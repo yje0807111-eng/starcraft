@@ -1,0 +1,378 @@
+{
+  "$schema": "./races.schema.json",
+  "version": 2,
+  "description": "스타크래프트 유즈맵(모바일) 기본 종족/유닛 설정. 원작 스탯을 기반으로 모바일에 맞게 단순화한 기준값. 유즈맵마다 이 값을 불러와 덮어쓰기(override) 방식으로 사용.",
+
+  "notes": {
+    "cost": "minerals=미네랄, gas=가스, supply=보급(인구수)",
+    "attackType": "normal=일반, explosive=폭발형(소형에 약함), concussive=진동형(대형에 약함), none=비공격",
+    "size": "small=소형, medium=중형, large=대형 (방어/데미지 보정용)",
+    "range": "1=근접, 2이상=원거리(타일 단위 기준)",
+    "flags": "detector=은신 감지, cloak=은폐 가능, transport=수송 가능(숫자=수용량), providesSupply=보급 제공량",
+    "balance": "모바일 단순화를 위해 일부 수치는 원작에서 반올림/조정됨"
+  },
+
+  "races": {
+    "terran": {
+      "name": "테란",
+      "theme": "인간",
+      "color": "#3a6ea5",
+      "description": "균형 잡힌 인간 진영. 건물을 띄워 이동하고 수리가 가능한 기계 중심 종족.",
+      "resourceUnit": "scv",
+      "supplyBuilding": "보급고",
+      "traits": {
+        "repair": true,
+        "note": "SCV로 기계 유닛/건물 수리 가능, 메딕으로 생체 유닛 치료"
+      },
+      "units": [
+        {
+          "id": "scv",
+          "name": "SCV",
+          "role": "worker",
+          "cost": { "minerals": 50, "gas": 0, "supply": 1 },
+          "buildTime": 12,
+          "stats": { "hp": 60, "shield": 0, "armor": 0, "damage": 5, "attackType": "normal", "range": 1, "sight": 7, "speed": 5, "size": "small" },
+          "ability": "건물 건설 및 기계/건물 수리"
+        },
+        {
+          "id": "marine",
+          "name": "마린",
+          "role": "ground",
+          "cost": { "minerals": 50, "gas": 0, "supply": 1 },
+          "buildTime": 15,
+          "stats": { "hp": 40, "shield": 0, "armor": 0, "damage": 6, "attackType": "normal", "range": 4, "sight": 7, "speed": 4, "size": "small" }
+        },
+        {
+          "id": "firebat",
+          "name": "파이어뱃",
+          "role": "ground",
+          "cost": { "minerals": 50, "gas": 25, "supply": 1 },
+          "buildTime": 24,
+          "stats": { "hp": 50, "shield": 0, "armor": 1, "damage": 16, "attackType": "concussive", "range": 1, "sight": 7, "speed": 4, "size": "small" }
+        },
+        {
+          "id": "medic",
+          "name": "메딕",
+          "role": "support",
+          "cost": { "minerals": 50, "gas": 25, "supply": 1 },
+          "buildTime": 30,
+          "stats": { "hp": 60, "shield": 0, "armor": 1, "damage": 0, "attackType": "none", "range": 2, "sight": 9, "speed": 4, "size": "small" },
+          "ability": "주변 아군 생체 유닛 체력 회복"
+        },
+        {
+          "id": "ghost",
+          "name": "고스트",
+          "role": "ground",
+          "cost": { "minerals": 25, "gas": 75, "supply": 1 },
+          "buildTime": 50,
+          "cloak": true,
+          "stats": { "hp": 45, "shield": 0, "armor": 0, "damage": 10, "attackType": "concussive", "range": 7, "sight": 9, "speed": 4, "size": "small" },
+          "ability": "은폐(클로킹), 락다운, 핵 유도"
+        },
+        {
+          "id": "vulture",
+          "name": "벌처",
+          "role": "ground",
+          "cost": { "minerals": 75, "gas": 0, "supply": 2 },
+          "buildTime": 30,
+          "stats": { "hp": 80, "shield": 0, "armor": 0, "damage": 20, "attackType": "concussive", "range": 5, "sight": 8, "speed": 7, "size": "medium" },
+          "ability": "스파이더 마인 설치"
+        },
+        {
+          "id": "goliath",
+          "name": "골리앗",
+          "role": "ground",
+          "cost": { "minerals": 100, "gas": 50, "supply": 2 },
+          "buildTime": 40,
+          "stats": { "hp": 125, "shield": 0, "armor": 1, "damage": 12, "attackType": "normal", "range": 5, "sight": 8, "speed": 4, "size": "large" },
+          "ability": "공중/지상 동시 공격"
+        },
+        {
+          "id": "siege_tank",
+          "name": "시즈탱크",
+          "role": "siege",
+          "cost": { "minerals": 150, "gas": 100, "supply": 2 },
+          "buildTime": 50,
+          "stats": { "hp": 150, "shield": 0, "armor": 1, "damage": 30, "attackType": "explosive", "range": 7, "sight": 10, "speed": 4, "size": "large" },
+          "ability": "시즈모드 전환 시 사거리/데미지 대폭 증가(이동 불가)"
+        },
+        {
+          "id": "dropship",
+          "name": "드랍십",
+          "role": "transport",
+          "cost": { "minerals": 100, "gas": 100, "supply": 2 },
+          "buildTime": 50,
+          "transport": 8,
+          "stats": { "hp": 150, "shield": 0, "armor": 1, "damage": 0, "attackType": "none", "range": 0, "sight": 8, "speed": 5, "size": "large" },
+          "ability": "지상 유닛 수송 (최대 8칸)"
+        },
+        {
+          "id": "wraith",
+          "name": "레이스",
+          "role": "air",
+          "cost": { "minerals": 150, "gas": 100, "supply": 2 },
+          "buildTime": 60,
+          "cloak": true,
+          "stats": { "hp": 120, "shield": 0, "armor": 0, "damage": 8, "attackType": "normal", "range": 5, "sight": 7, "speed": 7, "size": "large" },
+          "ability": "은폐(클로킹), 공중 추가 공격"
+        },
+        {
+          "id": "science_vessel",
+          "name": "사이언스 베슬",
+          "role": "detector",
+          "cost": { "minerals": 100, "gas": 225, "supply": 2 },
+          "buildTime": 80,
+          "detector": true,
+          "stats": { "hp": 200, "shield": 0, "armor": 1, "damage": 0, "attackType": "none", "range": 0, "sight": 10, "speed": 5, "size": "large" },
+          "ability": "은신 감지, EMP/디펜시브 매트릭스/이레디에이트"
+        },
+        {
+          "id": "battlecruiser",
+          "name": "배틀크루저",
+          "role": "air",
+          "cost": { "minerals": 400, "gas": 300, "supply": 6 },
+          "buildTime": 133,
+          "stats": { "hp": 500, "shield": 0, "armor": 3, "damage": 25, "attackType": "normal", "range": 6, "sight": 11, "speed": 3, "size": "large" },
+          "ability": "야마토 포(강력한 단일 타격)"
+        }
+      ]
+    },
+
+    "protoss": {
+      "name": "프로토스",
+      "theme": "외계",
+      "color": "#d4af37",
+      "description": "고도의 기술을 가진 외계 종족. 모든 유닛이 보호막(실드)을 가지며 고비용·고성능.",
+      "resourceUnit": "probe",
+      "supplyBuilding": "파일런",
+      "traits": {
+        "shieldRegenRate": 2,
+        "note": "모든 유닛의 보호막(shield)은 전투 밖에서 초당 약 2씩 자동 회복"
+      },
+      "units": [
+        {
+          "id": "probe",
+          "name": "프로브",
+          "role": "worker",
+          "cost": { "minerals": 50, "gas": 0, "supply": 1 },
+          "buildTime": 20,
+          "stats": { "hp": 20, "shield": 20, "armor": 0, "damage": 5, "attackType": "normal", "range": 1, "sight": 8, "speed": 5, "size": "small" },
+          "ability": "건물 워프 소환"
+        },
+        {
+          "id": "zealot",
+          "name": "질럿",
+          "role": "ground",
+          "cost": { "minerals": 100, "gas": 0, "supply": 2 },
+          "buildTime": 40,
+          "stats": { "hp": 100, "shield": 60, "armor": 1, "damage": 16, "attackType": "normal", "range": 1, "sight": 7, "speed": 4, "size": "small" }
+        },
+        {
+          "id": "dragoon",
+          "name": "드라군",
+          "role": "ground",
+          "cost": { "minerals": 125, "gas": 50, "supply": 2 },
+          "buildTime": 50,
+          "stats": { "hp": 100, "shield": 80, "armor": 1, "damage": 20, "attackType": "explosive", "range": 5, "sight": 8, "speed": 5, "size": "large" },
+          "ability": "공중/지상 동시 공격"
+        },
+        {
+          "id": "dark_templar",
+          "name": "다크템플러",
+          "role": "ground",
+          "cost": { "minerals": 125, "gas": 100, "supply": 2 },
+          "buildTime": 50,
+          "cloak": true,
+          "stats": { "hp": 80, "shield": 40, "armor": 1, "damage": 40, "attackType": "normal", "range": 1, "sight": 7, "speed": 5, "size": "small" },
+          "ability": "영구 은폐, 다크아콘 합체"
+        },
+        {
+          "id": "high_templar",
+          "name": "하이템플러",
+          "role": "caster",
+          "cost": { "minerals": 50, "gas": 150, "supply": 2 },
+          "buildTime": 50,
+          "stats": { "hp": 40, "shield": 40, "armor": 0, "damage": 0, "attackType": "none", "range": 2, "sight": 7, "speed": 4, "size": "small" },
+          "ability": "사이오닉 스톰(범위 피해), 아콘 합체"
+        },
+        {
+          "id": "archon",
+          "name": "아콘",
+          "role": "ground",
+          "cost": { "minerals": 0, "gas": 0, "supply": 4 },
+          "buildTime": 20,
+          "mergeFrom": ["high_templar", "high_templar"],
+          "stats": { "hp": 10, "shield": 350, "armor": 0, "damage": 30, "attackType": "normal", "range": 2, "sight": 8, "speed": 5, "size": "large" },
+          "ability": "하이템플러 2기 합체 생성, 범위 피해"
+        },
+        {
+          "id": "reaver",
+          "name": "리버",
+          "role": "siege",
+          "cost": { "minerals": 200, "gas": 100, "supply": 4 },
+          "buildTime": 70,
+          "stats": { "hp": 100, "shield": 80, "armor": 0, "damage": 100, "attackType": "normal", "range": 8, "sight": 10, "speed": 2, "size": "large" },
+          "ability": "스캐럽 발사(강력한 범위 폭발)"
+        },
+        {
+          "id": "observer",
+          "name": "옵저버",
+          "role": "detector",
+          "cost": { "minerals": 25, "gas": 75, "supply": 1 },
+          "buildTime": 40,
+          "detector": true,
+          "cloak": true,
+          "stats": { "hp": 40, "shield": 20, "armor": 0, "damage": 0, "attackType": "none", "range": 0, "sight": 11, "speed": 4, "size": "small" },
+          "ability": "영구 은폐 상태로 정찰 및 은신 감지"
+        },
+        {
+          "id": "shuttle",
+          "name": "셔틀",
+          "role": "transport",
+          "cost": { "minerals": 200, "gas": 0, "supply": 2 },
+          "buildTime": 60,
+          "transport": 8,
+          "stats": { "hp": 80, "shield": 60, "armor": 0, "damage": 0, "attackType": "none", "range": 0, "sight": 8, "speed": 5, "size": "large" },
+          "ability": "지상 유닛 수송 (최대 8칸)"
+        },
+        {
+          "id": "scout",
+          "name": "스카우트",
+          "role": "air",
+          "cost": { "minerals": 275, "gas": 125, "supply": 3 },
+          "buildTime": 80,
+          "stats": { "hp": 150, "shield": 100, "armor": 0, "damage": 28, "attackType": "explosive", "range": 4, "sight": 8, "speed": 6, "size": "large" },
+          "ability": "공중 대상 추가 공격력"
+        },
+        {
+          "id": "carrier",
+          "name": "캐리어",
+          "role": "air",
+          "cost": { "minerals": 350, "gas": 250, "supply": 6 },
+          "buildTime": 140,
+          "stats": { "hp": 300, "shield": 150, "armor": 4, "damage": 0, "attackType": "normal", "range": 8, "sight": 11, "speed": 3, "size": "large" },
+          "ability": "인터셉터(소형 전투기) 최대 8기 운용"
+        }
+      ]
+    },
+
+    "zerg": {
+      "name": "저그",
+      "theme": "괴물",
+      "color": "#7b4397",
+      "description": "빠르게 번식하는 생체 괴물 종족. 저비용 물량과 자가 회복(리젠)이 특징.",
+      "resourceUnit": "drone",
+      "supplyBuilding": "오버로드",
+      "traits": {
+        "regenRate": 1,
+        "note": "모든 생체 유닛은 초당 약 1씩 체력 자동 회복(리젠). 유닛은 애벌레(라바)에서 변태로 생산."
+      },
+      "units": [
+        {
+          "id": "drone",
+          "name": "드론",
+          "role": "worker",
+          "cost": { "minerals": 50, "gas": 0, "supply": 1 },
+          "buildTime": 20,
+          "stats": { "hp": 40, "shield": 0, "armor": 0, "damage": 5, "attackType": "normal", "range": 1, "sight": 7, "speed": 5, "size": "small", "regen": 1 },
+          "ability": "건물로 변태(자기 소모)"
+        },
+        {
+          "id": "overlord",
+          "name": "오버로드",
+          "role": "transport",
+          "cost": { "minerals": 100, "gas": 0, "supply": 0 },
+          "buildTime": 40,
+          "detector": true,
+          "transport": 8,
+          "providesSupply": 8,
+          "stats": { "hp": 200, "shield": 0, "armor": 0, "damage": 0, "attackType": "none", "range": 0, "sight": 9, "speed": 2, "size": "large", "regen": 1 },
+          "ability": "보급 제공 + 은신 감지 + 유닛 수송 (3역할)"
+        },
+        {
+          "id": "zergling",
+          "name": "저글링",
+          "role": "ground",
+          "cost": { "minerals": 25, "gas": 0, "supply": 0.5 },
+          "buildTime": 14,
+          "stats": { "hp": 35, "shield": 0, "armor": 0, "damage": 5, "attackType": "normal", "range": 1, "sight": 5, "speed": 6, "size": "small", "regen": 1 },
+          "ability": "한 번에 2기 생산"
+        },
+        {
+          "id": "hydralisk",
+          "name": "히드라리스크",
+          "role": "ground",
+          "cost": { "minerals": 75, "gas": 25, "supply": 1 },
+          "buildTime": 28,
+          "stats": { "hp": 80, "shield": 0, "armor": 0, "damage": 10, "attackType": "explosive", "range": 4, "sight": 6, "speed": 4, "size": "medium", "regen": 1 },
+          "ability": "공중/지상 동시 공격, 러커로 변태 가능"
+        },
+        {
+          "id": "lurker",
+          "name": "러커",
+          "role": "siege",
+          "cost": { "minerals": 50, "gas": 100, "supply": 2 },
+          "buildTime": 40,
+          "cloak": true,
+          "mergeFrom": ["hydralisk"],
+          "stats": { "hp": 125, "shield": 0, "armor": 1, "damage": 20, "attackType": "concussive", "range": 6, "sight": 8, "speed": 4, "size": "medium", "regen": 1 },
+          "ability": "버로우(은신) 상태에서만 공격, 직선 범위 피해"
+        },
+        {
+          "id": "scourge",
+          "name": "스커지",
+          "role": "air",
+          "cost": { "minerals": 12, "gas": 38, "supply": 0.5 },
+          "buildTime": 30,
+          "stats": { "hp": 25, "shield": 0, "armor": 0, "damage": 110, "attackType": "explosive", "range": 1, "sight": 5, "speed": 8, "size": "small", "regen": 1 },
+          "ability": "공중 전용 자폭, 한 번에 2기 생산"
+        },
+        {
+          "id": "mutalisk",
+          "name": "뮤탈리스크",
+          "role": "air",
+          "cost": { "minerals": 100, "gas": 100, "supply": 2 },
+          "buildTime": 40,
+          "stats": { "hp": 120, "shield": 0, "armor": 0, "damage": 9, "attackType": "normal", "range": 3, "sight": 7, "speed": 7, "size": "small", "regen": 1 },
+          "ability": "공격이 인접 적에게 튕김(바운스), 가디언/디바우러로 변태"
+        },
+        {
+          "id": "queen",
+          "name": "퀸",
+          "role": "caster",
+          "cost": { "minerals": 100, "gas": 100, "supply": 2 },
+          "buildTime": 50,
+          "stats": { "hp": 120, "shield": 0, "armor": 0, "damage": 0, "attackType": "none", "range": 0, "sight": 10, "speed": 6, "size": "medium", "regen": 1 },
+          "ability": "인스네어, 브루들링 생성, 패러사이트"
+        },
+        {
+          "id": "defiler",
+          "name": "디파일러",
+          "role": "caster",
+          "cost": { "minerals": 50, "gas": 150, "supply": 2 },
+          "buildTime": 50,
+          "stats": { "hp": 80, "shield": 0, "armor": 1, "damage": 0, "attackType": "none", "range": 0, "sight": 10, "speed": 4, "size": "medium", "regen": 1 },
+          "ability": "다크 스웜(원거리 방어), 플레이그, 컨슘"
+        },
+        {
+          "id": "guardian",
+          "name": "가디언",
+          "role": "air",
+          "cost": { "minerals": 150, "gas": 200, "supply": 2 },
+          "buildTime": 40,
+          "mergeFrom": ["mutalisk"],
+          "stats": { "hp": 150, "shield": 0, "armor": 2, "damage": 20, "attackType": "normal", "range": 8, "sight": 11, "speed": 3, "size": "large", "regen": 1 },
+          "ability": "지상 공격 전용 장거리 폭격(뮤탈 진화)"
+        },
+        {
+          "id": "ultralisk",
+          "name": "울트라리스크",
+          "role": "ground",
+          "cost": { "minerals": 200, "gas": 200, "supply": 4 },
+          "buildTime": 60,
+          "stats": { "hp": 400, "shield": 0, "armor": 1, "damage": 20, "attackType": "normal", "range": 1, "sight": 7, "speed": 5, "size": "large", "regen": 1 }
+        }
+      ]
+    }
+  }
+}

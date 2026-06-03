@@ -1,0 +1,57 @@
+{
+  "$schema": "./economy.schema.json",
+  "version": 1,
+  "description": "자원 채취 / 인구(보급) 시스템 기본 규칙. 원작 스타크래프트를 기반으로 모바일에 맞게 단순화. 유즈맵마다 이 값을 불러와 덮어쓰기 사용.",
+
+  "resources": {
+    "minerals": {
+      "name": "미네랄",
+      "color": "#3fb6ff",
+      "perTrip": 8,
+      "gatherTime": 3,
+      "patchAmount": 1500,
+      "optimalWorkersPerPatch": 2,
+      "note": "한 번 왕복에 8 채취. 덩어리당 일꾼 2기가 효율적."
+    },
+    "gas": {
+      "name": "가스",
+      "color": "#3fff8a",
+      "perTrip": 8,
+      "gatherTime": 4,
+      "geyserAmount": 2500,
+      "optimalWorkersPerGeyser": 3,
+      "requiresBuilding": true,
+      "note": "추출 건물(가스 정제소) 위에 일꾼 3기가 효율적."
+    }
+  },
+
+  "supply": {
+    "name": "보급(인구수)",
+    "cap": 200,
+    "startPerRace": {
+      "terran": 10,
+      "protoss": 9,
+      "zerg": 9
+    },
+    "perSupplyBuilding": 8,
+    "buildingByRace": {
+      "terran": "보급고",
+      "protoss": "파일런",
+      "zerg": "오버로드"
+    },
+    "note": "본진 건물이 기본 보급을 제공하고, 보급 건물 1개당 +8. 상한 200."
+  },
+
+  "startingState": {
+    "minerals": 50,
+    "gas": 0,
+    "workers": 4,
+    "note": "게임 시작 시 기본 자원/일꾼. 유즈맵에서 자유롭게 조정."
+  },
+
+  "mobileSimplification": {
+    "instantTravel": false,
+    "sharedSupplyAndMineralCap": false,
+    "note": "모바일에서 더 단순하게 가려면 instantTravel(왕복 시간 무시)이나 자원 자동 채취 옵션을 켜는 식으로 유즈맵별 조정 가능."
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "$schema": "./tech.schema.json",
+  "version": 1,
+  "description": "종족별 건물(테크 트리) / 업그레이드 / 특수능력 해금 기본 설정. races.json의 unit id와 연결됨.",
+
+  "notes": {
+    "requires": "해당 항목을 사용하려면 먼저 있어야 하는 건물 id 목록",
+    "unlocks": "이 건물이 생산/해금하는 유닛 id 목록",
+    "upgrade.levels": "최대 강화 단계 (보통 1~3)",
+    "upgrade.appliesTo": "업그레이드가 적용되는 유닛 id 목록 (혹은 role 태그)",
+    "effectPerLevel": "단계당 증가하는 수치"
+  },
+
+  "terran": {
+    "buildings": [
+      { "id": "command_center", "name": "커맨드 센터", "cost": { "minerals": 400, "gas": 0 }, "requires": [], "unlocks": ["scv"], "role": "main" },
+      { "id": "supply_depot", "name": "보급고", "cost": { "minerals": 100, "gas": 0 }, "requires": [], "unlocks": [], "role": "supply" },
+      { "id": "barracks", "name": "배럭", "cost": { "minerals": 150, "gas": 0 }, "requires": ["command_center"], "unlocks": ["marine", "firebat", "medic", "ghost"] },
+      { "id": "factory", "name": "팩토리", "cost": { "minerals": 200, "gas": 100 }, "requires": ["barracks"], "unlocks": ["vulture", "goliath", "siege_tank"] },
+      { "id": "starport", "name": "스타포트", "cost": { "minerals": 150, "gas": 100 }, "requires": ["factory"], "unlocks": ["wraith", "dropship", "battlecruiser"] },
+      { "id": "science_facility", "name": "사이언스 퍼실리티", "cost": { "minerals": 100, "gas": 150 }, "requires": ["starport"], "unlocks": ["science_vessel"] }
+    ],
+    "upgrades": [
+      { "id": "infantry_weapons", "name": "보병 공격력", "levels": 3, "appliesTo": ["marine", "firebat"], "requires": ["barracks"], "cost": { "minerals": 100, "gas": 100 }, "effectPerLevel": { "damage": 1 } },
+      { "id": "infantry_armor", "name": "보병 방어력", "levels": 3, "appliesTo": ["marine", "firebat", "medic"], "requires": ["barracks"], "cost": { "minerals": 100, "gas": 100 }, "effectPerLevel": { "armor": 1 } },
+      { "id": "vehicle_weapons", "name": "기계 공격력", "levels": 3, "appliesTo": ["vulture", "goliath", "siege_tank"], "requires": ["factory"], "cost": { "minerals": 100, "gas": 100 }, "effectPerLevel": { "damage": 2 } },
+      { "id": "vehicle_plating", "name": "기계 방어력", "levels": 3, "appliesTo": ["vulture", "goliath", "siege_tank"], "requires": ["factory"], "cost": { "minerals": 100, "gas": 100 }, "effectPerLevel": { "armor": 1 } }
+    ],
+    "abilities": [
+      { "id": "stim_pack", "name": "스팀팩", "appliesTo": ["marine", "firebat"], "requires": ["barracks"], "cost": { "minerals": 100, "gas": 100 }, "effect": "일시적으로 공격/이동 속도 증가, 체력 소모" },
+      { "id": "siege_mode", "name": "시즈모드", "appliesTo": ["siege_tank"], "requires": ["factory"], "cost": { "minerals": 150, "gas": 150 }, "effect": "사거리/데미지 증가, 이동 불가" },
+      { "id": "cloaking_field", "name": "은폐 장치", "appliesTo": ["wraith"], "requires": ["starport"], "cost": { "minerals": 150, "gas": 150 }, "effect": "은폐 가능" },
+      { "id": "yamato_gun", "name": "야마토 포", "appliesTo": ["battlecruiser"], "requires": ["starport"], "cost": { "minerals": 100, "gas": 100 }, "effect": "강력한 단일 타격" }
+    ]
+  },
+
+  "protoss": {
+    "buildings": [
+      { "id": "nexus", "name": "넥서스", "cost": { "minerals": 400, "gas": 0 }, "requires": [], "unlocks": ["probe"], "role": "main" },
+      { "id": "pylon", "name": "파일런", "cost": { "minerals": 100, "gas": 0 }, "requires": [], "unlocks": [], "role": "supply" },
+      { "id": "gateway", "name": "게이트웨이", "cost": { "minerals": 150, "gas": 0 }, "requires": ["nexus"], "unlocks": ["zealot", "dragoon", "high_templar", "dark_templar"] },
+      { "id": "robotics_facility", "name": "로보틱스", "cost": { "minerals": 200, "gas": 200 }, "requires": ["gateway"], "unlocks": ["reaver", "shuttle", "observer"] },
+      { "id": "stargate", "name": "스타게이트", "cost": { "minerals": 150, "gas": 150 }, "requires": ["gateway"], "unlocks": ["scout", "carrier"] }
+    ],
+    "upgrades": [
+      { "id": "ground_weapons", "name": "지상 공격력", "levels": 3, "appliesTo": ["zealot", "dragoon"], "requires": ["gateway"], "cost": { "minerals": 100, "gas": 100 }, "effectPerLevel": { "damage": 1 } },
+      { "id": "ground_armor", "name": "지상 방어력", "levels": 3, "appliesTo": ["zealot", "dragoon", "reaver"], "requires": ["gateway"], "cost": { "minerals": 100, "gas": 100 }, "effectPerLevel": { "armor": 1 } },
+      { "id": "plasma_shields", "name": "보호막 강화", "levels": 3, "appliesTo": ["zealot", "dragoon", "high_templar", "reaver", "scout", "carrier", "probe"], "requires": ["nexus"], "cost": { "minerals": 200, "gas": 200 }, "effectPerLevel": { "shield": 1 } },
+      { "id": "air_weapons", "name": "공중 공격력", "levels": 3, "appliesTo": ["scout", "carrier"], "requires": ["stargate"], "cost": { "minerals": 100, "gas": 100 }, "effectPerLevel": { "damage": 2 } }
+    ],
+    "abilities": [
+      { "id": "psionic_storm", "name": "사이오닉 스톰", "appliesTo": ["high_templar"], "requires": ["gateway"], "cost": { "minerals": 200, "gas": 200 }, "effect": "범위 지속 피해" },
+      { "id": "archon_merge", "name": "아콘 합체", "appliesTo": ["high_templar"], "requires": ["gateway"], "cost": { "minerals": 0, "gas": 0 }, "effect": "하이템플러 2기를 합쳐 아콘 생성" }
+    ]
+  },
+
+  "zerg": {
+    "buildings": [
+      { "id": "hatchery", "name": "해처리", "cost": { "minerals": 300, "gas": 0 }, "requires": [], "unlocks": ["drone", "overlord"], "role": "main" },
+      { "id": "spawning_pool", "name": "스포닝 풀", "cost": { "minerals": 200, "gas": 0 }, "requires": ["hatchery"], "unlocks": ["zergling"] },
+      { "id": "hydralisk_den", "name": "히드라리스크 덴", "cost": { "minerals": 100, "gas": 50 }, "requires": ["spawning_pool"], "unlocks": ["hydralisk", "lurker"] },
+      { "id": "spire", "name": "스파이어", "cost": { "minerals": 200, "gas": 150 }, "requires": ["hatchery"], "unlocks": ["mutalisk", "scourge", "guardian"] },
+      { "id": "queens_nest", "name": "퀸즈 네스트", "cost": { "minerals": 150, "gas": 100 }, "requires": ["spawning_pool"], "unlocks": ["queen"] },
+      { "id": "defiler_mound", "name": "디파일러 마운드", "cost": { "minerals": 100, "gas": 100 }, "requires": ["hydralisk_den"], "unlocks": ["defiler"] },
+      { "id": "ultralisk_cavern", "name": "울트라리스크 동굴", "cost": { "minerals": 150, "gas": 200 }, "requires": ["hatchery"], "unlocks": ["ultralisk"] }
+    ],
+    "upgrades": [
+      { "id": "melee_attacks", "name": "근접 공격력", "levels": 3, "appliesTo": ["zergling", "ultralisk"], "requires": ["spawning_pool"], "cost": { "minerals": 100, "gas": 100 }, "effectPerLevel": { "damage": 1 } },
+      { "id": "missile_attacks", "name": "원거리 공격력", "levels": 3, "appliesTo": ["hydralisk", "lurker"], "requires": ["hydralisk_den"], "cost": { "minerals": 100, "gas": 100 }, "effectPerLevel": { "damage": 1 } },
+      { "id": "carapace", "name": "지상 방어력", "levels": 3, "appliesTo": ["zergling", "hydralisk", "lurker", "ultralisk"], "requires": ["hatchery"], "cost": { "minerals": 100, "gas": 100 }, "effectPerLevel": { "armor": 1 } },
+      { "id": "flyer_attacks", "name": "공중 공격력", "levels": 3, "appliesTo": ["mutalisk", "guardian"], "requires": ["spire"], "cost": { "minerals": 100, "gas": 100 }, "effectPerLevel": { "damage": 1 } }
+    ],
+    "abilities": [
+      { "id": "metabolic_boost", "name": "저글링 속도", "appliesTo": ["zergling"], "requires": ["spawning_pool"], "cost": { "minerals": 100, "gas": 100 }, "effect": "이동 속도 대폭 증가" },
+      { "id": "burrow", "name": "버로우(잠복)", "appliesTo": ["zergling", "hydralisk", "lurker", "drone"], "requires": ["hatchery"], "cost": { "minerals": 100, "gas": 100 }, "effect": "땅에 숨어 은신" },
+      { "id": "lurker_aspect", "name": "러커 변태", "appliesTo": ["hydralisk"], "requires": ["hydralisk_den"], "cost": { "minerals": 200, "gas": 200 }, "effect": "히드라를 러커로 진화 가능" }
+    ]
+  }
+}

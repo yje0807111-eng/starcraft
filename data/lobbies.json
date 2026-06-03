@@ -1,0 +1,84 @@
+{
+  "$schema": "./lobbies.schema.json",
+  "version": 1,
+  "title": "유즈맵 아레나",
+  "subtitle": "모바일 스타크래프트 유즈맵",
+  "description": "메인 로비 → 맵 선택 → 모드(개인/멀티) → 게임. 새 유즈맵은 이 파일에 추가하면 메뉴에 자동 노출됨.",
+
+  "lobbies": [
+    {
+      "id": "defense",
+      "name": "디펜스 로비",
+      "icon": "🛡️",
+      "color": "#7b4397",
+      "desc": "몰려오는 적을 막아내는 협동·생존 맵",
+      "status": "open",
+      "maps": [
+        {
+          "id": "nemo-defense-app-web",
+          "name": "네모 디펜스 (정식)",
+          "icon": "⬛",
+          "url": "nemo-defense-app-web.html",
+          "desc": "엑셀 기반 정식판. 맵 4종(사각·다이아·팔각·십자)·영웅·가스 업그레이드. 30라운드 클리어.",
+          "players": "1인",
+          "modes": ["solo"],
+          "status": "playable"
+        },
+        {
+          "id": "nemo-defense",
+          "name": "네모 디펜스 (구버전)",
+          "icon": "🟥",
+          "url": "nemo-defense.html",
+          "desc": "적 누적을 200 밑으로 억제하는 DPS·경제 디펜스. 50라운드 생존이 목표.",
+          "players": "1~8인",
+          "modes": ["multi", "solo"],
+          "status": "playable"
+        }
+      ]
+    },
+    {
+      "id": "sandbox",
+      "name": "테스트 로비",
+      "icon": "🧪",
+      "color": "#2f6e4f",
+      "desc": "유닛·전투를 자유롭게 실험하는 샌드박스",
+      "status": "open",
+      "maps": [
+        {
+          "id": "unit-sandbox",
+          "name": "유닛 샌드박스",
+          "icon": "🎮",
+          "url": "game.html",
+          "desc": "3종족 유닛을 스폰하고 전투를 실험. 데이터 밸런스 확인용.",
+          "players": "1인",
+          "modes": ["solo"],
+          "status": "playable"
+        },
+        {
+          "id": "data-viewer",
+          "name": "데이터 뷰어",
+          "icon": "📊",
+          "url": "index.html",
+          "desc": "종족·유닛·코스트·테크 데이터를 표로 확인.",
+          "players": "-",
+          "modes": ["solo"],
+          "status": "playable"
+        }
+      ]
+    },
+    {
+      "id": "versus",
+      "name": "대전 로비",
+      "icon": "⚔️",
+      "color": "#3a6ea5",
+      "desc": "유닛을 생산해 상대와 겨루는 실시간 대전",
+      "status": "coming",
+      "maps": []
+    }
+  ],
+
+  "modes": {
+    "solo": { "name": "개인 플레이", "icon": "👤", "desc": "혼자 바로 시작합니다.", "flow": "직접 게임 시작" },
+    "multi": { "name": "멀티 플레이", "icon": "👥", "desc": "대기실에서 인원을 모아 시작합니다.", "flow": "참여 화면(대기실)으로 이동" }
+  }
+}

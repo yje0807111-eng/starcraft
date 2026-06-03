@@ -1,0 +1,94 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Races & Units Config",
+  "description": "스타크래프트 유즈맵(모바일) 종족/유닛 설정 스키마. races.json 검증 및 자동완성용.",
+  "type": "object",
+  "required": ["version", "races"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "type": "integer" },
+    "description": { "type": "string" },
+    "notes": { "type": "object" },
+    "races": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/race" }
+    }
+  },
+  "definitions": {
+    "race": {
+      "type": "object",
+      "required": ["name", "units"],
+      "properties": {
+        "name": { "type": "string" },
+        "theme": { "type": "string" },
+        "color": { "type": "string" },
+        "description": { "type": "string" },
+        "resourceUnit": { "type": "string" },
+        "supplyBuilding": { "type": "string" },
+        "traits": {
+          "type": "object",
+          "properties": {
+            "repair": { "type": "boolean" },
+            "regenRate": { "type": "number" },
+            "shieldRegenRate": { "type": "number" },
+            "note": { "type": "string" }
+          }
+        },
+        "units": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/unit" }
+        }
+      }
+    },
+    "unit": {
+      "type": "object",
+      "required": ["id", "name", "cost", "stats"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "role": {
+          "type": "string",
+          "enum": ["worker", "ground", "air", "siege", "support", "caster", "detector", "transport"]
+        },
+        "buildTime": { "type": "number" },
+        "ability": { "type": "string" },
+        "detector": { "type": "boolean" },
+        "cloak": { "type": "boolean" },
+        "transport": { "type": "number", "description": "수송 가능 칸 수" },
+        "providesSupply": { "type": "number" },
+        "mergeFrom": { "type": "array", "items": { "type": "string" }, "description": "합체/변태 재료 유닛 id" },
+        "cost": {
+          "type": "object",
+          "required": ["minerals", "gas", "supply"],
+          "properties": {
+            "minerals": { "type": "number" },
+            "gas": { "type": "number" },
+            "supply": { "type": "number" }
+          }
+        },
+        "stats": {
+          "type": "object",
+          "required": ["hp", "damage"],
+          "properties": {
+            "hp": { "type": "number" },
+            "shield": { "type": "number" },
+            "armor": { "type": "number" },
+            "damage": { "type": "number" },
+            "attackType": {
+              "type": "string",
+              "enum": ["normal", "explosive", "concussive", "none"]
+            },
+            "range": { "type": "number" },
+            "sight": { "type": "number" },
+            "speed": { "type": "number" },
+            "regen": { "type": "number", "description": "초당 체력 자동 회복량" },
+            "size": {
+              "type": "string",
+              "enum": ["small", "medium", "large"]
+            }
+          }
+        }
+      }
+    }
+  }
+}

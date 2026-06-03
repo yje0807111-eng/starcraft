@@ -1,0 +1,82 @@
+{
+  "$schema": "./heroes.schema.json",
+  "version": 1,
+  "description": "종족별 영웅 유닛. 유즈맵의 핵심 요소로, 기존 유닛(baseUnit)을 기반으로 능력치를 강화한 단일 강력 유닛. id/이름은 리브랜딩 시 교체 대상.",
+
+  "notes": {
+    "baseUnit": "참고한 기본 유닛 id (races.json). 영웅은 콘셉트상 다른 종족 유닛을 참고할 수 있음(예: 케리건=고스트 기반).",
+    "unique": "true면 게임당 1기만 보유 가능",
+    "stats": "기본 유닛 대비 강화된 최종 수치 (그대로 사용)",
+    "balance": "원작 영웅 스탯을 참고해 단순화. 유즈맵별 자유 조정 권장."
+  },
+
+  "heroes": {
+    "terran": [
+      {
+        "id": "hero_raynor_marine",
+        "name": "짐 레이너(마린)",
+        "baseUnit": "marine",
+        "role": "ground",
+        "unique": true,
+        "cost": { "minerals": 150, "gas": 50, "supply": 1 },
+        "stats": { "hp": 200, "shield": 0, "armor": 2, "damage": 18, "attackType": "normal", "range": 4, "sight": 9, "speed": 5, "size": "small" },
+        "ability": "강화된 사격, 스팀팩"
+      },
+      {
+        "id": "hero_raynor_vulture",
+        "name": "짐 레이너(벌처)",
+        "baseUnit": "vulture",
+        "role": "ground",
+        "unique": true,
+        "cost": { "minerals": 200, "gas": 50, "supply": 2 },
+        "stats": { "hp": 250, "shield": 0, "armor": 2, "damage": 40, "attackType": "concussive", "range": 5, "sight": 9, "speed": 8, "size": "medium" },
+        "ability": "고속 기동, 스파이더 마인"
+      }
+    ],
+    "protoss": [
+      {
+        "id": "hero_tassadar",
+        "name": "태사다르",
+        "baseUnit": "high_templar",
+        "role": "caster",
+        "unique": true,
+        "cost": { "minerals": 200, "gas": 200, "supply": 2 },
+        "stats": { "hp": 80, "shield": 300, "armor": 1, "damage": 0, "attackType": "none", "range": 2, "sight": 9, "speed": 4, "size": "small" },
+        "ability": "강화된 사이오닉 스톰, 할루시네이션"
+      },
+      {
+        "id": "hero_fenix_dragoon",
+        "name": "피닉스(드라군)",
+        "baseUnit": "dragoon",
+        "role": "ground",
+        "unique": true,
+        "cost": { "minerals": 250, "gas": 100, "supply": 2 },
+        "stats": { "hp": 200, "shield": 200, "armor": 2, "damage": 40, "attackType": "explosive", "range": 6, "sight": 9, "speed": 6, "size": "large" },
+        "ability": "공중/지상 강타"
+      }
+    ],
+    "zerg": [
+      {
+        "id": "hero_kerrigan",
+        "name": "케리건",
+        "baseUnit": "ghost",
+        "role": "ground",
+        "unique": true,
+        "cloak": true,
+        "cost": { "minerals": 150, "gas": 150, "supply": 1 },
+        "stats": { "hp": 250, "shield": 0, "armor": 2, "damage": 50, "attackType": "normal", "range": 5, "sight": 9, "speed": 6, "size": "small", "regen": 2 },
+        "ability": "영구 은폐, 사이오닉 능력"
+      },
+      {
+        "id": "hero_hunter_killer",
+        "name": "헌터 킬러(히드라)",
+        "baseUnit": "hydralisk",
+        "role": "ground",
+        "unique": false,
+        "cost": { "minerals": 150, "gas": 50, "supply": 1 },
+        "stats": { "hp": 160, "shield": 0, "armor": 1, "damage": 20, "attackType": "explosive", "range": 5, "sight": 8, "speed": 5, "size": "medium", "regen": 2 },
+        "ability": "강화된 가시 발사"
+      }
+    ]
+  }
+}

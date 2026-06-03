@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Heroes Config",
+  "description": "종족별 영웅 유닛 설정 스키마.",
+  "type": "object",
+  "required": ["version", "heroes"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "type": "integer" },
+    "description": { "type": "string" },
+    "notes": { "type": "object" },
+    "heroes": {
+      "type": "object",
+      "patternProperties": {
+        "^(terran|protoss|zerg)$": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/hero" }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "hero": {
+      "type": "object",
+      "required": ["id", "name", "baseUnit", "cost", "stats"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "baseUnit": { "type": "string" },
+        "role": { "type": "string" },
+        "unique": { "type": "boolean" },
+        "cloak": { "type": "boolean" },
+        "cost": {
+          "type": "object",
+          "required": ["minerals", "gas", "supply"],
+          "properties": {
+            "minerals": { "type": "number" },
+            "gas": { "type": "number" },
+            "supply": { "type": "number" }
+          }
+        },
+        "stats": { "type": "object" },
+        "ability": { "type": "string" }
+      }
+    }
+  }
+}

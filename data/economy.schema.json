@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Economy Config",
+  "description": "자원/인구 시스템 설정 스키마.",
+  "type": "object",
+  "required": ["version", "resources", "supply"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "type": "integer" },
+    "description": { "type": "string" },
+    "resources": {
+      "type": "object",
+      "properties": {
+        "minerals": { "$ref": "#/definitions/resource" },
+        "gas": { "$ref": "#/definitions/resource" }
+      }
+    },
+    "supply": {
+      "type": "object",
+      "required": ["cap", "perSupplyBuilding"],
+      "properties": {
+        "cap": { "type": "number" },
+        "perSupplyBuilding": { "type": "number" },
+        "startPerRace": { "type": "object" },
+        "buildingByRace": { "type": "object" }
+      }
+    },
+    "startingState": { "type": "object" },
+    "mobileSimplification": { "type": "object" }
+  },
+  "definitions": {
+    "resource": {
+      "type": "object",
+      "required": ["name", "perTrip"],
+      "properties": {
+        "name": { "type": "string" },
+        "color": { "type": "string" },
+        "perTrip": { "type": "number" },
+        "gatherTime": { "type": "number" }
+      }
+    }
+  }
+}

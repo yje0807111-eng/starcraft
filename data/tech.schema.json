@@ -1,0 +1,76 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Tech Tree Config",
+  "description": "종족별 건물/업그레이드/특수능력 설정 스키마.",
+  "type": "object",
+  "required": ["version"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "type": "integer" },
+    "description": { "type": "string" },
+    "notes": { "type": "object" }
+  },
+  "patternProperties": {
+    "^(terran|protoss|zerg)$": { "$ref": "#/definitions/raceTech" }
+  },
+  "definitions": {
+    "cost": {
+      "type": "object",
+      "properties": {
+        "minerals": { "type": "number" },
+        "gas": { "type": "number" }
+      }
+    },
+    "raceTech": {
+      "type": "object",
+      "properties": {
+        "buildings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "cost"],
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "cost": { "$ref": "#/definitions/cost" },
+              "requires": { "type": "array", "items": { "type": "string" } },
+              "unlocks": { "type": "array", "items": { "type": "string" } },
+              "role": { "type": "string" }
+            }
+          }
+        },
+        "upgrades": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "levels"],
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "levels": { "type": "number" },
+              "appliesTo": { "type": "array", "items": { "type": "string" } },
+              "requires": { "type": "array", "items": { "type": "string" } },
+              "cost": { "$ref": "#/definitions/cost" },
+              "effectPerLevel": { "type": "object" }
+            }
+          }
+        },
+        "abilities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "name"],
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "appliesTo": { "type": "array", "items": { "type": "string" } },
+              "requires": { "type": "array", "items": { "type": "string" } },
+              "cost": { "$ref": "#/definitions/cost" },
+              "effect": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

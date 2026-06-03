@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Lobbies / Menu Config",
+  "description": "메인 로비 → 맵 → 모드 메뉴 구성 스키마.",
+  "type": "object",
+  "required": ["version", "lobbies", "modes"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "type": "integer" },
+    "title": { "type": "string" },
+    "subtitle": { "type": "string" },
+    "description": { "type": "string" },
+    "lobbies": { "type": "array", "items": { "$ref": "#/definitions/lobby" } },
+    "modes": { "type": "object" }
+  },
+  "definitions": {
+    "lobby": {
+      "type": "object",
+      "required": ["id", "name", "status"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "icon": { "type": "string" },
+        "color": { "type": "string" },
+        "desc": { "type": "string" },
+        "status": { "type": "string", "enum": ["open", "coming"] },
+        "maps": { "type": "array", "items": { "$ref": "#/definitions/map" } }
+      }
+    },
+    "map": {
+      "type": "object",
+      "required": ["id", "name", "url", "modes", "status"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "icon": { "type": "string" },
+        "url": { "type": "string" },
+        "desc": { "type": "string" },
+        "players": { "type": "string" },
+        "modes": { "type": "array", "items": { "type": "string", "enum": ["solo", "multi"] } },
+        "status": { "type": "string", "enum": ["playable", "coming"] }
+      }
+    }
+  }
+}
