@@ -54,7 +54,8 @@
   @media(max-width:410px){#phone{width:100vw;height:calc(100vw*844/390);border-radius:0;border:none}}
 
   /* GAME AREA */
-  #gameArea{flex:1;position:relative;overflow:hidden;background:#060e0a;min-height:0}
+  #gameArea{flex:1;position:relative;overflow:hidden;background:#060e0a;min-height:0;transition:filter .35s}
+  #gameArea.gray{filter:grayscale(.82) brightness(.92)}   /* 일시정지 중 무채색 */
   canvas{position:absolute;inset:0;width:100%;height:100%}
   #cvMarine{z-index:6;pointer-events:none}  /* 마린 3D 오버레이(트랙 위, 유닛 라벨 아래) */
   #cvFx{z-index:7;pointer-events:none}       /* 투사체 오버레이(3D 모델 위 — 미사일이 몸에 안 가림) */
@@ -64,22 +65,25 @@
   #hud{position:absolute;top:0;left:0;right:0;z-index:20;padding:calc(env(safe-area-inset-top,0px) + 18px) 9px 0;
     display:flex;align-items:flex-start;justify-content:space-between;pointer-events:none;
     font-family:'Rajdhani','Apple SD Gothic Neo','Noto Sans KR',sans-serif;   /* 모던 테크 폰트(가시성↑) */
-    background:none}   /* HUD 배경 없음 — 텍스트 + 진한 드롭쉐도우만 */
+    background:none;opacity:.82}   /* HUD 배경 없음 — 텍스트 + 진한 드롭쉐도우, 살짝 투명(덜 쨍) */
   #hudL{display:flex;flex-direction:column;gap:3px;white-space:nowrap;line-height:1.15;
     text-shadow:0 2px 4px #000,0 0 8px #000,0 1px 2px #000}   /* 진한 드롭쉐도우(배경 없이 가독) */
   /* 라운드: ROUND 라벨 + 현재값 청록 네온 강조 / 최대값 흐리게 */
   #hudL .stage{font-size:11px;color:var(--txt);font-weight:800;letter-spacing:1.5px}
-  #hudL .stage b{font-size:16px;color:var(--hud);letter-spacing:0;text-shadow:0 0 8px var(--hud-glow),0 2px 3px #000}
+  #hudL .stage b{font-size:14px;color:var(--hud);letter-spacing:0;text-shadow:0 0 6px var(--hud-glow),0 2px 3px #000}
   #hudL .stage #hRoundMax{font-size:12px;color:rgba(214,226,240,.5);letter-spacing:0}
   #hudL .kill{font-size:12px;color:#fff;font-weight:800;letter-spacing:.5px}#hudL .kill b{color:var(--hud)}  /* Kill 텍스트=흰 / 숫자=청록 */
   /* 중앙 전자시계(LCD 패널 + 7-seg 고스트) — 자원 아래로 내려 겹침 방지 */
-  #hudC{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 47px);transform:translateX(-50%);pointer-events:none;
-    display:flex;align-items:center;justify-content:center;min-width:112px;height:34px;padding:0 12px;   /* 고정 박스 + 정중앙 */
-    background:none}   /* 배경/테두리 없음 — 텍스트만 */
-  #hudC .time{display:inline-block;font-family:'DSEG7','Courier New',monospace;font-size:21px;font-weight:700;line-height:1;
-    letter-spacing:0;color:var(--hud);text-shadow:0 0 8px var(--hud-glow),0 2px 4px #000,0 1px 2px #000}   /* 청록 네온 + 진한 드롭쉐도우 */
+  #hudC{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 46px);transform:translateX(-50%);pointer-events:none;
+    display:flex;align-items:center;justify-content:center;min-width:84px;height:28px;padding:0 14px;   /* 정중앙 */
+    background:linear-gradient(180deg,rgba(8,18,28,.5),rgba(4,10,16,.5));   /* 반투명 박스(배경과 구분) */
+    border:1px solid rgba(0,229,255,.22);border-radius:7px;
+    box-shadow:inset 0 0 12px rgba(0,0,0,.4),0 1px 3px rgba(0,0,0,.45)}
+  /* 시계 — 주변 HUD 숫자와 동일한 Rajdhani 폰트/청록 톤(디지털 시계체 X) */
+  #hudC .time{font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif;font-size:19px;font-weight:700;line-height:1;
+    letter-spacing:1.5px;color:var(--hud);text-shadow:0 0 5px var(--hud-glow),0 2px 3px #000}
   #hudRwrap{display:flex;flex-direction:column;align-items:flex-end;gap:4px;margin-top:2px}
-  #hudR{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:800;white-space:nowrap;text-shadow:0 2px 4px #000,0 0 8px #000}
+  #hudR{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:800;white-space:nowrap;text-shadow:0 2px 4px #000,0 0 8px #000}
   /* 맵 이름: 자원 아래 우측 — 배경 없이 텍스트 + 청록 액센트 + 진한 쉐도우 */
   #mapName{font-size:11px;font-weight:800;color:var(--txt);letter-spacing:1px;white-space:nowrap;
     text-shadow:0 2px 4px #000,0 0 8px #000;
@@ -87,7 +91,7 @@
   .res{display:flex;align-items:center;gap:4px}
   .res .ri{width:17px;height:17px;display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.85))}
   /* 자원 숫자: 밝은 흰색 + 진한 드롭쉐도우(배경 없는 HUD) */
-  .res b{color:#eaf4ff;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;letter-spacing:.3px;text-shadow:0 2px 4px #000,0 0 8px #000}
+  .res b{color:#eaf4ff;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13.5px;letter-spacing:.3px;text-shadow:0 2px 4px #000,0 0 8px #000}
   .res b .ru{font-style:normal;font-size:.6em;font-weight:700;color:var(--hud);opacity:.85;margin-left:1.5px;letter-spacing:0}  /* 자원 단위 C/E/CP — 청록 */
 
   #zoneLabel{display:none}   /* 구역 설명 텍스트 제거(사용자 요청) */
@@ -172,27 +176,41 @@
   /* 유닛뽑기: 패드 위 유닛 + 패드 아래 라벨(가림 방지) */
   .shopUnit{position:absolute;transform:translate(-50%,-50%);width:96px;height:92px;z-index:10;cursor:pointer}
   .shopUnit.off{opacity:.5;filter:grayscale(.5)}
-  .spadIcon{position:absolute;left:50%;top:50%;width:54px;height:54px;transform:translate(-50%,calc(-50% - 8px));filter:drop-shadow(0 0 6px currentColor) drop-shadow(0 3px 4px rgba(0,0,0,.75))}
-  .spadIcon svg{display:block;width:100%;height:100%}
-  .shopUnit.sel .spadIcon{filter:drop-shadow(0 0 10px #cfeaff) drop-shadow(0 0 5px currentColor) drop-shadow(0 3px 4px rgba(0,0,0,.75))}
+  .spadIcon{position:absolute;left:50%;top:50%;width:52px;height:52px;box-sizing:border-box;padding:8px;
+    transform:translate(-50%,calc(-50% - 9px));border-radius:50%;border:2px solid currentColor;
+    background:radial-gradient(circle at 50% 30%,rgba(255,255,255,.16),rgba(9,15,27,.95) 72%);
+    box-shadow:0 0 11px -1px currentColor,inset 0 0 10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.16),0 4px 6px rgba(0,0,0,.55)}
+  .spadIcon::after{content:'';position:absolute;inset:3px;border-radius:50%;border:1px solid currentColor;opacity:.3;pointer-events:none}
+  .spadIcon svg{display:block;width:100%;height:100%;filter:drop-shadow(0 0 3px currentColor)}
+  .shopUnit.sel .spadIcon{border-color:#cfeaff;background:radial-gradient(circle at 50% 30%,rgba(207,234,255,.25),rgba(9,15,27,.95) 72%);
+    box-shadow:0 0 15px #cfeaff,0 0 8px currentColor,inset 0 0 10px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.2),0 4px 6px rgba(0,0,0,.55)}
   .slbl{position:absolute;left:0;right:0;top:50%;transform:translateY(15px);text-align:center;white-space:nowrap;line-height:1.15}  /* 비콘 바로 아래에 붙임 */
   .sn{font-size:11px;color:#eaf2ff;font-weight:700;letter-spacing:.3px;text-shadow:0 1px 2px #000,0 0 5px #000}
   .sc{font-size:11px;color:#ffd766;font-weight:800;font-family:'Rajdhani',sans-serif;letter-spacing:.3px;text-shadow:0 1px 2px #000,0 0 5px #000;display:flex;align-items:center;justify-content:center;gap:2px}
   .citizen{position:absolute;transform:translate(-50%,-50%);text-align:center;z-index:11;pointer-events:none}
-  .cframe{width:34px;height:34px;border-radius:50%;border:1.5px solid #ffd24a;
-    background:rgba(40,34,10,.92);display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 0 10px rgba(255,210,74,.4)}
-  .cn{font-size:8px;color:#ffd24a;margin-top:1px}
+  .cframe{position:relative;width:40px;height:40px;box-sizing:border-box;padding:7px;border-radius:50%;border:2px solid #ffd24a;
+    background:radial-gradient(circle at 50% 28%,rgba(255,236,170,.28),rgba(38,30,7,.95) 72%);
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 0 12px rgba(255,210,74,.5),inset 0 0 9px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.22),0 3px 5px rgba(0,0,0,.5)}
+  .cframe::after{content:'';position:absolute;inset:3px;border-radius:50%;border:1px solid #ffe6a0;opacity:.35;pointer-events:none}
+  .cframe svg{width:100%;height:100%;display:block;filter:drop-shadow(0 0 2px rgba(255,210,74,.8))}
+  .cn{font-size:8px;color:#ffd24a;margin-top:2px;text-shadow:0 1px 2px #000}
 
   /* 건물(업그레이드) — 계열색 네온 카드 */
   .bldg{position:absolute;cursor:pointer;text-align:center;transform:translate(-50%,-50%);width:74px;z-index:8}
   .bframe.nofig, .bldg.sel .bframe.nofig{background:none!important;border:none!important;box-shadow:none!important}  /* 3D 건물: 네모 칸 제거(선택 시에도) — 선택 효과는 3D 모델 확대로 */
+  .bframe.nofig::before, .bframe.nofig::after{display:none!important}  /* 3D 건물: 장식 의사요소도 숨김 */
   .bframe{position:relative;width:64px;height:64px;margin:0 auto;border-radius:15px;
-    border:1.5px solid var(--bc,#1c3a50);font-size:30px;
-    background:radial-gradient(circle at 50% 30%,rgba(255,255,255,.08),rgba(7,16,28,.95));
+    border:1.5px solid var(--bc,#1c3a50);font-size:30px;overflow:hidden;
+    background:linear-gradient(165deg,rgba(34,50,74,.9),rgba(6,13,25,.97)),radial-gradient(circle at 50% 26%,rgba(255,255,255,.12),transparent 62%);
     display:flex;align-items:center;justify-content:center;
-    box-shadow:0 0 12px -3px var(--bc,#1c3a50),inset 0 0 12px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.08);
+    box-shadow:0 0 14px -3px var(--bc,#1c3a50),inset 0 0 13px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.12);
     transition:transform .12s,box-shadow .15s,border-color .15s}
-  .bframe svg{filter:drop-shadow(0 0 2px var(--bc))}
+  .bframe::before{content:'';position:absolute;left:0;right:0;top:0;height:46%;border-radius:14px 14px 40% 40%;
+    background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,0));pointer-events:none}
+  .bframe::after{content:'';position:absolute;inset:4px;border-radius:11px;border:1px solid var(--bc);opacity:.4;pointer-events:none}
+  .bframe svg{position:relative;z-index:1;filter:drop-shadow(0 0 3px var(--bc)) drop-shadow(0 1px 1px rgba(0,0,0,.6))}
+  .bldg.sel .bframe{box-shadow:0 0 16px -1px var(--bc),0 0 7px var(--bc),inset 0 0 13px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.16)}
   .bldg:active .bframe{transform:translateY(1px)}
   .bldg.sel .bframe{border-color:#fff;box-shadow:0 0 18px var(--bc,#ff3b3b),inset 0 0 14px rgba(0,0,0,.45)}
   .blv{position:absolute;top:-7px;right:-7px;min-width:19px;height:19px;border-radius:10px;padding:0 4px;
@@ -216,10 +234,138 @@
     border-right:1px solid rgba(255,255,255,.05);border-bottom:2px solid transparent;transition:all .18s;line-height:1.3;position:relative;
     text-shadow:0 1px 1px #000}   /* 얇은 금속 구분선 */
   .tab:last-child{border-right:none}
-  .tab .ti{font-size:14px;display:block;margin-bottom:2px;filter:grayscale(.6);transition:all .18s}
+  .tab .ti{display:block;margin-bottom:3px;line-height:0;transition:all .18s}
+  .tab .ti svg{width:19px;height:19px;display:block;margin:0 auto}   /* 모던 라인 아이콘(currentColor=탭색) */
   .tab.on{color:var(--neon);border-bottom-color:var(--neon);background:linear-gradient(180deg,var(--neon-faint),transparent);
     box-shadow:inset 0 -2px 8px var(--neon-faint),0 0 0 0 transparent}   /* 활성 탭만 청록 하이라이트 */
-  .tab.on .ti{filter:none;text-shadow:0 0 10px var(--neon-glow);transform:translateY(-1px)}
+  .tab.on .ti{filter:drop-shadow(0 0 5px var(--neon-glow));transform:translateY(-1px)}   /* 활성 아이콘 글로우 */
+  .tabSet{flex:0 0 auto;aspect-ratio:1;align-self:stretch;padding:0;display:flex;align-items:center;justify-content:center;
+    border-left:1px solid rgba(255,255,255,.07)}   /* 우측 1:1 정사각형 설정 칸 */
+  .tabSet .ti{margin:0;line-height:0}
+  .tabSet .ti svg{width:21px;height:21px}
+  /* 설정 팝업 */
+  #settingsPop{position:absolute;inset:0;z-index:45;display:flex;align-items:center;justify-content:center;
+    background:rgba(2,3,6,.22)}
+  #settingsPop.hide{display:none}
+  /* 반투명 + 각진 박스. 세로로 시원하게(기본 닫힌 상태 ~1.5배 높이) */
+  .setCard{width:90%;max-width:360px;padding:24px 17px;color:var(--txt);box-sizing:border-box;max-height:94%;overflow:auto;
+    display:flex;flex-direction:column;min-height:430px;
+    background:linear-gradient(180deg,rgba(4,4,6,.78),rgba(0,0,0,.78));   /* 검정 반투명 */
+    border:1px solid var(--metal-edge);border-radius:4px;box-shadow:0 0 0 1px var(--neon-faint),0 12px 40px rgba(0,0,0,.6)}
+  /* 일시정지(상단) / 나가기(하단) */
+  .setPause{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin:8px 0 4px;padding:12px;cursor:pointer;
+    font-family:inherit;font-size:13px;font-weight:700;letter-spacing:.5px;color:var(--txt);
+    background:linear-gradient(180deg,rgba(22,22,25,.5),rgba(6,6,8,.5));border:1px solid var(--metal-edge);border-radius:3px;
+    box-shadow:0 0 0 1px var(--neon-faint)}
+  .setPause .pIco{font-size:12px;color:var(--neon)}
+  .setPause.paused{color:var(--neon);border-color:var(--neon);box-shadow:0 0 0 1px var(--neon-faint),0 0 8px var(--neon-glow)}
+  .setPause:active{transform:translateY(1px)}
+  .setPause.disabled{opacity:.4;pointer-events:none}   /* 일시정지 횟수 소진 */
+  .setMenu{flex:1;display:flex;flex-direction:column;justify-content:space-between;min-height:0}
+  /* 배속 투표 보드 */
+  .spdNow{color:var(--neon);font-family:'Rajdhani',sans-serif;font-size:13px;margin-left:5px}
+  .voteNote{font-size:10.5px;line-height:1.4;color:var(--txt-dim);padding:4px 3px 8px;word-break:keep-all}
+  .voteNote b{color:var(--neon)}
+  .voteCols{display:flex;gap:7px}
+  .voteCol{flex:1;min-height:80px;border:1px solid var(--metal-edge);border-radius:4px;background:rgba(0,0,0,.2);cursor:pointer;
+    padding:7px 4px;display:flex;flex-direction:column;align-items:center;gap:6px;transition:border-color .14s,box-shadow .14s}
+  .voteCol.active{border-color:var(--neon);box-shadow:0 0 8px var(--neon-glow),inset 0 0 10px rgba(255,59,59,.08)}
+  .voteCol:active{transform:translateY(1px)}
+  .vcSpd{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:14px;color:var(--txt)}
+  .voteCol.active .vcSpd{color:var(--neon)}
+  .vcPlayers{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;min-height:16px}
+  .vChip{--pc:#888;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font:800 7px/1 'Rajdhani',sans-serif;color:#eef;letter-spacing:0;box-sizing:border-box;
+    background:radial-gradient(circle at 50% 30%,#3b3e48,#191b21 76%);   /* 공통 코인색 */
+    border:1.5px solid var(--pc);   /* 플레이어별 테두리색 */
+    box-shadow:0 1px 2px rgba(0,0,0,.55),inset 0 1px 1px rgba(255,255,255,.2);
+    text-shadow:0 1px 1px rgba(0,0,0,.65)}
+  .vChip.me{color:#fff;box-shadow:0 0 0 1.5px #fff,0 0 6px rgba(255,255,255,.6),0 1px 2px rgba(0,0,0,.55),inset 0 1px 1px rgba(255,255,255,.2)}   /* 나=추가 흰 테두리 */
+  .voteResult{font-size:11px;color:var(--txt);padding:9px 3px 2px;text-align:center}
+  .voteResult b{color:var(--neon);font-family:'Rajdhani',sans-serif;font-size:15px;margin-left:4px}
+  .setExit{display:block;width:100%;margin:4px 0 0;padding:11px;cursor:pointer;
+    font-family:inherit;font-size:13px;font-weight:800;letter-spacing:.5px;color:#ffd2d2;
+    background:linear-gradient(180deg,rgba(200,50,50,.26),rgba(120,20,20,.26));border:1px solid rgba(255,80,80,.5);border-radius:4px;
+    box-shadow:0 0 10px rgba(255,60,60,.16),inset 0 1px 0 rgba(255,255,255,.1)}
+  .setExit:active{transform:translateY(1px)}
+  /* 나가기 확인 창 */
+  #exitConfirm{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(2,3,6,.6)}
+  #exitConfirm.hide{display:none}
+  .ecCard{width:84%;max-width:300px;padding:20px 18px;border-radius:5px;text-align:center;
+    background:linear-gradient(180deg,rgba(12,12,15,.97),rgba(2,2,4,.97));border:1px solid var(--metal-edge);
+    box-shadow:0 0 0 1px var(--neon-faint),0 16px 44px rgba(0,0,0,.7)}
+  .ecTitle{font-size:14px;font-weight:800;letter-spacing:.5px;color:var(--neon);text-shadow:0 0 6px var(--neon-glow);margin-bottom:11px}
+  .ecMsg{font-size:12px;line-height:1.65;color:var(--txt);margin-bottom:17px}
+  .ecBtns{display:flex;gap:8px}
+  .ecCancel,.ecGo{flex:1;padding:11px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:700}
+  .ecCancel{color:var(--txt);background:rgba(255,255,255,.06);border:1px solid var(--metal-edge)}
+  .ecGo{color:#fff;background:linear-gradient(180deg,rgba(200,50,50,.85),rgba(150,25,25,.92));border:1px solid var(--neon)}
+  .ecCancel:active,.ecGo:active{transform:translateY(1px)}
+  .setTitle{display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:800;letter-spacing:1px;
+    color:var(--neon);text-shadow:0 0 6px var(--neon-glow);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--neon-faint)}
+  .setX{font-size:13px;color:var(--txt-dim);cursor:pointer;padding:2px 7px;border-radius:3px}
+  .setX:active{background:rgba(255,255,255,.08)}
+  .setItem{display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-size:13px;font-weight:700;color:var(--txt);
+    padding:12px 12px;border-radius:3px;margin-bottom:6px;
+    background:linear-gradient(180deg,rgba(22,22,25,.5),rgba(6,6,8,.5));border:1px solid var(--metal-edge);box-shadow:0 0 0 1px var(--neon-faint)}
+  .setItem:active{transform:translateY(1px)}
+  .setItem b{font-size:14px;color:var(--neon);font-family:'Rajdhani',sans-serif}
+  .setItem .setArr{font-size:11px;color:var(--txt-dim)}
+  /* 아코디언 본문 */
+  .setBody{display:none;margin:-3px 0 7px;padding:4px}
+  /* 효과음/배경음 — 버튼 행 + 볼륨 바를 하나의 박스로 묶음 */
+  .sndGroup{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08);border-radius:4px;padding:3px 2px 5px;margin-bottom:7px}
+  .setSub{display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-size:12px;font-weight:600;color:var(--txt);
+    padding:8px 11px;border-radius:3px;background:transparent;border:none}
+  .setSub b{color:var(--neon);font-family:'Rajdhani',sans-serif}
+  /* ON/OFF 버튼(효과음/배경음) */
+  .setToggle{display:inline-block;min-width:48px;text-align:center;padding:5px 12px;border-radius:4px;cursor:pointer;flex:0 0 auto;
+    font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:.5px;color:var(--txt-dim);
+    background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);transition:all .14s}
+  .setToggle.on{color:#fff;background:var(--neon-d1);border-color:var(--neon)}
+  .setSub:active .setToggle{transform:translateY(1px)}
+  .setVolRow{display:flex;align-items:center;gap:10px;padding:0 11px 3px;margin-top:-3px}
+  .setRange{-webkit-appearance:none;appearance:none;flex:1;height:4px;border-radius:3px;outline:none;cursor:pointer;
+    background:rgba(255,255,255,.15)}
+  .setRange::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:14px;height:14px;border-radius:50%;
+    background:var(--neon);box-shadow:0 0 5px var(--neon-glow),0 0 0 1px rgba(0,0,0,.45);cursor:pointer}
+  .setRange::-moz-range-thumb{width:14px;height:14px;border:none;border-radius:50%;
+    background:var(--neon);box-shadow:0 0 5px var(--neon-glow);cursor:pointer}
+  .setVolRow b{font-size:12px;color:var(--neon);font-family:'Rajdhani',sans-serif;min-width:26px;text-align:right}
+  .setRowLbl{font-size:12px;color:var(--txt);font-weight:700;padding:2px 4px 6px}
+  .setSeg{display:flex;gap:6px;margin-bottom:8px}
+  .segBtn{flex:1;padding:7px 0;font-size:12px;font-weight:700;color:var(--txt-dim);cursor:pointer;font-family:inherit;
+    background:rgba(0,0,0,.16);border:1px solid var(--metal-edge);border-radius:3px}
+  .segBtn.on{color:#fff;background:linear-gradient(180deg,var(--neon-face1),var(--neon-d1));border-color:var(--neon);box-shadow:0 0 6px var(--neon-glow)}
+  .setHint{font-size:10.5px;line-height:1.45;color:var(--txt-dim);padding:6px 3px 2px;word-break:keep-all;white-space:normal}
+  .setHint.save{color:var(--neon);font-weight:600}
+  .setDiv{font-size:10.5px;font-weight:700;letter-spacing:1px;color:var(--txt-dim);text-transform:none;
+    margin:9px 2px 7px;padding-bottom:5px;border-bottom:1px solid rgba(255,255,255,.07)}
+  .setOptRow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}
+  .setOptRow>span{font-size:12px;color:var(--txt);font-weight:600;flex:0 0 auto}
+  .setSeg.sm{flex:0 0 auto;gap:4px}
+  .setSeg.sm .segBtn{flex:0 0 auto;min-width:36px;padding:5px 8px;font-size:11px}
+  .sndBtn{flex:0 0 auto;min-width:50px;padding:4px 11px;font-size:11px}
+  .sndBtn:active{transform:translateY(1px)}
+  .setMore{display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-size:11.5px;color:var(--txt-dim);font-weight:600;
+    padding:8px 4px 6px;margin-top:7px;border-top:1px dashed rgba(255,255,255,.12)}
+  .setMore b{color:var(--neon);font-weight:700}
+  body.lite *{backdrop-filter:none!important;box-shadow:none!important}
+  .setNote{font-size:11px;line-height:1.7;color:var(--txt);padding:8px 11px;border-radius:3px;
+    background:rgba(0,0,0,.16);border:1px solid rgba(255,255,255,.05)}
+  .setNote b{color:var(--neon)}
+  /* 임무 목표 — 라벨 + 정렬 목록 (현재+5줄까지 확장 후 내부 스크롤) */
+  #body-mission{max-height:240px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+  #body-mission::-webkit-scrollbar{width:5px}
+  #body-mission::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:3px}
+  #body-mission::-webkit-scrollbar-track{background:transparent}
+  .missBlock{margin-bottom:9px}
+  .missBlock:last-child{margin-bottom:0}
+  .missLbl{font-size:10px;font-weight:800;letter-spacing:1.5px;color:var(--neon);margin-bottom:5px;padding-left:2px}
+  .missList{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+  .missList li{position:relative;font-size:11.5px;line-height:1.45;color:var(--txt);padding-left:13px;word-break:keep-all}
+  .missList li::before{content:'';position:absolute;left:2px;top:6px;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.3)}
+  .missList b{color:#fff;font-weight:700}
   .bp{display:none;flex:1;flex-direction:column;padding:10px 12px;gap:8px;min-height:0}
   .bp.on{display:flex}
 
@@ -439,7 +585,7 @@
         <span class="kill"><b id="hKill">0</b> Kill</span>
         <span id="specLabel"></span>
       </div>
-      <div id="hudC"><span class="time" id="hTime" data-g="88:88">00:00</span></div>
+      <div id="hudC"><span class="time" id="hTime">00:00</span></div>
       <div id="hudRwrap">
         <div id="hudR">
           <span class="res min"><svg class="ri" viewBox="0 0 24 24"><!-- 크레딧: 골드 코인 -->
@@ -486,20 +632,15 @@
 
   <div id="bot">
     <div id="tabs">
-      <div class="tab on" data-tab="Main"  onclick="switchTab('Main',this)"><span class="ti">🗡</span>메인</div>
-      <div class="tab" data-tab="Unit"     onclick="switchTab('Unit',this)"><span class="ti">⚔</span>유닛뽑기</div>
-      <div class="tab" data-tab="Upgrade"  onclick="switchTab('Upgrade',this)"><span class="ti">🔨</span>업그레이드</div>
-      <div class="tab" data-tab="Players"  onclick="switchTab('Players',this)"><span class="ti">👥</span>플레이어</div>
+      <div class="tab on" data-tab="Main"  onclick="switchTab('Main',this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 11L12 4.3 20.4 11"/><path d="M5.7 9.4V19.6h12.6V9.4"/><path d="M9.8 19.6v-4.7h4.4v4.7"/></svg></span>메인</div>
+      <div class="tab" data-tab="Unit"     onclick="switchTab('Unit',this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9.5" cy="8.5" r="3"/><path d="M4 19.5c0-3 2.5-5.2 5.5-5.2s5.5 2.2 5.5 5.2"/><path d="M18.5 4v5M16 6.5h5"/></svg></span>유닛뽑기</div>
+      <div class="tab" data-tab="Upgrade"  onclick="switchTab('Upgrade',this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5l5.3 5.3h-3.1v4.6h-4.4V9.8H6.7z"/><path d="M7 18.5h10"/></svg></span>업그레이드</div>
+      <div class="tab" data-tab="Players"  onclick="switchTab('Players',this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.6" r="2.7"/><path d="M3.8 19c0-2.9 2.3-4.9 5.2-4.9s5.2 2 5.2 4.9"/><circle cx="16.9" cy="9.2" r="2.1"/><path d="M15.4 14.5c2.4.3 4.6 2 4.6 4.5"/></svg></span>플레이어</div>
+      <div class="tab tabSet" id="settingsBtn" onclick="openSettings()" title="설정"><span class="ti"><svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg></span></div>
     </div>
 
     <div class="bp on" id="bpMain">
-      <div id="defaultCmd">
-        <div class="row">
-          <div class="btn pu" onclick="toggleSpeed(this)"><span class="bi">⏩</span><div class="bl" id="spdLbl">배속 1x</div></div>
-          <div class="btn" onclick="showHelp()"><span class="bi">❓</span><div class="bl">도움말</div></div>
-        </div>
-        <div class="hint" style="margin:4px auto 0">유닛뽑기 탭에서 건물→유닛 구매 후 <b>맵을 끌어</b> 배치<br>같은 유닛 <b>3개</b>를 <b>합체존</b>에 모으고 [조합] → 영웅 ⭐</div>
-      </div>
+      <div id="defaultCmd"><!-- 메인 홈 하단: 일단 비움(추후 부대 현황 등 추가 예정) --></div>
       <div id="unitCmd">
         <div class="scPanel" id="scSingle">
           <div class="scPortrait" id="uPortrait"></div>
@@ -546,6 +687,102 @@
       <div id="plGridWrap">
         <div style="font-size:10px;color:#2a4060;margin-bottom:2px">관전할 플레이어 선택 (P2~P8) · 전장 유닛 클릭=정보</div>
         <div class="plGrid" id="plGrid"></div>
+      </div>
+    </div>
+  </div>
+  <!-- 설정 팝업(반투명·각진 박스) — 소리/비디오/도움말/임무목표/배속 -->
+  <div id="settingsPop" class="hide" onclick="if(event.target===this)closeSettings()">
+    <div class="setCard">
+      <div class="setTitle"><span>설정</span><div class="setX" onclick="closeSettings()">✕</div></div>
+      <div class="setMenu">
+      <div class="setItem" onclick="setExpand('snd')"><span>소리 설정</span><b class="setArr" id="arr-snd">▾</b></div>
+      <div class="setBody" id="body-snd">
+        <div class="sndGroup">
+          <div class="setSub"><span>효과음</span>
+            <button class="segBtn sndBtn on" id="flag-sfx" onclick="event.stopPropagation();toggleSnd('sfx',this)">켜기</button></div>
+          <div class="setVolRow"><input type="range" class="setRange" data-k="sfx" min="0" max="100" value="80" style="background:linear-gradient(90deg,#ff3b3b 80%,rgba(255,255,255,.15) 80%)" oninput="setVol('sfx',this)" onclick="event.stopPropagation()"><b id="vol-sfx">80</b></div>
+        </div>
+        <div class="sndGroup">
+          <div class="setSub"><span>배경음</span>
+            <button class="segBtn sndBtn on" id="flag-bgm" onclick="event.stopPropagation();toggleSnd('bgm',this)">켜기</button></div>
+          <div class="setVolRow"><input type="range" class="setRange" data-k="bgm" min="0" max="100" value="60" style="background:linear-gradient(90deg,#ff3b3b 60%,rgba(255,255,255,.15) 60%)" oninput="setVol('bgm',this)" onclick="event.stopPropagation()"><b id="vol-bgm">60</b></div>
+        </div>
+      </div>
+      <div class="setItem" onclick="setExpand('vid')"><span>비디오 설정</span><b class="setArr" id="arr-vid">▾</b></div>
+      <div class="setBody" id="body-vid">
+        <div class="setRowLbl">그래픽 품질</div>
+        <div class="setSeg" id="seg-q">
+          <button class="segBtn" data-q="low" onclick="event.stopPropagation();setQuality('low')">저</button>
+          <button class="segBtn" data-q="mid" onclick="event.stopPropagation();setQuality('mid')">중</button>
+          <button class="segBtn on" data-q="high" onclick="event.stopPropagation();setQuality('high')">고</button>
+        </div>
+        <div class="setHint" id="qHint"></div>
+        <div class="setDiv">세부 설정</div>
+        <div class="setOptRow"><span>3D 유닛 모델</span>
+          <div class="setSeg sm" id="seg-m3d">
+            <button class="segBtn" data-v="off" onclick="event.stopPropagation();setVidOpt('m3d','off')">끄기</button>
+            <button class="segBtn on" data-v="on" onclick="event.stopPropagation();setVidOpt('m3d','on')">켜기</button>
+          </div></div>
+        <div class="setOptRow"><span>화질(해상도)</span>
+          <div class="setSeg sm" id="seg-res">
+            <button class="segBtn" data-v="low" onclick="event.stopPropagation();setVidOpt('res','low')">저</button>
+            <button class="segBtn" data-v="mid" onclick="event.stopPropagation();setVidOpt('res','mid')">중</button>
+            <button class="segBtn on" data-v="high" onclick="event.stopPropagation();setVidOpt('res','high')">고</button>
+          </div></div>
+        <div class="setOptRow"><span>이펙트</span>
+          <div class="setSeg sm" id="seg-fx">
+            <button class="segBtn" data-v="off" onclick="event.stopPropagation();setVidOpt('fx','off')">끔</button>
+            <button class="segBtn" data-v="min" onclick="event.stopPropagation();setVidOpt('fx','min')">최소</button>
+            <button class="segBtn on" data-v="full" onclick="event.stopPropagation();setVidOpt('fx','full')">전체</button>
+          </div></div>
+        <div class="setOptRow"><span>FPS 제한</span>
+          <div class="setSeg sm" id="seg-fps">
+            <button class="segBtn" data-v="30" onclick="event.stopPropagation();setVidOpt('fps','30')">30</button>
+            <button class="segBtn" data-v="60" onclick="event.stopPropagation();setVidOpt('fps','60')">60</button>
+            <button class="segBtn on" data-v="0" onclick="event.stopPropagation();setVidOpt('fps','0')">최대</button>
+          </div></div>
+      </div>
+      <div class="setItem" onclick="setExpand('mission')"><span>임무 목표</span><b class="setArr" id="arr-mission">▾</b></div>
+      <div class="setBody" id="body-mission">
+        <div class="missBlock">
+          <div class="missLbl">목표</div>
+          <ul class="missList">
+            <li><b>18라운드</b> 방어 성공 시 승리</li>
+            <li>적 <b>200기</b> 누적 시 패배</li>
+          </ul>
+        </div>
+        <div class="missBlock">
+          <div class="missLbl">조작</div>
+          <ul class="missList">
+            <li><b>시민</b>으로 유닛 구매 후 맵에 <b>드래그</b> 배치</li>
+            <li>같은 유닛 <b>3개</b>를 <b>합체존</b>에 모아 <b>[조합]</b></li>
+            <li>합체 성공 시 <b>영웅</b> ⭐ 탄생</li>
+          </ul>
+        </div>
+      </div>
+      <div class="setItem" onclick="setExpand('spd');renderVote()"><span>게임 배속 <b class="spdNow" id="spdNow">1x</b></span><b class="setArr" id="arr-spd">▾</b></div>
+      <div class="setBody" id="body-spd">
+        <div class="voteNote"><b>최저 배속</b>으로 진행 · 만장일치 시 가속</div>
+        <div class="voteCols">
+          <div class="voteCol" id="vcol-1" onclick="castVote(1)"><div class="vcSpd">1x</div><div class="vcPlayers" id="vc-1"></div></div>
+          <div class="voteCol" id="vcol-2" onclick="castVote(2)"><div class="vcSpd">2x</div><div class="vcPlayers" id="vc-2"></div></div>
+          <div class="voteCol" id="vcol-4" onclick="castVote(4)"><div class="vcSpd">4x</div><div class="vcPlayers" id="vc-4"></div></div>
+        </div>
+        <div class="voteResult">현재 진행 배속 <b id="voteResult">1x</b></div>
+      </div>
+      </div>
+      <button class="setPause" id="setPauseBtn" onclick="togglePause()"><span class="pIco">⏸</span><span id="pauseLbl">일시정지</span></button>
+      <button class="setExit" onclick="exitGame()">게임에서 나가기</button>
+    </div>
+  </div>
+  <!-- 나가기 확인 창 -->
+  <div id="exitConfirm" class="hide" onclick="if(event.target===this)closeExitConfirm()">
+    <div class="ecCard">
+      <div class="ecTitle">게임에서 나가기</div>
+      <div class="ecMsg">진행 상황이 모두 초기화됩니다.<br>정말 나가시겠어요?</div>
+      <div class="ecBtns">
+        <button class="ecCancel" onclick="closeExitConfirm()">취소</button>
+        <button class="ecGo" onclick="location.reload()">나가기</button>
       </div>
     </div>
   </div>
@@ -607,6 +844,13 @@ const UNIT_SVG = {
   photon:'<path d="M7 20h10l-1.5-4h-7z" fill="currentColor" opacity=".2"/><path d="M7 20h10l-1.5-4h-7z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M12 3l3.5 5-3.5 7-3.5-7z" fill="currentColor" opacity=".3"/><path d="M12 3l3.5 5-3.5 7-3.5-7z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><circle cx="12" cy="8.5" r="1.5" fill="currentColor"/>',
 };
 function unitSVG(id){ return '<svg viewBox="0 0 24 24" width="100%" height="100%">'+(UNIT_SVG[id]||'')+'</svg>'; }
+// 시민 벡터 아이콘(자체 제작) — 헬멧형 머리 + 어깨, 작업복 라인
+function citizenSVG(){ return '<svg viewBox="0 0 24 24" width="100%" height="100%">'
+  +'<path d="M4.5 21c0-4.2 3.4-7 7.5-7s7.5 2.8 7.5 7z" fill="#ffe6a0"/>'
+  +'<path d="M4.5 21c0-4.2 3.4-7 7.5-7s7.5 2.8 7.5 7z" fill="none" stroke="#8a6b16" stroke-width="1" stroke-linejoin="round"/>'
+  +'<circle cx="12" cy="7.2" r="3.7" fill="#ffe6a0" stroke="#8a6b16" stroke-width="1"/>'
+  +'<path d="M9.2 18.5v2.5M14.8 18.5v2.5" stroke="#8a6b16" stroke-width="1" opacity=".7"/>'
+  +'<path d="M12 14v3.2" stroke="#8a6b16" stroke-width="1" opacity=".6"/></svg>'; }
 // 충돌(분리) 판정용 반경 — 그림보다 작게 잡아 유닛끼리 더 촘촘히 붙게.
 function collideR(u){ return U[u.id].size * 0.62; }
 // 합성 사다리(가격 오름차순) — 같은 유닛 3개 → 다음 등급 영웅
@@ -713,8 +957,10 @@ let G=newGame();
 // ============================================================================
 const DPR=Math.min(devicePixelRatio||1,2);
 function setup(id){ const cv=document.getElementById(id),p=cv.parentElement;
-  const w=p.offsetWidth,h=p.offsetHeight; cv.width=w*DPR;cv.height=h*DPR;
-  const ctx=cv.getContext('2d');ctx.setTransform(DPR,0,0,DPR,0,0); return {ctx,W:w,H:h}; }
+  const w=p.offsetWidth,h=p.offsetHeight;
+  const eff=DPR*((typeof G!=='undefined'&&G.opt&&G.opt.resScale)||1);   // 화질(해상도) 배율
+  cv.width=Math.max(1,Math.round(w*eff));cv.height=Math.max(1,Math.round(h*eff));
+  const ctx=cv.getContext('2d');ctx.setTransform(eff,0,0,eff,0,0); return {ctx,W:w,H:h}; }
 // SF 배경: 깊은 그라데이션 + 미세 격자(두 단계) + 코너 패널 마커 + 비네팅
 function bg(ctx,W,H,c1,c2){ const g=ctx.createRadialGradient(W/2,H*0.42,0,W/2,H*0.42,Math.max(W,H)*0.85);
   g.addColorStop(0,c1);g.addColorStop(1,c2);ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
@@ -930,6 +1176,10 @@ function drawFixedSlots(ctx,W,H){
     });
   }
 }
+// 이펙트 레벨: 'full'(기본)=전부 / 'min'=발사체만 / 'off'=전부 제거
+function fxLevel(){ return (typeof G!=='undefined'&&G.opt&&G.opt.fx)||'full'; }
+function fxLite(){ return fxLevel()!=='full'; }   // min·off → 빔/타격/스파크/연기/총구/충전/가동파티클 생략
+function fxOff(){ return fxLevel()==='off'; }      // off → 발사체까지 제거
 function drawMain(cvId){ const {ctx,W,H}=setup(cvId||'cvMain'); GW=W;GH=H;
   const {side,ox,oy}=geom(W,H); const R=10;
   // 정적 지형 바닥(우주 배경 + 떠 있는 지형 플랫폼 + 용암 절벽 테두리) — 캐시에서 1회 빌드 후 매 프레임 재사용
@@ -945,7 +1195,8 @@ function drawMain(cvId){ const {ctx,W,H}=setup(cvId||'cvMain'); GW=W;GH=H;
   ctx.strokeStyle='rgba(255,68,85,.6)';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(ox,oy,pulse,0,6.28);ctx.stroke();
   ctx.strokeStyle='rgba(255,68,85,.25)';ctx.beginPath();ctx.arc(ox,oy,pulse+6,0,6.28);ctx.stroke();
   ctx.restore();
-  // ── 공격 이펙트(가산 합성으로 발광) ──
+  // ── 공격 이펙트(가산 합성으로 발광) ── (저화질/절전 시 생략: 빔/타격/스파크/파편/리콜/연기)
+  if(!fxLite()){
   ctx.save(); ctx.globalCompositeOperation='lighter';
   // 빔(유닛색·굵기)
   for(const b of G.beams){ const col=b.color||'#9be7ff', a=Math.max(0,b.life);
@@ -991,6 +1242,7 @@ function drawMain(cvId){ const {ctx,W,H}=setup(cvId||'cvMain'); GW=W;GH=H;
     ctx.globalAlpha=a*0.6; ctx.fillStyle=s.color; const rr=(s.r0||4)*(1+(1-a)*2.6);
     ctx.beginPath();ctx.arc(s.x,s.y,rr,0,6.28);ctx.fill(); }
   ctx.globalAlpha=1;
+  } // /fxLite — 전투 이펙트 생략
   // 적(형상별 네온 도형) + 체력/쉴드 바
   const T=G.timeSec;
   for(const e of G.enemies){ const p=posAt(e.d,W,H); const base=e.boss?13:9;
@@ -1016,7 +1268,25 @@ function drawMain(cvId){ const {ctx,W,H}=setup(cvId||'cvMain'); GW=W;GH=H;
         ctx.fillStyle='#5ad1ff';ctx.fillRect(p.x-bw/2,by-4,bw*shR,2.5); }
     }
   }
+  if(G.opt&&G.opt.model3d===false) drawUnits2D(ctx,W,H);   // 3D 끈 경우(저화질/절전) 2D 마커로 유닛 표시
 }
+// 3D 오버레이 OFF일 때 캔버스에 직접 그리는 유닛/적 2D 마커(저사양·절전용)
+function drawUnits2D(ctx,W,H){ ctx.save();
+  for(const u of G.units){ const def=U[u.id]; if(!def) continue; const x=u.x*W, y=u.y*H, col=def.color||'#7fdcff', r=u.hero?7:5.5;
+    ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=.32; ctx.fillStyle=col;
+    ctx.beginPath(); ctx.arc(x,y,r*1.7,0,6.28); ctx.fill();
+    ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=1;
+    ctx.fillStyle=col; ctx.strokeStyle='rgba(0,0,0,.55)'; ctx.lineWidth=1.3;
+    ctx.beginPath(); ctx.arc(x,y,r,0,6.28); ctx.fill(); ctx.stroke();
+    if(u.hero){ ctx.fillStyle='#fff5b0'; ctx.beginPath(); ctx.arc(x,y-r-3,2,0,6.28); ctx.fill(); }
+    if(G.sel&&G.sel.indexOf(u.uid)>=0){ ctx.strokeStyle='#cfeaff'; ctx.lineWidth=1.6; ctx.beginPath(); ctx.ellipse(x,y+r*0.4,r*1.5,r*0.7,0,0,6.28); ctx.stroke(); } }
+  for(const e of G.enemies){ if(!e.model3d) continue; const p=posAt(e.d,W,H), col=e.boss?COL.boss:COL.enemy, r=e.boss?10:7;
+    ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=.4; ctx.fillStyle=col;
+    ctx.beginPath(); ctx.arc(p.x,p.y,r*1.6,0,6.28); ctx.fill();
+    ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=1;
+    ctx.fillStyle=e.flash>0?'#fff':col; ctx.strokeStyle='rgba(0,0,0,.5)'; ctx.lineWidth=1.3;
+    ctx.beginPath(); ctx.arc(p.x,p.y,r,0,6.28); ctx.fill(); ctx.stroke(); }
+  ctx.restore(); }
 // 발광 원형 착륙 패드(심플). active=시민이 올라선/향하는 패드(밝게)
 function drawPad(ctx,cx,cy,rx,active){
   const ry=rx*0.5; const col=active?'130,225,255':'74,168,255';
@@ -1050,7 +1320,8 @@ function drawShopDecor(ctx,W,H){ return; }   // 정적(항상 표시) 엠블럼 
 function drawProd(){ const {ctx,W,H}=setup('cvUnit'); drawShopBg(ctx,W,H);
   GW=W;GH=H; const rx=Math.min(W,H)*0.10;
   // 유닛 패드: 3D 비콘이 준비되면 M3D가 렌더(여기선 생략), 아니면 기본 글로우 패드 폴백
-  const b3d=window.M3D && M3D.beaconReady && M3D.beaconReady();
+  const m3dOff=(G.opt&&G.opt.model3d===false);
+  const b3d=window.M3D && M3D.beaconReady && M3D.beaconReady() && !m3dOff;   // 3D 끄면 패드 폴백 표시
   SHOP_UNITS.forEach((uid,i)=>{ const p=CLOCK_POS[i], cx=p.x*W, cy=p.y*H, active=(G.citizen.buyId===uid||G.citizen.onPad===i);
     if(!b3d) drawPad(ctx,cx,cy,rx,active);
   });
@@ -1107,7 +1378,7 @@ const UPG_EMIT={
   evo:  {type:'spore', col:'150,255,130', rate:0.22, pts:[{dx:-0.045,dy:-0.04},{dx:0.045,dy:-0.055},{dx:0,dy:-0.085},{dx:0.05,dy:-0.02},{dx:-0.03,dy:-0.07}]},  // 여러 부위
 };
 function drawUpgFx(dt){ const {ctx,W,H}=setup('cvFx'); const M=Math.min(W,H);
-  TECH.forEach((b,i)=>{ const cfg=UPG_EMIT[b.id]; if(!cfg) return; const p=TECH_POS[i];
+  if(!fxLite()) TECH.forEach((b,i)=>{ const cfg=UPG_EMIT[b.id]; if(!cfg) return; const p=TECH_POS[i];   // 저화질/절전: 가동 파티클 생성 중단(기존 파티클은 자연 소멸)
     _upgTmr[b.id]=(_upgTmr[b.id]||0)-dt; if(_upgTmr[b.id]>0) return; _upgTmr[b.id]=cfg.rate;
     const gw=(typeof G!=='undefined'&&G._bldgGrow&&G._bldgGrow[b.id])||1;   // 선택 시 건물 확대 배율 → 위치·크기 같이 변함
     const pt=cfg.pts[Math.floor(Math.random()*cfg.pts.length)], ox=p.x*W+pt.dx*M*gw, oy=p.y*H+pt.dy*M*gw;
@@ -1501,7 +1772,7 @@ function renderBldgs(viewId,list,posArr,selId,onSel){ const v=document.getElemen
   v.querySelectorAll('.bldg').forEach(n=>n.remove());
   list.forEach((b,i)=>{ const p=posArr[i%posArr.length];
     const col=WPN_COL[b.wpn]||'#4aa8ff'; const lv=(G.atkLv&&G.atkLv[b.wpn])||0;
-    const has3d=!!(window.M3D && window.M3D.hasModel && window.M3D.hasModel(b.id));  // 3D 건물 모델 보유 시 프레임/아이콘 숨김(모델이 대신 섬)
+    const has3d=!!(window.M3D && window.M3D.hasModel && window.M3D.hasModel(b.id)) && !(typeof G!=='undefined'&&G.opt&&G.opt.model3d===false);  // 3D 건물 모델 보유 시 프레임/아이콘 숨김(모델이 대신 섬). 단 3D 끄면 2D 아이콘 표시
     const svg=has3d?'':(BLDG_SVG[b.id]?('<svg viewBox="0 0 24 24" width="34" height="34">'+BLDG_SVG[b.id]+'</svg>'):b.icon);
     const el=document.createElement('div'); el.className='bldg'+(b.id===selId?' sel':'');
     el.style.left=(p.x*100)+'%'; el.style.top=(p.y*100)+'%'; el.style.setProperty('--bc',col);
@@ -1719,14 +1990,14 @@ function buildClock(){ const v=document.getElementById('vUnit');
   SHOP_UNITS.forEach((uid,i)=>{ const d=U[uid],p=CLOCK_POS[i];
     const el=document.createElement('div'); el.className='shopUnit'; el.dataset.idx=i;
     el.style.left=(p.x*100)+'%'; el.style.top=(p.y*100)+'%';
-    const has3d = !!(window.M3D && window.M3D.hasModel && window.M3D.hasModel(uid));  // 3D 모델 보유 여부
+    const has3d = !!(window.M3D && window.M3D.hasModel && window.M3D.hasModel(uid)) && !(typeof G!=='undefined'&&G.opt&&G.opt.model3d===false);  // 3D 모델 보유 여부(3D 끄면 2D 아이콘 표시)
     const fig = has3d ? '' : '<div class="spadIcon" style="color:'+d.color+'">'+unitSVG(uid)+'</div>';  // 모델 없는 유닛(히드라)만 SVG 폴백
     el.innerHTML=fig+'<div class="slbl"><div class="sn">'+d.name+'</div><div class="sc"><svg viewBox="0 0 24 24" width="11" height="11" style="flex:0 0 auto"><circle cx="12" cy="12" r="9" fill="#f6c84a" stroke="#ffeaa0" stroke-width="1.6"/><path d="M14.8 8.8A4.4 4.4 0 1 0 14.8 15.2" fill="none" stroke="#7a5a12" stroke-width="2.6" stroke-linecap="round"/></svg>'+d.cost+'</div></div>';  // 모델 있는 유닛은 실제 3D가 패드 위에 섬(M3D.syncShop)
     v.appendChild(el);   // 클릭 핸들러 없음 — 꾹 누르기(vUnit)로 시민 이동/구매 통합 처리
   });
   const c=document.createElement('div'); c.className='citizen'; c.id='citizenEl';
-  const citModel=!!(window.M3D && window.M3D.hasModel && window.M3D.hasModel('citizen'));  // 3D 시민 있으면 이모지 프레임 숨김(모델이 대신)
-  c.innerHTML=(citModel?'':'<div class="cframe">🧍</div>')+'<div class="cn">시민</div>';
+  const citModel=!!(window.M3D && window.M3D.hasModel && window.M3D.hasModel('citizen')) && !(typeof G!=='undefined'&&G.opt&&G.opt.model3d===false);  // 3D 시민 있으면 이모지 프레임 숨김(3D 끄면 표시)
+  c.innerHTML=(citModel?'':'<div class="cframe">'+citizenSVG()+'</div>')+'<div class="cn">시민</div>';
   v.appendChild(c);
   renderClock();
 }
@@ -1890,8 +2161,112 @@ function renderPlayers(){ const g=document.getElementById('plGrid'); g.innerHTML
     if(!lock) el.onclick=()=>{ G.curPlayer=n; renderPlayers(); drawPlayer(); updateSpecLabel(); };   // 잠긴 슬롯(나)은 선택 불가
     g.appendChild(el);
   } }
-function toggleSpeed(el){ G.speedMul=G.speedMul===1?2:1; document.getElementById('spdLbl').textContent='배속 '+G.speedMul+'x'; }
-function showHelp(){ toast('유닛뽑기→건물→유닛구매→끌어배치→합체존3개+조합'); }
+function toggleSpeed(){ G.speedMul=G.speedMul===1?2:1; const e=document.getElementById('setSpd'); if(e) e.textContent=G.speedMul+'x'; }
+// ── 배속 투표(만장일치=최저 배속) ──
+const VOTE_PLAYERS=[1,2,3,4,5,6,7,8];   // 나(1) + 봇 7명
+function ensureVote(){ if(!G.vote){ G.vote={1:1,2:2,3:4,4:4,5:4,6:2,7:4,8:1}; G._voteT=4; computeSpeed(); } }
+function computeSpeed(){ ensureVote(); const sp=Math.min.apply(null, VOTE_PLAYERS.map(p=>G.vote[p]||1)); G.speedMul=sp;
+  const r=document.getElementById('voteResult'); if(r) r.textContent=sp+'x';
+  const n=document.getElementById('spdNow'); if(n) n.textContent=sp+'x';
+  if(G._lastSpeed!=null && G._lastSpeed!==sp && typeof addChat==='function') addChat('','게임 속도가 '+sp+'배속으로 변경되었습니다.');   // 배속 변경 안내(플레이어명 없음)
+  G._lastSpeed=sp; }
+function castVote(spd){ ensureVote(); G.vote[G.myPlayer||1]=spd; computeSpeed(); renderVote(); }
+function renderVote(){ ensureVote(); const me=G.myPlayer||1;
+  [1,2,4].forEach(s=>{ const c=document.getElementById('vc-'+s); if(!c) return; c.innerHTML='';
+    VOTE_PLAYERS.forEach(p=>{ if((G.vote[p]||1)===s){ const ch=document.createElement('div'); ch.className='vChip'+(p===me?' me':'');
+      ch.style.setProperty('--pc', PLAYER_VIEW_COLORS[(p-1)%PLAYER_VIEW_COLORS.length]); ch.textContent=p+'P'; ch.title=(p===me?'나 (P'+p+')':'P'+p); c.appendChild(ch); } }); });
+  const sp=Math.min.apply(null, VOTE_PLAYERS.map(p=>G.vote[p]||1));
+  [1,2,4].forEach(s=>{ const col=document.getElementById('vcol-'+s); if(col) col.classList.toggle('active', s===sp); }); }
+function tickVote(dt){ ensureVote(); G._voteT-=dt; if(G._voteT>0) return; G._voteT=3+Math.random()*3.5;
+  const bots=VOTE_PLAYERS.filter(p=>p!==(G.myPlayer||1)); if(!bots.length) return;
+  const p=bots[Math.floor(Math.random()*bots.length)];
+  const r=Math.random(), spd=r<0.6?4:(r<0.88?2:1);   // 봇 성향: 4x 60% · 2x 28% · 1x 12%
+  if(G.vote[p]!==spd){ G.vote[p]=spd; computeSpeed();
+    if(document.getElementById('body-spd') && getComputedStyle(document.getElementById('body-spd')).display!=='none') renderVote(); } }
+function showHelp(){ openSettings(); setExpand('mission'); }
+// ── 설정 팝업(소리/비디오/도움말/임무목표/배속) ──
+function openSettings(){ const p=document.getElementById('settingsPop'); if(!p) return; p.classList.remove('hide');
+  const s=document.getElementById('setSpd'); if(s) s.textContent=G.speedMul+'x';
+  if(typeof applyVideo==='function') applyVideo();
+  if(typeof updatePauseBtn==='function') updatePauseBtn(); }
+function closeSettings(){ const p=document.getElementById('settingsPop'); if(p) p.classList.add('hide'); }
+const PAUSE_MAX=3;
+function togglePause(){
+  if(!G.paused){   // 일시정지 시도 — 횟수 제한
+    if((G.pauseUsed||0)>=PAUSE_MAX){ addChat('','일시정지 횟수를 모두 사용했습니다. (최대 '+PAUSE_MAX+'회)'); updatePauseBtn(); return; }
+    G.pauseUsed=(G.pauseUsed||0)+1; G.paused=true;
+    const ga=document.getElementById('gameArea'); if(ga) ga.classList.add('gray');   // 무채색(설정 나가도 유지)
+    addChat('','플레이어 P'+(G.myPlayer||1)+'가 일시정지를 사용하였습니다.');
+  } else {         // 재개
+    G.paused=false; const ga=document.getElementById('gameArea'); if(ga) ga.classList.remove('gray');
+  }
+  updatePauseBtn(); }
+function updatePauseBtn(){
+  const btn=document.getElementById('setPauseBtn'), lbl=document.getElementById('pauseLbl'), ico=btn&&btn.querySelector('.pIco');
+  const remain=PAUSE_MAX-(G.pauseUsed||0);
+  if(btn){ btn.classList.toggle('paused',G.paused); btn.classList.toggle('disabled', !G.paused && remain<=0); }
+  if(lbl) lbl.textContent = G.paused ? '재개' : ('일시정지 ('+remain+'회 남음)');
+  if(ico) ico.textContent = G.paused?'▶':'⏸'; }
+function exitGame(){ const p=document.getElementById('exitConfirm'); if(p) p.classList.remove('hide'); }
+function closeExitConfirm(){ const p=document.getElementById('exitConfirm'); if(p) p.classList.add('hide'); }
+function setExpand(id){ const b=document.getElementById('body-'+id), a=document.getElementById('arr-'+id);
+  if(!b) return; const willOpen=getComputedStyle(b).display==='none';
+  document.querySelectorAll('#settingsPop .setBody').forEach(x=>x.style.display='none');   // 한 구역만 열기: 나머지 닫기
+  document.querySelectorAll('#settingsPop .setArr').forEach(x=>x.textContent='▾');
+  if(willOpen){ b.style.display='block'; if(a) a.textContent='▴'; } }
+function renderVol(key){ G.opt=G.opt||{sfx:true,bgm:true}; G.opt.vol=G.opt.vol||{sfx:80,bgm:60};
+  const sl=document.querySelector('.setRange[data-k="'+key+'"]'); if(!sl) return;
+  const on=G.opt[key]!==false; const v=on?(G.opt.vol[key]||0):0;
+  sl.value=v; sl.style.opacity=on?'1':'.35';
+  sl.style.background='linear-gradient(90deg,#ff3b3b '+v+'%,rgba(255,255,255,.15) '+v+'%)';
+  const lbl=document.getElementById('vol-'+key); if(lbl) lbl.textContent=v; }
+function refreshModelViews(){  /* 3D on/off 시 유닛뽑기·업그레이드 DOM 아이콘 폴백 갱신 */
+  try{ if(typeof buildClock==='function') buildClock(); }catch(e){}
+  try{ if(typeof renderBldgs==='function') renderBldgs('vUpgrade',TECH,TECH_POS,(typeof G!=='undefined'?G.techB:null),selectUpg); }catch(e){} }
+function setModel3d(on){ G.opt=G.opt||{sfx:true,bgm:true}; G.opt.model3d=on;
+  const fb=document.getElementById('flag-m3d'); if(fb) fb.textContent=on?'ON':'OFF';
+  const cv=document.getElementById('cvMarine'); if(cv && !on) cv.style.display='none';   /* 켜기는 렌더 루프가 탭에 맞춰 처리 */
+  refreshModelViews(); }
+const RES_SCALE={low:.55,mid:.78,high:1};
+function segOn(id,val){ const c=document.getElementById(id); if(!c) return; c.querySelectorAll('.segBtn').forEach(b=>b.classList.toggle('on', b.dataset.v===val||b.dataset.q===val)); }
+function applyVideo(){ G.opt=G.opt||{sfx:true,bgm:true};   // 현재 비디오 옵션 → 세그먼트 하이라이트/라이트모드 반영
+  segOn('seg-q', G.opt.quality||'high');
+  segOn('seg-m3d', G.opt.model3d===false?'off':'on');
+  segOn('seg-res', G.opt.resLvl||'high');
+  segOn('seg-fx', G.opt.fx||'full');
+  segOn('seg-fps', String(G.opt.fps||0));
+  const qh=document.getElementById('qHint'); if(qh){ const q=G.opt.quality||'high';
+    qh.textContent = q==='low' ? '🔋 절전 모드 — 3D·이펙트 끔, 30FPS 절약'
+      : (q==='mid' ? '균형 — 무거운 효과만 축소' : '최고 품질 — 모든 효과 표시');
+    qh.classList.toggle('save', q==='low'); }
+  document.body.classList.toggle('lite', (G.opt.fx==='off')||(G.opt.quality==='low')||G.opt.powerSave===true); }
+function setQuality(q){ G.opt=G.opt||{sfx:true,bgm:true}; G.opt.quality=q; G.opt.powerSave=false;   // 프리셋: 세부값 일괄 적용(절전 해제)
+  if(q==='low'){      G.opt.model3d=false; G.opt.resLvl='low';  G.opt.resScale=RES_SCALE.low;  G.opt.fx='off';  G.opt.fps=30; }
+  else if(q==='mid'){ G.opt.model3d=true;  G.opt.resLvl='mid';  G.opt.resScale=RES_SCALE.mid;  G.opt.fx='min';  G.opt.fps=60; }
+  else {              G.opt.model3d=true;  G.opt.resLvl='high'; G.opt.resScale=RES_SCALE.high; G.opt.fx='full'; G.opt.fps=0; }
+  setModel3d(G.opt.model3d); applyVideo(); }
+// 절전 모드: 켜면 저전력 프로파일(3D끔·해상도저·이펙트최소·30fps) 적용, 끄면 이전 값 복원
+function setPowerSave(on){ G.opt=G.opt||{sfx:true,bgm:true}; if(on===(G.opt.powerSave===true)){ applyVideo(); return; }
+  G.opt.powerSave=on;
+  if(on){ G.opt._save={model3d:G.opt.model3d, resLvl:G.opt.resLvl, resScale:G.opt.resScale, fx:G.opt.fx, fps:G.opt.fps};
+    G.opt.model3d=false; G.opt.resLvl='low'; G.opt.resScale=RES_SCALE.low; G.opt.fx='min'; G.opt.fps=30; setModel3d(false);
+  } else { const s=G.opt._save||{};
+    G.opt.model3d=(s.model3d===false)?false:true; G.opt.resLvl=s.resLvl||'high'; G.opt.resScale=s.resScale||1; G.opt.fx=s.fx||'full'; G.opt.fps=s.fps||0; setModel3d(G.opt.model3d);
+  }
+  applyVideo(); }
+function setVidOpt(kind,val){ G.opt=G.opt||{sfx:true,bgm:true}; G.opt.powerSave=false;   // 세부 개별 설정(절전 해제하고 덮어씀)
+  if(kind==='m3d'){ setModel3d(val==='on'); }
+  else if(kind==='res'){ G.opt.resLvl=val; G.opt.resScale=RES_SCALE[val]||1; }
+  else if(kind==='fx'){ G.opt.fx=val; }
+  else if(kind==='fps'){ G.opt.fps=+val; }
+  applyVideo(); }
+function togglePowerSave(){ setPowerSave(!(G.opt&&G.opt.powerSave===true)); }
+function toggleSnd(key,btn){ G.opt=G.opt||{sfx:true,bgm:true}; G.opt.vol=G.opt.vol||{sfx:80,bgm:60}; G.opt[key]=!G.opt[key];
+  if(btn){ btn.classList.toggle('on',G.opt[key]); btn.textContent=G.opt[key]?'켜기':'끄기'; } renderVol(key); }
+function setVol(key,el){ const v=Math.max(0,Math.min(100,+el.value)); G.opt=G.opt||{sfx:true,bgm:true}; G.opt.vol=G.opt.vol||{sfx:80,bgm:60}; G.opt.vol[key]=v;
+  if(G.opt[key]===false){ G.opt[key]=true; const fb=document.getElementById('flag-'+key); if(fb){ fb.classList.add('on'); fb.textContent='켜기'; } el.style.opacity='1'; }
+  const lbl=document.getElementById('vol-'+key); if(lbl) lbl.textContent=v;
+  el.style.background='linear-gradient(90deg,#ff3b3b '+v+'%,rgba(255,255,255,.15) '+v+'%)'; }
 // ── 채팅(메인-하단 사이) — 로컬 입력 + 다른 플레이어 가짜 메시지(임시) ──
 function escHtml(s){ return String(s).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
 function addChat(sender, text, color){ const box=document.getElementById('chatLog'); if(!box) return;
@@ -2254,7 +2629,7 @@ vUpg.addEventListener('touchstart',onUpgDown,{passive:false}); vUpg.addEventList
 // 투사체 오버레이(#cvFx, 3D 모델 위) — 미사일/탄이 유닛 몸에 가려지지 않도록 최상단에 그림
 function drawFx(){ const {ctx,W,H}=setup('cvFx');  // setup이 캔버스 크기 재설정=자동 클리어
   ctx.save(); ctx.globalCompositeOperation='lighter';
-  for(const s of G.shots){ ctx.fillStyle=s.color; ctx.strokeStyle=s.color;
+  if(!fxOff()) for(const s of G.shots){ ctx.fillStyle=s.color; ctx.strokeStyle=s.color;   // 이펙트 끔: 발사체도 생략
     if(s.kind==='plasma'){ ctx.globalAlpha=.4; ctx.beginPath();ctx.arc(s.x,s.y,7,0,6.28);ctx.fill();
       ctx.globalAlpha=1; ctx.beginPath();ctx.arc(s.x,s.y,3.5,0,6.28);ctx.fill();
     } else if(s.kind==='needle'){ ctx.save();ctx.translate(s.x,s.y);ctx.rotate(Math.atan2(s.vy,s.vx));
@@ -2278,7 +2653,8 @@ function drawFx(){ const {ctx,W,H}=setup('cvFx');  // setup이 캔버스 크기 
       ctx.globalAlpha=1; ctx.fillStyle='#fffbe8'; ctx.beginPath();ctx.arc(1.5,0,1.8,0,6.28);ctx.fill();
       ctx.restore();
     } else { ctx.globalAlpha=1; ctx.beginPath();ctx.arc(s.x,s.y,2.4,0,6.28);ctx.fill(); } }
-  // 총구 섬광(모델 위) — 거치무기 발사구·총구 플래시. z.r로 크기(터렛 크게)
+  // 총구 섬광·포토 충전(저화질/절전 시 생략)
+  if(!fxLite()){
   for(const z of G.muzzles){ const a=Math.max(0,z.life); ctx.globalAlpha=a*0.6; ctx.fillStyle=z.color;
     ctx.beginPath();ctx.arc(z.x,z.y,(z.r||4)*a*1.6+2,0,6.28);ctx.fill();        // 외곽 발광
     ctx.globalAlpha=a; ctx.fillStyle='#ffffff'; ctx.beginPath();ctx.arc(z.x,z.y,(z.r||4)*a*0.6+1,0,6.28);ctx.fill(); }  // 밝은 코어
@@ -2301,16 +2677,24 @@ function drawFx(){ const {ctx,W,H}=setup('cvFx');  // setup이 캔버스 크기 
       ctx.globalAlpha=ch*0.35*vis; ctx.fillStyle='#cdf3ff';
       ctx.beginPath();ctx.arc(mx+Math.cos(ang)*rr, my+Math.sin(ang)*rr, 1.4,0,6.28);ctx.fill(); }
   }
+  } // /fxLite — 총구/충전 생략
   ctx.restore();
 }
 // ── 루프 ──
 let last=performance.now();
-function loop(now){ const dt=Math.min(now-last,100)/1000; last=now;
+function loop(now){
+  const cap=(G.opt&&G.opt.fps)|0;   // FPS 제한(0=무제한). 게임시간은 누적 dt로 유지
+  if(cap>0 && (now-last) < (1000/cap - 1.5)){ requestAnimationFrame(loop); return; }
+  const dt=Math.min(now-last,100)/1000; last=now;
   tickFakeChat(dt);   // 다른 플레이어 가짜 채팅(임시)
-  tickResearch(dt);   // 업그레이드 연구 타이머(진행 중이면 카운트다운, 완료 시 레벨업)
-  if(G.phase==='playing'){ for(let k=0;k<G.speedMul;k++) step(dt/1*1); }
-  if(G.tab==='Unit') stepCitizen(dt);   // 시민 이동(도착 시 구매)
-  if(G.tab==='Main'){ stepCmdMove(dt); separateUnits(); renderUnits(); } // 이동명령 + 겹침 방지
+  tickVote(dt);       // 배속 투표(봇 성향 변화) — 일시정지와 무관하게 진행
+  if(!G.paused){      // 일시정지: 게임 진행(전투/연구/시민/이동/물리) 정지, 렌더·UI는 유지
+    tickResearch(dt);   // 업그레이드 연구 타이머(진행 중이면 카운트다운, 완료 시 레벨업)
+    if(G.phase==='playing'){ for(let k=0;k<G.speedMul;k++) step(dt/1*1); }
+    if(G.tab==='Unit') stepCitizen(dt);   // 시민 이동(도착 시 구매)
+    if(G.tab==='Main'){ stepCmdMove(dt); separateUnits(); } // 이동명령 + 겹침 방지
+  }
+  if(G.tab==='Main') renderUnits();   // 유닛 DOM 라벨 위치는 항상 갱신
   // 선택된 적: 죽으면 해제, 살아있으면 상태창 HP/실드 실시간 갱신
   if(G.selEnemy!=null){ const se=G.enemies.find(x=>x.eid===G.selEnemy);
     if(!se) deselectUnit(); else { const hpEl=document.getElementById('uHp'); if(hpEl) hpEl.innerHTML=enemyHpHTML(se); } }
@@ -2330,7 +2714,7 @@ function loop(now){ const dt=Math.min(now-last,100)/1000; last=now;
   else drawMiniMap();
   // 3D 오버레이: 메인/관전=게임유닛 / 유닛뽑기=슬롯 / 업글=건물
   const mcv=document.getElementById('cvMarine');
-  if(window.M3D && window.M3D.ready()){ const show=(G.tab==='Main'||G.tab==='Unit'||G.tab==='Upgrade'||G.tab==='Players'); mcv.style.display=show?'block':'none';
+  if(window.M3D && window.M3D.ready()){ const show=(G.tab==='Main'||G.tab==='Unit'||G.tab==='Upgrade'||G.tab==='Players') && !(G.opt&&G.opt.model3d===false); mcv.style.display=show?'block':'none';
     if(G.tab==='Main'||G.tab==='Players') window.M3D.sync(G.units, GW, GH, dt, G.sel, G.enemies, G.selEnemy);
     else if(G.tab==='Unit') window.M3D.syncShop(GW, GH, dt);
     else if(G.tab==='Upgrade') window.M3D.syncBldg(GW, GH, dt); }
