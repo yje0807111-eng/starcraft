@@ -1350,12 +1350,17 @@ const ENEMY_SHAPE={
 };
 function enemyShape(n){ return ENEMY_SHAPE[n]||'orb'; }
 const TOTAL_ROUNDS=MON.length;            // 18
-const ENEMIES_PER_ROUND=12;               // 라운드당 적 수 (밸런스용)
-const SPAWN_GAP=1.0;                       // 적 스폰 간격(초)
-const ROUND_GAP=2.5;                       // (구) 라운드 사이 대기 — 현재 미사용
+const ENEMIES_PER_ROUND=100;               // 일반 라운드 적 수 = 99 + 스페셜 1
+const SPAWN_GAP=1.5;                        // 적 스폰 간격(초) → 100마리×1.5s=150초 스폰 후 40초 정리시간
+const ROUND_GAP=2.5;                        // (구) 라운드 사이 대기 — 현재 미사용
 const PREP_TIME=10;                        // 라운드 시작 전 준비(유닛 뽑기) 시간(초)
 const ROUND_TIME=190;                      // 라운드 제한시간 3:10(초). 0초 도달 시 다음 라운드 자동 시작
-const LOSE_COUNT=100;                      // 설계서 §5-8: 트랙 100기 누적 패배
+const BOSS_EVERY=5;                         // 5라운드마다 보스 라운드(보스 1마리만)
+const LOSE_COUNT=200;                       // 트랙 200기 누적 시 탈락(게임아웃)
+const WARN1=150, WARN2=190;                 // 적 누적 경고 임계치
+const SPECIAL_MIN=25;                       // 스페셜 유닛 처치 시 미네랄 보너스
+function isBossRound(r){ return r % BOSS_EVERY === 0; }
+function bossHp(r){ return 4000 + r*450; }
 const START_MIN=40, START_GAS=0;
 const MAX_UNITS=200;                       // 인구 (HUD 0/200)
 const KILL_MIN_PER10=1, KILL_MIN_PER100=5; // 엑셀: 10킬당1, 100킬당5
@@ -1663,7 +1668,7 @@ function drawMain(cvId){ const {ctx,W,H}=setup(cvId||'cvMain'); GW=W;GH=H;
   const T=G.timeSec;
   for(const e of G.enemies){ const p=posAt(e.d,W,H); const base=e.boss?13:9;
     const punch=1+(e.hit||0)*0.35; const r=base*punch; // 피격 시 순간 확대
-    const col=e.boss?COL.boss:COL.enemy;
+    const col=e.special?'#ffd24a':(e.boss?COL.boss:COL.enemy);   // 스페셜=금색
     if(!e.model3d){  // 2D 네온 적(3D 모델 적은 WebGL이 렌더 → 도형 생략)
       if(e.maxSh>0 && e.sh>0){ ctx.save(); ctx.globalCompositeOperation='lighter';   // 실드 피격 막
         ctx.globalAlpha=0.25+0.6*(e.shHit||0); ctx.strokeStyle='#5ad1ff'; ctx.lineWidth=1.6;
@@ -1828,7 +1833,7 @@ function drawMiniMap(){
   // 유닛/적 — 단색 도트
   for(const u of G.units){ const def=U[u.id]; ctx.fillStyle=def.color;
     ctx.beginPath(); ctx.arc(u.x*W, u.y*H, u.hero?2.4:1.6, 0, 6.28); ctx.fill(); }
-  for(const e of G.enemies){ const p=posAt(e.d,GW,GH); ctx.fillStyle=e.boss?COL.boss:'#ff5566';
+  for(const e of G.enemies){ const p=posAt(e.d,GW,GH); ctx.fillStyle=e.special?'#ffd24a':(e.boss?COL.boss:'#ff5566');
     ctx.beginPath(); ctx.arc(p.x*sx, p.y*sy, e.boss?2.6:1.7, 0, 6.28); ctx.fill(); }
   // 외곽 라인(아주 얇고 은은하게 — HUD 시안 톤, 배경과 거의 동화)
   rR(ctx,0.5,0.5,W-1,H-1,2); ctx.strokeStyle='rgba(0,229,255,.22)'; ctx.lineWidth=0.5; ctx.stroke();
@@ -1929,10 +1934,11 @@ function combine(){
 
 function roundDef(r){ const m=MON[Math.min(Math.max(1,r),MON.length)-1]; return m; }
 const ENEMY_MODEL={ '옵저버':'observer', '오버로드':'overlord' };  // 적 이름 → 3D 모델 id(있으면 3D 렌더, 없으면 네온 도형)
-function spawnEnemy(boss){ const m=roundDef(G.round);
-  G.enemies.push({eid:G.eSeq++, d:0, hp:m.hp, maxHp:m.hp, sh:m.sh, maxSh:m.sh, ar:m.ar,
-    speed:0.018+(boss?0:0.004), boss:!!boss||!!m.boss, flash:0, name:m.n,
-    shape:enemyShape(m.n), ph:(G.eSeq*0.7)%6.283, hit:0, model3d:ENEMY_MODEL[m.n]||null}); }
+function spawnEnemy(opts){ opts=opts||{}; const boss=!!opts.boss, special=!!opts.special; const m=roundDef(G.round);
+  const hp = boss ? bossHp(G.round) : m.hp;
+  G.enemies.push({eid:G.eSeq++, d:0, hp:hp, maxHp:hp, sh:boss?0:m.sh, maxSh:boss?0:m.sh, ar:boss?10:m.ar,
+    speed:0.018+(boss?0:0.004), boss:boss, special:special, flash:0, name:boss?'보스':(special?'스페셜':m.n),
+    shape:boss?'capital':enemyShape(m.n), ph:(G.eSeq*0.7)%6.283, hit:0, model3d:boss?null:(ENEMY_MODEL[m.n]||null)}); }
 
 function hitEnemy(e,dmg){ let d=Math.max(1,dmg-(e.ar||0)); e.flash=4; e.hit=1; e.shHit=e.sh>0?1:0;
   if(e.sh>0){ if(d<=e.sh){ e.sh-=d; return; } d-=e.sh; e.sh=0; } e.hp-=d; }
@@ -2002,19 +2008,23 @@ function step(dt){
   if(G.roundTime==null) G.roundTime=PREP_TIME;
   G.roundTime-=dt;
   if(G.roundPhase!=='active'){   // 준비 단계: 유닛 뽑고 대기, 스폰 없음
-    if(G.roundTime<=0){ G.roundPhase='active'; G.roundTime=ROUND_TIME; G.toSpawn=ENEMIES_PER_ROUND; G.spawnTimer=0; }
+    if(G.roundTime<=0){ G.roundPhase='active'; G.roundTime=ROUND_TIME; G.spawnTimer=0;
+      if(isBossRound(G.round)){ G.toSpawn=0; spawnEnemy({boss:true}); }   // 보스 라운드: 보스 1마리만
+      else { G.toSpawn=ENEMIES_PER_ROUND; G.specialAt=1+Math.floor(Math.random()*ENEMIES_PER_ROUND); }  // 99 + 스페셜 1
+    }
   } else {                       // 전투 단계: 제한시간 종료 시 다음 라운드 준비로
     if(G.roundTime<=0){ const n=G.round+1;
       if(n>TOTAL_ROUNDS){ G.phase='won'; showOverlay(); return; }
       G.gas+=3+G.round; G.mineral+=10+G.round*3;   // 라운드 클리어 보너스(가스+미네랄)
       G.round=n; G.roundPhase='prep'; G.roundTime=PREP_TIME; G.toSpawn=0; G.spawnTimer=0; }
   }
-  // 스폰(전투 단계에서만)
-  if(G.roundPhase==='active' && G.toSpawn>0){ G.spawnTimer-=dt; if(G.spawnTimer<=0){ spawnEnemy(false); G.toSpawn--; G.spawnTimer=SPAWN_GAP;
-    if(G.toSpawn===0 && roundDef(G.round).boss){ spawnEnemy(true); } } }
-  // 적 이동 + 누적 패배(설계서 §5-8: 100기)
+  // 스폰(전투 단계, 일반 라운드만 — 150초 동안 1.5초당 1마리, 1마리는 스페셜)
+  if(G.roundPhase==='active' && G.toSpawn>0){ G.spawnTimer-=dt; if(G.spawnTimer<=0){
+    spawnEnemy({special: G.toSpawn===G.specialAt}); G.toSpawn--; G.spawnTimer=SPAWN_GAP; } }
+  // 적 이동 + 누적 경고/탈락(200기)
   for(const e of G.enemies){ e.d=(e.d+e.speed*dt*4)%1; if(e.flash>0) e.flash--; if(e.hit>0) e.hit=Math.max(0,e.hit-dt*5); if(e.shHit>0) e.shHit=Math.max(0,e.shHit-dt*4); }
-  if(G.enemies.length>=LOSE_COUNT){ G.phase='lost'; showOverlay(); return; }
+  checkEnemyWarn(G.enemies.length);
+  if(G.enemies.length>=LOSE_COUNT){ addChat('', (G.myPlayer||1)+'번 플레이어가 탈락하였습니다.'); G.phase='lost'; showOverlay(); return; }
   unitAI(dt);   // 명령 이동(공격이동/반복이동) + 스킬 타이머
   // 유닛 자동 공격
   for(const u of G.units){ const def=U[u.id]; if(u.atkT>0) u.atkT-=dt;
@@ -2047,6 +2057,7 @@ function step(dt){
       G.pendingHits.splice(i,1); } }
   // 처치
   for(let i=G.enemies.length-1;i>=0;i--){ const e=G.enemies[i]; if(e.hp<=0){ G.kills++;
+    if(e.special){ G.mineral+=SPECIAL_MIN; toast('스페셜 처치! +'+SPECIAL_MIN+' 미네랄'); }   // 스페셜 유닛=미네랄 보너스
     if(G.kills%100===0) G.mineral+=KILL_MIN_PER100; else if(G.kills%10===0) G.mineral+=KILL_MIN_PER10;
     deathBurst(e); G.enemies.splice(i,1); } }
   // (라운드 진행은 위쪽 제한시간 타이머가 담당 — 클리어로는 넘어가지 않음)
@@ -2817,6 +2828,11 @@ function toast(msg){ if(!msg) return;
   _lastSysMsg=msg; _lastSysT=now;
   addChat('', '▸ '+msg);   // 시스템 메시지(.cmsg.sys 스타일)
 }
+// 적 누적 경고(150/190기) — 임계 통과 시 1회만, 히스테리시스로 도배 방지
+function checkEnemyWarn(n){
+  if(n>=WARN2){ if(!G._w2){ G._w2=true; addChat('', '⚠️ 적 '+WARN2+'기 누적! 곧 탈락합니다 ('+n+'/'+LOSE_COUNT+')'); } } else if(n<WARN2-8) G._w2=false;
+  if(n>=WARN1){ if(!G._w1){ G._w1=true; addChat('', '⚠️ 적 '+WARN1+'기 누적! 위험 ('+n+'/'+LOSE_COUNT+')'); } } else if(n<WARN1-8) G._w1=false;
+}
 
 // ── 오버레이 ──
 // 게임 플레이 중에만 하단 콘솔(#bot)을 노출. 타이틀/방찾기/로비 등 메뉴 화면에서는 숨김.
@@ -2829,7 +2845,7 @@ function showOverlay(){ const ov=document.getElementById('ov'),tt=document.getEl
   else if(G.phase==='won'){ tt.textContent='CLEAR! 🏆'; tt.style.color='#ffd24a';
     dd.textContent=TOTAL_ROUNDS+'라운드를 모두 막아냈습니다!\n킬 '+G.kills; bt.textContent='다시 시작'; }
   else if(G.phase==='lost'){ tt.textContent='DEFEAT'; tt.style.color='#ff5c5c';
-    dd.textContent='라운드 '+G.round+'에서 적이 100기 누적되었습니다.\n킬 '+G.kills; bt.textContent='다시 시작'; }
+    dd.textContent='라운드 '+G.round+'에서 적이 '+LOSE_COUNT+'기 누적되어 탈락했습니다.\n킬 '+G.kills; bt.textContent='다시 시작'; }
 }
 document.getElementById('ovBtn').onclick=()=>{
   if(G.phase==='ready'){ openRooms(); }                 // 멀티플레이 → 방 찾기
@@ -3084,7 +3100,7 @@ function startGameNow(activePlayers, myNum){
 function playerLeave(n){ if(!G.activePlayers) return; const mine=G.myPlayer||1; if(n===mine) return;
   const i=G.activePlayers.indexOf(n); if(i<0) return;
   G.activePlayers.splice(i,1);
-  addChat('','P'+n+'님이 게임에서 나갔습니다.');
+  addChat('', n+'번 플레이어가 탈락하였습니다.');
   if(G.curPlayer===n){ const other=G.activePlayers.filter(x=>x!==mine); G.curPlayer=other[0]||mine;
     if(G.tab==='Players'){ if(typeof drawPlayer==='function') drawPlayer(); updateSpecLabel(); } }
   if(G.tab==='Players') renderPlayers();
