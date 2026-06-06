@@ -82,11 +82,8 @@
     border:1px solid rgba(0,229,255,.22);border-radius:7px;
     box-shadow:inset 0 0 12px rgba(0,0,0,.4),0 1px 3px rgba(0,0,0,.45)}
   /* 시계 — 주변 HUD 숫자와 동일한 Rajdhani 폰트/청록 톤(디지털 시계체 X) */
-  #hudC{display:flex;flex-direction:column;align-items:center;gap:1px}
   #hudC .time{font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif;font-size:16px;font-weight:700;line-height:1;
     letter-spacing:1.5px;color:var(--hud);text-shadow:0 0 5px var(--hud-glow),0 2px 3px #000}
-  #hudC .time.prep{color:#ffb14d;text-shadow:0 0 6px rgba(255,177,77,.5),0 2px 3px #000}   /* 준비 단계=주황 */
-  #hudC .rndPhase{font-size:8px;font-weight:800;letter-spacing:2px;color:#ffb14d;line-height:1;min-height:8px;text-shadow:0 1px 2px #000}
   #hudRwrap{display:flex;flex-direction:column;align-items:flex-end;gap:4px;margin-top:2px}
   #hudR{display:flex;align-items:center;gap:9px;font-size:10.5px;font-weight:800;white-space:nowrap;text-shadow:0 2px 4px #000,0 0 8px #000}
   /* 맵 이름: 자원 아래 우측 — 배경 없이 텍스트 + 청록 액센트 + 진한 쉐도우 */
@@ -602,6 +599,7 @@
   .plbtn.lock .plnum{color:#9aa8b8}
   .plnum{font-size:22px;font-weight:800;font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif;color:var(--pc);line-height:1;text-shadow:0 1px 2px #000}
   .plst{font-size:9px;font-weight:700;letter-spacing:.6px;color:#9aa6b4;text-transform:uppercase}
+  .plcnt{font-size:8.5px;font-weight:700;color:#9aa6b2;margin-top:2px;font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif}
 
   /* ===== 공유 우주 로딩방 배경 (멀티플레이/방 찾기/방 생성/로비 공통) =====
      게임과 동일한 space_bg 타일을 어둡게 깔고 빨강 비네트로 기존 분위기 유지.
@@ -864,7 +862,7 @@
         <span class="kill"><b id="hKill">0</b> Kill</span>
         <span id="specLabel"></span>
       </div>
-      <div id="hudC"><span class="rndPhase" id="hPhase"></span><span class="time" id="hTime">00:00</span></div>
+      <div id="hudC"><span class="time" id="hTime">00:00</span></div>
       <div id="hudRwrap">
         <div id="hudR">
           <span class="res min"><svg class="ri" viewBox="0 0 24 24"><!-- 크레딧: 골드 코인 -->
@@ -1349,7 +1347,7 @@ const ENEMY_SHAPE={
   '스커지':'orb','발키리':'jet','스카웃':'jet','퀸':'blob',
 };
 function enemyShape(n){ return ENEMY_SHAPE[n]||'orb'; }
-const TOTAL_ROUNDS=MON.length;            // 18
+const TOTAL_ROUNDS=20;                    // 총 20라운드(보스: 5·10·15·20). 적 정의(MON)는 부족분 마지막 것 반복
 const ENEMIES_PER_ROUND=100;               // 일반 라운드 적 수 = 99 + 스페셜 1
 const SPAWN_GAP=1.5;                        // 적 스폰 간격(초) → 100마리×1.5s=150초 스폰 후 40초 정리시간
 const ROUND_GAP=2.5;                        // (구) 라운드 사이 대기 — 현재 미사용
@@ -2704,10 +2702,14 @@ function renderPlayers(){ const g=document.getElementById('plGrid'); g.innerHTML
     const el=document.createElement('div');
     el.className='plbtn'+(present&&n===G.curPlayer&&!lock?' me':'')+(lock?' lock':'')+(!present?' off':'');   // 미입장=off
     el.style.setProperty('--pc', PLAYER_VIEW_COLORS[(n-1)%PLAYER_VIEW_COLORS.length]);
-    el.innerHTML='<div class="plnum">'+n+'</div><div class="plst">'+(lock?'나 🔒':(present?'P'+n:'빈 자리'))+'</div>';
+    el.innerHTML='<div class="plnum">'+n+'</div><div class="plst">'+(lock?'나 🔒':(present?'P'+n:'빈 자리'))+'</div>'
+      +(present?'<div class="plcnt" id="plcnt-'+n+'">적 '+playerEnemyCount(n)+'</div>':'');
     if(!lock && present) el.onclick=()=>{ G.curPlayer=n; renderPlayers(); drawPlayer(); updateSpecLabel(); };   // 입장한 다른 플레이어만 관전 가능
     g.appendChild(el);
   } }
+function updatePlayerCounts(){ const active=G.activePlayers||[];   // Players 탭에서 실시간 적 수 갱신
+  for(const n of active){ const e=document.getElementById('plcnt-'+n); if(!e) continue; const c=playerEnemyCount(n);
+    e.textContent='적 '+c; e.style.color = c>=WARN2?'#ff6b6b' : (c>=WARN1?'#ffb14d' : '#9aa6b2'); } }
 // ── 배속 투표(만장일치=최저 배속) ──
 const VOTE_PLAYERS=[1,2,3,4,5,6,7,8];   // 나(1) + 봇 7명
 function ensureVote(){ if(!G.vote){ G.vote={1:1,2:2,3:4,4:4,5:4,6:2,7:4,8:1}; G._voteT=4; computeSpeed(); } }
@@ -3090,6 +3092,7 @@ function startGameNow(activePlayers, myNum){
   G=newGame(); G.phase='playing'; G.roundPhase='prep'; G.roundTime=PREP_TIME; G.toSpawn=0;
   G.activePlayers = (activePlayers&&activePlayers.length)? activePlayers.slice() : [1,2,3,4,5,6,7,8];   // 입장한 플레이어
   G.myPlayer = myNum||1;   // 입장 순서로 배정된 내 번호
+  initPlayerSim();         // 다른 플레이어 트랙 적 누적 시뮬 초기화
   _leaveT=20+Math.random()*20;
   document.getElementById('ov').classList.add('hide');
   const lb=document.getElementById('lobby'); if(lb) lb.classList.add('hide');
@@ -3106,10 +3109,25 @@ function playerLeave(n){ if(!G.activePlayers) return; const mine=G.myPlayer||1; 
   if(G.tab==='Players') renderPlayers();
 }
 let _leaveT=1e9;
-function tickPresence(dt){ if(G.phase!=='playing'||!G.activePlayers) return; _leaveT-=dt; if(_leaveT>0) return; _leaveT=22+Math.random()*26;
-  const others=G.activePlayers.filter(n=>n!==(G.myPlayer||1));
-  if(others.length>1 && Math.random()<0.5) playerLeave(others[Math.floor(Math.random()*others.length)]);   // 최소 2명 유지
-}
+// ── 멀티 플레이어 시뮬레이션: 각 플레이어 트랙의 적 누적 수(나는 실제 G.enemies, 나머지는 시뮬) ──
+function initPlayerSim(){ G.pSim={}; const mine=G.myPlayer||1;
+  (G.activePlayers||[]).forEach(n=>{ if(n===mine) return;
+    G.pSim[n]={ count:0, skill:0.78+Math.random()*0.55, w1:false, w2:false, dead:false }; }); }
+function playerEnemyCount(n){ const mine=G.myPlayer||1;
+  if(n===mine) return G.enemies.length;
+  const s=G.pSim&&G.pSim[n]; return s? Math.round(s.count) : 0; }
+function tickPlayerSim(dt){ if(G.phase!=='playing'||!G.pSim) return;
+  const ed=dt*(G.speedMul||1);   // 게임 속도 반영
+  const spawning=(G.roundPhase==='active' && !isBossRound(G.round) && G.roundTime>ROUND_TIME-150);  // 전투 첫 150초 유입
+  const arrival=spawning ? (1/SPAWN_GAP) : 0;   // 초당 적 유입(≈0.667)
+  for(const k in G.pSim){ const n=+k, s=G.pSim[k]; if(s.dead) continue;
+    const clear=Math.max(0, s.skill*0.78 - G.round*0.016);   // 초당 처리량(라운드↑일수록 버거움)
+    s.count=Math.max(0, s.count + (arrival-clear)*ed);
+    if(s.count>=WARN2){ if(!s.w2){ s.w2=true; addChat('', '⚠️ '+n+'번 플레이어 적 '+WARN2+'기 누적!'); } } else if(s.count<WARN2-10) s.w2=false;
+    if(s.count>=WARN1){ if(!s.w1){ s.w1=true; addChat('', '⚠️ '+n+'번 플레이어 적 '+WARN1+'기 누적'); } } else if(s.count<WARN1-10) s.w1=false;
+    if(s.count>=LOSE_COUNT){ s.dead=true; playerLeave(n); }   // 200 누적 → 탈락
+  } }
+function tickPresence(dt){ tickPlayerSim(dt); }   // 루프 훅 → 플레이어 시뮬 구동
 // ── 멀티플레이 대기실(로비) ──
 const LOBBY_NAMES=['Striker','GG준비됨','리퍼장인','Crystalize','보이드킹','노바777','Sentinel','막눈'];
 let _lobbyT=null, _lobbySlots=[];
@@ -3199,10 +3217,9 @@ function updateHud(){
   document.getElementById('hRound').textContent=G.round;
   document.getElementById('hRoundMax').textContent='/'+TOTAL_ROUNDS;
   document.getElementById('hKill').textContent=G.kills;
-  const rt=Math.max(0,Math.ceil(G.roundTime||0));   // 라운드 카운트다운(준비/전투 공통)
-  const tEl=document.getElementById('hTime'); tEl.textContent=fmt(rt);
-  const prep=(G.phase==='playing' && G.roundPhase==='prep'); tEl.classList.toggle('prep', prep);
-  const phEl=document.getElementById('hPhase'); if(phEl) phEl.textContent = prep ? '준비' : '';
+  const rt=Math.max(0,Math.ceil(G.roundTime||0));   // 라운드 카운트다운(준비/전투 동일 표시)
+  document.getElementById('hTime').textContent=fmt(rt);
+  if(G.tab==='Players') updatePlayerCounts();
   document.getElementById('hMin').innerHTML=G.mineral+'<i class="ru">C</i>';            // 크레딧
   document.getElementById('hGas').innerHTML=G.gas+'<i class="ru">E</i>';                // 에너지
   document.getElementById('hPop').innerHTML=G.units.filter(u=>!u.fixed).length+'/'+MAX_UNITS+'<i class="ru">CP</i>';  // 커맨드 포인트
