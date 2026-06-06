@@ -71,10 +71,10 @@
   #hudL{display:flex;flex-direction:column;gap:3px;white-space:nowrap;line-height:1.15;
     text-shadow:0 2px 4px #000,0 0 8px #000,0 1px 2px #000}   /* 진한 드롭쉐도우(배경 없이 가독) */
   /* 라운드: ROUND 라벨 + 현재값 청록 네온 강조 / 최대값 흐리게 */
-  #hudL .stage{font-size:11px;color:var(--txt);font-weight:800;letter-spacing:1.5px}
-  #hudL .stage b{font-size:14px;color:var(--hud);letter-spacing:0;text-shadow:0 0 6px var(--hud-glow),0 2px 3px #000}
-  #hudL .stage #hRoundMax{font-size:12px;color:rgba(214,226,240,.5);letter-spacing:0}
-  #hudL .kill{font-size:12px;color:#fff;font-weight:800;letter-spacing:.5px}#hudL .kill b{color:var(--hud)}  /* Kill 텍스트=흰 / 숫자=청록 */
+  #hudL .stage{font-size:9.5px;color:var(--txt);font-weight:800;letter-spacing:1.5px}
+  #hudL .stage b{font-size:12px;color:var(--hud);letter-spacing:0;text-shadow:0 0 6px var(--hud-glow),0 2px 3px #000}
+  #hudL .stage #hRoundMax{font-size:10px;color:rgba(214,226,240,.5);letter-spacing:0}
+  #hudL .kill{font-size:10.5px;color:#fff;font-weight:800;letter-spacing:.5px}#hudL .kill b{color:var(--hud)}  /* Kill 텍스트=흰 / 숫자=청록 */
   /* 중앙 전자시계(LCD 패널 + 7-seg 고스트) — 자원 아래로 내려 겹침 방지 */
   #hudC{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 46px);transform:translateX(-50%);pointer-events:none;
     display:flex;align-items:center;justify-content:center;min-width:84px;height:28px;padding:0 14px;   /* 정중앙 */
@@ -82,18 +82,18 @@
     border:1px solid rgba(0,229,255,.22);border-radius:7px;
     box-shadow:inset 0 0 12px rgba(0,0,0,.4),0 1px 3px rgba(0,0,0,.45)}
   /* 시계 — 주변 HUD 숫자와 동일한 Rajdhani 폰트/청록 톤(디지털 시계체 X) */
-  #hudC .time{font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif;font-size:19px;font-weight:700;line-height:1;
+  #hudC .time{font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif;font-size:16px;font-weight:700;line-height:1;
     letter-spacing:1.5px;color:var(--hud);text-shadow:0 0 5px var(--hud-glow),0 2px 3px #000}
   #hudRwrap{display:flex;flex-direction:column;align-items:flex-end;gap:4px;margin-top:2px}
-  #hudR{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:800;white-space:nowrap;text-shadow:0 2px 4px #000,0 0 8px #000}
+  #hudR{display:flex;align-items:center;gap:9px;font-size:10.5px;font-weight:800;white-space:nowrap;text-shadow:0 2px 4px #000,0 0 8px #000}
   /* 맵 이름: 자원 아래 우측 — 배경 없이 텍스트 + 청록 액센트 + 진한 쉐도우 */
-  #mapName{font-size:11px;font-weight:800;color:var(--txt);letter-spacing:1px;white-space:nowrap;
+  #mapName{font-size:9.5px;font-weight:800;color:var(--txt);letter-spacing:1px;white-space:nowrap;
     text-shadow:0 2px 4px #000,0 0 8px #000;
     border-right:2px solid var(--hud-soft);padding:1px 7px 1px 16px}
   .res{display:flex;align-items:center;gap:4px}
-  .res .ri{width:17px;height:17px;display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.85))}
+  .res .ri{width:15px;height:15px;display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.85))}
   /* 자원 숫자: 밝은 흰색 + 진한 드롭쉐도우(배경 없는 HUD) */
-  .res b{color:#eaf4ff;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13.5px;letter-spacing:.3px;text-shadow:0 2px 4px #000,0 0 8px #000}
+  .res b{color:#eaf4ff;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:11.5px;letter-spacing:.3px;text-shadow:0 2px 4px #000,0 0 8px #000}
   .res b .ru{font-style:normal;font-size:.6em;font-weight:700;color:var(--hud);opacity:.85;margin-left:1.5px;letter-spacing:0}  /* 자원 단위 C/E/CP — 청록 */
 
   #zoneLabel{display:none}   /* 구역 설명 텍스트 제거(사용자 요청) */
@@ -263,7 +263,7 @@
   #tabs{display:flex;flex-shrink:0;position:relative;margin-top:4px;
     background:none;   /* 탭바 배경 투명 */
     border-bottom:1px solid rgba(255,255,255,.06)}
-  .tab{flex:1;padding:9px 2px 8px;text-align:center;font-size:10px;color:#56697c;cursor:pointer;font-weight:700;
+  .tab{flex:1;padding:9px 2px 8px;text-align:center;font-size:9px;color:#56697c;cursor:pointer;font-weight:700;
     border-right:1px solid rgba(255,255,255,.05);border-bottom:2px solid transparent;transition:all .18s;line-height:1.3;position:relative;
     text-shadow:0 1px 1px #000}   /* 얇은 금속 구분선 */
   .tab:last-child{border-right:none}
@@ -751,11 +751,97 @@
   .rmRefresh{flex:1;color:#cfeaff;background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.3)}
   .rmBack:active,.rmRefresh:active{transform:translateY(1px)}
   /* 토스트 */
-  #toast{position:absolute;bottom:46px;left:50%;transform:translateX(-50%);z-index:30;
+  #toast{position:absolute;bottom:46px;left:50%;transform:translateX(-50%);z-index:95;
     background:rgba(10,20,35,.92);border:1px solid var(--neon-soft);border-radius:8px;padding:7px 14px;
     font-size:11px;color:#cfe0ff;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
   #toast.on{opacity:1}
   .backlink{position:absolute;left:8px;bottom:6px;z-index:30;font-size:10px;color:#3a5570;text-decoration:none}
+  /* ===================== 신규 앱 셸: 오프닝 / 로그인 / 유즈맵 / 모드선택 ===================== */
+  .appScreen{position:absolute;inset:0;display:flex;flex-direction:column;z-index:47}
+  .appScreen.hide{display:none}
+  /* 오프닝 로딩 */
+  #opening{z-index:90;align-items:center;justify-content:center;text-align:center}
+  .opWrap{display:flex;flex-direction:column;align-items:center;gap:14px;padding:30px}
+  .opLogo{width:72px;height:72px;display:flex;align-items:center;justify-content:center;border-radius:16px;color:var(--neon);
+    background:radial-gradient(circle at 50% 30%,rgba(255,59,59,.22),rgba(10,8,10,.6) 75%);border:1px solid var(--neon-soft);
+    box-shadow:0 0 24px -4px var(--neon-glow),inset 0 0 16px rgba(0,0,0,.5);animation:opPulse 1.7s ease-in-out infinite}
+  @keyframes opPulse{0%,100%{box-shadow:0 0 16px -6px var(--neon-glow),inset 0 0 16px rgba(0,0,0,.5)}50%{box-shadow:0 0 30px -1px var(--neon-glow),inset 0 0 16px rgba(0,0,0,.5)}}
+  .opLogo svg{width:40px;height:40px;filter:drop-shadow(0 0 6px var(--neon-glow))}
+  .opTitle{font-size:21px;font-weight:800;letter-spacing:2px;color:var(--neon);text-shadow:0 0 16px var(--neon-glow),0 2px 4px #000}
+  .opSub{font-size:9.5px;color:#9a8a8c;letter-spacing:3px}
+  .opBarWrap{width:170px;height:5px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:5px}
+  .opBar{height:100%;width:8%;border-radius:3px;background:linear-gradient(90deg,var(--neon-d2),var(--neon));box-shadow:0 0 10px var(--neon-glow);animation:opLoad 1.6s ease-out forwards}
+  @keyframes opLoad{0%{width:8%}60%{width:72%}100%{width:100%}}
+  .opLoading{font-size:9.5px;color:#7a8390;letter-spacing:2px}
+  /* 로그인/회원가입 */
+  #auth{z-index:48;align-items:center;justify-content:center;padding:22px}
+  .authCard{width:90%;max-width:310px;padding:20px 18px;border-radius:8px;box-sizing:border-box;
+    background:linear-gradient(180deg,rgba(22,17,19,.92),rgba(8,7,9,.94));border:1px solid var(--neon-soft);
+    box-shadow:0 0 0 1px rgba(0,0,0,.5),0 0 40px -10px var(--neon-glow)}
+  .authLogo{font-size:17px;font-weight:800;letter-spacing:1px;color:var(--neon);text-align:center;text-shadow:0 0 12px var(--neon-glow);margin-bottom:2px}
+  .authSub{font-size:9.5px;color:#8a8086;text-align:center;letter-spacing:.5px;margin-bottom:15px}
+  .authSeg{display:flex;gap:7px;margin-bottom:13px}
+  .authSegBtn{flex:1;padding:8px;border-radius:6px;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;color:#9aa0a8;
+    background:rgba(255,255,255,.04);border:1px solid var(--metal-edge);transition:all .12s}
+  .authSegBtn.on{color:#fff;background:linear-gradient(180deg,var(--neon-face1),var(--neon-d1));border-color:var(--neon);box-shadow:0 0 10px -3px var(--neon-glow)}
+  .authField{width:100%;box-sizing:border-box;padding:9px 11px;margin-bottom:8px;border-radius:6px;background:rgba(0,0,0,.4);
+    border:1px solid var(--metal-edge);color:#ece6e6;font-family:inherit;font-size:12.5px;outline:none}
+  .authField:focus{border-color:var(--neon-soft)}
+  .authField::placeholder{color:#6f757d}
+  .authField.hide{display:none}
+  .authErr{min-height:14px;font-size:10.5px;color:#ff6b6b;margin:1px 1px 7px;line-height:1.4}
+  .authBtn{width:100%;padding:11px;border-radius:6px;font-family:inherit;font-size:13.5px;font-weight:800;letter-spacing:.5px;cursor:pointer;
+    color:#fff;background:linear-gradient(180deg,var(--neon-face1),var(--neon-d1) 60%,var(--neon-d2));border:1px solid var(--neon);
+    box-shadow:0 0 14px -3px var(--neon-glow),inset 0 1px 0 rgba(255,255,255,.2)}
+  .authBtn:active{transform:translateY(1px)}
+  .authGuest{display:block;width:100%;margin-top:9px;padding:8px;background:none;border:none;cursor:pointer;
+    font-family:inherit;font-size:11px;color:#9aa6b2;text-decoration:underline;text-underline-offset:3px}
+  .authNote{font-size:8.5px;color:#5f6772;text-align:center;margin-top:11px;line-height:1.5}
+  /* 유즈맵 선택 */
+  #mapSelect{z-index:47;padding:15px 13px}
+  .msHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px}
+  .msTitle{font-size:16px;font-weight:800;color:var(--neon);text-shadow:0 0 10px var(--neon-glow);letter-spacing:.5px}
+  .msUser{display:flex;align-items:center;gap:6px;font-size:10.5px;color:#b9c2cc}
+  .msUser b{color:#fff;max-width:74px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .msLogout{font-size:9.5px;color:#9aa6b2;background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);border-radius:4px;padding:4px 7px;cursor:pointer}
+  .msSort{display:flex;gap:5px;margin-bottom:10px}
+  .msSortBtn{flex:1;padding:7px 3px;border-radius:5px;font-family:inherit;font-size:10px;font-weight:700;cursor:pointer;color:#8a9098;
+    background:rgba(255,255,255,.04);border:1px solid var(--metal-edge);transition:all .12s;white-space:nowrap}
+  .msSortBtn.on{color:var(--neon);border-color:var(--neon-soft);background:var(--neon-faint);box-shadow:0 0 8px -2px var(--neon-glow)}
+  .msList{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:7px;padding-right:2px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+  .msList::-webkit-scrollbar{width:5px}.msList::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:3px}
+  .mapItem{display:flex;align-items:center;gap:10px;padding:9px;border-radius:7px;cursor:pointer;
+    background:linear-gradient(180deg,rgba(30,32,38,.85),rgba(12,13,17,.88));border:1px solid var(--metal-edge);transition:border-color .12s}
+  .mapItem:hover{border-color:var(--neon-soft)}
+  .mapItem:active{transform:translateY(1px)}
+  .mapItem.soon{opacity:.6}
+  .mapThumb{width:46px;height:46px;flex:none;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:22px;
+    background:radial-gradient(circle at 50% 35%,rgba(255,59,59,.16),rgba(8,8,12,.7));border:1px solid var(--metal-edge)}
+  .mapMain{flex:1;min-width:0}
+  .mapName{font-size:12.5px;font-weight:700;color:#ece6e6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mapDesc{font-size:9.5px;color:#8a9098;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mapMeta{display:flex;gap:5px;margin-top:4px;flex-wrap:wrap}
+  .mapTag{font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px;color:#cfe0ec;background:rgba(255,255,255,.06);border:1px solid var(--metal-edge)}
+  .mapTag.rec{color:#ffd24a;border-color:rgba(255,210,74,.4)}
+  .mapTag.new{color:#5dff8f;border-color:rgba(93,255,143,.4)}
+  .mapTag.soon{color:#ff9a6b;border-color:rgba(255,154,107,.4)}
+  .mapStar{flex:none;font-size:18px;line-height:1;color:#54606e;cursor:pointer;padding:5px 4px;transition:transform .1s}
+  .mapStar.on{color:#ffce4a;text-shadow:0 0 8px rgba(255,206,74,.5)}
+  .mapStar:active{transform:scale(1.2)}
+  .msEmpty{padding:28px 12px;text-align:center;font-size:10.5px;color:#7a8390;line-height:1.7}
+  /* 모드 선택(개인/멀티) 시트 */
+  #modeSheet{z-index:53;align-items:center;justify-content:center;background:rgba(2,3,6,.62);backdrop-filter:blur(2px)}
+  .moCard{width:88%;max-width:300px;padding:19px;border-radius:10px;text-align:center;
+    background:linear-gradient(180deg,rgba(22,17,19,.97),rgba(8,7,9,.98));border:1px solid var(--neon-soft);
+    box-shadow:0 14px 44px rgba(0,0,0,.7),0 0 18px -6px var(--neon-glow)}
+  .moMap{font-size:14px;font-weight:800;color:#fff;margin-bottom:2px}
+  .moDesc{font-size:10px;color:#8a9098;margin-bottom:15px}
+  .moBtns{display:flex;flex-direction:column;gap:9px}
+  .moBtn{padding:13px;border-radius:7px;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+  .moSolo{color:#cfeaff;background:linear-gradient(180deg,rgba(11,40,54,.9),rgba(5,16,26,.9));border:1px solid rgba(0,229,255,.5)}
+  .moMulti{color:#fff;background:linear-gradient(180deg,var(--neon-face1),var(--neon-d1));border:1px solid var(--neon);box-shadow:0 0 12px -3px var(--neon-glow)}
+  .moBtn:active{transform:translateY(1px)}
+  .moBack{margin-top:12px;background:none;border:none;color:#9aa6b2;font-family:inherit;font-size:11px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 </style>
 </head>
 <body>
@@ -807,7 +893,7 @@
     </div>
 
     <div id="toast"></div>
-    <div id="ov" class="spaceBg">
+    <div id="ov" class="spaceBg hide">
       <div class="ovCard">
         <div class="ovEmblem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="2.6"/><circle cx="3.5" cy="3.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="20.5" cy="3.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="3.5" cy="20.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="20.5" cy="20.5" r="1.3" fill="currentColor" stroke="none"/><path d="M12 7.7 13.1 10.3 15.9 10.6 13.5 12.4 14.3 15.2 12 13.6 9.7 15.2 10.5 12.4 8.1 10.6 10.9 10.3Z" fill="currentColor" stroke="none"/></svg></div>
         <h1 id="ovTitle">네모네모 디펜스</h1>
@@ -886,6 +972,65 @@
           <button class="cpCancel" onclick="closePw()">취소</button>
           <button class="cpMake" onclick="submitPw()">입장</button>
         </div>
+      </div>
+    </div>
+
+    <!-- ===== 신규: 오프닝 로딩 ===== -->
+    <div id="opening" class="appScreen spaceBg">
+      <div class="opWrap">
+        <div class="opLogo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="2.6"/><path d="M12 7.7 13.1 10.3 15.9 10.6 13.5 12.4 14.3 15.2 12 13.6 9.7 15.2 10.5 12.4 8.1 10.6 10.9 10.3Z" fill="currentColor" stroke="none"/></svg></div>
+        <div class="opTitle">UMS ARENA</div>
+        <div class="opSub">STARCRAFT USE MAP</div>
+        <div class="opBarWrap"><div class="opBar"></div></div>
+        <div class="opLoading">LOADING…</div>
+      </div>
+    </div>
+
+    <!-- ===== 신규: 로그인 / 회원가입 ===== -->
+    <div id="auth" class="appScreen spaceBg hide">
+      <div class="authCard">
+        <div class="authLogo">UMS ARENA</div>
+        <div class="authSub" id="authSub">로그인하고 시작하세요</div>
+        <div class="authSeg">
+          <button class="authSegBtn on" id="segLogin" onclick="authMode('login')">로그인</button>
+          <button class="authSegBtn" id="segSignup" onclick="authMode('signup')">회원가입</button>
+        </div>
+        <input id="authNick" class="authField hide" type="text" placeholder="닉네임" maxlength="12" autocomplete="off">
+        <input id="authEmail" class="authField" type="email" placeholder="이메일" autocomplete="username" onkeydown="if(event.key==='Enter')authSubmit()">
+        <input id="authPw" class="authField" type="password" placeholder="비밀번호 (4자 이상)" autocomplete="current-password" onkeydown="if(event.key==='Enter')authSubmit()">
+        <input id="authPw2" class="authField hide" type="password" placeholder="비밀번호 확인" autocomplete="new-password" onkeydown="if(event.key==='Enter')authSubmit()">
+        <div class="authErr" id="authErr"></div>
+        <button class="authBtn" id="authBtn" onclick="authSubmit()">로그인</button>
+        <button class="authGuest" onclick="authGuest()">게스트로 시작하기</button>
+        <div class="authNote" id="authNote">로컬 계정 모드 · Firebase 키 등록 시 실제 인증으로 전환</div>
+      </div>
+    </div>
+
+    <!-- ===== 신규: 유즈맵 선택 ===== -->
+    <div id="mapSelect" class="appScreen spaceBg hide">
+      <div class="msHead">
+        <span class="msTitle">유즈맵 선택</span>
+        <span class="msUser">👤 <b id="msNick">게스트</b><button class="msLogout" onclick="doLogout()">로그아웃</button></span>
+      </div>
+      <div class="msSort">
+        <button class="msSortBtn" data-sort="fav" onclick="setMapSort('fav',this)">⭐ 즐겨찾기</button>
+        <button class="msSortBtn on" data-sort="pop" onclick="setMapSort('pop',this)">🔥 인기순</button>
+        <button class="msSortBtn" data-sort="new" onclick="setMapSort('new',this)">🆕 신규</button>
+        <button class="msSortBtn" data-sort="rec" onclick="setMapSort('rec',this)">👍 추천</button>
+      </div>
+      <div class="msList" id="msList"></div>
+    </div>
+
+    <!-- ===== 신규: 모드 선택(개인/멀티) ===== -->
+    <div id="modeSheet" class="appScreen hide">
+      <div class="moCard">
+        <div class="moMap" id="moMap">유즈맵</div>
+        <div class="moDesc" id="moDesc"></div>
+        <div class="moBtns">
+          <button class="moBtn moSolo" onclick="chooseSolo()">🎮 개인 플레이</button>
+          <button class="moBtn moMulti" onclick="chooseMulti()">🌐 멀티플레이</button>
+        </div>
+        <button class="moBack" onclick="closeModeSheet()">← 다른 유즈맵 선택</button>
       </div>
     </div>
   </div>
@@ -2670,7 +2815,7 @@ function showOverlay(){ const ov=document.getElementById('ov'),tt=document.getEl
 }
 document.getElementById('ovBtn').onclick=()=>{
   if(G.phase==='ready'){ openRooms(); }                 // 멀티플레이 → 방 찾기
-  else { G=newGame(); showOverlay(); }                  // 승/패 후 '다시 시작' → 타이틀로
+  else { G=newGame(); openMapSelect(); }                // 승/패 후 '다시 시작' → 유즈맵 선택
 };
 // ── 방 찾기(룸 리스트) ──
 const ROOM_TITLES=['초보만 ㄱㄱ','빨무 고수방','1라운드부터','막판러시 ㄱ','즐겜 환영','영웅 키우기','풀방 가즈아','연습 같이해요','고인물 전용','협동 클리어','노바 팬클럽','쫄?'];
@@ -2689,7 +2834,127 @@ function tickRooms(){ if(!_roomList||document.getElementById('rooms').classList.
 }
 function openRooms(){ setInGame(false); document.getElementById('ov').classList.add('hide'); document.getElementById('lobby').classList.add('hide');
   document.getElementById('rooms').classList.remove('hide'); buildRoomList(); startRoomsTick(); }
-function backToTitle(){ stopRoomsTick(); document.getElementById('rooms').classList.add('hide'); G.phase='ready'; showOverlay(); }
+function backToTitle(){ stopRoomsTick(); document.getElementById('rooms').classList.add('hide'); openMapSelect(); }   // 방찾기 뒤로 → 유즈맵 선택
+
+// ===================== 앱 셸: 인증 / 유즈맵 / 모드 선택 =====================
+// ── 인증(로컬 계정 + Firebase 연결 지점) ──
+const FIREBASE_CONFIG = {  // ★ Firebase 콘솔의 웹앱 config를 여기에 채우면 실제 인증으로 전환됩니다(없으면 로컬 계정 모드).
+  // apiKey:'', authDomain:'', projectId:'', appId:''
+};
+const AUTH = { mode:'local', user:null, fb:null };
+function _lsGet(k,d){ try{ const v=JSON.parse(localStorage.getItem(k)); return v==null?d:v; }catch(e){ return d; } }
+function _lsSet(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+async function initAuth(){
+  if(FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey){
+    try{
+      const app=await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
+      const fa=await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js');
+      const a=app.initializeApp(FIREBASE_CONFIG); AUTH.fb={auth:fa.getAuth(a), m:fa}; AUTH.mode='firebase';
+      return new Promise(res=>{ AUTH.fb.m.onAuthStateChanged(AUTH.fb.auth, u=>{
+        AUTH.user = u ? {email:u.email, nick:(u.displayName||(u.email||'user').split('@')[0]), uid:u.uid} : null; res(); }); });
+    }catch(e){ console.warn('Firebase 초기화 실패 → 로컬 계정 모드', e); AUTH.mode='local'; }
+  }
+  AUTH.user = _lsGet('nm_session', null);   // 로컬 모드: 저장된 세션 자동 복원(자동 로그인)
+}
+async function authSignUp(email,pw,nick){
+  if(AUTH.mode==='firebase'){ const {m,auth}=AUTH.fb; const c=await m.createUserWithEmailAndPassword(auth,email,pw);
+    if(nick) await m.updateProfile(c.user,{displayName:nick}); AUTH.user={email:c.user.email,nick:nick||email.split('@')[0],uid:c.user.uid}; return; }
+  const users=_lsGet('nm_users',{}); if(users[email]) throw new Error('이미 가입된 이메일입니다.');
+  users[email]={pw, nick:nick||email.split('@')[0]}; _lsSet('nm_users',users);
+  AUTH.user={email, nick:users[email].nick}; _lsSet('nm_session',AUTH.user); }
+async function authSignIn(email,pw){
+  if(AUTH.mode==='firebase'){ const {m,auth}=AUTH.fb; const c=await m.signInWithEmailAndPassword(auth,email,pw);
+    AUTH.user={email:c.user.email,nick:(c.user.displayName||email.split('@')[0]),uid:c.user.uid}; return; }
+  const users=_lsGet('nm_users',{}); const u=users[email];
+  if(!u || u.pw!==pw) throw new Error('이메일 또는 비밀번호가 올바르지 않습니다.');
+  AUTH.user={email, nick:u.nick}; _lsSet('nm_session',AUTH.user); }
+async function authSignOut(){ if(AUTH.mode==='firebase'){ try{ await AUTH.fb.m.signOut(AUTH.fb.auth); }catch(e){} }
+  AUTH.user=null; try{ localStorage.removeItem('nm_session'); }catch(e){} }
+// ── 앱 화면 전환 ──
+const APP_SCREENS=['opening','auth','mapSelect','modeSheet'];
+function showAppScreen(id){ setInGame(false);
+  ['ov','lobby','rooms','createPanel','pwPanel'].forEach(x=>{const e=document.getElementById(x); if(e)e.classList.add('hide');});
+  APP_SCREENS.forEach(s=>{ const e=document.getElementById(s); if(e) e.classList.toggle('hide', s!==id); }); }
+function hideAppScreens(){ APP_SCREENS.forEach(s=>{ const e=document.getElementById(s); if(e) e.classList.add('hide'); }); }
+// ── 부팅 흐름: 오프닝 → (자동로그인 ? 유즈맵 : 로그인) ──
+async function bootApp(){ await initAuth();
+  setTimeout(()=>{ if(AUTH.user) openMapSelect(); else openAuth(); }, 1700); }   // 오프닝 최소 노출
+// ── 로그인 화면 ──
+let _authTab='login';
+function openAuth(){ document.getElementById('authEmail').value=''; document.getElementById('authPw').value='';
+  document.getElementById('authNick').value=''; document.getElementById('authPw2').value='';
+  authMode('login'); showAppScreen('auth'); }
+function authMode(m){ _authTab=m;
+  document.getElementById('segLogin').classList.toggle('on', m==='login');
+  document.getElementById('segSignup').classList.toggle('on', m==='signup');
+  document.getElementById('authNick').classList.toggle('hide', m!=='signup');
+  document.getElementById('authPw2').classList.toggle('hide', m!=='signup');
+  document.getElementById('authBtn').textContent = m==='login'?'로그인':'가입하기';
+  document.getElementById('authSub').textContent = m==='login'?'로그인하고 시작하세요':'새 계정을 만드세요';
+  document.getElementById('authErr').textContent=''; }
+async function authSubmit(){
+  const email=(document.getElementById('authEmail').value||'').trim(), pw=document.getElementById('authPw').value||'';
+  const err=document.getElementById('authErr');
+  if(!/.+@.+\..+/.test(email)){ err.textContent='올바른 이메일을 입력하세요.'; return; }
+  if(pw.length<4){ err.textContent='비밀번호는 4자 이상이어야 합니다.'; return; }
+  try{
+    if(_authTab==='signup'){ const nick=(document.getElementById('authNick').value||'').trim(), pw2=document.getElementById('authPw2').value||'';
+      if(!nick){ err.textContent='닉네임을 입력하세요.'; return; }
+      if(pw!==pw2){ err.textContent='비밀번호가 일치하지 않습니다.'; return; }
+      await authSignUp(email,pw,nick);
+    } else { await authSignIn(email,pw); }
+    openMapSelect();
+  }catch(e){ err.textContent = (e&&e.message)||'인증에 실패했습니다.'; }
+}
+function authGuest(){ AUTH.user={email:'', nick:'게스트'+(1000+Math.floor(Math.random()*9000)), guest:true};
+  _lsSet('nm_session',AUTH.user); openMapSelect(); }
+function doLogout(){ authSignOut().then(openAuth); }
+// ── 유즈맵 데이터 ──
+const MAPS=[
+  {id:'nemo',   name:'네모네모 디펜스', desc:'사각 트랙을 도는 적을 막는 협동 디펜스', players:'1-8', pop:9820, ready:true,  rec:true,  isNew:false},
+  {id:'jungle', name:'정글 서바이벌',   desc:'정글에서 자원 모아 살아남기',         players:'1-6', pop:7400, ready:false, rec:true,  isNew:false},
+  {id:'tower',  name:'랜덤 타워 디펜스', desc:'랜덤 타워를 조합해 라인을 방어',       players:'1-8', pop:6100, ready:false, rec:false, isNew:true },
+  {id:'hero',   name:'영웅 아레나',     desc:'영웅을 키워 8인 PvP',               players:'2-8', pop:5300, ready:false, rec:false, isNew:false},
+  {id:'boss',   name:'레이드 보스',     desc:'거대 보스를 협동 토벌',             players:'3-8', pop:4200, ready:false, rec:true,  isNew:true },
+  {id:'maze',   name:'미로 탈출',       desc:'함정 가득한 미로를 탈출하라',         players:'1-4', pop:2600, ready:false, rec:false, isNew:true },
+  {id:'race',   name:'유닛 레이스',     desc:'유닛으로 결승선까지 질주',           players:'2-8', pop:1900, ready:false, rec:false, isNew:false},
+];
+let _mapSort='pop';
+function getFavs(){ return _lsGet('nm_favs', {}); }
+function toggleFav(id,ev){ if(ev) ev.stopPropagation(); const f=getFavs(); if(f[id]) delete f[id]; else f[id]=Date.now(); _lsSet('nm_favs',f); renderMaps(); }
+function openMapSelect(){ const n=document.getElementById('msNick'); if(n) n.textContent=(AUTH.user&&AUTH.user.nick)||'게스트';
+  showAppScreen('mapSelect'); renderMaps(); }
+function setMapSort(s,btn){ _mapSort=s; document.querySelectorAll('#mapSelect .msSortBtn').forEach(b=>b.classList.toggle('on', b===btn)); renderMaps(); }
+function _kfmt(n){ return n>=1000 ? (n/1000).toFixed(1)+'k' : (''+n); }
+function renderMaps(){ const list=document.getElementById('msList'); if(!list) return; const favs=getFavs();
+  let arr=MAPS.slice();
+  if(_mapSort==='fav') arr=arr.filter(m=>favs[m.id]);
+  else if(_mapSort==='pop') arr.sort((a,b)=>b.pop-a.pop);
+  else if(_mapSort==='new') arr.sort((a,b)=>(b.isNew?1:0)-(a.isNew?1:0)||b.pop-a.pop);
+  else if(_mapSort==='rec') arr.sort((a,b)=>(b.rec?1:0)-(a.rec?1:0)||b.pop-a.pop);
+  if(_mapSort!=='fav') arr.sort((a,b)=>(favs[b.id]?1:0)-(favs[a.id]?1:0));   // 즐겨찾기는 항상 상단 고정
+  list.innerHTML='';
+  if(!arr.length){ list.innerHTML='<div class="msEmpty">⭐ 즐겨찾기한 유즈맵이 없습니다.<br>맵 카드의 별(☆)을 눌러 추가하세요.</div>'; return; }
+  arr.forEach(m=>{ const el=document.createElement('div'); el.className='mapItem'+(m.ready?'':' soon');
+    const tags=[]; if(!m.ready) tags.push('<span class="mapTag soon">준비중</span>');
+    if(m.rec) tags.push('<span class="mapTag rec">추천</span>'); if(m.isNew) tags.push('<span class="mapTag new">신규</span>');
+    tags.push('<span class="mapTag">👥 '+m.players+'</span>'); tags.push('<span class="mapTag">🔥 '+_kfmt(m.pop)+'</span>');
+    el.innerHTML='<div class="mapThumb">'+(m.ready?'🟥':'🗺️')+'</div>'
+      +'<div class="mapMain"><div class="mapName">'+escHtml(m.name)+'</div><div class="mapDesc">'+escHtml(m.desc)+'</div><div class="mapMeta">'+tags.join('')+'</div></div>'
+      +'<div class="mapStar'+(favs[m.id]?' on':'')+'">'+(favs[m.id]?'★':'☆')+'</div>';
+    el.querySelector('.mapStar').onclick=(e)=>toggleFav(m.id,e);
+    el.onclick=()=>{ if(!m.ready){ toast('아직 준비 중인 유즈맵입니다.'); return; } openModeSheet(m); };
+    list.appendChild(el);
+  });
+}
+// ── 모드 선택(개인/멀티) ──
+let _selMap=null;
+function openModeSheet(m){ _selMap=m; document.getElementById('moMap').textContent=m.name;
+  document.getElementById('moDesc').textContent=m.desc+' · '+m.players+'인';
+  document.getElementById('modeSheet').classList.remove('hide'); }
+function closeModeSheet(){ document.getElementById('modeSheet').classList.add('hide'); }
+function chooseSolo(){ closeModeSheet(); hideAppScreens(); startGameNow([1],1); }   // 개인플레이 → 즉시 게임
+function chooseMulti(){ closeModeSheet(); hideAppScreens(); openRooms(); }            // 멀티 → 방 찾기
 function refreshRooms(){ buildRoomList(); }
 function newRoomNum(){ let num; do{ num=1000+Math.floor(Math.random()*9000); }while(_roomList&&_roomList.some(r=>r.num===num)); return num; }
 function buildRoomList(){ _roomList=[];
@@ -3285,7 +3550,7 @@ function loop(now){
   requestAnimationFrame(loop);
 }
 window.addEventListener('resize',()=>{ if(G.tab==='Main'){drawMain();placeMergeZone();} if(G.tab==='Unit'){drawProd();renderClock();} if(G.tab==='Upgrade')drawUpg(); if(G.tab==='Players')drawPlayer(); });
-window.addEventListener('load',()=>{ drawMain(); placeMergeZone(); updateHud(); showOverlay(); initChat(); requestAnimationFrame(loop); });
+window.addEventListener('load',()=>{ drawMain(); placeMergeZone(); updateHud(); bootApp(); initChat(); requestAnimationFrame(loop); });
 </script>
 
 <!-- 유닛 3D 모델(Three.js) — assets/models/*.glb(마린/골리앗/고스트 + 마린총)를 WebGL로 렌더. 애니메이션은 코드로 구현(숨쉬기/공격기울임/사망), 가장 가까운 적 방향 자동 회전 -->
