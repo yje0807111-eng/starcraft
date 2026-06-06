@@ -41,8 +41,8 @@
   }
   html,body{height:100%;background:#010305;display:flex;align-items:center;justify-content:center;
     font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;overflow:hidden}
-  /* 모바일 고정 비율(390x844). 화면이 작으면 비율 유지하며 축소. 패널 폭 변해도 폰 모양 불변 */
-  #phone{width:390px;height:844px;aspect-ratio:390/844;position:relative;
+  /* 모바일 고정 비율(9:16, 390x693). 화면이 작으면 비율 유지하며 축소. 패널 폭 변해도 폰 모양 불변 */
+  #phone{width:390px;height:693px;aspect-ratio:9/16;position:relative;
     /* 게임 배경 우주 타일(space_bg)을 캔버스와 같은 380px 스케일로 프레임 전체에 이어지게 — 어둡게 덮어 콘솔 가독성 유지 */
     background:linear-gradient(rgba(3,4,12,.5),rgba(3,4,12,.66)),url('assets/tiles/space_bg.png') center/380px repeat #05060d;
     overflow:hidden;display:flex;flex-direction:column;flex:none;
@@ -52,8 +52,8 @@
     /* 뷰포트보다 크면 비율 유지하며 축소 */
     max-width:100vw;max-height:100vh}
   /* 높이가 모자라면 높이 기준으로, 폭이 모자라면 폭 기준으로 축소 */
-  @media(max-height:864px){#phone{height:96vh;width:calc(96vh*390/844)}}
-  @media(max-width:410px){#phone{width:100vw;height:calc(100vw*844/390);border-radius:0;border:none}}
+  @media(max-height:713px){#phone{height:96vh;width:calc(96vh*9/16)}}
+  @media(max-width:410px){#phone{width:100vw;height:calc(100vw*16/9);border-radius:0;border:none}}
 
   /* GAME AREA */
   #gameArea{flex:1;position:relative;overflow:hidden;background:#060e0a;min-height:0;transition:filter .35s}
