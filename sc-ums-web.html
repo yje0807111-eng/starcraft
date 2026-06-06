@@ -135,6 +135,21 @@
   #mergeFab .mfi{line-height:0;position:relative;z-index:1}
   #mergeFab .mfi svg{width:34px;height:34px;display:block;filter:drop-shadow(0 0 5px rgba(255,205,95,.65)) drop-shadow(0 1px 1px #000)}
   #mergeFab .mfl{font-size:11px;font-weight:800;letter-spacing:.5px;position:relative;z-index:1}
+  /* 스킬 FAB — 메인 화면, 조합 버튼 위(에너지 시안 톤) */
+  #skillFab{position:absolute;bottom:86px;right:8px;z-index:20;width:58px;height:58px;border-radius:10px;cursor:pointer;pointer-events:auto;overflow:hidden;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    border:1px solid rgba(0,229,255,.55);background:linear-gradient(180deg,rgba(11,40,54,.95),rgba(5,16,26,.95));
+    color:#bfeeff;text-shadow:0 0 5px rgba(0,200,255,.5),0 1px 2px #000;
+    box-shadow:0 0 14px -3px rgba(0,200,255,.45),0 4px 9px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.14);transition:transform .08s,box-shadow .15s,border-color .15s}
+  #skillFab.hide{display:none}
+  #skillFab::before{content:'';position:absolute;left:0;right:0;top:0;height:44%;border-radius:10px 10px 50% 50%;background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,0));pointer-events:none;z-index:2}
+  #skillFab .sfIco{line-height:0;position:relative;z-index:3}
+  #skillFab .sfIco svg{width:23px;height:23px;filter:drop-shadow(0 0 4px rgba(0,200,255,.6))}
+  #skillFab .sfName{font-size:9px;font-weight:800;letter-spacing:.2px;white-space:nowrap;position:relative;z-index:3}
+  #skillFab .sfOver{position:absolute;left:0;right:0;bottom:0;height:0;background:rgba(2,8,14,.7);z-index:4;pointer-events:none;transition:height .12s linear}
+  #skillFab .sfCd{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:5;font-family:'Rajdhani',sans-serif;font-size:19px;font-weight:800;color:#fff;text-shadow:0 1px 2px #000;pointer-events:none}
+  #skillFab.active{border-color:#7fffd4;box-shadow:0 0 16px -2px rgba(90,255,200,.65),0 4px 9px rgba(0,0,0,.5),inset 0 0 12px rgba(90,255,200,.22)}  /* 버프 활성 */
+  #skillFab:active{transform:translateY(1px)}
   /* 선택 해제 아이콘 버튼(우상단, 자원 표시 아래) — 노란 금지표시, 유닛 지정 시에만 표시 */
   /* 선택 해제 — 투명 배경 + 빨강 테마(하단 톤) */
   #deselTop{position:absolute;top:104px;right:10px;z-index:25;display:none;cursor:pointer;pointer-events:auto;
@@ -573,6 +588,9 @@
   .plbtn:active{transform:translateY(1px)}
   .plbtn.me{border-color:var(--pc);background:linear-gradient(180deg,rgba(36,42,54,.95),rgba(14,18,26,.95));box-shadow:0 0 0 1px var(--pc),0 0 9px -5px var(--pc),inset 0 0 12px -5px var(--pc)}  /* 관전 중 */
   .plbtn.me::after{opacity:1}
+  .plbtn.off{cursor:default;pointer-events:none;opacity:.3;filter:saturate(.25)}   /* 미입장/이탈 슬롯(관전 불가) */
+  .plbtn.off::after{opacity:.25}
+  .plbtn.off .plnum{color:#6a7682}.plbtn.off .plst{color:#6a7682}
   .plbtn.lock{cursor:default;opacity:.5;filter:saturate(.5)}   /* 내 슬롯=잠금(관전 불가) */
   .plbtn.lock::after{opacity:.35}
   .plbtn.lock .plnum{color:#9aa8b8}
@@ -599,6 +617,120 @@
     box-shadow:0 0 18px -2px var(--neon-glow),0 5px 11px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.28),inset 0 -3px 7px rgba(0,0,0,.4);transition:transform .08s,box-shadow .15s}
   #ovBtn::before{content:'';position:absolute;left:0;right:0;top:0;height:46%;border-radius:6px 6px 50% 50%;background:linear-gradient(180deg,rgba(255,255,255,.24),rgba(255,255,255,0));pointer-events:none}
   #ovBtn:active{transform:translateY(2px);box-shadow:0 0 12px -2px var(--neon-glow),0 2px 5px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.2),inset 0 -2px 5px rgba(0,0,0,.4)}
+  /* 멀티플레이 대기실(로비) */
+  #lobby{position:fixed;inset:0;z-index:46;display:flex;align-items:center;justify-content:center;padding:18px;
+    background:radial-gradient(circle at 50% 36%,rgba(46,8,12,.5),rgba(4,6,12,.95) 72%)}   /* 폰 전체 높이 사용 */
+  #lobby.hide{display:none}
+  .lbCard{width:90%;max-width:340px;max-height:92%;overflow:auto;padding:18px;border-radius:6px;
+    background:linear-gradient(180deg,rgba(26,20,22,.6),rgba(8,7,9,.66));border:1px solid var(--neon-soft);
+    box-shadow:0 0 0 1px rgba(0,0,0,.5),0 0 44px -10px var(--neon-glow)}
+  /* 대기실 채팅 */
+  .lbChat{height:150px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;padding:7px 9px;margin-bottom:7px;border-radius:5px;
+    background:rgba(0,0,0,.28);border:1px solid var(--metal-edge)}
+  .lbChat::-webkit-scrollbar{width:4px}.lbChat::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:3px}
+  .lbMsg{font-size:11px;line-height:1.35;color:#d6d2d2;word-break:break-all}
+  .lbMsg b{font-weight:700}
+  .lbMsg.sys{color:#8a9098;font-style:italic;font-size:10px}
+  .lbChatBar{display:flex;gap:6px;margin-bottom:14px}
+  .lbChatBar input{flex:1;min-width:0;background:rgba(0,0,0,.28);border:1px solid var(--metal-edge);border-radius:5px;color:#e0dcdc;font-size:12px;padding:8px 11px;outline:none}
+  .lbChatBar input:focus{border-color:var(--neon-soft)}
+  .lbChatBar input::placeholder{color:#7a7072}
+  .lbChatBar button{background:rgba(255,59,59,.12);border:1px solid var(--neon-soft);color:var(--neon-lt);border-radius:5px;padding:0 15px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+  .lbChatBar button:active{transform:translateY(1px)}
+  .lbHead{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:5px}
+  .lbTitle{font-size:16px;font-weight:800;color:var(--neon);text-shadow:0 0 10px var(--neon-glow);letter-spacing:.5px}
+  .lbRoom{font-size:11px;color:var(--hud);text-shadow:0 0 6px var(--hud-glow);white-space:nowrap}
+  .lbStatus{font-size:11px;color:#c8bbbd;margin-bottom:13px}
+  .lbGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-bottom:16px}
+  .lbSlot{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:6px;position:relative;overflow:hidden;
+    background:linear-gradient(180deg,rgba(30,32,38,.9),rgba(12,13,17,.92));border:1px solid var(--metal-edge)}
+  .lbSlot::after{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--pc,#4aa8ff);opacity:.7}
+  .lbSlot.me{border-color:var(--pc);box-shadow:0 0 0 1px var(--pc),0 0 9px -5px var(--pc)}
+  .lbSlot.empty{opacity:.4;border-style:dashed}
+  .lbNum{font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:800;color:var(--pc,#4aa8ff);min-width:15px;text-align:center;text-shadow:0 1px 2px #000}
+  .lbInfo{min-width:0;flex:1;text-align:left}
+  .lbName{font-size:12px;font-weight:700;color:#e6e2e2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.15}
+  .lbStat{font-size:8.5px;color:#9aa6b4;margin-top:1px;letter-spacing:.2px}
+  .lbStat.ok{color:#5dff8f}.lbStat.host{color:var(--hud)}
+  .lbEmpty{font-size:10px;color:#7a8696}
+  .lbBtns{display:flex;gap:8px}
+  .lbLeave,.lbStart{padding:12px;border-radius:5px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:.5px;transition:all .12s}
+  .lbLeave{flex:0 0 34%;color:#ffd2d2;background:rgba(200,50,50,.16);border:1px solid rgba(255,80,80,.45)}
+  .lbStart{flex:1;color:#cfcfd4;background:linear-gradient(180deg,rgba(70,70,76,.5),rgba(34,34,40,.5));border:1px solid var(--metal-edge)}
+  .lbStart.ready{color:#fff;background:linear-gradient(180deg,var(--neon-face1),var(--neon-d1));border-color:var(--neon);box-shadow:0 0 13px -3px var(--neon-glow),inset 0 1px 0 rgba(255,255,255,.22)}
+  .lbStart:disabled{cursor:default;opacity:.7}
+  .lbLeave:active,.lbStart:active{transform:translateY(1px)}
+  /* 방 찾기(룸 리스트) */
+  #rooms{position:fixed;inset:0;z-index:46;display:flex;align-items:center;justify-content:center;padding:20px;
+    background:radial-gradient(circle at 50% 36%,rgba(46,8,12,.5),rgba(4,6,12,.95) 72%)}   /* 폰 전체 높이 사용 */
+  #rooms.hide{display:none}
+  .rmCard{width:92%;max-width:350px;max-height:88%;display:flex;flex-direction:column;padding:18px;border-radius:6px;
+    background:linear-gradient(180deg,rgba(26,20,22,.6),rgba(8,7,9,.66));border:1px solid var(--neon-soft);
+    box-shadow:0 0 0 1px rgba(0,0,0,.5),0 0 44px -10px var(--neon-glow)}
+  .rmHead{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px}
+  .rmTitle{font-size:17px;font-weight:800;color:var(--neon);text-shadow:0 0 10px var(--neon-glow);letter-spacing:.5px}
+  .rmOnline{font-size:11px;color:var(--txt-dim)}.rmOnline b{color:var(--hud)}
+  .rmTop{display:flex;gap:8px;margin-bottom:12px}
+  .rmQuick,.rmCreate{flex:1;padding:11px;border-radius:5px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;letter-spacing:.3px;transition:transform .08s}
+  .rmQuick{color:#fff;background:linear-gradient(180deg,var(--neon-face1),var(--neon-d1));border:1px solid var(--neon);box-shadow:0 0 11px -3px var(--neon-glow),inset 0 1px 0 rgba(255,255,255,.2)}
+  .rmCreate{color:#cfeaff;background:linear-gradient(180deg,rgba(11,40,54,.9),rgba(5,16,26,.9));border:1px solid rgba(0,229,255,.5)}
+  .rmQuick:active,.rmCreate:active{transform:translateY(1px)}
+  .rmNum{display:flex;gap:7px;margin-bottom:12px}
+  .rmNum input{flex:1;min-width:0;padding:9px 11px;border-radius:5px;background:rgba(0,0,0,.35);border:1px solid var(--metal-edge);color:#ece6e6;font-family:inherit;font-size:12.5px;outline:none}
+  .rmNum input:focus{border-color:rgba(0,229,255,.55)}
+  .rmNum input::placeholder{color:#6f757d}
+  .rmNum button{flex:0 0 auto;padding:9px 16px;border-radius:5px;font-family:inherit;font-size:12.5px;font-weight:800;cursor:pointer;color:#cfeaff;background:rgba(0,229,255,.1);border:1px solid rgba(0,229,255,.4)}
+  .rmNum button:active{transform:translateY(1px)}
+  .riNum{font-family:'Rajdhani',sans-serif;font-weight:800;color:var(--hud);margin-right:5px}
+  .riLock{font-size:10px;color:#ffb14d;margin-right:3px}
+  /* 방 만들기 모달 */
+  #createPanel{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.66);backdrop-filter:blur(2px)}
+  #createPanel.hide{display:none}
+  .cpCard{width:300px;max-width:84vw;padding:20px;border-radius:12px;background:linear-gradient(180deg,rgba(24,26,32,.98),rgba(12,13,17,.98));border:1px solid var(--neon-soft);box-shadow:0 12px 40px -8px #000,0 0 18px -6px var(--neon-glow)}
+  .cpTitle{font-size:17px;font-weight:800;color:var(--neon);text-shadow:0 0 10px var(--neon-glow);margin-bottom:16px;text-align:center}
+  .cpLabel{display:block;font-size:11px;font-weight:700;color:#9aa0a8;margin:0 0 6px 2px}
+  #cpName{width:100%;box-sizing:border-box;padding:11px 12px;border-radius:6px;background:rgba(0,0,0,.4);border:1px solid var(--metal-edge);color:#ece6e6;font-family:inherit;font-size:14px;outline:none;margin-bottom:15px}
+  #cpName:focus{border-color:var(--neon-soft)}
+  #cpName::placeholder{color:#6f757d}
+  .cpSeg{display:flex;gap:8px;margin-bottom:9px}
+  .cpSegBtn{flex:1;padding:11px;border-radius:6px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;color:#9aa0a8;background:rgba(255,255,255,.04);border:1px solid var(--metal-edge);transition:all .12s}
+  .cpSegBtn.on{color:#fff;background:linear-gradient(180deg,var(--neon-face1),var(--neon-d1));border-color:var(--neon);box-shadow:0 0 10px -3px var(--neon-glow)}
+  .cpPwWrap{margin-bottom:9px}.cpPwWrap.hide{display:none}
+  .cpPwWrap .cpLabel{margin-top:4px}
+  #cpPw,#pwField{width:100%;box-sizing:border-box;padding:11px 12px;border-radius:6px;background:rgba(0,0,0,.4);border:1px solid var(--metal-edge);color:#ece6e6;font-family:inherit;font-size:14px;letter-spacing:2px;outline:none}
+  #cpPw:focus,#pwField:focus{border-color:var(--neon-soft)}
+  #cpPw::placeholder,#pwField::placeholder{color:#6f757d;letter-spacing:.5px}
+  #pwPanel{position:fixed;inset:0;z-index:51;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.66);backdrop-filter:blur(2px)}
+  #pwPanel.hide{display:none}
+  .pwRoomName{font-size:13px;font-weight:700;color:#cfe0ec;text-align:center;margin-bottom:14px}
+  #pwField{margin-bottom:8px}
+  #pwErr{min-height:15px;color:#ff6b6b}
+  .cpHint{font-size:10.5px;color:#8a9098;margin-bottom:18px;padding-left:2px}
+  .cpBtns{display:flex;gap:8px}
+  .cpCancel,.cpMake{flex:1;padding:12px;border-radius:6px;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;transition:transform .08s}
+  .cpCancel{flex:0 0 34%;color:var(--txt);background:rgba(255,255,255,.05);border:1px solid var(--metal-edge)}
+  .cpMake{color:#fff;background:linear-gradient(180deg,var(--neon-face1),var(--neon-d1));border:1px solid var(--neon);box-shadow:0 0 11px -3px var(--neon-glow)}
+  .cpCancel:active,.cpMake:active{transform:translateY(1px)}
+  .rmList{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding-right:2px}
+  .rmList::-webkit-scrollbar{width:5px}.rmList::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:3px}
+  .roomItem{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:6px;cursor:pointer;
+    background:linear-gradient(180deg,rgba(30,32,38,.85),rgba(12,13,17,.88));border:1px solid var(--metal-edge);transition:border-color .12s}
+  .roomItem:hover{border-color:var(--neon-soft)}
+  .roomItem:active{transform:translateY(1px)}
+  .roomItem.locked{cursor:default;opacity:.5}
+  .riMain{min-width:0;flex:1}
+  .riName{font-size:13px;font-weight:700;color:#ece6e6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .riSub{font-size:9.5px;color:#8a9098;margin-top:2px}
+  .riRight{text-align:right;flex:none}
+  .riCnt{font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:800;color:#cfe0ec;line-height:1}
+  .riCnt.full{color:#ff7676}
+  .riStat{font-size:9px;font-weight:700;margin-top:2px}
+  .riStat.wait{color:#5dff8f}.riStat.play{color:#8a9098}
+  .rmBtns{display:flex;gap:8px;margin-top:12px}
+  .rmBack,.rmRefresh{padding:10px;border-radius:5px;font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;transition:transform .08s}
+  .rmBack{flex:0 0 34%;color:var(--txt);background:rgba(255,255,255,.05);border:1px solid var(--metal-edge)}
+  .rmRefresh{flex:1;color:#cfeaff;background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.3)}
+  .rmBack:active,.rmRefresh:active{transform:translateY(1px)}
   /* 토스트 */
   #toast{position:absolute;bottom:46px;left:50%;transform:translateX(-50%);z-index:30;
     background:rgba(10,20,35,.92);border:1px solid var(--neon-soft);border-radius:8px;padding:7px 14px;
@@ -640,6 +772,8 @@
     <!-- 조합 버튼: 메인 탭에서 미니맵 자리(우하단 코너)에 표시 -->
     <div id="mergeFab" onclick="combine()"><span class="mfi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1.6 13.2 4 15.6 5.1 13.2 6.2 12 8.6 10.8 6.2 8.4 5.1 10.8 4Z" fill="currentColor" stroke="none"/><path d="M12 15.8 L12 11"/><path d="M9.6 13.1 L12 10.7 L14.4 13.1"/><circle cx="6.5" cy="20.4" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="20.4" r="1.5" fill="currentColor" stroke="none"/><circle cx="17.5" cy="20.4" r="1.5" fill="currentColor" stroke="none"/></svg></span><span class="mfl">조합</span></div>
     <div id="deselTop" onclick="cancelSelect()" title="선택 해제"><svg viewBox="0 0 24 24" width="26" height="26"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.4"/><line x1="6.2" y1="6.2" x2="17.8" y2="17.8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></div>
+    <!-- 스킬 버튼: 메인 탭에서 스킬 보유 유닛 선택 시 표시(조합 버튼 위) -->
+    <div id="skillFab" class="hide" onclick="useSkill()"><span class="sfIco" id="sfIco"></span><span class="sfName" id="sfName">스킬</span><div class="sfOver" id="sfOver"></div><div class="sfCd" id="sfCd"></div></div>
 
     <div class="gview on" id="vMain"><canvas id="cvMain"></canvas><div id="mergeZone"><span class="mz">합체</span></div></div>
     <div class="gview" id="vUnit"><canvas id="cvUnit"></canvas></div>
@@ -660,7 +794,79 @@
         <h1 id="ovTitle">네모네모 디펜스</h1>
         <div class="ovBar"></div>
         <p id="ovDesc"></p>
-        <button id="ovBtn">게임 시작</button>
+        <button id="ovBtn">멀티플레이</button>
+      </div>
+    </div>
+    <!-- 멀티플레이 대기실(로비) -->
+    <div id="lobby" class="hide">
+      <div class="lbCard">
+        <div class="lbHead"><span class="lbTitle">멀티플레이 대기실</span><span class="lbRoom">◈ 용암 정거장</span></div>
+        <div class="lbStatus" id="lbStatus">플레이어 입장 대기 중…</div>
+        <div class="lbGrid" id="lbGrid"></div>
+        <div class="lbChat" id="lbChat"></div>
+        <div class="lbChatBar">
+          <input id="lbChatField" type="text" placeholder="메시지…" maxlength="80" autocomplete="off" onkeydown="if(event.key==='Enter')sendLobbyChat()">
+          <button onclick="sendLobbyChat()">전송</button>
+        </div>
+        <div class="lbBtns">
+          <button class="lbLeave" onclick="leaveLobby()">나가기</button>
+          <button class="lbStart" id="lbStart" onclick="lobbyStart()" disabled>대기 중…</button>
+        </div>
+      </div>
+    </div>
+    <!-- 방 찾기(룸 리스트) -->
+    <div id="rooms" class="hide">
+      <div class="rmCard">
+        <div class="rmHead"><span class="rmTitle">방 찾기</span><span class="rmOnline">방 <b id="roomCount">0</b>개</span></div>
+        <div class="rmTop">
+          <button class="rmQuick" onclick="quickJoin()">⚡ 랜덤 입장</button>
+          <button class="rmCreate" onclick="createRoom()">＋ 방 만들기</button>
+        </div>
+        <div class="rmNum">
+          <input id="roomNumField" type="text" inputmode="numeric" placeholder="방 번호로 입장 (친구 방)" maxlength="5" onkeydown="if(event.key==='Enter')joinByNumber()">
+          <button onclick="joinByNumber()">입장</button>
+        </div>
+        <div class="rmList" id="roomList"></div>
+        <div class="rmBtns">
+          <button class="rmBack" onclick="backToTitle()">뒤로</button>
+          <button class="rmRefresh" onclick="refreshRooms()">↻ 새로고침</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="createPanel" class="hide">
+      <div class="cpCard">
+        <div class="cpTitle">방 만들기</div>
+        <label class="cpLabel">방 이름</label>
+        <input id="cpName" type="text" placeholder="방 이름을 입력하세요" maxlength="18">
+        <label class="cpLabel">공개 설정</label>
+        <div class="cpSeg" id="cpVis">
+          <button class="cpSegBtn on" data-v="public" onclick="setRoomVis('public')">🌐 공개</button>
+          <button class="cpSegBtn" data-v="private" onclick="setRoomVis('private')">🔒 비공개</button>
+        </div>
+        <div class="cpPwWrap hide" id="cpPwWrap">
+          <label class="cpLabel">비밀번호</label>
+          <input id="cpPw" type="text" inputmode="numeric" placeholder="비밀번호 설정 (숫자)" maxlength="8">
+        </div>
+        <div class="cpHint" id="cpHint">공개: 방 목록에 표시됩니다.</div>
+        <div class="cpBtns">
+          <button class="cpCancel" onclick="closeCreate()">취소</button>
+          <button class="cpMake" onclick="confirmCreate()">만들기</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="pwPanel" class="hide">
+      <div class="cpCard">
+        <div class="cpTitle">🔒 비공개 방</div>
+        <div class="pwRoomName" id="pwRoomName"></div>
+        <label class="cpLabel">비밀번호</label>
+        <input id="pwField" type="text" inputmode="numeric" placeholder="비밀번호 입력" maxlength="8" onkeydown="if(event.key==='Enter')submitPw()">
+        <div class="cpHint" id="pwErr"></div>
+        <div class="cpBtns">
+          <button class="cpCancel" onclick="closePw()">취소</button>
+          <button class="cpMake" onclick="submitPw()">입장</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1303,12 +1509,13 @@ function drawMain(cvId){ const {ctx,W,H}=setup(cvId||'cvMain'); GW=W;GH=H;
 }
 // 3D 오버레이 OFF일 때 캔버스에 직접 그리는 유닛/적 2D 마커(저사양·절전용)
 function drawUnits2D(ctx,W,H){ ctx.save();
+  const pcol=PLAYER_VIEW_COLORS[(((G.tab==='Players'?G.curPlayer:(G.myPlayer||1))-1))%PLAYER_VIEW_COLORS.length];   // 플레이어 색(테두리)
   for(const u of G.units){ const def=U[u.id]; if(!def) continue; const x=u.x*W, y=u.y*H, col=def.color||'#7fdcff', r=u.hero?7:5.5;
     ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=.32; ctx.fillStyle=col;
     ctx.beginPath(); ctx.arc(x,y,r*1.7,0,6.28); ctx.fill();
     ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=1;
-    ctx.fillStyle=col; ctx.strokeStyle='rgba(0,0,0,.55)'; ctx.lineWidth=1.3;
-    ctx.beginPath(); ctx.arc(x,y,r,0,6.28); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=col; ctx.beginPath(); ctx.arc(x,y,r,0,6.28); ctx.fill();
+    ctx.strokeStyle=pcol; ctx.lineWidth=1.7; ctx.beginPath(); ctx.arc(x,y,r+0.7,0,6.28); ctx.stroke();   // 플레이어색 테두리
     if(u.hero){ ctx.fillStyle='#fff5b0'; ctx.beginPath(); ctx.arc(x,y-r-3,2,0,6.28); ctx.fill(); }
     if(G.sel&&G.sel.indexOf(u.uid)>=0){ ctx.strokeStyle='#cfeaff'; ctx.lineWidth=1.6; ctx.beginPath(); ctx.ellipse(x,y+r*0.4,r*1.5,r*0.7,0,0,6.28); ctx.stroke(); } }
   for(const e of G.enemies){ if(!e.model3d) continue; const p=posAt(e.d,W,H), col=e.boss?COL.boss:COL.enemy, r=e.boss?10:7;
@@ -1871,7 +2078,8 @@ function switchTab(id,el){ G.tab=id;
   if(id==='Unit'){ G.citizen={x:CITIZEN_HOME.x,y:CITIZEN_HOME.y,gx:null,gy:null,buyId:null,mode:'idle',targetPad:null}; uHold=null; G.shopSel=null; buildClock(); drawProd(); }   // 진입 시 무선택(클릭해야 지정)
   updateDeselTop();
   if(id==='Upgrade'){ renderBldgs('vUpgrade',TECH,TECH_POS,null,selectUpg); drawUpg(); }
-  if(id==='Players'){ const mine=G.myPlayer||1; if(G.curPlayer===mine||G.curPlayer<1||G.curPlayer>8) G.curPlayer=(mine===1?2:1);   // 내 슬롯은 관전 안 함 → 다른 플레이어 기본
+  if(id==='Players'){ const mine=G.myPlayer||1; const others=(G.activePlayers||[1,2,3,4,5,6,7,8]).filter(n=>n!==mine);
+    if(others.indexOf(G.curPlayer)<0) G.curPlayer=others[0]||mine;   // 입장한 다른 플레이어 기본
     if(typeof clearPlayerSel==='function') clearPlayerSel(); renderPlayers(); drawPlayer(); }
   if(id==='Main'){ drawMain(); renderUnits(); placeMergeZone(); }
   updateSpecLabel();
@@ -1918,7 +2126,8 @@ function enemyHpHTML(e){ let h='';
 function refreshSelCard(){
   const en = G.selEnemy!=null ? G.enemies.find(x=>x.eid===G.selEnemy) : null;
   updateDeselTop(); // 우상단 해제버튼(탭별)
-  updateCmdRow();   // 명령 버튼 행(홀드/공격이동/반복이동/스킬)
+  updateCmdRow();   // 명령 버튼 행(홀드/공격이동/지정공격/반복이동)
+  updateSkillFab(); // 메인 화면 스킬 버튼
   if(G.sel.length===0 && !en){ document.getElementById('defaultCmd').classList.remove('hide');
     document.getElementById('unitCmd').classList.remove('on'); renderUnits(); return; }
   document.getElementById('defaultCmd').classList.add('hide');
@@ -2049,9 +2258,21 @@ function setFocusTarget(eid){ const e=G.enemies.find(x=>x.eid===eid); const us=s
   for(const u of us){ u.cmd='focus'; u.focusTarget=eid; u.patrol=null; u.atkTarget=null; u._chasing=false; }
   assignFormOffsets(us);   // 포위 대형
   addChat('','지정공격: '+(e?e.name:'적')+' 집중 공격.'); }
+const SKILL_ICON={ adr:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg>' };  // 아드레날린=번개
 function useSkill(){ const us=selUnits(); if(!us.length) return;
   let used=0; for(const u of us){ const def=U[u.id]; if(def.skill && (u.skCd||0)<=0){ u.adr=def.skill.dur; u.skCd=def.skill.cd; used++; } }
-  if(used){ const nm=U[us[0].id].skill.name; addChat('',nm+' 발동! ('+used+'기)'); } updateCmdRow(); }
+  if(used){ const nm=U[us[0].id].skill.name; addChat('',nm+' 발동! ('+used+'기)'); } updateCmdRow(); updateSkillFab(); }
+function updateSkillFab(){ const fab=document.getElementById('skillFab'); if(!fab) return;
+  if(typeof G==='undefined'||G.tab!=='Main'||G.selEnemy!=null){ fab.classList.add('hide'); return; }
+  const us=selUnits().filter(u=>U[u.id]&&U[u.id].skill);
+  if(!us.length){ fab.classList.add('hide'); return; }
+  fab.classList.remove('hide'); const sk=U[us[0].id].skill;
+  const ico=document.getElementById('sfIco'); if(ico.dataset.k!==sk.key){ ico.innerHTML=SKILL_ICON[sk.key]||''; ico.dataset.k=sk.key; }
+  document.getElementById('sfName').textContent=sk.name;
+  const cd=Math.min.apply(null, us.map(u=>u.skCd||0)), active=us.some(u=>(u.adr||0)>0);
+  fab.classList.toggle('active',active);
+  document.getElementById('sfCd').textContent = cd>0?Math.ceil(cd):'';
+  document.getElementById('sfOver').style.height = cd>0?Math.min(100,(cd/sk.cd)*100)+'%':'0'; }
 function updateCmdRow(){ const row=document.getElementById('cmdRow'); if(!row) return;
   const us=selUnits();   // 선택된 비고정 유닛 전체(단일/다중 공통)
   if(G.selEnemy!=null || us.length===0){ row.style.display='none'; return; }
@@ -2285,12 +2506,13 @@ function tickResearch(dt){ if(!G.research) return;
 const TINTS=['#0d1e35','#2a0d0d','#0d2a0d','#1e0d2a'];
 const PLAYER_VIEW_COLORS=['#4aa8ff','#ff4d4d','#1ecbb0','#b06bff','#ff9a2f','#ffd23b','#46d860','#e6e6ee'];  // 8인 플레이어 구분색(P1 파랑=나, 빨강/청록/보라/주황/노랑/초록/흰색)
 function renderPlayers(){ const g=document.getElementById('plGrid'); g.innerHTML='';
-  const mine=G.myPlayer||1;
-  for(let n=1;n<=8;n++){ const el=document.createElement('div'); const lock=(n===mine);   // 내 슬롯은 잠금(나)
-    el.className='plbtn'+(n===G.curPlayer&&!lock?' me':'')+(lock?' lock':'');
-    el.style.setProperty('--pc', PLAYER_VIEW_COLORS[(n-1)%PLAYER_VIEW_COLORS.length]);   // 플레이어색(CSS 변수)
-    el.innerHTML='<div class="plnum">'+n+'</div><div class="plst">'+(lock?'나 🔒':'P'+n)+'</div>';
-    if(!lock) el.onclick=()=>{ G.curPlayer=n; renderPlayers(); drawPlayer(); updateSpecLabel(); };   // 잠긴 슬롯(나)은 선택 불가
+  const mine=G.myPlayer||1; const active=G.activePlayers||[1,2,3,4,5,6,7,8];   // 게임에 입장한 플레이어만 활성
+  for(let n=1;n<=8;n++){ const present=active.indexOf(n)>=0, lock=(n===mine);   // 내 슬롯은 잠금(나)
+    const el=document.createElement('div');
+    el.className='plbtn'+(present&&n===G.curPlayer&&!lock?' me':'')+(lock?' lock':'')+(!present?' off':'');   // 미입장=off
+    el.style.setProperty('--pc', PLAYER_VIEW_COLORS[(n-1)%PLAYER_VIEW_COLORS.length]);
+    el.innerHTML='<div class="plnum">'+n+'</div><div class="plst">'+(lock?'나 🔒':(present?'P'+n:'빈 자리'))+'</div>';
+    if(!lock && present) el.onclick=()=>{ G.curPlayer=n; renderPlayers(); drawPlayer(); updateSpecLabel(); };   // 입장한 다른 플레이어만 관전 가능
     g.appendChild(el);
   } }
 // ── 배속 투표(만장일치=최저 배속) ──
@@ -2396,7 +2618,7 @@ function addChat(sender, text, color){ const box=document.getElementById('chatLo
   box.appendChild(d); while(box.children.length>6) box.removeChild(box.firstChild);
   setTimeout(()=>{ d.classList.add('fade'); setTimeout(()=>{ if(d.parentNode) d.remove(); }, 900); }, 6000); }  // 일정시간 후 페이드 아웃
 function sendChat(){ const f=document.getElementById('chatField'); const t=(f.value||'').trim(); if(!t) return;
-  addChat('나', t, PLAYER_VIEW_COLORS[0]); f.value=''; f.focus(); }
+  addChat('나', t, PLAYER_VIEW_COLORS[((G.myPlayer||1)-1)%PLAYER_VIEW_COLORS.length]); f.value=''; f.focus(); }
 const FAKE_CHATS=[['P3','#1ecbb0','다들 몇 라운드?'],['P5','#ff9a2f','스트라이더 미쳤다 ㅋㅋ'],['P2','#ff4d4d','gg 준비됨'],['P7','#46d860','리퍼 합체 완료'],['P4','#b06bff','크레딧 부족 ㅠㅠ'],['P6','#ffd23b','스파이어 도배 가자'],['P8','#e6e6ee','거의 다 막았다']];
 let _fakeChatT=0;
 function tickFakeChat(dt){ _fakeChatT-=dt; if(_fakeChatT<=0){ _fakeChatT=10+Math.random()*12;
@@ -2418,17 +2640,204 @@ function toast(msg){ if(!msg) return;
 function showOverlay(){ const ov=document.getElementById('ov'),tt=document.getElementById('ovTitle'),dd=document.getElementById('ovDesc'),bt=document.getElementById('ovBtn');
   ov.classList.remove('hide');
   if(G.phase==='ready'){ tt.textContent='네모네모 디펜스'; tt.style.color=COL.accent;
-    dd.textContent='사각 트랙을 도는 적을 막아라.\n유닛 구매 → 배치 → 합성으로 영웅을 키우고\n'+TOTAL_ROUNDS+'라운드를 클리어!'; bt.textContent='게임 시작'; }
+    dd.textContent='사각 트랙을 도는 적을 막아라.\n유닛 구매 → 배치 → 합성으로 영웅을 키우고\n'+TOTAL_ROUNDS+'라운드를 클리어!'; bt.textContent='멀티플레이'; }
   else if(G.phase==='won'){ tt.textContent='CLEAR! 🏆'; tt.style.color='#ffd24a';
     dd.textContent=TOTAL_ROUNDS+'라운드를 모두 막아냈습니다!\n킬 '+G.kills; bt.textContent='다시 시작'; }
   else if(G.phase==='lost'){ tt.textContent='DEFEAT'; tt.style.color='#ff5c5c';
     dd.textContent='라운드 '+G.round+'에서 적이 100기 누적되었습니다.\n킬 '+G.kills; bt.textContent='다시 시작'; }
 }
 document.getElementById('ovBtn').onclick=()=>{
-  G=newGame(); G.phase='playing'; G.toSpawn=ENEMIES_PER_ROUND;
-  document.getElementById('ov').classList.add('hide');
-  renderUnits(); updateHud(); placeMergeZone();
+  if(G.phase==='ready'){ openRooms(); }                 // 멀티플레이 → 방 찾기
+  else { G=newGame(); showOverlay(); }                  // 승/패 후 '다시 시작' → 타이틀로
 };
+// ── 방 찾기(룸 리스트) ──
+const ROOM_TITLES=['초보만 ㄱㄱ','빨무 고수방','1라운드부터','막판러시 ㄱ','즐겜 환영','영웅 키우기','풀방 가즈아','연습 같이해요','고인물 전용','협동 클리어','노바 팬클럽','쫄?'];
+let _roomList=[];
+function perfNow(){ return (typeof performance!=='undefined'&&performance.now)?performance.now():(window._rtFake=(window._rtFake||0)+16); }
+let _roomsTimer=null;
+function startRoomsTick(){ stopRoomsTick(); _roomsTimer=setInterval(tickRooms,1000); }
+function stopRoomsTick(){ if(_roomsTimer){ clearInterval(_roomsTimer); _roomsTimer=null; } }
+function tickRooms(){ if(!_roomList||document.getElementById('rooms').classList.contains('hide')){ stopRoomsTick(); return; }
+  const now=perfNow(); let changed=false;
+  for(let i=_roomList.length-1;i>=0;i--){ const r=_roomList[i];   // 게임 시작 10초 뒤 목록에서 제거
+    if(r.status==='playing'&&r.gameEndAt&&now>=r.gameEndAt){ _roomList.splice(i,1); changed=true; } }
+  const waits=_roomList.filter(r=>r.status==='wait'&&r.cur>=2);   // 대기방 일부가 게임 시작 → 10초 후 사라짐
+  if(waits.length&&Math.random()<0.18){ const r=waits[Math.floor(Math.random()*waits.length)]; r.status='playing'; r.round=1; r.gameEndAt=now+10000; changed=true; }
+  if(changed){ renderRoomList(); const rc=document.getElementById('roomCount'); if(rc) rc.textContent=_roomList.length; }
+}
+function openRooms(){ document.getElementById('ov').classList.add('hide'); document.getElementById('lobby').classList.add('hide');
+  document.getElementById('rooms').classList.remove('hide'); buildRoomList(); startRoomsTick(); }
+function backToTitle(){ stopRoomsTick(); document.getElementById('rooms').classList.add('hide'); G.phase='ready'; showOverlay(); }
+function refreshRooms(){ buildRoomList(); }
+function newRoomNum(){ let num; do{ num=1000+Math.floor(Math.random()*9000); }while(_roomList&&_roomList.some(r=>r.num===num)); return num; }
+function buildRoomList(){ _roomList=[];
+  const n=5+Math.floor(Math.random()*4);   // 5~8개 방
+  const titles=ROOM_TITLES.slice().sort(()=>Math.random()-0.5), hosts=LOBBY_NAMES.slice().sort(()=>Math.random()-0.5);
+  const now=perfNow();
+  for(let i=0;i<n;i++){ const playing=Math.random()<0.35;
+    const cur=playing?(2+Math.floor(Math.random()*6)):(1+Math.floor(Math.random()*7));
+    const priv=Math.random()<0.3;   // 약 30% 비공개(목록엔 보이지만 비밀번호 필요)
+    _roomList.push({num:newRoomNum(), name:titles[i%titles.length], host:hosts[i%hosts.length], cur:Math.min(8,cur), max:8, status:playing?'playing':'wait', round:playing?(1+Math.floor(Math.random()*TOTAL_ROUNDS)):0, visibility:priv?'private':'public', pw:priv?(''+(1000+Math.floor(Math.random()*9000))):'',
+      gameEndAt:playing?(now+1000+Math.random()*9000):0});   // 게임중 방: 시작 후 10초 내 목록에서 사라짐
+  }
+  renderRoomList(); }
+function renderRoomList(){ const list=document.getElementById('roomList'); if(!list) return; list.innerHTML='';
+  const rc=document.getElementById('roomCount'); if(rc) rc.textContent=_roomList.length;
+  _roomList.forEach(r=>{ const full=r.cur>=r.max, joinable=r.status==='wait'&&!full, priv=r.visibility==='private';
+    const el=document.createElement('div'); el.className='roomItem'+(joinable?'':' locked');
+    el.innerHTML='<div class="riMain"><div class="riName"><span class="riNum">#'+r.num+'</span>'+(priv?'<span class="riLock">🔒</span>':'')+escHtml(r.name)+'</div><div class="riSub">방장 '+escHtml(r.host)+'</div></div>'
+      +'<div class="riRight"><div class="riCnt'+(full?' full':'')+'">'+r.cur+'/'+r.max+'</div><div class="riStat '+(r.status==='wait'?'wait':'play')+'">'+(r.status==='wait'?(full?'가득참':'대기중'):'게임중 '+r.round+'R')+'</div></div>';
+    if(joinable) el.onclick=()=> priv? openPwPrompt(r) : joinRoom(r);
+    list.appendChild(el);
+  });
+}
+function joinRoom(r){ if(r.status!=='wait'||r.cur>=r.max) return;
+  openLobby({num:r.num, name:r.name, host:r.host, startCount:r.cur, joining:true}); }
+function quickJoin(){ const wait=_roomList.filter(r=>r.status==='wait'&&r.cur<r.max);
+  if(!wait.length){ createRoom(); return; }   // 빈 방 없으면 새로 생성
+  joinRoom(wait[Math.floor(Math.random()*wait.length)]); }
+// 방 번호로 입장(친구의 비공개 방 포함)
+function joinByNumber(){ const f=document.getElementById('roomNumField'); if(!f) return;
+  const num=parseInt((f.value||'').replace(/\D/g,''),10);
+  if(!num||num<1000){ toast('방 번호 4자리를 입력하세요'); f.focus(); return; }
+  const r=_roomList.find(x=>x.num===num);
+  if(r){ if(r.status!=='wait'||r.cur>=r.max){ toast(r.cur>=r.max?'방이 가득 찼습니다':'이미 게임 중인 방입니다'); return; }
+    f.value=''; if(r.visibility==='private') openPwPrompt(r); else joinRoom(r); return; }
+  // 목록에 없는 번호 → 친구의 비공개 방으로 입장(시뮬)
+  f.value='';
+  const host=LOBBY_NAMES[Math.floor(Math.random()*LOBBY_NAMES.length)];
+  openLobby({num:num, name:'#'+num+' 방', host:host, startCount:1+Math.floor(Math.random()*4), joining:true, visibility:'private'}); }
+// 방 만들기 모달
+let _createVis='public';
+function createRoom(){ const nm=document.getElementById('cpName'); if(nm) nm.value=''; const pw=document.getElementById('cpPw'); if(pw) pw.value=''; setRoomVis('public');
+  document.getElementById('createPanel').classList.remove('hide'); if(nm) nm.focus(); }
+function closeCreate(){ const p=document.getElementById('createPanel'); if(p) p.classList.add('hide'); }
+function setRoomVis(v){ _createVis=v;
+  document.querySelectorAll('#cpVis .cpSegBtn').forEach(b=>b.classList.toggle('on', b.dataset.v===v));
+  const w=document.getElementById('cpPwWrap'); if(w) w.classList.toggle('hide', v!=='private');
+  const h=document.getElementById('cpHint'); if(h){ h.style.color=''; h.textContent = v==='public'?'공개: 방 목록에 표시됩니다.':'비공개: 목록엔 보이지만 비밀번호를 입력해야 입장할 수 있습니다.'; } }
+function confirmCreate(){ const nmEl=document.getElementById('cpName');
+  const name=((nmEl&&nmEl.value)||'').trim()||'나의 대기실';
+  let pw=''; if(_createVis==='private'){ const pwEl=document.getElementById('cpPw'); pw=((pwEl&&pwEl.value)||'').replace(/\s/g,'');
+    if(!pw){ const h=document.getElementById('cpHint'); if(h){ h.textContent='비공개 방은 비밀번호를 설정해야 합니다.'; h.style.color='#ff6b6b'; } if(pwEl) pwEl.focus(); return; } }
+  closeCreate();
+  openLobby({num:newRoomNum(), name:name, host:'나', startCount:1, joining:false, visibility:_createVis, pw:pw}); }
+// 비공개 방 비밀번호 입력
+let _pwRoom=null;
+function openPwPrompt(r){ _pwRoom=r;
+  document.getElementById('pwRoomName').textContent='#'+r.num+'  '+r.name;
+  const f=document.getElementById('pwField'); if(f){ f.value=''; } document.getElementById('pwErr').textContent='';
+  document.getElementById('pwPanel').classList.remove('hide'); if(f) f.focus(); }
+function closePw(){ const p=document.getElementById('pwPanel'); if(p) p.classList.add('hide'); _pwRoom=null; }
+function submitPw(){ if(!_pwRoom) return; const f=document.getElementById('pwField');
+  const v=((f&&f.value)||'').replace(/\s/g,'');
+  if(v===_pwRoom.pw){ const r=_pwRoom; closePw(); joinRoom(r); }
+  else { document.getElementById('pwErr').textContent='비밀번호가 일치하지 않습니다.'; if(f){ f.value=''; f.focus(); } } }
+function startGameNow(activePlayers, myNum){
+  G=newGame(); G.phase='playing'; G.toSpawn=ENEMIES_PER_ROUND;
+  G.activePlayers = (activePlayers&&activePlayers.length)? activePlayers.slice() : [1,2,3,4,5,6,7,8];   // 입장한 플레이어
+  G.myPlayer = myNum||1;   // 입장 순서로 배정된 내 번호
+  _leaveT=20+Math.random()*20;
+  document.getElementById('ov').classList.add('hide');
+  const lb=document.getElementById('lobby'); if(lb) lb.classList.add('hide');
+  renderUnits(); updateHud(); placeMergeZone();
+}
+// 게임 중 플레이어 이탈 → 관전 버튼 비활성화
+function playerLeave(n){ if(!G.activePlayers) return; const mine=G.myPlayer||1; if(n===mine) return;
+  const i=G.activePlayers.indexOf(n); if(i<0) return;
+  G.activePlayers.splice(i,1);
+  addChat('','P'+n+'님이 게임에서 나갔습니다.');
+  if(G.curPlayer===n){ const other=G.activePlayers.filter(x=>x!==mine); G.curPlayer=other[0]||mine;
+    if(G.tab==='Players'){ if(typeof drawPlayer==='function') drawPlayer(); updateSpecLabel(); } }
+  if(G.tab==='Players') renderPlayers();
+}
+let _leaveT=1e9;
+function tickPresence(dt){ if(G.phase!=='playing'||!G.activePlayers) return; _leaveT-=dt; if(_leaveT>0) return; _leaveT=22+Math.random()*26;
+  const others=G.activePlayers.filter(n=>n!==(G.myPlayer||1));
+  if(others.length>1 && Math.random()<0.5) playerLeave(others[Math.floor(Math.random()*others.length)]);   // 최소 2명 유지
+}
+// ── 멀티플레이 대기실(로비) ──
+const LOBBY_NAMES=['Striker','GG준비됨','리퍼장인','Crystalize','보이드킹','노바777','Sentinel','막눈'];
+let _lobbyT=null, _lobbySlots=[];
+let _lobbyRoom=null;
+function openLobby(room){ _lobbyRoom=room||{name:'나의 대기실',host:'나',joining:false,startCount:1};
+  stopRoomsTick();
+  document.getElementById('ov').classList.add('hide'); document.getElementById('rooms').classList.add('hide');
+  document.getElementById('lobby').classList.remove('hide');
+  const tt=document.querySelector('.lbTitle'); if(tt) tt.textContent=_lobbyRoom.name;   // 방 이름을 제목으로
+  const rm=document.querySelector('.lbRoom'); if(rm) rm.textContent=(_lobbyRoom.visibility==='private'?'🔒 ':'')+(_lobbyRoom.num?'방 #'+_lobbyRoom.num:'◈ 용암 정거장');   // 방 번호 표시(친구 찾기용)
+  const cb=document.getElementById('lbChat'); if(cb) cb.innerHTML='';
+  startLobbySim(_lobbyRoom);
+  startLobbyChat(); }
+function leaveLobby(){ stopLobbySim(); stopLobbyChat(); document.getElementById('lobby').classList.add('hide'); openRooms(); }   // 나가기 → 방 목록
+function lobbyStart(){ const players=_lobbySlots.filter(Boolean); if(players.length<2||!players.every(s=>s.ready)) return;
+  const active=[]; let myNum=1; _lobbySlots.forEach((s,i)=>{ if(s){ active.push(i+1); if(s.me) myNum=i+1; } });   // 입장 순서대로 슬롯 번호
+  stopLobbySim(); stopLobbyChat(); startGameNow(active, myNum); }
+function startLobbySim(room){ room=room||{joining:false,startCount:1,host:'나'};
+  const names=LOBBY_NAMES.slice().sort(()=>Math.random()-0.5); let ni=0;
+  _lobbySlots=[null,null,null,null,null,null,null,null];
+  if(room.joining){   // 기존 방 참여: P1=호스트…, 나는 들어간 순서대로 다음 번호
+    const existing=Math.max(1,Math.min(7,room.startCount||2));
+    for(let k=0;k<existing;k++){ _lobbySlots[k]={name:'P'+(k+1), label:k===0?room.host:names[ni++%names.length], bot:true, ready:true, host:k===0}; }
+    _lobbySlots[existing]={me:true, name:'P'+(existing+1), ready:true, host:false};   // 나 = 다음 슬롯
+  } else {   // 방 생성: 내가 P1 호스트
+    _lobbySlots[0]={me:true, name:'P1', ready:true, host:true};
+  }
+  renderLobby(); updateLobbyStart();
+  addLobbyMsg('', '나님이 입장하였습니다.');   // 내 입장부터 표시(기존 입장자는 생략, 이후 입장자만 안내)
+  const cur=_lobbySlots.filter(Boolean).length;
+  const target=Math.min(8, cur + (room.joining? Math.floor(Math.random()*3) : 1+Math.floor(Math.random()*5)));   // 추가 입장
+  _lobbyT=setInterval(()=>{
+    const empty=_lobbySlots.indexOf(null), filled=_lobbySlots.filter(Boolean).length;
+    if(empty<0 || filled>=target){ stopLobbySim(); updateLobbyStart(); return; }
+    const slot={name:'P'+(empty+1),label:names[ni++%names.length],bot:true,ready:false,joining:true};
+    _lobbySlots[empty]=slot; renderLobby(); updateLobbyStart();
+    setTimeout(()=>{ if(_lobbySlots.indexOf(slot)>=0){ slot.joining=false; slot.ready=true; renderLobby(); updateLobbyStart();
+      addLobbyMsg('', (slot.label||slot.name)+'님이 입장하였습니다.'); } }, 450+Math.random()*700);
+  }, 850);
+}
+let _autoStartT=null;
+function stopLobbySim(){ if(_lobbyT){ clearInterval(_lobbyT); _lobbyT=null; } if(_autoStartT){ clearTimeout(_autoStartT); _autoStartT=null; } }   // 채팅은 대기실 떠날 때만(leaveLobby/lobbyStart) 정지
+// ── 대기실 채팅 ──
+const LOBBY_CHATTER=['반갑습니다','gl hf','다들 준비됐나요?','ㅎㅇ','이 맵 좋네요','초보인데 잘 부탁','ㄱㄱ 빨리','풀방 가즈아','몇 라운드까지 가봤어요?','오늘 잘 풀리길','ㅎㅎ 화이팅','시작하면 합체부터'];
+let _lobbyChatT=null;
+function lbMeInfo(){ const i=_lobbySlots.findIndex(s=>s&&s.me); return {col:PLAYER_VIEW_COLORS[(i<0?0:i)%PLAYER_VIEW_COLORS.length]}; }
+function addLobbyMsg(name, text, color){ const box=document.getElementById('lbChat'); if(!box) return;
+  const d=document.createElement('div'); d.className='lbMsg'+(name?'':' sys');
+  d.innerHTML = name ? '<b style="color:'+(color||'#9fb0c2')+'">'+escHtml(name)+'</b> '+escHtml(text) : escHtml(text);
+  box.appendChild(d); while(box.children.length>40) box.removeChild(box.firstChild); box.scrollTop=box.scrollHeight; }
+function sendLobbyChat(){ const f=document.getElementById('lbChatField'); const t=(f.value||'').trim(); if(!t) return;
+  addLobbyMsg('나', t, lbMeInfo().col); f.value=''; f.focus(); }
+function startLobbyChat(){ stopLobbyChat();
+  _lobbyChatT=setInterval(()=>{ const bots=_lobbySlots.filter(s=>s&&s.bot&&!s.joining); if(!bots.length) return;
+    const b=bots[Math.floor(Math.random()*bots.length)], i=_lobbySlots.indexOf(b);
+    addLobbyMsg(b.label||b.name, LOBBY_CHATTER[Math.floor(Math.random()*LOBBY_CHATTER.length)], PLAYER_VIEW_COLORS[i%PLAYER_VIEW_COLORS.length]);
+  }, 2800+Math.random()*2600); }
+function stopLobbyChat(){ if(_lobbyChatT){ clearInterval(_lobbyChatT); _lobbyChatT=null; } }
+function renderLobby(){ const g=document.getElementById('lbGrid'); if(!g) return; g.innerHTML='';
+  for(let i=0;i<8;i++){ const s=_lobbySlots[i], col=PLAYER_VIEW_COLORS[i%PLAYER_VIEW_COLORS.length];
+    const el=document.createElement('div'); el.className='lbSlot'+(s?'':' empty')+(s&&s.me?' me':''); el.style.setProperty('--pc',col);
+    if(s){ const stt = s.host?'호스트' : (s.joining?'입장 중…' : (s.ready?'준비 완료':'대기'));
+      const cls = s.host?'host' : (s.ready?'ok':'');
+      el.innerHTML='<div class="lbNum">'+(i+1)+'</div><div class="lbInfo"><div class="lbName">'+escHtml(s.me?'나':(s.label||s.name))+'</div><div class="lbStat '+cls+'">'+stt+'</div></div>';
+    } else el.innerHTML='<div class="lbNum">'+(i+1)+'</div><div class="lbInfo"><div class="lbEmpty">빈 자리</div></div>';
+    g.appendChild(el);
+  }
+}
+function updateLobbyStart(){ const players=_lobbySlots.filter(Boolean), cnt=players.length, allReady=players.every(s=>s.ready);
+  const meSlot=_lobbySlots.find(s=>s&&s.me), meHost=!!(meSlot&&meSlot.host);
+  const st=document.getElementById('lbStatus'), btn=document.getElementById('lbStart');
+  if(meHost){   // 방장: 직접 시작
+    if(st) st.textContent=(cnt>=8?'대기실이 가득 찼습니다':'플레이어 입장 대기 중…')+' ('+cnt+'/8)';
+    if(btn){ const ok=cnt>=2&&allReady; btn.disabled=!ok; btn.textContent=ok?'게임 시작':'대기 중…'; btn.classList.toggle('ready',ok); }
+  } else {   // 참가자: 시작 불가(방장만), 전원 준비되면 방장이 자동 시작
+    const ready=cnt>=2 && allReady && _lobbyT===null;
+    if(st) st.textContent= ready?'방장이 곧 게임을 시작합니다…':('플레이어 입장 대기 중… ('+cnt+'/8)');
+    if(btn){ btn.disabled=true; btn.textContent='방장 대기 중'; btn.classList.remove('ready'); }
+    if(ready && !_autoStartT){ _autoStartT=setTimeout(()=>{ _autoStartT=null;
+      if(document.getElementById('lobby').classList.contains('hide')) return;
+      const p=_lobbySlots.filter(Boolean); if(p.length>=2 && p.every(s=>s.ready)) lobbyStart(); }, 2200); }
+  } }
 
 // ── HUD ──
 function fmt(s){ const m=Math.floor(s/60),x=Math.floor(s%60); return String(m).padStart(2,'0')+':'+String(x).padStart(2,'0'); }
@@ -2812,6 +3221,7 @@ function loop(now){
   if(cap>0 && (now-last) < (1000/cap - 1.5)){ requestAnimationFrame(loop); return; }
   const dt=Math.min(now-last,100)/1000; last=now;
   tickFakeChat(dt);   // 다른 플레이어 가짜 채팅(임시)
+  tickPresence(dt);   // 플레이어 이탈(관전 버튼 비활성화)
   tickVote(dt);       // 배속 투표(봇 성향 변화) — 일시정지와 무관하게 진행
   if(!G.paused){      // 일시정지: 게임 진행(전투/연구/시민/이동/물리) 정지, 렌더·UI는 유지
     tickResearch(dt);   // 업그레이드 연구 타이머(진행 중이면 카운트다운, 완료 시 레벨업)
@@ -2828,13 +3238,14 @@ function loop(now){
     if(!pu) clearPlayerSel(); else { const e=document.getElementById('ppHp'); if(e && getComputedStyle(document.getElementById('playerProfile')).display!=='none') e.innerHTML=scHpHTML(pu); } }
   updateSelHp();   // 단일 종류 다중선택 시 유닛별 HP 실시간 갱신
   if(G.sel.length>=1 && document.getElementById('unitCmd').classList.contains('on')) updateCmdRow();   // 명령 행 상태 갱신(단일/다중)
+  updateSkillFab();   // 스킬 FAB 쿨다운/버프 실시간(탭 전환·해제도 내부 처리)
   updateHud();
   // '합체' 라벨 페이드: 1라운드만 표시, 2라운드부터 매 프레임 opacity 보간으로 부드럽게 사라짐
   { const mzl=document.querySelector('#mergeZone .mz');
     if(mzl){ const tgt=G.round>1?0:1; G._mzF=(G._mzF==null?1:G._mzF)+(tgt-(G._mzF==null?1:G._mzF))*Math.min(1,dt*1.6);
       if(G._mzF<0.002)G._mzF=0; mzl.style.opacity=G._mzF.toFixed(3); } }
   // 아군 유닛 림 색: 플레이어 구역 관전 시 관전 플레이어 색(+또렷하게), 그 외엔 내 색(은은)
-  if(window.M3D && window.M3D.setPlayerRim){ if(G.tab==='Players') window.M3D.setPlayerRim(PLAYER_VIEW_COLORS[(G.curPlayer-1)%PLAYER_VIEW_COLORS.length], 1.7); else window.M3D.setPlayerRim(PLAYER_VIEW_COLORS[0]); }
+  if(window.M3D && window.M3D.setPlayerRim){ if(G.tab==='Players') window.M3D.setPlayerRim(PLAYER_VIEW_COLORS[(G.curPlayer-1)%PLAYER_VIEW_COLORS.length], 1.7); else window.M3D.setPlayerRim(PLAYER_VIEW_COLORS[((G.myPlayer||1)-1)%PLAYER_VIEW_COLORS.length]); }   // 내 유닛·건물 테두리=내 플레이어 색
   if(G.tab==='Main') drawMain();
   else if(G.tab==='Players') drawPlayer();   // 관전: 실제 전장을 플레이어 캔버스에 동일 렌더
   else drawMiniMap();
@@ -2898,9 +3309,9 @@ const PLAYER_MODELS=new Set(['marine','ghost','goliath','dragoon','hydra','archo
 const RING_OP=0.9;        // 선택 링 불투명도
 const TINT_AMT=0.78;      // 모델 색 틴트 강도(0=원본, 1=완전 색칠) — 진한 색은 발광이 아닌 이 값으로(단단하게)
 const EMIT_AMT=0.09;      // 플레이어색 발광(은은하게 — 마린/고스트처럼 부드러운 빛)
-const RIM_INT=0.5;        // 프레넬 림 라이트 강도(은은한 가장자리 발광) — 메인 기본값
-const RIM_POW=2.6;        // 림 폭(클수록 가장자리에만 얇게)
-const RIM_WHITE=0.45;     // 림 색을 흰색 쪽으로 섞는 정도(밝은 테두리)
+const RIM_INT=0.85;       // 프레넬 림 라이트 강도(플레이어색 또렷하게)
+const RIM_POW=2.4;        // 림 폭(클수록 가장자리에만 얇게)
+const RIM_WHITE=0.16;     // 림 색을 흰색 쪽으로 섞는 정도(낮을수록 플레이어색 선명)
 const ENEMY_RIM=0xff3322; // 적 유닛 림 색(선명한 적색 — 눈에 잘 띄되 옅은 분홍보다 덜 밝음)
 const NEUTRAL_RIM=0xbfe0ff; // 구조물/기타 림 색(차가운 흰빛)
 // 아군 유닛 공용 림 색(Color 객체 1개를 모든 아군 재질이 공유 → setPlayerRim으로 한번에 색 전환: 플레이어 구역 관전용)
