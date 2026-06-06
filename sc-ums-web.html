@@ -82,8 +82,11 @@
     border:1px solid rgba(0,229,255,.22);border-radius:7px;
     box-shadow:inset 0 0 12px rgba(0,0,0,.4),0 1px 3px rgba(0,0,0,.45)}
   /* 시계 — 주변 HUD 숫자와 동일한 Rajdhani 폰트/청록 톤(디지털 시계체 X) */
+  #hudC{display:flex;flex-direction:column;align-items:center;gap:1px}
   #hudC .time{font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif;font-size:16px;font-weight:700;line-height:1;
     letter-spacing:1.5px;color:var(--hud);text-shadow:0 0 5px var(--hud-glow),0 2px 3px #000}
+  #hudC .time.prep{color:#ffb14d;text-shadow:0 0 6px rgba(255,177,77,.5),0 2px 3px #000}   /* 준비 단계=주황 */
+  #hudC .rndPhase{font-size:8px;font-weight:800;letter-spacing:2px;color:#ffb14d;line-height:1;min-height:8px;text-shadow:0 1px 2px #000}
   #hudRwrap{display:flex;flex-direction:column;align-items:flex-end;gap:4px;margin-top:2px}
   #hudR{display:flex;align-items:center;gap:9px;font-size:10.5px;font-weight:800;white-space:nowrap;text-shadow:0 2px 4px #000,0 0 8px #000}
   /* 맵 이름: 자원 아래 우측 — 배경 없이 텍스트 + 청록 액센트 + 진한 쉐도우 */
@@ -861,7 +864,7 @@
         <span class="kill"><b id="hKill">0</b> Kill</span>
         <span id="specLabel"></span>
       </div>
-      <div id="hudC"><span class="time" id="hTime">00:00</span></div>
+      <div id="hudC"><span class="rndPhase" id="hPhase"></span><span class="time" id="hTime">00:00</span></div>
       <div id="hudRwrap">
         <div id="hudR">
           <span class="res min"><svg class="ri" viewBox="0 0 24 24"><!-- 크레딧: 골드 코인 -->
@@ -1349,7 +1352,9 @@ function enemyShape(n){ return ENEMY_SHAPE[n]||'orb'; }
 const TOTAL_ROUNDS=MON.length;            // 18
 const ENEMIES_PER_ROUND=12;               // 라운드당 적 수 (밸런스용)
 const SPAWN_GAP=1.0;                       // 적 스폰 간격(초)
-const ROUND_GAP=2.5;                       // 라운드 사이 대기(초)
+const ROUND_GAP=2.5;                       // (구) 라운드 사이 대기 — 현재 미사용
+const PREP_TIME=10;                        // 라운드 시작 전 준비(유닛 뽑기) 시간(초)
+const ROUND_TIME=190;                      // 라운드 제한시간 3:10(초). 0초 도달 시 다음 라운드 자동 시작
 const LOSE_COUNT=100;                      // 설계서 §5-8: 트랙 100기 누적 패배
 const START_MIN=40, START_GAS=0;
 const MAX_UNITS=200;                       // 인구 (HUD 0/200)
@@ -1366,6 +1371,7 @@ function newGame(){ return {
   mineral:START_MIN, gas:START_GAS, atkLv:{inf:0,mech:0,pro:0,zrg:0}, // 계열별 공격 업글 레벨
   units:[], enemies:[], beams:[], shots:[], impacts:[], muzzles:[], debris:[], pendingHits:[], recalls:[], sparks:[], // 이펙트 + 명중대기 + 리콜 + 스파크
   toSpawn:0, spawnTimer:0, roundGap:0,
+  roundPhase:'prep', roundTime:10,   // 'prep'(준비 10s) → 'active'(라운드 3:10), 카운트다운
   tab:'Main', sel:[], selEnemy:null, prodB:null, techB:null, curPlayer:2, myPlayer:1,   // myPlayer=내 슬롯(멀티 대기실 순서로 할당 예정), curPlayer=관전 중인 플레이어
   mergeMode:false, idSeq:1, eSeq:1,
   citizen:{x:CITIZEN_HOME.x, y:CITIZEN_HOME.y, gx:null, gy:null, buyId:null}, // 유닛뽑기 시민(셀렉터)
@@ -1991,13 +1997,20 @@ function unitAI(dt){ const M=Math.min(GW,GH);
 }
 function step(dt){
   if(G.phase!=='playing') return;
-  G.timeSec+=dt;
-  // 라운드 대기
-  if(G.roundGap>0){ G.roundGap-=dt; if(G.roundGap<=0){ const n=G.round+1;
-    if(n>TOTAL_ROUNDS){ G.phase='won'; showOverlay(); return; }
-    G.round=n; G.toSpawn=ENEMIES_PER_ROUND; G.spawnTimer=0; } }
-  // 스폰
-  if(G.roundGap<=0 && G.toSpawn>0){ G.spawnTimer-=dt; if(G.spawnTimer<=0){ spawnEnemy(false); G.toSpawn--; G.spawnTimer=SPAWN_GAP;
+  G.timeSec+=dt;   // 애니메이션용(증가 유지)
+  // 라운드 타이머(카운트다운): 준비 10초 → 전투 3:10. 0초 도달 시 자동 진행.
+  if(G.roundTime==null) G.roundTime=PREP_TIME;
+  G.roundTime-=dt;
+  if(G.roundPhase!=='active'){   // 준비 단계: 유닛 뽑고 대기, 스폰 없음
+    if(G.roundTime<=0){ G.roundPhase='active'; G.roundTime=ROUND_TIME; G.toSpawn=ENEMIES_PER_ROUND; G.spawnTimer=0; }
+  } else {                       // 전투 단계: 제한시간 종료 시 다음 라운드 준비로
+    if(G.roundTime<=0){ const n=G.round+1;
+      if(n>TOTAL_ROUNDS){ G.phase='won'; showOverlay(); return; }
+      G.gas+=3+G.round; G.mineral+=10+G.round*3;   // 라운드 클리어 보너스(가스+미네랄)
+      G.round=n; G.roundPhase='prep'; G.roundTime=PREP_TIME; G.toSpawn=0; G.spawnTimer=0; }
+  }
+  // 스폰(전투 단계에서만)
+  if(G.roundPhase==='active' && G.toSpawn>0){ G.spawnTimer-=dt; if(G.spawnTimer<=0){ spawnEnemy(false); G.toSpawn--; G.spawnTimer=SPAWN_GAP;
     if(G.toSpawn===0 && roundDef(G.round).boss){ spawnEnemy(true); } } }
   // 적 이동 + 누적 패배(설계서 §5-8: 100기)
   for(const e of G.enemies){ e.d=(e.d+e.speed*dt*4)%1; if(e.flash>0) e.flash--; if(e.hit>0) e.hit=Math.max(0,e.hit-dt*5); if(e.shHit>0) e.shHit=Math.max(0,e.shHit-dt*4); }
@@ -2036,11 +2049,7 @@ function step(dt){
   for(let i=G.enemies.length-1;i>=0;i--){ const e=G.enemies[i]; if(e.hp<=0){ G.kills++;
     if(G.kills%100===0) G.mineral+=KILL_MIN_PER100; else if(G.kills%10===0) G.mineral+=KILL_MIN_PER10;
     deathBurst(e); G.enemies.splice(i,1); } }
-  // 라운드 클리어
-  if(G.roundGap<=0 && G.toSpawn===0 && G.enemies.length===0){
-    G.gas+=3+G.round; G.mineral+=10+G.round*3; // 라운드 보너스(가스+미네랄)
-    if(G.round>=TOTAL_ROUNDS){ G.phase='won'; showOverlay(); return; }
-    G.roundGap=ROUND_GAP; }
+  // (라운드 진행은 위쪽 제한시간 타이머가 담당 — 클리어로는 넘어가지 않음)
   // 이펙트 수명/이동
   for(let i=G.beams.length-1;i>=0;i--){ G.beams[i].life-=dt*8; if(G.beams[i].life<=0) G.beams.splice(i,1); }
   for(let i=G.muzzles.length-1;i>=0;i--){ G.muzzles[i].life-=dt*14; if(G.muzzles[i].life<=0) G.muzzles.splice(i,1); }
@@ -3062,7 +3071,7 @@ function submitPw(){ if(!_pwRoom) return; const f=document.getElementById('pwFie
   if(v===_pwRoom.pw){ const r=_pwRoom; closePw(); joinRoom(r); }
   else { document.getElementById('pwErr').textContent='비밀번호가 일치하지 않습니다.'; if(f){ f.value=''; f.focus(); } } }
 function startGameNow(activePlayers, myNum){
-  G=newGame(); G.phase='playing'; G.toSpawn=ENEMIES_PER_ROUND;
+  G=newGame(); G.phase='playing'; G.roundPhase='prep'; G.roundTime=PREP_TIME; G.toSpawn=0;
   G.activePlayers = (activePlayers&&activePlayers.length)? activePlayers.slice() : [1,2,3,4,5,6,7,8];   // 입장한 플레이어
   G.myPlayer = myNum||1;   // 입장 순서로 배정된 내 번호
   _leaveT=20+Math.random()*20;
@@ -3174,7 +3183,10 @@ function updateHud(){
   document.getElementById('hRound').textContent=G.round;
   document.getElementById('hRoundMax').textContent='/'+TOTAL_ROUNDS;
   document.getElementById('hKill').textContent=G.kills;
-  document.getElementById('hTime').textContent=fmt(G.timeSec);
+  const rt=Math.max(0,Math.ceil(G.roundTime||0));   // 라운드 카운트다운(준비/전투 공통)
+  const tEl=document.getElementById('hTime'); tEl.textContent=fmt(rt);
+  const prep=(G.phase==='playing' && G.roundPhase==='prep'); tEl.classList.toggle('prep', prep);
+  const phEl=document.getElementById('hPhase'); if(phEl) phEl.textContent = prep ? '준비' : '';
   document.getElementById('hMin').innerHTML=G.mineral+'<i class="ru">C</i>';            // 크레딧
   document.getElementById('hGas').innerHTML=G.gas+'<i class="ru">E</i>';                // 에너지
   document.getElementById('hPop').innerHTML=G.units.filter(u=>!u.fixed).length+'/'+MAX_UNITS+'<i class="ru">CP</i>';  // 커맨드 포인트
