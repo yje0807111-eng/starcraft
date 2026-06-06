@@ -2928,12 +2928,15 @@ function doLogout(){ authSignOut().then(openAuth); }
 // ── 유즈맵 데이터 ──
 const MAPS=[
   {id:'nemo',   name:'네모네모 디펜스', desc:'사각 트랙을 도는 적을 막는 협동 디펜스', players:'1-8', pop:9820, icon:'🟥', rec:true,  isNew:false},
-  {id:'jungle', name:'정글 서바이벌',   desc:'정글에서 자원 모아 살아남기',         players:'1-6', pop:7400, icon:'🌴', rec:true,  isNew:false},
-  {id:'tower',  name:'랜덤 타워 디펜스', desc:'랜덤 타워를 조합해 라인을 방어',       players:'1-8', pop:6100, icon:'🗼', rec:false, isNew:true },
-  {id:'hero',   name:'영웅 아레나',     desc:'영웅을 키워 8인 PvP',               players:'2-8', pop:5300, icon:'⚔️', rec:false, isNew:false},
-  {id:'boss',   name:'레이드 보스',     desc:'거대 보스를 협동 토벌',             players:'3-8', pop:4200, icon:'🐲', rec:true,  isNew:true },
-  {id:'maze',   name:'미로 탈출',       desc:'함정 가득한 미로를 탈출하라',         players:'1-4', pop:2600, icon:'🌀', rec:false, isNew:true },
-  {id:'race',   name:'유닛 레이스',     desc:'유닛으로 결승선까지 질주',           players:'2-8', pop:1900, icon:'🏁', rec:false, isNew:false},
+  {id:'sunken', name:'성큰타워 디펜스', desc:'성큰 콜로니로 길목을 막는 타워 디펜스', players:'1-8', pop:8730, icon:'🌿', rec:true,  isNew:false},
+  {id:'marine', name:'마린 키우기',     desc:'마린을 성장시켜 최강으로 키우는 RPG', players:'1-6', pop:7610, icon:'🔫', rec:true,  isNew:false},
+  {id:'temple', name:'신전 뿌수기',     desc:'상대 신전을 먼저 파괴하는 공성전',     players:'2-8', pop:6240, icon:'🏛️', rec:false, isNew:true },
+  {id:'cpu',    name:'컴퓨터가 싸운다', desc:'AI 군단의 대결을 관전·예측',         players:'1-8', pop:5180, icon:'🤖', rec:false, isNew:true },
+  {id:'photon', name:'포토겹치기',      desc:'포톤 캐논을 겹쳐 쌓아 버티기',       players:'1-4', pop:4090, icon:'🔵', rec:false, isNew:false},
+  // ── 임시(추후 추가 예정) ──
+  {id:'tmp1',   name:'랜덤 디펜스 (임시)', desc:'임시 등록 유즈맵',                 players:'1-8', pop:2600, icon:'🎲', rec:false, isNew:true },
+  {id:'tmp2',   name:'영웅 아레나 (임시)', desc:'임시 등록 유즈맵',                 players:'2-8', pop:1900, icon:'⚔️', rec:false, isNew:false},
+  {id:'tmp3',   name:'미로 탈출 (임시)',   desc:'임시 등록 유즈맵',                 players:'1-4', pop:1200, icon:'🌀', rec:false, isNew:false},
 ];
 // 유즈맵별 실시간 접속 인원(대기중=로비/방찾기, 게임중=인게임) — 시뮬레이션
 const _mapLive={};
