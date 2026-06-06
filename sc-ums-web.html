@@ -808,6 +808,14 @@
   .msSortBtn{flex:1;padding:7px 3px;border-radius:5px;font-family:inherit;font-size:10px;font-weight:700;cursor:pointer;color:#8a9098;
     background:rgba(255,255,255,.04);border:1px solid var(--metal-edge);transition:all .12s;white-space:nowrap}
   .msSortBtn.on{color:var(--neon);border-color:var(--neon-soft);background:var(--neon-faint);box-shadow:0 0 8px -2px var(--neon-glow)}
+  .msBanner{display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap;margin-bottom:10px;padding:8px 6px;border-radius:6px;
+    font-size:10.5px;color:#c4ccd6;background:linear-gradient(180deg,rgba(255,59,59,.1),rgba(20,12,14,.5));border:1px solid var(--neon-soft);
+    box-shadow:0 0 14px -6px var(--neon-glow)}
+  .msBanner b{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:12.5px}
+  .msBanner .bnWait b{color:#5dff8f}.msBanner .bnPlay b{color:#ff6b6b}.msBanner .bnAll b{color:var(--neon)}
+  .msBanner .bnDot{color:#586472}
+  .mapLive{font-size:9.5px;color:#9aa6b2;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mapLive b{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:11.5px;color:#cfe0ec}
   .msList{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:7px;padding-right:2px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
   .msList::-webkit-scrollbar{width:5px}.msList::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:3px}
   .mapItem{display:flex;align-items:center;gap:10px;padding:9px;border-radius:7px;cursor:pointer;
@@ -1002,7 +1010,7 @@
         <div class="authErr" id="authErr"></div>
         <button class="authBtn" id="authBtn" onclick="authSubmit()">로그인</button>
         <button class="authGuest" onclick="authGuest()">게스트로 시작하기</button>
-        <div class="authNote" id="authNote">로컬 계정 모드 · Firebase 키 등록 시 실제 인증으로 전환</div>
+        <div class="authNote" id="authNote">로컬 계정 모드 · Supabase 키 등록 시 실제 인증으로 전환</div>
       </div>
     </div>
 
@@ -1018,6 +1026,7 @@
         <button class="msSortBtn" data-sort="new" onclick="setMapSort('new',this)">🆕 신규</button>
         <button class="msSortBtn" data-sort="rec" onclick="setMapSort('rec',this)">👍 추천</button>
       </div>
+      <div class="msBanner" id="msBanner"></div>
       <div class="msList" id="msList"></div>
     </div>
 
@@ -2782,7 +2791,7 @@ function addChat(sender, text, color){ const box=document.getElementById('chatLo
   box.appendChild(d); while(box.children.length>6) box.removeChild(box.firstChild);
   setTimeout(()=>{ d.classList.add('fade'); setTimeout(()=>{ if(d.parentNode) d.remove(); }, 900); }, 6000); }  // 일정시간 후 페이드 아웃
 function sendChat(){ const f=document.getElementById('chatField'); const t=(f.value||'').trim(); if(!t) return;
-  addChat('나', t, PLAYER_VIEW_COLORS[((G.myPlayer||1)-1)%PLAYER_VIEW_COLORS.length]); f.value=''; f.focus(); }
+  addChat(myNick(), t, PLAYER_VIEW_COLORS[((G.myPlayer||1)-1)%PLAYER_VIEW_COLORS.length]); f.value=''; f.focus(); }
 const FAKE_CHATS=[['P3','#1ecbb0','다들 몇 라운드?'],['P5','#ff9a2f','스트라이더 미쳤다 ㅋㅋ'],['P2','#ff4d4d','gg 준비됨'],['P7','#46d860','리퍼 합체 완료'],['P4','#b06bff','크레딧 부족 ㅠㅠ'],['P6','#ffd23b','스파이어 도배 가자'],['P8','#e6e6ee','거의 다 막았다']];
 let _fakeChatT=0;
 function tickFakeChat(dt){ _fakeChatT-=dt; if(_fakeChatT<=0){ _fakeChatT=10+Math.random()*12;
@@ -2837,45 +2846,52 @@ function openRooms(){ setInGame(false); document.getElementById('ov').classList.
 function backToTitle(){ stopRoomsTick(); document.getElementById('rooms').classList.add('hide'); openMapSelect(); }   // 방찾기 뒤로 → 유즈맵 선택
 
 // ===================== 앱 셸: 인증 / 유즈맵 / 모드 선택 =====================
-// ── 인증(로컬 계정 + Firebase 연결 지점) ──
-const FIREBASE_CONFIG = {  // ★ Firebase 콘솔의 웹앱 config를 여기에 채우면 실제 인증으로 전환됩니다(없으면 로컬 계정 모드).
-  // apiKey:'', authDomain:'', projectId:'', appId:''
+// ── 인증(Supabase 연동 + 로컬 계정 폴백) ──
+const SUPABASE_CONFIG = {  // ★ Supabase 프로젝트의 URL + anon key를 채우면 실제 인증으로 전환됩니다(없으면 로컬 계정 모드).
+  url: '', anonKey: ''
 };
-const AUTH = { mode:'local', user:null, fb:null };
+const AUTH = { mode:'local', user:null };
+let _sb=null;
 function _lsGet(k,d){ try{ const v=JSON.parse(localStorage.getItem(k)); return v==null?d:v; }catch(e){ return d; } }
 function _lsSet(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+function sbUser(u){ return { email:u.email, nick:(u.user_metadata&&u.user_metadata.nick)||(u.email||'user').split('@')[0], uid:u.id }; }
 async function initAuth(){
-  if(FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey){
+  if(SUPABASE_CONFIG.url && SUPABASE_CONFIG.anonKey){
     try{
-      const app=await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
-      const fa=await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js');
-      const a=app.initializeApp(FIREBASE_CONFIG); AUTH.fb={auth:fa.getAuth(a), m:fa}; AUTH.mode='firebase';
-      return new Promise(res=>{ AUTH.fb.m.onAuthStateChanged(AUTH.fb.auth, u=>{
-        AUTH.user = u ? {email:u.email, nick:(u.displayName||(u.email||'user').split('@')[0]), uid:u.uid} : null; res(); }); });
-    }catch(e){ console.warn('Firebase 초기화 실패 → 로컬 계정 모드', e); AUTH.mode='local'; }
+      const m=await import('https://esm.sh/@supabase/supabase-js@2');
+      _sb=m.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey); AUTH.mode='supabase';
+      const { data }=await _sb.auth.getSession();   // 자동 로그인: 저장된 세션 복원
+      const u=data&&data.session&&data.session.user; AUTH.user = u ? sbUser(u) : null;
+      _sb.auth.onAuthStateChange((_e,sess)=>{ AUTH.user = (sess&&sess.user) ? sbUser(sess.user) : null; });
+      return;
+    }catch(e){ console.warn('Supabase 초기화 실패 → 로컬 계정 모드', e); AUTH.mode='local'; }
   }
   AUTH.user = _lsGet('nm_session', null);   // 로컬 모드: 저장된 세션 자동 복원(자동 로그인)
 }
 async function authSignUp(email,pw,nick){
-  if(AUTH.mode==='firebase'){ const {m,auth}=AUTH.fb; const c=await m.createUserWithEmailAndPassword(auth,email,pw);
-    if(nick) await m.updateProfile(c.user,{displayName:nick}); AUTH.user={email:c.user.email,nick:nick||email.split('@')[0],uid:c.user.uid}; return; }
+  if(AUTH.mode==='supabase'){ const {data,error}=await _sb.auth.signUp({email,password:pw,options:{data:{nick}}});
+    if(error) throw new Error(error.message||'회원가입에 실패했습니다.');
+    AUTH.user = data.user ? sbUser(data.user) : {email, nick}; return; }
   const users=_lsGet('nm_users',{}); if(users[email]) throw new Error('이미 가입된 이메일입니다.');
   users[email]={pw, nick:nick||email.split('@')[0]}; _lsSet('nm_users',users);
   AUTH.user={email, nick:users[email].nick}; _lsSet('nm_session',AUTH.user); }
 async function authSignIn(email,pw){
-  if(AUTH.mode==='firebase'){ const {m,auth}=AUTH.fb; const c=await m.signInWithEmailAndPassword(auth,email,pw);
-    AUTH.user={email:c.user.email,nick:(c.user.displayName||email.split('@')[0]),uid:c.user.uid}; return; }
+  if(AUTH.mode==='supabase'){ const {data,error}=await _sb.auth.signInWithPassword({email,password:pw});
+    if(error) throw new Error(error.message||'로그인에 실패했습니다.'); AUTH.user=sbUser(data.user); return; }
   const users=_lsGet('nm_users',{}); const u=users[email];
   if(!u || u.pw!==pw) throw new Error('이메일 또는 비밀번호가 올바르지 않습니다.');
   AUTH.user={email, nick:u.nick}; _lsSet('nm_session',AUTH.user); }
-async function authSignOut(){ if(AUTH.mode==='firebase'){ try{ await AUTH.fb.m.signOut(AUTH.fb.auth); }catch(e){} }
+async function authSignOut(){ if(AUTH.mode==='supabase'){ try{ await _sb.auth.signOut(); }catch(e){} }
   AUTH.user=null; try{ localStorage.removeItem('nm_session'); }catch(e){} }
+// 내 표시 닉네임(로그인/게스트). 미로그인 시 '나'로 폴백.
+function myNick(){ return (AUTH && AUTH.user && AUTH.user.nick) || '나'; }
 // ── 앱 화면 전환 ──
 const APP_SCREENS=['opening','auth','mapSelect','modeSheet'];
 function showAppScreen(id){ setInGame(false);
+  if(id!=='mapSelect' && id!=='modeSheet' && typeof stopMapLive==='function') stopMapLive();   // 유즈맵 화면 떠나면 실시간 갱신 정지
   ['ov','lobby','rooms','createPanel','pwPanel'].forEach(x=>{const e=document.getElementById(x); if(e)e.classList.add('hide');});
   APP_SCREENS.forEach(s=>{ const e=document.getElementById(s); if(e) e.classList.toggle('hide', s!==id); }); }
-function hideAppScreens(){ APP_SCREENS.forEach(s=>{ const e=document.getElementById(s); if(e) e.classList.add('hide'); }); }
+function hideAppScreens(){ if(typeof stopMapLive==='function') stopMapLive(); APP_SCREENS.forEach(s=>{ const e=document.getElementById(s); if(e) e.classList.add('hide'); }); }
 // ── 부팅 흐름: 오프닝 → (자동로그인 ? 유즈맵 : 로그인) ──
 async function bootApp(){ await initAuth();
   setTimeout(()=>{ if(AUTH.user) openMapSelect(); else openAuth(); }, 1700); }   // 오프닝 최소 노출
@@ -2911,41 +2927,63 @@ function authGuest(){ AUTH.user={email:'', nick:'게스트'+(1000+Math.floor(Mat
 function doLogout(){ authSignOut().then(openAuth); }
 // ── 유즈맵 데이터 ──
 const MAPS=[
-  {id:'nemo',   name:'네모네모 디펜스', desc:'사각 트랙을 도는 적을 막는 협동 디펜스', players:'1-8', pop:9820, ready:true,  rec:true,  isNew:false},
-  {id:'jungle', name:'정글 서바이벌',   desc:'정글에서 자원 모아 살아남기',         players:'1-6', pop:7400, ready:false, rec:true,  isNew:false},
-  {id:'tower',  name:'랜덤 타워 디펜스', desc:'랜덤 타워를 조합해 라인을 방어',       players:'1-8', pop:6100, ready:false, rec:false, isNew:true },
-  {id:'hero',   name:'영웅 아레나',     desc:'영웅을 키워 8인 PvP',               players:'2-8', pop:5300, ready:false, rec:false, isNew:false},
-  {id:'boss',   name:'레이드 보스',     desc:'거대 보스를 협동 토벌',             players:'3-8', pop:4200, ready:false, rec:true,  isNew:true },
-  {id:'maze',   name:'미로 탈출',       desc:'함정 가득한 미로를 탈출하라',         players:'1-4', pop:2600, ready:false, rec:false, isNew:true },
-  {id:'race',   name:'유닛 레이스',     desc:'유닛으로 결승선까지 질주',           players:'2-8', pop:1900, ready:false, rec:false, isNew:false},
+  {id:'nemo',   name:'네모네모 디펜스', desc:'사각 트랙을 도는 적을 막는 협동 디펜스', players:'1-8', pop:9820, icon:'🟥', rec:true,  isNew:false},
+  {id:'jungle', name:'정글 서바이벌',   desc:'정글에서 자원 모아 살아남기',         players:'1-6', pop:7400, icon:'🌴', rec:true,  isNew:false},
+  {id:'tower',  name:'랜덤 타워 디펜스', desc:'랜덤 타워를 조합해 라인을 방어',       players:'1-8', pop:6100, icon:'🗼', rec:false, isNew:true },
+  {id:'hero',   name:'영웅 아레나',     desc:'영웅을 키워 8인 PvP',               players:'2-8', pop:5300, icon:'⚔️', rec:false, isNew:false},
+  {id:'boss',   name:'레이드 보스',     desc:'거대 보스를 협동 토벌',             players:'3-8', pop:4200, icon:'🐲', rec:true,  isNew:true },
+  {id:'maze',   name:'미로 탈출',       desc:'함정 가득한 미로를 탈출하라',         players:'1-4', pop:2600, icon:'🌀', rec:false, isNew:true },
+  {id:'race',   name:'유닛 레이스',     desc:'유닛으로 결승선까지 질주',           players:'2-8', pop:1900, icon:'🏁', rec:false, isNew:false},
 ];
+// 유즈맵별 실시간 접속 인원(대기중=로비/방찾기, 게임중=인게임) — 시뮬레이션
+const _mapLive={};
+function initMapLive(){ MAPS.forEach(m=>{ if(_mapLive[m.id]) return;
+  const base=Math.max(40, Math.round(m.pop*(0.5+Math.random()*0.5)));
+  const play=Math.round(base*(0.55+Math.random()*0.2));
+  _mapLive[m.id]={wait:Math.max(0,base-play), play}; }); }
+function liveTotal(m){ const o=_mapLive[m.id]||{wait:0,play:0}; return o.wait+o.play; }
+function liveText(m){ const o=_mapLive[m.id]||{wait:0,play:0};
+  return '<b>'+_kfmt(o.wait+o.play)+'</b>명 접속 · 🟢 대기 '+_kfmt(o.wait)+' · 🔴 게임 '+_kfmt(o.play); }
+function tickMapLive(){ for(const id in _mapLive){ const o=_mapLive[id];
+    o.wait=Math.max(0, o.wait+Math.round((Math.random()-0.5)*Math.max(3, o.wait*0.05)));
+    o.play=Math.max(0, o.play+Math.round((Math.random()-0.5)*Math.max(4, o.play*0.05))); }
+  MAPS.forEach(m=>{ const e=document.getElementById('mlive-'+m.id); if(e) e.innerHTML=liveText(m); });
+  updateMapBanner(); }
+function updateMapBanner(){ const b=document.getElementById('msBanner'); if(!b) return;
+  let w=0,p=0; for(const id in _mapLive){ w+=_mapLive[id].wait; p+=_mapLive[id].play; }
+  b.innerHTML='<span class="bnWait">🟢 대기중 <b>'+_kfmt(w)+'</b>명</span><span class="bnDot">·</span>'
+    +'<span class="bnPlay">🔴 게임중 <b>'+_kfmt(p)+'</b>명</span><span class="bnDot">·</span>'
+    +'<span class="bnAll">총 <b>'+_kfmt(w+p)+'</b>명 접속</span>'; }
+let _mapLiveT=null;
+function startMapLive(){ stopMapLive(); _mapLiveT=setInterval(tickMapLive, 2600); }
+function stopMapLive(){ if(_mapLiveT){ clearInterval(_mapLiveT); _mapLiveT=null; } }
 let _mapSort='pop';
 function getFavs(){ return _lsGet('nm_favs', {}); }
 function toggleFav(id,ev){ if(ev) ev.stopPropagation(); const f=getFavs(); if(f[id]) delete f[id]; else f[id]=Date.now(); _lsSet('nm_favs',f); renderMaps(); }
 function openMapSelect(){ const n=document.getElementById('msNick'); if(n) n.textContent=(AUTH.user&&AUTH.user.nick)||'게스트';
-  showAppScreen('mapSelect'); renderMaps(); }
+  initMapLive(); showAppScreen('mapSelect'); renderMaps(); startMapLive(); }
 function setMapSort(s,btn){ _mapSort=s; document.querySelectorAll('#mapSelect .msSortBtn').forEach(b=>b.classList.toggle('on', b===btn)); renderMaps(); }
 function _kfmt(n){ return n>=1000 ? (n/1000).toFixed(1)+'k' : (''+n); }
 function renderMaps(){ const list=document.getElementById('msList'); if(!list) return; const favs=getFavs();
   let arr=MAPS.slice();
   if(_mapSort==='fav') arr=arr.filter(m=>favs[m.id]);
-  else if(_mapSort==='pop') arr.sort((a,b)=>b.pop-a.pop);
-  else if(_mapSort==='new') arr.sort((a,b)=>(b.isNew?1:0)-(a.isNew?1:0)||b.pop-a.pop);
-  else if(_mapSort==='rec') arr.sort((a,b)=>(b.rec?1:0)-(a.rec?1:0)||b.pop-a.pop);
+  else if(_mapSort==='pop') arr.sort((a,b)=>liveTotal(b)-liveTotal(a));   // 인기순=현재 접속 인원
+  else if(_mapSort==='new') arr.sort((a,b)=>(b.isNew?1:0)-(a.isNew?1:0)||liveTotal(b)-liveTotal(a));
+  else if(_mapSort==='rec') arr.sort((a,b)=>(b.rec?1:0)-(a.rec?1:0)||liveTotal(b)-liveTotal(a));
   if(_mapSort!=='fav') arr.sort((a,b)=>(favs[b.id]?1:0)-(favs[a.id]?1:0));   // 즐겨찾기는 항상 상단 고정
   list.innerHTML='';
-  if(!arr.length){ list.innerHTML='<div class="msEmpty">⭐ 즐겨찾기한 유즈맵이 없습니다.<br>맵 카드의 별(☆)을 눌러 추가하세요.</div>'; return; }
-  arr.forEach(m=>{ const el=document.createElement('div'); el.className='mapItem'+(m.ready?'':' soon');
-    const tags=[]; if(!m.ready) tags.push('<span class="mapTag soon">준비중</span>');
-    if(m.rec) tags.push('<span class="mapTag rec">추천</span>'); if(m.isNew) tags.push('<span class="mapTag new">신규</span>');
-    tags.push('<span class="mapTag">👥 '+m.players+'</span>'); tags.push('<span class="mapTag">🔥 '+_kfmt(m.pop)+'</span>');
-    el.innerHTML='<div class="mapThumb">'+(m.ready?'🟥':'🗺️')+'</div>'
-      +'<div class="mapMain"><div class="mapName">'+escHtml(m.name)+'</div><div class="mapDesc">'+escHtml(m.desc)+'</div><div class="mapMeta">'+tags.join('')+'</div></div>'
+  if(!arr.length){ list.innerHTML='<div class="msEmpty">⭐ 즐겨찾기한 유즈맵이 없습니다.<br>맵 카드의 별(☆)을 눌러 추가하세요.</div>'; updateMapBanner(); return; }
+  arr.forEach(m=>{ const el=document.createElement('div'); el.className='mapItem';
+    const nm=escHtml(m.name)+(m.isNew?' <span class="mapTag new">신규</span>':'');
+    el.innerHTML='<div class="mapThumb">'+(m.icon||'🗺️')+'</div>'
+      +'<div class="mapMain"><div class="mapName">'+nm+'</div><div class="mapDesc">'+escHtml(m.desc)+'</div>'
+        +'<div class="mapLive" id="mlive-'+m.id+'">'+liveText(m)+'</div></div>'
       +'<div class="mapStar'+(favs[m.id]?' on':'')+'">'+(favs[m.id]?'★':'☆')+'</div>';
     el.querySelector('.mapStar').onclick=(e)=>toggleFav(m.id,e);
-    el.onclick=()=>{ if(!m.ready){ toast('아직 준비 중인 유즈맵입니다.'); return; } openModeSheet(m); };
+    el.onclick=()=>openModeSheet(m);
     list.appendChild(el);
   });
+  updateMapBanner();
 }
 // ── 모드 선택(개인/멀티) ──
 let _selMap=null;
@@ -3008,7 +3046,7 @@ function confirmCreate(){ const nmEl=document.getElementById('cpName');
   let pw=''; if(_createVis==='private'){ const pwEl=document.getElementById('cpPw'); pw=((pwEl&&pwEl.value)||'').replace(/\s/g,'');
     if(!pw){ const h=document.getElementById('cpHint'); if(h){ h.textContent='비공개 방은 비밀번호를 설정해야 합니다.'; h.style.color='#ff6b6b'; } if(pwEl) pwEl.focus(); return; } }
   closeCreate();
-  openLobby({num:newRoomNum(), name:name, host:'나', startCount:1, joining:false, visibility:_createVis, pw:pw}); }
+  openLobby({num:newRoomNum(), name:name, host:myNick(), startCount:1, joining:false, visibility:_createVis, pw:pw}); }
 // 비공개 방 비밀번호 입력
 let _pwRoom=null;
 function openPwPrompt(r){ _pwRoom=r;
@@ -3072,7 +3110,7 @@ function startLobbySim(room){ room=room||{joining:false,startCount:1,host:'나'}
     _lobbySlots[0]={me:true, name:'P1', ready:true, host:true};
   }
   renderLobby(); updateLobbyStart();
-  addLobbyMsg('', '나님이 입장하였습니다.');   // 내 입장부터 표시(기존 입장자는 생략, 이후 입장자만 안내)
+  addLobbyMsg('', myNick()+'님이 입장하였습니다.');   // 내 입장부터 표시(기존 입장자는 생략, 이후 입장자만 안내)
   const cur=_lobbySlots.filter(Boolean).length;
   const target=Math.min(8, cur + (room.joining? Math.floor(Math.random()*3) : 1+Math.floor(Math.random()*5)));   // 추가 입장
   _lobbyT=setInterval(()=>{
@@ -3095,7 +3133,7 @@ function addLobbyMsg(name, text, color){ const box=document.getElementById('lbCh
   d.innerHTML = name ? '<b style="color:'+(color||'#9fb0c2')+'">'+escHtml(name)+'</b> '+escHtml(text) : escHtml(text);
   box.appendChild(d); while(box.children.length>40) box.removeChild(box.firstChild); box.scrollTop=box.scrollHeight; }
 function sendLobbyChat(){ const f=document.getElementById('lbChatField'); const t=(f.value||'').trim(); if(!t) return;
-  addLobbyMsg('나', t, lbMeInfo().col); f.value=''; f.focus(); }
+  addLobbyMsg(myNick(), t, lbMeInfo().col); f.value=''; f.focus(); }
 function startLobbyChat(){ stopLobbyChat();
   _lobbyChatT=setInterval(()=>{ const bots=_lobbySlots.filter(s=>s&&s.bot&&!s.joining); if(!bots.length) return;
     const b=bots[Math.floor(Math.random()*bots.length)], i=_lobbySlots.indexOf(b);
@@ -3107,7 +3145,7 @@ function renderLobby(){ const g=document.getElementById('lbGrid'); if(!g) return
     const el=document.createElement('div'); el.className='lbSlot'+(s?'':' empty')+(s&&s.me?' me':''); el.style.setProperty('--pc',col);
     if(s){ const stt = s.host?'호스트' : (s.joining?'입장 중…' : (s.ready?'준비 완료':'대기'));
       const cls = s.host?'host' : (s.ready?'ok':'');
-      el.innerHTML='<div class="lbNum">'+(i+1)+'</div><div class="lbInfo"><div class="lbName">'+escHtml(s.me?'나':(s.label||s.name))+'</div><div class="lbStat '+cls+'">'+stt+'</div></div>';
+      el.innerHTML='<div class="lbNum">'+(i+1)+'</div><div class="lbInfo"><div class="lbName">'+escHtml(s.me?myNick():(s.label||s.name))+'</div><div class="lbStat '+cls+'">'+stt+'</div></div>';
     } else el.innerHTML='<div class="lbNum">'+(i+1)+'</div><div class="lbInfo"><div class="lbEmpty">빈 자리</div></div>';
     g.appendChild(el);
   }
