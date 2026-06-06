@@ -469,6 +469,12 @@
   .scBox{width:55px;flex:none;height:53px;padding:0 3px;border:1.5px solid var(--neon-soft);border-radius:5px;background:#161416;overflow:hidden;
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
     box-shadow:inset 0 0 9px var(--neon-faint)}
+  .scBox.atkBox{overflow:visible;position:relative;cursor:pointer}
+  .scBox.atkBox .atkPeek{position:absolute;left:50%;bottom:calc(100% + 4px);transform:translateX(-50%);display:none;white-space:nowrap;z-index:40;
+    font-size:9px;font-weight:700;font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif;color:#ffe0b8;letter-spacing:.2px;
+    background:rgba(14,9,6,.96);border:1px solid rgba(255,154,106,.5);border-radius:5px;padding:3px 8px;box-shadow:0 3px 8px rgba(0,0,0,.55)}
+  .scBox.atkBox .atkPeek::after{content:'';position:absolute;left:50%;top:100%;transform:translateX(-50%);border:4px solid transparent;border-top-color:rgba(255,154,106,.5)}
+  .scBox.atkBox.peek .atkPeek{display:block}
   .scBox .sv{font-size:18px;color:var(--neon-lt);font-weight:800;font-family:'Rajdhani','Courier New',monospace;text-shadow:0 0 9px var(--neon-glow);line-height:1;white-space:nowrap}
   .scBox .sv .up{color:#e0f9ff;font-size:.7em;margin-left:1px;text-shadow:0 0 8px var(--neon)}
   .scBox .sl{font-size:8.5px;font-weight:700;letter-spacing:0;white-space:nowrap;line-height:1.2}
@@ -2002,22 +2008,19 @@ function unitAI(dt){ const M=Math.min(GW,GH);
       else { const p=u.patrol, goB=(u._patTo!=='a'), gx=goB?p.bx:p.ax, gy=goB?p.by:p.ay;
         if(Math.hypot(u.x-gx,u.y-gy)<0.022){ u._patTo=goB?'a':'b'; u._patWait=0.5; }   // 도착 → 0.5초 머문 뒤 반환
         else { tx=gx; ty=gy; } } }
-    else if(u.cmd==='focus'){   // 지정공격: 지정한 적 1기를 죽을 때까지 추적(리쉬 없음) — 포위
+    else if(u.cmd==='focus'){   // 지정공격: 지정한 적 1기를 죽을 때까지 추적(리쉬 없음 — 사거리 밖이어도 따라감) — 포위
       const tgt=u.focusTarget!=null?G.enemies.find(e=>e.eid===u.focusTarget):null;
       if(!tgt){ u.cmd='hold'; u.focusTarget=null; u._chasing=false; }   // 대상 사망 → 홀드 복귀
       else { const ux=u.x*GW,uy=u.y*GH, range=def.range*M, p=posAt(tgt.d,GW,GH), dd=Math.hypot(p.x-ux,p.y-uy);
         if(dd>range) u._chasing=true; else if(dd<range*0.7) u._chasing=false;
         if(u._chasing){ const o=u._fofs||{dx:0,dy:0}, cl=clampInner((p.x+o.dx)/GW,(p.y+o.dy)/GH); tx=cl.x; ty=cl.y; } } }
     else if(u.cmd==='attack'){ const ux=u.x*GW,uy=u.y*GH, range=def.range*M;
-      // 고정 타겟 추적(죽거나 사거리 3배 이탈 전까지). 이동 중에도 공격은 step이 '가장 가까운 적'을 타격
-      let tgt = u.atkTarget!=null ? G.enemies.find(e=>e.eid===u.atkTarget) : null;
-      if(tgt){ const p=posAt(tgt.d,GW,GH); if(Math.hypot(p.x-ux,p.y-uy) > range*3){ tgt=null; u.atkTarget=null; u._chasing=false; } }  // 리쉬 초과 → 포기
-      if(!tgt){ let best=Infinity,pick=null;
-        for(const e of G.enemies){ const p=posAt(e.d,GW,GH); const d2=(p.x-ux)*(p.x-ux)+(p.y-uy)*(p.y-uy); if(d2<best){best=d2;pick=e;} }
-        if(pick && best<=(range*3)*(range*3)){ tgt=pick; u.atkTarget=pick.eid; } else { u.atkTarget=null; u._chasing=false; } }  // 가까운 적 획득(3배 내)
-      if(tgt){ const p=posAt(tgt.d,GW,GH), dd=Math.hypot(p.x-ux,p.y-uy);
-        if(dd>range) u._chasing=true; else if(dd<range*0.7) u._chasing=false;   // 히스테리시스: 타겟이 사거리 안으로 들어오면 정지
-        if(u._chasing){ const o=u._fofs||{dx:0,dy:0}, cl=clampInner((p.x+o.dx)/GW,(p.y+o.dy)/GH); tx=cl.x; ty=cl.y; } } }   // 사거리 밖이면 추적
+      // 사거리 안 가장 가까운 적만 대상(전 범위 쏠림 X — 사거리 밖 적은 안 쫓음)
+      let tgt=null, best=range*range;
+      for(const e of G.enemies){ const p=posAt(e.d,GW,GH); const d2=(p.x-ux)*(p.x-ux)+(p.y-uy)*(p.y-uy); if(d2<=best){best=d2;tgt=e;} }
+      u.atkTarget = tgt?tgt.eid:null;
+      if(tgt){ const p=posAt(tgt.d,GW,GH), o=u._fofs||{dx:0,dy:0}, cl=clampInner((p.x+o.dx)/GW,(p.y+o.dy)/GH); tx=cl.x; ty=cl.y; u._chasing=true; }  // 사거리 안 적 포위 위치로 이동
+      else u._chasing=false; }   // 사거리 안 적 없으면 정지(쫓아가지 않음)
     if(tx==null){ u.moving=false; continue; }
     const dx=tx-u.x, dy=ty-u.y, d=Math.hypot(dx,dy);
     if(d<0.006){ u.moving=false; continue; }
@@ -2339,10 +2342,14 @@ function scHpHTML(u){ const def=U[u.id]; const m=u.hero?HERO_STAT_MUL:1;
   if(maxEn>0) h+='<div class="hpline en"><span class="lab">에너지</span>'+en+'/'+maxEn+'</div>';
   return h;
 }
+// 큰 수치 축약(칸 넘침 방지): 1만 미만=그대로, 그 이상=K/M
+function fmtStat(n){ n=Math.round(n); if(n<10000) return ''+n; if(n<1000000) return (n/1000).toFixed(n<100000?1:0)+'K'; return (n/1000000).toFixed(1)+'M'; }
 // 초록 테두리 스탯 박스(공격/방어/사거리) — 스타 콘솔식
 function scStatBoxesHTML(u){ const def=U[u.id];
-  const numBox=(label,val,cls)=>'<div class="scBox"><div class="sv">'+val+'</div><div class="sl '+(cls||'')+'">'+label+'</div></div>';
-  const atkBox=(label,p,cls)=>'<div class="scBox"><div class="sv">'+p.total+(p.up>0?'<span class="up">+'+p.up+'</span>':'')+'</div><div class="sl '+(cls||'')+'">'+label+'</div></div>';
+  const numBox=(label,val,cls)=>'<div class="scBox"><div class="sv">'+fmtStat(val)+'</div><div class="sl '+(cls||'')+'">'+label+'</div></div>';
+  const atkBox=(label,p,cls)=>'<div class="scBox atkBox" onpointerdown="atkPeekStart(this,event)">'   // 평소=총 공격력 / 길게 누르면 위에 기본+업글
+    +'<div class="atkPeek">기본 '+fmtStat(Math.max(0,p.total-p.up))+' + 업글 '+fmtStat(p.up)+'</div>'
+    +'<div class="sv">'+fmtStat(p.total)+'</div><div class="sl '+(cls||'')+'">'+label+'</div></div>';
   let h=numBox('방어력',def.armor,'def');             // 방어력(파랑)
   if(def.shield>0) h+=numBox('쉴드방어력',def.shArmor||0,'shd');  // 보호막(쉴드) 방어력(청록)
   const dp=unitDmgParts(u), ap=unitAirParts(u);
@@ -2351,11 +2358,18 @@ function scStatBoxesHTML(u){ const def=U[u.id];
   return h;
 }
 // 스탯 박스 크기 고정 — 숫자가 칸을 넘치면 폰트를 점점 줄여 맞춤
+// 공격력 박스 길게 누르기 → 기본+업글 분해 툴팁(위로 팝업)
+let _atkPeekT=null, _atkPeekEl=null;
+function atkPeekStart(box, ev){ if(ev){ ev.preventDefault(); ev.stopPropagation(); }
+  atkPeekClear();
+  _atkPeekT=setTimeout(()=>{ box.classList.add('peek'); _atkPeekEl=box; _atkPeekT=null; }, 300); }   // 0.3초 이상 누르면 표시
+function atkPeekClear(){ if(_atkPeekT){ clearTimeout(_atkPeekT); _atkPeekT=null; } if(_atkPeekEl){ _atkPeekEl.classList.remove('peek'); _atkPeekEl=null; } }
+['pointerup','pointercancel'].forEach(e=>document.addEventListener(e, atkPeekClear));
 function fitStatNumbers(){
-  document.querySelectorAll('#statGrid .scBox .sv').forEach(sv=>{
+  document.querySelectorAll('.scStats .scBox .sv').forEach(sv=>{   // 메인/뽑기/관전 프로필 모두
     let fs=18; sv.style.fontSize=fs+'px';
     const avail=sv.parentElement.clientWidth-5; let guard=0;
-    while(sv.scrollWidth>avail && fs>8 && guard++<26){ fs--; sv.style.fontSize=fs+'px'; }
+    while(sv.scrollWidth>avail && fs>6 && guard++<28){ fs--; sv.style.fontSize=fs+'px'; }
   });
 }
 function enemyHpHTML(e){ let h='';
@@ -2716,9 +2730,9 @@ function selectUpg(id){ G.techB=id; renderBldgs('vUpgrade',TECH,TECH_POS,id,sele
 }
 // 연구 시작 — 에너지 차감 후 타이머 가동(완료까지 다른 업그레이드 잠금). UPG_TIME=0이면 즉시
 function research(wpn){
-  if(G.research){ toast('연구 진행 중…'); return; }            // 동시 1개만(다른 업그레이드 잠금)
-  if((G.atkLv[wpn]||0)>=UPG_MAX){ toast('최대 레벨'); return; }
-  if(G.gas<UPG_COST){ toast('가스가 부족합니다'); return; }
+  if(G.research) return;                                       // 동시 1개만(즉시모드라 사실상 미발생)
+  if((G.atkLv[wpn]||0)>=UPG_MAX) return;                       // 최대 레벨 — 알림 없이 무시
+  if(G.gas<UPG_COST){ toast('에너지(가스)가 부족합니다'); return; }   // 부족 — 채팅 알림
   G.gas-=UPG_COST; updateHud();
   if(UPG_TIME<=0){ finishResearch(wpn); return; }              // 즉시 완료 모드
   G.research={ wpn:wpn, t:UPG_TIME, dur:UPG_TIME };            // 타이머 가동
@@ -2729,8 +2743,7 @@ function cancelResearch(){ if(!G.research) return;
   G.gas+=UPG_COST; updateHud(); toast('연구 취소');
   G.research=null; if(G.tab==='Upgrade'&&G.techB) selectUpg(G.techB);
 }
-function finishResearch(wpn){ G.atkLv[wpn]=(G.atkLv[wpn]||0)+1;
-  if(!(_upgHold&&_upgHold.rep)){ const b=TECH.find(x=>x.wpn===wpn); toast((b?b.wname:'')+' Lv.'+G.atkLv[wpn]+' 완료!'); }   // 연속 업글 중엔 토스트 생략
+function finishResearch(wpn){ G.atkLv[wpn]=(G.atkLv[wpn]||0)+1;   // 업그레이드 완료 — 채팅 알림 없이 슬롯 레벨로만 표시
   G.research=null; if(G.tab==='Upgrade'&&G.techB) selectUpg(G.techB); }
 // 길게 누르기 연속 업그레이드: 즉시 1회 → 0.5초 유지 시 0.05초마다 반복. 슬롯이 재렌더돼도 전역 타이머라 안 끊김
 let _upgHold=null;
@@ -2881,6 +2894,10 @@ function toast(msg){ if(!msg) return;
   _lastSysMsg=msg; _lastSysT=now;
   addChat('', '▸ '+msg);   // 시스템 메시지(.cmsg.sys 스타일)
 }
+// 채팅 안 쓰는 플로팅 알림(화면 하단 중앙에 잠깐 떴다 사라짐)
+let _floatT=null;
+function floatMsg(msg){ const el=document.getElementById('toast'); if(!el) return; el.textContent=msg; el.classList.add('on');
+  clearTimeout(_floatT); _floatT=setTimeout(()=>el.classList.remove('on'), 1100); }
 // 적 누적 경고(150/190기) — 임계 통과 시 1회만, 히스테리시스로 도배 방지
 function checkEnemyWarn(n){
   if(n>=WARN2){ if(!G._w2){ G._w2=true; addChat('', '⚠️ 적 '+WARN2+'기 누적! 곧 탈락합니다 ('+n+'/'+LOSE_COUNT+')'); } } else if(n<WARN2-8) G._w2=false;
@@ -3595,30 +3612,30 @@ vUpg.addEventListener('touchstart',onUpgDown,{passive:false}); vUpg.addEventList
 // 투사체 오버레이(#cvFx, 3D 모델 위) — 미사일/탄이 유닛 몸에 가려지지 않도록 최상단에 그림
 function drawFx(){ const {ctx,W,H}=setup('cvFx');  // setup이 캔버스 크기 재설정=자동 클리어
   ctx.save(); ctx.globalCompositeOperation='lighter';
-  if(!fxOff()) for(const s of G.shots){ ctx.fillStyle=s.color; ctx.strokeStyle=s.color;   // 이펙트 끔: 발사체도 생략
-    if(s.kind==='plasma'){ ctx.globalAlpha=.4; ctx.beginPath();ctx.arc(s.x,s.y,7,0,6.28);ctx.fill();
-      ctx.globalAlpha=1; ctx.beginPath();ctx.arc(s.x,s.y,3.5,0,6.28);ctx.fill();
+  if(!fxOff()) for(const s of G.shots){ ctx.fillStyle=s.color; ctx.strokeStyle=s.color;   // 이펙트 끔: 발사체도 생략 (유닛 축소에 맞춰 ~0.82 작게)
+    if(s.kind==='plasma'){ ctx.globalAlpha=.4; ctx.beginPath();ctx.arc(s.x,s.y,5.8,0,6.28);ctx.fill();
+      ctx.globalAlpha=1; ctx.beginPath();ctx.arc(s.x,s.y,2.9,0,6.28);ctx.fill();
     } else if(s.kind==='needle'){ ctx.save();ctx.translate(s.x,s.y);ctx.rotate(Math.atan2(s.vy,s.vx));
       ctx.globalAlpha=.85; ctx.fillStyle=s.color;                                                 // 가늘고 뾰족한 침(미사일 X)
-      ctx.beginPath(); ctx.moveTo(5.5,0); ctx.lineTo(-5,0.85); ctx.lineTo(-5,-0.85); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(4.5,0); ctx.lineTo(-4,0.7); ctx.lineTo(-4,-0.7); ctx.closePath(); ctx.fill();
       ctx.restore();
     } else if(s.kind==='missile'){ ctx.save();ctx.translate(s.x,s.y);ctx.rotate(Math.atan2(s.vy,s.vx));
-      ctx.globalAlpha=.5; ctx.fillStyle='#ff8a3c'; ctx.fillRect(-8,-1.5,5,3);     // 화염 배기(짧게)
-      ctx.globalAlpha=.9; ctx.fillStyle='#ffd27a'; ctx.fillRect(-5.5,-1.1,4,2.2); // 화염 코어
-      ctx.globalAlpha=1; ctx.fillStyle=s.color; ctx.fillRect(-2,-1.6,6,3.2);      // 미사일 본체
-      ctx.fillStyle='#fff'; ctx.fillRect(2.5,-1.2,2.5,2.4);                        // 탄두
+      ctx.globalAlpha=.5; ctx.fillStyle='#ff8a3c'; ctx.fillRect(-6.5,-1.2,4,2.4);   // 화염 배기(짧게)
+      ctx.globalAlpha=.9; ctx.fillStyle='#ffd27a'; ctx.fillRect(-4.5,-0.9,3.2,1.8); // 화염 코어
+      ctx.globalAlpha=1; ctx.fillStyle=s.color; ctx.fillRect(-1.6,-1.3,5,2.6);      // 미사일 본체
+      ctx.fillStyle='#fff'; ctx.fillRect(2,-1,2,2);                                  // 탄두
       ctx.restore();
     } else if(s.kind==='sniper'){ ctx.save(); ctx.translate(s.x,s.y); ctx.rotate(Math.atan2(s.vy,s.vx));
-      ctx.globalAlpha=.4; ctx.fillStyle='#bfe9ff'; ctx.fillRect(-28,-0.9,28,1.8);
-      ctx.globalAlpha=1; ctx.fillStyle='#ffffff'; ctx.fillRect(-8,-1.2,11,2.4);
-      ctx.globalAlpha=1; ctx.fillStyle='#eafdff'; ctx.beginPath();ctx.arc(2,0,1.6,0,6.28);ctx.fill();
+      ctx.globalAlpha=.4; ctx.fillStyle='#bfe9ff'; ctx.fillRect(-23,-0.8,23,1.5);
+      ctx.globalAlpha=1; ctx.fillStyle='#ffffff'; ctx.fillRect(-6.5,-1,9,2);
+      ctx.globalAlpha=1; ctx.fillStyle='#eafdff'; ctx.beginPath();ctx.arc(1.6,0,1.3,0,6.28);ctx.fill();
       ctx.restore();
     } else if(s.kind==='bullet'){ ctx.save(); ctx.translate(s.x,s.y); ctx.rotate(Math.atan2(s.vy,s.vx));
-      ctx.globalAlpha=.35; ctx.fillStyle=s.color; ctx.fillRect(-13,-1,13,2);
-      ctx.globalAlpha=.9; ctx.fillStyle='#fff7c0'; ctx.fillRect(-5,-1.1,7,2.2);
-      ctx.globalAlpha=1; ctx.fillStyle='#fffbe8'; ctx.beginPath();ctx.arc(1.5,0,1.8,0,6.28);ctx.fill();
+      ctx.globalAlpha=.35; ctx.fillStyle=s.color; ctx.fillRect(-10.5,-0.9,10.5,1.7);
+      ctx.globalAlpha=.9; ctx.fillStyle='#fff7c0'; ctx.fillRect(-4,-0.9,5.7,1.8);
+      ctx.globalAlpha=1; ctx.fillStyle='#fffbe8'; ctx.beginPath();ctx.arc(1.2,0,1.5,0,6.28);ctx.fill();
       ctx.restore();
-    } else { ctx.globalAlpha=1; ctx.beginPath();ctx.arc(s.x,s.y,2.4,0,6.28);ctx.fill(); } }
+    } else { ctx.globalAlpha=1; ctx.beginPath();ctx.arc(s.x,s.y,2,0,6.28);ctx.fill(); } }
   // 총구 섬광·포토 충전(저화질/절전 시 생략)
   if(!fxLite()){
   for(const z of G.muzzles){ const a=Math.max(0,z.life); ctx.globalAlpha=a*0.6; ctx.fillStyle=z.color;
