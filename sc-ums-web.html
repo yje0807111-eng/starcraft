@@ -711,9 +711,13 @@
   .cpCancel{flex:0 0 34%;color:var(--txt);background:rgba(255,255,255,.05);border:1px solid var(--metal-edge)}
   .cpMake{color:#fff;background:linear-gradient(180deg,var(--neon-face1),var(--neon-d1));border:1px solid var(--neon);box-shadow:0 0 11px -3px var(--neon-glow)}
   .cpCancel:active,.cpMake:active{transform:translateY(1px)}
-  .rmList{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding-right:2px}
+  /* 8칸 고정 높이: 방이 적어도 크기 유지(빈 공간), 많으면 내부 드래그 스크롤 */
+  .rmList{--rmRows:8;--rmItemH:54px;--rmGap:6px;flex:none;
+    height:calc(var(--rmRows) * var(--rmItemH) + (var(--rmRows) - 1) * var(--rmGap));
+    overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+    display:flex;flex-direction:column;gap:var(--rmGap);padding-right:2px}
   .rmList::-webkit-scrollbar{width:5px}.rmList::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:3px}
-  .roomItem{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:6px;cursor:pointer;
+  .roomItem{flex:0 0 auto;height:var(--rmItemH);box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border-radius:6px;cursor:pointer;
     background:linear-gradient(180deg,rgba(30,32,38,.85),rgba(12,13,17,.88));border:1px solid var(--metal-edge);transition:border-color .12s}
   .roomItem:hover{border-color:var(--neon-soft)}
   .roomItem:active{transform:translateY(1px)}
@@ -2671,7 +2675,7 @@ function backToTitle(){ stopRoomsTick(); document.getElementById('rooms').classL
 function refreshRooms(){ buildRoomList(); }
 function newRoomNum(){ let num; do{ num=1000+Math.floor(Math.random()*9000); }while(_roomList&&_roomList.some(r=>r.num===num)); return num; }
 function buildRoomList(){ _roomList=[];
-  const n=5+Math.floor(Math.random()*4);   // 5~8개 방
+  const n=5+Math.floor(Math.random()*8);   // 5~12개 방 (8개 초과 시 내부 스크롤)
   const titles=ROOM_TITLES.slice().sort(()=>Math.random()-0.5), hosts=LOBBY_NAMES.slice().sort(()=>Math.random()-0.5);
   const now=perfNow();
   for(let i=0;i<n;i++){ const playing=Math.random()<0.35;
