@@ -1247,7 +1247,7 @@ function cornerBrackets(ctx,x,y,w,h,len,col){ ctx.strokeStyle=col;ctx.lineWidth=
   for(const[px,py,sx,sy]of c){ ctx.beginPath();ctx.moveTo(px+sx*len,py);ctx.lineTo(px,py);ctx.lineTo(px,py+sy*len);ctx.stroke(); } }
 function rR(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);
   ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
-const INSET_RATIO=0.12;
+const INSET_RATIO=0.15;   // 보드 여백 비율(↑일수록 메인 보드가 작아지고 중앙 여백↑) — 9:16 비율에서 안정적 중앙 배치
 let GW=0,GH=0; // 게임영역 픽셀 크기
 function geom(W,H){ const inset=W*INSET_RATIO, side=Math.min(W,H)-inset*2; return {inset,side,ox:(W-side)/2,oy:(H-side)/2}; }
 // 유닛이 머물 수 있는 트랙 안쪽 영역(비율). 트랙선보다 조금 안쪽까지만 허용.
