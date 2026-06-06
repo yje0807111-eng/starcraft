@@ -319,7 +319,7 @@
     box-shadow:0 0 10px rgba(255,60,60,.16),inset 0 1px 0 rgba(255,255,255,.1)}
   .setExit:active{transform:translateY(1px)}
   /* 나가기 확인 창 */
-  #exitConfirm{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(2,3,6,.6)}
+  #exitConfirm{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(2,3,6,.6)}
   #exitConfirm.hide{display:none}
   .ecCard{width:84%;max-width:300px;padding:20px 18px;border-radius:5px;text-align:center;
     background:linear-gradient(180deg,rgba(12,12,15,.97),rgba(2,2,4,.97));border:1px solid var(--metal-edge);
@@ -597,36 +597,18 @@
   .plnum{font-size:22px;font-weight:800;font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif;color:var(--pc);line-height:1;text-shadow:0 1px 2px #000}
   .plst{font-size:9px;font-weight:700;letter-spacing:.6px;color:#9aa6b4;text-transform:uppercase}
 
-  /* ===== 공유 우주 로딩방 배경 (멀티플레이/방 찾기/방 생성/로비 공통) ===== */
+  /* ===== 공유 우주 로딩방 배경 (멀티플레이/방 찾기/방 생성/로비 공통) =====
+     게임과 동일한 space_bg 타일을 어둡게 깔고 빨강 비네트로 기존 분위기 유지.
+     아래 화면들은 position:absolute 라서 폰 프레임(#phone) 안에만 적용됨. */
   .spaceBg{overflow:hidden}
-  .spaceBg::before{content:'';position:absolute;inset:-18%;z-index:-2;pointer-events:none;
+  .spaceBg::before{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;
+    background:url('assets/tiles/space_bg.png') center/360px repeat #04050b;
+    animation:spaceDrift 120s linear infinite}
+  .spaceBg::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;
     background:
-      radial-gradient(circle at 82% 80%, rgba(120,170,255,.22) 0%, rgba(60,100,200,.12) 16%, transparent 34%),
-      radial-gradient(ellipse 60% 45% at 16% 84%, rgba(150,50,160,.16), transparent 60%),
-      radial-gradient(ellipse 70% 50% at 76% 16%, rgba(40,110,190,.16), transparent 62%),
-      radial-gradient(ellipse at 50% 36%, #0c1838 0%, #070d22 42%, #02040c 100%);
-    animation:spaceDrift 26s ease-in-out infinite alternate}
-  .spaceBg::after{content:'';position:absolute;inset:-18%;z-index:-1;pointer-events:none;
-    background-repeat:no-repeat;
-    background-image:
-      radial-gradient(1.6px 1.6px at 12% 18%, #fff, transparent),
-      radial-gradient(1.4px 1.4px at 28% 62%, #d6e6ff, transparent),
-      radial-gradient(1.2px 1.2px at 46% 28%, #fff, transparent),
-      radial-gradient(1.7px 1.7px at 62% 74%, #cfe0ff, transparent),
-      radial-gradient(1.2px 1.2px at 78% 42%, #fff, transparent),
-      radial-gradient(1.5px 1.5px at 88% 16%, #e6f0ff, transparent),
-      radial-gradient(1px 1px at 8% 78%, #fff, transparent),
-      radial-gradient(1px 1px at 36% 88%, #cfe0ff, transparent),
-      radial-gradient(1.3px 1.3px at 54% 54%, #fff, transparent),
-      radial-gradient(1px 1px at 70% 8%, #fff, transparent),
-      radial-gradient(1.1px 1.1px at 92% 64%, #d6e6ff, transparent),
-      radial-gradient(1px 1px at 20% 36%, #fff, transparent),
-      radial-gradient(2px 2px at 66% 30%, #bcd4ff, transparent),
-      radial-gradient(1px 1px at 4% 50%, #fff, transparent),
-      radial-gradient(1.4px 1.4px at 84% 88%, #fff, transparent);
-    animation:spaceTwinkle 5.5s ease-in-out infinite alternate, spaceDrift 34s ease-in-out infinite alternate-reverse}
-  @keyframes spaceTwinkle{0%{opacity:.5}100%{opacity:1}}
-  @keyframes spaceDrift{0%{transform:translate3d(0,0,0) scale(1.02)}100%{transform:translate3d(2.5%,-2%,0) scale(1.06)}}
+      radial-gradient(ellipse at 50% 34%, rgba(60,10,14,.40), transparent 64%),
+      linear-gradient(180deg, rgba(3,4,10,.70), rgba(2,3,8,.84))}
+  @keyframes spaceDrift{from{background-position:0 0}to{background-position:0 -720px}}
   /* 오버레이(시작/승패) */
   /* 시작 화면 — 검정+빨강 네온 카드 */
   #ov{position:absolute;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;text-align:center;padding:26px;
@@ -648,7 +630,7 @@
   #ovBtn::before{content:'';position:absolute;left:0;right:0;top:0;height:46%;border-radius:6px 6px 50% 50%;background:linear-gradient(180deg,rgba(255,255,255,.24),rgba(255,255,255,0));pointer-events:none}
   #ovBtn:active{transform:translateY(2px);box-shadow:0 0 12px -2px var(--neon-glow),0 2px 5px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.2),inset 0 -2px 5px rgba(0,0,0,.4)}
   /* 멀티플레이 대기실(로비) */
-  #lobby{position:fixed;inset:0;z-index:46;display:flex;align-items:center;justify-content:center;padding:18px;
+  #lobby{position:absolute;inset:0;z-index:46;display:flex;align-items:center;justify-content:center;padding:18px;
     background:radial-gradient(circle at 50% 36%,rgba(46,8,12,.5),rgba(4,6,12,.95) 72%)}   /* 폰 전체 높이 사용 */
   #lobby.hide{display:none}
   .lbCard{width:90%;max-width:340px;max-height:92%;overflow:auto;padding:18px;border-radius:6px;
@@ -691,7 +673,7 @@
   .lbStart:disabled{cursor:default;opacity:.7}
   .lbLeave:active,.lbStart:active{transform:translateY(1px)}
   /* 방 찾기(룸 리스트) */
-  #rooms{position:fixed;inset:0;z-index:46;display:flex;align-items:center;justify-content:center;padding:20px;
+  #rooms{position:absolute;inset:0;z-index:46;display:flex;align-items:center;justify-content:center;padding:20px;
     background:radial-gradient(circle at 50% 36%,rgba(46,8,12,.5),rgba(4,6,12,.95) 72%)}   /* 폰 전체 높이 사용 */
   #rooms.hide{display:none}
   .rmCard{width:92%;max-width:350px;max-height:88%;display:flex;flex-direction:column;padding:18px;border-radius:6px;
@@ -714,7 +696,7 @@
   .riNum{font-family:'Rajdhani',sans-serif;font-weight:800;color:var(--hud);margin-right:5px}
   .riLock{font-size:10px;color:#ffb14d;margin-right:3px}
   /* 방 만들기 모달 */
-  #createPanel{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.66);backdrop-filter:blur(2px)}
+  #createPanel{position:absolute;inset:0;z-index:50;display:flex;align-items:center;justify-content:center}
   #createPanel.hide{display:none}
   .cpCard{width:300px;max-width:84vw;padding:20px;border-radius:12px;background:linear-gradient(180deg,rgba(24,26,32,.98),rgba(12,13,17,.98));border:1px solid var(--neon-soft);box-shadow:0 12px 40px -8px #000,0 0 18px -6px var(--neon-glow)}
   .cpTitle{font-size:17px;font-weight:800;color:var(--neon);text-shadow:0 0 10px var(--neon-glow);margin-bottom:16px;text-align:center}
@@ -730,7 +712,7 @@
   #cpPw,#pwField{width:100%;box-sizing:border-box;padding:11px 12px;border-radius:6px;background:rgba(0,0,0,.4);border:1px solid var(--metal-edge);color:#ece6e6;font-family:inherit;font-size:14px;letter-spacing:2px;outline:none}
   #cpPw:focus,#pwField:focus{border-color:var(--neon-soft)}
   #cpPw::placeholder,#pwField::placeholder{color:#6f757d;letter-spacing:.5px}
-  #pwPanel{position:fixed;inset:0;z-index:51;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.66);backdrop-filter:blur(2px)}
+  #pwPanel{position:absolute;inset:0;z-index:51;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.66);backdrop-filter:blur(2px)}
   #pwPanel.hide{display:none}
   .pwRoomName{font-size:13px;font-weight:700;color:#cfe0ec;text-align:center;margin-bottom:14px}
   #pwField{margin-bottom:8px}
