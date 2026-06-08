@@ -805,6 +805,23 @@
   /* ===================== 신규 앱 셸: 오프닝 / 로그인 / 유즈맵 / 모드선택 ===================== */
   .appScreen{position:absolute;inset:0;display:flex;flex-direction:column;z-index:47}
   .appScreen.hide{display:none}
+  /* ===== 전환/팝업 FX (우주전쟁 HUD) ===== */
+  /* 화면 전환: 홀로그램 디졸브(블러+밝기에서 또렷해짐) — opacity는 건드리지 않음(뒤 게임 보드 비침 방지, 로비 배경 유지) */
+  .scrIn{animation:scrIn .3s ease-out}
+  @keyframes scrIn{0%{filter:blur(7px) brightness(1.32)}60%{filter:blur(0) brightness(1.05)}100%{filter:blur(0) brightness(1)}}
+  /* 화면 전환: HUD 스캔 와이프(네온 가로선이 위→아래로 한 번) */
+  #fxScan{position:absolute;inset:0;z-index:82;pointer-events:none;overflow:hidden;display:none}
+  #fxScan.run{display:block}
+  #fxScan i{position:absolute;left:0;right:0;top:0;height:3px;
+    background:linear-gradient(90deg,transparent,rgba(255,90,90,.95) 35%,rgba(255,210,210,.95) 50%,rgba(255,90,90,.95) 65%,transparent);
+    box-shadow:0 0 16px 3px rgba(255,60,60,.6);animation:scanSweep .3s ease-out forwards}
+  #fxScan.run::before{content:'';position:absolute;inset:0;opacity:.16;
+    background:repeating-linear-gradient(0deg,rgba(255,90,90,.5) 0 1px,transparent 1px 3px);animation:scanFade .3s ease-out forwards}
+  @keyframes scanSweep{0%{top:-2%;opacity:0}12%{opacity:1}100%{top:102%;opacity:0}}
+  @keyframes scanFade{0%{opacity:.2}100%{opacity:0}}
+  /* 팝업 등장: 잡히는(스트레치) 효과 제거 — 깔끔한 페이드인만 */
+  .fxPop{animation:fxPopOn .16s ease-out}
+  @keyframes fxPopOn{0%{opacity:0}100%{opacity:1}}
   /* 오프닝 로딩 */
   #opening{z-index:90;align-items:center;justify-content:center;text-align:center}
   .opWrap{display:flex;flex-direction:column;align-items:center;gap:14px;padding:30px}
@@ -1373,7 +1390,7 @@
         <div class="rmHead"><span class="rmTitle">방 찾기</span><span class="rmOnline">방 <b id="roomCount">0</b>개</span></div>
         <div class="rmTop">
           <button class="rmQuick" onclick="quickJoin()">⚡ 랜덤 입장</button>
-          <button class="rmCreate" onclick="createRoom()">＋ 방 만들기</button>
+          <button class="rmCreate" data-sfx="ui_open" onclick="createRoom()">＋ 방 만들기</button>
         </div>
         <div class="rmNum">
           <input id="roomNumField" type="text" inputmode="numeric" placeholder="방 번호로 입장 (친구 방)" maxlength="5" onkeydown="if(event.key==='Enter')joinByNumber()">
@@ -1425,7 +1442,7 @@
 
     <!-- ===== 신규: 로그인 / 회원가입 ===== -->
     <div id="auth" class="appScreen spaceBg hide">
-      <button class="authGear" onclick="openAppSettings()" title="설정" aria-label="설정"><svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg></button>
+      <button class="authGear" data-sfx="ui_open" onclick="openAppSettings()" title="설정" aria-label="설정"><svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg></button>
       <div class="authCard">
         <div class="authLogo">UMS ARENA</div>
         <div class="authSub" id="authSub">로그인하고 시작하세요</div>
@@ -1448,7 +1465,7 @@
     <div id="mapSelect" class="appScreen spaceBg hide">
       <div class="msHead">
         <span class="msTitle">유즈맵 선택</span>
-        <span class="msUser"><span data-ico="user"></span> <b id="msNick">게스트</b><button class="msGear" onclick="openAppSettings()" title="설정" aria-label="설정"><svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg></button></span>
+        <span class="msUser"><span data-ico="user"></span> <b id="msNick">게스트</b><button class="msGear" data-sfx="ui_open" onclick="openAppSettings()" title="설정" aria-label="설정"><svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg></button></span>
       </div>
       <div class="msTopBar">
         <div class="msBanner" id="msBanner"></div>
@@ -1512,7 +1529,7 @@
       <div class="tab" data-tab="Unit"     onclick="switchTab('Unit',this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9.5" cy="8.5" r="3"/><path d="M4 19.5c0-3 2.5-5.2 5.5-5.2s5.5 2.2 5.5 5.2"/><path d="M18.5 4v5M16 6.5h5"/></svg></span>유닛뽑기</div>
       <div class="tab" data-tab="Upgrade"  onclick="switchTab('Upgrade',this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5l5.3 5.3h-3.1v4.6h-4.4V9.8H6.7z"/><path d="M7 18.5h10"/></svg></span>업그레이드</div>
       <div class="tab" data-tab="Players"  onclick="switchTab('Players',this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.6" r="2.7"/><path d="M3.8 19c0-2.9 2.3-4.9 5.2-4.9s5.2 2 5.2 4.9"/><circle cx="16.9" cy="9.2" r="2.1"/><path d="M15.4 14.5c2.4.3 4.6 2 4.6 4.5"/></svg></span>플레이어</div>
-      <div class="tab tabSet" id="settingsBtn" onclick="openSettings()" title="설정"><span class="ti"><svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg></span></div>
+      <div class="tab tabSet" id="settingsBtn" data-sfx="ui_open" onclick="openSettings()" title="설정"><span class="ti"><svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg></span></div>
     </div>
 
     <div class="bp on" id="bpMain">
@@ -1653,7 +1670,7 @@
       </div>
       </div>
       <button class="setPause" id="setPauseBtn" onclick="togglePause()"><span class="pIco">⏸</span><span id="pauseLbl">일시정지</span></button>
-      <button class="setExit" id="setExit" onclick="exitGame()">게임에서 나가기</button>
+      <button class="setExit" id="setExit" data-sfx="ui_open" onclick="exitGame()">게임에서 나가기</button>
       <button class="setLogout" id="setLogout" onclick="closeSettings();doLogout()">로그아웃</button>
     </div>
   </div>
@@ -1684,13 +1701,16 @@
       </div>
       <div class="opCountSlot">
         <div class="opCount" id="opCount"><i class="opRing"></i><span class="opNum" id="opNum"></span></div>
-        <button class="opStart" id="opStart" onclick="gsReadyMe()"><svg class="opTimer" viewBox="0 0 100 100" aria-hidden="true"><circle class="opTicks" cx="50" cy="50" r="48"/><circle class="opTicks2" cx="50" cy="50" r="41.5"/><g class="opReticle"><path d="M50 1.5V8"/><path d="M50 92V98.5"/><path d="M1.5 50H8"/><path d="M92 50H98.5"/></g><circle class="opTimerTrack" cx="50" cy="50" r="44" transform="rotate(-90 50 50)"/><circle class="opTimerFill" id="opTimerFill" cx="50" cy="50" r="44" transform="rotate(-90 50 50)"/><circle class="opTimerInner" cx="50" cy="50" r="37"/></svg><span id="opStartTxt">시작</span></button>
+        <button class="opStart" id="opStart" data-sfx="game_start" onclick="gsReadyMe()"><svg class="opTimer" viewBox="0 0 100 100" aria-hidden="true"><circle class="opTicks" cx="50" cy="50" r="48"/><circle class="opTicks2" cx="50" cy="50" r="41.5"/><g class="opReticle"><path d="M50 1.5V8"/><path d="M50 92V98.5"/><path d="M1.5 50H8"/><path d="M92 50H98.5"/></g><circle class="opTimerTrack" cx="50" cy="50" r="44" transform="rotate(-90 50 50)"/><circle class="opTimerFill" id="opTimerFill" cx="50" cy="50" r="44" transform="rotate(-90 50 50)"/><circle class="opTimerInner" cx="50" cy="50" r="37"/></svg><span id="opStartTxt">시작</span></button>
       </div>
       <div class="opPlayers" id="opPlayers"></div>
       <div class="opStartAuto" id="opStartAuto"></div>
     </div>
     <div class="opFx" id="opFx" aria-hidden="true"></div>
   </div>
+
+  <!-- 화면 전환 HUD 스캔 와이프 오버레이 -->
+  <div id="fxScan" aria-hidden="true"><i></i></div>
 </div>
 <a class="backlink" href="#" onclick="location.reload();return false">↻ 새로</a>
 
@@ -1831,6 +1851,13 @@ const ENEMY_SHAPE={
   '스커지':'orb','발키리':'jet','스카웃':'jet','퀸':'blob',
 };
 function enemyShape(n){ return ENEMY_SHAPE[n]||'orb'; }
+// 적 종족(처치음 분리용) — 이름(스타크래프트 유닛) 기준 테란/저그/프로토스
+const ENEMY_RACE={
+  '옵저버':'protoss','오버로드':'zerg','레이스':'terran','아비터':'protoss','커세어':'protoss',
+  '셔틀':'protoss','디바우러':'zerg','드랍쉽':'terran','케리어':'protoss','배틀':'terran',
+  '스커지':'zerg','발키리':'terran','스카웃':'protoss','퀸':'zerg',
+};
+function enemyRace(n){ return ENEMY_RACE[n]||'terran'; }
 const TOTAL_ROUNDS=20;                    // 총 20라운드(보스: 5·10·15·20). 적 정의(MON)는 부족분 마지막 것 반복
 const ENEMIES_PER_ROUND=100;               // 일반 라운드 적 수 = 99 + 스페셜 1
 const SPAWN_GAP=1.5;                        // 적 스폰 간격(초) → 100마리×1.5s=150초 스폰 후 40초 정리시간
@@ -2410,6 +2437,7 @@ function buyUnit(id){
     if(G.mineral<def.cost){ toast('크레딧 부족'); return; }
     G.mineral-=def.cost; const p=stack?slots[0]:slots[used];  // 겹치기=항상 한 자리
     G.units.push(initUnitStats({uid:G.idSeq++, id, hero:false, lv:1, x:p.x, y:p.y, cd:0, fixed:true}));
+    if(typeof playSfx==='function') playSfx('buy_unit');
     renderUnits(); updateHud(); return;
   }
   if(G.units.filter(u=>!u.fixed).length>=MAX_UNITS){ toast('커맨드 포인트 최대('+MAX_UNITS+')'); return; }
@@ -2418,6 +2446,7 @@ function buyUnit(id){
   // 소환 위치 = 맵 중앙(약간의 랜덤 오프셋). 트랙 안쪽으로 클램프.
   const ctr=trackCenter(); const sp=clampInner(ctr.x+(Math.random()-.5)*.08, ctr.y+(Math.random()-.5)*.08);
   G.units.push(initUnitStats({uid:G.idSeq++, id, hero:false, lv:1, x:sp.x, y:sp.y, cd:0}));
+  if(typeof playSfx==='function') playSfx('buy_unit');
   renderUnits(); updateHud();
 }
 function combine(){
@@ -2433,6 +2462,7 @@ function combine(){
       const c=zoneCenter();
       G.units.push(initUnitStats({uid:G.idSeq++,id:base.id,hero:true,lv:1,x:c.x,y:c.y,cd:0}));
       toast(U[base.id].name+' 영웅 탄생! ⭐');
+      if(typeof playSfx==='function') playSfx('hero_merge');   // 영웅 조합(단일 사운드)
       refreshSelCard(); renderUnits(); updateHud(); return true;
     }
   }
@@ -2449,9 +2479,9 @@ function spawnEnemy(opts){ opts=opts||{}; const boss=!!opts.boss, special=!!opts
   const hp = boss ? bossHp(G.round) : m.hp;
   const e={eid:G.eSeq++, d:0, hp:hp, maxHp:hp, sh:boss?0:m.sh, maxSh:boss?0:m.sh, ar:boss?10:m.ar,
     speed:0.018+(boss?0:0.004), boss:boss, special:special, flash:0, name:boss?'보스':(special?'스페셜':m.n),
-    shape:boss?'capital':enemyShape(m.n), ph:(G.eSeq*0.7)%6.283, hit:0, model3d:boss?null:(ENEMY_MODEL[m.n]||null)};
+    shape:boss?'capital':enemyShape(m.n), race:enemyRace(m.n), ph:(G.eSeq*0.7)%6.283, hit:0, model3d:boss?null:(ENEMY_MODEL[m.n]||null)};
   G.recalls.push({life:1, boss:boss, special:special});   // ① 출현 이펙트(에너지 모임) 먼저 시작
-  G.pendSpawn.push({t:SPAWN_LEAD, e:e});                   // ② 모임 완료(플래시) 시점에 실제 등장
+  G.pendSpawn.push({t:SPAWN_LEAD, e:e});                   // ② 모임 완료(플래시) 시점에 실제 등장(효과음도 이때)
 }
 
 function hitEnemy(e,dmg){ let d=Math.max(1,dmg-(e.ar||0)); e.flash=4; e.hit=1; e.shHit=e.sh>0?1:0;
@@ -2514,6 +2544,7 @@ function unitAI(dt){ const M=Math.min(GW,GH);
 }
 // 전투 단계 시작(준비단계 통과 or 라운드 전환 공통)
 function beginActivePhase(){ G.roundPhase='active'; G.roundTime=ROUND_TIME; G.spawnTimer=0; G.pendSpawn.length=0;
+  if(typeof playSfx==='function') playSfx(isBossRound(G.round)?'boss':'round_start');   // 라운드/보스 시작음
   if(isBossRound(G.round)){ G.toSpawn=0; spawnEnemy({boss:true}); }   // 보스 라운드: 보스 1마리만
   else { G.toSpawn=ENEMIES_PER_ROUND; G.specialAt=1+Math.floor(Math.random()*ENEMIES_PER_ROUND); } }  // 99 + 스페셜 1
 function step(dt){
@@ -2526,7 +2557,7 @@ function step(dt){
     if(G.roundTime<=0) beginActivePhase();
   } else {                       // 전투 단계: 제한시간 종료 시 바로 다음 라운드(준비시간 없음)
     if(G.roundTime<=0){ const n=G.round+1;
-      if(n>TOTAL_ROUNDS){ G.phase='won'; showOverlay(); return; }
+      if(n>TOTAL_ROUNDS){ G.phase='won'; if(typeof playSfx==='function') playSfx('win'); showOverlay(); return; }
       G.gas+=3+G.round; G.mineral+=10+G.round*3;   // 라운드 클리어 보너스(가스+미네랄)
       G.round=n; beginActivePhase(); }   // 2라운드부터는 준비시간 없이 즉시 전투
   }
@@ -2535,11 +2566,11 @@ function step(dt){
     spawnEnemy({special: G.toSpawn===G.specialAt}); G.toSpawn--; G.spawnTimer=SPAWN_GAP; } }
   // 대기 스폰: 에너지 모임이 끝나는 시점(플래시)에 실제 적 등장
   for(let i=G.pendSpawn.length-1;i>=0;i--){ const ps=G.pendSpawn[i]; ps.t-=dt;
-    if(ps.t<=0){ ps.e.flash=4; G.enemies.push(ps.e); G.pendSpawn.splice(i,1); } }
+    if(ps.t<=0){ ps.e.flash=4; G.enemies.push(ps.e); G.pendSpawn.splice(i,1); if(typeof playEnemySpawn==='function') playEnemySpawn(); } }   // 실제 등장 시점에 적군 생산 효과음
   // 적 이동 + 누적 경고/탈락(200기)
   for(const e of G.enemies){ e.d=(e.d+e.speed*dt*4)%1; if(e.flash>0) e.flash--; if(e.hit>0) e.hit=Math.max(0,e.hit-dt*5); if(e.shHit>0) e.shHit=Math.max(0,e.shHit-dt*4); }
   checkEnemyWarn(G.enemies.length);
-  if(G.enemies.length>=LOSE_COUNT){ addChat('', (G.myPlayer||1)+'번 플레이어가 탈락하였습니다.'); G.phase='lost'; showOverlay(); return; }
+  if(G.enemies.length>=LOSE_COUNT){ addChat('', (G.myPlayer||1)+'번 플레이어가 탈락하였습니다.'); G.phase='lost'; if(typeof playSfx==='function') playSfx('lose'); showOverlay(); return; }
   unitAI(dt);   // 명령 이동(공격이동/반복이동) + 스킬 타이머
   // 유닛 자동 공격
   for(const u of G.units){ const def=U[u.id]; if(u.atkT>0) u.atkT-=dt;
@@ -2555,6 +2586,7 @@ function step(dt){
     if(tgt){ const tp=posAt(tgt.d,GW,GH); if(tgt.model3d) tp.y-=AIR_HIT_OFF; const dmg=unitDmg(u);  // 공중 적은 부유 위치(위)로 타격
       const ps=PROJ_SPD[def.atk];
       u.fireSeq=(u.fireSeq||0)+1;  // 발사 카운터(3D 공격모션 트리거)
+      if(typeof playUnitAttack==='function') playUnitAttack(u.id);   // 유닛별 공격 효과음(내 유닛)
       if(ps){ // 발사체: 대상 적을 끝까지 추적(유도) → 명중 시 데미지
         fireAttack(u,def,ux,uy,tp, tgt.eid, dmg);
       } else { // 즉발(빔/사이오닉): 즉시 데미지
@@ -2574,6 +2606,7 @@ function step(dt){
   for(let i=G.enemies.length-1;i>=0;i--){ const e=G.enemies[i]; if(e.hp<=0){ G.kills++;
     if(e.special){ G.mineral+=SPECIAL_MIN; toast('스페셜 처치! +'+SPECIAL_MIN+' 미네랄'); }   // 스페셜 유닛=미네랄 보너스
     if(G.kills%100===0) G.mineral+=KILL_MIN_PER100; else if(G.kills%10===0) G.mineral+=KILL_MIN_PER10;
+    if(typeof playEnemyDeath==='function') playEnemyDeath(e.race);   // 종족별 처치음(대량 처치 쓰로틀)
     deathBurst(e); G.enemies.splice(i,1); } }
   // (라운드 진행은 위쪽 제한시간 타이머가 담당 — 클리어로는 넘어가지 않음)
   // 이펙트 수명/이동
@@ -2987,7 +3020,7 @@ function setFocusTarget(eid){ const e=G.enemies.find(x=>x.eid===eid); const us=s
 const SKILL_ICON={ adr:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg>' };  // 아드레날린=번개
 function useSkill(){ const us=selUnits(); if(!us.length) return;
   let used=0; for(const u of us){ const def=U[u.id]; if(def.skill && (u.skCd||0)<=0){ u.adr=def.skill.dur; u.skCd=def.skill.cd; used++; } }
-  if(used){ const nm=U[us[0].id].skill.name; addChat('',nm+' 발동! ('+used+'기)'); } updateCmdRow(); updateSkillFab(); }
+  if(used){ const nm=U[us[0].id].skill.name; addChat('',nm+' 발동! ('+used+'기)'); if(typeof playSfx==='function') playSfx('skill'); } updateCmdRow(); updateSkillFab(); }
 function updateSkillFab(){ const fab=document.getElementById('skillFab'); if(!fab) return;
   if(typeof G==='undefined'||G.tab!=='Main'||G.selEnemy!=null){ fab.classList.add('hide'); return; }
   const us=selUnits().filter(u=>U[u.id]&&U[u.id].skill);
@@ -3216,6 +3249,7 @@ function cancelResearch(){ if(!G.research) return;
   G.research=null; if(G.tab==='Upgrade'&&G.techB) selectUpg(G.techB);
 }
 function finishResearch(wpn){ G.atkLv[wpn]=(G.atkLv[wpn]||0)+1;   // 업그레이드 완료 — 채팅 알림 없이 슬롯 레벨로만 표시
+  if(typeof playSfx==='function') playSfx('upgrade');
   G.research=null; if(G.tab==='Upgrade'&&G.techB) selectUpg(G.techB); }
 // 길게 누르기 연속 업그레이드: 즉시 1회 → 0.5초 유지 시 0.05초마다 반복. 슬롯이 재렌더돼도 전역 타이머라 안 끊김
 let _upgHold=null;
@@ -3282,12 +3316,14 @@ function renderVote(){ ensureVote(); const me=G.myPlayer||1, myv=G.vote[me]||1;
 function tickVote(dt){}   // 배속은 내 선택만 — 봇 투표 제거
 // ── 설정 팝업(소리/비디오/임무목표/배속) ──
 function openSettings(){ const p=document.getElementById('settingsPop'); if(!p) return; p.classList.remove('hide','appCtx');
+  if(typeof fxPop==='function') fxPop(p.querySelector('.setCard'));
   if(typeof syncSndUI==='function') syncSndUI();
   if(typeof applyVideo==='function') applyVideo();
   if(typeof updatePauseBtn==='function') updatePauseBtn();
   if(typeof renderVote==='function') renderVote(); }
 // 로비/로그인 화면 설정(게임 항목 숨김, 소리/비디오 + 로그아웃)
 function openAppSettings(){ const p=document.getElementById('settingsPop'); if(!p) return; p.classList.remove('hide'); p.classList.add('appCtx');
+  if(typeof fxPop==='function') fxPop(p.querySelector('.setCard'));
   const lo=document.getElementById('setLogout'); if(lo) lo.style.display=(typeof AUTH!=='undefined'&&AUTH.user)?'':'none';   // 로그인 상태에서만 로그아웃
   if(typeof syncSndUI==='function') syncSndUI();
   if(typeof applyVideo==='function') applyVideo();
@@ -3334,7 +3370,7 @@ function updatePauseBtn(){
   if(btn){ btn.classList.toggle('paused',G.paused); btn.classList.toggle('disabled', !G.paused && remain<=0); }
   if(lbl) lbl.textContent = G.paused ? '재개' : ('일시정지 ('+remain+'회 남음)');
   if(ico) ico.textContent = G.paused?'▶':'⏸'; }
-function exitGame(){ const p=document.getElementById('exitConfirm'); if(p) p.classList.remove('hide'); }
+function exitGame(){ const p=document.getElementById('exitConfirm'); if(p){ p.classList.remove('hide'); if(typeof fxPop==='function') fxPop(p.querySelector('.ecCard')); } }
 function closeExitConfirm(){ const p=document.getElementById('exitConfirm'); if(p) p.classList.add('hide'); }
 function setExpand(id){ const b=document.getElementById('body-'+id), a=document.getElementById('arr-'+id);
   if(!b) return; const willOpen=getComputedStyle(b).display==='none';
@@ -3402,7 +3438,8 @@ function setVol(key,el){ const v=Math.max(0,Math.min(100,+el.value));
 function syncSndUI(){ ['sfx','bgm'].forEach(_sndPaintBar); }
 // ── 채팅(메인-하단 사이) — 로컬 입력 + 다른 플레이어 가짜 메시지(임시) ──
 function escHtml(s){ return String(s).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
-function addChat(sender, text, color){ const box=document.getElementById('chatLog'); if(!box) return;
+function addChat(sender, text, color, silent){ const box=document.getElementById('chatLog'); if(!box) return;
+  if(!silent && typeof playNotify==='function') playNotify();   // 채팅·배속·일시정지 알람음(자원 토스트는 silent로 무음)
   const d=document.createElement('div'); d.className='cmsg'+(sender?'':' sys');
   d.innerHTML = sender ? '<b style="color:'+(color||'#7fc8ff')+'">'+escHtml(sender)+'</b> '+escHtml(text) : escHtml(text);
   box.appendChild(d); while(box.children.length>6) box.removeChild(box.firstChild);
@@ -3421,7 +3458,7 @@ function toast(msg){ if(!msg) return;
   const now=(typeof performance!=='undefined'&&performance.now)?performance.now():0;
   if(msg===_lastSysMsg && now-_lastSysT<2500) return;   // 같은 메시지 2.5초 내 반복 억제
   _lastSysMsg=msg; _lastSysT=now;
-  addChat('', '▸ '+msg);   // 시스템 메시지(.cmsg.sys 스타일)
+  addChat('', '▸ '+msg, null, true);   // 시스템 토스트(크레딧/에너지/인구/보너스 등) — 알림음 없음
 }
 // 채팅 안 쓰는 플로팅 알림(화면 하단 중앙에 잠깐 떴다 사라짐)
 let _floatT=null;
@@ -3429,8 +3466,8 @@ function floatMsg(msg){ const el=document.getElementById('toast'); if(!el) retur
   clearTimeout(_floatT); _floatT=setTimeout(()=>el.classList.remove('on'), 1100); }
 // 적 누적 경고(150/190기) — 임계 통과 시 1회만, 히스테리시스로 도배 방지
 function checkEnemyWarn(n){
-  if(n>=WARN2){ if(!G._w2){ G._w2=true; addChat('', '⚠️ 적 '+WARN2+'기 누적! 곧 탈락합니다 ('+n+'/'+LOSE_COUNT+')'); } } else if(n<WARN2-8) G._w2=false;
-  if(n>=WARN1){ if(!G._w1){ G._w1=true; addChat('', '⚠️ 적 '+WARN1+'기 누적! 위험 ('+n+'/'+LOSE_COUNT+')'); } } else if(n<WARN1-8) G._w1=false;
+  if(n>=WARN2){ if(!G._w2){ G._w2=true; addChat('', '⚠️ 적 '+WARN2+'기 누적! 곧 탈락합니다 ('+n+'/'+LOSE_COUNT+')'); if(typeof playSfx==='function') playSfx('warn'); } } else if(n<WARN2-8) G._w2=false;
+  if(n>=WARN1){ if(!G._w1){ G._w1=true; addChat('', '⚠️ 적 '+WARN1+'기 누적! 위험 ('+n+'/'+LOSE_COUNT+')'); if(typeof playSfx==='function') playSfx('warn'); } } else if(n<WARN1-8) G._w1=false;
 }
 
 // ── 오버레이 ──
@@ -3467,7 +3504,7 @@ function tickRooms(){ if(!_roomList||document.getElementById('rooms').classList.
   if(changed){ renderRoomList(); const rc=document.getElementById('roomCount'); if(rc) rc.textContent=_roomList.length; }
 }
 function openRooms(){ setInGame(false); document.getElementById('ov').classList.add('hide'); document.getElementById('lobby').classList.add('hide');
-  document.getElementById('rooms').classList.remove('hide'); buildRoomList(); startRoomsTick(); }
+  const rm=document.getElementById('rooms'); rm.classList.remove('hide'); if(typeof playScreenFx==='function') playScreenFx(rm); buildRoomList(); startRoomsTick(); }
 function backToTitle(){ stopRoomsTick(); document.getElementById('rooms').classList.add('hide'); openMapSelect(); }   // 방찾기 뒤로 → 유즈맵 선택
 
 // ===================== 앱 셸: 인증 / 유즈맵 / 모드 선택 =====================
@@ -3516,12 +3553,23 @@ function myNick(){ return (AUTH && AUTH.user && AUTH.user.nick) || '나'; }
 // 플레이어 번호 → 표시 닉네임(내 번호=내 닉, 나머지=게임 시작 시 배정된 이름)
 function playerName(n){ if(typeof G!=='undefined' && n===(G.myPlayer||1)) return myNick();
   return (typeof G!=='undefined' && G.playerNames && G.playerNames[n]) || ('P'+n); }
+// ── 전환/팝업 FX ──
+// 화면 전환: HUD 스캔 와이프 + 홀로그램 디졸브
+function playScreenFx(el){
+  const fx=document.getElementById('fxScan');
+  if(fx){ fx.classList.remove('run'); void fx.offsetWidth; fx.classList.add('run'); clearTimeout(fx._t); fx._t=setTimeout(()=>fx.classList.remove('run'),340); }
+  if(el){ el.classList.remove('scrIn'); void el.offsetWidth; el.classList.add('scrIn'); clearTimeout(el._scrT); el._scrT=setTimeout(()=>el.classList.remove('scrIn'),340); }
+}
+// 팝업/모달 등장: 홀로그램 파워온 + 테두리 점화
+function fxPop(card){ if(!card) return; card.classList.remove('fxPop'); void card.offsetWidth; card.classList.add('fxPop');
+  clearTimeout(card._fxT); card._fxT=setTimeout(()=>card.classList.remove('fxPop'),470); }
 // ── 앱 화면 전환 ──
 const APP_SCREENS=['opening','auth','mapSelect','modeSheet'];
 function showAppScreen(id){ setInGame(false);
   if(id!=='mapSelect' && id!=='modeSheet' && typeof stopMapLive==='function') stopMapLive();   // 유즈맵 화면 떠나면 실시간 갱신 정지
   ['ov','lobby','rooms','createPanel','pwPanel'].forEach(x=>{const e=document.getElementById(x); if(e)e.classList.add('hide');});
-  APP_SCREENS.forEach(s=>{ const e=document.getElementById(s); if(e) e.classList.toggle('hide', s!==id); }); }
+  APP_SCREENS.forEach(s=>{ const e=document.getElementById(s); if(e) e.classList.toggle('hide', s!==id); });
+  const tgt=document.getElementById(id); if(tgt && id!=='opening') playScreenFx(tgt); }   // 전환 FX(부팅 로딩 제외)
 function hideAppScreens(){ if(typeof stopMapLive==='function') stopMapLive(); APP_SCREENS.forEach(s=>{ const e=document.getElementById(s); if(e) e.classList.add('hide'); }); }
 // 게임 진입/종료 시 잠깐 노출되는 로딩 화면(#opening 재사용). display 토글로 로딩바 애니 재생됨.
 function showLoading(done, ms){ const op=document.getElementById('opening'); if(!op){ if(typeof done==='function') done(); return; }
@@ -4121,8 +4169,8 @@ function updateMyNameTag(){ const n=document.getElementById('msNick'); if(!n) re
   n.innerHTML=escHtml(nick)+(tag?'<span class="msUserTag">#'+escHtml(tag)+'</span>':''); }
 // ===== BGM (로비/인게임 셋 전환, 랜덤 재생 → 곡 종료 시 다시 랜덤, 반복) =====
 // 단일 오디오 엘리먼트만 사용 → 로비/인게임 BGM이 절대 겹쳐 재생되지 않음.
-let BGM_VOLUME = 0.25;            // ★ 로비 BGM 볼륨(0.2~0.3 권장). 여기서 조절.
-let BGM_GAME_VOLUME = 0.22;       // ★ 인게임 BGM 볼륨(0.2~0.3 권장). 여기서 조절.
+let BGM_VOLUME = 0.30;            // ★ 로비 BGM 볼륨. 여기서 조절.
+let BGM_GAME_VOLUME = 0.27;       // ★ 인게임 BGM 볼륨. 여기서 조절.
 const BGM_SETS = {
   lobby:  ['lobby_1.mp3','lobby_2.mp3','lobby_3.mp3'],
   ingame: ['ingame_1.mp3','ingame_2.mp3','ingame_3.mp3']
@@ -4155,6 +4203,88 @@ function bgmStart(setName){ setName=setName||'lobby';
 function bgmStop(){ _bgm.set=null; if(_bgm.audio){ try{ _bgm.audio.pause(); }catch(e){} try{ _bgm.audio.currentTime=0; }catch(e){} } }
 function bgmSetVolume(v){ BGM_VOLUME=v; if(_bgm.set!=='ingame'&&_bgm.audio) _bgm.audio.volume=v; }      // 로비 볼륨 런타임 조절
 function bgmSetGameVolume(v){ BGM_GAME_VOLUME=v; if(_bgm.set==='ingame'&&_bgm.audio) _bgm.audio.volume=v; }  // 인게임 볼륨 런타임 조절
+
+// ===== 효과음(Web Audio — 즉시 재생 + 겹침 재생, 종류별 세분화) =====
+let SFX_VOLUME = 0.45;            // ★ 효과음 기준 볼륨(0.4~0.5, BGM보다 약간 크게). 여기서 조절.
+const SFX_DIR = 'assets/audio/sfx/';
+// ── 효과음 파일 목록(확정) — assets/audio/sfx/ 에 넣으면 자동 연동 ──
+const SFX_FILES = {
+  // A. UI ('click' = 일반 버튼 기본음 = button_click.mp3)
+  click:'button_click.mp3', ui_tab:'ui_tab.mp3', ui_open:'ui_open.mp3', ui_close:'ui_close.mp3',
+  ui_confirm:'ui_confirm.mp3', ui_denied:'ui_denied.mp3', ui_toggle:'ui_toggle.mp3', ui_dropdown:'ui_dropdown.mp3',
+  notify:'notify.mp3',   // 게임 내 채팅·배속·일시정지 알람음(없으면 클릭음 폴백)
+  // B. 게임플레이
+  buy_unit:'unit_buy.mp3', enemy_spawn:'enemy_spawn.mp3', hero_merge:'hero_merge.mp3', place_unit:'place_unit.mp3', upgrade:'upgrade.mp3',
+  death_terran:'death_terran.mp3', death_zerg:'death_zerg.mp3', death_protoss:'death_protoss.mp3',   // 종족별 적 처치음
+  // 유닛별 공격음(8종)
+  attack_ghost:'attack_ghost.mp3', attack_dragoon:'attack_dragoon.mp3', attack_hydra:'attack_hydra.mp3', attack_marine:'attack_marine.mp3',
+  attack_goliath:'attack_goliath.mp3', attack_archon:'attack_archon.mp3', attack_turret:'attack_turret.mp3', attack_photon:'attack_photon.mp3',
+  game_start:'game_start.mp3',   // 로딩 화면 '시작' 버튼 전용음
+  round_start:'round_start.mp3', boss:'boss.mp3', warn:'warn.mp3', win:'win.mp3', lose:'lose.mp3',
+  skill:'skill.mp3', speed:'speed.mp3'
+};
+const SFX_FALLBACK_SRC = 'assets/audio/sfx/button_click.mp3';   // 기존 클릭음 = UI 폴백
+const _sfx = { ctx:null, bufs:{}, fallback:null, started:false };
+function _sfxInit(){ if(_sfx.ctx) return;
+  try{ const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return; _sfx.ctx=new AC(); }catch(e){ return; }
+  _sfxLoadAll(); }
+function _sfxDecode(url, cb){ fetch(url).then(r=>{ if(!r.ok) throw 0; return r.arrayBuffer(); })
+  .then(b=>_sfx.ctx.decodeAudioData(b)).then(buf=>cb(buf)).catch(()=>{}); }
+function _sfxLoadAll(){ if(!_sfx.ctx||_sfx.started) return; _sfx.started=true;
+  _sfxDecode(SFX_FALLBACK_SRC, b=>{ _sfx.fallback=b; });                       // 폴백(button_click)
+  Object.keys(SFX_FILES).forEach(name=>_sfxDecode(SFX_DIR+SFX_FILES[name], b=>{ _sfx.bufs[name]=b; })); }
+function _sfxVol(){ return SFX_VOLUME * (SND.sfxOn ? Math.max(0,Math.min(150,SND.sfx))/100 : 0); }   // 효과음 설정(켜기/볼륨) 반영
+// 효과음별 개별 볼륨 배율(기본 1). 여기서 특정 효과음만 키우거나 줄임.
+const SFX_GAIN = { buy_unit:0.38, enemy_spawn:1.2, death_terran:0.3, death_zerg:0.3, death_protoss:0.3,
+  attack_dragoon:0.30, attack_archon:0.30, attack_photon:0.30,                                  // 프로토스 공격음(조금 키움)
+  attack_ghost:0.14, attack_marine:0.14, attack_goliath:0.14, attack_turret:0.14 };             // 테란 공격음(조금 줄임). 기타 기본 0.18
+// 종류별 재생. 파일 없으면: UI(ui_*)는 클릭음으로 폴백, 게임 이벤트는 무음(파일 추가 시 자동 활성화).
+function playSfx(name){ const g=(SFX_GAIN[name]!=null)?SFX_GAIN[name]:((typeof name==='string'&&name.indexOf('attack_')===0)?0.18:1);
+  const v=_sfxVol()*g; if(v<=0) return;
+  if(!_sfx.ctx) _sfxInit(); const ctx=_sfx.ctx; if(!ctx) return;
+  if(ctx.state==='suspended'){ try{ ctx.resume(); }catch(e){} }
+  let buf=_sfx.bufs[name];
+  if(!buf && typeof name==='string' && (name.indexOf('ui_')===0 || name==='notify')) buf=_sfx.fallback;   // UI·알림은 클릭음 폴백
+  if(!buf) return;
+  try{ const s=ctx.createBufferSource(); s.buffer=buf;            // 매번 새 소스 → 겹침 재생
+    const g=ctx.createGain(); const vol=Math.min(1,v), now=ctx.currentTime, dur=buf.duration||0;
+    if(dur>0.03){                                                  // 양 끝 클릭 방지용 짧은 페이드 인/아웃
+      const fi=Math.min(0.006, dur*0.25), fo=Math.min(0.012, dur*0.3);
+      g.gain.setValueAtTime(0, now);
+      g.gain.linearRampToValueAtTime(vol, now+fi);
+      g.gain.setValueAtTime(vol, now+Math.max(fi, dur-fo));
+      g.gain.linearRampToValueAtTime(0, now+dur);
+    } else g.gain.value=vol;
+    s.connect(g); g.connect(ctx.destination); s.start(now); }catch(e){} }
+function playClick(){ playSfx('click'); }   // 하위호환 별칭
+let _notifyLast=0;
+function playNotify(){ const now=Date.now(); if(now-_notifyLast<140) return; _notifyLast=now; playSfx('notify'); }   // 알림음(연타 방지 쓰로틀)
+let _enSpawnLast=0;
+function playEnemySpawn(){ const now=Date.now(); if(now-_enSpawnLast<70) return; _enSpawnLast=now; playSfx('enemy_spawn'); }   // 적군 생산음(고속 배속 동시 스폰 겹침 방지)
+let _enDeathLast=0;
+function playEnemyDeath(race){ const now=Date.now(); if(now-_enDeathLast<70) return; _enDeathLast=now;   // 대량 처치 시 겹침 방지(전역 쓰로틀)
+  playSfx('death_'+(race||'terran')); }   // 종족별 처치음
+const _atkLast={};
+function playUnitAttack(id){ const now=Date.now(); if(now-(_atkLast[id]||0)<110) return; _atkLast[id]=now; playSfx('attack_'+id); }   // 유닛별 공격음(같은 유닛 다수 동시 발사 시 겹침 방지)
+function bgmSetSfxVolume(v){ SFX_VOLUME=v; }   // 효과음 기준 볼륨 런타임 조절용
+// 버튼 종류 판별 → 알맞은 UI 효과음 선택(data-sfx로 개별 지정 가능)
+function _sfxForEl(el){
+  if(el.dataset && el.dataset.sfx) return el.dataset.sfx;
+  if(el.classList.contains('locked')) return 'ui_denied';
+  if(el.matches('.tab, .msTab2, .msScopeBtn')) return 'ui_tab';                                   // 탭 전환
+  if(el.matches('.msSortCur, .msSortOpt')) return 'ui_dropdown';                                  // 정렬 드롭다운
+  if(el.matches('.segBtn, .sndBtn, .cpSegBtn, .authSegBtn, .voteCol')) return 'ui_toggle';        // 켜기↔끄기/세그먼트/배속
+  if(el.matches('.moClose, .setX, .cpCancel, .ecCancel, .rmBack, .lbLeave')) return 'ui_close';   // 닫기/취소/뒤로
+  if(el.matches('.opStart, .moBtn, .cpMake, .rmQuick, .lbStart, .ecGo, .authBtn, .authGuest, #chatSend, .msChatSend')) return 'ui_confirm';  // 시작·만들기·전송·확정
+  return 'click';                                                                                  // 일반 버튼 기본음
+}
+// 모든 버튼/탭/메뉴/모달에 위임 바인딩 — 누르는 순간(pointerdown) 즉시 재생
+const _SFX_BTN_SEL = 'button, .tab, .btn, .mergeBig, .setItem, .moClose, .mapStar, .voteCol';
+document.addEventListener('pointerdown', function(e){
+  const t = e.target && e.target.closest ? e.target.closest(_SFX_BTN_SEL) : null;
+  if(!t) return; if(t.disabled && !t.classList.contains('locked')) return;
+  playSfx(_sfxForEl(t));
+}, true);
 function openMapSelect(){ updateMyNameTag(); bgmStart('lobby');   // 메인/로비 진입 시 로비 BGM(인게임 BGM이면 자동 전환·정지)
   if(sbReady()){ rtStart(); rtSetStatus('online',''); }   // 실시간 소셜 연결 + 로비 상태
   initMapLive(); showAppScreen('mapSelect'); paintIcons(document.getElementById('mapSelect')); renderMaps(); startMapLive();
@@ -4207,7 +4337,7 @@ function openModeSheet(m){ _selMap=m; document.getElementById('moMap').textConte
   if(solo){ solo.disabled=party; solo.classList.toggle('locked', party);
     solo.innerHTML = '<span data-ico="solo"></span>개인 플레이' + (party ? ' <span class="moLockNote">파티 중</span>' : ''); }
   if(typeof paintIcons==='function') paintIcons(document.getElementById('modeSheet'));
-  document.getElementById('modeSheet').classList.remove('hide'); }
+  const ms=document.getElementById('modeSheet'); ms.classList.remove('hide'); if(typeof fxPop==='function') fxPop(ms.querySelector('.moCard')); if(typeof playSfx==='function') playSfx('ui_open'); }
 function closeModeSheet(){ document.getElementById('modeSheet').classList.add('hide'); }
 function chooseSolo(){ if(typeof inPartyNow==='function' && inPartyNow()){ if(typeof lobbyToast==='function') lobbyToast('파티 중에는 멀티플레이만 가능합니다'); return; }
   if(typeof rtSetStatus==='function') rtSetStatus('ingame', _selMap&&_selMap.name); closeModeSheet(); hideAppScreens(); startGameNow([1],1); }   // 개인플레이 → 즉시 게임
@@ -4233,13 +4363,13 @@ function renderRoomList(){ const list=document.getElementById('roomList'); if(!l
     el.innerHTML='<div class="riMain"><div class="riName"><span class="riNum">#'+r.num+'</span>'+(priv?'<span class="riLock">🔒</span>':'')+escHtml(r.name)+'</div><div class="riSub">방장 '+escHtml(r.host)+(need>1&&waiting&&!full&&!fits?' · <span class="riOver">파티 자리 부족</span>':'')+'</div></div>'
       +'<div class="riRight"><div class="riCnt'+(full?' full':'')+'">'+r.cur+'/'+r.max+'</div><div class="riStat '+(waiting?'wait':'play')+'">'+(waiting?(full?'가득참':'대기중'):'게임중 '+r.round+'R')+'</div></div>';
     if(joinable) el.onclick=()=> priv? openPwPrompt(r) : joinRoom(r);
-    else if(waiting && !full && !fits) el.onclick=()=> toast('파티 인원이 초과되었습니다 (남은 자리 '+(r.max-r.cur)+' / 필요 '+need+')');
+    else if(waiting && !full && !fits) el.onclick=()=>{ if(typeof playSfx==='function') playSfx('ui_denied'); toast('파티 인원이 초과되었습니다 (남은 자리 '+(r.max-r.cur)+' / 필요 '+need+')'); };
     list.appendChild(el);
   });
 }
 function joinRoom(r){ if(r.status!=='wait'||r.cur>=r.max) return;
   const need=partySize(), free=r.max-r.cur;   // 파티 전원이 들어갈 자리 필요
-  if(need>free){ toast('파티 인원이 초과되었습니다 (남은 자리 '+free+' / 필요 '+need+')'); return; }
+  if(need>free){ if(typeof playSfx==='function') playSfx('ui_denied'); toast('파티 인원이 초과되었습니다 (남은 자리 '+free+' / 필요 '+need+')'); return; }
   openLobby({num:r.num, name:r.name, host:r.host, startCount:r.cur, joining:true}); }
 function quickJoin(){ const need=partySize(), wait=_roomList.filter(r=>r.status==='wait'&&(r.max-r.cur)>=need);
   if(!wait.length){ if(need>1){ toast('파티가 들어갈 빈 자리가 있는 방이 없습니다'); return; } createRoom(); return; }   // 빈 방 없으면 새로 생성(혼자일 때)
@@ -4249,8 +4379,8 @@ function joinByNumber(){ const f=document.getElementById('roomNumField'); if(!f)
   const num=parseInt((f.value||'').replace(/\D/g,''),10);
   if(!num||num<1000){ toast('방 번호 4자리를 입력하세요'); f.focus(); return; }
   const r=_roomList.find(x=>x.num===num);
-  if(r){ if(r.status!=='wait'||r.cur>=r.max){ toast(r.cur>=r.max?'방이 가득 찼습니다':'이미 게임 중인 방입니다'); return; }
-    if(partySize()>(r.max-r.cur)){ toast('파티 인원이 초과되었습니다 (남은 자리 '+(r.max-r.cur)+' / 필요 '+partySize()+')'); return; }
+  if(r){ if(r.status!=='wait'||r.cur>=r.max){ if(typeof playSfx==='function') playSfx('ui_denied'); toast(r.cur>=r.max?'방이 가득 찼습니다':'이미 게임 중인 방입니다'); return; }
+    if(partySize()>(r.max-r.cur)){ if(typeof playSfx==='function') playSfx('ui_denied'); toast('파티 인원이 초과되었습니다 (남은 자리 '+(r.max-r.cur)+' / 필요 '+partySize()+')'); return; }
     f.value=''; if(r.visibility==='private') openPwPrompt(r); else joinRoom(r); return; }
   // 목록에 없는 번호 → 친구의 비공개 방으로 입장(시뮬)
   f.value='';
@@ -4259,7 +4389,7 @@ function joinByNumber(){ const f=document.getElementById('roomNumField'); if(!f)
 // 방 만들기 모달
 let _createVis='public';
 function createRoom(){ const nm=document.getElementById('cpName'); if(nm) nm.value=''; const pw=document.getElementById('cpPw'); if(pw) pw.value=''; setRoomVis('public');
-  document.getElementById('createPanel').classList.remove('hide'); if(typeof paintIcons==='function') paintIcons(document.getElementById('createPanel')); if(nm) nm.focus(); }
+  const cp=document.getElementById('createPanel'); cp.classList.remove('hide'); if(typeof fxPop==='function') fxPop(cp.querySelector('.cpCard')); if(typeof paintIcons==='function') paintIcons(cp); if(nm) nm.focus(); }
 function closeCreate(){ const p=document.getElementById('createPanel'); if(p) p.classList.add('hide'); }
 function setRoomVis(v){ _createVis=v;
   document.querySelectorAll('#cpVis .cpSegBtn').forEach(b=>b.classList.toggle('on', b.dataset.v===v));
@@ -4276,12 +4406,12 @@ let _pwRoom=null;
 function openPwPrompt(r){ _pwRoom=r;
   document.getElementById('pwRoomName').textContent='#'+r.num+'  '+r.name;
   const f=document.getElementById('pwField'); if(f){ f.value=''; } document.getElementById('pwErr').textContent='';
-  document.getElementById('pwPanel').classList.remove('hide'); if(typeof paintIcons==='function') paintIcons(document.getElementById('pwPanel')); if(f) f.focus(); }
+  const pp=document.getElementById('pwPanel'); pp.classList.remove('hide'); if(typeof fxPop==='function') fxPop(pp.querySelector('.cpCard')); if(typeof playSfx==='function') playSfx('ui_open'); if(typeof paintIcons==='function') paintIcons(pp); if(f) f.focus(); }
 function closePw(){ const p=document.getElementById('pwPanel'); if(p) p.classList.add('hide'); _pwRoom=null; }
 function submitPw(){ if(!_pwRoom) return; const f=document.getElementById('pwField');
   const v=((f&&f.value)||'').replace(/\s/g,'');
   if(v===_pwRoom.pw){ const r=_pwRoom; closePw(); joinRoom(r); }
-  else { document.getElementById('pwErr').textContent='비밀번호가 일치하지 않습니다.'; if(f){ f.value=''; f.focus(); } } }
+  else { if(typeof playSfx==='function') playSfx('ui_denied'); document.getElementById('pwErr').textContent='비밀번호가 일치하지 않습니다.'; if(f){ f.value=''; f.focus(); } } }
 function startGameNow(activePlayers, myNum, names){
   if(typeof bgmStop==='function') bgmStop();   // 게임 진입 시 로비 BGM 정지
   G=newGame(); G.phase='playing'; G.roundPhase='prep'; G.roundTime=PREP_TIME; G.toSpawn=0;
@@ -4421,7 +4551,7 @@ function openLobby(room){ _lobbyRoom=room||{name:'나의 대기실',host:'나',j
     _lobbyRoom.party=true; if(_selMap) _lobbyRoom.map=_selMap.name; if(!_lobbyRoom._followed) rtSendPartyRoom(_lobbyRoom); }
   stopRoomsTick(); setInGame(false);
   document.getElementById('ov').classList.add('hide'); document.getElementById('rooms').classList.add('hide');
-  document.getElementById('lobby').classList.remove('hide');
+  const _lb=document.getElementById('lobby'); _lb.classList.remove('hide'); if(typeof playScreenFx==='function') playScreenFx(_lb);
   const tt=document.querySelector('.lbTitle'); if(tt) tt.textContent=_lobbyRoom.name;   // 방 이름을 제목으로
   const rm=document.querySelector('.lbRoom'); if(rm) rm.textContent=(_lobbyRoom.visibility==='private'?'🔒 ':'')+(_lobbyRoom.num?'방 #'+_lobbyRoom.num:'◈ 용암 정거장');   // 방 번호 표시(친구 찾기용)
   const cb=document.getElementById('lbChat'); if(cb) cb.innerHTML='';
@@ -4920,9 +5050,12 @@ function loop(now){
   tickPauseSim(dt);   // 공유 일시정지: 다른 플레이어가 해제/일시정지(일시정지와 무관하게 진행)
   if(!G.paused && !G.loading){      // 일시정지/로딩(카운트다운) 중: 게임 진행(전투/연구/시민/이동/물리) 정지, 렌더·UI는 유지
     tickResearch(dt);   // 업그레이드 연구 타이머(진행 중이면 카운트다운, 완료 시 레벨업)
-    if(G.phase==='playing'){ for(let k=0;k<G.speedMul;k++) step(dt/1*1); }
-    if(G.tab==='Unit') stepCitizen(dt);   // 시민 이동(도착 시 구매)
-    if(G.tab==='Main'){ stepCmdMove(dt); separateUnits(); } // 이동명령 + 겹침 방지
+    const _sm=(G.phase==='playing')?G.speedMul:1;   // 배속: 적/시간뿐 아니라 내 유닛·시민 이동도 동일 배속
+    for(let k=0;k<_sm;k++){
+      if(G.phase==='playing') step(dt);
+      if(G.tab==='Unit') stepCitizen(dt);             // 시민 이동(도착 시 구매)
+      if(G.tab==='Main'){ stepCmdMove(dt); separateUnits(); }   // 내 유닛 이동명령 + 겹침 방지
+    }
   }
   if(G.tab==='Main') renderUnits();   // 유닛 DOM 라벨 위치는 항상 갱신
   // 선택된 적: 죽으면 해제, 살아있으면 상태창 HP/실드 실시간 갱신
@@ -4963,7 +5096,7 @@ function loop(now){
   requestAnimationFrame(loop);
 }
 window.addEventListener('resize',()=>{ if(G.tab==='Main'){drawMain();placeMergeZone();} if(G.tab==='Unit'){drawProd();renderClock();} if(G.tab==='Upgrade')drawUpg(); if(G.tab==='Players')drawPlayer(); });
-window.addEventListener('load',()=>{ drawMain(); placeMergeZone(); updateHud(); bootApp(); initChat(); requestAnimationFrame(loop); });
+window.addEventListener('load',()=>{ drawMain(); placeMergeZone(); updateHud(); bootApp(); initChat(); if(typeof _sfxInit==='function') _sfxInit(); requestAnimationFrame(loop); });
 </script>
 
 <!-- 유닛 3D 모델(Three.js) — assets/models/*.glb(마린/골리앗/고스트 + 마린총)를 WebGL로 렌더. 애니메이션은 코드로 구현(숨쉬기/공격기울임/사망), 가장 가까운 적 방향 자동 회전 -->
