@@ -540,6 +540,25 @@
   .hint{font-size:11px;color:var(--txt);text-align:center;margin:auto;line-height:1.7;padding:8px 12px;
     background:none;border:none;text-shadow:0 1px 2px #000,0 0 5px #000}   /* 배경 제거 — 텍스트만 */
   .hint b{color:var(--neon);text-shadow:0 0 6px var(--neon-glow),0 1px 2px #000}
+  /* 가챠 뽑기 바(유닛뽑기 탭) */
+  .gachaBar{display:flex;align-items:stretch;gap:9px;margin:auto;width:100%;max-width:330px;padding:4px 6px;box-sizing:border-box}
+  .gachaBtn{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-width:84px;padding:10px 14px;
+    border-radius:9px;cursor:pointer;font-family:inherit;color:#fff;border:1px solid var(--neon);
+    background:linear-gradient(180deg,var(--neon-face1),var(--neon-d1) 60%,var(--neon-d2));
+    box-shadow:0 0 16px -3px var(--neon-glow),inset 0 1px 0 rgba(255,255,255,.22)}
+  .gachaBtn:active{transform:translateY(1px)}
+  .gachaBtn .gbMain{font-size:16px;font-weight:800;letter-spacing:1px}
+  .gachaBtn .gbCost{font-size:10px;font-weight:700;color:#ffe0e0;display:flex;align-items:center;gap:2px}
+  .gachaBtn .gbCost b{font-family:'Rajdhani',sans-serif;font-size:12px}
+  .gachaResult{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:1px;padding:7px 11px;border-radius:9px;
+    background:linear-gradient(180deg,rgba(20,16,18,.7),rgba(8,7,9,.75));border:1px solid var(--gc,var(--metal-edge));
+    box-shadow:0 0 12px -6px var(--gc,transparent)}
+  .gachaResult .grHint{font-size:10.5px;color:#8a9098}
+  .gachaResult .grTier{font-size:10px;font-weight:800;letter-spacing:1px}
+  .gachaResult .grName{font-size:13.5px;font-weight:800;color:#ece6e6;line-height:1.1}
+  .gachaResult .grType{font-size:9px;color:#9aa6b2}
+  .gachaResult.pop{animation:grPop .3s ease-out}
+  @keyframes grPop{0%{transform:scale(.92);opacity:.4}60%{transform:scale(1.03)}100%{transform:scale(1);opacity:1}}
   /* 생산 버튼: 투명 + 빨강 네온 엣지 */
   .pbtn{flex:none;width:calc(33.33% - 5px);border:1.5px solid var(--metal-edge);border-radius:6px;background:none;
     padding:7px 5px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;
@@ -1562,7 +1581,14 @@
     </div>
 
     <div class="bp" id="bpUnit">
-      <div class="hint" id="prodHint"><b>시민</b>을 비콘 위로 옮기면 <b>구매</b> · 유닛 클릭 = <b>정보</b></div>
+      <!-- 가챠 뽑기(2단계): 시민 상점 대체 -->
+      <div class="gachaBar">
+        <button class="gachaBtn" id="gachaBtn" onclick="drawGacha()">
+          <span class="gbMain">뽑기</span><span class="gbCost">💎<b id="gachaCost">10</b></span>
+        </button>
+        <div class="gachaResult" id="gachaResult"><span class="grHint">랜덤 유닛을 획득합니다</span></div>
+      </div>
+      <div class="hint" id="prodHint" style="display:none">유닛 클릭 = <b>정보</b></div>
       <!-- 유닛뽑기: 중립 단일 선택 시 그 유닛 프로필(메인 단일카드와 동일 레이아웃) -->
       <div class="scPanel" id="shopProfile" style="display:none">
         <div class="scPortrait" id="spPortrait"></div>
@@ -1951,6 +1977,19 @@ const GACHA_UNITS = {   // 4종 × 7등급 = 28
 const TRANSCEND_RECIPE = {
   // phantom_t: ['machinegun_l','blade_l','phantom_u'],   // 예시(미정)
 };
+// 2단계 임시 매핑: 가챠 유닛 → 기존 유닛 ID(모델·성능). 실제 전용 모델·수치는 4단계에서 교체.
+const GACHA_PROXY = {
+  ranger_c:'marine',  strider_c:'goliath', sentinel_c:'dragoon', reaper_c:'hydra',
+  phantom_r:'ghost',  racer_r:'marine',    void_r:'archon',      snapper_r:'hydra',
+  ranger_e:'marine',  strider_e:'goliath', sentinel_e:'dragoon', reaper_e:'hydra',
+  phantom_u:'ghost',  racer_u:'marine',    void_u:'archon',      snapper_u:'hydra',
+  machinegun_l:'marine', tank_l:'goliath', blade_l:'dragoon',    thornqueen_l:'hydra',
+  phantom_t:'ghost',  skyguard_t:'turret', skydancer_t:'photon', matron_t:'archon',
+  ranger_god:'marine', strider_god:'goliath', sentinel_god:'dragoon', reaper_god:'hydra',
+};
+// 등급 표시 색
+const TIER_COLOR = { common:'#b8c0cc', rare:'#4aa8ff', epic:'#b06bff', unique:'#ffd23b', legend:'#ff8a3b', transcend:'#ff4d6d', god:'#ff2bd6' };
+const GACHA_COST = 10;   // 1회 뽑기 크레딧 비용
 
 // ============================================================================
 // 게임 상태
@@ -2523,6 +2562,32 @@ function buyUnit(id){
   G.units.push(initUnitStats({uid:G.idSeq++, id, hero:false, lv:1, x:sp.x, y:sp.y, cd:0}));
   if(typeof playSfx==='function') playSfx('buy_unit');
   renderUnits(); updateHud();
+}
+// ── 가챠 뽑기(2단계) — 기존 시민 상점 대체 ──
+function gachaRollTier(){ let r=Math.random(); for(const t of GACHA_TIER_ORDER){ r-=GACHA_TIERS[t].prob; if(r<=0) return t; } return 'common'; }
+function gachaUnitsOfTier(t){ return Object.values(GACHA_UNITS).filter(u=>u.tier===t); }
+function drawGacha(){
+  if(G.phase!=='playing'){ toast('게임 중에만 뽑기 가능합니다'); return; }
+  if(G.units.filter(u=>!u.fixed).length>=MAX_UNITS){ toast('커맨드 포인트 최대('+MAX_UNITS+')'); return; }
+  if(G.mineral<GACHA_COST){ toast('크레딧 부족 (뽑기 '+GACHA_COST+')'); return; }
+  G.mineral-=GACHA_COST;
+  const tier=gachaRollTier(); const pool=gachaUnitsOfTier(tier); const gu=pool[Math.floor(Math.random()*pool.length)];
+  const proxy=GACHA_PROXY[gu.id]||'marine';
+  const ctr=trackCenter(); const sp=clampInner(ctr.x+(Math.random()-.5)*.08, ctr.y+(Math.random()-.5)*.08);
+  G.units.push(initUnitStats({uid:G.idSeq++, id:proxy, hero:false, lv:1, x:sp.x, y:sp.y, cd:0,
+    gid:gu.id, gtier:tier, gname:gu.displayName}));   // 프록시 모델·성능 + 가챠 메타 태그
+  if(typeof playSfx==='function') playSfx((tier==='common'||tier==='rare')?'buy_unit':'hero_merge');
+  if(GACHA_TIERS[tier].serverNotify) addChat('', '🎉 '+myNick()+'님이 ['+GACHA_TIERS[tier].name+'] '+gu.displayName+' 획득!');   // 레전드+ 서버 알림
+  showGachaResult(tier, gu);
+  renderUnits(); updateHud();
+}
+function showGachaResult(tier, gu){ const box=document.getElementById('gachaResult'); if(!box) return;
+  const col=TIER_COLOR[tier]||'#fff';
+  box.style.setProperty('--gc', col);
+  box.innerHTML='<span class="grTier" style="color:'+col+'">'+GACHA_TIERS[tier].name+'</span>'
+    +'<span class="grName">'+escHtml(gu.displayName)+'</span>'
+    +'<span class="grType">'+(ATTACK_TYPES[gu.attackType]||gu.attackType)+'</span>';
+  box.classList.remove('pop'); void box.offsetWidth; box.classList.add('pop');   // 등장 애니 재생
 }
 function combine(){
   // 합체존 안 같은 '일반' 유닛 3개 → 영웅(1차 진화만). 영웅끼리는 더 이상 합쳐지지 않음.
@@ -3202,7 +3267,8 @@ function moveCitizen(i){ const p=CLOCK_POS[i];
   if(G.citizen.onPad===i){ buyUnit(SHOP_UNITS[i]); return; } // 이미 그 패드 위면 탭마다 바로 추가 구매
   moveCitizenTo(p.x,p.y,SHOP_UNITS[i]); }
 // 시민이 패드 위를 '지나가기만 해도' 그 유닛 구매. 패드당 1회(벗어났다 다시 들어오면 재구매).
-function passOverBuy(){ const c=G.citizen; if(!GW||!GH) return;
+function passOverBuy(){ return;   // 2단계: 시민 패드 구매 비활성화(가챠 뽑기로 대체)
+  const c=G.citizen; if(!GW||!GH) return;
   const buyR=Math.min(GW,GH)*0.075; let on=-1;   // 구역(패드)을 밟으면 구매
   for(let i=0;i<CLOCK_POS.length;i++){ const p=CLOCK_POS[i];
     if(Math.hypot((p.x-c.x)*GW,(p.y-c.y)*GH)<buyR){ on=i; break; } }
