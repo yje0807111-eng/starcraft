@@ -1814,6 +1814,7 @@ const TECH=[
 const TECH_POS=[{x:.28,y:.35},{x:.72,y:.35},{x:.28,y:.62},{x:.72,y:.62}];  // 2×2(좌우 간격 넓힘)
 // 계열별 색
 const WPN_COL={inf:'#4aa8ff',mech:'#5ad1ff',pro:'#ffc040',zrg:'#9fd356'};
+const WPN_RACE={inf:'terran',mech:'terran',pro:'protoss',zrg:'zerg'};   // 건물 계열 → 종족(작동음 분리용)
 // 건물 벡터 실루엣(자체 제작 네온, currentColor=계열색)
 const BLDG_SVG={
   acad:'<path d="M3 13l9-5 9 5z" fill="currentColor" opacity=".18"/><path d="M5 20v-7h14v7M3 13l9-5 9 5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M8 20v-5M12 20v-5M16 20v-5M4 20h16" stroke="currentColor" stroke-width="1.2"/>',
@@ -3204,7 +3205,9 @@ function upgSlotHTML(it){
     +'<div class="ccost">'+ENERGY_ICON+it.cost+'</div></div>';
 }
 // 건물 선택 → 좌(초상화+설명/진행) | 우(정사각 커맨드 그리드)
-function selectUpg(id){ G.techB=id; renderBldgs('vUpgrade',TECH,TECH_POS,id,selectUpg);
+function selectUpg(id){ const _bchg=(G.techB!==id); G.techB=id;
+  if(_bchg && typeof playSfx==='function'){ const _b=TECH.find(x=>x.id===id); const _r=(_b&&WPN_RACE[_b.wpn])||'terran'; playSfx('bldg_'+_r); }   // 종족별 건물 작동음(재렌더 제외)
+  renderBldgs('vUpgrade',TECH,TECH_POS,id,selectUpg);
   if(typeof updateDeselTop==='function') updateDeselTop();   // 우상단 취소키 표시
   const b=TECH.find(x=>x.id===id); document.getElementById('upgHint').style.display='none';
   const list=document.getElementById('upgList'); list.style.display='flex';
@@ -3237,7 +3240,8 @@ function selectUpg(id){ G.techB=id; renderBldgs('vUpgrade',TECH,TECH_POS,id,sele
 function research(wpn){
   if(G.research) return;                                       // 동시 1개만(즉시모드라 사실상 미발생)
   if((G.atkLv[wpn]||0)>=UPG_MAX) return;                       // 최대 레벨 — 알림 없이 무시
-  if(G.gas<UPG_COST){ toast('에너지(가스)가 부족합니다'); return; }   // 부족 — 채팅 알림
+  if(G.gas<UPG_COST){ if(typeof playSfxT==='function') playSfxT('upgrade_denied',130); toast('에너지(가스)가 부족합니다'); return; }   // 부족 — 알림음+토스트
+  if(typeof playSfxT==='function') playSfxT('upgrade_press',80);   // 업그레이드 누름(상호작용)
   G.gas-=UPG_COST; updateHud();
   if(UPG_TIME<=0){ finishResearch(wpn); return; }              // 즉시 완료 모드
   G.research={ wpn:wpn, t:UPG_TIME, dur:UPG_TIME };            // 타이머 가동
@@ -3249,7 +3253,7 @@ function cancelResearch(){ if(!G.research) return;
   G.research=null; if(G.tab==='Upgrade'&&G.techB) selectUpg(G.techB);
 }
 function finishResearch(wpn){ G.atkLv[wpn]=(G.atkLv[wpn]||0)+1;   // 업그레이드 완료 — 채팅 알림 없이 슬롯 레벨로만 표시
-  if(typeof playSfx==='function') playSfx('upgrade');
+  if(typeof playSfxT==='function') playSfxT('upgrade',80);   // 완료음(길게 누르기 연사 시 쓰로틀)
   G.research=null; if(G.tab==='Upgrade'&&G.techB) selectUpg(G.techB); }
 // 길게 누르기 연속 업그레이드: 즉시 1회 → 0.5초 유지 시 0.05초마다 반복. 슬롯이 재렌더돼도 전역 타이머라 안 끊김
 let _upgHold=null;
@@ -4216,6 +4220,8 @@ const SFX_FILES = {
   // B. 게임플레이
   buy_unit:'unit_buy.mp3', enemy_spawn:'enemy_spawn.mp3', hero_merge:'hero_merge.mp3', place_unit:'place_unit.mp3', upgrade:'upgrade.mp3',
   death_terran:'death_terran.mp3', death_zerg:'death_zerg.mp3', death_protoss:'death_protoss.mp3',   // 종족별 적 처치음
+  bldg_terran:'bldg_terran.mp3', bldg_protoss:'bldg_protoss.mp3', bldg_zerg:'bldg_zerg.mp3',   // 종족별 건물 작동음(선택 시)
+  upgrade_press:'upgrade_press.mp3', upgrade_denied:'upgrade_denied.mp3',   // 업그레이드 상호작용(완료음은 upgrade)
   // 유닛별 공격음(8종)
   attack_ghost:'attack_ghost.mp3', attack_dragoon:'attack_dragoon.mp3', attack_hydra:'attack_hydra.mp3', attack_marine:'attack_marine.mp3',
   attack_goliath:'attack_goliath.mp3', attack_archon:'attack_archon.mp3', attack_turret:'attack_turret.mp3', attack_photon:'attack_photon.mp3',
@@ -4266,6 +4272,8 @@ function playEnemyDeath(race){ const now=Date.now(); if(now-_enDeathLast<70) ret
   playSfx('death_'+(race||'terran')); }   // 종족별 처치음
 const _atkLast={};
 function playUnitAttack(id){ const now=Date.now(); if(now-(_atkLast[id]||0)<110) return; _atkLast[id]=now; playSfx('attack_'+id); }   // 유닛별 공격음(같은 유닛 다수 동시 발사 시 겹침 방지)
+const _sfxTLast={};
+function playSfxT(name, ms){ const now=Date.now(); if(now-(_sfxTLast[name]||0)<(ms||90)) return; _sfxTLast[name]=now; playSfx(name); }   // 이름별 쓰로틀(길게 누르기 연사 방지)
 function bgmSetSfxVolume(v){ SFX_VOLUME=v; }   // 효과음 기준 볼륨 런타임 조절용
 // 버튼 종류 판별 → 알맞은 UI 효과음 선택(data-sfx로 개별 지정 가능)
 function _sfxForEl(el){
