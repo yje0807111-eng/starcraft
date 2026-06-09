@@ -542,14 +542,10 @@
   .hint b{color:var(--neon);text-shadow:0 0 6px var(--neon-glow),0 1px 2px #000}
   /* 가챠 뽑기 바(유닛뽑기 탭) */
   .gachaBar{display:flex;align-items:stretch;gap:9px;margin:auto;width:100%;max-width:330px;padding:4px 6px;box-sizing:border-box}
-  .gachaBtn{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-width:84px;padding:10px 14px;
-    border-radius:9px;cursor:pointer;font-family:inherit;color:#fff;border:1px solid var(--neon);
-    background:linear-gradient(180deg,var(--neon-face1),var(--neon-d1) 60%,var(--neon-d2));
-    box-shadow:0 0 16px -3px var(--neon-glow),inset 0 1px 0 rgba(255,255,255,.22)}
-  .gachaBtn:active{transform:translateY(1px)}
-  .gachaBtn .gbMain{font-size:16px;font-weight:800;letter-spacing:1px}
-  .gachaBtn .gbCost{font-size:10px;font-weight:700;color:#ffe0e0;display:flex;align-items:center;gap:2px}
-  .gachaBtn .gbCost b{font-family:'Rajdhani',sans-serif;font-size:12px}
+  .gachaHint{flex:0 0 auto;display:flex;align-items:center;justify-content:center;text-align:center;min-width:92px;padding:8px 12px;
+    border-radius:9px;font-size:11px;line-height:1.5;color:#d6dee8;background:linear-gradient(180deg,rgba(26,20,22,.55),rgba(8,7,9,.62));
+    border:1px solid var(--neon-soft);box-shadow:0 0 12px -6px var(--neon-glow)}
+  .gachaHint b{color:var(--neon);text-shadow:0 0 6px var(--neon-glow)}
   .gachaResult{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:1px;padding:7px 11px;border-radius:9px;
     background:linear-gradient(180deg,rgba(20,16,18,.7),rgba(8,7,9,.75));border:1px solid var(--gc,var(--metal-edge));
     box-shadow:0 0 12px -6px var(--gc,transparent)}
@@ -559,6 +555,18 @@
   .gachaResult .grType{font-size:9px;color:#9aa6b2}
   .gachaResult.pop{animation:grPop .3s ease-out}
   @keyframes grPop{0%{transform:scale(.92);opacity:.4}60%{transform:scale(1.03)}100%{transform:scale(1);opacity:1}}
+  /* 뽑기 비콘(유닛뽑기 보드) — 시민이 올라서면 뽑기 */
+  .drawZone{position:absolute;transform:translate(-50%,-50%);z-index:9;pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:3px}
+  .drawZone .dzRing{width:74px;height:74px;border-radius:50%;border:2px solid var(--neon-soft);
+    box-shadow:0 0 18px -2px var(--neon-glow),inset 0 0 18px rgba(255,59,59,.18);
+    background:radial-gradient(circle at 50% 40%,rgba(255,59,59,.22),rgba(10,8,10,.05) 70%);animation:dzPulse 1.8s ease-in-out infinite}
+  .drawZone .dzCore{position:absolute;top:37px;left:50%;transform:translate(-50%,-50%);font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif;
+    font-size:30px;font-weight:800;color:var(--neon);text-shadow:0 0 12px var(--neon-glow),0 2px 4px #000}
+  .drawZone .dzLabel{display:flex;align-items:center;gap:5px;padding:2px 8px;border-radius:5px;background:rgba(6,5,8,.7);border:1px solid var(--neon-soft)}
+  .drawZone .dzName{font-size:11px;font-weight:800;color:#fff;letter-spacing:1px;text-shadow:0 0 6px var(--neon-glow)}
+  .drawZone .dzCost{display:flex;align-items:center;gap:2px;font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;color:#ffe6a0}
+  .drawZone.active .dzRing{border-color:var(--neon);box-shadow:0 0 26px 0 var(--neon-glow),inset 0 0 22px rgba(255,59,59,.3)}
+  @keyframes dzPulse{0%,100%{box-shadow:0 0 14px -4px var(--neon-glow),inset 0 0 18px rgba(255,59,59,.14)}50%{box-shadow:0 0 24px 0 var(--neon-glow),inset 0 0 22px rgba(255,59,59,.26)}}
   /* 생산 버튼: 투명 + 빨강 네온 엣지 */
   .pbtn{flex:none;width:calc(33.33% - 5px);border:1.5px solid var(--metal-edge);border-radius:6px;background:none;
     padding:7px 5px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;
@@ -1581,11 +1589,9 @@
     </div>
 
     <div class="bp" id="bpUnit">
-      <!-- 가챠 뽑기(2단계): 시민 상점 대체 -->
+      <!-- 가챠 뽑기(2단계): 시민을 뽑기 비콘으로 이동 -->
       <div class="gachaBar">
-        <button class="gachaBtn" id="gachaBtn" onclick="drawGacha()">
-          <span class="gbMain">뽑기</span><span class="gbCost">💎<b id="gachaCost">10</b></span>
-        </button>
+        <div class="gachaHint"><b>시민</b>을 <b>뽑기 비콘</b>으로<br>이동하면 뽑기</div>
         <div class="gachaResult" id="gachaResult"><span class="grHint">랜덤 유닛을 획득합니다</span></div>
       </div>
       <div class="hint" id="prodHint" style="display:none">유닛 클릭 = <b>정보</b></div>
@@ -1817,7 +1823,9 @@ const CLOCK_POS=(function(){ const lx=.19, rx=.81, ys=[.305,.50,.695]; return [
   {x:rx,y:ys[0]},{x:rx,y:ys[1]},{x:rx,y:ys[2]},    // 4~6 오른쪽 3개(골리앗·아칸·터렛)
   {x:.5, y:.74},                                   // 7 하단 1개(포토캐논) — 위로 좁힘
 ]; })();
-const CITIZEN_HOME={x:.5,y:.5}; // 시민 기본 위치(프레임 가운데)
+const CITIZEN_HOME={x:.5,y:.66}; // 시민 기본 위치(뽑기 비콘 아래)
+const DRAW_ZONE={x:.5,y:.34};    // 뽑기 비콘 위치 — 시민이 올라서면 가챠 뽑기
+function nearDrawZone(x,y,mult){ if(!GW||!GH) return false; return Math.hypot((DRAW_ZONE.x-x)*GW,(DRAW_ZONE.y-y)*GH) < Math.min(GW,GH)*(mult||0.085); }
 // 고정 방어 구조물 자리(터렛=모서리, 포토캐논=변 중앙). 살 때마다 다음 빈 자리에 하나씩(잠금 해제).
 const FIXED_SLOTS={
   // 터렛 = 보드 위/아래 우주 위에서 사격(5자리: TL·TR·BL + 상단중앙 + 하단중앙). 5시 자리는 포토캐논용으로 비움
@@ -2394,13 +2402,11 @@ function drawFacilityFloor(ctx,W,H,tint,light,tileImg){
 }
 function drawShopBg(ctx,W,H){ drawFacilityFloor(ctx,W,H); }   // 유닛뽑기(차가운 톤)
 function drawProd(){ const {ctx,W,H}=setup('cvUnit'); drawShopBg(ctx,W,H);
-  GW=W;GH=H; const rx=Math.min(W,H)*0.085;
-  // 유닛 패드: 3D 비콘이 준비되면 M3D가 렌더(여기선 생략), 아니면 기본 글로우 패드 폴백
+  GW=W;GH=H; const rx=Math.min(W,H)*0.11;
+  // 뽑기 비콘: 3D가 준비되면 M3D가 렌더, 아니면 글로우 패드 폴백
   const m3dOff=(G.opt&&G.opt.model3d===false);
-  const b3d=window.M3D && M3D.beaconReady && M3D.beaconReady() && !m3dOff;   // 3D 끄면 패드 폴백 표시
-  SHOP_UNITS.forEach((uid,i)=>{ const p=CLOCK_POS[i], cx=p.x*W, cy=p.y*H, active=(G.citizen.buyId===uid||G.citizen.onPad===i);
-    if(!b3d) drawPad(ctx,cx,cy,rx,active);
-  });
+  const b3d=window.M3D && M3D.beaconReady && M3D.beaconReady() && !m3dOff;
+  if(!b3d) drawPad(ctx, DRAW_ZONE.x*W, DRAW_ZONE.y*H, rx, G.citizen.onPad==='draw');
 }
 function drawUpg(){ const {ctx,W,H}=setup('cvUpgrade'); GW=W;GH=H;
   // ── 우주 배경 ──
@@ -3237,16 +3243,13 @@ function toggleMergeMode(el){ G.mergeMode=!G.mergeMode; el.classList.toggle('on'
 // 유닛뽑기: 시계 배치 유닛 + 중앙 시민 DOM 렌더
 // 시계 유닛 + 시민 div를 1회 생성(탭 진입 시). 이후엔 위치만 갱신해서 부드럽게 이동.
 function buildClock(){ const v=document.getElementById('vUnit');
-  v.querySelectorAll('.shopUnit,.citizen').forEach(n=>n.remove());
-  SHOP_UNITS.forEach((uid,i)=>{ const d=U[uid],p=CLOCK_POS[i];
-    const el=document.createElement('div'); el.className='shopUnit'; el.dataset.idx=i;
-    el.style.left=(p.x*100)+'%'; el.style.top=(p.y*100)+'%';
-    const has3d = !!(window.M3D && window.M3D.hasModel && window.M3D.hasModel(uid)) && !(typeof G!=='undefined'&&G.opt&&G.opt.model3d===false);  // 3D 모델 보유 여부(3D 끄면 2D 아이콘 표시)
-    const fig = has3d ? '' : '<div class="spadIcon" style="color:'+d.color+'">'+unitSVG(uid)+'</div>';  // 모델 없는 유닛(히드라)만 SVG 폴백
-    const info = '<div class="shopInfo" title="유닛 정보" onmousedown="event.stopPropagation();event.preventDefault();selectShop(\''+uid+'\')" ontouchstart="event.stopPropagation();event.preventDefault();selectShop(\''+uid+'\')">i</div>';  // 정보 버튼(비콘 클릭과 분리)
-    el.innerHTML=fig+info+'<div class="slbl"><div class="sn">'+d.name+'</div><div class="sc"><svg viewBox="0 0 24 24" width="11" height="11" style="flex:0 0 auto"><circle cx="12" cy="12" r="9" fill="#f6c84a" stroke="#ffeaa0" stroke-width="1.6"/><path d="M14.8 8.8A4.4 4.4 0 1 0 14.8 15.2" fill="none" stroke="#7a5a12" stroke-width="2.6" stroke-linecap="round"/></svg>'+d.cost+'</div></div>';  // 모델 있는 유닛은 실제 3D가 패드 위에 섬(M3D.syncShop)
-    v.appendChild(el);   // 클릭 핸들러 없음 — 꾹 누르기(vUnit)로 시민 이동/구매 통합 처리
-  });
+  v.querySelectorAll('.shopUnit,.citizen,.drawZone').forEach(n=>n.remove());
+  // 뽑기 비콘 1개(시민이 올라서면 뽑기)
+  const dz=document.createElement('div'); dz.className='drawZone'; dz.id='drawZoneEl';
+  dz.style.left=(DRAW_ZONE.x*100)+'%'; dz.style.top=(DRAW_ZONE.y*100)+'%';
+  dz.innerHTML='<div class="dzRing"></div><div class="dzCore">?</div>'
+    +'<div class="dzLabel"><span class="dzName">뽑기</span><span class="dzCost"><svg viewBox="0 0 24 24" width="10" height="10" style="flex:0 0 auto"><circle cx="12" cy="12" r="9" fill="#f6c84a" stroke="#ffeaa0" stroke-width="1.6"/><path d="M14.8 8.8A4.4 4.4 0 1 0 14.8 15.2" fill="none" stroke="#7a5a12" stroke-width="2.6" stroke-linecap="round"/></svg>'+GACHA_COST+'</span></div>';
+  v.appendChild(dz);
   const c=document.createElement('div'); c.className='citizen'; c.id='citizenEl';
   const citModel=!!(window.M3D && window.M3D.hasModel && window.M3D.hasModel('citizen')) && !(typeof G!=='undefined'&&G.opt&&G.opt.model3d===false);  // 3D 시민 있으면 이모지 프레임 숨김(3D 끄면 표시)
   c.innerHTML=(citModel?'':'<div class="cframe">'+citizenSVG()+'</div>')+'<div class="cn">시민</div>';
@@ -3256,9 +3259,8 @@ function buildClock(){ const v=document.getElementById('vUnit');
 // 매 프레임: 시민 위치 + 목표 유닛 강조만 갱신(div 재생성 없음).
 function renderClock(){ const c=document.getElementById('citizenEl'); if(!c) return;
   c.style.left=(G.citizen.x*100)+'%'; c.style.top=(G.citizen.y*100)+'%';
-  document.querySelectorAll('#vUnit .shopUnit').forEach((el)=>{ const i=+el.dataset.idx;
-    el.classList.toggle('sel', SHOP_UNITS[i]===G.citizen.buyId || G.citizen.onPad===i);
-  });
+  const dz=document.getElementById('drawZoneEl');
+  if(dz) dz.classList.toggle('active', G.citizen.onPad==='draw' || G.citizen.buyId==='draw');
 }
 // 시민 이동 명령. 구매는 '패드 통과' 시 자동(passOverBuy). 여기선 목표만 설정.
 function moveCitizenTo(x,y,buyId){ const c=G.citizen; c.gx=x; c.gy=y; c.buyId=buyId||null;
@@ -3267,17 +3269,13 @@ function moveCitizen(i){ const p=CLOCK_POS[i];
   if(G.citizen.onPad===i){ buyUnit(SHOP_UNITS[i]); return; } // 이미 그 패드 위면 탭마다 바로 추가 구매
   moveCitizenTo(p.x,p.y,SHOP_UNITS[i]); }
 // 시민이 패드 위를 '지나가기만 해도' 그 유닛 구매. 패드당 1회(벗어났다 다시 들어오면 재구매).
-function passOverBuy(){ return;   // 2단계: 시민 패드 구매 비활성화(가챠 뽑기로 대체)
-  const c=G.citizen; if(!GW||!GH) return;
-  const buyR=Math.min(GW,GH)*0.075; let on=-1;   // 구역(패드)을 밟으면 구매
-  for(let i=0;i<CLOCK_POS.length;i++){ const p=CLOCK_POS[i];
-    if(Math.hypot((p.x-c.x)*GW,(p.y-c.y)*GH)<buyR){ on=i; break; } }
-  if(on<0){ c.onPad=null; return; }
-  if(c.onPad===on) return;                 // 같은 패드 연속 중복 방지(벗어났다 다시 밟아야 재구매)
-  c.onPad=on;
-  const before=G.units.length; buyUnit(SHOP_UNITS[on]);  // 밟는 순간 구매(자원/인구 부족은 buyUnit이 토스트)
-  if(G.units.length>before){ c.x=CITIZEN_HOME.x; c.y=CITIZEN_HOME.y; c.onPad=null;  // 성공 → 즉시 중앙 텔레포트(걸어서 복귀 X)
-    if(!uHold){ c.gx=null; c.gy=null; c.buyId=null; } }   // 놓은 상태였으면 텔레포트 후 정지(누르고 있으면 다시 목표로 감)
+function passOverBuy(){ const c=G.citizen; if(!GW||!GH) return;   // 시민이 뽑기 비콘에 올라서면 가챠 뽑기
+  if(!nearDrawZone(c.x,c.y,0.075)){ c.onPad=null; return; }
+  if(c.onPad==='draw') return;             // 연속 중복 방지(벗어났다 다시 올라서야 재뽑기)
+  c.onPad='draw';
+  const before=G.units.length; drawGacha();
+  if(G.units.length>before){ c.x=CITIZEN_HOME.x; c.y=CITIZEN_HOME.y; c.onPad=null;   // 성공 → 중앙 아래로 복귀
+    if(!uHold){ c.gx=null; c.gy=null; c.buyId=null; } }
 }
 // 시민 위치 갱신(루프). 목표로 이동 + 패드 통과 시 자동 구매.
 let uHold=null;  // 유닛뽑기 꾹 누르기 중인 위치(정규화 {x,y}) — 홈화면 유닛이동과 동일 방식
@@ -3287,7 +3285,7 @@ function padUnder(nx,ny){ if(!GW||!GH) return -1; const r=Math.min(GW,GH)*0.11;
 // 시민 이동: 누른 지점으로 계속 이동(유닛/빈곳 구분 없음). 이동 중 구역을 '밟는 순간' 즉시 구매 + 중앙 텔레포트.
 // 계속 누르고 있으면 텔레포트 후 다시 누른 곳으로 이동 → 경로상 같은 구역을 또 밟아 반복 구매.
 function stepCitizen(dt){ const c=G.citizen; if(G.tab!=='Unit') return;
-  if(uHold){ c.gx=uHold.x; c.gy=uHold.y; c.buyId=SHOP_UNITS[padUnder(uHold.x,uHold.y)]||null; }  // 누른 곳으로 이동(목표 패드면 강조)
+  if(uHold){ c.gx=uHold.x; c.gy=uHold.y; c.buyId=nearDrawZone(uHold.x,uHold.y,0.11)?'draw':null; }  // 누른 곳으로 이동(뽑기 비콘이면 강조)
   if(c.gx!=null){ const dx=c.gx-c.x, dy=c.gy-c.y, dist=Math.hypot(dx,dy), spd=0.55*dt;
     if(dist<0.012){ c.x=c.gx; c.y=c.gy; c.gx=null; c.gy=null; c.buyId=null; }  // 도착 시 목표 비움(누르고 있으면 다음 프레임 uHold로 재설정)
     else { c.x+=dx/dist*Math.min(spd,dist); c.y+=dy/dist*Math.min(spd,dist); } }
@@ -5005,7 +5003,7 @@ function cancelSelect(){ if(G.tab==='Unit'){ clearShopSel(); return; }
   if(G.tab==='Players'){ if(typeof clearPlayerSel==='function') clearPlayerSel(); return; }
   deselectUnit(); }
 // 시민 이동 명령(빈 곳 클릭/드래그 → 그 지점으로, 유닛 위 지나가면 구매). 손 떼도 목표 유지(메인 이동명령식)
-function moveCitizenCmd(p){ uHold=p; const c=G.citizen; if(c){ c.gx=p.x; c.gy=p.y; c.buyId=SHOP_UNITS[padUnder(p.x,p.y)]||null; } }
+function moveCitizenCmd(p){ uHold=p; const c=G.citizen; if(c){ c.gx=p.x; c.gy=p.y; c.buyId=nearDrawZone(p.x,p.y,0.11)?'draw':null; } }
 function drawShopBox(b){ let el=document.getElementById('shopBox');
   if(!el){ el=document.createElement('div'); el.id='shopBox'; document.getElementById('vUnit').appendChild(el); }
   const x=Math.min(b.x0,b.x1),y=Math.min(b.y0,b.y1),w=Math.abs(b.x1-b.x0),h=Math.abs(b.y1-b.y0);
@@ -5698,30 +5696,14 @@ window.M3D={
     for(const [,m] of models) m.holder.visible=false;   // 게임 모델 숨김
     for(const [,m] of bldgModels) m.holder.visible=false;
     for(const [,m] of ghostModels) m.holder.visible=false;
-    const cz=(typeof G!=='undefined'&&G.citizen)?G.citizen.buyId:null;
-    const padLift = beaconBase ? Math.min(W,H)*0.10*SHOP_BW_MUL*SHOP_BEACON_LIFT : 0;  // 유닛을 비콘 단(deck) 위로 올림
-    SHOP_UNITS.forEach((uid,i)=>{ if(!MODELS[uid]) return;
-      let m=shopModels.get(uid); if(!m){ m=makeModel(uid); if(!m) return; m.kind='shop'; shopModels.set(uid,m); }
-      m.holder.visible=true;
-      if(m.inner) m.inner.visible=true; if(m.runInner) m.runInner.visible=false; if(m.gun) m.gun.visible=true;
-      m.rim.visible = (cz===uid);                        // 시민이 향하는(구매 대상) 유닛 강조
-      m.holder.scale.setScalar((SCALE[uid]||MODEL_SCALE)*SHOP_SCALE_MUL*(SHOP_FIT[uid]||1));  // 화면 전용 크기 보정
-      m.yaw.rotation.y += dt*SHOP_SPIN;                  // 턴테이블 회전(전시)
-      m.breathe += dt*BREATHE_SPD;
-      if(AURA_UNITS[uid]){ m.anim.position.y=m.h*AURA_LIFT+Math.sin(m.breathe)*m.h*HOVER_AMP*0.5; m.anim.position.x=0; m.anim.rotation.z=0; m.anim.rotation.x=0; }
-      else { m.anim.position.y=Math.sin(m.breathe)*m.h*BREATHE_AMP; m.anim.position.x=0; m.anim.rotation.z=0; m.anim.rotation.x=0; }
-      if(m.aura){ m.auraT+=dt; const a=m.aura;
-        const pp=1+Math.sin(m.auraT*2.0)*0.05, b=a[0]._base*pp; a[0].scale.set(b,b,1); a[0].material.opacity=0.20+Math.abs(Math.sin(m.auraT*1.6))*0.10;
-        a[1].scale.setScalar(1+Math.sin(m.auraT*2.4+1.0)*0.05); a[1].material.opacity=0.05+Math.abs(Math.sin(m.auraT*2.0+0.5))*0.05; a[1].rotation.y+=dt*0.5; }
-      const p=CLOCK_POS[i]; m.holder.position.set(p.x*W, (H-p.y*H) - Y_DROP + padLift, 0);  // 비콘 단 위에 서도록 올림
-    });
-    // 슬롯 3D 비콘(각 유닛 발판) — 합체 베이와 동일 모델
-    if(beaconBase){ const bw=Math.min(W,H)*0.10*SHOP_BW_MUL;
-      SHOP_UNITS.forEach((uid,i)=>{ const key='shop'+i; let bz=beaconInsts.get(key);
-        if(!bz){ bz=makeBeacon(); if(bz) beaconInsts.set(key,bz); }
-        if(bz){ bz.holder.visible=true; bz.holder.scale.setScalar(bw/bz.w);
-          const p=CLOCK_POS[i]; bz.holder.position.set(p.x*W, (H-p.y*H)-Y_DROP, -300); } });
-      const bay=beaconInsts.get('bay'); if(bay) bay.holder.visible=false;   // 베이 비콘은 이 탭에서 숨김
+    // 전시 유닛 모델 전부 숨김(가챠로 전환 — 8유닛 시계 제거)
+    for(const [k,m] of shopModels){ if(k!=='__cit') m.holder.visible=false; }
+    // 뽑기 비콘 1개만 — DRAW_ZONE 위치
+    if(beaconBase){ const bw=Math.min(W,H)*0.13*SHOP_BW_MUL;
+      let bz=beaconInsts.get('draw'); if(!bz){ bz=makeBeacon(); if(bz) beaconInsts.set('draw',bz); }
+      if(bz){ bz.holder.visible=true; bz.holder.scale.setScalar(bw/bz.w);
+        bz.holder.position.set(DRAW_ZONE.x*W, (H-DRAW_ZONE.y*H)-Y_DROP, -300); }
+      for(const [k,b] of beaconInsts){ if(k!=='draw') b.holder.visible=false; }   // 나머지 슬롯/베이 비콘 숨김
     }
     // 시민(셀렉터): 이동 방향 보며 달리기, 정지 시 idle (턴테이블 회전 X)
     if(MODELS.citizen && typeof G!=='undefined' && G.citizen){
