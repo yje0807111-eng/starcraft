@@ -1879,6 +1879,80 @@ const SPLASH_R=.08, SPLASH_RATIO=.5;
 const PROJ_SPD={bullet:640, spike:560, plasma:240, missile:240, rifle:900};
 
 // ============================================================================
+// 가챠 등급 시스템 — 데이터 구조 (1단계: 데이터만. 뽑기/조합/특성/상점제거는 다음 단계)
+//   설계서: "네모네모 디펜스 — 가챠 등급 시스템 설계서"
+//   ※ 기존 게임 로직과 분리된 신규 데이터. stats는 0(추후 확정), 일부 이름은 (미정).
+// ============================================================================
+const GACHA_TIERS = {   // 확률 합 = 1.000 (0.6+0.25+0.09+0.04+0.015+0.004+0.001)
+  common:    { name:'일반',   prob:0.600, combine:true,     serverNotify:false },
+  rare:      { name:'레어',   prob:0.250, combine:true,     serverNotify:false },
+  epic:      { name:'에픽',   prob:0.090, combine:true,     serverNotify:false },
+  unique:    { name:'유니크', prob:0.040, combine:true,     serverNotify:false },
+  legend:    { name:'레전드', prob:0.015, combine:true,     serverNotify:true  },
+  transcend: { name:'초월',   prob:0.004, combine:'recipe', serverNotify:true  },
+  god:       { name:'갓',     prob:0.001, combine:false,    serverNotify:true  },
+};
+const GACHA_TIER_ORDER = ['common','rare','epic','unique','legend','transcend','god'];
+const ATTACK_TYPES = {   // 공격 타입 정의
+  single:'단일', single_rapid:'단일 연사', aoe_single:'광역 단발',
+  aoe_rapid:'광역 연사', dot:'도트딜', single_chain:'단일+연계',
+};
+const GACHA_TRAITS = {   // 특성(레전드부터 부여). 실제 효과 적용은 4단계.
+  armor_pierce:{ name:'마깍',     desc:'적 마법방어 감소' },
+  def_down:    { name:'방깍',     desc:'적 방어력 감소' },
+  slow:        { name:'슬로우',   desc:'적 이동속도 감소' },
+  atkspd_buff: { name:'공속 버프', desc:'아군 공격속도 증가' },
+  atk_buff:    { name:'공격 버프', desc:'아군 공격력 증가' },
+  poison:      { name:'독',       desc:'지속 도트 데미지' },
+};
+// 유닛 생성 헬퍼. race: union(인간) / aetherial(빛) / swarm(군체)
+function _gUnit(id, displayName, tier, race, attackType, opt){ opt=opt||{};
+  return { id, displayName, tier, race, attackType,
+    stats:{ damage:0, fireRate:0, range:0 },   // 수치 추후 확정
+    traits: opt.traits||[], combineFrom: opt.combineFrom||null }; }
+const GACHA_UNITS = {   // 4종 × 7등급 = 28
+  // ── 일반 (common) ──
+  ranger_c:   _gUnit('ranger_c','레인저','common','union','single'),
+  strider_c:  _gUnit('strider_c','스트라이더','common','union','single'),
+  sentinel_c: _gUnit('sentinel_c','센티넬','common','aetherial','single'),
+  reaper_c:   _gUnit('reaper_c','리퍼','common','swarm','single'),
+  // ── 레어 (rare) ──
+  phantom_r:  _gUnit('phantom_r','팬텀','rare','union','single'),
+  racer_r:    _gUnit('racer_r','(미정)','rare','union','single'),
+  void_r:     _gUnit('void_r','보이드','rare','aetherial','single'),
+  snapper_r:  _gUnit('snapper_r','(미정)','rare','swarm','single'),
+  // ── 에픽 (epic) = 일반 라인 강화형 (3× 해당 common → epic) ──
+  ranger_e:   _gUnit('ranger_e','레인저+','epic','union','single', {combineFrom:'ranger_c'}),
+  strider_e:  _gUnit('strider_e','스트라이더+','epic','union','single', {combineFrom:'strider_c'}),
+  sentinel_e: _gUnit('sentinel_e','센티넬+','epic','aetherial','single', {combineFrom:'sentinel_c'}),
+  reaper_e:   _gUnit('reaper_e','리퍼+','epic','swarm','single', {combineFrom:'reaper_c'}),
+  // ── 유니크 (unique) = 레어 라인 강화형 (3× 해당 rare → unique) ──
+  phantom_u:  _gUnit('phantom_u','팬텀+','unique','union','single', {combineFrom:'phantom_r'}),
+  racer_u:    _gUnit('racer_u','(미정)+','unique','union','single', {combineFrom:'racer_r'}),
+  void_u:     _gUnit('void_u','보이드+','unique','aetherial','single', {combineFrom:'void_r'}),
+  snapper_u:  _gUnit('snapper_u','(미정)+','unique','swarm','single', {combineFrom:'snapper_r'}),
+  // ── 레전드 (legend) = 신규, 특성 1개(추후 부여) ──
+  machinegun_l: _gUnit('machinegun_l','(미정·머신건형)','legend','union','single_rapid'),
+  tank_l:       _gUnit('tank_l','(미정·탱크형)','legend','union','aoe_single'),
+  blade_l:      _gUnit('blade_l','(미정·근접 강타형)','legend','aetherial','single'),
+  thornqueen_l: _gUnit('thornqueen_l','(미정·가시여왕형)','legend','swarm','dot'),
+  // ── 초월 (transcend) = 특정 레시피 전용, 특성 1~2개(추후) ──
+  phantom_t:    _gUnit('phantom_t','(미정·핵 팬텀형)','transcend','union','single'),
+  skyguard_t:   _gUnit('skyguard_t','(미정·대공 광역형)','transcend','union','aoe_single'),
+  skydancer_t:  _gUnit('skydancer_t','(미정·공중 연사형)','transcend','aetherial','aoe_rapid'),
+  matron_t:     _gUnit('matron_t','(미정·연계형)','transcend','swarm','single_chain'),
+  // ── 갓 (god) = 0.1% 뽑기 전용, 조합 불가, 특성 2개+패시브(추후) ──
+  ranger_god:   _gUnit('ranger_god','(미정·레인저 최종형)','god','union','single_chain'),
+  strider_god:  _gUnit('strider_god','(미정·광역 연사형)','god','union','aoe_rapid'),
+  sentinel_god: _gUnit('sentinel_god','(미정·고속 단일형)','god','aetherial','single_rapid'),
+  reaper_god:   _gUnit('reaper_god','(미정·전범위 도트형)','god','swarm','dot'),
+};
+// 초월 레시피(특정 조합 전용) — 추후 확정. 형식: 결과ID: [재료ID 3종]
+const TRANSCEND_RECIPE = {
+  // phantom_t: ['machinegun_l','blade_l','phantom_u'],   // 예시(미정)
+};
+
+// ============================================================================
 // 게임 상태
 // ============================================================================
 function newGame(){ return {
