@@ -1812,7 +1812,7 @@ const U = {
 };
 const HERO_STAT_MUL=2; // 영웅은 체력/보호막 2배(기본값, 조정 가능)
 // 유닛 인스턴스에 생존 스탯 초기화(현재=최대). 추후 전투형 맵에서 u.hp 등을 깎으면 됨.
-function initUnitStats(u){ const d=U[u.id]; const m=u.hero?HERO_STAT_MUL:1;
+function initUnitStats(u){ const d=U[u.id]; const m=(u.hero?HERO_STAT_MUL:1)*gachaTierMul(u);   // 등급 배율 반영
   u.maxHp=Math.round(d.hp*m); u.hp=u.maxHp;
   u.maxSh=Math.round((d.shield||0)*m); u.sh=u.maxSh;
   u.maxEn=d.energy||0; u.en=u.maxEn;
@@ -2041,6 +2041,11 @@ const GACHA_MODEL = {
 };
 // 등급 표시 색
 const TIER_COLOR = { common:'#b8c0cc', rare:'#4aa8ff', epic:'#b06bff', unique:'#ffd23b', legend:'#ff8a3b', transcend:'#ff4d6d', god:'#ff2bd6' };
+// 등급별 전투 능력치 배율(프록시 기준 데미지·체력에 곱함) — 상위 등급일수록 강함. 밸런스 추후 조정.
+const TIER_MUL = { common:1.0, rare:1.6, epic:2.5, unique:3.8, legend:5.5, transcend:8.0, god:12.0 };
+function gachaTierMul(u){ return (u && u.gtier && TIER_MUL[u.gtier]) || 1; }
+// combineFrom 역방향: 재료 id → 결과 id (3개 조합 시 진화 대상)
+const COMBINE_TO = (function(){ const m={}; for(const id in GACHA_UNITS){ const cf=GACHA_UNITS[id].combineFrom; if(cf) m[cf]=id; } return m; })();
 // 별은 등급별로 늘어나지 않음 — 같은 이름이 두 등급에 걸쳐 있어(일반·레어=레인저, 에픽·유니크=팬텀)
 // 강화형(레어·유니크)만 ★ 하나로 구분하는 단순 장치. 나머지(이름이 겹치지 않는 등급)는 별 없음.
 const UPGRADED_TIER = { rare:true, unique:true };
@@ -2602,13 +2607,13 @@ function placeMergeZone(){ const mz=document.getElementById('mergeZone');
 function unitDmg(u){ const p=unitDmgParts(u); return p.total; }
 // 공격력 분해: {base:기본, up:업그레이드 추가분, total:합계, wlv:계열 업글 레벨}
 function unitDmgParts(u){ const d=U[u.id]; const wlv=(G.atkLv&&G.atkLv[d.wpn])||0;
-  const lv=1+((u.lv||1)-1)*0.6;
+  const lv=(1+((u.lv||1)-1)*0.6)*gachaTierMul(u);   // 등급 배율 반영
   const base=Math.round((u.hero?d.hdmg:d.dmg)*lv);
   const total=Math.round(((u.hero?d.hdmg:d.dmg)+(u.hero?d.hup:d.up)*wlv)*lv);
   return {base, up:total-base, total, wlv}; }
 // 공중공격 분해(airDmg 있는 유닛만). 없으면 null.
 function unitAirParts(u){ const d=U[u.id]; if(d.airDmg==null) return null;
-  const wlv=(G.atkLv&&G.atkLv[d.wpn])||0; const lv=1+((u.lv||1)-1)*0.6;
+  const wlv=(G.atkLv&&G.atkLv[d.wpn])||0; const lv=(1+((u.lv||1)-1)*0.6)*gachaTierMul(u);   // 등급 배율 반영
   const aD=u.hero?(d.hairDmg!=null?d.hairDmg:d.airDmg):d.airDmg;
   const aU=u.hero?(d.hairUp!=null?d.hairUp:d.airUp):d.airUp;
   const base=Math.round(aD*lv); const total=Math.round((aD+aU*wlv)*lv);
@@ -2641,16 +2646,20 @@ function buyUnit(id){
 // ── 가챠 뽑기(2단계) — 기존 시민 상점 대체 ──
 function gachaRollTier(){ let r=Math.random(); for(const t of GACHA_TIER_ORDER){ r-=GACHA_TIERS[t].prob; if(r<=0) return t; } return 'common'; }
 function gachaUnitsOfTier(t){ return Object.values(GACHA_UNITS).filter(u=>u.tier===t); }
+// 가챠 유닛 1기 생성(프록시 성능 + 전용 모델 + 등급 메타). 뽑기·조합 공용.
+function spawnGachaUnit(gid, x, y){ const gu=GACHA_UNITS[gid]; if(!gu) return null;
+  const proxy=GACHA_PROXY[gid]||'marine';
+  const u=initUnitStats({uid:G.idSeq++, id:proxy, hero:false, lv:1, x, y, cd:0,
+    gid, gtier:gu.tier, gname:gu.displayName, gmodel:GACHA_MODEL[gid]||null});
+  G.units.push(u); return u; }
 function drawGacha(){
   if(G.phase!=='playing'){ toast('게임 중에만 뽑기 가능합니다'); return; }
   if(G.units.filter(u=>!u.fixed).length>=MAX_UNITS){ toast('커맨드 포인트 최대('+MAX_UNITS+')'); return; }
   if(G.mineral<GACHA_COST){ toast('크레딧 부족 (뽑기 '+GACHA_COST+')'); return; }
   G.mineral-=GACHA_COST;
   const tier=gachaRollTier(); const pool=gachaUnitsOfTier(tier); const gu=pool[Math.floor(Math.random()*pool.length)];
-  const proxy=GACHA_PROXY[gu.id]||'marine';
   const ctr=trackCenter(); const sp=clampInner(ctr.x+(Math.random()-.5)*.08, ctr.y+(Math.random()-.5)*.08);
-  G.units.push(initUnitStats({uid:G.idSeq++, id:proxy, hero:false, lv:1, x:sp.x, y:sp.y, cd:0,
-    gid:gu.id, gtier:tier, gname:gu.displayName, gmodel:GACHA_MODEL[gu.id]||null}));   // 프록시 성능 + (있으면)전용 모델 + 가챠 메타
+  spawnGachaUnit(gu.id, sp.x, sp.y);
   if(typeof playSfx==='function') playSfx((tier==='common'||tier==='rare')?'buy_unit':'hero_merge');
   const _gcol=TIER_COLOR[tier]||'#fff', _gtn=GACHA_TIERS[tier].name;   // 뽑기 결과 → 등급 색상 채팅 알람(뽑기 사운드가 있으니 silent)
   if(GACHA_TIERS[tier].serverNotify) addChat('', '🎉 ['+_gtn+'] '+gu.displayName+' 획득!', _gcol, true);   // 레전드+ 강조
@@ -2701,25 +2710,33 @@ function testSpawnGacha(gid){
   renderUnits(); updateHud();
 }
 function combine(){
-  // 합체존 안 같은 '일반' 유닛 3개 → 영웅(1차 진화만). 영웅끼리는 더 이상 합쳐지지 않음.
+  // 합체존 안 같은 유닛 3개 → 가챠 유닛=다음 등급 진화 / 레거시=영웅(1차)
   const inz=G.units.filter(u=>inZone(u)&&!u.hero&&!u.fixed);
   const grp={};
-  for(const u of inz){ (grp[u.id]=grp[u.id]||[]).push(u); }
+  for(const u of inz){ const key=u.gid||('@'+u.id); (grp[key]=grp[key]||[]).push(u); }
   for(const k in grp){ const g=grp[k];
     if(g.length>=3){ const pick=g.slice(0,3), base=pick[0]; const con=new Set(pick.map(x=>x.uid));
+      if(base.gid && !COMBINE_TO[base.gid]) continue;   // 진화 대상 없는 등급은 다른 그룹 먼저 시도
       G.units=G.units.filter(x=>!con.has(x.uid));
       G.sel=G.sel.filter(uid=>!con.has(uid));                        // 합성으로 사라진 유닛 선택 해제(잔상 지정 제거)
       if(window.M3D&&M3D.dropModels) M3D.dropModels([...con]);       // 3D 모델 즉시 제거(사망모션 없이 — 한 템포 지연 방지)
       const c=zoneCenter();
-      G.units.push(initUnitStats({uid:G.idSeq++,id:base.id,hero:true,lv:1,x:c.x,y:c.y,cd:0}));
-      toast(U[base.id].name+' 영웅 탄생! ⭐');
-      if(typeof playSfx==='function') playSfx('hero_merge');   // 영웅 조합(단일 사운드)
+      if(base.gid){   // 가챠 진화 → combineFrom 기준 다음 등급
+        const target=COMBINE_TO[base.gid], tg=GACHA_UNITS[target];
+        spawnGachaUnit(target, c.x, c.y);
+        toast(tg.displayName+' '+GACHA_TIERS[tg.tier].name+' 진화! ⭐');
+      } else {        // 레거시 → 영웅
+        G.units.push(initUnitStats({uid:G.idSeq++,id:base.id,hero:true,lv:1,x:c.x,y:c.y,cd:0}));
+        toast(U[base.id].name+' 영웅 탄생! ⭐');
+      }
+      if(typeof playSfx==='function') playSfx('hero_merge');   // 조합 사운드
       refreshSelCard(); renderUnits(); updateHud(); return true;
     }
   }
-  // 영웅 3개가 있어도 합쳐지지 않음을 안내
+  // 진화 대상 없는 가챠 3개(레시피/뽑기 전용) 안내
+  const stuck=Object.values(grp).some(g=>g.length>=3 && g[0].gid && !COMBINE_TO[g[0].gid]);
   const heroTriple=Object.values((()=>{const m={};for(const u of G.units.filter(u=>inZone(u)&&u.hero)){(m[u.id]=m[u.id]||[]).push(u);}return m;})()).some(a=>a.length>=3);
-  toast(heroTriple ? '영웅은 더 진화하지 않습니다' : '합체존에 같은 유닛 3개를 모으세요');
+  toast(stuck ? '이 등급은 합체로 진화할 수 없습니다 (뽑기/레시피 전용)' : (heroTriple ? '영웅은 더 진화하지 않습니다' : '합체존에 같은 유닛 3개를 모으세요'));
   return false;
 }
 
