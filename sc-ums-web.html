@@ -2019,9 +2019,13 @@ const GACHA_UNITS = {   // 4종 × 7등급 = 28 (이름 확정)
   sentinel_god: _gUnit('sentinel_god','센티넬','god','aetherial','single_rapid'),
   reaper_god:   _gUnit('reaper_god','리퍼','god','swarm','dot'),
 };
-// 초월 레시피(특정 조합 전용) — 추후 확정. 형식: 결과ID: [재료ID 3종]
+// 초월 레시피(특수 조합 전용) — 합체존에 재료 유닛을 모으면 해당 초월 생성. 형식: 결과ID: [재료 gid 3개]
+// (기본: 특정 레전드 3개 → 특정 초월. 추후 혼합 레시피로 조정 가능)
 const TRANSCEND_RECIPE = {
-  // phantom_t: ['machinegun_l','blade_l','phantom_u'],   // 예시(미정)
+  phantom_t:   ['machinegun_l','machinegun_l','machinegun_l'],   // 발칸×3 → 디토네이터
+  skyguard_t:  ['tank_l','tank_l','tank_l'],                     // 브레이커×3 → 템페스트
+  skydancer_t: ['blade_l','blade_l','blade_l'],                  // 워든×3 → 스카이댄서
+  matron_t:    ['thornqueen_l','thornqueen_l','thornqueen_l'],   // 베놈퀸×3 → 매트론
 };
 // 2단계 임시 매핑: 가챠 유닛 → 기존 유닛 ID(모델·성능). 실제 전용 모델·수치는 4단계에서 교체.
 const GACHA_PROXY = {
@@ -2044,8 +2048,8 @@ const TIER_COLOR = { common:'#b8c0cc', rare:'#4aa8ff', epic:'#b06bff', unique:'#
 // 등급별 전투 능력치 배율(프록시 기준 데미지·체력에 곱함) — 상위 등급일수록 강함. 밸런스 추후 조정.
 const TIER_MUL = { common:1.0, rare:1.6, epic:2.5, unique:3.8, legend:5.5, transcend:8.0, god:12.0 };
 function gachaTierMul(u){ return (u && u.gtier && TIER_MUL[u.gtier]) || 1; }
-// combineFrom 역방향: 재료 id → 결과 id (3개 조합 시 진화 대상)
-const COMBINE_TO = (function(){ const m={}; for(const id in GACHA_UNITS){ const cf=GACHA_UNITS[id].combineFrom; if(cf) m[cf]=id; } return m; })();
+// 단순 조합 사다리: 같은 유닛 3개 → 다음 등급 랜덤 1종. (legend↑는 단순조합 없음 — 초월=레시피, 갓=뽑기전용)
+const SIMPLE_COMBINE_TIERS = { common:'rare', rare:'epic', epic:'unique', unique:'legend' };
 // 별은 등급별로 늘어나지 않음 — 같은 이름이 두 등급에 걸쳐 있어(일반·레어=레인저, 에픽·유니크=팬텀)
 // 강화형(레어·유니크)만 ★ 하나로 구분하는 단순 장치. 나머지(이름이 겹치지 않는 등급)는 별 없음.
 const UPGRADED_TIER = { rare:true, unique:true };
@@ -2709,34 +2713,38 @@ function testSpawnGacha(gid){
   addChat('', '[테스트] '+gu.displayName+' 소환 — 메인 탭에서 확인', col, true);
   renderUnits(); updateHud();
 }
+function _consumeUnits(con){ G.units=G.units.filter(x=>!con.has(x.uid)); G.sel=G.sel.filter(uid=>!con.has(uid));
+  if(window.M3D&&M3D.dropModels) M3D.dropModels([...con]); }   // 합성 소비: 유닛/선택/3D모델 제거
 function combine(){
-  // 합체존 안 같은 유닛 3개 → 가챠 유닛=다음 등급 진화 / 레거시=영웅(1차)
   const inz=G.units.filter(u=>inZone(u)&&!u.hero&&!u.fixed);
-  const grp={};
-  for(const u of inz){ const key=u.gid||('@'+u.id); (grp[key]=grp[key]||[]).push(u); }
-  for(const k in grp){ const g=grp[k];
-    if(g.length>=3){ const pick=g.slice(0,3), base=pick[0]; const con=new Set(pick.map(x=>x.uid));
-      if(base.gid && !COMBINE_TO[base.gid]) continue;   // 진화 대상 없는 등급은 다른 그룹 먼저 시도
-      G.units=G.units.filter(x=>!con.has(x.uid));
-      G.sel=G.sel.filter(uid=>!con.has(uid));                        // 합성으로 사라진 유닛 선택 해제(잔상 지정 제거)
-      if(window.M3D&&M3D.dropModels) M3D.dropModels([...con]);       // 3D 모델 즉시 제거(사망모션 없이 — 한 템포 지연 방지)
-      const c=zoneCenter();
-      if(base.gid){   // 가챠 진화 → combineFrom 기준 다음 등급
-        const target=COMBINE_TO[base.gid], tg=GACHA_UNITS[target];
-        spawnGachaUnit(target, c.x, c.y);
-        toast(tg.displayName+' '+GACHA_TIERS[tg.tier].name+' 진화! ⭐');
-      } else {        // 레거시 → 영웅
-        G.units.push(initUnitStats({uid:G.idSeq++,id:base.id,hero:true,lv:1,x:c.x,y:c.y,cd:0}));
-        toast(U[base.id].name+' 영웅 탄생! ⭐');
-      }
-      if(typeof playSfx==='function') playSfx('hero_merge');   // 조합 사운드
+  // 1) 초월 레시피 우선 — 합체존에 재료가 다 모이면 해당 초월 생성
+  const cnt={}; for(const u of inz){ if(u.gid) cnt[u.gid]=(cnt[u.gid]||0)+1; }
+  for(const res in TRANSCEND_RECIPE){ const need={}; TRANSCEND_RECIPE[res].forEach(id=>need[id]=(need[id]||0)+1);
+    if(Object.keys(need).every(id=>(cnt[id]||0)>=need[id])){
+      const con=new Set(); for(const id in need){ let n=need[id]; for(const u of inz){ if(u.gid===id && n>0 && !con.has(u.uid)){ con.add(u.uid); n--; } } }
+      _consumeUnits(con); const c=zoneCenter(); spawnGachaUnit(res, c.x, c.y);
+      const tg=GACHA_UNITS[res]; toast('✦ '+tg.displayName+' '+GACHA_TIERS[tg.tier].name+' 강림! ✦');
+      if(typeof playSfx==='function') playSfx('hero_merge');
       refreshSelCard(); renderUnits(); updateHud(); return true;
     }
   }
-  // 진화 대상 없는 가챠 3개(레시피/뽑기 전용) 안내
-  const stuck=Object.values(grp).some(g=>g.length>=3 && g[0].gid && !COMBINE_TO[g[0].gid]);
-  const heroTriple=Object.values((()=>{const m={};for(const u of G.units.filter(u=>inZone(u)&&u.hero)){(m[u.id]=m[u.id]||[]).push(u);}return m;})()).some(a=>a.length>=3);
-  toast(stuck ? '이 등급은 합체로 진화할 수 없습니다 (뽑기/레시피 전용)' : (heroTriple ? '영웅은 더 진화하지 않습니다' : '합체존에 같은 유닛 3개를 모으세요'));
+  // 2) 단순 조합 — 같은 유닛 3개 → 다음 등급 랜덤(legend↑ 제외) / 레거시=영웅
+  const grp={}; for(const u of inz){ const key=u.gid||('@'+u.id); (grp[key]=grp[key]||[]).push(u); }
+  for(const k in grp){ const g=grp[k]; if(g.length<3) continue; const pick=g.slice(0,3), base=pick[0], con=new Set(pick.map(x=>x.uid));
+    if(base.gid){ const nt=SIMPLE_COMBINE_TIERS[base.gtier]; if(!nt) continue;   // 단순조합 대상 아님(legend↑) → 다른 그룹 시도
+      const pool=gachaUnitsOfTier(nt), tgt=pool[Math.floor(Math.random()*pool.length)];   // 다음 등급 랜덤 1종
+      _consumeUnits(con); const c=zoneCenter(); spawnGachaUnit(tgt.id, c.x, c.y);
+      toast(tgt.displayName+' '+GACHA_TIERS[nt].name+' 진화! ⭐');
+    } else {   // 레거시 → 영웅
+      _consumeUnits(con); const c=zoneCenter();
+      G.units.push(initUnitStats({uid:G.idSeq++,id:base.id,hero:true,lv:1,x:c.x,y:c.y,cd:0}));
+      toast(U[base.id].name+' 영웅 탄생! ⭐');
+    }
+    if(typeof playSfx==='function') playSfx('hero_merge'); refreshSelCard(); renderUnits(); updateHud(); return true;
+  }
+  // 3) 안내
+  const stuck=Object.values(grp).some(g=>g.length>=3 && g[0].gid && !SIMPLE_COMBINE_TIERS[g[0].gtier]);
+  toast(stuck ? '레전드↑는 단순 조합이 안 됩니다 (초월=특수 레시피 / 갓=뽑기 전용)' : '합체존에 같은 유닛 3개를 모으세요');
   return false;
 }
 
