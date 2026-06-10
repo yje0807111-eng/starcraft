@@ -2070,6 +2070,62 @@ const GACHA_RANGE_MUL = { void:0.6, snapper:0.6, machinegun:0.65, blade:0.6, tho
 function gachaRangeMul(u){ const b=gachaBase(u); return (b&&GACHA_RANGE_MUL[b])||1; }
 
 // ============================================================================
+// 메타 성장 시스템 — 데이터 레이어 (1단계: 데이터 + 저장/로드만. 게임플레이 연결은 다음 단계)
+//   설계서: "네모네모 디펜스 — 메타 성장 시스템 설계서"
+//   ※ 코인=영구(계정별), 빌드 효과=개인 적용 예정, coop 그룹=데이터만(효과 보류)
+// ============================================================================
+const DIFFICULTY = {
+  easy:   { name:'이지', enemyHp:1.0, enemyAtk:1.0, coinMult:1.0 },
+  normal: { name:'노말', enemyHp:1.5, enemyAtk:1.3, coinMult:1.7 },
+  hard:   { name:'하드', enemyHp:2.0, enemyAtk:1.6, coinMult:2.5 },
+  hell:   { name:'헬',   enemyHp:3.0, enemyAtk:2.0, coinMult:4.0 },
+};
+const DIFFICULTY_ORDER = ['easy','normal','hard','hell'];
+// 보스 처치 코인(기본, 난이도 coinMult 적용 전). 표에 없는 라운드는 라운드 비례 폴백.
+const BOSS_COIN_BASE = { 5:50, 10:120, 15:250, 20:500 };
+function bossCoinBase(round){ return (BOSS_COIN_BASE[round]!=null) ? BOSS_COIN_BASE[round] : Math.round(round*25); }
+// 메타 빌드 정의(설계서 4번). group: util / power / coop. 다음레벨 비용 = floor(start * rate^level)
+const META_BUILD_GROUPS = { util:'유틸 빌드', power:'강화 빌드', coop:'공용 보스 빌드' };
+const META_BUILDS = {
+  // 유틸(게임 편의)
+  gacha_luck:    { name:'고등급 확률', desc:'레전드+ 뽑기 확률 증가',      start:200, rate:2.5, max:10, group:'util' },
+  credit_gain:   { name:'크레딧 획득', desc:'인게임 크레딧 획득 증가',      start:100, rate:2.0, max:15, group:'util' },
+  energy_gain:   { name:'에너지 획득', desc:'인게임 에너지 획득 증가',      start:100, rate:2.0, max:15, group:'util' },
+  unit_cap:      { name:'유닛 수 증가', desc:'최대 유닛 수 +1 (보너스 코인)', start:300, rate:2.5, max:10, group:'util' },
+  start_unit:    { name:'시작 유닛',   desc:'시작 시 기본 유닛 지급',        start:150, rate:2.2, max:8,  group:'util' },
+  guaranteed:    { name:'확정 뽑기권', desc:'유닛 확정 뽑기권 지급',         start:250, rate:2.3, max:8,  group:'util' },
+  sell_return:   { name:'판매 회수율', desc:'유닛 판매 시 회수 비용 증가',    start:120, rate:2.0, max:10, group:'util' },
+  // 강화(전투력) — 개인 적용
+  enemy_hp_down: { name:'적 체력 감소', desc:'내 트랙 적 체력 -%',          start:200, rate:2.4, max:10, group:'power' },
+  enemy_def_down:{ name:'적 방어 감소', desc:'내 트랙 적 방어력 -%',         start:200, rate:2.4, max:10, group:'power' },
+  enemy_slow:    { name:'적 이속 감소', desc:'내 트랙 적 이동속도 -%',       start:150, rate:2.2, max:10, group:'power' },
+  unit_atk_up:   { name:'공격력 증가',  desc:'유닛 공격력 +%',              start:180, rate:2.3, max:12, group:'power' },
+  start_credit:  { name:'시작 크레딧',  desc:'시작 시 크레딧 지급',          start:100, rate:2.0, max:12, group:'power' },
+  start_energy:  { name:'시작 에너지',  desc:'시작 시 에너지 지급',          start:100, rate:2.0, max:12, group:'power' },
+  // 공용 보스(협동) — 데이터만, 효과 보류(공용 보스 콘텐츠 추가 시 활성화)
+  boss_hp_down:  { name:'공용보스 체력', desc:'공용 보스 체력 -%',           start:300, rate:2.5, max:10, group:'coop', deferred:true },
+  boss_def_down: { name:'공용보스 방어', desc:'공용 보스 방어 -%',           start:300, rate:2.5, max:10, group:'coop', deferred:true },
+  boss_atk_up:   { name:'공용보스 공격', desc:'해당 구역 공격력 +%',         start:250, rate:2.4, max:10, group:'coop', deferred:true },
+  boss_spd_up:   { name:'공용보스 공속', desc:'해당 구역 공격속도 +%',       start:250, rate:2.4, max:10, group:'coop', deferred:true },
+  boss_reward_up:{ name:'공용보스 보상', desc:'공용 보스 보상 증가',         start:350, rate:2.6, max:8,  group:'coop', deferred:true },
+};
+// 다음 레벨 비용(최대치면 null). 현재 레벨 기준.
+function metaNextCost(buildId, level){ const b=META_BUILDS[buildId]; if(!b) return null;
+  const lv=(level==null)?buildLevel(buildId):level; if(lv>=b.max) return null;
+  return Math.floor(b.start*Math.pow(b.rate, lv)); }
+// 플레이어 메타(계정별 영구 데이터)
+function defaultMeta(){ return { coins:0, buildLevels:{}, highestRound:0, clearedDifficulty:'easy' }; }
+let PLAYER_META = defaultMeta();
+function metaKey(){ const u=(typeof AUTH!=='undefined' && AUTH.user) ? AUTH.user : null;
+  return 'nm_meta_' + (u ? (u.uid || u.email || u.nick || 'guest') : 'guest'); }
+function loadMeta(){ try{ const raw=localStorage.getItem(metaKey());
+  PLAYER_META = raw ? Object.assign(defaultMeta(), JSON.parse(raw)) : defaultMeta();
+  if(!PLAYER_META.buildLevels) PLAYER_META.buildLevels={}; }catch(e){ PLAYER_META=defaultMeta(); }
+  return PLAYER_META; }
+function saveMeta(){ try{ localStorage.setItem(metaKey(), JSON.stringify(PLAYER_META)); }catch(e){} }
+function buildLevel(id){ return (PLAYER_META.buildLevels && PLAYER_META.buildLevels[id]) || 0; }
+
+// ============================================================================
 // 게임 상태
 // ============================================================================
 function newGame(){ return {
@@ -4828,7 +4884,7 @@ document.addEventListener('pointerdown', function(e){
   if(!t) return; if(t.disabled && !t.classList.contains('locked')) return;
   playSfx(_sfxForEl(t));
 }, true);
-function openMapSelect(){ updateMyNameTag(); bgmStart('lobby');   // 메인/로비 진입 시 로비 BGM(인게임 BGM이면 자동 전환·정지)
+function openMapSelect(){ updateMyNameTag(); bgmStart('lobby'); loadMeta();   // 계정별 메타 성장 데이터 로드(메인/로비 진입 시 로비 BGM)
   if(sbReady()){ rtStart(); rtSetStatus('online',''); }   // 실시간 소셜 연결 + 로비 상태
   initMapLive(); showAppScreen('mapSelect'); paintIcons(document.getElementById('mapSelect')); renderMaps(); startMapLive();
   if(typeof setBottomTab==='function') setBottomTab('chat'); if(typeof refreshFriendBadge==='function') refreshFriendBadge(); }
