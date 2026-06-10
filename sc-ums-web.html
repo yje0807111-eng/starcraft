@@ -2013,7 +2013,7 @@ const WARN1=150, WARN2=190;                 // 적 누적 경고 임계치
 const SPECIAL_MIN=25;                       // 스페셜 유닛 처치 시 미네랄 보너스
 function isBossRound(r){ return r % BOSS_EVERY === 0; }
 function bossHp(r){ return 4000 + r*450; }
-const START_MIN=40, START_GAS=0;
+const START_MIN=120, START_GAS=0;
 const MAX_UNITS=200;                       // 인구 (HUD 0/200)
 const KILL_MIN_PER10=1, KILL_MIN_PER100=5; // 엑셀: 10킬당1, 100킬당5
 const SPLASH_R=.08, SPLASH_RATIO=.5;
@@ -2131,7 +2131,7 @@ function gNameStar(u, def){ const base=(u&&u.gname)||(def&&def.name)||''; const 
 function tierLabelHTML(tier){ if(!tier||!GACHA_TIERS[tier]) return '';
   const c=TIER_COLOR[tier]||'#fff';
   return '<span class="tierTag" style="color:'+c+';border-color:'+c+'55;background:'+c+'16;text-shadow:0 0 6px '+c+'66">'+GACHA_TIERS[tier].name+'</span>'; }
-const GACHA_COST = 10;   // 1회 뽑기 크레딧 비용
+const GACHA_COST = 30;   // 1회 뽑기 크레딧 비용
 const RACER_CD = 12;     // 레이서 공격 쿨다운(프레임/60fps) = 5발/초. 데미지는 DPS 유지 위해 퍼샷 대폭 감소
 const FAST_CD = { racer:RACER_CD, machinegun:8 };   // gmodel별 초고속 발사 쿨다운(발칸=8프레임≈7.5발/초). 데미지는 DPS 유지로 퍼샷 감소
 // 가챠 유닛 base(gid에서 등급접미사 제거) → 사거리 배율(기본 1). 근접형 유닛 사거리 단축
@@ -3087,7 +3087,7 @@ function step(dt){
   for(let i=G.enemies.length-1;i>=0;i--){ const e=G.enemies[i]; if(e.hp<=0){ G.kills++;
     if(e.boss) awardBossCoin();   // 보스 처치 → 코인(메타 화폐)
     if(e.special){ gainMineral(SPECIAL_MIN); toast('스페셜 처치! +'+SPECIAL_MIN+' 미네랄'); }   // 스페셜 유닛=미네랄 보너스
-    if(G.kills%100===0) gainMineral(KILL_MIN_PER100); else if(G.kills%10===0) gainMineral(KILL_MIN_PER10);
+    gainMineral(1);   // 킬당 1 크레딧(메타 획득↑ 반영)
     if(typeof playEnemyDeath==='function') playEnemyDeath(e.race);   // 종족별 처치음(대량 처치 쓰로틀)
     deathBurst(e); G.enemies.splice(i,1); } }
   // (라운드 진행은 위쪽 제한시간 타이머가 담당 — 클리어로는 넘어가지 않음)
