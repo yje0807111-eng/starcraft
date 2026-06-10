@@ -847,6 +847,8 @@
   .roomItem.locked{cursor:default;opacity:.5}
   .riMain{min-width:0;flex:1}
   .riName{font-size:13px;font-weight:700;color:#ece6e6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .riDiff{font-size:8.5px;font-weight:800;letter-spacing:.3px;color:var(--dc,#888);border:1px solid var(--dc,#888);border-radius:3px;padding:0 4px;margin-right:5px;vertical-align:1px}
+  .lbDiff{font-weight:800}
   .riSub{font-size:9.5px;color:#8a9098;margin-top:2px}
   .riSub .riOver{color:#ff8a6b;font-weight:700}
   .riRight{text-align:right;flex:none}
@@ -5098,20 +5100,23 @@ function newRoomNum(){ let num; do{ num=1000+Math.floor(Math.random()*9000); }wh
 function buildRoomList(){ _roomList=[];
   const n=5+Math.floor(Math.random()*8);   // 5~12개 방 (6개 초과 시 내부 스크롤)
   const titles=ROOM_TITLES.slice().sort(()=>Math.random()-0.5), hosts=LOBBY_NAMES.slice().sort(()=>Math.random()-0.5);
+  const diffs=['easy','easy','normal','normal','normal','hard','hard','hell'];   // 난이도 가중 분포
   const now=perfNow();
   for(let i=0;i<n;i++){ const playing=Math.random()<0.35;
     const cur=playing?(2+Math.floor(Math.random()*6)):(1+Math.floor(Math.random()*7));
     const priv=Math.random()<0.3;   // 약 30% 비공개(목록엔 보이지만 비밀번호 필요)
     _roomList.push({num:newRoomNum(), name:titles[i%titles.length], host:hosts[i%hosts.length], cur:Math.min(8,cur), max:8, status:playing?'playing':'wait', round:playing?(1+Math.floor(Math.random()*TOTAL_ROUNDS)):0, visibility:priv?'private':'public', pw:priv?(''+(1000+Math.floor(Math.random()*9000))):'',
+      diff:diffs[Math.floor(Math.random()*diffs.length)],
       gameEndAt:playing?(now+1000+Math.random()*9000):0});   // 게임중 방: 시작 후 10초 내 목록에서 사라짐
   }
   renderRoomList(); }
+function diffBadge(d){ const D=DIFFICULTY[d]||DIFFICULTY.normal; return '<span class="riDiff" style="--dc:'+(DIFF_COLOR[d]||'#888')+'">'+D.name+'</span>'; }
 function renderRoomList(){ const list=document.getElementById('roomList'); if(!list) return; list.innerHTML='';
   const rc=document.getElementById('roomCount'); if(rc) rc.textContent=_roomList.length;
   const need=partySize();
   _roomList.forEach(r=>{ const full=r.cur>=r.max, waiting=r.status==='wait', fits=(r.max-r.cur)>=need, joinable=waiting&&!full&&fits, priv=r.visibility==='private';
     const el=document.createElement('div'); el.className='roomItem'+(joinable?'':' locked');
-    el.innerHTML='<div class="riMain"><div class="riName"><span class="riNum">#'+r.num+'</span>'+(priv?'<span class="riLock">🔒</span>':'')+escHtml(r.name)+'</div><div class="riSub">방장 '+escHtml(r.host)+(need>1&&waiting&&!full&&!fits?' · <span class="riOver">파티 자리 부족</span>':'')+'</div></div>'
+    el.innerHTML='<div class="riMain"><div class="riName">'+diffBadge(r.diff)+'<span class="riNum">#'+r.num+'</span>'+(priv?'<span class="riLock">🔒</span>':'')+escHtml(r.name)+'</div><div class="riSub">방장 '+escHtml(r.host)+(need>1&&waiting&&!full&&!fits?' · <span class="riOver">파티 자리 부족</span>':'')+'</div></div>'
       +'<div class="riRight"><div class="riCnt'+(full?' full':'')+'">'+r.cur+'/'+r.max+'</div><div class="riStat '+(waiting?'wait':'play')+'">'+(waiting?(full?'가득참':'대기중'):'게임중 '+r.round+'R')+'</div></div>';
     if(joinable) el.onclick=()=> priv? openPwPrompt(r) : joinRoom(r);
     else if(waiting && !full && !fits) el.onclick=()=>{ if(typeof playSfx==='function') playSfx('ui_denied'); toast('파티 인원이 초과되었습니다 (남은 자리 '+(r.max-r.cur)+' / 필요 '+need+')'); };
@@ -5121,7 +5126,7 @@ function renderRoomList(){ const list=document.getElementById('roomList'); if(!l
 function joinRoom(r){ if(r.status!=='wait'||r.cur>=r.max) return;
   const need=partySize(), free=r.max-r.cur;   // 파티 전원이 들어갈 자리 필요
   if(need>free){ if(typeof playSfx==='function') playSfx('ui_denied'); toast('파티 인원이 초과되었습니다 (남은 자리 '+free+' / 필요 '+need+')'); return; }
-  openLobby({num:r.num, name:r.name, host:r.host, startCount:r.cur, joining:true}); }
+  openLobby({num:r.num, name:r.name, host:r.host, startCount:r.cur, joining:true, diff:r.diff}); }   // 방 난이도 인계
 function quickJoin(){ const need=partySize(), wait=_roomList.filter(r=>r.status==='wait'&&(r.max-r.cur)>=need);
   if(!wait.length){ if(need>1){ toast('파티가 들어갈 빈 자리가 있는 방이 없습니다'); return; } createRoom(); return; }   // 빈 방 없으면 새로 생성(혼자일 때)
   joinRoom(wait[Math.floor(Math.random()*wait.length)]); }
@@ -5136,7 +5141,7 @@ function joinByNumber(){ const f=document.getElementById('roomNumField'); if(!f)
   // 목록에 없는 번호 → 친구의 비공개 방으로 입장(시뮬)
   f.value='';
   const host=LOBBY_NAMES[Math.floor(Math.random()*LOBBY_NAMES.length)];
-  openLobby({num:num, name:'#'+num+' 방', host:host, startCount:1+Math.floor(Math.random()*4), joining:true, visibility:'private'}); }
+  openLobby({num:num, name:'#'+num+' 방', host:host, startCount:1+Math.floor(Math.random()*4), joining:true, visibility:'private', diff:['easy','normal','normal','hard','hell'][Math.floor(Math.random()*5)]}); }
 // 방 만들기 모달
 let _createVis='public';
 function createRoom(){ const nm=document.getElementById('cpName'); if(nm) nm.value=''; const pw=document.getElementById('cpPw'); if(pw) pw.value=''; setRoomVis('public');
@@ -5151,7 +5156,7 @@ function confirmCreate(){ const nmEl=document.getElementById('cpName');
   let pw=''; if(_createVis==='private'){ const pwEl=document.getElementById('cpPw'); pw=((pwEl&&pwEl.value)||'').replace(/\s/g,'');
     if(!pw){ const h=document.getElementById('cpHint'); if(h){ h.textContent='비공개 방은 비밀번호를 설정해야 합니다.'; h.style.color='#ff6b6b'; } if(pwEl) pwEl.focus(); return; } }
   closeCreate();
-  openLobby({num:newRoomNum(), name:name, host:myNick(), startCount:1, joining:false, visibility:_createVis, pw:pw}); }
+  openLobby({num:newRoomNum(), name:name, host:myNick(), startCount:1, joining:false, visibility:_createVis, pw:pw, diff:_selDiff}); }   // 방장이 모드 선택에서 고른 난이도
 // 비공개 방 비밀번호 입력
 let _pwRoom=null;
 function openPwPrompt(r){ _pwRoom=r;
@@ -5306,11 +5311,13 @@ function openLobby(room){ _lobbyRoom=room||{name:'나의 대기실',host:'나',j
   // 파티장이면 파티원도 같은 방으로 호출(실연동 파티)
   if(typeof RT!=='undefined' && RT.active && iAmPartyLeader() && _party && _party.members && _party.members.length>1){
     _lobbyRoom.party=true; if(_selMap) _lobbyRoom.map=_selMap.name; if(!_lobbyRoom._followed) rtSendPartyRoom(_lobbyRoom); }
+  if(_lobbyRoom.diff && DIFFICULTY[_lobbyRoom.diff]) _selDiff=_lobbyRoom.diff;   // 방 난이도를 이 게임에 적용
   stopRoomsTick(); setInGame(false);
   document.getElementById('ov').classList.add('hide'); document.getElementById('rooms').classList.add('hide');
   const _lb=document.getElementById('lobby'); _lb.classList.remove('hide'); if(typeof playScreenFx==='function') playScreenFx(_lb);
   const tt=document.querySelector('.lbTitle'); if(tt) tt.textContent=_lobbyRoom.name;   // 방 이름을 제목으로
-  const rm=document.querySelector('.lbRoom'); if(rm) rm.textContent=(_lobbyRoom.visibility==='private'?'🔒 ':'')+(_lobbyRoom.num?'방 #'+_lobbyRoom.num:'◈ 용암 정거장');   // 방 번호 표시(친구 찾기용)
+  const dN=(DIFFICULTY[_lobbyRoom.diff]||DIFFICULTY[_selDiff]||DIFFICULTY.normal).name, dC=DIFF_COLOR[_lobbyRoom.diff||_selDiff]||'#888';
+  const rm=document.querySelector('.lbRoom'); if(rm) rm.innerHTML=(_lobbyRoom.visibility==='private'?'🔒 ':'')+(_lobbyRoom.num?'방 #'+_lobbyRoom.num:'◈ 용암 정거장')+' · <span class="lbDiff" style="color:'+dC+'">'+dN+'</span>';   // 방 번호 + 난이도
   const cb=document.getElementById('lbChat'); if(cb) cb.innerHTML='';
   startLobbySim(_lobbyRoom);
   startLobbyChat(); }
