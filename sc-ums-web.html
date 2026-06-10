@@ -558,6 +558,24 @@
   .gachaResult .grName{font-size:13.5px;font-weight:800;color:#ece6e6;line-height:1.1}
   .gachaResult .grType{font-size:9px;color:#9aa6b2}
   .gachaResult.pop{animation:grPop .3s ease-out}
+  /* 지정 뽑기 / 에너지 도박 액션 */
+  .gachaActions{display:flex;gap:8px;margin:6px auto 0;width:100%;max-width:330px;padding:0 6px;box-sizing:border-box}
+  .gAct{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;padding:7px 4px;border-radius:8px;cursor:pointer;font-family:inherit;
+    background:linear-gradient(180deg,rgba(26,20,22,.6),rgba(8,7,9,.66));border:1px solid var(--metal-edge);transition:border-color .12s}
+  .gAct:active{transform:translateY(1px)}
+  .gPick{border-color:rgba(176,107,255,.45)}.gGamble{border-color:rgba(255,210,74,.45)}
+  .gAct .gaT{font-size:11.5px;font-weight:800;color:#ece6e6}
+  .gAct .gaS{font-size:8.5px;font-weight:700;color:#9aa6b2}
+  /* 지정 뽑기 모달 */
+  #pickPanel{position:absolute;inset:0;z-index:51;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.66);backdrop-filter:blur(2px)}
+  #pickPanel.hide{display:none}
+  .pickHint{font-size:11px;color:#9aa6b2;text-align:center;margin-bottom:12px}.pickHint b{color:#fff}
+  .pickList{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;max-height:46vh;overflow-y:auto}
+  .pickItem{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-radius:7px;cursor:pointer;font-family:inherit;
+    background:rgba(255,255,255,.03);border:1px solid var(--tc,var(--metal-edge));box-shadow:inset 0 0 12px -8px var(--tc,transparent)}
+  .pickItem:active{transform:translateY(1px)}.pickItem.off{opacity:.45}
+  .pickItem .piTier{font-size:13px;font-weight:800;color:var(--tc,#fff)}
+  .pickItem .piCost{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:#ffe6a0}
   /* 시민 프로필 설명 */
   .czDesc{font-size:11.5px;color:#c2c8d2;line-height:1.5}
   .czDesc b{color:var(--neon)}
@@ -1554,6 +1572,16 @@
       </div>
     </div>
 
+    <!-- ===== 지정 뽑기(5단계): 등급 확정 ===== -->
+    <div id="pickPanel" class="hide">
+      <div class="cpCard pickCard">
+        <div class="cpTitle">🎯 지정 뽑기</div>
+        <div class="pickHint">원하는 <b>등급</b>을 크레딧으로 확정 획득</div>
+        <div class="pickList" id="pickList"></div>
+        <div class="cpBtns"><button class="cpCancel" onclick="closePickDraw()" style="flex:1">닫기</button></div>
+      </div>
+    </div>
+
     <!-- ===== 신규: 로그인 / 회원가입 ===== -->
     <div id="auth" class="appScreen spaceBg hide">
       <button class="authGear" data-sfx="ui_open" onclick="openAppSettings()" title="설정" aria-label="설정"><svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg></button>
@@ -1701,6 +1729,10 @@
       <div class="gachaBar" id="gachaBar">
         <div class="gachaHint"><b>시민</b>을 <b>뽑기 비콘</b>으로<br>이동하면 뽑기</div>
         <div class="gachaResult" id="gachaResult"><span class="grHint">랜덤 유닛을 획득합니다</span></div>
+      </div>
+      <div class="gachaActions">
+        <button class="gAct gPick" onclick="openPickDraw()"><span class="gaT">🎯 지정 뽑기</span><span class="gaS">등급 확정</span></button>
+        <button class="gAct gGamble" onclick="energyGamble()"><span class="gaT">🎲 에너지 도박</span><span class="gaS" id="gambleSub">×2~5</span></button>
       </div>
       <div class="hint" id="prodHint" style="display:none">유닛 클릭 = <b>정보</b></div>
       <!-- 유닛뽑기: 중립 단일 선택 시 그 유닛 프로필(메인 단일카드와 동일 레이아웃) -->
@@ -2871,6 +2903,42 @@ function showGachaResult(tier, gu){ const box=document.getElementById('gachaResu
     +'<span class="grType">'+(ATTACK_TYPES[gu.attackType]||gu.attackType)+'</span>';
   box.classList.remove('pop'); void box.offsetWidth; box.classList.add('pop');   // 등장 애니 재생
 }
+// ── 에너지 도박(5단계) — 에너지 걸고 ×2~5, 라운드당 횟수 제한(과의존 방지) ──
+const GAMBLE_STAKE=10, GAMBLE_CAP=5;
+function energyGamble(){
+  if(G.phase!=='playing'){ toast('게임 중에만 가능합니다'); return; }
+  if((G.gambleN||0)>=GAMBLE_CAP){ toast('이번 라운드 도박을 모두 사용했습니다 ('+GAMBLE_CAP+'회)'); return; }
+  if(G.gas<GAMBLE_STAKE){ toast('에너지 부족 (도박 '+GAMBLE_STAKE+')'); return; }
+  G.gas-=GAMBLE_STAKE; G.gambleN=(G.gambleN||0)+1;
+  const r=Math.random(); let mult,lbl;
+  if(r<0.60){ mult=0; lbl='꽝'; } else if(r<0.88){ mult=2; lbl='×2'; } else if(r<0.97){ mult=3; lbl='×3'; } else { mult=5; lbl='×5'; }
+  const win=GAMBLE_STAKE*mult; G.gas+=win;
+  if(typeof playSfx==='function') playSfx(mult>0?'ui_confirm':'ui_denied');
+  toast(mult>0 ? ('🎲 '+lbl+'! +'+win+' 에너지 (보유 '+G.gas+')') : ('🎲 꽝… -'+GAMBLE_STAKE+' 에너지'));
+  updateHud();
+}
+// ── 유닛 지정 뽑기(5단계) — 원하는 등급을 크레딧으로 확정 획득 ──
+const PICK_COST={ common:60, rare:180, epic:450, unique:1100, legend:3000, transcend:8000, god:20000 };
+function openPickDraw(){ if(G.phase!=='playing'){ toast('게임 중에만 가능합니다'); return; }
+  renderPickList(); const p=document.getElementById('pickPanel'); if(!p) return; p.classList.remove('hide');
+  if(typeof fxPop==='function') fxPop(p.querySelector('.cpCard')); if(typeof playSfx==='function') playSfx('ui_open'); }
+function closePickDraw(){ const p=document.getElementById('pickPanel'); if(p) p.classList.add('hide'); if(typeof playSfx==='function') playSfx('ui_close'); }
+function renderPickList(){ const list=document.getElementById('pickList'); if(!list) return; list.innerHTML='';
+  GACHA_TIER_ORDER.forEach(t=>{ const cost=PICK_COST[t], col=TIER_COLOR[t], poor=G.mineral<cost;
+    const b=document.createElement('button'); b.className='pickItem'+(poor?' off':''); b.style.setProperty('--tc',col);
+    b.innerHTML='<span class="piTier">'+GACHA_TIERS[t].name+'</span><span class="piCost">💎'+cost+'</span>';
+    b.onclick=()=>pickDraw(t); list.appendChild(b); });
+}
+function pickDraw(t){ const cost=PICK_COST[t];
+  if(G.mineral<cost){ toast('크레딧 부족 (필요 '+cost+')'); return; }
+  if(G.units.filter(u=>!u.fixed).length>=maxUnits()){ toast('커맨드 포인트 최대('+maxUnits()+')'); return; }
+  G.mineral-=cost; const pool=gachaUnitsOfTier(t), gu=pool[Math.floor(Math.random()*pool.length)];
+  const ctr=trackCenter(); const sp=clampInner(ctr.x+(Math.random()-.5)*.08, ctr.y+(Math.random()-.5)*.08);
+  spawnGachaUnit(gu.id, sp.x, sp.y);
+  if(typeof playSfx==='function') playSfx('hero_merge'); showGachaResult(t, gu);
+  addChat('', '🎯 ['+GACHA_TIERS[t].name+'] '+gu.displayName+' 지정 획득', TIER_COLOR[t]||'#fff', true);
+  renderUnits(); updateHud(); renderPickList();
+}
 // ── 테스트 도감: 유닛뽑기 탭에 28종 등급별 카드 렌더(탭=즉시 소환) ──
 function buildGachaDex(){
   const box=document.getElementById('gachaDex'); if(!box) return;
@@ -3017,7 +3085,7 @@ function unitAI(dt){ const M=Math.min(GW,GH);
     if(def.model3d){ const fa=Math.atan2(mx,my); u.face=Math.round(fa/(Math.PI/8))*(Math.PI/8); } }
 }
 // 전투 단계 시작(준비단계 통과 or 라운드 전환 공통)
-function beginActivePhase(){ G.roundPhase='active'; G.roundTime=ROUND_TIME; G.spawnTimer=0; G.pendSpawn.length=0;
+function beginActivePhase(){ G.roundPhase='active'; G.roundTime=ROUND_TIME; G.spawnTimer=0; G.pendSpawn.length=0; G.gambleN=0;   // 라운드마다 도박 횟수 초기화
   if(typeof playSfx==='function') playSfx(isBossRound(G.round)?'boss':'round_start');   // 라운드/보스 시작음
   if(isBossRound(G.round)){ G.toSpawn=0; spawnEnemy({boss:true}); }   // 보스 라운드: 보스 1마리만
   else { G.toSpawn=ENEMIES_PER_ROUND; G.specialAt=1+Math.floor(Math.random()*ENEMIES_PER_ROUND); } }  // 99 + 스페셜 1
