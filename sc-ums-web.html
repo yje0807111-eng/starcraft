@@ -676,7 +676,10 @@
   .drawZone .dzCoreS{font-size:19px;letter-spacing:-1px}
   /* 뽑기 확률 — 화면 안 상시 표시(우상단, '유닛 생산고' 텍스트 바로 아래) */
   .rateMini{position:absolute;top:64px;right:8px;z-index:12;pointer-events:none;
-    padding:4px 8px 5px;border-radius:var(--r-md);background:rgba(6,5,8,.6);border:1px solid var(--metal-edge);backdrop-filter:blur(1px);
+    padding:5px 9px 6px;border:none;border-radius:0;
+    background:linear-gradient(180deg,rgba(26,20,22,.78),rgba(8,7,9,.84));
+    clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
+    box-shadow:0 0 0 1px var(--neon-faint),0 4px 14px -6px #000;backdrop-filter:blur(1px);
     font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif;min-width:112px}
   .rateMini .rmTitle{font-size:8.5px;font-weight:800;color:#cfd6de;margin-bottom:2px;letter-spacing:.3px;opacity:.85;text-align:right}
   .rateMini .rmRow{display:flex;justify-content:space-between;gap:10px;font-size:8.5px;font-weight:700;line-height:1.5}
@@ -740,6 +743,11 @@
   .drawZone .dzCost{display:flex;align-items:center;gap:2px;font-family:'Rajdhani',sans-serif;font-size:var(--fs-xs);font-weight:700;color:#e0c98a}
   .drawZone.active .dzPad{border-color:var(--neon);box-shadow:0 0 20px -2px var(--neon-glow),inset 0 0 14px -3px var(--neon-glow)}
   .drawZone.active .dzFx{opacity:.6;animation-duration:1.1s}
+  /* ×10 비콘 = 상위 행동: 한 단계 큰 패드 + 바깥 이중 링 */
+  .drawZone.big .dzPad{width:64px;height:64px}
+  .drawZone.big .dzPad::after{content:'';position:absolute;inset:-6px;border-radius:50%;pointer-events:none;
+    border:1px solid var(--neon-faint);box-shadow:0 0 10px -5px var(--neon-glow)}
+  .drawZone.big .dzGlyph{width:31px;height:31px}
   @keyframes dzAura{0%,100%{opacity:.22;transform:scale(.95)}50%{opacity:.45;transform:scale(1.06)}}
   @keyframes dzBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
   /* 생산 버튼: 투명 + 빨강 네온 엣지 */
@@ -2194,10 +2202,10 @@ const DRAW_BEACONS=[
   {id:'energy',  x:.82, y:.70, name:'에너지 1회', core:'⚡'},
 ];
 // 비콘별 색 테마(인라인 CSS 변수로 기존 .drawZone 스타일 재사용). 유닛 1·10회=기본 빨강.
-const BEACON_THEME={
-  premium: {'--neon':'#b06bff','--neon-soft':'rgba(176,107,255,.55)','--neon-glow':'rgba(176,107,255,.5)'},
-  energy:  {'--neon':'#34d17a','--neon-soft':'rgba(52,209,122,.55)','--neon-glow':'rgba(52,209,122,.45)'},
-  energy10:{'--neon':'#34d17a','--neon-soft':'rgba(52,209,122,.55)','--neon-glow':'rgba(52,209,122,.45)'},
+const BEACON_THEME={   // 디자인 토큰과 통일: 유닛=네온 레드(기본), 고급=골드(재화/희귀), 에너지=HUD 시안(E 재화색)
+  premium: {'--neon':'#ffd24a','--neon-soft':'rgba(255,210,74,.55)','--neon-glow':'rgba(255,210,74,.42)'},
+  energy:  {'--neon':'#00e5ff','--neon-soft':'rgba(0,229,255,.5)','--neon-glow':'rgba(0,229,255,.38)'},
+  energy10:{'--neon':'#00e5ff','--neon-soft':'rgba(0,229,255,.5)','--neon-glow':'rgba(0,229,255,.38)'},
 };
 function beaconCost(id){ return id==='pull10'?PULL10_COST : id==='premium'?PREMIUM_COST
   : id==='energy'?mapCfg('energyDrawCost',ENERGY_DRAW_COST) : id==='energy10'?ENERGY10_COST : mapCfg('gachaCost',GACHA_COST); }
@@ -3256,7 +3264,21 @@ function drawFacilityFloor(ctx,W,H,tint,light,tileImg){
     ctx.fillStyle=lt; ctx.fillRect(0,0,W,H*0.5); ctx.restore();
   } else { bg(ctx,W,H,'#0a1820','#050c14'); }
 }
-function drawShopBg(ctx,W,H){ drawFacilityFloor(ctx,W,H); }   // 유닛뽑기(차가운 톤)
+function drawShopBg(ctx,W,H){ drawFacilityFloor(ctx,W,H); drawBeaconPads(ctx,W,H); }   // 유닛뽑기(차가운 톤) + 비콘 바닥 패드
+// 비콘 발밑 금속 플랫폼 + 중앙 시민 대기 구역 — 비콘이 공간에 '놓여' 보이게
+function drawBeaconPads(ctx,W,H){
+  for(const b of DRAW_BEACONS){ const x=b.x*W, y=b.y*H+6, big=!!beaconBadge(b.id);
+    const r=big?40:32;
+    const g=ctx.createRadialGradient(x,y,r*0.2,x,y,r);
+    g.addColorStop(0,'rgba(30,33,40,.92)'); g.addColorStop(.8,'rgba(16,18,24,.94)'); g.addColorStop(1,'rgba(8,9,13,.96)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(x,y,r,r*0.6,0,0,6.283); ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,.10)'; ctx.lineWidth=1.2; ctx.beginPath(); ctx.ellipse(x,y,r,r*0.6,0,0,6.283); ctx.stroke();
+    ctx.strokeStyle='rgba(255,255,255,.045)'; ctx.lineWidth=1; ctx.beginPath(); ctx.ellipse(x,y,r*0.68,r*0.6*0.68,0,0,6.283); ctx.stroke();
+  }
+  const cx=CITIZEN_HOME.x*W, cy=CITIZEN_HOME.y*H+5;   // 시민 대기 구역(점선 링)
+  ctx.save(); ctx.setLineDash([5,5]); ctx.strokeStyle='rgba(120,170,220,.16)'; ctx.lineWidth=1.2;
+  ctx.beginPath(); ctx.ellipse(cx,cy,26,15,0,0,6.283); ctx.stroke(); ctx.restore();
+}
 function drawProd(){ const {ctx,W,H}=setup('cvUnit'); drawShopBg(ctx,W,H);
   GW=W;GH=H; const rx=Math.min(W,H)*0.11;
   // 뽑기 비콘: 3D가 준비되면 M3D가 렌더, 아니면 글로우 패드 폴백
@@ -4635,7 +4657,7 @@ function buildClock(){ const v=document.getElementById('vUnit');
   v.querySelectorAll('.shopUnit,.citizen,.drawZone,.rateMini').forEach(n=>n.remove());
   const coinSVG='<svg viewBox="0 0 24 24" width="10" height="10" style="flex:0 0 auto"><circle cx="12" cy="12" r="9" fill="#f6c84a" stroke="#ffeaa0" stroke-width="1.6"/><path d="M14.8 8.8A4.4 4.4 0 1 0 14.8 15.2" fill="none" stroke="#7a5a12" stroke-width="2.6" stroke-linecap="round"/></svg>';
   // 뽑기 비콘 3종(단발/10연차/에너지) — 시민이 올라서면 해당 뽑기
-  DRAW_BEACONS.forEach(b=>{ const dz=document.createElement('div'); dz.className='drawZone'; dz.id='drawZoneEl_'+b.id; dz.dataset.bid=b.id;
+  DRAW_BEACONS.forEach(b=>{ const dz=document.createElement('div'); dz.className='drawZone'+(beaconBadge(b.id)?' big':''); dz.id='drawZoneEl_'+b.id; dz.dataset.bid=b.id;
     dz.style.left=(b.x*100)+'%'; dz.style.top=(b.y*100)+'%';
     const th=BEACON_THEME[b.id]; if(th) for(const k in th) dz.style.setProperty(k, th[k]);
     const badge=beaconBadge(b.id);
