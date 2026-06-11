@@ -3774,6 +3774,12 @@ function step(dt){
         if(d<0.008){ u.bx=u.btx; u.by=u.bty; u.btx=null; u.bMov=false; }
         else { u.bx+=dx/d*Math.min(sp,d); u.by+=dy/d*Math.min(sp,d); u.bMov=true; u.bMvx=dx/d; u.bMvy=dy/d; continue; } }   // 이동 중엔 공격 안 함
       else u.bMov=false;
+      if(G.bossOpen && BAW && (u.gmodel==='racer'||u.gmodel==='machinegun')){   // 레이서/발칸: cd와 무관한 연속 스트림(메인과 동일)
+        const MN2=Math.min(BAW,BAH), bx2=BAW*0.5+(Math.random()-.5)*MN2*0.04, by2=BAH*BOSS_FEET_FRAC-MN2*0.05;
+        u._bmgT=(u._bmgT||0)-dt;
+        if(u._bmgT<=0){ u._bmgT=(u.gmodel==='racer')?0.032:0.04;
+          withBossFx(()=>{ if(u.gmodel==='racer') emitRacerTracer(u, u.bx*BAW, u.by*BAH, bx2, by2);
+            else emitVulcanSpray(u, u.bx*BAW, u.by*BAH, bx2, by2); }); } }
       if(u.bcd>0){ u.bcd-=dt*60; continue; }
       const bdef=U[u.id]; let bdmg=unitDmg(u); if(FAST_CD[u.gmodel]) bdmg*=FAST_CD[u.gmodel]/bdef.cd;
       coopBossDamage(bdmg, G.myPlayer||1, false); u.fireSeq=(u.fireSeq||0)+1;
@@ -3853,7 +3859,18 @@ function advanceFx(dt){
   for(let i=G.sparks.length-1;i>=0;i--){ const s=G.sparks[i]; s.x+=s.vx*dt; s.y+=s.vy*dt; const fr=s.fr||0.84; s.vx*=fr; s.vy*=fr; s.life-=dt*(s.dk||5.5); if(s.life<=0) G.sparks.splice(i,1); }
   for(let i=G.shots.length-1;i>=0;i--){ const s=G.shots[i];
     if(s.launchT>0){ s.launchT-=dt; s.x+=s.vx*dt; s.y+=s.vy*dt; s.vx*=0.93; s.vy*=0.93; continue; }  // 분출 단계: 잠깐 직진(감속) 후 유도 시작(베놈퀸 가시)
-    if(s.eid!=null){ // 유도 발사체: 대상 적을 끝까지 추적 → 명중 시 데미지
+    if(s.vt){ // 가상 목표 유도(토벌장): 고정 지점으로 곡선 유도 후 명중 연출 — 데미지 없음(보스 데미지는 별도)
+      const dx=s.vt.x-s.x, dy=s.vt.y-s.y, d=Math.hypot(dx,dy)||1;
+      if(d<=s.spd*dt+HIT_R){
+        if(s.kind==='needle'){ for(let q=0;q<5;q++){ const a=Math.atan2(-dy,-dx)+(Math.random()-0.5)*1.5, sp2=60+Math.random()*120; G.sparks.push({x:s.vt.x,y:s.vt.y,vx:Math.cos(a)*sp2,vy:Math.sin(a)*sp2,life:0.4,len:2+Math.random()*3,color:q%2?'#d6ff7a':'#9fd356'}); } G.impacts.push({x:s.vt.x,y:s.vt.y,life:1,r:6,color:s.color}); }
+        else G.impacts.push({x:s.vt.x,y:s.vt.y,life:1,r:s.boom||14,color:s.color});
+        G.shots.splice(i,1); continue;
+      }
+      if(s.turn){ const tdx=dx/d, tdy=dy/d, sp=Math.hypot(s.vx,s.vy)||s.spd, cdx=s.vx/sp, cdy=s.vy/sp, bl=Math.min(1, dt*s.turn);
+        let nvx=cdx+(tdx-cdx)*bl, nvy=cdy+(tdy-cdy)*bl, nl=Math.hypot(nvx,nvy)||1; s.vx=nvx/nl*s.spd; s.vy=nvy/nl*s.spd;
+      } else { s.vx=dx/d*s.spd; s.vy=dy/d*s.spd; }
+      s.x+=s.vx*dt; s.y+=s.vy*dt;
+    } else if(s.eid!=null){ // 유도 발사체: 대상 적을 끝까지 추적 → 명중 시 데미지
       const e=G.enemies.find(x=>x.eid===s.eid);
       if(e){ const p=posAt(e.d,GW,GH); if(e.model3d) p.y-=AIR_HIT_OFF;  // 적의 현재 위치(공중 보정)
         const dx=p.x-s.x, dy=p.y-s.y, d=Math.hypot(dx,dy)||1;
@@ -4000,11 +4017,12 @@ function fireSentinelOrb(u,def,ux,uy,tp,eid,dmg){
 const VULCAN_CONE=1.1;   // 전방 콘 반각(±63°)
 function fireVulcanSpray(u,def,ux,uy,tp,eid,dmg){
   const dist=Math.hypot(tp.x-ux,tp.y-uy)||1, nx=(tp.x-ux)/dist, ny=(tp.y-uy)/dist;
-  if(G._baFire){   // 토벌장: 트랙 적 탐색 금지 — 보스 지점에 화염 버스트만(보스 데미지는 파견 루프가 적용)
-    G.impacts.push({x:tp.x,y:tp.y,life:1,r:7,color:'#ff8a3c',glow:true,dk:12});
-    G.impacts.push({x:tp.x,y:tp.y,life:1,r:3.2,color:'#fff2c0',dk:13});
-    for(let q=0;q<3;q++){ const a2=Math.atan2(-ny,-nx)+(Math.random()-0.5)*1.5, sp=90+Math.random()*90;
-      G.sparks.push({x:tp.x,y:tp.y,vx:Math.cos(a2)*sp,vy:Math.sin(a2)*sp,life:0.2,flash:true,color:q%2?'#ffae4d':'#ff6a2c'}); }
+  if(G._baFire){   // 토벌장: 트랙 적 탐색 금지 — 보스 몸 여러 지점에 화염 탄착(메인의 다수 피격 느낌)
+    for(let b=0;b<3;b++){ const bx2=tp.x+(Math.random()-0.5)*26, by2=tp.y+(Math.random()-0.5)*18;
+      G.impacts.push({x:bx2,y:by2,life:1,r:7,color:'#ff8a3c',glow:true,dk:12});
+      G.impacts.push({x:bx2,y:by2,life:1,r:3.2,color:'#fff2c0',dk:13});
+      for(let q=0;q<3;q++){ const a2=Math.atan2(-ny,-nx)+(Math.random()-0.5)*1.5, sp=90+Math.random()*90;
+        G.sparks.push({x:bx2,y:by2,vx:Math.cos(a2)*sp,vy:Math.sin(a2)*sp,life:0.2,flash:true,color:q%2?'#ffae4d':'#ff6a2c'}); } }
     return; }
   const range=def.range*Math.min(GW,GH)*gachaRangeMul(u), coneCos=Math.cos(VULCAN_CONE);
   for(const e of G.enemies){ const p=posAt(e.d,GW,GH); const ay=(e.model3d?p.y-AIR_HIT_OFF:p.y);
@@ -4083,13 +4101,19 @@ function fireBladeSlash(u,def,ux,uy,tp,eid,dmg){
 }
 // 베놈퀸: 등에서 가시가 사방으로 분출 → 사거리 내 모든 적에게 몹당 일정 수량 유도(유도탄). 각 적 = 풀 데미지
 function fireThornQueen(u,def,ux,uy,tp,eid,dmg){
-  if(G._baFire){   // 토벌장: 트랙 적 탐색 금지 — 등 뒤에서 보스 지점으로 직선 가시(보스 데미지는 파견 루프가 적용)
-    const spd2=PROJ_SPD.spike||560;
-    for(let k=0;k<3;k++){ const txp=tp.x+(Math.random()-0.5)*16, typ=tp.y+(Math.random()-0.5)*12;
-      const sx=ux+(Math.random()-0.5)*6, sy=uy-14, dl=Math.hypot(txp-sx,typ-sy)||1;
-      G.shots.push({x:sx,y:sy,tx:txp,ty:typ,vx:(txp-sx)/dl*spd2,vy:(typ-sy)/dl*spd2,t:0,dur:dl/spd2,
-        color:def.color,boom:5,kind:'needle',ang:Math.atan2(typ-sy,txp-sx),eid:null,spd:spd2}); }
-    G.impacts.push({x:ux,y:uy-14,life:1,r:13,color:'#9fd356',glow:true,dk:8});
+  if(G._baFire){   // 토벌장: 트랙 적 탐색 금지 — 메인과 동일한 '등 가시 분출→유도' 연출을 보스 주변 가상 지점으로
+    const spdB=PROJ_SPD.spike||560, backUp=14;
+    const vts=[]; for(let k=0;k<4;k++) vts.push({x:tp.x+(Math.random()-0.5)*34, y:tp.y+(Math.random()-0.5)*24});
+    for(const t of vts){ for(let k=0;k<3;k++){
+      const sx=ux+(Math.random()-0.5)*6, sy=uy-backUp+(Math.random()-0.5)*4;
+      const dtx=t.x-sx, dty=t.y-sy, dl=Math.hypot(dtx,dty)||1;
+      let ivx=(dtx/dl)*0.7+(Math.random()-0.5)*0.5, ivy=(dty/dl)*0.7-0.55+(Math.random()-0.5)*0.5;
+      const il=Math.hypot(ivx,ivy)||1; ivx/=il; ivy/=il;
+      G.shots.push({x:sx,y:sy,tx:0,ty:0,vx:ivx*spdB*0.28,vy:ivy*spdB*0.28,t:0,dur:3,
+        color:def.color,boom:5,kind:'needle',ang:Math.atan2(ivy,ivx),vt:{x:t.x,y:t.y},spd:spdB,turn:11,launchT:0.1+k*0.05+Math.random()*0.04}); } }
+    G.impacts.push({x:ux,y:uy-backUp,life:1,r:13,color:'#9fd356',glow:true,dk:8});
+    for(let k=0;k<16;k++){ const a=-Math.PI/2+(Math.random()-0.5)*1.4, sp=50+Math.random()*100;
+      G.sparks.push({x:ux+(Math.random()-0.5)*6,y:uy-backUp,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:0.14+Math.random()*0.16,len:3+Math.random()*4,color:k%2?'#d6ff7a':'#7fc23a'}); }
     return; }
   const range=def.range*Math.min(GW,GH)*gachaRangeMul(u);
   let targets=[];
