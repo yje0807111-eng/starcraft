@@ -2805,7 +2805,8 @@ function drawBossFloor(ctx,ox,oy,bw,bh,t,fy){
   ctx.save(); ctx.beginPath(); rRpath(ctx,ox+lw,oy+lw,bw-2*lw,bh-2*lw,Ri); ctx.lineWidth=lw*0.4; ctx.strokeStyle='rgba(0,0,0,.5)'; ctx.stroke(); ctx.restore();
   ctx.save(); ctx.beginPath(); rRpath(ctx,ox,oy,bw,bh,R); ctx.lineWidth=2; ctx.strokeStyle='rgba(255,90,50,.35)'; ctx.stroke(); ctx.restore();
 }
-function drawBoss(dt){ const {ctx,W,H}=setup('cvBoss'); GW=W;GH=H; dt=dt||0;
+let BAW=0,BAH=0;   // 토벌장 캔버스 크기(메인 GW/GH와 분리 — 두 화면 좌표계 독립)
+function drawBoss(dt){ const {ctx,W,H}=setup('cvBoss'); BAW=W;BAH=H; dt=dt||0;
   const t=(G.timeSec||0), MN=Math.min(W,H);
   // ── 우주 배경(메인 맵과 동일) ──
   if(TILE_SPACE.complete && TILE_SPACE.naturalWidth){ ctx.fillStyle=mkPat(ctx,TILE_SPACE,SPACE_TILE)||'#05060d'; ctx.fillRect(0,0,W,H); }
@@ -2854,7 +2855,14 @@ function drawBoss(dt){ const {ctx,W,H}=setup('cvBoss'); GW=W;GH=H; dt=dt||0;
 }
 // ── 공용 보스 토벌장 팝업(HP바 클릭) — 맵 고정(드래그 없음) ──
 function updateBossViewBtn(){ const b=document.getElementById('bossViewBtn'); if(b){ b.textContent=G.bossOpen?'메인 화면 보기':'토벌장 보기'; b.classList.toggle('viewing', !!G.bossOpen); } }
-function _clearFxArrays(){ ['shots','impacts','muzzles','sparks','beams','debris'].forEach(k=>{ if(G[k]) G[k].length=0; }); }
+// ── 토벌장 전용 이펙트 저장소 — 메인 트랙 이펙트와 완전 분리(두 화면이 서로 영향 없음) ──
+const _FX_KEYS=['shots','impacts','muzzles','sparks','beams','debris'];
+function _baFxStore(){ if(!G.baFx) G.baFx={shots:[],impacts:[],muzzles:[],sparks:[],beams:[],debris:[]}; return G.baFx; }
+// fn 실행 동안 G.shots 등 이펙트 배열을 토벌장 전용으로 바꿔치기 → fireAttack/drawFx/advanceFx를 그대로 재사용
+function withBossFx(fn){ const st=_baFxStore(), sv={};
+  _FX_KEYS.forEach(k=>{ sv[k]=G[k]; G[k]=st[k]; });
+  try{ fn(); } finally{ _FX_KEYS.forEach(k=>{ st[k]=G[k]; G[k]=sv[k]; }); } }
+function _clearFxArrays(){ const st=_baFxStore(); _FX_KEYS.forEach(k=>{ st[k].length=0; }); }   // 토벌장 전용만 클리어(메인 이펙트 보존)
 function openBossArena(){ if(!G.coopBoss) return; BOSS_VIEW.x=0; BOSS_VIEW.y=0; G.bossOpen=true; _clearFxArrays();
   const vb=document.getElementById('vBoss'); if(vb) vb.classList.add('on');   // 아레나 캔버스 활성
   const bp=document.getElementById('bossPanel'); if(bp) bp.classList.remove('hide');
@@ -2872,7 +2880,7 @@ let _ba={box:null,cmd:null,dragU:null,moved:false};
 function bossArenaPoint(e){ const v=document.getElementById('vBoss').getBoundingClientRect(); const t=(e.touches&&e.touches[0])||e;
   return {x:(t.clientX-v.left)/v.width, y:(t.clientY-v.top)/v.height}; }
 function bossUnitUnder(p){ let best=Infinity,hit=null; for(const u of G.units){ if(!u.atBoss||u.bx==null) continue;
-  const d=Math.hypot((u.bx-p.x)*GW,(u.by-p.y)*GH); if(d<30 && d<best){ best=d; hit=u; } } return hit; }
+  const d=Math.hypot((u.bx-p.x)*(BAW||GW),(u.by-p.y)*(BAH||GH)); if(d<30 && d<best){ best=d; hit=u; } } return hit; }
 function bossAssignMove(p){ const sel=_baSel.map(id=>G.units.find(u=>u.uid===id&&u.atBoss)).filter(Boolean); const n=sel.length; if(!n) return;
   const B=bossWalkBounds(); const tx=Math.max(B.lo,Math.min(B.hi,p.x)), ty=Math.max(B.top,Math.min(B.bot,p.y));
   sel.forEach(function(u,i){ const off=(n>1?(i-(n-1)/2)*0.09:0); u.btx=Math.max(B.lo,Math.min(B.hi,tx+off)); u.bty=ty; }); }
@@ -3849,19 +3857,19 @@ function step(dt){
       if(u.bcd>0){ u.bcd-=dt*60; continue; }
       const bdef=U[u.id]; let bdmg=unitDmg(u); if(FAST_CD[u.gmodel]) bdmg*=FAST_CD[u.gmodel]/bdef.cd;
       coopBossDamage(bdmg, G.myPlayer||1, false); u.fireSeq=(u.fireSeq||0)+1;
-      if(G.bossOpen && GW){ const MN=Math.min(GW,GH);   // 토벌장 보는 중: 메인과 동일한 fireAttack 이펙트(보스를 타겟)
-        const ux=u.bx*GW, uy=u.by*GH, tp={x:GW*0.5+(Math.random()-.5)*MN*0.05, y:GH*BOSS_FEET_FRAC-MN*0.04};
+      if(G.bossOpen && BAW){ const MN=Math.min(BAW,BAH);   // 토벌장 보는 중: 메인과 동일한 fireAttack 이펙트(전용 배열·전용 좌표계)
+        const ux=u.bx*BAW, uy=u.by*BAH, tp={x:BAW*0.5+(Math.random()-.5)*MN*0.05, y:BAH*BOSS_FEET_FRAC-MN*0.04};
         if(typeof playUnitAttack==='function') playUnitAttack(u.id);
-        fireAttack(u, bdef, ux, uy, tp, null, bdmg); }
+        withBossFx(()=>fireAttack(u, bdef, ux, uy, tp, null, bdmg)); }
       u.bcd=(FAST_CD[u.gmodel]||bdef.cd); } }
   // 토벌장 보는 중: 다른 플레이어 파견 유닛의 공격도 같은 이펙트로 재생(데미지는 각자 bossdmg로 공유됨)
-  if(G.bossOpen && GW && G.coopBossU){ const MN=Math.min(GW,GH); G._bSeen=G._bSeen||{};
+  if(G.bossOpen && BAW && G.coopBossU){ const MN=Math.min(BAW,BAH); G._bSeen=G._bSeen||{};
     for(const k in G.coopBossU){ const sn=G.coopBossU[k]; if(!sn||!sn.cur) continue; if(Date.now()-sn.t>3000) continue;
       for(const ru of sn.cur){ const seen=G._bSeen[ru.uid]||0;
         if((ru.fireSeq||0)>seen){ G._bSeen[ru.uid]=ru.fireSeq;
-          const rdef=U[ru.id]||U.marine, ux=ru.bx*GW, uy=ru.by*GH;
-          const tp={x:GW*0.5+(Math.random()-.5)*MN*0.05, y:GH*BOSS_FEET_FRAC-MN*0.04};
-          fireAttack(ru, rdef, ux, uy, tp, null, 0); } } } }
+          const rdef=U[ru.id]||U.marine, ux=ru.bx*BAW, uy=ru.by*BAH;
+          const tp={x:BAW*0.5+(Math.random()-.5)*MN*0.05, y:BAH*BOSS_FEET_FRAC-MN*0.04};
+          withBossFx(()=>fireAttack(ru, rdef, ux, uy, tp, null, 0)); } } } }
   // 유닛 자동 공격
   for(const u of G.units){ if(u.atBoss) continue;   // 보스방 파견 유닛은 트랙 전투 제외
     const def=U[u.id]; if(u.atkT>0) u.atkT-=dt;
@@ -3887,10 +3895,7 @@ function step(dt){
       const ps=PROJ_SPD[def.atk];
       u.fireSeq=(u.fireSeq||0)+1;  // 발사 카운터(3D 공격모션 트리거)
       if(typeof playUnitAttack==='function') playUnitAttack(u.id);   // 유닛별 공격 효과음(내 유닛)
-      if(G.bossOpen){ // 토벌장 보는 중: 트랙 전투는 즉시 데미지(시각효과 생략 — 이펙트 배열은 토벌장 전용)
-        hitEnemy(tgt,dmg);
-        if(def.splash){ const r2=Math.pow(SPLASH_R*Math.min(GW,GH),2); for(const e of G.enemies){ if(e===tgt)continue; const p=posAt(e.d,GW,GH); const dx=p.x-tp.x,dy=p.y-tp.y; if(dx*dx+dy*dy<=r2) hitEnemy(e,dmg*SPLASH_RATIO); } }
-      } else if(ps){ // 발사체: 대상 적을 끝까지 추적(유도) → 명중 시 데미지
+      if(ps){ // 발사체: 대상 적을 끝까지 추적(유도) → 명중 시 데미지 (토벌장 이펙트는 전용 배열이라 화면과 무관하게 항상 동일 파이프라인)
         fireAttack(u,def,ux,uy,tp, tgt.eid, dmg);
       } else { // 즉발(빔/사이오닉): 즉시 데미지
         hitEnemy(tgt,dmg);
@@ -3914,12 +3919,17 @@ function step(dt){
     if(typeof playEnemyDeath==='function') playEnemyDeath(e.race);   // 종족별 처치음(대량 처치 쓰로틀)
     deathBurst(e); G.enemies.splice(i,1); } }
   // (라운드 진행은 위쪽 제한시간 타이머가 담당 — 클리어로는 넘어가지 않음)
-  // 이펙트 수명/이동
+  // 이펙트 수명/이동 — 메인 배열 + 토벌장 전용 배열 각각 전진(서로 영향 없음)
+  for(let i=G.recalls.length-1;i>=0;i--){ G.recalls[i].life-=dt/RECALL_DUR; if(G.recalls[i].life<=0) G.recalls.splice(i,1); }
+  advanceFx(dt);
+  withBossFx(()=>advanceFx(dt));
+}
+// 이펙트 배열 전진(수명·이동·유도) — step()에서 메인/토벌장 두 컨텍스트로 호출
+function advanceFx(dt){
   for(let i=G.beams.length-1;i>=0;i--){ G.beams[i].life-=dt*8; if(G.beams[i].life<=0) G.beams.splice(i,1); }
   for(let i=G.muzzles.length-1;i>=0;i--){ G.muzzles[i].life-=dt*14; if(G.muzzles[i].life<=0) G.muzzles.splice(i,1); }
   for(let i=G.impacts.length-1;i>=0;i--){ const m=G.impacts[i]; m.life-=dt*(m.dk||6); if(m.life<=0) G.impacts.splice(i,1); }
   for(let i=G.debris.length-1;i>=0;i--){ const f=G.debris[i]; f.x+=f.vx*dt; f.y+=f.vy*dt; f.vx*=0.94; f.vy*=0.94; f.rot+=f.spin*dt; f.life-=dt*2.2; if(f.life<=0) G.debris.splice(i,1); }
-  for(let i=G.recalls.length-1;i>=0;i--){ G.recalls[i].life-=dt/RECALL_DUR; if(G.recalls[i].life<=0) G.recalls.splice(i,1); }
   for(let i=G.sparks.length-1;i>=0;i--){ const s=G.sparks[i]; s.x+=s.vx*dt; s.y+=s.vy*dt; const fr=s.fr||0.84; s.vx*=fr; s.vy*=fr; s.life-=dt*(s.dk||5.5); if(s.life<=0) G.sparks.splice(i,1); }
   for(let i=G.shots.length-1;i>=0;i--){ const s=G.shots[i];
     if(s.launchT>0){ s.launchT-=dt; s.x+=s.vx*dt; s.y+=s.vy*dt; s.vx*=0.93; s.vy*=0.93; continue; }  // 분출 단계: 잠깐 직진(감속) 후 유도 시작(베놈퀸 가시)
@@ -6897,9 +6907,9 @@ function loop(now){
   if(G.bossOpen){   // 공용 보스 토벌장 팝업 — 탭과 무관하게 아레나 렌더(위에 vBoss/컨트롤)
     drawBoss(dt); renderBossPanel(); updateCoopBossBar();
     const mcv=document.getElementById('cvMarine');
-    if(window.M3D && window.M3D.ready() && !(G.opt&&G.opt.model3d===false)){ mcv.style.display='block'; window.M3D.syncBoss(GW, GH, dt); }
+    if(window.M3D && window.M3D.ready() && !(G.opt&&G.opt.model3d===false)){ mcv.style.display='block'; window.M3D.syncBoss(BAW||GW, BAH||GH, dt); }
     else if(mcv) mcv.style.display='none';
-    const fcv=document.getElementById('cvFx'); if(fcv){ fcv.style.display='block'; drawFx(); }   // 메인과 동일 이펙트 렌더(토벌장 전용 효과만 들어있음)
+    const fcv=document.getElementById('cvFx'); if(fcv){ fcv.style.display='block'; withBossFx(drawFx); }   // 토벌장 전용 이펙트만 렌더(메인 이펙트와 분리)
   }
   else if(G.tab==='Players' && _specNum){ renderSpectate(_specNum, dt); }   // 관전: 상대 보드를 3D+이펙트로 그대로 렌더
   else {
