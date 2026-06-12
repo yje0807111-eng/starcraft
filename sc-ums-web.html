@@ -4111,7 +4111,7 @@ function fireSentinelGodOrb(u,def,ux,uy,tp,eid,dmg){
   for(let k=0;k<14;k++){ const a=Math.random()*6.28, r=14+Math.random()*12, sp=r*4;   // 대충전: 더 많이·더 크게 모임
     G.sparks.push({x:mx+Math.cos(a)*r,y:my+Math.sin(a)*r,vx:-Math.cos(a)*sp,vy:-Math.sin(a)*sp,life:0.22,len:2.5+Math.random()*2.5,color:k%2?c:'#d8c4ff',dk:6}); }
   G.impacts.push({x:mx,y:my,life:1,r:7,color:'#eadcff',dk:9});   // 코어 섬광(충전 완료)
-  const spd=110, md=Math.hypot(tp.x-mx,tp.y-my)||1, nx=(tp.x-mx)/md, ny=(tp.y-my)/md;
+  const spd=150, md=Math.hypot(tp.x-mx,tp.y-my)||1, nx=(tp.x-mx)/md, ny=(tp.y-my)/md;
   const tly=tp.y;   // 발사 시점 표적 위치(비행 중 사망 대비)
   G.shots.push({x:mx,y:my,tx:tp.x,ty:tp.y,vx:nx*spd,vy:ny*spd,t:0,dur:9,color:c,kind:'plasma',orbR:9,
     eid:eid,dmg:dmg,spd:spd,sboom:true,lkx:tp.x,lky:tly});
@@ -7086,11 +7086,15 @@ function drawFx(){ const {ctx,W,H}=setup('cvFx');  // setup이 캔버스 크기 
       ctx.globalAlpha=.45; ctx.beginPath(); ctx.arc(s.x,s.y,6,0,6.283); ctx.fill();
       ctx.globalAlpha=1; ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(s.x,s.y,3.2,0,6.283); ctx.fill(); ctx.fillStyle=s.color;
     } else if(s.kind==='plasma'){ const oR=s.orbR||0;
-      ctx.globalAlpha=.4; ctx.beginPath();ctx.arc(s.x,s.y,oR?oR*1.9:5.8,0,6.28);ctx.fill();
-      ctx.globalAlpha=1; ctx.beginPath();ctx.arc(s.x,s.y,oR||2.9,0,6.28);ctx.fill();
-      if(oR){ ctx.fillStyle='#fff'; ctx.beginPath();ctx.arc(s.x,s.y,oR*0.45,0,6.28);ctx.fill(); ctx.fillStyle=s.color;   // 대구체: 흰 코어 + 지직 플리커
-        const fa=Math.random()*6.28; ctx.strokeStyle='#eadcff'; ctx.lineWidth=1.2; ctx.globalAlpha=.7;
-        ctx.beginPath(); ctx.moveTo(s.x+Math.cos(fa)*oR*0.7,s.y+Math.sin(fa)*oR*0.7); ctx.lineTo(s.x+Math.cos(fa)*(oR*1.6+Math.random()*4),s.y+Math.sin(fa)*(oR*1.6+Math.random()*4)); ctx.stroke(); ctx.globalAlpha=1; }
+      if(oR){ // 대구체: 방사형 그라데이션 플라즈마 — 흰 핵이 본색으로 녹아들며 가장자리는 부드럽게 사라짐
+        const gR=oR*2.1, g=ctx.createRadialGradient(s.x,s.y,0,s.x,s.y,gR);
+        g.addColorStop(0,'rgba(255,255,255,0.95)'); g.addColorStop(0.22,hexA(s.color,0.9));
+        g.addColorStop(0.55,hexA(s.color,0.45)); g.addColorStop(1,hexA(s.color,0));
+        ctx.globalAlpha=1; ctx.fillStyle=g; ctx.beginPath();ctx.arc(s.x,s.y,gR,0,6.28);ctx.fill(); ctx.fillStyle=s.color;
+        const fa=Math.random()*6.28; ctx.strokeStyle='#eadcff'; ctx.lineWidth=1.2; ctx.globalAlpha=.6;   // 지직 플리커
+        ctx.beginPath(); ctx.moveTo(s.x+Math.cos(fa)*oR*0.7,s.y+Math.sin(fa)*oR*0.7); ctx.lineTo(s.x+Math.cos(fa)*(oR*1.7+Math.random()*4),s.y+Math.sin(fa)*(oR*1.7+Math.random()*4)); ctx.stroke(); ctx.globalAlpha=1;
+      } else { ctx.globalAlpha=.4; ctx.beginPath();ctx.arc(s.x,s.y,5.8,0,6.28);ctx.fill();
+        ctx.globalAlpha=1; ctx.beginPath();ctx.arc(s.x,s.y,2.9,0,6.28);ctx.fill(); }
     } else if(s.kind==='needle'){ ctx.save();ctx.translate(s.x,s.y);ctx.rotate(Math.atan2(s.vy,s.vx));
       ctx.globalAlpha=.85; ctx.fillStyle=s.color;                                                 // 가늘고 뾰족한 침(미사일 X)
       ctx.beginPath(); ctx.moveTo(4.5,0); ctx.lineTo(-4,0.7); ctx.lineTo(-4,-0.7); ctx.closePath(); ctx.fill();
