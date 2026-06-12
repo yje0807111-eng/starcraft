@@ -2313,7 +2313,8 @@ const USEMAPS={
   nemo:  { id:'nemo',   name:'네모네모 디펜스', desc:'사각 트랙을 도는 적을 막는 협동 디펜스', players:'1-8', pop:9820, icon:'🟥', rec:true,  isNew:false, playable:true,
            cfg:{ rounds:20, roundTime:190, prepTime:10, startCredits:120, startEnergy:0, maxUnits:50,
                  killCredit:1, specialCredit:25, gachaCost:30, energyDrawCost:40, coopBoss:true, roster:'all',
-                 enemiesPerRound:100, bossEvery:5, loseCount:200 } },
+                 enemiesPerRound:100, bossEvery:5, loseCount:200,
+                 roundClearCreditBase:10, roundClearCreditPer:3, roundClearEnergyBase:3, roundClearEnergyPer:1 } },
   sunken:{ id:'sunken', name:'성큰타워 디펜스', desc:'성큰 콜로니로 길목을 막는 타워 디펜스', players:'1-8', pop:8730, icon:'🌿', rec:true,  isNew:false, playable:false, cfg:{} },
   marine:{ id:'marine', name:'마린 키우기',     desc:'마린을 성장시켜 최강으로 키우는 RPG', players:'1-6', pop:7610, icon:'🔫', rec:true,  isNew:false, playable:false, cfg:{} },
   temple:{ id:'temple', name:'신전 뿌수기',     desc:'상대 신전을 먼저 파괴하는 공성전',     players:'2-8', pop:6240, icon:'🏛️', rec:false, isNew:true,  playable:false, cfg:{} },
@@ -3787,7 +3788,8 @@ function step(dt){
   } else {                       // 전투 단계: 제한시간 종료 시 바로 다음 라운드(준비시간 없음)
     if(G.roundTime<=0){ const n=G.round+1;
       if(n>mapCfg('rounds',TOTAL_ROUNDS)){ G.phase='won'; if(typeof playSfx==='function') playSfx('win'); showOverlay(); return; }
-      gainGas(3+G.round); gainMineral(10+G.round*3);   // 라운드 클리어 보너스(가스+미네랄, 메타 획득↑ 반영)
+      gainGas(mapCfg('roundClearEnergyBase',3)+G.round*mapCfg('roundClearEnergyPer',1));   // 라운드 클리어 보너스(맵 설정, 메타 획득↑ 반영)
+    gainMineral(mapCfg('roundClearCreditBase',10)+G.round*mapCfg('roundClearCreditPer',3));
       G.round=n; beginActivePhase(); }   // 2라운드부터는 준비시간 없이 즉시 전투
   }
   // 스폰(전투 단계, 일반 라운드만 — 150초 동안 1.5초당 1마리, 1마리는 스페셜)
@@ -4872,7 +4874,8 @@ function renderPlayers(){ const g=document.getElementById('plGrid'); g.innerHTML
     const el=document.createElement('div');
     el.className='plbtn'+(present&&n===G.curPlayer&&!lock?' me':'')+(lock?' lock':'')+(!present?' off':'');   // 미입장=off
     el.style.setProperty('--pc', PLAYER_VIEW_COLORS[(n-1)%PLAYER_VIEW_COLORS.length]);
-    el.innerHTML='<div class="plnum">'+n+'P</div><div class="plst">'+(lock?(escHtml(myNick())+' 🔒'):(present?escHtml(playerName(n)):'빈 자리'))+'</div>';
+    const _bo=!lock && present && G.coopState && G.coopState[n] && G.coopState[n].bo;   // 상대가 토벌장 보는 중
+el.innerHTML='<div class="plnum">'+n+'P</div><div class="plst">'+(lock?(escHtml(myNick())+' 🔒'):(present?(escHtml(playerName(n))+(_bo?' <span title="토벌장 입장 중">👹</span>':'')):'빈 자리'))+'</div>';
     if(!lock && present) el.onclick=()=>{ G.curPlayer=n; renderPlayers(); drawPlayer(); updateSpecLabel(); };   // 입장한 다른 플레이어만 관전 가능
     g.appendChild(el);
   } }
@@ -6176,13 +6179,19 @@ function onCoopPause(p){ if(!p||p.uid===myUid()) return; if(G.paused===p.paused)
   addChat('', (p.nick||'상대')+'님이 일시정지를 '+(p.paused?'사용':'해제')+'하였습니다.'); updatePauseBtn(); }
 function onCoopChat(p){ if(!p||p.uid===myUid()) return; if(typeof playNotify==='function') playNotify(); addChat(p.nick||'상대', p.text, p.color||'#7fc8ff'); }
 function onCoopState(p){ if(!p||p.uid===myUid()) return; const num=G.coopUidToNum[p.uid]; if(!num) return;
-  G.coopState[num]={ count:p.count||0, round:p.round||0 };
+  const boPrev=G.coopState[num]&&G.coopState[num].bo;
+  G.coopState[num]={ count:p.count||0, round:p.round||0, bo:p.bo?1:0 };
+  if((p.bo?1:0)!==(boPrev||0) && G.tab==='Players' && typeof renderPlayers==='function') renderPlayers();   // 토벌장 입퇴장 배지 갱신
   const pf='r'+num+'_';   // 내 유닛/적 키와 충돌 방지(M3D 모델 추적용)
   const snap={ t:Date.now(),
     units:(p.u||[]).map(a=>({id:a[0], uid:pf+a[1], x:a[2], y:a[3], hero:!!a[4], fireSeq:a[5]||0, hp:a[6], maxHp:a[7], sh:a[8], maxSh:a[9], en:a[10], maxEn:a[11], lv:a[12]||1})),
     enemies:(p.e||[]).map(a=>({d:a[0], boss:!!a[1], special:!!a[2], shape:a[3], ph:a[4]||0, eid:pf+a[5], model3d:a[6]||null})),
     shots:(p.s||[]).map(a=>({x:a[0], y:a[1], vx:a[2], vy:a[3], kind:a[4], color:a[5]})),
     beams:(p.b||[]).map(a=>({x1:a[0], y1:a[1], x2:a[2], y2:a[3], color:a[4], w:a[5], life:a[6]})) };
+  // 관전 중인 상대의 발사 감지 → 해당 유닛 공격음(playUnitAttack 자체 110ms 쓰로틀)
+  if(G.tab==='Players' && G.curPlayer===num && typeof playUnitAttack==='function'){
+    const prevB=G.coopBoard[num]; if(prevB){ const pm={}; prevB.units.forEach(x=>pm[x.uid]=x.fireSeq||0);
+      for(const x of snap.units){ if((x.fireSeq||0)>(pm[x.uid]||0)){ playUnitAttack(x.id); break; } } } }   // 스냅당 1회(소음 방지)
   G.coopBoardPrev[num]=G.coopBoard[num]; G.coopBoard[num]=snap;   // 직전/현재 스냅(보간용)
   if(p.atk) (G.coopUpg=G.coopUpg||{})[num]=p.atk;   // 상대 공격 업그레이드 레벨
   // 전체 강화(팀 공유): 상대 레벨 수신 → 최고 레벨 기준으로 효과 재계산. 시작 크레딧이 늘면 차액 소급 지급
@@ -6213,7 +6222,7 @@ function coopBroadcastState(){ if(!coopActive()||G.phase!=='playing') return;
   const bs=(coopAuthNum()===(G.myPlayer||1) && G.coopBoss)?[Math.round(G.coopBoss.hp), G.coopBoss.max, G.coopBoss.lv, G.coopBoss.dead?1:0]:0;   // 권위자만 보스 상태 동봉
   const bu=G.units.filter(x=>x.atBoss).map(x=>[x.gmodel||x.id, x.id, x.uid, +(x.bx!=null?x.bx:0.5).toFixed(3), +(x.by!=null?x.by:0.54).toFixed(3), x.hero?1:0, x.fireSeq||0]);   // 내 토벌장 파견 유닛
   const tb=_TEAM_IDS.map(id=>buildLevel(id));   // 내 전체 강화 레벨(팀 공유 — 최고 레벨 적용)
-  coopSend('pstate', { count:G.enemies.length, round:G.round, u:u, e:e, s:s, b:b, atk:G.atkLv||{}, bs:bs, bu:bu, tb:tb }); }
+  coopSend('pstate', { count:G.enemies.length, round:G.round, u:u, e:e, s:s, b:b, atk:G.atkLv||{}, bs:bs, bu:bu, tb:tb, bo:G.bossOpen?1:0 }); }
 function specRemoteBoard(){ return (coopActive() && G.tab==='Players' && G.curPlayer!==(G.myPlayer||1) && G.coopBoard && G.coopBoard[G.curPlayer]) ? G.curPlayer : null; }
 function _clerp(a,b,f){ return a+(b-a)*f; }
 function _clerpWrap(a,b,f){ let d=b-a; if(d>0.5)d-=1; else if(d<-0.5)d+=1; let v=a+d*f; if(v<0)v+=1; else if(v>=1)v-=1; return v; }   // 트랙 d(0~1 순환) 경계 래핑 보간
@@ -6473,7 +6482,7 @@ function updateHud(){
 // 각 화면(맵) 이름 — 우측 상단 자원 아래 표시
 const MAP_NAMES={ Main:'용암 정거장', Unit:'유닛 생산고', Upgrade:'연구 시설', Players:'전장 관전', Boss:'공용 보스 토벌장' };
 function updateMapName(){ const el=document.getElementById('mapName'); if(!el) return;
-  if(G.bossOpen){ const t2='👹 공용 보스 토벌장'; if(el.textContent!==t2) el.textContent=t2; return; }   // 토벌장 진입 시 장소 이름 교체
+  if(G.bossOpen){ const t2='👹 '+(MAP_NAMES.Boss||'공용 보스 토벌장'); if(el.textContent!==t2) el.textContent=t2; return; }   // 토벌장 진입 시 장소 이름 교체(MAP_NAMES 단일 출처)
   const D=DIFFICULTY[G.difficulty], dtag=(D&&G.difficulty!=='normal')?(' · '+D.name):'';   // 노말 외에는 난이도 표시
   const txt = '◈ '+(MAP_NAMES[G.tab] || '')+dtag;   // 플레이어 관전도 통일된 고정 이름(관전 대상 무관)
   if(el.textContent!==txt) el.textContent=txt;
