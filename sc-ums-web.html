@@ -3041,9 +3041,9 @@ function spawnSparks(mx,my,nx,ny,col){
 }
 // 발사 연기(어깨 포드 발사 시) — 부드러운 회색 구름(glow) + 위로 피어오르는 연기 입자
 function spawnSmoke(mx,my,nx,ny){
-  for(let k=0;k<2;k++){ const ang=Math.atan2(ny,nx)+Math.PI+(Math.random()-0.5)*1.1, sp=16+Math.random()*30;
+  for(let k=0;k<3;k++){ const ang=Math.atan2(ny,nx)+Math.PI+(Math.random()-0.5)*1.1, sp=14+Math.random()*26;
     const sh=k%2; // 짙은 코어 + 옅은 가장자리 두 톤
-    G.sparks.push({x:mx+(Math.random()-0.5)*5,y:my+(Math.random()-0.5)*4,vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp-22,life:0.7,smoke:true,r0:2.5+Math.random()*2.5,color:sh?'#3a3a44':'#5a5a66',dk:2.8,fr:0.95}); } // 짙은 회색 연기(추가 축소)
+    G.sparks.push({x:mx+(Math.random()-0.5)*5,y:my+(Math.random()-0.5)*4,vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp-34,life:0.8,smoke:true,r0:3.5+Math.random()*3,color:sh?'#5a5a66':'#787884',dk:2.4,fr:0.95}); } // 모델 위로 더 높이·크게 피어오름짙은 회색 연기(추가 축소)
 }
 function tilePattern(ctx, img, cur, tilePx){ if(cur) return cur;
   if(!img.complete || !img.naturalWidth) return null;
@@ -4411,9 +4411,11 @@ function fireAttack(u,def,ux,uy,tp,eid,dmg){
       for(let k=-1;k<=1;k+=2){
         const sx = sh ? (ux + SHOULDER_SIDE*k) : (mx - ny*8*k);   // 어깨: 좌우 고정 / 그 외: 발사방향 수직 분산
         const sy = sh ? (uy - SHOULDER_UP)     : (my + nx*8*k);
-        const md=Math.hypot(tp.x-sx,tp.y-sy)||1, dx=(tp.x-sx)/md, dy=(tp.y-sy)/md;
-        G.shots.push({x:sx,y:sy,tx:tp.x,ty:tp.y,vx:dx*240,vy:dy*240,t:0,dur:md/240,color:c,boom:13,kind:'missile',ang:Math.atan2(dy,dx),side:k,...mhom});
-        if(sh) spawnSmoke(sx,sy,dx,dy);   // 어깨별 발사 연기
+        const md0=Math.hypot(tp.x-sx,tp.y-sy)||1, dx=(tp.x-sx)/md0, dy=(tp.y-sy)/md0;
+        if(sh) spawnSmoke(sx,sy,dx,dy);   // 어깨에 발사 연기(피어오름)
+        const lx = sh ? sx+dx*18 : sx, ly = sh ? sy+dy*18 : sy;   // 미사일은 어깨 앞쪽에서 점화 — 어깨에 화염 원이 안 생기게(연기만)
+        const md=Math.hypot(tp.x-lx,tp.y-ly)||1, ddx=(tp.x-lx)/md, ddy=(tp.y-ly)/md;
+        G.shots.push({x:lx,y:ly,tx:tp.x,ty:tp.y,vx:ddx*240,vy:ddy*240,t:0,dur:md/240,color:c,boom:13,kind:'missile',ang:Math.atan2(ddy,ddx),side:k,...mhom});
       } break; }
     case 'psi': { // 사이오닉(스타 아칸): 은은한 그라데이션 폭발 + 미세 전기 크래클(선 느낌 최소화)
       const pc='#7fe3ff', pc2='#cfeaff';   // 청록/연한 흰빛(모델 오라색과 일치)
@@ -7012,8 +7014,9 @@ function drawFx(){ const {ctx,W,H}=setup('cvFx');  // setup이 캔버스 크기 
       ctx.beginPath(); ctx.moveTo(4.5,0); ctx.lineTo(-4,0.7); ctx.lineTo(-4,-0.7); ctx.closePath(); ctx.fill();
       ctx.restore();
     } else if(s.kind==='missile'){ ctx.save();ctx.translate(s.x,s.y);ctx.rotate(Math.atan2(s.vy,s.vx));
-      ctx.globalAlpha=.5; ctx.fillStyle='#ff8a3c'; ctx.fillRect(-6.5,-1.2,4,2.4);   // 화염 배기(짧게)
-      ctx.globalAlpha=.9; ctx.fillStyle='#ffd27a'; ctx.fillRect(-4.5,-0.9,3.2,1.8); // 화염 코어
+      const lf=Math.min(1,(s.t||0)/0.1);   // 발사 직후 0.1s는 화염 억제 — 어깨엔 연기만(빨간 화염 원 방지)
+      ctx.globalAlpha=.5*lf; ctx.fillStyle='#ff8a3c'; ctx.fillRect(-6.5,-1.2,4,2.4);   // 화염 배기(짧게)
+      ctx.globalAlpha=.9*lf; ctx.fillStyle='#ffd27a'; ctx.fillRect(-4.5,-0.9,3.2,1.8); // 화염 코어
       ctx.globalAlpha=1; ctx.fillStyle=s.color; ctx.fillRect(-1.6,-1.3,5,2.6);      // 미사일 본체
       ctx.fillStyle='#fff'; ctx.fillRect(2,-1,2,2);                                  // 탄두
       ctx.restore();
