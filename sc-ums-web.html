@@ -4104,7 +4104,7 @@ function emitVulcanSpray(u, ux, uy, tx, ty){
 }
 // 브레이커 포탄 폭발 — 화염구 + 충격파 + 파편 + 연기
 // ── 디토네이터(초월): 핵 투하 — 경고 마커 → 탄두 수직 낙하 → 대형 광역 폭발 ──
-const NUKE_R=0.13;     // 폭발 반경(min(GW,GH) 비율)
+const NUKE_R=0.20;     // 폭발 반경(min(GW,GH) 비율) — 광범위
 const NUKE_FALL=0.62;  // 낙하 시간(초)
 function fireDetonateNuke(u,def,ux,uy,tp,eid,dmg){
   const MN=Math.min(GW,GH), R=NUKE_R*MN;
