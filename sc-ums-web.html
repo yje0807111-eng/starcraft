@@ -5056,13 +5056,14 @@ function wpnBadgeSVG(wpn,col){ const g=WPN_ICON[wpn]||WPN_ICON.inf;
 // ── 업그레이드 설정(유즈맵별로 바꿔 끼움) ──
 const UPG_MAX=299;   // 업그레이드 최대 레벨 (이 유즈맵=299, 일반 맵은 3 등으로 설정)
 const UPG_TIME=0;    // 업그레이드 1회 완료까지 걸리는 시간(초). 0=즉시 완료(네모네모 디펜스: 로딩 없음)
+function upgCost(wpn){ return UPG_COST+(G.atkLv&&G.atkLv[wpn]||0); }   // 레벨 점증 비용(3+현재레벨) — 정액이면 한 판에 100+레벨 도달해 밸런스 붕괴(봇 시뮬)
 const ENERGY_ICON='<svg viewBox="0 0 24 24" width="11" height="11" style="flex:0 0 auto"><path d="M13.6 2L5.4 13H10l-1.6 9L18.6 10.5H13z" fill="#6ff0a0" stroke="#d6ffe6" stroke-width="1.2" stroke-linejoin="round"/></svg>';
 // 건물별 업그레이드 항목 목록 — 추후 방어력 등 추가 시 배열에 push만 하면 슬롯이 자동 추가됨
 function bldgUpgs(b){
   const items=[];
   // 공격력(무기 계열)
   items.push({ wpn:b.wpn, name:b.wname, icon:wpnBadgeSVG(b.wpn,'#ff3b3b'),
-    lv:(G.atkLv[b.wpn]||0), cost:UPG_COST, action:"research('"+b.wpn+"')" });
+    lv:(G.atkLv[b.wpn]||0), cost:upgCost(b.wpn), action:"research('"+b.wpn+"')" });
   // ── 예시(추후 활성화): 방어력 등 — 슬롯 하나 더 생김 ──
   // items.push({ wpn:b.wpn+'_arm', name:b.aname, icon:armorBadgeSVG('#ff3b3b'),
   //   lv:(G.armLv&&G.armLv[b.wpn]||0), cost:UPG_COST, action:"research('"+b.wpn+"_arm')" });
@@ -5130,16 +5131,17 @@ function selectUpg(id){ const _b0=TECH.find(x=>x.id===id);
 function research(wpn){
   if(G.research) return;                                       // 동시 1개만(즉시모드라 사실상 미발생)
   if((G.atkLv[wpn]||0)>=UPG_MAX) return;                       // 최대 레벨 — 알림 없이 무시
-  if(G.gas<UPG_COST){ if(typeof playSfxT==='function') playSfxT('upgrade_denied',130); toast('에너지가 부족합니다'); return; }   // 부족 — 알림음+토스트
+  const _uc=upgCost(wpn);
+  if(G.gas<_uc){ if(typeof playSfxT==='function') playSfxT('upgrade_denied',130); toast('에너지 부족 (다음 업글 '+_uc+')'); return; }   // 부족 — 알림음+토스트
   if(typeof playSfxT==='function') playSfxT('upgrade_press',80);   // 업그레이드 누름(상호작용)
-  G.gas-=UPG_COST; updateHud();
+  G.gas-=_uc; updateHud();
   if(UPG_TIME<=0){ finishResearch(wpn); return; }              // 즉시 완료 모드
-  G.research={ wpn:wpn, t:UPG_TIME, dur:UPG_TIME };            // 타이머 가동
+  G.research={ wpn:wpn, t:UPG_TIME, dur:UPG_TIME, cost:_uc };            // 타이머 가동
   if(G.techB) selectUpg(G.techB);
 }
 // 연구 취소 — 에너지 환불 후 중단
 function cancelResearch(){ if(!G.research) return;
-  G.gas+=UPG_COST; updateHud(); toast('연구 취소');
+  G.gas+=(G.research.cost||UPG_COST); updateHud(); toast('연구 취소');
   G.research=null; if(G.tab==='Upgrade'&&G.techB) selectUpg(G.techB);
 }
 function finishResearch(wpn){ G.atkLv[wpn]=(G.atkLv[wpn]||0)+1;   // 업그레이드 완료 — 채팅 알림 없이 슬롯 레벨로만 표시
