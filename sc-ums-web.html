@@ -3735,11 +3735,16 @@ function hitEnemy(e,dmg){ let d=Math.max(1,dmg-(e.ar||0)); e.flash=4; e.hit=1; e
   if(e.sh>0){ if(d<=e.sh){ e.sh-=d; return; } d-=e.sh; e.sh=0; } e.hp-=d; }
 // 적 사망 폭발: 확장 링 2겹 + 코어 플래시 + 사방 파편
 function deathBurst(e){ const p=posAt(e.d,GW,GH); const col=e.boss?COL.boss:COL.enemy; const big=e.boss?1.8:1;
-  G.impacts.push({x:p.x,y:p.y,life:1,r:(e.boss?34:20)*1,color:'#fff',ring:true});
-  G.impacts.push({x:p.x,y:p.y,life:1,r:(e.boss?26:16),color:col,ring:true});
-  G.impacts.push({x:p.x,y:p.y,life:1,r:(e.boss?22:13),color:col}); // 코어 플래시
-  const n=e.boss?16:9; for(let i=0;i<n;i++){ const a=(6.283*i/n)+(e.ph||0); const sp=(70+(i%3)*40)*big;
-    G.debris.push({x:p.x,y:p.y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,rot:a,spin:(i%2?4:-4),len:(e.boss?5:3.2)*big,color:col}); } }
+  if(e.boss){   // 보스=임팩트 유지(살짝만 절제·빠른 페이드)
+    G.impacts.push({x:p.x,y:p.y,life:1,r:30,color:'#fff',ring:true,dk:7});
+    G.impacts.push({x:p.x,y:p.y,life:1,r:22,color:col,ring:true,dk:7});
+    G.impacts.push({x:p.x,y:p.y,life:1,r:18,color:col,dk:8});   // 코어 플래시
+  } else {      // 일반 적=작은 단일 링 + 작은 코어(자연스러운 퍽)
+    G.impacts.push({x:p.x,y:p.y,life:1,r:10,color:col,ring:true,dk:10});
+    G.impacts.push({x:p.x,y:p.y,life:1,r:5,color:'#fff',dk:11});
+  }
+  const n=e.boss?14:4; for(let i=0;i<n;i++){ const a=(6.283*i/n)+(e.ph||0); const sp=(55+(i%3)*30)*big;
+    G.debris.push({x:p.x,y:p.y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,rot:a,spin:(i%2?4:-4),len:(e.boss?5:2.4)*big,color:col}); } }
 
 // ============================================================================
 // 프레임 업데이트
