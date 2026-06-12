@@ -221,25 +221,25 @@
   .homeBoss{flex:1}                                                                   /* 보스 파견 구역 좁게(우) */
   .homeSell::after{content:'';position:absolute;right:0;top:6px;bottom:6px;width:1px;pointer-events:none;
     background:linear-gradient(180deg,transparent,rgba(255,255,255,.16) 20%,rgba(255,255,255,.16) 80%,transparent)}
-  .hsTitle svg{color:#f6c84a;filter:drop-shadow(0 0 4px rgba(246,200,74,.5))}
-  .hbHint{font-size:var(--fs-xs);color:var(--txt-mute);line-height:1.45}.hbHint b{color:#f6c84a}
+  .hsTitle svg{color:var(--gold);filter:drop-shadow(0 0 4px rgba(255,210,74,.5))}
+  .hbHint{font-size:var(--fs-xs);color:var(--txt-mute);line-height:1.45}.hbHint b{color:var(--gold)}
   /* 판매: 등급 칩 + 초상화 그리드 */
   .hsTiers{display:flex;flex-wrap:wrap;gap:4px}
   .hsTier{flex:1 1 auto;text-align:center;padding:5px 6px;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-sm);font-weight:800;cursor:pointer;white-space:nowrap;
     color:var(--tc,#bbb);background:var(--glass);border:1px solid var(--metal-edge);transition:all .12s}
-  .hsTier.on{color:#16110a;background:var(--tc,#f6c84a);border-color:var(--tc,#f6c84a);box-shadow:0 0 9px -3px var(--tc,#f6c84a)}
+  .hsTier.on{color:#16110a;background:var(--tc,var(--gold));border-color:var(--tc,var(--gold));box-shadow:0 0 9px -3px var(--tc,var(--gold))}
   .hsGrid{display:flex;flex-wrap:nowrap;gap:5px;align-items:flex-start;overflow-x:auto;overflow-y:hidden;padding-bottom:3px}
   .hsGrid::-webkit-scrollbar{height:4px}.hsGrid::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
   .hsCell{position:relative;flex:0 0 auto;width:50px;padding:0;border-radius:var(--r-md);cursor:pointer;background:rgba(0,0,0,.3);
     border:1px solid var(--metal-edge);overflow:hidden;transition:all .12s}
-  .hsCell:hover{border-color:#f6c84a;box-shadow:0 0 8px -3px rgba(246,200,74,.7)}
+  .hsCell:hover{border-color:var(--gold);box-shadow:0 0 8px -3px rgba(255,210,74,.7)}
   .hsCell:active{transform:translateY(1px)}
   .hsThumb{position:relative;width:100%;height:44px;display:flex;align-items:center;justify-content:center;overflow:hidden;
     background:radial-gradient(circle at 50% 36%,#26272b,#09090b 88%);box-shadow:inset 0 0 10px rgba(0,0,0,.72)}   /* 다중선택 칩과 동일 틀 */
   .hsThumb img{width:86%;height:86%;object-fit:cover;border-radius:var(--r-sm)}.hsThumb svg{width:32px;height:32px}
   .hsCnt{position:absolute;top:2px;left:3px;font-family:'Rajdhani',sans-serif;font-size:var(--fs-sm);font-weight:800;color:#fff;text-shadow:0 1px 2px #000,0 0 3px #000}
   .hsVal{display:block;font-family:'Rajdhani',sans-serif;font-size:var(--fs-lg);font-weight:800;color:var(--gold);text-align:center;line-height:16px;letter-spacing:.2px;
-    background:rgba(0,0,0,.78);border-top:1px solid rgba(246,200,74,.45);text-shadow:0 1px 2px #000,0 0 4px rgba(0,0,0,.9)}
+    background:rgba(0,0,0,.78);border-top:1px solid rgba(255,210,74,.45);text-shadow:0 1px 2px #000,0 0 4px rgba(0,0,0,.9)}
   .hsEmpty{font-size:var(--fs-xs);color:#7d8590;padding:8px 2px}
   /* 메인 홈 하단 — 공용 보스 파견 패널(주변 명령 버튼 톤: metal-edge + 레드 네온, 위계 구분) */
   .hbTop{display:flex;align-items:center;gap:7px}
@@ -696,7 +696,7 @@
   /* 시민 프로필 설명 */
   .czDesc{font-size:var(--fs-md);color:#c2c8d2;line-height:1.5}
   .czDesc b{color:var(--neon)}
-  .czCost{color:#f6c84a;font-weight:800;margin-left:3px}
+  .czCost{color:var(--gold);font-weight:800;margin-left:3px}
   @keyframes grPop{0%{transform:scale(.92);opacity:.4}60%{transform:scale(1.03)}100%{transform:scale(1);opacity:1}}
   /* 테스트 도감(폰 밖 우측 고정 패널) — 28종 등급별 카드. 탭=즉시 소환, 상단=랜덤 뽑기 */
   .gachaDex{position:fixed;top:50%;right:16px;transform:translateY(-50%);z-index:60;
@@ -1192,7 +1192,7 @@
   .msTitle{font-size:15px;font-weight:800;color:var(--neon);text-shadow:0 0 9px var(--neon-glow);letter-spacing:.3px}
   .msGrow{margin-left:auto;margin-right:8px;font-family:inherit;font-size:var(--fs-sm);font-weight:800;letter-spacing:.3px;cursor:pointer;
     color:var(--gold-lt);padding:5px 10px;border-radius:var(--r-md);background:linear-gradient(180deg,rgba(255,200,74,.16),rgba(120,80,10,.14));
-    border:1px solid rgba(246,200,74,.5);box-shadow:0 0 10px -4px rgba(246,200,74,.6)}
+    border:1px solid rgba(255,210,74,.5);box-shadow:0 0 10px -4px rgba(255,210,74,.6)}
   .msGrow:active{transform:translateY(1px)}
   /* 메타 성장(빌드) 화면 */
   .metaHead{display:flex;align-items:center;gap:10px;padding-bottom:9px;margin-bottom:10px;border-bottom:1px solid rgba(255,255,255,.07)}
@@ -1639,7 +1639,7 @@
       <div id="hudRwrap">
         <div id="hudR">
           <span class="res min"><svg class="ri" viewBox="0 0 24 24"><!-- 크레딧: 골드 코인 -->
-            <circle cx="12" cy="12" r="9" fill="#f6c84a" stroke="#ffeaa0" stroke-width="1.2"/>
+            <circle cx="12" cy="12" r="9" fill="#ffd24a" stroke="#ffe6a0" stroke-width="1.2"/>
             <circle cx="12" cy="12" r="6.6" fill="none" stroke="#b88a1e" stroke-width="1"/>
             <path d="M14.8 8.8A4.4 4.4 0 1 0 14.8 15.2" fill="none" stroke="#7a5a12" stroke-width="2.2" stroke-linecap="round"/>
           </svg><b id="hMin">0</b></span>
@@ -2639,7 +2639,7 @@ function coopBossDown(){ const cb=G.coopBoss; if(!cb||cb.dead) return; cb.dead=t
   addChat('', '👹 공용 보스 ['+cb.name+'] 처치! 기여 '+Math.round(share*100)+'% · +'+pts+' 포인트', '#ff8a9a', true);
   const nextLv=cb.lv+1;
   if(G._coopBossT) clearTimeout(G._coopBossT);
-  G._coopBossT=setTimeout(()=>{ if(G.phase==='playing') spawnCoopBoss(nextLv); }, 2500);   // 상시: 더 강한 보스 재등장
+  G._coopBossT=setTimeout(()=>{ if(G.phase==='playing'){ spawnCoopBoss(nextLv); if(typeof playSfxT==='function') playSfxT('boss',1500); } }, 2500);   // 상시: 더 강한 보스 재등장 + 등장음
   updateCoopBossBar(); }
 function updateCoopBossBar(){ const bar=document.getElementById('coopBossBar'); if(!bar) return;
   const cb=G.coopBoss; const show=(cb && !cb.dead && (G.tab==='Main'||G.bossOpen) && G.phase==='playing');
@@ -2648,7 +2648,10 @@ function updateCoopBossBar(){ const bar=document.getElementById('coopBossBar'); 
   const fill=document.getElementById('cbFill'); if(fill) fill.style.width=pct+'%';
   const nm=document.getElementById('cbName'); if(nm) nm.textContent=cb.name;
   const hp=document.getElementById('cbHp'); if(hp) hp.textContent=Math.ceil(cb.hp).toLocaleString()+' / '+cb.max.toLocaleString();
-  const ct=document.getElementById('cbContrib'); if(ct){ const me=G.myPlayer||1; const sh=Math.round(Math.min(1,(cb.contrib[me]||0)/cb.max)*100); ct.textContent='내 기여 '+sh+'%'; }
+  const ct=document.getElementById('cbContrib'); if(ct){ const me=G.myPlayer||1; const sh=Math.round(Math.min(1,(cb.contrib[me]||0)/cb.max)*100);
+    let top=null; for(const k in cb.contrib){ if(!top||cb.contrib[k]>cb.contrib[top]) top=k; }   // 기여 1위(멀티 식별)
+    const multi=G.activePlayers&&G.activePlayers.length>1 && top && +top!==me && cb.contrib[top]>0;
+    ct.textContent='내 기여 '+sh+'%'+(multi?(' · 1위 '+((G.playerNames&&G.playerNames[top])||('P'+top))+' '+Math.round(Math.min(1,cb.contrib[top]/cb.max)*100)+'%'):''); }
 }
 // ── 보스방 파견 (최대 2기, 지정 유닛만) ──
 const BOSS_DEPLOY_CAP=2;
@@ -2885,8 +2888,11 @@ const DPR=Math.min(devicePixelRatio||1,2);
 function setup(id){ const cv=document.getElementById(id),p=cv.parentElement;
   const w=p.offsetWidth,h=p.offsetHeight;
   const eff=DPR*((typeof G!=='undefined'&&G.opt&&G.opt.resScale)||1);   // 화질(해상도) 배율
-  cv.width=Math.max(1,Math.round(w*eff));cv.height=Math.max(1,Math.round(h*eff));
-  const ctx=cv.getContext('2d');ctx.setTransform(eff,0,0,eff,0,0); return {ctx,W:w,H:h}; }
+  const W=Math.max(1,Math.round(w*eff)), H=Math.max(1,Math.round(h*eff));
+  const ctx=cv.getContext('2d');
+  if(cv.width!==W||cv.height!==H){ cv.width=W; cv.height=H; }   // 크기 변할 때만 재할당
+  else { ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,cv.width,cv.height); }   // 같으면 클리어만(저비용)
+  ctx.setTransform(eff,0,0,eff,0,0); return {ctx,W:w,H:h}; }
 // SF 배경: 깊은 그라데이션 + 미세 격자(두 단계) + 코너 패널 마커 + 비네팅
 function bg(ctx,W,H,c1,c2){ const g=ctx.createRadialGradient(W/2,H*0.42,0,W/2,H*0.42,Math.max(W,H)*0.85);
   g.addColorStop(0,c1);g.addColorStop(1,c2);ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
@@ -3768,7 +3774,7 @@ function unitAI(dt){ const M=Math.min(GW,GH);
 // 전투 단계 시작(준비단계 통과 or 라운드 전환 공통)
 function beginActivePhase(){ G.roundPhase='active'; G.roundTime=mapCfg('roundTime',ROUND_TIME); G.spawnTimer=0; G.pendSpawn.length=0;
   if(typeof playSfx==='function') playSfx(isBossRound(G.round)?'boss':'round_start');   // 라운드/보스 시작음
-  if(isBossRound(G.round)){ G.toSpawn=0; spawnEnemy({boss:true}); }   // 보스 라운드: 보스 1마리만
+  if(isBossRound(G.round)){ G.toSpawn=0; spawnEnemy({boss:true}); if(typeof playSfxT==='function') playSfxT('boss',1500); }   // 보스 라운드: 보스 1마리만 + 등장음
   else { const epr=mapCfg('enemiesPerRound',ENEMIES_PER_ROUND); G.toSpawn=epr; G.specialAt=1+Math.floor(Math.random()*epr); } }  // (적 수-1) + 스페셜 1
 function step(dt){
   if(G.phase!=='playing') return;
@@ -4267,31 +4273,35 @@ function fireAttack(u,def,ux,uy,tp,eid,dmg){
 // ============================================================================
 // DOM 렌더 (유닛/건물)
 // ============================================================================
-function renderUnits(){ const v=document.getElementById('vMain');
-  v.querySelectorAll('.unit').forEach(n=>n.remove());
+const _uEls=new Map();   // uid -> {el,sig} — 유닛 DOM 캐시(매 프레임 위치만 갱신, 내용은 변할 때만 재구성)
+function renderUnits(){ const v=document.getElementById('vMain'); if(!v) return;
+  const live=new Set();
   for(const u of G.units){ if(u.atBoss) continue;   // 보스방 파견 유닛은 트랙에 표시 안 함
-    const def=U[u.id]; const r=unitRadius(u), box=Math.round(r*2);
-    const el=document.createElement('div'); el.className='unit'+(G.sel.includes(u.uid)?' sel':'');
-    el.style.left=(u.x*100)+'%'; el.style.top=(u.y*100)+'%'; el.dataset.uid=u.uid;
+    live.add(u.uid);
+    const def=U[u.id]; const r=unitRadius(u), box=Math.round(r*2), seld=G.sel.includes(u.uid);
+    let rec=_uEls.get(u.uid);
+    if(!rec || !rec.el.isConnected){ const el=document.createElement('div'); el.dataset.uid=u.uid; v.appendChild(el); rec={el:el, sig:null}; _uEls.set(u.uid, rec); }
+    const el=rec.el;
+    el.style.left=(u.x*100)+'%'; el.style.top=(u.y*100)+'%';   // 위치는 매 프레임(부드러운 이동)
+    const maxHp=u.maxHp||1, hpR=Math.max(0,Math.min(1,(u.hp!=null?u.hp:maxHp)/maxHp));
+    const maxSh=u.maxSh||0, shR=maxSh>0?Math.max(0,Math.min(1,(u.sh!=null?u.sh:maxSh)/maxSh)):0;
+    const sig=u.id+'|'+box+'|'+(seld?1:0)+'|'+(u.hero?(u.lv||1):0)+'|'+(seld?(Math.round(hpR*40)+','+Math.round(shR*40)):'');
+    if(sig===rec.sig) continue;   // 모양 그대로 → DOM 재구성 생략(리플로우 방지)
+    rec.sig=sig;
+    el.className='unit'+(seld?' sel':'');
     const star=u.hero?(' '+'★'.repeat(Math.min(u.lv||1,3))):'';
-    // 유닛별 벡터 아이콘 + 고유 네온 색
     const pad=Math.round(r*0.42);
-    // 선택 시 스타크래프트식 얇은 체력/실드 바
     let barH='';
-    if(G.sel.includes(u.uid)){
-      const maxHp=u.maxHp||1, hpR=Math.max(0,Math.min(1,(u.hp!=null?u.hp:maxHp)/maxHp));
-      const maxSh=u.maxSh||0, shR=maxSh>0?Math.max(0,Math.min(1,(u.sh!=null?u.sh:maxSh)/maxSh)):0;
-      const hpCol=hpBarColor(hpR);
+    if(seld){ const hpCol=hpBarColor(hpR);
       barH='<div class="uhp" style="width:'+box+'px">'
         +(maxSh>0?barHTML('ub uS',shR*100):'')
-        +barHTML('ub uH',hpR*100,hpCol)+'</div>';
-    }
+        +barHTML('ub uH',hpR*100,hpCol)+'</div>'; }
     const has3d=def.model3d;  // 3D 모델 유닛은 아이콘 비우고(투명) WebGL이 그 자리에 렌더
     const iconHTML=has3d?'':unitSVG(u.id);
-    const lblHTML = G.sel.includes(u.uid) ? '<div class="ulbl'+(u.hero?' hero':'')+'">'+gNameStar(u,def)+star+'</div>' : '';   // 이름은 선택(지정) 시에만 표시
+    const lblHTML = seld ? '<div class="ulbl'+(u.hero?' hero':'')+'">'+gNameStar(u,def)+star+'</div>' : '';   // 이름은 선택(지정) 시에만 표시
     el.innerHTML='<div class="ubox'+(u.hero?' hero':'')+(has3d?' model3d':'')+'" style="width:'+box+'px;height:'+box+'px;color:'+def.color+';padding:'+pad+'px">'+iconHTML+'</div>'+barH+lblHTML;
-    v.appendChild(el);
   }
+  for(const [uid,rec] of _uEls){ if(!live.has(uid)){ rec.el.remove(); _uEls.delete(uid); } }   // 죽은/파견된 유닛 정리
 }
 // 유닛 분리: 서로 겹치면 밀어냄(매 프레임).
 //  · 드래그 중인 유닛이 낀 쌍은 제외(옮기는 동안 다른 유닛 안 밀림)
@@ -4670,7 +4680,7 @@ function toggleMergeMode(el){ G.mergeMode=!G.mergeMode; el.classList.toggle('on'
 // 시계 유닛 + 시민 div를 1회 생성(탭 진입 시). 이후엔 위치만 갱신해서 부드럽게 이동.
 function buildClock(){ const v=document.getElementById('vUnit');
   v.querySelectorAll('.shopUnit,.citizen,.drawZone,.rateMini').forEach(n=>n.remove());
-  const coinSVG='<svg viewBox="0 0 24 24" width="10" height="10" style="flex:0 0 auto"><circle cx="12" cy="12" r="9" fill="#f6c84a" stroke="#ffeaa0" stroke-width="1.6"/><path d="M14.8 8.8A4.4 4.4 0 1 0 14.8 15.2" fill="none" stroke="#7a5a12" stroke-width="2.6" stroke-linecap="round"/></svg>';
+  const coinSVG='<svg viewBox="0 0 24 24" width="10" height="10" style="flex:0 0 auto"><circle cx="12" cy="12" r="9" fill="#ffd24a" stroke="#ffe6a0" stroke-width="1.6"/><path d="M14.8 8.8A4.4 4.4 0 1 0 14.8 15.2" fill="none" stroke="#7a5a12" stroke-width="2.6" stroke-linecap="round"/></svg>';
   // 뽑기 비콘 3종(단발/10연차/에너지) — 시민이 올라서면 해당 뽑기
   DRAW_BEACONS.forEach(b=>{ const dz=document.createElement('div'); dz.className='drawZone'+(beaconBadge(b.id)?' big':''); dz.id='drawZoneEl_'+b.id; dz.dataset.bid=b.id;
     dz.style.left=(b.x*100)+'%'; dz.style.top=(b.y*100)+'%';
@@ -6109,6 +6119,9 @@ function coopReconnect(){ if(!G || G.phase!=='playing' || !G.coopSlotInfo) retur
   setTimeout(()=>{ if(G && G.phase==='playing' && G.coopSlotInfo) startGameCoop(G.coopSlotInfo); }, 1500*_coopRetryN); }
 // 브라우저 네트워크 상태 — 끊김 알림 + 복귀 시 자동 재접속
 window.addEventListener('offline', ()=>{ if(typeof toast==='function') toast('⚠ 네트워크 연결이 끊겼습니다'); });
+document.addEventListener('visibilitychange', ()=>{   // 백그라운드 탭: 10Hz 송신 정지(대역·배터리 절약), 복귀 시 재개
+  if(document.hidden){ if(typeof G!=='undefined' && G && G.coopStateT){ clearInterval(G.coopStateT); G.coopStateT=null; } }
+  else if(typeof G!=='undefined' && G && !G.coopStateT && typeof coopActive==='function' && coopActive()){ G.coopStateT=setInterval(coopBroadcastState, 100); } });
 window.addEventListener('online', ()=>{ if(typeof toast==='function') toast('네트워크가 다시 연결되었습니다');
   if(G && G.phase==='playing' && G.coopSlotInfo && !coopActive()) coopReconnect();
   if(typeof RTROOM!=='undefined' && RTROOM.listChan===null && typeof rtRoomsActive==='function' && rtRoomsActive()) rtRoomsEnsure(); });
@@ -6145,7 +6158,7 @@ function coopSend(ev, payload){ if(!coopActive()) return;
 function onCoopSpeed(p){ if(!p||p.uid===myUid()) return; const num=G.coopUidToNum[p.uid]; const old=G.speedMul;
   if(num) G.coopSpeed[num]=p.mul;   // 상대 투표 기록
   computeSpeed();   // 효과 배속 = 전원 투표 최소
-  if(G.speedMul!==old) addChat('', '게임 배속이 '+old+'배 → '+G.speedMul+'배로 변경되었습니다.');
+  if(G.speedMul!==old){ addChat('', '게임 배속이 '+old+'배 → '+G.speedMul+'배로 변경되었습니다.'); if(typeof playSfxT==='function') playSfxT('speed',300); }
   if(typeof renderVote==='function') renderVote(); }
 function onCoopPlayerLeft(s){ if(!s||s.uid===myUid()) return; const num=G.coopUidToNum[s.uid]||s.num;
   addChat('', (s.nick||('P'+num))+'님이 게임에서 나갔습니다.');
@@ -6161,7 +6174,7 @@ function onCoopPlayerLeft(s){ if(!s||s.uid===myUid()) return; const num=G.coopUi
 function onCoopPause(p){ if(!p||p.uid===myUid()) return; if(G.paused===p.paused) return;
   G.paused=p.paused; const ga=document.getElementById('gameArea'); if(ga) ga.classList.toggle('gray', p.paused);
   addChat('', (p.nick||'상대')+'님이 일시정지를 '+(p.paused?'사용':'해제')+'하였습니다.'); updatePauseBtn(); }
-function onCoopChat(p){ if(!p||p.uid===myUid()) return; addChat(p.nick||'상대', p.text, p.color||'#7fc8ff'); }
+function onCoopChat(p){ if(!p||p.uid===myUid()) return; if(typeof playNotify==='function') playNotify(); addChat(p.nick||'상대', p.text, p.color||'#7fc8ff'); }
 function onCoopState(p){ if(!p||p.uid===myUid()) return; const num=G.coopUidToNum[p.uid]; if(!num) return;
   G.coopState[num]={ count:p.count||0, round:p.round||0 };
   const pf='r'+num+'_';   // 내 유닛/적 키와 충돌 방지(M3D 모델 추적용)
@@ -6295,7 +6308,7 @@ function rtRoomSync(){ if(!RTROOM.chan || !_lobbyRoom || !_lobbyRoom.real) retur
     mem.forEach((m,k)=>{ _lobbySlots[k]={ name:'P'+(k+1), label:m.nick, uid:m.uid, me:m.uid===myUid(), bot:false, ready:m.ready!==false, host:!!m.host }; });
     renderLobby(); updateLobbyStart();
     const now=mem.length;
-    if(before && now>before) addLobbyMsg('', (mem[now-1].nick||'플레이어')+'님이 입장하였습니다.');
+    if(before && now>before){ addLobbyMsg('', (mem[now-1].nick||'플레이어')+'님이 입장하였습니다.'); if(typeof playSfxT==='function') playSfxT('notify',400); }
     else if(before && now<before) addLobbyMsg('', '플레이어가 나갔습니다.');
     if(RTROOM.host && RTROOM.meta && RTROOM.meta.cur!==now){ RTROOM.meta.cur=now; rtRoomPublish(RTROOM.meta); }   // 목록 인원 갱신
   }catch(e){ console.warn('rtRoomSync', e); } }
