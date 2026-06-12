@@ -2143,8 +2143,8 @@ const U = {
   goliath: {name:'스트라이더', icon:'⚙️', cost:9,  dmg:30, up:30, hdmg:80, hup:80, range:.26, cd:30, splash:false, color:'#5ad1ff', size:21, wpn:'mech', atk:'missile', hp:125, armor:1, shield:0,   energy:0,   moveSpd:.11, airDmg:25, airUp:25, hairDmg:70, hairUp:70, model3d:'goliath'},
   archon:  {name:'보이드',   icon:'🔮', cost:10, dmg:30, up:20, hdmg:45, hup:55, range:.16, cd:28, splash:true,  color:'#ffc040', size:23, wpn:'pro',  atk:'psi',     hp:10,  armor:0, shield:350, shArmor:1, energy:0,   moveSpd:.13, model3d:'archon'},
   // 방어 구조물(디텍터) — 엑셀: 터렛 공격75 / 포토캐논 공격321. moveSpd:0(고정)
-  turret:  {name:'가드 타워',     icon:'🗼', cost:12, dmg:75,  up:20, hdmg:150, hup:40, range:.26, cd:34, splash:false, color:'#9fd6ff', size:11, wpn:'mech', atk:'missile', hp:200, armor:2, shield:0,   energy:0, moveSpd:0, detector:true, airDmg:75, airUp:20, hairDmg:150, hairUp:40, model3d:'turret'},
-  photon:  {name:'에너지 스파이어', icon:'🔵', cost:20, dmg:321, up:40, hdmg:500, hup:80, range:.24, cd:40, splash:false, color:'#62d0ff', size:12, wpn:'pro',  atk:'plasma',  hp:100, armor:0, shield:100, shArmor:1, energy:0, moveSpd:0, detector:true, model3d:'photon'},
+  turret:  {name:'가드 타워',     icon:'🗼', cost:100, dmg:75,  up:20, hdmg:150, hup:40, range:.26, cd:34, splash:false, color:'#9fd6ff', size:11, wpn:'mech', atk:'missile', hp:200, armor:2, shield:0,   energy:0, moveSpd:0, detector:true, airDmg:75, airUp:20, hairDmg:150, hairUp:40, model3d:'turret'},
+  photon:  {name:'에너지 스파이어', icon:'🔵', cost:200, dmg:321, up:40, hdmg:500, hup:80, range:.24, cd:40, splash:false, color:'#62d0ff', size:12, wpn:'pro',  atk:'plasma',  hp:100, armor:0, shield:100, shArmor:1, energy:0, moveSpd:0, detector:true, model3d:'photon'},
 };
 const HERO_STAT_MUL=2; // 영웅은 체력/보호막 2배(기본값, 조정 가능)
 // 유닛 인스턴스에 생존 스탯 초기화(현재=최대). 추후 전투형 맵에서 u.hp 등을 깎으면 됨.
