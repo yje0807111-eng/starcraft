@@ -4084,9 +4084,7 @@ function fireSentinelOrb(u,def,ux,uy,tp,eid,dmg){
   const c=def.color, mx=ux, my=uy-BODY_MUZZLE_UP;   // 몸통 코어
   for(let k=0;k<6;k++){ const a=Math.random()*6.28, r=10+Math.random()*8, sp=r*5;   // 충전: 바깥→코어로 모이는 에너지
     G.sparks.push({x:mx+Math.cos(a)*r,y:my+Math.sin(a)*r,vx:-Math.cos(a)*sp,vy:-Math.sin(a)*sp,life:0.15,len:2+Math.random()*2,color:k%2?c:'#d8c4ff',dk:8}); }
-  G.impacts.push({x:mx,y:my,life:1,r:12,color:c,glow:true,dk:9});   // 코어 충전 발광
-  G.impacts.push({x:mx,y:my,life:1,r:5,color:'#eadcff',dk:11});     // 발사 코어 섬광
-  G.muzzles.push({x:mx,y:my,life:1,color:c});
+  G.impacts.push({x:mx,y:my,life:1,r:4,color:'#eadcff',dk:12});   // 발사 코어 섬광(작게) — 몸통 원형 글로우·머즐 제거
   const spd=PROJ_SPD.plasma||240, md=Math.hypot(tp.x-mx,tp.y-my)||1, nx=(tp.x-mx)/md, ny=(tp.y-my)/md;
   G.shots.push({x:mx,y:my,tx:tp.x,ty:tp.y,vx:nx*spd,vy:ny*spd,t:0,dur:md/spd,color:c,boom:14,kind:'plasma',eid:eid,dmg:dmg,splash:!!def.splash,spd:spd,crackle:true});
 }
