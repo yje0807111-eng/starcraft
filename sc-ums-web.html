@@ -2461,6 +2461,9 @@ function tierStars(tier){ return UPGRADED_TIER[tier] ? '★' : ''; }
 function gNameStar(u, def){ const base=(u&&u.gname)||(def&&def.name)||''; const s=(u&&u.gtier)?tierStars(u.gtier):'';
   return s ? base+' '+s : base; }
 // 등급 라벨 HTML(등급색 칩). 가챠 유닛만, 아니면 빈 문자열
+const GACHA_TAGS = { matron_t:[{label:'슬로우',color:'#6fe0c0'}] };   // 유닛 부가 효과 배지(등급 배너 옆)
+function unitTagsHTML(u){ const ts=(u&&u.gid&&GACHA_TAGS[u.gid])||[]; if(!ts.length) return '';
+  return ts.map(function(t){ return '<span class="tierTag" style="margin-left:4px;color:'+t.color+';border-color:'+t.color+'55;background:'+t.color+'16;text-shadow:0 0 6px '+t.color+'66">'+t.label+'</span>'; }).join(''); }
 function tierLabelHTML(tier){ if(!tier||!GACHA_TIERS[tier]) return '';
   const c=TIER_COLOR[tier]||'#fff';
   return '<span class="tierTag" style="color:'+c+';border-color:'+c+'55;background:'+c+'16;text-shadow:0 0 6px '+c+'66">'+GACHA_TIERS[tier].name+'</span>'; }
@@ -4538,7 +4541,7 @@ function scStatBoxesHTML(u){ const def=U[u.id];
     +'<div class="atkPeek">기본 '+fmtStat(Math.max(0,p.total-p.up))+' + 업글 '+fmtStat(p.up)+'</div>'
     +'<div class="sv">'+fmtStat(p.total)+'</div><div class="sl '+(cls||'')+'">'+label+'</div></div>';
   let h=numBox('방어력',def.armor,'def');             // 방어력(파랑)
-  if(def.shield>0) h+=numBox('쉴드방어력',def.shArmor||0,'shd');  // 보호막(쉴드) 방어력(청록)
+  if((u.gid!=='matron_t') && ((u.maxSh!=null)?u.maxSh>0:def.shield>0)) h+=numBox('쉴드방어력',def.shArmor||0,'shd');  // 실드 있는 유닛만(매트론=실드 없음)
   const dp=unitDmgParts(u), ap=unitAirParts(u);
   if(ap){ h+=atkBox('지상공격력',dp,'atk'); h+=atkBox('공중공격력',ap,'atk'); }   // 지상/공중 분리 유닛(주황)
   else h+=atkBox(def.splash?'광역공격력':'공격력',dp,'atk');            // 단일 공격력(주황)
@@ -4597,7 +4600,7 @@ function refreshSelCard(){
     const job=UNIT_CLS[u.id]||'';
     portEl.innerHTML=unitPortraitHTML(u.gmodel||u.id)+(job?'<div class="portJob">'+job+'</div>':'');  // 초상화(가챠 전용 우선) + 직업 배지
     document.getElementById('uName').textContent=gNameStar(u,def)+(u.hero?' [영웅]':'');
-    typeEl.innerHTML=u.gtier?tierLabelHTML(u.gtier):'';   // 등급 라벨(등급색 칩) — 가챠 유닛만
+    typeEl.innerHTML=(u.gtier?tierLabelHTML(u.gtier):'')+unitTagsHTML(u);   // 등급 라벨 + 부가 효과(슬로우 등)
     hpEl.innerHTML=scHpHTML(u);
     grid.style.display='flex'; grid.innerHTML=scStatBoxesHTML(u); fitStatNumbers();
   } else { portEl.innerHTML='<svg viewBox="0 0 24 24" width="46" height="46"><circle cx="8" cy="9" r="4" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="16" cy="13" r="4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
