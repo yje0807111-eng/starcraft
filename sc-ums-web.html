@@ -1656,7 +1656,7 @@
     </div>
     <div id="zoneLabel">📍 내 디펜스 구역</div>
     <!-- 상시 공용 보스(협동) HP 바 — 메인 전투 화면 상단 -->
-    <div id="coopBossBar" class="hide" onclick="toggleBossArena()" title="공용 보스 토벌장 열기">
+    <div id="coopBossBar" class="hide" onclick="toggleBossArena()" title="공용 보스장 열기">
       <div class="cbMid">
         <div class="cbTop"><span class="cbName" id="cbName"></span><span class="cbContrib" id="cbContrib"></span></div>
         <div class="cbBarOuter"><div class="cbBarFill" id="cbFill"></div><span class="cbHpTxt" id="cbHp"></span></div>
@@ -1909,7 +1909,7 @@
               <button class="hbDeploy" id="bossPickBtn" onclick="armBossPick()">파견</button>
               <button class="hbRecall" onclick="recallFromBoss('all')">회수</button>
             </div>
-            <button class="hbOpen" id="bossViewBtn" onclick="toggleBossArena()">토벌장 보기</button>
+            <button class="hbOpen" id="bossViewBtn" onclick="toggleBossArena()">보스장 보기</button>
           </div>
         </div>
       </div>
@@ -2481,6 +2481,7 @@ function gachaRangeMul(u){ if(u&&u.gid==='phantom_t') return 1.8;   // 디토네
   if(u&&u.gid==='ranger_god') return 2.2;   // 레인저 갓: 장거리 저격
   if(u&&u.gid==='strider_god') return 1.8;   // 스트라이더 갓: 장거리 미사일 폭격
   if(u&&u.gid==='sentinel_god') return 1.3;   // 센티넬 갓: 중장거리 대구체
+  if(u&&u.gid==='reaper_god') return 1.3;     // 리퍼 갓: 중장거리 연사
   const b=gachaBase(u); return (b&&GACHA_RANGE_MUL[b])||1; }
 
 // ============================================================================
@@ -2521,7 +2522,7 @@ const META_BUILDS = {   // 가격: 포인트=공용 보스 전용(판당 ~수십
   team_credit:   { name:'전체 시작 크레딧',desc:'모든 플레이어 시작 크레딧 지급',start:4, rate:1.8, max:10, group:'team' },
   // 공용 보스(협동/솔로 상시 보스) — 활성화됨
   boss_hp_down:  { name:'보스 체력 감소', desc:'공용 보스 체력 -3%/Lv',      start:2, rate:1.7, max:10, group:'coop' },
-  boss_atk_up:   { name:'보스 기여딜 증가',desc:'토벌장 파견 유닛의 보스 데미지 +5%/Lv', start:2, rate:1.7, max:12, group:'coop' },
+  boss_atk_up:   { name:'보스 기여딜 증가',desc:'보스장 파견 유닛의 보스 데미지 +5%/Lv', start:2, rate:1.7, max:12, group:'coop' },
   boss_reward_up:{ name:'보스 보상 증가', desc:'공용 보스 처치 포인트 +10%/Lv', start:3, rate:1.8, max:10, group:'coop' },
 };
 // 다음 레벨 비용(최대치면 null). 현재 레벨 기준.
@@ -2822,7 +2823,7 @@ function drawBoss(dt){ const {ctx,W,H}=setup('cvBoss'); BAW=W;BAH=H; dt=dt||0;
   ctx.textAlign='left';
 }
 // ── 공용 보스 토벌장 팝업(HP바 클릭) — 맵 고정(드래그 없음) ──
-function updateBossViewBtn(){ const b=document.getElementById('bossViewBtn'); if(b){ b.textContent=G.bossOpen?'메인 화면 보기':'토벌장 보기'; b.classList.toggle('viewing', !!G.bossOpen); } }
+function updateBossViewBtn(){ const b=document.getElementById('bossViewBtn'); if(b){ b.textContent=G.bossOpen?'메인 화면 보기':'보스장 보기'; b.classList.toggle('viewing', !!G.bossOpen); } }
 // ── 토벌장 전용 이펙트 저장소 — 메인 트랙 이펙트와 완전 분리(두 화면이 서로 영향 없음) ──
 const _FX_KEYS=['shots','impacts','muzzles','sparks','beams','debris'];
 function _baFxStore(){ if(!G.baFx) G.baFx={shots:[],impacts:[],muzzles:[],sparks:[],beams:[],debris:[]}; return G.baFx; }
@@ -3947,6 +3948,8 @@ function advanceFx(dt){
       const dx=s.vt.x-s.x, dy=s.vt.y-s.y, d=Math.hypot(dx,dy)||1;
       if(d<=s.spd*dt+HIT_R){
         if(s.kind==='needle'){ for(let q=0;q<5;q++){ const a=Math.atan2(-dy,-dx)+(Math.random()-0.5)*1.5, sp2=60+Math.random()*120; G.sparks.push({x:s.vt.x,y:s.vt.y,vx:Math.cos(a)*sp2,vy:Math.sin(a)*sp2,life:0.4,len:2+Math.random()*3,color:q%2?'#d6ff7a':'#9fd356'}); } G.impacts.push({x:s.vt.x,y:s.vt.y,life:1,r:6,color:s.color}); }
+        else if(s.gboom){ striderGodBoom(s.vt.x,s.vt.y); }                      // 스트라이더 갓 소형 화염 폭발
+        else if(s.sboom){ sentinelGodBlast(s.vt.x,s.vt.y,s,null); }             // 센티넬 갓 대폭발(보스장은 연출만 — 내부 _baFire 가드)
         else G.impacts.push({x:s.vt.x,y:s.vt.y,life:1,r:s.boom||14,color:s.color});
         G.shots.splice(i,1); continue;
       }
@@ -4118,8 +4121,10 @@ function fireReaperGodNeedle(u,def,ux,uy,tp,eid,dmg){
   const mx=ux+j, my=uy-12;
   const md=Math.hypot(tp.x-mx,tp.y-my)||1, nx=(tp.x-mx)/md, ny=(tp.y-my)/md, spd=720;
   G.sparks.push({x:mx,y:my,vx:nx*90,vy:ny*90,life:0.08,len:3,color:'#d6ff7a'});   // 짧은 발사 스냅
-  G.shots.push({x:mx,y:my,tx:tp.x,ty:tp.y,vx:nx*spd,vy:ny*spd,t:0,dur:md/spd,color:c,boom:4,kind:'needle',
-    ang:Math.atan2(ny,nx),eid:eid,dmg:dmg,spd:spd,psn:Math.max(1,Math.round(dmg*0.7))});   // psn=스택당 틱 데미지
+  const _nd={x:mx,y:my,tx:tp.x,ty:tp.y,vx:nx*spd,vy:ny*spd,t:0,dur:md/spd,color:c,boom:4,kind:'needle',
+    ang:Math.atan2(ny,nx),dmg:dmg,spd:spd,psn:Math.max(1,Math.round(dmg*0.7))};   // psn=스택당 틱 데미지
+  if(eid!=null) _nd.eid=eid; else _nd.vt={x:tp.x,y:tp.y};   // 보스장·원격: 가상 목표
+  G.shots.push(_nd);
 }
 // 센티넬 갓: 코어에 크게 충전 → 느린 대형 에너지 구체 발사 → 명중 시 대광역 풀데미지 + 반경 내 감전 정지
 const SGOD_BLAST_R=0.13;   // 폭발 반경(보드 비율)
@@ -4131,12 +4136,14 @@ function fireSentinelGodOrb(u,def,ux,uy,tp,eid,dmg){
   G.impacts.push({x:mx,y:my,life:1,r:7,color:'#eadcff',dk:9});   // 코어 섬광(충전 완료)
   const spd=150, md=Math.hypot(tp.x-mx,tp.y-my)||1, nx=(tp.x-mx)/md, ny=(tp.y-my)/md;
   const tly=tp.y;   // 발사 시점 표적 위치(비행 중 사망 대비)
-  G.shots.push({x:mx,y:my,tx:tp.x,ty:tp.y,vx:nx*spd,vy:ny*spd,t:0,dur:9,color:c,kind:'plasma',orbR:9,
-    eid:eid,dmg:dmg,spd:spd,sboom:true,lkx:tp.x,lky:tly});
+  const _orb={x:mx,y:my,tx:tp.x,ty:tp.y,vx:nx*spd,vy:ny*spd,t:0,dur:9,color:c,kind:'plasma',orbR:9,
+    dmg:dmg,spd:spd,sboom:true,lkx:tp.x,lky:tly};
+  if(eid!=null) _orb.eid=eid; else _orb.vt={x:tp.x,y:tp.y};   // 보스장·원격: 가상 목표로 비행 후 폭발 연출
+  G.shots.push(_orb);
 }
 function sentinelGodBlast(x,y,sh,excl){   // 대광역 폭발 + 감전: 반경 내 전 적 풀데미지(직격 제외) + 정지
   const R=SGOD_BLAST_R*Math.min(GW,GH), r2=R*R, c=sh.color||'#b48bff';
-  for(const o of G.enemies){ const q=posAt(o.d,GW,GH); const qy=o.model3d?q.y-AIR_HIT_OFF:q.y;
+  if(!G._baFire) for(const o of G.enemies){ const q=posAt(o.d,GW,GH); const qy=o.model3d?q.y-AIR_HIT_OFF:q.y;
     const ax=q.x-x, ay=qy-y; if(ax*ax+ay*ay>r2) continue;
     if(o!==excl) hitEnemy(o,sh.dmg);
     o.stunT=Math.max(o.stunT||0, o.boss?0.5:SGOD_STUN);   // 감전 정지(보스 단축)
@@ -4428,6 +4435,20 @@ function fireThornQueen(u,def,ux,uy,tp,eid,dmg){
     G.sparks.push({x:ux+(Math.random()-0.5)*6,y:uy-backUp,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:0.14+Math.random()*0.16,len:3+Math.random()*4,color:k%2?'#d6ff7a':'#7fc23a'}); }
 }
 function fireAttack(u,def,ux,uy,tp,eid,dmg){
+  if(u.gid==='ranger_god'){ // 레인저 갓(보스장·원격): 5발 저격 볼리를 표적 지점 주변으로
+    for(let k=0;k<5;k++){ const tx=tp.x+(Math.random()-0.5)*26, ty=tp.y+(Math.random()-0.5)*18;
+      const dx=tx-ux, dy=ty-(uy-6), d=Math.hypot(dx,dy)||1, nx=dx/d, ny=dy/d, spd=PROJ_SPD.rifle||900;
+      G.muzzles.push({x:ux+nx*10,y:uy-6+ny*10,life:1,color:'#cfe8ff',r:2});
+      G.shots.push({x:ux+nx*10,y:uy-6+ny*10,tx:tx,ty:ty,vx:nx*spd,vy:ny*spd,t:0,dur:d/spd,color:'#eaf6ff',boom:7,kind:'sniper',ang:Math.atan2(ny,nx),spd:spd}); }
+    return; }
+  if(u.gid==='strider_god'){ // 스트라이더 갓(보스장·원격): 어깨 6발 폭격 볼리 → 표적 지점 낙하 폭발
+    for(let k=0;k<6;k++){ const side=(k%2)?1:-1, sx=ux+SHOULDER_SIDE*side, sy=uy-SHOULDER_UP;
+      const tx=tp.x+(Math.random()-0.5)*30, ty=tp.y+(Math.random()-0.5)*20;
+      const ivx=side*26+(Math.random()-0.5)*36, ivy=-(150+Math.random()*60);
+      G.shots.push({x:sx,y:sy,vx:ivx,vy:ivy,t:0,dur:9,color:def.color,boom:13,kind:'missile',
+        ang:Math.atan2(ivy,ivx),vt:{x:tx,y:ty},spd:300,turn:7,launchT:0.14+k*0.08,gboom:true}); }
+    spawnSmoke(ux-SHOULDER_SIDE,uy-SHOULDER_UP,0,-1); spawnSmoke(ux+SHOULDER_SIDE,uy-SHOULDER_UP,0,-1);
+    return; }
   if(u.gid==='phantom_t'){ fireDetonateNuke(u,def,ux,uy,tp,eid,dmg); return; }   // 디토네이터: 핵 투하(장거리 광역 한방)
   if(u.gid==='skyguard_t'){ fireTempestMissile(u,def,ux,uy,tp,eid,dmg); return; }   // 템페스트: 제트기 포격 — 얇은 고속 직선 미사일 1발
   if(u.gid==='skydancer_t'){ fireSkydancerBeam(u,def,ux,uy,tp); return; }   // 스카이댄서: 커세어식 원거리 에너지 빔(즉발)
@@ -5136,7 +5157,7 @@ function renderPlayers(){ const g=document.getElementById('plGrid'); g.innerHTML
     el.className='plbtn'+(present&&n===G.curPlayer&&!lock?' me':'')+(lock?' lock':'')+(!present?' off':'');   // 미입장=off
     el.style.setProperty('--pc', PLAYER_VIEW_COLORS[(n-1)%PLAYER_VIEW_COLORS.length]);
     const _bo=!lock && present && G.coopState && G.coopState[n] && G.coopState[n].bo;   // 상대가 토벌장 보는 중
-el.innerHTML='<div class="plnum">'+n+'P</div><div class="plst">'+(lock?(escHtml(myNick())+' 🔒'):(present?(escHtml(playerName(n))+(_bo?' <span title="토벌장 입장 중">👹</span>':'')):'빈 자리'))+'</div>';
+el.innerHTML='<div class="plnum">'+n+'P</div><div class="plst">'+(lock?(escHtml(myNick())+' 🔒'):(present?(escHtml(playerName(n))+(_bo?' <span title="보스장 입장 중">👹</span>':'')):'빈 자리'))+'</div>';
     if(!lock && present) el.onclick=()=>{ G.curPlayer=n; renderPlayers(); drawPlayer(); updateSpecLabel(); };   // 입장한 다른 플레이어만 관전 가능
     g.appendChild(el);
   } }
@@ -6466,7 +6487,7 @@ function onCoopState(p){ if(!p||p.uid===myUid()) return; const num=G.coopUidToNu
   // 상대 토벌장 파견 유닛 스냅(보간용 직전/현재) — 토벌장 화면에 함께 표시
   { const prevB=(G.coopBossU=G.coopBossU||{})[num];
     G.coopBossU[num]={ t:Date.now(), prev:prevB&&prevB.cur,
-      cur:(p.bu||[]).map(a=>({ gmodel:a[0], id:a[1], uid:'b'+num+'_'+a[2], bx:a[3], by:a[4], hero:!!a[5], fireSeq:a[6]||0, remote:true, pnum:num })) }; }
+      cur:(p.bu||[]).map(a=>({ gmodel:a[0], id:a[1], uid:'b'+num+'_'+a[2], bx:a[3], by:a[4], hero:!!a[5], fireSeq:a[6]||0, gid:a[7]||null, remote:true, pnum:num })) }; }
   // 보스 권위 동기화: 권위자(최저 번호)의 보스 상태로 수렴 — 레벨 다르면 교체, HP는 2% 이상 어긋날 때만 보정(잔떨림 방지)
   if(p.bs && num===coopAuthNum() && num!==(G.myPlayer||1)){ const b=p.bs;
     if(!G.coopBoss || G.coopBoss.lv!==b[2]){ if(typeof spawnCoopBoss==='function' && G.phase==='playing') spawnCoopBoss(b[2]); }
@@ -6481,7 +6502,7 @@ function coopBroadcastState(){ if(!coopActive()||G.phase!=='playing') return;
   const s=G.shots.map(x=>[+x.x.toFixed(1), +x.y.toFixed(1), +(x.vx||0).toFixed(1), +(x.vy||0).toFixed(1), x.kind, x.color]);
   const b=G.beams.map(x=>[+x.x1.toFixed(1), +x.y1.toFixed(1), +x.x2.toFixed(1), +x.y2.toFixed(1), x.color, x.w||2, +(x.life||0).toFixed(2)]);
   const bs=(coopAuthNum()===(G.myPlayer||1) && G.coopBoss)?[Math.round(G.coopBoss.hp), G.coopBoss.max, G.coopBoss.lv, G.coopBoss.dead?1:0]:0;   // 권위자만 보스 상태 동봉
-  const bu=G.units.filter(x=>x.atBoss).map(x=>[x.gmodel||x.id, x.id, x.uid, +(x.bx!=null?x.bx:0.5).toFixed(3), +(x.by!=null?x.by:0.54).toFixed(3), x.hero?1:0, x.fireSeq||0]);   // 내 토벌장 파견 유닛
+  const bu=G.units.filter(x=>x.atBoss).map(x=>[x.gmodel||x.id, x.id, x.uid, +(x.bx!=null?x.bx:0.5).toFixed(3), +(x.by!=null?x.by:0.54).toFixed(3), x.hero?1:0, x.fireSeq||0, x.gid||0]);   // 내 보스장 파견 유닛(gid 포함 — 초월·갓 이펙트 재생)
   const tb=_TEAM_IDS.map(id=>buildLevel(id));   // 내 전체 강화 레벨(팀 공유 — 최고 레벨 적용)
   coopSend('pstate', { count:G.enemies.length, round:G.round, u:u, e:e, s:s, b:b, atk:G.atkLv||{}, bs:bs, bu:bu, tb:tb, bo:G.bossOpen?1:0 }); }
 function specRemoteBoard(){ return (coopActive() && G.tab==='Players' && G.curPlayer!==(G.myPlayer||1) && G.coopBoard && G.coopBoard[G.curPlayer]) ? G.curPlayer : null; }
@@ -6741,9 +6762,9 @@ function updateHud(){
   updateMapName();
 }
 // 각 화면(맵) 이름 — 우측 상단 자원 아래 표시
-const MAP_NAMES={ Main:'용암 정거장', Unit:'유닛 생산고', Upgrade:'연구 시설', Players:'전장 관전', Boss:'공용 보스 토벌장' };
+const MAP_NAMES={ Main:'용암 정거장', Unit:'유닛 생산고', Upgrade:'연구 시설', Players:'전장 관전', Boss:'공용 보스장' };
 function updateMapName(){ const el=document.getElementById('mapName'); if(!el) return;
-  if(G.bossOpen){ const t2='👹 '+(MAP_NAMES.Boss||'공용 보스 토벌장'); if(el.textContent!==t2) el.textContent=t2; return; }   // 토벌장 진입 시 장소 이름 교체(MAP_NAMES 단일 출처)
+  if(G.bossOpen){ const t2='👹 '+(MAP_NAMES.Boss||'공용 보스장'); if(el.textContent!==t2) el.textContent=t2; return; }   // 토벌장 진입 시 장소 이름 교체(MAP_NAMES 단일 출처)
   const D=DIFFICULTY[G.difficulty], dtag=(D&&G.difficulty!=='normal')?(' · '+D.name):'';   // 노말 외에는 난이도 표시
   const txt = '◈ '+(MAP_NAMES[G.tab] || '')+dtag;   // 플레이어 관전도 통일된 고정 이름(관전 대상 무관)
   if(el.textContent!==txt) el.textContent=txt;
