@@ -4626,12 +4626,13 @@ function capSelTypes(uids){
   const groups={}, order=[];
   uids.forEach(uid=>{ const u=G.units.find(x=>x.uid===uid); if(!u||isBuilding(u.id)) return;   // 건물 제외
     const key=(u.gid||u.id)+'|'+(u.hero?1:0)+'|'+(u.lv||1);   // 선택 칩 분류와 동일 키(등급 다르면 다른 종류)
-    if(!groups[key]){ groups[key]={uids:[], cost:(U[u.id]?U[u.id].cost:0)}; order.push(key); }
+    if(!groups[key]){ groups[key]={uids:[], cost:(U[u.id]?U[u.id].cost:0),
+      tr:(u.gtier&&typeof GACHA_TIER_ORDER!=='undefined')?GACHA_TIER_ORDER.indexOf(u.gtier):-1}; order.push(key); }   // tr=등급 순위(높을수록 상위)
     groups[key].uids.push(uid);
   });
   let keep=order, msg='';
   if(order.length>MAX_SEL_TYPES){
-    keep=order.slice().sort((a,b)=> groups[b].uids.length-groups[a].uids.length || groups[b].cost-groups[a].cost)
+    keep=order.slice().sort((a,b)=> groups[b].uids.length-groups[a].uids.length || groups[b].tr-groups[a].tr || groups[b].cost-groups[a].cost)   // ①마릿수 ②등급 ③가격
               .slice(0,MAX_SEL_TYPES);
     msg=MAX_SEL_TYPES+'종류까지만 선택됩니다';
   }
