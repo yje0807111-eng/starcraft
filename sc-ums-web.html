@@ -4517,6 +4517,10 @@ function buildSelChips(){
     if(!groups[key]){ groups[key]={u:u,uids:[]}; order.push(key); }
     groups[key].uids.push(uid);
   });
+  // 칩 정렬: 선택 우선순위와 동일 — ①마릿수 많은 순 ②등급 높은 순 ③가격 높은 순 (왼쪽부터)
+  order.sort((a,b)=>{ const A=groups[a], B=groups[b];
+    const tr=g=>(g.u.gtier&&typeof GACHA_TIER_ORDER!=='undefined')?GACHA_TIER_ORDER.indexOf(g.u.gtier):-1;
+    return B.uids.length-A.uids.length || tr(B)-tr(A) || ((U[B.u.id]?U[B.u.id].cost:0)-(U[A.u.id]?U[A.u.id].cost:0)); });
   const chipsEl=document.getElementById('selChips'), singleEl=document.getElementById('selSingle'), allBtn=document.getElementById('selAllBtn');
   const sub=document.querySelector('#selMulti .selSub');
   if(order.length===1){   // ── 단일 종류: 칩 + 유닛별 HP + 전체선택 ──
