@@ -2467,8 +2467,8 @@ function tierLabelHTML(tier){ if(!tier||!GACHA_TIERS[tier]) return '';
 const GACHA_COST = 30;   // 1회 뽑기 크레딧 비용
 const RACER_CD = 12;     // 레이서 공격 쿨다운(프레임/60fps) = 5발/초. 데미지는 DPS 유지 위해 퍼샷 대폭 감소
 const FAST_CD = { racer:RACER_CD, machinegun:8 };   // gmodel별 초고속 발사 쿨다운(발칸=8프레임≈7.5발/초). 데미지는 DPS 유지로 퍼샷 감소
-const CD_OVR = { phantom_t:130, skyguard_t:60, skydancer_t:14 };   // gid별 쿨다운 오버라이드 — 디토네이터=느린 한방 / 템페스트=중속 단발 / 스카이댄서=연사
-const GDMG_OVR = { skyguard_t:{dmg:28,up:10}, skydancer_t:{dmg:7,up:3} };   // gid별 기본 공격 오버라이드 — 구조물 프록시(터렛75/포톤321)의 비정상 수치 교정(명시 dmg+cd → cd비례 보정 제외)
+const CD_OVR = { phantom_t:130, skyguard_t:60, skydancer_t:8 };   // gid별 쿨다운 오버라이드 — 디토네이터=느린 한방 / 템페스트=중속 단발 / 스카이댄서=초고속 연사
+const GDMG_OVR = { skyguard_t:{dmg:28,up:10}, skydancer_t:{dmg:4,up:2} };   // 스카이댄서=저공격력(좁은 광역 초고속으로 보완)   // gid별 기본 공격 오버라이드 — 구조물 프록시(터렛75/포톤321)의 비정상 수치 교정(명시 dmg+cd → cd비례 보정 제외)
 const AIR_FLOAT_GIDS = { skyguard_t:1, skydancer_t:1 };   // 비행체 gid(엔진 분사·부양 연출 대상)
 function cdOf(u,def){ return CD_OVR[u.gid]||FAST_CD[u.gmodel]||def.cd; }
 // 가챠 유닛 base(gid에서 등급접미사 제거) → 사거리 배율(기본 1). 근접형 유닛 사거리 단축
@@ -3882,7 +3882,8 @@ function step(dt){
         fireAttack(u,def,ux,uy,tp, tgt.eid, dmg);
       } else { // 즉발(빔/사이오닉): 즉시 데미지
         hitEnemy(tgt,dmg);
-        if(def.splash){ const r2=Math.pow(SPLASH_R*Math.min(GW,GH),2); for(const e of G.enemies){ if(e===tgt)continue; const p=posAt(e.d,GW,GH); const dx=p.x-tp.x,dy=p.y-tp.y; if(dx*dx+dy*dy<=r2) hitEnemy(e,dmg*SPLASH_RATIO); } }
+        const sR=(u.gid==='skydancer_t')?0.045:(def.splash?SPLASH_R:0);   // 스카이댄서=좁은 광역(에너지 수렴 범위)
+        if(sR){ const r2=Math.pow(sR*Math.min(GW,GH),2); const sRatio=(u.gid==='skydancer_t')?0.8:SPLASH_RATIO; for(const e of G.enemies){ if(e===tgt)continue; const p=posAt(e.d,GW,GH); const ey=(e.model3d?p.y-AIR_HIT_OFF:p.y); const dx=p.x-tp.x,dy=ey-tp.y; if(dx*dx+dy*dy<=r2) hitEnemy(e,dmg*sRatio); } }   // tp가 공중 보정된 만큼 비교 위치도 보정(좁은 반경에서 어긋남 방지)
         fireAttack(u,def,ux,uy,tp);
       }
       const cdv=cdOf(u,def)*(u.adr>0?0.5:1); u.cd=cdv; u.cdMax=cdv; u.atkT=0.6; } }  // 레이서·발칸=초고속 연사. 아드레날린 시 장전 0.5배. cdMax=장전 진행도 계산용
