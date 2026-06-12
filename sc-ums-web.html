@@ -1268,7 +1268,7 @@
   .ptBtn:disabled:not(.maxed) b{color:var(--txt-mute)}
   .ptBtn.maxed{color:#e9c98a;background:rgba(233,201,138,.08)}
   .ptEmpty{text-align:center;color:#7d8590;font-size:var(--fs-md);padding:18px}
-  .ppClose{width:100%;margin-top:12px}
+  .ppClose{width:100%;margin-top:12px;flex:0 0 auto;padding:10px}   /* cpCancel의 flex-basis 34% 상속 차단 — 세로 카드에서 거대해지는 것 방지 */
   .msUser{display:flex;align-items:center;gap:5px;font-size:var(--fs-sm);color:var(--txt-hud)}
   .msUser .ic{color:#7e8896}
   .msUser b{color:#e8eef5;font-weight:700;max-width:128px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
