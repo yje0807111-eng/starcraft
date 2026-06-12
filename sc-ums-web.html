@@ -2673,9 +2673,18 @@ function deployUnitToBoss(u){ if(!u||u.fixed||u.atBoss) return false;
   u.atBoss=true; u.bcd=0; u.moving=false; u.cmd='hold'; u.patrol=null; u.atkTarget=null; u.focusTarget=null;   // 트랙 상태 초기화
   G.sel=(G.sel||[]).filter(id=>id!==u.uid);   // 메인 선택에서 제외
   const k=bossDeployedCount();   // 이미 파견된 수(이번 포함) → 초기 진형 슬롯
-  u.bx=0.5 + (k-1 - (BOSS_DEPLOY_CAP-1)/2)*0.16; u.by=0.54; u.btx=null; u.bty=null;   // 아레나 좌표(플랫폼 내, 직접 이동 가능)
+  const sp=bossDeploySpot(G.myPlayer||1, k-1);   // 플레이어별 시계방향 슬롯(서로 안 겹침)
+  u.bx=sp.x; u.by=sp.y; u.btx=null; u.bty=null;   // 아레나 좌표(플랫폼 내, 직접 이동 가능)
   if(typeof playSfx==='function') playSfx('place_unit');
   toast('보스방에 파견 ('+k+'/'+BOSS_DEPLOY_CAP+')'); renderBossPanel(); return true; }
+// 플레이어별 파견 진입 위치 — 보스 중심 시계방향 8슬롯(P1=정면 아래, 번호 순서대로 45°씩), 플레이어끼리 안 겹침
+function bossDeploySpot(num, idx){ const B=bossWalkBounds();
+  const cx=0.5, cy=(B.top+B.bot)/2+0.03, rx=0.26, ry=0.15;
+  const ang=Math.PI/2 + (((num||1)-1)%8)*(Math.PI/4);
+  const a=ang + (idx-(BOSS_DEPLOY_CAP-1)/2)*0.34;   // 같은 플레이어 유닛은 슬롯 주변에 살짝 벌림
+  return { x:Math.max(B.lo,Math.min(B.hi, cx+Math.cos(a)*rx)),
+           y:Math.max(B.top,Math.min(B.bot, cy+Math.sin(a)*ry)) };
+}
 // 아레나 내 유닛 좌표(직접 이동값 우선, 없으면 진형)
 function bossUnitXY(u,i,n){ return (u.bx!=null)?{x:u.bx,y:u.by}:bossUnitPos(i,n); }
 // 토벌장에 표시할 전체 유닛 = 내 파견 + 다른 플레이어 파견(협동, 10Hz 스냅을 보간해 부드럽게)
