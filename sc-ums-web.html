@@ -2208,17 +2208,24 @@ const DRAW_BEACONS=[
   // 우측 줄: 에너지 뽑기 (좌측 유닛1회·고급1회 라인에 맞춤)
   {id:'energy10',x:.82, y:.50, name:'에너지 ×10', core:'10'},
   {id:'energy',  x:.82, y:.70, name:'에너지 1회', core:'⚡'},
+// 하단 줄: 방어 구조물 구매(터렛=좌, 포토캐논=우) — 메인 맵 고정 자리에 배치
+{id:'buyTurret', x:.38, y:.77, name:'가드 타워', core:'🗼'},
+{id:'buyPhoton', x:.62, y:.77, name:'스파이어', core:'◉'},
 ];
 // 비콘별 색 테마(인라인 CSS 변수로 기존 .drawZone 스타일 재사용). 유닛 1·10회=기본 빨강.
 const BEACON_THEME={   // 디자인 토큰과 통일: 유닛=네온 레드(기본), 고급=골드(재화/희귀), 에너지=HUD 시안(E 재화색)
   premium: {'--neon':'#ffd24a','--neon-soft':'rgba(255,210,74,.55)','--neon-glow':'rgba(255,210,74,.42)'},
   energy:  {'--neon':'#00e5ff','--neon-soft':'rgba(0,229,255,.5)','--neon-glow':'rgba(0,229,255,.38)'},
   energy10:{'--neon':'#00e5ff','--neon-soft':'rgba(0,229,255,.5)','--neon-glow':'rgba(0,229,255,.38)'},
+buyTurret:{'--neon':'#9fd6ff','--neon-soft':'rgba(159,214,255,.5)','--neon-glow':'rgba(159,214,255,.38)'},
+buyPhoton:{'--neon':'#62d0ff','--neon-soft':'rgba(98,208,255,.5)','--neon-glow':'rgba(98,208,255,.38)'},
 };
 function beaconCost(id){ return id==='pull10'?PULL10_COST : id==='premium'?PREMIUM_COST
-  : id==='energy'?mapCfg('energyDrawCost',ENERGY_DRAW_COST) : id==='energy10'?ENERGY10_COST : mapCfg('gachaCost',GACHA_COST); }
+  : id==='energy'?mapCfg('energyDrawCost',ENERGY_DRAW_COST) : id==='energy10'?ENERGY10_COST
+  : id==='buyTurret'?U.turret.cost : id==='buyPhoton'?U.photon.cost : mapCfg('gachaCost',GACHA_COST); }
 function runBeacon(id){ if(id==='pull10') return drawGacha10(); if(id==='premium') return drawGachaPremium();
-  if(id==='energy') return energyDraw(); if(id==='energy10') return energyDraw10(); return drawGacha(); }
+  if(id==='energy') return energyDraw(); if(id==='energy10') return energyDraw10();
+  if(id==='buyTurret') return buyUnit('turret'); if(id==='buyPhoton') return buyUnit('photon'); return drawGacha(); }
 function nearBeacon(b,x,y,mult){ if(!GW||!GH) return false; return Math.hypot((b.x-x)*GW,(b.y-y)*GH) < Math.min(GW,GH)*(mult||0.085); }
 function beaconUnder(x,y,mult){ for(const b of DRAW_BEACONS){ if(nearBeacon(b,x,y,mult)) return b; } return null; }
 function nearDrawZone(x,y,mult){ return !!beaconUnder(x,y,mult); }   // 하위호환: 아무 비콘이나 근처면 true
@@ -2227,8 +2234,11 @@ const BEACON_ICON={
   unit:'<path d="M12 3.2a3.1 3.1 0 1 1 0 6.2 3.1 3.1 0 0 1 0-6.2zM5.4 20.5c0-3.7 3-6.2 6.6-6.2s6.6 2.5 6.6 6.2z" fill="currentColor"/>',
   premium:'<path d="M12 1.8l2.5 6.6 6.7.3-5.2 4.2 1.8 6.5L12 16.1l-5.6 3.3 1.8-6.5L3 8.7l6.7-.3z" fill="currentColor"/>',
   energy:'<path d="M13.4 2L4.5 13.4h5.2L8.6 22l9-11.7h-5.4z" fill="currentColor"/>',
+tower:'<path d="M9 3h6v3l-1.5 1v6.5h2.5L18 21H6l2-7.5h2.5V7L9 6z" fill="currentColor"/>',
+spire:'<path d="M12 2.6a4.4 4.4 0 1 1 0 8.8 4.4 4.4 0 0 1 0-8.8zM8.5 13h7L17 21H7z" fill="currentColor"/>',
 };
-function beaconIcon(id){ if(id==='premium') return BEACON_ICON.premium; if(id==='energy'||id==='energy10') return BEACON_ICON.energy; return BEACON_ICON.unit; }
+function beaconIcon(id){ if(id==='premium') return BEACON_ICON.premium; if(id==='energy'||id==='energy10') return BEACON_ICON.energy;
+if(id==='buyTurret') return BEACON_ICON.tower; if(id==='buyPhoton') return BEACON_ICON.spire; return BEACON_ICON.unit; }
 function beaconBadge(id){ return (id==='pull10'||id==='energy10')?'×10':''; }
 // 고정 방어 구조물 자리(터렛=모서리, 포토캐논=변 중앙). 살 때마다 다음 빈 자리에 하나씩(잠금 해제).
 const FIXED_SLOTS={
@@ -2512,6 +2522,7 @@ const META_BUILDS = {   // 가격: 포인트=공용 보스 전용(판당 ~수십
   start_unit:    { name:'시작 유닛',   desc:'시작 시 기본 유닛 지급',        start:3, rate:1.8, max:8,  group:'util' },
   guaranteed:    { name:'확정 뽑기권', desc:'유닛 확정 뽑기권 지급',         start:4, rate:1.8, max:8,  group:'util' },
   sell_return:   { name:'판매 회수율', desc:'유닛 판매 회수 비용 +5%/Lv',     start:2, rate:1.7, max:10, group:'util' },
+start_turret:  { name:'시작 포탑',   desc:'시작 시 가드 타워 1기 배치',      start:12, rate:2.0, max:1, group:'util' },
   // 강화(전투력) — 개인 적용
   enemy_hp_down: { name:'적 체력 감소', desc:'내 트랙 적 체력 -%',          start:4, rate:1.8, max:10, group:'power' },
   enemy_def_down:{ name:'적 방어 감소', desc:'내 트랙 적 방어력 -%',         start:4, rate:1.8, max:10, group:'power' },
@@ -2563,6 +2574,7 @@ function metaBonus(){ const L=id=>buildLevel(id), T=id=>teamLevel(id);
     startCredit: L('start_credit')*20 + T('team_credit')*25,
     startEnergy: L('start_energy')*10,
     startUnits:  L('start_unit'),
+  startTurret: L('start_turret'),
     guaranteed:  L('guaranteed'),
     luck:        L('gacha_luck'),
   };
@@ -6354,6 +6366,8 @@ function startGameNow(activePlayers, myNum, names){
   if(mapCfg('coopBoss',true)) spawnCoopBoss(1);            // 공용 보스(맵 설정으로 켜고 끔)
   for(let i=0;i<G.metaB.startUnits;i++){ const ctr=trackCenter(); const pool=gachaUnitsOfTier('common');
     spawnGachaUnit(pool[Math.floor(Math.random()*pool.length)].id, ctr.x+(Math.random()-.5)*.1, ctr.y+(Math.random()-.5)*.1); }  // 시작 유닛 지급
+  if(G.metaB.startTurret){ const tp=FIXED_SLOTS.turret[0];   // 메타: 시작 포탑(가드 타워 1기 무료 배치)
+    G.units.push(initUnitStats({uid:G.idSeq++, id:'turret', hero:false, lv:1, x:tp.x, y:tp.y, cd:0, fixed:true})); }
   initPlayerSim();         // 다른 플레이어 트랙 적 누적 시뮬 초기화
   _leaveT=20+Math.random()*20;
   document.getElementById('ov').classList.add('hide');
