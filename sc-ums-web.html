@@ -3043,7 +3043,7 @@ function spawnSparks(mx,my,nx,ny,col){
 function spawnSmoke(mx,my,nx,ny){
   for(let k=0;k<3;k++){ const ang=Math.atan2(ny,nx)+Math.PI+(Math.random()-0.5)*1.1, sp=14+Math.random()*26;
     const sh=k%2; // 짙은 코어 + 옅은 가장자리 두 톤
-    G.sparks.push({x:mx+(Math.random()-0.5)*5,y:my+(Math.random()-0.5)*4,vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp-34,life:0.8,smoke:true,r0:3.5+Math.random()*3,color:sh?'#5a5a66':'#787884',dk:2.4,fr:0.95}); } // 모델 위로 더 높이·크게 피어오름짙은 회색 연기(추가 축소)
+    G.sparks.push({x:mx+(Math.random()-0.5)*5,y:my+(Math.random()-0.5)*4,vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp-34,life:0.8,smoke:true,r0:3+Math.random()*2.5,color:sh?'#5a5a66':'#787884',dk:2.4,fr:0.95}); } // 모델 위로 높이 피어오름(옅게)짙은 회색 연기(추가 축소)
 }
 function tilePattern(ctx, img, cur, tilePx){ if(cur) return cur;
   if(!img.complete || !img.naturalWidth) return null;
@@ -3220,7 +3220,7 @@ function drawMain(cvId){ const {ctx,W,H}=setup(cvId||'cvMain'); GW=W;GH=H;
   ctx.restore();
   // 발사 연기(노멀 블렌딩 — 짙은 회색 구름이 피어오르며 커짐)
   for(const s of G.sparks){ if(!s.smoke) continue; const a=Math.max(0,s.life);
-    ctx.globalAlpha=a*0.6; ctx.fillStyle=s.color; const rr=(s.r0||4)*(1+(1-a)*2.6);
+    ctx.globalAlpha=a*0.38; ctx.fillStyle=s.color; const rr=(s.r0||4)*(1+(1-a)*2.6);
     ctx.beginPath();ctx.arc(s.x,s.y,rr,0,6.28);ctx.fill(); }
   ctx.globalAlpha=1;
   } // /fxLite — 전투 이펙트 생략
@@ -3417,16 +3417,16 @@ function drawBeacon(ctx,W,H){ const r=mergeRect(W,H), cx=r.x+r.w/2, cy=r.y+r.h/2
   // 바닥 발광 구역(사각, 은은) — '여기에 유닛을 모아라' 영역
   const g=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.max(r.w,r.h)*0.62);
   g.addColorStop(0,'rgba(255,80,80,.12)'); g.addColorStop(0.6,'rgba(230,60,60,.05)'); g.addColorStop(1,'rgba(200,50,50,0)');
-  ctx.fillStyle=g; rRpath(ctx,r.x,r.y,r.w,r.h,rad); ctx.fill();
+  ctx.fillStyle=g; ctx.beginPath(); rRpath(ctx,r.x,r.y,r.w,r.h,rad); ctx.fill();
   // 점선 사각 경계 1개(정적 — 깜빡임 없음)
   ctx.strokeStyle='rgba(255,95,95,.5)'; ctx.lineWidth=1.5;
-  ctx.setLineDash([6,5]); rRpath(ctx,r.x,r.y,r.w,r.h,rad); ctx.stroke();
+  ctx.setLineDash([6,5]); ctx.beginPath(); rRpath(ctx,r.x,r.y,r.w,r.h,rad); ctx.stroke();
   ctx.setLineDash([]);
   ctx.restore();
   // 3D 비콘이 아직이면(로드 전) 중앙에 작은 절차적 비콘 폴백(사각, 1개)
   if(!(window.M3D && M3D.beaconReady && M3D.beaconReady())){
     ctx.save(); ctx.globalCompositeOperation='lighter';
-    const ins=Math.min(r.w,r.h)*0.3; ctx.strokeStyle='rgba(255,110,110,.4)'; ctx.lineWidth=2; rRpath(ctx,r.x+ins,r.y+ins,r.w-2*ins,r.h-2*ins,rad*0.6); ctx.stroke();
+    const ins=Math.min(r.w,r.h)*0.3; ctx.strokeStyle='rgba(255,110,110,.4)'; ctx.lineWidth=2; ctx.beginPath(); rRpath(ctx,r.x+ins,r.y+ins,r.w-2*ins,r.h-2*ins,rad*0.6); ctx.stroke();
     ctx.restore();
   }
 }
