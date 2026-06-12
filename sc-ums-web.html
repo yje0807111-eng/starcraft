@@ -2479,7 +2479,7 @@ function gachaBase(u){ return (u&&u.gid) ? u.gid.replace(/_(c|r|e|u|l|t|god)$/,'
 const GACHA_RANGE_MUL = { void:0.6, snapper:0.6, machinegun:0.65, blade:0.6, thornqueen:1.15, matron:0.65 };   // 매트론=근접(팔 휘두름)   // 발칸=근거리 / 워든=근접 / 베놈퀸=약간 장거리
 function gachaRangeMul(u){ if(u&&u.gid==='phantom_t') return 1.8;   // 디토네이터: 장거리 포격(에픽·유니크 팬텀과 무관)
   if(u&&u.gid==='ranger_god') return 2.2;   // 레인저 갓: 장거리 저격
-  if(u&&u.gid==='strider_god') return 1.6;   // 스트라이더 갓: 장거리 미사일 폭격
+  if(u&&u.gid==='strider_god') return 1.8;   // 스트라이더 갓: 장거리 미사일 폭격
   const b=gachaBase(u); return (b&&GACHA_RANGE_MUL[b])||1; }
 
 // ============================================================================
@@ -3947,6 +3947,7 @@ function advanceFx(dt){
     } else if(s.eid!=null){ // 유도 발사체: 대상 적을 끝까지 추적 → 명중 시 데미지
       const e=G.enemies.find(x=>x.eid===s.eid);
       if(e){ const p=posAt(e.d,GW,GH); if(e.model3d) p.y-=AIR_HIT_OFF;  // 적의 현재 위치(공중 보정)
+        if(s.gboom){ s.lkx=p.x; s.lky=p.y; }   // 마지막 표적 위치 기억(사망 시 그 자리에서 폭파)
         const dx=p.x-s.x, dy=p.y-s.y, d=Math.hypot(dx,dy)||1;
         if(d<=s.spd*dt+HIT_R){ // 명중
           hitEnemy(e, s.dmg);
@@ -3967,6 +3968,17 @@ function advanceFx(dt){
           let nvx=cdx+(tdx-cdx)*bl, nvy=cdy+(tdy-cdy)*bl, nl=Math.hypot(nvx,nvy)||1; s.vx=nvx/nl*s.spd; s.vy=nvy/nl*s.spd;
         } else { s.vx=adx/ad*s.spd; s.vy=ady/ad*s.spd; }
         s.x+=s.vx*dt; s.y+=s.vy*dt;  // 조준점 쪽으로 유도
+      } else if(s.gboom && s.lkx!=null){ // 스트라이더 갓: 표적 사망 → 죽은 자리로 계속 유도 후 폭파(통과 방지)
+        const dx=s.lkx-s.x, dy=s.lky-s.y, d=Math.hypot(dx,dy)||1;
+        if(d<=s.spd*dt+HIT_R){
+          striderGodBoom(s.lkx,s.lky);
+          const r2=Math.pow((s.splashR||SPLASH_R)*Math.min(GW,GH),2);   // 죽은 자리 폭발도 주변 스플래시 적용
+          for(const o of G.enemies){ const q=posAt(o.d,GW,GH); const qy=o.model3d?q.y-AIR_HIT_OFF:q.y;
+            const ax=q.x-s.lkx, ay=qy-s.lky; if(ax*ax+ay*ay<=r2) hitEnemy(o,s.dmg*SPLASH_RATIO); }
+          G.shots.splice(i,1); continue; }
+        const sp=Math.hypot(s.vx,s.vy)||s.spd, cdx=s.vx/sp, cdy=s.vy/sp, bl=Math.min(1,dt*(s.turn||8));
+        let nvx=cdx+(dx/d-cdx)*bl, nvy=cdy+(dy/d-cdy)*bl, nl=Math.hypot(nvx,nvy)||1; s.vx=nvx/nl*s.spd; s.vy=nvy/nl*s.spd;
+        s.x+=s.vx*dt; s.y+=s.vy*dt;
       } else { s.x+=s.vx*dt; s.y+=s.vy*dt; s.miss=(s.miss||0)+dt; if(s.miss>0.6){ G.shots.splice(i,1); continue; } } // 대상 소멸 → 잠시 직진 후 소멸
     } else { // 비유도(예비)
       s.x+=s.vx*dt; s.y+=s.vy*dt; s.t+=dt;
@@ -4180,10 +4192,11 @@ function fireStriderGodBarrage(u,def,ux,uy,dmg){
   const tgts=inR.slice(0,SHOTS);
   for(let k=0;k<SHOTS;k++){ const t=tgts[k%tgts.length], side=(k%2)?1:-1;
     const sx=ux+SHOULDER_SIDE*side, sy=uy-SHOULDER_UP;
+    const tq=posAt(t.e.d,GW,GH), tly=t.e.model3d?tq.y-AIR_HIT_OFF:tq.y;   // 발사 시점 표적 위치(상승 중 표적 사망 대비)
     const ivx=side*26+(Math.random()-0.5)*36, ivy=-(150+Math.random()*60);   // 위로 쏘아 올림 → 감속 후 유도 낙하
     G.shots.push({x:sx,y:sy,vx:ivx,vy:ivy,t:0,dur:9,color:def.color,boom:13,kind:'missile',
       ang:Math.atan2(ivy,ivx),eid:t.e.eid,dmg:dmg,spd:300,turn:7,launchT:0.14+k*0.08,
-      gboom:true,splash:true,splashR:0.055}); }
+      gboom:true,splash:true,splashR:0.055,lkx:tq.x,lky:tly}); }
   spawnSmoke(ux-SHOULDER_SIDE,uy-SHOULDER_UP,0,-1); spawnSmoke(ux+SHOULDER_SIDE,uy-SHOULDER_UP,0,-1);   // 어깨별 발사 연기(볼리당 1회)
 }
 function striderGodBoom(x,y){   // 소형 화염 폭발(미사일 1발) — 디토네이터 핵보다 한참 작게
