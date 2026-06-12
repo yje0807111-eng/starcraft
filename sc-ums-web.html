@@ -4116,7 +4116,6 @@ function emitVulcanSpray(u, ux, uy, tx, ty){
 function fireTempestMissile(u,def,ux,uy,tp,eid,dmg){
   const sy=uy-18;   // 높은 부양 고려(기체 높이에서 발사)
   const dx=tp.x-ux, dy=tp.y-sy, d=Math.hypot(dx,dy)||1, nx=dx/d, ny=dy/d;
-  G.muzzles.push({x:ux+nx*12, y:sy+ny*12, life:1, color:'#cfe8ff', r:4});   // 발사 섬광(작게)
   G.shots.push({x:ux+nx*14, y:sy+ny*14, tx:tp.x, ty:tp.y, vx:nx*1150, vy:ny*1150, t:0, dur:d/1150,
     kind:'jetmsl', color:'#dff0ff', eid:eid, dmg:dmg, splash:!!def.splash, spd:1150, boom:11});   // 유도지만 초고속이라 사실상 직선
 }
@@ -6894,8 +6893,8 @@ function drawFx(){ const {ctx,W,H}=setup('cvFx');  // setup이 캔버스 크기 
   ctx.save(); ctx.globalCompositeOperation='lighter';
   if(!fxOff()) for(const s of G.shots){ ctx.fillStyle=s.color; ctx.strokeStyle=s.color;   // 이펙트 끔: 발사체도 생략 (유닛 축소에 맞춰 ~0.82 작게)
     if(s.kind==='jetmsl'){ const m2=Math.hypot(s.vx,s.vy)||1, jx=s.vx/m2, jy=s.vy/m2;
-      ctx.globalAlpha=.4; ctx.strokeStyle='#9fc8ff'; ctx.lineWidth=1.3; ctx.beginPath(); ctx.moveTo(s.x-jx*17,s.y-jy*17); ctx.lineTo(s.x-jx*5,s.y-jy*5); ctx.stroke();   // 배기 꼬리
-      ctx.globalAlpha=1; ctx.strokeStyle='#eef6ff'; ctx.lineWidth=2.1; ctx.beginPath(); ctx.moveTo(s.x-jx*5,s.y-jy*5); ctx.lineTo(s.x+jx*3,s.y+jy*3); ctx.stroke();   // 얇은 탄체
+      ctx.globalAlpha=.35; ctx.strokeStyle='#9fc8ff'; ctx.lineWidth=0.9; ctx.beginPath(); ctx.moveTo(s.x-jx*18,s.y-jy*18); ctx.lineTo(s.x-jx*5,s.y-jy*5); ctx.stroke();   // 배기 꼬리
+      ctx.globalAlpha=1; ctx.strokeStyle='#eef6ff'; ctx.lineWidth=1.2; ctx.beginPath(); ctx.moveTo(s.x-jx*5,s.y-jy*5); ctx.lineTo(s.x+jx*4,s.y+jy*4); ctx.stroke();   // 얇은 탄체
       ctx.strokeStyle=s.color;
     } else if(s.kind==='nukefall'){ const tl=22;
       ctx.globalAlpha=.5; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(s.x,s.y-tl); ctx.lineTo(s.x,s.y); ctx.stroke();
