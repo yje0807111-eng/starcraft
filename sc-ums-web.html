@@ -2472,7 +2472,10 @@ const GACHA_COST = 30;   // 1회 뽑기 크레딧 비용
 const RACER_CD = 12;     // 레이서 공격 쿨다운(프레임/60fps) = 5발/초. 데미지는 DPS 유지 위해 퍼샷 대폭 감소
 const FAST_CD = { racer:RACER_CD, machinegun:8 };   // gmodel별 초고속 발사 쿨다운(발칸=8프레임≈7.5발/초). 데미지는 DPS 유지로 퍼샷 감소
 const CD_OVR = { phantom_t:130, skyguard_t:60, skydancer_t:8, ranger_god:78, strider_god:90, sentinel_god:150, reaper_god:6 };   // 센티넬 갓: 초저속 한방   // gid별 쿨다운 오버라이드 — 디토네이터=느린 한방 / 템페스트=중속 단발 / 스카이댄서=초고속 연사
-const GDMG_OVR = { skyguard_t:{dmg:28,up:10}, skydancer_t:{dmg:4,up:2}, ranger_god:{dmg:16,up:7}, strider_god:{dmg:12,up:5}, sentinel_god:{dmg:50,up:20}, reaper_god:{dmg:3,up:1} };   // 센티넬 갓: 광역 풀데미지 한방   // 스트라이더 갓: 발당 중간 데미지(볼리 6발×, 소광역 스플래시 별도)   // 레인저 갓: 발당 고정 고데미지(볼리 5발×, cd비례 보정 제외)   // 스카이댄서=저공격력(좁은 광역 초고속으로 보완)   // gid별 기본 공격 오버라이드 — 구조물 프록시(터렛75/포톤321)의 비정상 수치 교정(명시 dmg+cd → cd비례 보정 제외)
+const GDMG_OVR = { skyguard_t:{dmg:28,up:12}, skydancer_t:{dmg:4,up:2}, ranger_god:{dmg:16,up:5}, strider_god:{dmg:12,up:4}, sentinel_god:{dmg:50,up:20}, reaper_god:{dmg:3,up:1} };
+// 업글 밸런스 원칙: 발수·공속 정규화 — 업글당 DPS 증가가 유닛 간 비슷해지도록 up을 조정.
+// 느린 한방(센티넬 20, 템페스트 12)=업글 표시값 큼 / 초고속 연사(리퍼 1, 스카이댄서 2)=작음 /
+// 다발사격(레인저 5, 스트라이더 4)=발수만큼 증폭되므로 낮게. 오버라이드 없는 유닛은 cd 비례 보정이 자동 정규화.   // 센티넬 갓: 광역 풀데미지 한방   // 스트라이더 갓: 발당 중간 데미지(볼리 6발×, 소광역 스플래시 별도)   // 레인저 갓: 발당 고정 고데미지(볼리 5발×, cd비례 보정 제외)   // 스카이댄서=저공격력(좁은 광역 초고속으로 보완)   // gid별 기본 공격 오버라이드 — 구조물 프록시(터렛75/포톤321)의 비정상 수치 교정(명시 dmg+cd → cd비례 보정 제외)
 const AIR_FLOAT_GIDS = { skyguard_t:1, skydancer_t:1 };   // 비행체 gid(엔진 분사·부양 연출 대상)
 function cdOf(u,def){ return CD_OVR[u.gid]||FAST_CD[u.gmodel]||def.cd; }
 // 가챠 유닛 base(gid에서 등급접미사 제거) → 사거리 배율(기본 1). 근접형 유닛 사거리 단축
