@@ -2461,7 +2461,7 @@ function tierStars(tier){ return UPGRADED_TIER[tier] ? '★' : ''; }
 function gNameStar(u, def){ const base=(u&&u.gname)||(def&&def.name)||''; const s=(u&&u.gtier)?tierStars(u.gtier):'';
   return s ? base+' '+s : base; }
 // 등급 라벨 HTML(등급색 칩). 가챠 유닛만, 아니면 빈 문자열
-const GACHA_TAGS = { matron_t:[{label:'슬로우',color:'#6fe0c0'}], sentinel_god:[{label:'감전',color:'#b48bff'}] };   // 유닛 부가 효과 배지(등급 배너 옆)
+const GACHA_TAGS = { matron_t:[{label:'슬로우',color:'#6fe0c0'}], sentinel_god:[{label:'감전',color:'#b48bff'}], reaper_god:[{label:'맹독',color:'#9fd356'}] };   // 유닛 부가 효과 배지(등급 배너 옆)
 function unitTagsHTML(u){ const ts=(u&&u.gid&&GACHA_TAGS[u.gid])||[]; if(!ts.length) return '';
   return ts.map(function(t){ return '<span class="tierTag" style="margin-left:4px;color:'+t.color+';border-color:'+t.color+'55;background:'+t.color+'16;text-shadow:0 0 6px '+t.color+'66">'+t.label+'</span>'; }).join(''); }
 function tierLabelHTML(tier){ if(!tier||!GACHA_TIERS[tier]) return '';
@@ -2470,8 +2470,8 @@ function tierLabelHTML(tier){ if(!tier||!GACHA_TIERS[tier]) return '';
 const GACHA_COST = 30;   // 1회 뽑기 크레딧 비용
 const RACER_CD = 12;     // 레이서 공격 쿨다운(프레임/60fps) = 5발/초. 데미지는 DPS 유지 위해 퍼샷 대폭 감소
 const FAST_CD = { racer:RACER_CD, machinegun:8 };   // gmodel별 초고속 발사 쿨다운(발칸=8프레임≈7.5발/초). 데미지는 DPS 유지로 퍼샷 감소
-const CD_OVR = { phantom_t:130, skyguard_t:60, skydancer_t:8, ranger_god:78, strider_god:90, sentinel_god:150 };   // 센티넬 갓: 초저속 한방   // gid별 쿨다운 오버라이드 — 디토네이터=느린 한방 / 템페스트=중속 단발 / 스카이댄서=초고속 연사
-const GDMG_OVR = { skyguard_t:{dmg:28,up:10}, skydancer_t:{dmg:4,up:2}, ranger_god:{dmg:16,up:7}, strider_god:{dmg:12,up:5}, sentinel_god:{dmg:50,up:20} };   // 센티넬 갓: 광역 풀데미지 한방   // 스트라이더 갓: 발당 중간 데미지(볼리 6발×, 소광역 스플래시 별도)   // 레인저 갓: 발당 고정 고데미지(볼리 5발×, cd비례 보정 제외)   // 스카이댄서=저공격력(좁은 광역 초고속으로 보완)   // gid별 기본 공격 오버라이드 — 구조물 프록시(터렛75/포톤321)의 비정상 수치 교정(명시 dmg+cd → cd비례 보정 제외)
+const CD_OVR = { phantom_t:130, skyguard_t:60, skydancer_t:8, ranger_god:78, strider_god:90, sentinel_god:150, reaper_god:6 };   // 센티넬 갓: 초저속 한방   // gid별 쿨다운 오버라이드 — 디토네이터=느린 한방 / 템페스트=중속 단발 / 스카이댄서=초고속 연사
+const GDMG_OVR = { skyguard_t:{dmg:28,up:10}, skydancer_t:{dmg:4,up:2}, ranger_god:{dmg:16,up:7}, strider_god:{dmg:12,up:5}, sentinel_god:{dmg:50,up:20}, reaper_god:{dmg:3,up:1} };   // 센티넬 갓: 광역 풀데미지 한방   // 스트라이더 갓: 발당 중간 데미지(볼리 6발×, 소광역 스플래시 별도)   // 레인저 갓: 발당 고정 고데미지(볼리 5발×, cd비례 보정 제외)   // 스카이댄서=저공격력(좁은 광역 초고속으로 보완)   // gid별 기본 공격 오버라이드 — 구조물 프록시(터렛75/포톤321)의 비정상 수치 교정(명시 dmg+cd → cd비례 보정 제외)
 const AIR_FLOAT_GIDS = { skyguard_t:1, skydancer_t:1 };   // 비행체 gid(엔진 분사·부양 연출 대상)
 function cdOf(u,def){ return CD_OVR[u.gid]||FAST_CD[u.gmodel]||def.cd; }
 // 가챠 유닛 base(gid에서 등급접미사 제거) → 사거리 배율(기본 1). 근접형 유닛 사거리 단축
@@ -3830,6 +3830,11 @@ function step(dt){
     if(e.stunT>0){ e.stunT-=dt; _sm=0;   // 감전: 제자리 정지
       if(Math.random()<dt*7){ const q=posAt(e.d,GW,GH); const qy=e.model3d?q.y-AIR_HIT_OFF:q.y;
         G.sparks.push({x:q.x+(Math.random()-0.5)*14,y:qy+(Math.random()-0.5)*12,vx:(Math.random()-0.5)*60,vy:(Math.random()-0.5)*60,life:0.14,len:3+Math.random()*3,color:Math.random()<0.5?'#b48bff':'#eadcff'}); } }
+    if(e.psnT>0){ e.psnT-=dt; e.psnTick=(e.psnTick||RPSN_TICK)-dt;   // 맹독: 틱마다 중첩×틱데미지
+      if(e.psnTick<=0){ e.psnTick=RPSN_TICK; hitEnemy(e,(e.psnStk||1)*(e.psnDmg||1));
+        const q=posAt(e.d,GW,GH); const qy=e.model3d?q.y-AIR_HIT_OFF:q.y;   // 독방울 비주얼(초록 낙하)
+        G.sparks.push({x:q.x+(Math.random()-0.5)*10,y:qy+(Math.random()-0.5)*8,vx:(Math.random()-0.5)*18,vy:26+Math.random()*22,life:0.3,len:2.5,color:Math.random()<0.5?'#9fd356':'#d6ff7a'}); }
+      if(e.psnT<=0){ e.psnStk=0; e.psnDmg=0; } }
     e.d=(e.d+e.speed*_sm*dt*4)%1; if(e.flash>0) e.flash--; if(e.hit>0) e.hit=Math.max(0,e.hit-dt*5); if(e.shHit>0) e.shHit=Math.max(0,e.shHit-dt*4); }
   checkEnemyWarn(G.enemies.length);
   if(G.enemies.length>=mapCfg('loseCount',LOSE_COUNT)){ addChat('', (G.myPlayer||1)+'번 플레이어가 탈락하였습니다.'); G.phase='lost'; if(typeof playSfx==='function') playSfx('lose'); showOverlay(); return; }
@@ -3956,6 +3961,7 @@ function advanceFx(dt){
         const dx=p.x-s.x, dy=p.y-s.y, d=Math.hypot(dx,dy)||1;
         if(d<=s.spd*dt+HIT_R){ // 명중
           hitEnemy(e, s.dmg);
+          if(s.psn){ e.psnStk=Math.min(RPSN_MAX,(e.psnStk||0)+1); e.psnT=RPSN_DUR; e.psnDmg=Math.max(e.psnDmg||0,s.psn); }   // 맹독 중첩(상한)·지속 갱신
           if(s.splash){ const r2=Math.pow((s.splashR||SPLASH_R)*Math.min(GW,GH),2); for(const o of G.enemies){ if(o===e)continue; const q=posAt(o.d,GW,GH); const ax=q.x-p.x,ay=q.y-p.y; if(ax*ax+ay*ay<=r2) hitEnemy(o,s.dmg*SPLASH_RATIO); } }
           if(s.kind==='bullet'||s.kind==='sniper'||s.kind==='mg'){ const sn=s.kind==='sniper'; spawnSparks(p.x,p.y,-dx/d,-dy/d,sn?'#eaffff':'#ffe6a0'); G.impacts.push({x:p.x,y:p.y,life:1,r:sn?5:(s.kind==='mg'?2.5:3.5),color:sn?'#eafdff':'#fff6d8'}); }
           else if(s.kind==='needle'){ for(let q=0;q<5;q++){ const a=Math.atan2(-dy,-dx)+(Math.random()-0.5)*1.5, sp=60+Math.random()*120; G.sparks.push({x:p.x,y:p.y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:0.4,len:2+Math.random()*3,color:q%2?'#d6ff7a':'#9fd356'}); } G.impacts.push({x:p.x,y:p.y,life:1,r:6,color:s.color}); }  // 침 박힘 — 초록 점액 튀김
@@ -4103,6 +4109,18 @@ function sentinelBurst(x,y,color){
     G.sparks.push({x:x,y:y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:0.3,flash:true,color:k%2?c:'#eadcff'}); }
 }
 // 센티넬: 몸 안 코어에 에너지가 모였다가 구체를 발사. 명중 시 sentinelBurst(찌릿 방출)
+// 리퍼 갓: 초고속 단일 침 연사 — 직격은 약하고, 맞을 때마다 맹독 중첩(상한 RPSN_MAX)이 본딜
+const RPSN_MAX=8;     // 독 중첩 상한(공용 보스 안전장치)
+const RPSN_DUR=3;     // 독 지속(초) — 재명중 시 갱신
+const RPSN_TICK=0.5;  // 독 틱 간격(초)
+function fireReaperGodNeedle(u,def,ux,uy,tp,eid,dmg){
+  const c=def.color, j=(Math.random()-0.5)*5;   // 손끝 좌우 흔들림(속사 느낌)
+  const mx=ux+j, my=uy-12;
+  const md=Math.hypot(tp.x-mx,tp.y-my)||1, nx=(tp.x-mx)/md, ny=(tp.y-my)/md, spd=720;
+  G.sparks.push({x:mx,y:my,vx:nx*90,vy:ny*90,life:0.08,len:3,color:'#d6ff7a'});   // 짧은 발사 스냅
+  G.shots.push({x:mx,y:my,tx:tp.x,ty:tp.y,vx:nx*spd,vy:ny*spd,t:0,dur:md/spd,color:c,boom:4,kind:'needle',
+    ang:Math.atan2(ny,nx),eid:eid,dmg:dmg,spd:spd,psn:Math.max(1,Math.round(dmg*0.7))});   // psn=스택당 틱 데미지
+}
 // 센티넬 갓: 코어에 크게 충전 → 느린 대형 에너지 구체 발사 → 명중 시 대광역 풀데미지 + 반경 내 감전 정지
 const SGOD_BLAST_R=0.13;   // 폭발 반경(보드 비율)
 const SGOD_STUN=1.3;       // 감전 정지 시간(초) — 보스는 0.5초
@@ -4422,6 +4440,7 @@ function fireAttack(u,def,ux,uy,tp,eid,dmg){
   if(u.gid==='sentinel_god'){ fireSentinelGodOrb(u,def,ux,uy,tp,eid,dmg); return; }   // 센티넬 갓: 느린 대구체 → 광역 폭발+감전
 if(u.id==='dragoon' && u.gmodel!=='blade'){ fireSentinelOrb(u,def,ux,uy,tp,eid,dmg); return; }   // 센티넬(dragoon·워든 제외) 충전 구체
   if(u.gmodel==='snapper'){ fireSnapperSlash(u,def,ux,uy,tp,eid,dmg); return; }   // 스내퍼 전용 낫 베기
+  if(u.gid==='reaper_god'){ fireReaperGodNeedle(u,def,ux,uy,tp,eid,dmg); return; }   // 리퍼 갓: 초고속 단일 침 + 맹독 중첩
   if(u.id==='hydra'){ fireReaperSpikes(u,def,ux,uy,tp,eid,dmg); return; }   // 리퍼(hydra·스내퍼 제외) 손 가시 3연타
   if(gachaBase(u)==='void'){ fireVoidChidori(u,def,ux,uy,tp); return; }   // 보이드 전용 치도리(즉발이라 시각 전용)
   const c=def.color, dist=Math.hypot(tp.x-ux,tp.y-uy)||1, nx=(tp.x-ux)/dist, ny=(tp.y-uy)/dist;
