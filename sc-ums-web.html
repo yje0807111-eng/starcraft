@@ -6216,6 +6216,7 @@ function coopBroadcastState(){ if(!coopActive()||G.phase!=='playing') return;
   coopSend('pstate', { count:G.enemies.length, round:G.round, u:u, e:e, s:s, b:b, atk:G.atkLv||{}, bs:bs, bu:bu, tb:tb }); }
 function specRemoteBoard(){ return (coopActive() && G.tab==='Players' && G.curPlayer!==(G.myPlayer||1) && G.coopBoard && G.coopBoard[G.curPlayer]) ? G.curPlayer : null; }
 function _clerp(a,b,f){ return a+(b-a)*f; }
+function _clerpWrap(a,b,f){ let d=b-a; if(d>0.5)d-=1; else if(d<-0.5)d+=1; let v=a+d*f; if(v<0)v+=1; else if(v>=1)v-=1; return v; }   // 트랙 d(0~1 순환) 경계 래핑 보간
 // 직전·현재 스냅을 보간(유닛/적) + 투사체는 속도로 외삽 → 끊김 없는 관전 보드 생성
 function buildInterpBoard(num){ const cur=G.coopBoard[num]; if(!cur) return {units:[],enemies:[],shots:[],beams:[]};
   const prev=G.coopBoardPrev&&G.coopBoardPrev[num];
@@ -6225,7 +6226,7 @@ function buildInterpBoard(num){ const cur=G.coopBoard[num]; if(!cur) return {uni
   if(prev){ const pu={}; prev.units.forEach(u=>pu[u.uid]=u);
     units=cur.units.map(u=>{ const q=pu[u.uid]; return q? Object.assign({},u,{x:_clerp(q.x,u.x,f),y:_clerp(q.y,u.y,f)}) : u; });
     const pe={}; prev.enemies.forEach(e=>pe[e.eid]=e);
-    enemies=cur.enemies.map(e=>{ const q=pe[e.eid]; return q? Object.assign({},e,{d:_clerp(q.d,e.d,f)}) : e; }); }
+    enemies=cur.enemies.map(e=>{ const q=pe[e.eid]; return q? Object.assign({},e,{d:_clerpWrap(q.d,e.d,f)}) : e; }); }   // 한 바퀴 경계(1→0)에서 역주행 점프 방지
   const el=(now-cur.t)/1000;   // 투사체: 속도(px/초)로 외삽 → 매끄럽게 비행
   const shots=(cur.shots||[]).map(s=>({x:s.x+(s.vx||0)*el, y:s.y+(s.vy||0)*el, vx:s.vx, vy:s.vy, kind:s.kind, color:s.color}));
   return { units, enemies, shots, beams:cur.beams||[] }; }
