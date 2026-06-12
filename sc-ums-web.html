@@ -3940,7 +3940,7 @@ function advanceFx(dt){
         else G.impacts.push({x:s.vt.x,y:s.vt.y,life:1,r:s.boom||14,color:s.color});
         G.shots.splice(i,1); continue;
       }
-      if(s.turn){ const tdx=dx/d, tdy=dy/d, sp=Math.hypot(s.vx,s.vy)||s.spd, cdx=s.vx/sp, cdy=s.vy/sp, bl=Math.min(1, dt*s.turn);
+      if(s.turn){ const tdx=dx/d, tdy=dy/d, sp=Math.hypot(s.vx,s.vy)||s.spd, cdx=s.vx/sp, cdy=s.vy/sp, bl=Math.min(1, dt*s.turn*Math.max(1,70/Math.max(d,1)));   // 근접 선회 부스트(공전 방지)
         let nvx=cdx+(tdx-cdx)*bl, nvy=cdy+(tdy-cdy)*bl, nl=Math.hypot(nvx,nvy)||1; s.vx=nvx/nl*s.spd; s.vy=nvy/nl*s.spd;
       } else { s.vx=dx/d*s.spd; s.vy=dy/d*s.spd; }
       s.x+=s.vx*dt; s.y+=s.vy*dt;
@@ -3964,7 +3964,7 @@ function advanceFx(dt){
         if(s.side){ const sep=Math.min(d*0.22,16), px=-dy/d, py=dx/d; ax=p.x+px*s.side*sep; ay=p.y+py*s.side*sep; }  // 미사일: 좌우로 벌어진 경로(멀수록 벌어지고 가까우면 수렴)
         const adx=ax-s.x, ady=ay-s.y, ad=Math.hypot(adx,ady)||1;
         if(s.turn){ // 부드러운 곡선 유도: 현재 방향을 목표 방향으로 서서히 회전(스냅 X)
-          const tdx=adx/ad, tdy=ady/ad, sp=Math.hypot(s.vx,s.vy)||s.spd, cdx=s.vx/sp, cdy=s.vy/sp, bl=Math.min(1, dt*s.turn);
+          const tdx=adx/ad, tdy=ady/ad, sp=Math.hypot(s.vx,s.vy)||s.spd, cdx=s.vx/sp, cdy=s.vy/sp, bl=Math.min(1, dt*s.turn*Math.max(1,70/Math.max(ad,1)));   // 근접 선회 부스트(공전 방지)
           let nvx=cdx+(tdx-cdx)*bl, nvy=cdy+(tdy-cdy)*bl, nl=Math.hypot(nvx,nvy)||1; s.vx=nvx/nl*s.spd; s.vy=nvy/nl*s.spd;
         } else { s.vx=adx/ad*s.spd; s.vy=ady/ad*s.spd; }
         s.x+=s.vx*dt; s.y+=s.vy*dt;  // 조준점 쪽으로 유도
@@ -3976,7 +3976,7 @@ function advanceFx(dt){
           for(const o of G.enemies){ const q=posAt(o.d,GW,GH); const qy=o.model3d?q.y-AIR_HIT_OFF:q.y;
             const ax=q.x-s.lkx, ay=qy-s.lky; if(ax*ax+ay*ay<=r2) hitEnemy(o,s.dmg*SPLASH_RATIO); }
           G.shots.splice(i,1); continue; }
-        const sp=Math.hypot(s.vx,s.vy)||s.spd, cdx=s.vx/sp, cdy=s.vy/sp, bl=Math.min(1,dt*(s.turn||8));
+        const sp=Math.hypot(s.vx,s.vy)||s.spd, cdx=s.vx/sp, cdy=s.vy/sp, bl=Math.min(1,dt*(s.turn||8)*Math.max(1,70/Math.max(d,1)));   // 근접 선회 부스트(공전 방지)
         let nvx=cdx+(dx/d-cdx)*bl, nvy=cdy+(dy/d-cdy)*bl, nl=Math.hypot(nvx,nvy)||1; s.vx=nvx/nl*s.spd; s.vy=nvy/nl*s.spd;
         s.x+=s.vx*dt; s.y+=s.vy*dt;
       } else { s.x+=s.vx*dt; s.y+=s.vy*dt; s.miss=(s.miss||0)+dt; if(s.miss>0.6){ G.shots.splice(i,1); continue; } } // 대상 소멸 → 잠시 직진 후 소멸
