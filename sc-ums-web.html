@@ -1229,7 +1229,7 @@
   /* 포인트 연구소 — 팝업 형식. 기존 HUD 카드(cpCard) 톤과 동일하게 통일(어두운 레드 네온) */
   #pointPanel{position:absolute;inset:0;z-index:56;display:flex;align-items:center;justify-content:center;background:var(--ov-dim);backdrop-filter:blur(2px)}
   #pointPanel.hide{display:none}
-  #pointPanel .ppCard{width:312px;max-width:86vw;max-height:84%;display:flex;flex-direction:column;padding:18px 18px 16px}
+  #pointPanel .ppCard{width:312px;max-width:86vw;height:84%;display:flex;flex-direction:column;padding:18px 18px 16px}   /* 높이 고정 — 탭 전환 시 카드가 꿀렁이지 않게(목록만 내부 스크롤) */
   .ppHead{display:flex;align-items:baseline;gap:10px;margin-bottom:5px}
   .ppTitle{font-size:16px;font-weight:800;color:var(--neon);text-shadow:0 0 10px var(--neon-glow)}
   .ppBal{margin-left:auto;font-size:var(--fs-md);color:var(--txt-mute);display:flex;align-items:baseline;gap:3px;white-space:nowrap}
