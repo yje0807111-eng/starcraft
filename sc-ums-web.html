@@ -4625,7 +4625,7 @@ function isBuilding(id){ return !!(U[id] && U[id].moveSpd===0); }   // 건물(�
 function capSelTypes(uids){
   const groups={}, order=[];
   uids.forEach(uid=>{ const u=G.units.find(x=>x.uid===uid); if(!u||isBuilding(u.id)) return;   // 건물 제외
-    const key=u.id+'|'+(u.hero?1:0)+'|'+(u.lv||1);
+    const key=(u.gid||u.id)+'|'+(u.hero?1:0)+'|'+(u.lv||1);   // 선택 칩 분류와 동일 키(등급 다르면 다른 종류)
     if(!groups[key]){ groups[key]={uids:[], cost:(U[u.id]?U[u.id].cost:0)}; order.push(key); }
     groups[key].uids.push(uid);
   });
