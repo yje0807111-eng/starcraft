@@ -2408,7 +2408,7 @@ const GACHA_UNITS = {   // 4종 × 7등급 = 28 (이름 확정)
   blade_l:      _gUnit('blade_l','워든','legend','aetherial','single'),
   thornqueen_l: _gUnit('thornqueen_l','베놈퀸','legend','swarm','dot'),
   // ── 초월 (transcend) = 특정 레시피 전용, 특성 1~2개(추후) ──
-  phantom_t:    _gUnit('phantom_t','디토네이터','transcend','union','single'),
+  phantom_t:    _gUnit('phantom_t','디토네이터','transcend','union','aoe_single'),
   skyguard_t:   _gUnit('skyguard_t','템페스트','transcend','union','aoe_single'),
   skydancer_t:  _gUnit('skydancer_t','스카이댄서','transcend','aetherial','aoe_rapid'),
   matron_t:     _gUnit('matron_t','매트론','transcend','swarm','single_chain'),
@@ -2467,10 +2467,13 @@ function tierLabelHTML(tier){ if(!tier||!GACHA_TIERS[tier]) return '';
 const GACHA_COST = 30;   // 1회 뽑기 크레딧 비용
 const RACER_CD = 12;     // 레이서 공격 쿨다운(프레임/60fps) = 5발/초. 데미지는 DPS 유지 위해 퍼샷 대폭 감소
 const FAST_CD = { racer:RACER_CD, machinegun:8 };   // gmodel별 초고속 발사 쿨다운(발칸=8프레임≈7.5발/초). 데미지는 DPS 유지로 퍼샷 감소
+const CD_OVR = { phantom_t:130 };   // gid별 쿨다운 오버라이드 — 디토네이터: 느린 한방(핵 투하). 퍼샷 데미지는 비례 증가(DPS 유지)
+function cdOf(u,def){ return CD_OVR[u.gid]||FAST_CD[u.gmodel]||def.cd; }
 // 가챠 유닛 base(gid에서 등급접미사 제거) → 사거리 배율(기본 1). 근접형 유닛 사거리 단축
 function gachaBase(u){ return (u&&u.gid) ? u.gid.replace(/_(c|r|e|u|l|t|god)$/,'') : null; }
 const GACHA_RANGE_MUL = { void:0.6, snapper:0.6, machinegun:0.65, blade:0.6, thornqueen:1.15 };   // 발칸=근거리 / 워든=근접 / 베놈퀸=약간 장거리
-function gachaRangeMul(u){ const b=gachaBase(u); return (b&&GACHA_RANGE_MUL[b])||1; }
+function gachaRangeMul(u){ if(u&&u.gid==='phantom_t') return 1.8;   // 디토네이터: 장거리 포격(에픽·유니크 팬텀과 무관)
+  const b=gachaBase(u); return (b&&GACHA_RANGE_MUL[b])||1; }
 
 // ============================================================================
 // 메타 성장 시스템 — 데이터 레이어 (1단계: 데이터 + 저장/로드만. 게임플레이 연결은 다음 단계)
@@ -3825,13 +3828,13 @@ function step(dt){
             else emitVulcanSpray(u, u.bx*BAW, u.by*BAH, bx2, by2); }); } }
       if(u.bcd>0){ u.bcd-=dt*60; continue; }
       const bdef=U[u.id]; let bdmg=unitDmg(u)*(1+buildLevel('boss_atk_up')*0.05);   // 메타: 보스 기여딜 증가(파견 데미지에 적용)
-      if(FAST_CD[u.gmodel]) bdmg*=FAST_CD[u.gmodel]/bdef.cd;
+      { const _co=cdOf(u,bdef); if(_co!==bdef.cd) bdmg*=_co/bdef.cd; }
       coopBossDamage(bdmg, G.myPlayer||1, false); u.fireSeq=(u.fireSeq||0)+1;
       if(G.bossOpen && BAW){ const MN=Math.min(BAW,BAH);   // 토벌장 보는 중: 메인과 동일한 fireAttack 이펙트(전용 배열·전용 좌표계)
         const ux=u.bx*BAW, uy=u.by*BAH, tp={x:BAW*0.5+(Math.random()-.5)*MN*0.05, y:BAH*BOSS_FEET_FRAC-MN*0.04};
         if(typeof playUnitAttack==='function') playUnitAttack(u.id);
         withBossFx(()=>fireAttack(u, bdef, ux, uy, tp, null, bdmg)); }
-      u.bcd=(FAST_CD[u.gmodel]||bdef.cd); } }
+      u.bcd=cdOf(u,bdef); } }
   // 토벌장 보는 중: 다른 플레이어 파견 유닛의 공격도 같은 이펙트로 재생(데미지는 각자 bossdmg로 공유됨)
   if(G.bossOpen && BAW && G.coopBossU){ const MN=Math.min(BAW,BAH); G._bSeen=G._bSeen||{};
     for(const k in G.coopBossU){ const sn=G.coopBossU[k]; if(!sn||!sn.cur) continue; if(Date.now()-sn.t>3000) continue;
@@ -3861,7 +3864,7 @@ function step(dt){
     if(u.cd>0){ u.cd-=dt*60; continue; }
     if(u.moving && u.cmd!=='attack' && u.cmd!=='focus') continue;   // 이동 중엔 공격 불가(스타식). 단 공격이동·지정공격은 이동하면서도 공격
     if(tgt){ const tp=posAt(tgt.d,GW,GH); if(tgt.model3d) tp.y-=AIR_HIT_OFF; let dmg=unitDmg(u);  // 공중 적은 부유 위치(위)로 타격
-      if(FAST_CD[u.gmodel]) dmg*=FAST_CD[u.gmodel]/def.cd;   // 초고속 발사(레이서·발칸) → 퍼샷 데미지 비례 감소(DPS 유지)
+      { const _co=cdOf(u,def); if(_co!==def.cd) dmg*=_co/def.cd; }   // 쿨다운 오버라이드(레이서·발칸=감소, 디토네이터=증가) → 퍼샷 데미지 비례(DPS 유지)
       const ps=PROJ_SPD[def.atk];
       u.fireSeq=(u.fireSeq||0)+1;  // 발사 카운터(3D 공격모션 트리거)
       if(typeof playUnitAttack==='function') playUnitAttack(u.id);   // 유닛별 공격 효과음(내 유닛)
@@ -3872,7 +3875,7 @@ function step(dt){
         if(def.splash){ const r2=Math.pow(SPLASH_R*Math.min(GW,GH),2); for(const e of G.enemies){ if(e===tgt)continue; const p=posAt(e.d,GW,GH); const dx=p.x-tp.x,dy=p.y-tp.y; if(dx*dx+dy*dy<=r2) hitEnemy(e,dmg*SPLASH_RATIO); } }
         fireAttack(u,def,ux,uy,tp);
       }
-      const cdv=(FAST_CD[u.gmodel]||def.cd)*(u.adr>0?0.5:1); u.cd=cdv; u.cdMax=cdv; u.atkT=0.6; } }  // 레이서·발칸=초고속 연사. 아드레날린 시 장전 0.5배. cdMax=장전 진행도 계산용
+      const cdv=cdOf(u,def)*(u.adr>0?0.5:1); u.cd=cdv; u.cdMax=cdv; u.atkT=0.6; } }  // 레이서·발칸=초고속 연사. 아드레날린 시 장전 0.5배. cdMax=장전 진행도 계산용
   // 명중 대기(발사체) 처리 — 도달 시 데미지 적용
   for(let i=G.pendingHits.length-1;i>=0;i--){ const h=G.pendingHits[i]; h.t+=dt;
     if(h.t>=h.dur){ const e=G.enemies.find(x=>x.eid===h.eid);
@@ -3938,6 +3941,12 @@ function advanceFx(dt){
       } else { s.x+=s.vx*dt; s.y+=s.vy*dt; s.miss=(s.miss||0)+dt; if(s.miss>0.6){ G.shots.splice(i,1); continue; } } // 대상 소멸 → 잠시 직진 후 소멸
     } else { // 비유도(예비)
       s.x+=s.vx*dt; s.y+=s.vy*dt; s.t+=dt;
+      if(s.t>=s.dur && s.kind==='nukefall'){   // 핵 착탄: 대형 폭발 + 반경 내 전 적에게 풀데미지
+        detonateExplosion(s.tx,s.ty,s.nR||40);
+        if(s.nDmg){ for(const o of G.enemies){ const q=posAt(o.d,GW,GH); const qy=o.model3d?q.y-AIR_HIT_OFF:q.y;
+          const dx=q.x-s.tx, dy=qy-s.ty; if(dx*dx+dy*dy<=s.nR*s.nR) hitEnemy(o,s.nDmg); } }
+        if(typeof playSfxT==='function') playSfxT('attack_goliath',250);
+        G.shots.splice(i,1); continue; }
       if(s.t>=s.dur){ if(!s.cosmetic) G.impacts.push({x:s.tx,y:s.ty,life:1,r:s.boom||14,color:s.color});   // 코스메틱(연사 잔탄)은 폭발 없이 대상에서 소멸
         else if(s.kind==='mg' && Math.random()<0.5){ G.impacts.push({x:s.tx,y:s.ty,life:1,r:2.2,color:'#fff6d8'}); }  // 레이서: 명중 지점 작은 탄착
         else if(s.kind==='mgf'){ if(Math.random()<0.5){ G.impacts.push({x:s.tx,y:s.ty,life:1,r:3,color:'#ffcf8a'}); }   // 발칸: 작은 화염 탄착 + 불티(연속 피격감)
@@ -4094,6 +4103,32 @@ function emitVulcanSpray(u, ux, uy, tx, ty){
   }
 }
 // 브레이커 포탄 폭발 — 화염구 + 충격파 + 파편 + 연기
+// ── 디토네이터(초월): 핵 투하 — 경고 마커 → 탄두 수직 낙하 → 대형 광역 폭발 ──
+const NUKE_R=0.13;     // 폭발 반경(min(GW,GH) 비율)
+const NUKE_FALL=0.62;  // 낙하 시간(초)
+function fireDetonateNuke(u,def,ux,uy,tp,eid,dmg){
+  const MN=Math.min(GW,GH), R=NUKE_R*MN;
+  G.muzzles.push({x:ux,y:uy-10,life:1,color:'#ffd2d2',r:6});                       // 발사 신호
+  G.sparks.push({x:ux,y:uy-12,vx:0,vy:-220,life:0.25,len:9,color:'#ffb4b4'});
+  const wd=1/NUKE_FALL*0.95;                                                       // 경고 링(낙하 시간 동안 유지)
+  G.impacts.push({x:tp.x,y:tp.y,life:1,r:R,color:'#ff5c5c',ring:true,dk:wd});
+  G.impacts.push({x:tp.x,y:tp.y,life:1,r:R*0.45,color:'#ff8a8a',ring:true,dk:wd});
+  const MNF=MN*0.52, fy=tp.y-MNF, spd=MNF/NUKE_FALL;
+  G.shots.push({x:tp.x,y:fy,tx:tp.x,ty:tp.y,vx:0,vy:spd,t:0,dur:NUKE_FALL,kind:'nukefall',color:'#ffe2c0',spd:spd,
+    nDmg:(G._baFire?0:dmg), nR:R});   // 토벌장은 연출만(보스 데미지는 파견 루프가 적용)
+}
+function detonateExplosion(x,y,R){
+  G.impacts.push({x:x,y:y,life:1,r:R*1.05,color:'#fff',ring:true,dk:5});           // 흰 충격파
+  G.impacts.push({x:x,y:y,life:1,r:R*0.8,color:'#ffcaa0',ring:true,dk:6.5});       // 2차 링
+  G.impacts.push({x:x,y:y,life:1,r:R*0.66,color:'#ff8a3c',glow:true,dk:4.5});      // 화염구
+  G.impacts.push({x:x,y:y,life:1,r:R*0.34,color:'#ffd27a',glow:true,dk:5.5});
+  G.impacts.push({x:x,y:y,life:1,r:R*0.2,color:'#fff',dk:6});                      // 코어 섬광
+  for(let k=0;k<14;k++){ const a=k/14*6.28+Math.random()*0.4, sp=120+Math.random()*160;
+    G.debris.push({x:x,y:y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,rot:a,spin:(k%2?5:-5),len:3.5+Math.random()*3.5,color:k%2?'#ffae4d':'#ff6a2c'}); }
+  for(let k=0;k<12;k++){ const a=Math.random()*6.28, sp=80+Math.random()*180;
+    G.sparks.push({x:x,y:y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:0.35,flash:true,color:Math.random()<0.5?'#ffd2a0':'#ff6a2c'}); }
+  for(let k=0;k<6;k++){ G.sparks.push({x:x+(Math.random()-0.5)*R*0.3,y:y,vx:(Math.random()-0.5)*30,vy:-(120+Math.random()*120),life:0.5,len:5+Math.random()*5,color:'#ffb887',fr:0.92,dk:2.6}); }   // 버섯 기둥(위로 솟는 불티)
+}
 function breakerExplosion(x,y){
   G.impacts.push({x:x,y:y,life:1,r:34,color:'#ff8a3c',glow:true,dk:6});   // 화염구
   G.impacts.push({x:x,y:y,life:1,r:18,color:'#ffd27a',glow:true,dk:7});
@@ -4181,6 +4216,7 @@ function fireThornQueen(u,def,ux,uy,tp,eid,dmg){
     G.sparks.push({x:ux+(Math.random()-0.5)*6,y:uy-backUp,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:0.14+Math.random()*0.16,len:3+Math.random()*4,color:k%2?'#d6ff7a':'#7fc23a'}); }
 }
 function fireAttack(u,def,ux,uy,tp,eid,dmg){
+  if(u.gid==='phantom_t'){ fireDetonateNuke(u,def,ux,uy,tp,eid,dmg); return; }   // 디토네이터: 핵 투하(장거리 광역 한방)
   if(u.gmodel==='thornqueen'){ fireThornQueen(u,def,ux,uy,tp,eid,dmg); return; }   // 베놈퀸: 등 가시 사방 유도
   if(u.gmodel==='blade'){ fireBladeSlash(u,def,ux,uy,tp,eid,dmg); return; }   // 워든: 검 베기
   if(u.gmodel==='tank'){ fireBreakerShell(u,def,ux,uy,tp,eid,dmg); return; }   // 브레이커: 탱크 포탄
@@ -6830,7 +6866,11 @@ vUpg.addEventListener('touchstart',onUpgDown,{passive:false}); vUpg.addEventList
 function drawFx(){ const {ctx,W,H}=setup('cvFx');  // setup이 캔버스 크기 재설정=자동 클리어
   ctx.save(); ctx.globalCompositeOperation='lighter';
   if(!fxOff()) for(const s of G.shots){ ctx.fillStyle=s.color; ctx.strokeStyle=s.color;   // 이펙트 끔: 발사체도 생략 (유닛 축소에 맞춰 ~0.82 작게)
-    if(s.kind==='plasma'){ ctx.globalAlpha=.4; ctx.beginPath();ctx.arc(s.x,s.y,5.8,0,6.28);ctx.fill();
+    if(s.kind==='nukefall'){ const tl=22;
+      ctx.globalAlpha=.5; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(s.x,s.y-tl); ctx.lineTo(s.x,s.y); ctx.stroke();
+      ctx.globalAlpha=.45; ctx.beginPath(); ctx.arc(s.x,s.y,6,0,6.283); ctx.fill();
+      ctx.globalAlpha=1; ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(s.x,s.y,3.2,0,6.283); ctx.fill(); ctx.fillStyle=s.color;
+    } else if(s.kind==='plasma'){ ctx.globalAlpha=.4; ctx.beginPath();ctx.arc(s.x,s.y,5.8,0,6.28);ctx.fill();
       ctx.globalAlpha=1; ctx.beginPath();ctx.arc(s.x,s.y,2.9,0,6.28);ctx.fill();
     } else if(s.kind==='needle'){ ctx.save();ctx.translate(s.x,s.y);ctx.rotate(Math.atan2(s.vy,s.vx));
       ctx.globalAlpha=.85; ctx.fillStyle=s.color;                                                 // 가늘고 뾰족한 침(미사일 X)
