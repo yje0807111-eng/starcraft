@@ -4159,7 +4159,7 @@ const MATRON_HOP=0.07;     // 연쇄 전파 간격(초) — 한 마디씩 시간
 const MATRON_CHAIN_R=0.10; // 한 마디가 번지는 거리(min(GW,GH) 비율)
 const MATRON_MAXGEN=5;     // 최대 전파 세대
 const MATRON_BRANCH=2;     // 한 적에서 동시에 번지는 가지 수
-const MATRON_DECAY=0.82;   // 세대마다 데미지 감쇠
+const MATRON_DECAY=0.6;    // 세대마다 데미지 감쇠 — 연쇄가 멀어질수록 급격히 약해짐
 function matronStartChain(u,tgt,dmg,ux,uy,tp){   // 팔 휘두름 → 첫 대상부터 시간차 연쇄 시작
   const a0=Math.atan2(tp.y-(uy-14), tp.x-ux);
   matronSwing(ux,uy-14,a0);
