@@ -3942,7 +3942,7 @@ function advanceFx(dt){
     } else { // 비유도(예비)
       s.x+=s.vx*dt; s.y+=s.vy*dt; s.t+=dt;
       if(s.t>=s.dur && s.kind==='nukefall'){   // 핵 착탄: 대형 폭발 + 반경 내 전 적에게 풀데미지
-        detonateExplosion(s.tx,s.ty,s.nR||40);
+        detonateExplosion(s.tx,s.ty,(s.nR||40)*NUKE_VIS);   // 이펙트는 피해 반경보다 작게(절제)
         if(s.nDmg){ for(const o of G.enemies){ const q=posAt(o.d,GW,GH); const qy=o.model3d?q.y-AIR_HIT_OFF:q.y;
           const dx=q.x-s.tx, dy=qy-s.ty; if(dx*dx+dy*dy<=s.nR*s.nR) hitEnemy(o,s.nDmg); } }
         if(typeof playSfxT==='function') playSfxT('attack_goliath',250);
@@ -4104,15 +4104,15 @@ function emitVulcanSpray(u, ux, uy, tx, ty){
 }
 // 브레이커 포탄 폭발 — 화염구 + 충격파 + 파편 + 연기
 // ── 디토네이터(초월): 핵 투하 — 경고 마커 → 탄두 수직 낙하 → 대형 광역 폭발 ──
-const NUKE_R=0.20;     // 폭발 반경(min(GW,GH) 비율) — 광범위
+const NUKE_R=0.23;     // 피해 반경(min(GW,GH) 비율) — 광범위
+const NUKE_VIS=0.65;   // 폭발 이펙트 크기 = 피해 반경의 65%(시각은 절제, 범위는 넓게)
 const NUKE_FALL=0.62;  // 낙하 시간(초)
 function fireDetonateNuke(u,def,ux,uy,tp,eid,dmg){
   const MN=Math.min(GW,GH), R=NUKE_R*MN;
   G.muzzles.push({x:ux,y:uy-10,life:1,color:'#ffd2d2',r:6});                       // 발사 신호
   G.sparks.push({x:ux,y:uy-12,vx:0,vy:-220,life:0.25,len:9,color:'#ffb4b4'});
-  const wd=1/NUKE_FALL*0.95;                                                       // 경고 링(낙하 시간 동안 유지)
+  const wd=1/NUKE_FALL*0.95;                                                       // 경고 링(낙하 시간 동안 유지) — 피해 반경 1겹
   G.impacts.push({x:tp.x,y:tp.y,life:1,r:R,color:'#ff5c5c',ring:true,dk:wd});
-  G.impacts.push({x:tp.x,y:tp.y,life:1,r:R*0.45,color:'#ff8a8a',ring:true,dk:wd});
   const MNF=MN*0.52, fy=tp.y-MNF, spd=MNF/NUKE_FALL;
   G.shots.push({x:tp.x,y:fy,tx:tp.x,ty:tp.y,vx:0,vy:spd,t:0,dur:NUKE_FALL,kind:'nukefall',color:'#ffe2c0',spd:spd,
     nDmg:(G._baFire?0:dmg), nR:R});   // 토벌장은 연출만(보스 데미지는 파견 루프가 적용)
