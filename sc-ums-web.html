@@ -228,9 +228,9 @@
   .hsTier{flex:1 1 auto;text-align:center;padding:5px 6px;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-sm);font-weight:800;cursor:pointer;white-space:nowrap;
     color:var(--tc,#bbb);background:var(--glass);border:1px solid var(--metal-edge);transition:all .12s}
   .hsTier.on{color:#16110a;background:var(--tc,var(--gold));border-color:var(--tc,var(--gold));box-shadow:0 0 9px -3px var(--tc,var(--gold))}
-  .hsGrid{display:flex;flex-wrap:nowrap;gap:5px;align-items:flex-start;overflow-x:auto;overflow-y:hidden;padding-bottom:3px}
+  .hsGrid{display:flex;flex-wrap:nowrap;gap:5px;align-items:flex-start;overflow:hidden;padding-bottom:3px}
   .hsGrid::-webkit-scrollbar{height:4px}.hsGrid::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
-  .hsCell{position:relative;flex:0 0 auto;width:62px;padding:0;border-radius:var(--r-md);cursor:pointer;background:rgba(0,0,0,.3);
+  .hsCell{position:relative;flex:1 1 0;min-width:0;max-width:66px;padding:0;border-radius:var(--r-md);cursor:pointer;background:rgba(0,0,0,.3);
     border:1px solid var(--metal-edge);overflow:hidden;transition:all .12s}
   .hsCell:hover{border-color:var(--gold);box-shadow:0 0 8px -3px rgba(255,210,74,.7)}
   .hsCell:active{transform:translateY(1px)}
@@ -2339,7 +2339,7 @@ function enemyRace(n){ return ENEMY_RACE[n]||'terran'; }
 // ============================================================================
 const USEMAPS={
   nemo:  { id:'nemo',   name:'네모네모 디펜스', desc:'사각 트랙을 도는 적을 막는 협동 디펜스', players:'1-8', pop:9820, icon:'🟥', rec:true,  isNew:false, playable:true,
-           cfg:{ rounds:20, roundTime:60, prepTime:10, startCredits:120, startEnergy:0, maxUnits:50,
+           cfg:{ rounds:30, roundTime:60, prepTime:10, startCredits:120, startEnergy:0, maxUnits:50,
                  killCredit:1, specialCredit:25, gachaCost:30, energyDrawCost:40, coopBoss:true, roster:'all',
                  enemiesPerRound:100, bossEvery:5, loseCount:120,
                  roundClearCreditBase:10, roundClearCreditPer:3, roundClearEnergyBase:3, roundClearEnergyPer:1 } },
@@ -2356,7 +2356,7 @@ let MAP=USEMAPS.nemo;   // 현재 플레이 중인 유즈맵(게임 시작 시 _
 function mapCfg(k,def){ const c=MAP&&MAP.cfg, v=c?c[k]:undefined; return v===undefined?def:v; }
 
 // ── 엔진 기본값(유즈맵 cfg 미지정 시 사용) ──
-const TOTAL_ROUNDS=20;                    // 총 20라운드(보스: 5·10·15·20). 적 정의(MON)는 부족분 마지막 것 반복
+const TOTAL_ROUNDS=30;                    // 총 30라운드(보스: 5·10·…·30). 적 정의(MON)는 부족분 마지막 것 반복(R21+ = R20 적 + 라운드 램프로 가속)
 const ENEMIES_PER_ROUND=100;               // 일반 라운드 적 수 = 99 + 스페셜 1
 const SPAWN_GAP=0.5;                        // 적 스폰 간격(초) → 100마리×0.5s=50초 스폰 후 10초 정리시간
 const PREP_TIME=10;                        // 라운드 시작 전 준비(유닛 뽑기) 시간(초)
