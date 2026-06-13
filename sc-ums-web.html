@@ -6805,6 +6805,9 @@ function hitUnit(x,y){ let best=.06,hit=null;
 // 유닛 위 정확 판정(반경 내)
 function hitUnitPrecise(x,y){ let best=1e9,hit=null;
   for(const u of G.units){ if(u.atBoss) continue; const d=Math.hypot((u.x-x)*GW,(u.y-y)*GH); if(d<=unitRadius(u)+6 && d<best){ best=d; hit=u; } } return hit; }
+const GRAB_PAD=26;   // 손가락 친화 그랩 여유(px) — 유닛을 살짝 빗나가도 가장 가까운 유닛을 잡음(터치=즉시 선택+드래그 이동)
+function grabUnit(x,y){ let best=1e9,hit=null;
+  for(const u of G.units){ if(u.atBoss) continue; const d=Math.hypot((u.x-x)*GW,(u.y-y)*GH); if(d<=unitRadius(u)+GRAB_PAD && d<best){ best=d; hit=u; } } return hit; }
 // 적 위 판정(트랙 좌표 → 픽셀). 가장 가까운 적 1마리
 function hitEnemyPrecise(x,y){ let best=1e9,hit=null;
   for(const e of G.enemies){ const p=posAt(e.d,GW,GH); const d=Math.hypot(p.x-x*GW,p.y-y*GH); if(d<=24 && d<best){ best=d; hit=e; } } return hit; }
@@ -6827,9 +6830,9 @@ function onDown(e){ if(G.tab!=='Main'||G.phase!=='playing'||G.bossOpen) return; 
   if(G.patrolArm && G.sel.length>0 && !hitUnitPrecise(p.x,p.y) && !hitEnemyPrecise(p.x,p.y)){   // 반복이동: 빈 곳 클릭 → 왕복 목표 지정
     setPatrolTarget(p.x,p.y); G.patrolArm=false; updateCmdRow(); e.preventDefault(); return; }
   G.patrolArm=false;
-  const u=hitUnitPrecise(p.x,p.y);
-  if(u){ // 아군 누름(우선) → 단일 선택 + 이동 가능
-    if(!G.sel.includes(u.uid)) selectOne(u.uid);
+  const u=grabUnit(p.x,p.y);
+  if(u){ // 아군 누름(우선, 손가락 친화 반경) → 즉시 선택 + 떼지 않고 드래그하면 이동
+    if(!G.sel.includes(u.uid)) selectOne(u.uid);   // 이미 선택된 그룹의 한 명을 잡으면 그룹 전체 유지(다중 이동)
     drag=u.fixed?null:u; lastP=p; cmdMove=null; dragSet=[]; box=null;
   } else { const en=hitEnemyPrecise(p.x,p.y);
     if(en){ selectEnemy(en.eid); drag=null; dragSet=[]; box=null; cmdMove=null; }  // 적 직접 클릭 → 그 적 1마리 선택
@@ -6844,7 +6847,8 @@ function onDown(e){ if(G.tab!=='Main'||G.phase!=='playing'||G.bossOpen) return; 
 function onMove(e){ if(G.tab!=='Main') return; const p=evPos(e); moved=true;
   if(box){ box.x1=p.x; box.y1=p.y; drawBox(); e.preventDefault(); return; }
   // 유닛을 누른 채 움직이면 → 직접 끌기 대신 '이동 명령' 시작(이동속도대로 따라옴)
-  if(drag && !cmdMove){ cmdMove={x:p.x,y:p.y,issued:false}; assignFormation(p.x,p.y); }
+  if(drag && !cmdMove){ if(lastP && Math.hypot((p.x-lastP.x)*GW,(p.y-lastP.y)*GH)<8) return;   // 미세 떨림 무시(탭=선택만)
+    cmdMove={x:p.x,y:p.y,issued:false}; assignFormation(p.x,p.y); }
   if(cmdMove && !cmdMove.issued){ cmdMove.x=p.x; cmdMove.y=p.y; assignFormation(p.x,p.y); e.preventDefault(); return; } // 누른 채 목표 갱신
 }
 // 박스 시각화
