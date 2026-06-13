@@ -241,6 +241,16 @@
   .hsVal{display:block;font-family:'Rajdhani',sans-serif;font-size:var(--fs-lg);font-weight:800;color:var(--gold);text-align:center;line-height:16px;letter-spacing:.2px;
     background:rgba(0,0,0,.78);border-top:1px solid rgba(255,210,74,.45);text-shadow:0 1px 2px #000,0 0 4px rgba(0,0,0,.9)}
   .hsEmpty{font-size:var(--fs-xs);color:#7d8590;padding:8px 2px}
+  .hsTabs{gap:10px;padding-bottom:1px}
+  .hsTab{flex:0 0 auto;text-align:center;padding:2px 2px 4px;font-family:inherit;font-size:var(--fs-md);font-weight:800;cursor:pointer;
+    color:var(--txt-mute);background:none;border:none;border-bottom:2px solid transparent;transition:color .12s,border-color .12s}
+  .hsTab.on{color:var(--gold);border-bottom-color:var(--gold)}
+  .hsTabDot{display:inline-block;min-width:15px;height:15px;line-height:15px;margin-left:4px;padding:0 3px;border-radius:8px;
+    background:#46f06a;color:#06140a;font-size:9px;font-weight:800;vertical-align:1px;box-shadow:0 0 6px -1px rgba(70,240,106,.8)}
+  .hsTabDot.hide{display:none}
+  .hsResult{font-size:var(--fs-md)!important;letter-spacing:0!important}
+  #mergeFab{display:none!important}
+  #mergeZone{display:none!important}
   /* 메인 홈 하단 — 공용 보스 파견 패널(주변 명령 버튼 톤: metal-edge + 레드 네온, 위계 구분) */
   .hbTop{display:flex;align-items:center;gap:7px}
   .hbTitle{display:flex;align-items:center;gap:5px;font-size:var(--fs-md);font-weight:800;color:#e8dede;letter-spacing:.2px}
@@ -1894,8 +1904,9 @@
         <!-- 메인 홈 하단(무선택 시): 좌=유닛 판매 / 우=공용 보스 파견 -->
         <div class="homeCols">
           <div class="homeSell">
-            <div class="hbTop">
-              <span class="hbTitle hsTitle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M9.4 9.2a2.4 2.4 0 0 1 4.6.9c0 1.6-2 1.7-2 3M12 16.2v.02"/></svg>유닛 판매</span>
+            <div class="hbTop hsTabs">
+              <button class="hsTab on" id="hsTabSell" onclick="setHomeMode('sell')">유닛 판매</button>
+              <button class="hsTab" id="hsTabComb" onclick="setHomeMode('combine')">유닛 조합<span class="hsTabDot hide" id="combDot"></span></button>
             </div>
             <div class="hsTiers" id="hsTiers"></div>
             <div class="hsGrid" id="hsGrid"></div>
@@ -2750,6 +2761,55 @@ function sellUnit(u){ if(!u||u.fixed) return false;
   if(typeof playSfx==='function') playSfx('ui_confirm');
   toast('💰 판매 +'+val+' 크레딧'); renderUnits(); updateHud(); return true; }
 let _sellTier=null, _sellSig='';
+// ── 유닛 조합(전 범위 — 합체존/버튼 제거): 하단 [판매|조합] 토글 패널 ──
+let _homeMode='sell', _combTier=null, _combSig='';
+const LEGEND_TO_TRANSCEND={};   // 3-같은 레시피 역매핑(machinegun_l→phantom_t 등)
+for(const _res in TRANSCEND_RECIPE){ const _m=TRANSCEND_RECIPE[_res]; if(_m.length===3 && _m[0]===_m[1] && _m[1]===_m[2]) LEGEND_TO_TRANSCEND[_m[0]]=_res; }
+function combineResultFor(gid,gtier){ const nt=SIMPLE_COMBINE_TIERS[gtier]; if(nt) return {type:'simple', nextTier:nt};
+  if(LEGEND_TO_TRANSCEND[gid]) return {type:'transcend', id:LEGEND_TO_TRANSCEND[gid]}; return null; }   // 단순 3개 / 레전드→초월 레시피 / 그 외 조합 불가
+function ownedCombineGroups(){ const grp={};   // gid별 묶음(고정·파견 제외) — 3개 이상 & 조합 결과 있는 것만
+  for(const u of G.units){ if(u.fixed||u.atBoss||!u.gid) continue; (grp[u.gid]=grp[u.gid]||[]).push(u); }
+  const out={}; for(const gid in grp){ if(grp[gid].length>=3 && combineResultFor(gid, grp[gid][0].gtier)) out[gid]=grp[gid]; } return out; }
+function setHomeMode(m){ _homeMode=m; _sellSig=''; _combSig='';
+  const a=document.getElementById('hsTabSell'), b=document.getElementById('hsTabComb');
+  if(a) a.classList.toggle('on', m==='sell'); if(b) b.classList.toggle('on', m==='combine');
+  renderHomeLeft(); }
+function renderHomeLeft(){ if(_homeMode==='combine') renderCombinePanel(); else renderSellPanel(); updateCombDot(); }
+function updateCombDot(){ const dot=document.getElementById('combDot'); if(!dot) return;
+  const n=Object.keys(ownedCombineGroups()).length; dot.textContent=n||''; dot.classList.toggle('hide', !n); }
+function setCombTier(t){ _combTier=t; _combSig=''; renderCombinePanel(); }
+function combineOneOfType(gid){
+  const list=G.units.filter(u=>u.gid===gid && !u.fixed && !u.atBoss); if(list.length<3) return;
+  const res=combineResultFor(gid, list[0].gtier); if(!res) return;
+  const pick=list.slice(0,3), con=new Set(pick.map(x=>x.uid));
+  const cx=pick.reduce((a,u)=>a+u.x,0)/3, cy=pick.reduce((a,u)=>a+u.y,0)/3;   // 합쳐진 자리(무게중심) — 재배치 불필요
+  _consumeUnits(con);
+  let outId; if(res.type==='transcend') outId=res.id;
+  else { const pool=gachaUnitsOfTier(res.nextTier); outId=pool[Math.floor(Math.random()*pool.length)].id; }
+  spawnGachaUnit(outId, cx, cy); const tg=GACHA_UNITS[outId];
+  toast((res.type==='transcend'?'✦ ':'')+tg.displayName+' '+GACHA_TIERS[tg.tier].name+(res.type==='transcend'?' 강림! ✦':' 진화! ⭐'));
+  if(typeof playSfx==='function') playSfx('hero_merge');
+  _combSig=''; _sellSig=''; refreshSelCard(); renderUnits(); updateHud(); renderHomeLeft(); }
+function renderCombinePanel(){ const tiersBox=document.getElementById('hsTiers'), grid=document.getElementById('hsGrid'); if(!tiersBox||!grid) return;
+  const groups=ownedCombineGroups(), gids=Object.keys(groups);
+  const tierSet=GACHA_TIER_ORDER.filter(t=>gids.some(g=>groups[g][0].gtier===t));
+  if(!tierSet.length){ if(_combSig!=='∅'){ tiersBox.innerHTML=''; grid.innerHTML='<div class="hsEmpty">조합할 유닛이 없습니다 (같은 유닛 3개 필요)</div>'; _combSig='∅'; } _combTier=null; return; }
+  if(!_combTier || tierSet.indexOf(_combTier)<0) _combTier=tierSet[0];
+  const sig=_combTier+'|'+gids.map(g=>groups[g][0].gtier+':'+g+':'+groups[g].length).sort().join(',');
+  if(sig===_combSig) return; _combSig=sig;
+  tiersBox.innerHTML=tierSet.map(function(t){ return '<button class="hsTier'+(t===_combTier?' on':'')+'" style="--tc:'+(TIER_COLOR[t]||'#fff')+'" onclick="setCombTier(\''+t+'\')">'+GACHA_TIERS[t].name+'</button>'; }).join('');
+  let cells='';
+  for(const gid of gids){ const list=groups[gid]; if(list[0].gtier!==_combTier) continue; const gu=GACHA_UNITS[gid]; if(!gu) continue;
+    const res=combineResultFor(gid, list[0].gtier);
+    const pk=GACHA_MODEL[gid]||GACHA_PROXY[gid], img=PORTRAIT_IMG[pk];
+    const thumb=img?('<img src="'+img+'" draggable="false">'):(typeof unitSVG==='function'?unitSVG(GACHA_PROXY[gid]||'marine'):'');
+    const rtCol=res.type==='transcend'?TIER_COLOR.transcend:TIER_COLOR[res.nextTier];
+    const rtName=res.type==='transcend'?'초월':GACHA_TIERS[res.nextTier].name;
+    cells+='<button class="hsCell" onclick="combineOneOfType(\''+gid+'\')" title="'+escHtml(gu.displayName)+' ×3 → '+rtName+'"><div class="hsThumb">'+thumb+'</div>'
+      +'<span class="hsCnt">×'+list.length+'</span><span class="hsVal hsResult" style="color:'+rtCol+';border-top-color:'+rtCol+'">→'+rtName+'</span></button>';
+  }
+  grid.innerHTML=cells;
+}
 function ownedSellUnits(){ return G.units.filter(u=>!u.fixed && !u.atBoss && u.gid && !(function(v){return v.has?v.has(u.gtier):v.includes(u.gtier)})(mapCfg('noSellTiers',NO_SELL_TIERS))); }
 function setSellTier(t){ _sellTier=t; _sellSig=''; renderSellPanel(); }
 function sellOneOfType(gid){ const u=G.units.find(x=>x.gid===gid && !x.fixed && !x.atBoss); if(u) sellUnit(u); _sellSig=''; renderSellPanel(); }
@@ -3430,7 +3490,7 @@ function drawMiniMap(){
 }
 
 // 합체 베이 = 바닥 발광 구역(영역 표시) + 가운데 작은 3D 비콘(M3D가 렌더). 여기선 바닥 구역 데칼만 그림
-function drawBeacon(ctx,W,H){ const r=mergeRect(W,H), cx=r.x+r.w/2, cy=r.y+r.h/2;
+function drawBeacon(ctx,W,H){ return;   /* 합체존 제거 — 전 범위 조합(하단 조합 패널) */ const r=mergeRect(W,H), cx=r.x+r.w/2, cy=r.y+r.h/2;
   const rad=Math.min(r.w,r.h)*0.16;   // 사각 영역 모서리 둥글기
   ctx.save(); ctx.globalCompositeOperation='lighter';
   // 바닥 발광 구역(사각, 은은) — '여기에 유닛을 모아라' 영역
@@ -3450,10 +3510,7 @@ function drawBeacon(ctx,W,H){ const r=mergeRect(W,H), cx=r.x+r.w/2, cy=r.y+r.h/2
   }
 }
 // 합체존 DOM 위치 갱신
-function placeMergeZone(){ const mz=document.getElementById('mergeZone');
-  const r=mergeRect(GW,GH); mz.style.width=r.w+'px'; mz.style.height=r.h+'px';
-  mz.style.left=r.x+'px'; mz.style.top=r.y+'px';
-  mz.style.display=(G.tab==='Main')?'flex':'none'; }
+function placeMergeZone(){ const mz=document.getElementById('mergeZone'); if(mz) mz.style.display='none'; }   // 합체존 제거
 
 // ============================================================================
 // 유닛/적 로직
@@ -7250,7 +7307,7 @@ function loop(now){
       if(G.tab==='Main'){ stepCmdMove(dt); separateUnits(); }   // 내 유닛 이동명령 + 겹침 방지
     }
   }
-  if(G.tab==='Main'){ renderUnits(); if(!G.sel.length && !G.selEnemy){ renderBossPanel(); renderSellPanel(); } }   // 유닛 DOM 라벨 + 홈 파견/판매
+  if(G.tab==='Main'){ renderUnits(); if(!G.sel.length && !G.selEnemy){ renderBossPanel(); renderHomeLeft(); } }   // 유닛 DOM 라벨 + 홈 파견/판매
   // 선택된 적: 죽으면 해제, 살아있으면 상태창 HP/실드 실시간 갱신
   if(G.selEnemy!=null){ const se=G.enemies.find(x=>x.eid===G.selEnemy);
     if(!se) deselectUnit(); else { const hpEl=document.getElementById('uHp'); if(hpEl) hpEl.innerHTML=enemyHpHTML(se); } }
@@ -7848,8 +7905,7 @@ window.M3D={
     // ── 합체 베이 3D 비콘(우하단 구석) ──
     if(beaconBase && typeof mergeRect!=='undefined'){ let bz=beaconInsts.get('bay');
       if(!bz){ bz=makeBeacon(); if(bz) beaconInsts.set('bay',bz); }
-      if(bz){ bz.holder.visible=true; const r=mergeRect(W,H), cx=r.x+r.w/2, cy=r.y+r.h/2;
-        bz.holder.scale.setScalar((r.w*0.46)/bz.w); bz.holder.position.set(cx, (H-cy)-Y_DROP, -300); }   // 작은 중앙 비콘(구역은 바닥 데칼이 표시)
+      if(bz){ bz.holder.visible=false; }   // 합체존 제거 — 전 범위 조합으로 대체(3D 베이 비콘 숨김)
     }
     // 다른 탭의 shop 비콘 인스턴스는 숨김
     for(const [k,b] of beaconInsts){ if(k!=='bay') b.holder.visible=false; }
