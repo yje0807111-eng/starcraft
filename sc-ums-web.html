@@ -215,12 +215,12 @@
   .bdBtn.bdBack{color:var(--txt-hud);background:var(--glass);border-color:var(--metal-edge)}
   #coopBossBar{cursor:pointer;pointer-events:auto}
   /* 메인 홈 하단 — 좌(판매)·우(보스 파견): 칸 없이 중앙 구분선으로만 분리 */
-  .homeCols{position:relative;display:flex;gap:8px;align-items:stretch}
-  .homeSell,.homeBoss{display:flex;flex-direction:column;gap:7px;padding:8px 10px;min-width:0;
-    background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.012));
-    border:1px solid var(--metal-edge);border-radius:var(--r-lg);box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
-  .homeSell{flex:2.4;justify-content:flex-start}   /* 판매/조합 구역 넓게(좌) */
-  .homeBoss{flex:1;justify-content:space-between}  /* 보스 파견 구역 좁게(우) */
+  .homeCols{position:relative;display:flex;gap:0;align-items:stretch}
+  .homeSell,.homeBoss{display:flex;flex-direction:column;gap:7px;padding:2px 12px;background:none;border:none;min-width:0}
+  .homeSell{flex:2.4;position:relative;justify-content:flex-start;padding-left:2px}   /* 판매/조합 구역 넓게(좌) */
+  .homeBoss{flex:1;padding-left:12px}                                                 /* 보스 파견 구역 좁게(우) */
+  .homeSell::after{content:'';position:absolute;right:0;top:6px;bottom:6px;width:1px;pointer-events:none;
+    background:linear-gradient(180deg,transparent,rgba(255,255,255,.14) 20%,rgba(255,255,255,.14) 80%,transparent)}
   .hsTitle svg{color:var(--gold);filter:drop-shadow(0 0 4px rgba(255,210,74,.5))}
   .hbHint{font-size:var(--fs-xs);color:var(--txt-mute);line-height:1.45}.hbHint b{color:var(--gold)}
   /* 판매: 등급 칩 + 초상화 그리드 */
