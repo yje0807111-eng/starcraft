@@ -598,7 +598,7 @@
   .scKill b{color:var(--gold-lt);font-size:10px;font-weight:800}
   .scType{font-size:var(--fs-md);color:var(--neon);text-shadow:0 0 6px var(--neon-glow);margin-top:1px;white-space:nowrap}
   /* 등급 라벨(정보창) — 등급색 작은 칩. 서열은 색으로, 별은 강화형 구분용 */
-  .tierTag{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.5px;padding:1px 6px;border-radius:var(--r-md);border:1px solid;line-height:1.45;vertical-align:middle}
+  .tierTag{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.8px;padding:1px 6px;border-radius:0;border:1px solid;line-height:1.5;vertical-align:middle}
   .scHp{margin-top:7px;display:flex;flex-direction:column;gap:3px;font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif}
   .scHp .hpline{font-size:var(--fs-md);font-weight:700;line-height:1;display:flex;align-items:center;gap:4px;white-space:nowrap;letter-spacing:.3px}
   .scHp .hpline .lab{flex:none;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;font-size:8px;font-weight:700;letter-spacing:0;
@@ -2492,10 +2492,10 @@ function gNameStar(u, def){ const base=(u&&u.gname)||(def&&def.name)||''; const 
 // 등급 라벨 HTML(등급색 칩). 가챠 유닛만, 아니면 빈 문자열
 const GACHA_TAGS = { matron_t:[{label:'슬로우',color:'#6fe0c0'}], sentinel_god:[{label:'감전',color:'#b48bff'}], reaper_god:[{label:'맹독',color:'#9fd356'}] };   // 유닛 부가 효과 배지(등급 배너 옆)
 function unitTagsHTML(u){ const ts=(u&&u.gid&&GACHA_TAGS[u.gid])||[]; if(!ts.length) return '';
-  return ts.map(function(t){ return '<span class="tierTag" style="margin-left:4px;color:'+t.color+';border-color:'+t.color+'55;background:'+t.color+'16;text-shadow:0 0 6px '+t.color+'66">'+t.label+'</span>'; }).join(''); }
+  return ts.map(function(t){ return '<span class="tierTag" style="margin-left:4px;color:'+t.color+';border-color:'+t.color+'66;background:transparent">'+t.label+'</span>'; }).join(''); }
 function tierLabelHTML(tier){ if(!tier||!GACHA_TIERS[tier]) return '';
   const c=TIER_COLOR[tier]||'#fff';
-  return '<span class="tierTag" style="color:'+c+';border-color:'+c+'55;background:'+c+'16;text-shadow:0 0 6px '+c+'66">'+GACHA_TIERS[tier].name+'</span>'; }
+  return '<span class="tierTag" style="color:'+c+';border-color:'+c+'66;background:transparent">'+GACHA_TIERS[tier].name+'</span>'; }
 const GACHA_COST = 30;   // 1회 뽑기 크레딧 비용
 const RACER_CD = 12;     // 레이서 공격 쿨다운(프레임/60fps) = 5발/초. 데미지는 DPS 유지 위해 퍼샷 대폭 감소
 const FAST_CD = { racer:RACER_CD, machinegun:8 };   // gmodel별 초고속 발사 쿨다운(발칸=8프레임≈7.5발/초). 데미지는 DPS 유지로 퍼샷 감소
