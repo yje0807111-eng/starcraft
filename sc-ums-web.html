@@ -593,10 +593,12 @@
     font-size:var(--fs-xs);font-weight:800;letter-spacing:.5px;color:#ffd6d6;text-align:center;line-height:1;padding:3px 0 3.5px;
     background:linear-gradient(180deg,rgba(20,6,8,0),rgba(18,5,7,.9) 55%);text-shadow:0 1px 2px #000,0 0 5px rgba(255,59,59,.5)}
   .scMid{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}
-  .scName{font-size:15px;font-weight:800;color:var(--neon-lt);text-shadow:0 0 8px var(--neon-glow);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .scName{font-size:13px;font-weight:800;color:var(--neon-lt);text-shadow:0 0 8px var(--neon-glow);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .scKill{font-size:9px;font-weight:700;color:var(--txt-mute);margin-top:3px;letter-spacing:.3px;font-family:'Rajdhani',sans-serif}
+  .scKill b{color:var(--gold-lt);font-size:10px;font-weight:800}
   .scType{font-size:var(--fs-md);color:var(--neon);text-shadow:0 0 6px var(--neon-glow);margin-top:1px;white-space:nowrap}
   /* 등급 라벨(정보창) — 등급색 작은 칩. 서열은 색으로, 별은 강화형 구분용 */
-  .tierTag{display:inline-block;font-size:var(--fs-sm);font-weight:800;letter-spacing:.6px;padding:1px 8px;border-radius:var(--r-md);border:1px solid;line-height:1.5;vertical-align:middle}
+  .tierTag{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.5px;padding:1px 6px;border-radius:var(--r-md);border:1px solid;line-height:1.45;vertical-align:middle}
   .scHp{margin-top:7px;display:flex;flex-direction:column;gap:3px;font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif}
   .scHp .hpline{font-size:var(--fs-md);font-weight:700;line-height:1;display:flex;align-items:center;gap:4px;white-space:nowrap;letter-spacing:.3px}
   .scHp .hpline .lab{flex:none;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;font-size:8px;font-weight:700;letter-spacing:0;
@@ -1935,6 +1937,7 @@
             <div class="scName" id="uName">유닛</div>
             <div class="scType" id="uType"></div>
             <div class="scHp" id="uHp"></div>
+            <div class="scKill" id="uKill"></div>
           </div>
           <div class="scStats" id="statGrid"></div>
         </div>
@@ -3814,8 +3817,10 @@ function spawnEnemy(opts){ opts=opts||{}; const boss=!!opts.boss, special=!!opts
   G.pendSpawn.push({t:SPAWN_LEAD, e:e});                   // ② 모임 완료(플래시) 시점에 실제 등장(효과음도 이때)
 }
 
+let _atkUid=null;   // 현재 데미지 출처 유닛 uid(킬 카운트용)
 function hitEnemy(e,dmg){ let d=Math.max(1,dmg-(e.ar||0)); e.flash=4; e.hit=1; e.shHit=e.sh>0?1:0;
-  if(e.sh>0){ if(d<=e.sh){ e.sh-=d; return; } d-=e.sh; e.sh=0; } e.hp-=d; }
+  if(e.sh>0){ if(d<=e.sh){ e.sh-=d; return; } d-=e.sh; e.sh=0; } e.hp-=d;
+  if(e.hp<=0 && e._killer==null) e._killer=_atkUid; }   // 마지막에 치명타를 낸 유닛 = 킬 귀속
 // 적 사망 폭발: 확장 링 2겹 + 코어 플래시 + 사방 파편
 function deathBurst(e){ const p=posAt(e.d,GW,GH); const col=e.boss?COL.boss:COL.enemy; const big=e.boss?1.8:1;
   if(e.boss){   // 보스=임팩트 유지(살짝만 절제·빠른 페이드)
@@ -3911,7 +3916,7 @@ function step(dt){
       if(Math.random()<dt*7){ const q=posAt(e.d,GW,GH); const qy=e.model3d?q.y-AIR_HIT_OFF:q.y;
         G.sparks.push({x:q.x+(Math.random()-0.5)*14,y:qy+(Math.random()-0.5)*12,vx:(Math.random()-0.5)*60,vy:(Math.random()-0.5)*60,life:0.14,len:3+Math.random()*3,color:Math.random()<0.5?'#b48bff':'#eadcff'}); } }
     if(e.psnT>0){ e.psnT-=dt; e.psnTick=(e.psnTick||RPSN_TICK)-dt;   // 맹독: 틱마다 중첩×틱데미지
-      if(e.psnTick<=0){ e.psnTick=RPSN_TICK; hitEnemy(e,(e.psnStk||1)*(e.psnDmg||1));
+      if(e.psnTick<=0){ e.psnTick=RPSN_TICK; _atkUid=e.psnUid; hitEnemy(e,(e.psnStk||1)*(e.psnDmg||1));
         const q=posAt(e.d,GW,GH); const qy=e.model3d?q.y-AIR_HIT_OFF:q.y;   // 독방울 비주얼(초록 낙하)
         G.sparks.push({x:q.x+(Math.random()-0.5)*10,y:qy+(Math.random()-0.5)*8,vx:(Math.random()-0.5)*18,vy:26+Math.random()*22,life:0.3,len:2.5,color:Math.random()<0.5?'#9fd356':'#d6ff7a'}); }
       if(e.psnT<=0){ e.psnStk=0; e.psnDmg=0; } }
@@ -3978,6 +3983,7 @@ function step(dt){
       const ps=PROJ_SPD[def.atk];
       u.fireSeq=(u.fireSeq||0)+1;  // 발사 카운터(3D 공격모션 트리거)
       if(typeof playUnitAttack==='function') playUnitAttack(u.id);   // 유닛별 공격 효과음(내 유닛)
+      _atkUid=u.uid; const _sb=G.shots.length, _pb=G.pendingHits.length, _mb=(G.matronWaves||[]).length;   // 킬 귀속: 이번 공격 출처
       if(u.gid==='ranger_god'){ // 레인저 갓: 사거리 내 최대 5마리에 5발 저격(1마리면 5발 집중)
         fireRangerGodVolley(u,def,ux,uy,dmg);
       } else if(u.gid==='strider_god'){ // 스트라이더 갓: 어깨 포드 미사일 폭격 볼리(최대 6표적, 시간차 낙하, 소광역)
@@ -3992,17 +3998,21 @@ function step(dt){
         if(sR){ const r2=Math.pow(sR*Math.min(GW,GH),2); const sRatio=(u.gid==='skydancer_t')?0.8:SPLASH_RATIO; for(const e of G.enemies){ if(e===tgt)continue; const p=posAt(e.d,GW,GH); const ey=(e.model3d?p.y-AIR_HIT_OFF:p.y); const dx=p.x-tp.x,dy=ey-tp.y; if(dx*dx+dy*dy<=r2) hitEnemy(e,dmg*sRatio); } }   // tp가 공중 보정된 만큼 비교 위치도 보정(좁은 반경에서 어긋남 방지)
         fireAttack(u,def,ux,uy,tp);
       }
+      for(let k=_sb;k<G.shots.length;k++) G.shots[k].uid=u.uid;            // 이번 공격이 만든 발사체에 출처 태깅
+      for(let k=_pb;k<G.pendingHits.length;k++) G.pendingHits[k].uid=u.uid;
+      for(let k=_mb;k<(G.matronWaves||[]).length;k++) G.matronWaves[k].uid=u.uid;
       const cdv=cdOf(u,def)*(u.adr>0?0.5:1); u.cd=cdv; u.cdMax=cdv; u.atkT=0.6; } }  // 레이서·발칸=초고속 연사. 아드레날린 시 장전 0.5배. cdMax=장전 진행도 계산용
   // 명중 대기(발사체) 처리 — 도달 시 데미지 적용
   for(let i=G.pendingHits.length-1;i>=0;i--){ const h=G.pendingHits[i]; h.t+=dt;
     if(h.t>=h.dur){ const e=G.enemies.find(x=>x.eid===h.eid);
-      if(e){ hitEnemy(e,h.dmg);
+      if(e){ _atkUid=h.uid; hitEnemy(e,h.dmg);
         if(h.splash){ const r2=Math.pow(SPLASH_R*Math.min(GW,GH),2); const p=posAt(e.d,GW,GH);
           for(const o of G.enemies){ if(o===e)continue; const q=posAt(o.d,GW,GH); const dx=q.x-p.x,dy=q.y-p.y; if(dx*dx+dy*dy<=r2) hitEnemy(o,h.dmg*SPLASH_RATIO); } } }
       G.pendingHits.splice(i,1); } }
   stepMatronWaves(dt);   // 매트론 가시 연쇄: 시간차 전파(한 마리→주변→그 주변)
   // 처치
   for(let i=G.enemies.length-1;i>=0;i--){ const e=G.enemies[i]; if(e.hp<=0){ G.kills++;
+    if(e._killer!=null){ const _k=G.units.find(x=>x.uid===e._killer); if(_k) _k.kills=(_k.kills||0)+1; }   // 개별 유닛 킬 카운트
     if(e.boss) toast('🟡 라운드 보스 처치!');
     if(e.special){ const sc=mapCfg('specialCredit',SPECIAL_MIN); gainMineral(sc); gainGas(2); toast('스페셜 처치! +'+sc+' 크레딧 +2 에너지'); }   // 스페셜=크레딧+에너지
     if(e.boss){ gainGas(5+Math.floor(G.round/4)); }   // 보스 처치=에너지 보너스(하향)
@@ -4044,8 +4054,8 @@ function advanceFx(dt){
         if(s.gboom){ s.lkx=p.x; s.lky=p.y; }   // 마지막 표적 위치 기억(사망 시 그 자리에서 폭파)
         const dx=p.x-s.x, dy=p.y-s.y, d=Math.hypot(dx,dy)||1;
         if(d<=s.spd*dt+HIT_R){ // 명중
-          hitEnemy(e, s.dmg);
-          if(s.psn){ e.psnStk=Math.min(RPSN_MAX,(e.psnStk||0)+1); e.psnT=RPSN_DUR; e.psnDmg=Math.max(e.psnDmg||0,s.psn); }   // 맹독 중첩(상한)·지속 갱신
+          _atkUid=s.uid; hitEnemy(e, s.dmg);
+          if(s.psn){ e.psnStk=Math.min(RPSN_MAX,(e.psnStk||0)+1); e.psnT=RPSN_DUR; e.psnDmg=Math.max(e.psnDmg||0,s.psn); e.psnUid=s.uid; }   // 맹독 중첩(상한)·지속 갱신·출처
           if(s.splash){ const r2=Math.pow((s.splashR||SPLASH_R)*Math.min(GW,GH),2); for(const o of G.enemies){ if(o===e)continue; const q=posAt(o.d,GW,GH); const ax=q.x-p.x,ay=q.y-p.y; if(ax*ax+ay*ay<=r2) hitEnemy(o,s.dmg*SPLASH_RATIO); } }
           if(s.kind==='bullet'||s.kind==='sniper'||s.kind==='mg'){ const sn=s.kind==='sniper'; spawnSparks(p.x,p.y,-dx/d,-dy/d,sn?'#eaffff':'#ffe6a0'); G.impacts.push({x:p.x,y:p.y,life:1,r:sn?5:(s.kind==='mg'?2.5:3.5),color:sn?'#eafdff':'#fff6d8'}); }
           else if(s.kind==='needle'){ for(let q=0;q<5;q++){ const a=Math.atan2(-dy,-dx)+(Math.random()-0.5)*1.5, sp=60+Math.random()*120; G.sparks.push({x:p.x,y:p.y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:0.4,len:2+Math.random()*3,color:q%2?'#d6ff7a':'#9fd356'}); } G.impacts.push({x:p.x,y:p.y,life:1,r:6,color:s.color}); }  // 침 박힘 — 초록 점액 튀김
@@ -4387,7 +4397,7 @@ function stepMatronWaves(dt){
       const e=G.enemies.find(x=>x.eid===p.eid);
       if(!e || wave.hit.has(p.eid)) continue;
       const pos=posAt(e.d,GW,GH), ey=e.model3d?pos.y-AIR_HIT_OFF:pos.y;
-      hitEnemy(e,p.dmg); matronSlow(e); wave.hit.add(p.eid);
+      _atkUid=wave.uid; hitEnemy(e,p.dmg); matronSlow(e); wave.hit.add(p.eid);
       if(p.gen>0) G.beams.push({x1:p.px,y1:p.py,x2:pos.x,y2:ey,life:1,color:'#9be05a',w:1.5});   // 부모→이 적 에너지 줄기
       matronSlashHit(pos.x, ey, p.ang||0);
       if(p.gen<MATRON_MAXGEN){   // 다음 세대: 가까운 미타격·미예약 적 MATRON_BRANCH개로 번짐
@@ -4814,6 +4824,7 @@ function refreshSelCard(){
       :'<svg viewBox="0 0 24 24" width="46" height="46"><circle cx="12" cy="12" r="7" fill="none" stroke="#ff6a6a" stroke-width="1.6"/><circle cx="12" cy="12" r="2.4" fill="#ff6a6a"/></svg>';
     portEl.innerHTML=_eport+'<div class="portJob">'+ejob+'</div>';
     document.getElementById('uName').textContent=en.name+' [적]';
+    document.getElementById('uKill').textContent='';
     typeEl.textContent='';   // 타입 라인 제거(직업은 초상화 하단 배지로)
     hpEl.innerHTML=enemyHpHTML(en);
     grid.style.display='flex';
@@ -4825,6 +4836,7 @@ function refreshSelCard(){
     const job=UNIT_CLS[u.id]||'';
     portEl.innerHTML=unitPortraitHTML(u.gmodel||u.id)+(job?'<div class="portJob">'+job+'</div>':'');  // 초상화(가챠 전용 우선) + 직업 배지
     document.getElementById('uName').textContent=gNameStar(u,def)+(u.hero?' [영웅]':'');
+    document.getElementById('uKill').innerHTML='처치 <b>'+(u.kills||0)+'</b>';   // 이 유닛 누적 킬
     typeEl.innerHTML=(u.gtier?tierLabelHTML(u.gtier):'')+unitTagsHTML(u);   // 등급 라벨 + 부가 효과(슬로우 등)
     hpEl.innerHTML=scHpHTML(u);
     grid.style.display='flex'; grid.innerHTML=scStatBoxesHTML(u); fitStatNumbers();
@@ -6866,7 +6878,7 @@ function hitUnit(x,y){ let best=.06,hit=null;
 // 유닛 위 정확 판정(반경 내)
 function hitUnitPrecise(x,y){ let best=1e9,hit=null;
   for(const u of G.units){ if(u.atBoss) continue; const d=Math.hypot((u.x-x)*GW,(u.y-y)*GH); if(d<=unitRadius(u)+6 && d<best){ best=d; hit=u; } } return hit; }
-const GRAB_PAD=26;   // 손가락 친화 그랩 여유(px) — 유닛을 살짝 빗나가도 가장 가까운 유닛을 잡음(터치=즉시 선택+드래그 이동)
+const GRAB_PAD=15;   // 손가락 친화 그랩 여유(px) — 유닛을 살짝 빗나가도 가장 가까운 유닛을 잡음(좁게)
 function grabUnit(x,y){ let best=1e9,hit=null;
   for(const u of G.units){ if(u.atBoss) continue; const d=Math.hypot((u.x-x)*GW,(u.y-y)*GH); if(d<=unitRadius(u)+GRAB_PAD && d<best){ best=d; hit=u; } } return hit; }
 // 적 위 판정(트랙 좌표 → 픽셀). 가장 가까운 적 1마리
