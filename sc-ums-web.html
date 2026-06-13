@@ -373,16 +373,16 @@
   /* BOTTOM PANEL */
   /* 하단 패널: 상단 발광 라인 + 미세 그라데이션으로 게임화면과 분리 */
   /* 하단 콘솔 — 스타크래프트식 브러시드 메탈 + 상단 위험띠 + 리벳 */
-  #bot{height:220px;flex-shrink:0;display:flex;flex-direction:column;position:relative;
+  #bot{height:248px;flex-shrink:0;display:flex;flex-direction:column;position:relative;
     background:none;   /* 투명 — 프레임의 지형 타일이 그대로 비침(한 지면처럼) */
     box-shadow:0 -10px 24px -6px rgba(0,0,0,.55)}   /* 위쪽으로 부드러운 그림자 → 자연스러운 섹션 경계 */
   #phone:not(.inGame) #bot{display:none}   /* 게임 중(.inGame)에만 하단 콘솔 표시 — 타이틀/방찾기/로비 등에서는 숨김 */
   #bot::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;z-index:2;   /* 가장자리로 사라지는 빨강 하이라이트(자연스러운 구분선) */
     background:linear-gradient(90deg,transparent,var(--neon-soft) 50%,transparent);opacity:.55;box-shadow:0 0 8px var(--neon-faint)}
-  #tabs{display:flex;flex-shrink:0;position:relative;margin-top:4px;
+  #tabs{display:flex;flex-shrink:0;position:relative;margin-top:2px;
     background:none;   /* 탭바 배경 투명 */
     border-bottom:1px solid rgba(255,255,255,.06)}
-  .tab{flex:1;padding:9px 2px 8px;text-align:center;font-size:var(--fs-xs);color:#56697c;cursor:pointer;font-weight:700;
+  .tab{flex:1;padding:5px 2px 5px;text-align:center;font-size:var(--fs-xs);color:#56697c;cursor:pointer;font-weight:700;
     border-right:1px solid var(--glass);border-bottom:2px solid transparent;transition:all .18s;line-height:1.3;position:relative;
     text-shadow:0 1px 1px #000}   /* 얇은 금속 구분선 */
   .tab:last-child{border-right:none}
