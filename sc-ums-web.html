@@ -2602,9 +2602,12 @@ function gainMineral(n){ G.mineral += Math.round(n*((G.metaB&&G.metaB.creditMul)
 function gainGas(n){ G.gas += Math.round(n*((G.metaB&&G.metaB.energyMul)||1)); }            // 메타: 에너지 획득↑
 function maxUnits(){ return mapCfg('maxUnits',MAX_UNITS) + ((G.metaB&&G.metaB.unitCap)||0); }                  // 메타: 유닛 수 증가
 // 게임 종료 정산: 이번 판에서 모은 포인트(G.points)에 난이도 배율을 곱해 계정에 누적·저장(1회만).
+const ROUND_COIN_PER=1.4;   // 라운드 도달당 코인(R9까지 0 → R17~18 약 11~13 → R30 약 29). 공용보스 기여는 보너스로 추가
+function runRoundPoints(){ const R=Math.min(G.round||0, mapCfg('rounds',TOTAL_ROUNDS)); return Math.max(0, Math.round((R-9)*ROUND_COIN_PER)); }
 function bankRunPoints(){ if(G._pointsBanked) return G._bankedAmt||0; G._pointsBanked=true;
   const cm=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).coinMult;
-  const gained=Math.round((G.points||0)*cm);
+  const total=runRoundPoints()+(G.points||0);   // 라운드 도달 베이스 + 공용보스 처치 기여(보너스)
+  const gained=Math.round(total*cm);
   if(gained>0){ PLAYER_META.coins=(PLAYER_META.coins||0)+gained; saveMeta(); }
   G._bankedAmt=gained; return gained; }
 // 메타 빌드 레벨업(코인 차감)
