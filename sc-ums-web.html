@@ -3895,7 +3895,7 @@ function step(dt){
   } else {                       // 전투 단계: 제한시간 종료 시 바로 다음 라운드(준비시간 없음)
     if(G.roundTime<=0){ const n=G.round+1;
       if(n>mapCfg('rounds',TOTAL_ROUNDS)){ G.phase='won'; if(typeof playSfx==='function') playSfx('win'); showOverlay(); return; }
-      gainGas(mapCfg('roundClearEnergyBase',6)+G.round*mapCfg('roundClearEnergyPer',2));   // 라운드 클리어 보너스(맵 설정, 메타 획득↑ 반영)
+      gainGas(mapCfg('roundClearEnergyBase',1)+Math.floor(G.round*mapCfg('roundClearEnergyPer',0.34)));   // 라운드 클리어 보너스(하향)
     gainMineral(mapCfg('roundClearCreditBase',10)+G.round*mapCfg('roundClearCreditPer',3));
       G.round=n; beginActivePhase(); }   // 2라운드부터는 준비시간 없이 즉시 전투
   }
@@ -4004,10 +4004,10 @@ function step(dt){
   // 처치
   for(let i=G.enemies.length-1;i>=0;i--){ const e=G.enemies[i]; if(e.hp<=0){ G.kills++;
     if(e.boss) toast('🟡 라운드 보스 처치!');
-    if(e.special){ const sc=mapCfg('specialCredit',SPECIAL_MIN); gainMineral(sc); gainGas(8); toast('스페셜 처치! +'+sc+' 크레딧 +8 에너지'); }   // 스페셜=크레딧+에너지
-    if(e.boss){ gainGas(20+G.round); }   // 보스 처치=에너지 큰 보너스
+    if(e.special){ const sc=mapCfg('specialCredit',SPECIAL_MIN); gainMineral(sc); gainGas(2); toast('스페셜 처치! +'+sc+' 크레딧 +2 에너지'); }   // 스페셜=크레딧+에너지
+    if(e.boss){ gainGas(5+Math.floor(G.round/4)); }   // 보스 처치=에너지 보너스(하향)
     gainMineral(mapCfg('killCredit',1));   // 킬 보상(맵 설정, 메타 획득↑ 반영)
-    G._gasAcc=(G._gasAcc||0)+mapCfg('killEnergy',0.6); if(G._gasAcc>=1){ const w=Math.floor(G._gasAcc); G._gasAcc-=w; gainGas(w); }   // 킬 드립 에너지(누적 소수)
+    G._gasAcc=(G._gasAcc||0)+mapCfg('killEnergy',0.05); if(G._gasAcc>=1){ const w=Math.floor(G._gasAcc); G._gasAcc-=w; gainGas(w); }   // 킬 드립 에너지(누적 소수, 하향)
     if(typeof playEnemyDeath==='function') playEnemyDeath(e.race);   // 종족별 처치음(대량 처치 쓰로틀)
     deathBurst(e); G.enemies.splice(i,1); } }
   // (라운드 진행은 위쪽 제한시간 타이머가 담당 — 클리어로는 넘어가지 않음)
@@ -5119,7 +5119,7 @@ function wpnBadgeSVG(wpn,col){ const g=WPN_ICON[wpn]||WPN_ICON.inf;
 // ── 업그레이드 설정(유즈맵별로 바꿔 끼움) ──
 const UPG_MAX=299;   // 업그레이드 최대 레벨 (이 유즈맵=299, 일반 맵은 3 등으로 설정)
 const UPG_TIME=0;    // 업그레이드 1회 완료까지 걸리는 시간(초). 0=즉시 완료(네모네모 디펜스: 로딩 없음)
-function upgCost(wpn){ return UPG_COST+(G.atkLv&&G.atkLv[wpn]||0); }   // 레벨 점증 비용(5+현재레벨) — 정액이면 한 판에 100+레벨 도달해 밸런스 붕괴(봇 시뮬)
+function upgCost(wpn){ return UPG_COST; }   // 정액 5 에너지(에너지 수급 하향으로 밸런스)
 const ENERGY_ICON='<svg viewBox="0 0 24 24" width="11" height="11" style="flex:0 0 auto"><path d="M13.6 2L5.4 13H10l-1.6 9L18.6 10.5H13z" fill="#6ff0a0" stroke="#d6ffe6" stroke-width="1.2" stroke-linejoin="round"/></svg>';
 // 건물별 업그레이드 항목 목록 — 추후 방어력 등 추가 시 배열에 push만 하면 슬롯이 자동 추가됨
 function bldgUpgs(b){
@@ -6892,8 +6892,12 @@ function onDown(e){ if(G.tab!=='Main'||G.phase!=='playing'||G.bossOpen) return; 
     setPatrolTarget(p.x,p.y); G.patrolArm=false; updateCmdRow(); e.preventDefault(); return; }
   G.patrolArm=false;
   const u=grabUnit(p.x,p.y);
-  if(u){ // 아군 누름(우선, 손가락 친화 반경) → 즉시 선택 + 떼지 않고 드래그하면 이동
-    if(!G.sel.includes(u.uid)) selectOne(u.uid);   // 이미 선택된 그룹의 한 명을 잡으면 그룹 전체 유지(다중 이동)
+  const grabSelf=u && G.sel.includes(u.uid);   // 잡은 게 이미 선택된 유닛(그룹 이동용)
+  const multi=G.sel.length>1;                  // 다중 선택 상태
+  if(u && multi && !grabSelf){ // 다중 선택 중 다른 유닛 위 클릭 → 그 유닛 무시하고 그 지점으로 이동
+    cmdMove={x:p.x,y:p.y,issued:false}; assignFormation(p.x,p.y); box=null; drag=null; dragSet=[];
+  } else if(u){ // 단일 선택(다른 유닛 클릭=재선택) 또는 그룹 내 유닛 잡기 → 선택 + 떼지 않고 드래그하면 이동
+    if(!grabSelf) selectOne(u.uid);   // 이미 선택된 그룹의 한 명을 잡으면 그룹 전체 유지(다중 이동)
     drag=u.fixed?null:u; lastP=p; cmdMove=null; dragSet=[]; box=null;
   } else { const en=hitEnemyPrecise(p.x,p.y);
     if(en){ selectEnemy(en.eid); drag=null; dragSet=[]; box=null; cmdMove=null; }  // 적 직접 클릭 → 그 적 1마리 선택
