@@ -2609,6 +2609,7 @@ function isTopCoopContributor(){ const c=G.coopContrib||{}, me=G.myPlayer||1, mi
 function bankRunPoints(){ if(G._pointsBanked) return G._bankedAmt||0; G._pointsBanked=true;
   const cm=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).coinMult;
   const bonus=(typeof coopActive==='function'&&coopActive()&&isTopCoopContributor())?1:0;   // 멀티 & 기여 1위 = +1코인(개인플레이=없음)
+  G._bankBonus=bonus;
   const gained=Math.round(runRoundPoints()*cm)+bonus;
   if(gained>0){ PLAYER_META.coins=(PLAYER_META.coins||0)+gained; saveMeta(); }
   G._bankedAmt=gained; return gained; }
@@ -5463,9 +5464,9 @@ function showOverlay(){ const ov=document.getElementById('ov'),tt=document.getEl
   if(G.phase==='ready'){ tt.textContent=MAP.name; tt.style.color=COL.accent;
     dd.textContent=MAP.desc+'.\n유닛 구매 → 배치 → 합성으로 영웅을 키우고\n'+mapCfg('rounds',TOTAL_ROUNDS)+'라운드를 클리어!'; bt.textContent='멀티플레이'; }
   else if(G.phase==='won'){ const gp=bankRunPoints(); tt.textContent='CLEAR! 🏆'; tt.style.color='#ffd24a';
-    dd.textContent=mapCfg('rounds',TOTAL_ROUNDS)+'라운드를 모두 막아냈습니다!\n킬 '+G.kills+'\n🟡 포인트 +'+gp+' 획득 (보유 '+(PLAYER_META.coins||0)+')'; bt.textContent='다시 시작'; }
+    dd.textContent=mapCfg('rounds',TOTAL_ROUNDS)+'라운드를 모두 막아냈습니다!\n킬 '+G.kills+'\n🟡 라운드 도달 보상 +'+gp+'P'+(G._bankBonus?' (보스 기여 1위 +1 포함)':'')+' · 보유 '+(PLAYER_META.coins||0)+'P'; bt.textContent='다시 시작'; }
   else if(G.phase==='lost'){ const gp=bankRunPoints(); tt.textContent='DEFEAT'; tt.style.color='#ff5c5c';
-    dd.textContent='라운드 '+G.round+'에서 적이 '+mapCfg('loseCount',LOSE_COUNT)+'기 누적되어 탈락했습니다.\n킬 '+G.kills+'\n🟡 포인트 +'+gp+' 획득 (보유 '+(PLAYER_META.coins||0)+')'; bt.textContent='다시 시작'; }
+    dd.textContent='라운드 '+G.round+'에서 적이 '+mapCfg('loseCount',LOSE_COUNT)+'기 누적되어 탈락했습니다.\n킬 '+G.kills+'\n🟡 라운드 '+G.round+' 도달 보상 +'+gp+'P'+(G._bankBonus?' (보스 기여 1위 +1 포함)':'')+' · 보유 '+(PLAYER_META.coins||0)+'P'; bt.textContent='다시 시작'; }
 }
 document.getElementById('ovBtn').onclick=()=>{
   if(G.phase==='ready'){ openRooms(); }                 // 멀티플레이 → 방 찾기
