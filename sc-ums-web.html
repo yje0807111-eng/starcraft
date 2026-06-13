@@ -2272,7 +2272,7 @@ const BLDG_SVG={
   evo:'<path d="M12 4c4 0 6 4 6 8 0 4-3 7-6 7s-6-3-6-7c0-4 2-8 6-8z" fill="currentColor" opacity=".18"/><path d="M12 4c4 0 6 4 6 8 0 4-3 7-6 7s-6-3-6-7c0-4 2-8 6-8z" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M9 4l1 3M15 4l-1 3M6 10l2.2 1M18 10l-2.2 1" stroke="currentColor" stroke-width="1"/><circle cx="12" cy="12.5" r="2" fill="currentColor"/>',
   pointlab:'<path d="M5 20h14l-7-16z" fill="currentColor" opacity=".16"/><path d="M5 20h14l-7-16z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M12 16.5V9M9 12l3-3 3 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
 };
-const UPG_COST=3; // 계열당 1레벨 = 가스 3 (엑셀)
+const UPG_COST=5; // 계열당 1레벨 = 가스 5(점증, upgCost) — 초기 비용
 
 // 몬스터 18라운드(엑셀): 이름 / 체력 / 쉴드 / 방어력. 보스=10라운드. 커세어(5)는 엑셀 빈칸→임시.
 // 라운드별 적(행=라운드). ar=등급 관문: 그 라운드 의도 등급의 한방뎀 ~55%(하위 등급은 1뎀).
@@ -2325,7 +2325,7 @@ function enemyRace(n){ return ENEMY_RACE[n]||'terran'; }
 // ============================================================================
 const USEMAPS={
   nemo:  { id:'nemo',   name:'네모네모 디펜스', desc:'사각 트랙을 도는 적을 막는 협동 디펜스', players:'1-8', pop:9820, icon:'🟥', rec:true,  isNew:false, playable:true,
-           cfg:{ rounds:20, roundTime:190, prepTime:10, startCredits:120, startEnergy:0, maxUnits:50,
+           cfg:{ rounds:20, roundTime:60, prepTime:10, startCredits:120, startEnergy:0, maxUnits:50,
                  killCredit:1, specialCredit:25, gachaCost:30, energyDrawCost:40, coopBoss:true, roster:'all',
                  enemiesPerRound:100, bossEvery:5, loseCount:120,
                  roundClearCreditBase:10, roundClearCreditPer:3, roundClearEnergyBase:3, roundClearEnergyPer:1 } },
@@ -2344,15 +2344,15 @@ function mapCfg(k,def){ const c=MAP&&MAP.cfg, v=c?c[k]:undefined; return v===und
 // ── 엔진 기본값(유즈맵 cfg 미지정 시 사용) ──
 const TOTAL_ROUNDS=20;                    // 총 20라운드(보스: 5·10·15·20). 적 정의(MON)는 부족분 마지막 것 반복
 const ENEMIES_PER_ROUND=100;               // 일반 라운드 적 수 = 99 + 스페셜 1
-const SPAWN_GAP=1.5;                        // 적 스폰 간격(초) → 100마리×1.5s=150초 스폰 후 40초 정리시간
+const SPAWN_GAP=0.5;                        // 적 스폰 간격(초) → 100마리×0.5s=50초 스폰 후 10초 정리시간
 const PREP_TIME=10;                        // 라운드 시작 전 준비(유닛 뽑기) 시간(초)
-const ROUND_TIME=190;                      // 라운드 제한시간 3:10(초). 0초 도달 시 다음 라운드 자동 시작
+const ROUND_TIME=60;                       // 라운드 제한시간 1:00(초). 50초 스폰(0.5s×100) + 10초 정리
 const BOSS_EVERY=5;                         // 5라운드마다 보스 라운드(보스 1마리만)
 const LOSE_COUNT=120;                       // 트랙 120기 누적 시 탈락(게임아웃) — 200은 너무 후해 풀업 레전드도 버팀(봇 시뮬)
 const WARN1=85, WARN2=110;                  // 적 누적 경고 임계치(탈락선 120 비례)
 const SPECIAL_MIN=25;                       // 스페셜 유닛 처치 시 크레딧 보너스
 function isBossRound(r){ return r % mapCfg('bossEvery',BOSS_EVERY) === 0; }
-function bossHp(r){ const m=roundDef(r); return Math.round((m.hp+m.sh)*30); }   // 그 라운드 적 30마리 분량(물량 대신 단일 탱크)
+function bossHp(r){ const m=roundDef(r); return Math.round((m.hp+m.sh)*(24+r*1.8)); }   // 라운드 점증 배율(R5≈33배·R20≈54배) — 후반 보스 큰 폭 성장
 const START_MIN=120, START_GAS=0;
 const MAX_UNITS=50;                        // 인구 기본 상한 (HUD 0/50). 메타 '유닛 수 증가'로 +N
 const SPLASH_R=.08, SPLASH_RATIO=.5;
@@ -2909,7 +2909,7 @@ function newGame(){ return {
   coopBoss:null, bossOpen:false, bossPickArm:false,   // 상시 공용 보스 + 토벌장 팝업 + 지정 파견
   units:[], enemies:[], beams:[], shots:[], impacts:[], muzzles:[], debris:[], pendingHits:[], recalls:[], sparks:[], pendSpawn:[], // 이펙트 + 명중대기 + 출현이펙트/대기 + 스파크
   toSpawn:0, spawnTimer:0, roundGap:0,
-  roundPhase:'prep', roundTime:10,   // 'prep'(준비 10s) → 'active'(라운드 3:10), 카운트다운
+  roundPhase:'prep', roundTime:10,   // 'prep'(준비 10s) → 'active'(라운드 1:00), 카운트다운
   tab:'Main', sel:[], selEnemy:null, prodB:null, techB:null, curPlayer:2, myPlayer:1,   // myPlayer=내 슬롯(멀티 대기실 순서로 할당 예정), curPlayer=관전 중인 플레이어
   mergeMode:false, idSeq:1, eSeq:1,
   citizen:{x:CITIZEN_HOME.x, y:CITIZEN_HOME.y, gx:null, gy:null, buyId:null}, // 유닛뽑기 시민(셀렉터)
@@ -3741,7 +3741,7 @@ const SPAWN_LEAD=0.58;   // 출현 이펙트 시작 → 실제 등장(에너지 
 function spawnEnemy(opts){ opts=opts||{}; const boss=!!opts.boss, special=!!opts.special; const m=roundDef(G.round);
   const mb=G.metaB||{};   // 메타 강화: 적 체력/방어/이속 감소(개인)
   const hpMul=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).enemyHp*(mb.enemyHpMul||1)
-  *Math.pow(1.06, Math.max(0, G.round-4));   // 난이도×메타×라운드 램프(R5부터 +6%/R 복리 — 후반 가속)
+  *Math.pow(1.095, Math.max(0, G.round-4));   // 난이도×메타×라운드 램프(R5부터 +9.5%/R 복리 — 후반 급가속)
   const hp = Math.round((boss ? bossHp(G.round) : m.hp)*hpMul);
   const sh = boss?0:Math.round(m.sh*hpMul);
   const ar = Math.max(0, (boss?Math.round(m.ar*0.5):m.ar) - (mb.enemyArmor||0));   // 보스 방어=그 라운드의 절반(등급 관문은 일반 라운드가 담당)
@@ -3826,7 +3826,7 @@ function beginActivePhase(){ G.roundPhase='active'; G.roundTime=mapCfg('roundTim
 function step(dt){
   if(G.phase!=='playing') return;
   G.timeSec+=dt;   // 애니메이션용(증가 유지)
-  // 라운드 타이머(카운트다운): 준비 10초 → 전투 3:10. 0초 도달 시 자동 진행.
+  // 라운드 타이머(카운트다운): 준비 10초 → 전투 1:00. 0초 도달 시 자동 진행.
   if(G.roundTime==null) G.roundTime=mapCfg('prepTime',PREP_TIME);
   G.roundTime-=dt;
   if(G.roundPhase!=='active'){   // 준비 단계: 유닛 뽑고 대기(첫 라운드 시작 전에만)
@@ -3834,11 +3834,11 @@ function step(dt){
   } else {                       // 전투 단계: 제한시간 종료 시 바로 다음 라운드(준비시간 없음)
     if(G.roundTime<=0){ const n=G.round+1;
       if(n>mapCfg('rounds',TOTAL_ROUNDS)){ G.phase='won'; if(typeof playSfx==='function') playSfx('win'); showOverlay(); return; }
-      gainGas(mapCfg('roundClearEnergyBase',3)+G.round*mapCfg('roundClearEnergyPer',1));   // 라운드 클리어 보너스(맵 설정, 메타 획득↑ 반영)
+      gainGas(mapCfg('roundClearEnergyBase',6)+G.round*mapCfg('roundClearEnergyPer',2));   // 라운드 클리어 보너스(맵 설정, 메타 획득↑ 반영)
     gainMineral(mapCfg('roundClearCreditBase',10)+G.round*mapCfg('roundClearCreditPer',3));
       G.round=n; beginActivePhase(); }   // 2라운드부터는 준비시간 없이 즉시 전투
   }
-  // 스폰(전투 단계, 일반 라운드만 — 150초 동안 1.5초당 1마리, 1마리는 스페셜)
+  // 스폰(전투 단계, 일반 라운드만 — 50초 동안 0.5초당 1마리, 1마리는 스페셜)
   if(G.roundPhase==='active' && G.toSpawn>0){ G.spawnTimer-=dt; if(G.spawnTimer<=0){
     spawnEnemy({special: G.toSpawn===G.specialAt}); G.toSpawn--; G.spawnTimer=SPAWN_GAP; } }
   // 대기 스폰: 에너지 모임이 끝나는 시점(플래시)에 실제 적 등장
@@ -3943,8 +3943,10 @@ function step(dt){
   // 처치
   for(let i=G.enemies.length-1;i>=0;i--){ const e=G.enemies[i]; if(e.hp<=0){ G.kills++;
     if(e.boss) toast('🟡 라운드 보스 처치!');
-    if(e.special){ const sc=mapCfg('specialCredit',SPECIAL_MIN); gainMineral(sc); toast('스페셜 처치! +'+sc+' 크레딧'); }   // 스페셜 유닛=크레딧 보너스
+    if(e.special){ const sc=mapCfg('specialCredit',SPECIAL_MIN); gainMineral(sc); gainGas(8); toast('스페셜 처치! +'+sc+' 크레딧 +8 에너지'); }   // 스페셜=크레딧+에너지
+    if(e.boss){ gainGas(20+G.round); }   // 보스 처치=에너지 큰 보너스
     gainMineral(mapCfg('killCredit',1));   // 킬 보상(맵 설정, 메타 획득↑ 반영)
+    G._gasAcc=(G._gasAcc||0)+mapCfg('killEnergy',0.6); if(G._gasAcc>=1){ const w=Math.floor(G._gasAcc); G._gasAcc-=w; gainGas(w); }   // 킬 드립 에너지(누적 소수)
     if(typeof playEnemyDeath==='function') playEnemyDeath(e.race);   // 종족별 처치음(대량 처치 쓰로틀)
     deathBurst(e); G.enemies.splice(i,1); } }
   // (라운드 진행은 위쪽 제한시간 타이머가 담당 — 클리어로는 넘어가지 않음)
@@ -5056,7 +5058,7 @@ function wpnBadgeSVG(wpn,col){ const g=WPN_ICON[wpn]||WPN_ICON.inf;
 // ── 업그레이드 설정(유즈맵별로 바꿔 끼움) ──
 const UPG_MAX=299;   // 업그레이드 최대 레벨 (이 유즈맵=299, 일반 맵은 3 등으로 설정)
 const UPG_TIME=0;    // 업그레이드 1회 완료까지 걸리는 시간(초). 0=즉시 완료(네모네모 디펜스: 로딩 없음)
-function upgCost(wpn){ return UPG_COST+(G.atkLv&&G.atkLv[wpn]||0); }   // 레벨 점증 비용(3+현재레벨) — 정액이면 한 판에 100+레벨 도달해 밸런스 붕괴(봇 시뮬)
+function upgCost(wpn){ return UPG_COST+(G.atkLv&&G.atkLv[wpn]||0); }   // 레벨 점증 비용(5+현재레벨) — 정액이면 한 판에 100+레벨 도달해 밸런스 붕괴(봇 시뮬)
 const ENERGY_ICON='<svg viewBox="0 0 24 24" width="11" height="11" style="flex:0 0 auto"><path d="M13.6 2L5.4 13H10l-1.6 9L18.6 10.5H13z" fill="#6ff0a0" stroke="#d6ffe6" stroke-width="1.2" stroke-linejoin="round"/></svg>';
 // 건물별 업그레이드 항목 목록 — 추후 방어력 등 추가 시 배열에 push만 하면 슬롯이 자동 추가됨
 function bldgUpgs(b){
@@ -6398,7 +6400,7 @@ function playerEnemyCount(n){ const mine=G.myPlayer||1;
   const s=G.pSim&&G.pSim[n]; return s? Math.round(s.count) : 0; }
 function tickPlayerSim(dt){ if(G.phase!=='playing'||!G.pSim||G.coop) return;   // 협동: 시뮬 대신 실제 상태 사용
   const ed=dt*(G.speedMul||1);   // 게임 속도 반영
-  const spawning=(G.roundPhase==='active' && !isBossRound(G.round) && G.roundTime>mapCfg('roundTime',ROUND_TIME)-150);  // 전투 첫 150초 유입
+  const spawning=(G.roundPhase==='active' && !isBossRound(G.round) && G.roundTime>mapCfg('roundTime',ROUND_TIME)-50);  // 전투 첫 50초 유입
   const arrival=spawning ? (1/SPAWN_GAP) : 0;   // 초당 적 유입(≈0.667)
   for(const k in G.pSim){ const n=+k, s=G.pSim[k]; if(s.dead) continue;
     const clear=Math.max(0, s.skill*0.78 - G.round*0.016);   // 초당 처리량(라운드↑일수록 버거움)
