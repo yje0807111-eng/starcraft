@@ -217,8 +217,8 @@
   /* 메인 홈 하단 — 좌(판매)·우(보스 파견): 칸 없이 중앙 구분선으로만 분리 */
   .homeCols{position:relative;display:flex;gap:0;align-items:stretch}
   .homeSell,.homeBoss{display:flex;flex-direction:column;gap:6px;padding:2px 12px;background:none;border:none;min-width:0}
-  .homeSell{flex:1.8;position:relative;justify-content:flex-start;padding-left:2px}   /* 판매 구역 넓게(좌) */
-  .homeBoss{flex:1}                                                                   /* 보스 파견 구역 좁게(우) */
+  .homeSell{flex:2.4;position:relative;justify-content:flex-start;padding-left:2px}   /* 판매/조합 구역 넓게(좌) */
+  .homeBoss{flex:1;padding-left:8px;padding-right:8px}                                 /* 보스 파견 구역 좁게(우) */
   .homeSell::after{content:'';position:absolute;right:0;top:6px;bottom:6px;width:1px;pointer-events:none;
     background:linear-gradient(180deg,transparent,rgba(255,255,255,.16) 20%,rgba(255,255,255,.16) 80%,transparent)}
   .hsTitle svg{color:var(--gold);filter:drop-shadow(0 0 4px rgba(255,210,74,.5))}
@@ -230,7 +230,7 @@
   .hsTier.on{color:#16110a;background:var(--tc,var(--gold));border-color:var(--tc,var(--gold));box-shadow:0 0 9px -3px var(--tc,var(--gold))}
   .hsGrid{display:flex;flex-wrap:nowrap;gap:5px;align-items:flex-start;overflow-x:auto;overflow-y:hidden;padding-bottom:3px}
   .hsGrid::-webkit-scrollbar{height:4px}.hsGrid::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
-  .hsCell{position:relative;flex:0 0 auto;width:50px;padding:0;border-radius:var(--r-md);cursor:pointer;background:rgba(0,0,0,.3);
+  .hsCell{position:relative;flex:0 0 auto;width:62px;padding:0;border-radius:var(--r-md);cursor:pointer;background:rgba(0,0,0,.3);
     border:1px solid var(--metal-edge);overflow:hidden;transition:all .12s}
   .hsCell:hover{border-color:var(--gold);box-shadow:0 0 8px -3px rgba(255,210,74,.7)}
   .hsCell:active{transform:translateY(1px)}
@@ -240,6 +240,8 @@
   .hsCnt{position:absolute;top:2px;left:3px;font-family:'Rajdhani',sans-serif;font-size:var(--fs-sm);font-weight:800;color:#fff;text-shadow:0 1px 2px #000,0 0 3px #000}
   .hsVal{display:block;font-family:'Rajdhani',sans-serif;font-size:var(--fs-lg);font-weight:800;color:var(--gold);text-align:center;line-height:16px;letter-spacing:.2px;
     background:rgba(0,0,0,.78);border-top:1px solid rgba(255,210,74,.45);text-shadow:0 1px 2px #000,0 0 4px rgba(0,0,0,.9)}
+  .hsName{display:block;font-size:9px;font-weight:700;color:#d3dbe6;text-align:center;line-height:13px;padding:1px 2px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:rgba(0,0,0,.55);border-top:1px solid rgba(255,255,255,.07)}
   .hsEmpty{font-size:var(--fs-xs);color:#7d8590;padding:8px 2px}
   .hsTabs{gap:10px;padding-bottom:1px}
   .hsTab{flex:0 0 auto;text-align:center;padding:2px 2px 4px;font-family:inherit;font-size:var(--fs-md);font-weight:800;cursor:pointer;
@@ -258,6 +260,7 @@
   .hbCount{margin-left:auto;font-family:'Rajdhani',sans-serif;font-size:var(--fs-xl);font-weight:700;color:var(--txt-mute)}
   .hbCount b{font-size:17px;font-weight:800;color:#ff8a9a}.hbCount i{font-style:normal;opacity:.7}
   .bdBtns{display:flex;gap:7px}
+  .hbDeploy,.hbRecall,.hbOpen{white-space:nowrap}
   .hbDeploy{flex:2;min-width:0;padding:11px 6px;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-lg);font-weight:800;cursor:pointer;
     color:#fff;background:linear-gradient(180deg,var(--neon-face1),var(--neon-d1));border:1px solid var(--neon);box-shadow:0 0 9px -3px var(--neon-glow);transition:all .12s}
   .hbDeploy:active{transform:translateY(1px)}
@@ -2474,7 +2477,7 @@ const TIER_MUL = { common:1.0, rare:2.2, epic:5.0, unique:11, legend:24, transce
 const UP_TIER_MUL = { common:1.0, rare:1.8, epic:3.5, unique:7, legend:9, transcend:25, god:48 };   // 레전드 13→9: 풀업 레전드가 20라운드를 깨지 않게(초월=클리어 라인 유지, 봇 시뮬 검증)   // 업그레이드 1회당 증가폭 등급 배율(기본딜 배율의 절반 강도)   // 등급당 ×2.2 — 등급 업=급격한 성장(설계: 초월 조합=클리어 라인, 갓=초반 캐리)
 function gachaTierMul(u){ return (u && u.gtier && TIER_MUL[u.gtier]) || 1; }
 // 단순 조합 사다리: 같은 유닛 3개 → 다음 등급 랜덤 1종. (legend↑는 단순조합 없음 — 초월=레시피, 갓=뽑기전용)
-const SIMPLE_COMBINE_TIERS = { common:'rare', rare:'epic', epic:'unique', unique:'legend' };
+const SIMPLE_COMBINE_TIERS = { common:'rare', rare:'epic', epic:'unique', unique:'legend', transcend:'god' };   // 초월 3개 → 갓 랜덤(조합으로도 갓 획득 가능)
 // 별은 등급별로 늘어나지 않음 — 같은 이름이 두 등급에 걸쳐 있어(일반·레어=레인저, 에픽·유니크=팬텀)
 // 강화형(레어·유니크)만 ★ 하나로 구분하는 단순 장치. 나머지(이름이 겹치지 않는 등급)는 별 없음.
 const UPGRADED_TIER = { rare:true, unique:true };
@@ -2748,11 +2751,11 @@ function renderBossPanel(){ const s=document.getElementById('bdSent'), t=documen
   if(typeof updateDeselTop==='function') updateDeselTop(); }
 // ── 유닛 판매 (등급 선택 → 초상화 클릭 = 1마리씩 판매) ──
 const SELL_VALUE={ common:15, rare:50, epic:130, unique:320, legend:850 };
-const NO_SELL_TIERS=new Set(['transcend','god']);   // 초월·갓은 판매 불가
+const NO_SELL_TIERS=new Set(['god']);   // 갓만 판매 불가(초월은 판매·조합 가능)
 function unitSellValue(u){ const base=(u&&u.gtier&&mapCfg('sellValue',SELL_VALUE)[u.gtier])||20;
   const ret=1+(buildLevel('sell_return')*0.05); return Math.round(base*ret); }
 function sellUnit(u){ if(!u||u.fixed) return false;
-  if((function(v){return v.has?v.has(u.gtier):v.includes(u.gtier)})(mapCfg('noSellTiers',NO_SELL_TIERS))){ toast('초월·갓 등급은 판매할 수 없습니다'); return false; }
+  if((function(v){return v.has?v.has(u.gtier):v.includes(u.gtier)})(mapCfg('noSellTiers',NO_SELL_TIERS))){ toast('갓 등급은 판매할 수 없습니다'); return false; }
   if(u.atBoss){ toast('보스방 파견 유닛은 회수 후 판매하세요'); return false; }
   const val=unitSellValue(u); G.mineral+=val;
   const i=G.units.indexOf(u); if(i>=0) G.units.splice(i,1);
@@ -2806,7 +2809,7 @@ function renderCombinePanel(){ const tiersBox=document.getElementById('hsTiers')
     const rtCol=res.type==='transcend'?TIER_COLOR.transcend:TIER_COLOR[res.nextTier];
     const rtName=res.type==='transcend'?'초월':GACHA_TIERS[res.nextTier].name;
     cells+='<button class="hsCell" onclick="combineOneOfType(\''+gid+'\')" title="'+escHtml(gu.displayName)+' ×3 → '+rtName+'"><div class="hsThumb">'+thumb+'</div>'
-      +'<span class="hsCnt">×'+list.length+'</span><span class="hsVal hsResult" style="color:'+rtCol+';border-top-color:'+rtCol+'">→'+rtName+'</span></button>';
+      +'<span class="hsCnt">×'+list.length+'</span><span class="hsName">'+escHtml(gu.displayName)+'</span><span class="hsVal hsResult" style="color:'+rtCol+';border-top-color:'+rtCol+'">→'+rtName+'</span></button>';
   }
   grid.innerHTML=cells;
 }
@@ -2828,7 +2831,7 @@ function renderSellPanel(){ const tiersBox=document.getElementById('hsTiers'), g
     const thumb=img?('<img src="'+img+'" draggable="false">'):(typeof unitSVG==='function'?unitSVG(GACHA_PROXY[gid]||'marine'):'');
     const val=unitSellValue(list[0]);
     cells+='<button class="hsCell" onclick="sellOneOfType(\''+gid+'\')" title="'+escHtml(gu.displayName)+' 판매 +'+val+'"><div class="hsThumb">'+thumb+'</div>'
-      +'<span class="hsCnt">×'+list.length+'</span><span class="hsVal">+'+val+'</span></button>';
+      +'<span class="hsCnt">×'+list.length+'</span><span class="hsName">'+escHtml(gu.displayName)+'</span><span class="hsVal">+'+val+'</span></button>';
   }
   grid.innerHTML=cells;
 }
