@@ -217,15 +217,14 @@
   /* 메인 홈 하단 — 좌(판매)·우(보스 파견): 칸 없이 중앙 구분선으로만 분리 */
   .homeCols{position:relative;display:flex;gap:0;align-items:stretch}
   .homeSell,.homeBoss{display:flex;flex-direction:column;gap:7px;padding:2px 12px;background:none;border:none;min-width:0}
-  .homeSell{flex:2.4;position:relative;justify-content:flex-start;padding-left:2px}   /* 판매/조합 구역 넓게(좌) */
-  .homeBoss{flex:0.62;padding-left:10px}                                              /* 보스 파견 구역 더 좁게(우) */
-  .homeSell::after{content:'';position:absolute;right:0;top:6px;bottom:6px;width:1px;pointer-events:none;
-    background:linear-gradient(180deg,transparent,rgba(255,255,255,.14) 20%,rgba(255,255,255,.14) 80%,transparent)}
+  .homeSell{flex:1;position:relative;justify-content:flex-start;padding-left:2px}   /* 단일 칼럼(풀폭) */
+  /* .homeBoss 제거 — 보스는 탭으로 통합 */
+  /* .homeSell::after 분리선 제거 — 단일 칼럼 */
   .hsTitle svg{color:var(--gold);filter:drop-shadow(0 0 4px rgba(255,210,74,.5))}
   .hbHint{font-size:var(--fs-xs);color:var(--txt-mute);line-height:1.45}.hbHint b{color:var(--gold)}
   /* 판매: 등급 칩 + 초상화 그리드 */
   .hsTiers{display:flex;flex-wrap:nowrap;gap:3px}
-  .hsTier{flex:1 1 0;min-width:0;text-align:center;padding:4px 2px;border-radius:var(--r-md);font-family:inherit;font-size:9px;font-weight:800;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  .hsTier{flex:1 1 auto;text-align:center;padding:4px 4px;border-radius:var(--r-md);font-family:inherit;font-size:10px;font-weight:800;cursor:pointer;white-space:nowrap;
     color:var(--tc,#bbb);background:var(--glass);border:1px solid var(--metal-edge);transition:all .12s}
   .hsTier.on{color:#16110a;background:var(--tc,var(--gold));border-color:var(--tc,var(--gold));box-shadow:0 0 9px -3px var(--tc,var(--gold))}
   .hsGrid{display:flex;flex-wrap:nowrap;gap:5px;align-items:flex-start;overflow:hidden;padding-bottom:3px}
@@ -267,8 +266,9 @@
   .hbTitle svg{width:13px;height:13px;color:var(--neon);flex:0 0 auto;filter:drop-shadow(0 0 4px var(--neon-glow))}
   .hbCount{margin-left:auto;font-family:'Rajdhani',sans-serif;font-size:var(--fs-md);font-weight:700;color:var(--txt-mute);white-space:nowrap}
   .hbCount b{font-size:14px;font-weight:800;color:#ff8a9a}.hbCount i{font-style:normal;opacity:.7}
-  .bdBtns{display:flex;flex-direction:column;gap:5px}
-  .hbDeploy,.hbRecall,.hbOpen{white-space:nowrap;width:100%;flex:none;padding:8px 6px}
+  .bdRow{display:flex;gap:6px;margin-top:2px}
+  .hbDeploy,.hbRecall,.hbOpen{white-space:nowrap;padding:11px 6px}
+  .hbDeploy{flex:1.6}.hbRecall{flex:1}.hbOpen{flex:1.6;width:auto}
   .hbDeploy{flex:2;min-width:0;padding:11px 6px;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-lg);font-weight:800;cursor:pointer;
     color:#fff;background:linear-gradient(180deg,var(--neon-face1),var(--neon-d1));border:1px solid var(--neon);box-shadow:0 0 9px -3px var(--neon-glow);transition:all .12s}
   .hbDeploy:active{transform:translateY(1px)}
@@ -1921,19 +1921,17 @@
               <button class="hsTab on" id="hsTabSel" onclick="setHomeMode('select')">유닛 지정</button>
               <button class="hsTab" id="hsTabComb" onclick="setHomeMode('combine')">유닛 조합<span class="hsTabDot hide" id="combDot"></span></button>
               <button class="hsTab" id="hsTabSell" onclick="setHomeMode('sell')">유닛 판매</button>
+              <button class="hsTab" id="hsTabBoss" onclick="setHomeMode('boss')">보스</button>
             </div>
             <div class="hsTiers" id="hsTiers"></div>
             <div class="hsGrid" id="hsGrid"></div>
-          </div>
-          <div class="homeBoss">
-            <div class="hbTop">
-              <span class="hbTitle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="7.5"/><path d="M12 2.6v3.2M12 18.2v3.2M2.6 12h3.2M18.2 12h3.2"/><circle cx="12" cy="12" r="2.1" fill="currentColor" stroke="none"/></svg>보스</span>
+            <div id="bossContent" style="display:none">
+              <div class="bdRow">
+                <button class="hbDeploy" id="bossPickBtn" onclick="armBossPick()"><span class="bdLabel">파견</span> <span class="bdCount"><b id="bdSent">0</b>/<span id="bdTotal">2</span></span></button>
+                <button class="hbRecall" onclick="recallFromBoss('all')">회수</button>
+                <button class="hbOpen" id="bossViewBtn" onclick="toggleBossArena()">보스장</button>
+              </div>
             </div>
-            <div class="bdBtns">
-              <button class="hbDeploy" id="bossPickBtn" onclick="armBossPick()"><span class="bdLabel">파견</span> <span class="bdCount"><b id="bdSent">0</b>/<span id="bdTotal">2</span></span></button>
-              <button class="hbRecall" onclick="recallFromBoss('all')">회수</button>
-            </div>
-            <button class="hbOpen" id="bossViewBtn" onclick="toggleBossArena()">보스장</button>
           </div>
         </div>
       </div>
@@ -2793,10 +2791,14 @@ function ownedCombineGroups(){ const grp={};   // gid별 묶음(고정·파견 �
   for(const u of G.units){ if(u.fixed||u.atBoss||!u.gid) continue; (grp[u.gid]=grp[u.gid]||[]).push(u); }
   const out={}; for(const gid in grp){ if(grp[gid].length>=3 && combineResultFor(gid, grp[gid][0].gtier)) out[gid]=grp[gid]; } return out; }
 function setHomeMode(m){ _homeMode=m; _sellSig=''; _combSig=''; _selSig='';
-  const sel=document.getElementById('hsTabSel'), b=document.getElementById('hsTabComb'), a=document.getElementById('hsTabSell');
-  if(sel) sel.classList.toggle('on', m==='select'); if(b) b.classList.toggle('on', m==='combine'); if(a) a.classList.toggle('on', m==='sell');
+  const ids={select:'hsTabSel',combine:'hsTabComb',sell:'hsTabSell',boss:'hsTabBoss'};
+  for(const k in ids){ const el=document.getElementById(ids[k]); if(el) el.classList.toggle('on', m===k); }
+  const boss=m==='boss';
+  const tEl=document.getElementById('hsTiers'), gEl=document.getElementById('hsGrid'), bEl=document.getElementById('bossContent');
+  if(tEl) tEl.style.display=boss?'none':''; if(gEl) gEl.style.display=boss?'none':''; if(bEl) bEl.style.display=boss?'block':'none';
   renderHomeLeft(); }
-function renderHomeLeft(){ if(_homeMode==='select') renderSelectPanel(); else if(_homeMode==='combine') renderCombinePanel(); else renderSellPanel(); updateCombDot(); }
+function renderHomeLeft(){ if(_homeMode==='boss'){ if(typeof renderBossPanel==='function')renderBossPanel(); if(typeof updateBossPickBtn==='function')updateBossPickBtn(); if(typeof updateBossViewBtn==='function')updateBossViewBtn(); }
+  else if(_homeMode==='select') renderSelectPanel(); else if(_homeMode==='combine') renderCombinePanel(); else renderSellPanel(); updateCombDot(); }
 function updateCombDot(){ const dot=document.getElementById('combDot'); if(!dot) return;
   const n=Object.keys(ownedCombineGroups()).length; dot.textContent=n||''; dot.classList.toggle('hide', !n); }
 function setCombTier(t){ _combTier=t; _combSig=''; renderCombinePanel(); }
@@ -2844,7 +2846,7 @@ function renderSelectPanel(){ const tiersBox=document.getElementById('hsTiers'),
   const byGid={}; for(const u of byTier[_selTierH]){ (byGid[u.gid]=byGid[u.gid]||[]).push(u); }
   const sig=_selTierH+'|'+live.map(u=>u.gtier+':'+u.gid).sort().join(',');
   if(sig===_selSig) return; _selSig=sig;
-  tiersBox.innerHTML=tierSet.map(function(t){ return '<button class="hsTier'+(t===_selTierH?' on':'')+'" style="--tc:'+(TIER_COLOR[t]||'#fff')+'" onclick="setSelTier(\''+t+'\')">'+GACHA_TIERS[t].name+'<span style="opacity:.6;margin-left:2px;font-size:8px">'+byTier[t].length+'</span></button>'; }).join('');
+  tiersBox.innerHTML=tierSet.map(function(t){ return '<button class="hsTier'+(t===_selTierH?' on':'')+'" style="--tc:'+(TIER_COLOR[t]||'#fff')+'" onclick="setSelTier(\''+t+'\')">'+GACHA_TIERS[t].name+'</button>'; }).join('');
   let cells='';
   for(const gid in byGid){ const list=byGid[gid], gu=GACHA_UNITS[gid]; if(!gu) continue;
     const pk=GACHA_MODEL[gid]||GACHA_PROXY[gid], img=PORTRAIT_IMG[pk];
