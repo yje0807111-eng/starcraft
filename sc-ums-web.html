@@ -243,6 +243,8 @@
   .hsName{display:block;font-size:9px;font-weight:700;color:#d3dbe6;text-align:center;line-height:13px;padding:1px 2px;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:rgba(0,0,0,.55);border-top:1px solid rgba(255,255,255,.07)}
   .hsEmpty{font-size:var(--fs-xs);color:#7d8590;padding:8px 2px}
+  .bdCount{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;opacity:.85;margin-left:2px}
+  .bdCount b{font-weight:800}
   .selTiers{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:2px}
   .selTierChip{font-size:9px;font-weight:800;letter-spacing:.5px;padding:2px 7px;border-radius:2px;border:1px solid;cursor:pointer;
     color:var(--tc,#fff);border-color:var(--tc,#fff);background:transparent;white-space:nowrap;transition:background .12s}
@@ -1925,14 +1927,13 @@
           </div>
           <div class="homeBoss">
             <div class="hbTop">
-              <span class="hbTitle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="7.5"/><path d="M12 2.6v3.2M12 18.2v3.2M2.6 12h3.2M18.2 12h3.2"/><circle cx="12" cy="12" r="2.1" fill="currentColor" stroke="none"/></svg>보스 파견</span>
-              <span class="hbCount"><b id="bdSent">0</b><i>/<span id="bdTotal">2</span></i></span>
+              <span class="hbTitle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="7.5"/><path d="M12 2.6v3.2M12 18.2v3.2M2.6 12h3.2M18.2 12h3.2"/><circle cx="12" cy="12" r="2.1" fill="currentColor" stroke="none"/></svg>보스</span>
             </div>
             <div class="bdBtns">
-              <button class="hbDeploy" id="bossPickBtn" onclick="armBossPick()">파견</button>
+              <button class="hbDeploy" id="bossPickBtn" onclick="armBossPick()"><span class="bdLabel">파견</span> <span class="bdCount"><b id="bdSent">0</b>/<span id="bdTotal">2</span></span></button>
               <button class="hbRecall" onclick="recallFromBoss('all')">회수</button>
             </div>
-            <button class="hbOpen" id="bossViewBtn" onclick="toggleBossArena()">보스장 보기</button>
+            <button class="hbOpen" id="bossViewBtn" onclick="toggleBossArena()">보스장</button>
           </div>
         </div>
       </div>
@@ -2724,7 +2725,7 @@ function updateBossPickBtn(){ const b=document.getElementById('bossPickBtn'); if
   const full=bossDeployedCount()>=BOSS_DEPLOY_CAP;
   b.classList.toggle('on', !!G.bossPickArm && !full);
   b.disabled=full; b.classList.toggle('bdFull', full);
-  b.textContent = full ? '가득참' : '파견'; }
+  const lab=b.querySelector('.bdLabel'); if(lab) lab.textContent = full ? '가득참' : '파견'; }
 // 특정 유닛 1기를 보스방에 파견
 function deployUnitToBoss(u){ if(!u||u.fixed||u.atBoss) return false;
   if(bossDeployedCount()>=BOSS_DEPLOY_CAP){ toast('보스방 파견은 최대 '+BOSS_DEPLOY_CAP+'기입니다'); return false; }
@@ -2942,7 +2943,7 @@ function drawBoss(dt){ const {ctx,W,H}=setup('cvBoss'); BAW=W;BAH=H; dt=dt||0;
   ctx.textAlign='left';
 }
 // ── 공용 보스 토벌장 팝업(HP바 클릭) — 맵 고정(드래그 없음) ──
-function updateBossViewBtn(){ const b=document.getElementById('bossViewBtn'); if(b){ b.textContent=G.bossOpen?'메인 화면 보기':'보스장 보기'; b.classList.toggle('viewing', !!G.bossOpen); } }
+function updateBossViewBtn(){ const b=document.getElementById('bossViewBtn'); if(b){ b.textContent=G.bossOpen?'메인':'보스장'; b.classList.toggle('viewing', !!G.bossOpen); } }
 // ── 토벌장 전용 이펙트 저장소 — 메인 트랙 이펙트와 완전 분리(두 화면이 서로 영향 없음) ──
 const _FX_KEYS=['shots','impacts','muzzles','sparks','beams','debris'];
 function _baFxStore(){ if(!G.baFx) G.baFx={shots:[],impacts:[],muzzles:[],sparks:[],beams:[],debris:[]}; return G.baFx; }
