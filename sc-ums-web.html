@@ -591,13 +591,13 @@
   .cmdBtn:active{transform:translateY(1px)}
   #cmdRow .selAll{align-self:stretch;display:flex;align-items:center;justify-content:center;padding:8px 9px;border-radius:var(--r-md);font-size:var(--fs-sm);flex:0 0 auto;white-space:nowrap}
   /* 청록 와이어프레임 초상화 */
-  .scPortrait{width:64px;height:64px;flex:none;align-self:center;border:1px solid var(--neon-soft);border-radius:var(--r-lg);position:relative;overflow:hidden;
+  .scPortrait{width:72px;height:72px;flex:none;align-self:center;border:1px solid var(--neon-soft);border-radius:var(--r-lg);position:relative;overflow:hidden;
     background:radial-gradient(circle at 50% 42%,rgba(255,59,59,.16),#150a0b 70%);
     display:flex;align-items:center;justify-content:center;color:var(--neon);
     box-shadow:inset 0 0 14px var(--neon-faint)}
   .scPortrait svg{width:50px;height:50px;filter:drop-shadow(0 0 5px var(--neon))}
   /* 커스텀 초상화 이미지(둥근 사각형 크롭) — 프로필 카드 공통 */
-  .portImg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:1}
+  .portImg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:1;transform:scale(1.14);transform-origin:center 44%}
   .scPortrait::after{content:'';position:absolute;inset:0;pointer-events:none;
     background:repeating-linear-gradient(0deg,rgba(0,0,0,.0) 0 2px,rgba(0,0,0,.22) 2px 3px)}
   /* 직업 배지: 초상화 내부 하단 띠 */
@@ -4897,8 +4897,8 @@ function refreshSelCard(){
   renderUnits();
 }
 // 커스텀 초상화 이미지(유닛/건물 id → 파일). 있으면 3D/라인아트 대신 사용.
-const PORTRAIT_DIR='assets/portraits/';
-const PORTRAIT_IMG={
+const PORTRAIT_DIR='assets/portraits/'; const PORTRAIT_VER='?v=2';
+const _PI_RAW={
   marine:  PORTRAIT_DIR+'ranger_portrait.png',     // 레인저
   ghost:   PORTRAIT_DIR+'phantom_portrait.png',    // 팬텀
   goliath: PORTRAIT_DIR+'strider_portrait.png',    // 스트라이더
@@ -4921,6 +4921,7 @@ const PORTRAIT_IMG={
   racer:     PORTRAIT_DIR+'racer_portrait.png',       // 레이서(에픽·유니크)
   snapper:   PORTRAIT_DIR+'snapper_portrait.png',     // 스내퍼(에픽·유니크)
 };
+const PORTRAIT_IMG={}; for(const _k in _PI_RAW) PORTRAIT_IMG[_k]=_PI_RAW[_k]+PORTRAIT_VER;   // 캐시버스트 버전 부착(배경 제거 새 이미지 로드)
 // 프로필 초상화 HTML: 커스텀 이미지 있으면 <img>, 없으면 라인아트 SVG
 function unitPortraitHTML(id){ const u=PORTRAIT_IMG[id]; return u ? '<img class="portImg" src="'+u+'" alt="" draggable="false">' : unitSVG(id); }
 // 초상화 칩 내부 HTML(박스+개수+이름)
