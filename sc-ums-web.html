@@ -2943,7 +2943,7 @@ function updateBossPickBtn(){ const b=document.getElementById('bossPickBtn'); if
 // 특정 유닛 1기를 보스방에 파견
 function deployUnitToBoss(u){ if(!u||u.fixed||u.atBoss) return false;
   if(bossDeployedCount()>=BOSS_DEPLOY_CAP){ toast('보스방 파견은 최대 '+BOSS_DEPLOY_CAP+'기입니다'); return false; }
-  u.atBoss=true; u.bcd=0; u.moving=false; u.cmd='hold'; u.patrol=null; u.atkTarget=null; u.focusTarget=null;   // 트랙 상태 초기화
+  u.atBoss=true; u.bcd=0; u.moving=false; u.cmd='hold'; u.patrol=null; u.atkTarget=null; u.focusTarget=null; u.moveTo=null;   // 트랙 상태 초기화
   G.sel=(G.sel||[]).filter(id=>id!==u.uid);   // 메인 선택에서 제외
   const k=bossDeployedCount();   // 이미 파견된 수(이번 포함) → 초기 진형 슬롯
   const sp=bossDeploySpot(G.myPlayer||1, k-1);   // 플레이어별 시계방향 슬롯(서로 안 겹침)
@@ -4159,7 +4159,7 @@ function unitAI(dt){ const M=Math.min(GW,GH);
     if(u.adr>0) u.adr=Math.max(0,u.adr-dt);
     if(u.atBoss){ u.moving=false; continue; }   // 토벌장 파견 유닛은 트랙 AI 제외
     if(u.fixed){ u.moving=false; continue; }
-    if(typeof cmdMove!=='undefined' && cmdMove && cmdMove.slots && (u.uid in cmdMove.slots)) continue;  // 수동 이동 중 → AI 스킵
+    if(u.moveTo) continue;  // 수동 이동 명령 수행 중 → AI 스킵(선택 여부 무관)
     const def=U[u.id]; let tx=null,ty=null;
     if(u.patrol){
       if(u._patWait>0){ u._patWait-=dt; }   // 끝지점에서 대기(0.5초) → 정지
@@ -5007,7 +5007,7 @@ function separateUnits(){ if(!GW||!GH) return; const us=G.units; if(us.length<2)
   const isDrag=u=>dragSet.length&&dragSet.indexOf(u)>=0;
   // 이동명령으로 '걷는' 유닛: 분리에서 완전 제외(대형 슬롯+stepCmdMove 회피가 처리 → 서로 밀어 속도 튀는 버그 방지)
   const walk=new Set();
-  if(cmdMove){ for(const uid of G.sel){ const u=us.find(x=>x.uid===uid); if(u) walk.add(u); } }
+  for(const u of us){ if(u.moveTo) walk.add(u); }   // 이동 명령 수행 중 유닛(선택 무관)
   const skip=u=>u.atBoss||isDrag(u)||walk.has(u);   // 토벌장 파견 유닛은 트랙 충돌 제외(분리된 장소)
   let stillOverlap=false;
   for(let iter=0; iter<3; iter++){ // 몇 번 반복해 안정화
@@ -5294,7 +5294,7 @@ function updateSelHp(){ const el=document.getElementById('selSingle'); if(!el||e
 // ── 유닛 명령(홀드/공격이동/반복이동/스킬) ──
 function selUnits(){ return G.sel.map(id=>G.units.find(u=>u.uid===id)).filter(u=>u&&!u.fixed); }
 function setUnitCmd(mode){ const us=selUnits(); if(!us.length) return; G.patrolArm=false; G.focusArm=false;
-  for(const u of us){ u.patrol=null; u.atkTarget=null; u.focusTarget=null; u._chasing=false; u.cmd=(mode==='attack')?'attack':'hold'; }
+  for(const u of us){ u.patrol=null; u.atkTarget=null; u.focusTarget=null; u._chasing=false; u.moveTo=null; u.cmd=(mode==='attack')?'attack':'hold'; }
   if(mode==='attack') assignFormOffsets(us);   // 포위 대형
   updateCmdRow(); }
 function armPatrol(){ if(!selUnits().length) return; G.patrolArm=!G.patrolArm; G.focusArm=false; updateCmdRow();
@@ -5319,11 +5319,11 @@ function assignFormOffsets(us){
   us.forEach((u,i)=>u._fofs=offs[i]);
 }
 function setPatrolTarget(tx,ty){ const us=selUnits(); const slots=formationSlots(us,tx,ty);
-  us.forEach((u,i)=>{ const s=slots[i]; u.patrol={ax:u.x,ay:u.y,bx:s.x,by:s.y}; u._patTo='b'; u.cmd='hold'; u.focusTarget=null; }); }
+  us.forEach((u,i)=>{ const s=slots[i]; u.patrol={ax:u.x,ay:u.y,bx:s.x,by:s.y}; u._patTo='b'; u.cmd='hold'; u.focusTarget=null; u.moveTo=null; }); }
 function armFocus(){ if(!selUnits().length) return; G.focusArm=!G.focusArm; G.patrolArm=false; updateCmdRow();
   if(G.focusArm) addChat('','지정공격: 공격할 적을 클릭하세요.'); }
 function setFocusTarget(eid){ const e=G.enemies.find(x=>x.eid===eid); const us=selUnits();
-  for(const u of us){ u.cmd='focus'; u.focusTarget=eid; u.patrol=null; u.atkTarget=null; u._chasing=false; }
+  for(const u of us){ u.cmd='focus'; u.focusTarget=eid; u.patrol=null; u.atkTarget=null; u._chasing=false; u.moveTo=null; }
   assignFormOffsets(us);   // 포위 대형
   addChat('','지정공격: '+(e?e.name:'적')+' 집중 공격.'); }
 const SKILL_ICON={ adr:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg>' };  // 아드레날린=번개
@@ -7408,10 +7408,11 @@ function onUp(){
 // 대형 배치: 클릭 지점(cx,cy) 주변에 선택 유닛마다 '서로 다른 목표 칸'을 배정.
 //  한 점에 다 모이지 않고 동심원으로 퍼져서 비비적임 방지.
 function assignFormation(cx,cy){
-  const sel=G.sel.map(uid=>G.units.find(u=>u.uid===uid)).filter(Boolean);
+  const sel=G.sel.map(uid=>G.units.find(u=>u.uid===uid)).filter(Boolean).filter(u=>!u.fixed);
   if(!cmdMove) return; cmdMove.slots={};
+  // 이동 목표는 '명령 당시 선택된 유닛'에만 부여(u.moveTo) → 선택을 바꿔도 기존 명령은 그 유닛이 끝까지 수행, 새 유닛은 새 명령 때만 이동
   for(const u of sel){ u.cmd='hold'; u.patrol=null; u.atkTarget=null; u.focusTarget=null; u._chasing=false; }   // 수동 이동 명령 = 이동 후 홀드(공격이동/반복이동/지정공격 해제)
-  if(sel.length===1){ cmdMove.slots[sel[0].uid]={x:cx,y:cy}; return; }
+  if(sel.length===1){ sel[0].moveTo={x:cx,y:cy}; cmdMove.slots[sel[0].uid]={x:cx,y:cy}; return; }
   // 평균 충돌 반경 기반 간격
   const r=(sel.reduce((a,u)=>a+collideR(u),0)/sel.length)*2.1;
   const slots=[{dx:0,dy:0}]; let ring=1;
@@ -7419,7 +7420,7 @@ function assignFormation(cx,cy){
     for(let k=0;k<n && slots.length<sel.length;k++){ const a=(k/n)*Math.PI*2 + ring*0.5;
       slots.push({dx:Math.cos(a)*ring*r, dy:Math.sin(a)*ring*r}); } ring++; }
   // 가까운 유닛에 가까운 칸 배정(간단히 순서대로)
-  sel.forEach((u,i)=>{ const s=slots[i]; const t=clampInner(cx+s.dx/GW, cy+s.dy/GH); cmdMove.slots[u.uid]={x:t.x,y:t.y}; });
+  sel.forEach((u,i)=>{ const s=slots[i]; const t=clampInner(cx+s.dx/GW, cy+s.dy/GH); u.moveTo={x:t.x,y:t.y}; cmdMove.slots[u.uid]={x:t.x,y:t.y}; });
 }
 // 비행체 엔진 분사(이동 중) — 기체 뒤쪽에서 청백 추진염
 const ENG_COL={ skydancer_t:['#2e7bff','#74a8ff'] };   // 비행체 엔진 분사색(기본=청백, 스카이댄서=파랑)
@@ -7432,16 +7433,18 @@ function emitEngineExhaust(u, x, y, mx, my, dt){
       life:0.2+Math.random()*0.1, flash:true, color:q?ec[0]:ec[1]}); }
 }
 // 이동 명령: 각 유닛이 자기 대형 칸으로 걸어감. 가는 길의 다른 유닛은 '돌아서' 회피.
-function stepCmdMove(dt){ if(!cmdMove||G.sel.length===0){ cmdMove=null; for(const u of G.units) u.moving=false; return; }
-  let moving=false; const selSet=new Set(G.sel);
+function stepCmdMove(dt){
   for(const u of G.units) u.moving=false;   // 매 프레임 초기화(멈춘 유닛은 공격 가능)
-  for(const uid of G.sel){ const u=G.units.find(x=>x.uid===uid); if(!u||u.fixed) continue; // 고정 구조물은 이동 안 함
+  const movers=G.units.filter(u=>u.moveTo&&!u.fixed&&!u.atBoss);   // 이동 명령이 살아있는 유닛만(선택 여부 무관)
+  if(!movers.length){ if(cmdMove&&cmdMove.issued) cmdMove=null; return; }
+  let moving=false; const selSet=new Set(movers.map(u=>u.uid));   // 이동 중 유닛끼리는 회피 제외(대형 유지)
+  for(const u of movers){
     const def=U[u.id]; const spd=(def.moveSpd||0.13)*MOVE_MUL*dt;   // 유닛별 이동속도
-    const slot=(cmdMove.slots&&cmdMove.slots[uid])||{x:cmdMove.x,y:cmdMove.y};
+    const slot=u.moveTo;
     let dx=slot.x-u.x, dy=slot.y-u.y; const d=Math.hypot(dx,dy);
-    if(d<=0.012) continue;
+    if(d<=0.012){ u.moveTo=null; continue; }   // 도착 → 이 유닛만 명령 종료(다른 유닛은 계속)
     let dirx=dx/d, diry=dy/d;
-    // 장애물 회피 조향: 가까운 '비선택' 유닛을 피해 옆으로 돌아감
+    // 장애물 회피 조향: 가까운 '비이동' 유닛을 피해 옆으로 돌아감
     let sx=0, sy=0;
     for(const o of G.units){ if(o===u||selSet.has(o.uid)) continue;
       const ox=(o.x-u.x)*GW, oy=(o.y-u.y)*GH, od=Math.hypot(ox,oy);
@@ -7459,7 +7462,7 @@ function stepCmdMove(dt){ if(!cmdMove||G.sel.length===0){ cmdMove=null; for(cons
       if(AIR_FLOAT_GIDS[u.gid]) emitEngineExhaust(u, u.x*GW, u.y*GH-16, mx, my, dt);   // 비행체: 엔진 분사  // 이동 방향을 바라봄
   }
   if(moving) renderUnits();
-  else if(cmdMove.issued) cmdMove=null; // 전원 도착 → 명령 종료(분리가 간격 유지)
+  else if(cmdMove&&cmdMove.issued) cmdMove=null; // 전원 도착 → 제스처 상태 종료(분리가 간격 유지)
 }
 const vm=document.getElementById('vMain');
 vm.addEventListener('mousedown',onDown); window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onUp);
