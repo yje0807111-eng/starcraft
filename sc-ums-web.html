@@ -162,19 +162,34 @@
   #skillFab .sfCd{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:5;font-family:'Rajdhani',sans-serif;font-size:19px;font-weight:800;color:#fff;text-shadow:0 1px 2px #000;pointer-events:none}
   #skillFab.active{border-color:#7fffd4;box-shadow:0 0 16px -2px rgba(90,255,200,.65),0 4px 9px var(--shade),inset 0 0 12px rgba(90,255,200,.22)}  /* 버프 활성 */
   #skillFab:active{transform:translateY(1px)}
-  /* 개인 보스 소환 FAB(메인 좌측, SC 위협 레드 콘솔) */
-  #pbossFab{position:absolute;left:8px;top:44%;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
-    width:54px;min-height:48px;padding:6px 4px;cursor:pointer;pointer-events:auto;color:#ffd2d2;
-    background:linear-gradient(160deg,rgba(150,36,36,.5),rgba(22,8,10,.72));border:1px solid rgba(255,59,59,.5);
-    clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 0 13px -4px rgba(255,59,59,.55);transition:all .14s}
-  #pbossFab::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,120,120,.4),transparent);pointer-events:none}
-  #pbossFab.hide{display:none}
-  #pbossFab .pfIco{line-height:0;filter:drop-shadow(0 0 5px rgba(255,59,59,.7))}
-  #pbossFab .pfL{font-size:8.5px;font-weight:800;letter-spacing:.3px;font-family:'Rajdhani',sans-serif;line-height:1}
-  #pbossFab:active{transform:translateY(1px)}
-  #pbossFab.cd{color:#ff9a9a;border-color:var(--metal-edge);background:linear-gradient(160deg,rgba(56,32,34,.5),rgba(16,10,12,.72));box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
-  #pbossFab.cd .pfIco{filter:none;opacity:.7}
+  /* 개인 보스 버튼(전송 옆) + 소환 팝업(SC 위협 레드) */
+  #pbossBtn{position:relative;flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:3px;padding:0 11px;cursor:pointer;
+    background:none;border:1px solid rgba(255,59,59,.4);border-radius:var(--r-md);color:#ff8a8a;white-space:nowrap;
+    text-shadow:0 0 5px rgba(255,59,59,.5),0 1px 2px #000;transition:all .15s}
+  #pbossBtn svg{filter:drop-shadow(0 0 4px rgba(255,59,59,.6))}
+  #pbossBtn:hover{border-color:rgba(255,59,59,.7);color:#ffb0b0}
+  #pbossBtn:active{transform:translateY(1px);background:rgba(255,59,59,.1)}
+  #pbossBtn.cd{border-color:var(--metal-edge);color:#c98a8a}#pbossBtn.cd svg{filter:none;opacity:.6}
+  #pbossBtn #pbossBtnCd{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:800;letter-spacing:.2px}
+  #pbossPopup{position:absolute;right:9px;bottom:50px;z-index:30;width:228px;max-height:340px;overflow-y:auto;padding:9px;display:flex;flex-direction:column;gap:6px;
+    background:linear-gradient(160deg,rgba(34,18,20,.97),rgba(10,7,9,.98));border:1px solid rgba(255,59,59,.4);
+    clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
+    box-shadow:0 8px 24px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.06)}
+  #pbossPopup.hide{display:none}
+  #pbossPopup .ppHead{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:#ffdada;letter-spacing:.4px;padding:0 1px 6px;border-bottom:1px solid rgba(255,59,59,.25);text-shadow:0 1px 2px #000}
+  #pbossPopup .ppHead .ppBar{width:3px;height:13px;background:var(--neon);box-shadow:0 0 6px var(--neon-glow);border-radius:1px}
+  #pbossPopup .ppCdNote{font-size:9px;color:#e8a0a0;text-align:center;padding:2px;font-weight:700}
+  .ppItem{position:relative;display:flex;align-items:center;gap:8px;padding:7px 8px;cursor:pointer;text-align:left;width:100%;
+    background:linear-gradient(160deg,rgba(48,40,44,.5),rgba(12,9,11,.7));border:1px solid var(--metal-edge);border-left:3px solid var(--pc,#888);
+    clip-path:polygon(5px 0,100% 0,100% calc(100% - 5px),calc(100% - 5px) 100%,0 100%,0 5px);transition:all .12s;font-family:inherit}
+  .ppItem:hover{border-color:var(--pc,#aaa);filter:brightness(1.15)}
+  .ppItem:active{transform:translateY(1px)}
+  .ppItem:disabled{opacity:.4;cursor:default;filter:grayscale(.5)}
+  .ppItem .ppIco{width:22px;height:22px;flex:0 0 auto;color:var(--pc,#cfd);filter:drop-shadow(0 0 4px var(--pc))}
+  .ppItem .ppTx{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;line-height:1.15}
+  .ppItem .ppName{font-size:11px;font-weight:800;color:#f2e4e4;white-space:nowrap}
+  .ppItem .ppSub{font-size:8.5px;color:var(--pc,#bbb);font-weight:700;white-space:nowrap}
+  .ppItem .ppRwd{display:flex;align-items:center;gap:2px;font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:800;color:var(--gold-lt);flex:0 0 auto}
   /* 선택 해제 아이콘 버튼(우상단, 자원 표시 아래) — 노란 금지표시, 유닛 지정 시에만 표시 */
   /* 선택 해제 — 투명 배경 + 빨강 테마(하단 톤) */
   #deselTop{position:absolute;top:100px;right:10px;z-index:25;display:none;cursor:pointer;pointer-events:auto;
@@ -1794,8 +1809,6 @@
     <div id="deselTop" onclick="cancelSelect()" title="선택 해제"><svg viewBox="0 0 24 24" width="26" height="26"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.4"/><line x1="6.2" y1="6.2" x2="17.8" y2="17.8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></div>
     <!-- 스킬 버튼: 메인 탭에서 스킬 보유 유닛 선택 시 표시(조합 버튼 위) -->
     <div id="skillFab" class="hide" onclick="useSkill()"><span class="sfIco" id="sfIco"></span><span class="sfName" id="sfName">스킬</span><div class="sfOver" id="sfOver"></div><div class="sfCd" id="sfCd"></div></div>
-    <!-- 개인 보스 소환(메인 탭, 좌측). 처치 시 보너스 크레딧 · 4분 쿨다운 -->
-    <div id="pbossFab" class="hide" onclick="summonPersonalBoss()" title="개인 보스 소환"><span class="pfIco"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 2.5c-4 0-6.5 2.8-6.5 6.4 0 2.3 1.1 3.7 2.2 4.7v2.2c0 .7.5 1.1 1.2 1.1.4 1.1 1.6 1.9 3.1 1.9s2.7-.8 3.1-1.9c.7 0 1.2-.4 1.2-1.1v-2.2c1.1-1 2.2-2.4 2.2-4.7 0-3.6-2.5-6.4-6.5-6.4z" fill="currentColor" opacity=".22"/><path d="M12 2.5c-4 0-6.5 2.8-6.5 6.4 0 2.3 1.1 3.7 2.2 4.7v2.2c0 .7.5 1.1 1.2 1.1.4 1.1 1.6 1.9 3.1 1.9s2.7-.8 3.1-1.9c.7 0 1.2-.4 1.2-1.1v-2.2c1.1-1 2.2-2.4 2.2-4.7 0-3.6-2.5-6.4-6.5-6.4z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="9.3" cy="9.2" r="1.5" fill="currentColor"/><circle cx="14.7" cy="9.2" r="1.5" fill="currentColor"/><path d="M10.4 16.5v2M12 16.7v2.1M13.6 16.5v2" stroke="currentColor" stroke-width="1"/></svg></span><span class="pfL" id="pbossFabL">소환</span></div>
 
     <div class="gview on" id="vMain"><canvas id="cvMain"></canvas><div id="mergeZone"><span class="mz">합체</span></div></div>
     <div class="gview" id="vUnit"><canvas id="cvUnit"></canvas></div>
@@ -1810,7 +1823,10 @@
     <div id="chatBar">
       <input id="chatField" type="text" placeholder="메시지…" maxlength="120" autocomplete="off">
       <button id="chatSend" onclick="sendChat()">전송</button>
+      <button id="pbossBtn" onclick="togglePbossPopup(event)" title="개인 보스 소환"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 2.5c-4 0-6.5 2.8-6.5 6.4 0 2.3 1.1 3.7 2.2 4.7v2.2c0 .7.5 1.1 1.2 1.1.4 1.1 1.6 1.9 3.1 1.9s2.7-.8 3.1-1.9c.7 0 1.2-.4 1.2-1.1v-2.2c1.1-1 2.2-2.4 2.2-4.7 0-3.6-2.5-6.4-6.5-6.4z" fill="currentColor" opacity=".22"/><path d="M12 2.5c-4 0-6.5 2.8-6.5 6.4 0 2.3 1.1 3.7 2.2 4.7v2.2c0 .7.5 1.1 1.2 1.1.4 1.1 1.6 1.9 3.1 1.9s2.7-.8 3.1-1.9c.7 0 1.2-.4 1.2-1.1v-2.2c1.1-1 2.2-2.4 2.2-4.7 0-3.6-2.5-6.4-6.5-6.4z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="9.3" cy="9.2" r="1.5" fill="currentColor"/><circle cx="14.7" cy="9.2" r="1.5" fill="currentColor"/><path d="M10.4 16.5v2M12 16.7v2.1M13.6 16.5v2" stroke="currentColor" stroke-width="1"/></svg><span id="pbossBtnCd"></span></button>
     </div>
+    <!-- 개인 보스 소환 팝업(4종) -->
+    <div id="pbossPopup" class="hide"></div>
 
     <div id="toast"></div>
     <div id="ov" class="spaceBg hide">
@@ -3045,6 +3061,7 @@ function toggleBossPopup(e){ if(e&&e.stopPropagation)e.stopPropagation();
   if(show){ if(typeof renderBossPanel==='function')renderBossPanel(); if(typeof updateBossPickBtn==='function')updateBossPickBtn(); if(typeof updateBossViewBtn==='function')updateBossViewBtn(); } }
 function closeBossPopup(){ const p=document.getElementById('bossPopup'); if(p) p.classList.add('hide'); }
 document.addEventListener('pointerdown', function(ev){ const p=document.getElementById('bossPopup'); if(!p||p.classList.contains('hide'))return; if(ev.target.closest&&(ev.target.closest('#bossPopup')||ev.target.closest('#coopBossBar')))return; closeBossPopup(); }, true);
+document.addEventListener('pointerdown', function(ev){ const p=document.getElementById('pbossPopup'); if(!p||p.classList.contains('hide'))return; if(ev.target.closest&&(ev.target.closest('#pbossPopup')||ev.target.closest('#pbossBtn')))return; closePbossPopup(); }, true);
 function openBossFromPopup(){ closeBossPopup(); if(typeof toggleBossArena==='function')toggleBossArena(); }
 function updateBossViewBtn(){ const b=document.getElementById('bossViewBtn'); if(b){ b.textContent=G.bossOpen?'메인':'보스장'; b.classList.toggle('viewing', !!G.bossOpen); } }
 // ── 토벌장 전용 이펙트 저장소 — 메인 트랙 이펙트와 완전 분리(두 화면이 서로 영향 없음) ──
@@ -3961,35 +3978,43 @@ function roundDef(r){ const m=MON[Math.min(Math.max(1,r),MON.length)-1]; return 
 const ENEMY_MODEL={ '옵저버':'observer', '오버로드':'overlord' };  // 적 이름 → 3D 모델 id(있으면 3D 렌더, 없으면 네온 도형)
 try{ window.ENEMY_MODEL=ENEMY_MODEL; }catch(e){}   // M3D 모듈(별도 스코프) tintModel 폴백용
 const SPAWN_LEAD=0.58;   // 출현 이펙트 시작 → 실제 등장(에너지 모임 후 플래시 시점)까지 지연(초)
-function spawnEnemy(opts){ opts=opts||{}; const pboss=!!opts.pboss, boss=!!opts.boss||pboss, special=!!opts.special; const m=roundDef(G.round);
+// ── 개인 보스 4종(고정 난이도 — 라운드 무관, 등급별 도전) ──
+const PBOSS_TYPES=[
+  {id:'easy',  name:'견습 파수꾼',   tier:'일반 유닛',          hp:6000,     ar:0,    bonus:120,  col:'#b8c0cc'},
+  {id:'mid',   name:'정예 추적자',   tier:'에픽·유니크',        hp:150000,   ar:90,   bonus:300,  col:'#b06bff'},
+  {id:'upper', name:'전장의 정복자', tier:'초월(레전드는 버겁)', hp:700000,   ar:700,  bonus:700,  col:'#ff8a3b'},
+  {id:'super', name:'파멸의 군주',   tier:'초월 다수 · 갓',     hp:5000000,  ar:1450, bonus:1800, col:'#ff2bd6'},
+];
+function spawnEnemy(opts){ opts=opts||{}; const pt=opts.pbType||null; const pboss=!!opts.pboss||!!pt, boss=!!opts.boss||pboss, special=!!opts.special; const m=roundDef(G.round);
   const mb=G.metaB||{};   // 메타 강화: 적 체력/방어/이속 감소(개인)
   const hpMul=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).enemyHp*(mb.enemyHpMul||1)*TEMPO_HP_MUL
   *Math.pow(1.095, Math.max(0, G.round-4))
   *(G.round<10?EARLY_HP_MUL:1);   // ×템포 보정(라운드 2분=교전시간 2배 → 적 체력 보정) ×초반 보정(R10 이전 HP ×1.7)
-  const pbMul=pboss?0.75:1;   // 개인 보스: 라운드 보스의 75%(해볼 만한 보너스 도전)
-  const hp = Math.round((boss ? bossHp(G.round) : m.hp)*hpMul*pbMul);
-  const sh = boss?0:Math.round(m.sh*hpMul);
-  const ar = Math.max(0, (boss?Math.round(m.ar*0.5):m.ar) - (mb.enemyArmor||0));   // 보스 방어=그 라운드의 절반(등급 관문은 일반 라운드가 담당)
-  const spd = (0.018+(boss?0:0.004))*(mb.enemySlowMul||1);
   const coinMult=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).coinMult||1;
+  const hp = pt ? pt.hp : Math.round((boss ? bossHp(G.round) : m.hp)*hpMul);   // 개인 보스=고정 체력(라운드 무관)
+  const sh = pt ? 0 : (boss?0:Math.round(m.sh*hpMul));
+  const ar = pt ? pt.ar : Math.max(0, (boss?Math.round(m.ar*0.5):m.ar) - (mb.enemyArmor||0));   // 보스 방어=그 라운드의 절반(등급 관문은 일반 라운드가 담당)
+  const spd = (0.018+(boss?0:0.004))*(mb.enemySlowMul||1);
   const e={eid:G.eSeq++, d:pboss?Math.random():0, hp:hp, maxHp:hp, sh:sh, maxSh:sh, ar:ar,
-    speed:spd, boss:boss, special:special, pboss:pboss, life:pboss?120:null,
-    bonus:pboss?Math.round((40+G.round*14)*coinMult):0,   // 처치 시 추가 크레딧(라운드·난이도 비례)
-    flash:0, name:pboss?'개인 보스':(boss?'보스':(special?'스페셜':m.n)),
+    speed:spd, boss:boss, special:special, pboss:pboss, life:pboss?120:null, pbCol:pt?pt.col:null,
+    bonus:pt?Math.round(pt.bonus*coinMult):0,   // 처치 시 추가 크레딧(난이도 coinMult 비례)
+    flash:0, name:pt?pt.name:(boss?'보스':(special?'스페셜':m.n)),
     shape:boss?'capital':enemyShape(m.n), race:enemyRace(m.n), ph:(G.eSeq*0.7)%6.283, hit:0, model3d:boss?null:(ENEMY_MODEL[m.n]||null)};
   G.recalls.push({life:1, boss:boss, special:special});   // ① 출현 이펙트(에너지 모임) 먼저 시작
   G.pendSpawn.push({t:SPAWN_LEAD, e:e});                   // ② 모임 완료(플래시) 시점에 실제 등장(효과음도 이때)
 }
-// ── 개인 보스 소환: 자기 난이도(현재 라운드) 보스를 트랙에 1마리. 2분 배회 후 소멸, 처치 시 보너스 크레딧. 소환 4분 쿨다운 ──
-function summonPersonalBoss(){
+// ── 개인 보스 소환(4종): 고정 난이도 보스 1마리. 2분 배회 후 소멸, 처치 시 보너스 크레딧. 쿨다운·1마리 제한 전체 공유 ──
+function summonPersonalBoss(typeId){
+  const pt=PBOSS_TYPES.find(t=>t.id===typeId); if(!pt) return;
   if(G.phase!=='playing'){ toast('게임 중에만 소환 가능합니다'); return; }
   if(G.pbossCd>0){ toast('개인 보스 재소환까지 '+Math.ceil(G.pbossCd)+'초'); return; }
   if(G.enemies.some(e=>e.pboss)){ toast('이미 개인 보스가 활동 중입니다'); return; }
-  G.pbossCd=240;   // 4분 쿨다운(소환 시점부터)
-  spawnEnemy({pboss:true});
+  G.pbossCd=240;   // 4분 쿨다운(소환 시점부터, 전체 공유)
+  spawnEnemy({pbType:pt});
   if(typeof playSfxT==='function') playSfxT('boss',1500);
-  toast('☠ 개인 보스 소환! 2분 안에 처치하면 보너스 크레딧');
-  updateBeaconLabels();
+  const coinMult=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).coinMult||1;
+  toast('☠ '+pt.name+' 소환! 2분 안에 처치 → +'+Math.round(pt.bonus*coinMult)+' 크레딧');
+  closePbossPopup();
 }
 
 let _atkUid=null;   // 현재 데미지 출처 유닛 uid(킬 카운트용)
@@ -5186,11 +5211,26 @@ const SKILL_ICON={ adr:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M1
 function useSkill(){ const us=selUnits(); if(!us.length) return;
   let used=0; for(const u of us){ const def=U[u.id]; if(def.skill && (u.skCd||0)<=0){ u.adr=def.skill.dur; u.skCd=def.skill.cd; used++; } }
   if(used){ const nm=U[us[0].id].skill.name; addChat('',nm+' 발동! ('+used+'기)'); if(typeof playSfx==='function') playSfx('skill'); } updateCmdRow(); updateSkillFab(); }
-function updatePbossFab(){ const f=document.getElementById('pbossFab'); if(!f) return;   // 개인 보스 소환 FAB(메인·게임 중만, 쿨다운 실시간)
-  const show=(typeof G!=='undefined' && G.tab==='Main' && G.phase==='playing');
-  f.classList.toggle('hide', !show); if(!show) return;
-  const cd=G.pbossCd>0; f.classList.toggle('cd', cd);
-  const l=document.getElementById('pbossFabL'); if(l){ const t=cd?Math.ceil(G.pbossCd)+'s':'소환'; if(l.textContent!==t) l.textContent=t; } }
+// 전송 옆 개인 보스 버튼: 쿨다운/활동 중 표시 실시간 갱신 + 열린 팝업 동기화
+function updatePbossFab(){ const b=document.getElementById('pbossBtn'); if(!b) return;
+  const cd=(typeof G!=='undefined' && G.pbossCd>0); b.classList.toggle('cd', cd);
+  const c=document.getElementById('pbossBtnCd'); if(c){ const t=cd?Math.ceil(G.pbossCd)+'s':''; if(c.textContent!==t) c.textContent=t; }
+  const pop=document.getElementById('pbossPopup'); if(pop && !pop.classList.contains('hide')) renderPbossPopup(); }
+function togglePbossPopup(ev){ if(ev){ev.preventDefault();ev.stopPropagation();}
+  const pop=document.getElementById('pbossPopup'); if(!pop) return;
+  if(pop.classList.contains('hide')){ renderPbossPopup(); pop.classList.remove('hide'); } else pop.classList.add('hide'); }
+function closePbossPopup(){ const pop=document.getElementById('pbossPopup'); if(pop) pop.classList.add('hide'); }
+function renderPbossPopup(){ const pop=document.getElementById('pbossPopup'); if(!pop) return;
+  const cd=G.pbossCd>0, active=G.enemies.some(e=>e.pboss), block=cd||active;
+  const coinMult=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).coinMult||1;
+  const skull='<svg class="ppIco" viewBox="0 0 24 24"><path d="M12 2.5c-4 0-6.5 2.8-6.5 6.4 0 2.3 1.1 3.7 2.2 4.7v2.2c0 .7.5 1.1 1.2 1.1.4 1.1 1.6 1.9 3.1 1.9s2.7-.8 3.1-1.9c.7 0 1.2-.4 1.2-1.1v-2.2c1.1-1 2.2-2.4 2.2-4.7 0-3.6-2.5-6.4-6.5-6.4z" fill="currentColor" opacity=".22"/><path d="M12 2.5c-4 0-6.5 2.8-6.5 6.4 0 2.3 1.1 3.7 2.2 4.7v2.2c0 .7.5 1.1 1.2 1.1.4 1.1 1.6 1.9 3.1 1.9s2.7-.8 3.1-1.9c.7 0 1.2-.4 1.2-1.1v-2.2c1.1-1 2.2-2.4 2.2-4.7 0-3.6-2.5-6.4-6.5-6.4z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="9.3" cy="9.2" r="1.5" fill="currentColor"/><circle cx="14.7" cy="9.2" r="1.5" fill="currentColor"/><path d="M10.4 16.5v2M12 16.7v2.1M13.6 16.5v2" stroke="currentColor" stroke-width="1"/></svg>';
+  const items=PBOSS_TYPES.map(function(pt){ const rwd=Math.round(pt.bonus*coinMult);
+    return '<button class="ppItem" style="--pc:'+pt.col+'"'+(block?' disabled':'')+' onclick="summonPersonalBoss(\''+pt.id+'\')">'
+      +skull+'<div class="ppTx"><span class="ppName">'+pt.name+'</span><span class="ppSub">'+pt.tier+'</span></div>'
+      +'<span class="ppRwd">'+COIN_SM+rwd+'</span></button>'; }).join('');
+  const note=active?'<div class="ppCdNote">⚔ 개인 보스 활동 중 (한 마리만)</div>'
+    :cd?'<div class="ppCdNote">재소환까지 '+Math.ceil(G.pbossCd)+'초 (공유 쿨다운)</div>':'';
+  pop.innerHTML='<div class="ppHead"><span class="ppBar"></span>개인 보스 소환</div>'+items+note; }
 function updateSkillFab(){ const fab=document.getElementById('skillFab'); if(!fab) return;
   if(typeof G==='undefined'||G.tab!=='Main'||G.selEnemy!=null){ fab.classList.add('hide'); return; }
   const us=selUnits().filter(u=>U[u.id]&&U[u.id].skill);
@@ -5269,6 +5309,7 @@ function toggleMergeMode(el){ G.mergeMode=!G.mergeMode; el.classList.toggle('on'
 // 유닛뽑기: 시계 배치 유닛 + 중앙 시민 DOM 렌더
 // 시계 유닛 + 시민 div를 1회 생성(탭 진입 시). 이후엔 위치만 갱신해서 부드럽게 이동.
 const COIN_SVG='<svg viewBox="0 0 24 24" width="10" height="10" style="flex:0 0 auto"><circle cx="12" cy="12" r="9" fill="#ffd24a" stroke="#ffe6a0" stroke-width="1.6"/><path d="M14.8 8.8A4.4 4.4 0 1 0 14.8 15.2" fill="none" stroke="#7a5a12" stroke-width="2.6" stroke-linecap="round"/></svg>';
+const COIN_SM='<svg viewBox="0 0 24 24" width="9" height="9" style="flex:0 0 auto"><circle cx="12" cy="12" r="9" fill="#ffd24a" stroke="#ffe6a0" stroke-width="1.6"/><path d="M14.8 8.8A4.4 4.4 0 1 0 14.8 15.2" fill="none" stroke="#7a5a12" stroke-width="2.6" stroke-linecap="round"/></svg>';
 function beaconCostLabel(id){
   if(id==='pboss'){ return (G.pbossCd>0) ? ('<span class="dzCd">'+Math.ceil(G.pbossCd)+'s</span>') : '<span class="dzGo">소환</span>'; }   // 개인 보스=쿨다운/소환
   return beaconMaxed(id) ? '<span class="dzMax">MAX</span>' : (COIN_SVG+beaconCost(id)); }   // 최대 레벨이면 MAX
