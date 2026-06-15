@@ -444,6 +444,19 @@
   .blv{position:absolute;top:-7px;right:-7px;min-width:19px;height:19px;border-radius:10px;padding:0 4px;
     background:#1a1214;border:1.5px solid var(--bc);color:var(--bc);font-size:var(--fs-xs);font-weight:800;
     display:flex;align-items:center;justify-content:center;box-shadow:0 0 6px -1px var(--bc)}
+  /* 포인트 연구소 = 비콘 패드(바닥 발광 링 + 떠 있는 코어) */
+  .bldg .bbeacon{position:relative;width:64px;height:64px;margin:0 auto;display:flex;align-items:center;justify-content:center}
+  .bldg .bbRing{position:absolute;left:50%;bottom:5px;transform:translateX(-50%);width:52px;height:18px;border-radius:50%;
+    border:2px solid var(--bc,#ffd24a);background:radial-gradient(ellipse at 50% 50%,rgba(255,210,74,.22),transparent 70%);
+    box-shadow:0 0 16px -2px var(--bc,#ffd24a),inset 0 0 9px -3px var(--bc,#ffd24a);animation:bbPulse 1.8s ease-in-out infinite}
+  @keyframes bbPulse{0%,100%{opacity:.65}50%{opacity:1}}
+  .bldg .bbCore{position:relative;z-index:2;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:9px;
+    border:1px solid var(--bc,#ffd24a);background:linear-gradient(160deg,rgba(60,52,24,.7),rgba(14,11,6,.85));
+    box-shadow:0 0 13px -3px var(--bc,#ffd24a),inset 0 1px 0 rgba(255,255,255,.12);animation:bbFloat 2.2s ease-in-out infinite}
+  .bldg .bbCore svg{width:24px;height:24px;color:var(--bc,#ffd24a);filter:drop-shadow(0 0 5px var(--bc,#ffd24a))}
+  @keyframes bbFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+  .bldg.metaBeacon.sel .bbCore{border-color:#fff;box-shadow:0 0 16px -1px var(--bc,#ffd24a),inset 0 1px 0 rgba(255,255,255,.2)}
+  .bldg.metaBeacon:active .bbCore{transform:translateY(1px)}
   .bname{font-size:var(--fs-lg);margin-top:5px;font-weight:800;letter-spacing:.2px;white-space:nowrap;text-shadow:0 1px 2px #000,0 0 6px #000}
   .bsub{font-size:var(--fs-sm);color:#a3c0dc;margin-top:2px;font-weight:600;text-shadow:0 1px 2px #000}
 
@@ -950,7 +963,7 @@
   .upgProg .pbar i{display:block;height:100%;border-radius:var(--r-sm);background:linear-gradient(90deg,var(--neon-d1),var(--neon));box-shadow:0 0 6px var(--neon-glow);transition:width .12s linear}
   .upgProg .pval{font-size:var(--fs-sm);font-weight:800;font-family:'Rajdhani',sans-serif;color:var(--neon);text-shadow:0 0 5px var(--neon-glow);letter-spacing:.3px}
   /* 우측: 1:1 정사각 커맨드 그리드 — 패널 높이를 꽉 채움(우측 끝까지) */
-  .cmdGrid{flex:none;height:100%;aspect-ratio:3/2;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:5px}
+  .cmdGrid{flex:none;height:min(100%,108px);aspect-ratio:3/2;align-self:center;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:5px}
   .cmdSlot{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;position:relative;overflow:hidden;
     border:1px solid var(--metal-edge);transition:all .1s;
     background:linear-gradient(160deg,rgba(42,48,60,.42),rgba(10,12,16,.55));
@@ -988,7 +1001,7 @@
   /* 플레이어 선택: 8인 그리드(4×2) — 깔끔한 다크 카드 + 컬러 액센트 */
   #plGridWrap{display:flex;flex-direction:column;flex:1;min-height:0}   /* 콘솔 세로 가득 채움 */
   /* 플레이어 관전 슬롯 = 통일된 SC 카드(메탈+사선 모서리+플레이어색 좌측 액센트+스캔라인) */
-  .plGrid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:1fr;gap:6px;flex:1;min-height:0;padding:2px 0}
+  .plGrid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:64px;align-content:center;gap:6px;flex:1;min-height:0;padding:2px 0}
   .plbtn{--pc:var(--info);position:relative;cursor:pointer;overflow:hidden;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;padding:7px 10px;
     background:linear-gradient(160deg,rgba(42,48,60,.5),rgba(10,12,17,.7));border:1px solid var(--metal-edge);
     clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
@@ -3606,7 +3619,7 @@ function drawUpg(){ const {ctx,W,H}=setup('cvUpgrade'); GW=W;GH=H;
   const v=ctx.createRadialGradient(W/2,H*0.45,Math.min(W,H)*0.2,W/2,H*0.5,Math.max(W,H)*0.72);
   v.addColorStop(0,'rgba(0,0,0,0)'); v.addColorStop(1,'rgba(2,3,12,.7)'); ctx.fillStyle=v; ctx.fillRect(0,0,W,H);
   // ── 건물 구역 = 우주에 떠 있는 단일 타일 플랫폼 ──
-  drawUpgPlatform(ctx, W*0.075, H*0.205, W*0.85, H*0.565);   // 살짝 줄여 여백 확보
+  drawUpgPlatform(ctx, W*0.075, H*0.18, W*0.85, H*0.7);   // 포인트 연구소(y.80)까지 타일 위에 오게 확장
 }
 // 업그레이드 플랫폼 — 통일 타일(우주 정거장 금속) 라운드 사각, 우주에 떠 있는 느낌
 function drawUpgPlatform(ctx,x,y,w,h){ const R=16, img=TILE_PLATFORM;
@@ -4957,10 +4970,12 @@ function renderBldgs(viewId,list,posArr,selId,onSel){ const v=document.getElemen
     const col=WPN_COL[b.wpn]||'#4aa8ff'; const lv=(G.atkLv&&G.atkLv[b.wpn])||0;
     const has3d=!!(window.M3D && window.M3D.hasModel && window.M3D.hasModel(b.id)) && !(typeof G!=='undefined'&&G.opt&&G.opt.model3d===false);  // 3D 건물 모델 보유 시 프레임/아이콘 숨김(모델이 대신 섬). 단 3D 끄면 2D 아이콘 표시
     const svg=has3d?'':(BLDG_SVG[b.id]?('<svg viewBox="0 0 24 24" width="34" height="34">'+BLDG_SVG[b.id]+'</svg>'):b.icon);
-    const el=document.createElement('div'); el.className='bldg'+(b.id===selId?' sel':'');
+    const el=document.createElement('div'); el.className='bldg'+(b.id===selId?' sel':'')+(b.meta?' metaBeacon':'');
     el.style.left=(p.x*100)+'%'; el.style.top=(p.y*100)+'%'; el.style.setProperty('--bc',col);
-    el.innerHTML='<div class="bframe'+(has3d?' nofig':'')+'" style="color:'+col+'">'+svg+'</div>'
-      +'<div class="bname" style="color:'+col+'">'+b.name+'</div><div class="bsub">'+b.wname+'</div>';
+    const visual = b.meta
+      ? '<div class="bbeacon"><div class="bbRing"></div><div class="bbCore"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5l5.3 5.3h-3.1v5h-4.4v-5H6.7z"/><path d="M7 18.5h10"/></svg></div></div>'   // 포인트 연구소 = 비콘 패드
+      : '<div class="bframe'+(has3d?' nofig':'')+'" style="color:'+col+'">'+svg+'</div>';
+    el.innerHTML=visual+'<div class="bname" style="color:'+col+'">'+b.name+'</div><div class="bsub">'+b.wname+'</div>';
     el.onclick=()=>onSel(b.id); v.appendChild(el);
   });
 }
