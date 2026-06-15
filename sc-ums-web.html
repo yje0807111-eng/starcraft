@@ -5247,7 +5247,11 @@ function updatePbossFab(){ const b=document.getElementById('pbossBtn'); if(!b) r
   if(!show){ const p=document.getElementById('pbossPopup'); if(p) p.classList.add('hide'); return; }   // 메인 외에선 버튼·팝업 숨김
   const cd=G.pbossCd>0; b.classList.toggle('cd', cd);
   const c=document.getElementById('pbossBtnCd'); if(c){ const t=cd?Math.ceil(G.pbossCd)+'s':''; if(c.textContent!==t) c.textContent=t; }
-  const pop=document.getElementById('pbossPopup'); if(pop && !pop.classList.contains('hide')) renderPbossPopup(); }
+  // 열린 팝업: block(쿨다운/활동) 상태가 '바뀔 때만' 재생성(매 프레임 재생성 시 클릭이 사라지는 버그 방지)
+  const pop=document.getElementById('pbossPopup');
+  if(pop && !pop.classList.contains('hide')){ const blk=(cd||G.enemies.some(e=>e.pboss))?1:0;
+    if(pop._blk!==blk){ pop._blk=blk; renderPbossPopup(); }
+    const note=pop.querySelector('.ppCdNote'); if(note && cd && !G.enemies.some(e=>e.pboss)) note.textContent='재소환까지 '+Math.ceil(G.pbossCd)+'초 (공유 쿨다운)'; } }
 function togglePbossPopup(ev){ if(ev){ev.preventDefault();ev.stopPropagation();}
   const pop=document.getElementById('pbossPopup'); if(!pop) return;
   if(pop.classList.contains('hide')){ renderPbossPopup(); pop.classList.remove('hide'); } else pop.classList.add('hide'); }
@@ -5262,7 +5266,7 @@ function renderPbossPopup(){ const pop=document.getElementById('pbossPopup'); if
       +'<span class="ppRwd"><span class="ppC">'+COIN_SM+rwd+'</span><span class="ppE">⚡'+(pt.egy||0)+'</span></span></button>'; }).join('');
   const note=active?'<div class="ppCdNote">⚔ 개인 보스 활동 중 (한 마리만)</div>'
     :cd?'<div class="ppCdNote">재소환까지 '+Math.ceil(G.pbossCd)+'초 (공유 쿨다운)</div>':'';
-  pop.innerHTML='<div class="ppHead"><span class="ppBar"></span>개인 보스 소환</div>'+items+note; }
+  pop.innerHTML='<div class="ppHead"><span class="ppBar"></span>개인 보스 소환</div>'+items+note; pop._blk=block?1:0; }
 function updateSkillFab(){ const fab=document.getElementById('skillFab'); if(!fab) return;
   if(typeof G==='undefined'||G.tab!=='Main'||G.selEnemy!=null){ fab.classList.add('hide'); return; }
   const us=selUnits().filter(u=>U[u.id]&&U[u.id].skill);
