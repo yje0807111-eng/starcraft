@@ -1036,10 +1036,14 @@
   @keyframes spaceDrift{from{background-position:0 0}to{background-position:0 -720px}}
   /* 오버레이(시작/승패) */
   /* 시작 화면 — 검정+빨강 네온 카드 */
+  /* 승/패 오버레이 = 게임 화면 위 모달(뒤로 게임이 흐리게 비침) */
   #ov{position:absolute;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;text-align:center;padding:26px;
-    background:radial-gradient(circle at 50% 38%,rgba(46,8,12,.5),rgba(4,6,12,.93) 72%)}
+    background:radial-gradient(circle at 50% 42%,rgba(40,8,12,.34),rgba(4,6,12,.6) 82%);
+    backdrop-filter:blur(2.5px) saturate(.85);-webkit-backdrop-filter:blur(2.5px) saturate(.85)}
   #ov.hide{display:none}
-  .ovCard{width:86%;max-width:330px;padding:28px 26px 24px}
+  #ov:not(.hide) .ovCard{animation:ovPop .26s cubic-bezier(.2,.9,.3,1.2)}
+  @keyframes ovPop{from{opacity:0;transform:translateY(8px) scale(.94)}to{opacity:1;transform:none}}
+  .ovCard{width:84%;max-width:320px;padding:24px 24px 22px}
   .ovEmblem{width:60px;height:60px;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;border-radius:13px;color:var(--neon);
     background:radial-gradient(circle at 50% 30%,rgba(255,59,59,.22),rgba(10,8,10,.6) 75%);border:1px solid var(--neon-soft);
     box-shadow:0 0 18px -4px var(--neon-glow),inset 0 0 14px var(--shade)}
