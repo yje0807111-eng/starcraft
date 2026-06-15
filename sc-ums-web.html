@@ -2787,7 +2787,7 @@ function sellUnit(u){ if(!u||u.fixed) return false;
   toast('💰 판매 +'+val+' 크레딧'); renderUnits(); updateHud(); return true; }
 let _sellTier=null, _sellSig='';
 // ── 유닛 조합(전 범위 — 합체존/버튼 제거): 하단 [판매|조합] 토글 패널 ──
-let _homeMode='select', _combTier=null, _combSig=''; let _selTierH=null, _selSig='';
+let _homeMode='select', _combTier=null, _combSig=''; let _selTierH=null, _selSig='', _selViaTab=false;
 const LEGEND_TO_TRANSCEND={};   // 3-같은 레시피 역매핑(machinegun_l→phantom_t 등)
 for(const _res in TRANSCEND_RECIPE){ const _m=TRANSCEND_RECIPE[_res]; if(_m.length===3 && _m[0]===_m[1] && _m[1]===_m[2]) LEGEND_TO_TRANSCEND[_m[0]]=_res; }
 function combineResultFor(gid,gtier){ const nt=SIMPLE_COMBINE_TIERS[gtier]; if(nt) return {type:'simple', nextTier:nt};
@@ -2835,9 +2835,9 @@ function renderCombinePanel(){ const tiersBox=document.getElementById('hsTiers')
   }
   grid.innerHTML=cells;
 }
-function selectByGid(gid){ const ids=G.units.filter(u=>!u.fixed&&!u.atBoss&&u.gid===gid).map(u=>u.uid);
+function selectByGid(gid){ _selViaTab=true; const ids=G.units.filter(u=>!u.fixed&&!u.atBoss&&u.gid===gid).map(u=>u.uid);
   if(ids.length){ G.sel=capSelTypes(ids); G.selEnemy=null; refreshSelCard(); } }   // 그 종류(등급+유닛)만 필터 지정
-function setSelTier(t){ _selTierH=t; _selSig=''; selectAllOfTier(t); }   // 등급 탭 → 그 등급 전체 지정 + 종류 표시(refreshSelCard가 패널 갱신)
+function setSelTier(t){ _selViaTab=true; _selTierH=t; _selSig=''; selectAllOfTier(t); }   // 등급 탭 → 그 등급 전체 지정 + 종류 표시(refreshSelCard가 패널 갱신)
 function renderSelectPanel(){ const tiersBox=document.getElementById('hsTiers'), grid=document.getElementById('hsGrid'); if(!tiersBox||!grid) return;
   const live=G.units.filter(u=>!u.fixed&&!u.atBoss&&u.gid);
   const byTier={}; for(const u of live){ (byTier[u.gtier]=byTier[u.gtier]||[]).push(u); }
@@ -4855,6 +4855,9 @@ function refreshSelCard(){
   updateDeselTop(); // 우상단 해제버튼(탭별)
   updateCmdRow();   // 명령 버튼 행(홀드/공격이동/지정공격/반복이동)
   updateSkillFab(); // 메인 화면 스킬 버튼
+  if(G.tab==='Main' && _homeMode==='select' && _selViaTab && !en && G.sel.length>=1){   // 지정 탭에서 선택 → 지정 패널 유지(드래그 박스 선택은 selMulti 칩)
+    document.getElementById('defaultCmd').classList.remove('hide');
+    document.getElementById('unitCmd').classList.remove('on'); renderHomeLeft(); renderUnits(); return; }
   if(G.sel.length===0 && !en){ document.getElementById('defaultCmd').classList.remove('hide');
     document.getElementById('unitCmd').classList.remove('on'); renderHomeLeft(); renderUnits(); return; }
   document.getElementById('defaultCmd').classList.add('hide');
@@ -5064,7 +5067,7 @@ function updateCmdRow(){ const row=document.getElementById('cmdRow'); if(!row) r
   const types=new Set(us.map(u=>u.id+'|'+(u.hero?1:0)+'|'+(u.lv||1)));
   const all=document.getElementById('scAllBtn'); if(all) all.style.display=(types.size===1 && !isBuilding(us[0].id))?'flex':'none';
 }
-function selectOne(uid){ G.sel=[uid]; G.selEnemy=null; refreshSelCard(); }
+function selectOne(uid){ _selViaTab=false; G.sel=[uid]; G.selEnemy=null; refreshSelCard(); }
 const MAX_SEL_TYPES=8;   // 다중 선택은 최대 8종류(초상화 4칸×2줄)
 const MAX_PER_TYPE=30;   // 종류당 최대 30마리 (4종류 × 30 = 최대 120마리)
 function isBuilding(id){ return !!(U[id] && U[id].moveSpd===0); }   // 건물(가드타워·스파이어)=이동속도0 → 드래그 다중선택 제외(개별선택만)
@@ -5100,8 +5103,8 @@ function selectAllOfType(){ if(G.sel.length===0) return;
   const all=G.units.filter(u=>!isBuilding(u.id) && (u.id+'|'+(u.hero?1:0)+'|'+(u.lv||1))===key).map(u=>u.uid);
   selectMany(all);   // capSelTypes가 종류당 30마리로 제한
 }
-function selectMany(uids){ G.sel=capSelTypes(uids); G.selEnemy=null; refreshSelCard(); }
-function selectEnemy(eid){ G.sel=[]; G.selEnemy=eid; refreshSelCard(); }  // 적은 1마리만
+function selectMany(uids){ _selViaTab=false; G.sel=capSelTypes(uids); G.selEnemy=null; refreshSelCard(); }
+function selectEnemy(eid){ _selViaTab=false; G.sel=[]; G.selEnemy=eid; refreshSelCard(); }  // 적은 1마리만
 function deselectUnit(){ G.sel=[]; G.selEnemy=null; refreshSelCard(); }
 // 현재 선택 유닛과 '같은 종류(같은 id+영웅여부+레벨)' 전체 선택
 function selectSameType(){ if(G.sel.length===0) return;
