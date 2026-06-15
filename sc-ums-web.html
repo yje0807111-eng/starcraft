@@ -90,12 +90,6 @@
   #hudL .stage b{font-size:14px;color:var(--hud);letter-spacing:0;text-shadow:0 0 6px var(--hud-glow),0 2px 3px #000}
   #hudL .stage #hRoundMax{font-size:var(--fs-md);color:rgba(214,226,240,.5);letter-spacing:0}
   #hudL .kill{font-size:var(--fs-lg);color:#fff;font-weight:800;letter-spacing:.5px}#hudL .kill b{color:var(--hud)}  /* Kill 텍스트=흰 / 숫자=청록 */
-  /* 받을 코인 미리보기 칩 — 지금 끝내면 받는 코인(골드) */
-  #hudL .runCoin{display:inline-flex;align-items:center;gap:3px;align-self:flex-start;font-size:var(--fs-md);font-weight:800;
-    color:#ffd24a;letter-spacing:.3px;padding:1px 7px;border-radius:999px;
-    background:linear-gradient(160deg,rgba(255,210,74,.16),rgba(40,28,6,.5));border:1px solid rgba(255,210,74,.4);
-    box-shadow:0 0 7px rgba(255,210,74,.22),inset 0 0 5px rgba(255,210,74,.1);text-shadow:0 1px 2px #000}
-  #hudL .runCoin b{color:#fff;text-shadow:0 0 5px rgba(255,210,74,.5),0 1px 2px #000;margin-left:1px}
   /* 중앙 전자시계(LCD 패널 + 7-seg 고스트) — 자원 아래로 내려 겹침 방지 */
   #hudC{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 46px);transform:translateX(-50%);pointer-events:none;
     display:flex;align-items:center;justify-content:center;min-width:0;height:23px;padding:0 9px;   /* 정중앙 — 시간 크기에 맞춰 박스 축소 */
@@ -1839,7 +1833,6 @@
       <div id="hudL">
         <span class="stage">ROUND <b id="hRound">1</b><span id="hRoundMax">/18</span></span>
         <span class="kill"><b id="hKill">0</b> Kill</span>
-        <span class="runCoin" id="hRunCoin" title="지금 종료하면 받는 코인(도달 라운드 기준)">◎<b id="hRunCoinV">0</b></span>
         <span id="specLabel"></span>
       </div>
       <div id="hudC"><span class="time" id="hTime">00:00</span></div>
@@ -2823,13 +2816,9 @@ function bankRunPoints(){ if(G._pointsBanked) return G._bankedAmt||0; G._pointsB
   const cm=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).coinMult;
   const bonus=(typeof coopActive==='function'&&coopActive()&&isTopCoopContributor())?1:0;   // 멀티 & 기여 1위 = +1코인(개인플레이=없음)
   G._bankBonus=bonus;
-  const gained=Math.round(runRoundPoints()*cm)+bonus;
+  const gained=Math.round(runRoundPoints()*cm)+(G.bossCoins||0)+bonus;   // 라운드 도달 + 보스 처치 코인(이미 난이도/보상배율 반영) + 멀티 기여 보너스
   if(gained>0){ PLAYER_META.coins=(PLAYER_META.coins||0)+gained; saveMeta(); }
   G._bankedAmt=gained; return gained; }
-// 미리보기: 지금 판을 끝낼 경우 받게 될 코인(은행 처리 없이 계산만)
-function previewRunCoins(){ const cm=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).coinMult;
-  const bonus=(typeof coopActive==='function'&&coopActive()&&typeof isTopCoopContributor==='function'&&isTopCoopContributor())?1:0;
-  return Math.round(runRoundPoints()*cm)+bonus; }
 // 메타 빌드 레벨업(코인 차감)
 function buildUpgrade(id){ const b=META_BUILDS[id]; if(!b) return false;
   if(b.deferred){ toast('준비 중인 빌드입니다'); return false; }
@@ -3236,7 +3225,7 @@ function onBossArenaUp(){
 function newGame(){ return {
   phase:'ready', round:1, kills:0, timeSec:0, speedMul:1, difficulty:'normal',
   mineral:mapCfg('startCredits',START_MIN), gas:mapCfg('startEnergy',START_GAS), atkLv:{inf:0,mech:0,pro:0,zrg:0}, // 계열별 공격 업글 레벨
-  points:0, _pointsBanked:false,   // 이번 판에서 모은 포인트(게임 종료 시 계정에 정산 → 다음 판 강화)
+  points:0, _pointsBanked:false, bossCoins:0,   // 이번 판 포인트 + 보스 처치 적립 코인(게임 종료 시 계정에 정산 → 다음 판 강화)
   coopBoss:null, bossOpen:false, bossPickArm:false,   // 상시 공용 보스 + 토벌장 팝업 + 지정 파견
   units:[], enemies:[], beams:[], shots:[], impacts:[], muzzles:[], debris:[], pendingHits:[], recalls:[], sparks:[], pendSpawn:[], // 이펙트 + 명중대기 + 출현이펙트/대기 + 스파크
   toSpawn:0, spawnTimer:0, roundGap:0,
@@ -4095,10 +4084,10 @@ try{ window.ENEMY_MODEL=ENEMY_MODEL; }catch(e){}   // M3D 모듈(별도 스코�
 const SPAWN_LEAD=0.58;   // 출현 이펙트 시작 → 실제 등장(에너지 모임 후 플래시 시점)까지 지연(초)
 // ── 개인 보스 4종(고정 난이도 — 라운드 무관, 등급별 도전) ──
 const PBOSS_TYPES=[
-  {id:'easy',  name:'견습 파수꾼',   tier:'일반 유닛',          hp:6000,     ar:0,    bonus:120, egy:15, col:'#b8c0cc'},
-  {id:'mid',   name:'정예 추적자',   tier:'에픽·유니크',        hp:150000,   ar:90,   bonus:300, egy:30, col:'#b06bff'},
-  {id:'upper', name:'전장의 정복자', tier:'초월(레전드는 버겁)', hp:700000,   ar:700,  bonus:450, egy:45, col:'#ff8a3b'},
-  {id:'super', name:'파멸의 군주',   tier:'초월 다수 · 갓',     hp:5000000,  ar:1450, bonus:750, egy:75, col:'#ff2bd6'},
+  {id:'easy',  name:'견습 파수꾼',   tier:'일반 유닛',          hp:6000,     ar:0,    bonus:120, egy:15, coin:2,  col:'#b8c0cc'},
+  {id:'mid',   name:'정예 추적자',   tier:'에픽·유니크',        hp:150000,   ar:90,   bonus:300, egy:30, coin:5,  col:'#b06bff'},
+  {id:'upper', name:'전장의 정복자', tier:'초월(레전드는 버겁)', hp:700000,   ar:700,  bonus:450, egy:45, coin:10, col:'#ff8a3b'},
+  {id:'super', name:'파멸의 군주',   tier:'초월 다수 · 갓',     hp:5000000,  ar:1450, bonus:750, egy:75, coin:20, col:'#ff2bd6'},
 ];
 function spawnEnemy(opts){ opts=opts||{}; const pt=opts.pbType||null; const pboss=!!opts.pboss||!!pt, boss=!!opts.boss||pboss, special=!!opts.special; const m=roundDef(G.round);
   const mb=G.metaB||{};   // 메타 강화: 적 체력/방어/이속 감소(개인)
@@ -4113,6 +4102,7 @@ function spawnEnemy(opts){ opts=opts||{}; const pt=opts.pbType||null; const pbos
   const e={eid:G.eSeq++, d:pboss?Math.random():0, hp:hp, maxHp:hp, sh:sh, maxSh:sh, ar:ar,
     speed:spd, boss:boss, special:special, pboss:pboss, life:pboss?120:null, pbCol:pt?pt.col:null,
     bonus:pt?Math.round(pt.bonus*coinMult*((mb.pbossRewardMul)||1)):0, bonusE:pt?Math.round((pt.egy||0)*((mb.pbossRewardMul)||1)):0,   // 처치 보상(coinMult×메타 개인보스 보상)
+    coin:pt?Math.round((pt.coin||0)*coinMult*((mb.pbossRewardMul)||1)):(boss?Math.round((2+Math.floor(G.round/6))*coinMult):0),   // 처치 시 적립되는 메타 코인(◎) — 다음 판/결과창 반영
     flash:0, name:pt?pt.name:(boss?'보스':(special?'스페셜':m.n)),
     shape:boss?'capital':enemyShape(m.n), race:enemyRace(m.n), ph:(G.eSeq*0.7)%6.283, hit:0, model3d:boss?null:(ENEMY_MODEL[m.n]||null)};
   G.recalls.push({life:1, boss:boss, special:special});   // ① 출현 이펙트(에너지 모임) 먼저 시작
@@ -4333,8 +4323,8 @@ function step(dt){
     if(e.pboss && e.hp>0 && e.life!=null && e.life<=0){ toast('개인 보스가 사라졌습니다 (미처치 · 혜택 없음)'); deathBurst(e); G.enemies.splice(i,1); if(G.selEnemy===e.eid){G.selEnemy=null;refreshSelCard();} continue; }   // 2분 경과 소멸(보상·불이익 없음)
     if(e.hp<=0){ G.kills++;
     if(e._killer!=null){ const _k=G.units.find(x=>x.uid===e._killer); if(_k) _k.kills=(_k.kills||0)+1; }   // 개별 유닛 킬 카운트
-    if(e.pboss){ const bn=e.bonus||0, be=e.bonusE||0; gainMineral(bn); if(be>0) gainGas(be); toast('☠ 개인 보스 처치! +'+bn+' 크레딧'+(be>0?' +'+be+' 에너지':'')); if(typeof playSfx==='function') playSfx('hero_merge'); }
-    else if(e.boss) toast('🟡 라운드 보스 처치!');
+    if(e.pboss){ const bn=e.bonus||0, be=e.bonusE||0, bc=e.coin||0; gainMineral(bn); if(be>0) gainGas(be); if(bc>0) G.bossCoins=(G.bossCoins||0)+bc; toast('☠ 개인 보스 처치! +'+bn+' 크레딧'+(be>0?' +'+be+' 에너지':'')+(bc>0?' · ◎'+bc+' 코인':'')); if(typeof playSfx==='function') playSfx('hero_merge'); }
+    else if(e.boss){ const bc=e.coin||0; if(bc>0) G.bossCoins=(G.bossCoins||0)+bc; toast('🟡 라운드 보스 처치!'+(bc>0?' · ◎'+bc+' 코인':'')); }
     if(e.special){ const sc=mapCfg('specialCredit',SPECIAL_MIN); gainMineral(sc); gainGas(2); toast('스페셜 처치! +'+sc+' 크레딧 +2 에너지'); }   // 스페셜=크레딧+에너지
     if(e.boss && !e.pboss){ gainGas(5+Math.floor(G.round/4)); }   // 라운드 보스 처치=에너지 보너스(개인 보스는 크레딧만)
     gainMineral(mapCfg('killCredit',1));   // 킬 보상(맵 설정, 메타 획득↑ 반영)
@@ -7287,7 +7277,6 @@ function updateHud(){
   document.getElementById('hMin').innerHTML=G.mineral+'<i class="ru">C</i>';            // 크레딧
   document.getElementById('hGas').innerHTML=G.gas+'<i class="ru">E</i>';                // 에너지
   document.getElementById('hPop').innerHTML=G.units.filter(u=>!u.fixed).length+'/'+maxUnits()+'<i class="ru">CP</i>';  // 커맨드 포인트
-  const rcv=document.getElementById('hRunCoinV'); if(rcv && typeof previewRunCoins==='function') rcv.textContent=previewRunCoins();   // 받을 코인 미리보기
   updateMapName();
 }
 // 각 화면(맵) 이름 — 우측 상단 자원 아래 표시
