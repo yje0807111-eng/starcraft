@@ -2248,9 +2248,8 @@ const DRAW_BEACONS=[
   {id:'pull10',  x:.18, y:.30, name:'유닛 ×5', core:'5'},
   {id:'draw',    x:.18, y:.50, name:'유닛 1회', core:'?'},
   {id:'premium', x:.18, y:.70, name:'고급 1회', core:'★'},
-  // 우측 줄: 에너지 뽑기 (좌측 유닛1회·고급1회 라인에 맞춤)
-  {id:'energy10',x:.82, y:.50, name:'에너지 ×10', core:'10'},
-  {id:'energy',  x:.82, y:.70, name:'에너지 1회', core:'⚡'},
+  // 우측 줄: 에너지 1회 뽑기 (좌측 '유닛 1회'와 같은 높이로 정렬)
+  {id:'energy',  x:.82, y:.50, name:'에너지 1회', core:'⚡'},
 // 하단 줄: 방어 구조물 구매(터렛=좌, 포토캐논=우) — 메인 맵 고정 자리에 배치
 {id:'buyTurret', x:.38, y:.77, name:'가드 타워', core:'🗼'},
 {id:'buyPhoton', x:.62, y:.77, name:'스파이어', core:'◉'},
@@ -3693,7 +3692,7 @@ function energyDraw(){
 }
 
 // ── 10연차 묶음 뽑기 — 10회 한 번에, 레어+ 1개 확정. 10칸 여유 필요. 할인가 ──
-const PULL10_COST=180;   // 5연차: 단발 40×5=200 → 할인
+const PULL10_COST=145;   // 5연차: 단발 30×5=150 → 145 소폭 할인(단발 반복보다 싸게)
 function drawGacha10(){
   if(G.phase!=='playing'){ toast('게임 중에만 뽑기 가능합니다'); return; }
   const free=maxUnits()-G.units.filter(u=>!u.fixed).length;
