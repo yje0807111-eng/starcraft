@@ -2900,10 +2900,11 @@ function coopBossPlayers(){ return (typeof coopActive==='function'&&coopActive()
 function coopBossMaxHp(lv){
   const diff=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).enemyHp;
   const hpDown=Math.max(0.4, 1 - buildLevel('boss_hp_down')*0.03);
-  // 월드보스: 단계마다 ×2, 5단계부터 추가 ×2 가속(후반 벽) → 이지·솔로 8k·16k·32k·64k·256k·1.02M.
-  // 한 판(이지 무메타)에 5~6단계 겨우 처치 = 코인 15~21. 멀티는 ×players로 확장(인원수만큼 딜도 늘어 1인분 유지).
+  // 월드보스: 단계마다 ×2, 5단계부터 추가 ×2 가속(후반 벽) → 이지·솔로 45k·90k·180k·360k·1.44M·5.76M·23M.
+  // 초반 base를 높여(45k) 강한 유닛도 1~4단계를 즉사시키지 못함(월드보스 체감). 봇시뮬: 중간메타 ~4단계·만렙 ~6~8단계 캡.
+  // 멀티는 ×players로 확장(인원수만큼 딜도 늘어 1인분 유지).
   const late=Math.pow(2.0, Math.max(0, lv-4));
-  return Math.round(8000*diff*coopBossPlayers()*Math.pow(2.0, lv-1)*late*hpDown);
+  return Math.round(45000*diff*coopBossPlayers()*Math.pow(2.0, lv-1)*late*hpDown);
 }
 function makeCoopBoss(lv){ const max=coopBossMaxHp(lv);
   return { lv:lv, hp:max, max:max, contrib:{}, dead:false, name:COOP_BOSS_NAMES[(lv-1)%COOP_BOSS_NAMES.length] }; }
