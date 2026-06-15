@@ -664,7 +664,7 @@
   /* 단일 종류: 칩 + 유닛별 HP */
   .selSingle{display:none;align-items:flex-start;gap:7px;flex:1;min-height:0;padding:6px 6px 6px 3px}
   .selSingle .ssChip{flex:0 0 auto;cursor:default}
-  .ssHp{flex:1;min-width:0;display:grid;grid-template-columns:repeat(6,1fr);gap:4px;align-content:flex-start;min-height:0;overflow-y:auto;overflow-x:hidden;padding:2px 0}
+  .ssHp{flex:1;min-width:0;display:grid;grid-template-columns:repeat(6,1fr);gap:4px;align-content:flex-start;min-height:0;overflow:hidden;padding:2px 0}
   .uHpItem{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0;cursor:pointer;border-radius:6px;padding:3px 2px;
     background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.012));border:1px solid var(--metal-edge);box-shadow:inset 0 1px 0 rgba(255,255,255,.05);transition:all .12s}
   .uHpItem:hover{border-color:rgba(120,200,255,.55);background:rgba(120,200,255,.1)}
@@ -1971,8 +1971,6 @@
           </div>
           <div class="scStats" id="statGrid"></div>
         </div>
-        <!-- 1인 카드 밖 '전체 선택' 버튼 -->
-        <button class="scAllOne" id="scAllOne" onclick="selectAllOfType()" style="display:none">⛶ 이 종류 전체 선택</button>
         <!-- 다중 선택: 총 기수 + 종류별 초상화 칩(클릭 시 해당 종류만 선택) -->
         <div class="selMulti" id="selMulti">
           <div class="selHead"><span><b id="selCount">0</b>기 선택됨<span class="selSub"> · 초상화를 누르면 종류별 선택</span></span>
@@ -1980,6 +1978,8 @@
           <div class="selChips" id="selChips"></div>
           <div class="selSingle" id="selSingle" style="display:none"></div>
         </div>
+        <!-- 카드/그리드 밖 '전체 선택' 버튼: 항상 패널 가장 하단 -->
+        <button class="scAllOne" id="scAllOne" onclick="selectAllOfType()" style="display:none">⛶ 이 종류 전체 선택</button>
       </div>
     </div>
 
@@ -4994,15 +4994,21 @@ function buildSelChips(){
     const tr=g=>(g.u.gtier&&typeof GACHA_TIER_ORDER!=='undefined')?GACHA_TIER_ORDER.indexOf(g.u.gtier):-1;
     return B.uids.length-A.uids.length || tr(B)-tr(A) || ((U[B.u.id]?U[B.u.id].cost:0)-(U[A.u.id]?U[A.u.id].cost:0)); });
   const chipsEl=document.getElementById('selChips'), singleEl=document.getElementById('selSingle'), allBtn=document.getElementById('selAllBtn');
-  const sub=document.querySelector('#selMulti .selSub');
+  const sub=document.querySelector('#selMulti .selSub'); const allOne=document.getElementById('scAllOne');
   if(order.length===1){   // ── 단일 종류: 칩 + 유닛별 HP + 전체선택 ──
     const g=groups[order[0]];
     if(sub) sub.textContent=' · HP 바를 누르면 해당 유닛 선택';
-    chipsEl.style.display='none'; singleEl.style.display='flex'; allBtn.style.display='none';   // 전체선택은 하단 명령 행(cmdRow)이 담당
+    chipsEl.style.display='none'; singleEl.style.display='flex'; allBtn.style.display='none';   // 전체선택은 하단 scAllOne 버튼이 담당
     const chip=document.createElement('div'); chip.className='selChip ssChip'+(g.u.hero?' hero':''); chip.innerHTML=chipHTML(g);
-    const hp=document.createElement('div'); hp.className='ssHp'; hp.innerHTML=g.uids.slice(0,MAX_PER_TYPE).map(unitHpHTML).join('');   // HP바는 최대 30마리만 표시(나머지는 선택만)
+    const hp=document.createElement('div'); hp.className='ssHp'; hp.innerHTML=g.uids.slice(0,MAX_HP_SHOW).map(unitHpHTML).join('');   // HP바는 최대 24마리(6×4)만 표시(나머지는 선택만)
     singleEl.innerHTML=''; singleEl.appendChild(chip); singleEl.appendChild(hp);
+    if(allOne){   // 맵 전체 같은 종류 마릿수 → 하단 전체선택 버튼
+      const _key=g.u.id+'|'+(g.u.hero?1:0)+'|'+(g.u.lv||1);
+      const _cnt=G.units.filter(x=>!isBuilding(x.id) && (x.id+'|'+(x.hero?1:0)+'|'+(x.lv||1))===_key).length;
+      if(_cnt>1 && !isBuilding(g.u.id)){ allOne.style.display='flex'; allOne.innerHTML='⛶ 이 종류 전체 선택 <b>'+_cnt+'</b>'; } else allOne.style.display='none';
+    }
   } else {   // ── 여러 종류: 4칸 그리드 ──
+    if(allOne) allOne.style.display='none';   // 여러 종류 선택 시 숨김
     if(sub) sub.textContent=' · 초상화를 누르면 종류별 선택';
     singleEl.style.display='none'; allBtn.style.display='none'; chipsEl.style.display='grid'; chipsEl.innerHTML='';
     order.forEach(key=>{ const g=groups[key];
@@ -5095,6 +5101,7 @@ function updateCmdRow(){ const row=document.getElementById('cmdRow'); if(!row) r
 function selectOne(uid){ _selViaTab=false; G.sel=[uid]; G.selEnemy=null; refreshSelCard(); }
 const MAX_SEL_TYPES=8;   // 다중 선택은 최대 8종류(초상화 4칸×2줄)
 const MAX_PER_TYPE=30;   // 종류당 최대 30마리 (4종류 × 30 = 최대 120마리)
+const MAX_HP_SHOW=24;    // HP바 그리드 표시 상한(6열×4줄) — 초과분은 선택만 되고 미표시
 function isBuilding(id){ return !!(U[id] && U[id].moveSpd===0); }   // 건물(가드타워·스파이어)=이동속도0 → 드래그 다중선택 제외(개별선택만)
 // 선택 유닛을 종류(id+영웅+레벨)별로 묶어 최대 4종류 + 종류당 30마리로 제한. 건물 제외.
 // 종류 우선순위: 유닛 수 많은 순 → 같으면 더 비싼(cost↑) 순. (5종류면 가장 적은 종류 탈락)
