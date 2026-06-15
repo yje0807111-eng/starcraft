@@ -2696,21 +2696,24 @@ const DIFFICULTY = {
 const DIFFICULTY_ORDER = ['easy','normal','hard','hell'];
 // 보스 처치 코인(기본, 난이도 coinMult 적용 전). 표에 없는 라운드는 라운드 비례 폴백.
 // 메타 빌드 정의(설계서 4번). group: util / power / coop. 다음레벨 비용 = floor(start * rate^level)
-const META_BUILD_GROUPS = { eco:'경제', prod:'생산', combat:'전투', team:'전체 강화', coop:'공용 보스' };
+const META_BUILD_GROUPS = { eco:'경제', prod:'생산', combat:'전투', team:'전체 강화', coop:'보스', end:'엔드' };
 const META_BUILDS = {   // 탭(group) → 섹션(sect) 2단 분류. 같은 sect끼리 묶여 헤더로 구분됨
   // ── 경제 ──
   credit_gain:   { name:'크레딧 획득', desc:'인게임 크레딧 획득 증가',   start:2, rate:1.7, max:15, group:'eco', sect:'자원 획득' },
   energy_gain:   { name:'에너지 획득', desc:'인게임 에너지 획득 증가',   start:2, rate:1.7, max:15, group:'eco', sect:'자원 획득' },
   sell_return:   { name:'판매 회수율', desc:'유닛 판매 회수 비용 +5%/Lv', start:2, rate:1.7, max:10, group:'eco', sect:'자원 획득' },
+  energy_draw_bonus:{ name:'에너지 뽑기 강화', desc:'에너지 뽑기 획득 +10%/Lv', start:3, rate:1.8, max:10, group:'eco', sect:'자원 획득' },
   start_credit:  { name:'시작 크레딧', desc:'시작 시 크레딧 지급',       start:2, rate:1.7, max:12, group:'eco', sect:'시작 자원' },
   start_energy:  { name:'시작 에너지', desc:'시작 시 에너지 지급',       start:2, rate:1.7, max:12, group:'eco', sect:'시작 자원' },
   // ── 생산(뽑기·유닛) ──
   gacha_luck:    { name:'고등급 확률', desc:'레전드+ 뽑기 확률 증가',    start:5, rate:1.9, max:10, group:'prod', sect:'뽑기' },
   guaranteed:    { name:'확정 뽑기권', desc:'유닛 확정 뽑기권 지급',     start:4, rate:1.8, max:8,  group:'prod', sect:'뽑기' },
+  gacha_double:  { name:'추가 생산',   desc:'유닛 뽑기 시 6%/Lv 확률로 1기 더', start:6, rate:1.9, max:8, group:'prod', sect:'뽑기' },
   unit_cap:      { name:'유닛 수 증가', desc:'최대 유닛 수 +1',          start:6, rate:1.9, max:10, group:'prod', sect:'유닛' },
   start_unit:    { name:'시작 유닛',   desc:'시작 시 기본 유닛 지급',    start:3, rate:1.8, max:8,  group:'prod', sect:'유닛' },
   // ── 전투(아군 강화 · 적 약화) ──
   unit_atk_up:   { name:'공격력 증가',  desc:'유닛 공격력 +%',           start:3, rate:1.8, max:12, group:'combat', sect:'아군 강화' },
+  unit_aspd:     { name:'공격 속도',    desc:'아군 공격 속도 +4%/Lv',     start:4, rate:1.85, max:10, group:'combat', sect:'아군 강화' },
   tower_power:   { name:'타워 강화',    desc:'가드 타워·스파이어 공격력 +20%/Lv', start:3, rate:1.8, max:12, group:'combat', sect:'아군 강화' },
   start_turret:  { name:'시작 포탑',   desc:'시작 시 가드 타워 1기 배치', start:12, rate:2.0, max:1, group:'combat', sect:'아군 강화' },
   enemy_hp_down: { name:'적 체력 감소', desc:'내 트랙 적 체력 -%',        start:4, rate:1.8, max:10, group:'combat', sect:'적 약화' },
@@ -2721,10 +2724,18 @@ const META_BUILDS = {   // 탭(group) → 섹션(sect) 2단 분류. 같은 sect�
   team_credit:   { name:'전체 시작 크레딧',desc:'모든 플레이어 시작 크레딧 지급',start:4, rate:1.8, max:10, group:'team', sect:'팀 강화' },
   team_enemy_hp: { name:'전체 적 체력',  desc:'모든 플레이어 적 체력 -%',      start:6, rate:1.9, max:10, group:'team', sect:'팀 적 약화' },
   team_enemy_slow:{name:'전체 적 이속',  desc:'모든 플레이어 적 이동속도 -%',  start:5, rate:1.9, max:10, group:'team', sect:'팀 적 약화' },
-  // ── 공용 보스 ──
-  boss_hp_down:  { name:'보스 체력 감소', desc:'공용 보스 체력 -3%/Lv',      start:2, rate:1.7, max:10, group:'coop', sect:'보스 공략' },
-  boss_atk_up:   { name:'보스 기여딜 증가',desc:'보스장 파견 유닛의 보스 데미지 +5%/Lv', start:2, rate:1.7, max:12, group:'coop', sect:'보스 공략' },
-  boss_reward_up:{ name:'보스 보상 증가', desc:'공용 보스 처치 포인트 +10%/Lv', start:3, rate:1.8, max:10, group:'coop', sect:'보스 공략' },
+  // ── 보스(공용·개인) ──
+  boss_hp_down:  { name:'보스 체력 감소', desc:'공용 보스 체력 -3%/Lv',      start:2, rate:1.7, max:10, group:'coop', sect:'공용 보스' },
+  boss_atk_up:   { name:'보스 기여딜 증가',desc:'보스장 파견 유닛의 보스 데미지 +5%/Lv', start:2, rate:1.7, max:12, group:'coop', sect:'공용 보스' },
+  boss_reward_up:{ name:'보스 보상 증가', desc:'공용 보스 처치 포인트 +10%/Lv', start:3, rate:1.8, max:10, group:'coop', sect:'공용 보스' },
+  pboss_reward:  { name:'개인 보스 보상', desc:'개인 보스 처치 보상 +10%/Lv', start:3, rate:1.8, max:10, group:'coop', sect:'개인 보스' },
+  pboss_cd:      { name:'개인 보스 쿨감', desc:'개인 보스 재소환 쿨다운 -6%/Lv', start:3, rate:1.8, max:8, group:'coop', sect:'개인 보스' },
+  // ── 엔드 강화(고난도 도전용 · 매우 비싸지만 강력) ──
+  end_atk:    { name:'초월 화력',  desc:'유닛 공격력 +12%/Lv',          start:120, rate:1.6, max:6, group:'end', sect:'종결 강화' },
+  end_tower:  { name:'요새화',     desc:'타워 공격력 +35%/Lv',          start:100, rate:1.6, max:6, group:'end', sect:'종결 강화' },
+  end_enemy:  { name:'적 대붕괴',  desc:'내 트랙 적 체력 -6%/Lv',        start:120, rate:1.6, max:6, group:'end', sect:'종결 강화' },
+  end_econ:   { name:'무한 동력',  desc:'크레딧·에너지 획득 +12%/Lv',    start:100, rate:1.6, max:6, group:'end', sect:'종결 강화' },
+  end_cap:    { name:'군단 확장',  desc:'최대 유닛 +2/Lv',              start:150, rate:1.7, max:5, group:'end', sect:'종결 강화' },
 };
 // 다음 레벨 비용(최대치면 null). 현재 레벨 기준.
 function metaNextCost(buildId, level){ const b=META_BUILDS[buildId]; if(!b) return null;
@@ -2750,20 +2761,25 @@ function teamLevel(id){ let mx=buildLevel(id);
   return mx; }
 function metaBonus(){ const L=id=>buildLevel(id), T=id=>teamLevel(id);
   return {
-    creditMul:   1 + L('credit_gain')*0.08,
-    energyMul:   1 + L('energy_gain')*0.08,
-    atkMul:      1 + L('unit_atk_up')*0.05 + T('team_atk')*0.04,
-    enemyHpMul:  Math.max(0.35, 1 - L('enemy_hp_down')*0.03 - T('team_enemy_hp')*0.025),
+    creditMul:   (1 + L('credit_gain')*0.08) * (1 + L('end_econ')*0.12),
+    energyMul:   (1 + L('energy_gain')*0.08) * (1 + L('end_econ')*0.12),
+    atkMul:      1 + L('unit_atk_up')*0.05 + T('team_atk')*0.04 + L('end_atk')*0.12,
+    aspdMul:     Math.max(0.45, 1 - L('unit_aspd')*0.04),   // 공격 쿨다운 배율(낮을수록 빠름)
+    enemyHpMul:  Math.max(0.3, 1 - L('enemy_hp_down')*0.03 - T('team_enemy_hp')*0.025 - L('end_enemy')*0.06),
     enemyArmor:  L('enemy_def_down')*1,
     enemySlowMul:Math.max(0.4, 1 - L('enemy_slow')*0.03 - T('team_enemy_slow')*0.025),
-    unitCap:     L('unit_cap')*1,
+    unitCap:     L('unit_cap')*1 + L('end_cap')*2,
     startCredit: L('start_credit')*20 + T('team_credit')*25,
     startEnergy: L('start_energy')*10,
     startUnits:  L('start_unit'),
   startTurret: L('start_turret'),
     guaranteed:  L('guaranteed'),
     luck:        L('gacha_luck'),
-    towerMul:    1 + L('tower_power')*0.20,   // 타워(가드 타워·스파이어) 공격력 배율 — 포인트 연구소 '타워 강화'로 성장
+    energyDrawMul: 1 + L('energy_draw_bonus')*0.10,   // 에너지 뽑기 추가 획득
+    gachaDoubleP:  L('gacha_double')*0.06,             // 유닛 뽑기 시 1기 추가 확률
+    pbossRewardMul:1 + L('pboss_reward')*0.10,         // 개인 보스 처치 보상 배율
+    pbossCdMul:    Math.max(0.4, 1 - L('pboss_cd')*0.06),   // 개인 보스 쿨다운 배율
+    towerMul:    (1 + L('tower_power')*0.20) * (1 + L('end_tower')*0.35),   // 타워 공격력 배율(타워 강화 + 엔드 요새화)
   };
 }
 function gainMineral(n){ G.mineral += Math.round(n*((G.metaB&&G.metaB.creditMul)||1)*(1+(G.creditLv||0)*CREDIT_UP_STEP)); }   // 메타 크레딧↑ × 내실 크레딧획득↑(Lv당 +8%)
@@ -2792,13 +2808,14 @@ function buildUpgrade(id){ const b=META_BUILDS[id]; if(!b) return false;
 
 // ── 포인트 연구소(인게임 업그레이드 구역 건물) — 영구 강화 리스트. PLAYER_META 데이터, 구매 시 G.metaB 재계산으로 즉시 적용(시작 자원/유닛만 다음 판) ──
 let _ptGroup='eco';
-const _PT_TABS=[['eco','경제'],['prod','생산'],['combat','전투'],['team','전체'],['coop','보스']];
+const _PT_TABS=[['eco','경제'],['prod','생산'],['combat','전투'],['team','전체'],['coop','보스'],['end','엔드']];
 const _PT_NOTE={
   eco:'크레딧·에너지 수급 강화 · 즉시 적용 (시작 자원은 다음 판)',
-  prod:'뽑기 확률·유닛 수 등 생산 강화 · 즉시 적용 (시작 유닛은 다음 판)',
-  combat:'아군 화력 강화와 적 약화 · 즉시 적용 (시작 포탑은 다음 판)',
+  prod:'뽑기 확률·추가 생산·유닛 수 · 즉시 적용 (시작 유닛은 다음 판)',
+  combat:'아군 화력·공격속도 강화와 적 약화 · 즉시 적용 (시작 포탑은 다음 판)',
   team:'전체 강화 · 협동에서 파티 중 최고 레벨이 모두에게 적용',
-  coop:'공용 보스 · 상시 등장하는 보스 공략 강화'
+  coop:'공용 보스 공략 + 개인 보스 보상·쿨감 강화',
+  end:'⚡ 종결 강화 — 매우 비싸지만 강력 · 고난도 도전용'
 };
 // 포인트 연구소 선택 → 팝업으로 영구 강화 리스트 표시(하단 구역이 좁아 팝업 사용)
 function openPointUpgrade(){ loadMeta(); _ptGroup='eco';
@@ -3826,6 +3843,11 @@ function drawGacha(){
   const pool=gachaUnitsOfTier(tier); const gu=pool[Math.floor(Math.random()*pool.length)];
   const ctr=trackCenter(); const sp=clampInner(ctr.x+(Math.random()-.5)*.08, ctr.y+(Math.random()-.5)*.08);
   spawnGachaUnit(gu.id, sp.x, sp.y);
+  // 메타 '추가 생산': 확률로 같은 등급 1기 더(유닛 칸 여유 시)
+  const _gd=(G.metaB&&G.metaB.gachaDoubleP)||0;
+  if(_gd>0 && Math.random()<_gd && G.units.filter(u=>!u.fixed).length<maxUnits()){
+    const gu2=pool[Math.floor(Math.random()*pool.length)], sp2=clampInner(ctr.x+(Math.random()-.5)*.1, ctr.y+(Math.random()-.5)*.1);
+    spawnGachaUnit(gu2.id, sp2.x, sp2.y); addChat('', '➕ 추가 생산! ['+GACHA_TIERS[tier].name+'] '+gu2.displayName, TIER_COLOR[tier]||'#fff', true); }
   if(typeof playSfx==='function') playSfx((tier==='common'||tier==='rare')?'buy_unit':'hero_merge');
   const _gcol=TIER_COLOR[tier]||'#fff', _gtn=GACHA_TIERS[tier].name;   // 뽑기 결과 → 등급 색상 채팅 알람(뽑기 사운드가 있으니 silent)
   if(GACHA_TIERS[tier].serverNotify) addChat('', '🎉 ['+_gtn+'] '+gu.displayName+' 획득!', _gcol, true);   // 레전드+ 강조
@@ -3851,6 +3873,7 @@ function energyDraw(){
   else if(r<0.85){ base=7;  lbl='👍';      col='#6ff0a0'; }
   else if(r<0.97){ base=12; lbl='✨ 행운'; col='#5ad1ff'; }
   else { base=22; lbl='💥 대박'; col='#ffd24a'; }
+  base=Math.round(base*((G.metaB&&G.metaB.energyDrawMul)||1));   // 메타: 에너지 뽑기 강화
   const before=G.gas; gainGas(base); const real=G.gas-before;   // 에너지 획득 메타(energyMul) 반영
   if(typeof playSfx==='function') playSfx(base>=12?'hero_merge':'buy_unit');
   const box=document.getElementById('gachaResult');
@@ -4056,7 +4079,7 @@ function spawnEnemy(opts){ opts=opts||{}; const pt=opts.pbType||null; const pbos
   const spd = (0.018+(boss?0:0.004))*(mb.enemySlowMul||1);
   const e={eid:G.eSeq++, d:pboss?Math.random():0, hp:hp, maxHp:hp, sh:sh, maxSh:sh, ar:ar,
     speed:spd, boss:boss, special:special, pboss:pboss, life:pboss?120:null, pbCol:pt?pt.col:null,
-    bonus:pt?Math.round(pt.bonus*coinMult):0, bonusE:pt?(pt.egy||0):0,   // 처치 시 추가 크레딧(coinMult 비례)+에너지
+    bonus:pt?Math.round(pt.bonus*coinMult*((mb.pbossRewardMul)||1)):0, bonusE:pt?Math.round((pt.egy||0)*((mb.pbossRewardMul)||1)):0,   // 처치 보상(coinMult×메타 개인보스 보상)
     flash:0, name:pt?pt.name:(boss?'보스':(special?'스페셜':m.n)),
     shape:boss?'capital':enemyShape(m.n), race:enemyRace(m.n), ph:(G.eSeq*0.7)%6.283, hit:0, model3d:boss?null:(ENEMY_MODEL[m.n]||null)};
   G.recalls.push({life:1, boss:boss, special:special});   // ① 출현 이펙트(에너지 모임) 먼저 시작
@@ -4068,7 +4091,7 @@ function summonPersonalBoss(typeId){
   if(G.phase!=='playing'){ toast('게임 중에만 소환 가능합니다'); return; }
   if(G.pbossCd>0){ toast('개인 보스 재소환까지 '+Math.ceil(G.pbossCd)+'초'); return; }
   if(G.enemies.some(e=>e.pboss)){ toast('이미 개인 보스가 활동 중입니다'); return; }
-  G.pbossCd=240;   // 4분 쿨다운(소환 시점부터, 전체 공유)
+  G.pbossCd=Math.round(240*((G.metaB&&G.metaB.pbossCdMul)||1));   // 4분 쿨다운 × 메타 쿨감(전체 공유)
   spawnEnemy({pbType:pt});
   if(typeof playSfxT==='function') playSfxT('boss',1500);
   const coinMult=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).coinMult||1;
@@ -4263,7 +4286,7 @@ function step(dt){
       for(let k=_sb;k<G.shots.length;k++) G.shots[k].uid=u.uid;            // 이번 공격이 만든 발사체에 출처 태깅
       for(let k=_pb;k<G.pendingHits.length;k++) G.pendingHits[k].uid=u.uid;
       for(let k=_mb;k<(G.matronWaves||[]).length;k++) G.matronWaves[k].uid=u.uid;
-      const cdv=cdOf(u,def)*(u.adr>0?0.5:1); u.cd=cdv; u.cdMax=cdv; u.atkT=0.6; } }  // 레이서·발칸=초고속 연사. 아드레날린 시 장전 0.5배. cdMax=장전 진행도 계산용
+      const cdv=cdOf(u,def)*(u.adr>0?0.5:1)*((G.metaB&&G.metaB.aspdMul)||1); u.cd=cdv; u.cdMax=cdv; u.atkT=0.6; } }  // 레이서·발칸=초고속 연사. 아드레날린 0.5배. ×메타 공격속도(aspdMul). cdMax=장전 진행도용
   // 명중 대기(발사체) 처리 — 도달 시 데미지 적용
   for(let i=G.pendingHits.length-1;i>=0;i--){ const h=G.pendingHits[i]; h.t+=dt;
     if(h.t>=h.dur){ const e=G.enemies.find(x=>x.eid===h.eid);
