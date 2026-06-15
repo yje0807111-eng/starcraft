@@ -2659,6 +2659,10 @@ const GACHA_PROXY = {
   phantom_t:'ghost',  skyguard_t:'turret', skydancer_t:'photon', matron_t:'archon',
   ranger_god:'marine', strider_god:'goliath', sentinel_god:'dragoon', reaper_god:'hydra',
 };
+// 무기 계열 오버라이드 — 프록시(임시 stats용)와 정체성이 다른 유닛: 레이서=메카닉, 매트론=저그.
+// (나머지는 프록시 계열이 정체성과 일치) → 업글 공유가 유닛 종류대로 적용됨.
+const GACHA_WPN = { racer_e:'mech', racer_u:'mech', matron_t:'zrg' };
+function gachaWpn(u){ return (u && u.gid && GACHA_WPN[u.gid]) || ((U[u.id]||{}).wpn); }
 // 가챠 유닛 전용 3D 모델(있으면 프록시 모델 대신 사용). 키=가챠 id → 값=MODELS 키
 const GACHA_MODEL = {
   machinegun_l:'machinegun', tank_l:'tank', blade_l:'blade', thornqueen_l:'thornqueen',
@@ -3804,7 +3808,7 @@ function placeMergeZone(){ const mz=document.getElementById('mergeZone'); if(mz)
 function unitDmg(u){ const p=unitDmgParts(u); return p.total; }
 // 공격력 분해: {base:기본, up:업그레이드 추가분, total:합계, wlv:계열 업글 레벨}
 const UNIT_PWR=1.3;   // 유닛 개별 공격력 배율(적게·강하게 — 상한 50→35 보정)
-function unitDmgParts(u){ const d=U[u.id]; const wlv=(G.atkLv&&G.atkLv[d.wpn])||0;
+function unitDmgParts(u){ const d=U[u.id]; const wlv=(G.atkLv&&G.atkLv[gachaWpn(u)])||0;
   const lv=(1+((u.lv||1)-1)*0.6)*gachaTierMul(u)*((G.metaB&&G.metaB.atkMul)||1)*UNIT_PWR;   // 등급 배율 + 메타 공격력↑ × 개별 강화
   const ov=GDMG_OVR[u.gid];   // 구조물 프록시 가챠 유닛의 기본치 교정
   const base=Math.round((ov?ov.dmg:(u.hero?d.hdmg:d.dmg))*lv);
@@ -3814,7 +3818,7 @@ function unitDmgParts(u){ const d=U[u.id]; const wlv=(G.atkLv&&G.atkLv[d.wpn])||
   return {base, up:total-base, total, wlv}; }
 // 공중공격 분해(airDmg 있는 유닛만). 없으면 null.
 function unitAirParts(u){ const d=U[u.id]; if(d.airDmg==null) return null;
-  const wlv=(G.atkLv&&G.atkLv[d.wpn])||0; const lv=(1+((u.lv||1)-1)*0.6)*gachaTierMul(u)*((G.metaB&&G.metaB.atkMul)||1);   // 등급 배율 + 메타 공격력↑
+  const wlv=(G.atkLv&&G.atkLv[gachaWpn(u)])||0; const lv=(1+((u.lv||1)-1)*0.6)*gachaTierMul(u)*((G.metaB&&G.metaB.atkMul)||1);   // 등급 배율 + 메타 공격력↑
   const ov=GDMG_OVR[u.gid];   // 오버라이드 유닛은 공중=지상 동일
   const aD=ov?ov.dmg:(u.hero?(d.hairDmg!=null?d.hairDmg:d.airDmg):d.airDmg);
   const aU=ov?ov.up:(u.hero?(d.hairUp!=null?d.hairUp:d.airUp):d.airUp);
