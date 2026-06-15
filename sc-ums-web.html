@@ -3083,10 +3083,10 @@ function clampInner(x,y){ const b=innerBounds();
   return { x:Math.max(b.minX,Math.min(b.maxX,x)), y:Math.max(b.minY,Math.min(b.maxY,y)) }; }
 function trackCenter(){ const {ox,oy,bw,bh}=geom(GW,GH); return { x:(ox+bw/2)/GW, y:(oy+bh/2)/GH }; }
 // ── 배경 타일(공간 배경 + 프로토스 바닥) — canvas createPattern 반복 ──
-const TILE_SPACE=new Image(); TILE_SPACE.src='assets/tiles/space_bg.png';
+const TILE_SPACE=new Image(); TILE_SPACE.src='assets/tiles/space_bg.png?v=3';
 const TILE_INSTALL=new Image(); TILE_INSTALL.src='assets/tiles/installation.png';  // 유닛뽑기 배경(시설 격납고 금속 바닥)
 TILE_INSTALL.onload=()=>{ if(typeof G!=='undefined' && G.tab==='Unit') drawProd(); };  // 로드되면 뽑기 화면 다시 그림
-const TILE_PLATFORM=new Image(); TILE_PLATFORM.src='assets/tiles/space_platform.png';  // 우주 정거장 금속(업그레이드 플랫폼)
+const TILE_PLATFORM=new Image(); TILE_PLATFORM.src='assets/tiles/space_platform.png?v=3';  // 우주 정거장 금속(업그레이드 플랫폼)
 const _upgRedraw=()=>{ if(typeof G!=='undefined' && G.tab==='Upgrade' && typeof drawUpg==='function') drawUpg(); };
 TILE_PLATFORM.onload=_upgRedraw;
 // 비콘 발판 이미지(원형 금속 패드, 네이비 배경 → 그릴 때 원형 클립으로 코너 제거)
@@ -3094,8 +3094,8 @@ TILE_PLATFORM.onload=_upgRedraw;
 // 합성 비콘은 3D 모델(beacon_synthesis.glb)로 렌더 — M3D 씬에서 합체 베이·유닛 슬롯에 배치(아래 module)
 const SPACE_TILE=380;  // 타일 한 칸 크기(px) — 원본 2048이라 줄여서 반복(별 반복감 완화)
 // 지형 타일 — 바깥=badlands(흙) + 가장자리 ashworld(용암절벽)
-const TILE_BAD=new Image(); TILE_BAD.src='assets/tiles/badlands.png';
-const TILE_ASH=new Image(); TILE_ASH.src='assets/tiles/ashworld.png';
+const TILE_BAD=new Image(); TILE_BAD.src='assets/tiles/badlands.png?v=3';
+const TILE_ASH=new Image(); TILE_ASH.src='assets/tiles/ashworld.png?v=3';
 const BAD_TILE=300, ASH_TILE=260;   // 패턴 한 칸 크기(px)
 // 결정적 해시(셀좌표→0..1) — 시드 기반 지형 변형용(고정, 깜빡임 없음)
 function hsh(x,y,s){ const v=Math.sin(x*127.1+y*311.7+s*74.7)*43758.5453; return v-Math.floor(v); }
@@ -4908,7 +4908,7 @@ function refreshSelCard(){
   renderUnits();
 }
 // 커스텀 초상화 이미지(유닛/건물 id → 파일). 있으면 3D/라인아트 대신 사용.
-const PORTRAIT_DIR='assets/portraits/'; const PORTRAIT_VER='?v=2';
+const PORTRAIT_DIR='assets/portraits/'; const PORTRAIT_VER='?v=3';
 const _PI_RAW={
   marine:  PORTRAIT_DIR+'ranger_portrait.png',     // 레인저
   ghost:   PORTRAIT_DIR+'phantom_portrait.png',    // 팬텀
