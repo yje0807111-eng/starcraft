@@ -260,18 +260,15 @@
   .hbHint{font-size:var(--fs-xs);color:var(--txt-mute);line-height:1.45}.hbHint b{color:var(--gold)}
   /* 판매: 등급 칩 + 초상화 그리드 */
   /* 등급 배너 = SC 콘솔식(등급색 네온 액센트 + 사선 모서리, 모바일 탭 영역 확보) */
-  .hsTiers{display:flex;flex-wrap:nowrap;gap:4px;padding:2px 0 1px}
-  .hsTier{flex:1 1 0;min-width:0;min-height:32px;display:flex;align-items:center;justify-content:center;
-    font-family:inherit;font-size:11px;font-weight:800;letter-spacing:.4px;cursor:pointer;white-space:nowrap;
-    color:var(--tc,#bbb);background:linear-gradient(160deg,rgba(46,52,64,.5),rgba(10,12,18,.72));
-    border:1px solid var(--metal-edge);border-left:2px solid var(--tc,#888);
-    clip-path:polygon(5px 0,100% 0,100% calc(100% - 5px),calc(100% - 5px) 100%,0 100%,0 5px);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.05);position:relative;transition:all .12s;overflow:hidden}
-  .hsTier::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent)}
-  .hsTier:hover{filter:brightness(1.18);border-color:var(--tc,#aaa)}
+  /* 등급 필터 = 작은 알약 칩(3차 — 가장 가볍게, 선택된 등급만 채워짐) */
+  .hsTiers{display:flex;flex-wrap:nowrap;gap:3px;padding:3px 0 1px;overflow:hidden}
+  .hsTier{flex:1 1 0;min-width:0;display:inline-flex;align-items:center;justify-content:center;
+    font-family:inherit;font-size:10px;font-weight:800;letter-spacing:0;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    color:var(--tc,#aeb6c2);background:rgba(255,255,255,.035);border:1px solid var(--metal-edge);border-radius:10px;
+    padding:3px 4px;transition:all .12s}
+  .hsTier:hover{background:rgba(255,255,255,.08);border-color:var(--tc,#888)}
   .hsTier:active{transform:translateY(1px)}
-  .hsTier.on{color:#0c0a08;background:var(--tc,var(--gold));border-color:var(--tc,var(--gold));border-left-color:rgba(255,255,255,.55);
-    box-shadow:0 0 12px -2px var(--tc,var(--gold)),inset 0 1px 0 rgba(255,255,255,.45);text-shadow:0 1px 0 rgba(255,255,255,.28)}
+  .hsTier.on{color:#0c0a08;background:var(--tc,var(--gold));border-color:var(--tc,var(--gold));box-shadow:0 0 9px -3px var(--tc,var(--gold));text-shadow:0 1px 0 rgba(255,255,255,.25)}
   .hsGrid{display:flex;flex-wrap:nowrap;gap:5px;align-items:flex-start;overflow:hidden;padding-bottom:3px}
   .hsGrid::-webkit-scrollbar{height:4px}.hsGrid::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
   /* 유닛 셀 = 통일된 SC 카드(메탈+네온 엣지+사선 모서리+스캔라인) */
@@ -299,26 +296,21 @@
     color:var(--tc,#fff);border-color:var(--tc,#fff);background:transparent;white-space:nowrap;transition:background .12s}
   .selTierChip:active{background:var(--tc,#fff)22;transform:translateY(1px)}
   .selTierChip .stc{opacity:.7;font-weight:700;margin-left:2px}
-  /* 홈 하단 탭 = 스타크래프트 콘솔식 분할 버튼(모바일 탭 영역 확실히 분리) */
-  .hsTabs{gap:5px;padding:2px 0 8px;margin-bottom:0;border-bottom:1px solid var(--glass-edge)}
-  .hsTab{flex:1 1 0;min-width:0;min-height:36px;display:flex;align-items:center;justify-content:center;gap:4px;
-    font-family:inherit;font-size:var(--fs-md);font-weight:800;letter-spacing:.3px;color:var(--txt-dim);cursor:pointer;
-    background:linear-gradient(160deg,rgba(42,48,60,.55),rgba(12,14,20,.72));border:1px solid var(--metal-edge);
-    clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);   /* 모서리 사선 컷(SC 콘솔) */
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.05);position:relative;transition:all .14s;white-space:nowrap;overflow:hidden}
-  .hsTab .htIco{font-size:11px;opacity:.65;flex:0 0 auto}
-  .hsTab::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent)}
-  .hsTab:hover{color:var(--txt);border-color:rgba(255,120,120,.4)}
-  .hsTab.on{color:#fff;background:linear-gradient(160deg,rgba(187,54,54,.5),rgba(58,16,16,.62));border-color:#ff5b5b;
-    box-shadow:0 0 13px -3px rgba(255,80,80,.55),inset 0 1px 0 rgba(255,255,255,.12)}
-  .hsTab.on .htIco{opacity:1;color:#ffb3b3}
-  /* 조합 탭: 조합 가능할 때만 표시 + 골드 펄스로 주목 */
-  .hsTab.comb{color:var(--gold-lt);border-color:rgba(255,210,74,.5);animation:combPulse 1.7s ease-in-out infinite}
+  /* 모드 전환(지정/판매/조합) = 납작한 밑줄 탭(2차 — 최상위 카드 네비보다 가볍게) */
+  .hsTabs{gap:2px;padding:1px 0 7px;margin-bottom:0;border-bottom:1px solid var(--glass-edge)}
+  .hsTab{flex:1 1 0;min-width:0;min-height:30px;display:flex;align-items:center;justify-content:center;gap:4px;
+    font-family:inherit;font-size:var(--fs-md);font-weight:800;letter-spacing:.2px;color:var(--txt-mute);cursor:pointer;white-space:nowrap;
+    background:none;border:none;border-bottom:2px solid transparent;border-radius:0;clip-path:none;box-shadow:none;padding:4px 2px;transition:color .14s,border-color .14s}
+  .hsTab .htIco{font-size:11px;opacity:.5;flex:0 0 auto}
+  .hsTab:hover{color:var(--txt-dim)}
+  .hsTab.on{color:var(--neon);border-bottom-color:var(--neon)}
+  .hsTab.on .htIco{opacity:1;color:var(--neon)}
+  /* 조합 탭: 조합 가능할 때만 표시(골드 텍스트, 밑줄) */
+  .hsTab.comb{color:var(--gold-lt)}
   .hsTab.comb .htIco{color:var(--gold-lt);opacity:1}
-  .hsTab.comb.on{color:#fff;background:linear-gradient(160deg,rgba(255,196,56,.34),rgba(78,54,8,.6));border-color:var(--gold);box-shadow:0 0 14px -3px rgba(255,210,74,.6),inset 0 1px 0 rgba(255,255,255,.14);animation:none}
-  @keyframes combPulse{0%,100%{box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}50%{box-shadow:0 0 13px -2px rgba(255,210,74,.5),inset 0 1px 0 rgba(255,255,255,.08)}}
+  .hsTab.comb.on{color:var(--gold);border-bottom-color:var(--gold)}
   .hsTab.hide{display:none}
-  .hsTabDot{min-width:15px;height:15px;line-height:15px;margin-left:1px;padding:0 3px;border-radius:8px;
+  .hsTabDot{min-width:14px;height:14px;line-height:14px;margin-left:1px;padding:0 3px;border-radius:7px;
     background:var(--gold);color:#1a1206;font-size:9px;font-weight:900;text-align:center;box-shadow:0 0 6px rgba(255,210,74,.7)}
   .hsTabDot.hide{display:none}
   .hsResult{font-size:var(--fs-md)!important;letter-spacing:0!important}
