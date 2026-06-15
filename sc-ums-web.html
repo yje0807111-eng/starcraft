@@ -661,18 +661,18 @@
   .uHpBar i{display:block;height:100%;border-radius:var(--r-bar);transition:width .15s}
   .uHpBar.shb{height:3px}.uHpBar.shb i{background:#5ad1ff}
   .uHpNum{font-size:8px;color:#d2dbe6;font-weight:700;font-family:'Rajdhani',sans-serif;line-height:1}
-  .selChips{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;justify-items:center;align-content:center;overflow:hidden;flex:1;min-height:0;padding:5px 6px 3px}  /* 1줄 4칸 */
+  .selChips{display:grid;grid-template-columns:repeat(4,1fr);gap:9px 6px;justify-items:center;align-content:start;overflow-y:auto;overflow-x:hidden;flex:1;min-height:0;padding:7px 8px 4px}  /* 4칸×최대2줄 */
   /* 초상화 칩 = 흑백 정사각형(3D 모델→2D) + 하단 이름 */
-  .selChip{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;width:100%;max-width:54px;cursor:pointer;transition:transform .08s}
+  .selChip{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:100%;max-width:62px;cursor:pointer;transition:transform .08s}
   .selChip:active{transform:translateY(1px)}
-  .selChip .chipBox{position:relative;width:42px;height:42px;border-radius:var(--r-md);
+  .selChip .chipBox{position:relative;width:50px;height:50px;border-radius:8px;
     background:radial-gradient(circle at 50% 36%,#26272b,#09090b 88%);border:1.5px solid rgba(255,255,255,.5);
     display:flex;align-items:center;justify-content:center;overflow:visible;
     box-shadow:inset 0 0 11px rgba(0,0,0,.75),0 1px 3px var(--shade);transition:border-color .12s,box-shadow .12s}
   .selChip:hover .chipBox{border-color:#fff;box-shadow:inset 0 0 11px rgba(0,0,0,.7),0 0 9px -2px rgba(255,255,255,.4)}
   .selChip.hero .chipBox{border-color:#ffe08a;box-shadow:0 0 10px -1px rgba(255,200,80,.55),inset 0 0 11px rgba(0,0,0,.6)}
-  .selChip .chipPort{width:37px;height:37px;color:#fff;display:flex;align-items:center;justify-content:center;border-radius:var(--r-md);overflow:hidden}
-  .selChip .chipPort svg{width:35px;height:35px;filter:drop-shadow(0 0 1.5px rgba(0,0,0,.9))}
+  .selChip .chipPort{width:45px;height:45px;color:#fff;display:flex;align-items:center;justify-content:center;border-radius:8px;overflow:hidden}
+  .selChip .chipPort svg{width:42px;height:42px;filter:drop-shadow(0 0 1.5px rgba(0,0,0,.9))}
   .selChip .chipImg{width:100%;height:100%;object-fit:cover}  /* 커스텀 초상화=꽉 채워 크롭 */
   /* 개수 — 박스 우하단 코너에 자연스럽게 걸친 배지 */
   .selChip .chipCnt{position:absolute;right:-5px;bottom:-5px;min-width:16px;height:16px;padding:0 4px;border-radius:var(--r-lg);
@@ -5065,7 +5065,7 @@ function updateCmdRow(){ const row=document.getElementById('cmdRow'); if(!row) r
   const all=document.getElementById('scAllBtn'); if(all) all.style.display=(types.size===1 && !isBuilding(us[0].id))?'flex':'none';
 }
 function selectOne(uid){ G.sel=[uid]; G.selEnemy=null; refreshSelCard(); }
-const MAX_SEL_TYPES=4;   // 다중 선택은 최대 4종류까지만(초상화 1줄 4칸)
+const MAX_SEL_TYPES=8;   // 다중 선택은 최대 8종류(초상화 4칸×2줄)
 const MAX_PER_TYPE=30;   // 종류당 최대 30마리 (4종류 × 30 = 최대 120마리)
 function isBuilding(id){ return !!(U[id] && U[id].moveSpd===0); }   // 건물(가드타워·스파이어)=이동속도0 → 드래그 다중선택 제외(개별선택만)
 // 선택 유닛을 종류(id+영웅+레벨)별로 묶어 최대 4종류 + 종류당 30마리로 제한. 건물 제외.
