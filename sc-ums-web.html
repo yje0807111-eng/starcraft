@@ -1050,7 +1050,21 @@
   .ovEmblem svg{width:34px;height:34px;filter:drop-shadow(0 0 5px var(--neon-glow))}
   #ovTitle{font-size:27px;font-weight:800;letter-spacing:1.5px;color:var(--neon);margin:0;text-shadow:0 0 16px var(--neon-glow),0 2px 4px #000}
   .ovBar{width:52px;height:2px;margin:9px auto 13px;background:linear-gradient(90deg,transparent,var(--neon),transparent);opacity:.85}
-  #ovDesc{font-size:var(--fs-lg);color:#c8bbbd;line-height:1.7;margin:0 0 22px;white-space:pre-line}
+  #ovDesc{font-size:var(--fs-lg);color:#c8bbbd;line-height:1.6;margin:0 0 14px;white-space:pre-line;word-break:keep-all;overflow-wrap:anywhere}
+  /* 결과 통계(플레이타임·도달 라운드·받은 코인) */
+  .ovStats{display:flex;flex-direction:column;gap:6px;margin:0 0 18px;text-align:left}
+  .ovStat{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 12px;
+    background:linear-gradient(160deg,rgba(46,52,64,.4),rgba(10,12,17,.55));border:1px solid var(--metal-edge);border-left:2px solid var(--neon-soft);
+    clip-path:polygon(5px 0,100% 0,100% calc(100% - 5px),calc(100% - 5px) 100%,0 100%,0 5px)}
+  .ovStat .osL{font-size:var(--fs-sm);font-weight:700;color:var(--txt-mute);letter-spacing:.3px}
+  .ovStat .osV{font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:800;color:#eaf0f8;text-shadow:0 1px 2px #000;white-space:nowrap}
+  .ovStat .osB{font-size:9px;font-weight:700;color:var(--gold-lt)}
+  .ovBtns{display:flex;flex-direction:column;gap:8px;align-items:stretch}
+  #ovBtn2.ghost{background:linear-gradient(160deg,rgba(46,52,64,.5),rgba(12,14,20,.66));border:1px solid var(--metal-edge);color:var(--txt-dim);
+    padding:11px;font-size:var(--fs-lg);font-weight:800;letter-spacing:.5px;cursor:pointer;border-radius:var(--r-md);transition:all .12s}
+  #ovBtn2.ghost::before{display:none}
+  #ovBtn2.ghost:hover{border-color:rgba(255,120,120,.4);color:var(--txt)}
+  #ovBtn2.ghost:active{transform:translateY(1px)}
   #ovBtn{position:relative;overflow:hidden;border:1px solid var(--neon);color:#fff;border-radius:var(--r-md);padding:13px 42px;font-size:15px;font-weight:800;letter-spacing:1.5px;cursor:pointer;
     background:linear-gradient(180deg,var(--neon-face1),var(--neon-d1) 58%,var(--neon-d2));text-shadow:0 1px 2px rgba(0,0,0,.55);
     box-shadow:0 0 18px -2px var(--neon-glow),0 5px 11px var(--shade),inset 0 1px 0 rgba(255,255,255,.28),inset 0 -3px 7px rgba(0,0,0,.4);transition:transform .08s,box-shadow .15s}
@@ -1888,7 +1902,11 @@
         <h1 id="ovTitle">네모네모 디펜스</h1>
         <div class="ovBar"></div>
         <p id="ovDesc"></p>
-        <button id="ovBtn">멀티플레이</button>
+        <div class="ovStats" id="ovStats" style="display:none"></div>
+        <div class="ovBtns">
+          <button id="ovBtn">멀티플레이</button>
+          <button id="ovBtn2" class="ghost" style="display:none">로비로 돌아가기</button>
+        </div>
       </div>
     </div>
     <!-- 멀티플레이 대기실(로비) -->
@@ -5818,23 +5836,45 @@ function checkEnemyWarn(n){
 // ── 오버레이 ──
 // 게임 플레이 중에만 하단 콘솔(#bot)을 노출. 타이틀/방찾기/로비 등 메뉴 화면에서는 숨김.
 function setInGame(on){ const p=document.getElementById('phone'); if(p) p.classList.toggle('inGame', !!on); }
+function ovStatRow(label,val){ return '<div class="ovStat"><span class="osL">'+label+'</span><span class="osV">'+val+'</span></div>'; }
+function fmtTime(sec){ sec=Math.max(0,Math.floor(sec||0)); const m=Math.floor(sec/60), s=sec%60; return (m<10?'0':'')+m+':'+(s<10?'0':'')+s; }
 function showOverlay(){ const ov=document.getElementById('ov'),tt=document.getElementById('ovTitle'),dd=document.getElementById('ovDesc'),bt=document.getElementById('ovBtn');
-  setInGame(false);
+  const stats=document.getElementById('ovStats'), bt2=document.getElementById('ovBtn2');
   if(G.bossOpen && typeof closeBossArena==='function') closeBossArena();   // 게임 종료 → 보스 팝업 닫기
   if(typeof updateCoopBossBar==='function') updateCoopBossBar();   // 게임 종료 → 보스 바 숨김
   if((G.phase==='won'||G.phase==='lost') && typeof bgmStop==='function') bgmStop();   // 게임 종료 → 인게임 BGM 정지
   ov.classList.remove('hide');
-  if(G.phase==='ready'){ tt.textContent=MAP.name; tt.style.color=COL.accent;
-    dd.textContent=MAP.desc+'.\n유닛 구매 → 배치 → 합성으로 영웅을 키우고\n'+mapCfg('rounds',TOTAL_ROUNDS)+'라운드를 클리어!'; bt.textContent='멀티플레이'; }
-  else if(G.phase==='won'){ const gp=bankRunPoints(); tt.textContent='CLEAR! 🏆'; tt.style.color='#ffd24a';
-    dd.textContent=mapCfg('rounds',TOTAL_ROUNDS)+'라운드를 모두 막아냈습니다!\n킬 '+G.kills+'\n🟡 라운드 도달 보상 +'+gp+'P'+(G._bankBonus?' (보스 기여 1위 +1 포함)':'')+' · 보유 '+(PLAYER_META.coins||0)+'P'; bt.textContent='다시 시작'; }
-  else if(G.phase==='lost'){ const gp=bankRunPoints(); tt.textContent='DEFEAT'; tt.style.color='#ff5c5c';
-    dd.textContent='라운드 '+G.round+'에서 적이 '+mapCfg('loseCount',LOSE_COUNT)+'기 누적되어 탈락했습니다.\n킬 '+G.kills+'\n🟡 라운드 '+G.round+' 도달 보상 +'+gp+'P'+(G._bankBonus?' (보스 기여 1위 +1 포함)':'')+' · 보유 '+(PLAYER_META.coins||0)+'P'; bt.textContent='다시 시작'; }
+  if(G.phase==='ready'){   // 시작 안내 = 메뉴 화면(자체 우주 배경)
+    ov.classList.add('spaceBg'); setInGame(false);
+    tt.textContent=MAP.name; tt.style.color=COL.accent;
+    dd.style.display=''; dd.textContent=MAP.desc+'.\n유닛 구매 → 배치 → 합성으로 영웅을 키우고\n'+mapCfg('rounds',TOTAL_ROUNDS)+'라운드를 클리어!';
+    stats.style.display='none'; stats.innerHTML='';
+    bt.textContent='멀티플레이'; bt2.style.display='none';
+  } else {   // 승/패 = 게임 화면 위 모달(배경 게임 유지)
+    ov.classList.remove('spaceBg');   // 자체 배경 제거 → 뒤로 게임이 비침
+    const won=(G.phase==='won'), gp=bankRunPoints(), multi=(typeof coopActive==='function'&&coopActive());
+    tt.textContent=won?'CLEAR! 🏆':'DEFEAT'; tt.style.color=won?'#ffd24a':'#ff5c5c';
+    dd.style.display=''; dd.textContent=won?'모든 라운드를 막아냈습니다!':'적이 누적되어 방어선이 무너졌습니다.';
+    stats.style.display=''; stats.innerHTML=
+      ovStatRow('플레이타임', fmtTime(G.timeSec))
+     +ovStatRow('도달 라운드', G.round+' / '+mapCfg('rounds',TOTAL_ROUNDS))
+     +ovStatRow('받은 코인', '◎ '+gp+(G._bankBonus?' <span class="osB">(기여 1위 +1)</span>':''));
+    bt.textContent=multi?'관전하기':'다시하기';
+    bt2.style.display=''; bt2.textContent='로비로 돌아가기';
+  }
 }
+function overlayToLobby(){ document.getElementById('ov').classList.add('hide');   // 로비로 돌아가기(승/패 공통)
+  if(typeof stopGameCoop==='function') stopGameCoop(); if(typeof rtRoomClose==='function') rtRoomClose();
+  G=newGame(); showLoading(openMapSelect, 1100); }
+function overlaySpectate(){ document.getElementById('ov').classList.add('hide'); setInGame(true);   // 관전하기(멀티)
+  const pt=document.querySelector('.tab[data-tab="Players"]'); if(pt) pt.click(); }
 document.getElementById('ovBtn').onclick=()=>{
-  if(G.phase==='ready'){ openRooms(); }                 // 멀티플레이 → 방 찾기
-  else { if(typeof stopGameCoop==='function') stopGameCoop(); if(typeof rtRoomClose==='function') rtRoomClose(); G=newGame(); showLoading(openMapSelect, 1300); }                // 승/패 후 '다시 시작' → 로딩 → 유즈맵 선택(방장이면 방 목록에서 내리기)
+  if(G.phase==='ready'){ openRooms(); return; }                 // 멀티플레이 → 방 찾기
+  if(typeof coopActive==='function' && coopActive()){ overlaySpectate(); return; }   // 멀티 = 관전하기
+  document.getElementById('ov').classList.add('hide'); if(typeof stopGameCoop==='function') stopGameCoop();   // 솔로 = 다시하기(같은 맵·난이도)
+  startGameNow([1], 1);
 };
+document.getElementById('ovBtn2').onclick=()=>{ overlayToLobby(); };
 // ── 방 찾기(룸 리스트) ──
 const ROOM_TITLES=['초보만 ㄱㄱ','빨무 고수방','1라운드부터','막판러시 ㄱ','즐겜 환영','영웅 키우기','풀방 가즈아','연습 같이해요','고인물 전용','협동 클리어','노바 팬클럽','쫄?'];
 let _roomList=[];
