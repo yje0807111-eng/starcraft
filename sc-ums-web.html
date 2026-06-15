@@ -2500,15 +2500,15 @@ const MON=[
   {n:'드랍쉽',  hp:620,  sh:270,  ar:150},   // R9  에픽+업글
   {n:'스카웃',  hp:800,  sh:430,  ar:190},   // R10 에픽~유니크
   {n:'커세어',  hp:1050, sh:580,  ar:250},   // R11 유니크 관문
-  {n:'아비터',  hp:2100, sh:1170, ar:265},   // R12 유니크 (방어 300상한·체력 ×1.5 보정)
-  {n:'발키리',  hp:2850, sh:1500, ar:275},   // R13 유니크+업글
-  {n:'케리어',  hp:3600, sh:2000, ar:283},   // R14 레전드 관문(방어 벽→체력 벽)
-  {n:'스카웃',  hp:4650, sh:2600, ar:289},   // R15 레전드
-  {n:'드랍쉽',  hp:6000, sh:3450, ar:293},   // R16 레전드+업글
-  {n:'배틀',    hp:9750, sh:5250, ar:296},   // R17 레전드 한계(초월 진입 압박)
-  {n:'아비터',  hp:12150,sh:6600, ar:298},   // R18 초월 진입
-  {n:'퀸',      hp:15000,sh:8250, ar:299},   // R19 초월
-  {n:'배틀',    hp:19500,sh:10500,ar:300},   // R20 초월 조합 관문(갓은 여유)
+  {n:'아비터',  hp:1400, sh:780,  ar:235},   // R12 유니크 (방어 250상한, 비율감쇄 모델)
+  {n:'발키리',  hp:1900, sh:1000, ar:240},   // R13 유니크+업글
+  {n:'케리어',  hp:2400, sh:1350, ar:244},   // R14 레전드 관문
+  {n:'스카웃',  hp:3100, sh:1750, ar:247},   // R15 레전드
+  {n:'드랍쉽',  hp:4000, sh:2300, ar:249},   // R16 레전드+업글
+  {n:'배틀',    hp:6500, sh:3500, ar:250},   // R17 레전드 한계(초월 진입 압박)
+  {n:'아비터',  hp:8100, sh:4400, ar:250},   // R18 초월 진입
+  {n:'퀸',      hp:10000,sh:5500, ar:250},   // R19 초월
+  {n:'배틀',    hp:13000,sh:7000, ar:250},   // R20 초월 조합 관문(갓은 여유)
 ];
 // 적 형상 분류(이름 기준). 자체 제작 도형 — 공중기/유기체/비행정/대형.
 const ENEMY_SHAPE={
@@ -2717,10 +2717,10 @@ function gachaRangeMul(u){ if(u&&u.gid==='phantom_t') return 1.8;   // 디토네
 //   ※ 코인=영구(계정별), 빌드 효과=개인 적용 예정, coop 그룹=데이터만(효과 보류)
 // ============================================================================
 const DIFFICULTY = {
-  easy:   { name:'이지', enemyHp:1.0, enemyAtk:1.0, coinMult:1.0 },
-  normal: { name:'노말', enemyHp:1.5, enemyAtk:1.3, coinMult:1.3 },
-  hard:   { name:'하드', enemyHp:2.0, enemyAtk:1.6, coinMult:1.7 },
-  hell:   { name:'헬',   enemyHp:3.0, enemyAtk:2.0, coinMult:2.4 },
+  easy:   { name:'이지', enemyHp:0.2,  enemyAtk:1.0, coinMult:1.0, bossHp:1.0 },
+  normal: { name:'노말', enemyHp:0.28, enemyAtk:1.3, coinMult:1.3, bossHp:1.3 },
+  hard:   { name:'하드', enemyHp:1.0,  enemyAtk:1.6, coinMult:1.7, bossHp:1.7 },
+  hell:   { name:'헬',   enemyHp:13.0, enemyAtk:2.0, coinMult:2.4, bossHp:2.4 },
 };
 const DIFFICULTY_ORDER = ['easy','normal','hard','hell'];
 // 보스 처치 코인(기본, 난이도 coinMult 적용 전). 표에 없는 라운드는 라운드 비례 폴백.
@@ -2898,7 +2898,7 @@ const BOSS_PLATFORM={x:0.12,y:0.28,w:0.76,h:0.50};   // 토벌장 플랫폼 타�
 const COOP_BOSS_NAMES=['그렘린','데바스테이터','아포칼립스','오버마인드','타이탄','니드호그'];
 function coopBossPlayers(){ return (typeof coopActive==='function'&&coopActive()&&G.coopNumToUid)?Math.max(1,Object.keys(G.coopNumToUid).length):1; }
 function coopBossMaxHp(lv){
-  const diff=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).enemyHp;
+  const diff=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).bossHp||1;   // 보스 전용 난이도 계수(트랙 enemyHp와 분리 — enemyHp를 낮춰도 보스/코인 인플레 안 되게)
   const hpDown=Math.max(0.4, 1 - buildLevel('boss_hp_down')*0.03);
   // 월드보스: 단계마다 ×2, 5단계부터 추가 ×2 가속(후반 벽) → 이지·솔로 45k·90k·180k·360k·1.44M·5.76M·23M.
   // 초반 base를 높여(45k) 강한 유닛도 1~4단계를 즉사시키지 못함(월드보스 체감). 봇시뮬: 중간메타 ~4단계·만렙 ~6~8단계 캡.
@@ -4145,7 +4145,8 @@ function summonPersonalBoss(typeId){
 }
 
 let _atkUid=null;   // 현재 데미지 출처 유닛 uid(킬 카운트용)
-function hitEnemy(e,dmg){ let d=Math.max(1,dmg-(e.ar||0)); e.flash=4; e.hit=1; e.shHit=e.sh>0?1:0;
+const ARMOR_K=300;   // 방어력 비율 감쇄: 실효딜 = 딜 × K/(K+방어). 정액차감(1뎀 클리핑) 폐지 → 저티어도 비례 기여, enemyHp가 난이도 레버로 작동
+function hitEnemy(e,dmg){ const ar=e.ar||0; let d=Math.max(1, Math.round(dmg*ARMOR_K/(ARMOR_K+ar))); e.flash=4; e.hit=1; e.shHit=e.sh>0?1:0;
   if(e.sh>0){ if(d<=e.sh){ e.sh-=d; return; } d-=e.sh; e.sh=0; } e.hp-=d;
   if(e.hp<=0 && e._killer==null) e._killer=_atkUid; }   // 마지막에 치명타를 낸 유닛 = 킬 귀속
 // 적 사망 폭발: 확장 링 2겹 + 코어 플래시 + 사방 파편
@@ -6749,7 +6750,7 @@ function renderDiffBtns(){ const box=document.getElementById('moDiffBtns'); if(!
     b.className='moDiffBtn'+(d===_selDiff?' on':''); b.style.setProperty('--dc', DIFF_COLOR[d]||'#fff');
     b.innerHTML='<span class="ddN">'+D.name+'</span><span class="ddC">포인트 ×'+D.coinMult+'</span>';
     b.onclick=()=>setDiff(d); box.appendChild(b); });
-  const h=document.getElementById('moDiffHint'); if(h){ const D=DIFFICULTY[_selDiff]; h.textContent='적 체력 ×'+D.enemyHp+' · 포인트 ×'+D.coinMult; }
+  const h=document.getElementById('moDiffHint'); if(h){ const D=DIFFICULTY[_selDiff]; h.textContent='적 강도 ×'+(D.enemyHp/DIFFICULTY.easy.enemyHp).toFixed(1)+' · 코인 ×'+D.coinMult; }
 }
 function setDiff(d){ if(!DIFFICULTY[d]) return; _selDiff=d; renderDiffBtns(); if(typeof playSfx==='function') playSfx('ui_confirm'); }
 function openModeSheet(m){ _selMap=m; renderDiffBtns(); document.getElementById('moMap').textContent=m.name;
@@ -6770,7 +6771,7 @@ function chooseSolo(){ if(typeof inPartyNow==='function' && inPartyNow()){ if(ty
 function openSoloDiff(){ const box=document.getElementById('soloDiffBtns'); if(box){ box.innerHTML='';
     DIFFICULTY_ORDER.forEach(d=>{ const D=DIFFICULTY[d]; const b=document.createElement('div');
       b.className='moDiffBtn'; b.style.setProperty('--dc', DIFF_COLOR[d]||'#fff');
-      b.innerHTML='<span class="ddN">'+D.name+'</span><span class="ddC">적 체력 ×'+D.enemyHp+'<br>포인트 ×'+D.coinMult+'</span>';
+      b.innerHTML='<span class="ddN">'+D.name+'</span><span class="ddC">적 강도 ×'+(D.enemyHp/DIFFICULTY.easy.enemyHp).toFixed(1)+'<br>코인 ×'+D.coinMult+'</span>';
       b.onclick=()=>startSoloWithDiff(d); box.appendChild(b); }); }
   const p=document.getElementById('soloDiffPanel'); if(p){ p.classList.remove('hide'); if(typeof fxPop==='function') fxPop(p.querySelector('.cpCard')); } if(typeof playSfx==='function') playSfx('ui_open'); }
 function closeSoloDiff(){ popHide('soloDiffPanel'); }
