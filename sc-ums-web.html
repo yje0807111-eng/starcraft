@@ -726,7 +726,26 @@
     background:none;border:none;text-shadow:0 1px 2px #000,0 0 5px #000}   /* 배경 제거 — 텍스트만 */
   .hint b{color:var(--neon);text-shadow:0 0 6px var(--neon-glow),0 1px 2px #000}
   /* 가챠 뽑기 바(유닛뽑기 탭) */
-  .gachaBar{display:flex;align-items:stretch;gap:9px;margin:auto;width:100%;max-width:330px;padding:4px 6px;box-sizing:border-box}
+  .gachaBar{display:flex;align-items:stretch;gap:9px;margin:0 auto;width:100%;max-width:340px;padding:2px 6px 0;box-sizing:border-box;flex:0 0 auto}
+  /* 생산고 운용 안내(설명서) — 메인 콘솔과 통일된 SC 우주전쟁 톤 */
+  .opsManual{flex:1;min-height:0;display:flex;flex-direction:column;gap:6px;width:100%;max-width:360px;margin:0 auto;padding:4px 4px 0;box-sizing:border-box;overflow:hidden}
+  .opsManual .omHead{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;color:#dfe7f2;letter-spacing:.4px;padding-bottom:5px;border-bottom:1px solid var(--glass-edge);text-shadow:0 1px 2px #000}
+  .opsManual .omBar{width:3px;height:12px;background:var(--neon);box-shadow:0 0 6px var(--neon-glow);border-radius:1px;flex:0 0 auto}
+  .opsManual .omSub{margin-left:auto;font-size:9px;font-weight:600;color:var(--txt-mute);letter-spacing:0}
+  .opsManual .omGrid{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:5px;align-content:start}
+  .opsManual .omCell{display:flex;align-items:center;gap:7px;padding:5px 7px;position:relative;
+    background:linear-gradient(160deg,rgba(46,52,64,.42),rgba(10,12,18,.62));border:1px solid var(--metal-edge);border-left:2px solid var(--c,#888);
+    clip-path:polygon(4px 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%,0 4px);box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+  .opsManual .omCell::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent)}
+  .opsManual .omIco{width:17px;height:17px;flex:0 0 auto;color:var(--c,#cfd);filter:drop-shadow(0 0 4px var(--c))}
+  .opsManual .omTx{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.18;overflow:hidden}
+  .opsManual .omTx b{font-size:10.5px;font-weight:800;color:#eaf0f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .opsManual .omTx i{font-size:8.5px;font-style:normal;color:var(--txt-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .opsManual .omCost{display:flex;align-items:center;gap:2px;font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:800;color:#e0c98a;flex:0 0 auto}
+  .opsManual .omLv{font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:800;color:var(--c);flex:0 0 auto;text-shadow:0 0 5px var(--c)}
+  .opsManual .omFoot{display:flex;justify-content:space-around;gap:6px;padding-top:5px;border-top:1px solid var(--glass-edge);font-size:8.5px;color:var(--txt-mute);text-align:center}
+  .opsManual .omFoot b{color:var(--neon)}
+  .opsManual.hide{display:none}
   .gachaLeft{flex:1.3;min-width:0;display:flex;flex-direction:column;gap:5px;justify-content:center;padding:2px 2px 2px 4px}   /* 메인 하단(보스 파견)과 동일한 제목+설명 구성 */
   .gachaResult{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:1px;padding:7px 11px;border-radius:var(--r-lg);
     background:linear-gradient(180deg,rgba(20,16,18,.7),rgba(8,7,9,.75));border:1px solid var(--gc,var(--metal-edge));
@@ -2017,6 +2036,8 @@
         </div>
         <div class="gachaResult" id="gachaResult"><span class="grHint">랜덤 유닛을 획득합니다</span></div>
       </div>
+      <!-- SC 생산고 운용 안내(설명서) — 기본 표시, 유닛/시민 프로필 표시 중엔 숨김 -->
+      <div class="opsManual" id="opsManual"></div>
       <div class="hint" id="prodHint" style="display:none">유닛 클릭 = <b>정보</b></div>
       <!-- 유닛뽑기: 중립 단일 선택 시 그 유닛 프로필(메인 단일카드와 동일 레이아웃) -->
       <div class="scPanel" id="shopProfile" style="display:none">
@@ -2269,14 +2290,14 @@ const CITIZEN_HOME={x:.5,y:.5}; // 시민 기본 위치(보드 중앙)
 const DRAW_ZONE={x:.5,y:.30};    // 하위호환 유지
 // 유닛뽑기 비콘 — 좌측 줄(유닛 뽑기) / 우측 줄(에너지 뽑기). 시민이 올라서면 해당 뽑기 실행.
 const DRAW_BEACONS=[
-  // 좌측 줄(4줄): 가드 타워 / 스파이어 / 유닛 1회 / 에너지 1회 (간격 좁혀 하단 채팅 안 걸치게)
+  // 좌측 줄(4줄): 가드 타워 / 스파이어 / 유닛 1회 / 에너지 1회 (간격 더 좁힘)
   {id:'buyTurret', x:.20, y:.15, name:'가드 타워', core:'🗼'},
-  {id:'buyPhoton', x:.20, y:.34, name:'스파이어', core:'◉'},
-  {id:'draw',      x:.20, y:.53, name:'유닛 1회', core:'?'},
-  {id:'energy',    x:.20, y:.72, name:'에너지 1회', core:'⚡'},
+  {id:'buyPhoton', x:.20, y:.31, name:'스파이어', core:'◉'},
+  {id:'draw',      x:.20, y:.47, name:'유닛 1회', core:'?'},
+  {id:'energy',    x:.20, y:.63, name:'에너지 1회', core:'⚡'},
   // 우측 줄(2줄): 뽑기 확률↑ / 크레딧 획득↑ (확률표 아래·미니맵 위로 배치)
-  {id:'gachaUp',  x:.80, y:.46, name:'뽑기 확률↑', core:'%'},
-  {id:'creditUp', x:.80, y:.65, name:'크레딧 획득↑', core:'C'},
+  {id:'gachaUp',  x:.80, y:.43, name:'뽑기 확률↑', core:'%'},
+  {id:'creditUp', x:.80, y:.59, name:'크레딧 획득↑', core:'C'},
 ];
 // 비콘별 색 테마(인라인 CSS 변수로 기존 .drawZone 스타일 재사용). 유닛 1·10회=기본 빨강.
 const BEACON_THEME={   // 디자인 토큰과 통일: 유닛=네온 레드(기본), 고급=골드(재화/희귀), 에너지=HUD 시안(E 재화색)
@@ -5201,7 +5222,21 @@ function beaconCostLabel(id){ return beaconMaxed(id) ? '<span class="dzMax">MAX<
 function updateBeaconLabels(){ for(const b of DRAW_BEACONS){ const dz=document.getElementById('drawZoneEl_'+b.id); if(!dz) continue;
     const nm=dz.querySelector('.dzName'); if(nm) nm.textContent=beaconName(b);
     const cs=dz.querySelector('.dzCost'); if(cs) cs.innerHTML=beaconCostLabel(b.id); }
-  const rm=document.getElementById('rateMini'); if(rm) rm.innerHTML=rateMiniHTML(); }
+  const rm=document.getElementById('rateMini'); if(rm) rm.innerHTML=rateMiniHTML(); renderOpsManual(); }
+// 생산고 운용 안내(설명서) — 비콘 6종을 SC 콘솔 카드로 렌더(이름·아이콘·색·비용/레벨 동적)
+const COIN_SM='<svg viewBox="0 0 24 24" width="9" height="9" style="flex:0 0 auto"><circle cx="12" cy="12" r="9" fill="#ffd24a" stroke="#ffe6a0" stroke-width="1.6"/><path d="M14.8 8.8A4.4 4.4 0 1 0 14.8 15.2" fill="none" stroke="#7a5a12" stroke-width="2.6" stroke-linecap="round"/></svg>';
+const OPS_DESC={ buyTurret:'고정 포탑 설치', buyPhoton:'광역 방어탑', draw:'랜덤 유닛 생산', energy:'업그레이드 자원 획득', gachaUp:'상위 등급 확률 증가', creditUp:'크레딧 수급 증가' };
+function renderOpsManual(){ const el=document.getElementById('opsManual'); if(!el) return;
+  const order=['buyTurret','buyPhoton','draw','energy','gachaUp','creditUp'];
+  const cells=order.map(function(id){ const b=DRAW_BEACONS.find(x=>x.id===id); if(!b) return '';
+    const th=BEACON_THEME[id], c=(th&&th['--neon'])||'#cfd6e0', up=(id==='gachaUp'||id==='creditUp');
+    const right=up ? ('<span class="omLv">Lv'+(id==='gachaUp'?(G.gachaLuckLv||0):(G.creditLv||0))+'</span>')
+                   : ('<span class="omCost">'+COIN_SM+beaconCost(id)+'</span>');
+    return '<div class="omCell" style="--c:'+c+'"><svg class="omIco" viewBox="0 0 24 24">'+beaconIcon(id)+'</svg>'
+      +'<div class="omTx"><b>'+b.name+'</b><i>'+(OPS_DESC[id]||'')+'</i></div>'+right+'</div>'; }).join('');
+  el.innerHTML='<div class="omHead"><span class="omBar"></span>생산고 운용 안내<span class="omSub">시민을 비콘 위로 이동 → 자동 구매</span></div>'
+    +'<div class="omGrid">'+cells+'</div>'
+    +'<div class="omFoot"><span><b>유닛 클릭</b> 정보</span><span><b>같은 유닛 3</b> 등급 조합</span><span><b>드래그</b> 다중 선택</span></div>'; }
 function buildClock(){ const v=document.getElementById('vUnit');
   v.querySelectorAll('.shopUnit,.citizen,.drawZone,.rateMini').forEach(n=>n.remove());
   const coinSVG=COIN_SVG;
@@ -7189,6 +7224,8 @@ function unitHoldPos(e){ const v=document.getElementById('vUnit').getBoundingCli
 // 유닛뽑기: 비콘/유닛 프로필을 하단에 표시(메인 단일카드와 동일). 표시 전용(G.shopSel과 별개)
 function showShopProfile(id){ const def=U[id]; if(!def) return;
   document.getElementById('prodHint').style.display='none';
+  const gb0=document.getElementById('gachaBar'); if(gb0) gb0.style.display='none';   // 프로필 표시 중엔 안내 숨김
+  const om0=document.getElementById('opsManual'); if(om0) om0.style.display='none';
   const card=document.getElementById('shopProfile'); card.style.display='flex';
   const sjob=UNIT_CLS[id]||'';
   document.getElementById('spPortrait').innerHTML=unitPortraitHTML(id)+(sjob?'<div class="portJob">'+sjob+'</div>':'');
@@ -7202,12 +7239,14 @@ function showShopProfile(id){ const def=U[id]; if(!def) return;
 function clearShopProfile(){
   const card=document.getElementById('shopProfile'); if(card) card.style.display='none';
   const gb=document.getElementById('gachaBar'); if(gb) gb.style.display='';   // 가챠 안내 바 복귀
+  const om=document.getElementById('opsManual'); if(om) om.style.display='';   // 설명서 복귀
   const ph=document.getElementById('prodHint'); if(ph) ph.style.display='';
   document.querySelectorAll('#vUnit .shopUnit.sel').forEach(el=>el.classList.remove('sel'));
 }
 // 시민 선택/드래그 시 하단에 시민 프로필 표시(가챠 안내 바 대신)
 function showCitizenProfile(){ const card=document.getElementById('shopProfile'); if(!card) return;
   const gb=document.getElementById('gachaBar'); if(gb) gb.style.display='none';
+  const om=document.getElementById('opsManual'); if(om) om.style.display='none';
   const ph=document.getElementById('prodHint'); if(ph) ph.style.display='none';
   card.style.display='flex';
   document.getElementById('spPortrait').innerHTML=unitPortraitHTML('citizen')+'<div class="portJob">시민</div>';
