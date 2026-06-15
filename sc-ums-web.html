@@ -2721,11 +2721,11 @@ function gachaRangeMul(u){ if(u&&u.gid==='phantom_t') return 1.8;   // 디토네
 //   ※ 코인=영구(계정별), 빌드 효과=개인 적용 예정, coop 그룹=데이터만(효과 보류)
 // ============================================================================
 const DIFFICULTY = {
-  easy:   { name:'이지', enemyHp:0.2,  enemyAtk:1.0, coinMult:1.0, bossHp:1.0 },
-  normal: { name:'노말', enemyHp:0.28, enemyAtk:1.3, coinMult:1.3, bossHp:1.3 },
-  hard:   { name:'하드', enemyHp:1.0,  enemyAtk:1.6, coinMult:1.7, bossHp:1.7 },
-  hell:   { name:'헬',   enemyHp:7.0,  enemyAtk:2.0, coinMult:2.4, bossHp:2.4 },
-  nightmare:{ name:'나이트메어', enemyHp:220.0, enemyAtk:2.5, coinMult:3.2, bossHp:3.0 },   // 헬 위: 초월 '완성'(전 빌드 초월) 필수 + 운(봇 t9 50%·t8 0%)
+  easy:   { name:'이지', enemyHp:0.6,  enemyAtk:1.0, coinMult:1.0, bossHp:1.0 },   // 메타0=운 살짝 필요(봇 39%)·기본업글 1~2랩=72~94%
+  normal: { name:'노말', enemyHp:1.1,  enemyAtk:1.3, coinMult:1.3, bossHp:1.3 },   // 약간메타 운좋으면·중반메타 안정
+  hard:   { name:'하드', enemyHp:4.0,  enemyAtk:1.6, coinMult:1.7, bossHp:1.7 },   // 거의만렙(t5~6)이면 운보통 충분히
+  hell:   { name:'헬',   enemyHp:6.0,  enemyAtk:2.0, coinMult:2.4, bossHp:2.4 },   // 거의만렙 다수 통과·초월진입 확실
+  nightmare:{ name:'나이트메어', enemyHp:320.0, enemyAtk:2.5, coinMult:3.2, bossHp:3.0 },   // 초월 '완성'(t9) + 운(봇 t9 50%·t8 17%)
 };
 const DIFFICULTY_ORDER = ['easy','normal','hard','hell','nightmare'];
 // 보스 처치 코인(기본, 난이도 coinMult 적용 전). 표에 없는 라운드는 라운드 비례 폴백.
