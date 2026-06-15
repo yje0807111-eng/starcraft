@@ -2808,15 +2808,15 @@ function gainMineral(n){ G.mineral += Math.round(n*((G.metaB&&G.metaB.creditMul)
 function gainGas(n){ G.gas += Math.round(n*((G.metaB&&G.metaB.energyMul)||1)); }            // 메타: 에너지 획득↑
 function maxUnits(){ return mapCfg('maxUnits',MAX_UNITS) + ((G.metaB&&G.metaB.unitCap)||0); }                  // 메타: 유닛 수 증가
 // 게임 종료 정산: 이번 판에서 모은 포인트(G.points)에 난이도 배율을 곱해 계정에 누적·저장(1회만).
-const ROUND_COIN_PER=1.4;   // 라운드 도달당 코인(R9까지 0 → R17~18 약 11~13 → R30 약 29)
-function runRoundPoints(){ const R=Math.min(G.round||0, mapCfg('rounds',TOTAL_ROUNDS)); return Math.max(0, Math.round((R-9)*ROUND_COIN_PER)); }
+// 코인(◎ = 다음 판 업그레이드 화폐)은 '월드보스(공용 보스)' 처치로만 획득 — coopBossDown()이 G.points에 적립.
+function runRoundPoints(){ return G.points||0; }   // 이번 판 적립 포인트(월드보스 처치 합) = 정산 대상
 function isTopCoopContributor(){ const c=G.coopContrib||{}, me=G.myPlayer||1, mine=c[me]||0;   // 멀티: 공용보스 기여 1위 여부
   if(mine<=0) return false; for(const k in c){ if(+k!==me && c[k]>mine) return false; } return true; }
 function bankRunPoints(){ if(G._pointsBanked) return G._bankedAmt||0; G._pointsBanked=true;
   const cm=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).coinMult;
   const bonus=(typeof coopActive==='function'&&coopActive()&&isTopCoopContributor())?1:0;   // 멀티 & 기여 1위 = +1코인(개인플레이=없음)
   G._bankBonus=bonus;
-  const gained=Math.round(runRoundPoints()*cm)+(G.bossCoins||0)+bonus;   // 라운드 도달 + 보스 처치 코인(이미 난이도/보상배율 반영) + 멀티 기여 보너스
+  const gained=Math.round((G.points||0)*cm)+bonus;   // 코인 = 월드보스 처치 포인트 × 난이도 배율 + 멀티 기여 보너스
   if(gained>0){ PLAYER_META.coins=(PLAYER_META.coins||0)+gained; saveMeta(); }
   G._bankedAmt=gained; return gained; }
 // 메타 빌드 레벨업(코인 차감)
@@ -3225,7 +3225,7 @@ function onBossArenaUp(){
 function newGame(){ return {
   phase:'ready', round:1, kills:0, timeSec:0, speedMul:1, difficulty:'normal',
   mineral:mapCfg('startCredits',START_MIN), gas:mapCfg('startEnergy',START_GAS), atkLv:{inf:0,mech:0,pro:0,zrg:0}, // 계열별 공격 업글 레벨
-  points:0, _pointsBanked:false, bossCoins:0,   // 이번 판 포인트 + 보스 처치 적립 코인(게임 종료 시 계정에 정산 → 다음 판 강화)
+  points:0, _pointsBanked:false,   // 이번 판에서 모은 포인트(월드보스 처치 합) — 게임 종료 시 코인으로 정산 → 다음 판 강화
   coopBoss:null, bossOpen:false, bossPickArm:false,   // 상시 공용 보스 + 토벌장 팝업 + 지정 파견
   units:[], enemies:[], beams:[], shots:[], impacts:[], muzzles:[], debris:[], pendingHits:[], recalls:[], sparks:[], pendSpawn:[], // 이펙트 + 명중대기 + 출현이펙트/대기 + 스파크
   toSpawn:0, spawnTimer:0, roundGap:0,
@@ -4084,10 +4084,10 @@ try{ window.ENEMY_MODEL=ENEMY_MODEL; }catch(e){}   // M3D 모듈(별도 스코�
 const SPAWN_LEAD=0.58;   // 출현 이펙트 시작 → 실제 등장(에너지 모임 후 플래시 시점)까지 지연(초)
 // ── 개인 보스 4종(고정 난이도 — 라운드 무관, 등급별 도전) ──
 const PBOSS_TYPES=[
-  {id:'easy',  name:'견습 파수꾼',   tier:'일반 유닛',          hp:6000,     ar:0,    bonus:120, egy:15, coin:2,  col:'#b8c0cc'},
-  {id:'mid',   name:'정예 추적자',   tier:'에픽·유니크',        hp:150000,   ar:90,   bonus:300, egy:30, coin:5,  col:'#b06bff'},
-  {id:'upper', name:'전장의 정복자', tier:'초월(레전드는 버겁)', hp:700000,   ar:700,  bonus:450, egy:45, coin:10, col:'#ff8a3b'},
-  {id:'super', name:'파멸의 군주',   tier:'초월 다수 · 갓',     hp:5000000,  ar:1450, bonus:750, egy:75, coin:20, col:'#ff2bd6'},
+  {id:'easy',  name:'견습 파수꾼',   tier:'일반 유닛',          hp:6000,     ar:0,    bonus:120, egy:15, col:'#b8c0cc'},
+  {id:'mid',   name:'정예 추적자',   tier:'에픽·유니크',        hp:150000,   ar:90,   bonus:300, egy:30, col:'#b06bff'},
+  {id:'upper', name:'전장의 정복자', tier:'초월(레전드는 버겁)', hp:700000,   ar:700,  bonus:450, egy:45, col:'#ff8a3b'},
+  {id:'super', name:'파멸의 군주',   tier:'초월 다수 · 갓',     hp:5000000,  ar:1450, bonus:750, egy:75, col:'#ff2bd6'},
 ];
 function spawnEnemy(opts){ opts=opts||{}; const pt=opts.pbType||null; const pboss=!!opts.pboss||!!pt, boss=!!opts.boss||pboss, special=!!opts.special; const m=roundDef(G.round);
   const mb=G.metaB||{};   // 메타 강화: 적 체력/방어/이속 감소(개인)
@@ -4102,7 +4102,6 @@ function spawnEnemy(opts){ opts=opts||{}; const pt=opts.pbType||null; const pbos
   const e={eid:G.eSeq++, d:pboss?Math.random():0, hp:hp, maxHp:hp, sh:sh, maxSh:sh, ar:ar,
     speed:spd, boss:boss, special:special, pboss:pboss, life:pboss?120:null, pbCol:pt?pt.col:null,
     bonus:pt?Math.round(pt.bonus*coinMult*((mb.pbossRewardMul)||1)):0, bonusE:pt?Math.round((pt.egy||0)*((mb.pbossRewardMul)||1)):0,   // 처치 보상(coinMult×메타 개인보스 보상)
-    coin:pt?Math.round((pt.coin||0)*coinMult*((mb.pbossRewardMul)||1)):(boss?Math.round((2+Math.floor(G.round/6))*coinMult):0),   // 처치 시 적립되는 메타 코인(◎) — 다음 판/결과창 반영
     flash:0, name:pt?pt.name:(boss?'보스':(special?'스페셜':m.n)),
     shape:boss?'capital':enemyShape(m.n), race:enemyRace(m.n), ph:(G.eSeq*0.7)%6.283, hit:0, model3d:boss?null:(ENEMY_MODEL[m.n]||null)};
   G.recalls.push({life:1, boss:boss, special:special});   // ① 출현 이펙트(에너지 모임) 먼저 시작
@@ -4323,8 +4322,8 @@ function step(dt){
     if(e.pboss && e.hp>0 && e.life!=null && e.life<=0){ toast('개인 보스가 사라졌습니다 (미처치 · 혜택 없음)'); deathBurst(e); G.enemies.splice(i,1); if(G.selEnemy===e.eid){G.selEnemy=null;refreshSelCard();} continue; }   // 2분 경과 소멸(보상·불이익 없음)
     if(e.hp<=0){ G.kills++;
     if(e._killer!=null){ const _k=G.units.find(x=>x.uid===e._killer); if(_k) _k.kills=(_k.kills||0)+1; }   // 개별 유닛 킬 카운트
-    if(e.pboss){ const bn=e.bonus||0, be=e.bonusE||0, bc=e.coin||0; gainMineral(bn); if(be>0) gainGas(be); if(bc>0) G.bossCoins=(G.bossCoins||0)+bc; toast('☠ 개인 보스 처치! +'+bn+' 크레딧'+(be>0?' +'+be+' 에너지':'')+(bc>0?' · ◎'+bc+' 코인':'')); if(typeof playSfx==='function') playSfx('hero_merge'); }
-    else if(e.boss){ const bc=e.coin||0; if(bc>0) G.bossCoins=(G.bossCoins||0)+bc; toast('🟡 라운드 보스 처치!'+(bc>0?' · ◎'+bc+' 코인':'')); }
+    if(e.pboss){ const bn=e.bonus||0, be=e.bonusE||0; gainMineral(bn); if(be>0) gainGas(be); toast('☠ 개인 보스 처치! +'+bn+' 크레딧'+(be>0?' +'+be+' 에너지':'')); if(typeof playSfx==='function') playSfx('hero_merge'); }
+    else if(e.boss) toast('🟡 라운드 보스 처치!');
     if(e.special){ const sc=mapCfg('specialCredit',SPECIAL_MIN); gainMineral(sc); gainGas(2); toast('스페셜 처치! +'+sc+' 크레딧 +2 에너지'); }   // 스페셜=크레딧+에너지
     if(e.boss && !e.pboss){ gainGas(5+Math.floor(G.round/4)); }   // 라운드 보스 처치=에너지 보너스(개인 보스는 크레딧만)
     gainMineral(mapCfg('killCredit',1));   // 킬 보상(맵 설정, 메타 획득↑ 반영)
