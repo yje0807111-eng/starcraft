@@ -847,6 +847,8 @@
   .drawZone .dzName{font-size:8.5px;font-weight:800;color:#e6e0e0;letter-spacing:.2px;white-space:nowrap}
   .drawZone .dzCost{display:flex;align-items:center;gap:2px;font-family:'Rajdhani',sans-serif;font-size:var(--fs-xs);font-weight:700;color:#e0c98a}
   .drawZone .dzCost .dzMax{color:#9ad6a0;font-weight:800;letter-spacing:.5px}
+  .drawZone .dzCost .dzCd{color:#ff8a8a;font-weight:800;letter-spacing:.3px}   /* 개인 보스 쿨다운 */
+  .drawZone .dzCost .dzGo{color:#ff5b5b;font-weight:800;letter-spacing:.5px;text-shadow:0 0 6px rgba(255,59,59,.6)}   /* 소환 가능 */
   .drawZone.active .dzRing{border-color:var(--neon);box-shadow:0 0 18px -3px var(--neon-glow),inset 0 0 14px -4px var(--neon-glow)}
   .drawZone.active .dzFx{opacity:.55;animation-duration:1.1s}
   .drawZone.active .dzGlyph{animation-duration:1.2s}
@@ -2301,6 +2303,8 @@ const DRAW_BEACONS=[
   // 우측 줄(2줄): 뽑기 확률↑ / 크레딧 획득↑ (확률표 아래·미니맵 위로 배치)
   {id:'gachaUp',  x:.80, y:.51, name:'뽑기 확률↑', core:'%'},
   {id:'creditUp', x:.80, y:.67, name:'크레딧 획득↑', core:'C'},
+  // 중앙 상단: 개인 보스 소환(자기 난이도 보스 → 처치 시 보너스 크레딧, 4분 쿨다운)
+  {id:'pboss',    x:.50, y:.17, name:'개인 보스', core:'☠'},
 ];
 // 비콘별 색 테마(인라인 CSS 변수로 기존 .drawZone 스타일 재사용). 유닛 1·10회=기본 빨강.
 const BEACON_THEME={   // 디자인 토큰과 통일: 유닛=네온 레드(기본), 고급=골드(재화/희귀), 에너지=HUD 시안(E 재화색)
@@ -2310,13 +2314,15 @@ const BEACON_THEME={   // 디자인 토큰과 통일: 유닛=네온 레드(기�
   creditUp:{'--neon':'#ffd24a','--neon-soft':'rgba(255,210,74,.55)','--neon-glow':'rgba(255,210,74,.42)'},     // 크레딧획득↑=골드(재화색)
 buyTurret:{'--neon':'#9fd6ff','--neon-soft':'rgba(159,214,255,.5)','--neon-glow':'rgba(159,214,255,.38)'},
 buyPhoton:{'--neon':'#62d0ff','--neon-soft':'rgba(98,208,255,.5)','--neon-glow':'rgba(98,208,255,.38)'},
+pboss:   {'--neon':'#ff3b3b','--neon-soft':'rgba(255,59,59,.6)','--neon-glow':'rgba(255,59,59,.45)'},   // 개인 보스=위협 레드
 };
-function beaconCost(id){ return id==='gachaUp'?gachaUpCost() : id==='creditUp'?creditUpCost()
+function beaconCost(id){ return id==='gachaUp'?gachaUpCost() : id==='creditUp'?creditUpCost() : id==='pboss'?0
   : id==='energy'?mapCfg('energyDrawCost',ENERGY_DRAW_COST)
   : id==='buyTurret'?U.turret.cost : id==='buyPhoton'?U.photon.cost : mapCfg('gachaCost',GACHA_COST); }
 function beaconName(b){ if(b.id==='gachaUp') return b.name+' Lv'+(G.gachaLuckLv||0); if(b.id==='creditUp') return b.name+' Lv'+(G.creditLv||0); return b.name; }
 function beaconMaxed(id){ return (id==='gachaUp' && (G.gachaLuckLv||0)>=GACHA_UP_MAX) || (id==='creditUp' && (G.creditLv||0)>=CREDIT_UP_MAX); }
 function runBeacon(id){ if(id==='gachaUp') return buyGachaUp(); if(id==='creditUp') return buyCreditUp();
+  if(id==='pboss') return summonPersonalBoss();
   if(id==='energy') return energyDraw();
   if(id==='buyTurret') return buyUnit('turret'); if(id==='buyPhoton') return buyUnit('photon'); return drawGacha(); }
 function nearBeacon(b,x,y,mult){ if(!GW||!GH) return false; return Math.hypot((b.x-x)*GW,(b.y-y)*GH) < Math.min(GW,GH)*(mult||0.085); }
@@ -2331,8 +2337,10 @@ const BEACON_ICON={
   creditUp:'<circle cx="12" cy="13" r="7.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M14.6 10.4A3.4 3.4 0 1 0 14.6 15.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M12 1.8l2.4 2.6h-4.8z" fill="currentColor"/>',  // 코인+상승화살(획득↑)
 tower:'<path d="M9 3h6v3l-1.5 1v6.5h2.5L18 21H6l2-7.5h2.5V7L9 6z" fill="currentColor"/>',
 spire:'<path d="M12 2.6a4.4 4.4 0 1 1 0 8.8 4.4 4.4 0 0 1 0-8.8zM8.5 13h7L17 21H7z" fill="currentColor"/>',
+pboss:'<path d="M12 2.5c-4 0-6.5 2.8-6.5 6.4 0 2.3 1.1 3.7 2.2 4.7v2.2c0 .7.5 1.1 1.2 1.1.4 1.1 1.6 1.9 3.1 1.9s2.7-.8 3.1-1.9c.7 0 1.2-.4 1.2-1.1v-2.2c1.1-1 2.2-2.4 2.2-4.7 0-3.6-2.5-6.4-6.5-6.4z" fill="currentColor" opacity=".22"/><path d="M12 2.5c-4 0-6.5 2.8-6.5 6.4 0 2.3 1.1 3.7 2.2 4.7v2.2c0 .7.5 1.1 1.2 1.1.4 1.1 1.6 1.9 3.1 1.9s2.7-.8 3.1-1.9c.7 0 1.2-.4 1.2-1.1v-2.2c1.1-1 2.2-2.4 2.2-4.7 0-3.6-2.5-6.4-6.5-6.4z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="9.3" cy="9.2" r="1.5" fill="currentColor"/><circle cx="14.7" cy="9.2" r="1.5" fill="currentColor"/><path d="M10.4 16.5v2M12 16.7v2.1M13.6 16.5v2" stroke="currentColor" stroke-width="1"/>',
 };
 function beaconIcon(id){ if(id==='gachaUp') return BEACON_ICON.gachaUp; if(id==='creditUp') return BEACON_ICON.creditUp;
+if(id==='pboss') return BEACON_ICON.pboss;
 if(id==='energy') return BEACON_ICON.energy;
 if(id==='buyTurret') return BEACON_ICON.tower; if(id==='buyPhoton') return BEACON_ICON.spire; return BEACON_ICON.unit; }
 function beaconBadge(id){ return ''; }
@@ -2423,7 +2431,7 @@ const USEMAPS={
   nemo:  { id:'nemo',   name:'네모네모 디펜스', desc:'사각 트랙을 도는 적을 막는 협동 디펜스', players:'1-8', pop:9820, icon:'🟥', rec:true,  isNew:false, playable:true,
            cfg:{ rounds:30, roundTime:90, prepTime:10, startCredits:120, startEnergy:0, maxUnits:100,
                  killCredit:1, specialCredit:25, gachaCost:30, energyDrawCost:40, coopBoss:true, roster:'all',
-                 enemiesPerRound:100, bossEvery:5, loseCount:200,
+                 enemiesPerRound:100, bossEvery:10, loseCount:200,
                  roundClearCreditBase:10, roundClearCreditPer:3, roundClearEnergyBase:3, roundClearEnergyPer:1 } },
   sunken:{ id:'sunken', name:'성큰타워 디펜스', desc:'성큰 콜로니로 길목을 막는 타워 디펜스', players:'1-8', pop:8730, icon:'🌿', rec:true,  isNew:false, playable:false, cfg:{} },
   marine:{ id:'marine', name:'마린 키우기',     desc:'마린을 성장시켜 최강으로 키우는 RPG', players:'1-6', pop:7610, icon:'🔫', rec:true,  isNew:false, playable:false, cfg:{} },
@@ -2443,7 +2451,7 @@ const ENEMIES_PER_ROUND=100;               // 일반 라운드 적 수 = 99 + �
 const SPAWN_GAP=0.8;                        // 적 스폰 간격(초) → 100마리×0.8s=80초 스폰 후 10초 정리시간
 const PREP_TIME=10;                        // 라운드 시작 전 준비(유닛 뽑기) 시간(초)
 const ROUND_TIME=90;                       // 라운드 제한시간 1:30(초). 80초 스폰(0.8s×100) + 10초 정리
-const BOSS_EVERY=5;                         // 5라운드마다 보스 라운드(보스 1마리만)
+const BOSS_EVERY=10;                        // 10라운드마다 보스 라운드(보스 1마리만)
 const EARLY_HP_MUL=1.7;   // R10 이전 적 HP 추가 배율(초반 안전마진 축소)
 const TEMPO_HP_MUL=1.35;  // 라운드 1:30(교전시간 1.5배)에 대한 적 체력 보정(이지 ~5/10 목표, 봇시뮬 48%)
 const LOSE_COUNT=200;                       // 트랙 200기 누적 시 탈락(게임아웃)
@@ -3099,6 +3107,7 @@ function newGame(){ return {
   tab:'Main', sel:[], selEnemy:null, prodB:null, techB:null, curPlayer:2, myPlayer:1,   // myPlayer=내 슬롯(멀티 대기실 순서로 할당 예정), curPlayer=관전 중인 플레이어
   mergeMode:false, idSeq:1, eSeq:1,
   gachaLuckLv:0, creditLv:0,   // 내실 업그레이드: 뽑기 확률↑ / 크레딧 획득↑
+  pbossCd:0,                   // 개인 보스 소환 쿨다운(초, 소환 시 240=4분)
   citizen:{x:CITIZEN_HOME.x, y:CITIZEN_HOME.y, gx:null, gy:null, buyId:null}, // 유닛뽑기 시민(셀렉터)
 }; }
 let G=newGame();
@@ -3939,20 +3948,35 @@ function roundDef(r){ const m=MON[Math.min(Math.max(1,r),MON.length)-1]; return 
 const ENEMY_MODEL={ '옵저버':'observer', '오버로드':'overlord' };  // 적 이름 → 3D 모델 id(있으면 3D 렌더, 없으면 네온 도형)
 try{ window.ENEMY_MODEL=ENEMY_MODEL; }catch(e){}   // M3D 모듈(별도 스코프) tintModel 폴백용
 const SPAWN_LEAD=0.58;   // 출현 이펙트 시작 → 실제 등장(에너지 모임 후 플래시 시점)까지 지연(초)
-function spawnEnemy(opts){ opts=opts||{}; const boss=!!opts.boss, special=!!opts.special; const m=roundDef(G.round);
+function spawnEnemy(opts){ opts=opts||{}; const pboss=!!opts.pboss, boss=!!opts.boss||pboss, special=!!opts.special; const m=roundDef(G.round);
   const mb=G.metaB||{};   // 메타 강화: 적 체력/방어/이속 감소(개인)
   const hpMul=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).enemyHp*(mb.enemyHpMul||1)*TEMPO_HP_MUL
   *Math.pow(1.095, Math.max(0, G.round-4))
   *(G.round<10?EARLY_HP_MUL:1);   // ×템포 보정(라운드 2분=교전시간 2배 → 적 체력 보정) ×초반 보정(R10 이전 HP ×1.7)
-  const hp = Math.round((boss ? bossHp(G.round) : m.hp)*hpMul);
+  const pbMul=pboss?0.75:1;   // 개인 보스: 라운드 보스의 75%(해볼 만한 보너스 도전)
+  const hp = Math.round((boss ? bossHp(G.round) : m.hp)*hpMul*pbMul);
   const sh = boss?0:Math.round(m.sh*hpMul);
   const ar = Math.max(0, (boss?Math.round(m.ar*0.5):m.ar) - (mb.enemyArmor||0));   // 보스 방어=그 라운드의 절반(등급 관문은 일반 라운드가 담당)
   const spd = (0.018+(boss?0:0.004))*(mb.enemySlowMul||1);
-  const e={eid:G.eSeq++, d:0, hp:hp, maxHp:hp, sh:sh, maxSh:sh, ar:ar,
-    speed:spd, boss:boss, special:special, flash:0, name:boss?'보스':(special?'스페셜':m.n),
+  const coinMult=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).coinMult||1;
+  const e={eid:G.eSeq++, d:pboss?Math.random():0, hp:hp, maxHp:hp, sh:sh, maxSh:sh, ar:ar,
+    speed:spd, boss:boss, special:special, pboss:pboss, life:pboss?120:null,
+    bonus:pboss?Math.round((40+G.round*14)*coinMult):0,   // 처치 시 추가 크레딧(라운드·난이도 비례)
+    flash:0, name:pboss?'개인 보스':(boss?'보스':(special?'스페셜':m.n)),
     shape:boss?'capital':enemyShape(m.n), race:enemyRace(m.n), ph:(G.eSeq*0.7)%6.283, hit:0, model3d:boss?null:(ENEMY_MODEL[m.n]||null)};
   G.recalls.push({life:1, boss:boss, special:special});   // ① 출현 이펙트(에너지 모임) 먼저 시작
   G.pendSpawn.push({t:SPAWN_LEAD, e:e});                   // ② 모임 완료(플래시) 시점에 실제 등장(효과음도 이때)
+}
+// ── 개인 보스 소환: 자기 난이도(현재 라운드) 보스를 트랙에 1마리. 2분 배회 후 소멸, 처치 시 보너스 크레딧. 소환 4분 쿨다운 ──
+function summonPersonalBoss(){
+  if(G.phase!=='playing'){ toast('게임 중에만 소환 가능합니다'); return; }
+  if(G.pbossCd>0){ toast('개인 보스 재소환까지 '+Math.ceil(G.pbossCd)+'초'); return; }
+  if(G.enemies.some(e=>e.pboss)){ toast('이미 개인 보스가 활동 중입니다'); return; }
+  G.pbossCd=240;   // 4분 쿨다운(소환 시점부터)
+  spawnEnemy({pboss:true});
+  if(typeof playSfxT==='function') playSfxT('boss',1500);
+  toast('☠ 개인 보스 소환! 2분 안에 처치하면 보너스 크레딧');
+  updateBeaconLabels();
 }
 
 let _atkUid=null;   // 현재 데미지 출처 유닛 uid(킬 카운트용)
@@ -4058,9 +4082,12 @@ function step(dt){
         const q=posAt(e.d,GW,GH); const qy=e.model3d?q.y-AIR_HIT_OFF:q.y;   // 독방울 비주얼(초록 낙하)
         G.sparks.push({x:q.x+(Math.random()-0.5)*10,y:qy+(Math.random()-0.5)*8,vx:(Math.random()-0.5)*18,vy:26+Math.random()*22,life:0.3,len:2.5,color:Math.random()<0.5?'#9fd356':'#d6ff7a'}); }
       if(e.psnT<=0){ e.psnStk=0; e.psnDmg=0; } }
+    if(e.pboss && e.life!=null) e.life-=dt;   // 개인 보스 수명(2분) 카운트다운
     e.d=(e.d+e.speed*_sm*dt*4)%1; if(e.flash>0) e.flash--; if(e.hit>0) e.hit=Math.max(0,e.hit-dt*5); if(e.shHit>0) e.shHit=Math.max(0,e.shHit-dt*4); }
-  checkEnemyWarn(G.enemies.length);
-  if(G.enemies.length>=mapCfg('loseCount',LOSE_COUNT)){ addChat('', (G.myPlayer||1)+'번 플레이어가 탈락하였습니다.'); G.phase='lost'; if(typeof playSfx==='function') playSfx('lose'); showOverlay(); return; }
+  if(G.pbossCd>0) G.pbossCd=Math.max(0,G.pbossCd-dt);   // 개인 보스 재소환 쿨다운
+  const _regCnt=G.enemies.reduce((a,e)=>a+(e.pboss?0:1),0);   // 탈락 누적은 일반 적만(개인 보스 제외)
+  checkEnemyWarn(_regCnt);
+  if(_regCnt>=mapCfg('loseCount',LOSE_COUNT)){ addChat('', (G.myPlayer||1)+'번 플레이어가 탈락하였습니다.'); G.phase='lost'; if(typeof playSfx==='function') playSfx('lose'); showOverlay(); return; }
   unitAI(dt);   // 명령 이동(공격이동/반복이동) + 스킬 타이머
   // 보스방 파견 유닛 → 공용 보스 직접 공격(트랙 방어 제외) + 유닛별 공격 이펙트
   if(G.coopBoss && !G.coopBoss.dead){ const sentB=G.units.filter(u=>u.atBoss);
@@ -4149,11 +4176,14 @@ function step(dt){
       G.pendingHits.splice(i,1); } }
   stepMatronWaves(dt);   // 매트론 가시 연쇄: 시간차 전파(한 마리→주변→그 주변)
   // 처치
-  for(let i=G.enemies.length-1;i>=0;i--){ const e=G.enemies[i]; if(e.hp<=0){ G.kills++;
+  for(let i=G.enemies.length-1;i>=0;i--){ const e=G.enemies[i];
+    if(e.pboss && e.hp>0 && e.life!=null && e.life<=0){ toast('개인 보스가 사라졌습니다 (미처치 · 혜택 없음)'); deathBurst(e); G.enemies.splice(i,1); if(G.selEnemy===e.eid){G.selEnemy=null;refreshSelCard();} continue; }   // 2분 경과 소멸(보상·불이익 없음)
+    if(e.hp<=0){ G.kills++;
     if(e._killer!=null){ const _k=G.units.find(x=>x.uid===e._killer); if(_k) _k.kills=(_k.kills||0)+1; }   // 개별 유닛 킬 카운트
-    if(e.boss) toast('🟡 라운드 보스 처치!');
+    if(e.pboss){ const bn=e.bonus||0; gainMineral(bn); toast('☠ 개인 보스 처치! 보너스 +'+bn+' 크레딧'); if(typeof playSfx==='function') playSfx('hero_merge'); }
+    else if(e.boss) toast('🟡 라운드 보스 처치!');
     if(e.special){ const sc=mapCfg('specialCredit',SPECIAL_MIN); gainMineral(sc); gainGas(2); toast('스페셜 처치! +'+sc+' 크레딧 +2 에너지'); }   // 스페셜=크레딧+에너지
-    if(e.boss){ gainGas(5+Math.floor(G.round/4)); }   // 보스 처치=에너지 보너스(하향)
+    if(e.boss && !e.pboss){ gainGas(5+Math.floor(G.round/4)); }   // 라운드 보스 처치=에너지 보너스(개인 보스는 크레딧만)
     gainMineral(mapCfg('killCredit',1));   // 킬 보상(맵 설정, 메타 획득↑ 반영)
     G._gasAcc=(G._gasAcc||0)+mapCfg('killEnergy',0.05); if(G._gasAcc>=1){ const w=Math.floor(G._gasAcc); G._gasAcc-=w; gainGas(w); }   // 킬 드립 에너지(누적 소수, 하향)
     if(typeof playEnemyDeath==='function') playEnemyDeath(e.race);   // 종족별 처치음(대량 처치 쓰로틀)
@@ -5221,19 +5251,22 @@ function toggleMergeMode(el){ G.mergeMode=!G.mergeMode; el.classList.toggle('on'
 // 유닛뽑기: 시계 배치 유닛 + 중앙 시민 DOM 렌더
 // 시계 유닛 + 시민 div를 1회 생성(탭 진입 시). 이후엔 위치만 갱신해서 부드럽게 이동.
 const COIN_SVG='<svg viewBox="0 0 24 24" width="10" height="10" style="flex:0 0 auto"><circle cx="12" cy="12" r="9" fill="#ffd24a" stroke="#ffe6a0" stroke-width="1.6"/><path d="M14.8 8.8A4.4 4.4 0 1 0 14.8 15.2" fill="none" stroke="#7a5a12" stroke-width="2.6" stroke-linecap="round"/></svg>';
-function beaconCostLabel(id){ return beaconMaxed(id) ? '<span class="dzMax">MAX</span>' : (COIN_SVG+beaconCost(id)); }   // 최대 레벨이면 MAX
+function beaconCostLabel(id){
+  if(id==='pboss'){ return (G.pbossCd>0) ? ('<span class="dzCd">'+Math.ceil(G.pbossCd)+'s</span>') : '<span class="dzGo">소환</span>'; }   // 개인 보스=쿨다운/소환
+  return beaconMaxed(id) ? '<span class="dzMax">MAX</span>' : (COIN_SVG+beaconCost(id)); }   // 최대 레벨이면 MAX
 function updateBeaconLabels(){ for(const b of DRAW_BEACONS){ const dz=document.getElementById('drawZoneEl_'+b.id); if(!dz) continue;
     const nm=dz.querySelector('.dzName'); if(nm) nm.textContent=beaconName(b);
     const cs=dz.querySelector('.dzCost'); if(cs) cs.innerHTML=beaconCostLabel(b.id); }
   const rm=document.getElementById('rateMini'); if(rm) rm.innerHTML=rateMiniHTML(); renderOpsManual(); }
 // 생산고 운용 안내(설명서) — 비콘 6종을 SC 콘솔 카드로 렌더(이름·아이콘·색·비용/레벨 동적)
 const COIN_SM='<svg viewBox="0 0 24 24" width="9" height="9" style="flex:0 0 auto"><circle cx="12" cy="12" r="9" fill="#ffd24a" stroke="#ffe6a0" stroke-width="1.6"/><path d="M14.8 8.8A4.4 4.4 0 1 0 14.8 15.2" fill="none" stroke="#7a5a12" stroke-width="2.6" stroke-linecap="round"/></svg>';
-const OPS_DESC={ buyTurret:'고정 포탑 설치', buyPhoton:'광역 방어탑', draw:'랜덤 유닛 생산', energy:'업그레이드 자원 획득', gachaUp:'상위 등급 확률 증가', creditUp:'크레딧 수급 증가' };
+const OPS_DESC={ buyTurret:'고정 포탑 설치', buyPhoton:'광역 방어탑', draw:'랜덤 유닛 생산', energy:'업그레이드 자원 획득', gachaUp:'상위 등급 확률 증가', creditUp:'크레딧 수급 증가', pboss:'처치 시 보너스·4분 쿨다운' };
 function renderOpsManual(){ const el=document.getElementById('opsManual'); if(!el) return;
-  const order=['buyTurret','buyPhoton','draw','energy','gachaUp','creditUp'];
+  const order=['buyTurret','buyPhoton','draw','energy','gachaUp','creditUp','pboss'];
   const cells=order.map(function(id){ const b=DRAW_BEACONS.find(x=>x.id===id); if(!b) return '';
     const th=BEACON_THEME[id], c=(th&&th['--neon'])||'#cfd6e0', up=(id==='gachaUp'||id==='creditUp');
-    const right=up ? ('<span class="omLv">Lv'+(id==='gachaUp'?(G.gachaLuckLv||0):(G.creditLv||0))+'</span>')
+    const right=(id==='pboss') ? ('<span class="omLv" style="color:'+c+'">'+(G.pbossCd>0?Math.ceil(G.pbossCd)+'s':'소환')+'</span>')
+                   : up ? ('<span class="omLv">Lv'+(id==='gachaUp'?(G.gachaLuckLv||0):(G.creditLv||0))+'</span>')
                    : ('<span class="omCost">'+COIN_SM+beaconCost(id)+'</span>');
     return '<div class="omCell" style="--c:'+c+'"><svg class="omIco" viewBox="0 0 24 24">'+beaconIcon(id)+'</svg>'
       +'<div class="omTx"><b>'+b.name+'</b><i>'+(OPS_DESC[id]||'')+'</i></div>'+right+'</div>'; }).join('');
@@ -5266,6 +5299,8 @@ function renderClock(){ const c=document.getElementById('citizenEl'); if(!c) ret
   c.style.left=(G.citizen.x*100)+'%'; c.style.top=(G.citizen.y*100)+'%';
   DRAW_BEACONS.forEach(b=>{ const dz=document.getElementById('drawZoneEl_'+b.id);
     if(dz) dz.classList.toggle('active', G.citizen.onPad===b.id || G.citizen.buyId===b.id); });
+  const pz=document.getElementById('drawZoneEl_pboss');   // 개인 보스 쿨다운 라벨 실시간 갱신
+  if(pz){ const cs=pz.querySelector('.dzCost'); if(cs){ const nw=beaconCostLabel('pboss'); if(cs.innerHTML!==nw) cs.innerHTML=nw; } }
 }
 // 확률 미니 패널(상시 표시) HTML — 등급별 % 한 줄씩
 function rateMiniHTML(){ const w=gachaWeights();   // 현재 적용 확률(뽑기확률↑ 반영)
