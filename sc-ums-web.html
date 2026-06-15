@@ -787,6 +787,12 @@
   .gachaBar{display:flex;align-items:stretch;gap:9px;margin:0 auto;width:100%;max-width:340px;padding:2px 6px 0;box-sizing:border-box;flex:0 0 auto}
   /* 생산고 운용 안내(설명서) — 메인 콘솔과 통일된 SC 우주전쟁 톤 */
   .opsManual{flex:1;min-height:0;display:flex;flex-direction:column;gap:6px;width:100%;max-width:360px;margin:0 auto;padding:4px 4px 0;box-sizing:border-box;overflow:hidden}
+  /* 유닛뽑기 시민/유닛 프로필 = 컴팩트(생산고 안내와 함께 한 화면에 들어오게) */
+  #shopProfile{flex:0 0 auto;padding:6px 9px;gap:8px;align-items:center}
+  #shopProfile .scPortrait{width:54px;height:54px}
+  #shopProfile .scPortrait svg{width:38px;height:38px}
+  #shopProfile .scName{font-size:12px}
+  #shopProfile .scStats .scBox{width:50px;height:44px}
   .opsManual .omHead{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;color:#dfe7f2;letter-spacing:.4px;padding-bottom:5px;border-bottom:1px solid var(--glass-edge);text-shadow:0 1px 2px #000}
   .opsManual .omBar{width:3px;height:12px;background:var(--neon);box-shadow:0 0 6px var(--neon-glow);border-radius:1px;flex:0 0 auto}
   .opsManual .omSub{margin-left:auto;font-size:9px;font-weight:600;color:var(--txt-mute);letter-spacing:0}
@@ -2092,15 +2098,15 @@
     </div>
 
     <div class="bp" id="bpUnit">
-      <!-- SC 생산고 운용 안내(설명서) — 기본 표시, 유닛/시민 프로필 표시 중엔 숨김 -->
-      <div class="opsManual" id="opsManual"></div>
-      <div class="hint" id="prodHint" style="display:none"></div>
-      <!-- 유닛뽑기: 중립 단일 선택 시 그 유닛 프로필(메인 단일카드와 동일 레이아웃) -->
+      <!-- 시민/유닛 프로필(선택 시) — 상단에 컴팩트하게 -->
       <div class="scPanel" id="shopProfile" style="display:none">
         <div class="scPortrait" id="spPortrait"></div>
         <div class="scMid"><div class="scName" id="spName"></div><div class="scType" id="spType"></div><div class="scHp" id="spHp"></div></div>
         <div class="scStats" id="spStats"></div>
       </div>
+      <div class="hint" id="prodHint" style="display:none"></div>
+      <!-- SC 생산고 운용 안내(설명서) — 항상 표시(프로필 아래) -->
+      <div class="opsManual" id="opsManual"></div>
     </div>
 
     <div class="bp" id="bpUpgrade">
@@ -5382,7 +5388,7 @@ function buildClock(){ const v=document.getElementById('vUnit');
   const citModel=!!(window.M3D && window.M3D.hasModel && window.M3D.hasModel('citizen')) && !(typeof G!=='undefined'&&G.opt&&G.opt.model3d===false);  // 3D 시민 있으면 이모지 프레임 숨김(3D 끄면 표시)
   c.innerHTML=(citModel?'':'<div class="cframe">'+citizenSVG()+'</div>')+'<div class="cn">시민</div>';
   v.appendChild(c);
-  renderClock();
+  renderClock(); renderOpsManual();   // 탭 진입 시 생산고 안내 바로 표시(구매 전에도)
 }
 // 매 프레임: 시민 위치 + 목표 유닛 강조만 갱신(div 재생성 없음).
 function renderClock(){ const c=document.getElementById('citizenEl'); if(!c) return;
@@ -7352,9 +7358,7 @@ function unitHoldPos(e){ const v=document.getElementById('vUnit').getBoundingCli
 // 유닛뽑기: 비콘/유닛 프로필을 하단에 표시(메인 단일카드와 동일). 표시 전용(G.shopSel과 별개)
 function showShopProfile(id){ const def=U[id]; if(!def) return;
   document.getElementById('prodHint').style.display='none';
-  const gb0=document.getElementById('gachaBar'); if(gb0) gb0.style.display='none';   // 프로필 표시 중엔 안내 숨김
-  const om0=document.getElementById('opsManual'); if(om0) om0.style.display='none';
-  const card=document.getElementById('shopProfile'); card.style.display='flex';
+  const card=document.getElementById('shopProfile'); card.style.display='flex';   // 프로필=상단, 생산고 안내는 그대로 아래에 유지
   const sjob=UNIT_CLS[id]||'';
   document.getElementById('spPortrait').innerHTML=unitPortraitHTML(id)+(sjob?'<div class="portJob">'+sjob+'</div>':'');
   document.getElementById('spName').textContent=def.name;
@@ -7365,18 +7369,14 @@ function showShopProfile(id){ const def=U[id]; if(!def) return;
   document.querySelectorAll('#vUnit .shopUnit').forEach(el=>el.classList.toggle('sel', SHOP_UNITS[+el.dataset.idx]===id));
 }
 function clearShopProfile(){
-  const card=document.getElementById('shopProfile'); if(card) card.style.display='none';
-  const gb=document.getElementById('gachaBar'); if(gb) gb.style.display='';   // 가챠 안내 바 복귀
-  const om=document.getElementById('opsManual'); if(om) om.style.display='';   // 설명서 복귀
-  const ph=document.getElementById('prodHint'); if(ph) ph.style.display='';
+  const card=document.getElementById('shopProfile'); if(card) card.style.display='none';   // 안내(opsManual)는 항상 표시 — 따로 토글 안 함
+  const ph=document.getElementById('prodHint'); if(ph) ph.style.display='none';
   document.querySelectorAll('#vUnit .shopUnit.sel').forEach(el=>el.classList.remove('sel'));
 }
 // 시민 선택/드래그 시 하단에 시민 프로필 표시(가챠 안내 바 대신)
 function showCitizenProfile(){ const card=document.getElementById('shopProfile'); if(!card) return;
-  const gb=document.getElementById('gachaBar'); if(gb) gb.style.display='none';
-  const om=document.getElementById('opsManual'); if(om) om.style.display='none';
   const ph=document.getElementById('prodHint'); if(ph) ph.style.display='none';
-  card.style.display='flex';
+  card.style.display='flex';   // 프로필=상단, 생산고 안내는 아래에 유지
   document.getElementById('spPortrait').innerHTML=unitPortraitHTML('citizen')+'<div class="portJob">시민</div>';
   document.getElementById('spName').textContent='시민';
   document.getElementById('spType').textContent='유닛 생산 일꾼';
