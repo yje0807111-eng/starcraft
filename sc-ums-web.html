@@ -2688,6 +2688,7 @@ start_turret:  { name:'시작 포탑',   desc:'시작 시 가드 타워 1기 배
   enemy_def_down:{ name:'적 방어 감소', desc:'내 트랙 적 방어력 -%',         start:4, rate:1.8, max:10, group:'power' },
   enemy_slow:    { name:'적 이속 감소', desc:'내 트랙 적 이동속도 -%',       start:3, rate:1.8, max:10, group:'power' },
   unit_atk_up:   { name:'공격력 증가',  desc:'유닛 공격력 +%',              start:3, rate:1.8, max:12, group:'power' },
+  tower_power:   { name:'타워 강화',    desc:'가드 타워·스파이어 공격력 +20%/Lv', start:3, rate:1.8, max:12, group:'power' },
   start_credit:  { name:'시작 크레딧',  desc:'시작 시 크레딧 지급',          start:2, rate:1.7, max:12, group:'power' },
   start_energy:  { name:'시작 에너지',  desc:'시작 시 에너지 지급',          start:2, rate:1.7, max:12, group:'power' },
   // 전체 강화 — 게임 내 모든 플레이어에게 적용(팀 공유 버프)
@@ -2737,6 +2738,7 @@ function metaBonus(){ const L=id=>buildLevel(id), T=id=>teamLevel(id);
   startTurret: L('start_turret'),
     guaranteed:  L('guaranteed'),
     luck:        L('gacha_luck'),
+    towerMul:    1 + L('tower_power')*0.20,   // 타워(가드 타워·스파이어) 공격력 배율 — 포인트 연구소 '타워 강화'로 성장
   };
 }
 function gainMineral(n){ G.mineral += Math.round(n*((G.metaB&&G.metaB.creditMul)||1)*(1+(G.creditLv||0)*CREDIT_UP_STEP)); }   // 메타 크레딧↑ × 내실 크레딧획득↑(Lv당 +8%)
@@ -3716,7 +3718,8 @@ function unitDmgParts(u){ const d=U[u.id]; const wlv=(G.atkLv&&G.atkLv[d.wpn])||
   const ov=GDMG_OVR[u.gid];   // 구조물 프록시 가챠 유닛의 기본치 교정
   const base=Math.round((ov?ov.dmg:(u.hero?d.hdmg:d.dmg))*lv);
   const upMul=(u&&u.gtier&&UP_TIER_MUL[u.gtier])||1;   // 등급이 오를수록 업글 1회 증가폭도 커짐
-  const total=base+Math.round((ov?ov.up:(u.hero?d.hup:d.up))*wlv*1.2*upMul);
+  let total=base+Math.round((ov?ov.up:(u.hero?d.hup:d.up))*wlv*1.2*upMul);
+  if(u.id==='turret'||u.id==='photon'){ total=Math.round(total*((G.metaB&&G.metaB.towerMul)||1)); }   // 타워 강화(메타)로 성장
   return {base, up:total-base, total, wlv}; }
 // 공중공격 분해(airDmg 있는 유닛만). 없으면 null.
 function unitAirParts(u){ const d=U[u.id]; if(d.airDmg==null) return null;
@@ -3724,7 +3727,8 @@ function unitAirParts(u){ const d=U[u.id]; if(d.airDmg==null) return null;
   const ov=GDMG_OVR[u.gid];   // 오버라이드 유닛은 공중=지상 동일
   const aD=ov?ov.dmg:(u.hero?(d.hairDmg!=null?d.hairDmg:d.airDmg):d.airDmg);
   const aU=ov?ov.up:(u.hero?(d.hairUp!=null?d.hairUp:d.airUp):d.airUp);
-  const base=Math.round(aD*lv); const total=base+Math.round(aU*wlv*1.2);   // 업글=평탄 보조(지상과 동일 규칙)
+  const base=Math.round(aD*lv); let total=base+Math.round(aU*wlv*1.2);   // 업글=평탄 보조(지상과 동일 규칙)
+  if(u.id==='turret'||u.id==='photon'){ total=Math.round(total*((G.metaB&&G.metaB.towerMul)||1)); }   // 타워 강화(메타)
   return {base, up:total-base, total}; }
 function inZone(u){ const r=mergeRect(GW,GH); const px=u.x*GW, py=u.y*GH;
   return px>=r.x && px<=r.x+r.w && py>=r.y && py<=r.y+r.h; }
