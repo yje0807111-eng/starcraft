@@ -162,6 +162,19 @@
   #skillFab .sfCd{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:5;font-family:'Rajdhani',sans-serif;font-size:19px;font-weight:800;color:#fff;text-shadow:0 1px 2px #000;pointer-events:none}
   #skillFab.active{border-color:#7fffd4;box-shadow:0 0 16px -2px rgba(90,255,200,.65),0 4px 9px var(--shade),inset 0 0 12px rgba(90,255,200,.22)}  /* 버프 활성 */
   #skillFab:active{transform:translateY(1px)}
+  /* 개인 보스 소환 FAB(메인 좌측, SC 위협 레드 콘솔) */
+  #pbossFab{position:absolute;left:8px;top:44%;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    width:54px;min-height:48px;padding:6px 4px;cursor:pointer;pointer-events:auto;color:#ffd2d2;
+    background:linear-gradient(160deg,rgba(150,36,36,.5),rgba(22,8,10,.72));border:1px solid rgba(255,59,59,.5);
+    clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 0 13px -4px rgba(255,59,59,.55);transition:all .14s}
+  #pbossFab::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,120,120,.4),transparent);pointer-events:none}
+  #pbossFab.hide{display:none}
+  #pbossFab .pfIco{line-height:0;filter:drop-shadow(0 0 5px rgba(255,59,59,.7))}
+  #pbossFab .pfL{font-size:8.5px;font-weight:800;letter-spacing:.3px;font-family:'Rajdhani',sans-serif;line-height:1}
+  #pbossFab:active{transform:translateY(1px)}
+  #pbossFab.cd{color:#ff9a9a;border-color:var(--metal-edge);background:linear-gradient(160deg,rgba(56,32,34,.5),rgba(16,10,12,.72));box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+  #pbossFab.cd .pfIco{filter:none;opacity:.7}
   /* 선택 해제 아이콘 버튼(우상단, 자원 표시 아래) — 노란 금지표시, 유닛 지정 시에만 표시 */
   /* 선택 해제 — 투명 배경 + 빨강 테마(하단 톤) */
   #deselTop{position:absolute;top:100px;right:10px;z-index:25;display:none;cursor:pointer;pointer-events:auto;
@@ -1781,6 +1794,8 @@
     <div id="deselTop" onclick="cancelSelect()" title="선택 해제"><svg viewBox="0 0 24 24" width="26" height="26"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.4"/><line x1="6.2" y1="6.2" x2="17.8" y2="17.8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></div>
     <!-- 스킬 버튼: 메인 탭에서 스킬 보유 유닛 선택 시 표시(조합 버튼 위) -->
     <div id="skillFab" class="hide" onclick="useSkill()"><span class="sfIco" id="sfIco"></span><span class="sfName" id="sfName">스킬</span><div class="sfOver" id="sfOver"></div><div class="sfCd" id="sfCd"></div></div>
+    <!-- 개인 보스 소환(메인 탭, 좌측). 처치 시 보너스 크레딧 · 4분 쿨다운 -->
+    <div id="pbossFab" class="hide" onclick="summonPersonalBoss()" title="개인 보스 소환"><span class="pfIco"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 2.5c-4 0-6.5 2.8-6.5 6.4 0 2.3 1.1 3.7 2.2 4.7v2.2c0 .7.5 1.1 1.2 1.1.4 1.1 1.6 1.9 3.1 1.9s2.7-.8 3.1-1.9c.7 0 1.2-.4 1.2-1.1v-2.2c1.1-1 2.2-2.4 2.2-4.7 0-3.6-2.5-6.4-6.5-6.4z" fill="currentColor" opacity=".22"/><path d="M12 2.5c-4 0-6.5 2.8-6.5 6.4 0 2.3 1.1 3.7 2.2 4.7v2.2c0 .7.5 1.1 1.2 1.1.4 1.1 1.6 1.9 3.1 1.9s2.7-.8 3.1-1.9c.7 0 1.2-.4 1.2-1.1v-2.2c1.1-1 2.2-2.4 2.2-4.7 0-3.6-2.5-6.4-6.5-6.4z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="9.3" cy="9.2" r="1.5" fill="currentColor"/><circle cx="14.7" cy="9.2" r="1.5" fill="currentColor"/><path d="M10.4 16.5v2M12 16.7v2.1M13.6 16.5v2" stroke="currentColor" stroke-width="1"/></svg></span><span class="pfL" id="pbossFabL">소환</span></div>
 
     <div class="gview on" id="vMain"><canvas id="cvMain"></canvas><div id="mergeZone"><span class="mz">합체</span></div></div>
     <div class="gview" id="vUnit"><canvas id="cvUnit"></canvas></div>
@@ -2043,7 +2058,7 @@
     <div class="bp" id="bpUnit">
       <!-- SC 생산고 운용 안내(설명서) — 기본 표시, 유닛/시민 프로필 표시 중엔 숨김 -->
       <div class="opsManual" id="opsManual"></div>
-      <div class="hint" id="prodHint" style="display:none">유닛 클릭 = <b>정보</b></div>
+      <div class="hint" id="prodHint" style="display:none"></div>
       <!-- 유닛뽑기: 중립 단일 선택 시 그 유닛 프로필(메인 단일카드와 동일 레이아웃) -->
       <div class="scPanel" id="shopProfile" style="display:none">
         <div class="scPortrait" id="spPortrait"></div>
@@ -2295,16 +2310,14 @@ const CITIZEN_HOME={x:.5,y:.5}; // 시민 기본 위치(보드 중앙)
 const DRAW_ZONE={x:.5,y:.30};    // 하위호환 유지
 // 유닛뽑기 비콘 — 좌측 줄(유닛 뽑기) / 우측 줄(에너지 뽑기). 시민이 올라서면 해당 뽑기 실행.
 const DRAW_BEACONS=[
-  // 좌측 줄(4줄): 가드 타워 / 스파이어 / 유닛 1회 / 에너지 1회 (전체적으로 아래로 내려 중앙 배치)
-  {id:'buyTurret', x:.20, y:.23, name:'가드 타워', core:'🗼'},
-  {id:'buyPhoton', x:.20, y:.39, name:'스파이어', core:'◉'},
-  {id:'draw',      x:.20, y:.55, name:'유닛 1회', core:'?'},
-  {id:'energy',    x:.20, y:.71, name:'에너지 1회', core:'⚡'},
+  // 좌측 줄(4줄): 가드 타워 / 스파이어 / 유닛 1회 / 에너지 1회 (간격 약간 띄움)
+  {id:'buyTurret', x:.20, y:.18, name:'가드 타워', core:'🗼'},
+  {id:'buyPhoton', x:.20, y:.37, name:'스파이어', core:'◉'},
+  {id:'draw',      x:.20, y:.56, name:'유닛 1회', core:'?'},
+  {id:'energy',    x:.20, y:.75, name:'에너지 1회', core:'⚡'},
   // 우측 줄(2줄): 뽑기 확률↑ / 크레딧 획득↑ (확률표 아래·미니맵 위로 배치)
-  {id:'gachaUp',  x:.80, y:.51, name:'뽑기 확률↑', core:'%'},
-  {id:'creditUp', x:.80, y:.67, name:'크레딧 획득↑', core:'C'},
-  // 중앙 상단: 개인 보스 소환(자기 난이도 보스 → 처치 시 보너스 크레딧, 4분 쿨다운)
-  {id:'pboss',    x:.50, y:.17, name:'개인 보스', core:'☠'},
+  {id:'gachaUp',  x:.80, y:.46, name:'뽑기 확률↑', core:'%'},
+  {id:'creditUp', x:.80, y:.65, name:'크레딧 획득↑', core:'C'},
 ];
 // 비콘별 색 테마(인라인 CSS 변수로 기존 .drawZone 스타일 재사용). 유닛 1·10회=기본 빨강.
 const BEACON_THEME={   // 디자인 토큰과 통일: 유닛=네온 레드(기본), 고급=골드(재화/희귀), 에너지=HUD 시안(E 재화색)
@@ -5173,6 +5186,11 @@ const SKILL_ICON={ adr:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M1
 function useSkill(){ const us=selUnits(); if(!us.length) return;
   let used=0; for(const u of us){ const def=U[u.id]; if(def.skill && (u.skCd||0)<=0){ u.adr=def.skill.dur; u.skCd=def.skill.cd; used++; } }
   if(used){ const nm=U[us[0].id].skill.name; addChat('',nm+' 발동! ('+used+'기)'); if(typeof playSfx==='function') playSfx('skill'); } updateCmdRow(); updateSkillFab(); }
+function updatePbossFab(){ const f=document.getElementById('pbossFab'); if(!f) return;   // 개인 보스 소환 FAB(메인·게임 중만, 쿨다운 실시간)
+  const show=(typeof G!=='undefined' && G.tab==='Main' && G.phase==='playing');
+  f.classList.toggle('hide', !show); if(!show) return;
+  const cd=G.pbossCd>0; f.classList.toggle('cd', cd);
+  const l=document.getElementById('pbossFabL'); if(l){ const t=cd?Math.ceil(G.pbossCd)+'s':'소환'; if(l.textContent!==t) l.textContent=t; } }
 function updateSkillFab(){ const fab=document.getElementById('skillFab'); if(!fab) return;
   if(typeof G==='undefined'||G.tab!=='Main'||G.selEnemy!=null){ fab.classList.add('hide'); return; }
   const us=selUnits().filter(u=>U[u.id]&&U[u.id].skill);
@@ -5258,21 +5276,17 @@ function updateBeaconLabels(){ for(const b of DRAW_BEACONS){ const dz=document.g
     const nm=dz.querySelector('.dzName'); if(nm) nm.textContent=beaconName(b);
     const cs=dz.querySelector('.dzCost'); if(cs) cs.innerHTML=beaconCostLabel(b.id); }
   const rm=document.getElementById('rateMini'); if(rm) rm.innerHTML=rateMiniHTML(); renderOpsManual(); }
-// 생산고 운용 안내(설명서) — 비콘 6종을 SC 콘솔 카드로 렌더(이름·아이콘·색·비용/레벨 동적)
-const COIN_SM='<svg viewBox="0 0 24 24" width="9" height="9" style="flex:0 0 auto"><circle cx="12" cy="12" r="9" fill="#ffd24a" stroke="#ffe6a0" stroke-width="1.6"/><path d="M14.8 8.8A4.4 4.4 0 1 0 14.8 15.2" fill="none" stroke="#7a5a12" stroke-width="2.6" stroke-linecap="round"/></svg>';
-const OPS_DESC={ buyTurret:'고정 포탑 설치', buyPhoton:'광역 방어탑', draw:'랜덤 유닛 생산', energy:'업그레이드 자원 획득', gachaUp:'상위 등급 확률 증가', creditUp:'크레딧 수급 증가', pboss:'처치 시 보너스·4분 쿨다운' };
+// 생산고 운용 안내(현황) — 뽑기 확률 / 크레딧 확률 / 가드타워 수 / 스파이어 수 (SC 콘솔 카드)
 function renderOpsManual(){ const el=document.getElementById('opsManual'); if(!el) return;
-  const order=['buyTurret','buyPhoton','draw','energy','gachaUp','creditUp','pboss'];
-  const cells=order.map(function(id){ const b=DRAW_BEACONS.find(x=>x.id===id); if(!b) return '';
-    const th=BEACON_THEME[id], c=(th&&th['--neon'])||'#cfd6e0', up=(id==='gachaUp'||id==='creditUp');
-    const right=(id==='pboss') ? ('<span class="omLv" style="color:'+c+'">'+(G.pbossCd>0?Math.ceil(G.pbossCd)+'s':'소환')+'</span>')
-                   : up ? ('<span class="omLv">Lv'+(id==='gachaUp'?(G.gachaLuckLv||0):(G.creditLv||0))+'</span>')
-                   : ('<span class="omCost">'+COIN_SM+beaconCost(id)+'</span>');
-    return '<div class="omCell" style="--c:'+c+'"><svg class="omIco" viewBox="0 0 24 24">'+beaconIcon(id)+'</svg>'
-      +'<div class="omTx"><b>'+b.name+'</b><i>'+(OPS_DESC[id]||'')+'</i></div>'+right+'</div>'; }).join('');
-  el.innerHTML='<div class="omHead"><span class="omBar"></span>생산고 운용 안내<span class="omSub">시민을 비콘 위로 이동 → 자동 구매</span></div>'
-    +'<div class="omGrid">'+cells+'</div>'
-    +'<div class="omFoot"><span><b>유닛 클릭</b> 정보</span><span><b>같은 유닛 3</b> 등급 조합</span><span><b>드래그</b> 다중 선택</span></div>'; }
+  const gN=(typeof G!=='undefined'&&G.units)?G.units.filter(u=>u.id==='turret').length:0;   // 보유 가드 타워 수
+  const sN=(typeof G!=='undefined'&&G.units)?G.units.filter(u=>u.id==='photon').length:0;   // 보유 스파이어 수
+  const cell=function(c,ico,name,right){ return '<div class="omCell" style="--c:'+c+'"><svg class="omIco" viewBox="0 0 24 24">'+ico+'</svg>'
+    +'<div class="omTx"><b>'+name+'</b></div><span class="omLv" style="color:'+c+'">'+right+'</span></div>'; };
+  const rows=cell(BEACON_THEME.gachaUp['--neon'], beaconIcon('gachaUp'), '뽑기 확률', 'Lv'+(G.gachaLuckLv||0))
+    +cell(BEACON_THEME.creditUp['--neon'], beaconIcon('creditUp'), '크레딧 확률', 'Lv'+(G.creditLv||0))
+    +cell(BEACON_THEME.buyTurret['--neon'], beaconIcon('buyTurret'), '가드 타워', gN+'개')
+    +cell(BEACON_THEME.buyPhoton['--neon'], beaconIcon('buyPhoton'), '스파이어', sN+'개');
+  el.innerHTML='<div class="omHead"><span class="omBar"></span>생산고 운용 안내</div><div class="omGrid">'+rows+'</div>'; }
 function buildClock(){ const v=document.getElementById('vUnit');
   v.querySelectorAll('.shopUnit,.citizen,.drawZone,.rateMini').forEach(n=>n.remove());
   const coinSVG=COIN_SVG;
@@ -7563,6 +7577,7 @@ function loop(now){
   updateSelHp();   // 단일 종류 다중선택 시 유닛별 HP 실시간 갱신
   if(G.sel.length>=1 && document.getElementById('unitCmd').classList.contains('on')) updateCmdRow();   // 명령 행 상태 갱신(단일/다중)
   updateSkillFab();   // 스킬 FAB 쿨다운/버프 실시간(탭 전환·해제도 내부 처리)
+  updatePbossFab();   // 개인 보스 소환 FAB(메인·쿨다운 실시간)
   updateHud();
   // '합체' 라벨 페이드: 1라운드만 표시, 2라운드부터 매 프레임 opacity 보간으로 부드럽게 사라짐
   { const mzl=document.querySelector('#mergeZone .mz');
