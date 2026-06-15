@@ -602,10 +602,13 @@
     display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;
     box-shadow:inset 0 0 8px var(--shade),0 0 6px var(--neon-faint)}
   .unitInfo{flex:1;min-width:0}.unitInfo .uname{font-size:14px;color:#f0dada;font-weight:700;text-shadow:0 0 8px var(--neon-glow)}
-  /* ── 유닛 콘솔 패널: 어두운 금속 + 청록 네온 ── */
-  .scPanel{position:relative;display:flex;align-items:stretch;gap:7px;flex-shrink:0;padding:8px 8px;border-radius:var(--r-lg);
-    background:radial-gradient(ellipse at 30% 30%,rgba(46,42,46,.45),#0c090a 75%);
-    border:1px solid var(--metal-edge);box-shadow:inset 0 0 16px rgba(0,0,0,.8),inset 0 0 4px var(--neon-faint)}
+  /* ── 유닛 콘솔 카드: 세련된 SC 우주전쟁 톤(메탈 그라데이션 + 네온 엣지 + 사선 모서리 + 스캔라인) ── */
+  .scPanel{position:relative;display:flex;align-items:stretch;gap:9px;flex-shrink:0;padding:9px 11px;
+    background:linear-gradient(155deg,rgba(40,46,58,.5),rgba(9,11,16,.85));
+    border:1px solid var(--metal-edge);border-left:2px solid var(--neon-soft);
+    clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05),inset 0 0 22px rgba(0,0,0,.45)}
+  .scPanel::after{content:'';position:absolute;left:10px;right:4px;top:0;height:1px;background:linear-gradient(90deg,rgba(255,90,90,.45),transparent 75%);pointer-events:none}
   /* 유닛 명령 버튼 행(홀드/공격이동/반복이동/스킬/전체) */
   #cmdRow{display:none;flex:none;gap:6px;margin-top:7px;align-items:stretch}
   .cmdBtn{flex:1 1 0;min-width:0;padding:11px 6px;font-size:var(--fs-lg);font-weight:700;color:var(--txt);cursor:pointer;font-family:inherit;line-height:1.1;
@@ -622,11 +625,12 @@
   .cmdBtn.skill b{font-size:var(--fs-sm);color:#9bb8d0;font-family:'Rajdhani',sans-serif}
   .cmdBtn:active{transform:translateY(1px)}
   #cmdRow .selAll{align-self:stretch;display:flex;align-items:center;justify-content:center;padding:8px 9px;border-radius:var(--r-md);font-size:var(--fs-sm);flex:0 0 auto;white-space:nowrap}
-  /* 청록 와이어프레임 초상화 */
-  .scPortrait{width:72px;height:72px;flex:none;align-self:center;border:1px solid var(--neon-soft);border-radius:var(--r-lg);position:relative;overflow:hidden;
-    background:radial-gradient(circle at 50% 42%,rgba(255,59,59,.16),#150a0b 70%);
-    display:flex;align-items:center;justify-content:center;color:var(--neon);
-    box-shadow:inset 0 0 14px var(--neon-faint)}
+  /* 초상화 — 쿨 메탈 프레임 + 사선 모서리(카드와 통일) */
+  .scPortrait{width:74px;height:74px;flex:none;align-self:center;position:relative;overflow:hidden;color:var(--neon);
+    border:1px solid var(--metal-edge);
+    clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+    background:radial-gradient(circle at 50% 38%,rgba(74,86,110,.38),#080a10 78%);
+    display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 14px rgba(0,0,0,.62)}
   .scPortrait svg{width:50px;height:50px;filter:drop-shadow(0 0 5px var(--neon))}
   /* 커스텀 초상화 이미지(둥근 사각형 크롭) — 프로필 카드 공통 */
   .portImg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:1;transform:scale(1.14);transform-origin:center 44%}
@@ -657,16 +661,19 @@
   .scSub b{color:#bcd2e8;font-size:9px;font-weight:800}
   /* 1인 카드 밖: 이 종류 전체 선택 버튼(가로 전체) */
   .scAllOne{flex:none;display:flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;font-family:inherit;
-    font-size:11px;font-weight:800;letter-spacing:.2px;color:#dfeaff;white-space:nowrap;padding:8px 11px;border-radius:8px;
-    background:linear-gradient(180deg,rgba(120,170,255,.22),rgba(120,170,255,.06));border:1px solid rgba(120,170,255,.4);
+    font-size:11px;font-weight:800;letter-spacing:.2px;color:#dfeaff;white-space:nowrap;padding:9px 11px;
+    background:linear-gradient(160deg,rgba(120,170,255,.2),rgba(36,56,96,.34));border:1px solid rgba(120,170,255,.42);
+    clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.08);transition:all .12s}
-  .scAllOne:hover{border-color:rgba(150,200,255,.7);background:linear-gradient(180deg,rgba(120,170,255,.32),rgba(120,170,255,.1))}
+  .scAllOne:hover{border-color:rgba(150,200,255,.75);background:linear-gradient(160deg,rgba(120,170,255,.32),rgba(40,64,110,.45))}
   .scAllOne:active{transform:translateY(1px)}
   .scAllOne b{color:#7fd0ff;font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:800}
-  .scBox{width:55px;flex:none;height:53px;padding:0 3px;border:1.5px solid var(--neon-soft);border-radius:var(--r-md);background:#161416;overflow:hidden;
+  .scBox{position:relative;width:56px;flex:none;height:52px;padding:0 3px;overflow:hidden;border-radius:3px;
+    border:1px solid var(--metal-edge);background:linear-gradient(160deg,rgba(46,52,64,.52),rgba(10,12,17,.74));
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
-    box-shadow:inset 0 0 9px var(--neon-faint)}
-  .scBox.atkBox{overflow:visible;position:relative;cursor:pointer}
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05),inset 0 0 8px rgba(0,0,0,.4)}
+  .scBox::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.13),transparent);pointer-events:none}
+  .scBox.atkBox{overflow:visible;cursor:pointer}
   .scBox.atkBox .atkPeek{position:absolute;right:calc(100% + 6px);top:50%;transform:translateY(-50%);display:none;white-space:nowrap;z-index:40;   /* 박스 왼쪽(카드 안쪽)으로 — 패널 밖 삐짐 방지 */
     font-size:var(--fs-lg);font-weight:700;font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif;color:#ffe0b8;letter-spacing:.2px;
     background:rgba(14,9,6,.96);border:1px solid rgba(255,154,106,.5);border-radius:var(--r-md);padding:4px 10px;box-shadow:0 3px 8px rgba(0,0,0,.55)}
@@ -678,7 +685,8 @@
   .scBox .sl.def{color:#9ec2ff}.scBox .sl.shd{color:#8fd8ff}.scBox .sl.atk{color:#ffb088}  /* 칩 없이 방어=파랑·쉴드=청록·공격=주황 텍스트 */
   /* ── 다중 선택: 종류별 초상화 칩 ── */
   .selMulti{display:none;flex-direction:column;gap:7px;flex:1;min-height:0}
-  .selHead{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:var(--fs-lg);font-weight:700;color:var(--txt);text-shadow:0 1px 2px #000;flex-shrink:0}
+  .selHead{position:relative;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:var(--fs-lg);font-weight:700;color:var(--txt);text-shadow:0 1px 2px #000;flex-shrink:0;padding:0 0 5px 8px;border-bottom:1px solid var(--glass-edge)}
+  .selHead::before{content:'';position:absolute;left:0;top:1px;width:3px;height:13px;background:var(--neon);box-shadow:0 0 6px var(--neon-glow);border-radius:1px}
   .selHead b{font-size:16px;color:#46f06a;font-family:'Rajdhani',sans-serif;text-shadow:0 0 6px rgba(70,240,106,.4);margin-right:1px}  /* 총 기수 — 초록 */
   .selHead .selSub{font-size:var(--fs-sm);color:var(--txt-dim);font-weight:600}
   /* 우상단 '전체 선택' 버튼(단일 종류 선택 시) */
@@ -689,9 +697,11 @@
   .selSingle{display:none;align-items:flex-start;gap:7px;flex:1;min-height:0;padding:6px 6px 6px 3px}
   .selSingle .ssChip{flex:0 0 auto;cursor:default}
   .ssHp{flex:1;min-width:0;display:grid;grid-template-columns:repeat(6,1fr);gap:4px;align-content:flex-start;min-height:0;overflow:hidden;padding:2px 0}
-  .uHpItem{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0;cursor:pointer;border-radius:6px;padding:3px 2px;
-    background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.012));border:1px solid var(--metal-edge);box-shadow:inset 0 1px 0 rgba(255,255,255,.05);transition:all .12s}
-  .uHpItem:hover{border-color:rgba(120,200,255,.55);background:rgba(120,200,255,.1)}
+  .uHpItem{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0;cursor:pointer;padding:3px 2px;
+    background:linear-gradient(160deg,rgba(48,54,68,.5),rgba(10,12,17,.62));border:1px solid var(--metal-edge);
+    clip-path:polygon(4px 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%,0 4px);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05);transition:all .12s}
+  .uHpItem:hover{border-color:rgba(120,200,255,.6);background:linear-gradient(160deg,rgba(120,200,255,.22),rgba(20,30,50,.5))}
   .uHpItem:active{transform:translateY(1px)}
   .uhNum{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:800;color:#eaf2ff;line-height:1;text-shadow:0 1px 2px #000}
   .uHpBar{width:100%;height:4px;border-radius:var(--r-bar);background:rgba(0,0,0,.55);overflow:hidden;box-shadow:inset 0 0 3px rgba(0,0,0,.7)}
@@ -702,11 +712,12 @@
   /* 초상화 칩 = 흑백 정사각형(3D 모델→2D) + 하단 이름 */
   .selChip{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:100%;max-width:62px;cursor:pointer;transition:transform .08s}
   .selChip:active{transform:translateY(1px)}
-  .selChip .chipBox{position:relative;width:50px;height:50px;border-radius:8px;
-    background:radial-gradient(circle at 50% 36%,#26272b,#09090b 88%);border:1.5px solid rgba(255,255,255,.5);
+  .selChip .chipBox{position:relative;width:52px;height:52px;border-radius:5px;
+    background:linear-gradient(155deg,rgba(48,54,68,.65),rgba(8,9,13,.92));border:1px solid var(--metal-edge);
     display:flex;align-items:center;justify-content:center;overflow:visible;
-    box-shadow:inset 0 0 11px rgba(0,0,0,.75),0 1px 3px var(--shade);transition:border-color .12s,box-shadow .12s}
-  .selChip:hover .chipBox{border-color:#fff;box-shadow:inset 0 0 11px rgba(0,0,0,.7),0 0 9px -2px rgba(255,255,255,.4)}
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05),inset 0 0 11px rgba(0,0,0,.65),0 1px 3px var(--shade);transition:border-color .12s,box-shadow .12s}
+  .selChip .chipBox::after{content:'';position:absolute;left:4px;right:4px;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);pointer-events:none}
+  .selChip:hover .chipBox{border-color:rgba(255,120,120,.6);box-shadow:inset 0 0 11px rgba(0,0,0,.6),0 0 10px -2px var(--neon-glow)}
   .selChip.hero .chipBox{border-color:#ffe08a;box-shadow:0 0 10px -1px rgba(255,200,80,.55),inset 0 0 11px rgba(0,0,0,.6)}
   .selChip .chipPort{width:45px;height:45px;color:#fff;display:flex;align-items:center;justify-content:center;border-radius:8px;overflow:hidden}
   .selChip .chipPort svg{width:42px;height:42px;filter:drop-shadow(0 0 1.5px rgba(0,0,0,.9))}
@@ -2028,14 +2039,6 @@
     </div>
 
     <div class="bp" id="bpUnit">
-      <!-- 가챠 뽑기(2단계): 시민을 뽑기 비콘으로 이동 -->
-      <div class="gachaBar" id="gachaBar">
-        <div class="gachaLeft">
-          <div class="hbTitle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5.8 20c0-3.4 2.8-5.9 6.2-5.9s6.2 2.5 6.2 5.9"/></svg>유닛 뽑기</div>
-          <div class="hbHint" style="word-break:keep-all"><b>시민</b>을 비콘으로 이동하면 뽑습니다</div>
-        </div>
-        <div class="gachaResult" id="gachaResult"><span class="grHint">랜덤 유닛을 획득합니다</span></div>
-      </div>
       <!-- SC 생산고 운용 안내(설명서) — 기본 표시, 유닛/시민 프로필 표시 중엔 숨김 -->
       <div class="opsManual" id="opsManual"></div>
       <div class="hint" id="prodHint" style="display:none">유닛 클릭 = <b>정보</b></div>
@@ -2290,14 +2293,14 @@ const CITIZEN_HOME={x:.5,y:.5}; // 시민 기본 위치(보드 중앙)
 const DRAW_ZONE={x:.5,y:.30};    // 하위호환 유지
 // 유닛뽑기 비콘 — 좌측 줄(유닛 뽑기) / 우측 줄(에너지 뽑기). 시민이 올라서면 해당 뽑기 실행.
 const DRAW_BEACONS=[
-  // 좌측 줄(4줄): 가드 타워 / 스파이어 / 유닛 1회 / 에너지 1회 (간격 더 좁힘)
-  {id:'buyTurret', x:.20, y:.15, name:'가드 타워', core:'🗼'},
-  {id:'buyPhoton', x:.20, y:.31, name:'스파이어', core:'◉'},
-  {id:'draw',      x:.20, y:.47, name:'유닛 1회', core:'?'},
-  {id:'energy',    x:.20, y:.63, name:'에너지 1회', core:'⚡'},
+  // 좌측 줄(4줄): 가드 타워 / 스파이어 / 유닛 1회 / 에너지 1회 (전체적으로 아래로 내려 중앙 배치)
+  {id:'buyTurret', x:.20, y:.23, name:'가드 타워', core:'🗼'},
+  {id:'buyPhoton', x:.20, y:.39, name:'스파이어', core:'◉'},
+  {id:'draw',      x:.20, y:.55, name:'유닛 1회', core:'?'},
+  {id:'energy',    x:.20, y:.71, name:'에너지 1회', core:'⚡'},
   // 우측 줄(2줄): 뽑기 확률↑ / 크레딧 획득↑ (확률표 아래·미니맵 위로 배치)
-  {id:'gachaUp',  x:.80, y:.43, name:'뽑기 확률↑', core:'%'},
-  {id:'creditUp', x:.80, y:.59, name:'크레딧 획득↑', core:'C'},
+  {id:'gachaUp',  x:.80, y:.51, name:'뽑기 확률↑', core:'%'},
+  {id:'creditUp', x:.80, y:.67, name:'크레딧 획득↑', core:'C'},
 ];
 // 비콘별 색 테마(인라인 CSS 변수로 기존 .drawZone 스타일 재사용). 유닛 1·10회=기본 빨강.
 const BEACON_THEME={   // 디자인 토큰과 통일: 유닛=네온 레드(기본), 고급=골드(재화/희귀), 에너지=HUD 시안(E 재화색)
