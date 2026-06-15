@@ -651,12 +651,15 @@
     border-radius:var(--r-md);padding:4px 10px;cursor:pointer;white-space:nowrap;text-shadow:0 1px 1px #000;box-shadow:0 0 8px -3px rgba(70,240,106,.6)}
   .selAll:active{transform:translateY(1px);background:rgba(70,240,106,.3)}
   /* 단일 종류: 칩 + 유닛별 HP */
-  .selSingle{display:none;align-items:center;gap:12px;flex:1;min-height:0;padding:4px 8px}
+  .selSingle{display:none;align-items:flex-start;gap:10px;flex:1;min-height:0;padding:6px 8px}
   .selSingle .ssChip{flex:0 0 auto;cursor:default}
-  .ssHp{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:6px 10px;align-content:flex-start;max-height:96px;overflow-y:auto;padding:3px 2px}
-  .uHpItem{display:flex;flex-direction:column;align-items:center;gap:1px;width:33px;cursor:pointer;border-radius:var(--r-sm);padding:2px 1px;transition:opacity .2s,background .12s}
-  .uHpItem:hover{background:rgba(120,200,255,.18)}
-  .uHpItem:active{background:rgba(120,200,255,.28)}
+  .ssHp{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;max-height:148px;overflow-y:auto;overflow-x:hidden;padding:2px 2px 2px 0}
+  .uHpItem{display:flex;flex-direction:column;align-items:center;gap:2px;width:48px;cursor:pointer;border-radius:7px;padding:3px 3px 4px;
+    background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.012));border:1px solid var(--metal-edge);box-shadow:inset 0 1px 0 rgba(255,255,255,.05);transition:all .12s}
+  .uHpItem:hover{border-color:rgba(120,200,255,.55);background:rgba(120,200,255,.1)}
+  .uHpItem:active{transform:translateY(1px)}
+  .uhNum{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:800;color:#eaf2ff;line-height:1;text-shadow:0 1px 2px #000}
+  .uhKill{font-size:8px;font-weight:800;color:var(--gold-lt);line-height:1;letter-spacing:.2px;text-shadow:0 1px 1px #000}
   .uHpBar{width:100%;height:5px;border-radius:var(--r-bar);background:rgba(0,0,0,.55);overflow:hidden;box-shadow:inset 0 0 3px rgba(0,0,0,.7)}
   .uHpBar i{display:block;height:100%;border-radius:var(--r-bar);transition:width .15s}
   .uHpBar.shb{height:3px}.uHpBar.shb i{background:#5ad1ff}
@@ -4944,8 +4947,10 @@ function unitHpHTML(uid){ const u=G.units.find(x=>x.uid===uid); if(!u) return ''
   const maxSh=u.maxSh!=null?u.maxSh:Math.round((def.shield||0)*m), sh=u.sh!=null?u.sh:maxSh;
   const r=Math.max(0,Math.min(1,hp/maxHp)), col=hpBarColor(r);
   return '<div class="uHpItem" data-uid="'+uid+'" title="이 유닛만 선택" onclick="event.stopPropagation();selectOne('+uid+')">'
+    +'<span class="uhNum">'+Math.round(hp)+'</span>'
     +(maxSh>0?barHTML('uHpBar shb',Math.max(0,Math.min(1,sh/maxSh))*100):'')
-    +barHTML('uHpBar hpb',r*100,col)+'</div>';
+    +barHTML('uHpBar hpb',r*100,col)
+    +'<span class="uhKill">⚔'+(u.kills||0)+'</span></div>';
 }
 // 다중 선택: 단일 종류=칩+유닛별 HP+전체선택 버튼 / 여러 종류=4칸 그리드
 function selectAllOfTier(tier){ const ids=G.units.filter(u=>!u.fixed&&!u.atBoss&&u.gtier===tier).map(u=>u.uid);
@@ -4995,7 +5000,8 @@ function updateSelHp(){ const el=document.getElementById('selSingle'); if(!el||e
     const def=U[u.id], m=u.hero?HERO_STAT_MUL:1, maxHp=u.maxHp||Math.round(def.hp*m), hp=u.hp!=null?u.hp:maxHp;
     const r=Math.max(0,Math.min(1,hp/maxHp)), col=hpBarColor(r);
     const hi=it.querySelector('.hpb i'); if(hi){ hi.style.width=(r*100)+'%'; hi.style.background=col; }
-    const num=it.querySelector('.uHpNum'); if(num) num.textContent=Math.round(hp);
+    const num=it.querySelector('.uhNum'); if(num) num.textContent=Math.round(hp);
+    const kl=it.querySelector('.uhKill'); if(kl) kl.textContent='⚔'+(u.kills||0);
     const maxSh=u.maxSh!=null?u.maxSh:Math.round((def.shield||0)*m), sh=u.sh!=null?u.sh:maxSh, si=it.querySelector('.shb i');
     if(si&&maxSh>0) si.style.width=(Math.max(0,Math.min(1,sh/maxSh))*100)+'%';
   });
