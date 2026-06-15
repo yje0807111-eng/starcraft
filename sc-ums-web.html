@@ -2709,7 +2709,6 @@ const META_BUILDS = {   // 탭(group) → 섹션(sect) 2단 분류. 같은 sect�
   gacha_luck:    { name:'고등급 확률', desc:'레전드+ 뽑기 확률 증가',    start:5, rate:1.9, max:10, group:'prod', sect:'뽑기' },
   guaranteed:    { name:'확정 뽑기권', desc:'유닛 확정 뽑기권 지급',     start:4, rate:1.8, max:8,  group:'prod', sect:'뽑기' },
   gacha_double:  { name:'추가 생산',   desc:'유닛 뽑기 시 6%/Lv 확률로 1기 더', start:6, rate:1.9, max:8, group:'prod', sect:'뽑기' },
-  unit_cap:      { name:'유닛 수 증가', desc:'최대 유닛 수 +1',          start:6, rate:1.9, max:10, group:'prod', sect:'유닛' },
   start_unit:    { name:'시작 유닛',   desc:'시작 시 기본 유닛 지급',    start:3, rate:1.8, max:8,  group:'prod', sect:'유닛' },
   // ── 전투(아군 강화 · 적 약화) ──
   unit_atk_up:   { name:'공격력 증가',  desc:'유닛 공격력 +%',           start:3, rate:1.8, max:12, group:'combat', sect:'아군 강화' },
@@ -2735,7 +2734,6 @@ const META_BUILDS = {   // 탭(group) → 섹션(sect) 2단 분류. 같은 sect�
   end_tower:  { name:'요새화',     desc:'타워 공격력 +35%/Lv',          start:100, rate:1.6, max:6, group:'end', sect:'종결 강화' },
   end_enemy:  { name:'적 대붕괴',  desc:'내 트랙 적 체력 -6%/Lv',        start:120, rate:1.6, max:6, group:'end', sect:'종결 강화' },
   end_econ:   { name:'무한 동력',  desc:'크레딧·에너지 획득 +12%/Lv',    start:100, rate:1.6, max:6, group:'end', sect:'종결 강화' },
-  end_cap:    { name:'군단 확장',  desc:'최대 유닛 +2/Lv',              start:150, rate:1.7, max:5, group:'end', sect:'종결 강화' },
 };
 // 다음 레벨 비용(최대치면 null). 현재 레벨 기준.
 function metaNextCost(buildId, level){ const b=META_BUILDS[buildId]; if(!b) return null;
@@ -2768,7 +2766,7 @@ function metaBonus(){ const L=id=>buildLevel(id), T=id=>teamLevel(id);
     enemyHpMul:  Math.max(0.3, 1 - L('enemy_hp_down')*0.03 - T('team_enemy_hp')*0.025 - L('end_enemy')*0.06),
     enemyArmor:  L('enemy_def_down')*1,
     enemySlowMul:Math.max(0.4, 1 - L('enemy_slow')*0.03 - T('team_enemy_slow')*0.025),
-    unitCap:     L('unit_cap')*1 + L('end_cap')*2,
+    unitCap:     0,   // 최대 유닛은 100 고정(증가 업그레이드 제거)
     startCredit: L('start_credit')*20 + T('team_credit')*25,
     startEnergy: L('start_energy')*10,
     startUnits:  L('start_unit'),
@@ -2811,7 +2809,7 @@ let _ptGroup='eco';
 const _PT_TABS=[['eco','경제'],['prod','생산'],['combat','전투'],['team','전체'],['coop','보스'],['end','엔드']];
 const _PT_NOTE={
   eco:'크레딧·에너지 수급 강화 · 즉시 적용 (시작 자원은 다음 판)',
-  prod:'뽑기 확률·추가 생산·유닛 수 · 즉시 적용 (시작 유닛은 다음 판)',
+  prod:'뽑기 확률·추가 생산 등 생산 강화 · 즉시 적용 (시작 유닛은 다음 판)',
   combat:'아군 화력·공격속도 강화와 적 약화 · 즉시 적용 (시작 포탑은 다음 판)',
   team:'전체 강화 · 협동에서 파티 중 최고 레벨이 모두에게 적용',
   coop:'공용 보스 공략 + 개인 보스 보상·쿨감 강화',
