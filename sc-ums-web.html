@@ -1966,13 +1966,6 @@
           <div class="selSingle" id="selSingle" style="display:none"></div>
         </div>
       </div>
-      <div id="cmdRow">
-        <button class="cmdBtn" id="cmdHold" onclick="setUnitCmd('hold')" title="제자리 고정"><span class="cbi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 2.6v5.2c0 4.4-3 7.8-7 9.5-4-1.7-7-5.1-7-9.5V5.6z"/></svg></span>홀드</button>
-        <button class="cmdBtn" id="cmdAtk" onclick="setUnitCmd('attack')" title="적을 따라가며 공격"><span class="cbi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="6.5"/><path d="M12 2.4v3.2M12 18.4v3.2M2.4 12h3.2M18.4 12h3.2"/></svg></span>공격이동</button>
-        <button class="cmdBtn" id="cmdFocus" onclick="armFocus()" title="지정한 적을 죽을 때까지 집중 공격"><span class="cbi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="6.5"/><path d="M12 2.4v3.2M12 18.4v3.2M2.4 12h3.2M18.4 12h3.2"/><circle cx="12" cy="12" r="2.1" fill="currentColor" stroke="none"/></svg></span>지정공격</button>
-        <button class="cmdBtn" id="cmdPat" onclick="armPatrol()" title="두 지점 왕복"><span class="cbi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5A6 6 0 0 1 15 7l2 2M17 9V5.2M17 9h-3.8"/><path d="M20 14.5A6 6 0 0 1 9 17l-2-2M7 15v3.8M7 15h3.8"/></svg></span>반복이동</button>
-        <div class="selAll" id="scAllBtn" onclick="selectAllOfType()" style="display:none">전체 선택</div>
-      </div>
     </div>
 
     <div class="bp" id="bpUnit">
@@ -4877,7 +4870,6 @@ function refreshSelCard(){
   document.getElementById('selMulti').style.display = multi?'flex':'none';
   if(multi){ buildSelChips(); renderUnits(); return; }
   if(en){ // 적 유닛 상태창(아군과 동일 레이아웃)
-    document.getElementById('scAllBtn').style.display='none';   // 적은 전체선택 없음
     const ejob=en.boss?'보스':(en.special?'스페셜':'공중');
     const _epk=ENEMY_MODEL[en.name], _eimg=_epk&&PORTRAIT_IMG[_epk];   // 적 이름→모델키→포트레이트
     const _eport=_eimg?('<img class="portImg" src="'+_eimg+'" alt="" draggable="false">')
@@ -4892,7 +4884,6 @@ function refreshSelCard(){
     fitStatNumbers(); renderUnits(); return;
   }
   if(G.sel.length===1){ const u=G.units.find(x=>x.uid===G.sel[0]); const def=U[u.id];
-    document.getElementById('scAllBtn').style.display=isBuilding(u.id)?'none':'block';   // 건물 아니면 전체선택 버튼
     const job=UNIT_CLS[u.id]||'';
     portEl.innerHTML=unitPortraitHTML(u.gmodel||u.id)+(job?'<div class="portJob">'+job+'</div>':'');  // 초상화(가챠 전용 우선) + 직업 배지
     document.getElementById('uName').textContent=gNameStar(u,def)+(u.hero?' [영웅]':'');
