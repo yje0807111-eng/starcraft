@@ -249,12 +249,27 @@
     color:var(--tc,#fff);border-color:var(--tc,#fff);background:transparent;white-space:nowrap;transition:background .12s}
   .selTierChip:active{background:var(--tc,#fff)22;transform:translateY(1px)}
   .selTierChip .stc{opacity:.7;font-weight:700;margin-left:2px}
-  .hsTabs{gap:16px;padding:0 1px 6px;margin-bottom:0;border-bottom:1px solid var(--glass-edge)}
-  .hsTab{flex:0 0 auto;text-align:center;padding:0 1px 7px;margin-bottom:-7px;font-family:inherit;font-size:var(--fs-lg);font-weight:800;cursor:pointer;
-    color:var(--txt-mute);background:none;border:none;border-bottom:2px solid transparent;transition:color .12s,border-color .12s}
-  .hsTab.on{color:var(--gold);border-bottom-color:var(--gold)}
-  .hsTabDot{display:inline-block;min-width:15px;height:15px;line-height:15px;margin-left:4px;padding:0 3px;border-radius:8px;
-    background:#46f06a;color:#06140a;font-size:9px;font-weight:800;vertical-align:1px;box-shadow:0 0 6px -1px rgba(70,240,106,.8)}
+  /* 홈 하단 탭 = 스타크래프트 콘솔식 분할 버튼(모바일 탭 영역 확실히 분리) */
+  .hsTabs{gap:5px;padding:2px 0 8px;margin-bottom:0;border-bottom:1px solid var(--glass-edge)}
+  .hsTab{flex:1 1 0;min-width:0;min-height:36px;display:flex;align-items:center;justify-content:center;gap:4px;
+    font-family:inherit;font-size:var(--fs-md);font-weight:800;letter-spacing:.3px;color:var(--txt-dim);cursor:pointer;
+    background:linear-gradient(160deg,rgba(42,48,60,.55),rgba(12,14,20,.72));border:1px solid var(--metal-edge);
+    clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);   /* 모서리 사선 컷(SC 콘솔) */
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05);position:relative;transition:all .14s;white-space:nowrap;overflow:hidden}
+  .hsTab .htIco{font-size:11px;opacity:.65;flex:0 0 auto}
+  .hsTab::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent)}
+  .hsTab:hover{color:var(--txt);border-color:rgba(255,120,120,.4)}
+  .hsTab.on{color:#fff;background:linear-gradient(160deg,rgba(187,54,54,.5),rgba(58,16,16,.62));border-color:#ff5b5b;
+    box-shadow:0 0 13px -3px rgba(255,80,80,.55),inset 0 1px 0 rgba(255,255,255,.12)}
+  .hsTab.on .htIco{opacity:1;color:#ffb3b3}
+  /* 조합 탭: 조합 가능할 때만 표시 + 골드 펄스로 주목 */
+  .hsTab.comb{color:var(--gold-lt);border-color:rgba(255,210,74,.5);animation:combPulse 1.7s ease-in-out infinite}
+  .hsTab.comb .htIco{color:var(--gold-lt);opacity:1}
+  .hsTab.comb.on{color:#fff;background:linear-gradient(160deg,rgba(255,196,56,.34),rgba(78,54,8,.6));border-color:var(--gold);box-shadow:0 0 14px -3px rgba(255,210,74,.6),inset 0 1px 0 rgba(255,255,255,.14);animation:none}
+  @keyframes combPulse{0%,100%{box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}50%{box-shadow:0 0 13px -2px rgba(255,210,74,.5),inset 0 1px 0 rgba(255,255,255,.08)}}
+  .hsTab.hide{display:none}
+  .hsTabDot{min-width:15px;height:15px;line-height:15px;margin-left:1px;padding:0 3px;border-radius:8px;
+    background:var(--gold);color:#1a1206;font-size:9px;font-weight:900;text-align:center;box-shadow:0 0 6px rgba(255,210,74,.7)}
   .hsTabDot.hide{display:none}
   .hsResult{font-size:var(--fs-md)!important;letter-spacing:0!important}
   #mergeFab{display:none!important}
@@ -1952,9 +1967,9 @@
         <div class="homeCols">
           <div class="homeSell">
             <div class="hbTop hsTabs">
-              <button class="hsTab on" id="hsTabSel" onclick="setHomeMode('select')">유닛 지정</button>
-              <button class="hsTab" id="hsTabComb" onclick="setHomeMode('combine')">유닛 조합<span class="hsTabDot hide" id="combDot"></span></button>
-              <button class="hsTab" id="hsTabSell" onclick="setHomeMode('sell')">유닛 판매</button>
+              <button class="hsTab on" id="hsTabSel" onclick="setHomeMode('select')"><span class="htIco">◈</span>유닛 지정</button>
+              <button class="hsTab comb hide" id="hsTabComb" onclick="setHomeMode('combine')"><span class="htIco">⚛</span>유닛 조합<span class="hsTabDot hide" id="combDot"></span></button>
+              <button class="hsTab" id="hsTabSell" onclick="setHomeMode('sell')"><span class="htIco">▾</span>유닛 판매</button>
             </div>
             <div class="hsTiers" id="hsTiers"></div>
             <div class="hsGrid" id="hsGrid"></div>
@@ -2245,14 +2260,14 @@ const CITIZEN_HOME={x:.5,y:.5}; // 시민 기본 위치(보드 중앙)
 const DRAW_ZONE={x:.5,y:.30};    // 하위호환 유지
 // 유닛뽑기 비콘 — 좌측 줄(유닛 뽑기) / 우측 줄(에너지 뽑기). 시민이 올라서면 해당 뽑기 실행.
 const DRAW_BEACONS=[
-  // 좌측 줄(4줄): 가드 타워 / 스파이어 / 유닛 1회 / 에너지 1회
-  {id:'buyTurret', x:.20, y:.16, name:'가드 타워', core:'🗼'},
-  {id:'buyPhoton', x:.20, y:.39, name:'스파이어', core:'◉'},
-  {id:'draw',      x:.20, y:.62, name:'유닛 1회', core:'?'},
-  {id:'energy',    x:.20, y:.85, name:'에너지 1회', core:'⚡'},
-  // 우측 줄(2줄): 뽑기 확률↑ / 크레딧 획득↑ (내실 — 우상단 확률표 아래로 배치)
-  {id:'gachaUp',  x:.80, y:.52, name:'뽑기 확률↑', core:'%'},
-  {id:'creditUp', x:.80, y:.75, name:'크레딧 획득↑', core:'C'},
+  // 좌측 줄(4줄): 가드 타워 / 스파이어 / 유닛 1회 / 에너지 1회 (간격 좁혀 하단 채팅 안 걸치게)
+  {id:'buyTurret', x:.20, y:.15, name:'가드 타워', core:'🗼'},
+  {id:'buyPhoton', x:.20, y:.34, name:'스파이어', core:'◉'},
+  {id:'draw',      x:.20, y:.53, name:'유닛 1회', core:'?'},
+  {id:'energy',    x:.20, y:.72, name:'에너지 1회', core:'⚡'},
+  // 우측 줄(2줄): 뽑기 확률↑ / 크레딧 획득↑ (확률표 아래·미니맵 위로 배치)
+  {id:'gachaUp',  x:.80, y:.46, name:'뽑기 확률↑', core:'%'},
+  {id:'creditUp', x:.80, y:.65, name:'크레딧 획득↑', core:'C'},
 ];
 // 비콘별 색 테마(인라인 CSS 변수로 기존 .drawZone 스타일 재사용). 유닛 1·10회=기본 빨강.
 const BEACON_THEME={   // 디자인 토큰과 통일: 유닛=네온 레드(기본), 고급=골드(재화/희귀), 에너지=HUD 시안(E 재화색)
@@ -2821,8 +2836,10 @@ function setHomeMode(m){ if(m==='boss') m='select'; _homeMode=m; _sellSig=''; _c
   for(const k in ids){ const el=document.getElementById(ids[k]); if(el) el.classList.toggle('on', m===k); }
   renderHomeLeft(); }
 function renderHomeLeft(){ if(_homeMode==='select') renderSelectPanel(); else if(_homeMode==='combine') renderCombinePanel(); else renderSellPanel(); updateCombDot(); }
-function updateCombDot(){ const dot=document.getElementById('combDot'); if(!dot) return;
-  const n=Object.keys(ownedCombineGroups()).length; dot.textContent=n||''; dot.classList.toggle('hide', !n); }
+function updateCombDot(){ const n=Object.keys(ownedCombineGroups()).length;
+  const tab=document.getElementById('hsTabComb'); if(tab) tab.classList.toggle('hide', !n);   // 조합 탭은 조합 가능할 때만 표시
+  const dot=document.getElementById('combDot'); if(dot){ dot.textContent=n||''; dot.classList.toggle('hide', !n); }
+  if(!n && _homeMode==='combine') setHomeMode('select'); }   // 조합 불가가 되면 지정으로 복귀
 function setCombTier(t){ _combTier=t; _combSig=''; renderCombinePanel(); }
 function combineOneOfType(gid){
   const list=G.units.filter(u=>u.gid===gid && !u.fixed && !u.atBoss); if(list.length<3) return;
