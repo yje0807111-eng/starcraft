@@ -4855,9 +4855,6 @@ function refreshSelCard(){
   updateDeselTop(); // 우상단 해제버튼(탭별)
   updateCmdRow();   // 명령 버튼 행(홀드/공격이동/지정공격/반복이동)
   updateSkillFab(); // 메인 화면 스킬 버튼
-  if(G.tab==='Main' && _homeMode==='select' && !en && G.sel.length>=2){   // 지정 모드 다중선택: 홈 지정 패널 유지 + 명령행(cmdRow)으로 이동. 단일선택은 프로필 표시
-    document.getElementById('defaultCmd').classList.remove('hide');
-    document.getElementById('unitCmd').classList.remove('on'); renderHomeLeft(); renderUnits(); return; }
   if(G.sel.length===0 && !en){ document.getElementById('defaultCmd').classList.remove('hide');
     document.getElementById('unitCmd').classList.remove('on'); renderHomeLeft(); renderUnits(); return; }
   document.getElementById('defaultCmd').classList.add('hide');
