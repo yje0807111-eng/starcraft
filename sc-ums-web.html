@@ -266,7 +266,15 @@
   .hbTitle svg{width:13px;height:13px;color:var(--neon);flex:0 0 auto;filter:drop-shadow(0 0 4px var(--neon-glow))}
   .hbCount{margin-left:auto;font-family:'Rajdhani',sans-serif;font-size:var(--fs-md);font-weight:700;color:var(--txt-mute);white-space:nowrap}
   .hbCount b{font-size:14px;font-weight:800;color:#ff8a9a}.hbCount i{font-style:normal;opacity:.7}
-  .bdRow{display:flex;gap:6px;margin-top:2px}
+  #bossPopup{position:absolute;top:98px;right:9px;z-index:25;width:150px;display:flex;flex-direction:column;gap:6px;padding:9px;
+    border-radius:10px;background:linear-gradient(180deg,rgba(28,16,18,.97),rgba(16,8,10,.97));border:1px solid var(--neon-soft);
+    box-shadow:0 8px 22px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.06);animation:bpop .12s ease-out}
+  #bossPopup.hide{display:none}
+  @keyframes bpop{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+  #bossPopup .bpHead{display:flex;align-items:center;justify-content:space-between;font-size:var(--fs-sm);font-weight:800;color:#e8dede;padding:0 1px 5px;border-bottom:1px solid var(--glass-edge)}
+  #bossPopup .bpCnt{font-family:'Rajdhani',sans-serif;font-size:var(--fs-md);font-weight:700;color:var(--txt-mute)}
+  #bossPopup .bpCnt b{font-size:14px;font-weight:800;color:#ff8a9a}
+  #bossPopup .hbDeploy,#bossPopup .hbRecall,#bossPopup .hbOpen{width:100%;padding:9px 6px}
   .hbDeploy,.hbRecall,.hbOpen{white-space:nowrap;padding:11px 6px}
   .hbDeploy{flex:1.6}.hbRecall{flex:1}.hbOpen{flex:1.6;width:auto}
   .hbDeploy{flex:2;min-width:0;padding:11px 6px;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-lg);font-weight:800;cursor:pointer;
@@ -1684,11 +1692,18 @@
     </div>
     <div id="zoneLabel">📍 내 디펜스 구역</div>
     <!-- 상시 공용 보스(협동) HP 바 — 메인 전투 화면 상단 -->
-    <div id="coopBossBar" class="hide" onclick="toggleBossArena()" title="공용 보스장 열기">
+    <div id="coopBossBar" class="hide" onclick="toggleBossPopup(event)" title="보스 메뉴">
       <div class="cbMid">
         <div class="cbTop"><span class="cbName" id="cbName"></span><span class="cbContrib" id="cbContrib"></span></div>
         <div class="cbBarOuter"><div class="cbBarFill" id="cbFill"></div><span class="cbHpTxt" id="cbHp"></span></div>
       </div>
+    </div>
+    <!-- 보스 액션 팝업: 상단 보스바를 누르면 표시(파견/회수/보스장) -->
+    <div id="bossPopup" class="hide">
+      <div class="bpHead"><span>공용 보스</span><span class="bpCnt"><b id="bdSent">0</b>/<span id="bdTotal">2</span></span></div>
+      <button class="hbDeploy" id="bossPickBtn" onclick="armBossPick();closeBossPopup()"><span class="bdLabel">파견</span></button>
+      <button class="hbRecall" onclick="recallFromBoss('all')">회수</button>
+      <button class="hbOpen" id="bossViewBtn" onclick="openBossFromPopup()">보스장</button>
     </div>
     <div id="miniWrap"><div id="miniBox"><canvas id="miniMap"></canvas></div></div>
     <!-- 조합 버튼: 메인 탭에서 미니맵 자리(우하단 코너)에 표시 -->
@@ -1926,17 +1941,9 @@
               <button class="hsTab on" id="hsTabSel" onclick="setHomeMode('select')">유닛 지정</button>
               <button class="hsTab" id="hsTabComb" onclick="setHomeMode('combine')">유닛 조합<span class="hsTabDot hide" id="combDot"></span></button>
               <button class="hsTab" id="hsTabSell" onclick="setHomeMode('sell')">유닛 판매</button>
-              <button class="hsTab" id="hsTabBoss" onclick="setHomeMode('boss')">보스</button>
             </div>
             <div class="hsTiers" id="hsTiers"></div>
             <div class="hsGrid" id="hsGrid"></div>
-            <div id="bossContent" style="display:none">
-              <div class="bdRow">
-                <button class="hbDeploy" id="bossPickBtn" onclick="armBossPick()"><span class="bdLabel">파견</span> <span class="bdCount"><b id="bdSent">0</b>/<span id="bdTotal">2</span></span></button>
-                <button class="hbRecall" onclick="recallFromBoss('all')">회수</button>
-                <button class="hbOpen" id="bossViewBtn" onclick="toggleBossArena()">보스장</button>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -2795,15 +2802,11 @@ function combineResultFor(gid,gtier){ const nt=SIMPLE_COMBINE_TIERS[gtier]; if(n
 function ownedCombineGroups(){ const grp={};   // gid별 묶음(고정·파견 제외) — 3개 이상 & 조합 결과 있는 것만
   for(const u of G.units){ if(u.fixed||u.atBoss||!u.gid) continue; (grp[u.gid]=grp[u.gid]||[]).push(u); }
   const out={}; for(const gid in grp){ if(grp[gid].length>=3 && combineResultFor(gid, grp[gid][0].gtier)) out[gid]=grp[gid]; } return out; }
-function setHomeMode(m){ _homeMode=m; _sellSig=''; _combSig=''; _selSig='';
-  const ids={select:'hsTabSel',combine:'hsTabComb',sell:'hsTabSell',boss:'hsTabBoss'};
+function setHomeMode(m){ if(m==='boss') m='select'; _homeMode=m; _sellSig=''; _combSig=''; _selSig='';
+  const ids={select:'hsTabSel',combine:'hsTabComb',sell:'hsTabSell'};
   for(const k in ids){ const el=document.getElementById(ids[k]); if(el) el.classList.toggle('on', m===k); }
-  const boss=m==='boss';
-  const tEl=document.getElementById('hsTiers'), gEl=document.getElementById('hsGrid'), bEl=document.getElementById('bossContent');
-  if(tEl) tEl.style.display=boss?'none':''; if(gEl) gEl.style.display=boss?'none':''; if(bEl) bEl.style.display=boss?'block':'none';
   renderHomeLeft(); }
-function renderHomeLeft(){ if(_homeMode==='boss'){ if(typeof renderBossPanel==='function')renderBossPanel(); if(typeof updateBossPickBtn==='function')updateBossPickBtn(); if(typeof updateBossViewBtn==='function')updateBossViewBtn(); }
-  else if(_homeMode==='select') renderSelectPanel(); else if(_homeMode==='combine') renderCombinePanel(); else renderSellPanel(); updateCombDot(); }
+function renderHomeLeft(){ if(_homeMode==='select') renderSelectPanel(); else if(_homeMode==='combine') renderCombinePanel(); else renderSellPanel(); updateCombDot(); }
 function updateCombDot(){ const dot=document.getElementById('combDot'); if(!dot) return;
   const n=Object.keys(ownedCombineGroups()).length; dot.textContent=n||''; dot.classList.toggle('hide', !n); }
 function setCombTier(t){ _combTier=t; _combSig=''; renderCombinePanel(); }
@@ -2950,6 +2953,14 @@ function drawBoss(dt){ const {ctx,W,H}=setup('cvBoss'); BAW=W;BAH=H; dt=dt||0;
   ctx.textAlign='left';
 }
 // ── 공용 보스 토벌장 팝업(HP바 클릭) — 맵 고정(드래그 없음) ──
+function toggleBossPopup(e){ if(e&&e.stopPropagation)e.stopPropagation();
+  if(G.bossOpen){ if(typeof closeBossArena==='function')closeBossArena(); return; }   // 아레나 열려있으면 닫기
+  const p=document.getElementById('bossPopup'); if(!p) return;
+  const show=p.classList.contains('hide'); p.classList.toggle('hide', !show);
+  if(show){ if(typeof renderBossPanel==='function')renderBossPanel(); if(typeof updateBossPickBtn==='function')updateBossPickBtn(); if(typeof updateBossViewBtn==='function')updateBossViewBtn(); } }
+function closeBossPopup(){ const p=document.getElementById('bossPopup'); if(p) p.classList.add('hide'); }
+document.addEventListener('pointerdown', function(ev){ const p=document.getElementById('bossPopup'); if(!p||p.classList.contains('hide'))return; if(ev.target.closest&&(ev.target.closest('#bossPopup')||ev.target.closest('#coopBossBar')))return; closeBossPopup(); }, true);
+function openBossFromPopup(){ closeBossPopup(); if(typeof toggleBossArena==='function')toggleBossArena(); }
 function updateBossViewBtn(){ const b=document.getElementById('bossViewBtn'); if(b){ b.textContent=G.bossOpen?'메인':'보스장'; b.classList.toggle('viewing', !!G.bossOpen); } }
 // ── 토벌장 전용 이펙트 저장소 — 메인 트랙 이펙트와 완전 분리(두 화면이 서로 영향 없음) ──
 const _FX_KEYS=['shots','impacts','muzzles','sparks','beams','debris'];
