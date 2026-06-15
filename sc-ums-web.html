@@ -90,6 +90,12 @@
   #hudL .stage b{font-size:14px;color:var(--hud);letter-spacing:0;text-shadow:0 0 6px var(--hud-glow),0 2px 3px #000}
   #hudL .stage #hRoundMax{font-size:var(--fs-md);color:rgba(214,226,240,.5);letter-spacing:0}
   #hudL .kill{font-size:var(--fs-lg);color:#fff;font-weight:800;letter-spacing:.5px}#hudL .kill b{color:var(--hud)}  /* Kill 텍스트=흰 / 숫자=청록 */
+  /* 받을 코인 미리보기 칩 — 지금 끝내면 받는 코인(골드) */
+  #hudL .runCoin{display:inline-flex;align-items:center;gap:3px;align-self:flex-start;font-size:var(--fs-md);font-weight:800;
+    color:#ffd24a;letter-spacing:.3px;padding:1px 7px;border-radius:999px;
+    background:linear-gradient(160deg,rgba(255,210,74,.16),rgba(40,28,6,.5));border:1px solid rgba(255,210,74,.4);
+    box-shadow:0 0 7px rgba(255,210,74,.22),inset 0 0 5px rgba(255,210,74,.1);text-shadow:0 1px 2px #000}
+  #hudL .runCoin b{color:#fff;text-shadow:0 0 5px rgba(255,210,74,.5),0 1px 2px #000;margin-left:1px}
   /* 중앙 전자시계(LCD 패널 + 7-seg 고스트) — 자원 아래로 내려 겹침 방지 */
   #hudC{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 46px);transform:translateX(-50%);pointer-events:none;
     display:flex;align-items:center;justify-content:center;min-width:0;height:23px;padding:0 9px;   /* 정중앙 — 시간 크기에 맞춰 박스 축소 */
@@ -1833,6 +1839,7 @@
       <div id="hudL">
         <span class="stage">ROUND <b id="hRound">1</b><span id="hRoundMax">/18</span></span>
         <span class="kill"><b id="hKill">0</b> Kill</span>
+        <span class="runCoin" id="hRunCoin" title="지금 종료하면 받는 코인(도달 라운드 기준)">◎<b id="hRunCoinV">0</b></span>
         <span id="specLabel"></span>
       </div>
       <div id="hudC"><span class="time" id="hTime">00:00</span></div>
@@ -1896,19 +1903,7 @@
     <div id="pbossPopup" class="hide"></div>
 
     <div id="toast"></div>
-    <div id="ov" class="spaceBg hide">
-      <div class="ovCard">
-        <div class="ovEmblem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="2.6"/><circle cx="3.5" cy="3.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="20.5" cy="3.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="3.5" cy="20.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="20.5" cy="20.5" r="1.3" fill="currentColor" stroke="none"/><path d="M12 7.7 13.1 10.3 15.9 10.6 13.5 12.4 14.3 15.2 12 13.6 9.7 15.2 10.5 12.4 8.1 10.6 10.9 10.3Z" fill="currentColor" stroke="none"/></svg></div>
-        <h1 id="ovTitle">네모네모 디펜스</h1>
-        <div class="ovBar"></div>
-        <p id="ovDesc"></p>
-        <div class="ovStats" id="ovStats" style="display:none"></div>
-        <div class="ovBtns">
-          <button id="ovBtn">멀티플레이</button>
-          <button id="ovBtn2" class="ghost" style="display:none">로비로 돌아가기</button>
-        </div>
-      </div>
-    </div>
+    <!-- #ov(승/패 결과)는 #phone 직속으로 이동 — 게임 전체(하단 콘솔 포함)를 덮기 위함 -->
     <!-- 멀티플레이 대기실(로비) -->
     <div id="lobby" class="hide spaceBg">
       <div class="lbCard">
@@ -2173,6 +2168,20 @@
 
   </div>
 
+  <!-- 승/패 결과 오버레이: #phone 직속 → 게임 화면 + 하단 콘솔 전체를 덮는 모달 -->
+  <div id="ov" class="spaceBg hide">
+    <div class="ovCard">
+      <div class="ovEmblem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="2.6"/><circle cx="3.5" cy="3.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="20.5" cy="3.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="3.5" cy="20.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="20.5" cy="20.5" r="1.3" fill="currentColor" stroke="none"/><path d="M12 7.7 13.1 10.3 15.9 10.6 13.5 12.4 14.3 15.2 12 13.6 9.7 15.2 10.5 12.4 8.1 10.6 10.9 10.3Z" fill="currentColor" stroke="none"/></svg></div>
+      <h1 id="ovTitle">네모네모 디펜스</h1>
+      <div class="ovBar"></div>
+      <p id="ovDesc"></p>
+      <div class="ovStats" id="ovStats" style="display:none"></div>
+      <div class="ovBtns">
+        <button id="ovBtn">멀티플레이</button>
+        <button id="ovBtn2" class="ghost" style="display:none">로비로 돌아가기</button>
+      </div>
+    </div>
+  </div>
   <!-- 포인트 연구소 팝업: #phone 직속(게임 화면+하단 콘솔 전체를 덮음) · 강화 즉시 적용 -->
   <div id="pointPanel" class="hide">
     <div class="cpCard ppCard">
@@ -2817,6 +2826,10 @@ function bankRunPoints(){ if(G._pointsBanked) return G._bankedAmt||0; G._pointsB
   const gained=Math.round(runRoundPoints()*cm)+bonus;
   if(gained>0){ PLAYER_META.coins=(PLAYER_META.coins||0)+gained; saveMeta(); }
   G._bankedAmt=gained; return gained; }
+// 미리보기: 지금 판을 끝낼 경우 받게 될 코인(은행 처리 없이 계산만)
+function previewRunCoins(){ const cm=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).coinMult;
+  const bonus=(typeof coopActive==='function'&&coopActive()&&typeof isTopCoopContributor==='function'&&isTopCoopContributor())?1:0;
+  return Math.round(runRoundPoints()*cm)+bonus; }
 // 메타 빌드 레벨업(코인 차감)
 function buildUpgrade(id){ const b=META_BUILDS[id]; if(!b) return false;
   if(b.deferred){ toast('준비 중인 빌드입니다'); return false; }
@@ -5732,7 +5745,13 @@ function updatePauseBtn(){
   if(btn){ btn.classList.toggle('paused',G.paused); btn.classList.toggle('disabled', !G.paused && remain<=0); }
   if(lbl) lbl.textContent = G.paused ? '재개' : ('일시정지 ('+remain+'회 남음)');
   if(ico) ico.textContent = G.paused?'▶':'⏸'; }
-function exitGame(){ const p=document.getElementById('exitConfirm'); if(p){ p.classList.remove('hide'); if(typeof fxPop==='function') fxPop(p.querySelector('.ecCard')); } }
+function exitGame(){
+  if(typeof closeSettings==='function') closeSettings();   // 설정 팝업 닫기(결과창이 위에 뜨도록)
+  if(G && G.phase==='playing'){   // 게임 진행 중 → 결과창(현재까지의 합계) 표시
+    G.phase='quit'; if(typeof showOverlay==='function') showOverlay(); return;
+  }
+  const p=document.getElementById('exitConfirm'); if(p){ p.classList.remove('hide'); if(typeof fxPop==='function') fxPop(p.querySelector('.ecCard')); }
+}
 function closeExitConfirm(){ popHide('exitConfirm'); }
 function setExpand(id){ const b=document.getElementById('body-'+id), a=document.getElementById('arr-'+id);
   if(!b) return; const willOpen=getComputedStyle(b).display==='none';
@@ -5842,7 +5861,7 @@ function showOverlay(){ const ov=document.getElementById('ov'),tt=document.getEl
   const stats=document.getElementById('ovStats'), bt2=document.getElementById('ovBtn2');
   if(G.bossOpen && typeof closeBossArena==='function') closeBossArena();   // 게임 종료 → 보스 팝업 닫기
   if(typeof updateCoopBossBar==='function') updateCoopBossBar();   // 게임 종료 → 보스 바 숨김
-  if((G.phase==='won'||G.phase==='lost') && typeof bgmStop==='function') bgmStop();   // 게임 종료 → 인게임 BGM 정지
+  if((G.phase==='won'||G.phase==='lost'||G.phase==='quit') && typeof bgmStop==='function') bgmStop();   // 게임 종료 → 인게임 BGM 정지
   ov.classList.remove('hide');
   if(G.phase==='ready'){   // 시작 안내 = 메뉴 화면(자체 우주 배경)
     ov.classList.add('spaceBg'); setInGame(false);
@@ -5850,16 +5869,16 @@ function showOverlay(){ const ov=document.getElementById('ov'),tt=document.getEl
     dd.style.display=''; dd.textContent=MAP.desc+'.\n유닛 구매 → 배치 → 합성으로 영웅을 키우고\n'+mapCfg('rounds',TOTAL_ROUNDS)+'라운드를 클리어!';
     stats.style.display='none'; stats.innerHTML='';
     bt.textContent='멀티플레이'; bt2.style.display='none';
-  } else {   // 승/패 = 게임 화면 위 모달(배경 게임 유지)
+  } else {   // 승/패/종료 = 게임 화면 위 모달(배경 게임 유지)
     ov.classList.remove('spaceBg');   // 자체 배경 제거 → 뒤로 게임이 비침
-    const won=(G.phase==='won'), gp=bankRunPoints(), multi=(typeof coopActive==='function'&&coopActive());
-    tt.textContent=won?'CLEAR! 🏆':'DEFEAT'; tt.style.color=won?'#ffd24a':'#ff5c5c';
-    dd.style.display=''; dd.textContent=won?'모든 라운드를 막아냈습니다!':'적이 누적되어 방어선이 무너졌습니다.';
+    const won=(G.phase==='won'), quit=(G.phase==='quit'), gp=bankRunPoints(), multi=(typeof coopActive==='function'&&coopActive());
+    tt.textContent=won?'CLEAR! 🏆':(quit?'게임 종료':'DEFEAT'); tt.style.color=won?'#ffd24a':(quit?'#cfd6e2':'#ff5c5c');
+    dd.style.display=''; dd.textContent=won?'모든 라운드를 막아냈습니다!':(quit?'게임을 종료했습니다. 진행한 만큼 코인을 받았습니다.':'적이 누적되어 방어선이 무너졌습니다.');
     stats.style.display=''; stats.innerHTML=
       ovStatRow('플레이타임', fmtTime(G.timeSec))
      +ovStatRow('도달 라운드', G.round+' / '+mapCfg('rounds',TOTAL_ROUNDS))
      +ovStatRow('받은 코인', '◎ '+gp+(G._bankBonus?' <span class="osB">(기여 1위 +1)</span>':''));
-    bt.textContent=multi?'관전하기':'다시하기';
+    bt.textContent=(multi&&!quit)?'관전하기':'다시하기';   // 자발적 종료는 관전 아님 → 다시하기
     bt2.style.display=''; bt2.textContent='로비로 돌아가기';
   }
 }
@@ -5870,8 +5889,8 @@ function overlaySpectate(){ document.getElementById('ov').classList.add('hide');
   const pt=document.querySelector('.tab[data-tab="Players"]'); if(pt) pt.click(); }
 document.getElementById('ovBtn').onclick=()=>{
   if(G.phase==='ready'){ openRooms(); return; }                 // 멀티플레이 → 방 찾기
-  if(typeof coopActive==='function' && coopActive()){ overlaySpectate(); return; }   // 멀티 = 관전하기
-  document.getElementById('ov').classList.add('hide'); if(typeof stopGameCoop==='function') stopGameCoop();   // 솔로 = 다시하기(같은 맵·난이도)
+  if(G.phase!=='quit' && typeof coopActive==='function' && coopActive()){ overlaySpectate(); return; }   // 멀티 패배 = 관전하기(자발적 종료 제외)
+  document.getElementById('ov').classList.add('hide'); if(typeof stopGameCoop==='function') stopGameCoop();   // 솔로/종료 = 다시하기(같은 맵·난이도)
   startGameNow([1], 1);
 };
 document.getElementById('ovBtn2').onclick=()=>{ overlayToLobby(); };
@@ -7268,6 +7287,7 @@ function updateHud(){
   document.getElementById('hMin').innerHTML=G.mineral+'<i class="ru">C</i>';            // 크레딧
   document.getElementById('hGas').innerHTML=G.gas+'<i class="ru">E</i>';                // 에너지
   document.getElementById('hPop').innerHTML=G.units.filter(u=>!u.fixed).length+'/'+maxUnits()+'<i class="ru">CP</i>';  // 커맨드 포인트
+  const rcv=document.getElementById('hRunCoinV'); if(rcv && typeof previewRunCoins==='function') rcv.textContent=previewRunCoins();   // 받을 코인 미리보기
   updateMapName();
 }
 // 각 화면(맵) 이름 — 우측 상단 자원 아래 표시
