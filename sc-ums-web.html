@@ -2374,7 +2374,7 @@ function enemyRace(n){ return ENEMY_RACE[n]||'terran'; }
 // ============================================================================
 const USEMAPS={
   nemo:  { id:'nemo',   name:'네모네모 디펜스', desc:'사각 트랙을 도는 적을 막는 협동 디펜스', players:'1-8', pop:9820, icon:'🟥', rec:true,  isNew:false, playable:true,
-           cfg:{ rounds:30, roundTime:120, prepTime:10, startCredits:120, startEnergy:0, maxUnits:100,
+           cfg:{ rounds:30, roundTime:90, prepTime:10, startCredits:120, startEnergy:0, maxUnits:100,
                  killCredit:1, specialCredit:25, gachaCost:30, energyDrawCost:40, coopBoss:true, roster:'all',
                  enemiesPerRound:100, bossEvery:5, loseCount:200,
                  roundClearCreditBase:10, roundClearCreditPer:3, roundClearEnergyBase:3, roundClearEnergyPer:1 } },
@@ -2393,12 +2393,12 @@ function mapCfg(k,def){ const c=MAP&&MAP.cfg, v=c?c[k]:undefined; return v===und
 // ── 엔진 기본값(유즈맵 cfg 미지정 시 사용) ──
 const TOTAL_ROUNDS=30;                    // 총 30라운드(보스: 5·10·…·30). 적 정의(MON)는 부족분 마지막 것 반복(R21+ = R20 적 + 라운드 램프로 가속)
 const ENEMIES_PER_ROUND=100;               // 일반 라운드 적 수 = 99 + 스페셜 1
-const SPAWN_GAP=1.0;                        // 적 스폰 간격(초) → 100마리×1.0s=100초 스폰 후 20초 정리시간
+const SPAWN_GAP=0.8;                        // 적 스폰 간격(초) → 100마리×0.8s=80초 스폰 후 10초 정리시간
 const PREP_TIME=10;                        // 라운드 시작 전 준비(유닛 뽑기) 시간(초)
-const ROUND_TIME=120;                      // 라운드 제한시간 2:00(초). 100초 스폰(1.0s×100) + 20초 정리
+const ROUND_TIME=90;                       // 라운드 제한시간 1:30(초). 80초 스폰(0.8s×100) + 10초 정리
 const BOSS_EVERY=5;                         // 5라운드마다 보스 라운드(보스 1마리만)
 const EARLY_HP_MUL=1.7;   // R10 이전 적 HP 추가 배율(초반 안전마진 축소)
-const TEMPO_HP_MUL=1.7;   // 라운드 2분(교전시간 2배)에 대한 적 체력 보정(절반 보정 — 이지 ~5/10 목표, 봇시뮬)
+const TEMPO_HP_MUL=1.35;  // 라운드 1:30(교전시간 1.5배)에 대한 적 체력 보정(이지 ~5/10 목표, 봇시뮬 48%)
 const LOSE_COUNT=200;                       // 트랙 200기 누적 시 탈락(게임아웃)
 const WARN1=150, WARN2=185;                 // 적 누적 경고 임계치(탈락선 200 비례)
 const SPECIAL_MIN=25;                       // 스페셜 유닛 처치 시 크레딧 보너스
@@ -6597,8 +6597,8 @@ function playerEnemyCount(n){ const mine=G.myPlayer||1;
   const s=G.pSim&&G.pSim[n]; return s? Math.round(s.count) : 0; }
 function tickPlayerSim(dt){ if(G.phase!=='playing'||!G.pSim||G.coop) return;   // 협동: 시뮬 대신 실제 상태 사용
   const ed=dt*(G.speedMul||1);   // 게임 속도 반영
-  const spawning=(G.roundPhase==='active' && !isBossRound(G.round) && G.roundTime>mapCfg('roundTime',ROUND_TIME)-100);  // 전투 첫 100초 유입
-  const arrival=spawning ? (1/SPAWN_GAP) : 0;   // 초당 적 유입(=1.0)
+  const spawning=(G.roundPhase==='active' && !isBossRound(G.round) && G.roundTime>mapCfg('roundTime',ROUND_TIME)-80);  // 전투 첫 80초 유입
+  const arrival=spawning ? (1/SPAWN_GAP) : 0;   // 초당 적 유입(=1.25)
   for(const k in G.pSim){ const n=+k, s=G.pSim[k]; if(s.dead) continue;
     const clear=Math.max(0, s.skill*0.78 - G.round*0.016);   // 초당 처리량(라운드↑일수록 버거움)
     s.count=Math.max(0, s.count + (arrival-clear)*ed);
