@@ -627,7 +627,15 @@
   .scHp .shd{color:#7fd0ff;text-shadow:0 0 6px rgba(120,200,255,.45)}
   .scHp .en{color:#c0a0ff;text-shadow:0 0 6px rgba(180,140,255,.4)}
   /* 초록 테두리 스탯 박스 — 크기 고정, 숫자 넘치면 JS로 폰트 축소 */
-  .scStats{display:flex;gap:4px;flex:none;align-items:center}
+  .scStats{display:flex;flex-wrap:wrap;gap:4px;flex:none;align-items:center;justify-content:flex-end}
+  /* 단일 유닛 선택 카드: 하단 패널을 가득 채우는 큰 상세 카드 */
+  #scSingle{flex:1;min-height:0;align-items:center;gap:11px;padding:10px 12px}
+  #scSingle .scPortrait{width:104px;height:104px}
+  #scSingle .scPortrait svg{width:66px;height:66px}
+  #scSingle .scName{font-size:15px}
+  #scSingle .scStats{display:grid;grid-template-columns:repeat(2,58px);gap:5px;align-content:center;justify-content:end;flex:none}
+  #scSingle .scBox{width:58px;height:50px}
+  .scBox .sl.rng{color:#8de0a8}.scBox .sl.spd{color:#ffd27a}  /* 사거리=연두·공속=노랑 */
   .scBox{width:55px;flex:none;height:53px;padding:0 3px;border:1.5px solid var(--neon-soft);border-radius:var(--r-md);background:#161416;overflow:hidden;
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
     box-shadow:inset 0 0 9px var(--neon-faint)}
@@ -653,7 +661,7 @@
   /* 단일 종류: 칩 + 유닛별 HP */
   .selSingle{display:none;align-items:flex-start;gap:7px;flex:1;min-height:0;padding:6px 6px 6px 3px}
   .selSingle .ssChip{flex:0 0 auto;cursor:default}
-  .ssHp{flex:1;min-width:0;display:grid;grid-template-columns:repeat(6,1fr);gap:4px;align-content:flex-start;min-height:0;overflow:hidden;padding:2px 0}
+  .ssHp{flex:1;min-width:0;display:grid;grid-template-columns:repeat(6,1fr);gap:4px;align-content:flex-start;min-height:0;overflow-y:auto;overflow-x:hidden;padding:2px 0}
   .uHpItem{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0;cursor:pointer;border-radius:6px;padding:3px 2px;
     background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.012));border:1px solid var(--metal-edge);box-shadow:inset 0 1px 0 rgba(255,255,255,.05);transition:all .12s}
   .uHpItem:hover{border-color:rgba(120,200,255,.55);background:rgba(120,200,255,.1)}
@@ -2838,7 +2846,7 @@ function renderCombinePanel(){ const tiersBox=document.getElementById('hsTiers')
   grid.innerHTML=cells;
 }
 function selectByGid(gid){ _selViaTab=true; const ids=G.units.filter(u=>!u.fixed&&!u.atBoss&&u.gid===gid).map(u=>u.uid);
-  if(ids.length){ G.sel=capSelTypes(ids); G.selEnemy=null; refreshSelCard(); } }   // 그 종류(등급+유닛)만 필터 지정
+  if(ids.length){ G.sel=capSelTypes(ids,true); G.selEnemy=null; refreshSelCard(); } }   // 프로필 클릭 → 그 종류 전부 지정(30 제한 없음)
 function setSelTier(t){ _selViaTab=true; _selTierH=t; _selSig=''; selectAllOfTier(t); }   // 등급 탭 → 그 등급 전체 지정 + 종류 표시(refreshSelCard가 패널 갱신)
 function renderSelectPanel(){ const tiersBox=document.getElementById('hsTiers'), grid=document.getElementById('hsGrid'); if(!tiersBox||!grid) return;
   const live=G.units.filter(u=>!u.fixed&&!u.atBoss&&u.gid);
@@ -4827,11 +4835,14 @@ function scStatBoxesHTML(u){ const def=U[u.id];
   const atkBox=(label,p,cls)=>'<div class="scBox atkBox" onpointerdown="atkPeekStart(this,event)">'   // 평소=총 공격력 / 길게 누르면 위에 기본+업글
     +'<div class="atkPeek">기본 '+fmtStat(Math.max(0,p.total-p.up))+' + 업글 '+fmtStat(p.up)+'</div>'
     +'<div class="sv">'+fmtStat(p.total)+'</div><div class="sl '+(cls||'')+'">'+label+'</div></div>';
+  const rawBox=(label,txt,cls)=>'<div class="scBox"><div class="sv">'+txt+'</div><div class="sl '+(cls||'')+'">'+label+'</div></div>';
   let h=numBox('방어력',def.armor,'def');             // 방어력(파랑)
   if((u.gid!=='matron_t') && ((u.maxSh!=null)?u.maxSh>0:def.shield>0)) h+=numBox('쉴드방어력',def.shArmor||0,'shd');  // 실드 있는 유닛만(매트론=실드 없음)
   const dp=unitDmgParts(u), ap=unitAirParts(u);
   if(ap){ h+=atkBox('지상공격력',dp,'atk'); h+=atkBox('공중공격력',ap,'atk'); }   // 지상/공중 분리 유닛(주황)
   else h+=atkBox(def.splash?'광역공격력':'공격력',dp,'atk');            // 단일 공격력(주황)
+  h+=numBox('사거리',Math.round(def.range*(typeof gachaRangeMul==='function'?gachaRangeMul(u):1)*100),'rng');   // 상대 사거리 점수(초록)
+  const cdf=(typeof cdOf==='function')?cdOf(u,def):def.cd; if(cdf>0) h+=rawBox('공속',(60/cdf).toFixed(1),'spd');   // 초당 공격횟수
   return h;
 }
 // 스탯 박스 크기 고정 — 숫자가 칸을 넘치면 폰트를 점점 줄여 맞춤
@@ -4952,7 +4963,7 @@ function unitHpHTML(uid){ const u=G.units.find(x=>x.uid===uid); if(!u) return ''
 }
 // 다중 선택: 단일 종류=칩+유닛별 HP+전체선택 버튼 / 여러 종류=4칸 그리드
 function selectAllOfTier(tier){ const ids=G.units.filter(u=>!u.fixed&&!u.atBoss&&u.gtier===tier).map(u=>u.uid);
-  if(ids.length){ G.sel=capSelTypes(ids); G.selEnemy=null; refreshSelCard(); } }   // 그 등급 전체 한번에 선택(이동용)
+  if(ids.length){ G.sel=capSelTypes(ids,true); G.selEnemy=null; refreshSelCard(); } }   // 그 등급 전체 한번에 선택(30 제한 없음·이동용)
 function renderSelTiers(){ const el=document.getElementById('selTiers'); if(!el) return;
   const cnt={}; for(const u of G.units){ if(u.fixed||u.atBoss||!u.gtier) continue; cnt[u.gtier]=(cnt[u.gtier]||0)+1; }
   const tiers=GACHA_TIER_ORDER.filter(t=>cnt[t]);
@@ -5076,7 +5087,7 @@ const MAX_PER_TYPE=30;   // 종류당 최대 30마리 (4종류 × 30 = 최대 12
 function isBuilding(id){ return !!(U[id] && U[id].moveSpd===0); }   // 건물(가드타워·스파이어)=이동속도0 → 드래그 다중선택 제외(개별선택만)
 // 선택 유닛을 종류(id+영웅+레벨)별로 묶어 최대 4종류 + 종류당 30마리로 제한. 건물 제외.
 // 종류 우선순위: 유닛 수 많은 순 → 같으면 더 비싼(cost↑) 순. (5종류면 가장 적은 종류 탈락)
-function capSelTypes(uids){
+function capSelTypes(uids, noPerCap){   // noPerCap=true → 종류당 30 제한 해제(지정 패널 '전부 선택'용. 드래그 박스는 30 유지)
   const groups={}, order=[];
   uids.forEach(uid=>{ const u=G.units.find(x=>x.uid===uid); if(!u||u.fixed||(!u.gid&&isBuilding(u.id))) return;   // 실제 구조물만 제외(구조물 프록시 가챠 유닛은 일반 유닛)
     const key=(u.gid||u.id)+'|'+(u.hero?1:0)+'|'+(u.lv||1);   // 선택 칩 분류와 동일 키(등급 다르면 다른 종류)
@@ -5093,7 +5104,7 @@ function capSelTypes(uids){
   const keepSet=new Set(keep); let out=[];
   order.forEach(k=>{ if(!keepSet.has(k)) return;
     let arr=groups[k].uids;
-    if(arr.length>MAX_PER_TYPE){ arr=arr.slice(0,MAX_PER_TYPE); msg='한 종류당 최대 '+MAX_PER_TYPE+'마리'; }  // 종류당 30 제한
+    if(!noPerCap && arr.length>MAX_PER_TYPE){ arr=arr.slice(0,MAX_PER_TYPE); msg='한 종류당 최대 '+MAX_PER_TYPE+'마리'; }  // 종류당 30 제한(드래그)
     out.push(...arr);
   });
   if(msg) toast(msg);
@@ -5104,7 +5115,7 @@ function selectAllOfType(){ if(G.sel.length===0) return;
   const u0=G.units.find(x=>x.uid===G.sel[0]); if(!u0||isBuilding(u0.id)) return;
   const key=u0.id+'|'+(u0.hero?1:0)+'|'+(u0.lv||1);
   const all=G.units.filter(u=>!isBuilding(u.id) && (u.id+'|'+(u.hero?1:0)+'|'+(u.lv||1))===key).map(u=>u.uid);
-  selectMany(all);   // capSelTypes가 종류당 30마리로 제한
+  _selViaTab=false; G.sel=capSelTypes(all,true); G.selEnemy=null; refreshSelCard();   // '전체 선택' → 30 제한 없이 전부
 }
 function selectMany(uids){ _selViaTab=false; G.sel=capSelTypes(uids); G.selEnemy=null; refreshSelCard(); }
 function selectEnemy(eid){ _selViaTab=false; G.sel=[]; G.selEnemy=eid; refreshSelCard(); }  // 적은 1마리만
