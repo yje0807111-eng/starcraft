@@ -4908,7 +4908,7 @@ function refreshSelCard(){
   renderUnits();
 }
 // 커스텀 초상화 이미지(유닛/건물 id → 파일). 있으면 3D/라인아트 대신 사용.
-const PORTRAIT_DIR='assets/portraits/'; const PORTRAIT_VER='?v=3';
+const PORTRAIT_DIR='assets/portraits/'; const PORTRAIT_VER='?v=4';
 const _PI_RAW={
   marine:  PORTRAIT_DIR+'ranger_portrait.png',     // 레인저
   ghost:   PORTRAIT_DIR+'phantom_portrait.png',    // 팬텀
@@ -6952,7 +6952,7 @@ function grabUnit(x,y){ let best=1e9,hit=null;
   for(const u of G.units){ if(u.atBoss) continue; const d=Math.hypot((u.x-x)*GW,(u.y-y)*GH); if(d<=unitRadius(u)+GRAB_PAD && d<best){ best=d; hit=u; } } return hit; }
 // 적 위 판정(트랙 좌표 → 픽셀). 가장 가까운 적 1마리
 function hitEnemyPrecise(x,y){ let best=1e9,hit=null;
-  for(const e of G.enemies){ const p=posAt(e.d,GW,GH); const d=Math.hypot(p.x-x*GW,p.y-y*GH); if(d<=24 && d<best){ best=d; hit=e; } } return hit; }
+  for(const e of G.enemies){ const p=posAt(e.d,GW,GH); const d=Math.hypot(p.x-x*GW,p.y-y*GH); if(d<=10 && d<best){ best=d; hit=e; } } return hit; }   // 적 클릭 판정 24→10(아군 그랩보다 좁게)
 // 드래그/박스 상태
 let dragSet=[];      // 함께 이동 중인 유닛 배열(유닛 직접 끌기)
 let lastP=null;      // 직전 포인터(델타 계산)
