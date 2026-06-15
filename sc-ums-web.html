@@ -2151,14 +2151,14 @@
 
   </div>
 
-  <!-- 포인트 연구소 팝업: #phone 직속(게임 화면+하단 콘솔 전체를 덮음) · 다음 판부터 적용 -->
+  <!-- 포인트 연구소 팝업: #phone 직속(게임 화면+하단 콘솔 전체를 덮음) · 강화 즉시 적용 -->
   <div id="pointPanel" class="hide">
     <div class="cpCard ppCard">
       <div class="ppHead">
         <span class="ppTitle">포인트 연구소</span>
         <span class="ppBal"><b id="ptCoins">0</b> P</span>
       </div>
-      <div class="ppSub">한 판에서 모은 <b>포인트</b>로 영구 강화 · <b>다음 판부터</b> 적용</div>
+      <div class="ppSub">판 종료 시 <b>포인트</b> 정산 · 강화하면 <b>이번 판에 즉시 적용</b> (시작 자원·유닛은 다음 판)</div>
       <div class="ppTabs" id="ptTabs"></div>
       <div class="ppNote" id="ptNote"></div>
       <div class="ppList" id="ptList"></div>
@@ -2439,7 +2439,7 @@ const TECH=[
   {id:'arm',  name:'아스널',   icon:'🛡️', wpn:'mech', wname:'기계 무기',    units:'스트라이더'},
   {id:'forge',name:'크리스탈 워크스', icon:'🔱', wpn:'pro',  wname:'루멘 무기', units:'센티넬·보이드'},
   {id:'evo',  name:'바이오 코어', icon:'🧬', wpn:'zrg',  wname:'하이브 근접 무기', units:'리퍼'},
-  {id:'pointlab', name:'포인트 연구소', icon:'⬆️', wpn:'meta', wname:'영구 강화', units:'다음 판부터 적용', meta:true},  // 포인트로 영구 강화(게임 종료 시 모은 포인트 사용)
+  {id:'pointlab', name:'포인트 연구소', icon:'⬆️', wpn:'meta', wname:'영구 강화', units:'즉시 적용', meta:true},  // 포인트로 영구 강화(판 종료 시 정산, 강화 즉시 적용)
 ];
 // 상단 2×2(무기 계열) + 하단 중앙 1(포인트 연구소)
 const TECH_POS=[{x:.28,y:.30},{x:.72,y:.30},{x:.28,y:.55},{x:.72,y:.55},{x:.5,y:.80}];
@@ -2787,15 +2787,16 @@ function buildUpgrade(id){ const b=META_BUILDS[id]; if(!b) return false;
   const lv=buildLevel(id); if(lv>=b.max){ toast('최대 레벨입니다'); return false; }
   const cost=metaNextCost(id, lv); if((PLAYER_META.coins||0)<cost){ toast('포인트 부족 (필요 '+cost+'P)'); return false; }
   PLAYER_META.coins-=cost; PLAYER_META.buildLevels[id]=lv+1; saveMeta();
+  if(typeof G!=='undefined' && G){ G.metaB=metaBonus(); if(typeof updateHud==='function') updateHud(); }   // 즉시 적용(이번 판 효과 재계산) — 시작 자원/유닛 등 시작 한정은 다음 판부터
   if(typeof playSfx==='function') playSfx('ui_confirm'); return true; }
 
-// ── 포인트 연구소(인게임 업그레이드 구역 건물) — 하단 패널에 영구 강화 리스트. PLAYER_META 데이터, 다음 판부터 적용 ──
+// ── 포인트 연구소(인게임 업그레이드 구역 건물) — 영구 강화 리스트. PLAYER_META 데이터, 구매 시 G.metaB 재계산으로 즉시 적용(시작 자원/유닛만 다음 판) ──
 let _ptGroup='eco';
 const _PT_TABS=[['eco','경제'],['prod','생산'],['combat','전투'],['team','전체'],['coop','보스']];
 const _PT_NOTE={
-  eco:'크레딧·에너지 수급과 시작 자원 · 다음 판부터 적용',
-  prod:'뽑기 확률·유닛 수 등 생산 강화 · 다음 판부터 적용',
-  combat:'아군 화력 강화와 적 약화 · 다음 판부터 적용',
+  eco:'크레딧·에너지 수급 강화 · 즉시 적용 (시작 자원은 다음 판)',
+  prod:'뽑기 확률·유닛 수 등 생산 강화 · 즉시 적용 (시작 유닛은 다음 판)',
+  combat:'아군 화력 강화와 적 약화 · 즉시 적용 (시작 포탑은 다음 판)',
   team:'전체 강화 · 협동에서 파티 중 최고 레벨이 모두에게 적용',
   coop:'공용 보스 · 상시 등장하는 보스 공략 강화'
 };
