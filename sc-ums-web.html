@@ -4883,8 +4883,8 @@ function refreshSelCard(){
   const multi = !en && G.sel.length>1;
   document.getElementById('scSingle').style.display = multi?'none':'flex';
   document.getElementById('selMulti').style.display = multi?'flex':'none';
+  const _allOne=document.getElementById('scAllOne'); if(_allOne) _allOne.style.display='none';   // 기본 숨김(적/다중·여러종류 비표시) — 단일종류 분기에서만 다시 표시
   if(multi){ buildSelChips(); renderUnits(); return; }
-  const _allOne=document.getElementById('scAllOne'); if(_allOne) _allOne.style.display='none';   // 기본 숨김(적/다중에서 비표시)
   if(en){ // 적 유닛 상태창(아군과 동일 레이아웃)
     const ejob=en.boss?'보스':(en.special?'스페셜':'공중');
     const _epk=ENEMY_MODEL[en.name], _eimg=_epk&&PORTRAIT_IMG[_epk];   // 적 이름→모델키→포트레이트
