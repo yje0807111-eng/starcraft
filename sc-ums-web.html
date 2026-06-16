@@ -182,21 +182,21 @@
   #pbossBtn:active{transform:translateY(1px)}
   #pbossBtn.cd{color:#ff9a9a;border-color:var(--metal-edge);background:linear-gradient(160deg,rgba(56,32,34,.5),rgba(16,10,12,.74))}
   /* 자동화 묶음 버튼 — 좌상단 킬 스코어 바로 아래, 작은 가로 칩 */
-  /* 자동 설정 배너 — 우상단(월드보스 바 아래, 선택해제 버튼과 같은 자리). 우주전쟁풍 각진 메탈+네온 */
-  #autoFab{position:absolute;right:10px;top:100px;z-index:24;display:flex;align-items:center;gap:5px;
-    padding:5px 11px 5px 9px;cursor:pointer;pointer-events:auto;color:#cfe6da;overflow:hidden;
-    background:linear-gradient(150deg,rgba(38,52,47,.62),rgba(9,15,12,.7));border:1px solid var(--metal-edge);
-    clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
+  /* 자동 설정 버튼 — 우하단 개인보스 버튼 왼쪽에 나란히(같은 톤·크기). 녹색 액센트로 구분 */
+  #autoFab{position:absolute;right:96px;bottom:8px;z-index:20;width:82px;min-height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    padding:6px 4px;cursor:pointer;pointer-events:auto;color:#d6f0e0;overflow:hidden;
+    background:linear-gradient(160deg,rgba(34,72,52,.36),rgba(10,18,13,.56));border:1px solid rgba(70,240,106,.42);
     backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
-    box-shadow:0 2px 6px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.06);transition:.14s}
+    clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 0 14px -4px rgba(70,240,106,.5);transition:all .14s}
   #autoFab::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(120,240,160,.45),transparent);pointer-events:none}
-  #autoFab .afIco{font-size:13px;line-height:1;font-weight:800;color:#6ff0a0;text-shadow:0 0 7px rgba(70,240,106,.6)}
-  #autoFab .afTx{font-size:10px;font-weight:800;letter-spacing:.4px;text-shadow:0 1px 2px #000}
+  #autoFab .afIco{font-size:18px;line-height:0;font-weight:800;color:#6ff0a0;filter:drop-shadow(0 0 5px rgba(70,240,106,.7))}
+  #autoFab .afTx{font-size:10px;font-weight:800;letter-spacing:.3px;text-shadow:0 1px 2px #000}
   #autoFab.hide{display:none}
-  #autoFab.act{border-color:rgba(70,240,106,.7);box-shadow:0 0 11px -2px rgba(70,240,106,.6),inset 0 1px 0 rgba(255,255,255,.06)}
+  #autoFab.act{border-color:rgba(70,240,106,.8);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 0 14px -2px rgba(70,240,106,.7)}
   #autoFab.act .afTx{color:#9bf0c0}
   #autoFab:hover{border-color:rgba(120,240,160,.6)}#autoFab:active{transform:translateY(1px)}
-  #autoPopup{position:absolute;right:10px;top:146px;z-index:30;width:190px;display:flex;flex-direction:column;gap:5px;padding:8px;
+  #autoPopup{position:absolute;right:8px;bottom:78px;z-index:30;width:200px;display:flex;flex-direction:column;gap:5px;padding:8px;
     background:linear-gradient(160deg,rgba(20,26,24,.82),rgba(9,12,11,.86));border:1px solid rgba(255,255,255,.1);
     backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
     clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
@@ -5752,8 +5752,7 @@ function autoSig(){ const o=autoUtilOwned(); const a=G.auto||{}; return ''+(a.co
 function updateAutoFab(){ const b=document.getElementById('autoFab'); if(!b) return;
   if(!G.auto) G.auto={unit:false,combine:false,energy:false,pboss:{}};
   const o=autoUtilOwned(), anyOwned=o.combine||o.unit||o.energy||o.place;
-  const selOn=(G.sel&&G.sel.length>0)||G.selEnemy!=null;   // 선택 시엔 같은 자리의 '선택 해제' 버튼이 차지 → 자동 설정 숨김
-  const showFab=(G.tab==='Main' && G.phase==='playing' && anyOwned && !selOn);
+  const showFab=(G.tab==='Main' && G.phase==='playing' && anyOwned);   // 전용 자리(우하단 개인보스 옆) → 선택과 무관하게 표시
   b.classList.toggle('hide', !showFab);
   if(!showFab){ const p=document.getElementById('autoPopup'); if(p) p.classList.add('hide'); return; }
   b.classList.toggle('act', (o.combine&&G.auto.combine)||(o.unit&&G.auto.unit)||(o.energy&&G.auto.energy)||(o.place&&G.auto.place));
