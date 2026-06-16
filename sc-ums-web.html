@@ -7422,7 +7422,7 @@ function hitUnit(x,y){ let best=.06,hit=null;
 // 유닛 위 정확 판정(반경 내)
 function hitUnitPrecise(x,y){ let best=1e9,hit=null;
   for(const u of G.units){ if(u.atBoss) continue; const d=Math.hypot((u.x-x)*GW,(u.y-y)*GH); if(d<=unitRadius(u)+6 && d<best){ best=d; hit=u; } } return hit; }
-const GRAB_PAD=10;   // 그랩 여유(px) — 손가락 터치로 유닛을 짚고 바로 스와이프 이동하기 쉽게 살짝 키움
+const GRAB_PAD=6;    // 그랩 여유(px) — 유닛 위를 정확히 눌러야 잡힘(지정 구역을 좁게 유지)
 function grabUnit(x,y){ let best=1e9,hit=null;
   for(const u of G.units){ if(u.atBoss) continue; const d=Math.hypot((u.x-x)*GW,(u.y-y)*GH); if(d<=unitRadius(u)+GRAB_PAD && d<best){ best=d; hit=u; } } return hit; }
 // 적 위 판정(트랙 좌표 → 픽셀). 가장 가까운 적 1마리
