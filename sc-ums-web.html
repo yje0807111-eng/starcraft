@@ -8229,9 +8229,9 @@ const PLAYER_MODELS=new Set(['marine','ghost','goliath','dragoon','hydra','archo
 const RING_OP=0.9;        // 선택 링 불투명도
 const TINT_AMT=0.78;      // 모델 색 틴트 강도(0=원본, 1=완전 색칠) — 진한 색은 발광이 아닌 이 값으로(단단하게)
 const EMIT_AMT=0.09;      // 플레이어색 발광(은은하게 — 마린/고스트처럼 부드러운 빛)
-const RIM_INT=0.85;       // 프레넬 림 라이트 강도(플레이어색 또렷하게)
-const RIM_POW=2.4;        // 림 폭(클수록 가장자리에만 얇게)
-const RIM_WHITE=0.16;     // 림 색을 흰색 쪽으로 섞는 정도(낮을수록 플레이어색 선명)
+const RIM_INT=1.4;        // 프레넬 림 라이트 강도(환경광으로 밝아진 표면에서도 플레이어색이 또렷하게 — 0.85→1.4)
+const RIM_POW=2.0;        // 림 폭(클수록 가장자리에만 얇게) — 살짝 넓혀 색 띠가 더 보이게
+const RIM_WHITE=0.06;     // 림 색을 흰색 쪽으로 섞는 정도(낮을수록 플레이어색 선명 — 0.16→0.06)
 const ENEMY_RIM=0xff3322; // 적 유닛 림 색(선명한 적색 — 눈에 잘 띄되 옅은 분홍보다 덜 밝음)
 const NEUTRAL_RIM=0xbfe0ff; // 구조물/기타 림 색(차가운 흰빛)
 // 아군 유닛 공용 림 색(Color 객체 1개를 모든 아군 재질이 공유 → setPlayerRim으로 한번에 색 전환: 플레이어 구역 관전용)
@@ -8396,6 +8396,7 @@ function tintModel(root, id){
   const intU = isPlayer ? rimIntU : subRimIntU;   // 적·기타는 고정 은은(관전 부스트 영향 X) — 내 유닛처럼
   root.traverse(o=>{ if(!o.isMesh) return; const ms=Array.isArray(o.material)?o.material:[o.material];
     ms.forEach(m=>{ if(!m||m._tinted) return;
+      if('envMapIntensity' in m) m.envMapIntensity=0.55;   // 환경 반사는 입체감용으로만 약하게 → 본체 색·플레이어 림이 묻히지 않게
       addRim(m, rim, intU);   // 테두리(프레넬 림)만 색 — 본체 색·발광은 원본 그대로
       m._tinted=true; }); });
 }
