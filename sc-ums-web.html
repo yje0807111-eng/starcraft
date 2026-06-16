@@ -207,7 +207,11 @@
   #autoPopup .apTx{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.2}
   #autoPopup .apName{font-size:11px;font-weight:800;color:#eef2ee;white-space:nowrap}
   #autoPopup .apDesc{font-size:8px;color:#9fb0a8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  #autoPopup .apEye{flex:0 0 auto;font-size:8.5px;font-weight:800;letter-spacing:.2px;padding:3px 6px;border-radius:6px;cursor:pointer;font-family:inherit;
+  /* 자동 유닛 배치 칸: 본 토글(윗줄) + 화살표 표시 버튼(아랫줄, 전폭) — 텍스트와 안 겹침 */
+  #autoPopup .apRow.apPlace{flex-direction:column;align-items:stretch;gap:6px}
+  #autoPopup .apPlace .apMain{display:flex;align-items:center;gap:8px}
+  #autoPopup .apPlace .apMain .apTx{flex:1;min-width:0}
+  #autoPopup .apEye{width:100%;font-size:9px;font-weight:800;letter-spacing:.2px;padding:5px 6px;border-radius:6px;cursor:pointer;font-family:inherit;text-align:center;
     color:#9fb6c4;background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);white-space:nowrap}
   #autoPopup .apEye.on{color:#8fd0ff;border-color:rgba(120,200,255,.5);background:rgba(80,160,255,.12)}
   #autoPopup .apEye:active{transform:translateY(1px)}
@@ -5751,14 +5755,18 @@ function closeAutoPopup(){ const p=document.getElementById('autoPopup'); if(p) p
 function renderAutoPopup(){ const pop=document.getElementById('autoPopup'); if(!pop) return;
   if(!G.auto) G.auto={unit:false,combine:false,energy:false,pboss:{}};
   const o=autoUtilOwned();
-  const defs=[['combine','자동 조합','낮은 등급부터 레전드까지', o.combine],
-              ['unit','자동 유닛 소환','0.33초마다 1기 뽑기', o.unit],
-              ['place','자동 유닛 배치','등급별 화살표로 집결 지정', o.place],
-              ['energy','자동 에너지 변환','크레딧→에너지 전액', o.energy]];
+  const defs=[['unit','자동 유닛 소환','0.33초마다 1기 뽑기', o.unit],
+              ['combine','자동 조합','낮은 등급부터 레전드까지', o.combine],
+              ['energy','자동 에너지 변환','크레딧→에너지 전액', o.energy],
+              ['place','자동 유닛 배치','등급별 화살표로 집결 지정', o.place]];
   let rows='';
   for(const d of defs){ const kind=d[0], owned=d[3], on=!!G.auto[kind];
-    if(owned){ const eye=(kind==='place')?('<button class="apEye'+((G.rallyShow!==false)?' on':'')+'" onclick="toggleRallyShow(event)">'+((G.rallyShow!==false)?'화살표 표시':'화살표 숨김')+'</button>'):'';
-      rows+='<div class="apRow'+(on?' on':'')+'" onclick="toggleAuto(\''+kind+'\')"><div class="apTx"><span class="apName">'+d[1]+'</span><span class="apDesc">'+d[2]+'</span></div>'+eye+'<span class="apSw"></span></div>'; }
+    if(owned && kind==='place'){ const shown=(G.rallyShow!==false);   // 자동 배치 = 본 토글 + 화살표 표시 버튼(아랫줄, 텍스트와 안 겹침)
+      rows+='<div class="apRow apPlace'+(on?' on':'')+'">'
+        +'<div class="apMain" onclick="toggleAuto(\'place\')"><div class="apTx"><span class="apName">'+d[1]+'</span><span class="apDesc">'+d[2]+'</span></div><span class="apSw"></span></div>'
+        +'<button class="apEye'+(shown?' on':'')+'" onclick="toggleRallyShow(event)">'+(shown?'👁 화살표 표시 중':'🚫 화살표 숨김')+'</button>'
+        +'</div>'; }
+    else if(owned) rows+='<div class="apRow'+(on?' on':'')+'" onclick="toggleAuto(\''+kind+'\')"><div class="apTx"><span class="apName">'+d[1]+'</span><span class="apDesc">'+d[2]+'</span></div><span class="apSw"></span></div>';
     else rows+='<div class="apRow lk"><div class="apTx"><span class="apName">'+d[1]+'</span><span class="apDesc">🔒 코인 업그레이드 필요</span></div></div>'; }
   const note=AUTO_PREVIEW?'⚠ 예시 모드 — 미해금이어도 동작(테스트용)':'0.33초마다 동작 · 코인 연구소에서 해금';
   pop.innerHTML='<div class="apHead"><span class="apBar"></span>자동화 설정</div>'+rows+'<div class="apNote">'+note+'</div>';
@@ -7865,7 +7873,11 @@ function stepCmdMove(dt){
     const def=U[u.id]; const spd=(def.moveSpd||0.13)*MOVE_MUL*dt;   // 유닛별 이동속도
     const slot=u.moveTo;
     let dx=slot.x-u.x, dy=slot.y-u.y; const d=Math.hypot(dx,dy);
-    if(d<=0.012){ u.moveTo=null; continue; }   // 도착 → 이 유닛만 명령 종료(다른 유닛은 계속)
+    if(d<=0.012){ u.moveTo=null; u._mvStuck=0; u._mvPrevD=null; continue; }   // 도착 → 이 유닛만 명령 종료(다른 유닛은 계속)
+    // 혼잡·구석 클램프로 더 못 가까워지면 그 자리에 정착 → 끝없이 비비며 진동하는 것 방지
+    if(u._mvPrevD!=null && d > u._mvPrevD-0.0006) u._mvStuck=(u._mvStuck||0)+dt; else u._mvStuck=0;
+    u._mvPrevD=d;
+    if(u._mvStuck>0.6){ u.moveTo=null; u._mvStuck=0; u._mvPrevD=null; continue; }
     let dirx=dx/d, diry=dy/d;
     // 장애물 회피 조향: 가까운 '비이동' 유닛을 피해 옆으로 돌아감
     let sx=0, sy=0;
