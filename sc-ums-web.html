@@ -7589,8 +7589,14 @@ function stepCmdMove(dt){
   else if(cmdMove&&cmdMove.issued) cmdMove=null; // 전원 도착 → 제스처 상태 종료(분리가 간격 유지)
 }
 const vm=document.getElementById('vMain');
-vm.addEventListener('mousedown',onDown); window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onUp);
-vm.addEventListener('touchstart',onDown,{passive:false}); vm.addEventListener('touchmove',onMove,{passive:false}); vm.addEventListener('touchend',onUp); vm.addEventListener('touchcancel',onUp);
+// 포인터 이벤트 + 포인터 캡처(마우스·터치 통합):
+// 유닛을 처음 지정하는 순간 하단 패널 DOM이 default→unit으로 바뀌는데, 모바일에선 이 변화가
+// 진행 중인 터치를 취소시켜 이후 move가 끊겼다(=새로 지정한 유닛이 슬라이드를 따라오지 못함).
+// pointerdown 때 vMain이 포인터를 '캡처'하면 손가락 밑 DOM이 바뀌어도 move/up을 끝까지 받는다.
+vm.addEventListener('pointerdown', function(e){ try{ vm.setPointerCapture(e.pointerId); }catch(_){ } onDown(e); });
+vm.addEventListener('pointermove', onMove);
+vm.addEventListener('pointerup', function(e){ onUp(e); try{ vm.releasePointerCapture(e.pointerId); }catch(_){ } });
+vm.addEventListener('pointercancel', function(e){ onUp(e); });
 
 // ── 유닛뽑기: 꾹 누르기(홈화면 유닛이동과 동일) — 누른 지점으로 시민 계속 이동. 유닛 위면 패드↔중앙 왕복 반복구매 ──
 function unitHoldPos(e){ const v=document.getElementById('vUnit').getBoundingClientRect();
