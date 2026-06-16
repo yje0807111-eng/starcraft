@@ -182,17 +182,21 @@
   #pbossBtn:active{transform:translateY(1px)}
   #pbossBtn.cd{color:#ff9a9a;border-color:var(--metal-edge);background:linear-gradient(160deg,rgba(56,32,34,.5),rgba(16,10,12,.74))}
   /* 자동화 묶음 버튼 — 좌상단 킬 스코어 바로 아래, 작은 가로 칩 */
-  #autoFab{position:absolute;left:9px;top:calc(env(safe-area-inset-top,0px) + 60px);z-index:20;display:flex;align-items:center;gap:4px;
-    padding:3px 8px;cursor:pointer;pointer-events:auto;color:#bfe0d0;
-    background:linear-gradient(160deg,rgba(30,46,40,.4),rgba(8,14,11,.5));border:1px solid rgba(70,240,106,.3);
-    backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);border-radius:6px;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.05);transition:.14s}
+  /* 자동 설정 배너 — 우상단(월드보스 바 아래, 선택해제 버튼과 같은 자리). 우주전쟁풍 각진 메탈+네온 */
+  #autoFab{position:absolute;right:10px;top:100px;z-index:24;display:flex;align-items:center;gap:5px;
+    padding:5px 11px 5px 9px;cursor:pointer;pointer-events:auto;color:#cfe6da;overflow:hidden;
+    background:linear-gradient(150deg,rgba(38,52,47,.62),rgba(9,15,12,.7));border:1px solid var(--metal-edge);
+    clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
+    backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+    box-shadow:0 2px 6px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.06);transition:.14s}
+  #autoFab::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(120,240,160,.45),transparent);pointer-events:none}
+  #autoFab .afIco{font-size:13px;line-height:1;font-weight:800;color:#6ff0a0;text-shadow:0 0 7px rgba(70,240,106,.6)}
+  #autoFab .afTx{font-size:10px;font-weight:800;letter-spacing:.4px;text-shadow:0 1px 2px #000}
   #autoFab.hide{display:none}
-  #autoFab.act{border-color:rgba(70,240,106,.7);box-shadow:0 0 10px -3px rgba(70,240,106,.6)}
-  #autoFab .afIco{font-size:12px;line-height:1;font-weight:800;text-shadow:0 0 6px rgba(70,240,106,.5)}
-  #autoFab .afTx{font-size:9px;font-weight:800;letter-spacing:.3px;text-shadow:0 1px 2px #000}
-  #autoFab:hover{border-color:rgba(70,240,106,.55)}#autoFab:active{transform:translateY(1px)}
-  #autoPopup{position:absolute;left:9px;top:calc(env(safe-area-inset-top,0px) + 92px);z-index:30;width:184px;display:flex;flex-direction:column;gap:5px;padding:8px;
+  #autoFab.act{border-color:rgba(70,240,106,.7);box-shadow:0 0 11px -2px rgba(70,240,106,.6),inset 0 1px 0 rgba(255,255,255,.06)}
+  #autoFab.act .afTx{color:#9bf0c0}
+  #autoFab:hover{border-color:rgba(120,240,160,.6)}#autoFab:active{transform:translateY(1px)}
+  #autoPopup{position:absolute;right:10px;top:146px;z-index:30;width:190px;display:flex;flex-direction:column;gap:5px;padding:8px;
     background:linear-gradient(160deg,rgba(20,26,24,.82),rgba(9,12,11,.86));border:1px solid rgba(255,255,255,.1);
     backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
     clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
@@ -1976,7 +1980,7 @@
     <!-- 개인 보스 소환 팝업(4종) -->
     <div id="pbossPopup" class="hide"></div>
     <!-- 자동화 묶음 버튼(메인 좌측): 자동 조합/유닛/에너지 토글 — 해금 업그레이드 보유 시 표시 -->
-    <div id="autoFab" class="hide" onclick="toggleAutoPopup(event)" title="자동화 설정"><span class="afIco">⟳</span><span class="afTx">자동</span></div>
+    <div id="autoFab" class="hide" onclick="toggleAutoPopup(event)" title="자동 설정"><span class="afIco">⟳</span><span class="afTx">자동 설정</span></div>
     <div id="autoPopup" class="hide"></div>
 
     <div id="toast"></div>
@@ -3981,7 +3985,8 @@ function spawnGachaUnit(gid, x, y){ const gu=GACHA_UNITS[gid]; if(!gu) return nu
   const u=initUnitStats({uid:G.idSeq++, id:proxy, hero:false, lv:1, x, y, cd:0,
     gid, gtier:gu.tier, gname:gu.displayName, gmodel:GACHA_MODEL[gid]||null});
   G.units.push(u);
-  if(typeof autoPlaceOn==='function' && autoPlaceOn()) rallyTier(gu.tier);   // 자동 배치 ON: 중앙 생성 → 등급 랠리 대형으로 분산 이동
+  if(typeof autoPlaceOn==='function' && autoPlaceOn()){ const r=ensureRally()[gu.tier];   // 자동 배치 ON: 새 유닛만 랠리 근처 빈 자리로(기존 등급 유닛은 안 움직임)
+    if(r){ const fs=(typeof findFreeSpot==='function')?findFreeSpot(u,r.x,r.y):r; u.moveTo={x:fs.x,y:fs.y}; } }
   return u; }
 function drawGacha(){
   if(G.phase!=='playing'){ toast('게임 중에만 뽑기 가능합니다'); return; }
@@ -5449,6 +5454,7 @@ function refreshSelCard(){
   updateDeselTop(); // 우상단 해제버튼(탭별)
   updateCmdRow();   // 명령 버튼 행(홀드/공격이동/지정공격/반복이동)
   updateSkillFab(); // 메인 화면 스킬 버튼
+  if(typeof updateAutoFab==='function') updateAutoFab();   // 자동 설정 배너(선택 시 숨김 — 해제버튼과 자리 공유)
   if(G.tab==='Main' && _homeMode==='select' && _selViaTab && !en && G.sel.length>=1){   // 지정 탭에서 선택 → 지정 패널 유지(드래그 박스 선택은 selMulti 칩)
     document.getElementById('defaultCmd').classList.remove('hide');
     document.getElementById('unitCmd').classList.remove('on'); renderHomeLeft(); renderUnits(); return; }
@@ -5742,7 +5748,8 @@ function autoSig(){ const o=autoUtilOwned(); const a=G.auto||{}; return ''+(a.co
 function updateAutoFab(){ const b=document.getElementById('autoFab'); if(!b) return;
   if(!G.auto) G.auto={unit:false,combine:false,energy:false,pboss:{}};
   const o=autoUtilOwned(), anyOwned=o.combine||o.unit||o.energy||o.place;
-  const showFab=(G.tab==='Main' && G.phase==='playing' && anyOwned);
+  const selOn=(G.sel&&G.sel.length>0)||G.selEnemy!=null;   // 선택 시엔 같은 자리의 '선택 해제' 버튼이 차지 → 자동 설정 숨김
+  const showFab=(G.tab==='Main' && G.phase==='playing' && anyOwned && !selOn);
   b.classList.toggle('hide', !showFab);
   if(!showFab){ const p=document.getElementById('autoPopup'); if(p) p.classList.add('hide'); return; }
   b.classList.toggle('act', (o.combine&&G.auto.combine)||(o.unit&&G.auto.unit)||(o.energy&&G.auto.energy)||(o.place&&G.auto.place));
