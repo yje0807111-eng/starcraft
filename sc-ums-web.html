@@ -77,6 +77,7 @@
   #cvMarine{z-index:6;pointer-events:none}  /* 마린 3D 오버레이(트랙 위, 유닛 라벨 아래) */
   #cvFx{z-index:7;pointer-events:none}       /* 투사체 오버레이(3D 모델 위 — 미사일이 몸에 안 가림) */
   .gview{position:absolute;inset:0;display:none;touch-action:none}.gview.on{display:block}   /* touch-action:none → 모바일 스와이프를 스크롤로 뺏기지 않고 드래그 이동/업글로 처리 */
+  .gview canvas{touch-action:none}   /* 캔버스(터치 대상)에도 직접 부여 — 부모만으론 팬 제스처가 가로채질 수 있음 */
 
   /* HUD — 좌(킬·맵·라운드 세로) / 중앙(제한시간 박스) / 우(자원 가로) */
   #hud{position:absolute;top:0;left:0;right:0;z-index:20;padding:calc(env(safe-area-inset-top,0px) + 18px) 9px 0;
@@ -7473,8 +7474,10 @@ function onDown(e){ if(G.tab!=='Main'||G.phase!=='playing'||G.bossOpen) return; 
   }
   e.preventDefault();
 }
-function onMove(e){ if(G.tab!=='Main') return; const p=evPos(e); moved=true;
-  if(box){ box.x1=p.x; box.y1=p.y; drawBox(); e.preventDefault(); return; }
+function onMove(e){ if(G.tab!=='Main') return;
+  if((drag||cmdMove||box) && e.cancelable) e.preventDefault();   // 활성 제스처면 즉시 팬 가로채기 차단(미세 이동에서도) → 모바일 슬라이드 이동 끊김 방지
+  const p=evPos(e); moved=true;
+  if(box){ box.x1=p.x; box.y1=p.y; drawBox(); return; }
   // 유닛을 누른 채 움직이면 → 직접 끌기 대신 '이동 명령' 시작(이동속도대로 따라옴)
   if(drag && !cmdMove){ if(lastP && Math.hypot((p.x-lastP.x)*GW,(p.y-lastP.y)*GH)<8) return;   // 미세 떨림 무시(탭=선택만)
     cmdMove={x:p.x,y:p.y,issued:false}; assignFormation(p.x,p.y); }
@@ -7528,6 +7531,7 @@ function onUp(){
 // 대형 배치: 클릭 지점(cx,cy) 주변에 선택 유닛마다 '서로 다른 목표 칸'을 배정.
 //  한 점에 다 모이지 않고 동심원으로 퍼져서 비비적임 방지.
 function assignFormation(cx,cy){
+  { const cl=clampInner(cx,cy); cx=cl.x; cy=cl.y; }   // 맵 밖 클릭은 경계 안으로 보정 → 닿지 못할 목표로 벽에 무한히 비비는 현상 방지
   const sel=G.sel.map(uid=>G.units.find(u=>u.uid===uid)).filter(Boolean).filter(u=>!u.fixed);
   if(!cmdMove) return; cmdMove.slots={};
   // 이동 목표는 '명령 당시 선택된 유닛'에만 부여(u.moveTo) → 선택을 바꿔도 기존 명령은 그 유닛이 끝까지 수행, 새 유닛은 새 명령 때만 이동
@@ -7586,7 +7590,7 @@ function stepCmdMove(dt){
 }
 const vm=document.getElementById('vMain');
 vm.addEventListener('mousedown',onDown); window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onUp);
-vm.addEventListener('touchstart',onDown,{passive:false}); vm.addEventListener('touchmove',onMove,{passive:false}); vm.addEventListener('touchend',onUp);
+vm.addEventListener('touchstart',onDown,{passive:false}); vm.addEventListener('touchmove',onMove,{passive:false}); vm.addEventListener('touchend',onUp); vm.addEventListener('touchcancel',onUp);
 
 // ── 유닛뽑기: 꾹 누르기(홈화면 유닛이동과 동일) — 누른 지점으로 시민 계속 이동. 유닛 위면 패드↔중앙 왕복 반복구매 ──
 function unitHoldPos(e){ const v=document.getElementById('vUnit').getBoundingClientRect();
