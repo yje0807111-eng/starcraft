@@ -175,11 +175,12 @@
   #pbossBtn .pbIco{line-height:0;filter:drop-shadow(0 0 5px rgba(255,59,59,.7))}
   #pbossBtn .pbTx{font-size:10px;font-weight:800;letter-spacing:.3px;text-shadow:0 1px 2px #000}
   #pbossBtn .pbCd{font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:800;color:#ff9a9a;line-height:1;min-height:0}
-  /* 새 해금 알림 점(우상단) — 팝업 열면 사라짐 */
-  #pbossBtn .pbDot{display:none;position:absolute;top:-4px;right:-4px;width:13px;height:13px;border-radius:50%;
-    background:radial-gradient(circle at 40% 35%,#ffe27a,#ff3b3b);border:1.5px solid #1a0c0e;box-shadow:0 0 8px rgba(255,80,80,.85);animation:pbDotPulse 1s ease-in-out infinite}
-  #pbossBtn.notify .pbDot{display:block}
-  @keyframes pbDotPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.25);opacity:.7}}
+  /* 우상단 배지 = 지금 소환 가능한 보스 수(버튼 안쪽 — 짤림 방지) */
+  #pbossBtn .pbDot{display:none;position:absolute;top:3px;right:3px;min-width:16px;height:16px;padding:0 3px;border-radius:8px;box-sizing:border-box;
+    background:radial-gradient(circle at 40% 30%,#ffe27a,#ff3b3b);border:1.5px solid #1a0c0e;box-shadow:0 0 8px rgba(255,80,80,.85);
+    color:#fff;font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:800;line-height:13px;text-align:center;animation:pbDotPulse 1.1s ease-in-out infinite}
+  #pbossBtn .pbDot.show{display:block}
+  @keyframes pbDotPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.12);opacity:.82}}
   #pbossBtn:hover{border-color:rgba(255,90,90,.8)}
   #pbossBtn:active{transform:translateY(1px)}
   #pbossBtn.cd{color:#ff9a9a;border-color:var(--metal-edge);background:linear-gradient(160deg,rgba(56,32,34,.5),rgba(16,10,12,.74))}
@@ -215,7 +216,7 @@
   #autoPopup .apRow.on .apSw::after{left:18px;background:#0c1410}
   #autoPopup .apNote{font-size:8.5px;color:#8fa098;text-align:center;padding-top:2px}
   #pbossBtn.cd .pbIco{filter:none;opacity:.65}
-  #pbossPopup{position:absolute;right:8px;bottom:78px;z-index:30;width:206px;max-height:min(300px,calc(100% - 150px));overflow-y:auto;padding:7px;display:flex;flex-direction:column;gap:4px;
+  #pbossPopup{position:absolute;right:8px;bottom:56px;z-index:30;width:220px;max-height:min(348px,calc(100% - 64px));overflow-y:auto;padding:7px;display:flex;flex-direction:column;gap:3px;
     background:linear-gradient(160deg,rgba(34,18,20,.97),rgba(10,7,9,.98));border:1px solid rgba(255,59,59,.4);
     clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px);
     box-shadow:0 8px 24px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.06)}
@@ -230,15 +231,15 @@
   .ppItem:active{transform:translateY(1px)}
   .ppItem.locked{filter:grayscale(.55) brightness(.66);cursor:default;border-left-color:#5a5560}   /* 잠금 = 카드 전체가 잠긴 느낌 */
   .ppItem.locked:hover{filter:grayscale(.55) brightness(.7)}
-  .ppItem .ppGate{font-size:7.5px;font-weight:800;letter-spacing:.2px;padding:1.5px 7px;color:#e7b07a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  .ppItem .ppGate{font-size:8px;font-weight:800;letter-spacing:.2px;padding:1px 8px;color:#e7b07a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
     background:rgba(0,0,0,.34);border-bottom:1px solid rgba(255,255,255,.06)}   /* 카드 상단 해금 조건 띠 */
   .ppItem .ppGate b{color:#ffd24a}
   .ppItem .ppGate.ok{color:#7fe08a;background:rgba(50,90,55,.18)}
-  .ppItem .ppBody{display:flex;align-items:center;gap:5px;padding:3px 7px}
-  .ppItem .ppIco{width:16px;height:16px;flex:0 0 auto;color:var(--pc,#cfd);filter:drop-shadow(0 0 4px var(--pc))}
+  .ppItem .ppBody{display:flex;align-items:center;gap:6px;padding:2px 8px}
+  .ppItem .ppIco{width:19px;height:19px;flex:0 0 auto;color:var(--pc,#cfd);filter:drop-shadow(0 0 4px var(--pc))}
   .ppItem .ppTx{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.15}
-  .ppItem .ppName{font-size:9.5px;font-weight:800;color:#f2e4e4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .ppItem .ppSub{font-size:7.5px;color:var(--pc,#bbb);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ppItem .ppName{font-size:11px;font-weight:800;color:#f2e4e4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ppItem .ppSub{font-size:8.5px;color:var(--pc,#bbb);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .ppItem .ppSt{font-family:'Rajdhani',sans-serif;font-size:9px;font-weight:800;color:#c6a8a8;white-space:nowrap;flex:0 0 auto;text-align:right}
   .ppItem .ppSt.on{color:#ff9a9a}
   .ppItem .ppRwd{display:flex;flex-direction:column;align-items:flex-end;gap:0;font-family:'Rajdhani',sans-serif;font-size:9px;font-weight:800;flex:0 0 auto;line-height:1.12}
@@ -4292,7 +4293,11 @@ function pbossUnlockProgress(pt){
   const need=pbossUnlockNeed(pt);
   const have=new Set(G.units.map(u=>u.gid).filter(Boolean));
   return {have:need.filter(g=>have.has(g)).length, total:need.length}; }
-function pbossUnlocked(pt){ if(pt.unlock==='time') return (G.timeSec||0) >= (pt.unlockSec||60); const p=pbossUnlockProgress(pt); return p.total>0 && p.have>=p.total; }
+function pbossUnlocked(pt){ if(!G.pbUnlockedOnce) G.pbUnlockedOnce={};
+  if(G.pbUnlockedOnce[pt.id]) return true;   // 한 번 해금되면 유닛을 조합해 없애도 다시 잠기지 않음
+  const live=(pt.unlock==='time') ? (G.timeSec||0)>=(pt.unlockSec||60) : (function(){ const p=pbossUnlockProgress(pt); return p.total>0 && p.have>=p.total; })();
+  if(live) G.pbUnlockedOnce[pt.id]=true;
+  return live; }
 function spawnEnemy(opts){ opts=opts||{}; const pt=opts.pbType||null; const pboss=!!opts.pboss||!!pt, boss=!!opts.boss||pboss, special=!!opts.special; const m=roundDef(G.round);
   const mb=G.metaB||{};   // 메타 강화: 적 체력/방어/이속 감소(개인)
   const _D=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal);
@@ -5613,16 +5618,16 @@ function updatePbossFab(){ const b=document.getElementById('pbossBtn'); if(!b) r
   const show=(typeof G!=='undefined' && G.tab==='Main' && G.phase==='playing');
   b.classList.toggle('hide', !show);
   if(!show){ const p=document.getElementById('pbossPopup'); if(p) p.classList.add('hide'); return; }   // 메인 외에선 버튼·팝업 숨김
-  // FAB 배지: 소환 가능한 보스가 하나라도 있으면 비움, 없으면 가장 빨리 열리는 쿨다운 표시
-  let minCd=Infinity, anyReady=false;
+  // FAB 우상단 배지 = 지금 소환 가능한(해금·쿨0·미활동) 보스 수. 소환하면 줄고, 0이면 숨김. (하단 시간초는 제거)
+  let readyCount=0;
   for(const pt of PBOSS_TYPES){ const cdL=G.pbossCds[pt.id]||0;
     const active=G.enemies.some(e=>e.pboss&&e.pbId===pt.id);
-    if(pbossUnlocked(pt) && cdL<=0 && !active) anyReady=true;
-    if(cdL>0) minCd=Math.min(minCd,cdL); }
-  const badge=(!anyReady && minCd<Infinity)?Math.ceil(minCd)+'s':'';
+    if(pbossUnlocked(pt) && cdL<=0 && !active) readyCount++; }
+  const anyReady=readyCount>0;
   b.classList.toggle('cd', !anyReady);
-  b.classList.toggle('notify', !!G.pbossNotify);   // 새 해금 알림 점등(팝업 열면 해제)
-  const c=document.getElementById('pbossBtnCd'); if(c && c.textContent!==badge) c.textContent=badge;
+  const c=document.getElementById('pbossBtnCd'); if(c && c.textContent!=='') c.textContent='';   // 하단 시간초 표시 제거
+  const cnt=document.getElementById('pbossNotifyDot');
+  if(cnt){ const t=anyReady?String(readyCount):''; if(cnt.textContent!==t) cnt.textContent=t; cnt.classList.toggle('show', anyReady); }
   // 열린 팝업: 보스별 상태(해금/활동/쿨다운0) 시그니처가 바뀔 때만 재생성, 초 카운트다운은 제자리 갱신
   const pop=document.getElementById('pbossPopup');
   if(pop && !pop.classList.contains('hide')){
