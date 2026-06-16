@@ -7896,33 +7896,37 @@ function drawShopBox(b){ let el=document.getElementById('shopBox');
     +'left:'+(x*100)+'%;top:'+(y*100)+'%;width:'+(w*100)+'%;height:'+(h*100)+'%'; }
 function clearShopBox(){ const el=document.getElementById('shopBox'); if(el) el.remove(); }
 // 유닛뽑기 입력 = 메인 체계: 진입 무선택. 시민 클릭=시민 선택 / 비콘 클릭=그 유닛 선택(정보) / 시민 선택+빈곳=이동(구매) / 빈곳 드래그=박스 / 빈곳 탭=해제
-let _shopStart=null, _shopMoved=false, _shopBox=null;
+let _shopStart=null, _shopMoved=false, _shopBox=null, _shopGrab=false;
 // 유닛 정보 클릭 판정 — 작은 반경(유닛 아이콘 부근만). 비콘 가장자리 클릭은 '빈 곳'으로 → 시민 이동 가능
-function onUnitDown(e){ if(G.tab!=='Unit') return; e.preventDefault();
-  const p=unitHoldPos(e); _shopStart=p; _shopMoved=false; _shopBox=null;
+function onUnitDown(e){ if(G.tab!=='Unit') return; if(e.cancelable) e.preventDefault();
+  const p=unitHoldPos(e); _shopStart=p; _shopMoved=false; _shopBox=null; _shopGrab=false;
   const c=G.citizen, onCit = c && Math.hypot((p.x-c.x)*GW,(p.y-c.y)*GH) < Math.min(GW,GH)*0.055;
-  if(onCit){ selectShop('citizen'); }                       // 시민 클릭 → 시민 선택(여기부터 빈곳 클릭으로 이동)
+  if(onCit){ selectShop('citizen'); _shopGrab=true; }         // 시민 짚기 → 선택 + 떼지 않고 스와이프하면 즉시 이동
   else if(G.shopSel==='citizen'){ moveCitizenCmd(p); }      // 시민 선택됨 + 빈곳/비콘 → 시민 이동(비콘이면 구매). 비콘 유닛은 클릭 안됨(정보는 i 버튼)
   else { _shopBox={x0:p.x,y0:p.y,x1:p.x,y1:p.y}; drawShopBox(_shopBox); }  // 무선택 + 빈곳 → 박스
   updateDeselTop();
 }
-function onUnitMove(e){ if(G.tab!=='Unit') return; e.preventDefault();
+function onUnitMove(e){ if(G.tab!=='Unit') return; if(e.cancelable) e.preventDefault();
   const p=unitHoldPos(e);
   if(_shopStart && Math.hypot(p.x-_shopStart.x,p.y-_shopStart.y)>0.012) _shopMoved=true;
   if(_shopBox){ _shopBox.x1=p.x; _shopBox.y1=p.y; drawShopBox(_shopBox); return; }
-  if(G.shopSel==='citizen' && uHold) uHold=p;   // 시민 드래그=따라 이동
+  // 시민을 짚은 채(또는 선택된 시민) 움직이면 즉시 따라 이동(메인 유닛과 동일)
+  if(G.shopSel==='citizen' && (_shopGrab||uHold) && _shopMoved) moveCitizenCmd(p);
 }
 function onUnitUp(){
   if(_shopBox){ const b=_shopBox; clearShopBox(); _shopBox=null;
     const c=G.citizen, x0=Math.min(b.x0,b.x1),x1=Math.max(b.x0,b.x1),y0=Math.min(b.y0,b.y1),y1=Math.max(b.y0,b.y1);
     if(_shopMoved && c && c.x>=x0&&c.x<=x1&&c.y>=y0&&c.y<=y1) selectShop('citizen');  // 드래그 박스에 시민 들어오면 선택
     else clearShopSel();   // 빈 곳 탭/빈 박스 = 해제
-    _shopStart=null; uHold=null; return; }
-  uHold=null; _shopStart=null;   // 시민은 목표(c.gx)까지 계속 이동 후 정지
+    _shopStart=null; uHold=null; _shopGrab=false; return; }
+  uHold=null; _shopStart=null; _shopGrab=false;   // 시민은 목표(c.gx)까지 계속 이동 후 정지
 }
 const vu=document.getElementById('vUnit');
-vu.addEventListener('mousedown',onUnitDown); vu.addEventListener('mousemove',onUnitMove); window.addEventListener('mouseup',onUnitUp);
-vu.addEventListener('touchstart',onUnitDown,{passive:false}); vu.addEventListener('touchmove',onUnitMove,{passive:false}); vu.addEventListener('touchend',onUnitUp);
+// 포인터 캡처(마우스·터치 통합): 시민을 짚는 순간 vUnit이 포인터를 잡아 손가락 밑 DOM이 바뀌어도 끝까지 추적 → 짚고 스와이프 즉시 이동
+vu.addEventListener('pointerdown', function(e){ try{ vu.setPointerCapture(e.pointerId); }catch(_){ } onUnitDown(e); });
+vu.addEventListener('pointermove', onUnitMove);
+vu.addEventListener('pointerup', function(e){ onUnitUp(e); try{ vu.releasePointerCapture(e.pointerId); }catch(_){ } });
+vu.addEventListener('pointercancel', function(e){ onUnitUp(e); });
 
 // ── 플레이어(관전) 탭: 전장 유닛 클릭=그 유닛 1마리 정보(적군처럼 단일). 드래그=박스 안 최근접 1마리. 이동 명령 없음(내 유닛 아님) ──
 function evPosIn(viewId,e){ const v=document.getElementById(viewId).getBoundingClientRect();
@@ -8178,6 +8182,7 @@ window.addEventListener('load',()=>{ drawMain(); placeMergeZone(); updateHud(); 
 import * as THREE from 'https://esm.sh/three@0.160.0';
 import { GLTFLoader } from 'https://esm.sh/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'https://esm.sh/three@0.160.0/examples/jsm/utils/SkeletonUtils.js';
+import { RoomEnvironment } from 'https://esm.sh/three@0.160.0/examples/jsm/environments/RoomEnvironment.js';
 
 const MODELS={ marine:'marine.glb', goliath:'goliath.glb', ghost:'ghost.glb', archon:'archon.glb', dragoon:'dragoon.glb', hydra:'hydralisk.glb', observer:'observer.glb', overlord:'overlord.glb',
   turret:'buildings/turret.glb', photon:'buildings/photon_cannon.glb',
@@ -8321,11 +8326,14 @@ function init(){
   const cv=document.getElementById('cvMarine'); if(!cv) return;
   renderer=new THREE.WebGLRenderer({canvas:cv, alpha:true, antialias:true});
   renderer.setPixelRatio(DPR); renderer.setClearColor(0x000000,0);
+  renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.25;   // 필름 톤매핑 — 워시아웃 줄이고 입체감·하이라이트↑
   scene=new THREE.Scene();
-  scene.add(new THREE.AmbientLight(0xffffff,2.0));   // 전체 밝기↑(어두운 배경 대비)
-  const d1=new THREE.DirectionalLight(0xffffff,2.1); d1.position.set(0.5,1,0.9); scene.add(d1);
-  const d2=new THREE.DirectionalLight(0xbfe0ff,0.8); d2.position.set(-0.6,0.3,-0.5); scene.add(d2);
-  const d3=new THREE.DirectionalLight(0xffffff,0.7); d3.position.set(0,0.4,-1); scene.add(d3); // 정면 보강광
+  // 환경광(IBL): RoomEnvironment 기반 부드러운 반사 → 금속·플라스틱 재질이 평면적으로 안 보이게(품질 핵심)
+  try{ const _pmrem=new THREE.PMREMGenerator(renderer); scene.environment=_pmrem.fromScene(new RoomEnvironment(renderer),0.04).texture; }catch(_){ }
+  scene.add(new THREE.AmbientLight(0xffffff,1.25));   // 환경광이 채움 → 앰비언트 낮춰 대비 확보
+  const d1=new THREE.DirectionalLight(0xffffff,1.9); d1.position.set(0.5,1,0.9); scene.add(d1);
+  const d2=new THREE.DirectionalLight(0xbfe0ff,0.7); d2.position.set(-0.6,0.3,-0.5); scene.add(d2);
+  const d3=new THREE.DirectionalLight(0xffffff,0.6); d3.position.set(0,0.4,-1); scene.add(d3); // 정면 보강광
   camera=new THREE.OrthographicCamera(0,1,1,0,-2000,2000); camera.position.set(0,0,800);
   const L=new GLTFLoader();
   let pending=Object.keys(MODELS).length+Object.keys(GUN_FOR).length+Object.keys(RUN_FOR).length+Object.keys(ATTACK_FOR).length+2;  // +1=비콘 +1=워든 검
