@@ -5668,6 +5668,8 @@ function renderAutoPopup(){ const pop=document.getElementById('autoPopup'); if(!
 function toggleAuto(kind){ const o=autoUtilOwned(); if(!o[kind]){ toast('업그레이드 필요'); return; }
   if(!G.auto) G.auto={unit:false,combine:false,energy:false,pboss:{}};
   G.auto[kind]=!G.auto[kind];
+  // 자동 유닛 소환 ↔ 자동 에너지 변환 = 상호 배타(둘은 같은 크레딧을 두고 경쟁 → 동시 ON 금지)
+  if(G.auto[kind] && (kind==='unit'||kind==='energy')){ const other=(kind==='unit')?'energy':'unit'; if(G.auto[other]){ G.auto[other]=false; toast('⟳ '+(other==='unit'?'자동 유닛 소환':'자동 에너지 변환')+' OFF (동시 사용 불가)'); } }
   toast('⟳ '+({combine:'자동 조합',unit:'자동 유닛 소환',energy:'자동 에너지 변환'}[kind])+' '+(G.auto[kind]?'ON':'OFF'));
   if(typeof playSfx==='function') playSfx('ui_open');
   renderAutoPopup(); }
