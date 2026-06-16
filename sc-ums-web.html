@@ -76,7 +76,7 @@
   canvas{position:absolute;inset:0;width:100%;height:100%}
   #cvMarine{z-index:6;pointer-events:none}  /* 마린 3D 오버레이(트랙 위, 유닛 라벨 아래) */
   #cvFx{z-index:7;pointer-events:none}       /* 투사체 오버레이(3D 모델 위 — 미사일이 몸에 안 가림) */
-  .gview{position:absolute;inset:0;display:none}.gview.on{display:block}
+  .gview{position:absolute;inset:0;display:none;touch-action:none}.gview.on{display:block}   /* touch-action:none → 모바일 스와이프를 스크롤로 뺏기지 않고 드래그 이동/업글로 처리 */
 
   /* HUD — 좌(킬·맵·라운드 세로) / 중앙(제한시간 박스) / 우(자원 가로) */
   #hud{position:absolute;top:0;left:0;right:0;z-index:20;padding:calc(env(safe-area-inset-top,0px) + 18px) 9px 0;
@@ -965,7 +965,7 @@
   .upgProg .pval{font-size:var(--fs-sm);font-weight:800;font-family:'Rajdhani',sans-serif;color:var(--neon);text-shadow:0 0 5px var(--neon-glow);letter-spacing:.3px}
   /* 우측: 1:1 정사각 커맨드 그리드 — 패널 높이를 꽉 채움(우측 끝까지) */
   .cmdGrid{flex:none;height:min(100%,126px);aspect-ratio:3/2;align-self:center;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:5px}
-  .cmdSlot{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;position:relative;overflow:hidden;
+  .cmdSlot{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;position:relative;overflow:hidden;touch-action:none;
     border:1px solid var(--metal-edge);transition:all .1s;
     background:linear-gradient(160deg,rgba(42,48,60,.42),rgba(10,12,16,.55));
     clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
@@ -2410,14 +2410,16 @@ const DRAW_BEACONS=[
   {id:'buyPhoton', x:.20, y:.37, name:'스파이어', core:'◉'},
   {id:'draw',      x:.20, y:.56, name:'유닛 1회', core:'?'},
   {id:'energy',    x:.20, y:.75, name:'에너지 1회', core:'⚡'},
-  // 우측 줄(2줄): 뽑기 확률↑ / 크레딧 획득↑ (확률표 아래·미니맵 위로 배치)
-  {id:'gachaUp',  x:.80, y:.46, name:'뽑기 확률↑', core:'%'},
-  {id:'creditUp', x:.80, y:.65, name:'크레딧 획득↑', core:'C'},
+  // 우측 줄: 뽑기 확률↑ / 크레딧 획득↑ / 에너지 전환(전액)
+  {id:'gachaUp',  x:.80, y:.37, name:'뽑기 확률↑', core:'%'},
+  {id:'creditUp', x:.80, y:.56, name:'크레딧 획득↑', core:'C'},
+  {id:'energyAll',x:.80, y:.75, name:'에너지 전환', core:'⚡⚡'},
 ];
 // 비콘별 색 테마(인라인 CSS 변수로 기존 .drawZone 스타일 재사용). 유닛 1·10회=기본 빨강.
 const BEACON_THEME={   // 디자인 토큰과 통일: 유닛=네온 레드(기본), 고급=골드(재화/희귀), 에너지=HUD 시안(E 재화색)
   premium: {'--neon':'#ffd24a','--neon-soft':'rgba(255,210,74,.55)','--neon-glow':'rgba(255,210,74,.42)'},
   energy:  {'--neon':'#00e5ff','--neon-soft':'rgba(0,229,255,.5)','--neon-glow':'rgba(0,229,255,.38)'},
+  energyAll:{'--neon':'#00e5ff','--neon-soft':'rgba(0,229,255,.5)','--neon-glow':'rgba(0,229,255,.38)'},
   gachaUp: {'--neon':'#b06bff','--neon-soft':'rgba(176,107,255,.55)','--neon-glow':'rgba(176,107,255,.42)'},   // 뽑기확률↑=퍼플(상위등급색)
   creditUp:{'--neon':'#ffd24a','--neon-soft':'rgba(255,210,74,.55)','--neon-glow':'rgba(255,210,74,.42)'},     // 크레딧획득↑=골드(재화색)
 buyTurret:{'--neon':'#9fd6ff','--neon-soft':'rgba(159,214,255,.5)','--neon-glow':'rgba(159,214,255,.38)'},
@@ -2425,13 +2427,14 @@ buyPhoton:{'--neon':'#62d0ff','--neon-soft':'rgba(98,208,255,.5)','--neon-glow':
 pboss:   {'--neon':'#ff3b3b','--neon-soft':'rgba(255,59,59,.6)','--neon-glow':'rgba(255,59,59,.45)'},   // 개인 보스=위협 레드
 };
 function beaconCost(id){ return id==='gachaUp'?gachaUpCost() : id==='creditUp'?creditUpCost() : id==='pboss'?0
-  : id==='energy'?mapCfg('energyDrawCost',ENERGY_DRAW_COST)
+  : id==='energy'||id==='energyAll'?mapCfg('energyDrawCost',ENERGY_DRAW_COST)
   : id==='buyTurret'?U.turret.cost : id==='buyPhoton'?U.photon.cost : mapCfg('gachaCost',GACHA_COST); }
 function beaconName(b){ if(b.id==='gachaUp') return b.name+' Lv'+(G.gachaLuckLv||0); if(b.id==='creditUp') return b.name+' Lv'+(G.creditLv||0); return b.name; }
 function beaconMaxed(id){ return (id==='gachaUp' && (G.gachaLuckLv||0)>=GACHA_UP_MAX) || (id==='creditUp' && (G.creditLv||0)>=CREDIT_UP_MAX); }
 function runBeacon(id){ if(id==='gachaUp') return buyGachaUp(); if(id==='creditUp') return buyCreditUp();
   if(id==='pboss') return summonPersonalBoss();
   if(id==='energy') return energyDraw();
+  if(id==='energyAll') return energyDrawAll();
   if(id==='buyTurret') return buyUnit('turret'); if(id==='buyPhoton') return buyUnit('photon'); return drawGacha(); }
 function nearBeacon(b,x,y,mult){ if(!GW||!GH) return false; return Math.hypot((b.x-x)*GW,(b.y-y)*GH) < Math.min(GW,GH)*(mult||0.085); }
 function beaconUnder(x,y,mult){ for(const b of DRAW_BEACONS){ if(nearBeacon(b,x,y,mult)) return b; } return null; }
@@ -3002,7 +3005,7 @@ function renderBossPanel(){ const s=document.getElementById('bdSent'), t=documen
   if(typeof updateBossPickBtn==='function') updateBossPickBtn();
   if(typeof updateDeselTop==='function') updateDeselTop(); }
 // ── 유닛 판매 (등급 선택 → 초상화 클릭 = 1마리씩 판매) ──
-const SELL_VALUE={ common:15, rare:50, epic:130, unique:320, legend:850 };
+const SELL_VALUE={ common:15, rare:50, epic:130, unique:320, legend:850, transcend:2800 };   // 초월 추가(없으면 기본20에 헐값 판매됨). 갓=판매불가
 const NO_SELL_TIERS=new Set(['god']);   // 갓만 판매 불가(초월은 판매·조합 가능)
 function unitSellValue(u){ const base=(u&&u.gtier&&mapCfg('sellValue',SELL_VALUE)[u.gtier])||20;
   const ret=1+(buildLevel('sell_return')*0.05); return Math.round(base*ret); }
@@ -4014,6 +4017,27 @@ function energyDraw10(){
       +'<span class="grType">보유 '+G.gas+'</span>';
     box.classList.remove('pop'); void box.offsetWidth; box.classList.add('pop'); }
   toast('⚡ 에너지 ×10 → +'+total+' 에너지 (보유 '+G.gas+')');
+  updateHud();
+}
+// 에너지 전환(전액) — 보유 크레딧을 한 번에 전부 에너지로 변환
+function energyDrawAll(){
+  if(G.phase!=='playing'){ toast('게임 중에만 가능합니다'); return; }
+  const cost=mapCfg('energyDrawCost',ENERGY_DRAW_COST);
+  if(G.mineral<cost){ toast('크레딧 부족 (에너지 전환 '+cost+')'); return; }
+  const n=Math.floor(G.mineral/cost); G.mineral-=n*cost;
+  let total=0, jack=0;
+  for(let i=0;i<n;i++){ const r=Math.random(); let base;
+    if(r<0.55) base=4; else if(r<0.85) base=7; else if(r<0.97){ base=12; } else { base=22; jack++; }
+    base=Math.round(base*((G.metaB&&G.metaB.energyDrawMul)||1));
+    const before=G.gas; gainGas(base); total+=G.gas-before; }
+  if(typeof playSfx==='function') playSfx('hero_merge');
+  const col='#00e5ff', box=document.getElementById('gachaResult');
+  if(box){ box.style.setProperty('--gc', col);
+    box.innerHTML='<span class="grTier" style="color:'+col+'">⚡ 에너지 전환 ×'+n+(jack?' 💥'+jack:'')+'</span>'
+      +'<span class="grName" style="color:'+col+'">+'+total+' 에너지</span>'
+      +'<span class="grType">크레딧 '+(n*cost)+' 소모</span>';
+    box.classList.remove('pop'); void box.offsetWidth; box.classList.add('pop'); }
+  toast('⚡ 크레딧 '+(n*cost)+' → +'+total+' 에너지 (보유 '+G.gas+')');
   updateHud();
 }
 
@@ -5718,7 +5742,7 @@ function upgHoldStart(wpn, ev){ if(ev){ ev.preventDefault(); ev.stopPropagation(
   research(wpn);                       // 즉시 1회
   upgHoldStop();
   _upgHold={wpn:wpn};
-  _upgHold.delay=setTimeout(()=>{ if(_upgHold&&_upgHold.wpn===wpn) _upgHold.rep=setInterval(()=>research(wpn),50); }, 500); }
+  _upgHold.delay=setTimeout(()=>{ if(_upgHold&&_upgHold.wpn===wpn) _upgHold.rep=setInterval(()=>research(wpn),100); }, 1000); }   // 1초 후부터 0.1초마다 연속 업그레이드
 function upgHoldStop(){ if(_upgHold){ clearTimeout(_upgHold.delay); if(_upgHold.rep) clearInterval(_upgHold.rep); _upgHold=null; } }
 ['pointerup','pointercancel'].forEach(e=>document.addEventListener(e, upgHoldStop));   // 손 떼면 어디서든 중단
 window.addEventListener('blur', upgHoldStop);
@@ -7398,7 +7422,7 @@ function hitUnit(x,y){ let best=.06,hit=null;
 // 유닛 위 정확 판정(반경 내)
 function hitUnitPrecise(x,y){ let best=1e9,hit=null;
   for(const u of G.units){ if(u.atBoss) continue; const d=Math.hypot((u.x-x)*GW,(u.y-y)*GH); if(d<=unitRadius(u)+6 && d<best){ best=d; hit=u; } } return hit; }
-const GRAB_PAD=6;    // 그랩 여유(px) — 유닛 위를 정확히 눌러야 잡힘(바닥 클릭 시 선택 안 됨)
+const GRAB_PAD=10;   // 그랩 여유(px) — 손가락 터치로 유닛을 짚고 바로 스와이프 이동하기 쉽게 살짝 키움
 function grabUnit(x,y){ let best=1e9,hit=null;
   for(const u of G.units){ if(u.atBoss) continue; const d=Math.hypot((u.x-x)*GW,(u.y-y)*GH); if(d<=unitRadius(u)+GRAB_PAD && d<best){ best=d; hit=u; } } return hit; }
 // 적 위 판정(트랙 좌표 → 픽셀). 가장 가까운 적 1마리
