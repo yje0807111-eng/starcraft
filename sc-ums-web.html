@@ -119,13 +119,13 @@
     text-shadow:0 1px 2px #000}
   #specLabel.on{display:inline-block}
   /* 채팅: 게임 배경 위 오버레이 — 입력창 좌측 위에 떠올랐다 일정시간 후 사라짐 */
-  #chatLog{position:absolute;left:9px;right:186px;bottom:50px;z-index:18;display:flex;flex-direction:column;gap:2px;pointer-events:none}
+  #chatLog{position:absolute;left:9px;right:74px;bottom:50px;z-index:18;display:flex;flex-direction:column;gap:2px;pointer-events:none}
   .cmsg{font-size:var(--fs-md);line-height:1.4;color:#cfe0f4;text-shadow:0 0 5px #000,0 1px 2px #000,0 0 2px #000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
     opacity:1;transition:opacity .8s}
   .cmsg.fade{opacity:0}
   .cmsg b{font-weight:800}
   .cmsg.sys{color:#7fa8cc;font-style:italic;opacity:.85}
-  #chatBar{position:absolute;left:9px;right:186px;bottom:9px;z-index:18;display:flex;gap:6px}   /* 우하단 자동설정+개인보스 버튼 2개(각 82px) 자리 확보 */
+  #chatBar{position:absolute;left:9px;right:74px;bottom:9px;z-index:18;display:flex;gap:6px}   /* 우하단 우측열 버튼(58px 정사각) 한 줄 자리만 비움 → 채팅 영역 확장 */
   /* 채팅창·전송 — 상단 HUD(시안) 톤 + 투명 유지 */
   #chatField{flex:1;min-width:0;background:none;border:1px solid rgba(0,229,255,.2);border-radius:var(--r-md);color:#d6f1fb;font-size:var(--fs-lg);padding:9px 13px;outline:none;text-shadow:0 1px 2px #000;transition:border-color .15s}
   #chatField:focus{border-color:rgba(0,229,255,.55);box-shadow:0 0 7px var(--hud-glow)}
@@ -134,7 +134,7 @@
   #chatSend:active{transform:translateY(1px);background:rgba(0,229,255,.1)}
 
   /* 전투 미니맵(좌하단) — 메인 외 탭에서 전투를 도트로 표시 */
-  #miniWrap{position:absolute;bottom:8px;right:8px;z-index:20;display:none;width:82px;pointer-events:none}
+  #miniWrap{position:absolute;bottom:8px;right:8px;z-index:20;display:none;width:58px;pointer-events:none}
   #miniWrap.on{display:block}
   /* 조합 버튼(메인 탭 — 메시지 전송 버튼과 같은 높이, 버튼 느낌) */
   #mergeFab{position:absolute;bottom:9px;right:9px;z-index:20;width:66px;height:34px;border-radius:var(--r-md);cursor:pointer;pointer-events:auto;
@@ -149,7 +149,7 @@
   #mergeFab .mfi{display:none}   /* 조합 아이콘 제거 */
   #mergeFab .mfl{font-size:var(--fs-xl);font-weight:800;letter-spacing:1.5px}
   /* 스킬 FAB — 메인 화면, 조합 버튼 위(에너지 시안 톤) */
-  #skillFab{position:absolute;bottom:86px;right:8px;z-index:20;width:58px;height:58px;border-radius:10px;cursor:pointer;pointer-events:auto;overflow:hidden;
+  #skillFab{position:absolute;bottom:136px;right:8px;z-index:20;width:58px;height:58px;border-radius:10px;cursor:pointer;pointer-events:auto;overflow:hidden;
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
     border:1px solid rgba(0,229,255,.55);background:linear-gradient(180deg,rgba(11,40,54,.95),rgba(5,16,26,.95));
     color:#bfeeff;text-shadow:0 0 5px rgba(0,200,255,.5),0 1px 2px #000;
@@ -164,7 +164,7 @@
   #skillFab.active{border-color:#7fffd4;box-shadow:0 0 16px -2px rgba(90,255,200,.65),0 4px 9px var(--shade),inset 0 0 12px rgba(90,255,200,.22)}  /* 버프 활성 */
   #skillFab:active{transform:translateY(1px)}
   /* 개인 보스 버튼(메인 탭 우하단=미니맵 자리) — 해골 + '개인보스' + 쿨다운 */
-  #pbossBtn{position:absolute;right:8px;bottom:8px;z-index:20;width:82px;min-height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  #pbossBtn{position:absolute;right:8px;bottom:8px;z-index:20;width:58px;height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
     padding:6px 4px;cursor:pointer;pointer-events:auto;color:#ffd0d0;
     background:linear-gradient(160deg,rgba(150,36,36,.36),rgba(20,8,10,.56));border:1px solid rgba(255,59,59,.42);
     backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);   /* 투명도 살짝 ↑ — 배경이 비치되 글자 가독성 유지 */
@@ -173,7 +173,7 @@
   #pbossBtn::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,120,120,.4),transparent);pointer-events:none}
   #pbossBtn.hide{display:none}
   #pbossBtn .pbIco{line-height:0;filter:drop-shadow(0 0 5px rgba(255,59,59,.7))}
-  #pbossBtn .pbTx{font-size:10px;font-weight:800;letter-spacing:.3px;text-shadow:0 1px 2px #000}
+  #pbossBtn .pbTx{font-size:10px;font-weight:800;letter-spacing:.3px;text-shadow:0 1px 2px #000;white-space:nowrap}
   #pbossBtn .pbCd{font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:800;color:#ff9a9a;line-height:1;min-height:0}
   /* 우상단 = 소환 가능 보스 수: 박스 없이 숫자만(네온) */
   #pbossBtn .pbDot{display:none;position:absolute;top:1px;right:6px;color:#ff9a9a;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:800;line-height:1;text-shadow:0 0 7px rgba(255,90,90,.85),0 1px 2px #000;pointer-events:none}
@@ -182,8 +182,8 @@
   #pbossBtn:active{transform:translateY(1px)}
   #pbossBtn.cd{color:#ff9a9a;border-color:var(--metal-edge);background:linear-gradient(160deg,rgba(56,32,34,.5),rgba(16,10,12,.74))}
   /* 자동화 묶음 버튼 — 좌상단 킬 스코어 바로 아래, 작은 가로 칩 */
-  /* 자동 설정 버튼 — 우하단 개인보스 버튼 왼쪽에 나란히(같은 톤·크기). 녹색 액센트로 구분 */
-  #autoFab{position:absolute;right:96px;bottom:8px;z-index:20;width:82px;min-height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  /* 자동 설정 버튼 — 우하단 개인보스 버튼 바로 위에 세로로(전송버튼 폭의 정사각형). 녹색 액센트로 구분 */
+  #autoFab{position:absolute;right:8px;bottom:72px;z-index:20;width:58px;height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
     padding:6px 4px;cursor:pointer;pointer-events:auto;color:#d6f0e0;overflow:hidden;
     background:linear-gradient(160deg,rgba(34,72,52,.36),rgba(10,18,13,.56));border:1px solid rgba(70,240,106,.42);
     backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
@@ -191,12 +191,12 @@
     box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 0 14px -4px rgba(70,240,106,.5);transition:all .14s}
   #autoFab::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(120,240,160,.45),transparent);pointer-events:none}
   #autoFab .afIco{font-size:18px;line-height:0;font-weight:800;color:#6ff0a0;filter:drop-shadow(0 0 5px rgba(70,240,106,.7))}
-  #autoFab .afTx{font-size:10px;font-weight:800;letter-spacing:.3px;text-shadow:0 1px 2px #000}
+  #autoFab .afTx{font-size:10px;font-weight:800;letter-spacing:.3px;text-shadow:0 1px 2px #000;white-space:nowrap}
   #autoFab.hide{display:none}
   #autoFab.act{border-color:rgba(70,240,106,.8);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 0 14px -2px rgba(70,240,106,.7)}
   #autoFab.act .afTx{color:#9bf0c0}
   #autoFab:hover{border-color:rgba(120,240,160,.6)}#autoFab:active{transform:translateY(1px)}
-  #autoPopup{position:absolute;right:8px;bottom:78px;z-index:30;width:200px;display:flex;flex-direction:column;gap:5px;padding:8px;
+  #autoPopup{position:absolute;right:8px;bottom:136px;z-index:30;width:200px;display:flex;flex-direction:column;gap:5px;padding:8px;
     background:linear-gradient(160deg,rgba(20,26,24,.82),rgba(9,12,11,.86));border:1px solid rgba(255,255,255,.1);
     backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
     clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
@@ -225,7 +225,7 @@
   #autoPopup .apRow.on .apSw::after{left:18px;background:#0c1410}
   #autoPopup .apNote{font-size:8.5px;color:#8fa098;text-align:center;padding-top:2px}
   #pbossBtn.cd .pbIco{filter:none;opacity:.65}
-  #pbossPopup{position:absolute;right:8px;bottom:44px;z-index:30;width:246px;max-height:min(400px,calc(100% - 50px));overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:4px;
+  #pbossPopup{position:absolute;right:8px;bottom:72px;z-index:30;width:246px;max-height:min(400px,calc(100% - 50px));overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:4px;
     background:linear-gradient(160deg,rgba(34,18,20,.97),rgba(10,7,9,.98));border:1px solid rgba(255,59,59,.4);
     clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px);
     box-shadow:0 8px 24px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.06)}
@@ -436,7 +436,7 @@
     box-shadow:inset 0 1px 0 rgba(255,255,255,.06);transition:all .12s}
   .hbOpen:hover{border-color:rgba(255,90,90,.55)}.hbOpen:active{transform:translateY(1px)}
   .hbOpen.viewing{color:#bfe0ff;background:linear-gradient(160deg,rgba(40,90,140,.4),rgba(12,24,40,.55));border-color:rgba(120,180,230,.55)}
-  #miniBox{position:relative;width:82px;height:82px;border-radius:2px;overflow:hidden;
+  #miniBox{position:relative;width:58px;height:58px;border-radius:2px;overflow:hidden;
     border:1px solid rgba(0,229,255,.16);
     background:rgba(8,16,26,.2)}
 
@@ -1980,7 +1980,7 @@
     <!-- 개인 보스 소환 팝업(4종) -->
     <div id="pbossPopup" class="hide"></div>
     <!-- 자동화 묶음 버튼(메인 좌측): 자동 조합/유닛/에너지 토글 — 해금 업그레이드 보유 시 표시 -->
-    <div id="autoFab" class="hide" onclick="toggleAutoPopup(event)" title="자동 설정"><span class="afIco">⟳</span><span class="afTx">자동 설정</span></div>
+    <div id="autoFab" class="hide" onclick="toggleAutoPopup(event)" title="자동 설정"><span class="afIco">⟳</span><span class="afTx">자동설정</span></div>
     <div id="autoPopup" class="hide"></div>
 
     <div id="toast"></div>
