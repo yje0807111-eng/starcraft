@@ -178,6 +178,38 @@
   #pbossBtn:hover{border-color:rgba(255,90,90,.8)}
   #pbossBtn:active{transform:translateY(1px)}
   #pbossBtn.cd{color:#ff9a9a;border-color:var(--metal-edge);background:linear-gradient(160deg,rgba(56,32,34,.5),rgba(16,10,12,.74))}
+  /* 자동화 묶음 버튼(메인 좌측) + 설정 팝업 */
+  #autoFab{position:absolute;left:8px;top:96px;z-index:20;min-width:52px;min-height:46px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+    padding:5px 7px;cursor:pointer;pointer-events:auto;color:#bfe0d0;
+    background:linear-gradient(160deg,rgba(30,46,40,.42),rgba(8,14,11,.56));border:1px solid rgba(70,240,106,.34);
+    backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+    clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06);transition:.14s}
+  #autoFab.hide{display:none}
+  #autoFab.act{border-color:rgba(70,240,106,.72);box-shadow:0 0 13px -3px rgba(70,240,106,.6)}
+  #autoFab .afIco{font-size:18px;line-height:1;font-weight:800;text-shadow:0 0 6px rgba(70,240,106,.5)}
+  #autoFab .afTx{font-size:9px;font-weight:800;letter-spacing:.3px;text-shadow:0 1px 2px #000}
+  #autoFab:hover{border-color:rgba(70,240,106,.6)}#autoFab:active{transform:translateY(1px)}
+  #autoPopup{position:absolute;left:8px;top:150px;z-index:30;width:192px;display:flex;flex-direction:column;gap:6px;padding:9px;
+    background:linear-gradient(160deg,rgba(20,26,24,.82),rgba(9,12,11,.86));border:1px solid rgba(255,255,255,.1);
+    backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
+    clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
+    box-shadow:0 10px 26px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.05)}
+  #autoPopup.hide{display:none}
+  #autoPopup .apHead{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:#dfeae4;letter-spacing:.4px;padding:0 1px 6px;border-bottom:1px solid rgba(255,255,255,.12);text-shadow:0 1px 2px #000}
+  #autoPopup .apHead .apBar{width:3px;height:13px;background:#46f06a;box-shadow:0 0 6px rgba(70,240,106,.5);border-radius:1px}
+  #autoPopup .apRow{display:flex;align-items:center;gap:8px;padding:6px 7px;border-radius:7px;cursor:pointer;border:1px solid var(--metal-edge);background:rgba(255,255,255,.03);transition:.12s}
+  #autoPopup .apRow:active{transform:translateY(1px)}
+  #autoPopup .apRow.on{border-color:rgba(70,240,106,.55);background:rgba(70,240,106,.1)}
+  #autoPopup .apRow.lk{cursor:default;opacity:.6}
+  #autoPopup .apTx{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.2}
+  #autoPopup .apName{font-size:11px;font-weight:800;color:#eef2ee;white-space:nowrap}
+  #autoPopup .apDesc{font-size:8px;color:#9fb0a8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #autoPopup .apSw{flex:0 0 auto;width:34px;height:18px;border-radius:10px;background:rgba(255,255,255,.13);position:relative;transition:.14s}
+  #autoPopup .apSw::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#cfd6dc;transition:.14s}
+  #autoPopup .apRow.on .apSw{background:#46f06a}
+  #autoPopup .apRow.on .apSw::after{left:18px;background:#0c1410}
+  #autoPopup .apNote{font-size:8.5px;color:#8fa098;text-align:center;padding-top:2px}
   #pbossBtn.cd .pbIco{filter:none;opacity:.65}
   #pbossPopup{position:absolute;right:8px;bottom:80px;z-index:30;width:246px;max-height:380px;overflow-y:auto;padding:9px;display:flex;flex-direction:column;gap:6px;
     background:linear-gradient(160deg,rgba(34,18,20,.97),rgba(10,7,9,.98));border:1px solid rgba(255,59,59,.4);
@@ -192,7 +224,13 @@
     clip-path:polygon(5px 0,100% 0,100% calc(100% - 5px),calc(100% - 5px) 100%,0 100%,0 5px);transition:all .12s;font-family:inherit}
   .ppItem:hover{border-color:var(--pc,#aaa);filter:brightness(1.15)}
   .ppItem:active{transform:translateY(1px)}
-  .ppItem:disabled{opacity:.4;cursor:default;filter:grayscale(.5)}
+  .ppItem.blk{opacity:.55;cursor:default}                       /* 쿨다운·활동 중 — 흐리게(클릭 시 안내 토스트) */
+  .ppItem.locked{opacity:.8;filter:grayscale(.35);cursor:default}/* 잠금 — 진행도 읽히게 덜 흐리게 */
+  .ppItem.locked .ppIco{color:#9aa0ac;filter:none}
+  .ppItem .ppAuto{flex:0 0 auto;align-self:stretch;display:flex;align-items:center;justify-content:center;min-width:25px;margin-left:1px;
+    font-size:14px;font-weight:800;color:#828a96;cursor:pointer;border-radius:5px;border:1px solid var(--metal-edge);background:rgba(255,255,255,.04);transition:.12s}
+  .ppItem .ppAuto.on{color:#46f06a;border-color:#46f06a;background:rgba(70,240,106,.14);box-shadow:0 0 8px -2px rgba(70,240,106,.6)}
+  .ppItem .ppAuto:hover{border-color:#9aa6b2}.ppItem .ppAuto.on:hover{border-color:#7ef79a}.ppItem .ppAuto:active{transform:translateY(1px)}
   .ppItem .ppIco{width:22px;height:22px;flex:0 0 auto;color:var(--pc,#cfd);filter:drop-shadow(0 0 4px var(--pc))}
   .ppItem .ppTx{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;line-height:1.15}
   .ppItem .ppName{font-size:11px;font-weight:800;color:#f2e4e4;white-space:nowrap}
@@ -201,8 +239,6 @@
   .ppItem .ppRec{font-size:8px;color:#9fb0c0;font-weight:600;white-space:nowrap}
   .ppItem .ppLock{font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:800;color:#c6a8a8;white-space:nowrap;flex:0 0 auto;text-align:right;line-height:1.25}
   .ppItem .ppLock.on{color:#ff9a9a}
-  .ppItem.locked:disabled{opacity:.7;filter:grayscale(.4)}   /* 잠금: 진행도가 읽히도록 덜 흐리게 */
-  .ppItem.locked .ppIco{color:#9aa0ac;filter:none}
   .ppItem .ppRwd{display:flex;flex-direction:column;align-items:flex-end;gap:1px;font-family:'Rajdhani',sans-serif;font-size:10.5px;font-weight:800;flex:0 0 auto}
   .ppItem .ppRwd .ppC{display:flex;align-items:center;gap:2px;color:var(--gold-lt)}
   .ppItem .ppRwd .ppE{color:#7fe0ff;letter-spacing:.2px}
@@ -1917,6 +1953,9 @@
     <div id="pbossBtn" class="hide" onclick="togglePbossPopup(event)" title="개인 보스 소환"><span class="pbIco"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 2.5c-4 0-6.5 2.8-6.5 6.4 0 2.3 1.1 3.7 2.2 4.7v2.2c0 .7.5 1.1 1.2 1.1.4 1.1 1.6 1.9 3.1 1.9s2.7-.8 3.1-1.9c.7 0 1.2-.4 1.2-1.1v-2.2c1.1-1 2.2-2.4 2.2-4.7 0-3.6-2.5-6.4-6.5-6.4z" fill="currentColor" opacity=".22"/><path d="M12 2.5c-4 0-6.5 2.8-6.5 6.4 0 2.3 1.1 3.7 2.2 4.7v2.2c0 .7.5 1.1 1.2 1.1.4 1.1 1.6 1.9 3.1 1.9s2.7-.8 3.1-1.9c.7 0 1.2-.4 1.2-1.1v-2.2c1.1-1 2.2-2.4 2.2-4.7 0-3.6-2.5-6.4-6.5-6.4z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="9.3" cy="9.2" r="1.5" fill="currentColor"/><circle cx="14.7" cy="9.2" r="1.5" fill="currentColor"/><path d="M10.4 16.5v2M12 16.7v2.1M13.6 16.5v2" stroke="currentColor" stroke-width="1"/></svg></span><span class="pbTx">개인보스</span><span class="pbCd" id="pbossBtnCd"></span></div>
     <!-- 개인 보스 소환 팝업(4종) -->
     <div id="pbossPopup" class="hide"></div>
+    <!-- 자동화 묶음 버튼(메인 좌측): 자동 조합/유닛/에너지 토글 — 해금 업그레이드 보유 시 표시 -->
+    <div id="autoFab" class="hide" onclick="toggleAutoPopup(event)" title="자동화 설정"><span class="afIco">⟳</span><span class="afTx">자동</span></div>
+    <div id="autoPopup" class="hide"></div>
 
     <div id="toast"></div>
     <!-- #ov(승/패 결과)는 #phone 직속으로 이동 — 게임 전체(하단 콘솔 포함)를 덮기 위함 -->
@@ -2753,7 +2792,7 @@ const DIFFICULTY = {
 const DIFFICULTY_ORDER = ['easy','normal','hard','hell','nightmare'];
 // 보스 처치 코인(기본, 난이도 coinMult 적용 전). 표에 없는 라운드는 라운드 비례 폴백.
 // 메타 빌드 정의(설계서 4번). group: util / power / coop. 다음레벨 비용 = floor(start * rate^level)
-const META_BUILD_GROUPS = { eco:'경제', prod:'생산', combat:'전투', team:'전체 강화', coop:'보스', end:'엔드' };
+const META_BUILD_GROUPS = { eco:'경제', prod:'생산', combat:'전투', team:'전체 강화', coop:'보스', util:'자동화', end:'엔드' };
 // start=1레벨 비용 기준값, nMax=일반 레벨 수, max=일반+초월(초월 3레벨·효과 ×2/×4/×8). 비용은 metaNextCost(완만 감소배율) 참조.
 const META_BUILDS = {   // 탭(group) → 섹션(sect) 2단 분류. 같은 sect끼리 묶여 헤더로 구분됨
   // ── 경제 ──
@@ -2787,6 +2826,11 @@ const META_BUILDS = {   // 탭(group) → 섹션(sect) 2단 분류. 같은 sect�
   boss_reward_up:{ name:'보스 보상 증가', desc:'월드 보스 처치 포인트 +10%/Lv', start:5, nMax:5, max:8, group:'coop', sect:'월드 보스' },
   pboss_reward:  { name:'개인 보스 보상', desc:'개인 보스 처치 보상 +10%/Lv', start:5, nMax:5, max:8, group:'coop', sect:'개인 보스' },
   pboss_cd:      { name:'개인 보스 쿨감', desc:'개인 보스 재소환 쿨다운 -6%/Lv', start:5, nMax:5, max:8, group:'coop', sect:'개인 보스' },
+  // ── 자동화 유틸(QoL · 반복 작업 자동화 · on/off는 인게임 토글에서) — 노말 후반·하드 초반 진입자용 가격대 ──
+  auto_unit:    { name:'자동 유닛 소환',  desc:'유닛 자동 뽑기 토글 해금 (0.33초마다 1기)',        start:28, nMax:1, max:1, group:'util', sect:'자동화 해금' },
+  auto_combine: { name:'자동 조합',       desc:'낮은 등급부터 자동 조합 토글 해금 (레전드까지·0.33초)', start:28, nMax:1, max:1, group:'util', sect:'자동화 해금' },
+  auto_energy:  { name:'자동 에너지 변환', desc:'크레딧→에너지 자동 변환 토글 해금 (0.33초마다)',     start:24, nMax:1, max:1, group:'util', sect:'자동화 해금' },
+  auto_pboss:   { name:'자동 개인 보스',   desc:'개인 보스를 쿨마다 자동 소환 토글 해금 (보스별 on/off)', start:40, nMax:1, max:1, group:'util', sect:'자동화 해금' },
   // ── 엔드 강화(고난도 도전용 · 매우 비싸고 강력 · 초월 구간 없음) ──
   end_atk:    { name:'종결 화력',  desc:'유닛 공격력 +12%/Lv',          start:80, nMax:6, max:6, group:'end', sect:'종결 강화' },
   end_tower:  { name:'요새화',     desc:'타워 공격력 +35%/Lv',          start:70, nMax:6, max:6, group:'end', sect:'종결 강화' },
@@ -2847,6 +2891,10 @@ function metaBonus(){ const L=id=>metaEffLv(id), T=id=>teamEffLv(id);   // 효�
     pbossRewardMul:1 + L('pboss_reward')*0.10,         // 개인 보스 처치 보상 배율
     pbossCdMul:    Math.max(0.4, 1 - L('pboss_cd')*0.06),   // 개인 보스 쿨다운 배율
     towerMul:    (1 + L('tower_power')*0.20) * (1 + L('end_tower')*0.35),   // 타워 공격력 배율(타워 강화 + 엔드 요새화)
+    autoUnit:    L('auto_unit')>0,      // 자동화 해금 플래그(인게임 토글로 on/off)
+    autoCombine: L('auto_combine')>0,
+    autoEnergy:  L('auto_energy')>0,
+    autoPboss:   L('auto_pboss')>0,
   };
 }
 function gainMineral(n){ G.mineral += Math.round(n*((G.metaB&&G.metaB.creditMul)||1)*(1+(G.creditLv||0)*CREDIT_UP_STEP)); }   // 메타 크레딧↑ × 내실 크레딧획득↑(Lv당 +8%)
@@ -2875,13 +2923,14 @@ function buildUpgrade(id){ const b=META_BUILDS[id]; if(!b) return false;
 
 // ── 포인트 연구소(인게임 업그레이드 구역 건물) — 영구 강화 리스트. PLAYER_META 데이터, 구매 시 G.metaB 재계산으로 즉시 적용(시작 자원/유닛만 다음 판) ──
 let _ptGroup='eco';
-const _PT_TABS=[['eco','경제'],['prod','생산'],['combat','전투'],['team','전체'],['coop','보스'],['end','엔드']];
+const _PT_TABS=[['eco','경제'],['prod','생산'],['combat','전투'],['team','전체'],['coop','보스'],['util','자동화'],['end','엔드']];
 const _PT_NOTE={
   eco:'크레딧·에너지 수급 강화 · 즉시 적용 (시작 자원은 다음 판)',
   prod:'뽑기 확률·추가 생산 등 생산 강화 · 즉시 적용 (시작 유닛은 다음 판)',
   combat:'아군 화력·공격속도 강화와 적 약화 · 즉시 적용 (시작 포탑은 다음 판)',
   team:'전체 강화 · 협동에서 파티 중 최고 레벨이 모두에게 적용',
   coop:'월드 보스 공략 + 개인 보스 보상·쿨감 강화',
+  util:'반복 작업 자동화 해금 · on/off는 인게임 토글 (개인보스=보스 팝업 / 나머지=메인 자동 버튼)',
   end:'⚡ 종결 강화 — 매우 비싸지만 강력 · 고난도 도전용'
 };
 // 포인트 연구소 선택 → 팝업으로 영구 강화 리스트 표시(하단 구역이 좁아 팝업 사용)
@@ -3056,7 +3105,7 @@ function updateCombDot(){ const n=Object.keys(ownedCombineGroups()).length;
   const dot=document.getElementById('combDot'); if(dot){ dot.textContent=n||''; dot.classList.toggle('hide', !n); }
   if(!n && _homeMode==='combine') setHomeMode('select'); }   // 조합 불가가 되면 지정으로 복귀
 function setCombTier(t){ _combTier=t; _combSig=''; renderCombinePanel(); }
-function combineOneOfType(gid){
+function combineOneOfType(gid, quiet){
   const list=G.units.filter(u=>u.gid===gid && !u.fixed && !u.atBoss); if(list.length<3) return;
   const res=combineResultFor(gid, list[0].gtier); if(!res) return;
   const pick=list.slice(0,3), con=new Set(pick.map(x=>x.uid));
@@ -3065,8 +3114,8 @@ function combineOneOfType(gid){
   let outId; if(res.type==='transcend') outId=res.id;
   else { const pool=gachaUnitsOfTier(res.nextTier); outId=pool[Math.floor(Math.random()*pool.length)].id; }
   spawnGachaUnit(outId, cx, cy); const tg=GACHA_UNITS[outId];
-  toast((res.type==='transcend'?'✦ ':'')+tg.displayName+' '+GACHA_TIERS[tg.tier].name+(res.type==='transcend'?' 강림! ✦':' 진화! ⭐'));
-  if(typeof playSfx==='function') playSfx('hero_merge');
+  if(!quiet){ toast((res.type==='transcend'?'✦ ':'')+tg.displayName+' '+GACHA_TIERS[tg.tier].name+(res.type==='transcend'?' 강림! ✦':' 진화! ⭐'));
+    if(typeof playSfx==='function') playSfx('hero_merge'); }
   _combSig=''; _sellSig=''; refreshSelCard(); renderUnits(); updateHud(); renderHomeLeft(); }
 function renderCombinePanel(){ const tiersBox=document.getElementById('hsTiers'), grid=document.getElementById('hsGrid'); if(!tiersBox||!grid) return;
   const groups=ownedCombineGroups(), gids=Object.keys(groups);
@@ -3209,6 +3258,7 @@ function toggleBossPopup(e){ if(e&&e.stopPropagation)e.stopPropagation();
 function closeBossPopup(){ const p=document.getElementById('bossPopup'); if(p) p.classList.add('hide'); }
 document.addEventListener('pointerdown', function(ev){ const p=document.getElementById('bossPopup'); if(!p||p.classList.contains('hide'))return; if(ev.target.closest&&(ev.target.closest('#bossPopup')||ev.target.closest('#coopBossBar')))return; closeBossPopup(); }, true);
 document.addEventListener('pointerdown', function(ev){ const p=document.getElementById('pbossPopup'); if(!p||p.classList.contains('hide'))return; if(ev.target.closest&&(ev.target.closest('#pbossPopup')||ev.target.closest('#pbossBtn')))return; closePbossPopup(); }, true);
+document.addEventListener('pointerdown', function(ev){ const p=document.getElementById('autoPopup'); if(!p||p.classList.contains('hide'))return; if(ev.target.closest&&(ev.target.closest('#autoPopup')||ev.target.closest('#autoFab')))return; closeAutoPopup(); }, true);
 function openBossFromPopup(){ closeBossPopup(); if(typeof toggleBossArena==='function')toggleBossArena(); }
 function updateBossViewBtn(){ const b=document.getElementById('bossViewBtn'); if(b){ b.textContent=G.bossOpen?'메인':'보스방'; b.classList.toggle('viewing', !!G.bossOpen); } }
 // ── 토벌장 전용 이펙트 저장소 — 메인 트랙 이펙트와 완전 분리(두 화면이 서로 영향 없음) ──
@@ -3285,6 +3335,7 @@ function newGame(){ return {
   mergeMode:false, idSeq:1, eSeq:1,
   gachaLuckLv:0, creditLv:0,   // 내실 업그레이드: 뽑기 확률↑ / 크레딧 획득↑
   pbossCds:{},                 // 개인 보스 소환 쿨다운(보스 id별 개별, 초 / 소환 시 240=4분)
+  auto:{unit:false, combine:false, energy:false, pboss:{}},   // 자동화 on/off 토글(해금 업그레이드 보유 시에만 동작)
   citizen:{x:CITIZEN_HOME.x, y:CITIZEN_HOME.y, gx:null, gy:null, buyId:null}, // 유닛뽑기 시민(셀렉터)
 }; }
 let G=newGame();
@@ -4057,6 +4108,64 @@ function energyDrawAll(){
     box.classList.remove('pop'); void box.offsetWidth; box.classList.add('pop'); }
   toast('⚡ 크레딧 '+(n*cost)+' → +'+total+' 에너지 (보유 '+G.gas+')');
   updateHud();
+}
+
+// ── 자동화 유틸(해금 업그레이드 + 인게임 on/off 토글) — 0.33초마다 1틱(한 번에 폭주 방지) ──
+let _autoAcc=0;
+const AUTO_INT=0.33;
+function stepAuto(dt){
+  if(G.phase!=='playing' || !G.metaB || !G.auto) return;
+  _autoAcc+=dt; if(_autoAcc<AUTO_INT) return; _autoAcc=0;
+  const mb=G.metaB, a=G.auto;
+  if(mb.autoCombine && a.combine) autoCombineStep();   // 조합 먼저(유닛 칸 확보)
+  if(mb.autoUnit    && a.unit)    autoDrawStep();
+  if(mb.autoEnergy  && a.energy)  autoEnergyStep();
+  if(mb.autoPboss   && a.pboss)   autoPbossStep();
+}
+// 자동 조합: 가장 낮은 등급부터 1건. 'simple'(레전드 이하 생성)만 → 레전드→초월(레시피)은 자동 제외
+function autoCombineStep(){
+  const groups=ownedCombineGroups(); let bestGid=null, bestRank=99;
+  for(const gid in groups){ const list=groups[gid]; const res=combineResultFor(gid, list[0].gtier);
+    if(!res || res.type!=='simple') continue;   // 레전드→초월은 자동 안 됨
+    const rank=GACHA_TIER_ORDER.indexOf(list[0].gtier);
+    if(rank<bestRank){ bestRank=rank; bestGid=gid; } }
+  if(bestGid) combineOneOfType(bestGid, true);
+}
+// 자동 유닛 뽑기: 1기(칸·크레딧 충분할 때). 레전드+만 채팅 알림(도배 방지)
+function autoDrawStep(){
+  if(G.units.filter(u=>!u.fixed).length>=maxUnits()) return;
+  const cost=mapCfg('gachaCost',GACHA_COST); if(G.mineral<cost) return;
+  G.mineral-=cost;
+  let tier=gachaRollTier();
+  if(G.guarTickets>0){ if(tier==='common') tier='rare'; G.guarTickets--; }
+  const pool=gachaUnitsOfTier(tier); const gu=pool[Math.floor(Math.random()*pool.length)];
+  const ctr=trackCenter(); const sp=clampInner(ctr.x+(Math.random()-.5)*.08, ctr.y+(Math.random()-.5)*.08);
+  spawnGachaUnit(gu.id, sp.x, sp.y);
+  const _gd=(G.metaB&&G.metaB.gachaDoubleP)||0;
+  if(_gd>0 && Math.random()<_gd && G.units.filter(u=>!u.fixed).length<maxUnits()){
+    const gu2=pool[Math.floor(Math.random()*pool.length)], sp2=clampInner(ctr.x+(Math.random()-.5)*.1, ctr.y+(Math.random()-.5)*.1);
+    spawnGachaUnit(gu2.id, sp2.x, sp2.y); }
+  if(GACHA_TIERS[tier].serverNotify) addChat('', '🎉 ['+GACHA_TIERS[tier].name+'] '+gu.displayName+' (자동)', TIER_COLOR[tier]||'#fff', true);
+  renderUnits(); updateHud();
+}
+// 자동 에너지 변환: 보유 크레딧 전액을 조용히 변환(틱마다 새로 번 크레딧만큼 변환됨)
+function autoEnergyStep(){
+  const cost=mapCfg('energyDrawCost',ENERGY_DRAW_COST);
+  const n=Math.floor(G.mineral/cost); if(n<=0) return; G.mineral-=n*cost;
+  for(let i=0;i<n;i++){ const r=Math.random(); let base; if(r<0.55)base=4; else if(r<0.85)base=7; else if(r<0.97)base=12; else base=22;
+    base=Math.round(base*((G.metaB&&G.metaB.energyDrawMul)||1)); gainGas(base); }
+  updateHud();
+}
+// 자동 개인 보스: 토글된 보스 중 해금·쿨0·미활동인 것 소환
+function autoPbossStep(){
+  if(!G.auto.pboss) return; if(!G.pbossCds) G.pbossCds={};
+  for(const pt of PBOSS_TYPES){
+    if(!G.auto.pboss[pt.id]) continue;
+    if((G.pbossCds[pt.id]||0)>0) continue;
+    if(G.enemies.some(e=>e.pboss && e.pbId===pt.id)) continue;
+    if(!pbossUnlocked(pt)) continue;
+    summonPersonalBoss(pt.id);   // 내부에서 해금·쿨·활동 재검증 + 쿨다운 설정
+  }
 }
 
 // ── 유닛 지정 뽑기(5단계) — 원하는 등급을 크레딧으로 확정 획득 ──
@@ -5500,6 +5609,7 @@ function renderPbossPopup(){ const pop=document.getElementById('pbossPopup'); if
   const skull='<svg class="ppIco" viewBox="0 0 24 24"><path d="M12 2.5c-4 0-6.5 2.8-6.5 6.4 0 2.3 1.1 3.7 2.2 4.7v2.2c0 .7.5 1.1 1.2 1.1.4 1.1 1.6 1.9 3.1 1.9s2.7-.8 3.1-1.9c.7 0 1.2-.4 1.2-1.1v-2.2c1.1-1 2.2-2.4 2.2-4.7 0-3.6-2.5-6.4-6.5-6.4z" fill="currentColor" opacity=".22"/><path d="M12 2.5c-4 0-6.5 2.8-6.5 6.4 0 2.3 1.1 3.7 2.2 4.7v2.2c0 .7.5 1.1 1.2 1.1.4 1.1 1.6 1.9 3.1 1.9s2.7-.8 3.1-1.9c.7 0 1.2-.4 1.2-1.1v-2.2c1.1-1 2.2-2.4 2.2-4.7 0-3.6-2.5-6.4-6.5-6.4z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="9.3" cy="9.2" r="1.5" fill="currentColor"/><circle cx="14.7" cy="9.2" r="1.5" fill="currentColor"/><path d="M10.4 16.5v2M12 16.7v2.1M13.6 16.5v2" stroke="currentColor" stroke-width="1"/></svg>';
   const lock='<svg class="ppIco" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="9.5" rx="1.6" fill="currentColor" opacity=".18"/><rect x="5" y="10.5" width="14" height="9.5" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="12" cy="14.6" r="1.4" fill="currentColor"/></svg>';
   const fmtHpK=function(n){ if(n>=100000000) return (n/100000000).toFixed(1).replace(/\.0$/,'')+'억'; if(n>=10000) return (n/10000).toFixed(n>=100000?0:1).replace(/\.0$/,'')+'만'; return ''+n; };
+  const autoAvail=!!(G.metaB&&G.metaB.autoPboss);   // '자동 개인 보스' 업그레이드 보유 시 보스별 자동 토글 노출
   const items=PBOSS_TYPES.map(function(pt){
     const rwd=Math.round(pt.bonus*coinMult);
     const unlocked=pbossUnlocked(pt), active=G.enemies.some(e=>e.pboss&&e.pbId===pt.id);
@@ -5510,13 +5620,57 @@ function renderPbossPopup(){ const pop=document.getElementById('pbossPopup'); if
     else if(active) right='<span class="ppLock on">⚔ 활동 중</span>';
     else if(cdL>0)  right='<span class="ppLock ppCdLive" data-bid="'+pt.id+'">⏳ '+cdL+'s</span>';
     else            right='<span class="ppRwd"><span class="ppC">'+COIN_SM+rwd+'</span><span class="ppE">⚡'+(pt.egy||0)+'</span></span>';
-    return '<button class="ppItem'+(unlocked?'':' locked')+'" style="--pc:'+pt.col+'"'+(blocked?' disabled':'')+' onclick="summonPersonalBoss(\''+pt.id+'\')">'
+    const autoOn=!!(G.auto&&G.auto.pboss&&G.auto.pboss[pt.id]);
+    const autoChip=autoAvail?('<span class="ppAuto'+(autoOn?' on':'')+'" onclick="togglePbossAuto(event,\''+pt.id+'\')" title="쿨마다 자동 소환">⟳</span>'):'';
+    return '<div class="ppItem'+(unlocked?'':' locked')+(blocked?' blk':'')+'" style="--pc:'+pt.col+'" onclick="summonPersonalBoss(\''+pt.id+'\')">'
       +(unlocked?skull:lock)+'<div class="ppTx"><span class="ppName">'+pt.name+'</span>'
       +'<span class="ppHp">❤ '+fmtHpK(pt.hp)+(pt.ar?' · 🛡'+pt.ar:'')+'</span>'
       +'<span class="ppSub">권장 '+pt.rec+'</span></div>'
-      +right+'</button>'; }).join('');
-  const note='<div class="ppCdNote">등급 4종 전체 보유 시 해금 · 쿨다운 보스별 개별</div>';
+      +right+autoChip+'</div>'; }).join('');
+  const note='<div class="ppCdNote">등급 4종 전체 보유 시 해금 · 쿨다운 보스별 개별'+(autoAvail?' · ⟳=자동 소환':'')+'</div>';
   pop.innerHTML='<div class="ppHead"><span class="ppBar"></span>개인 보스 소환</div>'+items+note; }
+function togglePbossAuto(ev, id){ if(ev){ ev.stopPropagation(); ev.preventDefault(); }
+  if(!(G.metaB&&G.metaB.autoPboss)){ toast('자동 개인 보스 업그레이드 필요'); return; }
+  if(!G.auto) G.auto={unit:false,combine:false,energy:false,pboss:{}}; if(!G.auto.pboss) G.auto.pboss={};
+  G.auto.pboss[id]=!G.auto.pboss[id];
+  const pt=PBOSS_TYPES.find(t=>t.id===id);
+  toast('⟳ '+(pt?pt.name:'')+' 자동 소환 '+(G.auto.pboss[id]?'ON':'OFF'));
+  if(typeof playSfx==='function') playSfx('ui_open');
+  renderPbossPopup(); }
+// ── 메인 자동화 묶음 버튼/팝업(자동 조합·유닛·에너지) ──
+function autoUtilOwned(){ const mb=G.metaB||{}; return {combine:!!mb.autoCombine, unit:!!mb.autoUnit, energy:!!mb.autoEnergy}; }
+function autoSig(){ const o=autoUtilOwned(); const a=G.auto||{}; return ''+(a.combine?1:0)+(a.unit?1:0)+(a.energy?1:0)+(o.combine?1:0)+(o.unit?1:0)+(o.energy?1:0); }
+function updateAutoFab(){ const b=document.getElementById('autoFab'); if(!b) return;
+  if(!G.auto) G.auto={unit:false,combine:false,energy:false,pboss:{}};
+  const o=autoUtilOwned(), anyOwned=o.combine||o.unit||o.energy;
+  const showFab=(G.tab==='Main' && G.phase==='playing' && anyOwned);
+  b.classList.toggle('hide', !showFab);
+  if(!showFab){ const p=document.getElementById('autoPopup'); if(p) p.classList.add('hide'); return; }
+  b.classList.toggle('act', (o.combine&&G.auto.combine)||(o.unit&&G.auto.unit)||(o.energy&&G.auto.energy));
+  const pop=document.getElementById('autoPopup');
+  if(pop && !pop.classList.contains('hide') && pop._sig!==autoSig()) renderAutoPopup(); }
+function toggleAutoPopup(ev){ if(ev){ev.preventDefault();ev.stopPropagation();}
+  const pop=document.getElementById('autoPopup'); if(!pop) return;
+  if(pop.classList.contains('hide')){ renderAutoPopup(); pop.classList.remove('hide'); } else pop.classList.add('hide'); }
+function closeAutoPopup(){ const p=document.getElementById('autoPopup'); if(p) p.classList.add('hide'); }
+function renderAutoPopup(){ const pop=document.getElementById('autoPopup'); if(!pop) return;
+  if(!G.auto) G.auto={unit:false,combine:false,energy:false,pboss:{}};
+  const o=autoUtilOwned();
+  const defs=[['combine','자동 조합','낮은 등급부터 레전드까지', o.combine],
+              ['unit','자동 유닛 소환','0.33초마다 1기 뽑기', o.unit],
+              ['energy','자동 에너지 변환','크레딧→에너지 전액', o.energy]];
+  let rows='';
+  for(const d of defs){ const kind=d[0], owned=d[3], on=!!G.auto[kind];
+    if(owned) rows+='<div class="apRow'+(on?' on':'')+'" onclick="toggleAuto(\''+kind+'\')"><div class="apTx"><span class="apName">'+d[1]+'</span><span class="apDesc">'+d[2]+'</span></div><span class="apSw"></span></div>';
+    else rows+='<div class="apRow lk"><div class="apTx"><span class="apName">'+d[1]+'</span><span class="apDesc">🔒 코인 업그레이드 필요</span></div></div>'; }
+  pop.innerHTML='<div class="apHead"><span class="apBar"></span>자동화 설정</div>'+rows+'<div class="apNote">0.33초마다 동작 · 코인 연구소에서 해금</div>';
+  pop._sig=autoSig(); }
+function toggleAuto(kind){ const o=autoUtilOwned(); if(!o[kind]){ toast('업그레이드 필요'); return; }
+  if(!G.auto) G.auto={unit:false,combine:false,energy:false,pboss:{}};
+  G.auto[kind]=!G.auto[kind];
+  toast('⟳ '+({combine:'자동 조합',unit:'자동 유닛 소환',energy:'자동 에너지 변환'}[kind])+' '+(G.auto[kind]?'ON':'OFF'));
+  if(typeof playSfx==='function') playSfx('ui_open');
+  renderAutoPopup(); }
 function updateSkillFab(){ const fab=document.getElementById('skillFab'); if(!fab) return;
   if(typeof G==='undefined'||G.tab!=='Main'||G.selEnemy!=null){ fab.classList.add('hide'); return; }
   const us=selUnits().filter(u=>U[u.id]&&U[u.id].skill);
@@ -7929,6 +8083,8 @@ function loop(now){
       if(G.tab==='Unit') stepCitizen(dt);             // 시민 이동(도착 시 구매)
       if(G.tab==='Main'){ stepCmdMove(dt); separateUnits(); }   // 내 유닛 이동명령 + 겹침 방지
     }
+    stepAuto(dt);   // 자동화 유틸(0.33초 틱) — 배속과 무관하게 실시간 기준
+
   }
   if(G.tab==='Main'){ renderUnits(); if(!G.sel.length && !G.selEnemy){ renderBossPanel(); renderHomeLeft(); } }   // 유닛 DOM 라벨 + 홈 파견/판매
   // 선택된 적: 죽으면 해제, 살아있으면 상태창 HP/실드 실시간 갱신
@@ -7941,6 +8097,7 @@ function loop(now){
   if(G.sel.length>=1 && document.getElementById('unitCmd').classList.contains('on')) updateCmdRow();   // 명령 행 상태 갱신(단일/다중)
   updateSkillFab();   // 스킬 FAB 쿨다운/버프 실시간(탭 전환·해제도 내부 처리)
   updatePbossFab();   // 개인 보스 소환 FAB(메인·쿨다운 실시간)
+  updateAutoFab();    // 자동화 묶음 버튼/팝업(표시·토글 상태)
   updateHud();
   // '합체' 라벨 페이드: 1라운드만 표시, 2라운드부터 매 프레임 opacity 보간으로 부드럽게 사라짐
   { const mzl=document.querySelector('#mergeZone .mz');
