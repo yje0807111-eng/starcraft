@@ -175,12 +175,8 @@
   #pbossBtn .pbIco{line-height:0;filter:drop-shadow(0 0 5px rgba(255,59,59,.7))}
   #pbossBtn .pbTx{font-size:10px;font-weight:800;letter-spacing:.3px;text-shadow:0 1px 2px #000}
   #pbossBtn .pbCd{font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:800;color:#ff9a9a;line-height:1;min-height:0}
-  /* 우상단 배지 = 소환 가능 보스 수 — 우주전쟁풍 각진 네온 칩(버튼 안쪽, 짤림 방지) */
-  #pbossBtn .pbDot{display:none;position:absolute;top:3px;right:3px;min-width:15px;height:15px;padding:0 4px;box-sizing:border-box;
-    background:linear-gradient(155deg,rgba(255,96,104,.96),rgba(150,26,36,.96));
-    border:1px solid rgba(255,170,170,.65);box-shadow:0 0 7px rgba(255,70,80,.5),inset 0 1px 1px rgba(255,210,210,.35);
-    color:#fff;font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:800;line-height:13px;text-align:center;letter-spacing:.3px;text-shadow:0 1px 1px rgba(0,0,0,.6);
-    clip-path:polygon(3px 0,100% 0,100% calc(100% - 3px),calc(100% - 3px) 100%,0 100%,0 3px)}
+  /* 우상단 = 소환 가능 보스 수: 박스 없이 숫자만(네온) */
+  #pbossBtn .pbDot{display:none;position:absolute;top:1px;right:6px;color:#ff9a9a;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:800;line-height:1;text-shadow:0 0 7px rgba(255,90,90,.85),0 1px 2px #000;pointer-events:none}
   #pbossBtn .pbDot.show{display:block}
   #pbossBtn:hover{border-color:rgba(255,90,90,.8)}
   #pbossBtn:active{transform:translateY(1px)}
@@ -225,6 +221,11 @@
   #pbossPopup .ppHead{display:flex;align-items:center;gap:5px;font-size:10.5px;font-weight:800;color:#ffdada;letter-spacing:.3px;padding:0 1px 4px;border-bottom:1px solid rgba(255,59,59,.25);text-shadow:0 1px 2px #000}
   #pbossPopup .ppHead .ppBar{width:3px;height:11px;background:var(--neon);box-shadow:0 0 6px var(--neon-glow);border-radius:1px}
   #pbossPopup .ppCdNote{font-size:8px;color:#e8a0a0;text-align:center;padding:1px;font-weight:700}
+  /* 자동 배치 랠리 화살표(등급별) — 드래그해서 집결 지점 지정 */
+  .rallyArrow{position:absolute;z-index:16;transform:translate(-50%,-90%);display:none;flex-direction:column;align-items:center;gap:0;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+  .rallyArrow:active{cursor:grabbing}
+  .rallyArrow .raIco{width:20px;height:20px;color:var(--rc,#fff);filter:drop-shadow(0 0 4px var(--rc)) drop-shadow(0 1px 2px rgba(0,0,0,.9))}
+  .rallyArrow .raLbl{font-size:8px;font-weight:800;color:#fff;background:rgba(8,6,10,.66);padding:0 4px;border-radius:3px;border:1px solid var(--rc,#888);text-shadow:0 1px 1px #000;white-space:nowrap;letter-spacing:.2px;margin-top:-1px}
   .ppItem{position:relative;display:flex;flex-direction:column;cursor:pointer;text-align:left;width:100%;overflow:hidden;
     background:linear-gradient(160deg,rgba(48,40,44,.5),rgba(12,9,11,.7));border:1px solid var(--metal-edge);border-left:3px solid var(--pc,#888);
     clip-path:polygon(5px 0,100% 0,100% calc(100% - 5px),calc(100% - 5px) 100%,0 100%,0 5px);transition:all .12s;font-family:inherit}
@@ -3971,7 +3972,9 @@ function spawnGachaUnit(gid, x, y){ const gu=GACHA_UNITS[gid]; if(!gu) return nu
   const proxy=GACHA_PROXY[gid]||'marine';
   const u=initUnitStats({uid:G.idSeq++, id:proxy, hero:false, lv:1, x, y, cd:0,
     gid, gtier:gu.tier, gname:gu.displayName, gmodel:GACHA_MODEL[gid]||null});
-  G.units.push(u); return u; }
+  G.units.push(u);
+  if(typeof autoPlaceOn==='function' && autoPlaceOn()){ const r=ensureRally()[gu.tier]; if(r) u.moveTo={x:r.x,y:r.y}; }   // 자동 배치 ON: 중앙 생성 → 등급 랠리로 걸어감
+  return u; }
 function drawGacha(){
   if(G.phase!=='playing'){ toast('게임 중에만 뽑기 가능합니다'); return; }
   if(G.units.filter(u=>!u.fixed).length>=maxUnits()){ toast('커맨드 포인트 최대('+maxUnits()+')'); return; }
@@ -4141,17 +4144,34 @@ function stepAuto(dt){
   if(autoUsable('unit')    && a.unit)    autoDrawStep();
   if(autoUsable('energy')  && a.energy)  autoEnergyStep();
   if(autoUsable('pboss')   && a.pboss)   autoPbossStep();
-  if(autoUsable('place')   && a.place)   autoPlaceStep();
 }
-// 자동 유닛 배치: 유닛 수가 바뀔 때(새 뽑기·조합)만 트랙에 고르게 재정렬 → 가운데 쌓임 방지(평소엔 유지)
-function autoPlaceStep(){
-  const us=G.units.filter(u=>!u.fixed && !u.atBoss);
-  if(us.length===(G._autoPlaceN||-1)) return;   // 수 변화 없으면 그대로 둠(수동 이동 보존)
-  G._autoPlaceN=us.length;
-  if(!us.length) return;
-  us.sort(function(a,b){ return a.uid-b.uid; });   // 안정적 순서(새 유닛=뒤쪽 슬롯)
-  us.forEach(function(u,i){ const p=posAt((i+0.5)/us.length,1,1); u.x=p.x; u.y=p.y; u.moveTo=null; });
-  if(typeof renderUnits==='function') renderUnits();
+// ── 자동 유닛 배치 = 등급별 '랠리 화살표' ──
+// 켜면 등급별 화살표가 메인에 뜨고(드래그로 배치), 새 유닛은 중앙에서 생성돼 자기 등급 화살표로 걸어감.
+const RALLY_TIERS=['common','rare','epic','unique','legend','transcend','god'];
+const TIER_KO={common:'일반',rare:'레어',epic:'에픽',unique:'유니크',legend:'레전드',transcend:'초월',god:'갓'};
+function ensureRally(){ if(!G.rally) G.rally={};
+  RALLY_TIERS.forEach(function(t,i){ if(!G.rally[t]){ const c=clampInner(0.30+i*0.067, 0.30); G.rally[t]={x:c.x,y:c.y}; } });
+  return G.rally; }
+function autoPlaceOn(){ return !!(G.auto && G.auto.place && typeof autoUsable==='function' && autoUsable('place')); }
+function rallyOwnedTiers(){ const s={}; G.units.forEach(function(u){ if(!u.fixed && !u.atBoss && u.gtier) s[u.gtier]=1; }); return s; }
+function attachRallyDrag(el, t){ let drag=false;
+  el.addEventListener('pointerdown', function(e){ e.stopPropagation(); e.preventDefault(); drag=true; try{el.setPointerCapture(e.pointerId);}catch(_){ } });
+  el.addEventListener('pointermove', function(e){ if(!drag) return; e.stopPropagation(); e.preventDefault();
+    const host=document.getElementById('vMain'); if(!host) return; const rc=host.getBoundingClientRect();
+    const c=clampInner((e.clientX-rc.left)/rc.width, (e.clientY-rc.top)/rc.height);
+    ensureRally(); G.rally[t]={x:c.x,y:c.y}; el.style.left=(c.x*100)+'%'; el.style.top=(c.y*100)+'%'; });
+  function end(e){ if(!drag) return; drag=false; if(e) e.stopPropagation();
+    const r=(G.rally||{})[t]; if(r) G.units.forEach(function(u){ if(!u.fixed && !u.atBoss && u.gtier===t) u.moveTo={x:r.x,y:r.y}; }); }   // 같은 등급 유닛 재집결
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end); }
+function renderRallyArrows(){ const host=document.getElementById('vMain'); if(!host) return;
+  if(!autoPlaceOn()){ document.querySelectorAll('.rallyArrow').forEach(function(el){ el.style.display='none'; }); return; }
+  ensureRally(); const owned=rallyOwnedTiers();
+  RALLY_TIERS.forEach(function(t){ let el=document.getElementById('rally_'+t);
+    if(!owned[t]){ if(el) el.style.display='none'; return; }
+    if(!el){ el=document.createElement('div'); el.id='rally_'+t; el.className='rallyArrow';
+      el.innerHTML='<svg class="raIco" viewBox="0 0 24 24"><path d="M12 4v12" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M6.5 11.5L12 17l5.5-5.5" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="raLbl">'+(TIER_KO[t]||t)+'</span>';
+      el.style.setProperty('--rc', TIER_COLOR[t]||'#fff'); attachRallyDrag(el, t); host.appendChild(el); }
+    el.style.display='flex'; const r=G.rally[t]; el.style.left=(r.x*100)+'%'; el.style.top=(r.y*100)+'%'; });
 }
 // 자동 조합: 가장 낮은 등급부터 1건. 'simple'(레전드 이하 생성)만 → 레전드→초월(레시피)은 자동 제외
 function autoCombineStep(){
@@ -8173,6 +8193,7 @@ function loop(now){
   checkPbossUnlocks();// 개인 보스 해금 감지(채팅 알람 + 버튼 알림)
   updatePbossFab();   // 개인 보스 소환 FAB(메인·쿨다운 실시간)
   updateAutoFab();    // 자동화 묶음 버튼/팝업(표시·토글 상태)
+  if(typeof renderRallyArrows==='function') renderRallyArrows();   // 자동 배치 ON 시 등급별 랠리 화살표(드래그)
   updateHud();
   // '합체' 라벨 페이드: 1라운드만 표시, 2라운드부터 매 프레임 opacity 보간으로 부드럽게 사라짐
   { const mzl=document.querySelector('#mergeZone .mz');
