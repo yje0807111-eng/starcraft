@@ -3985,8 +3985,7 @@ function spawnGachaUnit(gid, x, y){ const gu=GACHA_UNITS[gid]; if(!gu) return nu
   const u=initUnitStats({uid:G.idSeq++, id:proxy, hero:false, lv:1, x, y, cd:0,
     gid, gtier:gu.tier, gname:gu.displayName, gmodel:GACHA_MODEL[gid]||null});
   G.units.push(u);
-  if(typeof autoPlaceOn==='function' && autoPlaceOn()){ const r=ensureRally()[gu.tier];   // 자동 배치 ON: 새 유닛만 랠리 근처 빈 자리로(기존 등급 유닛은 안 움직임)
-    if(r){ const fs=(typeof findFreeSpot==='function')?findFreeSpot(u,r.x,r.y):r; u.moveTo={x:fs.x,y:fs.y}; } }
+  if(typeof autoPlaceOn==='function' && autoPlaceOn()){ rallyAssignSlot(u, gu.tier); const p=rallySlotPos(gu.tier, u._slot); u.moveTo={x:p.x,y:p.y}; }   // 자동 배치 ON: 새 유닛만 자기 고정 슬롯으로(기존 유닛 불변)
   return u; }
 function drawGacha(){
   if(G.phase!=='playing'){ toast('게임 중에만 뽑기 가능합니다'); return; }
@@ -4166,13 +4165,18 @@ function ensureRally(){ if(!G.rally) G.rally={};
   RALLY_TIERS.forEach(function(t,i){ if(!G.rally[t]){ const c=clampInner(0.30+i*0.067, 0.30); G.rally[t]={x:c.x,y:c.y}; } });
   return G.rally; }
 function autoPlaceOn(){ return !!(G.auto && G.auto.place && typeof autoUsable==='function' && autoUsable('place')); }
-// 같은 등급 유닛들을 랠리 지점 주변 '대형 슬롯'으로 분산(같은 점에 몰려 끝없이 비비는 것 방지)
-function rallyTier(t){ ensureRally(); const r=G.rally[t]; if(!r) return;
-  const us=G.units.filter(function(u){ return !u.fixed && !u.atBoss && u.gtier===t; });
-  if(!us.length) return;
-  us.sort(function(a,b){ return a.uid-b.uid; });   // 안정적 순서
-  const slots=formationSlots(us, r.x, r.y);   // 충돌반경 간격으로 주변에 퍼짐 → 각자 도착해 정착
-  us.forEach(function(u,i){ const s=slots[i]||r; u.moveTo={x:s.x,y:s.y}; }); }
+// 랠리 슬롯: 유닛별 '고정 슬롯 인덱스'(u._slot)로 헥스 패킹 → 서로 겹치지 않는 자리에 정착(분리 churn 없음)
+function rallySlotPos(t, i){ ensureRally(); const r=G.rally[t]; const M=Math.min(GW||420,GH||300); const sp=28/M;   // 슬롯 간격(겹침 방지)
+  let cx=Math.max(0.1,Math.min(0.9,r.x)), cy=Math.max(0.12,Math.min(0.88,r.y));   // 중심 살짝 안쪽(구석 쏠림 완화)
+  if(i<=0) return clampInner(cx,cy);
+  let ring=1, idx=i-1; while(idx>=ring*6){ idx-=ring*6; ring++; }   // 1번부터 링(6·12·18…)으로 채움
+  const a=(idx/(ring*6))*Math.PI*2 + ring*0.45;
+  return clampInner(cx+Math.cos(a)*ring*sp, cy+Math.sin(a)*ring*sp*0.92); }
+function rallyAssignSlot(u, t){ if(u._slot!=null) return u._slot;   // 비어있는 가장 낮은 슬롯 번호 부여(죽은 슬롯 재사용)
+  const used=new Set(G.units.filter(function(x){ return x!==u && !x.fixed && !x.atBoss && x.gtier===t && x._slot!=null; }).map(function(x){ return x._slot; }));
+  let i=0; while(used.has(i)) i++; u._slot=i; return i; }
+function rallyTier(t){ ensureRally(); if(!G.rally[t]) return;   // 그 등급 전 유닛을 자기 슬롯으로(화살표 드래그 시 전체 재집결)
+  G.units.forEach(function(u){ if(!u.fixed && !u.atBoss && u.gtier===t){ rallyAssignSlot(u,t); const p=rallySlotPos(t,u._slot); u.moveTo={x:p.x,y:p.y}; } }); }
 function attachRallyDrag(el, t){ let drag=false;
   el.addEventListener('pointerdown', function(e){ e.stopPropagation(); e.preventDefault(); drag=true; try{el.setPointerCapture(e.pointerId);}catch(_){ } });
   el.addEventListener('pointermove', function(e){ if(!drag) return; e.stopPropagation(); e.preventDefault();
