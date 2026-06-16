@@ -177,7 +177,7 @@
   #pbossBtn:active{transform:translateY(1px)}
   #pbossBtn.cd{color:#ff9a9a;border-color:var(--metal-edge);background:linear-gradient(160deg,rgba(56,32,34,.5),rgba(16,10,12,.74))}
   #pbossBtn.cd .pbIco{filter:none;opacity:.65}
-  #pbossPopup{position:absolute;right:8px;bottom:80px;z-index:30;width:228px;max-height:340px;overflow-y:auto;padding:9px;display:flex;flex-direction:column;gap:6px;
+  #pbossPopup{position:absolute;right:8px;bottom:80px;z-index:30;width:246px;max-height:380px;overflow-y:auto;padding:9px;display:flex;flex-direction:column;gap:6px;
     background:linear-gradient(160deg,rgba(34,18,20,.97),rgba(10,7,9,.98));border:1px solid rgba(255,59,59,.4);
     clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
     box-shadow:0 8px 24px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.06)}
@@ -194,7 +194,9 @@
   .ppItem .ppIco{width:22px;height:22px;flex:0 0 auto;color:var(--pc,#cfd);filter:drop-shadow(0 0 4px var(--pc))}
   .ppItem .ppTx{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;line-height:1.15}
   .ppItem .ppName{font-size:11px;font-weight:800;color:#f2e4e4;white-space:nowrap}
+  .ppItem .ppHp{font-size:8.5px;color:#ffb3b3;font-weight:800;white-space:nowrap;letter-spacing:.2px}
   .ppItem .ppSub{font-size:8.5px;color:var(--pc,#bbb);font-weight:700;white-space:nowrap}
+  .ppItem .ppRec{font-size:8px;color:#9fb0c0;font-weight:600;white-space:nowrap}
   .ppItem .ppRwd{display:flex;flex-direction:column;align-items:flex-end;gap:1px;font-family:'Rajdhani',sans-serif;font-size:10.5px;font-weight:800;flex:0 0 auto}
   .ppItem .ppRwd .ppC{display:flex;align-items:center;gap:2px;color:var(--gold-lt)}
   .ppItem .ppRwd .ppE{color:#7fe0ff;letter-spacing:.2px}
@@ -4139,10 +4141,12 @@ try{ window.ENEMY_MODEL=ENEMY_MODEL; }catch(e){}   // M3D 모듈(별도 스코�
 const SPAWN_LEAD=0.58;   // 출현 이펙트 시작 → 실제 등장(에너지 모임 후 플래시 시점)까지 지연(초)
 // ── 개인 보스 4종(고정 난이도 — 라운드 무관, 등급별 도전) ──
 const PBOSS_TYPES=[
-  {id:'easy',  name:'견습 파수꾼',   tier:'일반 유닛',          hp:6000,     ar:0,    bonus:120, egy:15, col:'#b8c0cc'},
-  {id:'mid',   name:'정예 추적자',   tier:'에픽·유니크',        hp:150000,   ar:90,   bonus:300, egy:30, col:'#b06bff'},
-  {id:'upper', name:'전장의 정복자', tier:'초월(레전드는 버겁)', hp:700000,   ar:700,  bonus:450, egy:45, col:'#ff8a3b'},
-  {id:'super', name:'파멸의 군주',   tier:'초월 다수 · 갓',     hp:5000000,  ar:1450, bonus:750, egy:75, col:'#ff2bd6'},
+  // hp=고정 체력 / ar=방어 / rec=권장 스팩 / bonus·egy=처치 보상
+  // 1단 보스는 즉살 방지를 위해 시작 체력 상향, 상위 2종(upper·super)은 곡선을 완만히 낮추되 보상 격차도 함께 좁힘.
+  {id:'easy',  name:'견습 파수꾼',   tier:'일반·레어 권장',   rec:'유닛 3~4기 / 공격 업글 2~3',  hp:24000,    ar:0,    bonus:120, egy:15, col:'#b8c0cc'},
+  {id:'mid',   name:'정예 추적자',   tier:'에픽·유니크 권장', rec:'에픽 4기 / 공격·관통 업글', hp:150000,   ar:90,   bonus:260, egy:26, col:'#b06bff'},
+  {id:'upper', name:'전장의 정복자', tier:'유니크·초월 권장', rec:'유니크+ 6기 / 풀업 근접',   hp:560000,   ar:560,  bonus:360, egy:36, col:'#ff8a3b'},
+  {id:'super', name:'파멸의 군주',   tier:'초월·갓 권장',     rec:'초월 다수 / 갓 1~2기 + 풀업', hp:1900000,  ar:1100, bonus:470, egy:47, col:'#ff2bd6'},
 ];
 function spawnEnemy(opts){ opts=opts||{}; const pt=opts.pbType||null; const pboss=!!opts.pboss||!!pt, boss=!!opts.boss||pboss, special=!!opts.special; const m=roundDef(G.round);
   const mb=G.metaB||{};   // 메타 강화: 적 체력/방어/이속 감소(개인)
@@ -5461,9 +5465,13 @@ function renderPbossPopup(){ const pop=document.getElementById('pbossPopup'); if
   const cd=G.pbossCd>0, active=G.enemies.some(e=>e.pboss), block=cd||active;
   const coinMult=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).coinMult||1;
   const skull='<svg class="ppIco" viewBox="0 0 24 24"><path d="M12 2.5c-4 0-6.5 2.8-6.5 6.4 0 2.3 1.1 3.7 2.2 4.7v2.2c0 .7.5 1.1 1.2 1.1.4 1.1 1.6 1.9 3.1 1.9s2.7-.8 3.1-1.9c.7 0 1.2-.4 1.2-1.1v-2.2c1.1-1 2.2-2.4 2.2-4.7 0-3.6-2.5-6.4-6.5-6.4z" fill="currentColor" opacity=".22"/><path d="M12 2.5c-4 0-6.5 2.8-6.5 6.4 0 2.3 1.1 3.7 2.2 4.7v2.2c0 .7.5 1.1 1.2 1.1.4 1.1 1.6 1.9 3.1 1.9s2.7-.8 3.1-1.9c.7 0 1.2-.4 1.2-1.1v-2.2c1.1-1 2.2-2.4 2.2-4.7 0-3.6-2.5-6.4-6.5-6.4z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="9.3" cy="9.2" r="1.5" fill="currentColor"/><circle cx="14.7" cy="9.2" r="1.5" fill="currentColor"/><path d="M10.4 16.5v2M12 16.7v2.1M13.6 16.5v2" stroke="currentColor" stroke-width="1"/></svg>';
+  const fmtHpK=function(n){ if(n>=100000000) return (n/100000000).toFixed(1).replace(/\.0$/,'')+'억'; if(n>=10000) return (n/10000).toFixed(n>=100000?0:1).replace(/\.0$/,'')+'만'; return ''+n; };
   const items=PBOSS_TYPES.map(function(pt){ const rwd=Math.round(pt.bonus*coinMult);
     return '<button class="ppItem" style="--pc:'+pt.col+'"'+(block?' disabled':'')+' onclick="summonPersonalBoss(\''+pt.id+'\')">'
-      +skull+'<div class="ppTx"><span class="ppName">'+pt.name+'</span><span class="ppSub">'+pt.tier+'</span></div>'
+      +skull+'<div class="ppTx"><span class="ppName">'+pt.name+'</span>'
+      +'<span class="ppHp">❤ '+fmtHpK(pt.hp)+(pt.ar?' · 🛡'+pt.ar:'')+'</span>'
+      +'<span class="ppSub">'+pt.tier+'</span>'
+      +'<span class="ppRec">'+pt.rec+'</span></div>'
       +'<span class="ppRwd"><span class="ppC">'+COIN_SM+rwd+'</span><span class="ppE">⚡'+(pt.egy||0)+'</span></span></button>'; }).join('');
   const note=active?'<div class="ppCdNote">⚔ 개인 보스 활동 중 (한 마리만)</div>'
     :cd?'<div class="ppCdNote">재소환까지 '+Math.ceil(G.pbossCd)+'초 (공유 쿨다운)</div>':'';
