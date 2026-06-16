@@ -4131,9 +4131,12 @@ function spawnEnemy(opts){ opts=opts||{}; const pt=opts.pbType||null; const pbos
   const coinMult=_D.coinMult||1;
   const hp = pt ? pt.hp : Math.round(boss ? bossHp(G.round)*bossMul : m.hp*hpMul);   // 개인보스=고정 / 라운드보스=bossMul / 일반=hpMul
   const sh = pt ? 0 : (boss?0:Math.round(m.sh*hpMul));
-  const ar = pt ? pt.ar : Math.max(0, (boss?Math.round(m.ar*0.5):m.ar) - (mb.enemyArmor||0));   // 보스 방어=그 라운드의 절반(등급 관문은 일반 라운드가 담당)
-  const spd = (0.018+(boss?0:0.004))*(mb.enemySlowMul||1);
+  const mod=(!boss && !special && !pt && G.roundMod)?ROUND_MODS[G.roundMod]:null;   // 라운드 모디파이어(일반 적만)
+  let ar = pt ? pt.ar : Math.max(0, (boss?Math.round(m.ar*0.5):m.ar) - (mb.enemyArmor||0));   // 보스 방어=그 라운드의 절반(등급 관문은 일반 라운드가 담당)
+  let spd = (0.018+(boss?0:0.004))*(mb.enemySlowMul||1);
+  if(mod){ if(mod.spd) spd*=mod.spd; if(mod.ar) ar=Math.round(ar*mod.ar); }
   const e={eid:G.eSeq++, d:0, hp:hp, maxHp:hp, sh:sh, maxSh:sh, ar:ar,   // 개인 보스도 일반 적처럼 시작지점(d=0)에서 등장 후 트랙 따라 이동
+    regen:(mod&&mod.regen)||0, split:(mod&&mod.split&&Math.random()<0.6)?1:0,   // 재생/분열 모디파이어
     speed:spd, boss:boss, special:special, pboss:pboss, life:pboss?120:null, pbCol:pt?pt.col:null,
     bonus:pt?Math.round(pt.bonus*coinMult*((mb.pbossRewardMul)||1)):0, bonusE:pt?Math.round((pt.egy||0)*((mb.pbossRewardMul)||1)):0,   // 처치 보상(coinMult×메타 개인보스 보상)
     flash:0, name:pt?pt.name:(boss?'보스':(special?'스페셜':m.n)),
@@ -4241,10 +4244,35 @@ function unitAI(dt){ const M=Math.min(GW,GH);
       if(AIR_FLOAT_GIDS[u.gid]) emitEngineExhaust(u, u.x*GW, u.y*GH-16, mx, my, dt); }   // 비행체: 엔진 분사
 }
 // 전투 단계 시작(준비단계 통과 or 라운드 전환 공통)
+// ── 적 다양화: 라운드 모디파이어 + 보스 패턴(소환/광폭화) + 분열 ──
+const ROUND_MODS={
+  swift:   { name:'신속', desc:'적 이동속도 ↑',    color:'#5dd6ff', spd:1.35 },
+  armored: { name:'강철', desc:'적 방어력 ↑',      color:'#b0b8c4', ar:1.5 },
+  regen:   { name:'재생', desc:'적이 체력을 회복',  color:'#5dff8f', regen:0.04 },
+  swarm:   { name:'무리', desc:'적이 더 많이 등장', color:'#ffb14d', count:1.25 },
+  elite:   { name:'정예', desc:'쓰러지면 분열하는 적', color:'#ff6bd6', split:true },
+};
+const ROUND_MOD_KEYS=Object.keys(ROUND_MODS);
+function rollRoundMod(){ if(isBossRound(G.round)) return null; if(G.round<3) return null;   // 보스/초반 제외
+  if(Math.random()<0.5) return null;   // 50% 무난
+  return ROUND_MOD_KEYS[Math.floor(Math.random()*ROUND_MOD_KEYS.length)]; }
+function announceRoundMod(){ const M=G.roundMod&&ROUND_MODS[G.roundMod]; if(!M) return;
+  if(typeof toast==='function') toast('⚠ '+M.name+' 라운드 — '+M.desc);
+  if(typeof addChat==='function') addChat('', '⚠ '+M.name+' 라운드: '+M.desc, M.color, true); }
+function _mkAdd(d, hp, ar, spd, name, shape, race){ return {eid:G.eSeq++, d:((d||0)+1)%1, hp:hp, maxHp:hp, sh:0, maxSh:0, ar:ar||0,
+  speed:spd, boss:false, special:false, pboss:false, life:null, flash:4, name:name||'적', shape:shape||'orb', race:race||'union', ph:(G.eSeq*0.7)%6.283, hit:0, model3d:null }; }
+const BOSS_SUMMON_INT=12;   // 보스 소환 간격(초) — 필수처치 2분 라운드라 절제
+function bossSummon(boss){ const m=roundDef(G.round), hp=Math.round(m.hp*0.5);
+  for(let k=0;k<2;k++) G.enemies.push(_mkAdd((boss.d||0)+(Math.random()-0.5)*0.05, hp, 0, 0.024, '소환', enemyShape(m.n), enemyRace(m.n)));
+  if(typeof addChat==='function') addChat('', '☄ 보스가 적을 소환했습니다 (2마리)', '#ff8a3b', true); }
+function splitEnemy(e){ const hp=Math.round((e.maxHp||e.hp)*0.4);
+  for(let k=0;k<2;k++) G.enemies.push(_mkAdd((e.d||0)+(k?0.015:-0.015), hp, Math.round((e.ar||0)*0.5), (e.speed||0.02)*1.15, e.name, e.shape, e.race)); }
 function beginActivePhase(){ G.roundPhase='active'; G.roundTime=isBossRound(G.round)?BOSS_ROUND_TIME:mapCfg('roundTime',ROUND_TIME); G.spawnTimer=0; G.pendSpawn.length=0;
   if(typeof playSfx==='function') playSfx(isBossRound(G.round)?'boss':'round_start');   // 라운드/보스 시작음
-  if(isBossRound(G.round)){ G.toSpawn=0; spawnEnemy({boss:true}); if(typeof playSfxT==='function') playSfxT('boss',1500); }   // 보스 라운드: 보스 1마리만 + 등장음
-  else { const epr=mapCfg('enemiesPerRound',ENEMIES_PER_ROUND); G.toSpawn=epr; G.specialAt=1+Math.floor(Math.random()*epr); } }  // (적 수-1) + 스페셜 1
+  if(isBossRound(G.round)){ G.roundMod=null; G.toSpawn=0; spawnEnemy({boss:true}); if(typeof playSfxT==='function') playSfxT('boss',1500); }   // 보스 라운드: 보스 1마리만(자체 패턴)
+  else { G.roundMod=rollRoundMod(); let epr=mapCfg('enemiesPerRound',ENEMIES_PER_ROUND);
+    if(G.roundMod && ROUND_MODS[G.roundMod].count) epr=Math.round(epr*ROUND_MODS[G.roundMod].count);   // 무리=수 증가
+    G.toSpawn=epr; G.specialAt=1+Math.floor(Math.random()*epr); announceRoundMod(); } }
 function step(dt){
   if(G.phase!=='playing') return;
   G.timeSec+=dt;   // 애니메이션용(증가 유지)
@@ -4273,6 +4301,8 @@ function step(dt){
   for(const e of G.enemies){ let _sm=(e.slowT>0)?(e.slowMul||0.5):1; if(e.slowT>0) e.slowT-=dt;
     if(e.arDownT>0){ e.arDownT-=dt; if(e.arDownT<=0) e.arDown=0; }   // 방깍 디버프 감쇠
     if(e.vulnT>0){ e.vulnT-=dt; if(e.vulnT<=0) e.vuln=0; }           // 마깍(취약) 디버프 감쇠
+    if(e.regen>0 && e.hp<e.maxHp) e.hp=Math.min(e.maxHp, e.hp+e.maxHp*e.regen*dt);   // 재생 모디파이어
+    if(e.boss && !e.pboss && !e.enraged && e.hp<=e.maxHp*0.4){ e.enraged=true; e.speed*=1.6; e.flash=10; if(typeof addChat==='function') addChat('','⚡ 보스 광폭화! 이동속도 급증','#ff5c5c',true); if(typeof playSfx==='function') playSfx('warn'); }   // 보스 광폭화(HP 40%↓)
     if(e.stunT>0){ e.stunT-=dt; _sm=0;   // 감전: 제자리 정지
       if(Math.random()<dt*7){ const q=posAt(e.d,GW,GH); const qy=e.model3d?q.y-AIR_HIT_OFF:q.y;
         G.sparks.push({x:q.x+(Math.random()-0.5)*14,y:qy+(Math.random()-0.5)*12,vx:(Math.random()-0.5)*60,vy:(Math.random()-0.5)*60,life:0.14,len:3+Math.random()*3,color:Math.random()<0.5?'#b48bff':'#eadcff'}); } }
@@ -4283,6 +4313,8 @@ function step(dt){
       if(e.psnT<=0){ e.psnStk=0; e.psnDmg=0; } }
     if(e.pboss && e.life!=null) e.life-=dt;   // 개인 보스 수명(2분) 카운트다운
     e.d=(e.d+e.speed*_sm*dt*4)%1; if(e.flash>0) e.flash--; if(e.hit>0) e.hit=Math.max(0,e.hit-dt*5); if(e.shHit>0) e.shHit=Math.max(0,e.shHit-dt*4); }
+  if(G.roundPhase==='active'){ for(const e of G.enemies){ if(!e.boss||e.pboss) continue;   // 라운드 보스 주기적 소환
+    e.summonT=(e.summonT==null?BOSS_SUMMON_INT:e.summonT)-dt; if(e.summonT<=0){ e.summonT=BOSS_SUMMON_INT; bossSummon(e); } } }
   if(G.pbossCd>0) G.pbossCd=Math.max(0,G.pbossCd-dt);   // 개인 보스 재소환 쿨다운
   const _regCnt=G.enemies.reduce((a,e)=>a+(e.pboss?0:1),0);   // 탈락 누적은 일반 적만(개인 보스 제외)
   checkEnemyWarn(_regCnt);
@@ -4394,6 +4426,7 @@ function step(dt){
     gainMineral(mapCfg('killCredit',1));   // 킬 보상(맵 설정, 메타 획득↑ 반영)
     G._gasAcc=(G._gasAcc||0)+mapCfg('killEnergy',0.05); if(G._gasAcc>=1){ const w=Math.floor(G._gasAcc); G._gasAcc-=w; gainGas(w); }   // 킬 드립 에너지(누적 소수, 하향)
     if(typeof playEnemyDeath==='function') playEnemyDeath(e.race);   // 종족별 처치음(대량 처치 쓰로틀)
+    if(e.split>0) splitEnemy(e);   // 정예(분열): 쓰러지면 체력 40% 적 2마리로
     deathBurst(e); G.enemies.splice(i,1); } }
   // (라운드 진행은 위쪽 제한시간 타이머가 담당 — 클리어로는 넘어가지 않음)
   // 이펙트 수명/이동 — 메인 배열 + 토벌장 전용 배열 각각 전진(서로 영향 없음)
@@ -7349,7 +7382,9 @@ function updateMapName(){ const el=document.getElementById('mapName'); if(!el) r
   if(G.bossOpen){ const t2='👹 '+(MAP_NAMES.Boss||'공용 보스장'); if(el.textContent!==t2) el.textContent=t2; return; }   // 토벌장 진입 시 장소 이름 교체(MAP_NAMES 단일 출처)
   const D=DIFFICULTY[G.difficulty], dtag=(D&&G.difficulty!=='normal')?(' · '+D.name):'';   // 노말 외에는 난이도 표시
   const txt = '◈ '+(MAP_NAMES[G.tab] || '')+dtag;   // 플레이어 관전도 통일된 고정 이름(관전 대상 무관)
-  if(el.textContent!==txt) el.textContent=txt;
+  const M=(G.roundPhase==='active' && G.roundMod)?ROUND_MODS[G.roundMod]:null;   // 라운드 모디파이어 배지
+  if(M){ const html=txt+' · <span style="color:'+M.color+'">⚠'+M.name+'</span>'; if(el.innerHTML!==html) el.innerHTML=html; }
+  else if(el.textContent!==txt) el.textContent=txt;
 }
 
 // ── 입력: 유닛 드래그 (메인 탭) ──
