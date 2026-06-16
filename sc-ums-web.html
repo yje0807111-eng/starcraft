@@ -175,6 +175,11 @@
   #pbossBtn .pbIco{line-height:0;filter:drop-shadow(0 0 5px rgba(255,59,59,.7))}
   #pbossBtn .pbTx{font-size:10px;font-weight:800;letter-spacing:.3px;text-shadow:0 1px 2px #000}
   #pbossBtn .pbCd{font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:800;color:#ff9a9a;line-height:1;min-height:0}
+  /* 새 해금 알림 점(우상단) — 팝업 열면 사라짐 */
+  #pbossBtn .pbDot{display:none;position:absolute;top:-4px;right:-4px;width:13px;height:13px;border-radius:50%;
+    background:radial-gradient(circle at 40% 35%,#ffe27a,#ff3b3b);border:1.5px solid #1a0c0e;box-shadow:0 0 8px rgba(255,80,80,.85);animation:pbDotPulse 1s ease-in-out infinite}
+  #pbossBtn.notify .pbDot{display:block}
+  @keyframes pbDotPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.25);opacity:.7}}
   #pbossBtn:hover{border-color:rgba(255,90,90,.8)}
   #pbossBtn:active{transform:translateY(1px)}
   #pbossBtn.cd{color:#ff9a9a;border-color:var(--metal-edge);background:linear-gradient(160deg,rgba(56,32,34,.5),rgba(16,10,12,.74))}
@@ -1950,7 +1955,7 @@
       <button id="chatSend" onclick="sendChat()">전송</button>
     </div>
     <!-- 개인 보스 버튼: 메인 탭에서 미니맵 자리(우하단)에 표시 -->
-    <div id="pbossBtn" class="hide" onclick="togglePbossPopup(event)" title="개인 보스 소환"><span class="pbIco"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 2.5c-4 0-6.5 2.8-6.5 6.4 0 2.3 1.1 3.7 2.2 4.7v2.2c0 .7.5 1.1 1.2 1.1.4 1.1 1.6 1.9 3.1 1.9s2.7-.8 3.1-1.9c.7 0 1.2-.4 1.2-1.1v-2.2c1.1-1 2.2-2.4 2.2-4.7 0-3.6-2.5-6.4-6.5-6.4z" fill="currentColor" opacity=".22"/><path d="M12 2.5c-4 0-6.5 2.8-6.5 6.4 0 2.3 1.1 3.7 2.2 4.7v2.2c0 .7.5 1.1 1.2 1.1.4 1.1 1.6 1.9 3.1 1.9s2.7-.8 3.1-1.9c.7 0 1.2-.4 1.2-1.1v-2.2c1.1-1 2.2-2.4 2.2-4.7 0-3.6-2.5-6.4-6.5-6.4z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="9.3" cy="9.2" r="1.5" fill="currentColor"/><circle cx="14.7" cy="9.2" r="1.5" fill="currentColor"/><path d="M10.4 16.5v2M12 16.7v2.1M13.6 16.5v2" stroke="currentColor" stroke-width="1"/></svg></span><span class="pbTx">개인보스</span><span class="pbCd" id="pbossBtnCd"></span></div>
+    <div id="pbossBtn" class="hide" onclick="togglePbossPopup(event)" title="개인 보스 소환"><span class="pbIco"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 2.5c-4 0-6.5 2.8-6.5 6.4 0 2.3 1.1 3.7 2.2 4.7v2.2c0 .7.5 1.1 1.2 1.1.4 1.1 1.6 1.9 3.1 1.9s2.7-.8 3.1-1.9c.7 0 1.2-.4 1.2-1.1v-2.2c1.1-1 2.2-2.4 2.2-4.7 0-3.6-2.5-6.4-6.5-6.4z" fill="currentColor" opacity=".22"/><path d="M12 2.5c-4 0-6.5 2.8-6.5 6.4 0 2.3 1.1 3.7 2.2 4.7v2.2c0 .7.5 1.1 1.2 1.1.4 1.1 1.6 1.9 3.1 1.9s2.7-.8 3.1-1.9c.7 0 1.2-.4 1.2-1.1v-2.2c1.1-1 2.2-2.4 2.2-4.7 0-3.6-2.5-6.4-6.5-6.4z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="9.3" cy="9.2" r="1.5" fill="currentColor"/><circle cx="14.7" cy="9.2" r="1.5" fill="currentColor"/><path d="M10.4 16.5v2M12 16.7v2.1M13.6 16.5v2" stroke="currentColor" stroke-width="1"/></svg></span><span class="pbTx">개인보스</span><span class="pbCd" id="pbossBtnCd"></span><span class="pbDot" id="pbossNotifyDot"></span></div>
     <!-- 개인 보스 소환 팝업(4종) -->
     <div id="pbossPopup" class="hide"></div>
     <!-- 자동화 묶음 버튼(메인 좌측): 자동 조합/유닛/에너지 토글 — 해금 업그레이드 보유 시 표시 -->
@@ -4113,14 +4118,19 @@ function energyDrawAll(){
 // ── 자동화 유틸(해금 업그레이드 + 인게임 on/off 토글) — 0.33초마다 1틱(한 번에 폭주 방지) ──
 let _autoAcc=0;
 const AUTO_INT=0.33;
+// 예시(프리뷰) 모드: true면 코인 업그레이드 미해금이어도 자동화 토글을 켜고 동작시켜 볼 수 있음(테스트용).
+// 정식 게이팅으로 되돌리려면 false로만 바꾸면 됨.
+const AUTO_PREVIEW=true;
+function autoUsable(kind){ if(AUTO_PREVIEW) return true; const mb=G.metaB||{};
+  return kind==='combine'?!!mb.autoCombine : kind==='unit'?!!mb.autoUnit : kind==='energy'?!!mb.autoEnergy : kind==='pboss'?!!mb.autoPboss : false; }
 function stepAuto(dt){
-  if(G.phase!=='playing' || !G.metaB || !G.auto) return;
+  if(G.phase!=='playing' || !G.auto) return;
   _autoAcc+=dt; if(_autoAcc<AUTO_INT) return; _autoAcc=0;
-  const mb=G.metaB, a=G.auto;
-  if(mb.autoCombine && a.combine) autoCombineStep();   // 조합 먼저(유닛 칸 확보)
-  if(mb.autoUnit    && a.unit)    autoDrawStep();
-  if(mb.autoEnergy  && a.energy)  autoEnergyStep();
-  if(mb.autoPboss   && a.pboss)   autoPbossStep();
+  const a=G.auto;
+  if(autoUsable('combine') && a.combine) autoCombineStep();   // 조합 먼저(유닛 칸 확보)
+  if(autoUsable('unit')    && a.unit)    autoDrawStep();
+  if(autoUsable('energy')  && a.energy)  autoEnergyStep();
+  if(autoUsable('pboss')   && a.pboss)   autoPbossStep();
 }
 // 자동 조합: 가장 낮은 등급부터 1건. 'simple'(레전드 이하 생성)만 → 레전드→초월(레시피)은 자동 제외
 function autoCombineStep(){
@@ -5578,6 +5588,18 @@ const SKILL_ICON={ adr:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M1
 function useSkill(){ const us=selUnits(); if(!us.length) return;
   let used=0; for(const u of us){ const def=U[u.id]; if(def.skill && (u.skCd||0)<=0){ u.adr=def.skill.dur; u.skCd=def.skill.cd; used++; } }
   if(used){ const nm=U[us[0].id].skill.name; addChat('',nm+' 발동! ('+used+'기)'); if(typeof playSfx==='function') playSfx('skill'); } updateCmdRow(); updateSkillFab(); }
+// 개인 보스 해금 감지(등급 4종 전체 보유 → 잠금 해제): 채팅 알람 + 버튼 알림 점등
+function checkPbossUnlocks(){
+  if(G.phase!=='playing') return;
+  if(!G._pbWasUnlocked) G._pbWasUnlocked={};
+  for(const pt of PBOSS_TYPES){ const u=pbossUnlocked(pt);
+    if(u && !G._pbWasUnlocked[pt.id]){   // 잠금 → 해금 전환
+      const g=(GACHA_TIERS[pt.unlock]||{}).name||pt.unlock;
+      addChat('', '🔓 개인 보스 ['+pt.name+'] 해금! (모든 '+g+' 보유 · 소환 가능)', pt.col||'#ffd24a', true);
+      if(typeof playSfx==='function') playSfx('hero_merge');
+      G.pbossNotify=true; }
+    G._pbWasUnlocked[pt.id]=u; }
+}
 // 개인 보스 버튼(메인 탭 우하단): 표시/쿨다운 실시간 갱신 + 열린 팝업 동기화
 function updatePbossFab(){ const b=document.getElementById('pbossBtn'); if(!b) return;
   if(!G.pbossCds) G.pbossCds={};
@@ -5592,6 +5614,7 @@ function updatePbossFab(){ const b=document.getElementById('pbossBtn'); if(!b) r
     if(cdL>0) minCd=Math.min(minCd,cdL); }
   const badge=(!anyReady && minCd<Infinity)?Math.ceil(minCd)+'s':'';
   b.classList.toggle('cd', !anyReady);
+  b.classList.toggle('notify', !!G.pbossNotify);   // 새 해금 알림 점등(팝업 열면 해제)
   const c=document.getElementById('pbossBtnCd'); if(c && c.textContent!==badge) c.textContent=badge;
   // 열린 팝업: 보스별 상태(해금/활동/쿨다운0) 시그니처가 바뀔 때만 재생성, 초 카운트다운은 제자리 갱신
   const pop=document.getElementById('pbossPopup');
@@ -5601,7 +5624,7 @@ function updatePbossFab(){ const b=document.getElementById('pbossBtn'); if(!b) r
     else pop.querySelectorAll('.ppCdLive').forEach(function(s){ const left=Math.ceil(G.pbossCds[s.dataset.bid]||0); const t='⏳ '+left+'s'; if(s.textContent!==t) s.textContent=t; }); } }
 function togglePbossPopup(ev){ if(ev){ev.preventDefault();ev.stopPropagation();}
   const pop=document.getElementById('pbossPopup'); if(!pop) return;
-  if(pop.classList.contains('hide')){ renderPbossPopup(); pop.classList.remove('hide'); } else pop.classList.add('hide'); }
+  if(pop.classList.contains('hide')){ G.pbossNotify=false; renderPbossPopup(); pop.classList.remove('hide'); } else pop.classList.add('hide'); }
 function closePbossPopup(){ const pop=document.getElementById('pbossPopup'); if(pop) pop.classList.add('hide'); }
 function renderPbossPopup(){ const pop=document.getElementById('pbossPopup'); if(!pop) return;
   if(!G.pbossCds) G.pbossCds={};
@@ -5609,7 +5632,7 @@ function renderPbossPopup(){ const pop=document.getElementById('pbossPopup'); if
   const skull='<svg class="ppIco" viewBox="0 0 24 24"><path d="M12 2.5c-4 0-6.5 2.8-6.5 6.4 0 2.3 1.1 3.7 2.2 4.7v2.2c0 .7.5 1.1 1.2 1.1.4 1.1 1.6 1.9 3.1 1.9s2.7-.8 3.1-1.9c.7 0 1.2-.4 1.2-1.1v-2.2c1.1-1 2.2-2.4 2.2-4.7 0-3.6-2.5-6.4-6.5-6.4z" fill="currentColor" opacity=".22"/><path d="M12 2.5c-4 0-6.5 2.8-6.5 6.4 0 2.3 1.1 3.7 2.2 4.7v2.2c0 .7.5 1.1 1.2 1.1.4 1.1 1.6 1.9 3.1 1.9s2.7-.8 3.1-1.9c.7 0 1.2-.4 1.2-1.1v-2.2c1.1-1 2.2-2.4 2.2-4.7 0-3.6-2.5-6.4-6.5-6.4z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="9.3" cy="9.2" r="1.5" fill="currentColor"/><circle cx="14.7" cy="9.2" r="1.5" fill="currentColor"/><path d="M10.4 16.5v2M12 16.7v2.1M13.6 16.5v2" stroke="currentColor" stroke-width="1"/></svg>';
   const lock='<svg class="ppIco" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="9.5" rx="1.6" fill="currentColor" opacity=".18"/><rect x="5" y="10.5" width="14" height="9.5" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="12" cy="14.6" r="1.4" fill="currentColor"/></svg>';
   const fmtHpK=function(n){ if(n>=100000000) return (n/100000000).toFixed(1).replace(/\.0$/,'')+'억'; if(n>=10000) return (n/10000).toFixed(n>=100000?0:1).replace(/\.0$/,'')+'만'; return ''+n; };
-  const autoAvail=!!(G.metaB&&G.metaB.autoPboss);   // '자동 개인 보스' 업그레이드 보유 시 보스별 자동 토글 노출
+  const autoAvail=autoUsable('pboss');   // '자동 개인 보스' 해금(또는 예시 모드) 시 보스별 자동 토글 노출
   const items=PBOSS_TYPES.map(function(pt){
     const rwd=Math.round(pt.bonus*coinMult);
     const unlocked=pbossUnlocked(pt), active=G.enemies.some(e=>e.pboss&&e.pbId===pt.id);
@@ -5630,7 +5653,7 @@ function renderPbossPopup(){ const pop=document.getElementById('pbossPopup'); if
   const note='<div class="ppCdNote">등급 4종 전체 보유 시 해금 · 쿨다운 보스별 개별'+(autoAvail?' · ⟳=자동 소환':'')+'</div>';
   pop.innerHTML='<div class="ppHead"><span class="ppBar"></span>개인 보스 소환</div>'+items+note; }
 function togglePbossAuto(ev, id){ if(ev){ ev.stopPropagation(); ev.preventDefault(); }
-  if(!(G.metaB&&G.metaB.autoPboss)){ toast('자동 개인 보스 업그레이드 필요'); return; }
+  if(!autoUsable('pboss')){ toast('자동 개인 보스 업그레이드 필요'); return; }
   if(!G.auto) G.auto={unit:false,combine:false,energy:false,pboss:{}}; if(!G.auto.pboss) G.auto.pboss={};
   G.auto.pboss[id]=!G.auto.pboss[id];
   const pt=PBOSS_TYPES.find(t=>t.id===id);
@@ -5638,7 +5661,7 @@ function togglePbossAuto(ev, id){ if(ev){ ev.stopPropagation(); ev.preventDefaul
   if(typeof playSfx==='function') playSfx('ui_open');
   renderPbossPopup(); }
 // ── 메인 자동화 묶음 버튼/팝업(자동 조합·유닛·에너지) ──
-function autoUtilOwned(){ const mb=G.metaB||{}; return {combine:!!mb.autoCombine, unit:!!mb.autoUnit, energy:!!mb.autoEnergy}; }
+function autoUtilOwned(){ return {combine:autoUsable('combine'), unit:autoUsable('unit'), energy:autoUsable('energy')}; }
 function autoSig(){ const o=autoUtilOwned(); const a=G.auto||{}; return ''+(a.combine?1:0)+(a.unit?1:0)+(a.energy?1:0)+(o.combine?1:0)+(o.unit?1:0)+(o.energy?1:0); }
 function updateAutoFab(){ const b=document.getElementById('autoFab'); if(!b) return;
   if(!G.auto) G.auto={unit:false,combine:false,energy:false,pboss:{}};
@@ -5663,7 +5686,8 @@ function renderAutoPopup(){ const pop=document.getElementById('autoPopup'); if(!
   for(const d of defs){ const kind=d[0], owned=d[3], on=!!G.auto[kind];
     if(owned) rows+='<div class="apRow'+(on?' on':'')+'" onclick="toggleAuto(\''+kind+'\')"><div class="apTx"><span class="apName">'+d[1]+'</span><span class="apDesc">'+d[2]+'</span></div><span class="apSw"></span></div>';
     else rows+='<div class="apRow lk"><div class="apTx"><span class="apName">'+d[1]+'</span><span class="apDesc">🔒 코인 업그레이드 필요</span></div></div>'; }
-  pop.innerHTML='<div class="apHead"><span class="apBar"></span>자동화 설정</div>'+rows+'<div class="apNote">0.33초마다 동작 · 코인 연구소에서 해금</div>';
+  const note=AUTO_PREVIEW?'⚠ 예시 모드 — 미해금이어도 동작(테스트용)':'0.33초마다 동작 · 코인 연구소에서 해금';
+  pop.innerHTML='<div class="apHead"><span class="apBar"></span>자동화 설정</div>'+rows+'<div class="apNote">'+note+'</div>';
   pop._sig=autoSig(); }
 function toggleAuto(kind){ const o=autoUtilOwned(); if(!o[kind]){ toast('업그레이드 필요'); return; }
   if(!G.auto) G.auto={unit:false,combine:false,energy:false,pboss:{}};
@@ -8098,6 +8122,7 @@ function loop(now){
   updateSelHp();   // 단일 종류 다중선택 시 유닛별 HP 실시간 갱신
   if(G.sel.length>=1 && document.getElementById('unitCmd').classList.contains('on')) updateCmdRow();   // 명령 행 상태 갱신(단일/다중)
   updateSkillFab();   // 스킬 FAB 쿨다운/버프 실시간(탭 전환·해제도 내부 처리)
+  checkPbossUnlocks();// 개인 보스 해금 감지(채팅 알람 + 버튼 알림)
   updatePbossFab();   // 개인 보스 소환 FAB(메인·쿨다운 실시간)
   updateAutoFab();    // 자동화 묶음 버튼/팝업(표시·토글 상태)
   updateHud();
