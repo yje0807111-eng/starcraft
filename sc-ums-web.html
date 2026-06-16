@@ -2558,6 +2558,7 @@ const ENEMIES_PER_ROUND=100;               // 일반 라운드 적 수 = 99 + �
 const SPAWN_GAP=0.8;                        // 적 스폰 간격(초) → 100마리×0.8s=80초 스폰 후 10초 정리시간
 const PREP_TIME=10;                        // 라운드 시작 전 준비(유닛 뽑기) 시간(초)
 const ROUND_TIME=90;                       // 라운드 제한시간 1:30(초). 80초 스폰(0.8s×100) + 10초 정리
+const BOSS_ROUND_TIME=120;                  // 보스 라운드 제한시간 2:00 — 필수처치이므로 더 길게
 const BOSS_EVERY=10;                        // 10라운드마다 보스 라운드(보스 1마리만)
 const EARLY_HP_MUL=1.7;   // R10 이전 적 HP 추가 배율(초반 안전마진 축소)
 const TEMPO_HP_MUL=1.35;  // 라운드 1:30(교전시간 1.5배)에 대한 적 체력 보정(이지 ~5/10 목표, 봇시뮬 48%)
@@ -2565,7 +2566,7 @@ const LOSE_COUNT=200;                       // 트랙 200기 누적 시 탈락(�
 const WARN1=150, WARN2=185;                 // 적 누적 경고 임계치(탈락선 200 비례)
 const SPECIAL_MIN=25;                       // 스페셜 유닛 처치 시 크레딧 보너스
 function isBossRound(r){ return r % mapCfg('bossEvery',BOSS_EVERY) === 0; }
-function bossHp(r){ const m=roundDef(r); return Math.round((m.hp+m.sh)*(24+r*1.8)); }   // 라운드 점증 배율(R5≈33배·R20≈54배) — 후반 보스 큰 폭 성장
+function bossHp(r){ return Math.round(60*Math.pow(r,3.2)); }   // 라운드 보스 기본 HP=매끈한 곡선(MON 점프 회피). 난이도/템포는 bossMul. R10≈95k·R20≈870k·R30≈3.3M(×bossMul)
 const START_MIN=120, START_GAS=0;
 const MAX_UNITS=100;                       // 인구 기본 상한. 메타 '유닛 수 증가'로 +N
 const SPLASH_R=.08, SPLASH_RATIO=.5;
@@ -2721,11 +2722,11 @@ function gachaRangeMul(u){ if(u&&u.gid==='phantom_t') return 1.8;   // 디토네
 //   ※ 코인=영구(계정별), 빌드 효과=개인 적용 예정, coop 그룹=데이터만(효과 보류)
 // ============================================================================
 const DIFFICULTY = {
-  easy:   { name:'이지', enemyHp:0.6,  enemyAtk:1.0, coinMult:1.0, bossHp:1.0 },   // 메타0=운 살짝 필요(봇 39%)·기본업글 1~2랩=72~94%
-  normal: { name:'노말', enemyHp:1.1,  enemyAtk:1.3, coinMult:1.3, bossHp:1.3 },   // 약간메타 운좋으면·중반메타 안정
-  hard:   { name:'하드', enemyHp:4.0,  enemyAtk:1.6, coinMult:1.7, bossHp:1.7 },   // 거의만렙(t5~6)이면 운보통 충분히
-  hell:   { name:'헬',   enemyHp:6.0,  enemyAtk:2.0, coinMult:2.4, bossHp:2.4 },   // 거의만렙 다수 통과·초월진입 확실
-  nightmare:{ name:'나이트메어', enemyHp:320.0, enemyAtk:2.5, coinMult:3.2, bossHp:3.0 },   // 초월 '완성'(t9) + 운(봇 t9 50%·t8 17%)
+  easy:   { name:'이지', enemyHp:0.5,  enemyAtk:1.0, coinMult:1.0, bossHp:1.0 },   // 비콘너프+보스필수 반영 재튠. 약간메타 ~50%·기본 1~2랩 ~80%
+  normal: { name:'노말', enemyHp:0.8,  enemyAtk:1.3, coinMult:1.3, bossHp:1.3 },   // 중반메타 ~60~75%
+  hard:   { name:'하드', enemyHp:3.5,  enemyAtk:1.6, coinMult:1.7, bossHp:1.7 },   // 거의만렙(t5~6) 운보통 충분히
+  hell:   { name:'헬',   enemyHp:8.0,  enemyAtk:2.0, coinMult:2.4, bossHp:2.4 },   // 거의만렙(t6) 다수 통과·초월진입(t7) 확실
+  nightmare:{ name:'나이트메어', enemyHp:360.0, enemyAtk:2.5, coinMult:3.2, bossHp:3.0 },   // 초월 '완성'(t9) + 운(봇 t9 ~50%·t8 ~22%)
 };
 const DIFFICULTY_ORDER = ['easy','normal','hard','hell','nightmare'];
 // 보스 처치 코인(기본, 난이도 coinMult 적용 전). 표에 없는 라운드는 라운드 비례 폴백.
@@ -3851,11 +3852,11 @@ function buyUnit(id){
   renderUnits(); updateHud();
 }
 // ── 내실 업그레이드(비콘): 뽑기 확률↑ / 크레딧 획득↑ ──
-const GACHA_UP_MAX=6, CREDIT_UP_MAX=8;
-const GACHA_UP_STEP=0.10;   // 레벨당 상위(비일반) 등급 가중 +10%
-const CREDIT_UP_STEP=0.08;  // 레벨당 크레딧 획득 +8%
-function gachaUpCost(){ return 60 + (G.gachaLuckLv||0)*45; }   // 크레딧(점증)
-function creditUpCost(){ return 50 + (G.creditLv||0)*35; }     // 크레딧(점증)
+const GACHA_UP_MAX=5, CREDIT_UP_MAX=6;   // 상한 하향(스노볼 차단)
+const GACHA_UP_STEP=0.08;   // 레벨당 상위(비일반) 등급 가중 +8%(↓10)
+const CREDIT_UP_STEP=0.05;  // 레벨당 크레딧 획득 +5%(↓8) — 경제 복리 스노볼 완화
+function gachaUpCost(){ return 70 + (G.gachaLuckLv||0)*70; }   // 크레딧(가파른 점증 — 연속 투자 억제)
+function creditUpCost(){ return 70 + (G.creditLv||0)*65; }     // 크레딧(가파른 점증)
 function buyGachaUp(){ if(G.phase!=='playing'){ toast('게임 중에만 가능합니다'); return; }
   if((G.gachaLuckLv||0)>=GACHA_UP_MAX){ toast('뽑기 확률 최대 레벨'); return; }
   const c=gachaUpCost(); if(G.mineral<c){ toast('크레딧 부족 (뽑기 확률↑ '+c+')'); return; }
@@ -4119,11 +4120,14 @@ const PBOSS_TYPES=[
 ];
 function spawnEnemy(opts){ opts=opts||{}; const pt=opts.pbType||null; const pboss=!!opts.pboss||!!pt, boss=!!opts.boss||pboss, special=!!opts.special; const m=roundDef(G.round);
   const mb=G.metaB||{};   // 메타 강화: 적 체력/방어/이속 감소(개인)
-  const hpMul=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).enemyHp*(mb.enemyHpMul||1)*TEMPO_HP_MUL
+  const _D=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal);
+  const hpMul=_D.enemyHp*(mb.enemyHpMul||1)*TEMPO_HP_MUL
   *Math.pow(1.095, Math.max(0, G.round-4))
   *(G.round<10?EARLY_HP_MUL:1);   // ×템포 보정(라운드 2분=교전시간 2배 → 적 체력 보정) ×초반 보정(R10 이전 HP ×1.7)
-  const coinMult=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).coinMult||1;
-  const hp = pt ? pt.hp : Math.round((boss ? bossHp(G.round) : m.hp)*hpMul);   // 개인 보스=고정 체력(라운드 무관)
+  // 라운드 보스(필수처치)는 enemyHp(나이트=320배)면 처치 불가 → 완만한 bossHp 계수(1.0~3.0)로 분리. 초반보정 제외.
+  const bossMul=(_D.bossHp||1)*(mb.enemyHpMul||1)*TEMPO_HP_MUL;   // 라운드 램프는 bossHp(r) 곡선에 포함 → 여기선 난이도(bossHp계수)·템포·메타만
+  const coinMult=_D.coinMult||1;
+  const hp = pt ? pt.hp : Math.round(boss ? bossHp(G.round)*bossMul : m.hp*hpMul);   // 개인보스=고정 / 라운드보스=bossMul / 일반=hpMul
   const sh = pt ? 0 : (boss?0:Math.round(m.sh*hpMul));
   const ar = pt ? pt.ar : Math.max(0, (boss?Math.round(m.ar*0.5):m.ar) - (mb.enemyArmor||0));   // 보스 방어=그 라운드의 절반(등급 관문은 일반 라운드가 담당)
   const spd = (0.018+(boss?0:0.004))*(mb.enemySlowMul||1);
@@ -4218,7 +4222,7 @@ function unitAI(dt){ const M=Math.min(GW,GH);
       if(AIR_FLOAT_GIDS[u.gid]) emitEngineExhaust(u, u.x*GW, u.y*GH-16, mx, my, dt); }   // 비행체: 엔진 분사
 }
 // 전투 단계 시작(준비단계 통과 or 라운드 전환 공통)
-function beginActivePhase(){ G.roundPhase='active'; G.roundTime=mapCfg('roundTime',ROUND_TIME); G.spawnTimer=0; G.pendSpawn.length=0;
+function beginActivePhase(){ G.roundPhase='active'; G.roundTime=isBossRound(G.round)?BOSS_ROUND_TIME:mapCfg('roundTime',ROUND_TIME); G.spawnTimer=0; G.pendSpawn.length=0;
   if(typeof playSfx==='function') playSfx(isBossRound(G.round)?'boss':'round_start');   // 라운드/보스 시작음
   if(isBossRound(G.round)){ G.toSpawn=0; spawnEnemy({boss:true}); if(typeof playSfxT==='function') playSfxT('boss',1500); }   // 보스 라운드: 보스 1마리만 + 등장음
   else { const epr=mapCfg('enemiesPerRound',ENEMIES_PER_ROUND); G.toSpawn=epr; G.specialAt=1+Math.floor(Math.random()*epr); } }  // (적 수-1) + 스페셜 1
@@ -4231,7 +4235,10 @@ function step(dt){
   if(G.roundPhase!=='active'){   // 준비 단계: 유닛 뽑고 대기(첫 라운드 시작 전에만)
     if(G.roundTime<=0) beginActivePhase();
   } else {                       // 전투 단계: 제한시간 종료 시 바로 다음 라운드(준비시간 없음)
-    if(G.roundTime<=0){ const n=G.round+1;
+    if(G.roundTime<=0){
+      if(isBossRound(G.round) && G.enemies.some(e=>e.boss && !e.pboss)){   // 보스 라운드: 2분 내 보스 미처치 → 통과 실패(패배)
+        G.phase='lost'; if(typeof addChat==='function') addChat('', '⏱ 보스를 제한시간 내에 처치하지 못해 방어선이 무너졌습니다.'); if(typeof playSfx==='function') playSfx('lose'); showOverlay(); return; }
+      const n=G.round+1;
       if(n>mapCfg('rounds',TOTAL_ROUNDS)){ G.phase='won'; if(typeof playSfx==='function') playSfx('win'); showOverlay(); return; }
       gainGas(mapCfg('roundClearEnergyBase',1)+Math.floor(G.round*mapCfg('roundClearEnergyPer',0.34)));   // 라운드 클리어 보너스(하향)
     gainMineral(mapCfg('roundClearCreditBase',10)+G.round*mapCfg('roundClearCreditPer',3));
