@@ -205,7 +205,8 @@
   #autoPopup .apHead{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:#dfeae4;letter-spacing:.4px;padding:0 1px 6px;border-bottom:1px solid rgba(255,255,255,.12);text-shadow:0 1px 2px #000}
   #autoPopup .apHead .apBar{width:3px;height:13px;background:#46f06a;box-shadow:0 0 6px rgba(70,240,106,.5);border-radius:1px}
   #autoPopup .apHead .apTtl{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1}
-  #autoPopup .apHead .apClose{flex:0 0 auto;width:auto;cursor:pointer;font-family:inherit;font-size:14px;font-weight:800;line-height:1;padding:0 2px;background:none;border:none;color:#8fe6ab;opacity:.8;transition:.12s}
+  #autoPopup .apHead .apClose{flex:0 0 auto;width:auto;margin:0;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:0;padding:2px 2px;background:none;border:none;color:#8fe6ab;opacity:.8;transition:.12s}
+  #autoPopup .apHead .apClose svg{display:block}
   #autoPopup .apHead .apClose:hover{opacity:1;color:#fff}
   #autoPopup .apHead .apClose:active{transform:translateY(1px)}
   #autoPopup .apRow{display:flex;align-items:center;gap:8px;padding:6px 7px;border-radius:7px;cursor:pointer;border:1px solid var(--metal-edge);background:rgba(255,255,255,.03);transition:.12s}
@@ -237,7 +238,8 @@
   #pbossPopup .ppHead{display:flex;align-items:center;gap:5px;font-size:10.5px;font-weight:800;color:#ffdada;letter-spacing:.3px;padding:0 1px 4px;border-bottom:1px solid rgba(255,59,59,.25);text-shadow:0 1px 2px #000}
   #pbossPopup .ppHead .ppBar{width:3px;height:11px;background:var(--neon);box-shadow:0 0 6px var(--neon-glow);border-radius:1px}
   #pbossPopup .ppHead .ppTtl{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1}
-  #pbossPopup .ppHead .ppClose{flex:0 0 auto;width:auto;cursor:pointer;font-family:inherit;font-size:14px;font-weight:800;line-height:1;padding:0 2px;background:none;border:none;color:#ff9aa6;opacity:.78;transition:.12s}
+  #pbossPopup .ppHead .ppClose{flex:0 0 auto;width:auto;margin:0;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:0;padding:2px 2px;background:none;border:none;color:#ff9aa6;opacity:.78;transition:.12s}
+  #pbossPopup .ppHead .ppClose svg{display:block}
   #pbossPopup .ppHead .ppClose:hover{opacity:1;color:#fff}
   #pbossPopup .ppHead .ppClose:active{transform:translateY(1px)}
   #pbossPopup .ppCdNote{font-size:8px;color:#e8a0a0;text-align:center;padding:1px;font-weight:700}
@@ -915,12 +917,11 @@
   .opsManual .omFoot b{color:var(--neon)}
   .opsManual.hide{display:none}
   /* 프로필 미표시(기본 대기 상태) — 카드를 세로로 늘려 레벨/수량이 잘 보이도록 */
-  #bpUnit:not(.profOn) .opsManual .omGrid{align-content:stretch;grid-auto-rows:minmax(0,1fr);gap:8px}
-  #bpUnit:not(.profOn) .opsManual .omCell{padding:8px 12px;gap:10px}
-  #bpUnit:not(.profOn) .opsManual .omIco{width:22px;height:22px}
-  #bpUnit:not(.profOn) .opsManual .omTx b{font-size:13px}
-  #bpUnit:not(.profOn) .opsManual .omTx i{font-size:10px}
-  #bpUnit:not(.profOn) .opsManual .omLv{font-size:18px}
+  #bpUnit:not(.profOn) .opsManual .omGrid{align-content:start;grid-auto-rows:44px;gap:7px}
+  #bpUnit:not(.profOn) .opsManual .omCell{padding:6px 11px;gap:9px}
+  #bpUnit:not(.profOn) .opsManual .omIco{width:18px;height:18px}
+  #bpUnit:not(.profOn) .opsManual .omTx b{font-size:11.5px}
+  #bpUnit:not(.profOn) .opsManual .omLv{font-size:15px}
   .gachaLeft{flex:1.3;min-width:0;display:flex;flex-direction:column;gap:5px;justify-content:center;padding:2px 2px 2px 4px}   /* 메인 하단(보스 파견)과 동일한 제목+설명 구성 */
   .gachaResult{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:1px;padding:7px 11px;border-radius:var(--r-lg);
     background:linear-gradient(180deg,rgba(20,16,18,.7),rgba(8,7,9,.75));border:1px solid var(--gc,var(--metal-edge));
@@ -997,17 +998,17 @@
   /* 뽑기 비콘(유닛뽑기 보드) — 시민이 올라서면 뽑기 */
   .drawZone{position:absolute;transform:translate(-50%,-50%);z-index:9;pointer-events:none;width:0;height:0}
   /* 바닥 링 = 캔버스 금속 패드 테두리에 정확히 얹히는 원근 타원(평면 원 제거 — 3D 비콘과 한 공간) */
-  .drawZone .dzRing{position:absolute;left:0;top:6px;transform:translate(-50%,-50%);width:64px;height:38px;border-radius:50%;
+  .drawZone .dzRing{position:absolute;left:0;top:5px;transform:translate(-50%,-50%);width:56px;height:33px;border-radius:50%;
     border:1.6px solid var(--neon-soft);
     box-shadow:0 0 12px -5px var(--neon-glow),inset 0 0 12px -6px var(--neon-glow)}
   .drawZone .dzFx{position:absolute;inset:-6px;border-radius:50%;pointer-events:none;
     background:radial-gradient(ellipse,var(--neon-glow),transparent 66%);filter:blur(3px);opacity:.3;animation:dzAura 2.4s ease-in-out infinite}
   /* 아이콘 = 비콘 꼭대기 위 공중 부유(살짝 둥실) */
-  .drawZone .dzGlyph{position:absolute;left:0;top:-30px;transform:translateX(-50%);width:21px;height:21px;color:var(--neon);
+  .drawZone .dzGlyph{position:absolute;left:0;top:-26px;transform:translateX(-50%);width:19px;height:19px;color:var(--neon);
     filter:drop-shadow(0 0 3px var(--neon-glow));animation:dzBob 2.6s ease-in-out infinite}
-  .drawZone .dzBadge{position:absolute;left:11px;top:-38px;font-family:'Rajdhani',sans-serif;font-size:var(--fs-xs);font-weight:800;color:#f0eaea;
+  .drawZone .dzBadge{position:absolute;left:10px;top:-33px;font-family:'Rajdhani',sans-serif;font-size:var(--fs-xs);font-weight:800;color:#f0eaea;
     background:rgba(8,6,8,.82);border:1px solid var(--neon-soft);border-radius:var(--r-md);padding:0 3px;line-height:1.35}
-  .drawZone .dzLabel{position:absolute;left:0;top:30px;transform:translateX(-50%);display:flex;align-items:center;gap:3px;
+  .drawZone .dzLabel{position:absolute;left:0;top:26px;transform:translateX(-50%);display:flex;align-items:center;gap:3px;
     padding:2px 6px;border-radius:var(--r-md);background:rgba(6,5,8,.72);border:1px solid var(--metal-edge)}
   .drawZone .dzName{font-size:8.5px;font-weight:800;color:#e6e0e0;letter-spacing:.2px;white-space:nowrap}
   .drawZone .dzCost{display:flex;align-items:center;gap:2px;font-family:'Rajdhani',sans-serif;font-size:var(--fs-xs);font-weight:700;color:#e0c98a}
@@ -1018,12 +1019,12 @@
   .drawZone.active .dzFx{opacity:.55;animation-duration:1.1s}
   .drawZone.active .dzGlyph{animation-duration:1.2s}
   /* ×10 비콘 = 상위 행동: 큰 바닥 링 + 바깥 이중 타원 링 */
-  .drawZone.big .dzRing{width:80px;height:48px}
+  .drawZone.big .dzRing{width:70px;height:42px}
   .drawZone.big .dzRing::after{content:'';position:absolute;inset:-5px;border-radius:50%;pointer-events:none;
     border:1px solid var(--neon-faint);box-shadow:0 0 10px -5px var(--neon-glow)}
-  .drawZone.big .dzGlyph{width:25px;height:25px;top:-34px}
-  .drawZone.big .dzBadge{left:13px;top:-42px}
-  .drawZone.big .dzLabel{top:36px}
+  .drawZone.big .dzGlyph{width:23px;height:23px;top:-30px}
+  .drawZone.big .dzBadge{left:12px;top:-37px}
+  .drawZone.big .dzLabel{top:31px}
   @keyframes dzAura{0%,100%{opacity:.22;transform:scale(.95)}50%{opacity:.45;transform:scale(1.06)}}
   @keyframes dzBob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,-2px)}}
   /* 생산 버튼: 투명 + 빨강 네온 엣지 */
@@ -2509,13 +2510,11 @@ const DRAW_BEACONS=[
   // 좌측 줄(4줄): 가드 타워 / 스파이어 / 유닛 1회 / 에너지 1회 (간격 약간 띄움)
   {id:'buyTurret', x:.20, y:.18, name:'가드 타워', core:'🗼'},
   {id:'buyPhoton', x:.20, y:.37, name:'스파이어', core:'◉'},
-  {id:'draw',      x:.20, y:.56, name:'유닛 1회', core:'?'},
-  {id:'energy',    x:.20, y:.75, name:'에너지 1회', core:'⚡'},
+  {id:'draw',      x:.20, y:.55, name:'유닛 1회', core:'?'},
+  {id:'energy',    x:.20, y:.71, name:'에너지 1회', core:'⚡'},
   // 우측 줄: 뽑기 확률↑ / 크레딧 획득↑ (확률표는 우상단 → 아래쪽에 배치해 겹침 방지)
-  {id:'gachaUp',  x:.80, y:.56, name:'뽑기 확률↑', core:'%'},
-  {id:'creditUp', x:.80, y:.75, name:'크레딧 획득↑', core:'C'},
-  // 에너지 전환(전액): 6시 방향(하단 중앙) — 좌·우 줄 사이 빈 공간
-  {id:'energyAll',x:.50, y:.90, name:'에너지 전환', core:'⚡⚡'},
+  {id:'gachaUp',  x:.77, y:.55, name:'뽑기 확률↑', core:'%'},
+  {id:'creditUp', x:.77, y:.71, name:'크레딧 획득↑', core:'C'},
 ];
 // 비콘별 색 테마(인라인 CSS 변수로 기존 .drawZone 스타일 재사용). 유닛 1·10회=기본 빨강.
 const BEACON_THEME={   // 디자인 토큰과 통일: 유닛=네온 레드(기본), 고급=골드(재화/희귀), 에너지=HUD 시안(E 재화색)
@@ -5756,7 +5755,7 @@ function renderPbossPopup(){ const pop=document.getElementById('pbossPopup'); if
       + '<span class="ppSub">권장 '+pt.rec+' · ❤'+fmtHpK(pt.hp)+'</span></div>'
       + st + '</div></div>'; }).join('');
   const note='<div class="ppCdNote">쿨다운은 보스별로 따로 돌아갑니다</div>';
-  pop.innerHTML='<div class="ppHead"><span class="ppBar"></span><span class="ppTtl">개인 보스 소환</span><button class="ppClose" onclick="event.stopPropagation();closePbossPopup()" title="닫기">✕</button></div>'+items+note; }
+  pop.innerHTML='<div class="ppHead"><span class="ppBar"></span><span class="ppTtl">개인 보스 소환</span><button class="ppClose" onclick="event.stopPropagation();closePbossPopup()" title="닫기"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>'+items+note; }
 function togglePbossAuto(ev, id){ if(ev){ ev.stopPropagation(); ev.preventDefault(); }
   if(!autoUsable('pboss')){ toast('자동 개인 보스 업그레이드 필요'); return; }
   if(!G.auto) G.auto={unit:false,combine:false,energy:false,pboss:{}}; if(!G.auto.pboss) G.auto.pboss={};
@@ -5798,7 +5797,7 @@ function renderAutoPopup(){ const pop=document.getElementById('autoPopup'); if(!
     else if(owned) rows+='<div class="apRow'+(on?' on':'')+'" onclick="toggleAuto(\''+kind+'\')"><div class="apTx"><span class="apName">'+d[1]+'</span><span class="apDesc">'+d[2]+'</span></div><span class="apSw"></span></div>';
     else rows+='<div class="apRow lk"><div class="apTx"><span class="apName">'+d[1]+'</span><span class="apDesc">🔒 코인 업그레이드 필요</span></div></div>'; }
   const note=AUTO_PREVIEW?'⚠ 예시 모드 — 미해금이어도 동작(테스트용)':'0.33초마다 동작 · 코인 연구소에서 해금';
-  pop.innerHTML='<div class="apHead"><span class="apBar"></span><span class="apTtl">자동화 설정</span><button class="apClose" onclick="event.stopPropagation();closeAutoPopup()" title="닫기">✕</button></div>'+rows+'<div class="apNote">'+note+'</div>';
+  pop.innerHTML='<div class="apHead"><span class="apBar"></span><span class="apTtl">자동화 설정</span><button class="apClose" onclick="event.stopPropagation();closeAutoPopup()" title="닫기"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>'+rows+'<div class="apNote">'+note+'</div>';
   pop._sig=autoSig(); }
 function toggleAuto(kind){ const o=autoUtilOwned(); if(!o[kind]){ toast('업그레이드 필요'); return; }
   if(!G.auto) G.auto={unit:false,combine:false,energy:false,pboss:{}};
