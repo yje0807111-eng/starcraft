@@ -7748,8 +7748,7 @@ function updateHud(){
 const MAP_NAMES={ Main:'용암 정거장', Unit:'유닛 생산고', Upgrade:'연구 시설', Players:'전장 관전', Boss:'월드 보스방' };
 function updateMapName(){ const el=document.getElementById('mapName'); if(!el) return;
   if(G.bossOpen){ const t2='👹 '+(MAP_NAMES.Boss||'월드 보스방'); if(el.textContent!==t2) el.textContent=t2; return; }   // 토벌장 진입 시 장소 이름 교체(MAP_NAMES 단일 출처)
-  const D=DIFFICULTY[G.difficulty], dtag=(D&&G.difficulty!=='normal')?(' · '+D.name):'';   // 노말 외에는 난이도 표시
-  const txt = '◈ '+(MAP_NAMES[G.tab] || '')+dtag;   // 플레이어 관전도 통일된 고정 이름(관전 대상 무관)
+  const txt = '◈ '+(MAP_NAMES[G.tab] || '');   // 난이도 태그 제거 — 맵 이름만 표시(관전 대상 무관)
   const M=(G.roundPhase==='active' && G.roundMod)?ROUND_MODS[G.roundMod]:null;   // 라운드 모디파이어 배지
   if(M){ const html=txt+' · <span style="color:'+M.color+'">⚠'+M.name+'</span>'; if(el.innerHTML!==html) el.innerHTML=html; }
   else if(el.textContent!==txt) el.textContent=txt;
