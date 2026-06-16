@@ -224,29 +224,32 @@
   #pbossPopup .ppHead{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:#ffdada;letter-spacing:.4px;padding:0 1px 6px;border-bottom:1px solid rgba(255,59,59,.25);text-shadow:0 1px 2px #000}
   #pbossPopup .ppHead .ppBar{width:3px;height:13px;background:var(--neon);box-shadow:0 0 6px var(--neon-glow);border-radius:1px}
   #pbossPopup .ppCdNote{font-size:9px;color:#e8a0a0;text-align:center;padding:2px;font-weight:700}
-  .ppItem{position:relative;display:flex;align-items:center;gap:8px;padding:7px 8px;cursor:pointer;text-align:left;width:100%;
+  .ppItem{position:relative;display:flex;flex-direction:column;cursor:pointer;text-align:left;width:100%;overflow:hidden;
     background:linear-gradient(160deg,rgba(48,40,44,.5),rgba(12,9,11,.7));border:1px solid var(--metal-edge);border-left:3px solid var(--pc,#888);
     clip-path:polygon(5px 0,100% 0,100% calc(100% - 5px),calc(100% - 5px) 100%,0 100%,0 5px);transition:all .12s;font-family:inherit}
-  .ppItem:hover{border-color:var(--pc,#aaa);filter:brightness(1.15)}
+  .ppItem:hover{border-color:var(--pc,#aaa);filter:brightness(1.12)}
   .ppItem:active{transform:translateY(1px)}
-  .ppItem.blk{opacity:.55;cursor:default}                       /* 쿨다운·활동 중 — 흐리게(클릭 시 안내 토스트) */
-  .ppItem.locked{opacity:.8;filter:grayscale(.35);cursor:default}/* 잠금 — 진행도 읽히게 덜 흐리게 */
-  .ppItem.locked .ppIco{color:#9aa0ac;filter:none}
-  .ppItem .ppAuto{flex:0 0 auto;align-self:stretch;display:flex;align-items:center;justify-content:center;min-width:25px;margin-left:1px;
-    font-size:14px;font-weight:800;color:#828a96;cursor:pointer;border-radius:5px;border:1px solid var(--metal-edge);background:rgba(255,255,255,.04);transition:.12s}
-  .ppItem .ppAuto.on{color:#46f06a;border-color:#46f06a;background:rgba(70,240,106,.14);box-shadow:0 0 8px -2px rgba(70,240,106,.6)}
-  .ppItem .ppAuto:hover{border-color:#9aa6b2}.ppItem .ppAuto.on:hover{border-color:#7ef79a}.ppItem .ppAuto:active{transform:translateY(1px)}
-  .ppItem .ppIco{width:22px;height:22px;flex:0 0 auto;color:var(--pc,#cfd);filter:drop-shadow(0 0 4px var(--pc))}
-  .ppItem .ppTx{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;line-height:1.15}
-  .ppItem .ppName{font-size:11px;font-weight:800;color:#f2e4e4;white-space:nowrap}
-  .ppItem .ppHp{font-size:8.5px;color:#ffb3b3;font-weight:800;white-space:nowrap;letter-spacing:.2px}
-  .ppItem .ppSub{font-size:8.5px;color:var(--pc,#bbb);font-weight:700;white-space:nowrap}
-  .ppItem .ppRec{font-size:8px;color:#9fb0c0;font-weight:600;white-space:nowrap}
-  .ppItem .ppLock{font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:800;color:#c6a8a8;white-space:nowrap;flex:0 0 auto;text-align:right;line-height:1.25}
-  .ppItem .ppLock.on{color:#ff9a9a}
-  .ppItem .ppRwd{display:flex;flex-direction:column;align-items:flex-end;gap:1px;font-family:'Rajdhani',sans-serif;font-size:10.5px;font-weight:800;flex:0 0 auto}
+  .ppItem.locked{filter:grayscale(.55) brightness(.66);cursor:default;border-left-color:#5a5560}   /* 잠금 = 카드 전체가 잠긴 느낌 */
+  .ppItem.locked:hover{filter:grayscale(.55) brightness(.7)}
+  .ppItem .ppGate{font-size:8.5px;font-weight:800;letter-spacing:.2px;padding:2px 8px;color:#e7b07a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    background:rgba(0,0,0,.34);border-bottom:1px solid rgba(255,255,255,.06)}   /* 카드 상단 해금 조건 띠 */
+  .ppItem .ppGate b{color:#ffd24a}
+  .ppItem .ppGate.ok{color:#7fe08a;background:rgba(50,90,55,.18)}
+  .ppItem .ppBody{display:flex;align-items:center;gap:7px;padding:5px 8px}
+  .ppItem .ppIco{width:19px;height:19px;flex:0 0 auto;color:var(--pc,#cfd);filter:drop-shadow(0 0 4px var(--pc))}
+  .ppItem .ppTx{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.18}
+  .ppItem .ppName{font-size:11px;font-weight:800;color:#f2e4e4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ppItem .ppSub{font-size:8.5px;color:var(--pc,#bbb);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ppItem .ppSt{font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:800;color:#c6a8a8;white-space:nowrap;flex:0 0 auto;text-align:right}
+  .ppItem .ppSt.on{color:#ff9a9a}
+  .ppItem .ppRwd{display:flex;flex-direction:column;align-items:flex-end;gap:0;font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:800;flex:0 0 auto;line-height:1.15}
   .ppItem .ppRwd .ppC{display:flex;align-items:center;gap:2px;color:var(--gold-lt)}
   .ppItem .ppRwd .ppE{color:#7fe0ff;letter-spacing:.2px}
+  .ppItem .ppSw{flex:0 0 auto;width:30px;height:16px;border-radius:9px;background:rgba(255,255,255,.14);position:relative;transition:.14s;cursor:pointer}
+  .ppItem .ppSw::after{content:'';position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#cfd6dc;transition:.14s}
+  .ppItem .ppSw.on{background:#46f06a;box-shadow:0 0 7px -1px rgba(70,240,106,.7)}
+  .ppItem .ppSw.on::after{left:16px;background:#0c1410}
+  .ppItem .ppSw:active{transform:scale(.94)}
   /* 선택 해제 아이콘 버튼(우상단, 자원 표시 아래) — 노란 금지표시, 유닛 지정 시에만 표시 */
   /* 선택 해제 — 투명 배경 + 빨강 테마(하단 톤) */
   #deselTop{position:absolute;top:100px;right:10px;z-index:25;display:none;cursor:pointer;pointer-events:auto;
@@ -5636,21 +5639,28 @@ function renderPbossPopup(){ const pop=document.getElementById('pbossPopup'); if
   const items=PBOSS_TYPES.map(function(pt){
     const rwd=Math.round(pt.bonus*coinMult);
     const unlocked=pbossUnlocked(pt), active=G.enemies.some(e=>e.pboss&&e.pbId===pt.id);
-    const cdL=Math.ceil(G.pbossCds[pt.id]||0), blocked=!unlocked||active||cdL>0;
+    const cdL=Math.ceil(G.pbossCds[pt.id]||0);
     const gradeNm=(GACHA_TIERS[pt.unlock]||{}).name||pt.unlock, pr=pbossUnlockProgress(pt);
-    let right;
-    if(!unlocked)   right='<span class="ppLock">🔒 '+gradeNm+' '+pr.have+'/'+pr.total+'</span>';
-    else if(active) right='<span class="ppLock on">⚔ 활동 중</span>';
-    else if(cdL>0)  right='<span class="ppLock ppCdLive" data-bid="'+pt.id+'">⏳ '+cdL+'s</span>';
-    else            right='<span class="ppRwd"><span class="ppC">'+COIN_SM+rwd+'</span><span class="ppE">⚡'+(pt.egy||0)+'</span></span>';
+    // 카드 상단: 해금 조건(잠금=빨강+진행도 / 해금=초록 체크)
+    const gate=unlocked
+      ? '<div class="ppGate ok">✓ 모든 '+gradeNm+' 보유</div>'
+      : '<div class="ppGate">🔒 모든 '+gradeNm+' 필요 <b>'+pr.have+'/'+pr.total+'</b></div>';
+    // 우측 상태(해금된 경우만): 활동 / 쿨다운 / 보상
+    let st='';
+    if(unlocked){
+      if(active)      st='<span class="ppSt on">⚔ 활동</span>';
+      else if(cdL>0)  st='<span class="ppSt ppCdLive" data-bid="'+pt.id+'">⏳ '+cdL+'s</span>';
+      else            st='<span class="ppRwd"><span class="ppC">'+COIN_SM+rwd+'</span><span class="ppE">⚡'+(pt.egy||0)+'</span></span>';
+    }
     const autoOn=!!(G.auto&&G.auto.pboss&&G.auto.pboss[pt.id]);
-    const autoChip=autoAvail?('<span class="ppAuto'+(autoOn?' on':'')+'" onclick="togglePbossAuto(event,\''+pt.id+'\')" title="쿨마다 자동 소환">⟳</span>'):'';
-    return '<div class="ppItem'+(unlocked?'':' locked')+(blocked?' blk':'')+'" style="--pc:'+pt.col+'" onclick="summonPersonalBoss(\''+pt.id+'\')">'
-      +(unlocked?skull:lock)+'<div class="ppTx"><span class="ppName">'+pt.name+'</span>'
-      +'<span class="ppHp">❤ '+fmtHpK(pt.hp)+(pt.ar?' · 🛡'+pt.ar:'')+'</span>'
-      +'<span class="ppSub">권장 '+pt.rec+'</span></div>'
-      +right+autoChip+'</div>'; }).join('');
-  const note='<div class="ppCdNote">등급 4종 전체 보유 시 해금 · 쿨다운 보스별 개별'+(autoAvail?' · ⟳=자동 소환':'')+'</div>';
+    const sw=(autoAvail&&unlocked)?('<span class="ppSw'+(autoOn?' on':'')+'" onclick="togglePbossAuto(event,\''+pt.id+'\')" title="쿨마다 자동 소환"></span>'):'';
+    return '<div class="ppItem'+(unlocked?'':' locked')+'" style="--pc:'+pt.col+'" onclick="summonPersonalBoss(\''+pt.id+'\')">'
+      + gate
+      + '<div class="ppBody">'+(unlocked?skull:lock)
+      + '<div class="ppTx"><span class="ppName">'+pt.name+'</span>'
+      + '<span class="ppSub">권장 '+pt.rec+' · ❤'+fmtHpK(pt.hp)+'</span></div>'
+      + st + sw + '</div></div>'; }).join('');
+  const note='<div class="ppCdNote">쿨다운은 보스별로 따로 돌아갑니다</div>';
   pop.innerHTML='<div class="ppHead"><span class="ppBar"></span>개인 보스 소환</div>'+items+note; }
 function togglePbossAuto(ev, id){ if(ev){ ev.stopPropagation(); ev.preventDefault(); }
   if(!autoUsable('pboss')){ toast('자동 개인 보스 업그레이드 필요'); return; }
