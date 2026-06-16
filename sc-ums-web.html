@@ -213,6 +213,7 @@
   /* 상시 공용 보스 HP 바 */
   /* 심플: 피통(HP 바)만 또렷, 이름·기여도·테두리는 반투명으로 배경과 어우러짐 */
   #coopBossBar{position:absolute;top:60px;right:9px;z-index:19;pointer-events:none;width:166px;
+    transform:scale(.8);transform-origin:top right;   /* 우상단 보스 구역 0.8 축소(왼쪽 화면 침범 방지) */
     display:flex;flex-direction:column;background:none;border:none;box-shadow:none;padding:0}
   #coopBossBar.hide{display:none}
   #coopBossBar .cbMid{width:100%}
@@ -237,6 +238,13 @@
   #bossPanel::before{content:'';position:absolute;inset:0;pointer-events:none;
     background:radial-gradient(ellipse at 50% 42%,rgba(0,0,0,0) 52%,rgba(4,3,8,.62) 100%);
     box-shadow:inset 0 0 0 1px rgba(255,90,110,.25)}
+  /* 보스방 돌아가기 버튼(좌상단) — 메인 화면으로 복귀 */
+  #baBackBtn{position:absolute;top:58px;left:9px;z-index:26;pointer-events:auto;cursor:pointer;display:flex;align-items:center;gap:5px;
+    padding:7px 12px 7px 9px;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-sm);font-weight:800;color:#e8eef6;letter-spacing:.2px;
+    background:linear-gradient(160deg,rgba(22,24,32,.82),rgba(10,11,16,.86));border:1px solid rgba(255,255,255,.14);
+    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 4px 12px -4px #000}
+  #baBackBtn svg{color:#ff8a9a;flex:0 0 auto}
+  #baBackBtn:hover{border-color:rgba(255,120,130,.5)}#baBackBtn:active{transform:translateY(1px)}
   .bossDesel{position:absolute;top:62px;right:9px;pointer-events:auto;cursor:pointer;display:flex;align-items:center;gap:4px;
     padding:5px 9px;border-radius:var(--r-md);font-size:var(--fs-sm);font-weight:800;color:#ffd0d6;
     background:rgba(20,10,12,.78);border:1px solid rgba(255,90,110,.45);box-shadow:0 0 10px -4px rgba(255,80,100,.6)}
@@ -327,13 +335,14 @@
   .hbCount{margin-left:auto;font-family:'Rajdhani',sans-serif;font-size:var(--fs-md);font-weight:700;color:var(--txt-mute);white-space:nowrap}
   .hbCount b{font-size:14px;font-weight:800;color:#ff8a9a}.hbCount i{font-style:normal;opacity:.7}
   #bossPopup{position:absolute;top:98px;right:9px;z-index:25;width:160px;display:flex;flex-direction:column;gap:7px;padding:10px;
-    background:linear-gradient(160deg,rgba(42,16,20,.97),rgba(12,6,9,.98));border:1px solid rgba(255,59,59,.45);
+    background:linear-gradient(160deg,rgba(20,22,30,.74),rgba(10,11,16,.80));border:1px solid rgba(255,255,255,.1);
+    backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);   /* 반투명 + 블러: 깔끔하게, 빨강은 포인트로만 */
     clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px);
-    box-shadow:0 10px 26px rgba(0,0,0,.62),inset 0 1px 0 rgba(255,255,255,.06),inset 0 0 22px rgba(0,0,0,.4);animation:bpop .12s ease-out}
-  #bossPopup::after{content:'';position:absolute;left:11px;right:5px;top:0;height:1px;background:linear-gradient(90deg,rgba(255,90,90,.5),transparent 78%);pointer-events:none}
+    box-shadow:0 10px 26px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.05);animation:bpop .12s ease-out}
+  #bossPopup::after{content:'';position:absolute;left:11px;right:5px;top:0;height:1px;background:linear-gradient(90deg,rgba(255,90,90,.55),transparent 70%);pointer-events:none}
   #bossPopup.hide{display:none}
   @keyframes bpop{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
-  #bossPopup .bpHead{position:relative;display:flex;align-items:center;justify-content:space-between;font-size:var(--fs-sm);font-weight:800;color:#ffdada;letter-spacing:.4px;padding:0 1px 6px 8px;margin-bottom:1px;border-bottom:1px solid rgba(255,59,59,.25);text-shadow:0 1px 2px #000}
+  #bossPopup .bpHead{position:relative;display:flex;align-items:center;justify-content:space-between;font-size:var(--fs-sm);font-weight:800;color:#ece6e8;letter-spacing:.4px;padding:0 1px 6px 8px;margin-bottom:1px;border-bottom:1px solid rgba(255,255,255,.12);text-shadow:0 1px 2px #000}
   #bossPopup .bpHead::before{content:'';position:absolute;left:0;top:1px;width:3px;height:12px;background:var(--neon);box-shadow:0 0 6px var(--neon-glow);border-radius:1px}
   #bossPopup .bpCnt{font-family:'Rajdhani',sans-serif;font-size:var(--fs-md);font-weight:700;color:var(--txt-mute);letter-spacing:0}
   #bossPopup .bpCnt b{font-size:15px;font-weight:800;color:#ff8a9a;text-shadow:0 0 6px rgba(255,90,110,.5)}
@@ -354,11 +363,11 @@
     clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.05);transition:all .12s}
   .hbRecall:hover{border-color:rgba(255,120,120,.4)}.hbRecall:active{transform:translateY(1px)}
-  .hbOpen{width:100%;position:relative;padding:10px;font-family:inherit;font-size:var(--fs-lg);font-weight:800;cursor:pointer;color:#ffd0d6;
-    background:linear-gradient(160deg,rgba(120,30,38,.4),rgba(30,10,14,.55));border:1px solid rgba(255,59,59,.5);
+  .hbOpen{width:100%;position:relative;padding:10px;font-family:inherit;font-size:var(--fs-lg);font-weight:800;cursor:pointer;color:#e4dde0;
+    background:linear-gradient(160deg,rgba(46,50,62,.5),rgba(14,16,22,.6));border:1px solid var(--metal-edge);
     clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.06);transition:all .12s}
-  .hbOpen:hover{border-color:rgba(255,90,90,.8)}.hbOpen:active{transform:translateY(1px)}
+  .hbOpen:hover{border-color:rgba(255,90,90,.55)}.hbOpen:active{transform:translateY(1px)}
   .hbOpen.viewing{color:#bfe0ff;background:linear-gradient(160deg,rgba(40,90,140,.4),rgba(12,24,40,.55));border-color:rgba(120,180,230,.55)}
   #miniBox{position:relative;width:82px;height:82px;border-radius:2px;overflow:hidden;
     border:1px solid rgba(0,229,255,.16);
@@ -1873,10 +1882,10 @@
     </div>
     <!-- 보스 액션 팝업: 상단 보스바를 누르면 표시(파견/회수/보스장) -->
     <div id="bossPopup" class="hide">
-      <div class="bpHead"><span>공용 보스</span><span class="bpCnt"><b id="bdSent">0</b>/<span id="bdTotal">2</span></span></div>
+      <div class="bpHead"><span>월드 보스</span><span class="bpCnt"><b id="bdSent">0</b>/<span id="bdTotal">2</span></span></div>
       <button class="hbDeploy" id="bossPickBtn" onclick="armBossPick();closeBossPopup()"><span class="bdLabel">파견</span></button>
       <button class="hbRecall" onclick="recallFromBoss('all')">회수</button>
-      <button class="hbOpen" id="bossViewBtn" onclick="openBossFromPopup()">보스장</button>
+      <button class="hbOpen" id="bossViewBtn" onclick="openBossFromPopup()">보스방</button>
     </div>
     <div id="miniWrap"><div id="miniBox"><canvas id="miniMap"></canvas></div></div>
     <!-- 조합 버튼: 메인 탭에서 미니맵 자리(우하단 코너)에 표시 -->
@@ -1891,7 +1900,7 @@
     <div class="gview" id="vPlayers"><canvas id="cvPlayer"></canvas></div>
     <div class="gview" id="vBoss"><canvas id="cvBoss"></canvas></div>
     <!-- 공용 보스 토벌장 팝업(HP바 클릭 시) — 아레나는 vBoss/cvMarine로 뒤에 렌더, 여기는 컨트롤만 -->
-    <div id="bossPanel" class="hide"></div>
+    <div id="bossPanel" class="hide"><button id="baBackBtn" onclick="closeBossArena()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>돌아가기</button></div>
     <canvas id="cvMarine"></canvas>  <!-- 3D 오버레이: 뷰 바깥 지속 캔버스(메인=게임유닛 / 유닛뽑기=슬롯 위 모델) -->
     <canvas id="cvFx"></canvas>      <!-- 투사체 오버레이(3D 위) -->
     <div id="chatLog"></div>         <!-- 채팅: 배경 위에 떠올랐다 사라짐(입력창 좌측 위) -->
@@ -2768,9 +2777,9 @@ const META_BUILDS = {   // 탭(group) → 섹션(sect) 2단 분류. 같은 sect�
   team_enemy_hp: { name:'전체 적 체력',  desc:'모든 플레이어 적 체력 -2.5%/Lv', start:14, nMax:5, max:8, group:'team', sect:'팀 적 약화' },
   team_enemy_slow:{name:'전체 적 이속',  desc:'모든 플레이어 적 이동속도 -2.5%/Lv', start:12, nMax:5, max:8, group:'team', sect:'팀 적 약화' },
   // ── 보스(공용·개인) ──
-  boss_hp_down:  { name:'보스 체력 감소', desc:'공용 보스 체력 -3%/Lv',      start:4, nMax:6, max:9, group:'coop', sect:'공용 보스' },
-  boss_atk_up:   { name:'보스 기여딜 증가',desc:'보스장 파견 유닛의 보스 데미지 +5%/Lv', start:4, nMax:6, max:9, group:'coop', sect:'공용 보스' },
-  boss_reward_up:{ name:'보스 보상 증가', desc:'공용 보스 처치 포인트 +10%/Lv', start:5, nMax:5, max:8, group:'coop', sect:'공용 보스' },
+  boss_hp_down:  { name:'보스 체력 감소', desc:'월드 보스 체력 -3%/Lv',      start:4, nMax:6, max:9, group:'coop', sect:'월드 보스' },
+  boss_atk_up:   { name:'보스 기여딜 증가',desc:'보스방 파견 유닛의 보스 데미지 +5%/Lv', start:4, nMax:6, max:9, group:'coop', sect:'월드 보스' },
+  boss_reward_up:{ name:'보스 보상 증가', desc:'월드 보스 처치 포인트 +10%/Lv', start:5, nMax:5, max:8, group:'coop', sect:'월드 보스' },
   pboss_reward:  { name:'개인 보스 보상', desc:'개인 보스 처치 보상 +10%/Lv', start:5, nMax:5, max:8, group:'coop', sect:'개인 보스' },
   pboss_cd:      { name:'개인 보스 쿨감', desc:'개인 보스 재소환 쿨다운 -6%/Lv', start:5, nMax:5, max:8, group:'coop', sect:'개인 보스' },
   // ── 엔드 강화(고난도 도전용 · 매우 비싸고 강력 · 초월 구간 없음) ──
@@ -2867,7 +2876,7 @@ const _PT_NOTE={
   prod:'뽑기 확률·추가 생산 등 생산 강화 · 즉시 적용 (시작 유닛은 다음 판)',
   combat:'아군 화력·공격속도 강화와 적 약화 · 즉시 적용 (시작 포탑은 다음 판)',
   team:'전체 강화 · 협동에서 파티 중 최고 레벨이 모두에게 적용',
-  coop:'공용 보스 공략 + 개인 보스 보상·쿨감 강화',
+  coop:'월드 보스 공략 + 개인 보스 보상·쿨감 강화',
   end:'⚡ 종결 강화 — 매우 비싸지만 강력 · 고난도 도전용'
 };
 // 포인트 연구소 선택 → 팝업으로 영구 강화 리스트 표시(하단 구역이 좁아 팝업 사용)
@@ -2936,7 +2945,7 @@ function coopBossDown(){ const cb=G.coopBoss; if(!cb||cb.dead) return; cb.dead=t
   const pts=Math.max(1, Math.round(cb.lv*rewardMul));   // n번째 보스 = nP (포인트의 유일한 수입원)
   G.points += pts;   // 게임 종료 시 정산되는 포인트에 합산
   if(typeof playSfx==='function') playSfx('win');
-  addChat('', '👹 공용 보스 ['+cb.name+'] 처치! 기여 '+Math.round(share*100)+'% · +'+pts+' 포인트', '#ff8a9a', true);
+  addChat('', '👹 월드 보스 ['+cb.name+'] 처치! 기여 '+Math.round(share*100)+'% · +'+pts+' 포인트', '#ff8a9a', true);
   const nextLv=cb.lv+1;
   if(G._coopBossT) clearTimeout(G._coopBossT);
   G._coopBossT=setTimeout(()=>{ if(G.phase==='playing'){ spawnCoopBoss(nextLv); if(typeof playSfxT==='function') playSfxT('boss',1500); } }, 2500);   // 상시: 더 강한 보스 재등장 + 등장음
@@ -3196,7 +3205,7 @@ function closeBossPopup(){ const p=document.getElementById('bossPopup'); if(p) p
 document.addEventListener('pointerdown', function(ev){ const p=document.getElementById('bossPopup'); if(!p||p.classList.contains('hide'))return; if(ev.target.closest&&(ev.target.closest('#bossPopup')||ev.target.closest('#coopBossBar')))return; closeBossPopup(); }, true);
 document.addEventListener('pointerdown', function(ev){ const p=document.getElementById('pbossPopup'); if(!p||p.classList.contains('hide'))return; if(ev.target.closest&&(ev.target.closest('#pbossPopup')||ev.target.closest('#pbossBtn')))return; closePbossPopup(); }, true);
 function openBossFromPopup(){ closeBossPopup(); if(typeof toggleBossArena==='function')toggleBossArena(); }
-function updateBossViewBtn(){ const b=document.getElementById('bossViewBtn'); if(b){ b.textContent=G.bossOpen?'메인':'보스장'; b.classList.toggle('viewing', !!G.bossOpen); } }
+function updateBossViewBtn(){ const b=document.getElementById('bossViewBtn'); if(b){ b.textContent=G.bossOpen?'메인':'보스방'; b.classList.toggle('viewing', !!G.bossOpen); } }
 // ── 토벌장 전용 이펙트 저장소 — 메인 트랙 이펙트와 완전 분리(두 화면이 서로 영향 없음) ──
 const _FX_KEYS=['shots','impacts','muzzles','sparks','beams','debris'];
 function _baFxStore(){ if(!G.baFx) G.baFx={shots:[],impacts:[],muzzles:[],sparks:[],beams:[],debris:[]}; return G.baFx; }
@@ -3233,7 +3242,7 @@ function drawBossBox(){ let el=document.getElementById('bossSelBox'); const host
   el.style.cssText='position:absolute;border:1px solid #46f06a;background:rgba(70,240,106,.14);pointer-events:none;z-index:23;left:'+(x*100)+'%;top:'+(y*100)+'%;width:'+(w*100)+'%;height:'+(h*100)+'%'; }
 function clearBossBox(){ const el=document.getElementById('bossSelBox'); if(el) el.remove(); _ba.box=null; }
 function bossDeselect(){ _baSel=[]; }
-function onBossArenaDown(e){ if(!G.bossOpen) return; if(e.target&&e.target.closest&&e.target.closest('#deselTop,#coopBossBar,.bossDeployBar')) return;
+function onBossArenaDown(e){ if(!G.bossOpen) return; if(e.target&&e.target.closest&&e.target.closest('#deselTop,#coopBossBar,.bossDeployBar,#baBackBtn')) return;
   const p=bossArenaPoint(e); _ba.moved=false;
   const u=bossUnitUnder(p);
   if(u){ if(_baSel.indexOf(u.uid)<0) _baSel=[u.uid]; _ba.dragU=u; _ba.cmd=null; _ba.box=null; }   // 유닛 클릭 → 선택(드래그 시 이동)
@@ -5165,7 +5174,7 @@ function renderBldgs(viewId,list,posArr,selId,onSel){ const v=document.getElemen
 // ============================================================================
 // 탭 / 선택 / 커맨드카드
 // ============================================================================
-const ZONE_LABEL={Main:'📍 내 디펜스 구역',Unit:'🏗 유닛 생산 구역',Upgrade:'⚙️ 업그레이드 구역',Players:'👥 다른 플레이어 화면',Boss:'👹 공용 보스 토벌'};
+const ZONE_LABEL={Main:'📍 내 디펜스 구역',Unit:'🏗 유닛 생산 구역',Upgrade:'⚙️ 업그레이드 구역',Players:'👥 다른 플레이어 화면',Boss:'👹 월드 보스방'};
 function switchTab(id,el){ if(G.bossOpen && typeof closeBossArena==='function') closeBossArena();   // 탭 전환 시 보스 팝업 닫기
   if(G.bossPickArm){ G.bossPickArm=false; if(typeof updateBossPickBtn==='function') updateBossPickBtn(); }
   G.tab=id;
@@ -5776,7 +5785,7 @@ function renderPlayers(){ const g=document.getElementById('plGrid'); g.innerHTML
     el.className='plbtn'+(present&&n===G.curPlayer&&!lock?' me':'')+(lock?' lock':'')+(!present?' off':'');   // 미입장=off
     el.style.setProperty('--pc', PLAYER_VIEW_COLORS[(n-1)%PLAYER_VIEW_COLORS.length]);
     const _bo=!lock && present && G.coopState && G.coopState[n] && G.coopState[n].bo;   // 상대가 토벌장 보는 중
-el.innerHTML='<div class="plnum">'+n+'P</div><div class="plst">'+(lock?(escHtml(myNick())+' 🔒'):(present?(escHtml(playerName(n))+(_bo?' <span title="보스장 입장 중">👹</span>':'')):'빈 자리'))+'</div>';
+el.innerHTML='<div class="plnum">'+n+'P</div><div class="plst">'+(lock?(escHtml(myNick())+' 🔒'):(present?(escHtml(playerName(n))+(_bo?' <span title="보스방 입장 중">👹</span>':'')):'빈 자리'))+'</div>';
     if(!lock && present) el.onclick=()=>{ G.curPlayer=n; renderPlayers(); drawPlayer(); updateSpecLabel(); };   // 입장한 다른 플레이어만 관전 가능
     g.appendChild(el);
   } }
@@ -7411,9 +7420,9 @@ function updateHud(){
   updateMapName();
 }
 // 각 화면(맵) 이름 — 우측 상단 자원 아래 표시
-const MAP_NAMES={ Main:'용암 정거장', Unit:'유닛 생산고', Upgrade:'연구 시설', Players:'전장 관전', Boss:'공용 보스장' };
+const MAP_NAMES={ Main:'용암 정거장', Unit:'유닛 생산고', Upgrade:'연구 시설', Players:'전장 관전', Boss:'월드 보스방' };
 function updateMapName(){ const el=document.getElementById('mapName'); if(!el) return;
-  if(G.bossOpen){ const t2='👹 '+(MAP_NAMES.Boss||'공용 보스장'); if(el.textContent!==t2) el.textContent=t2; return; }   // 토벌장 진입 시 장소 이름 교체(MAP_NAMES 단일 출처)
+  if(G.bossOpen){ const t2='👹 '+(MAP_NAMES.Boss||'월드 보스방'); if(el.textContent!==t2) el.textContent=t2; return; }   // 토벌장 진입 시 장소 이름 교체(MAP_NAMES 단일 출처)
   const D=DIFFICULTY[G.difficulty], dtag=(D&&G.difficulty!=='normal')?(' · '+D.name):'';   // 노말 외에는 난이도 표시
   const txt = '◈ '+(MAP_NAMES[G.tab] || '')+dtag;   // 플레이어 관전도 통일된 고정 이름(관전 대상 무관)
   const M=(G.roundPhase==='active' && G.roundMod)?ROUND_MODS[G.roundMod]:null;   // 라운드 모디파이어 배지
