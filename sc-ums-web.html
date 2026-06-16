@@ -166,7 +166,8 @@
   /* 개인 보스 버튼(메인 탭 우하단=미니맵 자리) — 해골 + '개인보스' + 쿨다운 */
   #pbossBtn{position:absolute;right:8px;bottom:8px;z-index:20;width:82px;min-height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
     padding:6px 4px;cursor:pointer;pointer-events:auto;color:#ffd0d0;
-    background:linear-gradient(160deg,rgba(150,36,36,.5),rgba(20,8,10,.74));border:1px solid rgba(255,59,59,.5);
+    background:linear-gradient(160deg,rgba(150,36,36,.36),rgba(20,8,10,.56));border:1px solid rgba(255,59,59,.42);
+    backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);   /* 투명도 살짝 ↑ — 배경이 비치되 글자 가독성 유지 */
     clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 0 14px -4px rgba(255,59,59,.55);transition:all .14s}
   #pbossBtn::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,120,120,.4),transparent);pointer-events:none}
@@ -198,6 +199,10 @@
   .ppItem .ppHp{font-size:8.5px;color:#ffb3b3;font-weight:800;white-space:nowrap;letter-spacing:.2px}
   .ppItem .ppSub{font-size:8.5px;color:var(--pc,#bbb);font-weight:700;white-space:nowrap}
   .ppItem .ppRec{font-size:8px;color:#9fb0c0;font-weight:600;white-space:nowrap}
+  .ppItem .ppLock{font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:800;color:#c6a8a8;white-space:nowrap;flex:0 0 auto;text-align:right;line-height:1.25}
+  .ppItem .ppLock.on{color:#ff9a9a}
+  .ppItem.locked:disabled{opacity:.7;filter:grayscale(.4)}   /* 잠금: 진행도가 읽히도록 덜 흐리게 */
+  .ppItem.locked .ppIco{color:#9aa0ac;filter:none}
   .ppItem .ppRwd{display:flex;flex-direction:column;align-items:flex-end;gap:1px;font-family:'Rajdhani',sans-serif;font-size:10.5px;font-weight:800;flex:0 0 auto}
   .ppItem .ppRwd .ppC{display:flex;align-items:center;gap:2px;color:var(--gold-lt)}
   .ppItem .ppRwd .ppE{color:#7fe0ff;letter-spacing:.2px}
@@ -3279,7 +3284,7 @@ function newGame(){ return {
   tab:'Main', sel:[], selEnemy:null, prodB:null, techB:null, curPlayer:2, myPlayer:1,   // myPlayer=내 슬롯(멀티 대기실 순서로 할당 예정), curPlayer=관전 중인 플레이어
   mergeMode:false, idSeq:1, eSeq:1,
   gachaLuckLv:0, creditLv:0,   // 내실 업그레이드: 뽑기 확률↑ / 크레딧 획득↑
-  pbossCd:0,                   // 개인 보스 소환 쿨다운(초, 소환 시 240=4분)
+  pbossCds:{},                 // 개인 보스 소환 쿨다운(보스 id별 개별, 초 / 소환 시 240=4분)
   citizen:{x:CITIZEN_HOME.x, y:CITIZEN_HOME.y, gx:null, gy:null, buyId:null}, // 유닛뽑기 시민(셀렉터)
 }; }
 let G=newGame();
@@ -4152,13 +4157,19 @@ try{ window.ENEMY_MODEL=ENEMY_MODEL; }catch(e){}   // M3D 모듈(별도 스코�
 const SPAWN_LEAD=0.58;   // 출현 이펙트 시작 → 실제 등장(에너지 모임 후 플래시 시점)까지 지연(초)
 // ── 개인 보스 4종(고정 난이도 — 라운드 무관, 등급별 도전) ──
 const PBOSS_TYPES=[
-  // hp=고정 체력 / ar=방어 / rec=권장 스팩 / bonus·egy=처치 보상
-  // 1단 보스는 즉살 방지를 위해 시작 체력 상향, 상위 2종(upper·super)은 곡선을 완만히 낮추되 보상 격차도 함께 좁힘.
-  {id:'easy',  name:'견습 파수꾼',   tier:'일반·레어 권장',   rec:'유닛 3~4기 / 공격 업글 2~3',  hp:24000,    ar:0,    bonus:120, egy:15, col:'#b8c0cc'},
-  {id:'mid',   name:'정예 추적자',   tier:'에픽·유니크 권장', rec:'에픽 4기 / 공격·관통 업글', hp:150000,   ar:90,   bonus:260, egy:26, col:'#b06bff'},
-  {id:'upper', name:'전장의 정복자', tier:'유니크·초월 권장', rec:'유니크+ 6기 / 풀업 근접',   hp:560000,   ar:560,  bonus:360, egy:36, col:'#ff8a3b'},
-  {id:'super', name:'파멸의 군주',   tier:'초월·갓 권장',     rec:'초월 다수 / 갓 1~2기 + 풀업', hp:1900000,  ar:1100, bonus:470, egy:47, col:'#ff2bd6'},
+  // hp=고정 체력 / ar=방어 / rec=권장 전투 등급(표시용) / unlock=해금에 필요한 '현재 보유 전체 수집' 등급 / bonus·egy=처치 보상
+  // 업그레이드 0에서도 권장 등급을 모으면 충분히 잡히도록 체력을 낮춤. 보스별 쿨다운은 개별(G.pbossCds). 보상은 더 축소.
+  {id:'easy',  name:'견습 파수꾼',   rec:'레어~에픽',   unlock:'common', hp:18000,   ar:0,   bonus:80,  egy:10, col:'#b8c0cc'},
+  {id:'mid',   name:'정예 추적자',   rec:'유니크',      unlock:'rare',   hp:95000,   ar:60,  bonus:160, egy:18, col:'#b06bff'},
+  {id:'upper', name:'전장의 정복자', rec:'유니크~초월', unlock:'epic',   hp:300000,  ar:280, bonus:240, egy:26, col:'#ff8a3b'},
+  {id:'super', name:'파멸의 군주',   rec:'초월',        unlock:'unique', hp:720000,  ar:500, bonus:320, egy:36, col:'#ff2bd6'},
 ];
+// 개인 보스 해금: 해당 등급 가챠 유닛 4종을 '현재(이번 판)' 모두 보유하면 열림.
+function pbossUnlockNeed(pt){ return (typeof gachaUnitsOfTier==='function')?gachaUnitsOfTier(pt.unlock).map(u=>u.id):[]; }
+function pbossUnlockProgress(pt){ const need=pbossUnlockNeed(pt);
+  const have=new Set(G.units.map(u=>u.gid).filter(Boolean));
+  return {have:need.filter(g=>have.has(g)).length, total:need.length}; }
+function pbossUnlocked(pt){ const p=pbossUnlockProgress(pt); return p.total>0 && p.have>=p.total; }
 function spawnEnemy(opts){ opts=opts||{}; const pt=opts.pbType||null; const pboss=!!opts.pboss||!!pt, boss=!!opts.boss||pboss, special=!!opts.special; const m=roundDef(G.round);
   const mb=G.metaB||{};   // 메타 강화: 적 체력/방어/이속 감소(개인)
   const _D=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal);
@@ -4176,7 +4187,7 @@ function spawnEnemy(opts){ opts=opts||{}; const pt=opts.pbType||null; const pbos
   if(mod){ if(mod.spd) spd*=mod.spd; if(mod.ar) ar=Math.round(ar*mod.ar); }
   const e={eid:G.eSeq++, d:0, hp:hp, maxHp:hp, sh:sh, maxSh:sh, ar:ar,   // 개인 보스도 일반 적처럼 시작지점(d=0)에서 등장 후 트랙 따라 이동
     regen:(mod&&mod.regen)||0, split:(mod&&mod.split&&Math.random()<0.6)?1:0,   // 재생/분열 모디파이어
-    speed:spd, boss:boss, special:special, pboss:pboss, life:pboss?120:null, pbCol:pt?pt.col:null,
+    speed:spd, boss:boss, special:special, pboss:pboss, pbId:pt?pt.id:null, life:pboss?120:null, pbCol:pt?pt.col:null,
     bonus:pt?Math.round(pt.bonus*coinMult*((mb.pbossRewardMul)||1)):0, bonusE:pt?Math.round((pt.egy||0)*((mb.pbossRewardMul)||1)):0,   // 처치 보상(coinMult×메타 개인보스 보상)
     flash:0, name:pt?pt.name:(boss?'보스':(special?'스페셜':m.n)),
     shape:boss?'capital':enemyShape(m.n), race:enemyRace(m.n), ph:(G.eSeq*0.7)%6.283, hit:0, model3d:boss?null:(ENEMY_MODEL[m.n]||null)};
@@ -4186,10 +4197,12 @@ function spawnEnemy(opts){ opts=opts||{}; const pt=opts.pbType||null; const pbos
 // ── 개인 보스 소환(4종): 고정 난이도 보스 1마리. 2분 배회 후 소멸, 처치 시 보너스 크레딧. 쿨다운·1마리 제한 전체 공유 ──
 function summonPersonalBoss(typeId){
   const pt=PBOSS_TYPES.find(t=>t.id===typeId); if(!pt) return;
+  if(!G.pbossCds) G.pbossCds={};
   if(G.phase!=='playing'){ toast('게임 중에만 소환 가능합니다'); return; }
-  if(G.pbossCd>0){ toast('개인 보스 재소환까지 '+Math.ceil(G.pbossCd)+'초'); return; }
-  if(G.enemies.some(e=>e.pboss)){ toast('이미 개인 보스가 활동 중입니다'); return; }
-  G.pbossCd=Math.round(240*((G.metaB&&G.metaB.pbossCdMul)||1));   // 4분 쿨다운 × 메타 쿨감(전체 공유)
+  if(!pbossUnlocked(pt)){ const g=(GACHA_TIERS[pt.unlock]||{}).name||pt.unlock; const pr=pbossUnlockProgress(pt); toast('🔒 '+g+' 전체 보유 시 해금 ('+pr.have+'/'+pr.total+')'); return; }
+  if(G.enemies.some(e=>e.pboss && e.pbId===typeId)){ toast('이미 이 보스가 활동 중입니다'); return; }
+  if((G.pbossCds[typeId]||0)>0){ toast(pt.name+' 재소환까지 '+Math.ceil(G.pbossCds[typeId])+'초'); return; }
+  G.pbossCds[typeId]=Math.round(240*((G.metaB&&G.metaB.pbossCdMul)||1));   // 4분 쿨다운 × 메타 쿨감(보스별 개별)
   spawnEnemy({pbType:pt});
   if(typeof playSfxT==='function') playSfxT('boss',1500);
   const coinMult=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).coinMult||1;
@@ -4354,7 +4367,7 @@ function step(dt){
     e.d=(e.d+e.speed*_sm*dt*4)%1; if(e.flash>0) e.flash--; if(e.hit>0) e.hit=Math.max(0,e.hit-dt*5); if(e.shHit>0) e.shHit=Math.max(0,e.shHit-dt*4); }
   if(G.roundPhase==='active'){ for(const e of G.enemies){ if(!e.boss||e.pboss) continue;   // 라운드 보스 주기적 소환
     e.summonT=(e.summonT==null?BOSS_SUMMON_INT:e.summonT)-dt; if(e.summonT<=0){ e.summonT=BOSS_SUMMON_INT; bossSummon(e); } } }
-  if(G.pbossCd>0) G.pbossCd=Math.max(0,G.pbossCd-dt);   // 개인 보스 재소환 쿨다운
+  if(G.pbossCds){ for(const k in G.pbossCds){ if(G.pbossCds[k]>0) G.pbossCds[k]=Math.max(0,G.pbossCds[k]-dt); } }   // 개인 보스 재소환 쿨다운(보스별 개별)
   const _regCnt=G.enemies.reduce((a,e)=>a+(e.pboss?0:1),0);   // 탈락 누적은 일반 적만(개인 보스 제외)
   checkEnemyWarn(_regCnt);
   if(_regCnt>=mapCfg('loseCount',LOSE_COUNT)){ addChat('', (G.myPlayer||1)+'번 플레이어가 탈락하였습니다.'); G.phase='lost'; if(typeof playSfx==='function') playSfx('lose'); showOverlay(); return; }
@@ -5458,35 +5471,52 @@ function useSkill(){ const us=selUnits(); if(!us.length) return;
   if(used){ const nm=U[us[0].id].skill.name; addChat('',nm+' 발동! ('+used+'기)'); if(typeof playSfx==='function') playSfx('skill'); } updateCmdRow(); updateSkillFab(); }
 // 개인 보스 버튼(메인 탭 우하단): 표시/쿨다운 실시간 갱신 + 열린 팝업 동기화
 function updatePbossFab(){ const b=document.getElementById('pbossBtn'); if(!b) return;
+  if(!G.pbossCds) G.pbossCds={};
   const show=(typeof G!=='undefined' && G.tab==='Main' && G.phase==='playing');
   b.classList.toggle('hide', !show);
   if(!show){ const p=document.getElementById('pbossPopup'); if(p) p.classList.add('hide'); return; }   // 메인 외에선 버튼·팝업 숨김
-  const cd=G.pbossCd>0; b.classList.toggle('cd', cd);
-  const c=document.getElementById('pbossBtnCd'); if(c){ const t=cd?Math.ceil(G.pbossCd)+'s':''; if(c.textContent!==t) c.textContent=t; }
-  // 열린 팝업: block(쿨다운/활동) 상태가 '바뀔 때만' 재생성(매 프레임 재생성 시 클릭이 사라지는 버그 방지)
+  // FAB 배지: 소환 가능한 보스가 하나라도 있으면 비움, 없으면 가장 빨리 열리는 쿨다운 표시
+  let minCd=Infinity, anyReady=false;
+  for(const pt of PBOSS_TYPES){ const cdL=G.pbossCds[pt.id]||0;
+    const active=G.enemies.some(e=>e.pboss&&e.pbId===pt.id);
+    if(pbossUnlocked(pt) && cdL<=0 && !active) anyReady=true;
+    if(cdL>0) minCd=Math.min(minCd,cdL); }
+  const badge=(!anyReady && minCd<Infinity)?Math.ceil(minCd)+'s':'';
+  b.classList.toggle('cd', !anyReady);
+  const c=document.getElementById('pbossBtnCd'); if(c && c.textContent!==badge) c.textContent=badge;
+  // 열린 팝업: 보스별 상태(해금/활동/쿨다운0) 시그니처가 바뀔 때만 재생성, 초 카운트다운은 제자리 갱신
   const pop=document.getElementById('pbossPopup');
-  if(pop && !pop.classList.contains('hide')){ const blk=(cd||G.enemies.some(e=>e.pboss))?1:0;
-    if(pop._blk!==blk){ pop._blk=blk; renderPbossPopup(); }
-    const note=pop.querySelector('.ppCdNote'); if(note && cd && !G.enemies.some(e=>e.pboss)) note.textContent='재소환까지 '+Math.ceil(G.pbossCd)+'초 (공유 쿨다운)'; } }
+  if(pop && !pop.classList.contains('hide')){
+    const sig=PBOSS_TYPES.map(pt=>(pbossUnlocked(pt)?1:0)+''+(G.enemies.some(e=>e.pboss&&e.pbId===pt.id)?1:0)+((G.pbossCds[pt.id]||0)>0?1:0)).join('');
+    if(pop._sig!==sig){ pop._sig=sig; renderPbossPopup(); }
+    else pop.querySelectorAll('.ppCdLive').forEach(function(s){ const left=Math.ceil(G.pbossCds[s.dataset.bid]||0); const t='⏳ '+left+'s'; if(s.textContent!==t) s.textContent=t; }); } }
 function togglePbossPopup(ev){ if(ev){ev.preventDefault();ev.stopPropagation();}
   const pop=document.getElementById('pbossPopup'); if(!pop) return;
   if(pop.classList.contains('hide')){ renderPbossPopup(); pop.classList.remove('hide'); } else pop.classList.add('hide'); }
 function closePbossPopup(){ const pop=document.getElementById('pbossPopup'); if(pop) pop.classList.add('hide'); }
 function renderPbossPopup(){ const pop=document.getElementById('pbossPopup'); if(!pop) return;
-  const cd=G.pbossCd>0, active=G.enemies.some(e=>e.pboss), block=cd||active;
+  if(!G.pbossCds) G.pbossCds={};
   const coinMult=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).coinMult||1;
   const skull='<svg class="ppIco" viewBox="0 0 24 24"><path d="M12 2.5c-4 0-6.5 2.8-6.5 6.4 0 2.3 1.1 3.7 2.2 4.7v2.2c0 .7.5 1.1 1.2 1.1.4 1.1 1.6 1.9 3.1 1.9s2.7-.8 3.1-1.9c.7 0 1.2-.4 1.2-1.1v-2.2c1.1-1 2.2-2.4 2.2-4.7 0-3.6-2.5-6.4-6.5-6.4z" fill="currentColor" opacity=".22"/><path d="M12 2.5c-4 0-6.5 2.8-6.5 6.4 0 2.3 1.1 3.7 2.2 4.7v2.2c0 .7.5 1.1 1.2 1.1.4 1.1 1.6 1.9 3.1 1.9s2.7-.8 3.1-1.9c.7 0 1.2-.4 1.2-1.1v-2.2c1.1-1 2.2-2.4 2.2-4.7 0-3.6-2.5-6.4-6.5-6.4z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="9.3" cy="9.2" r="1.5" fill="currentColor"/><circle cx="14.7" cy="9.2" r="1.5" fill="currentColor"/><path d="M10.4 16.5v2M12 16.7v2.1M13.6 16.5v2" stroke="currentColor" stroke-width="1"/></svg>';
+  const lock='<svg class="ppIco" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="9.5" rx="1.6" fill="currentColor" opacity=".18"/><rect x="5" y="10.5" width="14" height="9.5" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="12" cy="14.6" r="1.4" fill="currentColor"/></svg>';
   const fmtHpK=function(n){ if(n>=100000000) return (n/100000000).toFixed(1).replace(/\.0$/,'')+'억'; if(n>=10000) return (n/10000).toFixed(n>=100000?0:1).replace(/\.0$/,'')+'만'; return ''+n; };
-  const items=PBOSS_TYPES.map(function(pt){ const rwd=Math.round(pt.bonus*coinMult);
-    return '<button class="ppItem" style="--pc:'+pt.col+'"'+(block?' disabled':'')+' onclick="summonPersonalBoss(\''+pt.id+'\')">'
-      +skull+'<div class="ppTx"><span class="ppName">'+pt.name+'</span>'
+  const items=PBOSS_TYPES.map(function(pt){
+    const rwd=Math.round(pt.bonus*coinMult);
+    const unlocked=pbossUnlocked(pt), active=G.enemies.some(e=>e.pboss&&e.pbId===pt.id);
+    const cdL=Math.ceil(G.pbossCds[pt.id]||0), blocked=!unlocked||active||cdL>0;
+    const gradeNm=(GACHA_TIERS[pt.unlock]||{}).name||pt.unlock, pr=pbossUnlockProgress(pt);
+    let right;
+    if(!unlocked)   right='<span class="ppLock">🔒 '+gradeNm+' '+pr.have+'/'+pr.total+'</span>';
+    else if(active) right='<span class="ppLock on">⚔ 활동 중</span>';
+    else if(cdL>0)  right='<span class="ppLock ppCdLive" data-bid="'+pt.id+'">⏳ '+cdL+'s</span>';
+    else            right='<span class="ppRwd"><span class="ppC">'+COIN_SM+rwd+'</span><span class="ppE">⚡'+(pt.egy||0)+'</span></span>';
+    return '<button class="ppItem'+(unlocked?'':' locked')+'" style="--pc:'+pt.col+'"'+(blocked?' disabled':'')+' onclick="summonPersonalBoss(\''+pt.id+'\')">'
+      +(unlocked?skull:lock)+'<div class="ppTx"><span class="ppName">'+pt.name+'</span>'
       +'<span class="ppHp">❤ '+fmtHpK(pt.hp)+(pt.ar?' · 🛡'+pt.ar:'')+'</span>'
-      +'<span class="ppSub">'+pt.tier+'</span>'
-      +'<span class="ppRec">'+pt.rec+'</span></div>'
-      +'<span class="ppRwd"><span class="ppC">'+COIN_SM+rwd+'</span><span class="ppE">⚡'+(pt.egy||0)+'</span></span></button>'; }).join('');
-  const note=active?'<div class="ppCdNote">⚔ 개인 보스 활동 중 (한 마리만)</div>'
-    :cd?'<div class="ppCdNote">재소환까지 '+Math.ceil(G.pbossCd)+'초 (공유 쿨다운)</div>':'';
-  pop.innerHTML='<div class="ppHead"><span class="ppBar"></span>개인 보스 소환</div>'+items+note; pop._blk=block?1:0; }
+      +'<span class="ppSub">권장 '+pt.rec+'</span></div>'
+      +right+'</button>'; }).join('');
+  const note='<div class="ppCdNote">등급 4종 전체 보유 시 해금 · 쿨다운 보스별 개별</div>';
+  pop.innerHTML='<div class="ppHead"><span class="ppBar"></span>개인 보스 소환</div>'+items+note; }
 function updateSkillFab(){ const fab=document.getElementById('skillFab'); if(!fab) return;
   if(typeof G==='undefined'||G.tab!=='Main'||G.selEnemy!=null){ fab.classList.add('hide'); return; }
   const us=selUnits().filter(u=>U[u.id]&&U[u.id].skill);
