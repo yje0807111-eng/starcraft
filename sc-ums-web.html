@@ -204,6 +204,10 @@
   #autoPopup.hide{display:none}
   #autoPopup .apHead{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:#dfeae4;letter-spacing:.4px;padding:0 1px 6px;border-bottom:1px solid rgba(255,255,255,.12);text-shadow:0 1px 2px #000}
   #autoPopup .apHead .apBar{width:3px;height:13px;background:#46f06a;box-shadow:0 0 6px rgba(70,240,106,.5);border-radius:1px}
+  #autoPopup .apClose{margin-left:auto;flex:0 0 auto;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:800;line-height:1;padding:0;
+    color:#bfe9cf;background:rgba(70,240,106,.1);border:1px solid rgba(70,240,106,.4)}
+  #autoPopup .apClose:hover{background:rgba(70,240,106,.24);color:#fff;border-color:rgba(70,240,106,.75)}
+  #autoPopup .apClose:active{transform:translateY(1px)}
   #autoPopup .apRow{display:flex;align-items:center;gap:8px;padding:6px 7px;border-radius:7px;cursor:pointer;border:1px solid var(--metal-edge);background:rgba(255,255,255,.03);transition:.12s}
   #autoPopup .apRow:active{transform:translateY(1px)}
   #autoPopup .apRow.on{border-color:rgba(70,240,106,.55);background:rgba(70,240,106,.1)}
@@ -232,6 +236,10 @@
   #pbossPopup.hide{display:none}
   #pbossPopup .ppHead{display:flex;align-items:center;gap:5px;font-size:10.5px;font-weight:800;color:#ffdada;letter-spacing:.3px;padding:0 1px 4px;border-bottom:1px solid rgba(255,59,59,.25);text-shadow:0 1px 2px #000}
   #pbossPopup .ppHead .ppBar{width:3px;height:11px;background:var(--neon);box-shadow:0 0 6px var(--neon-glow);border-radius:1px}
+  #pbossPopup .ppClose{margin-left:auto;flex:0 0 auto;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:800;line-height:1;padding:0;
+    color:#ffc2c8;background:rgba(255,60,70,.12);border:1px solid rgba(255,90,110,.42)}
+  #pbossPopup .ppClose:hover{background:rgba(255,60,70,.26);color:#fff;border-color:rgba(255,90,110,.78)}
+  #pbossPopup .ppClose:active{transform:translateY(1px)}
   #pbossPopup .ppCdNote{font-size:8px;color:#e8a0a0;text-align:center;padding:1px;font-weight:700}
   /* 자동 배치 랠리 화살표(등급별) — 드래그해서 집결 지점 지정 */
   .rallyArrow{position:absolute;z-index:16;transform:translate(-50%,-90%);display:none;flex-direction:column;align-items:center;gap:0;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
@@ -305,13 +313,17 @@
   #bossPanel::before{content:'';position:absolute;inset:0;pointer-events:none;
     background:radial-gradient(ellipse at 50% 42%,rgba(0,0,0,0) 52%,rgba(4,3,8,.62) 100%);
     box-shadow:inset 0 0 0 1px rgba(255,90,110,.25)}
-  /* 보스방 돌아가기 버튼(좌상단) — 메인 화면으로 복귀 */
-  #baBackBtn{position:absolute;top:58px;left:9px;z-index:26;pointer-events:auto;cursor:pointer;display:flex;align-items:center;gap:5px;
-    padding:7px 12px 7px 9px;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-sm);font-weight:800;color:#e8eef6;letter-spacing:.2px;
-    background:linear-gradient(160deg,rgba(22,24,32,.82),rgba(10,11,16,.86));border:1px solid rgba(255,255,255,.14);
-    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 4px 12px -4px #000}
-  #baBackBtn svg{color:#ff8a9a;flex:0 0 auto}
-  #baBackBtn:hover{border-color:rgba(255,120,130,.5)}#baBackBtn:active{transform:translateY(1px)}
+  /* 보스방 돌아가기 버튼(우상단 — 맵 타이틀·보스 이름 아래) — 메인 화면으로 복귀. SC식 각진 메탈 */
+  #baBackBtn{position:absolute;top:120px;right:9px;left:auto;z-index:26;pointer-events:auto;cursor:pointer;display:flex;align-items:center;gap:6px;overflow:hidden;
+    padding:7px 14px 7px 11px;font-family:inherit;font-size:var(--fs-sm);font-weight:800;color:#ffe2e6;letter-spacing:.4px;
+    background:linear-gradient(160deg,rgba(150,36,44,.44),rgba(18,8,10,.66));border:1px solid rgba(255,72,88,.52);
+    clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px);
+    backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 0 16px -4px rgba(255,72,88,.6),0 4px 12px -4px #000;transition:all .14s}
+  #baBackBtn::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,135,145,.55),transparent);pointer-events:none}
+  #baBackBtn svg{color:#ff9aa6;flex:0 0 auto}
+  #baBackBtn:hover{border-color:rgba(255,120,134,.85);box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 0 18px -2px rgba(255,82,98,.78),0 4px 12px -4px #000}
+  #baBackBtn:active{transform:translateY(1px)}
   .bossDesel{position:absolute;top:62px;right:9px;pointer-events:auto;cursor:pointer;display:flex;align-items:center;gap:4px;
     padding:5px 9px;border-radius:var(--r-md);font-size:var(--fs-sm);font-weight:800;color:#ffd0d6;
     background:rgba(20,10,12,.78);border:1px solid rgba(255,90,110,.45);box-shadow:0 0 10px -4px rgba(255,80,100,.6)}
@@ -5737,7 +5749,7 @@ function renderPbossPopup(){ const pop=document.getElementById('pbossPopup'); if
       + '<span class="ppSub">권장 '+pt.rec+' · ❤'+fmtHpK(pt.hp)+'</span></div>'
       + st + '</div></div>'; }).join('');
   const note='<div class="ppCdNote">쿨다운은 보스별로 따로 돌아갑니다</div>';
-  pop.innerHTML='<div class="ppHead"><span class="ppBar"></span>개인 보스 소환</div>'+items+note; }
+  pop.innerHTML='<div class="ppHead"><span class="ppBar"></span>개인 보스 소환<button class="ppClose" onclick="event.stopPropagation();closePbossPopup()" title="닫기">✕</button></div>'+items+note; }
 function togglePbossAuto(ev, id){ if(ev){ ev.stopPropagation(); ev.preventDefault(); }
   if(!autoUsable('pboss')){ toast('자동 개인 보스 업그레이드 필요'); return; }
   if(!G.auto) G.auto={unit:false,combine:false,energy:false,pboss:{}}; if(!G.auto.pboss) G.auto.pboss={};
@@ -5779,7 +5791,7 @@ function renderAutoPopup(){ const pop=document.getElementById('autoPopup'); if(!
     else if(owned) rows+='<div class="apRow'+(on?' on':'')+'" onclick="toggleAuto(\''+kind+'\')"><div class="apTx"><span class="apName">'+d[1]+'</span><span class="apDesc">'+d[2]+'</span></div><span class="apSw"></span></div>';
     else rows+='<div class="apRow lk"><div class="apTx"><span class="apName">'+d[1]+'</span><span class="apDesc">🔒 코인 업그레이드 필요</span></div></div>'; }
   const note=AUTO_PREVIEW?'⚠ 예시 모드 — 미해금이어도 동작(테스트용)':'0.33초마다 동작 · 코인 연구소에서 해금';
-  pop.innerHTML='<div class="apHead"><span class="apBar"></span>자동화 설정</div>'+rows+'<div class="apNote">'+note+'</div>';
+  pop.innerHTML='<div class="apHead"><span class="apBar"></span>자동화 설정<button class="apClose" onclick="event.stopPropagation();closeAutoPopup()" title="닫기">✕</button></div>'+rows+'<div class="apNote">'+note+'</div>';
   pop._sig=autoSig(); }
 function toggleAuto(kind){ const o=autoUtilOwned(); if(!o[kind]){ toast('업그레이드 필요'); return; }
   if(!G.auto) G.auto={unit:false,combine:false,energy:false,pboss:{}};
