@@ -4280,17 +4280,19 @@ const SPAWN_LEAD=0.58;   // 출현 이펙트 시작 → 실제 등장(에너지 
 const PBOSS_TYPES=[
   // hp=고정 체력 / ar=방어 / rec=권장 전투 등급(표시용) / unlock=해금에 필요한 '현재 보유 전체 수집' 등급 / bonus·egy=처치 보상
   // 업그레이드 0에서도 권장 등급을 모으면 충분히 잡히도록 체력을 낮춤. 보스별 쿨다운은 개별(G.pbossCds). 보상은 더 축소.
-  {id:'easy',  name:'견습 파수꾼',   rec:'레어~에픽',   unlock:'common', hp:18000,   ar:0,   bonus:80,  egy:10, col:'#b8c0cc'},
+  {id:'easy',  name:'견습 파수꾼',   rec:'레어~에픽',   unlock:'time', unlockSec:60, hp:18000,   ar:0,   bonus:80,  egy:10, col:'#b8c0cc'},   // 첫 보스=해금조건 없이 게임 시작 60초 후 소환 가능
   {id:'mid',   name:'정예 추적자',   rec:'유니크',      unlock:'rare',   hp:95000,   ar:60,  bonus:160, egy:18, col:'#b06bff'},
   {id:'upper', name:'전장의 정복자', rec:'유니크~초월', unlock:'epic',   hp:300000,  ar:280, bonus:240, egy:26, col:'#ff8a3b'},
   {id:'super', name:'파멸의 군주',   rec:'초월',        unlock:'unique', hp:720000,  ar:500, bonus:320, egy:36, col:'#ff2bd6'},
 ];
 // 개인 보스 해금: 해당 등급 가챠 유닛 4종을 '현재(이번 판)' 모두 보유하면 열림.
 function pbossUnlockNeed(pt){ return (typeof gachaUnitsOfTier==='function')?gachaUnitsOfTier(pt.unlock).map(u=>u.id):[]; }
-function pbossUnlockProgress(pt){ const need=pbossUnlockNeed(pt);
+function pbossUnlockProgress(pt){
+  if(pt.unlock==='time'){ const sec=pt.unlockSec||60; return {time:true, sec:sec, have:Math.min(sec,Math.floor(G.timeSec||0)), total:sec}; }   // 시간 해금: 진행도=경과초
+  const need=pbossUnlockNeed(pt);
   const have=new Set(G.units.map(u=>u.gid).filter(Boolean));
   return {have:need.filter(g=>have.has(g)).length, total:need.length}; }
-function pbossUnlocked(pt){ const p=pbossUnlockProgress(pt); return p.total>0 && p.have>=p.total; }
+function pbossUnlocked(pt){ if(pt.unlock==='time') return (G.timeSec||0) >= (pt.unlockSec||60); const p=pbossUnlockProgress(pt); return p.total>0 && p.have>=p.total; }
 function spawnEnemy(opts){ opts=opts||{}; const pt=opts.pbType||null; const pboss=!!opts.pboss||!!pt, boss=!!opts.boss||pboss, special=!!opts.special; const m=roundDef(G.round);
   const mb=G.metaB||{};   // 메타 강화: 적 체력/방어/이속 감소(개인)
   const _D=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal);
@@ -4320,7 +4322,10 @@ function summonPersonalBoss(typeId){
   const pt=PBOSS_TYPES.find(t=>t.id===typeId); if(!pt) return;
   if(!G.pbossCds) G.pbossCds={};
   if(G.phase!=='playing'){ toast('게임 중에만 소환 가능합니다'); return; }
-  if(!pbossUnlocked(pt)){ const g=(GACHA_TIERS[pt.unlock]||{}).name||pt.unlock; const pr=pbossUnlockProgress(pt); toast('🔒 '+g+' 전체 보유 시 해금 ('+pr.have+'/'+pr.total+')'); return; }
+  if(!pbossUnlocked(pt)){
+    if(pt.unlock==='time'){ const rem=Math.max(0,(pt.unlockSec||60)-Math.floor(G.timeSec||0)); toast('🔒 게임 시작 '+(pt.unlockSec||60)+'초 후 소환 가능 (남은 '+rem+'초)'); }
+    else { const g=(GACHA_TIERS[pt.unlock]||{}).name||pt.unlock; const pr=pbossUnlockProgress(pt); toast('🔒 '+g+' 전체 보유 시 해금 ('+pr.have+'/'+pr.total+')'); }
+    return; }
   if(G.enemies.some(e=>e.pboss && e.pbId===typeId)){ toast('이미 이 보스가 활동 중입니다'); return; }
   if((G.pbossCds[typeId]||0)>0){ toast(pt.name+' 재소환까지 '+Math.ceil(G.pbossCds[typeId])+'초'); return; }
   G.pbossCds[typeId]=Math.round(240*((G.metaB&&G.metaB.pbossCdMul)||1));   // 4분 쿨다운 × 메타 쿨감(보스별 개별)
@@ -5596,8 +5601,8 @@ function checkPbossUnlocks(){
   if(!G._pbWasUnlocked) G._pbWasUnlocked={};
   for(const pt of PBOSS_TYPES){ const u=pbossUnlocked(pt);
     if(u && !G._pbWasUnlocked[pt.id]){   // 잠금 → 해금 전환
-      const g=(GACHA_TIERS[pt.unlock]||{}).name||pt.unlock;
-      addChat('', '🔓 개인 보스 ['+pt.name+'] 해금! (모든 '+g+' 보유 · 소환 가능)', pt.col||'#ffd24a', true);
+      const cond=(pt.unlock==='time') ? ('게임 시작 '+(pt.unlockSec||60)+'초 경과') : ('모든 '+((GACHA_TIERS[pt.unlock]||{}).name||pt.unlock)+' 보유');
+      addChat('', '🔓 개인 보스 ['+pt.name+'] 해금! ('+cond+' · 소환 가능)', pt.col||'#ffd24a', true);
       if(typeof playSfx==='function') playSfx('hero_merge');
       G.pbossNotify=true; }
     G._pbWasUnlocked[pt.id]=u; }
@@ -5640,8 +5645,12 @@ function renderPbossPopup(){ const pop=document.getElementById('pbossPopup'); if
     const unlocked=pbossUnlocked(pt), active=G.enemies.some(e=>e.pboss&&e.pbId===pt.id);
     const cdL=Math.ceil(G.pbossCds[pt.id]||0);
     const gradeNm=(GACHA_TIERS[pt.unlock]||{}).name||pt.unlock, pr=pbossUnlockProgress(pt);
-    // 카드 상단: 해금 조건(잠금=빨강+진행도 / 해금=초록 체크)
-    const gate=unlocked
+    // 카드 상단: 해금 조건(잠금=빨강+진행도 / 해금=초록 체크). 시간 해금(첫 보스)은 경과시간 표시
+    let gate;
+    if(pt.unlock==='time'){ const rem=Math.max(0,(pt.unlockSec||60)-Math.floor(G.timeSec||0));
+      gate=unlocked ? '<div class="ppGate ok">✓ 소환 가능</div>'
+                    : '<div class="ppGate">🔒 게임 시작 '+(pt.unlockSec||60)+'초 후 <b>'+rem+'s</b></div>'; }
+    else gate=unlocked
       ? '<div class="ppGate ok">✓ 모든 '+gradeNm+' 보유</div>'
       : '<div class="ppGate">🔒 모든 '+gradeNm+' 필요 <b>'+pr.have+'/'+pr.total+'</b></div>';
     // 우측 상태(해금된 경우만): 활동 / 쿨다운 / 보상
