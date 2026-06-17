@@ -1301,29 +1301,23 @@
   /* ===================== 신규 앱 셸: 오프닝 / 로그인 / 유즈맵 / 모드선택 ===================== */
   .appScreen{position:absolute;inset:0;display:flex;flex-direction:column;z-index:47}
   .appScreen.hide{display:none}
-  /* 컴퓨터가 싸운다(직스) — nemo 셸 위 투명 오버레이(패널만) */
-  #strikeScreen{position:absolute;inset:0;z-index:19;pointer-events:none;font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif}
-  #strikeScreen.hide{display:none}
-  #stBack{position:absolute;left:9px;top:calc(env(safe-area-inset-top,0px) + 50px);pointer-events:auto;padding:6px 11px;border-radius:7px;cursor:pointer;font-family:inherit;font-weight:800;font-size:11px;color:#e8eef6;background:rgba(20,24,32,.85);border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(4px)}
-  #stBack:active{transform:translateY(1px)}
-  /* 직스 패널(건물/경제/관전) — 하단 탭바 위에 표시 */
-  .stPanel{position:absolute;left:8px;right:8px;bottom:60px;z-index:5;max-height:48%;overflow:auto;pointer-events:auto;padding:11px 12px 13px;border-radius:14px;background:linear-gradient(180deg,rgba(16,22,32,.97),rgba(10,14,22,.98));border:1px solid rgba(120,160,220,.22);box-shadow:0 -6px 24px rgba(0,0,0,.5);font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif;color:#dfe7f2}
-  .stPanel.hide{display:none}
-  .stPanelHead{font-weight:800;font-size:13px;color:#bfe0ff;margin-bottom:9px;letter-spacing:.3px}
-  .stEconRow{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;font-weight:700;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+  /* 컴퓨터가 싸운다(직스) — 하단 .bp 안 직스 패널 */
+  .stBp{padding:2px 2px 4px;font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif;color:#dfe7f2}
+  .stBp.hide{display:none}
+  .stBpHead{font-weight:800;font-size:12.5px;color:#bfe0ff;margin-bottom:8px;letter-spacing:.3px}
+  .stBpHint{margin-top:8px;font-size:10.5px;color:#7e93ab;line-height:1.4}
+  .stEconRow{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;font-weight:700;padding:5px 2px;border-bottom:1px solid rgba(255,255,255,.05)}
   .stEconRow b{color:#ffe27a;font-size:14px}
   .stEconRow.stEconTot b{color:#8fe6a0;font-size:16px}
-  .stBtn{width:100%;margin-top:10px;padding:10px;border-radius:9px;cursor:pointer;font-family:inherit;font-weight:800;font-size:13px;color:#0b1118;background:linear-gradient(180deg,#ffd24a,#f0a82e);border:none}
+  .stBtn{width:100%;margin-top:9px;padding:9px;border-radius:9px;cursor:pointer;font-family:inherit;font-weight:800;font-size:13px;color:#0b1118;background:linear-gradient(180deg,#ffd24a,#f0a82e);border:none}
   .stBtn:active{transform:translateY(1px)}.stBtn:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.4)}
-  .stHint{margin-top:9px;font-size:11px;color:#7e93ab;line-height:1.45}
   #stBuildPalette{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
   .stUnitCard{padding:8px 6px;border-radius:9px;text-align:center;cursor:pointer;background:rgba(30,40,54,.8);border:1px solid rgba(255,255,255,.08);font-size:11px;font-weight:700;color:#cfe0f2}
   .stUnitCard.sel{border-color:#7fe0ff;box-shadow:0 0 10px rgba(80,200,255,.4)}
   .stUnitCard .uc{font-size:20px;line-height:1.2}.stUnitCard .ucCost{color:#ffd24a;font-size:10px}
-  #stSpecList{display:flex;flex-direction:column;gap:6px}
-  .stSpecRow{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;background:rgba(30,40,54,.7);border:1px solid rgba(255,255,255,.06)}
-  .stSpecRow.enemy{opacity:.5;cursor:not-allowed}.stSpecRow.sel{border-color:#7fe0ff}
-  .stSpecRow .dot{width:10px;height:10px;border-radius:50%}
+  /* 직스 좌상단 로테이션 리더보드(라운드 자리 대체) */
+  #stLead{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:12px;color:#dbe6f5}
+  #stLead .lp{color:#9fd0ff}#stLead .lm{color:#ffd24a}#stLead .lg{color:#8fe6a0}
   /* ===== 전환/팝업 FX (우주전쟁 HUD) ===== */
   /* 화면 전환: 홀로그램 디졸브(블러+밝기에서 또렷해짐) — opacity는 건드리지 않음(뒤 게임 보드 비침 방지, 로비 배경 유지) */
   .scrIn{animation:scrIn .3s ease-out}
@@ -2010,32 +2004,6 @@
     <div id="autoPopup" class="hide"></div>
 
     <!-- 컴퓨터가 싸운다(직스) 화면 — 독립 오버레이(자체 렌더 루프) + 4탭 셸 -->
-    <div id="strikeScreen" class="hide">
-      <button id="stBack" onclick="strikeEnd()">← 나가기</button>
-      <!-- 경제 패널 -->
-      <div id="stEcon" class="stPanel hide">
-        <div class="stPanelHead">💰 경제</div>
-        <div class="stEconRow">보유 골드 <b id="ecGold">0</b></div>
-        <div class="stEconRow">라운드 기본 수입 <b id="ecBase">0</b></div>
-        <div class="stEconRow">광산 <b id="ecMines">0</b>개 → 추가 <b id="ecMineInc">0</b></div>
-        <div class="stEconRow stEconTot">라운드당 총 수입 <b id="ecTotal">0</b></div>
-        <button id="ecBuyMine" class="stBtn" onclick="strikeBuyMine()">⛏ 광산 건설 (<span id="ecMineCost">0</span>)</button>
-        <div class="stHint">광산을 지을수록 매 라운드 수입이 늘어납니다.</div>
-      </div>
-      <!-- 건물(건설) 패널 -->
-      <div id="stBuild" class="stPanel hide">
-        <div class="stPanelHead">🏗 건설 — 내 진영 타일을 눌러 생산 건물 배치</div>
-        <div id="stBuildPalette"></div>
-        <div class="stHint">건물마다 생산 유닛이 배정됩니다. 매 라운드 일괄 출격!</div>
-      </div>
-      <!-- 관전 패널 -->
-      <div id="stSpec" class="stPanel hide">
-        <div class="stPanelHead">👁 관전</div>
-        <div id="stSpecList"></div>
-        <div class="stHint">아군 진영은 볼 수 있고, 적 진영은 암흑 시야입니다.</div>
-      </div>
-    </div>
-
     <div id="toast"></div>
     <!-- #ov(승/패 결과)는 #phone 직속으로 이동 — 게임 전체(하단 콘솔 포함)를 덮기 위함 -->
     <!-- 멀티플레이 대기실(로비) -->
@@ -2261,6 +2229,12 @@
     </div>
 
     <div class="bp" id="bpUnit">
+      <!-- 직스(컴퓨터가 싸운다) 건설 패널 -->
+      <div id="stBuildBp" class="stBp hide">
+        <div class="stBpHead">🏗 건설 — 내 진영 타일에 생산 건물 배치</div>
+        <div id="stBuildPalette"></div>
+        <div class="stBpHint">건물마다 생산 유닛이 배정됩니다. 매 라운드 일괄 출격!</div>
+      </div>
       <!-- 시민/유닛 프로필(선택 시) — 상단에 컴팩트하게 -->
       <div class="scPanel" id="shopProfile" style="display:none">
         <div class="scPortrait" id="spPortrait"></div>
@@ -2273,6 +2247,15 @@
     </div>
 
     <div class="bp" id="bpUpgrade">
+      <!-- 직스(컴퓨터가 싸운다) 경제 패널 -->
+      <div id="stEconBp" class="stBp hide">
+        <div class="stBpHead">💰 경제</div>
+        <div class="stEconRow">보유 골드 <b id="ecGold">0</b></div>
+        <div class="stEconRow">라운드 기본 수입 <b id="ecBase">0</b></div>
+        <div class="stEconRow">광산 <b id="ecMines">0</b>개 → 추가 <b id="ecMineInc">0</b></div>
+        <div class="stEconRow stEconTot">라운드당 총 수입 <b id="ecTotal">0</b></div>
+        <button id="ecBuyMine" class="stBtn" onclick="strikeBuyMine()">⛏ 광산 건설 (<span id="ecMineCost">0</span>)</button>
+      </div>
       <div class="hint" id="upgHint">건물을 <b>터치</b>하면<br>업그레이드 목록이 표시됩니다</div>
       <div class="upgList" id="upgList" style="display:none"></div>
     </div>
@@ -2671,7 +2654,7 @@ const USEMAPS={
   marine:{ id:'marine', name:'마린 키우기',     desc:'마린을 성장시켜 최강으로 키우는 RPG', players:'1-6', pop:7610, icon:'🔫', rec:true,  isNew:false, playable:false, cfg:{} },
   temple:{ id:'temple', name:'신전 뿌수기',     desc:'상대 신전을 먼저 파괴하는 공성전',     players:'2-8', pop:6240, icon:'🏛️', rec:false, isNew:true,  playable:false, cfg:{} },
   cpu:   { id:'cpu',    name:'컴퓨터가 싸운다', desc:'건물에 유닛을 배정해 출격시켜 적 본진을 부수는 경제 전투', players:'1-8', pop:5180, icon:'⚔️', rec:true, isNew:true,  playable:true,
-          cfg:{ mode:'strike', cycleTime:10, heroAt:10, baseHp:3000, startGold:3000, incomeBase:150, mineIncome:120, mineCost:300, world:2400 } },
+          cfg:{ mode:'strike', cycleTime:10, heroAt:10, baseHp:3000, startGold:3000, incomeBase:150, mineIncome:120, mineCost:300, world:4800 } },
   photon:{ id:'photon', name:'포토겹치기',      desc:'포톤 캐논을 겹쳐 쌓아 버티기',       players:'1-4', pop:4090, icon:'🔵', rec:false, isNew:false, playable:false, cfg:{} },
   tmp1:  { id:'tmp1',   name:'랜덤 디펜스 (임시)', desc:'임시 등록 유즈맵',               players:'1-8', pop:2600, icon:'🎲', rec:false, isNew:true,  playable:false, cfg:{} },
   tmp2:  { id:'tmp2',   name:'영웅 아레나 (임시)', desc:'임시 등록 유즈맵',               players:'2-8', pop:1900, icon:'⚔️', rec:false, isNew:false, playable:false, cfg:{} },
@@ -6192,6 +6175,8 @@ function updatePauseBtn(){
   if(ico) ico.textContent = G.paused?'▶':'⏸'; }
 function exitGame(){
   if(typeof closeSettings==='function') closeSettings();   // 설정 팝업 닫기(결과창이 위에 뜨도록)
+  if(G && G.strike){ strikeEnd(); return; }   // 컴퓨터가 싸운다: 즉시 로비로
+
   if(G && G.phase==='playing'){   // 게임 진행 중 → 결과창(현재까지의 합계) 표시
     G.phase='quit'; if(typeof showOverlay==='function') showOverlay(); return;
   }
@@ -8303,26 +8288,35 @@ window.addEventListener('load',()=>{ drawMain(); placeMergeZone(); updateHud(); 
 // 컴퓨터가 싸운다(직스) — nemo 셸(상단 HUD·하단 탭·미니맵·채팅·프로필) 재사용 게임플레이 모듈.
 // 전투는 #cvMain에 2D 렌더. loop() 최상단 if(G.strike) 분기로 nemo 로직을 건너뛰고 strikeFrame 실행.
 // ════════════════════════════════════════════════════════════════
-let STK=null, _stkDrag=null;
+let STK=null, _stkDrag=null, _stkPtrs=new Map(), _stkPinch=null;
 const STK_TABLABEL ={ Main:'전투', Unit:'건물', Upgrade:'경제', Players:'관전' };
 const STK_NEMOLABEL={ Main:'메인', Unit:'유닛뽑기', Upgrade:'업그레이드', Players:'플레이어' };
-function strikeNewState(){ const W=mapCfg('world',2400), hp=mapCfg('baseHp',3000);
+function strikeNewState(){ const W=mapCfg('world',4800), hp=mapCfg('baseHp',3000), inc=mapCfg('incomeBase',150), mc=mapCfg('mineCost',300), mi=mapCfg('mineIncome',120);
   return { t:0, over:null, round:1,
     world:W, cycleTime:mapCfg('cycleTime',10), cycleT:mapCfg('cycleTime',10),
-    gold:mapCfg('startGold',3000), incomeBase:mapCfg('incomeBase',150),
-    mineIncome:mapCfg('mineIncome',120), mineCost:mapCfg('mineCost',300), mines:0,
-    me:{ base:{x:W*0.16,y:W*0.84}, hp:hp, max:hp, units:[], buildings:[] },   // 좌하단
-    ai:{ base:{x:W*0.84,y:W*0.16}, hp:hp, max:hp, units:[], buildings:[] },   // 우상단
-    cam:{x:W/2,y:W/2}, zoom:1, viewWorld:1700, cw:0, ch:0, sel:null, userCam:false };
+    incomeBase:inc, mineIncome:mi,
+    // 진영별 경제(me=나, ai=컴퓨터). 광산/돈 리더보드용
+    me:{ name:'나', base:{x:W*0.15,y:W*0.85}, hp:hp, max:hp, gold:mapCfg('startGold',3000), mines:0, mineCost:mc, units:[], buildings:[] },   // 좌하단
+    ai:{ name:'컴퓨터', base:{x:W*0.85,y:W*0.15}, hp:hp, max:hp, gold:mapCfg('startGold',3000), mines:0, mineCost:mc, units:[], buildings:[], aiT:0 },   // 우상단
+    cam:{x:W/2,y:W/2}, zoom:1, viewWorld:2600, cw:0, ch:0, sel:null, userCam:false,
+    leadT:0, leadIdx:0 };
 }
-function strikeIncome(){ const S=STK; return S? S.incomeBase + S.mines*S.mineIncome : 0; }
+function strikeIncome(side){ const S=STK; if(!S) return 0; side=side||S.me; return S.incomeBase + side.mines*S.mineIncome; }
+// 진영 리더보드(광산 수 → 돈 순). leadIdx로 5초마다 회전 표시
+function strikeRanked(){ const S=STK; return [S.me,S.ai].slice().sort((a,b)=> (b.mines-a.mines) || (b.gold-a.gold)); }
 
 // ── 라이프사이클 ──
 function strikeSetTabLabels(map){ for(const t in map){ const el=document.querySelector('.tab[data-tab="'+t+'"]'); if(!el) continue;
   let tn=null; el.childNodes.forEach(n=>{ if(n.nodeType===3 && n.textContent.trim()) tn=n; });
   if(tn) tn.textContent=map[t]; else el.appendChild(document.createTextNode(map[t])); } }
-function strikeHideNemoChrome(on){ ['coopBossBar','bossPopup','mergeFab','skillFab','autoFab','pbossBtn','deselTop','cvMarine','cvFx','mergeZone','miniWrap'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display=on?'none':''; });
-  const kill=document.querySelector('#hudL .kill'); if(kill) kill.style.display=on?'none':''; }
+function strikeHideNemoChrome(on){ ['coopBossBar','bossPopup','mergeFab','skillFab','autoFab','pbossBtn','deselTop','cvMarine','cvFx','mergeZone','miniWrap','defaultCmd','unitCmd'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display=on?'none':''; });
+  const kill=document.querySelector('#hudL .kill'); if(kill) kill.style.display=on?'none':'';
+  const stage=document.querySelector('#hudL .stage'); if(stage) stage.style.display=on?'none':'';   // 좌상단 ROUND 숨김
+  // nemo 하단 패널의 비-직스 자식 숨김(직스 패널만 보이게)
+  ['shopProfile','prodHint','opsManual'].forEach(id=>{ const e=document.getElementById(id); if(e&&on) e.style.display='none'; });
+  const uh=document.getElementById('upgHint'), ul=document.getElementById('upgList'); if(uh&&on) uh.style.display='none'; if(ul&&on) ul.style.display='none';
+  const sb=document.getElementById('stBuildBp'), se=document.getElementById('stEconBp'); if(sb) sb.classList.toggle('hide',!on); if(se) se.classList.toggle('hide',!on);
+}
 function strikeStart(){ if(typeof bgmStop==='function') bgmStop();
   G=newGame(); G.strike=true; G.phase='playing'; G.tab='Main'; G.sel=[]; G.selEnemy=null;
   STK=strikeNewState();
@@ -8330,36 +8324,48 @@ function strikeStart(){ if(typeof bgmStop==='function') bgmStop();
   if(typeof setInGame==='function') setInGame(true);
   strikeHideNemoChrome(true);
   strikeSetTabLabels(STK_TABLABEL);
-  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on', t.dataset.tab==='Main'));
-  document.querySelectorAll('.gview').forEach(v=>v.classList.toggle('on', v.id==='vMain'));
-  document.querySelectorAll('.bp').forEach(p=>p.classList.remove('on'));
-  const sc=document.getElementById('strikeScreen'); if(sc) sc.classList.remove('hide');
-  strikePanels('Main');
-  const zl=document.getElementById('zoneLabel'); if(zl) zl.textContent='⚔️ 전장';
   const mn=document.getElementById('mapName'); if(mn) mn.textContent='◈ 컴퓨터가 싸운다';
+  strikeSwitchTab('Main');
   if(typeof playSfx==='function') playSfx('game_start');
 }
 function strikeEnd(){ if(!STK && !(G&&G.strike)) return;
-  if(G) G.strike=false; STK=null; _stkDrag=null;
+  if(G) G.strike=false; STK=null; _stkPtrs.clear(); _stkPinch=null;
   strikeSetTabLabels(STK_NEMOLABEL); strikeHideNemoChrome(false);
-  const sc=document.getElementById('strikeScreen'); if(sc) sc.classList.add('hide');
-  ['stEcon','stBuild','stSpec'].forEach(id=>{ const e=document.getElementById(id); if(e) e.classList.add('hide'); });
+  const sl=document.getElementById('specLabel'); if(sl) sl.innerHTML='';
   if(typeof playSfx==='function') playSfx('ui_close');
   if(typeof openMapSelect==='function') openMapSelect();
 }
 
 // ── 프레임/시뮬 ──
-function strikeFrame(dt){ const S=STK; if(!S) return; strikeStep(dt); strikeDrawMain(); strikeHud(); }
+function strikeFrame(dt){ const S=STK; if(!S) return; strikeStep(dt); strikeDrawMain(); strikeHud(); strikeLeaderboard(dt); }
 function strikeStep(dt){ const S=STK; if(!S) return; S.t+=dt;
   S.cycleT-=dt;
-  if(S.cycleT<=0){ S.cycleT+=S.cycleTime; S.round++; S.gold+=strikeIncome(); if(G.tab==='Upgrade') strikeRenderEcon(); }
-  const baseView=(G.tab==='Unit')?1100:1700, tv=baseView/S.zoom;
+  if(S.cycleT<=0){ S.cycleT+=S.cycleTime; S.round++;
+    S.me.gold += strikeIncome(S.me); S.ai.gold += strikeIncome(S.ai);   // 라운드 수입(양 진영)
+    strikeAiEconomy();
+    if(G.tab==='Upgrade') strikeRenderEcon(); }
+  const baseView=(G.tab==='Unit')?1700:2600, tv=baseView/S.zoom;
   S.viewWorld += (tv-S.viewWorld)*Math.min(1,dt*4);
   if(G.tab==='Unit' || !S.userCam){   // 건물뷰=내 진영 고정 / 전투뷰=교전 팔로우(사용자 패닝 전까지)
     let tx,ty; if(G.tab==='Unit'){ tx=S.me.base.x; ty=S.me.base.y; } else { const f=strikeFocus(); tx=f.x; ty=f.y; }
     const k=Math.min(1,dt*2.5); S.cam.x+=(tx-S.cam.x)*k; S.cam.y+=(ty-S.cam.y)*k;
   }
+  strikeClampCam();
 }
+// AI 경제: 돈 모이면 광산 우선 투자(난이도 곡선 단순)
+function strikeAiEconomy(){ const S=STK, ai=S.ai;
+  if(ai.gold>=ai.mineCost && ai.mines<8 && Math.random()<0.7){ ai.gold-=ai.mineCost; ai.mines++; ai.mineCost=Math.round(ai.mineCost*1.35); } }
+// 카메라가 맵 밖으로 못 나가게 클램프(검은 화면 방지)
+function strikeClampCam(){ const S=STK; if(!S||!S.cw) return; const scale=Math.min(S.cw,S.ch)/S.viewWorld;
+  const hx=(S.cw/scale)/2, hy=(S.ch/scale)/2, W=S.world;
+  S.cam.x = hx*2>=W ? W/2 : Math.max(hx, Math.min(W-hx, S.cam.x));
+  S.cam.y = hy*2>=W ? W/2 : Math.max(hy, Math.min(W-hy, S.cam.y)); }
+// 좌상단: 진영별 광산/돈 5초마다 회전(광산 많은 순→돈 많은 순)
+function strikeLeaderboard(dt){ const S=STK; S.leadT-=dt; const ranked=strikeRanked();
+  if(S.leadT<=0){ S.leadT+=5; S.leadIdx=(S.leadIdx+1)%ranked.length; }
+  const p=ranked[S.leadIdx%ranked.length]; const sl=document.getElementById('specLabel'); if(!sl||!p) return;
+  const rank=S.leadIdx%ranked.length+1;
+  sl.innerHTML='<span id="stLead"><span class="lp">#'+rank+' '+p.name+'</span> <span class="lm">⛏'+p.mines+'</span> <span class="lg">💰'+Math.floor(p.gold)+'</span></span>'; }
 function strikeFocus(){ const S=STK; if(!S) return {x:0,y:0};
   const mf=S.me.units.length?S.me.units.reduce((a,u)=>(u.x+u.y)<(a.x+a.y)?u:a):null;
   const af=S.ai.units.length?S.ai.units.reduce((a,u)=>(u.x+u.y)>(a.x+a.y)?u:a):null;
@@ -8411,63 +8417,66 @@ function strikeDrawBase(ctx,w2s,scale,side,col,glow){ const p=w2s(side.base.x,si
   ctx.beginPath(); ctx.moveTo(p.x,p.y-rr); ctx.lineTo(p.x+rr,p.y); ctx.lineTo(p.x,p.y+rr); ctx.lineTo(p.x-rr,p.y); ctx.closePath(); ctx.fill();
   ctx.shadowBlur=0; ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=2; ctx.stroke(); ctx.restore(); }
 
-// ── HUD(nemo 상단 재사용) ──
+// ── HUD(nemo 상단 재사용): 크레딧=내 골드, 에너지=내 광산, 인구=내 유닛, 시계=출격 ──
 function strikeHud(){ const S=STK; if(!S) return; const set=(id,html)=>{ const e=document.getElementById(id); if(e) e.innerHTML=html; };
-  set('hMin', Math.floor(S.gold)+'<i class="ru">C</i>');
-  set('hGas', S.mines+'<i class="ru">⛏</i>');
+  set('hMin', Math.floor(S.me.gold)+'<i class="ru">C</i>');
+  set('hGas', S.me.mines+'<i class="ru">⛏</i>');
   set('hPop', S.me.units.length+'<i class="ru">CP</i>');
-  const hr=document.getElementById('hRound'); if(hr) hr.textContent=S.round;
-  const hm=document.getElementById('hRoundMax'); if(hm) hm.textContent='';
   const ht=document.getElementById('hTime'); if(ht) ht.textContent=Math.ceil(S.cycleT)+'s'; }
 
-// ── 탭(nemo 탭 재사용, 직스 전용 동작) ──
-function strikeSwitchTab(id,el){ const S=STK; if(!S) return; G.tab=id;
+// ── 탭(nemo 탭+하단 .bp 재사용, 직스 전용 동작) ──
+function strikeSwitchTab(id,el){ const S=STK; if(!S) return; G.tab=id; S.userCam=false;
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
   (el||document.querySelector('.tab[data-tab="'+id+'"]'))?.classList.add('on');
-  document.querySelectorAll('.gview').forEach(v=>v.classList.toggle('on', v.id==='vMain'));   // 직스는 항상 전장 캔버스 유지
-  strikePanels(id);
+  document.querySelectorAll('.gview').forEach(v=>v.classList.toggle('on', v.id==='vMain'));   // 직스는 항상 전장/건설 캔버스 유지
+  document.querySelectorAll('.bp').forEach(p=>p.classList.toggle('on', p.id==='bp'+id));        // 하단 패널은 nemo .bp 재사용
   const zl=document.getElementById('zoneLabel'); if(zl) zl.textContent={Main:'⚔️ 전장',Unit:'🏗 건설 구역',Upgrade:'💰 경제',Players:'👁 관전'}[id]||'';
   if(id==='Upgrade') strikeRenderEcon(); else if(id==='Unit') strikeRenderBuild(); else if(id==='Players') strikeRenderSpec();
   if(typeof playSfx==='function') playSfx('ui_tab'); }
-function strikePanels(id){ const map={Upgrade:'stEcon',Unit:'stBuild',Players:'stSpec'};
-  ['stEcon','stBuild','stSpec'].forEach(pid=>{ const e=document.getElementById(pid); if(e) e.classList.toggle('hide', map[id]!==pid); }); }
 
-// ── 경제 ──
-function strikeBuyMine(){ const S=STK; if(!S) return; if(S.gold<S.mineCost){ if(typeof playSfx==='function') playSfx('ui_denied'); return; }
-  S.gold-=S.mineCost; S.mines++; S.mineCost=Math.round(S.mineCost*1.35);
+// ── 경제(내 진영) ──
+function strikeBuyMine(){ const S=STK; if(!S) return; const me=S.me; if(me.gold<me.mineCost){ if(typeof playSfx==='function') playSfx('ui_denied'); return; }
+  me.gold-=me.mineCost; me.mines++; me.mineCost=Math.round(me.mineCost*1.35);
   if(typeof playSfx==='function') playSfx('ui_confirm'); strikeRenderEcon(); }
-function strikeRenderEcon(){ const S=STK; if(!S) return; const set=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
-  set('ecGold',Math.floor(S.gold)); set('ecBase',S.incomeBase); set('ecMines',S.mines);
-  set('ecMineInc',S.mines*S.mineIncome); set('ecTotal',strikeIncome()); set('ecMineCost',S.mineCost);
-  const b=document.getElementById('ecBuyMine'); if(b) b.disabled=S.gold<S.mineCost; }
+function strikeRenderEcon(){ const S=STK; if(!S) return; const me=S.me; const set=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
+  set('ecGold',Math.floor(me.gold)); set('ecBase',S.incomeBase); set('ecMines',me.mines);
+  set('ecMineInc',me.mines*S.mineIncome); set('ecTotal',strikeIncome(me)); set('ecMineCost',me.mineCost);
+  const b=document.getElementById('ecBuyMine'); if(b) b.disabled=me.gold<me.mineCost; }
 const STRIKE_BUILDABLE=[ {id:'marine',name:'마린',ico:'🔫',cost:100}, {id:'goliath',name:'골리앗',ico:'🤖',cost:220}, {id:'tank',name:'탱크',ico:'🛡',cost:350} ];
 function strikeRenderBuild(){ const el=document.getElementById('stBuildPalette'); if(!el) return;
   el.innerHTML=STRIKE_BUILDABLE.map(u=>`<div class="stUnitCard" onclick="strikeToast('곧 추가: 타일에 ${u.name} 생산 건물 배치')"><div class="uc">${u.ico}</div>${u.name}<div class="ucCost">⛁${u.cost}</div></div>`).join(''); }
-function strikeRenderSpec(){ const el=document.getElementById('stSpecList'); if(!el) return;
-  el.innerHTML=`<div class="stSpecRow sel"><span class="dot" style="background:#7fe0ff"></span>나 (내 진영)</div>`+
-    `<div class="stSpecRow enemy"><span class="dot" style="background:#ff5c5c"></span>적 컴퓨터 — 암흑 시야 🌑</div>`; }
+function strikeRenderSpec(){ const el=document.getElementById('plGrid'); if(!el) return;   // nemo 하단 관전 그리드 재사용
+  const pp=document.getElementById('playerProfile'); if(pp) pp.style.display='none';
+  const cell=(bg,bd,ico,nm,sub,sc)=>`<div style="flex:1;min-width:80px;padding:10px 8px;border-radius:10px;text-align:center;cursor:pointer;background:${bg};border:1px solid ${bd};font-weight:800;font-size:12px;color:#dfe7f2" onclick="strikeToast('${sc}')"><div style="font-size:20px">${ico}</div>${nm}<div style="font-size:10px;color:${sub}">${sc}</div></div>`;
+  el.style.display='flex'; el.style.gap='7px';
+  el.innerHTML=cell('rgba(30,60,90,.6)','#7fe0ff','🛡','나','#9fd0ff','내 진영')+cell('rgba(60,24,28,.6)','rgba(255,90,90,.4)','🌑','컴퓨터','#ff8a8a','암흑 시야'); }
 function strikeToast(msg){ if(typeof lobbyToast==='function') lobbyToast(msg); else if(typeof toast==='function') toast(msg); }
 
-// ── 입력(전장 패닝/줌/선택) ──
+// ── 입력(전장 패닝/핀치줌/선택) ──
 function strikeViewRect(){ return document.getElementById('vMain').getBoundingClientRect(); }
 function strikeScreenToWorld(px,py){ const S=STK, W=S.cw||1, H=S.ch||1, scale=Math.min(W,H)/S.viewWorld;
   return { x:S.cam.x+(px-W/2)/scale, y:S.cam.y+(py-H/2)/scale }; }
-function strikeOnDown(e){ const S=STK; if(!S) return; if(G.tab==='Upgrade'||G.tab==='Players') return;
-  const r=strikeViewRect(), px=(e.clientX!=null?e.clientX:0)-r.left, py=(e.clientY!=null?e.clientY:0)-r.top;
-  _stkDrag={ sx:px, sy:py, camx:S.cam.x, camy:S.cam.y, moved:false }; }
-function strikeOnMove(e){ const S=STK; if(!S||!_stkDrag) return; const r=strikeViewRect();
-  const px=(e.clientX!=null?e.clientX:0)-r.left, py=(e.clientY!=null?e.clientY:0)-r.top;
-  const dx=px-_stkDrag.sx, dy=py-_stkDrag.sy; if(Math.abs(dx)+Math.abs(dy)>6) _stkDrag.moved=true;
-  const W=S.cw||1,H=S.ch||1,scale=Math.min(W,H)/S.viewWorld;
-  S.cam.x=_stkDrag.camx-dx/scale; S.cam.y=_stkDrag.camy-dy/scale; S.userCam=true; }
-function strikeOnUp(e){ const S=STK; if(!S) return; if(_stkDrag && !_stkDrag.moved){ const r=strikeViewRect();
+function strikeOnDown(e){ const S=STK; if(!S) return; const r=strikeViewRect(), px=e.clientX-r.left, py=e.clientY-r.top;
+  _stkPtrs.set(e.pointerId,{x:px,y:py});
+  if(_stkPtrs.size===2){ const p=[..._stkPtrs.values()]; _stkPinch={ d:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)||1, zoom:S.zoom }; _stkDrag=null; }
+  else _stkDrag={ sx:px, sy:py, camx:S.cam.x, camy:S.cam.y, moved:false }; }
+function strikeOnMove(e){ const S=STK; if(!S) return; const r=strikeViewRect(), px=e.clientX-r.left, py=e.clientY-r.top;
+  if(_stkPtrs.has(e.pointerId)) _stkPtrs.set(e.pointerId,{x:px,y:py});
+  if(_stkPinch && _stkPtrs.size>=2){ const p=[..._stkPtrs.values()], d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);
+    S.zoom=Math.min(3, Math.max(0.45, _stkPinch.zoom * d/_stkPinch.d)); S.userCam=true; strikeClampCam(); return; }
+  if(_stkDrag){ const dx=px-_stkDrag.sx, dy=py-_stkDrag.sy; if(Math.abs(dx)+Math.abs(dy)>6) _stkDrag.moved=true;
+    const W=S.cw||1,H=S.ch||1,scale=Math.min(W,H)/S.viewWorld;
+    S.cam.x=_stkDrag.camx-dx/scale; S.cam.y=_stkDrag.camy-dy/scale; S.userCam=true; strikeClampCam(); } }
+function strikeOnUp(e){ const S=STK; if(!S) return; if(e) _stkPtrs.delete(e.pointerId);
+  if(_stkPtrs.size<2) _stkPinch=null;
+  if(_stkDrag && !_stkDrag.moved){ const r=strikeViewRect();
     const px=(e&&e.clientX!=null?e.clientX:r.left+r.width/2)-r.left, py=(e&&e.clientY!=null?e.clientY:r.top+r.height/2)-r.top;
     const w=strikeScreenToWorld(px,py); strikeSelectAt(w.x,w.y); } _stkDrag=null; }
 function strikeSelectAt(wx,wy){ const S=STK; let best=null,bd=1e9;
   for(const u of S.me.units.concat(S.ai.units)){ const d=(u.x-wx)**2+(u.y-wy)**2; if(d<bd && d<6400){ bd=d; best=u; } }
   S.sel=best; /* 유닛 프로필 연동은 유닛 추가(다음 증분) 시 */ }
 function strikeWheel(e){ const S=STK; if(!S) return; if(e.cancelable) e.preventDefault();
-  S.zoom=Math.min(2.2, Math.max(0.5, S.zoom*(e.deltaY>0?0.9:1.1))); }
+  S.zoom=Math.min(3, Math.max(0.45, S.zoom*(e.deltaY>0?0.9:1.1))); strikeClampCam(); }
 </script>
 
 <!-- 유닛 3D 모델(Three.js) — assets/models/*.glb(마린/골리앗/고스트 + 마린총)를 WebGL로 렌더. 애니메이션은 코드로 구현(숨쉬기/공격기울임/사망), 가장 가까운 적 방향 자동 회전 -->
