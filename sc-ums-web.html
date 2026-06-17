@@ -8302,6 +8302,8 @@ window.addEventListener('load',()=>{ drawMain(); placeMergeZone(); updateHud(); 
 // 전투는 #cvMain에 2D 렌더. loop() 최상단 if(G.strike) 분기로 nemo 로직을 건너뛰고 strikeFrame 실행.
 // ════════════════════════════════════════════════════════════════
 let STK=null, _stkDrag=null, _stkPtrs=new Map(), _stkPinch=null;
+// 크기 비교용 샘플 유닛(임시) — 다음 단계에서 실제 전투 유닛으로 대체. nm 없으면 U[id].name 폴백
+const STRIKE_SAMPLE=[{id:'marine'},{id:'ghost'},{id:'hydra'},{id:'dragoon'},{id:'goliath'},{id:'archon'},{id:'tank',nm:'탱크'},{id:'skyguard',nm:'스카이가드'}];
 // 직스 타일 에셋(기존 assets/tiles 재사용)
 const STRIKE_GROUND=new Image(); STRIKE_GROUND.src='assets/tiles/desert.png?v=1';        // 전장 지형(사막)
 const STRIKE_BUILDTILE=new Image(); STRIKE_BUILDTILE.src='assets/tiles/terran_tile_light.png?v=1';  // 건설 보드(깔끔한 금속)
@@ -8333,7 +8335,7 @@ function strikeNewState(){ const W=mapCfg('world',4800), hp=mapCfg('baseHp',3000
          sec:{x:W*0.661,y:W*0.339, hp:sHp, max:sHp, dead:false} },   // 우상단 메인 + 2차 신전
     central:{x:W*0.5,y:W*0.5, hp:cHp, max:cHp, owner:null, dead:false},   // 중앙 중립 보너스 신전(깬 팀 메인에 쉴드)
     cam:{x:W/2,y:W/2}, zoom:1, viewWorld:2600, cw:0, ch:0, sel:null, userCam:false,
-    leadT:0, leadIdx:0 };
+    leadT:0, leadIdx:0, sizeCmp:true, cmpUnits:null };
 }
 function strikeIncome(side){ const S=STK; if(!S) return 0; side=side||S.me; return S.incomeBase + side.mines*S.mineIncome; }
 // 진영 리더보드(광산 수 → 돈 순). leadIdx로 5초마다 회전 표시
@@ -8354,9 +8356,16 @@ function strikeHideNemoChrome(on){ ['coopBossBar','bossPopup','mergeFab','skillF
 function strikeStart(){ if(typeof bgmStop==='function') bgmStop();
   G=newGame(); G.strike=true; G.phase='playing'; G.tab='Main'; G.sel=[]; G.selEnemy=null;
   STK=strikeNewState();
+  if(STK.sizeCmp){   // 크기 비교용 샘플 유닛: 중앙 신전 주변 4×2 그리드(월드 좌표)
+    const W=STK.world, sp=560, cols=4;
+    STK.cmpUnits=STRIKE_SAMPLE.map((s,i)=>{ const c=i%cols, r=Math.floor(i/cols);
+      return { uid:'cmp_'+s.id, id:s.id, nm:s.nm, x:W*0.5+(c-1.5)*sp, y:W*0.5+(r-0.5)*sp }; });
+    if(window.M3D && M3D.loadMapModels) M3D.loadMapModels('cpu', ()=>{});
+  }
   if(typeof hideAppScreens==='function') hideAppScreens();
   if(typeof setInGame==='function') setInGame(true);
   strikeHideNemoChrome(true);
+  if(STK.sizeCmp){ const mcv=document.getElementById('cvMarine'); if(mcv) mcv.style.display='block'; }   // 3D 유닛 오버레이 캔버스 켜기
   strikeSetTabLabels(STK_TABLABEL);
   const mn=document.getElementById('mapName'); if(mn) mn.textContent='◈ 컴퓨터가 싸운다';
   strikeSwitchTab('Main');
@@ -8373,7 +8382,15 @@ function strikeEnd(){ if(!STK && !(G&&G.strike)) return;
 // ── 프레임/시뮬 ──
 function strikeFrame(dt){ const S=STK; if(!S) return; strikeStep(dt);
   if(G.tab==='Unit') strikeDrawBuildMap(); else strikeDrawMain();
-  strikeHud(); strikeLeaderboard(dt); }
+  strikeHud(); strikeLeaderboard(dt); strikeSyncCmpUnits(dt); }
+// 크기 비교 샘플 유닛(3D) — 직스 카메라 좌표→정규화로 변환해 M3D.sync로 cvMarine에 렌더(전투 탭만)
+function strikeSyncCmpUnits(dt){ const S=STK; if(!S) return; const mcv=document.getElementById('cvMarine');
+  const on=(S.sizeCmp && G.tab==='Main' && S.cmpUnits && window.M3D && M3D.ready && M3D.ready() && !(G.opt&&G.opt.model3d===false));
+  if(!on){ if(mcv) mcv.style.display='none'; return; }
+  if(mcv) mcv.style.display='block';
+  const W=S.cw||1, H=S.ch||1, scale=Math.min(W,H)/S.viewWorld;
+  const list=S.cmpUnits.map(u=>{ const sx=(u.x-S.cam.x)*scale+W/2, sy=(u.y-S.cam.y)*scale+H/2; return { uid:u.uid, id:u.id, x:sx/W, y:sy/H }; });
+  M3D.sync(list, W, H, dt, [], [], null); }
 // 건물 탭 전용: 내 전용 건설 맵(전장 아님). 화면 1/4 직사각형, 깔끔한 금속 타일 + 건설 격자
 function strikeDrawBuildMap(){ const S=STK; if(!S) return; const cvEl=document.getElementById('cvMain'); if(!cvEl) return;
   const r=setup('cvMain'); const ctx=r.ctx, W=r.W, H=r.H; GW=W; GH=H; S.cw=W; S.ch=H;
@@ -8443,6 +8460,12 @@ function strikeDrawMain(){ const S=STK; if(!S) return; const cvEl=document.getEl
   strikeDrawTemple(ctx,w2s,scale,S.ai.sec.x,S.ai.sec.y,'#ff3b54','#ff9aa6',205,{label:'적 2차 신전',labelCol:'#ffc2c8'});
   strikeDrawTemple(ctx,w2s,scale,S.me.base.x,S.me.base.y,'#3a7bff','#7fe0ff',320,{label:'메인 신전',labelCol:'#bfe0ff'});
   strikeDrawTemple(ctx,w2s,scale,S.ai.base.x,S.ai.base.y,'#ff3b54','#ff9aa6',320,{label:'적 메인 신전',labelCol:'#ffc2c8'});
+  // 크기 비교 샘플 유닛 라벨(3D 모델은 cvMarine에 strikeSyncCmpUnits가 렌더)
+  if(S.sizeCmp && S.cmpUnits){ ctx.save(); ctx.font='800 10px Rajdhani,"Apple SD Gothic Neo",sans-serif'; ctx.textAlign='center';
+    for(const u of S.cmpUnits){ const p=w2s(u.x,u.y), nm=u.nm||((typeof U!=='undefined'&&U[u.id]&&U[u.id].name)||u.id);
+      ctx.lineWidth=3; ctx.strokeStyle='rgba(0,0,0,.78)'; ctx.strokeText(nm,p.x,p.y+22);
+      ctx.fillStyle='#eef3fa'; ctx.fillText(nm,p.x,p.y+22); }
+    ctx.restore(); }
 }
 function _stkHash(x,y){ const n=Math.sin(x*127.1+y*311.7)*43758.5453; return n-Math.floor(n); }
 const _STK_PAL=['#12180e','#161e10','#1b2113','#0f1710','#19200f','#141a0d'];
@@ -8963,6 +8986,7 @@ function unitPortrait(id){
 // MAP_ASSETS: 맵 id → 그 맵이 쓰는 body 모델 키 배열. '*'=전체(현재 nemo). 신규 맵은 필요한 키만 나열.
 const MAP_ASSETS = {
   nemo: '*',
+  cpu: ['marine','ghost','hydra','dragoon','goliath','archon','tank','skyguard'],   // 직스: 크기 비교/전투용 샘플 유닛 모델
   // sunken: ['goliath','turret','photon', ...],   // 예: 맵 구현 시 이 맵에 필요한 모델만 나열 → 진입 시 그것만 로드
 };
 function mapModelKeys(mapId){ const a=MAP_ASSETS[mapId]; if(a==='*'||!a) return Object.keys(MODELS); return a.filter(k=>MODELS[k]); }
