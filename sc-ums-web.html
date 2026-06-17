@@ -8465,12 +8465,12 @@ function strikeDrawMain(){ const S=STK; if(!S) return; const cvEl=document.getEl
   const scale=Math.min(W,H)/S.viewWorld;
   const w2s=(x,y)=>({x:(x-S.cam.x)*scale+W/2, y:(y-S.cam.y)*scale+H/2});
   strikeDrawGround(ctx,W,H,S,scale);
-  // 메인 신전 주변: 프로토스 타일 사각 소환 구역(넓게) — 길 끝을 감싸 자연스럽게
-  strikeDrawSpawnZone(ctx,w2s,scale,S,W,H,S.me.base.x,S.me.base.y,1950,1280,'#7fe0ff');
-  strikeDrawSpawnZone(ctx,w2s,scale,S,W,H,S.ai.base.x,S.ai.base.y,1950,1280,'#ff9aa6');
-  // 사막 모랫길 레인: me메인 → me2차 → 중립 → ai2차 → ai메인 (한 직선)
+  // 길 먼저 → 그 위에 메인 신전 사각 플랫폼을 덮어 길 끝이 테두리에 '딱' 떨어지게
   const nodes=[S.me.base, S.me.sec, S.central, S.ai.sec, S.ai.base].map(o=>w2s(o.x,o.y));
   strikeDrawLane(ctx, nodes, scale, S, W, H);
+  // 메인 신전 주변: 프로토스 타일 정사각 소환 구역(길 끝을 깔끔히 감쌈)
+  strikeDrawSpawnZone(ctx,w2s,scale,S,W,H,S.me.base.x,S.me.base.y,1750,1750,'#7fe0ff');
+  strikeDrawSpawnZone(ctx,w2s,scale,S,W,H,S.ai.base.x,S.ai.base.y,1750,1750,'#ff9aa6');
   // 중립 중앙 신전(금색) → 2차(진영색) → 메인(진영색, 큼). 뒤→앞 순서로 그림
   // 신전: 3D 모델 로드 시 사이드 링+라벨만(본체는 strikeSync3D가 M3D로), 미로드 시 2D 폴백
   const _tmpl=function(o,modelId,col,glow,wr,label,labelCol){
@@ -8543,38 +8543,46 @@ function strikeDrawClearing(ctx,w2s,scale,wx,wy,worldR){ const p=w2s(wx,wy), r=M
   ctx.strokeStyle='rgba(150,120,74,.22)'; ctx.lineWidth=Math.max(1,2*scale); ctx.beginPath(); ctx.ellipse(p.x,p.y,r*0.94,r*0.85,0,0,6.283); ctx.stroke();
   ctx.restore(); }
 // 사막 모랫길(레인) — 노드들을 잇는 폭 넓은 길 + 중앙 바퀴자국 점선
-// 신전 잇는 포장 길 — 프로토스 타일(넓게) + 가장자리 페더(자연 소멸) + 진격 화살표(은은). 끝은 메인 플랫폼이 감쌈
+// 신전 잇는 포장 길 — 솔리드 포장 + 양옆만 은은한 외곽(끝은 메인 플랫폼이 딱 덮음)
 function strikeDrawLane(ctx, pts, scale, S, W, H){ if(!pts||pts.length<2) return; ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round';
   const path=()=>{ ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y); for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x,pts[i].y); };
   const img=STRIKE_PAVE; let pat=null;
   if(img&&img.complete&&img.naturalWidth&&S){ pat=ctx.createPattern(img,'repeat');
     if(pat&&pat.setTransform){ const tilePx=Math.max(8,300*scale), s=tilePx/img.naturalWidth, ox=(0-S.cam.x)*scale+W/2, oy=(0-S.cam.y)*scale+H/2; pat.setTransform(new DOMMatrix([s,0,0,s,ox,oy])); } }
-  const stroke=pat||'rgba(150,140,120,.5)', base=Math.max(24,1380*scale);
-  // 페더: 넓은→좁은 폭으로 알파 증가 → 가장자리(폭 테두리)·끝 모두 자연 소멸
-  const layers=[[1.0,0.22],[0.86,0.42],[0.7,0.72],[0.55,1.0]];
-  for(const L of layers){ path(); ctx.globalAlpha=L[1]; ctx.strokeStyle=stroke; ctx.lineWidth=base*L[0]; ctx.stroke(); }
-  ctx.globalAlpha=0.2; ctx.strokeStyle='rgba(18,26,34,1)'; path(); ctx.lineWidth=base*0.55; ctx.stroke();   // 중심 톤 다운(통일)
+  const stroke=pat||'rgba(150,140,120,.5)', base=Math.max(24,1320*scale);
+  path(); ctx.globalAlpha=0.4; ctx.strokeStyle=stroke; ctx.lineWidth=base; ctx.stroke();        // 외곽(양옆 은은)
+  path(); ctx.globalAlpha=1;   ctx.strokeStyle=stroke; ctx.lineWidth=base*0.82; ctx.stroke();    // 솔리드 포장 코어
+  path(); ctx.globalAlpha=0.18;ctx.strokeStyle='rgba(18,26,34,1)'; ctx.lineWidth=base*0.82; ctx.stroke();  // 톤 다운(통일)
   ctx.globalAlpha=1;
   strikeLaneArrows(ctx, pts, scale, 2);
   ctx.restore(); }
-// 바닥 진격 화살표(중앙선 위, 띄엄띄엄, 매우 은은)
-function strikeLaneArrows(ctx, pts, scale, centerIdx){ const gap=Math.max(48,480*scale), size=Math.max(6,76*scale);
+// 바닥 진격 화살표 — 넓게 벌어진 V, 띄엄띄엄, 매우 은은
+function strikeLaneArrows(ctx, pts, scale, centerIdx){ const gap=Math.max(48,500*scale), size=Math.max(6,80*scale);
   ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round';
   for(let si=0; si<pts.length-1; si++){ const a=pts[si], b=pts[si+1]; let dx=b.x-a.x, dy=b.y-a.y; const len=Math.hypot(dx,dy); if(len<1) continue;
     const toward = si<centerIdx, mdx=(toward?dx:-dx)/len, mdy=(toward?dy:-dy)/len, ang=Math.atan2(mdy,mdx);
     const n=Math.floor(len/gap);
-    for(let k=1;k<=n;k++){ const t=k*gap/len; if(t>0.94) break; const x=a.x+dx*t, y=a.y+dy*t;
-      ctx.save(); ctx.translate(x,y); ctx.rotate(ang); ctx.globalAlpha=.2;
-      ctx.strokeStyle='rgba(175,222,255,.8)'; ctx.lineWidth=Math.max(1.3,size*0.22);
-      ctx.beginPath(); ctx.moveTo(-size*0.58,-size*0.6); ctx.lineTo(size*0.55,0); ctx.lineTo(-size*0.58,size*0.6); ctx.stroke();
+    for(let k=1;k<=n;k++){ const t=k*gap/len; if(t>0.92) break; const x=a.x+dx*t, y=a.y+dy*t;
+      ctx.save(); ctx.translate(x,y); ctx.rotate(ang); ctx.globalAlpha=.15;
+      ctx.strokeStyle='rgba(180,224,255,.85)'; ctx.lineWidth=Math.max(1.2,size*0.2);
+      ctx.beginPath(); ctx.moveTo(-size*0.4,-size*0.95); ctx.lineTo(size*0.45,0); ctx.lineTo(-size*0.4,size*0.95); ctx.stroke();   // 넓게 벌어진 V
       ctx.restore(); } }
   ctx.restore(); }
+// 지상유닛 보행 가능 영역 = 프로토스 타일(레인 + 메인 소환 정사각). 향후 이동 단계에서 지상유닛 가둠(공중은 예외)
+const STK_LANE_HALF=640, STK_SPAWN_HALF=875;
+function _segDist(px,py,ax,ay,bx,by){ const dx=bx-ax, dy=by-ay, l2=dx*dx+dy*dy; let t=l2?((px-ax)*dx+(py-ay)*dy)/l2:0; t=Math.max(0,Math.min(1,t)); return Math.hypot(px-(ax+dx*t), py-(ay+dy*t)); }
+function strikeWalkable(wx,wy){ const S=STK; if(!S) return true;
+  if(Math.abs(wx-S.me.base.x)<STK_SPAWN_HALF && Math.abs(wy-S.me.base.y)<STK_SPAWN_HALF) return true;
+  if(Math.abs(wx-S.ai.base.x)<STK_SPAWN_HALF && Math.abs(wy-S.ai.base.y)<STK_SPAWN_HALF) return true;
+  const nd=[S.me.base,S.me.sec,S.central,S.ai.sec,S.ai.base];
+  for(let i=0;i<nd.length-1;i++){ if(_segDist(wx,wy,nd[i].x,nd[i].y,nd[i+1].x,nd[i+1].y)<STK_LANE_HALF) return true; }
+  return false; }
 // 둥근 사각 path 헬퍼
 function _strkRR(ctx,x,y,w,h,r){ if(ctx.roundRect){ ctx.beginPath(); ctx.roundRect(x,y,w,h,r); return; }
   ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
 // 메인 신전 주변 — 프로토스 타일 사각 소환 구역(넓게). 원형 개활지 대체
 function strikeDrawSpawnZone(ctx,w2s,scale,S,W,H,wx,wy,wWorld,hWorld,glow){
-  const c=w2s(wx,wy), pw=wWorld*scale, ph=hWorld*scale, x=c.x-pw/2, y=c.y-ph/2, rad=Math.min(pw,ph)*0.13;
+  const c=w2s(wx,wy), pw=wWorld*scale, ph=hWorld*scale, x=c.x-pw/2, y=c.y-ph/2, rad=Math.min(pw,ph)*0.07;
   ctx.save();
   _strkRR(ctx,x-3,y-2,pw+6,ph+8,rad); ctx.fillStyle='rgba(0,0,0,.28)'; ctx.fill();   // 접지 그림자
   _strkRR(ctx,x,y,pw,ph,rad); ctx.save(); ctx.clip();
