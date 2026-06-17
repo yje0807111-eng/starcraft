@@ -5277,7 +5277,8 @@ function renderUnits(){ const v=document.getElementById('vMain'); if(!v) return;
       barH='<div class="uhp" style="width:'+box+'px">'
         +(maxSh>0?barHTML('ub uS',shR*100):'')
         +barHTML('ub uH',hpR*100,hpCol)+'</div>'; }
-    const has3d=def.model3d;  // 3D 모델 유닛은 아이콘 비우고(투명) WebGL이 그 자리에 렌더
+    const _m3k=u.gmodel||def.model3d;   // 이 유닛이 쓸 3D 모델 키(가챠 전용 우선)
+    const has3d=!!_m3k && !(G.opt&&G.opt.model3d===false) && window.M3D && window.M3D.hasModel && window.M3D.hasModel(_m3k);  // 모델이 실제 로드됐을 때만 투명(WebGL이 그림). 로드 전엔 SVG 폴백
     const iconHTML=has3d?'':unitSVG(u.id);
     const lblHTML = seld ? '<div class="ulbl'+(u.hero?' hero':'')+'">'+gNameStar(u,def)+star+'</div>' : '';   // 이름은 선택(지정) 시에만 표시
     el.innerHTML='<div class="ubox'+(u.hero?' hero':'')+(has3d?' model3d':'')+'" style="width:'+box+'px;height:'+box+'px;color:'+def.color+';padding:'+pad+'px">'+iconHTML+'</div>'+barH+lblHTML;
@@ -8385,9 +8386,11 @@ function init(){
   const d2=new THREE.DirectionalLight(0xbfe0ff,0.7); d2.position.set(-0.6,0.3,-0.5); scene.add(d2);
   const d3=new THREE.DirectionalLight(0xffffff,0.6); d3.position.set(0,0.4,-1); scene.add(d3); // 정면 보강광
   camera=new THREE.OrthographicCamera(0,1,1,0,-2000,2000); camera.position.set(0,0,800);
+  ready=true;   // 렌더러 준비 즉시 가동 — 모델은 로드되는 대로 하나씩 등장(올-오어-나싱 30초 블랙아웃 제거). sync는 미로드 모델을 자동 스킵
   const L=new GLTFLoader();
   let pending=Object.keys(MODELS).length+Object.keys(GUN_FOR).length+Object.keys(RUN_FOR).length+Object.keys(ATTACK_FOR).length+2;  // +1=비콘 +1=워든 검
-  const done=()=>{ if(--pending<=0) ready=true; };
+  const done=()=>{ if(--pending<=0){ ready=true;   // 전체 로드 완료 → 2D 폴백 쓰던 화면(건물/시민) 1회 재렌더로 3D 전환
+    try{ if(typeof G!=='undefined'){ if(G.tab==='Upgrade'&&typeof renderBldgs==='function') renderBldgs('vUpgrade',TECH,TECH_POS,G.techB,selectUpg); if(G.tab==='Unit'&&typeof buildClock==='function') buildClock(); } }catch(e){} } };
   // 합성 비콘 3D 모델(합체 베이·유닛 슬롯 발판) — 유닛과 같은 씬에 렌더
   L.load('/assets/beacons/beacon_synthesis.glb', g=>{ const s=g.scene; const box=new THREE.Box3().setFromObject(s);
     beaconBase={ scene:s, off:{x:(box.max.x+box.min.x)/2, y:box.min.y, z:(box.max.z+box.min.z)/2}, h:Math.max(.001,box.max.y-box.min.y), w:Math.max(.001,Math.max(box.max.x-box.min.x, box.max.z-box.min.z)) };
@@ -8633,7 +8636,8 @@ function unitPortrait(id){
 }
 window.M3D={
   ready:()=>ready,
-  hasModel:(id)=>!!MODELS[id],   // 유닛뽑기 SVG 폴백 판정용(모듈 MODELS 노출)
+  hasModel:(id)=>!!bases[id],   // 실제 로드 완료 여부(로드 전엔 false → 2D/SVG 폴백 표시). MODELS 카탈로그가 아니라 bases(로드분) 기준
+  modelCatalog:(id)=>!!MODELS[id],   // 카탈로그 존재 여부(필요 시)
   portrait:(id)=>unitPortrait(id),   // 3D 모델 → 2D 흑백 포트레잇 dataURL(없으면 null)
   sync(units, W, H, dt, sel, enemies, selEnemy){
     if(!ready||!W||!H) return;
