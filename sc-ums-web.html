@@ -2836,51 +2836,46 @@ const DIFFICULTY = {
 const DIFFICULTY_ORDER = ['easy','normal','hard','hell','nightmare'];
 // 보스 처치 코인(기본, 난이도 coinMult 적용 전). 표에 없는 라운드는 라운드 비례 폴백.
 // 메타 빌드 정의(설계서 4번). group: util / power / coop. 다음레벨 비용 = floor(start * rate^level)
-const META_BUILD_GROUPS = { eco:'경제', prod:'생산', combat:'전투', team:'전체 강화', coop:'보스', util:'자동화', end:'엔드' };
+const META_BUILD_GROUPS = { eco:'경제', prod:'생산', combat:'전투', team:'전체 강화', coop:'보스' };
 // start=1레벨 비용 기준값, nMax=일반 레벨 수, max=일반+초월(초월 3레벨·효과 ×2/×4/×8). 비용은 metaNextCost(완만 감소배율) 참조.
 const META_BUILDS = {   // 탭(group) → 섹션(sect) 2단 분류. 같은 sect끼리 묶여 헤더로 구분됨
   // ── 경제 ──
-  credit_gain:   { name:'크레딧 획득', desc:'인게임 크레딧 획득 증가',   start:5, nMax:5, max:8, group:'eco', sect:'자원 획득' },
-  energy_gain:   { name:'에너지 획득', desc:'인게임 에너지 획득 증가',   start:5, nMax:5, max:8, group:'eco', sect:'자원 획득' },
-  sell_return:   { name:'판매 회수율', desc:'유닛 판매 회수 비용 +5%/Lv', start:4, nMax:5, max:8, group:'eco', sect:'자원 획득' },
-  energy_draw_bonus:{ name:'에너지 뽑기 강화', desc:'에너지 뽑기 획득 +10%/Lv', start:5, nMax:5, max:8, group:'eco', sect:'자원 획득' },
-  start_credit:  { name:'시작 크레딧', desc:'시작 시 크레딧 지급',       start:4, nMax:6, max:9, group:'eco', sect:'시작 자원' },
-  start_energy:  { name:'시작 에너지', desc:'시작 시 에너지 지급',       start:4, nMax:6, max:9, group:'eco', sect:'시작 자원' },
-  // ── 생산(뽑기·유닛) ──
-  gacha_luck:    { name:'고등급 확률', desc:'레전드+ 뽑기 확률 증가',    start:8, nMax:5, max:8, group:'prod', sect:'뽑기' },
-  guaranteed:    { name:'확정 뽑기권', desc:'유닛 확정 뽑기권 지급',     start:6, nMax:5, max:8, group:'prod', sect:'뽑기' },
-  gacha_double:  { name:'추가 생산',   desc:'유닛 뽑기 시 6%/Lv 확률로 1기 더', start:8, nMax:5, max:8, group:'prod', sect:'뽑기' },
-  start_unit:    { name:'시작 유닛',   desc:'시작 시 기본 유닛 지급',    start:5, nMax:5, max:8, group:'prod', sect:'유닛' },
-  // ── 전투(아군 강화 · 적 약화) ──
-  unit_atk_up:   { name:'공격력 증가',  desc:'유닛 공격력 +5%/Lv',       start:5, nMax:6, max:9, group:'combat', sect:'아군 강화' },
-  unit_aspd:     { name:'공격 속도',    desc:'아군 공격 속도 +4%/Lv',     start:6, nMax:6, max:9, group:'combat', sect:'아군 강화' },
-  tower_power:   { name:'타워 강화',    desc:'가드 타워·스파이어 공격력 +20%/Lv', start:5, nMax:5, max:8, group:'combat', sect:'아군 강화' },
-  start_turret:  { name:'시작 포탑',   desc:'시작 시 가드 타워 1기 배치', start:12, nMax:1, max:1, group:'combat', sect:'아군 강화' },
-  enemy_hp_down: { name:'적 체력 감소', desc:'내 트랙 적 체력 -3%/Lv',    start:5, nMax:6, max:9, group:'combat', sect:'적 약화' },
-  enemy_def_down:{ name:'적 방어 감소', desc:'내 트랙 적 방어력 -1/Lv',   start:5, nMax:6, max:9, group:'combat', sect:'적 약화' },
-  enemy_slow:    { name:'적 이속 감소', desc:'내 트랙 적 이동속도 -3%/Lv', start:4, nMax:6, max:9, group:'combat', sect:'적 약화' },
+  credit_gain:   { name:'크레딧 획득', desc:'인게임 크레딧 획득 증가',   start:14, nMax:5, max:8, group:'eco', sect:'자원 획득' },
+  energy_gain:   { name:'에너지 획득', desc:'인게임 에너지 획득 증가',   start:14, nMax:5, max:8, group:'eco', sect:'자원 획득' },
+  sell_return:   { name:'판매 회수율', desc:'유닛 판매 회수 비용 +5%/Lv', start:12, nMax:5, max:8, group:'eco', sect:'자원 획득' },
+  energy_draw_bonus:{ name:'에너지 뽑기 강화', desc:'에너지 뽑기 획득 +10%/Lv', start:14, nMax:5, max:8, group:'eco', sect:'자원 획득' },
+  start_credit:  { name:'시작 크레딧', desc:'시작 시 크레딧 지급',       start:12, nMax:6, max:9, group:'eco', sect:'시작 자원' },
+  start_energy:  { name:'시작 에너지', desc:'시작 시 에너지 지급',       start:12, nMax:6, max:9, group:'eco', sect:'시작 자원' },
+  // ── 생산(뽑기·유닛·자동화) ──
+  gacha_luck:    { name:'고등급 확률', desc:'레전드+ 뽑기 확률 증가',    start:22, nMax:5, max:8, group:'prod', sect:'뽑기' },
+  guaranteed:    { name:'확정 뽑기권', desc:'유닛 확정 뽑기권 지급',     start:16, nMax:5, max:8, group:'prod', sect:'뽑기' },
+  gacha_double:  { name:'추가 생산',   desc:'유닛 뽑기 시 6%/Lv 확률로 1기 더', start:22, nMax:5, max:8, group:'prod', sect:'뽑기' },
+  start_unit:    { name:'시작 유닛',   desc:'시작 시 기본 유닛 지급',    start:14, nMax:5, max:8, group:'prod', sect:'유닛' },
+  // 자동화 해금(생산 섹션 통합) — 1회 구매로 인게임 on/off 토글 해금 · 가격 높음
+  auto_unit:    { name:'자동 유닛 소환',  desc:'유닛 자동 뽑기 토글 해금 (0.33초마다 1기)',          start:150, nMax:1, max:1, group:'prod', sect:'자동화' },
+  auto_combine: { name:'자동 조합',       desc:'낮은 등급부터 자동 조합 토글 해금 (레전드까지·0.33초)', start:150, nMax:1, max:1, group:'prod', sect:'자동화' },
+  auto_energy:  { name:'자동 에너지 변환', desc:'크레딧→에너지 자동 변환 토글 해금 (0.33초마다)',      start:130, nMax:1, max:1, group:'prod', sect:'자동화' },
+  auto_pboss:   { name:'자동 개인 보스',   desc:'개인 보스를 쿨마다 자동 소환 토글 해금 (보스별 on/off)', start:220, nMax:1, max:1, group:'prod', sect:'자동화' },
+  auto_place:   { name:'자동 유닛 배치',   desc:'새 유닛을 트랙에 자동 정렬 토글 해금 (가운데 쌓임 방지)', start:120, nMax:1, max:1, group:'prod', sect:'자동화' },
+  // ── 전투(아군 강화 · 적 약화) — 초월 단계가 종결 강화 역할(엔드 대체) ──
+  unit_atk_up:   { name:'공격력 증가',  desc:'유닛 공격력 +5%/Lv',       start:14, nMax:6, max:9, group:'combat', sect:'아군 강화' },
+  unit_aspd:     { name:'공격 속도',    desc:'아군 공격 속도 +4%/Lv',     start:16, nMax:6, max:9, group:'combat', sect:'아군 강화' },
+  tower_power:   { name:'타워 강화',    desc:'가드 타워·스파이어 공격력 +20%/Lv', start:14, nMax:5, max:8, group:'combat', sect:'아군 강화' },
+  start_turret:  { name:'시작 포탑',   desc:'시작 시 가드 타워 1기 배치', start:34, nMax:1, max:1, group:'combat', sect:'아군 강화' },
+  enemy_hp_down: { name:'적 체력 감소', desc:'내 트랙 적 체력 -3%/Lv',    start:14, nMax:6, max:9, group:'combat', sect:'적 약화' },
+  enemy_def_down:{ name:'적 방어 감소', desc:'내 트랙 적 방어력 -1/Lv',   start:14, nMax:6, max:9, group:'combat', sect:'적 약화' },
+  enemy_slow:    { name:'적 이속 감소', desc:'내 트랙 적 이동속도 -3%/Lv', start:12, nMax:6, max:9, group:'combat', sect:'적 약화' },
   // ── 전체 강화(팀 공유 · 비쌈) ──
-  team_atk:      { name:'전체 공격력',   desc:'모든 플레이어 유닛 공격력 +4%/Lv',  start:14, nMax:5, max:8, group:'team', sect:'팀 강화' },
-  team_credit:   { name:'전체 시작 크레딧',desc:'모든 플레이어 시작 크레딧 지급',start:12, nMax:5, max:8, group:'team', sect:'팀 강화' },
-  team_enemy_hp: { name:'전체 적 체력',  desc:'모든 플레이어 적 체력 -2.5%/Lv', start:14, nMax:5, max:8, group:'team', sect:'팀 적 약화' },
-  team_enemy_slow:{name:'전체 적 이속',  desc:'모든 플레이어 적 이동속도 -2.5%/Lv', start:12, nMax:5, max:8, group:'team', sect:'팀 적 약화' },
+  team_atk:      { name:'전체 공격력',   desc:'모든 플레이어 유닛 공격력 +4%/Lv',  start:38, nMax:5, max:8, group:'team', sect:'팀 강화' },
+  team_credit:   { name:'전체 시작 크레딧',desc:'모든 플레이어 시작 크레딧 지급',start:32, nMax:5, max:8, group:'team', sect:'팀 강화' },
+  team_enemy_hp: { name:'전체 적 체력',  desc:'모든 플레이어 적 체력 -2.5%/Lv', start:38, nMax:5, max:8, group:'team', sect:'팀 적 약화' },
+  team_enemy_slow:{name:'전체 적 이속',  desc:'모든 플레이어 적 이동속도 -2.5%/Lv', start:32, nMax:5, max:8, group:'team', sect:'팀 적 약화' },
   // ── 보스(공용·개인) ──
-  boss_hp_down:  { name:'보스 체력 감소', desc:'월드 보스 체력 -3%/Lv',      start:4, nMax:6, max:9, group:'coop', sect:'월드 보스' },
-  boss_atk_up:   { name:'보스 기여딜 증가',desc:'보스방 파견 유닛의 보스 데미지 +5%/Lv', start:4, nMax:6, max:9, group:'coop', sect:'월드 보스' },
-  boss_reward_up:{ name:'보스 보상 증가', desc:'월드 보스 처치 포인트 +10%/Lv', start:5, nMax:5, max:8, group:'coop', sect:'월드 보스' },
-  pboss_reward:  { name:'개인 보스 보상', desc:'개인 보스 처치 보상 +10%/Lv', start:5, nMax:5, max:8, group:'coop', sect:'개인 보스' },
-  pboss_cd:      { name:'개인 보스 쿨감', desc:'개인 보스 재소환 쿨다운 -6%/Lv', start:5, nMax:5, max:8, group:'coop', sect:'개인 보스' },
-  // ── 자동화 유틸(QoL · 반복 작업 자동화 · on/off는 인게임 토글에서) — 노말 후반·하드 초반 진입자용 가격대 ──
-  auto_unit:    { name:'자동 유닛 소환',  desc:'유닛 자동 뽑기 토글 해금 (0.33초마다 1기)',        start:28, nMax:1, max:1, group:'util', sect:'자동화 해금' },
-  auto_combine: { name:'자동 조합',       desc:'낮은 등급부터 자동 조합 토글 해금 (레전드까지·0.33초)', start:28, nMax:1, max:1, group:'util', sect:'자동화 해금' },
-  auto_energy:  { name:'자동 에너지 변환', desc:'크레딧→에너지 자동 변환 토글 해금 (0.33초마다)',     start:24, nMax:1, max:1, group:'util', sect:'자동화 해금' },
-  auto_pboss:   { name:'자동 개인 보스',   desc:'개인 보스를 쿨마다 자동 소환 토글 해금 (보스별 on/off)', start:40, nMax:1, max:1, group:'util', sect:'자동화 해금' },
-  auto_place:   { name:'자동 유닛 배치',   desc:'새 유닛을 트랙에 자동 정렬 토글 해금 (가운데 쌓임 방지)', start:22, nMax:1, max:1, group:'util', sect:'자동화 해금' },
-  // ── 엔드 강화(고난도 도전용 · 매우 비싸고 강력 · 초월 구간 없음) ──
-  end_atk:    { name:'종결 화력',  desc:'유닛 공격력 +12%/Lv',          start:80, nMax:6, max:6, group:'end', sect:'종결 강화' },
-  end_tower:  { name:'요새화',     desc:'타워 공격력 +35%/Lv',          start:70, nMax:6, max:6, group:'end', sect:'종결 강화' },
-  end_enemy:  { name:'적 대붕괴',  desc:'내 트랙 적 체력 -6%/Lv',        start:80, nMax:6, max:6, group:'end', sect:'종결 강화' },
-  end_econ:   { name:'무한 동력',  desc:'크레딧·에너지 획득 +12%/Lv',    start:70, nMax:6, max:6, group:'end', sect:'종결 강화' },
+  boss_hp_down:  { name:'보스 체력 감소', desc:'월드 보스 체력 -3%/Lv',      start:12, nMax:6, max:9, group:'coop', sect:'월드 보스' },
+  boss_atk_up:   { name:'보스 기여딜 증가',desc:'보스방 파견 유닛의 보스 데미지 +5%/Lv', start:12, nMax:6, max:9, group:'coop', sect:'월드 보스' },
+  boss_reward_up:{ name:'보스 보상 증가', desc:'월드 보스 처치 포인트 +10%/Lv', start:14, nMax:5, max:8, group:'coop', sect:'월드 보스' },
+  pboss_reward:  { name:'개인 보스 보상', desc:'개인 보스 처치 보상 +10%/Lv', start:14, nMax:5, max:8, group:'coop', sect:'개인 보스' },
+  pboss_cd:      { name:'개인 보스 쿨감', desc:'개인 보스 재소환 쿨다운 -6%/Lv', start:14, nMax:5, max:8, group:'coop', sect:'개인 보스' },
 };
 // 비용 곡선: 일반 레벨 = round(start×(lv+1)^1.35)(레벨 오를수록 배율 감소·후반 완만), 초월 레벨 = 일반 누적×[0.6,0.9,1.2](엄청 비쌈).
 const META_COST_POW=1.35;
@@ -2917,11 +2912,11 @@ function teamLevel(id){ let mx=buildLevel(id);
 function teamEffLv(id){ return _metaEffFromRaw(META_BUILDS[id], teamLevel(id)); }   // 팀 최고레벨 + 초월 배율 적용
 function metaBonus(){ const L=id=>metaEffLv(id), T=id=>teamEffLv(id);   // 효과 = 초월 배율 반영 레벨(일반=그대로, 초월=×2/×4/×8)
   return {
-    creditMul:   (1 + L('credit_gain')*0.08) * (1 + L('end_econ')*0.12),
-    energyMul:   (1 + L('energy_gain')*0.08) * (1 + L('end_econ')*0.12),
-    atkMul:      1 + L('unit_atk_up')*0.05 + T('team_atk')*0.04 + L('end_atk')*0.12,
+    creditMul:   1 + L('credit_gain')*0.08,
+    energyMul:   1 + L('energy_gain')*0.08,
+    atkMul:      1 + L('unit_atk_up')*0.05 + T('team_atk')*0.04,
     aspdMul:     Math.max(0.45, 1 - L('unit_aspd')*0.04),   // 공격 쿨다운 배율(낮을수록 빠름)
-    enemyHpMul:  Math.max(0.3, 1 - L('enemy_hp_down')*0.03 - T('team_enemy_hp')*0.025 - L('end_enemy')*0.06),
+    enemyHpMul:  Math.max(0.3, 1 - L('enemy_hp_down')*0.03 - T('team_enemy_hp')*0.025),
     enemyArmor:  L('enemy_def_down')*1,
     enemySlowMul:Math.max(0.4, 1 - L('enemy_slow')*0.03 - T('team_enemy_slow')*0.025),
     unitCap:     0,   // 최대 유닛은 100 고정(증가 업그레이드 제거)
@@ -2935,7 +2930,7 @@ function metaBonus(){ const L=id=>metaEffLv(id), T=id=>teamEffLv(id);   // 효�
     gachaDoubleP:  L('gacha_double')*0.06,             // 유닛 뽑기 시 1기 추가 확률
     pbossRewardMul:1 + L('pboss_reward')*0.10,         // 개인 보스 처치 보상 배율
     pbossCdMul:    Math.max(0.4, 1 - L('pboss_cd')*0.06),   // 개인 보스 쿨다운 배율
-    towerMul:    (1 + L('tower_power')*0.20) * (1 + L('end_tower')*0.35),   // 타워 공격력 배율(타워 강화 + 엔드 요새화)
+    towerMul:    1 + L('tower_power')*0.20,   // 타워 공격력 배율(타워 강화 — 초월 단계가 종결 강화 역할)
     autoUnit:    L('auto_unit')>0,      // 자동화 해금 플래그(인게임 토글로 on/off)
     autoCombine: L('auto_combine')>0,
     autoEnergy:  L('auto_energy')>0,
@@ -2969,15 +2964,13 @@ function buildUpgrade(id){ const b=META_BUILDS[id]; if(!b) return false;
 
 // ── 포인트 연구소(인게임 업그레이드 구역 건물) — 영구 강화 리스트. PLAYER_META 데이터, 구매 시 G.metaB 재계산으로 즉시 적용(시작 자원/유닛만 다음 판) ──
 let _ptGroup='eco';
-const _PT_TABS=[['eco','경제'],['prod','생산'],['combat','전투'],['team','전체'],['coop','보스'],['util','자동화'],['end','엔드']];
+const _PT_TABS=[['eco','경제'],['prod','생산'],['combat','전투'],['team','전체'],['coop','보스']];
 const _PT_NOTE={
   eco:'크레딧·에너지 수급 강화 · 즉시 적용 (시작 자원은 다음 판)',
-  prod:'뽑기 확률·추가 생산 등 생산 강화 · 즉시 적용 (시작 유닛은 다음 판)',
-  combat:'아군 화력·공격속도 강화와 적 약화 · 즉시 적용 (시작 포탑은 다음 판)',
+  prod:'뽑기·시작유닛 + 자동화 해금 · 즉시 적용 (시작 유닛은 다음 판)',
+  combat:'아군 화력·공속·적 약화 (초월 단계 = 종결 강화) · 즉시 적용',
   team:'전체 강화 · 협동에서 파티 중 최고 레벨이 모두에게 적용',
-  coop:'월드 보스 공략 + 개인 보스 보상·쿨감 강화',
-  util:'반복 작업 자동화 해금 · on/off는 인게임 토글 (개인보스=보스 팝업 / 나머지=메인 자동 버튼)',
-  end:'⚡ 종결 강화 — 매우 비싸지만 강력 · 고난도 도전용'
+  coop:'월드 보스 공략 + 개인 보스 보상·쿨감 강화'
 };
 // 포인트 연구소 선택 → 팝업으로 영구 강화 리스트 표시(하단 구역이 좁아 팝업 사용)
 function openPointUpgrade(){ loadMeta(); _ptGroup='eco';
@@ -3003,7 +2996,7 @@ function renderPt(){ const list=document.getElementById('ptList'); if(!list) ret
     const lvTag=(lv>n)?' <span class="ptT">초월'+(lv-n)+'</span>':'';   // 이미 초월 단계면 표시
     rows+='<div class="ptRow'+(deferred?' deferred':'')+(_ptGroup==='team'?' team':'')+'">'
       +'<div class="ptInfo"><div class="ptNameRow"><span class="ptName">'+b.name+'</span><span class="ptLv">Lv '+lv+' / '+b.max+lvTag+'</span></div>'
-      +'<div class="ptDesc">'+b.desc+'</div>'
+      +'<div class="ptDesc">'+b.desc.replace(/\s*\(/,'<br>(')+'</div>'
       +barHTML('ptBar',Math.round(lv/b.max*100))+'</div>'
       +btn+'</div>';
   }
