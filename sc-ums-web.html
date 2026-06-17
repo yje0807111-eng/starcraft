@@ -3807,15 +3807,8 @@ function drawProd(){ const {ctx,W,H}=setup('cvUnit'); drawShopBg(ctx,W,H);
   if(!b3d) DRAW_BEACONS.forEach(b=>drawPad(ctx, b.x*W, b.y*H, rx, G.citizen.onPad===b.id));   // 3D 미준비 시 2D 패드
 }
 function drawUpg(){ const {ctx,W,H}=setup('cvUpgrade'); GW=W;GH=H;
-  // ── 우주 배경 ──
-  if(TILE_SPACE.complete && TILE_SPACE.naturalWidth){ const p=ctx.createPattern(TILE_SPACE,'repeat');
-    if(p&&p.setTransform){ const s=380/TILE_SPACE.naturalWidth; p.setTransform(new DOMMatrix([s,0,0,s,0,0])); }
-    ctx.fillStyle=p||'#05060d'; ctx.fillRect(0,0,W,H);
-  } else bg(ctx,W,H,'#0a0c16','#03040a');
-  const v=ctx.createRadialGradient(W/2,H*0.45,Math.min(W,H)*0.2,W/2,H*0.5,Math.max(W,H)*0.72);
-  v.addColorStop(0,'rgba(0,0,0,0)'); v.addColorStop(1,'rgba(2,3,12,.7)'); ctx.fillStyle=v; ctx.fillRect(0,0,W,H);
-  // ── 건물 구역 = 우주에 떠 있는 단일 타일 플랫폼 ──
-  drawUpgPlatform(ctx, W*0.075, H*0.18, W*0.85, H*0.7);   // 포인트 연구소(y.80)까지 타일 위에 오게 확장
+  // 바닥 타일을 화면 전체로 채움(유닛뽑기와 동일 방식) — 우주에 떠 있는 플랫폼 느낌 제거
+  drawFacilityFloor(ctx,W,H,'rgba(6,12,22,.5)','rgba(90,160,220,.07)',TILE_PLATFORM);
 }
 // 업그레이드 플랫폼 — 통일 타일(우주 정거장 금속) 라운드 사각, 우주에 떠 있는 느낌
 function drawUpgPlatform(ctx,x,y,w,h){ const R=16, img=TILE_PLATFORM;
@@ -6030,7 +6023,7 @@ function upgSlotHTML(it){
 function selectUpg(id){ const _b0=TECH.find(x=>x.id===id);
   if(_b0&&_b0.meta){ if(typeof playSfx==='function') playSfx('ui_open'); openPointUpgrade(); return; }   // 포인트 연구소 → 영구 강화 팝업
   const _bchg=(G.techB!==id); G.techB=id;
-  if(_bchg && typeof playSfx==='function'){ const _b=TECH.find(x=>x.id===id); const _r=(_b&&WPN_RACE[_b.wpn])||'terran'; playSfx('bldg_'+_r); }   // 종족별 건물 작동음(재렌더 제외)
+  if(_bchg && typeof playSfx==='function'){ playSfx('bldg_protoss'); }   // 모든 건물 작동음을 크리스탈 워크스(프로토스) 소리로 통일
   renderBldgs('vUpgrade',TECH,TECH_POS,id,selectUpg);
   if(typeof updateDeselTop==='function') updateDeselTop();   // 우상단 취소키 표시
   const b=TECH.find(x=>x.id===id); document.getElementById('upgHint').style.display='none';
