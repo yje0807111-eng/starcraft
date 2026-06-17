@@ -91,18 +91,16 @@
   #hudL .stage b{font-size:14px;color:var(--hud);letter-spacing:0;text-shadow:0 0 6px var(--hud-glow),0 2px 3px #000}
   #hudL .stage #hRoundMax{font-size:var(--fs-md);color:rgba(214,226,240,.5);letter-spacing:0}
   #hudL .kill{font-size:var(--fs-lg);color:#fff;font-weight:800;letter-spacing:.5px}#hudL .kill b{color:var(--hud)}  /* Kill 텍스트=흰 / 숫자=청록 */
-  /* 중앙 미션 타이머 — 우상단 '연구 시설' 라벨과 같은 높이. SC 우주전쟁식 각진 네온 플레이트 */
-  #hudC{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 39px);transform:translateX(-50%);pointer-events:none;overflow:hidden;
-    display:flex;align-items:center;justify-content:center;height:22px;padding:0 15px;
-    background:linear-gradient(180deg,rgba(11,32,46,.88),rgba(4,12,20,.92));
-    border:1px solid rgba(0,229,255,.5);
-    clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
-    box-shadow:inset 0 1px 0 rgba(150,240,255,.2),inset 0 0 12px -2px rgba(0,185,255,.3),0 0 16px -4px rgba(0,205,255,.6),0 2px 6px rgba(0,0,0,.55)}
-  #hudC::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--hud),rgba(0,170,255,.25));box-shadow:0 0 8px var(--hud-glow)}
-  #hudC::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(150,240,255,.75),transparent)}
-  /* 타이머 숫자 — 밝은 청록 네온 + 약간의 자간(디지털 테크) */
-  #hudC .time{font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif;font-size:16px;font-weight:800;line-height:1;
-    letter-spacing:1px;color:#bff4ff;text-shadow:0 0 7px var(--hud-glow),0 0 3px rgba(0,229,255,.85),0 2px 3px #000}
+  /* 중앙 미션 타이머 — 우상단 맵 이름과 같은 높이. SC식 각진 네온 플레이트(심플·소형) */
+  #hudC{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 41px);transform:translateX(-50%);pointer-events:none;
+    display:flex;align-items:center;justify-content:center;height:19px;padding:0 11px;
+    background:linear-gradient(180deg,rgba(9,24,36,.82),rgba(5,13,20,.86));
+    border:1px solid rgba(0,229,255,.42);
+    clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
+    box-shadow:inset 0 1px 0 rgba(160,240,255,.14),0 0 10px -3px rgba(0,200,255,.45),0 1px 4px rgba(0,0,0,.5)}
+  /* 타이머 숫자 — 청록 네온(심플) */
+  #hudC .time{font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif;font-size:14px;font-weight:700;line-height:1;
+    letter-spacing:.5px;color:#aeeeff;text-shadow:0 0 5px var(--hud-glow),0 1px 2px #000}
   #hudRwrap{display:flex;flex-direction:column;align-items:flex-end;gap:4px;margin-top:2px}
   #hudR{display:flex;align-items:center;gap:9px;font-size:var(--fs-md);font-weight:800;white-space:nowrap;text-shadow:0 2px 4px #000,0 0 8px #000}
   /* 맵 이름: 자원 아래 우측 — 배경 없이 텍스트 + 청록 액센트 + 진한 쉐도우 */
