@@ -8395,7 +8395,7 @@ function strikeSync3D(dt){ const S=STK; if(!S) return; const mcv=document.getEle
   const w2n=function(wx,wy){ const sx=(wx-S.cam.x)*scale+W/2, sy=(wy-S.cam.y)*scale+H/2; return {x:sx/W, y:sy/H}; };
   const list=[];
   const TT=[['tmpMeMain',S.me.base,'temple_main'],['tmpAiMain',S.ai.base,'temple_main'],['tmpMeSec',S.me.sec,'temple_stone'],['tmpAiSec',S.ai.sec,'temple_stone'],['tmpCentral',S.central,'temple_neutral']];
-  for(const t of TT){ const n=w2n(t[1].x,t[1].y); list.push({uid:t[0], id:t[2], x:n.x, y:n.y, fixed:true}); }   // 신전(고정)
+  for(const t of TT){ const n=w2n(t[1].x,t[1].y); list.push({uid:t[0], id:t[2], x:n.x, y:n.y, fixed:true, face:-0.62}); }   // 신전(고정, 살짝 사선=3/4 뷰)
   if(S.sizeCmp && S.cmpUnits){ for(const u of S.cmpUnits){ const n=w2n(u.x,u.y); list.push({uid:u.uid, id:u.id, x:n.x, y:n.y}); } }
   M3D.sync(list, W, H, dt, [], [], null, k); }
 // 건물 탭 전용: 내 전용 건설 맵(전장 아님). 화면 1/4 직사각형, 깔끔한 금속 타일 + 건설 격자
@@ -8471,16 +8471,18 @@ function strikeDrawMain(){ const S=STK; if(!S) return; const cvEl=document.getEl
     if(!has3d){ strikeDrawTemple(ctx,w2s,scale,o.x,o.y,col,glow,wr,{topCol:(modelId==='temple_neutral'?'#fff7da':undefined),label:label,labelCol:labelCol}); return; }
     const p=w2s(o.x,o.y), rr=Math.max(9,wr*scale*0.58);
     ctx.save();
-    // 접지 그림자(부드러운 타원) — 신전이 땅에 닿아 보이게
-    const sh=ctx.createRadialGradient(p.x,p.y+rr*0.16,rr*0.18,p.x,p.y+rr*0.16,rr*1.2);
-    sh.addColorStop(0,'rgba(0,0,0,.5)'); sh.addColorStop(.55,'rgba(0,0,0,.3)'); sh.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=sh; ctx.beginPath(); ctx.ellipse(p.x,p.y+rr*0.16,rr*1.2,rr*0.52,0,0,6.283); ctx.fill();
-    // 돌 기단 패드(사막 톤) — 신전이 박혀 보이는 받침
-    ctx.fillStyle='rgba(54,44,30,.9)'; ctx.beginPath(); ctx.ellipse(p.x,p.y,rr*0.95,rr*0.44,0,0,6.283); ctx.fill();
-    ctx.fillStyle='rgba(102,84,58,.7)'; ctx.beginPath(); ctx.ellipse(p.x,p.y-rr*0.05,rr*0.74,rr*0.33,0,0,6.283); ctx.fill();
-    // 진영색 림 글로우
-    ctx.globalAlpha=.55; ctx.strokeStyle=glow; ctx.lineWidth=Math.max(1.5,3*scale);
-    ctx.beginPath(); ctx.ellipse(p.x,p.y,rr*0.95,rr*0.44,0,0,6.283); ctx.stroke(); ctx.globalAlpha=1;
+    // 1) 넓은 앰비언트 오클루전 — 땅이 신전을 '받는' 느낌(모델 발치보다 넓게 퍼짐)
+    const ao=ctx.createRadialGradient(p.x,p.y+rr*0.1,rr*0.22,p.x,p.y+rr*0.1,rr*1.75);
+    ao.addColorStop(0,'rgba(0,0,0,.4)'); ao.addColorStop(.5,'rgba(0,0,0,.2)'); ao.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=ao; ctx.beginPath(); ctx.ellipse(p.x,p.y+rr*0.1,rr*1.75,rr*0.82,0,0,6.283); ctx.fill();
+    // 2) 사선 캐스트 그림자(좌상단 광원 → 우하단) — 모델 밖으로 뻗어 접지감
+    ctx.save(); ctx.translate(p.x+rr*0.42,p.y+rr*0.34); ctx.rotate(-0.5); ctx.scale(1.35,0.46);
+    const cs=ctx.createRadialGradient(0,0,rr*0.2,0,0,rr*1.15);
+    cs.addColorStop(0,'rgba(0,0,0,.5)'); cs.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=cs; ctx.beginPath(); ctx.arc(0,0,rr*1.15,0,6.283); ctx.fill(); ctx.restore();
+    // 3) 진영색 림(은은) — 소속 표시
+    ctx.globalAlpha=.42; ctx.strokeStyle=glow; ctx.lineWidth=Math.max(1.2,2.4*scale);
+    ctx.beginPath(); ctx.ellipse(p.x,p.y,rr*0.86,rr*0.4,0,0,6.283); ctx.stroke(); ctx.globalAlpha=1;
     // 라벨
     ctx.font='800 11px Rajdhani,"Apple SD Gothic Neo",sans-serif'; ctx.textAlign='center';
     ctx.lineWidth=3; ctx.strokeStyle='rgba(0,0,0,.72)'; ctx.strokeText(label,p.x,p.y+rr+14);
@@ -8580,11 +8582,21 @@ function strikeRenderEcon(){ const S=STK; if(!S) return; const me=S.me; const se
 const STRIKE_BUILDABLE=[ {id:'marine',name:'마린',ico:'🔫',cost:100}, {id:'goliath',name:'골리앗',ico:'🤖',cost:220}, {id:'tank',name:'탱크',ico:'🛡',cost:350} ];
 function strikeRenderBuild(){ const el=document.getElementById('stBuildPalette'); if(!el) return;
   el.innerHTML=STRIKE_BUILDABLE.map(u=>`<div class="stUnitCard" onclick="strikeToast('곧 추가: 타일에 ${u.name} 생산 건물 배치')"><div class="uc">${u.ico}</div>${u.name}<div class="ucCost">⛁${u.cost}</div></div>`).join(''); }
-function strikeRenderSpec(){ const el=document.getElementById('plGrid'); if(!el) return;   // nemo 하단 관전 그리드 재사용
+// 관전: nemo .plbtn/.plGrid(4×2) 재사용. 팀 1-4(아군 파랑) vs 5-8(적군 빨강). 빈 자리=잠금
+function strikeRenderSpec(){ const g=document.getElementById('plGrid'); if(!g) return;
   const pp=document.getElementById('playerProfile'); if(pp) pp.style.display='none';
-  const cell=(bg,bd,ico,nm,sub,sc)=>`<div style="flex:1;min-width:80px;padding:10px 8px;border-radius:10px;text-align:center;cursor:pointer;background:${bg};border:1px solid ${bd};font-weight:800;font-size:12px;color:#dfe7f2" onclick="strikeToast('${sc}')"><div style="font-size:20px">${ico}</div>${nm}<div style="font-size:10px;color:${sub}">${sc}</div></div>`;
-  el.style.display='flex'; el.style.gap='7px';
-  el.innerHTML=cell('rgba(30,60,90,.6)','#7fe0ff','🛡','나','#9fd0ff','내 진영')+cell('rgba(60,24,28,.6)','rgba(255,90,90,.4)','🌑','컴퓨터','#ff8a8a','암흑 시야'); }
+  g.style.display=''; g.style.gap=''; g.innerHTML='';
+  const present={1:(typeof myNick==='function'?myNick():'나'), 5:'컴퓨터'};   // vs AI: 나=1P, 컴퓨터=5P(적팀)
+  for(let n=1;n<=8;n++){ const here=present[n]!=null, enemy=n>=5, isMine=(n===1);
+    const el=document.createElement('div');
+    el.className='plbtn'+(isMine?' lock':'')+(!here?' off':'');
+    el.style.setProperty('--pc', enemy?'#ff5c5c':'#3a7bff');
+    const st = isMine ? (escHtml(present[1])+' 🔒') : (!here ? '빈 자리' : (enemy ? '컴퓨터 🌑' : escHtml(present[n])));
+    el.innerHTML='<div class="plnum">'+n+'P</div><div class="plst">'+st+'</div>';
+    if(here && enemy) el.onclick=()=>strikeToast('적 진영은 암흑 시야입니다 🌑');
+    else if(here && !isMine) el.onclick=()=>strikeToast('아군 진영 보기 (준비 중)');
+    g.appendChild(el);
+  } }
 function strikeToast(msg){ if(typeof lobbyToast==='function') lobbyToast(msg); else if(typeof toast==='function') toast(msg); }
 
 // ── 입력(전장 패닝/핀치줌/선택) ──
