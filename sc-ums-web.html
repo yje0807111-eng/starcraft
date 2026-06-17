@@ -8465,12 +8465,18 @@ function strikeDrawMain(){ const S=STK; if(!S) return; const cvEl=document.getEl
   const scale=Math.min(W,H)/S.viewWorld;
   const w2s=(x,y)=>({x:(x-S.cam.x)*scale+W/2, y:(y-S.cam.y)*scale+H/2});
   strikeDrawGround(ctx,W,H,S,scale);
-  // 길 먼저 → 그 위에 메인 신전 사각 플랫폼을 덮어 길 끝이 테두리에 '딱' 떨어지게
   const nodes=[S.me.base, S.me.sec, S.central, S.ai.sec, S.ai.base].map(o=>w2s(o.x,o.y));
-  strikeDrawLane(ctx, nodes, scale, S, W, H);
-  // 메인 신전 주변: 프로토스 타일 정사각 소환 구역(길 끝을 깔끔히 감쌈)
+  // 메인 정사각 플랫폼을 길 '아래'에 깔기 → 길이 위로 자연스럽게 올라타 하나의 타일처럼 연결
   strikeDrawSpawnZone(ctx,w2s,scale,S,W,H,S.me.base.x,S.me.base.y,1750,1750,'#7fe0ff');
   strikeDrawSpawnZone(ctx,w2s,scale,S,W,H,S.ai.base.x,S.ai.base.y,1750,1750,'#ff9aa6');
+  // 길(플랫폼 위로 연결) — 화살표는 따로(아래에서 맨 위에 그림)
+  strikeDrawLane(ctx, nodes, scale, S, W, H);
+  // 유닛 생성 패드: 각 메인신전 왼쪽위/오른쪽아래(바닥 타일 살짝 어둡게)
+  const SP=560, PS=560;
+  strikeDrawSpawnPad(ctx,w2s,scale,S.me.base.x-SP,S.me.base.y-SP,PS); strikeDrawSpawnPad(ctx,w2s,scale,S.me.base.x+SP,S.me.base.y+SP,PS);
+  strikeDrawSpawnPad(ctx,w2s,scale,S.ai.base.x-SP,S.ai.base.y-SP,PS); strikeDrawSpawnPad(ctx,w2s,scale,S.ai.base.x+SP,S.ai.base.y+SP,PS);
+  // 진격 화살표(길·플랫폼 위 모두 보이게 — 정사각에 안 가림)
+  strikeLaneArrows(ctx, nodes, scale, 2);
   // 중립 중앙 신전(금색) → 2차(진영색) → 메인(진영색, 큼). 뒤→앞 순서로 그림
   // 신전: 3D 모델 로드 시 사이드 링+라벨만(본체는 strikeSync3D가 M3D로), 미로드 시 2D 폴백
   const _tmpl=function(o,modelId,col,glow,wr,label,labelCol){
@@ -8549,12 +8555,10 @@ function strikeDrawLane(ctx, pts, scale, S, W, H){ if(!pts||pts.length<2) return
   const img=STRIKE_PAVE; let pat=null;
   if(img&&img.complete&&img.naturalWidth&&S){ pat=ctx.createPattern(img,'repeat');
     if(pat&&pat.setTransform){ const tilePx=Math.max(8,300*scale), s=tilePx/img.naturalWidth, ox=(0-S.cam.x)*scale+W/2, oy=(0-S.cam.y)*scale+H/2; pat.setTransform(new DOMMatrix([s,0,0,s,ox,oy])); } }
-  const stroke=pat||'rgba(150,140,120,.5)', base=Math.max(24,1320*scale);
-  path(); ctx.globalAlpha=0.4; ctx.strokeStyle=stroke; ctx.lineWidth=base; ctx.stroke();        // 외곽(양옆 은은)
-  path(); ctx.globalAlpha=1;   ctx.strokeStyle=stroke; ctx.lineWidth=base*0.82; ctx.stroke();    // 솔리드 포장 코어
-  path(); ctx.globalAlpha=0.18;ctx.strokeStyle='rgba(18,26,34,1)'; ctx.lineWidth=base*0.82; ctx.stroke();  // 톤 다운(통일)
-  ctx.globalAlpha=1;
-  strikeLaneArrows(ctx, pts, scale, 2);
+  const stroke=pat||'rgba(150,140,120,.5)', base=Math.max(24,1320*scale), edge=Math.max(3,9*scale);
+  path(); ctx.strokeStyle='rgba(10,16,20,.88)'; ctx.lineWidth=base; ctx.stroke();              // 어두운 테두리(정사각과 동일 seam)
+  path(); ctx.strokeStyle=stroke; ctx.lineWidth=base-edge; ctx.stroke();                        // 포장 코어
+  path(); ctx.globalAlpha=0.16; ctx.strokeStyle='rgba(18,26,34,1)'; ctx.lineWidth=base-edge; ctx.stroke(); ctx.globalAlpha=1;  // 톤 통일
   ctx.restore(); }
 // 바닥 진격 화살표 — 넓게 벌어진 V, 띄엄띄엄, 매우 은은
 function strikeLaneArrows(ctx, pts, scale, centerIdx){ const gap=Math.max(48,500*scale), size=Math.max(6,80*scale);
@@ -8596,8 +8600,14 @@ function strikeDrawSpawnZone(ctx,w2s,scale,S,W,H,wx,wy,wWorld,hWorld,glow){
   for(let ix=x+gx; ix<x+pw; ix+=gx){ ctx.beginPath(); ctx.moveTo(ix,y); ctx.lineTo(ix,y+ph); ctx.stroke(); }
   for(let iy=y+gx; iy<y+ph; iy+=gx){ ctx.beginPath(); ctx.moveTo(x,iy); ctx.lineTo(x+pw,iy); ctx.stroke(); }
   ctx.restore();   // unclip
-  _strkRR(ctx,x,y,pw,ph,rad); ctx.globalAlpha=.5; ctx.strokeStyle=glow; ctx.lineWidth=Math.max(1.5,3*scale); ctx.stroke(); ctx.globalAlpha=1;
+  const edge=Math.max(3,9*scale);
+  _strkRR(ctx,x,y,pw,ph,rad); ctx.strokeStyle='rgba(10,16,20,.88)'; ctx.lineWidth=edge; ctx.stroke();      // 길과 동일한 어두운 seam
+  _strkRR(ctx,x,y,pw,ph,rad); ctx.globalAlpha=.2; ctx.strokeStyle=glow; ctx.lineWidth=Math.max(1,2*scale); ctx.stroke(); ctx.globalAlpha=1;  // 아주 옅은 진영색
   ctx.restore(); }
+// 유닛 생성 패드 — 메인신전 왼쪽위/오른쪽아래. 바닥 타일을 살짝만 어둡게(자연스럽게)
+function strikeDrawSpawnPad(ctx,w2s,scale,wx,wy,sw){ const c=w2s(wx,wy), s=Math.max(10,sw*scale), x=c.x-s/2, y=c.y-s/2, rad=s*0.12;
+  ctx.save(); _strkRR(ctx,x,y,s,s,rad); ctx.fillStyle='rgba(0,0,0,.2)'; ctx.fill();
+  ctx.strokeStyle='rgba(150,185,225,.15)'; ctx.lineWidth=Math.max(1,1.6*scale); ctx.stroke(); ctx.restore(); }
 // 신전(메인/2차/중립 공용) — 계단식 마름모 3단. worldR로 크기, opt.label 화면 라벨. (추후 3D 모델 교체)
 function strikeDrawTemple(ctx,w2s,scale,wx,wy,col,glow,worldR,opt){ opt=opt||{}; const p=w2s(wx,wy), rr=Math.max(opt.minR||16, worldR*scale);
   ctx.save();
