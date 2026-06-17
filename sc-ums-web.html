@@ -6319,15 +6319,23 @@ const AUTH = { mode:'local', user:null };
 let _sb=null;
 function _lsGet(k,d){ try{ const v=JSON.parse(localStorage.getItem(k)); return v==null?d:v; }catch(e){ return d; } }
 function _lsSet(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
-function sbUser(u){ return { email:u.email, nick:(u.user_metadata&&u.user_metadata.nick)||(u.email||'user').split('@')[0], uid:u.id }; }
+function sbUser(u){ const meta=u.user_metadata||{};
+  const nick = meta.nick || (u.email ? u.email.split('@')[0] : ('게스트'+String(u.id||'').replace(/-/g,'').slice(0,4)));
+  return { email:u.email||null, nick, uid:u.id, anon:!!u.is_anonymous }; }   // 익명 사용자는 이메일 없음 → 게스트 닉 생성
 async function initAuth(){
   if(SUPABASE_CONFIG.url && SUPABASE_CONFIG.anonKey){
     try{
       const m=await import('https://esm.sh/@supabase/supabase-js@2');
       _sb=m.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey); AUTH.mode='supabase';
-      const { data }=await _sb.auth.getSession();   // 자동 로그인: 저장된 세션 복원
+      const { data }=await _sb.auth.getSession();   // 자동 로그인: 저장된 세션 복원(같은 기기 재실행)
       const u=data&&data.session&&data.session.user; AUTH.user = u ? sbUser(u) : null;
-      if(AUTH.user) sbEnsureProfile();   // 기존 계정도 프로필 보정(없으면 생성)
+      if(!AUTH.user){   // 세션 없음(첫 실행/로그아웃) → 익명 계정 자동 생성+로그인(로그인 화면 없이 시작)
+        try{ const r=await _sb.auth.signInAnonymously();
+          if(!r.error && r.data && r.data.user){ AUTH.user=sbUser(r.data.user); }
+          else if(r.error) console.warn('익명 로그인 비활성(대시보드 Anonymous sign-ins 켜기 필요)', r.error.message);
+        }catch(e){ console.warn('익명 로그인 실패', e); }
+      }
+      if(AUTH.user) sbEnsureProfile();   // 기존/신규 계정 프로필 보정(없으면 생성)
       _sb.auth.onAuthStateChange((_e,sess)=>{ AUTH.user = (sess&&sess.user) ? sbUser(sess.user) : null; if(AUTH.user) sbEnsureProfile(); });
       return;
     }catch(e){ console.warn('Supabase 초기화 실패 → 로컬 계정 모드', e); AUTH.mode='local'; }
