@@ -2092,11 +2092,10 @@
         </div>
         <input id="authId" class="authField" type="text" placeholder="아이디 (로그인용 · 영문·숫자 3~16자)" maxlength="16" autocomplete="username" onkeydown="if(event.key==='Enter')authSubmit()">
         <input id="authNick" class="authField hide" type="text" placeholder="닉네임 (게임 내 표시)" maxlength="12" autocomplete="off" onkeydown="if(event.key==='Enter')authSubmit()">
-        <input id="authPw" class="authField" type="password" placeholder="비밀번호 (6자 이상)" autocomplete="current-password" onkeydown="if(event.key==='Enter')authSubmit()">
-        <input id="authPw2" class="authField hide" type="password" placeholder="비밀번호 확인" autocomplete="new-password" onkeydown="if(event.key==='Enter')authSubmit()">
+        <input id="authPw" class="authField" type="password" placeholder="비밀번호 (영문·숫자 6자 이상)" autocomplete="current-password" autocapitalize="off" spellcheck="false" lang="en" oninput="this.value=this.value.replace(/[^\x21-\x7E]/g,'')" onkeydown="if(event.key==='Enter')authSubmit()">
+        <input id="authPw2" class="authField hide" type="password" placeholder="비밀번호 확인" autocomplete="new-password" autocapitalize="off" spellcheck="false" lang="en" oninput="this.value=this.value.replace(/[^\x21-\x7E]/g,'')" onkeydown="if(event.key==='Enter')authSubmit()">
         <div class="authErr" id="authErr"></div>
         <button class="authBtn" id="authBtn" onclick="authSubmit()">로그인</button>
-        <button class="authGuest" onclick="authGuest()">게스트로 시작하기</button>
         <div class="authNote" id="authNote">아이디로 즉시 가입 · 코인·강화는 계정에 저장됩니다</div>
       </div>
     </div>
@@ -6328,14 +6327,8 @@ async function initAuth(){
     try{
       const m=await import('https://esm.sh/@supabase/supabase-js@2');
       _sb=m.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey); AUTH.mode='supabase';
-      const { data }=await _sb.auth.getSession();   // 자동 로그인: 저장된 세션 복원(같은 기기 재실행)
+      const { data }=await _sb.auth.getSession();   // 자동 로그인: 저장된 세션 복원(같은 기기 재실행 — 정식 계정만)
       const u=data&&data.session&&data.session.user; AUTH.user = u ? sbUser(u) : null;
-      if(!AUTH.user){   // 세션 없음(첫 실행/로그아웃) → 익명 계정 자동 생성+로그인(로그인 화면 없이 시작)
-        try{ const r=await _sb.auth.signInAnonymously();
-          if(!r.error && r.data && r.data.user){ AUTH.user=sbUser(r.data.user); }
-          else if(r.error) console.warn('익명 로그인 비활성(대시보드 Anonymous sign-ins 켜기 필요)', r.error.message);
-        }catch(e){ console.warn('익명 로그인 실패', e); }
-      }
       if(AUTH.user){ await sbEnsureProfile(); await sbSyncMetaOnLogin(); }   // 프로필 보정 + 계정 메타(코인) 로드
       _sb.auth.onAuthStateChange((_e,sess)=>{ AUTH.user = (sess&&sess.user) ? sbUser(sess.user) : null; if(AUTH.user) sbEnsureProfile(); });
       return;
@@ -7239,14 +7232,14 @@ function joinByNumber(){ const f=document.getElementById('roomNumField'); if(!f)
   const host=LOBBY_NAMES[Math.floor(Math.random()*LOBBY_NAMES.length)];
   openLobby({num:num, name:'#'+num+' 방', host:host, startCount:1+Math.floor(Math.random()*4), joining:true, visibility:'private', diff:['easy','normal','normal','hard','hell'][Math.floor(Math.random()*5)]}); }
 // 방 만들기 모달
-let _createVis='public', _createDiff='normal';
+let _createVis='public', _createDiff='easy';
 function renderCpDiff(){ const box=document.getElementById('cpDiffBtns'); if(!box) return; box.innerHTML='';
   DIFFICULTY_ORDER.forEach(d=>{ const D=DIFFICULTY[d]; const b=document.createElement('div');
     b.className='moDiffBtn'+(d===_createDiff?' on':''); b.style.setProperty('--dc', DIFF_COLOR[d]||'#fff');
     b.innerHTML='<span class="ddN">'+D.name+'</span><span class="ddC">포인트 ×'+D.coinMult+'</span>';
     b.onclick=()=>setCpDiff(d); box.appendChild(b); }); }
 function setCpDiff(d){ if(!DIFFICULTY[d]) return; _createDiff=d; renderCpDiff(); if(typeof playSfx==='function') playSfx('ui_confirm'); }
-function createRoom(){ const nm=document.getElementById('cpName'); if(nm) nm.value=''; const pw=document.getElementById('cpPw'); if(pw) pw.value=''; setRoomVis('public'); _createDiff='normal'; renderCpDiff();
+function createRoom(){ const nm=document.getElementById('cpName'); if(nm) nm.value=''; const pw=document.getElementById('cpPw'); if(pw) pw.value=''; setRoomVis('public'); _createDiff='easy'; renderCpDiff();
   const cp=document.getElementById('createPanel'); cp.classList.remove('hide'); if(typeof fxPop==='function') fxPop(cp.querySelector('.cpCard')); if(typeof paintIcons==='function') paintIcons(cp); if(nm) nm.focus(); }
 function closeCreate(){ popHide('createPanel'); }
 function setRoomVis(v){ _createVis=v;
