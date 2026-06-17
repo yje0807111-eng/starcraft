@@ -2842,15 +2842,13 @@ const META_BUILDS = {   // 탭(group) → 섹션(sect) 2단 분류. 같은 sect�
   // ── 경제 ──
   credit_gain:   { name:'크레딧 획득', desc:'인게임 크레딧 획득 증가',   start:14, nMax:5, max:8, group:'eco', sect:'자원 획득' },
   energy_gain:   { name:'에너지 획득', desc:'인게임 에너지 획득 증가',   start:14, nMax:5, max:8, group:'eco', sect:'자원 획득' },
-  sell_return:   { name:'판매 회수율', desc:'유닛 판매 회수 비용 +5%/Lv', start:12, nMax:5, max:8, group:'eco', sect:'자원 획득' },
-  energy_draw_bonus:{ name:'에너지 뽑기 강화', desc:'에너지 뽑기 획득 +10%/Lv', start:14, nMax:5, max:8, group:'eco', sect:'자원 획득' },
   start_credit:  { name:'시작 크레딧', desc:'시작 시 크레딧 지급',       start:12, nMax:6, max:9, group:'eco', sect:'시작 자원' },
   start_energy:  { name:'시작 에너지', desc:'시작 시 에너지 지급',       start:12, nMax:6, max:9, group:'eco', sect:'시작 자원' },
-  // ── 생산(뽑기·유닛·자동화) ──
+  start_unit:    { name:'시작 유닛',   desc:'시작 시 기본 유닛 지급',    start:14, nMax:5, max:8, group:'eco', sect:'시작 자원' },
+  start_turret:  { name:'시작 포탑',   desc:'시작 시 가드 타워 1기 배치', start:34, nMax:1, max:1, group:'eco', sect:'시작 자원' },
+  // ── 생산(뽑기·자동화) ──
   gacha_luck:    { name:'고등급 확률', desc:'레전드+ 뽑기 확률 증가',    start:22, nMax:5, max:8, group:'prod', sect:'뽑기' },
-  guaranteed:    { name:'확정 뽑기권', desc:'유닛 확정 뽑기권 지급',     start:16, nMax:5, max:8, group:'prod', sect:'뽑기' },
   gacha_double:  { name:'추가 생산',   desc:'유닛 뽑기 시 6%/Lv 확률로 1기 더', start:22, nMax:5, max:8, group:'prod', sect:'뽑기' },
-  start_unit:    { name:'시작 유닛',   desc:'시작 시 기본 유닛 지급',    start:14, nMax:5, max:8, group:'prod', sect:'유닛' },
   // 자동화 해금(생산 섹션 통합) — 1회 구매로 인게임 on/off 토글 해금 · 가격 높음
   auto_unit:    { name:'자동 유닛 소환',  desc:'유닛 자동 뽑기 토글 해금 (0.33초마다 1기)',          start:150, nMax:1, max:1, group:'prod', sect:'자동화' },
   auto_combine: { name:'자동 조합',       desc:'낮은 등급부터 자동 조합 토글 해금 (레전드까지·0.33초)', start:150, nMax:1, max:1, group:'prod', sect:'자동화' },
@@ -2860,16 +2858,14 @@ const META_BUILDS = {   // 탭(group) → 섹션(sect) 2단 분류. 같은 sect�
   // ── 전투(아군 강화 · 적 약화) — 초월 단계가 종결 강화 역할(엔드 대체) ──
   unit_atk_up:   { name:'공격력 증가',  desc:'유닛 공격력 +5%/Lv',       start:14, nMax:6, max:9, group:'combat', sect:'아군 강화' },
   unit_aspd:     { name:'공격 속도',    desc:'아군 공격 속도 +4%/Lv',     start:16, nMax:6, max:9, group:'combat', sect:'아군 강화' },
-  tower_power:   { name:'타워 강화',    desc:'가드 타워·스파이어 공격력 +20%/Lv', start:14, nMax:5, max:8, group:'combat', sect:'아군 강화' },
-  start_turret:  { name:'시작 포탑',   desc:'시작 시 가드 타워 1기 배치', start:34, nMax:1, max:1, group:'combat', sect:'아군 강화' },
   enemy_hp_down: { name:'적 체력 감소', desc:'내 트랙 적 체력 -3%/Lv',    start:14, nMax:6, max:9, group:'combat', sect:'적 약화' },
   enemy_def_down:{ name:'적 방어 감소', desc:'내 트랙 적 방어력 -1/Lv',   start:14, nMax:6, max:9, group:'combat', sect:'적 약화' },
-  enemy_slow:    { name:'적 이속 감소', desc:'내 트랙 적 이동속도 -3%/Lv', start:12, nMax:6, max:9, group:'combat', sect:'적 약화' },
   // ── 전체 강화(팀 공유 · 비쌈) ──
   team_atk:      { name:'전체 공격력',   desc:'모든 플레이어 유닛 공격력 +4%/Lv',  start:38, nMax:5, max:8, group:'team', sect:'팀 강화' },
+  team_aspd:     { name:'전체 공격속도', desc:'모든 플레이어 공격 속도 +3%/Lv',     start:38, nMax:5, max:8, group:'team', sect:'팀 강화' },
   team_credit:   { name:'전체 시작 크레딧',desc:'모든 플레이어 시작 크레딧 지급',start:32, nMax:5, max:8, group:'team', sect:'팀 강화' },
   team_enemy_hp: { name:'전체 적 체력',  desc:'모든 플레이어 적 체력 -2.5%/Lv', start:38, nMax:5, max:8, group:'team', sect:'팀 적 약화' },
-  team_enemy_slow:{name:'전체 적 이속',  desc:'모든 플레이어 적 이동속도 -2.5%/Lv', start:32, nMax:5, max:8, group:'team', sect:'팀 적 약화' },
+  team_enemy_def:{ name:'전체 적 방어', desc:'모든 플레이어 적 방어력 -1/Lv',  start:38, nMax:5, max:8, group:'team', sect:'팀 적 약화' },
   // ── 보스(공용·개인) ──
   boss_hp_down:  { name:'보스 체력 감소', desc:'월드 보스 체력 -3%/Lv',      start:12, nMax:6, max:9, group:'coop', sect:'월드 보스' },
   boss_atk_up:   { name:'보스 기여딜 증가',desc:'보스방 파견 유닛의 보스 데미지 +5%/Lv', start:12, nMax:6, max:9, group:'coop', sect:'월드 보스' },
@@ -2904,7 +2900,7 @@ function saveMeta(){ try{ localStorage.setItem(metaKey(), JSON.stringify(PLAYER_
 function buildLevel(id){ return (PLAYER_META.buildLevels && PLAYER_META.buildLevels[id]) || 0; }
 // 현재 빌드 레벨 → 게임 효과(개인 적용). 게임 시작 시 G.metaB에 캐시.
 //  team_* = 전체 강화: 협동에선 파티 중 '최고 레벨'이 모두에게 적용(인원수 인플레 방지). 솔로면 내 레벨.
-const _TEAM_IDS=['team_atk','team_enemy_hp','team_enemy_slow','team_credit'];
+const _TEAM_IDS=['team_atk','team_aspd','team_enemy_hp','team_enemy_def','team_credit'];
 function teamLevel(id){ let mx=buildLevel(id);
   const ix=_TEAM_IDS.indexOf(id);
   if(ix>=0 && typeof G!=='undefined' && G && G.coopTeamB){ for(const k in G.coopTeamB){ const v=(G.coopTeamB[k]||[])[ix]||0; if(v>mx) mx=v; } }
@@ -2915,10 +2911,10 @@ function metaBonus(){ const L=id=>metaEffLv(id), T=id=>teamEffLv(id);   // 효�
     creditMul:   1 + L('credit_gain')*0.08,
     energyMul:   1 + L('energy_gain')*0.08,
     atkMul:      1 + L('unit_atk_up')*0.05 + T('team_atk')*0.04,
-    aspdMul:     Math.max(0.45, 1 - L('unit_aspd')*0.04),   // 공격 쿨다운 배율(낮을수록 빠름)
+    aspdMul:     Math.max(0.42, 1 - L('unit_aspd')*0.04 - T('team_aspd')*0.03),   // 공격 쿨다운 배율(낮을수록 빠름) + 팀 공속
     enemyHpMul:  Math.max(0.3, 1 - L('enemy_hp_down')*0.03 - T('team_enemy_hp')*0.025),
-    enemyArmor:  L('enemy_def_down')*1,
-    enemySlowMul:Math.max(0.4, 1 - L('enemy_slow')*0.03 - T('team_enemy_slow')*0.025),
+    enemyArmor:  L('enemy_def_down')*1 + T('team_enemy_def')*1,
+    enemySlowMul:1,   // 적 이속 감소 업그레이드 제거(개인·팀) → 배율 고정
     unitCap:     0,   // 최대 유닛은 100 고정(증가 업그레이드 제거)
     startCredit: L('start_credit')*20 + T('team_credit')*25,
     startEnergy: L('start_energy')*10,
