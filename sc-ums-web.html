@@ -5357,9 +5357,9 @@ function renderBldgs(viewId,list,posArr,selId,onSel){ const v=document.getElemen
     const svg=has3d?'':(BLDG_SVG[b.id]?('<svg viewBox="0 0 24 24" width="34" height="34">'+BLDG_SVG[b.id]+'</svg>'):b.icon);
     const el=document.createElement('div'); el.className='bldg'+(b.id===selId?' sel':'')+(b.meta?' metaBeacon':'');
     el.style.left=(p.x*100)+'%'; el.style.top=(p.y*100)+'%'; el.style.setProperty('--bc',col);
-    const visual = b.meta
-      ? '<div class="bbeacon"><div class="bbRing"></div><div class="bbCore"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5l5.3 5.3h-3.1v5h-4.4v-5H6.7z"/><path d="M7 18.5h10"/></svg></div></div>'   // 포인트 연구소 = 비콘 패드
-      : '<div class="bframe'+(has3d?' nofig':'')+'" style="color:'+col+'">'+svg+'</div>';
+    const visual = (b.meta && !has3d)
+      ? '<div class="bbeacon"><div class="bbRing"></div><div class="bbCore"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5l5.3 5.3h-3.1v5h-4.4v-5H6.7z"/><path d="M7 18.5h10"/></svg></div></div>'   // 포인트 연구소 = 비콘 패드(3D 모델 미로드 시 폴백)
+      : '<div class="bframe'+(has3d?' nofig':'')+'" style="color:'+col+'">'+svg+'</div>';   // 3D 모델(command_center) 로드 시 모델 표시
     el.innerHTML=visual+'<div class="bname" style="color:'+col+'">'+b.name+'</div><div class="bsub">'+b.wname+'</div>';
     el.onclick=()=>onSel(b.id); v.appendChild(el);
   });
@@ -8534,7 +8534,7 @@ import { RoomEnvironment } from 'https://esm.sh/three@0.160.0/examples/jsm/envir
 
 const MODELS={ marine:'marine.glb', goliath:'goliath.glb', ghost:'ghost.glb', archon:'archon.glb', dragoon:'dragoon.glb', hydra:'hydralisk.glb', observer:'observer.glb', overlord:'overlord.glb',
   turret:'buildings/turret.glb', photon:'buildings/photon_cannon.glb',
-  acad:'buildings/academy.glb', arm:'buildings/armory.glb', forge:'buildings/forge.glb', evo:'buildings/evolution_chamber.glb',
+  acad:'buildings/academy.glb', arm:'buildings/armory.glb', forge:'buildings/forge.glb', evo:'buildings/evolution_chamber.glb', pointlab:'command_center.glb',
   citizen:'civilian.glb',  // 아군/적 + 방어구조물 + 업그레이드 건물 + 유닛뽑기 시민(셀렉터)
   // 신규 가챠 유닛 전용 모델(전설/초월)
   machinegun:'machinegun.glb', tank:'tank.glb', blade:'blade.glb', skyguard:'skyguard.glb', skydancer:'skydancer.glb', matron:'matron.glb', thornqueen:'thornqueen.glb',
@@ -8566,7 +8566,7 @@ const STRUCT_RECOIL=0.18; // 고정 구조물(터렛/포토) 발사 시 뒤로 �
 const RELOAD_DIP=0.5;     // 장전 시 총 내리는 양(모델 단위)
 const RELOAD_TILT=0.9;    // 장전 시 총구 아래로 기울이는 각(라디안)
 const RELOAD_WIN=0.2;     // 장전(총 내림) 구간 폭 — 작을수록 들고 조준하는 시간이 김
-const SCALE={ marine:12, goliath:16, ghost:12, archon:18, dragoon:14, hydra:14, observer:13, overlord:22, turret:25, photon:25, acad:19, arm:19, forge:19, evo:19, citizen:13,
+const SCALE={ marine:12, goliath:16, ghost:12, archon:18, dragoon:14, hydra:14, observer:13, overlord:22, turret:25, photon:25, acad:19, arm:19, forge:19, evo:19, pointlab:19, citizen:13,
   racer:20, tank:22, blade:18, thornqueen:20, skyguard:17, skydancer:17 };  // 유닛별 화면 스케일. 초월 비행체(템페스트·스카이댄서)=대형
 const COLORS={ marine:0x2e9bff, goliath:0xff9418, ghost:0x6cf024, dragoon:0xb070ff, hydra:0x9fd356 };  // (구)타입별 색 — 현재는 플레이어색으로 통일(아래 PLAYER_COLOR)
 // 플레이어 색(스타크래프트식) — 한 플레이어의 모든 유닛·구조물을 같은 색으로 통일(아군 구별용)
