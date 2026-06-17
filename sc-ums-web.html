@@ -1301,6 +1301,18 @@
   /* ===================== 신규 앱 셸: 오프닝 / 로그인 / 유즈맵 / 모드선택 ===================== */
   .appScreen{position:absolute;inset:0;display:flex;flex-direction:column;z-index:47}
   .appScreen.hide{display:none}
+  /* 출격! 라인 워(직스) 화면 */
+  #strikeScreen{position:absolute;inset:0;z-index:40;background:#070b12}
+  #strikeScreen.hide{display:none}
+  #cvStrike{position:absolute;inset:0;width:100%;height:100%;display:block}
+  #stHud{position:absolute;inset:0;pointer-events:none;font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif}
+  #stHud .stTop{position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);left:10px;right:10px;display:flex;justify-content:space-between;align-items:center;color:#dfe7f2;font-weight:800;font-size:12px;text-shadow:0 2px 4px #000}
+  #stHud .stTop b{color:#fff;font-family:'Rajdhani',sans-serif}
+  #stHud .stBase.me b{color:#7fe0ff}#stHud .stBase.ai b{color:#ff8a8a}
+  #stHud .stGold{font-size:14px;color:#ffd24a}#stHud .stGold b{color:#ffe27a}
+  #stHud .stCycle{position:absolute;top:calc(env(safe-area-inset-top,0px) + 32px);left:50%;transform:translateX(-50%);color:#bfe0ff;font-size:11px;font-weight:800;text-shadow:0 1px 3px #000}
+  #stBack{position:absolute;left:10px;bottom:12px;pointer-events:auto;padding:7px 12px;border-radius:7px;cursor:pointer;font-family:inherit;font-weight:800;font-size:12px;color:#e8eef6;background:rgba(20,24,32,.85);border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(4px)}
+  #stBack:active{transform:translateY(1px)}
   /* ===== 전환/팝업 FX (우주전쟁 HUD) ===== */
   /* 화면 전환: 홀로그램 디졸브(블러+밝기에서 또렷해짐) — opacity는 건드리지 않음(뒤 게임 보드 비침 방지, 로비 배경 유지) */
   .scrIn{animation:scrIn .3s ease-out}
@@ -1986,6 +1998,16 @@
     <div id="autoFab" class="hide" onclick="toggleAutoPopup(event)" title="자동 설정"><span class="afTx">자동설정</span></div>
     <div id="autoPopup" class="hide"></div>
 
+    <!-- 출격! 라인 워(직스) 화면 — 독립 오버레이(자체 렌더 루프) -->
+    <div id="strikeScreen" class="hide">
+      <canvas id="cvStrike"></canvas>
+      <div id="stHud">
+        <div class="stTop"><span class="stBase me">🛡 내 본진 <b id="stMeHp">0</b></span><span class="stGold">⛁ <b id="stGold">0</b></span><span class="stBase ai">적 본진 <b id="stAiHp">0</b> 💀</span></div>
+        <div class="stCycle">출격까지 <b id="stCycle">0.0</b>s</div>
+        <button id="stBack" onclick="strikeEnd()">← 나가기</button>
+      </div>
+    </div>
+
     <div id="toast"></div>
     <!-- #ov(승/패 결과)는 #phone 직속으로 이동 — 게임 전체(하단 콘솔 포함)를 덮기 위함 -->
     <!-- 멀티플레이 대기실(로비) -->
@@ -2620,7 +2642,7 @@ const USEMAPS={
   sunken:{ id:'sunken', name:'성큰타워 디펜스', desc:'성큰 콜로니로 길목을 막는 타워 디펜스', players:'1-8', pop:8730, icon:'🌿', rec:true,  isNew:false, playable:false, cfg:{} },
   marine:{ id:'marine', name:'마린 키우기',     desc:'마린을 성장시켜 최강으로 키우는 RPG', players:'1-6', pop:7610, icon:'🔫', rec:true,  isNew:false, playable:false, cfg:{} },
   temple:{ id:'temple', name:'신전 뿌수기',     desc:'상대 신전을 먼저 파괴하는 공성전',     players:'2-8', pop:6240, icon:'🏛️', rec:false, isNew:true,  playable:false, cfg:{} },
-  cpu:   { id:'cpu',    name:'출격! 라인 워', desc:'건물에 유닛을 배정해 출격시켜 적 본진을 부수는 경제 전투(컴퓨터가 싸운다 류)', players:'1-8', pop:5180, icon:'⚔️', rec:true, isNew:true,  playable:false,
+  cpu:   { id:'cpu',    name:'출격! 라인 워', desc:'건물에 유닛을 배정해 출격시켜 적 본진을 부수는 경제 전투(컴퓨터가 싸운다 류)', players:'1-8', pop:5180, icon:'⚔️', rec:true, isNew:true,  playable:true,
           cfg:{ mode:'strike', cycleTime:6, heroAt:10, baseHp:2500, startGold:200, goldPerSec:8, world:2400 } },
   photon:{ id:'photon', name:'포토겹치기',      desc:'포톤 캐논을 겹쳐 쌓아 버티기',       players:'1-4', pop:4090, icon:'🔵', rec:false, isNew:false, playable:false, cfg:{} },
   tmp1:  { id:'tmp1',   name:'랜덤 디펜스 (임시)', desc:'임시 등록 유즈맵',               players:'1-8', pop:2600, icon:'🎲', rec:false, isNew:true,  playable:false, cfg:{} },
@@ -7271,6 +7293,7 @@ function submitPw(){ if(!_pwRoom) return; const f=document.getElementById('pwFie
   else { if(typeof playSfx==='function') playSfx('ui_denied'); document.getElementById('pwErr').textContent='비밀번호가 일치하지 않습니다.'; if(f){ f.value=''; f.focus(); } } }
 function startGameNow(activePlayers, myNum, names){
   MAP=(typeof _selMap!=='undefined' && _selMap && USEMAPS[_selMap.id]) || USEMAPS.nemo;   // 현재 유즈맵 확정(엔진은 mapCfg로 설정 참조)
+  if(mapCfg('mode')==='strike'){ strikeStart(); return; }   // 직스 모드 → 독립 모듈(nemo 우회). (3D 에셋은 추후 단계에서 loadMapModels)
   if(typeof bgmStop==='function') bgmStop();   // 게임 진입 시 로비 BGM 정지
   G=newGame(); G.phase='playing'; G.difficulty=_selDiff; G.roundPhase='prep'; G.roundTime=mapCfg('prepTime',PREP_TIME); G.toSpawn=0;
   G.loading=true;   // 로딩(카운트다운/준비) 동안 게임 시간 정지 → 시작하면 10초부터
@@ -8243,6 +8266,86 @@ function loop(now){
 }
 window.addEventListener('resize',()=>{ if(G.tab==='Main'){drawMain();placeMergeZone();} if(G.tab==='Unit'){drawProd();renderClock();} if(G.tab==='Upgrade')drawUpg(); if(G.tab==='Players')drawPlayer(); });
 window.addEventListener('load',()=>{ drawMain(); placeMergeZone(); updateHud(); bootApp(); initChat(); if(typeof _sfxInit==='function') _sfxInit(); if(typeof buildGachaDex==='function') buildGachaDex(); requestAnimationFrame(loop); });
+
+// ════════════════════════════════════════════════════════════════
+// 출격! 라인 워(직스) — 독립 게임플레이 모듈. nemo 엔진과 분리(자체 상태 STK + 자체 RAF 루프).
+// Increment 1: 진입/이탈 + 빈 월드 + 팔로우 카메라 + 본진 + 골드/주기 표시
+// ════════════════════════════════════════════════════════════════
+let STK=null, _stkRAF=null, _stkLast=0;
+function strikeNewState(){ const W=mapCfg('world',2400), hp=mapCfg('baseHp',2500);
+  return { active:true, t:0, over:null,
+    world:W, cycleTime:mapCfg('cycleTime',6), cycleT:mapCfg('cycleTime',6),
+    gold:mapCfg('startGold',200), goldRate:mapCfg('goldPerSec',8),
+    me:{ base:{x:W*0.13,y:W*0.87}, hp:hp, max:hp, units:[], buildings:[] },   // 좌하단
+    ai:{ base:{x:W*0.87,y:W*0.13}, hp:hp, max:hp, units:[], buildings:[] },   // 우상단
+    cam:{x:W/2,y:W/2}, viewWorld:1700, cw:0, ch:0 };
+}
+function strikeStart(){ if(typeof bgmStop==='function') bgmStop();
+  STK=strikeNewState();
+  const sc=document.getElementById('strikeScreen'); if(sc) sc.classList.remove('hide');
+  if(typeof setInGame==='function') setInGame(true);
+  _strikeResize();
+  _stkLast=performance.now(); if(_stkRAF) cancelAnimationFrame(_stkRAF); _stkRAF=requestAnimationFrame(strikeLoop);
+  if(typeof playSfx==='function') playSfx('game_start'); }
+function strikeEnd(){ if(_stkRAF){ cancelAnimationFrame(_stkRAF); _stkRAF=null; } if(STK) STK.active=false; STK=null;
+  const sc=document.getElementById('strikeScreen'); if(sc) sc.classList.add('hide');
+  if(typeof playSfx==='function') playSfx('ui_close');
+  if(typeof openMapSelect==='function') openMapSelect(); }
+function strikeLoop(now){ if(!STK||!STK.active){ _stkRAF=null; return; }
+  const dt=Math.min((now-_stkLast)/1000, 0.05); _stkLast=now;
+  strikeStep(dt); strikeDraw(); strikeHud();
+  _stkRAF=requestAnimationFrame(strikeLoop); }
+// 교전 핵심 지점(양측 최전선의 중간) — 유닛 없으면 월드 중앙
+function strikeFocus(){ const S=STK; if(!S) return {x:0,y:0};
+  const mf=S.me.units.length?S.me.units.reduce((a,u)=>(u.x+u.y)<(a.x+a.y)?u:a):null;   // 내 최전선(적 방향=좌상단 쪽 작은 x+y)
+  const af=S.ai.units.length?S.ai.units.reduce((a,u)=>(u.x+u.y)>(a.x+a.y)?u:a):null;   // 적 최전선(내 방향=큰 x+y)
+  if(mf&&af) return {x:(mf.x+af.x)/2, y:(mf.y+af.y)/2};
+  if(mf) return {x:mf.x,y:mf.y}; if(af) return {x:af.x,y:af.y};
+  return {x:S.world/2, y:S.world/2}; }
+function strikeStep(dt){ const S=STK; if(!S) return; S.t+=dt;
+  S.gold += S.goldRate*dt;
+  S.cycleT -= dt; if(S.cycleT<=0){ S.cycleT += S.cycleTime; /* Increment 2: 출격 스폰 */ }
+  // 카메라: 교전 지점으로 부드럽게
+  const f=strikeFocus(), k=Math.min(1,dt*2.5);
+  S.cam.x += (f.x-S.cam.x)*k; S.cam.y += (f.y-S.cam.y)*k;
+}
+function _strikeResize(){ const cv=document.getElementById('cvStrike'); if(!cv||!STK) return;
+  const dpr=Math.min(window.devicePixelRatio||1,2), cw=cv.clientWidth||window.innerWidth, ch=cv.clientHeight||window.innerHeight;
+  cv.width=Math.round(cw*dpr); cv.height=Math.round(ch*dpr); STK.cw=cw; STK.ch=ch; STK._dpr=dpr; }
+function strikeDraw(){ const S=STK, cv=document.getElementById('cvStrike'); if(!S||!cv) return;
+  const ctx=cv.getContext('2d'); ctx.setTransform(S._dpr,0,0,S._dpr,0,0);
+  const cw=S.cw, ch=S.ch, scale=Math.min(cw,ch)/S.viewWorld;
+  const w2s=(x,y)=>({x:(x-S.cam.x)*scale+cw/2, y:(y-S.cam.y)*scale+ch/2});
+  // 배경
+  ctx.fillStyle='#070b12'; ctx.fillRect(0,0,cw,ch);
+  // 월드 그리드(이동 체감)
+  const step=200; ctx.strokeStyle='rgba(90,130,180,.10)'; ctx.lineWidth=1; ctx.beginPath();
+  const x0=Math.floor((S.cam.x-cw/2/scale)/step)*step, x1=S.cam.x+cw/2/scale;
+  const y0=Math.floor((S.cam.y-ch/2/scale)/step)*step, y1=S.cam.y+ch/2/scale;
+  for(let x=x0;x<=x1;x+=step){ const a=w2s(x,y0), b=w2s(x,y1); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); }
+  for(let y=y0;y<=y1;y+=step){ const a=w2s(x0,y), b=w2s(x1,y); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); }
+  ctx.stroke();
+  // 대각 라인(내 본진→적 본진)
+  const mp=w2s(S.me.base.x,S.me.base.y), ap=w2s(S.ai.base.x,S.ai.base.y);
+  ctx.strokeStyle='rgba(120,160,220,.18)'; ctx.lineWidth=Math.max(2,90*scale); ctx.beginPath(); ctx.moveTo(mp.x,mp.y); ctx.lineTo(ap.x,ap.y); ctx.stroke();
+  // 본진 2개
+  strikeDrawBase(ctx,w2s,scale,S.me,'#3a7bff','#7fe0ff', '내 본진');
+  strikeDrawBase(ctx,w2s,scale,S.ai,'#ff3b54','#ff9aa6', '적 본진');
+}
+function strikeDrawBase(ctx,w2s,scale,side,col,glow,label){ const p=w2s(side.base.x,side.base.y), r=Math.max(14,150*scale);
+  ctx.save();
+  ctx.shadowColor=glow; ctx.shadowBlur=18; ctx.fillStyle=col;
+  ctx.beginPath(); ctx.moveTo(p.x,p.y-r); ctx.lineTo(p.x+r,p.y); ctx.lineTo(p.x,p.y+r); ctx.lineTo(p.x-r,p.y); ctx.closePath(); ctx.fill();
+  ctx.shadowBlur=0; ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=2; ctx.stroke();
+  // HP 바
+  const bw=r*2.0, bh=Math.max(5,10*scale), bx=p.x-bw/2, by=p.y-r-bh-6, hpR=Math.max(0,side.hp/side.max);
+  ctx.fillStyle='rgba(0,0,0,.55)'; ctx.fillRect(bx-1,by-1,bw+2,bh+2);
+  ctx.fillStyle=hpR>.5?'#46f06a':hpR>.25?'#ffd24a':'#ff5c5c'; ctx.fillRect(bx,by,bw*hpR,bh);
+  ctx.restore(); }
+function strikeHud(){ const S=STK; if(!S) return;
+  const set=(id,v)=>{ const e=document.getElementById(id); if(e&&e.textContent!=v) e.textContent=v; };
+  set('stMeHp', Math.ceil(S.me.hp)); set('stAiHp', Math.ceil(S.ai.hp)); set('stGold', Math.floor(S.gold)); set('stCycle', S.cycleT.toFixed(1)); }
+window.addEventListener('resize', ()=>{ if(STK&&STK.active) _strikeResize(); });
 </script>
 
 <!-- 유닛 3D 모델(Three.js) — assets/models/*.glb(마린/골리앗/고스트 + 마린총)를 WebGL로 렌더. 애니메이션은 코드로 구현(숨쉬기/공격기울임/사망), 가장 가까운 적 방향 자동 회전 -->
