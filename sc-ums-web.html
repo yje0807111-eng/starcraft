@@ -2090,14 +2090,13 @@
           <button class="authSegBtn on" id="segLogin" onclick="authMode('login')">로그인</button>
           <button class="authSegBtn" id="segSignup" onclick="authMode('signup')">회원가입</button>
         </div>
-        <input id="authNick" class="authField hide" type="text" placeholder="닉네임" maxlength="12" autocomplete="off">
-        <input id="authEmail" class="authField" type="email" placeholder="이메일" autocomplete="username" onkeydown="if(event.key==='Enter')authSubmit()">
-        <input id="authPw" class="authField" type="password" placeholder="비밀번호 (4자 이상)" autocomplete="current-password" onkeydown="if(event.key==='Enter')authSubmit()">
+        <input id="authId" class="authField" type="text" placeholder="아이디 (영문·숫자 3~16자)" maxlength="16" autocomplete="username" onkeydown="if(event.key==='Enter')authSubmit()">
+        <input id="authPw" class="authField" type="password" placeholder="비밀번호 (6자 이상)" autocomplete="current-password" onkeydown="if(event.key==='Enter')authSubmit()">
         <input id="authPw2" class="authField hide" type="password" placeholder="비밀번호 확인" autocomplete="new-password" onkeydown="if(event.key==='Enter')authSubmit()">
         <div class="authErr" id="authErr"></div>
         <button class="authBtn" id="authBtn" onclick="authSubmit()">로그인</button>
         <button class="authGuest" onclick="authGuest()">게스트로 시작하기</button>
-        <div class="authNote" id="authNote">로컬 계정 모드 · Supabase 키 등록 시 실제 인증으로 전환</div>
+        <div class="authNote" id="authNote">아이디로 즉시 가입 · 코인·강화는 계정에 저장됩니다</div>
       </div>
     </div>
 
@@ -2869,7 +2868,8 @@ function loadMeta(){ try{ const raw=localStorage.getItem(metaKey());
   PLAYER_META = raw ? Object.assign(defaultMeta(), JSON.parse(raw)) : defaultMeta();
   if(!PLAYER_META.buildLevels) PLAYER_META.buildLevels={}; }catch(e){ PLAYER_META=defaultMeta(); }
   return PLAYER_META; }
-function saveMeta(){ try{ localStorage.setItem(metaKey(), JSON.stringify(PLAYER_META)); }catch(e){} }
+function saveMeta(){ try{ localStorage.setItem(metaKey(), JSON.stringify(PLAYER_META)); }catch(e){}
+  if(typeof sbSaveMetaDebounced==='function') sbSaveMetaDebounced(); }   // 로컬 + 계정(서버) 동시 저장
 function buildLevel(id){ return (PLAYER_META.buildLevels && PLAYER_META.buildLevels[id]) || 0; }
 // 현재 빌드 레벨 → 게임 효과(개인 적용). 게임 시작 시 G.metaB에 캐시.
 //  team_* = 전체 강화: 협동에선 파티 중 '최고 레벨'이 모두에게 적용(인원수 인플레 방지). 솔로면 내 레벨.
@@ -6335,27 +6335,28 @@ async function initAuth(){
           else if(r.error) console.warn('익명 로그인 비활성(대시보드 Anonymous sign-ins 켜기 필요)', r.error.message);
         }catch(e){ console.warn('익명 로그인 실패', e); }
       }
-      if(AUTH.user) sbEnsureProfile();   // 기존/신규 계정 프로필 보정(없으면 생성)
+      if(AUTH.user){ await sbEnsureProfile(); await sbSyncMetaOnLogin(); }   // 프로필 보정 + 계정 메타(코인) 로드
       _sb.auth.onAuthStateChange((_e,sess)=>{ AUTH.user = (sess&&sess.user) ? sbUser(sess.user) : null; if(AUTH.user) sbEnsureProfile(); });
       return;
     }catch(e){ console.warn('Supabase 초기화 실패 → 로컬 계정 모드', e); AUTH.mode='local'; }
   }
   AUTH.user = _lsGet('nm_session', null);   // 로컬 모드: 저장된 세션 자동 복원(자동 로그인)
 }
-async function authSignUp(email,pw,nick){
-  if(AUTH.mode==='supabase'){ const {data,error}=await _sb.auth.signUp({email,password:pw,options:{data:{nick}}});
-    if(error) throw new Error(error.message||'회원가입에 실패했습니다.');
-    if(data.session){ AUTH.user = sbUser(data.session.user); sbEnsureProfile(); return; }   // 즉시 로그인(이메일 확인 off)
-    throw new Error('가입되었습니다. 이메일 인증 후 로그인하거나, 관리자 설정에서 이메일 확인을 꺼주세요.'); }   // 이메일 확인 on → 세션 없음
-  const users=_lsGet('nm_users',{}); if(users[email]) throw new Error('이미 가입된 이메일입니다.');
-  users[email]={pw, nick:nick||email.split('@')[0]}; _lsSet('nm_users',users);
-  AUTH.user={email, nick:users[email].nick}; _lsSet('nm_session',AUTH.user); }
-async function authSignIn(email,pw){
-  if(AUTH.mode==='supabase'){ const {data,error}=await _sb.auth.signInWithPassword({email,password:pw});
-    if(error) throw new Error(error.message||'로그인에 실패했습니다.'); AUTH.user=sbUser(data.user); sbEnsureProfile(); return; }
-  const users=_lsGet('nm_users',{}); const u=users[email];
-  if(!u || u.pw!==pw) throw new Error('이메일 또는 비밀번호가 올바르지 않습니다.');
-  AUTH.user={email, nick:u.nick}; _lsSet('nm_session',AUTH.user); }
+const ID_DOMAIN='nemonemo.app';   // 아이디를 Supabase 이메일 인증으로 처리하기 위한 합성 도메인(실제 메일 아님)
+function idToEmail(id){ return String(id).toLowerCase().replace(/[^a-z0-9._-]/g,'') + '@' + ID_DOMAIN; }
+async function authSignUp(id,pw){ const nick=id;
+  if(AUTH.mode==='supabase'){ const {data,error}=await _sb.auth.signUp({email:idToEmail(id),password:pw,options:{data:{nick}}});
+    if(error) throw new Error(/registered|already|exists/i.test(error.message||'')?'이미 사용 중인 아이디입니다.':(error.message||'회원가입에 실패했습니다.'));
+    if(data.session){ AUTH.user=sbUser(data.session.user); await sbEnsureProfile(); await sbSyncMetaOnLogin(); return; }   // 즉시 로그인(이메일 확인 off 필요)
+    throw new Error('가입은 됐지만 즉시 로그인이 안 됩니다 (대시보드에서 이메일 확인 OFF 필요).'); }
+  const users=_lsGet('nm_users',{}); if(users[id]) throw new Error('이미 사용 중인 아이디입니다.');
+  users[id]={pw, nick}; _lsSet('nm_users',users); AUTH.user={id, nick}; _lsSet('nm_session',AUTH.user); }
+async function authSignIn(id,pw){
+  if(AUTH.mode==='supabase'){ const {data,error}=await _sb.auth.signInWithPassword({email:idToEmail(id),password:pw});
+    if(error) throw new Error('아이디 또는 비밀번호가 올바르지 않습니다.'); AUTH.user=sbUser(data.user); await sbEnsureProfile(); await sbSyncMetaOnLogin(); return; }
+  const users=_lsGet('nm_users',{}); const u=users[id];
+  if(!u || u.pw!==pw) throw new Error('아이디 또는 비밀번호가 올바르지 않습니다.');
+  AUTH.user={id, nick:u.nick}; _lsSet('nm_session',AUTH.user); }
 async function authSignOut(){ if(AUTH.mode==='supabase'){ try{ await _sb.auth.signOut(); }catch(e){} }
   AUTH.user=null; try{ localStorage.removeItem('nm_session'); }catch(e){} }
 // 내 표시 닉네임(로그인/게스트). 미로그인 시 '나'로 폴백.
@@ -6470,28 +6471,26 @@ async function bootApp(){ await initAuth();
   setTimeout(()=>{ if(AUTH.user) openMapSelect(); else openAuth(); }, 1700); }   // 오프닝 최소 노출
 // ── 로그인 화면 ──
 let _authTab='login';
-function openAuth(){ document.getElementById('authEmail').value=''; document.getElementById('authPw').value='';
-  document.getElementById('authNick').value=''; document.getElementById('authPw2').value='';
+function openAuth(){ document.getElementById('authId').value=''; document.getElementById('authPw').value='';
+  document.getElementById('authPw2').value='';
   authMode('login'); showAppScreen('auth'); if(typeof bgmStart==='function') bgmStart('lobby'); }   // 로그인 화면부터 로비 BGM
 function authMode(m){ _authTab=m;
   document.getElementById('segLogin').classList.toggle('on', m==='login');
   document.getElementById('segSignup').classList.toggle('on', m==='signup');
-  document.getElementById('authNick').classList.toggle('hide', m!=='signup');
   document.getElementById('authPw2').classList.toggle('hide', m!=='signup');
   document.getElementById('authBtn').textContent = m==='login'?'로그인':'가입하기';
-  document.getElementById('authSub').textContent = m==='login'?'로그인하고 시작하세요':'새 계정을 만드세요';
+  document.getElementById('authSub').textContent = m==='login'?'아이디로 로그인하세요':'아이디로 즉시 가입';
   document.getElementById('authErr').textContent=''; }
 async function authSubmit(){
-  const email=(document.getElementById('authEmail').value||'').trim(), pw=document.getElementById('authPw').value||'';
+  const id=(document.getElementById('authId').value||'').trim(), pw=document.getElementById('authPw').value||'';
   const err=document.getElementById('authErr');
-  if(!/.+@.+\..+/.test(email)){ err.textContent='올바른 이메일을 입력하세요.'; return; }
-  if(pw.length<4){ err.textContent='비밀번호는 4자 이상이어야 합니다.'; return; }
+  if(!/^[A-Za-z0-9._-]{3,16}$/.test(id)){ err.textContent='아이디는 영문·숫자 3~16자입니다.'; return; }
+  if(pw.length<6){ err.textContent='비밀번호는 6자 이상이어야 합니다.'; return; }
   try{
-    if(_authTab==='signup'){ const nick=(document.getElementById('authNick').value||'').trim(), pw2=document.getElementById('authPw2').value||'';
-      if(!nick){ err.textContent='닉네임을 입력하세요.'; return; }
+    if(_authTab==='signup'){ const pw2=document.getElementById('authPw2').value||'';
       if(pw!==pw2){ err.textContent='비밀번호가 일치하지 않습니다.'; return; }
-      await authSignUp(email,pw,nick);
-    } else { await authSignIn(email,pw); }
+      await authSignUp(id,pw);
+    } else { await authSignIn(id,pw); }
     openMapSelect();
   }catch(e){ err.textContent = (e&&e.message)||'인증에 실패했습니다.'; }
 }
@@ -6725,6 +6724,19 @@ async function sbEnsureProfile(){ if(!sbReady()) return;
   catch(e){ console.warn('ensureProfile', e.message||e); }
   if(typeof updateMyNameTag==='function') updateMyNameTag();   // 코드 로드 후 헤더 갱신
   if(typeof RT!=='undefined' && RT.active && RT.lobby){ try{ RT.lobby.track(_rtTrackPayload()); }catch(e){} } }   // 프레즌스에 코드 반영
+// ── 메타(코인·강화) 서버 저장: profiles.meta(jsonb)에 계정별 저장 → 다른 기기에서도 코인·강화 유지 ──
+async function sbSaveMeta(){ if(!sbReady()||!(AUTH.user&&AUTH.user.uid)) return;
+  try{ await _sb.from('profiles').update({ meta: PLAYER_META }).eq('id', AUTH.user.uid); }
+  catch(e){ console.warn('메타 서버 저장 실패(profiles.meta jsonb 컬럼 필요)', e.message||e); } }
+let _metaSaveT=null;
+function sbSaveMetaDebounced(){ if(!sbReady()||!(AUTH.user&&AUTH.user.uid)) return; clearTimeout(_metaSaveT); _metaSaveT=setTimeout(sbSaveMeta, 1500); }
+async function sbSyncMetaOnLogin(){ if(!sbReady()||!(AUTH.user&&AUTH.user.uid)) return;
+  try{ const {data}=await _sb.from('profiles').select('meta').eq('id',AUTH.user.uid).maybeSingle();
+    const sm=data&&data.meta;
+    if(sm && typeof sm==='object'){ PLAYER_META=Object.assign(defaultMeta(), sm); if(!PLAYER_META.buildLevels) PLAYER_META.buildLevels={}; try{ localStorage.setItem(metaKey(), JSON.stringify(PLAYER_META)); }catch(e){} }   // 서버 메타 우선 → 로컬 캐시
+    else { await sbSaveMeta(); }   // 서버에 없으면 현재(로컬) 메타 업로드
+    if(typeof G!=='undefined' && G) G.metaB=metaBonus(); }
+  catch(e){ console.warn('메타 서버 로드 실패', e.message||e); } }
 async function sbSearchUser(query){ query=(query||'').trim(); if(!query) return [];
   let q=_sb.from('profiles').select('id,nick,tag').neq('id',AUTH.user.uid).limit(12);
   const h=query.lastIndexOf('#');
