@@ -8308,6 +8308,7 @@ const STRIKE_SAMPLE=[{id:'marine'},{id:'ghost'},{id:'hydra'},{id:'dragoon'},{id:
 const STK_MINZOOM=1.5, STK_MAXZOOM=3;
 // 직스 타일 에셋(기존 assets/tiles 재사용)
 const STRIKE_GROUND=new Image(); STRIKE_GROUND.src='assets/tiles/desert.png?v=1';        // 전장 지형(사막)
+const STRIKE_PAVE=new Image(); STRIKE_PAVE.src='assets/tiles/protoss_floor.png?v=1';     // 신전 잇는 포장 길(프로토스 테크)
 const STRIKE_BUILDTILE=new Image(); STRIKE_BUILDTILE.src='assets/tiles/terran_tile_light.png?v=1';  // 건설 보드(깔끔한 금속)
 // 카메라 고정 타일 패턴(전장 지형) — 월드 원점(0,0)이 화면 (ox,oy)에 오도록 패턴 변환
 function strikeDrawGround(ctx,W,H,S,scale){ const img=STRIKE_GROUND, tileWorld=460, tilePx=tileWorld*scale;
@@ -8395,7 +8396,7 @@ function strikeSync3D(dt){ const S=STK; if(!S) return; const mcv=document.getEle
   const w2n=function(wx,wy){ const sx=(wx-S.cam.x)*scale+W/2, sy=(wy-S.cam.y)*scale+H/2; return {x:sx/W, y:sy/H}; };
   const list=[];
   const TT=[['tmpMeMain',S.me.base,'temple_main'],['tmpAiMain',S.ai.base,'temple_main'],['tmpMeSec',S.me.sec,'temple_stone'],['tmpAiSec',S.ai.sec,'temple_stone'],['tmpCentral',S.central,'temple_neutral']];
-  for(const t of TT){ const n=w2n(t[1].x,t[1].y); list.push({uid:t[0], id:t[2], x:n.x, y:n.y, fixed:true, face:-0.62}); }   // 신전(고정, 살짝 사선=3/4 뷰)
+  for(const t of TT){ const n=w2n(t[1].x,t[1].y); list.push({uid:t[0], id:t[2], x:n.x, y:n.y, fixed:true, face:-0.42}); }   // 신전(고정, 살짝 사선)
   if(S.sizeCmp && S.cmpUnits){ for(const u of S.cmpUnits){ const n=w2n(u.x,u.y); list.push({uid:u.uid, id:u.id, x:n.x, y:n.y}); } }
   M3D.sync(list, W, H, dt, [], [], null, k); }
 // 건물 탭 전용: 내 전용 건설 맵(전장 아님). 화면 1/4 직사각형, 깔끔한 금속 타일 + 건설 격자
@@ -8463,7 +8464,7 @@ function strikeDrawMain(){ const S=STK; if(!S) return; const cvEl=document.getEl
   strikeDrawClearing(ctx,w2s,scale,S.ai.base.x,S.ai.base.y,950);
   // 사막 모랫길 레인: me메인 → me2차 → 중립 → ai2차 → ai메인 (한 직선)
   const nodes=[S.me.base, S.me.sec, S.central, S.ai.sec, S.ai.base].map(o=>w2s(o.x,o.y));
-  strikeDrawLane(ctx, nodes, scale);
+  strikeDrawLane(ctx, nodes, scale, S, W, H);
   // 중립 중앙 신전(금색) → 2차(진영색) → 메인(진영색, 큼). 뒤→앞 순서로 그림
   // 신전: 3D 모델 로드 시 사이드 링+라벨만(본체는 strikeSync3D가 M3D로), 미로드 시 2D 폴백
   const _tmpl=function(o,modelId,col,glow,wr,label,labelCol){
@@ -8471,18 +8472,23 @@ function strikeDrawMain(){ const S=STK; if(!S) return; const cvEl=document.getEl
     if(!has3d){ strikeDrawTemple(ctx,w2s,scale,o.x,o.y,col,glow,wr,{topCol:(modelId==='temple_neutral'?'#fff7da':undefined),label:label,labelCol:labelCol}); return; }
     const p=w2s(o.x,o.y), rr=Math.max(9,wr*scale*0.58);
     ctx.save();
-    // 1) 넓은 앰비언트 오클루전 — 땅이 신전을 '받는' 느낌(모델 발치보다 넓게 퍼짐)
-    const ao=ctx.createRadialGradient(p.x,p.y+rr*0.1,rr*0.22,p.x,p.y+rr*0.1,rr*1.75);
-    ao.addColorStop(0,'rgba(0,0,0,.4)'); ao.addColorStop(.5,'rgba(0,0,0,.2)'); ao.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=ao; ctx.beginPath(); ctx.ellipse(p.x,p.y+rr*0.1,rr*1.75,rr*0.82,0,0,6.283); ctx.fill();
-    // 2) 사선 캐스트 그림자(좌상단 광원 → 우하단) — 모델 밖으로 뻗어 접지감
-    ctx.save(); ctx.translate(p.x+rr*0.42,p.y+rr*0.34); ctx.rotate(-0.5); ctx.scale(1.35,0.46);
-    const cs=ctx.createRadialGradient(0,0,rr*0.2,0,0,rr*1.15);
+    // 1) 사막톤 돌 기단(넓게) — 신전 발치보다 크게 퍼져 보이는 받침(다진 사막 + 돌 테)
+    const pad=ctx.createRadialGradient(p.x,p.y,rr*0.3,p.x,p.y,rr*2.0);
+    pad.addColorStop(0,'rgba(150,124,82,.62)'); pad.addColorStop(.5,'rgba(126,102,66,.5)'); pad.addColorStop(.82,'rgba(96,78,52,.3)'); pad.addColorStop(1,'rgba(96,78,52,0)');
+    ctx.fillStyle=pad; ctx.beginPath(); ctx.ellipse(p.x,p.y+rr*0.08,rr*2.0,rr*0.95,0,0,6.283); ctx.fill();
+    ctx.strokeStyle='rgba(70,56,36,.35)'; ctx.lineWidth=Math.max(1.5,3*scale); ctx.beginPath(); ctx.ellipse(p.x,p.y+rr*0.08,rr*1.7,rr*0.8,0,0,6.283); ctx.stroke();
+    // 2) 넓은 앰비언트 오클루전(땅이 신전을 받는 음영)
+    const ao=ctx.createRadialGradient(p.x,p.y+rr*0.1,rr*0.3,p.x,p.y+rr*0.1,rr*2.4);
+    ao.addColorStop(0,'rgba(0,0,0,.46)'); ao.addColorStop(.4,'rgba(0,0,0,.26)'); ao.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=ao; ctx.beginPath(); ctx.ellipse(p.x,p.y+rr*0.1,rr*2.4,rr*1.1,0,0,6.283); ctx.fill();
+    // 3) 사선 캐스트 그림자(좌상단 광원 → 우하단) — 모델 밖으로 길게 뻗어 접지
+    ctx.save(); ctx.translate(p.x+rr*0.55,p.y+rr*0.42); ctx.rotate(-0.5); ctx.scale(1.5,0.5);
+    const cs=ctx.createRadialGradient(0,0,rr*0.25,0,0,rr*1.6);
     cs.addColorStop(0,'rgba(0,0,0,.5)'); cs.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=cs; ctx.beginPath(); ctx.arc(0,0,rr*1.15,0,6.283); ctx.fill(); ctx.restore();
-    // 3) 진영색 림(은은) — 소속 표시
-    ctx.globalAlpha=.42; ctx.strokeStyle=glow; ctx.lineWidth=Math.max(1.2,2.4*scale);
-    ctx.beginPath(); ctx.ellipse(p.x,p.y,rr*0.86,rr*0.4,0,0,6.283); ctx.stroke(); ctx.globalAlpha=1;
+    ctx.fillStyle=cs; ctx.beginPath(); ctx.arc(0,0,rr*1.6,0,6.283); ctx.fill(); ctx.restore();
+    // 4) 진영색 림(은은)
+    ctx.globalAlpha=.4; ctx.strokeStyle=glow; ctx.lineWidth=Math.max(1.2,2.4*scale);
+    ctx.beginPath(); ctx.ellipse(p.x,p.y,rr*1.0,rr*0.46,0,0,6.283); ctx.stroke(); ctx.globalAlpha=1;
     // 라벨
     ctx.font='800 11px Rajdhani,"Apple SD Gothic Neo",sans-serif'; ctx.textAlign='center';
     ctx.lineWidth=3; ctx.strokeStyle='rgba(0,0,0,.72)'; ctx.strokeText(label,p.x,p.y+rr+14);
@@ -8531,11 +8537,23 @@ function strikeDrawClearing(ctx,w2s,scale,wx,wy,worldR){ const p=w2s(wx,wy), r=M
   ctx.strokeStyle='rgba(150,120,74,.22)'; ctx.lineWidth=Math.max(1,2*scale); ctx.beginPath(); ctx.ellipse(p.x,p.y,r*0.94,r*0.85,0,0,6.283); ctx.stroke();
   ctx.restore(); }
 // 사막 모랫길(레인) — 노드들을 잇는 폭 넓은 길 + 중앙 바퀴자국 점선
-function strikeDrawLane(ctx, pts, scale){ if(!pts||pts.length<2) return; ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round';
+// 신전 잇는 포장 길 — 프로토스 테크 타일 패턴(카메라 정렬) + 네온 에너지 가장자리(SC 느낌)
+function strikeDrawLane(ctx, pts, scale, S, W, H){ if(!pts||pts.length<2) return; ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round';
   const path=()=>{ ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y); for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x,pts[i].y); };
-  path(); ctx.strokeStyle='rgba(120,92,52,.55)'; ctx.lineWidth=Math.max(32,1000*scale); ctx.stroke();   // 바깥 다져진 흙(더 넓게)
-  path(); ctx.strokeStyle='rgba(198,168,112,.5)'; ctx.lineWidth=Math.max(22,820*scale); ctx.stroke();   // 안쪽 밝은 모래
-  path(); ctx.setLineDash([20*scale,26*scale]); ctx.strokeStyle='rgba(120,95,58,.35)'; ctx.lineWidth=Math.max(2,15*scale); ctx.stroke();  // 바퀴자국
+  // 바깥 어두운 도로 베이스(테두리)
+  path(); ctx.strokeStyle='rgba(24,28,30,.82)'; ctx.lineWidth=Math.max(36,1040*scale); ctx.stroke();
+  // 포장 타일 패턴 채움
+  const img=STRIKE_PAVE;
+  if(img&&img.complete&&img.naturalWidth&&S){ const pat=ctx.createPattern(img,'repeat');
+    if(pat&&pat.setTransform){ const tilePx=Math.max(8,300*scale), s=tilePx/img.naturalWidth, ox=(0-S.cam.x)*scale+W/2, oy=(0-S.cam.y)*scale+H/2; pat.setTransform(new DOMMatrix([s,0,0,s,ox,oy])); }
+    path(); ctx.strokeStyle=pat||'rgba(150,140,120,.5)'; ctx.lineWidth=Math.max(28,900*scale); ctx.stroke();
+    path(); ctx.strokeStyle='rgba(18,26,34,.34)'; ctx.lineWidth=Math.max(28,900*scale); ctx.stroke();   // 톤 다운(통일)
+  } else { path(); ctx.strokeStyle='rgba(150,134,104,.5)'; ctx.lineWidth=Math.max(28,900*scale); ctx.stroke(); }
+  // 네온 에너지 가장자리(살짝 글로우)
+  ctx.save(); ctx.shadowColor='rgba(120,200,255,.6)'; ctx.shadowBlur=8*scale;
+  path(); ctx.strokeStyle='rgba(120,200,255,.3)'; ctx.lineWidth=Math.max(2,16*scale); ctx.stroke(); ctx.restore();
+  // 중앙 점선(진로)
+  path(); ctx.setLineDash([26*scale,30*scale]); ctx.strokeStyle='rgba(160,215,255,.22)'; ctx.lineWidth=Math.max(2,9*scale); ctx.stroke();
   ctx.restore(); }
 // 신전(메인/2차/중립 공용) — 계단식 마름모 3단. worldR로 크기, opt.label 화면 라벨. (추후 3D 모델 교체)
 function strikeDrawTemple(ctx,w2s,scale,wx,wy,col,glow,worldR,opt){ opt=opt||{}; const p=w2s(wx,wy), rr=Math.max(opt.minR||16, worldR*scale);
@@ -8846,9 +8864,17 @@ function tintModel(root, id){
   const rim = isPlayer ? playerRim   // 아군은 공용 림 색(관전 시 한번에 색 전환 가능)
                        : new THREE.Color(isEnemy ? ENEMY_RIM : NEUTRAL_RIM);
   const intU = isPlayer ? rimIntU : subRimIntU;   // 적·기타는 고정 은은(관전 부스트 영향 X) — 내 유닛처럼
+  const isTemple = (typeof id==='string') && id.indexOf('temple')===0;   // 직스 신전 → 사막 톤으로 통일
   root.traverse(o=>{ if(!o.isMesh) return; const ms=Array.isArray(o.material)?o.material:[o.material];
     ms.forEach(m=>{ if(!m||m._tinted) return;
-      if('envMapIntensity' in m) m.envMapIntensity=0.55;   // 환경 반사는 입체감용으로만 약하게 → 본체 색·플레이어 림이 묻히지 않게
+      if(isTemple && m.color){   // 채도↓ + 사막 warm 톤 곱 + 약간 어둡게 → 배경 사막과 한 덩어리
+        const l=m.color.r*0.299+m.color.g*0.587+m.color.b*0.114;
+        m.color.lerp(new THREE.Color(l,l,l), 0.4);          // 채도 40% 감소
+        m.color.multiply(new THREE.Color(0.82,0.72,0.55));  // 사막 톤 + 어둡게
+        if('emissiveIntensity' in m) m.emissiveIntensity*=0.55;
+        if('roughness' in m) m.roughness=Math.min(1, (m.roughness==null?0.7:m.roughness)+0.18);   // 무광에 가깝게(거친 돌)
+      }
+      if('envMapIntensity' in m) m.envMapIntensity = isTemple?0.32:0.55;   // 신전은 반사 더 낮춰 사막 톤 유지
       addRim(m, rim, intU);   // 테두리(프레넬 림)만 색 — 본체 색·발광은 원본 그대로
       m._tinted=true; }); });
 }
