@@ -127,11 +127,11 @@
   .cmsg b{font-weight:800}
   .cmsg.sys{color:#7fa8cc;font-style:italic;opacity:.85}
   #chatBar{position:absolute;left:9px;right:74px;bottom:9px;z-index:18;display:flex;gap:6px}   /* 우하단 우측열 버튼(58px 정사각) 한 줄 자리만 비움 → 채팅 영역 확장 */
-  /* 채팅창·전송 — 상단 HUD(시안) 톤 + 투명 유지 */
-  #chatField{flex:1;min-width:0;background:none;border:1px solid rgba(0,229,255,.2);border-radius:var(--r-md);color:#d6f1fb;font-size:var(--fs-lg);padding:9px 13px;outline:none;text-shadow:0 1px 2px #000;transition:border-color .15s}
-  #chatField:focus{border-color:rgba(0,229,255,.55);box-shadow:0 0 7px var(--hud-glow)}
-  #chatField::placeholder{color:rgba(120,190,220,.55)}
-  #chatSend{background:none;border:1px solid rgba(0,229,255,.28);color:var(--hud);border-radius:var(--r-md);padding:0 17px;font-size:var(--fs-lg);font-weight:700;cursor:pointer;white-space:nowrap;letter-spacing:.5px;text-shadow:0 0 5px var(--hud-glow),0 1px 2px #000;transition:all .15s}
+  /* 채팅창·전송 — 반투명 어두운 내부 + 테두리/텍스트 또렷하게(밝은 맵 위에서도 가독) */
+  #chatField{flex:1;min-width:0;background:rgba(6,12,18,.55);border:1px solid rgba(0,229,255,.42);border-radius:var(--r-md);color:#e9f7ff;font-size:var(--fs-lg);padding:9px 13px;outline:none;text-shadow:0 1px 2px #000;transition:border-color .15s}
+  #chatField:focus{border-color:rgba(0,229,255,.7);box-shadow:0 0 7px var(--hud-glow)}
+  #chatField::placeholder{color:rgba(150,205,230,.72)}
+  #chatSend{background:rgba(6,12,18,.55);border:1px solid rgba(0,229,255,.5);color:var(--hud);border-radius:var(--r-md);padding:0 17px;font-size:var(--fs-lg);font-weight:700;cursor:pointer;white-space:nowrap;letter-spacing:.5px;text-shadow:0 0 5px var(--hud-glow),0 1px 2px #000;transition:all .15s}
   #chatSend:active{transform:translateY(1px);background:rgba(0,229,255,.1)}
 
   /* 전투 미니맵(좌하단) — 메인 외 탭에서 전투를 도트로 표시 */
@@ -8337,7 +8337,7 @@ function strikeNewState(){ const W=mapCfg('world',4800), hp=mapCfg('baseHp',3000
          sec:{x:W*0.661,y:W*0.339, hp:sHp, max:sHp, dead:false} },   // 우상단 메인 + 2차 신전
     central:{x:W*0.5,y:W*0.5, hp:cHp, max:cHp, owner:null, dead:false},   // 중앙 중립 보너스 신전(깬 팀 메인에 쉴드)
     cam:{x:W/2,y:W/2}, zoom:STK_MINZOOM, viewWorld:Math.round(2600/STK_MINZOOM), cw:0, ch:0, sel:null, userCam:false,
-    leadT:0, leadIdx:0, sizeCmp:true, cmpUnits:null };
+    leadT:0, leadIdx:0, sizeCmp:false, cmpUnits:null };
 }
 function strikeIncome(side){ const S=STK; if(!S) return 0; side=side||S.me; return S.incomeBase + side.mines*S.mineIncome; }
 // 진영 리더보드(광산 수 → 돈 순). leadIdx로 5초마다 회전 표시
