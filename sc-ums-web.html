@@ -8289,6 +8289,22 @@ window.addEventListener('load',()=>{ drawMain(); placeMergeZone(); updateHud(); 
 // 전투는 #cvMain에 2D 렌더. loop() 최상단 if(G.strike) 분기로 nemo 로직을 건너뛰고 strikeFrame 실행.
 // ════════════════════════════════════════════════════════════════
 let STK=null, _stkDrag=null, _stkPtrs=new Map(), _stkPinch=null;
+// 직스 타일 에셋(기존 assets/tiles 재사용)
+const STRIKE_GROUND=new Image(); STRIKE_GROUND.src='assets/tiles/twilight.png?v=1';        // 전장 지형
+const STRIKE_BUILDTILE=new Image(); STRIKE_BUILDTILE.src='assets/tiles/terran_tile_light.png?v=1';  // 건설 보드(깔끔한 금속)
+// 카메라 고정 타일 패턴(전장 지형) — 월드 원점(0,0)이 화면 (ox,oy)에 오도록 패턴 변환
+function strikeDrawGround(ctx,W,H,S,scale){ const img=STRIKE_GROUND, tileWorld=460, tilePx=tileWorld*scale;
+  const ox=(0-S.cam.x)*scale+W/2, oy=(0-S.cam.y)*scale+H/2;
+  if(img.complete&&img.naturalWidth&&tilePx>4){ const p=ctx.createPattern(img,'repeat');
+    if(p&&p.setTransform){ const s=tilePx/img.naturalWidth; p.setTransform(new DOMMatrix([s,0,0,s,ox,oy])); }
+    ctx.fillStyle=p||'#1a1d14'; } else ctx.fillStyle='#1a1d14';
+  ctx.fillRect(0,0,W,H);
+  const v=ctx.createRadialGradient(W/2,H*0.5,Math.min(W,H)*0.3,W/2,H*0.5,Math.max(W,H)*0.75);
+  v.addColorStop(0,'rgba(0,0,0,0)'); v.addColorStop(1,'rgba(0,0,0,.42)'); ctx.fillStyle=v; ctx.fillRect(0,0,W,H); }
+// 사각 영역을 타일 패턴으로 채움(건설 보드)
+function strikeTileRect(ctx,x,y,w,h,img,tilePx){ ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip();
+  if(img&&img.complete&&img.naturalWidth){ const p=ctx.createPattern(img,'repeat'); if(p&&p.setTransform){ const s=tilePx/img.naturalWidth; p.setTransform(new DOMMatrix([s,0,0,s,x,y])); } ctx.fillStyle=p||'#16242e'; } else ctx.fillStyle='#16242e';
+  ctx.fillRect(x,y,w,h); ctx.restore(); }
 const STK_TABLABEL ={ Main:'전투', Unit:'건물', Upgrade:'경제', Players:'관전' };
 const STK_NEMOLABEL={ Main:'메인', Unit:'유닛뽑기', Upgrade:'업그레이드', Players:'플레이어' };
 function strikeNewState(){ const W=mapCfg('world',4800), hp=mapCfg('baseHp',3000), inc=mapCfg('incomeBase',150), mc=mapCfg('mineCost',300), mi=mapCfg('mineIncome',120);
@@ -8337,7 +8353,28 @@ function strikeEnd(){ if(!STK && !(G&&G.strike)) return;
 }
 
 // ── 프레임/시뮬 ──
-function strikeFrame(dt){ const S=STK; if(!S) return; strikeStep(dt); strikeDrawMain(); strikeHud(); strikeLeaderboard(dt); }
+function strikeFrame(dt){ const S=STK; if(!S) return; strikeStep(dt);
+  if(G.tab==='Unit') strikeDrawBuildMap(); else strikeDrawMain();
+  strikeHud(); strikeLeaderboard(dt); }
+// 건물 탭 전용: 내 전용 건설 맵(전장 아님). 화면 1/4 직사각형, 깔끔한 금속 타일 + 건설 격자
+function strikeDrawBuildMap(){ const S=STK; if(!S) return; const cvEl=document.getElementById('cvMain'); if(!cvEl) return;
+  const r=setup('cvMain'); const ctx=r.ctx, W=r.W, H=r.H; GW=W; GH=H; S.cw=W; S.ch=H;
+  ctx.fillStyle='#05080c'; ctx.fillRect(0,0,W,H);
+  const bw=W*0.66, bh=H*0.4, bx=(W-bw)/2, by=(H-bh)/2;   // ≈ 화면 1/4 면적, 직사각형
+  strikeTileRect(ctx, bx,by,bw,bh, STRIKE_BUILDTILE, 56);
+  // 건설 격자
+  const cols=6, rows=4, cwd=bw/cols, chd=bh/rows;
+  ctx.strokeStyle='rgba(120,200,255,.16)'; ctx.lineWidth=1;
+  for(let i=1;i<cols;i++){ ctx.beginPath(); ctx.moveTo(bx+i*cwd,by); ctx.lineTo(bx+i*cwd,by+bh); ctx.stroke(); }
+  for(let j=1;j<rows;j++){ ctx.beginPath(); ctx.moveTo(bx,by+j*chd); ctx.lineTo(bx+bw,by+j*chd); ctx.stroke(); }
+  // 외곽 네온 테두리
+  ctx.strokeStyle='rgba(120,200,255,.55)'; ctx.lineWidth=2; ctx.strokeRect(bx+0.5,by+0.5,bw-1,bh-1);
+  // 상단 라벨
+  ctx.fillStyle='rgba(150,210,255,.85)'; ctx.font='700 13px Rajdhani, sans-serif'; ctx.textAlign='center';
+  ctx.fillText('내 건설 구역 — 타일을 눌러 생산 건물 배치', W/2, by-10);
+  ctx.textAlign='left';
+  S.buildBoard={ bx,by,bw,bh,cols,rows };
+}
 function strikeStep(dt){ const S=STK; if(!S) return; S.t+=dt;
   S.cycleT-=dt;
   if(S.cycleT<=0){ S.cycleT+=S.cycleTime; S.round++;
@@ -8378,14 +8415,13 @@ function strikeDrawMain(){ const S=STK; if(!S) return; const cvEl=document.getEl
   const r=setup('cvMain'); const ctx=r.ctx, W=r.W, H=r.H; GW=W; GH=H; S.cw=W; S.ch=H;
   const scale=Math.min(W,H)/S.viewWorld;
   const w2s=(x,y)=>({x:(x-S.cam.x)*scale+W/2, y:(y-S.cam.y)*scale+H/2});
-  ctx.fillStyle='#0a0f0c'; ctx.fillRect(0,0,W,H);
-  strikeDrawTerrain(ctx,w2s,scale,S,W,H);
+  strikeDrawGround(ctx,W,H,S,scale);
   const mp=w2s(S.me.base.x,S.me.base.y), ap=w2s(S.ai.base.x,S.ai.base.y);
-  ctx.save(); ctx.lineCap='round';
-  ctx.strokeStyle='rgba(52,44,32,.75)'; ctx.lineWidth=Math.max(4,160*scale); ctx.beginPath(); ctx.moveTo(mp.x,mp.y); ctx.lineTo(ap.x,ap.y); ctx.stroke();
-  ctx.strokeStyle='rgba(78,68,50,.5)'; ctx.lineWidth=Math.max(2,116*scale); ctx.beginPath(); ctx.moveTo(mp.x,mp.y); ctx.lineTo(ap.x,ap.y); ctx.stroke();
+  ctx.save(); ctx.lineCap='round';   // 전투 도로(넓게)
+  ctx.strokeStyle='rgba(40,33,24,.7)'; ctx.lineWidth=Math.max(16,520*scale); ctx.beginPath(); ctx.moveTo(mp.x,mp.y); ctx.lineTo(ap.x,ap.y); ctx.stroke();
+  ctx.strokeStyle='rgba(70,60,44,.55)'; ctx.lineWidth=Math.max(10,430*scale); ctx.beginPath(); ctx.moveTo(mp.x,mp.y); ctx.lineTo(ap.x,ap.y); ctx.stroke();
+  ctx.setLineDash([18*scale,22*scale]); ctx.strokeStyle='rgba(150,135,90,.3)'; ctx.lineWidth=Math.max(2,12*scale); ctx.beginPath(); ctx.moveTo(mp.x,mp.y); ctx.lineTo(ap.x,ap.y); ctx.stroke();
   ctx.restore();
-  if(G.tab==='Unit') strikeDrawBuildZone(ctx,w2s,scale,S);
   strikeDrawBase(ctx,w2s,scale,S.me,'#3a7bff','#7fe0ff');
   strikeDrawBase(ctx,w2s,scale,S.ai,'#ff3b54','#ff9aa6');
 }
@@ -8412,10 +8448,20 @@ function strikeDrawBuildZone(ctx,w2s,scale,S){ const T=160;
     ctx.strokeStyle='rgba(120,220,255,.32)'; ctx.lineWidth=1; ctx.strokeRect(p.x+1.5,p.y+1.5,sz-3,sz-3);
   }}
 }
-function strikeDrawBase(ctx,w2s,scale,side,col,glow){ const p=w2s(side.base.x,side.base.y), rr=Math.max(14,150*scale);
-  ctx.save(); ctx.shadowColor=glow; ctx.shadowBlur=18; ctx.fillStyle=col;
-  ctx.beginPath(); ctx.moveTo(p.x,p.y-rr); ctx.lineTo(p.x+rr,p.y); ctx.lineTo(p.x,p.y+rr); ctx.lineTo(p.x-rr,p.y); ctx.closePath(); ctx.fill();
-  ctx.shadowBlur=0; ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=2; ctx.stroke(); ctx.restore(); }
+// 본진(임시 신전 느낌 — 추후 3D 모델 교체). 크게 + 계단식 단
+function strikeDrawBase(ctx,w2s,scale,side,col,glow){ const p=w2s(side.base.x,side.base.y), rr=Math.max(34,320*scale);
+  ctx.save();
+  // 기단(넓은 받침)
+  ctx.fillStyle='rgba(20,26,34,.92)'; ctx.beginPath(); ctx.ellipse(p.x,p.y+rr*0.12,rr*1.15,rr*0.72,0,0,6.283); ctx.fill();
+  ctx.shadowColor=glow; ctx.shadowBlur=22;
+  // 신전 본체(계단식 마름모 3단)
+  for(let i=0;i<3;i++){ const k=rr*(1-i*0.26), yo=-i*rr*0.34;
+    ctx.fillStyle=i===2?'#fff':col; ctx.globalAlpha=i===2?0.95:(0.78+i*0.08);
+    ctx.beginPath(); ctx.moveTo(p.x,p.y-k+yo); ctx.lineTo(p.x+k,p.y+yo); ctx.lineTo(p.x,p.y+k*0.85+yo); ctx.lineTo(p.x-k,p.y+yo); ctx.closePath(); ctx.fill(); }
+  ctx.globalAlpha=1; ctx.shadowBlur=0;
+  ctx.strokeStyle='rgba(255,255,255,.45)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(p.x,p.y-rr); ctx.lineTo(p.x+rr,p.y); ctx.lineTo(p.x,p.y+rr*0.85); ctx.lineTo(p.x-rr,p.y); ctx.closePath(); ctx.stroke();
+  ctx.restore(); }
 
 // ── HUD(nemo 상단 재사용): 크레딧=내 골드, 에너지=내 광산, 인구=내 유닛, 시계=출격 ──
 function strikeHud(){ const S=STK; if(!S) return; const set=(id,html)=>{ const e=document.getElementById(id); if(e) e.innerHTML=html; };
