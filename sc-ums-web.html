@@ -8452,15 +8452,18 @@ function strikeDrawMain(){ const S=STK; if(!S) return; const cvEl=document.getEl
   const scale=Math.min(W,H)/S.viewWorld;
   const w2s=(x,y)=>({x:(x-S.cam.x)*scale+W/2, y:(y-S.cam.y)*scale+H/2});
   strikeDrawGround(ctx,W,H,S,scale);
+  // 끝(메인) 신전 주변 넓은 개활지(베이스 광장) — 길보다 넓게 펼쳐진 다져진 땅
+  strikeDrawClearing(ctx,w2s,scale,S.me.base.x,S.me.base.y,950);
+  strikeDrawClearing(ctx,w2s,scale,S.ai.base.x,S.ai.base.y,950);
   // 사막 모랫길 레인: me메인 → me2차 → 중립 → ai2차 → ai메인 (한 직선)
   const nodes=[S.me.base, S.me.sec, S.central, S.ai.sec, S.ai.base].map(o=>w2s(o.x,o.y));
   strikeDrawLane(ctx, nodes, scale);
   // 중립 중앙 신전(금색) → 2차(진영색) → 메인(진영색, 큼). 뒤→앞 순서로 그림
-  strikeDrawTemple(ctx,w2s,scale,S.central.x,S.central.y,'#d9b34a','#ffd86a',95,{topCol:'#fff7da',label:'중립 신전',labelCol:'#ffe28a'});
-  strikeDrawTemple(ctx,w2s,scale,S.me.sec.x,S.me.sec.y,'#3a7bff','#7fe0ff',170,{label:'2차 신전',labelCol:'#bfe0ff'});
-  strikeDrawTemple(ctx,w2s,scale,S.ai.sec.x,S.ai.sec.y,'#ff3b54','#ff9aa6',170,{label:'적 2차 신전',labelCol:'#ffc2c8'});
-  strikeDrawTemple(ctx,w2s,scale,S.me.base.x,S.me.base.y,'#3a7bff','#7fe0ff',260,{label:'메인 신전',labelCol:'#bfe0ff'});
-  strikeDrawTemple(ctx,w2s,scale,S.ai.base.x,S.ai.base.y,'#ff3b54','#ff9aa6',260,{label:'적 메인 신전',labelCol:'#ffc2c8'});
+  strikeDrawTemple(ctx,w2s,scale,S.central.x,S.central.y,'#d9b34a','#ffd86a',70,{topCol:'#fff7da',label:'중립 신전',labelCol:'#ffe28a'});
+  strikeDrawTemple(ctx,w2s,scale,S.me.sec.x,S.me.sec.y,'#3a7bff','#7fe0ff',135,{label:'2차 신전',labelCol:'#bfe0ff'});
+  strikeDrawTemple(ctx,w2s,scale,S.ai.sec.x,S.ai.sec.y,'#ff3b54','#ff9aa6',135,{label:'적 2차 신전',labelCol:'#ffc2c8'});
+  strikeDrawTemple(ctx,w2s,scale,S.me.base.x,S.me.base.y,'#3a7bff','#7fe0ff',210,{label:'메인 신전',labelCol:'#bfe0ff'});
+  strikeDrawTemple(ctx,w2s,scale,S.ai.base.x,S.ai.base.y,'#ff3b54','#ff9aa6',210,{label:'적 메인 신전',labelCol:'#ffc2c8'});
   // 크기 비교 샘플 유닛 라벨(3D 모델은 cvMarine에 strikeSyncCmpUnits가 렌더)
   if(S.sizeCmp && S.cmpUnits){ ctx.save(); ctx.font='800 10px Rajdhani,"Apple SD Gothic Neo",sans-serif'; ctx.textAlign='center';
     for(const u of S.cmpUnits){ const p=w2s(u.x,u.y), nm=u.nm||((typeof U!=='undefined'&&U[u.id]&&U[u.id].name)||u.id);
@@ -8491,12 +8494,20 @@ function strikeDrawBuildZone(ctx,w2s,scale,S){ const T=160;
     ctx.strokeStyle='rgba(120,220,255,.32)'; ctx.lineWidth=1; ctx.strokeRect(p.x+1.5,p.y+1.5,sz-3,sz-3);
   }}
 }
+// 메인 신전 주변 개활지(넓은 베이스 광장) — 부드럽게 퍼지는 다져진 사막 땅
+function strikeDrawClearing(ctx,w2s,scale,wx,wy,worldR){ const p=w2s(wx,wy), r=Math.max(40,worldR*scale);
+  ctx.save();
+  const g=ctx.createRadialGradient(p.x,p.y,r*0.25,p.x,p.y,r);
+  g.addColorStop(0,'rgba(208,178,122,.5)'); g.addColorStop(0.65,'rgba(194,164,108,.34)'); g.addColorStop(1,'rgba(190,160,104,0)');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(p.x,p.y,r,r*0.9,0,0,6.283); ctx.fill();
+  ctx.strokeStyle='rgba(150,120,74,.22)'; ctx.lineWidth=Math.max(1,2*scale); ctx.beginPath(); ctx.ellipse(p.x,p.y,r*0.94,r*0.85,0,0,6.283); ctx.stroke();
+  ctx.restore(); }
 // 사막 모랫길(레인) — 노드들을 잇는 폭 넓은 길 + 중앙 바퀴자국 점선
 function strikeDrawLane(ctx, pts, scale){ if(!pts||pts.length<2) return; ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round';
   const path=()=>{ ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y); for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x,pts[i].y); };
-  path(); ctx.strokeStyle='rgba(120,92,52,.55)'; ctx.lineWidth=Math.max(26,800*scale); ctx.stroke();   // 바깥 다져진 흙(넓게)
-  path(); ctx.strokeStyle='rgba(198,168,112,.5)'; ctx.lineWidth=Math.max(18,640*scale); ctx.stroke();   // 안쪽 밝은 모래
-  path(); ctx.setLineDash([18*scale,24*scale]); ctx.strokeStyle='rgba(120,95,58,.35)'; ctx.lineWidth=Math.max(2,13*scale); ctx.stroke();  // 바퀴자국
+  path(); ctx.strokeStyle='rgba(120,92,52,.55)'; ctx.lineWidth=Math.max(32,1000*scale); ctx.stroke();   // 바깥 다져진 흙(더 넓게)
+  path(); ctx.strokeStyle='rgba(198,168,112,.5)'; ctx.lineWidth=Math.max(22,820*scale); ctx.stroke();   // 안쪽 밝은 모래
+  path(); ctx.setLineDash([20*scale,26*scale]); ctx.strokeStyle='rgba(120,95,58,.35)'; ctx.lineWidth=Math.max(2,15*scale); ctx.stroke();  // 바퀴자국
   ctx.restore(); }
 // 신전(메인/2차/중립 공용) — 계단식 마름모 3단. worldR로 크기, opt.label 화면 라벨. (추후 3D 모델 교체)
 function strikeDrawTemple(ctx,w2s,scale,wx,wy,col,glow,worldR,opt){ opt=opt||{}; const p=w2s(wx,wy), rr=Math.max(opt.minR||16, worldR*scale);
