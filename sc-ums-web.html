@@ -2863,6 +2863,7 @@ const META_BUILDS = {   // 탭(group) → 섹션(sect) 2단 분류. 같은 sect�
   // ── 전체 강화(팀 공유 · 비쌈) ──
   team_atk:      { name:'전체 공격력',   desc:'모든 유닛 공격력 증가 (+4%/Lv)',  start:60, nMax:5, max:8, group:'team', sect:'팀 강화' },
   team_aspd:     { name:'전체 공격속도', desc:'모든 유닛 공격 속도 증가 (+3%/Lv)', start:55, nMax:5, max:8, group:'team', sect:'팀 강화' },
+  team_luck:     { name:'전체 고등급 확률', desc:'모든 플레이어 레전드+ 뽑기 가중 (+6%/Lv)', start:60, nMax:5, max:8, group:'team', sect:'팀 강화' },
   team_credit:   { name:'전체 시작 크레딧',desc:'모든 플레이어 시작 크레딧 (+25/Lv)', start:45, nMax:5, max:8, group:'team', sect:'팀 강화' },
   team_enemy_hp: { name:'전체 적 체력',  desc:'모든 적 체력 감소 (-2.5%/Lv)', start:60, nMax:5, max:8, group:'team', sect:'팀 적 약화' },
   team_enemy_def:{ name:'전체 적 방어', desc:'모든 적 방어력 감소 (-1/Lv)',  start:55, nMax:5, max:8, group:'team', sect:'팀 적 약화' },
@@ -2899,7 +2900,7 @@ function saveMeta(){ try{ localStorage.setItem(metaKey(), JSON.stringify(PLAYER_
 function buildLevel(id){ return (PLAYER_META.buildLevels && PLAYER_META.buildLevels[id]) || 0; }
 // 현재 빌드 레벨 → 게임 효과(개인 적용). 게임 시작 시 G.metaB에 캐시.
 //  team_* = 전체 강화: 협동에선 파티 중 '최고 레벨'이 모두에게 적용(인원수 인플레 방지). 솔로면 내 레벨.
-const _TEAM_IDS=['team_atk','team_aspd','team_enemy_hp','team_enemy_def','team_credit'];
+const _TEAM_IDS=['team_atk','team_aspd','team_enemy_hp','team_enemy_def','team_credit','team_luck'];
 function teamLevel(id){ let mx=buildLevel(id);
   const ix=_TEAM_IDS.indexOf(id);
   if(ix>=0 && typeof G!=='undefined' && G && G.coopTeamB){ for(const k in G.coopTeamB){ const v=(G.coopTeamB[k]||[])[ix]||0; if(v>mx) mx=v; } }
@@ -2921,6 +2922,7 @@ function metaBonus(){ const L=id=>metaEffLv(id), T=id=>teamEffLv(id);   // 효�
   startTurret: L('start_turret'),
     guaranteed:  L('guaranteed'),
     luck:        L('gacha_luck'),
+    teamLuck:    T('team_luck'),   // 팀 고등급 확률(레전드+ 가중)
     energyDrawMul: 1 + L('energy_draw_bonus')*0.10,   // 에너지 뽑기 추가 획득
     gachaDoubleP:  L('gacha_double')*0.06,             // 유닛 뽑기 시 1기 추가 확률
     pbossRewardMul:1 + L('pboss_reward')*0.10,         // 개인 보스 처치 보상 배율
@@ -3953,7 +3955,7 @@ function buyUnit(id){
 }
 // ── 내실 업그레이드(비콘): 뽑기 확률↑ / 크레딧 획득↑ ──
 const GACHA_UP_MAX=5, CREDIT_UP_MAX=6;   // 상한 하향(스노볼 차단)
-const GACHA_UP_STEP=0.08;   // 레벨당 상위(비일반) 등급 가중 +8%(↓10)
+const GACHA_UP_STEP=0.06;   // 레벨당 상위(비일반) 등급 가중 +6% (3중 스택 고려해 8→6 하향)
 const CREDIT_UP_STEP=0.05;  // 레벨당 크레딧 획득 +5%(↓8) — 경제 복리 스노볼 완화
 function gachaUpCost(){ return 70 + (G.gachaLuckLv||0)*70; }   // 크레딧(가파른 점증 — 연속 투자 억제)
 function creditUpCost(){ return 70 + (G.creditLv||0)*65; }     // 크레딧(가파른 점증)
@@ -3969,10 +3971,13 @@ function buyCreditUp(){ if(G.phase!=='playing'){ toast('게임 중에만 가능�
   if(typeof playSfx==='function') playSfx('ui_confirm'); toast('💰 크레딧 획득↑ Lv'+G.creditLv+' — 크레딧 +'+Math.round(G.creditLv*CREDIT_UP_STEP*100)+'%'); updateHud(); updateBeaconLabels(); }
 // ── 가챠 뽑기(2단계) — 기존 시민 상점 대체 ──
 // 현재 적용 확률(메타 luck + 게임 내 뽑기확률↑ 반영, 합=1로 정규화). 룰렛·확률표 공용.
-function gachaWeights(){ const luck=(G.metaB&&G.metaB.luck)||0, gLv=(G.gachaLuckLv||0);
+function gachaWeights(){ const luck=(G.metaB&&G.metaB.luck)||0, teamLuck=(G.metaB&&G.metaB.teamLuck)||0, gLv=(G.gachaLuckLv||0);
   const w={}; for(const t of GACHA_TIER_ORDER) w[t]=GACHA_TIERS[t].prob;
-  if(luck){ const b=1+luck*0.12; for(const t of ['legend','transcend','god']) w[t]*=b; }   // 메타: 레전드+ 가중
-  if(gLv){ const b=1+gLv*GACHA_UP_STEP; for(const t of GACHA_TIER_ORDER){ if(t!=='common') w[t]*=b; } }   // 내실: 상위 전체 가중
+  // 세 소스(비콘 gLv=비일반 전체 / 메타 luck·팀 teamLuck=레전드+)가 모두 곱연산 → 풀스택 폭주 방지로 상한(cap) 적용.
+  const midMul=Math.min(1+gLv*GACHA_UP_STEP, 1.6);                                       // rare~unique: 비콘만, ×1.6 상한
+  const hiMul =Math.min((1+gLv*GACHA_UP_STEP)*(1+luck*0.08)*(1+teamLuck*0.06), 3.0);     // legend+: 비콘×메타×팀, ×3.0 상한
+  for(const t of ['rare','epic','unique']) w[t]*=midMul;
+  for(const t of ['legend','transcend','god']) w[t]*=hiMul;
   let sum=0; for(const t of GACHA_TIER_ORDER) sum+=w[t]; for(const t of GACHA_TIER_ORDER) w[t]/=sum; return w; }
 function gachaRollTier(){ const w=gachaWeights();
   let r=Math.random(); for(const t of GACHA_TIER_ORDER){ r-=w[t]; if(r<=0) return t; } return 'common'; }
