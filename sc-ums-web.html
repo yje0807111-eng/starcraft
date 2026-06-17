@@ -2840,41 +2840,41 @@ const META_BUILD_GROUPS = { eco:'경제', prod:'생산', combat:'전투', team:'
 // start=1레벨 비용 기준값, nMax=일반 레벨 수, max=일반+초월(초월 3레벨·효과 ×2/×4/×8). 비용은 metaNextCost(완만 감소배율) 참조.
 const META_BUILDS = {   // 탭(group) → 섹션(sect) 2단 분류. 같은 sect끼리 묶여 헤더로 구분됨
   // ── 경제 (시작 자원 → 자원 획득) ──
-  start_credit:  { name:'시작 크레딧', desc:'시작 시 크레딧 지급 (+20/Lv)',   start:10, nMax:6, max:9, group:'eco', sect:'시작 자원' },
-  start_energy:  { name:'시작 에너지', desc:'시작 시 에너지 지급 (+10/Lv)',   start:10, nMax:6, max:9, group:'eco', sect:'시작 자원' },
-  start_unit:    { name:'시작 유닛',   desc:'시작 시 기본 유닛 지급 (+1기/Lv)', start:15, nMax:5, max:8, group:'eco', sect:'시작 자원' },
-  start_turret:  { name:'시작 포탑',   desc:'시작 시 가드 타워 배치 (1기)',    start:50, nMax:1, max:1, group:'eco', sect:'시작 자원' },
-  credit_gain:   { name:'크레딧 획득', desc:'인게임 크레딧 획득 증가 (+8%/Lv)', start:20, nMax:5, max:8, group:'eco', sect:'자원 획득' },
-  energy_gain:   { name:'에너지 획득', desc:'인게임 에너지 획득 증가 (+8%/Lv)', start:20, nMax:5, max:8, group:'eco', sect:'자원 획득' },
+  start_credit:  { name:'시작 크레딧', desc:'시작 시 크레딧 지급 (+20/Lv)',   start:15, nMax:6, max:9, group:'eco', sect:'시작 자원' },
+  start_energy:  { name:'시작 에너지', desc:'시작 시 에너지 지급 (+10/Lv)',   start:15, nMax:6, max:9, group:'eco', sect:'시작 자원' },
+  start_unit:    { name:'시작 유닛',   desc:'시작 시 기본 유닛 지급 (+1기/Lv)', start:30, nMax:5, max:8, group:'eco', sect:'시작 자원' },
+  start_turret:  { name:'시작 포탑',   desc:'시작 시 가드 타워 배치 (1기)',    start:80, nMax:1, max:1, group:'eco', sect:'시작 자원' },
+  credit_gain:   { name:'크레딧 획득', desc:'인게임 크레딧 획득 증가 (+8%/Lv)', start:25, nMax:5, max:8, group:'eco', sect:'자원 획득' },
+  energy_gain:   { name:'에너지 획득', desc:'인게임 에너지 획득 증가 (+8%/Lv)', start:25, nMax:5, max:8, group:'eco', sect:'자원 획득' },
   // ── 생산(뽑기·자동화) ──
-  gacha_luck:    { name:'고등급 확률', desc:'레전드+ 뽑기 확률 가중 (+12%/Lv)', start:22, nMax:5, max:8, group:'prod', sect:'뽑기' },
-  gacha_double:  { name:'추가 생산',   desc:'뽑기 시 1기 추가 확률 (+6%/Lv)',  start:22, nMax:5, max:8, group:'prod', sect:'뽑기' },
+  gacha_luck:    { name:'고등급 확률', desc:'레전드+ 뽑기 확률 가중 (+12%/Lv)', start:35, nMax:5, max:8, group:'prod', sect:'뽑기' },
+  gacha_double:  { name:'추가 생산',   desc:'뽑기 시 1기 추가 확률 (+6%/Lv)',  start:30, nMax:5, max:8, group:'prod', sect:'뽑기' },
   // 자동화 해금(생산 섹션 통합) — 1회 구매로 인게임 on/off 토글 해금 · 가격 높음
-  auto_unit:    { name:'자동 유닛 소환',  desc:'유닛 자동 뽑기 토글 해금 (0.33초마다 1기)',          start:150, nMax:1, max:1, group:'prod', sect:'자동화' },
-  auto_combine: { name:'자동 조합',       desc:'낮은 등급부터 자동 조합 토글 해금 (레전드까지·0.33초)', start:150, nMax:1, max:1, group:'prod', sect:'자동화' },
-  auto_energy:  { name:'자동 에너지 변환', desc:'크레딧→에너지 자동 변환 토글 해금 (0.33초마다)',      start:130, nMax:1, max:1, group:'prod', sect:'자동화' },
-  auto_pboss:   { name:'자동 개인 보스',   desc:'개인 보스를 쿨마다 자동 소환 토글 해금 (보스별 on/off)', start:220, nMax:1, max:1, group:'prod', sect:'자동화' },
-  auto_place:   { name:'자동 유닛 배치',   desc:'새 유닛을 트랙에 자동 정렬 토글 해금 (가운데 쌓임 방지)', start:120, nMax:1, max:1, group:'prod', sect:'자동화' },
+  auto_unit:    { name:'자동 유닛 소환',  desc:'유닛 자동 뽑기 토글 해금 (0.33초마다 1기)',          start:250, nMax:1, max:1, group:'prod', sect:'자동화' },
+  auto_combine: { name:'자동 조합',       desc:'낮은 등급부터 자동 조합 토글 해금 (레전드까지·0.33초)', start:250, nMax:1, max:1, group:'prod', sect:'자동화' },
+  auto_energy:  { name:'자동 에너지 변환', desc:'크레딧→에너지 자동 변환 토글 해금 (0.33초마다)',      start:220, nMax:1, max:1, group:'prod', sect:'자동화' },
+  auto_pboss:   { name:'자동 개인 보스',   desc:'개인 보스를 쿨마다 자동 소환 토글 해금 (보스별 on/off)', start:400, nMax:1, max:1, group:'prod', sect:'자동화' },
+  auto_place:   { name:'자동 유닛 배치',   desc:'새 유닛을 트랙에 자동 정렬 토글 해금 (가운데 쌓임 방지)', start:200, nMax:1, max:1, group:'prod', sect:'자동화' },
   // ── 전투(아군 강화 · 적 약화) — 초월 단계가 종결 강화 역할(엔드 대체) ──
-  unit_atk_up:   { name:'공격력 증가',  desc:'유닛 공격력 증가 (+5%/Lv)',   start:14, nMax:6, max:9, group:'combat', sect:'아군 강화' },
-  unit_aspd:     { name:'공격 속도',    desc:'아군 공격 속도 증가 (+4%/Lv)', start:16, nMax:6, max:9, group:'combat', sect:'아군 강화' },
-  enemy_hp_down: { name:'적 체력 감소', desc:'내 트랙 적 체력 감소 (-3%/Lv)', start:14, nMax:6, max:9, group:'combat', sect:'적 약화' },
-  enemy_def_down:{ name:'적 방어 감소', desc:'내 트랙 적 방어력 감소 (-1/Lv)', start:14, nMax:6, max:9, group:'combat', sect:'적 약화' },
+  unit_atk_up:   { name:'공격력 증가',  desc:'유닛 공격력 증가 (+5%/Lv)',   start:30, nMax:6, max:9, group:'combat', sect:'아군 강화' },
+  unit_aspd:     { name:'공격 속도',    desc:'아군 공격 속도 증가 (+4%/Lv)', start:30, nMax:6, max:9, group:'combat', sect:'아군 강화' },
+  enemy_hp_down: { name:'적 체력 감소', desc:'내 트랙 적 체력 감소 (-3%/Lv)', start:30, nMax:6, max:9, group:'combat', sect:'적 약화' },
+  enemy_def_down:{ name:'적 방어 감소', desc:'내 트랙 적 방어력 감소 (-1/Lv)', start:25, nMax:6, max:9, group:'combat', sect:'적 약화' },
   // ── 전체 강화(팀 공유 · 비쌈) ──
-  team_atk:      { name:'전체 공격력',   desc:'모든 유닛 공격력 증가 (+4%/Lv)',  start:38, nMax:5, max:8, group:'team', sect:'팀 강화' },
-  team_aspd:     { name:'전체 공격속도', desc:'모든 유닛 공격 속도 증가 (+3%/Lv)', start:38, nMax:5, max:8, group:'team', sect:'팀 강화' },
-  team_credit:   { name:'전체 시작 크레딧',desc:'모든 플레이어 시작 크레딧 (+25/Lv)', start:32, nMax:5, max:8, group:'team', sect:'팀 강화' },
-  team_enemy_hp: { name:'전체 적 체력',  desc:'모든 적 체력 감소 (-2.5%/Lv)', start:38, nMax:5, max:8, group:'team', sect:'팀 적 약화' },
-  team_enemy_def:{ name:'전체 적 방어', desc:'모든 적 방어력 감소 (-1/Lv)',  start:38, nMax:5, max:8, group:'team', sect:'팀 적 약화' },
+  team_atk:      { name:'전체 공격력',   desc:'모든 유닛 공격력 증가 (+4%/Lv)',  start:60, nMax:5, max:8, group:'team', sect:'팀 강화' },
+  team_aspd:     { name:'전체 공격속도', desc:'모든 유닛 공격 속도 증가 (+3%/Lv)', start:55, nMax:5, max:8, group:'team', sect:'팀 강화' },
+  team_credit:   { name:'전체 시작 크레딧',desc:'모든 플레이어 시작 크레딧 (+25/Lv)', start:45, nMax:5, max:8, group:'team', sect:'팀 강화' },
+  team_enemy_hp: { name:'전체 적 체력',  desc:'모든 적 체력 감소 (-2.5%/Lv)', start:60, nMax:5, max:8, group:'team', sect:'팀 적 약화' },
+  team_enemy_def:{ name:'전체 적 방어', desc:'모든 적 방어력 감소 (-1/Lv)',  start:55, nMax:5, max:8, group:'team', sect:'팀 적 약화' },
   // ── 보스(공용·개인) ──
-  boss_hp_down:  { name:'보스 체력 감소', desc:'월드 보스 체력 감소 (-3%/Lv)',  start:12, nMax:6, max:9, group:'coop', sect:'월드 보스' },
-  boss_atk_up:   { name:'파견 유닛 데미지 증가', desc:'파견 유닛 보스 데미지 증가 (+5%/Lv)', start:12, nMax:6, max:9, group:'coop', sect:'월드 보스' },
-  pboss_reward:  { name:'개인 보스 보상', desc:'개인 보스 처치 보상 증가 (+10%/Lv)', start:14, nMax:5, max:8, group:'coop', sect:'개인 보스' },
-  pboss_cd:      { name:'개인 보스 쿨감', desc:'개인 보스 재소환 쿨다운 감소 (-6%/Lv)', start:14, nMax:5, max:8, group:'coop', sect:'개인 보스' },
+  boss_hp_down:  { name:'보스 체력 감소', desc:'월드 보스 체력 감소 (-3%/Lv)',  start:25, nMax:6, max:9, group:'coop', sect:'월드 보스' },
+  boss_atk_up:   { name:'파견 유닛 데미지 증가', desc:'파견 유닛 보스 데미지 증가 (+5%/Lv)', start:25, nMax:6, max:9, group:'coop', sect:'월드 보스' },
+  pboss_reward:  { name:'개인 보스 보상', desc:'개인 보스 처치 보상 증가 (+10%/Lv)', start:30, nMax:5, max:8, group:'coop', sect:'개인 보스' },
+  pboss_cd:      { name:'개인 보스 쿨감', desc:'개인 보스 재소환 쿨다운 감소 (-6%/Lv)', start:30, nMax:5, max:8, group:'coop', sect:'개인 보스' },
 };
 // 비용 곡선: 일반 레벨 = start×(lv+1) (선형 — 1단계 start, 2단계 2×start … 딱 떨어지는 가격), 초월 레벨 = 일반 누적×[..] (5단위 반올림).
 const META_COST_POW=1.0;
-const META_TRANS_COST=[0.6,0.9,1.2];   // 초월 3레벨 비용 배수(일반 누적 대비, 합 ≈2.7×)
+const META_TRANS_COST=[2.5,5,9];   // 초월 3레벨 비용 배수(일반 누적 대비) — 진짜 훨씬 비싸게(합 ≈16.5×)
 function metaNMax(b){ return (b&&b.nMax!=null)?b.nMax:(b?b.max:0); }
 function metaNormalTotal(b){ const n=metaNMax(b); let t=0; for(let i=0;i<n;i++) t+=Math.round(b.start*Math.pow(i+1,META_COST_POW)); return t; }
 function metaNextCost(buildId, level){ const b=META_BUILDS[buildId]; if(!b) return null;
