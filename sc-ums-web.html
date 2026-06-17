@@ -550,8 +550,16 @@
   @keyframes bbFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
   .bldg.metaBeacon.sel .bbCore{border-color:#fff;box-shadow:0 0 16px -1px var(--bc,#ffd24a),inset 0 1px 0 rgba(255,255,255,.2)}
   .bldg.metaBeacon:active .bbCore{transform:translateY(1px)}
-  .bname{font-size:var(--fs-lg);margin-top:5px;font-weight:800;letter-spacing:.2px;white-space:nowrap;text-shadow:0 1px 2px #000,0 0 6px #000}
-  .bsub{font-size:var(--fs-sm);color:#a3c0dc;margin-top:2px;font-weight:600;text-shadow:0 1px 2px #000}
+  /* 업그레이드 탭 섹션 구분(종족 무기 강화 ↔ 영구 강화) — 가로 구분선 + 가운데 라벨 */
+  .upgSect,.upgDivider{position:absolute;left:8%;right:8%;display:flex;align-items:center;justify-content:center;gap:8px;z-index:7;pointer-events:none;transform:translateY(-50%)}
+  .upgSect::before,.upgSect::after,.upgDivider::before,.upgDivider::after{content:'';flex:1;height:1px}
+  .upgSect::before,.upgSect::after{background:linear-gradient(90deg,transparent,rgba(120,180,255,.42),transparent)}
+  .upgDivider::before,.upgDivider::after{background:linear-gradient(90deg,transparent,rgba(255,210,74,.5),transparent)}
+  .upgSect span,.upgDivider span{font-size:9px;font-weight:800;letter-spacing:1.5px;white-space:nowrap;text-shadow:0 1px 2px #000}
+  .upgSect span{color:#9fc4ff;text-shadow:0 0 6px rgba(120,180,255,.4),0 1px 2px #000}
+  .upgDivider span{color:#ffd24a;text-shadow:0 0 6px rgba(255,210,74,.45),0 1px 2px #000}
+  .bname{font-size:var(--fs-md);margin-top:3px;font-weight:800;letter-spacing:.2px;white-space:nowrap;text-shadow:0 1px 2px #000,0 0 6px #000}
+  .bsub{font-size:var(--fs-xs);color:#a3c0dc;margin-top:1px;font-weight:600;text-shadow:0 1px 2px #000}
 
   /* BOTTOM PANEL */
   /* 하단 패널: 상단 발광 라인 + 미세 그라데이션으로 게임화면과 분리 */
@@ -2581,7 +2589,7 @@ const TECH=[
   {id:'pointlab', name:'포인트 연구소', icon:'⬆️', wpn:'meta', wname:'영구 강화', units:'즉시 적용', meta:true},  // 포인트로 영구 강화(판 종료 시 정산, 강화 즉시 적용)
 ];
 // 상단 2×2(무기 계열) + 하단 중앙 1(포인트 연구소)
-const TECH_POS=[{x:.28,y:.30},{x:.72,y:.30},{x:.28,y:.55},{x:.72,y:.55},{x:.5,y:.80}];
+const TECH_POS=[{x:.28,y:.26},{x:.72,y:.26},{x:.28,y:.47},{x:.72,y:.47},{x:.5,y:.74}];   // 상단 2×2(무기) + 하단중앙 포인트연구소(채팅 위로 올림)
 // 계열별 색 (meta=골드)
 const WPN_COL={inf:'#4aa8ff',mech:'#5ad1ff',pro:'#ffc040',zrg:'#9fd356',meta:'#ffd24a'};
 const WPN_RACE={inf:'terran',mech:'terran',pro:'protoss',zrg:'zerg'};   // 건물 계열 → 종족(작동음 분리용)
@@ -5350,7 +5358,11 @@ function separateUnits(){ if(!GW||!GH) return; const us=G.units; if(us.length<2)
   if(settling && !stillOverlap) settling=null;
 }
 function renderBldgs(viewId,list,posArr,selId,onSel){ const v=document.getElementById(viewId);
-  v.querySelectorAll('.bldg').forEach(n=>n.remove());
+  v.querySelectorAll('.bldg,.upgSect,.upgDivider').forEach(n=>n.remove());
+  if(viewId==='vUpgrade'){   // 두 그룹 시각 구분: 무기(상단) ↔ 영구 강화(하단)
+    const sec=document.createElement('div'); sec.className='upgSect'; sec.style.top='15%'; sec.innerHTML='<span>종족 무기 강화</span>'; v.appendChild(sec);
+    const div=document.createElement('div'); div.className='upgDivider'; div.style.top='60%'; div.innerHTML='<span>◆ 영구 강화</span>'; v.appendChild(div);
+  }
   list.forEach((b,i)=>{ const p=posArr[i%posArr.length];
     const col=WPN_COL[b.wpn]||'#4aa8ff'; const lv=(G.atkLv&&G.atkLv[b.wpn])||0;
     const has3d=!!(window.M3D && window.M3D.hasModel && window.M3D.hasModel(b.id)) && !(typeof G!=='undefined'&&G.opt&&G.opt.model3d===false);  // 3D 건물 모델 보유 시 프레임/아이콘 숨김(모델이 대신 섬). 단 3D 끄면 2D 아이콘 표시
@@ -8666,7 +8678,7 @@ const SHOP_BEACON_LIFT=0.15;  // 유닛뽑기: 유닛을 비콘 단(deck) 위로
 const SHOP_FIT={ marine:1.28, ghost:1.28, hydra:1.12, dragoon:0.8, goliath:0.82, archon:0.74, turret:0.62, photon:0.6 };
 const CITIZEN_SHOP_MUL=1.22;   // 유닛뽑기 시민 크기 배율(조금 더 크게)
 const SHOP_SPIN=0.6;          // 전시 모델 회전(턴테이블) 속도(rad/s)
-const BLDG_SCALE_MUL=1.95;    // 업그레이드 건물 전시 크기 배율(크게)
+const BLDG_SCALE_MUL=1.5;    // 업그레이드 건물 전시 크기 배율(5건물+섹션 구분 들어가게 약간 축소)
 const BLDG_SPIN=0.4;          // 건물 전시 회전 속도(천천히)
 const DPR=Math.min(devicePixelRatio||1,2);
 
