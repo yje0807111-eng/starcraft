@@ -2786,7 +2786,7 @@ const TIER_MUL = { common:1.0, rare:2.7, epic:5.5, unique:12, legend:30, transce
 const UP_TIER_MUL = { common:1.0, rare:1.1, epic:3.0, unique:7, legend:13, transcend:46, god:98 };   // 레어 업글배율=일반과 근접(중반엔 일반과 수렴) / 유니크는 에픽보다 확실히 높음 / 초월·갓 집중   // 레전드 13→9: 풀업 레전드가 20라운드를 깨지 않게(초월=클리어 라인 유지, 봇 시뮬 검증)   // 업그레이드 1회당 증가폭 등급 배율(기본딜 배율의 절반 강도)   // 등급당 ×2.2 — 등급 업=급격한 성장(설계: 초월 조합=클리어 라인, 갓=초반 캐리)
 function gachaTierMul(u){ return (u && u.gtier && TIER_MUL[u.gtier]) || 1; }
 // 단순 조합 사다리: 같은 유닛 3개 → 다음 등급 랜덤 1종. (legend↑는 단순조합 없음 — 초월=레시피, 갓=뽑기전용)
-const SIMPLE_COMBINE_TIERS = { common:'rare', rare:'epic', epic:'unique', unique:'legend', transcend:'god' };   // 초월 3개 → 갓 랜덤(조합으로도 갓 획득 가능)
+const SIMPLE_COMBINE_TIERS = { common:'rare', rare:'epic', epic:'unique', unique:'legend' };   // 일반~유니크만 단순조합. 초월=레전드 레시피로만, 갓=조합 불가(뽑기/지정 전용 — 도파민용)
 // 별은 등급별로 늘어나지 않음 — 같은 이름이 두 등급에 걸쳐 있어(일반·레어=레인저, 에픽·유니크=팬텀)
 // 강화형(레어·유니크)만 ★ 하나로 구분하는 단순 장치. 나머지(이름이 겹치지 않는 등급)는 별 없음.
 const UPGRADED_TIER = { rare:true, unique:true };
