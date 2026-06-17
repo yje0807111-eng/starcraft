@@ -8389,8 +8389,9 @@ function strikeSyncCmpUnits(dt){ const S=STK; if(!S) return; const mcv=document.
   if(!on){ if(mcv) mcv.style.display='none'; return; }
   if(mcv) mcv.style.display='block';
   const W=S.cw||1, H=S.ch||1, scale=Math.min(W,H)/S.viewWorld;
+  const k=Math.min(1, Math.max(0.05, (2600/3)/S.viewWorld));   // 맵 스케일 연동: 최대 줌(viewWorld≈867)=1(원하는 크기), 줌아웃 시 비례 축소
   const list=S.cmpUnits.map(u=>{ const sx=(u.x-S.cam.x)*scale+W/2, sy=(u.y-S.cam.y)*scale+H/2; return { uid:u.uid, id:u.id, x:sx/W, y:sy/H }; });
-  M3D.sync(list, W, H, dt, [], [], null); }
+  M3D.sync(list, W, H, dt, [], [], null, k); }
 // 건물 탭 전용: 내 전용 건설 맵(전장 아님). 화면 1/4 직사각형, 깔끔한 금속 타일 + 건설 격자
 function strikeDrawBuildMap(){ const S=STK; if(!S) return; const cvEl=document.getElementById('cvMain'); if(!cvEl) return;
   const r=setup('cvMain'); const ctx=r.ctx, W=r.W, H=r.H; GW=W; GH=H; S.cw=W; S.ch=H;
@@ -9023,7 +9024,7 @@ window.M3D={
   loadedKeys:()=>Object.keys(bases),
   mapModelKeys:(mapId)=>mapModelKeys(mapId),
   portrait:(id)=>unitPortrait(id),   // 3D 모델 → 2D 흑백 포트레잇 dataURL(없으면 null)
-  sync(units, W, H, dt, sel, enemies, selEnemy){
+  sync(units, W, H, dt, sel, enemies, selEnemy, scaleMul){
     if(!ready||!W||!H) return;
     if(renderer._w!==W||renderer._h!==H){ renderer.setSize(W,H,false);
       camera.left=0;camera.right=W;camera.top=H;camera.bottom=0;camera.updateProjectionMatrix(); renderer._w=W;renderer._h=H; }
@@ -9123,6 +9124,7 @@ window.M3D={
         m.gun.position.set(m.gunBase.x, m.gunBase.y - rl*RELOAD_DIP, m.gunBase.z - m.lean*GUN_RECOIL);
         m.gun.rotation.x = rl*RELOAD_TILT; }
       m.holder.position.set(px, worldY - Y_DROP, 0);
+      if(scaleMul&&scaleMul!==1) m.holder.scale.setScalar((SCALE[_id]||MODEL_SCALE)*scaleMul);   // 맵 스케일 연동(직스 등): 줌에 따라 유닛도 함께 확대/축소
     }
     // ── 적 유닛(공중: 부유 + 진행방향 회전) ──
     for(const e of eList){ const key='e'+e.eid; let m=models.get(key); if(!m){ m=makeModel(e.model3d); if(!m) continue; m.kind='enemy'; m.age=0; if(CLOAK_MODELS[m.id]) m.mats=cloneMats(m.inner); models.set(key,m); }  // 클로킹 모델만 투명재질(나머지는 불투명 유지)
