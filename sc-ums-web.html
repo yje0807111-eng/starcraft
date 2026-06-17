@@ -8305,7 +8305,7 @@ let STK=null, _stkDrag=null, _stkPtrs=new Map(), _stkPinch=null;
 // 크기 비교용 샘플 유닛(임시) — 다음 단계에서 실제 전투 유닛으로 대체. nm 없으면 U[id].name 폴백
 const STRIKE_SAMPLE=[{id:'marine'},{id:'ghost'},{id:'hydra'},{id:'dragoon'},{id:'goliath'},{id:'archon'},{id:'tank',nm:'탱크'},{id:'skyguard',nm:'스카이가드'}];
 // 전장 줌 한계: 최소(가장 축소)=1.5 → 전 맵이 한눈에 안 들어오게(유닛이 너무 작아지지 않게). 최대(가장 확대)=3
-const STK_MINZOOM=1.5, STK_MAXZOOM=3;
+const STK_MINZOOM=1.2, STK_MAXZOOM=3;
 // 직스 타일 에셋(기존 assets/tiles 재사용)
 const STRIKE_GROUND=new Image(); STRIKE_GROUND.src='assets/tiles/desert.png?v=1';        // 전장 지형(사막)
 const STRIKE_PAVE=new Image(); STRIKE_PAVE.src='assets/tiles/protoss_floor.png?v=1';     // 신전 잇는 포장 길(프로토스 테크)
@@ -8437,9 +8437,15 @@ function strikeAiEconomy(){ const S=STK, ai=S.ai;
   if(ai.gold>=ai.mineCost && ai.mines<8 && Math.random()<0.7){ ai.gold-=ai.mineCost; ai.mines++; ai.mineCost=Math.round(ai.mineCost*1.35); } }
 // 카메라가 맵 밖으로 못 나가게 클램프(검은 화면 방지)
 function strikeClampCam(){ const S=STK; if(!S||!S.cw) return; const scale=Math.min(S.cw,S.ch)/S.viewWorld;
-  const hx=(S.cw/scale)/2, hy=(S.ch/scale)/2, W=S.world;
-  S.cam.x = hx*2>=W ? W/2 : Math.max(hx, Math.min(W-hx, S.cam.x));
-  S.cam.y = hy*2>=W ? W/2 : Math.max(hy, Math.min(W-hy, S.cam.y)); }
+  const hx=(S.cw/scale)/2, hy=(S.ch/scale)/2, W=S.world, c=W/2;
+  S.cam.x = hx*2>=W ? c : Math.max(hx, Math.min(W-hx, S.cam.x));
+  S.cam.y = hy*2>=W ? c : Math.max(hy, Math.min(W-hy, S.cam.y));
+  // 대각 밴드 제한 — 액션은 me↔ai 반대각선에 집중. 좌상단/우하단 빈 코너로 못 가게
+  const dx=S.cam.x-c, dy=S.cam.y-c, SQ=Math.SQRT1_2;
+  let a=(dx-dy)*SQ, b=(dx+dy)*SQ;   // a=레인 방향, b=수직(빈 코너) 방향
+  const A=W*0.52, B=W*0.14;
+  a=Math.max(-A,Math.min(A,a)); b=Math.max(-B,Math.min(B,b));
+  S.cam.x = c+(a+b)*SQ; S.cam.y = c+(b-a)*SQ; }
 // 좌상단: 진영별 광산/돈 5초마다 회전(광산 많은 순→돈 많은 순)
 function strikeLeaderboard(dt){ const S=STK; S.leadT-=dt; const ranked=strikeRanked();
   if(S.leadT<=0){ S.leadT+=5; S.leadIdx=(S.leadIdx+1)%ranked.length; }
@@ -8460,8 +8466,8 @@ function strikeDrawMain(){ const S=STK; if(!S) return; const cvEl=document.getEl
   const w2s=(x,y)=>({x:(x-S.cam.x)*scale+W/2, y:(y-S.cam.y)*scale+H/2});
   strikeDrawGround(ctx,W,H,S,scale);
   // 메인 신전 주변: 프로토스 타일 사각 소환 구역(넓게) — 길 끝을 감싸 자연스럽게
-  strikeDrawSpawnZone(ctx,w2s,scale,S,W,H,S.me.base.x,S.me.base.y,1500,980,'#7fe0ff');
-  strikeDrawSpawnZone(ctx,w2s,scale,S,W,H,S.ai.base.x,S.ai.base.y,1500,980,'#ff9aa6');
+  strikeDrawSpawnZone(ctx,w2s,scale,S,W,H,S.me.base.x,S.me.base.y,1950,1280,'#7fe0ff');
+  strikeDrawSpawnZone(ctx,w2s,scale,S,W,H,S.ai.base.x,S.ai.base.y,1950,1280,'#ff9aa6');
   // 사막 모랫길 레인: me메인 → me2차 → 중립 → ai2차 → ai메인 (한 직선)
   const nodes=[S.me.base, S.me.sec, S.central, S.ai.sec, S.ai.base].map(o=>w2s(o.x,o.y));
   strikeDrawLane(ctx, nodes, scale, S, W, H);
@@ -8537,31 +8543,30 @@ function strikeDrawClearing(ctx,w2s,scale,wx,wy,worldR){ const p=w2s(wx,wy), r=M
   ctx.strokeStyle='rgba(150,120,74,.22)'; ctx.lineWidth=Math.max(1,2*scale); ctx.beginPath(); ctx.ellipse(p.x,p.y,r*0.94,r*0.85,0,0,6.283); ctx.stroke();
   ctx.restore(); }
 // 사막 모랫길(레인) — 노드들을 잇는 폭 넓은 길 + 중앙 바퀴자국 점선
-// 신전 잇는 포장 길 — 프로토스 타일(넓게) + 신전 관통 진격 화살표(은은). 끝은 메인 사각 플랫폼이 감싸 자연스럽게
+// 신전 잇는 포장 길 — 프로토스 타일(넓게) + 가장자리 페더(자연 소멸) + 진격 화살표(은은). 끝은 메인 플랫폼이 감쌈
 function strikeDrawLane(ctx, pts, scale, S, W, H){ if(!pts||pts.length<2) return; ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round';
   const path=()=>{ ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y); for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x,pts[i].y); };
-  // 얇은 어두운 shoulder(살짝만 — 2단계 느낌 최소화)
-  path(); ctx.strokeStyle='rgba(24,28,30,.45)'; ctx.lineWidth=Math.max(44,1360*scale); ctx.stroke();
-  // 포장 타일 패턴(넓게)
-  const img=STRIKE_PAVE;
-  if(img&&img.complete&&img.naturalWidth&&S){ const pat=ctx.createPattern(img,'repeat');
-    if(pat&&pat.setTransform){ const tilePx=Math.max(8,300*scale), s=tilePx/img.naturalWidth, ox=(0-S.cam.x)*scale+W/2, oy=(0-S.cam.y)*scale+H/2; pat.setTransform(new DOMMatrix([s,0,0,s,ox,oy])); }
-    path(); ctx.strokeStyle=pat||'rgba(150,140,120,.5)'; ctx.lineWidth=Math.max(36,1260*scale); ctx.stroke();
-    path(); ctx.strokeStyle='rgba(18,26,34,.28)'; ctx.lineWidth=Math.max(36,1260*scale); ctx.stroke();
-  } else { path(); ctx.strokeStyle='rgba(150,134,104,.45)'; ctx.lineWidth=Math.max(36,1260*scale); ctx.stroke(); }
-  // 진격 화살표(중앙선 관통, 양 끝→중앙, 은은)
+  const img=STRIKE_PAVE; let pat=null;
+  if(img&&img.complete&&img.naturalWidth&&S){ pat=ctx.createPattern(img,'repeat');
+    if(pat&&pat.setTransform){ const tilePx=Math.max(8,300*scale), s=tilePx/img.naturalWidth, ox=(0-S.cam.x)*scale+W/2, oy=(0-S.cam.y)*scale+H/2; pat.setTransform(new DOMMatrix([s,0,0,s,ox,oy])); } }
+  const stroke=pat||'rgba(150,140,120,.5)', base=Math.max(24,1380*scale);
+  // 페더: 넓은→좁은 폭으로 알파 증가 → 가장자리(폭 테두리)·끝 모두 자연 소멸
+  const layers=[[1.0,0.22],[0.86,0.42],[0.7,0.72],[0.55,1.0]];
+  for(const L of layers){ path(); ctx.globalAlpha=L[1]; ctx.strokeStyle=stroke; ctx.lineWidth=base*L[0]; ctx.stroke(); }
+  ctx.globalAlpha=0.2; ctx.strokeStyle='rgba(18,26,34,1)'; path(); ctx.lineWidth=base*0.55; ctx.stroke();   // 중심 톤 다운(통일)
+  ctx.globalAlpha=1;
   strikeLaneArrows(ctx, pts, scale, 2);
   ctx.restore(); }
-// 바닥 진격 화살표(중앙선 위, 간격 배치, 매우 은은)
-function strikeLaneArrows(ctx, pts, scale, centerIdx){ const gap=Math.max(30,300*scale), size=Math.max(6,72*scale);
+// 바닥 진격 화살표(중앙선 위, 띄엄띄엄, 매우 은은)
+function strikeLaneArrows(ctx, pts, scale, centerIdx){ const gap=Math.max(48,480*scale), size=Math.max(6,76*scale);
   ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round';
   for(let si=0; si<pts.length-1; si++){ const a=pts[si], b=pts[si+1]; let dx=b.x-a.x, dy=b.y-a.y; const len=Math.hypot(dx,dy); if(len<1) continue;
     const toward = si<centerIdx, mdx=(toward?dx:-dx)/len, mdy=(toward?dy:-dy)/len, ang=Math.atan2(mdy,mdx);
     const n=Math.floor(len/gap);
-    for(let k=1;k<=n;k++){ const t=k*gap/len; if(t>0.97) break; const x=a.x+dx*t, y=a.y+dy*t;
-      ctx.save(); ctx.translate(x,y); ctx.rotate(ang); ctx.globalAlpha=.34;
-      ctx.strokeStyle='rgba(170,220,255,.85)'; ctx.lineWidth=Math.max(1.4,size*0.26);
-      ctx.beginPath(); ctx.moveTo(-size*0.6,-size*0.62); ctx.lineTo(size*0.55,0); ctx.lineTo(-size*0.6,size*0.62); ctx.stroke();
+    for(let k=1;k<=n;k++){ const t=k*gap/len; if(t>0.94) break; const x=a.x+dx*t, y=a.y+dy*t;
+      ctx.save(); ctx.translate(x,y); ctx.rotate(ang); ctx.globalAlpha=.2;
+      ctx.strokeStyle='rgba(175,222,255,.8)'; ctx.lineWidth=Math.max(1.3,size*0.22);
+      ctx.beginPath(); ctx.moveTo(-size*0.58,-size*0.6); ctx.lineTo(size*0.55,0); ctx.lineTo(-size*0.58,size*0.6); ctx.stroke();
       ctx.restore(); } }
   ctx.restore(); }
 // 둥근 사각 path 헬퍼
