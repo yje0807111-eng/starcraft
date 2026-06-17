@@ -8469,15 +8469,25 @@ function strikeDrawMain(){ const S=STK; if(!S) return; const cvEl=document.getEl
   const _tmpl=function(o,modelId,col,glow,wr,label,labelCol){
     const has3d=window.M3D && M3D.hasModel && M3D.hasModel(modelId) && !(G.opt&&G.opt.model3d===false);
     if(!has3d){ strikeDrawTemple(ctx,w2s,scale,o.x,o.y,col,glow,wr,{topCol:(modelId==='temple_neutral'?'#fff7da':undefined),label:label,labelCol:labelCol}); return; }
-    const p=w2s(o.x,o.y), rr=Math.max(8,wr*scale*0.55);
-    ctx.save(); ctx.globalAlpha=.4; ctx.strokeStyle=glow; ctx.lineWidth=Math.max(1.5,3*scale);
-    ctx.beginPath(); ctx.ellipse(p.x,p.y,rr,rr*0.45,0,0,6.283); ctx.stroke(); ctx.globalAlpha=1; ctx.restore();
-    ctx.save(); ctx.font='800 11px Rajdhani,"Apple SD Gothic Neo",sans-serif'; ctx.textAlign='center';
+    const p=w2s(o.x,o.y), rr=Math.max(9,wr*scale*0.58);
+    ctx.save();
+    // 접지 그림자(부드러운 타원) — 신전이 땅에 닿아 보이게
+    const sh=ctx.createRadialGradient(p.x,p.y+rr*0.16,rr*0.18,p.x,p.y+rr*0.16,rr*1.2);
+    sh.addColorStop(0,'rgba(0,0,0,.5)'); sh.addColorStop(.55,'rgba(0,0,0,.3)'); sh.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=sh; ctx.beginPath(); ctx.ellipse(p.x,p.y+rr*0.16,rr*1.2,rr*0.52,0,0,6.283); ctx.fill();
+    // 돌 기단 패드(사막 톤) — 신전이 박혀 보이는 받침
+    ctx.fillStyle='rgba(54,44,30,.9)'; ctx.beginPath(); ctx.ellipse(p.x,p.y,rr*0.95,rr*0.44,0,0,6.283); ctx.fill();
+    ctx.fillStyle='rgba(102,84,58,.7)'; ctx.beginPath(); ctx.ellipse(p.x,p.y-rr*0.05,rr*0.74,rr*0.33,0,0,6.283); ctx.fill();
+    // 진영색 림 글로우
+    ctx.globalAlpha=.55; ctx.strokeStyle=glow; ctx.lineWidth=Math.max(1.5,3*scale);
+    ctx.beginPath(); ctx.ellipse(p.x,p.y,rr*0.95,rr*0.44,0,0,6.283); ctx.stroke(); ctx.globalAlpha=1;
+    // 라벨
+    ctx.font='800 11px Rajdhani,"Apple SD Gothic Neo",sans-serif'; ctx.textAlign='center';
     ctx.lineWidth=3; ctx.strokeStyle='rgba(0,0,0,.72)'; ctx.strokeText(label,p.x,p.y+rr+14);
     ctx.fillStyle=labelCol||glow; ctx.fillText(label,p.x,p.y+rr+14); ctx.restore(); };
-  _tmpl(S.central,'temple_neutral','#d9b34a','#ffd86a',70,'중립 신전','#ffe28a');
-  _tmpl(S.me.sec,'temple_stone','#3a7bff','#7fe0ff',135,'2차 신전','#bfe0ff');
-  _tmpl(S.ai.sec,'temple_stone','#ff3b54','#ff9aa6',135,'적 2차 신전','#ffc2c8');
+  _tmpl(S.central,'temple_neutral','#d9b34a','#ffd86a',40,'중립 신전','#ffe28a');
+  _tmpl(S.me.sec,'temple_stone','#3a7bff','#7fe0ff',102,'2차 신전','#bfe0ff');
+  _tmpl(S.ai.sec,'temple_stone','#ff3b54','#ff9aa6',102,'적 2차 신전','#ffc2c8');
   _tmpl(S.me.base,'temple_main','#3a7bff','#7fe0ff',210,'메인 신전','#bfe0ff');
   _tmpl(S.ai.base,'temple_main','#ff3b54','#ff9aa6',210,'적 메인 신전','#ffc2c8');
   // 크기 비교 샘플 유닛 라벨(3D 모델은 cvMarine에 strikeSyncCmpUnits가 렌더)
@@ -8646,7 +8656,7 @@ const STRUCT_RECOIL=0.18; // 고정 구조물(터렛/포토) 발사 시 뒤로 �
 const RELOAD_DIP=0.5;     // 장전 시 총 내리는 양(모델 단위)
 const RELOAD_TILT=0.9;    // 장전 시 총구 아래로 기울이는 각(라디안)
 const RELOAD_WIN=0.2;     // 장전(총 내림) 구간 폭 — 작을수록 들고 조준하는 시간이 김
-const SCALE={ marine:12, goliath:16, ghost:12, archon:18, dragoon:14, hydra:14, observer:13, overlord:22, turret:25, photon:25, acad:19, arm:19, forge:19, evo:19, pointlab:19, temple_main:105, temple_stone:74, temple_neutral:58, citizen:13,
+const SCALE={ marine:12, goliath:16, ghost:12, archon:18, dragoon:14, hydra:14, observer:13, overlord:22, turret:25, photon:25, acad:19, arm:19, forge:19, evo:19, pointlab:19, temple_main:105, temple_stone:55, temple_neutral:30, citizen:13,
   racer:20, tank:22, blade:18, thornqueen:20, skyguard:17, skydancer:17 };  // 유닛별 화면 스케일. 초월 비행체(템페스트·스카이댄서)=대형
 const COLORS={ marine:0x2e9bff, goliath:0xff9418, ghost:0x6cf024, dragoon:0xb070ff, hydra:0x9fd356 };  // (구)타입별 색 — 현재는 플레이어색으로 통일(아래 PLAYER_COLOR)
 // 플레이어 색(스타크래프트식) — 한 플레이어의 모든 유닛·구조물을 같은 색으로 통일(아군 구별용)
