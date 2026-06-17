@@ -8650,10 +8650,45 @@ function unitPortrait(id){
     _pCache[id]=url; return url;
   }catch(e){ console.warn('portrait fail',id,e); _pCache[id]=null; return null; }
 }
+// ── 유즈맵 확장 토대: 맵별 3D 에셋 명세 + 지연 로드/해제(VRAM 절약) ──
+// MAP_ASSETS: 맵 id → 그 맵이 쓰는 body 모델 키 배열. '*'=전체(현재 nemo). 신규 맵은 필요한 키만 나열.
+const MAP_ASSETS = {
+  nemo: '*',
+  // sunken: ['goliath','turret','photon', ...],   // 예: 맵 구현 시 이 맵에 필요한 모델만 나열 → 진입 시 그것만 로드
+};
+function mapModelKeys(mapId){ const a=MAP_ASSETS[mapId]; if(a==='*'||!a) return Object.keys(MODELS); return a.filter(k=>MODELS[k]); }
+function _disposeObj3D(root){ if(!root) return; root.traverse(o=>{
+  if(o.geometry && o.geometry.dispose) o.geometry.dispose();
+  const ms=o.material?(Array.isArray(o.material)?o.material:[o.material]):[];
+  for(const m of ms){ if(!m) continue; for(const k in m){ const v=m[k]; if(v&&v.isTexture&&v.dispose) v.dispose(); } if(m.dispose) m.dispose(); }
+}); }
+// 지정 모델 키들을 로드(이미 로드된 건 스킵). body 모델 한정(가장 큰 텍스처). onDone(로드 수) 콜백
+function ensureModels(keys, onDone){ const L=new GLTFLoader(); let total=0, loaded=0;
+  const fin=()=>{ if(--total<=0 && onDone) onDone(loaded); };
+  for(const id of keys){ if(bases[id]||!MODELS[id]) continue; total++; loaded++;
+    const path='/assets/'+(MODELS[id].includes('/')?MODELS[id]:'models/'+MODELS[id]);
+    L.load(path, g=>{ const s=g.scene; const box=new THREE.Box3().setFromObject(s);
+      bases[id]={ scene:s, off:{x:(box.max.x+box.min.x)/2,y:box.min.y,z:(box.max.z+box.min.z)/2}, h:Math.max(.001,box.max.y-box.min.y), w:Math.max(.001,Math.max(box.max.x-box.min.x,box.max.z-box.min.z)) };
+      tintModel(s,id); fin();
+    }, undefined, e=>{ console.warn('ensureModels fail',id,e); fin(); });
+  }
+  if(total===0 && onDone) onDone(0); return loaded; }
+// 지정 모델 키들을 메모리에서 해제(scene 제거 + geometry/texture dispose) — 맵 떠날 때 VRAM 회수
+function disposeModels(keys){ let n=0; for(const id of keys){
+  if(bases[id]){ _disposeObj3D(bases[id].scene); delete bases[id]; n++; }
+  if(guns[id]){ _disposeObj3D(guns[id]); delete guns[id]; }
+  if(runs[id]){ _disposeObj3D(runs[id].scene); delete runs[id]; }
+} return n; }
 window.M3D={
   ready:()=>ready,
   hasModel:(id)=>!!bases[id],   // 실제 로드 완료 여부(로드 전엔 false → 2D/SVG 폴백 표시). MODELS 카탈로그가 아니라 bases(로드분) 기준
   modelCatalog:(id)=>!!MODELS[id],   // 카탈로그 존재 여부(필요 시)
+  // ── 유즈맵별 에셋 지연 로드/해제(확장 토대) ──
+  loadMapModels:(mapId,cb)=>ensureModels(mapModelKeys(mapId), cb),   // 그 맵 모델만 로드(이미 있으면 스킵)
+  keepOnlyMap:(mapId)=>{ const keep=new Set(mapModelKeys(mapId)); const drop=Object.keys(bases).filter(k=>!keep.has(k)); return disposeModels(drop); },  // 그 맵 외 모델 VRAM 해제
+  disposeModels:(keys)=>disposeModels(keys),
+  loadedKeys:()=>Object.keys(bases),
+  mapModelKeys:(mapId)=>mapModelKeys(mapId),
   portrait:(id)=>unitPortrait(id),   // 3D 모델 → 2D 흑백 포트레잇 dataURL(없으면 null)
   sync(units, W, H, dt, sel, enemies, selEnemy){
     if(!ready||!W||!H) return;
