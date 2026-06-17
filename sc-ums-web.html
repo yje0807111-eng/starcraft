@@ -2840,12 +2840,12 @@ const META_BUILD_GROUPS = { eco:'경제', prod:'생산', combat:'전투', team:'
 // start=1레벨 비용 기준값, nMax=일반 레벨 수, max=일반+초월(초월 3레벨·효과 ×2/×4/×8). 비용은 metaNextCost(완만 감소배율) 참조.
 const META_BUILDS = {   // 탭(group) → 섹션(sect) 2단 분류. 같은 sect끼리 묶여 헤더로 구분됨
   // ── 경제 (시작 자원 → 자원 획득) ──
-  start_credit:  { name:'시작 크레딧', desc:'시작 시 크레딧 지급 (+20/Lv)',   start:12, nMax:6, max:9, group:'eco', sect:'시작 자원' },
-  start_energy:  { name:'시작 에너지', desc:'시작 시 에너지 지급 (+10/Lv)',   start:12, nMax:6, max:9, group:'eco', sect:'시작 자원' },
-  start_unit:    { name:'시작 유닛',   desc:'시작 시 기본 유닛 지급 (+1기/Lv)', start:14, nMax:5, max:8, group:'eco', sect:'시작 자원' },
-  start_turret:  { name:'시작 포탑',   desc:'시작 시 가드 타워 배치 (1기)',    start:34, nMax:1, max:1, group:'eco', sect:'시작 자원' },
-  credit_gain:   { name:'크레딧 획득', desc:'인게임 크레딧 획득 증가 (+8%/Lv)', start:14, nMax:5, max:8, group:'eco', sect:'자원 획득' },
-  energy_gain:   { name:'에너지 획득', desc:'인게임 에너지 획득 증가 (+8%/Lv)', start:14, nMax:5, max:8, group:'eco', sect:'자원 획득' },
+  start_credit:  { name:'시작 크레딧', desc:'시작 시 크레딧 지급 (+20/Lv)',   start:10, nMax:6, max:9, group:'eco', sect:'시작 자원' },
+  start_energy:  { name:'시작 에너지', desc:'시작 시 에너지 지급 (+10/Lv)',   start:10, nMax:6, max:9, group:'eco', sect:'시작 자원' },
+  start_unit:    { name:'시작 유닛',   desc:'시작 시 기본 유닛 지급 (+1기/Lv)', start:15, nMax:5, max:8, group:'eco', sect:'시작 자원' },
+  start_turret:  { name:'시작 포탑',   desc:'시작 시 가드 타워 배치 (1기)',    start:50, nMax:1, max:1, group:'eco', sect:'시작 자원' },
+  credit_gain:   { name:'크레딧 획득', desc:'인게임 크레딧 획득 증가 (+8%/Lv)', start:20, nMax:5, max:8, group:'eco', sect:'자원 획득' },
+  energy_gain:   { name:'에너지 획득', desc:'인게임 에너지 획득 증가 (+8%/Lv)', start:20, nMax:5, max:8, group:'eco', sect:'자원 획득' },
   // ── 생산(뽑기·자동화) ──
   gacha_luck:    { name:'고등급 확률', desc:'레전드+ 뽑기 확률 가중 (+12%/Lv)', start:22, nMax:5, max:8, group:'prod', sect:'뽑기' },
   gacha_double:  { name:'추가 생산',   desc:'뽑기 시 1기 추가 확률 (+6%/Lv)',  start:22, nMax:5, max:8, group:'prod', sect:'뽑기' },
@@ -2872,16 +2872,16 @@ const META_BUILDS = {   // 탭(group) → 섹션(sect) 2단 분류. 같은 sect�
   pboss_reward:  { name:'개인 보스 보상', desc:'개인 보스 처치 보상 증가 (+10%/Lv)', start:14, nMax:5, max:8, group:'coop', sect:'개인 보스' },
   pboss_cd:      { name:'개인 보스 쿨감', desc:'개인 보스 재소환 쿨다운 감소 (-6%/Lv)', start:14, nMax:5, max:8, group:'coop', sect:'개인 보스' },
 };
-// 비용 곡선: 일반 레벨 = round(start×(lv+1)^1.35)(레벨 오를수록 배율 감소·후반 완만), 초월 레벨 = 일반 누적×[0.6,0.9,1.2](엄청 비쌈).
-const META_COST_POW=1.35;
+// 비용 곡선: 일반 레벨 = start×(lv+1) (선형 — 1단계 start, 2단계 2×start … 딱 떨어지는 가격), 초월 레벨 = 일반 누적×[..] (5단위 반올림).
+const META_COST_POW=1.0;
 const META_TRANS_COST=[0.6,0.9,1.2];   // 초월 3레벨 비용 배수(일반 누적 대비, 합 ≈2.7×)
 function metaNMax(b){ return (b&&b.nMax!=null)?b.nMax:(b?b.max:0); }
 function metaNormalTotal(b){ const n=metaNMax(b); let t=0; for(let i=0;i<n;i++) t+=Math.round(b.start*Math.pow(i+1,META_COST_POW)); return t; }
 function metaNextCost(buildId, level){ const b=META_BUILDS[buildId]; if(!b) return null;
   const lv=(level==null)?buildLevel(buildId):level; if(lv>=b.max) return null;
   const n=metaNMax(b);
-  if(lv<n) return Math.round(b.start*Math.pow(lv+1, META_COST_POW));   // 일반 구간
-  return Math.round(metaNormalTotal(b)*(META_TRANS_COST[lv-n]||1.5)); }  // 초월 구간(일반 누적의 배수)
+  if(lv<n) return Math.round(b.start*Math.pow(lv+1, META_COST_POW));   // 일반 구간(선형 → start의 배수)
+  return Math.round(metaNormalTotal(b)*(META_TRANS_COST[lv-n]||1.5)/5)*5; }  // 초월 구간(일반 누적의 배수, 5단위 반올림)
 // 빌드 효과 레벨: 일반=레벨 그대로, 초월 k단계=일반최대 nMax×2^k(효과가 ×2/×4/×8로 점프)
 function _metaEffFromRaw(b, lv){ if(!b) return lv; const n=metaNMax(b); return (lv<=n)?lv:n*Math.pow(2, lv-n); }
 function metaEffLv(id){ return _metaEffFromRaw(META_BUILDS[id], buildLevel(id)); }
