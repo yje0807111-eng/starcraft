@@ -8466,16 +8466,17 @@ function strikeDrawMain(){ const S=STK; if(!S) return; const cvEl=document.getEl
   const w2s=(x,y)=>({x:(x-S.cam.x)*scale+W/2, y:(y-S.cam.y)*scale+H/2});
   strikeDrawGround(ctx,W,H,S,scale);
   const nodes=[S.me.base, S.me.sec, S.central, S.ai.sec, S.ai.base].map(o=>w2s(o.x,o.y));
-  // 메인 정사각 플랫폼을 길 '아래'에 깔기 → 길이 위로 자연스럽게 올라타 하나의 타일처럼 연결
+  // 외곽 네온 글로우(채움 아래) → 내부 접합부는 채움에 가려지고 바깥 외곽선만 빛남
+  strikeGlowUnderlay(ctx,w2s,scale,S,W,H,nodes);
+  // 메인 정사각 플랫폼(길 아래) + 길(위로 연결) → 하나의 타일
   strikeDrawSpawnZone(ctx,w2s,scale,S,W,H,S.me.base.x,S.me.base.y,1750,1750,'#7fe0ff');
   strikeDrawSpawnZone(ctx,w2s,scale,S,W,H,S.ai.base.x,S.ai.base.y,1750,1750,'#ff9aa6');
-  // 길(플랫폼 위로 연결) — 화살표는 따로(아래에서 맨 위에 그림)
   strikeDrawLane(ctx, nodes, scale, S, W, H);
-  // 유닛 생성 패드: 각 메인신전 왼쪽위/오른쪽아래(바닥 타일 살짝 어둡게)
-  const SP=560, PS=560;
-  strikeDrawSpawnPad(ctx,w2s,scale,S.me.base.x-SP,S.me.base.y-SP,PS); strikeDrawSpawnPad(ctx,w2s,scale,S.me.base.x+SP,S.me.base.y+SP,PS);
-  strikeDrawSpawnPad(ctx,w2s,scale,S.ai.base.x-SP,S.ai.base.y-SP,PS); strikeDrawSpawnPad(ctx,w2s,scale,S.ai.base.x+SP,S.ai.base.y+SP,PS);
-  // 진격 화살표(길·플랫폼 위 모두 보이게 — 정사각에 안 가림)
+  // 유닛 생성 패드: 메인신전 좌상/우하 — 중앙 쪽으로 이동(라인 진출 쉽게, 화면에 잘 보이게)
+  const SP=560, PS=560, CS=320;
+  strikeDrawSpawnPad(ctx,w2s,scale,S.me.base.x-SP+CS,S.me.base.y-SP-CS,PS); strikeDrawSpawnPad(ctx,w2s,scale,S.me.base.x+SP+CS,S.me.base.y+SP-CS,PS);   // me(좌하단): 오른쪽+위
+  strikeDrawSpawnPad(ctx,w2s,scale,S.ai.base.x-SP-CS,S.ai.base.y-SP+CS,PS); strikeDrawSpawnPad(ctx,w2s,scale,S.ai.base.x+SP-CS,S.ai.base.y+SP+CS,PS);   // ai(우상단): 왼쪽+아래
+  // 진격 화살표(맨 위)
   strikeLaneArrows(ctx, nodes, scale, 2);
   // 중립 중앙 신전(금색) → 2차(진영색) → 메인(진영색, 큼). 뒤→앞 순서로 그림
   // 신전: 3D 모델 로드 시 사이드 링+라벨만(본체는 strikeSync3D가 M3D로), 미로드 시 2D 폴백
@@ -8549,13 +8550,23 @@ function strikeDrawClearing(ctx,w2s,scale,wx,wy,worldR){ const p=w2s(wx,wy), r=M
   ctx.strokeStyle='rgba(150,120,74,.22)'; ctx.lineWidth=Math.max(1,2*scale); ctx.beginPath(); ctx.ellipse(p.x,p.y,r*0.94,r*0.85,0,0,6.283); ctx.stroke();
   ctx.restore(); }
 // 사막 모랫길(레인) — 노드들을 잇는 폭 넓은 길 + 중앙 바퀴자국 점선
+// 외곽 네온 글로우(채움 아래에 깔아 외곽선만 빛나게 — 길+플랫폼 겹침의 내부 접합부는 채움이 가림)
+function strikeGlowUnderlay(ctx,w2s,scale,S,W,H,nodes){ ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round';
+  const blur=Math.max(6,24*scale);
+  ctx.shadowBlur=blur; ctx.shadowColor='rgba(120,200,255,.85)'; ctx.strokeStyle='rgba(150,212,255,.7)';
+  ctx.lineWidth=Math.max(28,1580*scale)+Math.max(8,22*scale);   // 길(폭+약간)
+  ctx.beginPath(); ctx.moveTo(nodes[0].x,nodes[0].y); for(let i=1;i<nodes.length;i++) ctx.lineTo(nodes[i].x,nodes[i].y); ctx.stroke();
+  const ps=1750*scale, rad=ps*0.07, gw=Math.max(8,22*scale);
+  const plat=(wx,wy,col)=>{ const c=w2s(wx,wy), x=c.x-ps/2, y=c.y-ps/2; ctx.shadowColor=col; ctx.strokeStyle=col; ctx.lineWidth=gw; _strkRR(ctx,x,y,ps,ps,rad); ctx.stroke(); };
+  plat(S.me.base.x,S.me.base.y,'rgba(127,224,255,.78)'); plat(S.ai.base.x,S.ai.base.y,'rgba(255,154,166,.78)');
+  ctx.restore(); }
 // 신전 잇는 포장 길 — 솔리드 포장 + 양옆만 은은한 외곽(끝은 메인 플랫폼이 딱 덮음)
 function strikeDrawLane(ctx, pts, scale, S, W, H){ if(!pts||pts.length<2) return; ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round';
   const path=()=>{ ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y); for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x,pts[i].y); };
   const img=STRIKE_PAVE; let pat=null;
   if(img&&img.complete&&img.naturalWidth&&S){ pat=ctx.createPattern(img,'repeat');
     if(pat&&pat.setTransform){ const tilePx=Math.max(8,300*scale), s=tilePx/img.naturalWidth, ox=(0-S.cam.x)*scale+W/2, oy=(0-S.cam.y)*scale+H/2; pat.setTransform(new DOMMatrix([s,0,0,s,ox,oy])); } }
-  const stroke=pat||'rgba(150,140,120,.5)', base=Math.max(24,1320*scale), edge=Math.max(3,9*scale);
+  const stroke=pat||'rgba(150,140,120,.5)', base=Math.max(28,1580*scale), edge=Math.max(3,9*scale);
   path(); ctx.strokeStyle='rgba(10,16,20,.88)'; ctx.lineWidth=base; ctx.stroke();              // 어두운 테두리(정사각과 동일 seam)
   path(); ctx.strokeStyle=stroke; ctx.lineWidth=base-edge; ctx.stroke();                        // 포장 코어
   path(); ctx.globalAlpha=0.16; ctx.strokeStyle='rgba(18,26,34,1)'; ctx.lineWidth=base-edge; ctx.stroke(); ctx.globalAlpha=1;  // 톤 통일
@@ -8573,7 +8584,7 @@ function strikeLaneArrows(ctx, pts, scale, centerIdx){ const gap=Math.max(48,500
       ctx.restore(); } }
   ctx.restore(); }
 // 지상유닛 보행 가능 영역 = 프로토스 타일(레인 + 메인 소환 정사각). 향후 이동 단계에서 지상유닛 가둠(공중은 예외)
-const STK_LANE_HALF=640, STK_SPAWN_HALF=875;
+const STK_LANE_HALF=770, STK_SPAWN_HALF=875;
 function _segDist(px,py,ax,ay,bx,by){ const dx=bx-ax, dy=by-ay, l2=dx*dx+dy*dy; let t=l2?((px-ax)*dx+(py-ay)*dy)/l2:0; t=Math.max(0,Math.min(1,t)); return Math.hypot(px-(ax+dx*t), py-(ay+dy*t)); }
 function strikeWalkable(wx,wy){ const S=STK; if(!S) return true;
   if(Math.abs(wx-S.me.base.x)<STK_SPAWN_HALF && Math.abs(wy-S.me.base.y)<STK_SPAWN_HALF) return true;
@@ -8600,9 +8611,7 @@ function strikeDrawSpawnZone(ctx,w2s,scale,S,W,H,wx,wy,wWorld,hWorld,glow){
   for(let ix=x+gx; ix<x+pw; ix+=gx){ ctx.beginPath(); ctx.moveTo(ix,y); ctx.lineTo(ix,y+ph); ctx.stroke(); }
   for(let iy=y+gx; iy<y+ph; iy+=gx){ ctx.beginPath(); ctx.moveTo(x,iy); ctx.lineTo(x+pw,iy); ctx.stroke(); }
   ctx.restore();   // unclip
-  const edge=Math.max(3,9*scale);
-  _strkRR(ctx,x,y,pw,ph,rad); ctx.strokeStyle='rgba(10,16,20,.88)'; ctx.lineWidth=edge; ctx.stroke();      // 길과 동일한 어두운 seam
-  _strkRR(ctx,x,y,pw,ph,rad); ctx.globalAlpha=.2; ctx.strokeStyle=glow; ctx.lineWidth=Math.max(1,2*scale); ctx.stroke(); ctx.globalAlpha=1;  // 아주 옅은 진영색
+  _strkRR(ctx,x,y,pw,ph,rad); ctx.strokeStyle='rgba(10,16,20,.88)'; ctx.lineWidth=Math.max(3,9*scale); ctx.stroke();   // 어두운 seam(네온은 외곽 언더레이가 담당)
   ctx.restore(); }
 // 유닛 생성 패드 — 메인신전 왼쪽위/오른쪽아래. 바닥 타일을 살짝만 어둡게(자연스럽게)
 function strikeDrawSpawnPad(ctx,w2s,scale,wx,wy,sw){ const c=w2s(wx,wy), s=Math.max(10,sw*scale), x=c.x-s/2, y=c.y-s/2, rad=s*0.12;
