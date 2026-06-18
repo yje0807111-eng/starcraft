@@ -1203,6 +1203,15 @@
   .lbStat{font-size:8.5px;color:#9aa6b4;margin-top:1px;letter-spacing:.2px}
   .lbStat.ok{color:var(--ok)}.lbStat.host{color:var(--hud)}
   .lbEmpty{font-size:var(--fs-sm);color:#7a8696}
+  /* 대기실 종족 칩(카드 내부 우측) — 내 것=누르면 종족 팝업, 봇=읽기전용, 잠금(네모네모 등)=비활성 */
+  .lbRace{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:3px 6px;border-radius:7px;min-width:42px;
+    border:1px solid var(--rc,rgba(255,255,255,.2));background:rgba(255,255,255,.04);cursor:default;transition:box-shadow .12s,transform .08s}
+  .lbRace .lrIco{font-size:14px;line-height:1.15}
+  .lbRace .lrNm{font-size:8px;font-weight:800;color:var(--rc,#cfd);letter-spacing:.2px;white-space:nowrap;text-shadow:0 1px 1px #000}
+  .lbRace.me{cursor:pointer;background:rgba(255,255,255,.07);box-shadow:0 0 0 1px var(--rc),0 0 8px -3px var(--rc)}
+  .lbRace.me:active{transform:translateY(1px)}
+  .lbRace.lk{opacity:.42;border-style:dashed;cursor:not-allowed}
+  .lbRace.lk .lrNm{color:#8a93a0}
   .lbBtns{display:flex;gap:8px}
   .lbLeave,.lbStart{padding:12px;border-radius:var(--r-md);font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:.5px;transition:all .12s}
   .lbLeave{flex:0 0 34%;color:#ffd2d2;background:rgba(200,50,50,.16);border:1px solid rgba(255,80,80,.45)}
@@ -7230,16 +7239,19 @@ function chooseSolo(){ if(typeof inPartyNow==='function' && inPartyNow()){ if(ty
   closeModeSheet();
   if(_selMap && _selMap.cfg && _selMap.cfg.mode==='strike'){ openRaceSelect(); return; }   // 직스: 종족 선택 먼저
   openSoloDiff(); }   // 그 외 → 난이도 선택 팝업
-// ── 종족 선택(컴퓨터가 싸운다 전용): 맵→종족→난이도 ──
-function openRaceSelect(){ const box=document.getElementById('raceSelBtns'); if(box){ box.innerHTML='';
+// ── 종족 선택 팝업(재사용): 솔로(맵→종족→난이도) + 멀티 대기실(카드 칩→팝업) 공용 ──
+let _racePickCb=null;
+function openRacePicker(current, onPick){ _racePickCb=onPick||null;
+  const box=document.getElementById('raceSelBtns'); if(box){ box.innerHTML='';
     STK_RACE_ORDER.forEach(k=>{ const R=STK_RACES[k]; const b=document.createElement('div');
-      b.className='moDiffBtn raceCard'+(k===_selRace?' on':''); b.style.setProperty('--dc', R.col);
+      b.className='moDiffBtn raceCard'+(k===current?' on':''); b.style.setProperty('--dc', R.col);
       const names=R.units.map(id=>(U[id]&&U[id].name)||id).join('·');
       b.innerHTML='<span class="rcIco">'+R.icon+'</span><span class="ddN">'+R.name+'</span><span class="ddC">'+R.desc+'<br>'+names+'</span>';
       b.onclick=()=>pickRace(k); box.appendChild(b); }); }
   const p=document.getElementById('raceSelPanel'); if(p){ p.classList.remove('hide'); if(typeof fxPop==='function') fxPop(p.querySelector('.cpCard')); } if(typeof playSfx==='function') playSfx('ui_open'); }
-function closeRaceSelect(){ popHide('raceSelPanel'); }
-function pickRace(k){ if(STK_RACES[k]) _selRace=k; if(typeof playSfx==='function') playSfx('ui_confirm'); closeRaceSelect(); openSoloDiff(); }   // 종족 확정 → 난이도
+function openRaceSelect(){ openRacePicker(_selRace, function(k){ _selRace=k; openSoloDiff(); }); }   // 솔로: 종족 확정 → 난이도
+function closeRaceSelect(){ popHide('raceSelPanel'); _racePickCb=null; }
+function pickRace(k){ if(!STK_RACES[k]) return; if(typeof playSfx==='function') playSfx('ui_confirm'); const cb=_racePickCb; _racePickCb=null; popHide('raceSelPanel'); if(cb) cb(k); }
 // 개인 플레이 난이도 선택 팝업(고르면 즉시 시작)
 function openSoloDiff(){ const box=document.getElementById('soloDiffBtns'); if(box){ box.innerHTML='';
     DIFFICULTY_ORDER.forEach(d=>{ const D=DIFFICULTY[d]; const b=document.createElement('div');
@@ -7736,12 +7748,22 @@ function startLobbyChat(){ stopLobbyChat();
     addLobbyMsg(b.label||b.name, LOBBY_CHATTER[Math.floor(Math.random()*LOBBY_CHATTER.length)], PLAYER_VIEW_COLORS[i%PLAYER_VIEW_COLORS.length]);
   }, 2800+Math.random()*2600); }
 function stopLobbyChat(){ if(_lobbyChatT){ clearInterval(_lobbyChatT); _lobbyChatT=null; } }
+// 대기실 종족: 직스(컴퓨터가 싸운다) 맵에서만 활성. 그 외(네모네모 등)는 칸은 있되 잠금
+function lobbyRaceEnabled(){ return !!(_selMap && _selMap.cfg && _selMap.cfg.mode==='strike'); }
+function openLobbyRace(){ if(!lobbyRaceEnabled()) return; const me=_lobbySlots.find(s=>s&&s.me); const cur=(me&&me.race)||_selRace||'terran';
+  openRacePicker(cur, function(k){ if(me) me.race=k; _selRace=k; renderLobby(); }); }   // 내 종족 변경 → 게임에 반영(_selRace)
 function renderLobby(){ const g=document.getElementById('lbGrid'); if(!g) return; g.innerHTML='';
+  const raceOn=lobbyRaceEnabled();
   for(let i=0;i<8;i++){ const s=_lobbySlots[i], col=PLAYER_VIEW_COLORS[i%PLAYER_VIEW_COLORS.length];
     const el=document.createElement('div'); el.className='lbSlot'+(s?'':' empty')+(s&&s.me?' me':''); el.style.setProperty('--pc',col);
     if(s){ const stt = s.host?'호스트' : (s.joining?'입장 중…' : (s.ready?'준비 완료':'대기'));
       const cls = s.host?'host' : (s.ready?'ok':'');
-      el.innerHTML='<div class="lbNum">'+(i+1)+'</div><div class="lbInfo"><div class="lbName">'+escHtml(s.me?myNick():(s.label||s.name))+'</div><div class="lbStat '+cls+'">'+stt+'</div></div>';
+      if(!s.race) s.race = s.me ? (STK_RACES[_selRace]?_selRace:'terran') : strikeRandomRace();   // 종족 지연 배정(나=선택값, 봇=랜덤)
+      const R=STK_RACES[s.race]||STK_RACES.terran;
+      const chip = raceOn
+        ? '<div class="lbRace'+(s.me?' me':'')+'" style="--rc:'+R.col+'"'+(s.me?' onclick="openLobbyRace()" title="종족 선택"':'')+'><span class="lrIco">'+R.icon+'</span><span class="lrNm">'+R.name+'</span></div>'
+        : '<div class="lbRace lk" title="이 유즈맵은 종족이 없습니다"><span class="lrIco">🔒</span><span class="lrNm">종족</span></div>';
+      el.innerHTML='<div class="lbNum">'+(i+1)+'</div><div class="lbInfo"><div class="lbName">'+escHtml(s.me?myNick():(s.label||s.name))+'</div><div class="lbStat '+cls+'">'+stt+'</div></div>'+chip;
     } else el.innerHTML='<div class="lbNum">'+(i+1)+'</div><div class="lbInfo"><div class="lbEmpty">빈 자리</div></div>';
     g.appendChild(el);
   }
