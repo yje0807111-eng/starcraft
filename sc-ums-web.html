@@ -8304,8 +8304,8 @@ window.addEventListener('load',()=>{ drawMain(); placeMergeZone(); updateHud(); 
 let STK=null, _stkDrag=null, _stkPtrs=new Map(), _stkPinch=null;
 // 크기 비교용 샘플 유닛(임시) — 다음 단계에서 실제 전투 유닛으로 대체. nm 없으면 U[id].name 폴백
 const STRIKE_SAMPLE=[{id:'marine'},{id:'ghost'},{id:'hydra'},{id:'dragoon'},{id:'goliath'},{id:'archon'},{id:'tank',nm:'탱크'},{id:'skyguard',nm:'스카이가드'}];
-// 전장 줌 한계: 최소(가장 축소)=1.5 → 전 맵이 한눈에 안 들어오게(유닛이 너무 작아지지 않게). 최대(가장 확대)=3
-const STK_MINZOOM=1.2, STK_MAXZOOM=3, BUILD_MAXZOOM=3;
+// 전장 줌 한계: 최소(가장 축소)=0.9(더 넓게 볼 수 있게), 기본 시작=1.2, 최대(가장 확대)=3
+const STK_MINZOOM=0.9, STK_DEFZOOM=1.2, STK_MAXZOOM=3, BUILD_MAXZOOM=3;
 // 직스 타일 에셋(기존 assets/tiles 재사용)
 const STRIKE_GROUND=new Image(); STRIKE_GROUND.src='assets/tiles/desert.png?v=1';        // 전장 지형(사막)
 const STRIKE_PAVE=new Image(); STRIKE_PAVE.src='assets/tiles/protoss_floor.png?v=1';     // 신전 잇는 포장 길(프로토스 테크)
@@ -8339,7 +8339,7 @@ function strikeNewState(){ const W=mapCfg('world',4800), hp=mapCfg('baseHp',3000
     ai:{ name:'컴퓨터', base:{x:W*0.885,y:W*0.115}, hp:hp, max:hp, shield:0, gold:mapCfg('startGold',3000), mines:0, mineCost:mc, units:[], buildings:[], aiT:0,
          sec:{x:W*0.661,y:W*0.339, hp:sHp, max:sHp, dead:false} },   // 우상단 메인 + 2차 신전
     central:{x:W*0.5,y:W*0.5, hp:cHp, max:cHp, owner:null, dead:false},   // 중앙 중립 보너스 신전(깬 팀 메인에 쉴드)
-    cam:{x:W/2,y:W/2}, zoom:STK_MINZOOM, viewWorld:Math.round(2600/STK_MINZOOM), cw:0, ch:0, sel:null, userCam:false,
+    cam:{x:W/2,y:W/2}, zoom:STK_DEFZOOM, viewWorld:Math.round(2600/STK_DEFZOOM), cw:0, ch:0, sel:null, userCam:false,
     build:{ W:2400, H:1600, cols:6, rows:4, cam:{x:1200,y:800}, zoom:1, zoomCur:1, _sc:1, _ox:0, _oy:0 },   // 건설 전용 보드(맞춤=최대 축소). zoom=목표, zoomCur=보간 렌더
     leadT:0, leadIdx:0, sizeCmp:false, cmpUnits:null };
 }
