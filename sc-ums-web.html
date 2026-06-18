@@ -8338,7 +8338,7 @@ function strikeNewState(){ const W=mapCfg('world',4800), hp=mapCfg('baseHp',3000
          sec:{x:W*0.661,y:W*0.339, hp:sHp, max:sHp, dead:false} },   // 우상단 메인 + 2차 신전
     central:{x:W*0.5,y:W*0.5, hp:cHp, max:cHp, owner:null, dead:false},   // 중앙 중립 보너스 신전(깬 팀 메인에 쉴드)
     cam:{x:W/2,y:W/2}, zoom:STK_MINZOOM, viewWorld:Math.round(2600/STK_MINZOOM), cw:0, ch:0, sel:null, userCam:false,
-    build:{ W:2400, H:1600, cols:6, rows:4, cam:{x:1200,y:800}, zoom:1, _sc:1, _ox:0, _oy:0 },   // 건설 전용 보드(맞춤=최대 축소)
+    build:{ W:2400, H:1600, cols:6, rows:4, cam:{x:1200,y:800}, zoom:1, zoomCur:1, _sc:1, _ox:0, _oy:0 },   // 건설 전용 보드(맞춤=최대 축소). zoom=목표, zoomCur=보간 렌더
     leadT:0, leadIdx:0, sizeCmp:false, cmpUnits:null };
 }
 function strikeIncome(side){ const S=STK; if(!S) return 0; side=side||S.me; return S.incomeBase + side.mines*S.mineIncome; }
@@ -8404,15 +8404,16 @@ function strikeSync3D(dt){ const S=STK; if(!S) return; const mcv=document.getEle
 function strikeDrawBuildMap(){ const S=STK; if(!S) return; const cvEl=document.getElementById('cvMain'); if(!cvEl) return;
   const r=setup('cvMain'); const ctx=r.ctx, W=r.W, H=r.H; GW=W; GH=H; S.cw=W; S.ch=H;
   ctx.fillStyle='#05080c'; ctx.fillRect(0,0,W,H);
-  const b=S.build, fit=Math.min(W/b.W, H/b.H)*0.94, sc=fit*b.zoom;   // fit(zoom=1)=화면에 딱 맞춤=최대 축소
+  const b=S.build, fit=Math.min(W/b.W, H/b.H)*0.94, sc=fit*(b.zoomCur||b.zoom);   // zoomCur=보간(부드러운 줌). fit(zoom=1)=화면 맞춤=최대 축소
   strikeBuildClamp(b,sc,W,H);
   const ox=W/2-b.cam.x*sc, oy=H/2-b.cam.y*sc, pw=b.W*sc, ph=b.H*sc;
   b._sc=sc; b._ox=ox; b._oy=oy;
-  // 타일 바닥
+  // 타일 바닥(어둡고 단조롭게 — 나중에 건물이 잘 보이게)
   strikeTileRect(ctx, ox,oy, pw,ph, STRIKE_BUILDTILE, Math.max(10, (b.W/8)*sc));
-  // 건설 격자
+  ctx.save(); ctx.beginPath(); ctx.rect(ox,oy,pw,ph); ctx.clip(); ctx.fillStyle='rgba(7,11,16,.62)'; ctx.fillRect(ox,oy,pw,ph); ctx.restore();   // 어둡게+패턴 차분
+  // 건설 격자(차분하게)
   const cwd=pw/b.cols, chd=ph/b.rows;
-  ctx.strokeStyle='rgba(120,200,255,.16)'; ctx.lineWidth=1;
+  ctx.strokeStyle='rgba(110,150,190,.1)'; ctx.lineWidth=1;
   for(let i=1;i<b.cols;i++){ const gx=ox+i*cwd; ctx.beginPath(); ctx.moveTo(gx,oy); ctx.lineTo(gx,oy+ph); ctx.stroke(); }
   for(let j=1;j<b.rows;j++){ const gy=oy+j*chd; ctx.beginPath(); ctx.moveTo(ox,gy); ctx.lineTo(ox+pw,gy); ctx.stroke(); }
   // 외곽 네온 테두리
@@ -8435,6 +8436,7 @@ function strikeStep(dt){ const S=STK; if(!S) return; S.t+=dt;
     if(G.tab==='Upgrade') strikeRenderEcon(); }
   const baseView=(G.tab==='Unit')?1700:2600, tv=baseView/S.zoom;
   S.viewWorld += (tv-S.viewWorld)*Math.min(1,dt*4);
+  S.build.zoomCur += ((S.build.zoom||1)-(S.build.zoomCur||1))*Math.min(1,dt*8);   // 건설 줌 부드럽게(전투화면과 동일 보간)
   if(G.tab==='Unit' || !S.userCam){   // 건물뷰=내 진영 고정 / 전투뷰=교전 팔로우(사용자 패닝 전까지)
     let tx,ty; if(G.tab==='Unit'){ tx=S.me.base.x; ty=S.me.base.y; } else { const f=strikeFocus(); tx=f.x; ty=f.y; }
     const k=Math.min(1,dt*2.5); S.cam.x+=(tx-S.cam.x)*k; S.cam.y+=(ty-S.cam.y)*k;
