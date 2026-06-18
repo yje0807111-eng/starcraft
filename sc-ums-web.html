@@ -1278,25 +1278,23 @@
   #raceSelPanel.hide{display:none}
   /* 종족 선택 — 아이콘 없는 깔끔한 드롭다운(세로 목록) */
   .raceSelBtns{display:flex;flex-direction:column;gap:6px;margin:8px 0 12px}
-  .raceOpt{display:flex;flex-direction:column;gap:1px;padding:9px 13px;border-radius:7px;cursor:pointer;text-align:left;
+  .raceOpt{padding:13px 14px;border-radius:7px;cursor:pointer;text-align:center;
     border:1px solid var(--metal-edge);background:rgba(255,255,255,.03);transition:border-color .12s,background .12s}
   .raceOpt:hover{border-color:rgba(255,255,255,.18)}
   .raceOpt:active{transform:translateY(1px)}
   .raceOpt.on{border-color:rgba(120,200,255,.55);background:rgba(80,160,255,.1)}
-  .raceOpt .roNm{font-size:var(--fs-lg);font-weight:800;color:#e8edf4;letter-spacing:.2px}
+  .raceOpt .roNm{font-size:var(--fs-xl);font-weight:800;color:#e8edf4;letter-spacing:.3px}
   .raceOpt.on .roNm{color:#bfe0ff}
-  .raceOpt .roSub{font-size:9px;color:#8c97a5;font-weight:600;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   /* 인라인 드롭다운 메뉴(트리거 아래로 펼쳐짐) — 모달 X */
-  #raceMenu{position:fixed;z-index:60;min-width:138px;display:flex;flex-direction:column;gap:2px;padding:5px;
+  #raceMenu{position:fixed;z-index:60;min-width:104px;display:flex;flex-direction:column;gap:2px;padding:5px;
     background:linear-gradient(180deg,rgba(22,26,32,.98),rgba(10,12,16,.99));border:1px solid rgba(255,255,255,.15);border-radius:8px;
     box-shadow:0 12px 30px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05)}
   #raceMenu.hide{display:none}
-  #raceMenu .rmOpt{display:flex;flex-direction:column;gap:1px;padding:7px 11px;border-radius:6px;cursor:pointer;transition:background .1s}
+  #raceMenu .rmOpt{padding:9px 14px;border-radius:6px;cursor:pointer;transition:background .1s}
   #raceMenu .rmOpt:hover{background:rgba(255,255,255,.07)}
   #raceMenu .rmOpt.on{background:rgba(80,160,255,.14)}
   #raceMenu .rmOpt .rmNm{font-size:var(--fs-md);font-weight:800;color:#e8edf4;white-space:nowrap}
   #raceMenu .rmOpt.on .rmNm{color:#bfe0ff}
-  #raceMenu .rmOpt .rmSub{font-size:8.5px;font-weight:600;color:#8c97a5;white-space:nowrap}
   /* 솔로 난이도 팝업 안 종족 드롭다운 트리거 */
   .raceTrig{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 13px;margin:6px 0 4px;border-radius:7px;cursor:pointer;
     border:1px solid var(--metal-edge);background:rgba(255,255,255,.04);transition:border-color .12s}
@@ -7272,18 +7270,16 @@ function openRacePicker(current, onPick){ _racePickCb=onPick||null;
   const box=document.getElementById('raceSelBtns'); if(box){ box.innerHTML='';
     STK_RACE_ORDER.forEach(k=>{ const R=STK_RACES[k]; const b=document.createElement('div');
       b.className='raceOpt'+(k===current?' on':'');
-      const names=R.units.map(id=>(U[id]&&U[id].name)||id).join('·');
-      b.innerHTML='<span class="roNm">'+R.name+'</span><span class="roSub">'+R.desc+' · '+names+'</span>';
+      b.innerHTML='<span class="roNm">'+R.name+'</span>';   // 이름만(깔끔)
       b.onclick=()=>pickRace(k); box.appendChild(b); }); }
   const p=document.getElementById('raceSelPanel'); if(p){ p.classList.remove('hide'); if(typeof fxPop==='function') fxPop(p.querySelector('.cpCard')); } if(typeof playSfx==='function') playSfx('ui_open'); }
-function openRaceSelect(){ openRacePicker(_selRace, function(k){ _selRace=k; openSoloDiff(); }); }   // 솔로: 종족 확정 → 난이도
+function openRaceSelect(){ openRacePicker(_selRace, function(k){ _selRace=k; _startSoloNow(); }); }   // 솔로: 난이도 후 종족 확정 → 게임 시작
 // ── 인라인 종족 드롭다운(모달 아님): 트리거 요소 아래로 목록이 펼쳐짐 ──
 let _raceMenuCb=null;
 function showRaceMenu(anchor, current, onPick){ const menu=document.getElementById('raceMenu'); if(!menu||!anchor) return; _raceMenuCb=onPick||null;
   menu.innerHTML='';
   STK_RACE_ORDER.forEach(function(k){ const R=STK_RACES[k]; const o=document.createElement('div'); o.className='rmOpt'+(k===current?' on':'');
-    const names=R.units.map(function(id){return (U[id]&&U[id].name)||id;}).join('·');
-    o.innerHTML='<span class="rmNm">'+R.name+'</span><span class="rmSub">'+R.desc+' · '+names+'</span>';
+    o.innerHTML='<span class="rmNm">'+R.name+'</span>';   // 이름만(깔끔)
     o.onclick=function(e){ if(e) e.stopPropagation(); const cb=_raceMenuCb; hideRaceMenu(); if(cb) cb(k); };
     menu.appendChild(o); });
   menu.classList.remove('hide');
@@ -7305,13 +7301,13 @@ function openSoloDiff(){ const box=document.getElementById('soloDiffBtns'); if(b
       b.className='moDiffBtn'; b.style.setProperty('--dc', DIFF_COLOR[d]||'#fff');
       b.innerHTML='<span class="ddN">'+D.name+'</span><span class="ddC">적 강도 ×'+(D.enemyHp/DIFFICULTY.easy.enemyHp).toFixed(1)+'<br>코인 ×'+D.coinMult+'</span>';
       b.onclick=()=>startSoloWithDiff(d); box.appendChild(b); }); }
-  const trig=document.getElementById('soloRaceTrig'), strike=!!(_selMap&&_selMap.cfg&&_selMap.cfg.mode==='strike');   // 직스면 종족 드롭다운 표시
-  if(trig){ trig.classList.toggle('hide', !strike); if(strike){ const v=document.getElementById('soloRaceVal'); if(v) v.textContent=((STK_RACES[_selRace]||STK_RACES.terran).name)+' ▾'; } }
+  const trig=document.getElementById('soloRaceTrig'); if(trig) trig.classList.add('hide');   // 종족은 난이도 선택 후 별도 팝업으로(트리거 미사용)
   const p=document.getElementById('soloDiffPanel'); if(p){ p.classList.remove('hide'); if(typeof fxPop==='function') fxPop(p.querySelector('.cpCard')); } if(typeof playSfx==='function') playSfx('ui_open'); }
 function closeSoloDiff(){ popHide('soloDiffPanel'); }
-function openSoloRace(el){ showRaceMenu(el, _selRace, function(k){ _selRace=k; const v=document.getElementById('soloRaceVal'); if(v) v.textContent=((STK_RACES[k]||STK_RACES.terran).name)+' ▾'; }); }   // 솔로 종족 드롭다운
 function startSoloWithDiff(d){ if(DIFFICULTY[d]) _selDiff=d; closeSoloDiff();
-  if(typeof rtSetStatus==='function') rtSetStatus('ingame', _selMap&&_selMap.name); hideAppScreens(); if(typeof playSfx==='function') playSfx('ui_confirm'); startGameNow([1],1); }
+  if(_selMap && _selMap.cfg && _selMap.cfg.mode==='strike'){ openRaceSelect(); return; }   // 직스: 난이도 후 종족 선택 팝업 → 시작
+  _startSoloNow(); }
+function _startSoloNow(){ if(typeof rtSetStatus==='function') rtSetStatus('ingame', _selMap&&_selMap.name); hideAppScreens(); if(typeof playSfx==='function') playSfx('ui_confirm'); startGameNow([1],1); }
 function chooseMulti(){ if(typeof rtSetStatus==='function') rtSetStatus('ingame', _selMap&&_selMap.name); closeModeSheet(); hideAppScreens(); openRooms(); }            // 멀티 → 방 찾기
 function refreshRooms(){ buildRoomList(); }
 function newRoomNum(){ let num; do{ num=1000+Math.floor(Math.random()*9000); }while(_roomList&&_roomList.some(r=>r.num===num)); return num; }
