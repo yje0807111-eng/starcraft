@@ -1175,7 +1175,7 @@
       linear-gradient(180deg, rgba(2,3,8,.9) 0%, rgba(2,3,8,.35) 22%, rgba(2,3,8,.35) 78%, rgba(2,3,8,.92) 100%)}
   .lbCard{width:90%;max-width:340px;max-height:92%;overflow:auto;padding:18px}
   /* 대기실 채팅 */
-  .lbChat{height:150px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;padding:7px 9px;margin-bottom:7px;border-radius:var(--r-md);
+  .lbChat{height:90px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;padding:7px 9px;margin-bottom:7px;border-radius:var(--r-md);   /* 1열 8줄 슬롯 자리 확보 위해 축소 */
     background:rgba(0,0,0,.28);border:1px solid var(--metal-edge)}
   .lbChat::-webkit-scrollbar{width:4px}.lbChat::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
   .lbMsg{font-size:var(--fs-md);line-height:1.35;color:#d6d2d2;word-break:break-all}
@@ -1191,17 +1191,16 @@
   .lbTitle{font-size:16px;font-weight:800;color:var(--neon);text-shadow:0 0 10px var(--neon-glow);letter-spacing:.5px}
   .lbRoom{font-size:var(--fs-md);color:var(--hud);text-shadow:0 0 6px var(--hud-glow);white-space:nowrap}
   .lbStatus{font-size:var(--fs-md);color:#c8bbbd;margin-bottom:13px}
-  .lbGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-bottom:16px}
-  .lbSlot{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:var(--r-md);position:relative;overflow:hidden;
+  .lbGrid{display:grid;grid-template-columns:1fr;gap:5px;margin-bottom:12px}   /* 1열(가로로 긴 8줄) — 카드 넓어 닉네임/상태/종족 한 줄에 여유 */
+  .lbSlot{display:flex;align-items:center;gap:8px;padding:4px 10px;border-radius:var(--r-md);position:relative;overflow:hidden;
     background:linear-gradient(180deg,rgba(30,32,38,.9),rgba(12,13,17,.92));border:1px solid var(--metal-edge)}
   .lbSlot::after{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--pc,var(--info));opacity:.7}
   .lbSlot.me{border-color:var(--pc);box-shadow:0 0 0 1px var(--pc),0 0 9px -5px var(--pc)}
   .lbSlot.empty{opacity:.4;border-style:dashed}
   .lbNum{font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:800;color:var(--pc,var(--info));min-width:15px;text-align:center;text-shadow:0 1px 2px #000}
-  .lbInfo{min-width:0;flex:1;text-align:left;display:flex;flex-direction:column;gap:2px}
-  .lbName{font-size:var(--fs-lg);font-weight:700;color:#e6e2e2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.15}
-  .lbRow{display:flex;align-items:center;gap:6px;min-width:0}
-  .lbStat{font-size:8.5px;color:#9aa6b4;letter-spacing:.2px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lbInfo{min-width:0;flex:1;text-align:left;display:flex;align-items:baseline;gap:8px}   /* 1열 넓은 카드: 이름+상태 한 줄 */
+  .lbName{flex:0 1 auto;font-size:var(--fs-lg);font-weight:700;color:#e6e2e2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.15}
+  .lbStat{flex:0 0 auto;font-size:var(--fs-xs);color:#9aa6b4;letter-spacing:.2px;white-space:nowrap}
   .lbStat.ok{color:var(--ok)}.lbStat.host{color:var(--hud)}
   .lbEmpty{font-size:var(--fs-sm);color:#7a8696}
   /* 대기실 종족 칩(카드 내부 우측) — 내 것=누르면 종족 팝업, 봇=읽기전용, 잠금(네모네모 등)=비활성 */
@@ -7757,14 +7756,14 @@ function renderLobby(){ const g=document.getElementById('lbGrid'); if(!g) return
   const raceOn=lobbyRaceEnabled();
   for(let i=0;i<8;i++){ const s=_lobbySlots[i], col=PLAYER_VIEW_COLORS[i%PLAYER_VIEW_COLORS.length];
     const el=document.createElement('div'); el.className='lbSlot'+(s?'':' empty')+(s&&s.me?' me':''); el.style.setProperty('--pc',col);
-    if(s){ const stt = s.host?'호스트' : (s.joining?'입장' : (s.ready?'준비':'대기'));   // 종족 칩과 한 줄 공유 → 라벨 간결화(잘림 방지)
+    if(s){ const stt = s.host?'호스트' : (s.joining?'입장 중…' : (s.ready?'준비 완료':'대기'));
       const cls = s.host?'host' : (s.ready?'ok':'');
       if(!s.race) s.race = s.me ? (STK_RACES[_selRace]?_selRace:'terran') : strikeRandomRace();   // 종족 지연 배정(나=선택값, 봇=랜덤)
       const R=STK_RACES[s.race]||STK_RACES.terran;
       const chip = raceOn
         ? '<div class="lbRace'+(s.me?' me':'')+'" style="--rc:'+R.col+'"'+(s.me?' onclick="openLobbyRace()" title="종족 선택"':'')+'><span class="lrIco">'+R.icon+'</span><span class="lrNm">'+R.name+'</span></div>'
         : '<div class="lbRace lk" title="이 유즈맵은 종족이 없습니다"><span class="lrIco">🔒</span><span class="lrNm">종족</span></div>';
-      el.innerHTML='<div class="lbNum">'+(i+1)+'</div><div class="lbInfo"><div class="lbName">'+escHtml(s.me?myNick():(s.label||s.name))+'</div><div class="lbRow"><div class="lbStat '+cls+'">'+stt+'</div>'+chip+'</div></div>';
+      el.innerHTML='<div class="lbNum">'+(i+1)+'</div><div class="lbInfo"><span class="lbName">'+escHtml(s.me?myNick():(s.label||s.name))+'</span><span class="lbStat '+cls+'">'+stt+'</span></div>'+chip;
     } else el.innerHTML='<div class="lbNum">'+(i+1)+'</div><div class="lbInfo"><div class="lbEmpty">빈 자리</div></div>';
     g.appendChild(el);
   }
