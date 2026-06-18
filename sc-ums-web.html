@@ -1198,16 +1198,17 @@
   .lbSlot.me{border-color:var(--pc);box-shadow:0 0 0 1px var(--pc),0 0 9px -5px var(--pc)}
   .lbSlot.empty{opacity:.4;border-style:dashed}
   .lbNum{font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:800;color:var(--pc,var(--info));min-width:15px;text-align:center;text-shadow:0 1px 2px #000}
-  .lbInfo{min-width:0;flex:1;text-align:left}
+  .lbInfo{min-width:0;flex:1;text-align:left;display:flex;flex-direction:column;gap:2px}
   .lbName{font-size:var(--fs-lg);font-weight:700;color:#e6e2e2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.15}
-  .lbStat{font-size:8.5px;color:#9aa6b4;margin-top:1px;letter-spacing:.2px}
+  .lbRow{display:flex;align-items:center;gap:6px;min-width:0}
+  .lbStat{font-size:8.5px;color:#9aa6b4;letter-spacing:.2px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .lbStat.ok{color:var(--ok)}.lbStat.host{color:var(--hud)}
   .lbEmpty{font-size:var(--fs-sm);color:#7a8696}
   /* 대기실 종족 칩(카드 내부 우측) — 내 것=누르면 종족 팝업, 봇=읽기전용, 잠금(네모네모 등)=비활성 */
-  .lbRace{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:3px 6px;border-radius:7px;min-width:42px;
+  .lbRace{flex:0 0 auto;margin-left:auto;display:flex;flex-direction:row;align-items:center;gap:2px;padding:2px 5px;border-radius:6px;
     border:1px solid var(--rc,rgba(255,255,255,.2));background:rgba(255,255,255,.04);cursor:default;transition:box-shadow .12s,transform .08s}
-  .lbRace .lrIco{font-size:14px;line-height:1.15}
-  .lbRace .lrNm{font-size:8px;font-weight:800;color:var(--rc,#cfd);letter-spacing:.2px;white-space:nowrap;text-shadow:0 1px 1px #000}
+  .lbRace .lrIco{font-size:11px;line-height:1}
+  .lbRace .lrNm{font-size:8.5px;font-weight:800;color:var(--rc,#cfd);letter-spacing:.1px;white-space:nowrap;text-shadow:0 1px 1px #000}
   .lbRace.me{cursor:pointer;background:rgba(255,255,255,.07);box-shadow:0 0 0 1px var(--rc),0 0 8px -3px var(--rc)}
   .lbRace.me:active{transform:translateY(1px)}
   .lbRace.lk{opacity:.42;border-style:dashed;cursor:not-allowed}
@@ -7756,14 +7757,14 @@ function renderLobby(){ const g=document.getElementById('lbGrid'); if(!g) return
   const raceOn=lobbyRaceEnabled();
   for(let i=0;i<8;i++){ const s=_lobbySlots[i], col=PLAYER_VIEW_COLORS[i%PLAYER_VIEW_COLORS.length];
     const el=document.createElement('div'); el.className='lbSlot'+(s?'':' empty')+(s&&s.me?' me':''); el.style.setProperty('--pc',col);
-    if(s){ const stt = s.host?'호스트' : (s.joining?'입장 중…' : (s.ready?'준비 완료':'대기'));
+    if(s){ const stt = s.host?'호스트' : (s.joining?'입장' : (s.ready?'준비':'대기'));   // 종족 칩과 한 줄 공유 → 라벨 간결화(잘림 방지)
       const cls = s.host?'host' : (s.ready?'ok':'');
       if(!s.race) s.race = s.me ? (STK_RACES[_selRace]?_selRace:'terran') : strikeRandomRace();   // 종족 지연 배정(나=선택값, 봇=랜덤)
       const R=STK_RACES[s.race]||STK_RACES.terran;
       const chip = raceOn
         ? '<div class="lbRace'+(s.me?' me':'')+'" style="--rc:'+R.col+'"'+(s.me?' onclick="openLobbyRace()" title="종족 선택"':'')+'><span class="lrIco">'+R.icon+'</span><span class="lrNm">'+R.name+'</span></div>'
         : '<div class="lbRace lk" title="이 유즈맵은 종족이 없습니다"><span class="lrIco">🔒</span><span class="lrNm">종족</span></div>';
-      el.innerHTML='<div class="lbNum">'+(i+1)+'</div><div class="lbInfo"><div class="lbName">'+escHtml(s.me?myNick():(s.label||s.name))+'</div><div class="lbStat '+cls+'">'+stt+'</div></div>'+chip;
+      el.innerHTML='<div class="lbNum">'+(i+1)+'</div><div class="lbInfo"><div class="lbName">'+escHtml(s.me?myNick():(s.label||s.name))+'</div><div class="lbRow"><div class="lbStat '+cls+'">'+stt+'</div>'+chip+'</div></div>';
     } else el.innerHTML='<div class="lbNum">'+(i+1)+'</div><div class="lbInfo"><div class="lbEmpty">빈 자리</div></div>';
     g.appendChild(el);
   }
