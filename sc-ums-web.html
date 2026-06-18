@@ -8332,9 +8332,9 @@ function strikeNewState(){ const W=mapCfg('world',4800), hp=mapCfg('baseHp',3000
     world:W, cycleTime:mapCfg('cycleTime',30), cycleT:mapCfg('cycleTime',30),
     incomeBase:inc, mineIncome:mi,
     // 진영별 경제(me=나, ai=컴퓨터). 광산/돈 리더보드용. shield=중립 신전 보상 쉴드(다음 단계 전투에서 적용)
-    me:{ name:'나', base:{x:W*0.15,y:W*0.85}, hp:hp, max:hp, shield:0, gold:mapCfg('startGold',3000), mines:0, mineCost:mc, units:[], buildings:[],
+    me:{ name:'나', base:{x:W*0.115,y:W*0.885}, hp:hp, max:hp, shield:0, gold:mapCfg('startGold',3000), mines:0, mineCost:mc, units:[], buildings:[],
          sec:{x:W*0.339,y:W*0.661, hp:sHp, max:sHp, dead:false} },   // 좌하단 메인 + 2차 신전
-    ai:{ name:'컴퓨터', base:{x:W*0.85,y:W*0.15}, hp:hp, max:hp, shield:0, gold:mapCfg('startGold',3000), mines:0, mineCost:mc, units:[], buildings:[], aiT:0,
+    ai:{ name:'컴퓨터', base:{x:W*0.885,y:W*0.115}, hp:hp, max:hp, shield:0, gold:mapCfg('startGold',3000), mines:0, mineCost:mc, units:[], buildings:[], aiT:0,
          sec:{x:W*0.661,y:W*0.339, hp:sHp, max:sHp, dead:false} },   // 우상단 메인 + 2차 신전
     central:{x:W*0.5,y:W*0.5, hp:cHp, max:cHp, owner:null, dead:false},   // 중앙 중립 보너스 신전(깬 팀 메인에 쉴드)
     cam:{x:W/2,y:W/2}, zoom:STK_MINZOOM, viewWorld:Math.round(2600/STK_MINZOOM), cw:0, ch:0, sel:null, userCam:false,
@@ -8443,7 +8443,7 @@ function strikeClampCam(){ const S=STK; if(!S||!S.cw) return; const scale=Math.m
   // 대각 밴드 제한 — 액션은 me↔ai 반대각선에 집중. 좌상단/우하단 빈 코너로 못 가게
   const dx=S.cam.x-c, dy=S.cam.y-c, SQ=Math.SQRT1_2;
   let a=(dx-dy)*SQ, b=(dx+dy)*SQ;   // a=레인 방향, b=수직(빈 코너) 방향
-  const A=W*0.52, B=W*0.14;
+  const A=W*0.56, B=W*0.14;
   a=Math.max(-A,Math.min(A,a)); b=Math.max(-B,Math.min(B,b));
   S.cam.x = c+(a+b)*SQ; S.cam.y = c+(b-a)*SQ; }
 // 좌상단: 진영별 광산/돈 5초마다 회전(광산 많은 순→돈 많은 순)
@@ -8472,10 +8472,10 @@ function strikeDrawMain(){ const S=STK; if(!S) return; const cvEl=document.getEl
   strikeDrawSpawnZone(ctx,w2s,scale,S,W,H,S.me.base.x,S.me.base.y,1750,1750,'#7fe0ff');
   strikeDrawSpawnZone(ctx,w2s,scale,S,W,H,S.ai.base.x,S.ai.base.y,1750,1750,'#ff9aa6');
   strikeDrawLane(ctx, nodes, scale, S, W, H);
-  // 유닛 생성 패드: 메인신전 좌상/우하 — 중앙 쪽으로 이동(라인 진출 쉽게, 화면에 잘 보이게)
-  const SP=560, PS=560, CS=320;
-  strikeDrawSpawnPad(ctx,w2s,scale,S.me.base.x-SP+CS,S.me.base.y-SP-CS,PS); strikeDrawSpawnPad(ctx,w2s,scale,S.me.base.x+SP+CS,S.me.base.y+SP-CS,PS);   // me(좌하단): 오른쪽+위
-  strikeDrawSpawnPad(ctx,w2s,scale,S.ai.base.x-SP-CS,S.ai.base.y-SP+CS,PS); strikeDrawSpawnPad(ctx,w2s,scale,S.ai.base.x+SP-CS,S.ai.base.y+SP+CS,PS);   // ai(우상단): 왼쪽+아래
+  // 유닛 생성 패드: 메인신전 좌상/우하 — 정사각 플랫폼(±875) 안으로, 중앙 쪽으로 이동
+  const D=360, CS=180, PS=520;   // D=대각오프셋, CS=중앙쪽 이동, PS=패드크기(D+CS+PS/2=800<875)
+  strikeDrawSpawnPad(ctx,w2s,scale,S.me.base.x-D+CS,S.me.base.y-D-CS,PS); strikeDrawSpawnPad(ctx,w2s,scale,S.me.base.x+D+CS,S.me.base.y+D-CS,PS);   // me(좌하단): 오른쪽+위
+  strikeDrawSpawnPad(ctx,w2s,scale,S.ai.base.x-D-CS,S.ai.base.y-D+CS,PS); strikeDrawSpawnPad(ctx,w2s,scale,S.ai.base.x+D-CS,S.ai.base.y+D+CS,PS);   // ai(우상단): 왼쪽+아래
   // 진격 화살표(맨 위)
   strikeLaneArrows(ctx, nodes, scale, 2);
   // 중립 중앙 신전(금색) → 2차(진영색) → 메인(진영색, 큼). 뒤→앞 순서로 그림
@@ -8552,13 +8552,18 @@ function strikeDrawClearing(ctx,w2s,scale,wx,wy,worldR){ const p=w2s(wx,wy), r=M
 // 사막 모랫길(레인) — 노드들을 잇는 폭 넓은 길 + 중앙 바퀴자국 점선
 // 외곽 네온 글로우(채움 아래에 깔아 외곽선만 빛나게 — 길+플랫폼 겹침의 내부 접합부는 채움이 가림)
 function strikeGlowUnderlay(ctx,w2s,scale,S,W,H,nodes){ ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round';
-  const blur=Math.max(6,24*scale);
-  ctx.shadowBlur=blur; ctx.shadowColor='rgba(120,200,255,.85)'; ctx.strokeStyle='rgba(150,212,255,.7)';
-  ctx.lineWidth=Math.max(28,1580*scale)+Math.max(8,22*scale);   // 길(폭+약간)
-  ctx.beginPath(); ctx.moveTo(nodes[0].x,nodes[0].y); for(let i=1;i<nodes.length;i++) ctx.lineTo(nodes[i].x,nodes[i].y); ctx.stroke();
+  const base=Math.max(28,1580*scale), A=nodes[0], B=nodes[nodes.length-1];
+  // 길: me 시안 → 중앙(밝게 만남) → ai 레드 그라데이션
+  const g=ctx.createLinearGradient(A.x,A.y,B.x,B.y);
+  g.addColorStop(0,'rgba(127,224,255,.92)'); g.addColorStop(.4,'rgba(127,224,255,.85)'); g.addColorStop(.5,'rgba(232,238,255,.92)'); g.addColorStop(.6,'rgba(255,120,138,.85)'); g.addColorStop(1,'rgba(255,120,138,.92)');
+  const pathL=()=>{ ctx.beginPath(); ctx.moveTo(nodes[0].x,nodes[0].y); for(let i=1;i<nodes.length;i++) ctx.lineTo(nodes[i].x,nodes[i].y); };
+  ctx.shadowBlur=Math.max(6,20*scale); ctx.shadowColor='rgba(180,180,225,.55)';
+  ctx.strokeStyle=g; ctx.globalAlpha=.5; ctx.lineWidth=base+Math.max(12,32*scale); pathL(); ctx.stroke();
+  ctx.shadowBlur=0; ctx.globalAlpha=.92; ctx.lineWidth=base+Math.max(5,13*scale); pathL(); ctx.stroke(); ctx.globalAlpha=1;
+  // 플랫폼: 진영색 글로우(끝 색과 일치)
   const ps=1750*scale, rad=ps*0.07, gw=Math.max(8,22*scale);
-  const plat=(wx,wy,col)=>{ const c=w2s(wx,wy), x=c.x-ps/2, y=c.y-ps/2; ctx.shadowColor=col; ctx.strokeStyle=col; ctx.lineWidth=gw; _strkRR(ctx,x,y,ps,ps,rad); ctx.stroke(); };
-  plat(S.me.base.x,S.me.base.y,'rgba(127,224,255,.78)'); plat(S.ai.base.x,S.ai.base.y,'rgba(255,154,166,.78)');
+  const plat=(wx,wy,col)=>{ const c=w2s(wx,wy), x=c.x-ps/2, y=c.y-ps/2; ctx.shadowBlur=Math.max(6,22*scale); ctx.shadowColor=col; ctx.strokeStyle=col; ctx.lineWidth=gw; _strkRR(ctx,x,y,ps,ps,rad); ctx.stroke(); };
+  plat(S.me.base.x,S.me.base.y,'rgba(127,224,255,.85)'); plat(S.ai.base.x,S.ai.base.y,'rgba(255,130,145,.85)');
   ctx.restore(); }
 // 신전 잇는 포장 길 — 솔리드 포장 + 양옆만 은은한 외곽(끝은 메인 플랫폼이 딱 덮음)
 function strikeDrawLane(ctx, pts, scale, S, W, H){ if(!pts||pts.length<2) return; ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round';
