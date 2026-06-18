@@ -1275,9 +1275,16 @@
   #soloDiffPanel.hide{display:none}
   #raceSelPanel{position:absolute;inset:0;z-index:54;display:flex;align-items:center;justify-content:center;background:var(--ov-dim);backdrop-filter:blur(2px)}
   #raceSelPanel.hide{display:none}
-  .raceSelBtns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:8px 0 12px}
-  .raceCard{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px 8px}
-  .raceCard .rcIco{font-size:25px;line-height:1.15}
+  /* 종족 선택 — 아이콘 없는 깔끔한 드롭다운(세로 목록) */
+  .raceSelBtns{display:flex;flex-direction:column;gap:6px;margin:8px 0 12px}
+  .raceOpt{display:flex;flex-direction:column;gap:1px;padding:9px 13px;border-radius:7px;cursor:pointer;text-align:left;
+    border:1px solid var(--metal-edge);background:rgba(255,255,255,.03);transition:border-color .12s,background .12s}
+  .raceOpt:hover{border-color:rgba(255,255,255,.18)}
+  .raceOpt:active{transform:translateY(1px)}
+  .raceOpt.on{border-color:rgba(120,200,255,.55);background:rgba(80,160,255,.1)}
+  .raceOpt .roNm{font-size:var(--fs-lg);font-weight:800;color:#e8edf4;letter-spacing:.2px}
+  .raceOpt.on .roNm{color:#bfe0ff}
+  .raceOpt .roSub{font-size:9px;color:#8c97a5;font-weight:600;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .pwRoomName{font-size:var(--fs-xl);font-weight:700;color:#cfe0ec;text-align:center;margin-bottom:14px}
   #pwField{margin-bottom:8px}
   #pwErr{min-height:15px;color:#ff6b6b}
@@ -7244,9 +7251,9 @@ let _racePickCb=null;
 function openRacePicker(current, onPick){ _racePickCb=onPick||null;
   const box=document.getElementById('raceSelBtns'); if(box){ box.innerHTML='';
     STK_RACE_ORDER.forEach(k=>{ const R=STK_RACES[k]; const b=document.createElement('div');
-      b.className='moDiffBtn raceCard'+(k===current?' on':''); b.style.setProperty('--dc', R.col);
+      b.className='raceOpt'+(k===current?' on':'');
       const names=R.units.map(id=>(U[id]&&U[id].name)||id).join('·');
-      b.innerHTML='<span class="rcIco">'+R.icon+'</span><span class="ddN">'+R.name+'</span><span class="ddC">'+R.desc+'<br>'+names+'</span>';
+      b.innerHTML='<span class="roNm">'+R.name+'</span><span class="roSub">'+R.desc+' · '+names+'</span>';
       b.onclick=()=>pickRace(k); box.appendChild(b); }); }
   const p=document.getElementById('raceSelPanel'); if(p){ p.classList.remove('hide'); if(typeof fxPop==='function') fxPop(p.querySelector('.cpCard')); } if(typeof playSfx==='function') playSfx('ui_open'); }
 function openRaceSelect(){ openRacePicker(_selRace, function(k){ _selRace=k; openSoloDiff(); }); }   // 솔로: 종족 확정 → 난이도
@@ -8358,9 +8365,9 @@ const STK_MINZOOM=1.2, STK_DEFZOOM=1.2, STK_MAXZOOM=2.5, BUILD_MAXZOOM=3;
 // 종족(컴퓨터가 싸운다): 진입 시 선택 → 그 종족 유닛만 소환. units=현 보유 전투유닛 기준 로스터
 // (프로토스·저그는 다음 단계에서 가챠 유닛으로 보강 예정 — 균형)
 const STK_RACES={
-  terran:  { key:'terran',  name:'테란',     desc:'보병·기계', col:'#4aa8ff', icon:'🛡️', units:['marine','ghost','goliath'] },
-  protoss: { key:'protoss', name:'프로토스', desc:'루멘',     col:'#ffc040', icon:'🔮', units:['dragoon','archon'] },
-  zerg:    { key:'zerg',    name:'저그',     desc:'하이브',   col:'#9fd356', icon:'🦎', units:['hydra'] },
+  terran:  { key:'terran',  name:'인간',     desc:'보병·기계', col:'#4aa8ff', icon:'🛡️', units:['marine','ghost','goliath'] },
+  protoss: { key:'protoss', name:'외계종족', desc:'루멘',     col:'#ffc040', icon:'🔮', units:['dragoon','archon'] },
+  zerg:    { key:'zerg',    name:'군체',     desc:'하이브',   col:'#9fd356', icon:'🦎', units:['hydra'] },
 };
 const STK_RACE_ORDER=['terran','protoss','zerg'];
 function strikeRandomRace(){ return STK_RACE_ORDER[Math.floor(Math.random()*STK_RACE_ORDER.length)]; }
