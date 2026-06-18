@@ -1264,6 +1264,11 @@
   #pwPanel.hide{display:none}
   #soloDiffPanel{position:absolute;inset:0;z-index:54;display:flex;align-items:center;justify-content:center;background:var(--ov-dim);backdrop-filter:blur(2px)}
   #soloDiffPanel.hide{display:none}
+  #raceSelPanel{position:absolute;inset:0;z-index:54;display:flex;align-items:center;justify-content:center;background:var(--ov-dim);backdrop-filter:blur(2px)}
+  #raceSelPanel.hide{display:none}
+  .raceSelBtns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:8px 0 12px}
+  .raceCard{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px 8px}
+  .raceCard .rcIco{font-size:25px;line-height:1.15}
   .pwRoomName{font-size:var(--fs-xl);font-weight:700;color:#cfe0ec;text-align:center;margin-bottom:14px}
   #pwField{margin-bottom:8px}
   #pwErr{min-height:15px;color:#ff6b6b}
@@ -2090,6 +2095,15 @@
         <div class="pickHint">개인 플레이 · 난이도를 고르면 바로 시작합니다</div>
         <div class="moDiffBtns soloDiffBtns" id="soloDiffBtns"></div>
         <div class="cpBtns"><button class="cpCancel" onclick="closeSoloDiff()" style="flex:1">취소</button></div>
+      </div>
+    </div>
+    <!-- 종족 선택(컴퓨터가 싸운다): 맵→종족→난이도 -->
+    <div id="raceSelPanel" class="hide">
+      <div class="cpCard">
+        <div class="cpTitle">종족 선택</div>
+        <div class="pickHint">고른 종족의 유닛만 소환해 전투합니다 · 상대는 랜덤 종족</div>
+        <div class="raceSelBtns" id="raceSelBtns"></div>
+        <div class="cpBtns"><button class="cpCancel" onclick="closeRaceSelect()" style="flex:1">취소</button></div>
       </div>
     </div>
 
@@ -7190,6 +7204,7 @@ function renderMaps(){ const list=document.getElementById('msList'); if(!list) r
 let _selMap=null;
 // ── 난이도 선택(2단계) ──
 let _selDiff='normal';
+let _selRace='terran';   // 컴퓨터가 싸운다(직스): 내가 고른 종족(테란/프로토스/저그)
 const DIFF_COLOR={ easy:'#5dff8f', normal:'#4aa8ff', hard:'#ffb14d', hell:'#ff5c5c', nightmare:'#c45cff' };
 function renderDiffBtns(){ const box=document.getElementById('moDiffBtns'); if(!box) return; box.innerHTML='';
   DIFFICULTY_ORDER.forEach(d=>{ const D=DIFFICULTY[d]; const b=document.createElement('div');
@@ -7212,7 +7227,19 @@ function openModeSheet(m){ _selMap=m; renderDiffBtns(); document.getElementById(
   const ms=document.getElementById('modeSheet'); ms.classList.remove('hide'); if(typeof fxPop==='function') fxPop(ms.querySelector('.moCard')); if(typeof playSfx==='function') playSfx('ui_open'); }
 function closeModeSheet(){ popHide('modeSheet'); }
 function chooseSolo(){ if(typeof inPartyNow==='function' && inPartyNow()){ if(typeof lobbyToast==='function') lobbyToast('파티 중에는 멀티플레이만 가능합니다'); return; }
-  closeModeSheet(); openSoloDiff(); }   // 개인플레이 → 난이도 선택 팝업
+  closeModeSheet();
+  if(_selMap && _selMap.cfg && _selMap.cfg.mode==='strike'){ openRaceSelect(); return; }   // 직스: 종족 선택 먼저
+  openSoloDiff(); }   // 그 외 → 난이도 선택 팝업
+// ── 종족 선택(컴퓨터가 싸운다 전용): 맵→종족→난이도 ──
+function openRaceSelect(){ const box=document.getElementById('raceSelBtns'); if(box){ box.innerHTML='';
+    STK_RACE_ORDER.forEach(k=>{ const R=STK_RACES[k]; const b=document.createElement('div');
+      b.className='moDiffBtn raceCard'+(k===_selRace?' on':''); b.style.setProperty('--dc', R.col);
+      const names=R.units.map(id=>(U[id]&&U[id].name)||id).join('·');
+      b.innerHTML='<span class="rcIco">'+R.icon+'</span><span class="ddN">'+R.name+'</span><span class="ddC">'+R.desc+'<br>'+names+'</span>';
+      b.onclick=()=>pickRace(k); box.appendChild(b); }); }
+  const p=document.getElementById('raceSelPanel'); if(p){ p.classList.remove('hide'); if(typeof fxPop==='function') fxPop(p.querySelector('.cpCard')); } if(typeof playSfx==='function') playSfx('ui_open'); }
+function closeRaceSelect(){ popHide('raceSelPanel'); }
+function pickRace(k){ if(STK_RACES[k]) _selRace=k; if(typeof playSfx==='function') playSfx('ui_confirm'); closeRaceSelect(); openSoloDiff(); }   // 종족 확정 → 난이도
 // 개인 플레이 난이도 선택 팝업(고르면 즉시 시작)
 function openSoloDiff(){ const box=document.getElementById('soloDiffBtns'); if(box){ box.innerHTML='';
     DIFFICULTY_ORDER.forEach(d=>{ const D=DIFFICULTY[d]; const b=document.createElement('div');
@@ -8304,8 +8331,18 @@ window.addEventListener('load',()=>{ drawMain(); placeMergeZone(); updateHud(); 
 let STK=null, _stkDrag=null, _stkPtrs=new Map(), _stkPinch=null;
 // 크기 비교용 샘플 유닛(임시) — 다음 단계에서 실제 전투 유닛으로 대체. nm 없으면 U[id].name 폴백
 const STRIKE_SAMPLE=[{id:'marine'},{id:'ghost'},{id:'hydra'},{id:'dragoon'},{id:'goliath'},{id:'archon'},{id:'tank',nm:'탱크'},{id:'skyguard',nm:'스카이가드'}];
-// 전장 줌 한계: 최소(가장 축소)=0.9(더 넓게 볼 수 있게), 기본 시작=1.2, 최대(가장 확대)=3
-const STK_MINZOOM=0.9, STK_DEFZOOM=1.2, STK_MAXZOOM=3, BUILD_MAXZOOM=3;
+// 전장 줌 한계: 최소(가장 축소)=1.2, 기본 시작=1.2, 최대(가장 확대)=2.5
+const STK_MINZOOM=1.2, STK_DEFZOOM=1.2, STK_MAXZOOM=2.5, BUILD_MAXZOOM=3;
+// 종족(컴퓨터가 싸운다): 진입 시 선택 → 그 종족 유닛만 소환. units=현 보유 전투유닛 기준 로스터
+// (프로토스·저그는 다음 단계에서 가챠 유닛으로 보강 예정 — 균형)
+const STK_RACES={
+  terran:  { key:'terran',  name:'테란',     desc:'보병·기계', col:'#4aa8ff', icon:'🛡️', units:['marine','ghost','goliath'] },
+  protoss: { key:'protoss', name:'프로토스', desc:'루멘',     col:'#ffc040', icon:'🔮', units:['dragoon','archon'] },
+  zerg:    { key:'zerg',    name:'저그',     desc:'하이브',   col:'#9fd356', icon:'🦎', units:['hydra'] },
+};
+const STK_RACE_ORDER=['terran','protoss','zerg'];
+function strikeRandomRace(){ return STK_RACE_ORDER[Math.floor(Math.random()*STK_RACE_ORDER.length)]; }
+function strikeRaceUnits(side){ const r=side&&side.race; return (STK_RACES[r]||STK_RACES.terran).units.slice(); }   // 그 진영 종족의 소환 가능 유닛 id
 // 직스 타일 에셋(기존 assets/tiles 재사용)
 const STRIKE_GROUND=new Image(); STRIKE_GROUND.src='assets/tiles/desert.png?v=1';        // 전장 지형(사막)
 const STRIKE_PAVE=new Image(); STRIKE_PAVE.src='assets/tiles/protoss_floor.png?v=1';     // 신전 잇는 포장 길(프로토스 테크)
@@ -8362,6 +8399,7 @@ function strikeHideNemoChrome(on){ ['coopBossBar','bossPopup','mergeFab','skillF
 function strikeStart(){ if(typeof bgmStop==='function') bgmStop();
   G=newGame(); G.strike=true; G.phase='playing'; G.tab='Main'; G.sel=[]; G.selEnemy=null;
   STK=strikeNewState();
+  STK.me.race=(STK_RACES[_selRace]?_selRace:'terran'); STK.ai.race=strikeRandomRace();   // 내 종족=선택, 상대=랜덤 → 각자 그 종족 유닛만 소환
   if(STK.sizeCmp){   // 크기 비교용 샘플 유닛: 중앙 신전 주변 4×2 그리드(월드 좌표)
     const W=STK.world, sp=560, cols=4;
     STK.cmpUnits=STRIKE_SAMPLE.map((s,i)=>{ const c=i%cols, r=Math.floor(i/cols);
@@ -8423,7 +8461,8 @@ function strikeDrawBuildMap(){ const S=STK; if(!S) return; const cvEl=document.g
   ctx.strokeStyle='rgba(150,212,255,.75)'; ctx.lineWidth=2; ctx.strokeRect(ox,oy,pw,ph);
   // 상단 라벨(화면 고정)
   ctx.fillStyle='rgba(150,210,255,.85)'; ctx.font='700 13px Rajdhani, sans-serif'; ctx.textAlign='center';
-  ctx.fillText('내 건설 구역 — 두 손가락으로 확대 · 타일에 생산 건물 배치', W/2, Math.max(54, oy-12));
+  const _rc=STK_RACES[S.me.race]||STK_RACES.terran;
+  ctx.fillText('내 건설 구역 ['+_rc.icon+' '+_rc.name+'] — 두 손가락으로 확대 · 타일에 생산 건물 배치', W/2, Math.max(54, oy-12));
   ctx.textAlign='left';
 }
 // 건설 보드 카메라 클램프 — 보드가 화면보다 작으면 중앙, 크면 가장자리 넘어 못 가게
