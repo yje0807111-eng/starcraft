@@ -8305,7 +8305,7 @@ let STK=null, _stkDrag=null, _stkPtrs=new Map(), _stkPinch=null;
 // 크기 비교용 샘플 유닛(임시) — 다음 단계에서 실제 전투 유닛으로 대체. nm 없으면 U[id].name 폴백
 const STRIKE_SAMPLE=[{id:'marine'},{id:'ghost'},{id:'hydra'},{id:'dragoon'},{id:'goliath'},{id:'archon'},{id:'tank',nm:'탱크'},{id:'skyguard',nm:'스카이가드'}];
 // 전장 줌 한계: 최소(가장 축소)=1.5 → 전 맵이 한눈에 안 들어오게(유닛이 너무 작아지지 않게). 최대(가장 확대)=3
-const STK_MINZOOM=1.2, STK_MAXZOOM=3;
+const STK_MINZOOM=1.2, STK_MAXZOOM=3, BUILD_MAXZOOM=3;
 // 직스 타일 에셋(기존 assets/tiles 재사용)
 const STRIKE_GROUND=new Image(); STRIKE_GROUND.src='assets/tiles/desert.png?v=1';        // 전장 지형(사막)
 const STRIKE_PAVE=new Image(); STRIKE_PAVE.src='assets/tiles/protoss_floor.png?v=1';     // 신전 잇는 포장 길(프로토스 테크)
@@ -8338,6 +8338,7 @@ function strikeNewState(){ const W=mapCfg('world',4800), hp=mapCfg('baseHp',3000
          sec:{x:W*0.661,y:W*0.339, hp:sHp, max:sHp, dead:false} },   // 우상단 메인 + 2차 신전
     central:{x:W*0.5,y:W*0.5, hp:cHp, max:cHp, owner:null, dead:false},   // 중앙 중립 보너스 신전(깬 팀 메인에 쉴드)
     cam:{x:W/2,y:W/2}, zoom:STK_MINZOOM, viewWorld:Math.round(2600/STK_MINZOOM), cw:0, ch:0, sel:null, userCam:false,
+    build:{ W:2400, H:1600, cols:6, rows:4, cam:{x:1200,y:800}, zoom:1, _sc:1, _ox:0, _oy:0 },   // 건설 전용 보드(맞춤=최대 축소)
     leadT:0, leadIdx:0, sizeCmp:false, cmpUnits:null };
 }
 function strikeIncome(side){ const S=STK; if(!S) return 0; side=side||S.me; return S.incomeBase + side.mines*S.mineIncome; }
@@ -8403,21 +8404,29 @@ function strikeSync3D(dt){ const S=STK; if(!S) return; const mcv=document.getEle
 function strikeDrawBuildMap(){ const S=STK; if(!S) return; const cvEl=document.getElementById('cvMain'); if(!cvEl) return;
   const r=setup('cvMain'); const ctx=r.ctx, W=r.W, H=r.H; GW=W; GH=H; S.cw=W; S.ch=H;
   ctx.fillStyle='#05080c'; ctx.fillRect(0,0,W,H);
-  const bw=W*0.66, bh=H*0.4, bx=(W-bw)/2, by=(H-bh)/2;   // ≈ 화면 1/4 면적, 직사각형
-  strikeTileRect(ctx, bx,by,bw,bh, STRIKE_BUILDTILE, 56);
+  const b=S.build, fit=Math.min(W/b.W, H/b.H)*0.94, sc=fit*b.zoom;   // fit(zoom=1)=화면에 딱 맞춤=최대 축소
+  strikeBuildClamp(b,sc,W,H);
+  const ox=W/2-b.cam.x*sc, oy=H/2-b.cam.y*sc, pw=b.W*sc, ph=b.H*sc;
+  b._sc=sc; b._ox=ox; b._oy=oy;
+  // 타일 바닥
+  strikeTileRect(ctx, ox,oy, pw,ph, STRIKE_BUILDTILE, Math.max(10, (b.W/8)*sc));
   // 건설 격자
-  const cols=6, rows=4, cwd=bw/cols, chd=bh/rows;
+  const cwd=pw/b.cols, chd=ph/b.rows;
   ctx.strokeStyle='rgba(120,200,255,.16)'; ctx.lineWidth=1;
-  for(let i=1;i<cols;i++){ ctx.beginPath(); ctx.moveTo(bx+i*cwd,by); ctx.lineTo(bx+i*cwd,by+bh); ctx.stroke(); }
-  for(let j=1;j<rows;j++){ ctx.beginPath(); ctx.moveTo(bx,by+j*chd); ctx.lineTo(bx+bw,by+j*chd); ctx.stroke(); }
+  for(let i=1;i<b.cols;i++){ const gx=ox+i*cwd; ctx.beginPath(); ctx.moveTo(gx,oy); ctx.lineTo(gx,oy+ph); ctx.stroke(); }
+  for(let j=1;j<b.rows;j++){ const gy=oy+j*chd; ctx.beginPath(); ctx.moveTo(ox,gy); ctx.lineTo(ox+pw,gy); ctx.stroke(); }
   // 외곽 네온 테두리
-  ctx.strokeStyle='rgba(120,200,255,.55)'; ctx.lineWidth=2; ctx.strokeRect(bx+0.5,by+0.5,bw-1,bh-1);
-  // 상단 라벨
+  ctx.save(); ctx.shadowColor='rgba(120,200,255,.55)'; ctx.shadowBlur=Math.max(4,8*b.zoom);
+  ctx.strokeStyle='rgba(140,210,255,.7)'; ctx.lineWidth=Math.max(1.5,3); ctx.strokeRect(ox,oy,pw,ph); ctx.restore();
+  // 상단 라벨(화면 고정)
   ctx.fillStyle='rgba(150,210,255,.85)'; ctx.font='700 13px Rajdhani, sans-serif'; ctx.textAlign='center';
-  ctx.fillText('내 건설 구역 — 타일을 눌러 생산 건물 배치', W/2, by-10);
+  ctx.fillText('내 건설 구역 — 두 손가락으로 확대 · 타일에 생산 건물 배치', W/2, Math.max(54, oy-12));
   ctx.textAlign='left';
-  S.buildBoard={ bx,by,bw,bh,cols,rows };
 }
+// 건설 보드 카메라 클램프 — 보드가 화면보다 작으면 중앙, 크면 가장자리 넘어 못 가게
+function strikeBuildClamp(b,sc,W,H){ const hvx=(W/sc)/2, hvy=(H/sc)/2;
+  b.cam.x = (b.W<=hvx*2) ? b.W/2 : Math.max(hvx, Math.min(b.W-hvx, b.cam.x));
+  b.cam.y = (b.H<=hvy*2) ? b.H/2 : Math.max(hvy, Math.min(b.H-hvy, b.cam.y)); }
 function strikeStep(dt){ const S=STK; if(!S) return; S.t+=dt;
   S.cycleT-=dt;
   if(S.cycleT<=0){ S.cycleT+=S.cycleTime; S.round++;
@@ -8690,25 +8699,29 @@ function strikeScreenToWorld(px,py){ const S=STK, W=S.cw||1, H=S.ch||1, scale=Ma
   return { x:S.cam.x+(px-W/2)/scale, y:S.cam.y+(py-H/2)/scale }; }
 function strikeOnDown(e){ const S=STK; if(!S) return; const r=strikeViewRect(), px=e.clientX-r.left, py=e.clientY-r.top;
   _stkPtrs.set(e.pointerId,{x:px,y:py});
-  if(_stkPtrs.size===2){ const p=[..._stkPtrs.values()]; _stkPinch={ d:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)||1, zoom:S.zoom }; _stkDrag=null; }
-  else _stkDrag={ sx:px, sy:py, camx:S.cam.x, camy:S.cam.y, moved:false }; }
+  const build=(G.tab==='Unit'), cam=build?S.build.cam:S.cam, zoom=build?S.build.zoom:S.zoom;
+  if(_stkPtrs.size===2){ const p=[..._stkPtrs.values()]; _stkPinch={ d:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)||1, zoom:zoom }; _stkDrag=null; }
+  else _stkDrag={ sx:px, sy:py, camx:cam.x, camy:cam.y, moved:false }; }
 function strikeOnMove(e){ const S=STK; if(!S) return; const r=strikeViewRect(), px=e.clientX-r.left, py=e.clientY-r.top;
   if(_stkPtrs.has(e.pointerId)) _stkPtrs.set(e.pointerId,{x:px,y:py});
-  if(_stkPinch && _stkPtrs.size>=2){ const p=[..._stkPtrs.values()], d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);
-    S.zoom=Math.min(STK_MAXZOOM, Math.max(STK_MINZOOM, _stkPinch.zoom * d/_stkPinch.d)); S.userCam=true; strikeClampCam(); return; }
+  const build=(G.tab==='Unit');
+  if(_stkPinch && _stkPtrs.size>=2){ const p=[..._stkPtrs.values()], d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y), z=_stkPinch.zoom*d/_stkPinch.d;
+    if(build){ S.build.zoom=Math.min(BUILD_MAXZOOM, Math.max(1, z)); }
+    else { S.zoom=Math.min(STK_MAXZOOM, Math.max(STK_MINZOOM, z)); S.userCam=true; strikeClampCam(); } return; }
   if(_stkDrag){ const dx=px-_stkDrag.sx, dy=py-_stkDrag.sy; if(Math.abs(dx)+Math.abs(dy)>6) _stkDrag.moved=true;
-    const W=S.cw||1,H=S.ch||1,scale=Math.min(W,H)/S.viewWorld;
-    S.cam.x=_stkDrag.camx-dx/scale; S.cam.y=_stkDrag.camy-dy/scale; S.userCam=true; strikeClampCam(); } }
+    if(build){ const b=S.build, sc=b._sc||1; b.cam.x=_stkDrag.camx-dx/sc; b.cam.y=_stkDrag.camy-dy/sc; }
+    else { const W=S.cw||1,H=S.ch||1,scale=Math.min(W,H)/S.viewWorld; S.cam.x=_stkDrag.camx-dx/scale; S.cam.y=_stkDrag.camy-dy/scale; S.userCam=true; strikeClampCam(); } } }
 function strikeOnUp(e){ const S=STK; if(!S) return; if(e) _stkPtrs.delete(e.pointerId);
   if(_stkPtrs.size<2) _stkPinch=null;
-  if(_stkDrag && !_stkDrag.moved){ const r=strikeViewRect();
+  if(G.tab!=='Unit' && _stkDrag && !_stkDrag.moved){ const r=strikeViewRect();
     const px=(e&&e.clientX!=null?e.clientX:r.left+r.width/2)-r.left, py=(e&&e.clientY!=null?e.clientY:r.top+r.height/2)-r.top;
     const w=strikeScreenToWorld(px,py); strikeSelectAt(w.x,w.y); } _stkDrag=null; }
 function strikeSelectAt(wx,wy){ const S=STK; let best=null,bd=1e9;
   for(const u of S.me.units.concat(S.ai.units)){ const d=(u.x-wx)**2+(u.y-wy)**2; if(d<bd && d<6400){ bd=d; best=u; } }
   S.sel=best; /* 유닛 프로필 연동은 유닛 추가(다음 증분) 시 */ }
 function strikeWheel(e){ const S=STK; if(!S) return; if(e.cancelable) e.preventDefault();
-  S.zoom=Math.min(STK_MAXZOOM, Math.max(STK_MINZOOM, S.zoom*(e.deltaY>0?0.9:1.1))); strikeClampCam(); }
+  if(G.tab==='Unit'){ S.build.zoom=Math.min(BUILD_MAXZOOM, Math.max(1, S.build.zoom*(e.deltaY>0?0.9:1.1))); }
+  else { S.zoom=Math.min(STK_MAXZOOM, Math.max(STK_MINZOOM, S.zoom*(e.deltaY>0?0.9:1.1))); strikeClampCam(); } }
 </script>
 
 <!-- 유닛 3D 모델(Three.js) — assets/models/*.glb(마린/골리앗/고스트 + 마린총)를 WebGL로 렌더. 애니메이션은 코드로 구현(숨쉬기/공격기울임/사망), 가장 가까운 적 방향 자동 회전 -->
