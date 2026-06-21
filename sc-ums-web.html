@@ -3102,7 +3102,7 @@ function coopBossMaxHp(lv){
   return Math.round(45000*diff*coopBossPlayers()*Math.pow(2.0, lv-1)*late*hpDown);
 }
 function makeCoopBoss(lv){ const max=coopBossMaxHp(lv);
-  return { lv:lv, hp:max, max:max, contrib:{}, dead:false, name:COOP_BOSS_NAMES[(lv-1)%COOP_BOSS_NAMES.length] }; }
+  return { lv:lv, hp:max, max:max, contrib:{}, dead:false, name:'드레드노트' }; }   // 공용보스=공중 기함(배틀크루저) 이름
 function spawnCoopBoss(lv){ G.coopBoss=makeCoopBoss(lv); updateCoopBossBar(); }
 // 적에게 데미지를 줄 때 공용 보스에게도 기여 누적(내 기여 = 내 포인트 보상)
 function coopBossDamage(amt, num, remote){ const cb=G.coopBoss; if(!cb||cb.dead) return;
@@ -4398,17 +4398,29 @@ function combine(){
 }
 
 function roundDef(r){ const m=MON[Math.min(Math.max(1,r),MON.length)-1]; return m; }
-const ENEMY_MODEL={ '옵저버':'observer', '오버로드':'overlord' };  // 적 이름 → 3D 모델 id(있으면 3D 렌더, 없으면 네온 도형)
+const ENEMY_MODEL={ '옵저버':'observer', '오버로드':'overlord',   // 적 이름 → 3D 모델 id(있으면 3D 렌더, 없으면 네온 도형)
+  '발키리':'hellfire', '드랍쉽':'pelican', '배틀':'dreadnought',
+  '아비터':'kronos', '셔틀':'seraph', '케리어':'archangel', '스카웃':'falcon',
+  '스커지':'stinger', '디바우러':'venom', '퀸':'medusa',
+  '레이스':'skyguard', '커세어':'skydancer' };   // 레이스·커세어=기존 모델 재사용
 try{ window.ENEMY_MODEL=ENEMY_MODEL; }catch(e){}   // M3D 모듈(별도 스코프) tintModel 폴백용
+// 적/보스 표시 이름 — 모델 id → 한글 이름(스타크래프트명 대신 새 기함 이름). 매핑 없으면 기존 이름 유지(레이스/커세어/옵저버/오버로드).
+const MODEL_NAME_KR={ hellfire:'헬파이어', pelican:'펠리컨', dreadnought:'드레드노트', kronos:'크로노스', seraph:'세라프', archangel:'아크엔젤', falcon:'팔콘', stinger:'스팅어', venom:'베놈', medusa:'메두사' };
+function enemyName(n){ const mdl=ENEMY_MODEL[n]; return (mdl&&MODEL_NAME_KR[mdl])||n; }   // 스타크래프트명 → 새 기함 이름(없으면 그대로)
+// 라운드 보스 3D 모델 풀(공중유닛 순환) — 보스 라운드마다 다른 기함. 모델 미로드 맵에선 null→2D capital 폴백.
+const BOSS_AIR=['archangel','kronos','dreadnought','pelican','venom','medusa','seraph','hellfire','falcon','stinger'];
+const BOSS_SCALE_E=2.0;   // 라운드 보스 모델 확대 배율(일반 적 대비)
+function roundBossModel(){ const every=mapCfg('bossEvery',BOSS_EVERY); const bi=Math.max(0,Math.floor(G.round/every)-1)%BOSS_AIR.length;
+  const cand=BOSS_AIR[bi]; return (window.M3D && M3D.hasModel && M3D.hasModel(cand)) ? cand : null; }   // 로드된 경우만 3D
 const SPAWN_LEAD=0.58;   // 출현 이펙트 시작 → 실제 등장(에너지 모임 후 플래시 시점)까지 지연(초)
 // ── 개인 보스 4종(고정 난이도 — 라운드 무관, 등급별 도전) ──
 const PBOSS_TYPES=[
   // hp=고정 체력 / ar=방어 / rec=권장 전투 등급(표시용) / unlock=해금에 필요한 '현재 보유 전체 수집' 등급 / bonus·egy=처치 보상
   // 업그레이드 0에서도 권장 등급을 모으면 충분히 잡히도록 체력을 낮춤. 보스별 쿨다운은 개별(G.pbossCds). 보상은 더 축소.
-  {id:'easy',  name:'견습 파수꾼',   rec:'레어~에픽',   unlock:'time', unlockSec:60, hp:18000,   ar:0,   bonus:80,  egy:10, col:'#b8c0cc'},   // 첫 보스=해금조건 없이 게임 시작 60초 후 소환 가능
-  {id:'mid',   name:'정예 추적자',   rec:'유니크',      unlock:'rare',   hp:95000,   ar:60,  bonus:160, egy:18, col:'#b06bff'},
-  {id:'upper', name:'전장의 정복자', rec:'유니크~초월', unlock:'epic',   hp:300000,  ar:280, bonus:240, egy:26, col:'#ff8a3b'},
-  {id:'super', name:'파멸의 군주',   rec:'초월',        unlock:'unique', hp:720000,  ar:500, bonus:320, egy:36, col:'#ff2bd6'},
+  {id:'easy',  name:'와이번',   model:'wyvern',   rec:'레어~에픽',   unlock:'time', unlockSec:60, hp:18000,   ar:0,   bonus:80,  egy:10, col:'#b8c0cc'},   // 첫 보스=해금조건 없이 게임 시작 60초 후 소환 가능
+  {id:'mid',   name:'이지스',   model:'aegis',    rec:'유니크',      unlock:'rare',   hp:95000,   ar:60,  bonus:160, egy:18, col:'#b06bff'},
+  {id:'upper', name:'베히모스', model:'behemoth', rec:'유니크~초월', unlock:'epic',   hp:300000,  ar:280, bonus:240, egy:26, col:'#ff8a3b'},
+  {id:'super', name:'크로노스', model:'kronos',   rec:'초월',        unlock:'unique', hp:720000,  ar:500, bonus:320, egy:36, col:'#ff2bd6'},   // 모선(SC2) 대신 크로노스 재사용
 ];
 // 개인 보스 해금: 해당 등급 가챠 유닛 4종을 '현재(이번 판)' 모두 보유하면 열림.
 function pbossUnlockNeed(pt){ return (typeof gachaUnitsOfTier==='function')?gachaUnitsOfTier(pt.unlock).map(u=>u.id):[]; }
@@ -4437,12 +4449,16 @@ function spawnEnemy(opts){ opts=opts||{}; const pt=opts.pbType||null; const pbos
   let ar = pt ? pt.ar : Math.max(0, (boss?Math.round(m.ar*0.5):m.ar) - (mb.enemyArmor||0));   // 보스 방어=그 라운드의 절반(등급 관문은 일반 라운드가 담당)
   let spd = (0.018+(boss?0:0.004))*(mb.enemySlowMul||1);
   if(mod){ if(mod.spd) spd*=mod.spd; if(mod.ar) ar=Math.round(ar*mod.ar); }
+  if(!boss && m && m.n==='스커지') spd*=1.5;   // 스커지: 고속 비행(자폭형) — 이동속도 ↑
+  const _rbm = (boss && !pboss) ? roundBossModel() : null;   // 라운드 보스 전용 3D 모델(공중유닛, 로드된 경우만)
+  const _ptm = (pt && pt.model && window.M3D && M3D.hasModel && M3D.hasModel(pt.model)) ? pt.model : null;   // 개인보스 3D 모델(공중유닛, 로드된 경우만)
   const e={eid:G.eSeq++, d:0, hp:hp, maxHp:hp, sh:sh, maxSh:sh, ar:ar,   // 개인 보스도 일반 적처럼 시작지점(d=0)에서 등장 후 트랙 따라 이동
     regen:(mod&&mod.regen)||0, split:(mod&&mod.split&&Math.random()<0.6)?1:0,   // 재생/분열 모디파이어
     speed:spd, boss:boss, special:special, pboss:pboss, pbId:pt?pt.id:null, life:pboss?120:null, pbCol:pt?pt.col:null,
     bonus:pt?Math.round(pt.bonus*coinMult*((mb.pbossRewardMul)||1)):0, bonusE:pt?Math.round((pt.egy||0)*((mb.pbossRewardMul)||1)):0,   // 처치 보상(coinMult×메타 개인보스 보상)
-    flash:0, name:pt?pt.name:(boss?'보스':(special?'스페셜':m.n)),
-    shape:boss?'capital':enemyShape(m.n), race:enemyRace(m.n), ph:(G.eSeq*0.7)%6.283, hit:0, model3d:boss?null:(ENEMY_MODEL[m.n]||null)};
+    flash:0, name:pt?pt.name:((boss&&!pboss)?(MODEL_NAME_KR[_rbm]||'보스'):(special?'스페셜':enemyName(m.n))),   // 라운드 보스=기함 이름, 일반=새 적 이름
+    shape:boss?'capital':enemyShape(m.n), race:enemyRace(m.n), ph:(G.eSeq*0.7)%6.283, hit:0,
+    model3d: pt ? _ptm : ((boss&&!pboss)?_rbm:(boss?null:(ENEMY_MODEL[m.n]||null))), bossScale:(_ptm||_rbm)?BOSS_SCALE_E:undefined};   // 개인보스=전용 모델 / 라운드보스=공중 기함 / 일반=기존
   G.recalls.push({life:1, boss:boss, special:special});   // ① 출현 이펙트(에너지 모임) 먼저 시작
   G.pendSpawn.push({t:SPAWN_LEAD, e:e});                   // ② 모임 완료(플래시) 시점에 실제 등장(효과음도 이때)
 }
@@ -4766,7 +4782,7 @@ function advanceFx(dt){
     } else if(s.eid!=null){ // 유도 발사체: 대상 적을 끝까지 추적 → 명중 시 데미지
       const e=G.enemies.find(x=>x.eid===s.eid);
       if(e){ const p=posAt(e.d,GW,GH); if(e.model3d) p.y-=AIR_HIT_OFF;  // 적의 현재 위치(공중 보정)
-        if(s.gboom){ s.lkx=p.x; s.lky=p.y; }   // 마지막 표적 위치 기억(사망 시 그 자리에서 폭파)
+        s.lkx=p.x; s.lky=p.y;   // 마지막 표적 위치 기억(대상 사망 시 그 자리에서 소멸 — 통과 방지)
         const dx=p.x-s.x, dy=p.y-s.y, d=Math.hypot(dx,dy)||1;
         if(d<=s.spd*dt+HIT_R){ // 명중
           _atkUid=s.uid; hitEnemy(e, s.dmg);
@@ -4789,19 +4805,23 @@ function advanceFx(dt){
           let nvx=cdx+(tdx-cdx)*bl, nvy=cdy+(tdy-cdy)*bl, nl=Math.hypot(nvx,nvy)||1; s.vx=nvx/nl*s.spd; s.vy=nvy/nl*s.spd;
         } else { s.vx=adx/ad*s.spd; s.vy=ady/ad*s.spd; }
         s.x+=s.vx*dt; s.y+=s.vy*dt;  // 조준점 쪽으로 유도
-      } else if((s.gboom||s.sboom) && s.lkx!=null){ // 갓 발사체: 표적 사망 → 죽은 자리로 계속 유도 후 폭파(통과 방지)
+      } else if(s.lkx!=null){ // 표적 사망 → 죽은 자리로 계속 유도 후 그 자리에서 소멸(통과 방지)
         const dx=s.lkx-s.x, dy=s.lky-s.y, d=Math.hypot(dx,dy)||1;
-        if(d<=s.spd*dt+HIT_R){
-          if(s.sboom){ sentinelGodBlast(s.lkx,s.lky,s,null); G.shots.splice(i,1); continue; }
-          striderGodBoom(s.lkx,s.lky);
-          const r2=Math.pow((s.splashR||SPLASH_R)*Math.min(GW,GH),2);   // 죽은 자리 폭발도 주변 스플래시 적용
-          for(const o of G.enemies){ const q=posAt(o.d,GW,GH); const qy=o.model3d?q.y-AIR_HIT_OFF:q.y;
-            const ax=q.x-s.lkx, ay=qy-s.lky; if(ax*ax+ay*ay<=r2) hitEnemy(o,s.dmg*SPLASH_RATIO); }
+        if(d<=s.spd*dt+HIT_R){   // 죽은 자리 도달 → 명중 이펙트 후 소멸(데미지 없음 — 대상 이미 사망)
+          if(s.sboom){ sentinelGodBlast(s.lkx,s.lky,s,null); }
+          else if(s.gboom){ striderGodBoom(s.lkx,s.lky);
+            const r2=Math.pow((s.splashR||SPLASH_R)*Math.min(GW,GH),2);   // 갓 발사체: 죽은 자리 폭발도 주변 스플래시 적용
+            for(const o of G.enemies){ const q=posAt(o.d,GW,GH); const qy=o.model3d?q.y-AIR_HIT_OFF:q.y;
+              const ax=q.x-s.lkx, ay=qy-s.lky; if(ax*ax+ay*ay<=r2) hitEnemy(o,s.dmg*SPLASH_RATIO); } }
+          else if(s.kind==='bullet'||s.kind==='sniper'||s.kind==='mg'){ const sn=s.kind==='sniper', sp2=Math.hypot(s.vx,s.vy)||1; spawnSparks(s.lkx,s.lky,-s.vx/sp2,-s.vy/sp2,sn?'#eaffff':'#ffe6a0'); G.impacts.push({x:s.lkx,y:s.lky,life:1,r:sn?5:(s.kind==='mg'?2.5:3.5),color:sn?'#eafdff':'#fff6d8'}); }
+          else if(s.kind==='needle'){ for(let q=0;q<5;q++){ const a=Math.random()*6.283, sp2=60+Math.random()*120; G.sparks.push({x:s.lkx,y:s.lky,vx:Math.cos(a)*sp2,vy:Math.sin(a)*sp2,life:0.4,len:2+Math.random()*3,color:q%2?'#d6ff7a':'#9fd356'}); } G.impacts.push({x:s.lkx,y:s.lky,life:1,r:6,color:s.color}); }
+          else if(s.kind==='shell'){ breakerExplosion(s.lkx,s.lky); }
+          else G.impacts.push({x:s.lkx,y:s.lky,life:1,r:s.boom||14,color:s.color});   // 미사일 등: 그 자리에서 작은 폭발
           G.shots.splice(i,1); continue; }
         const sp=Math.hypot(s.vx,s.vy)||s.spd, cdx=s.vx/sp, cdy=s.vy/sp, bl=Math.min(1,dt*(s.turn||8)*Math.max(1,70/Math.max(d,1)));   // 근접 선회 부스트(공전 방지)
         let nvx=cdx+(dx/d-cdx)*bl, nvy=cdy+(dy/d-cdy)*bl, nl=Math.hypot(nvx,nvy)||1; s.vx=nvx/nl*s.spd; s.vy=nvy/nl*s.spd;
         s.x+=s.vx*dt; s.y+=s.vy*dt;
-      } else { s.x+=s.vx*dt; s.y+=s.vy*dt; s.miss=(s.miss||0)+dt; if(s.miss>0.6){ G.shots.splice(i,1); continue; } } // 대상 소멸 → 잠시 직진 후 소멸
+      } else { s.x+=s.vx*dt; s.y+=s.vy*dt; s.miss=(s.miss||0)+dt; if(s.miss>0.6){ G.shots.splice(i,1); continue; } } // (lkx 미기록 예외) 잠시 직진 후 소멸
     } else { // 비유도(예비)
       s.x+=s.vx*dt; s.y+=s.vy*dt; s.t+=dt;
       if(s.t>=s.dur && s.kind==='nukefall'){   // 핵 착탄: 대형 폭발 + 반경 내 전 적에게 풀데미지
@@ -8858,6 +8878,10 @@ const MODELS={ marine:'marine.glb', goliath:'goliath.glb', ghost:'ghost.glb', ar
   turret:'buildings/turret.glb', photon:'buildings/photon_cannon.glb',
   acad:'buildings/academy.glb', arm:'buildings/armory.glb', forge:'buildings/forge.glb', evo:'buildings/evolution_chamber.glb', pointlab:'buildings/command_center.glb',
   temple_main:'buildings/temple_main.glb', temple_stone:'buildings/temple_stone.glb', temple_neutral:'buildings/temple_neutral.glb',   // 직스 신전(메인/2차/중립)
+  // 적 공중 유닛 모델(네모네모 디펜스): 발키리·드랍쉽·배틀·아비터·셔틀·케리어·스카웃·스커지·디바우러·퀸
+  hellfire:'hellfire.glb', pelican:'pelican.glb', dreadnought:'dreadnought.glb', kronos:'kronos.glb', seraph:'seraph.glb',
+  archangel:'archangel.glb', falcon:'falcon.glb', stinger:'stinger.glb', venom:'venom.glb', medusa:'medusa.glb',
+  wyvern:'wyvern.glb', aegis:'aegis.glb', behemoth:'behemoth.glb',   // 개인보스(공중유닛): 뮤탈→와이번 / 사이언스베슬→이지스 / 가디언→베히모스 (super=kronos 재사용)
   citizen:'civilian.glb',  // 아군/적 + 방어구조물 + 업그레이드 건물 + 유닛뽑기 시민(셀렉터)
   // 신규 가챠 유닛 전용 모델(전설/초월)
   machinegun:'machinegun.glb', tank:'tank.glb', blade:'blade.glb', skyguard:'skyguard.glb', skydancer:'skydancer.glb', matron:'matron.glb', thornqueen:'thornqueen.glb',
@@ -8890,6 +8914,8 @@ const RELOAD_DIP=0.5;     // 장전 시 총 내리는 양(모델 단위)
 const RELOAD_TILT=0.9;    // 장전 시 총구 아래로 기울이는 각(라디안)
 const RELOAD_WIN=0.2;     // 장전(총 내림) 구간 폭 — 작을수록 들고 조준하는 시간이 김
 const SCALE={ marine:12, goliath:16, ghost:12, archon:18, dragoon:14, hydra:14, observer:13, overlord:22, turret:25, photon:25, acad:19, arm:19, forge:19, evo:19, pointlab:19, temple_main:105, temple_stone:55, temple_neutral:30, citizen:13,
+  hellfire:17, pelican:18, dreadnought:22, kronos:20, seraph:16, archangel:22, falcon:16, stinger:10, venom:17, medusa:18,   // 적 공중 유닛(초기값 — 보면서 조정). stinger(스커지)=약간 작게
+  wyvern:16, aegis:18, behemoth:20,   // 개인보스 모델(초기값 — bossScale 2배 적용됨)
   racer:20, tank:22, blade:18, thornqueen:20, skyguard:17, skydancer:17 };  // 유닛별 화면 스케일. 초월 비행체(템페스트·스카이댄서)=대형
 const COLORS={ marine:0x2e9bff, goliath:0xff9418, ghost:0x6cf024, dragoon:0xb070ff, hydra:0x9fd356 };  // (구)타입별 색 — 현재는 플레이어색으로 통일(아래 PLAYER_COLOR)
 // 플레이어 색(스타크래프트식) — 한 플레이어의 모든 유닛·구조물을 같은 색으로 통일(아군 구별용)
@@ -8914,9 +8940,10 @@ const BEACON_RIM=new THREE.Color(0xff3b3b);   // 비콘 테두리(빨강 림) �
 const beaconRimIntU={value:0.15};
 const MODEL_SCALE=13;     // 기본 스케일(미지정 유닛) — 보드 축소(INSET 0.245)에 맞춰 추가 ~0.85 축소
 const Y_DROP=2;           // 점 기준 수직 보정(px)
-const VIEW_TILT=0.42;     // 카메라 부감(작게=서 있게 보임, 0=정면). 모델은 세워두고 이 각도만큼만 기울여 내려다봄
+const VIEW_TILT=0.65;     // 카메라 부감(작게=서 있게 보임, 0=정면). 모델은 세워두고 이 각도만큼만 기울여 내려다봄 — 더 위에서 본 각도로 상향(0.42→0.65)
 const ROT_OFFSET=0;       // 모델 정면(+Z 가정)과 실제 forward 차이 보정(yaw, 필요시 조정)
-const MODEL_YAW_OFF={ turret:Math.PI/2, racer:Math.PI/2, tank:Math.PI/2, skyguard:Math.PI/2, skydancer:Math.PI/2 };  // 모델별 yaw 보정. 터렛/레이서/브레이커 모두 +90°(브레이커 실제 정면이 후방쪽이라 180° 반전)
+const MODEL_YAW_OFF={ turret:Math.PI/2, racer:Math.PI/2, tank:Math.PI/2, skyguard:Math.PI/2, skydancer:Math.PI/2,
+  falcon:Math.PI/2, pelican:Math.PI/2, kronos:Math.PI/2 };  // 모델별 yaw 보정. 터렛/레이서/브레이커 +90°. falcon·pelican·kronos(아비터, 신규 방향성 기체): 동체 수직이라 옆으로 진행 → +90° 회전 보정
 const NO_TURN={ dragoon:true };  // 몸을 돌리지 않는 유닛(고정 자세로 발사·이동 — 사용자 요청). 발사체 방향은 게임좌표로 계산되어 무관
 const RIM_RO_MUL={ racer:0.6 };  // 모델별 선택링 반경 배율. 레이서=크게 키워(SCALE20) 링이 굵어져 일반 유닛 크기로 축소
 // ── 코드 기반 애니메이션 파라미터 ──
@@ -8980,7 +9007,8 @@ const GHOST_SCALE=0.62;       // 고스트 크기 배율(실제보다 작게)
 let beaconBase=null;          // 합성 비콘 3D 모델 베이스(scene/off/h/w)
 const beaconInsts=new Map();  // 비콘 인스턴스(key 'bay' / 'shop0..7' -> {holder,view,inner,w})
 let bossModel=null;           // 공용 보스 3D 모델(임의 유닛 1종)
-const BOSS_MODEL='archon';    // 보스로 사용할 유닛 모델 id
+const BOSS_MODEL='archon';    // 공용 보스 폴백 모델(공중 기함 미로드 시)
+const BOSS_MODEL_AIR='dreadnought';   // 공용 보스 = 공중 기함(배틀크루저). 로드 시 우선 사용
 const BOSS_SCALE_MUL=2.0;     // 보스 확대 배율(유닛보다 크되 과하지 않게)
 const SHOP_SCALE_MUL=1.16;    // 슬롯 전시 모델·시민 크기 배율 — 유닛/시민 살짝 키움
 const SHOP_BW_MUL=1.7;        // 슬롯 비콘 폭 배율(min*0.10 * 이값) — 유닛 축소에 맞춰 비콘도 ~0.85 축소
@@ -9417,6 +9445,7 @@ window.M3D={
       m.anim.rotation.z = Math.sin(m.breathe*0.6)*HOVER_WOBBLE;        // 기우뚱 흔들
       m.anim.rotation.x = 0;
       m.holder.position.set(p.x, (H-p.y) - Y_DROP + HOVER_BASE, 0);  // 지면에서 띄움
+      if(e.bossScale){ m.bossScale=e.bossScale; m.holder.scale.setScalar((SCALE[m.id]||MODEL_SCALE)*e.bossScale); }   // 라운드 보스: 모델 확대(일반 적보다 크게)
       if(m.shadow) m.shadow.position.y = -HOVER_BASE/(SCALE[m.id]||MODEL_SCALE);   // 그림자는 지면에(부유 높이만큼 내림)
       // 스폰 0.5초 뒤 반투명(클로킹) — 옵저버 등 지정 모델만, 인스턴스별 개별 타이밍
       m.age=(m.age||0)+dt; const to=(CLOAK_MODELS[m.id] && m.age>=CLOAK_DELAY)?CLOAK_OPACITY:1;
@@ -9425,7 +9454,7 @@ window.M3D={
     // ── 사망 진행/제거 (아군=뒤로 쓰러짐 / 적=축소) ──
     for(const [key,m] of [...models]){ if(!m.dying) continue; m.deadT+=dt;
       if(m.kind==='enemy'){ const pp=Math.min(1, m.deadT/ENEMY_DEATH);
-        m.holder.scale.setScalar((SCALE[m.id]||MODEL_SCALE)*(1-pp));
+        m.holder.scale.setScalar((SCALE[m.id]||MODEL_SCALE)*(m.bossScale||1)*(1-pp));   // 보스도 확대 유지하며 축소
         if(m.deadT>=ENEMY_DEATH){ scene.remove(m.holder); models.delete(key); } }
       else { const p=Math.min(1, m.deadT/DEATH_DUR), e=1-Math.pow(1-p,3);
         m.anim.rotation.x = -e*DEATH_ANG; m.anim.position.y = 0;
@@ -9534,12 +9563,16 @@ window.M3D={
     const feetWorldY=H*(1-BOSS_FEET_FRAC), bossSX=W*0.5+px, bossScreenY=H*BOSS_FEET_FRAC;
     const alive=(typeof G!=='undefined' && G.coopBoss && !G.coopBoss.dead);
     // ── 보스 ──
-    if(MODELS[BOSS_MODEL] && alive){
-      let m=bossModel; if(!m){ m=makeModel(BOSS_MODEL); if(m){ m.kind='boss'; bossModel=m; } }
+    const bossId = bases[BOSS_MODEL_AIR] ? BOSS_MODEL_AIR : BOSS_MODEL;   // 공중 기함(로드 시) / archon 폴백
+    if(MODELS[bossId] && alive){
+      let m=bossModel; if(m && m.id!==bossId){ scene.remove(m.holder); bossModel=null; m=null; }   // 모델 바뀌면 교체
+      if(!m){ m=makeModel(bossId); if(m){ m.kind='boss'; bossModel=m; } }
       if(m){ m.holder.visible=true; if(m.inner)m.inner.visible=true; if(m.runInner)m.runInner.visible=false; if(m.gun)m.gun.visible=true; if(m.rim)m.rim.visible=false;
-        m.holder.scale.setScalar((SCALE[BOSS_MODEL]||MODEL_SCALE)*BOSS_SCALE_MUL);
-        m.yaw.rotation.y = (MODEL_YAW_OFF[BOSS_MODEL]||0);   // 고정 + 정면(카메라 방향)
-        m.anim.position.set(0,0,0); m.anim.rotation.set(0,0,0);
+        m.holder.scale.setScalar((SCALE[bossId]||MODEL_SCALE)*BOSS_SCALE_MUL);
+        m.yaw.rotation.y = (MODEL_YAW_OFF[bossId]||0);   // 고정 + 정면(카메라 방향)
+        m.breathe=(m.breathe||0)+dt*HOVER_SPD*0.7;   // 공중 기함 = 부유(공중유닛이므로)
+        m.anim.position.set(Math.sin(m.breathe*0.8+1.7)*m.h*HOVER_AMP*0.3, m.h*0.6 + Math.sin(m.breathe)*m.h*HOVER_AMP, 0);   // 들어올림 + 상하 둥실(+살짝 좌우 표류)
+        m.anim.rotation.set(0,0,Math.sin(m.breathe*0.6)*HOVER_WOBBLE*0.6);   // 살짝 기우뚱
         m.holder.position.set(bossSX, feetWorldY - py - Y_DROP, 0); }
     } else if(bossModel){ bossModel.holder.visible=false; }
     // ── 파견 유닛: 실제 모델이 진형으로 무대에 서서 보스를 향함 ──
