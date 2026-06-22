@@ -2481,7 +2481,7 @@
     <div class="opWrap">
       <div class="opLogo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="2.6"/><path d="M12 7.7 13.1 10.3 15.9 10.6 13.5 12.4 14.3 15.2 12 13.6 9.7 15.2 10.5 12.4 8.1 10.6 10.9 10.3Z" fill="currentColor" stroke="none"/></svg></div>
       <div class="opTitle">UMS ARENA</div>
-      <div class="opSub">STARCRAFT USE MAP</div>
+      <div class="opSub">RTS USEMAP ARCADE</div>
       <div class="opBarWrap"><div class="opBar"></div></div>
       <div class="opLoading">LOADING…</div>
       <div class="opMap" id="opMap">
@@ -2522,15 +2522,15 @@ const COL={track:'#4aa8ff',enemy:'#ff4455',boss:'#ffc040',accent:'#ff3b3b'};
 //  생존: hp(체력) armor(방어력) shield(보호막,0=없음) energy(에너지,0=비시전) moveSpd(이동속도,비율/초)
 //  ※ hp/armor/shield/energy/moveSpd 는 추후 전투형 유즈맵용 기본값(엑셀 아님, 조정 가능).
 const U = {
-  ghost:   {name:'팬텀', icon:'👻', cost:3,  dmg:21, up:15, hdmg:42, hup:50, range:.28, cd:46, splash:false, color:'#c0c0d8', size:15, wpn:'inf',  atk:'rifle',   hp:45,  armor:0, shield:0,   energy:200, moveSpd:.16, model3d:'ghost'},
+  ghost:   {name:'팬텀', icon:'👻', cost:3,  dmg:21, up:15, hdmg:42, hup:50, range:.28, cd:46, splash:false, color:'#c0c0d8', size:15, wpn:'inf',  atk:'rifle',   hp:45,  armor:0, shield:0,   energy:200, moveSpd:.19, model3d:'ghost'},
   dragoon: {name:'센티넬', icon:'🤖', cost:5,  dmg:20, up:15, hdmg:44, hup:37, range:.26, cd:30, splash:false, color:'#b48bff', size:18, wpn:'pro',  atk:'plasma',  hp:100, armor:1, shield:80,  shArmor:1, energy:0,   moveSpd:.13, model3d:'dragoon'},
-  hydra:   {name:'리퍼', icon:'🦎', cost:6,  dmg:18, up:6,  hdmg:36, hup:30, range:.24, cd:26, splash:false, color:'#9fd356', size:17, wpn:'zrg',  atk:'spike',   hp:80,  armor:0, shield:0,   energy:0,   moveSpd:.15, model3d:'hydra'},
-  marine:  {name:'레인저',   icon:'🪖', cost:7,  dmg:17, up:9,  hdmg:34, hup:22, range:.22, cd:22, splash:false, color:'#4aa8ff', size:14, wpn:'inf',  atk:'bullet',  hp:40,  armor:0, shield:0,   energy:0,   moveSpd:.15, model3d:'marine'},
-  goliath: {name:'스트라이더', icon:'⚙️', cost:9,  dmg:30, up:30, hdmg:80, hup:80, range:.26, cd:30, splash:false, color:'#5ad1ff', size:21, wpn:'mech', atk:'missile', hp:125, armor:1, shield:0,   energy:0,   moveSpd:.11, airDmg:25, airUp:25, hairDmg:70, hairUp:70, model3d:'goliath'},
-  archon:  {name:'보이드',   icon:'🔮', cost:10, dmg:30, up:20, hdmg:45, hup:55, range:.16, cd:28, splash:true,  color:'#ffc040', size:23, wpn:'pro',  atk:'psi',     hp:10,  armor:0, shield:350, shArmor:1, energy:0,   moveSpd:.13, model3d:'archon'},
+  hydra:   {name:'리퍼', icon:'🦎', cost:6,  dmg:18, up:6,  hdmg:36, hup:30, range:.24, cd:26, splash:false, color:'#9fd356', size:17, wpn:'zrg',  atk:'spike',   hp:80,  armor:0, shield:0,   energy:0,   moveSpd:.17, model3d:'hydra'},
+  marine:  {name:'레인저',   icon:'🪖', cost:7,  dmg:17, up:9,  hdmg:34, hup:22, range:.22, cd:22, splash:false, color:'#4aa8ff', size:14, wpn:'inf',  atk:'bullet',  hp:40,  armor:0, shield:0,   energy:0,   moveSpd:.19, model3d:'marine'},
+  goliath: {name:'스트라이더', icon:'⚙️', cost:9,  dmg:30, up:30, hdmg:80, hup:80, range:.26, cd:30, splash:false, color:'#5ad1ff', size:21, wpn:'mech', atk:'missile', hp:125, armor:1, shield:0,   energy:0,   moveSpd:.08, airDmg:25, airUp:25, hairDmg:70, hairUp:70, model3d:'goliath'},
+  archon:  {name:'보이드',   icon:'🔮', cost:10, dmg:30, up:20, hdmg:45, hup:55, range:.16, cd:28, splash:true,  color:'#ffc040', size:23, wpn:'pro',  atk:'psi',     hp:10,  armor:0, shield:350, shArmor:1, energy:0,   moveSpd:.10, model3d:'archon'},
   // 방어 구조물(디텍터) — 엑셀: 터렛 공격75 / 포토캐논 공격321. moveSpd:0(고정)
   turret:  {name:'가드 타워',     icon:'🗼', cost:100, dmg:75,  up:20, hdmg:150, hup:40, range:.26, cd:34, splash:false, color:'#9fd6ff', size:11, wpn:'mech', atk:'missile', hp:200, armor:2, shield:0,   energy:0, moveSpd:0, detector:true, airDmg:75, airUp:20, hairDmg:150, hairUp:40, model3d:'turret'},
-  photon:  {name:'에너지 스파이어', icon:'🔵', cost:200, dmg:321, up:40, hdmg:500, hup:80, range:.24, cd:40, splash:false, color:'#62d0ff', size:12, wpn:'pro',  atk:'plasma',  hp:100, armor:0, shield:100, shArmor:1, energy:0, moveSpd:0, detector:true, model3d:'photon'},
+  photon:  {name:'플라즈마 타워', icon:'🔵', cost:200, dmg:321, up:40, hdmg:500, hup:80, range:.24, cd:40, splash:false, color:'#62d0ff', size:12, wpn:'pro',  atk:'plasma',  hp:100, armor:0, shield:100, shArmor:1, energy:0, moveSpd:0, detector:true, model3d:'photon'},
 };
 const HERO_STAT_MUL=2; // 영웅은 체력/보호막 2배(기본값, 조정 가능)
 // 유닛 인스턴스에 생존 스탯 초기화(현재=최대). 추후 전투형 맵에서 u.hp 등을 깎으면 됨.
@@ -2589,7 +2589,7 @@ const DRAW_ZONE={x:.5,y:.30};    // 하위호환 유지
 const DRAW_BEACONS=[
   // 좌측 줄(4줄): 가드 타워 / 스파이어 / 유닛 1회 / 에너지 1회 (간격 약간 띄움)
   {id:'buyTurret', x:.20, y:.18, name:'가드 타워', core:'🗼'},
-  {id:'buyPhoton', x:.20, y:.37, name:'스파이어', core:'◉'},
+  {id:'buyPhoton', x:.20, y:.37, name:'플라즈마 타워', core:'◉'},
   {id:'draw',      x:.20, y:.55, name:'유닛 1회', core:'?'},
   {id:'energy',    x:.20, y:.71, name:'에너지 1회', core:'⚡'},
   // 우측 줄: 뽑기 확률↑ / 크레딧 획득↑ (확률표는 우상단 → 아래쪽에 배치해 겹침 방지)
@@ -2649,10 +2649,10 @@ const isFixed=id=>FIXED_IDS.indexOf(id)>=0;
 // 업그레이드 건물 — 무기/종족 계열별 공격력 업글(스타크래프트식). 가스 3가스 고정(엑셀).
 //  wpn = 담당 계열. 그 계열 유닛 전체의 공격력이 함께 오름.
 const TECH=[
-  {id:'acad', name:'커맨드 허브', icon:'🎓', wpn:'inf',  wname:'보병 무기',    units:'레인저·팬텀'},
+  {id:'acad', name:'전술 본부', icon:'🎓', wpn:'inf',  wname:'보병 무기',    units:'레인저·팬텀'},
   {id:'arm',  name:'아스널',   icon:'🛡️', wpn:'mech', wname:'기계 무기',    units:'스트라이더'},
   {id:'forge',name:'크리스탈 워크스', icon:'🔱', wpn:'pro',  wname:'루멘 무기', units:'센티넬·보이드'},
-  {id:'evo',  name:'바이오 코어', icon:'🧬', wpn:'zrg',  wname:'하이브 근접 무기', units:'리퍼'},
+  {id:'evo',  name:'바이오 코어', icon:'🧬', wpn:'zrg',  wname:'군체 근접 무기', units:'리퍼'},
   {id:'pointlab', name:'포인트 연구소', icon:'⬆️', wpn:'meta', wname:'영구 강화', units:'즉시 적용', meta:true},  // 포인트로 영구 강화(판 종료 시 정산, 강화 즉시 적용)
 ];
 // 상단 2×2(무기 계열) + 하단 중앙 1(포인트 연구소)
@@ -2722,15 +2722,15 @@ function enemyRace(n){ return ENEMY_RACE[n]||'terran'; }
 const USEMAPS={
   nemo:  { id:'nemo',   name:'네모네모 디펜스', desc:'사각 트랙을 도는 적을 막는 협동 디펜스', players:'1-8', pop:9820, icon:'🟥', rec:true,  isNew:false, playable:true,
            cfg:{ rounds:30, roundTime:90, prepTime:10, startCredits:120, startEnergy:0, maxUnits:100,
-                 killCredit:1, specialCredit:25, gachaCost:30, energyDrawCost:40, coopBoss:true, roster:'all',
+                 killCredit:0.5, killEnergy:0.03, specialCredit:12, gachaCost:30, energyDrawCost:40, coopBoss:true, roster:'all',
                  enemiesPerRound:100, bossEvery:10, loseCount:200,
-                 roundClearCreditBase:10, roundClearCreditPer:3, roundClearEnergyBase:3, roundClearEnergyPer:1 } },
-  sunken:{ id:'sunken', name:'성큰타워 디펜스', desc:'성큰 콜로니로 길목을 막는 타워 디펜스', players:'1-8', pop:8730, icon:'🌿', rec:true,  isNew:false, playable:false, cfg:{} },
-  marine:{ id:'marine', name:'마린 키우기',     desc:'마린을 성장시켜 최강으로 키우는 RPG', players:'1-6', pop:7610, icon:'🔫', rec:true,  isNew:false, playable:false, cfg:{} },
-  temple:{ id:'temple', name:'신전 뿌수기',     desc:'상대 신전을 먼저 파괴하는 공성전',     players:'2-8', pop:6240, icon:'🏛️', rec:false, isNew:true,  playable:false, cfg:{} },
-  cpu:   { id:'cpu',    name:'컴퓨터가 싸운다', desc:'건물에 유닛을 배정해 출격시켜 적 본진을 부수는 경제 전투', players:'1-8', pop:5180, icon:'⚔️', rec:true, isNew:true,  playable:true,
+                 roundClearCreditBase:6, roundClearCreditPer:2, roundClearEnergyBase:2, roundClearEnergyPer:0.5 } },
+  sunken:{ id:'sunken', name:'가시탑 디펜스', desc:'가시탑으로 길목을 막는 타워 디펜스', players:'1-8', pop:8730, icon:'🌿', rec:true,  isNew:false, playable:false, cfg:{} },
+  marine:{ id:'marine', name:'용병 키우기',     desc:'용병을 성장시켜 최강으로 키우는 RPG', players:'1-6', pop:7610, icon:'🔫', rec:true,  isNew:false, playable:false, cfg:{} },
+  temple:{ id:'temple', name:'성소 공성전',     desc:'상대 성소를 먼저 파괴하는 공성전',     players:'2-8', pop:6240, icon:'🏛️', rec:false, isNew:true,  playable:false, cfg:{} },
+  cpu:   { id:'cpu',    name:'오토 배틀', desc:'건물에 유닛을 배정해 출격시켜 적 본진을 부수는 경제 전투', players:'1-8', pop:5180, icon:'⚔️', rec:true, isNew:true,  playable:true,
           cfg:{ mode:'strike', cycleTime:30, heroAt:10, baseHp:3000, secHp:1500, centralHp:1050, startGold:3000, incomeBase:150, mineIncome:120, mineCost:300, world:4800 } },
-  photon:{ id:'photon', name:'포토겹치기',      desc:'포톤 캐논을 겹쳐 쌓아 버티기',       players:'1-4', pop:4090, icon:'🔵', rec:false, isNew:false, playable:false, cfg:{} },
+  photon:{ id:'photon', name:'포탑 겹치기',      desc:'방어 포탑을 겹쳐 쌓아 버티기',       players:'1-4', pop:4090, icon:'🔵', rec:false, isNew:false, playable:false, cfg:{} },
   tmp1:  { id:'tmp1',   name:'랜덤 디펜스 (임시)', desc:'임시 등록 유즈맵',               players:'1-8', pop:2600, icon:'🎲', rec:false, isNew:true,  playable:false, cfg:{} },
   tmp2:  { id:'tmp2',   name:'영웅 아레나 (임시)', desc:'임시 등록 유즈맵',               players:'2-8', pop:1900, icon:'⚔️', rec:false, isNew:false, playable:false, cfg:{} },
   tmp3:  { id:'tmp3',   name:'미로 탈출 (임시)',   desc:'임시 등록 유즈맵',               players:'1-4', pop:1200, icon:'🌀', rec:false, isNew:false, playable:false, cfg:{} },
@@ -2747,6 +2747,7 @@ const ROUND_TIME=90;                       // 라운드 제한시간 1:30(초). 
 const BOSS_ROUND_TIME=120;                  // 보스 라운드 제한시간 2:00 — 필수처치이므로 더 길게
 const BOSS_EVERY=10;                        // 10라운드마다 보스 라운드(보스 1마리만)
 const EARLY_HP_MUL=1.7;   // R10 이전 적 HP 추가 배율(초반 안전마진 축소)
+const EARLY3_BOOST={1:2.2, 2:1.8, 3:1.65, 4:1.35};   // 초반 라운드(R1~4) HP 추가 부스트, R5부터 1.0. 이지/노말에서만 — 1레어 솔로 방지·멀티유닛 유도
 const TEMPO_HP_MUL=1.35;  // 라운드 1:30(교전시간 1.5배)에 대한 적 체력 보정(이지 ~5/10 목표, 봇시뮬 48%)
 const LOSE_COUNT=200;                       // 트랙 200기 누적 시 탈락(게임아웃)
 const WARN1=150, WARN2=185;                 // 적 누적 경고 임계치(탈락선 200 비례)
@@ -4404,8 +4405,9 @@ const ENEMY_MODEL={ '옵저버':'observer', '오버로드':'overlord',   // 적 
   '스커지':'stinger', '디바우러':'venom', '퀸':'medusa',
   '레이스':'skyguard', '커세어':'skydancer' };   // 레이스·커세어=기존 모델 재사용
 try{ window.ENEMY_MODEL=ENEMY_MODEL; }catch(e){}   // M3D 모듈(별도 스코프) tintModel 폴백용
-// 적/보스 표시 이름 — 모델 id → 한글 이름(스타크래프트명 대신 새 기함 이름). 매핑 없으면 기존 이름 유지(레이스/커세어/옵저버/오버로드).
-const MODEL_NAME_KR={ hellfire:'헬파이어', pelican:'펠리컨', dreadnought:'드레드노트', kronos:'크로노스', seraph:'세라프', archangel:'아크엔젤', falcon:'팔콘', stinger:'스팅어', venom:'베놈', medusa:'메두사' };
+// 적/보스 표시 이름 — 모델 id → 한글 이름(스타크래프트명 대신 새 기함 이름). 매핑 없으면 적 한글명 그대로.
+const MODEL_NAME_KR={ hellfire:'헬파이어', pelican:'펠리컨', dreadnought:'드레드노트', kronos:'크로노스', seraph:'세라프', archangel:'아크엔젤', falcon:'팔콘', stinger:'스팅어', venom:'베놈', medusa:'메두사',
+  observer:'와처', overlord:'제플린', skyguard:'템페스트', skydancer:'스카이댄서' };   // 옵저버→와처, 오버로드→제플린, 레이스→템페스트, 커세어→스카이댄서
 function enemyName(n){ const mdl=ENEMY_MODEL[n]; return (mdl&&MODEL_NAME_KR[mdl])||n; }   // 스타크래프트명 → 새 기함 이름(없으면 그대로)
 // 라운드 보스 3D 모델 풀(공중유닛 순환) — 보스 라운드마다 다른 기함. 모델 미로드 맵에선 null→2D capital 폴백.
 const BOSS_AIR=['archangel','kronos','dreadnought','pelican','venom','medusa','seraph','hellfire','falcon','stinger'];
@@ -4439,7 +4441,8 @@ function spawnEnemy(opts){ opts=opts||{}; const pt=opts.pbType||null; const pbos
   const _D=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal);
   const hpMul=_D.enemyHp*(mb.enemyHpMul||1)*TEMPO_HP_MUL
   *Math.pow(1.095, Math.max(0, G.round-4))
-  *(G.round<10?EARLY_HP_MUL:1);   // ×템포 보정(라운드 2분=교전시간 2배 → 적 체력 보정) ×초반 보정(R10 이전 HP ×1.7)
+  *(G.round<10?EARLY_HP_MUL:1)
+  *(_D.enemyHp<=1 ? (EARLY3_BOOST[G.round]||1) : 1);   // ×템포 ×초반보정(R10 이전 ×1.7) ×초반 라운드 부스트(R1~4, 이지/노말만 — 1레어 솔로 방지)
   // 라운드 보스(필수처치)는 enemyHp(나이트=320배)면 처치 불가 → 완만한 bossHp 계수(1.0~3.0)로 분리. 초반보정 제외.
   const bossMul=(_D.bossHp||1)*(mb.enemyHpMul||1)*TEMPO_HP_MUL;   // 라운드 램프는 bossHp(r) 곡선에 포함 → 여기선 난이도(bossHp계수)·템포·메타만
   const coinMult=_D.coinMult||1;
@@ -4746,7 +4749,7 @@ function step(dt){
     else if(e.boss) toast('🟡 라운드 보스 처치!');
     if(e.special){ const sc=mapCfg('specialCredit',SPECIAL_MIN); gainMineral(sc); gainGas(2); toast('스페셜 처치! +'+sc+' 크레딧 +2 에너지'); }   // 스페셜=크레딧+에너지
     if(e.boss && !e.pboss){ gainGas(5+Math.floor(G.round/4)); }   // 라운드 보스 처치=에너지 보너스(개인 보스는 크레딧만)
-    gainMineral(mapCfg('killCredit',1));   // 킬 보상(맵 설정, 메타 획득↑ 반영)
+    G._minAcc=(G._minAcc||0)+mapCfg('killCredit',1); if(G._minAcc>=1){ const _mw=Math.floor(G._minAcc); G._minAcc-=_mw; gainMineral(_mw); }   // 킬 보상(소수 누적 — 1 미만/킬 지원, round 보정 회피)
     G._gasAcc=(G._gasAcc||0)+mapCfg('killEnergy',0.05); if(G._gasAcc>=1){ const w=Math.floor(G._gasAcc); G._gasAcc-=w; gainGas(w); }   // 킬 드립 에너지(누적 소수, 하향)
     if(typeof playEnemyDeath==='function') playEnemyDeath(e.race);   // 종족별 처치음(대량 처치 쓰로틀)
     if(e.split>0) splitEnemy(e);   // 정예(분열): 쓰러지면 체력 40% 적 2마리로
@@ -5496,7 +5499,7 @@ function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 
   if(id!=='Main') drawMiniMap();
 }
 // 계열 한글명(타입 라벨용)
-const WPN_KOR={inf:'보병',mech:'기계',pro:'루멘',zrg:'하이브',gun:'총기',beam:'광학',exp:'폭발',org:'유기체',fly:'비행',air:'항공',bio:'생체'};
+const WPN_KOR={inf:'보병',mech:'기계',pro:'루멘',zrg:'군체',gun:'총기',beam:'광학',exp:'폭발',org:'유기체',fly:'비행',air:'항공',bio:'생체'};
 // 유닛 직업(이름 옆 작은 배지)
 const UNIT_CLS={ ghost:'저격수', dragoon:'포격수', hydra:'전사', marine:'보병', goliath:'기갑병', archon:'광전사', turret:'포탑', photon:'방어탑', citizen:'시민' };
 // 체력/실드/에너지 초록 LCD 텍스트(스타식 "실드 HP / 에너지")
@@ -5979,7 +5982,7 @@ function renderOpsManual(){ const el=document.getElementById('opsManual'); if(!e
   const rows=cell(BEACON_THEME.gachaUp['--neon'], beaconIcon('gachaUp'), '뽑기 확률', 'Lv'+(G.gachaLuckLv||0))
     +cell(BEACON_THEME.creditUp['--neon'], beaconIcon('creditUp'), '크레딧 확률', 'Lv'+(G.creditLv||0))
     +cell(BEACON_THEME.buyTurret['--neon'], beaconIcon('buyTurret'), '가드 타워', gN+'개')
-    +cell(BEACON_THEME.buyPhoton['--neon'], beaconIcon('buyPhoton'), '스파이어', sN+'개');
+    +cell(BEACON_THEME.buyPhoton['--neon'], beaconIcon('buyPhoton'), '플라즈마 타워', sN+'개');
   el.innerHTML='<div class="omHead"><span class="omBar"></span>생산고 운용 안내</div><div class="omGrid">'+rows+'</div>'; }
 function buildClock(){ const v=document.getElementById('vUnit');
   v.querySelectorAll('.shopUnit,.citizen,.drawZone,.rateMini').forEach(n=>n.remove());
@@ -6424,7 +6427,7 @@ document.getElementById('ovBtn').onclick=()=>{
 };
 document.getElementById('ovBtn2').onclick=()=>{ overlayToLobby(); };
 // ── 방 찾기(룸 리스트) ──
-const ROOM_TITLES=['초보만 ㄱㄱ','빨무 고수방','1라운드부터','막판러시 ㄱ','즐겜 환영','영웅 키우기','풀방 가즈아','연습 같이해요','고인물 전용','협동 클리어','노바 팬클럽','쫄?'];
+const ROOM_TITLES=['초보만 ㄱㄱ','무한 고수방','1라운드부터','막판러시 ㄱ','즐겜 환영','영웅 키우기','풀방 가즈아','연습 같이해요','고인물 전용','협동 클리어','랭커 모임','쫄?'];
 let _roomList=[];
 function perfNow(){ return (typeof performance!=='undefined'&&performance.now)?performance.now():(window._rtFake=(window._rtFake||0)+16); }
 let _roomsTimer=null;
@@ -6715,7 +6718,7 @@ let _mapLiveT=null;
 function startMapLive(){ stopMapLive(); _mapLiveT=setInterval(tickMapLive, 2600); startGlobalChat(); }
 function stopMapLive(){ if(_mapLiveT){ clearInterval(_mapLiveT); _mapLiveT=null; } stopGlobalChat(); }
 // ── 전체 채팅(유즈맵 선택 로비) ──
-const GLOBAL_CHATTER=['ㅎㅇ 다들~','같이 하실 분','네모네모 재밌네요','마린키우기 고수 계신가요?','풀방 가즈아','초보 환영합니다','지금 인원 많네요 ㅋㅋ','성큰타워 ㄱㄱ','친추 받아요','3렙인데 잘 부탁','오늘 잘 풀린다','파티 2명 구함','신전뿌수기 해보신 분?','ㅇㅈ','반가워요~','컴까 한판 ㄱㄱ','방 만들었어요 들어오세요','gg 또 만나요'];
+const GLOBAL_CHATTER=['ㅎㅇ 다들~','같이 하실 분','네모네모 재밌네요','용병키우기 고수 계신가요?','풀방 가즈아','초보 환영합니다','지금 인원 많네요 ㅋㅋ','가시탑 ㄱㄱ','친추 받아요','3렙인데 잘 부탁','오늘 잘 풀린다','파티 2명 구함','성소공성전 해보신 분?','ㅇㅈ','반가워요~','오토배틀 한판 ㄱㄱ','방 만들었어요 들어오세요','gg 또 만나요'];
 let _gChatT=null;
 let _chatScope='all';
 function setChatScope(sc){ _chatScope=sc;
@@ -8439,7 +8442,7 @@ window.addEventListener('load',()=>{ drawMain(); placeMergeZone(); updateHud(); 
 // ════════════════════════════════════════════════════════════════
 let STK=null, _stkDrag=null, _stkPtrs=new Map(), _stkPinch=null;
 // 크기 비교용 샘플 유닛(임시) — 다음 단계에서 실제 전투 유닛으로 대체. nm 없으면 U[id].name 폴백
-const STRIKE_SAMPLE=[{id:'marine'},{id:'ghost'},{id:'hydra'},{id:'dragoon'},{id:'goliath'},{id:'archon'},{id:'tank',nm:'탱크'},{id:'skyguard',nm:'스카이가드'}];
+const STRIKE_SAMPLE=[{id:'marine'},{id:'ghost'},{id:'hydra'},{id:'dragoon'},{id:'goliath'},{id:'archon'},{id:'tank',nm:'중전차'},{id:'skyguard',nm:'템페스트'}];
 // 전장 줌 한계: 최소(가장 축소)=1.2, 기본 시작=1.2, 최대(가장 확대)=2.5
 const STK_MINZOOM=1.2, STK_DEFZOOM=1.2, STK_MAXZOOM=2.5, BUILD_MAXZOOM=3;
 // 종족(컴퓨터가 싸운다): 진입 시 선택 → 그 종족 유닛만 소환. units=현 보유 전투유닛 기준 로스터
@@ -8447,7 +8450,7 @@ const STK_MINZOOM=1.2, STK_DEFZOOM=1.2, STK_MAXZOOM=2.5, BUILD_MAXZOOM=3;
 const STK_RACES={
   terran:  { key:'terran',  name:'인간',     desc:'보병·기계', col:'#4aa8ff', icon:'🛡️', units:['marine','ghost','goliath'] },
   protoss: { key:'protoss', name:'외계종족', desc:'루멘',     col:'#ffc040', icon:'🔮', units:['dragoon','archon'] },
-  zerg:    { key:'zerg',    name:'군체',     desc:'하이브',   col:'#9fd356', icon:'🦎', units:['hydra'] },
+  zerg:    { key:'zerg',    name:'군체',     desc:'유기체',   col:'#9fd356', icon:'🦎', units:['hydra'] },
 };
 const STK_RACE_ORDER=['terran','protoss','zerg'];
 function strikeRandomRace(){ return STK_RACE_ORDER[Math.floor(Math.random()*STK_RACE_ORDER.length)]; }
@@ -8520,7 +8523,7 @@ function strikeStart(){ if(typeof bgmStop==='function') bgmStop();
   strikeHideNemoChrome(true);
   if(STK.sizeCmp){ const mcv=document.getElementById('cvMarine'); if(mcv) mcv.style.display='block'; }   // 3D 유닛 오버레이 캔버스 켜기
   strikeSetTabLabels(STK_TABLABEL);
-  const mn=document.getElementById('mapName'); if(mn) mn.textContent='◈ 컴퓨터가 싸운다';
+  const mn=document.getElementById('mapName'); if(mn) mn.textContent='◈ 오토 배틀';
   strikeSwitchTab('Main');
   if(typeof playSfx==='function') playSfx('game_start');
 }
@@ -8816,7 +8819,7 @@ function strikeRenderEcon(){ const S=STK; if(!S) return; const me=S.me; const se
   set('ecGold',Math.floor(me.gold)); set('ecBase',S.incomeBase); set('ecMines',me.mines);
   set('ecMineInc',me.mines*S.mineIncome); set('ecTotal',strikeIncome(me)); set('ecMineCost',me.mineCost);
   const b=document.getElementById('ecBuyMine'); if(b) b.disabled=me.gold<me.mineCost; }
-const STRIKE_BUILDABLE=[ {id:'marine',name:'마린',ico:'🔫',cost:100}, {id:'goliath',name:'골리앗',ico:'🤖',cost:220}, {id:'tank',name:'탱크',ico:'🛡',cost:350} ];
+const STRIKE_BUILDABLE=[ {id:'marine',name:'소총병',ico:'🔫',cost:100}, {id:'goliath',name:'워커',ico:'🤖',cost:220}, {id:'tank',name:'중전차',ico:'🛡',cost:350} ];
 function strikeRenderBuild(){ const el=document.getElementById('stBuildPalette'); if(!el) return;
   el.innerHTML=STRIKE_BUILDABLE.map(u=>`<div class="stUnitCard" onclick="strikeToast('곧 추가: 타일에 ${u.name} 생산 건물 배치')"><div class="uc">${u.ico}</div>${u.name}<div class="ucCost">⛁${u.cost}</div></div>`).join(''); }
 // 관전: nemo .plbtn/.plGrid(4×2) 재사용. 팀 1-4(아군 파랑) vs 5-8(적군 빨강). 빈 자리=잠금
