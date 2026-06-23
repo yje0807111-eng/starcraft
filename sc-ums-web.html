@@ -2722,7 +2722,7 @@ const USEMAPS={
            cfg:{ rounds:30, roundTime:90, prepTime:10, startCredits:200, startEnergy:0, maxUnits:100,
                  killCredit:1, killEnergy:0.03, specialCredit:12, gachaCost:60, energyDrawCost:80, coopBoss:true, roster:'all',
                  enemiesPerRound:100, bossEvery:10, loseCount:200,
-                 interestPer:100, interestRate:0.05, interestCap:500, roundClearEnergyBase:2, roundClearEnergyPer:0.5 } },
+                 interestPer:100, interestRate:0.10, interestCap:1000, roundClearEnergyBase:2, roundClearEnergyPer:0.5 } },
   sunken:{ id:'sunken', name:'가시탑 디펜스', desc:'가시탑으로 길목을 막는 타워 디펜스', players:'1-8', pop:8730, icon:'🌿', rec:true,  isNew:false, playable:false, cfg:{} },
   marine:{ id:'marine', name:'용병 키우기',     desc:'용병을 성장시켜 최강으로 키우는 RPG', players:'1-6', pop:7610, icon:'🔫', rec:true,  isNew:false, playable:false, cfg:{} },
   temple:{ id:'temple', name:'성소 공성전',     desc:'상대 성소를 먼저 파괴하는 공성전',     players:'2-8', pop:6240, icon:'🏛️', rec:false, isNew:true,  playable:false, cfg:{} },
@@ -2921,11 +2921,11 @@ const META_BUILD_GROUPS = { eco:'경제', prod:'생산', combat:'전투', team:'
 const META_BUILDS = {   // 탭(group) → 섹션(sect) 2단 분류. 같은 sect끼리 묶여 헤더로 구분됨
   // ── 경제 (시작 자원 → 자원 획득) ──
   start_credit:  { name:'시작 크레딧', desc:'시작 시 크레딧 지급 (+25/Lv)',   start:15, nMax:10, max:10, group:'eco', sect:'시작 자원' },
-  start_energy:  { name:'시작 에너지', desc:'시작 시 에너지 지급 (+10/Lv)',   start:15, nMax:6, max:9, group:'eco', sect:'시작 자원' },
-  start_turret:  { name:'시작 포탑',   desc:'시작 시 가드 타워 배치 (1기)',    start:80, nMax:1, max:1, group:'eco', sect:'시작 자원' },
-  credit_gain:   { name:'크레딧 획득', desc:'인게임 크레딧 획득 증가 (+8%/Lv)', start:25, nMax:5, max:8, group:'eco', sect:'자원 획득' },
-  energy_gain:   { name:'에너지 획득', desc:'인게임 에너지 획득 증가 (+8%/Lv)', start:25, nMax:5, max:8, group:'eco', sect:'자원 획득' },
-  interest_cap:  { name:'이자 상한',   desc:'라운드 정산 이자의 보유 크레딧 인정 한도 증가 (+100/Lv)', start:30, nMax:5, max:8, group:'eco', sect:'자원 획득' },
+  start_energy:  { name:'시작 에너지', desc:'시작 시 에너지 지급 (+10/Lv)',   start:15, nMax:10, max:10, group:'eco', sect:'시작 자원' },
+  start_turret:  { name:'시작 포탑',   desc:'시작 시 가드 타워 배치 (+1기/Lv, 최대 3기)', start:100, costs:[100,250,500], nMax:3, max:3, group:'eco', sect:'시작 자원' },
+  credit_gain:   { name:'크레딧 획득', desc:'인게임 크레딧 획득 증가 (+5%/Lv)', start:25, nMax:10, max:10, group:'eco', sect:'자원 획득' },
+  energy_gain:   { name:'에너지 획득', desc:'인게임 에너지 획득 증가 (+5%/Lv)', start:25, nMax:10, max:10, group:'eco', sect:'자원 획득' },
+  interest_cap:  { name:'이자 상한',   desc:'라운드 정산 이자 +10/Lv (보유 인정 한도 +100/Lv)', start:30, nMax:10, max:10, group:'eco', sect:'자원 획득' },
   // ── 생산(뽑기·자동화) ──
   gacha_luck:    { name:'고등급 확률', desc:'레전드+ 뽑기 확률 가중 (+12%/Lv)', start:35, nMax:5, max:8, group:'prod', sect:'뽑기' },
   gacha_double:  { name:'추가 생산',   desc:'뽑기 시 1기 추가 확률 (+6%/Lv)',  start:30, nMax:5, max:8, group:'prod', sect:'뽑기' },
@@ -2960,6 +2960,7 @@ function metaNMax(b){ return (b&&b.nMax!=null)?b.nMax:(b?b.max:0); }
 function metaNormalTotal(b){ const n=metaNMax(b); let t=0; for(let i=0;i<n;i++) t+=Math.round(b.start*Math.pow(i+1,META_COST_POW)); return t; }
 function metaNextCost(buildId, level){ const b=META_BUILDS[buildId]; if(!b) return null;
   const lv=(level==null)?buildLevel(buildId):level; if(lv>=b.max) return null;
+  if(b.costs) return (b.costs[lv]!=null)?b.costs[lv]:null;   // 레벨별 고정 비용 배열(급격한 곡선용)
   const n=metaNMax(b);
   if(lv<n) return Math.round(b.start*Math.pow(lv+1, META_COST_POW));   // 일반 구간(선형 → start의 배수)
   return Math.round(metaNormalTotal(b)*(META_TRANS_COST[lv-n]||1.5)/5)*5; }  // 초월 구간(일반 누적의 배수, 5단위 반올림)
@@ -2989,8 +2990,8 @@ function teamLevel(id){ let mx=buildLevel(id);
 function teamEffLv(id){ return _metaEffFromRaw(META_BUILDS[id], teamLevel(id)); }   // 팀 최고레벨 + 초월 배율 적용
 function metaBonus(){ const L=id=>metaEffLv(id), T=id=>teamEffLv(id);   // 효과 = 초월 배율 반영 레벨(일반=그대로, 초월=×2/×4/×8)
   return {
-    creditMul:   1 + L('credit_gain')*0.08,
-    energyMul:   1 + L('energy_gain')*0.08,
+    creditMul:   1 + L('credit_gain')*0.05,
+    energyMul:   1 + L('energy_gain')*0.05,
     interestCap: L('interest_cap')*100,   // 이자 정산 보유 크레딧 인정 한도 보너스(기본 한도는 맵 cfg)
     atkMul:      1 + L('unit_atk_up')*0.05 + T('team_atk')*0.04,
     aspdMul:     Math.max(0.42, 1 - L('unit_aspd')*0.04 - T('team_aspd')*0.03),   // 공격 쿨다운 배율(낮을수록 빠름) + 팀 공속
@@ -7451,7 +7452,7 @@ function startGameNow(activePlayers, myNum, names){
   G.mineral += G.metaB.startCredit; G.gas += G.metaB.startEnergy;   // 시작 크레딧/에너지 지급
   G.guarTickets = G.metaB.guaranteed;                     // 확정 뽑기권(레어+ 보장)
   if(mapCfg('coopBoss',true)) spawnCoopBoss(1);            // 공용 보스(맵 설정으로 켜고 끔)
-  if(G.metaB.startTurret){ const tp=FIXED_SLOTS.turret[0];   // 메타: 시작 포탑(가드 타워 1기 무료 배치)
+  for(let ti=0; ti<(G.metaB.startTurret||0) && ti<FIXED_SLOTS.turret.length; ti++){ const tp=FIXED_SLOTS.turret[ti];   // 메타: 시작 포탑(레벨당 1기, 최대 3기 무료 배치)
     G.units.push(initUnitStats({uid:G.idSeq++, id:'turret', hero:false, lv:1, x:tp.x, y:tp.y, cd:0, fixed:true})); }
   initPlayerSim();         // 다른 플레이어 트랙 적 누적 시뮬 초기화
   _leaveT=20+Math.random()*20;
