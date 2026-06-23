@@ -2719,8 +2719,8 @@ function enemyRace(n){ return ENEMY_RACE[n]||'terran'; }
 // ============================================================================
 const USEMAPS={
   nemo:  { id:'nemo',   name:'네모네모 디펜스', desc:'사각 트랙을 도는 적을 막는 협동 디펜스', players:'1-8', pop:9820, icon:'🟥', rec:true,  isNew:false, playable:true,
-           cfg:{ rounds:30, roundTime:90, prepTime:10, startCredits:200, startEnergy:0, maxUnits:100,
-                 killCredit:1, killEnergy:0.03, specialCredit:12, gachaCost:60, energyDrawCost:80, coopBoss:true, roster:'all',
+           cfg:{ rounds:30, roundTime:90, prepTime:10, startCredits:250, startEnergy:0, maxUnits:100,
+                 killCredit:1, killEnergy:0.03, specialCredit:12, gachaCost:50, energyDrawCost:80, coopBoss:true, roster:'all',
                  enemiesPerRound:100, bossEvery:10, loseCount:200,
                  interestPer:100, interestRate:0.10, interestCap:1000, roundClearEnergyBase:2, roundClearEnergyPer:0.5 } },
   sunken:{ id:'sunken', name:'가시탑 디펜스', desc:'가시탑으로 길목을 막는 타워 디펜스', players:'1-8', pop:8730, icon:'🌿', rec:true,  isNew:false, playable:false, cfg:{} },
@@ -3037,9 +3037,9 @@ function bankRunPoints(){ if(G._pointsBanked) return G._bankedAmt||0; G._pointsB
   G._bankedAmt=gained; return gained; }
 // 메타 빌드 레벨업(코인 차감)
 function buildUpgrade(id){ const b=META_BUILDS[id]; if(!b) return false;
-  if(b.deferred){ toast('준비 중인 빌드입니다'); return false; }
-  const lv=buildLevel(id); if(lv>=b.max){ toast('최대 레벨입니다'); return false; }
-  const cost=metaNextCost(id, lv); if((PLAYER_META.coins||0)<cost){ toast('포인트 부족 (필요 '+cost+'P)'); return false; }
+  if(b.deferred){ toast('🔒 준비 중인 빌드입니다'); return false; }
+  const lv=buildLevel(id); if(lv>=b.max){ toast('⚠️ 최대 레벨입니다'); return false; }
+  const cost=metaNextCost(id, lv); if((PLAYER_META.coins||0)<cost){ toast('🪙 코인 부족 (필요 '+cost+')'); return false; }
   PLAYER_META.coins-=cost; PLAYER_META.buildLevels[id]=lv+1; saveMeta();
   if(typeof G!=='undefined' && G){ G.metaB=metaBonus(); if(typeof updateHud==='function') updateHud(); }   // 즉시 적용(이번 판 효과 재계산) — 시작 자원/유닛 등 시작 한정은 다음 판부터
   if(typeof playSfx==='function') playSfx('ui_confirm'); return true; }
@@ -3118,7 +3118,7 @@ function coopBossDown(){ const cb=G.coopBoss; if(!cb||cb.dead) return; cb.dead=t
   const pts=Math.max(1, Math.round(cb.lv*rewardMul));   // n번째 보스 = nP (포인트의 유일한 수입원)
   G.points += pts;   // 게임 종료 시 정산되는 포인트에 합산
   if(typeof playSfx==='function') playSfx('win');
-  addChat('', '👹 월드 보스 ['+cb.name+'] 처치! +'+pts+' 포인트', '#ff8a9a', true);
+  addChat('', '👹 월드 보스 ['+cb.name+'] 처치! +'+pts+' 🪙', '#ff8a9a', true);
   const nextLv=cb.lv+1;
   if(G._coopBossT) clearTimeout(G._coopBossT);
   G._coopBossT=setTimeout(()=>{ if(G.phase==='playing'){ spawnCoopBoss(nextLv); if(typeof playSfxT==='function') playSfxT('boss',1500); } }, 2500);   // 상시: 더 강한 보스 재등장 + 등장음
@@ -3135,10 +3135,10 @@ function updateCoopBossBar(){ const bar=document.getElementById('coopBossBar'); 
 const BOSS_DEPLOY_CAP=2;
 function bossDeployedCount(){ return G.units.filter(u=>u.atBoss).length; }
 // 유닛 지정 파견 모드 무장 → 메인에서 유닛 클릭 시 파견
-function armBossPick(){ if(G.phase!=='playing'){ toast('게임 중에만 가능합니다'); return; }
-  if(bossDeployedCount()>=BOSS_DEPLOY_CAP){ toast('보스방 파견은 최대 '+BOSS_DEPLOY_CAP+'기입니다'); return; }
+function armBossPick(){ if(G.phase!=='playing'){ toast('⚠️ 게임 중에만 가능합니다'); return; }
+  if(bossDeployedCount()>=BOSS_DEPLOY_CAP){ toast('⚠️ 보스방 파견은 최대 '+BOSS_DEPLOY_CAP+'기입니다'); return; }
   G.bossPickArm=!G.bossPickArm; updateBossPickBtn();
-  if(G.bossPickArm){ if(typeof playSfx==='function') playSfx('ui_open'); toast('파견할 유닛을 클릭하세요 (최대 '+BOSS_DEPLOY_CAP+'기)'); } }
+  if(G.bossPickArm){ if(typeof playSfx==='function') playSfx('ui_open'); toast('ℹ️ 파견할 유닛을 클릭하세요 (최대 '+BOSS_DEPLOY_CAP+'기)'); } }
 function updateBossPickBtn(){ const b=document.getElementById('bossPickBtn'); if(!b) return;
   const full=bossDeployedCount()>=BOSS_DEPLOY_CAP;
   b.classList.toggle('on', !!G.bossPickArm && !full);
@@ -3146,14 +3146,14 @@ function updateBossPickBtn(){ const b=document.getElementById('bossPickBtn'); if
   const lab=b.querySelector('.bdLabel'); if(lab) lab.textContent = full ? '가득참' : '파견'; }
 // 특정 유닛 1기를 보스방에 파견
 function deployUnitToBoss(u){ if(!u||u.fixed||u.atBoss) return false;
-  if(bossDeployedCount()>=BOSS_DEPLOY_CAP){ toast('보스방 파견은 최대 '+BOSS_DEPLOY_CAP+'기입니다'); return false; }
+  if(bossDeployedCount()>=BOSS_DEPLOY_CAP){ toast('⚠️ 보스방 파견은 최대 '+BOSS_DEPLOY_CAP+'기입니다'); return false; }
   u.atBoss=true; u.bcd=0; u.moving=false; u.cmd='hold'; u.patrol=null; u.atkTarget=null; u.focusTarget=null; u.moveTo=null;   // 트랙 상태 초기화
   G.sel=(G.sel||[]).filter(id=>id!==u.uid);   // 메인 선택에서 제외
   const k=bossDeployedCount();   // 이미 파견된 수(이번 포함) → 초기 진형 슬롯
   const sp=bossDeploySpot(G.myPlayer||1, k-1);   // 플레이어별 시계방향 슬롯(서로 안 겹침)
   u.bx=sp.x; u.by=sp.y; u.btx=null; u.bty=null;   // 아레나 좌표(플랫폼 내, 직접 이동 가능)
   if(typeof playSfx==='function') playSfx('place_unit');
-  toast('보스방에 파견 ('+k+'/'+BOSS_DEPLOY_CAP+')'); renderBossPanel(); return true; }
+  toast('✓ 보스방 파견 ('+k+'/'+BOSS_DEPLOY_CAP+')'); renderBossPanel(); return true; }
 // 플레이어별 파견 진입 위치 — 보스 중심 시계방향 8슬롯(P1=정면 아래, 번호 순서대로 45°씩), 플레이어끼리 안 겹침
 function bossDeploySpot(num, idx){ const B=bossWalkBounds();
   const cx=0.5, cy=(B.top+B.bot)/2+0.03, rx=0.26, ry=0.15;
@@ -3192,14 +3192,14 @@ const NO_SELL_TIERS=new Set(['god']);   // 갓만 판매 불가(초월은 판매
 function unitSellValue(u){ const base=(u&&u.gtier&&mapCfg('sellValue',SELL_VALUE)[u.gtier])||20;
   const ret=1+(buildLevel('sell_return')*0.05); return Math.round(base*ret); }
 function sellUnit(u){ if(!u||u.fixed) return false;
-  if((function(v){return v.has?v.has(u.gtier):v.includes(u.gtier)})(mapCfg('noSellTiers',NO_SELL_TIERS))){ toast('갓 등급은 판매할 수 없습니다'); return false; }
-  if(u.atBoss){ toast('보스방 파견 유닛은 회수 후 판매하세요'); return false; }
+  if((function(v){return v.has?v.has(u.gtier):v.includes(u.gtier)})(mapCfg('noSellTiers',NO_SELL_TIERS))){ toast('⚠️ 갓 등급은 판매할 수 없습니다'); return false; }
+  if(u.atBoss){ toast('⚠️ 보스방 파견 유닛은 회수 후 판매하세요'); return false; }
   const val=unitSellValue(u); G.mineral+=val;
   const i=G.units.indexOf(u); if(i>=0) G.units.splice(i,1);
   if(window.M3D && M3D.dropModels) M3D.dropModels([u.uid]);
   G.sel=(G.sel||[]).filter(id=>id!==u.uid);
   if(typeof playSfx==='function') playSfx('ui_confirm');
-  toast('💰 판매 +'+val+' 크레딧'); renderUnits(); updateHud(); return true; }
+  toast('💰 판매 +'+val+' C'); renderUnits(); updateHud(); return true; }
 let _sellTier=null, _sellSig='';
 // ── 유닛 조합(전 범위 — 합체존/버튼 제거): 하단 [판매|조합] 토글 패널 ──
 let _homeMode='select', _combTier=null, _combSig=''; let _selTierH=null, _selSig='', _selViaTab=false;
@@ -3229,7 +3229,7 @@ function combineOneOfType(gid, quiet){
   let outId; if(res.type==='transcend') outId=res.id;
   else { const pool=gachaUnitsOfTier(res.nextTier); outId=pool[Math.floor(Math.random()*pool.length)].id; }
   spawnGachaUnit(outId, cx, cy); const tg=GACHA_UNITS[outId];
-  if(!quiet){ toast((res.type==='transcend'?'✦ ':'')+tg.displayName+' '+GACHA_TIERS[tg.tier].name+(res.type==='transcend'?' 강림! ✦':' 진화! ⭐'));
+  if(!quiet){ toast((res.type==='transcend'?'✦ ':'⭐ ')+tg.displayName+' '+GACHA_TIERS[tg.tier].name+(res.type==='transcend'?' 강림!':' 진화!'));
     if(typeof playSfx==='function') playSfx('hero_merge'); }
   _combSig=''; _sellSig=''; refreshSelCard(); renderUnits(); updateHud(); renderHomeLeft(); }
 function renderCombinePanel(){ const tiersBox=document.getElementById('hsTiers'), grid=document.getElementById('hsGrid'); if(!tiersBox||!grid) return;
@@ -4016,15 +4016,15 @@ function buyUnit(id){
   if(isFixed(id)){
     const slots=FIXED_SLOTS[id]; const used=G.units.filter(u=>u.id===id).length;
     const stack=FIXED_STACK[id];
-    if(!stack && used>=slots.length){ toast(def.name+' 자리가 가득 찼습니다'); return; }
-    if(G.mineral<def.cost){ toast('크레딧 부족'); return; }
+    if(!stack && used>=slots.length){ toast('⚠️ '+def.name+' 자리가 가득 찼습니다'); return; }
+    if(G.mineral<def.cost) return;
     G.mineral-=def.cost; const p=stack?slots[0]:slots[used];  // 겹치기=항상 한 자리
     G.units.push(initUnitStats({uid:G.idSeq++, id, hero:false, lv:1, x:p.x, y:p.y, cd:0, fixed:true}));
     if(typeof playSfx==='function') playSfx('buy_unit');
     renderUnits(); updateHud(); return;
   }
-  if(G.units.filter(u=>!u.fixed).length>=maxUnits()){ toast('커맨드 포인트 최대('+maxUnits()+')'); return; }
-  if(G.mineral<def.cost){ toast('크레딧 부족'); return; }
+  if(G.units.filter(u=>!u.fixed).length>=maxUnits()){ toast('⚠️ 커맨드 포인트 최대 ('+maxUnits()+')'); return; }
+  if(G.mineral<def.cost) return;
   G.mineral-=def.cost;
   // 소환 위치 = 맵 중앙(약간의 랜덤 오프셋). 트랙 안쪽으로 클램프.
   const ctr=trackCenter(); const sp=clampInner(ctr.x+(Math.random()-.5)*.08, ctr.y+(Math.random()-.5)*.08);
@@ -4036,16 +4036,16 @@ function buyUnit(id){
 const GACHA_UP_MAX=5, CREDIT_UP_MAX=6;   // 상한 하향(스노볼 차단)
 const GACHA_UP_STEP=0.06;   // 레벨당 상위(비일반) 등급 가중 +6% (3중 스택 고려해 8→6 하향)
 const CREDIT_UP_STEP=0.05;  // 레벨당 크레딧 획득 +5%(↓8) — 경제 복리 스노볼 완화
-function gachaUpCost(){ return 140 + (G.gachaLuckLv||0)*140; }   // 크레딧(가파른 점증 — 연속 투자 억제) ×2.0
-function creditUpCost(){ return 140 + (G.creditLv||0)*130; }     // 크레딧(가파른 점증) ×2.0
-function buyGachaUp(){ if(G.phase!=='playing'){ toast('게임 중에만 가능합니다'); return; }
-  if((G.gachaLuckLv||0)>=GACHA_UP_MAX){ toast('뽑기 확률 최대 레벨'); return; }
-  const c=gachaUpCost(); if(G.mineral<c){ toast('크레딧 부족 (뽑기 확률↑ '+c+')'); return; }
+function gachaUpCost(){ return 80 + (G.gachaLuckLv||0)*20; }   // 처음 80, 업글당 +20
+function creditUpCost(){ return 80 + (G.creditLv||0)*20; }     // 처음 80, 업글당 +20
+function buyGachaUp(){ if(G.phase!=='playing'){ toast('⚠️ 게임 중에만 가능합니다'); return; }
+  if((G.gachaLuckLv||0)>=GACHA_UP_MAX){ toast('⚠️ 뽑기 확률 최대 레벨'); return; }
+  const c=gachaUpCost(); if(G.mineral<c) return;
   G.mineral-=c; G.gachaLuckLv=(G.gachaLuckLv||0)+1;
   if(typeof playSfx==='function') playSfx('ui_confirm'); toast('🎲 뽑기 확률↑ Lv'+G.gachaLuckLv+' — 상위 등급 확률 증가'); updateHud(); updateBeaconLabels(); }
-function buyCreditUp(){ if(G.phase!=='playing'){ toast('게임 중에만 가능합니다'); return; }
-  if((G.creditLv||0)>=CREDIT_UP_MAX){ toast('크레딧 획득 최대 레벨'); return; }
-  const c=creditUpCost(); if(G.mineral<c){ toast('크레딧 부족 (크레딧 획득↑ '+c+')'); return; }
+function buyCreditUp(){ if(G.phase!=='playing'){ toast('⚠️ 게임 중에만 가능합니다'); return; }
+  if((G.creditLv||0)>=CREDIT_UP_MAX){ toast('⚠️ 크레딧 획득 최대 레벨'); return; }
+  const c=creditUpCost(); if(G.mineral<c) return;
   G.mineral-=c; G.creditLv=(G.creditLv||0)+1;
   if(typeof playSfx==='function') playSfx('ui_confirm'); toast('💰 크레딧 획득↑ Lv'+G.creditLv+' — 크레딧 +'+Math.round(G.creditLv*CREDIT_UP_STEP*100)+'%'); updateHud(); updateBeaconLabels(); }
 // ── 가챠 뽑기(2단계) — 기존 시민 상점 대체 ──
@@ -4071,9 +4071,9 @@ function spawnGachaUnit(gid, x, y){ const gu=GACHA_UNITS[gid]; if(!gu) return nu
   if(typeof autoPlaceOn==='function' && autoPlaceOn()){ rallyAssignSlot(u, gu.tier); const p=rallySlotPos(gu.tier, u._slot); u.moveTo={x:p.x,y:p.y}; }   // 자동 배치 ON: 새 유닛만 자기 고정 슬롯으로(기존 유닛 불변)
   return u; }
 function drawGacha(){
-  if(G.phase!=='playing'){ toast('게임 중에만 뽑기 가능합니다'); return; }
-  if(G.units.filter(u=>!u.fixed).length>=maxUnits()){ toast('커맨드 포인트 최대('+maxUnits()+')'); return; }
-  if(G.mineral<mapCfg('gachaCost',GACHA_COST)){ toast('크레딧 부족 (뽑기 '+mapCfg('gachaCost',GACHA_COST)+')'); return; }
+  if(G.phase!=='playing'){ toast('⚠️ 게임 중에만 뽑기 가능합니다'); return; }
+  if(G.units.filter(u=>!u.fixed).length>=maxUnits()){ toast('⚠️ 커맨드 포인트 최대 ('+maxUnits()+')'); return; }
+  if(G.mineral<mapCfg('gachaCost',GACHA_COST)) return;
   G.mineral-=mapCfg('gachaCost',GACHA_COST);
   let tier=gachaRollTier();
   if(G.guarTickets>0){ if(tier==='common') tier='rare'; G.guarTickets--; }   // 확정 뽑기권: 레어+ 보장
@@ -4088,7 +4088,7 @@ function drawGacha(){
   if(typeof playSfx==='function') playSfx((tier==='common'||tier==='rare')?'buy_unit':'hero_merge');
   const _gcol=TIER_COLOR[tier]||'#fff', _gtn=GACHA_TIERS[tier].name;   // 뽑기 결과 → 등급 색상 채팅 알람(뽑기 사운드가 있으니 silent)
   if(GACHA_TIERS[tier].serverNotify) addChat('', '🎉 ['+_gtn+'] '+gu.displayName+' 획득!', _gcol, true);   // 레전드+ 강조
-  else addChat('', '['+_gtn+'] '+gu.displayName+' 획득', _gcol, true);
+  else addChat('', '🎲 ['+_gtn+'] '+gu.displayName+' 획득', _gcol, true);   // 모든 등급 표시(뽑은 유닛 확인용)
   renderUnits(); updateHud();
 }
 function showGachaResult(tier, gu){ const box=document.getElementById('gachaResult'); if(!box) return;
@@ -4103,8 +4103,8 @@ function showGachaResult(tier, gu){ const box=document.getElementById('gachaResu
 // ── 에너지 뽑기 — 크레딧을 내고 랜덤 에너지 획득(에너지 수급 다양화). 에너지 획득 메타 반영 ──
 const ENERGY_DRAW_COST=40;
 function energyDraw(){
-  if(G.phase!=='playing'){ toast('게임 중에만 가능합니다'); return; }
-  if(G.mineral<mapCfg('energyDrawCost',ENERGY_DRAW_COST)){ toast('크레딧 부족 (에너지 뽑기 '+mapCfg('energyDrawCost',ENERGY_DRAW_COST)+')'); return; }
+  if(G.phase!=='playing'){ toast('⚠️ 게임 중에만 가능합니다'); return; }
+  if(G.mineral<mapCfg('energyDrawCost',ENERGY_DRAW_COST)) return;
   G.mineral-=mapCfg('energyDrawCost',ENERGY_DRAW_COST);
   const r=Math.random(); let base,lbl,col;
   if(r<0.55){ base=4;  lbl='';        col='#9aa6b2'; }
@@ -4120,17 +4120,17 @@ function energyDraw(){
       +'<span class="grName" style="color:'+col+'">+'+real+' 에너지</span>'
       +'<span class="grType">보유 '+G.gas+'</span>';
     box.classList.remove('pop'); void box.offsetWidth; box.classList.add('pop'); }
-  toast('⚡ 에너지 뽑기 '+(lbl||'')+' +'+real+' 에너지 (보유 '+G.gas+')');
+  toast('⚡ 에너지 뽑기'+(lbl?' '+lbl:'')+' +'+real+' E (보유 '+G.gas+' E)');
   updateHud();
 }
 
 // ── 10연차 묶음 뽑기 — 10회 한 번에, 레어+ 1개 확정. 10칸 여유 필요. 할인가 ──
 const PULL10_COST=145;   // 5연차: 단발 30×5=150 → 145 소폭 할인(단발 반복보다 싸게)
 function drawGacha10(){
-  if(G.phase!=='playing'){ toast('게임 중에만 뽑기 가능합니다'); return; }
+  if(G.phase!=='playing'){ toast('⚠️ 게임 중에만 뽑기 가능합니다'); return; }
   const free=maxUnits()-G.units.filter(u=>!u.fixed).length;
-  if(free<5){ toast('유닛 공간 부족 (5칸 필요 · 여유 '+Math.max(0,free)+')'); return; }
-  if(G.mineral<PULL10_COST){ toast('크레딧 부족 (5연차 '+PULL10_COST+')'); return; }
+  if(free<5){ toast('⚠️ 유닛 공간 부족 (5칸 필요 · 여유 '+Math.max(0,free)+')'); return; }
+  if(G.mineral<PULL10_COST) return;
   G.mineral-=PULL10_COST;
   const tiers=[];
   for(let i=0;i<5;i++){ let t=gachaRollTier();
@@ -4150,7 +4150,7 @@ function drawGacha10(){
     box.innerHTML='<span class="grTier" style="color:'+bcol+'">5연차 — 최고 '+GACHA_TIERS[bestTier].name+'</span>'
       +'<span class="grName" style="font-size:11px;line-height:1.3">'+summary+'</span>';
     box.classList.remove('pop'); void box.offsetWidth; box.classList.add('pop'); }
-  addChat('', '5연차: '+summary, bcol, true);
+  addChat('', '🎲 5연차: '+summary, bcol, true);
   renderUnits(); updateHud();
 }
 
@@ -4164,9 +4164,9 @@ function premiumRollTier(){ const r=Math.random();   // 고급 전용 확률표(
   if(r<0.997) return 'transcend';
   return 'god'; }
 function drawGachaPremium(){
-  if(G.phase!=='playing'){ toast('게임 중에만 뽑기 가능합니다'); return; }
-  if(G.units.filter(u=>!u.fixed).length>=maxUnits()){ toast('커맨드 포인트 최대('+maxUnits()+')'); return; }
-  if(G.mineral<PREMIUM_COST){ toast('크레딧 부족 (고급 뽑기 '+PREMIUM_COST+')'); return; }
+  if(G.phase!=='playing'){ toast('⚠️ 게임 중에만 뽑기 가능합니다'); return; }
+  if(G.units.filter(u=>!u.fixed).length>=maxUnits()){ toast('⚠️ 커맨드 포인트 최대 ('+maxUnits()+')'); return; }
+  if(G.mineral<PREMIUM_COST) return;
   G.mineral-=PREMIUM_COST;
   const tier=premiumRollTier();
   const pool=gachaUnitsOfTier(tier); const gu=pool[Math.floor(Math.random()*pool.length)];
@@ -4176,15 +4176,15 @@ function drawGachaPremium(){
   if(typeof playSfx==='function') playSfx('hero_merge');
   const col=TIER_COLOR[tier]||'#fff';
   if(GACHA_TIERS[tier].serverNotify) addChat('', '🎉 ★고급 ['+GACHA_TIERS[tier].name+'] '+gu.displayName+' 획득!', col, true);
-  else addChat('', '★고급 ['+GACHA_TIERS[tier].name+'] '+gu.displayName+' 획득', col, true);
+  else addChat('', '🎲 ★고급 ['+GACHA_TIERS[tier].name+'] '+gu.displayName+' 획득', col, true);
   renderUnits(); updateHud();
 }
 
 // ── 에너지 뽑기 10회 — 에너지 뽑기를 10회 한 번에(할인) ──
 const ENERGY10_COST=360;   // 단발 40×10=400 → 할인
 function energyDraw10(){
-  if(G.phase!=='playing'){ toast('게임 중에만 가능합니다'); return; }
-  if(G.mineral<ENERGY10_COST){ toast('크레딧 부족 (에너지 ×10 '+ENERGY10_COST+')'); return; }
+  if(G.phase!=='playing'){ toast('⚠️ 게임 중에만 가능합니다'); return; }
+  if(G.mineral<ENERGY10_COST) return;
   G.mineral-=ENERGY10_COST;
   let total=0, jack=0;
   for(let i=0;i<10;i++){ const r=Math.random(); let base;
@@ -4198,14 +4198,14 @@ function energyDraw10(){
       +'<span class="grName" style="color:'+col+'">+'+total+' 에너지</span>'
       +'<span class="grType">보유 '+G.gas+'</span>';
     box.classList.remove('pop'); void box.offsetWidth; box.classList.add('pop'); }
-  toast('⚡ 에너지 ×10 → +'+total+' 에너지 (보유 '+G.gas+')');
+  toast('⚡ 에너지 ×10 → +'+total+' E (보유 '+G.gas+' E)');
   updateHud();
 }
 // 에너지 전환(전액) — 보유 크레딧을 한 번에 전부 에너지로 변환
 function energyDrawAll(){
-  if(G.phase!=='playing'){ toast('게임 중에만 가능합니다'); return; }
+  if(G.phase!=='playing'){ toast('⚠️ 게임 중에만 가능합니다'); return; }
   const cost=mapCfg('energyDrawCost',ENERGY_DRAW_COST);
-  if(G.mineral<cost){ toast('크레딧 부족 (에너지 전환 '+cost+')'); return; }
+  if(G.mineral<cost) return;
   const n=Math.floor(G.mineral/cost); G.mineral-=n*cost;
   let total=0, jack=0;
   for(let i=0;i<n;i++){ const r=Math.random(); let base;
@@ -4219,7 +4219,7 @@ function energyDrawAll(){
       +'<span class="grName" style="color:'+col+'">+'+total+' 에너지</span>'
       +'<span class="grType">크레딧 '+(n*cost)+' 소모</span>';
     box.classList.remove('pop'); void box.offsetWidth; box.classList.add('pop'); }
-  toast('⚡ 크레딧 '+(n*cost)+' → +'+total+' 에너지 (보유 '+G.gas+')');
+  toast('⚡ 크레딧 '+(n*cost)+' C → +'+total+' E (보유 '+G.gas+' E)');
   updateHud();
 }
 
@@ -4255,6 +4255,12 @@ const TIER_KO={common:'일반',rare:'레어',epic:'에픽',unique:'유니크',le
 function ensureRally(){ if(!G.rally) G.rally={};
   RALLY_TIERS.forEach(function(t,i){ if(!G.rally[t]){ const c=clampInner(0.30+i*0.067, 0.30); G.rally[t]={x:c.x,y:c.y}; } });
   return G.rally; }
+// 자동설정·랠리 위치 영속(판 사이 유지 — 매번 세팅 불필요)
+function saveAutoCfg(){ try{ if(typeof _lsSet==='function') _lsSet('nm_autocfg', { auto:G.auto||null, rally:G.rally||null, rallyShow:G.rallyShow }); }catch(e){} }
+function loadAutoCfg(){ try{ const c=(typeof _lsGet==='function')?_lsGet('nm_autocfg',null):null; if(c&&typeof c==='object'){
+  if(c.auto&&typeof c.auto==='object'){ G.auto=c.auto; if(!G.auto.pboss||typeof G.auto.pboss!=='object') G.auto.pboss={}; }
+  if(c.rally&&typeof c.rally==='object') G.rally=c.rally;
+  if('rallyShow' in c) G.rallyShow=c.rallyShow; } }catch(e){} }
 function autoPlaceOn(){ return !!(G.auto && G.auto.place && typeof autoUsable==='function' && autoUsable('place')); }
 // 랠리 슬롯: 유닛별 '고정 슬롯 인덱스'(u._slot)로 헥스 패킹 → 서로 겹치지 않는 자리에 정착(분리 churn 없음)
 function rallySlotPos(t, i){ ensureRally(); const r=G.rally[t]; const M=Math.min(GW||420,GH||300); const sp=28/M;   // 슬롯 간격(겹침 방지)
@@ -4274,7 +4280,7 @@ function attachRallyDrag(el, t){ let drag=false;
     const host=document.getElementById('vMain'); if(!host) return; const rc=host.getBoundingClientRect();
     const c=clampInner((e.clientX-rc.left)/rc.width, (e.clientY-rc.top)/rc.height);
     ensureRally(); G.rally[t]={x:c.x,y:c.y}; el.style.left=(c.x*100)+'%'; el.style.top=(c.y*100)+'%'; });
-  function end(e){ if(!drag) return; drag=false; if(e) e.stopPropagation(); rallyTier(t); }   // 같은 등급 유닛 대형 재집결
+  function end(e){ if(!drag) return; drag=false; if(e) e.stopPropagation(); rallyTier(t); if(typeof saveAutoCfg==='function') saveAutoCfg(); }   // 같은 등급 유닛 대형 재집결 + 위치 저장(판 사이 유지)
   el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end); }
 function renderRallyArrows(){ const host=document.getElementById('vMain'); if(!host) return;
   const show=autoPlaceOn() && G.rallyShow!==false;   // 자동배치 ON + 화살표 표시 ON. 모든 등급 표시(미보유도 미리 배치 가능)
@@ -4354,8 +4360,8 @@ function buildGachaDex(){
 }
 // 테스트용: 특정 가챠 유닛 1기를 비용 없이 즉시 소환(트랙 중앙 근처). 메인 탭에서 동작/공격 확인.
 function testSpawnGacha(gid){
-  if(G.phase!=='playing'){ toast('게임 중에만 소환할 수 있습니다'); return; }
-  if(G.units.filter(u=>!u.fixed).length>=maxUnits()){ toast('커맨드 포인트 최대('+maxUnits()+')'); return; }
+  if(G.phase!=='playing'){ toast('⚠️ 게임 중에만 소환할 수 있습니다'); return; }
+  if(G.units.filter(u=>!u.fixed).length>=maxUnits()){ toast('⚠️ 커맨드 포인트 최대 ('+maxUnits()+')'); return; }
   const gu=GACHA_UNITS[gid]; if(!gu) return;
   const proxy=GACHA_PROXY[gid]||'marine';
   const ctr=trackCenter(); const sp=clampInner(ctr.x+(Math.random()-.5)*.08, ctr.y+(Math.random()-.5)*.08);
@@ -4364,7 +4370,7 @@ function testSpawnGacha(gid){
   G.units.push(u);
   if(typeof playSfx==='function') playSfx('buy_unit');
   const col=TIER_COLOR[gu.tier]||'#fff';
-  addChat('', '[테스트] '+gu.displayName+' 소환 — 메인 탭에서 확인', col, true);
+  addChat('', '🎲 [테스트] '+gu.displayName+' 소환 — 메인 탭에서 확인', col, true);
   renderUnits(); updateHud();
 }
 function _consumeUnits(con){ G.units=G.units.filter(x=>!con.has(x.uid)); G.sel=G.sel.filter(uid=>!con.has(uid));
@@ -4377,7 +4383,7 @@ function combine(){
     if(Object.keys(need).every(id=>(cnt[id]||0)>=need[id])){
       const con=new Set(); for(const id in need){ let n=need[id]; for(const u of inz){ if(u.gid===id && n>0 && !con.has(u.uid)){ con.add(u.uid); n--; } } }
       _consumeUnits(con); const c=zoneCenter(); spawnGachaUnit(res, c.x, c.y);
-      const tg=GACHA_UNITS[res]; toast('✦ '+tg.displayName+' '+GACHA_TIERS[tg.tier].name+' 강림! ✦');
+      const tg=GACHA_UNITS[res]; toast('✦ '+tg.displayName+' '+GACHA_TIERS[tg.tier].name+' 강림!');
       if(typeof playSfx==='function') playSfx('hero_merge');
       refreshSelCard(); renderUnits(); updateHud(); return true;
     }
@@ -4388,17 +4394,17 @@ function combine(){
     if(base.gid){ const nt=SIMPLE_COMBINE_TIERS[base.gtier]; if(!nt) continue;   // 단순조합 대상 아님(legend↑) → 다른 그룹 시도
       const pool=gachaUnitsOfTier(nt), tgt=pool[Math.floor(Math.random()*pool.length)];   // 다음 등급 랜덤 1종
       _consumeUnits(con); const c=zoneCenter(); spawnGachaUnit(tgt.id, c.x, c.y);
-      toast(tgt.displayName+' '+GACHA_TIERS[nt].name+' 진화! ⭐');
+      toast('⭐ '+tgt.displayName+' '+GACHA_TIERS[nt].name+' 진화!');
     } else {   // 레거시 → 영웅
       _consumeUnits(con); const c=zoneCenter();
       G.units.push(initUnitStats({uid:G.idSeq++,id:base.id,hero:true,lv:1,x:c.x,y:c.y,cd:0}));
-      toast(U[base.id].name+' 영웅 탄생! ⭐');
+      toast('⭐ '+U[base.id].name+' 영웅 탄생!');
     }
     if(typeof playSfx==='function') playSfx('hero_merge'); refreshSelCard(); renderUnits(); updateHud(); return true;
   }
   // 3) 안내
   const stuck=Object.values(grp).some(g=>g.length>=3 && g[0].gid && !SIMPLE_COMBINE_TIERS[g[0].gtier]);
-  toast(stuck ? '레전드↑는 단순 조합이 안 됩니다 (초월=특수 레시피 / 갓=뽑기 전용)' : '합체존에 같은 유닛 3개를 모으세요');
+  toast(stuck ? 'ℹ️ 레전드↑는 단순 조합이 안 됩니다 (초월=특수 레시피 / 갓=뽑기 전용)' : 'ℹ️ 합체존에 같은 유닛 3개를 모으세요');
   return false;
 }
 
@@ -4473,18 +4479,18 @@ function spawnEnemy(opts){ opts=opts||{}; const pt=opts.pbType||null; const pbos
 function summonPersonalBoss(typeId){
   const pt=PBOSS_TYPES.find(t=>t.id===typeId); if(!pt) return;
   if(!G.pbossCds) G.pbossCds={};
-  if(G.phase!=='playing'){ toast('게임 중에만 소환 가능합니다'); return; }
+  if(G.phase!=='playing'){ toast('⚠️ 게임 중에만 소환 가능합니다'); return; }
   if(!pbossUnlocked(pt)){
     if(pt.unlock==='time'){ const rem=Math.max(0,(pt.unlockSec||60)-Math.floor(G.timeSec||0)); toast('🔒 게임 시작 '+(pt.unlockSec||60)+'초 후 소환 가능 (남은 '+rem+'초)'); }
     else { const g=(GACHA_TIERS[pt.unlock]||{}).name||pt.unlock; const pr=pbossUnlockProgress(pt); toast('🔒 '+g+' 전체 보유 시 해금 ('+pr.have+'/'+pr.total+')'); }
     return; }
-  if(G.enemies.some(e=>e.pboss && e.pbId===typeId)){ toast('이미 이 보스가 활동 중입니다'); return; }
-  if((G.pbossCds[typeId]||0)>0){ toast(pt.name+' 재소환까지 '+Math.ceil(G.pbossCds[typeId])+'초'); return; }
+  if(G.enemies.some(e=>e.pboss && e.pbId===typeId)){ toast('⚠️ 이미 이 보스가 활동 중입니다'); return; }
+  if((G.pbossCds[typeId]||0)>0){ toast('🔒 '+pt.name+' 재소환까지 '+Math.ceil(G.pbossCds[typeId])+'초'); return; }
   G.pbossCds[typeId]=Math.round(240*((G.metaB&&G.metaB.pbossCdMul)||1));   // 4분 쿨다운 × 메타 쿨감(보스별 개별)
   spawnEnemy({pbType:pt});
   if(typeof playSfxT==='function') playSfxT('boss',1500);
   const coinMult=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).coinMult||1;
-  toast('☠ '+pt.name+' 소환! 2분 안에 처치 → +'+Math.round(pt.bonus*coinMult)+' 크레딧');
+  toast('☠ '+pt.name+' 소환 (처치 +'+Math.round(pt.bonus*coinMult)+' C)');
   closePbossPopup();
 }
 
@@ -4587,15 +4593,12 @@ const ROUND_MOD_KEYS=Object.keys(ROUND_MODS);
 function rollRoundMod(){ if(isBossRound(G.round)) return null; if(G.round<3) return null;   // 보스/초반 제외
   if(Math.random()<0.5) return null;   // 50% 무난
   return ROUND_MOD_KEYS[Math.floor(Math.random()*ROUND_MOD_KEYS.length)]; }
-function announceRoundMod(){ const M=G.roundMod&&ROUND_MODS[G.roundMod]; if(!M) return;
-  if(typeof toast==='function') toast('⚠ '+M.name+' 라운드 — '+M.desc);
-  if(typeof addChat==='function') addChat('', '⚠ '+M.name+' 라운드: '+M.desc, M.color, true); }
+function announceRoundMod(){}   // 라운드 특성은 상단 배지(⚠특성명)로 상시 표시 — 채팅 알림 제거(알림 도배 방지)
 function _mkAdd(d, hp, ar, spd, name, shape, race){ return {eid:G.eSeq++, d:((d||0)+1)%1, hp:hp, maxHp:hp, sh:0, maxSh:0, ar:ar||0,
   speed:spd, boss:false, special:false, pboss:false, life:null, flash:4, name:name||'적', shape:shape||'orb', race:race||'union', ph:(G.eSeq*0.7)%6.283, hit:0, model3d:null }; }
 const BOSS_SUMMON_INT=12;   // 보스 소환 간격(초) — 필수처치 2분 라운드라 절제
 function bossSummon(boss){ const m=roundDef(G.round), hp=Math.round(m.hp*0.5);
-  for(let k=0;k<2;k++) G.enemies.push(_mkAdd((boss.d||0)+(Math.random()-0.5)*0.05, hp, 0, 0.024, '소환', enemyShape(m.n), enemyRace(m.n)));
-  if(typeof addChat==='function') addChat('', '☄ 보스가 적을 소환했습니다 (2마리)', '#ff8a3b', true); }
+  for(let k=0;k<2;k++){ const e=_mkAdd((boss.d||0)+(Math.random()-0.5)*0.05, hp, 0, 0.024, '스커지', enemyShape('스커지'), enemyRace('스커지')); e.model3d=ENEMY_MODEL['스커지']||'stinger'; G.enemies.push(e); } }   // 보스 소환 = 스커지(3D 모델). 알림 채팅 없음 — 소환된 적은 화면에 보임
 function splitEnemy(e){ const hp=Math.round((e.maxHp||e.hp)*0.4);
   for(let k=0;k<2;k++) G.enemies.push(_mkAdd((e.d||0)+(k?0.015:-0.015), hp, Math.round((e.ar||0)*0.5), (e.speed||0.02)*1.15, e.name, e.shape, e.race)); }
 function beginActivePhase(){ G.roundPhase='active'; G.roundTime=isBossRound(G.round)?BOSS_ROUND_TIME:mapCfg('roundTime',ROUND_TIME); G.spawnTimer=0; G.pendSpawn.length=0;
@@ -4621,7 +4624,7 @@ function step(dt){
       gainGas(mapCfg('roundClearEnergyBase',1)+Math.floor(G.round*mapCfg('roundClearEnergyPer',0.34)));   // 라운드 클리어 보너스(하향)
     { const _cap=mapCfg('interestCap',500)+((G.metaB&&G.metaB.interestCap)||0); const _per=mapCfg('interestPer',100);   // 라운드 정산 이자: 보유 크레딧의 100당 5%(인정 한도까지) — 비축 보상
       const _int=Math.floor(Math.min(G.mineral,_cap)/_per)*Math.round(_per*mapCfg('interestRate',0.05));
-      if(_int>0){ const _bm=G.mineral; gainMineral(_int); toast('💰 이자 +'+(G.mineral-_bm)+' 크레딧 (보유 '+_bm+')'); } }
+      if(_int>0){ const _bm=G.mineral; gainMineral(_int); toast('💰 이자 +'+(G.mineral-_bm)+' C (보유 '+_bm+' C)'); } }
       G.round=n; beginActivePhase(); }   // 2라운드부터는 준비시간 없이 즉시 전투
   }
   // 스폰(전투 단계, 일반 라운드만 — 50초 동안 0.5초당 1마리, 1마리는 스페셜)
@@ -4635,7 +4638,7 @@ function step(dt){
     if(e.arDownT>0){ e.arDownT-=dt; if(e.arDownT<=0) e.arDown=0; }   // 방깍 디버프 감쇠
     if(e.vulnT>0){ e.vulnT-=dt; if(e.vulnT<=0) e.vuln=0; }           // 마깍(취약) 디버프 감쇠
     if(e.regen>0 && e.hp<e.maxHp) e.hp=Math.min(e.maxHp, e.hp+e.maxHp*e.regen*dt);   // 재생 모디파이어
-    if(e.boss && !e.pboss && !e.enraged && e.hp<=e.maxHp*0.4){ e.enraged=true; e.speed*=1.6; e.flash=10; if(typeof addChat==='function') addChat('','⚡ 보스 광폭화! 이동속도 급증','#ff5c5c',true); if(typeof playSfx==='function') playSfx('warn'); }   // 보스 광폭화(HP 40%↓)
+    if(e.boss && !e.pboss && !e.enraged && e.hp<=e.maxHp*0.4){ e.enraged=true; e.speed*=1.6; e.flash=10; if(typeof playSfx==='function') playSfx('warn'); }   // 보스 광폭화(HP 40%↓) — 채팅 제거(연출·소리만)
     if(e.stunT>0){ e.stunT-=dt; _sm=0;   // 감전: 제자리 정지
       if(Math.random()<dt*7){ const q=posAt(e.d,GW,GH); const qy=e.model3d?q.y-AIR_HIT_OFF:q.y;
         G.sparks.push({x:q.x+(Math.random()-0.5)*14,y:qy+(Math.random()-0.5)*12,vx:(Math.random()-0.5)*60,vy:(Math.random()-0.5)*60,life:0.14,len:3+Math.random()*3,color:Math.random()<0.5?'#b48bff':'#eadcff'}); } }
@@ -4651,7 +4654,7 @@ function step(dt){
   if(G.pbossCds){ for(const k in G.pbossCds){ if(G.pbossCds[k]>0) G.pbossCds[k]=Math.max(0,G.pbossCds[k]-dt); } }   // 개인 보스 재소환 쿨다운(보스별 개별)
   const _regCnt=G.enemies.reduce((a,e)=>a+(e.pboss?0:1),0);   // 탈락 누적은 일반 적만(개인 보스 제외)
   checkEnemyWarn(_regCnt);
-  if(_regCnt>=mapCfg('loseCount',LOSE_COUNT)){ addChat('', (G.myPlayer||1)+'번 플레이어가 탈락하였습니다.'); G.phase='lost'; if(typeof playSfx==='function') playSfx('lose'); showOverlay(); return; }
+  if(_regCnt>=mapCfg('loseCount',LOSE_COUNT)){ addChat('', '⚠️ '+(G.myPlayer||1)+'번 플레이어가 탈락하였습니다.'); G.phase='lost'; if(typeof playSfx==='function') playSfx('lose'); showOverlay(); return; }
   unitAI(dt);   // 명령 이동(공격이동/반복이동) + 스킬 타이머
   // 보스방 파견 유닛 → 공용 보스 직접 공격(트랙 방어 제외) + 유닛별 공격 이펙트
   if(G.coopBoss && !G.coopBoss.dead){ const sentB=G.units.filter(u=>u.atBoss);
@@ -4749,12 +4752,12 @@ function step(dt){
   stepMatronWaves(dt);   // 매트론 가시 연쇄: 시간차 전파(한 마리→주변→그 주변)
   // 처치
   for(let i=G.enemies.length-1;i>=0;i--){ const e=G.enemies[i];
-    if(e.pboss && e.hp>0 && e.life!=null && e.life<=0){ toast('개인 보스가 사라졌습니다 (미처치 · 혜택 없음)'); deathBurst(e); G.enemies.splice(i,1); if(G.selEnemy===e.eid){G.selEnemy=null;refreshSelCard();} continue; }   // 2분 경과 소멸(보상·불이익 없음)
+    if(e.pboss && e.hp>0 && e.life!=null && e.life<=0){ toast('☠ '+e.name+' 도주 (미처치)'); deathBurst(e); G.enemies.splice(i,1); if(G.selEnemy===e.eid){G.selEnemy=null;refreshSelCard();} continue; }   // 2분 경과 소멸(보상·불이익 없음)
     if(e.hp<=0){ G.kills++;
     if(e._killer!=null){ const _k=G.units.find(x=>x.uid===e._killer); if(_k) _k.kills=(_k.kills||0)+1; }   // 개별 유닛 킬 카운트
-    if(e.pboss){ const bn=e.bonus||0, be=e.bonusE||0; gainMineral(bn); if(be>0) gainGas(be); toast('☠ 개인 보스 처치! +'+bn+' 크레딧'+(be>0?' +'+be+' 에너지':'')); if(typeof playSfx==='function') playSfx('hero_merge'); }
-    else if(e.boss) toast('🟡 라운드 보스 처치!');
-    if(e.special){ const sc=mapCfg('specialCredit',SPECIAL_MIN); gainMineral(sc); gainGas(2); toast('스페셜 처치! +'+sc+' 크레딧 +2 에너지'); }   // 스페셜=크레딧+에너지
+    if(e.pboss){ const bn=e.bonus||0, be=e.bonusE||0; gainMineral(bn); if(be>0) gainGas(be); toast('☠ '+e.name+' 처치 (+'+bn+' C'+(be>0?' / +'+be+' E':'')+')'); if(typeof playSfx==='function') playSfx('hero_merge'); }
+    else if(e.boss) toast('☠ 라운드 보스 처치!');
+    if(e.special){ const sc=mapCfg('specialCredit',SPECIAL_MIN); gainMineral(sc); gainGas(2); }   // 스페셜=크레딧+에너지(알림 생략 — 도배 방지)
     if(e.boss && !e.pboss){ gainGas(5+Math.floor(G.round/4)); }   // 라운드 보스 처치=에너지 보너스(개인 보스는 크레딧만)
     G._minAcc=(G._minAcc||0)+mapCfg('killCredit',1); if(G._minAcc>=1){ const _mw=Math.floor(G._minAcc); G._minAcc-=_mw; gainMineral(_mw); }   // 킬 보상(소수 누적 — 1 미만/킬 지원, round 보정 회피)
     G._gasAcc=(G._gasAcc||0)+mapCfg('killEnergy',0.05); if(G._gasAcc>=1){ const w=Math.floor(G._gasAcc); G._gasAcc-=w; gainGas(w); }   // 킬 드립 에너지(누적 소수, 하향)
@@ -5729,7 +5732,7 @@ function setUnitCmd(mode){ const us=selUnits(); if(!us.length) return; G.patrolA
   if(mode==='attack') assignFormOffsets(us);   // 포위 대형
   updateCmdRow(); }
 function armPatrol(){ if(!selUnits().length) return; G.patrolArm=!G.patrolArm; G.focusArm=false; updateCmdRow();
-  if(G.patrolArm) addChat('','반복이동: 왕복할 지점을 클릭하세요.'); }
+  if(G.patrolArm) addChat('','ℹ️ 반복이동: 왕복할 지점을 클릭하세요.'); }
 // 목표 지점 주변에 유닛별 대형 슬롯 배정(겹쳐 몰리지 않게)
 function formationSlots(us, cx, cy){
   if(us.length<=1) return [{x:cx,y:cy}];
@@ -5752,11 +5755,11 @@ function assignFormOffsets(us){
 function setPatrolTarget(tx,ty){ const us=selUnits(); const slots=formationSlots(us,tx,ty);
   us.forEach((u,i)=>{ const s=slots[i]; u.patrol={ax:u.x,ay:u.y,bx:s.x,by:s.y}; u._patTo='b'; u.cmd='hold'; u.focusTarget=null; u.moveTo=null; }); }
 function armFocus(){ if(!selUnits().length) return; G.focusArm=!G.focusArm; G.patrolArm=false; updateCmdRow();
-  if(G.focusArm) addChat('','지정공격: 공격할 적을 클릭하세요.'); }
+  if(G.focusArm) addChat('','ℹ️ 지정공격: 공격할 적을 클릭하세요.'); }
 function setFocusTarget(eid){ const e=G.enemies.find(x=>x.eid===eid); const us=selUnits();
   for(const u of us){ u.cmd='focus'; u.focusTarget=eid; u.patrol=null; u.atkTarget=null; u._chasing=false; u.moveTo=null; }
   assignFormOffsets(us);   // 포위 대형
-  addChat('','지정공격: '+(e?e.name:'적')+' 집중 공격.'); }
+  addChat('','ℹ️ 지정공격: '+(e?e.name:'적')+' 집중 공격.'); }
 const SKILL_ICON={ adr:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg>' };  // 아드레날린=번개
 function useSkill(){ const us=selUnits(); if(!us.length) return;
   let used=0; for(const u of us){ const def=U[u.id]; if(def.skill && (u.skCd||0)<=0){ u.adr=def.skill.dur; u.skCd=def.skill.cd; used++; } }
@@ -5839,12 +5842,13 @@ function renderPbossPopup(){ const pop=document.getElementById('pbossPopup'); if
   const note='<div class="ppCdNote">쿨다운은 보스별로 따로 돌아갑니다</div>';
   pop.innerHTML='<div class="ppHead"><span class="ppBar"></span><span class="ppTtl">개인 보스 소환</span><button class="ppClose" onclick="event.stopPropagation();closePbossPopup()" title="닫기"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>'+items+note; }
 function togglePbossAuto(ev, id){ if(ev){ ev.stopPropagation(); ev.preventDefault(); }
-  if(!autoUsable('pboss')){ toast('자동 개인 보스 업그레이드 필요'); return; }
+  if(!autoUsable('pboss')){ toast('🔒 자동 개인 보스 업그레이드 필요'); return; }
   if(!G.auto) G.auto={unit:false,combine:false,energy:false,pboss:{}}; if(!G.auto.pboss) G.auto.pboss={};
   G.auto.pboss[id]=!G.auto.pboss[id];
   const pt=PBOSS_TYPES.find(t=>t.id===id);
   toast('⟳ '+(pt?pt.name:'')+' 자동 소환 '+(G.auto.pboss[id]?'ON':'OFF'));
   if(typeof playSfx==='function') playSfx('ui_open');
+  if(typeof saveAutoCfg==='function') saveAutoCfg();
   renderPbossPopup(); }
 // ── 메인 자동화 묶음 버튼/팝업(자동 조합·유닛·에너지) ──
 function autoUtilOwned(){ return {combine:autoUsable('combine'), unit:autoUsable('unit'), energy:autoUsable('energy'), place:autoUsable('place'), bossdeploy:autoUsable('bossdeploy')}; }
@@ -5882,18 +5886,20 @@ function renderAutoPopup(){ const pop=document.getElementById('autoPopup'); if(!
   const note=AUTO_PREVIEW?'⚠ 예시 모드 — 미해금이어도 동작(테스트용)':'0.33초마다 동작 · 코인 연구소에서 해금';
   pop.innerHTML='<div class="apHead"><span class="apBar"></span><span class="apTtl">자동화 설정</span><button class="apClose" onclick="event.stopPropagation();closeAutoPopup()" title="닫기"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>'+rows+'<div class="apNote">'+note+'</div>';
   pop._sig=autoSig(); }
-function toggleAuto(kind){ const o=autoUtilOwned(); if(!o[kind]){ toast('업그레이드 필요'); return; }
+function toggleAuto(kind){ const o=autoUtilOwned(); if(!o[kind]){ toast('🔒 업그레이드 필요'); return; }
   if(!G.auto) G.auto={unit:false,combine:false,energy:false,pboss:{}};
   G.auto[kind]=!G.auto[kind];
   // 자동 유닛 소환 ↔ 자동 에너지 변환 = 상호 배타(둘은 같은 크레딧을 두고 경쟁 → 동시 ON 금지)
   if(G.auto[kind] && (kind==='unit'||kind==='energy')){ const other=(kind==='unit')?'energy':'unit'; if(G.auto[other]){ G.auto[other]=false; toast('⟳ '+(other==='unit'?'자동 유닛 소환':'자동 에너지 변환')+' OFF (동시 사용 불가)'); } }
   toast('⟳ '+({combine:'자동 조합',unit:'자동 유닛 소환',energy:'자동 에너지 변환',place:'자동 유닛 배치',bossdeploy:'자동 보스 파견'}[kind])+' '+(G.auto[kind]?'ON':'OFF'));
   if(typeof playSfx==='function') playSfx('ui_open');
+  if(typeof saveAutoCfg==='function') saveAutoCfg();
   renderAutoPopup(); }
 function toggleRallyShow(ev){ if(ev){ ev.stopPropagation(); ev.preventDefault(); }
   G.rallyShow=(G.rallyShow===false);   // 토글(기본 표시)
-  toast('랠리 화살표 '+(G.rallyShow?'표시':'숨김'));
+  toast('ℹ️ 랠리 화살표 '+(G.rallyShow?'표시':'숨김'));
   if(typeof renderRallyArrows==='function') renderRallyArrows();
+  if(typeof saveAutoCfg==='function') saveAutoCfg();
   renderAutoPopup(); }
 function updateSkillFab(){ const fab=document.getElementById('skillFab'); if(!fab) return;
   if(typeof G==='undefined'||G.tab!=='Main'||G.selEnemy!=null){ fab.classList.add('hide'); return; }
@@ -5967,7 +5973,7 @@ function deselectUnit(){ G.sel=[]; G.selEnemy=null; refreshSelCard(); }
 function selectSameType(){ if(G.sel.length===0) return;
   const ref=G.units.find(u=>u.uid===G.sel[0]); if(!ref) return;
   const same=G.units.filter(u=>u.id===ref.id && u.hero===ref.hero && (u.lv||1)===(ref.lv||1)).map(u=>u.uid);
-  selectMany(same); toast(U[ref.id].name+(ref.hero?' 영웅':'')+' '+same.length+'기 선택'); }
+  selectMany(same); toast('ℹ️ '+U[ref.id].name+(ref.hero?' 영웅':'')+' '+same.length+'기 선택'); }
 function toggleMergeMode(el){ G.mergeMode=!G.mergeMode; el.classList.toggle('on',G.mergeMode);
   if(G.mergeMode){ combine(); G.mergeMode=false; el.classList.remove('on'); } }
 // 유닛뽑기: 시계 배치 유닛 + 중앙 시민 DOM 렌더
@@ -6148,7 +6154,7 @@ function research(wpn){
   if(G.research) return;                                       // 동시 1개만(즉시모드라 사실상 미발생)
   if((G.atkLv[wpn]||0)>=UPG_MAX) return;                       // 최대 레벨 — 알림 없이 무시
   const _uc=upgCost(wpn);
-  if(G.gas<_uc){ if(typeof playSfxT==='function') playSfxT('upgrade_denied',130); toast('에너지 부족 (다음 업글 '+_uc+')'); return; }   // 부족 — 알림음+토스트
+  if(G.gas<_uc){ if(typeof playSfxT==='function') playSfxT('upgrade_denied',130); toast('⚡ 에너지 부족 (다음 업글 '+_uc+' E)'); return; }   // 부족 — 알림음+토스트
   if(typeof playSfxT==='function') playSfxT('upgrade_press',80);   // 업그레이드 누름(상호작용)
   G.gas-=_uc; updateHud();
   if(UPG_TIME<=0){ finishResearch(wpn); return; }              // 즉시 완료 모드
@@ -6157,7 +6163,7 @@ function research(wpn){
 }
 // 연구 취소 — 에너지 환불 후 중단
 function cancelResearch(){ if(!G.research) return;
-  G.gas+=(G.research.cost||UPG_COST); updateHud(); toast('연구 취소');
+  G.gas+=(G.research.cost||UPG_COST); updateHud(); toast('ℹ️ 연구 취소');
   G.research=null; if(G.tab==='Upgrade'&&G.techB) selectUpg(G.techB);
 }
 function finishResearch(wpn){ G.atkLv[wpn]=(G.atkLv[wpn]||0)+1;   // 업그레이드 완료 — 채팅 알림 없이 슬롯 레벨로만 표시
@@ -6215,7 +6221,7 @@ function computeSpeed(){ ensureVote();
 function castVote(spd){ ensureVote(); const old=G.speedMul; G.vote[G.myPlayer||1]=spd;
   if(coopActive()){ G.coopSpeed[G.myPlayer||1]=spd; coopSend('speed',{mul:spd}); }   // 내 투표 전파(전원 최소로 결정)
   computeSpeed();
-  if(coopActive() && G.speedMul!==old) addChat('', '게임 배속이 '+old+'배 → '+G.speedMul+'배로 변경되었습니다.');   // 효과 배속 변경 시 전원 알림
+  if(coopActive() && G.speedMul!==old) addChat('', 'ℹ️ 게임 배속 '+old+'배 → '+G.speedMul+'배');   // 효과 배속 변경 시 전원 알림
   renderVote(); }
 function renderVote(){ ensureVote(); const me=G.myPlayer||1, myv=G.vote[me]||1;
   [1,2,4].forEach(s=>{ const c=document.getElementById('vc-'+s); if(c) c.innerHTML=''; });
@@ -6245,7 +6251,7 @@ function closeSettings(){ popHide('settingsPop'); }
 const PAUSE_MAX=3;
 function togglePause(){
   if(!G.paused){   // 일시정지 시도 — 횟수 제한
-    if((G.pauseUsed||0)>=PAUSE_MAX){ addChat('','일시정지 횟수를 모두 사용했습니다. (최대 '+PAUSE_MAX+'회)'); updatePauseBtn(); return; }
+    if((G.pauseUsed||0)>=PAUSE_MAX){ addChat('','⚠️ 일시정지 횟수를 모두 사용했습니다. (최대 '+PAUSE_MAX+'회)'); updatePauseBtn(); return; }
     G.pauseUsed=(G.pauseUsed||0)+1; G.paused=true;
     const ga=document.getElementById('gameArea'); if(ga) ga.classList.add('gray');   // 무채색(설정 나가도 유지)
     addChat('',(coopActive()?myNick():('플레이어 P'+(G.myPlayer||1)))+'님이 일시정지를 사용하였습니다.');
@@ -6273,7 +6279,7 @@ function botSetPause(p, others){
   if(G.paused===p) return;
   const n=others[Math.floor(Math.random()*others.length)];
   G.paused=p; const ga=document.getElementById('gameArea'); if(ga) ga.classList.toggle('gray', p);
-  addChat('','플레이어 P'+n+'가 일시정지를 '+(p?'사용':'해제')+'하였습니다.');
+  addChat('','ℹ️ 플레이어 P'+n+'가 일시정지를 '+(p?'사용':'해제')+'하였습니다.');
   if(p) _botUnpauseT=5+Math.random()*7;   // 봇이 걸면 잠시 후 누군가 해제
   updatePauseBtn();
 }
@@ -6359,7 +6365,9 @@ function setVol(key,el){ const v=Math.max(0,Math.min(100,+el.value));
 function syncSndUI(){ ['sfx','bgm'].forEach(_sndPaintBar); }
 // ── 채팅(메인-하단 사이) — 로컬 입력 + 다른 플레이어 가짜 메시지(임시) ──
 function escHtml(s){ return String(s).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
+let _lastSysMsg='', _lastSysT=-1e9;   // 시스템 알림 중복 억제 상태(toast·addChat 공통)
 function addChat(sender, text, color, silent){ const box=document.getElementById('chatLog'); if(!box) return;
+  if(sender===''){ const _n=(typeof performance!=='undefined'&&performance.now)?performance.now():0; const _k=(text||'').replace(/^▸\s*/,''); if(_k===_lastSysMsg && _n-_lastSysT<2000) return; _lastSysMsg=_k; _lastSysT=_n; }   // 같은 시스템 알림 2초 내 1회(중복·협동 에코 억제)
   if(!silent && typeof playNotify==='function') playNotify();   // 채팅·배속·일시정지 알람음(자원 토스트는 silent로 무음)
   const d=document.createElement('div'); d.className='cmsg'+(sender?'':' sys');
   d.innerHTML = sender ? '<b style="color:'+(color||'#7fc8ff')+'">'+escHtml(sender)+'</b> '+escHtml(text)
@@ -6375,13 +6383,7 @@ function initChat(){ const f=document.getElementById('chatField'); if(f) f.addEv
 
 // ── 토스트 ──
 // 스타크래프트식: 알림을 팝업 대신 채팅에 시스템 메시지로 표시(같은 메시지 연속 도배는 억제)
-let _lastSysMsg='', _lastSysT=-1e9;
-function toast(msg){ if(!msg) return;
-  const now=(typeof performance!=='undefined'&&performance.now)?performance.now():0;
-  if(msg===_lastSysMsg && now-_lastSysT<2500) return;   // 같은 메시지 2.5초 내 반복 억제
-  _lastSysMsg=msg; _lastSysT=now;
-  addChat('', '▸ '+msg, null, true);   // 시스템 토스트(크레딧/에너지/인구/보너스 등) — 알림음 없음
-}
+function toast(msg){ if(!msg) return; addChat('', msg, null, true); }   // 시스템 토스트 — 중복 억제는 addChat(시스템 메시지)에서 공통 처리
 // 채팅 안 쓰는 플로팅 알림(화면 하단 중앙에 잠깐 떴다 사라짐)
 let _floatT=null;
 function floatMsg(msg){ const el=document.getElementById('toast'); if(!el) return; el.textContent=msg; el.classList.add('on');
@@ -7391,29 +7393,29 @@ function renderRoomList(){ const list=document.getElementById('roomList'); if(!l
     el.innerHTML='<div class="riMain"><div class="riName">'+diffBadge(r.diff)+'<span class="riNum">#'+r.num+'</span>'+(priv?'<span class="riLock">🔒</span>':'')+escHtml(r.name)+'</div><div class="riSub">방장 '+escHtml(r.host)+(need>1&&waiting&&!full&&!fits?' · <span class="riOver">파티 자리 부족</span>':'')+'</div></div>'
       +'<div class="riRight"><div class="riCnt'+(full?' full':'')+'">'+r.cur+'/'+r.max+'</div><div class="riStat '+(waiting?'wait':'play')+'">'+(waiting?(full?'가득참':'대기중'):(r.round?('게임중 '+r.round+'R'):'게임중'))+'</div></div>';
     if(joinable) el.onclick=()=> priv? openPwPrompt(r) : joinRoom(r);
-    else if(waiting && !full && !fits) el.onclick=()=>{ if(typeof playSfx==='function') playSfx('ui_denied'); toast('파티 인원이 초과되었습니다 (남은 자리 '+(r.max-r.cur)+' / 필요 '+need+')'); };
+    else if(waiting && !full && !fits) el.onclick=()=>{ if(typeof playSfx==='function') playSfx('ui_denied'); toast('⚠️ 파티 인원이 초과되었습니다 (남은 자리 '+(r.max-r.cur)+' / 필요 '+need+')'); };
     list.appendChild(el);
   });
 }
 function joinRoom(r){ if(r.status!=='wait'||r.cur>=r.max) return;
   const need=partySize(), free=r.max-r.cur;   // 파티 전원이 들어갈 자리 필요
-  if(need>free){ if(typeof playSfx==='function') playSfx('ui_denied'); toast('파티 인원이 초과되었습니다 (남은 자리 '+free+' / 필요 '+need+')'); return; }
+  if(need>free){ if(typeof playSfx==='function') playSfx('ui_denied'); toast('⚠️ 파티 인원이 초과되었습니다 (남은 자리 '+free+' / 필요 '+need+')'); return; }
   if(r.real && rtRoomsActive()){   // 실제 방: 대기실 채널 presence로 입장
     rtRoomJoin(r.num, false);
     openLobby({real:true, num:r.num, name:r.name, host:r.host, hostUid:r.hostUid, startCount:r.cur, joining:true, visibility:r.visibility, diff:r.diff}); return; }
   openLobby({num:r.num, name:r.name, host:r.host, startCount:r.cur, joining:true, diff:r.diff}); }   // (오프라인 폴백) 시뮬 방
 function quickJoin(){ const need=partySize(), wait=_roomList.filter(r=>r.status==='wait'&&(r.max-r.cur)>=need);
-  if(!wait.length){ if(need>1){ toast('파티가 들어갈 빈 자리가 있는 방이 없습니다'); return; } createRoom(); return; }   // 빈 방 없으면 새로 생성(혼자일 때)
+  if(!wait.length){ if(need>1){ toast('⚠️ 파티가 들어갈 빈 자리가 있는 방이 없습니다'); return; } createRoom(); return; }   // 빈 방 없으면 새로 생성(혼자일 때)
   joinRoom(wait[Math.floor(Math.random()*wait.length)]); }
 // 방 번호로 입장(친구의 비공개 방 포함)
 function joinByNumber(){ const f=document.getElementById('roomNumField'); if(!f) return;
   const num=parseInt((f.value||'').replace(/\D/g,''),10);
-  if(!num||num<1000){ toast('방 번호 4자리를 입력하세요'); f.focus(); return; }
+  if(!num||num<1000){ toast('ℹ️ 방 번호 4자리를 입력하세요'); f.focus(); return; }
   const r=_roomList.find(x=>x.num===num);
-  if(r){ if(r.status!=='wait'||r.cur>=r.max){ if(typeof playSfx==='function') playSfx('ui_denied'); toast(r.cur>=r.max?'방이 가득 찼습니다':'이미 게임 중인 방입니다'); return; }
-    if(partySize()>(r.max-r.cur)){ if(typeof playSfx==='function') playSfx('ui_denied'); toast('파티 인원이 초과되었습니다 (남은 자리 '+(r.max-r.cur)+' / 필요 '+partySize()+')'); return; }
+  if(r){ if(r.status!=='wait'||r.cur>=r.max){ if(typeof playSfx==='function') playSfx('ui_denied'); toast(r.cur>=r.max?'⚠️ 방이 가득 찼습니다':'⚠️ 이미 게임 중인 방입니다'); return; }
+    if(partySize()>(r.max-r.cur)){ if(typeof playSfx==='function') playSfx('ui_denied'); toast('⚠️ 파티 인원이 초과되었습니다 (남은 자리 '+(r.max-r.cur)+' / 필요 '+partySize()+')'); return; }
     f.value=''; if(r.visibility==='private') openPwPrompt(r); else joinRoom(r); return; }
-  if(rtRoomsActive()){ toast('해당 번호의 방을 찾을 수 없습니다'); f.value=''; return; }   // 실방 모드: 없는 방은 없는 것
+  if(rtRoomsActive()){ toast('⚠️ 해당 번호의 방을 찾을 수 없습니다'); f.value=''; return; }   // 실방 모드: 없는 방은 없는 것
   // 목록에 없는 번호 → 친구의 비공개 방으로 입장(시뮬)
   f.value='';
   const host=LOBBY_NAMES[Math.floor(Math.random()*LOBBY_NAMES.length)];
@@ -7460,6 +7462,7 @@ function startGameNow(activePlayers, myNum, names){
   if(mapCfg('mode')==='strike'){ strikeStart(); return; }   // 직스 모드 → 독립 모듈(nemo 우회). (3D 에셋은 추후 단계에서 loadMapModels)
   if(typeof bgmStop==='function') bgmStop();   // 게임 진입 시 로비 BGM 정지
   G=newGame(); G.phase='playing'; G.difficulty=_selDiff; G.roundPhase='prep'; G.roundTime=mapCfg('prepTime',PREP_TIME); G.toSpawn=0;
+  if(typeof loadAutoCfg==='function') loadAutoCfg();   // 저장된 자동설정·랠리 위치 복원(판 사이 유지)
   G.loading=true;   // 로딩(카운트다운/준비) 동안 게임 시간 정지 → 시작하면 10초부터
   G.activePlayers = (activePlayers&&activePlayers.length)? activePlayers.slice() : [1,2,3,4,5,6,7,8];   // 입장한 플레이어
   G.myPlayer = myNum||1;   // 입장 순서로 배정된 내 번호
@@ -7483,7 +7486,7 @@ function startGameNow(activePlayers, myNum, names){
 function playerLeave(n){ if(!G.activePlayers) return; const mine=G.myPlayer||1; if(n===mine) return;
   const i=G.activePlayers.indexOf(n); if(i<0) return;
   G.activePlayers.splice(i,1);
-  addChat('', n+'번 플레이어가 탈락하였습니다.');
+  addChat('', '⚠️ '+n+'번 플레이어가 탈락하였습니다.');
   if(G.curPlayer===n){ const other=G.activePlayers.filter(x=>x!==mine); G.curPlayer=other[0]||mine;
     if(G.tab==='Players'){ if(typeof drawPlayer==='function') drawPlayer(); updateSpecLabel(); } }
   if(G.tab==='Players') renderPlayers();
@@ -7513,7 +7516,7 @@ function tickPresence(dt){ tickPlayerSim(dt); }   // 루프 훅 → 플레이어
 function coopActive(){ return !!(typeof G!=='undefined' && G && G.coop && G.coopChan); }
 let _netFailT=0;
 function netFail(){ const now=Date.now(); if(now-_netFailT<5000) return; _netFailT=now;   // 5초 스로틀
-  if(typeof toast==='function') toast('⚠ 네트워크 전송 실패 — 연결 상태를 확인하세요'); }
+  if(typeof toast==='function') toast('⚠️ 네트워크 전송 실패 — 연결 상태를 확인하세요'); }
 // 협동 권위자 = 접속 중인 가장 낮은 번호(이탈 시 자동 승계). 보스 HP 등 공유 상태의 기준
 function coopAuthNum(){ if(!G||!G.coopNumToUid) return (G&&G.myPlayer)||1;
   const nums=Object.keys(G.coopNumToUid).map(Number).filter(n=>!G.activePlayers||G.activePlayers.indexOf(n)>=0);
@@ -7521,16 +7524,16 @@ function coopAuthNum(){ if(!G||!G.coopNumToUid) return (G&&G.myPlayer)||1;
 // 협동 채널 재접속(지수 백오프, 최대 5회). 게임 중 끊겼을 때만
 let _coopRetryN=0;
 function coopReconnect(){ if(!G || G.phase!=='playing' || !G.coopSlotInfo) return;
-  if(_coopRetryN>=5){ addChat('', '⚠ 재접속에 실패했습니다. 협동 동기화 없이 계속 진행합니다.'); return; }
+  if(_coopRetryN>=5){ addChat('', '⚠️ 재접속에 실패했습니다. 협동 동기화 없이 계속 진행합니다.'); return; }
   _coopRetryN++;
-  if(_coopRetryN===1) addChat('', '⚠ 연결이 끊겼습니다 — 재접속 시도 중…');
+  if(_coopRetryN===1) addChat('', '⚠️ 연결이 끊겼습니다 — 재접속 시도 중…');
   setTimeout(()=>{ if(G && G.phase==='playing' && G.coopSlotInfo) startGameCoop(G.coopSlotInfo); }, 1500*_coopRetryN); }
 // 브라우저 네트워크 상태 — 끊김 알림 + 복귀 시 자동 재접속
-window.addEventListener('offline', ()=>{ if(typeof toast==='function') toast('⚠ 네트워크 연결이 끊겼습니다'); });
+window.addEventListener('offline', ()=>{ if(typeof toast==='function') toast('⚠️ 네트워크 연결이 끊겼습니다'); });
 document.addEventListener('visibilitychange', ()=>{   // 백그라운드 탭: 10Hz 송신 정지(대역·배터리 절약), 복귀 시 재개
   if(document.hidden){ if(typeof G!=='undefined' && G && G.coopStateT){ clearInterval(G.coopStateT); G.coopStateT=null; } }
   else if(typeof G!=='undefined' && G && !G.coopStateT && typeof coopActive==='function' && coopActive()){ G.coopStateT=setInterval(coopBroadcastState, 100); } });
-window.addEventListener('online', ()=>{ if(typeof toast==='function') toast('네트워크가 다시 연결되었습니다');
+window.addEventListener('online', ()=>{ if(typeof toast==='function') toast('✓ 네트워크가 다시 연결되었습니다');
   if(G && G.phase==='playing' && G.coopSlotInfo && !coopActive()) coopReconnect();
   if(typeof RTROOM!=='undefined' && RTROOM.listChan===null && typeof rtRoomsActive==='function' && rtRoomsActive()) rtRoomsEnsure(); });
 function onCoopBossDmg(p){ if(!p||p.uid===myUid()) return; const num=(G.coopUidToNum&&G.coopUidToNum[p.uid])||p.num||0;
@@ -7566,10 +7569,10 @@ function coopSend(ev, payload){ if(!coopActive()) return;
 function onCoopSpeed(p){ if(!p||p.uid===myUid()) return; const num=G.coopUidToNum[p.uid]; const old=G.speedMul;
   if(num) G.coopSpeed[num]=p.mul;   // 상대 투표 기록
   computeSpeed();   // 효과 배속 = 전원 투표 최소
-  if(G.speedMul!==old){ addChat('', '게임 배속이 '+old+'배 → '+G.speedMul+'배로 변경되었습니다.'); if(typeof playSfxT==='function') playSfxT('speed',300); }
+  if(G.speedMul!==old){ addChat('', 'ℹ️ 게임 배속 '+old+'배 → '+G.speedMul+'배'); if(typeof playSfxT==='function') playSfxT('speed',300); }
   if(typeof renderVote==='function') renderVote(); }
 function onCoopPlayerLeft(s){ if(!s||s.uid===myUid()) return; const num=G.coopUidToNum[s.uid]||s.num;
-  addChat('', (s.nick||('P'+num))+'님이 게임에서 나갔습니다.');
+  addChat('', 'ℹ️ '+(s.nick||('P'+num))+'님이 게임에서 나갔습니다.');
   if(num){ if(G.coopBoard) delete G.coopBoard[num]; if(G.coopState) delete G.coopState[num];
     if(G.activePlayers){ const i=G.activePlayers.indexOf(num); if(i>=0) G.activePlayers.splice(i,1); }
     if(G.curPlayer===num){ G.curPlayer=G.myPlayer||1; }
@@ -7581,7 +7584,7 @@ function onCoopPlayerLeft(s){ if(!s||s.uid===myUid()) return; const num=G.coopUi
   if(G.tab==='Players'){ if(typeof renderPlayers==='function') renderPlayers(); if(typeof updateSpecLabel==='function') updateSpecLabel(); } }
 function onCoopPause(p){ if(!p||p.uid===myUid()) return; if(G.paused===p.paused) return;
   G.paused=p.paused; const ga=document.getElementById('gameArea'); if(ga) ga.classList.toggle('gray', p.paused);
-  addChat('', (p.nick||'상대')+'님이 일시정지를 '+(p.paused?'사용':'해제')+'하였습니다.'); updatePauseBtn(); }
+  addChat('', 'ℹ️ '+(p.nick||'상대')+'님이 일시정지를 '+(p.paused?'사용':'해제')+'하였습니다.'); updatePauseBtn(); }
 function onCoopChat(p){ if(!p||p.uid===myUid()) return; if(typeof playNotify==='function') playNotify(); addChat(p.nick||'상대', p.text, p.color||'#7fc8ff'); }
 function onCoopState(p){ if(!p||p.uid===myUid()) return; const num=G.coopUidToNum[p.uid]; if(!num) return;
   const boPrev=G.coopState[num]&&G.coopState[num].bo;
@@ -7606,7 +7609,7 @@ function onCoopState(p){ if(!p||p.uid===myUid()) return; const num=G.coopUidToNu
       G.metaB=metaBonus();
       const diff=G.metaB.startCredit-before;
       if(diff>0){ G.mineral+=diff; if(typeof updateHud==='function') updateHud();
-        addChat('', '🤝 전체 강화 공유 적용 — 시작 크레딧 +'+diff, '#ffd24a', true); } } }
+        addChat('', '🤝 전체 강화 공유 적용 — 시작 크레딧 +'+diff+' C', '#ffd24a', true); } } }
   // 상대 토벌장 파견 유닛 스냅(보간용 직전/현재) — 토벌장 화면에 함께 표시
   { const prevB=(G.coopBossU=G.coopBossU||{})[num];
     G.coopBossU[num]={ t:Date.now(), prev:prevB&&prevB.cur,
@@ -7688,7 +7691,7 @@ function rtRoomsSync(){ if(!RTROOM.listChan) return;
   }catch(e){ console.warn('rtRoomsSync', e); } }
 // 방장: 방 정보 게시/갱신(presence 재track = 갱신)
 function rtRoomPublish(meta){ RTROOM.meta=meta; if(!RTROOM.listChan) return;
-  try{ RTROOM.listChan.track(meta); }catch(e){ console.warn('rtRoomPublish', e); toast('방 정보 전송에 실패했습니다'); } }
+  try{ RTROOM.listChan.track(meta); }catch(e){ console.warn('rtRoomPublish', e); toast('⚠️ 방 정보 전송에 실패했습니다'); } }
 function rtRoomClose(){ if(!RTROOM.host && !RTROOM.meta) return;
   try{ if(RTROOM.listChan) RTROOM.listChan.untrack(); }catch(e){}
   RTROOM.meta=null; RTROOM.host=false; }
@@ -7705,8 +7708,8 @@ function rtRoomJoin(num, asHost){ rtRoomLeaveChan(); RTROOM.num=num; RTROOM.host
       .on('broadcast',{event:'close'}, m=>rtRoomKicked('방장이 방을 닫았습니다'))
       .subscribe(st=>{ if(st==='SUBSCRIBED'){
           try{ RTROOM.chan.track({ uid:myUid(), nick:myNick(), ready:true, host:!!asHost, t:Date.now() }); }catch(e){}
-        } else if(st==='CHANNEL_ERROR'||st==='TIMED_OUT'){ toast('대기실 연결이 불안정합니다'); } });
-  }catch(e){ console.warn('rtRoomJoin', e); toast('방 입장에 실패했습니다'); rtRoomLeaveChan(); } }
+        } else if(st==='CHANNEL_ERROR'||st==='TIMED_OUT'){ toast('⚠️ 대기실 연결이 불안정합니다'); } });
+  }catch(e){ console.warn('rtRoomJoin', e); toast('⚠️ 방 입장에 실패했습니다'); rtRoomLeaveChan(); } }
 function rtRoomLeaveChan(){ if(RTROOM.chan){ try{ _sb.removeChannel(RTROOM.chan); }catch(e){} RTROOM.chan=null; } RTROOM.num=null; }
 // 대기실 presence → 슬롯 구성(입장 시각 순, 방장=P1)
 function rtRoomSync(){ if(!RTROOM.chan || !_lobbyRoom || !_lobbyRoom.real) return;
@@ -7730,7 +7733,7 @@ function rtRoomSync(){ if(!RTROOM.chan || !_lobbyRoom || !_lobbyRoom.real) retur
 // 참가자가 방에서 쫓겨남(방장 이탈/방 닫힘) → 방 목록으로
 function rtRoomKicked(msg){ rtRoomLeaveChan();
   document.getElementById('lobby').classList.add('hide');
-  toast(msg||'방이 닫혔습니다'); openRooms(); }
+  toast('ℹ️ '+(msg||'방이 닫혔습니다')); openRooms(); }
 // 방장의 시작 신호 수신(참가자) — 슬롯 배정은 방장 payload가 권위
 function rtRoomOnStart(p){ if(!_lobbyRoom || !_lobbyRoom.real || RTROOM.started) return; RTROOM.started=true;
   const slots=(p&&p.slots)||[]; if(!slots.length){ RTROOM.started=false; return; }
@@ -7776,7 +7779,7 @@ function lobbyStart(){ const players=_lobbySlots.filter(Boolean); if(players.len
     if(!RTROOM.host || RTROOM.started) return; RTROOM.started=true;
     const slots=[], names={}; let myNum=1;
     _lobbySlots.forEach((sl,i)=>{ if(sl){ slots.push({num:i+1, uid:sl.uid}); names[i+1]=sl.me?myNick():(sl.label||sl.name); if(sl.me) myNum=i+1; } });
-    try{ if(RTROOM.chan) RTROOM.chan.send({type:'broadcast', event:'start', payload:{slots:slots, names:names, diff:_lobbyRoom.diff, from:myUid()}}); }catch(e){ toast('시작 신호 전송 실패'); RTROOM.started=false; return; }
+    try{ if(RTROOM.chan) RTROOM.chan.send({type:'broadcast', event:'start', payload:{slots:slots, names:names, diff:_lobbyRoom.diff, from:myUid()}}); }catch(e){ toast('⚠️ 시작 신호 전송 실패'); RTROOM.started=false; return; }
     if(RTROOM.meta){ RTROOM.meta.status='playing'; RTROOM.meta.round=1; rtRoomPublish(RTROOM.meta); }   // 목록에 '게임중' 표시
     document.getElementById('lobby').classList.add('hide');
     startGameNow(slots.map(x=>x.num), myNum, names);
@@ -7833,7 +7836,7 @@ function addLobbyMsg(name, text, color){ const box=document.getElementById('lbCh
 function sendLobbyChat(){ const f=document.getElementById('lbChatField'); const t=(f.value||'').trim(); if(!t) return;
   const col=lbMeInfo().col; addLobbyMsg(myNick(), t, col);
   if(_lobbyRoom && _lobbyRoom.real && RTROOM.chan){   // 실제 방 대기실: room 채널로 공유
-    try{ RTROOM.chan.send({type:'broadcast', event:'rchat', payload:{uid:myUid(), nick:myNick(), text:t, color:col}}); }catch(e){ toast('채팅 전송 실패'); } }
+    try{ RTROOM.chan.send({type:'broadcast', event:'rchat', payload:{uid:myUid(), nick:myNick(), text:t, color:col}}); }catch(e){ toast('⚠️ 채팅 전송 실패'); } }
   else if(_lobbyRoom && _lobbyRoom.party && typeof RT!=='undefined' && RT.active && RT.lobby){   // 파티 대기실: 실시간 공유
     try{ RT.lobby.send({type:'broadcast', event:'roomchat', payload:{from:myUid(), num:_lobbyRoom.num, nick:myNick(), text:t, color:col}}); }catch(e){} }
   f.value=''; f.focus(); }
