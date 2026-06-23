@@ -5867,8 +5867,8 @@ function renderAutoPopup(){ const pop=document.getElementById('autoPopup'); if(!
   const defs=[['unit','자동 유닛 소환','0.33초마다 1기 뽑기', o.unit],
               ['combine','자동 조합','낮은 등급부터 레전드까지', o.combine],
               ['energy','자동 에너지 변환','크레딧→에너지 전액', o.energy],
-              ['place','자동 유닛 배치','등급별 화살표로 집결 지정', o.place],
-              ['bossdeploy','자동 보스 파견','가장 강한 유닛을 보스방에 파견', o.bossdeploy]];
+              ['bossdeploy','자동 보스 파견','가장 강한 유닛을 보스방에 파견', o.bossdeploy],
+              ['place','자동 유닛 배치','등급별 화살표로 집결 지정', o.place]];
   let rows='';
   for(const d of defs){ const kind=d[0], owned=d[3], on=!!G.auto[kind];
     if(owned && kind==='place'){ const shown=(G.rallyShow!==false);   // 자동 배치 = 본 토글 + 화살표 표시 버튼(아랫줄, 텍스트와 안 겹침)
