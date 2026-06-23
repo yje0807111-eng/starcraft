@@ -2719,7 +2719,7 @@ function enemyRace(n){ return ENEMY_RACE[n]||'terran'; }
 // ============================================================================
 const USEMAPS={
   nemo:  { id:'nemo',   name:'네모네모 디펜스', desc:'사각 트랙을 도는 적을 막는 협동 디펜스', players:'1-8', pop:9820, icon:'🟥', rec:true,  isNew:false, playable:true,
-           cfg:{ rounds:30, roundTime:90, prepTime:10, startCredits:120, startEnergy:0, maxUnits:100,
+           cfg:{ rounds:30, roundTime:90, prepTime:10, startCredits:200, startEnergy:0, maxUnits:100,
                  killCredit:1, killEnergy:0.03, specialCredit:12, gachaCost:60, energyDrawCost:80, coopBoss:true, roster:'all',
                  enemiesPerRound:100, bossEvery:10, loseCount:200,
                  interestPer:100, interestRate:0.05, interestCap:500, roundClearEnergyBase:2, roundClearEnergyPer:0.5 } },
@@ -2920,9 +2920,8 @@ const META_BUILD_GROUPS = { eco:'경제', prod:'생산', combat:'전투', team:'
 // start=1레벨 비용 기준값, nMax=일반 레벨 수, max=일반+초월(초월 3레벨·효과 ×2/×4/×8). 비용은 metaNextCost(완만 감소배율) 참조.
 const META_BUILDS = {   // 탭(group) → 섹션(sect) 2단 분류. 같은 sect끼리 묶여 헤더로 구분됨
   // ── 경제 (시작 자원 → 자원 획득) ──
-  start_credit:  { name:'시작 크레딧', desc:'시작 시 크레딧 지급 (+20/Lv)',   start:15, nMax:6, max:9, group:'eco', sect:'시작 자원' },
+  start_credit:  { name:'시작 크레딧', desc:'시작 시 크레딧 지급 (+25/Lv)',   start:15, nMax:10, max:10, group:'eco', sect:'시작 자원' },
   start_energy:  { name:'시작 에너지', desc:'시작 시 에너지 지급 (+10/Lv)',   start:15, nMax:6, max:9, group:'eco', sect:'시작 자원' },
-  start_unit:    { name:'시작 유닛',   desc:'시작 시 기본 유닛 지급 (+1기/Lv)', start:30, nMax:5, max:8, group:'eco', sect:'시작 자원' },
   start_turret:  { name:'시작 포탑',   desc:'시작 시 가드 타워 배치 (1기)',    start:80, nMax:1, max:1, group:'eco', sect:'시작 자원' },
   credit_gain:   { name:'크레딧 획득', desc:'인게임 크레딧 획득 증가 (+8%/Lv)', start:25, nMax:5, max:8, group:'eco', sect:'자원 획득' },
   energy_gain:   { name:'에너지 획득', desc:'인게임 에너지 획득 증가 (+8%/Lv)', start:25, nMax:5, max:8, group:'eco', sect:'자원 획득' },
@@ -2945,7 +2944,7 @@ const META_BUILDS = {   // 탭(group) → 섹션(sect) 2단 분류. 같은 sect�
   team_atk:      { name:'전체 공격력',   desc:'모든 유닛 공격력 증가 (+4%/Lv)',  start:60, nMax:5, max:8, group:'team', sect:'팀 강화' },
   team_aspd:     { name:'전체 공격속도', desc:'모든 유닛 공격 속도 증가 (+3%/Lv)', start:55, nMax:5, max:8, group:'team', sect:'팀 강화' },
   team_luck:     { name:'전체 고등급 확률', desc:'모든 플레이어 레전드+ 뽑기 가중 (+6%/Lv)', start:60, nMax:5, max:8, group:'team', sect:'팀 강화' },
-  team_credit:   { name:'전체 시작 크레딧',desc:'모든 플레이어 시작 크레딧 (+25/Lv)', start:45, nMax:5, max:8, group:'team', sect:'팀 강화' },
+  team_credit:   { name:'전체 시작 크레딧',desc:'모든 플레이어 시작 크레딧 (+10/Lv)', start:45, nMax:20, max:20, group:'team', sect:'팀 강화' },
   team_enemy_hp: { name:'전체 적 체력',  desc:'모든 적 체력 감소 (-2.5%/Lv)', start:60, nMax:5, max:8, group:'team', sect:'팀 적 약화' },
   team_enemy_def:{ name:'전체 적 방어', desc:'모든 적 방어력 감소 (-1/Lv)',  start:55, nMax:5, max:8, group:'team', sect:'팀 적 약화' },
   // ── 보스(공용·개인) ──
@@ -2999,9 +2998,8 @@ function metaBonus(){ const L=id=>metaEffLv(id), T=id=>teamEffLv(id);   // 효�
     enemyArmor:  L('enemy_def_down')*1 + T('team_enemy_def')*1,
     enemySlowMul:1,   // 적 이속 감소 업그레이드 제거(개인·팀) → 배율 고정
     unitCap:     0,   // 최대 유닛은 100 고정(증가 업그레이드 제거)
-    startCredit: L('start_credit')*20 + T('team_credit')*25,
+    startCredit: L('start_credit')*25 + T('team_credit')*10,
     startEnergy: L('start_energy')*10,
-    startUnits:  L('start_unit'),
   startTurret: L('start_turret'),
     guaranteed:  L('guaranteed'),
     luck:        L('gacha_luck'),
@@ -4409,10 +4407,10 @@ const SPAWN_LEAD=0.58;   // 출현 이펙트 시작 → 실제 등장(에너지 
 const PBOSS_TYPES=[
   // hp=고정 체력 / ar=방어 / rec=권장 전투 등급(표시용) / unlock=해금에 필요한 '현재 보유 전체 수집' 등급 / bonus·egy=처치 보상
   // 업그레이드 0에서도 권장 등급을 모으면 충분히 잡히도록 체력을 낮춤. 보스별 쿨다운은 개별(G.pbossCds). 보상은 더 축소.
-  {id:'easy',  name:'와이번',   model:'wyvern',   rec:'레어~에픽',   unlock:'time', unlockSec:60, hp:18000,   ar:0,   bonus:80,  egy:10, col:'#b8c0cc'},   // 첫 보스=해금조건 없이 게임 시작 60초 후 소환 가능
-  {id:'mid',   name:'이지스',   model:'aegis',    rec:'유니크',      unlock:'rare',   hp:95000,   ar:60,  bonus:160, egy:18, col:'#b06bff'},
-  {id:'upper', name:'베히모스', model:'behemoth', rec:'유니크~초월', unlock:'epic',   hp:300000,  ar:280, bonus:240, egy:26, col:'#ff8a3b'},
-  {id:'super', name:'크로노스', model:'kronos',   rec:'초월',        unlock:'unique', hp:720000,  ar:500, bonus:320, egy:36, col:'#ff2bd6'},   // 모선(SC2) 대신 크로노스 재사용
+  {id:'easy',  name:'와이번',   model:'wyvern',   rec:'레어~에픽',   unlock:'time', unlockSec:60, hp:18000,   ar:0,   bonus:100, egy:10, col:'#b8c0cc'},   // 첫 보스=해금조건 없이 게임 시작 60초 후 소환 가능
+  {id:'mid',   name:'이지스',   model:'aegis',    rec:'유니크',      unlock:'rare',   hp:95000,   ar:60,  bonus:150, egy:18, col:'#b06bff'},
+  {id:'upper', name:'베히모스', model:'behemoth', rec:'유니크~초월', unlock:'epic',   hp:300000,  ar:280, bonus:200, egy:26, col:'#ff8a3b'},
+  {id:'super', name:'크로노스', model:'kronos',   rec:'초월',        unlock:'unique', hp:720000,  ar:500, bonus:250, egy:36, col:'#ff2bd6'},   // 모선(SC2) 대신 크로노스 재사용
 ];
 // 개인 보스 해금: 해당 등급 가챠 유닛 4종을 '현재(이번 판)' 모두 보유하면 열림.
 function pbossUnlockNeed(pt){ return (typeof gachaUnitsOfTier==='function')?gachaUnitsOfTier(pt.unlock).map(u=>u.id):[]; }
@@ -7453,8 +7451,6 @@ function startGameNow(activePlayers, myNum, names){
   G.mineral += G.metaB.startCredit; G.gas += G.metaB.startEnergy;   // 시작 크레딧/에너지 지급
   G.guarTickets = G.metaB.guaranteed;                     // 확정 뽑기권(레어+ 보장)
   if(mapCfg('coopBoss',true)) spawnCoopBoss(1);            // 공용 보스(맵 설정으로 켜고 끔)
-  for(let i=0;i<G.metaB.startUnits;i++){ const ctr=trackCenter(); const pool=gachaUnitsOfTier('common');
-    spawnGachaUnit(pool[Math.floor(Math.random()*pool.length)].id, ctr.x+(Math.random()-.5)*.1, ctr.y+(Math.random()-.5)*.1); }  // 시작 유닛 지급
   if(G.metaB.startTurret){ const tp=FIXED_SLOTS.turret[0];   // 메타: 시작 포탑(가드 타워 1기 무료 배치)
     G.units.push(initUnitStats({uid:G.idSeq++, id:'turret', hero:false, lv:1, x:tp.x, y:tp.y, cd:0, fixed:true})); }
   initPlayerSim();         // 다른 플레이어 트랙 적 누적 시뮬 초기화
