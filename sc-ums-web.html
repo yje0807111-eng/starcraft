@@ -289,7 +289,7 @@
   #deselTop svg{filter:drop-shadow(0 0 5px var(--neon-glow))}
   #deselTop:active{transform:translateY(1px);border-color:var(--neon);box-shadow:0 0 12px var(--neon-glow)}
   /* 상시 공용 보스 HP 바 */
-  /* 심플: 피통(HP 바)만 또렷, 이름·기여도·테두리는 반투명으로 배경과 어우러짐 */
+  /* 심플: 피통(HP 바)만 또렷, 이름·테두리는 반투명으로 배경과 어우러짐 */
   #coopBossBar{position:absolute;top:60px;right:9px;z-index:19;pointer-events:none;width:166px;
     transform:scale(.8);transform-origin:top right;   /* 우상단 보스 구역 0.8 축소(왼쪽 화면 침범 방지) */
     display:flex;flex-direction:column;background:none;border:none;box-shadow:none;padding:0}
@@ -297,7 +297,6 @@
   #coopBossBar .cbMid{width:100%}
   #coopBossBar .cbTop{display:flex;align-items:baseline;justify-content:center;gap:6px;margin-bottom:2px}
   #coopBossBar .cbName{font-size:var(--fs-xs);font-weight:700;color:rgba(255,208,214,.66);letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 2px rgba(0,0,0,.85)}
-  #coopBossBar .cbContrib{flex:0 0 auto;font-size:8px;font-weight:700;color:rgba(180,190,200,.6);white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,.85)}
   #coopBossBar .cbBarOuter{position:relative;height:13px;border-radius:var(--r-md);background:rgba(0,0,0,.42);overflow:hidden;border:1px solid rgba(255,255,255,.1)}
   #coopBossBar .cbBarFill{height:100%;border-radius:var(--r-md);width:100%;background:linear-gradient(90deg,#c4203a,#ff5c6e);
     box-shadow:0 0 6px rgba(255,80,100,.5);transition:width .25s ease-out}
@@ -307,7 +306,6 @@
   #coopBossBar.bossMode{left:50%;right:auto;transform:translateX(-50%);top:84px;width:64%;max-width:250px;z-index:24}
   #coopBossBar.bossMode .cbTop{justify-content:center}
   #coopBossBar.bossMode .cbName{font-size:var(--fs-sm);color:rgba(255,210,216,.95)}
-  #coopBossBar.bossMode .cbContrib{color:rgba(200,210,220,.8)}
   #coopBossBar.bossMode .cbBarOuter{height:15px}
   #coopBossBar.bossMode .cbHpTxt{font-size:var(--fs-md);line-height:15px}
   /* 공용 보스 토벌장 팝업 — 아레나(vBoss/cvMarine)는 뒤로 비치고, 컨트롤만 위에 */
@@ -2026,7 +2024,7 @@
     <!-- 상시 공용 보스(협동) HP 바 — 메인 전투 화면 상단 -->
     <div id="coopBossBar" class="hide" onclick="toggleBossPopup(event)" title="보스 메뉴">
       <div class="cbMid">
-        <div class="cbTop"><span class="cbName" id="cbName"></span><span class="cbContrib" id="cbContrib"></span></div>
+        <div class="cbTop"><span class="cbName" id="cbName"></span></div>
         <div class="cbBarOuter"><div class="cbBarFill" id="cbFill"></div><span class="cbHpTxt" id="cbHp"></span></div>
       </div>
     </div>
@@ -2529,8 +2527,8 @@ const U = {
   goliath: {name:'스트라이더', icon:'⚙️', cost:9,  dmg:30, up:30, hdmg:80, hup:80, range:.26, cd:30, splash:false, color:'#5ad1ff', size:21, wpn:'mech', atk:'missile', hp:125, armor:1, shield:0,   energy:0,   moveSpd:.08, airDmg:25, airUp:25, hairDmg:70, hairUp:70, model3d:'goliath'},
   archon:  {name:'보이드',   icon:'🔮', cost:10, dmg:30, up:20, hdmg:45, hup:55, range:.16, cd:28, splash:true,  color:'#ffc040', size:23, wpn:'pro',  atk:'psi',     hp:10,  armor:0, shield:350, shArmor:1, energy:0,   moveSpd:.10, model3d:'archon'},
   // 방어 구조물(디텍터) — 엑셀: 터렛 공격75 / 포토캐논 공격321. moveSpd:0(고정)
-  turret:  {name:'가드 타워',     icon:'🗼', cost:100, dmg:75,  up:20, hdmg:150, hup:40, range:.26, cd:34, splash:false, color:'#9fd6ff', size:11, wpn:'mech', atk:'missile', hp:200, armor:2, shield:0,   energy:0, moveSpd:0, detector:true, airDmg:75, airUp:20, hairDmg:150, hairUp:40, model3d:'turret'},
-  photon:  {name:'플라즈마 타워', icon:'🔵', cost:200, dmg:321, up:40, hdmg:500, hup:80, range:.24, cd:40, splash:false, color:'#62d0ff', size:12, wpn:'pro',  atk:'plasma',  hp:100, armor:0, shield:100, shArmor:1, energy:0, moveSpd:0, detector:true, model3d:'photon'},
+  turret:  {name:'가드 타워',     icon:'🗼', cost:200, dmg:75,  up:20, hdmg:150, hup:40, range:.26, cd:34, splash:false, color:'#9fd6ff', size:11, wpn:'mech', atk:'missile', hp:200, armor:2, shield:0,   energy:0, moveSpd:0, detector:true, airDmg:75, airUp:20, hairDmg:150, hairUp:40, model3d:'turret'},
+  photon:  {name:'플라즈마 타워', icon:'🔵', cost:400, dmg:321, up:40, hdmg:500, hup:80, range:.24, cd:40, splash:false, color:'#62d0ff', size:12, wpn:'pro',  atk:'plasma',  hp:100, armor:0, shield:100, shArmor:1, energy:0, moveSpd:0, detector:true, model3d:'photon'},
 };
 const HERO_STAT_MUL=2; // 영웅은 체력/보호막 2배(기본값, 조정 가능)
 // 유닛 인스턴스에 생존 스탯 초기화(현재=최대). 추후 전투형 맵에서 u.hp 등을 깎으면 됨.
@@ -2722,9 +2720,9 @@ function enemyRace(n){ return ENEMY_RACE[n]||'terran'; }
 const USEMAPS={
   nemo:  { id:'nemo',   name:'네모네모 디펜스', desc:'사각 트랙을 도는 적을 막는 협동 디펜스', players:'1-8', pop:9820, icon:'🟥', rec:true,  isNew:false, playable:true,
            cfg:{ rounds:30, roundTime:90, prepTime:10, startCredits:120, startEnergy:0, maxUnits:100,
-                 killCredit:0.5, killEnergy:0.03, specialCredit:12, gachaCost:30, energyDrawCost:40, coopBoss:true, roster:'all',
+                 killCredit:1, killEnergy:0.03, specialCredit:12, gachaCost:60, energyDrawCost:80, coopBoss:true, roster:'all',
                  enemiesPerRound:100, bossEvery:10, loseCount:200,
-                 roundClearCreditBase:6, roundClearCreditPer:2, roundClearEnergyBase:2, roundClearEnergyPer:0.5 } },
+                 interestPer:100, interestRate:0.05, interestCap:500, roundClearEnergyBase:2, roundClearEnergyPer:0.5 } },
   sunken:{ id:'sunken', name:'가시탑 디펜스', desc:'가시탑으로 길목을 막는 타워 디펜스', players:'1-8', pop:8730, icon:'🌿', rec:true,  isNew:false, playable:false, cfg:{} },
   marine:{ id:'marine', name:'용병 키우기',     desc:'용병을 성장시켜 최강으로 키우는 RPG', players:'1-6', pop:7610, icon:'🔫', rec:true,  isNew:false, playable:false, cfg:{} },
   temple:{ id:'temple', name:'성소 공성전',     desc:'상대 성소를 먼저 파괴하는 공성전',     players:'2-8', pop:6240, icon:'🏛️', rec:false, isNew:true,  playable:false, cfg:{} },
@@ -2928,6 +2926,7 @@ const META_BUILDS = {   // 탭(group) → 섹션(sect) 2단 분류. 같은 sect�
   start_turret:  { name:'시작 포탑',   desc:'시작 시 가드 타워 배치 (1기)',    start:80, nMax:1, max:1, group:'eco', sect:'시작 자원' },
   credit_gain:   { name:'크레딧 획득', desc:'인게임 크레딧 획득 증가 (+8%/Lv)', start:25, nMax:5, max:8, group:'eco', sect:'자원 획득' },
   energy_gain:   { name:'에너지 획득', desc:'인게임 에너지 획득 증가 (+8%/Lv)', start:25, nMax:5, max:8, group:'eco', sect:'자원 획득' },
+  interest_cap:  { name:'이자 상한',   desc:'라운드 정산 이자의 보유 크레딧 인정 한도 증가 (+100/Lv)', start:30, nMax:5, max:8, group:'eco', sect:'자원 획득' },
   // ── 생산(뽑기·자동화) ──
   gacha_luck:    { name:'고등급 확률', desc:'레전드+ 뽑기 확률 가중 (+12%/Lv)', start:35, nMax:5, max:8, group:'prod', sect:'뽑기' },
   gacha_double:  { name:'추가 생산',   desc:'뽑기 시 1기 추가 확률 (+6%/Lv)',  start:30, nMax:5, max:8, group:'prod', sect:'뽑기' },
@@ -2993,6 +2992,7 @@ function metaBonus(){ const L=id=>metaEffLv(id), T=id=>teamEffLv(id);   // 효�
   return {
     creditMul:   1 + L('credit_gain')*0.08,
     energyMul:   1 + L('energy_gain')*0.08,
+    interestCap: L('interest_cap')*100,   // 이자 정산 보유 크레딧 인정 한도 보너스(기본 한도는 맵 cfg)
     atkMul:      1 + L('unit_atk_up')*0.05 + T('team_atk')*0.04,
     aspdMul:     Math.max(0.42, 1 - L('unit_aspd')*0.04 - T('team_aspd')*0.03),   // 공격 쿨다운 배율(낮을수록 빠름) + 팀 공속
     enemyHpMul:  Math.max(0.3, 1 - L('enemy_hp_down')*0.03 - T('team_enemy_hp')*0.025),
@@ -3024,13 +3024,9 @@ function maxUnits(){ return mapCfg('maxUnits',MAX_UNITS) + ((G.metaB&&G.metaB.un
 // 게임 종료 정산: 이번 판에서 모은 포인트(G.points)에 난이도 배율을 곱해 계정에 누적·저장(1회만).
 // 코인(◎ = 다음 판 업그레이드 화폐)은 '월드보스(공용 보스)' 처치로만 획득 — coopBossDown()이 G.points에 적립.
 function runRoundPoints(){ return G.points||0; }   // 이번 판 적립 포인트(월드보스 처치 합) = 정산 대상
-function isTopCoopContributor(){ const c=G.coopContrib||{}, me=G.myPlayer||1, mine=c[me]||0;   // 멀티: 공용보스 기여 1위 여부
-  if(mine<=0) return false; for(const k in c){ if(+k!==me && c[k]>mine) return false; } return true; }
 function bankRunPoints(){ if(G._pointsBanked) return G._bankedAmt||0; G._pointsBanked=true;
   const cm=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).coinMult;
-  const bonus=(typeof coopActive==='function'&&coopActive()&&isTopCoopContributor())?1:0;   // 멀티 & 기여 1위 = +1코인(개인플레이=없음)
-  G._bankBonus=bonus;
-  const gained=Math.round((G.points||0)*cm)+bonus;   // 코인 = 월드보스 처치 포인트 × 난이도 배율 + 멀티 기여 보너스
+  const gained=Math.round((G.points||0)*cm);   // 코인 = 월드보스 처치 포인트 × 난이도 배율
   if(gained>0){ PLAYER_META.coins=(PLAYER_META.coins||0)+gained; saveMeta(); }
   G._bankedAmt=gained; return gained; }
 // 메타 빌드 레벨업(코인 차감)
@@ -3103,22 +3099,20 @@ function coopBossMaxHp(lv){
   return Math.round(45000*diff*coopBossPlayers()*Math.pow(2.0, lv-1)*late*hpDown);
 }
 function makeCoopBoss(lv){ const max=coopBossMaxHp(lv);
-  return { lv:lv, hp:max, max:max, contrib:{}, dead:false, name:'드레드노트' }; }   // 공용보스=공중 기함(배틀크루저) 이름
+  return { lv:lv, hp:max, max:max, dead:false, name:'드레드노트' }; }   // 공용보스=공중 기함(배틀크루저) 이름
 function spawnCoopBoss(lv){ G.coopBoss=makeCoopBoss(lv); updateCoopBossBar(); }
-// 적에게 데미지를 줄 때 공용 보스에게도 기여 누적(내 기여 = 내 포인트 보상)
+// 적에게 데미지를 줄 때 공용 보스 체력 차감(기여도 시스템 제거)
 function coopBossDamage(amt, num, remote){ const cb=G.coopBoss; if(!cb||cb.dead) return;
-  cb.hp=Math.max(0, cb.hp-amt); cb.contrib[num]=(cb.contrib[num]||0)+amt;
-  G.coopContrib=G.coopContrib||{}; G.coopContrib[num]=(G.coopContrib[num]||0)+amt;   // 게임 전체 누적 기여(보너스 코인 판정용)
+  cb.hp=Math.max(0, cb.hp-amt);
   if(!remote && typeof coopActive==='function' && coopActive()) coopSend('bossdmg',{amt:amt, num:num});
   if(cb.hp<=0) coopBossDown();
   updateCoopBossBar(); }
 function coopBossDown(){ const cb=G.coopBoss; if(!cb||cb.dead) return; cb.dead=true;
-  const me=G.myPlayer||1; const share=Math.min(1,(cb.contrib[me]||0)/cb.max);
   const rewardMul=1+buildLevel('boss_reward_up')*0.1;
   const pts=Math.max(1, Math.round(cb.lv*rewardMul));   // n번째 보스 = nP (포인트의 유일한 수입원)
   G.points += pts;   // 게임 종료 시 정산되는 포인트에 합산
   if(typeof playSfx==='function') playSfx('win');
-  addChat('', '👹 월드 보스 ['+cb.name+'] 처치! 기여 '+Math.round(share*100)+'% · +'+pts+' 포인트', '#ff8a9a', true);
+  addChat('', '👹 월드 보스 ['+cb.name+'] 처치! +'+pts+' 포인트', '#ff8a9a', true);
   const nextLv=cb.lv+1;
   if(G._coopBossT) clearTimeout(G._coopBossT);
   G._coopBossT=setTimeout(()=>{ if(G.phase==='playing'){ spawnCoopBoss(nextLv); if(typeof playSfxT==='function') playSfxT('boss',1500); } }, 2500);   // 상시: 더 강한 보스 재등장 + 등장음
@@ -3130,10 +3124,6 @@ function updateCoopBossBar(){ const bar=document.getElementById('coopBossBar'); 
   const fill=document.getElementById('cbFill'); if(fill) fill.style.width=pct+'%';
   const nm=document.getElementById('cbName'); if(nm) nm.textContent=cb.name;
   const hp=document.getElementById('cbHp'); if(hp) hp.textContent=Math.ceil(cb.hp).toLocaleString()+' / '+cb.max.toLocaleString();
-  const ct=document.getElementById('cbContrib'); if(ct){ const me=G.myPlayer||1; const sh=Math.round(Math.min(1,(cb.contrib[me]||0)/cb.max)*100);
-    let top=null; for(const k in cb.contrib){ if(!top||cb.contrib[k]>cb.contrib[top]) top=k; }   // 기여 1위(멀티 식별)
-    const multi=G.activePlayers&&G.activePlayers.length>1 && top && +top!==me && cb.contrib[top]>0;
-    ct.textContent='내 기여 '+sh+'%'+(multi?(' · 1위 '+((G.playerNames&&G.playerNames[top])||('P'+top))+' '+Math.round(Math.min(1,cb.contrib[top]/cb.max)*100)+'%'):''); }
 }
 // ── 보스방 파견 (최대 2기, 지정 유닛만) ──
 const BOSS_DEPLOY_CAP=2;
@@ -4040,8 +4030,8 @@ function buyUnit(id){
 const GACHA_UP_MAX=5, CREDIT_UP_MAX=6;   // 상한 하향(스노볼 차단)
 const GACHA_UP_STEP=0.06;   // 레벨당 상위(비일반) 등급 가중 +6% (3중 스택 고려해 8→6 하향)
 const CREDIT_UP_STEP=0.05;  // 레벨당 크레딧 획득 +5%(↓8) — 경제 복리 스노볼 완화
-function gachaUpCost(){ return 70 + (G.gachaLuckLv||0)*70; }   // 크레딧(가파른 점증 — 연속 투자 억제)
-function creditUpCost(){ return 70 + (G.creditLv||0)*65; }     // 크레딧(가파른 점증)
+function gachaUpCost(){ return 140 + (G.gachaLuckLv||0)*140; }   // 크레딧(가파른 점증 — 연속 투자 억제) ×2.0
+function creditUpCost(){ return 140 + (G.creditLv||0)*130; }     // 크레딧(가파른 점증) ×2.0
 function buyGachaUp(){ if(G.phase!=='playing'){ toast('게임 중에만 가능합니다'); return; }
   if((G.gachaLuckLv||0)>=GACHA_UP_MAX){ toast('뽑기 확률 최대 레벨'); return; }
   const c=gachaUpCost(); if(G.mineral<c){ toast('크레딧 부족 (뽑기 확률↑ '+c+')'); return; }
@@ -4614,7 +4604,9 @@ function step(dt){
       const n=G.round+1;
       if(n>mapCfg('rounds',TOTAL_ROUNDS)){ G.phase='won'; if(typeof playSfx==='function') playSfx('win'); showOverlay(); return; }
       gainGas(mapCfg('roundClearEnergyBase',1)+Math.floor(G.round*mapCfg('roundClearEnergyPer',0.34)));   // 라운드 클리어 보너스(하향)
-    gainMineral(mapCfg('roundClearCreditBase',10)+G.round*mapCfg('roundClearCreditPer',3));
+    { const _cap=mapCfg('interestCap',500)+((G.metaB&&G.metaB.interestCap)||0); const _per=mapCfg('interestPer',100);   // 라운드 정산 이자: 보유 크레딧의 100당 5%(인정 한도까지) — 비축 보상
+      const _int=Math.floor(Math.min(G.mineral,_cap)/_per)*Math.round(_per*mapCfg('interestRate',0.05));
+      if(_int>0){ const _bm=G.mineral; gainMineral(_int); toast('💰 이자 +'+(G.mineral-_bm)+' 크레딧 (보유 '+_bm+')'); } }
       G.round=n; beginActivePhase(); }   // 2라운드부터는 준비시간 없이 즉시 전투
   }
   // 스폰(전투 단계, 일반 라운드만 — 50초 동안 0.5초당 1마리, 1마리는 스페셜)
@@ -6096,7 +6088,7 @@ function upgSlotHTML(it){
     return '<div class="cmdSlot maxed"><div class="ci">'+it.icon+'</div><div class="clv">MAX</div></div>';
   }
   const cls='cmdSlot up'+(G.gas<it.cost?' dim':'');   // 가스 부족이어도 막지 않음(누르면 알림)
-  return '<div class="'+cls+'" onpointerdown="upgHoldStart(\''+it.wpn+'\',event)">'   // 탭=1회 / 1초 이상 길게=0.1초마다 연속
+  return '<div class="'+cls+'" onpointerdown="upgHoldStart(\''+it.wpn+'\',event)">'   // 탭=1회 / 0.5초 이상 길게=0.05초마다 연속
     +'<div class="ci">'+it.icon+'</div>'
     +'<div class="clv">'+lv+'<span class="cmax">/'+UPG_MAX+'</span></div>'
     +'<div class="ccost">'+ENERGY_ICON+it.cost+'</div></div>';
@@ -6161,7 +6153,7 @@ function upgHoldStart(wpn, ev){ if(ev){ ev.preventDefault(); ev.stopPropagation(
   research(wpn);                       // 즉시 1회
   upgHoldStop();
   _upgHold={wpn:wpn};
-  _upgHold.delay=setTimeout(()=>{ if(_upgHold&&_upgHold.wpn===wpn) _upgHold.rep=setInterval(()=>research(wpn),100); }, 1000); }   // 1초 후부터 0.1초마다 연속 업그레이드
+  _upgHold.delay=setTimeout(()=>{ if(_upgHold&&_upgHold.wpn===wpn) _upgHold.rep=setInterval(()=>research(wpn),50); }, 500); }   // 0.5초 후부터 0.05초마다 연속 업그레이드
 function upgHoldStop(){ if(_upgHold){ clearTimeout(_upgHold.delay); if(_upgHold.rep) clearInterval(_upgHold.rep); _upgHold=null; } }
 ['pointerup','pointercancel'].forEach(e=>document.addEventListener(e, upgHoldStop));   // 손 떼면 어디서든 중단
 window.addEventListener('blur', upgHoldStop);
@@ -6409,7 +6401,7 @@ function showOverlay(){ const ov=document.getElementById('ov'),tt=document.getEl
     stats.style.display=''; stats.innerHTML=
       ovStatRow('플레이타임', fmtTime(G.timeSec))
      +ovStatRow('도달 라운드', G.round+' / '+mapCfg('rounds',TOTAL_ROUNDS))
-     +ovStatRow('받은 코인', '◎ '+gp+(G._bankBonus?' <span class="osB">(기여 1위 +1)</span>':''));
+     +ovStatRow('받은 코인', '◎ '+gp);
     bt.textContent=(multi&&!quit)?'관전하기':'다시하기';   // 자발적 종료는 관전 아님 → 다시하기
     bt2.style.display=''; bt2.textContent='로비로 돌아가기';
   }
