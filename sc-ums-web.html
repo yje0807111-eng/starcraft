@@ -2927,31 +2927,34 @@ const META_BUILDS = {   // 탭(group) → 섹션(sect) 2단 분류. 같은 sect�
   energy_gain:   { name:'에너지 획득', desc:'인게임 에너지 획득 증가 (+5%/Lv)', start:25, nMax:10, max:10, group:'eco', sect:'자원 획득' },
   interest_cap:  { name:'이자 상한',   desc:'라운드 정산 이자 +10/Lv (보유 인정 한도 +100/Lv)', start:30, nMax:10, max:10, group:'eco', sect:'자원 획득' },
   // ── 생산(뽑기·자동화) ──
-  gacha_luck:    { name:'고등급 확률', desc:'레전드+ 뽑기 확률 가중 (+12%/Lv)', start:35, nMax:5, max:8, group:'prod', sect:'뽑기' },
-  gacha_double:  { name:'추가 생산',   desc:'뽑기 시 1기 추가 확률 (+6%/Lv)',  start:30, nMax:5, max:8, group:'prod', sect:'뽑기' },
-  // 자동화 해금(생산 섹션 통합) — 1회 구매로 인게임 on/off 토글 해금 · 가격 높음
+  gacha_luck:    { name:'고등급 확률', desc:'레전드+ 뽑기 확률 가중 (+2%/Lv)', start:20, nMax:10, max:10, group:'prod', sect:'뽑기' },
+  gacha_double:  { name:'추가 생산',   desc:'뽑기 시 1기 추가 확률 (+1%/Lv)',  start:18, nMax:10, max:10, group:'prod', sect:'뽑기' },
+  // 자동화 해금(생산 섹션 통합) — 1회 구매로 인게임 on/off 토글 해금
   auto_unit:    { name:'자동 유닛 소환',  desc:'유닛 자동 뽑기 토글 해금 (0.33초마다 1기)',          start:250, nMax:1, max:1, group:'prod', sect:'자동화' },
   auto_combine: { name:'자동 조합',       desc:'낮은 등급부터 자동 조합 토글 해금 (레전드까지·0.33초)', start:250, nMax:1, max:1, group:'prod', sect:'자동화' },
   auto_energy:  { name:'자동 에너지 변환', desc:'크레딧→에너지 자동 변환 토글 해금 (0.33초마다)',      start:220, nMax:1, max:1, group:'prod', sect:'자동화' },
   auto_pboss:   { name:'자동 개인 보스',   desc:'개인 보스를 쿨마다 자동 소환 토글 해금 (보스별 on/off)', start:400, nMax:1, max:1, group:'prod', sect:'자동화' },
   auto_place:   { name:'자동 유닛 배치',   desc:'새 유닛을 트랙에 자동 정렬 토글 해금 (가운데 쌓임 방지)', start:200, nMax:1, max:1, group:'prod', sect:'자동화' },
-  // ── 전투(아군 강화 · 적 약화) — 초월 단계가 종결 강화 역할(엔드 대체) ──
-  unit_atk_up:   { name:'공격력 증가',  desc:'유닛 공격력 증가 (+5%/Lv)',   start:30, nMax:6, max:9, group:'combat', sect:'아군 강화' },
-  unit_aspd:     { name:'공격 속도',    desc:'아군 공격 속도 증가 (+4%/Lv)', start:30, nMax:6, max:9, group:'combat', sect:'아군 강화' },
-  enemy_hp_down: { name:'적 체력 감소', desc:'내 트랙 적 체력 감소 (-3%/Lv)', start:30, nMax:6, max:9, group:'combat', sect:'적 약화' },
-  enemy_def_down:{ name:'적 방어 감소', desc:'내 트랙 적 방어력 감소 (-1/Lv)', start:25, nMax:6, max:9, group:'combat', sect:'적 약화' },
-  // ── 전체 강화(팀 공유 · 비쌈) ──
-  team_atk:      { name:'전체 공격력',   desc:'모든 유닛 공격력 증가 (+4%/Lv)',  start:60, nMax:5, max:8, group:'team', sect:'팀 강화' },
-  team_aspd:     { name:'전체 공격속도', desc:'모든 유닛 공격 속도 증가 (+3%/Lv)', start:55, nMax:5, max:8, group:'team', sect:'팀 강화' },
-  team_luck:     { name:'전체 고등급 확률', desc:'모든 플레이어 레전드+ 뽑기 가중 (+6%/Lv)', start:60, nMax:5, max:8, group:'team', sect:'팀 강화' },
-  team_credit:   { name:'전체 시작 크레딧',desc:'모든 플레이어 시작 크레딧 (+10/Lv)', start:45, nMax:20, max:20, group:'team', sect:'팀 강화' },
-  team_enemy_hp: { name:'전체 적 체력',  desc:'모든 적 체력 감소 (-2.5%/Lv)', start:60, nMax:5, max:8, group:'team', sect:'팀 적 약화' },
-  team_enemy_def:{ name:'전체 적 방어', desc:'모든 적 방어력 감소 (-1/Lv)',  start:55, nMax:5, max:8, group:'team', sect:'팀 적 약화' },
-  // ── 보스(공용·개인) ──
-  boss_hp_down:  { name:'보스 체력 감소', desc:'월드 보스 체력 감소 (-3%/Lv)',  start:25, nMax:6, max:9, group:'coop', sect:'월드 보스' },
-  boss_atk_up:   { name:'파견 유닛 데미지 증가', desc:'파견 유닛 보스 데미지 증가 (+5%/Lv)', start:25, nMax:6, max:9, group:'coop', sect:'월드 보스' },
-  pboss_reward:  { name:'개인 보스 보상', desc:'개인 보스 처치 보상 증가 (+10%/Lv)', start:30, nMax:5, max:8, group:'coop', sect:'개인 보스' },
-  pboss_cd:      { name:'개인 보스 쿨감', desc:'개인 보스 재소환 쿨다운 감소 (-6%/Lv)', start:30, nMax:5, max:8, group:'coop', sect:'개인 보스' },
+  auto_bossdeploy:{ name:'자동 보스 파견', desc:'가장 강한 유닛을 월드 보스에 자동 파견 토글 해금 (빈 슬롯 채움)', start:300, nMax:1, max:1, group:'prod', sect:'자동화' },
+  // ── 전투(아군 강화 · 적 약화) — 모두 10레벨 ──
+  unit_atk_up:   { name:'공격력 증가',  desc:'유닛 공격력 증가 (+2.5%/Lv)', start:18, nMax:10, max:10, group:'combat', sect:'아군 강화' },
+  unit_aspd:     { name:'공격 속도',    desc:'아군 공격 속도 증가 (+2%/Lv)', start:18, nMax:10, max:10, group:'combat', sect:'아군 강화' },
+  enemy_hp_down: { name:'적 체력 감소', desc:'내 트랙 적 체력 감소 (-2%/Lv)', start:18, nMax:10, max:10, group:'combat', sect:'적 약화' },
+  enemy_def_down:{ name:'적 방어 감소', desc:'내 트랙 적 방어력 감소 (-1/Lv)', start:15, nMax:10, max:10, group:'combat', sect:'적 약화' },
+  // ── 전체 강화(팀 공유) — 모두 20레벨 ──
+  team_atk:      { name:'전체 공격력',   desc:'모든 유닛 공격력 증가 (+1%/Lv)',  start:15, nMax:20, max:20, group:'team', sect:'팀 강화' },
+  team_aspd:     { name:'전체 공격속도', desc:'모든 유닛 공격 속도 증가 (+1%/Lv)', start:15, nMax:20, max:20, group:'team', sect:'팀 강화' },
+  team_luck:     { name:'전체 고등급 확률', desc:'모든 플레이어 레전드+ 뽑기 가중 (+1%/Lv)', start:15, nMax:20, max:20, group:'team', sect:'팀 강화' },
+  team_credit:   { name:'전체 시작 크레딧',desc:'모든 플레이어 시작 크레딧 (+10/Lv)', start:15, nMax:20, max:20, group:'team', sect:'팀 강화' },
+  team_enemy_hp: { name:'전체 적 체력',  desc:'모든 적 체력 감소 (-1%/Lv)', start:15, nMax:20, max:20, group:'team', sect:'팀 적 약화' },
+  team_enemy_def:{ name:'전체 적 방어', desc:'모든 적 방어력 감소 (-0.5/Lv)',  start:15, nMax:20, max:20, group:'team', sect:'팀 적 약화' },
+  boss_hp_down:  { name:'월드보스 체력 감소', desc:'월드 보스 체력 감소 (-1.5%/Lv)', start:15, nMax:20, max:20, group:'team', sect:'월드 보스' },
+  boss_atk_up:   { name:'파견 유닛 데미지', desc:'파견 유닛 보스 데미지 증가 (+1%/Lv)', start:15, nMax:20, max:20, group:'team', sect:'월드 보스' },
+  // ── 보스(개인·라운드) — 모두 10레벨 ──
+  pboss_reward:  { name:'개인 보스 보상', desc:'개인 보스 처치 보상 증가 (+5%/Lv)', start:20, nMax:10, max:10, group:'coop', sect:'개인 보스' },
+  pboss_cd:      { name:'개인 보스 쿨감', desc:'개인 보스 재소환 쿨다운 감소 (-2.5%/Lv)', start:20, nMax:10, max:10, group:'coop', sect:'개인 보스' },
+  rboss_hp_down: { name:'라운드 보스 체력 감소', desc:'10·20·30라운드 보스 체력 감소 (-2%/Lv)', start:20, nMax:10, max:10, group:'coop', sect:'라운드 보스' },
+  rboss_dmg_up:  { name:'라운드 보스 피해 증가', desc:'10·20·30라운드 보스에 주는 피해 증가 (+2%/Lv)', start:20, nMax:10, max:10, group:'coop', sect:'라운드 보스' },
 };
 // 비용 곡선: 일반 레벨 = start×(lv+1) (선형 — 1단계 start, 2단계 2×start … 딱 떨어지는 가격), 초월 레벨 = 일반 누적×[..] (5단위 반올림).
 const META_COST_POW=1.0;
@@ -2993,10 +2996,10 @@ function metaBonus(){ const L=id=>metaEffLv(id), T=id=>teamEffLv(id);   // 효�
     creditMul:   1 + L('credit_gain')*0.05,
     energyMul:   1 + L('energy_gain')*0.05,
     interestCap: L('interest_cap')*100,   // 이자 정산 보유 크레딧 인정 한도 보너스(기본 한도는 맵 cfg)
-    atkMul:      1 + L('unit_atk_up')*0.05 + T('team_atk')*0.04,
-    aspdMul:     Math.max(0.42, 1 - L('unit_aspd')*0.04 - T('team_aspd')*0.03),   // 공격 쿨다운 배율(낮을수록 빠름) + 팀 공속
-    enemyHpMul:  Math.max(0.3, 1 - L('enemy_hp_down')*0.03 - T('team_enemy_hp')*0.025),
-    enemyArmor:  L('enemy_def_down')*1 + T('team_enemy_def')*1,
+    atkMul:      1 + L('unit_atk_up')*0.025 + T('team_atk')*0.01,
+    aspdMul:     Math.max(0.42, 1 - L('unit_aspd')*0.02 - T('team_aspd')*0.01),   // 공격 쿨다운 배율(낮을수록 빠름) + 팀 공속
+    enemyHpMul:  Math.max(0.3, 1 - L('enemy_hp_down')*0.02 - T('team_enemy_hp')*0.01),
+    enemyArmor:  L('enemy_def_down')*1 + T('team_enemy_def')*0.5,
     enemySlowMul:1,   // 적 이속 감소 업그레이드 제거(개인·팀) → 배율 고정
     unitCap:     0,   // 최대 유닛은 100 고정(증가 업그레이드 제거)
     startCredit: L('start_credit')*25 + T('team_credit')*10,
@@ -3006,14 +3009,17 @@ function metaBonus(){ const L=id=>metaEffLv(id), T=id=>teamEffLv(id);   // 효�
     luck:        L('gacha_luck'),
     teamLuck:    T('team_luck'),   // 팀 고등급 확률(레전드+ 가중)
     energyDrawMul: 1 + L('energy_draw_bonus')*0.10,   // 에너지 뽑기 추가 획득
-    gachaDoubleP:  L('gacha_double')*0.06,             // 유닛 뽑기 시 1기 추가 확률
-    pbossRewardMul:1 + L('pboss_reward')*0.10,         // 개인 보스 처치 보상 배율
-    pbossCdMul:    Math.max(0.4, 1 - L('pboss_cd')*0.06),   // 개인 보스 쿨다운 배율
+    gachaDoubleP:  L('gacha_double')*0.01,             // 유닛 뽑기 시 1기 추가 확률
+    pbossRewardMul:1 + L('pboss_reward')*0.05,         // 개인 보스 처치 보상 배율
+    pbossCdMul:    Math.max(0.4, 1 - L('pboss_cd')*0.025),   // 개인 보스 쿨다운 배율
+    rbossHpMul:  Math.max(0.3, 1 - L('rboss_hp_down')*0.02),   // 라운드 보스(10·20·30) 체력 배율
+    rbossDmgMul: 1 + L('rboss_dmg_up')*0.02,                   // 라운드 보스에 주는 피해 배율
     towerMul:    1 + L('tower_power')*0.20,   // 타워 공격력 배율(타워 강화 — 초월 단계가 종결 강화 역할)
     autoUnit:    L('auto_unit')>0,      // 자동화 해금 플래그(인게임 토글로 on/off)
     autoCombine: L('auto_combine')>0,
     autoEnergy:  L('auto_energy')>0,
     autoPboss:   L('auto_pboss')>0,
+    autoBossdeploy: L('auto_bossdeploy')>0,
     autoPlace:   L('auto_place')>0,
   };
 }
@@ -3090,7 +3096,7 @@ const COOP_BOSS_NAMES=['그렘린','데바스테이터','아포칼립스','오�
 function coopBossPlayers(){ return (typeof coopActive==='function'&&coopActive()&&G.coopNumToUid)?Math.max(1,Object.keys(G.coopNumToUid).length):1; }
 function coopBossMaxHp(lv){
   const diff=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).bossHp||1;   // 보스 전용 난이도 계수(트랙 enemyHp와 분리 — enemyHp를 낮춰도 보스/코인 인플레 안 되게)
-  const hpDown=Math.max(0.4, 1 - buildLevel('boss_hp_down')*0.03);
+  const hpDown=Math.max(0.4, 1 - buildLevel('boss_hp_down')*0.015);
   // 월드보스: 단계마다 ×2, 5단계부터 추가 ×2 가속(후반 벽) → 이지·솔로 45k·90k·180k·360k·1.44M·5.76M·23M.
   // 초반 base를 높여(45k) 강한 유닛도 1~4단계를 즉사시키지 못함(월드보스 체감). 봇시뮬: 중간메타 ~4단계·만렙 ~6~8단계 캡.
   // 멀티는 ×players로 확장(인원수만큼 딜도 늘어 1인분 유지).
@@ -4047,7 +4053,7 @@ function gachaWeights(){ const luck=(G.metaB&&G.metaB.luck)||0, teamLuck=(G.meta
   const w={}; for(const t of GACHA_TIER_ORDER) w[t]=GACHA_TIERS[t].prob;
   // 세 소스(비콘 gLv=비일반 전체 / 메타 luck·팀 teamLuck=레전드+)가 모두 곱연산 → 풀스택 폭주 방지로 상한(cap) 적용.
   const midMul=Math.min(1+gLv*GACHA_UP_STEP, 1.6);                                       // rare~unique: 비콘만, ×1.6 상한
-  const hiMul =Math.min((1+gLv*GACHA_UP_STEP)*(1+luck*0.08)*(1+teamLuck*0.06), 3.0);     // legend+: 비콘×메타×팀, ×3.0 상한
+  const hiMul =Math.min((1+gLv*GACHA_UP_STEP)*(1+luck*0.02)*(1+teamLuck*0.01), 3.0);     // legend+: 비콘×메타×팀, ×3.0 상한
   for(const t of ['rare','epic','unique']) w[t]*=midMul;
   for(const t of ['legend','transcend','god']) w[t]*=hiMul;
   let sum=0; for(const t of GACHA_TIER_ORDER) sum+=w[t]; for(const t of GACHA_TIER_ORDER) w[t]/=sum; return w; }
@@ -4223,7 +4229,7 @@ const AUTO_INT=0.33;
 // 정식 게이팅으로 되돌리려면 false로만 바꾸면 됨.
 const AUTO_PREVIEW=true;
 function autoUsable(kind){ if(AUTO_PREVIEW) return true; const mb=G.metaB||{};
-  return kind==='combine'?!!mb.autoCombine : kind==='unit'?!!mb.autoUnit : kind==='energy'?!!mb.autoEnergy : kind==='pboss'?!!mb.autoPboss : kind==='place'?!!mb.autoPlace : false; }
+  return kind==='combine'?!!mb.autoCombine : kind==='unit'?!!mb.autoUnit : kind==='energy'?!!mb.autoEnergy : kind==='pboss'?!!mb.autoPboss : kind==='place'?!!mb.autoPlace : kind==='bossdeploy'?!!mb.autoBossdeploy : false; }
 function stepAuto(dt){
   if(G.phase!=='playing' || !G.auto) return;
   _autoAcc+=dt; if(_autoAcc<AUTO_INT) return; _autoAcc=0;
@@ -4232,7 +4238,15 @@ function stepAuto(dt){
   if(autoUsable('unit')    && a.unit)    autoDrawStep();
   if(autoUsable('energy')  && a.energy)  autoEnergyStep();
   if(autoUsable('pboss')   && a.pboss)   autoPbossStep();
+  if(autoUsable('bossdeploy') && a.bossdeploy) autoBossDeployStep();
 }
+// 자동 보스 파견: 월드보스 생존 시, 빈 슬롯을 '가장 강한' 유닛(최고 공격력)으로 채움
+function autoBossDeployStep(){ if(!G.coopBoss || G.coopBoss.dead) return;
+  while(bossDeployedCount()<BOSS_DEPLOY_CAP){
+    let best=null, bp=-1;
+    for(const u of G.units){ if(u.fixed||u.atBoss) continue; const p=(typeof unitDmg==='function'?unitDmg(u):0); if(p>bp){ bp=p; best=u; } }
+    if(!best || !deployUnitToBoss(best)) break;   // 보낼 유닛 없거나 파견 실패 시 종료
+  } }
 // ── 자동 유닛 배치 = 등급별 '랠리 화살표' ──
 // 켜면 등급별 화살표가 메인에 뜨고(드래그로 배치), 새 유닛은 중앙에서 생성돼 자기 등급 화살표로 걸어감.
 const RALLY_TIERS=['common','rare','epic','unique','legend','transcend','god'];
@@ -4435,7 +4449,7 @@ function spawnEnemy(opts){ opts=opts||{}; const pt=opts.pbType||null; const pbos
   // 라운드 보스(필수처치)는 enemyHp(나이트=320배)면 처치 불가 → 완만한 bossHp 계수(1.0~3.0)로 분리. 초반보정 제외.
   const bossMul=(_D.bossHp||1)*(mb.enemyHpMul||1)*TEMPO_HP_MUL;   // 라운드 램프는 bossHp(r) 곡선에 포함 → 여기선 난이도(bossHp계수)·템포·메타만
   const coinMult=_D.coinMult||1;
-  const hp = pt ? pt.hp : Math.round(boss ? bossHp(G.round)*bossMul : m.hp*hpMul);   // 개인보스=고정 / 라운드보스=bossMul / 일반=hpMul
+  const hp = pt ? pt.hp : Math.round(boss ? bossHp(G.round)*bossMul*((mb.rbossHpMul)||1) : m.hp*hpMul);   // 개인보스=고정 / 라운드보스=bossMul×메타체감 / 일반=hpMul
   const sh = pt ? 0 : (boss?0:Math.round(m.sh*hpMul));
   const mod=(!boss && !special && !pt && G.roundMod)?ROUND_MODS[G.roundMod]:null;   // 라운드 모디파이어(일반 적만)
   let ar = pt ? pt.ar : Math.max(0, (boss?Math.round(m.ar*0.5):m.ar) - (mb.enemyArmor||0));   // 보스 방어=그 라운드의 절반(등급 관문은 일반 라운드가 담당)
@@ -4489,6 +4503,7 @@ function applyAttackerTraits(e){ const a=curAttacker(); if(!a||!a.gid) return; c
   }
 }
 function hitEnemy(e,dmg){ if(!_dotHit) applyAttackerTraits(e);   // 직격 시 특성 디버프(독 틱 재진입 제외)
+  if(e.boss && !e.pboss && G.metaB && G.metaB.rbossDmgMul) dmg*=G.metaB.rbossDmgMul;   // 메타: 라운드 보스(10·20·30)에 주는 피해 증가
   if(e.vulnT>0) dmg*=(1+(e.vuln||0));                            // 마깍(취약)=받는 피해↑
   const ar=Math.max(0,(e.ar||0)-(e.arDown||0));                 // 방깍=유효 방어↓
   let d=Math.max(1, Math.round(dmg*ARMOR_K/(ARMOR_K+ar)));      // 비율 방어 모델
@@ -4655,7 +4670,7 @@ function step(dt){
           withBossFx(()=>{ if(u.gmodel==='racer') emitRacerTracer(u, u.bx*BAW, u.by*BAH, bx2, by2);
             else emitVulcanSpray(u, u.bx*BAW, u.by*BAH, bx2, by2); }); } }
       if(u.bcd>0){ u.bcd-=dt*60; continue; }
-      const bdef=U[u.id]; let bdmg=unitDmg(u)*(1+buildLevel('boss_atk_up')*0.05);   // 메타: 보스 기여딜 증가(파견 데미지에 적용)
+      const bdef=U[u.id]; let bdmg=unitDmg(u)*(1+buildLevel('boss_atk_up')*0.01);   // 메타: 파견 유닛 보스 데미지 증가
       { const _co=cdOf(u,bdef); if(_co!==bdef.cd && !GDMG_OVR[u.gid]) bdmg*=_co/bdef.cd; }
       coopBossDamage(bdmg, G.myPlayer||1, false); u.fireSeq=(u.fireSeq||0)+1;
       if(G.bossOpen && BAW){ const MN=Math.min(BAW,BAH);   // 토벌장 보는 중: 메인과 동일한 fireAttack 이펙트(전용 배열·전용 좌표계)
@@ -5831,15 +5846,15 @@ function togglePbossAuto(ev, id){ if(ev){ ev.stopPropagation(); ev.preventDefaul
   if(typeof playSfx==='function') playSfx('ui_open');
   renderPbossPopup(); }
 // ── 메인 자동화 묶음 버튼/팝업(자동 조합·유닛·에너지) ──
-function autoUtilOwned(){ return {combine:autoUsable('combine'), unit:autoUsable('unit'), energy:autoUsable('energy'), place:autoUsable('place')}; }
-function autoSig(){ const o=autoUtilOwned(); const a=G.auto||{}; return ''+(a.combine?1:0)+(a.unit?1:0)+(a.energy?1:0)+(a.place?1:0)+(o.combine?1:0)+(o.unit?1:0)+(o.energy?1:0)+(o.place?1:0)+(G.rallyShow!==false?1:0); }
+function autoUtilOwned(){ return {combine:autoUsable('combine'), unit:autoUsable('unit'), energy:autoUsable('energy'), place:autoUsable('place'), bossdeploy:autoUsable('bossdeploy')}; }
+function autoSig(){ const o=autoUtilOwned(); const a=G.auto||{}; return ''+(a.combine?1:0)+(a.unit?1:0)+(a.energy?1:0)+(a.place?1:0)+(a.bossdeploy?1:0)+(o.combine?1:0)+(o.unit?1:0)+(o.energy?1:0)+(o.place?1:0)+(o.bossdeploy?1:0)+(G.rallyShow!==false?1:0); }
 function updateAutoFab(){ const b=document.getElementById('autoFab'); if(!b) return;
   if(!G.auto) G.auto={unit:false,combine:false,energy:false,pboss:{}};
-  const o=autoUtilOwned(), anyOwned=o.combine||o.unit||o.energy||o.place;
+  const o=autoUtilOwned(), anyOwned=o.combine||o.unit||o.energy||o.place||o.bossdeploy;
   const showFab=(G.tab==='Main' && G.phase==='playing' && anyOwned);   // 전용 자리(우하단 개인보스 옆) → 선택과 무관하게 표시
   b.classList.toggle('hide', !showFab);
   if(!showFab){ const p=document.getElementById('autoPopup'); if(p) p.classList.add('hide'); return; }
-  b.classList.toggle('act', (o.combine&&G.auto.combine)||(o.unit&&G.auto.unit)||(o.energy&&G.auto.energy)||(o.place&&G.auto.place));
+  b.classList.toggle('act', (o.combine&&G.auto.combine)||(o.unit&&G.auto.unit)||(o.energy&&G.auto.energy)||(o.place&&G.auto.place)||(o.bossdeploy&&G.auto.bossdeploy));
   const pop=document.getElementById('autoPopup');
   if(pop && !pop.classList.contains('hide') && pop._sig!==autoSig()) renderAutoPopup(); }
 function toggleAutoPopup(ev){ if(ev){ev.preventDefault();ev.stopPropagation();}
@@ -5852,7 +5867,8 @@ function renderAutoPopup(){ const pop=document.getElementById('autoPopup'); if(!
   const defs=[['unit','자동 유닛 소환','0.33초마다 1기 뽑기', o.unit],
               ['combine','자동 조합','낮은 등급부터 레전드까지', o.combine],
               ['energy','자동 에너지 변환','크레딧→에너지 전액', o.energy],
-              ['place','자동 유닛 배치','등급별 화살표로 집결 지정', o.place]];
+              ['place','자동 유닛 배치','등급별 화살표로 집결 지정', o.place],
+              ['bossdeploy','자동 보스 파견','가장 강한 유닛을 보스방에 파견', o.bossdeploy]];
   let rows='';
   for(const d of defs){ const kind=d[0], owned=d[3], on=!!G.auto[kind];
     if(owned && kind==='place'){ const shown=(G.rallyShow!==false);   // 자동 배치 = 본 토글 + 화살표 표시 버튼(아랫줄, 텍스트와 안 겹침)
@@ -5870,7 +5886,7 @@ function toggleAuto(kind){ const o=autoUtilOwned(); if(!o[kind]){ toast('업그�
   G.auto[kind]=!G.auto[kind];
   // 자동 유닛 소환 ↔ 자동 에너지 변환 = 상호 배타(둘은 같은 크레딧을 두고 경쟁 → 동시 ON 금지)
   if(G.auto[kind] && (kind==='unit'||kind==='energy')){ const other=(kind==='unit')?'energy':'unit'; if(G.auto[other]){ G.auto[other]=false; toast('⟳ '+(other==='unit'?'자동 유닛 소환':'자동 에너지 변환')+' OFF (동시 사용 불가)'); } }
-  toast('⟳ '+({combine:'자동 조합',unit:'자동 유닛 소환',energy:'자동 에너지 변환',place:'자동 유닛 배치'}[kind])+' '+(G.auto[kind]?'ON':'OFF'));
+  toast('⟳ '+({combine:'자동 조합',unit:'자동 유닛 소환',energy:'자동 에너지 변환',place:'자동 유닛 배치',bossdeploy:'자동 보스 파견'}[kind])+' '+(G.auto[kind]?'ON':'OFF'));
   if(typeof playSfx==='function') playSfx('ui_open');
   renderAutoPopup(); }
 function toggleRallyShow(ev){ if(ev){ ev.stopPropagation(); ev.preventDefault(); }
