@@ -8492,6 +8492,7 @@ function loop(now){
   if(cap>0 && (now-last) < (1000/cap - 1.5)){ requestAnimationFrame(loop); return; }
   const dt=Math.min(now-last,100)/1000; last=now;
   if(typeof window!=='undefined') window.__sandbox=!!(typeof G!=='undefined'&&G&&G.sandbox);   // 샌드박스 플래그(M3D 모듈 참조)
+  if(typeof window!=='undefined') window.__strike=!!(typeof G!=='undefined'&&G&&G.strike);   // 직스 플래그(고정슬롯 고스트 숨김용)
   if(G.strike){ strikeFrame(dt); requestAnimationFrame(loop); return; }   // 컴퓨터가 싸운다: nemo 로직 우회, 직스 프레임만
   tickFakeChat(dt);   // 다른 플레이어 가짜 채팅(임시)
   tickPresence(dt);   // 플레이어 이탈(관전 버튼 비활성화)
@@ -8649,6 +8650,7 @@ function strikeStart(){ if(typeof bgmStop==='function') bgmStop();
   strikeSetTabLabels(STK_TABLABEL);
   const mn=document.getElementById('mapName'); if(mn) mn.textContent='◈ 오토 배틀';
   strikeSwitchTab('Main');
+  if(typeof showLoading==='function') showLoading(null, 1300);   // 직스 진입 로딩 화면(게임 셋업 후 1.3초 노출)
   if(typeof playSfx==='function') playSfx('game_start');
 }
 function strikeEnd(){ if(!STK && !(G&&G.strike)) return;
@@ -8706,6 +8708,7 @@ function strikeBuildClamp(b,sc,W,H){ const hvx=(W/sc)/2, hvy=(H/sc)/2;
   b.cam.x = (b.W<=hvx*2) ? b.W/2 : Math.max(hvx, Math.min(b.W-hvx, b.cam.x));
   b.cam.y = (b.H<=hvy*2) ? b.H/2 : Math.max(hvy, Math.min(b.H-hvy, b.cam.y)); }
 function strikeStep(dt){ const S=STK; if(!S) return; S.t+=dt;
+  strikeStepUnits(dt);   // 전투 시뮬(소환·진격·교전·신전 타격)
   S.cycleT-=dt;
   if(S.cycleT<=0){ S.cycleT+=S.cycleTime; S.round++;
     S.me.gold += strikeIncome(S.me); S.ai.gold += strikeIncome(S.ai);   // 라운드 수입(양 진영)
@@ -8746,6 +8749,47 @@ function strikeFocus(){ const S=STK; if(!S) return {x:0,y:0};
   if(mf&&af) return {x:(mf.x+af.x)/2,y:(mf.y+af.y)/2};
   if(mf) return {x:mf.x,y:mf.y}; if(af) return {x:af.x,y:af.y};
   return {x:S.world/2,y:S.world/2}; }
+
+// ── 전투 시뮬(1차): 양 진영이 주기적으로 종족 유닛 소환 → 대각 진격 → 자동 교전 → 적 신전 타격 ──
+function strikeUnitStats(id){ const d=U[id]||{}; return {
+  hp:Math.round((d.hp||40)*3), dmg:(d.dmg||15), rng:(d.range||0.2)*1400,
+  cdMax:Math.max(0.45,(d.cd||22)/22), spd:(d.moveSpd||0.19)*1800, color:d.color||'#cfd6e2', size:d.size||13 }; }
+function strikeSpawnUnit(side){ const S=STK, me=S[side]; if(!me||me.units.length>=60) return;
+  const ids=(STK_RACES[me.race]||STK_RACES.terran).units; if(!ids.length) return;
+  const id=ids[(Math.random()*ids.length)|0], st=strikeUnitStats(id);
+  const pad=(side==='me')?{x:me.base.x+260,y:me.base.y-440}:{x:me.base.x-260,y:me.base.y+440};   // 메인신전 중앙쪽 패드에서 출격
+  me.units.push({uid:'su'+(S.uidSeq=(S.uidSeq||0)+1), id:id, side:side, x:pad.x+(Math.random()-.5)*240, y:pad.y+(Math.random()-.5)*240,
+    hp:st.hp, maxHp:st.hp, dmg:st.dmg, rng:st.rng, cd:Math.random()*st.cdMax, cdMax:st.cdMax, spd:st.spd, color:st.color, size:st.size, dead:false}); }
+function strikeMoveToward(u,tx,ty,dt){ const dx=tx-u.x, dy=ty-u.y, d=Math.hypot(dx,dy)||1, v=u.spd*dt; u.x+=dx/d*v; u.y+=dy/d*v; }
+function strikeNextStruct(side){ const S=STK, foe=S[side==='me'?'ai':'me']; return (foe.sec&&!foe.sec.dead)?foe.sec:foe.base; }   // 적 2차 신전 → 메인 신전 순
+function strikeCheckOver(){ const S=STK; if(S.over) return;
+  if(S.me.base.hp<=0) S.over='lose'; else if(S.ai.base.hp<=0) S.over='win';
+  if(S.over && typeof toast==='function') toast(S.over==='win'?'⚔️ 승리! 적 메인 신전 파괴':'💥 패배 — 메인 신전 붕괴'); }
+function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
+  S.spawnT=(S.spawnT==null?0:S.spawnT)-dt;
+  if(S.spawnT<=0){ S.spawnT+=2.4; strikeSpawnUnit('me'); strikeSpawnUnit('ai'); if(Math.random()<0.5)strikeSpawnUnit('me'); if(Math.random()<0.5)strikeSpawnUnit('ai'); }
+  for(const side of ['me','ai']){ const me=S[side], foe=S[side==='me'?'ai':'me'];
+    for(const u of me.units){ if(u.dead) continue;
+      let tgt=null, td=1e18;
+      for(const e of foe.units){ if(e.dead) continue; const dx=e.x-u.x, dy=e.y-u.y, d=dx*dx+dy*dy; if(d<td){ td=d; tgt=e; } }
+      const aggro=u.rng+700;
+      if(tgt && td<=aggro*aggro){ const d=Math.sqrt(td);
+        if(d<=u.rng){ u.cd-=dt; if(u.cd<=0){ u.cd=u.cdMax; tgt.hp-=u.dmg; if(tgt.hp<=0) tgt.dead=true; } }
+        else strikeMoveToward(u,tgt.x,tgt.y,dt);
+      } else { const st=strikeNextStruct(side), d=Math.hypot(st.x-u.x,st.y-u.y);
+        if(d<=u.rng+220){ u.cd-=dt; if(u.cd<=0){ u.cd=u.cdMax; st.hp-=u.dmg; if(st.hp<=0){ st.dead=true; strikeCheckOver(); } } }
+        else strikeMoveToward(u,st.x,st.y,dt); } }
+    me.units=me.units.filter(u=>!u.dead); }
+}
+function strikeDrawUnits(ctx,w2s,scale,S){ if(!S) return;
+  for(const side of ['me','ai']){ const ring=side==='me'?'#5aa0ff':'#ff6b7a';
+    for(const u of S[side].units){ const p=w2s(u.x,u.y), rad=Math.max(2.5,(u.size||12)*scale*0.5);
+      ctx.beginPath(); ctx.arc(p.x,p.y,rad,0,6.283); ctx.fillStyle=u.color||'#cfd6e2'; ctx.fill();
+      ctx.lineWidth=1.6; ctx.strokeStyle=ring; ctx.stroke();
+      if(u.hp<u.maxHp){ const bw=rad*2.4, hpr=Math.max(0,u.hp/u.maxHp), bx=p.x-bw/2, by=p.y-rad-5;
+        ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillRect(bx,by,bw,2.5);
+        ctx.fillStyle=hpr>0.4?'#6fe89a':'#ff6b6b'; ctx.fillRect(bx,by,bw*hpr,2.5); } } }
+}
 
 // ── 전장 렌더(#cvMain) ──
 function strikeDrawMain(){ const S=STK; if(!S) return; const cvEl=document.getElementById('cvMain'); if(!cvEl) return;
@@ -8788,6 +8832,7 @@ function strikeDrawMain(){ const S=STK; if(!S) return; const cvEl=document.getEl
   _tmpl(S.ai.sec,'temple_stone','#ff3b54','#ff9aa6',102,'적 2차 신전','#ffc2c8');
   _tmpl(S.me.base,'temple_main','#3a7bff','#7fe0ff',210,'메인 신전','#bfe0ff');
   _tmpl(S.ai.base,'temple_main','#ff3b54','#ff9aa6',210,'적 메인 신전','#ffc2c8');
+  strikeDrawUnits(ctx,w2s,scale,S);   // 전투 유닛(소환·교전) 위에 표시
   // 크기 비교 샘플 유닛 라벨(3D 모델은 cvMarine에 strikeSyncCmpUnits가 렌더)
   if(S.sizeCmp && S.cmpUnits){ ctx.save(); ctx.font='800 10px Rajdhani,"Apple SD Gothic Neo",sans-serif'; ctx.textAlign='center';
     for(const u of S.cmpUnits){ const p=w2s(u.x,u.y), nm=u.nm||((typeof U!=='undefined'&&U[u.id]&&U[u.id].name)||u.id);
@@ -9588,7 +9633,7 @@ window.M3D={
         if(m.deadT>=DEAD_HOLD){ scene.remove(m.holder); models.delete(key); } }
     }
     // ── 비활성 고정 슬롯 고스트(무채색·축소) — 아직 안 지어진 터렛/포토캐논 자리 ──
-    if(typeof window!=='undefined' && window.__sandbox){ for(const [,g] of ghostModels) g.holder.visible=false; }   // 샌드박스: 고정 슬롯 고스트 숨김
+    if(typeof window!=='undefined' && (window.__sandbox||window.__strike)){ for(const [,g] of ghostModels) g.holder.visible=false; }   // 샌드박스·직스: 고정 슬롯 고스트 숨김
     else if(typeof FIXED_IDS!=='undefined'){ const gLive=new Set();
       for(const id of FIXED_IDS){ if(!MODELS[id]) continue;
         const slots=FIXED_SLOTS[id], used=units.filter(u=>u.id===id).length;
