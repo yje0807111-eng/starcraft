@@ -2520,6 +2520,7 @@ const COL={track:'#4aa8ff',enemy:'#ff4455',boss:'#ffc040',accent:'#ff3b3b'};
 //  전투/공격: dmg·up·hdmg·hup(공격력/업글), range(사거리), cd(공격쿨=프레임), splash
 //  생존: hp(체력) armor(방어력) shield(보호막,0=없음) energy(에너지,0=비시전) moveSpd(이동속도,비율/초)
 //  ※ hp/armor/shield/energy/moveSpd 는 추후 전투형 유즈맵용 기본값(엑셀 아님, 조정 가능).
+// ===== [공유 베이스] 유닛 기본 정의 (외형·공격방식·기본 체력/공격력/사거리) — 모든 유즈맵 공유. 기본 스탯은 여기서 재설정 =====
 const U = {
   ghost:   {name:'팬텀', icon:'👻', cost:3,  dmg:21, up:15, hdmg:42, hup:50, range:.28, cd:46, splash:false, color:'#c0c0d8', size:15, wpn:'inf',  atk:'rifle',   hp:45,  armor:0, shield:0,   energy:200, moveSpd:.19, model3d:'ghost'},
   dragoon: {name:'센티넬', icon:'🤖', cost:5,  dmg:20, up:15, hdmg:44, hup:37, range:.26, cd:30, splash:false, color:'#b48bff', size:18, wpn:'pro',  atk:'plasma',  hp:100, armor:1, shield:80,  shArmor:1, energy:0,   moveSpd:.13, model3d:'dragoon'},
@@ -2718,6 +2719,11 @@ function enemyRace(n){ return ENEMY_RACE[n]||'terran'; }
 //           killCredit(킬 보상) gachaCost energyDrawCost sellValue noSellTiers(배열)
 //           coopBoss(공용보스 사용) roster('all' 또는 사용 유닛 id 배열)
 // ============================================================================
+// =====================================================================
+//  구조: [공유 베이스] = 엔진·렌더·3D·UI 셸·유닛 기본 정의 (모든 유즈맵 공유)
+//        [유즈맵 모듈]  = 등급·가챠·적 밸런스·경제 (맵마다 다름/없을 수 있음)
+//        맵별 값 → USEMAPS[id].cfg (+ cfg.bal). 엔진은 mapCfg()/applyMapBalance()로 주입.
+// =====================================================================
 const USEMAPS={
   nemo:  { id:'nemo',   name:'네모네모 디펜스', desc:'사각 트랙을 도는 적을 막는 협동 디펜스', players:'1-8', pop:9820, icon:'🟥', rec:true,  isNew:false, playable:true,
            cfg:{ rounds:30, roundTime:90, prepTime:10, startCredits:250, startEnergy:0, maxUnits:100,
@@ -2735,6 +2741,26 @@ const USEMAPS={
   tmp3:  { id:'tmp3',   name:'미로 탈출 (임시)',   desc:'임시 등록 유즈맵',               players:'1-4', pop:1200, icon:'🌀', rec:false, isNew:false, playable:false, cfg:{} },
 };
 let MAP=USEMAPS.nemo;   // 현재 플레이 중인 유즈맵(게임 시작 시 _selMap으로 설정)
+// ===== [nemo 유즈맵 모듈] 밸런스 (등급 배율·적 HP 스케일) — 맵마다 다름. 새 맵은 이 구조를 복제해 cfg.bal로 오버라이드 =====
+const NEMO_BAL = {
+  tierMul:    { common:1.0, rare:3, epic:10, unique:33, legend:105, transcend:340, god:950 },   // 등급 기본 데미지·체력 배율
+  upTierMul:  { common:1.0, rare:1.2, epic:4.5, unique:13, legend:34, transcend:115, god:300 },  // 등급별 업글 1회 증가폭 배율
+  unitPwr:    1.3,    // 유닛 개별 공격력 배율
+  earlyHpMul: 1.7,    // R10 이전 적 HP 추가 배율
+  early3Boost:{1:3.6, 2:3.1, 3:2.7, 4:2.35, 5:2.0, 6:1.7, 7:1.4, 8:1.18},   // 초반 라운드 HP 부스트(이지/노말)
+  tempoHpMul: 1.35,   // 라운드 1:30 교전시간 보정
+  hpRampBase: 1.14,   // 라운드당 적 HP 램프 밑수
+};
+try{ USEMAPS.nemo.cfg.bal = NEMO_BAL; }catch(e){}   // nemo 모듈에 연결
+// [공유 베이스] 엔진이 참조하는 '활성 맵 밸런스' — 게임 시작 시 applyMapBalance()로 주입(기본 nemo)
+let TIER_MUL=NEMO_BAL.tierMul, UP_TIER_MUL=NEMO_BAL.upTierMul, UNIT_PWR=NEMO_BAL.unitPwr,
+    EARLY_HP_MUL=NEMO_BAL.earlyHpMul, EARLY3_BOOST=NEMO_BAL.early3Boost, TEMPO_HP_MUL=NEMO_BAL.tempoHpMul, HP_RAMP_BASE=NEMO_BAL.hpRampBase;
+function applyMapBalance(){ const b=(MAP&&MAP.cfg&&MAP.cfg.bal)||NEMO_BAL;
+  TIER_MUL=b.tierMul; UP_TIER_MUL=b.upTierMul; UNIT_PWR=b.unitPwr; EARLY_HP_MUL=b.earlyHpMul; EARLY3_BOOST=b.early3Boost; TEMPO_HP_MUL=b.tempoHpMul; HP_RAMP_BASE=b.hpRampBase; }
+// ===== [admin 유즈맵] 관리자용 — nemo 복제본(독립 cfg·밸런스). 복제 후 cfg.bal만 바꾸면 nemo와 분리됨 =====
+const ADMIN_BAL = JSON.parse(JSON.stringify(NEMO_BAL));   // nemo 밸런스 깊은 복제(독립 — 여기서 조정해도 nemo 영향 없음)
+try{ USEMAPS.admin = { id:'admin', name:'관리자용 (테스트)', desc:'밸런스·기능 테스트 전용 — nemo 복제본(독립 조정)', players:'1-8', pop:0, icon:'🛠️', rec:false, isNew:false, playable:true,
+  cfg: Object.assign({}, USEMAPS.nemo.cfg, { bal:ADMIN_BAL, mode:'sandbox' }) }; }catch(e){}
 function mapCfg(k,def){ const c=MAP&&MAP.cfg, v=c?c[k]:undefined; return v===undefined?def:v; }
 
 // ── 엔진 기본값(유즈맵 cfg 미지정 시 사용) ──
@@ -2745,9 +2771,9 @@ const PREP_TIME=10;                        // 라운드 시작 전 준비(유닛
 const ROUND_TIME=90;                       // 라운드 제한시간 1:30(초). 80초 스폰(0.8s×100) + 10초 정리
 const BOSS_ROUND_TIME=120;                  // 보스 라운드 제한시간 2:00 — 필수처치이므로 더 길게
 const BOSS_EVERY=10;                        // 10라운드마다 보스 라운드(보스 1마리만)
-const EARLY_HP_MUL=1.7;   // R10 이전 적 HP 추가 배율(초반 안전마진 축소)
-const EARLY3_BOOST={1:3.6, 2:3.1, 3:2.7, 4:2.35, 5:2.0, 6:1.7, 7:1.4, 8:1.18};   // 초반 라운드(R1~4) HP 추가 부스트, R5부터 1.0. 이지/노말에서만 — 1레어 솔로 방지·멀티유닛 유도
-const TEMPO_HP_MUL=1.35;  // 라운드 1:30(교전시간 1.5배)에 대한 적 체력 보정(이지 ~5/10 목표, 봇시뮬 48%)
+/* EARLY_HP_MUL → NEMO_BAL.earlyHpMul */   // R10 이전 적 HP 추가 배율(초반 안전마진 축소)
+/* EARLY3_BOOST → NEMO_BAL.early3Boost */   // 초반 라운드(R1~4) HP 추가 부스트, R5부터 1.0. 이지/노말에서만 — 1레어 솔로 방지·멀티유닛 유도
+/* TEMPO_HP_MUL → NEMO_BAL.tempoHpMul */  // 라운드 1:30(교전시간 1.5배)에 대한 적 체력 보정(이지 ~5/10 목표, 봇시뮬 48%)
 const LOSE_COUNT=200;                       // 트랙 200기 누적 시 탈락(게임아웃)
 const WARN1=150, WARN2=185;                 // 적 누적 경고 임계치(탈락선 200 비례)
 const SPECIAL_MIN=25;                       // 스페셜 유닛 처치 시 크레딧 보너스
@@ -2863,8 +2889,8 @@ function popShow(id){ const e=document.getElementById(id); if(e) e.classList.rem
 function popHide(id){ const e=document.getElementById(id); if(e) e.classList.add('hide'); return e; }    // 팝업 숨김(공통)
 const TIER_COLOR = { common:'#b8c0cc', rare:'#4aa8ff', epic:'#b06bff', unique:'#ffd23b', legend:'#ff8a3b', transcend:'#ff4d6d', god:'#ff2bd6' };
 // 등급별 전투 능력치 배율(프록시 기준 데미지·체력에 곱함) — 상위 등급일수록 강함. 밸런스 추후 조정.
-const TIER_MUL = { common:1.0, rare:3, epic:10, unique:33, legend:105, transcend:340, god:950 };   // 레어=높은 기본뎀(초반 체감↑) / 초월·갓 기본 배율 소폭 하향(105→92, 270→235: 확률 상향 보상)
-const UP_TIER_MUL = { common:1.0, rare:1.2, epic:4.5, unique:13, legend:34, transcend:115, god:300 };   // 레어 업글배율=일반과 근접(중반엔 일반과 수렴) / 유니크는 에픽보다 확실히 높음 / 초월·갓 집중   // 레전드 13→9: 풀업 레전드가 20라운드를 깨지 않게(초월=클리어 라인 유지, 봇 시뮬 검증)   // 업그레이드 1회당 증가폭 등급 배율(기본딜 배율의 절반 강도)   // 등급당 ×2.2 — 등급 업=급격한 성장(설계: 초월 조합=클리어 라인, 갓=초반 캐리)
+/* TIER_MUL → NEMO_BAL.tierMul */   // 레어=높은 기본뎀(초반 체감↑) / 초월·갓 기본 배율 소폭 하향(105→92, 270→235: 확률 상향 보상)
+/* UP_TIER_MUL → NEMO_BAL.upTierMul */   // 레어 업글배율=일반과 근접(중반엔 일반과 수렴) / 유니크는 에픽보다 확실히 높음 / 초월·갓 집중   // 레전드 13→9: 풀업 레전드가 20라운드를 깨지 않게(초월=클리어 라인 유지, 봇 시뮬 검증)   // 업그레이드 1회당 증가폭 등급 배율(기본딜 배율의 절반 강도)   // 등급당 ×2.2 — 등급 업=급격한 성장(설계: 초월 조합=클리어 라인, 갓=초반 캐리)
 function gachaTierMul(u){ return (u && u.gtier && TIER_MUL[u.gtier]) || 1; }
 // 단순 조합 사다리: 같은 유닛 3개 → 다음 등급 랜덤 1종. (legend↑는 단순조합 없음 — 초월=레시피, 갓=뽑기전용)
 const SIMPLE_COMBINE_TIERS = { common:'rare', rare:'epic', epic:'unique', unique:'legend', transcend:'god' };   // 초월 3개 → 갓 랜덤(조합으로 갓 획득 가능). 초월 모으기 자체가 어려워 갓은 자연히 희소
@@ -3497,7 +3523,8 @@ function geom(W,H){ const inset=W*BOARD_X_INSET, bw=W-inset*2, bh=bw*BOARD_AR, s
   return {inset, bw, bh, side, ox:(W-bw)/2, oy:(H-bh)/2}; }  // bw=가로(넓게), bh=세로(짧게), side=장식 기준(min)
 // 유닛이 머물 수 있는 트랙 안쪽 영역(비율). 트랙선보다 조금 안쪽까지만 허용.
 const UNIT_PAD=18; // 트랙선에서 안쪽 여유(px)
-function innerBounds(){ const {ox,oy,bw,bh}=geom(GW,GH); const pad=UNIT_PAD;
+function innerBounds(){ if(typeof G!=='undefined' && G.sandbox) return { minX:0.04, maxX:0.96, minY:0.05, maxY:0.95 };   // 샌드박스: 보이는 땅 전체를 이동/배치 영역으로
+  const {ox,oy,bw,bh}=geom(GW,GH); const pad=UNIT_PAD;
   return { minX:(ox+pad)/GW, maxX:(ox+bw-pad)/GW, minY:(oy+pad)/GH, maxY:(oy+bh-pad)/GH }; }
 function clampInner(x,y){ const b=innerBounds();
   return { x:Math.max(b.minX,Math.min(b.maxX,x)), y:Math.max(b.minY,Math.min(b.maxY,y)) }; }
@@ -3729,6 +3756,7 @@ function fxLevel(){ return (typeof G!=='undefined'&&G.opt&&G.opt.fx)||'full'; }
 function fxLite(){ return fxLevel()!=='full'; }   // min·off → 빔/타격/스파크/연기/총구/충전/가동파티클 생략
 function fxOff(){ return fxLevel()==='off'; }      // off → 발사체까지 제거
 function drawMain(cvId){ const {ctx,W,H}=setup(cvId||'cvMain'); GW=W;GH=H;
+  if(typeof G!=='undefined' && G.sandbox){ drawSandboxGround(ctx,W,H); return; }
   const {side,ox,oy}=geom(W,H); const R=10;
   // 정적 지형 바닥(우주 배경 + 떠 있는 지형 플랫폼 + 용암 절벽 테두리) — 캐시에서 1회 빌드 후 매 프레임 재사용
   if(_floorW!==W||_floorH!==H||!_floorReady){ _floorReady=buildFloor(W,H); _floorW=W;_floorH=H; }
@@ -3992,7 +4020,7 @@ function placeMergeZone(){ const mz=document.getElementById('mergeZone'); if(mz)
 // ============================================================================
 function unitDmg(u){ const p=unitDmgParts(u); return p.total; }
 // 공격력 분해: {base:기본, up:업그레이드 추가분, total:합계, wlv:계열 업글 레벨}
-const UNIT_PWR=1.3;   // 유닛 개별 공격력 배율(적게·강하게 — 상한 50→35 보정)
+/* UNIT_PWR → NEMO_BAL.unitPwr */   // 유닛 개별 공격력 배율(적게·강하게 — 상한 50→35 보정)
 function unitDmgParts(u){ const d=U[u.id]; const wlv=(G.atkLv&&G.atkLv[gachaWpn(u)])||0;
   const lv=(1+((u.lv||1)-1)*0.6)*gachaTierMul(u)*((G.metaB&&G.metaB.atkMul)||1)*UNIT_PWR*((G.teamAtk)||1);   // 등급·메타·개별 강화 + 팀 공격버프
   const ov=GDMG_OVR[u.gid];   // 구조물 프록시 가챠 유닛의 기본치 교정
@@ -4451,7 +4479,7 @@ function spawnEnemy(opts){ opts=opts||{}; const pt=opts.pbType||null; const pbos
   const mb=G.metaB||{};   // 메타 강화: 적 체력/방어/이속 감소(개인)
   const _D=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal);
   const hpMul=_D.enemyHp*(mb.enemyHpMul||1)*TEMPO_HP_MUL
-  *Math.pow(1.14, Math.max(0, G.round-4))
+  *Math.pow(HP_RAMP_BASE, Math.max(0, G.round-4))
   *(G.round<10?EARLY_HP_MUL:(G.round<13?1.3:1))
   *(_D.enemyHp<=1 ? (EARLY3_BOOST[G.round]||1) : 1);   // ×템포 ×초반보정(R10 이전 ×1.7) ×초반 라운드 부스트(R1~4, 이지/노말만 — 1레어 솔로 방지)
   // 라운드 보스(필수처치)는 enemyHp(나이트=320배)면 처치 불가 → 완만한 bossHp 계수(1.0~3.0)로 분리. 초반보정 제외.
@@ -7462,8 +7490,9 @@ function submitPw(){ if(!_pwRoom) return; const f=document.getElementById('pwFie
   if(v===_pwRoom.pw){ const r=_pwRoom; closePw(); joinRoom(r); }
   else { if(typeof playSfx==='function') playSfx('ui_denied'); document.getElementById('pwErr').textContent='비밀번호가 일치하지 않습니다.'; if(f){ f.value=''; f.focus(); } } }
 function startGameNow(activePlayers, myNum, names){
-  MAP=(typeof _selMap!=='undefined' && _selMap && USEMAPS[_selMap.id]) || USEMAPS.nemo;   // 현재 유즈맵 확정(엔진은 mapCfg로 설정 참조)
+  MAP=(typeof _selMap!=='undefined' && _selMap && USEMAPS[_selMap.id]) || USEMAPS.nemo; if(typeof applyMapBalance==='function') applyMapBalance();   // 현재 유즈맵 확정 + 맵별 밸런스 주입
   if(mapCfg('mode')==='strike'){ strikeStart(); return; }   // 직스 모드 → 독립 모듈(nemo 우회). (3D 에셋은 추후 단계에서 loadMapModels)
+  if(mapCfg('mode')==='sandbox'){ enterSandbox(); return; }   // 관리자용 샌드박스 — 게임 진행 X, 유닛 진열·기본값 편집
   if(typeof bgmStop==='function') bgmStop();   // 게임 진입 시 로비 BGM 정지
   G=newGame(); G.phase='playing'; G.difficulty=_selDiff; G.roundPhase='prep'; G.roundTime=mapCfg('prepTime',PREP_TIME); G.toSpawn=0;
   if(typeof loadAutoCfg==='function') loadAutoCfg();   // 저장된 자동설정·랠리 위치 복원(판 사이 유지)
@@ -8376,11 +8405,59 @@ function drawFx(){ const {ctx,W,H}=setup('cvFx');  // setup이 캔버스 크기 
   ctx.restore();
 }
 // ── 루프 ──
+// ===== [admin 샌드박스] 게임 진행 없이 평지에 유닛 진열 — 기본값 편집 작업대 =====
+function drawSandboxGround(ctx,W,H){
+  ctx.fillStyle=(typeof mkPat==='function' && mkPat(ctx,TILE_BAD,BAD_TILE)) || '#241410';
+  ctx.fillRect(0,0,W,H);
+  if(typeof terrainNoise==='function') terrainNoise(ctx,0,0,W,H,80,3.0);
+  const g=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.max(W,H)*0.72);
+  g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,.28)'); ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  if(typeof G!=='undefined' && G._sandboxRows){ ctx.save(); ctx.font='bold 11px sans-serif'; ctx.textAlign='left'; ctx.textBaseline='middle';
+    G._sandboxRows.forEach(function(row){ const ly=row.y*H;
+      ctx.strokeStyle='rgba(255,255,255,.06)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(W*0.02,ly+H*0.06); ctx.lineTo(W*0.98,ly+H*0.06); ctx.stroke();
+      ctx.fillStyle='rgba(255,224,160,.92)'; ctx.shadowColor='#000'; ctx.shadowBlur=4; ctx.fillText(row.label, W*0.03, ly); ctx.shadowBlur=0;
+    }); ctx.restore(); }
+}
+const SANDBOX_ROSTER={
+  union:    [{n:'레인저',b:'marine'},{n:'스트라이더',b:'goliath'},{n:'팬텀',b:'ghost'},{n:'레이서',b:'marine',gm:'racer'},{n:'발칸',b:'marine',gm:'machinegun'},{n:'브레이커',b:'goliath',gm:'tank'},{n:'템페스트',b:'goliath',gm:'skyguard'},{n:'헬파이어',b:'marine',gm:'hellfire',e:1},{n:'펠리컨',b:'marine',gm:'pelican',e:1},{n:'드레드노트',b:'marine',gm:'dreadnought',e:1}],
+  swarm:    [{n:'리퍼',b:'hydra'},{n:'스내퍼',b:'hydra',gm:'snapper'},{n:'베놈퀸',b:'hydra',gm:'thornqueen'},{n:'매트론',b:'archon',gm:'matron'},{n:'제플린',b:'marine',gm:'overlord',e:1},{n:'스팅어',b:'marine',gm:'stinger',e:1},{n:'베놈',b:'marine',gm:'venom',e:1},{n:'메두사',b:'marine',gm:'medusa',e:1}],
+  aetherial:[{n:'센티넬',b:'dragoon'},{n:'보이드',b:'archon'},{n:'워든',b:'dragoon',gm:'blade'},{n:'스카이댄서',b:'goliath',gm:'skydancer'},{n:'와처',b:'marine',gm:'observer',e:1},{n:'크로노스',b:'marine',gm:'kronos',e:1},{n:'세라프',b:'marine',gm:'seraph',e:1},{n:'아크엔젤',b:'marine',gm:'archangel',e:1},{n:'팔콘',b:'marine',gm:'falcon',e:1}],
+};
+const SANDBOX_RACE_ORDER=['union','swarm','aetherial'];   // 3종족(테란=유니온 / 저그=스웜 / 프로토스=에테리얼), 적·아군 합침
+const SANDBOX_RACE_KO={union:'유니온 (테란)',swarm:'스웜 (저그)',aetherial:'에테리얼 (프로토스)'};
+function placeSandboxUnits(){
+  if(G.idSeq==null) G.idSeq=1; G.units.length=0; G._sandboxRows=[];
+  const COLS=5, dy=0.09, gap=0.055; let yc=0.19;
+  SANDBOX_RACE_ORDER.forEach(function(race){
+    const arr=SANDBOX_ROSTER[race]||[]; if(!arr.length) return;
+    G._sandboxRows.push({label:SANDBOX_RACE_KO[race]||race, y:yc-0.05});
+    const subRows=Math.ceil(arr.length/COLS);
+    arr.forEach(function(it, i){
+      const c=i%COLS, r=(i/COLS)|0;
+      const x=0.20+(c/(COLS-1))*0.70, y=yc+r*dy;
+      const u=initUnitStats({uid:G.idSeq++, id:it.b, hero:false, lv:1, x:x, y:y, cd:0, fixed:false});
+      if(it.gm) u.gmodel=it.gm; u.gname=it.n; if(it.e) u._enemyDisp=true;
+      G.units.push(u);
+    });
+    yc += subRows*dy + gap;
+  });
+}
+function enterSandbox(){
+  if(typeof bgmStop==='function') bgmStop();
+  G=newGame(); G.phase='playing'; G.sandbox=true; G.tab='Main'; G.loading=false; G.roundPhase='idle'; G.paused=false;
+  G.enemies.length=0;
+  if(window.M3D && window.M3D.clearGameModels) window.M3D.clearGameModels();
+  if(typeof setInGame==='function') setInGame(true);   // 하단 콘솔(#bot) 틀 표시
+  placeSandboxUnits();
+  if(typeof updateHud==='function') updateHud();
+  if(typeof drawMain==='function') drawMain();
+}
 let last=performance.now();
 function loop(now){
   const cap=(G.opt&&G.opt.fps)|0;   // FPS 제한(0=무제한). 게임시간은 누적 dt로 유지
   if(cap>0 && (now-last) < (1000/cap - 1.5)){ requestAnimationFrame(loop); return; }
   const dt=Math.min(now-last,100)/1000; last=now;
+  if(typeof window!=='undefined') window.__sandbox=!!(typeof G!=='undefined'&&G&&G.sandbox);   // 샌드박스 플래그(M3D 모듈 참조)
   if(G.strike){ strikeFrame(dt); requestAnimationFrame(loop); return; }   // 컴퓨터가 싸운다: nemo 로직 우회, 직스 프레임만
   tickFakeChat(dt);   // 다른 플레이어 가짜 채팅(임시)
   tickPresence(dt);   // 플레이어 이탈(관전 버튼 비활성화)
@@ -8390,7 +8467,7 @@ function loop(now){
     tickResearch(dt);   // 업그레이드 연구 타이머(진행 중이면 카운트다운, 완료 시 레벨업)
     const _sm=(G.phase==='playing')?G.speedMul:1;   // 배속: 적/시간뿐 아니라 내 유닛·시민 이동도 동일 배속
     for(let k=0;k<_sm;k++){
-      if(G.phase==='playing') step(dt);
+      if(G.phase==='playing' && !G.sandbox) step(dt);
       if(G.tab==='Unit') stepCitizen(dt);             // 시민 이동(도착 시 구매)
       if(G.tab==='Main'){ stepCmdMove(dt); separateUnits(); }   // 내 유닛 이동명령 + 겹침 방지
     }
@@ -8407,7 +8484,7 @@ function loop(now){
   updateSelHp();   // 단일 종류 다중선택 시 유닛별 HP 실시간 갱신
   if(G.sel.length>=1 && document.getElementById('unitCmd').classList.contains('on')) updateCmdRow();   // 명령 행 상태 갱신(단일/다중)
   updateSkillFab();   // 스킬 FAB 쿨다운/버프 실시간(탭 전환·해제도 내부 처리)
-  checkPbossUnlocks();// 개인 보스 해금 감지(채팅 알람 + 버튼 알림)
+  if(!G.sandbox) checkPbossUnlocks();// 개인 보스 해금 감지(채팅 알람 + 버튼 알림)
   updatePbossFab();   // 개인 보스 소환 FAB(메인·쿨다운 실시간)
   updateAutoFab();    // 자동화 묶음 버튼/팝업(표시·토글 상태)
   if(typeof renderRallyArrows==='function') renderRallyArrows();   // 자동 배치 ON 시 등급별 랠리 화살표(드래그)
@@ -9105,7 +9182,7 @@ function attachGun(anim, id){
 // 모델 재질을 타입색 쪽으로 살짝 칠하고 약한 발광 부여(클론들이 재질 공유 → 베이스 1회만 적용)
 function tintModel(root, id){
   // 본체는 원본 자연색 유지, 테두리(림)만 소유자 색으로 은은하게 발광 — 아군=플레이어색 / 적=붉은빛 / 기타=차가운 흰빛
-  const isPlayer = PLAYER_MODELS.has(id);
+  const isPlayer = PLAYER_MODELS.has(id) || (typeof window!=='undefined' && window.__sandbox);   // 샌드박스: 적 모델도 동일(아군) 림으로 통일
   const _EM = (typeof ENEMY_MODEL!=='undefined') ? ENEMY_MODEL : ((typeof window!=='undefined'&&window.ENEMY_MODEL)||{});
   const isEnemy = Object.values(_EM).includes(id);  // observer/overlord
   const rim = isPlayer ? playerRim   // 아군은 공용 림 색(관전 시 한번에 색 전환 가능)
@@ -9477,7 +9554,8 @@ window.M3D={
         if(m.deadT>=DEAD_HOLD){ scene.remove(m.holder); models.delete(key); } }
     }
     // ── 비활성 고정 슬롯 고스트(무채색·축소) — 아직 안 지어진 터렛/포토캐논 자리 ──
-    if(typeof FIXED_IDS!=='undefined'){ const gLive=new Set();
+    if(typeof window!=='undefined' && window.__sandbox){ for(const [,g] of ghostModels) g.holder.visible=false; }   // 샌드박스: 고정 슬롯 고스트 숨김
+    else if(typeof FIXED_IDS!=='undefined'){ const gLive=new Set();
       for(const id of FIXED_IDS){ if(!MODELS[id]) continue;
         const slots=FIXED_SLOTS[id], used=units.filter(u=>u.id===id).length;
         const stack=(typeof FIXED_STACK!=='undefined')&&FIXED_STACK[id], emptyIdx=[];
