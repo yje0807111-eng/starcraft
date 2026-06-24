@@ -2434,16 +2434,18 @@
         <div class="missBlock">
           <div class="missLbl">목표</div>
           <ul class="missList">
-            <li><b>18라운드</b> 방어 성공 시 승리</li>
+            <li><b>30라운드</b> 방어 성공 시 승리</li>
+            <li><b>10·20·30 보스</b>는 제한시간 내 필수 처치</li>
             <li>적 <b>200기</b> 누적 시 패배</li>
           </ul>
         </div>
         <div class="missBlock">
           <div class="missLbl">조작</div>
           <ul class="missList">
-            <li><b>시민</b>으로 유닛 구매 후 맵에 <b>드래그</b> 배치</li>
-            <li>같은 유닛 <b>3개</b>를 <b>합체존</b>에 모아 <b>[조합]</b></li>
-            <li>합체 성공 시 <b>영웅</b> ⭐ 탄생</li>
+            <li><b>시민</b>으로 유닛 뽑기(7등급) 후 맵에 <b>드래그</b> 배치</li>
+            <li>같은 유닛 <b>3기</b>를 <b>합체존</b>에 모아 <b>[조합]</b> → 상위 등급</li>
+            <li><b>업그레이드·타워</b>로 강화 · 금색 <b>스페셜</b>은 보너스</li>
+            <li><b>월드보스</b> 처치 <b>코인</b> → <b>포인트 연구소</b> 영구 강화</li>
           </ul>
         </div>
       </div>
@@ -8678,6 +8680,8 @@ function strikeSync3D(dt){ const S=STK; if(!S) return; const mcv=document.getEle
   const TT=[['tmpMeMain',S.me.base,'temple_main'],['tmpAiMain',S.ai.base,'temple_main'],['tmpMeSec',S.me.sec,'temple_stone'],['tmpAiSec',S.ai.sec,'temple_stone'],['tmpCentral',S.central,'temple_neutral']];
   for(const t of TT){ const n=w2n(t[1].x,t[1].y); list.push({uid:t[0], id:t[2], x:n.x, y:n.y, fixed:true, face:-0.42}); }   // 신전(고정, 살짝 사선)
   if(S.sizeCmp && S.cmpUnits){ for(const u of S.cmpUnits){ const n=w2n(u.x,u.y); list.push({uid:u.uid, id:u.id, x:n.x, y:n.y}); } }
+  for(const side of ['me','ai']){ const fc=(side==='me')?-0.785:2.356;   // 전투 유닛 3D: 진영별 진격 방향으로 향함
+    for(const u of S[side].units){ const n=w2n(u.x,u.y); list.push({uid:u.uid, id:u.id, x:n.x, y:n.y, face:fc}); } }
   M3D.sync(list, W, H, dt, [], [], null, k); }
 // 건물 탭 전용: 내 전용 건설 맵(전장 아님). 화면 1/4 직사각형, 깔끔한 금속 타일 + 건설 격자
 function strikeDrawBuildMap(){ const S=STK; if(!S) return; const cvEl=document.getElementById('cvMain'); if(!cvEl) return;
@@ -8755,7 +8759,7 @@ function strikeFocus(){ const S=STK; if(!S) return {x:0,y:0};
 function strikeUnitStats(id){ const d=U[id]||{}; return {
   hp:Math.round((d.hp||40)*3), dmg:(d.dmg||15), rng:(d.range||0.2)*1400,
   cdMax:Math.max(0.45,(d.cd||22)/22), spd:(d.moveSpd||0.19)*1800, color:d.color||'#cfd6e2', size:d.size||13 }; }
-function strikeSpawnUnit(side){ const S=STK, me=S[side]; if(!me||me.units.length>=60) return;
+function strikeSpawnUnit(side){ const S=STK, me=S[side]; if(!me||me.units.length>=40) return;   // 진영당 상한(3D 성능 고려)
   const ids=(STK_RACES[me.race]||STK_RACES.terran).units; if(!ids.length) return;
   const id=ids[(Math.random()*ids.length)|0], st=strikeUnitStats(id);
   const pad=(side==='me')?{x:me.base.x+260,y:me.base.y-440}:{x:me.base.x-260,y:me.base.y+440};   // 메인신전 중앙쪽 패드에서 출격
@@ -8783,11 +8787,12 @@ function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
     me.units=me.units.filter(u=>!u.dead); }
 }
 function strikeDrawUnits(ctx,w2s,scale,S){ if(!S) return;
+  const use3d=(window.M3D && M3D.ready && M3D.ready() && !(G.opt&&G.opt.model3d===false));   // 3D면 모델은 cvMarine에 렌더 → 2D 도트 생략, HP바만
   for(const side of ['me','ai']){ const ring=side==='me'?'#5aa0ff':'#ff6b7a';
     for(const u of S[side].units){ const p=w2s(u.x,u.y), rad=Math.max(2.5,(u.size||12)*scale*0.5);
-      ctx.beginPath(); ctx.arc(p.x,p.y,rad,0,6.283); ctx.fillStyle=u.color||'#cfd6e2'; ctx.fill();
-      ctx.lineWidth=1.6; ctx.strokeStyle=ring; ctx.stroke();
-      if(u.hp<u.maxHp){ const bw=rad*2.4, hpr=Math.max(0,u.hp/u.maxHp), bx=p.x-bw/2, by=p.y-rad-5;
+      if(!use3d){ ctx.beginPath(); ctx.arc(p.x,p.y,rad,0,6.283); ctx.fillStyle=u.color||'#cfd6e2'; ctx.fill();
+        ctx.lineWidth=1.6; ctx.strokeStyle=ring; ctx.stroke(); }
+      if(u.hp<u.maxHp){ const bw=Math.max(rad*2.4,16), hpr=Math.max(0,u.hp/u.maxHp), bx=p.x-bw/2, by=p.y-(use3d?22:rad+5);
         ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillRect(bx,by,bw,2.5);
         ctx.fillStyle=hpr>0.4?'#6fe89a':'#ff6b6b'; ctx.fillRect(bx,by,bw*hpr,2.5); } } }
 }
