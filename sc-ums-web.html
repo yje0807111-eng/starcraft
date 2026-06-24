@@ -8715,8 +8715,8 @@ function strikeSync3D(dt){ const S=STK; if(!S) return; const mcv=document.getEle
   const TT=[['tmpMeMain',S.me.base,'temple_main'],['tmpAiMain',S.ai.base,'temple_main'],['tmpMeSec',S.me.sec,'temple_stone'],['tmpAiSec',S.ai.sec,'temple_stone'],['tmpCentral',S.central,'temple_neutral']];
   for(const t of TT){ const n=w2n(t[1].x,t[1].y); list.push({uid:t[0], id:t[2], x:n.x, y:n.y, fixed:true, face:-0.42}); }   // 신전(고정, 살짝 사선)
   if(S.sizeCmp && S.cmpUnits){ for(const u of S.cmpUnits){ const n=w2n(u.x,u.y); list.push({uid:u.uid, id:u.id, x:n.x, y:n.y}); } }
-  for(const side of ['me','ai']){ const rc=(side==='me')?'#3aa0ff':'#ff4d5e';   // 전투 유닛 3D: 진영색 림 + 이동/타겟 방향 응시
-    for(const u of S[side].units){ const n=w2n(u.x,u.y); list.push({uid:u.uid, id:u.id, x:n.x, y:n.y, face:u.face, rimCol:rc}); } }
+  for(const side of ['me','ai']){ const ringCol=(side==='me')?'#3aa0ff':'#ff4d5e';   // 본체 림=플레이어색(고정) / 하단 링=팀색(아군 파랑/적군 빨강, 보는 쪽 기준)
+    for(const u of S[side].units){ const n=w2n(u.x,u.y); list.push({uid:u.uid, id:u.id, x:n.x, y:n.y, face:u.face, rimCol:u.pcol, ringCol:ringCol}); } }
   M3D.sync(list, W, H, dt, [], [], null, k); }
 // 건물 탭 전용: 내 전용 건설 맵(전장 아님). 화면 1/4 직사각형, 깔끔한 금속 타일 + 건설 격자
 function strikeDrawBuildMap(){ const S=STK; if(!S) return; const cvEl=document.getElementById('cvMain'); if(!cvEl) return;
@@ -8800,9 +8800,11 @@ function strikeSpawnUnit(side){ const S=STK, me=S[side]; if(!me||me.units.length
   const id=ids[(Math.random()*ids.length)|0], st=strikeUnitStats(id);
   const pads=strikeSpawnPads(side), pad=pads[(Math.random()*pads.length)|0], c=S.world/2;
   const x=pad.x+(Math.random()-.5)*260, y=pad.y+(Math.random()-.5)*260;   // 네모 스폰존 안에서 출현
-  me.units.push({uid:'su'+(S.uidSeq=(S.uidSeq||0)+1), id:id, side:side, x:x, y:y,
+  const slotBase=(side==='me')?0:4; me['_pc']=((me['_pc']||0)+1); const slot=slotBase+((me['_pc'])%4);   // 진영별 4명(아군 0~3 / 적군 4~7) 순환 배정
+  const pcol=(typeof PLAYER_VIEW_COLORS!=='undefined')?PLAYER_VIEW_COLORS[slot%PLAYER_VIEW_COLORS.length]:'#cfd6e2';
+  me.units.push({uid:'su'+(S.uidSeq=(S.uidSeq||0)+1), id:id, side:side, x:x, y:y, player:slot+1, pcol:pcol,
     hp:st.hp, maxHp:st.hp, dmg:st.dmg, rng:st.rng, acq:st.rng*1.5, tgtUid:null, cd:Math.random()*st.cdMax, cdMax:st.cdMax, spd:st.spd, color:st.color, size:st.size,
-    wait:0.5, face:Math.atan2(c-x, c-y), dead:false}); }   // 인지범위=사거리×1.5 / 0.5초 대기(중앙 응시) 후 진격
+    wait:0.5, face:Math.atan2(c-x, c-y), dead:false}); }   // 인지범위=사거리×1.5 / 0.5초 대기 후 진격 / pcol=플레이어색(본체 림)
 function strikeMoveToward(u,tx,ty,dt){ const dx=tx-u.x, dy=ty-u.y, d=Math.hypot(dx,dy)||1, v=u.spd*dt; u.x+=dx/d*v; u.y+=dy/d*v; u.face=Math.atan2(dx,dy); u.moving=true; }   // 이동방향 응시 + 보행 모션
 function strikeNextStruct(side){ const S=STK, foe=S[side==='me'?'ai':'me']; return (foe.sec&&!foe.sec.dead)?foe.sec:foe.base; }   // 적 2차 신전 → 메인 신전 순
 function strikeCheckOver(){ const S=STK; if(S.over) return;
@@ -8909,7 +8911,7 @@ function strikeDrawMain(){ const S=STK; if(!S) return; const cvEl=document.getEl
   strikeDrawSpawnPad(ctx,w2s,scale,S.me.base.x-D+CS,S.me.base.y-D-CS,PS); strikeDrawSpawnPad(ctx,w2s,scale,S.me.base.x+D+CS,S.me.base.y+D-CS,PS);   // me(좌하단): 오른쪽+위
   strikeDrawSpawnPad(ctx,w2s,scale,S.ai.base.x-D-CS,S.ai.base.y-D+CS,PS); strikeDrawSpawnPad(ctx,w2s,scale,S.ai.base.x+D-CS,S.ai.base.y+D+CS,PS);   // ai(우상단): 왼쪽+아래
   // 진격 화살표(맨 위)
-  strikeLaneArrows(ctx, nodes, scale, 2);
+  // strikeLaneArrows(ctx, nodes, scale, 2);   // 진격 화살표 제거(요청)
   // 중립 중앙 신전(금색) → 2차(진영색) → 메인(진영색, 큼). 뒤→앞 순서로 그림
   // 신전: 3D 모델 로드 시 사이드 링+라벨만(본체는 strikeSync3D가 M3D로), 미로드 시 2D 폴백
   const _tmpl=function(o,modelId,col,glow,wr,label,labelCol){
@@ -9650,7 +9652,7 @@ window.M3D={
       if(u.rimCol) applyTeamRim(m, u.rimCol);   // 직스: 진영색 본체 림(아군 파랑 / 적군 빨강 동시 표시)
       if(u.atBoss){ m.holder.visible=false; continue; }   // 보스방 파견 유닛은 트랙에 표시 안 함
       const px=u.x*W, worldY=H-u.y*H;
-      if(u.rimCol){ m.rim.visible=true; m.rim.material.color.set(u.rimCol); }   // 직스: 진영 색 림(항상 표시 — 파랑/빨강)
+      if(u.ringCol){ m.rim.visible=true; m.rim.material.color.set(u.ringCol); }   // 직스: 발밑 링=팀색(아군/적군 구분)
       else { m.rim.visible = selSet.has(u.uid);
       if(m.rim.visible){   // 선택링 색: 영웅=금색 / 가챠=등급색(유닛도감과 동일) / 일반=청록
         const _tc=(u.gtier && typeof TIER_COLOR!=='undefined')?TIER_COLOR[u.gtier]:null;
