@@ -8754,6 +8754,8 @@ function strikeStep(dt){ const S=STK; if(!S) return; S.t+=dt;
     S.me.gold += strikeIncome(S.me); S.ai.gold += strikeIncome(S.ai);   // 라운드 수입(양 진영)
     strikeAiEconomy(); strikeSpawnWave();   // 출격 주기마다 유닛 일괄 소환(중앙 타이머 0초 시점)
     if(G.tab==='Upgrade') strikeRenderEcon(); }
+  { const ter=strikeTerritory(); if(S.terBlue==null){ S.terBlue=ter.blue; S.terRed=ter.red; } const k=Math.min(1,dt*1.4);   // 영역 경계 부드럽게 슬라이드
+    S.terBlue+=(ter.blue-S.terBlue)*k; S.terRed+=(ter.red-S.terRed)*k; }
   const baseView=(G.tab==='Unit')?1700:2600, tv=baseView/S.zoom;
   S.viewWorld += (tv-S.viewWorld)*Math.min(1,dt*4);
   S.build.zoomCur += ((S.build.zoom||1)-(S.build.zoomCur||1))*Math.min(1,dt*8);   // 건설 줌 부드럽게(전투화면과 동일 보간)
@@ -8818,6 +8820,14 @@ function strikeFrontStruct(side){ const S=STK, foe=S[side==='me'?'ai':'me'];   /
   if(S.central && !S.central.dead) return S.central;
   if(foe.sec && !foe.sec.dead) return foe.sec;
   return foe.base; }
+// 영역 테두리 frontier(레인 t: me.base=0 ~ ai.base=1). 신전 파괴 상태로 파랑/빨강 경계가 전진·후퇴
+function strikeTerritory(){ const S=STK; let blue=0.25, red=0.75;   // 초기: 각자 2차까지, 중앙 흰색
+  const meSecDead=S.me.sec&&S.me.sec.dead, aiSecDead=S.ai.sec&&S.ai.sec.dead, cen=S.central;
+  if(cen&&cen.dead){ if(cen.deadBy==='me') blue=0.7; else if(cen.deadBy==='ai') red=0.3; }   // 중립 부순 팀 색이 상대 2차 앞까지
+  if(aiSecDead) blue=0.78;   // 적 2차 파괴 → 거기까지
+  if(meSecDead) red=0.22;
+  if(meSecDead&&aiSecDead){ blue=0.25; red=0.75; }   // 양쪽 2차 다 파괴 → 각자 2차까지, 중앙 흰색
+  return {blue:Math.max(0.05,Math.min(0.95,blue)), red:Math.max(0.05,Math.min(0.95,red))}; }
 function strikeSeparate(){ const S=STK; if(!S) return; const all=S.me.units.concat(S.ai.units);   // nemo식: 크기 기반 최소간격(작게) + 3회 반복 안정화(밀침 떨림 방지)
   for(let it=0; it<3; it++){
     for(let i=0;i<all.length;i++){ const a=all[i]; if(a.dead||a.wait>0) continue;
@@ -8841,7 +8851,7 @@ function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
             if(tgt.hp<=0) tgt.dead=true; } }
         else strikeMoveToward(u,tgt.x,tgt.y,dt);
       } else { const d=Math.hypot(front.x-u.x, front.y-u.y);   // 인지 적 없음 → 최전방 신전 1개로 진격/공격
-        if(d<=u.rng+120){ u.moving=false; u.face=Math.atan2(front.x-u.x, front.y-u.y); u.cd-=dt; if(u.cd<=0){ u.cd=u.cdMax; front.hp-=u.dmg; strikeFx(u,front.x,front.y,col); if(front.hp<=0){ front.dead=true; strikeCheckOver(); } } }
+        if(d<=u.rng+120){ u.moving=false; u.face=Math.atan2(front.x-u.x, front.y-u.y); u.cd-=dt; if(u.cd<=0){ u.cd=u.cdMax; front.hp-=u.dmg; strikeFx(u,front.x,front.y,col); if(front.hp<=0){ front.dead=true; front.deadBy=side; strikeCheckOver(); } } }
         else strikeMoveToward(u, front.x, front.y, dt); } }   // 가장 앞 신전을 향해 이동
     const _dead=me.units.filter(u=>u.dead); if(_dead.length && window.M3D && M3D.dropModels){ try{ M3D.dropModels(_dead.map(u=>u.uid)); }catch(e){} }   // 즉시 제거(사망 모션 없이)
     me.units=me.units.filter(u=>!u.dead); }
@@ -8852,9 +8862,9 @@ function strikeDrawTempleHp(ctx,w2s,scale,S){ if(!S) return;   // 신전 HP 바(
   const list=[[S.me.base,'#7fe0ff',210],[S.ai.base,'#ff9aa6',210],[S.me.sec,'#7fe0ff',102],[S.ai.sec,'#ff9aa6',102],[S.central,'#ffd86a',40]];
   ctx.save(); ctx.textAlign='center';
   for(const t of list){ const o=t[0]; if(!o||o.dead||o.hp==null) continue; const p=w2s(o.x,o.y), wr=t[2];
-    const bw=Math.max(44, wr*scale*1.1), hpr=Math.max(0,o.hp/o.max), bx=p.x-bw/2, by=p.y - Math.max(28, wr*scale*1.3);
-    ctx.fillStyle='rgba(0,0,0,.7)'; ctx.fillRect(bx-1.5,by-1.5,bw+3,7);
-    ctx.fillStyle=hpr>0.4?t[1]:'#ff5c5c'; ctx.fillRect(bx,by,bw*hpr,4);
+    const bw=(wr>=200?76:(wr>=90?56:46)), hpr=Math.max(0,o.hp/o.max), bx=p.x-bw/2, by=p.y - Math.max(30, wr*scale*1.3);   // 바 크기 고정(줌 무관), 위치만 모델 위로 추적
+    ctx.fillStyle='#0c1320'; ctx.fillRect(bx-1.5,by-1.5,bw+3,8);
+    ctx.fillStyle=hpr>0.4?t[1]:'#ff5c5c'; ctx.fillRect(bx,by,bw*hpr,5);
     ctx.font='800 9px Rajdhani,"Apple SD Gothic Neo",sans-serif'; ctx.lineWidth=2.6; ctx.strokeStyle='rgba(0,0,0,.8)';
     const tx=Math.ceil(o.hp)+' / '+o.max; ctx.strokeText(tx,p.x,by-3); ctx.fillStyle='#fff'; ctx.fillText(tx,p.x,by-3); }
   ctx.restore(); }
@@ -8893,9 +8903,9 @@ function strikeDrawUnits(ctx,w2s,scale,S){ if(!S) return;
         ctx.save(); ctx.lineWidth=1.6; ctx.strokeStyle=ring; ctx.globalAlpha=0.92;
         ctx.beginPath(); ctx.ellipse(p.x, p.y+rad*0.4, rad*1.6, rad*0.72, 0, 0, 6.283); ctx.stroke(); ctx.restore();
         ctx.beginPath(); ctx.arc(p.x,p.y,rad,0,6.283); ctx.fillStyle=u.color||'#cfd6e2'; ctx.fill(); }
-      if(u.hp<u.maxHp){ const bw=Math.max(rad*2.4,16), hpr=Math.max(0,u.hp/u.maxHp), bx=p.x-bw/2, by=p.y-(use3d?22:rad+5);
-        ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillRect(bx,by,bw,2.5);
-        ctx.fillStyle=hpr>0.4?'#6fe89a':'#ff6b6b'; ctx.fillRect(bx,by,bw*hpr,2.5); } } }
+      if(u.hp<u.maxHp){ const bw=24, hpr=Math.max(0,u.hp/u.maxHp), bx=p.x-bw/2, by=p.y-Math.max(18,rad*3);   // 고정 크기(줌 무관), 위치만 모델 위로 추적 — nemo식
+        ctx.fillStyle='#1a2230'; ctx.fillRect(bx-1,by-1,bw+2,5);
+        ctx.fillStyle=hpr>0.4?'#46f06a':'#ff5c5c'; ctx.fillRect(bx,by,bw*hpr,3); } } }
 }
 
 // ── 전장 렌더(#cvMain) ──
@@ -8987,7 +8997,12 @@ function strikeGlowUnderlay(ctx,w2s,scale,S,W,H,nodes){ ctx.save(); ctx.lineCap=
   const base=Math.max(28,1580*scale), A=nodes[0], B=nodes[nodes.length-1];
   // 길: me 시안 → 중앙(밝게 만남) → ai 레드 그라데이션. (모바일: shadowBlur 제거 → 레이어 스트로크)
   const g=ctx.createLinearGradient(A.x,A.y,B.x,B.y);
-  g.addColorStop(0,'rgba(127,224,255,.92)'); g.addColorStop(.4,'rgba(127,224,255,.85)'); g.addColorStop(.5,'rgba(232,238,255,.92)'); g.addColorStop(.6,'rgba(255,120,138,.85)'); g.addColorStop(1,'rgba(255,120,138,.92)');
+  const CY='rgba(127,224,255,', RD='rgba(255,120,138,', WH='rgba(232,238,255,', clamp=v=>Math.max(0.001,Math.min(0.999,v));
+  const bf=(S.terBlue!=null?S.terBlue:0.25), rf=(S.terRed!=null?S.terRed:0.75);   // 영역 경계(신전 파괴로 이동)
+  g.addColorStop(0, CY+'.92)');
+  if(bf<rf-0.02){ g.addColorStop(clamp(bf-0.03), CY+'.9)'); g.addColorStop(clamp(bf+0.03), WH+'.92)'); g.addColorStop(clamp(rf-0.03), WH+'.92)'); g.addColorStop(clamp(rf+0.03), RD+'.9)'); }   // 가운데 흰색(contested)
+  else { const mid=(bf+rf)/2; g.addColorStop(clamp(mid-0.03), CY+'.9)'); g.addColorStop(clamp(mid), WH+'.95)'); g.addColorStop(clamp(mid+0.03), RD+'.9)'); }   // 경계에서 바로 만남
+  g.addColorStop(1, RD+'.92)');
   const pathL=()=>{ ctx.beginPath(); ctx.moveTo(nodes[0].x,nodes[0].y); for(let i=1;i<nodes.length;i++) ctx.lineTo(nodes[i].x,nodes[i].y); };
   ctx.strokeStyle=g;
   ctx.globalAlpha=.28; ctx.lineWidth=base+Math.max(18,46*scale); pathL(); ctx.stroke();
