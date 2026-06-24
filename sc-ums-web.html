@@ -2762,7 +2762,7 @@ const ADMIN_BAL = JSON.parse(JSON.stringify(NEMO_BAL));   // nemo 밸런스 깊�
 try{ USEMAPS.admin = { id:'admin', name:'관리자용 (테스트)', desc:'밸런스·기능 테스트 전용 — nemo 복제본(독립 조정)', players:'1-8', pop:0, icon:'🛠️', rec:false, isNew:false, playable:true,
   cfg: Object.assign({}, USEMAPS.nemo.cfg, { bal:ADMIN_BAL, mode:'sandbox' }) }; }catch(e){}
 // 무한 디펜스 — nemo 엔진 재사용 + 무한 루프(노말 고정). 해금: 노말 클리어.
-try{ USEMAPS.nemo_inf = { id:'nemo_inf', name:'무한 디펜스', desc:'노말 난이도로 끝없이 이어지는 무한 라운드 — 얼마나 오래 버티나', players:'1', pop:0, icon:'♾️', rec:false, isNew:true, playable:true,
+try{ USEMAPS.nemo_inf = { id:'nemo_inf', name:'무한 디펜스', desc:'노말 난이도로 끝없이 이어지는 무한 라운드 — 얼마나 오래 버티나', players:'1', pop:0, icon:'♾️', rec:false, isNew:true, playable:true, hidden:true,
   cfg: Object.assign({}, USEMAPS.nemo.cfg, { infinite:true, rounds:999999, infLoopHpMul:2.2, infIncomeLoop:1.5, infSoftCap:200, infWallMul:1.4, fixedDiff:'normal' }) }; }catch(e){}
 function mapCfg(k,def){ const c=MAP&&MAP.cfg, v=c?c[k]:undefined; return v===undefined?def:v; }
 
@@ -5657,8 +5657,8 @@ function refreshSelCard(){
     hpEl.innerHTML=scHpHTML(u);
     grid.style.display='flex'; grid.innerHTML=scStatBoxesHTML(u); fitStatNumbers();
     if(_allOne && !isBuilding(u.id)){   // 같은 종류(등급·강화 동일) 총 마릿수 → 2기 이상이면 전체 선택 버튼
-      const _key=(u.gid||u.id)+'|'+(u.hero?1:0)+'|'+(u.lv||1);
-      const _cnt=G.units.filter(x=>!isBuilding(x.id) && ((x.gid||x.id)+'|'+(x.hero?1:0)+'|'+(x.lv||1))===_key).length;
+      const _key=(u.gid||u.gmodel||u.id)+'|'+(u.hero?1:0)+'|'+(u.lv||1);
+      const _cnt=G.units.filter(x=>!isBuilding(x.id) && ((x.gid||x.gmodel||x.id)+'|'+(x.hero?1:0)+'|'+(x.lv||1))===_key).length;
       if(_cnt>1){ _allOne.style.display='flex'; _allOne.innerHTML='⛶ 이 종류 전체 선택 <b>'+_cnt+'</b>'; }
     }
   } else { portEl.innerHTML='<svg viewBox="0 0 24 24" width="46" height="46"><circle cx="8" cy="9" r="4" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="16" cy="13" r="4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
@@ -5733,7 +5733,7 @@ function buildSelChips(){
   document.getElementById('selCount').textContent=G.sel.length;
   const groups={}, order=[];
   G.sel.forEach(uid=>{ const u=G.units.find(x=>x.uid===uid); if(!u) return;
-    const key=(u.gid||u.id)+'|'+(u.hero?1:0)+'|'+(u.lv||1);   // 가챠 타입(등급) 단위로 분류 — 같은 유닛도 등급 다르면 구분
+    const key=(u.gid||u.gmodel||u.id)+'|'+(u.hero?1:0)+'|'+(u.lv||1);   // 가챠 타입(등급) 단위로 분류 — 같은 유닛도 등급 다르면 구분
     if(!groups[key]){ groups[key]={u:u,uids:[]}; order.push(key); }
     groups[key].uids.push(uid);
   });
@@ -5751,8 +5751,8 @@ function buildSelChips(){
     const hp=document.createElement('div'); hp.className='ssHp'; hp.innerHTML=g.uids.slice(0,MAX_HP_SHOW).map(unitHpHTML).join('');   // HP바는 최대 24마리(6×4)만 표시(나머지는 선택만)
     singleEl.innerHTML=''; singleEl.appendChild(chip); singleEl.appendChild(hp);
     if(allOne){   // 맵 전체 같은 종류 마릿수 → 하단 전체선택 버튼
-      const _key=(g.u.gid||g.u.id)+'|'+(g.u.hero?1:0)+'|'+(g.u.lv||1);
-      const _cnt=G.units.filter(x=>!isBuilding(x.id) && ((x.gid||x.id)+'|'+(x.hero?1:0)+'|'+(x.lv||1))===_key).length;
+      const _key=(g.u.gid||g.u.gmodel||g.u.id)+'|'+(g.u.hero?1:0)+'|'+(g.u.lv||1);
+      const _cnt=G.units.filter(x=>!isBuilding(x.id) && ((x.gid||x.gmodel||x.id)+'|'+(x.hero?1:0)+'|'+(x.lv||1))===_key).length;
       if(_cnt>1 && !isBuilding(g.u.id)){ allOne.style.display='flex'; allOne.innerHTML='⛶ 이 종류 전체 선택 <b>'+_cnt+'</b>'; } else allOne.style.display='none';
     }
   } else {   // ── 여러 종류: 4칸 그리드 ──
@@ -5995,7 +5995,7 @@ function isBuilding(id){ return !!(U[id] && U[id].moveSpd===0); }   // 건물(�
 function capSelTypes(uids, noPerCap){   // noPerCap=true → 종류당 30 제한 해제(지정 패널 '전부 선택'용. 드래그 박스는 30 유지)
   const groups={}, order=[];
   uids.forEach(uid=>{ const u=G.units.find(x=>x.uid===uid); if(!u||u.fixed||(!u.gid&&isBuilding(u.id))) return;   // 실제 구조물만 제외(구조물 프록시 가챠 유닛은 일반 유닛)
-    const key=(u.gid||u.id)+'|'+(u.hero?1:0)+'|'+(u.lv||1);   // 선택 칩 분류와 동일 키(등급 다르면 다른 종류)
+    const key=(u.gid||u.gmodel||u.id)+'|'+(u.hero?1:0)+'|'+(u.lv||1);   // 선택 칩 분류와 동일 키(등급 다르면 다른 종류)
     if(!groups[key]){ groups[key]={uids:[], cost:(U[u.id]?U[u.id].cost:0),
       tr:(u.gtier&&typeof GACHA_TIER_ORDER!=='undefined')?GACHA_TIER_ORDER.indexOf(u.gtier):-1}; order.push(key); }   // tr=등급 순위(높을수록 상위)
     groups[key].uids.push(uid);
@@ -6018,8 +6018,8 @@ function capSelTypes(uids, noPerCap){   // noPerCap=true → 종류당 30 제한
 // 현재 선택된 종류의 유닛 전체 선택(맵 전체) — '전체 선택' 버튼(단일종류 뷰 + 1마리 카드)
 function selectAllOfType(){ if(G.sel.length===0) return;
   const u0=G.units.find(x=>x.uid===G.sel[0]); if(!u0||isBuilding(u0.id)) return;
-  const key=(u0.gid||u0.id)+'|'+(u0.hero?1:0)+'|'+(u0.lv||1);
-  const all=G.units.filter(u=>!isBuilding(u.id) && ((u.gid||u.id)+'|'+(u.hero?1:0)+'|'+(u.lv||1))===key).map(u=>u.uid);
+  const key=(u0.gid||u0.gmodel||u0.id)+'|'+(u0.hero?1:0)+'|'+(u0.lv||1);
+  const all=G.units.filter(u=>!isBuilding(u.id) && ((u.gid||u.gmodel||u.id)+'|'+(u.hero?1:0)+'|'+(u.lv||1))===key).map(u=>u.uid);
   _selViaTab=false; G.sel=capSelTypes(all,true); G.selEnemy=null; refreshSelCard();   // '전체 선택' → 30 제한 없이 전부
 }
 function selectMany(uids){ _selViaTab=false; G.sel=capSelTypes(uids,true); G.selEnemy=null; refreshSelCard(); }   // 드래그=종류당 전부 선택(HP바 표시만 30 제한)
@@ -6028,7 +6028,7 @@ function deselectUnit(){ G.sel=[]; G.selEnemy=null; refreshSelCard(); }
 // 현재 선택 유닛과 '같은 종류(같은 id+영웅여부+레벨)' 전체 선택
 function selectSameType(){ if(G.sel.length===0) return;
   const ref=G.units.find(u=>u.uid===G.sel[0]); if(!ref) return;
-  const same=G.units.filter(u=>(u.gid||u.id)===(ref.gid||ref.id) && u.hero===ref.hero && (u.lv||1)===(ref.lv||1)).map(u=>u.uid);
+  const same=G.units.filter(u=>(u.gid||u.gmodel||u.id)===(ref.gid||ref.gmodel||ref.id) && u.hero===ref.hero && (u.lv||1)===(ref.lv||1)).map(u=>u.uid);
   selectMany(same); toast('ℹ️ '+(ref.gname||U[ref.id].name)+(ref.hero?' 영웅':'')+' '+same.length+'기 선택'); }
 function toggleMergeMode(el){ G.mergeMode=!G.mergeMode; el.classList.toggle('on',G.mergeMode);
   if(G.mergeMode){ combine(); G.mergeMode=false; el.classList.remove('on'); } }
@@ -7323,7 +7323,7 @@ function closeSortMenu(){ const dd=document.getElementById('msSortDD'), menu=doc
 function _sortMenuOutside(e){ const dd=document.getElementById('msSortDD'); if(dd && !dd.contains(e.target)) closeSortMenu(); }
 function _kfmt(n){ return n>=1000 ? (n/1000).toFixed(1)+'k' : (''+n); }
 function renderMaps(){ const list=document.getElementById('msList'); if(!list) return; const favs=getFavs();
-  let arr=MAPS.slice();
+  let arr=MAPS.slice().filter(m=>!m.hidden);   // 숨김 맵(무한=난이도 팝업으로 진입) 제외
   if(_mapSort==='fav') arr=arr.filter(m=>favs[m.id]);
   else if(_mapSort==='pop') arr.sort((a,b)=>liveTotal(b)-liveTotal(a));   // 인기순=현재 접속 인원
   else if(_mapSort==='new') arr.sort((a,b)=>(b.isNew?1:0)-(a.isNew?1:0)||liveTotal(b)-liveTotal(a));
@@ -7384,7 +7384,7 @@ function openRacePicker(current, onPick){ _racePickCb=onPick||null;
   const box=document.getElementById('raceSelBtns'); if(box){ box.innerHTML='';
     STK_RACE_ORDER.forEach(k=>{ const R=STK_RACES[k]; const b=document.createElement('div');
       b.className='raceOpt'+(k===current?' on':''); b.setAttribute('style', raceVars(R.col));
-      b.innerHTML='<span class="roNm">'+R.name+'</span>';   // 이름만(깔끔)
+      b.innerHTML='<span class="roNm">'+R.name+(R.sub?' <span style="font-size:.68em;opacity:.55;font-weight:600">('+R.sub+')</span>':'')+'</span>';   // 이름 + 옛 이름(작게)
       b.onclick=()=>pickRace(k); box.appendChild(b); }); }
   const p=document.getElementById('raceSelPanel'); if(p){ p.classList.remove('hide'); if(typeof fxPop==='function') fxPop(p.querySelector('.cpCard')); } if(typeof playSfx==='function') playSfx('ui_open'); }
 function openRaceSelect(){ openRacePicker(_selRace, function(k){ _selRace=k; _startSoloNow(); }); }   // 솔로: 난이도 후 종족 확정 → 게임 시작
@@ -7393,7 +7393,7 @@ let _raceMenuCb=null;
 function showRaceMenu(anchor, current, onPick){ const menu=document.getElementById('raceMenu'); if(!menu||!anchor) return; _raceMenuCb=onPick||null;
   menu.innerHTML='';
   STK_RACE_ORDER.forEach(function(k){ const R=STK_RACES[k]; const o=document.createElement('div'); o.className='rmOpt'+(k===current?' on':''); o.setAttribute('style', raceVars(R.col));
-    o.innerHTML='<span class="rmNm">'+R.name+'</span>';   // 이름만(깔끔)
+    o.innerHTML='<span class="rmNm">'+R.name+(R.sub?' <span style="font-size:.7em;opacity:.55">('+R.sub+')</span>':'')+'</span>';   // 이름 + 옛 이름(작게)
     o.onclick=function(e){ if(e) e.stopPropagation(); const cb=_raceMenuCb; hideRaceMenu(); if(cb) cb(k); };
     menu.appendChild(o); });
   menu.classList.remove('hide');
@@ -7414,10 +7414,16 @@ function openSoloDiff(){ const box=document.getElementById('soloDiffBtns'); if(b
     DIFFICULTY_ORDER.forEach(d=>{ const D=DIFFICULTY[d]; const b=document.createElement('div');
       b.className='moDiffBtn'; b.style.setProperty('--dc', DIFF_COLOR[d]||'#fff');
       b.innerHTML='<span class="ddN">'+D.name+'</span><span class="ddC">적 강도 ×'+(D.enemyHp/DIFFICULTY.easy.enemyHp).toFixed(1)+'<br>코인 ×'+D.coinMult+'</span>';
-      b.onclick=()=>startSoloWithDiff(d); box.appendChild(b); }); }
+      b.onclick=()=>startSoloWithDiff(d); box.appendChild(b); });
+    if(_selMap && _selMap.id==='nemo' && USEMAPS.nemo_inf){   // 무한 모드 진입(네모 한정) — 난이도 칸 아래 전체폭
+      const lk=(typeof infiniteUnlocked==='function' && !infiniteUnlocked());
+      const inf=document.createElement('div'); inf.className='moDiffBtn'; inf.style.setProperty('--dc','#b06bff'); inf.style.gridColumn='1 / -1';
+      inf.innerHTML='<span class="ddN">♾️ 무한 모드</span><span class="ddC">노말 고정 · 끝없이 도전'+(lk?' · 🔒테스트 개방':'')+'</span>';
+      inf.onclick=()=>startSoloInfinite(); box.appendChild(inf); } }
   const trig=document.getElementById('soloRaceTrig'); if(trig) trig.classList.add('hide');   // 종족은 난이도 선택 후 별도 팝업으로(트리거 미사용)
   const p=document.getElementById('soloDiffPanel'); if(p){ p.classList.remove('hide'); if(typeof fxPop==='function') fxPop(p.querySelector('.cpCard')); } if(typeof playSfx==='function') playSfx('ui_open'); }
 function closeSoloDiff(){ popHide('soloDiffPanel'); }
+function startSoloInfinite(){ if(!USEMAPS.nemo_inf) return; _selMap=USEMAPS.nemo_inf; closeSoloDiff(); _startSoloNow(); }   // 무한 모드 시작(테스트 단계: 해금 게이트 미적용)
 function startSoloWithDiff(d){ if(DIFFICULTY[d]) _selDiff=d; closeSoloDiff();
   if(_selMap && _selMap.cfg && _selMap.cfg.mode==='strike'){ openRaceSelect(); return; }   // 직스: 난이도 후 종족 선택 팝업 → 시작
   _startSoloNow(); }
@@ -8566,9 +8572,9 @@ const STK_MINZOOM=1.2, STK_DEFZOOM=1.2, STK_MAXZOOM=2.5, BUILD_MAXZOOM=3;
 // 종족(컴퓨터가 싸운다): 진입 시 선택 → 그 종족 유닛만 소환. units=현 보유 전투유닛 기준 로스터
 // (프로토스·저그는 다음 단계에서 가챠 유닛으로 보강 예정 — 균형)
 const STK_RACES={
-  terran:  { key:'terran',  name:'유니온',   desc:'보병·기계', col:'#4aa8ff', icon:'🛡️', units:['marine','ghost','goliath'] },
-  protoss: { key:'protoss', name:'에테리얼', desc:'루멘',     col:'#ffc040', icon:'🔮', units:['dragoon','archon'] },
-  zerg:    { key:'zerg',    name:'스웜',     desc:'유기체',   col:'#9fd356', icon:'🦎', units:['hydra'] },
+  terran:  { key:'terran',  name:'유니온',   sub:'인간', desc:'보병·기계', col:'#4aa8ff', icon:'🛡️', units:['marine','ghost','goliath'] },
+  protoss: { key:'protoss', name:'에테리얼', sub:'외계', desc:'루멘',     col:'#ffc040', icon:'🔮', units:['dragoon','archon'] },
+  zerg:    { key:'zerg',    name:'스웜',     sub:'군체', desc:'유기체',   col:'#9fd356', icon:'🦎', units:['hydra'] },
 };
 const STK_RACE_ORDER=['terran','zerg','protoss'];   // 표시 순서: 유니온 · 스웜 · 에테리얼 (관리자와 통일)
 function strikeRandomRace(){ return STK_RACE_ORDER[Math.floor(Math.random()*STK_RACE_ORDER.length)]; }
