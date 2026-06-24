@@ -2736,7 +2736,7 @@ const USEMAPS={
   marine:{ id:'marine', name:'용병 키우기',     desc:'용병을 성장시켜 최강으로 키우는 RPG', players:'1-6', pop:7610, icon:'🔫', rec:true,  isNew:false, playable:false, cfg:{} },
   temple:{ id:'temple', name:'성소 공성전',     desc:'상대 성소를 먼저 파괴하는 공성전',     players:'2-8', pop:6240, icon:'🏛️', rec:false, isNew:true,  playable:false, cfg:{} },
   cpu:   { id:'cpu',    name:'오토 배틀', desc:'건물에 유닛을 배정해 출격시켜 적 본진을 부수는 경제 전투', players:'1-8', pop:5180, icon:'⚔️', rec:true, isNew:true,  playable:true,
-          cfg:{ mode:'strike', cycleTime:30, heroAt:10, baseHp:3000, secHp:1500, centralHp:1050, startGold:3000, incomeBase:150, mineIncome:120, mineCost:300, world:4800 } },
+          cfg:{ mode:'strike', cycleTime:30, heroAt:10, baseHp:9000, secHp:4500, centralHp:3000, startGold:3000, incomeBase:150, mineIncome:120, mineCost:300, world:4800 } },
   photon:{ id:'photon', name:'포탑 겹치기',      desc:'방어 포탑을 겹쳐 쌓아 버티기',       players:'1-4', pop:4090, icon:'🔵', rec:false, isNew:false, playable:false, cfg:{} },
   tmp1:  { id:'tmp1',   name:'랜덤 디펜스 (임시)', desc:'임시 등록 유즈맵',               players:'1-8', pop:2600, icon:'🎲', rec:false, isNew:true,  playable:false, cfg:{} },
   tmp2:  { id:'tmp2',   name:'영웅 아레나 (임시)', desc:'임시 등록 유즈맵',               players:'2-8', pop:1900, icon:'⚔️', rec:false, isNew:false, playable:false, cfg:{} },
@@ -8752,11 +8752,12 @@ function strikeStep(dt){ const S=STK; if(!S) return; S.t+=dt;
   S.cycleT-=dt;
   if(S.cycleT<=0){ S.cycleT+=S.cycleTime; S.round++;
     S.me.gold += strikeIncome(S.me); S.ai.gold += strikeIncome(S.ai);   // 라운드 수입(양 진영)
-    strikeAiEconomy();
+    strikeAiEconomy(); strikeSpawnWave();   // 출격 주기마다 유닛 일괄 소환(중앙 타이머 0초 시점)
     if(G.tab==='Upgrade') strikeRenderEcon(); }
   const baseView=(G.tab==='Unit')?1700:2600, tv=baseView/S.zoom;
   S.viewWorld += (tv-S.viewWorld)*Math.min(1,dt*4);
   S.build.zoomCur += ((S.build.zoom||1)-(S.build.zoomCur||1))*Math.min(1,dt*8);   // 건설 줌 부드럽게(전투화면과 동일 보간)
+  if(S.userCam && (S.t-(S.lastCam||0))>5) S.userCam=false;   // 마지막 조작 5초 후 자동 전장 복귀(줌은 유지)
   if(G.tab==='Unit' || !S.userCam){   // 건물뷰=내 진영 고정 / 전투뷰=교전 팔로우(사용자 패닝 전까지)
     let tx,ty; if(G.tab==='Unit'){ tx=S.me.base.x; ty=S.me.base.y; } else { const f=strikeFocus(); tx=f.x; ty=f.y; }
     const k=Math.min(1,dt*2.5); S.cam.x+=(tx-S.cam.x)*k; S.cam.y+=(ty-S.cam.y)*k;
@@ -8790,7 +8791,7 @@ function strikeFocus(){ const S=STK; if(!S) return {x:0,y:0}; const c=S.world/2;
 
 // ── 전투 시뮬(1차): 양 진영이 주기적으로 종족 유닛 소환 → 대각 진격 → 자동 교전 → 적 신전 타격 ──
 function strikeUnitStats(id){ const d=U[id]||{}; return {
-  hp:Math.round((d.hp||40)*3), dmg:(d.dmg||15), rng:(d.range||0.2)*1400,
+  hp:Math.round((d.hp||40)*3), dmg:(d.dmg||15), rng:(d.range||0.2)*850,   // 사거리 축소(1400→850)
   cdMax:Math.max(0.45,(d.cd||22)/22), spd:(d.moveSpd||0.19)*1800, color:d.color||'#cfd6e2', size:d.size||13 }; }
 function strikeSpawnPads(side){ const S=STK, b=S[side].base, D=360, CS=180;   // 메인신전 양 옆 네모 스폰존(strikeDrawSpawnPad와 동일 위치)
   return side==='me' ? [{x:b.x-D+CS,y:b.y-D-CS},{x:b.x+D+CS,y:b.y+D-CS}] : [{x:b.x-D-CS,y:b.y-D+CS},{x:b.x+D-CS,y:b.y+D+CS}]; }
@@ -8810,9 +8811,13 @@ function strikeCheckOver(){ const S=STK; if(S.over) return;
 function strikeFx(u,tx,ty,col){ const S=STK; if(!S) return; if(!S.fx) S.fx=[]; if(S.fx.length>140) S.fx.shift(); S.fx.push({x0:u.x,y0:u.y,x1:tx,y1:ty,life:1,col:col}); }   // 공격 트레이서 이펙트
 function strikeFindUnit(arr,uid){ if(!uid) return null; for(const u of arr){ if(u.uid===uid&&!u.dead) return u; } return null; }
 function strikeAlert(allies, attackerUid, ax, ay, r){ const r2=r*r; for(const a of allies){ if(a.dead||a.wait>0||a.tgtUid) continue; const dx=a.x-ax, dy=a.y-ay; if(dx*dx+dy*dy<=r2) a.tgtUid=attackerUid; } }   // 주변 아군 가담
+function strikeSpawnWave(){ const S=STK; if(!S) return; const n=4+(Math.random()*3|0); for(let i=0;i<n;i++){ strikeSpawnUnit('me'); strikeSpawnUnit('ai'); } }   // 출격 주기(30초)마다 한 번에 소환
+function strikeSeparate(){ const S=STK; if(!S) return; const all=S.me.units.concat(S.ai.units), MIN=150;   // 유닛끼리 완전히 겹치지 않게 밀어냄(관리자·nemo식)
+  for(let i=0;i<all.length;i++){ const a=all[i]; if(a.dead||a.wait>0) continue;
+    for(let j=i+1;j<all.length;j++){ const b=all[j]; if(b.dead||b.wait>0) continue;
+      let dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy);
+      if(d===0){ a.x-=8; b.x+=8; } else if(d<MIN){ const p=(MIN-d)/2, ux=dx/d, uy=dy/d; a.x-=ux*p; a.y-=uy*p; b.x+=ux*p; b.y+=uy*p; } } } }
 function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
-  S.waveT=(S.waveT==null?2:S.waveT)-dt;
-  if(S.waveT<=0){ S.waveT+=(S.waveGap||8); const n=4+(Math.random()*3|0); for(let i=0;i<n;i++){ strikeSpawnUnit('me'); strikeSpawnUnit('ai'); } }   // 타이머마다 한 번에 출격(웨이브)
   for(const side of ['me','ai']){ const me=S[side], foe=S[side==='me'?'ai':'me'], col=side==='me'?'#7fd0ff':'#ff8a96';
     const structs=[]; if(S.central&&!S.central.dead) structs.push(S.central); if(foe.sec&&!foe.sec.dead) structs.push(foe.sec); structs.push(foe.base);   // 공격 가능 신전: 중립·적2차·적메인
     for(const u of me.units){ if(u.dead) continue;
@@ -8828,13 +8833,24 @@ function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
             strikeAlert(foe.units, u.uid, tgt.x, tgt.y, 420);     // 주변 아군도 공격자에 가담(스타식 자동교전)
             if(tgt.hp<=0) tgt.dead=true; } }
         else strikeMoveToward(u,tgt.x,tgt.y,dt);
-      } else { let atk=null; for(const st of structs){ if(Math.hypot(st.x-u.x,st.y-u.y)<=u.rng+220){ atk=st; break; } }   // 인지 적 없음 → 신전 공격/진격
+      } else { let atk=null; for(const st of structs){ if(Math.hypot(st.x-u.x,st.y-u.y)<=u.rng+120){ atk=st; break; } }   // 인지 적 없음 → 신전 공격/진격
         if(atk){ u.moving=false; u.face=Math.atan2(atk.x-u.x, atk.y-u.y); u.cd-=dt; if(u.cd<=0){ u.cd=u.cdMax; atk.hp-=u.dmg; strikeFx(u,atk.x,atk.y,col); if(atk.hp<=0){ atk.dead=true; strikeCheckOver(); } } }
-        else strikeMoveToward(u, foe.base.x, foe.base.y, dt); } }   // 진격 목표=적 메인
+        else { const mt=(foe.sec&&!foe.sec.dead)?foe.sec:foe.base; strikeMoveToward(u, mt.x, mt.y, dt); } } }   // 진격 목표=적 2차 신전(파괴 시 메인)
     const _dead=me.units.filter(u=>u.dead); if(_dead.length && window.M3D && M3D.dropModels){ try{ M3D.dropModels(_dead.map(u=>u.uid)); }catch(e){} }   // 즉시 제거(사망 모션 없이)
     me.units=me.units.filter(u=>!u.dead); }
+  strikeSeparate();   // 유닛 분리(겹침 방지)
   if(S.fx){ for(const f of S.fx) f.life-=dt*5; S.fx=S.fx.filter(f=>f.life>0); }   // 공격 이펙트 감쇠
 }
+function strikeDrawTempleHp(ctx,w2s,scale,S){ if(!S) return;   // 신전 HP 바(모델 위)
+  const list=[[S.me.base,'#7fe0ff',210],[S.ai.base,'#ff9aa6',210],[S.me.sec,'#7fe0ff',102],[S.ai.sec,'#ff9aa6',102],[S.central,'#ffd86a',40]];
+  ctx.save(); ctx.textAlign='center';
+  for(const t of list){ const o=t[0]; if(!o||o.dead||o.hp==null) continue; const p=w2s(o.x,o.y), wr=t[2];
+    const bw=Math.max(44, wr*scale*1.1), hpr=Math.max(0,o.hp/o.max), bx=p.x-bw/2, by=p.y - Math.max(28, wr*scale*1.3);
+    ctx.fillStyle='rgba(0,0,0,.7)'; ctx.fillRect(bx-1.5,by-1.5,bw+3,7);
+    ctx.fillStyle=hpr>0.4?t[1]:'#ff5c5c'; ctx.fillRect(bx,by,bw*hpr,4);
+    ctx.font='800 9px Rajdhani,"Apple SD Gothic Neo",sans-serif'; ctx.lineWidth=2.6; ctx.strokeStyle='rgba(0,0,0,.8)';
+    const tx=Math.ceil(o.hp)+' / '+o.max; ctx.strokeText(tx,p.x,by-3); ctx.fillStyle='#fff'; ctx.fillText(tx,p.x,by-3); }
+  ctx.restore(); }
 function strikeDrawFx(ctx,w2s,scale,S){ if(!S||!S.fx||!S.fx.length) return; ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.lineCap='round';
   for(const f of S.fx){ const a=w2s(f.x0,f.y0), b=w2s(f.x1,f.y1), L=Math.max(0,f.life);
     ctx.globalAlpha=L*0.7; ctx.strokeStyle=f.col; ctx.lineWidth=Math.max(1,2.2*scale);
@@ -8895,6 +8911,7 @@ function strikeDrawMain(){ const S=STK; if(!S) return; const cvEl=document.getEl
   _tmpl(S.ai.sec,'temple_stone','#ff3b54','#ff9aa6',102,'적 2차 신전','#ffc2c8');
   _tmpl(S.me.base,'temple_main','#3a7bff','#7fe0ff',210,'메인 신전','#bfe0ff');
   _tmpl(S.ai.base,'temple_main','#ff3b54','#ff9aa6',210,'적 메인 신전','#ffc2c8');
+  strikeDrawTempleHp(ctx,w2s,scale,S);   // 신전 HP 바
   strikeDrawUnits(ctx,w2s,scale,S);   // 전투 유닛(소환·교전) 위에 표시
   strikeDrawFx(ctx,w2s,scale,S);   // 공격 트레이서/임팩트
   // 크기 비교 샘플 유닛 라벨(3D 모델은 cvMarine에 strikeSyncCmpUnits가 렌더)
@@ -9088,7 +9105,7 @@ function strikeOnMove(e){ const S=STK; if(!S) return; const r=strikeViewRect(), 
   if(_stkPinch && _stkPtrs.size>=2){ const p=[..._stkPtrs.values()], d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y), z=_stkPinch.zoom*d/_stkPinch.d;
     const cx=(p[0].x+p[1].x)/2, cy=(p[0].y+p[1].y)/2, dcx=cx-_stkPinch.cx, dcy=cy-_stkPinch.cy;   // 두 손가락 중심 이동 = 팬
     if(build){ const b=S.build; b.zoom=Math.min(BUILD_MAXZOOM, Math.max(1, z)); const sc=b._sc||1; b.cam.x=_stkPinch.camx-dcx/sc; b.cam.y=_stkPinch.camy-dcy/sc; }
-    else { S.zoom=Math.min(STK_MAXZOOM, Math.max(STK_MINZOOM, z)); const W=S.cw||1,H=S.ch||1,scale=Math.min(W,H)/S.viewWorld; S.cam.x=_stkPinch.camx-dcx/scale; S.cam.y=_stkPinch.camy-dcy/scale; S.userCam=true; strikeClampCam(); } return; }
+    else { S.zoom=Math.min(STK_MAXZOOM, Math.max(STK_MINZOOM, z)); const W=S.cw||1,H=S.ch||1,scale=Math.min(W,H)/S.viewWorld; S.cam.x=_stkPinch.camx-dcx/scale; S.cam.y=_stkPinch.camy-dcy/scale; S.userCam=true; S.lastCam=S.t; strikeClampCam(); } return; }
   if(_stkDrag){ const dx=px-_stkDrag.sx, dy=py-_stkDrag.sy; if(Math.abs(dx)+Math.abs(dy)>6) _stkDrag.moved=true; } }   // 한 손가락 이동=탭 취소 판정만(팬 안 함)
 function strikeOnUp(e){ const S=STK; if(!S) return; if(e) _stkPtrs.delete(e.pointerId);
   if(_stkPtrs.size<2) _stkPinch=null;
