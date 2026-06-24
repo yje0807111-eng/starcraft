@@ -8807,23 +8807,33 @@ function strikeNextStruct(side){ const S=STK, foe=S[side==='me'?'ai':'me']; retu
 function strikeCheckOver(){ const S=STK; if(S.over) return;
   if(S.me.base.hp<=0) S.over='lose'; else if(S.ai.base.hp<=0) S.over='win';
   if(S.over && typeof toast==='function') toast(S.over==='win'?'⚔️ 승리! 적 메인 신전 파괴':'💥 패배 — 메인 신전 붕괴'); }
+function strikeFx(u,tx,ty,col){ const S=STK; if(!S) return; if(!S.fx) S.fx=[]; if(S.fx.length>140) S.fx.shift(); S.fx.push({x0:u.x,y0:u.y,x1:tx,y1:ty,life:1,col:col}); }   // 공격 트레이서 이펙트
 function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
   S.spawnT=(S.spawnT==null?0:S.spawnT)-dt;
   if(S.spawnT<=0){ S.spawnT+=2.4; strikeSpawnUnit('me'); strikeSpawnUnit('ai'); if(Math.random()<0.5)strikeSpawnUnit('me'); if(Math.random()<0.5)strikeSpawnUnit('ai'); }
-  for(const side of ['me','ai']){ const me=S[side], foe=S[side==='me'?'ai':'me'];
+  for(const side of ['me','ai']){ const me=S[side], foe=S[side==='me'?'ai':'me'], col=side==='me'?'#7fd0ff':'#ff8a96';
+    const structs=[]; if(S.central&&!S.central.dead) structs.push(S.central); if(foe.sec&&!foe.sec.dead) structs.push(foe.sec); structs.push(foe.base);   // 공격 가능 신전: 중립·적2차·적메인
     for(const u of me.units){ if(u.dead) continue;
       if(u.wait>0){ u.wait-=dt; u.moving=false; continue; }   // 스폰 후 0.5초 대기(중앙 응시 상태로 정지)
       let tgt=null, td=1e18;
       for(const e of foe.units){ if(e.dead) continue; const dx=e.x-u.x, dy=e.y-u.y, d=dx*dx+dy*dy; if(d<td){ td=d; tgt=e; } }
-      const aggro=u.rng+700;
+      const aggro=u.rng+300;   // 가까운 적만 교전 → 나머지는 신전으로 진격
       if(tgt && td<=aggro*aggro){ const d=Math.sqrt(td);
-        if(d<=u.rng){ u.moving=false; u.face=Math.atan2(tgt.x-u.x, tgt.y-u.y); u.cd-=dt; if(u.cd<=0){ u.cd=u.cdMax; tgt.hp-=u.dmg; if(tgt.hp<=0) tgt.dead=true; } }
+        if(d<=u.rng){ u.moving=false; u.face=Math.atan2(tgt.x-u.x, tgt.y-u.y); u.cd-=dt; if(u.cd<=0){ u.cd=u.cdMax; tgt.hp-=u.dmg; strikeFx(u,tgt.x,tgt.y,col); if(tgt.hp<=0) tgt.dead=true; } }
         else strikeMoveToward(u,tgt.x,tgt.y,dt);
-      } else { const st=strikeNextStruct(side), d=Math.hypot(st.x-u.x,st.y-u.y);
-        if(d<=u.rng+220){ u.moving=false; u.face=Math.atan2(st.x-u.x, st.y-u.y); u.cd-=dt; if(u.cd<=0){ u.cd=u.cdMax; st.hp-=u.dmg; if(st.hp<=0){ st.dead=true; strikeCheckOver(); } } }
-        else strikeMoveToward(u,st.x,st.y,dt); } }
+      } else { let atk=null; for(const st of structs){ if(Math.hypot(st.x-u.x,st.y-u.y)<=u.rng+220){ atk=st; break; } }   // 사거리 내 신전 공격
+        if(atk){ u.moving=false; u.face=Math.atan2(atk.x-u.x, atk.y-u.y); u.cd-=dt; if(u.cd<=0){ u.cd=u.cdMax; atk.hp-=u.dmg; strikeFx(u,atk.x,atk.y,col); if(atk.hp<=0){ atk.dead=true; strikeCheckOver(); } } }
+        else strikeMoveToward(u, foe.base.x, foe.base.y, dt); } }   // 진격 목표=적 메인
+    const _dead=me.units.filter(u=>u.dead); if(_dead.length && window.M3D && M3D.dropModels){ try{ M3D.dropModels(_dead.map(u=>u.uid)); }catch(e){} }   // 즉시 제거(사망 모션 없이)
     me.units=me.units.filter(u=>!u.dead); }
+  if(S.fx){ for(const f of S.fx) f.life-=dt*5; S.fx=S.fx.filter(f=>f.life>0); }   // 공격 이펙트 감쇠
 }
+function strikeDrawFx(ctx,w2s,scale,S){ if(!S||!S.fx||!S.fx.length) return; ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.lineCap='round';
+  for(const f of S.fx){ const a=w2s(f.x0,f.y0), b=w2s(f.x1,f.y1), L=Math.max(0,f.life);
+    ctx.globalAlpha=L*0.7; ctx.strokeStyle=f.col; ctx.lineWidth=Math.max(1,2.2*scale);
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+    ctx.globalAlpha=L; ctx.fillStyle=f.col; ctx.beginPath(); ctx.arc(b.x,b.y,Math.max(2,3.2*scale),0,6.283); ctx.fill(); }
+  ctx.restore(); }
 function strikeDrawUnits(ctx,w2s,scale,S){ if(!S) return;
   const use3d=(window.M3D && M3D.ready && M3D.ready() && !(G.opt&&G.opt.model3d===false));   // 3D면 모델은 cvMarine에 렌더 → 2D 도트 생략(발밑 진영 링·HP바만)
   for(const side of ['me','ai']){ const ring=side==='me'?'#3aa0ff':'#ff4d5e';   // 파랑=아군 / 빨강=적군(맵 테두리색과 통일)
@@ -8878,6 +8888,7 @@ function strikeDrawMain(){ const S=STK; if(!S) return; const cvEl=document.getEl
   _tmpl(S.me.base,'temple_main','#3a7bff','#7fe0ff',210,'메인 신전','#bfe0ff');
   _tmpl(S.ai.base,'temple_main','#ff3b54','#ff9aa6',210,'적 메인 신전','#ffc2c8');
   strikeDrawUnits(ctx,w2s,scale,S);   // 전투 유닛(소환·교전) 위에 표시
+  strikeDrawFx(ctx,w2s,scale,S);   // 공격 트레이서/임팩트
   // 크기 비교 샘플 유닛 라벨(3D 모델은 cvMarine에 strikeSyncCmpUnits가 렌더)
   if(S.sizeCmp && S.cmpUnits){ ctx.save(); ctx.font='800 10px Rajdhani,"Apple SD Gothic Neo",sans-serif'; ctx.textAlign='center';
     for(const u of S.cmpUnits){ const p=w2s(u.x,u.y), nm=u.nm||((typeof U!=='undefined'&&U[u.id]&&U[u.id].name)||u.id);
