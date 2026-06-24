@@ -2725,7 +2725,7 @@ function enemyRace(n){ return ENEMY_RACE[n]||'terran'; }
 //        맵별 값 → USEMAPS[id].cfg (+ cfg.bal). 엔진은 mapCfg()/applyMapBalance()로 주입.
 // =====================================================================
 const USEMAPS={
-  nemo:  { id:'nemo',   name:'네모네모 디펜스', desc:'사각 트랙을 도는 적을 막는 협동 디펜스', players:'1-8', pop:9820, icon:'🟥', rec:true,  isNew:false, playable:true,
+  nemo:  { id:'nemo',   name:'네모네모 디펜스', desc:'유닛을 뽑고 합성해 트랙의 적을 막는 협동 디펜스', players:'1-8', pop:9820, icon:'🟥', rec:true,  isNew:false, playable:true,
            cfg:{ rounds:30, roundTime:90, prepTime:10, startCredits:250, startEnergy:0, maxUnits:100,
                  killCredit:1, killEnergy:0.03, specialCredit:12, gachaCost:50, energyDrawCost:50, coopBoss:true, roster:'all',
                  enemiesPerRound:100, bossEvery:10, loseCount:200,
@@ -6592,11 +6592,12 @@ function _loadThumbHTML(m){ if(!m) return '';
   return '<span class="opMapIco">'+(typeof mapIco==='function'?mapIco(m):'')+'</span>'; }
 // 유즈맵 상세 설명(설명서). 없으면 m.desc 폴백.
 const MAP_GUIDE={
-  nemo:['<b>시민</b>을 유닛 패드로 보내 <b>유닛을 구매</b>해요.',
-    '같은 유닛을 <b>합체존</b>에 모아 상위로 <b>조합</b>!',
-    '<b>업그레이드</b>로 공격력·사거리·체력 강화.',
-    '적이 <b>트랙</b>을 돌며 누적 — <b>200기</b>면 패배.',
-    '<b>20라운드</b>를 모두 막아내면 승리!']
+  nemo:['<b>시민</b>을 유닛 패드로 보내 <b>유닛을 뽑아요</b> (7등급 가챠).',
+    '같은 유닛 <b>3기</b>를 <b>합체존</b>에 모아 <b>상위 등급</b>으로 조합!',
+    '<b>업그레이드</b>로 공격력·사거리·체력, <b>타워</b>로 길목 강화.',
+    '적 <b>100마리/라운드</b> — 금색 <b>스페셜</b>은 잡으면 보너스.',
+    '<b>10·20·30 보스</b>는 시간 내 필수 처치 · <b>200기</b> 쌓이면 패배.',
+    '<b>월드보스</b> 처치 <b>코인</b>으로 <b>포인트 연구소</b> 영구 강화!']
 };
 function _mapGuideHTML(m){ if(!m) return '';
   const g=MAP_GUIDE[m.id]; if(g) return '<ul class="opGuide">'+g.map(x=>'<li>'+x+'</li>').join('')+'</ul>';
