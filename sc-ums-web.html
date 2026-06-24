@@ -3484,6 +3484,7 @@ function onBossArenaUp(){
 // ============================================================================
 function newGame(){ return {
   phase:'ready', round:1, kills:0, timeSec:0, speedMul:1, difficulty:'normal',
+  view:{x:0.5, y:0.5, zoom:1},   // 화면 줌/팬(두 손가락). zoom1·중심0.5 = 기존과 동일(항등)
   mineral:mapCfg('startCredits',START_MIN), gas:mapCfg('startEnergy',START_GAS), atkLv:{inf:0,mech:0,pro:0,zrg:0}, // 계열별 공격 업글 레벨
   points:0, _pointsBanked:false,   // 이번 판에서 모은 포인트(월드보스 처치 합) — 게임 종료 시 코인으로 정산 → 다음 판 강화
   coopBoss:null, bossOpen:false, bossPickArm:false,   // 상시 공용 보스 + 토벌장 팝업 + 지정 파견
@@ -3771,7 +3772,8 @@ function fxLevel(){ return (typeof G!=='undefined'&&G.opt&&G.opt.fx)||'full'; }
 function fxLite(){ return fxLevel()!=='full'; }   // min·off → 빔/타격/스파크/연기/총구/충전/가동파티클 생략
 function fxOff(){ return fxLevel()==='off'; }      // off → 발사체까지 제거
 function drawMain(cvId){ const {ctx,W,H}=setup(cvId||'cvMain'); GW=W;GH=H;
-  if(typeof G!=='undefined' && G.sandbox){ drawSandboxGround(ctx,W,H); return; }
+  if(typeof G!=='undefined' && G.sandbox){ const _va=viewApply(ctx,W,H); drawSandboxGround(ctx,W,H); viewRestore(ctx,_va); return; }
+  const _vapply=viewApply(ctx,W,H);   // 화면 줌/팬 변환 시작(기본 뷰면 미적용)
   const {side,ox,oy}=geom(W,H); const R=10;
   // 정적 지형 바닥(우주 배경 + 떠 있는 지형 플랫폼 + 용암 절벽 테두리) — 캐시에서 1회 빌드 후 매 프레임 재사용
   if(_floorW!==W||_floorH!==H||!_floorReady){ _floorReady=buildFloor(W,H); _floorW=W;_floorH=H; }
@@ -3854,6 +3856,7 @@ function drawMain(cvId){ const {ctx,W,H}=setup(cvId||'cvMain'); GW=W;GH=H;
     }
   }
   if(G.opt&&G.opt.model3d===false) drawUnits2D(ctx,W,H);   // 3D 끈 경우(저화질/절전) 2D 마커로 유닛 표시
+  viewRestore(ctx,_vapply);   // 화면 줌/팬 변환 종료
 }
 // 3D 오버레이 OFF일 때 캔버스에 직접 그리는 유닛/적 2D 마커(저사양·절전용)
 function drawUnits2D(ctx,W,H){ ctx.save();
@@ -5536,6 +5539,7 @@ function renderBldgs(viewId,list,posArr,selId,onSel){ const v=document.getElemen
 // ============================================================================
 const ZONE_LABEL={Main:'📍 내 디펜스 구역',Unit:'🏗 유닛 생산 구역',Upgrade:'⚙️ 업그레이드 구역',Players:'👥 다른 플레이어 화면',Boss:'👹 월드 보스방'};
 function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 컴퓨터가 싸운다: 직스 탭 동작
+  if(G.view){ G.view.x=0.5; G.view.y=0.5; G.view.zoom=1; } _nptrs.clear(); _nemoPinch=null;   // 탭 전환 시 화면 줌/팬 초기화(다른 탭 3D 카메라 보호)
   if(G.bossOpen && typeof closeBossArena==='function') closeBossArena();   // 탭 전환 시 보스 팝업 닫기
   if(G.bossPickArm){ G.bossPickArm=false; if(typeof updateBossPickBtn==='function') updateBossPickBtn(); }
   G.tab=id;
@@ -7724,7 +7728,7 @@ function renderSpectate(num, dt){ const board=buildInterpBoard(num);
   G.sel=[]; G.selEnemy=null; G.muzzles=[]; G.recalls=[]; G.impacts=[]; G.sparks=[]; G.debris=[];   // 내 공격 이펙트 leak 방지
   try{ drawPlayer();
     const mcv=document.getElementById('cvMarine');
-    if(window.M3D && window.M3D.ready() && !(G.opt&&G.opt.model3d===false)){ if(mcv) mcv.style.display='block'; window.M3D.sync(G.units, GW, GH, dt, G.specSel?[G.specSel]:[], G.enemies, null); }   // 선택한 상대 유닛 림 표시
+    if(window.M3D && window.M3D.ready() && !(G.opt&&G.opt.model3d===false)){ if(mcv) mcv.style.display='block'; window.M3D.sync(G.units, GW, GH, dt, G.specSel?[G.specSel]:[], G.enemies, null, null, G.view); }   // 선택한 상대 유닛 림 표시
     else if(mcv) mcv.style.display='none';
     const fcv=document.getElementById('cvFx'); if(fcv){ fcv.style.display='block'; drawFx(); }   // 투사체 이펙트
   }catch(e){ console.warn('spectate', e); }
@@ -7980,7 +7984,9 @@ function updateMapName(){ const el=document.getElementById('mapName'); if(!el) r
 // ── 입력: 유닛 드래그 (메인 탭) ──
 let drag=null;
 function evPos(e){ const v=document.getElementById('vMain').getBoundingClientRect();
-  const t=e.touches?e.touches[0]:e; return {x:(t.clientX-v.left)/v.width, y:(t.clientY-v.top)/v.height}; }
+  const t=e.touches?e.touches[0]:e; let x=(t.clientX-v.left)/v.width, y=(t.clientY-v.top)/v.height;
+  const vw=(typeof G!=='undefined')&&G.view; if(vw&&vw.zoom&&vw.zoom!==1){ x=(x-0.5)/vw.zoom+vw.x; y=(y-0.5)/vw.zoom+vw.y; }   // 화면좌표→월드좌표(줌/팬 역변환)
+  return {x:x, y:y}; }
 function hitUnit(x,y){ let best=.06,hit=null;
   for(const u of G.units){ const dx=(u.x-x),dy=(u.y-y); const d=Math.hypot(dx*GW,dy*GH); if(d<=22){ if(d<best*GW){best=d/GW;hit=u;} } }
   // 단순 최근접
@@ -8001,7 +8007,27 @@ let box=null;        // 박스선택 {x0,y0,x1,y1}
 let cmdMove=null;    // 이동 명령 목표 {x,y} — 선택 유닛들이 이쪽으로 걸어감
 const MOVE_MUL=3.0;  // 이동속도 배율(유닛 def.moveSpd × 이 값/초). 느리게/빠르게 조절
 let moved=false;
-function onDown(e){ if(G.strike){ strikeOnDown(e); return; } if(G.tab!=='Main'||G.phase!=='playing'||G.bossOpen) return; const p=evPos(e); moved=false;
+// ── 화면 줌/팬(두 손가락) — nemo·관리자 공용. zoom1·중심0.5=항등(기존 동작 유지) ──
+const NEMO_MAXZOOM=3;
+let _nptrs=new Map(), _nemoPinch=null;
+function viewApply(ctx,W,H){ const v=(typeof G!=='undefined')&&G.view; if(!v||(v.zoom===1&&v.x===0.5&&v.y===0.5)) return false;   // 기본 뷰=변환 생략(오버헤드·위험 0)
+  ctx.save(); ctx.translate(W/2,H/2); ctx.scale(v.zoom,v.zoom); ctx.translate(-v.x*W,-v.y*H); return true; }
+function viewRestore(ctx,applied){ if(applied) ctx.restore(); }
+function nemoClampView(){ const v=G.view; if(!v) return; v.zoom=Math.max(1,Math.min(NEMO_MAXZOOM,v.zoom));
+  if(v.zoom<=1.0001){ v.x=0.5; v.y=0.5; return; }
+  const half=0.5/v.zoom; v.x=Math.max(half,Math.min(1-half,v.x)); v.y=Math.max(half,Math.min(1-half,v.y)); }
+function _nptScreen(e){ const v=document.getElementById('vMain').getBoundingClientRect(); return {x:e.clientX-v.left, y:e.clientY-v.top}; }
+function _nemoPinchStart(){ const p=[..._nptrs.values()]; box=null; drag=null; cmdMove=null; dragSet=[]; clearBox();   // 단일 제스처 취소
+  const v=G.view||(G.view={x:0.5,y:0.5,zoom:1});
+  _nemoPinch={ d:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)||1, zoom:v.zoom, cx:(p[0].x+p[1].x)/2, cy:(p[0].y+p[1].y)/2, vx:v.x, vy:v.y }; }
+function _nemoPinchMove(){ const p=[..._nptrs.values()]; if(p.length<2||!_nemoPinch) return; const v=G.view, r=document.getElementById('vMain').getBoundingClientRect();
+  const d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y), z=Math.max(1,Math.min(NEMO_MAXZOOM,_nemoPinch.zoom*d/_nemoPinch.d)); v.zoom=z;
+  const cx=(p[0].x+p[1].x)/2, cy=(p[0].y+p[1].y)/2, dcx=(cx-_nemoPinch.cx)/(r.width||1), dcy=(cy-_nemoPinch.cy)/(r.height||1);
+  v.x=_nemoPinch.vx-dcx/z; v.y=_nemoPinch.vy-dcy/z; nemoClampView(); }
+function onDown(e){ if(G.strike){ strikeOnDown(e); return; } if(G.tab!=='Main'||G.phase!=='playing'||G.bossOpen) return;
+  _nptrs.set(e.pointerId, _nptScreen(e));
+  if(_nptrs.size>=2){ _nemoPinchStart(); if(e.cancelable)e.preventDefault(); return; }   // 두 손가락 = 줌/팬(단일 제스처 취소)
+  const p=evPos(e); moved=false;
   if(G.bossPickArm){   // 보스 지정 파견: 유닛 클릭 → 그 유닛 1기 파견 후 모드 해제(한 번 누름=한 기)
     const up=hitUnitPrecise(p.x,p.y);
     if(up && !up.fixed) deployUnitToBoss(up);
@@ -8032,6 +8058,8 @@ function onDown(e){ if(G.strike){ strikeOnDown(e); return; } if(G.tab!=='Main'||
   e.preventDefault();
 }
 function onMove(e){ if(G.strike){ strikeOnMove(e); return; } if(G.tab!=='Main') return;
+  if(_nptrs.has(e.pointerId)) _nptrs.set(e.pointerId, _nptScreen(e));
+  if(_nemoPinch && _nptrs.size>=2){ _nemoPinchMove(); if(e.cancelable)e.preventDefault(); return; }   // 두 손가락 = 줌/팬
   if((drag||cmdMove||box) && e.cancelable) e.preventDefault();   // 활성 제스처면 즉시 팬 가로채기 차단(미세 이동에서도) → 모바일 슬라이드 이동 끊김 방지
   const p=evPos(e); moved=true;
   if(box){ box.x1=p.x; box.y1=p.y; drawBox(); return; }
@@ -8043,7 +8071,8 @@ function onMove(e){ if(G.strike){ strikeOnMove(e); return; } if(G.tab!=='Main') 
 // 박스 시각화
 function drawBox(){ let el=document.getElementById('selBox');
   if(!el){ el=document.createElement('div'); el.id='selBox'; document.getElementById('vMain').appendChild(el); }
-  const x=Math.min(box.x0,box.x1),y=Math.min(box.y0,box.y1),w=Math.abs(box.x1-box.x0),h=Math.abs(box.y1-box.y0);
+  let x=Math.min(box.x0,box.x1),y=Math.min(box.y0,box.y1),w=Math.abs(box.x1-box.x0),h=Math.abs(box.y1-box.y0);
+  const v=G.view; if(v&&v.zoom&&v.zoom!==1){ x=(x-v.x)*v.zoom+0.5; y=(y-v.y)*v.zoom+0.5; w*=v.zoom; h*=v.zoom; }   // 월드→화면(줌/팬)
   el.style.cssText='position:absolute;border:1px solid #46f06a;background:rgba(70,240,106,.14);pointer-events:none;z-index:15;'
     +'left:'+(x*100)+'%;top:'+(y*100)+'%;width:'+(w*100)+'%;height:'+(h*100)+'%';
 }
@@ -8064,6 +8093,8 @@ function findFreeSpot(self,x,y){ if(isFreeSpot(self,x,y)) return {x,y};
 }
 function onUp(e){
   if(G.strike){ strikeOnUp(e); return; }
+  if(e) _nptrs.delete(e.pointerId);
+  if(_nemoPinch){ if(_nptrs.size<2){ _nemoPinch=null; } box=null; drag=null; cmdMove=null; dragSet=[]; return; }   // 줌/팬 중이었으면 단일 제스처 마무리 생략
   if(cmdMove){ // 이동 명령: 손 떼도 목표 유지 → 도착까지 계속 이동(스타식). 클리어 안 함.
     cmdMove.issued=true; drag=null; dragSet=[]; lastP=null; return;
   }
@@ -8551,7 +8582,7 @@ function loop(now){
     else drawMiniMap();
     const mcv=document.getElementById('cvMarine');
     if(window.M3D && window.M3D.ready()){ const show=(G.tab==='Main'||G.tab==='Unit'||G.tab==='Upgrade'||G.tab==='Players') && !(G.opt&&G.opt.model3d===false); mcv.style.display=show?'block':'none';
-      if(G.tab==='Main'||G.tab==='Players') window.M3D.sync(G.units, GW, GH, dt, G.sel, G.enemies, G.selEnemy);
+      if(G.tab==='Main'||G.tab==='Players') window.M3D.sync(G.units, GW, GH, dt, G.sel, G.enemies, G.selEnemy, null, G.view);
       else if(G.tab==='Unit') window.M3D.syncShop(GW, GH, dt);
       else if(G.tab==='Upgrade') window.M3D.syncBldg(GW, GH, dt); }
     const fcv=document.getElementById('cvFx');  // 투사체 오버레이(메인·관전) / 업그레이드 가동 파티클
@@ -9509,10 +9540,12 @@ window.M3D={
   loadedKeys:()=>Object.keys(bases),
   mapModelKeys:(mapId)=>mapModelKeys(mapId),
   portrait:(id)=>unitPortrait(id),   // 3D 모델 → 2D 흑백 포트레잇 dataURL(없으면 null)
-  sync(units, W, H, dt, sel, enemies, selEnemy, scaleMul){
+  sync(units, W, H, dt, sel, enemies, selEnemy, scaleMul, view){
     if(!ready||!W||!H) return;
-    if(renderer._w!==W||renderer._h!==H){ renderer.setSize(W,H,false);
-      camera.left=0;camera.right=W;camera.top=H;camera.bottom=0;camera.updateProjectionMatrix(); renderer._w=W;renderer._h=H; }
+    if(renderer._w!==W||renderer._h!==H){ renderer.setSize(W,H,false); renderer._w=W;renderer._h=H; }
+    { const vz=(view&&view.zoom)||1, vx=(view&&view.x!=null)?view.x:0.5, vy=(view&&view.y!=null)?view.y:0.5;   // 화면 줌/팬 → 직교 카메라 프러스텀(전체 3D가 한 번에 줌/팬). 기본=항등
+      const cxw=vx*W, cyw=H-vy*H, hw=(W/2)/vz, hh=(H/2)/vz;
+      camera.left=cxw-hw; camera.right=cxw+hw; camera.top=cyw+hh; camera.bottom=cyw-hh; camera.updateProjectionMatrix(); }
     for(const [,m] of shopModels) m.holder.visible=false;            // 메인 탭: 전시 모델 숨김
     for(const [,m] of bldgModels) m.holder.visible=false;
     if(bossModel) bossModel.holder.visible=false;
