@@ -1387,6 +1387,12 @@
   .stBtn:active{transform:translateY(1px)}.stBtn:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.4)}
   #stBuildPalette{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
   .stUnitCard.sel{border-color:#7fd0ff !important;box-shadow:0 0 11px -2px rgba(127,208,255,.7),inset 0 0 8px rgba(127,208,255,.12)}
+  /* 유닛뽑기 하단 액션 버튼 */
+  #gachaActions{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:100%;max-width:380px;margin:6px auto 0;box-sizing:border-box}
+  #gachaActions:empty{display:none}
+  .gaBtn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 5px;border:1px solid rgba(120,180,230,.4);border-radius:9px;background:linear-gradient(160deg,rgba(20,32,48,.7),rgba(10,16,26,.8));color:#dfeaf6;font-weight:800;font-size:11px;cursor:pointer;transition:transform .1s,box-shadow .15s}
+  .gaBtn:active{transform:scale(.95);box-shadow:0 0 10px -2px rgba(127,208,255,.6);border-color:#7fd0ff}
+  .gaBtn .gaCost{font-size:10px;font-weight:700;color:#e0c98a}
   .stUnitCard{padding:8px 6px;border-radius:9px;text-align:center;cursor:pointer;background:rgba(30,40,54,.8);border:1px solid rgba(255,255,255,.08);font-size:11px;font-weight:700;color:#cfe0f2}
   .stUnitCard.sel{border-color:#7fe0ff;box-shadow:0 0 10px rgba(80,200,255,.4)}
   .stUnitCard .uc{font-size:20px;line-height:1.2}.stUnitCard .ucCost{color:#ffd24a;font-size:10px}
@@ -2330,6 +2336,8 @@
         <div class="scStats" id="spStats"></div>
       </div>
       <div class="hint" id="prodHint" style="display:none"></div>
+      <!-- 유닛뽑기 액션 버튼 — 누르면 시민이 그 비콘으로 이동해 실행 -->
+      <div id="gachaActions"></div>
       <!-- SC 생산고 운용 안내(설명서) — 항상 표시(프로필 아래) -->
       <div class="opsManual" id="opsManual"></div>
     </div>
@@ -5565,7 +5573,7 @@ function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 
   if(typeof clearShopProfile==='function') clearShopProfile();   // 유닛뽑기 중립 선택 해제
   document.getElementById('prodHint').style.display='';
   document.getElementById('upgHint').style.display=''; document.getElementById('upgList').style.display='none';
-  if(id==='Unit'){ G.citizen={x:CITIZEN_HOME.x,y:CITIZEN_HOME.y,gx:null,gy:null,buyId:null,mode:'idle',targetPad:null}; uHold=null; G.shopSel=null; buildClock(); drawProd(); buildGachaDex(); }   // 진입 시 무선택(클릭해야 지정) + 테스트 도감 갱신
+  if(id==='Unit'){ G.citizen={x:CITIZEN_HOME.x,y:CITIZEN_HOME.y,gx:null,gy:null,buyId:null,mode:'idle',targetPad:null}; uHold=null; G.shopSel=null; buildClock(); drawProd(); buildGachaDex(); if(typeof renderGachaActions==='function') renderGachaActions(); }   // 진입 시 무선택(클릭해야 지정) + 테스트 도감 갱신 + 액션 버튼
   updateDeselTop();
   if(id==='Upgrade'){ renderBldgs('vUpgrade',TECH,TECH_POS,null,selectUpg); drawUpg(); }
   if(id==='Players'){ const mine=G.myPlayer||1; const others=(G.activePlayers||[1,2,3,4,5,6,7,8]).filter(n=>n!==mine);
@@ -6062,7 +6070,14 @@ function beaconCostLabel(id){
 function updateBeaconLabels(){ for(const b of DRAW_BEACONS){ const dz=document.getElementById('drawZoneEl_'+b.id); if(!dz) continue;
     const nm=dz.querySelector('.dzName'); if(nm) nm.textContent=beaconName(b);
     const cs=dz.querySelector('.dzCost'); if(cs) cs.innerHTML=beaconCostLabel(b.id); }
-  const rm=document.getElementById('rateMini'); if(rm) rm.innerHTML=rateMiniHTML(); renderOpsManual(); }
+  const rm=document.getElementById('rateMini'); if(rm) rm.innerHTML=rateMiniHTML(); renderOpsManual(); renderGachaActions(); }
+// 유닛뽑기 하단 액션 버튼 — 누르면 시민이 그 비콘으로 이동해 자동 실행(건설식 UX)
+function renderGachaActions(){ const el=document.getElementById('gachaActions'); if(!el || typeof DRAW_BEACONS==='undefined') return;
+  el.innerHTML=DRAW_BEACONS.map(b=>{ const maxed=(typeof beaconMaxed==='function')&&beaconMaxed(b.id), cost=(typeof beaconCost==='function')?beaconCost(b.id):0, nm=(typeof beaconName==='function')?beaconName(b):(b.name||'');
+    return '<button class="gaBtn" onclick="gachaActionCmd(\''+b.id+'\')"><span class="gaNm">'+escHtml(nm)+'</span><span class="gaCost">'+(maxed?'MAX':(cost?('⛁'+cost):'-'))+'</span></button>'; }).join(''); }
+function gachaActionCmd(id){ if(G.tab!=='Unit') return; const b=(typeof DRAW_BEACONS!=='undefined')&&DRAW_BEACONS.find(x=>x.id===id); if(!b) return;
+  if(typeof moveCitizenTo==='function') moveCitizenTo(b.x, b.y, b.id);   // 시민을 그 비콘으로 → 도착 시 자동 실행
+  if(typeof playSfx==='function') playSfx('ui_tab'); }
 // 생산고 운용 안내(현황) — 뽑기 확률 / 크레딧 확률 / 가드타워 수 / 스파이어 수 (SC 콘솔 카드)
 function renderOpsManual(){ const el=document.getElementById('opsManual'); if(!el) return;
   const gN=(typeof G!=='undefined'&&G.units)?G.units.filter(u=>u.id==='turret').length:0;   // 보유 가드 타워 수
