@@ -8639,10 +8639,25 @@ const STRIKE_SAMPLE=[{id:'marine'},{id:'ghost'},{id:'hydra'},{id:'dragoon'},{id:
 const STK_MINZOOM=1.2, STK_DEFZOOM=1.2, STK_MAXZOOM=2.5, BUILD_MAXZOOM=3;
 // 종족(컴퓨터가 싸운다): 진입 시 선택 → 그 종족 유닛만 소환. units=현 보유 전투유닛 기준 로스터
 // (프로토스·저그는 다음 단계에서 가챠 유닛으로 보강 예정 — 균형)
+// 직스 전용 유닛 스탯(네모 U 테이블과 독립 — 단독 밸런스 튜닝). hp/dmg/rng/spd=절대값(월드 0..4800 픽셀), cd=초, splash=광역 반경(px), melee=근접
+const STK_UNITS={
+  // 🛡 유니온 — 보병·기계 (저가 원거리 / 기계 탱커 / 공성)
+  marine:    {name:'레인저',    ico:'🪖', cost:100, hp:130, dmg:16, rng:200, cd:0.85, spd:340, size:14},
+  goliath:   {name:'스트라이더', ico:'⚙️', cost:220, hp:380, dmg:30, rng:235, cd:1.30, spd:155, size:21},
+  tank:      {name:'브레이커',   ico:'🛡', cost:350, hp:430, dmg:72, rng:330, cd:2.30, spd:115, size:24, splash:160},
+  // 🔮 에테리얼 — 사이오닉 (원거리 포격 / 근접 돌격 / 광역 탱커)
+  dragoon:   {name:'센티넬',    ico:'🤖', cost:200, hp:300, dmg:24, rng:245, cd:1.25, spd:230, size:18},
+  blade:     {name:'질럿',      ico:'⚔️', cost:120, hp:300, dmg:22, rng:62,  cd:0.80, spd:340, size:17, melee:true},
+  archon:    {name:'보이드',    ico:'🔮', cost:340, hp:400, dmg:34, rng:130, cd:1.05, spd:185, size:23, splash:120},
+  // 🦎 스웜 — 유기체 (저가 원거리 / 근접 다수 / 도트 공성)
+  hydra:     {name:'리퍼',      ico:'🦎', cost:110, hp:215, dmg:18, rng:215, cd:0.95, spd:300, size:17},
+  matron:    {name:'브루드마더', ico:'🧬', cost:210, hp:470, dmg:26, rng:70,  cd:0.95, spd:205, size:22, melee:true},
+  thornqueen:{name:'가시여왕',   ico:'🐛', cost:330, hp:360, dmg:42, rng:300, cd:1.70, spd:125, size:22, splash:150},
+};
 const STK_RACES={
-  terran:  { key:'terran',  name:'유니온',   sub:'인간', desc:'보병·기계', col:'#4aa8ff', icon:'🛡️', units:['marine','ghost','goliath'] },
-  protoss: { key:'protoss', name:'에테리얼', sub:'외계', desc:'루멘',     col:'#ffc040', icon:'🔮', units:['dragoon','archon'] },
-  zerg:    { key:'zerg',    name:'스웜',     sub:'군체', desc:'유기체',   col:'#9fd356', icon:'🦎', units:['hydra'] },
+  terran:  { key:'terran',  name:'유니온',   sub:'인간', desc:'보병·기계', col:'#4aa8ff', icon:'🛡️', units:['marine','goliath','tank'] },
+  protoss: { key:'protoss', name:'에테리얼', sub:'외계', desc:'사이오닉', col:'#ffc040', icon:'🔮', units:['dragoon','blade','archon'] },
+  zerg:    { key:'zerg',    name:'스웜',     sub:'군체', desc:'유기체',   col:'#9fd356', icon:'🦎', units:['hydra','matron','thornqueen'] },
 };
 const STK_RACE_ORDER=['terran','zerg','protoss'];   // 표시 순서: 유니온 · 스웜 · 에테리얼 (관리자와 통일)
 function strikeRandomRace(){ return STK_RACE_ORDER[Math.floor(Math.random()*STK_RACE_ORDER.length)]; }
@@ -8704,7 +8719,8 @@ function strikeStart(){ if(typeof bgmStop==='function') bgmStop();
   G=newGame(); G.strike=true; G.phase='playing'; G.tab='Main'; G.sel=[]; G.selEnemy=null;
   STK=strikeNewState();
   STK.me.race=(STK_RACES[_selRace]?_selRace:'terran'); STK.ai.race=strikeRandomRace();   // 내 종족=선택, 상대=랜덤 → 각자 그 종족 유닛만 소환
-  { const b=STK.build, cw=b.W/b.cols, ch=b.H/b.rows; b.cells.push({col:2,row:1,type:STRIKE_BUILDABLE[0],built:1,x:(2+0.5)*cw,y:(1+0.5)*ch}); b.workers=[]; for(let i=0;i<3;i++) b.workers.push({x:b.W*(0.34+i*0.16),y:b.H-180,task:null}); }   // 시작 생산 건물 1 + 일꾼 3
+  STK.buildMenu=strikeBuildable(STK.me.race);   // 내 종족 빌드 메뉴 캐시(이전 판 잔존 방지)
+  { const b=STK.build, cw=b.W/b.cols, ch=b.H/b.rows; b.cells.push({col:2,row:1,type:STK.buildMenu[0],built:1,x:(2+0.5)*cw,y:(1+0.5)*ch}); b.workers=[]; for(let i=0;i<3;i++) b.workers.push({x:b.W*(0.34+i*0.16),y:b.H-180,task:null}); }   // 시작 생산 건물 1 + 일꾼 3
   if(STK.sizeCmp){   // 크기 비교용 샘플 유닛: 중앙 신전 주변 4×2 그리드(월드 좌표)
     const W=STK.world, sp=560, cols=4;
     STK.cmpUnits=STRIKE_SAMPLE.map((s,i)=>{ const c=i%cols, r=Math.floor(i/cols);
@@ -8839,9 +8855,15 @@ function strikeFocus(){ const S=STK; if(!S) return {x:0,y:0}; const c=S.world/2;
   return {x:c*0.45+sx*0.55, y:c*0.45+sy*0.55}; }   // 전체 평균 + 중앙 블렌드(유닛 사망 시 카메라 튐 방지)
 
 // ── 전투 시뮬(1차): 양 진영이 주기적으로 종족 유닛 소환 → 대각 진격 → 자동 교전 → 적 신전 타격 ──
-function strikeUnitStats(id){ const d=U[id]||{}; return {
-  hp:Math.round((d.hp||40)*3), dmg:(d.dmg||15), rng:(d.range||0.2)*850,   // 사거리 축소(1400→850)
-  cdMax:Math.max(0.45,(d.cd||22)/22), spd:(d.moveSpd||0.19)*1800, color:d.color||'#cfd6e2', size:d.size||13 }; }
+function strikeUnitName(id){ return (STK_UNITS[id]&&STK_UNITS[id].name)||(U[id]&&U[id].name)||id; }   // 직스 유닛 표시명(신규 유닛 포함)
+function strikeUnitIco(id){ return (STK_UNITS[id]&&STK_UNITS[id].ico)||(U[id]&&U[id].icon)||'⚔'; }
+function strikeUnitStats(id){ const s=STK_UNITS[id];
+  if(s){ const acq = s.melee ? Math.max(440, s.rng*1.5) : s.rng*1.5;   // 근접은 인지범위 따로 키움(안 그러면 적 코앞까지 무시)
+    return { hp:s.hp, dmg:s.dmg, rng:s.rng, cdMax:s.cd, spd:s.spd,
+      color:(U[id]&&U[id].color)||'#cfd6e2', size:s.size, splash:s.splash||0, melee:!!s.melee, acq:acq }; }
+  const d=U[id]||{}; const rng=(d.range||0.2)*850;   // 폴백(U 기반 — 안전)
+  return { hp:Math.round((d.hp||40)*3), dmg:(d.dmg||15), rng:rng,
+    cdMax:Math.max(0.45,(d.cd||22)/22), spd:(d.moveSpd||0.19)*1800, color:d.color||'#cfd6e2', size:d.size||13, splash:0, melee:false, acq:rng*1.5 }; }
 function strikeSpawnPads(side){ const S=STK, b=S[side].base, D=360, CS=180;   // 메인신전 양 옆 네모 스폰존(strikeDrawSpawnPad와 동일 위치)
   return side==='me' ? [{x:b.x-D+CS,y:b.y-D-CS},{x:b.x+D+CS,y:b.y+D-CS}] : [{x:b.x-D-CS,y:b.y-D+CS},{x:b.x+D-CS,y:b.y+D+CS}]; }
 function strikeSpawnUnit(side, forceId){ const S=STK, me=S[side]; if(!me||me.units.length>=40) return;   // 진영당 상한(3D 성능 고려)
@@ -8851,8 +8873,8 @@ function strikeSpawnUnit(side, forceId){ const S=STK, me=S[side]; if(!me||me.uni
   const x=pad.x+(Math.random()-.5)*260, y=pad.y+(Math.random()-.5)*260;   // 네모 스폰존 안에서 출현
   const pcol=me.compCol||((typeof PLAYER_VIEW_COLORS!=='undefined')?PLAYER_VIEW_COLORS[(side==='me')?0:1]:'#cfd6e2');   // 본체색=팀 대표 컴퓨터(생산자) 색 1개(개별 플레이어색 X — 그건 관전 화면에서)
   me.units.push({uid:'su'+(S.uidSeq=(S.uidSeq||0)+1), id:id, side:side, x:x, y:y, pcol:pcol,
-    hp:st.hp, maxHp:st.hp, dmg:st.dmg, rng:st.rng, acq:st.rng*1.5, tgtUid:null, cd:Math.random()*st.cdMax, cdMax:st.cdMax, spd:st.spd, color:st.color, size:st.size,
-    wait:0.5, face:Math.atan2(c-x, c-y), dead:false}); }   // 인지범위=사거리×1.5 / 0.5초 대기 후 진격
+    hp:st.hp, maxHp:st.hp, dmg:st.dmg, rng:st.rng, acq:st.acq, splash:st.splash||0, melee:!!st.melee, tgtUid:null, cd:Math.random()*st.cdMax, cdMax:st.cdMax, spd:st.spd, color:st.color, size:st.size,
+    wait:0.5, face:Math.atan2(c-x, c-y), dead:false}); }   // 인지범위/광역/근접 스탯 반영 / 0.5초 대기 후 진격
 function strikeMoveToward(u,tx,ty,dt){ const dx=tx-u.x, dy=ty-u.y, d=Math.hypot(dx,dy)||1, v=u.spd*dt; u.x+=dx/d*v; u.y+=dy/d*v; u.face=Math.atan2(dx,dy); u.moving=true; }   // 이동방향 응시 + 보행 모션
 function strikeNextStruct(side){ const S=STK, foe=S[side==='me'?'ai':'me']; return (foe.sec&&!foe.sec.dead)?foe.sec:foe.base; }   // 적 2차 신전 → 메인 신전 순
 function strikeCheckOver(){ const S=STK; if(S.over) return;
@@ -8874,7 +8896,7 @@ function strikePlaceBuilding(col,row){ const S=STK, b=S.build; if(!b.placing) re
   S.me.gold-=t.cost; const cw=b.W/b.cols, ch=b.H/b.rows;
   b.cells.push({col:col,row:row,type:t,built:0,x:(col+0.5)*cw,y:(row+0.5)*ch});
   if(typeof playSfx==='function') playSfx('buy_unit'); }
-function strikePickBuild(i){ const S=STK; if(!S) return; const t=STRIKE_BUILDABLE[i]; S.build.placing=(S.build.placing===t)?null:t; strikeRenderBuild(); if(S.build.placing) strikeToast(t.name+' 생산 건물 — 빈 타일을 탭해 배치'); }
+function strikePickBuild(i){ const S=STK; if(!S) return; const t=strikeBuildMenu()[i]; if(!t) return; S.build.placing=(S.build.placing===t)?null:t; strikeRenderBuild(); if(S.build.placing) strikeToast(t.name+' 생산 건물 — 빈 타일을 탭해 배치'); }
 function strikeFx(u,tx,ty,col){ const S=STK; if(!S) return; if(!S.fx) S.fx=[]; if(S.fx.length>140) S.fx.shift(); S.fx.push({x0:u.x,y0:u.y,x1:tx,y1:ty,life:1,col:col}); }   // 공격 트레이서 이펙트
 function strikeFindUnit(arr,uid){ if(!uid) return null; for(const u of arr){ if(u.uid===uid&&!u.dead) return u; } return null; }
 function strikeAlert(allies, attackerUid, ax, ay, r){ const r2=r*r; for(const a of allies){ if(a.dead||a.wait>0||a.tgtUid) continue; const dx=a.x-ax, dy=a.y-ay; if(dx*dx+dy*dy<=r2) a.tgtUid=attackerUid; } }   // 주변 아군 가담
@@ -8915,6 +8937,8 @@ function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
           if(u.cd<=0){ u.cd=u.cdMax; tgt.hp-=u.dmg; strikeFx(u,tgt.x,tgt.y,col);
             if(!tgt.tgtUid) tgt.tgtUid=u.uid;                     // 맞은 유닛이 반격(공격자 겨냥)
             strikeAlert(foe.units, u.uid, tgt.x, tgt.y, 420);     // 주변 아군도 공격자에 가담(스타식 자동교전)
+            if(u.splash>0){ const sr2=u.splash*u.splash, sd=u.dmg*0.6;   // 광역: 타겟 주변 적에게 60% 추가타
+              for(const e of foe.units){ if(e===tgt||e.dead) continue; const ex=e.x-tgt.x, ey=e.y-tgt.y; if(ex*ex+ey*ey<=sr2){ e.hp-=sd; if(e.hp<=0) e.dead=true; } } }
             if(tgt.hp<=0) tgt.dead=true; } }
         else strikeMoveToward(u,tgt.x,tgt.y,dt);
       } else { const d=Math.hypot(front.x-u.x, front.y-u.y);   // 인지 적 없음 → 최전방 신전 1개로 진격/공격
@@ -8951,11 +8975,11 @@ function strikeRenderSelInfo(){ const S=STK; const el=document.getElementById('s
   let html=null;
   if(S && S.selTemple && !S.selTemple.dead){ const o=S.selTemple, nm=S.selTempleName||'신전', col=(nm.indexOf('적')>=0)?'#ff6b7a':(nm.indexOf('중립')>=0?'#ffd24a':'#7fd0ff');
     html='<div class="siIco" style="--c:'+col+'">🏛</div><div class="siBody"><div class="siName">'+escHtml(nm)+'</div>'+bar(o.hp,o.max)+'<div class="siStat"><span>HP <b>'+Math.ceil(o.hp).toLocaleString()+' / '+o.max.toLocaleString()+'</b></span></div></div>'; }
-  else if(S && S.selEnemy && !S.selEnemy.dead){ const u=S.selEnemy, nm=(U[u.id]&&U[u.id].name)||u.id;
-    html='<div class="siIco" style="--c:#ff6b7a">'+((U[u.id]&&U[u.id].icon)||'⚔')+'</div><div class="siBody"><div class="siName">'+escHtml(nm)+'<span class="siTeam" style="color:#ff6b7a">적군</span></div>'+bar(u.hp,u.maxHp)+'<div class="siStat"><span>HP <b>'+Math.ceil(u.hp)+' / '+u.maxHp+'</b></span><span>공격 <b>'+u.dmg+'</b></span></div></div>'; }
+  else if(S && S.selEnemy && !S.selEnemy.dead){ const u=S.selEnemy, nm=strikeUnitName(u.id);
+    html='<div class="siIco" style="--c:#ff6b7a">'+strikeUnitIco(u.id)+'</div><div class="siBody"><div class="siName">'+escHtml(nm)+'<span class="siTeam" style="color:#ff6b7a">적군</span></div>'+bar(u.hp,u.maxHp)+'<div class="siStat"><span>HP <b>'+Math.ceil(u.hp)+' / '+u.maxHp+'</b></span><span>공격 <b>'+u.dmg+'</b></span></div></div>'; }
   else if(S){ const arr=(S.selAllies||[]).map(uid=>strikeFindUnit(S.me.units,uid)).filter(Boolean), col=S.me.compCol||'#7fd0ff';
-    if(arr.length===1){ const u=arr[0], nm=(U[u.id]&&U[u.id].name)||u.id;
-      html='<div class="siIco" style="--c:'+col+'">'+((U[u.id]&&U[u.id].icon)||'🛡')+'</div><div class="siBody"><div class="siName">'+escHtml(nm)+'<span class="siTeam" style="color:'+col+'">아군</span></div>'+bar(u.hp,u.maxHp)+'<div class="siStat"><span>HP <b>'+Math.ceil(u.hp)+' / '+u.maxHp+'</b></span><span>공격 <b>'+u.dmg+'</b></span></div></div>'; }
+    if(arr.length===1){ const u=arr[0], nm=strikeUnitName(u.id);
+      html='<div class="siIco" style="--c:'+col+'">'+strikeUnitIco(u.id)+'</div><div class="siBody"><div class="siName">'+escHtml(nm)+'<span class="siTeam" style="color:'+col+'">아군</span></div>'+bar(u.hp,u.maxHp)+'<div class="siStat"><span>HP <b>'+Math.ceil(u.hp)+' / '+u.maxHp+'</b></span><span>공격 <b>'+u.dmg+'</b></span></div></div>'; }
     else if(arr.length>1){ const avg=Math.round(arr.reduce((a,u)=>a+u.hp/u.maxHp,0)/arr.length*100);
       html='<div class="siIco" style="--c:'+col+'">🛡</div><div class="siBody"><div class="siName">아군 유닛 '+arr.length+'기</div><div class="siStat"><span>평균 HP <b>'+avg+'%</b></span></div></div>'; } }
   if(html){ el.innerHTML=html; el.classList.remove('hide'); } else { el.classList.add('hide'); el.innerHTML=''; } }
@@ -9183,15 +9207,19 @@ function strikeRenderEcon(){ const S=STK; if(!S) return; const me=S.me; const se
   set('ecGold',Math.floor(me.gold)); set('ecBase',S.incomeBase); set('ecMines',me.mines);
   set('ecMineInc',me.mines*S.mineIncome); set('ecTotal',strikeIncome(me)); set('ecMineCost',me.mineCost);
   const b=document.getElementById('ecBuyMine'); if(b) b.disabled=me.gold<me.mineCost; }
-const STRIKE_BUILDABLE=[ {id:'marine',name:'소총병',ico:'🔫',cost:100}, {id:'goliath',name:'워커',ico:'🤖',cost:220}, {id:'tank',name:'중전차',ico:'🛡',cost:350} ];
-function strikeRenderBuild(){ const el=document.getElementById('stBuildPalette'); if(!el) return; const S=STK;
-  el.innerHTML=STRIKE_BUILDABLE.map((u,i)=>`<div class="stUnitCard${S&&S.build&&S.build.placing===u?' sel':''}" onclick="strikePickBuild(${i})"><div class="uc">${u.ico}</div>${u.name}<div class="ucCost">⛁${u.cost}</div></div>`).join(''); }
+// 종족별 빌드 메뉴(그 종족 소환 유닛 = 지을 수 있는 생산 건물). STK_UNITS에서 이름·아이콘·비용 도출
+function strikeBuildable(race){ const r=race||(STK&&STK.me&&STK.me.race)||'terran'; const ids=(STK_RACES[r]||STK_RACES.terran).units;
+  return ids.map(id=>{ const d=STK_UNITS[id]||{}; return {id:id, name:d.name||id, ico:d.ico||'⚙️', cost:d.cost||150}; }); }
+function strikeBuildMenu(){ const S=STK; if(!S) return []; if(!S.buildMenu) S.buildMenu=strikeBuildable(S.me&&S.me.race); return S.buildMenu; }   // 캐시(placing 객체 동일성 유지)
+function strikeRenderBuild(){ const el=document.getElementById('stBuildPalette'); if(!el) return; const S=STK; const menu=strikeBuildMenu();
+  el.innerHTML=menu.map((u,i)=>`<div class="stUnitCard${S&&S.build&&S.build.placing===u?' sel':''}" onclick="strikePickBuild(${i})"><div class="uc">${u.ico}</div>${u.name}<div class="ucCost">⛁${u.cost}</div></div>`).join(''); }
 // 관전: nemo .plbtn/.plGrid(4×2) 재사용. 팀 1-4(아군 파랑) vs 5-8(적군 빨강). 빈 자리=잠금
 function strikePColor(slot){ return (typeof PLAYER_VIEW_COLORS!=='undefined')?PLAYER_VIEW_COLORS[(slot-1)%PLAYER_VIEW_COLORS.length]:'#7fd0ff'; }
 function strikeSpecBuildCells(slot){ const S=STK; if(!S.specBuilds) S.specBuilds={};   // 데모 건물(추후 실제 멀티 데이터로 교체)
   if(!S.specBuilds[slot]){ const b=S.build, cw=b.W/b.cols, ch=b.H/b.rows, cells=[], used=new Set(), n=2+(Math.random()*4|0);
+    const menu=strikeBuildable(STK_RACE_ORDER[(slot-1)%STK_RACE_ORDER.length]);   // 슬롯별 종족 데모 빌드
     for(let k=0;k<n;k++){ let col,row,key,t=0; do{ col=Math.random()*b.cols|0; row=Math.random()*b.rows|0; key=col+','+row; }while(used.has(key)&&++t<20); used.add(key);
-      cells.push({col:col,row:row,type:STRIKE_BUILDABLE[Math.random()*STRIKE_BUILDABLE.length|0],built:1,x:(col+0.5)*cw,y:(row+0.5)*ch}); }
+      cells.push({col:col,row:row,type:menu[Math.random()*menu.length|0],built:1,x:(col+0.5)*cw,y:(row+0.5)*ch}); }
     S.specBuilds[slot]=cells; }
   return S.specBuilds[slot]; }
 function strikeSpecView(slot){ const S=STK; const cells=(slot===1)?(S.build.cells||[]):strikeSpecBuildCells(slot);
