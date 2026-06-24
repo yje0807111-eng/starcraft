@@ -9430,19 +9430,23 @@ function strikeWheel(e){ const S=STK; if(!S) return; if(e.cancelable) e.preventD
 //   맵/줌 슬라이더가 3D 모델 크기와 이펙트 크기를 함께 스케일 → "작은맵=작게 / 확대=크게" 일관 시연.
 // ════════════════════════════════════════════════════════════════
 const FXLAB_UNITS=['marine','ghost','goliath','dragoon','archon','hydra','tank','blade','matron','thornqueen'];
-const FXLAB={ store:null, attId:'marine', scale:1, mode:'attack', phase:'alive', t:0, cd:0, mv:1, atkB:false, att:null, dummy:null, bldg:null };
+const FXLAB={ store:null, attId:'marine', scale:1, mode:'attack', phase:'alive', t:0, cd:0, mv:1, ti:0, att:null, dummy:null, bldg:null, air:null };
 let _fxLabAttSeq=0;
-function fxLabStats(id){ const s=STK_UNITS[id]; if(s) return {size:s.size, cd:s.cd, melee:!!s.melee, color:(U[id]&&U[id].color)||'#cfd6e2'};
-  const d=U[id]||{}; return {size:d.size||16, cd:Math.max(0.5,(d.cd||22)/22), melee:false, color:d.color||'#cfd6e2'}; }
-function fxLabSpawnScene(){ const a=fxLabStats(FXLAB.attId);   // 공격자 + 타겟 더미(시민) + 타겟 건물
-  FXLAB.att={ uid:'lab_att'+(++_fxLabAttSeq), id:FXLAB.attId, x:0.28, y:0.55, face:Math.PI/2, moving:false, fireSeq:0, size:a.size, hidden:false };
-  FXLAB.dummy={ uid:'lab_cit', id:'citizen', x:0.60, y:0.44, face:-Math.PI/2, moving:false, fireSeq:0, size:13 };
-  FXLAB.bldg ={ uid:'lab_bld', id:'turret',  x:0.66, y:0.68, face:0,          moving:false, fireSeq:0, size:24 }; }
+const FXLAB_AA=new Set(['marine','ghost','goliath','dragoon','archon','hydra']);   // 공중 공격 가능 유닛(나머지는 지상만)
+const FXLAB_TGT_X=0.70, FXLAB_TGT_Y=0.52;   // 지상 타겟 기준선(시민)
+function fxLabStats(id){ const s=STK_UNITS[id]; if(s) return {size:s.size, cd:s.cd, melee:!!s.melee, rng:s.rng||120, color:(U[id]&&U[id].color)||'#cfd6e2'};
+  const d=U[id]||{}; return {size:d.size||16, cd:Math.max(0.5,(d.cd||22)/22), melee:false, rng:120, color:d.color||'#cfd6e2'}; }
+function fxLabAttX(id){ return Math.max(0.12, FXLAB_TGT_X - fxLabStats(id).rng/600); }   // 최대 사거리만큼 타겟에서 떨어진 위치
+function fxLabSpawnScene(){ const a=fxLabStats(FXLAB.attId);   // 공격자(사거리 위치) + 타겟 더미(시민) + 건물 + 공중 적
+  FXLAB.att={ uid:'lab_att'+(++_fxLabAttSeq), id:FXLAB.attId, x:fxLabAttX(FXLAB.attId), y:FXLAB_TGT_Y, face:Math.PI/2, moving:false, fireSeq:0, size:a.size, hidden:false };
+  FXLAB.dummy={ uid:'lab_cit', id:'citizen',  x:FXLAB_TGT_X, y:FXLAB_TGT_Y, face:-Math.PI/2, moving:false, fireSeq:0, size:13 };
+  FXLAB.bldg ={ uid:'lab_bld', id:'turret',   x:0.80, y:0.62, face:0,          moving:false, fireSeq:0, size:24 };
+  FXLAB.air  ={ uid:'lab_air', id:'skyguard', x:0.72, y:0.26, face:Math.PI,     moving:false, fireSeq:0, size:18 }; }
 function fxLabClearStore(){ const s=FXLAB.store; if(s){ s.shots.length=0; s.impacts.length=0; s.melee.length=0; s.deaths.length=0; } }
 function fxLabSelect(id){ FXLAB.attId=id; if(!FXLAB.store) FXLAB.store=FX.store(); fxLabClearStore();
   if(window.M3D&&M3D.clearGameModels) M3D.clearGameModels(); fxLabSpawnScene(); FXLAB.phase='alive'; FXLAB.t=(FXLAB.mode==='death')?0.9:0; FXLAB.cd=0.2; fxLabRenderGrid(); }
-function fxLabSetMode(mode, el){ FXLAB.mode=mode; FXLAB.phase='alive'; FXLAB.t=(mode==='death')?0.9:0; FXLAB.cd=0.2; FXLAB.mv=1;
-  if(FXLAB.att){ FXLAB.att.hidden=false; FXLAB.att.moving=false; if(mode!=='move'){ FXLAB.att.x=0.28; FXLAB.att.y=0.55; } }
+function fxLabSetMode(mode, el){ FXLAB.mode=mode; FXLAB.phase='alive'; FXLAB.t=(mode==='death')?0.9:0; FXLAB.cd=0.2; FXLAB.mv=1; FXLAB.ti=0;
+  if(FXLAB.att){ FXLAB.att.hidden=false; FXLAB.att.moving=false; if(mode!=='move'){ FXLAB.att.x=fxLabAttX(FXLAB.attId); FXLAB.att.y=FXLAB_TGT_Y; } }
   document.querySelectorAll('#fxLabActs .fxlAct').forEach(b=>b.classList.toggle('on', b.getAttribute('data-m')===mode)); }
 function fxLabSetMul(v){ FX.sizeMul=+v||1; const e=document.getElementById('fxLabSizeV'); if(e) e.textContent=(+v).toFixed(2); }
 function fxLabSetScale(v){ FXLAB.scale=+v||1; const e=document.getElementById('fxLabScaleV'); if(e) e.textContent=(+v).toFixed(2); }
@@ -9454,24 +9458,26 @@ function fxLabActivate(){ const w=document.getElementById('fxLabWrap'); if(w) w.
   ['shopProfile','prodHint','gachaActions','opsManual'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display='none'; });
   if(!FXLAB.store) FXLAB.store=FX.store(); if(window.M3D&&M3D.clearGameModels) M3D.clearGameModels(); fxLabSpawnScene(); fxLabRenderGrid(); }
 function fxLabDeactivate(){ const w=document.getElementById('fxLabWrap'); if(w) w.classList.remove('on');
-  const acts=document.getElementById('fxLabActs'); if(acts) acts.classList.add('hide'); FXLAB.att=null; FXLAB.dummy=null; FXLAB.bldg=null; }
+  const acts=document.getElementById('fxLabActs'); if(acts) acts.classList.add('hide'); FXLAB.att=null; FXLAB.dummy=null; FXLAB.bldg=null; FXLAB.air=null; }
 function fxLabStep(dt){ const L=FXLAB; if(!L.att) fxLabSpawnScene(); const a=L.att, st=fxLabStats(L.attId);
   if(L.mode==='move'){ a.moving=true; a.x+=0.17*dt*L.mv; if(a.x>0.60){ a.x=0.60; L.mv=-1; } if(a.x<0.22){ a.x=0.22; L.mv=1; } a.face=Math.atan2(L.mv,0.0001); return; }   // 좌우 왕복
   if(L.mode==='death'){ a.moving=false; L.t-=dt;
     if(L.phase==='alive'){ if(L.t<=0){ FX.death(L.store, a.x,a.y, {unitSize:a.size, color:st.color}); a.hidden=true; L.phase='dead'; L.t=0.9; } }   // 사망 이펙트 + 모델 사라짐(M3D 사망모션)
     else { if(L.t<=0){ a.hidden=false; a.uid='lab_att'+(++_fxLabAttSeq); a.fireSeq=0; L.phase='alive'; L.t=1.0; } }   // 재생성
     return; }
-  // 공격: 시민 더미 ↔ 건물 번갈아 타격
-  a.moving=false; const tgt=(L.atkB ? L.bldg : L.dummy)||L.dummy; if(!tgt) return;
-  const dx=tgt.x-a.x, dy=tgt.y-a.y; a.face=Math.atan2(dx,dy);
+  // 공격: 최대 사거리에서 — 지상(시민·건물) + 공중(공중공격 가능 유닛만) 타겟 순환
+  a.moving=false; const tgts=[L.dummy, L.bldg]; if(FXLAB_AA.has(L.attId)&&L.air) tgts.push(L.air);
+  const tgt=tgts[(L.ti||0)%tgts.length]; if(!tgt) return;
+  const ty=(tgt===L.air)?tgt.y-0.05:tgt.y;   // 공중 적은 부양 본체 위치로 살짝 위 조준
+  const dx=tgt.x-a.x, dy=ty-a.y; a.face=Math.atan2(dx,dy);
   L.cd-=dt; if(L.cd<=0){ L.cd=Math.max(0.42, st.cd); a.fireSeq=(a.fireSeq||0)+1;
-    FX.spawn(L.store, L.attId, a.x,a.y, tgt.x,tgt.y, {speed:(st.melee?6.5:3.6), unitSize:st.size}); L.atkB=!L.atkB; } }
+    FX.spawn(L.store, L.attId, a.x,a.y, tgt.x,ty, {speed:(st.melee?6.5:3.6), unitSize:st.size}); L.ti=((L.ti||0)+1)%tgts.length; } }
 function fxLabRender(dt){ const L=FXLAB; if(!L.store) L.store=FX.store(); if(!L.att) fxLabSpawnScene();
   const r=setup('cvUnit'); GW=r.W; GH=r.H; drawSandboxGround(r.ctx, r.W, r.H);   // 빈 땅(cvUnit)
   fxLabStep(dt);
   const mcv=document.getElementById('cvMarine');
   if(window.M3D && M3D.ready() && !(G.opt&&G.opt.model3d===false)){ mcv.style.display='block';
-    const list=[]; if(L.att && !L.att.hidden) list.push(L.att); if(L.dummy) list.push(L.dummy); if(L.bldg) list.push(L.bldg);
+    const list=[]; if(L.att && !L.att.hidden) list.push(L.att); if(L.dummy) list.push(L.dummy); if(L.bldg) list.push(L.bldg); if(L.air) list.push(L.air);
     const k=Math.max(0.12, Math.min(1.7, L.scale*0.72));   // 맵/줌 스케일 → 3D 모델 크기
     M3D.sync(list, r.W, r.H, dt, [], [], null, k); }
   else if(mcv) mcv.style.display='none';
