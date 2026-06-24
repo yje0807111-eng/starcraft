@@ -8663,7 +8663,7 @@ function strikeRanked(){ const S=STK; return [S.me,S.ai].slice().sort((a,b)=> (b
 function strikeSetTabLabels(map){ for(const t in map){ const el=document.querySelector('.tab[data-tab="'+t+'"]'); if(!el) continue;
   let tn=null; el.childNodes.forEach(n=>{ if(n.nodeType===3 && n.textContent.trim()) tn=n; });
   if(tn) tn.textContent=map[t]; else el.appendChild(document.createTextNode(map[t])); } }
-function strikeHideNemoChrome(on){ ['coopBossBar','bossPopup','mergeFab','skillFab','autoFab','pbossBtn','deselTop','cvMarine','cvFx','mergeZone','miniWrap','defaultCmd','unitCmd'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display=on?'none':''; });
+function strikeHideNemoChrome(on){ ['coopBossBar','bossPopup','mergeFab','skillFab','autoFab','pbossBtn','deselTop','cvMarine','cvFx','mergeZone','miniWrap','defaultCmd','unitCmd','zoneLabel'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display=on?'none':''; });
   const kill=document.querySelector('#hudL .kill'); if(kill) kill.style.display=on?'none':'';
   const stage=document.querySelector('#hudL .stage'); if(stage) stage.style.display=on?'none':'';   // 좌상단 ROUND 숨김
   // nemo 하단 패널의 비-직스 자식 숨김(직스 패널만 보이게)
@@ -8715,8 +8715,8 @@ function strikeSync3D(dt){ const S=STK; if(!S) return; const mcv=document.getEle
   const TT=[['tmpMeMain',S.me.base,'temple_main'],['tmpAiMain',S.ai.base,'temple_main'],['tmpMeSec',S.me.sec,'temple_stone'],['tmpAiSec',S.ai.sec,'temple_stone'],['tmpCentral',S.central,'temple_neutral']];
   for(const t of TT){ const n=w2n(t[1].x,t[1].y); list.push({uid:t[0], id:t[2], x:n.x, y:n.y, fixed:true, face:-0.42}); }   // 신전(고정, 살짝 사선)
   if(S.sizeCmp && S.cmpUnits){ for(const u of S.cmpUnits){ const n=w2n(u.x,u.y); list.push({uid:u.uid, id:u.id, x:n.x, y:n.y}); } }
-  for(const side of ['me','ai']){   // 전투 유닛 3D: 각자 진격/타겟 방향을 바라봄(u.face)
-    for(const u of S[side].units){ const n=w2n(u.x,u.y); list.push({uid:u.uid, id:u.id, x:n.x, y:n.y, face:u.face}); } }
+  for(const side of ['me','ai']){ const rc=(side==='me')?'#3aa0ff':'#ff4d5e';   // 전투 유닛 3D: 진영색 림 + 이동/타겟 방향 응시
+    for(const u of S[side].units){ const n=w2n(u.x,u.y); list.push({uid:u.uid, id:u.id, x:n.x, y:n.y, face:u.face, rimCol:rc}); } }
   M3D.sync(list, W, H, dt, [], [], null, k); }
 // 건물 탭 전용: 내 전용 건설 맵(전장 아님). 화면 1/4 직사각형, 깔끔한 금속 타일 + 건설 격자
 function strikeDrawBuildMap(){ const S=STK; if(!S) return; const cvEl=document.getElementById('cvMain'); if(!cvEl) return;
@@ -8800,28 +8800,35 @@ function strikeSpawnUnit(side){ const S=STK, me=S[side]; if(!me||me.units.length
   const pads=strikeSpawnPads(side), pad=pads[(Math.random()*pads.length)|0], c=S.world/2;
   const x=pad.x+(Math.random()-.5)*260, y=pad.y+(Math.random()-.5)*260;   // 네모 스폰존 안에서 출현
   me.units.push({uid:'su'+(S.uidSeq=(S.uidSeq||0)+1), id:id, side:side, x:x, y:y,
-    hp:st.hp, maxHp:st.hp, dmg:st.dmg, rng:st.rng, cd:Math.random()*st.cdMax, cdMax:st.cdMax, spd:st.spd, color:st.color, size:st.size,
-    wait:0.5, face:Math.atan2(c-x, c-y), dead:false}); }   // 0.5초 대기(중앙 응시) 후 진격
+    hp:st.hp, maxHp:st.hp, dmg:st.dmg, rng:st.rng, acq:st.rng*1.5, tgtUid:null, cd:Math.random()*st.cdMax, cdMax:st.cdMax, spd:st.spd, color:st.color, size:st.size,
+    wait:0.5, face:Math.atan2(c-x, c-y), dead:false}); }   // 인지범위=사거리×1.5 / 0.5초 대기(중앙 응시) 후 진격
 function strikeMoveToward(u,tx,ty,dt){ const dx=tx-u.x, dy=ty-u.y, d=Math.hypot(dx,dy)||1, v=u.spd*dt; u.x+=dx/d*v; u.y+=dy/d*v; u.face=Math.atan2(dx,dy); u.moving=true; }   // 이동방향 응시 + 보행 모션
 function strikeNextStruct(side){ const S=STK, foe=S[side==='me'?'ai':'me']; return (foe.sec&&!foe.sec.dead)?foe.sec:foe.base; }   // 적 2차 신전 → 메인 신전 순
 function strikeCheckOver(){ const S=STK; if(S.over) return;
   if(S.me.base.hp<=0) S.over='lose'; else if(S.ai.base.hp<=0) S.over='win';
   if(S.over && typeof toast==='function') toast(S.over==='win'?'⚔️ 승리! 적 메인 신전 파괴':'💥 패배 — 메인 신전 붕괴'); }
 function strikeFx(u,tx,ty,col){ const S=STK; if(!S) return; if(!S.fx) S.fx=[]; if(S.fx.length>140) S.fx.shift(); S.fx.push({x0:u.x,y0:u.y,x1:tx,y1:ty,life:1,col:col}); }   // 공격 트레이서 이펙트
+function strikeFindUnit(arr,uid){ if(!uid) return null; for(const u of arr){ if(u.uid===uid&&!u.dead) return u; } return null; }
+function strikeAlert(allies, attackerUid, ax, ay, r){ const r2=r*r; for(const a of allies){ if(a.dead||a.wait>0||a.tgtUid) continue; const dx=a.x-ax, dy=a.y-ay; if(dx*dx+dy*dy<=r2) a.tgtUid=attackerUid; } }   // 주변 아군 가담
 function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
-  S.spawnT=(S.spawnT==null?0:S.spawnT)-dt;
-  if(S.spawnT<=0){ S.spawnT+=2.4; strikeSpawnUnit('me'); strikeSpawnUnit('ai'); if(Math.random()<0.5)strikeSpawnUnit('me'); if(Math.random()<0.5)strikeSpawnUnit('ai'); }
+  S.waveT=(S.waveT==null?2:S.waveT)-dt;
+  if(S.waveT<=0){ S.waveT+=(S.waveGap||8); const n=4+(Math.random()*3|0); for(let i=0;i<n;i++){ strikeSpawnUnit('me'); strikeSpawnUnit('ai'); } }   // 타이머마다 한 번에 출격(웨이브)
   for(const side of ['me','ai']){ const me=S[side], foe=S[side==='me'?'ai':'me'], col=side==='me'?'#7fd0ff':'#ff8a96';
     const structs=[]; if(S.central&&!S.central.dead) structs.push(S.central); if(foe.sec&&!foe.sec.dead) structs.push(foe.sec); structs.push(foe.base);   // 공격 가능 신전: 중립·적2차·적메인
     for(const u of me.units){ if(u.dead) continue;
       if(u.wait>0){ u.wait-=dt; u.moving=false; continue; }   // 스폰 후 0.5초 대기(중앙 응시 상태로 정지)
-      let tgt=null, td=1e18;
-      for(const e of foe.units){ if(e.dead) continue; const dx=e.x-u.x, dy=e.y-u.y, d=dx*dx+dy*dy; if(d<td){ td=d; tgt=e; } }
-      const aggro=u.rng+300;   // 가까운 적만 교전 → 나머지는 신전으로 진격
-      if(tgt && td<=aggro*aggro){ const d=Math.sqrt(td);
-        if(d<=u.rng){ u.moving=false; u.face=Math.atan2(tgt.x-u.x, tgt.y-u.y); u.cd-=dt; if(u.cd<=0){ u.cd=u.cdMax; tgt.hp-=u.dmg; strikeFx(u,tgt.x,tgt.y,col); if(tgt.hp<=0) tgt.dead=true; } }
+      let tgt=strikeFindUnit(foe.units, u.tgtUid);   // 현재 타겟 유지(보복·추적)
+      if(tgt && Math.hypot(tgt.x-u.x,tgt.y-u.y) > u.acq*2.5) tgt=null;   // 너무 멀어지면 타겟 해제(리시)
+      if(!tgt){ let bd=u.acq*u.acq; for(const e of foe.units){ if(e.dead) continue; const dx=e.x-u.x, dy=e.y-u.y, d=dx*dx+dy*dy; if(d<bd){ bd=d; tgt=e; } } }   // 인지범위(사거리×1.5) 내 최근접 적 인지
+      u.tgtUid = tgt?tgt.uid:null;
+      if(tgt){ const d=Math.hypot(tgt.x-u.x,tgt.y-u.y);   // 유닛 우선 교전
+        if(d<=u.rng){ u.moving=false; u.face=Math.atan2(tgt.x-u.x, tgt.y-u.y); u.cd-=dt;
+          if(u.cd<=0){ u.cd=u.cdMax; tgt.hp-=u.dmg; strikeFx(u,tgt.x,tgt.y,col);
+            if(!tgt.tgtUid) tgt.tgtUid=u.uid;                     // 맞은 유닛이 반격(공격자 겨냥)
+            strikeAlert(foe.units, u.uid, tgt.x, tgt.y, 420);     // 주변 아군도 공격자에 가담(스타식 자동교전)
+            if(tgt.hp<=0) tgt.dead=true; } }
         else strikeMoveToward(u,tgt.x,tgt.y,dt);
-      } else { let atk=null; for(const st of structs){ if(Math.hypot(st.x-u.x,st.y-u.y)<=u.rng+220){ atk=st; break; } }   // 사거리 내 신전 공격
+      } else { let atk=null; for(const st of structs){ if(Math.hypot(st.x-u.x,st.y-u.y)<=u.rng+220){ atk=st; break; } }   // 인지 적 없음 → 신전 공격/진격
         if(atk){ u.moving=false; u.face=Math.atan2(atk.x-u.x, atk.y-u.y); u.cd-=dt; if(u.cd<=0){ u.cd=u.cdMax; atk.hp-=u.dmg; strikeFx(u,atk.x,atk.y,col); if(atk.hp<=0){ atk.dead=true; strikeCheckOver(); } } }
         else strikeMoveToward(u, foe.base.x, foe.base.y, dt); } }   // 진격 목표=적 메인
     const _dead=me.units.filter(u=>u.dead); if(_dead.length && window.M3D && M3D.dropModels){ try{ M3D.dropModels(_dead.map(u=>u.uid)); }catch(e){} }   // 즉시 제거(사망 모션 없이)
@@ -8838,9 +8845,10 @@ function strikeDrawUnits(ctx,w2s,scale,S){ if(!S) return;
   const use3d=(window.M3D && M3D.ready && M3D.ready() && !(G.opt&&G.opt.model3d===false));   // 3D면 모델은 cvMarine에 렌더 → 2D 도트 생략(발밑 진영 링·HP바만)
   for(const side of ['me','ai']){ const ring=side==='me'?'#3aa0ff':'#ff4d5e';   // 파랑=아군 / 빨강=적군(맵 테두리색과 통일)
     for(const u of S[side].units){ const p=w2s(u.x,u.y), rad=Math.max(2.5,(u.size||12)*scale*0.5);
-      ctx.save(); ctx.lineWidth=Math.max(1.4,2.2*scale*0.5); ctx.strokeStyle=ring; ctx.globalAlpha=0.92;   // 발밑 진영 구분 링(항상)
-      ctx.beginPath(); ctx.ellipse(p.x, p.y+(use3d?3:rad*0.4), rad*1.6, rad*0.72, 0, 0, 6.283); ctx.stroke(); ctx.restore();
-      if(!use3d){ ctx.beginPath(); ctx.arc(p.x,p.y,rad,0,6.283); ctx.fillStyle=u.color||'#cfd6e2'; ctx.fill(); }
+      if(!use3d){   // 3D 끔: 도트 + 진영 링 / 3D 켬: 모델 림(m.rim)이 진영색 담당
+        ctx.save(); ctx.lineWidth=1.6; ctx.strokeStyle=ring; ctx.globalAlpha=0.92;
+        ctx.beginPath(); ctx.ellipse(p.x, p.y+rad*0.4, rad*1.6, rad*0.72, 0, 0, 6.283); ctx.stroke(); ctx.restore();
+        ctx.beginPath(); ctx.arc(p.x,p.y,rad,0,6.283); ctx.fillStyle=u.color||'#cfd6e2'; ctx.fill(); }
       if(u.hp<u.maxHp){ const bw=Math.max(rad*2.4,16), hpr=Math.max(0,u.hp/u.maxHp), bx=p.x-bw/2, by=p.y-(use3d?22:rad+5);
         ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillRect(bx,by,bw,2.5);
         ctx.fillStyle=hpr>0.4?'#6fe89a':'#ff6b6b'; ctx.fillRect(bx,by,bw*hpr,2.5); } } }
@@ -9583,13 +9591,14 @@ window.M3D={
     for(const u of uList){ const _id=_mid(u); let m=models.get(u.uid); if(!m){ m=makeModel(_id); if(!m) continue; m.kind='unit'; models.set(u.uid,m); }
       if(u.atBoss){ m.holder.visible=false; continue; }   // 보스방 파견 유닛은 트랙에 표시 안 함
       const px=u.x*W, worldY=H-u.y*H;
-      m.rim.visible = selSet.has(u.uid);
+      if(u.rimCol){ m.rim.visible=true; m.rim.material.color.set(u.rimCol); }   // 직스: 진영 색 림(항상 표시 — 파랑/빨강)
+      else { m.rim.visible = selSet.has(u.uid);
       if(m.rim.visible){   // 선택링 색: 영웅=금색 / 가챠=등급색(유닛도감과 동일) / 일반=청록
         const _tc=(u.gtier && typeof TIER_COLOR!=='undefined')?TIER_COLOR[u.gtier]:null;
         if(u.hero) m.rim.material.color.setHex(0xffc24a);
         else if(_tc) m.rim.material.color.set(_tc);
         else m.rim.material.color.setHex(0x37e0c8);
-      }
+      } }
       // 영웅 상시 식별: 발밑 은은한 금색 링 + 미세한 반짝임(눈에 띄지 않게)
       if(u.hero){
         if(!m.heroRing){ const ro=(m.rim.geometry.parameters&&m.rim.geometry.parameters.outerRadius)||1;
