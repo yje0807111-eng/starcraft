@@ -8641,18 +8641,18 @@ const STK_MINZOOM=1.2, STK_DEFZOOM=1.2, STK_MAXZOOM=2.5, BUILD_MAXZOOM=3;
 // (프로토스·저그는 다음 단계에서 가챠 유닛으로 보강 예정 — 균형)
 // 직스 전용 유닛 스탯(네모 U 테이블과 독립 — 단독 밸런스 튜닝). hp/dmg/rng/spd=절대값(월드 0..4800 픽셀), cd=초, splash=광역 반경(px), melee=근접
 const STK_UNITS={
-  // 🛡 유니온 — 보병·기계 (저가 원거리 / 기계 탱커 / 공성)
-  marine:    {name:'레인저',    ico:'🪖', cost:100, hp:130, dmg:16, rng:200, cd:0.85, spd:340, size:14, atk:'bullet'},
-  goliath:   {name:'스트라이더', ico:'⚙️', cost:220, hp:380, dmg:30, rng:235, cd:1.30, spd:155, size:21, atk:'missile'},
-  tank:      {name:'브레이커',   ico:'🛡', cost:350, hp:430, dmg:72, rng:330, cd:2.30, spd:115, size:24, splash:160, atk:'shell'},
+  // 🛡 유니온 — 보병·기계 (저가 원거리 / 기계 탱커 / 공성) · 공격 이펙트는 ATK_STYLE(공용 FX 코어)에서 id로 매핑
+  marine:    {name:'레인저',    ico:'🪖', cost:100, hp:130, dmg:16, rng:200, cd:0.85, spd:340, size:14},
+  goliath:   {name:'스트라이더', ico:'⚙️', cost:220, hp:380, dmg:30, rng:235, cd:1.30, spd:155, size:21},
+  tank:      {name:'브레이커',   ico:'🛡', cost:350, hp:430, dmg:72, rng:330, cd:2.30, spd:115, size:24, splash:160},
   // 🔮 에테리얼 — 사이오닉 (원거리 포격 / 근접 돌격 / 광역 탱커)
-  dragoon:   {name:'센티넬',    ico:'🤖', cost:200, hp:300, dmg:24, rng:245, cd:1.25, spd:230, size:18, atk:'plasma'},
-  blade:     {name:'질럿',      ico:'⚔️', cost:120, hp:300, dmg:22, rng:62,  cd:0.80, spd:340, size:17, melee:true, atk:'slash'},
-  archon:    {name:'보이드',    ico:'🔮', cost:340, hp:400, dmg:34, rng:130, cd:1.05, spd:185, size:23, splash:120, atk:'psi'},
+  dragoon:   {name:'센티넬',    ico:'🤖', cost:200, hp:300, dmg:24, rng:245, cd:1.25, spd:230, size:18},
+  blade:     {name:'질럿',      ico:'⚔️', cost:120, hp:300, dmg:22, rng:62,  cd:0.80, spd:340, size:17, melee:true},
+  archon:    {name:'보이드',    ico:'🔮', cost:340, hp:400, dmg:34, rng:130, cd:1.05, spd:185, size:23, splash:120},
   // 🦎 스웜 — 유기체 (저가 원거리 / 근접 다수 / 도트 공성)
-  hydra:     {name:'리퍼',      ico:'🦎', cost:110, hp:215, dmg:18, rng:215, cd:0.95, spd:300, size:17, atk:'spit'},
-  matron:    {name:'브루드마더', ico:'🧬', cost:210, hp:470, dmg:26, rng:70,  cd:0.95, spd:205, size:22, melee:true, atk:'claw'},
-  thornqueen:{name:'가시여왕',   ico:'🐛', cost:330, hp:360, dmg:42, rng:300, cd:1.70, spd:125, size:22, splash:150, atk:'spike'},
+  hydra:     {name:'리퍼',      ico:'🦎', cost:110, hp:215, dmg:18, rng:215, cd:0.95, spd:300, size:17},
+  matron:    {name:'브루드마더', ico:'🧬', cost:210, hp:470, dmg:26, rng:70,  cd:0.95, spd:205, size:22, melee:true},
+  thornqueen:{name:'가시여왕',   ico:'🐛', cost:330, hp:360, dmg:42, rng:300, cd:1.70, spd:125, size:22, splash:150},
 };
 const STK_RACES={
   terran:  { key:'terran',  name:'유니온',   sub:'인간', desc:'보병·기계', col:'#4aa8ff', icon:'🛡️', units:['marine','goliath','tank'] },
@@ -8897,10 +8897,78 @@ function strikePlaceBuilding(col,row){ const S=STK, b=S.build; if(!b.placing) re
   b.cells.push({col:col,row:row,type:t,built:0,x:(col+0.5)*cw,y:(row+0.5)*ch});
   if(typeof playSfx==='function') playSfx('buy_unit'); }
 function strikePickBuild(i){ const S=STK; if(!S) return; const t=strikeBuildMenu()[i]; if(!t) return; S.build.placing=(S.build.placing===t)?null:t; strikeRenderBuild(); if(S.build.placing) strikeToast(t.name+' 생산 건물 — 빈 타일을 탭해 배치'); }
-const STK_ATK_COL={bullet:'#fff2c0',missile:'#ffd08a',shell:'#ffd0a0',plasma:'#9be7ff',psi:'#dcb6ff',spit:'#bdf06a',slash:'#eafff0',claw:'#ffd2cf',spike:'#cfeaff'};
-function strikeFx(u,tx,ty,col){ const S=STK; if(!S) return; if(!S.fx) S.fx=[]; if(S.fx.length>160) S.fx.shift();   // 유닛별 공격 이펙트(총알/미사일/포탄/플라즈마/침/사이오닉/근접)
-  const kind=(STK_UNITS[u.id]&&STK_UNITS[u.id].atk)||'bullet';
-  S.fx.push({x0:u.x,y0:u.y,x1:tx,y1:ty,life:1,kind:kind,col:STK_ATK_COL[kind]||col||'#cfe6ff',sd:(S._fxSeed=((S._fxSeed||0)+1)&255)}); }
+// ═══ 공용 FX 코어(모든 유즈맵 공통 유닛별 공격 이펙트) ═══
+// 유닛 id → 공격 스타일. 네모 발사체 비주얼을 그대로 — 한 곳에서 정의해 어느 맵이든 같은 느낌.
+const ATK_STYLE={
+  marine:    {kind:'bullet', color:'#ffe2a0'},
+  ghost:     {kind:'sniper', color:'#eafdff'},
+  goliath:   {kind:'missile',color:'#5ad1ff'},
+  dragoon:   {kind:'plasma', color:'#b48bff'},
+  archon:    {kind:'psi',    color:'#dcb6ff', beam:true},
+  hydra:     {kind:'needle', color:'#9fd356'},
+  tank:      {kind:'shell',  color:'#d8c8a0'},
+  blade:     {kind:'slash',  color:'#eafff0', melee:true},
+  matron:    {kind:'claw',   color:'#ffd2cf', melee:true},
+  thornqueen:{kind:'needle', color:'#bfe89a', count:3, boom:6},
+  _default:  {kind:'bullet', color:'#ffe2a0'},
+};
+// store={shots,impacts,melee}. 좌표는 해당 맵의 월드 단위. 그리기는 toScreen 변환 + sz(픽셀 스케일)만 맵이 공급.
+const FX={
+  store(){ return {shots:[], impacts:[], melee:[]}; },
+  spawn(store, id, sx,sy, tx,ty, opts){ if(!store) return; opts=opts||{}; const st=ATK_STYLE[id]||ATK_STYLE._default, col=opts.color||st.color;
+    const dx=tx-sx, dy=ty-sy, dist=Math.hypot(dx,dy)||1, ang=Math.atan2(dy,dx);
+    if(st.melee){ store.melee.push({x:tx,y:ty,ang:ang,life:1,kind:st.kind,col:col}); return; }
+    if(st.beam){ store.melee.push({kind:'psi',x0:sx,y0:sy,x:tx,y:ty,life:1,col:col,sd:(store._sd=((store._sd||0)+1)&255)}); return; }
+    const speed=opts.speed||2600, dur=Math.min(0.6,Math.max(0.05,dist/speed)), n=st.count||1;
+    if(store.shots.length>200) store.shots.splice(0, store.shots.length-200);
+    for(let i=0;i<n;i++){ const a=ang+(n>1?(i-(n-1)/2)*0.13:0);
+      store.shots.push({x:sx,y:sy,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,t:0,dur:dur,kind:st.kind,color:col,boom:st.boom||4}); } },
+  advance(store, dt){ if(!store) return;
+    const sh=store.shots; for(let i=sh.length-1;i>=0;i--){ const s=sh[i]; s.t+=dt; s.x+=s.vx*dt; s.y+=s.vy*dt;
+      if(s.t>=s.dur){ store.impacts.push({x:s.x,y:s.y,life:1,kind:s.kind,col:s.color,boom:s.boom||4}); sh.splice(i,1); } }
+    const im=store.impacts; for(let i=im.length-1;i>=0;i--){ im[i].life-=dt*4.5; if(im[i].life<=0) im.splice(i,1); }
+    const me=store.melee; for(let i=me.length-1;i>=0;i--){ me[i].life-=dt*5; if(me[i].life<=0) me.splice(i,1); } },
+  drawShots(ctx, store, toScreen, sz){ if(!store) return; ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round';
+    for(const s of store.shots){ const c=toScreen(s.x,s.y); ctx.save(); ctx.globalCompositeOperation='lighter';
+      ctx.translate(c.x,c.y); ctx.rotate(Math.atan2(s.vy,s.vx)); ctx.scale(sz,sz); FX._shot(ctx,s); ctx.restore(); }
+    ctx.globalCompositeOperation='lighter';
+    for(const im of store.impacts){ const c=toScreen(im.x,im.y), L=Math.max(0,im.life), p=1-L; ctx.save(); ctx.translate(c.x,c.y);
+      if(im.kind==='shell'){ ctx.globalAlpha=L; ctx.strokeStyle='#ffd08a'; ctx.lineWidth=2.4*sz; ctx.beginPath(); ctx.arc(0,0,(8+p*30)*sz,0,6.283); ctx.stroke();
+        ctx.globalAlpha=L*0.7; ctx.fillStyle='#fff2c0'; ctx.beginPath(); ctx.arc(0,0,6*sz*L,0,6.283); ctx.fill(); }
+      else if(im.kind==='needle'){ ctx.globalAlpha=L; ctx.strokeStyle=im.col; ctx.lineWidth=1.3*sz; for(let q=0;q<5;q++){ const a=q*1.3+p, len=(4+p*6)*sz; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(a)*len,Math.sin(a)*len); ctx.stroke(); } }
+      else { ctx.globalAlpha=L*0.9; ctx.fillStyle=(im.kind==='sniper')?'#eafdff':'#fff6d8'; ctx.beginPath(); ctx.arc(0,0,(im.kind==='sniper'?5:3.5)*sz*(0.5+p),0,6.283); ctx.fill(); }
+      ctx.restore(); }
+    for(const m of store.melee){ const L=Math.max(0,m.life);
+      if(m.kind==='psi'){ const a=toScreen(m.x0,m.y0), b=toScreen(m.x,m.y); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=L; ctx.strokeStyle=m.col; ctx.lineWidth=1.8*sz;
+        ctx.beginPath(); ctx.moveTo(a.x,a.y); const seg=4; for(let q=1;q<=seg;q++){ const t=q/seg, jx=a.x+(b.x-a.x)*t+(((m.sd*7+q*13)%9)-4)*sz, jy=a.y+(b.y-a.y)*t+(((m.sd*5+q*11)%9)-4)*sz; ctx.lineTo(jx,jy); } ctx.stroke();
+        ctx.globalAlpha=L*0.85; ctx.strokeStyle='#fff'; ctx.lineWidth=0.8*sz; ctx.stroke();
+        ctx.globalAlpha=L*0.5; ctx.strokeStyle=m.col; ctx.lineWidth=1.4*sz; ctx.beginPath(); ctx.arc(b.x,b.y,18*sz*(1-L*0.5),0,6.283); ctx.stroke(); }
+      else { const c=toScreen(m.x,m.y), claw=(m.kind==='claw'), R=(claw?20:24)*sz, a0=m.ang-0.9, a1=m.ang+0.9; ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=L*0.9; ctx.strokeStyle=claw?'#ff8f8f':'#eafff0'; ctx.lineWidth=(claw?2:2.6)*sz; ctx.beginPath(); ctx.arc(c.x,c.y,R,a0,a1); ctx.stroke(); if(claw){ ctx.lineWidth=1.4*sz; ctx.beginPath(); ctx.arc(c.x,c.y,R*0.66,a0,a1); ctx.stroke(); } } }
+    ctx.restore(); },
+  _shot(ctx,s){ switch(s.kind){   // 네모 발사체 레시피(원점 기준, 이미 회전·스케일됨)
+    case 'bullet': ctx.globalAlpha=.35; ctx.fillStyle=s.color; ctx.fillRect(-10.5,-0.9,10.5,1.7);
+      ctx.globalAlpha=.9; ctx.fillStyle='#fff7c0'; ctx.fillRect(-4,-0.9,5.7,1.8);
+      ctx.globalAlpha=1; ctx.fillStyle='#fffbe8'; ctx.beginPath();ctx.arc(1.2,0,1.5,0,6.28);ctx.fill(); break;
+    case 'mg': ctx.globalAlpha=.3; ctx.fillStyle=s.color; ctx.fillRect(-10,-0.45,10,0.9);
+      ctx.globalAlpha=1; ctx.fillStyle='#fff7d8'; ctx.fillRect(-1.6,-0.55,3.6,1.1); break;
+    case 'sniper': ctx.globalAlpha=.4; ctx.fillStyle='#bfe9ff'; ctx.fillRect(-23,-0.8,23,1.5);
+      ctx.globalAlpha=1; ctx.fillStyle='#ffffff'; ctx.fillRect(-6.5,-1,9,2);
+      ctx.fillStyle='#eafdff'; ctx.beginPath();ctx.arc(1.6,0,1.3,0,6.28);ctx.fill(); break;
+    case 'missile': { const lf=Math.min(1,(s.t||0)/0.05);
+      ctx.globalAlpha=.5*lf; ctx.fillStyle='#ff8a3c'; ctx.fillRect(-6.5,-1.2,4,2.4);
+      ctx.globalAlpha=.9*lf; ctx.fillStyle='#ffd27a'; ctx.fillRect(-4.5,-0.9,3.2,1.8);
+      ctx.globalAlpha=1; ctx.fillStyle=s.color; ctx.fillRect(-1.6,-1.3,5,2.6);
+      ctx.fillStyle='#fff'; ctx.fillRect(2,-1,2,2); break; }
+    case 'needle': ctx.globalAlpha=.9; ctx.fillStyle=s.color;
+      ctx.beginPath(); ctx.moveTo(4.5,0); ctx.lineTo(-4,0.7); ctx.lineTo(-4,-0.7); ctx.closePath(); ctx.fill(); break;
+    case 'shell': ctx.globalAlpha=.45; ctx.fillStyle='#ffae4d'; ctx.fillRect(-9,-1.4,5,2.8);
+      ctx.globalAlpha=1; ctx.fillStyle='#b8a878'; ctx.beginPath(); ctx.ellipse(0,0,3.6,2.5,0,0,6.28); ctx.fill();
+      ctx.fillStyle='#fff2c0'; ctx.beginPath(); ctx.arc(2.4,0,1.1,0,6.28); ctx.fill(); break;
+    case 'plasma': ctx.globalAlpha=.4; ctx.fillStyle=s.color; ctx.beginPath();ctx.arc(0,0,5.8,0,6.28);ctx.fill();
+      ctx.globalAlpha=1; ctx.beginPath();ctx.arc(0,0,2.9,0,6.28);ctx.fill(); break;
+    default: ctx.globalAlpha=1; ctx.fillStyle=s.color; ctx.beginPath();ctx.arc(0,0,2,0,6.28);ctx.fill(); } }
+};
+function strikeFx(u,tx,ty){ const S=STK; if(!S) return; if(!S.fx||!S.fx.shots) S.fx=FX.store(); FX.spawn(S.fx, u.id, u.x,u.y, tx,ty, {speed:2600}); }   // 직스 → 공용 FX 코어
 function strikeFindUnit(arr,uid){ if(!uid) return null; for(const u of arr){ if(u.uid===uid&&!u.dead) return u; } return null; }
 function strikeAlert(allies, attackerUid, ax, ay, r){ const r2=r*r; for(const a of allies){ if(a.dead||a.wait>0||a.tgtUid) continue; const dx=a.x-ax, dy=a.y-ay; if(dx*dx+dy*dy<=r2) a.tgtUid=attackerUid; } }   // 주변 아군 가담
 function strikeSpawnWave(){ const S=STK; if(!S) return;   // 출격 주기(30초): ME=내 생산 건물에서 / AI=컴퓨터 자동 소환
@@ -8950,7 +9018,7 @@ function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
     const _dead=me.units.filter(u=>u.dead); if(_dead.length && window.M3D && M3D.dropModels){ try{ M3D.dropModels(_dead.map(u=>u.uid)); }catch(e){} }   // 즉시 제거(사망 모션 없이)
     me.units=me.units.filter(u=>!u.dead); }
   strikeSeparate();   // 유닛 분리(겹침 방지)
-  if(S.fx){ for(const f of S.fx) f.life-=dt*5; S.fx=S.fx.filter(f=>f.life>0); }   // 공격 이펙트 감쇠
+  if(S.fx) FX.advance(S.fx, dt);   // 공격 이펙트(공용 FX 코어) 전진·감쇠
 }
 function strikeDrawTempleHp(ctx,w2s,scale,S){ if(!S) return;   // 신전 이름+HP — 모델 '하단'에 고정 크기(모델이 위로 솟아 안 가려짐, 줌 무관)
   const list=[[S.me.base,'#7fe0ff','메인 신전',1],[S.ai.base,'#ff9aa6','메인 신전',1],[S.me.sec,'#7fe0ff','2차 신전',0],[S.ai.sec,'#ff9aa6','2차 신전',0],[S.central,'#ffd86a','중립 신전',0]];
@@ -9001,56 +9069,8 @@ function strikeRenderSelInfo(){ const S=STK; const el=document.getElementById('s
       hp:u.hp, maxHp:u.maxHp, portrait:unitPortraitHTML(u.id),
       stats:[{label:'공격력',val:u.dmg,cls:'atk'},{label:'사거리',val:Math.round(u.rng),cls:''}] }); } }
   if(html){ el.innerHTML=html; el.classList.remove('hide'); } else { el.classList.add('hide'); el.innerHTML=''; } }
-function strikeDrawFx(ctx,w2s,scale,S){ if(!S||!S.fx||!S.fx.length) return; ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round';
-  const lw=(m)=>Math.max(1,m*scale);
-  for(const f of S.fx){ const L=Math.max(0,f.life), p=1-L, a=w2s(f.x0,f.y0), b=w2s(f.x1,f.y1);
-    const cx=a.x+(b.x-a.x)*p, cy=a.y+(b.y-a.y)*p, ang=Math.atan2(b.y-a.y,b.x-a.x);
-    ctx.globalCompositeOperation='lighter';
-    switch(f.kind){
-      case 'bullet': {   // 빠른 노란 트레이서 + 총구 섬광
-        ctx.globalAlpha=L*0.85; ctx.strokeStyle=f.col; ctx.lineWidth=lw(2);
-        const tl=22*scale; ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx-Math.cos(ang)*tl,cy-Math.sin(ang)*tl); ctx.stroke();
-        if(p<0.3){ ctx.globalAlpha=(0.3-p)*3; ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(a.x,a.y,lw(3),0,6.283); ctx.fill(); }
-        break; }
-      case 'missile': case 'shell': {   // 탄두 + 연기 꼬리, 명중 시 폭발 링(shell=크게)
-        const big=f.kind==='shell';
-        ctx.globalAlpha=L; ctx.strokeStyle=big?'#ffb060':'#ffcaa0'; ctx.lineWidth=lw(big?3:2);
-        const tl=(big?34:26)*scale; ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx-Math.cos(ang)*tl,cy-Math.sin(ang)*tl); ctx.stroke();
-        ctx.fillStyle='#fff3d0'; ctx.beginPath(); ctx.arc(cx,cy,lw(big?3.4:2.6),0,6.283); ctx.fill();
-        if(p>0.82){ const er=(big?34:20)*scale*((p-0.82)/0.18); ctx.globalAlpha=L*1.2; ctx.strokeStyle=big?'#ffd08a':'#ffe0b0'; ctx.lineWidth=lw(2); ctx.beginPath(); ctx.arc(b.x,b.y,er,0,6.283); ctx.stroke(); }
-        break; }
-      case 'plasma': {   // 파란 플라즈마 구체 + 글로우
-        ctx.globalAlpha=L; ctx.fillStyle=f.col; ctx.beginPath(); ctx.arc(cx,cy,lw(3.4),0,6.283); ctx.fill();
-        ctx.globalAlpha=L*0.4; ctx.beginPath(); ctx.arc(cx,cy,lw(6.4),0,6.283); ctx.fill();
-        break; }
-      case 'spit': {   // 초록 산성 침(살짝 포물선) + 명중 튐
-        const arc=Math.sin(p*Math.PI)*15*scale, px=cx, py=cy-arc;
-        ctx.globalAlpha=L; ctx.fillStyle=f.col; ctx.beginPath(); ctx.ellipse(px,py,lw(3.2),lw(2.3),ang,0,6.283); ctx.fill();
-        if(p>0.85){ ctx.globalAlpha=L*0.8; ctx.fillStyle='#d6ff9a'; ctx.beginPath(); ctx.arc(b.x,b.y,lw(4)*((p-0.85)/0.15+0.3),0,6.283); ctx.fill(); }
-        break; }
-      case 'spike': {   // 가시 다발(여러 바늘 갈라져 날아감)
-        ctx.globalAlpha=L*0.9; ctx.strokeStyle=f.col; ctx.lineWidth=lw(1.6);
-        for(let s=-1;s<=1;s++){ const off=s*9*scale, ox=-Math.sin(ang)*off, oy=Math.cos(ang)*off, len=14*scale;
-          ctx.beginPath(); ctx.moveTo(cx+ox,cy+oy); ctx.lineTo(cx+ox-Math.cos(ang)*len,cy+oy-Math.sin(ang)*len); ctx.stroke(); }
-        break; }
-      case 'psi': {   // 사이오닉 지그재그 번개 + 충격 링(광역)
-        ctx.globalAlpha=L; ctx.strokeStyle=f.col; ctx.lineWidth=lw(1.8);
-        ctx.beginPath(); ctx.moveTo(a.x,a.y); const seg=4;
-        for(let s=1;s<=seg;s++){ const t=s/seg, jx=a.x+(b.x-a.x)*t+(((f.sd*7+s*13)%9)-4)*scale, jy=a.y+(b.y-a.y)*t+(((f.sd*5+s*11)%9)-4)*scale; ctx.lineTo(jx,jy); }
-        ctx.stroke(); ctx.globalAlpha=L*0.85; ctx.strokeStyle='#fff'; ctx.lineWidth=lw(0.8); ctx.stroke();
-        const rr=18*scale*(1-L*0.5); ctx.globalAlpha=L*0.5; ctx.strokeStyle=f.col; ctx.lineWidth=lw(1.4); ctx.beginPath(); ctx.arc(b.x,b.y,rr,0,6.283); ctx.stroke();
-        break; }
-      case 'slash': case 'claw': {   // 근접 베기/할퀴기 — 대상에 호
-        ctx.globalCompositeOperation='source-over'; const claw=f.kind==='claw', R=(claw?20:24)*scale, a0=ang-0.9, a1=ang+0.9;
-        ctx.globalAlpha=L*0.9; ctx.strokeStyle=claw?'#ff8f8f':'#eafff0'; ctx.lineWidth=lw(claw?2:2.6);
-        ctx.beginPath(); ctx.arc(b.x,b.y,R,a0,a1); ctx.stroke();
-        if(claw){ ctx.lineWidth=lw(1.4); ctx.beginPath(); ctx.arc(b.x,b.y,R*0.66,a0,a1); ctx.stroke(); }
-        break; }
-      default: { ctx.globalAlpha=L*0.7; ctx.strokeStyle=f.col||'#cfe6ff'; ctx.lineWidth=lw(2);
-        ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); ctx.globalAlpha=L; ctx.fillStyle=f.col||'#cfe6ff'; ctx.beginPath(); ctx.arc(b.x,b.y,lw(3),0,6.283); ctx.fill(); }
-    }
-  }
-  ctx.restore(); }
+function strikeDrawFx(ctx,w2s,scale,S){ if(!S||!S.fx) return;   // 공용 FX 코어로 렌더(네모와 동일 비주얼). sz=픽셀 스케일(줌 연동)
+  const sz=Math.max(0.8, Math.min(2.6, scale*8.5)); FX.drawShots(ctx, S.fx, w2s, sz); }
 function strikeDrawUnits(ctx,w2s,scale,S){ if(!S) return;
   const use3d=(window.M3D && M3D.ready && M3D.ready() && !(G.opt&&G.opt.model3d===false));   // 3D면 모델은 cvMarine에 렌더 → 2D 도트 생략(발밑 진영 링·HP바만)
   for(const side of ['me','ai']){ const ring=side==='me'?'#3aa0ff':'#ff4d5e';   // 파랑=아군 / 빨강=적군(맵 테두리색과 통일)
