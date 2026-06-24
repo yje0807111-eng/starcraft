@@ -2141,7 +2141,7 @@
       <div class="cpCard">
         <div class="cpTitle">난이도 선택</div>
         <div class="pickHint">개인 플레이 · 난이도를 고르면 바로 시작합니다</div>
-        <div class="raceTrig hide" id="soloRaceTrig" onclick="openSoloRace(this)"><span class="rtLbl">종족</span><span class="rtVal" id="soloRaceVal">인간 ▾</span></div>
+        <div class="raceTrig hide" id="soloRaceTrig" onclick="openSoloRace(this)"><span class="rtLbl">종족</span><span class="rtVal" id="soloRaceVal">유니온 ▾</span></div>
         <div class="moDiffBtns soloDiffBtns" id="soloDiffBtns"></div>
         <div class="cpBtns"><button class="cpCancel" onclick="closeSoloDiff()" style="flex:1">취소</button></div>
       </div>
@@ -2652,7 +2652,7 @@ const TECH=[
   {id:'acad', name:'전술 본부', icon:'🎓', wpn:'inf',  wname:'보병 무기',    units:'레인저·팬텀'},
   {id:'arm',  name:'아스널',   icon:'🛡️', wpn:'mech', wname:'기계 무기',    units:'스트라이더'},
   {id:'forge',name:'크리스탈 워크스', icon:'🔱', wpn:'pro',  wname:'루멘 무기', units:'센티넬·보이드'},
-  {id:'evo',  name:'바이오 코어', icon:'🧬', wpn:'zrg',  wname:'군체 근접 무기', units:'리퍼'},
+  {id:'evo',  name:'바이오 코어', icon:'🧬', wpn:'zrg',  wname:'스웜 근접 무기', units:'리퍼'},
   {id:'pointlab', name:'포인트 연구소', icon:'⬆️', wpn:'meta', wname:'영구 강화', units:'즉시 적용', meta:true},  // 포인트로 영구 강화(판 종료 시 정산, 강화 즉시 적용)
 ];
 // 상단 2×2(무기 계열) + 하단 중앙 1(포인트 연구소)
@@ -2815,7 +2815,7 @@ const GACHA_TRAITS = {   // 특성(레전드부터 부여). 실제 효과 적용
   atk_buff:    { name:'공격 버프', desc:'아군 공격력 증가' },
   poison:      { name:'독',       desc:'지속 도트 데미지' },
 };
-// 유닛 생성 헬퍼. race: union(인간) / aetherial(빛) / swarm(군체)
+// 유닛 생성 헬퍼. race: union(유니온) / aetherial(에테리얼) / swarm(스웜)
 function _gUnit(id, displayName, tier, race, attackType, opt){ opt=opt||{};
   return { id, displayName, tier, race, attackType,
     stats:{ damage:0, fireRate:0, range:0 },   // 수치 추후 확정
@@ -5561,7 +5561,7 @@ function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 
   if(id!=='Main') drawMiniMap();
 }
 // 계열 한글명(타입 라벨용)
-const WPN_KOR={inf:'보병',mech:'기계',pro:'루멘',zrg:'군체',gun:'총기',beam:'광학',exp:'폭발',org:'유기체',fly:'비행',air:'항공',bio:'생체'};
+const WPN_KOR={inf:'보병',mech:'기계',pro:'루멘',zrg:'스웜',gun:'총기',beam:'광학',exp:'폭발',org:'유기체',fly:'비행',air:'항공',bio:'생체'};
 // 유닛 직업(이름 옆 작은 배지)
 const UNIT_CLS={ ghost:'저격수', dragoon:'포격수', hydra:'전사', marine:'보병', goliath:'기갑병', archon:'광전사', turret:'포탑', photon:'방어탑', citizen:'시민' };
 // 체력/실드/에너지 초록 LCD 텍스트(스타식 "실드 HP / 에너지")
@@ -8452,7 +8452,7 @@ const SANDBOX_ROSTER={
   aetherial:[{n:'센티넬',b:'dragoon'},{n:'보이드',b:'archon'},{n:'워든',b:'dragoon',gm:'blade'},{n:'스카이댄서',b:'goliath',gm:'skydancer'},{n:'와처',b:'marine',gm:'observer',e:1},{n:'크로노스',b:'marine',gm:'kronos',e:1},{n:'세라프',b:'marine',gm:'seraph',e:1},{n:'아크엔젤',b:'marine',gm:'archangel',e:1},{n:'팔콘',b:'marine',gm:'falcon',e:1}],
 };
 const SANDBOX_RACE_ORDER=['union','swarm','aetherial'];   // 3종족(테란=유니온 / 저그=스웜 / 프로토스=에테리얼), 적·아군 합침
-const SANDBOX_RACE_KO={union:'유니온 (테란)',swarm:'스웜 (저그)',aetherial:'에테리얼 (프로토스)'};
+const SANDBOX_RACE_KO={union:'유니온 (인간)',swarm:'스웜 (군체)',aetherial:'에테리얼 (외계)'};
 function placeSandboxUnits(){
   if(G.idSeq==null) G.idSeq=1; G.units.length=0; G._sandboxRows=[];
   const COLS=5, dy=0.09, gap=0.055; let yc=0.19;
@@ -8566,11 +8566,11 @@ const STK_MINZOOM=1.2, STK_DEFZOOM=1.2, STK_MAXZOOM=2.5, BUILD_MAXZOOM=3;
 // 종족(컴퓨터가 싸운다): 진입 시 선택 → 그 종족 유닛만 소환. units=현 보유 전투유닛 기준 로스터
 // (프로토스·저그는 다음 단계에서 가챠 유닛으로 보강 예정 — 균형)
 const STK_RACES={
-  terran:  { key:'terran',  name:'인간',     desc:'보병·기계', col:'#4aa8ff', icon:'🛡️', units:['marine','ghost','goliath'] },
-  protoss: { key:'protoss', name:'외계종족', desc:'루멘',     col:'#ffc040', icon:'🔮', units:['dragoon','archon'] },
-  zerg:    { key:'zerg',    name:'군체',     desc:'유기체',   col:'#9fd356', icon:'🦎', units:['hydra'] },
+  terran:  { key:'terran',  name:'유니온',   desc:'보병·기계', col:'#4aa8ff', icon:'🛡️', units:['marine','ghost','goliath'] },
+  protoss: { key:'protoss', name:'에테리얼', desc:'루멘',     col:'#ffc040', icon:'🔮', units:['dragoon','archon'] },
+  zerg:    { key:'zerg',    name:'스웜',     desc:'유기체',   col:'#9fd356', icon:'🦎', units:['hydra'] },
 };
-const STK_RACE_ORDER=['terran','protoss','zerg'];
+const STK_RACE_ORDER=['terran','zerg','protoss'];   // 표시 순서: 유니온 · 스웜 · 에테리얼 (관리자와 통일)
 function strikeRandomRace(){ return STK_RACE_ORDER[Math.floor(Math.random()*STK_RACE_ORDER.length)]; }
 function strikeRaceUnits(side){ const r=side&&side.race; return (STK_RACES[r]||STK_RACES.terran).units.slice(); }   // 그 진영 종족의 소환 가능 유닛 id
 // 직스 타일 에셋(기존 assets/tiles 재사용)
