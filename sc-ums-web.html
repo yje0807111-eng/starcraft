@@ -2763,7 +2763,7 @@ try{ USEMAPS.admin = { id:'admin', name:'관리자용 (테스트)', desc:'밸런
   cfg: Object.assign({}, USEMAPS.nemo.cfg, { bal:ADMIN_BAL, mode:'sandbox' }) }; }catch(e){}
 // 무한 디펜스 — nemo 엔진 재사용 + 무한 루프(노말 고정). 해금: 노말 클리어.
 try{ USEMAPS.nemo_inf = { id:'nemo_inf', name:'무한 디펜스', desc:'노말 난이도로 끝없이 이어지는 무한 라운드 — 얼마나 오래 버티나', players:'1', pop:0, icon:'♾️', rec:false, isNew:true, playable:true,
-  cfg: Object.assign({}, USEMAPS.nemo.cfg, { infinite:true, rounds:999999, infLoopHpMul:4, fixedDiff:'normal' }) }; }catch(e){}
+  cfg: Object.assign({}, USEMAPS.nemo.cfg, { infinite:true, rounds:999999, infLoopHpMul:2.2, infIncomeLoop:1.5, infSoftCap:200, infWallMul:1.4, fixedDiff:'normal' }) }; }catch(e){}
 function mapCfg(k,def){ const c=MAP&&MAP.cfg, v=c?c[k]:undefined; return v===undefined?def:v; }
 
 // ── 엔진 기본값(유즈맵 cfg 미지정 시 사용) ──
@@ -4031,7 +4031,13 @@ function placeMergeZone(){ const mz=document.getElementById('mergeZone'); if(mz)
 // ============================================================================
 // 유닛/적 로직
 // ============================================================================
-function unitDmg(u){ const p=unitDmgParts(u); return p.total; }
+// 베테랑시(무한모드 인런 무한 성장): 누적 킬로 계급↑ — 계급당 +4% 공격력(캡 없음). 사망 시 유닛이 사라지며 리셋.
+//  계급 L 도달 누적 킬 = 5·L·(L+1) (L1=10, L2=30, L3=60 …)
+function vetLevel(u){ const k=(u&&u.kills)||0; return k<10?0:Math.floor((Math.sqrt(1+0.8*k)-1)/2); }
+function vetMul(u){ return 1 + vetLevel(u)*0.04; }
+function vetNext(u){ const L=vetLevel(u)+1; return 5*L*(L+1); }   // 다음 계급까지 누적 킬 목표
+function unitDmg(u){ const p=unitDmgParts(u); let t=p.total; if(u && mapCfg('infinite')) t*=vetMul(u); return t; }
+function infIncomeMul(){ if(!mapCfg('infinite')||(G.round||0)<=30) return 1; return Math.pow(mapCfg('infIncomeLoop',1.5),(G.round-30)/30); }   // 무한모드: 라운드 깊을수록 크레딧/에너지 수입↑(적 성장보다 완만)
 // 공격력 분해: {base:기본, up:업그레이드 추가분, total:합계, wlv:계열 업글 레벨}
 /* UNIT_PWR → NEMO_BAL.unitPwr */   // 유닛 개별 공격력 배율(적게·강하게 — 상한 50→35 보정)
 function unitDmgParts(u){ const d=U[u.id]; const wlv=(G.atkLv&&G.atkLv[gachaWpn(u)])||0;
@@ -4492,7 +4498,9 @@ function spawnEnemy(opts){ opts=opts||{}; const pt=opts.pbType||null; const pbos
   const mb=G.metaB||{};   // 메타 강화: 적 체력/방어/이속 감소(개인)
   const _D=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal);
   const _inf=mapCfg('infinite'); const _effR=_inf?Math.min(G.round,30):G.round;   // 무한모드: 라운드 램프는 R30에서 고정, 이후 루프 배수로 연속 성장
-  const _infMul=(_inf&&G.round>30)?Math.pow(mapCfg('infLoopHpMul',4),(G.round-30)/30):1;   // 30라운드마다 ×infLoopHpMul (연속 곡선)
+  let _infMul=1;
+  if(_inf){ if(G.round>30) _infMul=Math.pow(mapCfg('infLoopHpMul',2.2),(G.round-30)/30);   // 30라운드마다 ×infLoopHpMul (연속 곡선)
+    const _sc=mapCfg('infSoftCap',200); if(G.round>_sc) _infMul*=Math.pow(mapCfg('infWallMul',1.4),G.round-_sc); }   // 소프트캡: 200 이후 급가속 → 자연 탈락
   const hpMul=_D.enemyHp*(mb.enemyHpMul||1)*TEMPO_HP_MUL
   *Math.pow(HP_RAMP_BASE, Math.max(0, _effR-4))
   *(G.round<10?EARLY_HP_MUL:(G.round<13?1.3:1))
@@ -4666,7 +4674,7 @@ function step(dt){
       const n=G.round+1;
       if(n>mapCfg('rounds',TOTAL_ROUNDS) && !mapCfg('infinite')){ G.phase='won'; if(typeof playSfx==='function') playSfx('win'); showOverlay(); return; }
       gainGas(mapCfg('roundClearEnergyBase',1)+Math.floor(G.round*mapCfg('roundClearEnergyPer',0.34)));   // 라운드 클리어 보너스(하향)
-    { const _cap=mapCfg('interestCap',500)+((G.metaB&&G.metaB.interestCap)||0); const _per=mapCfg('interestPer',100);   // 라운드 정산 이자: 보유 크레딧의 100당 5%(인정 한도까지) — 비축 보상
+    { const _cap=(mapCfg('interestCap',500)+((G.metaB&&G.metaB.interestCap)||0))*infIncomeMul(); const _per=mapCfg('interestPer',100);   // 라운드 정산 이자: 보유 크레딧 100당 N%(한도까지) — 비축 보상(무한=한도 수입배율)
       const _int=Math.floor(Math.min(G.mineral,_cap)/_per)*Math.round(_per*mapCfg('interestRate',0.05));
       if(_int>0){ const _bm=G.mineral; gainMineral(_int); toast('💰 이자 +'+(G.mineral-_bm)+' C (보유 '+_bm+' C)'); } }
       G.round=n; beginActivePhase(); }   // 2라운드부터는 준비시간 없이 즉시 전투
@@ -4801,10 +4809,10 @@ function step(dt){
     if(e._killer!=null){ const _k=G.units.find(x=>x.uid===e._killer); if(_k) _k.kills=(_k.kills||0)+1; }   // 개별 유닛 킬 카운트
     if(e.pboss){ const bn=e.bonus||0, be=e.bonusE||0; gainMineral(bn); if(be>0) gainGas(be); toast('☠ '+e.name+' 처치 (+'+bn+' C'+(be>0?' / +'+be+' E':'')+')'); if(typeof playSfx==='function') playSfx('hero_merge'); }
     else if(e.boss) toast('☠ 라운드 보스 처치!');
-    if(e.special){ const sc=mapCfg('specialCredit',SPECIAL_MIN); gainMineral(sc); gainGas(2); }   // 스페셜=크레딧+에너지(알림 생략 — 도배 방지)
+    if(e.special){ const _im=infIncomeMul(), sc=mapCfg('specialCredit',SPECIAL_MIN); gainMineral(Math.round(sc*_im)); gainGas(Math.round(2*_im)); }   // 스페셜=크레딧+에너지(무한=수입배율)
     if(e.boss && !e.pboss){ gainGas(5+Math.floor(G.round/4)); }   // 라운드 보스 처치=에너지 보너스(개인 보스는 크레딧만)
-    G._minAcc=(G._minAcc||0)+mapCfg('killCredit',1); if(G._minAcc>=1){ const _mw=Math.floor(G._minAcc); G._minAcc-=_mw; gainMineral(_mw); }   // 킬 보상(소수 누적 — 1 미만/킬 지원, round 보정 회피)
-    G._gasAcc=(G._gasAcc||0)+mapCfg('killEnergy',0.05); if(G._gasAcc>=1){ const w=Math.floor(G._gasAcc); G._gasAcc-=w; gainGas(w); }   // 킬 드립 에너지(누적 소수, 하향)
+    G._minAcc=(G._minAcc||0)+mapCfg('killCredit',1)*infIncomeMul(); if(G._minAcc>=1){ const _mw=Math.floor(G._minAcc); G._minAcc-=_mw; gainMineral(_mw); }   // 킬 보상(무한=수입배율, 소수 누적)
+    G._gasAcc=(G._gasAcc||0)+mapCfg('killEnergy',0.05)*infIncomeMul(); if(G._gasAcc>=1){ const w=Math.floor(G._gasAcc); G._gasAcc-=w; gainGas(w); }   // 킬 드립 에너지(무한=수입배율, 누적)
     if(typeof playEnemyDeath==='function') playEnemyDeath(e.race);   // 종족별 처치음(대량 처치 쓰로틀)
     if(e.split>0) splitEnemy(e);   // 정예(분열): 쓰러지면 체력 40% 적 2마리로
     deathBurst(e); G.enemies.splice(i,1); } }
@@ -5641,8 +5649,10 @@ function refreshSelCard(){
     document.getElementById('uName').textContent=gNameStar(u,def)+(u.hero?' [영웅]':'');
     const _rng=Math.round(def.range*(typeof gachaRangeMul==='function'?gachaRangeMul(u):1)*100);
     const _cdf=(typeof cdOf==='function')?cdOf(u,def):def.cd, _spd=_cdf>0?(60/_cdf).toFixed(1):'-';
+    const _vL=(mapCfg('infinite')?vetLevel(u):0);   // 무한모드 베테랑 계급
     document.getElementById('uKill').innerHTML='처치 <b>'+(u.kills||0)+'</b>'
-      +'<span class="scSub">사거리 <b>'+_rng+'</b> · 공속 <b>'+_spd+'</b>/s</span>';   // 누적 킬 + 사거리·공속(보조)
+      +(_vL>0?' <span style="color:#ffd24a;font-weight:800">★'+_vL+' <span style="font-size:.85em">공+'+(_vL*4)+'%</span></span>':'')
+      +'<span class="scSub">사거리 <b>'+_rng+'</b> · 공속 <b>'+_spd+'</b>/s</span>';   // 누적 킬 + (무한)베테랑 계급 + 사거리·공속
     typeEl.innerHTML=(u.gtier?tierLabelHTML(u.gtier):'')+unitTagsHTML(u);   // 등급 라벨 + 부가 효과(슬로우 등)
     hpEl.innerHTML=scHpHTML(u);
     grid.style.display='flex'; grid.innerHTML=scStatBoxesHTML(u); fitStatNumbers();
