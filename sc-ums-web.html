@@ -8732,7 +8732,9 @@ function strikeEnd(){ if(!STK && !(G&&G.strike)) return;
 
 // ── 프레임/시뮬 ──
 function strikeFrame(dt){ const S=STK; if(!S) return; strikeStep(dt);
-  if(G.tab==='Unit') strikeDrawBuildMap(); else strikeDrawMain();
+  if(G.tab==='Unit') strikeDrawBuildMap();
+  else if(G.tab==='Players' && S.specView) strikeDrawBuildMap(strikeSpecView(S.specView));   // 관전: 그 플레이어 건설 화면(그의 색)
+  else strikeDrawMain();
   strikeHud(); strikeLeaderboard(dt); strikeSync3D(dt);
   if(G.tab==='Main'){ S._siT=(S._siT||0)-dt; if(S._siT<=0){ S._siT=0.22; strikeRenderSelInfo(); } } }   // 선택 정보 라이브 갱신(HP)
 // 직스 3D 오버레이 — 신전(메인/2차/중립, 항상) + 크기비교 샘플유닛(sizeCmp일 때). 카메라 좌표→정규화, M3D.sync로 cvMarine 렌더(전투 탭, 맵 스케일 연동)
@@ -8751,7 +8753,7 @@ function strikeSync3D(dt){ const S=STK; if(!S) return; const mcv=document.getEle
     for(const u of S[side].units){ const n=w2n(u.x,u.y); list.push({uid:u.uid, id:u.id, x:n.x, y:n.y, face:u.face, rimCol:u.pcol, ringCol:ringCol}); } }
   M3D.sync(list, W, H, dt, [], [], null, k); }
 // 건물 탭 전용: 내 전용 건설 맵(전장 아님). 화면 1/4 직사각형, 깔끔한 금속 타일 + 건설 격자
-function strikeDrawBuildMap(){ const S=STK; if(!S) return; const cvEl=document.getElementById('cvMain'); if(!cvEl) return;
+function strikeDrawBuildMap(spec){ const S=STK; if(!S) return; const cvEl=document.getElementById('cvMain'); if(!cvEl) return;   // spec={cells,col,label} → 관전 모드(다른 플레이어 건설)
   const r=setup('cvMain'); const ctx=r.ctx, W=r.W, H=r.H; GW=W; GH=H; S.cw=W; S.ch=H;
   ctx.fillStyle='#05080c'; ctx.fillRect(0,0,W,H);
   const b=S.build, fit=Math.min(W/b.W, H/b.H)*0.94, sc=fit*(b.zoomCur||b.zoom);   // zoomCur=보간(부드러운 줌). fit(zoom=1)=화면 맞춤=최대 축소
@@ -8770,20 +8772,21 @@ function strikeDrawBuildMap(){ const S=STK; if(!S) return; const cvEl=document.g
   ctx.strokeStyle='rgba(120,200,255,.2)'; ctx.lineWidth=6; ctx.strokeRect(ox,oy,pw,ph);
   ctx.strokeStyle='rgba(150,212,255,.75)'; ctx.lineWidth=2; ctx.strokeRect(ox,oy,pw,ph);
   // 생산 건물 + 일꾼
-  const sz=Math.min(cwd,chd)*0.6, mc=S.me.compCol||'#7fd0ff';
-  for(const c of (b.cells||[])){ const cx=ox+c.x*sc, cy=oy+c.y*sc, built=c.built>=1;
+  const sz=Math.min(cwd,chd)*0.6, mc=spec?(spec.col||'#7fd0ff'):(S.me.compCol||'#7fd0ff'), cells=spec?(spec.cells||[]):(b.cells||[]);
+  for(const c of cells){ const cx=ox+c.x*sc, cy=oy+c.y*sc, built=c.built>=1;
     ctx.save(); ctx.globalAlpha=built?1:0.5; ctx.fillStyle=built?'rgba(30,52,84,.94)':'rgba(48,78,116,.5)'; _strkRR(ctx,cx-sz/2,cy-sz/2,sz,sz,sz*0.14); ctx.fill();
     ctx.globalAlpha=built?1:0.7; ctx.strokeStyle=mc; ctx.lineWidth=Math.max(1.5,sz*0.05); _strkRR(ctx,cx-sz/2,cy-sz/2,sz,sz,sz*0.14); ctx.stroke();
     ctx.globalAlpha=1; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font=Math.max(13,sz*0.48)+'px sans-serif'; ctx.fillStyle='#fff'; ctx.fillText(c.type.ico, cx, cy);
     if(!built){ const bw=sz*0.82, by2=cy+sz/2+5; ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillRect(cx-bw/2,by2,bw,5); ctx.fillStyle='#6fe89a'; ctx.fillRect(cx-bw/2,by2,bw*c.built,5); }
     ctx.restore(); }
-  for(const wk of (b.workers||[])){ const wx=ox+wk.x*sc, wy=oy+wk.y*sc, wr=Math.max(5,sz*0.16);
+  if(!spec) for(const wk of (b.workers||[])){ const wx=ox+wk.x*sc, wy=oy+wk.y*sc, wr=Math.max(5,sz*0.16);
     if(wk.task){ const tx=ox+wk.task.x*sc, ty=oy+wk.task.y*sc; ctx.strokeStyle='rgba(255,210,74,.45)'; ctx.setLineDash([5,4]); ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(wx,wy); ctx.lineTo(tx,ty); ctx.stroke(); ctx.setLineDash([]); }
     ctx.fillStyle='#ffd24a'; ctx.beginPath(); ctx.arc(wx,wy,wr,0,6.283); ctx.fill(); ctx.strokeStyle='#7a5a12'; ctx.lineWidth=1.5; ctx.stroke(); }
   // 상단 라벨(화면 고정)
-  ctx.textBaseline='alphabetic'; ctx.fillStyle='rgba(150,210,255,.9)'; ctx.font='700 13px Rajdhani, sans-serif'; ctx.textAlign='center';
-  const _rc=STK_RACES[S.me.race]||STK_RACES.terran, lbl=b.placing?('▸ '+b.placing.name+' 배치 — 빈 타일 탭'):'타일에 생산 건물 배치 · 출격 주기마다 자동 생산';
-  ctx.fillText('내 건설 ['+_rc.icon+' '+_rc.name+'] · ⛁'+Math.floor(S.me.gold)+' — '+lbl, W/2, Math.max(54, oy-12));
+  ctx.textBaseline='alphabetic'; ctx.fillStyle=spec?spec.col:'rgba(150,210,255,.9)'; ctx.font='700 13px Rajdhani, sans-serif'; ctx.textAlign='center';
+  if(spec){ ctx.fillText('👁 '+spec.label+' 관전', W/2, Math.max(54, oy-12)); }
+  else { const _rc=STK_RACES[S.me.race]||STK_RACES.terran, lbl=b.placing?('▸ '+b.placing.name+' 배치 — 빈 타일 탭'):'타일에 생산 건물 배치 · 출격 주기마다 자동 생산';
+    ctx.fillText('내 건설 ['+_rc.icon+' '+_rc.name+'] · ⛁'+Math.floor(S.me.gold)+' — '+lbl, W/2, Math.max(54, oy-12)); }
   ctx.textAlign='left';
 }
 // 건설 보드 카메라 클램프 — 보드가 화면보다 작으면 중앙, 크면 가장자리 넘어 못 가게
@@ -9163,7 +9166,7 @@ function strikeHud(){ const S=STK; if(!S) return; const set=(id,html)=>{ const e
   const ht=document.getElementById('hTime'); if(ht) ht.textContent=Math.ceil(S.cycleT)+'s'; }
 
 // ── 탭(nemo 탭+하단 .bp 재사용, 직스 전용 동작) ──
-function strikeSwitchTab(id,el){ const S=STK; if(!S) return; G.tab=id; S.userCam=false;
+function strikeSwitchTab(id,el){ const S=STK; if(!S) return; G.tab=id; S.userCam=false; if(id!=='Players') S.specView=null;   // 관전 종료
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
   (el||document.querySelector('.tab[data-tab="'+id+'"]'))?.classList.add('on');
   document.querySelectorAll('.gview').forEach(v=>v.classList.toggle('on', v.id==='vMain'));   // 직스는 항상 전장/건설 캔버스 유지
@@ -9184,18 +9187,30 @@ const STRIKE_BUILDABLE=[ {id:'marine',name:'소총병',ico:'🔫',cost:100}, {id
 function strikeRenderBuild(){ const el=document.getElementById('stBuildPalette'); if(!el) return; const S=STK;
   el.innerHTML=STRIKE_BUILDABLE.map((u,i)=>`<div class="stUnitCard${S&&S.build&&S.build.placing===u?' sel':''}" onclick="strikePickBuild(${i})"><div class="uc">${u.ico}</div>${u.name}<div class="ucCost">⛁${u.cost}</div></div>`).join(''); }
 // 관전: nemo .plbtn/.plGrid(4×2) 재사용. 팀 1-4(아군 파랑) vs 5-8(적군 빨강). 빈 자리=잠금
-function strikeRenderSpec(){ const g=document.getElementById('plGrid'); if(!g) return;
+function strikePColor(slot){ return (typeof PLAYER_VIEW_COLORS!=='undefined')?PLAYER_VIEW_COLORS[(slot-1)%PLAYER_VIEW_COLORS.length]:'#7fd0ff'; }
+function strikeSpecBuildCells(slot){ const S=STK; if(!S.specBuilds) S.specBuilds={};   // 데모 건물(추후 실제 멀티 데이터로 교체)
+  if(!S.specBuilds[slot]){ const b=S.build, cw=b.W/b.cols, ch=b.H/b.rows, cells=[], used=new Set(), n=2+(Math.random()*4|0);
+    for(let k=0;k<n;k++){ let col,row,key,t=0; do{ col=Math.random()*b.cols|0; row=Math.random()*b.rows|0; key=col+','+row; }while(used.has(key)&&++t<20); used.add(key);
+      cells.push({col:col,row:row,type:STRIKE_BUILDABLE[Math.random()*STRIKE_BUILDABLE.length|0],built:1,x:(col+0.5)*cw,y:(row+0.5)*ch}); }
+    S.specBuilds[slot]=cells; }
+  return S.specBuilds[slot]; }
+function strikeSpecView(slot){ const S=STK; const cells=(slot===1)?(S.build.cells||[]):strikeSpecBuildCells(slot);
+  return {cells:cells, col:strikePColor(slot), label:(slot===1?'내 ':(slot+'P '))+'건설'}; }
+function strikeSpecSelect(slot, enemy){ const S=STK; if(!S) return;
+  if(enemy){ strikeToast('적 진영은 암흑 시야입니다 🌑'); return; }
+  S.specView=(S.specView===slot)?null:slot;   // 같은 슬롯 다시 누르면 전장으로 복귀
+  strikeRenderSpec(); if(typeof playSfx==='function') playSfx('ui_tab'); }
+function strikeRenderSpec(){ const S=STK; const g=document.getElementById('plGrid'); if(!g) return;
   const pp=document.getElementById('playerProfile'); if(pp) pp.style.display='none';
   g.style.display=''; g.style.gap=''; g.innerHTML='';
-  const present={1:(typeof myNick==='function'?myNick():'나'), 5:'컴퓨터'};   // vs AI: 나=1P, 컴퓨터=5P(적팀)
-  for(let n=1;n<=8;n++){ const here=present[n]!=null, enemy=n>=5, isMine=(n===1);
+  const meNick=(typeof myNick==='function'?myNick():'나');
+  for(let n=1;n<=8;n++){ const enemy=n>=5, col=strikePColor(n);
     const el=document.createElement('div');
-    el.className='plbtn'+(isMine?' lock':'')+(!here?' off':'');
-    el.style.setProperty('--pc', enemy?'#ff5c5c':'#3a7bff');
-    const st = isMine ? (escHtml(present[1])+' 🔒') : (!here ? '빈 자리' : (enemy ? '컴퓨터 🌑' : escHtml(present[n])));
-    el.innerHTML='<div class="plnum">'+n+'P</div><div class="plst">'+st+'</div>';
-    if(here && enemy) el.onclick=()=>strikeToast('적 진영은 암흑 시야입니다 🌑');
-    else if(here && !isMine) el.onclick=()=>strikeToast('아군 진영 보기 (준비 중)');
+    el.className='plbtn'+((S&&S.specView===n)?' me':'')+(enemy?' off':'');   // 적군=흐리게(암흑 시야)
+    el.style.setProperty('--pc', col);
+    const nm=(n===1)?escHtml(meNick):(enemy?'컴퓨터 🌑':n+'P');
+    el.innerHTML='<div class="plnum">'+n+'P</div><div class="plst">'+nm+'</div>';
+    el.onclick=()=>strikeSpecSelect(n, enemy);
     g.appendChild(el);
   } }
 function strikeToast(msg){ if(typeof lobbyToast==='function') lobbyToast(msg); else if(typeof toast==='function') toast(msg); }
