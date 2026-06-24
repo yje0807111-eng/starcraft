@@ -8814,14 +8814,19 @@ function strikeFx(u,tx,ty,col){ const S=STK; if(!S) return; if(!S.fx) S.fx=[]; i
 function strikeFindUnit(arr,uid){ if(!uid) return null; for(const u of arr){ if(u.uid===uid&&!u.dead) return u; } return null; }
 function strikeAlert(allies, attackerUid, ax, ay, r){ const r2=r*r; for(const a of allies){ if(a.dead||a.wait>0||a.tgtUid) continue; const dx=a.x-ax, dy=a.y-ay; if(dx*dx+dy*dy<=r2) a.tgtUid=attackerUid; } }   // 주변 아군 가담
 function strikeSpawnWave(){ const S=STK; if(!S) return; const n=4+(Math.random()*3|0); for(let i=0;i<n;i++){ strikeSpawnUnit('me'); strikeSpawnUnit('ai'); } }   // 출격 주기(30초)마다 한 번에 소환
-function strikeSeparate(){ const S=STK; if(!S) return; const all=S.me.units.concat(S.ai.units), MIN=150;   // 유닛끼리 완전히 겹치지 않게 밀어냄(관리자·nemo식)
-  for(let i=0;i<all.length;i++){ const a=all[i]; if(a.dead||a.wait>0) continue;
-    for(let j=i+1;j<all.length;j++){ const b=all[j]; if(b.dead||b.wait>0) continue;
-      let dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy);
-      if(d===0){ a.x-=8; b.x+=8; } else if(d<MIN){ const p=(MIN-d)/2, ux=dx/d, uy=dy/d; a.x-=ux*p; a.y-=uy*p; b.x+=ux*p; b.y+=uy*p; } } } }
+function strikeFrontStruct(side){ const S=STK, foe=S[side==='me'?'ai':'me'];   // 가장 앞 신전: 중립 살아있으면 중립(그 뒤 신전은 못 때림) → 적 2차 → 적 메인
+  if(S.central && !S.central.dead) return S.central;
+  if(foe.sec && !foe.sec.dead) return foe.sec;
+  return foe.base; }
+function strikeSeparate(){ const S=STK; if(!S) return; const all=S.me.units.concat(S.ai.units);   // nemo식: 크기 기반 최소간격(작게) + 3회 반복 안정화(밀침 떨림 방지)
+  for(let it=0; it<3; it++){
+    for(let i=0;i<all.length;i++){ const a=all[i]; if(a.dead||a.wait>0) continue;
+      for(let j=i+1;j<all.length;j++){ const b=all[j]; if(b.dead||b.wait>0) continue;
+        let dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy); const min=(a.size+b.size)*2.6;   // 촘촘하게(150→크기기반 ~70~85)
+        if(d<min){ if(d<0.01){ dx=Math.random()-0.5; dy=Math.random()-0.5; d=1; } const p=(min-d)/2, ux=dx/d, uy=dy/d; a.x-=ux*p; a.y-=uy*p; b.x+=ux*p; b.y+=uy*p; } } } } }
 function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
   for(const side of ['me','ai']){ const me=S[side], foe=S[side==='me'?'ai':'me'], col=side==='me'?'#7fd0ff':'#ff8a96';
-    const structs=[]; if(S.central&&!S.central.dead) structs.push(S.central); if(foe.sec&&!foe.sec.dead) structs.push(foe.sec); structs.push(foe.base);   // 공격 가능 신전: 중립·적2차·적메인
+    const front=strikeFrontStruct(side);   // 가장 앞 신전 1개만 타겟(뒤 신전은 못 때림)
     for(const u of me.units){ if(u.dead) continue;
       if(u.wait>0){ u.wait-=dt; u.moving=false; continue; }   // 스폰 후 0.5초 대기(중앙 응시 상태로 정지)
       let tgt=strikeFindUnit(foe.units, u.tgtUid);   // 현재 타겟 유지(보복·추적)
@@ -8835,9 +8840,9 @@ function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
             strikeAlert(foe.units, u.uid, tgt.x, tgt.y, 420);     // 주변 아군도 공격자에 가담(스타식 자동교전)
             if(tgt.hp<=0) tgt.dead=true; } }
         else strikeMoveToward(u,tgt.x,tgt.y,dt);
-      } else { let atk=null; for(const st of structs){ if(Math.hypot(st.x-u.x,st.y-u.y)<=u.rng+120){ atk=st; break; } }   // 인지 적 없음 → 신전 공격/진격
-        if(atk){ u.moving=false; u.face=Math.atan2(atk.x-u.x, atk.y-u.y); u.cd-=dt; if(u.cd<=0){ u.cd=u.cdMax; atk.hp-=u.dmg; strikeFx(u,atk.x,atk.y,col); if(atk.hp<=0){ atk.dead=true; strikeCheckOver(); } } }
-        else { const mt=(foe.sec&&!foe.sec.dead)?foe.sec:foe.base; strikeMoveToward(u, mt.x, mt.y, dt); } } }   // 진격 목표=적 2차 신전(파괴 시 메인)
+      } else { const d=Math.hypot(front.x-u.x, front.y-u.y);   // 인지 적 없음 → 최전방 신전 1개로 진격/공격
+        if(d<=u.rng+120){ u.moving=false; u.face=Math.atan2(front.x-u.x, front.y-u.y); u.cd-=dt; if(u.cd<=0){ u.cd=u.cdMax; front.hp-=u.dmg; strikeFx(u,front.x,front.y,col); if(front.hp<=0){ front.dead=true; strikeCheckOver(); } } }
+        else strikeMoveToward(u, front.x, front.y, dt); } }   // 가장 앞 신전을 향해 이동
     const _dead=me.units.filter(u=>u.dead); if(_dead.length && window.M3D && M3D.dropModels){ try{ M3D.dropModels(_dead.map(u=>u.uid)); }catch(e){} }   // 즉시 제거(사망 모션 없이)
     me.units=me.units.filter(u=>!u.dead); }
   strikeSeparate();   // 유닛 분리(겹침 방지)
