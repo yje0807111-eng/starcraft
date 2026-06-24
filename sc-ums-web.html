@@ -9021,17 +9021,17 @@ function strikeScreenToWorld(px,py){ const S=STK, W=S.cw||1, H=S.ch||1, scale=Ma
 function strikeOnDown(e){ const S=STK; if(!S) return; const r=strikeViewRect(), px=e.clientX-r.left, py=e.clientY-r.top;
   _stkPtrs.set(e.pointerId,{x:px,y:py});
   const build=(G.tab==='Unit'), cam=build?S.build.cam:S.cam, zoom=build?S.build.zoom:S.zoom;
-  if(_stkPtrs.size===2){ const p=[..._stkPtrs.values()]; _stkPinch={ d:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)||1, zoom:zoom }; _stkDrag=null; }
-  else _stkDrag={ sx:px, sy:py, camx:cam.x, camy:cam.y, moved:false }; }
+  if(_stkPtrs.size>=2){ const p=[..._stkPtrs.values()], cx=(p[0].x+p[1].x)/2, cy=(p[0].y+p[1].y)/2;   // 두 손가락 = 줌+팬
+    _stkPinch={ d:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)||1, zoom:zoom, cx:cx, cy:cy, camx:cam.x, camy:cam.y }; _stkDrag=null; }
+  else _stkDrag={ sx:px, sy:py, moved:false }; }   // 한 손가락 = 탭(선택)만, 팬 안 함
 function strikeOnMove(e){ const S=STK; if(!S) return; const r=strikeViewRect(), px=e.clientX-r.left, py=e.clientY-r.top;
   if(_stkPtrs.has(e.pointerId)) _stkPtrs.set(e.pointerId,{x:px,y:py});
   const build=(G.tab==='Unit');
   if(_stkPinch && _stkPtrs.size>=2){ const p=[..._stkPtrs.values()], d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y), z=_stkPinch.zoom*d/_stkPinch.d;
-    if(build){ S.build.zoom=Math.min(BUILD_MAXZOOM, Math.max(1, z)); }
-    else { S.zoom=Math.min(STK_MAXZOOM, Math.max(STK_MINZOOM, z)); S.userCam=true; strikeClampCam(); } return; }
-  if(_stkDrag){ const dx=px-_stkDrag.sx, dy=py-_stkDrag.sy; if(Math.abs(dx)+Math.abs(dy)>6) _stkDrag.moved=true;
-    if(build){ const b=S.build, sc=b._sc||1; b.cam.x=_stkDrag.camx-dx/sc; b.cam.y=_stkDrag.camy-dy/sc; }
-    else { const W=S.cw||1,H=S.ch||1,scale=Math.min(W,H)/S.viewWorld; S.cam.x=_stkDrag.camx-dx/scale; S.cam.y=_stkDrag.camy-dy/scale; S.userCam=true; strikeClampCam(); } } }
+    const cx=(p[0].x+p[1].x)/2, cy=(p[0].y+p[1].y)/2, dcx=cx-_stkPinch.cx, dcy=cy-_stkPinch.cy;   // 두 손가락 중심 이동 = 팬
+    if(build){ const b=S.build; b.zoom=Math.min(BUILD_MAXZOOM, Math.max(1, z)); const sc=b._sc||1; b.cam.x=_stkPinch.camx-dcx/sc; b.cam.y=_stkPinch.camy-dcy/sc; }
+    else { S.zoom=Math.min(STK_MAXZOOM, Math.max(STK_MINZOOM, z)); const W=S.cw||1,H=S.ch||1,scale=Math.min(W,H)/S.viewWorld; S.cam.x=_stkPinch.camx-dcx/scale; S.cam.y=_stkPinch.camy-dcy/scale; S.userCam=true; strikeClampCam(); } return; }
+  if(_stkDrag){ const dx=px-_stkDrag.sx, dy=py-_stkDrag.sy; if(Math.abs(dx)+Math.abs(dy)>6) _stkDrag.moved=true; } }   // 한 손가락 이동=탭 취소 판정만(팬 안 함)
 function strikeOnUp(e){ const S=STK; if(!S) return; if(e) _stkPtrs.delete(e.pointerId);
   if(_stkPtrs.size<2) _stkPinch=null;
   if(G.tab!=='Unit' && _stkDrag && !_stkDrag.moved){ const r=strikeViewRect();
