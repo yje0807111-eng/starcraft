@@ -9348,6 +9348,15 @@ function tintModel(root, id){
 // 색칠 없이 림만 입힘(총 등 — 타입색 테두리만 발광)
 function rimModel(root, rimColor){ root.traverse(o=>{ if(!o.isMesh) return; const ms=Array.isArray(o.material)?o.material:[o.material];
   ms.forEach(m=>{ if(!m||m._tinted) return; addRim(m, rimColor); m._tinted=true; }); }); }
+// 인스턴스 전용 진영색 본체 림(직스: 아군/적군 동시 표시). 재질을 복제 → 그 인스턴스만 팀색 림(베이스 재질·nemo 무영향). 셰이더 코드 동일 → 프로그램 캐시로 재컴파일 비용 거의 없음
+const _teamRimCache={};   // hex → THREE.Color
+function applyTeamRim(m, hex){ if(!m||m._teamRim===hex) return; m._teamRim=hex;
+  const col=_teamRimCache[hex]||(_teamRimCache[hex]=new THREE.Color(hex));
+  const retint=function(root){ if(!root) return; root.traverse(o=>{ if(!o.isMesh||!o.material) return;
+    const arr=Array.isArray(o.material), ms=arr?o.material:[o.material];
+    const out=ms.map(mat=>{ if(!mat||!('emissive' in mat)) return mat; const c=mat.clone(); addRim(c, col, rimIntU); return c; });
+    o.material=arr?out:out[0]; }); };
+  retint(m.inner); retint(m.runInner); }
 // 밝은 림 색 — 아군은 플레이어색, 그 외 중립
 function unitRim(id){ return PLAYER_MODELS.has(id) ? playerRim : new THREE.Color(NEUTRAL_RIM); }
 // 재질 셰이더에 프레넬 림(가장자리 발광) 주입 — 시점 기준 실루엣이 항상 빛나 배경과 분리(MeshStandard/Physical)
@@ -9589,6 +9598,7 @@ window.M3D={
     for(const [key,m] of models){ if(!live.has(key)&&!m.dying){ m.dying=true; m.deadT=0; m.lean=0; } }
     // ── 아군 유닛 ──
     for(const u of uList){ const _id=_mid(u); let m=models.get(u.uid); if(!m){ m=makeModel(_id); if(!m) continue; m.kind='unit'; models.set(u.uid,m); }
+      if(u.rimCol) applyTeamRim(m, u.rimCol);   // 직스: 진영색 본체 림(아군 파랑 / 적군 빨강 동시 표시)
       if(u.atBoss){ m.holder.visible=false; continue; }   // 보스방 파견 유닛은 트랙에 표시 안 함
       const px=u.x*W, worldY=H-u.y*H;
       if(u.rimCol){ m.rim.visible=true; m.rim.material.color.set(u.rimCol); }   // 직스: 진영 색 림(항상 표시 — 파랑/빨강)
