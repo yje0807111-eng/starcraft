@@ -2761,6 +2761,9 @@ function applyMapBalance(){ const b=(MAP&&MAP.cfg&&MAP.cfg.bal)||NEMO_BAL;
 const ADMIN_BAL = JSON.parse(JSON.stringify(NEMO_BAL));   // nemo 밸런스 깊은 복제(독립 — 여기서 조정해도 nemo 영향 없음)
 try{ USEMAPS.admin = { id:'admin', name:'관리자용 (테스트)', desc:'밸런스·기능 테스트 전용 — nemo 복제본(독립 조정)', players:'1-8', pop:0, icon:'🛠️', rec:false, isNew:false, playable:true,
   cfg: Object.assign({}, USEMAPS.nemo.cfg, { bal:ADMIN_BAL, mode:'sandbox' }) }; }catch(e){}
+// 무한 디펜스 — nemo 엔진 재사용 + 무한 루프(노말 고정). 해금: 노말 클리어.
+try{ USEMAPS.nemo_inf = { id:'nemo_inf', name:'무한 디펜스', desc:'노말 난이도로 끝없이 이어지는 무한 라운드 — 얼마나 오래 버티나', players:'1', pop:0, icon:'♾️', rec:false, isNew:true, playable:true,
+  cfg: Object.assign({}, USEMAPS.nemo.cfg, { infinite:true, rounds:999999, infLoopHpMul:4, fixedDiff:'normal' }) }; }catch(e){}
 function mapCfg(k,def){ const c=MAP&&MAP.cfg, v=c?c[k]:undefined; return v===undefined?def:v; }
 
 // ── 엔진 기본값(유즈맵 cfg 미지정 시 사용) ──
@@ -3063,6 +3066,16 @@ function bankRunPoints(){ if(G._pointsBanked) return G._bankedAmt||0; G._pointsB
   const gained=Math.round((G.points||0)*cm);   // 코인 = 월드보스 처치 포인트 × 난이도 배율
   if(gained>0){ PLAYER_META.coins=(PLAYER_META.coins||0)+gained; saveMeta(); }
   G._bankedAmt=gained; return gained; }
+const DIFF_RANK=['easy','normal','hard','hell','nightmare'];
+function infiniteUnlocked(){ try{ return DIFF_RANK.indexOf((PLAYER_META&&PLAYER_META.clearedDifficulty)||'easy') >= 1; }catch(e){ return false; } }   // 노말 이상 클리어 시 무한모드 해금
+function recordRunResult(){ try{
+    if(typeof PLAYER_META==='undefined' || !PLAYER_META) return;
+    const r=G.round||0;
+    if(mapCfg('infinite')){ if(r>(PLAYER_META.highestRound||0)){ PLAYER_META.highestRound=r; saveMeta(); } }   // 무한모드: 최고 라운드 기록
+    if(G.phase==='won' && !mapCfg('infinite')){   // 캠페인 클리어: 클리어 난이도 갱신(무한 해금 판정용)
+      const cur=DIFF_RANK.indexOf(G.difficulty), had=DIFF_RANK.indexOf(PLAYER_META.clearedDifficulty||'easy');
+      if(cur>had){ PLAYER_META.clearedDifficulty=G.difficulty; saveMeta(); } }
+  }catch(e){} }
 // 메타 빌드 레벨업(코인 차감)
 function buildUpgrade(id){ const b=META_BUILDS[id]; if(!b) return false;
   if(b.deferred){ toast('🔒 준비 중인 빌드입니다'); return false; }
@@ -4478,14 +4491,16 @@ function pbossUnlocked(pt){ if(!G.pbUnlockedOnce) G.pbUnlockedOnce={};
 function spawnEnemy(opts){ opts=opts||{}; const pt=opts.pbType||null; const pboss=!!opts.pboss||!!pt, boss=!!opts.boss||pboss, special=!!opts.special; const m=roundDef(G.round);
   const mb=G.metaB||{};   // 메타 강화: 적 체력/방어/이속 감소(개인)
   const _D=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal);
+  const _inf=mapCfg('infinite'); const _effR=_inf?Math.min(G.round,30):G.round;   // 무한모드: 라운드 램프는 R30에서 고정, 이후 루프 배수로 연속 성장
+  const _infMul=(_inf&&G.round>30)?Math.pow(mapCfg('infLoopHpMul',4),(G.round-30)/30):1;   // 30라운드마다 ×infLoopHpMul (연속 곡선)
   const hpMul=_D.enemyHp*(mb.enemyHpMul||1)*TEMPO_HP_MUL
-  *Math.pow(HP_RAMP_BASE, Math.max(0, G.round-4))
+  *Math.pow(HP_RAMP_BASE, Math.max(0, _effR-4))
   *(G.round<10?EARLY_HP_MUL:(G.round<13?1.3:1))
   *(_D.enemyHp<=1 ? (EARLY3_BOOST[G.round]||1) : 1);   // ×템포 ×초반보정(R10 이전 ×1.7) ×초반 라운드 부스트(R1~4, 이지/노말만 — 1레어 솔로 방지)
   // 라운드 보스(필수처치)는 enemyHp(나이트=320배)면 처치 불가 → 완만한 bossHp 계수(1.0~3.0)로 분리. 초반보정 제외.
   const bossMul=(_D.bossHp||1)*(mb.enemyHpMul||1)*TEMPO_HP_MUL;   // 라운드 램프는 bossHp(r) 곡선에 포함 → 여기선 난이도(bossHp계수)·템포·메타만
   const coinMult=_D.coinMult||1;
-  const hp = pt ? pt.hp : Math.round(boss ? bossHp(G.round)*bossMul*((mb.rbossHpMul)||1) : m.hp*hpMul);   // 개인보스=고정 / 라운드보스=bossMul×메타체감 / 일반=hpMul
+  const hp = pt ? pt.hp : Math.round((boss ? bossHp(_effR)*bossMul*((mb.rbossHpMul)||1) : m.hp*hpMul) * _infMul);   // 개인보스=고정 / 라운드보스 / 일반 (무한모드=×_infMul 루프 성장)
   const sh = pt ? 0 : (boss?0:Math.round(m.sh*hpMul));
   const mod=(!boss && !special && !pt && G.roundMod)?ROUND_MODS[G.roundMod]:null;   // 라운드 모디파이어(일반 적만)
   let ar = pt ? pt.ar : Math.max(0, (boss?Math.round(m.ar*0.5):m.ar) - (mb.enemyArmor||0));   // 보스 방어=그 라운드의 절반(등급 관문은 일반 라운드가 담당)
@@ -4649,7 +4664,7 @@ function step(dt){
       if(isBossRound(G.round) && G.enemies.some(e=>e.boss && !e.pboss)){   // 보스 라운드: 2분 내 보스 미처치 → 통과 실패(패배)
         G.phase='lost'; if(typeof addChat==='function') addChat('', '⏱ 보스를 제한시간 내에 처치하지 못해 방어선이 무너졌습니다.'); if(typeof playSfx==='function') playSfx('lose'); showOverlay(); return; }
       const n=G.round+1;
-      if(n>mapCfg('rounds',TOTAL_ROUNDS)){ G.phase='won'; if(typeof playSfx==='function') playSfx('win'); showOverlay(); return; }
+      if(n>mapCfg('rounds',TOTAL_ROUNDS) && !mapCfg('infinite')){ G.phase='won'; if(typeof playSfx==='function') playSfx('win'); showOverlay(); return; }
       gainGas(mapCfg('roundClearEnergyBase',1)+Math.floor(G.round*mapCfg('roundClearEnergyPer',0.34)));   // 라운드 클리어 보너스(하향)
     { const _cap=mapCfg('interestCap',500)+((G.metaB&&G.metaB.interestCap)||0); const _per=mapCfg('interestPer',100);   // 라운드 정산 이자: 보유 크레딧의 100당 5%(인정 한도까지) — 비축 보상
       const _int=Math.floor(Math.min(G.mineral,_cap)/_per)*Math.round(_per*mapCfg('interestRate',0.05));
@@ -6439,17 +6454,18 @@ function showOverlay(){ const ov=document.getElementById('ov'),tt=document.getEl
   if(G.phase==='ready'){   // 시작 안내 = 메뉴 화면(자체 우주 배경)
     ov.classList.add('spaceBg'); setInGame(false);
     tt.textContent=MAP.name; tt.style.color=COL.accent;
-    dd.style.display=''; dd.textContent=MAP.desc+'.\n유닛 구매 → 배치 → 합성으로 영웅을 키우고\n'+mapCfg('rounds',TOTAL_ROUNDS)+'라운드를 클리어!';
+    dd.style.display=''; dd.textContent=MAP.desc+'.\n유닛 구매 → 배치 → 합성으로 영웅을 키우고\n'+(mapCfg('infinite')?'끝없이 밀려오는 적을 최대한 오래 막아내세요!':(mapCfg('rounds',TOTAL_ROUNDS)+'라운드를 클리어!'));
     stats.style.display='none'; stats.innerHTML='';
     bt.textContent='멀티플레이'; bt2.style.display='none';
   } else {   // 승/패/종료 = 게임 화면 위 모달(배경 게임 유지)
     ov.classList.remove('spaceBg');   // 자체 배경 제거 → 뒤로 게임이 비침
-    const won=(G.phase==='won'), quit=(G.phase==='quit'), gp=bankRunPoints(), multi=(typeof coopActive==='function'&&coopActive());
-    tt.textContent=won?'CLEAR! 🏆':(quit?'게임 종료':'DEFEAT'); tt.style.color=won?'#ffd24a':(quit?'#cfd6e2':'#ff5c5c');
-    dd.style.display=''; dd.textContent=won?'모든 라운드를 막아냈습니다!':(quit?'게임을 종료했습니다. 진행한 만큼 코인을 받았습니다.':'적이 누적되어 방어선이 무너졌습니다.');
+    recordRunResult();   // 최고 라운드 / 클리어 난이도 기록(무한 해금·점수)
+    const won=(G.phase==='won'), quit=(G.phase==='quit'), inf=mapCfg('infinite'), gp=bankRunPoints(), multi=(typeof coopActive==='function'&&coopActive());
+    tt.textContent=inf?'무한 종료':(won?'CLEAR! 🏆':(quit?'게임 종료':'DEFEAT')); tt.style.color=won&&!inf?'#ffd24a':(quit?'#cfd6e2':'#ff5c5c');
+    dd.style.display=''; dd.textContent=inf?'끝없는 적을 막아냈습니다. 최고 기록에 도전하세요!':(won?'모든 라운드를 막아냈습니다!':(quit?'게임을 종료했습니다. 진행한 만큼 코인을 받았습니다.':'적이 누적되어 방어선이 무너졌습니다.'));
     stats.style.display=''; stats.innerHTML=
       ovStatRow('플레이타임', fmtTime(G.timeSec))
-     +ovStatRow('도달 라운드', G.round+' / '+mapCfg('rounds',TOTAL_ROUNDS))
+     +ovStatRow(inf?'도달 라운드':'도달 라운드', inf?(G.round+'  (최고 '+((PLAYER_META&&PLAYER_META.highestRound)||G.round)+')'):(G.round+' / '+mapCfg('rounds',TOTAL_ROUNDS)))
      +ovStatRow('받은 코인', '◎ '+gp);
     bt.textContent=(multi&&!quit)?'관전하기':'다시하기';   // 자발적 종료는 관전 아님 → 다시하기
     bt2.style.display=''; bt2.textContent='로비로 돌아가기';
@@ -7312,7 +7328,9 @@ function renderMaps(){ const list=document.getElementById('msList'); if(!list) r
         +'<div class="mapLive" id="mlive-'+m.id+'">'+liveText(m)+'</div></div>'
       +'<div class="mapStar'+(favs[m.id]?' on':'')+'">'+ICO.fav+'</div>';
     el.querySelector('.mapStar').onclick=(e)=>toggleFav(m.id,e);
-    el.onclick=()=>{ if(m.playable===false){ lobbyToast('아직 준비 중인 유즈맵입니다'); return; } openModeSheet(m); };
+    el.onclick=()=>{ if(m.playable===false){ lobbyToast('아직 준비 중인 유즈맵입니다'); return; }
+      if(m.cfg&&m.cfg.infinite&&!infiniteUnlocked()){ lobbyToast('🔒 노말 난이도를 클리어하면 해금됩니다'); return; }
+      openModeSheet(m); };
     list.appendChild(el);
   });
   updateMapBanner();
@@ -7494,7 +7512,7 @@ function startGameNow(activePlayers, myNum, names){
   if(mapCfg('mode')==='strike'){ strikeStart(); return; }   // 직스 모드 → 독립 모듈(nemo 우회). (3D 에셋은 추후 단계에서 loadMapModels)
   if(mapCfg('mode')==='sandbox'){ enterSandbox(); return; }   // 관리자용 샌드박스 — 게임 진행 X, 유닛 진열·기본값 편집
   if(typeof bgmStop==='function') bgmStop();   // 게임 진입 시 로비 BGM 정지
-  G=newGame(); G.phase='playing'; G.difficulty=_selDiff; G.roundPhase='prep'; G.roundTime=mapCfg('prepTime',PREP_TIME); G.toSpawn=0;
+  G=newGame(); G.phase='playing'; G.difficulty=(mapCfg('fixedDiff')||_selDiff); G.roundPhase='prep'; G.roundTime=mapCfg('prepTime',PREP_TIME); G.toSpawn=0;
   if(typeof loadAutoCfg==='function') loadAutoCfg();   // 저장된 자동설정·랠리 위치 복원(판 사이 유지)
   G.loading=true;   // 로딩(카운트다운/준비) 동안 게임 시간 정지 → 시작하면 10초부터
   G.activePlayers = (activePlayers&&activePlayers.length)? activePlayers.slice() : [1,2,3,4,5,6,7,8];   // 입장한 플레이어
