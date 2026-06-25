@@ -7450,7 +7450,11 @@ function openModeSheet(m){ _selMap=m; renderDiffBtns(); document.getElementById(
   const ms=document.getElementById('modeSheet'); ms.classList.remove('hide'); if(typeof fxPop==='function') fxPop(ms.querySelector('.moCard')); if(typeof playSfx==='function') playSfx('ui_open'); }
 function closeModeSheet(){ popHide('modeSheet'); }
 function chooseSolo(){ if(typeof inPartyNow==='function' && inPartyNow()){ if(typeof lobbyToast==='function') lobbyToast('파티 중에는 멀티플레이만 가능합니다'); return; }
-  closeModeSheet(); openSoloDiff(); }   // 난이도 팝업(직스면 그 안에 종족 드롭다운 표시)
+  closeModeSheet();
+  const m=_selMap;
+  if(m && (m.id==='nemo' || m.id==='nemo_inf')){ openSoloDiff(); return; }   // 난이도 선택은 네모네모 디펜스 전용
+  if(m && m.cfg && m.cfg.mode==='strike'){ openRaceSelect(); return; }       // 컴퓨터가 싸운다(오토 배틀): 종족만 선택 후 시작
+  _startSoloNow(); }                                                          // 관리자 테스트(샌드박스)·기타: 난이도 없이 바로 시작
 // ── 종족 선택 팝업(재사용): 솔로(맵→종족→난이도) + 멀티 대기실(카드 칩→팝업) 공용 ──
 let _racePickCb=null;
 // 종족색 → CSS 변수(rgba 변형) 문자열. SC 네온 콘솔 행 스타일에 주입
@@ -8960,7 +8964,7 @@ const ATK_STYLE={
 const FX={
   sizeMul:1,   // 전역 크기 노브(이펙트 랩에서 조정 → 전 맵 즉시 반영)
   REF:18,      // 기준 유닛 월드크기 — 이펙트 크기 = sz × (유닛크기/REF). 큰 유닛=큰 이펙트
-  store(){ return {shots:[], impacts:[], melee:[], deaths:[]}; },
+  store(){ return {shots:[], impacts:[], melee:[], deaths:[], smoke:[]}; },
   spawn(store, id, sx,sy, tx,ty, opts){ if(!store) return; opts=opts||{}; const st=ATK_STYLE[id]||ATK_STYLE._default, col=opts.color||st.color;
     const szf=(opts.unitSize||FX.REF)/FX.REF;   // 유닛 크기 비례 계수
     const dx=tx-sx, dy=ty-sy, dist=Math.hypot(dx,dy)||1, ang=Math.atan2(dy,dx);
@@ -8973,13 +8977,19 @@ const FX={
   death(store, x,y, opts){ if(!store) return; opts=opts||{}; const szf=(opts.unitSize||FX.REF)/FX.REF, col=opts.color||'#ffd0a0', parts=[];
     for(let i=0;i<9;i++){ const a=Math.random()*6.283; parts.push({a:a, sp:42+Math.random()*70, len:4+Math.random()*5, col:(i%3===0?'#ffe6b0':col)}); }
     store.deaths.push({x:x,y:y,life:1,col:col,szf:szf,parts:parts}); },   // 통합 죽음 이펙트(섬광 링 + 코어 + 파편)
+  smoke(store, x,y){ if(!store||!store.smoke) return;   // 어깨 포드 발사 연기(골리앗 등) — 위로 피어오르는 회색 구름
+    for(let k=0;k<3;k++){ store.smoke.push({x:x+(Math.random()-0.5)*0.012, y:y, vx:(Math.random()-0.5)*0.03, vy:-0.05-Math.random()*0.045, life:1, r0:2.4+Math.random()*2, col:(k%2?'#5a5a66':'#7a7a86')}); } },
   advance(store, dt){ if(!store) return;
     const sh=store.shots; for(let i=sh.length-1;i>=0;i--){ const s=sh[i]; s.t+=dt; s.x+=s.vx*dt; s.y+=s.vy*dt;
       if(s.t>=s.dur){ store.impacts.push({x:s.x,y:s.y,life:1,kind:s.kind,col:s.color,boom:s.boom||4,szf:s.szf||1}); sh.splice(i,1); } }
     const im=store.impacts; for(let i=im.length-1;i>=0;i--){ im[i].life-=dt*4.5; if(im[i].life<=0) im.splice(i,1); }
     const me=store.melee; for(let i=me.length-1;i>=0;i--){ me[i].life-=dt*5; if(me[i].life<=0) me.splice(i,1); }
-    const de=store.deaths; for(let i=de.length-1;i>=0;i--){ de[i].life-=dt*2.2; if(de[i].life<=0) de.splice(i,1); } },
+    const de=store.deaths; for(let i=de.length-1;i>=0;i--){ de[i].life-=dt*2.2; if(de[i].life<=0) de.splice(i,1); }
+    const sm=store.smoke; if(sm) for(let i=sm.length-1;i>=0;i--){ const p=sm[i]; p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy*=0.95; p.life-=dt*1.7; if(p.life<=0) sm.splice(i,1); } },
   drawShots(ctx, store, toScreen, sz){ if(!store) return; sz=sz*(FX.sizeMul||1); ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round';
+    if(store.smoke) for(const p of store.smoke){ const c=toScreen(p.x,p.y), L=Math.max(0,p.life), z=sz*0.9, r=(p.r0+(1-L)*7)*z;   // 발사 연기(회색, 위로 확산)
+      ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=L*0.42; ctx.fillStyle=p.col; ctx.beginPath(); ctx.arc(c.x,c.y,r,0,6.283); ctx.fill(); }
+    ctx.globalAlpha=1;
     for(const s of store.shots){ const c=toScreen(s.x,s.y), z=sz*(s.szf||1); ctx.save(); ctx.globalCompositeOperation='lighter';
       ctx.translate(c.x,c.y); ctx.rotate(Math.atan2(s.vy,s.vx)); ctx.scale(z,z); FX._shot(ctx,s); ctx.restore(); }
     ctx.globalCompositeOperation='lighter';
@@ -9476,7 +9486,13 @@ function fxLabStep(dt){ const L=FXLAB; if(!L.att) fxLabSpawnScene(); const a=L.a
   const ty=(tgt===L.air)?tgt.y-0.05:tgt.y;   // 공중 적은 부양 본체 위치로 살짝 위 조준
   const dx=tgt.x-a.x, dy=ty-a.y; a.face=Math.atan2(dx,dy);
   L.cd-=dt; if(L.cd<=0){ L.cd=Math.max(0.42, st.cd); a.fireSeq=(a.fireSeq||0)+1;
-    FX.spawn(L.store, L.attId, a.x,a.y, tgt.x,ty, {speed:(st.melee?6.5:3.6), unitSize:st.size}); L.ti=((L.ti||0)+1)%tgts.length; } }
+    if(L.attId==='goliath') fxLabGoliathFire(L, a, tgt.x, ty, st.size);   // 스트라이더: 양 어깨 포드 미사일 + 발사 연기
+    else FX.spawn(L.store, L.attId, a.x,a.y, tgt.x,ty, {speed:(st.melee?6.5:3.6), unitSize:st.size});
+    L.ti=((L.ti||0)+1)%tgts.length; } }
+function fxLabGoliathFire(L, a, tx, ty, size){ const upN=0.055, sideN=0.03, sy=a.y-upN;   // 어깨 높이(위)·좌우 포드에서 2발
+  FX.spawn(L.store, 'goliath', a.x-sideN, sy, tx, ty, {speed:3.6, unitSize:size});
+  FX.spawn(L.store, 'goliath', a.x+sideN, sy, tx, ty, {speed:3.6, unitSize:size});
+  FX.smoke(L.store, a.x-sideN, sy); FX.smoke(L.store, a.x+sideN, sy); }
 function fxLabRender(dt){ const L=FXLAB; if(!L.store) L.store=FX.store(); if(!L.att) fxLabSpawnScene();
   const r=setup('cvUnit'); GW=r.W; GH=r.H; drawSandboxGround(r.ctx, r.W, r.H);   // 빈 땅(cvUnit)
   fxLabStep(dt);
