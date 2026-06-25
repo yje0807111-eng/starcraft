@@ -8811,7 +8811,7 @@ function strikeSync3D(dt){ const S=STK; if(!S) return; const mcv=document.getEle
   const w2n=function(wx,wy){ const sx=(wx-S.cam.x)*scale+W/2, sy=(wy-S.cam.y)*scale+H/2; return {x:sx/W, y:sy/H}; };
   const list=[];
   const TT=[['tmpMeMain',S.me.base,'temple_main'],['tmpAiMain',S.ai.base,'temple_main'],['tmpMeSec',S.me.sec,'temple_stone'],['tmpAiSec',S.ai.sec,'temple_stone'],['tmpCentral',S.central,'temple_neutral']];
-  for(const t of TT){ const n=w2n(t[1].x,t[1].y); list.push({uid:t[0], id:t[2], x:n.x, y:n.y, fixed:true, face:-0.42}); }   // 신전(고정, 살짝 사선)
+  for(const t of TT){ const o=t[1], n=w2n(o.x,o.y); list.push({uid:t[0], id:t[2], x:n.x, y:n.y, fixed:true, face:-0.42, dead:!!o.dead}); }   // 신전(고정, 살짝 사선) — 파괴 시 dead 플래그
   if(S.sizeCmp && S.cmpUnits){ for(const u of S.cmpUnits){ const n=w2n(u.x,u.y); list.push({uid:u.uid, id:u.id, x:n.x, y:n.y}); } }
   for(const side of ['me','ai']){ const ringCol=(side==='me')?'#3aa0ff':'#ff4d5e';   // 본체 림=플레이어색(고정) / 하단 링=팀색(아군 파랑/적군 빨강, 보는 쪽 기준)
     for(const u of S[side].units){ const n=w2n(u.x,u.y); list.push({uid:u.uid, id:u.id, x:n.x, y:n.y, face:u.face, rimCol:u.pcol, ringCol:ringCol}); } }
@@ -9055,12 +9055,22 @@ function strikeTerritory(){ const S=STK; let blue=0.25, red=0.75;   // 초기: �
   if(meSecDead) red=0.22;
   if(meSecDead&&aiSecDead){ blue=0.25; red=0.75; }   // 양쪽 2차 다 파괴 → 각자 2차까지, 중앙 흰색
   return {blue:Math.max(0.05,Math.min(0.95,blue)), red:Math.max(0.05,Math.min(0.95,red))}; }
-function strikeSeparate(){ const S=STK; if(!S) return; const all=S.me.units.concat(S.ai.units);   // nemo식: 크기 기반 최소간격(작게) + 3회 반복 안정화(밀침 떨림 방지)
+function strikeSeparate(){ const S=STK; if(!S) return; const all=S.me.units.concat(S.ai.units);   // nemo식 비간섭: 공격/정지 유닛=앵커(안 밀림) → 이동 유닛만 비켜서 돌아감(밀침 떨림 제거)
   for(let it=0; it<3; it++){
     for(let i=0;i<all.length;i++){ const a=all[i]; if(a.dead||a.wait>0) continue;
       for(let j=i+1;j<all.length;j++){ const b=all[j]; if(b.dead||b.wait>0) continue;
-        let dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy); const min=(a.size+b.size)*2.6;   // 촘촘하게(150→크기기반 ~70~85)
-        if(d<min){ if(d<0.01){ dx=Math.random()-0.5; dy=Math.random()-0.5; d=1; } const p=(min-d)/2, ux=dx/d, uy=dy/d; a.x-=ux*p; a.y-=uy*p; b.x+=ux*p; b.y+=uy*p; } } } } }
+        let dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy); const min=(a.size+b.size)*2.6;   // 촘촘하게(크기기반)
+        if(d<min){ if(d<0.01){ dx=Math.random()-0.5; dy=Math.random()-0.5; d=1; } const p=(min-d), ux=dx/d, uy=dy/d;
+          const aFix=!a.moving, bFix=!b.moving;   // 정지(공격/대기) 유닛은 앵커 — 지나가는 유닛이 비켜감
+          if(aFix&&!bFix){ b.x+=ux*p; b.y+=uy*p; }          // a 앵커 → b만 돌아감
+          else if(bFix&&!aFix){ a.x-=ux*p; a.y-=uy*p; }     // b 앵커 → a만 돌아감
+          else { a.x-=ux*p*0.5; a.y-=uy*p*0.5; b.x+=ux*p*0.5; b.y+=uy*p*0.5; } } } } }   // 둘 다 이동/둘 다 정지 → 절반씩(겹침만 해소)
+  strikeTempleClampUnits(); }
+function strikeTempleClampUnits(){ const S=STK; if(!S) return; const all=S.me.units.concat(S.ai.units);   // 유닛이 신전을 통과하지 못하게(살아있는 신전만 충돌)
+  const tps=[[S.me.base,150],[S.ai.base,150],[S.me.sec,80],[S.ai.sec,80],[S.central,35]];   // 신전별 발자국 반경(월드)
+  for(const tp of tps){ const o=tp[0]; if(!o||o.dead) continue; const tr=tp[1];
+    for(const u of all){ if(u.dead) continue; let dx=u.x-o.x, dy=u.y-o.y, d=Math.hypot(dx,dy); const min=tr+(u.size||14)*1.5;
+      if(d<min){ if(d<0.01){ const ang=Math.random()*6.283; dx=Math.cos(ang); dy=Math.sin(ang); d=1; } const nx=dx/d, ny=dy/d, push=min-d; u.x+=nx*push; u.y+=ny*push; } } } }
 function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
   for(const side of ['me','ai']){ const me=S[side], foe=S[side==='me'?'ai':'me'], col=side==='me'?'#7fd0ff':'#ff8a96';
     const front=strikeFrontStruct(side);   // 가장 앞 신전 1개만 타겟(뒤 신전은 못 때림)
@@ -9089,17 +9099,19 @@ function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
   strikeSeparate();   // 유닛 분리(겹침 방지)
   if(S.fx) FX.advance(S.fx, dt);   // 공격 이펙트(공용 FX 코어) 전진·감쇠
 }
-function strikeDrawTempleHp(ctx,w2s,scale,S){ if(!S) return;   // 신전 이름+HP — 모델 '하단'에 고정 크기(모델이 위로 솟아 안 가려짐, 줌 무관)
-  const list=[[S.me.base,'#7fe0ff','메인 신전',1],[S.ai.base,'#ff9aa6','메인 신전',1],[S.me.sec,'#7fe0ff','2차 신전',0],[S.ai.sec,'#ff9aa6','2차 신전',0],[S.central,'#ffd86a','중립 신전',0]];
+function strikeDrawTempleHp(ctx,w2s,scale,S){ if(!S) return;   // 신전 이름+HP — 줌에 따라 함께 확대 + 모델 하단 아래(가림 방지). 이름은 여기 단일 출력
+  const list=[[S.me.base,'#7fe0ff','메인 신전',210],[S.ai.base,'#ff9aa6','적 메인 신전',210],[S.me.sec,'#7fe0ff','2차 신전',102],[S.ai.sec,'#ff9aa6','적 2차 신전',102],[S.central,'#ffd86a','중립 신전',40]];
+  const ls=Math.max(0.9, Math.min(2.6, (S.zoom||STK_DEFZOOM)/STK_DEFZOOM));   // 라벨 스케일 = 줌 비율(모델과 함께 확대)
   ctx.save(); ctx.textAlign='center'; ctx.textBaseline='top';
-  for(const t of list){ const o=t[0]; if(!o||o.dead||o.hp==null) continue; const p=w2s(o.x,o.y), col=t[1], nm=t[2], big=t[3];
-    const bw=big?86:64, hpr=Math.max(0,o.hp/o.max), bx=p.x-bw/2, y0=p.y+8;   // 모델 접지점 바로 아래(고정 오프셋)
-    ctx.font='800 10px Rajdhani,"Apple SD Gothic Neo",sans-serif'; ctx.lineWidth=3; ctx.strokeStyle='rgba(0,0,0,.82)';
+  for(const t of list){ const o=t[0]; if(!o||o.dead||o.hp==null) continue; const p=w2s(o.x,o.y), col=t[1], nm=t[2], wr=t[3];
+    const rr=Math.max(9, wr*scale*0.58), hpr=Math.max(0,o.hp/o.max);
+    const bw=(wr>=200?86:64)*ls, bx=p.x-bw/2, y0=p.y+rr*0.7+8*ls;   // 모델 하단 아래로(줌 비례 오프셋)
+    ctx.font='800 '+(10*ls).toFixed(1)+'px Rajdhani,"Apple SD Gothic Neo",sans-serif'; ctx.lineWidth=3*ls; ctx.strokeStyle='rgba(0,0,0,.82)';
     ctx.strokeText(nm,p.x,y0); ctx.fillStyle=col; ctx.fillText(nm,p.x,y0);   // 이름
-    const by=y0+14; ctx.fillStyle='#0c1320'; ctx.fillRect(bx-1.5,by-1.5,bw+3,8);   // 바
-    ctx.fillStyle=hpr>0.4?col:'#ff5c5c'; ctx.fillRect(bx,by,bw*hpr,5);
-    ctx.font='800 9px Rajdhani,"Apple SD Gothic Neo",sans-serif'; ctx.lineWidth=2.6; ctx.strokeStyle='rgba(0,0,0,.8)';
-    const tx=Math.ceil(o.hp).toLocaleString()+' / '+o.max.toLocaleString(); ctx.strokeText(tx,p.x,by+7); ctx.fillStyle='#fff'; ctx.fillText(tx,p.x,by+7); }   // 수치
+    const by=y0+15*ls; ctx.fillStyle='#0c1320'; ctx.fillRect(bx-1.5*ls,by-1.5*ls,bw+3*ls,8*ls);   // 바 배경
+    ctx.fillStyle=hpr>0.4?col:'#ff5c5c'; ctx.fillRect(bx,by,bw*hpr,5*ls);
+    ctx.font='800 '+(9*ls).toFixed(1)+'px Rajdhani,"Apple SD Gothic Neo",sans-serif'; ctx.lineWidth=2.6*ls; ctx.strokeStyle='rgba(0,0,0,.8)';
+    const tx=Math.ceil(o.hp).toLocaleString()+' / '+o.max.toLocaleString(); ctx.strokeText(tx,p.x,by+8*ls); ctx.fillStyle='#fff'; ctx.fillText(tx,p.x,by+8*ls); }   // 수치
   ctx.restore(); }
 function strikeDrawSelection(ctx,w2s,scale,S){ if(!S) return;
   const all=S.me.units.concat(S.ai.units);
@@ -9176,19 +9188,16 @@ function strikeDrawMain(){ const S=STK; if(!S) return; const cvEl=document.getEl
   // 신전: 3D 모델 로드 시 사이드 링+라벨만(본체는 strikeSync3D가 M3D로), 미로드 시 2D 폴백
   const _tmpl=function(o,modelId,col,glow,wr,label,labelCol){
     const has3d=window.M3D && M3D.hasModel && M3D.hasModel(modelId) && !(G.opt&&G.opt.model3d===false);
-    if(!has3d){ strikeDrawTemple(ctx,w2s,scale,o.x,o.y,col,glow,wr,{topCol:(modelId==='temple_neutral'?'#fff7da':undefined),label:label,labelCol:labelCol}); return; }
-    const p=w2s(o.x,o.y), rr=Math.max(9,wr*scale*0.58);
-    ctx.save();
+    if(!has3d){ strikeDrawTemple(ctx,w2s,scale,o.x,o.y,col,glow,wr,{topCol:(modelId==='temple_neutral'?'#fff7da':undefined)}); return; }   // 라벨은 strikeDrawTempleHp 단일 출력(중복 제거)
+    const p=w2s(o.x,o.y), rr=Math.max(9,wr*scale*0.58), dd=!!o.dead;
+    ctx.save(); if(dd) ctx.globalAlpha=0.4;   // 죽은 신전: 접지/링도 흐리게
     // 접지(모바일 성능: 그라데이션·캐스트섀도 제거 → 솔리드 알파 타원 3겹)
     ctx.fillStyle='rgba(0,0,0,.26)'; ctx.beginPath(); ctx.ellipse(p.x,p.y+rr*0.1,rr*1.75,rr*0.82,0,0,6.283); ctx.fill();     // AO
     ctx.fillStyle='rgba(96,78,52,.4)'; ctx.beginPath(); ctx.ellipse(p.x,p.y,rr*1.22,rr*0.55,0,0,6.283); ctx.fill();           // 사막 돌기단
     ctx.fillStyle='rgba(122,100,68,.32)'; ctx.beginPath(); ctx.ellipse(p.x,p.y-rr*0.04,rr*0.92,rr*0.42,0,0,6.283); ctx.fill();
-    ctx.globalAlpha=.4; ctx.strokeStyle=glow; ctx.lineWidth=Math.max(1.2,2.4*scale);
-    ctx.beginPath(); ctx.ellipse(p.x,p.y,rr*1.0,rr*0.46,0,0,6.283); ctx.stroke(); ctx.globalAlpha=1;
-    // 라벨
-    ctx.font='800 11px Rajdhani,"Apple SD Gothic Neo",sans-serif'; ctx.textAlign='center';
-    ctx.lineWidth=3; ctx.strokeStyle='rgba(0,0,0,.72)'; ctx.strokeText(label,p.x,p.y+rr+14);
-    ctx.fillStyle=labelCol||glow; ctx.fillText(label,p.x,p.y+rr+14); ctx.restore(); };
+    if(!dd){ ctx.globalAlpha=.4; ctx.strokeStyle=glow; ctx.lineWidth=Math.max(1.2,2.4*scale);
+      ctx.beginPath(); ctx.ellipse(p.x,p.y,rr*1.0,rr*0.46,0,0,6.283); ctx.stroke(); }   // 진영색 글로우 링(살아있을 때만)
+    ctx.restore(); };
   _tmpl(S.central,'temple_neutral','#d9b34a','#ffd86a',40,'중립 신전','#ffe28a');
   _tmpl(S.me.sec,'temple_stone','#3a7bff','#7fe0ff',102,'2차 신전','#bfe0ff');
   _tmpl(S.ai.sec,'temple_stone','#ff3b54','#ff9aa6',102,'적 2차 신전','#ffc2c8');
@@ -9894,6 +9903,12 @@ function desatMat(mat){
   mat.customProgramCacheKey=()=>'ghost';   // 림 재질과 다른 프로그램으로 분리(셰이더 캐시 충돌 방지)
   mat.transparent=true; mat.opacity=0.2; mat.depthWrite=false; mat.needsUpdate=true;   // 거의 배경 수준 반투명(실루엣만 — 미해금)
 }
+// 파괴된 신전 재질 — 무채색 + 반투명(폐허처럼 비활성). desatMat보다 덜 투명(실루엣이 보이게)
+function dimDeadMat(mat){ if(!('emissive' in mat)) return;
+  if(mat.emissive) mat.emissive.setScalar(0);
+  mat.onBeforeCompile=(shader)=>{ shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',
+    '#include <map_fragment>\n  { float _g=dot(diffuseColor.rgb, vec3(0.299,0.587,0.114)); diffuseColor.rgb=vec3(_g)*0.5; }'); };   // 채도 0 + 어둡게(회색)
+  mat.customProgramCacheKey=()=>'deadtmpl'; mat.transparent=true; mat.opacity=0.5; mat.needsUpdate=true; }
 // 비활성 고정 슬롯 고스트 — 무채색·축소·정적(아직 안 지어진 자리)
 function makeGhost(id){
   const m=makeModel(id); if(!m) return null;
@@ -10085,7 +10100,9 @@ window.M3D={
         m.gun.position.set(m.gunBase.x, m.gunBase.y - rl*RELOAD_DIP, m.gunBase.z - m.lean*GUN_RECOIL);
         m.gun.rotation.x = rl*RELOAD_TILT; }
       m.holder.position.set(px, worldY - Y_DROP, 0);
-      if(scaleMul&&scaleMul!==1) m.holder.scale.setScalar((SCALE[_id]||MODEL_SCALE)*scaleMul);   // 맵 스케일 연동(직스 등): 줌에 따라 유닛도 함께 확대/축소
+      if(u.dead&&u.fixed){ if(!m._deadDim){ m._deadDim=true; if(m.rim) m.rim.visible=false; const mats=cloneMats(m.inner); for(const mt of mats) dimDeadMat(mt); } }   // 파괴된 신전(고정 구조물): 무채색 반투명(1회 적용)
+      const _ds=(u.dead&&u.fixed)?0.82:1;   // 파괴 시 약간 움츠러듦
+      if((scaleMul&&scaleMul!==1)||_ds!==1) m.holder.scale.setScalar((SCALE[_id]||MODEL_SCALE)*(scaleMul||1)*_ds);   // 맵 스케일 연동 + 파괴 축소
     }
     // ── 적 유닛(공중: 부유 + 진행방향 회전) ──
     for(const e of eList){ const key='e'+e.eid; let m=models.get(key); if(!m){ m=makeModel(e.model3d); if(!m) continue; m.kind='enemy'; m.age=0; if(CLOAK_MODELS[m.id]) m.mats=cloneMats(m.inner); models.set(key,m); }  // 클로킹 모델만 투명재질(나머지는 불투명 유지)
