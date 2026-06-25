@@ -8786,6 +8786,7 @@ function strikeStart(){ if(typeof bgmStop==='function') bgmStop();
   if(typeof playSfx==='function') playSfx('game_start');
 }
 function strikeEnd(){ if(!STK && !(G&&G.strike)) return;
+  { const r=document.getElementById('stResult'); if(r){ try{ r.remove(); }catch(_){ } } }   // 결과 오버레이 정리
   if(G) G.strike=false; STK=null; _stkPtrs.clear(); _stkPinch=null;
   { const si=document.getElementById('stSelInfo'); if(si){ si.classList.add('hide'); si.innerHTML=''; } }
   strikeSetTabLabels(STK_NEMOLABEL); strikeHideNemoChrome(false);
@@ -8857,7 +8858,7 @@ function strikeDrawBuildMap(spec){ const S=STK; if(!S) return; const cvEl=docume
 function strikeBuildClamp(b,sc,W,H){ const hvx=(W/sc)/2, hvy=(H/sc)/2;
   b.cam.x = (b.W<=hvx*2) ? b.W/2 : Math.max(hvx, Math.min(b.W-hvx, b.cam.x));
   b.cam.y = (b.H<=hvy*2) ? b.H/2 : Math.max(hvy, Math.min(b.H-hvy, b.cam.y)); }
-function strikeStep(dt){ const S=STK; if(!S) return; S.t+=dt;
+function strikeStep(dt){ const S=STK; if(!S) return; if(S.over) return; S.t+=dt;   // 종료 시 시뮬·소환 정지(결과창 표시 중)
   strikeStepUnits(dt);   // 전투 시뮬(소환·진격·교전·신전 타격)
   S.cycleT-=dt;
   if(S.cycleT<=0){ S.cycleT+=S.cycleTime; S.round++;
@@ -8923,11 +8924,30 @@ function strikeSpawnUnit(side, forceId){ const S=STK, me=S[side]; if(!me||me.uni
   me.units.push({uid:'su'+(S.uidSeq=(S.uidSeq||0)+1), id:id, side:side, x:x, y:y, pcol:pcol,
     hp:st.hp, maxHp:st.hp, dmg:st.dmg, rng:st.rng, acq:st.acq, splash:st.splash||0, melee:!!st.melee, tgtUid:null, cd:Math.random()*st.cdMax, cdMax:st.cdMax, spd:st.spd, color:st.color, size:st.size,
     wait:0.5, face:Math.atan2(c-x, c-y), dead:false}); }   // 인지범위/광역/근접 스탯 반영 / 0.5초 대기 후 진격
-function strikeMoveToward(u,tx,ty,dt){ const dx=tx-u.x, dy=ty-u.y, d=Math.hypot(dx,dy)||1, v=u.spd*dt; u.x+=dx/d*v; u.y+=dy/d*v; u.face=Math.atan2(dx,dy); u.moving=true; }   // 이동방향 응시 + 보행 모션
+function strikeMoveToward(u,tx,ty,dt){ const S=STK; let dx=tx-u.x, dy=ty-u.y, d=Math.hypot(dx,dy)||1, hx=dx/d, hy=dy/d;
+  // 전방의 정지(공격중=앵커) 유닛을 접선 방향으로 우회 → 막힌 길 자동 회피(최단 측면으로)
+  if(S){ let sx=0, sy=0; const scan=function(list){ for(const o of list){ if(o===u||o.dead||o.moving||o.wait>0) continue;
+      const ox=o.x-u.x, oy=o.y-u.y, od=Math.hypot(ox,oy)||1, reach=(u.size+o.size)*3.2;
+      if(od<reach){ const fwd=(ox*hx+oy*hy)/od; if(fwd>0.25){   // 진행 방향 앞쪽 장애물만
+        let tnx=-hy, tny=hx; if((ox*tnx+oy*tny)>0){ tnx=-tnx; tny=-tny; }   // 장애물 반대편(자유로운 쪽) 접선
+        const w=(1-od/reach)*fwd; sx+=tnx*w; sy+=tny*w; } } } };
+    scan(S.me.units); scan(S.ai.units);
+    if(sx||sy){ hx+=sx*1.8; hy+=sy*1.8; const hl=Math.hypot(hx,hy)||1; hx/=hl; hy/=hl; } }
+  const v=u.spd*dt; u.x+=hx*v; u.y+=hy*v; u.face=Math.atan2(hx,hy); u.moving=true; }   // 이동방향 응시 + 보행 모션
 function strikeNextStruct(side){ const S=STK, foe=S[side==='me'?'ai':'me']; return (foe.sec&&!foe.sec.dead)?foe.sec:foe.base; }   // 적 2차 신전 → 메인 신전 순
 function strikeCheckOver(){ const S=STK; if(S.over) return;
   if(S.me.base.hp<=0) S.over='lose'; else if(S.ai.base.hp<=0) S.over='win';
-  if(S.over && typeof toast==='function') toast(S.over==='win'?'⚔️ 승리! 적 메인 신전 파괴':'💥 패배 — 메인 신전 붕괴'); }
+  if(S.over){ if(typeof toast==='function') toast(S.over==='win'?'⚔️ 승리! 적 메인 신전 파괴':'💥 패배 — 메인 신전 붕괴'); strikeShowResult(S.over==='win'); } }
+function strikeShowResult(win){ const S=STK; if(!S||S._resultEl) return;   // 종료 결과 오버레이(승/패) — 없으면 전투가 멈춘 채 방치됨
+  const host=document.getElementById('phone')||document.body, el=document.createElement('div'); el.id='stResult';
+  el.style.cssText='position:absolute;inset:0;z-index:80;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:rgba(4,7,12,.78)';
+  const col=win?'#7fe0ff':'#ff6b7a';
+  el.innerHTML='<div style="font-size:34px;font-weight:900;letter-spacing:3px;color:'+col+';text-shadow:0 0 24px '+col+'88">'+(win?'승 리':'패 배')+'</div>'
+    +'<div style="font-size:13px;color:#cfe0f4;opacity:.92">'+(win?'적 메인 신전을 파괴했습니다':'아군 메인 신전이 붕괴되었습니다')+'</div>'
+    +'<button id="stResultBtn" style="margin-top:6px;padding:11px 28px;border-radius:11px;border:1px solid '+col+';background:linear-gradient(160deg,rgba(30,44,66,.72),rgba(10,16,28,.82));color:#fff;font-size:14px;font-weight:800;cursor:pointer">로비로 돌아가기</button>';
+  host.appendChild(el); S._resultEl=el;
+  const btn=document.getElementById('stResultBtn'); if(btn) btn.onclick=function(){ try{ el.remove(); }catch(_){ } strikeEnd(); };
+  if(typeof playSfx==='function') playSfx(win?'win':'lose'); }
 // ── 건설(스타식 일꾼): 팔레트 선택 → 타일 탭 배치 → 일꾼이 이동·건설 → 완성 건물이 출격 주기마다 그 유닛 생산 ──
 function strikeStepBuild(dt){ const S=STK, b=S&&S.build; if(!b) return;
   if(!b.workers){ b.workers=[]; for(let i=0;i<3;i++) b.workers.push({x:b.W*(0.34+i*0.16), y:b.H-180, task:null}); }   // 일꾼 3마리(병렬 자동 분배)
@@ -9059,7 +9079,7 @@ function strikeSeparate(){ const S=STK; if(!S) return; const all=S.me.units.conc
   for(let it=0; it<3; it++){
     for(let i=0;i<all.length;i++){ const a=all[i]; if(a.dead||a.wait>0) continue;
       for(let j=i+1;j<all.length;j++){ const b=all[j]; if(b.dead||b.wait>0) continue;
-        let dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy); const min=(a.size+b.size)*2.6;   // 촘촘하게(크기기반)
+        let dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy); const min=(a.size+b.size)*1.3;   // 유닛 크기 수준(거의 맞닿게) — 공간 낭비 줄임
         if(d<min){ if(d<0.01){ dx=Math.random()-0.5; dy=Math.random()-0.5; d=1; } const p=(min-d), ux=dx/d, uy=dy/d;
           const aFix=!a.moving, bFix=!b.moving;   // 정지(공격/대기) 유닛은 앵커 — 지나가는 유닛이 비켜감
           if(aFix&&!bFix){ b.x+=ux*p; b.y+=uy*p; }          // a 앵커 → b만 돌아감
@@ -9101,7 +9121,7 @@ function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
 }
 function strikeDrawTempleHp(ctx,w2s,scale,S){ if(!S) return;   // 신전 이름+HP — 줌에 따라 함께 확대 + 모델 하단 아래(가림 방지). 이름은 여기 단일 출력
   const list=[[S.me.base,'#7fe0ff','메인 신전',210],[S.ai.base,'#ff9aa6','적 메인 신전',210],[S.me.sec,'#7fe0ff','2차 신전',102],[S.ai.sec,'#ff9aa6','적 2차 신전',102],[S.central,'#ffd86a','중립 신전',40]];
-  const ls=Math.max(0.9, Math.min(2.6, (S.zoom||STK_DEFZOOM)/STK_DEFZOOM));   // 라벨 스케일 = 줌 비율(모델과 함께 확대)
+  const ez=2600/(S.viewWorld||2167), ls=Math.max(0.9, Math.min(2.6, ez/STK_DEFZOOM));   // 라벨 스케일 = 실제 보간된 줌(viewWorld) → 모델과 동일 타이밍(손 입력 지연 제거)
   ctx.save(); ctx.textAlign='center'; ctx.textBaseline='top';
   for(const t of list){ const o=t[0]; if(!o||o.dead||o.hp==null) continue; const p=w2s(o.x,o.y), col=t[1], nm=t[2], wr=t[3];
     const rr=Math.max(9, wr*scale*0.58), hpr=Math.max(0,o.hp/o.max);
@@ -10021,7 +10041,7 @@ window.M3D={
       if(u.rimCol) applyTeamRim(m, u.rimCol);   // 직스: 진영색 본체 림(아군 파랑 / 적군 빨강 동시 표시)
       if(u.atBoss){ m.holder.visible=false; continue; }   // 보스방 파견 유닛은 트랙에 표시 안 함
       const px=u.x*W, worldY=H-u.y*H;
-      if(u.ringCol){ m.rim.visible=true; m.rim.material.color.set(u.ringCol); }   // 직스: 발밑 링=팀색(아군/적군 구분)
+      if(u.ringCol){ m.rim.visible=true; m.rim.material.color.set(u.ringCol); m.rim.material.opacity=0.6; }   // 직스: 발밑 링=팀색(아군/적군 구분) — 살짝 연하게
       else { m.rim.visible = selSet.has(u.uid);
       if(m.rim.visible){   // 선택링 색: 영웅=금색 / 가챠=등급색(유닛도감과 동일) / 일반=청록
         const _tc=(u.gtier && typeof TIER_COLOR!=='undefined')?TIER_COLOR[u.gtier]:null;
