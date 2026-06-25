@@ -2307,7 +2307,7 @@
   <div id="bot">
     <div id="tabs">
       <div class="tab on" data-tab="Main"  onclick="switchTab('Main',this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 11L12 4.3 20.4 11"/><path d="M5.7 9.4V19.6h12.6V9.4"/><path d="M9.8 19.6v-4.7h4.4v4.7"/></svg></span>메인</div>
-      <div class="tab" data-tab="Unit"     onclick="switchTab('Unit',this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9.5" cy="8.5" r="3"/><path d="M4 19.5c0-3 2.5-5.2 5.5-5.2s5.5 2.2 5.5 5.2"/><path d="M18.5 4v5M16 6.5h5"/></svg></span>유닛뽑기</div>
+      <div class="tab" data-tab="Unit"     onclick="switchTab('Unit',this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9.5" cy="8.5" r="3"/><path d="M4 19.5c0-3 2.5-5.2 5.5-5.2s5.5 2.2 5.5 5.2"/><path d="M18.5 4v5M16 6.5h5"/></svg></span><span id="unitTabLbl">유닛뽑기</span></div>
       <div class="tab" data-tab="Upgrade"  onclick="switchTab('Upgrade',this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5l5.3 5.3h-3.1v4.6h-4.4V9.8H6.7z"/><path d="M7 18.5h10"/></svg></span>업그레이드</div>
       <div class="tab" data-tab="Players"  onclick="switchTab('Players',this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.6" r="2.7"/><path d="M3.8 19c0-2.9 2.3-4.9 5.2-4.9s5.2 2 5.2 4.9"/><circle cx="16.9" cy="9.2" r="2.1"/><path d="M15.4 14.5c2.4.3 4.6 2 4.6 4.5"/></svg></span>플레이어</div>
       <div class="tab tabSet" id="settingsBtn" data-sfx="ui_open" onclick="openSettings()" title="설정"><span class="ti"><svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg></span></div>
@@ -5625,9 +5625,10 @@ function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 
   if(typeof updateCoopBossBar==='function') updateCoopBossBar();
   updateSpecLabel();
   // 메인 외 탭에서 전투 미니맵 표시 / 조합 버튼은 메인에서만(미니맵과 자리 교대)
-  document.getElementById('miniWrap').classList.toggle('on', id!=='Main');
+  const _labView=(G.sandbox && id==='Unit');   // 이펙트 랩: 미니맵 숨김
+  document.getElementById('miniWrap').classList.toggle('on', id!=='Main' && !_labView);
   document.getElementById('mergeFab').classList.toggle('hide', id!=='Main');
-  if(id!=='Main') drawMiniMap();
+  if(id!=='Main' && !_labView) drawMiniMap();
 }
 // 계열 한글명(타입 라벨용)
 const WPN_KOR={inf:'보병',mech:'기계',pro:'루멘',zrg:'스웜',gun:'총기',beam:'광학',exp:'폭발',org:'유기체',fly:'비행',air:'항공',bio:'생체'};
@@ -8339,7 +8340,7 @@ function clearShopBox(){ const el=document.getElementById('shopBox'); if(el) el.
 // 유닛뽑기 입력 = 메인 체계: 진입 무선택. 시민 클릭=시민 선택 / 비콘 클릭=그 유닛 선택(정보) / 시민 선택+빈곳=이동(구매) / 빈곳 드래그=박스 / 빈곳 탭=해제
 let _shopStart=null, _shopMoved=false, _shopBox=null, _shopGrab=false;
 // 유닛 정보 클릭 판정 — 작은 반경(유닛 아이콘 부근만). 비콘 가장자리 클릭은 '빈 곳'으로 → 시민 이동 가능
-function onUnitDown(e){ if(G.tab!=='Unit') return; if(e.cancelable) e.preventDefault();
+function onUnitDown(e){ if(G.tab!=='Unit' || G.sandbox) return; if(e.cancelable) e.preventDefault();   // 이펙트 랩: 시민 셀렉터 비활성
   const p=unitHoldPos(e); _shopStart=p; _shopMoved=false; _shopBox=null; _shopGrab=false;
   const c=G.citizen, onCit = c && Math.hypot((p.x-c.x)*GW,(p.y-c.y)*GH) < Math.min(GW,GH)*0.055;
   if(onCit){ selectShop('citizen'); _shopGrab=true; }         // 시민 짚기 → 선택 + 떼지 않고 스와이프하면 즉시 이동
@@ -8347,7 +8348,7 @@ function onUnitDown(e){ if(G.tab!=='Unit') return; if(e.cancelable) e.preventDef
   else { _shopBox={x0:p.x,y0:p.y,x1:p.x,y1:p.y}; drawShopBox(_shopBox); }  // 무선택 + 빈곳 → 박스
   updateDeselTop();
 }
-function onUnitMove(e){ if(G.tab!=='Unit') return; if(e.cancelable) e.preventDefault();
+function onUnitMove(e){ if(G.tab!=='Unit' || G.sandbox) return; if(e.cancelable) e.preventDefault();
   const p=unitHoldPos(e);
   if(_shopStart && Math.hypot(p.x-_shopStart.x,p.y-_shopStart.y)>0.012) _shopMoved=true;
   if(_shopBox){ _shopBox.x1=p.x; _shopBox.y1=p.y; drawShopBox(_shopBox); return; }
@@ -8355,6 +8356,7 @@ function onUnitMove(e){ if(G.tab!=='Unit') return; if(e.cancelable) e.preventDef
   if(G.shopSel==='citizen' && (_shopGrab||uHold) && _shopMoved) moveCitizenCmd(p);
 }
 function onUnitUp(){
+  if(G.sandbox) return;   // 이펙트 랩: 시민 셀렉터 비활성
   if(_shopBox){ const b=_shopBox; clearShopBox(); _shopBox=null;
     const c=G.citizen, x0=Math.min(b.x0,b.x1),x1=Math.max(b.x0,b.x1),y0=Math.min(b.y0,b.y1),y1=Math.max(b.y0,b.y1);
     if(_shopMoved && c && c.x>=x0&&c.x<=x1&&c.y>=y0&&c.y<=y1) selectShop('citizen');  // 드래그 박스에 시민 들어오면 선택
@@ -8553,7 +8555,7 @@ function drawSandboxGround(ctx,W,H){
   if(typeof terrainNoise==='function') terrainNoise(ctx,0,0,W,H,80,3.0);
   const g=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.max(W,H)*0.72);
   g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,.28)'); ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-  if(typeof G!=='undefined' && G._sandboxRows){ ctx.save(); ctx.font='bold 11px sans-serif'; ctx.textAlign='left'; ctx.textBaseline='middle';
+  if(typeof G!=='undefined' && G._sandboxRows && !(G.sandbox && G.tab==='Unit')){ ctx.save(); ctx.font='bold 11px sans-serif'; ctx.textAlign='left'; ctx.textBaseline='middle';   // 이펙트 랩(Unit)에선 종족 행 라벨 숨김
     G._sandboxRows.forEach(function(row){ const ly=row.y*H;
       ctx.strokeStyle='rgba(255,255,255,.06)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(W*0.02,ly+H*0.06); ctx.lineTo(W*0.98,ly+H*0.06); ctx.stroke();
       ctx.fillStyle='rgba(255,224,160,.92)'; ctx.shadowColor='#000'; ctx.shadowBlur=4; ctx.fillText(row.label, W*0.03, ly); ctx.shadowBlur=0;
@@ -8611,7 +8613,7 @@ function loop(now){
     const _sm=(G.phase==='playing')?G.speedMul:1;   // 배속: 적/시간뿐 아니라 내 유닛·시민 이동도 동일 배속
     for(let k=0;k<_sm;k++){
       if(G.phase==='playing' && !G.sandbox) step(dt);
-      if(G.tab==='Unit') stepCitizen(dt);             // 시민 이동(도착 시 구매)
+      if(G.tab==='Unit' && !G.sandbox) stepCitizen(dt);   // 시민 이동(도착 시 구매) — 랩에선 정지
       if(G.tab==='Main'){ stepCmdMove(dt); separateUnits(); }   // 내 유닛 이동명령 + 겹침 방지
     }
     stepAuto(dt);   // 자동화 유틸(0.33초 틱) — 배속과 무관하게 실시간 기준
@@ -9455,10 +9457,13 @@ function fxLabRenderGrid(){ const g=document.getElementById('fxLabGrid'); if(!g)
     return '<div class="fxlCard'+on+'" onclick="fxLabSelect(\''+id+'\')"><div class="pic">'+unitPortraitHTML(id)+'</div><div class="nm">'+escHtml(strikeUnitName(id))+'</div><div class="ks">'+(st.kind||'')+'</div></div>'; }).join(''); }
 function fxLabActivate(){ const w=document.getElementById('fxLabWrap'); if(w) w.classList.add('on');
   const acts=document.getElementById('fxLabActs'); if(acts) acts.classList.remove('hide');
+  const lbl=document.getElementById('unitTabLbl'); if(lbl) lbl.textContent='이펙트';   // 탭 이름: 유닛뽑기 → 이펙트
   ['shopProfile','prodHint','gachaActions','opsManual'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display='none'; });
   if(!FXLAB.store) FXLAB.store=FX.store(); if(window.M3D&&M3D.clearGameModels) M3D.clearGameModels(); fxLabSpawnScene(); fxLabRenderGrid(); }
 function fxLabDeactivate(){ const w=document.getElementById('fxLabWrap'); if(w) w.classList.remove('on');
-  const acts=document.getElementById('fxLabActs'); if(acts) acts.classList.add('hide'); FXLAB.att=null; FXLAB.dummy=null; FXLAB.bldg=null; FXLAB.air=null; }
+  const acts=document.getElementById('fxLabActs'); if(acts) acts.classList.add('hide');
+  const lbl=document.getElementById('unitTabLbl'); if(lbl) lbl.textContent='유닛뽑기';   // 일반: 유닛뽑기 복원
+  FXLAB.att=null; FXLAB.dummy=null; FXLAB.bldg=null; FXLAB.air=null; }
 function fxLabStep(dt){ const L=FXLAB; if(!L.att) fxLabSpawnScene(); const a=L.att, st=fxLabStats(L.attId);
   if(L.mode==='move'){ a.moving=true; a.x+=0.17*dt*L.mv; if(a.x>0.60){ a.x=0.60; L.mv=-1; } if(a.x<0.22){ a.x=0.22; L.mv=1; } a.face=Math.atan2(L.mv,0.0001); return; }   // 좌우 왕복
   if(L.mode==='death'){ a.moving=false; L.t-=dt;
