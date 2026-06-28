@@ -165,24 +165,30 @@
   #skillFab.active{border-color:#7fffd4;box-shadow:0 0 16px -2px rgba(90,255,200,.65),0 4px 9px var(--shade),inset 0 0 12px rgba(90,255,200,.22)}  /* 버프 활성 */
   #skillFab:active{transform:translateY(1px)}
   /* 🎆 이펙트 테스트베드(관리자 Unit 탭) — 빈 땅 + 유닛 배너 → 3D 소환 무한 반복 */
-  #fxLabWrap{display:none;flex-direction:column;gap:6px;flex:1;min-height:0}
+  #fxLabWrap{display:none;flex-direction:column;gap:0;flex:1;min-height:0}
   #fxLabWrap.on{display:flex}
-  #fxLabBar{flex:0 0 auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:4px 8px 8px;border-bottom:1px solid rgba(120,160,210,.16)}
-  #fxLabBar .ttl{font-size:12.5px;font-weight:800;color:#bfe0ff}
-  #fxLabBar .ctl{display:flex;align-items:center;gap:6px;font-size:11px;color:#9fb6cf;font-weight:700}
-  #fxLabBar .ctl input[type=range]{width:92px}
-  #fxLabBar .ctl b{color:#cfe0f4;min-width:34px;text-align:right;font-family:'Rajdhani',sans-serif}
-  #fxLabGrid{flex:1;min-height:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;overflow-y:auto;padding:2px 2px 6px;align-content:start}
+  #fxLabGrid{flex:1;min-height:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;overflow-y:auto;padding:4px 4px 8px;align-content:start}
+  .fxlRaceHead{grid-column:1/-1;padding:3px 6px 2px;font-size:10px;font-weight:800;letter-spacing:.6px;border-radius:4px;margin-top:6px}
+  .fxlRaceHead.fxrl0{margin-top:0}
+  .fxlRaceHead.union{color:#4aa8ff;background:rgba(74,168,255,.1)}
+  .fxlRaceHead.swarm{color:#9fd356;background:rgba(159,211,86,.1)}
+  .fxlRaceHead.aetherial{color:#ffc040;background:rgba(255,192,64,.1)}
   .fxlCard{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;border-radius:8px;cursor:pointer;
     background:linear-gradient(160deg,rgba(30,44,66,.6),rgba(12,18,28,.6));border:1px solid rgba(120,160,210,.22)}
   .fxlCard.on{border-color:#7fd0ff;box-shadow:inset 0 0 12px -4px rgba(127,208,255,.6),0 0 10px -4px rgba(127,208,255,.5)}
-  .fxlCard:active{transform:translateY(1px)}
+  .fxlCard.todo{opacity:.35;pointer-events:none;cursor:default}
+  .fxlCard:not(.todo):active{transform:translateY(1px)}
   .fxlCard .pic{width:46px;height:46px;border-radius:7px;overflow:hidden;position:relative;background:rgba(8,14,22,.6)}
   .fxlCard .pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
   .fxlCard .nm{font-size:10.5px;font-weight:800;color:#eaf2ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
   .fxlCard .ks{font-size:8.5px;font-weight:700;color:#86a0bb}
   #fxLabActs{position:absolute;right:8px;bottom:8px;z-index:21;display:flex;flex-direction:column;gap:6px;pointer-events:auto}
   #fxLabActs.hide{display:none}
+  #fxLabCtrl{position:absolute;left:9px;right:80px;bottom:58px;z-index:21;display:none;flex-direction:row;gap:10px;align-items:center;flex-wrap:wrap;background:rgba(6,14,24,.84);border:1px solid rgba(100,140,180,.22);border-radius:8px;padding:5px 10px;pointer-events:auto}
+  #fxLabCtrl.on{display:flex}
+  #fxLabCtrl .ctl{display:flex;align-items:center;gap:6px;font-size:11px;color:#9fb6cf;font-weight:700}
+  #fxLabCtrl .ctl input[type=range]{width:82px}
+  #fxLabCtrl .ctl b{color:#cfe0f4;min-width:30px;text-align:right;font-family:'Rajdhani',sans-serif}
   .fxlAct{width:58px;height:40px;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:4px;cursor:pointer;border-radius:9px;
     background:linear-gradient(160deg,rgba(30,44,66,.62),rgba(10,16,28,.66));border:1px solid rgba(120,160,210,.3);color:#cfe0f4}
   .fxlAct span{font-size:16px;line-height:1}
@@ -2112,6 +2118,11 @@
       <div class="fxlAct" data-m="move" onclick="fxLabSetMode('move',this)"><span>🚶</span><b>이동</b></div>
       <div class="fxlAct" data-m="death" onclick="fxLabSetMode('death',this)"><span>💀</span><b>사망</b></div>
     </div>
+    <!-- 이펙트 테스트베드 컨트롤(크기·맵줌) — 채팅창 바로 위 오버레이, 랩 활성 시만 표시 -->
+    <div id="fxLabCtrl">
+      <label class="ctl">크기 <input id="fxLabSizeR" type="range" min="0.4" max="2" step="0.05" value="1" oninput="fxLabSetMul(this.value)"><b id="fxLabSizeV">1.00</b></label>
+      <label class="ctl">맵/줌 <input id="fxLabScaleR" type="range" min="0.45" max="2.4" step="0.05" value="1" oninput="fxLabSetScale(this.value)"><b id="fxLabScaleV">1.00</b></label>
+    </div>
     <div id="autoPopup" class="hide"></div>
 
     <!-- 컴퓨터가 싸운다(직스) 화면 — 독립 오버레이(자체 렌더 루프) + 4탭 셸 -->
@@ -2355,11 +2366,6 @@
     <div class="bp" id="bpUnit">
       <!-- 🎆 이펙트 테스트베드(관리자 전용) — 유닛 배너 → 3D 소환 무한 반복(공격/이동/죽음) -->
       <div id="fxLabWrap">
-        <div id="fxLabBar">
-          <span class="ttl">🎆 이펙트 테스트베드</span>
-          <label class="ctl">크기 <input id="fxLabSizeR" type="range" min="0.4" max="2" step="0.05" value="1" oninput="fxLabSetMul(this.value)"><b id="fxLabSizeV">1.00</b></label>
-          <label class="ctl">맵/줌 <input id="fxLabScaleR" type="range" min="0.45" max="2.4" step="0.05" value="1" oninput="fxLabSetScale(this.value)"><b id="fxLabScaleV">1.00</b></label>
-        </div>
         <div id="fxLabGrid"></div>
       </div>
       <!-- 직스(컴퓨터가 싸운다) 건설 패널 -->
@@ -9557,58 +9563,110 @@ function strikeWheel(e){ const S=STK; if(!S) return; if(e.cancelable) e.preventD
 //   공용 FX 코어 사용 → 여기서 확정한 크기/느낌이 전 유즈맵에 동일 반영.
 //   맵/줌 슬라이더가 3D 모델 크기와 이펙트 크기를 함께 스케일 → "작은맵=작게 / 확대=크게" 일관 시연.
 // ════════════════════════════════════════════════════════════════
-const FXLAB_UNITS=['marine','goliath','ghost','racer','machinegun','tank','skyguard','hellfire','pelican','dreadnought','hydra','snapper','thornqueen','matron','overlord','stinger','venom','medusa','wyvern','behemoth','dragoon','archon','blade','skydancer','observer','kronos','seraph','archangel','falcon','worker_human','worker_light','worker_swarm'];
-const FXLAB={ store:null, attId:'marine', scale:1, mode:'attack', phase:'alive', t:0, cd:0, mv:1, ti:0, att:null, dummy:null, bldg:null, air:null };
+const FXLAB_ROSTER={
+  union:[
+    {n:'일꾼',        id:'marine',  gm:'scv',         todo:true},
+    {n:'레인저',      id:'marine'},
+    {n:'발칸',        id:'marine',  gm:'machinegun'},
+    {n:'메딕',        id:'marine',  gm:'medic',        todo:true},
+    {n:'팬텀',        id:'ghost'},
+    {n:'레이서',      id:'marine',  gm:'racer'},
+    {n:'브레이커',    id:'goliath', gm:'tank'},
+    {n:'스트라이더',  id:'goliath'},
+    {n:'템페스트',    id:'goliath', gm:'skyguard'},
+    {n:'펠리컨',      id:'marine',  gm:'pelican'},
+    {n:'사이언스배슬',id:'marine',  gm:'aegis'},
+    {n:'헬파이어',    id:'marine',  gm:'hellfire'},
+    {n:'드래드노트',  id:'marine',  gm:'dreadnought'},
+  ],
+  swarm:[
+    {n:'리퍼',   id:'hydra'},
+    {n:'스내퍼', id:'hydra',  gm:'snapper'},
+    {n:'베놈퀸', id:'hydra',  gm:'thornqueen'},
+    {n:'매트론', id:'archon', gm:'matron'},
+    {n:'제플린', id:'marine', gm:'overlord'},
+    {n:'스팅어', id:'marine', gm:'stinger'},
+    {n:'베놈',   id:'marine', gm:'venom'},
+    {n:'메두사', id:'marine', gm:'medusa'},
+  ],
+  aetherial:[
+    {n:'센티넬',    id:'dragoon'},
+    {n:'보이드',    id:'archon'},
+    {n:'워든',      id:'dragoon', gm:'blade'},
+    {n:'스카이댄서',id:'goliath', gm:'skydancer'},
+    {n:'와처',      id:'marine',  gm:'observer'},
+    {n:'크로노스',  id:'marine',  gm:'kronos'},
+    {n:'세라프',    id:'marine',  gm:'seraph'},
+    {n:'아크엔젤',  id:'marine',  gm:'archangel'},
+    {n:'팔콘',      id:'marine',  gm:'falcon'},
+  ],
+};
+const FXLAB_RACE_ORDER=['union','swarm','aetherial'];
+const FXLAB_RACE_KO={union:'🛡 유니온',swarm:'🦎 스웜',aetherial:'🔮 에테리얼'};
+const FXLAB={ store:null, attId:'marine', attGm:null, scale:1, mode:'attack', phase:'alive', t:0, cd:0, mv:1, ti:0, att:null, dummy:null, bldg:null, air:null };
 let _fxLabAttSeq=0;
 const FXLAB_AA=new Set(['marine','ghost','goliath','dragoon','archon','hydra']);   // 공중 공격 가능 유닛(나머지는 지상만)
 const FXLAB_TGT_X=0.70, FXLAB_TGT_Y=0.52;   // 지상 타겟 기준선(시민)
-function fxLabStats(id){ const s=STK_UNITS[id], _d=U[id]||{}; const er=effRange(id,(_d.range!=null?_d.range:null)); if(er!=null) return {size:(s&&s.size)||_d.size||16, cd:(s&&s.cd)||Math.max(0.5,(_d.cd||22)/22), melee:(er>0&&er<=0.15)||!!_d.melee, rng:(er>0)?Math.max(6,er*600):120, color:_d.color||(U[id]&&U[id].color)||'#cfd6e2'}; if(s) return {size:s.size, cd:s.cd, melee:!!s.melee, rng:s.rng||120, color:(U[id]&&U[id].color)||'#cfd6e2'};
-  const d=U[id]||{};
-  const _melee=!!d.melee || (d.range>0 && d.range<=0.15);   // U[] 근접 플래그 또는 매우 짧은 사거리
-  const _rng=(d.range>0)?Math.max(6,d.range*600):120;   // U[] 사거리(0~1)→이펙트 랩 환산(간격=사거리 / 무공격=기본)
+function fxLabStats(id, gm){ const sg=gm&&STK_UNITS[gm]; if(sg) return {size:sg.size, cd:sg.cd, melee:!!sg.melee, rng:sg.rng||120, color:(U[gm]&&U[gm].color)||'#cfd6e2'};
+  const s=STK_UNITS[id], _d=U[gm||id]||{}; const er=effRange(gm||id,(_d.range!=null?_d.range:null));
+  if(er!=null) return {size:(s&&s.size)||_d.size||16, cd:(s&&s.cd)||Math.max(0.5,(_d.cd||22)/22), melee:(er>0&&er<=0.15)||!!_d.melee, rng:(er>0)?Math.max(6,er*600):120, color:_d.color||(U[gm||id]&&U[gm||id].color)||'#cfd6e2'};
+  if(s) return {size:s.size, cd:s.cd, melee:!!s.melee, rng:s.rng||120, color:(U[id]&&U[id].color)||'#cfd6e2'};
+  const d=U[id]||{}; const _melee=!!d.melee||(d.range>0&&d.range<=0.15); const _rng=(d.range>0)?Math.max(6,d.range*600):120;
   return {size:d.size||16, cd:Math.max(0.5,(d.cd||22)/22), melee:_melee, rng:_rng, color:d.color||'#cfd6e2'}; }
 function fxZoomF(){ return Math.max(0.12, Math.min(1.7, (FXLAB.scale||1)*0.72))/0.72; }   // 3D 모델 스케일과 동일 비율(맵/줌)
-function fxLabAttX(id){ return Math.max(0.06, FXLAB_TGT_X - (fxLabStats(id).rng/600)*fxZoomF()); }   // 사거리 간격을 줌(모델 크기)에 맞춰 스케일
-function fxLabSpawnScene(){ const a=fxLabStats(FXLAB.attId);   // 공격자(사거리 위치) + 타겟 더미(시민) + 건물 + 공중 적
-  FXLAB.att={ uid:'lab_att'+(++_fxLabAttSeq), id:FXLAB.attId, x:fxLabAttX(FXLAB.attId), y:FXLAB_TGT_Y, face:Math.PI/2, moving:false, fireSeq:0, size:a.size, hidden:false };
+function fxLabAttX(id, gm){ return Math.max(0.06, FXLAB_TGT_X - (fxLabStats(id,gm).rng/600)*fxZoomF()); }   // 사거리 간격을 줌에 맞춰 스케일
+function fxLabSpawnScene(){ const _gm=FXLAB.attGm; const a=fxLabStats(FXLAB.attId,_gm);
+  FXLAB.att={ uid:'lab_att'+(++_fxLabAttSeq), id:FXLAB.attId, x:fxLabAttX(FXLAB.attId,_gm), y:FXLAB_TGT_Y, face:Math.PI/2, moving:false, fireSeq:0, size:a.size, hidden:false };
+  if(_gm) FXLAB.att.gmodel=_gm;
   FXLAB.dummy={ uid:'lab_cit', id:'citizen',  x:FXLAB_TGT_X, y:FXLAB_TGT_Y, face:-Math.PI/2, moving:false, fireSeq:0, size:13 };
   FXLAB.bldg ={ uid:'lab_bld', id:'turret',   x:0.80, y:0.62, face:0,          moving:false, fireSeq:0, size:24 };
   FXLAB.air  ={ uid:'lab_air', id:'skyguard', x:0.72, y:0.26, face:Math.PI,     moving:false, fireSeq:0, size:18 }; }
 function fxLabClearStore(){ const s=FXLAB.store; if(s){ s.shots.length=0; s.impacts.length=0; s.melee.length=0; s.deaths.length=0; if(s.flashes) s.flashes.length=0; } }
-function fxLabSelect(id){ FXLAB.attId=id; if(!FXLAB.store) FXLAB.store=FX.store(); fxLabClearStore();
+function fxLabSelect(id, gm){ FXLAB.attId=id; FXLAB.attGm=gm||null; if(!FXLAB.store) FXLAB.store=FX.store(); fxLabClearStore();
   if(window.M3D&&M3D.clearGameModels) M3D.clearGameModels(); fxLabSpawnScene(); FXLAB.phase='alive'; FXLAB.t=(FXLAB.mode==='death')?0.9:0; FXLAB.cd=0.2; fxLabRenderGrid(); }
 function fxLabSetMode(mode, el){ FXLAB.mode=mode; FXLAB.phase='alive'; FXLAB.t=(mode==='death')?0.9:0; FXLAB.cd=0.2; FXLAB.mv=1; FXLAB.ti=0;
-  if(FXLAB.att){ FXLAB.att.hidden=false; FXLAB.att.moving=false; if(mode!=='move'){ FXLAB.att.x=fxLabAttX(FXLAB.attId); FXLAB.att.y=FXLAB_TGT_Y; } }
+  if(FXLAB.att){ FXLAB.att.hidden=false; FXLAB.att.moving=false; if(mode!=='move'){ FXLAB.att.x=fxLabAttX(FXLAB.attId,FXLAB.attGm); FXLAB.att.y=FXLAB_TGT_Y; } }
   document.querySelectorAll('#fxLabActs .fxlAct').forEach(b=>b.classList.toggle('on', b.getAttribute('data-m')===mode)); }
 function fxLabSetMul(v){ FX.sizeMul=+v||1; const e=document.getElementById('fxLabSizeV'); if(e) e.textContent=(+v).toFixed(2); }
 function fxLabSetScale(v){ FXLAB.scale=+v||1; const e=document.getElementById('fxLabScaleV'); if(e) e.textContent=(+v).toFixed(2);
-  if(FXLAB.att && FXLAB.mode!=='move') FXLAB.att.x=fxLabAttX(FXLAB.attId); }   // 줌 변경 시 사거리 간격 즉시 반영
+  if(FXLAB.att && FXLAB.mode!=='move') FXLAB.att.x=fxLabAttX(FXLAB.attId,FXLAB.attGm); }   // 줌 변경 시 사거리 간격 즉시 반영
 function fxLabRenderGrid(){ const g=document.getElementById('fxLabGrid'); if(!g) return;
-  g.innerHTML=FXLAB_UNITS.map(id=>{ const on=(id===FXLAB.attId)?' on':'', st=ATK_STYLE[id]||{};
-    return '<div class="fxlCard'+on+'" onclick="fxLabSelect(\''+id+'\')"><div class="pic">'+unitPortraitHTML(id)+'</div><div class="nm">'+escHtml(strikeUnitName(id))+'</div><div class="ks">'+(st.kind||'')+'</div></div>'; }).join(''); }
+  const selKey=FXLAB.attId+(FXLAB.attGm?':'+FXLAB.attGm:''); let html='', ri=0;
+  for(const race of FXLAB_RACE_ORDER){ const list=FXLAB_ROSTER[race]||[]; if(!list.length) continue;
+    html+='<div class="fxlRaceHead '+race+(ri===0?' fxrl0':'')+'">'+FXLAB_RACE_KO[race]+'</div>'; ri++;
+    for(const u of list){ const key=u.id+(u.gm?':'+u.gm:''), dispId=u.gm||u.id;
+      const on=(key===selKey&&!u.todo)?' on':'', todo=u.todo?' todo':'';
+      const st=ATK_STYLE[u.gm||u.id]||ATK_STYLE[u.id]||{};
+      const click=u.todo?'':'onclick="fxLabSelect(\''+u.id+'\',\''+(u.gm||'')+'\')"';
+      html+='<div class="fxlCard'+on+todo+'" '+click+'><div class="pic">'+unitPortraitHTML(dispId)+'</div>';
+      html+='<div class="nm">'+escHtml(u.n)+'</div><div class="ks">'+(u.todo?'준비중':st.kind||'')+'</div></div>'; } }
+  g.innerHTML=html; }
 function fxLabActivate(){ const w=document.getElementById('fxLabWrap'); if(w) w.classList.add('on');
   const acts=document.getElementById('fxLabActs'); if(acts) acts.classList.remove('hide');
-  const lbl=document.getElementById('unitTabLbl'); if(lbl) lbl.textContent='이펙트';   // 탭 이름: 유닛뽑기 → 이펙트
+  const ctrl=document.getElementById('fxLabCtrl'); if(ctrl) ctrl.classList.add('on');
+  const lbl=document.getElementById('unitTabLbl'); if(lbl) lbl.textContent='이펙트';
   ['shopProfile','prodHint','gachaActions','opsManual'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display='none'; });
   if(!FXLAB.store) FXLAB.store=FX.store(); if(window.M3D&&M3D.clearGameModels) M3D.clearGameModels(); fxLabSpawnScene(); fxLabRenderGrid(); }
 function fxLabDeactivate(){ const w=document.getElementById('fxLabWrap'); if(w) w.classList.remove('on');
   const acts=document.getElementById('fxLabActs'); if(acts) acts.classList.add('hide');
-  const lbl=document.getElementById('unitTabLbl'); if(lbl) lbl.textContent='유닛뽑기';   // 일반: 유닛뽑기 복원
+  const ctrl=document.getElementById('fxLabCtrl'); if(ctrl) ctrl.classList.remove('on');
+  const lbl=document.getElementById('unitTabLbl'); if(lbl) lbl.textContent='유닛뽑기';
   FXLAB.att=null; FXLAB.dummy=null; FXLAB.bldg=null; FXLAB.air=null; }
-function fxLabStep(dt){ const L=FXLAB; if(!L.att) fxLabSpawnScene(); const a=L.att, st=fxLabStats(L.attId);
-  if(L.mode==='move'){ a.moving=true; a.x+=0.17*dt*L.mv; if(a.x>0.60){ a.x=0.60; L.mv=-1; } if(a.x<0.22){ a.x=0.22; L.mv=1; } a.face=Math.atan2(L.mv,0.0001); return; }   // 좌우 왕복
+function fxLabStep(dt){ const L=FXLAB; if(!L.att) fxLabSpawnScene(); const a=L.att, st=fxLabStats(L.attId,L.attGm);
+  if(L.mode==='move'){ a.moving=true; a.x+=0.17*dt*L.mv; if(a.x>0.60){ a.x=0.60; L.mv=-1; } if(a.x<0.22){ a.x=0.22; L.mv=1; } a.face=Math.atan2(L.mv,0.0001); return; }
   if(L.mode==='death'){ a.moving=false; L.t-=dt;
-    if(L.phase==='alive'){ if(L.t<=0){ FX.death(L.store, a.x,a.y, {unitSize:a.size, color:st.color}); a.hidden=true; L.phase='dead'; L.t=0.9; } }   // 사망 이펙트 + 모델 사라짐(M3D 사망모션)
-    else { if(L.t<=0){ a.hidden=false; a.uid='lab_att'+(++_fxLabAttSeq); a.fireSeq=0; L.phase='alive'; L.t=1.0; } }   // 재생성
+    if(L.phase==='alive'){ if(L.t<=0){ FX.death(L.store, a.x,a.y, {unitSize:a.size, color:st.color}); a.hidden=true; L.phase='dead'; L.t=0.9; } }
+    else { if(L.t<=0){ a.hidden=false; a.uid='lab_att'+(++_fxLabAttSeq); a.fireSeq=0; L.phase='alive'; L.t=1.0; } }
     return; }
-  // 공격: 최대 사거리에서 — 지상(시민·건물) + 공중(공중공격 가능 유닛만) 타겟 순환
   a.moving=false; const tgts=[L.dummy, L.bldg]; if(FXLAB_AA.has(L.attId)&&L.air) tgts.push(L.air);
   const tgt=tgts[(L.ti||0)%tgts.length]; if(!tgt) return;
-  const ty=(tgt===L.air)?tgt.y-0.05:tgt.y;   // 공중 적은 부양 본체 위치로 살짝 위 조준
+  const ty=(tgt===L.air)?tgt.y-0.05:tgt.y;
   const dx=tgt.x-a.x, dy=ty-a.y; a.face=Math.atan2(dx,dy);
-  L.cd-=dt; if(L.cd<=0){ L.cd=Math.max(0.42, st.cd); a.fireSeq=(a.fireSeq||0)+1; if(typeof playUnitAttack==='function') playUnitAttack(L.attId);   // 이펙트 랩에서도 유닛 공격음 재생
-    if(L.attId==='goliath') fxLabGoliathFire(L, a, tgt.x, ty, st.size);   // 스트라이더: 양 어깨 포드 미사일 + 발사 연기
-    else { const _dx=tgt.x-a.x, _dy=ty-a.y, _d=Math.hypot(_dx,_dy)||1, _mz=0.03*((st.size||16)/16); FX.spawn(L.store, L.attId, a.x+(_dx/_d)*_mz, a.y+(_dy/_d)*_mz-0.024, tgt.x,ty, {speed:(st.melee?6.5:(L.attId==='marine'?4.5:3.6)), unitSize:st.size}); }   // 총구(전방+위)에서 발사 — 각도 무관
+  L.cd-=dt; if(L.cd<=0){ L.cd=Math.max(0.42, st.cd); a.fireSeq=(a.fireSeq||0)+1;
+    const fxId=L.attGm||L.attId;
+    if(typeof playUnitAttack==='function') playUnitAttack(fxId);   // 유닛 공격음 재생
+    if(L.attId==='goliath'&&!L.attGm) fxLabGoliathFire(L, a, tgt.x, ty, st.size);
+    else { const _dx=tgt.x-a.x, _dy=ty-a.y, _d=Math.hypot(_dx,_dy)||1, _mz=0.03*((st.size||16)/16); FX.spawn(L.store, fxId, a.x+(_dx/_d)*_mz, a.y+(_dy/_d)*_mz-0.024, tgt.x,ty, {speed:(st.melee?6.5:(fxId==='marine'?4.5:3.6)), unitSize:st.size}); }
     L.ti=((L.ti||0)+1)%tgts.length; } }
 function fxLabGoliathFire(L, a, tx, ty, size){ const upN=0.055, sideN=0.03, sy=a.y-upN;   // 어깨 높이(위)·좌우 포드에서 2발
   FX.spawn(L.store, 'goliath', a.x-sideN, sy, tx, ty, {speed:3.6, unitSize:size});
