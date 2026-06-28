@@ -4097,8 +4097,8 @@ function drawMiniMap(){
   ctx.strokeRect(mr.x*sx, mr.y*sy, mr.w*sx, mr.h*sy); ctx.restore();
   // 스폰 포인트(정적 점)
   ctx.fillStyle=COL.enemy; ctx.beginPath(); ctx.arc(ox*sx, oy*sy, 2, 0, 6.28); ctx.fill();
-  // 유닛/적 — 단색 도트
-  for(const u of G.units){ const def=U[u.id]; ctx.fillStyle=def.color;
+  // 유닛/적 — 단색 도트(내 유닛=파랑, 적사이드=빨강)
+  for(const u of G.units){ ctx.fillStyle=(G.sandbox&&u._enemyDisp)?'#ff5566':'#4aa8ff';
     ctx.beginPath(); ctx.arc(u.x*W, u.y*H, u.hero?2.4:1.6, 0, 6.28); ctx.fill(); }
   for(const e of G.enemies){ const p=posAt(e.d,GW,GH); ctx.fillStyle=e.special?'#ffd24a':(e.boss?COL.boss:'#ff5566');
     ctx.beginPath(); ctx.arc(p.x*sx, p.y*sy, e.boss?2.6:1.7, 0, 6.28); ctx.fill(); }
@@ -8652,13 +8652,12 @@ function drawSandboxGround(ctx,W,H){
     }); ctx.restore(); }
 }
 const SANDBOX_ROSTER={
-  union:    [{n:'레인저',b:'marine'},{n:'발칸',b:'marine',gm:'machinegun'},{n:'팬텀',b:'ghost'},{n:'레이서',b:'marine',gm:'racer'},{n:'브레이커',b:'goliath',gm:'tank'},{n:'스트라이더',b:'goliath'},{n:'템페스트',b:'goliath',gm:'skyguard'},{n:'펠리컨',b:'marine',gm:'pelican',e:1},{n:'이지스',b:'marine',gm:'aegis',e:1},{n:'헬파이어',b:'marine',gm:'hellfire',e:1},{n:'드레드노트',b:'marine',gm:'dreadnought',e:1}],
-  swarm:    [{n:'제플린',b:'marine',gm:'overlord',e:1},{n:'스내퍼',b:'hydra',gm:'snapper'},{n:'리퍼',b:'hydra'},{n:'베놈퀸',b:'hydra',gm:'thornqueen'},{n:'스팅어',b:'marine',gm:'stinger',e:1},{n:'와이번',b:'wyvern',gm:'wyvern',e:1},{n:'메두사',b:'marine',gm:'medusa',e:1},{n:'베놈',b:'marine',gm:'venom',e:1},{n:'베히모스',b:'behemoth',gm:'behemoth',e:1}],
-  aetherial:[{n:'센티넬',b:'dragoon'},{n:'보이드',b:'archon'},{n:'팔콘',b:'marine',gm:'falcon',e:1},{n:'세라프',b:'marine',gm:'seraph',e:1},{n:'스카이댄서',b:'goliath',gm:'skydancer'},{n:'아크엔젤',b:'marine',gm:'archangel',e:1},{n:'와처',b:'marine',gm:'observer',e:1},{n:'크로노스',b:'marine',gm:'kronos',e:1}],
-  worker:[{n:'유니온 일꾼',b:'marine',gm:'worker_human'},{n:'에테리얼 일꾼',b:'marine',gm:'worker_light'},{n:'스웜 일꾼',b:'marine',gm:'worker_swarm'}],
+  union:    [{n:'엔지니어',b:'marine',gm:'worker_human'},{n:'레인저',b:'marine'},{n:'발칸',b:'marine',gm:'machinegun'},{n:'팬텀',b:'ghost'},{n:'레이서',b:'marine',gm:'racer'},{n:'브레이커',b:'goliath',gm:'tank'},{n:'스트라이더',b:'goliath'},{n:'템페스트',b:'goliath',gm:'skyguard'},{n:'펠리컨',b:'marine',gm:'pelican',e:1},{n:'이지스',b:'marine',gm:'aegis',e:1},{n:'헬파이어',b:'marine',gm:'hellfire',e:1},{n:'드레드노트',b:'marine',gm:'dreadnought',e:1}],
+  swarm:    [{n:'드론',b:'marine',gm:'worker_swarm'},{n:'제플린',b:'marine',gm:'overlord',e:1},{n:'스내퍼',b:'hydra',gm:'snapper'},{n:'리퍼',b:'hydra'},{n:'베놈퀸',b:'hydra',gm:'thornqueen'},{n:'스팅어',b:'marine',gm:'stinger',e:1},{n:'와이번',b:'wyvern',gm:'wyvern',e:1},{n:'메두사',b:'marine',gm:'medusa',e:1},{n:'베놈',b:'marine',gm:'venom',e:1},{n:'베히모스',b:'behemoth',gm:'behemoth',e:1}],
+  aetherial:[{n:'결정체',b:'marine',gm:'worker_light'},{n:'센티넬',b:'dragoon'},{n:'보이드',b:'archon'},{n:'팔콘',b:'marine',gm:'falcon',e:1},{n:'세라프',b:'marine',gm:'seraph',e:1},{n:'스카이댄서',b:'goliath',gm:'skydancer'},{n:'아크엔젤',b:'marine',gm:'archangel',e:1},{n:'와처',b:'marine',gm:'observer',e:1},{n:'크로노스',b:'marine',gm:'kronos',e:1}],
 };
-const SANDBOX_RACE_ORDER=['union','swarm','aetherial','worker'];   // 3종족(테란=유니온 / 저그=스웜 / 프로토스=에테리얼), 적·아군 합침
-const SANDBOX_RACE_KO={union:'유니온 (인간)',swarm:'스웜 (군체)',aetherial:'에테리얼 (외계)',worker:'일꾼'};
+const SANDBOX_RACE_ORDER=['union','swarm','aetherial'];   // 3종족(테란=유니온 / 저그=스웜 / 프로토스=에테리얼) — 일꾼은 각 종족 첫 자리
+const SANDBOX_RACE_KO={union:'유니온 (인간)',swarm:'스웜 (군체)',aetherial:'에테리얼 (외계)'};
 function placeSandboxUnits(){
   if(G.idSeq==null) G.idSeq=1; G.units.length=0; G._sandboxRows=[];
   const COLS=5, dy=0.072, gap=0.04; let yc=0.17;
@@ -9567,7 +9566,7 @@ function strikeWheel(e){ const S=STK; if(!S) return; if(e.cancelable) e.preventD
 // ════════════════════════════════════════════════════════════════
 const FXLAB_ROSTER={
   union:[
-    {n:'일꾼',        id:'marine',  gm:'worker_human',  todo:true},
+    {n:'일꾼',        id:'marine',  gm:'worker_human'},
     {n:'레인저',      id:'marine'},
     {n:'발칸',        id:'marine',  gm:'machinegun'},
     {n:'메딕',        id:'marine',  gm:'medic',          todo:true},
@@ -9582,7 +9581,7 @@ const FXLAB_ROSTER={
     {n:'드래드노트',  id:'marine',  gm:'dreadnought'},
   ],
   swarm:[
-    {n:'일꾼',      id:'marine', gm:'worker_swarm', todo:true},
+    {n:'일꾼',      id:'marine', gm:'worker_swarm'},
     {n:'제플린',    id:'marine', gm:'overlord'},
     {n:'스내퍼',    id:'hydra',  gm:'snapper'},
     {n:'리퍼',      id:'hydra'},
@@ -9595,8 +9594,8 @@ const FXLAB_ROSTER={
     {n:'브루드마더',id:'hydra',              todo:true},
   ],
   aetherial:[
-    {n:'일꾼',      id:'marine',  gm:'worker_light', todo:true},
-    {n:'질럿',      id:'dragoon',                    todo:true},
+    {n:'일꾼',      id:'marine',  gm:'worker_light'},
+    {n:'워든',      id:'blade'},
     {n:'센티넬',    id:'dragoon'},
     {n:'보이드',    id:'archon'},
     {n:'팔콘',      id:'marine',  gm:'falcon'},
@@ -9717,7 +9716,7 @@ const AURA_UNITS={ archon:true };      // 공중 부유 + 에너지 오라(아�
 const AURA_LIFT=0.14;                  // 부유 기본 높이(모델높이 비율) — 아주 약간 떠 있음
 const AURA_COL1=0x5fd8ff, AURA_COL2=0xb070ff;  // 오라 색(청록 외피 + 보라 코어)
 const HOVER_AMP=0.13;     // 공중 유닛 상하 부유 진폭(모델높이 비율) — 크게(둥실)
-const AIR_FLOAT={ skyguard:1.4, skydancer:0.8 };   // 아군 공중 유닛: 본체 부양 높이(모델높이 비율) — 그림자는 지면
+const AIR_FLOAT={ skyguard:2.2, skydancer:1.8 };   // 아군 공중 유닛: 본체 부양 높이(모델높이 비율) — 그림자는 지면
 const HOVER_SPD=2.6;      // 부유 속도
 const HOVER_WOBBLE=0.10;  // 공중 유닛 기우뚱 흔들(라디안)
 const HOVER_BASE=14;      // 지면에서 띄우는 높이(px)
@@ -9774,7 +9773,7 @@ const MODEL_YAW_OFF={ turret:Math.PI/2, racer:Math.PI/2, tank:Math.PI/2, skyguar
 const NO_TURN={ dragoon:true };  // 몸을 돌리지 않는 유닛(고정 자세로 발사·이동 — 사용자 요청). 발사체 방향은 게임좌표로 계산되어 무관
 const RIM_RO_MUL={ racer:0.6 };  // 모델별 선택링 반경 배율. 레이서=크게 키워(SCALE20) 링이 굵어져 일반 유닛 크기로 축소
 // ── 코드 기반 애니메이션 파라미터 ──
-const BREATHE_AMP=0.03;   // idle 숨쉬기 진폭(모델높이 비율)
+const BREATHE_AMP=0;      // idle 숨쉬기 진폭(모델높이 비율) — 바닥 고정(제자리 모션은 별도 추가 예정)
 const BREATHE_SPD=2.2;    // 숨쉬기 속도
 const LEAN_DECAY=7;       // 발사 펄스(반동/섬광/떨림) 복귀 속도
 const TREMBLE=0.045;      // 발사 시 미세 떨림 진폭(모델높이 비율) — 상체 숙임 대신
@@ -10052,8 +10051,9 @@ function makeModel(id){
     if(id==='blade'){ rimModel(atkInner, unitRim(id)); attachSwords(atkInner, base.h); } }   // 워든 공격: 림 + 쌍검(손 본)
   const yaw=new THREE.Group(); yaw.add(anim);                // 적 방향으로 제자리 회전(세운 채 yaw)
   const view=new THREE.Group(); view.add(yaw); view.rotation.x=VIEW_TILT;  // 카메라 부감(소량, 발끝 기준)
-  // 발밑 선택 링(스타식 셀렉션 써클) — 선택(드래그) 시에만 표시. 폭 넓거나 크게 키운 모델은 RIM_RO_MUL로 일반 유닛 링 크기·굵기에 맞춤
-  const ro=0.5*base.w*1.15*(RIM_RO_MUL[id]||1), ri=ro*0.72;
+  // 발밑 선택 링(스타식 셀렉션 써클) — 선택(드래그) 시에만 표시. 링 폭은 모든 유닛 동일(시각적 두께 균일), 반지름만 유닛 크기 비례
+  const ro=0.5*base.w*1.15*(RIM_RO_MUL[id]||1);
+  const ri=Math.max(0, ro - 0.75/(SCALE[id]||MODEL_SCALE));  // 동일 시각폭: band = 0.75 / holder_scale
   const rim=new THREE.Mesh(new THREE.RingGeometry(ri, ro, 36),
     new THREE.MeshBasicMaterial({color:0x37e0c8, transparent:true, opacity:RING_OP, side:THREE.DoubleSide, depthWrite:false}));
   rim.rotation.x=-Math.PI/2; rim.position.y=0.02; rim.visible=false; view.add(rim);
