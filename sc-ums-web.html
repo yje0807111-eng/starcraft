@@ -8650,7 +8650,7 @@ function drawSandboxGround(ctx,W,H){
     }); ctx.restore(); }
 }
 const SANDBOX_ROSTER={
-  union:    [{n:'레인저',b:'marine'},{n:'스트라이더',b:'goliath'},{n:'팬텀',b:'ghost'},{n:'레이서',b:'marine',gm:'racer'},{n:'발칸',b:'marine',gm:'machinegun'},{n:'브레이커',b:'goliath',gm:'tank'},{n:'템페스트',b:'goliath',gm:'skyguard'},{n:'헬파이어',b:'marine',gm:'hellfire',e:1},{n:'펠리컨',b:'marine',gm:'pelican',e:1},{n:'드레드노트',b:'marine',gm:'dreadnought',e:1}],
+  union:    [{n:'레인저',b:'marine'},{n:'스트라이더',b:'goliath'},{n:'팬텀',b:'ghost'},{n:'레이서',b:'marine',gm:'racer'},{n:'발칸',b:'marine',gm:'machinegun'},{n:'브레이커',b:'goliath',gm:'tank'},{n:'템페스트',b:'goliath',gm:'skyguard'},{n:'헬파이어',b:'marine',gm:'hellfire',e:1},{n:'펠리컨',b:'marine',gm:'pelican',e:1},{n:'드레드노트',b:'marine',gm:'dreadnought',e:1},{n:'이지스',b:'marine',gm:'aegis',e:1}],
   swarm:    [{n:'리퍼',b:'hydra'},{n:'스내퍼',b:'hydra',gm:'snapper'},{n:'베놈퀸',b:'hydra',gm:'thornqueen'},{n:'매트론',b:'archon',gm:'matron'},{n:'제플린',b:'marine',gm:'overlord',e:1},{n:'스팅어',b:'marine',gm:'stinger',e:1},{n:'베놈',b:'marine',gm:'venom',e:1},{n:'메두사',b:'marine',gm:'medusa',e:1},{n:'와이번',b:'wyvern',gm:'wyvern',e:1},{n:'베히모스',b:'behemoth',gm:'behemoth',e:1}],
   aetherial:[{n:'센티넬',b:'dragoon'},{n:'보이드',b:'archon'},{n:'워든',b:'dragoon',gm:'blade'},{n:'스카이댄서',b:'goliath',gm:'skydancer'},{n:'와처',b:'marine',gm:'observer',e:1},{n:'크로노스',b:'marine',gm:'kronos',e:1},{n:'세라프',b:'marine',gm:'seraph',e:1},{n:'아크엔젤',b:'marine',gm:'archangel',e:1},{n:'팔콘',b:'marine',gm:'falcon',e:1}],
   worker:[{n:'유니온 일꾼',b:'marine',gm:'worker_human'},{n:'에테리얼 일꾼',b:'marine',gm:'worker_light'},{n:'스웜 일꾼',b:'marine',gm:'worker_swarm'}],
@@ -9055,7 +9055,7 @@ function strikePickBuild(i){ const S=STK; if(!S) return; const t=strikeBuildMenu
 // ═══ 공용 FX 코어(모든 유즈맵 공통 유닛별 공격 이펙트) ═══
 // 유닛 id → 공격 스타일. 네모 발사체 비주얼을 그대로 — 한 곳에서 정의해 어느 맵이든 같은 느낌.
 const ATK_STYLE={
-  marine:    {kind:'bullet', color:'#ffe2a0', burst:3, burstGap:0.035},
+  marine:    {kind:'bullet', color:'#ffe2a0', burst:2, burstGap:0.035},
   ghost:     {kind:'sniper', color:'#eafdff'},
   goliath:   {kind:'missile',color:'#5ad1ff'},
   dragoon:   {kind:'plasma', color:'#b48bff'},
