@@ -903,7 +903,7 @@
   .selChip:hover{border-color:rgba(255,120,120,.55)}
   .selChip:active{transform:translateY(1px)}
   .selChip.hero{border-color:rgba(255,224,138,.6)}
-  .selChip .chipAccent{position:absolute;left:0;top:0;bottom:0;width:2px;z-index:3;box-shadow:0 0 5px currentColor}
+  .selChip .chipAccent{position:absolute;left:0;top:0;bottom:0;width:4px;z-index:3;box-shadow:0 0 6px currentColor}
   .selChip .chipBox{position:relative;width:100%;height:48px;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:3px;
     background:radial-gradient(circle at 50% 34%,rgba(60,70,90,.42),#070910 90%);border:none}
   .selChip .chipPort{width:44px;height:44px;color:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden}
@@ -2594,6 +2594,34 @@ const U = {
   // 방어 구조물(디텍터) — 엑셀: 터렛 공격75 / 포토캐논 공격321. moveSpd:0(고정)
   turret:  {name:'가드 타워',     icon:'🗼', cost:200, dmg:192,  up:20, hdmg:384, hup:40, range:.26, cd:34, splash:false, color:'#9fd6ff', size:11, wpn:'mech', atk:'missile', hp:200, armor:2, shield:0,   energy:0, moveSpd:0, detector:true, airDmg:192, airUp:20, hairDmg:384, hairUp:40, model3d:'turret'},
   photon:  {name:'플라즈마 타워', icon:'🔵', cost:400, dmg:346, up:40, hdmg:540, hup:80, range:.24, cd:40, splash:false, color:'#62d0ff', size:12, wpn:'pro',  atk:'plasma',  hp:100, armor:0, shield:100, shArmor:1, energy:0, moveSpd:0, detector:true, model3d:'photon'},
+  // ───── 관리자 샌드박스 전용 유닛 스탯(보직별) — 추가형, 네모 게임플레이 무영향 ─────
+  racer: {name:'레이서', icon:'🔧', cost:0, dmg:26, up:10, hdmg:52, hup:21, range:0.15, cd:24, splash:false, color:'#4aa8ff', size:18, wpn:'mech', atk:'bullet', hp:95, armor:1, shield:0, energy:0, moveSpd:0.19, model3d:'racer'},   // 샌드박스 전용(보직 스탯)
+  machinegun: {name:'발칸', icon:'🔧', cost:0, dmg:18, up:7, hdmg:36, hup:14, range:0.21, cd:9, splash:false, color:'#4aa8ff', size:18, wpn:'mech', atk:'bullet', hp:120, armor:2, shield:0, energy:0, moveSpd:0.12, airDmg:16, airUp:6, hairDmg:32, hairUp:13, model3d:'machinegun'},   // 샌드박스 전용(보직 스탯)
+  tank: {name:'브레이커', icon:'🔧', cost:0, dmg:72, up:29, hdmg:144, hup:58, range:0.34, cd:52, splash:true, color:'#4aa8ff', size:22, wpn:'mech', atk:'shell', hp:180, armor:2, shield:0, energy:0, moveSpd:0.07, model3d:'tank'},   // 샌드박스 전용(보직 스탯)
+  blade: {name:'워든', icon:'🔮', cost:0, dmg:34, up:14, hdmg:68, hup:27, range:0.05, cd:16, splash:false, color:'#ffc040', size:18, wpn:'pro', atk:'slash', hp:140, armor:1, shield:40, shArmor:1, energy:0, moveSpd:0.18, model3d:'blade'},   // 샌드박스 전용(보직 스탯)
+  matron: {name:'매트론', icon:'🐛', cost:0, dmg:52, up:21, hdmg:104, hup:42, range:0.27, cd:26, splash:true, color:'#a8472e', size:23, wpn:'zrg', atk:'psi', hp:420, armor:3, shield:120, shArmor:1, energy:0, moveSpd:0.15, airDmg:40, airUp:16, hairDmg:80, hairUp:32, model3d:'matron'},   // 샌드박스 전용(보직 스탯)
+  thornqueen: {name:'베놈퀸', icon:'🐛', cost:0, dmg:24, up:10, hdmg:48, hup:19, range:0.24, cd:30, splash:true, color:'#a8472e', size:20, wpn:'zrg', atk:'spike', hp:130, armor:1, shield:0, energy:0, moveSpd:0.13, model3d:'thornqueen'},   // 샌드박스 전용(보직 스탯)
+  snapper: {name:'스내퍼', icon:'🐛', cost:0, dmg:19, up:8, hdmg:38, hup:15, range:0.23, cd:14, splash:false, color:'#a8472e', size:17, wpn:'zrg', atk:'spike', hp:55, armor:0, shield:0, energy:0, moveSpd:0.19, model3d:'snapper'},   // 샌드박스 전용(보직 스탯)
+  skyguard: {name:'템페스트', icon:'🔧', cost:0, dmg:54, up:22, hdmg:108, hup:43, range:0.27, cd:24, splash:false, color:'#4aa8ff', size:20, wpn:'mech', atk:'missile', hp:260, armor:2, shield:120, shArmor:1, energy:0, moveSpd:0.24, airDmg:54, airUp:22, hairDmg:108, hairUp:43, model3d:'skyguard'},   // 샌드박스 전용(보직 스탯)
+  skydancer: {name:'스카이댄서', icon:'🔮', cost:0, dmg:26, up:10, hdmg:52, hup:21, range:0.25, cd:16, splash:false, color:'#ffc040', size:18, wpn:'pro', atk:'plasma', hp:210, armor:2, shield:100, shArmor:1, energy:0, moveSpd:0.25, airDmg:26, airUp:10, hairDmg:52, hairUp:21, model3d:'skydancer'},   // 샌드박스 전용(보직 스탯)
+  hellfire: {name:'헬파이어', icon:'🔧', cost:0, dmg:42, up:17, hdmg:84, hup:34, range:0.24, cd:30, splash:true, color:'#4aa8ff', size:18, wpn:'mech', atk:'missile', hp:150, armor:1, shield:0, energy:0, moveSpd:0.22, model3d:'hellfire'},   // 샌드박스 전용(보직 스탯)
+  pelican: {name:'펠리컨', icon:'🔧', cost:0, dmg:0, up:0, hdmg:0, hup:0, range:0, cd:40, splash:false, color:'#4aa8ff', size:20, wpn:'mech', atk:'bullet', hp:220, armor:2, shield:0, energy:0, moveSpd:0.26, model3d:'pelican'},   // 샌드박스 전용(보직 스탯)
+  dreadnought: {name:'드레드노트', icon:'🔧', cost:0, dmg:52, up:21, hdmg:104, hup:42, range:0.3, cd:42, splash:false, color:'#4aa8ff', size:24, wpn:'mech', atk:'shell', hp:520, armor:3, shield:180, shArmor:1, energy:0, moveSpd:0.14, airDmg:44, airUp:18, hairDmg:88, hairUp:35, model3d:'dreadnought'},   // 샌드박스 전용(보직 스탯)
+  kronos: {name:'크로노스', icon:'🔮', cost:0, dmg:36, up:14, hdmg:72, hup:29, range:0.31, cd:40, splash:true, color:'#ffc040', size:22, wpn:'pro', atk:'plasma', hp:440, armor:2, shield:170, shArmor:1, energy:0, moveSpd:0.15, airDmg:30, airUp:12, hairDmg:60, hairUp:24, model3d:'kronos'},   // 샌드박스 전용(보직 스탯)
+  seraph: {name:'세라프', icon:'🔮', cost:0, dmg:0, up:0, hdmg:0, hup:0, range:0, cd:40, splash:false, color:'#ffc040', size:18, wpn:'pro', atk:'bullet', hp:120, armor:1, shield:40, shArmor:1, energy:0, moveSpd:0.24, model3d:'seraph'},   // 샌드박스 전용(보직 스탯)
+  archangel: {name:'아크엔젤', icon:'🔮', cost:0, dmg:22, up:9, hdmg:44, hup:18, range:0.3, cd:16, splash:true, color:'#ffc040', size:24, wpn:'pro', atk:'plasma', hp:560, armor:3, shield:200, shArmor:1, energy:0, moveSpd:0.12, airDmg:22, airUp:9, hairDmg:44, hairUp:18, model3d:'archangel'},   // 샌드박스 전용(보직 스탯)
+  falcon: {name:'팔콘', icon:'🔮', cost:0, dmg:24, up:10, hdmg:48, hup:19, range:0.24, cd:18, splash:false, color:'#ffc040', size:17, wpn:'pro', atk:'plasma', hp:130, armor:1, shield:50, shArmor:1, energy:0, moveSpd:0.26, airDmg:24, airUp:10, hairDmg:48, hairUp:19, model3d:'falcon'},   // 샌드박스 전용(보직 스탯)
+  observer: {name:'와처', icon:'🔮', cost:0, dmg:0, up:0, hdmg:0, hup:0, range:0.18, cd:34, splash:false, color:'#ffc040', size:14, wpn:'pro', atk:'bullet', hp:35, armor:0, shield:0, energy:0, moveSpd:0.26, detector:true, model3d:'observer'},   // 샌드박스 전용(보직 스탯)
+  overlord: {name:'제플린', icon:'🐛', cost:0, dmg:0, up:0, hdmg:0, hup:0, range:0.16, cd:40, splash:false, color:'#a8472e', size:20, wpn:'zrg', atk:'bullet', hp:110, armor:1, shield:0, energy:0, moveSpd:0.1, detector:true, model3d:'overlord'},   // 샌드박스 전용(보직 스탯)
+  stinger: {name:'스팅어', icon:'🐛', cost:0, dmg:70, up:28, hdmg:140, hup:56, range:0.13, cd:50, splash:true, color:'#a8472e', size:14, wpn:'zrg', atk:'missile', hp:15, armor:0, shield:0, energy:0, moveSpd:0.3, airDmg:70, airUp:28, hairDmg:140, hairUp:56, model3d:'stinger'},   // 샌드박스 전용(보직 스탯)
+  venom: {name:'베놈', icon:'🐛', cost:0, dmg:20, up:8, hdmg:40, hup:16, range:0.24, cd:24, splash:false, color:'#a8472e', size:18, wpn:'zrg', atk:'spike', hp:140, armor:1, shield:0, energy:0, moveSpd:0.18, airDmg:46, airUp:18, hairDmg:92, hairUp:37, model3d:'venom'},   // 샌드박스 전용(보직 스탯)
+  medusa: {name:'메두사', icon:'🐛', cost:0, dmg:40, up:16, hdmg:80, hup:32, range:0.26, cd:26, splash:true, color:'#a8472e', size:20, wpn:'zrg', atk:'psi', hp:300, armor:2, shield:120, shArmor:1, energy:0, moveSpd:0.16, airDmg:40, airUp:16, hairDmg:80, hairUp:32, model3d:'medusa'},   // 샌드박스 전용(보직 스탯)
+  aegis: {name:'이지스', icon:'🔧', cost:0, dmg:12, up:5, hdmg:24, hup:10, range:0.26, cd:36, splash:false, color:'#4aa8ff', size:20, wpn:'mech', atk:'bullet', hp:1150, armor:4, shield:300, shArmor:1, energy:0, moveSpd:0.13, airDmg:12, airUp:5, hairDmg:24, hairUp:10, model3d:'aegis'},   // 샌드박스 전용(보직 스탯)
+  wyvern: {name:'와이번', icon:'🐛', cost:0, dmg:120, up:48, hdmg:240, hup:96, range:0.28, cd:20, splash:false, color:'#a8472e', size:22, wpn:'zrg', atk:'spike', hp:2200, armor:5, shield:300, shArmor:1, energy:0, moveSpd:0.25, airDmg:120, airUp:48, hairDmg:240, hairUp:96, model3d:'wyvern'},   // 샌드박스 전용(보직 스탯)
+  behemoth: {name:'베히모스', icon:'🐛', cost:0, dmg:190, up:76, hdmg:380, hup:152, range:0.46, cd:50, splash:true, color:'#a8472e', size:26, wpn:'zrg', atk:'shell', hp:3200, armor:6, shield:400, shArmor:1, energy:0, moveSpd:0.1, airDmg:110, airUp:44, hairDmg:220, hairUp:88, model3d:'behemoth'},   // 샌드박스 전용(보직 스탯)
+  worker_human: {name:'유니온 일꾼', icon:'🔧', cost:0, dmg:4, up:2, hdmg:8, hup:3, range:0.04, cd:30, splash:false, melee:true, color:'#4aa8ff', size:13, wpn:'mech', atk:'slash', hp:30, armor:0, shield:0, energy:0, moveSpd:0.14, model3d:'worker_human'},   // 샌드박스 전용(보직 스탯)
+  worker_light: {name:'에테리얼 일꾼', icon:'🔮', cost:0, dmg:3, up:1, hdmg:6, hup:2, range:0.04, cd:30, splash:false, melee:true, color:'#ffc040', size:12, wpn:'pro', atk:'slash', hp:28, armor:0, shield:20, shArmor:1, energy:0, moveSpd:0.15, model3d:'worker_light'},   // 샌드박스 전용(보직 스탯)
+  worker_swarm: {name:'스웜 일꾼', icon:'🐛', cost:0, dmg:4, up:2, hdmg:8, hup:3, range:0.04, cd:28, splash:false, melee:true, color:'#a8472e', size:13, wpn:'zrg', atk:'slash', hp:34, armor:0, shield:0, energy:0, moveSpd:0.14, model3d:'worker_swarm'},   // 샌드박스 전용(보직 스탯)
 };
 const HERO_STAT_MUL=2; // 영웅은 체력/보호막 2배(기본값, 조정 가능)
 // 유닛 인스턴스에 생존 스탯 초기화(현재=최대). 추후 전투형 맵에서 u.hp 등을 깎으면 됨.
@@ -4531,7 +4559,7 @@ const ENEMY_MODEL={ '옵저버':'observer', '오버로드':'overlord',   // 적 
 try{ window.ENEMY_MODEL=ENEMY_MODEL; }catch(e){}   // M3D 모듈(별도 스코프) tintModel 폴백용
 // 적/보스 표시 이름 — 모델 id → 한글 이름(스타크래프트명 대신 새 기함 이름). 매핑 없으면 적 한글명 그대로.
 const MODEL_NAME_KR={ hellfire:'헬파이어', pelican:'펠리컨', dreadnought:'드레드노트', kronos:'크로노스', seraph:'세라프', archangel:'아크엔젤', falcon:'팔콘', stinger:'스팅어', venom:'베놈', medusa:'메두사',
-  observer:'와처', overlord:'제플린', skyguard:'템페스트', skydancer:'스카이댄서' };   // 옵저버→와처, 오버로드→제플린, 레이스→템페스트, 커세어→스카이댄서
+  observer:'와처', overlord:'제플린', skyguard:'템페스트', skydancer:'스카이댄서', racer:'레이서', machinegun:'발칸', snapper:'스내퍼' };   // 옵저버→와처, 오버로드→제플린, 레이스→템페스트, 커세어→스카이댄서
 function enemyName(n){ const mdl=ENEMY_MODEL[n]; return (mdl&&MODEL_NAME_KR[mdl])||n; }   // 스타크래프트명 → 새 기함 이름(없으면 그대로)
 // 라운드 보스 3D 모델 풀(공중유닛 순환) — 보스 라운드마다 다른 기함. 모델 미로드 맵에선 null→2D capital 폴백.
 const BOSS_AIR=['archangel','kronos','dreadnought','pelican','venom','medusa','seraph','hellfire','falcon','stinger'];
@@ -5633,7 +5661,36 @@ function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 
 // 계열 한글명(타입 라벨용)
 const WPN_KOR={inf:'보병',mech:'기계',pro:'루멘',zrg:'스웜',gun:'총기',beam:'광학',exp:'폭발',org:'유기체',fly:'비행',air:'항공',bio:'생체'};
 // 유닛 직업(이름 옆 작은 배지)
-const UNIT_CLS={ ghost:'저격수', dragoon:'포격수', hydra:'전사', marine:'보병', goliath:'기갑병', archon:'광전사', turret:'포탑', photon:'방어탑', citizen:'시민' };
+const UNIT_CLS={   // 유닛 직업/병과 — 모델 id(gmodel) 기준. 베이스 유닛은 id로 폴백
+  marine:'보병', goliath:'기갑병', ghost:'저격수', dragoon:'포격수', archon:'광전사', hydra:'전사',
+  turret:'포탑', photon:'방어탑', citizen:'시민',
+  racer:'돌격병', machinegun:'화력병', tank:'공성전차', skyguard:'전투기',
+  blade:'검사', matron:'여제', skydancer:'전투기',
+  thornqueen:'역병술사', snapper:'척후병',
+  hellfire:'폭격기', pelican:'수송선', dreadnought:'전함', aegis:'지원함',
+  kronos:'전함', seraph:'수송선', archangel:'모함', falcon:'전투기', observer:'정찰기',
+  overlord:'정찰기', stinger:'자폭충', venom:'산성충', medusa:'군단여왕',
+  wyvern:'전투기', behemoth:'공성생물',
+  worker_human:'일꾼', worker_light:'일꾼', worker_swarm:'일꾼',
+};
+// 유닛 종족 → 좌측 바 색(유니온=파랑/스웜=초록/에테리얼=금색). 같은 모델을 다른 종족이 쓰기도 해 모델키(gmodel||id) 기준
+const RACE_BAR={ union:'#4aa8ff', swarm:'#a8472e', aetherial:'#ffc040' };
+const RACE_OF={
+  marine:'union', goliath:'union', ghost:'union', racer:'union', machinegun:'union', tank:'union', skyguard:'union', hellfire:'union', pelican:'union', dreadnought:'union', aegis:'union', worker_human:'union', turret:'union', photon:'union', citizen:'union',
+  dragoon:'aetherial', archon:'aetherial', blade:'aetherial', skydancer:'aetherial', kronos:'aetherial', seraph:'aetherial', archangel:'aetherial', falcon:'aetherial', observer:'aetherial', worker_light:'aetherial',
+  hydra:'swarm', snapper:'swarm', thornqueen:'swarm', matron:'swarm', overlord:'swarm', stinger:'swarm', venom:'swarm', medusa:'swarm', wyvern:'swarm', behemoth:'swarm', worker_swarm:'swarm',
+};
+function raceBarCol(u){ if(!u) return null; const r=(u.gid && typeof GACHA_UNITS!=='undefined' && GACHA_UNITS[u.gid] && GACHA_UNITS[u.gid].race) || RACE_OF[u.gmodel||u.id]; return RACE_BAR[r]||null; }
+// 관리자 샌드박스 전용 사거리(보직별·스타크래프트식) — 네모 게임 무영향. 값=표시 사거리(정규화는 /100). 모델키(gmodel||id) 기준
+const SB_RANGE={
+  worker_human:4, worker_light:4, worker_swarm:4, stinger:3, racer:17, blade:5, archon:9, matron:5,
+  marine:15, machinegun:8, hydra:17, snapper:4, thornqueen:19, observer:0, overlord:0,
+  goliath:18, wyvern:16, dragoon:23, venom:18, falcon:16, skydancer:16, hellfire:22, medusa:5, aegis:13, skyguard:16,
+  kronos:23, ghost:24, dreadnought:26, archangel:28, behemoth:25, tank:23,
+  pelican:0, seraph:0,
+};
+const SB_AIR={ goliath:23 };   // 대공(공중공격) 사거리 별도 — 샌드박스 전용
+function effRange(id, fb){ if(typeof SB_RANGE!=='undefined' && id!=null && SB_RANGE[id]!=null) return SB_RANGE[id]/100; return fb; }   // 샌드박스 사거리 오버라이드(없으면 폴백)
 // 체력/실드/에너지 초록 LCD 텍스트(스타식 "실드 HP / 에너지")
 function scHpHTML(u){ const def=U[u.id]; const m=u.hero?HERO_STAT_MUL:1;
   const maxHp=u.maxHp||Math.round(def.hp*m), hp=u.hp!=null?u.hp:maxHp;
@@ -5714,15 +5771,16 @@ function refreshSelCard(){
     fitStatNumbers(); renderUnits(); return;
   }
   if(G.sel.length===1){ const u=G.units.find(x=>x.uid===G.sel[0]); const def=U[u.id];
-    const job=UNIT_CLS[u.id]||'';
+    const job=UNIT_CLS[u.gmodel||u.id]||'';
     portEl.innerHTML=unitPortraitHTML(u.gmodel||u.id)+(job?'<div class="portJob">'+job+'</div>':'');  // 초상화(가챠 전용 우선) + 직업 배지
     document.getElementById('uName').textContent=gNameStar(u,def)+(u.hero?' [영웅]':'');
-    const _rng=Math.round(def.range*(typeof gachaRangeMul==='function'?gachaRangeMul(u):1)*100);
+    const _rng=Math.round((G.sandbox?effRange(u.gmodel||u.id, def.range):def.range)*(typeof gachaRangeMul==='function'?gachaRangeMul(u):1)*100);   // 샌드박스: SB_RANGE 우선(네모 무영향)
+    const _arng=(G.sandbox && typeof SB_AIR!=='undefined' && SB_AIR[u.gmodel||u.id]!=null)?SB_AIR[u.gmodel||u.id]:null;   // 샌드박스 대공 사거리
     const _cdf=(typeof cdOf==='function')?cdOf(u,def):def.cd, _spd=_cdf>0?(60/_cdf).toFixed(1):'-';
     const _vL=(mapCfg('infinite')?vetLevel(u):0);   // 무한모드 베테랑 계급
     document.getElementById('uKill').innerHTML='처치 <b>'+(u.kills||0)+'</b>'
       +(_vL>0?' <span style="color:#ffd24a;font-weight:800">★'+_vL+' <span style="font-size:.85em">공+'+(_vL*4)+'%</span></span>':'')
-      +'<span class="scSub">사거리 <b>'+_rng+'</b> · 공속 <b>'+_spd+'</b>/s</span>';   // 누적 킬 + (무한)베테랑 계급 + 사거리·공속
+      +'<span class="scSub">'+((_rng>0||_arng!=null)?((_arng!=null?('지상 <b>'+_rng+'</b> · 공중 <b>'+_arng+'</b>'):('사거리 <b>'+_rng+'</b>'))+' · 공속 <b>'+_spd+'</b>/s'):'무공격')+'</span>';   // 누적 킬 + (무한)베테랑 계급 + 사거리·공속
     typeEl.innerHTML=(u.gtier?tierLabelHTML(u.gtier):'')+unitTagsHTML(u);   // 등급 라벨 + 부가 효과(슬로우 등)
     hpEl.innerHTML=scHpHTML(u);
     grid.style.display='flex'; grid.innerHTML=scStatBoxesHTML(u); fitStatNumbers();
@@ -5762,6 +5820,25 @@ const _PI_RAW={
   matron:    PORTRAIT_DIR+'matron_portrait.png',      // 매트론
   racer:     PORTRAIT_DIR+'racer_portrait.png',       // 레이서(에픽·유니크)
   snapper:   PORTRAIT_DIR+'snapper_portrait.png',     // 스내퍼(에픽·유니크)
+  // 적 공중유닛(네모네모) — 샌드박스 아군외형 + 이펙트 랩/도감 초상화
+  hellfire:   PORTRAIT_DIR+'hellfire_portrait.png',    // 헬파이어
+  pelican:    PORTRAIT_DIR+'pelican_portrait.png',     // 펠리컨
+  dreadnought:PORTRAIT_DIR+'dreadnought_portrait.png', // 드레드노트
+  kronos:     PORTRAIT_DIR+'kronos_portrait.png',      // 크로노스
+  seraph:     PORTRAIT_DIR+'seraph_portrait.png',      // 세라프
+  archangel:  PORTRAIT_DIR+'archangel_portrait.png',   // 아크엔젤
+  falcon:     PORTRAIT_DIR+'falcon_portrait.png',      // 팔콘
+  overlord:   PORTRAIT_DIR+'overlord_portrait.png',    // 제플린
+  stinger:    PORTRAIT_DIR+'stinger_portrait.png',     // 스팅어
+  venom:      PORTRAIT_DIR+'venom_portrait.png',       // 베놈
+  medusa:     PORTRAIT_DIR+'medusa_portrait.png',      // 메두사
+  aegis:      PORTRAIT_DIR+'aegis_portrait.png',       // 이지스(개인보스)
+  wyvern:     PORTRAIT_DIR+'wyvern_portrait.png',      // 와이번(개인보스)
+  behemoth:   PORTRAIT_DIR+'behemoth_portrait.png',    // 베히모스(개인보스)
+  // 일꾼 3종족
+  worker_human:PORTRAIT_DIR+'worker_human_portrait.png', // 유니온 일꾼
+  worker_light:PORTRAIT_DIR+'worker_light_portrait.png', // 에테리얼 일꾼
+  worker_swarm:PORTRAIT_DIR+'worker_swarm_portrait.png', // 스웜 일꾼
 };
 const PORTRAIT_IMG={}; for(const _k in _PI_RAW) PORTRAIT_IMG[_k]=_PI_RAW[_k]+PORTRAIT_VER;   // 캐시버스트 버전 부착(배경 제거 새 이미지 로드)
 // 프로필 초상화 HTML: 커스텀 이미지 있으면 <img>, 없으면 라인아트 SVG
@@ -5773,7 +5850,8 @@ function chipHTML(g){ const def=U[g.u.id];
   const port=purl?('<img class="chipImg" src="'+purl+'" alt="">'):unitSVG(g.u.id);
   const tcol=(!g.u.hero && g.u.gtier && typeof TIER_COLOR!=='undefined')?TIER_COLOR[g.u.gtier]:null;   // 등급색(영웅 칩은 기존 금색 틀 유지)
   const tname=(tcol && typeof GACHA_TIERS!=='undefined' && GACHA_TIERS[g.u.gtier])?GACHA_TIERS[g.u.gtier].name:'';
-  const ac=tcol||(g.u.hero?'#ffe08a':'#7d8aa0');   // 등급색 좌측 액센트(영웅=금색) — 등급은 액센트색+이름색으로 표시
+  const rc=raceBarCol(g.u);   // 종족색 좌측 바(유니온 파랑/스웜 초록/에테리얼 금색)
+  const ac=rc||tcol||(g.u.hero?'#ffe08a':'#7d8aa0');   // 좌측 액센트=종족색(없으면 등급/영웅색) · 등급은 이름색으로
   return '<span class="chipAccent" style="background:'+ac+';color:'+ac+'"></span>'
     +'<div class="chipBox"><div class="chipPort">'+port+'</div></div>'
     +'<div class="chipCnt">'+g.uids.length+'</div>'
@@ -8387,7 +8465,7 @@ function showPlayerProfile(u){ const def=U[u.id]; if(!def) return;
   try{
     document.getElementById('plGridWrap').style.display='none';
     const card=document.getElementById('playerProfile'); card.style.display='flex';
-    const pjob=UNIT_CLS[u.id]||'';
+    const pjob=UNIT_CLS[u.gmodel||u.id]||'';
     document.getElementById('ppPortrait').innerHTML=unitPortraitHTML(u.gmodel||u.id)+(pjob?'<div class="portJob">'+pjob+'</div>':'');
     document.getElementById('ppName').textContent=gNameStar(u,def)+(u.hero?' [영웅]':'');
     document.getElementById('ppType').innerHTML=u.gtier?tierLabelHTML(u.gtier):'';   // 등급 라벨(등급색 칩)
@@ -8567,14 +8645,15 @@ function drawSandboxGround(ctx,W,H){
 }
 const SANDBOX_ROSTER={
   union:    [{n:'레인저',b:'marine'},{n:'스트라이더',b:'goliath'},{n:'팬텀',b:'ghost'},{n:'레이서',b:'marine',gm:'racer'},{n:'발칸',b:'marine',gm:'machinegun'},{n:'브레이커',b:'goliath',gm:'tank'},{n:'템페스트',b:'goliath',gm:'skyguard'},{n:'헬파이어',b:'marine',gm:'hellfire',e:1},{n:'펠리컨',b:'marine',gm:'pelican',e:1},{n:'드레드노트',b:'marine',gm:'dreadnought',e:1}],
-  swarm:    [{n:'리퍼',b:'hydra'},{n:'스내퍼',b:'hydra',gm:'snapper'},{n:'베놈퀸',b:'hydra',gm:'thornqueen'},{n:'매트론',b:'archon',gm:'matron'},{n:'제플린',b:'marine',gm:'overlord',e:1},{n:'스팅어',b:'marine',gm:'stinger',e:1},{n:'베놈',b:'marine',gm:'venom',e:1},{n:'메두사',b:'marine',gm:'medusa',e:1}],
+  swarm:    [{n:'리퍼',b:'hydra'},{n:'스내퍼',b:'hydra',gm:'snapper'},{n:'베놈퀸',b:'hydra',gm:'thornqueen'},{n:'매트론',b:'archon',gm:'matron'},{n:'제플린',b:'marine',gm:'overlord',e:1},{n:'스팅어',b:'marine',gm:'stinger',e:1},{n:'베놈',b:'marine',gm:'venom',e:1},{n:'메두사',b:'marine',gm:'medusa',e:1},{n:'와이번',b:'wyvern',gm:'wyvern',e:1},{n:'베히모스',b:'behemoth',gm:'behemoth',e:1}],
   aetherial:[{n:'센티넬',b:'dragoon'},{n:'보이드',b:'archon'},{n:'워든',b:'dragoon',gm:'blade'},{n:'스카이댄서',b:'goliath',gm:'skydancer'},{n:'와처',b:'marine',gm:'observer',e:1},{n:'크로노스',b:'marine',gm:'kronos',e:1},{n:'세라프',b:'marine',gm:'seraph',e:1},{n:'아크엔젤',b:'marine',gm:'archangel',e:1},{n:'팔콘',b:'marine',gm:'falcon',e:1}],
+  worker:[{n:'유니온 일꾼',b:'marine',gm:'worker_human'},{n:'에테리얼 일꾼',b:'marine',gm:'worker_light'},{n:'스웜 일꾼',b:'marine',gm:'worker_swarm'}],
 };
-const SANDBOX_RACE_ORDER=['union','swarm','aetherial'];   // 3종족(테란=유니온 / 저그=스웜 / 프로토스=에테리얼), 적·아군 합침
-const SANDBOX_RACE_KO={union:'유니온 (인간)',swarm:'스웜 (군체)',aetherial:'에테리얼 (외계)'};
+const SANDBOX_RACE_ORDER=['union','swarm','aetherial','worker'];   // 3종족(테란=유니온 / 저그=스웜 / 프로토스=에테리얼), 적·아군 합침
+const SANDBOX_RACE_KO={union:'유니온 (인간)',swarm:'스웜 (군체)',aetherial:'에테리얼 (외계)',worker:'일꾼'};
 function placeSandboxUnits(){
   if(G.idSeq==null) G.idSeq=1; G.units.length=0; G._sandboxRows=[];
-  const COLS=5, dy=0.09, gap=0.055; let yc=0.19;
+  const COLS=5, dy=0.072, gap=0.04; let yc=0.17;
   SANDBOX_RACE_ORDER.forEach(function(race){
     const arr=SANDBOX_ROSTER[race]||[]; if(!arr.length) return;
     G._sandboxRows.push({label:SANDBOX_RACE_KO[race]||race, y:yc-0.05});
@@ -8582,7 +8661,8 @@ function placeSandboxUnits(){
     arr.forEach(function(it, i){
       const c=i%COLS, r=(i/COLS)|0;
       const x=0.20+(c/(COLS-1))*0.70, y=yc+r*dy;
-      const u=initUnitStats({uid:G.idSeq++, id:it.b, hero:false, lv:1, x:x, y:y, cd:0, fixed:false});
+      const _sid=(it.gm && typeof U[it.gm]!=='undefined') ? it.gm : it.b;   // 모델 전용 스탯 있으면 사용
+      const u=initUnitStats({uid:G.idSeq++, id:_sid, hero:false, lv:1, x:x, y:y, cd:0, fixed:false});
       if(it.gm) u.gmodel=it.gm; u.gname=it.n; if(it.e) u._enemyDisp=true;
       G.units.push(u);
     });
@@ -8904,7 +8984,8 @@ function strikeFocus(){ const S=STK; if(!S) return {x:0,y:0}; const c=S.world/2;
   return {x:c*0.45+sx*0.55, y:c*0.45+sy*0.55}; }   // 전체 평균 + 중앙 블렌드(유닛 사망 시 카메라 튐 방지)
 
 // ── 전투 시뮬(1차): 양 진영이 주기적으로 종족 유닛 소환 → 대각 진격 → 자동 교전 → 적 신전 타격 ──
-function strikeUnitName(id){ return (STK_UNITS[id]&&STK_UNITS[id].name)||(U[id]&&U[id].name)||id; }   // 직스 유닛 표시명(신규 유닛 포함)
+const WORKER_KR={worker_human:'유니온 일꾼',worker_light:'에테리얼 일꾼',worker_swarm:'스웜 일꾼'};   // 신규 일꾼 표시명
+function strikeUnitName(id){ return (STK_UNITS[id]&&STK_UNITS[id].name)||(WORKER_KR[id])||(typeof MODEL_NAME_KR!=='undefined'&&MODEL_NAME_KR[id])||(U[id]&&U[id].name)||id; }   // 직스 유닛 표시명(신규 유닛 포함)
 function strikeUnitIco(id){ return (STK_UNITS[id]&&STK_UNITS[id].ico)||(U[id]&&U[id].icon)||'⚔'; }
 function strikeUnitStats(id){ const s=STK_UNITS[id];
   if(s){ const acq = s.melee ? Math.max(440, s.rng*1.5) : s.rng*1.5;   // 근접은 인지범위 따로 키움(안 그러면 적 코앞까지 무시)
@@ -8968,7 +9049,7 @@ function strikePickBuild(i){ const S=STK; if(!S) return; const t=strikeBuildMenu
 // ═══ 공용 FX 코어(모든 유즈맵 공통 유닛별 공격 이펙트) ═══
 // 유닛 id → 공격 스타일. 네모 발사체 비주얼을 그대로 — 한 곳에서 정의해 어느 맵이든 같은 느낌.
 const ATK_STYLE={
-  marine:    {kind:'bullet', color:'#ffe2a0'},
+  marine:    {kind:'bullet', color:'#ffe2a0', burst:3, burstGap:0.035},
   ghost:     {kind:'sniper', color:'#eafdff'},
   goliath:   {kind:'missile',color:'#5ad1ff'},
   dragoon:   {kind:'plasma', color:'#b48bff'},
@@ -8984,39 +9065,45 @@ const ATK_STYLE={
 const FX={
   sizeMul:1,   // 전역 크기 노브(이펙트 랩에서 조정 → 전 맵 즉시 반영)
   REF:18,      // 기준 유닛 월드크기 — 이펙트 크기 = sz × (유닛크기/REF). 큰 유닛=큰 이펙트
-  store(){ return {shots:[], impacts:[], melee:[], deaths:[], smoke:[]}; },
+  store(){ return {shots:[], impacts:[], melee:[], deaths:[], smoke:[], flashes:[]}; },
   spawn(store, id, sx,sy, tx,ty, opts){ if(!store) return; opts=opts||{}; const st=ATK_STYLE[id]||ATK_STYLE._default, col=opts.color||st.color;
     const szf=(opts.unitSize||FX.REF)/FX.REF;   // 유닛 크기 비례 계수
     const dx=tx-sx, dy=ty-sy, dist=Math.hypot(dx,dy)||1, ang=Math.atan2(dy,dx);
     if(st.melee){ store.melee.push({x:tx,y:ty,ang:ang,life:1,kind:st.kind,col:col,szf:szf}); return; }
     if(st.beam){ store.melee.push({kind:'psi',x0:sx,y0:sy,x:tx,y:ty,life:1,col:col,szf:szf,sd:(store._sd=((store._sd||0)+1)&255)}); return; }
-    const speed=opts.speed||2600, dur=Math.min(0.6,Math.max(0.05,dist/speed)), n=st.count||1;
+    const speed=opts.speed||2600, dur=Math.min(0.6,Math.max(0.05,dist/speed)), n=st.count||1, burst=st.burst||1, bgap=st.burstGap||0.05;
     if(store.shots.length>200) store.shots.splice(0, store.shots.length-200);
-    for(let i=0;i<n;i++){ const a=ang+(n>1?(i-(n-1)/2)*0.13:0);
-      store.shots.push({x:sx,y:sy,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,t:0,dur:dur,kind:st.kind,color:col,boom:st.boom||4,szf:szf}); } },
+    for(let b=0;b<burst;b++) for(let i=0;i<n;i++){ const a=ang+(n>1?(i-(n-1)/2)*0.13:0);
+      store.shots.push({x:sx,y:sy,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,t:0,dur:dur,kind:st.kind,color:col,boom:st.boom||4,szf:szf,delay:b*bgap,mx:sx,my:sy,dist:dist,ex:sx+Math.cos(a)*dist,ey:sy+Math.sin(a)*dist}); } },
   death(store, x,y, opts){ if(!store) return; opts=opts||{}; const szf=(opts.unitSize||FX.REF)/FX.REF, col=opts.color||'#ffd0a0', parts=[];
     for(let i=0;i<9;i++){ const a=Math.random()*6.283; parts.push({a:a, sp:42+Math.random()*70, len:4+Math.random()*5, col:(i%3===0?'#ffe6b0':col)}); }
     store.deaths.push({x:x,y:y,life:1,col:col,szf:szf,parts:parts}); },   // 통합 죽음 이펙트(섬광 링 + 코어 + 파편)
   smoke(store, x,y){ if(!store||!store.smoke) return;   // 어깨 포드 발사 연기(골리앗 등) — 위로 피어오르는 회색 구름
     for(let k=0;k<3;k++){ store.smoke.push({x:x+(Math.random()-0.5)*0.012, y:y, vx:(Math.random()-0.5)*0.03, vy:-0.05-Math.random()*0.045, life:1, r0:2.4+Math.random()*2, col:(k%2?'#5a5a66':'#7a7a86')}); } },
   advance(store, dt){ if(!store) return;
-    const sh=store.shots; for(let i=sh.length-1;i>=0;i--){ const s=sh[i]; s.t+=dt; s.x+=s.vx*dt; s.y+=s.vy*dt;
-      if(s.t>=s.dur){ store.impacts.push({x:s.x,y:s.y,life:1,kind:s.kind,col:s.color,boom:s.boom||4,szf:s.szf||1}); sh.splice(i,1); } }
+    const sh=store.shots; for(let i=sh.length-1;i>=0;i--){ const s=sh[i]; if(s.delay>0){ s.delay-=dt; if(s.delay>0) continue; if(store.flashes) store.flashes.push({x:s.mx,y:s.my,life:1,szf:s.szf||1,ang:Math.atan2(s.vy,s.vx)}); } s.t+=dt; s.x+=s.vx*dt; s.y+=s.vy*dt;
+      if((s.dist!=null && Math.hypot(s.x-s.mx,s.y-s.my)>=s.dist) || s.t>=s.dur){ const _ix=(s.ex!=null?s.ex:s.x), _iy=(s.ey!=null?s.ey:s.y); store.impacts.push({x:_ix,y:_iy,life:1,kind:s.kind,col:s.color,boom:s.boom||4,szf:s.szf||1,ang:Math.atan2(s.vy,s.vx),sd:(store._sd=((store._sd||0)+1)&255)}); sh.splice(i,1); } }
     const im=store.impacts; for(let i=im.length-1;i>=0;i--){ im[i].life-=dt*4.5; if(im[i].life<=0) im.splice(i,1); }
     const me=store.melee; for(let i=me.length-1;i>=0;i--){ me[i].life-=dt*5; if(me[i].life<=0) me.splice(i,1); }
     const de=store.deaths; for(let i=de.length-1;i>=0;i--){ de[i].life-=dt*2.2; if(de[i].life<=0) de.splice(i,1); }
-    const sm=store.smoke; if(sm) for(let i=sm.length-1;i>=0;i--){ const p=sm[i]; p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy*=0.95; p.life-=dt*1.7; if(p.life<=0) sm.splice(i,1); } },
+    const sm=store.smoke; if(sm) for(let i=sm.length-1;i>=0;i--){ const p=sm[i]; p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy*=0.95; p.life-=dt*1.7; if(p.life<=0) sm.splice(i,1); }
+    const fl=store.flashes; if(fl) for(let i=fl.length-1;i>=0;i--){ fl[i].life-=dt*11; if(fl[i].life<=0) fl.splice(i,1); } },
   drawShots(ctx, store, toScreen, sz){ if(!store) return; sz=sz*(FX.sizeMul||1); ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round';
     if(store.smoke) for(const p of store.smoke){ const c=toScreen(p.x,p.y), L=Math.max(0,p.life), z=sz*0.9, r=(p.r0+(1-L)*7)*z;   // 발사 연기(회색, 위로 확산)
       ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=L*0.42; ctx.fillStyle=p.col; ctx.beginPath(); ctx.arc(c.x,c.y,r,0,6.283); ctx.fill(); }
     ctx.globalAlpha=1;
-    for(const s of store.shots){ const c=toScreen(s.x,s.y), z=sz*(s.szf||1); ctx.save(); ctx.globalCompositeOperation='lighter';
+    if(store.flashes) for(const fS of store.flashes){ const c=toScreen(fS.x,fS.y), L=Math.max(0,fS.life), z=sz*(fS.szf||1), fa=fS.ang||0; ctx.globalCompositeOperation='lighter'; ctx.lineCap='round'; ctx.strokeStyle='#ffd779'; const _sp=[[0,4.5,1.2],[0.42,2.5,0.85],[-0.42,2.5,0.85],[1.5,1.3,0.65],[-1.5,1.3,0.65]]; for(let _q=0;_q<_sp.length;_q++){ const _a=fa+_sp[_q][0], _len=_sp[_q][1]*z*(0.4+L*0.7); ctx.globalAlpha=L*0.82; ctx.lineWidth=_sp[_q][2]*z; ctx.beginPath(); ctx.moveTo(c.x,c.y); ctx.lineTo(c.x+Math.cos(_a)*_len, c.y+Math.sin(_a)*_len); ctx.stroke(); } ctx.globalAlpha=L*0.95; ctx.fillStyle='#fff7d0'; ctx.beginPath(); ctx.arc(c.x,c.y,1.0*z*(0.4+L*0.7),0,6.283); ctx.fill(); }
+    for(const s of store.shots){ if(s.delay>0) continue; const c=toScreen(s.x,s.y), z=sz*(s.szf||1); ctx.save(); ctx.globalCompositeOperation='lighter';
       ctx.translate(c.x,c.y); ctx.rotate(Math.atan2(s.vy,s.vx)); ctx.scale(z,z); FX._shot(ctx,s); ctx.restore(); }
     ctx.globalCompositeOperation='lighter';
     for(const im of store.impacts){ const c=toScreen(im.x,im.y), L=Math.max(0,im.life), p=1-L, z=sz*(im.szf||1); ctx.save(); ctx.translate(c.x,c.y);
       if(im.kind==='shell'){ ctx.globalAlpha=L; ctx.strokeStyle='#ffd08a'; ctx.lineWidth=2.4*z; ctx.beginPath(); ctx.arc(0,0,(8+p*30)*z,0,6.283); ctx.stroke();
         ctx.globalAlpha=L*0.7; ctx.fillStyle='#fff2c0'; ctx.beginPath(); ctx.arc(0,0,6*z*L,0,6.283); ctx.fill(); }
       else if(im.kind==='needle'){ ctx.globalAlpha=L; ctx.strokeStyle=im.col; ctx.lineWidth=1.3*z; for(let q=0;q<5;q++){ const a=q*1.3+p, len=(4+p*6)*z; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(a)*len,Math.sin(a)*len); ctx.stroke(); } }
+      else if(im.kind==='bullet'||im.kind==='mg'){ ctx.globalCompositeOperation='lighter';   // 실제 피탄 — 희미한 작은 섬광 + 진행방향 짧은 비산(뭉침 방지)
+        ctx.globalAlpha=L*0.4; ctx.fillStyle='#fff0c4'; ctx.beginPath(); ctx.arc(0,0,1.2*z*(0.5+L*0.7),0,6.283); ctx.fill();
+        ctx.globalAlpha=L*0.45; ctx.strokeStyle=im.col||'#ffce86'; ctx.lineWidth=0.7*z; const ia=im.ang||0, sd=im.sd||0;
+        for(let q=0;q<4;q++){ const a=ia+(q-1.5)*0.55+((sd*5+q*11)%9-4)*0.05, d0=(0.8+p*2.5)*z, d1=d0+(2.4+p*4)*z*(0.7+((sd+q*7)%5)/8); ctx.beginPath(); ctx.moveTo(Math.cos(a)*d0,Math.sin(a)*d0); ctx.lineTo(Math.cos(a)*d1,Math.sin(a)*d1); ctx.stroke(); } }
       else { ctx.globalAlpha=L*0.9; ctx.fillStyle=(im.kind==='sniper')?'#eafdff':'#fff6d8'; ctx.beginPath(); ctx.arc(0,0,(im.kind==='sniper'?5:3.5)*z*(0.5+p),0,6.283); ctx.fill(); }
       ctx.restore(); }
     for(const m of store.melee){ const L=Math.max(0,m.life), z=sz*(m.szf||1);
@@ -9033,9 +9120,9 @@ const FX={
       ctx.restore(); }
     ctx.restore(); },
   _shot(ctx,s){ switch(s.kind){   // 네모 발사체 레시피(원점 기준, 이미 회전·스케일됨)
-    case 'bullet': ctx.globalAlpha=.35; ctx.fillStyle=s.color; ctx.fillRect(-10.5,-0.9,10.5,1.7);
-      ctx.globalAlpha=.9; ctx.fillStyle='#fff7c0'; ctx.fillRect(-4,-0.9,5.7,1.8);
-      ctx.globalAlpha=1; ctx.fillStyle='#fffbe8'; ctx.beginPath();ctx.arc(1.2,0,1.5,0,6.28);ctx.fill(); break;
+    case 'bullet': ctx.globalAlpha=.28; ctx.fillStyle=s.color; ctx.fillRect(-6.5,-0.6,6.5,1.2);
+      ctx.globalAlpha=.85; ctx.fillStyle='#ffe2a0'; ctx.fillRect(-2.4,-0.55,3.2,1.1);
+      ctx.globalAlpha=1; ctx.fillStyle='#fff2cf'; ctx.beginPath();ctx.arc(0.6,0,1.1,0,6.28);ctx.fill(); break;
     case 'mg': ctx.globalAlpha=.3; ctx.fillStyle=s.color; ctx.fillRect(-10,-0.45,10,0.9);
       ctx.globalAlpha=1; ctx.fillStyle='#fff7d8'; ctx.fillRect(-1.6,-0.55,3.6,1.1); break;
     case 'sniper': ctx.globalAlpha=.4; ctx.fillStyle='#bfe9ff'; ctx.fillRect(-23,-0.8,23,1.5);
@@ -9470,27 +9557,32 @@ function strikeWheel(e){ const S=STK; if(!S) return; if(e.cancelable) e.preventD
 //   공용 FX 코어 사용 → 여기서 확정한 크기/느낌이 전 유즈맵에 동일 반영.
 //   맵/줌 슬라이더가 3D 모델 크기와 이펙트 크기를 함께 스케일 → "작은맵=작게 / 확대=크게" 일관 시연.
 // ════════════════════════════════════════════════════════════════
-const FXLAB_UNITS=['marine','ghost','goliath','dragoon','archon','hydra','tank','blade','matron','thornqueen'];
+const FXLAB_UNITS=['marine','goliath','ghost','racer','machinegun','tank','skyguard','hellfire','pelican','dreadnought','hydra','snapper','thornqueen','matron','overlord','stinger','venom','medusa','wyvern','behemoth','dragoon','archon','blade','skydancer','observer','kronos','seraph','archangel','falcon','worker_human','worker_light','worker_swarm'];
 const FXLAB={ store:null, attId:'marine', scale:1, mode:'attack', phase:'alive', t:0, cd:0, mv:1, ti:0, att:null, dummy:null, bldg:null, air:null };
 let _fxLabAttSeq=0;
 const FXLAB_AA=new Set(['marine','ghost','goliath','dragoon','archon','hydra']);   // 공중 공격 가능 유닛(나머지는 지상만)
 const FXLAB_TGT_X=0.70, FXLAB_TGT_Y=0.52;   // 지상 타겟 기준선(시민)
-function fxLabStats(id){ const s=STK_UNITS[id]; if(s) return {size:s.size, cd:s.cd, melee:!!s.melee, rng:s.rng||120, color:(U[id]&&U[id].color)||'#cfd6e2'};
-  const d=U[id]||{}; return {size:d.size||16, cd:Math.max(0.5,(d.cd||22)/22), melee:false, rng:120, color:d.color||'#cfd6e2'}; }
-function fxLabAttX(id){ return Math.max(0.12, FXLAB_TGT_X - fxLabStats(id).rng/600); }   // 최대 사거리만큼 타겟에서 떨어진 위치
+function fxLabStats(id){ const s=STK_UNITS[id], _d=U[id]||{}; const er=effRange(id,(_d.range!=null?_d.range:null)); if(er!=null) return {size:(s&&s.size)||_d.size||16, cd:(s&&s.cd)||Math.max(0.5,(_d.cd||22)/22), melee:(er>0&&er<=0.15)||!!_d.melee, rng:(er>0)?Math.max(6,er*600):120, color:_d.color||(U[id]&&U[id].color)||'#cfd6e2'}; if(s) return {size:s.size, cd:s.cd, melee:!!s.melee, rng:s.rng||120, color:(U[id]&&U[id].color)||'#cfd6e2'};
+  const d=U[id]||{};
+  const _melee=!!d.melee || (d.range>0 && d.range<=0.15);   // U[] 근접 플래그 또는 매우 짧은 사거리
+  const _rng=(d.range>0)?Math.max(6,d.range*600):120;   // U[] 사거리(0~1)→이펙트 랩 환산(간격=사거리 / 무공격=기본)
+  return {size:d.size||16, cd:Math.max(0.5,(d.cd||22)/22), melee:_melee, rng:_rng, color:d.color||'#cfd6e2'}; }
+function fxZoomF(){ return Math.max(0.12, Math.min(1.7, (FXLAB.scale||1)*0.72))/0.72; }   // 3D 모델 스케일과 동일 비율(맵/줌)
+function fxLabAttX(id){ return Math.max(0.06, FXLAB_TGT_X - (fxLabStats(id).rng/600)*fxZoomF()); }   // 사거리 간격을 줌(모델 크기)에 맞춰 스케일
 function fxLabSpawnScene(){ const a=fxLabStats(FXLAB.attId);   // 공격자(사거리 위치) + 타겟 더미(시민) + 건물 + 공중 적
   FXLAB.att={ uid:'lab_att'+(++_fxLabAttSeq), id:FXLAB.attId, x:fxLabAttX(FXLAB.attId), y:FXLAB_TGT_Y, face:Math.PI/2, moving:false, fireSeq:0, size:a.size, hidden:false };
   FXLAB.dummy={ uid:'lab_cit', id:'citizen',  x:FXLAB_TGT_X, y:FXLAB_TGT_Y, face:-Math.PI/2, moving:false, fireSeq:0, size:13 };
   FXLAB.bldg ={ uid:'lab_bld', id:'turret',   x:0.80, y:0.62, face:0,          moving:false, fireSeq:0, size:24 };
   FXLAB.air  ={ uid:'lab_air', id:'skyguard', x:0.72, y:0.26, face:Math.PI,     moving:false, fireSeq:0, size:18 }; }
-function fxLabClearStore(){ const s=FXLAB.store; if(s){ s.shots.length=0; s.impacts.length=0; s.melee.length=0; s.deaths.length=0; } }
+function fxLabClearStore(){ const s=FXLAB.store; if(s){ s.shots.length=0; s.impacts.length=0; s.melee.length=0; s.deaths.length=0; if(s.flashes) s.flashes.length=0; } }
 function fxLabSelect(id){ FXLAB.attId=id; if(!FXLAB.store) FXLAB.store=FX.store(); fxLabClearStore();
   if(window.M3D&&M3D.clearGameModels) M3D.clearGameModels(); fxLabSpawnScene(); FXLAB.phase='alive'; FXLAB.t=(FXLAB.mode==='death')?0.9:0; FXLAB.cd=0.2; fxLabRenderGrid(); }
 function fxLabSetMode(mode, el){ FXLAB.mode=mode; FXLAB.phase='alive'; FXLAB.t=(mode==='death')?0.9:0; FXLAB.cd=0.2; FXLAB.mv=1; FXLAB.ti=0;
   if(FXLAB.att){ FXLAB.att.hidden=false; FXLAB.att.moving=false; if(mode!=='move'){ FXLAB.att.x=fxLabAttX(FXLAB.attId); FXLAB.att.y=FXLAB_TGT_Y; } }
   document.querySelectorAll('#fxLabActs .fxlAct').forEach(b=>b.classList.toggle('on', b.getAttribute('data-m')===mode)); }
 function fxLabSetMul(v){ FX.sizeMul=+v||1; const e=document.getElementById('fxLabSizeV'); if(e) e.textContent=(+v).toFixed(2); }
-function fxLabSetScale(v){ FXLAB.scale=+v||1; const e=document.getElementById('fxLabScaleV'); if(e) e.textContent=(+v).toFixed(2); }
+function fxLabSetScale(v){ FXLAB.scale=+v||1; const e=document.getElementById('fxLabScaleV'); if(e) e.textContent=(+v).toFixed(2);
+  if(FXLAB.att && FXLAB.mode!=='move') FXLAB.att.x=fxLabAttX(FXLAB.attId); }   // 줌 변경 시 사거리 간격 즉시 반영
 function fxLabRenderGrid(){ const g=document.getElementById('fxLabGrid'); if(!g) return;
   g.innerHTML=FXLAB_UNITS.map(id=>{ const on=(id===FXLAB.attId)?' on':'', st=ATK_STYLE[id]||{};
     return '<div class="fxlCard'+on+'" onclick="fxLabSelect(\''+id+'\')"><div class="pic">'+unitPortraitHTML(id)+'</div><div class="nm">'+escHtml(strikeUnitName(id))+'</div><div class="ks">'+(st.kind||'')+'</div></div>'; }).join(''); }
@@ -9514,9 +9606,9 @@ function fxLabStep(dt){ const L=FXLAB; if(!L.att) fxLabSpawnScene(); const a=L.a
   const tgt=tgts[(L.ti||0)%tgts.length]; if(!tgt) return;
   const ty=(tgt===L.air)?tgt.y-0.05:tgt.y;   // 공중 적은 부양 본체 위치로 살짝 위 조준
   const dx=tgt.x-a.x, dy=ty-a.y; a.face=Math.atan2(dx,dy);
-  L.cd-=dt; if(L.cd<=0){ L.cd=Math.max(0.42, st.cd); a.fireSeq=(a.fireSeq||0)+1;
+  L.cd-=dt; if(L.cd<=0){ L.cd=Math.max(0.42, st.cd); a.fireSeq=(a.fireSeq||0)+1; if(typeof playUnitAttack==='function') playUnitAttack(L.attId);   // 이펙트 랩에서도 유닛 공격음 재생
     if(L.attId==='goliath') fxLabGoliathFire(L, a, tgt.x, ty, st.size);   // 스트라이더: 양 어깨 포드 미사일 + 발사 연기
-    else FX.spawn(L.store, L.attId, a.x,a.y, tgt.x,ty, {speed:(st.melee?6.5:3.6), unitSize:st.size});
+    else { const _dx=tgt.x-a.x, _dy=ty-a.y, _d=Math.hypot(_dx,_dy)||1, _mz=0.03*((st.size||16)/16); FX.spawn(L.store, L.attId, a.x+(_dx/_d)*_mz, a.y+(_dy/_d)*_mz-0.024, tgt.x,ty, {speed:(st.melee?6.5:(L.attId==='marine'?4.5:3.6)), unitSize:st.size}); }   // 총구(전방+위)에서 발사 — 각도 무관
     L.ti=((L.ti||0)+1)%tgts.length; } }
 function fxLabGoliathFire(L, a, tx, ty, size){ const upN=0.055, sideN=0.03, sy=a.y-upN;   // 어깨 높이(위)·좌우 포드에서 2발
   FX.spawn(L.store, 'goliath', a.x-sideN, sy, tx, ty, {speed:3.6, unitSize:size});
@@ -9555,7 +9647,7 @@ const MODELS={ marine:'marine.glb', goliath:'goliath.glb', ghost:'ghost.glb', ar
   citizen:'civilian.glb',  // 아군/적 + 방어구조물 + 업그레이드 건물 + 유닛뽑기 시민(셀렉터)
   // 신규 가챠 유닛 전용 모델(전설/초월)
   machinegun:'machinegun.glb', tank:'tank.glb', blade:'blade.glb', skyguard:'skyguard.glb', skydancer:'skydancer.glb', matron:'matron.glb', thornqueen:'thornqueen.glb',
-  racer:'racer.glb', snapper:'snapper.glb' };   // 레이서·스내퍼(에픽·유니크 공용)
+  racer:'racer.glb', snapper:'snapper.glb', worker_human:'worker_human.glb', worker_light:'worker_light.glb', worker_swarm:'worker_swarm.glb' };   // 레이서·스내퍼(에픽·유니크 공용)
 const CLOAK_MODELS={ observer:true };  // 클로킹(반투명) 적용 모델만(옵저버). 오버로드 등은 불투명
 const AURA_UNITS={ archon:true };      // 공중 부유 + 에너지 오라(아칸 — 사이오닉 에너지 생명체)
 const AURA_LIFT=0.14;                  // 부유 기본 높이(모델높이 비율) — 아주 약간 떠 있음
@@ -9569,10 +9661,11 @@ const ENEMY_DEATH=0.4;    // 적 사망 축소 시간(초)
 const CLOAK_DELAY=0.5;    // 스폰 후 반투명(클로킹)까지(초) — 스타 옵저버
 const CLOAK_OPACITY=0.5;  // 클로킹 시 불투명도(↑=덜 투명)
 const GUN_FOR={ marine:'marine_gun.glb', ghost:'ghost_gun.glb' };  // 손에 부착할 총(총만 있는 정적 메시)
-const RUN_FOR={ marine:'marine_run.glb', ghost:'ghost_run.glb', goliath:'goliath_run.glb', citizen:'civilian_run.glb', blade:'blade_run.glb' };  // 이동 시 재생할 달리기 모델(리깅+클립)
+const RUN_FOR={ marine:'marine_run.glb', ghost:'ghost_run.glb', goliath:'goliath_run.glb', citizen:'civilian_run.glb', blade:'blade_run.glb', worker_human:'worker_human_run.glb', worker_light:'worker_light_run.glb', worker_swarm:'worker_swarm_run.glb' };  // 이동 시 재생할 달리기 모델(리깅+클립)
 const RUN_CLIP='Rifle_Charge_inplace';      // 이동 클립 이름(없으면 첫 클립 사용)
 const ATTACK_FOR={ blade:'blade_attect.glb' };   // 공격 시 1회 재생할 공격 애니 모델(워든 검 베기)
-const RUN_SCALE_MUL=0.9;                     // 달리기 모델 크기 보정(본높이→full높이 마진)
+const RUN_SCALE_MUL=0.9;
+const RUN_SCALE_OVR={worker_swarm:0.68};   // 달리기 모델 크기 점프 보정(모델별 — 정지/이동 크기 일치)                     // 달리기 모델 크기 보정(본높이→full높이 마진)
 // 유닛별 총 부착 설정(길이/손위치/회전) — 모델마다 손 위치가 달라 개별 지정
 const GUN_CFG={
   marine:{ len:1.5, pos:{x:0.34, y:0.98, z:0.30}, rot:{x:0, y:Math.PI/2, z:0} },
@@ -9586,13 +9679,13 @@ const RELOAD_WIN=0.2;     // 장전(총 내림) 구간 폭 — 작을수록 들�
 const SCALE={ marine:12, goliath:16, ghost:12, archon:18, dragoon:14, hydra:14, observer:13, overlord:22, turret:25, photon:25, acad:19, arm:19, forge:19, evo:19, pointlab:19, temple_main:105, temple_stone:55, temple_neutral:30, citizen:13,
   hellfire:17, pelican:18, dreadnought:22, kronos:20, seraph:16, archangel:22, falcon:16, stinger:10, venom:17, medusa:18,   // 적 공중 유닛(초기값 — 보면서 조정). stinger(스커지)=약간 작게
   wyvern:16, aegis:18, behemoth:20,   // 개인보스 모델(초기값 — bossScale 2배 적용됨)
-  racer:20, tank:22, blade:18, thornqueen:20, skyguard:17, skydancer:17 };  // 유닛별 화면 스케일. 초월 비행체(템페스트·스카이댄서)=대형
+  racer:20, tank:22, blade:18, thornqueen:20, skyguard:17, skydancer:17, worker_human:13, worker_light:11, worker_swarm:11 };  // 유닛별 화면 스케일. 초월 비행체(템페스트·스카이댄서)=대형
 const COLORS={ marine:0x2e9bff, goliath:0xff9418, ghost:0x6cf024, dragoon:0xb070ff, hydra:0x9fd356 };  // (구)타입별 색 — 현재는 플레이어색으로 통일(아래 PLAYER_COLOR)
 // 플레이어 색(스타크래프트식) — 한 플레이어의 모든 유닛·구조물을 같은 색으로 통일(아군 구별용)
 const PLAYER_PALETTE={ blue:0x2e7bff, red:0xff3b3b, orange:0xff9418, yellow:0xffd23b, white:0xeaf2ff, purple:0xb05bff, green:0x46d860, teal:0x2dd6c0 };
 let PLAYER_COLOR=PLAYER_PALETTE.blue;   // 현재 플레이어 통일색(키만 바꾸면 전체 색 변경)
 const PLAYER_MODELS=new Set(['marine','ghost','goliath','dragoon','hydra','archon','turret','photon',
-  'machinegun','tank','blade','thornqueen','skyguard','skydancer','matron','racer','snapper']);  // 플레이어 소유(전장) 모델 — 플레이어색 림 적용(가챠 전용 모델 포함)
+  'machinegun','tank','blade','thornqueen','skyguard','skydancer','matron','racer','snapper','worker_human','worker_light','worker_swarm']);  // 플레이어 소유(전장) 모델 — 플레이어색 림 적용(가챠 전용 모델 포함)
 const RING_OP=0.9;        // 선택 링 불투명도
 const TINT_AMT=0.78;      // 모델 색 틴트 강도(0=원본, 1=완전 색칠) — 진한 색은 발광이 아닌 이 값으로(단단하게)
 const EMIT_AMT=0.09;      // 플레이어색 발광(은은하게 — 마린/고스트처럼 부드러운 빛)
@@ -9791,6 +9884,18 @@ function applyTeamRim(m, hex){ if(!m||m._teamRim===hex) return; m._teamRim=hex;
     const out=ms.map(mat=>{ if(!mat||!('emissive' in mat)) return mat; const c=mat.clone(); addRim(c, col, rimIntU); return c; });
     o.material=arr?out:out[0]; }); };
   retint(m.inner); retint(m.runInner); }
+// 샌드박스: 적 표시 유닛을 아군처럼 — 머티리얼 복제 후 본체색을 아군 톤 + 공용 플레이어 림(시작-틴트 경합 무관, 베이스/일반게임 무영향)
+const _SB_ALLY=new THREE.Color(0x3f7fd0);
+function sandboxAllyFix(m){ if(!m||m._sbAlly) return; m._sbAlly=true;
+  const fix=function(root){ if(!root) return; root.traverse(o=>{ if(!o.isMesh||!o.material) return;
+    const arr=Array.isArray(o.material), ms=arr?o.material:[o.material];
+    const out=ms.map(mat=>{ if(!mat) return mat; const c=mat.clone();
+      if(c.color) c.color.lerp(_SB_ALLY,0.6);
+      if(c.emissive && (c.emissive.r+c.emissive.g+c.emissive.b)>0.05) c.emissive.lerp(_SB_ALLY,0.55);
+      if('emissive' in c) addRim(c, playerRim, rimIntU);
+      c.needsUpdate=true; return c; });
+    o.material=arr?out:out[0]; }); };
+  fix(m.inner); fix(m.runInner); fix(m.atkInner); }
 // 밝은 림 색 — 아군은 플레이어색, 그 외 중립
 function unitRim(id){ return PLAYER_MODELS.has(id) ? playerRim : new THREE.Color(NEUTRAL_RIM); }
 // 재질 셰이더에 프레넬 림(가장자리 발광) 주입 — 시점 기준 실루엣이 항상 빛나 배경과 분리(MeshStandard/Physical)
@@ -9861,14 +9966,16 @@ function makeModel(id){
   if(GUN_FOR[id]) gun=attachGun(anim, id);                   // 오른손에 총 부착
   // 이동용 달리기 모델(리깅+클립) — 정적 마린과 크기 맞춰 anim에 추가, 평소 숨김
   let runInner=null, runMixer=null;
-  if(RUN_FOR[id] && runs[id]){ const rb=runs[id], s=(base.h/rb.h)*RUN_SCALE_MUL;
+  if(RUN_FOR[id] && runs[id]){ const rb=runs[id], s=(base.h/rb.h)*RUN_SCALE_MUL*((typeof RUN_SCALE_OVR!=='undefined'&&RUN_SCALE_OVR[id])||1);
     runInner=cloneSkinned(rb.scene); runInner.scale.setScalar(s);
     runInner.position.set(-rb.off.x*s, -rb.off.y*s, -rb.off.z*s); runInner.visible=false; anim.add(runInner);
     runMixer=new THREE.AnimationMixer(runInner);
     let clip=THREE.AnimationClip.findByName(rb.clips, RUN_CLIP)||rb.clips[0];
     if(clip){ clip=clip.clone(); clip.tracks=clip.tracks.filter(t=>t.name.endsWith('.quaternion')); // 회전만(이동·크기 변동 제거)
       runMixer.clipAction(clip).play(); }
-    if(id==='blade'){ rimModel(runInner, unitRim(id)); attachSwords(runInner, base.h); } }   // 워든 이동: 림 + 쌍검(손 본)
+    if(id==='blade'){ rimModel(runInner, unitRim(id)); attachSwords(runInner, base.h); }
+    else if(id==='worker_human'||id==='worker_light'||id==='worker_swarm'){ rimModel(runInner, unitRim(id)); }   // 일꾼 달리기 모델도 림 유지
+  }   // 워든 이동: 림 + 쌍검(손 본)
   // 공격 애니 모델(워든 검 베기) — 공격 시 1회 재생
   let atkInner=null, atkMixer=null, atkAction=null, atkDur=0.45;
   if(ATTACK_FOR[id] && atks[id]){ const ab=atks[id], s=(base.h/ab.h)*RUN_SCALE_MUL;
@@ -10039,6 +10146,7 @@ window.M3D={
     // ── 아군 유닛 ──
     for(const u of uList){ const _id=_mid(u); let m=models.get(u.uid); if(!m){ m=makeModel(_id); if(!m) continue; m.kind='unit'; models.set(u.uid,m); }
       if(u.rimCol) applyTeamRim(m, u.rimCol);   // 직스: 진영색 본체 림(아군 파랑 / 적군 빨강 동시 표시)
+      if(typeof window!=='undefined' && window.__sandbox && u._enemyDisp) sandboxAllyFix(m);   // 샌드박스: 적 표시 유닛도 아군 외형(색+림 통일)
       if(u.atBoss){ m.holder.visible=false; continue; }   // 보스방 파견 유닛은 트랙에 표시 안 함
       const px=u.x*W, worldY=H-u.y*H;
       if(u.ringCol){ m.rim.visible=true; m.rim.material.color.set(u.ringCol); m.rim.material.opacity=0.6; }   // 직스: 발밑 링=팀색(아군/적군 구분) — 살짝 연하게
