@@ -4096,9 +4096,9 @@ function drawMiniMap(){
   const mr=mergeRect(GW,GH); ctx.save(); ctx.setLineDash([2,2]); ctx.strokeStyle='rgba(255,192,64,.6)'; ctx.lineWidth=1;
   ctx.strokeRect(mr.x*sx, mr.y*sy, mr.w*sx, mr.h*sy); ctx.restore();
   // 스폰 포인트(정적 점)
-  ctx.fillStyle=COL.enemy; ctx.beginPath(); ctx.arc(ox*sx, oy*sy, 2, 0, 6.28); ctx.fill();
+  if(!G.sandbox){ ctx.fillStyle=COL.enemy; ctx.beginPath(); ctx.arc(ox*sx, oy*sy, 2, 0, 6.28); ctx.fill(); }   // 적 스폰 점(샌드박스 제외)
   // 유닛/적 — 단색 도트(내 유닛=파랑, 적사이드=빨강)
-  for(const u of G.units){ ctx.fillStyle=(G.sandbox&&u._enemyDisp)?'#ff5566':'#4aa8ff';
+  for(const u of G.units){ ctx.fillStyle='#4aa8ff';   // 샌드박스 포함 전부 아군색(메인 유닛=내 유닛)
     ctx.beginPath(); ctx.arc(u.x*W, u.y*H, u.hero?2.4:1.6, 0, 6.28); ctx.fill(); }
   for(const e of G.enemies){ const p=posAt(e.d,GW,GH); ctx.fillStyle=e.special?'#ffd24a':(e.boss?COL.boss:'#ff5566');
     ctx.beginPath(); ctx.arc(p.x*sx, p.y*sy, e.boss?2.6:1.7, 0, 6.28); ctx.fill(); }
@@ -9066,6 +9066,7 @@ const ATK_STYLE={
   blade:     {kind:'slash',  color:'#eafff0', melee:true},
   matron:    {kind:'claw',   color:'#ffd2cf', melee:true},
   thornqueen:{kind:'needle', color:'#bfe89a', count:3, boom:6},
+  worker_human:{kind:'push', color:'#dfe7f2', melee:true},   // 유니온 일꾼: 손으로 밀치는 근접 타격
   _default:  {kind:'bullet', color:'#ffe2a0'},
 };
 // store={shots,impacts,melee}. 좌표는 해당 맵의 월드 단위. 그리기는 toScreen 변환 + sz(픽셀 스케일)만 맵이 공급.
@@ -9088,7 +9089,7 @@ const FX={
   smoke(store, x,y){ if(!store||!store.smoke) return;   // 어깨 포드 발사 연기(골리앗 등) — 위로 피어오르는 회색 구름
     for(let k=0;k<3;k++){ store.smoke.push({x:x+(Math.random()-0.5)*0.012, y:y, vx:(Math.random()-0.5)*0.03, vy:-0.05-Math.random()*0.045, life:1, r0:2.4+Math.random()*2, col:(k%2?'#5a5a66':'#7a7a86')}); } },
   advance(store, dt){ if(!store) return;
-    const sh=store.shots; for(let i=sh.length-1;i>=0;i--){ const s=sh[i]; if(s.delay>0){ s.delay-=dt; if(s.delay>0) continue; if(store.flashes) store.flashes.push({x:s.mx,y:s.my,life:1,szf:s.szf||1,ang:Math.atan2(s.vy,s.vx)}); } s.t+=dt; s.x+=s.vx*dt; s.y+=s.vy*dt;
+    const sh=store.shots; for(let i=sh.length-1;i>=0;i--){ const s=sh[i]; if(!s._fired){ if(s.delay>0){ s.delay-=dt; if(s.delay>0) continue; } s._fired=true; if(store.flashes) store.flashes.push({x:s.mx,y:s.my,life:1,szf:s.szf||1,ang:Math.atan2(s.vy,s.vx)}); } s.t+=dt; s.x+=s.vx*dt; s.y+=s.vy*dt;
       if((s.dist!=null && Math.hypot(s.x-s.mx,s.y-s.my)>=s.dist) || s.t>=s.dur){ const _ix=(s.ex!=null?s.ex:s.x), _iy=(s.ey!=null?s.ey:s.y); store.impacts.push({x:_ix,y:_iy,life:1,kind:s.kind,col:s.color,boom:s.boom||4,szf:s.szf||1,ang:Math.atan2(s.vy,s.vx),sd:(store._sd=((store._sd||0)+1)&255)}); sh.splice(i,1); } }
     const im=store.impacts; for(let i=im.length-1;i>=0;i--){ im[i].life-=dt*4.5; if(im[i].life<=0) im.splice(i,1); }
     const me=store.melee; for(let i=me.length-1;i>=0;i--){ me[i].life-=dt*5; if(me[i].life<=0) me.splice(i,1); }
@@ -9118,6 +9119,7 @@ const FX={
         ctx.beginPath(); ctx.moveTo(a.x,a.y); const seg=4; for(let q=1;q<=seg;q++){ const t=q/seg, jx=a.x+(b.x-a.x)*t+(((m.sd*7+q*13)%9)-4)*z, jy=a.y+(b.y-a.y)*t+(((m.sd*5+q*11)%9)-4)*z; ctx.lineTo(jx,jy); } ctx.stroke();
         ctx.globalAlpha=L*0.85; ctx.strokeStyle='#fff'; ctx.lineWidth=0.8*z; ctx.stroke();
         ctx.globalAlpha=L*0.5; ctx.strokeStyle=m.col; ctx.lineWidth=1.4*z; ctx.beginPath(); ctx.arc(b.x,b.y,18*z*(1-L*0.5),0,6.283); ctx.stroke(); }
+      else if(m.kind==='push'){ const c=toScreen(m.x,m.y), R=15*z*(0.45+(1-L)*0.7); ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=L*0.65; ctx.strokeStyle='#dfe7f2'; ctx.lineWidth=2.6*z; ctx.beginPath(); ctx.arc(c.x,c.y,R,m.ang-0.6,m.ang+0.6); ctx.stroke(); ctx.globalAlpha=L*0.45; ctx.fillStyle='#b9ad94'; for(let _q=0;_q<3;_q++){ const _a=m.ang+(_q-1)*0.5, _d=R*0.85; ctx.beginPath(); ctx.arc(c.x+Math.cos(_a)*_d,c.y+Math.sin(_a)*_d,1.6*z,0,6.283); ctx.fill(); } }
       else { const c=toScreen(m.x,m.y), claw=(m.kind==='claw'), R=(claw?20:24)*z, a0=m.ang-0.9, a1=m.ang+0.9; ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=L*0.9; ctx.strokeStyle=claw?'#ff8f8f':'#eafff0'; ctx.lineWidth=(claw?2:2.6)*z; ctx.beginPath(); ctx.arc(c.x,c.y,R,a0,a1); ctx.stroke(); if(claw){ ctx.lineWidth=1.4*z; ctx.beginPath(); ctx.arc(c.x,c.y,R*0.66,a0,a1); ctx.stroke(); } } }
     for(const d of store.deaths){ const c=toScreen(d.x,d.y), L=Math.max(0,d.life), p=1-L, z=sz*(d.szf||1); ctx.save(); ctx.translate(c.x,c.y); ctx.globalCompositeOperation='lighter';
       ctx.globalAlpha=L*0.8; ctx.strokeStyle='#fff2d0'; ctx.lineWidth=2*z; ctx.beginPath(); ctx.arc(0,0,(6+p*34)*z,0,6.283); ctx.stroke();   // 섬광 링
@@ -9724,9 +9726,10 @@ const ENEMY_DEATH=0.4;    // 적 사망 축소 시간(초)
 const CLOAK_DELAY=0.5;    // 스폰 후 반투명(클로킹)까지(초) — 스타 옵저버
 const CLOAK_OPACITY=0.5;  // 클로킹 시 불투명도(↑=덜 투명)
 const GUN_FOR={ marine:'marine_gun.glb', ghost:'ghost_gun.glb' };  // 손에 부착할 총(총만 있는 정적 메시)
-const RUN_FOR={ marine:'marine_run.glb', ghost:'ghost_run.glb', goliath:'goliath_run.glb', citizen:'civilian_run.glb', blade:'blade_run.glb', worker_human:'worker_human_run.glb', worker_light:'worker_light_run.glb', worker_swarm:'worker_swarm_run.glb' };  // 이동 시 재생할 달리기 모델(리깅+클립)
+const RUN_FOR={ marine:'marine_run.glb', ghost:'ghost_run.glb', goliath:'goliath_run.glb', dragoon:'dragoon_run.glb', hydra:'hydralisk_run.glb', thornqueen:'thornqueen_run.glb', citizen:'civilian_run.glb', blade:'blade_run.glb', worker_human:'worker_human_run.glb', worker_light:'worker_light_run.glb', worker_swarm:'worker_swarm_run.glb' };  // 이동 시 재생할 달리기 모델(리깅+클립)
 const RUN_CLIP='Rifle_Charge_inplace';      // 이동 클립 이름(없으면 첫 클립 사용)
-const ATTACK_FOR={ blade:'blade_attect.glb' };   // 공격 시 1회 재생할 공격 애니 모델(워든 검 베기)
+const ATTACK_FOR={ blade:'blade_attect.glb', dragoon:'dragoon_attack.glb', snapper:'snapper_attack.glb', worker_human:'worker_human_punch.glb' };
+const STAY_FOR={ marine:'marine_stay.glb', ghost:'ghost_stay.glb', goliath:'goliath_stay.glb', hydra:'hydralisk_stay.glb', worker_human:'worker_human_stay.glb', worker_light:'worker_light_stay.glb' };   // 정지(대기) 애니   // 공격 시 1회 재생할 공격 애니 모델(워든 검 베기)
 const RUN_SCALE_MUL=0.9;
 const RUN_SCALE_OVR={worker_swarm:0.68};   // 달리기 모델 크기 점프 보정(모델별 — 정지/이동 크기 일치)                     // 달리기 모델 크기 보정(본높이→full높이 마진)
 // 유닛별 총 부착 설정(길이/손위치/회전) — 모델마다 손 위치가 달라 개별 지정
@@ -9792,6 +9795,7 @@ const bases={};           // id -> {scene, off:{x,y,z}, h}
 const guns={};            // id -> 총 scene
 const runs={};            // id -> {scene, clips, off, h} 달리기 모델
 const atks={};            // id -> {scene, clips, off, h} 공격 애니 모델(워든 검 베기 등)
+const stays={};           // id -> {scene, clips, off, h} 정지(대기) 애니 모델
 const swords={};          // id -> 검 scene(워든)
 // 워든 쌍검: 손 본(LeftHand/RightHand)에 부착. 튜닝값
 const ATK_SPEED=2.0;                           // 워든 검 베기 애니 배속(빠르게 쓱)
@@ -9862,7 +9866,7 @@ function init(){
   camera=new THREE.OrthographicCamera(0,1,1,0,-2000,2000); camera.position.set(0,0,800);
   ready=true;   // 렌더러 준비 즉시 가동 — 모델은 로드되는 대로 하나씩 등장(올-오어-나싱 30초 블랙아웃 제거). sync는 미로드 모델을 자동 스킵
   const L=new GLTFLoader();
-  let pending=Object.keys(MODELS).length+Object.keys(GUN_FOR).length+Object.keys(RUN_FOR).length+Object.keys(ATTACK_FOR).length+2;  // +1=비콘 +1=워든 검
+  let pending=Object.keys(MODELS).length+Object.keys(GUN_FOR).length+Object.keys(RUN_FOR).length+Object.keys(ATTACK_FOR).length+Object.keys(STAY_FOR).length+2;  // +1=비콘 +1=워든 검
   const done=()=>{ if(--pending<=0){ ready=true;   // 전체 로드 완료 → 2D 폴백 쓰던 화면(건물/시민) 1회 재렌더로 3D 전환
     try{ if(typeof G!=='undefined'){ if(G.tab==='Upgrade'&&typeof renderBldgs==='function') renderBldgs('vUpgrade',TECH,TECH_POS,G.techB,selectUpg); if(G.tab==='Unit'&&typeof buildClock==='function') buildClock(); } }catch(e){} } };
   // 합성 비콘 3D 모델(합체 베이·유닛 슬롯 발판) — 유닛과 같은 씬에 렌더
@@ -9888,6 +9892,15 @@ function init(){
       tintModel(s, id);   // 이동(달리기) 모델도 정적 모델과 동일하게 색+림 적용
       done();
     }, undefined, e=>{ console.warn(RUN_FOR[id]+' load fail', e); done(); }); }
+  for(const id in STAY_FOR){ L.load('/assets/models/'+STAY_FOR[id], g=>{
+      const s=g.scene; s.updateWorldMatrix(true,true);
+      let mn=1e9,mx=-1e9,cx=0,cz=0,nb=0;
+      s.traverse(o=>{ if(o.isBone){ const w=new THREE.Vector3(); o.getWorldPosition(w); if(w.y<mn)mn=w.y; if(w.y>mx)mx=w.y; cx+=w.x; cz+=w.z; nb++; } });
+      if(!nb){ const b=new THREE.Box3().setFromObject(s); mn=b.min.y; mx=b.max.y; cx=(b.min.x+b.max.x)/2; cz=(b.min.z+b.max.z)/2; nb=1; }
+      stays[id]={ scene:s, clips:g.animations, off:{x:cx/nb, y:mn, z:cz/nb}, h:Math.max(.001,mx-mn) };
+      tintModel(s, id);
+      done();
+    }, undefined, e=>{ console.warn(STAY_FOR[id]+' load fail', e); done(); }); }
   for(const id in ATTACK_FOR){ L.load('/assets/models/'+ATTACK_FOR[id], g=>{
       const s=g.scene; s.updateWorldMatrix(true,true);
       let mn=1e9,mx=-1e9,cx=0,cz=0,nb=0;
@@ -10039,6 +10052,15 @@ function makeModel(id){
     if(id==='blade'){ rimModel(runInner, unitRim(id)); attachSwords(runInner, base.h); }
     else if(id==='worker_human'||id==='worker_light'||id==='worker_swarm'){ rimModel(runInner, unitRim(id)); }   // 일꾼 달리기 모델도 림 유지
   }   // 워든 이동: 림 + 쌍검(손 본)
+  // 정지(대기) 애니 모델 — 이동 안 할 때 재생(절차적 호흡 대체)
+  let stayInner=null, stayMixer=null;
+  if(typeof STAY_FOR!=='undefined' && STAY_FOR[id] && stays[id]){ const sb=stays[id], ss=(base.h/sb.h)*RUN_SCALE_MUL*((typeof RUN_SCALE_OVR!=='undefined'&&RUN_SCALE_OVR[id])||1);
+    stayInner=cloneSkinned(sb.scene); stayInner.scale.setScalar(ss);
+    stayInner.position.set(-sb.off.x*ss, -sb.off.y*ss, -sb.off.z*ss); stayInner.visible=false; anim.add(stayInner);
+    stayMixer=new THREE.AnimationMixer(stayInner);
+    let sclip=sb.clips[0]; if(sclip){ sclip=sclip.clone(); sclip.tracks=sclip.tracks.filter(t=>t.name.endsWith('.quaternion')); stayMixer.clipAction(sclip).play(); }
+    if(id==='worker_human'||id==='worker_light'||id==='worker_swarm'){ rimModel(stayInner, unitRim(id)); }
+  }
   // 공격 애니 모델(워든 검 베기) — 공격 시 1회 재생
   let atkInner=null, atkMixer=null, atkAction=null, atkDur=0.45;
   if(ATTACK_FOR[id] && atks[id]){ const ab=atks[id], s=(base.h/ab.h)*RUN_SCALE_MUL;
@@ -10063,7 +10085,7 @@ function makeModel(id){
   shadow.rotation.x=-Math.PI/2; shadow.position.y=0.012; view.add(shadow);
   const holder=new THREE.Group(); holder.add(view); holder.scale.setScalar(SCALE[id]||MODEL_SCALE);
   scene.add(holder);
-  return { holder, view, yaw, anim, rim, gun, aura, shadow, auraT:Math.random()*6.28, gunBase:(GUN_CFG[id]?{...GUN_CFG[id].pos}:{x:0,y:0,z:0}), reload:!!(GUN_CFG[id]&&GUN_CFG[id].reload), inner, runInner, runMixer, atkInner, atkMixer, atkAction, atkDur, atkT:0, id, h:base.h, face:undefined, breathe:Math.random()*6.28, lean:0, seenSeq:0, dying:false, deadT:0 };
+  return { holder, view, yaw, anim, rim, gun, aura, shadow, auraT:Math.random()*6.28, gunBase:(GUN_CFG[id]?{...GUN_CFG[id].pos}:{x:0,y:0,z:0}), reload:!!(GUN_CFG[id]&&GUN_CFG[id].reload), inner, runInner, runMixer, stayInner, stayMixer, atkInner, atkMixer, atkAction, atkDur, atkT:0, id, h:base.h, face:undefined, breathe:Math.random()*6.28, lean:0, seenSeq:0, dying:false, deadT:0 };
 }
 
 // 비콘 톤다운 — 채도/밝기/발광을 낮춰 유닛이 비콘 위에서 돋보이게(쨍한 색 완화). 로드 시 1회.
@@ -10238,6 +10260,7 @@ window.M3D={
       if(typeof u.face==='number' && !NO_TURN[_id]){ const tgt=u.face+ROT_OFFSET+(MODEL_YAW_OFF[_id]||0);  // NO_TURN 유닛(드라군)은 회전 안 함 — 고정 자세
         let d=tgt-m.yaw.rotation.y; d=Math.atan2(Math.sin(d),Math.cos(d));
         m.yaw.rotation.y += d*Math.min(1, dt*ROT_SPD); }
+      if(m.stayInner) m.stayInner.visible=false;   // 정지 애니: 기본 숨김(정지 분기서만 표시)
       if(!u.moving && m.atkT>0 && m.atkInner){   // 워든 검 베기 공격 애니(정지 시 1회 재생) — 정적/총 숨김
         if(m.inner) m.inner.visible=false; if(m.runInner) m.runInner.visible=false; if(m.gun) m.gun.visible=false; m.atkInner.visible=true;
         m.anim.position.set(0,0,0); m.anim.rotation.x=0; m.anim.rotation.z=0;
@@ -10257,6 +10280,10 @@ window.M3D={
         if(m.inner) m.inner.visible=false; m.runInner.visible=true; if(m.gun) m.gun.visible=false; if(m.atkInner) m.atkInner.visible=false;
         m.anim.position.set(0,0,0); m.anim.rotation.set(0,0,0);
         m.runMixer.setTime(0);
+      } else if(m.stayInner){              // 정지: 대기(idle) 애니 재생 — 정적/총 숨김
+        if(m.inner) m.inner.visible=false; m.stayInner.visible=true; if(m.runInner) m.runInner.visible=false; if(m.gun) m.gun.visible=true; if(m.atkInner) m.atkInner.visible=false;   // 정지 모델엔 총 없음 → 부착총 유지
+        m.anim.position.set(0,0,0); m.anim.rotation.set(0,0,0);
+        m.stayMixer.update(dt);
       } else {                              // 정지: 정적 모델 + 숨쉬기/발사 떨림
         if(m.inner) m.inner.visible=true; if(m.runInner) m.runInner.visible=false; if(m.gun) m.gun.visible=true; if(m.atkInner) m.atkInner.visible=false;
         m.breathe += dt*BREATHE_SPD;
