@@ -2361,6 +2361,10 @@
         </div>
         <!-- 카드/그리드 밖 '전체 선택' 버튼: 항상 패널 가장 하단 -->
         <button class="scAllOne" id="scAllOne" onclick="selectAllOfType()" style="display:none">⛶ 이 종류 전체 선택</button>
+        <div id="transportCmd" style="display:none;gap:7px;margin-top:7px">
+          <button class="cmdBtn" id="cmdBoard" onclick="armBoard()">🛬 태우기</button>
+          <button class="cmdBtn" id="cmdUnload" onclick="armUnload()">🛫 내리기</button>
+        </div>
       </div>
     </div>
 
@@ -4820,6 +4824,7 @@ function step(dt){
             withBossFx(()=>emitEngineExhaust(u, ex, ey, emx, emy, dt)); }   // 토벌장 이동 분사
           continue; } }   // 이동 중엔 공격 안 함
       else u.bMov=false;
+      if(isTransport(u)) continue;   // 수송선: 보스방에서도 공격 안 함
       if(G.bossOpen && BAW && (u.gmodel==='racer'||u.gmodel==='machinegun')){   // 레이서/발칸: cd와 무관한 연속 스트림(메인과 동일)
         const MN2=Math.min(BAW,BAH), bx2=BAW*0.5+(Math.random()-.5)*MN2*0.04, by2=BAH*BOSS_FEET_FRAC-MN2*0.05;
         u._bmgT=(u._bmgT||0)-dt;
@@ -4849,6 +4854,7 @@ function step(dt){
     G.teamAtk=1+Math.min(na*TRAIT.atkBuffPer,TRAIT.atkBuffCap); G.teamSpd=1+Math.min(ns*TRAIT.spdBuffPer,TRAIT.spdBuffCap); }
   // 유닛 자동 공격
   for(const u of G.units){ if(u.atBoss) continue;   // 보스방 파견 유닛은 트랙 전투 제외
+    if(isTransport(u)) continue;   // 수송선: 공격·조준(적 바라보기) 안 함
     const def=U[u.id]; if(u.atkT>0) u.atkT-=dt;
     const ux=u.x*GW, uy=u.y*GH, range=def.range*Math.min(GW,GH)*gachaRangeMul(u);   // 가챠 근접형 사거리 단축
     let tgt=null,best=range*range, tgtX=0,tgtY=0;
@@ -5561,7 +5567,7 @@ function renderUnits(){ const v=document.getElementById('vMain'); if(!v) return;
     el.style.left=(u.x*100)+'%'; el.style.top=(u.y*100)+'%';   // 위치는 매 프레임(부드러운 이동)
     const maxHp=u.maxHp||1, hpR=Math.max(0,Math.min(1,(u.hp!=null?u.hp:maxHp)/maxHp));
     const maxSh=u.maxSh||0, shR=maxSh>0?Math.max(0,Math.min(1,(u.sh!=null?u.sh:maxSh)/maxSh)):0;
-    const sig=u.id+'|'+box+'|'+(seld?1:0)+'|'+(u.hero?(u.lv||1):0)+'|'+(seld?(Math.round(hpR*40)+','+Math.round(shR*40)):'');
+    const sig=u.id+'|'+box+'|'+(seld?1:0)+'|'+(u.hero?(u.lv||1):0)+'|'+(seld?(Math.round(hpR*40)+','+Math.round(shR*40)):'')+'|c'+(u.cargo?u.cargo.length:0);
     if(sig===rec.sig) continue;   // 모양 그대로 → DOM 재구성 생략(리플로우 방지)
     rec.sig=sig;
     el.className='unit'+(seld?' sel':'');
@@ -5576,7 +5582,8 @@ function renderUnits(){ const v=document.getElementById('vMain'); if(!v) return;
     const has3d=!!_m3k && !(G.opt&&G.opt.model3d===false) && window.M3D && window.M3D.hasModel && window.M3D.hasModel(_m3k);  // 모델이 실제 로드됐을 때만 투명(WebGL이 그림). 로드 전엔 SVG 폴백
     const iconHTML=has3d?'':unitSVG(u.id);
     const lblHTML = seld ? '<div class="ulbl'+(u.hero?' hero':'')+'">'+gNameStar(u,def)+star+'</div>' : '';   // 이름은 선택(지정) 시에만 표시
-    el.innerHTML='<div class="ubox'+(u.hero?' hero':'')+(has3d?' model3d':'')+'" style="width:'+box+'px;height:'+box+'px;color:'+def.color+';padding:'+pad+'px">'+iconHTML+'</div>'+barH+lblHTML;
+    const cargoH = (isTransport(u) && !seld) ? ('<div style="text-align:center;font-size:8px;font-weight:600;color:#9fd6ff;opacity:.8;text-shadow:0 1px 1px #000;line-height:1;margin-top:0">▲'+(u.cargo?u.cargo.length:0)+'/'+transportCap(u)+'</div>') : '';   // 수송 탑승수 뱃지(작게·선택 시 숨김 — 하단 패널 표시)
+    el.innerHTML='<div class="ubox'+(u.hero?' hero':'')+(has3d?' model3d':'')+'" style="width:'+box+'px;height:'+box+'px;color:'+def.color+';padding:'+pad+'px">'+iconHTML+'</div>'+barH+lblHTML+cargoH;
   }
   for(const [uid,rec] of _uEls){ if(!live.has(uid)){ rec.el.remove(); _uEls.delete(uid); } }   // 죽은/파견된 유닛 정리
 }
@@ -5589,7 +5596,7 @@ function separateUnits(){ if(!GW||!GH) return; const us=G.units; if(us.length<2)
   // 이동명령으로 '걷는' 유닛: 분리에서 완전 제외(대형 슬롯+stepCmdMove 회피가 처리 → 서로 밀어 속도 튀는 버그 방지)
   const walk=new Set();
   for(const u of us){ if(u.moveTo) walk.add(u); }   // 이동 명령 수행 중 유닛(선택 무관)
-  const skip=u=>u.atBoss||isDrag(u)||walk.has(u);   // 토벌장 파견 유닛은 트랙 충돌 제외(분리된 장소)
+  const skip=u=>u.atBoss||isDrag(u)||walk.has(u)||isTransport(u);   // 토벌장 파견·수송선(공중 비행) 충돌 제외
   let stillOverlap=false;
   for(let iter=0; iter<3; iter++){ // 몇 번 반복해 안정화
     for(let i=0;i<us.length;i++){ for(let j=i+1;j<us.length;j++){ const a=us[i],b=us[j];
@@ -5676,7 +5683,7 @@ const UNIT_CLS={   // 유닛 직업/병과 — 모델 id(gmodel) 기준. 베이�
   thornqueen:'역병술사', snapper:'척후병',
   hellfire:'폭격기', pelican:'수송선', dreadnought:'전함', aegis:'지원함',
   kronos:'전함', seraph:'수송선', archangel:'모함', falcon:'전투기', observer:'정찰기',
-  overlord:'정찰기', stinger:'자폭충', venom:'산성충', medusa:'군단여왕',
+  overlord:'수송선', stinger:'자폭충', venom:'산성충', medusa:'군단여왕',
   wyvern:'전투기', behemoth:'공성생물',
   worker_human:'일꾼', worker_light:'일꾼', worker_swarm:'일꾼',
 };
@@ -5692,7 +5699,7 @@ function raceBarCol(u){ if(!u) return null; const r=(u.gid && typeof GACHA_UNITS
 const SB_RANGE={
   worker_human:3.5, worker_light:3.5, worker_swarm:3.5, stinger:3, racer:17, blade:5, archon:9, matron:5,
   marine:15, machinegun:8, hydra:17, snapper:4, thornqueen:19, observer:0, overlord:0,
-  goliath:18, wyvern:16, dragoon:23, venom:18, falcon:16, skydancer:16, hellfire:22, medusa:5, aegis:13, skyguard:16,
+  goliath:18, wyvern:16, dragoon:23, venom:18, falcon:16, skydancer:16, hellfire:22, medusa:5, aegis:13, skyguard:18,
   kronos:23, ghost:24, dreadnought:26, archangel:28, behemoth:25, tank:23,
   pelican:0, seraph:0,
 };
@@ -5743,10 +5750,11 @@ function fitStatNumbers(){
 function enemyHpHTML(e){ let h='';
   if(e.maxSh>0) h+='<div class="hpline shd"><span class="lab">쉴드</span>'+Math.max(0,Math.round(e.sh))+'/'+e.maxSh+'</div>';
   h+='<div class="hpline hp"><span class="lab">체력</span>'+Math.max(0,Math.round(e.hp))+'/'+e.maxHp+'</div>'; return h; }
-function refreshSelCard(){
+function refreshSelCard(){ if(typeof G!=='undefined'){ G.boardArm=false; G.unloadArm=false; }
   const en = G.selEnemy!=null ? G.enemies.find(x=>x.eid===G.selEnemy) : null;
   updateDeselTop(); // 우상단 해제버튼(탭별)
   updateCmdRow();   // 명령 버튼 행(홀드/공격이동/지정공격/반복이동)
+  if(typeof updateTransportBtns==='function') updateTransportBtns();   // 수송 유닛 태우기/내리기 버튼
   updateSkillFab(); // 메인 화면 스킬 버튼
   if(typeof updateAutoFab==='function') updateAutoFab();   // 자동 설정 배너(선택 시 숨김 — 해제버튼과 자리 공유)
   if(G.tab==='Main' && _homeMode==='select' && _selViaTab && !en && G.sel.length>=1){   // 지정 탭에서 선택 → 지정 패널 유지(드래그 박스 선택은 selMulti 칩)
@@ -5967,6 +5975,16 @@ function setPatrolTarget(tx,ty){ const us=selUnits(); const slots=formationSlots
   us.forEach((u,i)=>{ const s=slots[i]; u.patrol={ax:u.x,ay:u.y,bx:s.x,by:s.y}; u._patTo='b'; u.cmd='hold'; u.focusTarget=null; u.moveTo=null; }); }
 function armFocus(){ if(!selUnits().length) return; G.focusArm=!G.focusArm; G.patrolArm=false; updateCmdRow();
   if(G.focusArm) addChat('','ℹ️ 지정공격: 공격할 적을 클릭하세요.'); }
+function selTransport(){ if(typeof G==='undefined'||G.sel.length!==1) return null; const u=G.units.find(x=>x.uid===G.sel[0]); return (u&&isTransport(u))?u:null; }
+function updateTransportBtns(){ const el=document.getElementById('transportCmd'); if(!el) return; const t=selTransport();
+  if(!t){ el.style.display='none'; return; } el.style.display='flex';
+  const bb=document.getElementById('cmdBoard'), ub=document.getElementById('cmdUnload');
+  if(bb){ bb.innerHTML='🛬 태우기 <span style="font-size:.76em;opacity:.5;font-weight:600">'+(t.cargo?t.cargo.length:0)+'/'+transportCap(t)+'</span>'; bb.classList.toggle('arm',!!G.boardArm); }
+  if(ub){ ub.textContent='🛫 내리기'; ub.classList.toggle('arm',!!G.unloadArm); } }
+function armBoard(){ const t=selTransport(); if(!t) return; G.boardArm=(G.boardArm===t.uid)?false:t.uid; G.unloadArm=false; G.focusArm=false; G.patrolArm=false; updateTransportBtns();
+  if(G.boardArm) addChat('','🛬 태우기: 드래그로 태울 유닛들을 지정하세요.'); }
+function armUnload(){ const t=selTransport(); if(!t) return; G.unloadArm=!G.unloadArm; G.boardArm=false; G.focusArm=false; G.patrolArm=false; updateTransportBtns();
+  if(G.unloadArm) addChat('','🛫 내리기: 화면에서 내릴 곳을 지정하세요.'); }
 function setFocusTarget(eid){ const e=G.enemies.find(x=>x.eid===eid); const us=selUnits();
   for(const u of us){ u.cmd='focus'; u.focusTarget=eid; u.patrol=null; u.atkTarget=null; u._chasing=false; u.moveTo=null; }
   assignFormOffsets(us);   // 포위 대형
@@ -8157,8 +8175,15 @@ function hitUnit(x,y){ let best=.06,hit=null;
 function hitUnitPrecise(x,y){ let best=1e9,hit=null;
   for(const u of G.units){ if(u.atBoss) continue; const d=Math.hypot((u.x-x)*GW,(u.y-y)*GH); if(d<=unitRadius(u)+6 && d<best){ best=d; hit=u; } } return hit; }
 const GRAB_PAD=6;    // 그랩 여유(px) — 유닛 위를 정확히 눌러야 잡힘(지정 구역을 좁게 유지)
-function grabUnit(x,y){ let best=1e9,hit=null;
-  for(const u of G.units){ if(u.atBoss) continue; const d=Math.hypot((u.x-x)*GW,(u.y-y)*GH); if(d<=unitRadius(u)+GRAB_PAD && d<best){ best=d; hit=u; } } return hit; }
+function grabUnit(x,y){ let bestAir=1e9,hitAir=null, bestGnd=1e9,hitGnd=null;
+  const _liftPx=(window.M3D&&M3D.airLiftPx)?M3D.airLiftPx():0;   // 공중유닛 부양 화면 px
+  for(const u of G.units){ if(u.atBoss) continue;
+    const _air=(typeof FXLAB_AIR!=='undefined' && FXLAB_AIR.has(u.gmodel||u.id));   // 공중유닛
+    const _uy=u.y*GH - (_air?_liftPx:0);   // 공중은 부양한 만큼 위(모델 위치)에서 잡힘
+    const d=Math.hypot((u.x-x)*GW, _uy-y*GH);
+    if(d<=unitRadius(u)+GRAB_PAD){ if(_air){ if(d<bestAir){bestAir=d;hitAir=u;} } else if(d<bestGnd){bestGnd=d;hitGnd=u;} } }
+  return hitAir||hitGnd;   // 공중 우선(겹치면 공중 먼저 잡혀 치우고 지상 잡기)
+}
 // 적 위 판정(트랙 좌표 → 픽셀). 가장 가까운 적 1마리
 function hitEnemyPrecise(x,y){ let best=1e9,hit=null;
   for(const e of G.enemies){ const p=posAt(e.d,GW,GH); const d=Math.hypot(p.x-x*GW,p.y-y*GH); if(d<=10 && d<best){ best=d; hit=e; } } return hit; }   // 적 클릭 판정 24→10(아군 그랩보다 좁게)
@@ -8168,6 +8193,9 @@ let lastP=null;      // 직전 포인터(델타 계산)
 let box=null;        // 박스선택 {x0,y0,x1,y1}
 let cmdMove=null;    // 이동 명령 목표 {x,y} — 선택 유닛들이 이쪽으로 걸어감
 const MOVE_MUL=3.0;  // 이동속도 배율(유닛 def.moveSpd × 이 값/초). 느리게/빠르게 조절
+const AIR_ACCEL=5.0;   // 공중유닛 관성 가속(낮을수록 더 굼뜨고 반동 큼)
+const AIR_ARRIVE=0.05; // 공중유닛 목표 근처 감속 시작 거리(정규화)
+const GA_MAX=40, GA_MIN=10, GA_SLOPE=2.7;   // 지상 관성: 작은 유닛=GA_MAX(거의 즉시) → 큰 유닛=GA_MIN(약한 관성). SCALE 비례
 let moved=false;
 // ── 화면 줌/팬(두 손가락) — nemo·관리자 공용. zoom1·중심0.5=항등(기존 동작 유지) ──
 const NEMO_MAXZOOM=3;
@@ -8204,6 +8232,10 @@ function onDown(e){ if(G.strike){ strikeOnDown(e); return; } if(G.tab!=='Main'||
   if(G.patrolArm && G.sel.length>0 && !hitUnitPrecise(p.x,p.y) && !hitEnemyPrecise(p.x,p.y)){   // 반복이동: 빈 곳 클릭 → 왕복 목표 지정
     setPatrolTarget(p.x,p.y); G.patrolArm=false; updateCmdRow(); e.preventDefault(); return; }
   G.patrolArm=false;
+  if(G.unloadArm){ const _tu=G.units.find(x=>x.uid===G.sel[0]);   // 내리기: 빈 곳 클릭 → 그 지점으로 비행 후 도착 하차
+    if(_tu && isTransport(_tu)){ const cl=clampInner(p.x,p.y); _tu._dropAt={x:cl.x,y:cl.y}; _tu.pickupQueue=null; _tu.cmd='hold'; _tu.patrol=null; if(typeof addChat==='function') addChat('','🛫 하차 지점으로 이동 후 한 마리씩 내립니다'); }
+    G.unloadArm=false; updateTransportBtns(); e.preventDefault(); return; }
+  if(G.boardArm){ box={x0:p.x,y0:p.y,x1:p.x,y1:p.y}; drag=null; dragSet=[]; cmdMove=null; e.preventDefault(); return; }   // 태우기: 드래그로 탑승 대상 지정(박스)
   const u=grabUnit(p.x,p.y);
   const grabSelf=u && G.sel.includes(u.uid);   // 잡은 게 이미 선택된 유닛(그룹 이동용)
   const multi=G.sel.length>1;                  // 다중 선택 상태
@@ -8267,6 +8299,10 @@ function onUp(e){
     const sx=box.x0, sy=box.y0;  // 드래그 시작점
     const x0=Math.min(box.x0,box.x1),y0=Math.min(box.y0,box.y1),x1=Math.max(box.x0,box.x1),y1=Math.max(box.y0,box.y1);
     clearBox();
+    if(G.boardArm){ const _t=G.units.find(u=>u.uid===G.boardArm);   // 태우기: 박스 안(또는 탭한) 아군 탑승
+      if(_t){ let _tg=(moved&&(x1-x0>0.01||y1-y0>0.01)) ? G.units.filter(u=>canBoard(_t,u)&&u.x>=x0&&u.x<=x1&&u.y>=y0&&u.y<=y1) : (function(){var o=grabUnit(sx,sy); return (o&&canBoard(_t,o))?[o]:[];})();
+        _t.pickupQueue=(_t.pickupQueue||[]).concat(_tg); _t._dropAt=null; if(typeof addChat==='function') addChat('','🛬 '+_tg.length+'기 호출 — 펠리컨이 한 마리씩 태우러 갑니다'); G.sel=[_t.uid]; refreshSelCard(); }
+      G.boardArm=false; updateTransportBtns(); drag=null; dragSet=[]; lastP=null; return; }
     if(moved && (x1-x0>0.01||y1-y0>0.01)){
       const inBox=G.units.filter(u=>!(u.fixed||(!u.gid&&isBuilding(u.id)))&&!u.atBoss&&u.x>=x0&&u.x<=x1&&u.y>=y0&&u.y<=y1).map(u=>u.uid);  // 실제 구조물·토벌장 파견 제외
       if(inBox.length){ selectMany(inBox); }   // 아군이 1마리라도 있으면 아군 우선(적 무시)
@@ -8289,7 +8325,7 @@ function assignFormation(cx,cy){
   const sel=G.sel.map(uid=>G.units.find(u=>u.uid===uid)).filter(Boolean).filter(u=>!u.fixed);
   if(!cmdMove) return; cmdMove.slots={};
   // 이동 목표는 '명령 당시 선택된 유닛'에만 부여(u.moveTo) → 선택을 바꿔도 기존 명령은 그 유닛이 끝까지 수행, 새 유닛은 새 명령 때만 이동
-  for(const u of sel){ u.cmd='hold'; u.patrol=null; u.atkTarget=null; u.focusTarget=null; u._chasing=false; }   // 수동 이동 명령 = 이동 후 홀드(공격이동/반복이동/지정공격 해제)
+  for(const u of sel){ u.cmd='hold'; u.patrol=null; u.atkTarget=null; u.focusTarget=null; u._chasing=false; if(isTransport(u)){ u.pickupQueue=null; u._dropAt=null; } }   // 수동 이동 = 홀드(수송선은 태우기/내리기 취소)
   if(sel.length===1){ sel[0].moveTo={x:cx,y:cy}; cmdMove.slots[sel[0].uid]={x:cx,y:cy}; return; }
   // 평균 충돌 반경 기반 간격
   const r=(sel.reduce((a,u)=>a+collideR(u),0)/sel.length)*2.1;
@@ -8300,6 +8336,45 @@ function assignFormation(cx,cy){
   // 가까운 유닛에 가까운 칸 배정(간단히 순서대로)
   sel.forEach((u,i)=>{ const s=slots[i]; const t=clampInner(cx+s.dx/GW, cy+s.dy/GH); u.moveTo={x:t.x,y:t.y}; cmdMove.slots[u.uid]={x:t.x,y:t.y}; });
 }
+// ── 펠리컨 수송(탑승/하차) — 탑승=G.units에서 빼고 모델 제거→cargo 보관 / 하차=좌표 주고 재추가 ──
+const TRANSPORT_CAP={ pelican:8, overlord:8, seraph:8 };   // 수송 유닛별 정원(모델키 gmodel||id) — 유니온 펠리컨 / 스웜 제플린(overlord) / 에테리얼 세라프
+function transportCap(u){ return (u&&TRANSPORT_CAP[u.gmodel||u.id])||0; }
+function isTransport(u){ return transportCap(u)>0; }
+function canBoard(t,u){ if(!t||!u||u===t||u.fixed||u.atBoss) return false; if(isTransport(u)) return false; if(typeof FXLAB_AIR!=='undefined' && FXLAB_AIR.has(u.gmodel||u.id)) return false; if(isBuilding(u.id)&&!u.gid) return false; return (t.cargo?t.cargo.length:0) < transportCap(t); }   // 공중유닛 탑승 불가(지상유닛만)
+function boardUnit(t,u){ if(!canBoard(t,u)){ if((t.cargo?t.cargo.length:0)>=transportCap(t)) toast('⚠️ 수송 정원 가득'); return; }
+  t.cargo=t.cargo||[]; u.moveTo=null; u.cmd=null; u.patrol=null; u.atkTarget=null; u.focusTarget=null; u._chasing=false; u.moving=false; u._mvStuck=0; u._mvPrevD=null;
+  t.cargo.push(u);
+  const i=G.units.indexOf(u); if(i>=0) G.units.splice(i,1);
+  if(window.M3D && M3D.dropModels) M3D.dropModels([u.uid]);
+  G.sel=(G.sel||[]).filter(id=>id!==u.uid);
+  if(typeof playSfx==='function') playSfx('ui_confirm');
+  renderUnits(); if(typeof updateHud==='function') updateHud(); if(typeof updateTransportBtns==='function') updateTransportBtns(); }
+function dropCargo(t){ if(!t||!t.cargo||!t.cargo.length) return; const cargo=t.cargo; t.cargo=[];
+  cargo.forEach((u,k)=>{ const ring=1+Math.floor(k/8), a=(k%8)/8*6.283+ring*0.6, rad=ring*collideR(u)*2.2;
+    const c=clampInner(t.x+Math.cos(a)*rad/GW, t.y+Math.sin(a)*rad/GH);
+    u.x=c.x; u.y=c.y; u.moveTo=null; u.moving=false; u.cmd=null; u._mvStuck=0; u._mvPrevD=null; G.units.push(u); });
+  if(typeof playSfx==='function') playSfx('ui_confirm');
+  renderUnits(); if(typeof updateHud==='function') updateHud(); }
+// 수송선 자동 운항: 태우기=유닛 머리 위로 한 마리씩 가서 탑승 / 내리기=지점 도착 후 한 마리씩 방출
+const PICK_R=22, DROP_R=16, DROP_GAP=0.07;
+function dropOne(t,pt){ if(!t.cargo||!t.cargo.length) return; const u=t.cargo.shift();
+  const k=t._dropN=(t._dropN||0)+1, ring=1+Math.floor(k/8), a=(k%8)/8*6.283+ring*0.6, rad=ring*collideR(u)*2.2;
+  const c=clampInner(pt.x+Math.cos(a)*rad/GW, pt.y+Math.sin(a)*rad/GH);
+  u.x=c.x; u.y=c.y; u.moveTo=null; u.moving=false; u.cmd=null; u._mvStuck=0; u._mvPrevD=null; G.units.push(u);
+  if(!t.cargo.length) t._dropN=0; renderUnits(); if(typeof updateHud==='function') updateHud(); if(typeof updateTransportBtns==='function') updateTransportBtns(); }
+function stepTransports(dt){ if(!GW||!GH) return;
+  for(const t of G.units){ if(!isTransport(t)) continue;
+    if(t.pickupQueue && t.pickupQueue.length){   // 태우기: 큐의 유닛에게 차례로 비행 → 머리 위 도달 시 탑승
+      let tgt=null; while(t.pickupQueue.length){ const u=t.pickupQueue[0]; if(G.units.indexOf(u)<0){ t.pickupQueue.shift(); continue; } tgt=u; break; }
+      if(!tgt || (t.cargo&&t.cargo.length>=transportCap(t))){ t.pickupQueue=null; t.moveTo=null; continue; }
+      if(Math.hypot((tgt.x-t.x)*GW,(tgt.y-t.y)*GH)<=PICK_R){ boardUnit(t,tgt); t.pickupQueue.shift(); if(t.pickupQueue&&!t.pickupQueue.length){ t.pickupQueue=null; t.moveTo=null; } }
+      else t.moveTo={x:tgt.x,y:tgt.y};
+      continue; }
+    if(t._dropAt){   // 내리기: 지점 도착 후 한 마리씩 빠르게 방출
+      if(Math.hypot((t._dropAt.x-t.x)*GW,(t._dropAt.y-t.y)*GH)<=DROP_R){ t.moveTo=null; t._dropT=(t._dropT||0)-dt;
+        if(t._dropT<=0){ if(t.cargo&&t.cargo.length){ dropOne(t,t._dropAt); t._dropT=DROP_GAP; } else { t._dropAt=null; t._dropT=0; } } }
+      else t.moveTo={x:t._dropAt.x,y:t._dropAt.y}; }
+  } }
 // 비행체 엔진 분사(이동 중) — 기체 뒤쪽에서 청백 추진염
 const ENG_COL={ skydancer_t:['#2e7bff','#74a8ff'] };   // 비행체 엔진 분사색(기본=청백, 스카이댄서=파랑)
 function emitEngineExhaust(u, x, y, mx, my, dt){
@@ -8320,15 +8395,16 @@ function stepCmdMove(dt){
     const def=U[u.id]; const spd=(def.moveSpd||0.13)*MOVE_MUL*dt;   // 유닛별 이동속도
     const slot=u.moveTo;
     let dx=slot.x-u.x, dy=slot.y-u.y; const d=Math.hypot(dx,dy);
-    if(d<=0.012){ u.moveTo=null; u._mvStuck=0; u._mvPrevD=null; continue; }   // 도착 → 이 유닛만 명령 종료(다른 유닛은 계속)
-    // 혼잡·구석 클램프로 더 못 가까워지면 그 자리에 정착 → 끝없이 비비며 진동하는 것 방지
+    const _air=(typeof FXLAB_AIR!=='undefined' && FXLAB_AIR.has(u.gmodel||u.id));   // 공중유닛 = 관성 이동
+    if(d<=0.012){ u.moveTo=null; u._mvStuck=0; u._mvPrevD=null; u.vx=0; u.vy=0; continue; }   // 도착 → 명령 종료(속도 정지)
+    // 혼잡·구석 클램프로 더 못 가까워지면 정착(공중은 관성 반동 허용 → 더 관대)
     if(u._mvPrevD!=null && d > u._mvPrevD-0.0006) u._mvStuck=(u._mvStuck||0)+dt; else u._mvStuck=0;
     u._mvPrevD=d;
-    if(u._mvStuck>0.6){ u.moveTo=null; u._mvStuck=0; u._mvPrevD=null; continue; }
+    if(u._mvStuck>(_air?1.6:0.6)){ u.moveTo=null; u._mvStuck=0; u._mvPrevD=null; u.vx=0; u.vy=0; continue; }
     let dirx=dx/d, diry=dy/d;
     // 장애물 회피 조향: 가까운 '비이동' 유닛을 피해 옆으로 돌아감
     let sx=0, sy=0;
-    for(const o of G.units){ if(o===u||selSet.has(o.uid)) continue;
+    if(!isTransport(u)) for(const o of G.units){ if(o===u||selSet.has(o.uid)) continue;
       const ox=(o.x-u.x)*GW, oy=(o.y-u.y)*GH, od=Math.hypot(ox,oy);
       const avoidR=(collideR(u)+collideR(o))*2.4;
       if(od>0.01 && od<avoidR){ const w=1-od/avoidR;
@@ -8338,9 +8414,15 @@ function stepCmdMove(dt){
           sx+=tx*side*w*1.6; sy+=ty*side*w*1.6; }
       }
     }
-    let mx=dirx+sx, my=diry+sy; const ml=Math.hypot(mx,my)||1; mx/=ml; my/=ml;
-    const cl=clampInner(u.x+mx*Math.min(spd,d), u.y+my*Math.min(spd,d)); u.x=cl.x; u.y=cl.y; moving=true; u.moving=true;
-    if(def.model3d){ const fa=Math.atan2(mx,my); u.face=Math.round(fa/(Math.PI/8))*(Math.PI/8); }
+    let mx, my;
+    if(_air){ mx=dirx; my=diry; } else { mx=dirx+sx; my=diry+sy; const ml=Math.hypot(mx,my)||1; mx/=ml; my/=ml; }   // 지상=회피 반영
+    const maxSpd=(def.moveSpd||0.13)*MOVE_MUL; let dvx=mx*maxSpd, dvy=my*maxSpd;
+    if(d<AIR_ARRIVE){ const _f=d/AIR_ARRIVE; dvx*=_f; dvy*=_f; }   // 목표 근처 감속(안착)
+    const _sz=(window.M3D&&M3D.scaleOf)?M3D.scaleOf(u.gmodel||u.id):13;
+    const _acc=_air?AIR_ACCEL:Math.max(GA_MIN, GA_MAX-(_sz-11)*GA_SLOPE);   // 공중=강한 관성 / 지상=크기 클수록 관성↑(작은 유닛≈즉시)
+    const _k=Math.min(1, _acc*dt); u.vx=(u.vx||0)+(dvx-(u.vx||0))*_k; u.vy=(u.vy||0)+(dvy-(u.vy||0))*_k;
+    const cl=clampInner(u.x+u.vx*dt, u.y+u.vy*dt); u.x=cl.x; u.y=cl.y; moving=true; u.moving=true;
+    if(def.model3d){ const _sp=Math.hypot(u.vx,u.vy); if(_sp>0.0004){ const fa=Math.atan2(u.vx,u.vy); u.face=Math.round(fa/(Math.PI/8))*(Math.PI/8); } else { const fa=Math.atan2(mx,my); u.face=Math.round(fa/(Math.PI/8))*(Math.PI/8); } }
       if(AIR_FLOAT_GIDS[u.gid]) emitEngineExhaust(u, u.x*GW, u.y*GH-16, mx, my, dt);   // 비행체: 엔진 분사  // 이동 방향을 바라봄
   }
   if(moving) renderUnits();
@@ -8706,7 +8788,7 @@ function loop(now){
     for(let k=0;k<_sm;k++){
       if(G.phase==='playing' && !G.sandbox) step(dt);
       if(G.tab==='Unit' && !G.sandbox) stepCitizen(dt);   // 시민 이동(도착 시 구매) — 랩에선 정지
-      if(G.tab==='Main'){ stepCmdMove(dt); separateUnits(); }   // 내 유닛 이동명령 + 겹침 방지
+      if(G.tab==='Main'){ stepTransports(dt); stepCmdMove(dt); separateUnits(); }   // 수송선 운항 + 내 유닛 이동명령 + 겹침 방지
     }
     stepAuto(dt);   // 자동화 유틸(0.33초 틱) — 배속과 무관하게 실시간 기준
 
@@ -9057,9 +9139,10 @@ function strikePickBuild(i){ const S=STK; if(!S) return; const t=strikeBuildMenu
 // ═══ 공용 FX 코어(모든 유즈맵 공통 유닛별 공격 이펙트) ═══
 // 유닛 id → 공격 스타일. 네모 발사체 비주얼을 그대로 — 한 곳에서 정의해 어느 맵이든 같은 느낌.
 const ATK_STYLE={
-  marine:    {kind:'bullet', color:'#ffe2a0', burst:3, burstGap:0.035},
+  marine:    {kind:'bullet', color:'#ffe2a0', burst:3, burstGap:0.007, tr:0.5},   // 레인저: 트레일 가시도 ↓(여러발처럼 보임 완화)
+  skyguard:  {kind:'bullet', color:'#ffe2a0', lng:2.7, hd:0.55, wd:0.8, spd:2.5},   // 템페스트: 더 얇고 길고 빠른 레이저(고속=즉시 명중)
   ghost:     {kind:'sniper', color:'#eafdff', spd:1.8},   // 팬텀: 저격탄 고속
-  racer:     {kind:'bullet', color:'#ffe2a0'},   // 레이서: 오토바이 앞 좌/우 총 각 1발
+  racer:     {kind:'bullet', color:'#ffe2a0', tr:0.5},   // 레이서: 앞 좌/우 총 각 1발 + 트레일 가시도 ↓
   striderSMG:{kind:'mg',     color:'#ffe2a0', burst:5, burstGap:0.025},   // 스트라이더 지상: 손 기관단총 연사
   goliath:   {kind:'missile',color:'#5ad1ff'},
   dragoon:   {kind:'plasma', color:'#b48bff'},
@@ -9091,14 +9174,14 @@ const FX={
     const speed=(opts.speed||2600)*(st.spd||1), dur=Math.min(0.6,Math.max(0.05,dist/speed)), n=st.count||1, burst=st.burst||1, bgap=st.burstGap||0.05;
     if(store.shots.length>200) store.shots.splice(0, store.shots.length-200);
     for(let b=0;b<burst;b++) for(let i=0;i<n;i++){ const a=ang+(n>1?(i-(n-1)/2)*0.13:0);
-      store.shots.push({x:sx,y:sy,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,t:0,dur:dur,kind:st.kind,color:col,boom:st.boom||4,szf:szf,delay:b*bgap,mx:sx,my:sy,dist:dist,ex:sx+Math.cos(a)*dist,ey:sy+Math.sin(a)*dist}); } },
+      store.shots.push({x:sx,y:sy,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,t:0,dur:dur,kind:st.kind,color:col,boom:st.boom||4,szf:szf,delay:b*bgap,mx:sx,my:sy,dist:dist,ex:sx+Math.cos(a)*dist,ey:sy+Math.sin(a)*dist,lng:st.lng||1,hd:st.hd||1,wd:st.wd||1,tr:(st.tr==null?1:st.tr)}); } },
   death(store, x,y, opts){ if(!store) return; opts=opts||{}; const szf=(opts.unitSize||FX.REF)/FX.REF, col=opts.color||'#ffd0a0', parts=[];
     for(let i=0;i<9;i++){ const a=Math.random()*6.283; parts.push({a:a, sp:42+Math.random()*70, len:4+Math.random()*5, col:(i%3===0?'#ffe6b0':col)}); }
     store.deaths.push({x:x,y:y,life:1,col:col,szf:szf,parts:parts}); },   // 통합 죽음 이펙트(섬광 링 + 코어 + 파편)
   smoke(store, x,y){ if(!store||!store.smoke) return;   // 어깨 포드 발사 연기(골리앗 등) — 위로 피어오르는 회색 구름
     for(let k=0;k<3;k++){ store.smoke.push({x:x+(Math.random()-0.5)*0.012, y:y, vx:(Math.random()-0.5)*0.03, vy:-0.05-Math.random()*0.045, life:1, r0:2.4+Math.random()*2, col:(k%2?'#5a5a66':'#7a7a86')}); } },
   advance(store, dt){ if(!store) return;
-    const sh=store.shots; for(let i=sh.length-1;i>=0;i--){ const s=sh[i]; if(!s._fired){ if(s.delay>0){ s.delay-=dt; if(s.delay>0) continue; } s._fired=true; if(store.flashes && !s.noflash) store.flashes.push({x:s.mx,y:s.my,life:1,szf:s.szf||1,ang:Math.atan2(s.vy,s.vx),fz:s.fz}); } if(s.wob){ const cw=Math.cos(s.wob*dt), sw=Math.sin(s.wob*dt), nvx=s.vx*cw-s.vy*sw, nvy=s.vx*sw+s.vy*cw; s.vx=nvx; s.vy=nvy; } s.t+=dt; if(s.kind==='missile'&&s.ex!=null){ const _ta=Math.atan2(s.ey-s.y,s.ex-s.x), _ca=Math.atan2(s.vy,s.vx); let _da=_ta-_ca; _da=Math.atan2(Math.sin(_da),Math.cos(_da)); const _mt=7*dt, _na=_ca+Math.max(-_mt,Math.min(_mt,_da)), _msp=Math.hypot(s.vx,s.vy); s.vx=Math.cos(_na)*_msp; s.vy=Math.sin(_na)*_msp; if(store.smoke){ s.trailT=(s.trailT||0)-dt; if(s.trailT<=0){ s.trailT=0.03; store.smoke.push({x:s.x,y:s.y,vx:0,vy:0,life:1,r0:0.5*(s.szf||1),col:'#ff9a4c',core:'#ffd9a0',glow:true,dk:5,ex:1.0,af:0.5}); } } } s.x+=s.vx*dt; s.y+=s.vy*dt;
+    const sh=store.shots; for(let i=sh.length-1;i>=0;i--){ const s=sh[i]; if(!s._fired){ if(s.delay>0){ s.delay-=dt; if(s.delay>0) continue; } s._fired=true; if(store.flashes && !s.noflash) store.flashes.push({x:s.mx,y:s.my,life:1,szf:s.szf||1,ang:Math.atan2(s.vy,s.vx),fz:s.fz}); } if(s.wob){ const cw=Math.cos(s.wob*dt), sw=Math.sin(s.wob*dt), nvx=s.vx*cw-s.vy*sw, nvy=s.vx*sw+s.vy*cw; s.vx=nvx; s.vy=nvy; } s.t+=dt; if(s.kind==='missile'&&s.ex!=null){ const _ta=Math.atan2(s.ey-s.y,s.ex-s.x), _ca=Math.atan2(s.vy,s.vx); let _da=_ta-_ca; _da=Math.atan2(Math.sin(_da),Math.cos(_da)); const _mt=7*dt, _na=_ca+Math.max(-_mt,Math.min(_mt,_da)), _msp=Math.hypot(s.vx,s.vy); s.vx=Math.cos(_na)*_msp; s.vy=Math.sin(_na)*_msp; if(store.smoke){ s.trailT=(s.trailT||0)-dt; if(s.trailT<=0){ s.trailT=0.03; store.smoke.push({x:s.x,y:s.y,vx:0,vy:0,life:1,r0:0.5*(s.szf||1),col:'#ff9a4c',core:'#ffd9a0',glow:true,dk:5,ex:1.0,af:0.5}); } } } s._dn=Math.hypot(s.vx,s.vy)*dt; s.x+=s.vx*dt; s.y+=s.vy*dt;
       if((s.dist!=null && Math.hypot(s.x-s.mx,s.y-s.my)>=s.dist) || s.t>=s.dur || (s.kind==='missile'&&s.ex!=null&&Math.hypot(s.x-s.ex,s.y-s.ey)<0.012)){ const _ix=(s.ex!=null?s.ex:s.x), _iy=(s.ey!=null?s.ey:s.y); store.impacts.push({x:_ix,y:_iy,life:1,kind:s.kind,col:s.color,boom:s.boom||4,szf:s.szf||1,ang:Math.atan2(s.vy,s.vx),sd:(store._sd=((store._sd||0)+1)&255)}); sh.splice(i,1); } }
     const im=store.impacts; for(let i=im.length-1;i>=0;i--){ im[i].life-=dt*4.5; if(im[i].life<=0) im.splice(i,1); }
     const me=store.melee; for(let i=me.length-1;i>=0;i--){ me[i].life-=dt*5; if(me[i].life<=0) me.splice(i,1); }
@@ -9111,8 +9194,11 @@ const FX={
       else { const r=(p.r0+(1-L)*(p.ex||7))*z; ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=L*(p.af||0.42); ctx.fillStyle=p.col; ctx.beginPath(); ctx.arc(c.x,c.y,r,0,6.283); ctx.fill(); } }
     ctx.globalAlpha=1;
     if(store.flashes) for(const fS of store.flashes){ const c=toScreen(fS.x,fS.y), L=Math.max(0,fS.life), _fz=(fS.fz||1), z=sz*(fS.szf||1)*_fz, fa=fS.ang||0, _fa=Math.min(1,_fz+0.3); ctx.globalCompositeOperation='lighter'; ctx.lineCap='round'; ctx.strokeStyle='#ffd779'; const _sp=[[0,4.5,1.2],[0.42,2.5,0.85],[-0.42,2.5,0.85],[1.5,1.3,0.65],[-1.5,1.3,0.65]]; for(let _q=0;_q<_sp.length;_q++){ const _a=fa+_sp[_q][0], _len=_sp[_q][1]*z*(0.4+L*0.7); ctx.globalAlpha=L*0.82*_fa; ctx.lineWidth=_sp[_q][2]*z; ctx.beginPath(); ctx.moveTo(c.x,c.y); ctx.lineTo(c.x+Math.cos(_a)*_len, c.y+Math.sin(_a)*_len); ctx.stroke(); } ctx.globalAlpha=L*0.95*_fa; ctx.fillStyle='#fff7d0'; ctx.beginPath(); ctx.arc(c.x,c.y,1.0*z*(0.4+L*0.7),0,6.283); ctx.fill(); }
+    const _pxn=toScreen(1,0).x-toScreen(0,0).x;   // 정규화→px(가로) — 프레임 이동거리 환산
     for(const s of store.shots){ if(s.delay>0) continue; const c=toScreen(s.x,s.y), z=sz*(s.szf||1); ctx.save(); ctx.globalCompositeOperation='lighter';
-      ctx.translate(c.x,c.y); ctx.rotate(Math.atan2(s.vy,s.vx)); ctx.scale(z,z); FX._shot(ctx,s); ctx.restore(); }
+      ctx.translate(c.x,c.y); ctx.rotate(Math.atan2(s.vy,s.vx)); ctx.scale(z,z);
+      if(s._dn && (s.kind==='bullet'||s.kind==='sniper'||s.kind==='mg'||s.kind==='shell')){ const _tu=Math.min(52, s._dn*_pxn/Math.max(0.001,z)); if(_tu>8){ ctx.globalAlpha=0.3*(s.tr==null?1:s.tr); ctx.strokeStyle=s.color; ctx.lineWidth=0.8; ctx.beginPath(); ctx.moveTo(-5,0); ctx.lineTo(-_tu,0); ctx.stroke(); ctx.globalAlpha=1; } }   // 프레임 간 이동 잔상 연결(빠른 탄이 점선처럼 여러발로 보이는 것 방지 → 하나의 연속 궤적)
+      FX._shot(ctx,s); ctx.restore(); }
     ctx.globalCompositeOperation='lighter';
     for(const im of store.impacts){ const c=toScreen(im.x,im.y), L=Math.max(0,im.life), p=1-L, z=sz*(im.szf||1); ctx.save(); ctx.translate(c.x,c.y);
       if(im.kind==='shell'){ ctx.globalCompositeOperation='lighter';
@@ -9153,9 +9239,9 @@ const FX={
       ctx.restore(); }
     ctx.restore(); },
   _shot(ctx,s){ switch(s.kind){   // 네모 발사체 레시피(원점 기준, 이미 회전·스케일됨)
-    case 'bullet': ctx.globalAlpha=.28; ctx.fillStyle=s.color; ctx.fillRect(-6.5,-0.6,6.5,1.2);
-      ctx.globalAlpha=.85; ctx.fillStyle='#ffe2a0'; ctx.fillRect(-2.4,-0.55,3.2,1.1);
-      ctx.globalAlpha=1; ctx.fillStyle='#fff2cf'; ctx.beginPath();ctx.arc(0.6,0,1.1,0,6.28);ctx.fill(); break;
+    case 'bullet': { const L=s.lng||1, W=s.wd||1; ctx.globalAlpha=.28; ctx.fillStyle=s.color; ctx.fillRect(-6.5*L,-0.6*W,6.5*L,1.2*W);
+      ctx.globalAlpha=.85; ctx.fillStyle='#ffe2a0'; ctx.fillRect(-2.4*L,-0.55*W,0.8+2.4*L,1.1*W);
+      ctx.globalAlpha=1; ctx.fillStyle='#fff2cf'; ctx.beginPath();ctx.arc(0.6,0,1.1*(s.hd||1),0,6.28);ctx.fill(); break; }
     case 'mg': ctx.globalAlpha=.25; ctx.fillStyle=s.color; ctx.fillRect(-5,-0.22,5,0.44);
       ctx.globalAlpha=1; ctx.fillStyle='#fff7d8'; ctx.fillRect(-1.2,-0.28,2.6,0.56); break;
     case 'sniper': ctx.globalAlpha=.3; ctx.fillStyle=s.color; ctx.beginPath(); ctx.moveTo(1.5,-0.6); ctx.lineTo(1.5,0.6); ctx.lineTo(-24,0.05); ctx.lineTo(-24,-0.05); ctx.closePath(); ctx.fill();
@@ -9643,7 +9729,7 @@ const FXLAB_RACE_KO={union:'🛡 유니온',swarm:'🦎 스웜',aetherial:'🔮 
 const FXLAB={ store:null, attId:'marine', attGm:null, scale:1, mode:'attack', phase:'alive', t:0, cd:0, mv:1, ti:0, att:null, dummy:null, bldg:null, air:null };
 let _fxLabAttSeq=0;
 const FXLAB_AA=new Set(['marine','ghost','goliath','dragoon','archon','hydra']);   // 공중 공격 가능 유닛(나머지는 지상만)
-const FXLAB_AIR=new Set(['skyguard','skydancer','overlord','observer','pelican','seraph','hellfire','dreadnought','kronos','archangel','falcon','stinger','venom','medusa','wyvern','aegis']);   // 공중(비행) 유닛 — 바닥 위로 부양
+const FXLAB_AIR=new Set(['skyguard','skydancer','overlord','observer','pelican','seraph','hellfire','dreadnought','kronos','archangel','falcon','stinger','venom','medusa','wyvern','aegis','behemoth']);   // 공중(비행) 유닛 — 바닥 위로 부양
 const FXLAB_AIR_LIFT=0.16;   // 공중유닛 부양 높이(정규화)
 const FXLAB_TGT_X=0.70, FXLAB_TGT_Y=0.52;   // 지상 타겟 기준선(시민)
 function fxLabStats(id, gm){ const sg=gm&&STK_UNITS[gm]; if(sg){ var _er=(typeof effRange==='function')?effRange(gm,null):null; return {size:sg.size, cd:(typeof SB_CD!=='undefined'&&SB_CD[gm]!=null?Math.max(0.42,SB_CD[gm]):sg.cd), melee:!!sg.melee, rng:(_er!=null)?Math.max(6,_er*600):(sg.rng||120), color:(U[gm]&&U[gm].color)||'#cfd6e2'}; }   // SB_RANGE(샌드박스 사거리) 우선 — 표시값=배치 일치
@@ -9655,7 +9741,7 @@ function fxLabStats(id, gm){ const sg=gm&&STK_UNITS[gm]; if(sg){ var _er=(typeof
 function fxZoomF(){ return Math.max(0.12, Math.min(1.7, (FXLAB.scale||1)*0.72))/0.72; }   // 3D 모델 스케일과 동일 비율(맵/줌)
 function fxLabAttX(id, gm){ return Math.max(0.06, FXLAB_TGT_X - (fxLabStats(id,gm).rng/600)*fxZoomF()); }   // 사거리 간격을 줌에 맞춰 스케일
 function fxLabSpawnScene(){ const _gm=FXLAB.attGm; const a=fxLabStats(FXLAB.attId,_gm);
-  FXLAB.att={ uid:'lab_att'+(++_fxLabAttSeq), id:FXLAB.attId, x:fxLabAttX(FXLAB.attId,_gm), y:(FXLAB_AIR.has(_gm||FXLAB.attId)?FXLAB_TGT_Y-FXLAB_AIR_LIFT:FXLAB_TGT_Y), face:Math.PI/2, moving:false, fireSeq:0, size:a.size, hidden:false };
+  FXLAB.att={ uid:'lab_att'+(++_fxLabAttSeq), id:FXLAB.attId, x:fxLabAttX(FXLAB.attId,_gm), y:((window.M3D&&M3D.airFloat&&M3D.airFloat(_gm||FXLAB.attId))?FXLAB_TGT_Y:(FXLAB_AIR.has(_gm||FXLAB.attId)?FXLAB_TGT_Y-FXLAB_AIR_LIFT:FXLAB_TGT_Y)), face:Math.PI/2, moving:false, fireSeq:0, size:a.size, hidden:false };
   if(_gm) FXLAB.att.gmodel=_gm;
   FXLAB.dummy={ uid:'lab_cit', id:'citizen',  x:FXLAB_TGT_X, y:FXLAB_TGT_Y, face:-Math.PI/2, moving:false, fireSeq:0, size:13 };
   FXLAB.bldg ={ uid:'lab_bld', id:'turret',   x:0.80, y:0.62, face:0,          moving:false, fireSeq:0, size:24 };
@@ -9664,7 +9750,7 @@ function fxLabClearStore(){ const s=FXLAB.store; if(s){ s.shots.length=0; s.impa
 function fxLabSelect(id, gm){ FXLAB.attId=id; FXLAB.attGm=gm||null; if(!FXLAB.store) FXLAB.store=FX.store(); fxLabClearStore();
   if(window.M3D&&M3D.clearGameModels) M3D.clearGameModels(); fxLabSpawnScene(); FXLAB.phase='alive'; FXLAB.t=(FXLAB.mode==='death')?0.9:0; FXLAB.cd=0.2; fxLabRenderGrid(); }
 function fxLabSetMode(mode, el){ FXLAB.mode=mode; FXLAB.phase='alive'; FXLAB.t=(mode==='death')?0.9:0; FXLAB.cd=0.2; FXLAB.mv=1; FXLAB.ti=0;
-  if(FXLAB.att){ FXLAB.att.hidden=false; FXLAB.att.moving=false; if(mode!=='move'){ FXLAB.att.x=fxLabAttX(FXLAB.attId,FXLAB.attGm); FXLAB.att.y=(FXLAB_AIR.has(FXLAB.attGm||FXLAB.attId)?FXLAB_TGT_Y-FXLAB_AIR_LIFT:FXLAB_TGT_Y); } }
+  if(FXLAB.att){ FXLAB.att.hidden=false; FXLAB.att.moving=false; if(mode!=='move'){ FXLAB.att.x=fxLabAttX(FXLAB.attId,FXLAB.attGm); FXLAB.att.y=((window.M3D&&M3D.airFloat&&M3D.airFloat(FXLAB.attGm||FXLAB.attId))?FXLAB_TGT_Y:(FXLAB_AIR.has(FXLAB.attGm||FXLAB.attId)?FXLAB_TGT_Y-FXLAB_AIR_LIFT:FXLAB_TGT_Y)); } }
   document.querySelectorAll('#fxLabActs .fxlAct').forEach(b=>b.classList.toggle('on', b.getAttribute('data-m')===mode)); }
 function fxLabSetMul(v){ FX.sizeMul=+v||1; const e=document.getElementById('fxLabSizeV'); if(e) e.textContent=(+v).toFixed(2); }
 function fxLabSetScale(v){ FXLAB.scale=+v||1; const e=document.getElementById('fxLabScaleV'); if(e) e.textContent=(+v).toFixed(2);
@@ -9714,6 +9800,7 @@ function fxLabStep(dt){ const L=FXLAB; if(!L.att) fxLabSpawnScene(); const a=L.a
       let _sx=a.x+(_dx/_d)*_mz, _sy=a.y+(_dy/_d)*_mz-0.024;
       const _mzg=(window.M3D && M3D.muzzleAt)?M3D.muzzleAt(a.uid):null;   // 실제 3D 총구 위치(있으면 — 각도 무관)
       if(_mzg){ const _bl=(fxId==='tank')?0:0.02*fxZoomF(); _sx=_mzg.x+(_dx/_d)*_bl; _sy=_mzg.y+(_dy/_d)*_bl; }   // 머즐(투영) — 탱크는 3D 포구 기준점 그대로
+      else if(window.M3D && M3D.airFloat && M3D.airFloat(fxId)){ const _ctr=M3D.centerAt?M3D.centerAt(a.uid):null; if(_ctr){ _sx=_ctr.x+(_dx/_d)*_mz; _sy=_ctr.y+(_dy/_d)*_mz; } }   // 공중 부양 유닛(전용 총구 없음): 떠 있는 몸 중앙에서 발사
       const _opt={speed:(st.melee?6.5:(fxId==='marine'?4.5:3.6)), unitSize:st.size}, _stA=(typeof ATK_STYLE!=='undefined'?(ATK_STYLE[fxId]||ATK_STYLE._default):{}), _hd=_stA.hit||0;
       if(_hd>0) (L.pend=L.pend||[]).push({t:_hd, id:fxId, sx:_sx, sy:_sy, tx:tgt.x, ty:ty, opt:_opt});
       else FX.spawn(L.store, fxId, _sx, _sy, tgt.x, ty, _opt); }
@@ -9727,12 +9814,12 @@ function fxLabGoliathFire(L, a, tx, ty, size){   // 스트라이더 공중: 어�
 function fxLabStriderSMG(L, a, tx, ty, size){   // 스트라이더 지상: 양손 기관단총 — 얇은 즉발 탄, 여러 지점 타다닥
   if(!L.store||!L.store.shots) return;
   const dx=tx-a.x, dy=ty-a.y, d=Math.hypot(dx,dy)||1, nx=dx/d, ny=dy/d, px=-ny, py=nx, zf=fxZoomF();
-  const _mz=0.012*zf, fx=a.x+nx*_mz, fy=a.y+ny*_mz-0.012*zf, hand=0.018*zf, sp=0.022*zf, szf=(size||16)/18;
+  const _mz=0.012*zf, fx=a.x+nx*_mz, fy=a.y+ny*_mz-0.02*zf, hand=0.006*zf, sp=0.012*zf, szf=(size||16)/18;
   for(let i=0;i<8;i++){ const sgn=(i%2)?1:-1, hx=fx+px*hand*sgn, hy=fy+py*hand*sgn, ex=tx+(Math.random()-0.5)*sp, ey=ty+(Math.random()-0.5)*sp, ea=Math.atan2(ey-hy,ex-hx), ed=Math.hypot(ex-hx,ey-hy)||1;
-    L.store.shots.push({x:hx,y:hy,vx:Math.cos(ea)*14,vy:Math.sin(ea)*14,t:0,dur:0.06,kind:'mg',color:'#ffe6a8',boom:3,szf:szf,delay:i*0.016,mx:hx,my:hy,dist:ed,ex:ex,ey:ey,fz:0.5}); } }
+    L.store.shots.push({x:hx,y:hy,vx:Math.cos(ea)*7,vy:Math.sin(ea)*7,t:0,dur:0.06,kind:'mg',color:'#ffe6a8',boom:3,szf:szf,delay:i*0.016,mx:hx,my:hy,dist:ed,ex:ex,ey:ey,fz:0.5,tr:0.45}); } }
 function fxLabRacerFire(L, a, tx, ty){   // 레이서: 오토바이 앞 좌/우 총에서 각 2발(총 4발) — 타겟 방향=바이크 앞
   const dx=tx-a.x, dy=ty-a.y, d=Math.hypot(dx,dy)||1, nx=dx/d, ny=dy/d, px=-ny, py=nx, sz=(a&&a.size)||18;
-  const _zf=(typeof fxZoomF==="function")?fxZoomF():1, frontN=0.038*_zf, sideN=0.0035*_zf, upN=0.008*_zf, bx=a.x+nx*frontN, by=a.y+ny*frontN-upN, _dd=Math.max(0.02, d-frontN);   // 바이크 가장 앞(노즈)·간격 좁게·줌 비례
+  const _zf=(typeof fxZoomF==="function")?fxZoomF():1, frontN=0.038*_zf, sideN=0.0055*_zf, upN=0.008*_zf, bx=a.x+nx*frontN, by=a.y+ny*frontN-upN, _dd=Math.max(0.02, d-frontN);   // 바이크 가장 앞(노즈)·간격 좁게·줌 비례
   for(const sgn of [-1,1]){ const gx=bx+px*sideN*sgn, gy=by+py*sideN*sgn; FX.spawn(L.store, 'racer', gx, gy, gx+nx*_dd, gy+ny*_dd, {speed:4.4, unitSize:sz}); }   // 평행 직진(간격 유지, 한 점 수렴 X)
 }
 function fxLabRender(dt){ const L=FXLAB; if(!L.store) L.store=FX.store(); if(!L.att) fxLabSpawnScene();
@@ -9774,7 +9861,8 @@ const AURA_UNITS={ archon:true };      // 공중 부유 + 에너지 오라(아�
 const AURA_LIFT=0.14;                  // 부유 기본 높이(모델높이 비율) — 아주 약간 떠 있음
 const AURA_COL1=0x5fd8ff, AURA_COL2=0xb070ff;  // 오라 색(청록 외피 + 보라 코어)
 const HOVER_AMP=0.13;     // 공중 유닛 상하 부유 진폭(모델높이 비율) — 크게(둥실)
-const AIR_FLOAT={ skyguard:2.2, skydancer:1.8 };   // 아군 공중 유닛: 본체 부양 높이(모델높이 비율) — 그림자는 지면
+const AIR_FLOAT={ skyguard:1, skydancer:1, overlord:1, observer:1, pelican:1, seraph:1, hellfire:1, dreadnought:1, kronos:1, archangel:1, falcon:1, stinger:1, venom:1, medusa:1, wyvern:1, aegis:1, behemoth:1 };   // 공중 유닛 멤버십(=FXLAB_AIR 17종과 동일 유지) — 전부 고정 정지 부양(AIR_LIFT_PX), 값 미사용
+const AIR_LIFT_PX=28;     // 공중유닛 부양 높이(화면 px 기준, 모델·스케일 무관 — 전 공중유닛 동일 고도). 정지 부양(흔들림 없음)
 const HOVER_SPD=2.6;      // 부유 속도
 const HOVER_WOBBLE=0.10;  // 공중 유닛 기우뚱 흔들(라디안)
 const HOVER_BASE=14;      // 지면에서 띄우는 높이(px)
@@ -10269,6 +10357,9 @@ window.M3D={
   mapModelKeys:(mapId)=>mapModelKeys(mapId),
   portrait:(id)=>unitPortrait(id),   // 3D 모델 → 2D 흑백 포트레잇 dataURL(없으면 null)
   muzzleAt:(uid)=>{ const m=models.get(uid); return (m&&m.muzzleN)?m.muzzleN:null; },   // 총구(3D 총 위치) 2D 정규화 좌표 — 각도 무관 머즐 FX
+  airFloat:(id)=>!!AIR_FLOAT[id],   // 이 모델이 공중(고정 부양) 유닛인지 — 랩 att.y 판정용(모듈 스코프 AIR_FLOAT 노출)
+  airLiftPx:()=>((typeof AIR_LIFT_PX!=='undefined'?AIR_LIFT_PX:0)*Math.cos(typeof VIEW_TILT!=='undefined'?VIEW_TILT:0)),   // 공중유닛 부양 화면 px(잡기 히트박스 보정)
+  scaleOf:(id)=>(typeof SCALE!=='undefined'?(SCALE[id]||MODEL_SCALE):13),   // 모델 시각 크기(관성 크기비례용)
   centerAt:(uid)=>{ const m=models.get(uid); return (m&&m.centerN)?m.centerN:null; },   // 유닛 몸 중앙 2D 좌표 — 발이 아닌 몸통 조준용
   sync(units, W, H, dt, sel, enemies, selEnemy, scaleMul, view){
     if(!ready||!W||!H) return;
@@ -10365,12 +10456,12 @@ window.M3D={
         m.anim.position.y = m.h*AURA_LIFT + Math.sin(m.hover)*m.h*HOVER_AMP*0.5;
         m.anim.rotation.z = Math.sin(m.hover*0.6)*0.035; m.anim.rotation.x = 0;
       }
-      if(AIR_FLOAT[_id]){ // 공중 비행체(템페스트·스카이댄서): 높이 부양 + 둥실 — 본체만(선택링·그림자는 지면)
-        m.hover=(m.hover||0)+dt*HOVER_SPD;
-        m.anim.position.x = Math.sin(m.hover*0.8+1.3)*m.h*0.04;
-        m.anim.position.y = m.h*AIR_FLOAT[_id] + Math.sin(m.hover)*m.h*HOVER_AMP*0.6;
-        m.anim.rotation.z = Math.sin(m.hover*0.6)*0.05; m.anim.rotation.x = 0;
-        if(m.shadow) m.shadow.material.opacity=0.26+Math.sin(m.hover)*0.05;   // 부유 리듬에 맞춰 공통 그림자 농도 변화
+      if(AIR_FLOAT[_id]){ // 공중 비행체: 고정 화면높이 부양(크기·모델 무관 — 전 공중유닛 동일 고도). 정지 부양(흔들림 없음)
+        const _scA=(SCALE[_id]||MODEL_SCALE);
+        m.anim.position.x = 0;
+        m.anim.position.y = AIR_LIFT_PX/_scA;   // 고정 px 부양(÷스케일 → 화면상 균일)
+        m.anim.rotation.z = 0; m.anim.rotation.x = 0;
+        if(m.shadow) m.shadow.material.opacity=0.26;   // 그림자 농도 고정
       }
       if(m.aura){ m.auraT+=dt; const a=m.aura;  // 에너지 오라: 은은한 맥동(밝기·크기 미세 변화)
         const p=1+Math.sin(m.auraT*2.0)*0.05, b=a[0]._base*p;
@@ -10574,10 +10665,10 @@ window.M3D={
       } else if(mu.atkT>0 && mu.atkInner){ if(mu.inner)mu.inner.visible=false; if(mu.runInner)mu.runInner.visible=false; if(mu.gun)mu.gun.visible=false; mu.atkInner.visible=true; mu.anim.position.set(0,0,0); mu.anim.rotation.set(0,0,0); mu.atkMixer.update(dt); }
       else { if(mu.inner)mu.inner.visible=true; if(mu.runInner)mu.runInner.visible=false; if(mu.gun)mu.gun.visible=true; if(mu.atkInner)mu.atkInner.visible=false;
         mu.breathe=(mu.breathe||0)+dt*BREATHE_SPD; mu.anim.position.y=Math.sin(mu.breathe)*mu.h*BREATHE_AMP; mu.anim.position.x=0; mu.anim.rotation.set(0,0,0); }
-      if(AIR_FLOAT[_id]){ mu.hover=(mu.hover||0)+dt*HOVER_SPD;   // 공중 비행체: 토벌장에서도 동일 부양
-        mu.anim.position.y=mu.h*AIR_FLOAT[_id]+Math.sin(mu.hover)*mu.h*HOVER_AMP*0.6;
-        mu.anim.rotation.z=Math.sin(mu.hover*0.6)*0.05;
-        if(mu.shadow) mu.shadow.material.opacity=0.26+Math.sin(mu.hover)*0.05; }
+      if(AIR_FLOAT[_id]){ const _scA=(SCALE[_id]||MODEL_SCALE);   // 공중 비행체: 토벌장에서도 동일 정지 부양
+        mu.anim.position.y=AIR_LIFT_PX/_scA;
+        mu.anim.rotation.z=0;
+        if(mu.shadow) mu.shadow.material.opacity=0.26; }
     }
     renderer.render(scene,camera);
   }
