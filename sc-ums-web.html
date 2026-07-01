@@ -6856,7 +6856,12 @@ async function bootApp(){ await initAuth();
   setTimeout(()=>{ if(AUTH.user) openMapSelect(); else openAuth(); }, 1700); }   // 오프닝 최소 노출
 // ── 로그인 화면 ──
 let _authTab='login';
-function openAuth(){ document.getElementById('authId').value=''; document.getElementById('authPw').value='';
+function openAuth(){
+  // (임시) 로그인 화면 건너뛰기 — 어떤 경로로 호출돼도 자동 로그인 후 맵 선택으로. 되돌릴 때 이 3줄 제거
+  if(!AUTH.user) AUTH.user={id:'dev', nick:'플레이어'};
+  try{ _lsSet('nm_session', AUTH.user); }catch(e){}
+  if(typeof openMapSelect==='function') openMapSelect(); return;
+  document.getElementById('authId').value=''; document.getElementById('authPw').value='';
   document.getElementById('authNick').value=''; document.getElementById('authPw2').value='';
   authMode('login'); showAppScreen('auth'); if(typeof bgmStart==='function') bgmStart('lobby'); }   // 로그인 화면부터 로비 BGM
 function authMode(m){ _authTab=m;
