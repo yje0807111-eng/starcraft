@@ -1427,6 +1427,7 @@
   .stUnitCard{padding:8px 6px;border-radius:9px;text-align:center;cursor:pointer;background:rgba(30,40,54,.8);border:1px solid rgba(255,255,255,.08);font-size:11px;font-weight:700;color:#cfe0f2}
   .stUnitCard.sel{border-color:#7fe0ff;box-shadow:0 0 10px rgba(80,200,255,.4)}
   .stUnitCard .uc{font-size:20px;line-height:1.2}.stUnitCard .ucCost{color:#ffd24a;font-size:10px}
+  .stUnitCard .ucProd{color:#9fd9ff;font-size:9px;font-weight:700;margin-top:2px;line-height:1.25;opacity:.92}
   /* 직스 좌상단 로테이션 리더보드(라운드 자리 대체) */
   #stLead{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:12px;color:#dbe6f5}
   #stLead .lp{color:#9fd0ff}#stLead .lm{color:#ffd24a}#stLead .lg{color:#8fe6a0}
@@ -2375,7 +2376,7 @@
       </div>
       <!-- 직스(컴퓨터가 싸운다) 건설 패널 -->
       <div id="stBuildBp" class="stBp hide">
-        <div class="stBpHead">🏗 건설 — 내 진영 타일에 생산 건물 배치</div>
+        <div class="stBpHead">🏗 건설지 — 빈 타일에 생산 건물을 지으세요</div>
         <div id="stBuildPalette"></div>
         <div class="stBpHint">건물마다 생산 유닛이 배정됩니다. 매 라운드 일괄 출격!</div>
       </div>
@@ -8871,6 +8872,11 @@ const STK_UNITS={
   hydra:     {name:'리퍼',      ico:'🦎', cost:110, hp:215, dmg:18, rng:215, cd:0.95, spd:300, size:17},
   matron:    {name:'브루드마더', ico:'🧬', cost:210, hp:470, dmg:26, rng:70,  cd:0.95, spd:205, size:22, melee:true},
   thornqueen:{name:'가시여왕',   ico:'🐛', cost:330, hp:360, dmg:42, rng:300, cd:1.70, spd:125, size:22, splash:150},
+  // ── 건설지 확장 유닛(직스 밸런스) — 모델 기존 재사용 ──
+  ghost:     {name:'팬텀',      ico:'👻', cost:130, hp:110, dmg:28, rng:260, cd:1.40, spd:300, size:15},   // 유니온 저격 보병(유리 대포)
+  snapper:   {name:'스내퍼',    ico:'🐛', cost:90,  hp:130, dmg:14, rng:190, cd:0.70, spd:360, size:15},   // 스웜 고속 소형 다수
+  stinger:   {name:'스팅어',    ico:'🐝', cost:160, hp:90,  dmg:40, rng:210, cd:1.60, spd:300, size:15, splash:120},   // 스웜 광역 유리대포
+  falcon:    {name:'팔콘',      ico:'🦅', cost:150, hp:170, dmg:22, rng:240, cd:1.00, spd:320, size:17},   // 에테리얼 기동 원거리
 };
 const STK_RACES={
   terran:  { key:'terran',  name:'유니온',   sub:'인간', desc:'보병·기계', col:'#4aa8ff', icon:'🛡️', units:['marine','goliath','tank'] },
@@ -8878,6 +8884,27 @@ const STK_RACES={
   zerg:    { key:'zerg',    name:'스웜',     sub:'군체', desc:'유기체',   col:'#9fd356', icon:'🦎', units:['hydra','matron','thornqueen'] },
 };
 const STK_RACE_ORDER=['terran','zerg','protoss'];   // 표시 순서: 유니온 · 스웜 · 에테리얼 (관리자와 통일)
+// 종족별 생산 건물(스타식 이름) → 건물마다 출격 주기에 배정 유닛을 지정 수량만큼 자동 생산
+const STK_BUILDINGS={
+  terran:[
+    {key:'supply',  name:'서플라이 디팟', ico:'🏠', cost:250, produces:[{id:'marine',  n:3}]},
+    {key:'barracks',name:'배럭',          ico:'🏛', cost:320, produces:[{id:'ghost',   n:2}]},
+    {key:'factory', name:'팩토리',        ico:'🏭', cost:420, produces:[{id:'goliath', n:2}]},
+    {key:'armory',  name:'아머리',        ico:'🛠', cost:480, produces:[{id:'tank',    n:1}]},
+  ],
+  zerg:[
+    {key:'pool',    name:'스포닝 풀',     ico:'🥚', cost:250, produces:[{id:'hydra',   n:3}]},
+    {key:'den',     name:'히드라 덴',     ico:'🕳', cost:320, produces:[{id:'snapper', n:2}]},
+    {key:'spire',   name:'스파이어',      ico:'🗼', cost:420, produces:[{id:'stinger', n:2}]},
+    {key:'cavern',  name:'울트라 케이번', ico:'🦴', cost:480, produces:[{id:'matron',  n:1}]},
+  ],
+  protoss:[
+    {key:'gateway', name:'게이트웨이',        ico:'🌀', cost:250, produces:[{id:'blade',   n:3}]},
+    {key:'core',    name:'사이버네틱스 코어', ico:'💠', cost:320, produces:[{id:'dragoon', n:2}]},
+    {key:'robo',    name:'로보틱스 베이',     ico:'🤖', cost:420, produces:[{id:'archon',  n:1}]},
+    {key:'stargate',name:'스타게이트',        ico:'✨', cost:480, produces:[{id:'falcon',  n:2}]},
+  ],
+};
 function strikeRandomRace(){ return STK_RACE_ORDER[Math.floor(Math.random()*STK_RACE_ORDER.length)]; }
 function strikeRaceUnits(side){ const r=side&&side.race; return (STK_RACES[r]||STK_RACES.terran).units.slice(); }   // 그 진영 종족의 소환 가능 유닛 id
 // 직스 타일 에셋(기존 assets/tiles 재사용)
@@ -8899,7 +8926,7 @@ function strikeDrawGround(ctx,W,H,S,scale){ const img=STRIKE_GROUND, tilePx=460*
 function strikeTileRect(ctx,x,y,w,h,img,tilePx){ ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip();
   const p=strikePattern(ctx,img); if(p){ const s=tilePx/img.naturalWidth; if(p.setTransform) p.setTransform(new DOMMatrix([s,0,0,s,x,y])); ctx.fillStyle=p; } else ctx.fillStyle='#16242e';
   ctx.fillRect(x,y,w,h); ctx.restore(); }
-const STK_TABLABEL ={ Main:'전투', Unit:'건물', Upgrade:'경제', Players:'관전' };
+const STK_TABLABEL ={ Main:'전투', Unit:'건설지', Upgrade:'경제', Players:'관전' };
 const STK_NEMOLABEL={ Main:'메인', Unit:'유닛뽑기', Upgrade:'업그레이드', Players:'플레이어' };
 function strikeNewState(){ const W=mapCfg('world',4800), hp=mapCfg('baseHp',3000), inc=mapCfg('incomeBase',150), mc=mapCfg('mineCost',300), mi=mapCfg('mineIncome',120);
   const sHp=mapCfg('secHp',Math.round(hp*0.5)), cHp=mapCfg('centralHp',Math.round(hp*0.35));
@@ -8923,6 +8950,8 @@ function strikeRanked(){ const S=STK; return [S.me,S.ai].slice().sort((a,b)=> (b
 
 // ── 라이프사이클 ──
 function strikeSetTabLabels(map){ for(const t in map){ const el=document.querySelector('.tab[data-tab="'+t+'"]'); if(!el) continue;
+  const span=el.querySelector('#unitTabLbl');   // Unit 탭은 라벨이 <span>에 들어있음 → 텍스트노드 덧붙이기(겹침) 대신 스팬 갱신
+  if(span){ span.textContent=map[t]; continue; }
   let tn=null; el.childNodes.forEach(n=>{ if(n.nodeType===3 && n.textContent.trim()) tn=n; });
   if(tn) tn.textContent=map[t]; else el.appendChild(document.createTextNode(map[t])); } }
 function strikeHideNemoChrome(on){ ['coopBossBar','bossPopup','mergeFab','skillFab','autoFab','pbossBtn','deselTop','cvMarine','cvFx','mergeZone','miniWrap','defaultCmd','unitCmd','zoneLabel'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display=on?'none':''; });
@@ -9270,11 +9299,12 @@ const FX={
 function strikeFx(u,tx,ty){ const S=STK; if(!S) return; if(!S.fx||!S.fx.shots) S.fx=FX.store(); FX.spawn(S.fx, u.id, u.x,u.y, tx,ty, {speed:2600, unitSize:u.size}); }   // 직스 → 공용 FX 코어(유닛 크기 비례)
 function strikeFindUnit(arr,uid){ if(!uid) return null; for(const u of arr){ if(u.uid===uid&&!u.dead) return u; } return null; }
 function strikeAlert(allies, attackerUid, ax, ay, r){ const r2=r*r; for(const a of allies){ if(a.dead||a.wait>0||a.tgtUid) continue; const dx=a.x-ax, dy=a.y-ay; if(dx*dx+dy*dy<=r2) a.tgtUid=attackerUid; } }   // 주변 아군 가담
-function strikeSpawnWave(){ const S=STK; if(!S) return;   // 출격 주기(30초): ME=내 생산 건물에서 / AI=컴퓨터 자동 소환
-  const cells=(S.build&&S.build.cells)||[]; let built=0;
-  for(const c of cells){ if(c.built>=1){ strikeSpawnUnit('me', c.type.id); built++; } }
-  if(!built){ strikeSpawnUnit('me'); strikeSpawnUnit('me'); }   // 건물 없으면 기본 소량(전멸 방지)
-  const n=Math.max(2, built||4)+(Math.random()*2|0); for(let i=0;i<n;i++) strikeSpawnUnit('ai'); }   // AI는 내 생산량에 맞춰 대응
+function strikeSpawnWave(){ const S=STK; if(!S) return;   // 출격 주기(30초): ME=내 생산 건물별 배정 유닛 / AI=컴퓨터 자동 소환
+  const cells=(S.build&&S.build.cells)||[]; let myCount=0;
+  for(const c of cells){ if(c.built>=1){ const prod=(c.type&&c.type.produces)||[{id:c.type.id,n:1}];   // 건물별 배정 유닛 수량만큼 생산
+    for(const p of prod){ for(let k=0;k<p.n;k++) strikeSpawnUnit('me', p.id); myCount+=p.n; } } }
+  if(!myCount){ strikeSpawnUnit('me'); strikeSpawnUnit('me'); myCount=2; }   // 건물 없으면 기본 소량(전멸 방지)
+  const n=Math.max(2, myCount)+(Math.random()*2|0); for(let i=0;i<n;i++) strikeSpawnUnit('ai'); }   // AI는 내 총 생산량에 맞춰 대응
 function strikeFrontStruct(side){ const S=STK, foe=S[side==='me'?'ai':'me'];   // 가장 앞 신전: 중립 살아있으면 중립(그 뒤 신전은 못 때림) → 적 2차 → 적 메인
   if(S.central && !S.central.dead) return S.central;
   if(foe.sec && !foe.sec.dead) return foe.sec;
@@ -9587,7 +9617,7 @@ function strikeSwitchTab(id,el){ const S=STK; if(!S) return; G.tab=id; S.userCam
   (el||document.querySelector('.tab[data-tab="'+id+'"]'))?.classList.add('on');
   document.querySelectorAll('.gview').forEach(v=>v.classList.toggle('on', v.id==='vMain'));   // 직스는 항상 전장/건설 캔버스 유지
   document.querySelectorAll('.bp').forEach(p=>p.classList.toggle('on', p.id==='bp'+id));        // 하단 패널은 nemo .bp 재사용
-  const zl=document.getElementById('zoneLabel'); if(zl) zl.textContent={Main:'⚔️ 전장',Unit:'🏗 건설 구역',Upgrade:'💰 경제',Players:'👁 관전'}[id]||'';
+  const zl=document.getElementById('zoneLabel'); if(zl) zl.textContent={Main:'⚔️ 전장',Unit:'🏗 건설지',Upgrade:'💰 경제',Players:'👁 관전'}[id]||'';
   if(id==='Upgrade') strikeRenderEcon(); else if(id==='Unit') strikeRenderBuild(); else if(id==='Players') strikeRenderSpec();
   if(typeof playSfx==='function') playSfx('ui_tab'); }
 
@@ -9600,11 +9630,13 @@ function strikeRenderEcon(){ const S=STK; if(!S) return; const me=S.me; const se
   set('ecMineInc',me.mines*S.mineIncome); set('ecTotal',strikeIncome(me)); set('ecMineCost',me.mineCost);
   const b=document.getElementById('ecBuyMine'); if(b) b.disabled=me.gold<me.mineCost; }
 // 종족별 빌드 메뉴(그 종족 소환 유닛 = 지을 수 있는 생산 건물). STK_UNITS에서 이름·아이콘·비용 도출
-function strikeBuildable(race){ const r=race||(STK&&STK.me&&STK.me.race)||'terran'; const ids=(STK_RACES[r]||STK_RACES.terran).units;
-  return ids.map(id=>{ const d=STK_UNITS[id]||{}; return {id:id, name:d.name||id, ico:d.ico||'⚙️', cost:d.cost||150}; }); }
+function strikeBuildable(race){ const r=race||(STK&&STK.me&&STK.me.race)||'terran';
+  return (STK_BUILDINGS[r]||STK_BUILDINGS.terran).map(b=>({key:b.key, name:b.name, ico:b.ico, cost:b.cost, produces:b.produces})); }
+// 건물 카드에 표시할 생산 유닛 요약 문자열(예: "레인저×3")
+function strikeProdLabel(b){ const ps=(b&&b.produces)||[]; return ps.map(p=>{ const d=STK_UNITS[p.id]||{}; return (d.name||p.id)+'×'+p.n; }).join(', '); }
 function strikeBuildMenu(){ const S=STK; if(!S) return []; if(!S.buildMenu) S.buildMenu=strikeBuildable(S.me&&S.me.race); return S.buildMenu; }   // 캐시(placing 객체 동일성 유지)
 function strikeRenderBuild(){ const el=document.getElementById('stBuildPalette'); if(!el) return; const S=STK; const menu=strikeBuildMenu();
-  el.innerHTML=menu.map((u,i)=>`<div class="stUnitCard${S&&S.build&&S.build.placing===u?' sel':''}" onclick="strikePickBuild(${i})"><div class="uc">${u.ico}</div>${u.name}<div class="ucCost">⛁${u.cost}</div></div>`).join(''); }
+  el.innerHTML=menu.map((u,i)=>`<div class="stUnitCard${S&&S.build&&S.build.placing===u?' sel':''}" onclick="strikePickBuild(${i})"><div class="uc">${u.ico}</div>${u.name}<div class="ucProd">${strikeProdLabel(u)}</div><div class="ucCost">⛁${u.cost}</div></div>`).join(''); }
 // 관전: nemo .plbtn/.plGrid(4×2) 재사용. 팀 1-4(아군 파랑) vs 5-8(적군 빨강). 빈 자리=잠금
 function strikePColor(slot){ return (typeof PLAYER_VIEW_COLORS!=='undefined')?PLAYER_VIEW_COLORS[(slot-1)%PLAYER_VIEW_COLORS.length]:'#7fd0ff'; }
 function strikeSpecBuildCells(slot){ const S=STK; if(!S.specBuilds) S.specBuilds={};   // 데모 건물(추후 실제 멀티 데이터로 교체)
