@@ -8866,7 +8866,7 @@ const STK_UNITS={
   tank:      {name:'브레이커',   ico:'🛡', cost:350, hp:430, dmg:72, rng:330, cd:2.30, spd:115, size:24, splash:160},
   // 🔮 에테리얼 — 사이오닉 (원거리 포격 / 근접 돌격 / 광역 탱커)
   dragoon:   {name:'센티넬',    ico:'🤖', cost:200, hp:300, dmg:24, rng:245, cd:1.25, spd:230, size:18},
-  blade:     {name:'질럿',      ico:'⚔️', cost:120, hp:300, dmg:22, rng:62,  cd:0.80, spd:340, size:17, melee:true},
+  blade:     {name:'워든',      ico:'⚔️', cost:120, hp:300, dmg:22, rng:62,  cd:0.80, spd:340, size:17, melee:true},
   archon:    {name:'보이드',    ico:'🔮', cost:340, hp:400, dmg:34, rng:130, cd:1.05, spd:185, size:23, splash:120},
   // 🦎 스웜 — 유기체 (저가 원거리 / 근접 다수 / 도트 공성)
   hydra:     {name:'리퍼',      ico:'🦎', cost:110, hp:215, dmg:18, rng:215, cd:0.95, spd:300, size:17},
@@ -8877,32 +8877,63 @@ const STK_UNITS={
   snapper:   {name:'스내퍼',    ico:'🐛', cost:90,  hp:130, dmg:14, rng:190, cd:0.70, spd:360, size:15},   // 스웜 고속 소형 다수
   stinger:   {name:'스팅어',    ico:'🐝', cost:160, hp:90,  dmg:40, rng:210, cd:1.60, spd:300, size:15, splash:120},   // 스웜 광역 유리대포
   falcon:    {name:'팔콘',      ico:'🦅', cost:150, hp:170, dmg:22, rng:240, cd:1.00, spd:320, size:17},   // 에테리얼 기동 원거리
+  // ── 관리자 맵 유닛 이식(건설지 확장) — id=gmodel 키 → 모델·이펙트·부양 자동 연결 ──
+  // 🛡 유니온 확장
+  machinegun:{name:'발칸',      ico:'🔫', cost:130, hp:180, dmg:11, rng:210, cd:0.45, spd:200, size:18},   // 고속 기관총
+  racer:     {name:'레이서',    ico:'🏍', cost:120, hp:150, dmg:22, rng:190, cd:0.90, spd:330, size:18},   // 경량 고속 차량
+  skyguard:  {name:'템페스트',  ico:'✈️', cost:200, hp:280, dmg:28, rng:250, cd:1.10, spd:300, size:20},   // 공중 전투기
+  hellfire:  {name:'헬파이어',  ico:'🔥', cost:220, hp:200, dmg:34, rng:240, cd:1.40, spd:240, size:18, splash:130},   // 공중 미사일(광역)
+  dreadnought:{name:'드레드노트',ico:'💥', cost:360, hp:620, dmg:60, rng:300, cd:2.20, spd:130, size:24, splash:150},   // 공중 중포함
+  aegis:     {name:'이지스',    ico:'🛡', cost:480, hp:1400,dmg:14, rng:230, cd:1.20, spd:110, size:22},   // 공중 방벽(초고체력 저공격)
+  // 🦎 스웜 확장
+  venom:     {name:'베놈',      ico:'🐛', cost:130, hp:200, dmg:22, rng:230, cd:1.00, spd:260, size:18},   // 공중 산성 포자
+  medusa:    {name:'메두사',    ico:'🐍', cost:240, hp:340, dmg:34, rng:240, cd:1.30, spd:180, size:20, splash:120},   // 공중 사이오닉 광역
+  wyvern:    {name:'와이번',    ico:'🐲', cost:420, hp:750, dmg:70, rng:250, cd:1.30, spd:240, size:22},   // 공중 준보스(고화력)
+  behemoth:  {name:'베히모스',  ico:'🦣', cost:620, hp:1100,dmg:95, rng:300, cd:2.40, spd:120, size:26, splash:180},   // 공중 대형 보스(광역)
+  // 🔮 에테리얼 확장
+  skydancer: {name:'스카이댄서',ico:'💃', cost:180, hp:240, dmg:24, rng:250, cd:1.00, spd:320, size:18},   // 공중 고속 기동
+  archangel: {name:'아크엔젤',  ico:'👼', cost:420, hp:640, dmg:32, rng:280, cd:1.60, spd:140, size:24, splash:150},   // 공중 성채(광역)
+  kronos:    {name:'크로노스',  ico:'⏳', cost:340, hp:520, dmg:42, rng:300, cd:1.80, spd:150, size:22, splash:140},   // 공중 시공 포격(광역)
 };
 const STK_RACES={
-  terran:  { key:'terran',  name:'유니온',   sub:'인간', desc:'보병·기계', col:'#4aa8ff', icon:'🛡️', units:['marine','goliath','tank'] },
-  protoss: { key:'protoss', name:'에테리얼', sub:'외계', desc:'사이오닉', col:'#ffc040', icon:'🔮', units:['dragoon','blade','archon'] },
-  zerg:    { key:'zerg',    name:'스웜',     sub:'군체', desc:'유기체',   col:'#9fd356', icon:'🦎', units:['hydra','matron','thornqueen'] },
+  terran:  { key:'terran',  name:'유니온',   sub:'인간', desc:'보병·기계', col:'#4aa8ff', icon:'🛡️', units:['marine','ghost','machinegun','racer','goliath','tank','skyguard','hellfire','dreadnought'] },
+  protoss: { key:'protoss', name:'에테리얼', sub:'외계', desc:'사이오닉', col:'#ffc040', icon:'🔮', units:['blade','dragoon','archon','falcon','skydancer','kronos','archangel'] },
+  zerg:    { key:'zerg',    name:'스웜',     sub:'군체', desc:'유기체',   col:'#9fd356', icon:'🦎', units:['hydra','snapper','thornqueen','matron','venom','stinger','medusa'] },
 };
 const STK_RACE_ORDER=['terran','zerg','protoss'];   // 표시 순서: 유니온 · 스웜 · 에테리얼 (관리자와 통일)
 // 종족별 생산 건물(스타식 이름) → 건물마다 출격 주기에 배정 유닛을 지정 수량만큼 자동 생산
 const STK_BUILDINGS={
   terran:[
-    {key:'supply',  name:'서플라이 디팟', ico:'🏠', cost:250, produces:[{id:'marine',  n:3}]},
-    {key:'barracks',name:'배럭',          ico:'🏛', cost:320, produces:[{id:'ghost',   n:2}]},
-    {key:'factory', name:'팩토리',        ico:'🏭', cost:420, produces:[{id:'goliath', n:2}]},
-    {key:'armory',  name:'아머리',        ico:'🛠', cost:480, produces:[{id:'tank',    n:1}]},
+    {key:'supply',  name:'서플라이 디팟', ico:'🏠', cost:250, produces:[{id:'marine',     n:3}]},
+    {key:'barracks',name:'배럭',          ico:'🏛', cost:320, produces:[{id:'ghost',      n:2}]},
+    {key:'bunker',  name:'벙커',          ico:'🧱', cost:300, produces:[{id:'machinegun', n:2}]},
+    {key:'machshop',name:'머시너리',      ico:'🏍', cost:320, produces:[{id:'racer',      n:2}]},
+    {key:'factory', name:'팩토리',        ico:'🏭', cost:440, produces:[{id:'goliath',    n:2}]},
+    {key:'armory',  name:'아머리',        ico:'🛠', cost:480, produces:[{id:'tank',       n:1}]},
+    {key:'starport',name:'스타포트',      ico:'✈️', cost:460, produces:[{id:'skyguard',   n:2}]},
+    {key:'missile', name:'미사일 베이',   ico:'🚀', cost:500, produces:[{id:'hellfire',   n:2}]},
+    {key:'vessel',  name:'배슬 야드',     ico:'💥', cost:640, produces:[{id:'dreadnought',n:1}]},
+    {key:'aegis',   name:'이지스 도크',   ico:'🛡', cost:760, produces:[{id:'aegis',      n:1}]},
   ],
   zerg:[
-    {key:'pool',    name:'스포닝 풀',     ico:'🥚', cost:250, produces:[{id:'hydra',   n:3}]},
-    {key:'den',     name:'히드라 덴',     ico:'🕳', cost:320, produces:[{id:'snapper', n:2}]},
-    {key:'spire',   name:'스파이어',      ico:'🗼', cost:420, produces:[{id:'stinger', n:2}]},
-    {key:'cavern',  name:'울트라 케이번', ico:'🦴', cost:480, produces:[{id:'matron',  n:1}]},
+    {key:'pool',    name:'스포닝 풀',     ico:'🥚', cost:250, produces:[{id:'hydra',      n:3}]},
+    {key:'creep',   name:'크립 콜로니',   ico:'🟢', cost:240, produces:[{id:'snapper',    n:3}]},
+    {key:'den',     name:'히드라 덴',     ico:'🕳', cost:340, produces:[{id:'venom',      n:2}]},
+    {key:'garden',  name:'가시 정원',     ico:'🌵', cost:420, produces:[{id:'thornqueen', n:2}]},
+    {key:'spire',   name:'스파이어',      ico:'🗼', cost:440, produces:[{id:'stinger',    n:2}]},
+    {key:'gspire',  name:'그레이터 스파이어', ico:'🐍', cost:520, produces:[{id:'medusa', n:1}]},
+    {key:'cavern',  name:'울트라 케이번', ico:'🦴', cost:480, produces:[{id:'matron',     n:1}]},
+    {key:'nest',    name:'와이번 소굴',   ico:'🐲', cost:720, produces:[{id:'wyvern',     n:1}]},
+    {key:'pit',     name:'베히모스 굴',   ico:'🦣', cost:840, produces:[{id:'behemoth',   n:1}]},
   ],
   protoss:[
-    {key:'gateway', name:'게이트웨이',        ico:'🌀', cost:250, produces:[{id:'blade',   n:3}]},
-    {key:'core',    name:'사이버네틱스 코어', ico:'💠', cost:320, produces:[{id:'dragoon', n:2}]},
-    {key:'robo',    name:'로보틱스 베이',     ico:'🤖', cost:420, produces:[{id:'archon',  n:1}]},
-    {key:'stargate',name:'스타게이트',        ico:'✨', cost:480, produces:[{id:'falcon',  n:2}]},
+    {key:'gateway', name:'게이트웨이',        ico:'🌀', cost:250, produces:[{id:'blade',     n:3}]},
+    {key:'core',    name:'사이버네틱스 코어', ico:'💠', cost:340, produces:[{id:'dragoon',   n:2}]},
+    {key:'robo',    name:'로보틱스 베이',     ico:'🤖', cost:440, produces:[{id:'archon',    n:1}]},
+    {key:'stargate',name:'스타게이트',        ico:'✨', cost:420, produces:[{id:'falcon',    n:2}]},
+    {key:'beacon',  name:'플릿 비콘',         ico:'💃', cost:460, produces:[{id:'skydancer', n:2}]},
+    {key:'tribunal',name:'아비터 트리뷰널',   ico:'⏳', cost:580, produces:[{id:'kronos',    n:1}]},
+    {key:'sanctum', name:'아크엔젤 성소',     ico:'👼', cost:700, produces:[{id:'archangel', n:1}]},
   ],
 };
 function strikeRandomRace(){ return STK_RACE_ORDER[Math.floor(Math.random()*STK_RACE_ORDER.length)]; }
@@ -9184,6 +9215,21 @@ const ATK_STYLE={
   worker_human:{kind:'push', color:'#dfe7f2', melee:true, hit:0.6},   // 유니온 일꾼: 펀치 — hit초 뒤(타격 순간) 피격
   worker_swarm:{kind:'spit', color:'#a6e23c', count:3, boom:6},   // 스웜 일꾼: 독 가래를 여러 갈래로 뱉음
   worker_light:{kind:'shock', color:'#bfe6ff', beam:true},   // 에테리얼 일꾼: 두 손→중앙 전기 모임 + 대상 미세 감전
+  // ── 관리자 맵 유닛 이식 이펙트(무기 타입별) — 기존 _default(총알) 대체 ──
+  machinegun:{kind:'mg',     color:'#ffe2a0', burst:4, burstGap:0.03},   // 발칸: 기관총 연사
+  hellfire:  {kind:'missile',color:'#ff9a5a'},   // 헬파이어: 화염 미사일
+  dreadnought:{kind:'shell', color:'#ffcf9a', spd:2.2},   // 드레드노트: 중포
+  aegis:     {kind:'bullet', color:'#bfe4ff'},   // 이지스: 방어포
+  snapper:   {kind:'needle', color:'#a8d95a'},   // 스내퍼: 가시
+  stinger:   {kind:'missile',color:'#c8e89a'},   // 스팅어: 산성 미사일
+  venom:     {kind:'needle', color:'#a6e23c'},   // 베놈: 산성 가시
+  medusa:    {kind:'psi',    color:'#c7a0ff'},   // 메두사: 사이오닉
+  wyvern:    {kind:'needle', color:'#bfe89a', count:2},   // 와이번: 다연발 가시
+  behemoth:  {kind:'shell',  color:'#d0b070', spd:2.0},   // 베히모스: 대형 포
+  falcon:    {kind:'plasma', color:'#ffd66a'},   // 팔콘: 플라즈마
+  skydancer: {kind:'plasma', color:'#ffe08a'},   // 스카이댄서: 플라즈마
+  archangel: {kind:'plasma', color:'#ffd66a'},   // 아크엔젤: 플라즈마 포
+  kronos:    {kind:'plasma', color:'#ffcf6a'},   // 크로노스: 시공 플라즈마
   _default:  {kind:'bullet', color:'#ffe2a0'},
 };
 // store={shots,impacts,melee}. 좌표는 해당 맵의 월드 단위. 그리기는 toScreen 변환 + sz(픽셀 스케일)만 맵이 공급.
