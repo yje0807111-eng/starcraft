@@ -2376,11 +2376,9 @@
       <div id="fxLabWrap">
         <div id="fxLabGrid"></div>
       </div>
-      <!-- 직스(컴퓨터가 싸운다) 건설 패널 -->
+      <!-- 직스(컴퓨터가 싸운다) 건설 패널 — 설명은 맵 로딩화면에서 안내(화면 상시 텍스트 제거) -->
       <div id="stBuildBp" class="stBp hide">
-        <div class="stBpHead">🏗 건설지 — 빈 타일에 생산 건물을 지으세요</div>
         <div id="stBuildPalette"></div>
-        <div class="stBpHint">건물마다 생산 유닛이 배정됩니다. 매 라운드 일괄 출격!</div>
       </div>
       <!-- 시민/유닛 프로필(선택 시) — 상단에 컴팩트하게 -->
       <div class="scPanel" id="shopProfile" style="display:none">
@@ -8975,7 +8973,7 @@ function strikeNewState(){ const W=mapCfg('world',4800), hp=mapCfg('baseHp',3000
          sec:{x:W*0.661,y:W*0.339, hp:sHp, max:sHp, dead:false} },   // 우상단 메인 + 2차 신전 / compCol=적군 컴퓨터 색
     central:{x:W*0.5,y:W*0.5, hp:cHp, max:cHp, owner:null, dead:false},   // 중앙 중립 보너스 신전(깬 팀 메인에 쉴드)
     cam:{x:W/2,y:W/2}, zoom:STK_DEFZOOM, viewWorld:Math.round(2600/STK_DEFZOOM), cw:0, ch:0, sel:null, userCam:false,
-    build:{ W:2400, H:1600, cols:6, rows:4, cam:{x:1200,y:800}, zoom:1, zoomCur:1, _sc:1, _ox:0, _oy:0, cells:[], worker:null, placing:null },   // 건설 보드 + 생산 건물(cells)·일꾼(worker)·배치선택(placing)
+    build:{ W:2400, H:1600, cols:12, rows:8, cam:{x:1200,y:800}, zoom:1, zoomCur:1, _sc:1, _ox:0, _oy:0, cells:[], worker:null, placing:null },   // 건설 보드(세분 그리드) + 생산 건물(cells,풋프린트)·일꾼(worker)·배치선택(placing)
     leadT:0, leadIdx:0, sizeCmp:false, cmpUnits:null };
 }
 function strikeIncome(side){ const S=STK; if(!S) return 0; side=side||S.me; return S.incomeBase + side.mines*S.mineIncome; }
@@ -9001,7 +8999,7 @@ function strikeStart(){ if(typeof bgmStop==='function') bgmStop();
   STK=strikeNewState();
   STK.me.race=(STK_RACES[_selRace]?_selRace:'terran'); STK.ai.race=strikeRandomRace();   // 내 종족=선택, 상대=랜덤 → 각자 그 종족 유닛만 소환
   STK.buildMenu=strikeBuildable(STK.me.race);   // 내 종족 빌드 메뉴 캐시(이전 판 잔존 방지)
-  { const b=STK.build, cw=b.W/b.cols, ch=b.H/b.rows; b.cells.push({col:2,row:1,type:STK.buildMenu[0],built:1,x:(2+0.5)*cw,y:(1+0.5)*ch}); b.workers=[]; for(let i=0;i<3;i++) b.workers.push({x:b.W*(0.34+i*0.16),y:b.H-180,task:null}); }   // 시작 생산 건물 1 + 일꾼 3
+  { const b=STK.build, cw=b.W/b.cols, ch=b.H/b.rows, t0=STK.buildMenu[0], fp=strikeFootprint(t0), col=Math.floor((b.cols-fp.w)/2), row=Math.floor((b.rows-fp.h)/2); b.cells.push({col:col,row:row,w:fp.w,h:fp.h,type:t0,built:1,x:(col+fp.w/2)*cw,y:(row+fp.h/2)*ch}); b.workers=[]; for(let i=0;i<3;i++) b.workers.push({x:b.W*(0.34+i*0.16),y:b.H-180,task:null}); }   // 시작 생산 건물 1(풋프린트) + 일꾼 3
   if(STK.sizeCmp){   // 크기 비교용 샘플 유닛: 중앙 신전 주변 4×2 그리드(월드 좌표)
     const W=STK.world, sp=560, cols=4;
     STK.cmpUnits=STRIKE_SAMPLE.map((s,i)=>{ const c=i%cols, r=Math.floor(i/cols);
@@ -9069,22 +9067,31 @@ function strikeDrawBuildMap(spec){ const S=STK; if(!S) return; const cvEl=docume
   // 외곽 네온 테두리(모바일: shadowBlur 없이 레이어 스트로크)
   ctx.strokeStyle='rgba(120,200,255,.2)'; ctx.lineWidth=6; ctx.strokeRect(ox,oy,pw,ph);
   ctx.strokeStyle='rgba(150,212,255,.75)'; ctx.lineWidth=2; ctx.strokeRect(ox,oy,pw,ph);
-  // 생산 건물 + 일꾼
+  // 건물 선택 시: 배치 가능 구역 하이라이트(풋프린트가 들어갈 수 있는 자리 초록)
+  if(!spec && b.placing){ const fp=strikeFootprint(b.placing);
+    ctx.save(); ctx.fillStyle='rgba(110,235,150,.15)'; ctx.strokeStyle='rgba(120,240,160,.55)'; ctx.lineWidth=1.4;
+    for(let row=0; row+fp.h<=b.rows; row++){ for(let col=0; col+fp.w<=b.cols; col++){
+      if(!strikeCellsFree(b,col,row,fp.w,fp.h)) continue;
+      const rx=ox+col*cwd+2, ry=oy+row*chd+2, rw=fp.w*cwd-4, rh=fp.h*chd-4;
+      ctx.fillRect(rx,ry,rw,rh); ctx.strokeRect(rx,ry,rw,rh); } }
+    ctx.restore(); }
+  // 생산 건물(풋프린트 크기 → 건물마다 다름) + 일꾼
   const sz=Math.min(cwd,chd)*0.6, mc=spec?(spec.col||'#7fd0ff'):(S.me.compCol||'#7fd0ff'), cells=spec?(spec.cells||[]):(b.cells||[]);
-  for(const c of cells){ const cx=ox+c.x*sc, cy=oy+c.y*sc, built=c.built>=1;
-    ctx.save(); ctx.globalAlpha=built?1:0.5; ctx.fillStyle=built?'rgba(30,52,84,.94)':'rgba(48,78,116,.5)'; _strkRR(ctx,cx-sz/2,cy-sz/2,sz,sz,sz*0.14); ctx.fill();
-    ctx.globalAlpha=built?1:0.7; ctx.strokeStyle=mc; ctx.lineWidth=Math.max(1.5,sz*0.05); _strkRR(ctx,cx-sz/2,cy-sz/2,sz,sz,sz*0.14); ctx.stroke();
-    ctx.globalAlpha=1; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font=Math.max(13,sz*0.48)+'px sans-serif'; ctx.fillStyle='#fff'; ctx.fillText(c.type.ico, cx, cy);
-    if(!built){ const bw=sz*0.82, by2=cy+sz/2+5; ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillRect(cx-bw/2,by2,bw,5); ctx.fillStyle='#6fe89a'; ctx.fillRect(cx-bw/2,by2,bw*c.built,5); }
+  for(const c of cells){ const fw=(c.w||1)*cwd, fh=(c.h||1)*chd, pad=Math.min(fw,fh)*0.12,
+    bx0=ox+(c.col!=null?c.col*cwd:c.x*sc-fw/2), by0=oy+(c.row!=null?c.row*chd:c.y*sc-fh/2),
+    rx=bx0+pad, ry=by0+pad, rw=fw-pad*2, rh=fh-pad*2, rr=Math.min(rw,rh)*0.14, built=c.built>=1;
+    ctx.save(); ctx.globalAlpha=built?1:0.5; ctx.fillStyle=built?'rgba(30,52,84,.94)':'rgba(48,78,116,.5)'; _strkRR(ctx,rx,ry,rw,rh,rr); ctx.fill();
+    ctx.globalAlpha=built?1:0.75; ctx.strokeStyle=mc; ctx.lineWidth=Math.max(1.5,Math.min(rw,rh)*0.05); _strkRR(ctx,rx,ry,rw,rh,rr); ctx.stroke();
+    ctx.globalAlpha=1; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font=Math.max(13,Math.min(rw,rh)*0.5)+'px sans-serif'; ctx.fillStyle='#fff'; ctx.fillText(c.type.ico, rx+rw/2, ry+rh/2);
+    if(!built){ const bw=rw*0.82, by2=ry+rh+5; ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillRect(rx+rw/2-bw/2,by2,bw,5); ctx.fillStyle='#6fe89a'; ctx.fillRect(rx+rw/2-bw/2,by2,bw*c.built,5); }
     ctx.restore(); }
   if(!spec) for(const wk of (b.workers||[])){ const wx=ox+wk.x*sc, wy=oy+wk.y*sc, wr=Math.max(5,sz*0.16);
     if(wk.task){ const tx=ox+wk.task.x*sc, ty=oy+wk.task.y*sc; ctx.strokeStyle='rgba(255,210,74,.45)'; ctx.setLineDash([5,4]); ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(wx,wy); ctx.lineTo(tx,ty); ctx.stroke(); ctx.setLineDash([]); }
     ctx.fillStyle='#ffd24a'; ctx.beginPath(); ctx.arc(wx,wy,wr,0,6.283); ctx.fill(); ctx.strokeStyle='#7a5a12'; ctx.lineWidth=1.5; ctx.stroke(); }
-  // 상단 라벨(화면 고정)
-  ctx.textBaseline='alphabetic'; ctx.fillStyle=spec?spec.col:'rgba(150,210,255,.9)'; ctx.font='700 13px Rajdhani, sans-serif'; ctx.textAlign='center';
-  if(spec){ ctx.fillText('👁 '+spec.label+' 관전', W/2, Math.max(54, oy-12)); }
-  else { const _rc=STK_RACES[S.me.race]||STK_RACES.terran, lbl=b.placing?('▸ '+b.placing.name+' 배치 — 빈 타일 탭'):'타일에 생산 건물 배치 · 출격 주기마다 자동 생산';
-    ctx.fillText('내 건설 ['+_rc.icon+' '+_rc.name+'] · ⛁'+Math.floor(S.me.gold)+' — '+lbl, W/2, Math.max(54, oy-12)); }
+  // 상단: 골드만 최소 표시(설명 텍스트 제거 — 안내는 로딩화면에서) / 관전 시 대상 라벨
+  ctx.textBaseline='alphabetic'; ctx.font='700 13px Rajdhani, sans-serif'; ctx.textAlign='center';
+  if(spec){ ctx.fillStyle=spec.col; ctx.fillText('👁 '+spec.label, W/2, Math.max(54, oy-12)); }
+  else { ctx.fillStyle='rgba(255,210,74,.95)'; ctx.fillText('⛁ '+Math.floor(S.me.gold), W/2, Math.max(54, oy-12)); }
   ctx.textAlign='left';
 }
 // 건설 보드 카메라 클램프 — 보드가 화면보다 작으면 중앙, 크면 가장자리 넘어 못 가게
@@ -9198,12 +9205,20 @@ function strikeStepBuild(dt){ const S=STK, b=S&&S.build; if(!b) return;
   for(const w of b.workers){ if(!w.task) continue; const c=w.task, dx=c.x-w.x, dy=c.y-w.y, d=Math.hypot(dx,dy);
     if(d>150){ const v=1100*dt; w.x+=dx/d*v; w.y+=dy/d*v; }   // 건설지로 이동
     else { c.built=Math.min(1, c.built+dt/3.5); if(c.built>=1){ if(typeof playSfx==='function') playSfx('ui_confirm'); w.task=null; } } } }   // 3.5초 건설
+// 건물 풋프린트(칸 수): 비용 티어로 1×1 / 2×2 / 3×3 → 건물마다 크기 다름
+function strikeFootprint(t){ const c=(t&&t.cost)||0, s=c<350?1:(c<560?2:3); return {w:s,h:s}; }
+// 앵커(col,row)에 w×h 풋프린트가 들어갈 수 있는지(경계 안 + 기존 건물과 미겹침)
+function strikeCellsFree(b,col,row,w,h){ if(col<0||row<0||col+w>b.cols||row+h>b.rows) return false;
+  for(const c of b.cells){ const cw=c.w||1, ch=c.h||1; if(col<c.col+cw && col+w>c.col && row<c.row+ch && row+h>c.row) return false; }   // AABB 겹침 검사
+  return true; }
 function strikePlaceBuilding(col,row){ const S=STK, b=S.build; if(!b.placing) return;
-  if(col<0||col>=b.cols||row<0||row>=b.rows) return;
-  if(b.cells.some(c=>c.col===col&&c.row===row)){ strikeToast('이미 건물이 있습니다'); return; }
-  const t=b.placing; if(S.me.gold<t.cost){ strikeToast('골드 부족 (필요 '+t.cost+')'); return; }
+  const t=b.placing, fp=strikeFootprint(t);
+  col=col-((fp.w-1)>>1); row=row-((fp.h-1)>>1);   // 탭 지점을 풋프린트 중심으로 → 좌상단 앵커
+  col=Math.max(0,Math.min(b.cols-fp.w,col)); row=Math.max(0,Math.min(b.rows-fp.h,row));
+  if(!strikeCellsFree(b,col,row,fp.w,fp.h)){ strikeToast('공간이 부족합니다'); return; }
+  if(S.me.gold<t.cost){ strikeToast('골드 부족 (필요 '+t.cost+')'); return; }
   S.me.gold-=t.cost; const cw=b.W/b.cols, ch=b.H/b.rows;
-  b.cells.push({col:col,row:row,type:t,built:0,x:(col+0.5)*cw,y:(row+0.5)*ch});
+  b.cells.push({col:col,row:row,w:fp.w,h:fp.h,type:t,built:0,x:(col+fp.w/2)*cw,y:(row+fp.h/2)*ch});
   if(typeof playSfx==='function') playSfx('buy_unit'); }
 function strikePickBuild(i){ const S=STK; if(!S) return; const t=strikeBuildMenu()[i]; if(!t) return; S.build.placing=(S.build.placing===t)?null:t; strikeRenderBuild(); if(S.build.placing) strikeToast(t.name+' 생산 건물 — 빈 타일을 탭해 배치'); }
 // ═══ 공용 FX 코어(모든 유즈맵 공통 유닛별 공격 이펙트) ═══
