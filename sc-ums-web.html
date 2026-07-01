@@ -8903,38 +8903,39 @@ const STK_RACES={
 };
 const STK_RACE_ORDER=['terran','zerg','protoss'];   // 표시 순서: 유니온 · 스웜 · 에테리얼 (관리자와 통일)
 // 종족별 생산 건물(스타식 이름) → 건물마다 출격 주기에 배정 유닛을 지정 수량만큼 자동 생산
+// fp:[w,h] = 건물 풋프린트(칸 단위, 30×20 그리드). 비율 다양화: 2×2(1:1)·2×3(1:1.5)·3×2·3×3·3×4(1.5:2)·4×3·4×4·4×5(2:2.5 최대)
 const STK_BUILDINGS={
   terran:[
-    {key:'supply',  name:'서플라이 디팟', ico:'🏠', cost:250, produces:[{id:'marine',     n:3}]},
-    {key:'barracks',name:'배럭',          ico:'🏛', cost:320, produces:[{id:'ghost',      n:2}]},
-    {key:'bunker',  name:'벙커',          ico:'🧱', cost:300, produces:[{id:'machinegun', n:2}]},
-    {key:'machshop',name:'머시너리',      ico:'🏍', cost:320, produces:[{id:'racer',      n:2}]},
-    {key:'factory', name:'팩토리',        ico:'🏭', cost:440, produces:[{id:'goliath',    n:2}]},
-    {key:'armory',  name:'아머리',        ico:'🛠', cost:480, produces:[{id:'tank',       n:1}]},
-    {key:'starport',name:'스타포트',      ico:'✈️', cost:460, produces:[{id:'skyguard',   n:2}]},
-    {key:'missile', name:'미사일 베이',   ico:'🚀', cost:500, produces:[{id:'hellfire',   n:2}]},
-    {key:'vessel',  name:'배슬 야드',     ico:'💥', cost:640, produces:[{id:'dreadnought',n:1}]},
-    {key:'aegis',   name:'이지스 도크',   ico:'🛡', cost:760, produces:[{id:'aegis',      n:1}]},
+    {key:'supply',  name:'서플라이 디팟', ico:'🏠', cost:250, fp:[2,2], produces:[{id:'marine',     n:3}]},
+    {key:'barracks',name:'배럭',          ico:'🏛', cost:320, fp:[2,3], produces:[{id:'ghost',      n:2}]},
+    {key:'bunker',  name:'벙커',          ico:'🧱', cost:300, fp:[3,2], produces:[{id:'machinegun', n:2}]},
+    {key:'machshop',name:'머시너리',      ico:'🏍', cost:320, fp:[2,3], produces:[{id:'racer',      n:2}]},
+    {key:'factory', name:'팩토리',        ico:'🏭', cost:440, fp:[3,4], produces:[{id:'goliath',    n:2}]},
+    {key:'armory',  name:'아머리',        ico:'🛠', cost:480, fp:[4,3], produces:[{id:'tank',       n:1}]},
+    {key:'starport',name:'스타포트',      ico:'✈️', cost:460, fp:[3,4], produces:[{id:'skyguard',   n:2}]},
+    {key:'missile', name:'미사일 베이',   ico:'🚀', cost:500, fp:[4,3], produces:[{id:'hellfire',   n:2}]},
+    {key:'vessel',  name:'배슬 야드',     ico:'💥', cost:640, fp:[4,4], produces:[{id:'dreadnought',n:1}]},
+    {key:'aegis',   name:'이지스 도크',   ico:'🛡', cost:760, fp:[4,5], produces:[{id:'aegis',      n:1}]},
   ],
   zerg:[
-    {key:'pool',    name:'스포닝 풀',     ico:'🥚', cost:250, produces:[{id:'hydra',      n:3}]},
-    {key:'creep',   name:'크립 콜로니',   ico:'🟢', cost:240, produces:[{id:'snapper',    n:3}]},
-    {key:'den',     name:'히드라 덴',     ico:'🕳', cost:340, produces:[{id:'venom',      n:2}]},
-    {key:'garden',  name:'가시 정원',     ico:'🌵', cost:420, produces:[{id:'thornqueen', n:2}]},
-    {key:'spire',   name:'스파이어',      ico:'🗼', cost:440, produces:[{id:'stinger',    n:2}]},
-    {key:'gspire',  name:'그레이터 스파이어', ico:'🐍', cost:520, produces:[{id:'medusa', n:1}]},
-    {key:'cavern',  name:'울트라 케이번', ico:'🦴', cost:480, produces:[{id:'matron',     n:1}]},
-    {key:'nest',    name:'와이번 소굴',   ico:'🐲', cost:720, produces:[{id:'wyvern',     n:1}]},
-    {key:'pit',     name:'베히모스 굴',   ico:'🦣', cost:840, produces:[{id:'behemoth',   n:1}]},
+    {key:'pool',    name:'스포닝 풀',     ico:'🥚', cost:250, fp:[2,2], produces:[{id:'hydra',      n:3}]},
+    {key:'creep',   name:'크립 콜로니',   ico:'🟢', cost:240, fp:[2,2], produces:[{id:'snapper',    n:3}]},
+    {key:'den',     name:'히드라 덴',     ico:'🕳', cost:340, fp:[2,3], produces:[{id:'venom',      n:2}]},
+    {key:'garden',  name:'가시 정원',     ico:'🌵', cost:420, fp:[3,3], produces:[{id:'thornqueen', n:2}]},
+    {key:'spire',   name:'스파이어',      ico:'🗼', cost:440, fp:[3,4], produces:[{id:'stinger',    n:2}]},
+    {key:'gspire',  name:'그레이터 스파이어', ico:'🐍', cost:520, fp:[4,3], produces:[{id:'medusa', n:1}]},
+    {key:'cavern',  name:'울트라 케이번', ico:'🦴', cost:480, fp:[3,4], produces:[{id:'matron',     n:1}]},
+    {key:'nest',    name:'와이번 소굴',   ico:'🐲', cost:720, fp:[4,4], produces:[{id:'wyvern',     n:1}]},
+    {key:'pit',     name:'베히모스 굴',   ico:'🦣', cost:840, fp:[4,5], produces:[{id:'behemoth',   n:1}]},
   ],
   protoss:[
-    {key:'gateway', name:'게이트웨이',        ico:'🌀', cost:250, produces:[{id:'blade',     n:3}]},
-    {key:'core',    name:'사이버네틱스 코어', ico:'💠', cost:340, produces:[{id:'dragoon',   n:2}]},
-    {key:'robo',    name:'로보틱스 베이',     ico:'🤖', cost:440, produces:[{id:'archon',    n:1}]},
-    {key:'stargate',name:'스타게이트',        ico:'✨', cost:420, produces:[{id:'falcon',    n:2}]},
-    {key:'beacon',  name:'플릿 비콘',         ico:'💃', cost:460, produces:[{id:'skydancer', n:2}]},
-    {key:'tribunal',name:'아비터 트리뷰널',   ico:'⏳', cost:580, produces:[{id:'kronos',    n:1}]},
-    {key:'sanctum', name:'아크엔젤 성소',     ico:'👼', cost:700, produces:[{id:'archangel', n:1}]},
+    {key:'gateway', name:'게이트웨이',        ico:'🌀', cost:250, fp:[2,2], produces:[{id:'blade',     n:3}]},
+    {key:'core',    name:'사이버네틱스 코어', ico:'💠', cost:340, fp:[2,3], produces:[{id:'dragoon',   n:2}]},
+    {key:'robo',    name:'로보틱스 베이',     ico:'🤖', cost:440, fp:[3,3], produces:[{id:'archon',    n:1}]},
+    {key:'stargate',name:'스타게이트',        ico:'✨', cost:420, fp:[3,4], produces:[{id:'falcon',    n:2}]},
+    {key:'beacon',  name:'플릿 비콘',         ico:'💃', cost:460, fp:[4,3], produces:[{id:'skydancer', n:2}]},
+    {key:'tribunal',name:'아비터 트리뷰널',   ico:'⏳', cost:580, fp:[4,4], produces:[{id:'kronos',    n:1}]},
+    {key:'sanctum', name:'아크엔젤 성소',     ico:'👼', cost:700, fp:[4,5], produces:[{id:'archangel', n:1}]},
   ],
 };
 function strikeRandomRace(){ return STK_RACE_ORDER[Math.floor(Math.random()*STK_RACE_ORDER.length)]; }
@@ -8973,7 +8974,7 @@ function strikeNewState(){ const W=mapCfg('world',4800), hp=mapCfg('baseHp',3000
          sec:{x:W*0.661,y:W*0.339, hp:sHp, max:sHp, dead:false} },   // 우상단 메인 + 2차 신전 / compCol=적군 컴퓨터 색
     central:{x:W*0.5,y:W*0.5, hp:cHp, max:cHp, owner:null, dead:false},   // 중앙 중립 보너스 신전(깬 팀 메인에 쉴드)
     cam:{x:W/2,y:W/2}, zoom:STK_DEFZOOM, viewWorld:Math.round(2600/STK_DEFZOOM), cw:0, ch:0, sel:null, userCam:false,
-    build:{ W:2400, H:1600, cols:12, rows:8, cam:{x:1200,y:800}, zoom:1, zoomCur:1, _sc:1, _ox:0, _oy:0, cells:[], worker:null, placing:null },   // 건설 보드(세분 그리드) + 생산 건물(cells,풋프린트)·일꾼(worker)·배치선택(placing)
+    build:{ W:2400, H:1600, cols:30, rows:20, cam:{x:1200,y:800}, zoom:1, zoomCur:1, _sc:1, _ox:0, _oy:0, cells:[], worker:null, placing:null },   // 건설 보드(세밀 그리드 30×20, 칸=80) + 생산 건물(cells,풋프린트)·일꾼(worker)·배치선택(placing)
     leadT:0, leadIdx:0, sizeCmp:false, cmpUnits:null };
 }
 function strikeIncome(side){ const S=STK; if(!S) return 0; side=side||S.me; return S.incomeBase + side.mines*S.mineIncome; }
@@ -9067,13 +9068,12 @@ function strikeDrawBuildMap(spec){ const S=STK; if(!S) return; const cvEl=docume
   // 외곽 네온 테두리(모바일: shadowBlur 없이 레이어 스트로크)
   ctx.strokeStyle='rgba(120,200,255,.2)'; ctx.lineWidth=6; ctx.strokeRect(ox,oy,pw,ph);
   ctx.strokeStyle='rgba(150,212,255,.75)'; ctx.lineWidth=2; ctx.strokeRect(ox,oy,pw,ph);
-  // 건물 선택 시: 배치 가능 구역 하이라이트(풋프린트가 들어갈 수 있는 자리 초록)
-  if(!spec && b.placing){ const fp=strikeFootprint(b.placing);
-    ctx.save(); ctx.fillStyle='rgba(110,235,150,.15)'; ctx.strokeStyle='rgba(120,240,160,.55)'; ctx.lineWidth=1.4;
-    for(let row=0; row+fp.h<=b.rows; row++){ for(let col=0; col+fp.w<=b.cols; col++){
-      if(!strikeCellsFree(b,col,row,fp.w,fp.h)) continue;
-      const rx=ox+col*cwd+2, ry=oy+row*chd+2, rw=fp.w*cwd-4, rh=fp.h*chd-4;
-      ctx.fillRect(rx,ry,rw,rh); ctx.strokeRect(rx,ry,rw,rh); } }
+  // 건물 선택 시: 배치 가능 구역 하이라이트 — 빈 칸을 1회씩만 균일하게(겹쳐서 진해지지 않게)
+  if(!spec && b.placing){ const occ={};
+    for(const c of b.cells){ const cw2=c.w||1, ch2=c.h||1; for(let yy=c.row; yy<c.row+ch2; yy++) for(let xx=c.col; xx<c.col+cw2; xx++) occ[xx+','+yy]=1; }
+    ctx.save(); ctx.fillStyle='rgba(110,235,150,.16)';
+    for(let row=0; row<b.rows; row++){ for(let col=0; col<b.cols; col++){ if(occ[col+','+row]) continue;
+      ctx.fillRect(ox+col*cwd+0.5, oy+row*chd+0.5, cwd-1, chd-1); } }
     ctx.restore(); }
   // 생산 건물(풋프린트 크기 → 건물마다 다름) + 일꾼
   const sz=Math.min(cwd,chd)*0.6, mc=spec?(spec.col||'#7fd0ff'):(S.me.compCol||'#7fd0ff'), cells=spec?(spec.cells||[]):(b.cells||[]);
@@ -9088,11 +9088,9 @@ function strikeDrawBuildMap(spec){ const S=STK; if(!S) return; const cvEl=docume
   if(!spec) for(const wk of (b.workers||[])){ const wx=ox+wk.x*sc, wy=oy+wk.y*sc, wr=Math.max(5,sz*0.16);
     if(wk.task){ const tx=ox+wk.task.x*sc, ty=oy+wk.task.y*sc; ctx.strokeStyle='rgba(255,210,74,.45)'; ctx.setLineDash([5,4]); ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(wx,wy); ctx.lineTo(tx,ty); ctx.stroke(); ctx.setLineDash([]); }
     ctx.fillStyle='#ffd24a'; ctx.beginPath(); ctx.arc(wx,wy,wr,0,6.283); ctx.fill(); ctx.strokeStyle='#7a5a12'; ctx.lineWidth=1.5; ctx.stroke(); }
-  // 상단: 골드만 최소 표시(설명 텍스트 제거 — 안내는 로딩화면에서) / 관전 시 대상 라벨
-  ctx.textBaseline='alphabetic'; ctx.font='700 13px Rajdhani, sans-serif'; ctx.textAlign='center';
-  if(spec){ ctx.fillStyle=spec.col; ctx.fillText('👁 '+spec.label, W/2, Math.max(54, oy-12)); }
-  else { ctx.fillStyle='rgba(255,210,74,.95)'; ctx.fillText('⛁ '+Math.floor(S.me.gold), W/2, Math.max(54, oy-12)); }
-  ctx.textAlign='left';
+  // 상단 텍스트 전부 제거(골드는 우상단 크레딧 표시로 충분) — 관전 시에만 대상 라벨
+  if(spec){ ctx.textBaseline='alphabetic'; ctx.font='700 13px Rajdhani, sans-serif'; ctx.textAlign='center';
+    ctx.fillStyle=spec.col; ctx.fillText('👁 '+spec.label, W/2, Math.max(54, oy-12)); ctx.textAlign='left'; }
 }
 // 건설 보드 카메라 클램프 — 보드가 화면보다 작으면 중앙, 크면 가장자리 넘어 못 가게
 function strikeBuildClamp(b,sc,W,H){ const hvx=(W/sc)/2, hvy=(H/sc)/2;
@@ -9205,8 +9203,8 @@ function strikeStepBuild(dt){ const S=STK, b=S&&S.build; if(!b) return;
   for(const w of b.workers){ if(!w.task) continue; const c=w.task, dx=c.x-w.x, dy=c.y-w.y, d=Math.hypot(dx,dy);
     if(d>150){ const v=1100*dt; w.x+=dx/d*v; w.y+=dy/d*v; }   // 건설지로 이동
     else { c.built=Math.min(1, c.built+dt/3.5); if(c.built>=1){ if(typeof playSfx==='function') playSfx('ui_confirm'); w.task=null; } } } }   // 3.5초 건설
-// 건물 풋프린트(칸 수): 비용 티어로 1×1 / 2×2 / 3×3 → 건물마다 크기 다름
-function strikeFootprint(t){ const c=(t&&t.cost)||0, s=c<350?1:(c<560?2:3); return {w:s,h:s}; }
+// 건물 풋프린트(칸 수) — STK_BUILDINGS의 fp:[w,h](다양한 비율). 미지정 시 2×2
+function strikeFootprint(t){ const f=(t&&t.fp)||[2,2]; return {w:f[0], h:f[1]}; }
 // 앵커(col,row)에 w×h 풋프린트가 들어갈 수 있는지(경계 안 + 기존 건물과 미겹침)
 function strikeCellsFree(b,col,row,w,h){ if(col<0||row<0||col+w>b.cols||row+h>b.rows) return false;
   for(const c of b.cells){ const cw=c.w||1, ch=c.h||1; if(col<c.col+cw && col+w>c.col && row<c.row+ch && row+h>c.row) return false; }   // AABB 겹침 검사
