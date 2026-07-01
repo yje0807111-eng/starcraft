@@ -6852,6 +6852,7 @@ function _gsFinish(){ const op=document.getElementById('opening'); if(!op||op._f
     if(typeof _gsDone==='function') _gsDone(); }, 470); }
 // ── 부팅 흐름: 오프닝 → (자동로그인 ? 유즈맵 : 로그인) ──
 async function bootApp(){ await initAuth();
+  if(!AUTH.user){ AUTH.user={id:'dev', nick:'플레이어'}; try{ _lsSet('nm_session', AUTH.user); }catch(e){} }   // (임시) 자동 로그인 — 로그인 화면 건너뜀(고정 유저로 진행 유지). 되돌릴 때 이 줄 제거
   setTimeout(()=>{ if(AUTH.user) openMapSelect(); else openAuth(); }, 1700); }   // 오프닝 최소 노출
 // ── 로그인 화면 ──
 let _authTab='login';
@@ -7376,8 +7377,8 @@ const BGM_DIR = 'assets/audio/bgm/';
 const _bgm = { audio:null, set:null, pendingGesture:false };
 let _bgmLast = -1;
 // 전역 사운드 설정(로비/로그인/인게임 공통). 100 = 현재 기준 볼륨.
-const SND = { bgm:100, sfx:100, bgmOn:true, sfxOn:true };
-(function(){ try{ const s=JSON.parse(localStorage.getItem('nm_snd')); if(s&&typeof s==='object') Object.assign(SND,s); }catch(e){} })();
+const SND = { bgm:100, sfx:100, bgmOn:false, sfxOn:false };   // (임시) 기본 음소거 — 되돌리려면 bgmOn/sfxOn을 true로
+(function(){ try{ const s=JSON.parse(localStorage.getItem('nm_snd')); if(s&&typeof s==='object') Object.assign(SND,s); }catch(e){} SND.bgmOn=false; SND.sfxOn=false; })();   // (임시) 시작 시 강제 음소거 — 되돌릴 때 이 강제 두 줄만 제거
 function _sndSave(){ try{ localStorage.setItem('nm_snd', JSON.stringify(SND)); }catch(e){} }
 function _bgmTracks(){ return BGM_SETS[_bgm.set] || []; }
 function _bgmVol(){ const base=(_bgm.set==='ingame'?BGM_GAME_VOLUME:BGM_VOLUME);
