@@ -8952,13 +8952,40 @@ function strikeDrawGround(ctx,W,H,S,scale){ const img=STRIKE_GROUND, tilePx=460*
   const ox=(0-S.cam.x)*scale+W/2, oy=(0-S.cam.y)*scale+H/2, p=strikePattern(ctx,img);
   if(p&&tilePx>4){ const s=tilePx/img.naturalWidth; if(p.setTransform) p.setTransform(new DOMMatrix([s,0,0,s,ox,oy])); ctx.fillStyle=p; } else ctx.fillStyle='#1a1d14';
   ctx.fillRect(0,0,W,H);
-  // 비네팅: W,H 바뀔 때만 그라데이션 재생성(캐시)
-  const vk=W+'x'+H; if(_stkVig.k!==vk){ const v=ctx.createRadialGradient(W/2,H*0.5,Math.min(W,H)*0.3,W/2,H*0.5,Math.max(W,H)*0.75); v.addColorStop(0,'rgba(0,0,0,0)'); v.addColorStop(1,'rgba(0,0,0,.42)'); _stkVig.k=vk; _stkVig.v=v; }
+  // 영역 워시: 좌하(유니온/파랑) ↔ 우상(적/빨강) 진영색으로 은은히 물듦(전황 감각)
+  const gw=ctx.createLinearGradient(0,H,W,0);
+  gw.addColorStop(0,'rgba(70,150,230,.11)'); gw.addColorStop(0.5,'rgba(0,0,0,0)'); gw.addColorStop(1,'rgba(230,80,92,.11)');
+  ctx.fillStyle=gw; ctx.fillRect(0,0,W,H);
+  // 비네팅 + 태양광(따뜻한 사선 조명): W,H 바뀔 때만 재생성(캐시)
+  const vk=W+'x'+H; if(_stkVig.k!==vk){ const v=ctx.createRadialGradient(W/2,H*0.5,Math.min(W,H)*0.3,W/2,H*0.5,Math.max(W,H)*0.75); v.addColorStop(0,'rgba(0,0,0,0)'); v.addColorStop(1,'rgba(0,0,0,.42)'); _stkVig.k=vk; _stkVig.v=v;
+    const su=ctx.createRadialGradient(W*0.3,H*0.2,0,W*0.3,H*0.2,Math.max(W,H)*0.95); su.addColorStop(0,'rgba(255,238,198,.11)'); su.addColorStop(0.5,'rgba(255,228,188,.035)'); su.addColorStop(1,'rgba(255,228,188,0)'); _stkVig.su=su; }
+  ctx.fillStyle=_stkVig.su; ctx.fillRect(0,0,W,H);
   ctx.fillStyle=_stkVig.v; ctx.fillRect(0,0,W,H); }
 // 사각 영역을 타일 패턴으로 채움(건설 보드)
 function strikeTileRect(ctx,x,y,w,h,img,tilePx){ ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip();
   const p=strikePattern(ctx,img); if(p){ const s=tilePx/img.naturalWidth; if(p.setTransform) p.setTransform(new DOMMatrix([s,0,0,s,x,y])); ctx.fillStyle=p; } else ctx.fillStyle='#16242e';
   ctx.fillRect(x,y,w,h); ctx.restore(); }
+// ── 전장 배경 데코(코너 채움) + 떠다니는 먼지 — 1회 시드 생성 후 재사용(성능) ──
+function _stkRnd(seed){ let s=seed>>>0; return function(){ s=(s*1664525+1013904223)>>>0; return s/4294967296; }; }
+function strikeGenScenery(world){ const rnd=_stkRnd(20260701), props=[];
+  for(let i=0;i<80;i++){ const rx=rnd(), ry=rnd(); if(Math.abs(rx+ry-1)<0.30) continue;   // 중앙 레인(반대각선) 밴드 회피 → 빈 코너만 채움
+    const kk=rnd(), t=kk<0.4?'rock':(kk<0.68?'crater':(kk<0.87?'tuft':'bone'));
+    props.push({x:rx*world, y:ry*world, r:0.6+rnd()*1.3, t:t, a:rnd()*6.28}); }
+  const motes=[]; for(let i=0;i<34;i++) motes.push({x:rnd()*world, y:rnd()*world, ph:rnd()*6.28, sp:0.3+rnd()*0.5, amp:60+rnd()*90});
+  return {props:props, motes:motes}; }
+function strikeDrawScenery(ctx,w2s,scale,S,W,H){ if(!S.dec) S.dec=strikeGenScenery(S.world); const D=S.dec, t=S.t||0;
+  ctx.save();
+  for(const o of D.props){ const p=w2s(o.x,o.y); if(p.x<-50||p.x>W+50||p.y<-50||p.y>H+50) continue; const s=o.r*scale;
+    if(o.t==='rock'){ const R=13*s+3; ctx.fillStyle='rgba(78,69,52,.72)'; ctx.strokeStyle='rgba(28,24,16,.55)'; ctx.lineWidth=1;
+      ctx.beginPath(); for(let k=0;k<6;k++){ const a=o.a+k*1.047, rr=R*(0.78+0.22*Math.sin(o.a*3+k)); const xx=p.x+Math.cos(a)*rr, yy=p.y+Math.sin(a)*rr*0.72; k?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy); } ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle='rgba(126,113,86,.5)'; ctx.beginPath(); ctx.ellipse(p.x-R*0.24,p.y-R*0.22,R*0.42,R*0.28,0,0,6.28); ctx.fill(); }
+    else if(o.t==='crater'){ const R=17*s+5; ctx.fillStyle='rgba(0,0,0,.26)'; ctx.beginPath(); ctx.ellipse(p.x,p.y,R,R*0.6,0,0,6.28); ctx.fill();
+      ctx.strokeStyle='rgba(102,84,54,.5)'; ctx.lineWidth=Math.max(1,2*scale); ctx.beginPath(); ctx.ellipse(p.x,p.y,R*0.9,R*0.53,0,0,6.28); ctx.stroke(); }
+    else if(o.t==='tuft'){ ctx.strokeStyle='rgba(104,128,60,.55)'; ctx.lineWidth=Math.max(1,1.6*scale); const R=9*s+2; for(let k=-2;k<=2;k++){ ctx.beginPath(); ctx.moveTo(p.x+k*2.2,p.y); ctx.lineTo(p.x+k*2.6,p.y-R); ctx.stroke(); } }
+    else { ctx.strokeStyle='rgba(184,176,152,.5)'; ctx.lineWidth=Math.max(1,1.8*scale); const R=8*s+2; ctx.beginPath(); ctx.moveTo(p.x-R,p.y-R*0.5); ctx.lineTo(p.x+R,p.y+R*0.5); ctx.moveTo(p.x-R,p.y+R*0.5); ctx.lineTo(p.x+R,p.y-R*0.5); ctx.stroke(); } }
+  ctx.fillStyle='rgba(222,212,182,.15)';   // 떠다니는 먼지(다이나믹)
+  for(const m of D.motes){ const p=w2s(m.x+Math.sin(t*m.sp+m.ph)*m.amp, m.y+Math.cos(t*m.sp*0.7+m.ph)*m.amp*0.6); if(p.x<0||p.x>W||p.y<0||p.y>H) continue; ctx.beginPath(); ctx.arc(p.x,p.y,1.5+Math.sin(t*2+m.ph)*0.6,0,6.28); ctx.fill(); }
+  ctx.restore(); }
 const STK_TABLABEL ={ Main:'전투', Unit:'건설지', Upgrade:'경제', Players:'관전' };
 const STK_NEMOLABEL={ Main:'메인', Unit:'유닛뽑기', Upgrade:'업그레이드', Players:'플레이어' };
 function strikeNewState(){ const W=mapCfg('world',4800), hp=mapCfg('baseHp',3000), inc=mapCfg('incomeBase',150), mc=mapCfg('mineCost',300), mi=mapCfg('mineIncome',120);
@@ -9068,6 +9095,15 @@ function strikeDrawBuildMap(spec){ const S=STK; if(!S) return; const cvEl=docume
   // 외곽 네온 테두리(모바일: shadowBlur 없이 레이어 스트로크)
   ctx.strokeStyle='rgba(120,200,255,.2)'; ctx.lineWidth=6; ctx.strokeRect(ox,oy,pw,ph);
   ctx.strokeStyle='rgba(150,212,255,.75)'; ctx.lineWidth=2; ctx.strokeRect(ox,oy,pw,ph);
+  // 중앙 은은한 글로우(허전함 완화) + 코너 테크 브래킷 + 경계 펄스
+  { ctx.save(); const cg=ctx.createRadialGradient(ox+pw/2,oy+ph/2,0,ox+pw/2,oy+ph/2,Math.max(pw,ph)*0.6);
+    cg.addColorStop(0,'rgba(60,130,190,.10)'); cg.addColorStop(0.6,'rgba(40,90,140,.03)'); cg.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=cg; ctx.fillRect(ox,oy,pw,ph);
+    const bl=Math.min(pw,ph)*0.06, cc=spec?(spec.col||'#7fd0ff'):'#8fe0ff'; ctx.strokeStyle=cc; ctx.lineWidth=Math.max(2,3*sc*8/8);   // 코너 L 브래킷
+    const brk=[[ox,oy,1,1],[ox+pw,oy,-1,1],[ox,oy+ph,1,-1],[ox+pw,oy+ph,-1,-1]];
+    for(const q of brk){ ctx.beginPath(); ctx.moveTo(q[0]+q[2]*bl,q[1]); ctx.lineTo(q[0],q[1]); ctx.lineTo(q[0],q[1]+q[3]*bl); ctx.stroke(); }
+    const pul=0.35+0.25*Math.sin((S.t||0)*2.2); ctx.globalAlpha=pul; ctx.strokeStyle=cc; ctx.lineWidth=1; ctx.strokeRect(ox+3,oy+3,pw-6,ph-6);   // 은은한 경계 펄스
+    ctx.restore(); }
   // 건물 선택 시: 배치 가능 구역 하이라이트 — 빈 칸을 1회씩만 균일하게(겹쳐서 진해지지 않게)
   if(!spec && b.placing){ const occ={};
     for(const c of b.cells){ const cw2=c.w||1, ch2=c.h||1; for(let yy=c.row; yy<c.row+ch2; yy++) for(let xx=c.col; xx<c.col+cw2; xx++) occ[xx+','+yy]=1; }
@@ -9080,7 +9116,9 @@ function strikeDrawBuildMap(spec){ const S=STK; if(!S) return; const cvEl=docume
   for(const c of cells){ const fw=(c.w||1)*cwd, fh=(c.h||1)*chd, pad=Math.min(fw,fh)*0.12,
     bx0=ox+(c.col!=null?c.col*cwd:c.x*sc-fw/2), by0=oy+(c.row!=null?c.row*chd:c.y*sc-fh/2),
     rx=bx0+pad, ry=by0+pad, rw=fw-pad*2, rh=fh-pad*2, rr=Math.min(rw,rh)*0.14, built=c.built>=1;
-    ctx.save(); ctx.globalAlpha=built?1:0.5; ctx.fillStyle=built?'rgba(30,52,84,.94)':'rgba(48,78,116,.5)'; _strkRR(ctx,rx,ry,rw,rh,rr); ctx.fill();
+    ctx.save();
+    if(built){ ctx.globalAlpha=0.5; ctx.strokeStyle=mc; ctx.lineWidth=Math.max(2,Math.min(rw,rh)*0.11); _strkRR(ctx,rx-1,ry-1,rw+2,rh+2,rr); ctx.stroke(); ctx.globalAlpha=1; }   // 완성 건물 외곽 소프트 글로우
+    ctx.globalAlpha=built?1:0.5; ctx.fillStyle=built?'rgba(30,52,84,.94)':'rgba(48,78,116,.5)'; _strkRR(ctx,rx,ry,rw,rh,rr); ctx.fill();
     ctx.globalAlpha=built?1:0.75; ctx.strokeStyle=mc; ctx.lineWidth=Math.max(1.5,Math.min(rw,rh)*0.05); _strkRR(ctx,rx,ry,rw,rh,rr); ctx.stroke();
     ctx.globalAlpha=1; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font=Math.max(13,Math.min(rw,rh)*0.5)+'px sans-serif'; ctx.fillStyle='#fff'; ctx.fillText(c.type.ico, rx+rw/2, ry+rh/2);
     if(!built){ const bw=rw*0.82, by2=ry+rh+5; ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillRect(rx+rw/2-bw/2,by2,bw,5); ctx.fillStyle='#6fe89a'; ctx.fillRect(rx+rw/2-bw/2,by2,bw*c.built,5); }
@@ -9502,6 +9540,7 @@ function strikeDrawMain(){ const S=STK; if(!S) return; const cvEl=document.getEl
   const scale=Math.min(W,H)/S.viewWorld;
   const w2s=(x,y)=>({x:(x-S.cam.x)*scale+W/2, y:(y-S.cam.y)*scale+H/2});
   strikeDrawGround(ctx,W,H,S,scale);
+  strikeDrawScenery(ctx,w2s,scale,S,W,H);   // 코너 데코(바위·분화구·수풀·뼈) + 떠다니는 먼지
   const nodes=[S.me.base, S.me.sec, S.central, S.ai.sec, S.ai.base].map(o=>w2s(o.x,o.y));
   // 외곽 네온 글로우(채움 아래) → 내부 접합부는 채움에 가려지고 바깥 외곽선만 빛남
   strikeGlowUnderlay(ctx,w2s,scale,S,W,H,nodes);
