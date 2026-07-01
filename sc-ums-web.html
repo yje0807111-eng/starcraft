@@ -9254,22 +9254,51 @@ function strikeShowResult(win){ const S=STK; if(!S||S._resultEl) return;   // �
   host.appendChild(el); S._resultEl=el;
   const btn=document.getElementById('stResultBtn'); if(btn) btn.onclick=function(){ try{ el.remove(); }catch(_){ } strikeEnd(); };
   if(typeof playSfx==='function') playSfx(win?'win':'lose'); }
-// ── 건설(스타식 일꾼): 팔레트 선택 → 타일 탭 배치 → 일꾼이 이동·건설 → 완성 건물이 출격 주기마다 그 유닛 생산 ──
+// ── 건설(스타식 일꾼) — A* 격자 경로탐색: 건물을 장애물로 마킹 → 최단 경로 웨이포인트 추종(+국소 반발 스무딩) ──
+const BLD_GP=BUILD_UNIT;   // 경로탐색 격자 셀(월드)
+// 점유 격자: 목표 건물(target) 제외한 건물 사각형(여유 포함) 셀을 막음
+function strikeBuildOcc(b, target){ const gp=BLD_GP, gc=Math.ceil(b.W/gp), gr=Math.ceil(b.H/gp), bl=new Uint8Array(gc*gr), CL=BUILD_UNIT*0.5;
+  for(const c of b.cells){ if(c===target) continue;
+    const x0=Math.max(0,Math.floor((c.x-c.w/2-CL)/gp)), x1=Math.min(gc-1,Math.floor((c.x+c.w/2+CL)/gp));
+    const y0=Math.max(0,Math.floor((c.y-c.h/2-CL)/gp)), y1=Math.min(gr-1,Math.floor((c.y+c.h/2+CL)/gp));
+    for(let y=y0;y<=y1;y++) for(let x=x0;x<=x1;x++) bl[y*gc+x]=1; }
+  return {gp,gc,gr,bl}; }
+// A* 경로(시작→목표) → 월드 웨이포인트 배열(못 찾으면 null)
+function strikeFindPath(b, sx, sy, gx, gy, target){ const O=strikeBuildOcc(b,target), gp=O.gp, gc=O.gc, gr=O.gr, bl=O.bl, N=gc*gr, id=(x,y)=>y*gc+x;
+  const sX=Math.max(0,Math.min(gc-1,Math.floor(sx/gp))), sY=Math.max(0,Math.min(gr-1,Math.floor(sy/gp)));
+  const gX=Math.max(0,Math.min(gc-1,Math.floor(gx/gp))), gY=Math.max(0,Math.min(gr-1,Math.floor(gy/gp)));
+  const g=new Float32Array(N).fill(Infinity), came=new Int32Array(N).fill(-1), closed=new Uint8Array(N);
+  const heap=[]; const push=(f,i)=>{ heap.push({f,i}); let c=heap.length-1; while(c>0){ const p=(c-1)>>1; if(heap[p].f<=heap[c].f)break; const t=heap[p];heap[p]=heap[c];heap[c]=t; c=p; } };
+  const pop=()=>{ const top=heap[0], last=heap.pop(); if(heap.length){ heap[0]=last; let c=0; for(;;){ let l=2*c+1,r=2*c+2,s=c; if(l<heap.length&&heap[l].f<heap[s].f)s=l; if(r<heap.length&&heap[r].f<heap[s].f)s=r; if(s===c)break; const t=heap[s];heap[s]=heap[c];heap[c]=t; c=s; } } return top; };
+  const H=(x,y)=>Math.hypot(x-gX,y-gY), goal=id(gX,gY); g[id(sX,sY)]=0; push(H(sX,sY), id(sX,sY));
+  const D=[[1,0,1],[-1,0,1],[0,1,1],[0,-1,1],[1,1,1.4142],[1,-1,1.4142],[-1,1,1.4142],[-1,-1,1.4142]];
+  let found=false, it=0;
+  while(heap.length && it++<12000){ const cur=pop().i; if(closed[cur])continue; closed[cur]=1; if(cur===goal){ found=true; break; }
+    const cx=cur%gc, cy=(cur/gc)|0;
+    for(const d of D){ const nx=cx+d[0], ny=cy+d[1]; if(nx<0||ny<0||nx>=gc||ny>=gr)continue; const ni=id(nx,ny); if(bl[ni]||closed[ni])continue;
+      if(d[0]&&d[1] && (bl[id(cx+d[0],cy)]||bl[id(cx,cy+d[1])]))continue;   // 대각 코너 관통 방지
+      const ng=g[cur]+d[2]; if(ng<g[ni]){ g[ni]=ng; came[ni]=cur; push(ng+H(nx,ny), ni); } } }
+  if(!found) return null;
+  const path=[]; let cur=goal, guard=0; while(cur!==-1 && guard++<N){ const cx=cur%gc, cy=(cur/gc)|0; path.push({x:(cx+0.5)*gp, y:(cy+0.5)*gp}); cur=came[cur]; }
+  path.reverse(); return path; }
 function strikeStepBuild(dt){ const S=STK, b=S&&S.build; if(!b) return;
   if(!b.workers){ b.workers=[]; for(let i=0;i<3;i++) b.workers.push({x:b.W*(0.34+i*0.16), y:b.H-180, task:null}); }   // 일꾼 3마리(병렬 자동 분배)
   const claimed=new Set();
-  for(const w of b.workers){ if(w.task && w.task.built<1 && b.cells.indexOf(w.task)>=0) claimed.add(w.task); else w.task=null; }
-  for(const w of b.workers){ if(w.task) continue; for(const c of b.cells){ if(c.built<1 && !claimed.has(c)){ w.task=c; claimed.add(c); break; } } }   // 유휴 일꾼 → 미점유 미완성 건물
-  const MARG=BUILD_UNIT*1.4;   // 일꾼이 건물에서 유지할 여유(회피 반경)
-  for(const w of b.workers){ if(!w.task) continue; const c=w.task, dx=c.x-w.x, dy=c.y-w.y, d=Math.hypot(dx,dy)||1;
-    if(d<=150){ c.built=Math.min(1, c.built+dt/3.5); if(c.built>=1){ if(typeof playSfx==='function') playSfx('ui_confirm'); w.task=null; } continue; }   // 도착 → 3.5초 건설
-    let hx=dx/d, hy=dy/d, px=0, py=0;   // 목표 방향 + 건물 회피(사각형 가장자리에서 밀어냄 → 돌아서 감)
-    for(const o of b.cells){ if(o===c) continue; const hw=o.w/2, hh=o.h/2, rx=w.x-o.x, ry=w.y-o.y;
-      const nx=Math.max(-hw,Math.min(hw,rx)), ny=Math.max(-hh,Math.min(hh,ry));   // 사각형 위 최근접점
-      let ox=rx-nx, oy=ry-ny, od=Math.hypot(ox,oy);
-      if(od<0.01){ const penx=hw-Math.abs(rx), peny=hh-Math.abs(ry); if(penx<peny){ ox=Math.sign(rx||1); oy=0; } else { ox=0; oy=Math.sign(ry||1); } od=1; }   // 내부면 얕은 축으로 탈출
+  for(const w of b.workers){ if(w.task && w.task.built<1 && b.cells.indexOf(w.task)>=0) claimed.add(w.task); else { w.task=null; w.path=null; } }
+  for(const w of b.workers){ if(w.task) continue; for(const c of b.cells){ if(c.built<1 && !claimed.has(c)){ w.task=c; claimed.add(c); w.path=null; break; } } }   // 유휴 일꾼 → 미점유 미완성 건물
+  const MARG=BUILD_UNIT*1.15;   // 국소 반발(경로 위 미세 회피)
+  for(const w of b.workers){ if(!w.task) continue; const c=w.task;
+    if(Math.hypot(c.x-w.x,c.y-w.y)<=150){ c.built=Math.min(1, c.built+dt/3.5); if(c.built>=1){ if(typeof playSfx==='function') playSfx('ui_confirm'); w.task=null; w.path=null; } continue; }   // 도착 → 3.5초 건설
+    w.repathT=(w.repathT||0)-dt;
+    if(!w.path || w.pathTask!==c || w.repathT<=0){ w.path=strikeFindPath(b,w.x,w.y,c.x,c.y,c); w.pi=0; w.pathTask=c; w.repathT=0.7; }   // 경로 (재)탐색(0.7초마다·건물 변화 반영)
+    let tx=c.x, ty=c.y;   // 현재 웨이포인트(없으면 목표 직행)
+    if(w.path && w.path.length){ while(w.pi<w.path.length-1 && Math.hypot(w.path[w.pi].x-w.x,w.path[w.pi].y-w.y)<BUILD_UNIT*0.85) w.pi++; const wp=w.path[Math.min(w.pi,w.path.length-1)]; tx=wp.x; ty=wp.y; }
+    let dx=tx-w.x, dy=ty-w.y, d=Math.hypot(dx,dy)||1, hx=dx/d, hy=dy/d, px=0, py=0;
+    for(const o of b.cells){ if(o===c) continue; const hw=o.w/2, hh=o.h/2, rx=w.x-o.x, ry=w.y-o.y;   // 국소 반발(경로가 못 잡은 미세 겹침 방지)
+      const nx=Math.max(-hw,Math.min(hw,rx)), ny=Math.max(-hh,Math.min(hh,ry)); let ox=rx-nx, oy=ry-ny, od=Math.hypot(ox,oy);
+      if(od<0.01){ const penx=hw-Math.abs(rx), peny=hh-Math.abs(ry); if(penx<peny){ ox=Math.sign(rx||1); oy=0; } else { ox=0; oy=Math.sign(ry||1); } od=1; }
       if(od<MARG){ const wgt=(MARG-od)/MARG; px+=(ox/od)*wgt; py+=(oy/od)*wgt; } }
-    if(px||py){ hx+=px*2.0; hy+=py*2.0; const hl=Math.hypot(hx,hy)||1; hx/=hl; hy/=hl; }   // 회피 성분 합성
+    if(px||py){ hx+=px*1.1; hy+=py*1.1; const hl=Math.hypot(hx,hy)||1; hx/=hl; hy/=hl; }
     const v=1100*dt; w.x=Math.max(0,Math.min(b.W, w.x+hx*v)); w.y=Math.max(0,Math.min(b.H, w.y+hy*v)); w._face=Math.atan2(hx,hy); } }
 // 건물 풋프린트 → 월드 크기(자유 배치). fp:[w,h] 비율 × BUILD_UNIT. 미지정 시 4×4
 function strikeFootprint(t){ const f=(t&&t.fp)||[4,4]; return {w:f[0]*BUILD_UNIT, h:f[1]*BUILD_UNIT}; }
@@ -9287,6 +9316,7 @@ function strikePlaceGhost(){ const S=STK, b=S.build; if(!b.placing||!b.ghost) re
   if(!strikeCanPlace(b,cx,cy,fp.w,fp.h)){ strikeToast('여기엔 지을 수 없습니다'); return; }
   if(S.me.gold<t.cost){ strikeToast('골드 부족 (필요 '+t.cost+')'); return; }
   S.me.gold-=t.cost; b.cells.push({type:t,built:0,x:cx,y:cy,w:fp.w,h:fp.h});
+  for(const w of (b.workers||[])) w.path=null;   // 새 건물 → 일꾼 경로 즉시 재탐색(새 장애물 반영)
   if(typeof playSfx==='function') playSfx('buy_unit');
   b.placing=null; b.ghost=null; strikeRenderBuild(); }   // 배치 후 카드 선택 해제(다시 누르면 또 지음)
 function strikePickBuild(i){ const S=STK; if(!S) return; const t=strikeBuildMenu()[i]; if(!t) return; S.build.placing=(S.build.placing===t)?null:t; S.build.ghost=null; strikeRenderBuild(); if(S.build.placing) strikeToast(t.name+' — 맵을 눌러 위치를 조정하고 손을 떼면 건설'); }
