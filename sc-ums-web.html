@@ -2394,14 +2394,9 @@
     </div>
 
     <div class="bp" id="bpUpgrade">
-      <!-- 직스(컴퓨터가 싸운다) 경제 패널 -->
+      <!-- 직스(컴퓨터가 싸운다) 보급 패널 — 화면의 시설을 탭하면 해당 내용이 여기 열림 -->
       <div id="stEconBp" class="stBp hide">
-        <div class="stBpHead">💰 경제</div>
-        <div class="stEconRow">보유 골드 <b id="ecGold">0</b></div>
-        <div class="stEconRow">라운드 기본 수입 <b id="ecBase">0</b></div>
-        <div class="stEconRow">광산 <b id="ecMines">0</b>개 → 추가 <b id="ecMineInc">0</b></div>
-        <div class="stEconRow stEconTot">라운드당 총 수입 <b id="ecTotal">0</b></div>
-        <button id="ecBuyMine" class="stBtn" onclick="strikeBuyMine()">⛏ 광산 건설 (<span id="ecMineCost">0</span>)</button>
+        <div id="supBody"></div>
       </div>
       <div class="hint" id="upgHint">건물을 <b>터치</b>하면<br>업그레이드 목록이 표시됩니다</div>
       <div class="upgList" id="upgList" style="display:none"></div>
@@ -9003,7 +8998,7 @@ function strikeDrawScenery(ctx,w2s,scale,S,W,H){ if(!S.dec) S.dec=strikeGenScene
   ctx.fillStyle='rgba(222,212,182,.15)';   // 떠다니는 먼지(다이나믹)
   for(const m of D.motes){ const p=w2s(m.x+Math.sin(t*m.sp+m.ph)*m.amp, m.y+Math.cos(t*m.sp*0.7+m.ph)*m.amp*0.6); if(p.x<0||p.x>W||p.y<0||p.y>H) continue; ctx.beginPath(); ctx.arc(p.x,p.y,1.5+Math.sin(t*2+m.ph)*0.6,0,6.28); ctx.fill(); }
   ctx.restore(); }
-const STK_TABLABEL ={ Main:'전투', Unit:'건설지', Upgrade:'경제', Players:'관전' };
+const STK_TABLABEL ={ Main:'전투', Unit:'건설지', Upgrade:'보급', Players:'관전' };
 const STK_NEMOLABEL={ Main:'메인', Unit:'유닛뽑기', Upgrade:'업그레이드', Players:'플레이어' };
 function strikeNewState(){ const W=mapCfg('world',4800), hp=mapCfg('baseHp',3000), inc=mapCfg('incomeBase',150), mc=mapCfg('mineCost',300), mi=mapCfg('mineIncome',120);
   const sHp=mapCfg('secHp',Math.round(hp*0.5)), cHp=mapCfg('centralHp',Math.round(hp*0.35));
@@ -9012,16 +9007,23 @@ function strikeNewState(){ const W=mapCfg('world',4800), hp=mapCfg('baseHp',3000
     world:W, cycleTime:mapCfg('cycleTime',30), cycleT:mapCfg('cycleTime',30),
     incomeBase:inc, mineIncome:mi,
     // 진영별 경제(me=나, ai=컴퓨터). 광산/돈 리더보드용. shield=중립 신전 보상 쉴드(다음 단계 전투에서 적용)
-    me:{ name:'나', compCol:(typeof PLAYER_VIEW_COLORS!=='undefined'?PLAYER_VIEW_COLORS[0]:'#4aa8ff'), base:{x:W*0.115,y:W*0.885, hp:hp, max:hp, dead:false}, hp:hp, max:hp, shield:0, gold:mapCfg('startGold',3000), mines:0, mineCost:mc, units:[], buildings:[],
-         sec:{x:W*0.339,y:W*0.661, hp:sHp, max:sHp, dead:false} },   // 좌하단 메인 + 2차 신전 / compCol=아군 컴퓨터(생산자) 색
-    ai:{ name:'컴퓨터', compCol:(typeof PLAYER_VIEW_COLORS!=='undefined'?PLAYER_VIEW_COLORS[1]:'#ff4d4d'), base:{x:W*0.885,y:W*0.115, hp:hp, max:hp, dead:false}, hp:hp, max:hp, shield:0, gold:mapCfg('startGold',3000), mines:0, mineCost:mc, units:[], buildings:[], aiT:0,
+    me:{ name:'나', compCol:(typeof PLAYER_VIEW_COLORS!=='undefined'?PLAYER_VIEW_COLORS[0]:'#4aa8ff'), base:{x:W*0.115,y:W*0.885, hp:hp, max:hp, dead:false}, hp:hp, max:hp, shield:0, gold:mapCfg('startGold',3000), mines:0, mineCost:mc, atkLv:0, hpLv:0, mineLv:0, bombs:0, units:[], buildings:[],
+         sec:{x:W*0.339,y:W*0.661, hp:sHp, max:sHp, dead:false} },   // 좌하단 메인 + 2차 신전 / compCol=아군 컴퓨터(생산자) 색 / atkLv·hpLv=유닛강화, mineLv=채굴강화, bombs=폭탄 재고
+    ai:{ name:'컴퓨터', compCol:(typeof PLAYER_VIEW_COLORS!=='undefined'?PLAYER_VIEW_COLORS[1]:'#ff4d4d'), base:{x:W*0.885,y:W*0.115, hp:hp, max:hp, dead:false}, hp:hp, max:hp, shield:0, gold:mapCfg('startGold',3000), mines:0, mineCost:mc, atkLv:0, hpLv:0, mineLv:0, bombs:0, units:[], buildings:[], aiT:0,
          sec:{x:W*0.661,y:W*0.339, hp:sHp, max:sHp, dead:false} },   // 우상단 메인 + 2차 신전 / compCol=적군 컴퓨터 색
     central:{x:W*0.5,y:W*0.5, hp:cHp, max:cHp, owner:null, dead:false},   // 중앙 중립 보너스 신전(깬 팀 메인에 쉴드)
-    cam:{x:W/2,y:W/2}, zoom:STK_DEFZOOM, viewWorld:Math.round(2600/STK_DEFZOOM), cw:0, ch:0, sel:null, userCam:false,
+    cam:{x:W/2,y:W/2}, zoom:STK_DEFZOOM, viewWorld:Math.round(2600/STK_DEFZOOM), cw:0, ch:0, sel:null, userCam:false, supplySel:'mine',
     build:{ W:2400, H:1800, cols:32, rows:24, cam:{x:1200,y:900}, zoom:1.15, zoomCur:1.15, _sc:1, _ox:0, _oy:0, cells:[], worker:null, placing:null },   // 건설 보드(4:3, 그리드 32×24 칸=75) — 화면 커버+팬(전체가 한 화면에 안 들어옴) + 생산 건물(cells,풋프린트)·일꾼
     leadT:0, leadIdx:0, sizeCmp:false, cmpUnits:null };
 }
-function strikeIncome(side){ const S=STK; if(!S) return 0; side=side||S.me; return S.incomeBase + side.mines*S.mineIncome; }
+function strikeMineYield(side){ const S=STK; return S.mineIncome + (side.mineLv||0)*60; }   // 광산 1개당 수입(채굴 강화 반영)
+function strikeIncome(side){ const S=STK; if(!S) return 0; side=side||S.me; return S.incomeBase + side.mines*strikeMineYield(side); }
+// 보급 강화 비용(레벨별 누증) — 유닛 공격/체력, 채굴, 폭탄
+function strikeUpCost(kind, lv){ const B={atk:280, hp:280, mine:400}; return Math.round((B[kind]||300)*Math.pow(1.55, lv||0)); }
+const STK_BOMB_COST=600, STK_BOMB_DMG=520, STK_BOMB_R=520;   // 폭탄: 비용/피해/반경
+// 유닛 강화 배율(소환 시 적용) — 공격 +12%/Lv, 체력 +16%/Lv
+function strikeAtkMul(side){ return 1 + (side.atkLv||0)*0.12; }
+function strikeHpMul(side){ return 1 + (side.hpLv||0)*0.16; }
 // 진영 리더보드(광산 수 → 돈 순). leadIdx로 5초마다 회전 표시
 function strikeRanked(){ const S=STK; return [S.me,S.ai].slice().sort((a,b)=> (b.mines-a.mines) || (b.gold-a.gold)); }
 
@@ -9078,6 +9080,7 @@ function strikeEnd(){ if(!STK && !(G&&G.strike)) return;
 // ── 프레임/시뮬 ──
 function strikeFrame(dt){ const S=STK; if(!S) return; strikeStep(dt);
   if(G.tab==='Unit') strikeDrawBuildMap();
+  else if(G.tab==='Upgrade') strikeDrawSupply();   // 보급: 시설 화면(탭하면 하단 패널 열림)
   else if(G.tab==='Players' && S.specView) strikeDrawBuildMap(strikeSpecView(S.specView));   // 관전: 그 플레이어 건설 화면(그의 색)
   else strikeDrawMain();
   strikeHud(); strikeLeaderboard(dt); strikeSync3D(dt);
@@ -9184,9 +9187,13 @@ function strikeStep(dt){ const S=STK; if(!S) return; if(S.over) return; S.t+=dt;
   }
   strikeClampCam();
 }
-// AI 경제: 돈 모이면 광산 우선 투자(난이도 곡선 단순)
+// AI 경제: 광산 우선 투자 + 가끔 유닛 강화(플레이어 보급과 대등하게 스케일)
 function strikeAiEconomy(){ const S=STK, ai=S.ai;
-  if(ai.gold>=ai.mineCost && ai.mines<8 && Math.random()<0.7){ ai.gold-=ai.mineCost; ai.mines++; ai.mineCost=Math.round(ai.mineCost*1.35); } }
+  if(ai.gold>=ai.mineCost && ai.mines<8 && Math.random()<0.7){ ai.gold-=ai.mineCost; ai.mines++; ai.mineCost=Math.round(ai.mineCost*1.35); return; }
+  if(Math.random()<0.5){ const k=Math.random()<0.5?'atk':'hp', lv=(k==='atk'?ai.atkLv:ai.hpLv), cost=strikeUpCost(k,lv);   // 유닛 공격/체력 강화
+    if(ai.gold>=cost && lv<8){ ai.gold-=cost; if(k==='atk') ai.atkLv++; else ai.hpLv++; return; } }
+  const mc=strikeUpCost('mine', ai.mineLv);   // 채굴 강화
+  if(ai.gold>=mc && ai.mines>0 && ai.mineLv<6 && Math.random()<0.4){ ai.gold-=mc; ai.mineLv++; } }
 // 카메라가 맵 밖으로 못 나가게 클램프(검은 화면 방지)
 function strikeClampCam(){ const S=STK; if(!S||!S.cw) return; const scale=Math.min(S.cw,S.ch)/S.viewWorld;
   const hx=(S.cw/scale)/2, hy=(S.ch/scale)/2, W=S.world, c=W/2;
@@ -9238,8 +9245,9 @@ function strikeSpawnUnit(side, forceId){ const S=STK, me=S[side]; if(!me||me.uni
   const pads=strikeSpawnPads(side), pad=pads[(Math.random()*pads.length)|0], c=S.world/2;
   const x=pad.x+(Math.random()-.5)*260, y=pad.y+(Math.random()-.5)*260;   // 네모 스폰존 안에서 출현
   const pcol=me.compCol||((typeof PLAYER_VIEW_COLORS!=='undefined')?PLAYER_VIEW_COLORS[(side==='me')?0:1]:'#cfd6e2');   // 본체색=팀 대표 컴퓨터(생산자) 색 1개(개별 플레이어색 X — 그건 관전 화면에서)
+  const _hpM=strikeHpMul(me), _atkM=strikeAtkMul(me), _hp=Math.round(st.hp*_hpM), _dmg=st.dmg*_atkM;   // 보급 유닛 강화(체력·공격) 반영
   me.units.push({uid:'su'+(S.uidSeq=(S.uidSeq||0)+1), id:id, side:side, x:x, y:y, pcol:pcol,
-    hp:st.hp, maxHp:st.hp, dmg:st.dmg, rng:st.rng, acq:st.acq, splash:st.splash||0, melee:!!st.melee, tgtUid:null, cd:Math.random()*st.cdMax, cdMax:st.cdMax, spd:st.spd, color:st.color, size:st.size,
+    hp:_hp, maxHp:_hp, dmg:_dmg, rng:st.rng, acq:st.acq, splash:st.splash||0, melee:!!st.melee, tgtUid:null, cd:Math.random()*st.cdMax, cdMax:st.cdMax, spd:st.spd, color:st.color, size:st.size,
     _flank:(Math.random()<0.5?1:-1),   // 좌우 전개 선호(대칭 혼잡 시 분산 방향)
     wait:0.5, face:Math.atan2(c-x, c-y), dead:false}); }   // 인지범위/광역/근접 스탯 반영 / 0.5초 대기 후 진격
 function strikeMoveToward(u,tx,ty,dt){ const S=STK; let dx=tx-u.x, dy=ty-u.y, d=Math.hypot(dx,dy)||1, hx=dx/d, hy=dy/d;
@@ -9812,18 +9820,75 @@ function strikeSwitchTab(id,el){ const S=STK; if(!S) return; G.tab=id; S.userCam
   (el||document.querySelector('.tab[data-tab="'+id+'"]'))?.classList.add('on');
   document.querySelectorAll('.gview').forEach(v=>v.classList.toggle('on', v.id==='vMain'));   // 직스는 항상 전장/건설 캔버스 유지
   document.querySelectorAll('.bp').forEach(p=>p.classList.toggle('on', p.id==='bp'+id));        // 하단 패널은 nemo .bp 재사용
-  const zl=document.getElementById('zoneLabel'); if(zl) zl.textContent={Main:'⚔️ 전장',Unit:'🏗 건설지',Upgrade:'💰 경제',Players:'👁 관전'}[id]||'';
+  const zl=document.getElementById('zoneLabel'); if(zl) zl.textContent={Main:'⚔️ 전장',Unit:'🏗 건설지',Upgrade:'📦 보급',Players:'👁 관전'}[id]||'';
   if(id==='Upgrade') strikeRenderEcon(); else if(id==='Unit') strikeRenderBuild(); else if(id==='Players') strikeRenderSpec();
   if(typeof playSfx==='function') playSfx('ui_tab'); }
 
-// ── 경제(내 진영) ──
+// ── 보급(내 진영) — 화면 시설 탭 → 하단 패널 ──
+const STK_SUPPLY=[   // 보급 시설(화면 배치, 탭 시 하단 패널 열림). x,y=정규화 위치
+  {key:'mine',   name:'광산',       ico:'⛏', x:0.26, y:0.46, col:'#ffd24a'},
+  {key:'armory', name:'병기창',     ico:'⚙', x:0.5,  y:0.46, col:'#7fd0ff'},
+  {key:'silo',   name:'특수병기고', ico:'💣', x:0.74, y:0.46, col:'#ff7a6a'},
+];
 function strikeBuyMine(){ const S=STK; if(!S) return; const me=S.me; if(me.gold<me.mineCost){ if(typeof playSfx==='function') playSfx('ui_denied'); return; }
   me.gold-=me.mineCost; me.mines++; me.mineCost=Math.round(me.mineCost*1.35);
-  if(typeof playSfx==='function') playSfx('ui_confirm'); strikeRenderEcon(); }
-function strikeRenderEcon(){ const S=STK; if(!S) return; const me=S.me; const set=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
-  set('ecGold',Math.floor(me.gold)); set('ecBase',S.incomeBase); set('ecMines',me.mines);
-  set('ecMineInc',me.mines*S.mineIncome); set('ecTotal',strikeIncome(me)); set('ecMineCost',me.mineCost);
-  const b=document.getElementById('ecBuyMine'); if(b) b.disabled=me.gold<me.mineCost; }
+  if(typeof playSfx==='function') playSfx('ui_confirm'); strikeRenderSupply(); }
+function strikeUpg(kind){ const S=STK; if(!S) return; const me=S.me;   // 유닛 공격/체력 · 채굴 강화
+  const lv=(kind==='atk'?me.atkLv:kind==='hp'?me.hpLv:me.mineLv), max=(kind==='mine'?6:10), cost=strikeUpCost(kind,lv);
+  if(lv>=max){ if(typeof playSfx==='function') playSfx('ui_denied'); return; }
+  if(me.gold<cost){ if(typeof playSfx==='function') playSfx('ui_denied'); return; }
+  me.gold-=cost; if(kind==='atk') me.atkLv++; else if(kind==='hp') me.hpLv++; else me.mineLv++;
+  if(typeof playSfx==='function') playSfx('ui_confirm'); strikeRenderSupply(); }
+function strikeBuyBomb(){ const S=STK; if(!S) return; const me=S.me; if(me.gold<STK_BOMB_COST){ if(typeof playSfx==='function') playSfx('ui_denied'); return; }
+  me.gold-=STK_BOMB_COST; me.bombs=(me.bombs||0)+1; if(typeof playSfx==='function') playSfx('ui_confirm'); strikeRenderSupply(); }
+function strikeDropBomb(){ const S=STK; if(!S||!S.me.bombs) return; const me=S.me, foe=S.ai;   // 가장 밀집한 적 무리에 투하(자동 조준)
+  const alive=foe.units.filter(u=>!u.dead); if(!alive.length){ strikeToast('투하할 적이 없습니다'); return; }
+  let best=alive[0], bestN=-1; for(const a of alive){ let n=0; for(const b of alive){ const dx=a.x-b.x, dy=a.y-b.y; if(dx*dx+dy*dy<STK_BOMB_R*STK_BOMB_R) n++; } if(n>bestN){ bestN=n; best=a; } }
+  me.bombs--; const r2=STK_BOMB_R*STK_BOMB_R; let hit=0;
+  for(const e of alive){ const dx=e.x-best.x, dy=e.y-best.y, d2=dx*dx+dy*dy; if(d2<=r2){ e.hp-=STK_BOMB_DMG*(1-Math.sqrt(d2)/STK_BOMB_R*0.5); if(e.hp<=0) e.dead=true; hit++; } }   // 중심일수록 큰 피해
+  if(!S.fx||!S.fx.shots) S.fx=FX.store(); FX.death(S.fx, best.x, best.y, {unitSize:60, color:'#ff9a4c'});   // 폭발 이펙트(임시로 death FX 재사용)
+  if(typeof playSfx==='function') playSfx('boss_hit'); strikeToast('💥 폭탄 투하 — '+hit+'기 타격'); strikeRenderSupply(); }
+function strikeSupplySelect(key){ const S=STK; if(!S) return; S.supplySel=key; if(typeof playSfx==='function') playSfx('ui_tab'); strikeRenderSupply(); }
+// 하단 패널: 선택 시설의 내용 렌더(골드는 항상 상단 표기)
+function strikeRenderSupply(){ const S=STK; if(!S) return; const me=S.me, el=document.getElementById('supBody'); if(!el) return;
+  const g=Math.floor(me.gold), sel=S.supplySel||'mine';
+  const btn=(label, cost, cb, dis)=>`<button class="stBtn" onclick="${cb}" ${dis?'disabled':''}>${label}${cost!=null?' <span style="opacity:.85">(⛁'+cost+')</span>':''}</button>`;
+  let h='<div class="stBpHead">📦 보급 — 골드 <b style="color:#ffe27a">'+g+'</b></div>';
+  if(sel==='mine'){ const yield1=strikeMineYield(me), mc=strikeUpCost('mine',me.mineLv);
+    h+='<div class="stEconRow">광산 <b>'+me.mines+'</b>개 · 개당 <b>'+yield1+'</b></div>';
+    h+='<div class="stEconRow stEconTot">라운드 총수입 <b>'+strikeIncome(me)+'</b></div>';
+    h+=btn('⛏ 광산 건설', me.mineCost, 'strikeBuyMine()', g<me.mineCost);
+    h+=btn('⬆ 채굴 강화 Lv'+me.mineLv+(me.mineLv>=6?' (MAX)':' → +60/개'), me.mineLv>=6?null:mc, 'strikeUpg(\'mine\')', me.mineLv>=6||g<mc);
+  } else if(sel==='armory'){ const ac=strikeUpCost('atk',me.atkLv), hc=strikeUpCost('hp',me.hpLv);
+    h+='<div class="stEconRow">공격 <b>Lv'+me.atkLv+'</b> (+'+(me.atkLv*12)+'%) · 체력 <b>Lv'+me.hpLv+'</b> (+'+(me.hpLv*16)+'%)</div>';
+    h+='<div class="stBpHint">이후 소환되는 내 유닛에 적용됩니다.</div>';
+    h+=btn('⚔ 공격 강화 Lv'+me.atkLv+(me.atkLv>=10?' (MAX)':''), me.atkLv>=10?null:ac, 'strikeUpg(\'atk\')', me.atkLv>=10||g<ac);
+    h+=btn('❤ 체력 강화 Lv'+me.hpLv+(me.hpLv>=10?' (MAX)':''), me.hpLv>=10?null:hc, 'strikeUpg(\'hp\')', me.hpLv>=10||g<hc);
+  } else { // silo — 폭탄
+    h+='<div class="stEconRow">보유 폭탄 <b>'+(me.bombs||0)+'</b>개</div>';
+    h+='<div class="stBpHint">투하 시 가장 밀집한 적 무리에 광역 피해.</div>';
+    h+=btn('💣 폭탄 구매', STK_BOMB_COST, 'strikeBuyBomb()', g<STK_BOMB_COST);
+    h+=btn('🎯 폭탄 투하'+(me.bombs?' ×'+me.bombs:''), null, 'strikeDropBomb()', !me.bombs);
+  }
+  el.innerHTML=h; }
+var strikeRenderEcon=strikeRenderSupply;   // 하위호환(기존 호출부)
+// 보급 시설 화면(cvMain) — 시설 카드 배치, 선택 강조
+function strikeDrawSupply(){ const S=STK; if(!S) return; const cvEl=document.getElementById('cvMain'); if(!cvEl) return;
+  const r=setup('cvMain'); const ctx=r.ctx, W=r.W, H=r.H; GW=W; GH=H; S.cw=W; S.ch=H;
+  ctx.fillStyle='#070b12'; ctx.fillRect(0,0,W,H);
+  const bg=ctx.createRadialGradient(W/2,H*0.42,0,W/2,H*0.42,Math.max(W,H)*0.7); bg.addColorStop(0,'rgba(40,70,110,.22)'); bg.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+  ctx.textAlign='center'; ctx.textBaseline='alphabetic'; ctx.fillStyle='rgba(180,210,240,.9)'; ctx.font='800 15px Rajdhani,"Apple SD Gothic Neo",sans-serif';
+  ctx.fillText('📦 보급 — 시설을 탭하세요', W/2, H*0.16);
+  const cardW=Math.min(W*0.26, 120), cardH=cardW*1.1, sel=S.supplySel||'mine'; S._supHit=[];
+  for(const f of STK_SUPPLY){ const cx=f.x*W, cy=f.y*H, x=cx-cardW/2, y=cy-cardH/2, on=(f.key===sel);
+    S._supHit.push({key:f.key, x:x, y:y, w:cardW, h:cardH});
+    ctx.save();
+    ctx.fillStyle=on?'rgba(30,54,86,.96)':'rgba(22,34,52,.9)'; _strkRR(ctx,x,y,cardW,cardH,12); ctx.fill();
+    ctx.lineWidth=on?3:1.5; ctx.strokeStyle=on?f.col:'rgba(120,160,200,.4)'; _strkRR(ctx,x,y,cardW,cardH,12); ctx.stroke();
+    ctx.fillStyle='#fff'; ctx.textBaseline='middle'; ctx.font=(cardW*0.5)+'px sans-serif'; ctx.fillText(f.ico, cx, cy-cardH*0.12);
+    ctx.fillStyle=on?f.col:'#cfe0f2'; ctx.font='800 13px "Apple SD Gothic Neo",sans-serif'; ctx.fillText(f.name, cx, cy+cardH*0.32);
+    ctx.restore(); }
+  ctx.textBaseline='alphabetic'; }
 // 종족별 빌드 메뉴(그 종족 소환 유닛 = 지을 수 있는 생산 건물). STK_UNITS에서 이름·아이콘·비용 도출
 function strikeBuildable(race){ const r=race||(STK&&STK.me&&STK.me.race)||'terran';
   return (STK_BUILDINGS[r]||STK_BUILDINGS.terran).map(b=>({key:b.key, name:b.name, ico:b.ico, cost:b.cost, fp:b.fp, produces:b.produces})); }   // fp 포함(누락 시 전부 기본 2×2로 나오던 버그 수정)
@@ -9889,6 +9954,9 @@ function strikeOnMove(e){ const S=STK; if(!S) return; const r=strikeViewRect(), 
 function strikeOnUp(e){ const S=STK; if(!S) return; if(e) _stkPtrs.delete(e.pointerId);
   if(_stkPtrs.size<2) _stkPinch=null;
   if(_stkDrag && _stkDrag.ghost){ strikePlaceGhost(); if(S.build) S.build.ghost=null; _stkDrag=null; return; }   // 건설: 손 떼면 실루엣 위치에 배치(유효할 때만)
+  if(_stkDrag && !_stkDrag.moved && G.tab==='Upgrade'){ const r=strikeViewRect();   // 보급 탭: 시설 탭 → 하단 패널
+    const px=(e&&e.clientX!=null?e.clientX:r.left)-r.left, py=(e&&e.clientY!=null?e.clientY:r.top)-r.top;
+    const hit=(S._supHit||[]).find(f=> px>=f.x&&px<=f.x+f.w&&py>=f.y&&py<=f.y+f.h); if(hit) strikeSupplySelect(hit.key); _stkDrag=null; return; }
   if(_stkDrag && !_stkDrag.moved && G.tab!=='Unit'){ const r=strikeViewRect();   // 전장 탭(이동 없음)=단일 선택
     const px=(e&&e.clientX!=null?e.clientX:r.left+r.width/2)-r.left, py=(e&&e.clientY!=null?e.clientY:r.top+r.height/2)-r.top;
     const w=strikeScreenToWorld(px,py); strikeSelectAt(w.x,w.y); }
