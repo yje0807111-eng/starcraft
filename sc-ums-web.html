@@ -8943,6 +8943,12 @@ const STK_BUILDINGS={
 const STK_BUILD_MODEL={};   // 예: { supply:'supply_bld', barracks:'barracks_bld', factory:'factory_bld', ... }
 // 종족 → 일꾼 3D 모델 키(모델 이미 존재 → 건설지에서 3D로 표시)
 const STK_WORKER_MODEL={ terran:'worker_human', zerg:'worker_swarm', protoss:'worker_light' };
+// 종족별 시작 본진(팔레트에 없음 · 처음부터 왼쪽 위에 1채 · 전투유닛 생산 없음)
+const STK_MAIN={
+  terran:  {key:'command',  name:'커맨드 센터', ico:'🏢', fp:[7,6], produces:[]},
+  zerg:    {key:'hatchery', name:'해처리',      ico:'🥚', fp:[7,6], produces:[]},
+  protoss: {key:'nexus',    name:'넥서스',      ico:'🔷', fp:[7,6], produces:[]},
+};
 function strikeRandomRace(){ return STK_RACE_ORDER[Math.floor(Math.random()*STK_RACE_ORDER.length)]; }
 function strikeRaceUnits(side){ const r=side&&side.race; return (STK_RACES[r]||STK_RACES.terran).units.slice(); }   // 그 진영 종족의 소환 가능 유닛 id
 // 직스 타일 에셋(기존 assets/tiles 재사용)
@@ -9032,7 +9038,11 @@ function strikeStart(){ if(typeof bgmStop==='function') bgmStop();
   STK=strikeNewState();
   STK.me.race=(STK_RACES[_selRace]?_selRace:'terran'); STK.ai.race=strikeRandomRace();   // 내 종족=선택, 상대=랜덤 → 각자 그 종족 유닛만 소환
   STK.buildMenu=strikeBuildable(STK.me.race);   // 내 종족 빌드 메뉴 캐시(이전 판 잔존 방지)
-  { const b=STK.build, t0=STK.buildMenu[0], fp=strikeFootprint(t0); b.cells.push({type:t0,built:1,x:b.W/2,y:b.H/2,w:fp.w,h:fp.h}); b.workers=[]; for(let i=0;i<3;i++) b.workers.push({x:b.W*(0.34+i*0.16),y:b.H-180,task:null}); }   // 시작 생산 건물 1(중앙, 자유배치) + 일꾼 3
+  { const b=STK.build, hq=STK_MAIN[STK.me.race]||STK_MAIN.terran, fp=strikeFootprint(hq),   // 시작: 커맨드 센터(본진) 1채를 왼쪽 위에(자동 서플라이 제거)
+      sp=strikeSnap(b, fp.w/2+BUILD_UNIT*2, fp.h/2+BUILD_UNIT*2, fp.w, fp.h);   // 좌상단 근처(그리드 스냅)
+    b.cells.push({type:hq,built:1,x:sp.x,y:sp.y,w:fp.w,h:fp.h});
+    b.cam.x=sp.x; b.cam.y=sp.y;   // 시작 카메라를 본진에 맞춤(왼쪽 위 보임)
+    b.workers=[]; for(let i=0;i<3;i++) b.workers.push({x:sp.x+(i-1)*90, y:sp.y+fp.h/2+120, task:null}); }   // 일꾼 3(본진 앞)
   if(STK.sizeCmp){   // 크기 비교용 샘플 유닛: 중앙 신전 주변 4×2 그리드(월드 좌표)
     const W=STK.world, sp=560, cols=4;
     STK.cmpUnits=STRIKE_SAMPLE.map((s,i)=>{ const c=i%cols, r=Math.floor(i/cols);
@@ -9259,8 +9269,8 @@ function strikeFootprint(t){ const f=(t&&t.fp)||[4,4]; return {w:f[0]*BUILD_UNIT
 function strikeCanPlace(b,cx,cy,w,h){ if(cx-w/2<0||cy-h/2<0||cx+w/2>b.W||cy+h/2>b.H) return false;   // 보드 밖
   for(const c of b.cells){ if(Math.abs(cx-c.x)<(w+c.w)/2 && Math.abs(cy-c.y)<(h+c.h)/2) return false; }   // AABB 겹침
   return true; }
-// 그리드 스냅: 건물 좌상단을 BUILD_UNIT 격자에 맞춰 정렬(보이지 않는 격자) → 중심 좌표 반환
-function strikeSnap(b,cx,cy,w,h){ const G=BUILD_UNIT;
+// 그리드 스냅: 건물 좌상단을 격자(BUILD_UNIT×2)에 맞춰 정렬 → 인접 건물이 위/중앙/아래로 딱 나뉨
+function strikeSnap(b,cx,cy,w,h){ const G=BUILD_UNIT*2;
   let x0=Math.round((cx-w/2)/G)*G, y0=Math.round((cy-h/2)/G)*G;
   x0=Math.max(0,Math.min(b.W-w,x0)); y0=Math.max(0,Math.min(b.H-h,y0));   // 보드 안 클램프
   return {x:x0+w/2, y:y0+h/2}; }
