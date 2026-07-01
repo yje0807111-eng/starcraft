@@ -9217,13 +9217,14 @@ function strikeFocus(){ const S=STK; if(!S) return {x:0,y:0}; const c=S.world/2;
 const WORKER_KR={worker_human:'유니온 일꾼',worker_light:'에테리얼 일꾼',worker_swarm:'스웜 일꾼'};   // 신규 일꾼 표시명
 function strikeUnitName(id){ return (STK_UNITS[id]&&STK_UNITS[id].name)||(WORKER_KR[id])||(typeof MODEL_NAME_KR!=='undefined'&&MODEL_NAME_KR[id])||(U[id]&&U[id].name)||id; }   // 직스 유닛 표시명(신규 유닛 포함)
 function strikeUnitIco(id){ return (STK_UNITS[id]&&STK_UNITS[id].ico)||(U[id]&&U[id].icon)||'⚔'; }
+// 인지 거리 = 사거리×1.6, 단 하한 340(근접도 인식)·상한 560(장거리 과도추격 방지)
+function strikeAcq(rng){ return Math.max(340, Math.min(560, rng*1.6)); }
 function strikeUnitStats(id){ const s=STK_UNITS[id];
-  if(s){ const acq = s.melee ? Math.max(440, s.rng*1.5) : s.rng*1.5;   // 근접은 인지범위 따로 키움(안 그러면 적 코앞까지 무시)
-    return { hp:s.hp, dmg:s.dmg, rng:s.rng, cdMax:s.cd, spd:s.spd,
-      color:(U[id]&&U[id].color)||'#cfd6e2', size:s.size, splash:s.splash||0, melee:!!s.melee, acq:acq }; }
+  if(s){ return { hp:s.hp, dmg:s.dmg, rng:s.rng, cdMax:s.cd, spd:s.spd,
+      color:(U[id]&&U[id].color)||'#cfd6e2', size:s.size, splash:s.splash||0, melee:!!s.melee, acq:strikeAcq(s.rng) }; }
   const d=U[id]||{}; const rng=(d.range||0.2)*850;   // 폴백(U 기반 — 안전)
   return { hp:Math.round((d.hp||40)*3), dmg:(d.dmg||15), rng:rng,
-    cdMax:Math.max(0.45,(d.cd||22)/22), spd:(d.moveSpd||0.19)*1800, color:d.color||'#cfd6e2', size:d.size||13, splash:0, melee:false, acq:rng*1.5 }; }
+    cdMax:Math.max(0.45,(d.cd||22)/22), spd:(d.moveSpd||0.19)*1800, color:d.color||'#cfd6e2', size:d.size||13, splash:0, melee:false, acq:strikeAcq(rng) }; }
 function strikeSpawnPads(side){ const S=STK, b=S[side].base, D=360, CS=180;   // 메인신전 양 옆 네모 스폰존(strikeDrawSpawnPad와 동일 위치)
   return side==='me' ? [{x:b.x-D+CS,y:b.y-D-CS},{x:b.x+D+CS,y:b.y+D-CS}] : [{x:b.x-D-CS,y:b.y-D+CS},{x:b.x+D-CS,y:b.y+D+CS}]; }
 function strikeSpawnUnit(side, forceId){ const S=STK, me=S[side]; if(!me||me.units.length>=40) return;   // 진영당 상한(3D 성능 고려)
@@ -9234,15 +9235,20 @@ function strikeSpawnUnit(side, forceId){ const S=STK, me=S[side]; if(!me||me.uni
   const pcol=me.compCol||((typeof PLAYER_VIEW_COLORS!=='undefined')?PLAYER_VIEW_COLORS[(side==='me')?0:1]:'#cfd6e2');   // 본체색=팀 대표 컴퓨터(생산자) 색 1개(개별 플레이어색 X — 그건 관전 화면에서)
   me.units.push({uid:'su'+(S.uidSeq=(S.uidSeq||0)+1), id:id, side:side, x:x, y:y, pcol:pcol,
     hp:st.hp, maxHp:st.hp, dmg:st.dmg, rng:st.rng, acq:st.acq, splash:st.splash||0, melee:!!st.melee, tgtUid:null, cd:Math.random()*st.cdMax, cdMax:st.cdMax, spd:st.spd, color:st.color, size:st.size,
+    _flank:(Math.random()<0.5?1:-1),   // 좌우 전개 선호(대칭 혼잡 시 분산 방향)
     wait:0.5, face:Math.atan2(c-x, c-y), dead:false}); }   // 인지범위/광역/근접 스탯 반영 / 0.5초 대기 후 진격
 function strikeMoveToward(u,tx,ty,dt){ const S=STK; let dx=tx-u.x, dy=ty-u.y, d=Math.hypot(dx,dy)||1, hx=dx/d, hy=dy/d;
-  // 전방의 정지(공격중=앵커) 유닛을 접선 방향으로 우회 → 막힌 길 자동 회피(최단 측면으로)
-  if(S){ let sx=0, sy=0; const scan=function(list){ for(const o of list){ if(o===u||o.dead||o.moving||o.wait>0) continue;
-      const ox=o.x-u.x, oy=o.y-u.y, od=Math.hypot(ox,oy)||1, reach=(u.size+o.size)*3.2;
-      if(od<reach){ const fwd=(ox*hx+oy*hy)/od; if(fwd>0.25){   // 진행 방향 앞쪽 장애물만
-        let tnx=-hy, tny=hx; if((ox*tnx+oy*tny)>0){ tnx=-tnx; tny=-tny; }   // 장애물 반대편(자유로운 쪽) 접선
+  // 전방 정지(공격중=앵커) 유닛 접선 회피 + 아군 혼잡 시 좌우 전개(스타식)
+  if(S){ let sx=0, sy=0; const perpX=-hy, perpY=hx; let latBal=0, aheadN=0;
+    const scan=function(list, friendly){ for(const o of list){ if(o===u||o.dead||o.wait>0) continue;
+      const ox=o.x-u.x, oy=o.y-u.y, od=Math.hypot(ox,oy)||1;
+      if(friendly){ const rf=(u.size+o.size)*5.0; if(od<rf){ const fwd=(ox*hx+oy*hy)/od; if(fwd>0){ latBal+=((ox*perpX+oy*perpY)/od)*(1-od/rf); if(fwd>0.4) aheadN+=(1-od/rf); } } }   // 앞쪽 아군 밀집 측정
+      if(o.moving) continue;   // 이동 유닛은 앵커 아님
+      const reach=(u.size+o.size)*3.2; if(od<reach){ const fwd=(ox*hx+oy*hy)/od; if(fwd>0.25){   // 진행 방향 앞쪽 앵커만
+        let tnx=-hy, tny=hx; if((ox*tnx+oy*tny)>0){ tnx=-tnx; tny=-tny; }   // 자유로운 쪽 접선
         const w=(1-od/reach)*fwd; sx+=tnx*w; sy+=tny*w; } } } };
-    scan(S.me.units); scan(S.ai.units);
+    scan(S.me.units, u.side==='me'); scan(S.ai.units, u.side==='ai');
+    if(aheadN>0.5){ const dir=(Math.abs(latBal)>0.2)?(latBal>0?-1:1):(u._flank||1), spread=Math.min(1.6, aheadN*0.55); sx+=perpX*dir*spread; sy+=perpY*dir*spread; }   // 앞이 붐비면 덜 붐비는 옆으로 퍼져 우회
     // 신전 회피: 목표가 그 신전이 아니면 발자국을 접선으로 돌아 감(신전에 막혀 제자리 달리기 방지)
     const tps=[[S.me.base,150],[S.ai.base,150],[S.me.sec,80],[S.ai.sec,80],[S.central,35]];
     for(const tp of tps){ const o=tp[0]; if(!o||o.dead) continue; if(Math.hypot(tx-o.x,ty-o.y) < tp[1]+60) continue;   // 이 신전이 공격 목표면 회피 안 함(접근 허용)
@@ -9519,9 +9525,11 @@ function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
     const front=strikeFrontStruct(side);   // 가장 앞 신전 1개만 타겟(뒤 신전은 못 때림)
     for(const u of me.units){ if(u.dead) continue;
       if(u.wait>0){ u.wait-=dt; u.moving=false; continue; }   // 스폰 후 0.5초 대기(중앙 응시 상태로 정지)
-      let tgt=strikeFindUnit(foe.units, u.tgtUid);   // 현재 타겟 유지(보복·추적)
-      if(tgt && Math.hypot(tgt.x-u.x,tgt.y-u.y) > u.acq*2.5) tgt=null;   // 너무 멀어지면 타겟 해제(리시)
-      if(!tgt){ let bd=u.acq*u.acq; for(const e of foe.units){ if(e.dead) continue; const dx=e.x-u.x, dy=e.y-u.y, d=dx*dx+dy*dy; if(d<bd){ bd=d; tgt=e; } } }   // 인지범위(사거리×1.5) 내 최근접 적 인지
+      let tgt=strikeFindUnit(foe.units, u.tgtUid);   // 현재 타겟
+      const inRng = tgt && Math.hypot(tgt.x-u.x,tgt.y-u.y)<=u.rng;   // 사거리 안이면 그 타겟 고수(포커스 유지)
+      if(!inRng){   // 사거리 밖: 매 프레임 최근접 적 재탐색 → 먼 타겟에 몰리지 않고 각자 가까운 적 교전
+        let bd=u.acq*u.acq, best=null; for(const e of foe.units){ if(e.dead) continue; const dx=e.x-u.x, dy=e.y-u.y, d=dx*dx+dy*dy; if(d<bd){ bd=d; best=e; } }
+        if(best) tgt=best; else if(tgt && Math.hypot(tgt.x-u.x,tgt.y-u.y)>u.acq*2.5) tgt=null; }   // 인지 내 최근접 / 없고 너무 멀면 해제
       u.tgtUid = tgt?tgt.uid:null;
       if(tgt){ const d=Math.hypot(tgt.x-u.x,tgt.y-u.y);   // 유닛 우선 교전
         if(d<=u.rng){ u.moving=false; u.face=Math.atan2(tgt.x-u.x, tgt.y-u.y); u.cd-=dt;
