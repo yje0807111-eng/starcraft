@@ -9099,16 +9099,24 @@ function strikeDrawBuildMap(spec){ const S=STK; if(!S) return; const cvEl=docume
     ctx.globalAlpha=1; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font=Math.max(12,Math.min(fw,fh)*0.5)+'px sans-serif'; ctx.fillStyle='#fff'; ctx.fillText(c.type.ico, cx, cy);
     if(!built){ const bw=fw*0.82, by2=ry+fh+5; ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillRect(cx-bw/2,by2,bw,5); ctx.fillStyle='#6fe89a'; ctx.fillRect(cx-bw/2,by2,bw*c.built,5); }
     ctx.restore(); }
-  // 배치 실루엣(손 누르는 중) — 유효=초록 / 무효(겹침·보드밖)=빨강 테두리
-  if(!spec && b.placing && b.ghost){ const fp=strikeFootprint(b.placing), ok=strikeCanPlace(b,b.ghost.x,b.ghost.y,fp.w,fp.h);
-    const gw=fp.w*sc, gh=fp.h*sc, gx=ox+b.ghost.x*sc, gy=oy+b.ghost.y*sc, rr=Math.min(gw,gh)*0.14;
+  // 배치 실루엣(손 누르는 중) — 그리드 스냅 위치에 표시. 유효=초록 / 무효(겹침·보드밖)=빨강 테두리
+  if(!spec && b.placing && b.ghost){ const fp=strikeFootprint(b.placing), sp=strikeSnap(b,b.ghost.x,b.ghost.y,fp.w,fp.h), ok=strikeCanPlace(b,sp.x,sp.y,fp.w,fp.h);
+    const gw=fp.w*sc, gh=fp.h*sc, gx=ox+sp.x*sc, gy=oy+sp.y*sc, rr=Math.min(gw,gh)*0.14;
     ctx.save(); ctx.globalAlpha=0.42; ctx.fillStyle=ok?'rgba(110,235,150,.4)':'rgba(255,70,80,.32)'; _strkRR(ctx,gx-gw/2,gy-gh/2,gw,gh,rr); ctx.fill();
     ctx.globalAlpha=1; ctx.lineWidth=3; ctx.strokeStyle=ok?'#7dffb0':'#ff4650'; _strkRR(ctx,gx-gw/2,gy-gh/2,gw,gh,rr); ctx.stroke();
     ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font=Math.max(12,Math.min(gw,gh)*0.42)+'px sans-serif'; ctx.fillStyle=ok?'#eaffef':'#ffdadd'; ctx.fillText(b.placing.ico, gx, gy);
     ctx.restore(); }
-  if(!spec) for(const wk of (b.workers||[])){ const wx=ox+wk.x*sc, wy=oy+wk.y*sc, wr=Math.max(4,22*sc);
-    if(wk.task){ const tx=ox+wk.task.x*sc, ty=oy+wk.task.y*sc; ctx.strokeStyle='rgba(255,210,74,.45)'; ctx.setLineDash([5,4]); ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(wx,wy); ctx.lineTo(tx,ty); ctx.stroke(); ctx.setLineDash([]); }
-    ctx.fillStyle='#ffd24a'; ctx.beginPath(); ctx.arc(wx,wy,wr,0,6.283); ctx.fill(); ctx.strokeStyle='#7a5a12'; ctx.lineWidth=1.5; ctx.stroke(); }
+  // 일꾼 — 종족별 일꾼(엔지니어/드론/결정체)로 표시(종족색 원반 + 일꾼 이모지)
+  if(!spec){ const _wid={terran:'worker_human',zerg:'worker_swarm',protoss:'worker_light'}[S.me.race]||'worker_human';
+    const _wico=(typeof U!=='undefined'&&U[_wid]&&U[_wid].icon)||'🔧', _wcol=(STK_RACES[S.me.race]&&STK_RACES[S.me.race].col)||'#ffd24a';
+    for(const wk of (b.workers||[])){ const wx=ox+wk.x*sc, wy=oy+wk.y*sc, wr=Math.max(7,30*sc);
+      if(wk.task){ const tx=ox+wk.task.x*sc, ty=oy+wk.task.y*sc; ctx.strokeStyle='rgba(255,210,74,.4)'; ctx.setLineDash([5,4]); ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(wx,wy); ctx.lineTo(tx,ty); ctx.stroke(); ctx.setLineDash([]); }
+      ctx.save();
+      ctx.fillStyle='rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(wx,wy+wr*0.55,wr*0.9,wr*0.38,0,0,6.28); ctx.fill();   // 그림자
+      ctx.globalAlpha=0.92; ctx.fillStyle=_wcol; ctx.beginPath(); ctx.arc(wx,wy,wr,0,6.28); ctx.fill(); ctx.globalAlpha=1;   // 종족색 원반
+      ctx.strokeStyle='rgba(0,0,0,.55)'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(wx,wy,wr,0,6.28); ctx.stroke();
+      ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font=Math.max(9,wr*1.15)+'px sans-serif'; ctx.fillText(_wico,wx,wy);   // 종족 일꾼 이모지
+      ctx.restore(); } }
   // 상단 텍스트 전부 제거(골드는 우상단 크레딧 표시로 충분) — 관전 시에만 대상 라벨
   if(spec){ ctx.textBaseline='alphabetic'; ctx.font='700 13px Rajdhani, sans-serif'; ctx.textAlign='center';
     ctx.fillStyle=spec.col; ctx.fillText('👁 '+spec.label, W/2, Math.max(54, oy-12)); ctx.textAlign='left'; }
@@ -9233,8 +9241,13 @@ function strikeFootprint(t){ const f=(t&&t.fp)||[4,4]; return {w:f[0]*BUILD_UNIT
 function strikeCanPlace(b,cx,cy,w,h){ if(cx-w/2<0||cy-h/2<0||cx+w/2>b.W||cy+h/2>b.H) return false;   // 보드 밖
   for(const c of b.cells){ if(Math.abs(cx-c.x)<(w+c.w)/2 && Math.abs(cy-c.y)<(h+c.h)/2) return false; }   // AABB 겹침
   return true; }
-// 실루엣(b.ghost) 위치에 확정 배치 — 손 뗄 때 호출
-function strikePlaceGhost(){ const S=STK, b=S.build; if(!b.placing||!b.ghost) return; const t=b.placing, fp=strikeFootprint(t), cx=b.ghost.x, cy=b.ghost.y;
+// 그리드 스냅: 건물 좌상단을 BUILD_UNIT 격자에 맞춰 정렬(보이지 않는 격자) → 중심 좌표 반환
+function strikeSnap(b,cx,cy,w,h){ const G=BUILD_UNIT;
+  let x0=Math.round((cx-w/2)/G)*G, y0=Math.round((cy-h/2)/G)*G;
+  x0=Math.max(0,Math.min(b.W-w,x0)); y0=Math.max(0,Math.min(b.H-h,y0));   // 보드 안 클램프
+  return {x:x0+w/2, y:y0+h/2}; }
+// 실루엣(b.ghost) 위치에 확정 배치 — 손 뗄 때 호출(그리드 스냅)
+function strikePlaceGhost(){ const S=STK, b=S.build; if(!b.placing||!b.ghost) return; const t=b.placing, fp=strikeFootprint(t), sp=strikeSnap(b,b.ghost.x,b.ghost.y,fp.w,fp.h), cx=sp.x, cy=sp.y;
   if(!strikeCanPlace(b,cx,cy,fp.w,fp.h)){ strikeToast('여기엔 지을 수 없습니다'); return; }
   if(S.me.gold<t.cost){ strikeToast('골드 부족 (필요 '+t.cost+')'); return; }
   S.me.gold-=t.cost; b.cells.push({type:t,built:0,x:cx,y:cy,w:fp.w,h:fp.h});
