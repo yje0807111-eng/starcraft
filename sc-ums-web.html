@@ -8857,7 +8857,7 @@ const STRIKE_SAMPLE=[{id:'marine'},{id:'ghost'},{id:'hydra'},{id:'dragoon'},{id:
 // 전장 줌 한계: 최소(가장 축소)=1.2, 기본 시작=1.2, 최대(가장 확대)=2.5
 const STK_MINZOOM=1.2, STK_DEFZOOM=1.2, STK_MAXZOOM=2.5, BUILD_MAXZOOM=3;
 const STK_UNIT_SCALE=1.35;   // 직스 전투 유닛 3D 확대 배율(신전 제외) — 전장에서 잘 보이게
-const BUILD_UNIT=40;         // 건설 건물 크기(월드/풋프린트 칸) — 작을수록 건물 작고 배치 공간 넓어짐
+const BUILD_UNIT=26;         // 건설 건물 크기(월드/풋프린트 칸) — 작을수록 건물 작고 배치 공간 넓어짐
 // 종족(컴퓨터가 싸운다): 진입 시 선택 → 그 종족 유닛만 소환. units=현 보유 전투유닛 기준 로스터
 // (프로토스·저그는 다음 단계에서 가챠 유닛으로 보강 예정 — 균형)
 // 직스 전용 유닛 스탯(네모 U 테이블과 독립 — 단독 밸런스 튜닝). hp/dmg/rng/spd=절대값(월드 0..4800 픽셀), cd=초, splash=광역 반경(px), melee=근접
@@ -9260,9 +9260,17 @@ function strikeStepBuild(dt){ const S=STK, b=S&&S.build; if(!b) return;
   const claimed=new Set();
   for(const w of b.workers){ if(w.task && w.task.built<1 && b.cells.indexOf(w.task)>=0) claimed.add(w.task); else w.task=null; }
   for(const w of b.workers){ if(w.task) continue; for(const c of b.cells){ if(c.built<1 && !claimed.has(c)){ w.task=c; claimed.add(c); break; } } }   // 유휴 일꾼 → 미점유 미완성 건물
-  for(const w of b.workers){ if(!w.task) continue; const c=w.task, dx=c.x-w.x, dy=c.y-w.y, d=Math.hypot(dx,dy);
-    if(d>150){ const v=1100*dt; w.x+=dx/d*v; w.y+=dy/d*v; w._face=Math.atan2(dx,dy); }   // 건설지로 이동(진행 방향 응시)
-    else { c.built=Math.min(1, c.built+dt/3.5); if(c.built>=1){ if(typeof playSfx==='function') playSfx('ui_confirm'); w.task=null; } } } }   // 3.5초 건설
+  const MARG=BUILD_UNIT*1.4;   // 일꾼이 건물에서 유지할 여유(회피 반경)
+  for(const w of b.workers){ if(!w.task) continue; const c=w.task, dx=c.x-w.x, dy=c.y-w.y, d=Math.hypot(dx,dy)||1;
+    if(d<=150){ c.built=Math.min(1, c.built+dt/3.5); if(c.built>=1){ if(typeof playSfx==='function') playSfx('ui_confirm'); w.task=null; } continue; }   // 도착 → 3.5초 건설
+    let hx=dx/d, hy=dy/d, px=0, py=0;   // 목표 방향 + 건물 회피(사각형 가장자리에서 밀어냄 → 돌아서 감)
+    for(const o of b.cells){ if(o===c) continue; const hw=o.w/2, hh=o.h/2, rx=w.x-o.x, ry=w.y-o.y;
+      const nx=Math.max(-hw,Math.min(hw,rx)), ny=Math.max(-hh,Math.min(hh,ry));   // 사각형 위 최근접점
+      let ox=rx-nx, oy=ry-ny, od=Math.hypot(ox,oy);
+      if(od<0.01){ const penx=hw-Math.abs(rx), peny=hh-Math.abs(ry); if(penx<peny){ ox=Math.sign(rx||1); oy=0; } else { ox=0; oy=Math.sign(ry||1); } od=1; }   // 내부면 얕은 축으로 탈출
+      if(od<MARG){ const wgt=(MARG-od)/MARG; px+=(ox/od)*wgt; py+=(oy/od)*wgt; } }
+    if(px||py){ hx+=px*2.0; hy+=py*2.0; const hl=Math.hypot(hx,hy)||1; hx/=hl; hy/=hl; }   // 회피 성분 합성
+    const v=1100*dt; w.x=Math.max(0,Math.min(b.W, w.x+hx*v)); w.y=Math.max(0,Math.min(b.H, w.y+hy*v)); w._face=Math.atan2(hx,hy); } }
 // 건물 풋프린트 → 월드 크기(자유 배치). fp:[w,h] 비율 × BUILD_UNIT. 미지정 시 4×4
 function strikeFootprint(t){ const f=(t&&t.fp)||[4,4]; return {w:f[0]*BUILD_UNIT, h:f[1]*BUILD_UNIT}; }
 // (cx,cy)=월드 중심에 w×h 건물이 놓일 수 있는지(보드 안 + 기존 건물과 미겹침)
@@ -9279,7 +9287,8 @@ function strikePlaceGhost(){ const S=STK, b=S.build; if(!b.placing||!b.ghost) re
   if(!strikeCanPlace(b,cx,cy,fp.w,fp.h)){ strikeToast('여기엔 지을 수 없습니다'); return; }
   if(S.me.gold<t.cost){ strikeToast('골드 부족 (필요 '+t.cost+')'); return; }
   S.me.gold-=t.cost; b.cells.push({type:t,built:0,x:cx,y:cy,w:fp.w,h:fp.h});
-  if(typeof playSfx==='function') playSfx('buy_unit'); }
+  if(typeof playSfx==='function') playSfx('buy_unit');
+  b.placing=null; b.ghost=null; strikeRenderBuild(); }   // 배치 후 카드 선택 해제(다시 누르면 또 지음)
 function strikePickBuild(i){ const S=STK; if(!S) return; const t=strikeBuildMenu()[i]; if(!t) return; S.build.placing=(S.build.placing===t)?null:t; S.build.ghost=null; strikeRenderBuild(); if(S.build.placing) strikeToast(t.name+' — 맵을 눌러 위치를 조정하고 손을 떼면 건설'); }
 // ═══ 공용 FX 코어(모든 유즈맵 공통 유닛별 공격 이펙트) ═══
 // 유닛 id → 공격 스타일. 네모 발사체 비주얼을 그대로 — 한 곳에서 정의해 어느 맵이든 같은 느낌.
