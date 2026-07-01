@@ -1416,7 +1416,9 @@
   .stEconRow.stEconTot b{color:#8fe6a0;font-size:16px}
   .stBtn{width:100%;margin-top:9px;padding:9px;border-radius:9px;cursor:pointer;font-family:inherit;font-weight:800;font-size:13px;color:#0b1118;background:linear-gradient(180deg,#ffd24a,#f0a82e);border:none}
   .stBtn:active{transform:translateY(1px)}.stBtn:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.4)}
-  #stBuildPalette{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+  #stBuildBp:not(.hide){display:flex;flex-direction:column;flex:1 1 auto;min-height:0}   /* 직스 건설 패널: .bp 높이 채움 */
+  #stBuildBp .stBpHead{flex:0 0 auto}
+  #stBuildPalette{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;flex:1 1 auto;min-height:0;overflow-y:auto;align-content:start;padding-bottom:4px;-webkit-overflow-scrolling:touch}   /* 카드 넘치면 내부 스크롤 */
   .stUnitCard.sel{border-color:#7fd0ff !important;box-shadow:0 0 11px -2px rgba(127,208,255,.7),inset 0 0 8px rgba(127,208,255,.12)}
   /* 유닛뽑기 하단 액션 버튼 */
   #gachaActions{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:100%;max-width:380px;margin:6px auto 0;box-sizing:border-box}
@@ -8856,6 +8858,7 @@ let STK=null, _stkDrag=null, _stkPtrs=new Map(), _stkPinch=null;
 const STRIKE_SAMPLE=[{id:'marine'},{id:'ghost'},{id:'hydra'},{id:'dragoon'},{id:'goliath'},{id:'archon'},{id:'tank',nm:'중전차'},{id:'skyguard',nm:'템페스트'}];
 // 전장 줌 한계: 최소(가장 축소)=1.2, 기본 시작=1.2, 최대(가장 확대)=2.5
 const STK_MINZOOM=1.2, STK_DEFZOOM=1.2, STK_MAXZOOM=2.5, BUILD_MAXZOOM=3;
+const STK_UNIT_SCALE=1.35;   // 직스 전투 유닛 3D 확대 배율(신전 제외) — 전장에서 잘 보이게
 // 종족(컴퓨터가 싸운다): 진입 시 선택 → 그 종족 유닛만 소환. units=현 보유 전투유닛 기준 로스터
 // (프로토스·저그는 다음 단계에서 가챠 유닛으로 보강 예정 — 균형)
 // 직스 전용 유닛 스탯(네모 U 테이블과 독립 — 단독 밸런스 튜닝). hp/dmg/rng/spd=절대값(월드 0..4800 픽셀), cd=초, splash=광역 반경(px), melee=근접
@@ -9045,7 +9048,7 @@ function strikeSync3D(dt){ const S=STK; if(!S) return; const mcv=document.getEle
   for(const t of TT){ const o=t[1], n=w2n(o.x,o.y); list.push({uid:t[0], id:t[2], x:n.x, y:n.y, fixed:true, face:-0.42, dead:!!o.dead}); }   // 신전(고정, 살짝 사선) — 파괴 시 dead 플래그
   if(S.sizeCmp && S.cmpUnits){ for(const u of S.cmpUnits){ const n=w2n(u.x,u.y); list.push({uid:u.uid, id:u.id, x:n.x, y:n.y}); } }
   for(const side of ['me','ai']){ const ringCol=(side==='me')?'#3aa0ff':'#ff4d5e';   // 본체 림=플레이어색(고정) / 하단 링=팀색(아군 파랑/적군 빨강, 보는 쪽 기준)
-    for(const u of S[side].units){ const n=w2n(u.x,u.y); list.push({uid:u.uid, id:u.id, x:n.x, y:n.y, face:u.face, rimCol:u.pcol, ringCol:ringCol}); } }
+    for(const u of S[side].units){ const n=w2n(u.x,u.y); list.push({uid:u.uid, id:u.id, x:n.x, y:n.y, face:u.face, rimCol:u.pcol, ringCol:ringCol, scl:STK_UNIT_SCALE}); } }   // 전투 유닛만 확대(신전 제외)
   M3D.sync(list, W, H, dt, [], [], null, k); }
 // 건물 탭 전용: 내 전용 건설 맵(전장 아님). 화면 1/4 직사각형, 깔끔한 금속 타일 + 건설 격자
 function strikeDrawBuildMap(spec){ const S=STK; if(!S) return; const cvEl=document.getElementById('cvMain'); if(!cvEl) return;   // spec={cells,col,label} → 관전 모드(다른 플레이어 건설)
@@ -9129,9 +9132,16 @@ function strikeLeaderboard(dt){ const S=STK; S.leadT-=dt; const ranked=strikeRan
   const rank=S.leadIdx%ranked.length+1;
   sl.innerHTML='<span id="stLead"><span class="lp">#'+rank+' '+p.name+'</span> <span class="lm">⛏'+p.mines+'</span> <span class="lg">💰'+Math.floor(p.gold)+'</span></span>'; }
 function strikeFocus(){ const S=STK; if(!S) return {x:0,y:0}; const c=S.world/2;
-  const all=S.me.units.concat(S.ai.units); if(!all.length) return {x:c,y:c};
+  const me=S.me.units, ai=S.ai.units;
+  // 교전 중심: 서로 가까운 적↔아군 쌍의 중점을 근접도로 가중 → 실제로 전투가 벌어지는 곳
+  let wx=0, wy=0, wsum=0; const ENG=1000, ENG2=ENG*ENG;
+  for(const a of me){ if(a.dead) continue; let bd=ENG2, bn=null;
+    for(const b of ai){ if(b.dead) continue; const dx=b.x-a.x, dy=b.y-a.y, d=dx*dx+dy*dy; if(d<bd){ bd=d; bn=b; } }
+    if(bn){ const w=1-Math.sqrt(bd)/ENG; const mx=(a.x+bn.x)/2, my=(a.y+bn.y)/2; wx+=mx*w; wy+=my*w; wsum+=w; } }   // 가까운 쌍일수록 큰 가중치(격전지)
+  if(wsum>0.001){ return {x:c*0.15+(wx/wsum)*0.85, y:c*0.15+(wy/wsum)*0.85}; }   // 격전 중심(약한 중앙 블렌드로 튐 완화)
+  const all=me.concat(ai); if(!all.length) return {x:c,y:c};   // 교전 전(대치) → 전체 평균 + 중앙 블렌드
   let sx=0,sy=0; for(const u of all){ sx+=u.x; sy+=u.y; } sx/=all.length; sy/=all.length;
-  return {x:c*0.45+sx*0.55, y:c*0.45+sy*0.55}; }   // 전체 평균 + 중앙 블렌드(유닛 사망 시 카메라 튐 방지)
+  return {x:c*0.45+sx*0.55, y:c*0.45+sy*0.55}; }
 
 // ── 전투 시뮬(1차): 양 진영이 주기적으로 종족 유닛 소환 → 대각 진격 → 자동 교전 → 적 신전 타격 ──
 const WORKER_KR={worker_human:'유니온 일꾼',worker_light:'에테리얼 일꾼',worker_swarm:'스웜 일꾼'};   // 신규 일꾼 표시명
@@ -10554,7 +10564,8 @@ window.M3D={
       m.holder.position.set(px, worldY - Y_DROP, 0);
       if(u.dead&&u.fixed){ if(!m._deadDim){ m._deadDim=true; if(m.rim) m.rim.visible=false; const mats=cloneMats(m.inner); for(const mt of mats) dimDeadMat(mt); } }   // 파괴된 신전(고정 구조물): 무채색 반투명(1회 적용)
       const _ds=(u.dead&&u.fixed)?0.82:1;   // 파괴 시 약간 움츠러듦
-      if((scaleMul&&scaleMul!==1)||_ds!==1) m.holder.scale.setScalar((SCALE[_id]||MODEL_SCALE)*(scaleMul||1)*_ds);   // 맵 스케일 연동 + 파괴 축소
+      const _us=u.scl||1;   // 유닛별 추가 배율(직스 전투 유닛 확대 등) — 신전엔 미적용
+      if((scaleMul&&scaleMul!==1)||_ds!==1||_us!==1) m.holder.scale.setScalar((SCALE[_id]||MODEL_SCALE)*(scaleMul||1)*_ds*_us);   // 맵 스케일 연동 + 파괴 축소 + 유닛 배율
       if(typeof window!=='undefined' && window.__sandbox && m.muzzlePt){ m.muzzlePt.updateWorldMatrix(true,false); const _mw=m.muzzlePt.getWorldPosition(new THREE.Vector3()); _mw.project(camera); m.muzzleN={ x:_mw.x*0.5+0.5, y:0.5-_mw.y*0.5 }; }   // 포구 기준점(3D) 투영 — 각도 완전 대응
       else if(typeof window!=='undefined' && window.__sandbox && m.gun && m.gun.visible){ m.gun.updateWorldMatrix(true,false); const _gw=m.gun.getWorldPosition(new THREE.Vector3()); _gw.project(camera); m.muzzleN={ x:_gw.x*0.5+0.5, y:0.5-_gw.y*0.5 }; } else m.muzzleN=null;   // 총구 2D 투영(각도 무관 머즐 원점)
       if(typeof window!=='undefined' && window.__sandbox && m.anim){ const _cc=new THREE.Box3().setFromObject(m.anim).getCenter(new THREE.Vector3()); _cc.project(camera); m.centerN={ x:_cc.x*0.5+0.5, y:0.5-_cc.y*0.5 }; } else m.centerN=null;   // 몸 중앙 2D 투영(발 X — 조준 타겟)
