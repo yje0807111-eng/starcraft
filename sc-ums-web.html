@@ -8906,36 +8906,36 @@ const STK_RACE_ORDER=['terran','zerg','protoss'];   // 표시 순서: 유니온 
 // fp:[w,h] = 건물 풋프린트(칸 단위, 30×20 그리드). 비율 다양화: 2×2(1:1)·2×3(1:1.5)·3×2·3×3·3×4(1.5:2)·4×3·4×4·4×5(2:2.5 최대)
 const STK_BUILDINGS={
   terran:[
-    {key:'supply',  name:'서플라이 디팟', ico:'🏠', cost:250, fp:[2,3], produces:[{id:'marine',     n:3}]},
-    {key:'barracks',name:'배럭',          ico:'🏛', cost:320, fp:[2,3], produces:[{id:'ghost',      n:2}]},
-    {key:'bunker',  name:'벙커',          ico:'🧱', cost:300, fp:[3,2], produces:[{id:'machinegun', n:2}]},
-    {key:'machshop',name:'머시너리',      ico:'🏍', cost:320, fp:[2,3], produces:[{id:'racer',      n:2}]},
-    {key:'factory', name:'팩토리',        ico:'🏭', cost:440, fp:[3,4], produces:[{id:'goliath',    n:2}]},
-    {key:'armory',  name:'아머리',        ico:'🛠', cost:480, fp:[3,4], produces:[{id:'tank',       n:1}]},
-    {key:'starport',name:'스타포트',      ico:'✈️', cost:460, fp:[4,3], produces:[{id:'skyguard',   n:2}]},
-    {key:'missile', name:'미사일 베이',   ico:'🚀', cost:500, fp:[3,4], produces:[{id:'hellfire',   n:2}]},
-    {key:'vessel',  name:'배슬 야드',     ico:'💥', cost:640, fp:[4,6], produces:[{id:'dreadnought',n:1}]},
-    {key:'aegis',   name:'이지스 도크',   ico:'🛡', cost:760, fp:[4,6], produces:[{id:'aegis',      n:1}]},
+    {key:'supply',  name:'서플라이 디팟', ico:'🏠', cost:250, fp:[5,4], produces:[{id:'marine',     n:3}]},
+    {key:'barracks',name:'배럭',          ico:'🏛', cost:320, fp:[7,7], produces:[{id:'ghost',      n:2}]},
+    {key:'bunker',  name:'벙커',          ico:'🧱', cost:300, fp:[5,4], produces:[{id:'machinegun', n:2}]},
+    {key:'machshop',name:'머시너리',      ico:'🏍', cost:320, fp:[7,6], produces:[{id:'racer',      n:2}]},
+    {key:'factory', name:'팩토리',        ico:'🏭', cost:440, fp:[7,7], produces:[{id:'goliath',    n:2}]},
+    {key:'armory',  name:'아머리',        ico:'🛠', cost:480, fp:[5,4], produces:[{id:'tank',       n:1}]},
+    {key:'starport',name:'스타포트',      ico:'✈️', cost:460, fp:[7,7], produces:[{id:'skyguard',   n:2}]},
+    {key:'missile', name:'미사일 베이',   ico:'🚀', cost:500, fp:[5,4], produces:[{id:'hellfire',   n:2}]},
+    {key:'vessel',  name:'배슬 야드',     ico:'💥', cost:640, fp:[7,6], produces:[{id:'dreadnought',n:1}]},
+    {key:'aegis',   name:'이지스 도크',   ico:'🛡', cost:760, fp:[5,4], produces:[{id:'aegis',      n:1}]},
   ],
   zerg:[
-    {key:'pool',    name:'스포닝 풀',     ico:'🥚', cost:250, fp:[2,3], produces:[{id:'hydra',      n:3}]},
-    {key:'creep',   name:'크립 콜로니',   ico:'🟢', cost:240, fp:[2,3], produces:[{id:'snapper',    n:3}]},
-    {key:'den',     name:'히드라 덴',     ico:'🕳', cost:340, fp:[3,2], produces:[{id:'venom',      n:2}]},
-    {key:'garden',  name:'가시 정원',     ico:'🌵', cost:420, fp:[3,4], produces:[{id:'thornqueen', n:2}]},
-    {key:'spire',   name:'스파이어',      ico:'🗼', cost:440, fp:[3,4], produces:[{id:'stinger',    n:2}]},
-    {key:'gspire',  name:'그레이터 스파이어', ico:'🐍', cost:520, fp:[4,3], produces:[{id:'medusa', n:1}]},
-    {key:'cavern',  name:'울트라 케이번', ico:'🦴', cost:480, fp:[3,4], produces:[{id:'matron',     n:1}]},
-    {key:'nest',    name:'와이번 소굴',   ico:'🐲', cost:720, fp:[4,6], produces:[{id:'wyvern',     n:1}]},
-    {key:'pit',     name:'베히모스 굴',   ico:'🦣', cost:840, fp:[4,6], produces:[{id:'behemoth',   n:1}]},
+    {key:'pool',    name:'스포닝 풀',     ico:'🥚', cost:250, fp:[5,4], produces:[{id:'hydra',      n:3}]},
+    {key:'creep',   name:'크립 콜로니',   ico:'🟢', cost:240, fp:[5,4], produces:[{id:'snapper',    n:3}]},
+    {key:'den',     name:'히드라 덴',     ico:'🕳', cost:340, fp:[7,6], produces:[{id:'venom',      n:2}]},
+    {key:'garden',  name:'가시 정원',     ico:'🌵', cost:420, fp:[7,7], produces:[{id:'thornqueen', n:2}]},
+    {key:'spire',   name:'스파이어',      ico:'🗼', cost:440, fp:[7,7], produces:[{id:'stinger',    n:2}]},
+    {key:'gspire',  name:'그레이터 스파이어', ico:'🐍', cost:520, fp:[5,4], produces:[{id:'medusa', n:1}]},
+    {key:'cavern',  name:'울트라 케이번', ico:'🦴', cost:480, fp:[7,7], produces:[{id:'matron',     n:1}]},
+    {key:'nest',    name:'와이번 소굴',   ico:'🐲', cost:720, fp:[7,6], produces:[{id:'wyvern',     n:1}]},
+    {key:'pit',     name:'베히모스 굴',   ico:'🦣', cost:840, fp:[7,7], produces:[{id:'behemoth',   n:1}]},
   ],
   protoss:[
-    {key:'gateway', name:'게이트웨이',        ico:'🌀', cost:250, fp:[2,3], produces:[{id:'blade',     n:3}]},
-    {key:'core',    name:'사이버네틱스 코어', ico:'💠', cost:340, fp:[2,3], produces:[{id:'dragoon',   n:2}]},
-    {key:'robo',    name:'로보틱스 베이',     ico:'🤖', cost:440, fp:[3,4], produces:[{id:'archon',    n:1}]},
-    {key:'stargate',name:'스타게이트',        ico:'✨', cost:420, fp:[3,4], produces:[{id:'falcon',    n:2}]},
-    {key:'beacon',  name:'플릿 비콘',         ico:'💃', cost:460, fp:[4,3], produces:[{id:'skydancer', n:2}]},
-    {key:'tribunal',name:'아비터 트리뷰널',   ico:'⏳', cost:580, fp:[4,6], produces:[{id:'kronos',    n:1}]},
-    {key:'sanctum', name:'아크엔젤 성소',     ico:'👼', cost:700, fp:[4,6], produces:[{id:'archangel', n:1}]},
+    {key:'gateway', name:'게이트웨이',        ico:'🌀', cost:250, fp:[5,4], produces:[{id:'blade',     n:3}]},
+    {key:'core',    name:'사이버네틱스 코어', ico:'💠', cost:340, fp:[7,6], produces:[{id:'dragoon',   n:2}]},
+    {key:'robo',    name:'로보틱스 베이',     ico:'🤖', cost:440, fp:[7,7], produces:[{id:'archon',    n:1}]},
+    {key:'stargate',name:'스타게이트',        ico:'✨', cost:420, fp:[7,7], produces:[{id:'falcon',    n:2}]},
+    {key:'beacon',  name:'플릿 비콘',         ico:'💃', cost:460, fp:[5,4], produces:[{id:'skydancer', n:2}]},
+    {key:'tribunal',name:'아비터 트리뷰널',   ico:'⏳', cost:580, fp:[7,6], produces:[{id:'kronos',    n:1}]},
+    {key:'sanctum', name:'아크엔젤 성소',     ico:'👼', cost:700, fp:[7,7], produces:[{id:'archangel', n:1}]},
   ],
 };
 function strikeRandomRace(){ return STK_RACE_ORDER[Math.floor(Math.random()*STK_RACE_ORDER.length)]; }
@@ -9001,7 +9001,7 @@ function strikeNewState(){ const W=mapCfg('world',4800), hp=mapCfg('baseHp',3000
          sec:{x:W*0.661,y:W*0.339, hp:sHp, max:sHp, dead:false} },   // 우상단 메인 + 2차 신전 / compCol=적군 컴퓨터 색
     central:{x:W*0.5,y:W*0.5, hp:cHp, max:cHp, owner:null, dead:false},   // 중앙 중립 보너스 신전(깬 팀 메인에 쉴드)
     cam:{x:W/2,y:W/2}, zoom:STK_DEFZOOM, viewWorld:Math.round(2600/STK_DEFZOOM), cw:0, ch:0, sel:null, userCam:false,
-    build:{ W:2400, H:1600, cols:30, rows:20, cam:{x:1200,y:800}, zoom:1, zoomCur:1, _sc:1, _ox:0, _oy:0, cells:[], worker:null, placing:null },   // 건설 보드(세밀 그리드 30×20, 칸=80) + 생산 건물(cells,풋프린트)·일꾼(worker)·배치선택(placing)
+    build:{ W:2400, H:1800, cols:32, rows:24, cam:{x:1200,y:900}, zoom:1.15, zoomCur:1.15, _sc:1, _ox:0, _oy:0, cells:[], worker:null, placing:null },   // 건설 보드(4:3, 그리드 32×24 칸=75) — 화면 커버+팬(전체가 한 화면에 안 들어옴) + 생산 건물(cells,풋프린트)·일꾼
     leadT:0, leadIdx:0, sizeCmp:false, cmpUnits:null };
 }
 function strikeIncome(side){ const S=STK; if(!S) return 0; side=side||S.me; return S.incomeBase + side.mines*S.mineIncome; }
@@ -9080,7 +9080,7 @@ function strikeSync3D(dt){ const S=STK; if(!S) return; const mcv=document.getEle
 function strikeDrawBuildMap(spec){ const S=STK; if(!S) return; const cvEl=document.getElementById('cvMain'); if(!cvEl) return;   // spec={cells,col,label} → 관전 모드(다른 플레이어 건설)
   const r=setup('cvMain'); const ctx=r.ctx, W=r.W, H=r.H; GW=W; GH=H; S.cw=W; S.ch=H;
   ctx.fillStyle='#05080c'; ctx.fillRect(0,0,W,H);
-  const b=S.build, fit=Math.min(W/b.W, H/b.H)*0.94, sc=fit*(b.zoomCur||b.zoom);   // zoomCur=보간(부드러운 줌). fit(zoom=1)=화면 맞춤=최대 축소
+  const b=S.build, fit=Math.max(W/b.W, H/b.H), sc=fit*(b.zoomCur||b.zoom);   // fit=커버(화면 꽉 채움) → zoom=1에서도 전체가 안 보이고 팬으로 이동. 여백/레터박스 없음
   strikeBuildClamp(b,sc,W,H);
   const ox=W/2-b.cam.x*sc, oy=H/2-b.cam.y*sc, pw=b.W*sc, ph=b.H*sc;
   b._sc=sc; b._ox=ox; b._oy=oy;
