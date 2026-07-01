@@ -8857,6 +8857,7 @@ const STRIKE_SAMPLE=[{id:'marine'},{id:'ghost'},{id:'hydra'},{id:'dragoon'},{id:
 // 전장 줌 한계: 최소(가장 축소)=1.2, 기본 시작=1.2, 최대(가장 확대)=2.5
 const STK_MINZOOM=1.2, STK_DEFZOOM=1.2, STK_MAXZOOM=2.5, BUILD_MAXZOOM=3;
 const STK_UNIT_SCALE=1.35;   // 직스 전투 유닛 3D 확대 배율(신전 제외) — 전장에서 잘 보이게
+const BUILD_UNIT=40;         // 건설 건물 크기(월드/풋프린트 칸) — 작을수록 건물 작고 배치 공간 넓어짐
 // 종족(컴퓨터가 싸운다): 진입 시 선택 → 그 종족 유닛만 소환. units=현 보유 전투유닛 기준 로스터
 // (프로토스·저그는 다음 단계에서 가챠 유닛으로 보강 예정 — 균형)
 // 직스 전용 유닛 스탯(네모 U 테이블과 독립 — 단독 밸런스 튜닝). hp/dmg/rng/spd=절대값(월드 0..4800 픽셀), cd=초, splash=광역 반경(px), melee=근접
@@ -9027,7 +9028,7 @@ function strikeStart(){ if(typeof bgmStop==='function') bgmStop();
   STK=strikeNewState();
   STK.me.race=(STK_RACES[_selRace]?_selRace:'terran'); STK.ai.race=strikeRandomRace();   // 내 종족=선택, 상대=랜덤 → 각자 그 종족 유닛만 소환
   STK.buildMenu=strikeBuildable(STK.me.race);   // 내 종족 빌드 메뉴 캐시(이전 판 잔존 방지)
-  { const b=STK.build, cw=b.W/b.cols, ch=b.H/b.rows, t0=STK.buildMenu[0], fp=strikeFootprint(t0), col=Math.floor((b.cols-fp.w)/2), row=Math.floor((b.rows-fp.h)/2); b.cells.push({col:col,row:row,w:fp.w,h:fp.h,type:t0,built:1,x:(col+fp.w/2)*cw,y:(row+fp.h/2)*ch}); b.workers=[]; for(let i=0;i<3;i++) b.workers.push({x:b.W*(0.34+i*0.16),y:b.H-180,task:null}); }   // 시작 생산 건물 1(풋프린트) + 일꾼 3
+  { const b=STK.build, t0=STK.buildMenu[0], fp=strikeFootprint(t0); b.cells.push({type:t0,built:1,x:b.W/2,y:b.H/2,w:fp.w,h:fp.h}); b.workers=[]; for(let i=0;i<3;i++) b.workers.push({x:b.W*(0.34+i*0.16),y:b.H-180,task:null}); }   // 시작 생산 건물 1(중앙, 자유배치) + 일꾼 3
   if(STK.sizeCmp){   // 크기 비교용 샘플 유닛: 중앙 신전 주변 4×2 그리드(월드 좌표)
     const W=STK.world, sp=560, cols=4;
     STK.cmpUnits=STRIKE_SAMPLE.map((s,i)=>{ const c=i%cols, r=Math.floor(i/cols);
@@ -9087,43 +9088,25 @@ function strikeDrawBuildMap(spec){ const S=STK; if(!S) return; const cvEl=docume
   // 타일 바닥(어둡고 단조롭게 — 나중에 건물이 잘 보이게)
   strikeTileRect(ctx, ox,oy, pw,ph, STRIKE_BUILDTILE, Math.max(10, (b.W/8)*sc));
   ctx.save(); ctx.beginPath(); ctx.rect(ox,oy,pw,ph); ctx.clip(); ctx.fillStyle='rgba(7,11,16,.62)'; ctx.fillRect(ox,oy,pw,ph); ctx.restore();   // 어둡게+패턴 차분
-  // 건설 격자(차분하게)
-  const cwd=pw/b.cols, chd=ph/b.rows;
-  ctx.strokeStyle='rgba(110,150,190,.1)'; ctx.lineWidth=1;
-  for(let i=1;i<b.cols;i++){ const gx=ox+i*cwd; ctx.beginPath(); ctx.moveTo(gx,oy); ctx.lineTo(gx,oy+ph); ctx.stroke(); }
-  for(let j=1;j<b.rows;j++){ const gy=oy+j*chd; ctx.beginPath(); ctx.moveTo(ox,gy); ctx.lineTo(ox+pw,gy); ctx.stroke(); }
-  // 외곽 네온 테두리(모바일: shadowBlur 없이 레이어 스트로크)
-  ctx.strokeStyle='rgba(120,200,255,.2)'; ctx.lineWidth=6; ctx.strokeRect(ox,oy,pw,ph);
-  ctx.strokeStyle='rgba(150,212,255,.75)'; ctx.lineWidth=2; ctx.strokeRect(ox,oy,pw,ph);
-  // 중앙 은은한 글로우(허전함 완화) + 코너 테크 브래킷 + 경계 펄스
-  { ctx.save(); const cg=ctx.createRadialGradient(ox+pw/2,oy+ph/2,0,ox+pw/2,oy+ph/2,Math.max(pw,ph)*0.6);
-    cg.addColorStop(0,'rgba(60,130,190,.10)'); cg.addColorStop(0.6,'rgba(40,90,140,.03)'); cg.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=cg; ctx.fillRect(ox,oy,pw,ph);
-    const bl=Math.min(pw,ph)*0.06, cc=spec?(spec.col||'#7fd0ff'):'#8fe0ff'; ctx.strokeStyle=cc; ctx.lineWidth=Math.max(2,3*sc*8/8);   // 코너 L 브래킷
-    const brk=[[ox,oy,1,1],[ox+pw,oy,-1,1],[ox,oy+ph,1,-1],[ox+pw,oy+ph,-1,-1]];
-    for(const q of brk){ ctx.beginPath(); ctx.moveTo(q[0]+q[2]*bl,q[1]); ctx.lineTo(q[0],q[1]); ctx.lineTo(q[0],q[1]+q[3]*bl); ctx.stroke(); }
-    const pul=0.35+0.25*Math.sin((S.t||0)*2.2); ctx.globalAlpha=pul; ctx.strokeStyle=cc; ctx.lineWidth=1; ctx.strokeRect(ox+3,oy+3,pw-6,ph-6);   // 은은한 경계 펄스
-    ctx.restore(); }
-  // 건물 선택 시: 배치 가능 구역 하이라이트 — 빈 칸을 1회씩만 균일하게(겹쳐서 진해지지 않게)
-  if(!spec && b.placing){ const occ={};
-    for(const c of b.cells){ const cw2=c.w||1, ch2=c.h||1; for(let yy=c.row; yy<c.row+ch2; yy++) for(let xx=c.col; xx<c.col+cw2; xx++) occ[xx+','+yy]=1; }
-    ctx.save(); ctx.fillStyle='rgba(110,235,150,.16)';
-    for(let row=0; row<b.rows; row++){ for(let col=0; col<b.cols; col++){ if(occ[col+','+row]) continue;
-      ctx.fillRect(ox+col*cwd+0.5, oy+row*chd+0.5, cwd-1, chd-1); } }
-    ctx.restore(); }
-  // 생산 건물(풋프린트 크기 → 건물마다 다름) + 일꾼
-  const sz=Math.min(cwd,chd)*0.6, mc=spec?(spec.col||'#7fd0ff'):(S.me.compCol||'#7fd0ff'), cells=spec?(spec.cells||[]):(b.cells||[]);
-  for(const c of cells){ const fw=(c.w||1)*cwd, fh=(c.h||1)*chd, pad=Math.min(fw,fh)*0.12,
-    bx0=ox+(c.col!=null?c.col*cwd:c.x*sc-fw/2), by0=oy+(c.row!=null?c.row*chd:c.y*sc-fh/2),
-    rx=bx0+pad, ry=by0+pad, rw=fw-pad*2, rh=fh-pad*2, rr=Math.min(rw,rh)*0.14, built=c.built>=1;
+  // (그리드·테두리·프레임·구역 하이라이트 제거 — 요청) 건물은 자유 배치, 위치는 드래그 실루엣으로 안내
+  const mc=spec?(spec.col||'#7fd0ff'):(S.me.compCol||'#7fd0ff'), cells=spec?(spec.cells||[]):(b.cells||[]);
+  for(const c of cells){ const fw=(c.w||60)*sc, fh=(c.h||60)*sc, cx=ox+c.x*sc, cy=oy+c.y*sc, built=c.built>=1,
+    rx=cx-fw/2, ry=cy-fh/2, rr=Math.min(fw,fh)*0.14;
     ctx.save();
-    if(built){ ctx.globalAlpha=0.5; ctx.strokeStyle=mc; ctx.lineWidth=Math.max(2,Math.min(rw,rh)*0.11); _strkRR(ctx,rx-1,ry-1,rw+2,rh+2,rr); ctx.stroke(); ctx.globalAlpha=1; }   // 완성 건물 외곽 소프트 글로우
-    ctx.globalAlpha=built?1:0.5; ctx.fillStyle=built?'rgba(30,52,84,.94)':'rgba(48,78,116,.5)'; _strkRR(ctx,rx,ry,rw,rh,rr); ctx.fill();
-    ctx.globalAlpha=built?1:0.75; ctx.strokeStyle=mc; ctx.lineWidth=Math.max(1.5,Math.min(rw,rh)*0.05); _strkRR(ctx,rx,ry,rw,rh,rr); ctx.stroke();
-    ctx.globalAlpha=1; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font=Math.max(13,Math.min(rw,rh)*0.5)+'px sans-serif'; ctx.fillStyle='#fff'; ctx.fillText(c.type.ico, rx+rw/2, ry+rh/2);
-    if(!built){ const bw=rw*0.82, by2=ry+rh+5; ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillRect(rx+rw/2-bw/2,by2,bw,5); ctx.fillStyle='#6fe89a'; ctx.fillRect(rx+rw/2-bw/2,by2,bw*c.built,5); }
+    if(built){ ctx.globalAlpha=0.5; ctx.strokeStyle=mc; ctx.lineWidth=Math.max(2,Math.min(fw,fh)*0.1); _strkRR(ctx,rx-1,ry-1,fw+2,fh+2,rr); ctx.stroke(); ctx.globalAlpha=1; }   // 완성 건물 외곽 소프트 글로우
+    ctx.globalAlpha=built?1:0.5; ctx.fillStyle=built?'rgba(30,52,84,.94)':'rgba(48,78,116,.5)'; _strkRR(ctx,rx,ry,fw,fh,rr); ctx.fill();
+    ctx.globalAlpha=built?1:0.75; ctx.strokeStyle=mc; ctx.lineWidth=Math.max(1.5,Math.min(fw,fh)*0.05); _strkRR(ctx,rx,ry,fw,fh,rr); ctx.stroke();
+    ctx.globalAlpha=1; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font=Math.max(12,Math.min(fw,fh)*0.5)+'px sans-serif'; ctx.fillStyle='#fff'; ctx.fillText(c.type.ico, cx, cy);
+    if(!built){ const bw=fw*0.82, by2=ry+fh+5; ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillRect(cx-bw/2,by2,bw,5); ctx.fillStyle='#6fe89a'; ctx.fillRect(cx-bw/2,by2,bw*c.built,5); }
     ctx.restore(); }
-  if(!spec) for(const wk of (b.workers||[])){ const wx=ox+wk.x*sc, wy=oy+wk.y*sc, wr=Math.max(5,sz*0.16);
+  // 배치 실루엣(손 누르는 중) — 유효=초록 / 무효(겹침·보드밖)=빨강 테두리
+  if(!spec && b.placing && b.ghost){ const fp=strikeFootprint(b.placing), ok=strikeCanPlace(b,b.ghost.x,b.ghost.y,fp.w,fp.h);
+    const gw=fp.w*sc, gh=fp.h*sc, gx=ox+b.ghost.x*sc, gy=oy+b.ghost.y*sc, rr=Math.min(gw,gh)*0.14;
+    ctx.save(); ctx.globalAlpha=0.42; ctx.fillStyle=ok?'rgba(110,235,150,.4)':'rgba(255,70,80,.32)'; _strkRR(ctx,gx-gw/2,gy-gh/2,gw,gh,rr); ctx.fill();
+    ctx.globalAlpha=1; ctx.lineWidth=3; ctx.strokeStyle=ok?'#7dffb0':'#ff4650'; _strkRR(ctx,gx-gw/2,gy-gh/2,gw,gh,rr); ctx.stroke();
+    ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font=Math.max(12,Math.min(gw,gh)*0.42)+'px sans-serif'; ctx.fillStyle=ok?'#eaffef':'#ffdadd'; ctx.fillText(b.placing.ico, gx, gy);
+    ctx.restore(); }
+  if(!spec) for(const wk of (b.workers||[])){ const wx=ox+wk.x*sc, wy=oy+wk.y*sc, wr=Math.max(4,22*sc);
     if(wk.task){ const tx=ox+wk.task.x*sc, ty=oy+wk.task.y*sc; ctx.strokeStyle='rgba(255,210,74,.45)'; ctx.setLineDash([5,4]); ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(wx,wy); ctx.lineTo(tx,ty); ctx.stroke(); ctx.setLineDash([]); }
     ctx.fillStyle='#ffd24a'; ctx.beginPath(); ctx.arc(wx,wy,wr,0,6.283); ctx.fill(); ctx.strokeStyle='#7a5a12'; ctx.lineWidth=1.5; ctx.stroke(); }
   // 상단 텍스트 전부 제거(골드는 우상단 크레딧 표시로 충분) — 관전 시에만 대상 라벨
@@ -9244,22 +9227,19 @@ function strikeStepBuild(dt){ const S=STK, b=S&&S.build; if(!b) return;
   for(const w of b.workers){ if(!w.task) continue; const c=w.task, dx=c.x-w.x, dy=c.y-w.y, d=Math.hypot(dx,dy);
     if(d>150){ const v=1100*dt; w.x+=dx/d*v; w.y+=dy/d*v; }   // 건설지로 이동
     else { c.built=Math.min(1, c.built+dt/3.5); if(c.built>=1){ if(typeof playSfx==='function') playSfx('ui_confirm'); w.task=null; } } } }   // 3.5초 건설
-// 건물 풋프린트(칸 수) — STK_BUILDINGS의 fp:[w,h](다양한 비율). 미지정 시 2×2
-function strikeFootprint(t){ const f=(t&&t.fp)||[2,2]; return {w:f[0], h:f[1]}; }
-// 앵커(col,row)에 w×h 풋프린트가 들어갈 수 있는지(경계 안 + 기존 건물과 미겹침)
-function strikeCellsFree(b,col,row,w,h){ if(col<0||row<0||col+w>b.cols||row+h>b.rows) return false;
-  for(const c of b.cells){ const cw=c.w||1, ch=c.h||1; if(col<c.col+cw && col+w>c.col && row<c.row+ch && row+h>c.row) return false; }   // AABB 겹침 검사
+// 건물 풋프린트 → 월드 크기(자유 배치). fp:[w,h] 비율 × BUILD_UNIT. 미지정 시 4×4
+function strikeFootprint(t){ const f=(t&&t.fp)||[4,4]; return {w:f[0]*BUILD_UNIT, h:f[1]*BUILD_UNIT}; }
+// (cx,cy)=월드 중심에 w×h 건물이 놓일 수 있는지(보드 안 + 기존 건물과 미겹침)
+function strikeCanPlace(b,cx,cy,w,h){ if(cx-w/2<0||cy-h/2<0||cx+w/2>b.W||cy+h/2>b.H) return false;   // 보드 밖
+  for(const c of b.cells){ if(Math.abs(cx-c.x)<(w+c.w)/2 && Math.abs(cy-c.y)<(h+c.h)/2) return false; }   // AABB 겹침
   return true; }
-function strikePlaceBuilding(col,row){ const S=STK, b=S.build; if(!b.placing) return;
-  const t=b.placing, fp=strikeFootprint(t);
-  col=col-((fp.w-1)>>1); row=row-((fp.h-1)>>1);   // 탭 지점을 풋프린트 중심으로 → 좌상단 앵커
-  col=Math.max(0,Math.min(b.cols-fp.w,col)); row=Math.max(0,Math.min(b.rows-fp.h,row));
-  if(!strikeCellsFree(b,col,row,fp.w,fp.h)){ strikeToast('공간이 부족합니다'); return; }
+// 실루엣(b.ghost) 위치에 확정 배치 — 손 뗄 때 호출
+function strikePlaceGhost(){ const S=STK, b=S.build; if(!b.placing||!b.ghost) return; const t=b.placing, fp=strikeFootprint(t), cx=b.ghost.x, cy=b.ghost.y;
+  if(!strikeCanPlace(b,cx,cy,fp.w,fp.h)){ strikeToast('여기엔 지을 수 없습니다'); return; }
   if(S.me.gold<t.cost){ strikeToast('골드 부족 (필요 '+t.cost+')'); return; }
-  S.me.gold-=t.cost; const cw=b.W/b.cols, ch=b.H/b.rows;
-  b.cells.push({col:col,row:row,w:fp.w,h:fp.h,type:t,built:0,x:(col+fp.w/2)*cw,y:(row+fp.h/2)*ch});
+  S.me.gold-=t.cost; b.cells.push({type:t,built:0,x:cx,y:cy,w:fp.w,h:fp.h});
   if(typeof playSfx==='function') playSfx('buy_unit'); }
-function strikePickBuild(i){ const S=STK; if(!S) return; const t=strikeBuildMenu()[i]; if(!t) return; S.build.placing=(S.build.placing===t)?null:t; strikeRenderBuild(); if(S.build.placing) strikeToast(t.name+' 생산 건물 — 빈 타일을 탭해 배치'); }
+function strikePickBuild(i){ const S=STK; if(!S) return; const t=strikeBuildMenu()[i]; if(!t) return; S.build.placing=(S.build.placing===t)?null:t; S.build.ghost=null; strikeRenderBuild(); if(S.build.placing) strikeToast(t.name+' — 맵을 눌러 위치를 조정하고 손을 떼면 건설'); }
 // ═══ 공용 FX 코어(모든 유즈맵 공통 유닛별 공격 이펙트) ═══
 // 유닛 id → 공격 스타일. 네모 발사체 비주얼을 그대로 — 한 곳에서 정의해 어느 맵이든 같은 느낌.
 const ATK_STYLE={
@@ -9750,11 +9730,12 @@ function strikeRenderBuild(){ const el=document.getElementById('stBuildPalette')
   el.innerHTML=menu.map((u,i)=>`<div class="stUnitCard${S&&S.build&&S.build.placing===u?' sel':''}" onclick="strikePickBuild(${i})"><div class="uc">${u.ico}</div>${u.name}<div class="ucProd">${strikeProdLabel(u)}</div><div class="ucCost">⛁${u.cost}</div></div>`).join(''); }
 // 관전: nemo .plbtn/.plGrid(4×2) 재사용. 팀 1-4(아군 파랑) vs 5-8(적군 빨강). 빈 자리=잠금
 function strikePColor(slot){ return (typeof PLAYER_VIEW_COLORS!=='undefined')?PLAYER_VIEW_COLORS[(slot-1)%PLAYER_VIEW_COLORS.length]:'#7fd0ff'; }
-function strikeSpecBuildCells(slot){ const S=STK; if(!S.specBuilds) S.specBuilds={};   // 데모 건물(추후 실제 멀티 데이터로 교체)
-  if(!S.specBuilds[slot]){ const b=S.build, cw=b.W/b.cols, ch=b.H/b.rows, cells=[], used=new Set(), n=2+(Math.random()*4|0);
+function strikeSpecBuildCells(slot){ const S=STK; if(!S.specBuilds) S.specBuilds={};   // 데모 건물(추후 실제 멀티 데이터로 교체) — 자유 배치(월드)
+  if(!S.specBuilds[slot]){ const b=S.build, cells=[], n=3+(Math.random()*4|0);
     const menu=strikeBuildable(STK_RACE_ORDER[(slot-1)%STK_RACE_ORDER.length]);   // 슬롯별 종족 데모 빌드
-    for(let k=0;k<n;k++){ let col,row,key,t=0; do{ col=Math.random()*b.cols|0; row=Math.random()*b.rows|0; key=col+','+row; }while(used.has(key)&&++t<20); used.add(key);
-      cells.push({col:col,row:row,type:menu[Math.random()*menu.length|0],built:1,x:(col+0.5)*cw,y:(row+0.5)*ch}); }
+    for(let k=0;k<n;k++){ const t=menu[Math.random()*menu.length|0], fp=strikeFootprint(t); let cx,cy,tries=0,ok=false;
+      do{ cx=fp.w/2+Math.random()*(b.W-fp.w); cy=fp.h/2+Math.random()*(b.H-fp.h); ok=true; for(const c of cells){ if(Math.abs(cx-c.x)<(fp.w+c.w)/2 && Math.abs(cy-c.y)<(fp.h+c.h)/2){ ok=false; break; } } }while(!ok&&++tries<20);
+      if(ok) cells.push({type:t,built:1,x:cx,y:cy,w:fp.w,h:fp.h}); }
     S.specBuilds[slot]=cells; }
   return S.specBuilds[slot]; }
 function strikeSpecView(slot){ const S=STK; const cells=(slot===1)?(S.build.cells||[]):strikeSpecBuildCells(slot);
@@ -9787,7 +9768,8 @@ function strikeOnDown(e){ const S=STK; if(!S) return; const r=strikeViewRect(), 
   const build=(G.tab==='Unit'), cam=build?S.build.cam:S.cam, zoom=build?S.build.zoom:S.zoom;
   if(_stkPtrs.size>=2){ const p=[..._stkPtrs.values()], cx=(p[0].x+p[1].x)/2, cy=(p[0].y+p[1].y)/2;   // 두 손가락 = 줌+팬
     _stkPinch={ d:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)||1, zoom:zoom, cx:cx, cy:cy, camx:cam.x, camy:cam.y }; _stkDrag=null; }
-  else _stkDrag={ sx:px, sy:py, moved:false, camx:cam.x, camy:cam.y, build:build }; }   // 한 손가락 = 드래그 팬 / 탭 선택
+  else { _stkDrag={ sx:px, sy:py, moved:false, camx:cam.x, camy:cam.y, build:build };   // 한 손가락 = 드래그 팬 / 탭 선택
+    if(build && S.build.placing){ const b=S.build; b.ghost={x:(px-b._ox)/(b._sc||1), y:(py-b._oy)/(b._sc||1)}; _stkDrag.ghost=true; } } }   // 건물 선택 중 = 실루엣 배치(팬 대신)
 function strikeOnMove(e){ const S=STK; if(!S) return; const r=strikeViewRect(), px=e.clientX-r.left, py=e.clientY-r.top;
   if(_stkPtrs.has(e.pointerId)) _stkPtrs.set(e.pointerId,{x:px,y:py});
   const build=(G.tab==='Unit');
@@ -9795,17 +9777,17 @@ function strikeOnMove(e){ const S=STK; if(!S) return; const r=strikeViewRect(), 
     const cx=(p[0].x+p[1].x)/2, cy=(p[0].y+p[1].y)/2, dcx=cx-_stkPinch.cx, dcy=cy-_stkPinch.cy;   // 두 손가락 중심 이동 = 팬
     if(build){ const b=S.build; b.zoom=Math.min(BUILD_MAXZOOM, Math.max(1, z)); const sc=b._sc||1; b.cam.x=_stkPinch.camx-dcx/sc; b.cam.y=_stkPinch.camy-dcy/sc; }
     else { S.zoom=Math.min(STK_MAXZOOM, Math.max(STK_MINZOOM, z)); const W=S.cw||1,H=S.ch||1,scale=Math.min(W,H)/S.viewWorld; S.cam.x=_stkPinch.camx-dcx/scale; S.cam.y=_stkPinch.camy-dcy/scale; S.userCam=true; S.lastCam=S.t; strikeClampCam(); } return; }
+  if(_stkDrag && _stkDrag.ghost){ const b=S.build; b.ghost={x:(px-b._ox)/(b._sc||1), y:(py-b._oy)/(b._sc||1)}; return; }   // 실루엣이 손가락 따라 이동(팬 안 함)
   if(_stkDrag){ const dx=px-_stkDrag.sx, dy=py-_stkDrag.sy; if(Math.abs(dx)+Math.abs(dy)>6) _stkDrag.moved=true;
     if(_stkDrag.moved){   // 한 손가락 드래그 = 화면 팬(전장/건설 공통)
       if(_stkDrag.build){ const b=S.build, sc=b._sc||1; b.cam.x=_stkDrag.camx-dx/sc; b.cam.y=_stkDrag.camy-dy/sc; }
       else { const W=S.cw||1,H=S.ch||1,scale=Math.min(W,H)/S.viewWorld; S.cam.x=_stkDrag.camx-dx/scale; S.cam.y=_stkDrag.camy-dy/scale; S.userCam=true; S.lastCam=S.t; strikeClampCam(); } } } }
 function strikeOnUp(e){ const S=STK; if(!S) return; if(e) _stkPtrs.delete(e.pointerId);
   if(_stkPtrs.size<2) _stkPinch=null;
-  if(_stkDrag && !_stkDrag.moved){ const r=strikeViewRect();   // 탭(이동 없음)만 선택/배치 — 드래그는 팬이라 무시
+  if(_stkDrag && _stkDrag.ghost){ strikePlaceGhost(); if(S.build) S.build.ghost=null; _stkDrag=null; return; }   // 건설: 손 떼면 실루엣 위치에 배치(유효할 때만)
+  if(_stkDrag && !_stkDrag.moved && G.tab!=='Unit'){ const r=strikeViewRect();   // 전장 탭(이동 없음)=단일 선택
     const px=(e&&e.clientX!=null?e.clientX:r.left+r.width/2)-r.left, py=(e&&e.clientY!=null?e.clientY:r.top+r.height/2)-r.top;
-    if(G.tab==='Unit'){ const b=S.build, bx=(px-b._ox)/(b._sc||1), by=(py-b._oy)/(b._sc||1);   // 건설 탭: 탭=타일에 건물 배치
-      if(bx>=0&&bx<=b.W&&by>=0&&by<=b.H&&b.placing){ strikePlaceBuilding(Math.floor(bx/(b.W/b.cols)), Math.floor(by/(b.H/b.rows))); } }
-    else { const w=strikeScreenToWorld(px,py); strikeSelectAt(w.x,w.y); } }   // 전장: 탭=단일 선택(아군/적군/신전)
+    const w=strikeScreenToWorld(px,py); strikeSelectAt(w.x,w.y); }
   _stkDrag=null; }
 function strikeClearSel(){ const S=STK; S.selAllies=[]; S.selEnemy=null; S.selTemple=null; }
 function strikeTemples(){ const S=STK; return [[S.me.base,'메인 신전 (아군)'],[S.ai.base,'메인 신전 (적군)'],[S.me.sec,'2차 신전 (아군)'],[S.ai.sec,'2차 신전 (적군)'],[S.central,'중립 신전']]; }
