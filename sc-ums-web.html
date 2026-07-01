@@ -8906,36 +8906,36 @@ const STK_RACE_ORDER=['terran','zerg','protoss'];   // 표시 순서: 유니온 
 // fp:[w,h] = 건물 풋프린트(칸 단위, 30×20 그리드). 비율 다양화: 2×2(1:1)·2×3(1:1.5)·3×2·3×3·3×4(1.5:2)·4×3·4×4·4×5(2:2.5 최대)
 const STK_BUILDINGS={
   terran:[
-    {key:'supply',  name:'서플라이 디팟', ico:'🏠', cost:250, fp:[2,2], produces:[{id:'marine',     n:3}]},
+    {key:'supply',  name:'서플라이 디팟', ico:'🏠', cost:250, fp:[2,3], produces:[{id:'marine',     n:3}]},
     {key:'barracks',name:'배럭',          ico:'🏛', cost:320, fp:[2,3], produces:[{id:'ghost',      n:2}]},
     {key:'bunker',  name:'벙커',          ico:'🧱', cost:300, fp:[3,2], produces:[{id:'machinegun', n:2}]},
     {key:'machshop',name:'머시너리',      ico:'🏍', cost:320, fp:[2,3], produces:[{id:'racer',      n:2}]},
     {key:'factory', name:'팩토리',        ico:'🏭', cost:440, fp:[3,4], produces:[{id:'goliath',    n:2}]},
-    {key:'armory',  name:'아머리',        ico:'🛠', cost:480, fp:[4,3], produces:[{id:'tank',       n:1}]},
-    {key:'starport',name:'스타포트',      ico:'✈️', cost:460, fp:[3,4], produces:[{id:'skyguard',   n:2}]},
-    {key:'missile', name:'미사일 베이',   ico:'🚀', cost:500, fp:[4,3], produces:[{id:'hellfire',   n:2}]},
-    {key:'vessel',  name:'배슬 야드',     ico:'💥', cost:640, fp:[4,4], produces:[{id:'dreadnought',n:1}]},
-    {key:'aegis',   name:'이지스 도크',   ico:'🛡', cost:760, fp:[4,5], produces:[{id:'aegis',      n:1}]},
+    {key:'armory',  name:'아머리',        ico:'🛠', cost:480, fp:[3,4], produces:[{id:'tank',       n:1}]},
+    {key:'starport',name:'스타포트',      ico:'✈️', cost:460, fp:[4,3], produces:[{id:'skyguard',   n:2}]},
+    {key:'missile', name:'미사일 베이',   ico:'🚀', cost:500, fp:[3,4], produces:[{id:'hellfire',   n:2}]},
+    {key:'vessel',  name:'배슬 야드',     ico:'💥', cost:640, fp:[4,6], produces:[{id:'dreadnought',n:1}]},
+    {key:'aegis',   name:'이지스 도크',   ico:'🛡', cost:760, fp:[4,6], produces:[{id:'aegis',      n:1}]},
   ],
   zerg:[
-    {key:'pool',    name:'스포닝 풀',     ico:'🥚', cost:250, fp:[2,2], produces:[{id:'hydra',      n:3}]},
-    {key:'creep',   name:'크립 콜로니',   ico:'🟢', cost:240, fp:[2,2], produces:[{id:'snapper',    n:3}]},
-    {key:'den',     name:'히드라 덴',     ico:'🕳', cost:340, fp:[2,3], produces:[{id:'venom',      n:2}]},
-    {key:'garden',  name:'가시 정원',     ico:'🌵', cost:420, fp:[3,3], produces:[{id:'thornqueen', n:2}]},
+    {key:'pool',    name:'스포닝 풀',     ico:'🥚', cost:250, fp:[2,3], produces:[{id:'hydra',      n:3}]},
+    {key:'creep',   name:'크립 콜로니',   ico:'🟢', cost:240, fp:[2,3], produces:[{id:'snapper',    n:3}]},
+    {key:'den',     name:'히드라 덴',     ico:'🕳', cost:340, fp:[3,2], produces:[{id:'venom',      n:2}]},
+    {key:'garden',  name:'가시 정원',     ico:'🌵', cost:420, fp:[3,4], produces:[{id:'thornqueen', n:2}]},
     {key:'spire',   name:'스파이어',      ico:'🗼', cost:440, fp:[3,4], produces:[{id:'stinger',    n:2}]},
     {key:'gspire',  name:'그레이터 스파이어', ico:'🐍', cost:520, fp:[4,3], produces:[{id:'medusa', n:1}]},
     {key:'cavern',  name:'울트라 케이번', ico:'🦴', cost:480, fp:[3,4], produces:[{id:'matron',     n:1}]},
-    {key:'nest',    name:'와이번 소굴',   ico:'🐲', cost:720, fp:[4,4], produces:[{id:'wyvern',     n:1}]},
-    {key:'pit',     name:'베히모스 굴',   ico:'🦣', cost:840, fp:[4,5], produces:[{id:'behemoth',   n:1}]},
+    {key:'nest',    name:'와이번 소굴',   ico:'🐲', cost:720, fp:[4,6], produces:[{id:'wyvern',     n:1}]},
+    {key:'pit',     name:'베히모스 굴',   ico:'🦣', cost:840, fp:[4,6], produces:[{id:'behemoth',   n:1}]},
   ],
   protoss:[
-    {key:'gateway', name:'게이트웨이',        ico:'🌀', cost:250, fp:[2,2], produces:[{id:'blade',     n:3}]},
+    {key:'gateway', name:'게이트웨이',        ico:'🌀', cost:250, fp:[2,3], produces:[{id:'blade',     n:3}]},
     {key:'core',    name:'사이버네틱스 코어', ico:'💠', cost:340, fp:[2,3], produces:[{id:'dragoon',   n:2}]},
-    {key:'robo',    name:'로보틱스 베이',     ico:'🤖', cost:440, fp:[3,3], produces:[{id:'archon',    n:1}]},
+    {key:'robo',    name:'로보틱스 베이',     ico:'🤖', cost:440, fp:[3,4], produces:[{id:'archon',    n:1}]},
     {key:'stargate',name:'스타게이트',        ico:'✨', cost:420, fp:[3,4], produces:[{id:'falcon',    n:2}]},
     {key:'beacon',  name:'플릿 비콘',         ico:'💃', cost:460, fp:[4,3], produces:[{id:'skydancer', n:2}]},
-    {key:'tribunal',name:'아비터 트리뷰널',   ico:'⏳', cost:580, fp:[4,4], produces:[{id:'kronos',    n:1}]},
-    {key:'sanctum', name:'아크엔젤 성소',     ico:'👼', cost:700, fp:[4,5], produces:[{id:'archangel', n:1}]},
+    {key:'tribunal',name:'아비터 트리뷰널',   ico:'⏳', cost:580, fp:[4,6], produces:[{id:'kronos',    n:1}]},
+    {key:'sanctum', name:'아크엔젤 성소',     ico:'👼', cost:700, fp:[4,6], produces:[{id:'archangel', n:1}]},
   ],
 };
 function strikeRandomRace(){ return STK_RACE_ORDER[Math.floor(Math.random()*STK_RACE_ORDER.length)]; }
@@ -8948,10 +8948,10 @@ const STRIKE_BUILDTILE=new Image(); STRIKE_BUILDTILE.src='assets/tiles/terran_ti
 // 패턴 캐시(모바일 성능) — createPattern은 1회만, 매 프레임엔 setTransform만
 const _stkPat={}, _stkVig={};
 function strikePattern(ctx,img){ if(!img||!img.complete||!img.naturalWidth) return null; const k=img.src; if(!_stkPat[k]) _stkPat[k]=ctx.createPattern(img,'repeat'); return _stkPat[k]; }
-function strikeDrawGround(ctx,W,H,S,scale){ const img=STRIKE_GROUND, tilePx=460*scale;
-  const ox=(0-S.cam.x)*scale+W/2, oy=(0-S.cam.y)*scale+H/2, p=strikePattern(ctx,img);
-  if(p&&tilePx>4){ const s=tilePx/img.naturalWidth; if(p.setTransform) p.setTransform(new DOMMatrix([s,0,0,s,ox,oy])); ctx.fillStyle=p; } else ctx.fillStyle='#1a1d14';
-  ctx.fillRect(0,0,W,H);
+function strikeDrawGround(ctx,W,H,S,scale){
+  ctx.fillStyle='#0a0d08'; ctx.fillRect(0,0,W,H);   // 바탕(월드 밖 어둠)
+  const w2s=(x,y)=>({x:(x-S.cam.x)*scale+W/2, y:(y-S.cam.y)*scale+H/2});
+  strikeDrawTerrain(ctx,w2s,scale,S,W,H);   // 절차적 흙 타일(제공 이미지 미사용 — 전부 새로 깔기)
   // 영역 워시: 좌하(유니온/파랑) ↔ 우상(적/빨강) 진영색으로 은은히 물듦(전황 감각)
   const gw=ctx.createLinearGradient(0,H,W,0);
   gw.addColorStop(0,'rgba(70,150,230,.11)'); gw.addColorStop(0.5,'rgba(0,0,0,0)'); gw.addColorStop(1,'rgba(230,80,92,.11)');
@@ -9084,9 +9084,12 @@ function strikeDrawBuildMap(spec){ const S=STK; if(!S) return; const cvEl=docume
   strikeBuildClamp(b,sc,W,H);
   const ox=W/2-b.cam.x*sc, oy=H/2-b.cam.y*sc, pw=b.W*sc, ph=b.H*sc;
   b._sc=sc; b._ox=ox; b._oy=oy;
-  // 타일 바닥(어둡고 단조롭게 — 나중에 건물이 잘 보이게)
-  strikeTileRect(ctx, ox,oy, pw,ph, STRIKE_BUILDTILE, Math.max(10, (b.W/8)*sc));
-  ctx.save(); ctx.beginPath(); ctx.rect(ox,oy,pw,ph); ctx.clip(); ctx.fillStyle='rgba(7,11,16,.62)'; ctx.fillRect(ox,oy,pw,ph); ctx.restore();   // 어둡게+패턴 차분
+  // 절차적 금속 바닥(제공 이미지 미사용) — 세로 그라데이션 + 은은한 패널 체커
+  { ctx.save(); ctx.beginPath(); ctx.rect(ox,oy,pw,ph); ctx.clip();
+    const bg=ctx.createLinearGradient(ox,oy,ox,oy+ph); bg.addColorStop(0,'#15202b'); bg.addColorStop(1,'#0b131b'); ctx.fillStyle=bg; ctx.fillRect(ox,oy,pw,ph);
+    const pcw=pw/b.cols, pch=ph/b.rows; ctx.fillStyle='rgba(150,200,240,.022)';   // 2칸 단위 패널 명암(체커)
+    for(let ry2=0;ry2<b.rows;ry2+=2) for(let cx2=0;cx2<b.cols;cx2+=2){ if(((cx2>>1)+(ry2>>1))&1) continue; ctx.fillRect(ox+cx2*pcw,oy+ry2*pch,pcw*2,pch*2); }
+    ctx.restore(); }
   // 건설 격자(차분하게)
   const cwd=pw/b.cols, chd=ph/b.rows;
   ctx.strokeStyle='rgba(110,150,190,.1)'; ctx.lineWidth=1;
@@ -9585,7 +9588,7 @@ function strikeDrawMain(){ const S=STK; if(!S) return; const cvEl=document.getEl
     ctx.restore(); }
 }
 function _stkHash(x,y){ const n=Math.sin(x*127.1+y*311.7)*43758.5453; return n-Math.floor(n); }
-const _STK_PAL=['#12180e','#161e10','#1b2113','#0f1710','#19200f','#141a0d'];
+const _STK_PAL=['#2b2417','#33291a','#3a2f1d','#251f14','#352b1b','#2e2618'];   // 흙(사막) 톤 절차 타일 팔레트
 function strikeDrawTerrain(ctx,w2s,scale,S,cw,ch){ const T=160;
   const x0=Math.floor((S.cam.x-cw/2/scale)/T)*T, x1=S.cam.x+cw/2/scale+T;
   const y0=Math.floor((S.cam.y-ch/2/scale)/T)*T, y1=S.cam.y+ch/2/scale+T;
@@ -9642,12 +9645,11 @@ function strikeGlowUnderlay(ctx,w2s,scale,S,W,H,nodes){ ctx.save(); ctx.lineCap=
 // 신전 잇는 포장 길 — 솔리드 포장 + 양옆만 은은한 외곽(끝은 메인 플랫폼이 딱 덮음)
 function strikeDrawLane(ctx, pts, scale, S, W, H){ if(!pts||pts.length<2) return; ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round';
   const path=()=>{ ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y); for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x,pts[i].y); };
-  const img=STRIKE_PAVE; let pat=strikePattern(ctx,img);
-  if(pat&&pat.setTransform&&S){ const tilePx=Math.max(8,300*scale), s=tilePx/img.naturalWidth, ox=(0-S.cam.x)*scale+W/2, oy=(0-S.cam.y)*scale+H/2; pat.setTransform(new DOMMatrix([s,0,0,s,ox,oy])); }
-  const stroke=pat||'rgba(150,140,120,.5)', base=Math.max(28,1580*scale), edge=Math.max(3,9*scale);
-  path(); ctx.strokeStyle='rgba(10,16,20,.88)'; ctx.lineWidth=base; ctx.stroke();              // 어두운 테두리(정사각과 동일 seam)
-  path(); ctx.strokeStyle=stroke; ctx.lineWidth=base-edge; ctx.stroke();                        // 포장 코어
-  path(); ctx.globalAlpha=0.16; ctx.strokeStyle='rgba(18,26,34,1)'; ctx.lineWidth=base-edge; ctx.stroke(); ctx.globalAlpha=1;  // 톤 통일
+  const base=Math.max(28,1580*scale), edge=Math.max(3,9*scale);   // 절차적 다져진 흙길(제공 이미지 미사용)
+  path(); ctx.strokeStyle='rgba(8,12,16,.9)';  ctx.lineWidth=base;             ctx.stroke();   // 어두운 테두리(seam)
+  path(); ctx.strokeStyle='#6b5a3c';           ctx.lineWidth=base-edge;        ctx.stroke();   // 다져진 흙길 코어(밝은 사막색)
+  path(); ctx.strokeStyle='#7f6c48';           ctx.lineWidth=(base-edge)*0.7;  ctx.stroke();   // 중앙 밝은 결
+  path(); ctx.globalAlpha=0.45; ctx.strokeStyle='rgba(42,32,18,.6)'; ctx.lineWidth=(base-edge)*0.5; ctx.setLineDash([Math.max(6,58*scale),Math.max(6,48*scale)]); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha=1;   // 중앙 바퀴자국 점선
   ctx.restore(); }
 // 바닥 진격 화살표 — 넓게 벌어진 V, 띄엄띄엄, 매우 은은
 function strikeLaneArrows(ctx, pts, scale, centerIdx){ const gap=Math.max(48,500*scale), size=Math.max(6,80*scale);
@@ -9679,11 +9681,8 @@ function strikeDrawSpawnZone(ctx,w2s,scale,S,W,H,wx,wy,wWorld,hWorld,glow){
   ctx.save();
   _strkRR(ctx,x-3,y-2,pw+6,ph+8,rad); ctx.fillStyle='rgba(0,0,0,.28)'; ctx.fill();   // 접지 그림자
   _strkRR(ctx,x,y,pw,ph,rad); ctx.save(); ctx.clip();
-  const img=STRIKE_PAVE, pat=strikePattern(ctx,img); if(pat){
-    if(pat.setTransform){ const tilePx=Math.max(8,300*scale), s=tilePx/img.naturalWidth, ox=(0-S.cam.x)*scale+W/2, oy=(0-S.cam.y)*scale+H/2; pat.setTransform(new DOMMatrix([s,0,0,s,ox,oy])); }
-    ctx.fillStyle=pat; } else ctx.fillStyle='#3a4a52';
-  ctx.fillRect(x,y,pw,ph);
-  ctx.fillStyle='rgba(16,24,30,.26)'; ctx.fillRect(x,y,pw,ph);   // 톤 통일
+  ctx.fillStyle='#39434c'; ctx.fillRect(x,y,pw,ph);   // 절차적 석재 플랫폼(제공 이미지 미사용)
+  const pg=ctx.createLinearGradient(x,y,x,y+ph); pg.addColorStop(0,'rgba(255,255,255,.05)'); pg.addColorStop(1,'rgba(0,0,0,.2)'); ctx.fillStyle=pg; ctx.fillRect(x,y,pw,ph);   // 상단 하이라이트→하단 음영
   // 소환 격자(은은)
   ctx.strokeStyle='rgba(180,220,255,.08)'; ctx.lineWidth=1; const gx=Math.max(40,260*scale);
   for(let ix=x+gx; ix<x+pw; ix+=gx){ ctx.beginPath(); ctx.moveTo(ix,y); ctx.lineTo(ix,y+ph); ctx.stroke(); }
