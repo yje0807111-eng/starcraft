@@ -8857,7 +8857,7 @@ const STRIKE_SAMPLE=[{id:'marine'},{id:'ghost'},{id:'hydra'},{id:'dragoon'},{id:
 // 전장 줌 한계: 최소(가장 축소)=1.2, 기본 시작=1.2, 최대(가장 확대)=2.5
 const STK_MINZOOM=1.2, STK_DEFZOOM=1.2, STK_MAXZOOM=2.5, BUILD_MAXZOOM=3;
 const STK_UNIT_SCALE=1.35;   // 직스 전투 유닛 3D 확대 배율(신전 제외) — 전장에서 잘 보이게
-const BUILD_UNIT=26;         // 건설 건물 크기(월드/풋프린트 칸) — 작을수록 건물 작고 배치 공간 넓어짐
+const BUILD_UNIT=48;         // 건설 건물 크기 = 스냅 격자(월드/풋프린트 칸) — fp가 정수 비율이라 격자에 딱 맞게 타일링
 // 종족(컴퓨터가 싸운다): 진입 시 선택 → 그 종족 유닛만 소환. units=현 보유 전투유닛 기준 로스터
 // (프로토스·저그는 다음 단계에서 가챠 유닛으로 보강 예정 — 균형)
 // 직스 전용 유닛 스탯(네모 U 테이블과 독립 — 단독 밸런스 튜닝). hp/dmg/rng/spd=절대값(월드 0..4800 픽셀), cd=초, splash=광역 반경(px), melee=근접
@@ -8907,36 +8907,36 @@ const STK_RACE_ORDER=['terran','zerg','protoss'];   // 표시 순서: 유니온 
 // fp:[w,h] = 건물 풋프린트(칸 단위, 30×20 그리드). 비율 다양화: 2×2(1:1)·2×3(1:1.5)·3×2·3×3·3×4(1.5:2)·4×3·4×4·4×5(2:2.5 최대)
 const STK_BUILDINGS={
   terran:[
-    {key:'supply',  name:'서플라이 디팟', ico:'🏠', cost:250, fp:[5,4], produces:[{id:'marine',     n:3}]},
-    {key:'barracks',name:'배럭',          ico:'🏛', cost:320, fp:[7,7], produces:[{id:'ghost',      n:2}]},
-    {key:'bunker',  name:'벙커',          ico:'🧱', cost:300, fp:[5,4], produces:[{id:'machinegun', n:2}]},
-    {key:'machshop',name:'머시너리',      ico:'🏍', cost:320, fp:[7,6], produces:[{id:'racer',      n:2}]},
-    {key:'factory', name:'팩토리',        ico:'🏭', cost:440, fp:[7,7], produces:[{id:'goliath',    n:2}]},
-    {key:'armory',  name:'아머리',        ico:'🛠', cost:480, fp:[5,4], produces:[{id:'tank',       n:1}]},
-    {key:'starport',name:'스타포트',      ico:'✈️', cost:460, fp:[7,7], produces:[{id:'skyguard',   n:2}]},
-    {key:'missile', name:'미사일 베이',   ico:'🚀', cost:500, fp:[5,4], produces:[{id:'hellfire',   n:2}]},
-    {key:'vessel',  name:'배슬 야드',     ico:'💥', cost:640, fp:[7,6], produces:[{id:'dreadnought',n:1}]},
-    {key:'aegis',   name:'이지스 도크',   ico:'🛡', cost:760, fp:[5,4], produces:[{id:'aegis',      n:1}]},
+    {key:'supply',  name:'서플라이 디팟', ico:'🏠', cost:250, fp:[3,2], produces:[{id:'marine',     n:3}]},
+    {key:'barracks',name:'배럭',          ico:'🏛', cost:320, fp:[4,4], produces:[{id:'ghost',      n:2}]},
+    {key:'bunker',  name:'벙커',          ico:'🧱', cost:300, fp:[3,2], produces:[{id:'machinegun', n:2}]},
+    {key:'machshop',name:'머시너리',      ico:'🏍', cost:320, fp:[4,3], produces:[{id:'racer',      n:2}]},
+    {key:'factory', name:'팩토리',        ico:'🏭', cost:440, fp:[4,4], produces:[{id:'goliath',    n:2}]},
+    {key:'armory',  name:'아머리',        ico:'🛠', cost:480, fp:[3,2], produces:[{id:'tank',       n:1}]},
+    {key:'starport',name:'스타포트',      ico:'✈️', cost:460, fp:[4,4], produces:[{id:'skyguard',   n:2}]},
+    {key:'missile', name:'미사일 베이',   ico:'🚀', cost:500, fp:[3,2], produces:[{id:'hellfire',   n:2}]},
+    {key:'vessel',  name:'배슬 야드',     ico:'💥', cost:640, fp:[4,3], produces:[{id:'dreadnought',n:1}]},
+    {key:'aegis',   name:'이지스 도크',   ico:'🛡', cost:760, fp:[3,2], produces:[{id:'aegis',      n:1}]},
   ],
   zerg:[
-    {key:'pool',    name:'스포닝 풀',     ico:'🥚', cost:250, fp:[5,4], produces:[{id:'hydra',      n:3}]},
-    {key:'creep',   name:'크립 콜로니',   ico:'🟢', cost:240, fp:[5,4], produces:[{id:'snapper',    n:3}]},
-    {key:'den',     name:'히드라 덴',     ico:'🕳', cost:340, fp:[7,6], produces:[{id:'venom',      n:2}]},
-    {key:'garden',  name:'가시 정원',     ico:'🌵', cost:420, fp:[7,7], produces:[{id:'thornqueen', n:2}]},
-    {key:'spire',   name:'스파이어',      ico:'🗼', cost:440, fp:[7,7], produces:[{id:'stinger',    n:2}]},
-    {key:'gspire',  name:'그레이터 스파이어', ico:'🐍', cost:520, fp:[5,4], produces:[{id:'medusa', n:1}]},
-    {key:'cavern',  name:'울트라 케이번', ico:'🦴', cost:480, fp:[7,7], produces:[{id:'matron',     n:1}]},
-    {key:'nest',    name:'와이번 소굴',   ico:'🐲', cost:720, fp:[7,6], produces:[{id:'wyvern',     n:1}]},
-    {key:'pit',     name:'베히모스 굴',   ico:'🦣', cost:840, fp:[7,7], produces:[{id:'behemoth',   n:1}]},
+    {key:'pool',    name:'스포닝 풀',     ico:'🥚', cost:250, fp:[3,2], produces:[{id:'hydra',      n:3}]},
+    {key:'creep',   name:'크립 콜로니',   ico:'🟢', cost:240, fp:[3,2], produces:[{id:'snapper',    n:3}]},
+    {key:'den',     name:'히드라 덴',     ico:'🕳', cost:340, fp:[4,3], produces:[{id:'venom',      n:2}]},
+    {key:'garden',  name:'가시 정원',     ico:'🌵', cost:420, fp:[4,4], produces:[{id:'thornqueen', n:2}]},
+    {key:'spire',   name:'스파이어',      ico:'🗼', cost:440, fp:[4,4], produces:[{id:'stinger',    n:2}]},
+    {key:'gspire',  name:'그레이터 스파이어', ico:'🐍', cost:520, fp:[3,2], produces:[{id:'medusa', n:1}]},
+    {key:'cavern',  name:'울트라 케이번', ico:'🦴', cost:480, fp:[4,4], produces:[{id:'matron',     n:1}]},
+    {key:'nest',    name:'와이번 소굴',   ico:'🐲', cost:720, fp:[4,3], produces:[{id:'wyvern',     n:1}]},
+    {key:'pit',     name:'베히모스 굴',   ico:'🦣', cost:840, fp:[4,4], produces:[{id:'behemoth',   n:1}]},
   ],
   protoss:[
-    {key:'gateway', name:'게이트웨이',        ico:'🌀', cost:250, fp:[5,4], produces:[{id:'blade',     n:3}]},
-    {key:'core',    name:'사이버네틱스 코어', ico:'💠', cost:340, fp:[7,6], produces:[{id:'dragoon',   n:2}]},
-    {key:'robo',    name:'로보틱스 베이',     ico:'🤖', cost:440, fp:[7,7], produces:[{id:'archon',    n:1}]},
-    {key:'stargate',name:'스타게이트',        ico:'✨', cost:420, fp:[7,7], produces:[{id:'falcon',    n:2}]},
-    {key:'beacon',  name:'플릿 비콘',         ico:'💃', cost:460, fp:[5,4], produces:[{id:'skydancer', n:2}]},
-    {key:'tribunal',name:'아비터 트리뷰널',   ico:'⏳', cost:580, fp:[7,6], produces:[{id:'kronos',    n:1}]},
-    {key:'sanctum', name:'아크엔젤 성소',     ico:'👼', cost:700, fp:[7,7], produces:[{id:'archangel', n:1}]},
+    {key:'gateway', name:'게이트웨이',        ico:'🌀', cost:250, fp:[3,2], produces:[{id:'blade',     n:3}]},
+    {key:'core',    name:'사이버네틱스 코어', ico:'💠', cost:340, fp:[4,3], produces:[{id:'dragoon',   n:2}]},
+    {key:'robo',    name:'로보틱스 베이',     ico:'🤖', cost:440, fp:[4,4], produces:[{id:'archon',    n:1}]},
+    {key:'stargate',name:'스타게이트',        ico:'✨', cost:420, fp:[4,4], produces:[{id:'falcon',    n:2}]},
+    {key:'beacon',  name:'플릿 비콘',         ico:'💃', cost:460, fp:[3,2], produces:[{id:'skydancer', n:2}]},
+    {key:'tribunal',name:'아비터 트리뷰널',   ico:'⏳', cost:580, fp:[4,3], produces:[{id:'kronos',    n:1}]},
+    {key:'sanctum', name:'아크엔젤 성소',     ico:'👼', cost:700, fp:[4,4], produces:[{id:'archangel', n:1}]},
   ],
 };
 // 건물 key → 3D 모델 키(건물 모델 추가 시 여기에 매핑). 매핑/로드 전엔 2D 렌더로 폴백.
@@ -8945,9 +8945,9 @@ const STK_BUILD_MODEL={};   // 예: { supply:'supply_bld', barracks:'barracks_bl
 const STK_WORKER_MODEL={ terran:'worker_human', zerg:'worker_swarm', protoss:'worker_light' };
 // 종족별 시작 본진(팔레트에 없음 · 처음부터 왼쪽 위에 1채 · 전투유닛 생산 없음)
 const STK_MAIN={
-  terran:  {key:'command',  name:'커맨드 센터', ico:'🏢', fp:[7,6], produces:[]},
-  zerg:    {key:'hatchery', name:'해처리',      ico:'🥚', fp:[7,6], produces:[]},
-  protoss: {key:'nexus',    name:'넥서스',      ico:'🔷', fp:[7,6], produces:[]},
+  terran:  {key:'command',  name:'커맨드 센터', ico:'🏢', fp:[4,3], produces:[]},
+  zerg:    {key:'hatchery', name:'해처리',      ico:'🥚', fp:[4,3], produces:[]},
+  protoss: {key:'nexus',    name:'넥서스',      ico:'🔷', fp:[4,3], produces:[]},
 };
 function strikeRandomRace(){ return STK_RACE_ORDER[Math.floor(Math.random()*STK_RACE_ORDER.length)]; }
 function strikeRaceUnits(side){ const r=side&&side.race; return (STK_RACES[r]||STK_RACES.terran).units.slice(); }   // 그 진영 종족의 소환 가능 유닛 id
@@ -9084,7 +9084,7 @@ function strikeSync3D(dt){ const S=STK; if(!S) return; const mcv=document.getEle
     const b=S.build, W=S.cw||1, H=S.ch||1, bs=b._sc||0.2, list=[];
     const mul=Math.min(1.2, Math.max(0.12, (2600/3)/(Math.min(W,H)/bs)));   // 보드 스케일 연동(전투와 동일 규약)
     const wid=STK_WORKER_MODEL[S.me.race]||'worker_human', wks=b.workers||[];
-    for(let i=0;i<wks.length;i++){ const wk=wks[i]; list.push({uid:'bw'+i, id:wid, x:(b._ox+wk.x*bs)/W, y:(b._oy+wk.y*bs)/H, face:wk._face||0}); }
+    for(let i=0;i<wks.length;i++){ const wk=wks[i]; list.push({uid:'bw'+i, id:wid, x:(b._ox+wk.x*bs)/W, y:(b._oy+wk.y*bs)/H, face:wk._face||0, moving:!!wk._moving}); }
     const cells=b.cells||[]; for(let i=0;i<cells.length;i++){ const c=cells[i], mk=STK_BUILD_MODEL[c.type&&c.type.key]; if(!mk||!M3D.hasModel(mk)) continue; list.push({uid:'bc'+i, id:mk, x:(b._ox+c.x*bs)/W, y:(b._oy+c.y*bs)/H}); }
     M3D.syncBuild(list, W, H, dt, mul); return;
   }
@@ -9098,8 +9098,8 @@ function strikeSync3D(dt){ const S=STK; if(!S) return; const mcv=document.getEle
   const TT=[['tmpMeMain',S.me.base,'temple_main'],['tmpAiMain',S.ai.base,'temple_main'],['tmpMeSec',S.me.sec,'temple_stone'],['tmpAiSec',S.ai.sec,'temple_stone'],['tmpCentral',S.central,'temple_neutral']];
   for(const t of TT){ const o=t[1], n=w2n(o.x,o.y); list.push({uid:t[0], id:t[2], x:n.x, y:n.y, fixed:true, face:-0.42, dead:!!o.dead}); }   // 신전(고정, 살짝 사선) — 파괴 시 dead 플래그
   if(S.sizeCmp && S.cmpUnits){ for(const u of S.cmpUnits){ const n=w2n(u.x,u.y); list.push({uid:u.uid, id:u.id, x:n.x, y:n.y}); } }
-  for(const side of ['me','ai']){ const ringCol=(side==='me')?'#3aa0ff':'#ff4d5e';   // 본체 림=플레이어색(고정) / 하단 링=팀색(아군 파랑/적군 빨강, 보는 쪽 기준)
-    for(const u of S[side].units){ const n=w2n(u.x,u.y); list.push({uid:u.uid, id:u.id, x:n.x, y:n.y, face:u.face, rimCol:u.pcol, ringCol:ringCol, scl:STK_UNIT_SCALE}); } }   // 전투 유닛만 확대(신전 제외)
+  for(const side of ['me','ai']){ const ringCol=(side==='me')?'#3aa0ff':'#ff4d5e', foe=(side==='ai');   // 본체 림=플레이어색 / 하단 링=팀색 / 적군은 본체 적색 틴트
+    for(const u of S[side].units){ const n=w2n(u.x,u.y); list.push({uid:u.uid, id:u.id, x:n.x, y:n.y, face:u.face, moving:u.moving, rimCol:u.pcol, ringCol:ringCol, foeTint:foe, scl:STK_UNIT_SCALE}); } }   // moving=이동모션 / foeTint=적 본체 통일색
   M3D.sync(list, W, H, dt, [], [], null, k); }
 // 건물 탭 전용: 내 전용 건설 맵(전장 아님). 화면 1/4 직사각형, 깔끔한 금속 타일 + 건설 격자
 function strikeDrawBuildMap(spec){ const S=STK; if(!S) return; const cvEl=document.getElementById('cvMain'); if(!cvEl) return;   // spec={cells,col,label} → 관전 모드(다른 플레이어 건설)
@@ -9284,11 +9284,11 @@ function strikeFindPath(b, sx, sy, gx, gy, target){ const O=strikeBuildOcc(b,tar
 function strikeStepBuild(dt){ const S=STK, b=S&&S.build; if(!b) return;
   if(!b.workers){ b.workers=[]; for(let i=0;i<3;i++) b.workers.push({x:b.W*(0.34+i*0.16), y:b.H-180, task:null}); }   // 일꾼 3마리(병렬 자동 분배)
   const claimed=new Set();
-  for(const w of b.workers){ if(w.task && w.task.built<1 && b.cells.indexOf(w.task)>=0) claimed.add(w.task); else { w.task=null; w.path=null; } }
+  for(const w of b.workers){ if(w.task && w.task.built<1 && b.cells.indexOf(w.task)>=0) claimed.add(w.task); else { w.task=null; w.path=null; w._moving=false; } }
   for(const w of b.workers){ if(w.task) continue; for(const c of b.cells){ if(c.built<1 && !claimed.has(c)){ w.task=c; claimed.add(c); w.path=null; break; } } }   // 유휴 일꾼 → 미점유 미완성 건물
   const MARG=BUILD_UNIT*1.15;   // 국소 반발(경로 위 미세 회피)
   for(const w of b.workers){ if(!w.task) continue; const c=w.task;
-    if(Math.hypot(c.x-w.x,c.y-w.y)<=150){ c.built=Math.min(1, c.built+dt/3.5); if(c.built>=1){ if(typeof playSfx==='function') playSfx('ui_confirm'); w.task=null; w.path=null; } continue; }   // 도착 → 3.5초 건설
+    if(Math.hypot(c.x-w.x,c.y-w.y)<=150){ w._moving=false; c.built=Math.min(1, c.built+dt/3.5); if(c.built>=1){ if(typeof playSfx==='function') playSfx('ui_confirm'); w.task=null; w.path=null; } continue; }   // 도착 → 3.5초 건설(정지)
     w.repathT=(w.repathT||0)-dt;
     if(!w.path || w.pathTask!==c || w.repathT<=0){ w.path=strikeFindPath(b,w.x,w.y,c.x,c.y,c); w.pi=0; w.pathTask=c; w.repathT=0.7; }   // 경로 (재)탐색(0.7초마다·건물 변화 반영)
     let tx=c.x, ty=c.y;   // 현재 웨이포인트(없으면 목표 직행)
@@ -9299,15 +9299,15 @@ function strikeStepBuild(dt){ const S=STK, b=S&&S.build; if(!b) return;
       if(od<0.01){ const penx=hw-Math.abs(rx), peny=hh-Math.abs(ry); if(penx<peny){ ox=Math.sign(rx||1); oy=0; } else { ox=0; oy=Math.sign(ry||1); } od=1; }
       if(od<MARG){ const wgt=(MARG-od)/MARG; px+=(ox/od)*wgt; py+=(oy/od)*wgt; } }
     if(px||py){ hx+=px*1.1; hy+=py*1.1; const hl=Math.hypot(hx,hy)||1; hx/=hl; hy/=hl; }
-    const v=1100*dt; w.x=Math.max(0,Math.min(b.W, w.x+hx*v)); w.y=Math.max(0,Math.min(b.H, w.y+hy*v)); w._face=Math.atan2(hx,hy); } }
+    const v=1100*dt; w.x=Math.max(0,Math.min(b.W, w.x+hx*v)); w.y=Math.max(0,Math.min(b.H, w.y+hy*v)); w._face=Math.atan2(hx,hy); w._moving=true; } }   // 이동 중(이동모션 트리거)
 // 건물 풋프린트 → 월드 크기(자유 배치). fp:[w,h] 비율 × BUILD_UNIT. 미지정 시 4×4
 function strikeFootprint(t){ const f=(t&&t.fp)||[4,4]; return {w:f[0]*BUILD_UNIT, h:f[1]*BUILD_UNIT}; }
 // (cx,cy)=월드 중심에 w×h 건물이 놓일 수 있는지(보드 안 + 기존 건물과 미겹침)
 function strikeCanPlace(b,cx,cy,w,h){ if(cx-w/2<0||cy-h/2<0||cx+w/2>b.W||cy+h/2>b.H) return false;   // 보드 밖
   for(const c of b.cells){ if(Math.abs(cx-c.x)<(w+c.w)/2 && Math.abs(cy-c.y)<(h+c.h)/2) return false; }   // AABB 겹침
   return true; }
-// 그리드 스냅: 건물 좌상단을 격자(BUILD_UNIT×2)에 맞춰 정렬 → 인접 건물이 위/중앙/아래로 딱 나뉨
-function strikeSnap(b,cx,cy,w,h){ const G=BUILD_UNIT*2;
+// 그리드 스냅: 건물 좌상단을 격자(BUILD_UNIT)에 맞춰 정렬 → 정수 비율 건물이 딱 맞게 타일링
+function strikeSnap(b,cx,cy,w,h){ const G=BUILD_UNIT;
   let x0=Math.round((cx-w/2)/G)*G, y0=Math.round((cy-h/2)/G)*G;
   x0=Math.max(0,Math.min(b.W-w,x0)); y0=Math.max(0,Math.min(b.H-h,y0));   // 보드 안 클램프
   return {x:x0+w/2, y:y0+h/2}; }
@@ -10324,6 +10324,18 @@ function sandboxAllyFix(m){ if(!m||m._sbAlly) return; m._sbAlly=true;
       c.needsUpdate=true; return c; });
     o.material=arr?out:out[0]; }); };
   fix(m.inner); fix(m.runInner); fix(m.atkInner); }
+// 직스: 적 유닛 본체를 통일 적색으로 틴트(모델 원래색이 파랑 등이어도 적군으로 구분). 인스턴스 재질 복제 → 베이스/일반게임 무영향
+const _STK_FOE=new THREE.Color(0xcf4a4a);
+function strikeFoeFix(m){ if(!m||m._stkFoe) return; m._stkFoe=true;
+  const fix=function(root){ if(!root) return; root.traverse(o=>{ if(!o.isMesh||!o.material) return;
+    const arr=Array.isArray(o.material), ms=arr?o.material:[o.material];
+    const out=ms.map(mat=>{ if(!mat) return mat; const c=mat.clone();
+      if(c.color) c.color.lerp(_STK_FOE,0.6);
+      if(c.emissive && (c.emissive.r+c.emissive.g+c.emissive.b)>0.05) c.emissive.lerp(_STK_FOE,0.5);
+      if('emissive' in c) addRim(c, _STK_FOE, rimIntU);
+      c.needsUpdate=true; return c; });
+    o.material=arr?out:out[0]; }); };
+  fix(m.inner); fix(m.runInner); fix(m.atkInner); }
 // 밝은 림 색 — 아군은 플레이어색, 그 외 중립
 function unitRim(id){ return PLAYER_MODELS.has(id) ? playerRim : new THREE.Color(NEUTRAL_RIM); }
 // 재질 셰이더에 프레넬 림(가장자리 발광) 주입 — 시점 기준 실루엣이 항상 빛나 배경과 분리(MeshStandard/Physical)
@@ -10590,7 +10602,8 @@ window.M3D={
     for(const [key,m] of models){ if(!live.has(key)&&!m.dying){ m.dying=true; m.deadT=0; m.lean=0; } }
     // ── 아군 유닛 ──
     for(const u of uList){ const _id=_mid(u); let m=models.get(u.uid); if(!m){ m=makeModel(_id); if(!m) continue; m.kind='unit'; models.set(u.uid,m); }
-      if(u.rimCol) applyTeamRim(m, u.rimCol);   // 직스: 진영색 본체 림(아군 파랑 / 적군 빨강 동시 표시)
+      if(u.foeTint) strikeFoeFix(m);            // 직스 적군: 본체 통일 적색 틴트(모델 원래색 무관)
+      else if(u.rimCol) applyTeamRim(m, u.rimCol);   // 진영색 본체 림(아군)
       if(typeof window!=='undefined' && window.__sandbox && u._enemyDisp) sandboxAllyFix(m);   // 샌드박스: 적 표시 유닛도 아군 외형(색+림 통일)
       if(u.atBoss){ m.holder.visible=false; continue; }   // 보스방 파견 유닛은 트랙에 표시 안 함
       const px=u.x*W, worldY=H-u.y*H;
@@ -10793,9 +10806,10 @@ window.M3D={
     const seen=new Set(), mul=scaleMul||0.5;
     for(const it of (list||[])){ if(!MODELS[it.id]) continue; seen.add(it.uid);
       let m=buildModels.get(it.uid); if(!m){ m=makeModel(it.id); if(!m) continue; m.kind='build'; buildModels.set(it.uid,m); }
-      m.holder.visible=true;
-      if(m.inner) m.inner.visible=true; if(m.runInner) m.runInner.visible=false; if(m.gun) m.gun.visible=true;
-      if(m.rim) m.rim.visible=false; if(m.shadow) m.shadow.material.opacity=0.22;
+      m.holder.visible=true; if(m.rim) m.rim.visible=false; if(m.shadow) m.shadow.material.opacity=0.22;
+      if(it.moving && m.runInner){ if(m.inner)m.inner.visible=false; m.runInner.visible=true; if(m.gun)m.gun.visible=false; if(m.atkInner)m.atkInner.visible=false; m.anim.position.set(0,0,0); m.anim.rotation.set(0,0,0); if(m.runMixer) m.runMixer.update(dt); }   // 이동: 달리기 모션
+      else if(it.moving){ if(m.inner)m.inner.visible=true; if(m.runInner)m.runInner.visible=false; if(m.gun)m.gun.visible=true; m.walk=(m.walk||0)+dt*WALK_SPD; m.anim.position.set(0,Math.abs(Math.sin(m.walk))*m.h*WALK_BOB,0); m.anim.rotation.z=Math.sin(m.walk*0.5)*WALK_SWAY; }   // 이동(달리기 모델 없음): 절차적 걷기
+      else { if(m.inner)m.inner.visible=true; if(m.runInner)m.runInner.visible=false; if(m.gun)m.gun.visible=true; m.anim.position.set(0,0,0); m.anim.rotation.set(0,0,0); }   // 정지
       if(it.face!=null){ m.yaw.rotation.y=it.face; }
       m.holder.scale.setScalar((SCALE[it.id]||MODEL_SCALE)*mul*(it.scl||1));
       m.holder.position.set(it.x*W, (H-it.y*H)-Y_DROP, 0);
