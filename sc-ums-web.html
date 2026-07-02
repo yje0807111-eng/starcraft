@@ -9454,8 +9454,15 @@ const FX={
         ctx.globalAlpha=L*0.16; ctx.fillStyle=gc; ctx.beginPath(); ctx.arc(0,0,(1.2+p*2.6)*z,0,6.283); ctx.fill();
         ctx.globalAlpha=L*0.45; ctx.fillStyle=gc; ctx.beginPath(); ctx.arc(0,0,(0.7+p*1.1)*z,0,6.283); ctx.fill();
         ctx.globalAlpha=L*0.4; ctx.fillStyle='#5f9e1e'; for(let q=0;q<3;q++){ const _a=q*2.1+sd*0.4, _d=(1+p*3.5)*z*(0.5+((sd+q*7)%5)/6), _r=(0.4+((sd*3+q*5)%4)/4*0.6)*z; ctx.beginPath(); ctx.arc(Math.cos(_a)*_d,Math.sin(_a)*_d,_r,0,6.283); ctx.fill(); } }
-      else if(im.kind==='sniper'||im.kind==='beam'){ ctx.globalCompositeOperation='lighter';
-        ctx.globalAlpha=L*0.4; ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(0,0,(0.9+p*1.1)*z,0,6.283); ctx.fill();   // 희미한 흰 타격 코어(빔 포함)
+      else if(im.kind==='beam'){ const bsd=((im.x*13)|0)%7; ctx.globalCompositeOperation='lighter'; ctx.lineCap='round';   // 팔콘 빔 타격: 또렷한 에너지 히트
+        ctx.globalAlpha=L*0.85; ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(0,0,(1.1+p*1.2)*z,0,6.283); ctx.fill();   // 밝은 타격 코어
+        ctx.globalAlpha=L*0.38; ctx.fillStyle=im.col||'#6ec8ff'; ctx.beginPath(); ctx.arc(0,0,(2.2+p*4.0)*z,0,6.283); ctx.fill();   // 퍼지는 에너지 글로우
+        ctx.globalAlpha=L*0.7*(1-p*0.4); ctx.strokeStyle=im.col||'#6ec8ff'; ctx.lineWidth=0.7*z; ctx.beginPath(); ctx.arc(0,0,(1.6+p*5.2)*z,0,6.283); ctx.stroke();   // 확장 링
+        ctx.globalAlpha=L*0.6; ctx.strokeStyle='#dff2ff'; ctx.lineWidth=0.5*z;
+        for(let q=0;q<4;q++){ const an=q*1.57+bsd*0.2, l1=(1.5+p*3.0)*z;   // 튀는 스파크 4가닥
+          ctx.beginPath(); ctx.moveTo(Math.cos(an)*l1*0.4,Math.sin(an)*l1*0.4); ctx.lineTo(Math.cos(an)*l1,Math.sin(an)*l1); ctx.stroke(); } }
+      else if(im.kind==='sniper'){ ctx.globalCompositeOperation='lighter';
+        ctx.globalAlpha=L*0.4; ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(0,0,(0.9+p*1.1)*z,0,6.283); ctx.fill();   // 희미한 흰 타격 코어
         ctx.globalAlpha=L*0.14; ctx.fillStyle=im.col||'#eafdff'; ctx.beginPath(); ctx.arc(0,0,(1.8+p*3.0)*z,0,6.283); ctx.fill(); }   // 아주 옅은 글로우
       else { ctx.globalAlpha=L*0.9; ctx.fillStyle='#fff6d8'; ctx.beginPath(); ctx.arc(0,0,3.5*z*(0.5+p),0,6.283); ctx.fill(); }
       ctx.restore(); }
