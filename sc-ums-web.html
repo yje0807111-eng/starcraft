@@ -5703,7 +5703,7 @@ const SB_RANGE={
   pelican:0, seraph:0,
 };
 const SB_AIR={ goliath:23 };   // 대공(공중공격) 사거리 별도 — 샌드박스 전용
-const SB_CD={ worker_human:1.1111, worker_light:1.1111, worker_swarm:1.1111, marine:0.8333, ghost:1.25, racer:0.7692, tank:1.4286, goliath:0.9091, skyguard:0.8333, hellfire:1.6667, dreadnought:1.6667, blade:1.0, falcon:0.9091, skydancer:0.3333, archon:1.0 };   // 샌드박스 전용 공속 오버라이드(초=발사 간격, =1/공속) — nemo 무영향. 워든=1.0/s·팔콘=1.1/s·스카이댄서=3/s·보이드=1.0/s   // 샌드박스 전용 공속 오버라이드(초=발사 간격, =1/공속) — nemo 무영향. 일꾼0.9·레인저1.2·팬텀0.8·레이서1.3·브레이커0.7·스트라이더1.1·템페스트1.2·헬파이어0.6·드레드노트0.6
+const SB_CD={ worker_human:1.1111, worker_light:1.1111, worker_swarm:1.1111, marine:0.8333, ghost:1.25, racer:0.7692, tank:1.4286, goliath:0.9091, skyguard:0.8333, hellfire:1.6667, dreadnought:1.6667, blade:1.0, falcon:0.9091, skydancer:0.3333, archon:1.0, dragoon:0.8333 };   // 샌드박스 전용 공속 오버라이드(초=발사 간격, =1/공속) — nemo 무영향. 워든=1.0/s·팔콘=1.1/s·스카이댄서=3/s·보이드=1.0/s·센티넬=1.2/s   // 샌드박스 전용 공속 오버라이드(초=발사 간격, =1/공속) — nemo 무영향. 일꾼0.9·레인저1.2·팬텀0.8·레이서1.3·브레이커0.7·스트라이더1.1·템페스트1.2·헬파이어0.6·드레드노트0.6
 function effRange(id, fb){ if(typeof SB_RANGE!=='undefined' && id!=null && SB_RANGE[id]!=null) return SB_RANGE[id]/100; return fb; }   // 샌드박스 사거리 오버라이드(없으면 폴백)
 // 체력/실드/에너지 초록 LCD 텍스트(스타식 "실드 HP / 에너지")
 function scHpHTML(u){ const def=U[u.id]; const m=u.hero?HERO_STAT_MUL:1;
@@ -9364,7 +9364,7 @@ const ATK_STYLE={
   racer:     {kind:'bullet', color:'#ffe2a0', tr:0.5},   // 레이서: 앞 좌/우 총 각 1발 + 트레일 가시도 ↓
   striderSMG:{kind:'mg',     color:'#ffe2a0', burst:5, burstGap:0.025},   // 스트라이더 지상: 손 기관단총 연사
   goliath:   {kind:'missile',color:'#5ad1ff'},
-  dragoon:   {kind:'plasma', color:'#b48bff'},
+  dragoon:   {kind:'plasma', color:'#7fb8ff', spd:0.78, szm:0.88},   // 센티넬: 푸른 구체 — 살짝 느리고 조금 작게
   archon:    {kind:'voidburst', color:'#dcb6ff'},   // 보이드: 손 앞 급성장 에너지 구체 → 넓은 영역 에너지 필(즉발 광역)
   hydra:     {kind:'needle', color:'#9fd356'},
   tank:      {kind:'shell',  color:'#d8c8a0', spd:2.2},   // 브레이커: 포탄 얇고 고속·단일 타격
@@ -9396,7 +9396,7 @@ const FX={
   REF:18,      // 기준 유닛 월드크기 — 이펙트 크기 = sz × (유닛크기/REF). 큰 유닛=큰 이펙트
   store(){ return {shots:[], impacts:[], melee:[], deaths:[], smoke:[], flashes:[]}; },
   spawn(store, id, sx,sy, tx,ty, opts){ if(!store) return; opts=opts||{}; const st=ATK_STYLE[id]||ATK_STYLE._default, col=opts.color||st.color;
-    const szf=(opts.unitSize||FX.REF)/FX.REF;   // 유닛 크기 비례 계수
+    const szf=(opts.unitSize||FX.REF)/FX.REF*(st.szm||1);   // 유닛 크기 비례 계수 × 스타일별 크기 배율(szm)
     const dx=tx-sx, dy=ty-sy, dist=Math.hypot(dx,dy)||1, ang=Math.atan2(dy,dx);
     if(st.melee){ store.melee.push({x:tx,y:ty,ang:ang,life:1,kind:st.kind,col:col,szf:szf,op:st.op,sd:(store._sd=((store._sd||0)+1)&255)}); return; }
     if(st.beam){ store.melee.push({kind:st.kind||'psi',x0:sx,y0:sy,x:tx,y:ty,life:1,col:col,szf:szf,op:st.op,sd:(store._sd=((store._sd||0)+1)&255),dk:(st.hold?1/st.hold:null)}); return; }
@@ -10291,7 +10291,7 @@ const CLOAK_OPACITY=0.5;  // 클로킹 시 불투명도(↑=덜 투명)
 const GUN_FOR={ marine:'marine_gun.glb', ghost:'ghost_gun.glb' };  // 손에 부착할 총(총만 있는 정적 메시)
 const RUN_FOR={ marine:'marine_run.glb', ghost:'ghost_run.glb', goliath:'goliath_run.glb', dragoon:'dragoon_run.glb', hydra:'hydralisk_run.glb', thornqueen:'thornqueen_run.glb', citizen:'civilian_run.glb', blade:'blade_run.glb', worker_human:'worker_human_run.glb', worker_light:'worker_light_run.glb', worker_swarm:'worker_swarm_run.glb' };  // 이동 시 재생할 달리기 모델(리깅+클립)
 const RUN_CLIP='Rifle_Charge_inplace';      // 이동 클립 이름(없으면 첫 클립 사용)
-const ATTACK_FOR={ blade:'blade_attect.glb', dragoon:'dragoon_attack.glb', snapper:'snapper_attack.glb', worker_human:'worker_human_punch.glb' };
+const ATTACK_FOR={ blade:'blade_attect.glb', snapper:'snapper_attack.glb', worker_human:'worker_human_punch.glb' };   // dragoon 공격 모션 제거(이펙트만 — 요청)
 const STAY_FOR={ marine:'marine_stay.glb', ghost:'ghost_stay.glb', goliath:'goliath_stay.glb', hydra:'hydralisk_stay.glb', worker_human:'worker_human_stay.glb', worker_light:'worker_light_stay.glb' };   // 정지(대기) 애니   // 공격 시 1회 재생할 공격 애니 모델(워든 검 베기)
 const RUN_SCALE_MUL=0.9;
 const RUN_SCALE_OVR={worker_swarm:0.68};   // 달리기 모델 크기 점프 보정(모델별 — 정지/이동 크기 일치)                     // 달리기 모델 크기 보정(본높이→full높이 마진)
