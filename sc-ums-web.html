@@ -793,7 +793,7 @@
     box-shadow:inset 0 0 8px var(--shade),0 0 6px var(--neon-faint)}
   .unitInfo{flex:1;min-width:0}.unitInfo .uname{font-size:14px;color:#f0dada;font-weight:700;text-shadow:0 0 8px var(--neon-glow)}
   /* ── 유닛 콘솔 카드: 세련된 SC 우주전쟁 톤(메탈 그라데이션 + 네온 엣지 + 사선 모서리 + 스캔라인) ── */
-  .scPanel{position:relative;display:flex;align-items:stretch;gap:9px;flex-shrink:0;padding:9px 11px;
+  .scPanel{position:relative;display:flex;align-items:stretch;gap:9px;flex-shrink:0;padding:7px 10px;
     background:linear-gradient(155deg,rgba(40,46,58,.5),rgba(9,11,16,.85));
     border:1px solid var(--metal-edge);border-left:2px solid var(--neon-soft);
     clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
@@ -816,12 +816,15 @@
   .cmdBtn:active{transform:translateY(1px)}
   #cmdRow .selAll{align-self:stretch;display:flex;align-items:center;justify-content:center;padding:8px 9px;border-radius:var(--r-md);font-size:var(--fs-sm);flex:0 0 auto;white-space:nowrap}
   /* 초상화 — 쿨 메탈 프레임 + 사선 모서리(카드와 통일) */
-  .scPortrait{width:74px;height:74px;flex:none;align-self:center;position:relative;overflow:hidden;color:var(--neon);
+  .scPortrait{width:64px;height:64px;flex:none;align-self:center;position:relative;overflow:hidden;color:var(--neon);
     border:1px solid var(--metal-edge);
     clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
     background:radial-gradient(circle at 50% 38%,rgba(74,86,110,.38),#080a10 78%);
     display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 14px rgba(0,0,0,.62)}
-  .scPortrait svg{width:50px;height:50px;filter:drop-shadow(0 0 5px var(--neon))}
+  .scPortrait svg{width:42px;height:42px;filter:drop-shadow(0 0 5px var(--neon))}
+  .scPortCol{flex:none;align-self:center;display:flex;flex-direction:column;align-items:center;gap:2px}
+  .scPortSub{font-size:7.5px;font-weight:700;color:var(--txt-mute);letter-spacing:.1px;font-family:'Rajdhani',sans-serif;white-space:nowrap;line-height:1;text-align:center}
+  .scPortSub b{color:#bcd2e8;font-size:8.5px;font-weight:800}
   /* 커스텀 초상화 이미지(둥근 사각형 크롭) — 프로필 카드 공통 */
   .portImg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:1;transform:scale(1.14);transform-origin:center 44%}
   .scPortrait::after{content:'';position:absolute;inset:0;pointer-events:none;
@@ -845,7 +848,7 @@
   .scHp .shd{color:#7fd0ff;text-shadow:0 0 6px rgba(120,200,255,.45)}
   .scHp .en{color:#c0a0ff;text-shadow:0 0 6px rgba(180,140,255,.4)}
   /* 초록 테두리 스탯 박스 — 크기 고정, 숫자 넘치면 JS로 폰트 축소 */
-  .scStats{display:flex;gap:4px;flex:none;align-items:center}
+  .scStats{display:flex;flex-wrap:nowrap;gap:3px;flex:none;align-items:center;justify-content:flex-end}
   /* 사거리·공속: 카드 하단의 작은 보조 정보 라인 */
   .scSub{display:block;margin-top:3px;font-size:8px;font-weight:700;color:var(--txt-mute);letter-spacing:.2px;font-family:'Rajdhani',sans-serif;white-space:nowrap}
   .scSub b{color:#bcd2e8;font-size:9px;font-weight:800}
@@ -858,7 +861,7 @@
   .scAllOne:hover{border-color:rgba(150,200,255,.75);background:linear-gradient(160deg,rgba(120,170,255,.32),rgba(40,64,110,.45))}
   .scAllOne:active{transform:translateY(1px)}
   .scAllOne b{color:#7fd0ff;font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:800}
-  .scBox{position:relative;width:56px;flex:none;height:52px;padding:0 3px;overflow:hidden;border-radius:3px;
+  .scBox{position:relative;width:50px;flex:none;height:52px;padding:0 3px;overflow:hidden;border-radius:3px;
     border:1px solid var(--metal-edge);background:linear-gradient(160deg,rgba(46,52,64,.52),rgba(10,12,17,.74));
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
     box-shadow:inset 0 1px 0 rgba(255,255,255,.05),inset 0 0 8px rgba(0,0,0,.4)}
@@ -937,7 +940,7 @@
   #shopProfile .scPortrait svg{width:38px;height:38px}
   #shopProfile .scName{font-size:12px}
   #shopProfile .scStats .scBox{width:50px;height:44px}
-  #statGrid,#ppStats{flex-wrap:wrap;align-content:center;max-width:120px}  /* 4 스탯박스(쉴드+지공+공공+방어) 시 2열 줄바꿈 → 이름 영역 확보 */
+  #statGrid,#ppStats{flex-wrap:nowrap;align-content:center}  /* 스탯박스 한 줄 통일(높이 일정) — 박스 축소로 3~4개도 1행 */
   /* 직스 선택 정보(하단 콘솔) — 유닛/신전 프로필 */
   #stSelInfo{flex:0 0 auto;display:flex;align-items:center;justify-content:center;width:100%;margin:auto;box-sizing:border-box}
   #stSelInfo.hide{display:none}
@@ -2346,7 +2349,7 @@
       </div>
       <div id="unitCmd">
         <div class="scPanel" id="scSingle">
-          <div class="scPortrait" id="uPortrait"></div>
+          <div class="scPortCol"><div class="scPortrait" id="uPortrait"></div><div class="scPortSub" id="uPortSub"></div></div>
           <div class="scMid">
             <div class="scName" id="uName">유닛</div>
             <div class="scType" id="uType"></div>
@@ -2626,9 +2629,9 @@ const U = {
   aegis: {name:'이지스', icon:'🔧', cost:0, dmg:12, up:5, hdmg:24, hup:10, range:0.26, cd:36, splash:false, color:'#4aa8ff', size:20, wpn:'mech', atk:'bullet', hp:1150, armor:4, shield:0, energy:0, moveSpd:0.13, airDmg:12, airUp:5, hairDmg:24, hairUp:10, model3d:'aegis'},   // 샌드박스 전용(보직 스탯)
   wyvern: {name:'와이번', icon:'🐛', cost:0, dmg:120, up:48, hdmg:240, hup:96, range:0.28, cd:20, splash:false, color:'#a8472e', size:22, wpn:'zrg', atk:'spike', hp:2200, armor:5, shield:0, energy:0, moveSpd:0.25, airDmg:120, airUp:48, hairDmg:240, hairUp:96, model3d:'wyvern'},   // 샌드박스 전용(보직 스탯)
   behemoth: {name:'베히모스', icon:'🐛', cost:0, dmg:190, up:76, hdmg:380, hup:152, range:0.46, cd:50, splash:true, color:'#a8472e', size:26, wpn:'zrg', atk:'shell', hp:3200, armor:6, shield:0, energy:0, moveSpd:0.1, airDmg:110, airUp:44, hairDmg:220, hairUp:88, model3d:'behemoth'},   // 샌드박스 전용(보직 스탯)
-  worker_human: {name:'유니온 일꾼', icon:'🔧', cost:0, dmg:4, up:2, hdmg:8, hup:3, range:0.035, cd:33, splash:false, melee:true, color:'#4aa8ff', size:13, wpn:'mech', atk:'slash', hp:30, armor:0, shield:0, energy:0, moveSpd:0.14, model3d:'worker_human'},   // 샌드박스 전용(보직 스탯)
-  worker_light: {name:'에테리얼 일꾼', icon:'🔮', cost:0, dmg:3, up:1, hdmg:6, hup:2, range:0.035, cd:33, splash:false, melee:true, color:'#ffc040', size:12, wpn:'pro', atk:'slash', hp:28, armor:0, shield:20, shArmor:1, energy:0, moveSpd:0.15, model3d:'worker_light'},   // 샌드박스 전용(보직 스탯)
-  worker_swarm: {name:'스웜 일꾼', icon:'🐛', cost:0, dmg:4, up:2, hdmg:8, hup:3, range:0.035, cd:33, splash:false, melee:true, color:'#a8472e', size:13, wpn:'zrg', atk:'slash', hp:34, armor:0, shield:0, energy:0, moveSpd:0.14, model3d:'worker_swarm'},   // 샌드박스 전용(보직 스탯)
+  worker_human: {name:'유니온 일꾼', icon:'🔧', cost:0, dmg:4, up:2, hdmg:8, hup:3, range:0.035, cd:40, splash:false, melee:true, color:'#4aa8ff', size:13, wpn:'mech', atk:'slash', hp:30, armor:0, shield:0, energy:0, moveSpd:0.14, model3d:'worker_human'},   // 샌드박스 전용(보직 스탯)
+  worker_light: {name:'에테리얼 일꾼', icon:'🔮', cost:0, dmg:3, up:1, hdmg:6, hup:2, range:0.035, cd:40, splash:false, melee:true, color:'#ffc040', size:12, wpn:'pro', atk:'slash', hp:28, armor:0, shield:20, shArmor:1, energy:0, moveSpd:0.15, model3d:'worker_light'},   // 샌드박스 전용(보직 스탯)
+  worker_swarm: {name:'스웜 일꾼', icon:'🐛', cost:0, dmg:4, up:2, hdmg:8, hup:3, range:0.035, cd:40, splash:false, melee:true, color:'#a8472e', size:13, wpn:'zrg', atk:'slash', hp:34, armor:0, shield:0, energy:0, moveSpd:0.14, model3d:'worker_swarm'},   // 샌드박스 전용(보직 스탯)
 };
 const HERO_STAT_MUL=2; // 영웅은 체력/보호막 2배(기본값, 조정 가능)
 // 유닛 인스턴스에 생존 스탯 초기화(현재=최대). 추후 전투형 맵에서 u.hp 등을 깎으면 됨.
@@ -5700,7 +5703,7 @@ const SB_RANGE={
   pelican:0, seraph:0,
 };
 const SB_AIR={ goliath:23 };   // 대공(공중공격) 사거리 별도 — 샌드박스 전용
-const SB_CD={ ghost:1.4, tank:1.3 };   // 샌드박스 전용 공속 오버라이드(초=발사 간격) — nemo 무영향
+const SB_CD={ worker_human:1.1111, worker_light:1.1111, worker_swarm:1.1111, marine:0.8333, ghost:1.25, racer:0.7692, tank:1.4286, goliath:0.9091, skyguard:0.8333, hellfire:1.6667, dreadnought:1.6667 };   // 샌드박스 전용 공속 오버라이드(초=발사 간격, =1/공속) — nemo 무영향. 일꾼0.9·레인저1.2·팬텀0.8·레이서1.3·브레이커0.7·스트라이더1.1·템페스트1.2·헬파이어0.6·드레드노트0.6
 function effRange(id, fb){ if(typeof SB_RANGE!=='undefined' && id!=null && SB_RANGE[id]!=null) return SB_RANGE[id]/100; return fb; }   // 샌드박스 사거리 오버라이드(없으면 폴백)
 // 체력/실드/에너지 초록 LCD 텍스트(스타식 "실드 HP / 에너지")
 function scHpHTML(u){ const def=U[u.id]; const m=u.hero?HERO_STAT_MUL:1;
@@ -5723,9 +5726,9 @@ function scStatBoxesHTML(u){ const def=U[u.id];
     +'<div class="sv">'+fmtStat(p.total)+'</div><div class="sl '+(cls||'')+'">'+label+'</div></div>';
   let h=numBox('방어력',def.armor,'def');             // 방어력(파랑)
   if((u.gid!=='matron_t') && ((u.maxSh!=null)?u.maxSh>0:def.shield>0)) h+=numBox('쉴드방어력',def.shArmor||0,'shd');  // 실드 있는 유닛만(매트론=실드 없음)
-  const dp=unitDmgParts(u), ap=unitAirParts(u);
-  if(ap){ h+=atkBox('지상공격력',dp,'atk'); h+=atkBox('공중공격력',ap,'atk'); }   // 지상/공중 분리 유닛(주황)
-  else h+=atkBox(def.splash?'광역공격력':'공격력',dp,'atk');            // 단일 공격력(주황)
+  const dp=unitDmgParts(u), ap=unitAirParts(u), _mk=(u.gmodel||u.id);
+  if(ap && (_mk==='goliath'||_mk==='skyguard')){ h+=atkBox('지상공격력',dp,'atk'); h+=atkBox('공중공격력',ap,'atk'); }   // 지상/공중 분리 = 스트라이더(goliath)·템페스트(skyguard)만
+  else h+=atkBox(def.splash?'광역공격력':'공격력',dp,'atk');            // 그 외 전부 통합 공격력(최대 3박스)
   return h;
 }
 // 스탯 박스 크기 고정 — 숫자가 칸을 넘치면 폰트를 점점 줄여 맞춤
@@ -5788,11 +5791,12 @@ function refreshSelCard(){ if(typeof G!=='undefined'){ G.boardArm=false; G.unloa
     document.getElementById('uName').textContent=gNameStar(u,def)+(u.hero?' [영웅]':'');
     const _rngV=(G.sandbox?effRange(u.gmodel||u.id, def.range):def.range)*(typeof gachaRangeMul==='function'?gachaRangeMul(u):1)*100; const _rng=G.sandbox?Math.round(_rngV*10)/10:Math.round(_rngV);   // 샌드박스: SB_RANGE 우선(네모 무영향)
     const _arng=(G.sandbox && typeof SB_AIR!=='undefined' && SB_AIR[u.gmodel||u.id]!=null)?SB_AIR[u.gmodel||u.id]:null;   // 샌드박스 대공 사거리
-    const _cdf=(typeof cdOf==='function')?cdOf(u,def):def.cd, _spd=_cdf>0?(60/_cdf).toFixed(1):'-';
+    const _cdf=(typeof cdOf==='function')?cdOf(u,def):def.cd; const _sbcd=(G.sandbox && typeof SB_CD!=='undefined' && SB_CD[u.gmodel||u.id]!=null)?SB_CD[u.gmodel||u.id]:null; const _spd=(_sbcd!=null)?(1/_sbcd).toFixed(1):(_cdf>0?(60/_cdf).toFixed(1):'-');   // 샌드박스: SB_CD 우선(카드=랩 발사 일치, nemo 무영향)
     const _vL=(mapCfg('infinite')?vetLevel(u):0);   // 무한모드 베테랑 계급
+    const _psub=((_rng>0||_arng!=null)?((_arng!=null?('지상 <b>'+_rng+'</b> · 공중 <b>'+_arng+'</b>'):('사거리 <b>'+_rng+'</b>'))+' · 공속 <b>'+_spd+'</b>/s'):'무공격');
     document.getElementById('uKill').innerHTML='처치 <b>'+(u.kills||0)+'</b>'
-      +(_vL>0?' <span style="color:#ffd24a;font-weight:800">★'+_vL+' <span style="font-size:.85em">공+'+(_vL*4)+'%</span></span>':'')
-      +'<span class="scSub">'+((_rng>0||_arng!=null)?((_arng!=null?('지상 <b>'+_rng+'</b> · 공중 <b>'+_arng+'</b>'):('사거리 <b>'+_rng+'</b>'))+' · 공속 <b>'+_spd+'</b>/s'):'무공격')+'</span>';   // 누적 킬 + (무한)베테랑 계급 + 사거리·공속
+      +(_vL>0?' <span style="color:#ffd24a;font-weight:800">★'+_vL+' <span style="font-size:.85em">공+'+(_vL*4)+'%</span></span>':'');
+    { const _pse=document.getElementById('uPortSub'); if(_pse) _pse.innerHTML=_psub; }   // 누적 킬 + (무한)베테랑 계급 + 사거리·공속
     typeEl.innerHTML=(u.gtier?tierLabelHTML(u.gtier):'')+unitTagsHTML(u);   // 등급 라벨 + 부가 효과(슬로우 등)
     hpEl.innerHTML=scHpHTML(u);
     grid.style.display='flex'; grid.innerHTML=scStatBoxesHTML(u); fitStatNumbers();
@@ -9355,6 +9359,7 @@ function strikePickBuild(i){ const S=STK; if(!S) return; const t=strikeBuildMenu
 const ATK_STYLE={
   marine:    {kind:'bullet', color:'#ffe2a0', burst:3, burstGap:0.007, tr:0.5},   // 레인저: 트레일 가시도 ↓(여러발처럼 보임 완화)
   skyguard:  {kind:'bullet', color:'#ffe2a0', lng:2.7, hd:0.55, wd:0.8, spd:2.5},   // 템페스트: 더 얇고 길고 빠른 레이저(고속=즉시 명중)
+  dreadnought:{kind:'bullet', color:'#ff7a66', core:'#ffffff', lng:3.6, hd:0.8, wd:1.3, spd:2.6, fz:1.6},   // 드레드노트: 배틀크루저식 대구경 레이저 — 템페스트보다 길고 두껍게·백색 코어·강한 머즐
   ghost:     {kind:'sniper', color:'#eafdff', spd:1.8},   // 팬텀: 저격탄 고속
   racer:     {kind:'bullet', color:'#ffe2a0', tr:0.5},   // 레이서: 앞 좌/우 총 각 1발 + 트레일 가시도 ↓
   striderSMG:{kind:'mg',     color:'#ffe2a0', burst:5, burstGap:0.025},   // 스트라이더 지상: 손 기관단총 연사
@@ -9366,13 +9371,12 @@ const ATK_STYLE={
   blade:     {kind:'slash',  color:'#eafff0', melee:true},
   matron:    {kind:'claw',   color:'#ffd2cf', melee:true},
   thornqueen:{kind:'needle', color:'#bfe89a', count:3, boom:6},
-  worker_human:{kind:'push', color:'#dfe7f2', melee:true, hit:0.6},   // 유니온 일꾼: 펀치 — hit초 뒤(타격 순간) 피격
+  worker_human:{kind:'push', color:'#dfe7f2', melee:true, hit:0.3},   // 유니온 일꾼: 펀치 — hit초 뒤(타격 순간=0.55s 펀치의 신전 피크) 피격
   worker_swarm:{kind:'spit', color:'#a6e23c', count:3, boom:6},   // 스웜 일꾼: 독 가래를 여러 갈래로 뱉음
-  worker_light:{kind:'shock', color:'#bfe6ff', beam:true},   // 에테리얼 일꾼: 두 손→중앙 전기 모임 + 대상 미세 감전
+  worker_light:{kind:'shock', color:'#bfe6ff', beam:true, hold:1.3},   // 에테리얼 일꾼: 프로브식 지속 전기 아크 — 공격 간격 내내 유지(hold초)
   // ── 관리자 맵 유닛 이식 이펙트(무기 타입별) — 기존 _default(총알) 대체 ──
   machinegun:{kind:'mg',     color:'#ffe2a0', burst:4, burstGap:0.03},   // 발칸: 기관총 연사
   hellfire:  {kind:'missile',color:'#ff9a5a'},   // 헬파이어: 화염 미사일
-  dreadnought:{kind:'shell', color:'#ffcf9a', spd:2.2},   // 드레드노트: 중포
   aegis:     {kind:'bullet', color:'#bfe4ff'},   // 이지스: 방어포
   snapper:   {kind:'needle', color:'#a8d95a'},   // 스내퍼: 가시
   stinger:   {kind:'missile',color:'#c8e89a'},   // 스팅어: 산성 미사일
@@ -9395,7 +9399,7 @@ const FX={
     const szf=(opts.unitSize||FX.REF)/FX.REF;   // 유닛 크기 비례 계수
     const dx=tx-sx, dy=ty-sy, dist=Math.hypot(dx,dy)||1, ang=Math.atan2(dy,dx);
     if(st.melee){ store.melee.push({x:tx,y:ty,ang:ang,life:1,kind:st.kind,col:col,szf:szf,sd:(store._sd=((store._sd||0)+1)&255)}); return; }
-    if(st.beam){ store.melee.push({kind:st.kind||'psi',x0:sx,y0:sy,x:tx,y:ty,life:1,col:col,szf:szf,sd:(store._sd=((store._sd||0)+1)&255)}); return; }
+    if(st.beam){ store.melee.push({kind:st.kind||'psi',x0:sx,y0:sy,x:tx,y:ty,life:1,col:col,szf:szf,sd:(store._sd=((store._sd||0)+1)&255),dk:(st.hold?1/st.hold:null)}); return; }
     if(st.kind==='spit'){ const strands=st.count||5; if(store.shots.length>200) store.shots.splice(0, store.shots.length-200);   // 스웜 일꾼: 독 가래 여러 갈래(거리÷비행시간=스케일 독립)
       for(let i=0;i<strands;i++){ const a=ang+(i-(strands-1)/2)*0.24+(Math.random()-0.5)*0.18, dj=dist*(0.60+Math.random()*0.22), td=0.08+Math.random()*0.05, sp=dj/td;
         store.shots.push({x:sx,y:sy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,t:0,dur:td,kind:'spit',color:col,boom:st.boom||6,szf:szf*0.65*(0.7+Math.random()*0.7),delay:i*0.012+Math.random()*0.02,mx:sx,my:sy,dist:dj,ex:null,ey:null,noflash:true,wob:(Math.random()-0.5)*3.4}); }
@@ -9403,17 +9407,17 @@ const FX={
     const speed=(opts.speed||2600)*(st.spd||1), dur=Math.min(0.6,Math.max(0.05,dist/speed)), n=st.count||1, burst=st.burst||1, bgap=st.burstGap||0.05;
     if(store.shots.length>200) store.shots.splice(0, store.shots.length-200);
     for(let b=0;b<burst;b++) for(let i=0;i<n;i++){ const a=ang+(n>1?(i-(n-1)/2)*0.13:0);
-      store.shots.push({x:sx,y:sy,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,t:0,dur:dur,kind:st.kind,color:col,boom:st.boom||4,szf:szf,delay:b*bgap,mx:sx,my:sy,dist:dist,ex:sx+Math.cos(a)*dist,ey:sy+Math.sin(a)*dist,lng:st.lng||1,hd:st.hd||1,wd:st.wd||1,tr:(st.tr==null?1:st.tr)}); } },
+      store.shots.push({x:sx,y:sy,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,t:0,dur:dur,kind:st.kind,color:col,boom:st.boom||4,szf:szf,delay:b*bgap,mx:sx,my:sy,dist:dist,ex:sx+Math.cos(a)*dist,ey:sy+Math.sin(a)*dist,lng:st.lng||1,hd:st.hd||1,wd:st.wd||1,tr:(st.tr==null?1:st.tr),core:st.core,fz:st.fz}); } },
   death(store, x,y, opts){ if(!store) return; opts=opts||{}; const szf=(opts.unitSize||FX.REF)/FX.REF, col=opts.color||'#ffd0a0', parts=[];
     for(let i=0;i<9;i++){ const a=Math.random()*6.283; parts.push({a:a, sp:42+Math.random()*70, len:4+Math.random()*5, col:(i%3===0?'#ffe6b0':col)}); }
     store.deaths.push({x:x,y:y,life:1,col:col,szf:szf,parts:parts}); },   // 통합 죽음 이펙트(섬광 링 + 코어 + 파편)
   smoke(store, x,y){ if(!store||!store.smoke) return;   // 어깨 포드 발사 연기(골리앗 등) — 위로 피어오르는 회색 구름
     for(let k=0;k<3;k++){ store.smoke.push({x:x+(Math.random()-0.5)*0.012, y:y, vx:(Math.random()-0.5)*0.03, vy:-0.05-Math.random()*0.045, life:1, r0:2.4+Math.random()*2, col:(k%2?'#5a5a66':'#7a7a86')}); } },
   advance(store, dt){ if(!store) return;
-    const sh=store.shots; for(let i=sh.length-1;i>=0;i--){ const s=sh[i]; if(!s._fired){ if(s.delay>0){ s.delay-=dt; if(s.delay>0) continue; } s._fired=true; if(store.flashes && !s.noflash) store.flashes.push({x:s.mx,y:s.my,life:1,szf:s.szf||1,ang:Math.atan2(s.vy,s.vx),fz:s.fz}); } if(s.wob){ const cw=Math.cos(s.wob*dt), sw=Math.sin(s.wob*dt), nvx=s.vx*cw-s.vy*sw, nvy=s.vx*sw+s.vy*cw; s.vx=nvx; s.vy=nvy; } s.t+=dt; if(s.kind==='missile'&&s.ex!=null){ const _ta=Math.atan2(s.ey-s.y,s.ex-s.x), _ca=Math.atan2(s.vy,s.vx); let _da=_ta-_ca; _da=Math.atan2(Math.sin(_da),Math.cos(_da)); const _mt=7*dt, _na=_ca+Math.max(-_mt,Math.min(_mt,_da)), _msp=Math.hypot(s.vx,s.vy); s.vx=Math.cos(_na)*_msp; s.vy=Math.sin(_na)*_msp; if(store.smoke){ s.trailT=(s.trailT||0)-dt; if(s.trailT<=0){ s.trailT=0.03; store.smoke.push({x:s.x,y:s.y,vx:0,vy:0,life:1,r0:0.5*(s.szf||1),col:'#ff9a4c',core:'#ffd9a0',glow:true,dk:5,ex:1.0,af:0.5}); } } } s._dn=Math.hypot(s.vx,s.vy)*dt; s.x+=s.vx*dt; s.y+=s.vy*dt;
-      if((s.dist!=null && Math.hypot(s.x-s.mx,s.y-s.my)>=s.dist) || s.t>=s.dur || (s.kind==='missile'&&s.ex!=null&&Math.hypot(s.x-s.ex,s.y-s.ey)<0.012)){ const _ix=(s.ex!=null?s.ex:s.x), _iy=(s.ey!=null?s.ey:s.y); store.impacts.push({x:_ix,y:_iy,life:1,kind:s.kind,col:s.color,boom:s.boom||4,szf:s.szf||1,ang:Math.atan2(s.vy,s.vx),sd:(store._sd=((store._sd||0)+1)&255)}); sh.splice(i,1); } }
+    const sh=store.shots; for(let i=sh.length-1;i>=0;i--){ const s=sh[i]; if(!s._fired){ if(s.delay>0){ s.delay-=dt; if(s.delay>0) continue; } s._fired=true; if(store.flashes && !s.noflash) store.flashes.push({x:s.mx,y:s.my,life:1,szf:s.szf||1,ang:Math.atan2(s.vy,s.vx),fz:s.fz}); } if(s.wob){ const cw=Math.cos(s.wob*dt), sw=Math.sin(s.wob*dt), nvx=s.vx*cw-s.vy*sw, nvy=s.vx*sw+s.vy*cw; s.vx=nvx; s.vy=nvy; } s.t+=dt; if(s.kind==='missile'&&s.ex!=null){ const _ta=Math.atan2(s.ey-s.y,s.ex-s.x), _ca=Math.atan2(s.vy,s.vx); let _da=_ta-_ca; _da=Math.atan2(Math.sin(_da),Math.cos(_da)); const _mt=7*dt, _na=_ca+Math.max(-_mt,Math.min(_mt,_da)), _msp=Math.hypot(s.vx,s.vy); s.vx=Math.cos(_na)*_msp; s.vy=Math.sin(_na)*_msp; const _dtg=Math.hypot(s.ex-s.x,s.ey-s.y); if(s._pd!=null && _dtg>s._pd && s._pd<0.2) s._boom=1; s._pd=_dtg; /* 목표 지나침(선회 반경 내 재접근 불가)=즉시 기폭 */ if(store.smoke){ s.trailT=(s.trailT||0)-dt; if(s.trailT<=0){ s.trailT=0.03; store.smoke.push({x:s.x,y:s.y,vx:0,vy:0,life:1,r0:0.5*(s.szf||1),col:'#ff9a4c',core:'#ffd9a0',glow:true,dk:5,ex:1.0,af:0.5}); } } } s._dn=Math.hypot(s.vx,s.vy)*dt; s.x+=s.vx*dt; s.y+=s.vy*dt;
+      if((s.dist!=null && Math.hypot(s.x-s.mx,s.y-s.my)>=s.dist) || s.t>=s.dur || s._boom || (s.kind==='missile'&&s.ex!=null&&Math.hypot(s.x-s.ex,s.y-s.ey)<0.012)){ const _ix=(s.ex!=null?s.ex:s.x), _iy=(s.ey!=null?s.ey:s.y); store.impacts.push({x:_ix,y:_iy,life:1,kind:s.kind,col:s.color,boom:s.boom||4,szf:s.szf||1,ang:Math.atan2(s.vy,s.vx),sd:(store._sd=((store._sd||0)+1)&255)}); sh.splice(i,1); } }
     const im=store.impacts; for(let i=im.length-1;i>=0;i--){ im[i].life-=dt*4.5; if(im[i].life<=0) im.splice(i,1); }
-    const me=store.melee; for(let i=me.length-1;i>=0;i--){ me[i].life-=dt*5; if(me[i].life<=0) me.splice(i,1); }
+    const me=store.melee; for(let i=me.length-1;i>=0;i--){ me[i].age=(me[i].age||0)+dt; me[i].life-=dt*(me[i].dk||5); if(me[i].life<=0) me.splice(i,1); }
     const de=store.deaths; for(let i=de.length-1;i>=0;i--){ de[i].life-=dt*2.2; if(de[i].life<=0) de.splice(i,1); }
     const sm=store.smoke; if(sm) for(let i=sm.length-1;i>=0;i--){ const p=sm[i]; p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy*=0.95; p.life-=dt*(p.dk||1.7); if(p.life<=0) sm.splice(i,1); }
     const fl=store.flashes; if(fl) for(let i=fl.length-1;i>=0;i--){ fl[i].life-=dt*11; if(fl[i].life<=0) fl.splice(i,1); } },
@@ -9452,12 +9456,12 @@ const FX={
         ctx.beginPath(); ctx.moveTo(a.x,a.y); const seg=4; for(let q=1;q<=seg;q++){ const t=q/seg, jx=a.x+(b.x-a.x)*t+(((m.sd*7+q*13)%9)-4)*z, jy=a.y+(b.y-a.y)*t+(((m.sd*5+q*11)%9)-4)*z; ctx.lineTo(jx,jy); } ctx.stroke();
         ctx.globalAlpha=L*0.85; ctx.strokeStyle='#fff'; ctx.lineWidth=0.8*z; ctx.stroke();
         ctx.globalAlpha=L*0.5; ctx.strokeStyle=m.col; ctx.lineWidth=1.4*z; ctx.beginPath(); ctx.arc(b.x,b.y,18*z*(1-L*0.5),0,6.283); ctx.stroke(); }
-      else if(m.kind==='shock'){ const a=toScreen(m.x0,m.y0), b=toScreen(m.x,m.y), sd=m.sd||0; ctx.globalCompositeOperation='lighter'; ctx.lineCap='round';
-        for(let q=0;q<3;q++){ const an=q*2.1+sd*0.5, ln=(1.8+(q%2)*1.2)*z; ctx.globalAlpha=L*0.45; ctx.strokeStyle=m.col; ctx.lineWidth=0.5*z; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(a.x+Math.cos(an)*ln, a.y+Math.sin(an)*ln); ctx.stroke(); }   // 손 미세 충전(나가는 선 없음)
-        ctx.globalAlpha=L*0.55; ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(a.x,a.y,0.8*z,0,6.283); ctx.fill();
-        ctx.globalAlpha=L*0.9; ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(b.x,b.y,(1.3+(1-L)*1.6)*z,0,6.283); ctx.fill();   // 대상 직접 감전: 코어 플래시
-        ctx.globalAlpha=L*0.85; ctx.strokeStyle=m.col; ctx.lineWidth=0.8*z; for(let q=0;q<8;q++){ const an=q*0.8+sd*0.4, ln=(3.2+(q%3)*2.4)*z*(0.6+L*0.6); ctx.beginPath(); ctx.moveTo(b.x,b.y); for(let k=1;k<=2;k++){ const t=k/2, ex=b.x+Math.cos(an)*ln*t+(((sd*5+q*7+k)%7)-3)*z*0.55, ey=b.y+Math.sin(an)*ln*t+(((sd*3+q*11+k)%7)-3)*z*0.55; ctx.lineTo(ex,ey); } ctx.stroke(); }   // 방사 지그재그 전격
-        ctx.globalAlpha=L*0.4; ctx.strokeStyle=m.col; ctx.lineWidth=0.6*z; ctx.beginPath(); ctx.arc(b.x,b.y,(4+(1-L)*5)*z,0,6.283); ctx.stroke(); }   // 은은한 감전 링
+      else if(m.kind==='shock'){ const a=toScreen(m.x0,m.y0), b=toScreen(m.x,m.y), fI=Math.min(1,L*5), fsd=(m.sd||0)+(((m.age||0)*26)|0)*13, flick=0.72+((fsd*29)%100)/100*0.28; ctx.globalCompositeOperation='lighter'; ctx.lineCap='round';   // 지속 감전(프로브식): fI=유지 밝기(마지막 20%만 페이드), fsd=프레임 시드(재추첨), flick=강도 플리커
+        for(let w=0;w<2;w++){ ctx.globalAlpha=fI*0.5*flick; ctx.strokeStyle=m.col; ctx.lineWidth=(1.15-w*0.4)*z; ctx.beginPath(); ctx.moveTo(a.x,a.y); for(let q=1;q<5;q++){ const t=q/5; ctx.lineTo(a.x+(b.x-a.x)*t+(((fsd*7+q*13+w*29)%11)-5)*z*0.8, a.y+(b.y-a.y)*t+(((fsd*5+q*17+w*23)%11)-5)*z*0.8); } ctx.lineTo(b.x,b.y); ctx.stroke(); }   // 손→대상 전기 아크 2가닥(매 프레임 지그재그 재추첨=찌릿찌릿)
+        ctx.globalAlpha=fI*0.85*flick; ctx.strokeStyle='#ffffff'; ctx.lineWidth=0.45*z; ctx.beginPath(); ctx.moveTo(a.x,a.y); for(let q=1;q<5;q++){ const t=q/5; ctx.lineTo(a.x+(b.x-a.x)*t+(((fsd*11+q*7)%9)-4)*z*0.6, a.y+(b.y-a.y)*t+(((fsd*13+q*5)%9)-4)*z*0.6); } ctx.lineTo(b.x,b.y); ctx.stroke();   // 흰 코어 아크
+        ctx.globalAlpha=fI*0.6*flick; ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(a.x,a.y,0.9*z,0,6.283); ctx.fill();   // 손 충전 글로우
+        ctx.globalAlpha=fI*(0.55+0.35*flick); ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(b.x,b.y,1.35*z,0,6.283); ctx.fill();   // 대상 감전 코어(플리커)
+        ctx.globalAlpha=fI*0.65*flick; ctx.strokeStyle=m.col; ctx.lineWidth=0.7*z; for(let q=0;q<5;q++){ const an=q*1.256+((fsd*3+q)%7)*0.14, ln=(2.6+((fsd+q*5)%4)*1.1)*z; ctx.beginPath(); ctx.moveTo(b.x,b.y); ctx.lineTo(b.x+Math.cos(an)*ln*0.5+(((fsd*5+q*7)%7)-3)*z*0.5, b.y+Math.sin(an)*ln*0.5+(((fsd*3+q*11)%7)-3)*z*0.5); ctx.lineTo(b.x+Math.cos(an)*ln, b.y+Math.sin(an)*ln); ctx.stroke(); } }   // 대상 주위 잔전격(매 프레임 재추첨)
       else if(m.kind==='push'){ const c=toScreen(m.x,m.y), p=1-L, z2=z, sd=m.sd||0; ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=L*0.78; ctx.fillStyle='#fff3e2'; ctx.beginPath(); ctx.arc(c.x,c.y,(0.55+L*1.9)*z2,0,6.283); ctx.fill(); ctx.globalAlpha=L*0.3; ctx.fillStyle='#ffb066'; ctx.beginPath(); ctx.arc(c.x,c.y,(1.2+p*2.9)*z2,0,6.283); ctx.fill(); ctx.globalAlpha=L*0.68; ctx.strokeStyle='#ffd7a0'; ctx.lineCap='round'; for(let _q=0;_q<6;_q++){ const _a=m.ang+(_q-2.5)*0.42+((sd*7+_q*13)%7-3)*0.05, _len=(2.3+p*4.8)*z2*(0.65+((sd+_q*5)%4)/4*0.7); ctx.lineWidth=(1.05-_q*0.07)*z2; ctx.beginPath(); ctx.moveTo(c.x,c.y); ctx.lineTo(c.x+Math.cos(_a)*_len,c.y+Math.sin(_a)*_len); ctx.stroke(); } }
       else { const c=toScreen(m.x,m.y), claw=(m.kind==='claw'), R=(claw?20:24)*z, a0=m.ang-0.9, a1=m.ang+0.9; ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=L*0.9; ctx.strokeStyle=claw?'#ff8f8f':'#eafff0'; ctx.lineWidth=(claw?2:2.6)*z; ctx.beginPath(); ctx.arc(c.x,c.y,R,a0,a1); ctx.stroke(); if(claw){ ctx.lineWidth=1.4*z; ctx.beginPath(); ctx.arc(c.x,c.y,R*0.66,a0,a1); ctx.stroke(); } } }
     for(const d of store.deaths){ const c=toScreen(d.x,d.y), L=Math.max(0,d.life), p=1-L, z=sz*(d.szf||1); ctx.save(); ctx.translate(c.x,c.y); ctx.globalCompositeOperation='lighter';
@@ -9469,7 +9473,7 @@ const FX={
     ctx.restore(); },
   _shot(ctx,s){ switch(s.kind){   // 네모 발사체 레시피(원점 기준, 이미 회전·스케일됨)
     case 'bullet': { const L=s.lng||1, W=s.wd||1; ctx.globalAlpha=.28; ctx.fillStyle=s.color; ctx.fillRect(-6.5*L,-0.6*W,6.5*L,1.2*W);
-      ctx.globalAlpha=.85; ctx.fillStyle='#ffe2a0'; ctx.fillRect(-2.4*L,-0.55*W,0.8+2.4*L,1.1*W);
+      ctx.globalAlpha=.85; ctx.fillStyle=s.core||'#ffe2a0'; ctx.fillRect(-2.4*L,-0.55*W,0.8+2.4*L,1.1*W);
       ctx.globalAlpha=1; ctx.fillStyle='#fff2cf'; ctx.beginPath();ctx.arc(0.6,0,1.1*(s.hd||1),0,6.28);ctx.fill(); break; }
     case 'mg': ctx.globalAlpha=.25; ctx.fillStyle=s.color; ctx.fillRect(-5,-0.22,5,0.44);
       ctx.globalAlpha=1; ctx.fillStyle='#fff7d8'; ctx.fillRect(-1.2,-0.28,2.6,0.56); break;
@@ -9875,8 +9879,12 @@ var strikeRenderEcon=strikeRenderSupply;   // 하위호환(기존 호출부)
 // 보급 시설 화면(cvMain) — 시설 카드 배치, 선택 강조
 function strikeDrawSupply(){ const S=STK; if(!S) return; const cvEl=document.getElementById('cvMain'); if(!cvEl) return;
   const r=setup('cvMain'); const ctx=r.ctx, W=r.W, H=r.H; GW=W; GH=H; S.cw=W; S.ch=H;
-  ctx.fillStyle='#070b12'; ctx.fillRect(0,0,W,H);
-  const bg=ctx.createRadialGradient(W/2,H*0.42,0,W/2,H*0.42,Math.max(W,H)*0.7); bg.addColorStop(0,'rgba(40,70,110,.22)'); bg.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+  // 보급 배경: 건설지 타일 렌더(strikeTileRect) 재사용 + 보급 테마(따뜻한 산업/야적 톤) — 건설지(파랑·빨강)와 구분
+  ctx.fillStyle='#0a0d14'; ctx.fillRect(0,0,W,H);
+  strikeTileRect(ctx, 0,0,W,H, STRIKE_BUILDTILE, Math.max(64, Math.min(W,H)/3));
+  ctx.fillStyle='rgba(8,11,18,.5)'; ctx.fillRect(0,0,W,H);
+  { const amb=ctx.createLinearGradient(0,0,0,H); amb.addColorStop(0,'rgba(255,196,92,.12)'); amb.addColorStop(0.5,'rgba(0,0,0,0)'); amb.addColorStop(1,'rgba(150,105,45,.16)'); ctx.fillStyle=amb; ctx.fillRect(0,0,W,H); }
+  { const vg=ctx.createRadialGradient(W/2,H*0.42,Math.min(W,H)*0.22,W/2,H*0.42,Math.max(W,H)*0.72); vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,.5)'); ctx.fillStyle=vg; ctx.fillRect(0,0,W,H); }
   ctx.textAlign='center'; ctx.textBaseline='alphabetic'; ctx.fillStyle='rgba(180,210,240,.9)'; ctx.font='800 15px Rajdhani,"Apple SD Gothic Neo",sans-serif';
   ctx.fillText('📦 보급 — 시설을 탭하세요', W/2, H*0.16);
   const cardW=Math.min(W*0.26, 120), cardH=cardW*1.1, sel=S.supplySel||'mine'; S._supHit=[];
@@ -10026,12 +10034,14 @@ const FXLAB_RACE_KO={union:'🛡 유니온',swarm:'🦎 스웜',aetherial:'🔮 
 const FXLAB={ store:null, attId:'marine', attGm:null, scale:1, mode:'attack', phase:'alive', t:0, cd:0, mv:1, ti:0, att:null, dummy:null, bldg:null, air:null };
 let _fxLabAttSeq=0;
 const FXLAB_AA=new Set(['marine','ghost','goliath','dragoon','archon','hydra']);   // 공중 공격 가능 유닛(나머지는 지상만)
+const FXLAB_NOATK=new Set(['pelican','overlord','seraph','aegis','observer','medic']);   // 비전투(수송선·지원함·정찰기): 랩에서 공격 안 함
+const FXLAB_SWITCH_DELAY=0.35;   // 발사 후 방금 쏜 대상을 잠깐 더 바라본 뒤 다음 타겟으로 전환(허공 발사 방지)
 const FXLAB_AIR=new Set(['skyguard','skydancer','overlord','observer','pelican','seraph','hellfire','dreadnought','kronos','archangel','falcon','stinger','venom','medusa','wyvern','aegis','behemoth']);   // 공중(비행) 유닛 — 바닥 위로 부양
 const FXLAB_AIR_LIFT=0.16;   // 공중유닛 부양 높이(정규화)
 const FXLAB_TGT_X=0.70, FXLAB_TGT_Y=0.52;   // 지상 타겟 기준선(시민)
-function fxLabStats(id, gm){ const sg=gm&&STK_UNITS[gm]; if(sg){ var _er=(typeof effRange==='function')?effRange(gm,null):null; return {size:sg.size, cd:(typeof SB_CD!=='undefined'&&SB_CD[gm]!=null?Math.max(0.42,SB_CD[gm]):sg.cd), melee:!!sg.melee, rng:(_er!=null)?Math.max(6,_er*600):(sg.rng||120), color:(U[gm]&&U[gm].color)||'#cfd6e2'}; }   // SB_RANGE(샌드박스 사거리) 우선 — 표시값=배치 일치
+function fxLabStats(id, gm){ const sg=gm&&STK_UNITS[gm]; if(sg){ var _er=(typeof effRange==='function')?effRange(gm,null):null; return {size:sg.size, cd:(typeof SB_CD!=='undefined'&&SB_CD[gm]!=null?Math.max(0.35,SB_CD[gm]):Math.max(0.35,((U[gm]&&U[gm].cd)||22)/60)), melee:!!sg.melee, rng:(_er!=null)?Math.max(6,_er*600):(sg.rng||120), color:(U[gm]&&U[gm].color)||'#cfd6e2'}; }   // SB_RANGE(샌드박스 사거리) 우선 — 표시값=배치 일치
   const s=STK_UNITS[id], _d=U[gm||id]||{}; const er=effRange(gm||id,(_d.range!=null?_d.range:null));
-  if(er!=null) return {size:(s&&s.size)||_d.size||16, cd:(typeof SB_CD!=='undefined'&&SB_CD[gm||id]!=null)?Math.max(0.42,SB_CD[gm||id]):((s&&s.cd)||Math.max(0.5,(_d.cd||22)/22)), melee:(er>0&&er<=0.15)||!!_d.melee, rng:(er>0)?Math.max(6,er*600):120, color:_d.color||(U[gm||id]&&U[gm||id].color)||'#cfd6e2'};
+  if(er!=null) return {size:(s&&s.size)||_d.size||16, cd:(typeof SB_CD!=='undefined'&&SB_CD[gm||id]!=null)?Math.max(0.35,SB_CD[gm||id]):Math.max(0.35,(_d.cd||22)/60), melee:(er>0&&er<=0.15)||!!_d.melee, rng:(er>0)?Math.max(6,er*600):120, color:_d.color||(U[gm||id]&&U[gm||id].color)||'#cfd6e2'};
   if(s) return {size:s.size, cd:s.cd, melee:!!s.melee, rng:s.rng||120, color:(U[id]&&U[id].color)||'#cfd6e2'};
   const d=U[id]||{}; const _melee=!!d.melee||(d.range>0&&d.range<=0.15); const _rng=(d.range>0)?Math.max(6,d.range*600):120;
   return {size:d.size||16, cd:Math.max(0.5,(d.cd||22)/22), melee:_melee, rng:_rng, color:d.color||'#cfd6e2'}; }
@@ -10084,36 +10094,58 @@ function fxLabStep(dt){ const L=FXLAB; if(!L.att) fxLabSpawnScene(); const a=L.a
     if(L.phase==='alive'){ if(L.t<=0){ FX.death(L.store, a.x,a.y, {unitSize:a.size, color:st.color}); a.hidden=true; L.phase='dead'; L.t=0.9; } }
     else { if(L.t<=0){ a.hidden=false; a.uid='lab_att'+(++_fxLabAttSeq); a.fireSeq=0; L.phase='alive'; L.t=1.0; } }
     return; }
-  a.moving=false; const tgts=[L.dummy, L.bldg]; if(FXLAB_AA.has(L.attId)&&L.air) tgts.push(L.air);
+  if(FXLAB_NOATK.has(L.attGm||L.attId)){ a.moving=false; return; }   // 비전투 유닛: 공격 없음(대기만)
+  a.moving=false; const tgts=[L.dummy, L.bldg]; if(FXLAB_AA.has(L.attId)&&L.air&&!((L.attGm||'').indexOf('worker_')===0)) tgts.push(L.air);   // 일꾼(worker_*)은 베이스 id가 marine이어도 공중 공격 제외
+  if((L.attGm||L.attId)==='hellfire'){ tgts.length=0; if(L.air) tgts.push(L.air); if(!tgts.length) return; }   // 헬파이어: 공중 전용(지상 공격 불가)
+  if(L._switchT>0){ L._switchT-=dt; if(L._switchT<=0) L.ti=((L.ti||0)+1)%tgts.length; }   // 텀 경과 후 타겟 전환(발사 직후 즉시 X → 부드러운 전환)
   const tgt=tgts[(L.ti||0)%tgts.length]; if(!tgt) return;
   const _cc=(window.M3D&&M3D.centerAt)?M3D.centerAt(tgt.uid):null; const ty=_cc?_cc.y:((tgt===L.air)?tgt.y-0.05:tgt.y);   // 몸 중앙 조준(발 X)
   const dx=tgt.x-a.x, dy=ty-a.y; a.face=Math.atan2(dx,dy);
   L.cd-=dt; if(L.cd<=0){ L.cd=Math.max(0.42, st.cd); a.fireSeq=(a.fireSeq||0)+1;
     const fxId=L.attGm||L.attId;
     if(typeof playUnitAttack==='function') playUnitAttack(fxId);   // 유닛 공격음 재생
-    if(L.attId==='goliath'&&!L.attGm){ if(tgt===L.air) fxLabGoliathFire(L, a, tgt.x, ty, st.size); else fxLabStriderSMG(L, a, tgt.x, ty, st.size); }   // 스트라이더: 공중=어깨 추적미사일 / 지상=손 기관단총
+    if(L.attId==='goliath'&&!L.attGm){ fxLabGoliathFire(L, a, tgt.x, ty, st.size); }   // 스트라이더: 지상·공중 모두 어깨 추적 미사일
     else if(fxId==='racer') fxLabRacerFire(L, a, tgt.x, ty);
+    else if(L.attGm==='skyguard'&&tgt===L.air) fxLabTempestAir(L, a, tgt.x, ty, st.size);   // 템페스트 공중: 아주 얇은 소형 고속 미사일 2발
+    else if(fxId==='hellfire') fxLabHellfireFire(L, a, tgt.x, ty, st.size);   // 헬파이어: 발키리식 유도 로켓 볼리(시간차·곡선·개별 타격)
     else { const _dx=tgt.x-a.x, _dy=ty-a.y, _d=Math.hypot(_dx,_dy)||1, _mz=0.03*((st.size||16)/16);
       let _sx=a.x+(_dx/_d)*_mz, _sy=a.y+(_dy/_d)*_mz-0.024;
       const _mzg=(window.M3D && M3D.muzzleAt)?M3D.muzzleAt(a.uid):null;   // 실제 3D 총구 위치(있으면 — 각도 무관)
       if(_mzg){ const _bl=(fxId==='tank')?0:0.02*fxZoomF(); _sx=_mzg.x+(_dx/_d)*_bl; _sy=_mzg.y+(_dy/_d)*_bl; }   // 머즐(투영) — 탱크는 3D 포구 기준점 그대로
-      else if(window.M3D && M3D.airFloat && M3D.airFloat(fxId)){ const _ctr=M3D.centerAt?M3D.centerAt(a.uid):null; if(_ctr){ _sx=_ctr.x+(_dx/_d)*_mz; _sy=_ctr.y+(_dy/_d)*_mz; } }   // 공중 부양 유닛(전용 총구 없음): 떠 있는 몸 중앙에서 발사
+      else if(window.M3D && M3D.airFloat && M3D.airFloat(fxId)){ const _ctr=M3D.centerAt?M3D.centerAt(a.uid):null; if(_ctr){ const _fw=_mz+((fxId==='dreadnought')?0.0127*fxZoomF():0); _sx=_ctr.x+(_dx/_d)*_fw; _sy=_ctr.y+(_dy/_d)*_fw; } }   // 공중 부양 유닛(전용 총구 없음): 떠 있는 몸 중앙에서 발사 — 드레드노트는 함수 바깥까지 전방 보정
       const _opt={speed:(st.melee?6.5:(fxId==='marine'?4.5:3.6)), unitSize:st.size}, _stA=(typeof ATK_STYLE!=='undefined'?(ATK_STYLE[fxId]||ATK_STYLE._default):{}), _hd=_stA.hit||0;
       if(_hd>0) (L.pend=L.pend||[]).push({t:_hd, id:fxId, sx:_sx, sy:_sy, tx:tgt.x, ty:ty, opt:_opt});
       else FX.spawn(L.store, fxId, _sx, _sy, tgt.x, ty, _opt); }
-    L.ti=((L.ti||0)+1)%tgts.length; } }
+    L._switchT=FXLAB_SWITCH_DELAY; } }   // 발사 후 텀: 방금 쏜 대상을 계속 바라보다 전환
 function fxLabGoliathFire(L, a, tx, ty, size){   // 스트라이더 공중: 어깨 추적 미사일 2발 — 유도곡선 + 트레일
   if(!L.store||!L.store.shots) return;
   const upN=0.04, sideN=0.025, szf=(size||16)/18*0.73, sp=1.7;
   for(let k=-1;k<=1;k+=2){ const sx=a.x+sideN*k, sy=a.y-upN, baseA=Math.atan2(ty-sy,tx-sx), la=baseA+k*0.7;
     L.store.shots.push({x:sx,y:sy,vx:Math.cos(la)*sp,vy:Math.sin(la)*sp,t:0,dur:1.2,kind:'missile',color:'#5ad1ff',boom:8,szf:szf,mx:sx,my:sy,ex:tx,ey:ty,dist:null,noflash:1});
     FX.smoke(L.store, sx, sy); } }
+function fxLabTempestAir(L, a, tx, ty, size){   // 템페스트 공중: 얇은 소형 미사일 2발 — 스트라이더 미사일보다 빠르고 작게(궤적 살짝 벌어졌다 수렴)
+  if(!L.store||!L.store.shots) return;
+  const _c=(window.M3D&&M3D.centerAt)?M3D.centerAt(a.uid):null, ox=_c?_c.x:a.x, oy=_c?_c.y:(a.y-0.03);   // 부양한 기체 중앙에서 발사
+  const dx=tx-ox, dy=ty-oy, d=Math.hypot(dx,dy)||1, px=-dy/d, py=dx/d;
+  const sideN=0.012, szf=(size||16)/18*0.34, sp=2.8;   // 스트라이더(szf~0.73·sp1.7) 대비 절반 크기·1.6배 속도
+  for(let k=-1;k<=1;k+=2){ const sx=ox+px*sideN*k, sy=oy+py*sideN*k, baseA=Math.atan2(ty-sy,tx-sx), la=baseA+k*0.3, ed=Math.hypot(tx-sx,ty-sy)||1;
+    L.store.shots.push({x:sx,y:sy,vx:Math.cos(la)*sp,vy:Math.sin(la)*sp,t:0,dur:0.9,kind:'missile',color:'#9fe0ff',boom:4,szf:szf,mx:sx,my:sy,ex:tx,ey:ty,dist:ed*0.99,noflash:1}); } }   // dist로 확실히 명중(고속 통과 방지)
+function fxLabHellfireFire(L, a, tx, ty, size){   // 헬파이어: 스타크 발키리식 로켓 볼리 — 여러 발 시간차 발사, 제각각 곡선 유도, 착탄 산포(미사일당 개별 타격)
+  if(!L.store||!L.store.shots) return;
+  const _c=(window.M3D&&M3D.centerAt)?M3D.centerAt(a.uid):null, ox=_c?_c.x:a.x, oy=_c?_c.y:(a.y-0.03);   // 부양 기체 중앙
+  const dx=tx-ox, dy=ty-oy, d0=Math.hypot(dx,dy)||1, px=-dy/d0, py=dx/d0;
+  const N=6, sp=1.5, szf=(size||16)/18*0.46;   // 스트라이더 미사일(1.7)보다 살짝 느리고 작게
+  for(let i=0;i<N;i++){ const k=(i%2)?1:-1, off=0.006+((i/2)|0)*0.004;   // 좌/우 포드 번갈아
+    const sx=ox+px*off*k, sy=oy+py*off*k;
+    const jx=tx+(Math.random()-0.5)*0.035, jy=ty+(Math.random()-0.5)*0.035;   // 유닛 직접 타격 X — 주변 지역 착탄(스플래시)
+    const baseA=Math.atan2(jy-sy,jx-sx), la=baseA+k*(0.55+Math.random()*0.5);   // 크게 벌어졌다 유도 수렴(곡선)
+    L.store.shots.push({x:sx,y:sy,vx:Math.cos(la)*sp,vy:Math.sin(la)*sp,t:0,dur:1.8,kind:'missile',color:'#ffd9a0',boom:7,szf:szf,delay:i*0.055,mx:sx,my:sy,ex:jx,ey:jy,dist:null,noflash:1,wob:(Math.random()-0.5)*2}); } }   // 시간차 + 미세 흔들림(유기적 곡선) + 지역 폭발
 function fxLabStriderSMG(L, a, tx, ty, size){   // 스트라이더 지상: 양손 기관단총 — 얇은 즉발 탄, 여러 지점 타다닥
   if(!L.store||!L.store.shots) return;
   const dx=tx-a.x, dy=ty-a.y, d=Math.hypot(dx,dy)||1, nx=dx/d, ny=dy/d, px=-ny, py=nx, zf=fxZoomF();
   const _mz=0.012*zf, fx=a.x+nx*_mz, fy=a.y+ny*_mz-0.02*zf, hand=0.006*zf, sp=0.012*zf, szf=(size||16)/18;
-  for(let i=0;i<8;i++){ const sgn=(i%2)?1:-1, hx=fx+px*hand*sgn, hy=fy+py*hand*sgn, ex=tx+(Math.random()-0.5)*sp, ey=ty+(Math.random()-0.5)*sp, ea=Math.atan2(ey-hy,ex-hx), ed=Math.hypot(ex-hx,ey-hy)||1;
-    L.store.shots.push({x:hx,y:hy,vx:Math.cos(ea)*7,vy:Math.sin(ea)*7,t:0,dur:0.06,kind:'mg',color:'#ffe6a8',boom:3,szf:szf,delay:i*0.016,mx:hx,my:hy,dist:ed,ex:ex,ey:ey,fz:0.5,tr:0.45}); } }
+  for(let i=0;i<6;i++){ const sgn=(i%2)?1:-1, hx=fx+px*hand*sgn, hy=fy+py*hand*sgn, ex=tx+(Math.random()-0.5)*sp, ey=ty+(Math.random()-0.5)*sp, ea=Math.atan2(ey-hy,ex-hx), ed=Math.hypot(ex-hx,ey-hy)||1;
+    L.store.shots.push({x:hx,y:hy,vx:Math.cos(ea)*11,vy:Math.sin(ea)*11,t:0,dur:0.05,kind:'mg',color:'#ffe6a8',boom:3,szf:szf,delay:i*0.018,mx:hx,my:hy,dist:ed,ex:ex,ey:ey,fz:0.5,tr:0.3}); } }   // 짧고 빠른 버스트(6발·고속탄·짧은 트레이서)
 function fxLabRacerFire(L, a, tx, ty){   // 레이서: 오토바이 앞 좌/우 총에서 각 2발(총 4발) — 타겟 방향=바이크 앞
   const dx=tx-a.x, dy=ty-a.y, d=Math.hypot(dx,dy)||1, nx=dx/d, ny=dy/d, px=-ny, py=nx, sz=(a&&a.size)||18;
   const _zf=(typeof fxZoomF==="function")?fxZoomF():1, frontN=0.038*_zf, sideN=0.0055*_zf, upN=0.008*_zf, bx=a.x+nx*frontN, by=a.y+ny*frontN-upN, _dd=Math.max(0.02, d-frontN);   // 바이크 가장 앞(노즈)·간격 좁게·줌 비례
@@ -10525,7 +10557,7 @@ function makeModel(id){
     atkMixer=new THREE.AnimationMixer(atkInner);
     let clip=ab.clips[0];
     if(clip){ const _aspd=(typeof ATK_SPEED_OVR!=='undefined'&&ATK_SPEED_OVR[id])||ATK_SPEED, _afr=(typeof ATK_FRACTION_OVR!=='undefined'&&ATK_FRACTION_OVR[id])||ATK_FRACTION; atkDur=(id==='worker_human')?1.7:((clip.duration||0.45)*_afr/_aspd); clip=clip.clone(); let _rootB=null; if(id==='worker_human'){ atkInner.traverse(o=>{ if(!_rootB && o.isBone && !(o.parent&&o.parent.isBone)) _rootB=o.name; }); } clip.tracks=clip.tracks.filter(t=>t.name.endsWith('.quaternion') && !(_rootB && t.name===_rootB+'.quaternion')); // 회전만(제자리). 스윙 비율(유닛별 오버라이드)
-      atkAction=atkMixer.clipAction(clip); atkAction.setLoop(THREE.LoopOnce,1); atkAction.clampWhenFinished=true; atkAction.timeScale=(id==='worker_human')?((clip.duration||1)/1.5):_aspd; }   // 배속(유닛별)
+      atkAction=atkMixer.clipAction(clip); atkAction.setLoop(THREE.LoopOnce,1); atkAction.clampWhenFinished=true; atkAction.timeScale=(id==='worker_human')?((clip.duration||1)/0.55):_aspd; }   // 배속(유닛별) — 일꾼: 잽(0.55s 완결) 후 정지
     if(id==='blade'){ rimModel(atkInner, unitRim(id)); attachSwords(atkInner, base.h); } }   // 워든 공격: 림 + 쌍검(손 본)
   const yaw=new THREE.Group(); yaw.add(anim);                // 적 방향으로 제자리 회전(세운 채 yaw)
   const view=new THREE.Group(); view.add(yaw); view.rotation.x=VIEW_TILT;  // 카메라 부감(소량, 발끝 기준)
@@ -10541,7 +10573,7 @@ function makeModel(id){
   shadow.rotation.x=-Math.PI/2; shadow.position.y=0.012; view.add(shadow);
   const holder=new THREE.Group(); holder.add(view); holder.scale.setScalar(SCALE[id]||MODEL_SCALE);
   scene.add(holder);
-  let muzzlePt=null; if(id==='tank'){ muzzlePt=new THREE.Object3D(); muzzlePt.position.set(-base.h*1.3, base.h*0.42, 0); yaw.add(muzzlePt); }   // 탱크 포구 기준점(yaw=조준방향 따라 회전)
+  let muzzlePt=null; if(id==='tank'){ muzzlePt=new THREE.Object3D(); muzzlePt.position.set(-base.h*1.08, base.h*0.84, 0); yaw.add(muzzlePt); }   // 탱크 포구 기준점(yaw=조준방향 따라 회전) — 포신 끝(높이 포함) 화면 캘리브레이션 값
   return { holder, view, yaw, anim, rim, gun, muzzlePt, aura, shadow, auraT:Math.random()*6.28, gunBase:(GUN_CFG[id]?{...GUN_CFG[id].pos}:{x:0,y:0,z:0}), reload:!!(GUN_CFG[id]&&GUN_CFG[id].reload), inner, runInner, runMixer, stayInner, stayMixer, atkInner, atkMixer, atkAction, atkDur, atkT:0, id, h:base.h, face:undefined, breathe:Math.random()*6.28, lean:0, seenSeq:0, dying:false, deadT:0 };
 }
 
