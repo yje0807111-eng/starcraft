@@ -9368,7 +9368,7 @@ const ATK_STYLE={
   archon:    {kind:'psi',    color:'#dcb6ff', beam:true},
   hydra:     {kind:'needle', color:'#9fd356'},
   tank:      {kind:'shell',  color:'#d8c8a0', spd:2.2},   // 브레이커: 포탄 얇고 고속·단일 타격
-  blade:     {kind:'slash',  color:'#eafff0', melee:true},
+  blade:     {kind:'slash',  color:'#eafff0', melee:true, hit:0.3},   // 워든: 검이 실제로 지나가는 타이밍(0.3s 뒤)에 표시
   matron:    {kind:'claw',   color:'#ffd2cf', melee:true},
   thornqueen:{kind:'needle', color:'#bfe89a', count:3, boom:6},
   worker_human:{kind:'push', color:'#dfe7f2', melee:true, hit:0.3},   // 유니온 일꾼: 펀치 — hit초 뒤(타격 순간=0.55s 펀치의 신전 피크) 피격
@@ -9463,18 +9463,13 @@ const FX={
         ctx.globalAlpha=fI*(0.55+0.35*flick); ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(b.x,b.y,1.35*z,0,6.283); ctx.fill();   // 대상 감전 코어(플리커)
         ctx.globalAlpha=fI*0.65*flick; ctx.strokeStyle=m.col; ctx.lineWidth=0.7*z; for(let q=0;q<5;q++){ const an=q*1.256+((fsd*3+q)%7)*0.14, ln=(2.6+((fsd+q*5)%4)*1.1)*z; ctx.beginPath(); ctx.moveTo(b.x,b.y); ctx.lineTo(b.x+Math.cos(an)*ln*0.5+(((fsd*5+q*7)%7)-3)*z*0.5, b.y+Math.sin(an)*ln*0.5+(((fsd*3+q*11)%7)-3)*z*0.5); ctx.lineTo(b.x+Math.cos(an)*ln, b.y+Math.sin(an)*ln); ctx.stroke(); } }   // 대상 주위 잔전격(매 프레임 재추첨)
       else if(m.kind==='push'){ const c=toScreen(m.x,m.y), p=1-L, z2=z, sd=m.sd||0; ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=L*0.78; ctx.fillStyle='#fff3e2'; ctx.beginPath(); ctx.arc(c.x,c.y,(0.55+L*1.9)*z2,0,6.283); ctx.fill(); ctx.globalAlpha=L*0.3; ctx.fillStyle='#ffb066'; ctx.beginPath(); ctx.arc(c.x,c.y,(1.2+p*2.9)*z2,0,6.283); ctx.fill(); ctx.globalAlpha=L*0.68; ctx.strokeStyle='#ffd7a0'; ctx.lineCap='round'; for(let _q=0;_q<6;_q++){ const _a=m.ang+(_q-2.5)*0.42+((sd*7+_q*13)%7-3)*0.05, _len=(2.3+p*4.8)*z2*(0.65+((sd+_q*5)%4)/4*0.7); ctx.lineWidth=(1.05-_q*0.07)*z2; ctx.beginPath(); ctx.moveTo(c.x,c.y); ctx.lineTo(c.x+Math.cos(_a)*_len,c.y+Math.sin(_a)*_len); ctx.stroke(); } }
-      else if(m.kind==='slash'){ // 검격: 대상 몸 위에 새겨지는 X자 베기(단일 타깃 고정 — 이동·확산 없음)
-        const c=toScreen(m.x,m.y), p=1-L, g=Math.min(1,p*7);   // g=등장 팝(순간 새겨짐)
-        ctx.save(); ctx.translate(c.x,c.y); ctx.rotate(m.ang);
+      else if(m.kind==='slash'){ // 검격: 대상 위 사선 베기 한 줄(희미·소형, 고정 — 타이밍은 ATK_STYLE.hit 지연)
+        const c=toScreen(m.x,m.y), p=1-L, g=Math.min(1,p*7);   // g=등장 팝
+        ctx.save(); ctx.translate(c.x,c.y); ctx.rotate(m.ang+0.62);
         ctx.globalCompositeOperation='lighter'; ctx.lineCap='round';
-        const len=12*z*(0.85+0.15*g);   // 반길이 고정(파동식 확산 제거)
-        const cut=(a,l,w)=>{ ctx.save(); ctx.rotate(a);
-          ctx.globalAlpha=L*0.5;  ctx.strokeStyle=m.col;   ctx.lineWidth=w*2.4*z; ctx.beginPath(); ctx.moveTo(-l,0); ctx.lineTo(l,0); ctx.stroke();   // 색 글로우
-          ctx.globalAlpha=L*0.95; ctx.strokeStyle='#ffffff'; ctx.lineWidth=w*0.85*z; ctx.beginPath(); ctx.moveTo(-l*0.92,0); ctx.lineTo(l*0.92,0); ctx.stroke();   // 흰 칼날 코어
-          ctx.restore(); };
-        cut(0.62, len, 1);                          // 주 베기(사선)
-        if(p>0.12) cut(-0.62, len*0.78, 0.8);       // 한 박자 뒤 교차 베기 → X자
-        ctx.globalAlpha=L*0.85; ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(0,0,1.6*z*g,0,6.28); ctx.fill();   // 중심 타격 섬광
+        const l=8*z*(0.9+0.1*g);   // 반길이(소형, 확산 없음)
+        ctx.globalAlpha=L*0.28; ctx.strokeStyle=m.col;   ctx.lineWidth=1.9*z;  ctx.beginPath(); ctx.moveTo(-l,0); ctx.lineTo(l,0); ctx.stroke();        // 옅은 글로우
+        ctx.globalAlpha=L*0.55; ctx.strokeStyle='#ffffff'; ctx.lineWidth=0.7*z; ctx.beginPath(); ctx.moveTo(-l*0.92,0); ctx.lineTo(l*0.92,0); ctx.stroke();   // 희미한 칼날 선
         ctx.restore(); }
       else { const c=toScreen(m.x,m.y), R=20*z, a0=m.ang-0.9, a1=m.ang+0.9; ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=L*0.9; ctx.strokeStyle='#ff8f8f'; ctx.lineWidth=2*z; ctx.beginPath(); ctx.arc(c.x,c.y,R,a0,a1); ctx.stroke(); ctx.lineWidth=1.4*z; ctx.beginPath(); ctx.arc(c.x,c.y,R*0.66,a0,a1); ctx.stroke(); } }   // claw(매트론)
     for(const d of store.deaths){ const c=toScreen(d.x,d.y), L=Math.max(0,d.life), p=1-L, z=sz*(d.szf||1); ctx.save(); ctx.translate(c.x,c.y); ctx.globalCompositeOperation='lighter';
@@ -10569,7 +10564,7 @@ function makeModel(id){
     atkInner.position.set(-ab.off.x*s, -ab.off.y*s, -ab.off.z*s); atkInner.visible=false; anim.add(atkInner);
     atkMixer=new THREE.AnimationMixer(atkInner);
     let clip=ab.clips[0];
-    if(clip){ const _aspd=(typeof ATK_SPEED_OVR!=='undefined'&&ATK_SPEED_OVR[id])||ATK_SPEED, _afr=(typeof ATK_FRACTION_OVR!=='undefined'&&ATK_FRACTION_OVR[id])||ATK_FRACTION; atkDur=(id==='worker_human')?1.7:((clip.duration||0.45)*_afr/_aspd); clip=clip.clone(); let _rootB=null; if(id==='worker_human'){ atkInner.traverse(o=>{ if(!_rootB && o.isBone && !(o.parent&&o.parent.isBone)) _rootB=o.name; }); } clip.tracks=clip.tracks.filter(t=>t.name.endsWith('.quaternion') && !(_rootB && t.name===_rootB+'.quaternion')); // 회전만(제자리). 스윙 비율(유닛별 오버라이드)
+    if(clip){ const _aspd=(typeof ATK_SPEED_OVR!=='undefined'&&ATK_SPEED_OVR[id])||ATK_SPEED, _afr=(typeof ATK_FRACTION_OVR!=='undefined'&&ATK_FRACTION_OVR[id])||ATK_FRACTION; atkDur=(id==='worker_human')?1.7:((clip.duration||0.45)*_afr/_aspd); clip=clip.clone(); let _rootB=null; if(id==='worker_human'||id==='blade'){ atkInner.traverse(o=>{ if(!_rootB && o.isBone && !(o.parent&&o.parent.isBone)) _rootB=o.name; }); } clip.tracks=clip.tracks.filter(t=>t.name.endsWith('.quaternion') && !(_rootB && t.name===_rootB+'.quaternion')); // 회전만(제자리). 루트 본 회전 제외(일꾼·워든: 몸통이 돌아간 채 끝나 방향 튀는 문제 방지)
       atkAction=atkMixer.clipAction(clip); atkAction.setLoop(THREE.LoopOnce,1); atkAction.clampWhenFinished=true; atkAction.timeScale=(id==='worker_human')?((clip.duration||1)/0.55):_aspd; }   // 배속(유닛별) — 일꾼: 잽(0.55s 완결) 후 정지
     if(id==='blade'){ rimModel(atkInner, unitRim(id)); attachSwords(atkInner, base.h); } }   // 워든 공격: 림 + 쌍검(손 본)
   const yaw=new THREE.Group(); yaw.add(anim);                // 적 방향으로 제자리 회전(세운 채 yaw)
