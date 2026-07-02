@@ -10165,9 +10165,10 @@ function fxLabSpawnScene(){ const _gm=FXLAB.attGm; const a=fxLabStats(FXLAB.attI
   FXLAB.bldg ={ uid:'lab_bld', id:'turret',   x:0.80, y:0.62, face:0,          moving:false, fireSeq:0, size:24 };
   FXLAB.air  ={ uid:'lab_air', id:'skyguard', x:0.72, y:0.14, face:Math.PI,     moving:false, fireSeq:0, size:18 }; }
 function fxLabClearStore(){ const s=FXLAB.store; if(s){ s.shots.length=0; s.impacts.length=0; s.melee.length=0; s.deaths.length=0; if(s.flashes) s.flashes.length=0; } }
-function fxLabSelect(id, gm){ FXLAB.attId=id; FXLAB.attGm=gm||null; if(!FXLAB.store) FXLAB.store=FX.store(); fxLabClearStore();
+function fxLabSelect(id, gm){ FXLAB.attId=id; FXLAB.attGm=gm||null; FXLAB.bstate=null; if(!FXLAB.store) FXLAB.store=FX.store(); fxLabClearStore();
   if(window.M3D&&M3D.clearGameModels) M3D.clearGameModels(); fxLabSpawnScene(); FXLAB.phase='alive'; FXLAB.t=(FXLAB.mode==='death')?0.9:0; FXLAB.cd=0.2; fxLabRenderGrid(); }
 function fxLabSetMode(mode, el){ FXLAB.mode=mode; FXLAB.phase='alive'; FXLAB.t=(mode==='death')?0.9:0; FXLAB.cd=0.2; FXLAB.mv=1; FXLAB.ti=0;
+  FXLAB.bstate=null;   // 베놈퀸 잠복 상태 리셋
   if(FXLAB.att){ FXLAB.att.hidden=false; FXLAB.att.moving=false; if(mode!=='move'){ FXLAB.att.x=fxLabAttX(FXLAB.attId,FXLAB.attGm); FXLAB.att.y=((window.M3D&&M3D.airFloat&&M3D.airFloat(FXLAB.attGm||FXLAB.attId))?FXLAB_TGT_Y:(FXLAB_AIR.has(FXLAB.attGm||FXLAB.attId)?FXLAB_TGT_Y-FXLAB_AIR_LIFT:FXLAB_TGT_Y)); } }
   document.querySelectorAll('#fxLabActs .fxlAct').forEach(b=>b.classList.toggle('on', b.getAttribute('data-m')===mode)); }
 function fxLabSetMul(v){ FX.sizeMul=+v||1; const e=document.getElementById('fxLabSizeV'); if(e) e.textContent=(+v).toFixed(2); }
@@ -10206,6 +10207,7 @@ function fxLabStep(dt){ const L=FXLAB; if(!L.att) fxLabSpawnScene(); const a=L.a
     else { if(L.t<=0){ a.hidden=false; a.uid='lab_att'+(++_fxLabAttSeq); a.fireSeq=0; L.phase='alive'; L.t=1.0; } }
     return; }
   if(FXLAB_NOATK.has(L.attGm||L.attId)){ a.moving=false; return; }   // 비전투 유닛: 공격 없음(대기만)
+  if((L.attGm||L.attId)==='thornqueen'){ fxLabThornCycle(L, a, dt); return; }   // 베놈퀸(럴커식): 지상=공격불가 / 잠복 시에만 가시 퍼붓기
   a.moving=false; const _noAir=(L.attGm==='snapper'); const tgts=[L.dummy, L.bldg]; if(FXLAB_AA.has(L.attId)&&L.air&&!((L.attGm||'').indexOf('worker_')===0)&&!_noAir) tgts.push(L.air);   // 일꾼·스내퍼는 공중 공격 제외
   if((L.attGm||L.attId)==='hellfire'){ tgts.length=0; if(L.air) tgts.push(L.air); if(!tgts.length) return; }   // 헬파이어: 공중 전용(지상 공격 불가)
   if(L._switchT>0){ L._switchT-=dt; if(L._switchT<=0) L.ti=((L.ti||0)+1)%tgts.length; }   // 텀 경과 후 타겟 전환(발사 직후 즉시 X → 부드러운 전환)
@@ -10243,6 +10245,29 @@ function fxLabTempestAir(L, a, tx, ty, size){   // 템페스트 공중: 얇은 �
   const sideN=0.012, szf=(size||16)/18*0.34, sp=2.8;   // 스트라이더(szf~0.73·sp1.7) 대비 절반 크기·1.6배 속도
   for(let k=-1;k<=1;k+=2){ const sx=ox+px*sideN*k, sy=oy+py*sideN*k, baseA=Math.atan2(ty-sy,tx-sx), la=baseA+k*0.3, ed=Math.hypot(tx-sx,ty-sy)||1;
     L.store.shots.push({x:sx,y:sy,vx:Math.cos(la)*sp,vy:Math.sin(la)*sp,t:0,dur:0.9,kind:'missile',color:'#9fe0ff',boom:4,szf:szf,mx:sx,my:sy,ex:tx,ey:ty,dist:ed*0.99,noflash:1}); } }   // dist로 확실히 명중(고속 통과 방지)
+// 베놈퀸(럴커): 지상=대기(공격 불가) → 땅 파고 잠복 → 잠복 중 가시 폭격 → 지상 복귀 사이클
+function fxLabThornCycle(L, a, dt){ a.moving=false;
+  if(L.bstate==null){ L.bstate='surface'; L.bt=1.6; }
+  L.bt-=dt;
+  if(L.bstate==='surface'){ a.hidden=false; a.face=Math.PI/2;   // 지상: 대기(공격 안 함)
+    if(L.bt<=0){ L.bstate='digging'; L.bt=0.45; fxLabDigPuff(L, a); } }
+  else if(L.bstate==='digging'){ a.hidden=false;   // 파고드는 중(흙먼지)
+    if(L.bt<=0){ a.hidden=true; L.bstate='burrowed'; L.bt=3.2; L.cd=0.25; } }
+  else if(L.bstate==='burrowed'){ a.hidden=true;   // 잠복: 주기적으로 가시 폭격
+    L.cd-=dt; if(L.cd<=0){ L.cd=0.55; fxLabThornBarrage(L, a, L.dummy); }
+    if(L.bt<=0){ L.bstate='emerging'; L.bt=0.4; fxLabDigPuff(L, a); } }
+  else { a.hidden=false;   // 지상 복귀
+    if(L.bt<=0){ L.bstate='surface'; L.bt=1.6; } } }
+function fxLabDigPuff(L, a){ if(!L.store||!L.store.smoke) return;   // 땅 파기 흙먼지
+  for(let k=0;k<10;k++){ const an=-Math.PI/2+(Math.random()-0.5)*2.4, sp=0.02+Math.random()*0.04;
+    L.store.smoke.push({x:a.x+(Math.random()-0.5)*0.03, y:FXLAB_TGT_Y-0.004, vx:Math.cos(an)*sp, vy:Math.sin(an)*sp*0.7, life:1, r0:0.9+Math.random()*0.9, col:(k%2?'#6b5636':'#8a7048'), ex:2.4, af:0.5, dk:2.4}); } }
+function fxLabThornBarrage(L, a, tgt){   // 잠복 가시 폭격: 대상 발밑 땅에서 가시가 솟구쳐 몸을 관통(전 범위 랜덤)
+  if(!L.store||!L.store.shots||!tgt) return;
+  const cx=tgt.x, gy=FXLAB_TGT_Y, N=7, szf=(a.size||16)/18*0.7, R=((tgt.size||14)/600)*fxZoomF()*1.1;
+  for(let k=0;k<N;k++){ const ex=cx+(Math.sqrt(Math.random())*2-1)*R*1.3, ey=gy-(0.02+Math.random()*R*1.4);   // 대상 몸 여러 지점(위로 솟음)
+    const sx=ex+(Math.random()-0.5)*0.006, sy=gy+0.02+Math.random()*0.01, la=Math.atan2(ey-sy,ex-sx), ed=Math.hypot(ey-sy,ex-sx)||1, sp=4.4;   // 발밑 땅에서 위로
+    L.store.shots.push({x:sx,y:sy,vx:Math.cos(la)*sp,vy:Math.sin(la)*sp,t:0,dur:Math.min(0.5,ed/sp),kind:'needle',imk:'stab',color:'#9fd356',boom:3,szf:szf,wd:1.8,delay:k*0.02,mx:sx,my:sy,dist:ed,ex:ex,ey:ey,noflash:1}); }
+  if(L.store.smoke) for(let k=0;k<4;k++) L.store.smoke.push({x:cx+(Math.random()-0.5)*0.04,y:gy-0.004,vx:(Math.random()-0.5)*0.02,vy:-0.02,life:1,r0:0.7,col:'#6b5636',ex:2,af:0.4,dk:3}); }
 function fxLabHydraFire(L, a, tx, ty, size){   // 리퍼: 양손에서 가시 다발이 아주 짧은 텀으로 연달아 발사 → 대상 전 범위 랜덤 타격(한 점 X)
   if(!L.store||!L.store.shots) return;
   const _c=(window.M3D&&M3D.centerAt)?M3D.centerAt(a.uid):null, ox0=_c?_c.x:a.x, oy0=_c?_c.y:(a.y-0.02);
@@ -10294,6 +10319,13 @@ function fxLabRender(dt){ const L=FXLAB; if(!L.store) L.store=FX.store(); if(!L.
   else if(mcv) mcv.style.display='none';
   const fcv=document.getElementById('cvFx');
   if(fcv){ fcv.style.display='block'; const f=setup('cvFx'); FX.advance(L.store, dt);
+    if(L.att && (L.bstate==='burrowed'||L.bstate==='emerging'||L.bstate==='digging') && L.bstate!=='surface'){   // 베놈퀸 잠복 흙두덩
+      const mx=L.att.x*f.W, my=FXLAB_TGT_Y*f.H, w=Math.max(18,34*L.scale), h=w*0.42, ctx=f.ctx;
+      ctx.save(); ctx.globalAlpha=0.9; ctx.fillStyle='#6b5636'; ctx.beginPath(); ctx.ellipse(mx,my,w,h,0,Math.PI,0,true); ctx.lineTo(mx-w,my); ctx.fill();
+      ctx.fillStyle='#8a7048'; ctx.beginPath(); ctx.ellipse(mx,my-h*0.15,w*0.72,h*0.7,0,Math.PI,0,true); ctx.fill();   // 밝은 흙 봉우리
+      ctx.strokeStyle='rgba(30,22,14,.5)'; ctx.lineWidth=1.4; ctx.beginPath(); ctx.moveTo(mx-w,my); ctx.lineTo(mx+w,my); ctx.stroke();   // 지면 균열선
+      if(L.bstate==='burrowed'){ ctx.strokeStyle='#9fd356'; ctx.lineWidth=1.6; ctx.globalAlpha=0.5; for(let q=0;q<3;q++){ const qx=mx+(q-1)*w*0.5; ctx.beginPath(); ctx.moveTo(qx,my-h*0.4); ctx.lineTo(qx,my-h*1.1); ctx.stroke(); } }   // 봉우리에 삐죽한 가시 끝
+      ctx.restore(); }
     FX.drawShots(f.ctx, L.store, (x,y)=>({x:x*f.W, y:y*f.H}), 1.0*L.scale); } }   // 이펙트도 같은 스케일
 
 </script>
