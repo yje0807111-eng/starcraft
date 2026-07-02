@@ -5703,7 +5703,7 @@ const SB_RANGE={
   pelican:0, seraph:0,
 };
 const SB_AIR={ goliath:23 };   // 대공(공중공격) 사거리 별도 — 샌드박스 전용
-const SB_CD={ worker_human:1.1111, worker_light:1.1111, worker_swarm:1.1111, marine:0.8333, ghost:1.25, racer:0.7692, tank:1.4286, goliath:0.9091, skyguard:0.8333, hellfire:1.6667, dreadnought:1.6667, blade:1.0, falcon:0.9091 };   // 샌드박스 전용 공속 오버라이드(초=발사 간격, =1/공속) — nemo 무영향. 워든=1.0/s·팔콘=1.1/s   // 샌드박스 전용 공속 오버라이드(초=발사 간격, =1/공속) — nemo 무영향. 일꾼0.9·레인저1.2·팬텀0.8·레이서1.3·브레이커0.7·스트라이더1.1·템페스트1.2·헬파이어0.6·드레드노트0.6
+const SB_CD={ worker_human:1.1111, worker_light:1.1111, worker_swarm:1.1111, marine:0.8333, ghost:1.25, racer:0.7692, tank:1.4286, goliath:0.9091, skyguard:0.8333, hellfire:1.6667, dreadnought:1.6667, blade:1.0, falcon:0.9091, skydancer:0.3333 };   // 샌드박스 전용 공속 오버라이드(초=발사 간격, =1/공속) — nemo 무영향. 워든=1.0/s·팔콘=1.1/s·스카이댄서=3/s   // 샌드박스 전용 공속 오버라이드(초=발사 간격, =1/공속) — nemo 무영향. 일꾼0.9·레인저1.2·팬텀0.8·레이서1.3·브레이커0.7·스트라이더1.1·템페스트1.2·헬파이어0.6·드레드노트0.6
 function effRange(id, fb){ if(typeof SB_RANGE!=='undefined' && id!=null && SB_RANGE[id]!=null) return SB_RANGE[id]/100; return fb; }   // 샌드박스 사거리 오버라이드(없으면 폴백)
 // 체력/실드/에너지 초록 LCD 텍스트(스타식 "실드 HP / 에너지")
 function scHpHTML(u){ const def=U[u.id]; const m=u.hero?HERO_STAT_MUL:1;
@@ -9385,7 +9385,7 @@ const ATK_STYLE={
   wyvern:    {kind:'needle', color:'#bfe89a', count:2},   // 와이번: 다연발 가시
   behemoth:  {kind:'shell',  color:'#d0b070', spd:2.0},   // 베히모스: 대형 포
   falcon:    {kind:'beam', color:'#6ec8ff', lng:3.0, hd:0.85, wd:0.9, spd:2.6},   // 팔콘: 파란 에너지 파동 빔(FxLab에선 날개 트윈 평행 발사)
-  skydancer: {kind:'plasma', color:'#ffe08a'},   // 스카이댄서: 플라즈마
+  skydancer: {kind:'spark', color:'#ffe08a'},   // 스카이댄서: 원거리 즉발 — 투사체·연결 없음, 발사구 미세 스파크 + 타격 지점 범위 스파크
   archangel: {kind:'plasma', color:'#ffd66a'},   // 아크엔젤: 플라즈마 포
   kronos:    {kind:'plasma', color:'#ffcf6a'},   // 크로노스: 시공 플라즈마
   _default:  {kind:'bullet', color:'#ffe2a0'},
@@ -9400,6 +9400,10 @@ const FX={
     const dx=tx-sx, dy=ty-sy, dist=Math.hypot(dx,dy)||1, ang=Math.atan2(dy,dx);
     if(st.melee){ store.melee.push({x:tx,y:ty,ang:ang,life:1,kind:st.kind,col:col,szf:szf,op:st.op,sd:(store._sd=((store._sd||0)+1)&255)}); return; }
     if(st.beam){ store.melee.push({kind:st.kind||'psi',x0:sx,y0:sy,x:tx,y:ty,life:1,col:col,szf:szf,op:st.op,sd:(store._sd=((store._sd||0)+1)&255),dk:(st.hold?1/st.hold:null)}); return; }
+    if(st.kind==='spark'){   // 원거리 즉발(스카이댄서): 투사체·연결 없음 — 발사구 미세 스파크 + 타격 지점 범위 스파크(독립 2개)
+      store.melee.push({kind:'sparkM',x:sx,y:sy,life:1,col:col,szf:szf,sd:(store._sd=((store._sd||0)+1)&255),dk:6});    // 발사구: 미세 일렁임(짧게)
+      store.melee.push({kind:'spark', x:tx,y:ty,life:1,col:col,szf:szf,sd:(store._sd=((store._sd||0)+1)&255),dk:3.2});  // 타격 지점: 연한 범위 스파크
+      return; }
     if(st.kind==='spit'){ const strands=st.count||5; if(store.shots.length>200) store.shots.splice(0, store.shots.length-200);   // 스웜 일꾼: 독 가래 여러 갈래(거리÷비행시간=스케일 독립)
       for(let i=0;i<strands;i++){ const a=ang+(i-(strands-1)/2)*0.24+(Math.random()-0.5)*0.18, dj=dist*(0.60+Math.random()*0.22), td=0.08+Math.random()*0.05, sp=dj/td;
         store.shots.push({x:sx,y:sy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,t:0,dur:td,kind:'spit',color:col,boom:st.boom||6,szf:szf*0.65*(0.7+Math.random()*0.7),delay:i*0.012+Math.random()*0.02,mx:sx,my:sy,dist:dj,ex:null,ey:null,noflash:true,wob:(Math.random()-0.5)*3.4}); }
@@ -9462,6 +9466,16 @@ const FX={
         ctx.globalAlpha=fI*0.6*flick; ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(a.x,a.y,0.9*z,0,6.283); ctx.fill();   // 손 충전 글로우
         ctx.globalAlpha=fI*(0.55+0.35*flick); ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(b.x,b.y,1.35*z,0,6.283); ctx.fill();   // 대상 감전 코어(플리커)
         ctx.globalAlpha=fI*0.65*flick; ctx.strokeStyle=m.col; ctx.lineWidth=0.7*z; for(let q=0;q<5;q++){ const an=q*1.256+((fsd*3+q)%7)*0.14, ln=(2.6+((fsd+q*5)%4)*1.1)*z; ctx.beginPath(); ctx.moveTo(b.x,b.y); ctx.lineTo(b.x+Math.cos(an)*ln*0.5+(((fsd*5+q*7)%7)-3)*z*0.5, b.y+Math.sin(an)*ln*0.5+(((fsd*3+q*11)%7)-3)*z*0.5); ctx.lineTo(b.x+Math.cos(an)*ln, b.y+Math.sin(an)*ln); ctx.stroke(); } }   // 대상 주위 잔전격(매 프레임 재추첨)
+      else if(m.kind==='spark'||m.kind==='sparkM'){ const b=toScreen(m.x,m.y), mzl=(m.kind==='sparkM');   // 즉발 스파크: 발사구(미세)/타격 지점(범위) — 매 프레임 재추첨으로 일렁임
+        const fI=Math.min(1,L*4)*(mzl?0.5:0.45), fsd=(m.sd||0)+(((m.age||0)*30)|0)*17, R=(mzl?2.0:5.2)*z;
+        ctx.globalCompositeOperation='lighter'; ctx.lineCap='round';
+        ctx.globalAlpha=fI*0.3; ctx.fillStyle=m.col; ctx.beginPath(); ctx.arc(b.x,b.y,R*0.75,0,6.283); ctx.fill();   // 연한 글로우(범위감)
+        ctx.globalAlpha=fI*0.5; ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(b.x,b.y,(mzl?0.55:0.85)*z,0,6.283); ctx.fill();   // 희미한 코어
+        ctx.globalAlpha=fI*0.5; ctx.strokeStyle=m.col; ctx.lineWidth=0.55*z;
+        const n=mzl?4:6; for(let q=0;q<n;q++){ const an=q*(6.283/n)+((fsd*3+q)%7)*0.16, ln=R*(0.55+((fsd+q*5)%5)*0.14);   // 주위 미세 전기 가닥(재추첨=일렁)
+          ctx.beginPath(); ctx.moveTo(b.x+Math.cos(an)*R*0.22, b.y+Math.sin(an)*R*0.22);
+          ctx.lineTo(b.x+Math.cos(an)*ln*0.6+(((fsd*5+q*7)%7)-3)*z*0.4, b.y+Math.sin(an)*ln*0.6+(((fsd*3+q*11)%7)-3)*z*0.4);
+          ctx.lineTo(b.x+Math.cos(an)*ln, b.y+Math.sin(an)*ln); ctx.stroke(); } }
       else if(m.kind==='push'){ const c=toScreen(m.x,m.y), p=1-L, z2=z, sd=m.sd||0; ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=L*0.78; ctx.fillStyle='#fff3e2'; ctx.beginPath(); ctx.arc(c.x,c.y,(0.55+L*1.9)*z2,0,6.283); ctx.fill(); ctx.globalAlpha=L*0.3; ctx.fillStyle='#ffb066'; ctx.beginPath(); ctx.arc(c.x,c.y,(1.2+p*2.9)*z2,0,6.283); ctx.fill(); ctx.globalAlpha=L*0.68; ctx.strokeStyle='#ffd7a0'; ctx.lineCap='round'; for(let _q=0;_q<6;_q++){ const _a=m.ang+(_q-2.5)*0.42+((sd*7+_q*13)%7-3)*0.05, _len=(2.3+p*4.8)*z2*(0.65+((sd+_q*5)%4)/4*0.7); ctx.lineWidth=(1.05-_q*0.07)*z2; ctx.beginPath(); ctx.moveTo(c.x,c.y); ctx.lineTo(c.x+Math.cos(_a)*_len,c.y+Math.sin(_a)*_len); ctx.stroke(); } }
       else if(m.kind==='slash'){ // 검격: 대상 위 사선 베기 한 줄(희미·소형, 고정 — 타이밍은 ATK_STYLE.hit 지연)
         const c=toScreen(m.x,m.y), p=1-L, g=Math.min(1,p*7);   // g=등장 팝
