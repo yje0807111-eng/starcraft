@@ -5703,7 +5703,7 @@ const SB_RANGE={
   pelican:0, seraph:0,
 };
 const SB_AIR={ goliath:23 };   // 대공(공중공격) 사거리 별도 — 샌드박스 전용
-const SB_CD={ worker_human:1.1111, worker_light:1.1111, worker_swarm:1.1111, marine:0.8333, ghost:1.25, racer:0.7692, tank:1.4286, goliath:0.9091, skyguard:0.8333, hellfire:1.6667, dreadnought:1.6667, blade:1.0 };   // 샌드박스 전용 공속 오버라이드(초=발사 간격, =1/공속) — nemo 무영향. 워든=1.0/s   // 샌드박스 전용 공속 오버라이드(초=발사 간격, =1/공속) — nemo 무영향. 일꾼0.9·레인저1.2·팬텀0.8·레이서1.3·브레이커0.7·스트라이더1.1·템페스트1.2·헬파이어0.6·드레드노트0.6
+const SB_CD={ worker_human:1.1111, worker_light:1.1111, worker_swarm:1.1111, marine:0.8333, ghost:1.25, racer:0.7692, tank:1.4286, goliath:0.9091, skyguard:0.8333, hellfire:1.6667, dreadnought:1.6667, blade:1.0, falcon:0.9091 };   // 샌드박스 전용 공속 오버라이드(초=발사 간격, =1/공속) — nemo 무영향. 워든=1.0/s·팔콘=1.1/s   // 샌드박스 전용 공속 오버라이드(초=발사 간격, =1/공속) — nemo 무영향. 일꾼0.9·레인저1.2·팬텀0.8·레이서1.3·브레이커0.7·스트라이더1.1·템페스트1.2·헬파이어0.6·드레드노트0.6
 function effRange(id, fb){ if(typeof SB_RANGE!=='undefined' && id!=null && SB_RANGE[id]!=null) return SB_RANGE[id]/100; return fb; }   // 샌드박스 사거리 오버라이드(없으면 폴백)
 // 체력/실드/에너지 초록 LCD 텍스트(스타식 "실드 HP / 에너지")
 function scHpHTML(u){ const def=U[u.id]; const m=u.hero?HERO_STAT_MUL:1;
@@ -9384,7 +9384,7 @@ const ATK_STYLE={
   medusa:    {kind:'psi',    color:'#c7a0ff'},   // 메두사: 사이오닉
   wyvern:    {kind:'needle', color:'#bfe89a', count:2},   // 와이번: 다연발 가시
   behemoth:  {kind:'shell',  color:'#d0b070', spd:2.0},   // 베히모스: 대형 포
-  falcon:    {kind:'plasma', color:'#ffd66a'},   // 팔콘: 플라즈마
+  falcon:    {kind:'bullet', color:'#ffd66a', lng:3.0, hd:0.5, wd:0.5, spd:2.6, tr:0.5},   // 팔콘: 얇고 긴 고속 레이저(FxLab에선 날개 트윈 평행 발사)
   skydancer: {kind:'plasma', color:'#ffe08a'},   // 스카이댄서: 플라즈마
   archangel: {kind:'plasma', color:'#ffd66a'},   // 아크엔젤: 플라즈마 포
   kronos:    {kind:'plasma', color:'#ffcf6a'},   // 크로노스: 시공 플라즈마
@@ -10116,6 +10116,7 @@ function fxLabStep(dt){ const L=FXLAB; if(!L.att) fxLabSpawnScene(); const a=L.a
     else if(fxId==='racer') fxLabRacerFire(L, a, tgt.x, ty);
     else if(L.attGm==='skyguard'&&tgt===L.air) fxLabTempestAir(L, a, tgt.x, ty, st.size);   // 템페스트 공중: 아주 얇은 소형 고속 미사일 2발
     else if(fxId==='hellfire') fxLabHellfireFire(L, a, tgt.x, ty, st.size);   // 헬파이어: 발키리식 유도 로켓 볼리(시간차·곡선·개별 타격)
+    else if(fxId==='falcon') fxLabFalconFire(L, a, tgt.x, ty, st.size);   // 팔콘: 두 날개 평행 트윈 레이저
     else { const _dx=tgt.x-a.x, _dy=ty-a.y, _d=Math.hypot(_dx,_dy)||1, _mz=0.03*((st.size||16)/16);
       let _sx=a.x+(_dx/_d)*_mz, _sy=a.y+(_dy/_d)*_mz-0.024;
       const _mzg=(window.M3D && M3D.muzzleAt)?M3D.muzzleAt(a.uid):null;   // 실제 3D 총구 위치(있으면 — 각도 무관)
@@ -10138,6 +10139,13 @@ function fxLabTempestAir(L, a, tx, ty, size){   // 템페스트 공중: 얇은 �
   const sideN=0.012, szf=(size||16)/18*0.34, sp=2.8;   // 스트라이더(szf~0.73·sp1.7) 대비 절반 크기·1.6배 속도
   for(let k=-1;k<=1;k+=2){ const sx=ox+px*sideN*k, sy=oy+py*sideN*k, baseA=Math.atan2(ty-sy,tx-sx), la=baseA+k*0.3, ed=Math.hypot(tx-sx,ty-sy)||1;
     L.store.shots.push({x:sx,y:sy,vx:Math.cos(la)*sp,vy:Math.sin(la)*sp,t:0,dur:0.9,kind:'missile',color:'#9fe0ff',boom:4,szf:szf,mx:sx,my:sy,ex:tx,ey:ty,dist:ed*0.99,noflash:1}); } }   // dist로 확실히 명중(고속 통과 방지)
+function fxLabFalconFire(L, a, tx, ty, size){   // 팔콘: 두 날개에서 얇고 긴 트윈 레이저 — 평행 유지(수렴 X), 고속 직진
+  if(!L.store||!L.store.shots) return;
+  const _c=(window.M3D&&M3D.centerAt)?M3D.centerAt(a.uid):null, ox=_c?_c.x:a.x, oy=_c?_c.y:(a.y-0.03);   // 부양 기체 중앙
+  const dx=tx-ox, dy=ty-oy, d=Math.hypot(dx,dy)||1, px=-dy/d, py=dx/d;   // 진행 수직(날개 방향)
+  const sideN=0.014*fxZoomF(), szf=(size||16)/18*0.5, sp=4.6, baseA=Math.atan2(dy,dx);   // 공용 각도 → 두 발 평행
+  for(let k=-1;k<=1;k+=2){ const sx=ox+px*sideN*k, sy=oy+py*sideN*k, ed=d;   // 날개 좌/우 출발, 같은 방향·같은 거리 직진(간격 유지)
+    L.store.shots.push({x:sx,y:sy,vx:Math.cos(baseA)*sp,vy:Math.sin(baseA)*sp,t:0,dur:Math.min(0.6,Math.max(0.05,ed/sp)),kind:'bullet',color:'#ffd66a',boom:3,szf:szf,mx:sx,my:sy,dist:ed,ex:sx+Math.cos(baseA)*ed,ey:sy+Math.sin(baseA)*ed,lng:3.0,hd:0.5,wd:0.5,tr:0.5,noflash:(k>0?0:1)}); } }   // 얇고 긴 레이저(머즐 플래시는 한쪽만)
 function fxLabHellfireFire(L, a, tx, ty, size){   // 헬파이어: 스타크 발키리식 로켓 볼리 — 여러 발 시간차 발사, 제각각 곡선 유도, 착탄 산포(미사일당 개별 타격)
   if(!L.store||!L.store.shots) return;
   const _c=(window.M3D&&M3D.centerAt)?M3D.centerAt(a.uid):null, ox=_c?_c.x:a.x, oy=_c?_c.y:(a.y-0.03);   // 부양 기체 중앙
