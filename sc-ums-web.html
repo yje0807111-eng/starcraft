@@ -9422,8 +9422,10 @@ const FX={
   smoke(store, x,y){ if(!store||!store.smoke) return;   // 어깨 포드 발사 연기(골리앗 등) — 위로 피어오르는 회색 구름
     for(let k=0;k<3;k++){ store.smoke.push({x:x+(Math.random()-0.5)*0.012, y:y, vx:(Math.random()-0.5)*0.03, vy:-0.05-Math.random()*0.045, life:1, r0:2.4+Math.random()*2, col:(k%2?'#5a5a66':'#7a7a86')}); } },
   advance(store, dt){ if(!store) return;
-    const sh=store.shots; for(let i=sh.length-1;i>=0;i--){ const s=sh[i]; if(!s._fired){ if(s.delay>0){ s.delay-=dt; if(s.delay>0) continue; } s._fired=true; if(store.flashes && !s.noflash) store.flashes.push({x:s.mx,y:s.my,life:1,szf:s.szf||1,ang:Math.atan2(s.vy,s.vx),fz:s.fz}); } if(s.wob){ const cw=Math.cos(s.wob*dt), sw=Math.sin(s.wob*dt), nvx=s.vx*cw-s.vy*sw, nvy=s.vx*sw+s.vy*cw; s.vx=nvx; s.vy=nvy; } s.t+=dt; if(s.kind==='missile'&&s.ex!=null){ const _ta=Math.atan2(s.ey-s.y,s.ex-s.x), _ca=Math.atan2(s.vy,s.vx); let _da=_ta-_ca; _da=Math.atan2(Math.sin(_da),Math.cos(_da)); const _mt=7*dt, _na=_ca+Math.max(-_mt,Math.min(_mt,_da)), _msp=Math.hypot(s.vx,s.vy); s.vx=Math.cos(_na)*_msp; s.vy=Math.sin(_na)*_msp; const _dtg=Math.hypot(s.ex-s.x,s.ey-s.y); if(s._pd!=null && _dtg>s._pd && s._pd<0.2) s._boom=1; s._pd=_dtg; /* 목표 지나침(선회 반경 내 재접근 불가)=즉시 기폭 */ if(store.smoke && !s.notrail){ s.trailT=(s.trailT||0)-dt; if(s.trailT<=0){ s.trailT=0.03; store.smoke.push({x:s.x,y:s.y,vx:0,vy:0,life:1,r0:0.5*(s.szf||1),col:'#ff9a4c',core:'#ffd9a0',glow:true,dk:5,ex:1.0,af:0.5}); } } } const _rf=(s.ramp&&s.t<s.ramp)?(0.34+0.66*Math.pow(s.t/s.ramp,1.6)):1;   // 가속 램프: 초반 잠깐 느리게 → 금방 최고속(이후 일정)
+    const sh=store.shots; for(let i=sh.length-1;i>=0;i--){ const s=sh[i]; if(!s._fired){ if(s.delay>0){ s.delay-=dt; if(s.delay>0) continue; } s._fired=true; if(store.flashes && !s.noflash) store.flashes.push({x:s.mx,y:s.my,life:1,szf:s.szf||1,ang:Math.atan2(s.vy,s.vx),fz:s.fz}); } if(s.wob){ const cw=Math.cos(s.wob*dt), sw=Math.sin(s.wob*dt), nvx=s.vx*cw-s.vy*sw, nvy=s.vx*sw+s.vy*cw; s.vx=nvx; s.vy=nvy; } s.t+=dt; if(s.kind==='missile'&&s.ex!=null){ const _ta=Math.atan2(s.ey-s.y,s.ex-s.x), _ca=Math.atan2(s.vy,s.vx); let _da=_ta-_ca; _da=Math.atan2(Math.sin(_da),Math.cos(_da)); const _mt=7*dt, _na=_ca+Math.max(-_mt,Math.min(_mt,_da)), _msp=Math.hypot(s.vx,s.vy); s.vx=Math.cos(_na)*_msp; s.vy=Math.sin(_na)*_msp; const _dtg=Math.hypot(s.ex-s.x,s.ey-s.y); if(s._pd!=null && _dtg>s._pd && s._pd<0.2) s._boom=1; s._pd=_dtg; /* 목표 지나침(선회 반경 내 재접근 불가)=즉시 기폭 */ if(store.smoke && !s.notrail){ s.trailT=(s.trailT||0)-dt; if(s.trailT<=0){ s.trailT=0.03; store.smoke.push({x:s.x,y:s.y,vx:0,vy:0,life:1,r0:0.5*(s.szf||1),col:'#ff9a4c',core:'#ffd9a0',glow:true,dk:5,ex:1.0,af:0.5}); } } } if(s.grav) s.vy+=s.grav*dt;   // 포물선(가시 하늘로 솟았다 낙하)
+      const _rf=(s.ramp&&s.t<s.ramp)?(0.34+0.66*Math.pow(s.t/s.ramp,1.6)):1;   // 가속 램프: 초반 잠깐 느리게 → 금방 최고속(이후 일정)
       s._dn=Math.hypot(s.vx,s.vy)*dt*_rf; s.x+=s.vx*dt*_rf; s.y+=s.vy*dt*_rf;
+      if(s.landY!=null && s.vy>0 && s.y>=s.landY){ s.y=s.landY; store.impacts.push({x:s.x,y:s.landY,life:1,kind:(s.imk||s.kind),col:s.color,boom:s.boom||4,szf:s.szf||1,ang:Math.atan2(s.vy,s.vx),sd:(store._sd=((store._sd||0)+1)&255)}); sh.splice(i,1); continue; }   // 낙하 착지=꽂힘
       if((s.dist!=null && Math.hypot(s.x-s.mx,s.y-s.my)>=s.dist) || s.t>=s.dur || s._boom || (s.kind==='missile'&&s.ex!=null&&Math.hypot(s.x-s.ex,s.y-s.ey)<0.012)){ const _ix=(s.ex!=null?s.ex:s.x), _iy=(s.ey!=null?s.ey:s.y); store.impacts.push({x:_ix,y:_iy,life:1,kind:(s.imk||s.kind),col:s.color,boom:s.boom||4,szf:s.szf||1,ang:Math.atan2(s.vy,s.vx),sd:(store._sd=((store._sd||0)+1)&255)}); sh.splice(i,1); } }
     const im=store.impacts; for(let i=im.length-1;i>=0;i--){ im[i].life-=dt*(im[i].kind==='stab'?5.5:4.5); if(im[i].life<=0) im.splice(i,1); }   // stab(가시 박힘)=타격 즉시 사라짐
     const me=store.melee; for(let i=me.length-1;i>=0;i--){ const M=me[i]; if(M.delay>0){ M.delay-=dt; continue; } M.age=(M.age||0)+dt; M.life-=dt*(M.dk||5); if(M.life<=0) me.splice(i,1); }   // delay=발동 지연(보이드 버스트 등)
@@ -10254,20 +10256,20 @@ function fxLabThornCycle(L, a, dt){ a.moving=false;
   else if(L.bstate==='digging'){ a.hidden=false;   // 파고드는 중(흙먼지)
     if(L.bt<=0){ if(window.M3D&&M3D.dropModels){ try{ M3D.dropModels([a.uid]); }catch(e){} } a.hidden=true; L.bstate='burrowed'; L.bt=3.2; L.cd=0.25; } }   // 모델 즉시 제거(죽음 애니 없이 바로 사라짐)
   else if(L.bstate==='burrowed'){ a.hidden=true;   // 잠복: 주기적으로 가시 폭격
-    L.cd-=dt; if(L.cd<=0){ L.cd=0.55; fxLabThornBarrage(L, a, L.dummy); }
+    L.cd-=dt; if(L.cd<=0){ L.cd=1.0; fxLabThornBarrage(L, a, L.dummy); }
     if(L.bt<=0){ a.hidden=false; a.uid='lab_att'+(++_fxLabAttSeq); a.fireSeq=0; L.bstate='emerging'; L.bt=0.4; fxLabDigPuff(L, a); } }   // 복귀: 새 uid로 즉시 등장(부활 애니 방지)
   else { a.hidden=false;   // 지상 복귀
     if(L.bt<=0){ L.bstate='surface'; L.bt=1.6; } } }
 function fxLabDigPuff(L, a){ if(!L.store||!L.store.smoke) return;   // 땅 파기 흙먼지
   for(let k=0;k<10;k++){ const an=-Math.PI/2+(Math.random()-0.5)*2.4, sp=0.02+Math.random()*0.04;
     L.store.smoke.push({x:a.x+(Math.random()-0.5)*0.03, y:FXLAB_TGT_Y-0.004, vx:Math.cos(an)*sp, vy:Math.sin(an)*sp*0.7, life:1, r0:0.9+Math.random()*0.9, col:(k%2?'#6b5636':'#8a7048'), ex:2.4, af:0.5, dk:2.4}); } }
-function fxLabThornBarrage(L, a, tgt){   // 잠복 가시 폭격: 굴에서 가시가 뿜어져 나와 상대 발밑을 향해 유도(느린 미사일)로 날아가 꽂힘
+function fxLabThornBarrage(L, a, tgt){   // 럴커식 라인 폭격: 굴에서 가시가 하늘로 솟았다 포물선으로 낙하, 굴→대상→최대사거리까지 일직선 일정 간격 착지
   if(!L.store||!L.store.shots||!tgt) return;
-  const gy=FXLAB_TGT_Y, sx0=a.x, sy0=gy-0.006, N=6, szf=(a.size||16)/18*0.7, R=((tgt.size||14)/600)*fxZoomF()*0.5, sp=1.9;   // 잠복 지점(굴)에서 발사
-  for(let k=0;k<N;k++){ const ex=tgt.x+(Math.random()*2-1)*R, ey=gy;   // 대상 서 있는 곳 바닥(좁게)
-    const la=Math.atan2(ey-sy0,ex-sx0)+(Math.random()-0.5)*0.6;   // 초기 각도 랜덤 → 유도로 발밑 수렴
-    L.store.shots.push({x:sx0,y:sy0,vx:Math.cos(la)*sp,vy:Math.sin(la)*sp,t:0,dur:2.0,kind:'missile',imk:'stab',color:'#9fd356',boom:3,szf:szf,wd:1.8,notrail:1,delay:k*0.05,mx:sx0,my:sy0,ex:ex,ey:ey,dist:null,noflash:1}); }   // 스트라이더식 유도·천천히 → 발밑 꽂힘
-  if(L.store.smoke) for(let k=0;k<5;k++){ const an=-Math.PI/2+(Math.random()-0.5)*1.6; L.store.smoke.push({x:sx0+(Math.random()-0.5)*0.02,y:gy-0.004,vx:Math.cos(an)*0.02,vy:Math.sin(an)*0.02,life:1,r0:0.7,col:'#5a4a30',ex:2,af:0.4,dk:3}); } }   // 굴 입구 흙먼지
+  const gy=FXLAB_TGT_Y, sx0=a.x, sy0=gy-0.005, dir=Math.sign(tgt.x-sx0)||1;
+  const reach=Math.abs(tgt.x-sx0)+0.2, N=9, step=reach/N, szf=(a.size||16)/18*0.72, grav=2.6;   // 대상 지역 + 최대사거리까지
+  for(let k=1;k<=N;k++){ const ex=sx0+dir*step*k, D=Math.abs(ex-sx0), T=0.5+D*1.4, vx=(ex-sx0)/T, vy0=-0.5*grav*T;   // 착지점별 포물선(T=체공)
+    L.store.shots.push({x:sx0,y:sy0,vx:vx,vy:vy0,t:0,dur:3,kind:'needle',imk:'stab',color:'#9fd356',boom:3,szf:szf,wd:1.8,grav:grav,landY:gy,delay:(k-1)*0.045,mx:sx0,my:sy0,noflash:1}); }   // 굴→끝까지 순차(투두둑 라인 폭격) → 위에서 낙하 꽂힘
+  if(L.store.smoke) for(let k=0;k<6;k++){ const an=-Math.PI/2+(Math.random()-0.5)*1.4; L.store.smoke.push({x:sx0+(Math.random()-0.5)*0.02,y:gy-0.004,vx:Math.cos(an)*0.03,vy:Math.sin(an)*0.03,life:1,r0:0.8,col:'#5a4a30',ex:2,af:0.4,dk:2.6}); } }   // 굴 입구 분출 흙먼지
 function fxLabHydraFire(L, a, tx, ty, size){   // 리퍼: 양손에서 가시 다발이 아주 짧은 텀으로 연달아 발사 → 대상 전 범위 랜덤 타격(한 점 X)
   if(!L.store||!L.store.shots) return;
   const _c=(window.M3D&&M3D.centerAt)?M3D.centerAt(a.uid):null, ox0=_c?_c.x:a.x, oy0=_c?_c.y:(a.y-0.02);
@@ -10311,6 +10313,11 @@ function fxLabRacerFire(L, a, tx, ty){   // 레이서: 오토바이 앞 좌/우 
 function fxLabRender(dt){ const L=FXLAB; if(!L.store) L.store=FX.store(); if(!L.att) fxLabSpawnScene();
   const r=setup('cvUnit'); GW=r.W; GH=r.H; drawSandboxGround(r.ctx, r.W, r.H);   // 빈 땅(cvUnit)
   fxLabStep(dt);
+  if(L.att && L.bstate==='burrowed'){   // 베놈퀸 잠복 = 지하 굴(검정 타원) — 지면 위에 직접 그려 항상 보이게(3D에 안 가림)
+    const mx=L.att.x*r.W, my=FXLAB_TGT_Y*r.H, w=Math.max(18,34*L.scale), h=w*0.4, ctx=r.ctx; ctx.save();
+    const g=ctx.createRadialGradient(mx,my,0,mx,my,w); g.addColorStop(0,'rgba(0,0,0,.92)'); g.addColorStop(0.7,'rgba(0,0,0,.82)'); g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=g; ctx.save(); ctx.translate(mx,my); ctx.scale(1,h/w); ctx.beginPath(); ctx.arc(0,0,w,0,6.283); ctx.fill(); ctx.restore();
+    ctx.strokeStyle='rgba(70,56,38,.6)'; ctx.lineWidth=1.6; ctx.beginPath(); ctx.ellipse(mx,my,w*0.82,h*0.82,0,0,6.283); ctx.stroke(); ctx.restore(); }
   const mcv=document.getElementById('cvMarine');
   if(window.M3D && M3D.ready() && !(G.opt&&G.opt.model3d===false)){ mcv.style.display='block';
     const list=[]; if(L.att && !L.att.hidden) list.push(L.att); if(L.dummy) list.push(L.dummy); if(L.bldg) list.push(L.bldg); if(L.air) list.push(L.air);
@@ -10319,13 +10326,6 @@ function fxLabRender(dt){ const L=FXLAB; if(!L.store) L.store=FX.store(); if(!L.
   else if(mcv) mcv.style.display='none';
   const fcv=document.getElementById('cvFx');
   if(fcv){ fcv.style.display='block'; const f=setup('cvFx'); FX.advance(L.store, dt);
-    if(L.att && L.bstate==='burrowed'){   // 베놈퀸 잠복 = 지하 굴(검정 타원, 럴커 잠복 표시)
-      const mx=L.att.x*f.W, my=FXLAB_TGT_Y*f.H, w=Math.max(16,30*L.scale), h=w*0.42, ctx=f.ctx;
-      ctx.save();
-      const g=ctx.createRadialGradient(mx,my,0,mx,my,w); g.addColorStop(0,'rgba(0,0,0,.9)'); g.addColorStop(0.72,'rgba(0,0,0,.78)'); g.addColorStop(1,'rgba(0,0,0,0)');   // 굴 구멍(가장자리 페이드)
-      ctx.fillStyle=g; ctx.save(); ctx.translate(mx,my); ctx.scale(1,h/w); ctx.beginPath(); ctx.arc(0,0,w,0,6.283); ctx.fill(); ctx.restore();
-      ctx.strokeStyle='rgba(60,48,32,.55)'; ctx.lineWidth=1.4; ctx.beginPath(); ctx.ellipse(mx,my,w*0.86,h*0.86,0,0,6.283); ctx.stroke();   // 흙 테두리
-      ctx.restore(); }
     FX.drawShots(f.ctx, L.store, (x,y)=>({x:x*f.W, y:y*f.H}), 1.0*L.scale); } }   // 이펙트도 같은 스케일
 
 </script>
