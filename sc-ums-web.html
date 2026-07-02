@@ -10267,8 +10267,8 @@ function fxLabThornBarrage(L, a, tgt){   // 럴커식 라인 폭격: 굴에서 �
   if(!L.store||!L.store.shots||!tgt) return;
   const gy=FXLAB_TGT_Y, sx0=a.x, sy0=gy-0.005, dir=Math.sign(tgt.x-sx0)||1;
   const reach=Math.abs(tgt.x-sx0)+0.2, N=9, step=reach/N, szf=(a.size||16)/18*0.72, grav=2.6;   // 대상 지역 + 최대사거리까지
-  for(let k=1;k<=N;k++){ const ex=sx0+dir*step*k, D=Math.abs(ex-sx0), T=0.5+D*1.4, vx=(ex-sx0)/T, vy0=-0.5*grav*T;   // 착지점별 포물선(T=체공)
-    L.store.shots.push({x:sx0,y:sy0,vx:vx,vy:vy0,t:0,dur:3,kind:'needle',imk:'stab',color:'#9fd356',boom:3,szf:szf,wd:1.8,grav:grav,landY:gy,delay:(k-1)*0.045,mx:sx0,my:sy0,noflash:1}); }   // 굴→끝까지 순차(투두둑 라인 폭격) → 위에서 낙하 꽂힘
+  for(let k=1;k<=N;k++){ const ex=sx0+dir*step*k, peak=0.09+Math.random()*0.03, T=Math.sqrt(8*peak/grav), vx=(ex-sx0)/T, vy0=-0.5*grav*T;   // 포물선 높이 고정(화면 안) — 전 가시 동일 체공, 먼 가시=빠른 수평속도
+    L.store.shots.push({x:sx0,y:sy0,vx:vx,vy:vy0,t:0,dur:3,kind:'needle',imk:'stab',color:'#9fd356',boom:3,szf:szf,wd:1.8,grav:grav,landY:gy,delay:(k-1)*0.05,mx:sx0,my:sy0,noflash:1}); }   // 굴→끝까지 순차(투두둑 라인 폭격) → 하늘로 솟았다 낙하 꽂힘
   if(L.store.smoke) for(let k=0;k<6;k++){ const an=-Math.PI/2+(Math.random()-0.5)*1.4; L.store.smoke.push({x:sx0+(Math.random()-0.5)*0.02,y:gy-0.004,vx:Math.cos(an)*0.03,vy:Math.sin(an)*0.03,life:1,r0:0.8,col:'#5a4a30',ex:2,af:0.4,dk:2.6}); } }   // 굴 입구 분출 흙먼지
 function fxLabHydraFire(L, a, tx, ty, size){   // 리퍼: 양손에서 가시 다발이 아주 짧은 텀으로 연달아 발사 → 대상 전 범위 랜덤 타격(한 점 X)
   if(!L.store||!L.store.shots) return;
@@ -10313,11 +10313,12 @@ function fxLabRacerFire(L, a, tx, ty){   // 레이서: 오토바이 앞 좌/우 
 function fxLabRender(dt){ const L=FXLAB; if(!L.store) L.store=FX.store(); if(!L.att) fxLabSpawnScene();
   const r=setup('cvUnit'); GW=r.W; GH=r.H; drawSandboxGround(r.ctx, r.W, r.H);   // 빈 땅(cvUnit)
   fxLabStep(dt);
-  if(L.att && L.bstate==='burrowed'){   // 베놈퀸 잠복 = 지하 굴(검정 타원) — 지면 위에 직접 그려 항상 보이게(3D에 안 가림)
-    const mx=L.att.x*r.W, my=FXLAB_TGT_Y*r.H, w=Math.max(18,34*L.scale), h=w*0.4, ctx=r.ctx; ctx.save();
-    const g=ctx.createRadialGradient(mx,my,0,mx,my,w); g.addColorStop(0,'rgba(0,0,0,.92)'); g.addColorStop(0.7,'rgba(0,0,0,.82)'); g.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=g; ctx.save(); ctx.translate(mx,my); ctx.scale(1,h/w); ctx.beginPath(); ctx.arc(0,0,w,0,6.283); ctx.fill(); ctx.restore();
-    ctx.strokeStyle='rgba(70,56,38,.6)'; ctx.lineWidth=1.6; ctx.beginPath(); ctx.ellipse(mx,my,w*0.82,h*0.82,0,0,6.283); ctx.stroke(); ctx.restore(); }
+  if(L.att && (L.bstate==='digging'||L.bstate==='burrowed')){   // 베놈퀸 잠복 = 지하 굴(검정 타원) — 지면 캔버스에 직접(3D에 안 가림)
+    const mx=L.att.x*r.W, my=FXLAB_TGT_Y*r.H, w=Math.max(20,38*L.scale), h=w*0.4, ctx=r.ctx;
+    ctx.save(); ctx.translate(mx,my); ctx.scale(1,h/w);   // 변환 후 로컬 좌표로 그라데이션 생성(이전엔 중심이 어긋나 투명부만 칠해져 안 보였음)
+    const g=ctx.createRadialGradient(0,0,0,0,0,w); g.addColorStop(0,'rgba(0,0,0,.94)'); g.addColorStop(0.7,'rgba(0,0,0,.84)'); g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,w,0,6.283); ctx.fill();
+    ctx.strokeStyle='rgba(70,56,38,.6)'; ctx.lineWidth=1.6; ctx.beginPath(); ctx.arc(0,0,w*0.82,0,6.283); ctx.stroke(); ctx.restore(); }
   const mcv=document.getElementById('cvMarine');
   if(window.M3D && M3D.ready() && !(G.opt&&G.opt.model3d===false)){ mcv.style.display='block';
     const list=[]; if(L.att && !L.att.hidden) list.push(L.att); if(L.dummy) list.push(L.dummy); if(L.bldg) list.push(L.bldg); if(L.air) list.push(L.air);
