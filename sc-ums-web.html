@@ -9537,22 +9537,24 @@ const FX={
         for(let k2=1;k2<=2;k2++){ const rr=Rc*(1-k2*0.27); if(rr<=0) continue;   // 내부 리플(따라오는 동심원)
           ctx.globalAlpha=fI*0.22; ctx.strokeStyle=m.col; ctx.lineWidth=0.5*z; ctx.beginPath(); ctx.arc(b.x,b.y,rr,0,6.283); ctx.stroke(); } }
       else if(m.kind==='push'){ const c=toScreen(m.x,m.y), p=1-L, z2=z, sd=m.sd||0; ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=L*0.78; ctx.fillStyle='#fff3e2'; ctx.beginPath(); ctx.arc(c.x,c.y,(0.55+L*1.9)*z2,0,6.283); ctx.fill(); ctx.globalAlpha=L*0.3; ctx.fillStyle='#ffb066'; ctx.beginPath(); ctx.arc(c.x,c.y,(1.2+p*2.9)*z2,0,6.283); ctx.fill(); ctx.globalAlpha=L*0.68; ctx.strokeStyle='#ffd7a0'; ctx.lineCap='round'; for(let _q=0;_q<6;_q++){ const _a=m.ang+(_q-2.5)*0.42+((sd*7+_q*13)%7-3)*0.05, _len=(2.3+p*4.8)*z2*(0.65+((sd+_q*5)%4)/4*0.7); ctx.lineWidth=(1.05-_q*0.07)*z2; ctx.beginPath(); ctx.moveTo(c.x,c.y); ctx.lineTo(c.x+Math.cos(_a)*_len,c.y+Math.sin(_a)*_len); ctx.stroke(); } }
-      else if(m.kind==='scythe'){ // 대상 직격 베기: 짧은 X 자국 + 피 튀김(원형 선 없음)
-        const c=toScreen(m.x,m.y), p=1-L, g=Math.min(1,p*6);
-        ctx.save(); ctx.translate(c.x,c.y);
-        // 대상 위 짧은 X 베기 자국(소형·직접)
-        ctx.globalCompositeOperation='lighter'; ctx.lineCap='round';
-        const cut=(a,l)=>{ ctx.save(); ctx.rotate(a);
-          ctx.globalAlpha=L*0.5;  ctx.strokeStyle=m.col;   ctx.lineWidth=2.0*z; ctx.beginPath(); ctx.moveTo(-l,0); ctx.lineTo(l,0); ctx.stroke();
-          ctx.globalAlpha=L*0.9;  ctx.strokeStyle='#f4ffe0'; ctx.lineWidth=0.7*z; ctx.beginPath(); ctx.moveTo(-l*0.9,0); ctx.lineTo(l*0.9,0); ctx.stroke(); ctx.restore(); };
-        const cl=(6+p*3)*z; cut(m.ang+0.55, cl); if(p>0.1) cut(m.ang-0.55, cl*0.85);
-        ctx.globalAlpha=L*0.75*g; ctx.fillStyle='#f4ffe0'; ctx.beginPath(); ctx.arc(0,0,1.3*z*g,0,6.28); ctx.fill();   // 타격 섬광
-        // 피 튀김(베기 방향으로 흩뿌림) — 감산 없이 자연 합성
+      else if(m.kind==='scythe'){ // 대상 직격 베기: 얇게 시작→두껍게 끝나는 곡선 슬래시(칼자국) + 피 튀김
+        const c=toScreen(m.x,m.y), p=1-L, g=Math.min(1,p*6), ba=m.ang+0.5, len=(11+p*4)*z, curve=0.42;
+        const ux=Math.cos(ba), uy=Math.sin(ba), px2=-uy, py2=ux;   // 베기 축 + 수직(곡률)
+        // 곡선 슬래시: 여러 세그먼트를 두께 테이퍼(가늘→굵→가늘)로 채워 실제 벤 자국처럼
+        const slashFill=(col, wid, alpha)=>{ ctx.globalAlpha=alpha; ctx.fillStyle=col; ctx.beginPath();
+          const N=14; for(let s=0;s<=N;s++){ const t=s/N, tt=(t-0.5)*2, along=(t-0.5)*len, bow=(1-tt*tt)*curve*len, w=wid*(Math.pow(1-Math.abs(tt),0.6));
+            const cx=c.x+ux*along+px2*bow, cy=c.y+uy*along+py2*bow; if(s===0) ctx.moveTo(cx+px2*w,cy+py2*w); else ctx.lineTo(cx+px2*w,cy+py2*w); }
+          for(let s=N;s>=0;s--){ const t=s/N, tt=(t-0.5)*2, along=(t-0.5)*len, bow=(1-tt*tt)*curve*len, w=wid*(Math.pow(1-Math.abs(tt),0.6));
+            const cx=c.x+ux*along+px2*bow, cy=c.y+uy*along+py2*bow; ctx.lineTo(cx-px2*w,cy-py2*w); } ctx.closePath(); ctx.fill(); };
+        ctx.globalCompositeOperation='lighter';
+        slashFill(m.col, (2.4-p*1.5)*z, L*0.4);        // 초록 잔광(굵게)
+        slashFill('#f4ffe0', (1.0-p*0.7)*z, L*0.92);   // 밝은 칼자국 심
+        ctx.globalAlpha=L*0.8*g; ctx.fillStyle='#f4ffe0'; ctx.beginPath(); ctx.arc(c.x,c.y,1.2*z*g,0,6.28); ctx.fill();   // 타격 섬광
+        // 피 튀김(베기 방향으로 흩뿌림) — 자연 합성
         ctx.globalCompositeOperation='source-over';
-        for(let q=0;q<7;q++){ const an=m.ang+0.55+(q-3)*0.34+((m.sd*7+q*13)%7-3)*0.05, dd=(1.5+p*7.0)*z*(0.5+((m.sd+q*5)%5)/5), rr=(0.9-p*0.55)*z*(0.6+((m.sd*3+q*7)%4)/4);
-          if(rr<=0.05) continue; ctx.globalAlpha=L*(0.7-p*0.35); ctx.fillStyle=(q%3===0)?'#c8f07a':'#7fae2c';   // 초록빛 체액(밝은/짙은)
-          ctx.beginPath(); ctx.ellipse(Math.cos(an)*dd, Math.sin(an)*dd, rr*1.5, rr*0.75, an, 0, 6.28); ctx.fill(); }
-        ctx.restore(); }
+        for(let q=0;q<8;q++){ const an=ba+(q-3.5)*0.3+((m.sd*7+q*13)%7-3)*0.05, dd=(1.5+p*8.0)*z*(0.5+((m.sd+q*5)%5)/5), rr=(0.95-p*0.6)*z*(0.55+((m.sd*3+q*7)%4)/4);
+          if(rr<=0.05) continue; ctx.globalAlpha=L*(0.72-p*0.4); ctx.fillStyle=(q%3===0)?'#c8f07a':'#7fae2c';   // 초록빛 체액(밝은/짙은)
+          ctx.beginPath(); ctx.ellipse(c.x+Math.cos(an)*dd, c.y+Math.sin(an)*dd, rr*1.6, rr*0.7, an, 0, 6.28); ctx.fill(); } }
       else if(m.kind==='slash'){ // 검격: 대상 위 사선 베기 한 줄(희미·소형, 고정 — 타이밍은 ATK_STYLE.hit 지연)
         const c=toScreen(m.x,m.y), p=1-L, g=Math.min(1,p*7);   // g=등장 팝
         ctx.save(); ctx.translate(c.x,c.y); ctx.rotate(m.ang+0.62);
