@@ -9378,7 +9378,7 @@ const ATK_STYLE={
   machinegun:{kind:'mg',     color:'#ffe2a0', burst:4, burstGap:0.03},   // 발칸: 기관총 연사
   hellfire:  {kind:'missile',color:'#ff9a5a'},   // 헬파이어: 화염 미사일
   aegis:     {kind:'bullet', color:'#bfe4ff'},   // 이지스: 방어포
-  snapper:   {kind:'needle', color:'#a8d95a'},   // 스내퍼: 가시
+  snapper:   {kind:'scythe', color:'#a8e05a', melee:true},   // 스내퍼: 낫 교차 베기(유기체 초록)
   stinger:   {kind:'missile',color:'#c8e89a'},   // 스팅어: 산성 미사일
   venom:     {kind:'needle', color:'#a6e23c'},   // 베놈: 산성 가시
   medusa:    {kind:'psi',    color:'#c7a0ff'},   // 메두사: 사이오닉
@@ -9537,6 +9537,20 @@ const FX={
         for(let k2=1;k2<=2;k2++){ const rr=Rc*(1-k2*0.27); if(rr<=0) continue;   // 내부 리플(따라오는 동심원)
           ctx.globalAlpha=fI*0.22; ctx.strokeStyle=m.col; ctx.lineWidth=0.5*z; ctx.beginPath(); ctx.arc(b.x,b.y,rr,0,6.283); ctx.stroke(); } }
       else if(m.kind==='push'){ const c=toScreen(m.x,m.y), p=1-L, z2=z, sd=m.sd||0; ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=L*0.78; ctx.fillStyle='#fff3e2'; ctx.beginPath(); ctx.arc(c.x,c.y,(0.55+L*1.9)*z2,0,6.283); ctx.fill(); ctx.globalAlpha=L*0.3; ctx.fillStyle='#ffb066'; ctx.beginPath(); ctx.arc(c.x,c.y,(1.2+p*2.9)*z2,0,6.283); ctx.fill(); ctx.globalAlpha=L*0.68; ctx.strokeStyle='#ffd7a0'; ctx.lineCap='round'; for(let _q=0;_q<6;_q++){ const _a=m.ang+(_q-2.5)*0.42+((sd*7+_q*13)%7-3)*0.05, _len=(2.3+p*4.8)*z2*(0.65+((sd+_q*5)%4)/4*0.7); ctx.lineWidth=(1.05-_q*0.07)*z2; ctx.beginPath(); ctx.moveTo(c.x,c.y); ctx.lineTo(c.x+Math.cos(_a)*_len,c.y+Math.sin(_a)*_len); ctx.stroke(); } }
+      else if(m.kind==='scythe'){ // 낫 교차 베기(고퀄): 곡선 초승달 두 날이 X로 스치며 베고 잔상·날끝 섬광·튄 파편
+        const c=toScreen(m.x,m.y), p=1-L, ez='#f4ffe0';
+        ctx.save(); ctx.translate(c.x,c.y); ctx.globalCompositeOperation='lighter'; ctx.lineCap='round';
+        const sickle=(base)=>{ const R=(9+p*8)*z, a0=base-0.95+p*1.7, a1=a0+1.35;   // 수명 동안 스윙(휘두름)
+          ctx.globalAlpha=L*0.34; ctx.strokeStyle=m.col; ctx.lineWidth=(4.6-p*3)*z; ctx.beginPath(); ctx.arc(0,0,R,a0,a1); ctx.stroke();      // 넓은 초록 잔상
+          ctx.globalAlpha=L*0.62; ctx.strokeStyle=m.col; ctx.lineWidth=(2.2-p*1.4)*z; ctx.beginPath(); ctx.arc(0,0,R,a0+0.08,a1); ctx.stroke();  // 낫 몸체
+          ctx.globalAlpha=L*0.96; ctx.strokeStyle=ez; ctx.lineWidth=(1.1-p*0.7)*z; ctx.beginPath(); ctx.arc(0,0,R,a0+0.16,a1-0.02); ctx.stroke(); // 밝은 날
+          const tx=Math.cos(a1)*R, ty=Math.sin(a1)*R; ctx.globalAlpha=L; ctx.fillStyle='#f8ffe8'; ctx.beginPath(); ctx.arc(tx,ty,(1.6-p*0.8)*z,0,6.28); ctx.fill();   // 날끝 섬광
+          return {tx,ty,a1}; };
+        const s1=sickle(m.ang), s2=sickle(m.ang+Math.PI);   // 교차 두 낫(X)
+        ctx.globalAlpha=L*0.5; ctx.fillStyle=m.col; ctx.beginPath(); ctx.arc(0,0,(1.6+p*2.4)*z,0,6.28); ctx.fill();   // 교차점 임팩트 코어
+        ctx.strokeStyle=ez; ctx.lineWidth=0.7*z;   // 튄 파편(날끝에서 접선으로)
+        for(const s of [s1,s2]){ const ta=s.a1+1.4, ll=(2.2+p*3.5)*z; ctx.globalAlpha=L*(0.7-p*0.5); ctx.beginPath(); ctx.moveTo(s.tx,s.ty); ctx.lineTo(s.tx+Math.cos(ta)*ll, s.ty+Math.sin(ta)*ll); ctx.stroke(); }
+        ctx.restore(); }
       else if(m.kind==='slash'){ // 검격: 대상 위 사선 베기 한 줄(희미·소형, 고정 — 타이밍은 ATK_STYLE.hit 지연)
         const c=toScreen(m.x,m.y), p=1-L, g=Math.min(1,p*7);   // g=등장 팝
         ctx.save(); ctx.translate(c.x,c.y); ctx.rotate(m.ang+0.62);
@@ -10182,7 +10196,7 @@ function fxLabStep(dt){ const L=FXLAB; if(!L.att) fxLabSpawnScene(); const a=L.a
     else { if(L.t<=0){ a.hidden=false; a.uid='lab_att'+(++_fxLabAttSeq); a.fireSeq=0; L.phase='alive'; L.t=1.0; } }
     return; }
   if(FXLAB_NOATK.has(L.attGm||L.attId)){ a.moving=false; return; }   // 비전투 유닛: 공격 없음(대기만)
-  a.moving=false; const tgts=[L.dummy, L.bldg]; if(FXLAB_AA.has(L.attId)&&L.air&&!((L.attGm||'').indexOf('worker_')===0)) tgts.push(L.air);   // 일꾼(worker_*)은 베이스 id가 marine이어도 공중 공격 제외
+  a.moving=false; const _noAir=(L.attGm==='snapper'); const tgts=[L.dummy, L.bldg]; if(FXLAB_AA.has(L.attId)&&L.air&&!((L.attGm||'').indexOf('worker_')===0)&&!_noAir) tgts.push(L.air);   // 일꾼·스내퍼는 공중 공격 제외
   if((L.attGm||L.attId)==='hellfire'){ tgts.length=0; if(L.air) tgts.push(L.air); if(!tgts.length) return; }   // 헬파이어: 공중 전용(지상 공격 불가)
   if(L._switchT>0){ L._switchT-=dt; if(L._switchT<=0) L.ti=((L.ti||0)+1)%tgts.length; }   // 텀 경과 후 타겟 전환(발사 직후 즉시 X → 부드러운 전환)
   const tgt=tgts[(L.ti||0)%tgts.length]; if(!tgt) return;
@@ -10302,6 +10316,7 @@ const ATTACK_FOR={ blade:'blade_attect.glb', snapper:'snapper_attack.glb', worke
 const STAY_FOR={ marine:'marine_stay.glb', ghost:'ghost_stay.glb', goliath:'goliath_stay.glb', hydra:'hydralisk_stay.glb', worker_human:'worker_human_stay.glb', worker_light:'worker_light_stay.glb' };   // 정지(대기) 애니   // 공격 시 1회 재생할 공격 애니 모델(워든 검 베기)
 const RUN_SCALE_MUL=0.9;
 const RUN_SCALE_OVR={worker_swarm:0.68};   // 달리기 모델 크기 점프 보정(모델별 — 정지/이동 크기 일치)                     // 달리기 모델 크기 보정(본높이→full높이 마진)
+const ATK_SCALE_OVR={ snapper:1.12 };   // 공격 모델 크기 보정(스내퍼: 공격 시 작아지지 않게 평상시 크기로)
 // 유닛별 총 부착 설정(길이/손위치/회전) — 모델마다 손 위치가 달라 개별 지정
 const GUN_CFG={
   marine:{ len:1.5, pos:{x:0.34, y:0.98, z:0.30}, rot:{x:0, y:Math.PI/2, z:0} },
@@ -10370,8 +10385,8 @@ const swords={};          // id -> 검 scene(워든)
 // 워든 쌍검: 손 본(LeftHand/RightHand)에 부착. 튜닝값
 const ATK_SPEED=2.0;                           // 워든 검 베기 애니 배속(빠르게 쓱)
 const ATK_FRACTION=0.5;                        // 공격 애니 중 첫 스윙만 재생(뒤 스윙 컷 — 허공 휘적임 방지)
-const ATK_SPEED_OVR={ worker_human:1.4, blade:2.8 };       // 유닛별 공격 배속 오버라이드(일꾼 펀치=자연 속도 / 워든=빠른 풀스윙)
-const ATK_FRACTION_OVR={ worker_human:1.05, blade:1.0 };   // 유닛별 스윙 비율(일꾼=전체+여유 / 워든=전체 재생 — 중간 컷 끊김 제거)
+const ATK_SPEED_OVR={ worker_human:1.4, blade:2.8, snapper:3.4 };       // 유닛별 공격 배속(일꾼=자연 / 워든·스내퍼=빠른 풀스윙)
+const ATK_FRACTION_OVR={ worker_human:1.05, blade:1.0, snapper:1.0 };   // 유닛별 스윙 비율(전체 재생 — 중간 컷 끊김 제거)
 const SWORD_LEN=0.62;                          // 검 길이(모델높이 비율, anim 단위)
 const SWORD_HAND_POS={x:0, y:0, z:0};          // 손 본 기준 추가 오프셋(본 로컬)
 const SWORD_HAND_ROT={x:0, y:0, z:0};          // 칼끝 방향 보정(라디안)
@@ -10648,7 +10663,7 @@ function makeModel(id){
   }
   // 공격 애니 모델(워든 검 베기) — 공격 시 1회 재생
   let atkInner=null, atkMixer=null, atkAction=null, atkDur=0.45;
-  if(ATTACK_FOR[id] && atks[id]){ const ab=atks[id], s=(base.h/ab.h)*RUN_SCALE_MUL;
+  if(ATTACK_FOR[id] && atks[id]){ const ab=atks[id], s=(base.h/ab.h)*((typeof ATK_SCALE_OVR!=='undefined'&&ATK_SCALE_OVR[id])||RUN_SCALE_MUL);
     atkInner=cloneSkinned(ab.scene); atkInner.scale.setScalar(s);
     atkInner.position.set(-ab.off.x*s, -ab.off.y*s, -ab.off.z*s); atkInner.visible=false; anim.add(atkInner);
     atkMixer=new THREE.AnimationMixer(atkInner);
