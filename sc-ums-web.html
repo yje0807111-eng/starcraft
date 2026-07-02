@@ -9424,7 +9424,7 @@ const FX={
   advance(store, dt){ if(!store) return;
     const sh=store.shots; for(let i=sh.length-1;i>=0;i--){ const s=sh[i]; if(!s._fired){ if(s.delay>0){ s.delay-=dt; if(s.delay>0) continue; } s._fired=true; if(store.flashes && !s.noflash) store.flashes.push({x:s.mx,y:s.my,life:1,szf:s.szf||1,ang:Math.atan2(s.vy,s.vx),fz:s.fz}); } if(s.wob){ const cw=Math.cos(s.wob*dt), sw=Math.sin(s.wob*dt), nvx=s.vx*cw-s.vy*sw, nvy=s.vx*sw+s.vy*cw; s.vx=nvx; s.vy=nvy; } s.t+=dt; if(s.kind==='missile'&&s.ex!=null){ const _ta=Math.atan2(s.ey-s.y,s.ex-s.x), _ca=Math.atan2(s.vy,s.vx); let _da=_ta-_ca; _da=Math.atan2(Math.sin(_da),Math.cos(_da)); const _mt=7*dt, _na=_ca+Math.max(-_mt,Math.min(_mt,_da)), _msp=Math.hypot(s.vx,s.vy); s.vx=Math.cos(_na)*_msp; s.vy=Math.sin(_na)*_msp; const _dtg=Math.hypot(s.ex-s.x,s.ey-s.y); if(s._pd!=null && _dtg>s._pd && s._pd<0.2) s._boom=1; s._pd=_dtg; /* 목표 지나침(선회 반경 내 재접근 불가)=즉시 기폭 */ if(store.smoke){ s.trailT=(s.trailT||0)-dt; if(s.trailT<=0){ s.trailT=0.03; store.smoke.push({x:s.x,y:s.y,vx:0,vy:0,life:1,r0:0.5*(s.szf||1),col:'#ff9a4c',core:'#ffd9a0',glow:true,dk:5,ex:1.0,af:0.5}); } } } const _rf=(s.ramp&&s.t<s.ramp)?(0.34+0.66*Math.pow(s.t/s.ramp,1.6)):1;   // 가속 램프: 초반 잠깐 느리게 → 금방 최고속(이후 일정)
       s._dn=Math.hypot(s.vx,s.vy)*dt*_rf; s.x+=s.vx*dt*_rf; s.y+=s.vy*dt*_rf;
-      if((s.dist!=null && Math.hypot(s.x-s.mx,s.y-s.my)>=s.dist) || s.t>=s.dur || s._boom || (s.kind==='missile'&&s.ex!=null&&Math.hypot(s.x-s.ex,s.y-s.ey)<0.012)){ const _ix=(s.ex!=null?s.ex:s.x), _iy=(s.ey!=null?s.ey:s.y); store.impacts.push({x:_ix,y:_iy,life:1,kind:s.kind,col:s.color,boom:s.boom||4,szf:s.szf||1,ang:Math.atan2(s.vy,s.vx),sd:(store._sd=((store._sd||0)+1)&255)}); sh.splice(i,1); } }
+      if((s.dist!=null && Math.hypot(s.x-s.mx,s.y-s.my)>=s.dist) || s.t>=s.dur || s._boom || (s.kind==='missile'&&s.ex!=null&&Math.hypot(s.x-s.ex,s.y-s.ey)<0.012)){ const _ix=(s.ex!=null?s.ex:s.x), _iy=(s.ey!=null?s.ey:s.y); store.impacts.push({x:_ix,y:_iy,life:1,kind:(s.imk||s.kind),col:s.color,boom:s.boom||4,szf:s.szf||1,ang:Math.atan2(s.vy,s.vx),sd:(store._sd=((store._sd||0)+1)&255)}); sh.splice(i,1); } }
     const im=store.impacts; for(let i=im.length-1;i>=0;i--){ im[i].life-=dt*4.5; if(im[i].life<=0) im.splice(i,1); }
     const me=store.melee; for(let i=me.length-1;i>=0;i--){ const M=me[i]; if(M.delay>0){ M.delay-=dt; continue; } M.age=(M.age||0)+dt; M.life-=dt*(M.dk||5); if(M.life<=0) me.splice(i,1); }   // delay=발동 지연(보이드 버스트 등)
     const de=store.deaths; for(let i=de.length-1;i>=0;i--){ de[i].life-=dt*2.2; if(de[i].life<=0) de.splice(i,1); }
@@ -9446,6 +9446,10 @@ const FX={
       if(im.kind==='shell'){ ctx.globalCompositeOperation='lighter';
         ctx.globalAlpha=L*0.45; ctx.fillStyle='#fff2c0'; ctx.beginPath(); ctx.arc(0,0,(1.2+p*1.4)*z,0,6.283); ctx.fill();   // 옅은 화염 코어
         ctx.globalAlpha=L*0.16; ctx.fillStyle='#ff9a3c'; ctx.beginPath(); ctx.arc(0,0,(2.0+p*2.6)*z,0,6.283); ctx.fill(); }   // 아주 옅은 글로우(산탄 제거)
+      else if(im.kind==='stab'){ ctx.globalCompositeOperation='source-over'; ctx.rotate(im.ang||0);   // 가시 박힘(단순·현실적): 짧은 자상 + 박힌 점 + 미세 튀김
+        ctx.globalAlpha=L*0.8; ctx.strokeStyle='#5f8f2a'; ctx.lineWidth=1.0*z; ctx.beginPath(); ctx.moveTo(-1.3*z,0); ctx.lineTo((2.4+p*1.4)*z,0); ctx.stroke();   // 자상 선(진입 방향)
+        ctx.globalAlpha=L*0.9; ctx.fillStyle='#bfe07a'; ctx.beginPath(); ctx.arc(0,0,0.7*z,0,6.283); ctx.fill();   // 박힌 점
+        for(let q=0;q<3;q++){ const an=(q-1)*0.6, dd=(1.0+p*2.2)*z; ctx.globalAlpha=L*0.5; ctx.fillStyle='#7fae2c'; ctx.beginPath(); ctx.arc((2.0+p*1.4)*z+Math.cos(an)*dd*0.4, Math.sin(an)*dd, 0.45*z, 0, 6.283); ctx.fill(); } }   // 앞쪽 미세 체액 튀김
       else if(im.kind==='needle'){ ctx.globalAlpha=L; ctx.strokeStyle=im.col; ctx.lineWidth=1.3*z; for(let q=0;q<5;q++){ const a=q*1.3+p, len=(4+p*6)*z; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(a)*len,Math.sin(a)*len); ctx.stroke(); } }
       else if(im.kind==='bullet'||im.kind==='mg'){ ctx.globalCompositeOperation='lighter';   // 실제 피탄 — 희미한 작은 섬광 + 진행방향 짧은 비산(뭉침 방지)
         ctx.globalAlpha=L*0.4; ctx.fillStyle='#fff0c4'; ctx.beginPath(); ctx.arc(0,0,1.2*z*(0.5+L*0.7),0,6.283); ctx.fill();
@@ -10214,6 +10218,7 @@ function fxLabStep(dt){ const L=FXLAB; if(!L.att) fxLabSpawnScene(); const a=L.a
     else if(L.attGm==='skyguard'&&tgt===L.air) fxLabTempestAir(L, a, tgt.x, ty, st.size);   // 템페스트 공중: 아주 얇은 소형 고속 미사일 2발
     else if(fxId==='hellfire') fxLabHellfireFire(L, a, tgt.x, ty, st.size);   // 헬파이어: 발키리식 유도 로켓 볼리(시간차·곡선·개별 타격)
     else if(fxId==='falcon') fxLabFalconFire(L, a, tgt.x, ty, st.size);   // 팔콘: 두 날개 평행 트윈 레이저
+    else if(fxId==='hydra') fxLabHydraFire(L, a, tgt.x, ty, st.size);   // 리퍼: 양손 가시 다발(대상 전범위 랜덤)
     else { const _dx=tgt.x-a.x, _dy=ty-a.y, _d=Math.hypot(_dx,_dy)||1, _mz=0.03*((st.size||16)/16);
       let _sx=a.x+(_dx/_d)*_mz, _sy=a.y+(_dy/_d)*_mz-0.024;
       const _mzg=(window.M3D && M3D.muzzleAt)?M3D.muzzleAt(a.uid):null;   // 실제 3D 총구 위치(있으면 — 각도 무관)
@@ -10236,6 +10241,16 @@ function fxLabTempestAir(L, a, tx, ty, size){   // 템페스트 공중: 얇은 �
   const sideN=0.012, szf=(size||16)/18*0.34, sp=2.8;   // 스트라이더(szf~0.73·sp1.7) 대비 절반 크기·1.6배 속도
   for(let k=-1;k<=1;k+=2){ const sx=ox+px*sideN*k, sy=oy+py*sideN*k, baseA=Math.atan2(ty-sy,tx-sx), la=baseA+k*0.3, ed=Math.hypot(tx-sx,ty-sy)||1;
     L.store.shots.push({x:sx,y:sy,vx:Math.cos(la)*sp,vy:Math.sin(la)*sp,t:0,dur:0.9,kind:'missile',color:'#9fe0ff',boom:4,szf:szf,mx:sx,my:sy,ex:tx,ey:ty,dist:ed*0.99,noflash:1}); } }   // dist로 확실히 명중(고속 통과 방지)
+function fxLabHydraFire(L, a, tx, ty, size){   // 리퍼: 양손에서 가시 다발이 아주 짧은 텀으로 연달아 발사 → 대상 전 범위 랜덤 타격(한 점 X)
+  if(!L.store||!L.store.shots) return;
+  const _c=(window.M3D&&M3D.centerAt)?M3D.centerAt(a.uid):null, ox0=_c?_c.x:a.x, oy0=_c?_c.y:(a.y-0.02);
+  const dx=tx-ox0, dy=ty-oy0, d=Math.hypot(dx,dy)||1, px=-dy/d, py=dx/d;   // 손 좌우(진행 수직)
+  const N=6, szf=(size||16)/18*0.55, sp=5.2, R=0.06*fxZoomF(), ho=0.013*fxZoomF();   // R=대상 랜덤 산포 반경
+  for(let k=0;k<N;k++){ const hand=(k%2?1:-1), sx=ox0+px*ho*hand, sy=oy0+py*ho*hand;
+    const rr=Math.sqrt(0.15+Math.random()*0.85)*R, ra=Math.random()*6.283, ex=tx+Math.cos(ra)*rr, ey=ty+Math.sin(ra)*rr*0.72;   // 대상 전 범위 랜덤(약간 납작)
+    const la=Math.atan2(ey-sy,ex-sx), ed=Math.hypot(ex-sx,ey-sy)||1;
+    L.store.shots.push({x:sx,y:sy,vx:Math.cos(la)*sp,vy:Math.sin(la)*sp,t:0,dur:Math.min(0.6,ed/sp),kind:'needle',imk:'stab',color:'#9fd356',boom:3,szf:szf,delay:k*0.026,mx:sx,my:sy,dist:ed,ex:ex,ey:ey,noflash:1}); }   // 아주 짧은 텀(0.026s×6)=투두둑 연사
+}
 function fxLabFalconFire(L, a, tx, ty, size){   // 팔콘: 두 날개(바깥쪽)에서 파란 에너지 파동 빔 2발 — 날며 간격 아주 살짝만 좁아짐(수렴 X)
   if(!L.store||!L.store.shots) return;
   const _c=(window.M3D&&M3D.centerAt)?M3D.centerAt(a.uid):null, ox=_c?_c.x:a.x, oy=_c?_c.y:(a.y-0.03);   // 부양 기체 중앙
