@@ -9404,9 +9404,9 @@ const FX={
       store.melee.push({kind:'sparkM',x:sx,y:sy,life:1,col:col,szf:szf,sd:(store._sd=((store._sd||0)+1)&255),dk:3.4});    // 발사구: 에너지 장전(공격 사이클 내내 보이게)
       store.melee.push({kind:'spark', x:tx,y:ty,life:1,col:col,szf:szf,sd:(store._sd=((store._sd||0)+1)&255),dk:3.2});  // 타격 지점: 연한 범위 스파크
       return; }
-    if(st.kind==='voidburst'){   // 보이드: 손 앞 급성장 구체(차지) → 넓은 영역 에너지 필(버스트, 차지 후 지연 발동)
-      store.melee.push({kind:'voidQ',x:sx,y:sy,life:1,col:col,szf:szf,sd:(store._sd=((store._sd||0)+1)&255),dk:3.8});
-      store.melee.push({kind:'voidA',x:tx,y:ty,life:1,col:col,szf:szf,sd:(store._sd=((store._sd||0)+1)&255),dk:2.1,delay:0.2});
+    if(st.kind==='voidburst'){   // 보이드(근접): 대상 위치에서 구체가 빠르게 커지며 그 지역을 에너지로 채움 — 발사·이동 없음
+      store.melee.push({kind:'voidQ',x:tx,y:ty,life:1,col:col,szf:szf,sd:(store._sd=((store._sd||0)+1)&255),dk:3.2});          // 대상 위 급성장 구체
+      store.melee.push({kind:'voidA',x:tx,y:ty,life:1,col:col,szf:szf,sd:(store._sd=((store._sd||0)+1)&255),dk:2.1,delay:0.14});   // 구체를 따라 영역 에너지 필
       return; }
     if(st.kind==='spit'){ const strands=st.count||5; if(store.shots.length>200) store.shots.splice(0, store.shots.length-200);   // 스웜 일꾼: 독 가래 여러 갈래(거리÷비행시간=스케일 독립)
       for(let i=0;i<strands;i++){ const a=ang+(i-(strands-1)/2)*0.24+(Math.random()-0.5)*0.18, dj=dist*(0.60+Math.random()*0.22), td=0.08+Math.random()*0.05, sp=dj/td;
@@ -10187,7 +10187,6 @@ function fxLabStep(dt){ const L=FXLAB; if(!L.att) fxLabSpawnScene(); const a=L.a
       const _mzg=(window.M3D && M3D.muzzleAt)?M3D.muzzleAt(a.uid):null;   // 실제 3D 총구 위치(있으면 — 각도 무관)
       if(_mzg){ const _bl=(fxId==='tank')?0:0.02*fxZoomF(); _sx=_mzg.x+(_dx/_d)*_bl; _sy=_mzg.y+(_dy/_d)*_bl; }   // 머즐(투영) — 탱크는 3D 포구 기준점 그대로
       else if(window.M3D && M3D.airFloat && M3D.airFloat(fxId)){ const _ctr=M3D.centerAt?M3D.centerAt(a.uid):null; if(_ctr){ const _fw=_mz+((fxId==='dreadnought')?0.0127*fxZoomF():0)+((fxId==='skydancer')?0.007*fxZoomF():0); _sx=_ctr.x+(_dx/_d)*_fw; _sy=_ctr.y+(_dy/_d)*_fw; } }   // 공중 부양 유닛: 몸 중앙+전방 — 드레드노트/스카이댄서(스파크 몸 바로 앞)는 추가 전방 보정
-      if(fxId==='archon'){ const _rx=-(_dy/_d), _ry=(_dx/_d), _ho=0.013*fxZoomF(); _sx+=_rx*_ho+(_dx/_d)*0.008*fxZoomF(); _sy+=_ry*_ho+(_dy/_d)*0.008*fxZoomF(); }   // 보이드: 오른손 앞(진행 오른쪽+전방)에서 차지
       const _opt={speed:(st.melee?6.5:(fxId==='marine'?4.5:3.6)), unitSize:st.size}, _stA=(typeof ATK_STYLE!=='undefined'?(ATK_STYLE[fxId]||ATK_STYLE._default):{}), _hd=_stA.hit||0;
       if(_hd>0) (L.pend=L.pend||[]).push({t:_hd, id:fxId, sx:_sx, sy:_sy, tx:tgt.x, ty:ty, opt:_opt});
       else FX.spawn(L.store, fxId, _sx, _sy, tgt.x, ty, _opt); }
