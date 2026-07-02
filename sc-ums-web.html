@@ -9384,7 +9384,7 @@ const ATK_STYLE={
   medusa:    {kind:'psi',    color:'#c7a0ff'},   // 메두사: 사이오닉
   wyvern:    {kind:'needle', color:'#bfe89a', count:2},   // 와이번: 다연발 가시
   behemoth:  {kind:'shell',  color:'#d0b070', spd:2.0},   // 베히모스: 대형 포
-  falcon:    {kind:'bullet', color:'#ffd66a', lng:3.0, hd:0.5, wd:0.5, spd:2.6, tr:0.5},   // 팔콘: 얇고 긴 고속 레이저(FxLab에선 날개 트윈 평행 발사)
+  falcon:    {kind:'beam', color:'#6ec8ff', lng:3.0, hd:0.85, wd:0.9, spd:2.6},   // 팔콘: 파란 에너지 파동 빔(FxLab에선 날개 트윈 평행 발사)
   skydancer: {kind:'plasma', color:'#ffe08a'},   // 스카이댄서: 플라즈마
   archangel: {kind:'plasma', color:'#ffd66a'},   // 아크엔젤: 플라즈마 포
   kronos:    {kind:'plasma', color:'#ffcf6a'},   // 크로노스: 시공 플라즈마
@@ -9483,6 +9483,11 @@ const FX={
     case 'bullet': { const L=s.lng||1, W=s.wd||1; ctx.globalAlpha=.28; ctx.fillStyle=s.color; ctx.fillRect(-6.5*L,-0.6*W,6.5*L,1.2*W);
       ctx.globalAlpha=.85; ctx.fillStyle=s.core||'#ffe2a0'; ctx.fillRect(-2.4*L,-0.55*W,0.8+2.4*L,1.1*W);
       ctx.globalAlpha=1; ctx.fillStyle='#fff2cf'; ctx.beginPath();ctx.arc(0.6,0,1.1*(s.hd||1),0,6.28);ctx.fill(); break; }
+    case 'beam': { const L=s.lng||3, W=s.wd||1; ctx.globalCompositeOperation='lighter';   // 에너지 파동 빔(팔콘): 부드러운 글로우 + 둥근 에너지 헤드
+      ctx.globalAlpha=.3;  ctx.fillStyle=s.color; ctx.fillRect(-7*L,-1.15*W,7*L,2.3*W);       // 넓은 색 글로우
+      ctx.globalAlpha=.75; ctx.fillStyle=s.color; ctx.fillRect(-6*L,-0.6*W,6*L,1.2*W);        // 빔 본체
+      ctx.globalAlpha=.95; ctx.fillStyle='#eaf8ff'; ctx.fillRect(-4.6*L,-0.28*W,4.6*L,0.56*W); // 흰 코어
+      ctx.globalAlpha=.9;  ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.ellipse(0.4,0,1.6*(s.hd||1),0.95*(s.hd||1),0,0,6.28); ctx.fill(); break; }   // 둥근 파동 헤드
     case 'mg': ctx.globalAlpha=.25; ctx.fillStyle=s.color; ctx.fillRect(-5,-0.22,5,0.44);
       ctx.globalAlpha=1; ctx.fillStyle='#fff7d8'; ctx.fillRect(-1.2,-0.28,2.6,0.56); break;
     case 'sniper': ctx.globalAlpha=.3; ctx.fillStyle=s.color; ctx.beginPath(); ctx.moveTo(1.5,-0.6); ctx.lineTo(1.5,0.6); ctx.lineTo(-24,0.05); ctx.lineTo(-24,-0.05); ctx.closePath(); ctx.fill();
@@ -10139,13 +10144,15 @@ function fxLabTempestAir(L, a, tx, ty, size){   // 템페스트 공중: 얇은 �
   const sideN=0.012, szf=(size||16)/18*0.34, sp=2.8;   // 스트라이더(szf~0.73·sp1.7) 대비 절반 크기·1.6배 속도
   for(let k=-1;k<=1;k+=2){ const sx=ox+px*sideN*k, sy=oy+py*sideN*k, baseA=Math.atan2(ty-sy,tx-sx), la=baseA+k*0.3, ed=Math.hypot(tx-sx,ty-sy)||1;
     L.store.shots.push({x:sx,y:sy,vx:Math.cos(la)*sp,vy:Math.sin(la)*sp,t:0,dur:0.9,kind:'missile',color:'#9fe0ff',boom:4,szf:szf,mx:sx,my:sy,ex:tx,ey:ty,dist:ed*0.99,noflash:1}); } }   // dist로 확실히 명중(고속 통과 방지)
-function fxLabFalconFire(L, a, tx, ty, size){   // 팔콘: 두 날개에서 얇고 긴 트윈 레이저 — 평행 유지(수렴 X), 고속 직진
+function fxLabFalconFire(L, a, tx, ty, size){   // 팔콘: 두 날개(바깥쪽)에서 파란 에너지 파동 빔 2발 — 날며 간격 아주 살짝만 좁아짐(수렴 X)
   if(!L.store||!L.store.shots) return;
   const _c=(window.M3D&&M3D.centerAt)?M3D.centerAt(a.uid):null, ox=_c?_c.x:a.x, oy=_c?_c.y:(a.y-0.03);   // 부양 기체 중앙
   const dx=tx-ox, dy=ty-oy, d=Math.hypot(dx,dy)||1, px=-dy/d, py=dx/d;   // 진행 수직(날개 방향)
-  const sideN=0.014*fxZoomF(), szf=(size||16)/18*0.5, sp=4.6, baseA=Math.atan2(dy,dx);   // 공용 각도 → 두 발 평행
-  for(let k=-1;k<=1;k+=2){ const sx=ox+px*sideN*k, sy=oy+py*sideN*k, ed=d;   // 날개 좌/우 출발, 같은 방향·같은 거리 직진(간격 유지)
-    L.store.shots.push({x:sx,y:sy,vx:Math.cos(baseA)*sp,vy:Math.sin(baseA)*sp,t:0,dur:Math.min(0.6,Math.max(0.05,ed/sp)),kind:'bullet',color:'#ffd66a',boom:3,szf:szf,mx:sx,my:sy,dist:ed,ex:sx+Math.cos(baseA)*ed,ey:sy+Math.sin(baseA)*ed,lng:3.0,hd:0.5,wd:0.5,tr:0.5,noflash:(k>0?0:1)}); } }   // 얇고 긴 레이저(머즐 플래시는 한쪽만)
+  const sideN=0.024*fxZoomF(), szf=(size||16)/18*0.5, sp=4.6;   // 더 바깥 날개에서 발사
+  for(let k=-1;k<=1;k+=2){ const sx=ox+px*sideN*k, sy=oy+py*sideN*k;   // 날개 좌/우 출발
+    const ext=tx+px*sideN*0.8*k, eyt=ty+py*sideN*0.8*k, la=Math.atan2(eyt-sy,ext-sx), ed=Math.hypot(ext-sx,eyt-sy)||1;   // 도착 간격 80% → 아주 살짝만 좁아짐
+    L.store.shots.push({x:sx,y:sy,vx:Math.cos(la)*sp,vy:Math.sin(la)*sp,t:0,dur:Math.min(0.6,Math.max(0.05,ed/sp)),kind:'beam',color:'#6ec8ff',boom:4,szf:szf,mx:sx,my:sy,dist:ed,ex:ext,ey:eyt,lng:3.0,hd:0.85,wd:0.9,noflash:1});   // 파란 에너지 빔(살짝 두껍게)
+    if(L.store.smoke) L.store.smoke.push({x:sx,y:sy,vx:Math.cos(la)*0.04,vy:Math.sin(la)*0.04,life:1,r0:1.5,col:'#8fd4ff',glow:true,dk:5.5,ex:2.2,af:0.6}); } }   // 발사구 에너지 펄스(총구 화염 대체)
 function fxLabHellfireFire(L, a, tx, ty, size){   // 헬파이어: 스타크 발키리식 로켓 볼리 — 여러 발 시간차 발사, 제각각 곡선 유도, 착탄 산포(미사일당 개별 타격)
   if(!L.store||!L.store.shots) return;
   const _c=(window.M3D&&M3D.centerAt)?M3D.centerAt(a.uid):null, ox=_c?_c.x:a.x, oy=_c?_c.y:(a.y-0.03);   // 부양 기체 중앙
