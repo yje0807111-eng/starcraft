@@ -9463,14 +9463,18 @@ const FX={
         ctx.globalAlpha=fI*(0.55+0.35*flick); ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(b.x,b.y,1.35*z,0,6.283); ctx.fill();   // 대상 감전 코어(플리커)
         ctx.globalAlpha=fI*0.65*flick; ctx.strokeStyle=m.col; ctx.lineWidth=0.7*z; for(let q=0;q<5;q++){ const an=q*1.256+((fsd*3+q)%7)*0.14, ln=(2.6+((fsd+q*5)%4)*1.1)*z; ctx.beginPath(); ctx.moveTo(b.x,b.y); ctx.lineTo(b.x+Math.cos(an)*ln*0.5+(((fsd*5+q*7)%7)-3)*z*0.5, b.y+Math.sin(an)*ln*0.5+(((fsd*3+q*11)%7)-3)*z*0.5); ctx.lineTo(b.x+Math.cos(an)*ln, b.y+Math.sin(an)*ln); ctx.stroke(); } }   // 대상 주위 잔전격(매 프레임 재추첨)
       else if(m.kind==='push'){ const c=toScreen(m.x,m.y), p=1-L, z2=z, sd=m.sd||0; ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=L*0.78; ctx.fillStyle='#fff3e2'; ctx.beginPath(); ctx.arc(c.x,c.y,(0.55+L*1.9)*z2,0,6.283); ctx.fill(); ctx.globalAlpha=L*0.3; ctx.fillStyle='#ffb066'; ctx.beginPath(); ctx.arc(c.x,c.y,(1.2+p*2.9)*z2,0,6.283); ctx.fill(); ctx.globalAlpha=L*0.68; ctx.strokeStyle='#ffd7a0'; ctx.lineCap='round'; for(let _q=0;_q<6;_q++){ const _a=m.ang+(_q-2.5)*0.42+((sd*7+_q*13)%7-3)*0.05, _len=(2.3+p*4.8)*z2*(0.65+((sd+_q*5)%4)/4*0.7); ctx.lineWidth=(1.05-_q*0.07)*z2; ctx.beginPath(); ctx.moveTo(c.x,c.y); ctx.lineTo(c.x+Math.cos(_a)*_len,c.y+Math.sin(_a)*_len); ctx.stroke(); } }
-      else if(m.kind==='slash'){ // 검격: 휘두르는 초승달 칼자국(선두 밝고 뒤로 갈수록 흐려지는 스윕)
-        const c=toScreen(m.x,m.y), p=1-L, sw=0.9;   // sw=호 반폭(rad). 수명 동안 살짝 벌어짐
-        ctx.save(); ctx.translate(c.x,c.y); ctx.rotate(m.ang + (p-0.5)*0.7);   // 진행에 따라 살짝 회전(휘두르는 느낌)
+      else if(m.kind==='slash'){ // 검격: 대상 몸 위에 새겨지는 X자 베기(단일 타깃 고정 — 이동·확산 없음)
+        const c=toScreen(m.x,m.y), p=1-L, g=Math.min(1,p*7);   // g=등장 팝(순간 새겨짐)
+        ctx.save(); ctx.translate(c.x,c.y); ctx.rotate(m.ang);
         ctx.globalCompositeOperation='lighter'; ctx.lineCap='round';
-        const R=(16+p*12)*z;   // 반경이 커지며 스윕
-        ctx.globalAlpha=L*0.55; ctx.strokeStyle=m.col; ctx.lineWidth=(4.5-p*3)*z; ctx.beginPath(); ctx.arc(0,0,R,-sw,sw); ctx.stroke();       // 색 글로우(굵고 흐리게)
-        ctx.globalAlpha=L*0.98; ctx.strokeStyle='#ffffff'; ctx.lineWidth=(1.6-p*1.1)*z; ctx.beginPath(); ctx.arc(0,0,R,-sw*0.9,sw*0.75); ctx.stroke();   // 흰 칼날 코어(얇고 선명)
-        const tx=Math.cos(sw*0.78)*R, ty=Math.sin(sw*0.78)*R; ctx.globalAlpha=L; ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(tx,ty,(1.7-p)*z,0,6.28); ctx.fill();   // 칼끝 섬광
+        const len=12*z*(0.85+0.15*g);   // 반길이 고정(파동식 확산 제거)
+        const cut=(a,l,w)=>{ ctx.save(); ctx.rotate(a);
+          ctx.globalAlpha=L*0.5;  ctx.strokeStyle=m.col;   ctx.lineWidth=w*2.4*z; ctx.beginPath(); ctx.moveTo(-l,0); ctx.lineTo(l,0); ctx.stroke();   // 색 글로우
+          ctx.globalAlpha=L*0.95; ctx.strokeStyle='#ffffff'; ctx.lineWidth=w*0.85*z; ctx.beginPath(); ctx.moveTo(-l*0.92,0); ctx.lineTo(l*0.92,0); ctx.stroke();   // 흰 칼날 코어
+          ctx.restore(); };
+        cut(0.62, len, 1);                          // 주 베기(사선)
+        if(p>0.12) cut(-0.62, len*0.78, 0.8);       // 한 박자 뒤 교차 베기 → X자
+        ctx.globalAlpha=L*0.85; ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(0,0,1.6*z*g,0,6.28); ctx.fill();   // 중심 타격 섬광
         ctx.restore(); }
       else { const c=toScreen(m.x,m.y), R=20*z, a0=m.ang-0.9, a1=m.ang+0.9; ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=L*0.9; ctx.strokeStyle='#ff8f8f'; ctx.lineWidth=2*z; ctx.beginPath(); ctx.arc(c.x,c.y,R,a0,a1); ctx.stroke(); ctx.lineWidth=1.4*z; ctx.beginPath(); ctx.arc(c.x,c.y,R*0.66,a0,a1); ctx.stroke(); } }   // claw(매트론)
     for(const d of store.deaths){ const c=toScreen(d.x,d.y), L=Math.max(0,d.life), p=1-L, z=sz*(d.szf||1); ctx.save(); ctx.translate(c.x,c.y); ctx.globalCompositeOperation='lighter';
