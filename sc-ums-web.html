@@ -6033,29 +6033,32 @@ function useSkill(){ const us=selUnits(); if(!us.length) return;
 //   · 시전=castSkill → 지정형은 armed 후 맵 클릭(fireSkillGround). 쿨다운/에너지=stepSkills, 시각=drawSkillFx.
 //   · 전투 유즈맵은 hitEnemy 훅(_skStormDamage)으로 실제 피해; 관리자(적 없음)에선 순수 연출.
 // ════════════════════════════════════════════════════════════════
-const SKILL_EN_REGEN=8;   // 에너지 재생(초당) — maxEn>0 유닛 공통
+const SKILL_EN_REGEN=8;    // 에너지 재생(초당) — maxEn>0 유닛 공통
+const DETECT_RANGE=0.20;  // 탐지 유닛(와쳐·제플린·터렛 등) 은신 감지 반경(넓게·상시 유지)
+const HEAL_RANGE=0.14;    // 메딕 치유 사거리(자동/지정 공통)
+const PERMA_CLOAK={ dark_templar:true };   // 상시 은신 유닛(스킬 아님) — 다크템플러
+const HEALER={ medic:true };               // 자동/지정 치유 유닛
+const BIONIC={ marine:1, ghost:1, medic:1, machinegun:1 };   // 바이오닉(치유 대상) — 유니온 보병(확장 가능)
 SKILL_ICON.psi_storm='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h9l-2.4 5H18l-9 11 2.2-8H5z"/></svg>';   // 스톰=번개 구름
-SKILL_ICON.cloak='<svg viewBox="0 0 24 24" fill="currentColor"><path opacity=".5" d="M12 5c5.5 0 9.3 5 10 7-.7 2-4.5 7-10 7S2.7 14 2 12c.7-2 4.5-7 10-7zm0 3a4 4 0 100 8 4 4 0 000-8z"/><path d="M3.7 2.3l18 18-1.4 1.4-18-18z"/></svg>';   // 은신=가려진 눈
 SKILL_ICON.heal='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 3h4v7h7v4h-7v7h-4v-7H3v-4h7z"/></svg>';   // 치유=십자
-SKILL_ICON.detect='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 5c5.5 0 9.3 5 10 7-.7 2-4.5 7-10 7S2.7 14 2 12c.7-2 4.5-7 10-7zm0 3a4 4 0 100 8 4 4 0 000-8z"/></svg>';   // 탐지=눈
 SKILL_ICON.psi_cloak='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l8 3v6c0 5-3.4 9-8 11-4.6-2-8-6-8-11V5z"/></svg>';   // 차원은폐=방패
 const SKILLS={
   // 하이템플러: 사이오닉 스톰 — 지정 지점 광역 지속 피해(연출: 보라 뇌운+번개)
   psi_storm:{ key:'psi_storm', name:'사이오닉 스톰', kind:'target_ground', energy:75, cd:12, dur:3, radius:0.075, dmg:14,
     arm:'⚡ 사이오닉 스톰: 떨어뜨릴 지점을 클릭하세요.' },
-  // 다크템플러: 은신 — 토글(반투명 은폐). 전투 유즈맵 훅: 미탐지 시 피격/조준 불가
-  cloak:{ key:'cloak', name:'은신', kind:'toggle', energy:0, drain:0, cd:1 },
-  // 메딕: 치유 — 지정 아군 1기 지속 채널(에너지 소모하며 체력 회복)
-  heal:{ key:'heal', name:'치유', kind:'target_unit', energy:0, drain:10, hps:24, range:0.16,
-    arm:'✚ 치유: 치유할 아군을 클릭하세요.' },
-  // 와쳐·제플린: 탐지 — 오라(범위 내 은신 감지·표시). 훅: 범위 내 적 _revealed
-  detect:{ key:'detect', name:'탐지', kind:'aura', energy:0, radius:0.14, detect:true },
+  // 메딕: 지정 힐 — 아군 1기를 지정해 따라다니며 치료(미지정 시 근처 부상 바이오닉 자동 치료)
+  heal:{ key:'heal', name:'지정 힐', kind:'target_unit', energy:0, drain:10, hps:24, range:HEAL_RANGE,
+    arm:'✚ 지정 힐: 따라다니며 치료할 아군을 클릭하세요.' },
   // 아비터(크로노스): 차원 은폐 — 오라(범위 내 아군 은신)
   psi_cloak:{ key:'psi_cloak', name:'차원 은폐', kind:'aura', energy:0, radius:0.12, cloakAllies:true },
 };
 // 모델키(gmodel||id) → 스킬 키 목록. 하단 선택 패널 '여분 구역'에 버튼 표시.
-const UNIT_SKILLS={ high_templar:['psi_storm'], dark_templar:['cloak'], medic:['heal'], observer:['detect'], overlord:['detect'], kronos:['psi_cloak'] };
+// 다크템플러=상시 은신(PERMA_CLOAK)·와쳐/제플린=상시 탐지(U.detector) → 스킬 버튼 없음(패시브)
+const UNIT_SKILLS={ high_templar:['psi_storm'], medic:['heal'], kronos:['psi_cloak'] };
 function unitSkillKeys(u){ if(!u) return []; return UNIT_SKILLS[u.gmodel||u.id]||UNIT_SKILLS[u.id]||[]; }
+function _skKey(u){ return (u&&(u.gmodel||u.id))||''; }
+function isCloaked(u){ return !!(u&&(PERMA_CLOAK[_skKey(u)] || (u.skillOn&&u.skillOn.cloak) || u._fieldCloak)); }   // 상시/토글/오라 은신
+function isDetector(u){ const d=u&&(typeof U!=='undefined')&&U[_skKey(u)]; return !!(d&&d.detector); }   // 탐지 유닛(U.detector)
 function renderSkillBar(){ const bar=document.getElementById('skillBar'); if(!bar) return;
   if(typeof G==='undefined'||G.selEnemy!=null||G.sel.length!==1){ if(bar.style.display!=='none'){ bar.style.display='none'; bar.innerHTML=''; bar.dataset.sig=''; } return; }
   const u=G.units.find(x=>x.uid===G.sel[0]); const keys=u?unitSkillKeys(u):[];
@@ -6064,7 +6067,7 @@ function renderSkillBar(){ const bar=document.getElementById('skillBar'); if(!ba
   let sig=u.uid+'|'+keys.length+'|', html='';
   for(const key of keys){ const sk=SKILLS[key]; if(!sk) continue;
     const cd=Math.ceil(u.skillCd[key]||0), armed=(G.skillArm&&G.skillArm.uid===u.uid&&G.skillArm.key===key)?1:0,
-          on=((((sk.kind==='toggle'||sk.kind==='aura')&&u.skillOn&&u.skillOn[key])||(sk.kind==='target_unit'&&u.channel&&u.channel.key===key))?1:0),
+          on=((((sk.kind==='toggle'||sk.kind==='aura')&&u.skillOn&&u.skillOn[key])||(sk.kind==='target_unit'&&u.healFocus))?1:0),
           lowE=(sk.energy>0&&(u.en||0)<sk.energy)?1:0,
           dis=(cd>0||lowE)&&!armed&&!on?1:0;
     sig+=key+cd+armed+on+lowE+';';
@@ -6081,15 +6084,16 @@ function castSkill(key){ if(typeof G==='undefined'||G.sel.length!==1) return; co
   const sk=SKILLS[key]; if(!sk||unitSkillKeys(u).indexOf(key)<0) return;
   u.skillCd=u.skillCd||{};
   if((u.skillCd[key]||0)>0){ if(typeof toast==='function') toast('쿨다운 '+Math.ceil(u.skillCd[key])+'초'); return; }
-  if(sk.kind==='toggle'||sk.kind==='aura'){ u.skillOn=u.skillOn||{}; const nv=!u.skillOn[key]; u.skillOn[key]=nv; if(key==='cloak')u.cloaked=nv; if(typeof playSfx==='function')playSfx('skill'); if(typeof addChat==='function') addChat('', sk.name+(nv?' 켜짐':' 꺼짐')); renderSkillBar(); return; }
+  if(sk.kind==='toggle'||sk.kind==='aura'){ u.skillOn=u.skillOn||{}; const nv=!u.skillOn[key]; u.skillOn[key]=nv; if(typeof playSfx==='function')playSfx('skill'); if(typeof addChat==='function') addChat('', sk.name+(nv?' 켜짐':' 꺼짐')); renderSkillBar(); return; }
   if(sk.energy>0 && (u.en||0)<sk.energy){ if(typeof toast==='function') toast('에너지 부족'); return; }
   if(sk.kind==='target_ground'){ G.skillArm={uid:u.uid,key:key,mode:'ground'}; G.focusArm=false; G.patrolArm=false; if(typeof addChat==='function') addChat('', sk.arm||'ℹ️ 대상 지점을 클릭하세요.'); renderSkillBar(); return; }
-  if(sk.kind==='target_unit'){ if(u.channel&&u.channel.key===key){ u.channel=null; if(typeof addChat==='function') addChat('', sk.name+' 중단'); renderSkillBar(); return; } G.skillArm={uid:u.uid,key:key,mode:'unit'}; G.focusArm=false; G.patrolArm=false; if(typeof addChat==='function') addChat('', sk.arm||'ℹ️ 대상 아군을 클릭하세요.'); renderSkillBar(); return; }
+  if(sk.kind==='target_unit'){ if(u.healFocus){ u.healFocus=null; if(typeof addChat==='function') addChat('', sk.name+' 해제(자동 치료로 복귀)'); renderSkillBar(); return; } G.skillArm={uid:u.uid,key:key,mode:'unit'}; G.focusArm=false; G.patrolArm=false; if(typeof addChat==='function') addChat('', sk.arm||'ℹ️ 대상 아군을 클릭하세요.'); renderSkillBar(); return; }
 }
-function fireSkillUnit(uid,key,tgtUid){ const u=G.units.find(z=>z.uid===uid), t=G.units.find(z=>z.uid===tgtUid); const sk=SKILLS[key]; if(!u||!t||!sk) return;
-  if(key==='heal') u.channel={key:'heal', target:tgtUid, t:0};
-  if(typeof playSfx==='function')playSfx('skill'); if(typeof addChat==='function') addChat('', sk.name+' 채널 시작'); renderSkillBar();
+function fireSkillUnit(uid,key,tgtUid){ const u=G.units.find(z=>z.uid===uid), t=G.units.find(z=>z.uid===tgtUid); const sk=SKILLS[key]; if(!u||!t||!sk||t===u) return;
+  if(key==='heal') u.healFocus=tgtUid;   // 지정 힐: 따라다니며 이 유닛만 치료
+  if(typeof playSfx==='function')playSfx('skill'); if(typeof addChat==='function') addChat('', sk.name+': 대상 지정'); renderSkillBar();
 }
+function _healApply(u,t,dt){ if(u.maxEn>0){ if((u.en||0)<=0) return false; u.en=Math.max(0,u.en-10*dt); } if(t.maxHp){ t.hp=Math.min(t.maxHp,(t.hp!=null?t.hp:t.maxHp)+24*dt); } return true; }
 function fireSkillGround(uid,key,x,y){ const u=G.units.find(z=>z.uid===uid); const sk=SKILLS[key]; if(!u||!sk) return;
   if(sk.energy>0){ if((u.en||0)<sk.energy) return; u.en-=sk.energy; }
   u.skillCd=u.skillCd||{}; u.skillCd[key]=sk.cd||0; G.skillFx=G.skillFx||[];
@@ -6103,19 +6107,25 @@ function _skAura(u, key, sk){ if(!G.units) return; const r2=(sk.radius||0.12)*(s
   if(sk.detect && G.enemies){ for(const e of G.enemies){ if(e.dead) continue; const dx=e.x-u.x, dy=e.y-u.y; if(dx*dx+dy*dy<=r2) e._revealed=true; } }   // 탐지 훅: 범위 내 적 표식(전투 유즈맵용)
 }
 function stepSkills(dt){ if(typeof G==='undefined'||!G.units) return; G._skT=(G._skT||0)+dt;
-  for(const u of G.units) u._fieldCloak=false;   // 오라 은신 상태 매 프레임 초기화(오라가 재설정)
+  for(const u of G.units){ u._fieldCloak=false; u._healTgt=null; }   // 오라 은신·치유 대상 매 프레임 초기화
   for(const u of G.units){ if(u.fixed) continue;
     if(u.maxEn>0) u.en=Math.min(u.maxEn,(u.en||0)+SKILL_EN_REGEN*dt);   // 에너지 재생
     if(u.skillCd){ for(const k in u.skillCd){ if(u.skillCd[k]>0) u.skillCd[k]=Math.max(0,u.skillCd[k]-dt); } }
     if(u.skillOn){ for(const k in u.skillOn){ if(!u.skillOn[k]) continue; const sk=SKILLS[k]; if(!sk) continue;
-      if(sk.drain&&u.maxEn>0){ u.en-=sk.drain*dt; if(u.en<=0){ u.en=0; u.skillOn[k]=false; if(k==='cloak')u.cloaked=false; continue; } }
+      if(sk.drain&&u.maxEn>0){ u.en-=sk.drain*dt; if(u.en<=0){ u.en=0; u.skillOn[k]=false; continue; } }
       if(sk.kind==='aura') _skAura(u, k, sk); } }
-    if(u.channel){ const sk=SKILLS[u.channel.key], t=G.units.find(z=>z.uid===u.channel.target);   // 채널(치유): 지정 아군 지속 회복+에너지 소모
-      const rr=(sk&&sk.range)||0.16, dx=t?t.x-u.x:9, dy=t?t.y-u.y:9, inR=!!t&&(dx*dx+dy*dy<=rr*rr);
-      if(!t||!inR||(u.maxEn>0&&(u.en||0)<=0)){ u.channel=null; }
-      else { if(sk.drain&&u.maxEn>0) u.en=Math.max(0,(u.en||0)-sk.drain*dt); u.channel.t+=dt;
-        if(sk.hps&&t.maxHp){ t.hp=Math.min(t.maxHp,(t.hp!=null?t.hp:t.maxHp)+sk.hps*dt); } } }
+    if(HEALER[_skKey(u)]){ let t=null;   // 메딕: 지정 힐(따라다니며 1명) or 자동(근처 부상 바이오닉)
+      if(u.healFocus){ t=G.units.find(z=>z.uid===u.healFocus && !z.dead && !z.fixed); if(!t) u.healFocus=null; }
+      if(t){ const dx=t.x-u.x, dy=t.y-u.y, d=Math.hypot(dx,dy)||0.0001;
+        if(d>HEAL_RANGE*0.8) u.moveTo={ x:t.x-(dx/d)*HEAL_RANGE*0.55, y:t.y-(dy/d)*HEAL_RANGE*0.55 };   // 사거리 밖 → 접근(따라다님)
+        if(d<=HEAL_RANGE && _healApply(u,t,dt)) u._healTgt=t.uid; }
+      else { let best=null, bd=HEAL_RANGE*HEAL_RANGE;   // 자동: 근처 부상 바이오닉 중 최근접
+        for(const a of G.units){ if(a===u||a.fixed||a.dead||!BIONIC[_skKey(a)]) continue; if(!a.maxHp||(a.hp!=null?a.hp:a.maxHp)>=a.maxHp) continue; const dx=a.x-u.x, dy=a.y-u.y, dd=dx*dx+dy*dy; if(dd<=bd){ bd=dd; best=a; } }
+        if(best && _healApply(u,best,dt)) u._healTgt=best.uid; } }
   }
+  for(const u of G.units){ u._cloaked=isCloaked(u); u._detected=false; }   // 은신 상태 갱신(오라 반영 후)
+  for(const d of G.units){ if(!isDetector(d)||d.dead) continue; const r2=DETECT_RANGE*DETECT_RANGE;   // 탐지: 범위 내 은신 유닛 드러냄
+    for(const u of G.units){ if(!u._cloaked||u._detected) continue; const dx=u.x-d.x, dy=u.y-d.y; if(dx*dx+dy*dy<=r2) u._detected=true; } }
   if(G.skillFx&&G.skillFx.length){ for(let i=G.skillFx.length-1;i>=0;i--){ const f=G.skillFx[i]; f.t+=dt;
     if(f.type==='storm'){ f.boltT=(f.boltT||0)-dt; if(f.boltT<=0){ f.boltT=0.05; (f.bolts=f.bolts||[]).push({a:Math.random()*6.28, rr:Math.random(), t:0}); }
       if(f.bolts){ for(let b=f.bolts.length-1;b>=0;b--){ f.bolts[b].t+=dt; if(f.bolts[b].t>0.24) f.bolts.splice(b,1); } }
@@ -6123,7 +6133,7 @@ function stepSkills(dt){ if(typeof G==='undefined'||!G.units) return; G._skT=(G.
     if(f.t>=f.dur) G.skillFx.splice(i,1);
   } } }
 function _skW2S(wx,wy,W,H){ const v=(typeof G!=='undefined')&&G.view; let x=wx,y=wy; if(v&&v.zoom&&v.zoom!==1){ x=(wx-v.x)*v.zoom+0.5; y=(wy-v.y)*v.zoom+0.5; } return {x:x*W, y:y*H, z:(v&&v.zoom)||1}; }
-function _skHasUnitFx(){ if(!G.units) return false; for(const u of G.units){ if(u.cloaked||u._fieldCloak||u.channel) return true; if(u.skillOn){ for(const k in u.skillOn){ if(u.skillOn[k]&&SKILLS[k]&&SKILLS[k].kind==='aura') return true; } } } return false; }
+function _skHasUnitFx(){ if(!G.units) return false; for(const u of G.units){ if(u._cloaked||u._healTgt||isDetector(u)) return true; if(u.skillOn){ for(const k in u.skillOn){ if(u.skillOn[k]&&SKILLS[k]&&SKILLS[k].kind==='aura') return true; } } } return false; }
 function drawSkillFx(){ if(typeof G==='undefined') return; const hasFx=!!(G.skillFx&&G.skillFx.length); if(!hasFx && !_skHasUnitFx()) return;
   const cv=document.getElementById('cvFx'); if(!cv) return; const ctx=cv.getContext('2d'); if(!ctx) return; const W=cv.width, H=cv.height;
   ctx.save(); ctx.globalCompositeOperation='lighter';
@@ -6138,21 +6148,23 @@ function drawSkillFx(){ if(typeof G==='undefined') return; const hasFx=!!(G.skil
       const bx=p.x+Math.cos(b.a)*R*b.rr, by=p.y+Math.sin(b.a)*R*b.rr*0.62; let zx=bx, zy=by-R*0.9; ctx.beginPath(); ctx.moveTo(zx,zy);
       for(let seg=0;seg<3;seg++){ zx+=(b.a*13%7-3); zy+=R*0.3; ctx.lineTo(zx,zy);} ctx.lineTo(bx,by); ctx.stroke(); } }
   }
-  const _T=(G._skT||0);
-  // 오라 링(탐지=시안·회전 스윕 / 차원 은폐=보라) — 유닛 발밑 원
+  const _T=(G._skT||0), _selArr=(G.sel||[]);
+  // 탐지 원(와쳐·제플린 등) — 넓은 시안 원 + 레이더 스윕, 상시 유지
+  for(const d of G.units){ if(!isDetector(d)||d.dead) continue; const p=_skW2S(d.x,d.y,W,H), R=DETECT_RANGE*W*p.z;
+    ctx.globalAlpha=0.13; ctx.strokeStyle='#7fe0ff'; ctx.lineWidth=1.4; ctx.setLineDash([7,7]); ctx.lineDashOffset=-_T*18; ctx.beginPath(); ctx.ellipse(p.x,p.y,R,R*0.62,0,0,6.28); ctx.stroke(); ctx.setLineDash([]);
+    const sa=(_T*1.4)%6.28, g=ctx.createLinearGradient(p.x,p.y,p.x+Math.cos(sa)*R,p.y+Math.sin(sa)*R*0.62); g.addColorStop(0,'rgba(127,224,255,.16)'); g.addColorStop(1,'rgba(0,0,0,0)'); ctx.globalAlpha=1; ctx.strokeStyle=g; ctx.lineWidth=R*0.5; ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x+Math.cos(sa)*R,p.y+Math.sin(sa)*R*0.62); ctx.stroke(); }
+  // 차원 은폐 오라 링(아비터=보라)
   for(const u of G.units){ if(!u.skillOn) continue; for(const k in u.skillOn){ if(!u.skillOn[k]) continue; const sk=SKILLS[k]; if(!sk||sk.kind!=='aura') continue;
-    const p=_skW2S(u.x,u.y,W,H), R=(sk.radius||0.12)*W*p.z, col=sk.detect?'#7fe0ff':'#c8b0ff';
-    ctx.globalAlpha=0.24; ctx.strokeStyle=col; ctx.lineWidth=1.4; ctx.setLineDash([6,6]); ctx.lineDashOffset=-_T*20*(sk.detect?1:-1); ctx.beginPath(); ctx.ellipse(p.x,p.y,R,R*0.62,0,0,6.28); ctx.stroke(); ctx.setLineDash([]);
-    if(sk.detect){ const sa=(_T*1.6)%6.28; const g=ctx.createLinearGradient(p.x,p.y,p.x+Math.cos(sa)*R,p.y+Math.sin(sa)*R*0.62); g.addColorStop(0,'rgba(127,224,255,.28)'); g.addColorStop(1,'rgba(0,0,0,0)'); ctx.globalAlpha=1; ctx.strokeStyle=g; ctx.lineWidth=R*0.45; ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x+Math.cos(sa)*R,p.y+Math.sin(sa)*R*0.62); ctx.stroke(); } } }
-  // 은신 실드(자체 은신 or 오라 은신) — 반투명 시안 왜곡 + 스캔라인
-  for(const u of G.units){ if(!(u.cloaked||u._fieldCloak)) continue; const p=_skW2S(u.x,u.y,W,H), rad=((typeof unitRadius==='function'?unitRadius(u):14))*p.z, ph=_T*3+(u.uid||0);
-    ctx.globalAlpha=0.15+0.06*Math.sin(ph); const g=ctx.createRadialGradient(p.x,p.y-rad*0.5,rad*0.2,p.x,p.y-rad*0.5,rad*1.35); g.addColorStop(0,'rgba(150,215,255,.55)'); g.addColorStop(1,'rgba(80,160,255,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.x,p.y-rad*0.5,rad*1.35,0,6.28); ctx.fill();
-    ctx.globalAlpha=0.4; ctx.strokeStyle='#9fe0ff'; ctx.lineWidth=1; for(let s=0;s<2;s++){ const yb=p.y-rad*1.1+s*rad*0.85; ctx.beginPath(); for(let xx=-rad;xx<=rad;xx+=3){ const yy=yb+Math.sin(xx*0.5+ph*2+s)*2; (xx===-rad)?ctx.moveTo(p.x+xx,yy):ctx.lineTo(p.x+xx,yy);} ctx.stroke(); } }
-  // 치유 채널 빔 + 대상 회복 반짝
-  for(const u of G.units){ if(!u.channel) continue; const t=G.units.find(z=>z.uid===u.channel.target); if(!t) continue; const a=_skW2S(u.x,u.y-0.02,W,H), b=_skW2S(t.x,t.y-0.02,W,H);
-    ctx.globalAlpha=0.55; ctx.strokeStyle='#7fffcf'; ctx.lineWidth=2.6; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
-    ctx.globalAlpha=0.95; ctx.strokeStyle='#eafff6'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
-    for(let s=0;s<3;s++){ const rr=((_T*30+s*13)%26), px=b.x+Math.sin(_T*5+s*2.1)*7, py=b.y-rr; ctx.globalAlpha=Math.max(0,0.75-rr/30); ctx.strokeStyle='#8affd0'; ctx.lineWidth=1.7; ctx.beginPath(); ctx.moveTo(px-3,py); ctx.lineTo(px+3,py); ctx.moveTo(px,py-3); ctx.lineTo(px,py+3); ctx.stroke(); } }
+    const p=_skW2S(u.x,u.y,W,H), R=(sk.radius||0.12)*W*p.z; ctx.globalAlpha=0.22; ctx.strokeStyle='#c8b0ff'; ctx.lineWidth=1.4; ctx.setLineDash([6,6]); ctx.lineDashOffset=_T*20; ctx.beginPath(); ctx.ellipse(p.x,p.y,R,R*0.62,0,0,6.28); ctx.stroke(); ctx.setLineDash([]); } }
+  // 은신 일렁임: 미탐지·미선택 은신 유닛만(3D 모델 완전 투명 → 배경만 미세 왜곡)
+  for(const u of G.units){ if(!u._cloaked || u._detected || _selArr.indexOf(u.uid)>=0) continue; const p=_skW2S(u.x,u.y,W,H), rad=((typeof unitRadius==='function'?unitRadius(u):14))*p.z, ph=_T*2.2+(u.uid||0);
+    ctx.globalAlpha=0.07+0.03*Math.sin(ph); const g=ctx.createRadialGradient(p.x,p.y-rad*0.5,rad*0.15,p.x,p.y-rad*0.5,rad*1.25); g.addColorStop(0,'rgba(170,220,255,.42)'); g.addColorStop(0.6,'rgba(140,190,255,.12)'); g.addColorStop(1,'rgba(120,170,255,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.x,p.y-rad*0.5,rad*1.25,0,6.28); ctx.fill();
+    ctx.globalAlpha=0.11; ctx.strokeStyle='#bfe6ff'; ctx.lineWidth=1; for(let s=0;s<2;s++){ const yb=p.y-rad*1.0+s*rad*0.8; ctx.beginPath(); for(let xx=-rad;xx<=rad;xx+=4){ const yy=yb+Math.sin(xx*0.4+ph*2+s)*1.6; (xx===-rad)?ctx.moveTo(p.x+xx,yy):ctx.lineTo(p.x+xx,yy);} ctx.stroke(); } }
+  // 치유 빔(자동/지정 공통) + 대상 회복 반짝
+  for(const u of G.units){ if(!u._healTgt) continue; const t=G.units.find(z=>z.uid===u._healTgt); if(!t) continue; const a=_skW2S(u.x,u.y-0.02,W,H), b=_skW2S(t.x,t.y-0.02,W,H);
+    ctx.globalAlpha=0.5; ctx.strokeStyle='#7fffcf'; ctx.lineWidth=2.6; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+    ctx.globalAlpha=0.9; ctx.strokeStyle='#eafff6'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+    for(let s=0;s<3;s++){ const rr=((_T*30+s*13)%26), px=b.x+Math.sin(_T*5+s*2.1)*7, py=b.y-rr; ctx.globalAlpha=Math.max(0,0.7-rr/30); ctx.strokeStyle='#8affd0'; ctx.lineWidth=1.7; ctx.beginPath(); ctx.moveTo(px-3,py); ctx.lineTo(px+3,py); ctx.moveTo(px,py-3); ctx.lineTo(px,py+3); ctx.stroke(); } }
   ctx.restore(); }
 // 개인 보스 해금 감지(등급 4종 전체 보유 → 잠금 해제): 채팅 알람 + 버튼 알림 점등
 function checkPbossUnlocks(){
@@ -11024,6 +11036,12 @@ function cloneMats(obj){ const list=[];
     if(Array.isArray(o.material)){ o.material=o.material.map(mm=>{ const c=cl(mm); list.push(c); return c; }); }
     else if(o.material){ o.material=cl(o.material); list.push(o.material); } });
   return list; }
+// 🪄 클로킹 렌더: 아군 모델을 런타임 반투명/투명 처리(적 클로킹과 동일한 재질복제+opacity 방식)
+//   targetOp=1 정상 · 0.42 감지/선택(반투명 유령) · 0.0 미감지(완전 투명, 배경 일렁임은 cvFx)
+function _applyCloak(m, targetOp, dt){ if(!m||!m.anim) return;
+  if(!m._cloakMats){ if(targetOp>=1) return; try{ m._cloakMats=cloneMats(m.anim); }catch(e){ m._cloakMats=null; return; } m._cloakOp=1; }
+  const cur=(m._cloakOp==null?1:m._cloakOp), nx=cur+(targetOp-cur)*Math.min(1, dt*6); m._cloakOp=nx;
+  for(const mt of m._cloakMats){ mt.transparent=true; mt.opacity=nx; mt.depthWrite=nx>0.6; } }
 
 // 그룹 구조: holder(화면위치·크기) → view(카메라 부감 tilt) → yaw(적 방향 회전) → anim(절차적) → inner(모델, 발 y=0)
 // 오라용 방사형 그라데이션 텍스처(중심 밝은 청록 → 보라 → 가장자리 투명) — 1회 생성 후 공유
@@ -11353,6 +11371,7 @@ window.M3D={
       const _ds=(u.dead&&u.fixed)?0.82:1;   // 파괴 시 약간 움츠러듦
       const _us=u.scl||1;   // 유닛별 추가 배율(직스 전투 유닛 확대 등) — 신전엔 미적용
       if((scaleMul&&scaleMul!==1)||_ds!==1||_us!==1) m.holder.scale.setScalar((SCALE[_id]||MODEL_SCALE)*(scaleMul||1)*_ds*_us);   // 맵 스케일 연동 + 파괴 축소 + 유닛 배율
+      if(u._cloaked || m._cloakMats){ const _vis=(u._detected || (selSet&&selSet.has(u.uid))); _applyCloak(m, u._cloaked?(_vis?0.42:0.0):1, dt); }   // 🪄 은신: 감지/선택=반투명, 미감지=투명
       if(typeof window!=='undefined' && window.__sandbox && m.muzzlePt){ m.muzzlePt.updateWorldMatrix(true,false); const _mw=m.muzzlePt.getWorldPosition(new THREE.Vector3()); _mw.project(camera); m.muzzleN={ x:_mw.x*0.5+0.5, y:0.5-_mw.y*0.5 }; }   // 포구 기준점(3D) 투영 — 각도 완전 대응
       else if(typeof window!=='undefined' && window.__sandbox && m.gun && m.gun.visible){ m.gun.updateWorldMatrix(true,false); const _gw=m.gun.getWorldPosition(new THREE.Vector3()); _gw.project(camera); m.muzzleN={ x:_gw.x*0.5+0.5, y:0.5-_gw.y*0.5 }; } else m.muzzleN=null;   // 총구 2D 투영(각도 무관 머즐 원점)
       if(typeof window!=='undefined' && window.__sandbox && m.anim){ const _cc=new THREE.Box3().setFromObject(m.anim).getCenter(new THREE.Vector3()); _cc.project(camera); m.centerN={ x:_cc.x*0.5+0.5, y:0.5-_cc.y*0.5 }; } else m.centerN=null;   // 몸 중앙 2D 투영(발 X — 조준 타겟)
