@@ -837,6 +837,16 @@
   .skBtn .skEn{position:absolute;bottom:2px;right:5px;z-index:3;font:700 9px 'Rajdhani',sans-serif;color:#7fc8ff}
   .skBtn.lowE .skEn{color:#ff8a8a}
   .skBtn .skCd{position:absolute;inset:0;z-index:4;display:flex;align-items:center;justify-content:center;background:rgba(2,8,14,.55);font:800 18px 'Rajdhani',sans-serif;color:#fff;text-shadow:0 1px 2px #000}
+  /* ⚔ 전투 실험 바(관리자) — 붉은 사선 서브패널 */
+  #sbCombatBar{margin:0 0 7px;padding:7px 9px 8px;position:relative;background:linear-gradient(160deg,rgba(60,34,38,.5),rgba(10,6,8,.82));border:1px solid var(--metal-edge);border-left:2px solid rgba(255,90,90,.6);clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px);box-shadow:inset 0 1px 0 rgba(255,255,255,.04),inset 0 0 16px rgba(0,0,0,.4)}
+  #sbCombatBar .sbcHead{font-size:var(--fs-md);font-weight:800;color:#ffb0b0;letter-spacing:.3px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+  #sbCombatBar .sbcSub{font-size:var(--fs-xs);font-weight:600;color:#b08a8a;opacity:.85}
+  #sbCombatBar .sbcCnt{margin-left:auto;font:800 var(--fs-sm) 'Rajdhani',sans-serif;color:#ff8a8a}
+  #sbCombatBar .sbcRow{display:flex;gap:6px}
+  .sbcBtn{flex:1 1 0;min-width:0;padding:9px 4px;font-size:var(--fs-sm);font-weight:700;color:#e2d0d0;cursor:pointer;font-family:inherit;white-space:nowrap;border-radius:8px;background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.012));border:1px solid var(--metal-edge);box-shadow:inset 0 1px 0 rgba(255,255,255,.05);transition:all .14s}
+  .sbcBtn:hover{border-color:rgba(255,120,120,.4)}
+  .sbcBtn:active{transform:translateY(1px)}
+  .sbcBtn.on{color:#fff;background:linear-gradient(180deg,#bb3636,#5e1616);border-color:#ff5b5b;box-shadow:0 0 12px -2px rgba(255,80,80,.55),inset 0 1px 0 rgba(255,255,255,.18)}
   #cmdRow .selAll{align-self:stretch;display:flex;align-items:center;justify-content:center;padding:8px 9px;border-radius:var(--r-md);font-size:var(--fs-sm);flex:0 0 auto;white-space:nowrap}
   /* 초상화 — 쿨 메탈 프레임 + 사선 모서리(카드와 통일) */
   .scPortrait{width:64px;height:64px;flex:none;align-self:center;position:relative;overflow:hidden;color:var(--neon);
@@ -2356,6 +2366,16 @@
 
     <div class="bp on" id="bpMain">
       <div id="stSelInfo" class="hide"></div>
+      <!-- ⚔ 전투 실험 바(관리자 전용) — 하단 섹션 상단에 상시 표시 -->
+      <div id="sbCombatBar" style="display:none">
+        <div class="sbcHead">⚔ 전투 실험 <span class="sbcSub">스킬·치유·은신 실전 테스트</span> <span class="sbcCnt" id="sbcCount">0기</span></div>
+        <div class="sbcRow">
+          <button class="sbcBtn on" id="sbcToggle" onclick="sbCombatToggle()">▶ 전투</button>
+          <button class="sbcBtn" onclick="sbCombatSpawn(5)">＋적 소환</button>
+          <button class="sbcBtn" onclick="sbCombatHurt()">아군 손상</button>
+          <button class="sbcBtn" onclick="sbCombatReset()">리셋</button>
+        </div>
+      </div>
       <div id="defaultCmd">
         <!-- 메인 홈 하단(무선택 시): 좌=유닛 판매 / 우=공용 보스 파견 -->
         <div class="homeCols">
@@ -6114,14 +6134,17 @@ function fireSkillGround(uid,key,x,y){ const u=G.units.find(z=>z.uid===uid); con
   else if(key==='spider_mine') G.skillFx.push({type:'mine', x:x, y:y, t:0, dur:1e9, r:sk.r, trig:sk.trig, dmg:sk.dmg, owner:uid, armT:1.0});
   if(typeof playSfx==='function')playSfx('skill'); if(typeof addChat==='function') addChat('', sk.name+' 시전!'); renderSkillBar();
 }
-function _skStormDamage(f){ if(!G.enemies||!G.enemies.length) return; const r=f.r, r2=r*r;   // 전투 유즈맵 훅: 범위 내 적 지속 피해
-  for(const e of G.enemies){ if(e.dead) continue; const dx=e.x-f.x, dy=e.y-f.y; if(dx*dx+dy*dy<=r2){ try{ _atkUid=f.owner; }catch(_e){} if(typeof hitEnemy==='function') hitEnemy(e, f.dmg); } } }
-function _skEnsnare(f){ if(!G.enemies||!G.enemies.length) return; const r2=f.r*f.r;   // 인스네어: 범위 내 적 둔화(전투 유즈맵 훅)
-  for(const e of G.enemies){ if(e.dead) continue; const dx=e.x-f.x, dy=e.y-f.y; if(dx*dx+dy*dy<=r2){ e.slowT=Math.max(e.slowT||0, 1.2); e.ensnared=1; } } }
-function _skMineTrigger(f){ if(!G.enemies) return null; const r2=f.trig*f.trig;   // 스파이더 마인: 접근한 적 감지
-  for(const e of G.enemies){ if(e.dead) continue; const dx=e.x-f.x, dy=e.y-f.y; if(dx*dx+dy*dy<=r2) return e; } return null; }
-function _skMineBoom(f){ G.skillFx.push({type:'boom', x:f.x, y:f.y, t:0, dur:0.4, r:f.r});   // 폭발 연출 + 광역 피해
-  if(G.enemies){ const r2=f.r*f.r; for(const e of G.enemies){ if(e.dead) continue; const dx=e.x-f.x, dy=e.y-f.y; if(dx*dx+dy*dy<=r2){ try{ _atkUid=f.owner; }catch(_e){} if(typeof hitEnemy==='function') hitEnemy(e, f.dmg); } } }
+function _skFoes(){ const a=G.enemies||[], b=G.sbFoes; return (b&&b.length)?(a.length?a.concat(b):b):a; }   // 실전 적 + 전투실험 더미 통합 대상
+function _skHurt(e,dmg,owner){ if(e.eid!=null){ try{ _atkUid=owner; }catch(_){} if(typeof hitEnemy==='function') hitEnemy(e,dmg); }   // 정규 적=hitEnemy(방어/실드/킬귀속)
+  else { e.hp-=dmg; e.flash=0.12; if(e.hp<=0) e.dead=true; } }   // 실험 더미=직접 피해
+function _skStormDamage(f){ const L=_skFoes(); if(!L.length) return; const r2=f.r*f.r;   // 범위 내 대상 지속 피해
+  for(const e of L){ if(e.dead) continue; const dx=e.x-f.x, dy=e.y-f.y; if(dx*dx+dy*dy<=r2) _skHurt(e, f.dmg, f.owner); } }
+function _skEnsnare(f){ const L=_skFoes(); if(!L.length) return; const r2=f.r*f.r;   // 범위 내 대상 둔화
+  for(const e of L){ if(e.dead) continue; const dx=e.x-f.x, dy=e.y-f.y; if(dx*dx+dy*dy<=r2){ e.slowT=Math.max(e.slowT||0, 1.2); e.ensnared=1; } } }
+function _skMineTrigger(f){ const L=_skFoes(); const r2=f.trig*f.trig;   // 접근한 대상 감지
+  for(const e of L){ if(e.dead) continue; const dx=e.x-f.x, dy=e.y-f.y; if(dx*dx+dy*dy<=r2) return e; } return null; }
+function _skMineBoom(f){ G.skillFx=G.skillFx||[]; G.skillFx.push({type:'boom', x:f.x, y:f.y, t:0, dur:0.4, r:f.r}); const L=_skFoes(), r2=f.r*f.r;   // 폭발 연출 + 광역 피해
+  for(const e of L){ if(e.dead) continue; const dx=e.x-f.x, dy=e.y-f.y; if(dx*dx+dy*dy<=r2) _skHurt(e, f.dmg, f.owner); }
   if(typeof playSfx==='function') playSfx('boom'); }
 function _skAura(u, key, sk){ if(!G.units) return; const r2=(sk.radius||0.12)*(sk.radius||0.12);
   if(sk.cloakAllies){ for(const a of G.units){ if(a.fixed) continue; const dx=a.x-u.x, dy=a.y-u.y; if(dx*dx+dy*dy<=r2) a._fieldCloak=true; } }   // 오라 은신: 범위 내 아군
@@ -6158,7 +6181,7 @@ function stepSkills(dt){ if(typeof G==='undefined'||!G.units) return; G._skT=(G.
   } } }
 function _skW2S(wx,wy,W,H){ const v=(typeof G!=='undefined')&&G.view; let x=wx,y=wy; if(v&&v.zoom&&v.zoom!==1){ x=(wx-v.x)*v.zoom+0.5; y=(wy-v.y)*v.zoom+0.5; } return {x:x*W, y:y*H, z:(v&&v.zoom)||1}; }
 function _skHasUnitFx(){ if(!G.units) return false; for(const u of G.units){ if(u._cloaked||u._healTgt||isDetector(u)||(u.buff&&u.buff.stim&&u.buff.stim.t>0)) return true; if(u.skillOn){ for(const k in u.skillOn){ if(u.skillOn[k]&&SKILLS[k]&&SKILLS[k].kind==='aura') return true; } } } return false; }
-function drawSkillFx(){ if(typeof G==='undefined') return; const hasFx=!!(G.skillFx&&G.skillFx.length); if(!hasFx && !_skHasUnitFx()) return;
+function drawSkillFx(){ if(typeof G==='undefined') return; const hasFx=!!(G.skillFx&&G.skillFx.length); if(!hasFx && !_skHasUnitFx() && !(G.sbFoes&&G.sbFoes.length)) return;
   const cv=document.getElementById('cvFx'); if(!cv) return; const ctx=cv.getContext('2d'); if(!ctx) return; const W=cv.width, H=cv.height;
   ctx.save(); ctx.globalCompositeOperation='lighter';
   if(hasFx)
@@ -6202,7 +6225,41 @@ function drawSkillFx(){ if(typeof G==='undefined') return; const hasFx=!!(G.skil
   for(const u of G.units){ if(!u.buff||!u.buff.stim||u.buff.stim.t<=0) continue; const p=_skW2S(u.x,u.y,W,H), rad=((typeof unitRadius==='function'?unitRadius(u):14))*p.z, uid=(u.uid||0);
     ctx.globalAlpha=0.3; ctx.strokeStyle='#ff6a5a'; ctx.lineWidth=1.6; ctx.beginPath(); ctx.ellipse(p.x,p.y,rad*0.9,rad*0.9*0.5,0,0,6.28); ctx.stroke();
     ctx.fillStyle='#ff8a6a'; for(let s=0;s<3;s++){ const yy=p.y-((_T*22+s*9)%22), xx=p.x+Math.sin(_T*3+s*2+uid)*rad*0.5; ctx.globalAlpha=Math.max(0,0.26-((_T*22+s*9)%22)/90); ctx.beginPath(); ctx.arc(xx,yy,2+s*0.6,0,6.28); ctx.fill(); } }
+  // 전투 실험 더미(2D 적) — 정규 적 시스템과 분리
+  if(G.sbFoes&&G.sbFoes.length){ ctx.globalCompositeOperation='source-over';
+    for(const e of G.sbFoes){ if(e.dead) continue; const p=_skW2S(e.x,e.y,W,H), rr=(e.r||0.02)*W*p.z;
+      ctx.globalAlpha=1; ctx.fillStyle=(e.flash>0)?'#ffd0d0':((e.slowT>0)?'#c08a40':'#c83a3a'); ctx.strokeStyle='#3a0808'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.arc(p.x,p.y,rr,0,6.28); ctx.fill(); ctx.stroke();
+      ctx.fillStyle='#2a0000'; ctx.beginPath(); ctx.arc(p.x-rr*0.35,p.y-rr*0.18,rr*0.16,0,6.28); ctx.arc(p.x+rr*0.35,p.y-rr*0.18,rr*0.16,0,6.28); ctx.fill();
+      const w=rr*2, hpR=Math.max(0,Math.min(1,e.hp/(e.maxHp||1))); ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillRect(p.x-w/2,p.y-rr-7,w,4); ctx.fillStyle=hpR>0.5?'#7fe07f':(hpR>0.25?'#e0c040':'#e05050'); ctx.fillRect(p.x-w/2,p.y-rr-7,w*hpR,4);
+      if(e.slowT>0){ ctx.globalAlpha=0.5; ctx.strokeStyle='#e8c060'; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(p.x,p.y,rr+3,0,6.28); ctx.stroke(); } } }
   ctx.restore(); }
+// ════════════════════════════════════════════════════════════════
+// ⚔ 전투 실험(관리자 전용) — 자립형 더미 적(G.sbFoes, 정규 적/트랙과 분리). 스킬·치유·은신 실전 검증용.
+//   · 스킬 훅(_skFoes)이 sbFoes를 대상으로 → 스톰/인스네어/마인 등 즉시 작동
+//   · 더미는 아군에게 접근·접촉 피해(치유·메딕 검증) / 아군은 사거리 내 더미에 기본 DPS
+// ════════════════════════════════════════════════════════════════
+function _sbUnitRange(u){ const d=(typeof U!=='undefined'&&(U[u.gmodel||u.id]||U[u.id]))||{}; if((d.dmg||0)<=0) return 0; return d.melee?0.06:0.18; }   // 무공격(dmg0)=미공격
+function _sbUnitDps(u){ const d=(typeof U!=='undefined'&&(U[u.gmodel||u.id]||U[u.id]))||{}; const dmg=d.dmg||0, cd=(d.cd||20)/60; return dmg>0?dmg/Math.max(0.2,cd):0; }
+function sbCombatSpawn(n){ if(typeof G==='undefined') return; G.sbFoes=G.sbFoes||[]; G.sbSeq=G.sbSeq||1; const k=n||5;
+  for(let i=0;i<k;i++) G.sbFoes.push({fid:G.sbSeq++, x:0.90+Math.random()*0.06, y:0.22+Math.random()*0.56, hp:200, maxHp:200, spd:0.045, dmg:9, slowT:0, r:0.02, flash:0, dead:false});
+  G.sbCombat=true; sbCombatUiSync(); if(typeof toast==='function') toast('적 더미 '+k+'기 소환'); }
+function sbCombatToggle(){ if(typeof G==='undefined') return; G.sbCombat=!G.sbCombat; if(G.sbCombat && !(G.sbFoes&&G.sbFoes.length)) sbCombatSpawn(5); sbCombatUiSync(); if(typeof toast==='function') toast(G.sbCombat?'전투 실험 시작':'전투 정지'); }
+function sbCombatHurt(){ if(typeof G==='undefined'||!G.units) return; let n=0; for(const u of G.units){ if(u.fixed||u._enemyDisp||!u.maxHp) continue; u.hp=Math.max(1,Math.round(u.maxHp*0.35)); n++; } if(typeof toast==='function') toast('아군 '+n+'기 체력 35%로 손상(치유·메딕 검증)'); }
+function sbCombatReset(){ if(typeof G==='undefined') return; G.sbFoes=[]; G.sbCombat=false; if(G.units) for(const u of G.units){ if(u.maxHp) u.hp=u.maxHp; if(u.buff) u.buff={}; if(u.skillCd) u.skillCd={}; u.healFocus=null; if(u.skillOn) u.skillOn={}; } if(G.skillFx) G.skillFx.length=0; sbCombatUiSync(); if(typeof toast==='function') toast('전투 실험 리셋'); }
+function sbCombatUiSync(){ const el=document.getElementById('sbCombatBar'); if(!el) return; const show=(typeof G!=='undefined'&&G.sandbox&&G.tab==='Main'); el.style.display=show?'block':'none';
+  if(show){ const t=document.getElementById('sbcToggle'); if(t){ t.textContent=G.sbCombat?'⏸ 정지':'▶ 전투'; t.classList.toggle('on',!!G.sbCombat); } const c=document.getElementById('sbcCount'); if(c) c.textContent=(G.sbFoes?G.sbFoes.filter(f=>!f.dead).length:0)+'기'; } }
+function stepSbCombat(dt){ if(typeof G==='undefined'||!G.sandbox||!G.sbCombat||!G.sbFoes||!G.sbFoes.length) return;
+  const foes=G.sbFoes, units=G.units;
+  for(const f of foes){ if(f.dead) continue; if(f.flash>0) f.flash-=dt; if(f.slowT>0) f.slowT=Math.max(0,f.slowT-dt);
+    let best=null, bd=1e9; for(const u of units){ if(u.fixed||u._enemyDisp||(u.maxHp&&(u.hp!=null?u.hp:u.maxHp)<=0)) continue; const dx=u.x-f.x, dy=u.y-f.y, d=dx*dx+dy*dy; if(d<bd){ bd=d; best=u; } }
+    if(best){ const dx=best.x-f.x, dy=best.y-f.y, d=Math.hypot(dx,dy)||1e-4, sl=(f.slowT>0)?0.45:1;
+      if(d>0.05){ f.x+=(dx/d)*f.spd*sl*dt; f.y+=(dy/d)*f.spd*sl*dt; }
+      else if(best.maxHp){ best.hp=Math.max(0,(best.hp!=null?best.hp:best.maxHp)-f.dmg*dt); } } }
+  for(const u of units){ if(u.fixed||u._enemyDisp||(u.maxHp&&(u.hp!=null?u.hp:u.maxHp)<=0)) continue; const rng=_sbUnitRange(u); if(rng<=0) continue;
+    let best=null, bd=rng*rng; for(const f of foes){ if(f.dead) continue; const dx=f.x-u.x, dy=f.y-u.y, d=dx*dx+dy*dy; if(d<=bd){ bd=d; best=f; } }
+    if(best){ best.hp-=_sbUnitDps(u)*dt; best.flash=0.1; if(best.hp<=0) best.dead=true; } }
+  for(let i=foes.length-1;i>=0;i--){ if(foes[i].dead||foes[i].hp<=0){ G.skillFx=G.skillFx||[]; G.skillFx.push({type:'boom', x:foes[i].x, y:foes[i].y, t:0, dur:0.35, r:0.03}); foes.splice(i,1); } } }
 // 개인 보스 해금 감지(등급 4종 전체 보유 → 잠금 해제): 채팅 알람 + 버튼 알림 점등
 function checkPbossUnlocks(){
   if(G.phase!=='playing') return;
@@ -9053,6 +9110,7 @@ function loop(now){
       if(G.tab==='Main'){ stepTransports(dt); stepCmdMove(dt); separateUnits(); }   // 수송선 운항 + 내 유닛 이동명령 + 겹침 방지
     }
     stepAuto(dt);   // 자동화 유틸(0.33초 틱) — 배속과 무관하게 실시간 기준
+    if(typeof stepSbCombat==='function') stepSbCombat(dt);   // ⚔ 전투 실험 더미 진행(스킬 대상 좌표 갱신 전제 — stepSkills 앞)
     if(typeof stepSkills==='function') stepSkills(dt);   // 🪄 유닛 스킬(쿨다운·에너지·스톰 연출) — 샌드박스 포함(step 우회 대비)
 
   }
@@ -9067,6 +9125,7 @@ function loop(now){
   if(G.sel.length>=1 && document.getElementById('unitCmd').classList.contains('on')) updateCmdRow();   // 명령 행 상태 갱신(단일/다중)
   updateSkillFab();   // 스킬 FAB 쿨다운/버프 실시간(탭 전환·해제도 내부 처리)
   if(typeof renderSkillBar==='function') renderSkillBar();   // 🪄 스킬 바 쿨다운/에너지 실시간(sig 캐시로 저비용)
+  if(typeof sbCombatUiSync==='function') sbCombatUiSync();   // ⚔ 전투 실험 컨트롤 표시/상태(관리자 Main)
   if(!G.sandbox) checkPbossUnlocks();// 개인 보스 해금 감지(채팅 알람 + 버튼 알림)
   updatePbossFab();   // 개인 보스 소환 FAB(메인·쿨다운 실시간)
   updateAutoFab();    // 자동화 묶음 버튼/팝업(표시·토글 상태)
