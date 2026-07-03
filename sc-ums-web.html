@@ -2632,6 +2632,12 @@ const U = {
   worker_human: {name:'유니온 일꾼', icon:'🔧', cost:0, dmg:4, up:2, hdmg:8, hup:3, range:0.035, cd:40, splash:false, melee:true, color:'#4aa8ff', size:13, wpn:'mech', atk:'slash', hp:30, armor:0, shield:0, energy:0, moveSpd:0.14, model3d:'worker_human'},   // 샌드박스 전용(보직 스탯)
   worker_light: {name:'에테리얼 일꾼', icon:'🔮', cost:0, dmg:3, up:1, hdmg:6, hup:2, range:0.035, cd:40, splash:false, melee:true, color:'#ffc040', size:12, wpn:'pro', atk:'slash', hp:28, armor:0, shield:20, shArmor:1, energy:0, moveSpd:0.15, model3d:'worker_light'},   // 샌드박스 전용(보직 스탯)
   worker_swarm: {name:'스웜 일꾼', icon:'🐛', cost:0, dmg:4, up:2, hdmg:8, hup:3, range:0.035, cd:40, splash:false, melee:true, color:'#a8472e', size:13, wpn:'zrg', atk:'slash', hp:34, armor:0, shield:0, energy:0, moveSpd:0.14, model3d:'worker_swarm'},   // 샌드박스 전용(보직 스탯)
+  medic: {name:'메딕', icon:'🔧', cost:0, dmg:0, up:0, hdmg:0, hup:0, range:0, cd:40, splash:false, color:'#4aa8ff', size:13, wpn:'inf', atk:'bullet', hp:60, armor:1, shield:0, energy:200, moveSpd:0.19, model3d:'medic'},   // 샌드박스 전용(보직 스탯) — 치유 지원(무공격)
+  broodling: {name:'브루들링', icon:'🐛', cost:0, dmg:6, up:2, hdmg:12, hup:4, range:0.035, cd:22, splash:false, melee:true, color:'#a8472e', size:10, wpn:'zrg', atk:'slash', hp:30, armor:0, shield:0, energy:0, moveSpd:0.25, model3d:'broodling'},   // 샌드박스 전용(보직 스탯)
+  larva: {name:'라바', icon:'🐛', cost:0, dmg:0, up:0, hdmg:0, hup:0, range:0, cd:40, splash:false, color:'#a8472e', size:8, wpn:'zrg', atk:'slash', hp:25, armor:10, shield:0, energy:0, moveSpd:0.03, model3d:'larva'},   // 샌드박스 전용(보직 스탯) — 무공격
+  ultralisk: {name:'울트라리스크', icon:'🐛', cost:0, dmg:65, up:26, hdmg:130, hup:52, range:0.045, cd:35, splash:false, melee:true, color:'#a8472e', size:26, wpn:'zrg', atk:'slash', hp:800, armor:4, shield:0, energy:0, moveSpd:0.2, model3d:'ultralisk'},   // 샌드박스 전용(보직 스탯)
+  dark_templar: {name:'다크템플러', icon:'🔮', cost:0, dmg:80, up:32, hdmg:160, hup:64, range:0.04, cd:42, splash:false, melee:true, color:'#ffc040', size:14, wpn:'pro', atk:'slash', hp:80, armor:1, shield:80, shArmor:1, energy:0, moveSpd:0.19, model3d:'dark_templar'},   // 샌드박스 전용(보직 스탯)
+  high_templar: {name:'하이템플러', icon:'🔮', cost:0, dmg:0, up:0, hdmg:0, hup:0, range:0, cd:40, splash:false, color:'#ffc040', size:12, wpn:'pro', atk:'psi', hp:40, armor:0, shield:40, shArmor:1, energy:200, moveSpd:0.12, model3d:'high_templar'},   // 샌드박스 전용(보직 스탯) — 시전형(무공격)
 };
 const HERO_STAT_MUL=2; // 영웅은 체력/보호막 2배(기본값, 조정 가능)
 // 유닛 인스턴스에 생존 스탯 초기화(현재=최대). 추후 전투형 맵에서 u.hp 등을 깎으면 됨.
@@ -5685,25 +5691,26 @@ const UNIT_CLS={   // 유닛 직업/병과 — 모델 id(gmodel) 기준. 베이�
   overlord:'수송선', stinger:'자폭충', venom:'산성충', medusa:'군단여왕',
   wyvern:'전투기', behemoth:'공성생물',
   worker_human:'일꾼', worker_light:'일꾼', worker_swarm:'일꾼',
+  medic:'의무병', broodling:'소환수', larva:'유충', ultralisk:'돌격괴수', dark_templar:'암살자', high_templar:'대마법사',
 };
 // 유닛 종족 → 좌측 바 색(유니온=파랑/스웜=초록/에테리얼=금색). 같은 모델을 다른 종족이 쓰기도 해 모델키(gmodel||id) 기준
 const RACE_BAR={ union:'#4aa8ff', swarm:'#a8472e', aetherial:'#ffc040' };
 const RACE_OF={
-  marine:'union', goliath:'union', ghost:'union', racer:'union', machinegun:'union', tank:'union', skyguard:'union', hellfire:'union', pelican:'union', dreadnought:'union', aegis:'union', worker_human:'union', turret:'union', photon:'union', citizen:'union',
-  dragoon:'aetherial', archon:'aetherial', blade:'aetherial', skydancer:'aetherial', kronos:'aetherial', seraph:'aetherial', archangel:'aetherial', falcon:'aetherial', observer:'aetherial', worker_light:'aetherial',
-  hydra:'swarm', snapper:'swarm', thornqueen:'swarm', matron:'swarm', overlord:'swarm', stinger:'swarm', venom:'swarm', medusa:'swarm', wyvern:'swarm', behemoth:'swarm', worker_swarm:'swarm',
+  marine:'union', goliath:'union', ghost:'union', racer:'union', machinegun:'union', tank:'union', skyguard:'union', hellfire:'union', pelican:'union', dreadnought:'union', aegis:'union', worker_human:'union', turret:'union', photon:'union', citizen:'union', medic:'union',
+  dragoon:'aetherial', archon:'aetherial', blade:'aetherial', skydancer:'aetherial', kronos:'aetherial', seraph:'aetherial', archangel:'aetherial', falcon:'aetherial', observer:'aetherial', worker_light:'aetherial', dark_templar:'aetherial', high_templar:'aetherial',
+  hydra:'swarm', snapper:'swarm', thornqueen:'swarm', matron:'swarm', overlord:'swarm', stinger:'swarm', venom:'swarm', medusa:'swarm', wyvern:'swarm', behemoth:'swarm', worker_swarm:'swarm', broodling:'swarm', larva:'swarm', ultralisk:'swarm',
 };
 function raceBarCol(u){ if(!u) return null; const r=(u.gid && typeof GACHA_UNITS!=='undefined' && GACHA_UNITS[u.gid] && GACHA_UNITS[u.gid].race) || RACE_OF[u.gmodel||u.id]; return RACE_BAR[r]||null; }
 // 관리자 샌드박스 전용 사거리(보직별·스타크래프트식) — 네모 게임 무영향. 값=표시 사거리(정규화는 /100). 모델키(gmodel||id) 기준
 const SB_RANGE={
-  worker_human:3.5, worker_light:3.5, worker_swarm:3.5, stinger:3, racer:17, blade:5, archon:9, matron:5,
+  worker_human:3.5, worker_light:3.5, worker_swarm:3.5, stinger:3, racer:17, blade:5, archon:7, matron:5,
   marine:15, machinegun:8, hydra:17, snapper:4, thornqueen:19, observer:0, overlord:0,
   goliath:18, wyvern:16, dragoon:23, venom:18, falcon:16, skydancer:16, hellfire:22, medusa:5, aegis:13, skyguard:18,
   kronos:23, ghost:24, dreadnought:26, archangel:28, behemoth:25, tank:23,
-  pelican:0, seraph:0,
+  pelican:0, seraph:0, medic:0, larva:0, high_templar:0, broodling:3, ultralisk:4.5, dark_templar:3.5,
 };
 const SB_AIR={ goliath:23 };   // 대공(공중공격) 사거리 별도 — 샌드박스 전용
-const SB_CD={ worker_human:1.1111, worker_light:1.1111, worker_swarm:1.1111, marine:0.8333, ghost:1.25, racer:0.7692, tank:1.4286, goliath:0.9091, skyguard:0.8333, hellfire:1.6667, dreadnought:1.6667, blade:1.0, falcon:0.9091, skydancer:0.3333, archon:1.0, dragoon:0.8333, snapper:0.7, hydra:0.7692 };   // 샌드박스 전용 공속 오버라이드(초=발사 간격, =1/공속) — nemo 무영향. 워든=1.0/s·팔콘=1.1/s·스카이댄서=3/s·보이드=1.0/s·센티넬=1.2/s   // 샌드박스 전용 공속 오버라이드(초=발사 간격, =1/공속) — nemo 무영향. 일꾼0.9·레인저1.2·팬텀0.8·레이서1.3·브레이커0.7·스트라이더1.1·템페스트1.2·헬파이어0.6·드레드노트0.6
+const SB_CD={ worker_human:1.1111, worker_light:1.1111, worker_swarm:1.1111, marine:0.8333, ghost:1.25, racer:0.7692, tank:1.4286, goliath:0.9091, skyguard:0.8333, hellfire:1.6667, dreadnought:1.6667, blade:1.0, falcon:0.9091, skydancer:0.3333, archon:1.0, dragoon:0.8333, snapper:0.7, hydra:0.7692, thornqueen:0.8333, wyvern:0.8333, venom:1.6667, dark_templar:1.0 };   // 샌드박스 전용 공속 오버라이드(초=발사 간격, =1/공속) — nemo 무영향. 워든=1.0/s·팔콘=1.1/s·스카이댄서=3/s·보이드=1.0/s·센티넬=1.2/s·베놈퀸=1.2/s·와이번=1.2/s·베놈=0.6/s·다크템플러=1.0/s
 function effRange(id, fb){ if(typeof SB_RANGE!=='undefined' && id!=null && SB_RANGE[id]!=null) return SB_RANGE[id]/100; return fb; }   // 샌드박스 사거리 오버라이드(없으면 폴백)
 // 체력/실드/에너지 초록 LCD 텍스트(스타식 "실드 HP / 에너지")
 function scHpHTML(u){ const def=U[u.id]; const m=u.hero?HERO_STAT_MUL:1;
@@ -8637,6 +8644,44 @@ vUpg.addEventListener('mousedown',onUpgDown); vUpg.addEventListener('mousemove',
 vUpg.addEventListener('touchstart',onUpgDown,{passive:false}); vUpg.addEventListener('touchmove',onUpgMove,{passive:false}); vUpg.addEventListener('touchend',onUpgUp);
 
 // 투사체 오버레이(#cvFx, 3D 모델 위) — 미사일/탄이 유닛 몸에 가려지지 않도록 최상단에 그림
+// ── 이동 트레일: 모델별 테마 레시피(전 공중유닛 + 레이서/브레이커) — 랩·메인 공용(완전 동일) ──
+const TRAIL_FX={   // glow=발광 화염/에너지(가산), 그 외=연무(확산·source-over). mode:center=부양 몸 중앙 / anchor=발밑 앵커
+  racer:{every:.022,n:2,mode:'anchor',by:-.004,back:.016,glow:1,col:['#4ab4ff'],core:'#cfe6ff',r0:.4,rv:.45,dk:4.6,kick:.012,kv:.012,sv:.006,jit:.004},   // 레이서: 푸른 엔진화염(지상)
+  jet:  {every:.02, n:2,mode:'center',back:.016,glow:1,col:['#5ab0ff','#bfe0ff'],core:'#eaf4ff',r0:.4,rv:.4,dk:4.4,kick:.014,kv:.012,sv:.008,jit:.005},   // 테란 비행: 청백 엔진 배기
+  tank: {every:.05, n:1,mode:'anchor',by:-.012,back:.022,col:['#3a3a42','#4e4e58'],ex:3.0,af:.5,r0:.6,rv:.5,dk:1.6,kick:.008,kv:.01,up:.018,uv:.012,jit:.006},   // 브레이커: 검은 배기 연기(지상)
+  psiC: {every:.03, n:1,mode:'center',back:.015,glow:1,col:['#8fe0ff','#dff2ff'],core:'#eafaff',r0:.5,rv:.45,dk:3.2,kick:.006,kv:.008,up:.01,uv:.008,sv:.008,jit:.006},   // 프로토스: 청록 사이오닉 잔광
+  psiG: {every:.03, n:1,mode:'center',back:.015,glow:1,col:['#ffd98a','#fff0c8'],core:'#fff6df',r0:.55,rv:.5,dk:3.0,kick:.006,kv:.008,up:.01,uv:.008,sv:.008,jit:.006},   // 프로토스 상위: 금빛 사이오닉
+  spore:{every:.035,n:1,mode:'center',back:.014,col:['#9a6fd0','#7250a0'],ex:2.2,af:.4,r0:.7,rv:.6,dk:2.8,kick:.004,kv:.006,sv:.008,jit:.006},   // 저그 유기체: 보라 포자 연무
+  acid: {every:.025,n:1,mode:'center',back:.012,col:['#8fbf5a','#6f9e3c'],ex:2.2,af:.4,r0:.7,rv:.6,dk:3.4,kick:.005,kv:.006,sv:.008,jit:.005},   // 저그 독: 초록 산성 연무
+};
+const TRAIL_UNIT={   // 모델키 → 트레일 레시피
+  racer:'racer', tank:'tank',
+  pelican:'jet', hellfire:'jet', dreadnought:'jet', skyguard:'jet', aegis:'jet',   // 테란 비행
+  seraph:'psiC', falcon:'psiC', observer:'psiC', skydancer:'psiC', archangel:'psiG', kronos:'psiG',   // 에테리얼 비행
+  overlord:'spore', medusa:'spore', wyvern:'spore', venom:'acid', behemoth:'acid', stinger:'acid',   // 스웜 비행
+};
+const MOVE_TRAIL_GM=new Set(Object.keys(TRAIL_UNIT));
+function emitMoveTrail(store, gm, o, dx, dy, zf, dt){ const key=TRAIL_UNIT[gm]; if(!key||!store||!store.smoke) return; const R=TRAIL_FX[key]; if(!R) return;
+  o._mtT=(o._mtT||0)+dt; if(o._mtT<R.every) return; o._mtT=0;
+  let ox=o.x, oy=o.y;
+  if(R.mode==='center'){ const c=(window.M3D&&M3D.centerAt)?M3D.centerAt(o.uid):null; if(c){ ox=c.x; oy=c.y; } else oy=o.y-0.05; }   // 부양 유닛: 떠 있는 몸 중앙에서
+  const bk=(R.back||.015)*zf; ox-=dx*bk; oy-=dy*bk+(R.by?R.by*zf:0);   // 진행 반대쪽(뒤) + 앵커 y보정
+  for(let k=0;k<(R.n||1);k++){ const kk=(R.kick||0)+Math.random()*(R.kv||0);
+    const p={ x:ox+(Math.random()-0.5)*(R.jit||0), y:oy+(Math.random()-0.5)*(R.jit||0),
+      vx:-dx*kk+(Math.random()-0.5)*(R.sv||0), vy:-dy*kk-(R.up||0)-Math.random()*(R.uv||0)+(Math.random()-0.5)*(R.sv||0),
+      life:1, r0:(R.r0||.5)+Math.random()*(R.rv||.4), col:R.col[(Math.random()*R.col.length)|0], dk:R.dk||2 };
+    if(R.glow){ p.glow=true; p.core=R.core; } else { p.ex=R.ex||2.4; p.af=R.af||0.4; }
+    store.smoke.push(p); } }
+// 메인·관전: 실제 유닛 이동에 랩과 동일한 트레일 적용(cvFx 위 오버레이 — drawFx 다음에 호출)
+function stepMoveTrails(dt){ if(typeof FX==='undefined'||typeof emitMoveTrail!=='function') return;
+  if(!G._mvFx) G._mvFx=FX.store();
+  if(!fxOff()) for(const u of G.units){ const gm=u.gmodel||u.id; if(!u.moving||!MOVE_TRAIL_GM.has(gm)) continue;
+    const vx=u.vx||0, vy=u.vy||0, sp=Math.hypot(vx,vy);
+    if(sp>0.004){ emitMoveTrail(G._mvFx, gm, u, vx/sp, vy/sp, 1, dt); }
+    else if(typeof u.face==='number'){ emitMoveTrail(G._mvFx, gm, u, Math.sin(u.face), Math.cos(u.face), 1, dt); } }   // 속도 없으면 바라보는 방향 기준
+  FX.advance(G._mvFx, dt);
+  const cv=document.getElementById('cvFx'); if(!cv) return; const ctx=cv.getContext('2d');
+  FX.drawShots(ctx, G._mvFx, (x,y)=>({x:x*GW, y:y*GH}), 1.0); }
 function drawFx(){ const {ctx,W,H}=setup('cvFx');  // setup이 캔버스 크기 재설정=자동 클리어
   ctx.save(); ctx.globalCompositeOperation='lighter';
   if(!fxOff()) for(const s of G.shots){ ctx.fillStyle=s.color; ctx.strokeStyle=s.color;   // 이펙트 끔: 발사체도 생략 (유닛 축소에 맞춰 ~0.82 작게)
@@ -8741,9 +8786,9 @@ function drawSandboxGround(ctx,W,H){
     }); ctx.restore(); }
 }
 const SANDBOX_ROSTER={
-  union:    [{n:'엔지니어',b:'marine',gm:'worker_human'},{n:'레인저',b:'marine'},{n:'발칸',b:'marine',gm:'machinegun'},{n:'팬텀',b:'ghost'},{n:'레이서',b:'marine',gm:'racer'},{n:'브레이커',b:'goliath',gm:'tank'},{n:'스트라이더',b:'goliath'},{n:'템페스트',b:'goliath',gm:'skyguard'},{n:'펠리컨',b:'marine',gm:'pelican',e:1},{n:'이지스',b:'marine',gm:'aegis',e:1},{n:'헬파이어',b:'marine',gm:'hellfire',e:1},{n:'드레드노트',b:'marine',gm:'dreadnought',e:1}],
-  swarm:    [{n:'드론',b:'marine',gm:'worker_swarm'},{n:'제플린',b:'marine',gm:'overlord',e:1},{n:'스내퍼',b:'hydra',gm:'snapper'},{n:'리퍼',b:'hydra'},{n:'베놈퀸',b:'hydra',gm:'thornqueen'},{n:'스팅어',b:'marine',gm:'stinger',e:1},{n:'와이번',b:'wyvern',gm:'wyvern',e:1},{n:'메두사',b:'marine',gm:'medusa',e:1},{n:'베놈',b:'marine',gm:'venom',e:1},{n:'베히모스',b:'behemoth',gm:'behemoth',e:1}],
-  aetherial:[{n:'결정체',b:'marine',gm:'worker_light'},{n:'센티넬',b:'dragoon'},{n:'워든',b:'dragoon',gm:'blade'},{n:'보이드',b:'archon'},{n:'팔콘',b:'marine',gm:'falcon',e:1},{n:'세라프',b:'marine',gm:'seraph',e:1},{n:'스카이댄서',b:'goliath',gm:'skydancer'},{n:'아크엔젤',b:'marine',gm:'archangel',e:1},{n:'와처',b:'marine',gm:'observer',e:1},{n:'크로노스',b:'marine',gm:'kronos',e:1}],
+  union:    [{n:'엔지니어',b:'marine',gm:'worker_human'},{n:'레인저',b:'marine'},{n:'발칸',b:'marine',gm:'machinegun'},{n:'메딕',b:'marine',gm:'medic'},{n:'팬텀',b:'ghost'},{n:'레이서',b:'marine',gm:'racer'},{n:'브레이커',b:'goliath',gm:'tank'},{n:'스트라이더',b:'goliath'},{n:'템페스트',b:'goliath',gm:'skyguard'},{n:'펠리컨',b:'marine',gm:'pelican',e:1},{n:'이지스',b:'marine',gm:'aegis',e:1},{n:'헬파이어',b:'marine',gm:'hellfire',e:1},{n:'드레드노트',b:'marine',gm:'dreadnought',e:1}],
+  swarm:    [{n:'드론',b:'marine',gm:'worker_swarm'},{n:'제플린',b:'marine',gm:'overlord',e:1},{n:'스내퍼',b:'hydra',gm:'snapper'},{n:'리퍼',b:'hydra'},{n:'베놈퀸',b:'hydra',gm:'thornqueen'},{n:'스팅어',b:'marine',gm:'stinger',e:1},{n:'와이번',b:'wyvern',gm:'wyvern',e:1},{n:'메두사',b:'marine',gm:'medusa',e:1},{n:'베놈',b:'marine',gm:'venom',e:1},{n:'베히모스',b:'behemoth',gm:'behemoth',e:1},{n:'브루들링',b:'hydra',gm:'broodling'},{n:'라바',b:'hydra',gm:'larva'},{n:'울트라리스크',b:'hydra',gm:'ultralisk'}],
+  aetherial:[{n:'결정체',b:'marine',gm:'worker_light'},{n:'센티넬',b:'dragoon'},{n:'워든',b:'dragoon',gm:'blade'},{n:'보이드',b:'archon'},{n:'팔콘',b:'marine',gm:'falcon',e:1},{n:'세라프',b:'marine',gm:'seraph',e:1},{n:'스카이댄서',b:'goliath',gm:'skydancer'},{n:'아크엔젤',b:'marine',gm:'archangel',e:1},{n:'와처',b:'marine',gm:'observer',e:1},{n:'크로노스',b:'marine',gm:'kronos',e:1},{n:'다크템플러',b:'ghost',gm:'dark_templar'},{n:'하이템플러',b:'marine',gm:'high_templar'}],
 };
 const SANDBOX_RACE_ORDER=['union','swarm','aetherial'];   // 3종족(테란=유니온 / 저그=스웜 / 프로토스=에테리얼) — 일꾼은 각 종족 첫 자리
 const SANDBOX_RACE_KO={union:'유니온 (인간)',swarm:'스웜 (군체)',aetherial:'에테리얼 (외계)'};
@@ -8843,7 +8888,7 @@ function loop(now){
       else if(G.tab==='Unit') window.M3D.syncShop(GW, GH, dt);
       else if(G.tab==='Upgrade') window.M3D.syncBldg(GW, GH, dt); }
     const fcv=document.getElementById('cvFx');  // 투사체 오버레이(메인·관전) / 업그레이드 가동 파티클
-    if(G.tab==='Main'||G.tab==='Players'){ fcv.style.display='block'; drawFx(); }
+    if(G.tab==='Main'||G.tab==='Players'){ fcv.style.display='block'; drawFx(); stepMoveTrails(dt); }   // 이동 트레일(랩과 완전 동일 이펙트) 오버레이
     else if(G.tab==='Upgrade'){ fcv.style.display='block'; drawUpgFx(dt); }
     else fcv.style.display='none';
   }
@@ -9365,10 +9410,10 @@ const ATK_STYLE={
   striderSMG:{kind:'mg',     color:'#ffe2a0', burst:5, burstGap:0.025},   // 스트라이더 지상: 손 기관단총 연사
   goliath:   {kind:'missile',color:'#5ad1ff'},
   dragoon:   {kind:'plasma', color:'#7fb8ff', spd:0.78, szm:0.88, ramp:0.13},   // 센티넬: 푸른 구체 — 초반 잠깐 느리다 금방 최고속(램프 0.13s)
-  archon:    {kind:'voidburst', color:'#dcb6ff'},   // 보이드: 손 앞 급성장 에너지 구체 → 넓은 영역 에너지 필(즉발 광역)
+  archon:    {kind:'voidburst', color:'#dcb6ff', hit:0.4},   // 보이드: 손 앞 급성장 에너지 구체 → 넓은 영역 에너지 필. hit=손 뻗는 시점(0.4s) — 모션과 위상 고정 결합
   hydra:     {kind:'needle', color:'#9fd356'},
   tank:      {kind:'shell',  color:'#d8c8a0', spd:2.2},   // 브레이커: 포탄 얇고 고속·단일 타격
-  blade:     {kind:'slash',  color:'#eafff0', melee:true, hit:0.3},   // 워든: 검이 실제로 지나가는 타이밍(0.3s 뒤)에 표시
+  blade:     {kind:'psicut', color:'#9fe8d8', melee:true, hit:0.3},   // 워든: 사이오닉 검격(테이퍼 칼자국+백열 심+에너지 파편) — 검이 지나가는 타이밍(0.3s)
   matron:    {kind:'claw',   color:'#ffd2cf', melee:true},
   thornqueen:{kind:'needle', color:'#bfe89a', count:3, boom:6},
   worker_human:{kind:'push', color:'#dfe7f2', melee:true, hit:0.3},   // 유니온 일꾼: 펀치 — hit초 뒤(타격 순간=0.55s 펀치의 신전 피크) 피격
@@ -9380,10 +9425,16 @@ const ATK_STYLE={
   aegis:     {kind:'bullet', color:'#bfe4ff'},   // 이지스: 방어포
   snapper:   {kind:'scythe', color:'#a8e05a', melee:true},   // 스내퍼: 낫 교차 베기(유기체 초록)
   stinger:   {kind:'missile',color:'#c8e89a'},   // 스팅어: 산성 미사일
-  venom:     {kind:'needle', color:'#a6e23c'},   // 베놈: 산성 가시
+  venom:     {kind:'spit', color:'#a6e23c'},   // 베놈: 입에서 독 가래 분사 + 감염 잔류(랩 전용 함수 발사)
+  broodling: {kind:'claw',  color:'#9fd356', melee:true},   // 브루들링: 근접 할큄
+  ultralisk: {kind:'claw',  color:'#c8e89a', melee:true},   // 울트라리스크: 근접 대형 칼날
+  dark_templar:{kind:'psicut', color:'#7fe0b8', melee:true, x2:true, mul:1.25, hit:0.3},   // 다크템플러: X자 이중 사이오닉 검격+충격 링 — 워든보다 크고 강한 타격감
+  medic:     {kind:'heal', color:'#bfe6ff'},   // 메딕: 치유(무공격 — 라벨용)
+  larva:     {kind:'-', color:'#a8472e'},   // 라바: 무공격(라벨용)
+  high_templar:{kind:'psi', color:'#ffd24a'},   // 하이템플러: 시전형(무공격 — 라벨용)
   medusa:    {kind:'psi',    color:'#c7a0ff'},   // 메두사: 사이오닉
-  wyvern:    {kind:'needle', color:'#bfe89a', count:2},   // 와이번: 다연발 가시
-  behemoth:  {kind:'shell',  color:'#d0b070', spd:2.0},   // 베히모스: 대형 포
+  wyvern:    {kind:'shuriken', color:'#bfe89a'},   // 와이번: 회전 표창 3쿠션 튕김(랩 전용 함수 발사)
+  behemoth:  {kind:'porb', color:'#a6e23c'},   // 베히모스(가디언): 꼬리에서 뭉친 독구슬 — 독연기 꼬리 + 착탄 독폭발(랩 전용 함수 발사)
   falcon:    {kind:'beam', color:'#6ec8ff', lng:3.0, hd:0.85, wd:0.9, spd:2.6},   // 팔콘: 파란 에너지 파동 빔(FxLab에선 날개 트윈 평행 발사)
   skydancer: {kind:'spark', color:'#9fd0ff'},   // 스카이댄서: 원거리 즉발(푸른 스파크) — 투사체·연결 없음, 발사구 미세 스파크 + 타격 지점 범위 스파크
   archangel: {kind:'plasma', color:'#ffd66a'},   // 아크엔젤: 플라즈마 포
@@ -9398,15 +9449,20 @@ const FX={
   spawn(store, id, sx,sy, tx,ty, opts){ if(!store) return; opts=opts||{}; const st=ATK_STYLE[id]||ATK_STYLE._default, col=opts.color||st.color;
     const szf=(opts.unitSize||FX.REF)/FX.REF*(st.szm||1);   // 유닛 크기 비례 계수 × 스타일별 크기 배율(szm)
     const dx=tx-sx, dy=ty-sy, dist=Math.hypot(dx,dy)||1, ang=Math.atan2(dy,dx);
-    if(st.melee){ store.melee.push({x:tx,y:ty,ang:ang,life:1,kind:st.kind,col:col,szf:szf,op:st.op,sd:(store._sd=((store._sd||0)+1)&255)}); return; }
+    if(st.melee){ const _mm=st.mul||1, _pw=st.x2?2:1;
+      store.melee.push({x:tx,y:ty,ang:ang,life:1,kind:st.kind,col:col,szf:szf*_mm,op:st.op,pw:_pw,sd:(store._sd=((store._sd||0)+1)&255)});
+      if(st.x2) store.melee.push({x:tx,y:ty,ang:ang+1.75,life:1,kind:st.kind,col:col,szf:szf*_mm*0.92,op:st.op,pw:_pw,delay:0.09,sd:(store._sd=((store._sd||0)+1)&255)});   // X자 두 번째 베기(시차)
+      return; }
     if(st.beam){ store.melee.push({kind:st.kind||'psi',x0:sx,y0:sy,x:tx,y:ty,life:1,col:col,szf:szf,op:st.op,sd:(store._sd=((store._sd||0)+1)&255),dk:(st.hold?1/st.hold:null)}); return; }
     if(st.kind==='spark'){   // 원거리 즉발(스카이댄서): 투사체·연결 없음 — 발사구 미세 스파크 + 타격 지점 범위 스파크(독립 2개)
       store.melee.push({kind:'sparkM',x:sx,y:sy,life:1,col:col,szf:szf,sd:(store._sd=((store._sd||0)+1)&255),dk:3.4});    // 발사구: 에너지 장전(공격 사이클 내내 보이게)
       store.melee.push({kind:'spark', x:tx,y:ty,life:1,col:col,szf:szf,sd:(store._sd=((store._sd||0)+1)&255),dk:3.2});  // 타격 지점: 연한 범위 스파크
       return; }
-    if(st.kind==='voidburst'){   // 보이드(근접): 대상 위치에서 구체가 빠르게 커지며 그 지역을 에너지로 채움 — 발사·이동 없음
-      store.melee.push({kind:'voidQ',x:tx,y:ty,life:1,col:col,szf:szf,sd:(store._sd=((store._sd||0)+1)&255),dk:3.2});          // 대상 위 급성장 구체
-      store.melee.push({kind:'voidA',x:tx,y:ty,life:1,col:col,szf:szf,sd:(store._sd=((store._sd||0)+1)&255),dk:2.1,delay:0.14});   // 구체를 따라 영역 에너지 필
+    if(st.kind==='voidburst'){   // 보이드: 손에서 고속 사이오닉 볼트 발사 → 꽂히는 순간 대상 지역이 에너지로 차오름(시전→타격 인과 연결, 직접 쏘는 느낌)
+      const _vT=Math.max(0.05, dist/3.8), _vsp=dist/_vT;   // 비행 시간: 근거리 최소 0.05s(눈에 보이게), 원거리 고속(3.8/s)
+      store.shots.push({x:sx,y:sy,vx:Math.cos(ang)*_vsp,vy:Math.sin(ang)*_vsp,t:0,dur:_vT+0.05,kind:'plasma',color:col,boom:3,szf:szf*0.4,mx:sx,my:sy,dist:dist,ex:tx,ey:ty,noflash:1});   // 손→대상 사이오닉 볼트(작고 밝게)
+      store.melee.push({kind:'voidQ',x:tx,y:ty,life:1,col:col,szf:szf,sd:(store._sd=((store._sd||0)+1)&255),dk:3.2,delay:_vT});          // 볼트 도착 순간 급성장 구체
+      store.melee.push({kind:'voidA',x:tx,y:ty,life:1,col:col,szf:szf,sd:(store._sd=((store._sd||0)+1)&255),dk:2.1,delay:_vT+0.14});   // 구체를 따라 영역 에너지 필
       return; }
     if(st.kind==='spit'){ const strands=st.count||5; if(store.shots.length>200) store.shots.splice(0, store.shots.length-200);   // 스웜 일꾼: 독 가래 여러 갈래(거리÷비행시간=스케일 독립)
       for(let i=0;i<strands;i++){ const a=ang+(i-(strands-1)/2)*0.24+(Math.random()-0.5)*0.18, dj=dist*(0.60+Math.random()*0.22), td=0.08+Math.random()*0.05, sp=dj/td;
@@ -9422,7 +9478,7 @@ const FX={
   smoke(store, x,y){ if(!store||!store.smoke) return;   // 어깨 포드 발사 연기(골리앗 등) — 위로 피어오르는 회색 구름
     for(let k=0;k<3;k++){ store.smoke.push({x:x+(Math.random()-0.5)*0.012, y:y, vx:(Math.random()-0.5)*0.03, vy:-0.05-Math.random()*0.045, life:1, r0:2.4+Math.random()*2, col:(k%2?'#5a5a66':'#7a7a86')}); } },
   advance(store, dt){ if(!store) return;
-    const sh=store.shots; for(let i=sh.length-1;i>=0;i--){ const s=sh[i]; if(!s._fired){ if(s.delay>0){ s.delay-=dt; if(s.delay>0) continue; } s._fired=true; if(store.flashes && !s.noflash) store.flashes.push({x:s.mx,y:s.my,life:1,szf:s.szf||1,ang:Math.atan2(s.vy,s.vx),fz:s.fz}); } if(s.wob){ const cw=Math.cos(s.wob*dt), sw=Math.sin(s.wob*dt), nvx=s.vx*cw-s.vy*sw, nvy=s.vx*sw+s.vy*cw; s.vx=nvx; s.vy=nvy; } s.t+=dt; if(s.kind==='missile'&&s.ex!=null){ const _ta=Math.atan2(s.ey-s.y,s.ex-s.x), _ca=Math.atan2(s.vy,s.vx); let _da=_ta-_ca; _da=Math.atan2(Math.sin(_da),Math.cos(_da)); const _mt=7*dt, _na=_ca+Math.max(-_mt,Math.min(_mt,_da)), _msp=Math.hypot(s.vx,s.vy); s.vx=Math.cos(_na)*_msp; s.vy=Math.sin(_na)*_msp; const _dtg=Math.hypot(s.ex-s.x,s.ey-s.y); if(s._pd!=null && _dtg>s._pd && s._pd<0.2) s._boom=1; s._pd=_dtg; /* 목표 지나침(선회 반경 내 재접근 불가)=즉시 기폭 */ if(store.smoke && !s.notrail){ s.trailT=(s.trailT||0)-dt; if(s.trailT<=0){ s.trailT=0.03; store.smoke.push({x:s.x,y:s.y,vx:0,vy:0,life:1,r0:0.5*(s.szf||1),col:'#ff9a4c',core:'#ffd9a0',glow:true,dk:5,ex:1.0,af:0.5}); } } } if(s.grav) s.vy+=s.grav*dt;   // 포물선(가시 하늘로 솟았다 낙하)
+    const sh=store.shots; for(let i=sh.length-1;i>=0;i--){ const s=sh[i]; if(!s._fired){ if(s.delay>0){ s.delay-=dt; if(s.delay>0) continue; } s._fired=true; if(store.flashes && !s.noflash) store.flashes.push({x:s.mx,y:s.my,life:1,szf:s.szf||1,ang:Math.atan2(s.vy,s.vx),fz:s.fz}); } if(s.wob){ const cw=Math.cos(s.wob*dt), sw=Math.sin(s.wob*dt), nvx=s.vx*cw-s.vy*sw, nvy=s.vx*sw+s.vy*cw; s.vx=nvx; s.vy=nvy; } s.t+=dt; if(s.kind==='missile'&&s.ex!=null){ const _ta=Math.atan2(s.ey-s.y,s.ex-s.x), _ca=Math.atan2(s.vy,s.vx); let _da=_ta-_ca; _da=Math.atan2(Math.sin(_da),Math.cos(_da)); const _mt=7*dt, _na=_ca+Math.max(-_mt,Math.min(_mt,_da)), _msp=Math.hypot(s.vx,s.vy); s.vx=Math.cos(_na)*_msp; s.vy=Math.sin(_na)*_msp; const _dtg=Math.hypot(s.ex-s.x,s.ey-s.y); if(s._pd!=null && _dtg>s._pd && s._pd<0.2) s._boom=1; s._pd=_dtg; /* 목표 지나침(선회 반경 내 재접근 불가)=즉시 기폭 */ if(store.smoke && !s.notrail){ s.trailT=(s.trailT||0)-dt; if(s.trailT<=0){ s.trailT=0.03; store.smoke.push({x:s.x,y:s.y,vx:0,vy:0,life:1,r0:0.5*(s.szf||1),col:'#ff9a4c',core:'#ffd9a0',glow:true,dk:5,ex:1.0,af:0.5}); } } } if(s.grav) s.vy+=s.grav*dt; if(s.gt&&store.smoke){ s.trailT=(s.trailT||0)-dt; if(s.trailT<=0){ s.trailT=0.035; store.smoke.push({x:s.x,y:s.y,vx:(Math.random()-0.5)*0.008,vy:(Math.random()-0.5)*0.008,life:1,r0:(0.5+Math.random()*0.4)*(s.szf||1),col:'#7ca83c',ex:1.8,af:0.32,dk:2.8}); } }   // 포물선 + 독 연기 꼬리(gt 플래그)
       const _rf=(s.ramp&&s.t<s.ramp)?(0.34+0.66*Math.pow(s.t/s.ramp,1.6)):1;   // 가속 램프: 초반 잠깐 느리게 → 금방 최고속(이후 일정)
       s._dn=Math.hypot(s.vx,s.vy)*dt*_rf; s.x+=s.vx*dt*_rf; s.y+=s.vy*dt*_rf;
       if(s.landY!=null && s.vy>0 && s.y>=s.landY){ s.y=s.landY; store.impacts.push({x:s.x,y:s.landY,life:1,kind:(s.imk||s.kind),col:s.color,boom:s.boom||4,szf:s.szf||1,ang:Math.atan2(s.vy,s.vx),sd:(store._sd=((store._sd||0)+1)&255)}); sh.splice(i,1); continue; }   // 낙하 착지=꽂힘
@@ -9430,7 +9486,7 @@ const FX={
     const im=store.impacts; for(let i=im.length-1;i>=0;i--){ im[i].life-=dt*(im[i].kind==='stab'?5.5:4.5); if(im[i].life<=0) im.splice(i,1); }   // stab(가시 박힘)=타격 즉시 사라짐
     const me=store.melee; for(let i=me.length-1;i>=0;i--){ const M=me[i]; if(M.delay>0){ M.delay-=dt; continue; } M.age=(M.age||0)+dt; M.life-=dt*(M.dk||5); if(M.life<=0) me.splice(i,1); }   // delay=발동 지연(보이드 버스트 등)
     const de=store.deaths; for(let i=de.length-1;i>=0;i--){ de[i].life-=dt*2.2; if(de[i].life<=0) de.splice(i,1); }
-    const sm=store.smoke; if(sm) for(let i=sm.length-1;i>=0;i--){ const p=sm[i]; p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy*=0.95; p.life-=dt*(p.dk||1.7); if(p.life<=0) sm.splice(i,1); }
+    const sm=store.smoke; if(sm) for(let i=sm.length-1;i>=0;i--){ const p=sm[i]; p.x+=p.vx*dt; p.y+=p.vy*dt; if(!p.vk) p.vy*=0.95; p.life-=dt*(p.dk||1.7); if(p.life<=0) sm.splice(i,1); }   // vk=속도 유지(가스 스트림 등)
     const fl=store.flashes; if(fl) for(let i=fl.length-1;i>=0;i--){ fl[i].life-=dt*11; if(fl[i].life<=0) fl.splice(i,1); } },
   drawShots(ctx, store, toScreen, sz){ if(!store) return; sz=sz*(FX.sizeMul||1); ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round';
     if(store.smoke) for(const p of store.smoke){ const c=toScreen(p.x,p.y), L=Math.max(0,p.life), z=sz*0.9;   // 발사 연기(회색) / 엔진 분사(glow=푸른 발광)
@@ -9441,7 +9497,7 @@ const FX={
     const _pxn=toScreen(1,0).x-toScreen(0,0).x;   // 정규화→px(가로) — 프레임 이동거리 환산
     for(const s of store.shots){ if(s.delay>0) continue; const c=toScreen(s.x,s.y), z=sz*(s.szf||1); ctx.save(); ctx.globalCompositeOperation='lighter';
       ctx.translate(c.x,c.y); ctx.rotate(Math.atan2(s.vy,s.vx)); ctx.scale(z,z);
-      if(s._dn && (s.kind==='bullet'||s.kind==='sniper'||s.kind==='mg'||s.kind==='shell')){ const _tu=Math.min(52, s._dn*_pxn/Math.max(0.001,z)); if(_tu>8){ ctx.globalAlpha=0.3*(s.tr==null?1:s.tr); ctx.strokeStyle=s.color; ctx.lineWidth=0.8; ctx.beginPath(); ctx.moveTo(-5,0); ctx.lineTo(-_tu,0); ctx.stroke(); ctx.globalAlpha=1; } }   // 프레임 간 이동 잔상 연결(빠른 탄이 점선처럼 여러발로 보이는 것 방지 → 하나의 연속 궤적)
+      if(s._dn && (s.kind==='bullet'||s.kind==='sniper'||s.kind==='mg'||s.kind==='shell'||s.kind==='shuriken')){ const _tu=Math.min(52, s._dn*_pxn/Math.max(0.001,z)); if(_tu>8){ ctx.globalAlpha=0.3*(s.tr==null?1:s.tr); ctx.strokeStyle=s.color; ctx.lineWidth=0.8; ctx.beginPath(); ctx.moveTo(-5,0); ctx.lineTo(-_tu,0); ctx.stroke(); ctx.globalAlpha=1; } }   // 프레임 간 이동 잔상 연결(빠른 탄이 점선처럼 여러발로 보이는 것 방지 → 하나의 연속 궤적)
       FX._shot(ctx,s); ctx.restore(); }
     ctx.globalCompositeOperation='lighter';
     for(const im of store.impacts){ const c=toScreen(im.x,im.y), L=Math.max(0,im.life), p=1-L, z=sz*(im.szf||1); ctx.save(); ctx.translate(c.x,c.y);
@@ -9475,6 +9531,10 @@ const FX={
         ctx.globalAlpha=L*0.6; ctx.strokeStyle='#dff2ff'; ctx.lineWidth=0.5*z;
         for(let q=0;q<4;q++){ const an=q*1.57+bsd*0.2, l1=(1.5+p*3.0)*z;   // 튀는 스파크 4가닥
           ctx.beginPath(); ctx.moveTo(Math.cos(an)*l1*0.4,Math.sin(an)*l1*0.4); ctx.lineTo(Math.cos(an)*l1,Math.sin(an)*l1); ctx.stroke(); } }
+      else if(im.kind==='shurikenHit'){ ctx.globalCompositeOperation='lighter';   // 표창 그레이즈: 작고 자연스러운 타격(과한 섬광 X)
+        ctx.globalAlpha=L*0.5; ctx.fillStyle='#eaffc0'; ctx.beginPath(); ctx.arc(0,0,(0.7+p*0.6)*z,0,6.283); ctx.fill();
+        ctx.globalAlpha=L*0.32; ctx.strokeStyle=im.col||'#bfe89a'; ctx.lineWidth=0.55*z;
+        for(let q=0;q<3;q++){ const a2=(im.ang||0)+(q-1)*0.5, d0=(0.5+p*1.0)*z, d1=d0+(1.2+p*1.6)*z; ctx.beginPath(); ctx.moveTo(Math.cos(a2)*d0,Math.sin(a2)*d0); ctx.lineTo(Math.cos(a2)*d1,Math.sin(a2)*d1); ctx.stroke(); } }
       else if(im.kind==='sniper'){ ctx.globalCompositeOperation='lighter';
         ctx.globalAlpha=L*0.4; ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(0,0,(0.9+p*1.1)*z,0,6.283); ctx.fill();   // 희미한 흰 타격 코어
         ctx.globalAlpha=L*0.14; ctx.fillStyle=im.col||'#eafdff'; ctx.beginPath(); ctx.arc(0,0,(1.8+p*3.0)*z,0,6.283); ctx.fill(); }   // 아주 옅은 글로우
@@ -9543,6 +9603,22 @@ const FX={
         ctx.globalAlpha=fI*0.4*(1-pe*0.4); ctx.strokeStyle=m.col; ctx.lineWidth=1.7*z; ctx.beginPath(); ctx.arc(b.x,b.y,Rc*0.965,0,6.283); ctx.stroke();   // 파면 색 글로우
         for(let k2=1;k2<=2;k2++){ const rr=Rc*(1-k2*0.27); if(rr<=0) continue;   // 내부 리플(따라오는 동심원)
           ctx.globalAlpha=fI*0.22; ctx.strokeStyle=m.col; ctx.lineWidth=0.5*z; ctx.beginPath(); ctx.arc(b.x,b.y,rr,0,6.283); ctx.stroke(); } }
+      else if(m.kind==='infect'){ const c=toScreen(m.x,m.y), age=m.age||0, fI=Math.min(1,L*2.5)*0.85;   // 감염(디바우러 산성 포자): 대상 주위 독 연기 구름 — 소용돌이치며 위로 떠오르는 안개
+        ctx.globalCompositeOperation='source-over';
+        for(let q=0;q<6;q++){ const an=(m.sd||0)*0.7+q*1.047+age*(0.5+(q%3)*0.22), dd=(1.5+(q%3)*1.1)*z;   // 퍼프별 위상·회전속도 다르게(소용돌이)
+          const px2=c.x+Math.cos(an)*dd, py2=c.y+Math.sin(an)*dd*0.75-age*0.5*z, pr=(2.2+(q%4)*0.8)*z*(0.8+age*0.25);   // 천천히 위로 떠오르며 팽창
+          const g2=ctx.createRadialGradient(px2,py2,0,px2,py2,pr);
+          g2.addColorStop(0,'rgba(124,168,60,'+(0.34*fI)+')'); g2.addColorStop(0.6,'rgba(94,128,50,'+(0.18*fI)+')'); g2.addColorStop(1,'rgba(94,128,50,0)');
+          ctx.globalAlpha=1; ctx.fillStyle=g2; ctx.beginPath(); ctx.arc(px2,py2,pr,0,6.283); ctx.fill(); }   // 부드러운 안개 퍼프(경계 없는 그라데이션)
+        ctx.globalAlpha=fI*0.5; ctx.fillStyle='#b8d878'; for(let q=0;q<3;q++){ const an=(m.sd||0)+q*2.1+age*2.2, dd=(1.2+(q%2))*z; ctx.beginPath(); ctx.arc(c.x+Math.cos(an)*dd, c.y+Math.sin(an)*dd*0.7-age*0.4*z, 0.35*z, 0, 6.283); ctx.fill(); } }   // 구름 속 떠다니는 포자 점
+      else if(m.kind==='boom'){ const c=toScreen(m.x,m.y), p=1-L, R=16*z;   // 자폭 범위딜: 중심(최대)→외곽(최소) 그라데이션 + 확장 블라스트 링, 터지며 페이드
+        ctx.globalCompositeOperation='lighter';
+        const rg=ctx.createRadialGradient(c.x,c.y,0,c.x,c.y,R*(0.4+p*0.85));
+        rg.addColorStop(0,'rgba(255,255,255,'+(0.85*L)+')'); rg.addColorStop(0.32,'rgba(200,232,154,'+(0.55*L)+')'); rg.addColorStop(0.68,'rgba(140,180,90,'+(0.26*L)+')'); rg.addColorStop(1,'rgba(140,180,90,0)');
+        ctx.globalAlpha=1; ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(c.x,c.y,R*(0.4+p*0.85),0,6.283); ctx.fill();
+        ctx.globalAlpha=L*0.8; ctx.strokeStyle='#eaffc0'; ctx.lineWidth=1.6*z; ctx.beginPath(); ctx.arc(c.x,c.y,R*(0.5+p*0.7),0,6.283); ctx.stroke();
+        ctx.globalAlpha=L*0.35; ctx.strokeStyle='#c8e89a'; ctx.lineWidth=1*z; ctx.beginPath(); ctx.arc(c.x,c.y,R*(0.3+p*0.55),0,6.283); ctx.stroke();
+        ctx.globalAlpha=L*0.9; ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(c.x,c.y,3.2*z*(1-p*0.6),0,6.283); ctx.fill(); }
       else if(m.kind==='push'){ const c=toScreen(m.x,m.y), p=1-L, z2=z, sd=m.sd||0; ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=L*0.78; ctx.fillStyle='#fff3e2'; ctx.beginPath(); ctx.arc(c.x,c.y,(0.55+L*1.9)*z2,0,6.283); ctx.fill(); ctx.globalAlpha=L*0.3; ctx.fillStyle='#ffb066'; ctx.beginPath(); ctx.arc(c.x,c.y,(1.2+p*2.9)*z2,0,6.283); ctx.fill(); ctx.globalAlpha=L*0.68; ctx.strokeStyle='#ffd7a0'; ctx.lineCap='round'; for(let _q=0;_q<6;_q++){ const _a=m.ang+(_q-2.5)*0.42+((sd*7+_q*13)%7-3)*0.05, _len=(2.3+p*4.8)*z2*(0.65+((sd+_q*5)%4)/4*0.7); ctx.lineWidth=(1.05-_q*0.07)*z2; ctx.beginPath(); ctx.moveTo(c.x,c.y); ctx.lineTo(c.x+Math.cos(_a)*_len,c.y+Math.sin(_a)*_len); ctx.stroke(); } }
       else if(m.kind==='scythe'){ // 대상 직격 베기: 얇게 시작→두껍게 끝나는 곡선 슬래시(칼자국) + 피 튀김
         const c=toScreen(m.x,m.y), p=1-L, g=Math.min(1,p*6), ba=m.ang+0.5, len=(11+p*4)*z, curve=0.42;
@@ -9562,6 +9638,22 @@ const FX={
         for(let q=0;q<8;q++){ const an=ba+(q-3.5)*0.3+((m.sd*7+q*13)%7-3)*0.05, dd=(1.5+p*8.0)*z*(0.5+((m.sd+q*5)%5)/5), rr=(0.95-p*0.6)*z*(0.55+((m.sd*3+q*7)%4)/4);
           if(rr<=0.05) continue; ctx.globalAlpha=L*(0.72-p*0.4); ctx.fillStyle=(q%3===0)?'#c8f07a':'#7fae2c';   // 초록빛 체액(밝은/짙은)
           ctx.beginPath(); ctx.ellipse(c.x+Math.cos(an)*dd, c.y+Math.sin(an)*dd, rr*1.6, rr*0.7, an, 0, 6.28); ctx.fill(); } }
+      else if(m.kind==='psicut'){ // 사이오닉 검격(워든/다크템플러): 테이퍼 곡선 칼자국 + 백열 심 + 에너지 파편. pw2(다크템플러)=더 크고 강한 타격+충격 링
+        const c=toScreen(m.x,m.y), p=1-L, g=Math.min(1,p*6), pw=m.pw||1, ba=m.ang+0.5, len=(10+pw*2.5+p*4)*z, curve=0.4;
+        const ux=Math.cos(ba), uy=Math.sin(ba), px2=-uy, py2=ux;
+        const slashFill=(col2, wid, alpha)=>{ ctx.globalAlpha=alpha; ctx.fillStyle=col2; ctx.beginPath();
+          const N=14; for(let s2=0;s2<=N;s2++){ const t=s2/N, tt=(t-0.5)*2, along=(t-0.5)*len, bow=(1-tt*tt)*curve*len, w=wid*(Math.pow(1-Math.abs(tt),0.6));
+            const cx=c.x+ux*along+px2*bow, cy=c.y+uy*along+py2*bow; if(s2===0) ctx.moveTo(cx+px2*w,cy+py2*w); else ctx.lineTo(cx+px2*w,cy+py2*w); }
+          for(let s2=N;s2>=0;s2--){ const t=s2/N, tt=(t-0.5)*2, along=(t-0.5)*len, bow=(1-tt*tt)*curve*len, w=wid*(Math.pow(1-Math.abs(tt),0.6));
+            const cx=c.x+ux*along+px2*bow, cy=c.y+uy*along+py2*bow; ctx.lineTo(cx-px2*w,cy-py2*w); } ctx.closePath(); ctx.fill(); };
+        ctx.globalCompositeOperation='lighter';
+        slashFill(m.col, (2.2+pw*0.5-p*1.4)*z, L*0.38);      // 색 잔광(강할수록 굵게)
+        slashFill('#ffffff', (0.85+pw*0.15-p*0.6)*z, L*0.95); // 백열 칼자국 심
+        ctx.globalAlpha=L*0.85*g; ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(c.x,c.y,(1.0+pw*0.5)*z*g,0,6.28); ctx.fill();   // 타격 섬광(강할수록 크게)
+        for(let q=0;q<6;q++){ const an=ba+(q-2.5)*0.34+((m.sd*7+q*13)%7-3)*0.05, d0=(1.2+p*7.5)*z*(0.5+((m.sd+q*5)%5)/5), l2=(2.0-p*1.2)*z;
+          if(l2<=0.1) continue; ctx.globalAlpha=L*(0.6-p*0.3); ctx.strokeStyle=(q%2?m.col:'#ffffff'); ctx.lineWidth=(0.5+pw*0.1)*z; ctx.lineCap='round';
+          ctx.beginPath(); ctx.moveTo(c.x+Math.cos(an)*d0, c.y+Math.sin(an)*d0); ctx.lineTo(c.x+Math.cos(an)*(d0+l2), c.y+Math.sin(an)*(d0+l2)); ctx.stroke(); }   // 에너지 파편(베기 방향 비산)
+        if(pw>=2){ ctx.globalAlpha=L*0.5*(1-p*0.4); ctx.strokeStyle=m.col; ctx.lineWidth=0.8*z; ctx.beginPath(); ctx.arc(c.x,c.y,(3+p*9)*z,0,6.283); ctx.stroke(); } }   // 강타 충격 링(다크템플러)
       else if(m.kind==='slash'){ // 검격: 대상 위 사선 베기 한 줄(희미·소형, 고정 — 타이밍은 ATK_STYLE.hit 지연)
         const c=toScreen(m.x,m.y), p=1-L, g=Math.min(1,p*7);   // g=등장 팝
         ctx.save(); ctx.translate(c.x,c.y); ctx.rotate(m.ang+0.62);
@@ -9611,6 +9703,18 @@ const FX={
       ctx.globalAlpha=.9; ctx.fillStyle=s.color; ctx.beginPath(); ctx.ellipse(0,0,3.0,0.85,0,0,6.28); ctx.fill();
       ctx.globalAlpha=.55; ctx.fillStyle='#5f9e1e'; ctx.beginPath(); ctx.ellipse(-0.6,0,1.6,0.4,0,0,6.28); ctx.fill();
       ctx.globalAlpha=.8; ctx.fillStyle='#eaffb0'; ctx.beginPath(); ctx.arc(1.2,-0.15,0.45,0,6.28); ctx.fill(); break;
+    case 'porb': { ctx.globalAlpha=.30; ctx.fillStyle=s.color; ctx.beginPath(); ctx.arc(0,0,3.4,0,6.28); ctx.fill();   // 독구슬: 겉 글로우
+      ctx.globalAlpha=1; ctx.fillStyle='#5f9e1e'; ctx.beginPath(); ctx.arc(0,0,2.2,0,6.28); ctx.fill();   // 짙은 몸체
+      ctx.fillStyle=s.color; ctx.beginPath(); ctx.arc(0,0,1.5,0,6.28); ctx.fill();   // 본색 코어
+      ctx.globalAlpha=.85; ctx.fillStyle='#eaffb0'; ctx.beginPath(); ctx.arc(0.7,-0.7,0.5,0,6.28); ctx.fill(); break; }   // 하이라이트(뭉친 구슬)
+    case 'shuriken': { const spin=(s.t||0)*(s.spinRate||18);   // 삼각수리검: 중심에서 뻗은 얇고 긴 못 형태 블레이드 3개(120도)
+      ctx.save(); ctx.rotate(spin);
+      for(let bq=0;bq<3;bq++){ ctx.save(); ctx.rotate(bq*2.0944);
+        ctx.globalAlpha=1; ctx.fillStyle=s.color; ctx.beginPath(); ctx.moveTo(3.4,0); ctx.lineTo(-0.75,0.15); ctx.lineTo(-0.75,-0.15); ctx.closePath(); ctx.fill();   // 완전히 얇은 못 형태 블레이드
+        ctx.globalAlpha=1; ctx.fillStyle='#eaffc0'; ctx.beginPath(); ctx.moveTo(2.6,0); ctx.lineTo(-0.35,0.06); ctx.lineTo(-0.35,-0.06); ctx.closePath(); ctx.fill();   // 밝은 심(더욱 얇게)
+        ctx.restore(); }
+      ctx.globalAlpha=.95; ctx.fillStyle='#f6ffe0'; ctx.beginPath(); ctx.arc(0,0,0.2,0,6.283); ctx.fill();   // 중심 리벳(축소)
+      ctx.restore(); break; }
     default: ctx.globalAlpha=1; ctx.fillStyle=s.color; ctx.beginPath();ctx.arc(0,0,2,0,6.28);ctx.fill(); } }
 };
 function strikeFx(u,tx,ty){ const S=STK; if(!S) return; if(!S.fx||!S.fx.shots) S.fx=FX.store(); FX.spawn(S.fx, u.id, u.x,u.y, tx,ty, {speed:2600, unitSize:u.size}); }   // 직스 → 공용 FX 코어(유닛 크기 비례)
@@ -10105,7 +10209,7 @@ const FXLAB_ROSTER={
     {n:'일꾼',        id:'marine',  gm:'worker_human'},
     {n:'레인저',      id:'marine'},
     {n:'발칸',        id:'marine',  gm:'machinegun'},
-    {n:'메딕',        id:'marine',  gm:'medic',          todo:true},
+    {n:'메딕',        id:'marine',  gm:'medic'},
     {n:'팬텀',        id:'ghost'},
     {n:'레이서',      id:'marine',  gm:'racer'},
     {n:'브레이커',    id:'goliath', gm:'tank'},
@@ -10127,6 +10231,9 @@ const FXLAB_ROSTER={
     {n:'메두사',    id:'marine', gm:'medusa'},
     {n:'베놈',      id:'marine', gm:'venom'},
     {n:'베히모스',  id:'marine', gm:'behemoth'},
+    {n:'브루들링',  id:'hydra',  gm:'broodling'},
+    {n:'라바',      id:'hydra',  gm:'larva'},
+    {n:'울트라리스크',id:'hydra', gm:'ultralisk'},
     {n:'브루드마더',id:'hydra',              todo:true},
   ],
   aetherial:[
@@ -10134,6 +10241,8 @@ const FXLAB_ROSTER={
     {n:'워든',      id:'blade'},
     {n:'센티넬',    id:'dragoon'},
     {n:'보이드',    id:'archon'},
+    {n:'다크템플러',id:'ghost',   gm:'dark_templar'},
+    {n:'하이템플러',id:'marine',  gm:'high_templar'},
     {n:'팔콘',      id:'marine',  gm:'falcon'},
     {n:'세라프',    id:'marine',  gm:'seraph'},
     {n:'스카이댄서',id:'goliath', gm:'skydancer'},
@@ -10147,7 +10256,7 @@ const FXLAB_RACE_KO={union:'🛡 유니온',swarm:'🦎 스웜',aetherial:'🔮 
 const FXLAB={ store:null, attId:'marine', attGm:null, scale:1, mode:'attack', phase:'alive', t:0, cd:0, mv:1, ti:0, att:null, dummy:null, bldg:null, air:null };
 let _fxLabAttSeq=0;
 const FXLAB_AA=new Set(['marine','ghost','goliath','dragoon','archon','hydra']);   // 공중 공격 가능 유닛(나머지는 지상만)
-const FXLAB_NOATK=new Set(['pelican','overlord','seraph','aegis','observer','medic']);   // 비전투(수송선·지원함·정찰기): 랩에서 공격 안 함
+const FXLAB_NOATK=new Set(['pelican','overlord','seraph','aegis','observer','medic','medusa','larva','high_templar']);   // 비전투(수송선·지원함·정찰기·시전형): 랩에서 공격 안 함 — 메두사(퀸)·라바·하이템플러=기본공격 없음
 const FXLAB_SWITCH_DELAY=0.35;   // 발사 후 방금 쏜 대상을 잠깐 더 바라본 뒤 다음 타겟으로 전환(허공 발사 방지)
 const FXLAB_AIR=new Set(['skyguard','skydancer','overlord','observer','pelican','seraph','hellfire','dreadnought','kronos','archangel','falcon','stinger','venom','medusa','wyvern','aegis','behemoth']);   // 공중(비행) 유닛 — 바닥 위로 부양
 const FXLAB_AIR_LIFT=0.16;   // 공중유닛 부양 높이(정규화)
@@ -10167,10 +10276,10 @@ function fxLabSpawnScene(){ const _gm=FXLAB.attGm; const a=fxLabStats(FXLAB.attI
   FXLAB.bldg ={ uid:'lab_bld', id:'turret',   x:0.80, y:0.62, face:0,          moving:false, fireSeq:0, size:24 };
   FXLAB.air  ={ uid:'lab_air', id:'skyguard', x:0.72, y:0.14, face:Math.PI,     moving:false, fireSeq:0, size:18 }; }
 function fxLabClearStore(){ const s=FXLAB.store; if(s){ s.shots.length=0; s.impacts.length=0; s.melee.length=0; s.deaths.length=0; if(s.flashes) s.flashes.length=0; } }
-function fxLabSelect(id, gm){ FXLAB.attId=id; FXLAB.attGm=gm||null; FXLAB.bstate=null; if(!FXLAB.store) FXLAB.store=FX.store(); fxLabClearStore();
+function fxLabSelect(id, gm){ FXLAB.attId=id; FXLAB.attGm=gm||null; FXLAB.bstate=null; FXLAB.sgstate=null; FXLAB.wyPend=null; FXLAB.vnJet=null; if(!FXLAB.store) FXLAB.store=FX.store(); fxLabClearStore();
   if(window.M3D&&M3D.clearGameModels) M3D.clearGameModels(); fxLabSpawnScene(); FXLAB.phase='alive'; FXLAB.t=(FXLAB.mode==='death')?0.9:0; FXLAB.cd=0.2; fxLabRenderGrid(); }
 function fxLabSetMode(mode, el){ FXLAB.mode=mode; FXLAB.phase='alive'; FXLAB.t=(mode==='death')?0.9:0; FXLAB.cd=0.2; FXLAB.mv=1; FXLAB.ti=0;
-  FXLAB.bstate=null;   // 베놈퀸 잠복 상태 리셋
+  FXLAB.bstate=null; FXLAB.sgstate=null; FXLAB.wyPend=null; FXLAB.vnJet=null;   // 베놈퀸 잠복/스팅어 자폭/와이번 튕김/베놈 가스 상태 리셋
   if(FXLAB.att){ FXLAB.att.hidden=false; FXLAB.att.moving=false; if(mode!=='move'){ FXLAB.att.x=fxLabAttX(FXLAB.attId,FXLAB.attGm); FXLAB.att.y=((window.M3D&&M3D.airFloat&&M3D.airFloat(FXLAB.attGm||FXLAB.attId))?FXLAB_TGT_Y:(FXLAB_AIR.has(FXLAB.attGm||FXLAB.attId)?FXLAB_TGT_Y-FXLAB_AIR_LIFT:FXLAB_TGT_Y)); } }
   document.querySelectorAll('#fxLabActs .fxlAct').forEach(b=>b.classList.toggle('on', b.getAttribute('data-m')===mode)); }
 function fxLabSetMul(v){ FX.sizeMul=+v||1; const e=document.getElementById('fxLabSizeV'); if(e) e.textContent=(+v).toFixed(2); }
@@ -10200,9 +10309,13 @@ function fxLabDeactivate(){ const w=document.getElementById('fxLabWrap'); if(w) 
   FXLAB.att=null; FXLAB.dummy=null; FXLAB.bldg=null; FXLAB.air=null; }
 function fxLabStep(dt){ const L=FXLAB; if(!L.att) fxLabSpawnScene(); const a=L.att, st=fxLabStats(L.attId,L.attGm);
   if(L.pend && L.pend.length){ for(let i=L.pend.length-1;i>=0;i--){ const p=L.pend[i]; p.t-=dt; if(p.t<=0){ FX.spawn(L.store, p.id, p.sx, p.sy, p.tx, p.ty, p.opt); L.pend.splice(i,1); } } }   // 지연 피격: 공격 모션의 타격 순간에 FX 생성
+  if(L.wyPend && L.wyPend.length){ for(let i=L.wyPend.length-1;i>=0;i--){ const p=L.wyPend[i]; p.t-=dt; if(p.t<=0){ fxLabWyvernLaunchLeg(L, p.from, p.order, p.idx, p.szf); L.wyPend.splice(i,1); } } }   // 와이번 튕김: 실제 튕길 시점에 좌표 재조회 후 다음 다리 발사
+  if(L.vnJet && L.store && L.store.smoke){ const J=L.vnJet; J.t-=dt; J.acc+=dt;   // 베놈 가스 분사: 화염방사기식 스트림(이미터가 매 프레임 퍼프 방출)
+    while(J.acc>=0.016){ J.acc-=0.016; for(let k=0;k<5;k++){ const an=J.ang+(Math.random()-0.5)*0.18, v=J.v*(0.85+Math.random()*0.3), trav=(J.ed||0.25)*(0.88+Math.random()*0.24);
+      L.store.smoke.push({x:J.mx+(Math.random()-0.5)*0.006, y:J.my+(Math.random()-0.5)*0.006, vx:Math.cos(an)*v, vy:Math.sin(an)*v, vk:1, life:1, r0:(0.45+Math.random()*0.5)*J.szf, col:(Math.random()<0.6?'#7ca83c':'#96c452'), ex:2.6, af:0.4, dk:v/trav}); } }   // 수명=사거리/속도 → 가스가 대상 지점에서 소멸(그 지역에 독이 떨어지듯)
+    if(J.t<=0) L.vnJet=null; }
   if(L.mode==='move'){ a.moving=true; a.x+=0.17*dt*L.mv; if(a.x>0.60){ a.x=0.60; L.mv=-1; } if(a.x<0.22){ a.x=0.22; L.mv=1; } a.face=Math.atan2(L.mv,0.0001);
-    if((L.attGm==='racer'||L.attId==='racer') && L.store && L.store.smoke){ L._ex=(L._ex||0)+dt; if(L._ex>=0.022){ L._ex=0; var _ro=0.016*fxZoomF(); for(var _e=0;_e<2;_e++){ L.store.smoke.push({x:a.x-L.mv*_ro+(Math.random()-0.5)*0.004, y:a.y-0.004+(Math.random()-0.5)*0.004, vx:-L.mv*(0.012+Math.random()*0.012), vy:(Math.random()-0.5)*0.006, life:1, r0:0.4+Math.random()*0.45, col:'#4ab4ff', glow:true, dk:4.6}); } } }   // 레이서: 바로 뒤 미세한 푸른 엔진 화염(이동 중)
-    if((L.attGm==='tank'||L.attId==='tank') && L.store && L.store.smoke){ L._tx=(L._tx||0)+dt; if(L._tx>=0.05){ L._tx=0; var _tro=0.022*fxZoomF(); L.store.smoke.push({x:a.x-L.mv*_tro+(Math.random()-0.5)*0.006, y:a.y-0.012+(Math.random()-0.5)*0.004, vx:-L.mv*(0.008+Math.random()*0.01), vy:-0.018-Math.random()*0.012, life:1, r0:0.6+Math.random()*0.5, col:(Math.random()<0.5?'#3a3a42':'#4e4e58'), ex:3.0, af:0.5, dk:1.6}); } }   // 브레이커: 뒤 검은 엔진 연기(미세, 이동 중)
+    emitMoveTrail(L.store, (L.attGm||L.attId), a, L.mv, 0, fxZoomF(), dt);   // 이동 트레일(레이서/브레이커/스팅어) — 메인과 공용 이미터(완전 동일)
     return; }
   if(L.mode==='death'){ a.moving=false; L.t-=dt;
     if(L.phase==='alive'){ if(L.t<=0){ FX.death(L.store, a.x,a.y, {unitSize:a.size, color:st.color}); a.hidden=true; L.phase='dead'; L.t=0.9; } }
@@ -10210,13 +10323,14 @@ function fxLabStep(dt){ const L=FXLAB; if(!L.att) fxLabSpawnScene(); const a=L.a
     return; }
   if(FXLAB_NOATK.has(L.attGm||L.attId)){ a.moving=false; return; }   // 비전투 유닛: 공격 없음(대기만)
   if((L.attGm||L.attId)==='thornqueen'){ fxLabThornCycle(L, a, dt); return; }   // 베놈퀸(럴커식): 지상=공격불가 / 잠복 시에만 가시 퍼붓기
-  a.moving=false; const _noAir=(L.attGm==='snapper'); const tgts=[L.dummy, L.bldg]; if(FXLAB_AA.has(L.attId)&&L.air&&!((L.attGm||'').indexOf('worker_')===0)&&!_noAir) tgts.push(L.air);   // 일꾼·스내퍼는 공중 공격 제외
-  if((L.attGm||L.attId)==='hellfire'){ tgts.length=0; if(L.air) tgts.push(L.air); if(!tgts.length) return; }   // 헬파이어: 공중 전용(지상 공격 불가)
+  if((L.attGm||L.attId)==='stinger'){ fxLabStingerCycle(L, a, dt); return; }   // 스팅어(자폭충): 공중 전용 — 대상 지역까지 돌진 후 폭발(원점 복귀)
+  a.moving=false; const _noAir=(L.attGm==='snapper'||L.attGm==='broodling'||L.attGm==='ultralisk'||L.attGm==='dark_templar'||L.attGm==='behemoth'); const tgts=[L.dummy, L.bldg]; if(FXLAB_AA.has(L.attId)&&L.air&&!((L.attGm||'').indexOf('worker_')===0)&&!_noAir) tgts.push(L.air);   // 일꾼·근접·베히모스(가디언)는 공중 공격 제외
+  if((L.attGm||L.attId)==='hellfire'||(L.attGm||L.attId)==='venom'){ tgts.length=0; if(L.air) tgts.push(L.air); if(!tgts.length) return; }   // 헬파이어·베놈: 공중 전용(지상 공격 불가)
   if(L._switchT>0){ L._switchT-=dt; if(L._switchT<=0) L.ti=((L.ti||0)+1)%tgts.length; }   // 텀 경과 후 타겟 전환(발사 직후 즉시 X → 부드러운 전환)
   const tgt=tgts[(L.ti||0)%tgts.length]; if(!tgt) return;
   const _cc=(window.M3D&&M3D.centerAt)?M3D.centerAt(tgt.uid):null; const ty=_cc?_cc.y:((tgt===L.air)?tgt.y-0.05:tgt.y);   // 몸 중앙 조준(발 X)
   const dx=tgt.x-a.x, dy=ty-a.y; a.face=Math.atan2(dx,dy);
-  L.cd-=dt; if(L.cd<=0){ L.cd=Math.max(0.42, st.cd); a.fireSeq=(a.fireSeq||0)+1;
+  L.cd-=dt; if(L.cd<=0){ L.cd+=Math.max(0.42, st.cd); a.fireSeq=(a.fireSeq||0)+1;   // +=로 나머지 이월 → 발사 간격 정확(모션 루프와 위상 고정, 드리프트 방지)
     const fxId=L.attGm||L.attId;
     if(typeof playUnitAttack==='function') playUnitAttack(fxId);   // 유닛 공격음 재생
     if(L.attId==='goliath'&&!L.attGm){ fxLabGoliathFire(L, a, tgt.x, ty, st.size); }   // 스트라이더: 지상·공중 모두 어깨 추적 미사일
@@ -10225,6 +10339,9 @@ function fxLabStep(dt){ const L=FXLAB; if(!L.att) fxLabSpawnScene(); const a=L.a
     else if(fxId==='hellfire') fxLabHellfireFire(L, a, tgt.x, ty, st.size);   // 헬파이어: 발키리식 유도 로켓 볼리(시간차·곡선·개별 타격)
     else if(fxId==='falcon') fxLabFalconFire(L, a, tgt.x, ty, st.size);   // 팔콘: 두 날개 평행 트윈 레이저
     else if(fxId==='hydra') fxLabHydraFire(L, a, tgt.x, ty, st.size);   // 리퍼: 양손 가시 다발(대상 전범위 랜덤)
+    else if(fxId==='wyvern') fxLabWyvernFire(L, a, tgt, ty, st.size, st.rng);   // 와이번(뮤탈 리스킨): 꼬리에서 회전 표창 — 가까이 있는 대상에만 튕김(최대 3쿠션)
+    else if(fxId==='venom') fxLabVenomFire(L, a, tgt.x, ty, st.size);   // 베놈(디바우러): 입에서 독 가래 분사 → 명중 시 감염 잔류
+    else if(fxId==='behemoth') fxLabBehemothFire(L, a, tgt.x, ty, st.size);   // 베히모스(가디언): 꼬리에서 독구슬 — 독연기 꼬리 + 착탄 독폭발
     else { const _dx=tgt.x-a.x, _dy=ty-a.y, _d=Math.hypot(_dx,_dy)||1, _mz=0.03*((st.size||16)/16);
       let _sx=a.x+(_dx/_d)*_mz, _sy=a.y+(_dy/_d)*_mz-0.024;
       const _mzg=(window.M3D && M3D.muzzleAt)?M3D.muzzleAt(a.uid):null;   // 실제 3D 총구 위치(있으면 — 각도 무관)
@@ -10247,6 +10364,35 @@ function fxLabTempestAir(L, a, tx, ty, size){   // 템페스트 공중: 얇은 �
   const sideN=0.012, szf=(size||16)/18*0.34, sp=2.8;   // 스트라이더(szf~0.73·sp1.7) 대비 절반 크기·1.6배 속도
   for(let k=-1;k<=1;k+=2){ const sx=ox+px*sideN*k, sy=oy+py*sideN*k, baseA=Math.atan2(ty-sy,tx-sx), la=baseA+k*0.3, ed=Math.hypot(tx-sx,ty-sy)||1;
     L.store.shots.push({x:sx,y:sy,vx:Math.cos(la)*sp,vy:Math.sin(la)*sp,t:0,dur:0.9,kind:'missile',color:'#9fe0ff',boom:4,szf:szf,mx:sx,my:sy,ex:tx,ey:ty,dist:ed*0.99,noflash:1}); } }   // dist로 확실히 명중(고속 통과 방지)
+// 스팅어(자폭충): 공중 전용 — 대기 → 대상 지역으로 돌진(정확한 좌표X, 주변 지역) → 도착 시 자폭(범위딜 시각화, 중심=최대~외곽=최소) → 원점 복귀
+function fxLabStingerCycle(L, a, dt){ a.moving=false; if(!L.air) return;
+  if(L.sgstate==null){ L.sgstate='ready'; L.sgt=0.5; L.sgOrigin={x:a.x,y:a.y}; }
+  L.sgt-=dt;
+  if(L.sgstate==='ready'){ a.hidden=false; a.moving=false;
+    const _cc=(window.M3D&&M3D.centerAt)?M3D.centerAt(L.air.uid):null, ty=_cc?_cc.y:(L.air.y-0.05); a.face=Math.atan2(L.air.x-a.x, ty-a.y);
+    if(L.sgt<=0){ L.sgstate='dash';
+      const ar=(a.size||14)*0.005;   // 목표=적 유닛 정확한 좌표가 아닌 주변 공격 지역(약간의 산포)
+      L.sgTarget={x:L.air.x+(Math.random()-0.5)*ar, y:ty+(Math.random()-0.5)*ar};
+      const _bc=(window.M3D&&M3D.centerAt)?M3D.centerAt(a.uid):null, _lift=_bc?Math.max(0,a.y-_bc.y):0;   // 부양 오프셋(앵커−몸 중앙): 공중 유닛은 모델이 앵커보다 위에 떠서 렌더됨
+      L.sgAnchor={x:L.sgTarget.x, y:L.sgTarget.y+_lift};   // 앵커 목적지 = 폭발 지점 + 부양 오프셋 → 몸체가 정확히 폭발 지점에서 멈춤(지나침 방지)
+      const _spd=(U[a.gmodel||a.id]&&U[a.gmodel||a.id].moveSpd)||0.3;   // 실제 이동속도 그대로 돌진(임의 고속 X) — 이동해서 부딪히는 느낌
+      L.sgFrom={x:a.x,y:a.y}; L.sgDur=Math.max(0.25, Math.hypot(L.sgAnchor.x-a.x,L.sgAnchor.y-a.y)/_spd); L.sgT0=L.sgDur; L.sgt=L.sgDur; } }
+  else if(L.sgstate==='dash'){ a.hidden=false; a.moving=true;
+    const _dst=L.sgAnchor||L.sgTarget;   // 보정된 앵커 목적지(부양 오프셋 반영)
+    const p=Math.min(1,1-(L.sgt/L.sgT0)), pe=Math.pow(p,1.55);   // 가속 돌진: 천천히 출발 → 점점 빨라져 박음(총 소요시간=이동속도 기준 유지)
+    a.x=L.sgFrom.x+(_dst.x-L.sgFrom.x)*pe; a.y=L.sgFrom.y+(_dst.y-L.sgFrom.y)*pe+Math.sin(p*21)*0.0035*(1-p);   // 유기체 미세 요동 — 접근할수록 잦아듦
+    a.face=Math.atan2(_dst.x-L.sgFrom.x, _dst.y-L.sgFrom.y);
+    if(L.store&&L.store.smoke){ L._sgTrail=(L._sgTrail||0)-dt; if(L._sgTrail<=0){ L._sgTrail=0.025;
+      const _tc=(window.M3D&&M3D.centerAt)?M3D.centerAt(a.uid):null, _ddx=_dst.x-L.sgFrom.x, _ddy=_dst.y-L.sgFrom.y, _ddd=Math.hypot(_ddx,_ddy)||1;   // 연기 원점 = 떠 있는 몸 중앙(앵커=바닥 X)에서 진행 반대쪽
+      const _sro2=0.012*fxZoomF(), _sx3=(_tc?_tc.x:a.x)-(_ddx/_ddd)*_sro2, _sy3=(_tc?_tc.y:a.y)-(_ddy/_ddd)*_sro2;   // 뒤 오프셋 줌 비례
+      L.store.smoke.push({x:_sx3,y:_sy3,vx:(Math.random()-0.5)*0.01,vy:(Math.random()-0.5)*0.01,life:1,r0:0.7+Math.random()*0.6,col:'#8fbf5a',ex:2.2,af:0.4,dk:3.4}); } }   // 돌진 잔상(옅은 산성 궤적)
+    if(L.sgt<=0){ fxLabStingerBlast(L, a, L.sgTarget.x, L.sgTarget.y); if(window.M3D&&M3D.dropModels){ try{ M3D.dropModels([a.uid]); }catch(e){} } a.hidden=true; L.sgstate='gap'; L.sgt=0.5; } }   // 자폭 즉시 모델 제거(죽음 애니/시체 없이 폭발과 함께 소멸)
+  else if(L.sgstate==='gap'){ a.hidden=true;
+    if(L.sgt<=0){ a.x=L.sgOrigin.x; a.y=L.sgOrigin.y; a.hidden=false; a.uid='lab_att'+(++_fxLabAttSeq); a.fireSeq=0; L.sgstate='ready'; L.sgt=0.5; } } }
+function fxLabStingerBlast(L, a, x, y){   // 자폭 범위딜: 중심=최대 데미지, 외곽으로 갈수록 약화 — 스팅어 크기보다 약간 큰 범위까지, 터지며 사라짐
+  if(!L.store) return; const szf=(a.size||14)/18;
+  L.store.melee.push({kind:'boom', x:x, y:y, life:1, dk:3.3, col:'#c8e89a', szf:szf, sd:(L.store._sd=((L.store._sd||0)+1)&255)});
+  if(L.store.smoke){ for(let k=0;k<9;k++){ const an=Math.random()*6.283, sp=0.02+Math.random()*0.04; L.store.smoke.push({x:x,y:y,vx:Math.cos(an)*sp,vy:Math.sin(an)*sp,life:1,r0:1.2+Math.random()*1.6,col:(k%2?'#c8e89a':'#7fae4c'),ex:2.6,af:0.42,dk:3.0}); } } }
 // 베놈퀸(럴커): 지상=대기(공격 불가) → 땅 파고 잠복 → 잠복 중 가시 폭격 → 지상 복귀 사이클
 function fxLabThornCycle(L, a, dt){ a.moving=false;
   if(L.bstate==null){ L.bstate='surface'; L.bt=1.6; }
@@ -10256,7 +10402,7 @@ function fxLabThornCycle(L, a, dt){ a.moving=false;
   else if(L.bstate==='digging'){ a.hidden=false;   // 파고드는 중(흙먼지)
     if(L.bt<=0){ if(window.M3D&&M3D.dropModels){ try{ M3D.dropModels([a.uid]); }catch(e){} } a.hidden=true; L.bstate='burrowed'; L.bt=3.2; L.cd=0.25; } }   // 모델 즉시 제거(죽음 애니 없이 바로 사라짐)
   else if(L.bstate==='burrowed'){ a.hidden=true;   // 잠복: 주기적으로 가시 폭격
-    L.cd-=dt; if(L.cd<=0){ L.cd=1.0; fxLabThornBarrage(L, a, L.dummy); }
+    L.cd-=dt; if(L.cd<=0){ L.cd=Math.max(0.42,fxLabStats(L.attId,L.attGm).cd); fxLabThornBarrage(L, a, L.dummy); }   // 폭격 간격 = 실제 공속(SB_CD) 연동
     if(L.bt<=0){ a.hidden=false; a.uid='lab_att'+(++_fxLabAttSeq); a.fireSeq=0; L.bstate='emerging'; L.bt=0.4; fxLabDigPuff(L, a); } }   // 복귀: 새 uid로 즉시 등장(부활 애니 방지)
   else { a.hidden=false;   // 지상 복귀
     if(L.bt<=0){ L.bstate='surface'; L.bt=1.6; } } }
@@ -10265,9 +10411,10 @@ function fxLabDigPuff(L, a){ if(!L.store||!L.store.smoke) return;   // 땅 파�
     L.store.smoke.push({x:a.x+(Math.random()-0.5)*0.03, y:FXLAB_TGT_Y-0.004, vx:Math.cos(an)*sp, vy:Math.sin(an)*sp*0.7, life:1, r0:0.9+Math.random()*0.9, col:(k%2?'#6b5636':'#8a7048'), ex:2.4, af:0.5, dk:2.4}); } }
 function fxLabThornBarrage(L, a, tgt){   // 럴커식 라인 폭격: 굴에서 가시가 하늘로 솟았다 포물선으로 낙하, 굴→대상→최대사거리까지 일직선 일정 간격 착지
   if(!L.store||!L.store.shots||!tgt) return;
-  const gy=FXLAB_TGT_Y, sx0=a.x, sy0=gy-0.005, dir=Math.sign(tgt.x-sx0)||1;
+  const gy=FXLAB_TGT_Y, sx0=a.x, sy0=gy-0.005, dir=Math.sign(tgt.x-sx0)||1;   // dir=공격 방향(가시가 기울어질 쪽)
   const reach=Math.abs(tgt.x-sx0)+0.2, N=9, step=reach/N, szf=(a.size||16)/18*0.72, grav=2.6;   // 대상 지역 + 최대사거리까지
-  for(let k=1;k<=N;k++){ const ex=sx0+dir*step*k, peak=0.09+Math.random()*0.03, T=Math.sqrt(8*peak/grav), vx=(ex-sx0)/T, vy0=-0.5*grav*T;   // 포물선 높이 고정(화면 안) — 전 가시 동일 체공, 먼 가시=빠른 수평속도
+  for(let k=1;k<=N;k++){ const ex=sx0+dir*step*k, peak=0.24+Math.random()*0.05, T=Math.sqrt(8*peak/grav), vxLine=(ex-sx0)/T, vy0=-0.5*grav*T;
+    const vxMinLean=(reach*0.35)/T, vx=(Math.abs(vxLine)>vxMinLean?Math.abs(vxLine):vxMinLean)*dir;   // 완전 수직 방지: 가까운 착지점도 공격 방향으로 최소한 확실히 기울게
     L.store.shots.push({x:sx0,y:sy0,vx:vx,vy:vy0,t:0,dur:3,kind:'needle',imk:'stab',color:'#9fd356',boom:3,szf:szf,wd:1.8,grav:grav,landY:gy,delay:(k-1)*0.05,mx:sx0,my:sy0,noflash:1}); }   // 굴→끝까지 순차(투두둑 라인 폭격) → 하늘로 솟았다 낙하 꽂힘
   if(L.store.smoke) for(let k=0;k<6;k++){ const an=-Math.PI/2+(Math.random()-0.5)*1.4; L.store.smoke.push({x:sx0+(Math.random()-0.5)*0.02,y:gy-0.004,vx:Math.cos(an)*0.03,vy:Math.sin(an)*0.03,life:1,r0:0.8,col:'#5a4a30',ex:2,af:0.4,dk:2.6}); } }   // 굴 입구 분출 흙먼지
 function fxLabHydraFire(L, a, tx, ty, size){   // 리퍼: 양손에서 가시 다발이 아주 짧은 텀으로 연달아 발사 → 대상 전 범위 랜덤 타격(한 점 X)
@@ -10280,6 +10427,42 @@ function fxLabHydraFire(L, a, tx, ty, size){   // 리퍼: 양손에서 가시 �
     const la=Math.atan2(ey-sy,ex-sx), ed=Math.hypot(ex-sx,ey-sy)||1;
     L.store.shots.push({x:sx,y:sy,vx:Math.cos(la)*sp,vy:Math.sin(la)*sp,t:0,dur:Math.min(0.6,ed/sp),kind:'needle',imk:'stab',color:'#9fd356',boom:3,szf:szf,wd:1.7,delay:k*0.006,mx:sx,my:sy,dist:ed,ex:ex,ey:ey,noflash:1}); }   // 텀 0.006s×3=거의 동시 / wd=굵게 / dist로 모델 내부서 확실히 멈춤
 }
+function fxLabWyvernCenterY(L, t){ const cc=(window.M3D&&M3D.centerAt)?M3D.centerAt(t.uid):null; return cc?cc.y:((t===L.air)?t.y-0.05:t.y); }
+function fxLabWyvernFire(L, a, tgt, ty, size, rng){   // 와이번(뮤탈 리스킨): 꼬리(몸 뒤·아래)에서 회전 표창 발사 — 가까이 있는 대상에만 튕김(최대 3쿠션), 튕길수록 작고 느려짐(약화)
+  if(!L.store||!L.store.shots||!tgt) return;
+  const bounceMax=Math.max(0.15,(rng||120)/600);   // 튕김 사거리 = 실제 공격 사거리(무한정 튕기지 않음)
+  let cur={x:tgt.x,y:ty}; const order=[tgt]; let remain=[L.dummy,L.bldg,L.air].filter(t=>t && t!==tgt);
+  for(let step=0;step<2 && remain.length;step++){   // 튕길 순서만 미리 결정(당구식) — 좌표는 각 튕김 발사 직전에 새로 조회(아래)
+    remain.sort((p,q)=>Math.hypot(p.x-cur.x,fxLabWyvernCenterY(L,p)-cur.y)-Math.hypot(q.x-cur.x,fxLabWyvernCenterY(L,q)-cur.y));
+    const nx=remain[0], ny=fxLabWyvernCenterY(L,nx), d=Math.hypot(nx.x-cur.x,ny-cur.y);
+    if(d>bounceMax) break;
+    cur={x:nx.x,y:ny}; order.push(nx); remain=remain.filter(t=>t!==nx); }
+  const _c=(window.M3D&&M3D.centerAt)?M3D.centerAt(a.uid):null, bx=_c?_c.x:a.x, by=_c?_c.y:(a.y-0.03);
+  fxLabWyvernLaunchLeg(L, {x:bx,y:by}, order, 0, (size||16)/18); }
+function fxLabWyvernLaunchLeg(L, from, order, idx, szf){   // 튕길 때마다 실제 타격 지점(현재 프레임 기준 좌표)을 다시 조회 — 이전엔 처음에 한 번에 계산해 둬서 나중 튕김(숨쉬기 등으로 위치가 미세하게 변함)이 실제 위치와 어긋났음
+  if(!L.store||!L.store.shots||idx>=order.length) return;
+  const t=order[idx], tx=t.x, ty=fxLabWyvernCenterY(L,t);   // 지금 이 순간의 실제 좌표(신선)
+  let ox=from.x, oy=from.y;
+  if(idx===0){ const fx0=tx-ox, fy0=ty-oy, fd0=Math.hypot(fx0,fy0)||1, tailN=0.022*fxZoomF();
+    ox=ox-(fx0/fd0)*tailN; oy=oy-(fy0/fd0)*tailN+0.014*fxZoomF(); }   // 1차만 꼬리 오프셋(이후 튕김은 직전 타격 지점에서 그대로 이어짐)
+  const dx=tx-ox, dy=ty-oy, d=Math.hypot(dx,dy)||1, spd=3.2, dur=Math.min(0.5,d/spd), sf=Math.max(0.35,szf*(1-idx*0.22));
+  L.store.shots.push({x:ox,y:oy,vx:(dx/d)*spd,vy:(dy/d)*spd,t:0,dur:dur+0.05,kind:'shuriken',imk:'shurikenHit',color:'#bfe89a',boom:2,szf:sf,spinRate:22,delay:0,mx:ox,my:oy,dist:d,noflash:1,tr:0.5});
+  if(idx+1<order.length){ (L.wyPend=L.wyPend||[]).push({t:dur, from:{x:tx,y:ty}, order:order, idx:idx+1, szf:szf}); } }
+function fxLabBehemothFire(L, a, tx, ty, size){   // 베히모스(가디언): 꼬리(떠 있는 몸 최하단)에서 뭉친 독구슬 발사 — 독연기 꼬리 + 착탄 독폭발
+  if(!L.store||!L.store.shots) return;
+  const _c=(window.M3D&&M3D.centerAt)?M3D.centerAt(a.uid):null, cx0=_c?_c.x:a.x, cy0=_c?_c.y:(a.y-0.05);
+  const bot=cy0+(a.y-cy0)*0.45;   // 몸 중앙~지면 앵커의 45% 지점 = 부양한 몸의 최하단(꼬리 높이)
+  const dx0=tx-cx0, d0=Math.abs(dx0)||1, sx=cx0-(dx0/d0)*0.008, sy=bot;   // 꼬리(진행 반대쪽으로 살짝)
+  const la=Math.atan2(ty-sy,tx-sx), ed=Math.hypot(tx-sx,ty-sy)||1, sp=2.6, szf=(size||16)/18;   // sp=최고속도(가속 램프로 초반 느림→순식간에 최고속, 센티넬식)
+  L.store.shots.push({x:sx,y:sy,vx:Math.cos(la)*sp,vy:Math.sin(la)*sp,t:0,dur:3,kind:'porb',color:'#a6e23c',boom:3,szf:szf,mx:sx,my:sy,dist:ed,ex:tx,ey:ty,noflash:1,gt:1,imk:'spit',ramp:0.42}); }   // 독구슬: 가속 램프 + 독연기 꼬리 + 간단 착탄 스플래터(범위 폭발 제거)
+function fxLabVenomFire(L, a, tx, ty, size){   // 베놈(디바우러): 화염방사기식 독가스 분사 — 입에서 가스 퍼프를 연속 분출해 덩어리째 던짐(발사체 X) + 대상에 독 구름 잔류
+  if(!L.store||!L.store.smoke) return;
+  const _c=(window.M3D&&M3D.centerAt)?M3D.centerAt(a.uid):null, ox=_c?_c.x:a.x, oy=_c?_c.y:(a.y-0.03);   // 부양 기체 중앙
+  const dx=tx-ox, dy=ty-oy, d=Math.hypot(dx,dy)||1, fw=0.016*fxZoomF();
+  const mx=ox+(dx/d)*fw, my=oy+(dy/d)*fw;   // 입(전방)
+  const ed=Math.hypot(tx-mx,ty-my)||1, szf=(size||16)/18;
+  L.vnJet={t:0.15, acc:0, mx:mx, my:my, ang:Math.atan2(ty-my,tx-mx), v:ed/0.32, szf:szf, ed:ed};   // 가스 분사 이미터: 0.15초에 왈칵 몰아 뱉는 압축 버스트(선단 ~0.32초 도달)
+  L.store.melee.push({kind:'infect', x:tx, y:ty, life:1, dk:0.45, col:'#7ca83c', szf:szf, delay:0.3, sd:(L.store._sd=((L.store._sd||0)+1)&255)}); }   // 가스 도달 시점부터 독 구름 잔류(~2.2s)
 function fxLabFalconFire(L, a, tx, ty, size){   // 팔콘: 두 날개(바깥쪽)에서 파란 에너지 파동 빔 2발 — 날며 간격 아주 살짝만 좁아짐(수렴 X)
   if(!L.store||!L.store.shots) return;
   const _c=(window.M3D&&M3D.centerAt)?M3D.centerAt(a.uid):null, ox=_c?_c.x:a.x, oy=_c?_c.y:(a.y-0.03);   // 부양 기체 중앙
@@ -10313,8 +10496,9 @@ function fxLabRacerFire(L, a, tx, ty){   // 레이서: 오토바이 앞 좌/우 
 function fxLabRender(dt){ const L=FXLAB; if(!L.store) L.store=FX.store(); if(!L.att) fxLabSpawnScene();
   const r=setup('cvUnit'); GW=r.W; GH=r.H; drawSandboxGround(r.ctx, r.W, r.H);   // 빈 땅(cvUnit)
   fxLabStep(dt);
-  if(L.att && (L.bstate==='digging'||L.bstate==='burrowed')){   // 베놈퀸 잠복 = 지하 굴(검정 타원) — 지면 캔버스에 직접(3D에 안 가림)
-    const mx=L.att.x*r.W, my=FXLAB_TGT_Y*r.H, w=Math.max(20,38*L.scale), h=w*0.4, ctx=r.ctx;
+  if(L.att && (L.bstate==='digging'||L.bstate==='burrowed'||L.bstate==='emerging')){   // 베놈퀸 잠복 = 지하 굴(검정 타원) — 지면 캔버스에 직접(3D에 안 가림)
+    const _hk=(L.bstate==='digging')?Math.min(1,Math.max(0,1-L.bt/0.4)):(L.bstate==='emerging')?Math.min(1,Math.max(0,L.bt/0.4)):1;   // 굴 등장 계수: 파고들 때 자라나고 나올 때 줄어듦(팝인/팝아웃 방지)
+    const mx=L.att.x*r.W, my=FXLAB_TGT_Y*r.H, w=Math.max(0.5,(L.att.size||16)*0.64*L.scale*_hk), h=w*0.4, ctx=r.ctx;   // 굴 반경 = 유닛 크기 비례 × 등장 계수
     ctx.save(); ctx.translate(mx,my); ctx.scale(1,h/w);   // 변환 후 로컬 좌표로 그라데이션 생성(이전엔 중심이 어긋나 투명부만 칠해져 안 보였음)
     const g=ctx.createRadialGradient(0,0,0,0,0,w); g.addColorStop(0,'rgba(0,0,0,.94)'); g.addColorStop(0.7,'rgba(0,0,0,.84)'); g.addColorStop(1,'rgba(0,0,0,0)');
     ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,w,0,6.283); ctx.fill();
@@ -10349,7 +10533,8 @@ const MODELS={ marine:'marine.glb', goliath:'goliath.glb', ghost:'ghost.glb', ar
   citizen:'civilian.glb',  // 아군/적 + 방어구조물 + 업그레이드 건물 + 유닛뽑기 시민(셀렉터)
   // 신규 가챠 유닛 전용 모델(전설/초월)
   machinegun:'machinegun.glb', tank:'tank.glb', blade:'blade.glb', skyguard:'skyguard.glb', skydancer:'skydancer.glb', matron:'matron.glb', thornqueen:'thornqueen.glb',
-  racer:'racer.glb', snapper:'snapper.glb', worker_human:'worker_human.glb', worker_light:'worker_light.glb', worker_swarm:'worker_swarm.glb' };   // 레이서·스내퍼(에픽·유니크 공용)
+  racer:'racer.glb', snapper:'snapper.glb', worker_human:'worker_human.glb', worker_light:'worker_light.glb', worker_swarm:'worker_swarm.glb',
+  medic:'mender.glb', broodling:'broodling.glb', larva:'larva.glb', ultralisk:'ultralisk.glb', dark_templar:'dark_templar.glb', high_templar:'high_templar.glb' };   // 신규: 메딕(멘더)·브루들링·라바·울트라리스크·다크/하이템플러
 const CLOAK_MODELS={ observer:true };  // 클로킹(반투명) 적용 모델만(옵저버). 오버로드 등은 불투명
 const AURA_UNITS={ archon:true };      // 공중 부유 + 에너지 오라(아칸 — 사이오닉 에너지 생명체)
 const AURA_LIFT=0.14;                  // 부유 기본 높이(모델높이 비율) — 아주 약간 떠 있음
@@ -10364,12 +10549,13 @@ const ENEMY_DEATH=0.4;    // 적 사망 축소 시간(초)
 const CLOAK_DELAY=0.5;    // 스폰 후 반투명(클로킹)까지(초) — 스타 옵저버
 const CLOAK_OPACITY=0.5;  // 클로킹 시 불투명도(↑=덜 투명)
 const GUN_FOR={ marine:'marine_gun.glb', ghost:'ghost_gun.glb' };  // 손에 부착할 총(총만 있는 정적 메시)
-const RUN_FOR={ marine:'marine_run.glb', ghost:'ghost_run.glb', goliath:'goliath_run.glb', dragoon:'dragoon_run.glb', hydra:'hydralisk_run.glb', thornqueen:'thornqueen_run.glb', citizen:'civilian_run.glb', blade:'blade_run.glb', worker_human:'worker_human_run.glb', worker_light:'worker_light_run.glb', worker_swarm:'worker_swarm_run.glb' };  // 이동 시 재생할 달리기 모델(리깅+클립)
+const RUN_FOR={ marine:'marine_run.glb', ghost:'ghost_run.glb', goliath:'goliath_run.glb', dragoon:'dragoon_run.glb', hydra:'hydralisk_run.glb', thornqueen:'thornqueen_run.glb', citizen:'civilian_run.glb', blade:'blade_run.glb', worker_human:'worker_human_run.glb', worker_light:'worker_light_run.glb', worker_swarm:'worker_swarm_run.glb',
+  archon:'archon_run.glb', medic:'mender_run.glb', broodling:'broodling_run.glb', larva:'larva_run.glb', ultralisk:'ultralisk_run.glb', dark_templar:'dark_templar_run.glb', high_templar:'high_templar_run.glb' };  // 이동 시 재생할 달리기 모델(리깅+클립)
 const RUN_CLIP='Rifle_Charge_inplace';      // 이동 클립 이름(없으면 첫 클립 사용)
-const ATTACK_FOR={ blade:'blade_attect.glb', snapper:'snapper_attack.glb', worker_human:'worker_human_punch.glb' };   // dragoon 공격 모션 제거(이펙트만 — 요청)
-const STAY_FOR={ marine:'marine_stay.glb', ghost:'ghost_stay.glb', goliath:'goliath_stay.glb', hydra:'hydralisk_stay.glb', worker_human:'worker_human_stay.glb', worker_light:'worker_light_stay.glb' };   // 정지(대기) 애니   // 공격 시 1회 재생할 공격 애니 모델(워든 검 베기)
+const ATTACK_FOR={ blade:'blade_attect.glb', snapper:'snapper_attack.glb', worker_human:'worker_human_punch.glb', archon:'archon_attack.glb', dark_templar:'dark_templar_attack.glb', medic:'mender_healling.glb' };   // dragoon 공격 모션 제거(이펙트만 — 요청). 메딕=치유 모션
+const STAY_FOR={ marine:'marine_stay.glb', ghost:'ghost_stay.glb', goliath:'goliath_stay.glb', hydra:'hydralisk_stay.glb', worker_human:'worker_human_stay.glb', worker_light:'worker_light_stay.glb', archon:'archon_stay.glb', medic:'mender_stay.glb', high_templar:'high_templar_stay.glb' };   // 정지(대기) 애니
 const RUN_SCALE_MUL=0.9;
-const RUN_SCALE_OVR={worker_swarm:0.68};   // 달리기 모델 크기 점프 보정(모델별 — 정지/이동 크기 일치)                     // 달리기 모델 크기 보정(본높이→full높이 마진)
+const RUN_SCALE_OVR={worker_swarm:0.88, dragoon:1.08};   // 달리기 모델 크기 점프 보정(모델별 — 정지/이동 크기 일치, 픽셀 실측 기반)
 const ATK_SCALE_OVR={ snapper:1.12 };   // 공격 모델 크기 보정(스내퍼: 공격 시 작아지지 않게 평상시 크기로)
 // 유닛별 총 부착 설정(길이/손위치/회전) — 모델마다 손 위치가 달라 개별 지정
 const GUN_CFG={
@@ -10384,13 +10570,15 @@ const RELOAD_WIN=0.2;     // 장전(총 내림) 구간 폭 — 작을수록 들�
 const SCALE={ marine:12, goliath:16, ghost:12, archon:18, dragoon:14, hydra:14, observer:13, overlord:22, turret:25, photon:25, acad:19, arm:19, forge:19, evo:19, pointlab:19, temple_main:105, temple_stone:55, temple_neutral:30, citizen:13,
   hellfire:17, pelican:18, dreadnought:22, kronos:20, seraph:16, archangel:22, falcon:16, stinger:10, venom:17, medusa:18,   // 적 공중 유닛(초기값 — 보면서 조정). stinger(스커지)=약간 작게
   wyvern:16, aegis:18, behemoth:20,   // 개인보스 모델(초기값 — bossScale 2배 적용됨)
-  racer:20, tank:22, blade:18, thornqueen:20, skyguard:17, skydancer:17, worker_human:13, worker_light:11, worker_swarm:8.8 };  // 유닛별 화면 스케일. 초월 비행체(템페스트·스카이댄서)=대형
+  racer:20, tank:22, blade:18, thornqueen:20, skyguard:17, skydancer:17, worker_human:13, worker_light:11, worker_swarm:8.8,
+  medic:12, broodling:9, larva:8, ultralisk:24, dark_templar:13, high_templar:12 };  // 유닛별 화면 스케일. 초월 비행체(템페스트·스카이댄서)=대형
 const COLORS={ marine:0x2e9bff, goliath:0xff9418, ghost:0x6cf024, dragoon:0xb070ff, hydra:0x9fd356 };  // (구)타입별 색 — 현재는 플레이어색으로 통일(아래 PLAYER_COLOR)
 // 플레이어 색(스타크래프트식) — 한 플레이어의 모든 유닛·구조물을 같은 색으로 통일(아군 구별용)
 const PLAYER_PALETTE={ blue:0x2e7bff, red:0xff3b3b, orange:0xff9418, yellow:0xffd23b, white:0xeaf2ff, purple:0xb05bff, green:0x46d860, teal:0x2dd6c0 };
 let PLAYER_COLOR=PLAYER_PALETTE.blue;   // 현재 플레이어 통일색(키만 바꾸면 전체 색 변경)
 const PLAYER_MODELS=new Set(['marine','ghost','goliath','dragoon','hydra','archon','turret','photon',
-  'machinegun','tank','blade','thornqueen','skyguard','skydancer','matron','racer','snapper','worker_human','worker_light','worker_swarm']);  // 플레이어 소유(전장) 모델 — 플레이어색 림 적용(가챠 전용 모델 포함)
+  'machinegun','tank','blade','thornqueen','skyguard','skydancer','matron','racer','snapper','worker_human','worker_light','worker_swarm',
+  'medic','broodling','larva','ultralisk','dark_templar','high_templar']);  // 플레이어 소유(전장) 모델 — 플레이어색 림 적용(가챠 전용 모델 포함)
 const RING_OP=0.9;        // 선택 링 불투명도
 const TINT_AMT=0.78;      // 모델 색 틴트 강도(0=원본, 1=완전 색칠) — 진한 색은 발광이 아닌 이 값으로(단단하게)
 const EMIT_AMT=0.09;      // 플레이어색 발광(은은하게 — 마린/고스트처럼 부드러운 빛)
@@ -10412,7 +10600,8 @@ const VIEW_TILT=0.65;     // 카메라 부감(작게=서 있게 보임, 0=정면
 const ROT_OFFSET=0;       // 모델 정면(+Z 가정)과 실제 forward 차이 보정(yaw, 필요시 조정)
 const MODEL_YAW_OFF={ turret:Math.PI/2, racer:Math.PI/2, tank:Math.PI/2, skyguard:Math.PI/2, skydancer:Math.PI/2,
   falcon:Math.PI/2, pelican:Math.PI/2, kronos:Math.PI/2 };  // 모델별 yaw 보정. 터렛/레이서/브레이커 +90°. falcon·pelican·kronos(아비터, 신규 방향성 기체): 동체 수직이라 옆으로 진행 → +90° 회전 보정
-const NO_TURN={ dragoon:true };  // 몸을 돌리지 않는 유닛(고정 자세로 발사·이동 — 사용자 요청). 발사체 방향은 게임좌표로 계산되어 무관
+const NO_TURN={};  // 몸을 돌리지 않는 유닛(현재 없음)
+const TURN_MOVE_ONLY={ dragoon:true };  // 이동 중에만 회전(정지·공격 시 몸 고정) — 센티넬
 const RIM_RO_MUL={ racer:0.6 };  // 모델별 선택링 반경 배율. 레이서=크게 키워(SCALE20) 링이 굵어져 일반 유닛 크기로 축소
 // ── 코드 기반 애니메이션 파라미터 ──
 const BREATHE_AMP=0;      // idle 숨쉬기 진폭(모델높이 비율) — 바닥 고정(제자리 모션은 별도 추가 예정)
@@ -10439,8 +10628,9 @@ const swords={};          // id -> 검 scene(워든)
 // 워든 쌍검: 손 본(LeftHand/RightHand)에 부착. 튜닝값
 const ATK_SPEED=2.0;                           // 워든 검 베기 애니 배속(빠르게 쓱)
 const ATK_FRACTION=0.5;                        // 공격 애니 중 첫 스윙만 재생(뒤 스윙 컷 — 허공 휘적임 방지)
-const ATK_SPEED_OVR={ worker_human:1.4, blade:2.8, snapper:1.9 };       // 유닛별 공격 배속(일꾼=자연 / 워든=빠른 / 스내퍼=부드럽게)
-const ATK_FRACTION_OVR={ worker_human:1.05, blade:1.0, snapper:1.0 };   // 유닛별 스윙 비율(전체 재생 — 중간 컷 끊김 제거)
+const ATK_SPEED_OVR={ worker_human:1.4, blade:2.8, snapper:1.9, archon:3.0 };       // 유닛별 공격 배속(일꾼=자연 / 워든=빠른 / 스내퍼=부드럽게 / 보이드=3s 캐스트→1s)
+const ATK_LOOP={ archon:true };   // 공격 모션 연속 루프 유닛 — 공격 간격과 모션 주기를 맞춰(1s=1s) 리셋 없이 이어 재생(끊김 제거)
+const ATK_FRACTION_OVR={ worker_human:1.05, blade:1.0, snapper:1.0, archon:1.15 };   // 유닛별 스윙 비율(전체 재생 — 중간 컷 끊김 제거). 보이드 1.15=atkT 버퍼(다음 공격까지 모션 유지, 루프라 재생엔 영향 없음)
 const SWORD_LEN=0.62;                          // 검 길이(모델높이 비율, anim 단위)
 const SWORD_HAND_POS={x:0, y:0, z:0};          // 손 본 기준 추가 오프셋(본 로컬)
 const SWORD_HAND_ROT={x:0, y:0, z:0};          // 칼끝 방향 보정(라디안)
@@ -10587,6 +10777,7 @@ function tintModel(root, id){
         if('roughness' in m) m.roughness=Math.min(1, (m.roughness==null?0.7:m.roughness)+0.18);   // 무광에 가깝게(거친 돌)
       }
       if('envMapIntensity' in m) m.envMapIntensity = isTemple?0.32:0.55;   // 신전은 반사 더 낮춰 사막 톤 유지
+      if(m.emissiveMap && m.emissive && m.emissive.r>0.85 && m.emissive.g>0.85 && m.emissive.b>0.85){ m.emissive.setRGB(0,0,0); m.emissiveMap=null; m.needsUpdate=true; }   // 신규 GLB의 흰색 자체발광 베이크 제거 — 정지/이동 모델 색감·테두리 통일(바램 방지)
       addRim(m, rim, intU);   // 테두리(프레넬 림)만 색 — 본체 색·발광은 원본 그대로
       m._tinted=true; }); });
 }
@@ -10681,16 +10872,17 @@ function makeModel(id){
   const inner=cloneSkinned(base.scene);
   inner.position.set(-base.off.x, -base.off.y, -base.off.z);  // 수평중앙 + 발을 y=0
   const anim=new THREE.Group(); anim.add(inner);             // 절차적 애니(숨쉬기/공격숙임/사망)
-  // 에너지 오라(아칸): 가산 블렌딩 구체 셸 2겹 + 와이어프레임 전기막 — 인물을 감싸는 사이오닉 에너지
+  // 에너지 오라(아칸): 소프트 헤일로 + 프레넬 에너지 보호막 셸 — 가장자리만 빛나고 중심은 투명한 버블(감싸는 느낌)
   let aura=null;
   if(AURA_UNITS[id]){ aura=[]; const cy=base.h*0.52;
-    // 소프트 그라데이션 헤일로(빌보드) — 가장자리가 자연스럽게 사라져 은은함
-    const halo=new THREE.Sprite(new THREE.SpriteMaterial({map:auraTexture(),blending:THREE.AdditiveBlending,depthWrite:false,depthTest:false,transparent:true,opacity:0.26}));
-    halo._base=base.h*1.95; halo.scale.set(halo._base,halo._base,1); halo.position.y=cy; anim.add(halo); aura.push(halo);
-    // 아주 옅은 볼류메트릭 보호막 셸(3D 입체감만 살짝)
-    const shell=new THREE.Mesh(new THREE.SphereGeometry(base.h*0.52,24,16),
-      new THREE.MeshBasicMaterial({color:AURA_COL1,transparent:true,opacity:0.07,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));
-    shell.position.y=cy; anim.add(shell); aura.push(shell);
+    const halo=new THREE.Sprite(new THREE.SpriteMaterial({map:auraTexture(),blending:THREE.AdditiveBlending,depthWrite:false,depthTest:false,transparent:true,opacity:0.22}));
+    halo._base=base.h*1.8; halo.scale.set(halo._base,halo._base,1); halo.position.y=cy; anim.add(halo); aura.push(halo);   // 은은한 헤일로(빌보드)
+    const shMat=new THREE.ShaderMaterial({ transparent:true, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.FrontSide,
+      uniforms:{ uT:{value:Math.random()*6.28}, uC1:{value:new THREE.Color(AURA_COL1)}, uC2:{value:new THREE.Color(AURA_COL2)} },
+      vertexShader:'varying vec3 vN; varying vec3 vV; varying float vY; void main(){ vec4 mv=modelViewMatrix*vec4(position,1.0); vN=normalMatrix*normal; vV=-mv.xyz; vY=position.y; gl_Position=projectionMatrix*mv; }',
+      fragmentShader:'varying vec3 vN; varying vec3 vV; varying float vY; uniform float uT; uniform vec3 uC1; uniform vec3 uC2; void main(){ float f=pow(1.0-abs(dot(normalize(vN),normalize(vV))),2.3); float pulse=0.8+0.2*sin(uT*2.0); float band=0.10*sin(vY*26.0+uT*2.6)*f; vec3 col=mix(uC1,uC2,0.5+0.5*sin(uT*0.6)); float a=f*0.75*pulse+0.035+band; gl_FragColor=vec4(col*(0.55+f*0.9), a); }' });   // 프레넬 가장자리 발광 + 흐르는 파동 + 시안↔보라 색 흐름
+    const shell=new THREE.Mesh(new THREE.SphereGeometry(base.h*0.55, 32, 24), shMat);
+    shell.position.y=cy; shell._mat=shMat; anim.add(shell); aura.push(shell);   // 에너지 보호막 버블
   }
   let gun=null;
   if(GUN_FOR[id]) gun=attachGun(anim, id);                   // 오른손에 총 부착
@@ -10723,7 +10915,7 @@ function makeModel(id){
     atkMixer=new THREE.AnimationMixer(atkInner);
     let clip=ab.clips[0];
     if(clip){ const _aspd=(typeof ATK_SPEED_OVR!=='undefined'&&ATK_SPEED_OVR[id])||ATK_SPEED, _afr=(typeof ATK_FRACTION_OVR!=='undefined'&&ATK_FRACTION_OVR[id])||ATK_FRACTION; atkDur=(id==='worker_human')?1.7:((clip.duration||0.45)*_afr/_aspd); clip=clip.clone(); let _rootB=null; if(id==='worker_human'||id==='blade'||id==='snapper'){ atkInner.traverse(o=>{ if(!_rootB && o.isBone && !(o.parent&&o.parent.isBone)) _rootB=o.name; }); } clip.tracks=clip.tracks.filter(t=>t.name.endsWith('.quaternion') && !(_rootB && t.name===_rootB+'.quaternion')); // 회전만(제자리). 루트 본 회전 제외(일꾼·워든·스내퍼: 몸통이 돌아간 채 끝나 방향 튀는 문제 방지)
-      atkAction=atkMixer.clipAction(clip); atkAction.setLoop(THREE.LoopOnce,1); atkAction.clampWhenFinished=true; atkAction.timeScale=(id==='worker_human')?((clip.duration||1)/0.55):_aspd; }   // 배속(유닛별) — 일꾼: 잽(0.55s 완결) 후 정지
+      atkAction=atkMixer.clipAction(clip); if(typeof ATK_LOOP!=='undefined'&&ATK_LOOP[id]){ atkAction.setLoop(THREE.LoopRepeat,Infinity); } else { atkAction.setLoop(THREE.LoopOnce,1); atkAction.clampWhenFinished=true; } atkAction.timeScale=(id==='worker_human')?((clip.duration||1)/0.55):_aspd; }   // 배속(유닛별) — 일꾼: 잽(0.55s 완결) 후 정지 / ATK_LOOP=연속 루프
     if(id==='blade'){ rimModel(atkInner, unitRim(id)); attachSwords(atkInner, base.h); } }   // 워든 공격: 림 + 쌍검(손 본)
   const yaw=new THREE.Group(); yaw.add(anim);                // 적 방향으로 제자리 회전(세운 채 yaw)
   const view=new THREE.Group(); view.add(yaw); view.rotation.x=VIEW_TILT;  // 카메라 부감(소량, 발끝 기준)
@@ -10915,11 +11107,11 @@ window.M3D={
         m.heroRing.material.opacity=0.13+Math.abs(Math.sin(m.heroT*2.1))*0.15;   // 천천히 반짝(은은)
       } else if(m.heroRing){ m.heroRing.visible=false; }
       if((u.fireSeq||0)>(m.seenSeq||0)){ m.seenSeq=u.fireSeq; m.lean=1; m.swing=1;   // m.swing=워든 검 휘두름 트리거
-        if(m.atkAction){ m.atkAction.reset(); m.atkAction.play(); m.atkT=m.atkDur; } }
+        if(m.atkAction){ if(typeof ATK_LOOP!=='undefined'&&ATK_LOOP[m.id]){ m.atkAction.time=0; if(!m.atkAction.isRunning()) m.atkAction.play(); } else { m.atkAction.reset(); m.atkAction.play(); } m.atkT=m.atkDur; } }   // 루프 유닛(보이드)=발사마다 위상 0 재동기(시작=끝 포즈, 무단절) → 모션·이펙트 고정 결합
       m.lean=(m.lean||0)*Math.max(0, 1-dt*LEAN_DECAY);
       // 공격 모션 타이머: 이동 중이면 즉시 취소, 아니면 매 프레임 감소(공격 끊기면 모션도 종료 — 허공 베기 방지)
       if(u.moving) m.atkT=0; else if(m.atkT>0) m.atkT-=dt;
-      if(typeof u.face==='number' && !NO_TURN[_id]){ const tgt=u.face+ROT_OFFSET+(MODEL_YAW_OFF[_id]||0);  // NO_TURN 유닛(드라군)은 회전 안 함 — 고정 자세
+      if(typeof u.face==='number' && !NO_TURN[_id] && (!TURN_MOVE_ONLY[_id] || u.moving)){ const tgt=u.face+ROT_OFFSET+(MODEL_YAW_OFF[_id]||0);  // TURN_MOVE_ONLY(센티넬)=이동 중에만 회전
         let d=tgt-m.yaw.rotation.y; d=Math.atan2(Math.sin(d),Math.cos(d));
         m.yaw.rotation.y += d*Math.min(1, dt*ROT_SPD); }
       if(m.stayInner) m.stayInner.visible=false;   // 정지 애니: 기본 숨김(정지 분기서만 표시)
@@ -10973,10 +11165,12 @@ window.M3D={
         m.anim.rotation.z = 0; m.anim.rotation.x = 0;
         if(m.shadow) m.shadow.material.opacity=0.26;   // 그림자 농도 고정
       }
-      if(m.aura){ m.auraT+=dt; const a=m.aura;  // 에너지 오라: 은은한 맥동(밝기·크기 미세 변화)
+      if(m.aura){ m.auraT+=dt; const a=m.aura;  // 에너지 오라: 헤일로 맥동 + 프레넬 보호막 버블
         const p=1+Math.sin(m.auraT*2.0)*0.05, b=a[0]._base*p;
-        a[0].scale.set(b,b,1); a[0].material.opacity=0.20+Math.abs(Math.sin(m.auraT*1.6))*0.10;  // 헤일로
-        a[1].scale.setScalar(1+Math.sin(m.auraT*2.4+1.0)*0.05); a[1].material.opacity=0.05+Math.abs(Math.sin(m.auraT*2.0+0.5))*0.05; a[1].rotation.y+=dt*0.5;  // 셸
+        a[0].scale.set(b,b,1); a[0].material.opacity=0.17+Math.abs(Math.sin(m.auraT*1.6))*0.08;  // 헤일로
+        for(let q=1;q<a.length;q++){ const g=a[q]; if(!g._mat) continue;
+          if(g._mat.uniforms&&g._mat.uniforms.uT) g._mat.uniforms.uT.value=m.auraT;   // 보호막 파동·색 흐름 시간
+          const s2=1+Math.sin(m.auraT*1.4)*0.025; g.scale.setScalar(s2); }   // 보호막 미세 호흡
       }
       if(m.gun){ // 반동(뒤로 킥) + 장전(발사 텀에 총 내렸다 올림 — reload 유닛만)
         let rl=0; if(m.reload && u.cdMax){ const p=Math.max(0,Math.min(1,(u.cd||0)/u.cdMax));
@@ -11189,7 +11383,7 @@ window.M3D={
       mu._lx=uSX; mu._ly=scrY;
       if(!NO_TURN[_id]){ const fa=isMov? Math.atan2(mvx,mvy) : Math.atan2(bossSX-uSX, bossScreenY-scrY);   // 이동 중=진행 방향, 정지=보스 바라봄
         const tgt=fa+ROT_OFFSET+(MODEL_YAW_OFF[_id]||0); let d=tgt-mu.yaw.rotation.y; d=Math.atan2(Math.sin(d),Math.cos(d)); mu.yaw.rotation.y+=d*Math.min(1,dt*ROT_SPD); }
-      if((u.fireSeq||0)>(mu.seenSeq||0)){ mu.seenSeq=u.fireSeq; mu.lean=1; if(mu.atkAction){ mu.atkAction.reset(); mu.atkAction.play(); mu.atkT=mu.atkDur; } }
+      if((u.fireSeq||0)>(mu.seenSeq||0)){ mu.seenSeq=u.fireSeq; mu.lean=1; if(mu.atkAction){ if(typeof ATK_LOOP!=='undefined'&&ATK_LOOP[mu.id]){ mu.atkAction.time=0; if(!mu.atkAction.isRunning()) mu.atkAction.play(); } else { mu.atkAction.reset(); mu.atkAction.play(); } mu.atkT=mu.atkDur; } }
       mu.lean=(mu.lean||0)*Math.max(0,1-dt*LEAN_DECAY);
       if(isMov) mu.atkT=0; else if(mu.atkT>0) mu.atkT-=dt;   // 이동 중 공격모션 취소(메인과 동일)
       if(isMov && mu.runInner){            // 달리기 모델(클립 재생) — 메인과 동일
@@ -11213,6 +11407,8 @@ window.M3D={
   }
 };
 init();
+window.M3D.matDbg=(uid)=>{ const m=models.get(uid); if(!m) return null; const dump=(root)=>{ const out=[]; if(!root) return out; root.traverse(o=>{ if(!o.isMesh) return; const ms=Array.isArray(o.material)?o.material:[o.material]; ms.forEach(mt=>{ if(!mt) return; out.push({nm:mt.name||"", type:mt.type, color:mt.color?"#"+mt.color.getHexString():null, emis:mt.emissive?"#"+mt.emissive.getHexString():null, emisInt:mt.emissiveIntensity, emisMap:!!mt.emissiveMap, map:!!mt.map, metal:mt.metalness, rough:mt.roughness, envInt:mt.envMapIntensity, tinted:!!mt._tinted}); }); }); return out; };
+  return {inner:dump(m.inner), run:dump(m.runInner), stay:dump(m.stayInner), atk:dump(m.atkInner)}; };   // 재질 디버그(정지/이동 룩 차이 진단용)
 window.M3D.dbg=()=>({ n:models.size, ready, loaded:Object.keys(bases), anims:[...models].map(([uid,m])=>({uid,id:m.id,dying:m.dying,yaw:+m.yaw.rotation.y.toFixed(2),pos:[Math.round(m.holder.position.x),Math.round(m.holder.position.y)]})) });
 window.M3D.setPlayerRim=setPlayerRim;   // 아군 림 색 전환(플레이어 구역 관전: 관전 플레이어 색으로)
 window.M3D.dropModels=(uids)=>{ for(const uid of uids){ const m=models.get(uid); if(m){ scene.remove(m.holder); models.delete(uid); } } };  // 즉시 제거(합성 소모 유닛 — 사망모션 생략)
