@@ -6065,6 +6065,11 @@ SKILL_ICON.psi_cloak='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 
 SKILL_ICON.stim='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 2h2v6h6v2h-6v6h4l-5 6-5-6h4v-6H5V8h6z"/></svg>';   // 스팀팩=아드레날린 화살
 SKILL_ICON.ensnare='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4"/></svg>';   // 인스네어=거미줄
 SKILL_ICON.spider_mine='<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="11" cy="14" r="7"/><path d="M11 4V1M4 14H1M21 14h-3M5 8L3 6M17 8l2-2"/></svg>';   // 마인=지뢰
+SKILL_ICON.lockdown='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 10V7a5 5 0 0110 0v3h1.5v11h-13V10zm2 0h6V7a3 3 0 00-6 0z"/></svg>';   // 락다운=자물쇠
+SKILL_ICON.nuke='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 7.2L14.8 14H9.2zM7 15h10l-2 4-3-2-3 2z"/></svg>';   // 핵=방사능
+SKILL_ICON.siege='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h18v3H3zM5 10h6l3-4h4l-2 4h2v2H5zM6 16v3H4v-3zM20 16v3h-2v-3z"/></svg>';   // 시즈=포탑
+SKILL_ICON.yamato='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 017 7c0 3-2 5-2 7l-5 6-5-6c0-2-2-4-2-7a7 7 0 017-7zm0 4a3 3 0 100 6 3 3 0 000-6z"/></svg>';   // 야마토=충전포
+SKILL_ICON.emp='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L5 13h5l-1 9 9-12h-5z"/><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".5"/></svg>';   // EMP=전자펄스
 const SKILLS={
   // 하이템플러: 사이오닉 스톰 — 지정 지점 광역 지속 피해(연출: 보라 뇌운+번개)
   psi_storm:{ key:'psi_storm', name:'사이오닉 스톰', kind:'target_ground', energy:75, cd:12, dur:3, radius:0.075, dmg:14,
@@ -6082,10 +6087,22 @@ const SKILLS={
   // 레이서(벌처): 스파이더 마인 — 매설 후 적 접근 시 폭발(광역). 훅: 근접 적 감지
   spider_mine:{ key:'spider_mine', name:'스파이더 마인', kind:'target_ground', energy:0, cd:3, r:0.06, trig:0.045, dmg:60,
     arm:'💣 스파이더 마인: 매설 지점을 클릭하세요.' },
+  // ── 유니온 배치 ──
+  // 팬텀(고스트): 락다운 — 지정 적 정지(기계 무력화). 훅: e.stunT
+  lockdown:{ key:'lockdown', name:'락다운', kind:'target_enemy', energy:0, cd:9, dur:6, arm:'🔒 락다운: 정지시킬 적을 클릭하세요.' },
+  // 팬텀(고스트): 핵 공격 — 지정 지점에 지연 후 대형 폭발
+  nuke:{ key:'nuke', name:'핵 공격', kind:'target_ground', energy:0, cd:22, delay:3.5, radius:0.15, dmg:400, arm:'☢ 핵: 투하 지점을 클릭하세요.' },
+  // 브레이커(탱크): 시즈 모드 — 토글(사거리·공격↑, 정지). 훅: 이동불가
+  siege:{ key:'siege', name:'시즈 모드', kind:'toggle', energy:0, atkMul:1.8, rngMul:1.6 },
+  // 드레드노트: 야마토 포 — 지정 적에 고정 대형 피해(즉발)
+  yamato:{ key:'yamato', name:'야마토 포', kind:'target_enemy', energy:0, cd:12, dmg:260, arm:'💥 야마토: 조준할 적을 클릭하세요.' },
+  // 이지스: EMP — 지정 지역 에너지·보호막 소거
+  emp:{ key:'emp', name:'EMP', kind:'target_ground', energy:0, cd:10, radius:0.13, arm:'⚡ EMP: 지점을 클릭하세요.' },
 };
 // 모델키(gmodel||id) → 스킬 키 목록. 하단 선택 패널 '여분 구역'에 버튼 표시.
 // 다크템플러=상시 은신(PERMA_CLOAK)·와쳐/제플린=상시 탐지(U.detector) → 스킬 버튼 없음(패시브)
-const UNIT_SKILLS={ high_templar:['psi_storm'], medic:['heal'], kronos:['psi_cloak'], marine:['stim'], medusa:['ensnare'], racer:['spider_mine'] };
+const UNIT_SKILLS={ high_templar:['psi_storm'], medic:['heal'], kronos:['psi_cloak'], marine:['stim'], medusa:['ensnare'], racer:['spider_mine'],
+  ghost:['lockdown','nuke'], tank:['siege'], dreadnought:['yamato'], aegis:['emp'] };
 function unitSkillKeys(u){ if(!u) return []; return UNIT_SKILLS[u.gmodel||u.id]||UNIT_SKILLS[u.id]||[]; }
 function _skKey(u){ return (u&&(u.gmodel||u.id))||''; }
 function isCloaked(u){ return !!(u&&(PERMA_CLOAK[_skKey(u)] || (u.skillOn&&u.skillOn.cloak) || u._fieldCloak)); }   // 상시/토글/오라 은신
@@ -6120,7 +6137,17 @@ function castSkill(key){ if(typeof G==='undefined'||G.sel.length!==1) return; co
   if(sk.energy>0 && (u.en||0)<sk.energy){ if(typeof toast==='function') toast('에너지 부족'); return; }
   if(sk.kind==='target_ground'){ G.skillArm={uid:u.uid,key:key,mode:'ground'}; G.focusArm=false; G.patrolArm=false; if(typeof addChat==='function') addChat('', sk.arm||'ℹ️ 대상 지점을 클릭하세요.'); renderSkillBar(); return; }
   if(sk.kind==='target_unit'){ if(u.healFocus){ u.healFocus=null; if(typeof addChat==='function') addChat('', sk.name+' 해제(자동 치료로 복귀)'); renderSkillBar(); return; } G.skillArm={uid:u.uid,key:key,mode:'unit'}; G.focusArm=false; G.patrolArm=false; if(typeof addChat==='function') addChat('', sk.arm||'ℹ️ 대상 아군을 클릭하세요.'); renderSkillBar(); return; }
+  if(sk.kind==='target_enemy'){ G.skillArm={uid:u.uid,key:key,mode:'enemy'}; G.focusArm=false; G.patrolArm=false; if(typeof addChat==='function') addChat('', sk.arm||'ℹ️ 대상 적을 클릭하세요.'); renderSkillBar(); return; }
 }
+function _sbFoeAt(x,y){ const L=_skFoes(); let best=null, bd=0.055*0.055; for(const e of L){ if(e.dead||e.x==null) continue; const dx=e.x-x, dy=e.y-y, d=dx*dx+dy*dy; if(d<=bd){ bd=d; best=e; } } return best; }   // 탭 지점 근처 적 픽
+function fireSkillEnemy(uid,key,foe){ const u=G.units.find(z=>z.uid===uid); const sk=SKILLS[key]; if(!u||!sk||!foe) return;
+  if(sk.energy>0){ if((u.en||0)<sk.energy) return; u.en-=sk.energy; }
+  u.skillCd=u.skillCd||{}; u.skillCd[key]=sk.cd||0; G.skillFx=G.skillFx||[];
+  if(key==='lockdown'){ foe.stunT=Math.max(foe.stunT||0, sk.dur||6); G.skillFx.push({type:'lock', x:foe.x, y:foe.y, t:0, dur:sk.dur||6, foe:foe}); }
+  else if(key==='yamato'){ G.skillFx.push({type:'beam', sx:u.x, sy:u.y-0.02, x:foe.x, y:foe.y, t:0, dur:0.55}); _skHurt(foe, sk.dmg, uid); }
+  if(typeof playSfx==='function')playSfx('skill'); if(typeof addChat==='function') addChat('', sk.name+' 시전!'); renderSkillBar();
+}
+function _skEmp(x,y,r){ const L=_skFoes(), r2=r*r; for(const e of L){ if(e.dead) continue; const dx=e.x-x, dy=e.y-y; if(dx*dx+dy*dy<=r2){ if(e.sh!=null) e.sh=0; e.en=0; e.empT=1.5; } } }
 function fireSkillUnit(uid,key,tgtUid){ const u=G.units.find(z=>z.uid===uid), t=G.units.find(z=>z.uid===tgtUid); const sk=SKILLS[key]; if(!u||!t||!sk||t===u) return;
   if(key==='heal') u.healFocus=tgtUid;   // 지정 힐: 따라다니며 이 유닛만 치료
   if(typeof playSfx==='function')playSfx('skill'); if(typeof addChat==='function') addChat('', sk.name+': 대상 지정'); renderSkillBar();
@@ -6132,6 +6159,8 @@ function fireSkillGround(uid,key,x,y){ const u=G.units.find(z=>z.uid===uid); con
   if(key==='psi_storm') G.skillFx.push({type:'storm', x:x, y:y, t:0, dur:sk.dur, r:sk.radius, dmg:sk.dmg, owner:uid});
   else if(key==='ensnare') G.skillFx.push({type:'ensnare', x:x, y:y, t:0, dur:sk.dur, r:sk.radius, slow:sk.slow, owner:uid});
   else if(key==='spider_mine') G.skillFx.push({type:'mine', x:x, y:y, t:0, dur:1e9, r:sk.r, trig:sk.trig, dmg:sk.dmg, owner:uid, armT:1.0});
+  else if(key==='nuke') G.skillFx.push({type:'nuke', x:x, y:y, t:0, dur:(sk.delay||3.5)+0.9, delay:sk.delay||3.5, r:sk.radius, dmg:sk.dmg, owner:uid, boomed:false});
+  else if(key==='emp'){ G.skillFx.push({type:'emp', x:x, y:y, t:0, dur:0.6, r:sk.radius}); _skEmp(x,y,sk.radius); }
   if(typeof playSfx==='function')playSfx('skill'); if(typeof addChat==='function') addChat('', sk.name+' 시전!'); renderSkillBar();
 }
 function _skFoes(){ const a=G.enemies||[], b=G.sbFoes; return (b&&b.length)?(a.length?a.concat(b):b):a; }   // 실전 적 + 전투실험 더미 통합 대상
@@ -6177,10 +6206,12 @@ function stepSkills(dt){ if(typeof G==='undefined'||!G.units) return; G._skT=(G.
       f.dmgAcc=(f.dmgAcc||0)+dt; if(f.dmgAcc>=0.5){ f.dmgAcc-=0.5; _skStormDamage(f); } }
     else if(f.type==='ensnare'){ f.slowAcc=(f.slowAcc||0)+dt; if(f.slowAcc>=0.3){ f.slowAcc-=0.3; _skEnsnare(f); } }
     else if(f.type==='mine'){ if(f.armT>0) f.armT-=dt; else if(_skMineTrigger(f)){ _skMineBoom(f); f._done=true; } }
+    else if(f.type==='nuke'){ if(!f.boomed && f.t>=f.delay){ f.boomed=true; G.skillFx.push({type:'boom', x:f.x, y:f.y, t:0, dur:0.9, r:f.r*1.5}); const L=_skFoes(), r2=f.r*f.r; for(const e of L){ if(e.dead) continue; const dx=e.x-f.x, dy=e.y-f.y; if(dx*dx+dy*dy<=r2) _skHurt(e, f.dmg, f.owner); } if(typeof playSfx==='function') playSfx('boom'); } }
+    else if(f.type==='lock'){ if(f.foe && !f.foe.dead){ f.x=f.foe.x; f.y=f.foe.y; } else f._done=true; }
     if(f._done||f.t>=f.dur) G.skillFx.splice(i,1);
   } } }
 function _skW2S(wx,wy,W,H){ const v=(typeof G!=='undefined')&&G.view; let x=wx,y=wy; if(v&&v.zoom&&v.zoom!==1){ x=(wx-v.x)*v.zoom+0.5; y=(wy-v.y)*v.zoom+0.5; } return {x:x*W, y:y*H, z:(v&&v.zoom)||1}; }
-function _skHasUnitFx(){ if(!G.units) return false; for(const u of G.units){ if(u._cloaked||u._healTgt||isDetector(u)||(u.buff&&u.buff.stim&&u.buff.stim.t>0)) return true; if(u.skillOn){ for(const k in u.skillOn){ if(u.skillOn[k]&&SKILLS[k]&&SKILLS[k].kind==='aura') return true; } } } return false; }
+function _skHasUnitFx(){ if(!G.units) return false; for(const u of G.units){ if(u._cloaked||u._healTgt||isDetector(u)||(u.buff&&u.buff.stim&&u.buff.stim.t>0)||(u.skillOn&&u.skillOn.siege)) return true; if(u.skillOn){ for(const k in u.skillOn){ if(u.skillOn[k]&&SKILLS[k]&&SKILLS[k].kind==='aura') return true; } } } return false; }
 function drawSkillFx(){ if(typeof G==='undefined') return; const hasFx=!!(G.skillFx&&G.skillFx.length); if(!hasFx && !_skHasUnitFx() && !(G.sbFoes&&G.sbFoes.length)) return;
   const cv=document.getElementById('cvFx'); if(!cv) return; const ctx=cv.getContext('2d'); if(!ctx) return; const W=cv.width, H=cv.height;
   ctx.save(); ctx.globalCompositeOperation='lighter';
@@ -6204,7 +6235,11 @@ function drawSkillFx(){ if(typeof G==='undefined') return; const hasFx=!!(G.skil
       ctx.globalAlpha=0.92; ctx.fillStyle='#3a3f2a'; ctx.beginPath(); ctx.ellipse(p.x,p.y,rr,rr*0.6,0,0,6.28); ctx.fill();
       ctx.globalAlpha=1; ctx.fillStyle=blink?'#ff5030':'#5a1e14'; ctx.beginPath(); ctx.arc(p.x,p.y-rr*0.2,rr*0.3,0,6.28); ctx.fill();
       if(blink){ ctx.globalAlpha=0.5; ctx.strokeStyle='#ff6040'; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(p.x,p.y-rr*0.2,rr*0.75,0,6.28); ctx.stroke(); } }
-    else if(f.type==='boom'){ const life=f.t/f.dur, R=f.r*W*p.z*(0.4+life*1.3); ctx.globalAlpha=Math.max(0,1-life); const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,R); g.addColorStop(0,'rgba(255,242,186,.95)'); g.addColorStop(0.5,'rgba(255,140,50,.6)'); g.addColorStop(1,'rgba(120,40,10,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.x,p.y,R,0,6.28); ctx.fill(); } }
+    else if(f.type==='boom'){ const life=f.t/f.dur, R=f.r*W*p.z*(0.4+life*1.3); ctx.globalAlpha=Math.max(0,1-life); const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,R); g.addColorStop(0,'rgba(255,242,186,.95)'); g.addColorStop(0.5,'rgba(255,140,50,.6)'); g.addColorStop(1,'rgba(120,40,10,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.x,p.y,R,0,6.28); ctx.fill(); }
+    else if(f.type==='nuke'){ const pre=Math.min(1,f.t/f.delay), R=f.r*W*p.z; ctx.globalAlpha=0.45+0.35*Math.abs(Math.sin(f.t*10)); ctx.strokeStyle='#ff5030'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(p.x,p.y,R*(1.25-pre*0.6),0,6.28); ctx.stroke(); ctx.beginPath(); ctx.moveTo(p.x-R*0.55,p.y); ctx.lineTo(p.x+R*0.55,p.y); ctx.moveTo(p.x,p.y-R*0.55); ctx.lineTo(p.x,p.y+R*0.55); ctx.stroke(); ctx.globalAlpha=0.95; ctx.fillStyle='#ffce4a'; ctx.font='bold '+Math.round(13*p.z)+'px sans-serif'; ctx.textAlign='center'; ctx.fillText('☢ '+Math.max(0,Math.ceil(f.delay-f.t)), p.x, p.y-R*0.72); }
+    else if(f.type==='lock'){ const rr=11*p.z; ctx.globalAlpha=0.65; ctx.strokeStyle='#ffd24a'; ctx.lineWidth=1.8; for(let s=0;s<2;s++){ const rot=f.t*3+s*Math.PI; ctx.beginPath(); ctx.arc(p.x,p.y,rr+s*3, rot, rot+4.2); ctx.stroke(); } ctx.globalAlpha=0.9; ctx.fillStyle='#ffe27a'; ctx.font='bold '+Math.round(11*p.z)+'px sans-serif'; ctx.textAlign='center'; ctx.fillText('🔒', p.x, p.y+4*p.z); }
+    else if(f.type==='emp'){ const life=f.t/f.dur, R=f.r*W*p.z*(0.3+life*1.1); ctx.globalAlpha=Math.max(0,1-life); const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,R); g.addColorStop(0,'rgba(180,230,255,.8)'); g.addColorStop(0.6,'rgba(90,160,255,.5)'); g.addColorStop(1,'rgba(40,80,200,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.x,p.y,R,0,6.28); ctx.fill(); ctx.globalAlpha=Math.max(0,0.8-life); ctx.strokeStyle='#bfe6ff'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(p.x,p.y,R,0,6.28); ctx.stroke(); }
+    else if(f.type==='beam'){ const s=_skW2S(f.sx,f.sy,W,H), life=f.t/f.dur, aa=Math.max(0,1-life); ctx.globalAlpha=aa*0.7; ctx.strokeStyle='#ffca50'; ctx.lineWidth=4+6*(1-life); ctx.beginPath(); ctx.moveTo(s.x,s.y); ctx.lineTo(p.x,p.y); ctx.stroke(); ctx.globalAlpha=aa; ctx.strokeStyle='#fff6d0'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(s.x,s.y); ctx.lineTo(p.x,p.y); ctx.stroke(); const R2=18*p.z*(0.3+life); ctx.globalAlpha=aa*0.85; const g2=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,R2); g2.addColorStop(0,'rgba(255,240,180,.9)'); g2.addColorStop(1,'rgba(255,120,40,0)'); ctx.fillStyle=g2; ctx.beginPath(); ctx.arc(p.x,p.y,R2,0,6.28); ctx.fill(); } }
   // 탐지 원(와쳐·제플린 등) — 넓은 시안 원 + 레이더 스윕, 상시 유지
   for(const d of G.units){ if(!isDetector(d)||d.dead) continue; const p=_skW2S(d.x,d.y,W,H), R=DETECT_RANGE*W*p.z;
     ctx.globalAlpha=0.13; ctx.strokeStyle='#7fe0ff'; ctx.lineWidth=1.4; ctx.setLineDash([7,7]); ctx.lineDashOffset=-_T*18; ctx.beginPath(); ctx.ellipse(p.x,p.y,R,R*0.62,0,0,6.28); ctx.stroke(); ctx.setLineDash([]);
@@ -6221,6 +6256,10 @@ function drawSkillFx(){ if(typeof G==='undefined') return; const hasFx=!!(G.skil
     ctx.globalAlpha=0.5; ctx.strokeStyle='#7fffcf'; ctx.lineWidth=2.6; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
     ctx.globalAlpha=0.9; ctx.strokeStyle='#eafff6'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
     for(let s=0;s<3;s++){ const rr=((_T*30+s*13)%26), px=b.x+Math.sin(_T*5+s*2.1)*7, py=b.y-rr; ctx.globalAlpha=Math.max(0,0.7-rr/30); ctx.strokeStyle='#8affd0'; ctx.lineWidth=1.7; ctx.beginPath(); ctx.moveTo(px-3,py); ctx.lineTo(px+3,py); ctx.moveTo(px,py-3); ctx.lineTo(px,py+3); ctx.stroke(); } }
+  // 시즈 모드: 붉은 포진 링 + 지지대
+  for(const u of G.units){ if(!u.skillOn||!u.skillOn.siege) continue; const p=_skW2S(u.x,u.y,W,H), rad=((typeof unitRadius==='function'?unitRadius(u):14))*p.z;
+    ctx.globalAlpha=0.42; ctx.strokeStyle='#ff8a5a'; ctx.lineWidth=2; ctx.beginPath(); ctx.ellipse(p.x,p.y,rad*1.15,rad*1.15*0.5,0,0,6.28); ctx.stroke();
+    ctx.globalAlpha=0.28; ctx.lineWidth=1.5; for(let s=0;s<4;s++){ const an=s*1.57+_T*0.4; ctx.beginPath(); ctx.moveTo(p.x+Math.cos(an)*rad*0.75,p.y+Math.sin(an)*rad*0.38); ctx.lineTo(p.x+Math.cos(an)*rad*1.35,p.y+Math.sin(an)*rad*0.68); ctx.stroke(); } }
   // 스팀팩 등 자기 강화: 붉은 발밑 링 + 상승 스팀
   for(const u of G.units){ if(!u.buff||!u.buff.stim||u.buff.stim.t<=0) continue; const p=_skW2S(u.x,u.y,W,H), rad=((typeof unitRadius==='function'?unitRadius(u):14))*p.z, uid=(u.uid||0);
     ctx.globalAlpha=0.3; ctx.strokeStyle='#ff6a5a'; ctx.lineWidth=1.6; ctx.beginPath(); ctx.ellipse(p.x,p.y,rad*0.9,rad*0.9*0.5,0,0,6.28); ctx.stroke();
@@ -6239,8 +6278,8 @@ function drawSkillFx(){ if(typeof G==='undefined') return; const hasFx=!!(G.skil
 //   · 스킬 훅(_skFoes)이 sbFoes를 대상으로 → 스톰/인스네어/마인 등 즉시 작동
 //   · 더미는 아군에게 접근·접촉 피해(치유·메딕 검증) / 아군은 사거리 내 더미에 기본 DPS
 // ════════════════════════════════════════════════════════════════
-function _sbUnitRange(u){ const d=(typeof U!=='undefined'&&(U[u.gmodel||u.id]||U[u.id]))||{}; if((d.dmg||0)<=0) return 0; return d.melee?0.06:0.18; }   // 무공격(dmg0)=미공격
-function _sbUnitDps(u){ const d=(typeof U!=='undefined'&&(U[u.gmodel||u.id]||U[u.id]))||{}; const dmg=d.dmg||0, cd=(d.cd||20)/60; return dmg>0?dmg/Math.max(0.2,cd):0; }
+function _sbUnitRange(u){ const d=(typeof U!=='undefined'&&(U[u.gmodel||u.id]||U[u.id]))||{}; if((d.dmg||0)<=0) return 0; let r=d.melee?0.06:0.18; if(u.skillOn&&u.skillOn.siege) r*=(SKILLS.siege.rngMul||1.6); return r; }   // 무공격(dmg0)=미공격 · 시즈=사거리↑
+function _sbUnitDps(u){ const d=(typeof U!=='undefined'&&(U[u.gmodel||u.id]||U[u.id]))||{}; const dmg=d.dmg||0, cd=(d.cd||20)/60; let dps=dmg>0?dmg/Math.max(0.2,cd):0; if(u.skillOn&&u.skillOn.siege) dps*=(SKILLS.siege.atkMul||1.8); return dps; }   // 시즈=공격↑
 function sbCombatSpawn(n){ if(typeof G==='undefined') return; G.sbFoes=G.sbFoes||[]; G.sbSeq=G.sbSeq||1; const k=n||5;
   for(let i=0;i<k;i++) G.sbFoes.push({fid:G.sbSeq++, x:0.90+Math.random()*0.06, y:0.22+Math.random()*0.56, hp:200, maxHp:200, spd:0.045, dmg:9, slowT:0, r:0.02, flash:0, dead:false});
   G.sbCombat=true; sbCombatUiSync(); if(typeof toast==='function') toast('적 더미 '+k+'기 소환'); }
@@ -6251,7 +6290,8 @@ function sbCombatUiSync(){ const el=document.getElementById('sbCombatBar'); if(!
   if(show){ const t=document.getElementById('sbcToggle'); if(t){ t.textContent=G.sbCombat?'⏸ 정지':'▶ 전투'; t.classList.toggle('on',!!G.sbCombat); } const c=document.getElementById('sbcCount'); if(c) c.textContent=(G.sbFoes?G.sbFoes.filter(f=>!f.dead).length:0)+'기'; } }
 function stepSbCombat(dt){ if(typeof G==='undefined'||!G.sandbox||!G.sbCombat||!G.sbFoes||!G.sbFoes.length) return;
   const foes=G.sbFoes, units=G.units;
-  for(const f of foes){ if(f.dead) continue; if(f.flash>0) f.flash-=dt; if(f.slowT>0) f.slowT=Math.max(0,f.slowT-dt);
+  for(const f of foes){ if(f.dead) continue; if(f.flash>0) f.flash-=dt; if(f.slowT>0) f.slowT=Math.max(0,f.slowT-dt); if(f.empT>0) f.empT=Math.max(0,f.empT-dt);
+    if(f.stunT>0){ f.stunT=Math.max(0,f.stunT-dt); continue; }   // 락다운: 정지(이동·접촉 없음)
     let best=null, bd=1e9; for(const u of units){ if(u.fixed||u._enemyDisp||(u.maxHp&&(u.hp!=null?u.hp:u.maxHp)<=0)) continue; const dx=u.x-f.x, dy=u.y-f.y, d=dx*dx+dy*dy; if(d<bd){ bd=d; best=u; } }
     if(best){ const dx=best.x-f.x, dy=best.y-f.y, d=Math.hypot(dx,dy)||1e-4, sl=(f.slowT>0)?0.45:1;
       if(d>0.05){ f.x+=(dx/d)*f.spd*sl*dt; f.y+=(dy/d)*f.spd*sl*dt; }
@@ -8500,6 +8540,9 @@ function onDown(e){ if(G.strike){ strikeOnDown(e); return; } if(G.tab!=='Main'||
     G.bossPickArm=false; updateBossPickBtn(); e.preventDefault(); return; }
   if(G.skillArm && G.sel.length>0){   // 🪄 지정형 스킬: 지점(스톰) 또는 아군(치유) 클릭 시전
     const _sk=SKILLS[G.skillArm.key];
+    if(_sk && _sk.kind==='target_enemy'){ const foe=(typeof _sbFoeAt==='function')?_sbFoeAt(p.x,p.y):null;
+      if(foe) fireSkillEnemy(G.skillArm.uid, G.skillArm.key, foe); G.skillArm=null;
+      if(typeof renderSkillBar==='function') renderSkillBar(); if(e.cancelable)e.preventDefault(); return; }
     if(_sk && _sk.kind==='target_unit'){ const tu=(typeof hitUnitPrecise==='function')?hitUnitPrecise(p.x,p.y):null;
       if(tu && !tu.fixed) fireSkillUnit(G.skillArm.uid, G.skillArm.key, tu.uid); G.skillArm=null;
       if(typeof renderSkillBar==='function') renderSkillBar(); if(e.cancelable)e.preventDefault(); return; }
