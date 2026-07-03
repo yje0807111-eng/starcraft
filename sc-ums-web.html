@@ -6042,6 +6042,9 @@ const BIONIC={ marine:1, ghost:1, medic:1, machinegun:1 };   // 바이오닉(치
 SKILL_ICON.psi_storm='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h9l-2.4 5H18l-9 11 2.2-8H5z"/></svg>';   // 스톰=번개 구름
 SKILL_ICON.heal='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 3h4v7h7v4h-7v7h-4v-7H3v-4h7z"/></svg>';   // 치유=십자
 SKILL_ICON.psi_cloak='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l8 3v6c0 5-3.4 9-8 11-4.6-2-8-6-8-11V5z"/></svg>';   // 차원은폐=방패
+SKILL_ICON.stim='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 2h2v6h6v2h-6v6h4l-5 6-5-6h4v-6H5V8h6z"/></svg>';   // 스팀팩=아드레날린 화살
+SKILL_ICON.ensnare='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4"/></svg>';   // 인스네어=거미줄
+SKILL_ICON.spider_mine='<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="11" cy="14" r="7"/><path d="M11 4V1M4 14H1M21 14h-3M5 8L3 6M17 8l2-2"/></svg>';   // 마인=지뢰
 const SKILLS={
   // 하이템플러: 사이오닉 스톰 — 지정 지점 광역 지속 피해(연출: 보라 뇌운+번개)
   psi_storm:{ key:'psi_storm', name:'사이오닉 스톰', kind:'target_ground', energy:75, cd:12, dur:3, radius:0.075, dmg:14,
@@ -6051,10 +6054,18 @@ const SKILLS={
     arm:'✚ 지정 힐: 따라다니며 치료할 아군을 클릭하세요.' },
   // 아비터(크로노스): 차원 은폐 — 오라(범위 내 아군 은신)
   psi_cloak:{ key:'psi_cloak', name:'차원 은폐', kind:'aura', energy:0, radius:0.12, cloakAllies:true },
+  // 레인저(마린): 스팀팩 — 자기 강화(공속·이속↑, 체력 소모). 전투 유즈맵 훅: u.buff.stim
+  stim:{ key:'stim', name:'스팀팩', kind:'self', cd:10, dur:6, atkMul:1.5, spdMul:1.4, hpCost:10 },
+  // 메두사(퀸): 인스네어 — 지정 지역 적 둔화(가스). 훅: e.slowT
+  ensnare:{ key:'ensnare', name:'인스네어', kind:'target_ground', energy:0, cd:10, dur:8, radius:0.11, slow:0.5,
+    arm:'🕸 인스네어: 퍼뜨릴 지점을 클릭하세요.' },
+  // 레이서(벌처): 스파이더 마인 — 매설 후 적 접근 시 폭발(광역). 훅: 근접 적 감지
+  spider_mine:{ key:'spider_mine', name:'스파이더 마인', kind:'target_ground', energy:0, cd:3, r:0.06, trig:0.045, dmg:60,
+    arm:'💣 스파이더 마인: 매설 지점을 클릭하세요.' },
 };
 // 모델키(gmodel||id) → 스킬 키 목록. 하단 선택 패널 '여분 구역'에 버튼 표시.
 // 다크템플러=상시 은신(PERMA_CLOAK)·와쳐/제플린=상시 탐지(U.detector) → 스킬 버튼 없음(패시브)
-const UNIT_SKILLS={ high_templar:['psi_storm'], medic:['heal'], kronos:['psi_cloak'] };
+const UNIT_SKILLS={ high_templar:['psi_storm'], medic:['heal'], kronos:['psi_cloak'], marine:['stim'], medusa:['ensnare'], racer:['spider_mine'] };
 function unitSkillKeys(u){ if(!u) return []; return UNIT_SKILLS[u.gmodel||u.id]||UNIT_SKILLS[u.id]||[]; }
 function _skKey(u){ return (u&&(u.gmodel||u.id))||''; }
 function isCloaked(u){ return !!(u&&(PERMA_CLOAK[_skKey(u)] || (u.skillOn&&u.skillOn.cloak) || u._fieldCloak)); }   // 상시/토글/오라 은신
@@ -6067,7 +6078,7 @@ function renderSkillBar(){ const bar=document.getElementById('skillBar'); if(!ba
   let sig=u.uid+'|'+keys.length+'|', html='';
   for(const key of keys){ const sk=SKILLS[key]; if(!sk) continue;
     const cd=Math.ceil(u.skillCd[key]||0), armed=(G.skillArm&&G.skillArm.uid===u.uid&&G.skillArm.key===key)?1:0,
-          on=((((sk.kind==='toggle'||sk.kind==='aura')&&u.skillOn&&u.skillOn[key])||(sk.kind==='target_unit'&&u.healFocus))?1:0),
+          on=((((sk.kind==='toggle'||sk.kind==='aura')&&u.skillOn&&u.skillOn[key])||(sk.kind==='target_unit'&&u.healFocus)||(sk.kind==='self'&&u.buff&&u.buff[key]&&u.buff[key].t>0))?1:0),
           lowE=(sk.energy>0&&(u.en||0)<sk.energy)?1:0,
           dis=(cd>0||lowE)&&!armed&&!on?1:0;
     sig+=key+cd+armed+on+lowE+';';
@@ -6085,6 +6096,7 @@ function castSkill(key){ if(typeof G==='undefined'||G.sel.length!==1) return; co
   u.skillCd=u.skillCd||{};
   if((u.skillCd[key]||0)>0){ if(typeof toast==='function') toast('쿨다운 '+Math.ceil(u.skillCd[key])+'초'); return; }
   if(sk.kind==='toggle'||sk.kind==='aura'){ u.skillOn=u.skillOn||{}; const nv=!u.skillOn[key]; u.skillOn[key]=nv; if(typeof playSfx==='function')playSfx('skill'); if(typeof addChat==='function') addChat('', sk.name+(nv?' 켜짐':' 꺼짐')); renderSkillBar(); return; }
+  if(sk.kind==='self'){ if(sk.hpCost&&u.maxHp){ u.hp=Math.max(1,(u.hp!=null?u.hp:u.maxHp)-sk.hpCost); } u.buff=u.buff||{}; u.buff[key]={t:sk.dur||3, atkMul:sk.atkMul||1, spdMul:sk.spdMul||1}; u.skillCd[key]=sk.cd||0; if(typeof playSfx==='function')playSfx('skill'); if(typeof addChat==='function') addChat('', sk.name+' 발동!'); renderSkillBar(); return; }
   if(sk.energy>0 && (u.en||0)<sk.energy){ if(typeof toast==='function') toast('에너지 부족'); return; }
   if(sk.kind==='target_ground'){ G.skillArm={uid:u.uid,key:key,mode:'ground'}; G.focusArm=false; G.patrolArm=false; if(typeof addChat==='function') addChat('', sk.arm||'ℹ️ 대상 지점을 클릭하세요.'); renderSkillBar(); return; }
   if(sk.kind==='target_unit'){ if(u.healFocus){ u.healFocus=null; if(typeof addChat==='function') addChat('', sk.name+' 해제(자동 치료로 복귀)'); renderSkillBar(); return; } G.skillArm={uid:u.uid,key:key,mode:'unit'}; G.focusArm=false; G.patrolArm=false; if(typeof addChat==='function') addChat('', sk.arm||'ℹ️ 대상 아군을 클릭하세요.'); renderSkillBar(); return; }
@@ -6098,10 +6110,19 @@ function fireSkillGround(uid,key,x,y){ const u=G.units.find(z=>z.uid===uid); con
   if(sk.energy>0){ if((u.en||0)<sk.energy) return; u.en-=sk.energy; }
   u.skillCd=u.skillCd||{}; u.skillCd[key]=sk.cd||0; G.skillFx=G.skillFx||[];
   if(key==='psi_storm') G.skillFx.push({type:'storm', x:x, y:y, t:0, dur:sk.dur, r:sk.radius, dmg:sk.dmg, owner:uid});
+  else if(key==='ensnare') G.skillFx.push({type:'ensnare', x:x, y:y, t:0, dur:sk.dur, r:sk.radius, slow:sk.slow, owner:uid});
+  else if(key==='spider_mine') G.skillFx.push({type:'mine', x:x, y:y, t:0, dur:1e9, r:sk.r, trig:sk.trig, dmg:sk.dmg, owner:uid, armT:1.0});
   if(typeof playSfx==='function')playSfx('skill'); if(typeof addChat==='function') addChat('', sk.name+' 시전!'); renderSkillBar();
 }
 function _skStormDamage(f){ if(!G.enemies||!G.enemies.length) return; const r=f.r, r2=r*r;   // 전투 유즈맵 훅: 범위 내 적 지속 피해
   for(const e of G.enemies){ if(e.dead) continue; const dx=e.x-f.x, dy=e.y-f.y; if(dx*dx+dy*dy<=r2){ try{ _atkUid=f.owner; }catch(_e){} if(typeof hitEnemy==='function') hitEnemy(e, f.dmg); } } }
+function _skEnsnare(f){ if(!G.enemies||!G.enemies.length) return; const r2=f.r*f.r;   // 인스네어: 범위 내 적 둔화(전투 유즈맵 훅)
+  for(const e of G.enemies){ if(e.dead) continue; const dx=e.x-f.x, dy=e.y-f.y; if(dx*dx+dy*dy<=r2){ e.slowT=Math.max(e.slowT||0, 1.2); e.ensnared=1; } } }
+function _skMineTrigger(f){ if(!G.enemies) return null; const r2=f.trig*f.trig;   // 스파이더 마인: 접근한 적 감지
+  for(const e of G.enemies){ if(e.dead) continue; const dx=e.x-f.x, dy=e.y-f.y; if(dx*dx+dy*dy<=r2) return e; } return null; }
+function _skMineBoom(f){ G.skillFx.push({type:'boom', x:f.x, y:f.y, t:0, dur:0.4, r:f.r});   // 폭발 연출 + 광역 피해
+  if(G.enemies){ const r2=f.r*f.r; for(const e of G.enemies){ if(e.dead) continue; const dx=e.x-f.x, dy=e.y-f.y; if(dx*dx+dy*dy<=r2){ try{ _atkUid=f.owner; }catch(_e){} if(typeof hitEnemy==='function') hitEnemy(e, f.dmg); } } }
+  if(typeof playSfx==='function') playSfx('boom'); }
 function _skAura(u, key, sk){ if(!G.units) return; const r2=(sk.radius||0.12)*(sk.radius||0.12);
   if(sk.cloakAllies){ for(const a of G.units){ if(a.fixed) continue; const dx=a.x-u.x, dy=a.y-u.y; if(dx*dx+dy*dy<=r2) a._fieldCloak=true; } }   // 오라 은신: 범위 내 아군
   if(sk.detect && G.enemies){ for(const e of G.enemies){ if(e.dead) continue; const dx=e.x-u.x, dy=e.y-u.y; if(dx*dx+dy*dy<=r2) e._revealed=true; } }   // 탐지 훅: 범위 내 적 표식(전투 유즈맵용)
@@ -6114,6 +6135,7 @@ function stepSkills(dt){ if(typeof G==='undefined'||!G.units) return; G._skT=(G.
     if(u.skillOn){ for(const k in u.skillOn){ if(!u.skillOn[k]) continue; const sk=SKILLS[k]; if(!sk) continue;
       if(sk.drain&&u.maxEn>0){ u.en-=sk.drain*dt; if(u.en<=0){ u.en=0; u.skillOn[k]=false; continue; } }
       if(sk.kind==='aura') _skAura(u, k, sk); } }
+    if(u.buff){ for(const k in u.buff){ const bf=u.buff[k]; if(bf&&bf.t>0){ bf.t-=dt; if(bf.t<=0) delete u.buff[k]; } } }   // 자기 강화(스팀팩 등) 지속시간
     if(HEALER[_skKey(u)]){ let t=null;   // 메딕: 지정 힐(따라다니며 1명) or 자동(근처 부상 바이오닉)
       if(u.healFocus){ t=G.units.find(z=>z.uid===u.healFocus && !z.dead && !z.fixed); if(!t) u.healFocus=null; }
       if(t){ const dx=t.x-u.x, dy=t.y-u.y, d=Math.hypot(dx,dy)||0.0001;
@@ -6130,10 +6152,12 @@ function stepSkills(dt){ if(typeof G==='undefined'||!G.units) return; G._skT=(G.
     if(f.type==='storm'){ f.boltT=(f.boltT||0)-dt; if(f.boltT<=0){ f.boltT=0.05; (f.bolts=f.bolts||[]).push({a:Math.random()*6.28, rr:Math.random(), t:0}); }
       if(f.bolts){ for(let b=f.bolts.length-1;b>=0;b--){ f.bolts[b].t+=dt; if(f.bolts[b].t>0.24) f.bolts.splice(b,1); } }
       f.dmgAcc=(f.dmgAcc||0)+dt; if(f.dmgAcc>=0.5){ f.dmgAcc-=0.5; _skStormDamage(f); } }
-    if(f.t>=f.dur) G.skillFx.splice(i,1);
+    else if(f.type==='ensnare'){ f.slowAcc=(f.slowAcc||0)+dt; if(f.slowAcc>=0.3){ f.slowAcc-=0.3; _skEnsnare(f); } }
+    else if(f.type==='mine'){ if(f.armT>0) f.armT-=dt; else if(_skMineTrigger(f)){ _skMineBoom(f); f._done=true; } }
+    if(f._done||f.t>=f.dur) G.skillFx.splice(i,1);
   } } }
 function _skW2S(wx,wy,W,H){ const v=(typeof G!=='undefined')&&G.view; let x=wx,y=wy; if(v&&v.zoom&&v.zoom!==1){ x=(wx-v.x)*v.zoom+0.5; y=(wy-v.y)*v.zoom+0.5; } return {x:x*W, y:y*H, z:(v&&v.zoom)||1}; }
-function _skHasUnitFx(){ if(!G.units) return false; for(const u of G.units){ if(u._cloaked||u._healTgt||isDetector(u)) return true; if(u.skillOn){ for(const k in u.skillOn){ if(u.skillOn[k]&&SKILLS[k]&&SKILLS[k].kind==='aura') return true; } } } return false; }
+function _skHasUnitFx(){ if(!G.units) return false; for(const u of G.units){ if(u._cloaked||u._healTgt||isDetector(u)||(u.buff&&u.buff.stim&&u.buff.stim.t>0)) return true; if(u.skillOn){ for(const k in u.skillOn){ if(u.skillOn[k]&&SKILLS[k]&&SKILLS[k].kind==='aura') return true; } } } return false; }
 function drawSkillFx(){ if(typeof G==='undefined') return; const hasFx=!!(G.skillFx&&G.skillFx.length); if(!hasFx && !_skHasUnitFx()) return;
   const cv=document.getElementById('cvFx'); if(!cv) return; const ctx=cv.getContext('2d'); if(!ctx) return; const W=cv.width, H=cv.height;
   ctx.save(); ctx.globalCompositeOperation='lighter';
@@ -6149,6 +6173,15 @@ function drawSkillFx(){ if(typeof G==='undefined') return; const hasFx=!!(G.skil
       for(let seg=0;seg<3;seg++){ zx+=(b.a*13%7-3); zy+=R*0.3; ctx.lineTo(zx,zy);} ctx.lineTo(bx,by); ctx.stroke(); } }
   }
   const _T=(G._skT||0), _selArr=(G.sel||[]);
+  if(hasFx) for(const f of G.skillFx){ const p=_skW2S(f.x,f.y,W,H);   // 인스네어 가스 / 스파이더 마인 / 폭발
+    if(f.type==='ensnare'){ const R=f.r*W*p.z, life=f.t/f.dur, fade=life>0.85?((1-life)/0.15):1;
+      ctx.globalAlpha=0.16*fade; const g=ctx.createRadialGradient(p.x,p.y,R*0.1,p.x,p.y,R); g.addColorStop(0,'rgba(196,158,66,.6)'); g.addColorStop(1,'rgba(150,120,40,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(p.x,p.y,R,R*0.62,0,0,6.28); ctx.fill();
+      ctx.globalAlpha=0.3*fade; ctx.strokeStyle='#e8c060'; ctx.lineWidth=1; for(let s=0;s<6;s++){ const an=s*1.047+_T*0.25; ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x+Math.cos(an)*R,p.y+Math.sin(an)*R*0.62); ctx.stroke(); } for(let ring=1;ring<=2;ring++){ const rf=R*ring/2.4; ctx.beginPath(); ctx.ellipse(p.x,p.y,rf,rf*0.62,0,0,6.28); ctx.stroke(); } }
+    else if(f.type==='mine'){ const rr=6*p.z, blink=(f.armT>0)?(Math.sin(_T*8)>0):(Math.sin(_T*18)>0);
+      ctx.globalAlpha=0.92; ctx.fillStyle='#3a3f2a'; ctx.beginPath(); ctx.ellipse(p.x,p.y,rr,rr*0.6,0,0,6.28); ctx.fill();
+      ctx.globalAlpha=1; ctx.fillStyle=blink?'#ff5030':'#5a1e14'; ctx.beginPath(); ctx.arc(p.x,p.y-rr*0.2,rr*0.3,0,6.28); ctx.fill();
+      if(blink){ ctx.globalAlpha=0.5; ctx.strokeStyle='#ff6040'; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(p.x,p.y-rr*0.2,rr*0.75,0,6.28); ctx.stroke(); } }
+    else if(f.type==='boom'){ const life=f.t/f.dur, R=f.r*W*p.z*(0.4+life*1.3); ctx.globalAlpha=Math.max(0,1-life); const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,R); g.addColorStop(0,'rgba(255,242,186,.95)'); g.addColorStop(0.5,'rgba(255,140,50,.6)'); g.addColorStop(1,'rgba(120,40,10,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.x,p.y,R,0,6.28); ctx.fill(); } }
   // 탐지 원(와쳐·제플린 등) — 넓은 시안 원 + 레이더 스윕, 상시 유지
   for(const d of G.units){ if(!isDetector(d)||d.dead) continue; const p=_skW2S(d.x,d.y,W,H), R=DETECT_RANGE*W*p.z;
     ctx.globalAlpha=0.13; ctx.strokeStyle='#7fe0ff'; ctx.lineWidth=1.4; ctx.setLineDash([7,7]); ctx.lineDashOffset=-_T*18; ctx.beginPath(); ctx.ellipse(p.x,p.y,R,R*0.62,0,0,6.28); ctx.stroke(); ctx.setLineDash([]);
@@ -6165,6 +6198,10 @@ function drawSkillFx(){ if(typeof G==='undefined') return; const hasFx=!!(G.skil
     ctx.globalAlpha=0.5; ctx.strokeStyle='#7fffcf'; ctx.lineWidth=2.6; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
     ctx.globalAlpha=0.9; ctx.strokeStyle='#eafff6'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
     for(let s=0;s<3;s++){ const rr=((_T*30+s*13)%26), px=b.x+Math.sin(_T*5+s*2.1)*7, py=b.y-rr; ctx.globalAlpha=Math.max(0,0.7-rr/30); ctx.strokeStyle='#8affd0'; ctx.lineWidth=1.7; ctx.beginPath(); ctx.moveTo(px-3,py); ctx.lineTo(px+3,py); ctx.moveTo(px,py-3); ctx.lineTo(px,py+3); ctx.stroke(); } }
+  // 스팀팩 등 자기 강화: 붉은 발밑 링 + 상승 스팀
+  for(const u of G.units){ if(!u.buff||!u.buff.stim||u.buff.stim.t<=0) continue; const p=_skW2S(u.x,u.y,W,H), rad=((typeof unitRadius==='function'?unitRadius(u):14))*p.z, uid=(u.uid||0);
+    ctx.globalAlpha=0.3; ctx.strokeStyle='#ff6a5a'; ctx.lineWidth=1.6; ctx.beginPath(); ctx.ellipse(p.x,p.y,rad*0.9,rad*0.9*0.5,0,0,6.28); ctx.stroke();
+    ctx.fillStyle='#ff8a6a'; for(let s=0;s<3;s++){ const yy=p.y-((_T*22+s*9)%22), xx=p.x+Math.sin(_T*3+s*2+uid)*rad*0.5; ctx.globalAlpha=Math.max(0,0.26-((_T*22+s*9)%22)/90); ctx.beginPath(); ctx.arc(xx,yy,2+s*0.6,0,6.28); ctx.fill(); } }
   ctx.restore(); }
 // 개인 보스 해금 감지(등급 4종 전체 보유 → 잠금 해제): 채팅 알람 + 버튼 알림 점등
 function checkPbossUnlocks(){
@@ -11041,7 +11078,11 @@ function cloneMats(obj){ const list=[];
 function _applyCloak(m, targetOp, dt){ if(!m||!m.anim) return;
   if(!m._cloakMats){ if(targetOp>=1) return; try{ m._cloakMats=cloneMats(m.anim); }catch(e){ m._cloakMats=null; return; } m._cloakOp=1; }
   const cur=(m._cloakOp==null?1:m._cloakOp), nx=cur+(targetOp-cur)*Math.min(1, dt*6); m._cloakOp=nx;
-  for(const mt of m._cloakMats){ mt.transparent=true; mt.opacity=nx; mt.depthWrite=nx>0.6; } }
+  for(const mt of m._cloakMats){ mt.transparent=true; mt.opacity=nx; mt.depthWrite=nx>0.6; }
+  if(m.shadow){ m.shadow.visible=nx>0.05; if(m.shadow.material) m.shadow.material.opacity=0.26*Math.min(1,nx*1.6); }   // 완전 투명 시 그림자까지 숨김(상대 시점 미노출)
+  if(m.rim && nx<=0.02) m.rim.visible=false;   // 완전 투명 시 선택링도 숨김(미감지=완전 은폐)
+}
+
 
 // 그룹 구조: holder(화면위치·크기) → view(카메라 부감 tilt) → yaw(적 방향 회전) → anim(절차적) → inner(모델, 발 y=0)
 // 오라용 방사형 그라데이션 텍스처(중심 밝은 청록 → 보라 → 가장자리 투명) — 1회 생성 후 공유
