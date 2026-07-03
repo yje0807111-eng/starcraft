@@ -814,6 +814,29 @@
   .cmdBtn.skill.on{background:linear-gradient(180deg,rgba(0,150,200,.5),rgba(0,90,130,.5));border-color:#5cd6ff;box-shadow:0 0 8px rgba(0,200,255,.4);color:#fff}
   .cmdBtn.skill b{font-size:var(--fs-sm);color:#9bb8d0;font-family:'Rajdhani',sans-serif}
   .cmdBtn:active{transform:translateY(1px)}
+  /* 🪄 스킬 바 — 프로필 카드의 하위 계열(같은 사선 모서리·메탈 톤, 사이오닉 시안 엣지). 중앙 정렬, 1~4개 대응 */
+  #skillBar{display:none;flex-wrap:wrap;gap:6px;justify-content:center;align-items:stretch;margin-top:7px;padding:8px 9px 7px;position:relative;
+    background:linear-gradient(160deg,rgba(30,42,60,.5),rgba(6,9,14,.82));
+    border:1px solid var(--metal-edge);border-left:2px solid rgba(96,200,255,.55);
+    clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.04),inset 0 0 18px rgba(0,0,0,.42)}
+  #skillBar::after{content:'';position:absolute;left:9px;right:5px;top:0;height:1px;background:linear-gradient(90deg,rgba(96,200,255,.5),transparent 72%);pointer-events:none}
+  .skBtn{flex:1 1 0;min-width:66px;max-width:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    min-height:58px;padding:8px 8px 7px;cursor:pointer;font-family:inherit;position:relative;overflow:hidden;transition:all .14s;border-radius:8px;
+    background:linear-gradient(180deg,rgba(120,190,255,.11),rgba(255,255,255,.012));
+    border:1px solid rgba(120,200,255,.32);box-shadow:inset 0 1px 0 rgba(255,255,255,.05);color:#cfeaff}
+  .skBtn::before{content:'';position:absolute;left:0;right:0;top:0;height:42%;background:linear-gradient(180deg,rgba(255,255,255,.11),rgba(255,255,255,0));pointer-events:none}
+  .skBtn .skIco{width:23px;height:23px;line-height:0;position:relative;z-index:2;filter:drop-shadow(0 0 4px rgba(96,200,255,.6))}
+  .skBtn .skIco svg{width:23px;height:23px}
+  .skBtn .skNm{font-size:var(--fs-sm);font-weight:800;letter-spacing:.2px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;position:relative;z-index:2}
+  .skBtn:hover{border-color:rgba(120,200,255,.55)}
+  .skBtn:active{transform:translateY(1px)}
+  .skBtn.arm{border-color:var(--gold);color:var(--gold-lt);box-shadow:0 0 10px rgba(255,210,74,.5),inset 0 1px 0 rgba(255,255,255,.06)}
+  .skBtn.on{background:linear-gradient(180deg,rgba(0,150,200,.5),rgba(0,90,130,.5));border-color:#5cd6ff;box-shadow:0 0 11px rgba(0,200,255,.45);color:#fff}
+  .skBtn.disabled{opacity:.46;filter:grayscale(.28)}
+  .skBtn .skEn{position:absolute;bottom:2px;right:5px;z-index:3;font:700 9px 'Rajdhani',sans-serif;color:#7fc8ff}
+  .skBtn.lowE .skEn{color:#ff8a8a}
+  .skBtn .skCd{position:absolute;inset:0;z-index:4;display:flex;align-items:center;justify-content:center;background:rgba(2,8,14,.55);font:800 18px 'Rajdhani',sans-serif;color:#fff;text-shadow:0 1px 2px #000}
   #cmdRow .selAll{align-self:stretch;display:flex;align-items:center;justify-content:center;padding:8px 9px;border-radius:var(--r-md);font-size:var(--fs-sm);flex:0 0 auto;white-space:nowrap}
   /* 초상화 — 쿨 메탈 프레임 + 사선 모서리(카드와 통일) */
   .scPortrait{width:64px;height:64px;flex:none;align-self:center;position:relative;overflow:hidden;color:var(--neon);
@@ -2366,7 +2389,7 @@
           <div class="selSingle" id="selSingle" style="display:none"></div>
         </div>
         <!-- 🪄 유닛 스킬 바(여분 구역) — 단일 선택 유닛이 스킬 보유 시 표시 -->
-        <div id="skillBar" style="display:none;flex-wrap:wrap;gap:6px;margin-top:7px;justify-content:center"></div>
+        <div id="skillBar"></div>
         <!-- 카드/그리드 밖 '전체 선택' 버튼: 항상 패널 가장 하단 -->
         <button class="scAllOne" id="scAllOne" onclick="selectAllOfType()" style="display:none">⛶ 이 종류 전체 선택</button>
         <div id="transportCmd" style="display:none;gap:7px;margin-top:7px">
@@ -6019,23 +6042,22 @@ const SKILLS={
 };
 const UNIT_SKILLS={ high_templar:['psi_storm'] };   // 모델키(gmodel||id) → 스킬 키 목록. 다크템플러 은신·메딕 힐·와쳐 탐지 등은 동일 틀에 추가 예정
 function unitSkillKeys(u){ if(!u) return []; return UNIT_SKILLS[u.gmodel||u.id]||UNIT_SKILLS[u.id]||[]; }
-const _SKBTN_CSS='display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:54px;height:48px;border-radius:10px;border:1px solid rgba(150,190,255,.32);background:rgba(28,38,58,.78);color:#e2ecff;font:600 10px/1.1 sans-serif;gap:2px;padding:4px 7px;position:relative;cursor:pointer;overflow:hidden';
 function renderSkillBar(){ const bar=document.getElementById('skillBar'); if(!bar) return;
   if(typeof G==='undefined'||G.selEnemy!=null||G.sel.length!==1){ if(bar.style.display!=='none'){ bar.style.display='none'; bar.innerHTML=''; bar.dataset.sig=''; } return; }
   const u=G.units.find(x=>x.uid===G.sel[0]); const keys=u?unitSkillKeys(u):[];
   if(!u||!keys.length){ if(bar.style.display!=='none'){ bar.style.display='none'; bar.innerHTML=''; bar.dataset.sig=''; } return; }
   u.skillCd=u.skillCd||{};
-  let sig=u.uid+'|', html='';
+  let sig=u.uid+'|'+keys.length+'|', html='';
   for(const key of keys){ const sk=SKILLS[key]; if(!sk) continue;
     const cd=Math.ceil(u.skillCd[key]||0), armed=(G.skillArm&&G.skillArm.uid===u.uid&&G.skillArm.key===key)?1:0,
-          on=(sk.kind==='toggle'&&u.skillOn&&u.skillOn[key])?1:0, lowE=(sk.energy>0&&(u.en||0)<sk.energy)?1:0;
+          on=(sk.kind==='toggle'&&u.skillOn&&u.skillOn[key])?1:0, lowE=(sk.energy>0&&(u.en||0)<sk.energy)?1:0,
+          dis=(cd>0||lowE)&&!armed&&!on?1:0;
     sig+=key+cd+armed+on+lowE+';';
-    const extra=armed?';border-color:#ffd24a;box-shadow:0 0 8px rgba(255,210,74,.5)':(on?';border-color:#7fe0b8':(lowE||cd>0?';opacity:.5':''));
-    const badge=cd>0?('<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:800 15px sans-serif;background:rgba(0,0,0,.45)">'+cd+'</span>')
-      :(sk.energy>0?('<span style="position:absolute;bottom:1px;right:3px;font:700 8px sans-serif;color:'+(lowE?'#ff8a8a':'#7fc8ff')+'">'+sk.energy+'</span>'):'');
-    html+='<button class="skBtn" onclick="castSkill(\''+key+'\')" style="'+_SKBTN_CSS+extra+'">'
-      +'<span style="width:20px;height:20px;display:block">'+(SKILL_ICON[key]||'')+'</span>'
-      +'<span style="max-width:56px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+sk.name+'</span>'+badge+'</button>';
+    const cls='skBtn'+(armed?' arm':'')+(on?' on':'')+(dis?' disabled':'')+(lowE?' lowE':'');
+    const badge=cd>0?('<span class="skCd">'+cd+'</span>'):(sk.energy>0?('<span class="skEn">'+sk.energy+'</span>'):'');
+    html+='<button class="'+cls+'" onclick="castSkill(\''+key+'\')">'
+      +'<span class="skIco">'+(SKILL_ICON[key]||'')+'</span>'
+      +'<span class="skNm">'+sk.name+'</span>'+badge+'</button>';
   }
   if(bar.dataset.sig===sig) return;   // 상태 동일 → DOM 재구성 생략(깜빡임 방지)
   bar.dataset.sig=sig; bar.style.display='flex'; bar.innerHTML=html;
