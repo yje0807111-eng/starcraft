@@ -2365,6 +2365,8 @@
           <div class="selChips" id="selChips"></div>
           <div class="selSingle" id="selSingle" style="display:none"></div>
         </div>
+        <!-- 🪄 유닛 스킬 바(여분 구역) — 단일 선택 유닛이 스킬 보유 시 표시 -->
+        <div id="skillBar" style="display:none;flex-wrap:wrap;gap:6px;margin-top:7px;justify-content:center"></div>
         <!-- 카드/그리드 밖 '전체 선택' 버튼: 항상 패널 가장 하단 -->
         <button class="scAllOne" id="scAllOne" onclick="selectAllOfType()" style="display:none">⛶ 이 종류 전체 선택</button>
         <div id="transportCmd" style="display:none;gap:7px;margin-top:7px">
@@ -5762,6 +5764,7 @@ function refreshSelCard(){ if(typeof G!=='undefined'){ G.boardArm=false; G.unloa
   updateCmdRow();   // 명령 버튼 행(홀드/공격이동/지정공격/반복이동)
   if(typeof updateTransportBtns==='function') updateTransportBtns();   // 수송 유닛 태우기/내리기 버튼
   updateSkillFab(); // 메인 화면 스킬 버튼
+  if(typeof renderSkillBar==='function') renderSkillBar();   // 🪄 하단 패널 스킬 바(여분 구역)
   if(typeof updateAutoFab==='function') updateAutoFab();   // 자동 설정 배너(선택 시 숨김 — 해제버튼과 자리 공유)
   if(G.tab==='Main' && _homeMode==='select' && _selViaTab && !en && G.sel.length>=1){   // 지정 탭에서 선택 → 지정 패널 유지(드래그 박스 선택은 selMulti 칩)
     document.getElementById('defaultCmd').classList.remove('hide');
@@ -6000,6 +6003,86 @@ const SKILL_ICON={ adr:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M1
 function useSkill(){ const us=selUnits(); if(!us.length) return;
   let used=0; for(const u of us){ const def=U[u.id]; if(def.skill && (u.skCd||0)<=0){ u.adr=def.skill.dur; u.skCd=def.skill.cd; used++; } }
   if(used){ const nm=U[us[0].id].skill.name; addChat('',nm+' 발동! ('+used+'기)'); if(typeof playSfx==='function') playSfx('skill'); } updateCmdRow(); updateSkillFab(); }
+// ════════════════════════════════════════════════════════════════
+// 🪄 유닛 스킬 프레임워크(관리자/재사용 유즈맵 기본 틀) — 스타식 액티브/토글/오라 스킬.
+//   · SKILLS: 스킬 정의 레지스트리(kind=target_ground|target_unit|toggle|aura). 새 유즈맵은 여기에 항목만 추가.
+//   · UNIT_SKILLS: 유닛(모델키) → 보유 스킬 배열. 하단 선택 패널 '여분 구역'(#skillBar)에 버튼 표시.
+//   · 시전=castSkill → 지정형은 armed 후 맵 클릭(fireSkillGround). 쿨다운/에너지=stepSkills, 시각=drawSkillFx.
+//   · 전투 유즈맵은 hitEnemy 훅(_skStormDamage)으로 실제 피해; 관리자(적 없음)에선 순수 연출.
+// ════════════════════════════════════════════════════════════════
+const SKILL_EN_REGEN=8;   // 에너지 재생(초당) — maxEn>0 유닛 공통
+SKILL_ICON.psi_storm='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h9l-2.4 5H18l-9 11 2.2-8H5z"/></svg>';   // 스톰=번개 구름
+const SKILLS={
+  // 하이템플러: 사이오닉 스톰 — 지정 지점 광역 지속 피해(연출: 보라 뇌운+번개)
+  psi_storm:{ key:'psi_storm', name:'사이오닉 스톰', kind:'target_ground', energy:75, cd:12, dur:3, radius:0.075, dmg:14,
+    arm:'⚡ 사이오닉 스톰: 떨어뜨릴 지점을 클릭하세요.' },
+};
+const UNIT_SKILLS={ high_templar:['psi_storm'] };   // 모델키(gmodel||id) → 스킬 키 목록. 다크템플러 은신·메딕 힐·와쳐 탐지 등은 동일 틀에 추가 예정
+function unitSkillKeys(u){ if(!u) return []; return UNIT_SKILLS[u.gmodel||u.id]||UNIT_SKILLS[u.id]||[]; }
+const _SKBTN_CSS='display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:54px;height:48px;border-radius:10px;border:1px solid rgba(150,190,255,.32);background:rgba(28,38,58,.78);color:#e2ecff;font:600 10px/1.1 sans-serif;gap:2px;padding:4px 7px;position:relative;cursor:pointer;overflow:hidden';
+function renderSkillBar(){ const bar=document.getElementById('skillBar'); if(!bar) return;
+  if(typeof G==='undefined'||G.selEnemy!=null||G.sel.length!==1){ if(bar.style.display!=='none'){ bar.style.display='none'; bar.innerHTML=''; bar.dataset.sig=''; } return; }
+  const u=G.units.find(x=>x.uid===G.sel[0]); const keys=u?unitSkillKeys(u):[];
+  if(!u||!keys.length){ if(bar.style.display!=='none'){ bar.style.display='none'; bar.innerHTML=''; bar.dataset.sig=''; } return; }
+  u.skillCd=u.skillCd||{};
+  let sig=u.uid+'|', html='';
+  for(const key of keys){ const sk=SKILLS[key]; if(!sk) continue;
+    const cd=Math.ceil(u.skillCd[key]||0), armed=(G.skillArm&&G.skillArm.uid===u.uid&&G.skillArm.key===key)?1:0,
+          on=(sk.kind==='toggle'&&u.skillOn&&u.skillOn[key])?1:0, lowE=(sk.energy>0&&(u.en||0)<sk.energy)?1:0;
+    sig+=key+cd+armed+on+lowE+';';
+    const extra=armed?';border-color:#ffd24a;box-shadow:0 0 8px rgba(255,210,74,.5)':(on?';border-color:#7fe0b8':(lowE||cd>0?';opacity:.5':''));
+    const badge=cd>0?('<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:800 15px sans-serif;background:rgba(0,0,0,.45)">'+cd+'</span>')
+      :(sk.energy>0?('<span style="position:absolute;bottom:1px;right:3px;font:700 8px sans-serif;color:'+(lowE?'#ff8a8a':'#7fc8ff')+'">'+sk.energy+'</span>'):'');
+    html+='<button class="skBtn" onclick="castSkill(\''+key+'\')" style="'+_SKBTN_CSS+extra+'">'
+      +'<span style="width:20px;height:20px;display:block">'+(SKILL_ICON[key]||'')+'</span>'
+      +'<span style="max-width:56px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+sk.name+'</span>'+badge+'</button>';
+  }
+  if(bar.dataset.sig===sig) return;   // 상태 동일 → DOM 재구성 생략(깜빡임 방지)
+  bar.dataset.sig=sig; bar.style.display='flex'; bar.innerHTML=html;
+}
+function castSkill(key){ if(typeof G==='undefined'||G.sel.length!==1) return; const u=G.units.find(x=>x.uid===G.sel[0]); if(!u) return;
+  const sk=SKILLS[key]; if(!sk||unitSkillKeys(u).indexOf(key)<0) return;
+  u.skillCd=u.skillCd||{};
+  if((u.skillCd[key]||0)>0){ if(typeof toast==='function') toast('쿨다운 '+Math.ceil(u.skillCd[key])+'초'); return; }
+  if(sk.kind==='toggle'){ u.skillOn=u.skillOn||{}; const nv=!u.skillOn[key]; u.skillOn[key]=nv; if(key==='cloak')u.cloaked=nv; if(typeof playSfx==='function')playSfx('skill'); renderSkillBar(); return; }
+  if(sk.energy>0 && (u.en||0)<sk.energy){ if(typeof toast==='function') toast('에너지 부족'); return; }
+  if(sk.kind==='target_ground'){ G.skillArm={uid:u.uid,key:key}; G.focusArm=false; G.patrolArm=false; if(typeof addChat==='function') addChat('', sk.arm||'ℹ️ 대상 지점을 클릭하세요.'); renderSkillBar(); return; }
+}
+function fireSkillGround(uid,key,x,y){ const u=G.units.find(z=>z.uid===uid); const sk=SKILLS[key]; if(!u||!sk) return;
+  if(sk.energy>0){ if((u.en||0)<sk.energy) return; u.en-=sk.energy; }
+  u.skillCd=u.skillCd||{}; u.skillCd[key]=sk.cd||0; G.skillFx=G.skillFx||[];
+  if(key==='psi_storm') G.skillFx.push({type:'storm', x:x, y:y, t:0, dur:sk.dur, r:sk.radius, dmg:sk.dmg, owner:uid});
+  if(typeof playSfx==='function')playSfx('skill'); if(typeof addChat==='function') addChat('', sk.name+' 시전!'); renderSkillBar();
+}
+function _skStormDamage(f){ if(!G.enemies||!G.enemies.length) return; const r=f.r, r2=r*r;   // 전투 유즈맵 훅: 범위 내 적 지속 피해
+  for(const e of G.enemies){ if(e.dead) continue; const dx=e.x-f.x, dy=e.y-f.y; if(dx*dx+dy*dy<=r2){ try{ _atkUid=f.owner; }catch(_e){} if(typeof hitEnemy==='function') hitEnemy(e, f.dmg); } } }
+function stepSkills(dt){ if(typeof G==='undefined'||!G.units) return; G._skT=(G._skT||0)+dt;
+  for(const u of G.units){ if(u.fixed) continue;
+    if(u.maxEn>0) u.en=Math.min(u.maxEn,(u.en||0)+SKILL_EN_REGEN*dt);   // 에너지 재생
+    if(u.skillCd){ for(const k in u.skillCd){ if(u.skillCd[k]>0) u.skillCd[k]=Math.max(0,u.skillCd[k]-dt); } }
+    if(u.skillOn){ for(const k in u.skillOn){ if(u.skillOn[k]){ const sk=SKILLS[k]; if(sk&&sk.drain&&u.maxEn>0){ u.en-=sk.drain*dt; if(u.en<=0){ u.en=0; u.skillOn[k]=false; if(k==='cloak')u.cloaked=false; } } } } }
+  }
+  if(G.skillFx&&G.skillFx.length){ for(let i=G.skillFx.length-1;i>=0;i--){ const f=G.skillFx[i]; f.t+=dt;
+    if(f.type==='storm'){ f.boltT=(f.boltT||0)-dt; if(f.boltT<=0){ f.boltT=0.05; (f.bolts=f.bolts||[]).push({a:Math.random()*6.28, rr:Math.random(), t:0}); }
+      if(f.bolts){ for(let b=f.bolts.length-1;b>=0;b--){ f.bolts[b].t+=dt; if(f.bolts[b].t>0.24) f.bolts.splice(b,1); } }
+      f.dmgAcc=(f.dmgAcc||0)+dt; if(f.dmgAcc>=0.5){ f.dmgAcc-=0.5; _skStormDamage(f); } }
+    if(f.t>=f.dur) G.skillFx.splice(i,1);
+  } } }
+function _skW2S(wx,wy,W,H){ const v=(typeof G!=='undefined')&&G.view; let x=wx,y=wy; if(v&&v.zoom&&v.zoom!==1){ x=(wx-v.x)*v.zoom+0.5; y=(wy-v.y)*v.zoom+0.5; } return {x:x*W, y:y*H, z:(v&&v.zoom)||1}; }
+function drawSkillFx(){ if(typeof G==='undefined'||!G.skillFx||!G.skillFx.length) return; const cv=document.getElementById('cvFx'); if(!cv) return;
+  const ctx=cv.getContext('2d'); if(!ctx) return; const W=cv.width, H=cv.height;
+  ctx.save(); ctx.globalCompositeOperation='lighter';
+  for(const f of G.skillFx){ if(f.type!=='storm') continue; const p=_skW2S(f.x,f.y,W,H); const R=f.r*W*p.z;
+    const life=f.t/f.dur, fade=life<0.15?(life/0.15):(life>0.8?((1-life)/0.2):1);
+    const g=ctx.createRadialGradient(p.x,p.y,R*0.15,p.x,p.y,R); g.addColorStop(0,'rgba(160,130,255,0.42)'); g.addColorStop(1,'rgba(90,60,200,0)');
+    ctx.globalAlpha=0.55*fade; ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.x,p.y,R,0,6.28); ctx.fill();
+    ctx.globalAlpha=0.5*fade; ctx.strokeStyle='#c8b4ff'; ctx.lineWidth=1.4;   // 소용돌이 뇌운
+    for(let s=0;s<3;s++){ ctx.beginPath(); const ph=f.t*3.2+s*2.1; for(let a=0;a<6.3;a+=0.35){ const rr=R*(0.28+0.6*(a/6.3)); const xx=p.x+Math.cos(a+ph)*rr, yy=p.y+Math.sin(a+ph)*rr*0.62; a?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy);} ctx.stroke(); }
+    if(f.bolts){ ctx.strokeStyle='#efe6ff'; for(const b of f.bolts){ const bl=1-b.t/0.24; if(bl<=0) continue; ctx.globalAlpha=bl*fade; ctx.lineWidth=1+bl*1.6;
+      const bx=p.x+Math.cos(b.a)*R*b.rr, by=p.y+Math.sin(b.a)*R*b.rr*0.62; let zx=bx, zy=by-R*0.9; ctx.beginPath(); ctx.moveTo(zx,zy);
+      for(let seg=0;seg<3;seg++){ zx+=(b.a*13%7-3); zy+=R*0.3; ctx.lineTo(zx,zy);} ctx.lineTo(bx,by); ctx.stroke(); } }
+  }
+  ctx.restore(); }
 // 개인 보스 해금 감지(등급 4종 전체 보유 → 잠금 해제): 채팅 알람 + 버튼 알림 점등
 function checkPbossUnlocks(){
   if(G.phase!=='playing') return;
@@ -8238,6 +8321,10 @@ function onDown(e){ if(G.strike){ strikeOnDown(e); return; } if(G.tab!=='Main'||
     const up=hitUnitPrecise(p.x,p.y);
     if(up && !up.fixed) deployUnitToBoss(up);
     G.bossPickArm=false; updateBossPickBtn(); e.preventDefault(); return; }
+  if(G.skillArm && G.sel.length>0){   // 🪄 지정형 스킬: 클릭 지점에 시전(사이오닉 스톰 등)
+    const cl=(typeof clampInner==='function')?clampInner(p.x,p.y):{x:p.x,y:p.y};
+    fireSkillGround(G.skillArm.uid, G.skillArm.key, cl.x, cl.y); G.skillArm=null;
+    if(typeof renderSkillBar==='function') renderSkillBar(); if(e.cancelable)e.preventDefault(); return; }
   if(G.focusArm && G.sel.length>0){   // 지정공격: 적 클릭 → 그 적 집중 공격
     const en0=hitEnemyPrecise(p.x,p.y);
     if(en0){ setFocusTarget(en0.eid); G.focusArm=false; updateCmdRow(); e.preventDefault(); return; }
@@ -8842,6 +8929,7 @@ function loop(now){
       if(G.tab==='Main'){ stepTransports(dt); stepCmdMove(dt); separateUnits(); }   // 수송선 운항 + 내 유닛 이동명령 + 겹침 방지
     }
     stepAuto(dt);   // 자동화 유틸(0.33초 틱) — 배속과 무관하게 실시간 기준
+    if(typeof stepSkills==='function') stepSkills(dt);   // 🪄 유닛 스킬(쿨다운·에너지·스톰 연출) — 샌드박스 포함(step 우회 대비)
 
   }
   if(G.tab==='Main'){ renderUnits(); if(!G.sel.length && !G.selEnemy){ renderBossPanel(); renderHomeLeft(); } }   // 유닛 DOM 라벨 + 홈 파견/판매
@@ -8854,6 +8942,7 @@ function loop(now){
   updateSelHp();   // 단일 종류 다중선택 시 유닛별 HP 실시간 갱신
   if(G.sel.length>=1 && document.getElementById('unitCmd').classList.contains('on')) updateCmdRow();   // 명령 행 상태 갱신(단일/다중)
   updateSkillFab();   // 스킬 FAB 쿨다운/버프 실시간(탭 전환·해제도 내부 처리)
+  if(typeof renderSkillBar==='function') renderSkillBar();   // 🪄 스킬 바 쿨다운/에너지 실시간(sig 캐시로 저비용)
   if(!G.sandbox) checkPbossUnlocks();// 개인 보스 해금 감지(채팅 알람 + 버튼 알림)
   updatePbossFab();   // 개인 보스 소환 FAB(메인·쿨다운 실시간)
   updateAutoFab();    // 자동화 묶음 버튼/팝업(표시·토글 상태)
@@ -8888,7 +8977,7 @@ function loop(now){
       else if(G.tab==='Unit') window.M3D.syncShop(GW, GH, dt);
       else if(G.tab==='Upgrade') window.M3D.syncBldg(GW, GH, dt); }
     const fcv=document.getElementById('cvFx');  // 투사체 오버레이(메인·관전) / 업그레이드 가동 파티클
-    if(G.tab==='Main'||G.tab==='Players'){ fcv.style.display='block'; drawFx(); stepMoveTrails(dt); }   // 이동 트레일(랩과 완전 동일 이펙트) 오버레이
+    if(G.tab==='Main'||G.tab==='Players'){ fcv.style.display='block'; drawFx(); if(typeof drawSkillFx==='function') drawSkillFx(); stepMoveTrails(dt); }   // 이동 트레일(랩과 완전 동일 이펙트) 오버레이 + 🪄 스킬 연출
     else if(G.tab==='Upgrade'){ fcv.style.display='block'; drawUpgFx(dt); }
     else fcv.style.display='none';
   }
