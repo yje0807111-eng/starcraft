@@ -837,6 +837,19 @@
   .skBtn .skEn{position:absolute;bottom:2px;right:5px;z-index:3;font:700 9px 'Rajdhani',sans-serif;color:#7fc8ff}
   .skBtn.lowE .skEn{color:#ff8a8a}
   .skBtn .skCd{position:absolute;inset:0;z-index:4;display:flex;align-items:center;justify-content:center;background:rgba(2,8,14,.55);font:800 18px 'Rajdhani',sans-serif;color:#fff;text-shadow:0 1px 2px #000}
+  /* ⚔ 전투 실험 — 아군 배치 피커 */
+  .btPickHead{display:flex;align-items:center;gap:6px;font-size:var(--fs-sm);font-weight:800;color:#cfe0ff;margin:2px 0 5px}
+  .btPickHead .sbcSub{font-weight:600;color:#8aa0b8;opacity:.85}
+  .btClearBtn{flex:0 0 auto;margin-left:auto;padding:4px 9px;font-size:var(--fs-xs)}
+  .btPicker{display:flex;flex-wrap:wrap;gap:4px;max-height:154px;overflow-y:auto;padding-right:2px}
+  .btpRaceHead{flex:0 0 100%;font-size:var(--fs-xs);font-weight:700;color:#9fb4cc;margin:3px 0 1px;opacity:.9}
+  .btpCard{display:flex;flex-direction:column;align-items:center;gap:2px;width:52px;padding:4px 2px;cursor:pointer;font-family:inherit;border-radius:7px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.012));border:1px solid var(--metal-edge);transition:all .12s}
+  .btpCard:hover{border-color:rgba(120,180,255,.5)}
+  .btpCard:active{transform:translateY(1px)}
+  .btpCard .btpPic{position:relative;width:30px;height:30px;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:4px}
+  .btpCard .btpPic img{width:100%;height:100%;object-fit:cover;border-radius:4px}
+  .btpCard .btpPic svg{width:24px;height:24px}
+  .btpCard .btpNm{font-size:8.5px;font-weight:700;color:#cfd8e4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
   /* ⚔ 전투 실험 바(관리자) — 붉은 사선 서브패널 */
   #sbCombatBar{margin:0 0 7px;padding:7px 9px 8px;position:relative;background:linear-gradient(160deg,rgba(60,34,38,.5),rgba(10,6,8,.82));border:1px solid var(--metal-edge);border-left:2px solid rgba(255,90,90,.6);clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px);box-shadow:inset 0 1px 0 rgba(255,255,255,.04),inset 0 0 16px rgba(0,0,0,.4)}
   #sbCombatBar .sbcHead{font-size:var(--fs-md);font-weight:800;color:#ffb0b0;letter-spacing:.3px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
@@ -847,6 +860,30 @@
   .sbcBtn:hover{border-color:rgba(255,120,120,.4)}
   .sbcBtn:active{transform:translateY(1px)}
   .sbcBtn.on{color:#fff;background:linear-gradient(180deg,#bb3636,#5e1616);border-color:#ff5b5b;box-shadow:0 0 12px -2px rgba(255,80,80,.55),inset 0 1px 0 rgba(255,255,255,.18)}
+  /* ⚔ 전투실험 — 화면 내 컨트롤 오버레이(Battle 탭에서만) */
+  #btCtl{position:absolute;top:38px;left:50%;transform:translateX(-50%);z-index:30;display:none;flex-wrap:wrap;justify-content:center;gap:5px;align-items:center;max-width:94%;pointer-events:none;padding:4px 7px;border-radius:11px;background:linear-gradient(180deg,rgba(14,10,12,.74),rgba(8,5,7,.62));border:1px solid rgba(255,90,90,.3);box-shadow:0 2px 10px rgba(0,0,0,.42)}
+  #btCtl .btCtlBtn{pointer-events:auto;padding:5px 8px;font-size:11px;font-weight:800;color:#e6d2d2;cursor:pointer;font-family:inherit;white-space:nowrap;border-radius:7px;background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.015));border:1px solid var(--metal-edge);transition:all .12s}
+  #btCtl .btCtlBtn:active{transform:translateY(1px)}
+  #btCtl .btCtlBtn.on{color:#fff;background:linear-gradient(180deg,#bb3636,#5e1616);border-color:#ff5b5b;box-shadow:0 0 10px -2px rgba(255,80,80,.55)}
+  #btCtl .btCtlCnt{pointer-events:none;font:800 11px 'Rajdhani',sans-serif;color:#ffb0b0;padding:0 4px;white-space:nowrap}
+  /* ⚔ 전투실험 — 하단 좌우 분할(적군|아군 소환) */
+  .btSplit{display:flex;gap:7px}
+  .btCol{flex:1 1 0;min-width:0;display:flex;flex-direction:column;border-radius:9px;padding:6px 6px 4px;background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(0,0,0,.14));border:1px solid var(--metal-edge)}
+  .btCol.foe{border-left:2px solid rgba(255,90,90,.62)}
+  .btCol.ally{border-left:2px solid rgba(90,160,255,.62)}
+  .btColHead{display:flex;align-items:center;gap:5px;font-size:var(--fs-xs);font-weight:800;letter-spacing:.2px;margin:0 0 4px}
+  .btCol.foe .btColHead{color:#ff9a9a}
+  .btCol.ally .btColHead{color:#9fc4ff}
+  .btCol .btPicker{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;max-height:132px;overflow-y:auto;padding-right:3px;scrollbar-width:thin;scrollbar-color:rgba(150,170,200,.4) transparent}
+  .btCol .btPicker::-webkit-scrollbar{width:5px}
+  .btCol .btPicker::-webkit-scrollbar-track{background:transparent}
+  .btCol .btPicker::-webkit-scrollbar-thumb{background:rgba(150,170,200,.35);border-radius:3px}
+  .btCol .btpRaceHead{grid-column:1/-1}
+  .btCol .btpCard{width:auto;padding:4px 1px}
+  .btCol .btpCard .btpPic{width:26px;height:26px}
+  .btCol .btpCard .btpNm{font-size:8px}
+  /* 적군 유닛 구분(붉은 링) */
+  .unit.foe .ubox{box-shadow:0 0 0 2px rgba(255,66,66,.62),0 0 9px rgba(255,54,54,.5)!important}
   #cmdRow .selAll{align-self:stretch;display:flex;align-items:center;justify-content:center;padding:8px 9px;border-radius:var(--r-md);font-size:var(--fs-sm);flex:0 0 auto;white-space:nowrap}
   /* 초상화 — 쿨 메탈 프레임 + 사선 모서리(카드와 통일) */
   .scPortrait{width:64px;height:64px;flex:none;align-self:center;position:relative;overflow:hidden;color:var(--neon);
@@ -2141,6 +2178,15 @@
     <div id="bossPanel" class="hide"><button id="baBackBtn" onclick="closeBossArena()"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>돌아가기</button></div>
     <canvas id="cvMarine"></canvas>  <!-- 3D 오버레이: 뷰 바깥 지속 캔버스(메인=게임유닛 / 유닛뽑기=슬롯 위 모델) -->
     <canvas id="cvFx"></canvas>      <!-- 투사체 오버레이(3D 위) -->
+    <!-- ⚔ 전투실험: 화면 내 컨트롤 오버레이(Battle 탭에서만 표시) -->
+    <div id="btCtl">
+      <button class="btCtlBtn on" id="btCtlToggle" onclick="sbCombatToggle()">▶ 전투</button>
+      <button class="btCtlBtn" onclick="sbCombatSpawn(5)">＋적</button>
+      <button class="btCtlBtn" onclick="sbCombatHurt()">아군손상</button>
+      <button class="btCtlBtn" onclick="sbCombatReset()">리셋</button>
+      <button class="btCtlBtn" onclick="btClear()">필드비우기</button>
+      <span class="btCtlCnt" id="btCtlCount">적 0 · 아군 0</span>
+    </div>
     <div id="chatLog"></div>         <!-- 채팅: 배경 위에 떠올랐다 사라짐(입력창 좌측 위) -->
     <div id="chatBar">
       <input id="chatField" type="text" placeholder="메시지…" maxlength="120" autocomplete="off">
@@ -2361,21 +2407,12 @@
       <div class="tab" data-tab="Unit"     onclick="switchTab('Unit',this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9.5" cy="8.5" r="3"/><path d="M4 19.5c0-3 2.5-5.2 5.5-5.2s5.5 2.2 5.5 5.2"/><path d="M18.5 4v5M16 6.5h5"/></svg></span><span id="unitTabLbl">유닛뽑기</span></div>
       <div class="tab" data-tab="Upgrade"  onclick="switchTab('Upgrade',this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5l5.3 5.3h-3.1v4.6h-4.4V9.8H6.7z"/><path d="M7 18.5h10"/></svg></span>업그레이드</div>
       <div class="tab" data-tab="Players"  onclick="switchTab('Players',this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.6" r="2.7"/><path d="M3.8 19c0-2.9 2.3-4.9 5.2-4.9s5.2 2 5.2 4.9"/><circle cx="16.9" cy="9.2" r="2.1"/><path d="M15.4 14.5c2.4.3 4.6 2 4.6 4.5"/></svg></span>플레이어</div>
+      <div class="tab" id="battleTab" data-tab="Battle" style="display:none" onclick="switchTab('Battle',this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5 15 15M19 5 9 15M14.5 15.5 17.5 18.5M9.5 15.5 6.5 18.5"/></svg></span>전투실험</div>
       <div class="tab tabSet" id="settingsBtn" data-sfx="ui_open" onclick="openSettings()" title="설정"><span class="ti"><svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg></span></div>
     </div>
 
     <div class="bp on" id="bpMain">
       <div id="stSelInfo" class="hide"></div>
-      <!-- ⚔ 전투 실험 바(관리자 전용) — 하단 섹션 상단에 상시 표시 -->
-      <div id="sbCombatBar" style="display:none">
-        <div class="sbcHead">⚔ 전투 실험 <span class="sbcSub">스킬·치유·은신 실전 테스트</span> <span class="sbcCnt" id="sbcCount">0기</span></div>
-        <div class="sbcRow">
-          <button class="sbcBtn on" id="sbcToggle" onclick="sbCombatToggle()">▶ 전투</button>
-          <button class="sbcBtn" onclick="sbCombatSpawn(5)">＋적 소환</button>
-          <button class="sbcBtn" onclick="sbCombatHurt()">아군 손상</button>
-          <button class="sbcBtn" onclick="sbCombatReset()">리셋</button>
-        </div>
-      </div>
       <div id="defaultCmd">
         <!-- 메인 홈 하단(무선택 시): 좌=유닛 판매 / 우=공용 보스 파견 -->
         <div class="homeCols">
@@ -2459,6 +2496,14 @@
       </div>
       <div id="plGridWrap">
         <div class="plGrid" id="plGrid"></div>
+      </div>
+    </div>
+
+    <div class="bp" id="bpBattle">
+      <div class="btPickHead">⚔ 전투 실험 <span class="sbcSub">눌러 배치 · 드래그로 이동 · 화면 상단 버튼으로 전투 제어</span></div>
+      <div class="btSplit">
+        <div class="btCol ally"><div class="btColHead">◈ 아군 소환</div><div class="btPicker" id="btPicker"></div></div>
+        <div class="btCol foe"><div class="btColHead">◈ 적군 소환</div><div class="btPicker" id="btPickerFoe"></div></div>
       </div>
     </div>
 
@@ -3922,7 +3967,7 @@ function fxLevel(){ return (typeof G!=='undefined'&&G.opt&&G.opt.fx)||'full'; }
 function fxLite(){ return fxLevel()!=='full'; }   // min·off → 빔/타격/스파크/연기/총구/충전/가동파티클 생략
 function fxOff(){ return fxLevel()==='off'; }      // off → 발사체까지 제거
 function drawMain(cvId){ const {ctx,W,H}=setup(cvId||'cvMain'); GW=W;GH=H;
-  if(typeof G!=='undefined' && G.sandbox){ const _va=viewApply(ctx,W,H); drawSandboxGround(ctx,W,H); viewRestore(ctx,_va); return; }
+  if(typeof G!=='undefined' && G.sandbox){ const _va=viewApply(ctx,W,H); if(G.tab==='Battle') drawBattleGround(ctx,W,H); else drawSandboxGround(ctx,W,H); viewRestore(ctx,_va); return; }
   const _vapply=viewApply(ctx,W,H);   // 화면 줌/팬 변환 시작(기본 뷰면 미적용)
   const {side,ox,oy}=geom(W,H); const R=10;
   // 정적 지형 바닥(우주 배경 + 떠 있는 지형 플랫폼 + 용암 절벽 테두리) — 캐시에서 1회 빌드 후 매 프레임 재사용
@@ -5617,14 +5662,15 @@ function renderUnits(){ const v=document.getElementById('vMain'); if(!v) return;
     el.style.left=(u.x*100)+'%'; el.style.top=(u.y*100)+'%';   // 위치는 매 프레임(부드러운 이동)
     const maxHp=u.maxHp||1, hpR=Math.max(0,Math.min(1,(u.hp!=null?u.hp:maxHp)/maxHp));
     const maxSh=u.maxSh||0, shR=maxSh>0?Math.max(0,Math.min(1,(u.sh!=null?u.sh:maxSh)/maxSh)):0;
-    const sig=u.id+'|'+box+'|'+(seld?1:0)+'|'+(u.hero?(u.lv||1):0)+'|'+(seld?(Math.round(hpR*40)+','+Math.round(shR*40)):'')+'|c'+(u.cargo?u.cargo.length:0);
+    const _foe=(u.team==='foe'), _showBar=seld||(G.tab==='Battle'&&G.sandbox);   // 전투실험: 양팀 HP 상시 표시
+    const sig=u.id+'|'+box+'|'+(seld?1:0)+'|'+(_foe?'F':'A')+'|'+(u.hero?(u.lv||1):0)+'|'+(_showBar?(Math.round(hpR*40)+','+Math.round(shR*40)):'')+'|c'+(u.cargo?u.cargo.length:0);
     if(sig===rec.sig) continue;   // 모양 그대로 → DOM 재구성 생략(리플로우 방지)
     rec.sig=sig;
-    el.className='unit'+(seld?' sel':'');
+    el.className='unit'+(seld?' sel':'')+(_foe?' foe':'');
     const star=u.hero?(' '+'★'.repeat(Math.min(u.lv||1,3))):'';
     const pad=Math.round(r*0.42);
     let barH='';
-    if(seld){ const hpCol=hpBarColor(hpR);
+    if(_showBar){ const hpCol=_foe?'#ff5a5a':hpBarColor(hpR);
       barH='<div class="uhp" style="width:'+box+'px">'
         +(maxSh>0?barHTML('ub uS',shR*100):'')
         +barHTML('ub uH',hpR*100,hpCol)+'</div>'; }
@@ -5646,11 +5692,12 @@ function separateUnits(){ if(!GW||!GH) return; const us=G.units; if(us.length<2)
   // 이동명령으로 '걷는' 유닛: 분리에서 완전 제외(대형 슬롯+stepCmdMove 회피가 처리 → 서로 밀어 속도 튀는 버그 방지)
   const walk=new Set();
   for(const u of us){ if(u.moveTo) walk.add(u); }   // 이동 명령 수행 중 유닛(선택 무관)
-  const skip=u=>u.atBoss||isDrag(u)||walk.has(u)||isTransport(u);   // 토벌장 파견·수송선(공중 비행) 충돌 제외
+  const skip=u=>u.atBoss||isDrag(u)||walk.has(u)||isTransport(u);   // 토벌장 파견·수송선·이동중만 제외(전투 교전 유닛도 겹침 분리 — 같은 레이어 한정, 공중↔지상은 미분리)
   let stillOverlap=false;
   for(let iter=0; iter<3; iter++){ // 몇 번 반복해 안정화
     for(let i=0;i<us.length;i++){ for(let j=i+1;j<us.length;j++){ const a=us[i],b=us[j];
       if(skip(a)||skip(b)) continue; // 드래그/이동중 유닛이 낀 쌍 제외
+      if(typeof FXLAB_AIR!=='undefined' && FXLAB_AIR.has(a.gmodel||a.id)!==FXLAB_AIR.has(b.gmodel||b.id)) continue;   // 지상↔공중은 서로 안 밀어냄(다른 레이어 = 통과)
       const ax=a.x*GW,ay=a.y*GH,bx=b.x*GW,by=b.y*GH;
       let dx=bx-ax, dy=by-ay; let d=Math.hypot(dx,dy); const min=collideR(a)+collideR(b);
       if(d<min){ if(d<0.01){ dx=Math.random()-.5; dy=Math.random()-.5; d=1; }
@@ -5690,14 +5737,18 @@ function renderBldgs(viewId,list,posArr,selId,onSel){ const v=document.getElemen
 // ============================================================================
 // 탭 / 선택 / 커맨드카드
 // ============================================================================
-const ZONE_LABEL={Main:'📍 내 디펜스 구역',Unit:'🏗 유닛 생산 구역',Upgrade:'⚙️ 업그레이드 구역',Players:'👥 다른 플레이어 화면',Boss:'👹 월드 보스방'};
+const ZONE_LABEL={Main:'📍 내 디펜스 구역',Unit:'🏗 유닛 생산 구역',Upgrade:'⚙️ 업그레이드 구역',Players:'👥 다른 플레이어 화면',Boss:'👹 월드 보스방',Battle:'⚔ 전투 실험 구역'};
 function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 컴퓨터가 싸운다: 직스 탭 동작
+  const _fromBattle=(G.tab==='Battle');   // ⚔ 전투실험: 별도 전장 유닛(G.btUnits)으로 스왑
+  if(_fromBattle && id!=='Battle' && G._galUnits){ G.units=G._galUnits; G._galUnits=null; if(window.M3D&&M3D.clearGameModels) M3D.clearGameModels(); }   // 이탈 → 갤러리 유닛 복원
+  if(id==='Battle' && !_fromBattle){ G.btUnits=G.btUnits||[]; G._galUnits=G.units; G.units=G.btUnits; if(window.M3D&&M3D.clearGameModels) M3D.clearGameModels(); }   // 진입 → 빈 전장 유닛으로
+  { const _btc=document.getElementById('btCtl'); if(_btc) _btc.style.display=(id==='Battle')?'flex':'none'; }   // 전투실험 화면 오버레이 컨트롤
   if(G.view){ G.view.x=0.5; G.view.y=0.5; G.view.zoom=1; } if(G.viewT){ G.viewT.x=0.5; G.viewT.y=0.5; G.viewT.zoom=1; } _nptrs.clear(); _nemoPinch=null;   // 탭 전환 시 화면 줌/팬 초기화(다른 탭 3D 카메라 보호)
   if(G.bossOpen && typeof closeBossArena==='function') closeBossArena();   // 탭 전환 시 보스 팝업 닫기
   if(G.bossPickArm){ G.bossPickArm=false; if(typeof updateBossPickBtn==='function') updateBossPickBtn(); }
   G.tab=id;
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on')); el.classList.add('on');
-  document.querySelectorAll('.gview').forEach(v=>v.classList.remove('on')); document.getElementById('v'+id).classList.add('on');
+  document.querySelectorAll('.gview').forEach(v=>v.classList.remove('on')); document.getElementById('v'+(id==='Battle'?'Main':id)).classList.add('on');   // 전투실험은 메인 아레나 뷰 공유
   document.querySelectorAll('.bp').forEach(p=>p.classList.remove('on')); document.getElementById('bp'+id).classList.add('on');
   document.getElementById('zoneLabel').textContent=ZONE_LABEL[id];
   deselectUnit(); G.prodB=null; G.techB=null; G.mergeMode=false; { const mb=document.getElementById('mergeBtn'); if(mb) mb.classList.remove('on'); }
@@ -5713,14 +5764,15 @@ function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 
     if(others.indexOf(G.curPlayer)<0) G.curPlayer=others[0]||mine;   // 입장한 다른 플레이어 기본
     if(typeof clearPlayerSel==='function') clearPlayerSel(); renderPlayers(); drawPlayer(); }
   if(id==='Main'){ drawMain(); renderUnits(); placeMergeZone(); }
+  if(id==='Battle'){ drawMain(); renderUnits(); if(typeof renderBtPicker==='function') renderBtPicker(); if(typeof sbCombatUiSync==='function') sbCombatUiSync(); }   // 전투실험: 별도 전장(아군 배치)
   if(id==='Boss'){ BOSS_VIEW.x=0; BOSS_VIEW.y=0; renderBossPanel(); drawBoss(); }
   if(typeof updateCoopBossBar==='function') updateCoopBossBar();
   updateSpecLabel();
   // 메인 외 탭에서 전투 미니맵 표시 / 조합 버튼은 메인에서만(미니맵과 자리 교대)
-  const _labView=(G.sandbox && id==='Unit');   // 이펙트 랩: 미니맵 숨김
-  document.getElementById('miniWrap').classList.toggle('on', id!=='Main' && !_labView);
+  const _labView=(G.sandbox && id==='Unit'), _arena=(id==='Main'||id==='Battle');   // 이펙트 랩: 미니맵 숨김 / 아레나(메인·전투실험)
+  document.getElementById('miniWrap').classList.toggle('on', !_arena && !_labView);
   document.getElementById('mergeFab').classList.toggle('hide', id!=='Main');
-  if(id!=='Main' && !_labView) drawMiniMap();
+  if(!_arena && !_labView) drawMiniMap();
 }
 // 계열 한글명(타입 라벨용)
 const WPN_KOR={inf:'보병',mech:'기계',pro:'루멘',zrg:'스웜',gun:'총기',beam:'광학',exp:'폭발',org:'유기체',fly:'비행',air:'항공',bio:'생체'};
@@ -6163,7 +6215,7 @@ function fireSkillGround(uid,key,x,y){ const u=G.units.find(z=>z.uid===uid); con
   else if(key==='emp'){ G.skillFx.push({type:'emp', x:x, y:y, t:0, dur:0.6, r:sk.radius}); _skEmp(x,y,sk.radius); }
   if(typeof playSfx==='function')playSfx('skill'); if(typeof addChat==='function') addChat('', sk.name+' 시전!'); renderSkillBar();
 }
-function _skFoes(){ const a=G.enemies||[], b=G.sbFoes; return (b&&b.length)?(a.length?a.concat(b):b):a; }   // 실전 적 + 전투실험 더미 통합 대상
+function _skFoes(){ if(G.sandbox && G.tab==='Battle' && G.units){ return G.units.filter(u=>u.team==='foe' && !(u.maxHp&&(u.hp!=null?u.hp:u.maxHp)<=0)); } const a=G.enemies||[], b=G.sbFoes; return (b&&b.length)?(a.length?a.concat(b):b):a; }   // 전투실험=적팀 실유닛 / 그 외=실전 적+더미
 function _skHurt(e,dmg,owner){ if(e.eid!=null){ try{ _atkUid=owner; }catch(_){} if(typeof hitEnemy==='function') hitEnemy(e,dmg); }   // 정규 적=hitEnemy(방어/실드/킬귀속)
   else { e.hp-=dmg; e.flash=0.12; if(e.hp<=0) e.dead=true; } }   // 실험 더미=직접 피해
 function _skStormDamage(f){ const L=_skFoes(); if(!L.length) return; const r2=f.r*f.r;   // 범위 내 대상 지속 피해
@@ -6265,7 +6317,7 @@ function drawSkillFx(){ if(typeof G==='undefined') return; const hasFx=!!(G.skil
     ctx.globalAlpha=0.3; ctx.strokeStyle='#ff6a5a'; ctx.lineWidth=1.6; ctx.beginPath(); ctx.ellipse(p.x,p.y,rad*0.9,rad*0.9*0.5,0,0,6.28); ctx.stroke();
     ctx.fillStyle='#ff8a6a'; for(let s=0;s<3;s++){ const yy=p.y-((_T*22+s*9)%22), xx=p.x+Math.sin(_T*3+s*2+uid)*rad*0.5; ctx.globalAlpha=Math.max(0,0.26-((_T*22+s*9)%22)/90); ctx.beginPath(); ctx.arc(xx,yy,2+s*0.6,0,6.28); ctx.fill(); } }
   // 전투 실험 더미(2D 적) — 정규 적 시스템과 분리
-  if(G.sbFoes&&G.sbFoes.length){ ctx.globalCompositeOperation='source-over';
+  if(G.sbFoes&&G.sbFoes.length&&G.tab==='Battle'){ ctx.globalCompositeOperation='source-over';
     for(const e of G.sbFoes){ if(e.dead) continue; const p=_skW2S(e.x,e.y,W,H), rr=(e.r||0.02)*W*p.z;
       ctx.globalAlpha=1; ctx.fillStyle=(e.flash>0)?'#ffd0d0':((e.slowT>0)?'#c08a40':'#c83a3a'); ctx.strokeStyle='#3a0808'; ctx.lineWidth=1.5;
       ctx.beginPath(); ctx.arc(p.x,p.y,rr,0,6.28); ctx.fill(); ctx.stroke();
@@ -6280,26 +6332,64 @@ function drawSkillFx(){ if(typeof G==='undefined') return; const hasFx=!!(G.skil
 // ════════════════════════════════════════════════════════════════
 function _sbUnitRange(u){ const d=(typeof U!=='undefined'&&(U[u.gmodel||u.id]||U[u.id]))||{}; if((d.dmg||0)<=0) return 0; let r=d.melee?0.06:0.18; if(u.skillOn&&u.skillOn.siege) r*=(SKILLS.siege.rngMul||1.6); return r; }   // 무공격(dmg0)=미공격 · 시즈=사거리↑
 function _sbUnitDps(u){ const d=(typeof U!=='undefined'&&(U[u.gmodel||u.id]||U[u.id]))||{}; const dmg=d.dmg||0, cd=(d.cd||20)/60; let dps=dmg>0?dmg/Math.max(0.2,cd):0; if(u.skillOn&&u.skillOn.siege) dps*=(SKILLS.siege.atkMul||1.8); return dps; }   // 시즈=공격↑
-function sbCombatSpawn(n){ if(typeof G==='undefined') return; G.sbFoes=G.sbFoes||[]; G.sbSeq=G.sbSeq||1; const k=n||5;
-  for(let i=0;i<k;i++) G.sbFoes.push({fid:G.sbSeq++, x:0.90+Math.random()*0.06, y:0.22+Math.random()*0.56, hp:200, maxHp:200, spd:0.045, dmg:9, slowT:0, r:0.02, flash:0, dead:false});
-  G.sbCombat=true; sbCombatUiSync(); if(typeof toast==='function') toast('적 더미 '+k+'기 소환'); }
-function sbCombatToggle(){ if(typeof G==='undefined') return; G.sbCombat=!G.sbCombat; if(G.sbCombat && !(G.sbFoes&&G.sbFoes.length)) sbCombatSpawn(5); sbCombatUiSync(); if(typeof toast==='function') toast(G.sbCombat?'전투 실험 시작':'전투 정지'); }
-function sbCombatHurt(){ if(typeof G==='undefined'||!G.units) return; let n=0; for(const u of G.units){ if(u.fixed||u._enemyDisp||!u.maxHp) continue; u.hp=Math.max(1,Math.round(u.maxHp*0.35)); n++; } if(typeof toast==='function') toast('아군 '+n+'기 체력 35%로 손상(치유·메딕 검증)'); }
-function sbCombatReset(){ if(typeof G==='undefined') return; G.sbFoes=[]; G.sbCombat=false; if(G.units) for(const u of G.units){ if(u.maxHp) u.hp=u.maxHp; if(u.buff) u.buff={}; if(u.skillCd) u.skillCd={}; u.healFocus=null; if(u.skillOn) u.skillOn={}; } if(G.skillFx) G.skillFx.length=0; sbCombatUiSync(); if(typeof toast==='function') toast('전투 실험 리셋'); }
-function sbCombatUiSync(){ const el=document.getElementById('sbCombatBar'); if(!el) return; const show=(typeof G!=='undefined'&&G.sandbox&&G.tab==='Main'); el.style.display=show?'block':'none';
-  if(show){ const t=document.getElementById('sbcToggle'); if(t){ t.textContent=G.sbCombat?'⏸ 정지':'▶ 전투'; t.classList.toggle('on',!!G.sbCombat); } const c=document.getElementById('sbcCount'); if(c) c.textContent=(G.sbFoes?G.sbFoes.filter(f=>!f.dead).length:0)+'기'; } }
-function stepSbCombat(dt){ if(typeof G==='undefined'||!G.sandbox||!G.sbCombat||!G.sbFoes||!G.sbFoes.length) return;
-  const foes=G.sbFoes, units=G.units;
-  for(const f of foes){ if(f.dead) continue; if(f.flash>0) f.flash-=dt; if(f.slowT>0) f.slowT=Math.max(0,f.slowT-dt); if(f.empT>0) f.empT=Math.max(0,f.empT-dt);
-    if(f.stunT>0){ f.stunT=Math.max(0,f.stunT-dt); continue; }   // 락다운: 정지(이동·접촉 없음)
-    let best=null, bd=1e9; for(const u of units){ if(u.fixed||u._enemyDisp||(u.maxHp&&(u.hp!=null?u.hp:u.maxHp)<=0)) continue; const dx=u.x-f.x, dy=u.y-f.y, d=dx*dx+dy*dy; if(d<bd){ bd=d; best=u; } }
-    if(best){ const dx=best.x-f.x, dy=best.y-f.y, d=Math.hypot(dx,dy)||1e-4, sl=(f.slowT>0)?0.45:1;
-      if(d>0.05){ f.x+=(dx/d)*f.spd*sl*dt; f.y+=(dy/d)*f.spd*sl*dt; }
-      else if(best.maxHp){ best.hp=Math.max(0,(best.hp!=null?best.hp:best.maxHp)-f.dmg*dt); } } }
-  for(const u of units){ if(u.fixed||u._enemyDisp||(u.maxHp&&(u.hp!=null?u.hp:u.maxHp)<=0)) continue; const rng=_sbUnitRange(u); if(rng<=0) continue;
-    let best=null, bd=rng*rng; for(const f of foes){ if(f.dead) continue; const dx=f.x-u.x, dy=f.y-u.y, d=dx*dx+dy*dy; if(d<=bd){ bd=d; best=f; } }
-    if(best){ best.hp-=_sbUnitDps(u)*dt; best.flash=0.1; if(best.hp<=0) best.dead=true; } }
-  for(let i=foes.length-1;i>=0;i--){ if(foes[i].dead||foes[i].hp<=0){ G.skillFx=G.skillFx||[]; G.skillFx.push({type:'boom', x:foes[i].x, y:foes[i].y, t:0, dur:0.35, r:0.03}); foes.splice(i,1); } } }
+function sbCombatSpawn(n){ if(typeof G==='undefined'||!G.units) return; const k=n||5;
+  const pool=_btRosterFlat().filter(it=>{ const id=(it.gm&&typeof U[it.gm]!=='undefined')?it.gm:it.b; return !(typeof FXLAB_NOATK!=='undefined'&&FXLAB_NOATK.has(it.gm||id)); });   // 공격형만(수송·지원·시전형 제외)
+  if(!pool.length) return;
+  for(let i=0;i<k;i++){ const it=pool[(Math.random()*pool.length)|0], sid=((it.gm&&typeof U[it.gm]!=='undefined')?it.gm:it.b); btAddFoe(sid, it.gm||'', it.n, true); }
+  G.sbCombat=true; sbCombatUiSync(); if(typeof toast==='function') toast('적군 '+k+'기 무작위 소환'); }
+function sbCombatToggle(){ if(typeof G==='undefined') return; G.sbCombat=!G.sbCombat;
+  if(G.sbCombat){ if(!(G.units&&G.units.some(u=>u.team==='foe'))) sbCombatSpawn(5); _btSnapshot(); }   // 전투 시작 시점 배치 저장(리셋=재대결)
+  sbCombatUiSync(); if(typeof toast==='function') toast(G.sbCombat?'전투 실험 시작':'전투 정지'); }
+function sbCombatHurt(){ if(typeof G==='undefined'||!G.units) return; let n=0; for(const u of G.units){ if(u.fixed||u.team==='foe'||!u.maxHp) continue; u.hp=Math.max(1,Math.round(u.maxHp*0.35)); n++; } if(typeof toast==='function') toast('아군 '+n+'기 체력 35%로 손상(치유·메딕 검증)'); }
+function sbCombatReset(){ if(typeof G==='undefined') return; G.sbFoes=[]; G.sbCombat=false;
+  if(G.btFx){ G.btFx.shots.length=0; G.btFx.impacts.length=0; G.btFx.melee.length=0; G.btFx.smoke.length=0; if(G.btFx.flashes)G.btFx.flashes.length=0; }
+  if(G.btPend) G.btPend.length=0;
+  if(!_btRestore()){ if(G.units) for(const u of G.units){ if(u.maxHp) u.hp=u.maxHp; if(u.maxSh) u.sh=u.maxSh; } }   // 스냅샷 있으면 원편성 재생성, 없으면 HP만 회복
+  if(G.units) for(const u of G.units){ u._btCd=0; if(u._fxL) u._fxL.vnJet=null; if(u.buff) u.buff={}; if(u.skillCd) u.skillCd={}; u.healFocus=null; if(u.skillOn) u.skillOn={}; u._sbEngage=false; u.moveTo=null; }
+  if(G.skillFx) G.skillFx.length=0; G.sel=[]; sbCombatUiSync(); if(typeof toast==='function') toast('전투 실험 리셋'); }
+function _btSnapshot(){ if(!G.btUnits) return; G._btSnap=G.btUnits.map(u=>({id:u.id, gmodel:u.gmodel, gname:u.gname, team:u.team, x:u.x, y:u.y, hero:!!u.hero, lv:u.lv||1})); }   // 전투 시작 편성 저장
+function _btRestore(){ if(!G._btSnap||!G.btUnits) return false; if(G.idSeq==null)G.idSeq=1;
+  const arr=G._btSnap.map(sn=>{ const u=initUnitStats({uid:G.idSeq++, id:sn.id, hero:sn.hero, lv:sn.lv, x:sn.x, y:sn.y, cd:0, fixed:false}); if(sn.gmodel)u.gmodel=sn.gmodel; u.gname=sn.gname; if(sn.team)u.team=sn.team; u._btCd=0; return u; });
+  G.btUnits.length=0; for(const u of arr) G.btUnits.push(u); if(G.tab==='Battle') G.units=G.btUnits;
+  if(window.M3D&&M3D.clearGameModels) M3D.clearGameModels(); return true; }
+function sbCombatUiSync(){ const t=document.getElementById('btCtlToggle'); const on=!!(typeof G!=='undefined'&&G&&G.sbCombat);   // 전투실험 화면 오버레이 컨트롤
+  if(t){ t.textContent=on?'⏸ 정지':'▶ 전투'; t.classList.toggle('on',on); }
+  const c=document.getElementById('btCtlCount'); if(c&&typeof G!=='undefined'&&G&&G.units){ let fo=0,al=0; for(const u of G.units){ if(u.fixed) continue; if(u.maxHp&&(u.hp!=null?u.hp:u.maxHp)<=0) continue; if(u.team==='foe')fo++; else al++; } c.textContent='적 '+fo+' · 아군 '+al; } }
+function _sbTeam(u){ return (u&&u.team==='foe')?'foe':'ally'; }
+function stepSbCombat(dt){ if(typeof G==='undefined'||!G.sandbox||G.tab!=='Battle'||!G.sbCombat||!G.units||!G.units.length) return;   // ⚔ 양방향 실전 전투(적팀=team:'foe')
+  const units=G.units; if(!G.btFx) G.btFx=FX.store(); if(!G.btPend) G.btPend=[];
+  const _alive=u=>!(u.maxHp&&(u.hp!=null?u.hp:u.maxHp)<=0), _MM=(typeof MOVE_MUL!=='undefined'?MOVE_MUL:1);
+  for(const u of units){
+    u._sbEngage=false;
+    if(u.fixed||!_alive(u)||isTransport(u)) continue;   // 수송선=전투 안 함
+    if(u.slowT>0) u.slowT=Math.max(0,u.slowT-dt); if(u.empT>0) u.empT=Math.max(0,u.empT-dt); if(u.stunT>0){ u.stunT=Math.max(0,u.stunT-dt); u.moving=false; continue; }   // 상태이상: 둔화·EMP 감쇠 / 락다운=정지(공격·이동 없음)
+    const myTeam=_sbTeam(u);
+    let tgt=null, td=1e9;
+    for(const o of units){ if(o===u||o.fixed||!_alive(o)||_sbTeam(o)===myTeam) continue; const dx=o.x-u.x, dy=o.y-u.y, d=dx*dx+dy*dy; if(d<td){ td=d; tgt=o; } }   // 상대팀 최근접
+    if(!tgt) continue;
+    const rng=_sbUnitRange(u); if(rng<=0) continue;   // 무공격 유닛=교전 안 함(자유 분리)
+    const dist=Math.sqrt(td); u._sbEngage=true; if(u._btCd>0) u._btCd-=dt;
+    if(dist<=rng){   // 사거리 내 → 정지·조준·발사
+      u.face=Math.atan2(tgt.x-u.x, tgt.y-u.y); u.moving=false;
+      if(!(u._btCd>0)){ const cd=(typeof fxLabStats==='function')?Math.max(0.42,fxLabStats(u.id,u.gmodel).cd):0.6; u._btCd=cd; u.fireSeq=(u.fireSeq||0)+1;
+        if(typeof playUnitAttack==='function') playUnitAttack(u.gmodel||u.id);
+        const sz=(U[u.gmodel||u.id]||U[u.id]||{}).size||16, _os=FXLAB.scale; FXLAB.scale=BT_FX_ZOOM;
+        const tgtAir=(typeof FXLAB_AIR!=='undefined'&&FXLAB_AIR.has(tgt.gmodel||tgt.id));
+        u._fxL=u._fxL||{}; u._fxL.store=G.btFx; u._fxL.pend=G.btPend; unitFireFx(u._fxL, u, tgt.x, tgt.y, sz, tgtAir); FXLAB.scale=_os;   // 만들어 둔 발사 이펙트 그대로
+        let dmg=_sbUnitDps(u)*cd; if(tgt.sh>0){ if(dmg<=tgt.sh){ tgt.sh-=dmg; dmg=0; } else { dmg-=tgt.sh; tgt.sh=0; } } if(dmg>0) tgt.hp=(tgt.hp!=null?tgt.hp:tgt.maxHp)-dmg; tgt.flash=0.12; }   // 실드 우선 차감(메인 전투와 동일)
+    } else if(!u.moveTo){   // 사거리 밖 → 접근(직접 이동 · 수동 이동명령 있으면 양보)
+      const def=U[u.id]||{}, dx=tgt.x-u.x, dy=tgt.y-u.y, d=dist||1e-4, _sl=(u.slowT>0)?0.45:1, spd=(def.moveSpd||0.13)*_MM*dt*_sl;   // 둔화 시 감속
+      const cl=(typeof clampInner==='function')?clampInner(u.x+(dx/d)*spd, u.y+(dy/d)*spd):{x:u.x+(dx/d)*spd,y:u.y+(dy/d)*spd};
+      u.x=cl.x; u.y=cl.y; u.moving=true; u.face=Math.atan2(dx,dy);
+    }
+  }
+  _sbReapDead(); }
+function _sbReapDead(){ if(!(typeof G!=='undefined'&&G.sandbox&&G.tab==='Battle'&&G.units)) return;   // 사망 유닛 정리(양팀) — 전투 OFF 중 스킬 사망 포함
+  const units=G.units;
+  for(let i=units.length-1;i>=0;i--){ const u=units[i]; if(u.fixed) continue; if(u.maxHp&&(u.hp!=null?u.hp:u.maxHp)<=0){
+    G.skillFx=G.skillFx||[]; G.skillFx.push({type:'boom', x:u.x, y:u.y, t:0, dur:0.35, r:0.03});
+    if(window.M3D&&M3D.dropModels) M3D.dropModels([u.uid]);
+    G.sel=(G.sel||[]).filter(id=>id!==u.uid); units.splice(i,1); } } }
 // 개인 보스 해금 감지(등급 4종 전체 보유 → 잠금 해제): 채팅 알람 + 버튼 알림 점등
 function checkPbossUnlocks(){
   if(G.phase!=='playing') return;
@@ -8505,6 +8595,8 @@ let dragSet=[];      // 함께 이동 중인 유닛 배열(유닛 직접 끌기)
 let lastP=null;      // 직전 포인터(델타 계산)
 let box=null;        // 박스선택 {x0,y0,x1,y1}
 let cmdMove=null;    // 이동 명령 목표 {x,y} — 선택 유닛들이 이쪽으로 걸어감
+let _tpHold=null;   // 롱프레스 하차 감시: {pt(하차지점), ids(수송기), px/py(누른지점), aT(수송기별 도착 후 경과)}
+const TP_ARRIVE_HOLD=0.3, TP_DROP_R=18;   // 도착·정지 후 계속 눌러야 하차하는 시간(초) / 도착 판정 반경(px)
 const MOVE_MUL=3.0;  // 이동속도 배율(유닛 def.moveSpd × 이 값/초). 느리게/빠르게 조절
 const AIR_ACCEL=5.0;   // 공중유닛 관성 가속(낮을수록 더 굼뜨고 반동 큼)
 const AIR_ARRIVE=0.05; // 공중유닛 목표 근처 감속 시작 거리(정규화)
@@ -8530,7 +8622,7 @@ function _nemoPinchMove(){ const p=[..._nptrs.values()]; if(p.length<2||!_nemoPi
   const d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y), z=Math.max(1,Math.min(NEMO_MAXZOOM,_nemoPinch.zoom*d/_nemoPinch.d)); v.zoom=z;
   const cx=(p[0].x+p[1].x)/2, cy=(p[0].y+p[1].y)/2, dcx=(cx-_nemoPinch.cx)/(r.width||1), dcy=(cy-_nemoPinch.cy)/(r.height||1);
   v.x=_nemoPinch.vx-dcx/z; v.y=_nemoPinch.vy-dcy/z; nemoClampView(); }
-function onDown(e){ if(G.strike){ strikeOnDown(e); return; } if(G.tab!=='Main'||G.phase!=='playing'||G.bossOpen) return;
+function onDown(e){ if(G.strike){ strikeOnDown(e); return; } if((G.tab!=='Main'&&G.tab!=='Battle')||G.phase!=='playing'||G.bossOpen) return;
   _nptrs.set(e.pointerId, _nptScreen(e));
   if(_nptrs.size>=2){ _nemoPinchStart(); if(e.cancelable)e.preventDefault(); return; }   // 두 손가락 = 줌/팬(단일 제스처 취소)
   const p=evPos(e); moved=false;
@@ -8557,32 +8649,36 @@ function onDown(e){ if(G.strike){ strikeOnDown(e); return; } if(G.tab!=='Main'||
     setPatrolTarget(p.x,p.y); G.patrolArm=false; updateCmdRow(); e.preventDefault(); return; }
   G.patrolArm=false;
   if(G.unloadArm){ const _tu=G.units.find(x=>x.uid===G.sel[0]);   // 내리기: 빈 곳 클릭 → 그 지점으로 비행 후 도착 하차
-    if(_tu && isTransport(_tu)){ const cl=clampInner(p.x,p.y); _tu._dropAt={x:cl.x,y:cl.y}; _tu.pickupQueue=null; _tu.cmd='hold'; _tu.patrol=null; if(typeof addChat==='function') addChat('','🛫 하차 지점으로 이동 후 한 마리씩 내립니다'); }
+    if(_tu && isTransport(_tu)){ const cl=clampInner(p.x,p.y); _tu._dropAt={x:cl.x,y:cl.y}; _tu.pickupQueue=null; _tu._rvBoard=null; _tu.cmd='hold'; _tu.patrol=null; if(typeof addChat==='function') addChat('','🛫 하차 지점으로 이동 후 한 마리씩 내립니다'); }
     G.unloadArm=false; updateTransportBtns(); e.preventDefault(); return; }
   if(G.boardArm){ box={x0:p.x,y0:p.y,x1:p.x,y1:p.y}; drag=null; dragSet=[]; cmdMove=null; e.preventDefault(); return; }   // 태우기: 드래그로 탑승 대상 지정(박스)
   const u=grabUnit(p.x,p.y);
+  if(u && isTransport(u) && !G.sel.includes(u.uid)){   // 선택 유닛 지정 상태에서 수송기 탭 = 집결 탑승(중앙에서 만나 탑승)
+    const _mem=G.sel.map(id=>G.units.find(x=>x.uid===id)).filter(m=>m&&canBoard(u,m)&&(m.team||null)===(u.team||null));
+    if(_mem.length){ startRvBoard(u,_mem); box=null; drag=null; dragSet=[]; cmdMove=null; if(e.cancelable)e.preventDefault(); return; } }
   const grabSelf=u && G.sel.includes(u.uid);   // 잡은 게 이미 선택된 유닛(그룹 이동용)
   const multi=G.sel.length>1;                  // 다중 선택 상태
   if(u && multi && !grabSelf){ // 다중 선택 중 다른 유닛 위 클릭 → 그 유닛 무시하고 그 지점으로 이동
-    cmdMove={x:p.x,y:p.y,issued:false}; assignFormation(p.x,p.y); box=null; drag=null; dragSet=[];
+    cmdMove={x:p.x,y:p.y,issued:false}; assignFormation(p.x,p.y); box=null; drag=null; dragSet=[]; _tpHoldArm(p.x,p.y);
   } else if(u){ // 단일 선택(다른 유닛 클릭=재선택) 또는 그룹 내 유닛 잡기 → 선택 + 떼지 않고 드래그하면 이동
     if(!grabSelf) selectOne(u.uid);   // 이미 선택된 그룹의 한 명을 잡으면 그룹 전체 유지(다중 이동)
     drag=u.fixed?null:u; lastP=p; cmdMove=null; dragSet=[]; box=null;
   } else { const en=hitEnemyPrecise(p.x,p.y);
     if(en){ selectEnemy(en.eid); drag=null; dragSet=[]; box=null; cmdMove=null; }  // 적 직접 클릭 → 그 적 1마리 선택
     else if(G.sel.length>0){ // 아군 선택됨 + 빈 곳 → 이동 명령
-      cmdMove={x:p.x,y:p.y,issued:false}; assignFormation(p.x,p.y); box=null; drag=null; dragSet=[];
+      cmdMove={x:p.x,y:p.y,issued:false}; assignFormation(p.x,p.y); box=null; drag=null; dragSet=[]; _tpHoldArm(p.x,p.y);
     } else { // 선택 없음 + 빈 곳 → 박스 선택
       box={x0:p.x,y0:p.y,x1:p.x,y1:p.y}; drag=null; dragSet=[]; cmdMove=null;
     }
   }
   e.preventDefault();
 }
-function onMove(e){ if(G.strike){ strikeOnMove(e); return; } if(G.tab!=='Main') return;
+function onMove(e){ if(G.strike){ strikeOnMove(e); return; } if(G.tab!=='Main'&&G.tab!=='Battle') return;
   if(_nptrs.has(e.pointerId)) _nptrs.set(e.pointerId, _nptScreen(e));
   if(_nemoPinch && _nptrs.size>=2){ _nemoPinchMove(); if(e.cancelable)e.preventDefault(); return; }   // 두 손가락 = 줌/팬
   if((drag||cmdMove||box) && e.cancelable) e.preventDefault();   // 활성 제스처면 즉시 팬 가로채기 차단(미세 이동에서도) → 모바일 슬라이드 이동 끊김 방지
   const p=evPos(e); moved=true;
+  if(_tpHold){ const _hdx=(p.x-_tpHold.px)*GW, _hdy=(p.y-_tpHold.py)*GH; if(Math.hypot(_hdx,_hdy)>12) _tpHold=null; }   // 롱프레스 하차: 12px 이상 드래그하면 취소(=일반 이동)
   if(box){ box.x1=p.x; box.y1=p.y; drawBox(); return; }
   // 유닛을 누른 채 움직이면 → 직접 끌기 대신 '이동 명령' 시작(이동속도대로 따라옴)
   if(drag && !cmdMove){ if(lastP && Math.hypot((p.x-lastP.x)*GW,(p.y-lastP.y)*GH)<8) return;   // 미세 떨림 무시(탭=선택만)
@@ -8614,6 +8710,7 @@ function findFreeSpot(self,x,y){ if(isFreeSpot(self,x,y)) return {x,y};
 }
 function onUp(e){
   if(G.strike){ strikeOnUp(e); return; }
+  _tpHold=null;   // 롱프레스 하차: 손 떼면 취소(도착 후 0.3초 유지 전에 떼면 하차 안 함)
   if(e) _nptrs.delete(e.pointerId);
   if(_nemoPinch){ if(_nptrs.size<2){ _nemoPinch=null; } box=null; drag=null; cmdMove=null; dragSet=[]; return; }   // 줌/팬 중이었으면 단일 제스처 마무리 생략
   if(cmdMove){ // 이동 명령: 손 떼도 목표 유지 → 도착까지 계속 이동(스타식). 클리어 안 함.
@@ -8625,7 +8722,7 @@ function onUp(e){
     clearBox();
     if(G.boardArm){ const _t=G.units.find(u=>u.uid===G.boardArm);   // 태우기: 박스 안(또는 탭한) 아군 탑승
       if(_t){ let _tg=(moved&&(x1-x0>0.01||y1-y0>0.01)) ? G.units.filter(u=>canBoard(_t,u)&&u.x>=x0&&u.x<=x1&&u.y>=y0&&u.y<=y1) : (function(){var o=grabUnit(sx,sy); return (o&&canBoard(_t,o))?[o]:[];})();
-        _t.pickupQueue=(_t.pickupQueue||[]).concat(_tg); _t._dropAt=null; if(typeof addChat==='function') addChat('','🛬 '+_tg.length+'기 호출 — 펠리컨이 한 마리씩 태우러 갑니다'); G.sel=[_t.uid]; refreshSelCard(); }
+        _t.pickupQueue=(_t.pickupQueue||[]).concat(_tg); _t._dropAt=null; _t._rvBoard=null; if(typeof addChat==='function') addChat('','🛬 '+_tg.length+'기 호출 — 펠리컨이 한 마리씩 태우러 갑니다'); G.sel=[_t.uid]; refreshSelCard(); }
       G.boardArm=false; updateTransportBtns(); drag=null; dragSet=[]; lastP=null; return; }
     if(moved && (x1-x0>0.01||y1-y0>0.01)){
       const inBox=G.units.filter(u=>!(u.fixed||(!u.gid&&isBuilding(u.id)))&&!u.atBoss&&u.x>=x0&&u.x<=x1&&u.y>=y0&&u.y<=y1).map(u=>u.uid);  // 실제 구조물·토벌장 파견 제외
@@ -8649,7 +8746,7 @@ function assignFormation(cx,cy){
   const sel=G.sel.map(uid=>G.units.find(u=>u.uid===uid)).filter(Boolean).filter(u=>!u.fixed);
   if(!cmdMove) return; cmdMove.slots={};
   // 이동 목표는 '명령 당시 선택된 유닛'에만 부여(u.moveTo) → 선택을 바꿔도 기존 명령은 그 유닛이 끝까지 수행, 새 유닛은 새 명령 때만 이동
-  for(const u of sel){ u.cmd='hold'; u.patrol=null; u.atkTarget=null; u.focusTarget=null; u._chasing=false; if(isTransport(u)){ u.pickupQueue=null; u._dropAt=null; } }   // 수동 이동 = 홀드(수송선은 태우기/내리기 취소)
+  for(const u of sel){ u.cmd='hold'; u.patrol=null; u.atkTarget=null; u.focusTarget=null; u._chasing=false; if(isTransport(u)){ u.pickupQueue=null; u._dropAt=null; u._rvBoard=null; } else if(u._rvBoard!=null){ const _rt=G.units.find(x=>x.uid===u._rvBoard); if(_rt&&_rt._rvBoard) _rt._rvBoard.ids=_rt._rvBoard.ids.filter(id=>id!==u.uid); u._rvBoard=null; } }   // 수동 이동 = 홀드(수송선=태우기/내리기/집결 취소, 멤버=집결 이탈)
   if(sel.length===1){ sel[0].moveTo={x:cx,y:cy}; cmdMove.slots[sel[0].uid]={x:cx,y:cy}; return; }
   // 평균 충돌 반경 기반 간격
   const r=(sel.reduce((a,u)=>a+collideR(u),0)/sel.length)*2.1;
@@ -8679,6 +8776,43 @@ function dropCargo(t){ if(!t||!t.cargo||!t.cargo.length) return; const cargo=t.c
     u.x=c.x; u.y=c.y; u.moveTo=null; u.moving=false; u.cmd=null; u._mvStuck=0; u._mvPrevD=null; G.units.push(u); });
   if(typeof playSfx==='function') playSfx('ui_confirm');
   renderUnits(); if(typeof updateHud==='function') updateHud(); }
+// 집결 탑승(rendezvous): 선택 유닛 지정 상태에서 수송기 탭 → 수송기·유닛 모두 중앙 지점으로 이동해 만나 탑승
+function startRvBoard(t, members){ if(!t||!members||!members.length) return;
+  const avail=Math.max(0, transportCap(t)-((t.cargo&&t.cargo.length)||0));   // 남은 정원
+  const boarders=members.slice(0, avail), leftover=members.slice(avail);     // 태울 유닛 / 정원 초과로 못 탄 유닛
+  if(!boarders.length){ if(typeof toast==='function') toast('⚠️ 수송 정원 가득'); return; }
+  let cx=0, cy=0; boarders.forEach(m=>{ cx+=m.x; cy+=m.y; }); cx/=boarders.length; cy/=boarders.length;
+  const mp=(typeof clampInner==='function')?clampInner((t.x+cx)/2,(t.y+cy)/2):{x:(t.x+cx)/2,y:(t.y+cy)/2};   // 수송기·(탈)유닛 중앙
+  t._rvBoard={ ids: boarders.map(m=>m.uid), mx:mp.x, my:mp.y }; t.pickupQueue=null; t._dropAt=null; t.cmd=null;
+  boarders.forEach(m=>{ m.moveTo={x:mp.x,y:mp.y}; m._rvBoard=t.uid; m.cmd=null; m.patrol=null; m.atkTarget=null; m.focusTarget=null; m._chasing=false; });
+  t.moveTo={x:mp.x,y:mp.y};
+  if(typeof addChat==='function') addChat('','🛬 '+boarders.length+'기 집결 탑승'+(leftover.length?(' · 잔여 '+leftover.length+'기(다른 수송기 지정)'):'')+' — 중앙에서 만나 탑승');
+  if(typeof playSfx==='function') playSfx('ui_confirm');
+  // 못 탄 유닛을 선택 유지 → 다른 수송기 바로 지정 / 전부 태웠으면 선택 해제
+  if(leftover.length && typeof selectMany==='function') selectMany(leftover.map(m=>m.uid));
+  else if(typeof deselectUnit==='function') deselectUnit();
+  else { G.sel=(leftover.length?leftover.map(m=>m.uid):[]); if(typeof refreshSelCard==='function') refreshSelCard(); } }
+// 롱프레스 하차: 화물 실은 수송기(들) 선택 후 목적지를 꾹 누른 채 유지 → 그 지점 이동·정지 후에도 계속(TP_ARRIVE_HOLD초 이상) 누르고 있으면 그때 하차. 도착 전/후 0.3초 전에 떼면 이동만.
+function _tpHoldArm(x,y){ _tpHold=null; if(!(typeof G!=='undefined'&&G.sel&&G.sel.length)) return;
+  const ids=G.sel.filter(id=>{ const u=G.units.find(v=>v.uid===id); return u&&isTransport(u)&&u.cargo&&u.cargo.length; });
+  if(!ids.length) return;   // 화물 실은 선택 수송기 없으면 감시 안 함(일반 이동만)
+  const cl=(typeof clampInner==='function')?clampInner(x,y):{x:x,y:y};
+  _tpHold={ pt:cl, ids:ids, px:x, py:y, aT:{} }; }
+function _tpHoldTick(dt){ if(!_tpHold||typeof G==='undefined'||!G.units) return;
+  const pt=_tpHold.pt;
+  for(let i=_tpHold.ids.length-1;i>=0;i--){ const uid=_tpHold.ids[i], t=G.units.find(v=>v.uid===uid);
+    if(!t||!isTransport(t)||!(t.cargo&&t.cargo.length)){ _tpHold.ids.splice(i,1); delete _tpHold.aT[uid]; continue; }
+    const arrived = Math.hypot((t.x-pt.x)*(GW||390),(t.y-pt.y)*(GH||600)) <= TP_DROP_R && !t.moveTo;   // 지점 도착·정지
+    if(arrived){ _tpHold.aT[uid]=(_tpHold.aT[uid]||0)+dt;
+      if(_tpHold.aT[uid]>=TP_ARRIVE_HOLD){   // 도착 후 계속 0.3초 유지 → 하차
+        t._dropAt={x:pt.x,y:pt.y}; t._dropT=0; t.pickupQueue=null; t._rvBoard=null; t.cmd='hold'; t.patrol=null;
+        _tpHold.ids.splice(i,1); delete _tpHold.aT[uid];
+        if(typeof playSfx==='function') playSfx('ui_confirm');
+        if(typeof navigator!=='undefined' && navigator.vibrate){ try{ navigator.vibrate(20); }catch(_e){} }
+        if(typeof addChat==='function') addChat('','🛫 수송기 도착 — 하차'); } }
+    else _tpHold.aT[uid]=0;   // 미도착/이동중 → 리셋(도착 후 연속 유지만 인정)
+  }
+  if(!_tpHold.ids.length) _tpHold=null; }
 // 수송선 자동 운항: 태우기=유닛 머리 위로 한 마리씩 가서 탑승 / 내리기=지점 도착 후 한 마리씩 방출
 const PICK_R=22, DROP_R=16, DROP_GAP=0.07;
 function dropOne(t,pt){ if(!t.cargo||!t.cargo.length) return; const u=t.cargo.shift();
@@ -8688,6 +8822,14 @@ function dropOne(t,pt){ if(!t.cargo||!t.cargo.length) return; const u=t.cargo.sh
   if(!t.cargo.length) t._dropN=0; renderUnits(); if(typeof updateHud==='function') updateHud(); if(typeof updateTransportBtns==='function') updateTransportBtns(); }
 function stepTransports(dt){ if(!GW||!GH) return;
   for(const t of G.units){ if(!isTransport(t)) continue;
+    if(t._rvBoard){   // 집결 탑승: 수송기·유닛 모두 중앙으로 → 근접 시 탑승
+      const R=t._rvBoard; R.ids=R.ids.filter(uid=>!!G.units.find(x=>x.uid===uid));   // 탑승/사망분 제거(boardUnit이 G.units에서 뺌)
+      if(!R.ids.length || (t.cargo&&t.cargo.length>=transportCap(t))){ t._rvBoard=null; t.moveTo=null; continue; }
+      t.moveTo={x:R.mx,y:R.my};
+      for(const uid of R.ids.slice()){ const u=G.units.find(x=>x.uid===uid); if(!u) continue;
+        if(Math.hypot((u.x-t.x)*GW,(u.y-t.y)*GH)<=PICK_R){ boardUnit(t,u); }
+        else if(u._rvBoard===t.uid && !u.moveTo){ u.moveTo={x:R.mx,y:R.my}; } }
+      continue; }
     if(t.pickupQueue && t.pickupQueue.length){   // 태우기: 큐의 유닛에게 차례로 비행 → 머리 위 도달 시 탑승
       let tgt=null; while(t.pickupQueue.length){ const u=t.pickupQueue[0]; if(G.units.indexOf(u)<0){ t.pickupQueue.shift(); continue; } tgt=u; break; }
       if(!tgt || (t.cargo&&t.cargo.length>=transportCap(t))){ t.pickupQueue=null; t.moveTo=null; continue; }
@@ -8729,6 +8871,7 @@ function stepCmdMove(dt){
     // 장애물 회피 조향: 가까운 '비이동' 유닛을 피해 옆으로 돌아감
     let sx=0, sy=0;
     if(!isTransport(u)) for(const o of G.units){ if(o===u||selSet.has(o.uid)) continue;
+      if((typeof FXLAB_AIR!=='undefined' && FXLAB_AIR.has(o.gmodel||o.id))!==_air) continue;   // 다른 레이어(지상↔공중)는 회피 안 함 — 지상유닛이 공중유닛 아래로 통과
       const ox=(o.x-u.x)*GW, oy=(o.y-u.y)*GH, od=Math.hypot(ox,oy);
       const avoidR=(collideR(u)+collideR(o))*2.4;
       if(od>0.01 && od<avoidR){ const w=1-od/avoidR;
@@ -8956,9 +9099,13 @@ vUpg.addEventListener('touchstart',onUpgDown,{passive:false}); vUpg.addEventList
 
 // 투사체 오버레이(#cvFx, 3D 모델 위) — 미사일/탄이 유닛 몸에 가려지지 않도록 최상단에 그림
 // ── 이동 트레일: 모델별 테마 레시피(전 공중유닛 + 레이서/브레이커) — 랩·메인 공용(완전 동일) ──
+const BT_FX_ZOOM=1.4;   // ⚔ 전장 발사 이펙트 줌(메인 모델 스케일 기준 — 랩 scale1 대비 1/0.72 보정)
 const TRAIL_FX={   // glow=발광 화염/에너지(가산), 그 외=연무(확산·source-over). mode:center=부양 몸 중앙 / anchor=발밑 앵커
   racer:{every:.022,n:2,mode:'anchor',by:-.004,back:.016,glow:1,col:['#4ab4ff'],core:'#cfe6ff',r0:.4,rv:.45,dk:4.6,kick:.012,kv:.012,sv:.006,jit:.004},   // 레이서: 푸른 엔진화염(지상)
   jet:  {every:.02, n:2,mode:'center',back:.016,glow:1,col:['#5ab0ff','#bfe0ff'],core:'#eaf4ff',r0:.4,rv:.4,dk:4.4,kick:.014,kv:.012,sv:.008,jit:.005},   // 테란 비행: 청백 엔진 배기
+  jetP: {every:.02, n:2,mode:'center',back:.034,side:.012,glow:1,col:['#5ab0ff','#bfe0ff'],core:'#eaf4ff',r0:.4,rv:.4,dk:4.4,kick:.014,kv:.012,sv:.006,jit:.004},   // 펠리컨: 더 뒤에서 좌우 2갈래(트윈 엔진)
+  jetH: {every:.02, n:2,mode:'center',back:.016,side:.006,glow:1,col:['#5ab0ff','#bfe0ff'],core:'#eaf4ff',r0:.4,rv:.4,dk:4.4,kick:.014,kv:.012,sv:.005,jit:.004},   // 헬파이어: 트윈 엔진(아주 살짝만 벌림)
+  jetD: {every:.018,n:2,mode:'center',back:.028,side:.007,glow:1,col:['#5ab0ff','#bfe0ff'],core:'#eaf4ff',r0:.56,rv:.42,dk:4.4,kick:.014,kv:.012,sv:.005,jit:.004},   // 드레드노트: 더 뒤 + 좁은 간격 트윈 + 두껍게(강력, 길이는 동일=dk 유지)
   tank: {every:.05, n:1,mode:'anchor',by:-.012,back:.022,col:['#3a3a42','#4e4e58'],ex:3.0,af:.5,r0:.6,rv:.5,dk:1.6,kick:.008,kv:.01,up:.018,uv:.012,jit:.006},   // 브레이커: 검은 배기 연기(지상)
   psiC: {every:.03, n:1,mode:'center',back:.015,glow:1,col:['#8fe0ff','#dff2ff'],core:'#eafaff',r0:.5,rv:.45,dk:3.2,kick:.006,kv:.008,up:.01,uv:.008,sv:.008,jit:.006},   // 프로토스: 청록 사이오닉 잔광
   psiG: {every:.03, n:1,mode:'center',back:.015,glow:1,col:['#ffd98a','#fff0c8'],core:'#fff6df',r0:.55,rv:.5,dk:3.0,kick:.006,kv:.008,up:.01,uv:.008,sv:.008,jit:.006},   // 프로토스 상위: 금빛 사이오닉
@@ -8967,7 +9114,7 @@ const TRAIL_FX={   // glow=발광 화염/에너지(가산), 그 외=연무(확�
 };
 const TRAIL_UNIT={   // 모델키 → 트레일 레시피
   racer:'racer', tank:'tank',
-  pelican:'jet', hellfire:'jet', dreadnought:'jet', skyguard:'jet', aegis:'jet',   // 테란 비행
+  pelican:'jetP', hellfire:'jetH', dreadnought:'jetD', skyguard:'jet', aegis:'jet',   // 테란 비행(펠리컨·헬파이어=트윈 / 드레드노트=강력 트윈)
   seraph:'psiC', falcon:'psiC', observer:'psiC', skydancer:'psiC', archangel:'psiG', kronos:'psiG',   // 에테리얼 비행
   overlord:'spore', medusa:'spore', wyvern:'spore', venom:'acid', behemoth:'acid', stinger:'acid',   // 스웜 비행
 };
@@ -8978,11 +9125,19 @@ function emitMoveTrail(store, gm, o, dx, dy, zf, dt){ const key=TRAIL_UNIT[gm]; 
   if(R.mode==='center'){ const c=(window.M3D&&M3D.centerAt)?M3D.centerAt(o.uid):null; if(c){ ox=c.x; oy=c.y; } else oy=o.y-0.05; }   // 부양 유닛: 떠 있는 몸 중앙에서
   const bk=(R.back||.015)*zf; ox-=dx*bk; oy-=dy*bk+(R.by?R.by*zf:0);   // 진행 반대쪽(뒤) + 앵커 y보정
   for(let k=0;k<(R.n||1);k++){ const kk=(R.kick||0)+Math.random()*(R.kv||0);
-    const p={ x:ox+(Math.random()-0.5)*(R.jit||0), y:oy+(Math.random()-0.5)*(R.jit||0),
+    const sgn=R.side?((R.n===2)?(k?1:-1):(Math.random()<0.5?1:-1))*R.side*zf:0, sox=ox+(-dy)*sgn, soy=oy+dx*sgn;   // side=진행 수직 좌/우 갈래(트윈)
+    const p={ x:sox+(Math.random()-0.5)*(R.jit||0), y:soy+(Math.random()-0.5)*(R.jit||0),
       vx:-dx*kk+(Math.random()-0.5)*(R.sv||0), vy:-dy*kk-(R.up||0)-Math.random()*(R.uv||0)+(Math.random()-0.5)*(R.sv||0),
       life:1, r0:(R.r0||.5)+Math.random()*(R.rv||.4), col:R.col[(Math.random()*R.col.length)|0], dk:R.dk||2 };
     if(R.glow){ p.glow=true; p.core=R.core; } else { p.ex=R.ex||2.4; p.af=R.af||0.4; }
     store.smoke.push(p); } }
+// ⚔ 전장 발사 이펙트: unitFireFx로 쌓인 G.btFx를 advance+draw(cvFx 위 오버레이, 지연피격 pend 처리)
+function drawBattleFx(dt){ if(typeof FX==='undefined') return; if(!G.btFx) G.btFx=FX.store(); if(!G.btPend) G.btPend=[];
+  for(let i=G.btPend.length-1;i>=0;i--){ const p=G.btPend[i]; p.t-=dt; if(p.t<=0){ FX.spawn(G.btFx, p.id, p.sx, p.sy, p.tx, p.ty, p.opt); G.btPend.splice(i,1); } }
+  if(G.btUnits) for(const _u of G.btUnits){ if(_u._fxL && _u._fxL.vnJet) tickUnitFx(_u._fxL, dt); }   // 연속 이미터(베놈 가스) 틱
+  FX.advance(G.btFx, dt);
+  const cvf=document.getElementById('cvFx'); if(!cvf) return; const ctx=cvf.getContext('2d');
+  FX.drawShots(ctx, G.btFx, (x,y)=>({x:x*GW, y:y*GH}), BT_FX_ZOOM); }
 // 메인·관전: 실제 유닛 이동에 랩과 동일한 트레일 적용(cvFx 위 오버레이 — drawFx 다음에 호출)
 function stepMoveTrails(dt){ if(typeof FX==='undefined'||typeof emitMoveTrail!=='function') return;
   if(!G._mvFx) G._mvFx=FX.store();
@@ -9084,6 +9239,42 @@ function drawFx(){ const {ctx,W,H}=setup('cvFx');  // setup이 캔버스 크기 
 }
 // ── 루프 ──
 // ===== [admin 샌드박스] 게임 진행 없이 평지에 유닛 진열 — 기본값 편집 작업대 =====
+function drawBattleGround(ctx,W,H){   // ⚔ 전용 전장: 어두운 격전지 + 좌(아군)·우(적) 존 + 격자 + 대치선 + 비네트
+  const g=ctx.createLinearGradient(0,0,W,0); g.addColorStop(0,'#0c1420'); g.addColorStop(0.5,'#0a0d12'); g.addColorStop(1,'#1a0e10'); ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  ctx.save(); ctx.globalAlpha=0.06; ctx.strokeStyle='#6f8fb0'; ctx.lineWidth=1; const gs=Math.max(28,W/16);
+  for(let x=0;x<W;x+=gs){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); } for(let y=0;y<H;y+=gs){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); } ctx.restore();
+  ctx.save(); ctx.globalCompositeOperation='lighter';
+  let lg=ctx.createRadialGradient(W*0.14,H*0.5,0,W*0.14,H*0.5,W*0.42); lg.addColorStop(0,'rgba(60,120,220,.10)'); lg.addColorStop(1,'rgba(60,120,220,0)'); ctx.fillStyle=lg; ctx.fillRect(0,0,W,H);
+  let rg=ctx.createRadialGradient(W*0.88,H*0.5,0,W*0.88,H*0.5,W*0.42); rg.addColorStop(0,'rgba(210,60,60,.10)'); rg.addColorStop(1,'rgba(210,60,60,0)'); ctx.fillStyle=rg; ctx.fillRect(0,0,W,H); ctx.restore();
+  ctx.save(); ctx.globalAlpha=0.12; ctx.strokeStyle='#cfe0ff'; ctx.setLineDash([6,8]); ctx.lineWidth=1.4; ctx.beginPath(); ctx.moveTo(W*0.52,H*0.06); ctx.lineTo(W*0.52,H*0.94); ctx.stroke(); ctx.restore();
+  const v=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*0.3,W/2,H/2,Math.max(W,H)*0.75); v.addColorStop(0,'rgba(0,0,0,0)'); v.addColorStop(1,'rgba(0,0,0,.5)'); ctx.fillStyle=v; ctx.fillRect(0,0,W,H);
+  ctx.save(); ctx.globalAlpha=0.55; ctx.font='bold 10px Rajdhani,sans-serif'; ctx.textBaseline='top';
+  ctx.fillStyle='#7fb0ff'; ctx.textAlign='left'; ctx.fillText('◈ 아군 배치', 8, 8);
+  ctx.fillStyle='#ff8a8a'; ctx.textAlign='right'; ctx.fillText('적 더미 ▶', W-8, 8); ctx.restore(); }
+// ⚔ 아군 배치 피커(전투실험 탭) — 종족별 유닛 버튼. 누르면 전장 좌측 진형에 추가
+function _btPickerHTML(addFn){ let html=''; if(typeof SANDBOX_ROSTER==='undefined') return html;
+  SANDBOX_RACE_ORDER.forEach(function(race){ const arr=SANDBOX_ROSTER[race]||[]; if(!arr.length) return;
+    html+='<div class="btpRaceHead">'+(SANDBOX_RACE_KO[race]||race)+'</div>';
+    arr.forEach(function(it){ const disp=it.gm||it.b, sid=((it.gm&&typeof U[it.gm]!=='undefined')?it.gm:it.b);
+      html+='<button class="btpCard" onclick="'+addFn+'(\''+sid+'\',\''+(it.gm||'')+'\',\''+it.n+'\')"><span class="btpPic">'+((typeof unitPortraitHTML==='function')?unitPortraitHTML(disp):'')+'</span><span class="btpNm">'+it.n+'</span></button>'; }); });
+  return html; }
+function _btRosterFlat(){ const out=[]; if(typeof SANDBOX_ROSTER==='undefined') return out;
+  (typeof SANDBOX_RACE_ORDER!=='undefined'?SANDBOX_RACE_ORDER:Object.keys(SANDBOX_ROSTER)).forEach(function(race){ (SANDBOX_ROSTER[race]||[]).forEach(function(it){ out.push(it); }); }); return out; }
+function renderBtPicker(){ const ea=document.getElementById('btPicker'), ef=document.getElementById('btPickerFoe');
+  if(ea) ea.innerHTML=_btPickerHTML('btAdd'); if(ef) ef.innerHTML=_btPickerHTML('btAddFoe'); }
+function btAdd(sid, gm, name){ if(typeof G==='undefined') return; G.btUnits=G.btUnits||[]; if(G.idSeq==null) G.idSeq=1;
+  const n=G.btUnits.filter(u=>u.team!=='foe').length, c=n%4, r=(n/4)|0;   // 아군만 카운트 → 좌측 격자
+  const u=initUnitStats({uid:G.idSeq++, id:sid, hero:false, lv:1, x:0.10+c*0.05, y:0.44+r*0.052, cd:0, fixed:false});
+  if(gm) u.gmodel=gm; u.gname=name;
+  G.btUnits.push(u); if(G.tab==='Battle') G.units=G.btUnits;   // 전투실험 중이면 즉시 전장에 반영
+  if(typeof toast==='function') toast(name+' 배치'); }
+function btAddFoe(sid, gm, name, quiet){ if(typeof G==='undefined') return; G.btUnits=G.btUnits||[]; if(G.idSeq==null) G.idSeq=1;
+  const n=G.btUnits.filter(u=>u.team==='foe').length, c=n%4, r=(n/4)|0;   // 적군만 카운트 → 우측 격자
+  const u=initUnitStats({uid:G.idSeq++, id:sid, hero:false, lv:1, x:0.90-c*0.05, y:0.44+r*0.052, cd:0, fixed:false});
+  if(gm) u.gmodel=gm; u.gname=name||''; u.team='foe';   // 적팀 표식
+  G.btUnits.push(u); if(G.tab==='Battle') G.units=G.btUnits;
+  if(!quiet && typeof toast==='function') toast((name||sid)+' [적] 배치'); }
+function btClear(){ if(typeof G==='undefined'||!G.btUnits) return; G.btUnits.length=0; if(G.tab==='Battle') G.units=G.btUnits; G.sel=[]; if(window.M3D&&M3D.clearGameModels) M3D.clearGameModels(); if(typeof toast==='function') toast('전장 비움'); }
 function drawSandboxGround(ctx,W,H){
   ctx.fillStyle=(typeof mkPat==='function' && mkPat(ctx,TILE_BAD,BAD_TILE)) || '#241410';
   ctx.fillRect(0,0,W,H);
@@ -9127,6 +9318,7 @@ function enterSandbox(){
   G.enemies.length=0;
   if(window.M3D && window.M3D.clearGameModels) window.M3D.clearGameModels();
   if(typeof setInGame==='function') setInGame(true);   // 하단 콘솔(#bot) 틀 표시
+  { const bt=document.getElementById('battleTab'); if(bt) bt.style.display=''; }   // 전투실험 탭 노출(관리자 샌드박스 전용)
   placeSandboxUnits();
   if(typeof updateHud==='function') updateHud();
   if(typeof drawMain==='function') drawMain();
@@ -9150,14 +9342,16 @@ function loop(now){
     for(let k=0;k<_sm;k++){
       if(G.phase==='playing' && !G.sandbox) step(dt);
       if(G.tab==='Unit' && !G.sandbox) stepCitizen(dt);   // 시민 이동(도착 시 구매) — 랩에선 정지
-      if(G.tab==='Main'){ stepTransports(dt); stepCmdMove(dt); separateUnits(); }   // 수송선 운항 + 내 유닛 이동명령 + 겹침 방지
+      if(G.tab==='Main'||G.tab==='Battle'){ stepTransports(dt); stepCmdMove(dt); separateUnits(); }   // 수송선 운항 + 내 유닛 이동명령 + 겹침 방지(전투실험 포함)
     }
     stepAuto(dt);   // 자동화 유틸(0.33초 틱) — 배속과 무관하게 실시간 기준
-    if(typeof stepSbCombat==='function') stepSbCombat(dt);   // ⚔ 전투 실험 더미 진행(스킬 대상 좌표 갱신 전제 — stepSkills 앞)
+    if((G.tab==='Main'||G.tab==='Battle') && typeof _tpHoldTick==='function') _tpHoldTick(dt);   // 롱프레스 하차: 도착 후 유지 감시
+    if(typeof stepSbCombat==='function') stepSbCombat(dt*_sm);   // ⚔ 전투 실험(양방향) — 배속(_sm) 반영(이동·쿨다운 동일 배속, stepSkills 앞)
     if(typeof stepSkills==='function') stepSkills(dt);   // 🪄 유닛 스킬(쿨다운·에너지·스톰 연출) — 샌드박스 포함(step 우회 대비)
+    if(typeof _sbReapDead==='function') _sbReapDead();   // 전투실험: 스킬 사망 유닛 정리(전투 OFF 포함)
 
   }
-  if(G.tab==='Main'){ renderUnits(); if(!G.sel.length && !G.selEnemy){ renderBossPanel(); renderHomeLeft(); } }   // 유닛 DOM 라벨 + 홈 파견/판매
+  if(G.tab==='Main'||G.tab==='Battle'){ renderUnits(); } if(G.tab==='Main' && !G.sel.length && !G.selEnemy){ renderBossPanel(); renderHomeLeft(); }   // 유닛 DOM 라벨 + (메인)홈 파견/판매
   // 선택된 적: 죽으면 해제, 살아있으면 상태창 HP/실드 실시간 갱신
   if(G.selEnemy!=null){ const se=G.enemies.find(x=>x.eid===G.selEnemy);
     if(!se) deselectUnit(); else { const hpEl=document.getElementById('uHp'); if(hpEl) hpEl.innerHTML=enemyHpHTML(se); } }
@@ -9194,16 +9388,16 @@ function loop(now){
   else if(G.tab==='Players' && _specNum){ renderSpectate(_specNum, dt); }   // 관전: 상대 보드를 3D+이펙트로 그대로 렌더
   else if(G.sandbox && G.tab==='Unit'){ fxLabRender(dt); }   // 🎆 이펙트 테스트베드(관리자 Unit 탭)
   else {
-    if(G.tab==='Main') drawMain();
+    if(G.tab==='Main'||G.tab==='Battle') drawMain();
     else if(G.tab==='Players') drawPlayer();
     else drawMiniMap();
     const mcv=document.getElementById('cvMarine');
-    if(window.M3D && window.M3D.ready()){ const show=(G.tab==='Main'||G.tab==='Unit'||G.tab==='Upgrade'||G.tab==='Players') && !(G.opt&&G.opt.model3d===false); mcv.style.display=show?'block':'none';
-      if(G.tab==='Main'||G.tab==='Players') window.M3D.sync(G.units, GW, GH, dt, G.sel, G.enemies, G.selEnemy, null, G.view);
+    if(window.M3D && window.M3D.ready()){ const show=(G.tab==='Main'||G.tab==='Battle'||G.tab==='Unit'||G.tab==='Upgrade'||G.tab==='Players') && !(G.opt&&G.opt.model3d===false); mcv.style.display=show?'block':'none';
+      if(G.tab==='Main'||G.tab==='Battle'||G.tab==='Players') window.M3D.sync(G.units, GW, GH, dt, G.sel, G.enemies, G.selEnemy, null, G.view);
       else if(G.tab==='Unit') window.M3D.syncShop(GW, GH, dt);
       else if(G.tab==='Upgrade') window.M3D.syncBldg(GW, GH, dt); }
     const fcv=document.getElementById('cvFx');  // 투사체 오버레이(메인·관전) / 업그레이드 가동 파티클
-    if(G.tab==='Main'||G.tab==='Players'){ fcv.style.display='block'; drawFx(); if(typeof drawSkillFx==='function') drawSkillFx(); stepMoveTrails(dt); }   // 이동 트레일(랩과 완전 동일 이펙트) 오버레이 + 🪄 스킬 연출
+    if(G.tab==='Main'||G.tab==='Battle'||G.tab==='Players'){ fcv.style.display='block'; drawFx(); if(typeof drawSkillFx==='function') drawSkillFx(); stepMoveTrails(dt); if(G.tab==='Battle'&&typeof drawBattleFx==='function') drawBattleFx(dt); }   // 이동 트레일 + 스킬 + ⚔ 전장 발사 이펙트
     else if(G.tab==='Upgrade'){ fcv.style.display='block'; drawUpgFx(dt); }
     else fcv.style.display='none';
   }
@@ -10632,10 +10826,7 @@ function fxLabDeactivate(){ const w=document.getElementById('fxLabWrap'); if(w) 
 function fxLabStep(dt){ const L=FXLAB; if(!L.att) fxLabSpawnScene(); const a=L.att, st=fxLabStats(L.attId,L.attGm);
   if(L.pend && L.pend.length){ for(let i=L.pend.length-1;i>=0;i--){ const p=L.pend[i]; p.t-=dt; if(p.t<=0){ FX.spawn(L.store, p.id, p.sx, p.sy, p.tx, p.ty, p.opt); L.pend.splice(i,1); } } }   // 지연 피격: 공격 모션의 타격 순간에 FX 생성
   if(L.wyPend && L.wyPend.length){ for(let i=L.wyPend.length-1;i>=0;i--){ const p=L.wyPend[i]; p.t-=dt; if(p.t<=0){ fxLabWyvernLaunchLeg(L, p.from, p.order, p.idx, p.szf); L.wyPend.splice(i,1); } } }   // 와이번 튕김: 실제 튕길 시점에 좌표 재조회 후 다음 다리 발사
-  if(L.vnJet && L.store && L.store.smoke){ const J=L.vnJet; J.t-=dt; J.acc+=dt;   // 베놈 가스 분사: 화염방사기식 스트림(이미터가 매 프레임 퍼프 방출)
-    while(J.acc>=0.016){ J.acc-=0.016; for(let k=0;k<5;k++){ const an=J.ang+(Math.random()-0.5)*0.18, v=J.v*(0.85+Math.random()*0.3), trav=(J.ed||0.25)*(0.88+Math.random()*0.24);
-      L.store.smoke.push({x:J.mx+(Math.random()-0.5)*0.006, y:J.my+(Math.random()-0.5)*0.006, vx:Math.cos(an)*v, vy:Math.sin(an)*v, vk:1, life:1, r0:(0.45+Math.random()*0.5)*J.szf, col:(Math.random()<0.6?'#7ca83c':'#96c452'), ex:2.6, af:0.4, dk:v/trav}); } }   // 수명=사거리/속도 → 가스가 대상 지점에서 소멸(그 지역에 독이 떨어지듯)
-    if(J.t<=0) L.vnJet=null; }
+  tickUnitFx(L, dt);   // 이미터 틱(베놈 가스 등 — 랩·전장 공용)
   if(L.mode==='move'){ a.moving=true; a.x+=0.17*dt*L.mv; if(a.x>0.60){ a.x=0.60; L.mv=-1; } if(a.x<0.22){ a.x=0.22; L.mv=1; } a.face=Math.atan2(L.mv,0.0001);
     emitMoveTrail(L.store, (L.attGm||L.attId), a, L.mv, 0, fxZoomF(), dt);   // 이동 트레일(레이서/브레이커/스팅어) — 메인과 공용 이미터(완전 동일)
     return; }
@@ -10655,24 +10846,35 @@ function fxLabStep(dt){ const L=FXLAB; if(!L.att) fxLabSpawnScene(); const a=L.a
   L.cd-=dt; if(L.cd<=0){ L.cd+=Math.max(0.42, st.cd); a.fireSeq=(a.fireSeq||0)+1;   // +=로 나머지 이월 → 발사 간격 정확(모션 루프와 위상 고정, 드리프트 방지)
     const fxId=L.attGm||L.attId;
     if(typeof playUnitAttack==='function') playUnitAttack(fxId);   // 유닛 공격음 재생
-    if(L.attId==='goliath'&&!L.attGm){ fxLabGoliathFire(L, a, tgt.x, ty, st.size); }   // 스트라이더: 지상·공중 모두 어깨 추적 미사일
-    else if(fxId==='racer') fxLabRacerFire(L, a, tgt.x, ty);
-    else if(L.attGm==='skyguard'&&tgt===L.air) fxLabTempestAir(L, a, tgt.x, ty, st.size);   // 템페스트 공중: 아주 얇은 소형 고속 미사일 2발
-    else if(fxId==='hellfire') fxLabHellfireFire(L, a, tgt.x, ty, st.size);   // 헬파이어: 발키리식 유도 로켓 볼리(시간차·곡선·개별 타격)
-    else if(fxId==='falcon') fxLabFalconFire(L, a, tgt.x, ty, st.size);   // 팔콘: 두 날개 평행 트윈 레이저
-    else if(fxId==='hydra') fxLabHydraFire(L, a, tgt.x, ty, st.size);   // 리퍼: 양손 가시 다발(대상 전범위 랜덤)
-    else if(fxId==='wyvern') fxLabWyvernFire(L, a, tgt, ty, st.size, st.rng);   // 와이번(뮤탈 리스킨): 꼬리에서 회전 표창 — 가까이 있는 대상에만 튕김(최대 3쿠션)
-    else if(fxId==='venom') fxLabVenomFire(L, a, tgt.x, ty, st.size);   // 베놈(디바우러): 입에서 독 가래 분사 → 명중 시 감염 잔류
-    else if(fxId==='behemoth') fxLabBehemothFire(L, a, tgt.x, ty, st.size);   // 베히모스(가디언): 꼬리에서 독구슬 — 독연기 꼬리 + 착탄 독폭발
-    else { const _dx=tgt.x-a.x, _dy=ty-a.y, _d=Math.hypot(_dx,_dy)||1, _mz=0.03*((st.size||16)/16);
-      let _sx=a.x+(_dx/_d)*_mz, _sy=a.y+(_dy/_d)*_mz-0.024;
-      const _mzg=(window.M3D && M3D.muzzleAt)?M3D.muzzleAt(a.uid):null;   // 실제 3D 총구 위치(있으면 — 각도 무관)
-      if(_mzg){ const _bl=(fxId==='tank')?0:0.02*fxZoomF(); _sx=_mzg.x+(_dx/_d)*_bl; _sy=_mzg.y+(_dy/_d)*_bl; }   // 머즐(투영) — 탱크는 3D 포구 기준점 그대로
-      else if(window.M3D && M3D.airFloat && M3D.airFloat(fxId)){ const _ctr=M3D.centerAt?M3D.centerAt(a.uid):null; if(_ctr){ const _fw=_mz+((fxId==='dreadnought')?0.0127*fxZoomF():0)+((fxId==='skydancer')?0.007*fxZoomF():0); _sx=_ctr.x+(_dx/_d)*_fw; _sy=_ctr.y+(_dy/_d)*_fw; } }   // 공중 부양 유닛: 몸 중앙+전방 — 드레드노트/스카이댄서(스파크 몸 바로 앞)는 추가 전방 보정
-      const _opt={speed:(st.melee?6.5:(fxId==='marine'?4.5:3.6)), unitSize:st.size}, _stA=(typeof ATK_STYLE!=='undefined'?(ATK_STYLE[fxId]||ATK_STYLE._default):{}), _hd=_stA.hit||0;
-      if(_hd>0) (L.pend=L.pend||[]).push({t:_hd, id:fxId, sx:_sx, sy:_sy, tx:tgt.x, ty:ty, opt:_opt});
-      else FX.spawn(L.store, fxId, _sx, _sy, tgt.x, ty, _opt); }
-    L._switchT=FXLAB_SWITCH_DELAY; } }   // 발사 후 텀: 방금 쏜 대상을 계속 바라보다 전환
+    unitFireFx(L, a, tgt.x, ty, st.size, (tgt===L.air));   // 발사 이펙트(랩·전장 공용 디스패치, L=FXLAB 영속 shim)
+    L._switchT=FXLAB_SWITCH_DELAY; } }
+// 이미터 틱(연속 방출형 이펙트: 베놈 가스) — L=영속 shim(store/vnJet 보유). 랩(FXLAB)·전장(u._fxL) 공용
+function tickUnitFx(L, dt){ if(!L||!L.store||!L.store.smoke) return;
+  if(L.vnJet){ const J=L.vnJet; J.t-=dt; J.acc+=dt;
+    while(J.acc>=0.016){ J.acc-=0.016; for(let k=0;k<5;k++){ const an=J.ang+(Math.random()-0.5)*0.18, v=J.v*(0.85+Math.random()*0.3), trav=(J.ed||0.25)*(0.88+Math.random()*0.24);
+      L.store.smoke.push({x:J.mx+(Math.random()-0.5)*0.006, y:J.my+(Math.random()-0.5)*0.006, vx:Math.cos(an)*v, vy:Math.sin(an)*v, vk:1, life:1, r0:(0.45+Math.random()*0.5)*J.szf, col:(Math.random()<0.6?'#7ca83c':'#96c452'), ex:2.6, af:0.4, dk:v/trav}); } }
+    if(J.t<=0) L.vnJet=null; } }
+// 유닛별 발사 이펙트 디스패치(랩·전투실험 공용) — L=영속 shim(store/pend/vnJet), u=발사 유닛, (tx,ty)=대상, tgtAir=대상 공중여부
+function unitFireFx(L, u, tx, ty, size, tgtAir){ const store=L.store; if(!L.pend) L.pend=[]; const pend=L.pend; const id=u.id, fxId=u.gmodel||u.id;
+  try{
+    if(id==='goliath'&&!u.gmodel){ fxLabGoliathFire(L, u, tx, ty, size); }
+    else if(fxId==='racer') fxLabRacerFire(L, u, tx, ty);
+    else if(fxId==='skyguard'&&tgtAir) fxLabTempestAir(L, u, tx, ty, size);
+    else if(fxId==='hellfire') fxLabHellfireFire(L, u, tx, ty, size);
+    else if(fxId==='falcon') fxLabFalconFire(L, u, tx, ty, size);
+    else if(fxId==='hydra') fxLabHydraFire(L, u, tx, ty, size);
+    else if(fxId==='wyvern') fxLabWyvernFire(L, u, {x:tx,y:ty}, ty, size, 0);   // 전장: 단일 표창(바운스 대상 없음)
+    else if(fxId==='venom') fxLabVenomFire(L, u, tx, ty, size);
+    else if(fxId==='behemoth') fxLabBehemothFire(L, u, tx, ty, size);
+    else { const _dx=tx-u.x, _dy=ty-u.y, _d=Math.hypot(_dx,_dy)||1, _mz=0.03*((size||16)/16);
+      let _sx=u.x+(_dx/_d)*_mz, _sy=u.y+(_dy/_d)*_mz-0.024;
+      const _mzg=(window.M3D && M3D.muzzleAt)?M3D.muzzleAt(u.uid):null;
+      if(_mzg){ const _bl=(fxId==='tank')?0:0.02*fxZoomF(); _sx=_mzg.x+(_dx/_d)*_bl; _sy=_mzg.y+(_dy/_d)*_bl; }
+      else if(window.M3D && M3D.airFloat && M3D.airFloat(fxId)){ const _ctr=M3D.centerAt?M3D.centerAt(u.uid):null; if(_ctr){ const _fw=_mz+((fxId==='dreadnought')?0.0127*fxZoomF():0)+((fxId==='skydancer')?0.007*fxZoomF():0); _sx=_ctr.x+(_dx/_d)*_fw; _sy=_ctr.y+(_dy/_d)*_fw; } }
+      const _stA=(typeof ATK_STYLE!=='undefined'?(ATK_STYLE[fxId]||ATK_STYLE._default):{}), _opt={speed:(_stA.melee?6.5:(fxId==='marine'?4.5:3.6)), unitSize:size}, _hd=_stA.hit||0;
+      if(_hd>0 && pend) pend.push({t:_hd, id:fxId, sx:_sx, sy:_sy, tx:tx, ty:ty, opt:_opt});
+      else FX.spawn(store, fxId, _sx, _sy, tx, ty, _opt); }
+  }catch(e){} }   // 발사 후 텀: 방금 쏜 대상을 계속 바라보다 전환
 function fxLabGoliathFire(L, a, tx, ty, size){   // 스트라이더 공중: 어깨 추적 미사일 2발 — 유도곡선 + 트레일
   if(!L.store||!L.store.shots) return;
   const upN=0.04, sideN=0.025, szf=(size||16)/18*0.73, sp=1.7;
