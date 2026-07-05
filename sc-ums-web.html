@@ -6463,10 +6463,14 @@ const SB_U={
   marine: {hp:48, dmg:16, cd:20},       // 레인저: 유니온 첫유닛(순서 워든>레인저>스내퍼 복구) · 네모 공유라 SB_U로 분리
   hydra:  {dmg:21, hp:95},              // 리퍼: 스웜 종족밸런스 ×1.17
   dragoon:{dmg:24, hp:120, shield:96},  // 센티넬: 에테 종족밸런스 ×1.20
-  archon: {dmg:37, shield:420},         // 보이드: 에테 종족밸런스 ×1.20
+  archon: {dmg:33, shield:340},         // 보이드: 에테 광역 탱커 — 동수 전투 과대(shield 420→340·dmg 37→33)
   goliath:{dmg:24, hp:100},             // 스트라이더: 유니온 메카 너프 ×0.80
   wyvern:  {hp:160, dmg:22, cd:22},     // 와이번: 스웜 중간 공중(진화체) — 보스급 hp2200/dps360 유출 방지
-  behemoth:{hp:620, dmg:54, cd:48, range:0.28, splash:true}   // 베히모스: 스웜 중장 '공중' 브루저(스플) — 지상군엔 강·공중 카이팅에 약 · 12보급에 패(hp3200 유출 방지)
+  behemoth:{hp:620, dmg:54, cd:48, range:0.28, splash:true},   // 베히모스: 스웜 중장 '공중' 브루저(스플) — 지상군엔 강·공중 카이팅에 약 · 12보급에 패(hp3200 유출 방지)
+  // ── 에테리얼 공중 엘리트 하향(동수 전투 전승/준전승 과대 — 관리자 밸런스 재수렴) ──
+  archangel:{hp:500, dmg:20, shield:120},   // 아크엔젤: 28전 전승 → shield 200→120·hp 560→500·dmg 22→20
+  kronos:   {dmg:32, shield:110},            // 크로노스: 27-1 → shield 170→110·dmg 36→32
+  skydancer:{hp:175, shield:70}              // 스카이댄서: 고속 공중 과대 → hp 210→175·shield 100→70
 };
 function Udef(key){ const b=U[key]; if(!b) return b; if(typeof G!=='undefined'&&G.sandbox&&typeof SB_U!=='undefined'&&SB_U[key]) return Object.assign({}, b, SB_U[key]); return b; }   // 유효 스탯(샌드박스=유즈맵 오버라이드 반영)
 function Ueff(u){ return Udef(u.gmodel||u.id)||Udef(u.id)||{}; }
