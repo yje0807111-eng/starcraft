@@ -885,6 +885,13 @@
   /* 🏗 건설 테스트(데이터 전용) */
   #vBuild{overflow:hidden}
   #cstMain{position:absolute;inset:0;overflow-y:auto;padding:10px 11px 16px;font-size:13px;color:#d7dee9;background:linear-gradient(180deg,#0c1017,#090c12);z-index:6}
+  #cstMain.hasPrev{padding-bottom:188px}
+  #cstPrev{position:absolute;left:0;right:0;bottom:0;height:174px;background:linear-gradient(0deg,#080b11,#0d1420f2);border-top:1px solid #2b3c55;z-index:8;display:none;box-shadow:0 -6px 20px rgba(0,0,0,.55)}
+  #cstPrev.on{display:block}
+  #cstPrevCv{position:absolute;left:10px;top:12px;width:150px;height:150px;background:radial-gradient(circle at 50% 38%,#18243a,#090d15);border:1px solid #24344c;border-radius:9px}
+  #cstPrevName{position:absolute;left:174px;top:16px;font-weight:800;color:#ffe0a0;font-size:15px;letter-spacing:.3px}
+  #cstPrevInfo{position:absolute;left:174px;top:44px;right:40px;color:#aab6c6;font-size:12px;line-height:1.55}
+  #cstPrevX{position:absolute;top:9px;right:10px;background:#141b28;border:1px solid #3a4a60;color:#9fb0c4;border-radius:6px;padding:3px 9px;font-size:13px;cursor:pointer}
   .cstTabs{display:flex;gap:6px;margin-bottom:9px}
   .cstTab{flex:1;padding:8px 4px;text-align:center;font-weight:800;font-size:13px;cursor:pointer;border-radius:8px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.012));border:1px solid var(--metal-edge);border-bottom:2px solid transparent;color:#aeb8c6}
   .cstTab.on{color:#fff;border-bottom-color:var(--ca);box-shadow:inset 0 0 14px -6px var(--ca)}
@@ -2202,7 +2209,7 @@
     <div class="gview" id="vUpgrade"><canvas id="cvUpgrade"></canvas></div>
     <div class="gview" id="vPlayers"><canvas id="cvPlayer"></canvas></div>
     <div class="gview" id="vBoss"><canvas id="cvBoss"></canvas></div>
-    <div class="gview" id="vBuild"><div id="cstMain"></div></div>   <!-- 건설 테스트(데이터 전용) -->
+    <div class="gview" id="vBuild"><div id="cstMain"></div><div id="cstPrev"><canvas id="cstPrevCv"></canvas><div id="cstPrevName"></div><div id="cstPrevInfo"></div><button id="cstPrevX" onclick="cstHidePreview()">✕ 닫기</button></div></div>   <!-- 건설 테스트 + 건물 3D 프리뷰 -->
     <!-- 공용 보스 토벌장 팝업(HP바 클릭 시) — 아레나는 vBoss/cvMarine로 뒤에 렌더, 여기는 컨트롤만 -->
     <div id="bossPanel" class="hide"><button id="baBackBtn" onclick="closeBossArena()"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>돌아가기</button></div>
     <canvas id="cvMarine"></canvas>  <!-- 3D 오버레이: 뷰 바깥 지속 캔버스(메인=게임유닛 / 유닛뽑기=슬롯 위 모델) -->
@@ -5777,7 +5784,7 @@ function cstInit(race){ if(!BUILD_TREE[race]) race='union'; const T=BUILD_TREE[r
   G.cst={ race:race, credit:CST_START.credit, gas:CST_START.gas, inf:false, supCap:10, built:{}, units:{} };
   G.cst.built[T.main]=1; }
 function cstEnsure(){ if(!G.cst) cstInit('union'); cstRender(); }
-function cstSwitch(race){ cstInit(race); cstRender(); }
+function cstSwitch(race){ cstInit(race); cstHidePreview(); cstRender(); }
 function cstReset(){ const inf=G.cst?G.cst.inf:false, race=G.cst?G.cst.race:'union'; cstInit(race); G.cst.inf=inf; cstRender(); }
 function cstToggleInf(){ if(!G.cst) return; G.cst.inf=!G.cst.inf; cstRender(); }
 function cstSupUsed(){ if(!G.cst) return 0; const T=BUILD_TREE[G.cst.race]; let u=0; for(const k in G.cst.units){ const d=T.units[k]; if(d) u+=G.cst.units[k]*(d.supply||0); } return u; }
@@ -5792,7 +5799,21 @@ function cstCanProduce(uk){ const T=BUILD_TREE[G.cst.race], u=T.units[uk]; if(!u
   if(!G.cst.inf && (G.cst.credit<u.credit || G.cst.gas<u.gas)) return {ok:false, why:'자원 부족'};
   if(cstSupUsed()+(u.supply||0) > G.cst.supCap) return {ok:false, why:'인구 부족'};
   return {ok:true}; }
-function cstBuild(bk){ if(!G.cst) return; const c=cstCanBuild(bk); if(!c.ok){ if(typeof toast==='function') toast('⛔ '+(c.why||'건설 불가')); return; }
+const CST_MODEL={
+  swarm:{ hatchery:'swarm_hatchery', spawningpool:'swarm_spawning_pool', gasden:'swarm_extractor', burrowden:'swarm_hydralisk_den', spire:'swarm_spire', queennest:'swarm_queens_nest', grandspire:'swarm_greater_spire' },
+  aeth:{ nexus:'aetherial_nexus', pylon:'aetherial_pylon', assimilator:'aetherial_assimilator', gateway:'aetherial_gatewa', forge:'aetherial_forge', cybernetics:'aetherial_cybernetics_core', robotics:'aetherial_robotics_facility', stargate:'aetherial_stargate', templar_archive:'aetherial_templar_archives', fleet_beacon:'aetherial_fleet_beacon' },
+  union:{}   // 유니온 신규 건물모델 없음(추후)
+};
+function cstShowPreview(bk){ if(!G.cst) return; const T=BUILD_TREE[G.cst.race], b=T&&T.buildings[bk]; if(!b) return;
+  const mk=(CST_MODEL[G.cst.race]||{})[bk];
+  const prev=document.getElementById('cstPrev'), cv=document.getElementById('cstPrevCv'), nm=document.getElementById('cstPrevName'), info=document.getElementById('cstPrevInfo'), main=document.getElementById('cstMain');
+  if(!prev||!cv) return;
+  if(!mk || !(window.M3D&&M3D.cstShow)){ cstHidePreview(); return; }   // 모델 없는 건물=프리뷰 없음
+  prev.classList.add('on'); if(main) main.classList.add('hasPrev'); if(nm) nm.textContent=b.name;
+  if(info){ const prod=(b.produces&&b.produces.length)?('생산: '+b.produces.map(function(p){return T.units[p]?T.units[p].name:p;}).join(', ')):'생산 없음'; info.innerHTML='T'+b.tier+' · '+b.credit+'C'+(b.gas?(' · '+b.gas+'G'):'')+'<br>'+_cstEsc(prod); }
+  M3D.cstShow(cv, mk); }
+function cstHidePreview(){ const prev=document.getElementById('cstPrev'), main=document.getElementById('cstMain'); if(prev) prev.classList.remove('on'); if(main) main.classList.remove('hasPrev'); if(window.M3D&&M3D.cstStop) M3D.cstStop(); }
+function cstBuild(bk){ if(!G.cst) return; cstShowPreview(bk); const c=cstCanBuild(bk); if(!c.ok){ if(typeof toast==='function') toast('⛔ '+(c.why||'건설 불가')); return; }
   const b=BUILD_TREE[G.cst.race].buildings[bk]; if(!G.cst.inf){ G.cst.credit-=b.credit; G.cst.gas-=b.gas; }
   G.cst.built[bk]=(G.cst.built[bk]||0)+1; G.cst.supCap+=(b.supply||0); if(typeof playSfx==='function') playSfx('ui_confirm'); cstRender(); }
 function cstProduce(uk){ if(!G.cst) return; const c=cstCanProduce(uk); if(!c.ok){ if(typeof toast==='function') toast('⛔ '+(c.why||'생산 불가')); return; }
@@ -5843,7 +5864,7 @@ function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 
   document.querySelectorAll('.bp').forEach(p=>p.classList.remove('on')); document.getElementById('bp'+id).classList.add('on');
   document.getElementById('zoneLabel').textContent=ZONE_LABEL[id];
   document.body.classList.toggle('cstMode', id==='Build');   // 건설 탭: 게임 HUD 숨김
-  if(id==='Build' && typeof cstEnsure==='function') cstEnsure();   // 건설 테스트 진입 렌더
+  if(id==='Build' && typeof cstEnsure==='function') cstEnsure(); else if(typeof cstHidePreview==='function') cstHidePreview();   // 건설 진입 렌더 / 이탈 시 프리뷰 정지
   deselectUnit(); G.prodB=null; G.techB=null; G.mergeMode=false; { const mb=document.getElementById('mergeBtn'); if(mb) mb.classList.remove('on'); }
   if(typeof clearShopProfile==='function') clearShopProfile();   // 유닛뽑기 중립 선택 해제
   document.getElementById('prodHint').style.display='';
@@ -11750,8 +11771,37 @@ function disposeModels(keys){ let n=0; for(const id of keys){
   if(guns[id]){ _disposeObj3D(guns[id]); delete guns[id]; }
   if(runs[id]){ _disposeObj3D(runs[id].scene); delete runs[id]; }
 } return n; }
+// ── 건설 섹션 건물 3D 프리뷰(회전 뷰) — M3D 게임 씬/네모 MODELS·VRAM과 분리된 자체 로더·렌더러 ──
+const CST_GLB={
+  swarm_hatchery:'buildings/swarm/swarm_hatchery.glb', swarm_spawning_pool:'buildings/swarm/swarm_spawning_pool.glb',
+  swarm_extractor:'buildings/swarm/swarm_extractor.glb', swarm_hydralisk_den:'buildings/swarm/swarm_hydralisk_den.glb',
+  swarm_spire:'buildings/swarm/swarm_spire.glb', swarm_queens_nest:'buildings/swarm/swarm_queens_nest.glb', swarm_greater_spire:'buildings/swarm/swarm_greater_spire.glb',
+  aetherial_nexus:'buildings/aetherial/aetherial_nexus.glb', aetherial_pylon:'buildings/aetherial/aetherial_pylon.glb',
+  aetherial_assimilator:'buildings/aetherial/aetherial_assimilator.glb', aetherial_gatewa:'buildings/aetherial/aetherial_gatewa.glb',
+  aetherial_forge:'buildings/aetherial/aetherial_forge.glb', aetherial_cybernetics_core:'buildings/aetherial/aetherial_cybernetics_core.glb',
+  aetherial_robotics_facility:'buildings/aetherial/aetherial_robotics_facility.glb', aetherial_stargate:'buildings/aetherial/aetherial_stargate.glb',
+  aetherial_templar_archives:'buildings/aetherial/aetherial_templar_archives.glb', aetherial_fleet_beacon:'buildings/aetherial/aetherial_fleet_beacon.glb'
+};
+let _cvRend=null,_cvScene=null,_cvCam=null,_cvGrp=null,_cvRAF=0,_cvCanvas=null,_cvTok=0; const _cvCache={};
+function _cvInit(canvas){ if(_cvRend&&_cvCanvas===canvas) return; _cvCanvas=canvas;
+  _cvRend=new THREE.WebGLRenderer({canvas:canvas, alpha:true, antialias:true}); _cvRend.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
+  _cvScene=new THREE.Scene(); _cvCam=new THREE.PerspectiveCamera(34,1,0.05,200);
+  _cvScene.add(new THREE.HemisphereLight(0xdfeaff,0x2a3340,1.25)); const dl=new THREE.DirectionalLight(0xffffff,1.15); dl.position.set(3,5,4); _cvScene.add(dl);
+  const dl2=new THREE.DirectionalLight(0x88aaff,0.5); dl2.position.set(-3,2,-2); _cvScene.add(dl2); }
+function _cvResize(){ if(!_cvRend||!_cvCanvas) return; const w=_cvCanvas.clientWidth||150,h=_cvCanvas.clientHeight||150; _cvRend.setSize(w,h,false); _cvCam.aspect=w/h; _cvCam.updateProjectionMatrix(); }
+function _cvPlace(scene){ if(_cvGrp){ _cvScene.remove(_cvGrp); _cvGrp=null; }
+  const model=scene.clone(true); const box=new THREE.Box3().setFromObject(model), c=box.getCenter(new THREE.Vector3()), sz=box.getSize(new THREE.Vector3());
+  const maxd=Math.max(sz.x,sz.y,sz.z)||1; model.position.set(-c.x,-c.y,-c.z);
+  const grp=new THREE.Group(); grp.add(model); grp.scale.setScalar(2.0/maxd); grp.rotation.y=0.5; _cvScene.add(grp); _cvGrp=grp;
+  _cvCam.position.set(0,0.55,3.2); _cvCam.lookAt(0,0.02,0); }
+function cstShowModel(canvas,key){ if(!canvas||!CST_GLB[key]) return; _cvInit(canvas); _cvResize(); const tok=++_cvTok;
+  if(_cvCache[key]){ _cvPlace(_cvCache[key]); } else { new GLTFLoader().load('/assets/'+CST_GLB[key], g=>{ _cvCache[key]=g.scene; if(tok===_cvTok) _cvPlace(g.scene); }, undefined, e=>console.warn('cst glb fail',key,e)); }
+  if(!_cvRAF){ const loop=()=>{ _cvRAF=requestAnimationFrame(loop); if(_cvGrp) _cvGrp.rotation.y+=0.011; if(_cvRend&&_cvScene&&_cvCam) _cvRend.render(_cvScene,_cvCam); }; loop(); } }
+function cstStopModel(){ if(_cvRAF){ cancelAnimationFrame(_cvRAF); _cvRAF=0; } if(_cvGrp){ _cvScene.remove(_cvGrp); _cvGrp=null; } }
 window.M3D={
   ready:()=>ready,
+  cstShow:(canvas,key)=>cstShowModel(canvas,key),   // 건설 섹션 건물 3D 프리뷰(회전)
+  cstStop:()=>cstStopModel(),
   hasModel:(id)=>!!bases[id],   // 실제 로드 완료 여부(로드 전엔 false → 2D/SVG 폴백 표시). MODELS 카탈로그가 아니라 bases(로드분) 기준
   modelCatalog:(id)=>!!MODELS[id],   // 카탈로그 존재 여부(필요 시)
   // ── 유즈맵별 에셋 지연 로드/해제(확장 토대) ──
