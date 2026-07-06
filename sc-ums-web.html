@@ -10124,6 +10124,46 @@ TECH_SPEC.union={
     dreadnought:{hp:500,ar:3,sh:0,atk:25,at:'norm',rng:6,spd:'느림',t:133,abil:'야마토 260'},
     nuke:{hp:0,ar:0,sh:0,atk:0,at:'-',rng:0,spd:'-',t:75,abil:'핵미사일'} }
 };
+TECH_SPEC.swarm={   // 저그: 건물 자동재생·유닛 자동재생(점막), 실드 없음
+  bldg:{ hatchery:{hp:1250,ar:1,size:[4,3],t:100}, extractor:{hp:750,ar:1,size:[4,2],t:40},
+    pool:{hp:750,ar:1,size:[3,2],t:80}, evochamber:{hp:750,ar:1,size:[3,2],t:40}, hydraden:{hp:850,ar:1,size:[3,2],t:40},
+    creep:{hp:400,ar:1,size:[2,2],t:20}, sunken:{hp:300,ar:1,size:[2,2],t:20,atk:40}, spore:{hp:400,ar:1,size:[2,2],t:20,atk:15},
+    lair:{hp:1800,ar:1,size:[4,3],t:60}, spire:{hp:600,ar:1,size:[2,2],t:120}, queensnest:{hp:850,ar:1,size:[3,2],t:60},
+    hive:{hp:2500,ar:1,size:[4,3],t:70}, gspire:{hp:1000,ar:1,size:[2,2],t:60}, defilermound:{hp:850,ar:1,size:[3,2],t:60},
+    ultracavern:{hp:600,ar:1,size:[3,2],t:80}, nydus:{hp:250,ar:1,size:[2,2],t:40} },
+  unit:{
+    worker_swarm:{hp:40,ar:0,sh:0,atk:5,at:'norm',rng:1,spd:'보통',t:20,abil:'건물 변태'},
+    overlord:{hp:200,ar:0,sh:0,atk:0,at:'-',rng:0,spd:'느림',t:40,abil:'디텍터·수송(연구)'},
+    snapper:{hp:35,ar:0,sh:0,atk:5,at:'norm',rng:1,spd:'빠름',t:28,abil:'2기 생산·발업·아드레날린'},
+    hydra:{hp:80,ar:0,sh:0,atk:10,at:'expl',rng:4,spd:'보통',t:28,abil:'사거리+1·럴커 변태'},
+    thornqueen:{hp:125,ar:1,sh:0,atk:20,at:'norm',rng:6,spd:'빠름',t:40,abil:'버로우 공격·일직선 스플'},
+    wyvern:{hp:120,ar:0,sh:0,atk:9,at:'norm',rng:3,spd:'매우빠름',t:40,abil:'바운스 9-3-1'},
+    stinger:{hp:25,ar:0,sh:0,atk:110,at:'norm',rng:1,spd:'매우빠름',t:28,abil:'2기 생산·공중전용 자폭'},
+    medusa:{hp:120,ar:0,sh:0,atk:0,at:'-',rng:0,spd:'매우빠름',t:50,abil:'패러사이트·브루들링·인스네어'},
+    venom:{hp:80,ar:1,sh:0,atk:0,at:'-',rng:0,spd:'보통',t:50,abil:'다크스웜·컨슘·플레이그'},
+    behemoth:{hp:150,ar:2,sh:0,atk:20,at:'norm',rng:8,spd:'느림',t:40,abil:'지상 전용 폭격'},
+    ultralisk:{hp:400,ar:1,sh:0,atk:20,at:'norm',rng:1,spd:'보통',t:60,abil:'방업 시 방어+2'} }
+};
+TECH_SPEC.aetherial={   // 프로토스: 건물·유닛 실드 자동재생(기본 방어 0, 건물 방어 1)
+  bldg:{ nexus:{hp:750,sh:750,ar:1,size:[4,3],t:120}, pylon:{hp:300,sh:300,ar:1,size:[2,2],t:30}, assimilator:{hp:450,sh:450,ar:1,size:[4,2],t:40},
+    forge:{hp:550,sh:550,ar:1,size:[2,2],t:40}, cannon:{hp:100,sh:100,ar:1,size:[2,2],t:50,atk:20},
+    gateway:{hp:500,sh:500,ar:1,size:[3,2],t:60}, battery:{hp:200,sh:200,ar:1,size:[2,2],t:30}, cyber:{hp:500,sh:500,ar:1,size:[3,2],t:60},
+    citadel:{hp:450,sh:450,ar:1,size:[3,2],t:60}, archives:{hp:500,sh:500,ar:1,size:[3,2],t:60},
+    robo:{hp:500,sh:500,ar:1,size:[3,2],t:80}, robobay:{hp:450,sh:450,ar:1,size:[3,2],t:30}, observatory:{hp:250,sh:250,ar:1,size:[2,2],t:30},
+    stargate:{hp:600,sh:600,ar:1,size:[3,2],t:70}, fleet:{hp:500,sh:500,ar:1,size:[3,2],t:60}, tribunal:{hp:500,sh:500,ar:1,size:[3,2],t:60} },
+  unit:{
+    worker_light:{hp:20,ar:0,sh:20,atk:5,at:'norm',rng:1,spd:'보통',t:20,abil:'건물 소환'},
+    blade:{hp:100,ar:1,sh:60,atk:16,at:'norm',rng:1,spd:'보통',t:40,abil:'발업(다리 강화)'},
+    dragoon:{hp:100,ar:1,sh:80,atk:20,at:'expl',rng:4,spd:'보통',t:50,abil:'사거리 4→6'},
+    high_templar:{hp:40,ar:0,sh:40,atk:0,at:'-',rng:0,spd:'느림',t:50,abil:'아칸 합체·스톰·할루시네이션'},
+    dark_templar:{hp:80,ar:1,sh:40,atk:40,at:'norm',rng:1,spd:'빠름',t:50,abil:'영구 은신·다크아칸 합체'},
+    seraph:{hp:80,ar:1,sh:60,atk:0,at:'-',rng:0,spd:'보통',t:60,abil:'수송·속업'},
+    observer:{hp:40,ar:0,sh:20,atk:0,at:'-',rng:0,spd:'보통',t:40,abil:'디텍터·영구 은신'},
+    skydancer:{hp:150,ar:0,sh:100,atk:8,at:'norm',rng:4,spd:'보통',t:80,abil:'대공 28(폭발)·속업'},
+    falcon:{hp:120,ar:1,sh:80,atk:5,at:'expl',rng:5,spd:'매우빠름',t:40,abil:'공중전용 스플·디스럽션 웹'},
+    archangel:{hp:300,ar:4,sh:150,atk:6,at:'norm',rng:8,spd:'느림',t:140,abil:'인터셉터 최대 8기'},
+    kronos:{hp:200,ar:1,sh:150,atk:10,at:'expl',rng:5,spd:'보통',t:160,abil:'클로킹 필드·리콜·스테이시스'} }
+};
 const _AT_KO={norm:'일반',conc:'진동',expl:'폭발','-':'무공격'};
 function techUnitSpec(race,id){ const s=TECH_SPEC[race]; return (s&&s.unit&&s.unit[id])||null; }
 function techBldgSpec(race,k){ const s=TECH_SPEC[race]; return (s&&s.bldg&&s.bldg[k])||null; }
@@ -10136,7 +10176,7 @@ function techBuildModel(race, actFn){ const t=TECH_TREE[race]; if(!t) return nul
   const f=t.buildings[0]||{}, fbs=techBldgSpec(race,f.k)||{};
   return { mode:'build', title:t.name+' 건설', icon:'<span class="pemoji">👷</span>', sub:'건설 가능 '+items.length+'종', items,
     info:{ eb:'선택 · 건설', name:f.name||'', desc:(f.produces?('생산: '+f.produces.map(p=>p.name).join(', ')):'')||'건물을 선택해 건설',
-      stats:[['체력',''+(fbs.hp||'-')+(fbs.ar?(' 방'+fbs.ar):'')],['크기',fbs.size?fbs.size.join('×'):'-'],['시간',(fbs.t||'?')+'s']], progLabel:'배치', progVal:'지점 선택', prog:0, cr:f.m||0, en:f.g||0, time:'탭하여 건설' } }; }
+      stats:[['체력',''+(fbs.hp||'-')+(fbs.sh?('/'+fbs.sh+'실드'):'')+(fbs.ar?(' 방'+fbs.ar):'')],['크기',fbs.size?fbs.size.join('×'):'-'],['시간',(fbs.t||'?')+'s']], progLabel:'배치', progVal:'지점 선택', prog:0, cr:f.m||0, en:f.g||0, time:'탭하여 건설' } }; }
 function techProdModel(race, k, actFn){ const b=techGetBldg(race,k); if(!b||!b.produces) return null;   // 건물 생산 유닛
   const items=b.produces.map(p=>({ pro:_techUnitPortrait(p.id), sn:p.name, cr:p.m||0, en:p.g||0, meta:p.pop?('👤'+p.pop):'', state:'ok', act:actFn?actFn(p.id):'' }));
   const f=b.produces[0]||{}, fs=techUnitSpec(race,f.id)||{};
