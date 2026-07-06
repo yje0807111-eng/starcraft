@@ -933,13 +933,38 @@
   #cstBar .cbtn.on{color:#fff;background:linear-gradient(180deg,#2f7d4a,#173a24);border-color:#46f06a}
   #cstBar .tally{flex:1 1 100%;font-size:11.5px;color:#9fb0c2;line-height:1.5}
   #cstBar .tally b{color:#eaf0f8}
-  /* 🏗 테크트리 건설 UI(커맨드 그리드 호스트 + 종족/모드 탭) */
+  /* 🏗 테크트리 건설 — RTS 배치 맵 + 하단 커맨드 그리드 */
   #vBuild{display:flex;flex-direction:column;min-height:0}
-  #cstMain{flex:1;min-height:0;width:100%;display:flex;flex-direction:column;padding:10px}
-  #cstBar .techTabs{display:flex;gap:4px;flex:0 0 auto}
-  #cstBar .techTab{padding:5px 9px;font-size:12px;font-weight:800;border-radius:7px;cursor:pointer;white-space:nowrap;
+  #cstMain{flex:1;min-height:0;width:100%;position:relative;overflow:hidden;padding:0}
+  #bpBuild{display:flex;flex-direction:column;padding:8px;min-height:0}
+  .bmap{position:absolute;inset:0;overflow:hidden;cursor:crosshair;
+    background:linear-gradient(0deg,rgba(0,0,0,.25),rgba(0,0,0,.1)),
+      repeating-linear-gradient(0deg,transparent 0 27px,rgba(120,150,190,.06) 27px 28px),
+      repeating-linear-gradient(90deg,transparent 0 27px,rgba(120,150,190,.06) 27px 28px),
+      radial-gradient(circle at 50% 32%,#1a2436,#080c14)}
+  .bmap.arming{cursor:copy}
+  .bmapTop{position:absolute;top:0;left:0;right:0;min-height:34px;display:flex;align-items:center;justify-content:space-between;gap:8px;
+    padding:6px 10px;background:linear-gradient(180deg,rgba(6,9,14,.9),transparent);z-index:5;pointer-events:auto;flex-wrap:wrap}
+  .bmapTop .techTabs{display:flex;gap:4px}
+  .bmapTop .techTab{padding:5px 9px;font-size:12px;font-weight:800;border-radius:7px;cursor:pointer;white-space:nowrap;
     background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.015));border:1px solid var(--metal-edge);color:#cbd5e6}
-  #cstBar .techTab.on{color:#fff;background:linear-gradient(180deg,#2f6fbf,#173a6e);border-color:#5aa8ff;box-shadow:0 0 10px -3px rgba(90,168,255,.6)}
+  .bmapTop .techTab.on{color:#fff;background:linear-gradient(180deg,#2f6fbf,#173a6e);border-color:#5aa8ff;box-shadow:0 0 10px -3px rgba(90,168,255,.6)}
+  .bmapTop .bres{display:flex;gap:5px;align-items:center;font:800 12px 'Rajdhani',sans-serif}
+  .bmapTop .res{padding:2px 7px;border-radius:6px;border:1px solid var(--metal-edge);background:rgba(0,0,0,.35);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .bmapTop .res.cr{color:#ffce6a}.bmapTop .res.gs{color:#7fd0ff}.bmapTop .res.sp{color:#c8b6ff}
+  .bmapTop .cbtn{padding:2px 8px;border-radius:6px;cursor:pointer;font-weight:800;font-size:13px;border:1px solid var(--metal-edge);background:rgba(255,255,255,.05);color:#dbe3ee}
+  .bmapTop .cbtn.on{color:#fff;background:linear-gradient(180deg,#2f7d4a,#173a24);border-color:#46f06a}
+  .bent{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;z-index:2}
+  .bent .be-ico{font-size:26px;line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))}
+  .bent .be-nm{font-size:8.5px;font-weight:800;color:#dfeaff;text-shadow:0 1px 2px #000;white-space:nowrap;margin-top:1px}
+  .bent.bldg{width:54px;height:54px;border-radius:9px;background:radial-gradient(circle at 50% 35%,rgba(70,90,120,.5),rgba(8,12,20,.72));border:1px solid var(--metal-edge)}
+  .bent.worker .be-ico{font-size:23px}
+  .bent.unit{width:22px;height:22px}
+  .bent.unit svg,.bent.unit img{width:20px;height:20px}
+  .bent.sel{outline:2px solid #5aa8ff;outline-offset:2px;box-shadow:0 0 14px -2px rgba(90,168,255,.75);border-radius:9px}
+  .bhint{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);z-index:5;font-size:11px;font-weight:700;color:#bcd;
+    background:rgba(6,9,14,.75);border:1px solid var(--metal-edge);border-radius:8px;padding:5px 12px;max-width:92%;text-align:center;pointer-events:none}
+  .bhint.on{color:#ffe27a;border-color:var(--gold);box-shadow:0 0 12px -3px rgba(255,210,74,.5)}
   body.cstMode #hud, body.cstMode #chatBar, body.cstMode #chatLog, body.cstMode #miniWrap, body.cstMode #deselTop, body.cstMode #mergeFab, body.cstMode #skillFab, body.cstMode #pbossBtn, body.cstMode #autoFab, body.cstMode #btCtl{display:none !important}
   /* 적군 유닛 구분(붉은 링) */
   .unit.foe .ubox{box-shadow:0 0 0 2px rgba(255,66,66,.62),0 0 9px rgba(255,54,54,.5)!important}
@@ -10197,47 +10222,79 @@ function techUpgModel(race, k, actFn){ const b=techGetBldg(race,k); if(!b||!b.re
   const f=b.research[0]||{};
   return { mode:'upg', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', sub:'연구 '+items.length+'종', items,
     info:{ eb:'선택 · 연구', name:f.name||'', desc:f.desc||'', progLabel:'상태', progVal:f.tier?('1/'+f.tier.length):'연구', prog:0, cr:f.tier?f.tier[0][0]:(f.m||0), en:f.tier?f.tier[0][1]:(f.g||0), time:'탭하여 연구' } }; }
-// ══ 건설 탭 UI — TECH_TREE를 커맨드 그리드로 실제 연결(종족·모드 탭 · 선행조건 잠금 · 크레딧/에너지 차감) ══
+// ══ 건설 탭 — RTS식 배치 맵(종족→일꾼→건물 배치) + 선택 건물 생산/연구 카드 ══
 const TECH_START={credit:1500, energy:1000};
 const _TECH_RKO={union:'유니온',swarm:'스웜',aetherial:'에테리얼'};
 function techUIInit(race){ if(!TECH_TREE[race]) race='union';
-  G.tech={ race, credit:TECH_START.credit, energy:TECH_START.energy, built:{}, addon:{}, units:{}, research:{}, sup:0, supCap:0, mode:'build', inf:false };
-  const main=TECH_TREE[race].buildings[0]; if(main){ G.tech.built[main.k]=1; G.tech.supCap+=(main.supply||0); } }   // 본진 자동 건설
+  G.tech={ race, credit:TECH_START.credit, energy:TECH_START.energy, built:{}, addon:{}, units:{}, research:{}, sup:0, supCap:0, inf:false, ents:[], sel:null, arm:null, eseq:1 };
+  const main=TECH_TREE[race].buildings[0]; if(main){ G.tech.built[main.k]=1; G.tech.supCap+=(main.supply||0); G.tech.ents.push({eid:G.tech.eseq++, type:'bldg', bk:main.k, x:0.5, y:0.3}); }   // 본진 자동 배치
+  G.tech.ents.push({eid:G.tech.eseq++, type:'worker', x:0.32, y:0.62}); }   // 일꾼 1기
 function techUIEnsure(){ if(!G.tech||!TECH_TREE[G.tech.race]) techUIInit('union'); techUIRender(); }
 function _techReqMet(req){ if(!req) return true; for(const r of req){ if(!(G.tech.built[r]>0||G.tech.addon[r])) return false; } return true; }
 function _techAfford(m,g){ return G.tech.inf || (G.tech.credit>=(m||0) && G.tech.energy>=(g||0)); }
 function _techSpend(m,g){ if(G.tech.inf) return; G.tech.credit-=(m||0); G.tech.energy-=(g||0); }
-function _techInfo(label, legend){ return { eb:'상태', name:label, desc:legend, stats:[['크레딧',G.tech.inf?'∞':''+G.tech.credit],['에너지',G.tech.inf?'∞':''+G.tech.energy],['인구',G.tech.sup+'/'+G.tech.supCap]] }; }
-function techUIBuildModel(){ const race=G.tech.race, t=TECH_TREE[race];
+function _techEntAt(x,y){ let best=null,bd=0.06*0.06; for(let i=G.tech.ents.length-1;i>=0;i--){ const e=G.tech.ents[i]; const dx=e.x-x,dy=e.y-y,d=dx*dx+dy*dy; if(d<=bd){bd=d;best=e;} } return best; }
+function _techResInfo(){ return { eb:'자원', name:TECH_TREE[G.tech.race].name, desc:'일꾼 탭 → 건물 선택 → 맵을 탭해 배치', stats:[['크레딧',G.tech.inf?'∞':''+G.tech.credit],['에너지',G.tech.inf?'∞':''+G.tech.energy],['인구',G.tech.sup+'/'+G.tech.supCap]] }; }
+// 하단 패널 모델
+function techBuildListModel(){ const race=G.tech.race, t=TECH_TREE[race];
   const items=t.buildings.map(b=>{ const cnt=(G.tech.built[b.k]||0)+(G.tech.addon[b.k]?1:0), spec=techBldgSpec(race,b.k)||{};
-    const parentOk=!b.addonTo||G.tech.built[b.addonTo]>0, reqok=_techReqMet(b.req)&&parentOk, afford=_techAfford(b.m,b.g);
-    const meta=cnt?('✓'+(cnt>1?cnt:'')):(b.addonTo?'부속':(b.supply?'👤+'+b.supply:(b.detector?'탐지':(spec.size?spec.size.join('×'):''))));
-    return { pro:'<span class="pemoji">'+b.ico+'</span>', sn:b.name, cr:b.m, en:b.g, meta, metaCls:cnt?'lv':'', state:cnt?'sel':((!reqok||!afford)?'dim':'ok'), act:'onclick="techDoBuild(\''+b.k+'\')"' }; });
-  return { mode:'build', title:t.name+' · 건설', icon:'<span class="pemoji">👷</span>', sub:'탭하여 건설 (✓=보유)', items, info:_techInfo('건설','건물 탭=건설. 회색=선행/자원 부족.') }; }
-function techUIProdModel(){ const race=G.tech.race, t=TECH_TREE[race]; const items=[];
-  for(const b of t.buildings){ if(!b.produces) continue; const bBuilt=G.tech.built[b.k]>0;
-    for(const p of b.produces){ const reqok=bBuilt&&_techReqMet(p.req), afford=_techAfford(p.m,p.g), cnt=G.tech.units[p.id]||0;
-      items.push({ pro:_techUnitPortrait(p.id), sn:p.name, cr:p.m, en:p.g, meta:cnt?('×'+cnt):(p.pop?'👤'+p.pop:''), metaCls:cnt?'lv':'', state:(!reqok||!afford)?'dim':'ok', act:'onclick="techDoProduce(\''+p.id+'\',\''+b.k+'\')"' }); } }
-  return { mode:'prod', title:t.name+' · 생산', icon:'<span class="pemoji">🏭</span>', sub:'탭하여 생산', items, info:_techInfo('생산','유닛 탭=생산. 회색=건물 미건설/자원·인구 부족.') }; }
-function techUIUpgModel(){ const race=G.tech.race, t=TECH_TREE[race]; const items=[];
-  for(const b of t.buildings){ if(!b.research) continue; const bBuilt=(G.tech.built[b.k]>0)||G.tech.addon[b.k];
-    for(const r of b.research){ const key=race+'_'+r.k; let meta,state,cr,en;
-      if(r.tier){ const lv=G.tech.research[key]||0, isMax=lv>=r.tier.length, nx=r.tier[Math.min(lv,r.tier.length-1)]; meta=isMax?'MAX':('Lv.'+lv); cr=isMax?0:nx[0]; en=isMax?0:nx[1]; state=isMax?'max':((!bBuilt||!_techAfford(cr,en))?'dim':'ok'); }
-      else { const done=G.tech.research[key]; meta=done?'완료':'연구'; cr=done?0:r.m; en=done?0:r.g; state=done?'max':((!bBuilt||!_techAfford(cr,en))?'dim':'ok'); }
-      items.push({ pro:'<span class="pemoji">🔬</span>', sn:r.name, cr, en, meta, metaCls:'lv', state, act:'onclick="techDoResearch(\''+b.k+'\',\''+r.k+'\')"' }); } }
-  return { mode:'upg', title:t.name+' · 연구', icon:'<span class="pemoji">🔬</span>', sub:'탭하여 연구', items, info:_techInfo('연구','연구 탭=진행. 회색=건물 미건설/자원 부족.') }; }
-function techDoBuild(bk){ const race=G.tech.race, b=techGetBldg(race,bk); if(!b) return;
-  if(b.addonTo && !(G.tech.built[b.addonTo]>0)){ const pb=techGetBldg(race,b.addonTo); if(typeof toast==='function') toast('⛔ '+(pb?pb.name:'')+' 필요'); return; }
-  if(!_techReqMet(b.req)){ if(typeof toast==='function') toast('⛔ 선행: '+(b.req||[]).map(r=>{const rb=techGetBldg(race,r);return rb?rb.name:r;}).join(', ')); return; }
+    const parentOk=!b.addonTo||G.tech.built[b.addonTo]>0, reqok=_techReqMet(b.req)&&parentOk, afford=_techAfford(b.m,b.g), armed=(G.tech.arm===b.k);
+    return { pro:'<span class="pemoji">'+b.ico+'</span>', sn:b.name, cr:b.m, en:b.g, meta:cnt?('✓'+(cnt>1?cnt:'')):(b.addonTo?'부속':(b.supply?'👤+'+b.supply:(spec.size?spec.size.join('×'):''))), metaCls:cnt?'lv':'', state:armed?'sel':((!reqok||!afford)?'dim':'ok'), act:'onclick="techArm(\''+b.k+'\')"' }; });
+  return { mode:'build', title:t.name+' · 건설', icon:'<span class="pemoji">👷</span>', sub:'건물 탭 → 맵을 탭해 배치', items, info:_techResInfo() }; }
+function techBldgProdModel(b){ const race=G.tech.race;
+  const items=b.produces.map(p=>{ const reqok=_techReqMet(p.req), afford=_techAfford(p.m,p.g), popok=G.tech.inf||!p.pop||(G.tech.sup+p.pop<=G.tech.supCap), cnt=G.tech.units[p.id]||0;
+    return { pro:_techUnitPortrait(p.id), sn:p.name, cr:p.m, en:p.g, meta:cnt?('×'+cnt):(p.pop?'👤'+p.pop:''), metaCls:cnt?'lv':'', state:(!reqok||!afford||!popok)?'dim':'ok', act:'onclick="techDoProduce(\''+p.id+'\',\''+b.k+'\')"' }; });
+  const f=b.produces[0]||{}, fs=techUnitSpec(race,f.id)||{};
+  return { mode:'prod', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', sub:'유닛 생산 — 탭', items,
+    info:{ eb:'생산', name:f.name||'', desc:fs.abil?('능력: '+fs.abil):'', stats:[['체력',(fs.hp!=null?fs.hp:'-')+(fs.sh?('/'+fs.sh):'')],['공격',fs.atk?(fs.atk+' '+(_AT_KO[fs.at]||'')):'무공격'],['사거리',''+(fs.rng!=null?fs.rng:'-')]], progLabel:'인구·시간', progVal:'👤'+(f.pop||1)+' · '+(fs.t||'?')+'s', prog:0, cr:f.m||0, en:f.g||0, time:'탭하여 생산' } }; }
+function techBldgUpgModel(b){ const race=G.tech.race;
+  const items=b.research.map(r=>{ const key=race+'_'+r.k; let meta,state,cr,en;
+    if(r.tier){ const lv=G.tech.research[key]||0, isMax=lv>=r.tier.length, nx=r.tier[Math.min(lv,r.tier.length-1)]; meta=isMax?'MAX':('Lv.'+lv); cr=isMax?0:nx[0]; en=isMax?0:nx[1]; state=isMax?'max':(_techAfford(cr,en)?'ok':'dim'); }
+    else { const done=G.tech.research[key]; meta=done?'완료':'연구'; cr=done?0:r.m; en=done?0:r.g; state=done?'max':(_techAfford(cr,en)?'ok':'dim'); }
+    return { pro:'<span class="pemoji">🔬</span>', sn:r.name, cr, en, meta, metaCls:'lv', state, act:'onclick="techDoResearch(\''+b.k+'\',\''+r.k+'\')"' }; });
+  const f=b.research[0]||{};
+  return { mode:'upg', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', sub:'연구/업그레이드 — 탭', items,
+    info:{ eb:'연구', name:f.name||'', desc:f.desc||'', cr:f.tier?f.tier[0][0]:(f.m||0), en:f.tier?f.tier[0][1]:(f.g||0), time:'탭하여 연구' } }; }
+// 렌더
+function techUIRender(){ if(!G.tech) return; techMapRender(); techPanelRender(); }
+function techMapRender(){ const map=document.getElementById('cstMain'); if(!map) return; const race=G.tech.race;
+  let ents=''; for(const e of G.tech.ents){ let inner,cls;
+    if(e.type==='bldg'){ const b=techGetBldg(race,e.bk)||{}; inner='<span class="be-ico">'+(b.ico||'🏢')+'</span><span class="be-nm">'+(b.name||'')+'</span>'; cls='bldg'; }
+    else if(e.type==='worker'){ inner='<span class="be-ico">👷</span>'; cls='worker'; }
+    else { inner=_techUnitPortrait(e.uid); cls='unit'; }
+    ents+='<div class="bent '+cls+(G.tech.sel===e.eid?' sel':'')+'" style="left:'+(e.x*100).toFixed(2)+'%;top:'+(e.y*100).toFixed(2)+'%">'+inner+'</div>'; }
+  let tabs=''; ['union','swarm','aetherial'].forEach(r=>{ tabs+='<span class="techTab'+(r===race?' on':'')+'" onclick="techRace(event,\''+r+'\')">'+_TECH_RKO[r]+'</span>'; });
+  const res='<span class="res cr">'+(G.tech.inf?'∞':G.tech.credit)+'◈</span><span class="res gs">'+(G.tech.inf?'∞':G.tech.energy)+'⚡</span><span class="res sp">👤'+G.tech.sup+'/'+G.tech.supCap+'</span><span class="cbtn'+(G.tech.inf?' on':'')+'" onclick="techInf(event)">∞</span><span class="cbtn" onclick="techReset(event)">↺</span>';
+  const hint=G.tech.arm?('📍 '+((techGetBldg(race,G.tech.arm)||{}).name)+' — 지을 곳을 탭'):(G.tech.sel==null?'일꾼을 탭 → 하단에서 건물 선택 → 맵을 탭해 배치':'건물을 탭하면 생산·연구가 하단에 표시됩니다');
+  map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+'" onpointerdown="techMapClick(event)"><div class="bmapTop"><div class="techTabs">'+tabs+'</div><div class="bres">'+res+'</div></div>'+ents+'<div class="bhint'+(G.tech.arm?' on':'')+'">'+hint+'</div></div>'; }
+function techPanelRender(){ const host=document.getElementById('bpBuild'); if(!host) return;
+  const sel=(G.tech.sel!=null)?G.tech.ents.find(e=>e.eid===G.tech.sel):null; let model;
+  if(sel&&sel.type==='bldg'){ const b=techGetBldg(G.tech.race,sel.bk); model=(b&&b.produces)?techBldgProdModel(b):((b&&b.research)?techBldgUpgModel(b):techBuildListModel()); }
+  else model=techBuildListModel();   // 일꾼·무선택 → 건설 목록
+  renderCmdGrid(host, model); }
+// 입력
+function techMapClick(ev){ if(!ev||!ev.currentTarget) return; const r=ev.currentTarget.getBoundingClientRect(); const x=(ev.clientX-r.left)/(r.width||1), y=(ev.clientY-r.top)/(r.height||1);
+  if(y<0.13) return;   // 상단바 영역 무시
+  if(G.tech.arm){ techPlace(x,y); return; }
+  const e=_techEntAt(x,y); G.tech.sel=e?e.eid:null; const bp=document.getElementById('bpBuild'); if(bp) bp._cgPage=0; techUIRender(); }
+function techArm(bk){ const race=G.tech.race, b=techGetBldg(race,bk); if(!b) return;
+  if(b.addonTo && !(G.tech.built[b.addonTo]>0)){ if(typeof toast==='function') toast('⛔ '+((techGetBldg(race,b.addonTo)||{}).name)+' 먼저 건설'); return; }
+  if(!_techReqMet(b.req)){ if(typeof toast==='function') toast('⛔ 선행: '+(b.req||[]).map(r=>(techGetBldg(race,r)||{}).name).join(', ')); return; }
   if(!_techAfford(b.m,b.g)){ if(typeof toast==='function') toast('⛔ 자원 부족'); return; }
-  _techSpend(b.m,b.g); if(b.addonTo) G.tech.addon[bk]=true; else G.tech.built[bk]=(G.tech.built[bk]||0)+1; G.tech.supCap+=(b.supply||0);
-  if(typeof playSfx==='function') playSfx('ui_confirm'); techUIRender(); }
+  G.tech.arm=(G.tech.arm===bk)?null:bk; techUIRender(); }
+function techPlace(x,y){ const race=G.tech.race, b=techGetBldg(race,G.tech.arm); if(!b){ G.tech.arm=null; techUIRender(); return; }
+  if(!_techAfford(b.m,b.g)||(b.addonTo&&!(G.tech.built[b.addonTo]>0))||!_techReqMet(b.req)){ if(typeof toast==='function') toast('⛔ 건설 불가'); G.tech.arm=null; techUIRender(); return; }
+  _techSpend(b.m,b.g); if(b.addonTo) G.tech.addon[b.k]=true; else G.tech.built[b.k]=(G.tech.built[b.k]||0)+1; G.tech.supCap+=(b.supply||0);
+  const ne={eid:G.tech.eseq++, type:'bldg', bk:b.k, x:Math.max(0.06,Math.min(0.94,x)), y:Math.max(0.18,Math.min(0.94,y))}; G.tech.ents.push(ne);
+  G.tech.arm=null; G.tech.sel=ne.eid; const bp=document.getElementById('bpBuild'); if(bp) bp._cgPage=0; if(typeof playSfx==='function') playSfx('ui_confirm'); techUIRender(); }
 function techDoProduce(id, bk){ const race=G.tech.race; if(!(G.tech.built[bk]>0)){ if(typeof toast==='function') toast('⛔ 건물 미건설'); return; }
   const b=techGetBldg(race,bk), p=b&&b.produces&&b.produces.find(x=>x.id===id); if(!p) return;
   if(!_techReqMet(p.req)){ if(typeof toast==='function') toast('⛔ 선행 미충족'); return; }
-  if(p.pop && !G.tech.inf && G.tech.sup+p.pop>G.tech.supCap){ if(typeof toast==='function') toast('⛔ 인구 부족'); return; }
+  if(p.pop && !G.tech.inf && G.tech.sup+p.pop>G.tech.supCap){ if(typeof toast==='function') toast('⛔ 인구 부족 (보급 건물 필요)'); return; }
   if(!_techAfford(p.m,p.g)){ if(typeof toast==='function') toast('⛔ 자원 부족'); return; }
   _techSpend(p.m,p.g); G.tech.units[id]=(G.tech.units[id]||0)+1; G.tech.sup+=(p.pop||0); if(p.supply) G.tech.supCap+=p.supply;
+  const be=G.tech.ents.find(e=>e.type==='bldg'&&e.bk===bk), bx=be?be.x:0.5, by=be?be.y:0.5, n=G.tech.units[id], ang=n*2.4, rr=0.045+((n%6)*0.014);
+  G.tech.ents.push({eid:G.tech.eseq++, type:'unit', uid:id, x:Math.max(0.04,Math.min(0.96,bx+Math.cos(ang)*rr)), y:Math.max(0.18,Math.min(0.96,by+0.1+Math.sin(ang)*rr*0.55))});
   if(typeof playSfx==='function') playSfx('ui_confirm'); techUIRender(); }
 function techDoResearch(bk, rk){ const race=G.tech.race, b=techGetBldg(race,bk); if(!b||!b.research) return; const r=b.research.find(x=>x.k===rk); if(!r) return;
   if(!((G.tech.built[bk]>0)||G.tech.addon[bk])){ if(typeof toast==='function') toast('⛔ 건물 미건설'); return; }
@@ -10245,18 +10302,9 @@ function techDoResearch(bk, rk){ const race=G.tech.race, b=techGetBldg(race,bk);
   if(r.tier){ const lv=G.tech.research[key]||0; if(lv>=r.tier.length){ if(typeof toast==='function') toast('최대 레벨'); return; } const c=r.tier[lv]; if(!_techAfford(c[0],c[1])){ if(typeof toast==='function') toast('⛔ 자원 부족'); return; } _techSpend(c[0],c[1]); G.tech.research[key]=lv+1; }
   else { if(G.tech.research[key]){ if(typeof toast==='function') toast('이미 연구됨'); return; } if(!_techAfford(r.m,r.g)){ if(typeof toast==='function') toast('⛔ 자원 부족'); return; } _techSpend(r.m,r.g); G.tech.research[key]=true; }
   if(typeof playSfx==='function') playSfx('ui_confirm'); techUIRender(); }
-function techUIRender(){ if(!G.tech) return; const main=document.getElementById('cstMain'), bar=document.getElementById('cstBar'); if(!main||!bar) return;
-  const model=(G.tech.mode==='prod')?techUIProdModel():(G.tech.mode==='upg')?techUIUpgModel():techUIBuildModel();
-  renderCmdGrid(main, model);
-  let h='<div class="techTabs">'; ['union','swarm','aetherial'].forEach(r=>{ h+='<span class="techTab'+(r===G.tech.race?' on':'')+'" onclick="techRace(\''+r+'\')">'+_TECH_RKO[r]+'</span>'; });
-  h+='</div><div class="techTabs md">'; [['build','🏗 건설'],['prod','⚔ 생산'],['upg','🔬 연구']].forEach(m=>{ h+='<span class="techTab'+(m[0]===G.tech.mode?' on':'')+'" onclick="techMode(\''+m[0]+'\')">'+m[1]+'</span>'; });
-  h+='</div><span class="res cr">'+(G.tech.inf?'∞':G.tech.credit)+' ◈</span><span class="res gs">'+(G.tech.inf?'∞':G.tech.energy)+' ⚡</span><span class="res sp">인구 '+G.tech.sup+'/'+G.tech.supCap+'</span>'
-   +'<span class="cbtn'+(G.tech.inf?' on':'')+'" onclick="techInf()">⚡무한</span><span class="cbtn" onclick="techReset()">↺ 리셋</span>';
-  bar.innerHTML=h; }
-function techRace(r){ const m=document.getElementById('cstMain'); if(m) m._cgPage=0; techUIInit(r); techUIRender(); }
-function techMode(m){ const el=document.getElementById('cstMain'); if(el) el._cgPage=0; G.tech.mode=m; techUIRender(); }
-function techInf(){ G.tech.inf=!G.tech.inf; techUIRender(); }
-function techReset(){ const r=G.tech.race, inf=G.tech.inf; techUIInit(r); G.tech.inf=inf; techUIRender(); }
+function techRace(ev,r){ if(ev&&ev.stopPropagation) ev.stopPropagation(); techUIInit(r); techUIRender(); }
+function techInf(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return; G.tech.inf=!G.tech.inf; techUIRender(); }
+function techReset(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); const r=G.tech?G.tech.race:'union', inf=G.tech?G.tech.inf:false; techUIInit(r); G.tech.inf=inf; techUIRender(); }
 function strikeRandomRace(){ return STK_RACE_ORDER[Math.floor(Math.random()*STK_RACE_ORDER.length)]; }
 function strikeRaceUnits(side){ const r=side&&side.race; return (STK_RACES[r]||STK_RACES.terran).units.slice(); }   // 그 진영 종족의 소환 가능 유닛 id
 // 직스 타일 에셋(기존 assets/tiles 재사용)
