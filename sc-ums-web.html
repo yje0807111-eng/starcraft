@@ -5802,7 +5802,7 @@ function cstCanProduce(uk){ const T=BUILD_TREE[G.cst.race], u=T.units[uk]; if(!u
 const CST_MODEL={
   swarm:{ hatchery:'swarm_hatchery', spawningpool:'swarm_spawning_pool', gasden:'swarm_extractor', burrowden:'swarm_hydralisk_den', spire:'swarm_spire', queennest:'swarm_queens_nest', grandspire:'swarm_greater_spire' },
   aeth:{ nexus:'aetherial_nexus', pylon:'aetherial_pylon', assimilator:'aetherial_assimilator', gateway:'aetherial_gatewa', forge:'aetherial_forge', cybernetics:'aetherial_cybernetics_core', robotics:'aetherial_robotics_facility', stargate:'aetherial_stargate', templar_archive:'aetherial_templar_archives', fleet_beacon:'aetherial_fleet_beacon' },
-  union:{}   // 유니온 신규 건물모델 없음(추후)
+  union:{ command:'union_command_center', depot:'union_supply_depot', refinery:'union_refinery', barracks:'union_barracks', factory:'union_factory', techlab:'union_machine_shop', starport:'union_starport', armory:'union_armory', fusioncore:'union_science_facility' }   // 유니온 9종(엔지니어링 베이 제외)
 };
 function cstShowPreview(bk){ if(!G.cst) return; const T=BUILD_TREE[G.cst.race], b=T&&T.buildings[bk]; if(!b) return;
   const mk=(CST_MODEL[G.cst.race]||{})[bk];
@@ -11780,7 +11780,12 @@ const CST_GLB={
   aetherial_assimilator:'buildings/aetherial/aetherial_assimilator.glb', aetherial_gatewa:'buildings/aetherial/aetherial_gatewa.glb',
   aetherial_forge:'buildings/aetherial/aetherial_forge.glb', aetherial_cybernetics_core:'buildings/aetherial/aetherial_cybernetics_core.glb',
   aetherial_robotics_facility:'buildings/aetherial/aetherial_robotics_facility.glb', aetherial_stargate:'buildings/aetherial/aetherial_stargate.glb',
-  aetherial_templar_archives:'buildings/aetherial/aetherial_templar_archives.glb', aetherial_fleet_beacon:'buildings/aetherial/aetherial_fleet_beacon.glb'
+  aetherial_templar_archives:'buildings/aetherial/aetherial_templar_archives.glb', aetherial_fleet_beacon:'buildings/aetherial/aetherial_fleet_beacon.glb',
+  union_command_center:'buildings/union/union_command_center.glb', union_supply_depot:'buildings/union/union_supply_depot.glb',
+  union_refinery:'buildings/union/union_refinery.glb', union_barracks:'buildings/union/union_barracks.glb',
+  union_factory:'buildings/union/union_factory.glb', union_machine_shop:'buildings/union/union_machine_shop.glb',
+  union_starport:'buildings/union/union_starport.glb', union_armory:'buildings/union/union_armory.glb',
+  union_science_facility:'buildings/union/union_science_facility.glb'
 };
 let _cvRend=null,_cvScene=null,_cvCam=null,_cvGrp=null,_cvRAF=0,_cvCanvas=null,_cvTok=0; const _cvCache={};
 function _cvInit(canvas){ if(_cvRend&&_cvCanvas===canvas) return; _cvCanvas=canvas;
