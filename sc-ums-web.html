@@ -10031,6 +10031,72 @@ TECH_TREE.swarm={ name:'스웜', res:{m:'크레딧', g:'에너지'}, buildings:[
       {k:'chitinous', name:'키틴질 장갑', desc:'저거너트 방어력 +2', m:150, g:150} ] },
   { k:'nydus', name:'나이더스 커널', ico:'🕳', m:150, g:0, req:['hive'] },
 ]};
+TECH_TREE.aetherial={ name:'에테리얼', res:{m:'크레딧', g:'에너지'}, buildings:[
+  // ── 기본·방어 ──
+  { k:'nexus', name:'넥서스', ico:'🔷', m:400, g:0, supply:9, req:[],
+    produces:[{id:'worker_light', name:'결정체', m:50, g:0, pop:1}] },                // 프로브
+  { k:'pylon', name:'파일런', ico:'🔮', m:100, g:0, supply:8, req:[] },               // 동력장
+  { k:'assimilator', name:'어시밀레이터', ico:'🛢', m:100, g:0, gas:true, req:[] },
+  { k:'forge', name:'포지', ico:'⚒️', m:150, g:0, req:['nexus'],
+    research:[
+      {k:'gnd_wpn', name:'지상 무기', desc:'워든·센티넬·보이드 +/티어', tier:[[100,100],[150,150],[200,200]]},
+      {k:'gnd_arm', name:'지상 장갑', desc:'지상 방어 +/티어', tier:[[100,100],[150,150],[200,200]]},
+      {k:'shield', name:'플라즈마 보호막', desc:'모든 유닛 실드 +/티어', tier:[[200,200],[300,300],[400,400]]} ] },
+  { k:'cannon', name:'포톤 캐논', ico:'☄️', m:150, g:0, req:['forge'], detector:true },
+  // ── 관문·지상군 ──
+  { k:'gateway', name:'게이트웨이', ico:'⛩️', m:150, g:0, req:['nexus'],
+    produces:[
+      {id:'blade', name:'워든', m:100, g:0, pop:2},                                   // 질럿
+      {id:'dragoon', name:'센티넬', m:125, g:50, pop:2, req:['cyber']},               // 드라군
+      {id:'high_templar', name:'하이템플러', m:50, g:150, pop:2, req:['archives']},
+      {id:'dark_templar', name:'다크템플러', m:125, g:100, pop:2, req:['archives']}] },
+  { k:'battery', name:'쉴드 배터리', ico:'🔋', m:100, g:0, req:['gateway'] },
+  { k:'cyber', name:'사이버네틱스 코어', ico:'⚙️', m:200, g:0, req:['gateway'],
+    research:[
+      {k:'singularity', name:'특이점 장약', desc:'센티넬 사거리↑', m:150, g:150},
+      {k:'air_wpn', name:'공중 무기', desc:'팔콘·스카이댄서·아크엔젤·크로노스 +/티어', tier:[[100,100],[175,175],[250,250]]},
+      {k:'air_arm', name:'공중 장갑', desc:'공중 방어 +/티어', tier:[[150,150],[225,225],[300,300]]} ] },
+  { k:'citadel', name:'시타델 오브 아둔', ico:'🏯', m:150, g:100, req:['cyber'],
+    research:[{k:'legs', name:'다리 강화', desc:'워든 이동속도↑ (발업)', m:150, g:150}] },
+  { k:'archives', name:'템플러 아카이브', ico:'📚', m:150, g:200, req:['citadel'],
+    research:[
+      {k:'storm', name:'사이오닉 스톰', desc:'하이템플러 범위 번개', m:200, g:200},
+      {k:'hallucination', name:'할루시네이션', desc:'가짜 유닛 생성', m:150, g:150},
+      {k:'khaydarin', name:'케이다린 부적', desc:'하이템플러 최대 에너지 +50', m:150, g:150},
+      {k:'mindcontrol', name:'마인드 컨트롤', desc:'적 유닛 영구 탈취', m:200, g:200},
+      {k:'maelstrom', name:'메일스트롬', desc:'생체 유닛 일정시간 마비', m:100, g:100},
+      {k:'argus', name:'아르거스 부적', desc:'다크아콘 최대 에너지 +50', m:150, g:150} ] },
+  // ── 로보틱스 ──
+  { k:'robo', name:'로보틱스 퍼실리티', ico:'🤖', m:200, g:200, req:['cyber'],
+    produces:[
+      {id:'seraph', name:'세라프', m:200, g:0, pop:2},                                // 셔틀(수송)
+      {id:'observer', name:'와처', m:25, g:75, pop:1, req:['observatory'], detector:true}] },  // 옵저버
+  { k:'robobay', name:'로보틱스 서포트 베이', ico:'🔧', m:150, g:100, req:['robo'],
+    research:[{k:'gravitic_shuttle', name:'중력자 추진기', desc:'세라프 이동속도↑', m:200, g:200}] },
+  { k:'observatory', name:'옵저버터리', ico:'🔭', m:50, g:100, req:['robo'],
+    research:[
+      {k:'gravitic_obs', name:'중력자 승압기', desc:'와처 이동속도↑', m:150, g:150},
+      {k:'sensor', name:'센서 배열', desc:'와처 시야↑', m:150, g:150} ] },
+  // ── 스타게이트·공중군 ──
+  { k:'stargate', name:'스타게이트', ico:'🛸', m:150, g:150, req:['cyber'],
+    produces:[
+      {id:'skydancer', name:'스카이댄서', m:275, g:125, pop:3},                        // 스카웃
+      {id:'falcon', name:'팔콘', m:150, g:100, pop:2},                                 // 커세어
+      {id:'archangel', name:'아크엔젤', m:350, g:250, pop:6, req:['fleet']},            // 캐리어
+      {id:'kronos', name:'크로노스', m:100, g:350, pop:4, req:['tribunal']}] },         // 아비터
+  { k:'fleet', name:'플릿 비콘', ico:'📡', m:300, g:200, req:['stargate'],
+    research:[
+      {k:'apial', name:'에피얼 센서', desc:'스카이댄서 시야↑', m:100, g:100},
+      {k:'gravitic_scout', name:'중력자 추진기', desc:'스카이댄서 이동속도↑', m:200, g:200},
+      {k:'carrier_cap', name:'캐리어 수용력', desc:'요격기 최대 4→8', m:100, g:100},
+      {k:'disruption', name:'디스럽션 웹', desc:'팔콘: 지상 공격 무력화 그물', m:200, g:200},
+      {k:'argus_jewel', name:'아르거스 보석', desc:'팔콘 최대 에너지 +50', m:100, g:100} ] },
+  { k:'tribunal', name:'아비터 트리뷰널', ico:'💎', m:200, g:150, req:['stargate','archives'],
+    research:[
+      {k:'recall', name:'리콜', desc:'아군 대규모 순간이동', m:150, g:150},
+      {k:'stasis', name:'스테이시스 필드', desc:'범위 유닛 무적·행동불가', m:150, g:150},
+      {k:'khaydarin_core', name:'케이다린 코어', desc:'크로노스 최대 에너지 +50', m:150, g:150} ] },
+]};
 // ── 테크트리 → 커맨드 그리드 모델 어댑터(재사용) ──
 function techGetBldg(race,k){ const t=TECH_TREE[race]; return t&&t.buildings.find(b=>b.k===k); }
 function _techUnitPortrait(id){ return (typeof unitPortraitHTML==='function'&&unitPortraitHTML(id))||'<span class="pemoji">🔧</span>'; }
