@@ -954,6 +954,7 @@
   .bmapTop .res.cr{color:#ffce6a}.bmapTop .res.gs{color:#7fd0ff}.bmapTop .res.sp{color:#c8b6ff}
   .bmapTop .cbtn{padding:2px 8px;border-radius:6px;cursor:pointer;font-weight:800;font-size:13px;border:1px solid var(--metal-edge);background:rgba(255,255,255,.05);color:#dbe3ee}
   .bmapTop .cbtn.on{color:#fff;background:linear-gradient(180deg,#2f7d4a,#173a24);border-color:#46f06a}
+  .bmapTop .cbtn.dz{color:#ffc0c0;border-color:rgba(255,90,90,.5);background:rgba(70,18,18,.5)}
   .bent{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;z-index:2}
   .bent .be-ico{font-size:26px;line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))}
   .bent .be-nm{font-size:8.5px;font-weight:800;color:#dfeaff;text-shadow:0 1px 2px #000;white-space:nowrap;margin-top:1px}
@@ -1343,7 +1344,7 @@
   .cmdG .cgSlot:active{transform:translateY(1px)} .cmdG .cgSlot.dim{opacity:.5} .cmdG .cgSlot.dim .cc{color:var(--cgBad)!important}
   .cmdG .cgSlot.max{cursor:default} .cmdG .cgSlot.busy .cgPro{color:var(--cgBad);border-color:var(--cgBad)} .cmdG .cgSlot.busy .cgName{color:var(--cgBad)}
   .cmdG .cgSlot.empty{border-style:dashed;border-color:var(--glass);background:linear-gradient(160deg,rgba(20,22,28,.3),rgba(8,9,12,.4));cursor:default;box-shadow:none} .cmdG .cgSlot.empty::after{display:none}
-  .cmdG .cgPage{display:flex;align-items:center;justify-content:center;gap:11px;height:19px;flex:none}
+  .cmdG .cgPage{display:flex;align-items:center;justify-content:center;gap:7px;height:20px;flex:0 0 auto;margin-left:auto}   /* 헤더 우측 상단 */
   .cmdG .cgPage button{width:24px;height:19px;border-radius:5px;border:1px solid var(--metal-edge);background:rgba(255,255,255,.04);color:var(--caL);cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center}
   .cmdG .cgPage button:disabled{opacity:.3;cursor:default} .cmdG .cgPage .dots{display:flex;gap:5px}
   .cmdG .cgPage .dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.18)} .cmdG .cgPage .dot.on{background:var(--ca);box-shadow:0 0 6px var(--caG)}
@@ -7138,8 +7139,8 @@ function renderCmdGrid(host, m){ const el=(typeof host==='string')?document.getE
   const pager=(pages>1)?('<div class="cgPage"><button onclick="_cgTurn(this,-1)"'+(pg<=0?' disabled':'')+'>◀</button><span class="dots">'+dots+'</span><span class="pn">'+(pg+1)+' / '+pages+'</span><button onclick="_cgTurn(this,1)"'+(pg>=pages-1?' disabled':'')+'>▶</button></div>'):'';
   const pill=m.status?('<span class="cgPill'+(m.statusIdle?' idle':'')+'">'+m.status+'</span>'):'';
   el.innerHTML='<div class="cmdG" data-mode="'+(m.mode||'upg')+'">'
-    +'<div class="cgHead"><div class="cgPort">'+(m.icon||'')+'</div><div class="cgTtl"><div class="cgN">'+(m.title||'')+'</div>'+(m.sub?'<div class="cgS">'+m.sub+'</div>':'')+'</div>'+pill+'</div>'
-    +'<div class="cgBody"><div class="cgInfo">'+_cgInfoHTML(m.info)+'</div><div class="cgCol"><div class="cgGrid">'+cells.join('')+'</div>'+pager+'</div></div></div>'; }
+    +'<div class="cgHead"><div class="cgPort">'+(m.icon||'')+'</div><div class="cgTtl"><div class="cgN">'+(m.title||'')+'</div>'+(m.sub?'<div class="cgS">'+m.sub+'</div>':'')+'</div>'+pill+pager+'</div>'
+    +'<div class="cgBody"><div class="cgInfo">'+_cgInfoHTML(m.info)+'</div><div class="cgCol"><div class="cgGrid">'+cells.join('')+'</div></div></div></div>'; }
 function _cgTurn(btn,delta){ let h=btn; while(h && !h._cgModel) h=h.parentElement; if(!h||!h._cgModel) return; h._cgModel.page=(h._cgPage||0)+delta; renderCmdGrid(h,h._cgModel); }
 // 업그레이드 모델 빌더(현재 무기 강화 데이터 → 커맨드 그리드)
 function cmdGridModelForUpg(b){ const its=bldgUpgs(b), R=G.research;
@@ -10001,13 +10002,21 @@ TECH_TREE.union={ name:'유니온', res:{m:'크레딧', g:'에너지'}, building
 TECH_TREE.swarm={ name:'스웜', res:{m:'크레딧', g:'에너지'}, buildings:[
   // ── 1티어(해처리 단계) ──
   { k:'hatchery', name:'해처리', ico:'🥚', m:300, g:0, supply:1, req:[],
-    produces:[
+    produces:[   // 스타식: 모든 유닛=해처리에서 생산, 테크 건물이 해금(파괴 시 재잠금)
       {id:'worker_swarm', name:'드론', m:50, g:0, pop:1},
-      {id:'overlord', name:'제플린', m:100, g:0, pop:0, supply:8, detector:true}],   // 오버로드
+      {id:'overlord', name:'제플린', m:100, g:0, pop:0, supply:8, detector:true},
+      {id:'snapper', name:'스내퍼', m:50, g:0, pop:1, req:['pool']},
+      {id:'hydra', name:'리퍼', m:75, g:25, pop:1, req:['hydraden']},
+      {id:'thornqueen', name:'베놈퀸', m:50, g:100, pop:2, req:['hydraden','lair']},
+      {id:'wyvern', name:'와이번', m:100, g:100, pop:2, req:['spire']},
+      {id:'stinger', name:'스팅어', m:25, g:75, pop:1, req:['spire']},
+      {id:'medusa', name:'메두사', m:100, g:100, pop:2, req:['queensnest']},
+      {id:'venom', name:'베놈', m:50, g:150, pop:2, req:['defilermound']},
+      {id:'behemoth', name:'베히모스', m:50, g:100, pop:2, req:['gspire']},
+      {id:'ultralisk', name:'저거너트', m:200, g:200, pop:4, req:['ultracavern']}],
     research:[{k:'burrow', name:'버로우', desc:'지상 유닛 잠복', m:100, g:100}] },
   { k:'extractor', name:'익스트랙터', ico:'🛢', m:50, g:0, gas:true, req:['hatchery'] },
-  { k:'pool', name:'스포닝 풀', ico:'🧫', m:200, g:0, req:['hatchery'],
-    produces:[{id:'snapper', name:'스내퍼', m:50, g:0, pop:1}],   // 저글링(알1개 2마리)
+  { k:'pool', name:'스포닝 풀', ico:'🧫', m:200, g:0, req:['hatchery'], unlocks:['snapper'],   // 저글링 해금(생산=해처리)
     research:[
       {k:'metabolic', name:'대사 촉진', desc:'스내퍼 이동속도↑', m:100, g:100},
       {k:'adrenal', name:'아드레날린', desc:'스내퍼 공격속도↑', m:200, g:200, req:['hive']} ] },
@@ -10016,10 +10025,7 @@ TECH_TREE.swarm={ name:'스웜', res:{m:'크레딧', g:'에너지'}, buildings:[
       {k:'melee_atk', name:'근접 공격력', desc:'스내퍼·스웜링·저거너트 +/티어', tier:[[100,100],[150,150],[200,200]]},
       {k:'range_atk', name:'원거리 공격력', desc:'리퍼·베놈퀸 +/티어', tier:[[100,100],[150,150],[200,200]]},
       {k:'gnd_def', name:'지상 방어력', desc:'모든 지상 +/티어', tier:[[150,150],[225,225],[300,300]]} ] },
-  { k:'hydraden', name:'히드라리스크 덴', ico:'🐍', m:100, g:50, req:['pool'],
-    produces:[
-      {id:'hydra', name:'리퍼', m:75, g:25, pop:1},                                   // 히드라리스크
-      {id:'thornqueen', name:'베놈퀸', m:50, g:100, pop:2, req:['lair']}],            // 럴커(리퍼 변태)
+  { k:'hydraden', name:'히드라리스크 덴', ico:'🐍', m:100, g:50, req:['pool'], unlocks:['hydra','thornqueen'],   // 리퍼·럴커 해금
     research:[
       {k:'muscle', name:'근육 보강', desc:'리퍼 이동속도↑', m:150, g:150},
       {k:'grooved', name:'가시 홈', desc:'리퍼 사거리 +1', m:150, g:150},
@@ -10033,31 +10039,24 @@ TECH_TREE.swarm={ name:'스웜', res:{m:'크레딧', g:'에너지'}, buildings:[
       {k:'pneuma', name:'기낭 갑각', desc:'제플린 이동속도↑', m:150, g:150},
       {k:'antennae', name:'촉각', desc:'제플린 시야↑', m:150, g:150},
       {k:'ventral', name:'복강 주머니', desc:'제플린 수송(드랍) 가능', m:200, g:200} ] },
-  { k:'spire', name:'스파이어', ico:'🦇', m:200, g:150, req:['lair'],
-    produces:[
-      {id:'wyvern', name:'와이번', m:100, g:100, pop:2},                              // 뮤탈리스크
-      {id:'stinger', name:'스팅어', m:25, g:75, pop:1}],                              // 스컬지(알1개 2마리)
+  { k:'spire', name:'스파이어', ico:'🦇', m:200, g:150, req:['lair'], unlocks:['wyvern','stinger'],   // 와이번·스팅어 해금
     research:[
       {k:'fly_atk', name:'비행 공격력', desc:'와이번·스팅어·베히모스 +/티어', tier:[[100,100],[175,175],[250,250]]},
       {k:'fly_def', name:'비행 방어력', desc:'비행 방어 +/티어', tier:[[150,150],[225,225],[300,300]]} ] },
-  { k:'queensnest', name:'퀸즈 네스트', ico:'👑', m:150, g:150, req:['lair'],
-    produces:[{id:'medusa', name:'메두사', m:100, g:100, pop:2}],                     // 퀸
+  { k:'queensnest', name:'퀸즈 네스트', ico:'👑', m:150, g:150, req:['lair'], unlocks:['medusa'],   // 메두사(퀸) 해금
     research:[
       {k:'ensnare', name:'인스네어', desc:'적 이동·공속 감소', m:100, g:100},
       {k:'broodling', name:'스폰 브루들링', desc:'적 생체 즉사+스웜링 생성', m:100, g:100},
       {k:'gamete', name:'생식 세포 분열', desc:'메두사 최대 에너지 +50', m:150, g:150} ] },
   // ── 3티어(하이브 단계) ──
   { k:'hive', name:'하이브', ico:'🌋', m:200, g:150, req:['queensnest'] },
-  { k:'gspire', name:'그레이터 스파이어', ico:'🦅', m:100, g:150, req:['hive','spire'],
-    produces:[{id:'behemoth', name:'베히모스', m:50, g:100, pop:2}] },                // 가디언(와이번 변태)
-  { k:'defilermound', name:'디파일러 마운드', ico:'🦂', m:100, g:100, req:['hive'],
-    produces:[{id:'venom', name:'베놈', m:50, g:150, pop:2}],                         // 디파일러
+  { k:'gspire', name:'그레이터 스파이어', ico:'🦅', m:100, g:150, req:['hive','spire'], unlocks:['behemoth'] },   // 가디언 해금
+  { k:'defilermound', name:'디파일러 마운드', ico:'🦂', m:100, g:100, req:['hive'], unlocks:['venom'],   // 디파일러 해금
     research:[
       {k:'consume', name:'컨슘', desc:'아군 잡아먹어 에너지 +50', m:100, g:100},
       {k:'plague', name:'플레이그', desc:'광역 지속 체력 감소', m:200, g:200},
       {k:'metasynaptic', name:'후성 신경절', desc:'베놈 최대 에너지 +50', m:150, g:150} ] },
-  { k:'ultracavern', name:'울트라리스크 케번', ico:'🦏', m:150, g:200, req:['hive'],
-    produces:[{id:'ultralisk', name:'저거너트', m:200, g:200, pop:4}],                // 울트라리스크
+  { k:'ultracavern', name:'울트라리스크 케번', ico:'🦏', m:150, g:200, req:['hive'], unlocks:['ultralisk'],   // 저거너트 해금
     research:[
       {k:'anabolic', name:'동화작용', desc:'저거너트 이동속도↑', m:200, g:200},
       {k:'chitinous', name:'키틴질 장갑', desc:'저거너트 방어력 +2', m:150, g:150} ] },
@@ -10264,12 +10263,18 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
     else { inner=_techUnitPortrait(e.uid); cls='unit'; }
     ents+='<div class="bent '+cls+(G.tech.sel===e.eid?' sel':'')+'" style="left:'+(e.x*100).toFixed(2)+'%;top:'+(e.y*100).toFixed(2)+'%">'+inner+'</div>'; }
   let tabs=''; ['union','swarm','aetherial'].forEach(r=>{ tabs+='<span class="techTab'+(r===race?' on':'')+'" onclick="techRace(event,\''+r+'\')">'+_TECH_RKO[r]+'</span>'; });
-  const res='<span class="res cr">'+(G.tech.inf?'∞':G.tech.credit)+'◈</span><span class="res gs">'+(G.tech.inf?'∞':G.tech.energy)+'⚡</span><span class="res sp">👤'+G.tech.sup+'/'+G.tech.supCap+'</span><span class="cbtn'+(G.tech.inf?' on':'')+'" onclick="techInf(event)">∞</span><span class="cbtn" onclick="techReset(event)">↺</span>';
+  const selE=(G.tech.sel!=null)?G.tech.ents.find(e=>e.eid===G.tech.sel):null, canDemo=selE&&selE.type==='bldg'&&((techGetBldg(race,selE.bk)||{}).k!==TECH_TREE[race].buildings[0].k);
+  const res='<span class="res cr">'+(G.tech.inf?'∞':G.tech.credit)+'◈</span><span class="res gs">'+(G.tech.inf?'∞':G.tech.energy)+'⚡</span><span class="res sp">👤'+G.tech.sup+'/'+G.tech.supCap+'</span>'
+    +(canDemo?'<span class="cbtn dz" onclick="techDemolish(event)">🗑 철거</span>':'')+'<span class="cbtn'+(G.tech.inf?' on':'')+'" onclick="techInf(event)">∞</span><span class="cbtn" onclick="techReset(event)">↺</span>';
   const hint=G.tech.arm?('📍 '+((techGetBldg(race,G.tech.arm)||{}).name)+' — 지을 곳을 탭'):(G.tech.sel==null?'일꾼을 탭 → 하단에서 건물 선택 → 맵을 탭해 배치':'건물을 탭하면 생산·연구가 하단에 표시됩니다');
   map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+'" onpointerdown="techMapClick(event)"><div class="bmapTop"><div class="techTabs">'+tabs+'</div><div class="bres">'+res+'</div></div>'+ents+'<div class="bhint'+(G.tech.arm?' on':'')+'">'+hint+'</div></div>'; }
+function techBldgInfoModel(b){ const race=G.tech.race, hb=TECH_TREE[race].buildings[0];
+  const items=(b.unlocks||[]).map(uid=>{ const p=(hb.produces||[]).find(x=>x.id===uid)||{}; return { pro:_techUnitPortrait(uid), sn:p.name||uid, cr:p.m||0, en:p.g||0, meta:p.pop?'👤'+p.pop:'', state:'ok', act:'' }; });
+  return { mode:'prod', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', sub:'이 건물이 해금 · 생산은 '+hb.name+'에서', items,
+    info:{ eb:'해금', name:b.name, desc:'테크 건물 — 생산은 '+hb.name+'에서. 철거 시 해당 유닛 재잠금.', stats:[['해금 유닛',(b.unlocks||[]).length+'종']], cr:0, en:0 } }; }
 function techPanelRender(){ const host=document.getElementById('bpBuild'); if(!host) return;
   const sel=(G.tech.sel!=null)?G.tech.ents.find(e=>e.eid===G.tech.sel):null; let model;
-  if(sel&&sel.type==='bldg'){ const b=techGetBldg(G.tech.race,sel.bk); model=(b&&b.produces)?techBldgProdModel(b):((b&&b.research)?techBldgUpgModel(b):techBuildListModel()); }
+  if(sel&&sel.type==='bldg'){ const b=techGetBldg(G.tech.race,sel.bk); model=(b&&b.produces)?techBldgProdModel(b):((b&&b.research)?techBldgUpgModel(b):((b&&b.unlocks)?techBldgInfoModel(b):techBuildListModel())); }
   else model=techBuildListModel();   // 일꾼·무선택 → 건설 목록
   renderCmdGrid(host, model); }
 // 입력
@@ -10305,6 +10310,13 @@ function techDoResearch(bk, rk){ const race=G.tech.race, b=techGetBldg(race,bk);
 function techRace(ev,r){ if(ev&&ev.stopPropagation) ev.stopPropagation(); techUIInit(r); techUIRender(); }
 function techInf(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return; G.tech.inf=!G.tech.inf; techUIRender(); }
 function techReset(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); const r=G.tech?G.tech.race:'union', inf=G.tech?G.tech.inf:false; techUIInit(r); G.tech.inf=inf; techUIRender(); }
+function techDemolish(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech||G.tech.sel==null) return;
+  const e=G.tech.ents.find(x=>x.eid===G.tech.sel); if(!e||e.type!=='bldg') return; const race=G.tech.race, b=techGetBldg(race,e.bk), main=TECH_TREE[race].buildings[0];
+  if(!b||b.k===main.k){ if(typeof toast==='function') toast('본진은 철거 불가'); return; }
+  if(b.addonTo) G.tech.addon[b.k]=false; else G.tech.built[b.k]=Math.max(0,(G.tech.built[b.k]||0)-1);
+  G.tech.supCap=Math.max(0,G.tech.supCap-(b.supply||0));
+  G.tech.ents=G.tech.ents.filter(x=>x.eid!==e.eid); G.tech.sel=null;
+  if(typeof playSfx==='function') playSfx('ui_confirm'); if(typeof toast==='function') toast('🗑 '+b.name+' 철거 — 해금 유닛 재잠금'); techUIRender(); }
 function strikeRandomRace(){ return STK_RACE_ORDER[Math.floor(Math.random()*STK_RACE_ORDER.length)]; }
 function strikeRaceUnits(side){ const r=side&&side.race; return (STK_RACES[r]||STK_RACES.terran).units.slice(); }   // 그 진영 종족의 소환 가능 유닛 id
 // 직스 타일 에셋(기존 assets/tiles 재사용)
