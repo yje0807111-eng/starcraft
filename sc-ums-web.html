@@ -9886,6 +9886,105 @@ const STK_MAIN={
   zerg:    {key:'hatchery', name:'해처리',      ico:'🥚', fp:[4,3], produces:[]},
   protoss: {key:'nexus',    name:'넥서스',      ico:'🔷', fp:[4,3], produces:[]},
 };
+// ══ 테크트리 데이터(SC1 구조 → 게임 로스터·개명 유닛 매핑) ══
+//   자원: SC1 미네랄→크레딧(m,◈) / 가스→에너지(g,⚡) · 신규 이중자원 없음(기존 재화 재활용)
+//   b = 건물 { k,name,ico, m,g(건설비), req[](선행 건물키), supply,gas,lift,detector, addonTo(애드온 부착 대상),
+//             produces:[{id,name,m,g,pop,req[]}], research:[{k,name,desc,m,g} | {k,name,desc,tier:[[m,g]..]}] }
+const TECH_TREE={};
+TECH_TREE.union={ name:'유니온', res:{m:'크레딧', g:'에너지'}, buildings:[
+  // ── 기본·자원 ──
+  { k:'command', name:'커맨드 센터', ico:'🏢', m:400, g:0, supply:10, req:[], lift:true,
+    produces:[{id:'worker_human', name:'엔지니어', m:50, g:0, pop:1}] },
+  { k:'supply', name:'서플라이 디팟', ico:'🏠', m:100, g:0, supply:8, req:['command'] },
+  { k:'refinery', name:'리파이너리', ico:'🛢', m:100, g:0, gas:true, req:['command'] },
+  // ── 보병(바이오닉)·방어 ──
+  { k:'barracks', name:'배럭', ico:'🏛', m:150, g:0, req:['command'], lift:true,
+    produces:[
+      {id:'marine', name:'레인저', m:50, g:0, pop:1},
+      {id:'machinegun', name:'발칸', m:50, g:25, pop:1, req:['academy']},   // 파이어뱃
+      {id:'medic', name:'메딕', m:50, g:25, pop:1, req:['academy']},
+      {id:'ghost', name:'팬텀', m:25, g:75, pop:1, req:['scifac','covert']} ] },
+  { k:'academy', name:'아카데미', ico:'🎓', m:150, g:0, req:['barracks'],
+    research:[
+      {k:'u238', name:'U-238 탄환', desc:'레인저 사거리 +1', m:150, g:150},
+      {k:'stim', name:'스팀팩', desc:'레인저·발칸 이속·공속↑(체력 소모)', m:100, g:100},
+      {k:'flare', name:'메디컬 플레어', desc:'메딕 시야 회복 스킬', m:100, g:100},
+      {k:'restore', name:'리스토레이션', desc:'메딕 디버프 해제', m:100, g:100},
+      {k:'caduceus', name:'카두세우스', desc:'메딕 최대 에너지 +50', m:150, g:150} ] },
+  { k:'engbay', name:'엔지니어링 베이', ico:'⚙️', m:125, g:0, req:['command'], lift:true,
+    research:[
+      {k:'inf_atk', name:'보병 공격력', desc:'레인저·발칸·팬텀 공격 +1/티어', tier:[[100,100],[175,175],[250,250]]},
+      {k:'inf_def', name:'보병 방어력', desc:'보병 방어 +1/티어', tier:[[100,100],[175,175],[250,250]]} ] },
+  { k:'bunker', name:'벙커', ico:'🧱', m:100, g:0, req:['barracks'] },
+  { k:'turret', name:'미사일 터렛', ico:'📡', m:75, g:0, req:['engbay'], detector:true },
+  // ── 기갑(메카)·공중 ──
+  { k:'factory', name:'팩토리', ico:'🏭', m:200, g:100, req:['barracks'], lift:true,
+    produces:[
+      {id:'racer', name:'레이서', m:75, g:0, pop:2},                        // 벌처
+      {id:'tank', name:'브레이커', m:150, g:100, pop:2, req:['machshop']},   // 시즈 탱크
+      {id:'goliath', name:'스트라이더', m:100, g:50, pop:2, req:['armory']} ] },
+  { k:'machshop', name:'머신 샵', ico:'🛠', m:50, g:50, addonTo:'factory',
+    research:[
+      {k:'ion', name:'이온 추진기', desc:'레이서 이동속도↑', m:100, g:100},
+      {k:'mine', name:'스파이더 마인', desc:'레이서 마인 3개 사용', m:100, g:100},
+      {k:'siege', name:'시즈 모드', desc:'브레이커 장거리 포격 모드', m:150, g:150},
+      {k:'charon', name:'카론 증폭기', desc:'스트라이더 대공 사거리↑', m:150, g:150} ] },
+  { k:'armory', name:'아머리', ico:'⚔️', m:100, g:50, req:['factory'],
+    research:[
+      {k:'veh_atk', name:'차량 공격력', desc:'레이서·브레이커·스트라이더 +/티어', tier:[[100,100],[175,175],[250,250]]},
+      {k:'veh_def', name:'차량 방어력', desc:'차량 방어 +/티어', tier:[[100,100],[175,175],[250,250]]},
+      {k:'air_atk', name:'함선 공격력', desc:'템페스트·헬파이어·드레드노트 +/티어', tier:[[100,100],[175,175],[250,250]]},
+      {k:'air_def', name:'함선 방어력', desc:'함선 방어 +/티어', tier:[[150,150],[225,225],[300,300]]} ] },
+  { k:'starport', name:'스타포트', ico:'🚀', m:150, g:100, req:['factory'], lift:true,
+    produces:[
+      {id:'skyguard', name:'템페스트', m:150, g:100, pop:2},                                  // 레이스
+      {id:'pelican', name:'펠리컨', m:100, g:100, pop:2, req:['control']},                     // 드랍십
+      {id:'hellfire', name:'헬파이어', m:250, g:125, pop:3, req:['control','armory']},          // 발키리
+      {id:'dreadnought', name:'드레드노트', m:400, g:300, pop:6, req:['control','physics']} ] },// 배틀크루저
+  { k:'control', name:'컨트롤 타워', ico:'🗼', m:50, g:50, addonTo:'starport',
+    research:[
+      {k:'cloak_w', name:'은폐장', desc:'템페스트 은신 스킬', m:150, g:150},
+      {k:'apollo', name:'아폴로 반응로', desc:'템페스트 최대 에너지 +50', m:150, g:150} ] },
+  // ── 고급 기술 ──
+  { k:'scifac', name:'사이언스 퍼실리티', ico:'🔬', m:100, g:150, req:['starport'], lift:true,
+    research:[
+      {k:'emp', name:'EMP 충격파', desc:'대상 지역 에너지·보호막 소거', m:200, g:200},
+      {k:'irradiate', name:'이레디에이트', desc:'생체 유닛 지속 방사능 피해', m:200, g:200},
+      {k:'titan', name:'타이탄 반응로', desc:'지원함 최대 에너지 +50', m:150, g:150} ] },
+  { k:'covert', name:'코버트 옵스', ico:'👁️', m:50, g:50, addonTo:'scifac',
+    research:[
+      {k:'lockdown', name:'락다운', desc:'기계 유닛 일정시간 마비', m:200, g:200},
+      {k:'cloak_g', name:'은폐장', desc:'팬텀 은신 스킬', m:100, g:100},
+      {k:'ocular', name:'오큘러 임플란트', desc:'팬텀 시야·사거리 +1', m:100, g:100},
+      {k:'moebius', name:'뫼비우스 반응로', desc:'팬텀 최대 에너지 +50', m:150, g:150} ] },
+  { k:'physics', name:'피직스 랩', ico:'🌌', m:50, g:50, addonTo:'scifac',
+    research:[
+      {k:'yamato', name:'야마토 포', desc:'드레드노트 단일 대상 강력 포격', m:200, g:200},
+      {k:'colossus', name:'콜로서스 반응로', desc:'드레드노트 최대 에너지 +50', m:150, g:150} ] },
+  { k:'comsat', name:'컴셋 스테이션', ico:'📡', m:50, g:50, addonTo:'command', req:['academy'], detector:true },
+  { k:'nuke', name:'뉴클리어 사일로', ico:'☢️', m:50, g:50, addonTo:'command', req:['covert'],
+    produces:[{id:'nuke', name:'핵미사일', m:200, g:200, pop:8}] },
+]};
+// ── 테크트리 → 커맨드 그리드 모델 어댑터(재사용) ──
+function techGetBldg(race,k){ const t=TECH_TREE[race]; return t&&t.buildings.find(b=>b.k===k); }
+function _techUnitPortrait(id){ return (typeof unitPortraitHTML==='function'&&unitPortraitHTML(id))||'<span class="pemoji">🔧</span>'; }
+function techBuildModel(race, actFn){ const t=TECH_TREE[race]; if(!t) return null;   // 건설 목록(애드온 제외한 독립 건물)
+  const items=t.buildings.filter(b=>!b.addonTo).map(b=>({ pro:'<span class="pemoji">'+b.ico+'</span>', sn:b.name, cr:b.m||0, en:b.g||0,
+    meta:b.supply?('👤+'+b.supply):(b.detector?'탐지':''), state:'ok', act:actFn?actFn(b.k):'' }));
+  return { mode:'build', title:t.name+' 건설', icon:'<span class="pemoji">👷</span>', sub:'건설 가능 '+items.length+'종', items,
+    info:{ eb:'테크트리', name:t.name, desc:'건물을 선택해 건설', stats:[['자원','◈'+t.res.m+' · ⚡'+t.res.g]], progLabel:'배치', progVal:'지점 선택', prog:0, time:'탭하여 건설' } }; }
+function techProdModel(race, k, actFn){ const b=techGetBldg(race,k); if(!b||!b.produces) return null;   // 건물 생산 유닛
+  const items=b.produces.map(p=>({ pro:_techUnitPortrait(p.id), sn:p.name, cr:p.m||0, en:p.g||0, meta:p.pop?('👤'+p.pop):'', state:'ok', act:actFn?actFn(p.id):'' }));
+  const f=b.produces[0]||{};
+  return { mode:'prod', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', sub:'생산 '+items.length+'종', items,
+    info:{ eb:'선택 · 생산', name:f.name||'', desc:f.req&&f.req.length?('선행: '+f.req.join(', ')):'', progLabel:'인구', progVal:'👤'+(f.pop||1), prog:0, cr:f.m||0, en:f.g||0, time:'탭하여 생산' } }; }
+function techUpgModel(race, k, actFn){ const b=techGetBldg(race,k); if(!b||!b.research) return null;   // 건물 업그레이드/연구
+  const items=b.research.map(r=>{ if(r.tier){ const lv=(G.techUpg&&G.techUpg[race+'_'+r.k])||0, isMax=lv>=r.tier.length, nx=r.tier[Math.min(lv,r.tier.length-1)];
+      return { pro:'<span class="pemoji">🔬</span>', sn:r.name, cr:isMax?0:nx[0], en:isMax?0:nx[1], meta:isMax?'MAX':('Lv.'+lv), metaCls:'lv', state:isMax?'max':'ok', act:(actFn&&!isMax)?actFn(r.k):'' }; }
+    const done=(G.techRes&&G.techRes[race+'_'+r.k]); return { pro:'<span class="pemoji">🔬</span>', sn:r.name, cr:done?0:(r.m||0), en:done?0:(r.g||0), meta:done?'완료':'연구', metaCls:'lv', state:done?'max':'ok', act:(actFn&&!done)?actFn(r.k):'' }; });
+  const f=b.research[0]||{};
+  return { mode:'upg', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', sub:'연구 '+items.length+'종', items,
+    info:{ eb:'선택 · 연구', name:f.name||'', desc:f.desc||'', progLabel:'상태', progVal:f.tier?('1/'+f.tier.length):'연구', prog:0, cr:f.tier?f.tier[0][0]:(f.m||0), en:f.tier?f.tier[0][1]:(f.g||0), time:'탭하여 연구' } }; }
 function strikeRandomRace(){ return STK_RACE_ORDER[Math.floor(Math.random()*STK_RACE_ORDER.length)]; }
 function strikeRaceUnits(side){ const r=side&&side.race; return (STK_RACES[r]||STK_RACES.terran).units.slice(); }   // 그 진영 종족의 소환 가능 유닛 id
 // 직스 타일 에셋(기존 assets/tiles 재사용)
