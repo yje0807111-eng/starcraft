@@ -2238,7 +2238,7 @@
       <button class="btCtlBtn" onclick="sbCombatHurt()">아군손상</button>
       <button class="btCtlBtn" onclick="sbCombatReset()">리셋</button>
       <button class="btCtlBtn" onclick="btClear()">필드비우기</button>
-      <button class="btCtlBtn" onclick="runBalanceSim()">⚖ 검증</button>
+      <button class="btCtlBtn" onclick="runBalanceSim('cost')">⚖ 검증</button>
       <span class="btCtlCnt" id="btCtlCount">적 0 · 아군 0</span>
     </div>
     <!-- ⚖ 밸런스 자동검증 결과 패널 -->
@@ -6611,29 +6611,34 @@ function _balCombatUnits(){ const out=[]; if(typeof SANDBOX_ROSTER==='undefined'
     if(/worker_/.test(key)||(d.dmg||0)<=0) continue;   // 일꾼·무공격 제외
     out.push({key, base:it.b, gm:it.gm, name:it.n, race}); } }
   return out; }
+function _balCost(key){ return (typeof STK_UNITS!=='undefined' && STK_UNITS[key] && STK_UNITS[key].cost)? STK_UNITS[key].cost : 150; }   // 유닛 비용(직스 기준 — 유일한 비용 정의처)
+function _balCount(item, mode, budget, N){ if(mode==='cost') return Math.max(1, Math.min(20, Math.round(budget/_balCost(item.key)))); return N; }   // 동일비용=budget/비용 · 동수=N
 function _balArmy(item, team, N, x0){ const arr=[]; if(G.idSeq==null)G.idSeq=1; const sid=(item.gm&&U[item.gm])?item.gm:item.base;
-  for(let i=0;i<N;i++){ const u=initUnitStats({uid:G.idSeq++, id:sid, hero:false, lv:1, x:x0, y:0.28+i*0.09, cd:0, fixed:false});
+  for(let i=0;i<N;i++){ const col=(i/8)|0, row=i%8;   // 8기 단위 열 배치(대규모 물량 대응)
+    const x=(team==='ally')?Math.max(0.05,0.22-col*0.05):Math.min(0.95,0.78+col*0.05), y=0.12+row*0.085;
+    const u=initUnitStats({uid:G.idSeq++, id:sid, hero:false, lv:1, x:x, y:y, cd:0, fixed:false});
     if(item.gm) u.gmodel=item.gm; u.gname=item.name; u.team=team; u._btCd=0; u._detAlly=true; u._detFoe=true; u.moveTo=null; u.slowT=0; u.stunT=0; u.empT=0;   // 은신 무력화(순수 전투력 측정)
     arr.push(u); } return arr; }
-function _balDuel(A, B, N){ const ally=_balArmy(A,'ally',N,0.2), foe=_balArmy(B,'foe',N,0.8); G.units=ally.concat(foe);
+function _balDuel(A, B, opts){ const na=_balCount(A,opts.mode,opts.budget,opts.N), nb=_balCount(B,opts.mode,opts.budget,opts.N);
+  const ally=_balArmy(A,'ally',na,0.2), foe=_balArmy(B,'foe',nb,0.8); G.units=ally.concat(foe);
   const dt=0.1; let t=0;
-  while(t<18){ t+=dt; stepSbCombat(dt); let a=0,f=0; for(const u of G.units){ if(u.maxHp&&(u.hp!=null?u.hp:u.maxHp)<=0) continue; if(u.team==='foe')f++; else a++; } if(a===0||f===0) break; }
+  while(t<20){ t+=dt; stepSbCombat(dt); let a=0,f=0; for(const u of G.units){ if(u.maxHp&&(u.hp!=null?u.hp:u.maxHp)<=0) continue; if(u.team==='foe')f++; else a++; } if(a===0||f===0) break; }
   let a=0,f=0; for(const u of G.units){ if(u.maxHp&&(u.hp!=null?u.hp:u.maxHp)<=0) continue; if(u.team==='foe')f++; else a++; }
   return a>f?1:(f>a?-1:0); }
-function runBalanceSim(){ if(typeof G==='undefined'||G._balSimRunning) return;
+function runBalanceSim(mode){ if(typeof G==='undefined'||G._balSimRunning) return; mode=(mode==='count')?'count':'cost';   // 기본=동일비용
   const units=_balCombatUnits(); if(units.length<2){ if(typeof toast==='function') toast('전투 유닛이 부족합니다'); return; }
-  const N=5, sv={units:G.units, tab:G.tab, comb:G.sbCombat, bal:G._balSim, sel:(G.sel||[]).slice(), idSeq:G.idSeq};
+  const opts={mode, budget:1000, N:5}, sv={units:G.units, tab:G.tab, comb:G.sbCombat, bal:G._balSim, sel:(G.sel||[]).slice(), idSeq:G.idSeq};
   G._balSim=true; G._balSimRunning=true; G.tab='Battle'; G.sbCombat=true; G.sel=[];
   const rec={}; units.forEach(u=>rec[u.key]={name:u.name,race:u.race,w:0,d:0,l:0});
   const pairs=[]; for(let i=0;i<units.length;i++)for(let j=i+1;j<units.length;j++) pairs.push([i,j]);
   let pi=0; _balOpenPanel(); _balShowProgress(0, pairs.length);
   function _balRestore(){ G.units=sv.units; G.tab=sv.tab; G.sbCombat=sv.comb; G._balSim=sv.bal; G.sel=sv.sel; G._balSimRunning=false; if(window.M3D&&M3D.clearGameModels) M3D.clearGameModels(); }   // 원상복구(정상·에러 공통)
   function chunk(){ try{ const t0=Date.now();
-      while(pi<pairs.length && Date.now()-t0<45){ const pr=pairs[pi++]; const r=_balDuel(units[pr[0]],units[pr[1]],N); const a=units[pr[0]].key,b=units[pr[1]].key;
+      while(pi<pairs.length && Date.now()-t0<45){ const pr=pairs[pi++]; const r=_balDuel(units[pr[0]],units[pr[1]],opts); const a=units[pr[0]].key,b=units[pr[1]].key;
         if(r>0){rec[a].w++;rec[b].l++;} else if(r<0){rec[a].l++;rec[b].w++;} else {rec[a].d++;rec[b].d++;} }
       _balShowProgress(pi, pairs.length);
       if(pi<pairs.length){ setTimeout(chunk,0); return; }
-      _balRestore(); _balRenderResults(rec, units, N);
+      _balRestore(); _balRenderResults(rec, units, opts);
     }catch(err){ _balRestore(); const b=document.getElementById('balBody'); if(b) b.innerHTML='<div style="padding:22px;color:#ff9a9a">검증 오류: '+((err&&err.message)||err)+'</div>'; } }
   setTimeout(chunk,0); }
 function _balOpenPanel(){ const p=document.getElementById('balPanel'); if(p) p.classList.remove('hide'); }
@@ -6641,16 +6646,19 @@ function closeBalPanel(){ const p=document.getElementById('balPanel'); if(p) p.c
 function _balShowProgress(done,total){ const b=document.getElementById('balBody'), s=document.getElementById('balSub'); if(!b) return;
   const pct=total?Math.round(done/total*100):0; if(s) s.textContent='검증 중 '+done+'/'+total;
   b.innerHTML='<div style="padding:26px 4px;text-align:center;color:#bcd">실제 전투코드로 동수 대결 시뮬 중…<div style="margin-top:12px;height:12px;border-radius:6px;background:rgba(255,255,255,.08);overflow:hidden"><div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#5aa8ff,#9fd356);transition:width .1s"></div></div><div style="margin-top:8px;font:700 13px Rajdhani,sans-serif">'+pct+'%</div></div>'; }
-function _balRenderResults(rec, units, N){ const b=document.getElementById('balBody'), s=document.getElementById('balSub'); if(!b) return;
+function _balModeBtns(mode){ function bt(m,lb){ const on=(mode===m); return '<button onclick="runBalanceSim(\''+m+'\')" style="flex:1;padding:7px 4px;border-radius:7px;cursor:pointer;font-weight:800;font-size:11px;border:1px solid '+(on?'#5aa8ff':'var(--metal-edge)')+';'+(on?'background:linear-gradient(180deg,#2a6cbb,#163a6e);color:#fff':'background:rgba(255,255,255,.05);color:#9aabbc')+'">'+lb+'</button>'; }
+  return '<div style="display:flex;gap:6px;margin-bottom:8px">'+bt('cost','💰 동일비용 1000')+bt('count','⚔ 동수 5v5')+'</div>'; }
+function _balRenderResults(rec, units, opts){ const b=document.getElementById('balBody'), s=document.getElementById('balSub'); if(!b) return; const mode=opts.mode;
   const rows=units.map(u=>({...u, ...rec[u.key], score:rec[u.key].w-rec[u.key].l})).sort((x,y)=>y.score-x.score);
   const maxAbs=Math.max(1,...rows.map(r=>Math.abs(r.score)));
   const races={}; for(const race in _BAL_RKO){ const us=rows.filter(r=>r.race===race); if(us.length) races[race]=us.reduce((a,r)=>a+r.score,0)/us.length; }
-  if(s) s.textContent=(N+'v'+N+' 동수 · '+units.length+'종 · '+(units.length*(units.length-1)/2)+'대결');
-  let html='<div class="balRaceRow">';
+  if(s) s.textContent=units.length+'종 · '+(units.length*(units.length-1)/2)+'대결';
+  let html=_balModeBtns(mode)+'<div class="balRaceRow">';
   for(const race in races){ html+='<div class="rc" style="border-color:'+_BAL_RCOL[race]+'55"><span style="font-size:11px;color:'+_BAL_RCOL[race]+'">'+_BAL_RKO[race]+'</span><b style="color:'+_BAL_RCOL[race]+'">'+(races[race]>0?'+':'')+races[race].toFixed(1)+'</b><span style="font-size:9px;color:#8899aa">평균점수</span></div>'; }
-  html+='</div><div style="font-size:10px;color:#8899aa;margin:2px 0 8px">승−패 점수 · 초록=강세 빨강=약세 (동수·무비용 기준)</div>';
+  html+='</div><div style="font-size:10px;color:#8899aa;margin:2px 0 8px">'+(mode==='cost'?'💰 <b>동일비용 1000크레딧</b>씩 뽑아 대결 (×N=구매 수량 · 직스 비용 기준)':'⚔ <b>동수 5v5</b> — 한 마리 순수 전투력')+' · 초록=강세 빨강=약세</div>';
   for(const r of rows){ const w=Math.abs(r.score)/maxAbs*50, col=r.score>=0?'#5ad18a':'#e07070', side=r.score>=0?'left:50%':'right:50%';
-    html+='<div class="balRow"><span class="bn" style="color:'+_BAL_RCOL[r.race]+'">'+r.name+'</span>'
+    const tag=(mode==='cost')?('<span style="color:#8899aa;font-size:9px;font-weight:600">×'+_balCount(r,'cost',opts.budget,opts.N)+'</span>'):'';
+    html+='<div class="balRow"><span class="bn" style="color:'+_BAL_RCOL[r.race]+'">'+r.name+' '+tag+'</span>'
       +'<span class="bbar"><span style="position:absolute;left:50%;top:0;bottom:0;width:1px;background:rgba(255,255,255,.25)"></span><i style="'+side+';width:'+w+'%;background:'+col+'"></i></span>'
       +'<span class="bsc" style="color:'+col+'">'+(r.score>0?'+':'')+r.score+' <span style="color:#7a8;font-size:9px">'+r.w+'/'+r.l+'</span></span></div>'; }
   b.innerHTML=html; }
