@@ -938,10 +938,11 @@
   #cstMain{flex:1;min-height:0;width:100%;position:relative;overflow:hidden;padding:0}
   #bpBuild{display:flex;flex-direction:column;padding:8px;min-height:0}
   .bmap{position:absolute;inset:0;overflow:hidden;cursor:crosshair;
-    background:linear-gradient(0deg,rgba(0,0,0,.25),rgba(0,0,0,.1)),
+    background:linear-gradient(0deg,rgba(8,12,20,.46),rgba(8,12,20,.24)),
       repeating-linear-gradient(0deg,transparent 0 27px,rgba(120,150,190,.06) 27px 28px),
       repeating-linear-gradient(90deg,transparent 0 27px,rgba(120,150,190,.06) 27px 28px),
-      radial-gradient(circle at 50% 32%,#1a2436,#080c14)}
+      url('/assets/tiles/badlands.png');
+    background-size:auto,auto,auto,132px 132px; background-repeat:repeat}
   .bmap.arming{cursor:copy}
   .bmapTop{position:absolute;top:0;left:0;right:0;min-height:34px;display:flex;align-items:center;justify-content:space-between;gap:8px;
     padding:6px 10px;background:linear-gradient(180deg,rgba(6,9,14,.9),transparent);z-index:5;pointer-events:auto;flex-wrap:wrap}
@@ -959,10 +960,14 @@
   .bent .be-ico{font-size:26px;line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))}
   .bent .be-nm{font-size:8.5px;font-weight:800;color:#dfeaff;text-shadow:0 1px 2px #000;white-space:nowrap;margin-top:1px}
   .bent.bldg{width:54px;height:54px;border-radius:9px;background:radial-gradient(circle at 50% 35%,rgba(70,90,120,.5),rgba(8,12,20,.72));border:1px solid var(--metal-edge)}
+  .bent.bldg.live3d{background:none;border:none;width:auto;height:auto;justify-content:flex-end}
+  .bent.bldg.live3d .be-nm{margin-top:36px;background:rgba(6,10,16,.62);padding:1px 5px;border-radius:5px}
+  #techMap3d{position:absolute;inset:0;pointer-events:none;z-index:7}
   .bent.worker .be-ico{font-size:23px}
   .bent.unit{width:22px;height:22px}
   .bent.unit svg,.bent.unit img{width:20px;height:20px}
   .bent.sel{outline:2px solid #5aa8ff;outline-offset:2px;box-shadow:0 0 14px -2px rgba(90,168,255,.75);border-radius:9px}
+  .bent.bldg.live3d.sel{outline:none!important;box-shadow:none!important}
   .bhint{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);z-index:5;font-size:11px;font-weight:700;color:#bcd;
     background:rgba(6,9,14,.75);border:1px solid var(--metal-edge);border-radius:8px;padding:5px 12px;max-width:92%;text-align:center;pointer-events:none}
   .bhint.on{color:#ffe27a;border-color:var(--gold);box-shadow:0 0 12px -3px rgba(255,210,74,.5)}
@@ -2318,7 +2323,7 @@
     <div class="gview" id="vUpgrade"><canvas id="cvUpgrade"></canvas></div>
     <div class="gview" id="vPlayers"><canvas id="cvPlayer"></canvas></div>
     <div class="gview" id="vBoss"><canvas id="cvBoss"></canvas></div>
-    <div class="gview" id="vBuild"><div id="cstMain"></div><div id="cstPrev"><canvas id="cstPrevCv"></canvas><div id="cstPrevName"></div><div id="cstPrevInfo"></div><button id="cstPrevX" onclick="cstHidePreview()">✕ 닫기</button></div></div>   <!-- 건설 테스트 + 건물 3D 프리뷰 -->
+    <div class="gview" id="vBuild"><div id="cstMain"></div><canvas id="techMap3d"></canvas><div id="cstPrev"><canvas id="cstPrevCv"></canvas><div id="cstPrevName"></div><div id="cstPrevInfo"></div><button id="cstPrevX" onclick="cstHidePreview()">✕ 닫기</button></div></div>   <!-- 건설 테스트 + 건물 3D 프리뷰 -->
     <!-- 공용 보스 토벌장 팝업(HP바 클릭 시) — 아레나는 vBoss/cvMarine로 뒤에 렌더, 여기는 컨트롤만 -->
     <div id="bossPanel" class="hide"><button id="baBackBtn" onclick="closeBossArena()"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>돌아가기</button></div>
     <canvas id="cvMarine"></canvas>  <!-- 3D 오버레이: 뷰 바깥 지속 캔버스(메인=게임유닛 / 유닛뽑기=슬롯 위 모델) -->
@@ -5982,7 +5987,7 @@ function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 
   document.querySelectorAll('.bp').forEach(p=>p.classList.remove('on')); document.getElementById('bp'+id).classList.add('on');
   document.getElementById('zoneLabel').textContent=ZONE_LABEL[id];
   document.body.classList.toggle('cstMode', id==='Build');   // 건설 탭: 게임 HUD 숨김
-  if(id==='Build' && typeof techUIEnsure==='function') techUIEnsure(); else if(typeof cstHidePreview==='function') cstHidePreview();   // 건설 진입: 테크트리 UI(커맨드 그리드) 렌더 / 이탈 시 프리뷰 정지
+  if(id==='Build' && typeof techUIEnsure==='function') techUIEnsure(); else { if(typeof cstHidePreview==='function') cstHidePreview(); if(window.M3D&&M3D.techMap3DStop) M3D.techMap3DStop(); }   // 건설 진입 렌더 / 이탈 시 프리뷰·라이브3D 정지
   deselectUnit(); G.prodB=null; G.techB=null; G.mergeMode=false; { const mb=document.getElementById('mergeBtn'); if(mb) mb.classList.remove('on'); }
   if(typeof clearShopProfile==='function') clearShopProfile();   // 유닛뽑기 중립 선택 해제
   document.getElementById('prodHint').style.display='';
@@ -9791,6 +9796,18 @@ function loop(now){
   }
   else if(G.tab==='Players' && _specNum){ renderSpectate(_specNum, dt); }   // 관전: 상대 보드를 3D+이펙트로 그대로 렌더
   else if(G.sandbox && G.tab==='Unit'){ fxLabRender(dt); }   // 🎆 이펙트 테스트베드(관리자 Unit 탭)
+  else if(G.tab==='Build'){   // 🏗 건설 탭: 메인 렌더러(cvMarine)로 배치 건물 3D — 업그레이드와 동일 방식
+    const mcv=document.getElementById('cvMarine');
+    if(window.M3D && window.M3D.ready() && G.tech && !(G.opt&&G.opt.model3d===false)){
+      const race=G.tech.race;
+      if(window.M3D.cstEnsure && G._cstLoaded!==race){ G._cstLoaded=race; window.M3D.cstEnsure(Object.values((typeof TECH_MODEL!=='undefined'&&TECH_MODEL[race])||{})); }
+      mcv.style.display='block';
+      const _map=document.getElementById('cstMain'); const W=(_map&&_map.clientWidth)||GW||360, H=(_map&&_map.clientHeight)||GH||420; GW=W; GH=H;
+      const list=[]; for(const e of (G.tech.ents||[])){ if(e.type!=='bldg') continue; const mk=(TECH_MODEL[race]||{})[e.bk]; if(!mk) continue; const _cfg=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[mk]:null; list.push({uid:'cst_'+race+'_'+mk+'_'+e.eid, id:'cb_'+mk, x:e.x, y:e.y, face:((race==='swarm')?0:(typeof CST_YAW!=='undefined'?CST_YAW:0))+((_cfg&&_cfg.f)||0), yoff:(typeof CST_YSHIFT!=='undefined'?CST_YSHIFT:34), sel:(G.tech&&G.tech.sel===e.eid)}); }   // yoff=전체 균일 하강(px)
+      window.M3D.syncBuild(list, W, H, dt, 1.0);
+    } else if(mcv) mcv.style.display='none';
+    const _fcv=document.getElementById('cvFx'); if(_fcv) _fcv.style.display='none';
+  }
   else {
     if(G.tab==='Main'||G.tab==='Battle') drawMain();
     else if(G.tab==='Players') drawPlayer();
@@ -10228,11 +10245,53 @@ function techUIInit(race){ if(!TECH_TREE[race]) race='union';
   G.tech={ race, credit:TECH_START.credit, energy:TECH_START.energy, built:{}, addon:{}, units:{}, research:{}, sup:0, supCap:0, inf:false, ents:[], sel:null, arm:null, eseq:1 };
   const main=TECH_TREE[race].buildings[0]; if(main){ G.tech.built[main.k]=1; G.tech.supCap+=(main.supply||0); G.tech.ents.push({eid:G.tech.eseq++, type:'bldg', bk:main.k, x:0.5, y:0.3}); }   // 본진 자동 배치
   G.tech.ents.push({eid:G.tech.eseq++, type:'worker', x:0.32, y:0.62}); }   // 일꾼 1기
+// 건설 탭 건물 3D 프리뷰: TECH 건물키 → glb 모델키(선택/배치대기 시 하단 도크에 회전 렌더)
+const TECH_MODEL={
+  union:{ command:'union_command_center', supply:'union_supply_depot', refinery:'union_refinery', barracks:'union_barracks', academy:'union_academy', engbay:'union_engineering_bay', bunker:'union_bunker', turret:'union_missile_turret', factory:'union_factory', machshop:'union_machine_shop', armory:'union_armory', starport:'union_starport', control:'union_control_tower', scifac:'union_science_facility', covert:'union_covert_ops', physics:'union_physics_lab', comsat:'union_comsat_station', nuke:'union_nuclear_silo' },
+  swarm:{ hatchery:'swarm_hatchery', extractor:'swarm_extractor', pool:'swarm_spawning_pool', evochamber:'swarm_evolution_chamber', hydraden:'swarm_hydralisk_den', creep:'swarm_creep_colony', sunken:'swarm_sunken_colony', spore:'swarm_spore_colony', lair:'swarm_lair', spire:'swarm_spire', queensnest:'swarm_queens_nest', hive:'swarm_hive', gspire:'swarm_greater_spire', defilermound:'swarm_defiler_mound', ultracavern:'swarm_ultralisk_cavern', nydus:'swarm_nydus_canal' },
+  aetherial:{ nexus:'aetherial_nexus', pylon:'aetherial_pylon', assimilator:'aetherial_assimilator', forge:'aetherial_forge', cannon:'aetherial_photon_cannon', gateway:'aetherial_gateway', battery:'aetherial_shield_battery', cyber:'aetherial_cybernetics_core', citadel:'aetherial_temple_of_adun', archives:'aetherial_templar_archives', robo:'aetherial_robotics_facility', robobay:'aetherial_robotics_support_bay', observatory:'aetherial_observatory', stargate:'aetherial_stargate', fleet:'aetherial_fleet_beacon', tribunal:'aetherial_arbiter_tribunal' }
+};
+// 건설 건물 고정 스펙 — s: 목표 화면크기(모델 바운딩박스로 정규화 → 파일 재추가·다른 맵에도 동일 크기) · f: 정면 방향(yaw 라디안)
+// 값만 바꾸면 크기·정면이 확정됨. (스웜·에테리얼은 미지정 시 자동크기 55·정면 0.34)
+// 타일 비율 기준 크기(s): 4x3=64 · 4x2=58 · 3x3=52 · 3x2=46 · 2x2=36 · f=정면 yaw
+const CST_BLDG_CFG={
+  // 유니온(테란)
+  union_command_center:{s:64,f:0}, union_barracks:{s:64,f:0}, union_engineering_bay:{s:64,f:0}, union_factory:{s:64,f:0}, union_starport:{s:64,f:0}, union_science_facility:{s:64,f:0},
+  union_refinery:{s:58,f:0},
+  union_supply_depot:{s:46,f:0}, union_academy:{s:46,f:0}, union_bunker:{s:46,f:0}, union_armory:{s:46,f:0},
+  union_missile_turret:{s:36,f:0}, union_comsat_station:{s:36,f:0}, union_nuclear_silo:{s:36,f:0}, union_machine_shop:{s:36,f:0}, union_control_tower:{s:36,f:0}, union_covert_ops:{s:36,f:0}, union_physics_lab:{s:36,f:0},
+  // 스웜(저그)
+  swarm_hatchery:{s:64,f:0}, swarm_lair:{s:64,f:0}, swarm_hive:{s:64,f:0},
+  swarm_extractor:{s:58,f:-0.52},
+  swarm_spawning_pool:{s:46,f:0}, swarm_evolution_chamber:{s:46,f:0.52}, swarm_hydralisk_den:{s:46,f:0}, swarm_queens_nest:{s:46,f:0}, swarm_defiler_mound:{s:46,f:-1.57}, swarm_ultralisk_cavern:{s:46,f:0.52},
+  swarm_creep_colony:{s:36,f:0}, swarm_sunken_colony:{s:36,f:0}, swarm_spore_colony:{s:36,f:0.52}, swarm_spire:{s:36,f:0}, swarm_greater_spire:{s:36,f:0}, swarm_nydus_canal:{s:36,f:-0.52},
+  // 에테리얼(프로토스)
+  aetherial_nexus:{s:64,f:0}, aetherial_gateway:{s:64,f:0}, aetherial_stargate:{s:64,f:1.136},
+  aetherial_assimilator:{s:58,f:0},
+  aetherial_forge:{s:52,f:Math.PI}, aetherial_cybernetics_core:{s:52,f:0}, aetherial_temple_of_adun:{s:52,f:0}, aetherial_templar_archives:{s:52,f:0}, aetherial_robotics_facility:{s:52,f:0}, aetherial_robotics_support_bay:{s:52,f:0}, aetherial_fleet_beacon:{s:52,f:0}, aetherial_arbiter_tribunal:{s:52,f:0},
+  aetherial_observatory:{s:46,f:0},
+  aetherial_pylon:{s:36,f:0}, aetherial_photon_cannon:{s:36,f:0}, aetherial_shield_battery:{s:36,f:0}
+};
+try{ if(typeof window!=='undefined') window.CST_BLDG_CFG=CST_BLDG_CFG; }catch(_e){}
+const CST_YSHIFT=34;   // 건설 건물 3D 전체를 화면 아래로 내리는 양(px). 키우면 더 아래로.
+const CST_YAW=-0.52;   // 유니온·에테리얼 정면 회전(라디안). -0.52≈왼쪽 30°.
+function techHidePreview(){ const prev=document.getElementById('cstPrev'), main=document.getElementById('cstMain'); if(prev) prev.classList.remove('on'); if(main) main.classList.remove('hasPrev'); if(window.M3D&&M3D.cstStop) M3D.cstStop(); }
+function techSyncPreview(){ if(!G.tech){ techHidePreview(); return; }
+  let bk=G.tech.arm||null;
+  if(!bk && G.tech.sel!=null){ const e=(G.tech.ents||[]).find(x=>x.eid===G.tech.sel); if(e&&e.type==='bldg') bk=e.bk; }
+  const race=G.tech.race, mk=bk?((TECH_MODEL[race]||{})[bk]):null;
+  if(!mk || !(window.M3D&&M3D.cstShow)){ techHidePreview(); return; }
+  const b=(typeof techGetBldg==='function'?techGetBldg(race,bk):null)||{};
+  const prev=document.getElementById('cstPrev'), cv=document.getElementById('cstPrevCv'), nm=document.getElementById('cstPrevName'), info=document.getElementById('cstPrevInfo');
+  if(!prev||!cv) return;
+  prev.classList.add('on'); if(nm) nm.textContent=b.name||'';
+  if(info) info.innerHTML=(b.m!=null?('◈'+b.m):'')+(b.g?(' · ⚡'+b.g):'')+(b.supply?(' · 👤+'+b.supply):'')+(G.tech.arm===bk?'<br><span style="color:#8fd">📍 맵을 탭해 배치</span>':'');
+  M3D.cstShow(cv, mk); }
 function techUIEnsure(){ if(!G.tech||!TECH_TREE[G.tech.race]) techUIInit('union'); techUIRender(); }
 function _techReqMet(req){ if(!req) return true; for(const r of req){ if(!(G.tech.built[r]>0||G.tech.addon[r])) return false; } return true; }
 function _techAfford(m,g){ return G.tech.inf || (G.tech.credit>=(m||0) && G.tech.energy>=(g||0)); }
 function _techSpend(m,g){ if(G.tech.inf) return; G.tech.credit-=(m||0); G.tech.energy-=(g||0); }
-function _techEntAt(x,y){ let best=null,bd=0.06*0.06; for(let i=G.tech.ents.length-1;i>=0;i--){ const e=G.tech.ents[i]; const dx=e.x-x,dy=e.y-y,d=dx*dx+dy*dy; if(d<=bd){bd=d;best=e;} } return best; }
+function _techEntAt(x,y){ let best=null,bd=1e9; const _W=(typeof GW!=='undefined'&&GW)?GW:380, _H=(typeof GH!=='undefined'&&GH)?GH:440, _ys=(typeof CST_YSHIFT!=='undefined'?CST_YSHIFT:34); for(let i=G.tech.ents.length-1;i>=0;i--){ const e=G.tech.ents[i]; let rad=0.055, cy=e.y; if(e.type==='bldg'){ const _mk=(TECH_MODEL[G.tech.race]||{})[e.bk]; const _cf=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[_mk]:null; const _sz=(_cf&&_cf.s)||50; rad=(_sz*0.6)/_W; cy=e.y+(_ys-_sz*0.35)/_H; } const dx=e.x-x, dy=cy-y, d=dx*dx+dy*dy; if(d<=rad*rad && d<bd){ bd=d; best=e; } } return best; }
 function _techResInfo(){ return { eb:'자원', name:TECH_TREE[G.tech.race].name, desc:'일꾼 탭 → 건물 선택 → 맵을 탭해 배치', stats:[['크레딧',G.tech.inf?'∞':''+G.tech.credit],['에너지',G.tech.inf?'∞':''+G.tech.energy],['인구',G.tech.sup+'/'+G.tech.supCap]] }; }
 // 하단 패널 모델
 function techBuildListModel(){ const race=G.tech.race, t=TECH_TREE[race];
@@ -10255,10 +10314,10 @@ function techBldgUpgModel(b){ const race=G.tech.race;
   return { mode:'upg', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', sub:'연구/업그레이드 — 탭', items,
     info:{ eb:'연구', name:f.name||'', desc:f.desc||'', cr:f.tier?f.tier[0][0]:(f.m||0), en:f.tier?f.tier[0][1]:(f.g||0), time:'탭하여 연구' } }; }
 // 렌더
-function techUIRender(){ if(!G.tech) return; techMapRender(); techPanelRender(); }
+function techUIRender(){ if(!G.tech) return; techMapRender(); techPanelRender(); techHidePreview(); }   // 3D 건물은 메인 렌더러(syncBuild)가 렌더
 function techMapRender(){ const map=document.getElementById('cstMain'); if(!map) return; const race=G.tech.race;
   let ents=''; for(const e of G.tech.ents){ let inner,cls;
-    if(e.type==='bldg'){ const b=techGetBldg(race,e.bk)||{}; inner='<span class="be-ico">'+(b.ico||'🏢')+'</span><span class="be-nm">'+(b.name||'')+'</span>'; cls='bldg'; }
+    if(e.type==='bldg'){ inner=''; cls='bldg live3d'; if(G.tech.sel===e.eid){ const _cf=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[(TECH_MODEL[race]||{})[e.bk]]:null; const _sz=(_cf&&_cf.s)||50; inner='<div class="uhp" style="width:44px;position:absolute;left:50%;transform:translateX(-50%);top:'+((CST_YSHIFT+10+Math.max(0,(_sz-36)*0.9))|0)+'px">'+barHTML('ub uH',100,hpBarColor(1))+'</div>'; } }
     else if(e.type==='worker'){ inner='<span class="be-ico">👷</span>'; cls='worker'; }
     else { inner=_techUnitPortrait(e.uid); cls='unit'; }
     ents+='<div class="bent '+cls+(G.tech.sel===e.eid?' sel':'')+'" style="left:'+(e.x*100).toFixed(2)+'%;top:'+(e.y*100).toFixed(2)+'%">'+inner+'</div>'; }
@@ -10267,7 +10326,7 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
   const res='<span class="res cr">'+(G.tech.inf?'∞':G.tech.credit)+'◈</span><span class="res gs">'+(G.tech.inf?'∞':G.tech.energy)+'⚡</span><span class="res sp">👤'+G.tech.sup+'/'+G.tech.supCap+'</span>'
     +(canDemo?'<span class="cbtn dz" onclick="techDemolish(event)">🗑 철거</span>':'')+'<span class="cbtn'+(G.tech.inf?' on':'')+'" onclick="techInf(event)">∞</span><span class="cbtn" onclick="techReset(event)">↺</span>';
   const hint=G.tech.arm?('📍 '+((techGetBldg(race,G.tech.arm)||{}).name)+' — 지을 곳을 탭'):(G.tech.sel==null?'일꾼을 탭 → 하단에서 건물 선택 → 맵을 탭해 배치':'건물을 탭하면 생산·연구가 하단에 표시됩니다');
-  map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+'" onpointerdown="techMapClick(event)"><div class="bmapTop"><div class="techTabs">'+tabs+'</div><div class="bres">'+res+'</div></div>'+ents+'<div class="bhint'+(G.tech.arm?' on':'')+'">'+hint+'</div></div>'; }
+  map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+'" onpointerdown="techMapClick(event)"><div class="bmapTop"><div class="techTabs">'+tabs+'</div><div class="bres">'+res+'</div></div>'+ents+'</div>'; }
 function techBldgInfoModel(b){ const race=G.tech.race, hb=TECH_TREE[race].buildings[0];
   const items=(b.unlocks||[]).map(uid=>{ const p=(hb.produces||[]).find(x=>x.id===uid)||{}; return { pro:_techUnitPortrait(uid), sn:p.name||uid, cr:p.m||0, en:p.g||0, meta:p.pop?'👤'+p.pop:'', state:'ok', act:'' }; });
   return { mode:'prod', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', sub:'이 건물이 해금 · 생산은 '+hb.name+'에서', items,
@@ -11849,8 +11908,8 @@ import { clone as cloneSkinned } from 'https://esm.sh/three@0.160.0/examples/jsm
 import { RoomEnvironment } from 'https://esm.sh/three@0.160.0/examples/jsm/environments/RoomEnvironment.js';
 
 const MODELS={ marine:'marine.glb', goliath:'goliath.glb', ghost:'ghost.glb', archon:'archon.glb', dragoon:'dragoon.glb', hydra:'hydralisk.glb', observer:'observer.glb', overlord:'overlord.glb',
-  turret:'buildings/turret.glb', photon:'buildings/photon_cannon.glb',
-  acad:'buildings/academy.glb', arm:'buildings/armory.glb', forge:'buildings/forge.glb', evo:'buildings/evolution_chamber.glb', pointlab:'buildings/command_center.glb',
+  turret:'buildings/turret.glb', photon:'buildings/aetherial/aetherial_photon_cannon.glb',
+  acad:'buildings/union/union_academy.glb', arm:'buildings/armory.glb', forge:'buildings/aetherial/aetherial_forge.glb', evo:'buildings/swarm/swarm_evolution_chamber.glb', pointlab:'buildings/union/union_command_center.glb',
   temple_main:'buildings/temple_main.glb', temple_stone:'buildings/temple_stone.glb', temple_neutral:'buildings/temple_neutral.glb',   // 직스 신전(메인/2차/중립)
   // 적 공중 유닛 모델(네모네모 디펜스): 발키리·드랍쉽·배틀·아비터·셔틀·케리어·스카웃·스커지·디바우러·퀸
   hellfire:'hellfire.glb', pelican:'pelican.glb', dreadnought:'dreadnought.glb', kronos:'kronos.glb', seraph:'seraph.glb',
@@ -11924,7 +11983,7 @@ const MODEL_SCALE=13;     // 기본 스케일(미지정 유닛) — 보드 축�
 const Y_DROP=2;           // 점 기준 수직 보정(px)
 const VIEW_TILT=0.65;     // 카메라 부감(작게=서 있게 보임, 0=정면). 모델은 세워두고 이 각도만큼만 기울여 내려다봄 — 더 위에서 본 각도로 상향(0.42→0.65)
 const ROT_OFFSET=0;       // 모델 정면(+Z 가정)과 실제 forward 차이 보정(yaw, 필요시 조정)
-const MODEL_YAW_OFF={ turret:Math.PI/2, racer:Math.PI/2, tank:Math.PI/2, skyguard:Math.PI/2, skydancer:Math.PI/2,
+const MODEL_YAW_OFF={ forge:Math.PI, turret:Math.PI/2, racer:Math.PI/2, tank:Math.PI/2, skyguard:Math.PI/2, skydancer:Math.PI/2,
   falcon:Math.PI/2, pelican:Math.PI/2, kronos:Math.PI/2 };  // 모델별 yaw 보정. 터렛/레이서/브레이커 +90°. falcon·pelican·kronos(아비터, 신규 방향성 기체): 동체 수직이라 옆으로 진행 → +90° 회전 보정
 const NO_TURN={};  // 몸을 돌리지 않는 유닛(현재 없음)
 const TURN_MOVE_ONLY={ dragoon:true };  // 이동 중에만 회전(정지·공격 시 몸 고정) — 센티넬
@@ -12103,8 +12162,12 @@ function tintModel(root, id){
         if('roughness' in m) m.roughness=Math.min(1, (m.roughness==null?0.7:m.roughness)+0.18);   // 무광에 가깝게(거친 돌)
       }
       if('envMapIntensity' in m) m.envMapIntensity = isTemple?0.32:0.55;   // 신전은 반사 더 낮춰 사막 톤 유지
+      if(m.color && typeof id==='string' && id.indexOf('cb_')===0){
+        if(id==='cb_swarm_extractor'){ m.color.r*=1.24; m.color.g*=1.10; m.color.b*=1.26; }   // 익스트랙터: 원래 어둡고 초록 → 밝기↑·초록기↓
+        else { m.color.r*=1.045; m.color.g*=1.02; m.color.b*=1.05; }                          // 그 외 건설 건물(전 종족): 익스트랙터와 같은 성격(밝기↑·초록기↓)을 아주 연하고 미세하게만
+      }
       if(m.emissiveMap && m.emissive && m.emissive.r>0.85 && m.emissive.g>0.85 && m.emissive.b>0.85){ m.emissive.setRGB(0,0,0); m.emissiveMap=null; m.needsUpdate=true; }   // 신규 GLB의 흰색 자체발광 베이크 제거 — 정지/이동 모델 색감·테두리 통일(바램 방지)
-      addRim(m, rim, intU);   // 테두리(프레넬 림)만 색 — 본체 색·발광은 원본 그대로
+      if(!(typeof id==='string'&&id.indexOf('cb_')===0)) addRim(m, rim, intU);   // 건설 건물(cb_)은 림 생략 / 그 외 프레넬 림
       m._tinted=true; }); });
 }
 // 색칠 없이 림만 입힘(총 등 — 타입색 테두리만 발광)
@@ -12358,7 +12421,7 @@ const MAP_ASSETS = {
   cpu: ['temple_main','temple_stone','temple_neutral','marine','ghost','hydra','dragoon','goliath','archon','tank','skyguard'],   // 직스: 신전(3종) + 샘플/전투 유닛 모델
   // sunken: ['goliath','turret','photon', ...],   // 예: 맵 구현 시 이 맵에 필요한 모델만 나열 → 진입 시 그것만 로드
 };
-function mapModelKeys(mapId){ const a=MAP_ASSETS[mapId]; if(a==='*'||!a) return Object.keys(MODELS); return a.filter(k=>MODELS[k]); }
+function mapModelKeys(mapId){ const a=MAP_ASSETS[mapId]; if(a==='*'||!a) return Object.keys(MODELS).filter(function(k){return k.slice(0,3)!=='cb_';}); return a.filter(k=>MODELS[k]); }
 function _disposeObj3D(root){ if(!root) return; root.traverse(o=>{
   if(o.geometry && o.geometry.dispose) o.geometry.dispose();
   const ms=o.material?(Array.isArray(o.material)?o.material:[o.material]):[];
@@ -12383,19 +12446,9 @@ function disposeModels(keys){ let n=0; for(const id of keys){
 } return n; }
 // ── 건설 섹션 건물 3D 프리뷰(회전 뷰) — M3D 게임 씬/네모 MODELS·VRAM과 분리된 자체 로더·렌더러 ──
 const CST_GLB={
-  swarm_hatchery:'buildings/swarm/swarm_hatchery.glb', swarm_spawning_pool:'buildings/swarm/swarm_spawning_pool.glb',
-  swarm_extractor:'buildings/swarm/swarm_extractor.glb', swarm_hydralisk_den:'buildings/swarm/swarm_hydralisk_den.glb',
-  swarm_spire:'buildings/swarm/swarm_spire.glb', swarm_queens_nest:'buildings/swarm/swarm_queens_nest.glb', swarm_greater_spire:'buildings/swarm/swarm_greater_spire.glb',
-  aetherial_nexus:'buildings/aetherial/aetherial_nexus.glb', aetherial_pylon:'buildings/aetherial/aetherial_pylon.glb',
-  aetherial_assimilator:'buildings/aetherial/aetherial_assimilator.glb', aetherial_gatewa:'buildings/aetherial/aetherial_gatewa.glb',
-  aetherial_forge:'buildings/aetherial/aetherial_forge.glb', aetherial_cybernetics_core:'buildings/aetherial/aetherial_cybernetics_core.glb',
-  aetherial_robotics_facility:'buildings/aetherial/aetherial_robotics_facility.glb', aetherial_stargate:'buildings/aetherial/aetherial_stargate.glb',
-  aetherial_templar_archives:'buildings/aetherial/aetherial_templar_archives.glb', aetherial_fleet_beacon:'buildings/aetherial/aetherial_fleet_beacon.glb',
-  union_command_center:'buildings/union/union_command_center.glb', union_supply_depot:'buildings/union/union_supply_depot.glb',
-  union_refinery:'buildings/union/union_refinery.glb', union_barracks:'buildings/union/union_barracks.glb',
-  union_factory:'buildings/union/union_factory.glb', union_machine_shop:'buildings/union/union_machine_shop.glb',
-  union_starport:'buildings/union/union_starport.glb', union_armory:'buildings/union/union_armory.glb',
-  union_science_facility:'buildings/union/union_science_facility.glb'
+  swarm_creep_colony:'buildings/swarm/swarm_creep_colony.glb', swarm_defiler_mound:'buildings/swarm/swarm_defiler_mound.glb', swarm_evolution_chamber:'buildings/swarm/swarm_evolution_chamber.glb', swarm_extractor:'buildings/swarm/swarm_extractor.glb', swarm_greater_spire:'buildings/swarm/swarm_greater_spire.glb', swarm_hatchery:'buildings/swarm/swarm_hatchery.glb', swarm_hive:'buildings/swarm/swarm_hive.glb', swarm_hydralisk_den:'buildings/swarm/swarm_hydralisk_den.glb', swarm_infested_command_center:'buildings/swarm/swarm_infested_command_center.glb', swarm_lair:'buildings/swarm/swarm_lair.glb', swarm_nydus_canal:'buildings/swarm/swarm_nydus_canal.glb', swarm_queens_nest:'buildings/swarm/swarm_queens_nest.glb', swarm_spawning_pool:'buildings/swarm/swarm_spawning_pool.glb', swarm_spire:'buildings/swarm/swarm_spire.glb', swarm_spore_colony:'buildings/swarm/swarm_spore_colony.glb', swarm_sunken_colony:'buildings/swarm/swarm_sunken_colony.glb', swarm_ultralisk_cavern:'buildings/swarm/swarm_ultralisk_cavern.glb',
+  aetherial_arbiter_tribunal:'buildings/aetherial/aetherial_arbiter_tribunal.glb', aetherial_assimilator:'buildings/aetherial/aetherial_assimilator.glb', aetherial_cybernetics_core:'buildings/aetherial/aetherial_cybernetics_core.glb', aetherial_fleet_beacon:'buildings/aetherial/aetherial_fleet_beacon.glb', aetherial_forge:'buildings/aetherial/aetherial_forge.glb', aetherial_gateway:'buildings/aetherial/aetherial_gateway.glb', aetherial_nexus:'buildings/aetherial/aetherial_nexus.glb', aetherial_observatory:'buildings/aetherial/aetherial_observatory.glb', aetherial_photon_cannon:'buildings/aetherial/aetherial_photon_cannon.glb', aetherial_pylon:'buildings/aetherial/aetherial_pylon.glb', aetherial_robotics_facility:'buildings/aetherial/aetherial_robotics_facility.glb', aetherial_robotics_support_bay:'buildings/aetherial/aetherial_robotics_support_bay.glb', aetherial_shield_battery:'buildings/aetherial/aetherial_shield_battery.glb', aetherial_stargate:'buildings/aetherial/aetherial_stargate.glb', aetherial_templar_archives:'buildings/aetherial/aetherial_templar_archives.glb', aetherial_temple_of_adun:'buildings/aetherial/aetherial_temple_of_adun.glb',
+  union_academy:'buildings/union/union_academy.glb', union_armory:'buildings/union/union_armory.glb', union_barracks:'buildings/union/union_barracks.glb', union_bunker:'buildings/union/union_bunker.glb', union_command_center:'buildings/union/union_command_center.glb', union_comsat_station:'buildings/union/union_comsat_station.glb', union_control_tower:'buildings/union/union_control_tower.glb', union_covert_ops:'buildings/union/union_covert_ops.glb', union_engineering_bay:'buildings/union/union_engineering_bay.glb', union_factory:'buildings/union/union_factory.glb', union_machine_shop:'buildings/union/union_machine_shop.glb', union_missile_turret:'buildings/union/union_missile_turret.glb', union_nuclear_silo:'buildings/union/union_nuclear_silo.glb', union_physics_lab:'buildings/union/union_physics_lab.glb', union_refinery:'buildings/union/union_refinery.glb', union_science_facility:'buildings/union/union_science_facility.glb', union_starport:'buildings/union/union_starport.glb', union_supply_depot:'buildings/union/union_supply_depot.glb'
 };
 let _cvRend=null,_cvScene=null,_cvCam=null,_cvGrp=null,_cvRAF=0,_cvCanvas=null,_cvTok=0; const _cvCache={};
 function _cvInit(canvas){ if(_cvRend&&_cvCanvas===canvas) return; _cvCanvas=canvas;
@@ -12413,9 +12466,50 @@ function cstShowModel(canvas,key){ if(!canvas||!CST_GLB[key]) return; _cvInit(ca
   if(_cvCache[key]){ _cvPlace(_cvCache[key]); } else { new GLTFLoader().load('/assets/'+CST_GLB[key], g=>{ _cvCache[key]=g.scene; if(tok===_cvTok) _cvPlace(g.scene); }, undefined, e=>console.warn('cst glb fail',key,e)); }
   if(!_cvRAF){ const loop=()=>{ _cvRAF=requestAnimationFrame(loop); if(_cvGrp) _cvGrp.rotation.y+=0.011; if(_cvRend&&_cvScene&&_cvCam) _cvRend.render(_cvScene,_cvCam); }; loop(); } }
 function cstStopModel(){ if(_cvRAF){ cancelAnimationFrame(_cvRAF); _cvRAF=0; } if(_cvGrp){ _cvScene.remove(_cvGrp); _cvGrp=null; } }
+// 건설 맵: 건물 glb → 3D 렌더 이미지(맵에 실제 모델로 배치, key별 1회 캐시 · 준비되면 맵 갱신)
+const _bldgImgCache={}; let _biRend=null,_biScene=null,_biCam=null;
+function bldgImage(key){ if(_bldgImgCache[key]!==undefined) return _bldgImgCache[key]; if(!CST_GLB[key]){ _bldgImgCache[key]=null; return null; } _bldgImgCache[key]=null;
+  new GLTFLoader().load('/assets/'+CST_GLB[key], g=>{ try{
+    if(!_biRend){ _biRend=new THREE.WebGLRenderer({alpha:true,antialias:true,preserveDrawingBuffer:true}); _biRend.setPixelRatio(1); _biRend.setSize(240,240); _biRend.setClearColor(0x000000,0);
+      _biScene=new THREE.Scene(); _biScene.add(new THREE.HemisphereLight(0xdfeaff,0x2a3340,1.3)); const dl=new THREE.DirectionalLight(0xffffff,1.2); dl.position.set(3,5,4); _biScene.add(dl); const dl2=new THREE.DirectionalLight(0x88aaff,0.55); dl2.position.set(-3,2,-2); _biScene.add(dl2);
+      _biCam=new THREE.PerspectiveCamera(30,1,0.05,100); }
+    const model=g.scene, box=new THREE.Box3().setFromObject(model), c=box.getCenter(new THREE.Vector3()), sz=box.getSize(new THREE.Vector3()), maxd=Math.max(sz.x,sz.y,sz.z)||1;
+    model.position.set(-c.x,-c.y,-c.z); const grp=new THREE.Group(); grp.add(model); grp.scale.setScalar(1.7/maxd); grp.rotation.y=0.62;
+    _biScene.add(grp); _biCam.position.set(0,0.65,3.0); _biCam.lookAt(0,0.03,0); _biRend.render(_biScene,_biCam);
+    _bldgImgCache[key]=_biRend.domElement.toDataURL('image/png'); _biScene.remove(grp); if(typeof _disposeObj3D==='function') _disposeObj3D(grp);
+    if(typeof window.techUIRender==='function') window.techUIRender();
+  }catch(e){ console.warn('bldgImage fail',key,e); _bldgImgCache[key]=null; } }, undefined, e=>{ console.warn('bldgImage load fail',key,e); _bldgImgCache[key]=null; });
+  return null; }
+// ── 건설 맵 라이브 3D: 배치된 건물 실모델을 맵 위에 아이소메트릭으로 렌더(언프로젝트로 배치칸 정렬) ──
+let _tmRend=null,_tmScene=null,_tmCam=null,_tmRAF=0,_tmCanvas=null,_tmRing=null; const _tmModels={}, _tmGlb={};
+function _tmInit(canvas){ if(_tmRend&&_tmCanvas===canvas) return; _tmCanvas=canvas;
+  _tmRend=new THREE.WebGLRenderer({canvas:canvas, alpha:true, antialias:true}); _tmRend.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
+  _tmScene=new THREE.Scene();
+  _tmScene.add(new THREE.HemisphereLight(0xf2f6ff,0x30363f,1.7)); const dl=new THREE.DirectionalLight(0xffffff,2.0); dl.position.set(2.5,6,3.5); _tmScene.add(dl); const dl2=new THREE.DirectionalLight(0x9fc0ff,0.85); dl2.position.set(-3,2.5,-2.5); _tmScene.add(dl2); const dl3=new THREE.DirectionalLight(0xffffff,0.6); dl3.position.set(0,1,-4); _tmScene.add(dl3);
+  _tmCam=new THREE.OrthographicCamera(-0.5,0.5,0.5,-0.5,-12,24); _tmCam.position.set(0,2.7,1.75); _tmCam.up.set(0,1,0); _tmCam.lookAt(0,0,0);
+  const rg=new THREE.Mesh(new THREE.RingGeometry(0.092,0.118,40), new THREE.MeshBasicMaterial({color:0x5aa8ff,transparent:true,opacity:0.9,side:THREE.DoubleSide})); rg.rotation.x=-Math.PI/2; rg.visible=false; _tmScene.add(rg); _tmRing=rg; }
+function _tmResize(){ if(!_tmRend||!_tmCanvas) return; const w=_tmCanvas.clientWidth||300,h=_tmCanvas.clientHeight||300; _tmRend.setSize(w,h,false); const asp=w/h,V=1.18; _tmCam.top=V/2; _tmCam.bottom=-V/2; _tmCam.left=-V/2*asp; _tmCam.right=V/2*asp; _tmCam.updateProjectionMatrix(); _tmCam.updateMatrixWorld(); }
+function _tmGround(ex,ey){ const v=new THREE.Vector3(ex*2-1,-(ey*2-1),-1).unproject(_tmCam); const dir=new THREE.Vector3(0,0,-1).applyQuaternion(_tmCam.quaternion).normalize(); if(Math.abs(dir.y)<1e-5) return v; const t=-v.y/dir.y; return v.add(dir.multiplyScalar(t)); }
+function _tmLoad(mk,cb){ if(_tmGlb[mk]){ cb(_tmGlb[mk]); return; } new GLTFLoader().load('/assets/'+CST_GLB[mk], g=>{ _tmGlb[mk]=g.scene; cb(g.scene); }, undefined, e=>console.warn('tm glb fail',mk,e)); }
+function techMap3DSync(){ if(typeof G==='undefined'||!G.tech) return; const canvas=document.getElementById('techMap3d'); if(!canvas) return; _tmInit(canvas); _tmResize();
+  const race=G.tech.race, ents=(G.tech.ents||[]).filter(e=>e.type==='bldg'), seen={};
+  for(const e of ents){ seen[e.eid]=1; const mk=(typeof TECH_MODEL!=='undefined'&&TECH_MODEL[race])?TECH_MODEL[race][e.bk]:null; if(!mk||!CST_GLB[mk]) continue;
+    let m=_tmModels[e.eid];
+    if(!m||m._mk!==mk){ if(m) _tmScene.remove(m); m=new THREE.Group(); m._mk=mk; _tmModels[e.eid]=m; _tmScene.add(m);
+      _tmLoad(mk, sc=>{ if(_tmModels[e.eid]!==m) return; const model=sc.clone(true); const box=new THREE.Box3().setFromObject(model), c=box.getCenter(new THREE.Vector3()), sz=box.getSize(new THREE.Vector3()), maxd=Math.max(sz.x,sz.y,sz.z)||1; model.position.set(-c.x,-box.min.y,-c.z); model.scale.setScalar(0.125/maxd); m.add(model); }); }
+    const p=_tmGround(e.x,e.y); if(p) m.position.copy(p); m.rotation.set(0,0.62,0); }
+  for(const id in _tmModels){ if(!seen[id]){ _tmScene.remove(_tmModels[id]); delete _tmModels[id]; } }
+  if(_tmRing){ const se=(G.tech.sel!=null)?ents.find(e=>e.eid===G.tech.sel):null; if(se){ const rp=_tmGround(se.x,se.y); if(rp){ _tmRing.position.copy(rp); _tmRing.position.y=0.006; } _tmRing.visible=true; } else _tmRing.visible=false; }
+  if(!_tmRAF){ const loop=()=>{ _tmRAF=requestAnimationFrame(loop); if(_tmRend&&_tmScene&&_tmCam) _tmRend.render(_tmScene,_tmCam); }; loop(); } }
+function techMap3DStop(){ if(_tmRAF){ cancelAnimationFrame(_tmRAF); _tmRAF=0; } for(const id in _tmModels){ if(_tmScene) _tmScene.remove(_tmModels[id]); delete _tmModels[id]; } if(_tmRing) _tmRing.visible=false; }
+Object.keys(CST_GLB).forEach(function(k){ if(!MODELS['cb_'+k]) MODELS['cb_'+k]=CST_GLB[k]; });   // 건설 건물 → 게임 MODELS(cb_) 등록(네모 '*' 로딩 제외)
 window.M3D={
   ready:()=>ready,
   cstShow:(canvas,key)=>cstShowModel(canvas,key),   // 건설 섹션 건물 3D 프리뷰(회전)
+  bldgImage:(key)=>bldgImage(key),   // 건물 glb → 맵 배치용 3D 렌더 이미지(dataURL/null)
+  techMap3DSync:()=>techMap3DSync(),   // 건설 맵 라이브 3D: 배치 건물 실모델 렌더/동기화
+  techMap3DStop:()=>techMap3DStop(),
+  cstEnsure:(keys,cb)=>{ const orig=(keys||[]); const ks=orig.map(k=>'cb_'+k).filter(k=>MODELS[k]); ensureModels(ks, function(n){ for(const bk of orig){ const k='cb_'+bk; const b=bases[k]; if(!b) continue; const _cfg=(typeof window!=='undefined'&&window.CST_BLDG_CFG)?window.CST_BLDG_CFG[bk]:null; SCALE[k]=(_cfg&&_cfg.s?_cfg.s:55)/Math.max(b.h||1,b.w||1); } if(cb) cb(n); }); return true; },   // 건설 건물 로드 → 고정 스펙(s) 또는 자동 크기
   cstStop:()=>cstStopModel(),
   hasModel:(id)=>!!bases[id],   // 실제 로드 완료 여부(로드 전엔 false → 2D/SVG 폴백 표시). MODELS 카탈로그가 아니라 bases(로드분) 기준
   modelCatalog:(id)=>!!MODELS[id],   // 카탈로그 존재 여부(필요 시)
@@ -12661,13 +12755,14 @@ window.M3D={
     const seen=new Set(), mul=scaleMul||0.5;
     for(const it of (list||[])){ if(!MODELS[it.id]) continue; seen.add(it.uid);
       let m=buildModels.get(it.uid); if(!m){ m=makeModel(it.id); if(!m) continue; m.kind='build'; buildModels.set(it.uid,m); }
-      m.holder.visible=true; if(m.rim) m.rim.visible=false; if(m.shadow) m.shadow.material.opacity=0.22;
+      m.holder.visible=true; if(m.rim){ m.rim.visible=!!it.sel; if(it.sel) m.rim.scale.setScalar(1.12); } if(m.shadow) m.shadow.material.opacity=0.22;
       if(it.moving && m.runInner){ if(m.inner)m.inner.visible=false; m.runInner.visible=true; if(m.gun)m.gun.visible=false; if(m.atkInner)m.atkInner.visible=false; m.anim.position.set(0,0,0); m.anim.rotation.set(0,0,0); if(m.runMixer) m.runMixer.update(dt); }   // 이동: 달리기 모션
       else if(it.moving){ if(m.inner)m.inner.visible=true; if(m.runInner)m.runInner.visible=false; if(m.gun)m.gun.visible=true; m.walk=(m.walk||0)+dt*WALK_SPD; m.anim.position.set(0,Math.abs(Math.sin(m.walk))*m.h*WALK_BOB,0); m.anim.rotation.z=Math.sin(m.walk*0.5)*WALK_SWAY; }   // 이동(달리기 모델 없음): 절차적 걷기
       else { if(m.inner)m.inner.visible=true; if(m.runInner)m.runInner.visible=false; if(m.gun)m.gun.visible=true; m.anim.position.set(0,0,0); m.anim.rotation.set(0,0,0); }   // 정지
       if(it.face!=null){ m.yaw.rotation.y=it.face; }
       m.holder.scale.setScalar((SCALE[it.id]||MODEL_SCALE)*mul*(it.scl||1));
-      m.holder.position.set(it.x*W, (H-it.y*H)-Y_DROP, 0);
+      m.holder.position.set(it.x*W, (H-it.y*H)-Y_DROP-(it.yoff||0), 0);   // yoff=화면 아래로 내림
+      m.holder.rotation.x = it.pitch||0;   // 건물 사선 틸트(SC식 부감) — 미지정=0(기존 동작 유지)
     }
     for(const [k,m] of buildModels){ if(!seen.has(k)) m.holder.visible=false; }
     renderer.render(scene,camera);
