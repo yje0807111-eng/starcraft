@@ -10097,19 +10097,52 @@ TECH_TREE.aetherial={ name:'에테리얼', res:{m:'크레딧', g:'에너지'}, b
       {k:'stasis', name:'스테이시스 필드', desc:'범위 유닛 무적·행동불가', m:150, g:150},
       {k:'khaydarin_core', name:'케이다린 코어', desc:'크로노스 최대 에너지 +50', m:150, g:150} ] },
 ]};
+// ══ 테크트리 상세 스펙(SC1 기반, B안=실제 수치) — 건물{hp,ar,size,t(초)} / 유닛{hp,ar,sh,atk,at(공격형),rng,spd,t,abil} ══
+//   at: norm(일반형)·conc(진동형)·expl(폭발형)·'-'(무공격)
+const TECH_SPEC={};
+TECH_SPEC.union={
+  bldg:{ command:{hp:1500,ar:1,size:[4,3],t:120}, comsat:{hp:500,ar:1,t:40}, nuke:{hp:600,ar:1,t:40},
+    supply:{hp:500,ar:1,size:[3,2],t:40}, refinery:{hp:750,ar:1,size:[4,2],t:40},
+    barracks:{hp:1000,ar:1,size:[4,3],t:80}, engbay:{hp:850,ar:1,size:[4,3],t:60}, academy:{hp:600,ar:1,size:[3,2],t:80},
+    bunker:{hp:350,ar:1,size:[3,2],t:30}, turret:{hp:200,ar:0,size:[2,2],t:30},
+    factory:{hp:1250,ar:1,size:[4,3],t:80}, machshop:{hp:750,ar:1,t:40},
+    starport:{hp:1300,ar:1,size:[4,3],t:70}, control:{hp:500,ar:1,t:40}, armory:{hp:750,ar:1,size:[3,2],t:80},
+    scifac:{hp:850,ar:1,size:[4,3],t:60}, covert:{hp:750,ar:1,t:40}, physics:{hp:600,ar:1,t:40} },
+  unit:{
+    worker_human:{hp:60,ar:0,sh:0,atk:5,at:'norm',rng:1,spd:'보통',t:20,abil:'수리'},
+    marine:{hp:40,ar:0,sh:0,atk:6,at:'norm',rng:4,spd:'보통',t:24,abil:'스팀팩'},
+    machinegun:{hp:50,ar:1,sh:0,atk:16,at:'conc',rng:2,spd:'보통',t:24,abil:'스팀팩·스플래시'},
+    medic:{hp:60,ar:1,sh:0,atk:0,at:'-',rng:0,spd:'보통',t:30,abil:'힐·플레어·리스토레이션'},
+    ghost:{hp:45,ar:0,sh:0,atk:10,at:'conc',rng:7,spd:'보통',t:50,abil:'핵·클로킹·락다운'},
+    racer:{hp:80,ar:0,sh:0,atk:20,at:'conc',rng:5,spd:'빠름',t:30,abil:'스파이더 마인'},
+    tank:{hp:150,ar:1,sh:0,atk:30,at:'expl',rng:7,spd:'느림',t:50,abil:'시즈 85·스플·사거리12'},
+    goliath:{hp:125,ar:1,sh:0,atk:12,at:'norm',rng:5,spd:'보통',t:40,abil:'대공 20(폭발)·사거리→8'},
+    skyguard:{hp:120,ar:0,sh:0,atk:20,at:'expl',rng:5,spd:'매우빠름',t:60,abil:'클로킹'},
+    pelican:{hp:150,ar:1,sh:0,atk:0,at:'-',rng:0,spd:'빠름',t:50,abil:'수송'},
+    hellfire:{hp:200,ar:2,sh:0,atk:48,at:'expl',rng:6,spd:'빠름',t:50,abil:'공중전용 스플래시'},
+    aegis:{hp:200,ar:1,sh:0,atk:0,at:'-',rng:0,spd:'보통',t:80,abil:'디텍터·매트릭스·EMP·이레디에이트'},
+    dreadnought:{hp:500,ar:3,sh:0,atk:25,at:'norm',rng:6,spd:'느림',t:133,abil:'야마토 260'},
+    nuke:{hp:0,ar:0,sh:0,atk:0,at:'-',rng:0,spd:'-',t:75,abil:'핵미사일'} }
+};
+const _AT_KO={norm:'일반',conc:'진동',expl:'폭발','-':'무공격'};
+function techUnitSpec(race,id){ const s=TECH_SPEC[race]; return (s&&s.unit&&s.unit[id])||null; }
+function techBldgSpec(race,k){ const s=TECH_SPEC[race]; return (s&&s.bldg&&s.bldg[k])||null; }
 // ── 테크트리 → 커맨드 그리드 모델 어댑터(재사용) ──
 function techGetBldg(race,k){ const t=TECH_TREE[race]; return t&&t.buildings.find(b=>b.k===k); }
 function _techUnitPortrait(id){ return (typeof unitPortraitHTML==='function'&&unitPortraitHTML(id))||'<span class="pemoji">🔧</span>'; }
 function techBuildModel(race, actFn){ const t=TECH_TREE[race]; if(!t) return null;   // 건설 목록(애드온 제외한 독립 건물)
   const items=t.buildings.filter(b=>!b.addonTo).map(b=>({ pro:'<span class="pemoji">'+b.ico+'</span>', sn:b.name, cr:b.m||0, en:b.g||0,
-    meta:b.supply?('👤+'+b.supply):(b.detector?'탐지':''), state:'ok', act:actFn?actFn(b.k):'' }));
+    meta:b.supply?('👤+'+b.supply):(b.detector?'탐지':(techBldgSpec(race,b.k)&&techBldgSpec(race,b.k).size?techBldgSpec(race,b.k).size.join('×'):'')), state:'ok', act:actFn?actFn(b.k):'' }));
+  const f=t.buildings[0]||{}, fbs=techBldgSpec(race,f.k)||{};
   return { mode:'build', title:t.name+' 건설', icon:'<span class="pemoji">👷</span>', sub:'건설 가능 '+items.length+'종', items,
-    info:{ eb:'테크트리', name:t.name, desc:'건물을 선택해 건설', stats:[['자원','◈'+t.res.m+' · ⚡'+t.res.g]], progLabel:'배치', progVal:'지점 선택', prog:0, time:'탭하여 건설' } }; }
+    info:{ eb:'선택 · 건설', name:f.name||'', desc:(f.produces?('생산: '+f.produces.map(p=>p.name).join(', ')):'')||'건물을 선택해 건설',
+      stats:[['체력',''+(fbs.hp||'-')+(fbs.ar?(' 방'+fbs.ar):'')],['크기',fbs.size?fbs.size.join('×'):'-'],['시간',(fbs.t||'?')+'s']], progLabel:'배치', progVal:'지점 선택', prog:0, cr:f.m||0, en:f.g||0, time:'탭하여 건설' } }; }
 function techProdModel(race, k, actFn){ const b=techGetBldg(race,k); if(!b||!b.produces) return null;   // 건물 생산 유닛
   const items=b.produces.map(p=>({ pro:_techUnitPortrait(p.id), sn:p.name, cr:p.m||0, en:p.g||0, meta:p.pop?('👤'+p.pop):'', state:'ok', act:actFn?actFn(p.id):'' }));
-  const f=b.produces[0]||{};
+  const f=b.produces[0]||{}, fs=techUnitSpec(race,f.id)||{};
+  const stats=[['체력', (fs.hp!=null?fs.hp:'-')+(fs.sh?('/'+fs.sh+'실드'):'')], ['공격', fs.atk?(fs.atk+' '+(_AT_KO[fs.at]||'')):'무공격'], ['사거리', ''+(fs.rng!=null?fs.rng:'-')]];
   return { mode:'prod', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', sub:'생산 '+items.length+'종', items,
-    info:{ eb:'선택 · 생산', name:f.name||'', desc:f.req&&f.req.length?('선행: '+f.req.join(', ')):'', progLabel:'인구', progVal:'👤'+(f.pop||1), prog:0, cr:f.m||0, en:f.g||0, time:'탭하여 생산' } }; }
+    info:{ eb:'선택 · 생산', name:f.name||'', desc:fs.abil?('능력: '+fs.abil):(f.req&&f.req.length?('선행: '+f.req.join(', ')):''), stats, progLabel:'인구·시간', progVal:'👤'+(f.pop||1)+' · '+(fs.t||'?')+'s', prog:0, cr:f.m||0, en:f.g||0, time:'탭하여 생산' } }; }
 function techUpgModel(race, k, actFn){ const b=techGetBldg(race,k); if(!b||!b.research) return null;   // 건물 업그레이드/연구
   const items=b.research.map(r=>{ if(r.tier){ const lv=(G.techUpg&&G.techUpg[race+'_'+r.k])||0, isMax=lv>=r.tier.length, nx=r.tier[Math.min(lv,r.tier.length-1)];
       return { pro:'<span class="pemoji">🔬</span>', sn:r.name, cr:isMax?0:nx[0], en:isMax?0:nx[1], meta:isMax?'MAX':('Lv.'+lv), metaCls:'lv', state:isMax?'max':'ok', act:(actFn&&!isMax)?actFn(r.k):'' }; }
