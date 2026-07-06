@@ -9939,6 +9939,7 @@ TECH_TREE.union={ name:'유니온', res:{m:'크레딧', g:'에너지'}, building
     produces:[
       {id:'skyguard', name:'템페스트', m:150, g:100, pop:2},                                  // 레이스
       {id:'pelican', name:'펠리컨', m:100, g:100, pop:2, req:['control']},                     // 드랍십
+      {id:'aegis', name:'이지스', m:100, g:225, pop:2, req:['control','scifac']},              // 사이언스 베슬
       {id:'hellfire', name:'헬파이어', m:250, g:125, pop:3, req:['control','armory']},          // 발키리
       {id:'dreadnought', name:'드레드노트', m:400, g:300, pop:6, req:['control','physics']} ] },// 배틀크루저
   { k:'control', name:'컨트롤 타워', ico:'🗼', m:50, g:50, addonTo:'starport',
@@ -9964,6 +9965,71 @@ TECH_TREE.union={ name:'유니온', res:{m:'크레딧', g:'에너지'}, building
   { k:'comsat', name:'컴셋 스테이션', ico:'📡', m:50, g:50, addonTo:'command', req:['academy'], detector:true },
   { k:'nuke', name:'뉴클리어 사일로', ico:'☢️', m:50, g:50, addonTo:'command', req:['covert'],
     produces:[{id:'nuke', name:'핵미사일', m:200, g:200, pop:8}] },
+]};
+TECH_TREE.swarm={ name:'스웜', res:{m:'크레딧', g:'에너지'}, buildings:[
+  // ── 1티어(해처리 단계) ──
+  { k:'hatchery', name:'해처리', ico:'🥚', m:300, g:0, supply:1, req:[],
+    produces:[
+      {id:'worker_swarm', name:'드론', m:50, g:0, pop:1},
+      {id:'overlord', name:'제플린', m:100, g:0, pop:0, supply:8, detector:true}],   // 오버로드
+    research:[{k:'burrow', name:'버로우', desc:'지상 유닛 잠복', m:100, g:100}] },
+  { k:'extractor', name:'익스트랙터', ico:'🛢', m:50, g:0, gas:true, req:['hatchery'] },
+  { k:'pool', name:'스포닝 풀', ico:'🧫', m:200, g:0, req:['hatchery'],
+    produces:[{id:'snapper', name:'스내퍼', m:50, g:0, pop:1}],   // 저글링(알1개 2마리)
+    research:[
+      {k:'metabolic', name:'대사 촉진', desc:'스내퍼 이동속도↑', m:100, g:100},
+      {k:'adrenal', name:'아드레날린', desc:'스내퍼 공격속도↑', m:200, g:200, req:['hive']} ] },
+  { k:'evochamber', name:'에볼루션 챔버', ico:'🧬', m:50, g:0, req:['hatchery'],
+    research:[
+      {k:'melee_atk', name:'근접 공격력', desc:'스내퍼·스웜링·저거너트 +/티어', tier:[[100,100],[150,150],[200,200]]},
+      {k:'range_atk', name:'원거리 공격력', desc:'리퍼·베놈퀸 +/티어', tier:[[100,100],[150,150],[200,200]]},
+      {k:'gnd_def', name:'지상 방어력', desc:'모든 지상 +/티어', tier:[[150,150],[225,225],[300,300]]} ] },
+  { k:'hydraden', name:'히드라리스크 덴', ico:'🐍', m:100, g:50, req:['pool'],
+    produces:[
+      {id:'hydra', name:'리퍼', m:75, g:25, pop:1},                                   // 히드라리스크
+      {id:'thornqueen', name:'베놈퀸', m:50, g:100, pop:2, req:['lair']}],            // 럴커(리퍼 변태)
+    research:[
+      {k:'muscle', name:'근육 보강', desc:'리퍼 이동속도↑', m:150, g:150},
+      {k:'grooved', name:'가시 홈', desc:'리퍼 사거리 +1', m:150, g:150},
+      {k:'lurker', name:'럴커 변태', desc:'리퍼→베놈퀸 변태 가능', m:200, g:200, req:['lair']} ] },
+  { k:'creep', name:'크립 콜로니', ico:'🩸', m:75, g:0, req:['hatchery'] },
+  { k:'sunken', name:'성큰 콜로니', ico:'🦑', m:50, g:0, req:['pool'] },
+  { k:'spore', name:'스포어 콜로니', ico:'🍄', m:50, g:0, req:['evochamber'], detector:true },
+  // ── 2티어(레어 단계) ──
+  { k:'lair', name:'레어', ico:'👁️', m:150, g:100, req:['pool'],
+    research:[
+      {k:'pneuma', name:'기낭 갑각', desc:'제플린 이동속도↑', m:150, g:150},
+      {k:'antennae', name:'촉각', desc:'제플린 시야↑', m:150, g:150},
+      {k:'ventral', name:'복강 주머니', desc:'제플린 수송(드랍) 가능', m:200, g:200} ] },
+  { k:'spire', name:'스파이어', ico:'🦇', m:200, g:150, req:['lair'],
+    produces:[
+      {id:'wyvern', name:'와이번', m:100, g:100, pop:2},                              // 뮤탈리스크
+      {id:'stinger', name:'스팅어', m:25, g:75, pop:1}],                              // 스컬지(알1개 2마리)
+    research:[
+      {k:'fly_atk', name:'비행 공격력', desc:'와이번·스팅어·베히모스 +/티어', tier:[[100,100],[175,175],[250,250]]},
+      {k:'fly_def', name:'비행 방어력', desc:'비행 방어 +/티어', tier:[[150,150],[225,225],[300,300]]} ] },
+  { k:'queensnest', name:'퀸즈 네스트', ico:'👑', m:150, g:150, req:['lair'],
+    produces:[{id:'medusa', name:'메두사', m:100, g:100, pop:2}],                     // 퀸
+    research:[
+      {k:'ensnare', name:'인스네어', desc:'적 이동·공속 감소', m:100, g:100},
+      {k:'broodling', name:'스폰 브루들링', desc:'적 생체 즉사+스웜링 생성', m:100, g:100},
+      {k:'gamete', name:'생식 세포 분열', desc:'메두사 최대 에너지 +50', m:150, g:150} ] },
+  // ── 3티어(하이브 단계) ──
+  { k:'hive', name:'하이브', ico:'🌋', m:200, g:150, req:['queensnest'] },
+  { k:'gspire', name:'그레이터 스파이어', ico:'🦅', m:100, g:150, req:['hive','spire'],
+    produces:[{id:'behemoth', name:'베히모스', m:50, g:100, pop:2}] },                // 가디언(와이번 변태)
+  { k:'defilermound', name:'디파일러 마운드', ico:'🦂', m:100, g:100, req:['hive'],
+    produces:[{id:'venom', name:'베놈', m:50, g:150, pop:2}],                         // 디파일러
+    research:[
+      {k:'consume', name:'컨슘', desc:'아군 잡아먹어 에너지 +50', m:100, g:100},
+      {k:'plague', name:'플레이그', desc:'광역 지속 체력 감소', m:200, g:200},
+      {k:'metasynaptic', name:'후성 신경절', desc:'베놈 최대 에너지 +50', m:150, g:150} ] },
+  { k:'ultracavern', name:'울트라리스크 케번', ico:'🦏', m:150, g:200, req:['hive'],
+    produces:[{id:'ultralisk', name:'저거너트', m:200, g:200, pop:4}],                // 울트라리스크
+    research:[
+      {k:'anabolic', name:'동화작용', desc:'저거너트 이동속도↑', m:200, g:200},
+      {k:'chitinous', name:'키틴질 장갑', desc:'저거너트 방어력 +2', m:150, g:150} ] },
+  { k:'nydus', name:'나이더스 커널', ico:'🕳', m:150, g:0, req:['hive'] },
 ]};
 // ── 테크트리 → 커맨드 그리드 모델 어댑터(재사용) ──
 function techGetBldg(race,k){ const t=TECH_TREE[race]; return t&&t.buildings.find(b=>b.k===k); }
@@ -11202,7 +11268,7 @@ const FXLAB_ROSTER={
     {n:'스트라이더',  id:'goliath'},
     {n:'템페스트',    id:'goliath', gm:'skyguard'},
     {n:'펠리컨',      id:'marine',  gm:'pelican'},
-    {n:'사이언스배슬',id:'marine',  gm:'aegis'},
+    {n:'이지스',     id:'marine',  gm:'aegis'},
     {n:'헬파이어',    id:'marine',  gm:'hellfire'},
     {n:'드래드노트',  id:'marine',  gm:'dreadnought'},
   ],
