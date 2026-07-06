@@ -1257,6 +1257,65 @@
   .cmdSlot.cancel:active{transform:translateY(1px);box-shadow:inset 0 0 9px rgba(0,0,0,.7)}
   .cmdSlot.cancel svg{width:28px;height:28px;filter:drop-shadow(0 0 4px rgba(255,90,90,.7))}
   .cmdSlot.cancel .clbl{font-size:var(--fs-sm);font-weight:800;color:#ffd2d2;text-shadow:0 1px 1px #000;line-height:1}
+  /* ══ 재사용 커맨드 그리드(업그레이드·생산·건설 공용) — data-mode로 강조색만 교체 ══ */
+  .cmdG{position:relative;display:flex;flex-direction:column;flex:1;width:100%;height:100%;min-height:0;
+    --ca:var(--neon);--caG:var(--neon-glow);--caS:var(--neon-soft);--caL:var(--neon-lt);
+    --cgDim:#8a94a6;--cgMuted:#657085;--cgGood:#6ff0a0;--cgBad:#ff7676;--cgCr:#8fd8ff;--cgEn:#ffd24a;--cgPop:#c8b6ff}
+  .cmdG[data-mode="prod"]{--ca:#5cd6ff;--caG:rgba(92,214,255,.45);--caS:rgba(92,214,255,.5);--caL:#dff4ff}
+  .cmdG[data-mode="build"]{--ca:var(--gold);--caG:rgba(255,210,74,.45);--caS:rgba(255,210,74,.5);--caL:var(--gold-lt)}
+  .cmdG .cgHead{display:flex;align-items:center;gap:8px;padding:1px 2px 6px;position:relative;flex:none}
+  .cmdG .cgHead::after{content:'';position:absolute;left:2px;right:6px;bottom:0;height:1px;background:linear-gradient(90deg,var(--caS),transparent 72%)}
+  .cmdG .cgPort{width:38px;height:38px;flex:none;position:relative;overflow:hidden;color:var(--ca);border:1.5px solid var(--caS);
+    clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
+    background:radial-gradient(circle at 50% 36%,rgba(74,86,110,.4),#080a10 78%);display:flex;align-items:center;justify-content:center;font-size:20px}
+  .cmdG .cgPort svg{width:26px;height:26px;filter:drop-shadow(0 0 4px var(--caG))} .cmdG .cgPort .pemoji{font-size:22px}
+  .cmdG .cgTtl{flex:1;min-width:0} .cmdG .cgN{font-size:var(--fs-xl);font-weight:800;color:var(--caL);text-shadow:0 0 8px var(--caG);line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cmdG .cgS{margin-top:1px;font-size:var(--fs-xs);color:var(--cgDim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .cmdG .cgS b{color:#cfe0f5;font-weight:700}
+  .cmdG .cgPill{flex:none;align-self:flex-start;font:800 9px/1 sans-serif;letter-spacing:.5px;padding:4px 6px;border-radius:5px;color:var(--caL);background:rgba(255,255,255,.04);border:1px solid var(--caS)}
+  .cmdG .cgPill.idle{color:var(--cgMuted);border-color:var(--metal-edge)}
+  .cmdG .cgBody{display:flex;gap:8px;align-items:stretch;flex:1;min-height:0}
+  /* 좌측 보조 정보 */
+  .cmdG .cgInfo{flex:0 0 29%;max-width:150px;min-width:104px;display:flex;flex-direction:column;gap:4px;padding:7px 8px;overflow:hidden;
+    background:linear-gradient(160deg,rgba(18,23,34,.42),rgba(6,9,14,.5));border:1px solid var(--glass);border-radius:9px}
+  .cmdG .cgEb{font:800 8px/1 sans-serif;letter-spacing:1px;color:var(--cgMuted)} .cmdG .cgDn{font-size:var(--fs-md);font-weight:800;color:#eaf1fb;line-height:1.15;word-break:keep-all}
+  .cmdG .cgDd{font-size:9.5px;color:var(--cgDim);line-height:1.4;overflow:hidden}
+  .cmdG .cgVal{display:flex;align-items:baseline;gap:4px;font-family:'Rajdhani',sans-serif;font-weight:700}
+  .cmdG .cgVal .cur{font-size:13px;color:#c2ccda;font-variant-numeric:tabular-nums} .cmdG .cgVal .arw{color:var(--cgMuted);font-size:10px}
+  .cmdG .cgVal .nxt{font-size:16px;color:var(--ca);text-shadow:0 0 7px var(--caG);font-variant-numeric:tabular-nums} .cmdG .cgVal .u{font-size:8.5px;color:var(--cgMuted);font-weight:600}
+  .cmdG .cgStats{display:flex;flex-direction:column;gap:2px} .cmdG .cgStat{display:flex;justify-content:space-between;font-size:9.5px}
+  .cmdG .cgStat span{color:var(--cgMuted)} .cmdG .cgStat b{color:#c2ccda;font-family:'Rajdhani',sans-serif;font-size:11px;font-variant-numeric:tabular-nums}
+  .cmdG .cgProg{margin-top:1px} .cmdG .cgProg .pl{display:flex;justify-content:space-between;font-size:8.5px;color:var(--cgMuted);margin-bottom:2px} .cmdG .cgProg .pl b{color:var(--caL);font-family:'Rajdhani',sans-serif;font-size:10px}
+  .cmdG .cgBar{height:6px;border-radius:3px;background:rgba(0,0,0,.55);overflow:hidden;box-shadow:inset 0 0 4px rgba(0,0,0,.7)}
+  .cmdG .cgBar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,color-mix(in srgb,var(--ca) 55%,#000),var(--ca));box-shadow:0 0 7px var(--caG);transition:width .12s linear}
+  .cmdG .cgDcost{display:flex;align-items:center;gap:5px;margin-top:auto;padding-top:2px;font-family:'Rajdhani',sans-serif;font-weight:800;font-size:11.5px;flex-wrap:wrap}
+  .cmdG .cgDcost .time{color:var(--cgMuted);font-size:9.5px;width:100%}
+  /* 그리드(주역) + 페이저 */
+  .cmdG .cgCol{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+  .cmdG .cgGrid{flex:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(2,1fr);gap:5px;min-height:0}
+  .cmdG .cgSlot{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:2px;cursor:pointer;padding:5px 3px 4px;touch-action:none;
+    border:1px solid var(--metal-edge);border-radius:8px;background:linear-gradient(160deg,rgba(30,36,48,.62),rgba(8,10,14,.72));transition:.12s}
+  .cmdG .cgSlot::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent)}
+  .cmdG .cgPro{width:clamp(28px,42%,40px);aspect-ratio:1;flex:none;position:relative;overflow:hidden;color:var(--ca);border:1px solid var(--caS);border-radius:6px;
+    background:radial-gradient(circle at 50% 34%,rgba(74,86,110,.45),#0a0d14 80%);display:flex;align-items:center;justify-content:center;font-size:22px}
+  .cmdG .cgPro::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.22) 2px 3px)}
+  .cmdG .cgPro svg{width:76%;height:76%} .cmdG .cgPro img{width:100%;height:100%;object-fit:cover} .cmdG .cgPro .pemoji{font-size:20px}
+  .cmdG .cgName{font:800 10px/1.05 sans-serif;color:#e6eefc;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cmdG .cgCost{display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap;line-height:1;margin-top:auto}
+  .cmdG .cc{display:inline-flex;align-items:center;gap:1px;font:800 10px/1 'Rajdhani',sans-serif;font-variant-numeric:tabular-nums}
+  .cmdG .cc.cr{color:var(--cgCr)} .cmdG .cc.en{color:var(--cgEn)}
+  .cmdG .cgMeta{position:absolute;top:3px;right:4px;display:inline-flex;align-items:center;gap:1px;font:800 8.5px/1 'Rajdhani',sans-serif;
+    color:var(--cgPop);background:rgba(10,12,20,.72);border:1px solid rgba(200,182,255,.3);border-radius:4px;padding:2px 3px;font-variant-numeric:tabular-nums;z-index:1}
+  .cmdG .cgMeta.lv{color:var(--caL);border-color:var(--caS)}
+  .cmdG .cgSlot.sel{border-color:var(--ca);box-shadow:0 0 13px -2px var(--caG),inset 0 0 10px rgba(0,0,0,.35)}
+  .cmdG .cgSlot.sel .cgPro{box-shadow:0 0 9px -2px var(--caG)}
+  .cmdG .cgSlot:active{transform:translateY(1px)} .cmdG .cgSlot.dim{opacity:.5} .cmdG .cgSlot.dim .cc{color:var(--cgBad)!important}
+  .cmdG .cgSlot.max{cursor:default} .cmdG .cgSlot.busy .cgPro{color:var(--cgBad);border-color:var(--cgBad)} .cmdG .cgSlot.busy .cgName{color:var(--cgBad)}
+  .cmdG .cgSlot.empty{border-style:dashed;border-color:var(--glass);background:linear-gradient(160deg,rgba(20,22,28,.3),rgba(8,9,12,.4));cursor:default;box-shadow:none} .cmdG .cgSlot.empty::after{display:none}
+  .cmdG .cgPage{display:flex;align-items:center;justify-content:center;gap:11px;height:19px;flex:none}
+  .cmdG .cgPage button{width:24px;height:19px;border-radius:5px;border:1px solid var(--metal-edge);background:rgba(255,255,255,.04);color:var(--caL);cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center}
+  .cmdG .cgPage button:disabled{opacity:.3;cursor:default} .cmdG .cgPage .dots{display:flex;gap:5px}
+  .cmdG .cgPage .dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.18)} .cmdG .cgPage .dot.on{background:var(--ca);box-shadow:0 0 6px var(--caG)}
+  .cmdG .cgPage .pn{font:800 10px/1 'Rajdhani',sans-serif;color:var(--cgDim);letter-spacing:.5px}
   /* 플레이어 선택: 8인 그리드(4×2) — 깔끔한 다크 카드 + 컬러 액센트 */
   #plGridWrap{display:flex;flex-direction:column;flex:1;min-height:0}   /* 콘솔 세로 가득 채움 */
   /* 플레이어 관전 슬롯 = 통일된 SC 카드(메탈+사선 모서리+플레이어색 좌측 액센트+스캔라인) */
@@ -7023,6 +7082,63 @@ function upgSlotHTML(it){
     +'<div class="ccost">'+ENERGY_ICON+it.cost+'</div></div>';
 }
 // 건물 선택 → 좌(초상화+설명/진행) | 우(정사각 커맨드 그리드)
+// ══ 재사용 커맨드 그리드 컴포넌트(업그레이드·생산·건설 공용) — model 객체만 만들어 renderCmdGrid로 넘기면 됨 ══
+//   model = { mode:'upg'|'prod'|'build', title, icon(초상화 HTML), sub, status, statusIdle,
+//     items:[{ pro(초상화 HTML), sn(이름), cr(크레딧), en(에너지), meta(우상단 배지), metaCls:'lv'?, state:'ok'|'dim'|'busy'|'max'|'empty', sel, act(이벤트 속성 문자열) }],
+//     info:{ eb, name, desc, stats:[[라벨,값]] | val:{cur,nxt,unit}, progLabel, progVal, prog, cr, en, time }, page }
+function _cgFmt(n){ n=n||0; return n>=10000?((n/1000).toFixed(n>=100000?0:1)+'K'):(''+n); }
+function _cgCost(cr,en){ let h=''; if(cr) h+='<span class="cc cr">◈'+_cgFmt(cr)+'</span>'; if(en) h+='<span class="cc en">⚡'+_cgFmt(en)+'</span>'; return h||'<span class="cc" style="color:var(--cgMuted)">무료</span>'; }
+function _cgSlotHTML(it){ if(!it||it.state==='empty') return '<div class="cgSlot empty"></div>';
+  const cls='cgSlot '+(it.state==='busy'?'busy':it.state==='dim'?'dim':it.state==='max'?'max':'')+(it.sel?' sel':'');
+  const meta=it.meta?('<div class="cgMeta '+(it.metaCls||'')+'">'+it.meta+'</div>'):'';
+  return '<div class="'+cls+'"'+(it.act?(' '+it.act):'')+'>'+meta+'<div class="cgPro">'+(it.pro||'')+'</div><div class="cgName">'+(it.sn||'')+'</div><div class="cgCost">'+_cgCost(it.cr,it.en)+'</div></div>'; }
+function _cgInfoHTML(d){ if(!d) return '<div class="cgEb">정보</div><div class="cgDd">항목을 선택하세요</div>';
+  let val=''; if(d.stats) val='<div class="cgStats">'+d.stats.map(s=>'<div class="cgStat"><span>'+s[0]+'</span><b>'+s[1]+'</b></div>').join('')+'</div>';
+  else if(d.val) val='<div class="cgVal"><span class="cur">'+d.val.cur+'</span><span class="arw">▸</span><span class="nxt">'+d.val.nxt+'</span><span class="u">'+(d.val.unit||'')+'</span></div>';
+  return '<div class="cgEb">'+(d.eb||'')+'</div><div class="cgDn">'+(d.name||'')+'</div>'+(d.desc?'<div class="cgDd">'+d.desc+'</div>':'')+val
+    +(d.progLabel?('<div class="cgProg"><div class="pl"><span>'+d.progLabel+'</span><b>'+(d.progVal||'')+'</b></div><div class="cgBar"><i style="width:'+Math.max(4,d.prog||0)+'%"></i></div></div>'):'')
+    +'<div class="cgDcost">'+_cgCost(d.cr,d.en)+(d.time?'<span class="time">'+d.time+'</span>':'')+'</div>'; }
+function renderCmdGrid(host, m){ const el=(typeof host==='string')?document.getElementById(host):host; if(!el||!m) return;
+  const PER=8, total=(m.items?m.items.length:0), pages=Math.max(1,Math.ceil(total/PER));
+  let pg=Math.max(0,Math.min(m.page!=null?m.page:(el._cgPage||0),pages-1)); el._cgPage=pg; m.page=pg; el._cgModel=m;
+  const start=pg*PER, cells=[]; for(let k=0;k<PER;k++) cells.push(_cgSlotHTML(m.items?m.items[start+k]:null));
+  let dots=''; for(let p=0;p<pages;p++) dots+='<span class="dot'+(p===pg?' on':'')+'"></span>';
+  const pager=(pages>1)?('<div class="cgPage"><button onclick="_cgTurn(this,-1)"'+(pg<=0?' disabled':'')+'>◀</button><span class="dots">'+dots+'</span><span class="pn">'+(pg+1)+' / '+pages+'</span><button onclick="_cgTurn(this,1)"'+(pg>=pages-1?' disabled':'')+'>▶</button></div>'):'';
+  const pill=m.status?('<span class="cgPill'+(m.statusIdle?' idle':'')+'">'+m.status+'</span>'):'';
+  el.innerHTML='<div class="cmdG" data-mode="'+(m.mode||'upg')+'">'
+    +'<div class="cgHead"><div class="cgPort">'+(m.icon||'')+'</div><div class="cgTtl"><div class="cgN">'+(m.title||'')+'</div>'+(m.sub?'<div class="cgS">'+m.sub+'</div>':'')+'</div>'+pill+'</div>'
+    +'<div class="cgBody"><div class="cgInfo">'+_cgInfoHTML(m.info)+'</div><div class="cgCol"><div class="cgGrid">'+cells.join('')+'</div>'+pager+'</div></div></div>'; }
+function _cgTurn(btn,delta){ let h=btn; while(h && !h._cgModel) h=h.parentElement; if(!h||!h._cgModel) return; h._cgModel.page=(h._cgPage||0)+delta; renderCmdGrid(h,h._cgModel); }
+// 업그레이드 모델 빌더(현재 무기 강화 데이터 → 커맨드 그리드)
+function cmdGridModelForUpg(b){ const its=bldgUpgs(b), R=G.research;
+  const items=its.map(it=>{ const lv=it.lv, isMax=lv>=UPG_MAX, rThis=R&&R.wpn===it.wpn, other=R&&!rThis;
+    let state='ok', act='', meta='Lv.'+lv;
+    if(rThis){ state='busy'; act='onclick="cancelResearch()"'; }
+    else if(isMax){ state='max'; meta='MAX'; }
+    else if(other){ state='dim'; }
+    else { act='onpointerdown="upgHoldStart(\''+it.wpn+'\',event)"'; if(G.gas<it.cost) state='dim'; }
+    return { pro:it.icon, sn:it.name, en:it.cost, cr:0, meta, metaCls:'lv', state, sel:!!rThis, act }; });
+  const rThis=R&&its.find(it=>it.wpn===R.wpn); let info;
+  if(rThis){ const p=Math.round((1-R.t/R.dur)*100);
+    info={ eb:'연구 진행', name:rThis.name, desc:'업그레이드 진행 중', progLabel:'연구', progVal:p+'%', prog:p, en:rThis.cost, time:R.t.toFixed(1)+'s 남음' }; }
+  else { const f=its[0];
+    info={ eb:'선택 · 정보', name:b.name, desc:'적용 '+(b.units||''), stats:[['현재','Lv.'+(f?f.lv:0)],['최대','Lv.'+UPG_MAX]], progLabel:'상태', progVal:R?'🔒 연구 중':'대기', prog:R?100:0, en:f?f.cost:0, time:R?'다른 연구 중':'탭하여 연구' }; }
+  return { mode:'upg', title:b.name, icon:bldgPortraitInner(b), sub:'적용 '+(b.units||b.wname||''), status:R?'연구 중':'대기', statusIdle:!R, items, info }; }
+// 생산 모델 빌더(STK 건물 → 유닛 그리드). actFn(unitId)→이벤트 속성 문자열(미지정 시 미리보기만)
+function cmdGridModelForProd(bd, actFn){ if(!bd) return null;
+  const items=(bd.produces||[]).map(p=>{ const u=(typeof STK_UNITS!=='undefined'&&STK_UNITS[p.id])||{};
+    const pro=(typeof unitPortraitHTML==='function'&&unitPortraitHTML(p.id))||('<span class="pemoji">'+(u.ico||'❓')+'</span>');
+    return { pro, sn:u.name||p.id, cr:u.cost||0, en:u.en||0, meta:(p.n>1?('×'+p.n):(u.pop?('👤'+u.pop):'')), state:'ok', act:actFn?actFn(p.id):'' }; });
+  const f=(bd.produces&&bd.produces[0]&&STK_UNITS[bd.produces[0].id])||{};
+  return { mode:'prod', title:bd.name, icon:'<span class="pemoji">'+(bd.ico||'🏭')+'</span>', sub:'생산 '+(bd.produces?bd.produces.length:0)+'종',
+    items, info:{ eb:'선택 · 생산', name:f.name||'', stats:[['체력',''+(f.hp||'-')],['공격',''+(f.dmg||'-')],['사거리',''+(f.rng||'-')]], progLabel:'비용', progVal:'◈'+(f.cost||0), prog:0, cr:f.cost||0, time:'탭하여 생산' } }; }
+// 건설 모델 빌더(STK 건물 목록 → 건물 그리드·페이지 자동). actFn(bldgKey)→이벤트 속성 문자열
+function cmdGridModelForBuild(blds, actFn, workerName){
+  const items=(blds||[]).map(bd=>({ pro:'<span class="pemoji">'+(bd.ico||'🏗')+'</span>', sn:bd.name, cr:bd.cost||0, en:bd.en||0,
+    meta:(bd.fp?(bd.fp[0]+'×'+bd.fp[1]):''), state:'ok', act:actFn?actFn(bd.key):'' }));
+  const f=(blds&&blds[0])||{};
+  return { mode:'build', title:workerName||'건설', icon:'<span class="pemoji">👷</span>', sub:'건설 가능 '+(blds?blds.length:0)+'종',
+    items, info:{ eb:'선택 · 건설', name:f.name||'', stats:[['생산',(f.produces&&f.produces[0]&&(STK_UNITS[f.produces[0].id]||{}).name)||'-'],['크기',f.fp?(f.fp[0]+'×'+f.fp[1]):'-']], progLabel:'배치', progVal:'지점 선택', prog:0, cr:f.cost||0, time:'탭하여 배치' } }; }
 function selectUpg(id){ const _b0=TECH.find(x=>x.id===id);
   if(_b0&&_b0.meta){ if(typeof playSfx==='function') playSfx('ui_open'); openPointUpgrade(); return; }   // 포인트 연구소 → 영구 강화 팝업
   const _bchg=(G.techB!==id); G.techB=id;
@@ -7031,30 +7147,7 @@ function selectUpg(id){ const _b0=TECH.find(x=>x.id===id);
   if(typeof updateDeselTop==='function') updateDeselTop();   // 우상단 취소키 표시
   const b=TECH.find(x=>x.id===id); document.getElementById('upgHint').style.display='none';
   const list=document.getElementById('upgList'); list.style.display='flex';
-  const items=bldgUpgs(b);
-  const rThis = G.research && items.find(it=>it.wpn===G.research.wpn);   // 이 건물에서 연구 중인 항목
-  // 우측 그리드(6칸: 항목 슬롯 + 빈 소켓)
-  let slots=items.map(upgSlotHTML).join('');
-  for(let i=items.length;i<6;i++) slots+='<div class="cmdSlot empty"></div>';
-  // 좌측 메타: 연구 중이면 진행 표시, 아니면 설명
-  let meta, pprog='';
-  if(rThis){
-    const p=Math.round((1-G.research.t/G.research.dur)*100);
-    pprog=barHTML('pprog',p);
-    meta='<div class="upgName">'+b.name+'</div>'
-      +'<div class="upgProg"><div class="pt"><b>'+rThis.name+'</b> 업그레이드 중</div>'
-        +barHTML('pbar',p)
-        +'<div class="pval">'+p+'% · '+G.research.t.toFixed(1)+'s 남음</div></div>';
-  } else {
-    const lockMsg = G.research ? ' · 🔒 연구 중' : '';
-    meta='<div class="upgName">'+b.name+'</div>'
-      +'<div class="upgDesc">적용 <span class="du">'+b.units+'</span></div>'
-      +'<div class="upgDesc">최대 Lv.'+UPG_MAX+lockMsg+'</div>';
-  }
-  list.innerHTML='<div class="upgPanel">'
-    +'<div class="upgSide"><div class="upgPortrait'+(rThis?' active':'')+'">'+bldgPortraitInner(b)+pprog+'</div>'
-      +'<div class="upgMeta">'+meta+'</div></div>'
-    +'<div class="cmdGrid">'+slots+'</div></div>';
+  renderCmdGrid(list, cmdGridModelForUpg(b));   // 🆕 재사용 커맨드 그리드
 }
 // 연구 시작 — 에너지 차감 후 타이머 가동(완료까지 다른 업그레이드 잠금). UPG_TIME=0이면 즉시
 function research(wpn){
@@ -7092,9 +7185,9 @@ function tickResearch(dt){ if(!G.research) return;
   if(G.research.t<=0){ finishResearch(G.research.wpn); return; }
   if(G.tab==='Upgrade'){   // 업글 탭이면 좌측 진행바/수치·초상화 진행바만 갱신(전체 재렌더 X)
     const p=Math.round((1-G.research.t/G.research.dur)*100);
-    const pb=document.querySelector('.upgProg .pbar i'); if(pb) pb.style.width=p+'%';
-    const pp=document.querySelector('.upgPortrait .pprog i'); if(pp) pp.style.width=p+'%';
-    const pv=document.querySelector('.upgProg .pval'); if(pv) pv.textContent=p+'% · '+G.research.t.toFixed(1)+'s 남음';
+    const pb=document.querySelector('.cmdG .cgBar i'); if(pb) pb.style.width=p+'%';
+    const pv=document.querySelector('.cmdG .cgProg .pl b'); if(pv) pv.textContent=p+'%';
+    const pt=document.querySelector('.cmdG .cgDcost .time'); if(pt) pt.textContent=G.research.t.toFixed(1)+'s 남음';
   }
 }
 const TINTS=['#0d1e35','#2a0d0d','#0d2a0d','#1e0d2a'];
