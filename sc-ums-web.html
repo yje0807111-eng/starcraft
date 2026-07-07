@@ -602,7 +602,7 @@
     background:linear-gradient(90deg,transparent,var(--neon-soft) 50%,transparent);opacity:.55;box-shadow:0 0 8px var(--neon-faint)}
   /* 최상위 네비 = 별도 섹션 밴드(SC 콘솔 탭 카드, 활성=빨간 부각 카드) — 하단 콘텐츠와 위계 분리 */
   #tabs{display:flex;gap:4px;flex-shrink:0;position:relative;margin:0;padding:3px 7px 5px;z-index:45;
-    background:linear-gradient(180deg,rgba(24,26,34,.62),rgba(8,10,14,.18));
+    background:linear-gradient(180deg,#171922,#090b10);   /* 불투명 — 뒤로 내려간 시트가 비쳐 보이지 않게 */
     border-bottom:1px solid var(--glass-edge);box-shadow:inset 0 -10px 14px -12px rgba(0,0,0,.7)}
   .tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0;position:relative;
     padding:4px 2px;text-align:center;font-size:var(--fs-xs);color:#7c8ba0;cursor:pointer;font-weight:800;line-height:1.15;text-shadow:0 1px 1px #000;
@@ -765,8 +765,7 @@
   .bp.on{display:flex}   /* 활성 탭 패널만 렌더(내려간 상태로 대기) */
   body.sheetOpen .bp.on{transform:translateY(0);pointer-events:auto}   /* 시트 올라옴 */
   /* 시트 바깥(게임 화면) 스크림 — 탭하면 시트 닫힘. 캔버스 위(z17), HUD·사이드·시트 아래 */
-  #sheetScrim{position:absolute;inset:0;z-index:17;display:none;background:rgba(2,4,8,.22)}
-  body.sheetOpen:not(.cstMode) #sheetScrim{display:block}
+  #sheetScrim{display:none}   /* 사용 안 함 — 시트 닫기는 게임 빈-탭(onUp)에서 처리(화면 어두워짐·상호작용 차단 없음) */
   /* 시트 올라오면 하단 사이드 배너(채팅·자동·개인보스)도 시트 위로 함께 상승 */
   #chatBar,#chatLog,#autoFab,#pbossBtn{transition:transform .26s cubic-bezier(.2,.8,.25,1)}
   body.sheetOpen:not(.cstMode) #chatBar,
@@ -2377,7 +2376,6 @@
     <div id="bossPanel" class="hide"><button id="baBackBtn" onclick="closeBossArena()"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>돌아가기</button></div>
     <canvas id="cvMarine"></canvas>  <!-- 3D 오버레이: 뷰 바깥 지속 캔버스(메인=게임유닛 / 유닛뽑기=슬롯 위 모델) -->
     <canvas id="cvFx"></canvas>      <!-- 투사체 오버레이(3D 위) -->
-    <div id="sheetScrim" onpointerdown="closeSheet(event)"></div>   <!-- 하단 시트 열림 시 바깥(게임) 화면 → 탭하면 시트 닫힘 -->
 
     <!-- ⚔ 전투실험: 화면 내 컨트롤 오버레이(Battle 탭에서만 표시) -->
     <div id="btCtl">
@@ -6025,7 +6023,7 @@ function cstRender(){ if(!G.cst) return; const T=BUILD_TREE[G.cst.race]; const m
     +'<span class="cbtn'+(G.cst.inf?' on':'')+'" onclick="cstToggleInf()">⚡ 빠른무한</span><span class="cbtn" onclick="cstReset()">↺ 리셋</span>'+tally;
 }
 function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 컴퓨터가 싸운다: 직스 탭 동작
-  if(G.tab===id && id!=='Build'){ document.body.classList.toggle('sheetOpen'); requestAnimationFrame(_syncSheetLift); return; }   // 같은 탭 재탭 = 슬라이드 시트 열고/닫기(건설은 선택 기반)
+  if(G.tab===id && id!=='Build'){ document.body.classList.toggle('sheetOpen'); requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); return; }   // 같은 탭 재탭 = 슬라이드 시트 열고/닫기(건설은 선택 기반)
   const _fromBattle=(G.tab==='Battle');   // ⚔ 전투실험: 별도 전장 유닛(G.btUnits)으로 스왑
   if(_fromBattle && id!=='Battle' && G._galUnits){ G.units=G._galUnits; G._galUnits=null; if(window.M3D&&M3D.clearGameModels) M3D.clearGameModels(); }   // 이탈 → 갤러리 유닛 복원
   if(id==='Battle' && !_fromBattle){ G.btUnits=G.btUnits||[]; G._galUnits=G.units; G.units=G.btUnits; if(window.M3D&&M3D.clearGameModels) M3D.clearGameModels(); }   // 진입 → 빈 전장 유닛으로
@@ -6038,7 +6036,7 @@ function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 
   document.querySelectorAll('.gview').forEach(v=>v.classList.remove('on')); document.getElementById('v'+(id==='Battle'?'Main':id)).classList.add('on');   // 전투실험은 메인 아레나 뷰 공유
   document.querySelectorAll('.bp').forEach(p=>p.classList.remove('on')); document.getElementById('bp'+id).classList.add('on');
   document.body.classList.toggle('sheetOpen', id!=='Build');   // 탭 진입 = 시트 자동 오픈(건설은 선택 시 시트)
-  requestAnimationFrame(_syncSheetLift);
+  requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220);
   document.getElementById('zoneLabel').textContent=ZONE_LABEL[id];
   document.body.classList.toggle('cstMode', id==='Build');   // 건설 탭: 게임 HUD 숨김
   if(id==='Build' && typeof techUIEnsure==='function') techUIEnsure(); else { if(typeof cstHidePreview==='function') cstHidePreview(); if(window.M3D&&M3D.techMap3DStop) M3D.techMap3DStop();
@@ -7489,10 +7487,12 @@ function checkEnemyWarn(n){
 
 // ── 오버레이 ──
 // 게임 플레이 중에만 하단 콘솔(#bot)을 노출. 타이틀/방찾기/로비 등 메뉴 화면에서는 숨김.
-function setInGame(on){ const p=document.getElementById('phone'); if(p) p.classList.toggle('inGame', !!on); document.body.classList.toggle('sheetOpen', !!on); if(typeof _syncSheetLift==='function') requestAnimationFrame(_syncSheetLift); }   // 게임 진입 = 하단 시트 기본 오픈(시작 탭 메인)
-function _syncSheetLift(){ let h=0; if(document.body.classList.contains('sheetOpen')&&!document.body.classList.contains('cstMode')){ const p=document.querySelector('.bp.on'); if(p) h=p.offsetHeight||0; } document.documentElement.style.setProperty('--sheetH', h+'px'); }   // 열린 시트 높이 → 사이드 배너 상승량(--sheetH)
-function closeSheet(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); document.body.classList.remove('sheetOpen'); _syncSheetLift(); }   // 바깥(게임) 화면 탭 → 하단 시트 닫힘
-(function _initSheetObserver(){ try{ if(typeof ResizeObserver==='undefined') return; const ro=new ResizeObserver(()=>{ if(typeof _syncSheetLift==='function') _syncSheetLift(); }); const bind=()=>document.querySelectorAll('.bp').forEach(p=>ro.observe(p)); if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bind); else bind(); }catch(_e){} })();   // 시트 콘텐츠 로드로 높이 변하면 --sheetH 재동기화
+function setInGame(on){ const p=document.getElementById('phone'); if(p) p.classList.toggle('inGame', !!on); document.body.classList.toggle('sheetOpen', !!on); if(typeof _syncSheetLift==='function') requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); }   // 게임 진입 = 하단 시트 기본 오픈(시작 탭 메인)
+function _syncSheetLift(){ const open=document.body.classList.contains('sheetOpen')&&!document.body.classList.contains('cstMode');
+  if(open){ const p=document.querySelector('.bp.on'); const h=p?(p.offsetHeight||0):0; if(h<20) return;   // 리렌더 중 순간 높이 0/저값 무시(사이드 배너 깜빡임 방지) — 이전 값 유지
+    document.documentElement.style.setProperty('--sheetH', h+'px'); }
+  else document.documentElement.style.setProperty('--sheetH', '0px'); }   // 닫힘 = 0(사이드 배너 원위치)
+function closeSheet(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); document.body.classList.remove('sheetOpen'); _syncSheetLift(); }   // 빈-탭 → 하단 시트 닫힘
 function ovStatRow(label,val){ return '<div class="ovStat"><span class="osL">'+label+'</span><span class="osV">'+val+'</span></div>'; }
 function fmtTime(sec){ sec=Math.max(0,Math.floor(sec||0)); const m=Math.floor(sec/60), s=sec%60; return (m<10?'0':'')+m+':'+(s<10?'0':'')+s; }
 function showOverlay(){ const ov=document.getElementById('ov'),tt=document.getElementById('ovTitle'),dd=document.getElementById('ovDesc'),bt=document.getElementById('ovBtn');
@@ -9063,6 +9063,7 @@ const AIR_ACCEL=5.0;   // 공중유닛 관성 가속(낮을수록 더 굼뜨고 
 const AIR_ARRIVE=0.05; // 공중유닛 목표 근처 감속 시작 거리(정규화)
 const GA_MAX=40, GA_MIN=10, GA_SLOPE=2.7;   // 지상 관성: 작은 유닛=GA_MAX(거의 즉시) → 큰 유닛=GA_MIN(약한 관성). SCALE 비례
 let moved=false;
+let _downTime=0;   // 포인터 다운 시각(빈-탭 빠름 판정용 — 하단 시트 닫기)
 // ── 화면 줌/팬(두 손가락) — nemo·관리자 공용. zoom1·중심0.5=항등(기존 동작 유지) ──
 const NEMO_MAXZOOM=3;
 let _nptrs=new Map(), _nemoPinch=null;
@@ -9086,7 +9087,7 @@ function _nemoPinchMove(){ const p=[..._nptrs.values()]; if(p.length<2||!_nemoPi
 function onDown(e){ if(G.strike){ strikeOnDown(e); return; } if((G.tab!=='Main'&&G.tab!=='Battle')||G.phase!=='playing'||G.bossOpen) return;
   _nptrs.set(e.pointerId, _nptScreen(e));
   if(_nptrs.size>=2){ _nemoPinchStart(); if(e.cancelable)e.preventDefault(); return; }   // 두 손가락 = 줌/팬(단일 제스처 취소)
-  const p=evPos(e); moved=false;
+  const p=evPos(e); moved=false; _downTime=(e&&e.timeStamp)||0;
   if(G.bossPickArm){   // 보스 지정 파견: 유닛 클릭 → 그 유닛 1기 파견 후 모드 해제(한 번 누름=한 기)
     const up=hitUnitPrecise(p.x,p.y);
     if(up && !up.fixed) deployUnitToBoss(up);
@@ -9194,7 +9195,9 @@ function onUp(e){
           if(ex>=x0&&ex<=x1&&ey>=y0&&ey<=y1){ const dd=Math.hypot((ex-sx)*GW,(ey-sy)*GH); if(dd<best){best=dd;pick=e;} } }
         if(pick) selectEnemy(pick.eid); else deselectUnit();
       }
-    } else { deselectUnit(); } // 빈 곳 탭 = 선택 해제
+    } else { deselectUnit();   // 빈 곳 탭 = 선택 해제
+      if(document.body.classList.contains('sheetOpen') && e && (e.timeStamp-_downTime)<400 && typeof closeSheet==='function') closeSheet();   // 빈 땅을 빠르게 탭했다 뗌 = 하단 시트 내려감(유닛/드래그/핀치/이동명령은 다른 분기라 유지)
+    }
     drag=null; dragSet=[]; lastP=null; return;
   }
   // 유닛 탭(이동 없음)은 선택만 유지. 직접 끌기 정착 로직 제거됨.
