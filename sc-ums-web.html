@@ -9209,7 +9209,7 @@ function onUp(e){
         if(pick) selectEnemy(pick.eid); else deselectUnit();
       }
     } else { deselectUnit();   // 빈 곳 탭 = 선택 해제
-      if(document.body.classList.contains('sheetOpen') && e && (e.timeStamp-_downTime)<400 && typeof closeSheet==='function') closeSheet();   // 빈 땅을 빠르게 탭했다 뗌 = 하단 시트 내려감(유닛/드래그/핀치/이동명령은 다른 분기라 유지)
+      if(G.tab!=='Battle' && document.body.classList.contains('sheetOpen') && e && (e.timeStamp-_downTime)<400 && typeof closeSheet==='function') closeSheet();   // 빈 땅을 빠르게 탭했다 뗌 = 하단 시트 내려감. 단 전투실험 피커는 도구 팔레트라 유지(탭 재탭으로만 여닫음)
     }
     drag=null; dragSet=[]; lastP=null; return;
   }
