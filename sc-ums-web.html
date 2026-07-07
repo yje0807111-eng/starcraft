@@ -949,7 +949,7 @@
   #cstBar .tally{flex:1 1 100%;font-size:11.5px;color:#9fb0c2;line-height:1.5}
   #cstBar .tally b{color:#eaf0f8}
   /* 🏗 테크트리 건설 — RTS 배치 맵 + 하단 커맨드 그리드 */
-  #vBuild{display:flex;flex-direction:column;min-height:0}
+  #vBuild.on{display:flex;flex-direction:column;min-height:0}   /* .on일 때만 표시 — 없으면 .gview{display:none}로 숨김(탭 이탈 시 건설 상단바·시트 잔류 방지) */
   #cstMain{flex:1;min-height:0;width:100%;position:relative;overflow:hidden;padding:0}
   #bpBuild{display:none}   /* 건설은 자체 슬라이드 시트(#btSheet) 사용 → 하단 패널 미사용(다른 탭에서 32px 잔여공간 제거) */
   .bmap{position:absolute;inset:0;overflow:hidden;cursor:crosshair;
