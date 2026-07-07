@@ -6328,7 +6328,7 @@ function buildSelChips(){
     if(allOne) allOne.style.display='none';   // 여러 종류 선택 시 숨김
     if(sub) sub.textContent=' · 초상화를 누르면 종류별 선택';
     singleEl.style.display='none'; allBtn.style.display='none'; chipsEl.style.display='grid'; chipsEl.innerHTML='';
-    order.forEach(key=>{ const g=groups[key];
+    order.slice(0,6).forEach(key=>{ const g=groups[key];   // 칩은 최대 6종만 표시(6칸×1줄 유지 — 2줄로 안 넘어감). 선택 유닛 전체는 그대로(상단 카운트 반영)
       const chip=document.createElement('div'); chip.className='selChip'+(g.u.hero?' hero':'');
       chip.title=U[g.u.id].name+(g.u.hero?' 영웅':'')+' ×'+g.uids.length; chip.innerHTML=chipHTML(g);
       chip.onclick=()=>selectMany(g.uids);   // 해당 종류만 선택
