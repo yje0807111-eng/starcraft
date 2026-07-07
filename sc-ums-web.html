@@ -6680,7 +6680,25 @@ const SB_U={
   kronos:   {dmg:32, shield:110},            // 크로노스: 27-1 → shield 170→110·dmg 36→32
   skydancer:{hp:175, shield:70}              // 스카이댄서: 고속 공중 과대 → hp 210→175·shield 100→70
 };
-function Udef(key){ const b=U[key]; if(!b) return b; if(typeof G!=='undefined'&&G.sandbox&&typeof SB_U!=='undefined'&&SB_U[key]) return Object.assign({}, b, SB_U[key]); return b; }   // 유효 스탯(샌드박스=유즈맵 오버라이드 반영)
+// ── 관리자 전투를 기본 공통 자료(base_stats)로 전환 — 게임 id → [hp, shield, armor, atk, rng(SC타일)] ──
+const BASE_UNIT={
+  worker_human:[60,0,0,5,1], marine:[40,0,0,6,4], machinegun:[50,0,1,16,2], medic:[60,0,1,0,0], ghost:[45,0,0,10,7], racer:[80,0,0,20,5], tank:[150,0,1,30,7], goliath:[125,0,1,12,5], skyguard:[120,0,0,20,5], pelican:[150,0,1,0,0], hellfire:[200,0,2,48,6], aegis:[200,0,1,0,0], dreadnought:[500,0,3,25,6],
+  worker_swarm:[40,0,0,5,1], overlord:[200,0,0,0,0], snapper:[35,0,0,5,1], hydra:[80,0,0,10,4], thornqueen:[125,0,1,20,6], wyvern:[120,0,0,9,3], stinger:[25,0,0,110,1], medusa:[120,0,0,0,0], ultralisk:[400,0,1,20,1], behemoth:[150,0,2,20,8], venom:[250,0,2,25,6],
+  worker_light:[20,20,0,5,1], blade:[100,60,1,16,1], dragoon:[100,80,1,20,4], high_templar:[40,40,0,0,0], dark_templar:[80,40,1,40,1], archon:[10,350,0,30,2], seraph:[80,60,1,0,0], larva:[100,80,0,100,8], observer:[40,20,0,0,0], falcon:[150,100,0,8,4], skydancer:[120,80,1,5,5], archangel:[300,150,4,6,8], kronos:[200,150,1,10,5] };
+// 일꾼 앵커: 사거리·공속은 base_stats 그대로가 아니라 "현재 일꾼값 = base 1단위" 비율로 통일(전투가 과하게 안 달라지게)
+const SB_ANCHOR_RANGE=0.035;   // 일꾼 현재 사거리 0.035 ÷ base 1타일 → 유닛 사거리 = base타일 × 0.035
+const SB_ANCHOR_CD=40/15;      // 일꾼 현재 공속 cd40 ÷ base 15프레임 → 유닛 cd = base프레임 × (40/15)
+function _baseUnitOv(s, key){ const c=BASE_UNIT[key]; if(!c) return s;   // base_stats 파생 오버라이드(관리자 전투 전용)
+  s.hp=c[0]; s.shield=c[1]; s.armor=c[2];
+  s.dmg=c[3]; s.up=Math.max(1,Math.round(c[3]*0.4)); s.hdmg=c[3]*2; s.hup=Math.max(1,Math.round(c[3]*0.8));
+  s.range=+(c[4]*SB_ANCHOR_RANGE).toFixed(3);
+  const bcd=(typeof BASE_CD!=='undefined')?BASE_CD[key]:null; if(bcd&&bcd>0) s.cd=Math.round(bcd*SB_ANCHOR_CD);
+  if(s.airDmg!=null&&s.airDmg>0){ s.airDmg=c[3]; s.airUp=Math.max(1,Math.round(c[3]*0.4)); s.hairDmg=c[3]*2; s.hairUp=Math.max(1,Math.round(c[3]*0.8)); }
+  return s; }
+function Udef(key){ const b=U[key]; if(!b) return b;
+  if(typeof G==='undefined'||!G.sandbox||G.strike) return b;   // 네모·직스: 기본 U 그대로(무영향)
+  let s=(typeof SB_U!=='undefined'&&SB_U[key])?Object.assign({},b,SB_U[key]):Object.assign({},b);
+  return _baseUnitOv(s, key); }   // 유효 스탯(관리자=base_stats 전환, 사거리·공속=일꾼앵커 비율)
 function Ueff(u){ return Udef(u.gmodel||u.id)||Udef(u.id)||{}; }
 function _sbTeam(u){ return (u&&u.team==='foe')?'foe':'ally'; }
 // 유닛별 공격 가능 레이어(랩 규칙 반영). 키=gmodel||id
