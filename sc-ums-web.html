@@ -10386,6 +10386,7 @@ const CST_BLDG_CFG={
 try{ if(typeof window!=='undefined') window.CST_BLDG_CFG=CST_BLDG_CFG; }catch(_e){}
 const CST_YSHIFT=34;   // 건설 건물 3D 전체를 화면 아래로 내리는 양(px). 키우면 더 아래로.
 const CST_YAW=-0.52;   // 유니온·에테리얼 정면 회전(라디안). -0.52≈왼쪽 30°.
+try{ if(typeof window!=='undefined') window.CST_YAW=CST_YAW; }catch(_e){}   // 업그레이드 탭 각도 통일용(모듈에서 참조)
 const TECH_WORKER={ union:'worker_human', swarm:'worker_swarm', aetherial:'worker_light' };   // 종족별 일꾼 3D 모델
 const TECH_UNIT_YOFF=6;   // 건설 맵 3D 유닛 바닥 보정(px) — 크기는 메인과 동일한 유닛별 SCALE 그대로
 function _techEntModel(e){ if(!e) return null; if(e.type==='worker') return (TECH_WORKER[G.tech.race]||'worker_human'); if(e.type==='unit') return e.uid; return null; }   // 엔티티 → 3D 모델 키
@@ -12201,6 +12202,13 @@ const VIEW_TILT=0.65;     // 카메라 부감(작게=서 있게 보임, 0=정면
 const ROT_OFFSET=0;       // 모델 정면(+Z 가정)과 실제 forward 차이 보정(yaw, 필요시 조정)
 const MODEL_YAW_OFF={ forge:Math.PI, turret:Math.PI/2, racer:Math.PI/2, tank:Math.PI/2, skyguard:Math.PI/2, skydancer:Math.PI/2,
   falcon:Math.PI/2, pelican:Math.PI/2, kronos:Math.PI/2 };  // 모델별 yaw 보정. 터렛/레이서/브레이커 +90°. falcon·pelican·kronos(아비터, 신규 방향성 기체): 동체 수직이라 옆으로 진행 → +90° 회전 보정
+// 업그레이드 탭 건물 → 건설 구역 대응 모델키(+swarm 여부). 각도를 건설 구역과 통일하기 위한 매핑.
+const UPG_BUILD_KEY={ acad:{k:'union_academy',swarm:false}, arm:{k:'union_armory',swarm:false}, forge:{k:'aetherial_forge',swarm:false}, evo:{k:'swarm_evolution_chamber',swarm:true}, pointlab:{k:'union_command_center',swarm:false} };
+function upgBldgYaw(id){ const map=UPG_BUILD_KEY[id];   // 건설 공식과 동일: (swarm?0:CST_YAW)+CST_BLDG_CFG[model].f
+  if(map){ const cfg=(typeof window!=='undefined'&&window.CST_BLDG_CFG)?window.CST_BLDG_CFG[map.k]:null;
+    const base=map.swarm?0:((typeof window!=='undefined'&&window.CST_YAW!=null)?window.CST_YAW:-0.52);
+    return base+((cfg&&cfg.f)||0); }
+  return (MODEL_YAW_OFF[id]||0)+0.5; }   // 미매핑 건물 폴백(기존 3/4 뷰)
 const NO_TURN={};  // 몸을 돌리지 않는 유닛(현재 없음)
 const TURN_MOVE_ONLY={ dragoon:true };  // 이동 중에만 회전(정지·공격 시 몸 고정) — 센티넬
 const RIM_RO_MUL={ racer:0.6 };  // 모델별 선택링 반경 배율. 레이서=크게 키워(SCALE20) 링이 굵어져 일반 유닛 크기로 축소
@@ -13009,7 +13017,7 @@ window.M3D={
       const grow = m._g = (m._g||1) + ((sel?1.4:1)-(m._g||1))*Math.min(1,dt*8);  // 선택 시 크게 확대
       if(typeof G!=='undefined'){ (G._bldgGrow=G._bldgGrow||{})[b.id]=grow; }   // 가동 파티클이 확대 배율 따라가도록 공유
       m.holder.scale.setScalar(base*grow);
-      m.yaw.rotation.y = (MODEL_YAW_OFF[b.id]||0) + 0.5;  // 고정 방향 + 살짝 측면(3/4 뷰)
+      m.yaw.rotation.y = upgBldgYaw(b.id);  // 건설 구역과 각도 통일((swarm?0:CST_YAW)+건설 f)
       m.anim.position.set(0,0,0); m.anim.rotation.set(0,0,0);  // 바닥에 완전 고정(움직임 없음 — 가동 효과는 파티클로)
       const p=TECH_POS[i]; m.holder.position.set(p.x*W, (H-p.y*H) - Y_DROP, 0);
     });
