@@ -10251,7 +10251,7 @@ const _TECH_RKO={union:'유니온',swarm:'스웜',aetherial:'에테리얼'};
 const TECH_TIME_MUL=0.5;   // 스타 대비 생산·건설 시간 배율(전부 절반=속도감↑)
 function techUIInit(race){ if(!TECH_TREE[race]) race='union';
   const keep=G.tech?{inf:G.tech.inf,nocool:G.tech.nocool}:{};
-  G.tech={ race, credit:TECH_START.credit, energy:TECH_START.energy, built:{}, addon:{}, units:{}, research:{}, sup:0, supCap:0, inf:!!keep.inf, nocool:!!keep.nocool, ents:[], sel:null, arm:null, eseq:1, pend:[], view:{x:0.5,y:0.5,zoom:1} };
+  G.tech={ race, credit:TECH_START.credit, energy:TECH_START.energy, built:{}, addon:{}, units:{}, research:{}, sup:0, supCap:0, inf:!!keep.inf, nocool:!!keep.nocool, ents:[], sel:null, selU:[], arm:null, eseq:1, pend:[], view:{x:0.5,y:0.5,zoom:1} };
   const main=TECH_TREE[race].buildings[0]; if(main){ G.tech.built[main.k]=1; G.tech.supCap+=(main.supply||0); G.tech.ents.push({eid:G.tech.eseq++, type:'bldg', bk:main.k, x:0.5, y:0.3, bt:0}); }   // 본진 자동 배치(완성)
   G.tech.ents.push({eid:G.tech.eseq++, type:'worker', x:0.32, y:0.62}); }   // 일꾼 1기
 function _techBuildTime(race,k){ if(G.tech.nocool) return 0; return ((techBldgSpec(race,k)||{}).t||20)*TECH_TIME_MUL; }
@@ -10262,6 +10262,8 @@ function techFinishProduce(q){ const race=G.tech.race; G.tech.units[q.id]=(G.tec
   G.tech.ents.push({eid:G.tech.eseq++, type:'unit', uid:q.id, x:Math.max(0.04,Math.min(0.96,bx+Math.cos(ang)*rr)), y:Math.max(0.18,Math.min(0.96,by+0.1+Math.sin(ang)*rr*0.55))}); }
 function techTick(dt){ if(!G.tech) return; let active=false, done=false;
   for(const e of G.tech.ents){ if(e.type==='bldg'&&e.bt>0){ e.bt=Math.max(0,e.bt-dt); active=true; if(e.bt<=0){ techFinishBuild(e); done=true; } } }
+  for(const e of G.tech.ents){ if((e.type==='unit'||e.type==='worker')&&e.tx!=null){ const dx=e.tx-e.x, dy=e.ty-e.y, d=Math.hypot(dx,dy), step=TECH_USPD*dt;   // 🚶 유닛 이동
+    if(d<=step||d<1e-4){ e.x=e.tx; e.y=e.ty; e.tx=null; e.ty=null; } else { e.x+=dx/d*step; e.y+=dy/d*step; } active=true; } }
   if(G.tech.pend&&G.tech.pend.length){ const seen={}; for(let i=G.tech.pend.length-1;i>=0;i--){ const q=G.tech.pend[i]; if(seen[q.bk]){ continue; } seen[q.bk]=1; q.t=Math.max(0,q.t-dt); active=true; if(q.t<=0){ techFinishProduce(q); G.tech.pend.splice(i,1); done=true; } } }
   if(done) techUIRender(); else if(active) techMapRender(); }   // 완성=전체 갱신 / 진행중=맵만(진행바)
 // 건설 탭 건물 3D 프리뷰: TECH 건물키 → glb 모델키(선택/배치대기 시 하단 도크에 회전 렌더)
@@ -10342,13 +10344,16 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
         if(G.tech.sel===e.eid){ const _cf=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[(TECH_MODEL[race]||{})[e.bk]]:null; const _sz=(_cf&&_cf.s)||50; inner+='<div class="uhp" style="width:44px;position:absolute;left:50%;transform:translateX(-50%);top:'+((CST_YSHIFT+10+Math.max(0,(_sz-36)*0.9))|0)+'px">'+barHTML('ub uH',100,hpBarColor(1))+'</div>'; } } }
     else if(e.type==='worker'){ inner='<span class="be-ico">👷</span>'; cls='worker'; }
     else { inner=_techUnitPortrait(e.uid); cls='unit'; }
-    const _s=_techW2S(e.x,e.y); ents+='<div class="bent '+cls+(G.tech.sel===e.eid?' sel':'')+'" style="left:'+(_s.x*100).toFixed(2)+'%;top:'+(_s.y*100).toFixed(2)+'%;transform:translate(-50%,-50%) scale('+techView().zoom.toFixed(2)+')">'+inner+'</div>'; }
+    const _seld=(G.tech.sel===e.eid)||(G.tech.selU&&G.tech.selU.indexOf(e.eid)>=0);
+    const _s=_techW2S(e.x,e.y); ents+='<div class="bent '+cls+(_seld?' sel':'')+'" style="left:'+(_s.x*100).toFixed(2)+'%;top:'+(_s.y*100).toFixed(2)+'%;transform:translate(-50%,-50%) scale('+techView().zoom.toFixed(2)+')">'+inner+'</div>'; }
+  if(_btBox && _btBox.active){ const bx=Math.min(_btBox.sx0,_btBox.sx1),by=Math.min(_btBox.sy0,_btBox.sy1),bw=Math.abs(_btBox.sx1-_btBox.sx0),bh=Math.abs(_btBox.sy1-_btBox.sy0);   // 🔲 한 손가락 드래그 = 유닛 지정 박스
+    ents+='<div class="techSelBox" style="left:'+(bx*100).toFixed(2)+'%;top:'+(by*100).toFixed(2)+'%;width:'+(bw*100).toFixed(2)+'%;height:'+(bh*100).toFixed(2)+'%;position:absolute;border:1.5px solid #46f06a;background:rgba(70,240,106,.14);pointer-events:none;z-index:23;border-radius:2px"></div>'; }
   let tabs=''; ['union','swarm','aetherial'].forEach(r=>{ tabs+='<span class="techTab'+(r===race?' on':'')+'" onclick="techRace(event,\''+r+'\')">'+_TECH_RKO[r]+'</span>'; });
   const selE=(G.tech.sel!=null)?G.tech.ents.find(e=>e.eid===G.tech.sel):null, canDemo=selE&&selE.type==='bldg'&&((techGetBldg(race,selE.bk)||{}).k!==TECH_TREE[race].buildings[0].k);
   const res='<span class="res cr">'+(G.tech.inf?'∞':G.tech.credit)+'◈</span><span class="res gs">'+(G.tech.inf?'∞':G.tech.energy)+'⚡</span><span class="res sp">👤'+G.tech.sup+'/'+G.tech.supCap+'</span>'
     +(canDemo?'<span class="cbtn dz" onclick="techDemolish(event)">🗑 철거</span>':'')+'<span class="cbtn'+(G.tech.inf?' on':'')+'" onclick="techInf(event)">∞</span><span class="cbtn'+(G.tech.nocool?' on':'')+'" onclick="techNocool(event)" title="즉시 건설·생산">⏱</span><span class="cbtn" onclick="techReset(event)">↺</span>';
-  const hint=G.tech.arm?('📍 '+((techGetBldg(race,G.tech.arm)||{}).name)+' — 지을 곳을 탭'):(G.tech.sel==null?'일꾼을 탭 → 하단에서 건물 선택 → 맵을 탭해 배치':'건물을 탭하면 생산·연구가 하단에 표시됩니다');
-  map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none"><div class="bmapTop"><div class="techTabs">'+tabs+'</div><div class="bres">'+res+'</div></div>'+ents+'</div>'; }
+  const hint=G.tech.arm?('📍 '+((techGetBldg(race,G.tech.arm)||{}).name)+' — 지을 곳을 탭'):((G.tech.selU&&G.tech.selU.length)?('👥 '+G.tech.selU.length+'기 선택 — 빈 곳을 탭해 이동'):(G.tech.sel==null?'유닛 드래그로 지정 · 두 손가락으로 화면 이동 · 건물 탭→생산':'건물을 탭하면 생산·연구가 하단에 표시됩니다'));
+  map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none"><div class="bmapTop"><div class="techTabs">'+tabs+'</div><div class="bres">'+res+'</div></div>'+ents+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div></div>'; }
 function techBldgInfoModel(b){ const race=G.tech.race, hb=TECH_TREE[race].buildings[0];
   const items=(b.unlocks||[]).map(uid=>{ const p=(hb.produces||[]).find(x=>x.id===uid)||{}; return { pro:_techUnitPortrait(uid), sn:p.name||uid, cr:p.m||0, en:p.g||0, meta:p.pop?'👤'+p.pop:'', state:'ok', act:'' }; });
   return { mode:'prod', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', sub:'이 건물이 해금 · 생산은 '+hb.name+'에서', items,
@@ -10364,25 +10369,43 @@ function techView(){ if(!G.tech.view) G.tech.view={x:0.5,y:0.5,zoom:1}; return G
 function _techClampView(){ const v=G.tech.view; v.zoom=Math.max(1,Math.min(4,v.zoom)); const m=(1-1/v.zoom)*0.5; v.x=Math.max(0.5-m,Math.min(0.5+m,v.x)); v.y=Math.max(0.5-m,Math.min(0.5+m,v.y)); }
 function _techW2S(wx,wy){ const v=techView(); return { x:(wx-v.x)*v.zoom+0.5, y:(wy-v.y)*v.zoom+0.5 }; }   // 월드→화면
 function _techS2W(sx,sy){ const v=techView(); return { x:(sx-0.5)/v.zoom+v.x, y:(sy-0.5)/v.zoom+v.y }; }   // 화면→월드
-const _btPtrs=new Map(); let _btPinch=null, _btPan=null, _btMoved=false, _btDown=null;
+const TECH_USPD=0.42;   // 유닛 이동 속도(월드/초 — 맵 폭 1.0)
+const _btPtrs=new Map(); let _btPinch=null, _btBox=null, _btMoved=false, _btDown=null;
 function _btRect(){ const m=document.getElementById('cstMain'); return m?m.getBoundingClientRect():null; }
+function _techAssignMove(wx,wy){ const sel=(G.tech.selU||[]).map(id=>G.tech.ents.find(e=>e.eid===id)).filter(e=>e&&(e.type==='unit'||e.type==='worker')); const n=sel.length; if(!n) return;
+  const tx=Math.max(0.04,Math.min(0.96,wx)), ty=Math.max(0.16,Math.min(0.96,wy));   // 여러 기 선택 시 살짝 벌려 진형 유지
+  sel.forEach(function(e,i){ const off=(n>1?(i-(n-1)/2)*0.05:0); e.tx=Math.max(0.04,Math.min(0.96,tx+off)); e.ty=Math.max(0.16,Math.min(0.96,ty+(off?off*0.4:0))); });
+  if(typeof playSfx==='function') playSfx('ui_confirm'); }
 function techPtrDown(ev){ if(!G.tech) return; const r=_btRect(); if(!r) return; if(ev.preventDefault)ev.preventDefault();
   _btPtrs.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
   const sx=(ev.clientX-r.left)/(r.width||1), sy=(ev.clientY-r.top)/(r.height||1);
-  if(_btPtrs.size>=2){ _btPan=null; const p=[..._btPtrs.values()], v=techView();   // 두 손가락 = 핀치 줌/팬
-    _btPinch={ d:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)||1, zoom:v.zoom, cx:(p[0].x+p[1].x)/2, cy:(p[0].y+p[1].y)/2, vx:v.x, vy:v.y, rw:r.width, rh:r.height }; return; }
+  if(_btPtrs.size>=2){ _btBox=null; const p=[..._btPtrs.values()], v=techView();   // 두 손가락 = 화면 이동(팬 + 핀치 줌)
+    _btPinch={ d:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)||1, zoom:v.zoom, cx:(p[0].x+p[1].x)/2, cy:(p[0].y+p[1].y)/2, vx:v.x, vy:v.y, rw:r.width, rh:r.height }; _btMoved=true; return; }
   _btMoved=false; _btDown={sx, sy};
-  if(G.tech.arm==null && G.tech.sel==null && sy>=0.13){ const v=techView(); _btPan={ ox:ev.clientX, oy:ev.clientY, vx:v.x, vy:v.y, rw:r.width, rh:r.height }; } else _btPan=null; }   // 무선택·비배치일 때만 한 손가락 팬
+  _btBox=(G.tech.arm==null && sy>=0.13) ? {sx0:sx, sy0:sy, sx1:sx, sy1:sy, active:false, rw:r.width, rh:r.height} : null; }   // 한 손가락 드래그 = 유닛 지정 박스(배치 중·상단바 제외)
 function techPtrMove(ev){ if(!G.tech||G.tab!=='Build'||!_btPtrs.has(ev.pointerId)) return; _btPtrs.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
   if(_btPinch && _btPtrs.size>=2){ const p=[..._btPtrs.values()], d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y), z=Math.max(1,Math.min(4,_btPinch.zoom*d/_btPinch.d)), v=techView(); v.zoom=z;
     const cx=(p[0].x+p[1].x)/2, cy=(p[0].y+p[1].y)/2; v.x=_btPinch.vx-(cx-_btPinch.cx)/(_btPinch.rw||1)/z; v.y=_btPinch.vy-(cy-_btPinch.cy)/(_btPinch.rh||1)/z; _techClampView(); _btMoved=true; techMapRender(); return; }
-  if(_btPan){ const dx=ev.clientX-_btPan.ox, dy=ev.clientY-_btPan.oy; if(_btMoved||Math.abs(dx)+Math.abs(dy)>6){ _btMoved=true; const v=techView(); v.x=_btPan.vx-dx/(_btPan.rw||1)/v.zoom; v.y=_btPan.vy-dy/(_btPan.rh||1)/v.zoom; _techClampView(); techMapRender(); } } }
+  if(_btBox){ const r=_btRect(); if(!r) return; const sx=(ev.clientX-r.left)/(r.width||1), sy=(ev.clientY-r.top)/(r.height||1); _btBox.sx1=sx; _btBox.sy1=sy;
+    if(!_btBox.active && (Math.abs(sx-_btBox.sx0)*(r.width||1)+Math.abs(sy-_btBox.sy0)*(r.height||1))>6) _btBox.active=true;
+    if(_btBox.active){ _btMoved=true; techMapRender(); } } }
 function techPtrUp(ev){ if(!G.tech) return; const had=_btPtrs.has(ev.pointerId); _btPtrs.delete(ev.pointerId); if(_btPtrs.size<2) _btPinch=null;
-  if(_btPtrs.size>0) return; const moved=_btMoved, down=_btDown; _btPan=null; _btDown=null; _btMoved=false;
-  if(!had||moved||!down||G.tab!=='Build'||down.sy<0.13) return;   // 드래그/핀치/상단바 = 탭 아님
+  if(_btPtrs.size>0) return; const box=_btBox, down=_btDown, moved=_btMoved; _btBox=null; _btDown=null; _btMoved=false;
+  const bp=document.getElementById('bpBuild');
+  if(box && box.active){   // 박스 드래그 완료 → 안의 유닛/일꾼 지정
+    const x0=Math.min(box.sx0,box.sx1),y0=Math.min(box.sy0,box.sy1),x1=Math.max(box.sx0,box.sx1),y1=Math.max(box.sy0,box.sy1);
+    if((x1-x0>0.015||y1-y0>0.015)){ const w0=_techS2W(x0,y0), w1=_techS2W(x1,y1);
+      G.tech.selU=G.tech.ents.filter(e=>(e.type==='unit'||e.type==='worker')&&e.x>=w0.x&&e.x<=w1.x&&e.y>=w0.y&&e.y<=w1.y).map(e=>e.eid);
+      G.tech.sel=null; if(bp) bp._cgPage=0; }
+    techUIRender(); return; }
+  if(!had||moved||!down||G.tab!=='Build'||down.sy<0.13) return;   // 핀치/드래그/상단바 = 탭 아님
   const w=_techS2W(down.sx, down.sy);
   if(G.tech.arm){ techPlace(w.x, w.y); return; }
-  const e=_techEntAt(w.x, w.y); G.tech.sel=e?e.eid:null; const bp=document.getElementById('bpBuild'); if(bp) bp._cgPage=0; techUIRender(); }
+  const e=_techEntAt(w.x, w.y);
+  if(e){ if(e.type==='bldg'){ G.tech.sel=e.eid; G.tech.selU=[]; } else { G.tech.selU=[e.eid]; G.tech.sel=null; } }   // 건물 탭=패널 / 유닛·일꾼 탭=선택
+  else if(G.tech.selU&&G.tech.selU.length){ _techAssignMove(w.x, w.y); return; }   // 선택 상태 + 빈 곳 탭 = 이동
+  else { G.tech.sel=null; G.tech.selU=[]; }   // 빈 곳 탭 = 해제
+  if(bp) bp._cgPage=0; techUIRender(); }
 if(typeof document!=='undefined'){ document.addEventListener('pointermove', function(e){ if(typeof techPtrMove==='function') techPtrMove(e); }, {passive:false});
   document.addEventListener('pointerup', function(e){ if(typeof techPtrUp==='function') techPtrUp(e); });
   document.addEventListener('pointercancel', function(e){ if(typeof techPtrUp==='function') techPtrUp(e); }); }
