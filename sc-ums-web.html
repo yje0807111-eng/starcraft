@@ -9809,8 +9809,9 @@ function loop(now){
       if(window.M3D.cstEnsure && G._cstLoaded!==race){ G._cstLoaded=race; window.M3D.cstEnsure(Object.values((typeof TECH_MODEL!=='undefined'&&TECH_MODEL[race])||{})); }
       mcv.style.display='block';
       const _map=document.getElementById('cstMain'); const W=(_map&&_map.clientWidth)||GW||360, H=(_map&&_map.clientHeight)||GH||420; GW=W; GH=H;
-      const list=[]; for(const e of (G.tech.ents||[])){ if(e.type!=='bldg'||e.bt>0) continue; const mk=(TECH_MODEL[race]||{})[e.bk]; if(!mk) continue; const _cfg=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[mk]:null; list.push({uid:'cst_'+race+'_'+mk+'_'+e.eid, id:'cb_'+mk, x:e.x, y:e.y, face:((race==='swarm')?0:(typeof CST_YAW!=='undefined'?CST_YAW:0))+((_cfg&&_cfg.f)||0), yoff:(typeof CST_YSHIFT!=='undefined'?CST_YSHIFT:34), sel:(G.tech&&G.tech.sel===e.eid)}); }   // yoff=전체 균일 하강(px)
-      window.M3D.syncBuild(list, W, H, dt, 1.0);
+      const _v=(G.tech&&G.tech.view)||{x:0.5,y:0.5,zoom:1};
+      const list=[]; for(const e of (G.tech.ents||[])){ if(e.type!=='bldg'||e.bt>0) continue; const mk=(TECH_MODEL[race]||{})[e.bk]; if(!mk) continue; const _cfg=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[mk]:null; list.push({uid:'cst_'+race+'_'+mk+'_'+e.eid, id:'cb_'+mk, x:(e.x-_v.x)*_v.zoom+0.5, y:(e.y-_v.y)*_v.zoom+0.5, face:((race==='swarm')?0:(typeof CST_YAW!=='undefined'?CST_YAW:0))+((_cfg&&_cfg.f)||0), yoff:(typeof CST_YSHIFT!=='undefined'?CST_YSHIFT:34), sel:(G.tech&&G.tech.sel===e.eid)}); }   // 뷰 변환(팬/줌) 반영
+      window.M3D.syncBuild(list, W, H, dt, _v.zoom);
     } else if(mcv) mcv.style.display='none';
     const _fcv=document.getElementById('cvFx'); if(_fcv) _fcv.style.display='none';
   }
@@ -10250,7 +10251,7 @@ const _TECH_RKO={union:'유니온',swarm:'스웜',aetherial:'에테리얼'};
 const TECH_TIME_MUL=0.5;   // 스타 대비 생산·건설 시간 배율(전부 절반=속도감↑)
 function techUIInit(race){ if(!TECH_TREE[race]) race='union';
   const keep=G.tech?{inf:G.tech.inf,nocool:G.tech.nocool}:{};
-  G.tech={ race, credit:TECH_START.credit, energy:TECH_START.energy, built:{}, addon:{}, units:{}, research:{}, sup:0, supCap:0, inf:!!keep.inf, nocool:!!keep.nocool, ents:[], sel:null, arm:null, eseq:1, pend:[] };
+  G.tech={ race, credit:TECH_START.credit, energy:TECH_START.energy, built:{}, addon:{}, units:{}, research:{}, sup:0, supCap:0, inf:!!keep.inf, nocool:!!keep.nocool, ents:[], sel:null, arm:null, eseq:1, pend:[], view:{x:0.5,y:0.5,zoom:1} };
   const main=TECH_TREE[race].buildings[0]; if(main){ G.tech.built[main.k]=1; G.tech.supCap+=(main.supply||0); G.tech.ents.push({eid:G.tech.eseq++, type:'bldg', bk:main.k, x:0.5, y:0.3, bt:0}); }   // 본진 자동 배치(완성)
   G.tech.ents.push({eid:G.tech.eseq++, type:'worker', x:0.32, y:0.62}); }   // 일꾼 1기
 function _techBuildTime(race,k){ if(G.tech.nocool) return 0; return ((techBldgSpec(race,k)||{}).t||20)*TECH_TIME_MUL; }
@@ -10341,13 +10342,13 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
         if(G.tech.sel===e.eid){ const _cf=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[(TECH_MODEL[race]||{})[e.bk]]:null; const _sz=(_cf&&_cf.s)||50; inner+='<div class="uhp" style="width:44px;position:absolute;left:50%;transform:translateX(-50%);top:'+((CST_YSHIFT+10+Math.max(0,(_sz-36)*0.9))|0)+'px">'+barHTML('ub uH',100,hpBarColor(1))+'</div>'; } } }
     else if(e.type==='worker'){ inner='<span class="be-ico">👷</span>'; cls='worker'; }
     else { inner=_techUnitPortrait(e.uid); cls='unit'; }
-    ents+='<div class="bent '+cls+(G.tech.sel===e.eid?' sel':'')+'" style="left:'+(e.x*100).toFixed(2)+'%;top:'+(e.y*100).toFixed(2)+'%">'+inner+'</div>'; }
+    const _s=_techW2S(e.x,e.y); ents+='<div class="bent '+cls+(G.tech.sel===e.eid?' sel':'')+'" style="left:'+(_s.x*100).toFixed(2)+'%;top:'+(_s.y*100).toFixed(2)+'%;transform:translate(-50%,-50%) scale('+techView().zoom.toFixed(2)+')">'+inner+'</div>'; }
   let tabs=''; ['union','swarm','aetherial'].forEach(r=>{ tabs+='<span class="techTab'+(r===race?' on':'')+'" onclick="techRace(event,\''+r+'\')">'+_TECH_RKO[r]+'</span>'; });
   const selE=(G.tech.sel!=null)?G.tech.ents.find(e=>e.eid===G.tech.sel):null, canDemo=selE&&selE.type==='bldg'&&((techGetBldg(race,selE.bk)||{}).k!==TECH_TREE[race].buildings[0].k);
   const res='<span class="res cr">'+(G.tech.inf?'∞':G.tech.credit)+'◈</span><span class="res gs">'+(G.tech.inf?'∞':G.tech.energy)+'⚡</span><span class="res sp">👤'+G.tech.sup+'/'+G.tech.supCap+'</span>'
     +(canDemo?'<span class="cbtn dz" onclick="techDemolish(event)">🗑 철거</span>':'')+'<span class="cbtn'+(G.tech.inf?' on':'')+'" onclick="techInf(event)">∞</span><span class="cbtn'+(G.tech.nocool?' on':'')+'" onclick="techNocool(event)" title="즉시 건설·생산">⏱</span><span class="cbtn" onclick="techReset(event)">↺</span>';
   const hint=G.tech.arm?('📍 '+((techGetBldg(race,G.tech.arm)||{}).name)+' — 지을 곳을 탭'):(G.tech.sel==null?'일꾼을 탭 → 하단에서 건물 선택 → 맵을 탭해 배치':'건물을 탭하면 생산·연구가 하단에 표시됩니다');
-  map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+'" onpointerdown="techMapClick(event)"><div class="bmapTop"><div class="techTabs">'+tabs+'</div><div class="bres">'+res+'</div></div>'+ents+'</div>'; }
+  map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none"><div class="bmapTop"><div class="techTabs">'+tabs+'</div><div class="bres">'+res+'</div></div>'+ents+'</div>'; }
 function techBldgInfoModel(b){ const race=G.tech.race, hb=TECH_TREE[race].buildings[0];
   const items=(b.unlocks||[]).map(uid=>{ const p=(hb.produces||[]).find(x=>x.id===uid)||{}; return { pro:_techUnitPortrait(uid), sn:p.name||uid, cr:p.m||0, en:p.g||0, meta:p.pop?'👤'+p.pop:'', state:'ok', act:'' }; });
   return { mode:'prod', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', sub:'이 건물이 해금 · 생산은 '+hb.name+'에서', items,
@@ -10358,10 +10359,33 @@ function techPanelRender(){ const host=document.getElementById('bpBuild'); if(!h
   else model=techBuildListModel();   // 일꾼·무선택 → 건설 목록
   renderCmdGrid(host, model); }
 // 입력
-function techMapClick(ev){ if(!ev||!ev.currentTarget) return; const r=ev.currentTarget.getBoundingClientRect(); const x=(ev.clientX-r.left)/(r.width||1), y=(ev.clientY-r.top)/(r.height||1);
-  if(y<0.13) return;   // 상단바 영역 무시
-  if(G.tech.arm){ techPlace(x,y); return; }
-  const e=_techEntAt(x,y); G.tech.sel=e?e.eid:null; const bp=document.getElementById('bpBuild'); if(bp) bp._cgPage=0; techUIRender(); }
+// 뷰(확대/축소·팬) — 월드좌표(0~1)↔화면좌표 변환 (메인탭 G.view와 동일 규약)
+function techView(){ if(!G.tech.view) G.tech.view={x:0.5,y:0.5,zoom:1}; return G.tech.view; }
+function _techClampView(){ const v=G.tech.view; v.zoom=Math.max(1,Math.min(4,v.zoom)); const m=(1-1/v.zoom)*0.5; v.x=Math.max(0.5-m,Math.min(0.5+m,v.x)); v.y=Math.max(0.5-m,Math.min(0.5+m,v.y)); }
+function _techW2S(wx,wy){ const v=techView(); return { x:(wx-v.x)*v.zoom+0.5, y:(wy-v.y)*v.zoom+0.5 }; }   // 월드→화면
+function _techS2W(sx,sy){ const v=techView(); return { x:(sx-0.5)/v.zoom+v.x, y:(sy-0.5)/v.zoom+v.y }; }   // 화면→월드
+const _btPtrs=new Map(); let _btPinch=null, _btPan=null, _btMoved=false, _btDown=null;
+function _btRect(){ const m=document.getElementById('cstMain'); return m?m.getBoundingClientRect():null; }
+function techPtrDown(ev){ if(!G.tech) return; const r=_btRect(); if(!r) return; if(ev.preventDefault)ev.preventDefault();
+  _btPtrs.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
+  const sx=(ev.clientX-r.left)/(r.width||1), sy=(ev.clientY-r.top)/(r.height||1);
+  if(_btPtrs.size>=2){ _btPan=null; const p=[..._btPtrs.values()], v=techView();   // 두 손가락 = 핀치 줌/팬
+    _btPinch={ d:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)||1, zoom:v.zoom, cx:(p[0].x+p[1].x)/2, cy:(p[0].y+p[1].y)/2, vx:v.x, vy:v.y, rw:r.width, rh:r.height }; return; }
+  _btMoved=false; _btDown={sx, sy};
+  if(G.tech.arm==null && G.tech.sel==null && sy>=0.13){ const v=techView(); _btPan={ ox:ev.clientX, oy:ev.clientY, vx:v.x, vy:v.y, rw:r.width, rh:r.height }; } else _btPan=null; }   // 무선택·비배치일 때만 한 손가락 팬
+function techPtrMove(ev){ if(!G.tech||G.tab!=='Build'||!_btPtrs.has(ev.pointerId)) return; _btPtrs.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
+  if(_btPinch && _btPtrs.size>=2){ const p=[..._btPtrs.values()], d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y), z=Math.max(1,Math.min(4,_btPinch.zoom*d/_btPinch.d)), v=techView(); v.zoom=z;
+    const cx=(p[0].x+p[1].x)/2, cy=(p[0].y+p[1].y)/2; v.x=_btPinch.vx-(cx-_btPinch.cx)/(_btPinch.rw||1)/z; v.y=_btPinch.vy-(cy-_btPinch.cy)/(_btPinch.rh||1)/z; _techClampView(); _btMoved=true; techMapRender(); return; }
+  if(_btPan){ const dx=ev.clientX-_btPan.ox, dy=ev.clientY-_btPan.oy; if(_btMoved||Math.abs(dx)+Math.abs(dy)>6){ _btMoved=true; const v=techView(); v.x=_btPan.vx-dx/(_btPan.rw||1)/v.zoom; v.y=_btPan.vy-dy/(_btPan.rh||1)/v.zoom; _techClampView(); techMapRender(); } } }
+function techPtrUp(ev){ if(!G.tech) return; const had=_btPtrs.has(ev.pointerId); _btPtrs.delete(ev.pointerId); if(_btPtrs.size<2) _btPinch=null;
+  if(_btPtrs.size>0) return; const moved=_btMoved, down=_btDown; _btPan=null; _btDown=null; _btMoved=false;
+  if(!had||moved||!down||G.tab!=='Build'||down.sy<0.13) return;   // 드래그/핀치/상단바 = 탭 아님
+  const w=_techS2W(down.sx, down.sy);
+  if(G.tech.arm){ techPlace(w.x, w.y); return; }
+  const e=_techEntAt(w.x, w.y); G.tech.sel=e?e.eid:null; const bp=document.getElementById('bpBuild'); if(bp) bp._cgPage=0; techUIRender(); }
+if(typeof document!=='undefined'){ document.addEventListener('pointermove', function(e){ if(typeof techPtrMove==='function') techPtrMove(e); }, {passive:false});
+  document.addEventListener('pointerup', function(e){ if(typeof techPtrUp==='function') techPtrUp(e); });
+  document.addEventListener('pointercancel', function(e){ if(typeof techPtrUp==='function') techPtrUp(e); }); }
 function techArm(bk){ const race=G.tech.race, b=techGetBldg(race,bk); if(!b) return;
   if(b.addonTo && !(G.tech.built[b.addonTo]>0)){ if(typeof toast==='function') toast('⛔ '+((techGetBldg(race,b.addonTo)||{}).name)+' 먼저 건설'); return; }
   if(!_techReqMet(b.req)){ if(typeof toast==='function') toast('⛔ 선행: '+(b.req||[]).map(r=>(techGetBldg(race,r)||{}).name).join(', ')); return; }
