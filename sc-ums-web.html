@@ -601,7 +601,7 @@
   #bot::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;z-index:2;   /* 가장자리로 사라지는 빨강 하이라이트(자연스러운 구분선) */
     background:linear-gradient(90deg,transparent,var(--neon-soft) 50%,transparent);opacity:.55;box-shadow:0 0 8px var(--neon-faint)}
   /* 최상위 네비 = 별도 섹션 밴드(SC 콘솔 탭 카드, 활성=빨간 부각 카드) — 하단 콘텐츠와 위계 분리 */
-  #tabs{display:flex;gap:4px;flex-shrink:0;position:relative;margin:0;padding:3px 7px 5px;z-index:3;
+  #tabs{display:flex;gap:4px;flex-shrink:0;position:relative;margin:0;padding:3px 7px 5px;z-index:45;
     background:linear-gradient(180deg,rgba(24,26,34,.62),rgba(8,10,14,.18));
     border-bottom:1px solid var(--glass-edge);box-shadow:inset 0 -10px 14px -12px rgba(0,0,0,.7)}
   .tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0;position:relative;
@@ -1014,7 +1014,9 @@
   #btDesel.on{display:flex}
   #btDesel svg{filter:drop-shadow(0 0 5px var(--neon-glow))}
   #btDesel:active{transform:translateY(1px);border-color:var(--neon);box-shadow:0 0 12px var(--neon-glow)}
-  body.cstMode #hud, body.cstMode #chatBar, body.cstMode #chatLog, body.cstMode #miniWrap, body.cstMode #deselTop, body.cstMode #mergeFab, body.cstMode #skillFab, body.cstMode #pbossBtn, body.cstMode #autoFab, body.cstMode #btCtl{display:none !important}
+  body.cstMode #chatBar, body.cstMode #chatLog, body.cstMode #miniWrap, body.cstMode #deselTop, body.cstMode #mergeFab, body.cstMode #skillFab, body.cstMode #pbossBtn, body.cstMode #autoFab, body.cstMode #btCtl{display:none !important}
+  /* 상단 HUD(크레딧·에너지·인구·라운드·킬·시계)는 모든 구역 공통 고정 — 건설 탭에서도 표시. 건설맵 상단바는 그 아래로 */
+  body.cstMode .bmapTop{top:58px}
   /* 적군 유닛 구분(붉은 링) */
   .unit.foe .ubox{box-shadow:0 0 0 2px rgba(255,66,66,.62),0 0 9px rgba(255,54,54,.5)!important}
   #cmdRow .selAll{align-self:stretch;display:flex;align-items:center;justify-content:center;padding:8px 9px;border-radius:var(--r-md);font-size:var(--fs-sm);flex:0 0 auto;white-space:nowrap}
