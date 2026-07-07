@@ -1106,10 +1106,10 @@
   .uHpBar i{display:block;height:100%;border-radius:var(--r-bar);transition:width .15s}
   .uHpBar.shb{height:3px}.uHpBar.shb i{background:#5ad1ff}
   .uHpNum{font-size:8px;color:#d2dbe6;font-weight:700;font-family:'Rajdhani',sans-serif;line-height:1}
-  .selChips{display:grid;grid-template-columns:repeat(4,1fr);gap:9px 6px;justify-items:center;align-content:start;overflow-y:auto;overflow-x:hidden;flex:1;min-height:0;padding:7px 8px 4px}  /* 4칸×최대2줄 */
+  .selChips{display:grid;grid-template-columns:repeat(6,1fr);gap:5px 4px;justify-items:center;align-content:start;overflow-y:auto;overflow-x:hidden;flex:0 0 auto;min-height:0;padding:6px 8px 4px}  /* 6칸×1줄(작은 칩, 하단 공간 절약. 6종 초과 시 스크롤) */
   /* 초상화 칩 = 흑백 정사각형(3D 모델→2D) + 하단 이름 */
   /* 종류별 칩 = 통일된 SC 카드(메탈+사선 모서리+등급색 좌측 액센트+스캔라인) */
-  .selChip{position:relative;display:flex;flex-direction:column;align-items:stretch;width:100%;max-width:66px;cursor:pointer;overflow:hidden;transition:all .1s;
+  .selChip{position:relative;display:flex;flex-direction:column;align-items:stretch;width:100%;max-width:48px;cursor:pointer;overflow:hidden;transition:all .1s;
     background:linear-gradient(160deg,rgba(48,54,68,.5),rgba(10,12,17,.78));border:1px solid var(--metal-edge);
     clip-path:polygon(0 0,calc(100% - 7px) 0,100% 7px,100% 100%,7px 100%,0 calc(100% - 7px));
     box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
@@ -1118,16 +1118,16 @@
   .selChip:active{transform:translateY(1px)}
   .selChip.hero{border-color:rgba(255,224,138,.6)}
   .selChip .chipAccent{position:absolute;left:0;top:0;bottom:0;width:4px;z-index:3;box-shadow:0 0 6px currentColor}
-  .selChip .chipBox{position:relative;width:100%;height:48px;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:3px;
+  .selChip .chipBox{position:relative;width:100%;height:34px;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:2px;
     background:radial-gradient(circle at 50% 34%,rgba(60,70,90,.42),#070910 90%);border:none}
-  .selChip .chipPort{width:44px;height:44px;color:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden}
-  .selChip .chipPort svg{width:40px;height:40px;filter:drop-shadow(0 0 1.5px rgba(0,0,0,.9))}
+  .selChip .chipPort{width:30px;height:30px;color:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .selChip .chipPort svg{width:27px;height:27px;filter:drop-shadow(0 0 1.5px rgba(0,0,0,.9))}
   .selChip .chipImg{width:100%;height:100%;object-fit:cover}  /* 커스텀 초상화=꽉 채워 크롭 */
   .selChip .chipCnt{position:absolute;top:3px;left:5px;z-index:5;padding:0 4px;border-radius:var(--r-bar);
     background:rgba(6,8,12,.8);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:var(--fs-sm);font-weight:800;font-family:'Rajdhani',sans-serif;line-height:1.5;box-shadow:0 1px 2px #000}
   .selChip .chipTier{position:absolute;top:3px;right:4px;z-index:5;font-size:7.5px;font-weight:800;padding:0 3px;line-height:1.5;
     border-radius:var(--r-bar);border:1px solid;background:rgba(8,8,12,.85);letter-spacing:.2px;text-shadow:0 1px 2px #000}
-  .selChip .chipName{display:block;font-size:9px;font-weight:700;color:#dbe3ee;text-align:center;line-height:13px;padding:2px;
+  .selChip .chipName{display:block;font-size:8px;font-weight:700;color:#dbe3ee;text-align:center;line-height:11px;padding:1px 2px;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:rgba(6,8,12,.62);border-top:1px solid rgba(255,255,255,.07)}
   #defaultCmd{display:flex;flex-direction:column;gap:7px;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden}#defaultCmd.hide{display:none}
 
