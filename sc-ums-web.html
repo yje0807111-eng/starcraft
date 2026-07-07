@@ -1006,7 +1006,7 @@
     background:linear-gradient(180deg,rgba(13,18,28,.97),rgba(8,11,17,.985));border-top:1px solid rgba(90,140,210,.3);border-radius:14px 14px 0 0;
     box-shadow:0 -8px 24px rgba(0,0,0,.55);padding:9px 8px 12px;display:flex;flex-direction:column}
   #btSheet.open{transform:translateY(0)}
-  #btSheetBody{max-height:min(40vh,300px);min-height:0;display:flex;flex-direction:column}   /* 내용에 맞춰 축소(다른 .bp 시트처럼) — 고정 높이 제거로 과하게 올라오지 않음 */
+  #btSheetBody{height:min(40vh,204px);max-height:min(40vh,204px);min-height:0;display:flex;flex-direction:column}   /* 일꾼 지정 패널 크기로 고정(건물·유닛 모두 동일 높이) */
   #btDesel{position:absolute;top:44px;right:10px;z-index:26;display:none;cursor:pointer;pointer-events:auto;
     width:42px;height:42px;border-radius:var(--r-lg);align-items:center;justify-content:center;
     background:rgba(10,12,16,.2);border:1px solid rgba(255,59,59,.4);color:var(--neon);
@@ -1354,6 +1354,8 @@
   .cmdG .cgPort svg{width:26px;height:26px;filter:drop-shadow(0 0 4px var(--caG))} .cmdG .cgPort .pemoji{font-size:22px}
   .cmdG .cgTtl{flex:1;min-width:0} .cmdG .cgN{font-size:var(--fs-xl);font-weight:800;color:var(--caL);text-shadow:0 0 8px var(--caG);line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .cmdG .cgS{margin-top:1px;font-size:var(--fs-xs);color:var(--cgDim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .cmdG .cgS b{color:#cfe0f5;font-weight:700}
+  .cmdG .cgHpsh{margin-top:2px;display:flex;gap:9px;font-family:'Rajdhani',sans-serif;font-weight:800;font-size:12.5px;line-height:1}
+  .cmdG .cgHpsh .hpv{color:#7ee081} .cmdG .cgHpsh .shv{color:#8fd8ff}
   .cmdG .cgPill{flex:none;align-self:flex-start;font:800 9px/1 sans-serif;letter-spacing:.5px;padding:4px 6px;border-radius:5px;color:var(--caL);background:rgba(255,255,255,.04);border:1px solid var(--caS)}
   .cmdG .cgPill.idle{color:var(--cgMuted);border-color:var(--metal-edge)}
   .cmdG .cgBody{display:flex;gap:8px;align-items:stretch;flex:1;min-height:0}
@@ -7187,7 +7189,8 @@ function upgSlotHTML(it){
 //     items:[{ pro(초상화 HTML), sn(이름), cr(크레딧), en(에너지), meta(우상단 배지), metaCls:'lv'?, state:'ok'|'dim'|'busy'|'max'|'empty', sel, act(이벤트 속성 문자열) }],
 //     info:{ eb, name, desc, stats:[[라벨,값]] | val:{cur,nxt,unit}, progLabel, progVal, prog, cr, en, time }, page }
 function _cgFmt(n){ n=n||0; return n>=10000?((n/1000).toFixed(n>=100000?0:1)+'K'):(''+n); }
-function _cgCost(cr,en){ let h=''; if(cr) h+='<span class="cc cr">◈'+_cgFmt(cr)+'</span>'; if(en) h+='<span class="cc en">⚡'+_cgFmt(en)+'</span>'; return h||'<span class="cc" style="color:var(--cgMuted)">무료</span>'; }
+function _cgCost(cr,en){ let h=''; if(cr) h+='<span class="cc cr">◈'+_cgFmt(cr)+'</span>'; if(en) h+='<span class="cc en">⚡'+_cgFmt(en)+'</span>'; return h; }   // 무료 표기 제거(빈칸)
+function _cgHpShStr(hp,sh){ let s=''; if(hp!=null&&hp!=='') s+='<span class="hpv">❤ '+hp+'</span>'; if(sh) s+='<span class="shv">🛡 '+sh+'</span>'; return s; }   // 헤더 HP/쉴드 표시(건설 커맨드 그리드)
 function _cgSlotHTML(it){ if(!it||it.state==='empty') return '<div class="cgSlot empty"></div>';
   const cls='cgSlot '+(it.state==='busy'?'busy':it.state==='dim'?'dim':it.state==='max'?'max':'')+(it.sel?' sel':'');
   const meta=it.meta?('<div class="cgMeta '+(it.metaCls||'')+'">'+it.meta+'</div>'):'';
@@ -7195,7 +7198,7 @@ function _cgSlotHTML(it){ if(!it||it.state==='empty') return '<div class="cgSlot
 function _cgInfoHTML(d){ if(!d) return '<div class="cgEb">정보</div><div class="cgDd">항목을 선택하세요</div>';
   let val=''; if(d.stats) val='<div class="cgStats">'+d.stats.map(s=>'<div class="cgStat"><span>'+s[0]+'</span><b>'+s[1]+'</b></div>').join('')+'</div>';
   else if(d.val) val='<div class="cgVal"><span class="cur">'+d.val.cur+'</span><span class="arw">▸</span><span class="nxt">'+d.val.nxt+'</span><span class="u">'+(d.val.unit||'')+'</span></div>';
-  return '<div class="cgEb">'+(d.eb||'')+'</div><div class="cgDn">'+(d.name||'')+'</div>'+(d.desc?'<div class="cgDd">'+d.desc+'</div>':'')+val
+  return '<div class="cgEb">'+(d.eb||'')+'</div>'+(d.hideName?'':'<div class="cgDn">'+(d.name||'')+'</div>')+(d.desc?'<div class="cgDd">'+d.desc+'</div>':'')+val
     +(d.progLabel?('<div class="cgProg"><div class="pl"><span>'+d.progLabel+'</span><b>'+(d.progVal||'')+'</b></div><div class="cgBar"><i style="width:'+Math.max(4,d.prog||0)+'%"></i></div></div>'):'')
     +'<div class="cgDcost">'+_cgCost(d.cr,d.en)+(d.time?'<span class="time">'+d.time+'</span>':'')+'</div>'; }
 function renderCmdGrid(host, m){ const el=(typeof host==='string')?document.getElementById(host):host; if(!el||!m) return;
@@ -7206,7 +7209,7 @@ function renderCmdGrid(host, m){ const el=(typeof host==='string')?document.getE
   const pager=(pages>1)?('<div class="cgPage"><button onclick="_cgTurn(this,-1)"'+(pg<=0?' disabled':'')+'>◀</button><span class="dots">'+dots+'</span><span class="pn">'+(pg+1)+' / '+pages+'</span><button onclick="_cgTurn(this,1)"'+(pg>=pages-1?' disabled':'')+'>▶</button></div>'):'';
   const pill=m.status?('<span class="cgPill'+(m.statusIdle?' idle':'')+'">'+m.status+'</span>'):'';
   el.innerHTML='<div class="cmdG" data-mode="'+(m.mode||'upg')+'">'
-    +'<div class="cgHead"><div class="cgPort">'+(m.icon||'')+'</div><div class="cgTtl"><div class="cgN">'+(m.title||'')+'</div>'+(m.sub?'<div class="cgS">'+m.sub+'</div>':'')+'</div>'+pill+pager+'</div>'
+    +'<div class="cgHead"><div class="cgPort">'+(m.icon||'')+'</div><div class="cgTtl"><div class="cgN">'+(m.title||'')+'</div>'+(m.hpsh?'<div class="cgHpsh">'+m.hpsh+'</div>':(m.sub?'<div class="cgS">'+m.sub+'</div>':''))+'</div>'+pill+pager+'</div>'
     +'<div class="cgBody"><div class="cgInfo">'+_cgInfoHTML(m.info)+'</div><div class="cgCol"><div class="cgGrid">'+cells.join('')+'</div></div></div></div>'; }
 function _cgTurn(btn,delta){ let h=btn; while(h && !h._cgModel) h=h.parentElement; if(!h||!h._cgModel) return; h._cgModel.page=(h._cgPage||0)+delta; renderCmdGrid(h,h._cgModel); }
 // 업그레이드 모델 빌더(현재 무기 강화 데이터 → 커맨드 그리드)
@@ -10418,17 +10421,17 @@ function techBuildListModel(){ const race=G.tech.race, t=TECH_TREE[race];
 function techBldgProdModel(b){ const race=G.tech.race;
   const items=b.produces.map(p=>{ const reqok=_techReqMet(p.req), afford=_techAfford(p.m,p.g), popok=G.tech.inf||!p.pop||(G.tech.sup+p.pop<=G.tech.supCap), cnt=G.tech.units[p.id]||0;
     return { pro:_techUnitPortrait(p.id), sn:p.name, cr:p.m, en:p.g, meta:cnt?('×'+cnt):(p.pop?'👤'+p.pop:''), metaCls:cnt?'lv':'', state:(!reqok||!afford||!popok)?'dim':'ok', act:'onclick="techDoProduce(\''+p.id+'\',\''+b.k+'\')"' }; });
-  const f=b.produces[0]||{}, fs=techUnitSpec(race,f.id)||{};
-  return { mode:'prod', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', sub:'유닛 생산 — 탭', items,
-    info:{ eb:'생산', name:f.name||'', desc:fs.abil?('능력: '+fs.abil):'', stats:[['체력',(fs.hp!=null?fs.hp:'-')+(fs.sh?('/'+fs.sh):'')],['공격',fs.atk?(fs.atk+' '+(_AT_KO[fs.at]||'')):'무공격'],['사거리',''+(fs.rng!=null?fs.rng:'-')]], progLabel:'인구·시간', progVal:'👤'+(f.pop||1)+' · '+(fs.t||'?')+'s', prog:0, cr:f.m||0, en:f.g||0, time:'탭하여 생산' } }; }
+  const f=b.produces[0]||{}, fs=techUnitSpec(race,f.id)||{}, bs=techBldgSpec(race,b.k)||{};
+  return { mode:'prod', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:'유닛 생산 — 탭', items,
+    info:{ eb:'생산', name:f.name||'', hideName:true, desc:fs.abil?('능력: '+fs.abil):'', stats:[['체력',(fs.hp!=null?fs.hp:'-')+(fs.sh?('/'+fs.sh):'')],['공격',fs.atk?(fs.atk+' '+(_AT_KO[fs.at]||'')):'무공격'],['사거리',''+(fs.rng!=null?fs.rng:'-')]], progLabel:'인구·시간', progVal:'👤'+(f.pop||1)+' · '+(fs.t||'?')+'s', prog:0, cr:f.m||0, en:f.g||0, time:'탭하여 생산' } }; }
 function techBldgUpgModel(b){ const race=G.tech.race;
   const items=b.research.map(r=>{ const key=race+'_'+r.k; let meta,state,cr,en;
     if(r.tier){ const lv=G.tech.research[key]||0, isMax=lv>=r.tier.length, nx=r.tier[Math.min(lv,r.tier.length-1)]; meta=isMax?'MAX':('Lv.'+lv); cr=isMax?0:nx[0]; en=isMax?0:nx[1]; state=isMax?'max':(_techAfford(cr,en)?'ok':'dim'); }
     else { const done=G.tech.research[key]; meta=done?'완료':'연구'; cr=done?0:r.m; en=done?0:r.g; state=done?'max':(_techAfford(cr,en)?'ok':'dim'); }
     return { pro:'<span class="pemoji">🔬</span>', sn:r.name, cr, en, meta, metaCls:'lv', state, act:'onclick="techDoResearch(\''+b.k+'\',\''+r.k+'\')"' }; });
-  const f=b.research[0]||{};
-  return { mode:'upg', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', sub:'연구/업그레이드 — 탭', items,
-    info:{ eb:'연구', name:f.name||'', desc:f.desc||'', cr:f.tier?f.tier[0][0]:(f.m||0), en:f.tier?f.tier[0][1]:(f.g||0), time:'탭하여 연구' } }; }
+  const f=b.research[0]||{}, bs=techBldgSpec(race,b.k)||{};
+  return { mode:'upg', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:'연구/업그레이드 — 탭', items,
+    info:{ eb:'연구', name:f.name||'', hideName:true, desc:f.desc||'', cr:f.tier?f.tier[0][0]:(f.m||0), en:f.tier?f.tier[0][1]:(f.g||0), time:'탭하여 연구' } }; }
 // 렌더
 function techUIRender(){ if(!G.tech) return; techMapRender(); techPanelRender(); techHidePreview(); }   // 3D 건물은 메인 렌더러(syncBuild)가 렌더
 function techMapRender(){ const map=document.getElementById('cstMain'); if(!map) return; const race=G.tech.race;
@@ -10453,8 +10456,9 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
   map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none"><div class="bmapTop"><div class="techTabs">'+tabs+'</div><div class="bres">'+res+'</div></div>'+ents+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div></div>'; }
 function techBldgInfoModel(b){ const race=G.tech.race, hb=TECH_TREE[race].buildings[0];
   const items=(b.unlocks||[]).map(uid=>{ const p=(hb.produces||[]).find(x=>x.id===uid)||{}; return { pro:_techUnitPortrait(uid), sn:p.name||uid, cr:p.m||0, en:p.g||0, meta:p.pop?'👤'+p.pop:'', state:'ok', act:'' }; });
-  return { mode:'prod', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', sub:'이 건물이 해금 · 생산은 '+hb.name+'에서', items,
-    info:{ eb:'해금', name:b.name, desc:'테크 건물 — 생산은 '+hb.name+'에서. 철거 시 해당 유닛 재잠금.', stats:[['해금 유닛',(b.unlocks||[]).length+'종']], cr:0, en:0 } }; }
+  const bs=techBldgSpec(race,b.k)||{};
+  return { mode:'prod', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:'이 건물이 해금 · 생산은 '+hb.name+'에서', items,
+    info:{ eb:'해금', name:b.name, hideName:true, desc:'테크 건물 — 생산은 '+hb.name+'에서. 철거 시 해당 유닛 재잠금.', stats:[['해금 유닛',(b.unlocks||[]).length+'종']], cr:0, en:0 } }; }
 function _techUnitName(e){ if(!e) return null; if(e.type==='worker') return '일꾼';
   const bs=(TECH_TREE[G.tech.race]||{}).buildings||[]; for(const b of bs){ const p=(b.produces||[]).find(x=>x.id===e.uid); if(p) return p.name; } return e.uid; }
 function techUnitPanelModel(list){ const race=G.tech.race, grp={}, ord=[];   // 유닛 지정 시트 — 건물 그리드와 동일한 커맨드 그리드 재사용
@@ -10465,12 +10469,13 @@ function techUnitPanelModel(list){ const race=G.tech.race, grp={}, ord=[];   // 
   const stats=[]; if(spec.hp!=null) stats.push(['체력',spec.hp]); if(spec.sh) stats.push(['보호막',spec.sh]); if(spec.ar!=null) stats.push(['방어',spec.ar]);
   if(spec.atk) stats.push(['공격',spec.atk+((typeof _AT_KO!=='undefined'&&_AT_KO[spec.at])?(' ('+_AT_KO[spec.at]+')'):'')]); if(spec.rng) stats.push(['사거리',spec.rng]); if(spec.spd&&spec.spd!=='-') stats.push(['속도',spec.spd]);
   const nm=(list.length===1)?(_techUnitName(f)||'유닛'):('유닛 '+list.length+'기');
-  return { mode:'prod', title:nm, icon:_techUnitPortrait(fid), sub:'맵을 탭하면 이동 · 해제는 우상단 ✕', items,
-    info:{ eb:'유닛', name:_techUnitName(f)||'유닛', desc:(spec.abil?('능력: '+spec.abil):'지정된 유닛이 탭한 곳으로 이동합니다.'), stats, cr:0, en:0 } }; }
+  return { mode:'prod', title:nm, icon:_techUnitPortrait(fid), hpsh:_cgHpShStr(spec.hp,spec.sh), sub:'맵을 탭하면 이동 · 해제는 우상단 ✕', items,
+    info:{ eb:'유닛', name:_techUnitName(f)||'유닛', hideName:true, desc:(spec.abil?('능력: '+spec.abil):'지정된 유닛이 탭한 곳으로 이동합니다.'), stats, cr:0, en:0 } }; }
 function techWorkerBuildModel(list){ const race=G.tech.race, fid=(TECH_WORKER[race]||'worker_human'), n=list.length;   // 일꾼 지정 시트 — 헤더=일꾼 프로필, 그리드=건물 생성 카드
   const bl=techBuildListModel();   // 건물 카드(techArm) 재사용
-  return { mode:'build', title:(n>1?('일꾼 '+n+'기'):'일꾼'), icon:_techUnitPortrait(fid),
-    sub:'건물 선택 → 맵 탭해 배치 · 맵 탭 = 이동 · 해제 ✕', items:bl.items, info:bl.info }; }
+  const ws=techUnitSpec(race,fid)||{};
+  return { mode:'build', title:(n>1?('일꾼 '+n+'기'):'일꾼'), icon:_techUnitPortrait(fid), hpsh:_cgHpShStr(ws.hp,ws.sh),
+    sub:'건물 선택 → 맵 탭해 배치 · 맵 탭 = 이동 · 해제 ✕', items:bl.items, info:Object.assign({},bl.info,{hideName:true}) }; }
 function techPanelRender(){ const body=document.getElementById('btSheetBody'), sheet=document.getElementById('btSheet'); if(!body||!sheet) return;
   const sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null});
   const selB=(G.tech.sel!=null)?G.tech.ents.find(e=>e.eid===G.tech.sel&&e.type==='bldg'):null;
