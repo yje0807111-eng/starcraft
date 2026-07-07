@@ -10402,7 +10402,7 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
   const selE=(G.tech.sel!=null)?G.tech.ents.find(e=>e.eid===G.tech.sel):null, canDemo=selE&&selE.type==='bldg'&&((techGetBldg(race,selE.bk)||{}).k!==TECH_TREE[race].buildings[0].k);
   const res='<span class="res cr">'+(G.tech.inf?'∞':G.tech.credit)+'◈</span><span class="res gs">'+(G.tech.inf?'∞':G.tech.energy)+'⚡</span><span class="res sp">👤'+G.tech.sup+'/'+G.tech.supCap+'</span>'
     +(canDemo?'<span class="cbtn dz" onclick="techDemolish(event)">🗑 철거</span>':'')+'<span class="cbtn'+(G.tech.inf?' on':'')+'" onclick="techInf(event)">∞</span><span class="cbtn'+(G.tech.nocool?' on':'')+'" onclick="techNocool(event)" title="즉시 건설·생산">⏱</span><span class="cbtn" onclick="techReset(event)">↺</span>';
-  const hint=G.tech.arm?('📍 '+((techGetBldg(race,G.tech.arm)||{}).name)+' — 지을 곳을 탭'):((G.tech.selU&&G.tech.selU.length)?('👥 '+G.tech.selU.length+'기 지정 — 탭/드래그로 이동 · 해제는 우상단 ✕'):(G.tech.sel==null?'드래그=유닛 지정 · 두 손가락=화면 이동 · 건물/유닛 탭=하단 시트':'건물을 탭하면 하단 시트에 생산·연구가 표시됩니다'));
+  const hint=G.tech.arm?('📍 '+((techGetBldg(race,G.tech.arm)||{}).name)+' — 지을 곳을 탭'):((G.tech.selU&&G.tech.selU.length)?('👥 '+G.tech.selU.length+'기 지정 — 탭/드래그로 이동 · 해제는 우상단 ✕'):(G.tech.sel==null?'일꾼 탭=건설 메뉴 · 드래그=유닛 지정 · 두 손가락=화면 이동':'건물을 탭하면 하단 시트에 생산·연구가 표시됩니다'));
   map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none"><div class="bmapTop"><div class="techTabs">'+tabs+'</div><div class="bres">'+res+'</div></div>'+ents+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div></div>'; }
 function techBldgInfoModel(b){ const race=G.tech.race, hb=TECH_TREE[race].buildings[0];
   const items=(b.unlocks||[]).map(uid=>{ const p=(hb.produces||[]).find(x=>x.id===uid)||{}; return { pro:_techUnitPortrait(uid), sn:p.name||uid, cr:p.m||0, en:p.g||0, meta:p.pop?'👤'+p.pop:'', state:'ok', act:'' }; });
@@ -10418,24 +10418,28 @@ function techUnitPanelModel(list){ const race=G.tech.race, grp={}, ord=[];   // 
   const stats=[]; if(spec.hp!=null) stats.push(['체력',spec.hp]); if(spec.sh) stats.push(['보호막',spec.sh]); if(spec.ar!=null) stats.push(['방어',spec.ar]);
   if(spec.atk) stats.push(['공격',spec.atk+((typeof _AT_KO!=='undefined'&&_AT_KO[spec.at])?(' ('+_AT_KO[spec.at]+')'):'')]); if(spec.rng) stats.push(['사거리',spec.rng]); if(spec.spd&&spec.spd!=='-') stats.push(['속도',spec.spd]);
   const nm=(list.length===1)?(_techUnitName(f)||'유닛'):('유닛 '+list.length+'기');
-  return { mode:'prod', title:nm, icon:_techUnitPortrait(fid), sub:'맵을 탭하면 이동 · 해제는 우상단 ✕'+(f.type==='worker'?' · 건설은 🏗':''), items,
+  return { mode:'prod', title:nm, icon:_techUnitPortrait(fid), sub:'맵을 탭하면 이동 · 해제는 우상단 ✕', items,
     info:{ eb:'유닛', name:_techUnitName(f)||'유닛', desc:(spec.abil?('능력: '+spec.abil):'지정된 유닛이 탭한 곳으로 이동합니다.'), stats, cr:0, en:0 } }; }
+function techWorkerBuildModel(list){ const race=G.tech.race, fid=(TECH_WORKER[race]||'worker_human'), n=list.length;   // 일꾼 지정 시트 — 헤더=일꾼 프로필, 그리드=건물 생성 카드
+  const bl=techBuildListModel();   // 건물 카드(techArm) 재사용
+  return { mode:'build', title:(n>1?('일꾼 '+n+'기'):'일꾼'), icon:_techUnitPortrait(fid),
+    sub:'건물 선택 → 맵 탭해 배치 · 맵 탭 = 이동 · 해제 ✕', items:bl.items, info:bl.info }; }
 function techPanelRender(){ const body=document.getElementById('btSheetBody'), sheet=document.getElementById('btSheet'), dock=document.getElementById('btDock'); if(!body||!sheet||!dock) return;
   const sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null});
   const selB=(G.tech.sel!=null)?G.tech.ents.find(e=>e.eid===G.tech.sel&&e.type==='bldg'):null;
   const selUs=(G.tech.selU||[]).map(id=>G.tech.ents.find(e=>e.eid===id)).filter(Boolean);
   if(sh.sec==='ent' && !selB && !selUs.length){ sh.open=false; sh.sec=null; }   // 선택 사라짐 → 엔티티 시트 닫기
-  // 독: 아이콘만(열린 섹션에만 이름 표시)
-  const entIco=selB?((techGetBldg(G.tech.race,selB.bk)||{}).ico||'🏢'):(selUs.length?'👥':null);
+  // 독: 지정된 엔티티(일꾼·유닛·건물)가 있을 때만 아이콘 표시(별도 '건설' 배너 없음 — 건설은 일꾼 지정 시 그리드로)
+  const _selWk=selUs.some(e=>e.type==='worker');
+  const entIco=selB?((techGetBldg(G.tech.race,selB.bk)||{}).ico||'🏢'):(selUs.length?(_selWk?'👷':'👥'):null);
   const entName=selB?((techGetBldg(G.tech.race,selB.bk)||{}).name||'건물'):(selUs.length===1?(_techUnitName(selUs[0])||'유닛'):(selUs.length+'기 지정'));
-  let d='<div class="btDockBtn'+((sh.open&&sh.sec==='build')?' on':'')+'" onclick="techSheetSec(event,\'build\')"><span class="ic">🏗</span><span class="lb">건설</span></div>';
+  let d='';
   if(entIco) d+='<div class="btDockBtn'+((sh.open&&sh.sec==='ent')?' on':'')+'" onclick="techSheetSec(event,\'ent\')"><span class="ic">'+entIco+'</span><span class="lb">'+entName+'</span></div>';
   dock.innerHTML=d;
-  // 시트: 열려 있으면 섹션 내용 즉시 교체(닫힘 애니메이션 없음)
+  // 시트: 열려 있으면 선택 대상별 내용 즉시 교체
   let model=null;
-  if(sh.open){ if(sh.sec==='build') model=techBuildListModel();
-    else if(selB){ const b=techGetBldg(G.tech.race,selB.bk); model=(b&&b.produces)?techBldgProdModel(b):((b&&b.research)?techBldgUpgModel(b):((b&&b.unlocks)?techBldgInfoModel(b):null)); }
-    else if(selUs.length) model=techUnitPanelModel(selUs); }
+  if(sh.open){ if(selB){ const b=techGetBldg(G.tech.race,selB.bk); model=(b&&b.produces)?techBldgProdModel(b):((b&&b.research)?techBldgUpgModel(b):((b&&b.unlocks)?techBldgInfoModel(b):null)); }
+    else if(selUs.length) model=_selWk?techWorkerBuildModel(selUs):techUnitPanelModel(selUs); }   // 일꾼=건설 그리드 / 그 외 유닛=이동 패널
   sheet.classList.toggle('open', !!(sh.open&&model));
   if(model) renderCmdGrid(body, model);
   const dz=document.getElementById('btDesel'); if(dz) dz.classList.toggle('on',(G.tech.selU||[]).length>0); }   // 유닛 지정 해제 버튼(메인 deselTop 규약)
@@ -10501,7 +10505,7 @@ function techArm(bk){ const race=G.tech.race, b=techGetBldg(race,bk); if(!b) ret
   if(b.addonTo && !(G.tech.built[b.addonTo]>0)){ if(typeof toast==='function') toast('⛔ '+((techGetBldg(race,b.addonTo)||{}).name)+' 먼저 건설'); return; }
   if(!_techReqMet(b.req)){ if(typeof toast==='function') toast('⛔ 선행: '+(b.req||[]).map(r=>(techGetBldg(race,r)||{}).name).join(', ')); return; }
   if(!_techAfford(b.m,b.g)){ if(typeof toast==='function') toast('⛔ 자원 부족'); return; }
-  G.tech.arm=(G.tech.arm===bk)?null:bk; const sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null}); sh.open=(G.tech.arm==null); if(G.tech.arm==null) sh.sec='build';   // 배치 중 = 시트 내려 맵 확보, 취소 = 건설 목록 복귀
+  G.tech.arm=(G.tech.arm===bk)?null:bk; const sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null}); sh.open=(G.tech.arm==null); if(G.tech.arm==null) sh.sec='ent';   // 배치 중 = 시트 내려 맵 확보, 취소 = 일꾼 건설 시트로 복귀
   techUIRender(); }
 function techPlace(x,y){ const race=G.tech.race, b=techGetBldg(race,G.tech.arm); if(!b){ G.tech.arm=null; techUIRender(); return; }
   if(!_techAfford(b.m,b.g)||(b.addonTo&&!(G.tech.built[b.addonTo]>0))||!_techReqMet(b.req)){ if(typeof toast==='function') toast('⛔ 건설 불가'); G.tech.arm=null; techUIRender(); return; }
