@@ -1006,7 +1006,7 @@
     background:linear-gradient(180deg,rgba(13,18,28,.97),rgba(8,11,17,.985));border-top:1px solid rgba(90,140,210,.3);border-radius:14px 14px 0 0;
     box-shadow:0 -8px 24px rgba(0,0,0,.55);padding:9px 8px 12px;display:flex;flex-direction:column}
   #btSheet.open{transform:translateY(0)}
-  #btSheetBody{height:min(40vh,300px);max-height:min(40vh,300px);min-height:0;display:flex;flex-direction:column}
+  #btSheetBody{max-height:min(40vh,300px);min-height:0;display:flex;flex-direction:column}   /* 내용에 맞춰 축소(다른 .bp 시트처럼) — 고정 높이 제거로 과하게 올라오지 않음 */
   #btDesel{position:absolute;top:44px;right:10px;z-index:26;display:none;cursor:pointer;pointer-events:auto;
     width:42px;height:42px;border-radius:var(--r-lg);align-items:center;justify-content:center;
     background:rgba(10,12,16,.2);border:1px solid rgba(255,59,59,.4);color:var(--neon);
