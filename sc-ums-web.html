@@ -759,8 +759,6 @@
     transform:translateY(112%);transition:transform .26s cubic-bezier(.2,.8,.25,1);pointer-events:none}
   .bp.on{display:flex}   /* 활성 탭 패널만 렌더(내려간 상태로 대기) */
   body.sheetOpen .bp.on{transform:translateY(0);pointer-events:auto}   /* 시트 올라옴 */
-  /* 시트 바깥(게임 화면) 스크림 — 탭하면 시트 닫힘. 캔버스 위(z17), HUD·사이드·시트 아래 */
-  #sheetScrim{display:none}   /* 사용 안 함 — 시트 닫기는 게임 빈-탭(onUp)에서 처리(화면 어두워짐·상호작용 차단 없음) */
   /* 시트 올라오면 하단 사이드 배너(채팅·자동·개인보스)도 시트 위로 함께 상승 */
   #chatBar,#chatLog,#autoFab,#pbossBtn,#fxLabActs{transition:transform .26s cubic-bezier(.2,.8,.25,1)}
   body.sheetOpen:not(.cstMode) #chatBar,
@@ -861,11 +859,6 @@
   .btpCard .btpPic svg{width:24px;height:24px}
   .btpCard .btpNm{font-size:8.5px;font-weight:700;color:#cfd8e4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
   /* ⚔ 전투 실험 바(관리자) — 붉은 사선 서브패널 */
-  #sbCombatBar{margin:0 0 7px;padding:7px 9px 8px;position:relative;background:linear-gradient(160deg,rgba(60,34,38,.5),rgba(10,6,8,.82));border:1px solid var(--metal-edge);border-left:2px solid rgba(255,90,90,.6);clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px);box-shadow:inset 0 1px 0 rgba(255,255,255,.04),inset 0 0 16px rgba(0,0,0,.4)}
-  #sbCombatBar .sbcHead{font-size:var(--fs-md);font-weight:800;color:#ffb0b0;letter-spacing:.3px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
-  #sbCombatBar .sbcSub{font-size:var(--fs-xs);font-weight:600;color:#b08a8a;opacity:.85}
-  #sbCombatBar .sbcCnt{margin-left:auto;font:800 var(--fs-sm) 'Rajdhani',sans-serif;color:#ff8a8a}
-  #sbCombatBar .sbcRow{display:flex;gap:6px}
   .sbcBtn{flex:1 1 0;min-width:0;padding:9px 4px;font-size:var(--fs-sm);font-weight:700;color:#e2d0d0;cursor:pointer;font-family:inherit;white-space:nowrap;border-radius:8px;background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.012));border:1px solid var(--metal-edge);box-shadow:inset 0 1px 0 rgba(255,255,255,.05);transition:all .14s}
   .sbcBtn:hover{border-color:rgba(255,120,120,.4)}
   .sbcBtn:active{transform:translateY(1px)}
@@ -988,7 +981,6 @@
   .bhint.on{color:#ffe27a;border-color:var(--gold);box-shadow:0 0 12px -3px rgba(255,210,74,.5)}
   /* ── ExoMiner식 하단 인터페이스: 아이콘 독(상시) + 슬라이드 시트(필요 시 올라옴) ── */
   #bpBuild.on{display:none}   /* 기존 하단 패널 영역 제거 → 맵이 화면을 가득 채움 */
-  #btDock{position:absolute;left:8px;right:8px;bottom:8px;z-index:32;display:flex;gap:7px;justify-content:center;pointer-events:none}   /* vBuild 내부 → 탭 이탈 시 함께 숨음 */
   .btDockBtn{pointer-events:auto;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:7px;padding:0 13px;cursor:pointer;
     background:linear-gradient(180deg,rgba(26,34,50,.94),rgba(10,14,22,.96));border:1px solid var(--metal-edge);box-shadow:0 4px 14px rgba(0,0,0,.5);
     font:800 13px 'Rajdhani',sans-serif;color:#cfe0f5}
@@ -2055,8 +2047,6 @@
     border:none;border-left:1px solid rgba(255,59,59,.16);background:rgba(205,45,45,.24);color:#ffd6d6;text-shadow:0 0 6px var(--neon-glow)}
   .msChatSend:active{transform:translateY(1px)}
   /* 친구 오버레이(스텁 — 다음 단계에서 친구목록/메시지/파티 채움) */
-  #friendsOv{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:var(--ov-dim);backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
-  #friendsOv.hide{display:none}
   .foCard{width:84%;max-width:300px;max-height:80%;display:flex;flex-direction:column;padding:15px 14px;border-radius:10px;
     background:linear-gradient(180deg,rgba(20,22,28,.98),rgba(10,11,15,.98));border:1px solid var(--neon-soft);box-shadow:0 14px 44px rgba(0,0,0,.6)}
   .foHead{display:flex;align-items:center;justify-content:space-between;font-size:15px;font-weight:800;color:var(--neon);text-shadow:0 0 8px var(--neon-glow);margin-bottom:11px}
@@ -2972,7 +2962,6 @@ function citizenSVG(){ return '<svg viewBox="0 0 24 24" width="100%" height="100
 // 충돌(분리) 판정용 반경 — 그림보다 작게 잡아 유닛끼리 더 촘촘히 붙게.
 function collideR(u){ return U[u.id].size * 0.62; }
 // 합성 사다리(가격 오름차순) — 같은 유닛 3개 → 다음 등급 영웅
-const CHAIN=['ghost','dragoon','hydra','marine','goliath','archon'];
 
 // 유닛뽑기: 유닛을 시계처럼 원형 배치. 중앙 시민(셀렉터)이 이동→통과 시 구매.
 const SHOP_UNITS=['ghost','dragoon','hydra','marine','goliath','archon','turret','photon']; // 시계 순서
@@ -4519,15 +4508,6 @@ function drawGacha(){
   else addChat('', '🎲 ['+_gtn+'] '+gu.displayName+' 획득', _gcol, true);   // 모든 등급 표시(뽑은 유닛 확인용)
   renderUnits(); updateHud();
 }
-function showGachaResult(tier, gu){ const box=document.getElementById('gachaResult'); if(!box) return;
-  const col=TIER_COLOR[tier]||'#fff';
-  box.style.setProperty('--gc', col);
-  const trTxt=(gu.traits&&gu.traits.length)?(' · '+gu.traits.map(t=>(GACHA_TRAITS[t]&&GACHA_TRAITS[t].name)||t).join(', ')):'';
-  box.innerHTML='<span class="grTier" style="color:'+col+'">'+GACHA_TIERS[tier].name+'</span>'
-    +'<span class="grName">'+escHtml(gu.displayName)+'</span>'
-    +'<span class="grType">'+(ATTACK_TYPES[gu.attackType]||gu.attackType)+(trTxt?'<span class="grTrait">'+trTxt+'</span>':'')+'</span>';
-  box.classList.remove('pop'); void box.offsetWidth; box.classList.add('pop');   // 등장 애니 재생
-}
 // ── 에너지 뽑기 — 크레딧을 내고 랜덤 에너지 획득(에너지 수급 다양화). 에너지 획득 메타 반영 ──
 const ENERGY_DRAW_COST=40;
 function energyDraw(){
@@ -4556,13 +4536,6 @@ function energyDraw(){
    // 5연차: 단발 30×5=150 → 145 소폭 할인(단발 반복보다 싸게)
 
 // ── 고급 유닛 뽑기 1회 — 비싼 대신 레어+ 보장, 에픽+ 확률 대폭 상승 ──
-function premiumRollTier(){ const r=Math.random();   // 고급 전용 확률표(레어 이상 보장)
-  if(r<0.42) return 'rare';
-  if(r<0.76) return 'epic';
-  if(r<0.92) return 'unique';
-  if(r<0.982) return 'legend';
-  if(r<0.997) return 'transcend';
-  return 'god'; }
 
 // ── 에너지 뽑기 10회 — 에너지 뽑기를 10회 한 번에(할인) ──
    // 단발 40×10=400 → 할인
@@ -6555,22 +6528,8 @@ function _btRestore(){ if(!G._btSnap||!G.btUnits) return false; if(G.idSeq==null
 function sbCombatUiSync(){ const t=document.getElementById('btCtlToggle'); const on=!!(typeof G!=='undefined'&&G&&G.sbCombat);   // 전투실험 화면 오버레이 컨트롤
   if(t){ t.textContent=on?'⏸ 정지':'▶ 전투'; t.classList.toggle('on',on); }
   const c=document.getElementById('btCtlCount'); if(c&&typeof G!=='undefined'&&G&&G.units){ let fo=0,al=0; for(const u of G.units){ if(u.fixed) continue; if(u.maxHp&&(u.hp!=null?u.hp:u.maxHp)<=0) continue; if(u.team==='foe')fo++; else al++; } c.textContent='적 '+fo+' · 아군 '+al; } }
-// ══ 유즈맵(샌드박스) 전용 스탯 오버라이드 — 네모(디펜스)의 U 기본값에 영향 없음 ══
-//   샌드박스(관리자·전투실험·유즈맵)에선 SB_U 오버라이드를 U 위에 병합해 사용. 네모(buyUnit·비샌드박스)는 기본 U 그대로.
-const SB_U={
-  marine: {hp:48, dmg:16, cd:20},       // 레인저: 유니온 첫유닛(순서 워든>레인저>스내퍼 복구) · 네모 공유라 SB_U로 분리
-  hydra:  {dmg:21, hp:95},              // 리퍼: 스웜 종족밸런스 ×1.17
-  dragoon:{dmg:24, hp:120, shield:96},  // 센티넬: 에테 종족밸런스 ×1.20
-  archon: {dmg:33, shield:340},         // 보이드: 에테 광역 탱커 — 동수 전투 과대(shield 420→340·dmg 37→33)
-  goliath:{dmg:24, hp:100},             // 스트라이더: 유니온 메카 너프 ×0.80
-  wyvern:  {hp:160, dmg:22, cd:22},     // 와이번: 스웜 중간 공중(진화체) — 보스급 hp2200/dps360 유출 방지
-  behemoth:{hp:620, dmg:54, cd:48, range:0.28, splash:true},   // 베히모스: 스웜 중장 '공중' 브루저(스플) — 지상군엔 강·공중 카이팅에 약 · 12보급에 패(hp3200 유출 방지)
-  // ── 에테리얼 공중 엘리트 하향(동수 전투 전승/준전승 과대 — 관리자 밸런스 재수렴) ──
-  archangel:{hp:500, dmg:20, shield:120},   // 아크엔젤: 28전 전승 → shield 200→120·hp 560→500·dmg 22→20
-  kronos:   {dmg:32, shield:110},            // 크로노스: 27-1 → shield 170→110·dmg 36→32
-  skydancer:{hp:175, shield:70}              // 스카이댄서: 고속 공중 과대 → hp 210→175·shield 100→70
-};
-// ── 관리자 전투를 기본 공통 자료(base_stats)로 전환 — 게임 id → [hp, shield, armor, atk, rng(SC타일)] ──
+// ── 관리자 전투를 기본 공통 자료(base_stats)로 전환 — 게임 id → [hp, shield, armor, atk, rng(SC타일)]
+//    (구 SB_U 수동 밸런스 오버라이드는 base_stats 전환으로 완전히 덮여 제거됨. 네모는 원본 U 그대로) ──
 const BASE_UNIT={
   worker_human:[60,0,0,5,1], marine:[40,0,0,6,4], machinegun:[50,0,1,16,2], medic:[60,0,1,0,0], ghost:[45,0,0,10,7], racer:[80,0,0,20,5], tank:[150,0,1,30,7], goliath:[125,0,1,12,5], skyguard:[120,0,0,20,5], pelican:[150,0,1,0,0], hellfire:[200,0,2,48,6], aegis:[200,0,1,0,0], dreadnought:[500,0,3,25,6],
   worker_swarm:[40,0,0,5,1], overlord:[200,0,0,0,0], snapper:[35,0,0,5,1], hydra:[80,0,0,10,4], thornqueen:[125,0,1,20,6], wyvern:[120,0,0,9,3], stinger:[25,0,0,110,1], medusa:[120,0,0,0,0], ultralisk:[400,0,1,20,1], behemoth:[150,0,2,20,8], venom:[250,0,2,25,6],
@@ -6587,8 +6546,7 @@ function _baseUnitOv(s, key){ const c=BASE_UNIT[key]; if(!c) return s;   // base
   return s; }
 function Udef(key){ const b=U[key]; if(!b) return b;
   if(typeof G==='undefined'||!G.sandbox||G.strike) return b;   // 네모·직스: 기본 U 그대로(무영향)
-  let s=(typeof SB_U!=='undefined'&&SB_U[key])?Object.assign({},b,SB_U[key]):Object.assign({},b);
-  return _baseUnitOv(s, key); }   // 유효 스탯(관리자=base_stats 전환, 사거리·공속=일꾼앵커 비율)
+  return _baseUnitOv(Object.assign({},b), key); }   // 유효 스탯(관리자=base_stats 전환, 사거리·공속=일꾼앵커 비율)
 function Ueff(u){ return Udef(u.gmodel||u.id)||Udef(u.id)||{}; }
 function _sbTeam(u){ return (u&&u.team==='foe')?'foe':'ally'; }
 // 유닛별 공격 가능 레이어(랩 규칙 반영). 키=gmodel||id
@@ -9013,8 +8971,6 @@ function clearBox(){ const el=document.getElementById('selBox'); if(el) el.remov
 // 놓는 순간: 그 자리가 다른 유닛과 겹치면, 가장 가까운 '빈 자리'로 옮긴다(억지로 끼워넣기 방지).
 let settling=null;
 // (x,y)가 자기 외 모든 유닛과 안 겹치는지
-function isFreeSpot(self,x,y){ for(const o of G.units){ if(o.uid===self.uid||o.atBoss) continue;
-  const need=collideR(self)+collideR(o); if(Math.hypot((x-o.x)*GW,(y-o.y)*GH)<need) return false; } return true; }
 // (x,y) 근처에서 가장 가까운 빈 자리를 나선형으로 탐색
 function onUp(e){
   if(G.strike){ strikeOnUp(e); return; }
@@ -11309,7 +11265,6 @@ function strikeDrawMain(){ const S=STK; if(!S) return; const cvEl=document.getEl
       ctx.fillStyle='#eef3fa'; ctx.fillText(nm,p.x,p.y+22); }
     ctx.restore(); }
 }
-function _stkHash(x,y){ const n=Math.sin(x*127.1+y*311.7)*43758.5453; return n-Math.floor(n); }
 // 메인 신전 주변 개활지(넓은 베이스 광장) — 부드럽게 퍼지는 다져진 사막 땅
 // 사막 모랫길(레인) — 노드들을 잇는 폭 넓은 길 + 중앙 바퀴자국 점선
 // 외곽 네온 글로우(채움 아래에 깔아 외곽선만 빛나게 — 길+플랫폼 겹침의 내부 접합부는 채움이 가림)
@@ -11358,7 +11313,6 @@ function strikeLaneArrows(ctx, pts, scale, centerIdx){ const gap=Math.max(48,500
       ctx.restore(); } }
   ctx.restore(); }
 // 지상유닛 보행 가능 영역 = 프로토스 타일(레인 + 메인 소환 정사각). 향후 이동 단계에서 지상유닛 가둠(공중은 예외)
-function _segDist(px,py,ax,ay,bx,by){ const dx=bx-ax, dy=by-ay, l2=dx*dx+dy*dy; let t=l2?((px-ax)*dx+(py-ay)*dy)/l2:0; t=Math.max(0,Math.min(1,t)); return Math.hypot(px-(ax+dx*t), py-(ay+dy*t)); }
 // 둥근 사각 path 헬퍼
 function _strkRR(ctx,x,y,w,h,r){ if(ctx.roundRect){ ctx.beginPath(); ctx.roundRect(x,y,w,h,r); return; }
   ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
