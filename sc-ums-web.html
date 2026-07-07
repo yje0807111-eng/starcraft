@@ -758,12 +758,21 @@
   .missList b{color:#fff;font-weight:700}
   /* 하단 섹션 = 위로 올라오는 슬라이드 시트(탭 바 바로 위, 게임 위로 오버레이). 활성 탭 패널만 존재(.on), body.sheetOpen일 때 올라옴 */
   .bp{position:absolute;left:0;right:0;bottom:100%;z-index:22;box-sizing:border-box;
-    display:none;flex-direction:column;gap:5px;padding:10px 12px 12px;max-height:46vh;overflow-y:auto;
+    display:none;flex-direction:column;gap:5px;padding:10px 12px 12px;max-height:min(46vh,342px);overflow-y:auto;
     background:linear-gradient(180deg,rgba(13,18,28,.975),rgba(8,11,17,.99));border-top:1px solid rgba(90,140,210,.32);
     border-radius:15px 15px 0 0;box-shadow:0 -9px 26px rgba(0,0,0,.6);
     transform:translateY(112%);transition:transform .26s cubic-bezier(.2,.8,.25,1);pointer-events:none}
   .bp.on{display:flex}   /* 활성 탭 패널만 렌더(내려간 상태로 대기) */
   body.sheetOpen .bp.on{transform:translateY(0);pointer-events:auto}   /* 시트 올라옴 */
+  /* 시트 바깥(게임 화면) 스크림 — 탭하면 시트 닫힘. 캔버스 위(z17), HUD·사이드·시트 아래 */
+  #sheetScrim{position:absolute;inset:0;z-index:17;display:none;background:rgba(2,4,8,.22)}
+  body.sheetOpen:not(.cstMode) #sheetScrim{display:block}
+  /* 시트 올라오면 하단 사이드 배너(채팅·자동·개인보스)도 시트 위로 함께 상승 */
+  #chatBar,#chatLog,#autoFab,#pbossBtn{transition:transform .26s cubic-bezier(.2,.8,.25,1)}
+  body.sheetOpen:not(.cstMode) #chatBar,
+  body.sheetOpen:not(.cstMode) #chatLog,
+  body.sheetOpen:not(.cstMode) #autoFab,
+  body.sheetOpen:not(.cstMode) #pbossBtn{transform:translateY(calc(-1 * var(--sheetH,0px)))}
 
   .row{display:flex;gap:7px;flex-shrink:0;flex-wrap:wrap}
   /* 버튼: 스타크래프트식 메탈 베벨 박스 */
@@ -995,9 +1004,9 @@
   .btDockBtn.on .lb{display:inline}   /* 열린 섹션에만 이름 표시 */
   #btSheet{position:absolute;left:0;right:0;bottom:0;z-index:30;transform:translateY(103%);transition:transform .26s cubic-bezier(.2,.8,.25,1);
     background:linear-gradient(180deg,rgba(13,18,28,.97),rgba(8,11,17,.985));border-top:1px solid rgba(90,140,210,.3);border-radius:14px 14px 0 0;
-    box-shadow:0 -8px 24px rgba(0,0,0,.55);padding:9px 8px 62px;display:flex;flex-direction:column}
+    box-shadow:0 -8px 24px rgba(0,0,0,.55);padding:9px 8px 12px;display:flex;flex-direction:column}
   #btSheet.open{transform:translateY(0)}
-  #btSheetBody{height:234px;max-height:40vh;min-height:0;display:flex;flex-direction:column}
+  #btSheetBody{height:min(40vh,300px);max-height:min(40vh,300px);min-height:0;display:flex;flex-direction:column}
   #btDesel{position:absolute;top:44px;right:10px;z-index:26;display:none;cursor:pointer;pointer-events:auto;
     width:42px;height:42px;border-radius:var(--r-lg);align-items:center;justify-content:center;
     background:rgba(10,12,16,.2);border:1px solid rgba(255,59,59,.4);color:var(--neon);
@@ -2360,13 +2369,14 @@
     <div class="gview" id="vBuild"><div id="cstMain"></div><canvas id="techMap3d"></canvas><div id="cstPrev"><canvas id="cstPrevCv"></canvas><div id="cstPrevName"></div><div id="cstPrevInfo"></div><button id="cstPrevX" onclick="cstHidePreview()">✕ 닫기</button></div>
       <!-- ExoMiner식 하단 인터페이스: 슬라이드 시트 + 아이콘 독 + 유닛 지정 해제(메인 deselTop 재사용 디자인) -->
       <div id="btSheet"><div id="btSheetBody"></div></div>
-      <div id="btDock"></div>
       <div id="btDesel" onclick="techDeselU(event)" title="유닛 지정 해제"><svg viewBox="0 0 24 24" width="26" height="26"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.4"/><line x1="6.2" y1="6.2" x2="17.8" y2="17.8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></div>
     </div>   <!-- 건설 테스트 + 건물 3D 프리뷰 -->
     <!-- 공용 보스 토벌장 팝업(HP바 클릭 시) — 아레나는 vBoss/cvMarine로 뒤에 렌더, 여기는 컨트롤만 -->
     <div id="bossPanel" class="hide"><button id="baBackBtn" onclick="closeBossArena()"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>돌아가기</button></div>
     <canvas id="cvMarine"></canvas>  <!-- 3D 오버레이: 뷰 바깥 지속 캔버스(메인=게임유닛 / 유닛뽑기=슬롯 위 모델) -->
     <canvas id="cvFx"></canvas>      <!-- 투사체 오버레이(3D 위) -->
+    <div id="sheetScrim" onpointerdown="closeSheet(event)"></div>   <!-- 하단 시트 열림 시 바깥(게임) 화면 → 탭하면 시트 닫힘 -->
+
     <!-- ⚔ 전투실험: 화면 내 컨트롤 오버레이(Battle 탭에서만 표시) -->
     <div id="btCtl">
       <button class="btCtlBtn on" id="btCtlToggle" onclick="sbCombatToggle()">▶ 전투</button>
@@ -6013,7 +6023,7 @@ function cstRender(){ if(!G.cst) return; const T=BUILD_TREE[G.cst.race]; const m
     +'<span class="cbtn'+(G.cst.inf?' on':'')+'" onclick="cstToggleInf()">⚡ 빠른무한</span><span class="cbtn" onclick="cstReset()">↺ 리셋</span>'+tally;
 }
 function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 컴퓨터가 싸운다: 직스 탭 동작
-  if(G.tab===id && id!=='Build'){ document.body.classList.toggle('sheetOpen'); return; }   // 같은 탭 재탭 = 슬라이드 시트 열고/닫기(건설은 자체 독)
+  if(G.tab===id && id!=='Build'){ document.body.classList.toggle('sheetOpen'); requestAnimationFrame(_syncSheetLift); return; }   // 같은 탭 재탭 = 슬라이드 시트 열고/닫기(건설은 선택 기반)
   const _fromBattle=(G.tab==='Battle');   // ⚔ 전투실험: 별도 전장 유닛(G.btUnits)으로 스왑
   if(_fromBattle && id!=='Battle' && G._galUnits){ G.units=G._galUnits; G._galUnits=null; if(window.M3D&&M3D.clearGameModels) M3D.clearGameModels(); }   // 이탈 → 갤러리 유닛 복원
   if(id==='Battle' && !_fromBattle){ G.btUnits=G.btUnits||[]; G._galUnits=G.units; G.units=G.btUnits; if(window.M3D&&M3D.clearGameModels) M3D.clearGameModels(); }   // 진입 → 빈 전장 유닛으로
@@ -6025,7 +6035,8 @@ function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on')); el.classList.add('on');
   document.querySelectorAll('.gview').forEach(v=>v.classList.remove('on')); document.getElementById('v'+(id==='Battle'?'Main':id)).classList.add('on');   // 전투실험은 메인 아레나 뷰 공유
   document.querySelectorAll('.bp').forEach(p=>p.classList.remove('on')); document.getElementById('bp'+id).classList.add('on');
-  document.body.classList.toggle('sheetOpen', id!=='Build');   // 탭 진입 = 시트 자동 오픈(건설은 자체 슬라이드 독 사용)
+  document.body.classList.toggle('sheetOpen', id!=='Build');   // 탭 진입 = 시트 자동 오픈(건설은 선택 시 시트)
+  requestAnimationFrame(_syncSheetLift);
   document.getElementById('zoneLabel').textContent=ZONE_LABEL[id];
   document.body.classList.toggle('cstMode', id==='Build');   // 건설 탭: 게임 HUD 숨김
   if(id==='Build' && typeof techUIEnsure==='function') techUIEnsure(); else { if(typeof cstHidePreview==='function') cstHidePreview(); if(window.M3D&&M3D.techMap3DStop) M3D.techMap3DStop();
@@ -7476,7 +7487,10 @@ function checkEnemyWarn(n){
 
 // ── 오버레이 ──
 // 게임 플레이 중에만 하단 콘솔(#bot)을 노출. 타이틀/방찾기/로비 등 메뉴 화면에서는 숨김.
-function setInGame(on){ const p=document.getElementById('phone'); if(p) p.classList.toggle('inGame', !!on); document.body.classList.toggle('sheetOpen', !!on); }   // 게임 진입 = 하단 시트 기본 오픈(시작 탭 메인)
+function setInGame(on){ const p=document.getElementById('phone'); if(p) p.classList.toggle('inGame', !!on); document.body.classList.toggle('sheetOpen', !!on); if(typeof _syncSheetLift==='function') requestAnimationFrame(_syncSheetLift); }   // 게임 진입 = 하단 시트 기본 오픈(시작 탭 메인)
+function _syncSheetLift(){ let h=0; if(document.body.classList.contains('sheetOpen')&&!document.body.classList.contains('cstMode')){ const p=document.querySelector('.bp.on'); if(p) h=p.offsetHeight||0; } document.documentElement.style.setProperty('--sheetH', h+'px'); }   // 열린 시트 높이 → 사이드 배너 상승량(--sheetH)
+function closeSheet(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); document.body.classList.remove('sheetOpen'); _syncSheetLift(); }   // 바깥(게임) 화면 탭 → 하단 시트 닫힘
+(function _initSheetObserver(){ try{ if(typeof ResizeObserver==='undefined') return; const ro=new ResizeObserver(()=>{ if(typeof _syncSheetLift==='function') _syncSheetLift(); }); const bind=()=>document.querySelectorAll('.bp').forEach(p=>ro.observe(p)); if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bind); else bind(); }catch(_e){} })();   // 시트 콘텐츠 로드로 높이 변하면 --sheetH 재동기화
 function ovStatRow(label,val){ return '<div class="ovStat"><span class="osL">'+label+'</span><span class="osV">'+val+'</span></div>'; }
 function fmtTime(sec){ sec=Math.max(0,Math.floor(sec||0)); const m=Math.floor(sec/60), s=sec%60; return (m<10?'0':'')+m+':'+(s<10?'0':'')+s; }
 function showOverlay(){ const ov=document.getElementById('ov'),tt=document.getElementById('ovTitle'),dd=document.getElementById('ovDesc'),bt=document.getElementById('ovBtn');
@@ -10424,22 +10438,16 @@ function techWorkerBuildModel(list){ const race=G.tech.race, fid=(TECH_WORKER[ra
   const bl=techBuildListModel();   // 건물 카드(techArm) 재사용
   return { mode:'build', title:(n>1?('일꾼 '+n+'기'):'일꾼'), icon:_techUnitPortrait(fid),
     sub:'건물 선택 → 맵 탭해 배치 · 맵 탭 = 이동 · 해제 ✕', items:bl.items, info:bl.info }; }
-function techPanelRender(){ const body=document.getElementById('btSheetBody'), sheet=document.getElementById('btSheet'), dock=document.getElementById('btDock'); if(!body||!sheet||!dock) return;
+function techPanelRender(){ const body=document.getElementById('btSheetBody'), sheet=document.getElementById('btSheet'); if(!body||!sheet) return;
   const sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null});
   const selB=(G.tech.sel!=null)?G.tech.ents.find(e=>e.eid===G.tech.sel&&e.type==='bldg'):null;
   const selUs=(G.tech.selU||[]).map(id=>G.tech.ents.find(e=>e.eid===id)).filter(Boolean);
-  if(sh.sec==='ent' && !selB && !selUs.length){ sh.open=false; sh.sec=null; }   // 선택 사라짐 → 엔티티 시트 닫기
-  // 독: 지정된 엔티티(일꾼·유닛·건물)가 있을 때만 아이콘 표시(별도 '건설' 배너 없음 — 건설은 일꾼 지정 시 그리드로)
+  if(sh.sec==='ent' && !selB && !selUs.length){ sh.open=false; sh.sec=null; }   // 선택 사라짐 → 시트 닫기
   const _selWk=selUs.some(e=>e.type==='worker');
-  const entIco=selB?((techGetBldg(G.tech.race,selB.bk)||{}).ico||'🏢'):(selUs.length?(_selWk?'👷':'👥'):null);
-  const entName=selB?((techGetBldg(G.tech.race,selB.bk)||{}).name||'건물'):(selUs.length===1?(_techUnitName(selUs[0])||'유닛'):(selUs.length+'기 지정'));
-  let d='';
-  if(entIco) d+='<div class="btDockBtn'+((sh.open&&sh.sec==='ent')?' on':'')+'" onclick="techSheetSec(event,\'ent\')"><span class="ic">'+entIco+'</span><span class="lb">'+entName+'</span></div>';
-  dock.innerHTML=d;
-  // 시트: 열려 있으면 선택 대상별 내용 즉시 교체
+  // 시트: 선택된 대상(일꾼=건설 그리드 / 유닛=이동 / 건물=생산·연구)만 표시. 별도 독 배너 없음 — 업그레이드 탭 시트처럼 그 영역만
   let model=null;
   if(sh.open){ if(selB){ const b=techGetBldg(G.tech.race,selB.bk); model=(b&&b.produces)?techBldgProdModel(b):((b&&b.research)?techBldgUpgModel(b):((b&&b.unlocks)?techBldgInfoModel(b):null)); }
-    else if(selUs.length) model=_selWk?techWorkerBuildModel(selUs):techUnitPanelModel(selUs); }   // 일꾼=건설 그리드 / 그 외 유닛=이동 패널
+    else if(selUs.length) model=_selWk?techWorkerBuildModel(selUs):techUnitPanelModel(selUs); }
   sheet.classList.toggle('open', !!(sh.open&&model));
   if(model) renderCmdGrid(body, model);
   const dz=document.getElementById('btDesel'); if(dz) dz.classList.toggle('on',(G.tech.selU||[]).length>0); }   // 유닛 지정 해제 버튼(메인 deselTop 규약)
