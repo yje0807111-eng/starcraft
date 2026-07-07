@@ -756,8 +756,14 @@
   .missList li{position:relative;font-size:var(--fs-md);line-height:1.55;color:var(--txt);padding-left:13px;word-break:keep-all}
   .missList li::before{content:'';position:absolute;left:2px;top:6px;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.3)}
   .missList b{color:#fff;font-weight:700}
-  .bp{display:none;flex:1;flex-direction:column;padding:6px 12px;gap:5px;min-height:0}
-  .bp.on{display:none}   /* 하단 패널 영역 제거 — 탭 바를 맨 아래로 내리는 1단계. 섹션 내용은 추후 위로 올라오는 시트로 재구성 */
+  /* 하단 섹션 = 위로 올라오는 슬라이드 시트(탭 바 바로 위, 게임 위로 오버레이). 활성 탭 패널만 존재(.on), body.sheetOpen일 때 올라옴 */
+  .bp{position:absolute;left:0;right:0;bottom:100%;z-index:22;box-sizing:border-box;
+    display:none;flex-direction:column;gap:5px;padding:10px 12px 12px;max-height:46vh;overflow-y:auto;
+    background:linear-gradient(180deg,rgba(13,18,28,.975),rgba(8,11,17,.99));border-top:1px solid rgba(90,140,210,.32);
+    border-radius:15px 15px 0 0;box-shadow:0 -9px 26px rgba(0,0,0,.6);
+    transform:translateY(112%);transition:transform .26s cubic-bezier(.2,.8,.25,1);pointer-events:none}
+  .bp.on{display:flex}   /* 활성 탭 패널만 렌더(내려간 상태로 대기) */
+  body.sheetOpen .bp.on{transform:translateY(0);pointer-events:auto}   /* 시트 올라옴 */
 
   .row{display:flex;gap:7px;flex-shrink:0;flex-wrap:wrap}
   /* 버튼: 스타크래프트식 메탈 베벨 박스 */
@@ -936,7 +942,7 @@
   /* 🏗 테크트리 건설 — RTS 배치 맵 + 하단 커맨드 그리드 */
   #vBuild{display:flex;flex-direction:column;min-height:0}
   #cstMain{flex:1;min-height:0;width:100%;position:relative;overflow:hidden;padding:0}
-  #bpBuild{display:flex;flex-direction:column;padding:8px;min-height:0}
+  #bpBuild{display:none}   /* 건설은 자체 슬라이드 시트(#btSheet) 사용 → 하단 패널 미사용(다른 탭에서 32px 잔여공간 제거) */
   .bmap{position:absolute;inset:0;overflow:hidden;cursor:crosshair;
     background:linear-gradient(0deg,rgba(8,12,20,.46),rgba(8,12,20,.24)),
       repeating-linear-gradient(0deg,transparent 0 27px,rgba(120,150,190,.06) 27px 28px),
@@ -6007,6 +6013,7 @@ function cstRender(){ if(!G.cst) return; const T=BUILD_TREE[G.cst.race]; const m
     +'<span class="cbtn'+(G.cst.inf?' on':'')+'" onclick="cstToggleInf()">⚡ 빠른무한</span><span class="cbtn" onclick="cstReset()">↺ 리셋</span>'+tally;
 }
 function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 컴퓨터가 싸운다: 직스 탭 동작
+  if(G.tab===id && id!=='Build'){ document.body.classList.toggle('sheetOpen'); return; }   // 같은 탭 재탭 = 슬라이드 시트 열고/닫기(건설은 자체 독)
   const _fromBattle=(G.tab==='Battle');   // ⚔ 전투실험: 별도 전장 유닛(G.btUnits)으로 스왑
   if(_fromBattle && id!=='Battle' && G._galUnits){ G.units=G._galUnits; G._galUnits=null; if(window.M3D&&M3D.clearGameModels) M3D.clearGameModels(); }   // 이탈 → 갤러리 유닛 복원
   if(id==='Battle' && !_fromBattle){ G.btUnits=G.btUnits||[]; G._galUnits=G.units; G.units=G.btUnits; if(window.M3D&&M3D.clearGameModels) M3D.clearGameModels(); }   // 진입 → 빈 전장 유닛으로
@@ -6018,9 +6025,11 @@ function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on')); el.classList.add('on');
   document.querySelectorAll('.gview').forEach(v=>v.classList.remove('on')); document.getElementById('v'+(id==='Battle'?'Main':id)).classList.add('on');   // 전투실험은 메인 아레나 뷰 공유
   document.querySelectorAll('.bp').forEach(p=>p.classList.remove('on')); document.getElementById('bp'+id).classList.add('on');
+  document.body.classList.toggle('sheetOpen', id!=='Build');   // 탭 진입 = 시트 자동 오픈(건설은 자체 슬라이드 독 사용)
   document.getElementById('zoneLabel').textContent=ZONE_LABEL[id];
   document.body.classList.toggle('cstMode', id==='Build');   // 건설 탭: 게임 HUD 숨김
-  if(id==='Build' && typeof techUIEnsure==='function') techUIEnsure(); else { if(typeof cstHidePreview==='function') cstHidePreview(); if(window.M3D&&M3D.techMap3DStop) M3D.techMap3DStop(); }   // 건설 진입 렌더 / 이탈 시 프리뷰·라이브3D 정지
+  if(id==='Build' && typeof techUIEnsure==='function') techUIEnsure(); else { if(typeof cstHidePreview==='function') cstHidePreview(); if(window.M3D&&M3D.techMap3DStop) M3D.techMap3DStop();
+    if(G.tech){ G.tech.sel=null; G.tech.selU=[]; G.tech.arm=null; if(G.tech.sheet){ G.tech.sheet.open=false; G.tech.sheet.sec=null; } } }   // 건설 진입 렌더 / 이탈 시 프리뷰·라이브3D 정지 + 지정·시트 해제
   deselectUnit(); G.prodB=null; G.techB=null; G.mergeMode=false; { const mb=document.getElementById('mergeBtn'); if(mb) mb.classList.remove('on'); }
   if(typeof clearShopProfile==='function') clearShopProfile();   // 유닛뽑기 중립 선택 해제
   document.getElementById('prodHint').style.display='';
@@ -7467,7 +7476,7 @@ function checkEnemyWarn(n){
 
 // ── 오버레이 ──
 // 게임 플레이 중에만 하단 콘솔(#bot)을 노출. 타이틀/방찾기/로비 등 메뉴 화면에서는 숨김.
-function setInGame(on){ const p=document.getElementById('phone'); if(p) p.classList.toggle('inGame', !!on); }
+function setInGame(on){ const p=document.getElementById('phone'); if(p) p.classList.toggle('inGame', !!on); document.body.classList.toggle('sheetOpen', !!on); }   // 게임 진입 = 하단 시트 기본 오픈(시작 탭 메인)
 function ovStatRow(label,val){ return '<div class="ovStat"><span class="osL">'+label+'</span><span class="osV">'+val+'</span></div>'; }
 function fmtTime(sec){ sec=Math.max(0,Math.floor(sec||0)); const m=Math.floor(sec/60), s=sec%60; return (m<10?'0':'')+m+':'+(s<10?'0':'')+s; }
 function showOverlay(){ const ov=document.getElementById('ov'),tt=document.getElementById('ovTitle'),dd=document.getElementById('ovDesc'),bt=document.getElementById('ovBtn');
