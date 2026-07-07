@@ -594,7 +594,7 @@
   /* BOTTOM PANEL */
   /* 하단 패널: 상단 발광 라인 + 미세 그라데이션으로 게임화면과 분리 */
   /* 하단 콘솔 — 스타크래프트식 브러시드 메탈 + 상단 위험띠 + 리벳 */
-  #bot{height:248px;flex-shrink:0;display:flex;flex-direction:column;position:relative;
+  #bot{height:auto;flex-shrink:0;display:flex;flex-direction:column;position:relative;   /* 하단 콘솔=탭 바만(패널 영역 제거) → 화면 맨 아래 네비. 각 섹션은 위로 올라오는 시트로 전환 예정 */
     background:none;   /* 투명 — 프레임의 지형 타일이 그대로 비침(한 지면처럼) */
     box-shadow:0 -10px 24px -6px rgba(0,0,0,.55)}   /* 위쪽으로 부드러운 그림자 → 자연스러운 섹션 경계 */
   #phone:not(.inGame) #bot{display:none}   /* 게임 중(.inGame)에만 하단 콘솔 표시 — 타이틀/방찾기/로비 등에서는 숨김 */
@@ -757,7 +757,7 @@
   .missList li::before{content:'';position:absolute;left:2px;top:6px;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.3)}
   .missList b{color:#fff;font-weight:700}
   .bp{display:none;flex:1;flex-direction:column;padding:6px 12px;gap:5px;min-height:0}
-  .bp.on{display:flex}
+  .bp.on{display:none}   /* 하단 패널 영역 제거 — 탭 바를 맨 아래로 내리는 1단계. 섹션 내용은 추후 위로 올라오는 시트로 재구성 */
 
   .row{display:flex;gap:7px;flex-shrink:0;flex-wrap:wrap}
   /* 버튼: 스타크래프트식 메탈 베벨 박스 */
