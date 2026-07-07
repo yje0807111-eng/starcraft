@@ -7190,7 +7190,8 @@ function upgSlotHTML(it){
 //     info:{ eb, name, desc, stats:[[라벨,값]] | val:{cur,nxt,unit}, progLabel, progVal, prog, cr, en, time }, page }
 function _cgFmt(n){ n=n||0; return n>=10000?((n/1000).toFixed(n>=100000?0:1)+'K'):(''+n); }
 function _cgCost(cr,en){ let h=''; if(cr) h+='<span class="cc cr">◈'+_cgFmt(cr)+'</span>'; if(en) h+='<span class="cc en">⚡'+_cgFmt(en)+'</span>'; return h; }   // 무료 표기 제거(빈칸)
-function _cgHpShStr(hp,sh){ let s=''; if(hp!=null&&hp!=='') s+='<span class="hpv">❤ '+hp+'</span>'; if(sh) s+='<span class="shv">🛡 '+sh+'</span>'; return s; }   // 헤더 HP/쉴드 표시(건설 커맨드 그리드)
+function _cgHpShStr(hp,sh){ let s=''; if(hp!=null&&hp!=='') s+='<span class="hpv">❤ '+hp+'</span>'; if(sh) s+='<span class="shv">🛡 '+sh+'</span>'; return s; }   // 헤더 HP/쉴드(건물 — 단일값)
+function _cgHpShDual(hp,sh){ let s=''; if(hp!=null&&hp!=='') s+='<span class="hpv">❤ '+hp+'/'+hp+'</span>'; if(sh) s+='<span class="shv">🛡 '+sh+'/'+sh+'</span>'; return s; }   // 헤더 HP/쉴드(유닛 — 현재/기본)
 function _cgSlotHTML(it){ if(!it||it.state==='empty') return '<div class="cgSlot empty"></div>';
   const cls='cgSlot '+(it.state==='busy'?'busy':it.state==='dim'?'dim':it.state==='max'?'max':'')+(it.sel?' sel':'');
   const meta=it.meta?('<div class="cgMeta '+(it.metaCls||'')+'">'+it.meta+'</div>'):'';
@@ -7198,7 +7199,7 @@ function _cgSlotHTML(it){ if(!it||it.state==='empty') return '<div class="cgSlot
 function _cgInfoHTML(d){ if(!d) return '<div class="cgEb">정보</div><div class="cgDd">항목을 선택하세요</div>';
   let val=''; if(d.stats) val='<div class="cgStats">'+d.stats.map(s=>'<div class="cgStat"><span>'+s[0]+'</span><b>'+s[1]+'</b></div>').join('')+'</div>';
   else if(d.val) val='<div class="cgVal"><span class="cur">'+d.val.cur+'</span><span class="arw">▸</span><span class="nxt">'+d.val.nxt+'</span><span class="u">'+(d.val.unit||'')+'</span></div>';
-  return '<div class="cgEb">'+(d.eb||'')+'</div>'+(d.hideName?'':'<div class="cgDn">'+(d.name||'')+'</div>')+(d.desc?'<div class="cgDd">'+d.desc+'</div>':'')+val
+  return (d.eb?'<div class="cgEb">'+d.eb+'</div>':'')+(d.hideName?'':'<div class="cgDn">'+(d.name||'')+'</div>')+(d.desc?'<div class="cgDd">'+d.desc+'</div>':'')+val
     +(d.progLabel?('<div class="cgProg"><div class="pl"><span>'+d.progLabel+'</span><b>'+(d.progVal||'')+'</b></div><div class="cgBar"><i style="width:'+Math.max(4,d.prog||0)+'%"></i></div></div>'):'')
     +'<div class="cgDcost">'+_cgCost(d.cr,d.en)+(d.time?'<span class="time">'+d.time+'</span>':'')+'</div>'; }
 function renderCmdGrid(host, m){ const el=(typeof host==='string')?document.getElementById(host):host; if(!el||!m) return;
@@ -10314,6 +10315,10 @@ function techUnitSpec(race,id){ const s=TECH_SPEC[race]; return (s&&s.unit&&s.un
 function techBldgSpec(race,k){ const s=TECH_SPEC[race]; return (s&&s.bldg&&s.bldg[k])||null; }
 // ── 테크트리 → 커맨드 그리드 모델 어댑터(재사용) ──
 function techGetBldg(race,k){ const t=TECH_TREE[race]; return t&&t.buildings.find(b=>b.k===k); }
+// 유닛 직책/이름/스탯(유닛·일꾼 패널 헤더+왼쪽) — 일꾼=생산자, 그 외 UNIT_CLS 병과
+function _techRoleOf(uid){ if(uid==='worker_human'||uid==='worker_swarm'||uid==='worker_light') return '생산자'; return (typeof UNIT_CLS!=='undefined'&&UNIT_CLS[uid])||''; }
+function _techRealName(race,uid){ const bs=(TECH_TREE[race]||{}).buildings||[]; for(const b of bs){ for(const p of (b.produces||[])){ if(p.id===uid) return p.name||uid; } } return uid; }   // 유닛 한글명 = produces에서 id로 조회
+function _techUnitStatList(spec){ return [['공격력', spec.atk?(''+spec.atk):'무공격'], ['사거리', spec.rng!=null?(''+spec.rng):'-'], ['공격속도','-'], ['처치','0']]; }   // 공속·처치는 칸만(데이터 추후)
 function _techUnitPortrait(id){ return (typeof unitPortraitHTML==='function'&&unitPortraitHTML(id))||'<span class="pemoji">🔧</span>'; }
 function techBuildModel(race, actFn){ const t=TECH_TREE[race]; if(!t) return null;   // 건설 목록(애드온 제외한 독립 건물)
   const items=t.buildings.filter(b=>!b.addonTo).map(b=>({ pro:'<span class="pemoji">'+b.ico+'</span>', sn:b.name, cr:b.m||0, en:b.g||0,
@@ -10350,7 +10355,9 @@ function techFinishBuild(e){ const b=techGetBldg(G.tech.race,e.bk); if(!b) retur
   for(const w of G.tech.ents){ if(w.type==='worker'&&w.build===e.eid){ w.build=null; } } }   // 건설 완료 → 일꾼 해방
 function techFinishProduce(q){ const race=G.tech.race; G.tech.units[q.id]=(G.tech.units[q.id]||0)+1; if(q.supply) G.tech.supCap+=q.supply;
   const be=G.tech.ents.find(e=>e.type==='bldg'&&e.bk===q.bk), bx=be?be.x:0.5, by=be?be.y:0.5, n=G.tech.units[q.id], ang=n*2.4, rr=0.045+((n%6)*0.014);
-  G.tech.ents.push({eid:G.tech.eseq++, type:'unit', uid:q.id, x:Math.max(0.04,Math.min(0.96,bx+Math.cos(ang)*rr)), y:Math.max(0.18,Math.min(0.96,by+0.1+Math.sin(ang)*rr*0.55))}); }
+  const _ex=Math.max(0.04,Math.min(0.96,bx+Math.cos(ang)*rr)), _ey=Math.max(0.18,Math.min(0.96,by+0.1+Math.sin(ang)*rr*0.55));
+  const _isWk=(q.id===(TECH_WORKER[race]||'worker_human'));   // 생산된 일꾼도 초기 일꾼과 동일한 type:'worker'(건설 가능)
+  G.tech.ents.push(_isWk?{eid:G.tech.eseq++, type:'worker', x:_ex, y:_ey}:{eid:G.tech.eseq++, type:'unit', uid:q.id, x:_ex, y:_ey}); }
 function techTick(dt){ if(!G.tech) return; let active=false, done=false;
   for(const e of G.tech.ents){ if(e.type==='bldg'&&e.bt>0){ if(!e.waiting){ e.bt=Math.max(0,e.bt-dt); if(e.bt<=0){ techFinishBuild(e); done=true; } } active=true; } }   // waiting=일꾼 미도착 → 카운트다운 정지
   for(const e of G.tech.ents){ if((e.type==='unit'||e.type==='worker')&&e.tx!=null){ const dx=e.tx-e.x, dy=e.ty-e.y, d=Math.hypot(dx,dy), step=_techSpdOf(e)*dt;   // 🚶 유닛 이동(스펙별 속도)
@@ -10466,16 +10473,15 @@ function techUnitPanelModel(list){ const race=G.tech.race, grp={}, ord=[];   // 
   const items=ord.map(k=>{ const g=grp[k], id=(g.e.type==='worker')?(TECH_WORKER[race]||'worker_human'):g.e.uid;
     return { pro:_techUnitPortrait(id), sn:_techUnitName(g.e)||id, meta:'×'+g.n, metaCls:'lv', state:'ok', act:'' }; });
   const f=list[0], fid=(f.type==='worker')?(TECH_WORKER[race]||'worker_human'):f.uid, spec=techUnitSpec(race,fid)||{};
-  const stats=[]; if(spec.hp!=null) stats.push(['체력',spec.hp]); if(spec.sh) stats.push(['보호막',spec.sh]); if(spec.ar!=null) stats.push(['방어',spec.ar]);
-  if(spec.atk) stats.push(['공격',spec.atk+((typeof _AT_KO!=='undefined'&&_AT_KO[spec.at])?(' ('+_AT_KO[spec.at]+')'):'')]); if(spec.rng) stats.push(['사거리',spec.rng]); if(spec.spd&&spec.spd!=='-') stats.push(['속도',spec.spd]);
-  const nm=(list.length===1)?(_techUnitName(f)||'유닛'):('유닛 '+list.length+'기');
-  return { mode:'prod', title:nm, icon:_techUnitPortrait(fid), hpsh:_cgHpShStr(spec.hp,spec.sh), sub:'맵을 탭하면 이동 · 해제는 우상단 ✕', items,
-    info:{ eb:'유닛', name:_techUnitName(f)||'유닛', hideName:true, desc:(spec.abil?('능력: '+spec.abil):'지정된 유닛이 탭한 곳으로 이동합니다.'), stats, cr:0, en:0 } }; }
+  const rn=_techRealName(race,fid), role=_techRoleOf(fid);
+  const nm=(list.length===1)?(rn+(role?' ('+role+')':'')):('유닛 '+list.length+'기');   // 이름 (직책)
+  return { mode:'prod', title:nm, icon:_techUnitPortrait(fid), hpsh:_cgHpShDual(spec.hp,spec.sh), sub:'맵을 탭하면 이동 · 해제는 우상단 ✕', items,
+    info:{ eb:'', hideName:true, stats:_techUnitStatList(spec), cr:0, en:0 } }; }   // 왼쪽: 공격력/사거리/공속/처치(유닛=이름·체력·방어 제거)
 function techWorkerBuildModel(list){ const race=G.tech.race, fid=(TECH_WORKER[race]||'worker_human'), n=list.length;   // 일꾼 지정 시트 — 헤더=일꾼 프로필, 그리드=건물 생성 카드
   const bl=techBuildListModel();   // 건물 카드(techArm) 재사용
-  const ws=techUnitSpec(race,fid)||{};
-  return { mode:'build', title:(n>1?('일꾼 '+n+'기'):'일꾼'), icon:_techUnitPortrait(fid), hpsh:_cgHpShStr(ws.hp,ws.sh),
-    sub:'건물 선택 → 맵 탭해 배치 · 맵 탭 = 이동 · 해제 ✕', items:bl.items, info:Object.assign({},bl.info,{hideName:true}) }; }
+  const ws=techUnitSpec(race,fid)||{}, rn=_techRealName(race,fid), role=_techRoleOf(fid);
+  return { mode:'build', title:rn+(n>1?(' '+n+'기'):'')+(role?' ('+role+')':''), icon:_techUnitPortrait(fid), hpsh:_cgHpShDual(ws.hp,ws.sh),
+    sub:'건물 선택 → 맵 탭해 배치 · 맵 탭 = 이동 · 해제 ✕', items:bl.items, info:{ eb:'', hideName:true, stats:_techUnitStatList(ws), cr:0, en:0 } }; }   // 왼쪽: 유닛 스탯(자원은 맵 상단바)
 function techPanelRender(){ const body=document.getElementById('btSheetBody'), sheet=document.getElementById('btSheet'); if(!body||!sheet) return;
   const sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null});
   const selB=(G.tech.sel!=null)?G.tech.ents.find(e=>e.eid===G.tech.sel&&e.type==='bldg'):null;
