@@ -6151,11 +6151,19 @@ function refreshSelCard(){ if(typeof G!=='undefined'){ G.boardArm=false; G.unloa
   updateSkillFab(); // 메인 화면 스킬 버튼
   if(typeof renderSkillBar==='function') renderSkillBar();   // 🪄 하단 패널 스킬 바(여분 구역)
   if(typeof updateAutoFab==='function') updateAutoFab();   // 자동 설정 배너(선택 시 숨김 — 해제버튼과 자리 공유)
-  if(G.tab==='Main' && _homeMode==='select' && _selViaTab && !en && G.sel.length>=1){   // 지정 탭에서 선택 → 지정 패널 유지(드래그 박스 선택은 selMulti 칩)
-    document.getElementById('defaultCmd').classList.remove('hide');
-    document.getElementById('unitCmd').classList.remove('on'); renderHomeLeft(); renderUnits(); return; }
-  if(G.sel.length===0 && !en){ document.getElementById('defaultCmd').classList.remove('hide');
-    document.getElementById('unitCmd').classList.remove('on'); renderHomeLeft(); renderUnits(); return; }
+  if(G.sandbox && G.tab==='Main'){   // 관리자 메인: 홈 지정/판매 패널 미사용 — 무선택=아무것도(시트 내려감), 유닛 지정=프로필 시트 올라옴
+    const hasSel=(G.sel.length>=1 || !!en);
+    document.body.classList.toggle('sheetOpen', hasSel); if(typeof _syncSheetLift==='function') requestAnimationFrame(_syncSheetLift);
+    document.getElementById('defaultCmd').classList.add('hide');
+    if(!hasSel){ document.getElementById('unitCmd').classList.remove('on'); renderUnits(); return; }
+    // 선택됨 → 아래 유닛 프로필(unitCmd) 렌더로 진행
+  } else {
+    if(G.tab==='Main' && _homeMode==='select' && _selViaTab && !en && G.sel.length>=1){   // 지정 탭에서 선택 → 지정 패널 유지(드래그 박스 선택은 selMulti 칩)
+      document.getElementById('defaultCmd').classList.remove('hide');
+      document.getElementById('unitCmd').classList.remove('on'); renderHomeLeft(); renderUnits(); return; }
+    if(G.sel.length===0 && !en){ document.getElementById('defaultCmd').classList.remove('hide');
+      document.getElementById('unitCmd').classList.remove('on'); renderHomeLeft(); renderUnits(); return; }
+  }
   document.getElementById('defaultCmd').classList.add('hide');
   document.getElementById('unitCmd').classList.add('on');
   const grid=document.getElementById('statGrid'), hpEl=document.getElementById('uHp'),
@@ -6909,7 +6917,7 @@ function updateAutoFab(){ const b=document.getElementById('autoFab'); if(!b) ret
   const showFab=(G.tab==='Main' && G.phase==='playing' && anyOwned);   // 전용 자리(우하단 개인보스 옆) → 선택과 무관하게 표시
   b.classList.toggle('hide', !showFab);
   if(!showFab){ const p=document.getElementById('autoPopup'); if(p) p.classList.add('hide'); return; }
-  b.classList.toggle('act', (o.combine&&G.auto.combine)||(o.unit&&G.auto.unit)||(o.energy&&G.auto.energy)||(o.place&&G.auto.place)||(o.bossdeploy&&G.auto.bossdeploy));
+  b.classList.toggle('act', !!((o.combine&&G.auto.combine)||(o.unit&&G.auto.unit)||(o.energy&&G.auto.energy)||(o.place&&G.auto.place)||(o.bossdeploy&&G.auto.bossdeploy)));   // !! 필수: G.auto.place/bossdeploy가 undefined면 식이 undefined→toggle이 force없음으로 간주해 매프레임 토글(깜빡임)
   const pop=document.getElementById('autoPopup');
   if(pop && !pop.classList.contains('hide') && pop._sig!==autoSig()) renderAutoPopup(); }
 function toggleAutoPopup(ev){ if(ev){ev.preventDefault();ev.stopPropagation();}
@@ -9791,6 +9799,7 @@ function enterSandbox(){
   placeSandboxUnits();
   if(typeof updateHud==='function') updateHud();
   if(typeof drawMain==='function') drawMain();
+  if(typeof refreshSelCard==='function') refreshSelCard();   // 관리자 메인 초기 상태: 무선택 → 홈 패널 숨김 + 시트 내려감
 }
 let last=performance.now();
 function loop(now){
