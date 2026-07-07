@@ -972,7 +972,7 @@
   .bent .bprog i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#2f7d4a,#5adf8a);box-shadow:0 0 6px rgba(90,223,138,.5);transition:width .12s linear}
   .bent .bprog.prod i{background:linear-gradient(90deg,#2f6fbf,#5cc8ff);box-shadow:0 0 6px rgba(92,200,255,.5)}
   .bent .bpt{position:absolute;left:50%;bottom:-21px;transform:translateX(-50%);font:800 9px 'Rajdhani',sans-serif;color:#8adf9a;white-space:nowrap;text-shadow:0 1px 2px #000}
-  .bent.bldg.live3d.sel{outline:none!important;box-shadow:none!important}
+  .bent.bldg.live3d.sel,.bent.unit.live3d.sel,.bent.worker.live3d.sel{outline:none!important;box-shadow:none!important}
   .bhint{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);z-index:5;font-size:11px;font-weight:700;color:#bcd;
     background:rgba(6,9,14,.75);border:1px solid var(--metal-edge);border-radius:8px;padding:5px 12px;max-width:92%;text-align:center;pointer-events:none}
   .bhint.on{color:#ffe27a;border-color:var(--gold);box-shadow:0 0 12px -3px rgba(255,210,74,.5)}
@@ -9807,10 +9807,14 @@ function loop(now){
     if(window.M3D && window.M3D.ready() && G.tech && !(G.opt&&G.opt.model3d===false)){
       const race=G.tech.race;
       if(window.M3D.cstEnsure && G._cstLoaded!==race){ G._cstLoaded=race; window.M3D.cstEnsure(Object.values((typeof TECH_MODEL!=='undefined'&&TECH_MODEL[race])||{})); }
+      if(window.M3D.ensureUnits && G._cstULoaded!==race){ G._cstULoaded=race; window.M3D.ensureUnits((typeof _techRaceUnitKeys==='function')?_techRaceUnitKeys(race):[]); }   // 일꾼·생산 유닛 3D 모델 로드
       mcv.style.display='block';
       const _map=document.getElementById('cstMain'); const W=(_map&&_map.clientWidth)||GW||360, H=(_map&&_map.clientHeight)||GH||420; GW=W; GH=H;
       const _v=(G.tech&&G.tech.view)||{x:0.5,y:0.5,zoom:1};
       const list=[]; for(const e of (G.tech.ents||[])){ if(e.type!=='bldg'||e.bt>0) continue; const mk=(TECH_MODEL[race]||{})[e.bk]; if(!mk) continue; const _cfg=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[mk]:null; list.push({uid:'cst_'+race+'_'+mk+'_'+e.eid, id:'cb_'+mk, x:(e.x-_v.x)*_v.zoom+0.5, y:(e.y-_v.y)*_v.zoom+0.5, face:((race==='swarm')?0:(typeof CST_YAW!=='undefined'?CST_YAW:0))+((_cfg&&_cfg.f)||0), yoff:(typeof CST_YSHIFT!=='undefined'?CST_YSHIFT:34), sel:(G.tech&&G.tech.sel===e.eid)}); }   // 뷰 변환(팬/줌) 반영
+      for(const e of (G.tech.ents||[])){ if(e.type!=='unit'&&e.type!=='worker') continue; const mk=(typeof _techEntModel==='function')?_techEntModel(e):null; if(!mk) continue;   // 🚶 일꾼·생산 유닛 3D
+        const _selu=(G.tech.sel===e.eid)||(G.tech.selU&&G.tech.selU.indexOf(e.eid)>=0);
+        list.push({uid:'tu_'+e.eid, id:mk, x:(e.x-_v.x)*_v.zoom+0.5, y:(e.y-_v.y)*_v.zoom+0.5, face:(typeof CST_YAW!=='undefined'?CST_YAW:0), yoff:(typeof TECH_UNIT_YOFF!=='undefined'?TECH_UNIT_YOFF:6), moving:(e.tx!=null), sel:_selu, scl:(typeof TECH_UNIT_SCL!=='undefined'?TECH_UNIT_SCL:0.85)}); }
       window.M3D.syncBuild(list, W, H, dt, _v.zoom);
     } else if(mcv) mcv.style.display='none';
     const _fcv=document.getElementById('cvFx'); if(_fcv) _fcv.style.display='none';
@@ -10256,14 +10260,17 @@ function techUIInit(race){ if(!TECH_TREE[race]) race='union';
   G.tech.ents.push({eid:G.tech.eseq++, type:'worker', x:0.32, y:0.62}); }   // 일꾼 1기
 function _techBuildTime(race,k){ if(G.tech.nocool) return 0; return ((techBldgSpec(race,k)||{}).t||20)*TECH_TIME_MUL; }
 function _techProdTime(race,id){ if(G.tech.nocool) return 0; return ((techUnitSpec(race,id)||{}).t||15)*TECH_TIME_MUL; }
-function techFinishBuild(e){ const b=techGetBldg(G.tech.race,e.bk); if(!b) return; e.bt=0; if(b.addonTo) G.tech.addon[b.k]=true; else G.tech.built[b.k]=(G.tech.built[b.k]||0)+1; G.tech.supCap+=(b.supply||0); }
+function techFinishBuild(e){ const b=techGetBldg(G.tech.race,e.bk); if(!b) return; e.bt=0; e.waiting=false; if(b.addonTo) G.tech.addon[b.k]=true; else G.tech.built[b.k]=(G.tech.built[b.k]||0)+1; G.tech.supCap+=(b.supply||0);
+  for(const w of G.tech.ents){ if(w.type==='worker'&&w.build===e.eid){ w.build=null; } } }   // 건설 완료 → 일꾼 해방
 function techFinishProduce(q){ const race=G.tech.race; G.tech.units[q.id]=(G.tech.units[q.id]||0)+1; if(q.supply) G.tech.supCap+=q.supply;
   const be=G.tech.ents.find(e=>e.type==='bldg'&&e.bk===q.bk), bx=be?be.x:0.5, by=be?be.y:0.5, n=G.tech.units[q.id], ang=n*2.4, rr=0.045+((n%6)*0.014);
   G.tech.ents.push({eid:G.tech.eseq++, type:'unit', uid:q.id, x:Math.max(0.04,Math.min(0.96,bx+Math.cos(ang)*rr)), y:Math.max(0.18,Math.min(0.96,by+0.1+Math.sin(ang)*rr*0.55))}); }
 function techTick(dt){ if(!G.tech) return; let active=false, done=false;
-  for(const e of G.tech.ents){ if(e.type==='bldg'&&e.bt>0){ e.bt=Math.max(0,e.bt-dt); active=true; if(e.bt<=0){ techFinishBuild(e); done=true; } } }
+  for(const e of G.tech.ents){ if(e.type==='bldg'&&e.bt>0){ if(!e.waiting){ e.bt=Math.max(0,e.bt-dt); if(e.bt<=0){ techFinishBuild(e); done=true; } } active=true; } }   // waiting=일꾼 미도착 → 카운트다운 정지
   for(const e of G.tech.ents){ if((e.type==='unit'||e.type==='worker')&&e.tx!=null){ const dx=e.tx-e.x, dy=e.ty-e.y, d=Math.hypot(dx,dy), step=TECH_USPD*dt;   // 🚶 유닛 이동
-    if(d<=step||d<1e-4){ e.x=e.tx; e.y=e.ty; e.tx=null; e.ty=null; } else { e.x+=dx/d*step; e.y+=dy/d*step; } active=true; } }
+    if(d<=step||d<1e-4){ e.x=e.tx; e.y=e.ty; e.tx=null; e.ty=null;
+      if(e.type==='worker'&&e.build!=null){ const bd=G.tech.ents.find(x=>x.eid===e.build); if(bd&&bd.waiting){ bd.waiting=false; done=true; } }   // 일꾼 도착 → 건설 시작
+    } else { e.x+=dx/d*step; e.y+=dy/d*step; } active=true; } }
   if(G.tech.pend&&G.tech.pend.length){ const seen={}; for(let i=G.tech.pend.length-1;i>=0;i--){ const q=G.tech.pend[i]; if(seen[q.bk]){ continue; } seen[q.bk]=1; q.t=Math.max(0,q.t-dt); active=true; if(q.t<=0){ techFinishProduce(q); G.tech.pend.splice(i,1); done=true; } } }
   if(done) techUIRender(); else if(active) techMapRender(); }   // 완성=전체 갱신 / 진행중=맵만(진행바)
 // 건설 탭 건물 3D 프리뷰: TECH 건물키 → glb 모델키(선택/배치대기 시 하단 도크에 회전 렌더)
@@ -10296,6 +10303,10 @@ const CST_BLDG_CFG={
 try{ if(typeof window!=='undefined') window.CST_BLDG_CFG=CST_BLDG_CFG; }catch(_e){}
 const CST_YSHIFT=34;   // 건설 건물 3D 전체를 화면 아래로 내리는 양(px). 키우면 더 아래로.
 const CST_YAW=-0.52;   // 유니온·에테리얼 정면 회전(라디안). -0.52≈왼쪽 30°.
+const TECH_WORKER={ union:'worker_human', swarm:'worker_swarm', aetherial:'worker_light' };   // 종족별 일꾼 3D 모델
+const TECH_UNIT_SCL=0.85, TECH_UNIT_YOFF=6;   // 건설 맵 3D 유닛 크기 배율·바닥 보정(px)
+function _techEntModel(e){ if(!e) return null; if(e.type==='worker') return (TECH_WORKER[G.tech.race]||'worker_human'); if(e.type==='unit') return e.uid; return null; }   // 엔티티 → 3D 모델 키
+function _techRaceUnitKeys(race){ const keys=new Set(); keys.add(TECH_WORKER[race]||'worker_human'); const bs=(TECH_TREE[race]&&TECH_TREE[race].buildings)||[]; for(const b of bs){ for(const p of (b.produces||[])) if(p&&p.id) keys.add(p.id); } return [...keys]; }   // 그 종족 건설 맵에서 쓸 유닛 모델 키(일꾼+생산 유닛)
 function techHidePreview(){ const prev=document.getElementById('cstPrev'), main=document.getElementById('cstMain'); if(prev) prev.classList.remove('on'); if(main) main.classList.remove('hasPrev'); if(window.M3D&&M3D.cstStop) M3D.cstStop(); }
 function techSyncPreview(){ if(!G.tech){ techHidePreview(); return; }
   let bk=G.tech.arm||null;
@@ -10339,11 +10350,13 @@ function techUIRender(){ if(!G.tech) return; techMapRender(); techPanelRender();
 function techMapRender(){ const map=document.getElementById('cstMain'); if(!map) return; const race=G.tech.race;
   let ents=''; for(const e of G.tech.ents){ let inner,cls;
     if(e.type==='bldg'){ const _b=techGetBldg(race,e.bk)||{};
-      if(e.bt>0){ cls='bldg building'; const _p=Math.round((1-e.bt/(e.btMax||1))*100); inner='<span class="be-ico" style="opacity:.5">'+(_b.ico||'🏢')+'</span><div class="bprog"><i style="width:'+_p+'%"></i></div><div class="bpt">🏗 '+Math.ceil(e.bt)+'s</div>'; }   // 건설 중(3D 미표시)
+      if(e.bt>0){ cls='bldg building'; const _p=Math.round((1-e.bt/(e.btMax||1))*100); const _lbl=e.waiting?'⏳ 일꾼 오는 중':('🏗 '+Math.ceil(e.bt)+'s'); inner='<span class="be-ico" style="opacity:.5">'+(_b.ico||'🏢')+'</span><div class="bprog"><i style="width:'+(e.waiting?0:_p)+'%"></i></div><div class="bpt">'+_lbl+'</div>'; }   // 건설 중(3D 미표시) / waiting=일꾼 도착 대기
       else { cls='bldg live3d'; inner=''; const _pq=(G.tech.pend||[]).find(q=>q.bk===e.bk); if(_pq){ const _pp=Math.round((1-_pq.t/(_pq.tMax||1))*100); inner='<div class="bprog prod" style="bottom:0"><i style="width:'+_pp+'%"></i></div>'; }
         if(G.tech.sel===e.eid){ const _cf=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[(TECH_MODEL[race]||{})[e.bk]]:null; const _sz=(_cf&&_cf.s)||50; inner+='<div class="uhp" style="width:44px;position:absolute;left:50%;transform:translateX(-50%);top:'+((CST_YSHIFT+10+Math.max(0,(_sz-36)*0.9))|0)+'px">'+barHTML('ub uH',100,hpBarColor(1))+'</div>'; } } }
-    else if(e.type==='worker'){ inner='<span class="be-ico">👷</span>'; cls='worker'; }
-    else { inner=_techUnitPortrait(e.uid); cls='unit'; }
+    else if(e.type==='worker'||e.type==='unit'){ const _mk=_techEntModel(e);
+      const _h3=!!(window.M3D&&M3D.ready&&M3D.ready()&&_mk&&M3D.hasModel&&M3D.hasModel(_mk)&&!(G.opt&&G.opt.model3d===false));   // 3D 모델 로드 완료 시 DOM은 빈 앵커, 아니면 초상화 폴백
+      cls=(e.type==='worker'?'worker':'unit')+(_h3?' live3d':'');
+      inner=_h3?((e.type==='worker'&&e.build!=null)?'<span style="position:absolute;left:50%;top:-8px;transform:translateX(-50%);font-size:13px">🔨</span>':''):(e.type==='worker'?'<span class="be-ico">👷</span>':_techUnitPortrait(e.uid)); }
     const _seld=(G.tech.sel===e.eid)||(G.tech.selU&&G.tech.selU.indexOf(e.eid)>=0);
     const _s=_techW2S(e.x,e.y); ents+='<div class="bent '+cls+(_seld?' sel':'')+'" style="left:'+(_s.x*100).toFixed(2)+'%;top:'+(_s.y*100).toFixed(2)+'%;transform:translate(-50%,-50%) scale('+techView().zoom.toFixed(2)+')">'+inner+'</div>'; }
   if(_btBox && _btBox.active){ const bx=Math.min(_btBox.sx0,_btBox.sx1),by=Math.min(_btBox.sy0,_btBox.sy1),bw=Math.abs(_btBox.sx1-_btBox.sx0),bh=Math.abs(_btBox.sy1-_btBox.sy0);   // 🔲 한 손가락 드래그 = 유닛 지정 박스
@@ -10416,10 +10429,19 @@ function techArm(bk){ const race=G.tech.race, b=techGetBldg(race,bk); if(!b) ret
   G.tech.arm=(G.tech.arm===bk)?null:bk; techUIRender(); }
 function techPlace(x,y){ const race=G.tech.race, b=techGetBldg(race,G.tech.arm); if(!b){ G.tech.arm=null; techUIRender(); return; }
   if(!_techAfford(b.m,b.g)||(b.addonTo&&!(G.tech.built[b.addonTo]>0))||!_techReqMet(b.req)){ if(typeof toast==='function') toast('⛔ 건설 불가'); G.tech.arm=null; techUIRender(); return; }
+  const bx=Math.max(0.06,Math.min(0.94,x)), by=Math.max(0.18,Math.min(0.94,y)), bt=_techBuildTime(race,b.k);
+  let wk=null;
+  if(bt>0){   // 노쿨이 아니면 일꾼이 걸어가서 건설 — 선택된 일꾼 우선, 없으면 가장 가까운 유휴 일꾼
+    const sels=(G.tech.selU||[]).map(id=>G.tech.ents.find(e=>e.eid===id)).filter(e=>e&&e.type==='worker'&&e.build==null); wk=sels[0]||null;
+    if(!wk){ let bd=1e9; for(const e of G.tech.ents){ if(e.type==='worker'&&e.build==null){ const d=(e.x-bx)*(e.x-bx)+(e.y-by)*(e.y-by); if(d<bd){ bd=d; wk=e; } } } }
+    if(!wk){ if(typeof toast==='function') toast('⛔ 건설할 일꾼이 없음'); G.tech.arm=null; techUIRender(); return; }
+  }
   _techSpend(b.m,b.g);
-  const bt=_techBuildTime(race,b.k), ne={eid:G.tech.eseq++, type:'bldg', bk:b.k, x:Math.max(0.06,Math.min(0.94,x)), y:Math.max(0.18,Math.min(0.94,y)), bt:bt, btMax:bt};
-  G.tech.ents.push(ne); if(bt<=0) techFinishBuild(ne);   // 즉시(노쿨) 완성 / 아니면 건설 진행바
-  G.tech.arm=null; G.tech.sel=ne.eid; const bp=document.getElementById('bpBuild'); if(bp) bp._cgPage=0; if(typeof playSfx==='function') playSfx('ui_confirm'); techUIRender(); }
+  const ne={eid:G.tech.eseq++, type:'bldg', bk:b.k, x:bx, y:by, bt:bt, btMax:bt, waiting:(bt>0&&!!wk)};
+  G.tech.ents.push(ne);
+  if(bt<=0){ techFinishBuild(ne); }   // 즉시(노쿨) 완성
+  else if(wk){ wk.build=ne.eid; wk.tx=Math.max(0.04,Math.min(0.96,bx)); wk.ty=Math.max(0.16,Math.min(0.96,by+0.05)); }   // 일꾼 → 건설지로 이동
+  G.tech.arm=null; G.tech.sel=ne.eid; G.tech.selU=[]; const bp=document.getElementById('bpBuild'); if(bp) bp._cgPage=0; if(typeof playSfx==='function') playSfx('ui_confirm'); techUIRender(); }
 function techDoProduce(id, bk){ const race=G.tech.race; if(!(G.tech.built[bk]>0)){ if(typeof toast==='function') toast('⛔ 건물 미건설'); return; }
   const b=techGetBldg(race,bk), p=b&&b.produces&&b.produces.find(x=>x.id===id); if(!p) return;
   if(!_techReqMet(p.req)){ if(typeof toast==='function') toast('⛔ 선행 미충족'); return; }
@@ -10447,6 +10469,7 @@ function techDemolish(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!
   if(!b||b.k===main.k){ if(typeof toast==='function') toast('본진은 철거 불가'); return; }
   if(b.addonTo) G.tech.addon[b.k]=false; else G.tech.built[b.k]=Math.max(0,(G.tech.built[b.k]||0)-1);
   G.tech.supCap=Math.max(0,G.tech.supCap-(b.supply||0));
+  for(const w of G.tech.ents){ if(w.type==='worker'&&w.build===e.eid){ w.build=null; w.tx=null; w.ty=null; } }   // 건설 중이던 일꾼 해방
   G.tech.ents=G.tech.ents.filter(x=>x.eid!==e.eid); G.tech.sel=null;
   if(typeof playSfx==='function') playSfx('ui_confirm'); if(typeof toast==='function') toast('🗑 '+b.name+' 철거 — 해금 유닛 재잠금'); techUIRender(); }
 function strikeRandomRace(){ return STK_RACE_ORDER[Math.floor(Math.random()*STK_RACE_ORDER.length)]; }
@@ -12584,6 +12607,7 @@ window.M3D={
   techMap3DStop:()=>techMap3DStop(),
   cstEnsure:(keys,cb)=>{ const orig=(keys||[]); const ks=orig.map(k=>'cb_'+k).filter(k=>MODELS[k]); ensureModels(ks, function(n){ for(const bk of orig){ const k='cb_'+bk; const b=bases[k]; if(!b) continue; const _cfg=(typeof window!=='undefined'&&window.CST_BLDG_CFG)?window.CST_BLDG_CFG[bk]:null; SCALE[k]=(_cfg&&_cfg.s?_cfg.s:55)/Math.max(b.h||1,b.w||1); } if(cb) cb(n); }); return true; },   // 건설 건물 로드 → 고정 스펙(s) 또는 자동 크기
   cstStop:()=>cstStopModel(),
+  ensureUnits:(keys,cb)=>ensureModels((keys||[]).filter(k=>MODELS[k]), cb),   // 건설 맵 3D 유닛(일꾼·생산 유닛) 모델 지연 로드
   hasModel:(id)=>!!bases[id],   // 실제 로드 완료 여부(로드 전엔 false → 2D/SVG 폴백 표시). MODELS 카탈로그가 아니라 bases(로드분) 기준
   modelCatalog:(id)=>!!MODELS[id],   // 카탈로그 존재 여부(필요 시)
   // ── 유즈맵별 에셋 지연 로드/해제(확장 토대) ──
