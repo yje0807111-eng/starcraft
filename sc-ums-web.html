@@ -6023,7 +6023,11 @@ function cstRender(){ if(!G.cst) return; const T=BUILD_TREE[G.cst.race]; const m
     +'<span class="cbtn'+(G.cst.inf?' on':'')+'" onclick="cstToggleInf()">⚡ 빠른무한</span><span class="cbtn" onclick="cstReset()">↺ 리셋</span>'+tally;
 }
 function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 컴퓨터가 싸운다: 직스 탭 동작
-  if(G.tab===id && id!=='Build'){ document.body.classList.toggle('sheetOpen'); requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); return; }   // 같은 탭 재탭 = 슬라이드 시트 열고/닫기(건설은 선택 기반)
+  if(G.tab===id && id!=='Build'){   // 같은 탭 재탭 = 슬라이드 시트 열고/닫기(건설은 선택 기반)
+    if(G.sandbox && (id==='Main'||id==='Upgrade')){   // 관리자 메인/업그레이드: 무선택이면 재탭 무반응(빈 시트 안 올라오게)
+      const _hasSel=(id==='Main')?(G.sel.length>=1 || G.selEnemy!=null):(G.techB!=null);
+      if(!_hasSel) return; }
+    document.body.classList.toggle('sheetOpen'); requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); return; }
   const _fromBattle=(G.tab==='Battle');   // ⚔ 전투실험: 별도 전장 유닛(G.btUnits)으로 스왑
   if(_fromBattle && id!=='Battle' && G._galUnits){ G.units=G._galUnits; G._galUnits=null; if(window.M3D&&M3D.clearGameModels) M3D.clearGameModels(); }   // 이탈 → 갤러리 유닛 복원
   if(id==='Battle' && !_fromBattle){ G.btUnits=G.btUnits||[]; G._galUnits=G.units; G.units=G.btUnits; if(window.M3D&&M3D.clearGameModels) M3D.clearGameModels(); }   // 진입 → 빈 전장 유닛으로
