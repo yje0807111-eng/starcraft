@@ -165,9 +165,9 @@
   #skillFab.active{border-color:#7fffd4;box-shadow:0 0 16px -2px rgba(90,255,200,.65),0 4px 9px var(--shade),inset 0 0 12px rgba(90,255,200,.22)}  /* 버프 활성 */
   #skillFab:active{transform:translateY(1px)}
   /* 🎆 이펙트 테스트베드(관리자 Unit 탭) — 빈 땅 + 유닛 배너 → 3D 소환 무한 반복 */
-  #fxLabWrap{display:none;flex-direction:column;gap:0;flex:1;min-height:0}
+  #fxLabWrap{display:none;flex-direction:column;gap:0;flex:0 0 auto;min-height:0}
   #fxLabWrap.on{display:flex}
-  #fxLabGrid{flex:1;min-height:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;overflow-y:auto;padding:4px 4px 8px;align-content:start}
+  #fxLabGrid{flex:0 0 auto;min-height:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;overflow-y:auto;padding:4px 4px 8px;align-content:start;max-height:214px}   /* 2줄까지 표시 후 스크롤(시트도 콘텐츠에 맞춰 축소) */
   .fxlRaceHead{grid-column:1/-1;padding:3px 6px 2px;font-size:10px;font-weight:800;letter-spacing:.6px;border-radius:4px;margin-top:6px}
   .fxlRaceHead.fxrl0{margin-top:0}
   .fxlRaceHead.union{color:#4aa8ff;background:rgba(74,168,255,.1)}
@@ -767,11 +767,12 @@
   /* 시트 바깥(게임 화면) 스크림 — 탭하면 시트 닫힘. 캔버스 위(z17), HUD·사이드·시트 아래 */
   #sheetScrim{display:none}   /* 사용 안 함 — 시트 닫기는 게임 빈-탭(onUp)에서 처리(화면 어두워짐·상호작용 차단 없음) */
   /* 시트 올라오면 하단 사이드 배너(채팅·자동·개인보스)도 시트 위로 함께 상승 */
-  #chatBar,#chatLog,#autoFab,#pbossBtn{transition:transform .26s cubic-bezier(.2,.8,.25,1)}
+  #chatBar,#chatLog,#autoFab,#pbossBtn,#fxLabActs{transition:transform .26s cubic-bezier(.2,.8,.25,1)}
   body.sheetOpen:not(.cstMode) #chatBar,
   body.sheetOpen:not(.cstMode) #chatLog,
   body.sheetOpen:not(.cstMode) #autoFab,
-  body.sheetOpen:not(.cstMode) #pbossBtn{transform:translateY(calc(-1 * var(--sheetH,0px)))}
+  body.sheetOpen:not(.cstMode) #pbossBtn,
+  body.sheetOpen:not(.cstMode) #fxLabActs{transform:translateY(calc(-1 * var(--sheetH,0px)))}   /* 이펙트 랩 동작 배너(공격/이동/사망)도 시트 위로 함께 상승 */
 
   .row{display:flex;gap:7px;flex-shrink:0;flex-wrap:wrap}
   /* 버튼: 스타크래프트식 메탈 베벨 박스 */
@@ -2412,11 +2413,7 @@
       <div class="fxlAct" data-m="move" onclick="fxLabSetMode('move',this)"><span>🚶</span><b>이동</b></div>
       <div class="fxlAct" data-m="death" onclick="fxLabSetMode('death',this)"><span>💀</span><b>사망</b></div>
     </div>
-    <!-- 이펙트 테스트베드 컨트롤(크기·맵줌) — 채팅창 바로 위 오버레이, 랩 활성 시만 표시 -->
-    <div id="fxLabCtrl">
-      <label class="ctl">크기 <input id="fxLabSizeR" type="range" min="0.4" max="2" step="0.05" value="1" oninput="fxLabSetMul(this.value)"><b id="fxLabSizeV">1.00</b></label>
-      <label class="ctl">맵/줌 <input id="fxLabScaleR" type="range" min="0.45" max="2.4" step="0.05" value="1" oninput="fxLabSetScale(this.value)"><b id="fxLabScaleV">1.00</b></label>
-    </div>
+    <!-- (제거) 이펙트 크기·맵줌 슬라이더 — 크기는 항상 1 고정, 맵 줌은 두 손가락 핀치로 직접 조작 -->
     <div id="autoPopup" class="hide"></div>
 
     <!-- 컴퓨터가 싸운다(직스) 화면 — 독립 오버레이(자체 렌더 루프) + 4탭 셸 -->
@@ -6032,7 +6029,7 @@ function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 
   if(_fromBattle && id!=='Battle' && G._galUnits){ G.units=G._galUnits; G._galUnits=null; if(window.M3D&&M3D.clearGameModels) M3D.clearGameModels(); }   // 이탈 → 갤러리 유닛 복원
   if(id==='Battle' && !_fromBattle){ G.btUnits=G.btUnits||[]; G._galUnits=G.units; G.units=G.btUnits; if(window.M3D&&M3D.clearGameModels) M3D.clearGameModels(); }   // 진입 → 빈 전장 유닛으로
   { const _btc=document.getElementById('btCtl'); if(_btc) _btc.style.display=(id==='Battle')?'flex':'none'; }   // 전투실험 화면 오버레이 컨트롤
-  if(G.view){ G.view.x=0.5; G.view.y=0.5; G.view.zoom=1; } if(G.viewT){ G.viewT.x=0.5; G.viewT.y=0.5; G.viewT.zoom=1; } _nptrs.clear(); _nemoPinch=null;   // 탭 전환 시 화면 줌/팬 초기화(다른 탭 3D 카메라 보호)
+  if(G.view){ G.view.x=0.5; G.view.y=0.5; G.view.zoom=1; } if(G.viewT){ G.viewT.x=0.5; G.viewT.y=0.5; G.viewT.zoom=1; } _nptrs.clear(); _nemoPinch=null; _fxPinch=null;   // 탭 전환 시 화면 줌/팬 초기화(다른 탭 3D 카메라 보호)
   if(G.bossOpen && typeof closeBossArena==='function') closeBossArena();   // 탭 전환 시 보스 팝업 닫기
   if(G.bossPickArm){ G.bossPickArm=false; if(typeof updateBossPickBtn==='function') updateBossPickBtn(); }
   G.tab=id;
@@ -9079,7 +9076,7 @@ let moved=false;
 let _downTime=0;   // 포인터 다운 시각(빈-탭 빠름 판정용 — 하단 시트 닫기)
 // ── 화면 줌/팬(두 손가락) — nemo·관리자 공용. zoom1·중심0.5=항등(기존 동작 유지) ──
 const NEMO_MAXZOOM=3;
-let _nptrs=new Map(), _nemoPinch=null;
+let _nptrs=new Map(), _nemoPinch=null, _fxPinch=null;   // _fxPinch: 이펙트 랩 두 손가락 줌(FXLAB.scale)
 function viewApply(ctx,W,H){ const v=(typeof G!=='undefined')&&G.view; if(!v||(v.zoom===1&&v.x===0.5&&v.y===0.5)) return false;   // 기본 뷰=변환 생략(오버헤드·위험 0)
   ctx.save(); ctx.translate(W/2,H/2); ctx.scale(v.zoom,v.zoom); ctx.translate(-v.x*W,-v.y*H); return true; }
 function viewRestore(ctx,applied){ if(applied) ctx.restore(); }
@@ -9459,7 +9456,12 @@ function clearShopBox(){ const el=document.getElementById('shopBox'); if(el) el.
 // 유닛뽑기 입력 = 메인 체계: 진입 무선택. 시민 클릭=시민 선택 / 비콘 클릭=그 유닛 선택(정보) / 시민 선택+빈곳=이동(구매) / 빈곳 드래그=박스 / 빈곳 탭=해제
 let _shopStart=null, _shopMoved=false, _shopBox=null, _shopGrab=false;
 // 유닛 정보 클릭 판정 — 작은 반경(유닛 아이콘 부근만). 비콘 가장자리 클릭은 '빈 곳'으로 → 시민 이동 가능
-function onUnitDown(e){ if(G.tab!=='Unit' || G.sandbox) return; if(e.cancelable) e.preventDefault();   // 이펙트 랩: 시민 셀렉터 비활성
+function onUnitDown(e){ if(G.tab!=='Unit') return;
+  if(G.sandbox){   // 이펙트 랩: 시민 셀렉터 비활성. 두 손가락 = 맵 줌(FXLAB.scale) 직접 확대/축소
+    _nptrs.set(e.pointerId, _nptScreen(e));
+    if(_nptrs.size>=2){ const p=[..._nptrs.values()]; _fxPinch={ d:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)||1, scale:FXLAB.scale||1 }; if(e.cancelable)e.preventDefault(); }
+    return; }
+  if(e.cancelable) e.preventDefault();
   const p=unitHoldPos(e); _shopStart=p; _shopMoved=false; _shopBox=null; _shopGrab=false;
   const c=G.citizen, onCit = c && Math.hypot((p.x-c.x)*GW,(p.y-c.y)*GH) < Math.min(GW,GH)*0.055;
   if(onCit){ selectShop('citizen'); _shopGrab=true; }         // 시민 짚기 → 선택 + 떼지 않고 스와이프하면 즉시 이동
@@ -9467,15 +9469,21 @@ function onUnitDown(e){ if(G.tab!=='Unit' || G.sandbox) return; if(e.cancelable)
   else { _shopBox={x0:p.x,y0:p.y,x1:p.x,y1:p.y}; drawShopBox(_shopBox); }  // 무선택 + 빈곳 → 박스
   updateDeselTop();
 }
-function onUnitMove(e){ if(G.tab!=='Unit' || G.sandbox) return; if(e.cancelable) e.preventDefault();
+function onUnitMove(e){ if(G.tab!=='Unit') return;
+  if(G.sandbox){   // 이펙트 랩: 두 손가락 핀치 → FXLAB.scale(맵/줌) 갱신
+    if(_nptrs.has(e.pointerId)) _nptrs.set(e.pointerId, _nptScreen(e));
+    if(_fxPinch && _nptrs.size>=2){ const p=[..._nptrs.values()]; const d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);
+      const z=Math.max(0.45, Math.min(2.4, _fxPinch.scale*d/_fxPinch.d)); if(typeof fxLabSetScale==='function') fxLabSetScale(z); if(e.cancelable)e.preventDefault(); }
+    return; }
+  if(e.cancelable) e.preventDefault();
   const p=unitHoldPos(e);
   if(_shopStart && Math.hypot(p.x-_shopStart.x,p.y-_shopStart.y)>0.012) _shopMoved=true;
   if(_shopBox){ _shopBox.x1=p.x; _shopBox.y1=p.y; drawShopBox(_shopBox); return; }
   // 시민을 짚은 채(또는 선택된 시민) 움직이면 즉시 따라 이동(메인 유닛과 동일)
   if(G.shopSel==='citizen' && (_shopGrab||uHold) && _shopMoved) moveCitizenCmd(p);
 }
-function onUnitUp(){
-  if(G.sandbox) return;   // 이펙트 랩: 시민 셀렉터 비활성
+function onUnitUp(e){
+  if(G.sandbox){ if(e) _nptrs.delete(e.pointerId); if(_nptrs.size<2) _fxPinch=null; return; }   // 이펙트 랩: 시민 셀렉터 비활성 / 핀치 종료
   if(_shopBox){ const b=_shopBox; clearShopBox(); _shopBox=null;
     const c=G.citizen, x0=Math.min(b.x0,b.x1),x1=Math.max(b.x0,b.x1),y0=Math.min(b.y0,b.y1),y1=Math.max(b.y0,b.y1);
     if(_shopMoved && c && c.x>=x0&&c.x<=x1&&c.y>=y0&&c.y<=y1) selectShop('citizen');  // 드래그 박스에 시민 들어오면 선택
@@ -11884,13 +11892,12 @@ function fxLabRenderGrid(){ const g=document.getElementById('fxLabGrid'); if(!g)
   g.innerHTML=html; }
 function fxLabActivate(){ const w=document.getElementById('fxLabWrap'); if(w) w.classList.add('on');
   const acts=document.getElementById('fxLabActs'); if(acts) acts.classList.remove('hide');
-  const ctrl=document.getElementById('fxLabCtrl'); if(ctrl) ctrl.classList.add('on');
+  if(typeof FX!=='undefined') FX.sizeMul=1; FXLAB.scale=1;   // 이펙트 크기 항상 1 고정 / 맵 줌은 핀치로(초기 1)
   const lbl=document.getElementById('unitTabLbl'); if(lbl) lbl.textContent='이펙트';
   ['shopProfile','prodHint','gachaActions','opsManual'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display='none'; });
   if(!FXLAB.store) FXLAB.store=FX.store(); if(window.M3D&&M3D.clearGameModels) M3D.clearGameModels(); fxLabSpawnScene(); fxLabRenderGrid(); }
 function fxLabDeactivate(){ const w=document.getElementById('fxLabWrap'); if(w) w.classList.remove('on');
   const acts=document.getElementById('fxLabActs'); if(acts) acts.classList.add('hide');
-  const ctrl=document.getElementById('fxLabCtrl'); if(ctrl) ctrl.classList.remove('on');
   const lbl=document.getElementById('unitTabLbl'); if(lbl) lbl.textContent='유닛뽑기';
   FXLAB.att=null; FXLAB.dummy=null; FXLAB.bldg=null; FXLAB.air=null; }
 function fxLabStep(dt){ const L=FXLAB; if(!L.att) fxLabSpawnScene(); const a=L.att, st=fxLabStats(L.attId,L.attGm);
