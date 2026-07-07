@@ -10315,10 +10315,20 @@ function techUnitSpec(race,id){ const s=TECH_SPEC[race]; return (s&&s.unit&&s.un
 function techBldgSpec(race,k){ const s=TECH_SPEC[race]; return (s&&s.bldg&&s.bldg[k])||null; }
 // ── 테크트리 → 커맨드 그리드 모델 어댑터(재사용) ──
 function techGetBldg(race,k){ const t=TECH_TREE[race]; return t&&t.buildings.find(b=>b.k===k); }
+// 기본 공통 자료(data/base_stats.md) — SC 원본 공격 쿨다운 프레임(cd, 작을수록 빠름·24f=1s) / 이동 픽셀(mv, 클수록 빠름). 게임 id 기준.
+const BASE_CD={  // 0=공격 없음(수송·시전·자폭 등)
+  worker_human:15, marine:15, machinegun:22, medic:0, ghost:22, racer:30, tank:37, goliath:22, skyguard:22, pelican:0, hellfire:64, aegis:0, dreadnought:30,
+  worker_swarm:22, overlord:0, snapper:8, hydra:15, thornqueen:37, wyvern:30, stinger:0, medusa:0, ultralisk:15, behemoth:30, venom:100,
+  worker_light:22, blade:22, dragoon:30, high_templar:0, dark_templar:30, archon:30, seraph:0, larva:60, observer:0, falcon:22, skydancer:8, archangel:30, kronos:45 };
+const BASE_MV={  // 이동 픽셀/프레임(참고·추후 이동 반영용)
+  worker_human:1.88, marine:1.88, machinegun:1.88, medic:1.88, ghost:1.88, racer:3.13, tank:1.88, goliath:1.88, skyguard:3.13, pelican:2.5, hellfire:2.5, aegis:2.5, dreadnought:1.25,
+  worker_swarm:1.88, overlord:0.47, snapper:2.61, hydra:1.74, thornqueen:2.5, wyvern:3.13, stinger:3.13, medusa:3.13, ultralisk:2.5, behemoth:1.25, venom:2.5,
+  worker_light:1.88, blade:1.88, dragoon:2.5, high_templar:1.56, dark_templar:2.5, archon:2.5, seraph:1.56, larva:0.94, observer:1.56, falcon:2.5, skydancer:3.13, archangel:1.56, kronos:2.5 };
 // 유닛 직책/이름/스탯(유닛·일꾼 패널 헤더+왼쪽) — 일꾼=생산자, 그 외 UNIT_CLS 병과
 function _techRoleOf(uid){ if(uid==='worker_human'||uid==='worker_swarm'||uid==='worker_light') return '생산자'; return (typeof UNIT_CLS!=='undefined'&&UNIT_CLS[uid])||''; }
 function _techRealName(race,uid){ const bs=(TECH_TREE[race]||{}).buildings||[]; for(const b of bs){ for(const p of (b.produces||[])){ if(p.id===uid) return p.name||uid; } } return uid; }   // 유닛 한글명 = produces에서 id로 조회
-function _techUnitStatList(spec){ return [['공격력', spec.atk?(''+spec.atk):'무공격'], ['사거리', spec.rng!=null?(''+spec.rng):'-'], ['공격속도','-'], ['처치','0']]; }   // 공속·처치는 칸만(데이터 추후)
+function _techUnitStatList(spec,uid){ const cd=(typeof BASE_CD!=='undefined')?BASE_CD[uid]:null;   // 공격속도=SC 쿨다운 프레임(기본 공통 자료)
+  return [['공격력', spec.atk?(''+spec.atk):'무공격'], ['사거리', spec.rng!=null?(''+spec.rng):'-'], ['공격속도', (cd&&cd>0)?(cd+'f'):'-'], ['처치','0']]; }
 function _techUnitPortrait(id){ return (typeof unitPortraitHTML==='function'&&unitPortraitHTML(id))||'<span class="pemoji">🔧</span>'; }
 function techBuildModel(race, actFn){ const t=TECH_TREE[race]; if(!t) return null;   // 건설 목록(애드온 제외한 독립 건물)
   const items=t.buildings.filter(b=>!b.addonTo).map(b=>({ pro:'<span class="pemoji">'+b.ico+'</span>', sn:b.name, cr:b.m||0, en:b.g||0,
@@ -10476,12 +10486,12 @@ function techUnitPanelModel(list){ const race=G.tech.race, grp={}, ord=[];   // 
   const rn=_techRealName(race,fid), role=_techRoleOf(fid);
   const nm=(list.length===1)?(rn+(role?' ('+role+')':'')):('유닛 '+list.length+'기');   // 이름 (직책)
   return { mode:'prod', title:nm, icon:_techUnitPortrait(fid), hpsh:_cgHpShDual(spec.hp,spec.sh), sub:'맵을 탭하면 이동 · 해제는 우상단 ✕', items,
-    info:{ eb:'', hideName:true, stats:_techUnitStatList(spec), cr:0, en:0 } }; }   // 왼쪽: 공격력/사거리/공속/처치(유닛=이름·체력·방어 제거)
+    info:{ eb:'', hideName:true, stats:_techUnitStatList(spec,fid), cr:0, en:0 } }; }   // 왼쪽: 공격력/사거리/공속/처치(유닛=이름·체력·방어 제거)
 function techWorkerBuildModel(list){ const race=G.tech.race, fid=(TECH_WORKER[race]||'worker_human'), n=list.length;   // 일꾼 지정 시트 — 헤더=일꾼 프로필, 그리드=건물 생성 카드
   const bl=techBuildListModel();   // 건물 카드(techArm) 재사용
   const ws=techUnitSpec(race,fid)||{}, rn=_techRealName(race,fid), role=_techRoleOf(fid);
   return { mode:'build', title:rn+(n>1?(' '+n+'기'):'')+(role?' ('+role+')':''), icon:_techUnitPortrait(fid), hpsh:_cgHpShDual(ws.hp,ws.sh),
-    sub:'건물 선택 → 맵 탭해 배치 · 맵 탭 = 이동 · 해제 ✕', items:bl.items, info:{ eb:'', hideName:true, stats:_techUnitStatList(ws), cr:0, en:0 } }; }   // 왼쪽: 유닛 스탯(자원은 맵 상단바)
+    sub:'건물 선택 → 맵 탭해 배치 · 맵 탭 = 이동 · 해제 ✕', items:bl.items, info:{ eb:'', hideName:true, stats:_techUnitStatList(ws,fid), cr:0, en:0 } }; }   // 왼쪽: 유닛 스탯(자원은 맵 상단바)
 function techPanelRender(){ const body=document.getElementById('btSheetBody'), sheet=document.getElementById('btSheet'); if(!body||!sheet) return;
   const sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null});
   const selB=(G.tech.sel!=null)?G.tech.ents.find(e=>e.eid===G.tech.sel&&e.type==='bldg'):null;
