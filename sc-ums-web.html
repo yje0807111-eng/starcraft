@@ -6049,7 +6049,7 @@ function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 
   if(id==='Unit'){ if(G.sandbox){ fxLabActivate(); }   // 관리자: Unit 탭 = 이펙트 테스트베드
     else { G.citizen={x:CITIZEN_HOME.x,y:CITIZEN_HOME.y,gx:null,gy:null,buyId:null,mode:'idle',targetPad:null}; uHold=null; G.shopSel=null; buildClock(); drawProd(); buildGachaDex(); if(typeof renderGachaActions==='function') renderGachaActions(); } }   // 일반: 유닛뽑기
   updateDeselTop();
-  if(id==='Upgrade'){ renderBldgs('vUpgrade',TECH,TECH_POS,null,selectUpg); drawUpg(); }
+  if(id==='Upgrade'){ renderBldgs('vUpgrade',TECH,TECH_POS,null,selectUpg); drawUpg(); _upgSheetSync(); }   // 관리자: 진입 시 무선택=시트 내려감(메인 규약)
   if(id==='Players'){ const mine=G.myPlayer||1; const others=(G.activePlayers||[1,2,3,4,5,6,7,8]).filter(n=>n!==mine);
     if(others.indexOf(G.curPlayer)<0) G.curPlayer=others[0]||mine;   // 입장한 다른 플레이어 기본
     if(typeof clearPlayerSel==='function') clearPlayerSel(); renderPlayers(); drawPlayer(); }
@@ -7247,6 +7247,7 @@ function selectUpg(id){ const _b0=TECH.find(x=>x.id===id);
   const b=TECH.find(x=>x.id===id); document.getElementById('upgHint').style.display='none';
   const list=document.getElementById('upgList'); list.style.display='flex';
   renderCmdGrid(list, cmdGridModelForUpg(b));   // 🆕 재사용 커맨드 그리드
+  _upgSheetSync();   // 관리자: 건물 지정 = 목록 시트 슬라이드업(메인 규약)
 }
 // 연구 시작 — 에너지 차감 후 타이머 가동(완료까지 다른 업그레이드 잠금). UPG_TIME=0이면 즉시
 function research(wpn){
@@ -9541,8 +9542,13 @@ vp.addEventListener('mousedown',onPlayerDown); vp.addEventListener('mousemove',o
 vp.addEventListener('touchstart',onPlayerDown,{passive:false}); vp.addEventListener('touchmove',onPlayerMove,{passive:false}); vp.addEventListener('touchend',onPlayerUp);
 
 // ── 업그레이드 탭: 메인 체계 — 건물 클릭=선택(업글 패널) / 빈곳 드래그=박스로 건물 선택 / 빈곳 탭=해제 / 취소키 ──
+// 관리자 업그레이드: 메인 규약 정합 — 무선택=시트 내려감/힌트 숨김, 건물 지정=목록 시트 슬라이드업. 일반 게임은 미적용(if G.sandbox)
+function _upgSheetSync(){ if(!G.sandbox || G.tab!=='Upgrade') return;
+  const hasSel=(G.techB!=null);
+  document.body.classList.toggle('sheetOpen', !!hasSel); if(typeof _syncSheetLift==='function') requestAnimationFrame(_syncSheetLift);
+  const uh=document.getElementById('upgHint'); if(uh) uh.style.display='none'; }   // 관리자: "건물을 터치하면…" 힌트 미표시(무선택=빈 시트)
 function clearUpgSel(){ G.techB=null; renderBldgs('vUpgrade',TECH,TECH_POS,null,selectUpg);
-  document.getElementById('upgList').style.display='none'; document.getElementById('upgHint').style.display=''; updateDeselTop(); }
+  document.getElementById('upgList').style.display='none'; document.getElementById('upgHint').style.display=''; updateDeselTop(); _upgSheetSync(); }
 function bldgUnder(nx,ny){ for(let i=0;i<TECH_POS.length;i++){ const p=TECH_POS[i]; if(Math.hypot((p.x-nx)*GW,(p.y-ny)*GH)<Math.min(GW,GH)*0.10) return i; } return -1; }
 let _upgStart=null, _upgBox=null, _upgMoved=false;
 function onUpgDown(e){ if(G.tab!=='Upgrade') return; e.preventDefault();
