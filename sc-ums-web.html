@@ -184,11 +184,6 @@
   .fxlCard .ks{font-size:8.5px;font-weight:700;color:#86a0bb}
   #fxLabActs{position:absolute;right:8px;bottom:8px;z-index:21;display:flex;flex-direction:column;gap:6px;pointer-events:auto}
   #fxLabActs.hide{display:none}
-  #fxLabCtrl{position:absolute;left:9px;right:80px;bottom:58px;z-index:21;display:none;flex-direction:row;gap:10px;align-items:center;flex-wrap:wrap;background:rgba(6,14,24,.84);border:1px solid rgba(100,140,180,.22);border-radius:8px;padding:5px 10px;pointer-events:auto}
-  #fxLabCtrl.on{display:flex}
-  #fxLabCtrl .ctl{display:flex;align-items:center;gap:6px;font-size:11px;color:#9fb6cf;font-weight:700}
-  #fxLabCtrl .ctl input[type=range]{width:82px}
-  #fxLabCtrl .ctl b{color:#cfe0f4;min-width:30px;text-align:right;font-family:'Rajdhani',sans-serif}
   .fxlAct{width:58px;height:40px;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:4px;cursor:pointer;border-radius:9px;
     background:linear-gradient(160deg,rgba(30,44,66,.62),rgba(10,16,28,.66));border:1px solid rgba(120,160,210,.3);color:#cfe0f4}
   .fxlAct span{font-size:16px;line-height:1}
@@ -2978,7 +2973,6 @@ function citizenSVG(){ return '<svg viewBox="0 0 24 24" width="100%" height="100
 function collideR(u){ return U[u.id].size * 0.62; }
 // 합성 사다리(가격 오름차순) — 같은 유닛 3개 → 다음 등급 영웅
 const CHAIN=['ghost','dragoon','hydra','marine','goliath','archon'];
-const nextIn=id=>{const i=CHAIN.indexOf(id);return (i<0||i>=CHAIN.length-1)?null:CHAIN[i+1];};
 
 // 유닛뽑기: 유닛을 시계처럼 원형 배치. 중앙 시민(셀렉터)이 이동→통과 시 구매.
 const SHOP_UNITS=['ghost','dragoon','hydra','marine','goliath','archon','turret','photon']; // 시계 순서
@@ -2990,7 +2984,7 @@ const CLOCK_POS=(function(){ const lx=.19, rx=.81, ys=[.305,.50,.695]; return [
   {x:.5, y:.74},                                   // 7 하단 1개(포토캐논) — 위로 좁힘
 ]; })();
 const CITIZEN_HOME={x:.5,y:.5}; // 시민 기본 위치(보드 중앙)
-const DRAW_ZONE={x:.5,y:.30};    // 하위호환 유지
+    // 하위호환 유지
 // 유닛뽑기 비콘 — 좌측 줄(유닛 뽑기) / 우측 줄(에너지 뽑기). 시민이 올라서면 해당 뽑기 실행.
 const DRAW_BEACONS=[
   // 좌측 줄(4줄): 가드 타워 / 스파이어 / 유닛 1회 / 에너지 1회 (간격 약간 띄움)
@@ -3065,7 +3059,7 @@ const TECH=[
 const TECH_POS=[{x:.28,y:.26},{x:.72,y:.26},{x:.28,y:.47},{x:.72,y:.47},{x:.5,y:.74}];   // 상단 2×2(무기) + 하단중앙 포인트연구소(채팅 위로 올림)
 // 계열별 색 (meta=골드)
 const WPN_COL={inf:'#4aa8ff',mech:'#5ad1ff',pro:'#ffc040',zrg:'#9fd356',meta:'#ffd24a'};
-const WPN_RACE={inf:'terran',mech:'terran',pro:'protoss',zrg:'zerg'};   // 건물 계열 → 종족(작동음 분리용)
+   // 건물 계열 → 종족(작동음 분리용)
 // 건물 벡터 실루엣(자체 제작 네온, currentColor=계열색)
 const BLDG_SVG={
   acad:'<path d="M3 13l9-5 9 5z" fill="currentColor" opacity=".18"/><path d="M5 20v-7h14v7M3 13l9-5 9 5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M8 20v-5M12 20v-5M16 20v-5M4 20h16" stroke="currentColor" stroke-width="1.2"/>',
@@ -3352,7 +3346,6 @@ const DIFFICULTY = {
 const DIFFICULTY_ORDER = ['easy','normal','hard','hell','nightmare'];
 // 보스 처치 코인(기본, 난이도 coinMult 적용 전). 표에 없는 라운드는 라운드 비례 폴백.
 // 메타 빌드 정의(설계서 4번). group: util / power / coop. 다음레벨 비용 = floor(start * rate^level)
-const META_BUILD_GROUPS = { eco:'경제', prod:'생산', combat:'전투', team:'전체 강화', coop:'보스' };
 // start=1레벨 비용 기준값, nMax=일반 레벨 수, max=일반+초월(초월 3레벨·효과 ×2/×4/×8). 비용은 metaNextCost(완만 감소배율) 참조.
 const META_BUILDS = {   // 탭(group) → 섹션(sect) 2단 분류. 같은 sect끼리 묶여 헤더로 구분됨
   // ── 경제 (시작 자원 → 자원 획득) ──
@@ -3541,7 +3534,6 @@ const BOSS_FEET_FRAC=0.52;    // 보스 발이 닿는 화면 세로 비율(플�
 // 유닛 이동 가능 구역(이전 값) — 이 영역을 덮도록 타일(플랫폼)을 더 크게 설정
 function bossWalkBounds(){ return {lo:0.18, hi:0.82, top:0.34, bot:0.72}; }
 const BOSS_PLATFORM={x:0.12,y:0.28,w:0.76,h:0.50};   // 토벌장 플랫폼 타일 — 이동가능 구역(0.18~0.82, 0.34~0.72)을 감쌈
-const COOP_BOSS_NAMES=['그렘린','데바스테이터','아포칼립스','오버마인드','타이탄','니드호그'];
 function coopBossPlayers(){ return (typeof coopActive==='function'&&coopActive()&&G.coopNumToUid)?Math.max(1,Object.keys(G.coopNumToUid).length):1; }
 function coopBossMaxHp(lv){
   const diff=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).bossHp||1;   // 보스 전용 난이도 계수(트랙 enemyHp와 분리 — enemyHp를 낮춰도 보스/코인 인플레 안 되게)
@@ -4561,10 +4553,9 @@ function energyDraw(){
 }
 
 // ── 10연차 묶음 뽑기 — 10회 한 번에, 레어+ 1개 확정. 10칸 여유 필요. 할인가 ──
-const PULL10_COST=145;   // 5연차: 단발 30×5=150 → 145 소폭 할인(단발 반복보다 싸게)
+   // 5연차: 단발 30×5=150 → 145 소폭 할인(단발 반복보다 싸게)
 
 // ── 고급 유닛 뽑기 1회 — 비싼 대신 레어+ 보장, 에픽+ 확률 대폭 상승 ──
-const PREMIUM_COST=90;
 function premiumRollTier(){ const r=Math.random();   // 고급 전용 확률표(레어 이상 보장)
   if(r<0.42) return 'rare';
   if(r<0.76) return 'epic';
@@ -4574,7 +4565,7 @@ function premiumRollTier(){ const r=Math.random();   // 고급 전용 확률표(
   return 'god'; }
 
 // ── 에너지 뽑기 10회 — 에너지 뽑기를 10회 한 번에(할인) ──
-const ENERGY10_COST=360;   // 단발 40×10=400 → 할인
+   // 단발 40×10=400 → 할인
 // 에너지 전환(전액) — 보유 크레딧을 한 번에 전부 에너지로 변환
 function energyDrawAll(){
   if(G.phase!=='playing'){ toast('⚠️ 게임 중에만 가능합니다'); return; }
@@ -5983,7 +5974,6 @@ function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 
   if(!_arena && !_labView) drawMiniMap();
 }
 // 계열 한글명(타입 라벨용)
-const WPN_KOR={inf:'보병',mech:'기계',pro:'루멘',zrg:'스웜',gun:'총기',beam:'광학',exp:'폭발',org:'유기체',fly:'비행',air:'항공',bio:'생체'};
 // 유닛 직업(이름 옆 작은 배지)
 const UNIT_CLS={   // 유닛 직업/병과 — 모델 id(gmodel) 기준. 베이스 유닛은 id로 폴백
   marine:'보병', goliath:'기갑병', ghost:'저격수', dragoon:'포격수', archon:'광전사', hydra:'전사',
@@ -6187,7 +6177,6 @@ function chipHTML(g){ const def=U[g.u.id];
   const purl=PORTRAIT_IMG[_pk] || ((window.M3D && M3D.portrait)?M3D.portrait(g.u.id):null);
   const port=purl?('<img class="chipImg" src="'+purl+'" alt="">'):unitSVG(g.u.id);
   const tcol=(!g.u.hero && g.u.gtier && typeof TIER_COLOR!=='undefined')?TIER_COLOR[g.u.gtier]:null;   // 등급색(영웅 칩은 기존 금색 틀 유지)
-  const tname=(tcol && typeof GACHA_TIERS!=='undefined' && GACHA_TIERS[g.u.gtier])?GACHA_TIERS[g.u.gtier].name:'';
   const rc=raceBarCol(g.u);   // 종족색 좌측 바(유니온 파랑/스웜 초록/에테리얼 금색)
   const ac=rc||tcol||(g.u.hero?'#ffe08a':'#7d8aa0');   // 좌측 액센트=종족색(없으면 등급/영웅색) · 등급은 이름색으로
   return '<span class="chipAccent" style="background:'+ac+';color:'+ac+'"></span>'
@@ -6981,7 +6970,6 @@ function renderOpsManual(){ const el=document.getElementById('opsManual'); if(!e
   el.innerHTML='<div class="omHead"><span class="omBar"></span>생산고 운용 안내</div><div class="omGrid">'+rows+'</div>'; }
 function buildClock(){ const v=document.getElementById('vUnit');
   v.querySelectorAll('.shopUnit,.citizen,.drawZone,.rateMini').forEach(n=>n.remove());
-  const coinSVG=COIN_SVG;
   // 뽑기 비콘 3종(단발/10연차/에너지) — 시민이 올라서면 해당 뽑기
   DRAW_BEACONS.forEach(b=>{ const dz=document.createElement('div'); dz.className='drawZone'+(beaconBadge(b.id)?' big':''); dz.id='drawZoneEl_'+b.id; dz.dataset.bid=b.id;
     dz.style.left=(b.x*100)+'%'; dz.style.top=(b.y*100)+'%';
@@ -7055,7 +7043,6 @@ function wpnBadgeSVG(wpn,col){ const g=WPN_ICON[wpn]||WPN_ICON.inf;
 const UPG_MAX=299;   // 업그레이드 최대 레벨 (이 유즈맵=299, 일반 맵은 3 등으로 설정)
 const UPG_TIME=0;    // 업그레이드 1회 완료까지 걸리는 시간(초). 0=즉시 완료(네모네모 디펜스: 로딩 없음)
 function upgCost(wpn){ return UPG_COST; }   // 정액 5 에너지(에너지 수급 하향으로 밸런스)
-const ENERGY_ICON='<svg viewBox="0 0 24 24" width="11" height="11" style="flex:0 0 auto"><path d="M13.6 2L5.4 13H10l-1.6 9L18.6 10.5H13z" fill="#6ff0a0" stroke="#d6ffe6" stroke-width="1.2" stroke-linejoin="round"/></svg>';
 // 건물별 업그레이드 항목 목록 — 추후 방어력 등 추가 시 배열에 push만 하면 슬롯이 자동 추가됨
 function bldgUpgs(b){
   const items=[];
@@ -7171,7 +7158,6 @@ function tickResearch(dt){ if(!G.research) return;
     const pt=document.querySelector('.cmdG .cgDcost .time'); if(pt) pt.textContent=G.research.t.toFixed(1)+'s 남음';
   }
 }
-const TINTS=['#0d1e35','#2a0d0d','#0d2a0d','#1e0d2a'];
 const PLAYER_VIEW_COLORS=['#4aa8ff','#ff4d4d','#1ecbb0','#b06bff','#ff9a2f','#ffd23b','#46d860','#e6e6ee'];  // 8인 플레이어 구분색(P1 파랑=나, 빨강/청록/보라/주황/노랑/초록/흰색)
 function renderPlayers(){ const g=document.getElementById('plGrid'); g.innerHTML='';
   const mine=G.myPlayer||1; const active=G.activePlayers||[1,2,3,4,5,6,7,8];   // 게임에 입장한 플레이어만 활성
@@ -7188,7 +7174,7 @@ function updatePlayerCounts(){ const active=G.activePlayers||[];   // Players �
   for(const n of active){ const e=document.getElementById('plcnt-'+n); if(!e) continue; const c=playerEnemyCount(n);
     e.textContent='적 '+c; e.style.color = c>=WARN2?'#ff6b6b' : (c>=WARN1?'#ffb14d' : '#9aa6b2'); } }
 // ── 배속 투표(만장일치=최저 배속) ──
-const VOTE_PLAYERS=[1,2,3,4,5,6,7,8];   // 나(1) + 봇 7명
+   // 나(1) + 봇 7명
 function ensureVote(){ if(!G.vote){ G.vote={1:1,2:2,3:4,4:4,5:4,6:2,7:4,8:1}; G._voteT=4; computeSpeed(); } }
 function computeSpeed(){ ensureVote();
   let sp;
@@ -7360,7 +7346,6 @@ function initChat(){ const f=document.getElementById('chatField'); if(f) f.addEv
 // 스타크래프트식: 알림을 팝업 대신 채팅에 시스템 메시지로 표시(같은 메시지 연속 도배는 억제)
 function toast(msg){ if(!msg) return; addChat('', msg, null, true); }   // 시스템 토스트 — 중복 억제는 addChat(시스템 메시지)에서 공통 처리
 // 채팅 안 쓰는 플로팅 알림(화면 하단 중앙에 잠깐 떴다 사라짐)
-let _floatT=null;
 // 적 누적 경고(150/190기) — 임계 통과 시 1회만, 히스테리시스로 도배 방지
 function checkEnemyWarn(n){
   if(n>=WARN2){ if(!G._w2){ G._w2=true; addChat('', '⚠️ 적 '+WARN2+'기 누적! 곧 탈락합니다 ('+n+'/'+mapCfg('loseCount',LOSE_COUNT)+')'); if(typeof playSfx==='function') playSfx('warn'); } } else if(n<WARN2-8) G._w2=false;
@@ -7664,12 +7649,6 @@ const ICO={
 };
 function mapIco(m){ return ICO[m.id] || ICO.map; }
 // 카드 썸네일: 메인화면 미니맵(보드) — 용암 테두리 보드 + 지면 + 합체존
-const MAP_MINIMAP='<svg class="mmBg" viewBox="0 0 48 48" fill="none">'
-  +'<rect x="5.5" y="10.5" width="37" height="27" rx="4.5" fill="#17120e" stroke="#ff5a2a" stroke-width="2"/>'
-  +'<rect x="5.7" y="10.7" width="36.6" height="26.6" rx="4.3" fill="none" stroke="#ffb070" stroke-width=".6" opacity=".55"/>'
-  +'<rect x="9.5" y="14.5" width="29" height="19" rx="2.5" fill="#2a2622"/>'
-  +'<rect x="29.5" y="25.5" width="7" height="6" rx="1" fill="none" stroke="#ff7a6b" stroke-width="1" stroke-dasharray="2 1.4" opacity=".85"/>'
-  +'</svg>';
 // 네모네모: 사각 트랙 미니맵 — 지형/그리드/발광 트랙/스폰·적·유닛/합체존
 const NEMO_MINIMAP='<svg class="mmBg" viewBox="0 0 48 48" fill="none">'
   +'<rect x="2" y="2" width="44" height="44" rx="4" fill="#241d18"/>'                       /* 외곽 지형 */
@@ -11331,7 +11310,6 @@ function strikeDrawMain(){ const S=STK; if(!S) return; const cvEl=document.getEl
     ctx.restore(); }
 }
 function _stkHash(x,y){ const n=Math.sin(x*127.1+y*311.7)*43758.5453; return n-Math.floor(n); }
-const _STK_PAL=['#12180e','#161e10','#1b2113','#0f1710','#19200f','#141a0d'];
 // 메인 신전 주변 개활지(넓은 베이스 광장) — 부드럽게 퍼지는 다져진 사막 땅
 // 사막 모랫길(레인) — 노드들을 잇는 폭 넓은 길 + 중앙 바퀴자국 점선
 // 외곽 네온 글로우(채움 아래에 깔아 외곽선만 빛나게 — 길+플랫폼 겹침의 내부 접합부는 채움이 가림)
@@ -11380,7 +11358,6 @@ function strikeLaneArrows(ctx, pts, scale, centerIdx){ const gap=Math.max(48,500
       ctx.restore(); } }
   ctx.restore(); }
 // 지상유닛 보행 가능 영역 = 프로토스 타일(레인 + 메인 소환 정사각). 향후 이동 단계에서 지상유닛 가둠(공중은 예외)
-const STK_LANE_HALF=770, STK_SPAWN_HALF=875;
 function _segDist(px,py,ax,ay,bx,by){ const dx=bx-ax, dy=by-ay, l2=dx*dx+dy*dy; let t=l2?((px-ax)*dx+(py-ay)*dy)/l2:0; t=Math.max(0,Math.min(1,t)); return Math.hypot(px-(ax+dx*t), py-(ay+dy*t)); }
 // 둥근 사각 path 헬퍼
 function _strkRR(ctx,x,y,w,h,r){ if(ctx.roundRect){ ctx.beginPath(); ctx.roundRect(x,y,w,h,r); return; }
@@ -11960,7 +11937,7 @@ const GUN_CFG={
   ghost: { len:1.65, pos:{x:-0.28, y:1.4, z:0.26}, rot:{x:0, y:Math.PI/2, z:0}, reload:true }, // 저격: 발사 텀에 장전(총 내렸다 올림)
 };
 const GUN_RECOIL=0.22;    // 발사 시 총 뒤로 킥(모델 단위)
-const STRUCT_RECOIL=0.18; // 고정 구조물(터렛/포토) 발사 시 뒤로 반동(모델 단위)
+ // 고정 구조물(터렛/포토) 발사 시 뒤로 반동(모델 단위)
 const RELOAD_DIP=0.5;     // 장전 시 총 내리는 양(모델 단위)
 const RELOAD_TILT=0.9;    // 장전 시 총구 아래로 기울이는 각(라디안)
 const RELOAD_WIN=0.2;     // 장전(총 내림) 구간 폭 — 작을수록 들고 조준하는 시간이 김
@@ -11969,7 +11946,7 @@ const SCALE={ marine:12, goliath:16, ghost:12, archon:18, dragoon:14, hydra:14, 
   wyvern:16, aegis:18, behemoth:20,   // 개인보스 모델(초기값 — bossScale 2배 적용됨)
   racer:20, tank:22, blade:18, thornqueen:20, skyguard:17, skydancer:17, worker_human:13, worker_light:11, worker_swarm:8.8,
   medic:12, broodling:9, larva:8, ultralisk:24, dark_templar:13, high_templar:12 };  // 유닛별 화면 스케일. 초월 비행체(템페스트·스카이댄서)=대형
-const COLORS={ marine:0x2e9bff, goliath:0xff9418, ghost:0x6cf024, dragoon:0xb070ff, hydra:0x9fd356 };  // (구)타입별 색 — 현재는 플레이어색으로 통일(아래 PLAYER_COLOR)
+  // (구)타입별 색 — 현재는 플레이어색으로 통일(아래 PLAYER_COLOR)
 // 플레이어 색(스타크래프트식) — 한 플레이어의 모든 유닛·구조물을 같은 색으로 통일(아군 구별용)
 const PLAYER_PALETTE={ blue:0x2e7bff, red:0xff3b3b, orange:0xff9418, yellow:0xffd23b, white:0xeaf2ff, purple:0xb05bff, green:0x46d860, teal:0x2dd6c0 };
 let PLAYER_COLOR=PLAYER_PALETTE.blue;   // 현재 플레이어 통일색(키만 바꾸면 전체 색 변경)
@@ -11977,8 +11954,8 @@ const PLAYER_MODELS=new Set(['marine','ghost','goliath','dragoon','hydra','archo
   'machinegun','tank','blade','thornqueen','skyguard','skydancer','matron','racer','snapper','worker_human','worker_light','worker_swarm',
   'medic','broodling','larva','ultralisk','dark_templar','high_templar']);  // 플레이어 소유(전장) 모델 — 플레이어색 림 적용(가챠 전용 모델 포함)
 const RING_OP=0.9;        // 선택 링 불투명도
-const TINT_AMT=0.78;      // 모델 색 틴트 강도(0=원본, 1=완전 색칠) — 진한 색은 발광이 아닌 이 값으로(단단하게)
-const EMIT_AMT=0.09;      // 플레이어색 발광(은은하게 — 마린/고스트처럼 부드러운 빛)
+      // 모델 색 틴트 강도(0=원본, 1=완전 색칠) — 진한 색은 발광이 아닌 이 값으로(단단하게)
+      // 플레이어색 발광(은은하게 — 마린/고스트처럼 부드러운 빛)
 const RIM_INT=1.4;        // 프레넬 림 라이트 강도(환경광으로 밝아진 표면에서도 플레이어색이 또렷하게 — 0.85→1.4)
 const RIM_POW=2.0;        // 림 폭(클수록 가장자리에만 얇게) — 살짝 넓혀 색 띠가 더 보이게
 const RIM_WHITE=0.06;     // 림 색을 흰색 쪽으로 섞는 정도(낮을수록 플레이어색 선명 — 0.16→0.06)
@@ -12078,13 +12055,12 @@ const BOSS_MODEL_AIR='dreadnought';   // 공용 보스 = 공중 기함(배틀크
 const BOSS_SCALE_MUL=2.0;     // 보스 확대 배율(유닛보다 크되 과하지 않게)
 const SHOP_SCALE_MUL=1.16;    // 슬롯 전시 모델·시민 크기 배율 — 유닛/시민 살짝 키움
 const SHOP_BW_MUL=1.7;        // 슬롯 비콘 폭 배율(min*0.10 * 이값) — 유닛 축소에 맞춰 비콘도 ~0.85 축소
-const SHOP_BEACON_LIFT=0.15;  // 유닛뽑기: 유닛을 비콘 단(deck) 위로 올리는 높이(비콘 폭 대비)
+  // 유닛뽑기: 유닛을 비콘 단(deck) 위로 올리는 높이(비콘 폭 대비)
 // 유닛뽑기 화면 전용 크기 보정(비콘 위에 적절히 보이게) — 작은건 키우고, 큰건 비콘 밖으로 안 나가게 축소
-const SHOP_FIT={ marine:1.28, ghost:1.28, hydra:1.12, dragoon:0.8, goliath:0.82, archon:0.74, turret:0.62, photon:0.6 };
 const CITIZEN_SHOP_MUL=1.22;   // 유닛뽑기 시민 크기 배율(조금 더 크게)
-const SHOP_SPIN=0.6;          // 전시 모델 회전(턴테이블) 속도(rad/s)
+          // 전시 모델 회전(턴테이블) 속도(rad/s)
 const BLDG_SCALE_MUL=1.5;    // 업그레이드 건물 전시 크기 배율(5건물+섹션 구분 들어가게 약간 축소)
-const BLDG_SPIN=0.4;          // 건물 전시 회전 속도(천천히)
+          // 건물 전시 회전 속도(천천히)
 const DPR=Math.min(devicePixelRatio||1,2);
 
 function init(){
