@@ -5967,17 +5967,9 @@ const RACE_OF={
   hydra:'swarm', snapper:'swarm', thornqueen:'swarm', matron:'swarm', overlord:'swarm', stinger:'swarm', venom:'swarm', medusa:'swarm', wyvern:'swarm', behemoth:'swarm', worker_swarm:'swarm', broodling:'swarm', larva:'swarm', ultralisk:'swarm',
 };
 function raceBarCol(u){ if(!u) return null; const r=(u.gid && typeof GACHA_UNITS!=='undefined' && GACHA_UNITS[u.gid] && GACHA_UNITS[u.gid].race) || RACE_OF[u.gmodel||u.id]; return RACE_BAR[r]||null; }
-// 관리자 샌드박스 전용 사거리(보직별·스타크래프트식) — 네모 게임 무영향. 값=표시 사거리(정규화는 /100). 모델키(gmodel||id) 기준
-const SB_RANGE={
-  worker_human:3.5, worker_light:3.5, worker_swarm:3.5, stinger:3, racer:17, blade:5, archon:7, matron:5,
-  marine:15, machinegun:8, hydra:17, snapper:4, thornqueen:19, observer:0, overlord:0,
-  goliath:18, wyvern:16, dragoon:23, venom:18, falcon:16, skydancer:16, hellfire:22, medusa:5, aegis:13, skyguard:18,
-  kronos:23, ghost:24, dreadnought:26, archangel:28, behemoth:25, tank:23,
-  pelican:0, seraph:0, medic:0, larva:0, high_templar:0, broodling:3, ultralisk:4.5, dark_templar:3.5,
-};
-const SB_AIR={ goliath:23 };   // 대공(공중공격) 사거리 별도 — 샌드박스 전용
-const SB_CD={ worker_human:1.1111, worker_light:1.1111, worker_swarm:1.1111, marine:0.8333, ghost:1.25, racer:0.7692, tank:1.4286, goliath:0.9091, skyguard:0.8333, hellfire:1.6667, dreadnought:1.6667, blade:1.0, falcon:0.9091, skydancer:0.3333, archon:1.0, dragoon:0.8333, snapper:0.7, hydra:0.7692, thornqueen:0.8333, wyvern:0.8333, venom:1.6667, dark_templar:1.0 };   // 샌드박스 전용 공속 오버라이드(초=발사 간격, =1/공속) — nemo 무영향. 워든=1.0/s·팔콘=1.1/s·스카이댄서=3/s·보이드=1.0/s·센티넬=1.2/s·베놈퀸=1.2/s·와이번=1.2/s·베놈=0.6/s·다크템플러=1.0/s
-function effRange(id, fb){ if(typeof SB_RANGE!=='undefined' && id!=null && SB_RANGE[id]!=null) return SB_RANGE[id]/100; return fb; }   // 샌드박스 사거리 오버라이드(없으면 폴백)
+// 관리자 사거리·공속 = base_stats 단일 소스(구 SB_RANGE/SB_CD/SB_AIR 파생표 제거). 전투(_sbUnitRange/_sbUnitDps)와 표시·발사 리듬이 완전히 동일값. 네모는 U 그대로.
+function effRange(id, fb){ if(typeof BASE_UNIT!=='undefined' && id!=null && BASE_UNIT[id]) return BASE_UNIT[id][4]*SB_ANCHOR_RANGE; return fb; }   // 관리자 사거리 = base타일 × 앵커(전투 _sbUnitRange와 동일)
+function _sbBaseCd(key){ const bcd=(typeof BASE_CD!=='undefined'&&BASE_CD[key]>0)?Math.round(BASE_CD[key]*SB_ANCHOR_CD):0; return bcd>0?bcd/60:(((U[key]&&U[key].cd)||22)/60); }   // 관리자 공속(초) = base_stats(BASE_CD×앵커, _baseUnitOv와 동일 반올림) — 표시·발사 리듬=전투 완전 일치
 // 체력/실드/에너지 초록 LCD 텍스트(스타식 "실드 HP / 에너지")
 function scHpHTML(u){ const def=U[u.id]; const m=u.hero?HERO_STAT_MUL:1;
   const maxHp=u.maxHp||Math.round(def.hp*m), hp=u.hp!=null?u.hp:maxHp;
@@ -6071,9 +6063,9 @@ function refreshSelCard(){ if(typeof G!=='undefined'){ G.boardArm=false; G.unloa
     const job=UNIT_CLS[u.gmodel||u.id]||'';
     portEl.innerHTML=unitPortraitHTML(u.gmodel||u.id)+(job?'<div class="portJob">'+job+'</div>':'');  // 초상화(가챠 전용 우선) + 직업 배지
     document.getElementById('uName').textContent=gNameStar(u,def)+(u.hero?' [영웅]':'');
-    const _rngV=(G.sandbox?effRange(u.gmodel||u.id, def.range):def.range)*(typeof gachaRangeMul==='function'?gachaRangeMul(u):1)*100; const _rng=G.sandbox?Math.round(_rngV*10)/10:Math.round(_rngV);   // 샌드박스: SB_RANGE 우선(네모 무영향)
-    const _arng=(G.sandbox && typeof SB_AIR!=='undefined' && SB_AIR[u.gmodel||u.id]!=null)?SB_AIR[u.gmodel||u.id]:null;   // 샌드박스 대공 사거리
-    const _cdf=(typeof cdOf==='function')?cdOf(u,def):def.cd; const _sbcd=(G.sandbox && typeof SB_CD!=='undefined' && SB_CD[u.gmodel||u.id]!=null)?SB_CD[u.gmodel||u.id]:null; const _spd=(_sbcd!=null)?(1/_sbcd).toFixed(1):(_cdf>0?(60/_cdf).toFixed(1):'-');   // 샌드박스: SB_CD 우선(카드=랩 발사 일치, nemo 무영향)
+    const _rngV=(G.sandbox?effRange(u.gmodel||u.id, def.range):def.range)*(typeof gachaRangeMul==='function'?gachaRangeMul(u):1)*100; const _rng=G.sandbox?Math.round(_rngV*10)/10:Math.round(_rngV);   // 샌드박스: base_stats 사거리(전투와 동일)
+    const _arng=null;   // base_stats는 지상·공중 사거리 단일 — 별도 대공 사거리 표시 없음
+    const _cdf=(typeof cdOf==='function')?cdOf(u,def):def.cd; const _sbcd=(G.sandbox)?_sbBaseCd(u.gmodel||u.id):null; const _spd=(_sbcd!=null)?(1/_sbcd).toFixed(1):(_cdf>0?(60/_cdf).toFixed(1):'-');   // 샌드박스: base_stats 공속(발사 리듬과 일치)
     const _vL=(mapCfg('infinite')?vetLevel(u):0);   // 무한모드 베테랑 계급
     const _psub=((_rng>0||_arng!=null)?((_arng!=null?('지상 <b>'+_rng+'</b> · 공중 <b>'+_arng+'</b>'):('사거리 <b>'+_rng+'</b>'))+' · 공속 <b>'+_spd+'</b>/s'):'무공격');
     document.getElementById('uKill').innerHTML='처치 <b>'+(u.kills||0)+'</b>'
@@ -6607,7 +6599,7 @@ function stepSbCombat(dt){ if(typeof G==='undefined'||!G.sandbox||G.tab!=='Battl
       const _ad=Ueff(u), _dps=Math.max(0.5,(_ad.dmg||1)-_armor)*60/Math.max(0.2,(_ad.cd||22));   // 유즈맵 유효 스탯 · (공격력−방어력)×초당공격횟수
       if(_ad.splash){ const _SR=0.05; for(const o of units){ if(o.fixed||_sbTeam(o)===myTeam||!_alive(o)) continue; const _sx=o.x-tgt.x,_sy=o.y-tgt.y; if(_sx*_sx+_sy*_sy<=_SR*_SR){ _dmgAcc[o.uid]=(_dmgAcc[o.uid]||0)+_dps*dt; o.flash=0.12; } } }   // 스플래시(광역): 대상 주변 적 동시 타격 → 물량 카운터
       else { _dmgAcc[tgt.uid]=(_dmgAcc[tgt.uid]||0)+_dps*dt; tgt.flash=0.12; }   // 단일 대상
-      // ── 시각 발사: SB_CD 케이던스(사용자 설정 공속 유지) ──
+      // ── 시각 발사 케이던스 = base_stats 공속(실제 DPS와 동일 리듬) ──
       if(!G._balSim && !(u._btCd>0)){ const cd=(typeof fxLabStats==='function')?Math.max(0.42,fxLabStats(u.id,u.gmodel).cd):0.6; u._btCd=cd; u.fireSeq=(u.fireSeq||0)+1;
         if(typeof playUnitAttack==='function') playUnitAttack(u.gmodel||u.id);
         const sz=(U[u.gmodel||u.id]||U[u.id]||{}).size||16, _os=FXLAB.scale; FXLAB.scale=BT_FX_ZOOM;
@@ -11633,9 +11625,9 @@ const FXLAB_AIR=new Set(['skyguard','skydancer','overlord','observer','pelican',
 try{ if(typeof window!=='undefined') window.FXLAB_AIR=FXLAB_AIR; }catch(_e){}   // M3D 모듈(별도 스코프)에서 공중 판정 공용 참조
 const FXLAB_AIR_LIFT=0.16;   // 공중유닛 부양 높이(정규화)
 const FXLAB_TGT_X=0.70, FXLAB_TGT_Y=0.52;   // 지상 타겟 기준선(시민)
-function fxLabStats(id, gm){ const sg=gm&&STK_UNITS[gm]; if(sg){ var _er=(typeof effRange==='function')?effRange(gm,null):null; return {size:sg.size, cd:(typeof SB_CD!=='undefined'&&SB_CD[gm]!=null?Math.max(0.35,SB_CD[gm]):Math.max(0.35,((U[gm]&&U[gm].cd)||22)/60)), melee:!!sg.melee, rng:(_er!=null)?Math.max(6,_er*600):(sg.rng||120), color:(U[gm]&&U[gm].color)||'#cfd6e2'}; }   // SB_RANGE(샌드박스 사거리) 우선 — 표시값=배치 일치
+function fxLabStats(id, gm){ const sg=gm&&STK_UNITS[gm]; if(sg){ var _er=(typeof effRange==='function')?effRange(gm,null):null; return {size:sg.size, cd:Math.max(0.35,_sbBaseCd(gm)), melee:!!sg.melee, rng:(_er!=null)?Math.max(6,_er*600):(sg.rng||120), color:(U[gm]&&U[gm].color)||'#cfd6e2'}; }   // 사거리·공속 = base_stats(표시=전투 일치). size만 STK_UNITS(시각 크기)
   const s=STK_UNITS[id], _d=U[gm||id]||{}; const er=effRange(gm||id,(_d.range!=null?_d.range:null));
-  if(er!=null) return {size:(s&&s.size)||_d.size||16, cd:(typeof SB_CD!=='undefined'&&SB_CD[gm||id]!=null)?Math.max(0.35,SB_CD[gm||id]):Math.max(0.35,(_d.cd||22)/60), melee:(er>0&&er<=0.15)||!!_d.melee, rng:(er>0)?Math.max(6,er*600):120, color:_d.color||(U[gm||id]&&U[gm||id].color)||'#cfd6e2'};
+  if(er!=null) return {size:(s&&s.size)||_d.size||16, cd:Math.max(0.35,_sbBaseCd(gm||id)), melee:(er>0&&er<=0.15)||!!_d.melee, rng:(er>0)?Math.max(6,er*600):120, color:_d.color||(U[gm||id]&&U[gm||id].color)||'#cfd6e2'};
   if(s) return {size:s.size, cd:s.cd, melee:!!s.melee, rng:s.rng||120, color:(U[id]&&U[id].color)||'#cfd6e2'};
   const d=U[id]||{}; const _melee=!!d.melee||(d.range>0&&d.range<=0.15); const _rng=(d.range>0)?Math.max(6,d.range*600):120;
   return {size:d.size||16, cd:Math.max(0.5,(d.cd||22)/22), melee:_melee, rng:_rng, color:d.color||'#cfd6e2'}; }
@@ -11780,7 +11772,7 @@ function fxLabThornCycle(L, a, dt){ a.moving=false;
   else if(L.bstate==='digging'){ a.hidden=false;   // 파고드는 중(흙먼지)
     if(L.bt<=0){ if(window.M3D&&M3D.dropModels){ try{ M3D.dropModels([a.uid]); }catch(e){} } a.hidden=true; L.bstate='burrowed'; L.bt=3.2; L.cd=0.25; } }   // 모델 즉시 제거(죽음 애니 없이 바로 사라짐)
   else if(L.bstate==='burrowed'){ a.hidden=true;   // 잠복: 주기적으로 가시 폭격
-    L.cd-=dt; if(L.cd<=0){ L.cd=Math.max(0.42,fxLabStats(L.attId,L.attGm).cd); fxLabThornBarrage(L, a, L.dummy); }   // 폭격 간격 = 실제 공속(SB_CD) 연동
+    L.cd-=dt; if(L.cd<=0){ L.cd=Math.max(0.42,fxLabStats(L.attId,L.attGm).cd); fxLabThornBarrage(L, a, L.dummy); }   // 폭격 간격 = base_stats 공속 연동
     if(L.bt<=0){ a.hidden=false; a.uid='lab_att'+(++_fxLabAttSeq); a.fireSeq=0; L.bstate='emerging'; L.bt=0.4; fxLabDigPuff(L, a); } }   // 복귀: 새 uid로 즉시 등장(부활 애니 방지)
   else { a.hidden=false;   // 지상 복귀
     if(L.bt<=0){ L.bstate='surface'; L.bt=1.6; } } }
