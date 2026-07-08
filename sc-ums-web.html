@@ -5970,6 +5970,9 @@ function raceBarCol(u){ if(!u) return null; const r=(u.gid && typeof GACHA_UNITS
 // 관리자 사거리·공속 = base_stats 단일 소스(구 SB_RANGE/SB_CD/SB_AIR 파생표 제거). 전투(_sbUnitRange/_sbUnitDps)와 표시·발사 리듬이 완전히 동일값. 네모는 U 그대로.
 function effRange(id, fb){ if(typeof BASE_UNIT!=='undefined' && id!=null && BASE_UNIT[id]) return BASE_UNIT[id][4]*SB_ANCHOR_RANGE; return fb; }   // 관리자 사거리 = base타일 × 앵커(전투 _sbUnitRange와 동일)
 function _sbBaseCd(key){ const bcd=(typeof BASE_CD!=='undefined'&&BASE_CD[key]>0)?Math.round(BASE_CD[key]*SB_ANCHOR_CD):0; return bcd>0?bcd/60:(((U[key]&&U[key].cd)||22)/60); }   // 관리자 공속(초) = base_stats(BASE_CD×앵커, _baseUnitOv와 동일 반올림) — 표시·발사 리듬=전투 완전 일치
+// 관리자 이펙트 크기 = 실제 3D 모델 크기(SCALE)에서 유도(단일 소스). 모델 덩치와 이펙트가 항상 비례 → 이펙트 구역 크기와 자동 연동. SCALE(또는 이펙트 계수)만 바꾸면 발사·사망·이펙트 크기가 같이 따라옴.
+const FX_UNIT_SIZE_K=1.11;   // SCALE→이펙트 크기 계수(현행 평균 유지, 어긋난 유닛만 모델 비례로 교정)
+function _fxUnitSize(key){ const sc=(typeof window!=='undefined'&&window.M3D&&window.M3D.scaleOf)?window.M3D.scaleOf(key):null; return (sc&&sc>0)?Math.round(sc*FX_UNIT_SIZE_K*10)/10:((U[key]&&U[key].size)||16); }   // 3D 미가용 시 U.size 폴백
 // 체력/실드/에너지 초록 LCD 텍스트(스타식 "실드 HP / 에너지")
 function scHpHTML(u){ const def=U[u.id]; const m=u.hero?HERO_STAT_MUL:1;
   const maxHp=u.maxHp||Math.round(def.hp*m), hp=u.hp!=null?u.hp:maxHp;
@@ -6602,7 +6605,7 @@ function stepSbCombat(dt){ if(typeof G==='undefined'||!G.sandbox||G.tab!=='Battl
       // ── 시각 발사 케이던스 = base_stats 공속(실제 DPS와 동일 리듬) ──
       if(!G._balSim && !(u._btCd>0)){ const cd=(typeof fxLabStats==='function')?Math.max(0.42,fxLabStats(u.id,u.gmodel).cd):0.6; u._btCd=cd; u.fireSeq=(u.fireSeq||0)+1;
         if(typeof playUnitAttack==='function') playUnitAttack(u.gmodel||u.id);
-        const sz=(U[u.gmodel||u.id]||U[u.id]||{}).size||16, _os=FXLAB.scale; FXLAB.scale=BT_FX_ZOOM;
+        const sz=_fxUnitSize(u.gmodel||u.id), _os=FXLAB.scale; FXLAB.scale=BT_FX_ZOOM;   // 이펙트 크기 = 실제 모델 크기(SCALE) 기준
         const tgtAir=(typeof FXLAB_AIR!=='undefined'&&FXLAB_AIR.has(tgt.gmodel||tgt.id));
         u._fxL=u._fxL||{}; u._fxL.store=G.btFx; u._fxL.pend=G.btPend; unitFireFx(u._fxL, u, tgt.x, tgt.y, sz, tgtAir); FXLAB.scale=_os; }   // 만들어 둔 발사 이펙트 그대로
     } else if(!u.moveTo){   // 사거리 밖 → 접근(직접 이동 · 수동 이동명령 있으면 양보)
@@ -11626,9 +11629,9 @@ const FXLAB_AIR=new Set(['skyguard','skydancer','overlord','observer','pelican',
 try{ if(typeof window!=='undefined') window.FXLAB_AIR=FXLAB_AIR; }catch(_e){}   // M3D 모듈(별도 스코프)에서 공중 판정 공용 참조
 const FXLAB_AIR_LIFT=0.16;   // 공중유닛 부양 높이(정규화)
 const FXLAB_TGT_X=0.70, FXLAB_TGT_Y=0.52;   // 지상 타겟 기준선(시민)
-function fxLabStats(id, gm){ const sg=gm&&STK_UNITS[gm]; if(sg){ var _er=(typeof effRange==='function')?effRange(gm,null):null; return {size:sg.size, cd:Math.max(0.35,_sbBaseCd(gm)), melee:!!sg.melee, rng:(_er!=null)?Math.max(6,_er*600):(sg.rng||120), color:(U[gm]&&U[gm].color)||'#cfd6e2'}; }   // 사거리·공속 = base_stats(표시=전투 일치). size만 STK_UNITS(시각 크기)
+function fxLabStats(id, gm){ const sg=gm&&STK_UNITS[gm]; if(sg){ var _er=(typeof effRange==='function')?effRange(gm,null):null; return {size:_fxUnitSize(gm), cd:Math.max(0.35,_sbBaseCd(gm)), melee:!!sg.melee, rng:(_er!=null)?Math.max(6,_er*600):(sg.rng||120), color:(U[gm]&&U[gm].color)||'#cfd6e2'}; }   // 사거리·공속·크기 = 공용(크기=실제 모델 SCALE 기준)
   const s=STK_UNITS[id], _d=U[gm||id]||{}; const er=effRange(gm||id,(_d.range!=null?_d.range:null));
-  if(er!=null) return {size:(s&&s.size)||_d.size||16, cd:Math.max(0.35,_sbBaseCd(gm||id)), melee:(er>0&&er<=0.15)||!!_d.melee, rng:(er>0)?Math.max(6,er*600):120, color:_d.color||(U[gm||id]&&U[gm||id].color)||'#cfd6e2'};
+  if(er!=null) return {size:_fxUnitSize(gm||id), cd:Math.max(0.35,_sbBaseCd(gm||id)), melee:(er>0&&er<=0.15)||!!_d.melee, rng:(er>0)?Math.max(6,er*600):120, color:_d.color||(U[gm||id]&&U[gm||id].color)||'#cfd6e2'};
   if(s) return {size:s.size, cd:s.cd, melee:!!s.melee, rng:s.rng||120, color:(U[id]&&U[id].color)||'#cfd6e2'};
   const d=U[id]||{}; const _melee=!!d.melee||(d.range>0&&d.range<=0.15); const _rng=(d.range>0)?Math.max(6,d.range*600):120;
   return {size:d.size||16, cd:Math.max(0.5,(d.cd||22)/22), melee:_melee, rng:_rng, color:d.color||'#cfd6e2'}; }
