@@ -4,3 +4,7 @@ node_modules/
 .DS_Store
 Thumbs.db
 *.log
+# 로컬 에셋 최적화 도구(배포 제외 — 정적 사이트 빌드 동작 변경 방지)
+/package.json
+/package-lock.json
+/scripts/

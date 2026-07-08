@@ -60,7 +60,7 @@
   /* 모바일 고정 비율(9:16, 390x693). 화면이 작으면 비율 유지하며 축소. 패널 폭 변해도 폰 모양 불변 */
   #phone{width:390px;height:693px;aspect-ratio:9/16;position:relative;
     /* 게임 배경 우주 타일(space_bg)을 캔버스와 같은 380px 스케일로 프레임 전체에 이어지게 — 어둡게 덮어 콘솔 가독성 유지 */
-    background:linear-gradient(rgba(3,4,12,.5),rgba(3,4,12,.66)),url('assets/tiles/space_bg.png') center/380px repeat #05060d;
+    background:linear-gradient(rgba(3,4,12,.5),rgba(3,4,12,.66)),url('assets/tiles/space_bg.webp') center/380px repeat #05060d;
     overflow:hidden;display:flex;flex-direction:column;flex:none;
     border:none;border-radius:28px;
     box-shadow:0 0 0 1px rgba(0,0,0,.6),0 0 60px rgba(0,0,0,.9);
@@ -944,7 +944,7 @@
     background:linear-gradient(0deg,rgba(8,12,20,.46),rgba(8,12,20,.24)),
       repeating-linear-gradient(0deg,transparent 0 27px,rgba(120,150,190,.06) 27px 28px),
       repeating-linear-gradient(90deg,transparent 0 27px,rgba(120,150,190,.06) 27px 28px),
-      url('/assets/tiles/badlands.png');
+      url('/assets/tiles/badlands.webp');
     background-size:auto,auto,auto,132px 132px; background-repeat:repeat}
   .bmap.arming{cursor:copy}
   .bmapTop{position:absolute;top:0;left:0;right:0;min-height:34px;display:flex;align-items:center;justify-content:space-between;gap:8px;
@@ -1417,7 +1417,7 @@
      아래 화면들은 position:absolute 라서 폰 프레임(#phone) 안에만 적용됨. */
   .spaceBg{overflow:hidden}
   .spaceBg::before{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;
-    background:url('assets/tiles/space_bg.png') center/360px repeat #04050b;
+    background:url('assets/tiles/space_bg.webp') center/360px repeat #04050b;
     animation:spaceDrift 120s linear infinite}
   .spaceBg::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;
     background:
@@ -1465,7 +1465,7 @@
   #lobby.hide{display:none}
   /* 대기실 배경: waiting_room_bg.png 전체 cover(9:16), 중앙은 어둡게(UI 패널용) */
   #lobby::before{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;transform-origin:center center;
-    background:url('assets/backgrounds/waiting_room_bg.png') center center / cover no-repeat #04050b;
+    background:url('assets/backgrounds/waiting_room_bg.webp') center center / cover no-repeat #04050b;
     animation:lobbyBreath 12s ease-in-out infinite}
   #lobby::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;
     background:
@@ -1819,7 +1819,7 @@
   #opening.warp .opFx::after{animation:opBloom .46s ease-out forwards}
   @keyframes opBloom{0%{opacity:0}34%{opacity:.5}100%{opacity:0}}
   /* 로딩/로그인 화면 배경: loading_bg.png 전체 cover(9:16), 콘텐츠는 위 레이어 */
-  #opening::before,#auth::before{background:url('assets/backgrounds/loading_bg.png') center center / cover no-repeat #04050b;
+  #opening::before,#auth::before{background:url('assets/backgrounds/loading_bg.webp') center center / cover no-repeat #04050b;
     transform-origin:center center;animation:loadBreath 14s ease-in-out infinite}
   @keyframes loadBreath{0%,100%{transform:scale(1.015) translateY(0)}50%{transform:scale(1.06) translateY(-1.2%)}}
   #opening::after,#auth::after{background:linear-gradient(180deg, rgba(2,3,8,.5) 0%, rgba(2,3,8,.32) 40%, rgba(2,3,8,.6) 100%)}
@@ -1850,7 +1850,7 @@
   #mapSelect{z-index:47;padding:12px 13px}
   /* 유즈맵 선택 로비 배경(전체 cover, 9:16 기준, UI는 위 레이어) */
   #mapSelect::before,#rooms::before,#createPanel::before{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;transform-origin:center center;
-    background:url('assets/backgrounds/lobby_bg.png') center center / cover no-repeat #04050b;
+    background:url('assets/backgrounds/lobby_bg.webp') center center / cover no-repeat #04050b;
     animation:lobbyBreath 12s ease-in-out infinite}   /* 미세한 호흡(위아래 + 약한 확대) */
   @keyframes lobbyBreath{ 0%,100%{transform:scale(1.01) translateY(0)} 50%{transform:scale(1.05) translateY(-1%)} }
   #mapSelect::after,#rooms::after,#createPanel::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg, rgba(2,3,8,.96) 0%, rgba(2,3,8,.66) 16%, rgba(2,3,8,.2) 38%, rgba(2,3,8,.2) 62%, rgba(2,3,8,.66) 84%, rgba(2,3,8,.97) 100%)}   /* 위·아래 빨강 더 톤다운(중앙 이미지 유지) */
@@ -3928,10 +3928,10 @@ function clampInner(x,y){ const b=innerBounds();
   return { x:Math.max(b.minX,Math.min(b.maxX,x)), y:Math.max(b.minY,Math.min(b.maxY,y)) }; }
 function trackCenter(){ const {ox,oy,bw,bh}=geom(GW,GH); return { x:(ox+bw/2)/GW, y:(oy+bh/2)/GH }; }
 // ── 배경 타일(공간 배경 + 프로토스 바닥) — canvas createPattern 반복 ──
-const TILE_SPACE=new Image(); TILE_SPACE.src='assets/tiles/space_bg.png?v=3';
-const TILE_INSTALL=new Image(); TILE_INSTALL.src='assets/tiles/installation.png';  // 유닛뽑기 배경(시설 격납고 금속 바닥)
+const TILE_SPACE=new Image(); TILE_SPACE.src='assets/tiles/space_bg.webp?v=3';
+const TILE_INSTALL=new Image(); TILE_INSTALL.src='assets/tiles/installation.webp';  // 유닛뽑기 배경(시설 격납고 금속 바닥)
 TILE_INSTALL.onload=()=>{ if(typeof G!=='undefined' && G.tab==='Unit') drawProd(); };  // 로드되면 뽑기 화면 다시 그림
-const TILE_PLATFORM=new Image(); TILE_PLATFORM.src='assets/tiles/space_platform.png?v=3';  // 우주 정거장 금속(업그레이드 플랫폼)
+const TILE_PLATFORM=new Image(); TILE_PLATFORM.src='assets/tiles/space_platform.webp?v=3';  // 우주 정거장 금속(업그레이드 플랫폼)
 const _upgRedraw=()=>{ if(typeof G!=='undefined' && G.tab==='Upgrade' && typeof drawUpg==='function') drawUpg(); };
 TILE_PLATFORM.onload=_upgRedraw;
 // 비콘 발판 이미지(원형 금속 패드, 네이비 배경 → 그릴 때 원형 클립으로 코너 제거)
@@ -3939,8 +3939,8 @@ TILE_PLATFORM.onload=_upgRedraw;
 // 합성 비콘은 3D 모델(beacon_synthesis.glb)로 렌더 — M3D 씬에서 합체 베이·유닛 슬롯에 배치(아래 module)
 const SPACE_TILE=380;  // 타일 한 칸 크기(px) — 원본 2048이라 줄여서 반복(별 반복감 완화)
 // 지형 타일 — 바깥=badlands(흙) + 가장자리 ashworld(용암절벽)
-const TILE_BAD=new Image(); TILE_BAD.src='assets/tiles/badlands.png?v=3';
-const TILE_ASH=new Image(); TILE_ASH.src='assets/tiles/ashworld.png?v=3';
+const TILE_BAD=new Image(); TILE_BAD.src='assets/tiles/badlands.webp?v=3';
+const TILE_ASH=new Image(); TILE_ASH.src='assets/tiles/ashworld.webp?v=3';
 const BAD_TILE=300, ASH_TILE=260;   // 패턴 한 칸 크기(px)
 // 결정적 해시(셀좌표→0..1) — 시드 기반 지형 변형용(고정, 깜빡임 없음)
 function hsh(x,y,s){ const v=Math.sin(x*127.1+y*311.7+s*74.7)*43758.5453; return v-Math.floor(v); }
@@ -6099,46 +6099,46 @@ function refreshSelCard(){ if(typeof G!=='undefined'){ G.boardArm=false; G.unloa
 // 커스텀 초상화 이미지(유닛/건물 id → 파일). 있으면 3D/라인아트 대신 사용.
 const PORTRAIT_DIR='assets/portraits/'; const PORTRAIT_VER='?v=4';
 const _PI_RAW={
-  marine:  PORTRAIT_DIR+'ranger_portrait.png',     // 레인저
-  ghost:   PORTRAIT_DIR+'phantom_portrait.png',    // 팬텀
-  goliath: PORTRAIT_DIR+'strider_portrait.png',    // 스트라이더
-  hydra:   PORTRAIT_DIR+'reaper_portrait.png',     // 리퍼
-  dragoon: PORTRAIT_DIR+'sentinel_portrait.png',   // 센티넬
-  archon:  PORTRAIT_DIR+'void_portrait.png',       // 보이드
-  turret:  PORTRAIT_DIR+'guardtower_portrait.png', // 가드 타워(건물)
-  photon:  PORTRAIT_DIR+'energyspire_portrait.png',// 에너지 스파이어(건물)
-  citizen: PORTRAIT_DIR+'civilian_portrait.png',   // 시민
-  beholder:PORTRAIT_DIR+'beholder_portrait.png',   // 비홀더
-  observer:PORTRAIT_DIR+'observer_portrait.png',   // 옵저버(적)
+  marine:  PORTRAIT_DIR+'ranger_portrait.webp',     // 레인저
+  ghost:   PORTRAIT_DIR+'phantom_portrait.webp',    // 팬텀
+  goliath: PORTRAIT_DIR+'strider_portrait.webp',    // 스트라이더
+  hydra:   PORTRAIT_DIR+'reaper_portrait.webp',     // 리퍼
+  dragoon: PORTRAIT_DIR+'sentinel_portrait.webp',   // 센티넬
+  archon:  PORTRAIT_DIR+'void_portrait.webp',       // 보이드
+  turret:  PORTRAIT_DIR+'guardtower_portrait.webp', // 가드 타워(건물)
+  photon:  PORTRAIT_DIR+'energyspire_portrait.webp',// 에너지 스파이어(건물)
+  citizen: PORTRAIT_DIR+'civilian_portrait.webp',   // 시민
+  beholder:PORTRAIT_DIR+'beholder_portrait.webp',   // 비홀더
+  observer:PORTRAIT_DIR+'observer_portrait.webp',   // 옵저버(적)
   // 신규 가챠 유닛(전설/초월) — 키 = gmodel(전용 모델 키)
-  machinegun:PORTRAIT_DIR+'machinegun_portrait.png',  // 발칸
-  tank:      PORTRAIT_DIR+'tank_portrait.png',        // 브레이커
-  blade:     PORTRAIT_DIR+'blade_portrait.png',       // 워든
-  thornqueen:PORTRAIT_DIR+'thornqueen_portrait.png',  // 베놈퀸
-  skyguard:  PORTRAIT_DIR+'skyguard_portrait.png',    // 템페스트
-  skydancer: PORTRAIT_DIR+'skydancer_portrait.png',   // 스카이댄서
-  matron:    PORTRAIT_DIR+'matron_portrait.png',      // 매트론
-  racer:     PORTRAIT_DIR+'racer_portrait.png',       // 레이서(에픽·유니크)
-  snapper:   PORTRAIT_DIR+'snapper_portrait.png',     // 스내퍼(에픽·유니크)
+  machinegun:PORTRAIT_DIR+'machinegun_portrait.webp',  // 발칸
+  tank:      PORTRAIT_DIR+'tank_portrait.webp',        // 브레이커
+  blade:     PORTRAIT_DIR+'blade_portrait.webp',       // 워든
+  thornqueen:PORTRAIT_DIR+'thornqueen_portrait.webp',  // 베놈퀸
+  skyguard:  PORTRAIT_DIR+'skyguard_portrait.webp',    // 템페스트
+  skydancer: PORTRAIT_DIR+'skydancer_portrait.webp',   // 스카이댄서
+  matron:    PORTRAIT_DIR+'matron_portrait.webp',      // 매트론
+  racer:     PORTRAIT_DIR+'racer_portrait.webp',       // 레이서(에픽·유니크)
+  snapper:   PORTRAIT_DIR+'snapper_portrait.webp',     // 스내퍼(에픽·유니크)
   // 적 공중유닛(네모네모) — 샌드박스 아군외형 + 이펙트 랩/도감 초상화
-  hellfire:   PORTRAIT_DIR+'hellfire_portrait.png',    // 헬파이어
-  pelican:    PORTRAIT_DIR+'pelican_portrait.png',     // 펠리컨
-  dreadnought:PORTRAIT_DIR+'dreadnought_portrait.png', // 드레드노트
-  kronos:     PORTRAIT_DIR+'kronos_portrait.png',      // 크로노스
-  seraph:     PORTRAIT_DIR+'seraph_portrait.png',      // 세라프
-  archangel:  PORTRAIT_DIR+'archangel_portrait.png',   // 아크엔젤
-  falcon:     PORTRAIT_DIR+'falcon_portrait.png',      // 팔콘
-  overlord:   PORTRAIT_DIR+'overlord_portrait.png',    // 제플린
-  stinger:    PORTRAIT_DIR+'stinger_portrait.png',     // 스팅어
-  venom:      PORTRAIT_DIR+'venom_portrait.png',       // 베놈
-  medusa:     PORTRAIT_DIR+'medusa_portrait.png',      // 메두사
-  aegis:      PORTRAIT_DIR+'aegis_portrait.png',       // 이지스(개인보스)
-  wyvern:     PORTRAIT_DIR+'wyvern_portrait.png',      // 와이번(개인보스)
-  behemoth:   PORTRAIT_DIR+'behemoth_portrait.png',    // 베히모스(개인보스)
+  hellfire:   PORTRAIT_DIR+'hellfire_portrait.webp',    // 헬파이어
+  pelican:    PORTRAIT_DIR+'pelican_portrait.webp',     // 펠리컨
+  dreadnought:PORTRAIT_DIR+'dreadnought_portrait.webp', // 드레드노트
+  kronos:     PORTRAIT_DIR+'kronos_portrait.webp',      // 크로노스
+  seraph:     PORTRAIT_DIR+'seraph_portrait.webp',      // 세라프
+  archangel:  PORTRAIT_DIR+'archangel_portrait.webp',   // 아크엔젤
+  falcon:     PORTRAIT_DIR+'falcon_portrait.webp',      // 팔콘
+  overlord:   PORTRAIT_DIR+'overlord_portrait.webp',    // 제플린
+  stinger:    PORTRAIT_DIR+'stinger_portrait.webp',     // 스팅어
+  venom:      PORTRAIT_DIR+'venom_portrait.webp',       // 베놈
+  medusa:     PORTRAIT_DIR+'medusa_portrait.webp',      // 메두사
+  aegis:      PORTRAIT_DIR+'aegis_portrait.webp',       // 이지스(개인보스)
+  wyvern:     PORTRAIT_DIR+'wyvern_portrait.webp',      // 와이번(개인보스)
+  behemoth:   PORTRAIT_DIR+'behemoth_portrait.webp',    // 베히모스(개인보스)
   // 일꾼 3종족
-  worker_human:PORTRAIT_DIR+'worker_human_portrait.png', // 유니온 일꾼
-  worker_light:PORTRAIT_DIR+'worker_light_portrait.png', // 에테리얼 일꾼
-  worker_swarm:PORTRAIT_DIR+'worker_swarm_portrait.png', // 스웜 일꾼
+  worker_human:PORTRAIT_DIR+'worker_human_portrait.webp', // 유니온 일꾼
+  worker_light:PORTRAIT_DIR+'worker_light_portrait.webp', // 에테리얼 일꾼
+  worker_swarm:PORTRAIT_DIR+'worker_swarm_portrait.webp', // 스웜 일꾼
 };
 const PORTRAIT_IMG={}; for(const _k in _PI_RAW) PORTRAIT_IMG[_k]=_PI_RAW[_k]+PORTRAIT_VER;   // 캐시버스트 버전 부착(배경 제거 새 이미지 로드)
 (function(){ for(const _k in _PI_RAW){ const _pi=new Image(); _pi.src=_PI_RAW[_k]+PORTRAIT_VER; } })();   // 전체 초상화 프리로드(첫 표시 지연 없애기)
@@ -10368,9 +10368,9 @@ function techDemolish(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!
 function strikeRandomRace(){ return STK_RACE_ORDER[Math.floor(Math.random()*STK_RACE_ORDER.length)]; }
    // 그 진영 종족의 소환 가능 유닛 id
 // 직스 타일 에셋(기존 assets/tiles 재사용)
-const STRIKE_GROUND=new Image(); STRIKE_GROUND.src='assets/tiles/desert.png?v=1';        // 전장 지형(사막)
-const STRIKE_PAVE=new Image(); STRIKE_PAVE.src='assets/tiles/protoss_floor.png?v=1';     // 신전 잇는 포장 길(프로토스 테크)
-const STRIKE_BUILDTILE=new Image(); STRIKE_BUILDTILE.src='assets/tiles/terran_tile_light.png?v=1';  // 건설 보드(깔끔한 금속)
+const STRIKE_GROUND=new Image(); STRIKE_GROUND.src='assets/tiles/desert.webp?v=1';        // 전장 지형(사막)
+const STRIKE_PAVE=new Image(); STRIKE_PAVE.src='assets/tiles/protoss_floor.webp?v=1';     // 신전 잇는 포장 길(프로토스 테크)
+const STRIKE_BUILDTILE=new Image(); STRIKE_BUILDTILE.src='assets/tiles/terran_tile_light.webp?v=1';  // 건설 보드(깔끔한 금속)
 // 카메라 고정 타일 패턴(전장 지형) — 월드 원점(0,0)이 화면 (ox,oy)에 오도록 패턴 변환
 // 패턴 캐시(모바일 성능) — createPattern은 1회만, 매 프레임엔 setTransform만
 const _stkPat={}, _stkVig={};
@@ -12377,16 +12377,25 @@ function _disposeObj3D(root){ if(!root) return; root.traverse(o=>{
   for(const m of ms){ if(!m) continue; for(const k in m){ const v=m[k]; if(v&&v.isTexture&&v.dispose) v.dispose(); } if(m.dispose) m.dispose(); }
 }); }
 // 지정 모델 키들을 로드(이미 로드된 건 스킵). body 모델 한정(가장 큰 텍스처). onDone(로드 수) 콜백
-function ensureModels(keys, onDone){ const L=new GLTFLoader(); let total=0, loaded=0;
-  const fin=()=>{ if(--total<=0 && onDone) onDone(loaded); };
-  for(const id of keys){ if(bases[id]||!MODELS[id]) continue; total++; loaded++;
+const MODEL_LOAD_CONC=6;   // 동시 GLB 로드 상한 — 대량 동시 로드 시 텍스처 blob 디코드 실패 방지 + 로딩 안정화
+function ensureModels(keys, onDone){ const L=new GLTFLoader();
+  const q=[]; for(const id of keys){ if(!bases[id] && MODELS[id]) q.push(id); }   // 미로드분만 큐잉
+  const total=q.length; let doneN=0, idx=0, active=0;
+  // 로딩 화면(#opening)이 떠 있는 동안 실제 로딩 진행률을 opBar에 반영(가짜 CSS 애니 대체)
+  const bumpBar=()=>{ const op=document.getElementById('opening'); if(!op||op.classList.contains('hide')) return;
+    const bar=op.querySelector('.opBar'); if(!bar) return;
+    bar.style.animation='none'; bar.style.width=Math.max(8,Math.round(doneN/(total||1)*100))+'%'; };
+  if(total===0){ if(onDone) onDone(0); return 0; }
+  const fin=()=>{ active--; doneN++; bumpBar(); if(doneN>=total){ if(onDone) onDone(total); } else pump(); };
+  const loadOne=(id)=>{
     const path='/assets/'+(MODELS[id].includes('/')?MODELS[id]:'models/'+MODELS[id]);
     L.load(path, g=>{ const s=g.scene; const box=new THREE.Box3().setFromObject(s);
       bases[id]={ scene:s, off:{x:(box.max.x+box.min.x)/2,y:box.min.y,z:(box.max.z+box.min.z)/2}, h:Math.max(.001,box.max.y-box.min.y), w:Math.max(.001,Math.max(box.max.x-box.min.x,box.max.z-box.min.z)) };
       tintModel(s,id); fin();
     }, undefined, e=>{ console.warn('ensureModels fail',id,e); fin(); });
-  }
-  if(total===0 && onDone) onDone(0); return loaded; }
+  };
+  const pump=()=>{ while(active<MODEL_LOAD_CONC && idx<total){ active++; loadOne(q[idx++]); } };
+  bumpBar(); pump(); return total; }
 // 지정 모델 키들을 메모리에서 해제(scene 제거 + geometry/texture dispose) — 맵 떠날 때 VRAM 회수
 function disposeModels(keys){ let n=0; for(const id of keys){
   if(bases[id]){ _disposeObj3D(bases[id].scene); delete bases[id]; n++; }
