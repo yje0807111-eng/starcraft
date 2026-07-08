@@ -11629,7 +11629,8 @@ let _fxLabAttSeq=0;
 const FXLAB_AA=new Set(['marine','ghost','goliath','dragoon','archon','hydra']);   // 공중 공격 가능 유닛(나머지는 지상만)
 const FXLAB_NOATK=new Set(['pelican','overlord','seraph','aegis','observer','medic','medusa','larva','high_templar']);   // 비전투(수송선·지원함·정찰기·시전형): 랩에서 공격 안 함 — 메두사(퀸)·라바·하이템플러=기본공격 없음
 const FXLAB_SWITCH_DELAY=0.35;   // 발사 후 방금 쏜 대상을 잠깐 더 바라본 뒤 다음 타겟으로 전환(허공 발사 방지)
-const FXLAB_AIR=new Set(['skyguard','skydancer','overlord','observer','pelican','seraph','hellfire','dreadnought','kronos','archangel','falcon','stinger','venom','medusa','wyvern','aegis','behemoth']);   // 공중(비행) 유닛 — 바닥 위로 부양
+const FXLAB_AIR=new Set(['skyguard','skydancer','overlord','observer','pelican','seraph','hellfire','dreadnought','kronos','archangel','falcon','stinger','venom','medusa','wyvern','aegis','behemoth']);   // 공중(비행) 유닛 단일 출처 — 바닥 위로 부양. 3D 모듈 AIR_FLOAT도 이걸 참조
+try{ if(typeof window!=='undefined') window.FXLAB_AIR=FXLAB_AIR; }catch(_e){}   // M3D 모듈(별도 스코프)에서 공중 판정 공용 참조
 const FXLAB_AIR_LIFT=0.16;   // 공중유닛 부양 높이(정규화)
 const FXLAB_TGT_X=0.70, FXLAB_TGT_Y=0.52;   // 지상 타겟 기준선(시민)
 function fxLabStats(id, gm){ const sg=gm&&STK_UNITS[gm]; if(sg){ var _er=(typeof effRange==='function')?effRange(gm,null):null; return {size:sg.size, cd:(typeof SB_CD!=='undefined'&&SB_CD[gm]!=null?Math.max(0.35,SB_CD[gm]):Math.max(0.35,((U[gm]&&U[gm].cd)||22)/60)), melee:!!sg.melee, rng:(_er!=null)?Math.max(6,_er*600):(sg.rng||120), color:(U[gm]&&U[gm].color)||'#cfd6e2'}; }   // SB_RANGE(샌드박스 사거리) 우선 — 표시값=배치 일치
@@ -11912,7 +11913,10 @@ const AURA_UNITS={ archon:true };      // 공중 부유 + 에너지 오라(아�
 const AURA_LIFT=0.14;                  // 부유 기본 높이(모델높이 비율) — 아주 약간 떠 있음
 const AURA_COL1=0x5fd8ff, AURA_COL2=0xb070ff;  // 오라 색(청록 외피 + 보라 코어)
 const HOVER_AMP=0.13;     // 공중 유닛 상하 부유 진폭(모델높이 비율) — 크게(둥실)
-const AIR_FLOAT={ skyguard:1, skydancer:1, overlord:1, observer:1, pelican:1, seraph:1, hellfire:1, dreadnought:1, kronos:1, archangel:1, falcon:1, stinger:1, venom:1, medusa:1, wyvern:1, aegis:1, behemoth:1 };   // 공중 유닛 멤버십(=FXLAB_AIR 17종과 동일 유지) — 전부 고정 정지 부양(AIR_LIFT_PX), 값 미사용
+// 공중 유닛 멤버십 = FXLAB_AIR(단일 출처)에서 생성. 더 이상 수동 동기화 안 함(값 미사용, 존재 여부만). window 미가용 시 폴백 목록.
+const AIR_FLOAT=(function(){ const o={}; const s=(typeof window!=='undefined'&&window.FXLAB_AIR);
+  if(s&&s.forEach){ s.forEach(k=>{ o[k]=1; }); return o; }
+  ['skyguard','skydancer','overlord','observer','pelican','seraph','hellfire','dreadnought','kronos','archangel','falcon','stinger','venom','medusa','wyvern','aegis','behemoth'].forEach(k=>{ o[k]=1; }); return o; })();
 const AIR_LIFT_PX=28;     // 공중유닛 부양 높이(화면 px 기준, 모델·스케일 무관 — 전 공중유닛 동일 고도). 정지 부양(흔들림 없음)
 const HOVER_SPD=2.6;      // 부유 속도
 const HOVER_WOBBLE=0.10;  // 공중 유닛 기우뚱 흔들(라디안)
