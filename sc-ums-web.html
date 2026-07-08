@@ -83,7 +83,7 @@
   #hud{position:absolute;top:0;left:0;right:0;z-index:20;padding:calc(env(safe-area-inset-top,0px) + 18px) 9px 0;
     display:flex;align-items:flex-start;justify-content:space-between;pointer-events:none;
     font-family:'Rajdhani','Apple SD Gothic Neo','Noto Sans KR',sans-serif;   /* 모던 테크 폰트(가시성↑) */
-    background:none;opacity:.82}   /* HUD 배경 없음 — 텍스트 + 진한 드롭쉐도우, 살짝 투명(덜 쨍) */
+    background:linear-gradient(180deg,rgba(8,12,20,.85),rgba(8,12,20,.42) 60%,transparent);opacity:.82}   /* 상단 HUD 구역 구분용 반투명 배경(아래로 자연스레 페이드) — 전 영역 공통 */
   #hudL{display:flex;flex-direction:column;gap:3px;white-space:nowrap;line-height:1.15;
     text-shadow:0 2px 4px #000,0 0 8px #000,0 1px 2px #000}   /* 진한 드롭쉐도우(배경 없이 가독) */
   /* 라운드: ROUND 라벨 + 현재값 청록 네온 강조 / 최대값 흐리게 */
@@ -941,11 +941,10 @@
   #cstMain{flex:1;min-height:0;width:100%;position:relative;overflow:hidden;padding:0}
   #bpBuild{display:none}   /* 건설은 자체 슬라이드 시트(#btSheet) 사용 → 하단 패널 미사용(다른 탭에서 32px 잔여공간 제거) */
   .bmap{position:absolute;inset:0;overflow:hidden;cursor:crosshair;
-    background:linear-gradient(0deg,rgba(8,12,20,.46),rgba(8,12,20,.24)),
-      repeating-linear-gradient(0deg,transparent 0 27px,rgba(120,150,190,.06) 27px 28px),
+    background:repeating-linear-gradient(0deg,transparent 0 27px,rgba(120,150,190,.06) 27px 28px),
       repeating-linear-gradient(90deg,transparent 0 27px,rgba(120,150,190,.06) 27px 28px),
       url('/assets/tiles/badlands.webp');
-    background-size:auto,auto,auto,132px 132px; background-repeat:repeat}
+    background-size:auto,auto,132px 132px; background-repeat:repeat}   /* 타일 위 어두운 덮개 제거 — 타일 선명하게 */
   .bmap.arming{cursor:copy}
   .bmapTop{position:absolute;top:0;left:0;right:0;min-height:34px;display:flex;align-items:center;justify-content:space-between;gap:8px;
     padding:6px 10px;background:linear-gradient(180deg,rgba(6,10,18,.86),rgba(6,10,18,.5) 66%,transparent);z-index:5;pointer-events:auto;flex-wrap:wrap}   /* 진한 반투명 덮개 — 화면에 스며들며 약간의 구분 */
