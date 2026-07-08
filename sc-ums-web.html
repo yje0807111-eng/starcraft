@@ -4406,7 +4406,8 @@ function unitDmg(u){ const p=unitDmgParts(u); let t=p.total; if(u && mapCfg('inf
 function infIncomeMul(){ if(!mapCfg('infinite')||(G.round||0)<=30) return 1; return Math.pow(mapCfg('infIncomeLoop',1.5),(G.round-30)/30); }   // 무한모드: 라운드 깊을수록 크레딧/에너지 수입↑(적 성장보다 완만)
 // 공격력 분해: {base:기본, up:업그레이드 추가분, total:합계, wlv:계열 업글 레벨}
 /* UNIT_PWR → NEMO_BAL.unitPwr */   // 유닛 개별 공격력 배율(적게·강하게 — 상한 50→35 보정)
-function unitDmgParts(u){ const d=U[u.id]; const wlv=(G.atkLv&&G.atkLv[gachaWpn(u)])||0;
+function unitDmgParts(u){ if(typeof G!=='undefined' && G.sandbox && !G.strike){ const _b=(u.hero?HERO_STAT_MUL:1); const base=Math.round((Ueff(u).dmg||0)*_b); return {base, up:0, total:base, wlv:0}; }   // 관리자: base_stats 공격력 그대로(가챠·업글 배율 없음 — 전투 DPS와 동일)
+  const d=U[u.id]; const wlv=(G.atkLv&&G.atkLv[gachaWpn(u)])||0;
   const lv=(1+((u.lv||1)-1)*0.6)*gachaTierMul(u)*((G.metaB&&G.metaB.atkMul)||1)*UNIT_PWR*((G.teamAtk)||1);   // 등급·메타·개별 강화 + 팀 공격버프
   const ov=GDMG_OVR[u.gid];   // 구조물 프록시 가챠 유닛의 기본치 교정
   const base=Math.round((ov?ov.dmg:(u.hero?d.hdmg:d.dmg))*lv);
@@ -4416,6 +4417,7 @@ function unitDmgParts(u){ const d=U[u.id]; const wlv=(G.atkLv&&G.atkLv[gachaWpn(
   return {base, up:total-base, total, wlv}; }
 // 공중공격 분해(airDmg 있는 유닛만). 없으면 null.
 function unitAirParts(u){ const d=U[u.id]; if(d.airDmg==null) return null;
+  if(typeof G!=='undefined' && G.sandbox && !G.strike){ const _b=(u.hero?HERO_STAT_MUL:1); const e=Ueff(u); const base=Math.round((e.airDmg!=null?e.airDmg:0)*_b); return {base, up:0, total:base}; }   // 관리자: base_stats 공중공격력
   const wlv=(G.atkLv&&G.atkLv[gachaWpn(u)])||0; const lv=(1+((u.lv||1)-1)*0.6)*gachaTierMul(u)*((G.metaB&&G.metaB.atkMul)||1);   // 등급 배율 + 메타 공격력↑
   const ov=GDMG_OVR[u.gid];   // 오버라이드 유닛은 공중=지상 동일
   const aD=ov?ov.dmg:(u.hero?(d.hairDmg!=null?d.hairDmg:d.airDmg):d.airDmg);
@@ -5988,7 +5990,7 @@ function scHpHTML(u){ const def=U[u.id]; const m=u.hero?HERO_STAT_MUL:1;
 // 큰 수치 축약(칸 넘침 방지): 1만 미만=그대로, 그 이상=K/M
 function fmtStat(n){ n=Math.round(n); if(n<10000) return ''+n; if(n<1000000) return (n/1000).toFixed(n<100000?1:0)+'K'; return (n/1000000).toFixed(1)+'M'; }
 // 초록 테두리 스탯 박스(공격/방어/사거리) — 스타 콘솔식
-function scStatBoxesHTML(u){ const def=U[u.id];
+function scStatBoxesHTML(u){ const def=(typeof G!=='undefined'&&G.sandbox&&!G.strike)?Ueff(u):U[u.id];   // 관리자: 방어·실드도 base_stats
   const numBox=(label,val,cls)=>'<div class="scBox"><div class="sv">'+fmtStat(val)+'</div><div class="sl '+(cls||'')+'">'+label+'</div></div>';
   const atkBox=(label,p,cls)=>'<div class="scBox atkBox" onpointerdown="atkPeekStart(this,event)">'   // 평소=총 공격력 / 길게 누르면 위에 기본+업글
     +'<div class="atkPeek">기본 '+fmtStat(Math.max(0,p.total-p.up))+' + 업글 '+fmtStat(p.up)+'</div>'
