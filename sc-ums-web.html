@@ -10150,7 +10150,7 @@ const TECH_MODEL={
 // 타일 비율 기준 크기(s): 4x3=64 · 4x2=58 · 3x3=52 · 3x2=46 · 2x2=36 · f=정면 yaw
 const CST_BLDG_CFG={
   // 유니온(테란)
-  union_command_center:{s:64,f:0}, union_barracks:{s:64,f:0}, union_engineering_bay:{s:64,f:0}, union_factory:{s:64,f:0}, union_starport:{s:64,f:0}, union_science_facility:{s:64,f:0},
+  union_command_center:{s:64,f:0}, union_barracks:{s:64,f:0}, union_engineering_bay:{s:64,f:Math.PI}, union_factory:{s:64,f:0}, union_starport:{s:64,f:0}, union_science_facility:{s:64,f:0},
   union_refinery:{s:58,f:0},
   union_supply_depot:{s:46,f:0}, union_academy:{s:46,f:0}, union_bunker:{s:46,f:0}, union_armory:{s:46,f:0},
   union_missile_turret:{s:36,f:0}, union_comsat_station:{s:36,f:0}, union_nuclear_silo:{s:36,f:0}, union_machine_shop:{s:36,f:0}, union_control_tower:{s:36,f:0}, union_covert_ops:{s:36,f:0}, union_physics_lab:{s:36,f:0},
@@ -10332,7 +10332,9 @@ function techPlace(x,y){ const race=G.tech.race, b=techGetBldg(race,G.tech.arm);
   G.tech.ents.push(ne);
   if(bt<=0){ techFinishBuild(ne); }   // 즉시(노쿨) 완성
   else if(wk){ wk.build=ne.eid; wk.tx=Math.max(0.04,Math.min(0.96,bx)); wk.ty=Math.max(0.16,Math.min(0.96,by+0.05)); }   // 일꾼 → 건설지로 이동
-  G.tech.arm=null; G.tech.sel=ne.eid; G.tech.selU=[]; const sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null}); sh.open=true; sh.sec='ent';   // 배치 → 그 건물 시트로 즉시 전환
+  G.tech.arm=null; const sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null}); sh.open=true; sh.sec='ent';
+  if(wk){ G.tech.sel=null; G.tech.selU=[wk.eid]; }   // 배치 후에도 건설한 일꾼 선택 유지
+  else { G.tech.sel=ne.eid; G.tech.selU=[]; }   // 노쿨(일꾼 없이 즉시 완성)일 땐 그 건물 시트로
   const body=document.getElementById('btSheetBody'); if(body) body._cgPage=0; if(typeof playSfx==='function') playSfx('ui_confirm'); techUIRender(); }
 function techDoProduce(id, bk){ const race=G.tech.race; if(!(G.tech.built[bk]>0)){ if(typeof toast==='function') toast('⛔ 건물 미건설'); return; }
   const b=techGetBldg(race,bk), p=b&&b.produces&&b.produces.find(x=>x.id===id); if(!p) return;
