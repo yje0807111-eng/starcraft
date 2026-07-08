@@ -6526,8 +6526,8 @@ function sbCombatUiSync(){ const t=document.getElementById('btCtlToggle'); const
 //    (구 SB_U 수동 밸런스 오버라이드는 base_stats 전환으로 완전히 덮여 제거됨. 네모는 원본 U 그대로) ──
 const BASE_UNIT={
   worker_human:[60,0,0,5,1], marine:[40,0,0,6,4], machinegun:[50,0,1,16,2], medic:[60,0,1,0,0], ghost:[45,0,0,10,7], racer:[80,0,0,20,5], tank:[150,0,1,30,7], goliath:[125,0,1,12,5], skyguard:[120,0,0,20,5], pelican:[150,0,1,0,0], hellfire:[200,0,2,48,6], aegis:[200,0,1,0,0], dreadnought:[500,0,3,25,6],
-  worker_swarm:[40,0,0,5,1], overlord:[200,0,0,0,0], snapper:[35,0,0,5,1], hydra:[80,0,0,10,4], thornqueen:[125,0,1,20,6], wyvern:[120,0,0,9,3], stinger:[25,0,0,110,1], medusa:[120,0,0,0,0], ultralisk:[400,0,1,20,1], behemoth:[150,0,2,20,8], venom:[250,0,2,25,6],
-  worker_light:[20,20,0,5,1], blade:[100,60,1,16,1], dragoon:[100,80,1,20,4], high_templar:[40,40,0,0,0], dark_templar:[80,40,1,40,1], archon:[10,350,0,30,2], seraph:[80,60,1,0,0], larva:[100,80,0,100,8], observer:[40,20,0,0,0], falcon:[150,100,0,8,4], skydancer:[120,80,1,5,5], archangel:[300,150,4,6,8], kronos:[200,150,1,10,5] };
+  worker_swarm:[40,0,0,5,1], overlord:[200,0,0,0,0], snapper:[35,0,0,5,1], hydra:[80,0,0,10,4], thornqueen:[125,0,1,20,6], wyvern:[120,0,0,9,3], stinger:[25,0,0,110,1], medusa:[120,0,0,0,0], ultralisk:[400,0,1,20,1], behemoth:[150,0,2,20,8], venom:[250,0,2,25,6], broodling:[30,0,0,6,1], larva:[25,0,10,0,0],
+  worker_light:[20,20,0,5,1], blade:[100,60,1,16,1], dragoon:[100,80,1,20,4], high_templar:[40,40,0,0,0], dark_templar:[80,40,1,40,1], archon:[10,350,0,30,2], seraph:[80,60,1,0,0], observer:[40,20,0,0,0], falcon:[150,100,0,8,4], skydancer:[120,80,1,5,5], archangel:[300,150,4,6,8], kronos:[200,150,1,10,5] };
 // 일꾼 앵커: 사거리·공속은 base_stats 그대로가 아니라 "현재 일꾼값 = base 1단위" 비율로 통일(전투가 과하게 안 달라지게)
 const SB_ANCHOR_RANGE=0.035;   // 일꾼 현재 사거리 0.035 ÷ base 1타일 → 유닛 사거리 = base타일 × 0.035
 const SB_ANCHOR_CD=40/15;      // 일꾼 현재 공속 cd40 ÷ base 15프레임 → 유닛 cd = base프레임 × (40/15)
