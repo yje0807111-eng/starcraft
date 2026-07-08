@@ -5972,7 +5972,8 @@ function effRange(id, fb){ if(typeof BASE_UNIT!=='undefined' && id!=null && BASE
 function _sbBaseCd(key){ const bcd=(typeof BASE_CD!=='undefined'&&BASE_CD[key]>0)?Math.round(BASE_CD[key]*SB_ANCHOR_CD):0; return bcd>0?bcd/60:(((U[key]&&U[key].cd)||22)/60); }   // 관리자 공속(초) = base_stats(BASE_CD×앵커, _baseUnitOv와 동일 반올림) — 표시·발사 리듬=전투 완전 일치
 // 관리자 이펙트 크기 = 실제 3D 모델 크기(SCALE)에서 유도(단일 소스). 모델 덩치와 이펙트가 항상 비례 → 이펙트 구역 크기와 자동 연동. SCALE(또는 이펙트 계수)만 바꾸면 발사·사망·이펙트 크기가 같이 따라옴.
 const FX_UNIT_SIZE_K=1.11;   // SCALE→이펙트 크기 계수(현행 평균 유지, 어긋난 유닛만 모델 비례로 교정)
-function _fxUnitSize(key){ const sc=(typeof window!=='undefined'&&window.M3D&&window.M3D.scaleOf)?window.M3D.scaleOf(key):null; return (sc&&sc>0)?Math.round(sc*FX_UNIT_SIZE_K*10)/10:((U[key]&&U[key].size)||16); }   // 3D 미가용 시 U.size 폴백
+const FX_SIZE_OVR={ machinegun:1.25, wyvern:1.25 };   // 유닛별 이펙트 크기 미세 보정(모델 대비 이펙트만 키우거나 줄임). 발칸·와이번=이펙트 확대
+function _fxUnitSize(key){ const ov=FX_SIZE_OVR[key]||1; const sc=(typeof window!=='undefined'&&window.M3D&&window.M3D.scaleOf)?window.M3D.scaleOf(key):null; return (sc&&sc>0)?Math.round(sc*FX_UNIT_SIZE_K*ov*10)/10:(((U[key]&&U[key].size)||16)*ov); }   // 3D 미가용 시 U.size 폴백
 // 체력/실드/에너지 초록 LCD 텍스트(스타식 "실드 HP / 에너지")
 function scHpHTML(u){ const def=U[u.id]; const m=u.hero?HERO_STAT_MUL:1;
   const maxHp=u.maxHp||Math.round(def.hp*m), hp=u.hp!=null?u.hp:maxHp;
@@ -11707,7 +11708,7 @@ function tickUnitFx(L, dt){ if(!L||!L.store||!L.store.smoke) return;
 // 유닛별 발사 이펙트 디스패치(랩·전투실험 공용) — L=영속 shim(store/pend/vnJet), u=발사 유닛, (tx,ty)=대상, tgtAir=대상 공중여부
 function unitFireFx(L, u, tx, ty, size, tgtAir){ const store=L.store; if(!L.pend) L.pend=[]; const pend=L.pend; const id=u.id, fxId=u.gmodel||u.id;
   try{
-    if(id==='goliath'&&!u.gmodel){ fxLabGoliathFire(L, u, tx, ty, size); }
+    if(id==='goliath'&&!u.gmodel){ if(tgtAir) fxLabGoliathFire(L, u, tx, ty, size); else fxLabGoliathGround(L, u, tx, ty, size); }   // 공중=어깨 유도미사일 2발(기존) / 지상=왼손 미사일 1발
     else if(fxId==='racer') fxLabRacerFire(L, u, tx, ty);
     else if(fxId==='skyguard'&&tgtAir) fxLabTempestAir(L, u, tx, ty, size);
     else if(fxId==='hellfire') fxLabHellfireFire(L, u, tx, ty, size);
@@ -11731,6 +11732,13 @@ function fxLabGoliathFire(L, a, tx, ty, size){   // 스트라이더 공중: 어�
   for(let k=-1;k<=1;k+=2){ const sx=a.x+sideN*k, sy=a.y-upN, baseA=Math.atan2(ty-sy,tx-sx), la=baseA+k*0.7;
     L.store.shots.push({x:sx,y:sy,vx:Math.cos(la)*sp,vy:Math.sin(la)*sp,t:0,dur:1.2,kind:'missile',color:'#5ad1ff',boom:8,szf:szf,mx:sx,my:sy,ex:tx,ey:ty,dist:null,noflash:1});
     FX.smoke(L.store, sx, sy); } }
+function fxLabGoliathGround(L, a, tx, ty, size){   // 스트라이더 지상: 왼손(화면 왼쪽)에서 미사일 1발 — 살짝 휘어 타격(유도)
+  if(!L.store||!L.store.shots) return;
+  const sideN=0.02, downN=0.006, szf=(size||16)/18*0.72, sp=1.9;
+  const sx=a.x-sideN, sy=a.y+downN;   // 왼손 위치: 화면 왼쪽·어깨보다 살짝 아래
+  const la=Math.atan2(ty-sy,tx-sx)+0.15;   // 왼손에서 나가 약간의 곡선 그리며 타격
+  L.store.shots.push({x:sx,y:sy,vx:Math.cos(la)*sp,vy:Math.sin(la)*sp,t:0,dur:1.0,kind:'missile',color:'#5ad1ff',boom:8,szf:szf,mx:sx,my:sy,ex:tx,ey:ty,dist:null,noflash:0});
+  FX.smoke(L.store, sx, sy); }
 function fxLabTempestAir(L, a, tx, ty, size){   // 템페스트 공중: 얇은 소형 미사일 2발 — 스트라이더 미사일보다 빠르고 작게(궤적 살짝 벌어졌다 수렴)
   if(!L.store||!L.store.shots) return;
   const _c=(window.M3D&&M3D.centerAt)?M3D.centerAt(a.uid):null, ox=_c?_c.x:a.x, oy=_c?_c.y:(a.y-0.03);   // 부양한 기체 중앙에서 발사
