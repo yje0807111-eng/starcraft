@@ -9567,16 +9567,16 @@ function drawSandboxGround(ctx,W,H){
     }); ctx.restore(); }
 }
 // ═══ 공용 유닛 로스터(단일 출처) — 메인(관리자)·이펙트랩·건설 등 모든 구역이 이 하나를 참조. 유닛 추가/이름 변경은 여기 한 곳만 고치면 전 구역 반영 ═══
-// key = 유닛 식별자(= U/모델 키 · 스탯=Udef(key)/TECH_SPEC) · n = 표시 이름 · e = 적 표기(관리자 배치)
+// key = 유닛 식별자(= U/모델 키 · 스탯=Udef(key)/TECH_SPEC) · n = 표시 이름. 아군/적은 배치 상황이 정하는 것 — 유닛 고유 속성 아님
 const RACE_ROSTER={
-  union:[{n:'엔지니어',key:'worker_human'},{n:'레인저',key:'marine'},{n:'발칸',key:'machinegun'},{n:'메딕',key:'medic'},{n:'팬텀',key:'ghost'},{n:'레이서',key:'racer'},{n:'브레이커',key:'tank'},{n:'스트라이더',key:'goliath'},{n:'템페스트',key:'skyguard'},{n:'펠리컨',key:'pelican',e:1},{n:'이지스',key:'aegis',e:1},{n:'헬파이어',key:'hellfire',e:1},{n:'드레드노트',key:'dreadnought',e:1}],
-  swarm:[{n:'채집충',key:'worker_swarm'},{n:'너울',key:'overlord',e:1},{n:'스내퍼',key:'snapper'},{n:'리퍼',key:'hydra'},{n:'베놈퀸',key:'thornqueen'},{n:'스팅어',key:'stinger',e:1},{n:'와이번',key:'wyvern',e:1},{n:'메두사',key:'medusa',e:1},{n:'베놈',key:'venom',e:1},{n:'베히모스',key:'behemoth',e:1},{n:'스웜링',key:'broodling'},{n:'라바',key:'larva'},{n:'저거너트',key:'ultralisk'}],
-  aetherial:[{n:'결정체',key:'worker_light'},{n:'센티넬',key:'dragoon'},{n:'워든',key:'blade'},{n:'보이드',key:'archon'},{n:'팔콘',key:'falcon',e:1},{n:'세라프',key:'seraph',e:1},{n:'스카이댄서',key:'skydancer'},{n:'아크엔젤',key:'archangel',e:1},{n:'와처',key:'observer',e:1},{n:'크로노스',key:'kronos',e:1},{n:'다크세이지',key:'dark_templar'},{n:'하이세이지',key:'high_templar'}],
+  union:[{n:'엔지니어',key:'worker_human'},{n:'레인저',key:'marine'},{n:'발칸',key:'machinegun'},{n:'메딕',key:'medic'},{n:'팬텀',key:'ghost'},{n:'레이서',key:'racer'},{n:'브레이커',key:'tank'},{n:'스트라이더',key:'goliath'},{n:'템페스트',key:'skyguard'},{n:'펠리컨',key:'pelican'},{n:'이지스',key:'aegis'},{n:'헬파이어',key:'hellfire'},{n:'드레드노트',key:'dreadnought'}],
+  swarm:[{n:'채집충',key:'worker_swarm'},{n:'너울',key:'overlord'},{n:'스내퍼',key:'snapper'},{n:'리퍼',key:'hydra'},{n:'베놈퀸',key:'thornqueen'},{n:'스팅어',key:'stinger'},{n:'와이번',key:'wyvern'},{n:'메두사',key:'medusa'},{n:'베놈',key:'venom'},{n:'베히모스',key:'behemoth'},{n:'스웜링',key:'broodling'},{n:'라바',key:'larva'},{n:'저거너트',key:'ultralisk'}],
+  aetherial:[{n:'결정체',key:'worker_light'},{n:'센티넬',key:'dragoon'},{n:'워든',key:'blade'},{n:'보이드',key:'archon'},{n:'팔콘',key:'falcon'},{n:'세라프',key:'seraph'},{n:'스카이댄서',key:'skydancer'},{n:'아크엔젤',key:'archangel'},{n:'와처',key:'observer'},{n:'크로노스',key:'kronos'},{n:'다크세이지',key:'dark_templar'},{n:'하이세이지',key:'high_templar'}],
 };
 function _rosterName(key){ for(const r in RACE_ROSTER){ const f=RACE_ROSTER[r].find(u=>u.key===key); if(f) return f.n; } return (typeof U!=='undefined'&&U[key]&&U[key].name)||key; }   // 공용 표시 이름(전 구역 통일)
 function _rosterRaceOf(key){ for(const r in RACE_ROSTER){ if(RACE_ROSTER[r].some(u=>u.key===key)) return r; } return null; }
 // SANDBOX_ROSTER(관리자 메인 배치)는 공용 로스터에서 생성 — b/gm 모두 key(모델=스탯 키). 출력은 기존과 동일
-const SANDBOX_ROSTER=(function(){ const o={}; for(const r in RACE_ROSTER){ o[r]=RACE_ROSTER[r].map(u=>({n:u.n, b:u.key, gm:u.key, e:u.e})); } return o; })();
+const SANDBOX_ROSTER=(function(){ const o={}; for(const r in RACE_ROSTER){ o[r]=RACE_ROSTER[r].map(u=>({n:u.n, b:u.key, gm:u.key})); } return o; })();
 const SANDBOX_RACE_ORDER=['union','swarm','aetherial'];   // 3종족(테란=유니온 / 저그=스웜 / 프로토스=에테리얼) — 일꾼은 각 종족 첫 자리
 const SANDBOX_RACE_KO={union:'유니온 (인간)',swarm:'스웜 (군체)',aetherial:'에테리얼 (외계)'};
 function placeSandboxUnits(){
@@ -9591,7 +9591,7 @@ function placeSandboxUnits(){
       const x=0.20+(c/(COLS-1))*0.70, y=yc+r*dy;
       const _sid=(it.gm && typeof U[it.gm]!=='undefined') ? it.gm : it.b;   // 모델 전용 스탯 있으면 사용
       const u=initUnitStats({uid:G.idSeq++, id:_sid, hero:false, lv:1, x:x, y:y, cd:0, fixed:false});
-      if(it.gm) u.gmodel=it.gm; u.gname=it.n; if(it.e) u._enemyDisp=true;
+      if(it.gm) u.gmodel=it.gm; u.gname=it.n;
       G.units.push(u);
     });
     yc += subRows*dy + gap;
@@ -9688,10 +9688,12 @@ function loop(now){
       const list=[]; for(const e of (G.tech.ents||[])){ if(e.type!=='bldg'||e.bt>0) continue; const mk=(TECH_MODEL[race]||{})[e.bk]; if(!mk) continue; const _cfg=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[mk]:null; list.push({uid:'cst_'+race+'_'+mk+'_'+e.eid, id:'cb_'+mk, x:(e.x-_v.x)*_v.zoom+0.5, y:(e.y-_v.y)*_v.zoom+0.5, face:((race==='swarm')?0:(typeof CST_YAW!=='undefined'?CST_YAW:0))+((_cfg&&_cfg.f)||0), yoff:(typeof CST_YSHIFT!=='undefined'?CST_YSHIFT:34), sel:(G.tech&&G.tech.sel===e.eid)}); }   // 뷰 변환(팬/줌) 반영
       for(const e of (G.tech.ents||[])){ if(e.type!=='unit'&&e.type!=='worker') continue; const mk=(typeof _techEntModel==='function')?_techEntModel(e):null; if(!mk) continue;   // 🚶 일꾼·생산 유닛 3D
         const _selu=(G.tech.sel===e.eid)||(G.tech.selU&&G.tech.selU.indexOf(e.eid)>=0);
-        list.push({uid:'tu_'+e.eid, id:mk, x:(e.x-_v.x)*_v.zoom+0.5, y:(e.y-_v.y)*_v.zoom+0.5, face:(typeof CST_YAW!=='undefined'?CST_YAW:0)+(e.face||0), yoff:(typeof TECH_UNIT_YOFF!=='undefined'?TECH_UNIT_YOFF:6), moving:(e.tx!=null), sel:_selu}); }   // face = 건설뷰 기준각 + 이동방향(메인과 동일 응시)
+        const _isAir=(typeof FXLAB_AIR!=='undefined')&&FXLAB_AIR.has(mk);   // 공중 유닛: 메인과 동일한 고정 부양(syncBuild airlift)
+        list.push({uid:'tu_'+e.eid, id:mk, x:(e.x-_v.x)*_v.zoom+0.5, y:(e.y-_v.y)*_v.zoom+0.5, face:(typeof CST_YAW!=='undefined'?CST_YAW:0)+(e.face||0), yoff:(typeof TECH_UNIT_YOFF!=='undefined'?TECH_UNIT_YOFF:6), moving:(e.tx!=null), sel:_selu, airlift:_isAir}); }   // face = 건설뷰 기준각 + 이동방향(메인과 동일 응시)
       window.M3D.syncBuild(list, W, H, dt, _v.zoom);
     } else if(mcv) mcv.style.display='none';
-    const _fcv=document.getElementById('cvFx'); if(_fcv) _fcv.style.display='none';
+    const _fcv=document.getElementById('cvFx');   // 이동 트레일(메인과 동일 이펙트) — 3D 표시 중일 때만
+    if(_fcv){ if(mcv.style.display==='block' && typeof techMoveTrails==='function'){ _fcv.style.display='block'; techMoveTrails(dt); } else _fcv.style.display='none'; }
   }
   else {
     if(G.tab==='Main'||G.tab==='Battle') drawMain();
@@ -10169,14 +10171,52 @@ function _techAvoidSteer(e, tx, ty, hx, hy, obst){
   if(!blocked) return {hx,hy};
   const nx=hx+ax, ny=hy+ay, nl=Math.hypot(nx,ny); if(nl<1e-4) return {hx,hy}; return {hx:nx/nl, hy:ny/nl};
 }
+// 건설 맵 이동 트레일 — 메인 stepMoveTrails와 동일 레시피(TRAIL_UNIT/emitMoveTrail)를 건설 뷰(팬/줌) 좌표로 적용
+function techMoveTrails(dt){ if(typeof FX==='undefined'||typeof emitMoveTrail==='undefined'||!G.tech) return;
+  if(!G._techFx) G._techFx=FX.store();
+  const v=techView(), z=v.zoom;
+  if(typeof fxOff!=='function'||!fxOff()) for(const e of G.tech.ents){ if((e.type!=='unit'&&e.type!=='worker')||e.tx==null) continue;
+    const gm=_techEntKey(e); if(!MOVE_TRAIL_GM.has(gm)) continue;
+    const vx=e.vx||0, vy=e.vy||0, sp=Math.hypot(vx,vy);
+    const px={ x:(e.x-v.x)*z+0.5, y:(e.y-v.y)*z+0.5, uid:'tu_'+e.eid, _mtT:e._mtT };   // 월드→뷰 좌표(팬/줌 반영)
+    if(sp>0.004) emitMoveTrail(G._techFx, gm, px, vx/sp, vy/sp, 1, dt);
+    else if(typeof e.face==='number') emitMoveTrail(G._techFx, gm, px, Math.sin(e.face), Math.cos(e.face), 1, dt);
+    e._mtT=px._mtT; }
+  FX.advance(G._techFx, dt);
+  if(typeof setup!=='function') return; const s=setup('cvFx');   // setup=캔버스 크기 재설정+클리어(메인 drawFx와 동일)
+  FX.drawShots(s.ctx, G._techFx, (x,y)=>({x:x*s.W, y:y*s.H}), 1.0); }
 function techTick(dt){ if(!G.tech) return; let active=false, done=false;
   for(const e of G.tech.ents){ if(e.type==='bldg'&&e.bt>0){ if(!e.waiting){ e.bt=Math.max(0,e.bt-dt); if(e.bt<=0){ techFinishBuild(e); done=true; } } active=true; } }   // waiting=일꾼 미도착 → 카운트다운 정지
   const _obst=G.tech.ents.filter(x=>x.type==='bldg');   // 회피 대상 건물(건설 중 포함)
-  for(const e of G.tech.ents){ if((e.type==='unit'||e.type==='worker')&&e.tx!=null){ const dx=e.tx-e.x, dy=e.ty-e.y, d=Math.hypot(dx,dy), step=_techSpdOf(e)*dt;   // 🚶 유닛 이동(스펙별 속도)
-    if(d<=step||d<1e-4){ e.x=e.tx; e.y=e.ty; e.tx=null; e.ty=null;
-      if(e.type==='worker'&&e.build!=null){ const bd=G.tech.ents.find(x=>x.eid===e.build); if(bd&&bd.waiting){ bd.waiting=false; done=true; } }   // 일꾼 도착 → 건설 시작
-    } else { let hx=dx/d, hy=dy/d; const _st=_techAvoidSteer(e, e.tx, e.ty, hx, hy, _obst); hx=_st.hx; hy=_st.hy;   // 🧭 건물 돌아가기
-      e.x+=hx*step; e.y+=hy*step; const _fa=Math.atan2(hx,hy); e.face=Math.round(_fa/(Math.PI/8))*(Math.PI/8); }   // 이동 방향 응시(메인과 동일: atan2 + π/8 스냅)
+  // 🚶 유닛 이동 — 메인 stepCmdMove와 동일 물리: 유닛별 U.moveSpd, 공중/지상 레이어, 관성(공중=강한 관성·지상=크기 비례), 목표 감속, 정체 정착, 유닛끼리 회피 + 건물 돌아가기(지상만 — 공중은 넘어감)
+  for(const e of G.tech.ents){ if((e.type==='unit'||e.type==='worker')&&e.tx!=null){
+    const key=_techEntKey(e), _air=_techAirOf(e);
+    const dx=e.tx-e.x, dy=e.ty-e.y, d=Math.hypot(dx,dy);
+    const _end=()=>{ e.tx=null; e.ty=null; e.vx=0; e.vy=0; e._mvStuck=0; e._mvPrevD=null;
+      if(e.type==='worker'&&e.build!=null){ const bd=G.tech.ents.find(x=>x.eid===e.build); if(bd&&bd.waiting&&Math.hypot(bd.x-e.x,bd.y-e.y)<0.16){ bd.waiting=false; done=true; } } };   // 일꾼 도착(근접 포함) → 건설 시작
+    if(d<=0.012){ e.x=e.tx; e.y=e.ty; _end(); active=true; continue; }   // 도착 → 명령 종료
+    if(e._mvPrevD!=null && d>e._mvPrevD-0.0006) e._mvStuck=(e._mvStuck||0)+dt; else e._mvStuck=0;   // 혼잡·클램프로 더 못 가까워지면 정착
+    e._mvPrevD=d;
+    if(e._mvStuck>(_air?1.6:0.6)){ _end(); active=true; continue; }
+    let hx=dx/d, hy=dy/d;
+    if(!_air){
+      const _st=_techAvoidSteer(e, e.tx, e.ty, hx, hy, _obst); hx=_st.hx; hy=_st.hy;   // 🧭 건물 돌아가기(지상)
+      let sx=0, sy=0; const GWp=GW||390, GHp=GH||390;   // 유닛끼리 회피(메인과 동일: 정지 유닛만, 같은 레이어만)
+      for(const o of G.tech.ents){ if(o===e||o.tx!=null||(o.type!=='unit'&&o.type!=='worker')) continue;
+        if(_techAirOf(o)) continue;
+        const ox=(o.x-e.x)*GWp, oy=(o.y-e.y)*GHp, od=Math.hypot(ox,oy);
+        const avoidR=(((U[key]||{}).size||14)*0.62+((U[_techEntKey(o)]||{}).size||14)*0.62)*2.4;
+        if(od>0.01&&od<avoidR){ const w=1-od/avoidR; sx-=(ox/od)*w; sy-=(oy/od)*w;
+          if((ox/od)*hx+(oy/od)*hy>0.25){ const tx2=-hy, ty2=hx, side=(tx2*ox+ty2*oy)>=0?-1:1; sx+=tx2*side*w*1.6; sy+=ty2*side*w*1.6; } } }
+      hx+=sx; hy+=sy; const hl=Math.hypot(hx,hy)||1; hx/=hl; hy/=hl;
+    }
+    const maxSpd=_techSpdOf(e); let dvx=hx*maxSpd, dvy=hy*maxSpd;
+    const _AR=(typeof AIR_ARRIVE!=='undefined')?AIR_ARRIVE:0.05; if(d<_AR){ const f=d/_AR; dvx*=f; dvy*=f; }   // 목표 근처 감속(안착)
+    const _sz=(window.M3D&&M3D.scaleOf)?M3D.scaleOf(key):13;
+    const _acc=_air?((typeof AIR_ACCEL!=='undefined')?AIR_ACCEL:5.0):Math.max((typeof GA_MIN!=='undefined')?GA_MIN:10, ((typeof GA_MAX!=='undefined')?GA_MAX:40)-(_sz-11)*((typeof GA_SLOPE!=='undefined')?GA_SLOPE:2.7));
+    const _k=Math.min(1,_acc*dt); e.vx=(e.vx||0)+(dvx-(e.vx||0))*_k; e.vy=(e.vy||0)+(dvy-(e.vy||0))*_k;
+    e.x=Math.max(0.02,Math.min(0.98,e.x+e.vx*dt)); e.y=Math.max(0.12,Math.min(0.98,e.y+e.vy*dt));
+    const _sp=Math.hypot(e.vx,e.vy), _fa=(_sp>0.0004)?Math.atan2(e.vx,e.vy):Math.atan2(hx,hy); e.face=Math.round(_fa/(Math.PI/8))*(Math.PI/8);   // 이동 방향 응시(메인과 동일: 속도 벡터 + π/8 스냅)
     active=true; } }
   if(G.tech.pend&&G.tech.pend.length){ const seen={}; for(let i=G.tech.pend.length-1;i>=0;i--){ const q=G.tech.pend[i]; if(seen[q.bk]){ continue; } seen[q.bk]=1; q.t=Math.max(0,q.t-dt); active=true; if(q.t<=0){ techFinishProduce(q); G.tech.pend.splice(i,1); done=true; } } }
   if(done) techUIRender(); else if(active) techMapRender(); }   // 완성=전체 갱신 / 진행중=맵만(진행바)
@@ -10306,14 +10346,25 @@ function techView(){ if(!G.tech.view) G.tech.view={x:0.5,y:0.5,zoom:1}; return G
 function _techClampView(){ const v=G.tech.view; v.zoom=Math.max(1,Math.min(4,v.zoom)); const m=(1-1/v.zoom)*0.5; v.x=Math.max(0.5-m,Math.min(0.5+m,v.x)); v.y=Math.max(0.5-m,Math.min(0.5+m,v.y)); }
 function _techW2S(wx,wy){ const v=techView(); return { x:(wx-v.x)*v.zoom+0.5, y:(wy-v.y)*v.zoom+0.5 }; }   // 월드→화면
 function _techS2W(sx,sy){ const v=techView(); return { x:(sx-0.5)/v.zoom+v.x, y:(sy-0.5)/v.zoom+v.y }; }   // 화면→월드
-const TECH_USPD=0.42;   // 기본 이동 속도(월드/초 — 맵 폭 1.0, '보통' 기준)
-const TECH_SPD_KO={'느림':0.30,'보통':0.42,'빠름':0.56,'매우빠름':0.68};   // TECH_SPEC spd 등급 → 월드 속도(기존 스펙 그대로 사용)
-function _techSpdOf(e){ const race=G.tech.race, id=(e.type==='worker')?(TECH_WORKER[race]||'worker_human'):e.uid; const sp=((typeof techUnitSpec==='function'&&techUnitSpec(race,id))||{}).spd; return TECH_SPD_KO[sp]||TECH_USPD; }
+// 이동 파라미터 = 메인과 동일한 공용 자료 사용: 속도=U.moveSpd×MOVE_MUL · 공중 판정=FXLAB_AIR (별도 표 없음)
+function _techEntKey(e){ return (e.type==='worker')?(TECH_WORKER[G.tech.race]||'worker_human'):e.uid; }
+function _techAirOf(e){ return (typeof FXLAB_AIR!=='undefined')&&FXLAB_AIR.has(_techEntKey(e)); }
+function _techSpdOf(e){ const b=(typeof Udef==='function'?Udef(_techEntKey(e)):U[_techEntKey(e)])||{}; return (b.moveSpd||0.13)*(typeof MOVE_MUL!=='undefined'?MOVE_MUL:3.0); }
 const _btPtrs=new Map(); let _btPinch=null, _btBox=null, _btCmd=null, _btMoved=false, _btDown=null;
 function _btRect(){ const m=document.getElementById('cstMain'); return m?m.getBoundingClientRect():null; }
-function _techAssignMove(wx,wy){ const sel=(G.tech.selU||[]).map(id=>G.tech.ents.find(e=>e.eid===id)).filter(e=>e&&(e.type==='unit'||e.type==='worker')); const n=sel.length; if(!n) return;
-  const tx=Math.max(0.04,Math.min(0.96,wx)), ty=Math.max(0.16,Math.min(0.96,wy));   // 여러 기 선택 시 살짝 벌려 진형 유지
-  sel.forEach(function(e,i){ const off=(n>1?(i-(n-1)/2)*0.05:0); e.tx=Math.max(0.04,Math.min(0.96,tx+off)); e.ty=Math.max(0.16,Math.min(0.96,ty+(off?off*0.4:0))); }); }   // 효과음은 다운 1회만(드래그 재지정 스팸 방지)
+function _techAssignMove(wx,wy){ const sel=(G.tech.selU||[]).map(id=>G.tech.ents.find(e=>e.eid===id)).filter(e=>e&&(e.type==='unit'||e.type==='worker')); if(!sel.length) return;
+  const cx=Math.max(0.04,Math.min(0.96,wx)), cy=Math.max(0.16,Math.min(0.96,wy));
+  const cX=x=>Math.max(0.04,Math.min(0.96,x)), cY=y=>Math.max(0.16,Math.min(0.96,y));
+  // 집합 방식 = 메인 assignFormation과 동일: 공중=한 지점 스택(스타식 겹치기) / 지상=충돌 반경 기반 동심원 대형
+  const air=sel.filter(e=>_techAirOf(e)), ground=sel.filter(e=>!_techAirOf(e));
+  air.forEach(e=>{ e.tx=cx; e.ty=cy; e._mvStuck=0; e._mvPrevD=null; });
+  if(ground.length===1){ ground[0].tx=cx; ground[0].ty=cy; ground[0]._mvStuck=0; ground[0]._mvPrevD=null; }
+  else if(ground.length){ const GWp=GW||390, GHp=GH||390;
+    const r=(ground.reduce((a,e)=>a+((U[_techEntKey(e)]||{}).size||14)*0.62,0)/ground.length)*2.1;
+    const slots=[{dx:0,dy:0}]; let ring=1;
+    while(slots.length<ground.length){ const n2=Math.floor(Math.PI*2*ring*0.9)||6;
+      for(let k=0;k<n2&&slots.length<ground.length;k++){ const a=(k/n2)*Math.PI*2+ring*0.5; slots.push({dx:Math.cos(a)*ring*r, dy:Math.sin(a)*ring*r}); } ring++; }
+    ground.forEach((e,i)=>{ const s=slots[i]; e.tx=cX(cx+s.dx/GWp); e.ty=cY(cy+s.dy/GHp); e._mvStuck=0; e._mvPrevD=null; }); } }   // 효과음은 다운 1회만(드래그 재지정 스팸 방지)
 function techPtrDown(ev){ if(!G.tech) return; const r=_btRect(); if(!r) return; if(ev.preventDefault)ev.preventDefault();
   _btPtrs.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
   const sx=(ev.clientX-r.left)/(r.width||1), sy=(ev.clientY-r.top)/(r.height||1);
@@ -12715,6 +12766,7 @@ window.M3D={
       if(it.moving && m.runInner){ if(m.inner)m.inner.visible=false; m.runInner.visible=true; if(m.gun)m.gun.visible=false; if(m.atkInner)m.atkInner.visible=false; m.anim.position.set(0,0,0); m.anim.rotation.set(0,0,0); if(m.runMixer) m.runMixer.update(dt); }   // 이동: 달리기 모션
       else if(it.moving){ if(m.inner)m.inner.visible=true; if(m.runInner)m.runInner.visible=false; if(m.gun)m.gun.visible=true; m.walk=(m.walk||0)+dt*WALK_SPD; m.anim.position.set(0,Math.abs(Math.sin(m.walk))*m.h*WALK_BOB,0); m.anim.rotation.z=Math.sin(m.walk*0.5)*WALK_SWAY; }   // 이동(달리기 모델 없음): 절차적 걷기
       else { if(m.inner)m.inner.visible=true; if(m.runInner)m.runInner.visible=false; if(m.gun)m.gun.visible=true; m.anim.position.set(0,0,0); m.anim.rotation.set(0,0,0); }   // 정지
+      if(it.airlift && AIR_FLOAT[it.id]){ m.anim.position.x=0; m.anim.position.y=AIR_LIFT_PX/(SCALE[it.id]||MODEL_SCALE); m.anim.rotation.z=0; m.anim.rotation.x=0; if(m.shadow) m.shadow.material.opacity=0.26; }   // 공중 비행체: 메인 sync와 동일한 고정 부양(airlift 플래그 있을 때만 — 직스 등 기존 호출 무영향)
       if(it.face!=null){ m.yaw.rotation.y=it.face; }
       m.holder.scale.setScalar((SCALE[it.id]||MODEL_SCALE)*mul*(it.scl||1));
       m.holder.position.set(it.x*W, (H-it.y*H)-Y_DROP-(it.yoff||0), 0);   // yoff=화면 아래로 내림
