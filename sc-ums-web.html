@@ -10126,9 +10126,14 @@ TECH_SPEC.aetherial={   // 프로토스: 건물·유닛 실드 자동재생(기�
     larva:{hp:100,ar:0,sh:80,atk:100,at:'norm',rng:8,t:70,abil:'스캐럽 100→125·스플'} }
 };
 const _AT_KO={norm:'일반',conc:'진동',expl:'폭발','-':'무공격'};
-function techUnitSpec(race,id){ const s=TECH_SPEC[race]; const cur=(s&&s.unit&&s.unit[id]); if(cur) return cur;
-  const b=(typeof Udef==='function')?Udef(id):(typeof U!=='undefined'?U[id]:null); if(!b) return null;   // 커스텀·신규 로스터 유닛: 공용 U/Udef에서 합성(별도 표 없어도 표시 통일)
-  return { hp:b.hp||0, ar:b.armor||0, sh:b.shield||0, atk:b.dmg||0, at:'norm', rng:(b.range>0?'-':0),  t:15, abil:'' }; }
+function techUnitSpec(race,id){ const s=TECH_SPEC[race]; const cur=(s&&s.unit&&s.unit[id]);
+  const b=(typeof Udef==='function')?Udef(id):(typeof U!=='undefined'?U[id]:null);
+  const _sb=(typeof G!=='undefined'&&G.sandbox&&!G.strike);
+  const _tiles=(v)=>(v>0?Math.round(v/((typeof SB_ANCHOR_RANGE!=='undefined')?SB_ANCHOR_RANGE:0.035)):0);   // 내부 사거리 → SC 타일(메인 배너·base_stats와 동일 환산)
+  if(cur){ if(_sb && b) return Object.assign({}, cur, { hp:b.hp||0, sh:b.shield||0, ar:b.armor||0, atk:b.dmg||0, rng:_tiles(b.range) });   // 관리자: 전투 수치(체력·실드·방어·공격·사거리)는 base_stats 단일 출처로 덮어씀 — 능력·빌드시간·공격타입 등 카드 전용 메타만 유지(수치 이중관리·드리프트 방지)
+    return cur; }
+  if(!b) return null;   // 커스텀·신규 로스터 유닛: 공용 U/Udef에서 합성(별도 표 없어도 표시 통일)
+  return { hp:b.hp||0, ar:b.armor||0, sh:b.shield||0, atk:b.dmg||0, at:'norm', rng:_tiles(b.range),  t:15, abil:'' }; }
 function techBldgSpec(race,k){ const s=TECH_SPEC[race]; return (s&&s.bldg&&s.bldg[k])||null; }
 // ── 테크트리 → 커맨드 그리드 모델 어댑터(재사용) ──
 function techGetBldg(race,k){ const t=TECH_TREE[race]; return t&&t.buildings.find(b=>b.k===k); }
@@ -12392,7 +12397,10 @@ function makeModel(id){
     let clip=ab.clips[0];
     if(clip){ const _aspd=(typeof ATK_SPEED_OVR!=='undefined'&&ATK_SPEED_OVR[id])||ATK_SPEED, _afr=(typeof ATK_FRACTION_OVR!=='undefined'&&ATK_FRACTION_OVR[id])||ATK_FRACTION; atkDur=(id==='worker_human')?1.7:((clip.duration||0.45)*_afr/_aspd); clip=clip.clone(); let _rootB=null; if(id==='worker_human'||id==='blade'||id==='snapper'){ atkInner.traverse(o=>{ if(!_rootB && o.isBone && !(o.parent&&o.parent.isBone)) _rootB=o.name; }); } clip.tracks=clip.tracks.filter(t=>t.name.endsWith('.quaternion') && !(_rootB && t.name===_rootB+'.quaternion')); // 회전만(제자리). 루트 본 회전 제외(일꾼·워든·스내퍼: 몸통이 돌아간 채 끝나 방향 튀는 문제 방지)
       atkAction=atkMixer.clipAction(clip); if(typeof ATK_LOOP!=='undefined'&&ATK_LOOP[id]){ atkAction.setLoop(THREE.LoopRepeat,Infinity); } else { atkAction.setLoop(THREE.LoopOnce,1); atkAction.clampWhenFinished=true; } atkAction.timeScale=(id==='worker_human')?((clip.duration||1)/0.55):_aspd; }   // 배속(유닛별) — 일꾼: 잽(0.55s 완결) 후 정지 / ATK_LOOP=연속 루프
-    if(id==='blade'){ rimModel(atkInner, unitRim(id)); attachSwords(atkInner, base.h); } }   // 워든 공격: 림 + 쌍검(손 본)
+    if(id==='blade'){ rimModel(atkInner, unitRim(id)); attachSwords(atkInner, base.h); }
+    else if(id==='worker_human' && inner){   // 유니온 엔지니어 공격(펀치) GLB는 베이스 텍스처(webp)가 손상돼 디코드 실패 → 맵이 없어 흰색으로 렌더됨(공격모션에서만 하얗게 뜨는 원인). 정상인 정지(idle) 워커 머티리얼을 펀치 모델 메시에 그대로 입혀 색·텍스처를 통일(같은 캐릭터 재익스포트라 UV 동일)
+      let _im=null; inner.traverse(o=>{ if(!_im && o.isMesh && o.material) _im=Array.isArray(o.material)?o.material[0]:o.material; });
+      if(_im) atkInner.traverse(o=>{ if(o.isMesh) o.material=_im; }); } }   // 워든 공격: 림 + 쌍검(손 본)
   const yaw=new THREE.Group(); yaw.add(anim);                // 적 방향으로 제자리 회전(세운 채 yaw)
   const view=new THREE.Group(); view.add(yaw); view.rotation.x=VIEW_TILT;  // 카메라 부감(소량, 발끝 기준)
   // 발밑 선택 링(스타식 셀렉션 써클) — 선택(드래그) 시에만 표시. 링 폭은 모든 유닛 동일(시각적 두께 균일), 반지름만 유닛 크기 비례
