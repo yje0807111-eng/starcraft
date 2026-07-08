@@ -9689,7 +9689,7 @@ function loop(now){
       for(const e of (G.tech.ents||[])){ if(e.type!=='unit'&&e.type!=='worker') continue; const mk=(typeof _techEntModel==='function')?_techEntModel(e):null; if(!mk) continue;   // 🚶 일꾼·생산 유닛 3D
         const _selu=(G.tech.sel===e.eid)||(G.tech.selU&&G.tech.selU.indexOf(e.eid)>=0);
         const _isAir=(typeof FXLAB_AIR!=='undefined')&&FXLAB_AIR.has(mk);   // 공중 유닛: 메인과 동일한 고정 부양(syncBuild airlift)
-        list.push({uid:'tu_'+e.eid, id:mk, x:(e.x-_v.x)*_v.zoom+0.5, y:(e.y-_v.y)*_v.zoom+0.5, face:(typeof CST_YAW!=='undefined'?CST_YAW:0)+(e.face||0), yoff:(typeof TECH_UNIT_YOFF!=='undefined'?TECH_UNIT_YOFF:6), moving:(e.tx!=null), sel:_selu, airlift:_isAir, yawFix:true}); }   // face = 건설뷰 기준각 + 이동방향 + (syncBuild서)모델별 정면 보정
+        list.push({uid:'tu_'+e.eid, id:mk, x:(e.x-_v.x)*_v.zoom+0.5, y:(e.y-_v.y)*_v.zoom+0.5, face:(e.face||0), yoff:(typeof TECH_UNIT_YOFF!=='undefined'?TECH_UNIT_YOFF:6), moving:(e.tx!=null), sel:_selu, airlift:_isAir, yawFix:true}); }   // face = 이동방향 + (syncBuild서)모델별 정면 보정 — 메인과 100% 동일(CST_YAW는 건물 전용 아트 오프셋, 유닛은 미적용)
       window.M3D.syncBuild(list, W, H, dt, _v.zoom);
     } else if(mcv) mcv.style.display='none';
     const _fcv=document.getElementById('cvFx');   // 이동 트레일(메인과 동일 이펙트) — 3D 표시 중일 때만
@@ -12188,13 +12188,13 @@ function applyTeamRim(m, hex){ if(!m||m._teamRim===hex) return; m._teamRim=hex;
   retint(m.inner); retint(m.runInner); retint(m.atkInner); retint(m.stayInner); }
 // 샌드박스: 적 표시 유닛을 아군처럼 — 머티리얼 복제 후 본체색을 아군 톤 + 공용 플레이어 림(시작-틴트 경합 무관, 베이스/일반게임 무영향)
 const _SB_ALLY=new THREE.Color(0x3f7fd0);
-function sandboxAllyFix(m){ if(!m||m._sbAlly) return; m._sbAlly=true;
+function sandboxAllyFix(m, rimOnly){ if(!m||m._sbAlly) return; m._sbAlly=true;
   const fix=function(root){ if(!root) return; root.traverse(o=>{ if(!o.isMesh||!o.material) return;
     const arr=Array.isArray(o.material), ms=arr?o.material:[o.material];
     const out=ms.map(mat=>{ if(!mat) return mat; const c=mat.clone();
-      if(c.color) c.color.lerp(_SB_ALLY,0.6);
-      if(c.emissive && (c.emissive.r+c.emissive.g+c.emissive.b)>0.05) c.emissive.lerp(_SB_ALLY,0.55);
-      if('emissive' in c) addRim(c, playerRim, rimIntU);
+      if(!rimOnly){ if(c.color) c.color.lerp(_SB_ALLY,0.6);
+        if(c.emissive && (c.emissive.r+c.emissive.g+c.emissive.b)>0.05) c.emissive.lerp(_SB_ALLY,0.55); }
+      if('emissive' in c) addRim(c, playerRim, rimIntU);   // 테두리(림)를 아군색으로 통일(적/기타 baked 림 덮어씀)
       c.needsUpdate=true; return c; });
     o.material=arr?out:out[0]; }); };
   fix(m.inner); fix(m.runInner); fix(m.atkInner); fix(m.stayInner); }
@@ -12564,7 +12564,7 @@ window.M3D={
     for(const u of uList){ const _id=_mid(u); let m=models.get(u.uid); if(!m){ m=makeModel(_id); if(!m) continue; m.kind='unit'; models.set(u.uid,m); }
       if(u.foeTint) strikeFoeFix(m);            // 직스 적군: 본체 통일 적색 틴트(모델 원래색 무관)
       else if(u.rimCol) applyTeamRim(m, u.rimCol);   // 진영색 본체 림(아군)
-      if(typeof window!=='undefined' && window.__sandbox && u._enemyDisp) sandboxAllyFix(m);   // 샌드박스: 적 표시 유닛도 아군 외형(색+림 통일)
+      if(typeof window!=='undefined' && window.__sandbox) sandboxAllyFix(m, true);   // 샌드박스: 모든 유닛 테두리(림)를 아군색 한 가지로 통일 — 유닛은 적/아군 고정이 아님(오버로드·옵저버 등 ENEMY_MODEL의 baked 적색 림 덮어씀)
       if(u.atBoss){ m.holder.visible=false; continue; }   // 보스방 파견 유닛은 트랙에 표시 안 함
       const px=u.x*W, worldY=H-u.y*H;
       if(u.ringCol){ m.rim.visible=true; m.rim.material.color.set(u.ringCol); m.rim.material.opacity=0.6; }   // 직스: 발밑 링=팀색(아군/적군 구분) — 살짝 연하게
