@@ -12858,7 +12858,7 @@ window.M3D={
         seenGhost.add(it.id); g.holder.visible=true; if(g.inner)g.inner.visible=true; if(g.shadow) g.shadow.visible=false;   // 원형 그림자 숨김(사각 footprint가 지면 역할 · 하단 넘침 방지)
         if(it.face!=null) g.yaw.rotation.y=it.face + (MODEL_YAW_OFF[it.id]||0);
         g.holder.scale.setScalar((SCALE[it.id]||MODEL_SCALE)*mul*(it.scl||1));
-        g.holder.position.set(it.x*W, (H-it.y*H)-Y_DROP-(it.yoff||0), 0); g.holder.rotation.x=it.pitch||0;
+        g.holder.position.set(it.x*W, (H-it.y*H)-Y_DROP-(it.yoff||0), it.y*H*2.5); g.holder.rotation.x=it.pitch||0;   // z=화면 아래일수록 앞(painter 정렬 — 겹칠 때 아래 건물이 위 건물을 가림)
         if(it.fitW){ const _fw=it.fitW*(CB_FIT_MUL[it.id]||1); g.holder.updateWorldMatrix(true,true); let _bb=new THREE.Box3().setFromObject(g.yaw); const _pw=_bb.max.x-_bb.min.x; if(_pw>0.5){ g.holder.scale.multiplyScalar(_fw/_pw); g.holder.updateWorldMatrix(true,true); _bb=new THREE.Box3().setFromObject(g.yaw); } g.holder.position.y += ((H-it.y*H)+1) - _bb.min.y; }   // 폭을 footprint에 꽉 맞춤(모델별 보정 배율) + 실제 최하단을 footprint 하단 1px 위로
         continue; }
       seen.add(it.uid);
@@ -12872,7 +12872,7 @@ window.M3D={
         if(it.yawFix){ let _d=_tgt-m.yaw.rotation.y; _d=Math.atan2(Math.sin(_d),Math.cos(_d)); m.yaw.rotation.y+=_d*Math.min(1,dt*ROT_SPD); }   // 메인 sync와 동일: 부드럽게 회전 보간(끊김 방지)
         else m.yaw.rotation.y=_tgt; }
       m.holder.scale.setScalar((SCALE[it.id]||MODEL_SCALE)*mul*(it.scl||1));
-      m.holder.position.set(it.x*W, (H-it.y*H)-Y_DROP-(it.yoff||0), 0);   // yoff=화면 아래로 내림
+      m.holder.position.set(it.x*W, (H-it.y*H)-Y_DROP-(it.yoff||0), it.y*H*2.5);   // yoff=화면 아래로 내림 · z=화면 아래일수록 앞(겹칠 때 아래 건물이 앞에 보임)
       m.holder.rotation.x = it.pitch||0;   // 건물 사선 틸트(SC식 부감) — 미지정=0(기존 동작 유지)
       if(it.fitW){ const _fw=it.fitW*(CB_FIT_MUL[it.id]||1); m.holder.updateWorldMatrix(true,true); let _bb=new THREE.Box3().setFromObject(m.yaw); const _pw=_bb.max.x-_bb.min.x; if(_pw>0.5){ m.holder.scale.multiplyScalar(_fw/_pw); m.holder.updateWorldMatrix(true,true); _bb=new THREE.Box3().setFromObject(m.yaw); } m.holder.position.y += ((H-it.y*H)+1) - _bb.min.y; }   // 폭을 footprint에 꽉 맞춤(모델별 보정 배율) + 실제 최하단을 footprint 하단 1px 위로
       if(m.anim && typeof it.id==='string' && it.id.indexOf('cb_')!==0){ m.holder.updateWorldMatrix(false,true); const _cc=new THREE.Box3().setFromObject(m.anim).getCenter(new THREE.Vector3()); _cc.project(camera); m.centerN={ x:_cc.x*0.5+0.5, y:0.5-_cc.y*0.5 }; } else m.centerN=null;   // 유닛(건물 cb_ 제외) 몸 중앙 2D 투영 — 이동 트레일 원점(메인 sync와 동일, 팬·줌·부양 정확 반영)
