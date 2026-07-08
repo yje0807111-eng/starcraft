@@ -9112,49 +9112,54 @@ function emitEngineExhaust(u, x, y, mx, my, dt){
       vx:-mx*130+(Math.random()-0.5)*34, vy:-my*130+(Math.random()-0.5)*34,
       life:0.2+Math.random()*0.1, flash:true, color:q?ec[0]:ec[1]}); }
 }
-// 이동 명령: 각 유닛이 자기 대형 칸으로 걸어감. 가는 길의 다른 유닛은 '돌아서' 회피.
+// ─── 공용 유닛 이동 물리(단일 출처) — 관성·유닛 회피·목표 감속·정착·이동방향 응시. 메인·건설 등 모든 구역이 이 함수를 그대로 호출 ───
+// u에 x,y,vx,vy,face,moving,_mvStuck,_mvPrevD를 직접 갱신. tgt={x,y}. sizeKey=스탯/크기 키(U[]), airKey=공중판정·모델스케일 키.
+// o:{ GW,GH, clamp(x,y)->{x,y}, staticN:[{ref,x,y,sizeKey,airKey}](회피할 정지 유닛), transport, extraSteer(dirx,diry)->{sx,sy}|null(건물 회피 등) }
+// 반환: {done:true} 도착·정착 / {done:false,mx,my,air} 이동 중
+function stepUnitMove(u, tgt, sizeKey, airKey, dt, o){
+  const def=U[sizeKey]||{};
+  let dx=tgt.x-u.x, dy=tgt.y-u.y; const d=Math.hypot(dx,dy);
+  const _air=(typeof FXLAB_AIR!=='undefined' && FXLAB_AIR.has(airKey));   // 공중유닛 = 관성 이동
+  if(d<=0.012){ u.vx=0; u.vy=0; u._mvStuck=0; u._mvPrevD=null; return {done:true}; }   // 도착
+  if(u._mvPrevD!=null && d > u._mvPrevD-0.0006) u._mvStuck=(u._mvStuck||0)+dt; else u._mvStuck=0;   // 혼잡·클램프로 못 가까워지면 정착(공중은 더 관대)
+  u._mvPrevD=d;
+  if(u._mvStuck>(_air?1.6:0.6)){ u.vx=0; u.vy=0; u._mvStuck=0; u._mvPrevD=null; return {done:true}; }
+  let dirx=dx/d, diry=dy/d, sx=0, sy=0;
+  if(!o.transport && o.staticN) for(const n of o.staticN){ if(n.ref===u) continue;   // 정지 유닛 회피(같은 레이어만 — 지상↔공중은 통과)
+    if((typeof FXLAB_AIR!=='undefined' && FXLAB_AIR.has(n.airKey))!==_air) continue;
+    const ox=(n.x-u.x)*o.GW, oy=(n.y-u.y)*o.GH, od=Math.hypot(ox,oy);
+    const avoidR=((((U[sizeKey]||{}).size)||14)*0.62 + (((U[n.sizeKey]||{}).size)||14)*0.62)*2.4;
+    if(od>0.01 && od<avoidR){ const w=1-od/avoidR; sx-=(ox/od)*w; sy-=(oy/od)*w;   // 밀어내기
+      if((ox/od)*dirx+(oy/od)*diry>0.25){ const tx=-diry, ty=dirx, side=(tx*ox+ty*oy)>=0?-1:1; sx+=tx*side*w*1.6; sy+=ty*side*w*1.6; } }   // 전방 장애물 → 접선으로 비킴
+  }
+  if(o.extraSteer){ const es=o.extraSteer(dirx,diry); if(es){ sx+=es.sx; sy+=es.sy; } }   // 건설: 건물 회피(공중은 아래 mx=dirx로 자동 무시 → 위로 비행)
+  let mx, my;
+  if(_air){ mx=dirx; my=diry; } else { mx=dirx+sx; my=diry+sy; const ml=Math.hypot(mx,my)||1; mx/=ml; my/=ml; }   // 지상=회피 반영 / 공중=목표 직선
+  const maxSpd=(def.moveSpd||0.13)*MOVE_MUL; let dvx=mx*maxSpd, dvy=my*maxSpd;
+  if(d<AIR_ARRIVE){ const _f=d/AIR_ARRIVE; dvx*=_f; dvy*=_f; }   // 목표 근처 감속(안착)
+  const _sz=(window.M3D&&M3D.scaleOf)?M3D.scaleOf(airKey):13;
+  const _acc=_air?AIR_ACCEL:Math.max(GA_MIN, GA_MAX-(_sz-11)*GA_SLOPE);   // 공중=강한 관성 / 지상=크기 클수록 관성↑
+  const _k=Math.min(1, _acc*dt); u.vx=(u.vx||0)+(dvx-(u.vx||0))*_k; u.vy=(u.vy||0)+(dvy-(u.vy||0))*_k;
+  const cl=o.clamp(u.x+u.vx*dt, u.y+u.vy*dt); u.x=cl.x; u.y=cl.y; u.moving=true;
+  if(def.model3d){ const _spd=Math.hypot(u.vx,u.vy); const fa=(_spd>0.0004)?Math.atan2(u.vx,u.vy):Math.atan2(mx,my); u.face=Math.round(fa/(Math.PI/8))*(Math.PI/8); }   // 이동방향 응시(π/8 스냅)
+  return {done:false, mx, my, air:_air};
+}
+// 이동 명령: 각 유닛이 자기 대형 칸으로 걸어감. 물리는 공용 stepUnitMove.
 function stepCmdMove(dt){
   for(const u of G.units) u.moving=false;   // 매 프레임 초기화(멈춘 유닛은 공격 가능)
-  const movers=G.units.filter(u=>u.moveTo&&!u.fixed&&!u.atBoss);   // 이동 명령이 살아있는 유닛만(선택 여부 무관)
+  const movers=G.units.filter(u=>u.moveTo&&!u.fixed&&!u.atBoss);   // 이동 명령이 살아있는 유닛만
   if(!movers.length){ if(cmdMove&&cmdMove.issued) cmdMove=null; return; }
-  let moving=false; const selSet=new Set(movers.map(u=>u.uid));   // 이동 중 유닛끼리는 회피 제외(대형 유지)
+  const moverSet=new Set(movers.map(u=>u.uid));   // 이동 중 유닛끼리는 회피 제외(대형 유지)
+  const staticN=[]; for(const o2 of G.units){ if(moverSet.has(o2.uid)) continue; staticN.push({ref:o2, x:o2.x, y:o2.y, sizeKey:o2.id, airKey:o2.gmodel||o2.id}); }
+  let moving=false;
   for(const u of movers){
-    const def=U[u.id]; const spd=(def.moveSpd||0.13)*MOVE_MUL*dt;   // 유닛별 이동속도
-    const slot=u.moveTo;
-    let dx=slot.x-u.x, dy=slot.y-u.y; const d=Math.hypot(dx,dy);
-    const _air=(typeof FXLAB_AIR!=='undefined' && FXLAB_AIR.has(u.gmodel||u.id));   // 공중유닛 = 관성 이동
-    if(d<=0.012){ u.moveTo=null; u._mvStuck=0; u._mvPrevD=null; u.vx=0; u.vy=0; continue; }   // 도착 → 명령 종료(속도 정지)
-    // 혼잡·구석 클램프로 더 못 가까워지면 정착(공중은 관성 반동 허용 → 더 관대)
-    if(u._mvPrevD!=null && d > u._mvPrevD-0.0006) u._mvStuck=(u._mvStuck||0)+dt; else u._mvStuck=0;
-    u._mvPrevD=d;
-    if(u._mvStuck>(_air?1.6:0.6)){ u.moveTo=null; u._mvStuck=0; u._mvPrevD=null; u.vx=0; u.vy=0; continue; }
-    let dirx=dx/d, diry=dy/d;
-    // 장애물 회피 조향: 가까운 '비이동' 유닛을 피해 옆으로 돌아감
-    let sx=0, sy=0;
-    if(!isTransport(u)) for(const o of G.units){ if(o===u||selSet.has(o.uid)) continue;
-      if((typeof FXLAB_AIR!=='undefined' && FXLAB_AIR.has(o.gmodel||o.id))!==_air) continue;   // 다른 레이어(지상↔공중)는 회피 안 함 — 지상유닛이 공중유닛 아래로 통과
-      const ox=(o.x-u.x)*GW, oy=(o.y-u.y)*GH, od=Math.hypot(ox,oy);
-      const avoidR=(collideR(u)+collideR(o))*2.4;
-      if(od>0.01 && od<avoidR){ const w=1-od/avoidR;
-        sx-=(ox/od)*w; sy-=(oy/od)*w;                              // 밀어내기
-        if((ox/od)*dirx+(oy/od)*diry>0.25){                        // 전방 장애물 → 접선으로 비킴
-          const tx=-diry, ty=dirx, side=(tx*ox+ty*oy)>=0?-1:1;
-          sx+=tx*side*w*1.6; sy+=ty*side*w*1.6; }
-      }
-    }
-    let mx, my;
-    if(_air){ mx=dirx; my=diry; } else { mx=dirx+sx; my=diry+sy; const ml=Math.hypot(mx,my)||1; mx/=ml; my/=ml; }   // 지상=회피 반영
-    const maxSpd=(def.moveSpd||0.13)*MOVE_MUL; let dvx=mx*maxSpd, dvy=my*maxSpd;
-    if(d<AIR_ARRIVE){ const _f=d/AIR_ARRIVE; dvx*=_f; dvy*=_f; }   // 목표 근처 감속(안착)
-    const _sz=(window.M3D&&M3D.scaleOf)?M3D.scaleOf(u.gmodel||u.id):13;
-    const _acc=_air?AIR_ACCEL:Math.max(GA_MIN, GA_MAX-(_sz-11)*GA_SLOPE);   // 공중=강한 관성 / 지상=크기 클수록 관성↑(작은 유닛≈즉시)
-    const _k=Math.min(1, _acc*dt); u.vx=(u.vx||0)+(dvx-(u.vx||0))*_k; u.vy=(u.vy||0)+(dvy-(u.vy||0))*_k;
-    const cl=clampInner(u.x+u.vx*dt, u.y+u.vy*dt); u.x=cl.x; u.y=cl.y; moving=true; u.moving=true;
-    if(def.model3d){ const _sp=Math.hypot(u.vx,u.vy); if(_sp>0.0004){ const fa=Math.atan2(u.vx,u.vy); u.face=Math.round(fa/(Math.PI/8))*(Math.PI/8); } else { const fa=Math.atan2(mx,my); u.face=Math.round(fa/(Math.PI/8))*(Math.PI/8); } }
-      if(AIR_FLOAT_GIDS[u.gid]) emitEngineExhaust(u, u.x*GW, u.y*GH-16, mx, my, dt);   // 비행체: 엔진 분사  // 이동 방향을 바라봄
+    const r=stepUnitMove(u, u.moveTo, u.id, u.gmodel||u.id, dt, { GW, GH, clamp:clampInner, staticN, transport:isTransport(u) });
+    if(r.done){ u.moveTo=null; continue; }   // 도착·정착 → 명령 종료
+    moving=true;
+    if(AIR_FLOAT_GIDS[u.gid]) emitEngineExhaust(u, u.x*GW, u.y*GH-16, r.mx, r.my, dt);   // 비행체: 엔진 분사
   }
   if(moving) renderUnits();
-  else if(cmdMove&&cmdMove.issued) cmdMove=null; // 전원 도착 → 제스처 상태 종료(분리가 간격 유지)
+  else if(cmdMove&&cmdMove.issued) cmdMove=null; // 전원 도착 → 제스처 상태 종료
 }
 const vm=document.getElementById('vMain');
 // 포인터 이벤트 + 포인터 캡처(마우스·터치 통합):
@@ -10152,24 +10157,23 @@ function techFinishProduce(q){ const race=G.tech.race; G.tech.units[q.id]=(G.tec
   const _ex=Math.max(0.04,Math.min(0.96,bx+Math.cos(ang)*rr)), _ey=Math.max(0.18,Math.min(0.96,by+0.1+Math.sin(ang)*rr*0.55));
   const _isWk=(q.id===(TECH_WORKER[race]||'worker_human'));   // 생산된 일꾼도 초기 일꾼과 동일한 type:'worker'(건설 가능)
   G.tech.ents.push(_isWk?{eid:G.tech.eseq++, type:'worker', x:_ex, y:_ey}:{eid:G.tech.eseq++, type:'unit', uid:q.id, x:_ex, y:_ey}); }
-// 건설 맵 유닛 이동: 건물을 관통하지 않고 돌아가도록 조향(바깥 밀어내기 + 접선 미끄러짐). 목표가 건물 안이면 그 건물은 장애물서 제외(그리로 가는 중).
-function _techAvoidSteer(e, tx, ty, hx, hy, obst){
-  if(!obst||!obst.length) return {hx,hy};
-  const GWp=(typeof GW!=='undefined'&&GW>0)?GW:390, race=G.tech.race, MM=(typeof TECH_MODEL!=='undefined'&&TECH_MODEL[race])||{};
-  let ax=0, ay=0, blocked=false;
+// 건설 전용 추가 조향: 건물을 관통하지 않고 돌아가도록(바깥 밀어내기 + 접선 미끄러짐). stepUnitMove.extraSteer로 sx,sy 가산(지상만 반영 — 공중은 stepUnitMove에서 자동 무시).
+// 목표(tx,ty)가 건물 안이면 그 건물은 제외(그리로 가는 중). 반환 {sx,sy}.
+function _techBldgSteer(e, tx, ty, dirx, diry, obst){
+  if(!obst||!obst.length) return {sx:0,sy:0};
+  const race=G.tech.race, MM=(typeof TECH_MODEL!=='undefined'&&TECH_MODEL[race])||{}, GWp=(typeof GW!=='undefined'&&GW>0)?GW:390;
+  let ax=0, ay=0;
   for(const b of obst){ const cfg=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[MM[b.bk]]:null, s=(cfg&&cfg.s)||50;
     const r=Math.min(0.13,(s*0.5*1.2)/GWp);   // 건물 회피 반경(정규화)
     const rdx=e.x-b.x, rdy=e.y-b.y, dist=Math.hypot(rdx,rdy)||1e-4;
     if(dist>r+0.10) continue;   // 충분히 멀면 무시
     const tdx=tx-b.x, tdy=ty-b.y; if(tdx*tdx+tdy*tdy < r*r) continue;   // 목표가 건물 안 → 제외
-    if(dist>r && ((b.x-e.x)*hx+(b.y-e.y)*hy)<=0) continue;   // 건물이 진행 방향 뒤 & 바깥 → 무시
-    blocked=true;
+    if(dist>r && ((b.x-e.x)*dirx+(b.y-e.y)*diry)<=0) continue;   // 건물이 진행 방향 뒤 & 바깥 → 무시
     const push=Math.max(0,(r+0.015-dist))/r; ax+=(rdx/dist)*push*1.1; ay+=(rdy/dist)*push*1.1;   // 바깥으로 밀기
-    const t1x=-rdy/dist, t1y=rdx/dist, dot1=t1x*hx+t1y*hy;   // 접선 — 진행방향에 부합하는 쪽으로 미끄러져 돌아감
+    const t1x=-rdy/dist, t1y=rdx/dist, dot1=t1x*dirx+t1y*diry;   // 접선 — 진행방향에 부합하는 쪽으로 미끄러져 돌아감
     ax+=(dot1>=0?t1x:-t1x)*0.95; ay+=(dot1>=0?t1y:-t1y)*0.95;
   }
-  if(!blocked) return {hx,hy};
-  const nx=hx+ax, ny=hy+ay, nl=Math.hypot(nx,ny); if(nl<1e-4) return {hx,hy}; return {hx:nx/nl, hy:ny/nl};
+  return {sx:ax, sy:ay};
 }
 // 건설 맵 이동 트레일 — 메인 stepMoveTrails와 동일 레시피(TRAIL_UNIT/emitMoveTrail)를 건설 뷰(팬/줌) 좌표로 적용
 function techMoveTrails(dt){ if(typeof FX==='undefined'||typeof emitMoveTrail==='undefined'||!G.tech) return;
@@ -10187,37 +10191,15 @@ function techMoveTrails(dt){ if(typeof FX==='undefined'||typeof emitMoveTrail===
   FX.drawShots(s.ctx, G._techFx, (x,y)=>({x:x*s.W, y:y*s.H}), 1.0); }
 function techTick(dt){ if(!G.tech) return; let active=false, done=false;
   for(const e of G.tech.ents){ if(e.type==='bldg'&&e.bt>0){ if(!e.waiting){ e.bt=Math.max(0,e.bt-dt); if(e.bt<=0){ techFinishBuild(e); done=true; } } active=true; } }   // waiting=일꾼 미도착 → 카운트다운 정지
+  // 🚶 유닛 이동 — 메인과 100% 동일한 공용 stepUnitMove 사용(관성·회피·감속·정착·응시). 건물 회피만 건설 전용 extraSteer로 추가(지상만).
   const _obst=G.tech.ents.filter(x=>x.type==='bldg');   // 회피 대상 건물(건설 중 포함)
-  // 🚶 유닛 이동 — 메인 stepCmdMove와 동일 물리: 유닛별 U.moveSpd, 공중/지상 레이어, 관성(공중=강한 관성·지상=크기 비례), 목표 감속, 정체 정착, 유닛끼리 회피 + 건물 돌아가기(지상만 — 공중은 넘어감)
+  const _clamp=(x,y)=>({x:Math.max(0.02,Math.min(0.98,x)), y:Math.max(0.12,Math.min(0.98,y))});
+  const _staticN=[]; for(const o of G.tech.ents){ if((o.type!=='unit'&&o.type!=='worker')||o.tx!=null) continue; const k=_techEntKey(o); _staticN.push({ref:o, x:o.x, y:o.y, sizeKey:k, airKey:k}); }   // 정지 유닛만(이동 중 유닛끼리는 회피 제외)
   for(const e of G.tech.ents){ if((e.type==='unit'||e.type==='worker')&&e.tx!=null){
-    const key=_techEntKey(e), _air=_techAirOf(e);
-    const dx=e.tx-e.x, dy=e.ty-e.y, d=Math.hypot(dx,dy);
-    const _end=()=>{ e.tx=null; e.ty=null; e.vx=0; e.vy=0; e._mvStuck=0; e._mvPrevD=null; e._airDest=null;
-      if(e.type==='worker'&&e.build!=null){ const bd=G.tech.ents.find(x=>x.eid===e.build); if(bd&&bd.waiting&&Math.hypot(bd.x-e.x,bd.y-e.y)<0.16){ bd.waiting=false; done=true; } } };   // 일꾼 도착(근접 포함) → 건설 시작
-    if(d<=0.012){ if(e._airDest){ e.tx=e._airDest.x; e.ty=e._airDest.y; e._airDest=null; e._mvStuck=0; e._mvPrevD=null; active=true; continue; }   // 공중: 중앙 집결 완료 → 자기 대형 자리로 퍼짐
-      e.x=e.tx; e.y=e.ty; _end(); active=true; continue; }   // 도착 → 명령 종료
-    if(e._mvPrevD!=null && d>e._mvPrevD-0.0006) e._mvStuck=(e._mvStuck||0)+dt; else e._mvStuck=0;   // 혼잡·클램프로 더 못 가까워지면 정착
-    e._mvPrevD=d;
-    if(e._mvStuck>(_air?1.6:0.6)){ _end(); active=true; continue; }
-    let hx=dx/d, hy=dy/d;
-    if(!_air){
-      const _st=_techAvoidSteer(e, e.tx, e.ty, hx, hy, _obst); hx=_st.hx; hy=_st.hy;   // 🧭 건물 돌아가기(지상)
-      let sx=0, sy=0; const GWp=GW||390, GHp=GH||390;   // 유닛끼리 회피(메인과 동일: 정지 유닛만, 같은 레이어만)
-      for(const o of G.tech.ents){ if(o===e||o.tx!=null||(o.type!=='unit'&&o.type!=='worker')) continue;
-        if(_techAirOf(o)) continue;
-        const ox=(o.x-e.x)*GWp, oy=(o.y-e.y)*GHp, od=Math.hypot(ox,oy);
-        const avoidR=(((U[key]||{}).size||14)*0.62+((U[_techEntKey(o)]||{}).size||14)*0.62)*2.4;
-        if(od>0.01&&od<avoidR){ const w=1-od/avoidR; sx-=(ox/od)*w; sy-=(oy/od)*w;
-          if((ox/od)*hx+(oy/od)*hy>0.25){ const tx2=-hy, ty2=hx, side=(tx2*ox+ty2*oy)>=0?-1:1; sx+=tx2*side*w*1.6; sy+=ty2*side*w*1.6; } } }
-      hx+=sx; hy+=sy; const hl=Math.hypot(hx,hy)||1; hx/=hl; hy/=hl;
-    }
-    const maxSpd=_techSpdOf(e); let dvx=hx*maxSpd, dvy=hy*maxSpd;
-    const _AR=(typeof AIR_ARRIVE!=='undefined')?AIR_ARRIVE:0.05; if(d<_AR){ const f=d/_AR; dvx*=f; dvy*=f; }   // 목표 근처 감속(안착)
-    const _sz=(window.M3D&&M3D.scaleOf)?M3D.scaleOf(key):13;
-    const _acc=_air?((typeof AIR_ACCEL!=='undefined')?AIR_ACCEL:5.0):Math.max((typeof GA_MIN!=='undefined')?GA_MIN:10, ((typeof GA_MAX!=='undefined')?GA_MAX:40)-(_sz-11)*((typeof GA_SLOPE!=='undefined')?GA_SLOPE:2.7));
-    const _k=Math.min(1,_acc*dt); e.vx=(e.vx||0)+(dvx-(e.vx||0))*_k; e.vy=(e.vy||0)+(dvy-(e.vy||0))*_k;
-    e.x=Math.max(0.02,Math.min(0.98,e.x+e.vx*dt)); e.y=Math.max(0.12,Math.min(0.98,e.y+e.vy*dt));
-    const _sp=Math.hypot(e.vx,e.vy), _fa=(_sp>0.0004)?Math.atan2(e.vx,e.vy):Math.atan2(hx,hy); e.face=Math.round(_fa/(Math.PI/8))*(Math.PI/8);   // 이동 방향 응시(메인과 동일: 속도 벡터 + π/8 스냅)
+    const key=_techEntKey(e);
+    const r=stepUnitMove(e, {x:e.tx,y:e.ty}, key, key, dt, { GW:GW||390, GH:GH||390, clamp:_clamp, staticN:_staticN, extraSteer:(dirx,diry)=>_techBldgSteer(e, e.tx, e.ty, dirx, diry, _obst) });
+    if(r.done){ e.tx=null; e.ty=null;
+      if(e.type==='worker'&&e.build!=null){ const bd=G.tech.ents.find(x=>x.eid===e.build); if(bd&&bd.waiting&&Math.hypot(bd.x-e.x,bd.y-e.y)<0.16){ bd.waiting=false; done=true; } } }   // 일꾼 도착 → 건설 시작
     active=true; } }
   if(G.tech.pend&&G.tech.pend.length){ const seen={}; for(let i=G.tech.pend.length-1;i>=0;i--){ const q=G.tech.pend[i]; if(seen[q.bk]){ continue; } seen[q.bk]=1; q.t=Math.max(0,q.t-dt); active=true; if(q.t<=0){ techFinishProduce(q); G.tech.pend.splice(i,1); done=true; } } }
   if(done) techUIRender(); else if(active) techMapRender(); }   // 완성=전체 갱신 / 진행중=맵만(진행바)
@@ -10350,7 +10332,6 @@ function _techS2W(sx,sy){ const v=techView(); return { x:(sx-0.5)/v.zoom+v.x, y:
 // 이동 파라미터 = 메인과 동일한 공용 자료 사용: 속도=U.moveSpd×MOVE_MUL · 공중 판정=FXLAB_AIR (별도 표 없음)
 function _techEntKey(e){ return (e.type==='worker')?(TECH_WORKER[G.tech.race]||'worker_human'):e.uid; }
 function _techAirOf(e){ return (typeof FXLAB_AIR!=='undefined')&&FXLAB_AIR.has(_techEntKey(e)); }
-function _techSpdOf(e){ const b=(typeof Udef==='function'?Udef(_techEntKey(e)):U[_techEntKey(e)])||{}; return (b.moveSpd||0.13)*(typeof MOVE_MUL!=='undefined'?MOVE_MUL:3.0); }
 const _btPtrs=new Map(); let _btPinch=null, _btBox=null, _btCmd=null, _btMoved=false, _btDown=null;
 function _btRect(){ const m=document.getElementById('cstMain'); return m?m.getBoundingClientRect():null; }
 // 충돌 반경 기반 동심원 대형 슬롯(메인 assignFormation과 동일 공식)
@@ -10362,14 +10343,11 @@ function _techRingSlots(list){ const slots=[{dx:0,dy:0}]; if(list.length<=1) ret
 function _techAssignMove(wx,wy){ const sel=(G.tech.selU||[]).map(id=>G.tech.ents.find(e=>e.eid===id)).filter(e=>e&&(e.type==='unit'||e.type==='worker')); if(!sel.length) return;
   const cx=Math.max(0.04,Math.min(0.96,wx)), cy=Math.max(0.16,Math.min(0.96,wy));
   const cX=x=>Math.max(0.04,Math.min(0.96,x)), cY=y=>Math.max(0.16,Math.min(0.96,y)), GWp=GW||390, GHp=GH||390;
+  // 집합 = 메인 assignFormation과 100% 동일: 공중=한 지점 스택(강한 관성으로 자연스럽게 뭉쳤다 퍼짐) / 지상=충돌 반경 동심원 대형
   const air=sel.filter(e=>_techAirOf(e)), ground=sel.filter(e=>!_techAirOf(e));
-  // 공중: 먼저 한 점(중앙)에 집결 → 도착하면 각자 대형 슬롯으로 서서히 퍼져 자리 잡음(_airDest)
-  const aslots=_techRingSlots(air);
-  air.forEach((e,i)=>{ e.tx=cx; e.ty=cy; e._mvStuck=0; e._mvPrevD=null;
-    e._airDest=(air.length>1)?{x:cX(cx+aslots[i].dx/GWp), y:cY(cy+aslots[i].dy/GHp)}:null; });
-  // 지상: 충돌 반경 동심원 대형으로 바로 배치
+  air.forEach(e=>{ e.tx=cx; e.ty=cy; e._mvStuck=0; e._mvPrevD=null; });
   const gslots=_techRingSlots(ground);
-  ground.forEach((e,i)=>{ e.tx=cX(cx+gslots[i].dx/GWp); e.ty=cY(cy+gslots[i].dy/GHp); e._mvStuck=0; e._mvPrevD=null; e._airDest=null; }); }   // 효과음은 다운 1회만(드래그 재지정 스팸 방지)
+  ground.forEach((e,i)=>{ e.tx=cX(cx+gslots[i].dx/GWp); e.ty=cY(cy+gslots[i].dy/GHp); e._mvStuck=0; e._mvPrevD=null; }); }   // 효과음은 다운 1회만(드래그 재지정 스팸 방지)
 function techPtrDown(ev){ if(!G.tech) return; const r=_btRect(); if(!r) return; if(ev.preventDefault)ev.preventDefault();
   _btPtrs.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
   const sx=(ev.clientX-r.left)/(r.width||1), sy=(ev.clientY-r.top)/(r.height||1);
@@ -12774,7 +12752,9 @@ window.M3D={
       else if(it.moving){ if(m.inner)m.inner.visible=true; if(m.runInner)m.runInner.visible=false; if(m.gun)m.gun.visible=true; m.walk=(m.walk||0)+dt*WALK_SPD; m.anim.position.set(0,Math.abs(Math.sin(m.walk))*m.h*WALK_BOB,0); m.anim.rotation.z=Math.sin(m.walk*0.5)*WALK_SWAY; }   // 이동(달리기 모델 없음): 절차적 걷기
       else { if(m.inner)m.inner.visible=true; if(m.runInner)m.runInner.visible=false; if(m.gun)m.gun.visible=true; m.anim.position.set(0,0,0); m.anim.rotation.set(0,0,0); }   // 정지
       if(it.airlift && AIR_FLOAT[it.id]){ m.anim.position.x=0; m.anim.position.y=AIR_LIFT_PX/(SCALE[it.id]||MODEL_SCALE); m.anim.rotation.z=0; m.anim.rotation.x=0; if(m.shadow) m.shadow.material.opacity=0.26; }   // 공중 비행체: 메인 sync와 동일한 고정 부양(airlift 플래그 있을 때만 — 직스 등 기존 호출 무영향)
-      if(it.face!=null){ m.yaw.rotation.y=it.face + (it.yawFix?(MODEL_YAW_OFF[it.id]||0):0); }   // yawFix=모델별 정면 보정(메인과 동일: 템페스트·레이서·팔콘 등 옆으로 틀어지는 모델 +90° 등). 플래그 없으면 무영향
+      if(it.face!=null){ const _tgt=it.face + (it.yawFix?(MODEL_YAW_OFF[it.id]||0):0);   // yawFix=모델별 정면 보정(템페스트·레이서·팔콘 등 옆으로 틀어지는 모델 +90° 등)
+        if(it.yawFix){ let _d=_tgt-m.yaw.rotation.y; _d=Math.atan2(Math.sin(_d),Math.cos(_d)); m.yaw.rotation.y+=_d*Math.min(1,dt*ROT_SPD); }   // 메인 sync와 동일: 부드럽게 회전 보간(끊김 방지)
+        else m.yaw.rotation.y=_tgt; }
       m.holder.scale.setScalar((SCALE[it.id]||MODEL_SCALE)*mul*(it.scl||1));
       m.holder.position.set(it.x*W, (H-it.y*H)-Y_DROP-(it.yoff||0), 0);   // yoff=화면 아래로 내림
       m.holder.rotation.x = it.pitch||0;   // 건물 사선 틸트(SC식 부감) — 미지정=0(기존 동작 유지)
