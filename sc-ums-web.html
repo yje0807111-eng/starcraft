@@ -1000,9 +1000,9 @@
   #btDesel.on{display:flex}
   #btDesel svg{filter:drop-shadow(0 0 5px var(--neon-glow))}
   #btDesel:active{transform:translateY(1px);border-color:var(--neon);box-shadow:0 0 12px var(--neon-glow)}
-  body.cstMode #chatBar, body.cstMode #chatLog, body.cstMode #miniWrap, body.cstMode #deselTop, body.cstMode #mergeFab, body.cstMode #skillFab, body.cstMode #pbossBtn, body.cstMode #autoFab, body.cstMode #btCtl{display:none !important}
+  body.cstMode #chatBar, body.cstMode #chatLog, body.cstMode #miniWrap, body.cstMode #deselTop, body.cstMode #mergeFab, body.cstMode #skillFab, body.cstMode #pbossBtn, body.cstMode #autoFab, body.cstMode #btCtl, body.cstMode #hud{display:none !important}   /* 건설=자체 상단바(.bmapTop)만 사용 → HUD 이중 표시 방지 */
   /* 상단 HUD(크레딧·에너지·인구·라운드·킬·시계)는 모든 구역 공통 고정 — 건설 탭에서도 표시. 건설맵 상단바는 그 아래로 */
-  body.cstMode .bmapTop{top:58px}
+  body.cstMode .bmapTop{top:0}   /* #hud 숨김 → 건설 자체 상단바를 최상단으로 */
   /* 적군 유닛 구분(붉은 링) */
   .unit.foe .ubox{box-shadow:0 0 0 2px rgba(255,66,66,.62),0 0 9px rgba(255,54,54,.5)!important}
   #cmdRow .selAll{align-self:stretch;display:flex;align-items:center;justify-content:center;padding:8px 9px;border-radius:var(--r-md);font-size:var(--fs-sm);flex:0 0 auto;white-space:nowrap}
