@@ -12170,7 +12170,7 @@ function tintModel(root, id){
         if(id==='cb_swarm_extractor'){ m.color.r*=1.24; m.color.g*=1.10; m.color.b*=1.26; }   // 익스트랙터: 원래 어둡고 초록 → 밝기↑·초록기↓
         else { m.color.r*=1.045; m.color.g*=1.02; m.color.b*=1.05; }                          // 그 외 건설 건물(전 종족): 익스트랙터와 같은 성격(밝기↑·초록기↓)을 아주 연하고 미세하게만
       }
-      if(m.emissiveMap && m.emissive && m.emissive.r>0.85 && m.emissive.g>0.85 && m.emissive.b>0.85){ m.emissive.setRGB(0,0,0); m.emissiveMap=null; m.needsUpdate=true; }   // 신규 GLB의 흰색 자체발광 베이크 제거 — 정지/이동 모델 색감·테두리 통일(바램 방지)
+      if(m.emissive && m.emissive.r>0.85 && m.emissive.g>0.85 && m.emissive.b>0.85 && ((m.emissiveIntensity==null)||m.emissiveIntensity>0.05)){ m.emissive.setRGB(0,0,0); if(m.emissiveMap) m.emissiveMap=null; m.needsUpdate=true; }   // 흰색 자체발광 베이크 제거(맵 유무 무관) — 공격 모델 등 일부가 완전 하얗게 뜨는 현상 방지
       if(!(typeof id==='string'&&id.indexOf('cb_')===0)) addRim(m, rim, intU);   // 건설 건물(cb_)은 림 생략 / 그 외 프레넬 림
       m._tinted=true; }); });
 }
