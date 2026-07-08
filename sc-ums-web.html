@@ -9566,11 +9566,17 @@ function drawSandboxGround(ctx,W,H){
       ctx.fillStyle='rgba(255,224,160,.92)'; ctx.shadowColor='#000'; ctx.shadowBlur=4; ctx.fillText(row.label, W*0.03, ly); ctx.shadowBlur=0;
     }); ctx.restore(); }
 }
-const SANDBOX_ROSTER={
-  union:    [{n:'엔지니어',b:'marine',gm:'worker_human'},{n:'레인저',b:'marine'},{n:'발칸',b:'marine',gm:'machinegun'},{n:'메딕',b:'marine',gm:'medic'},{n:'팬텀',b:'ghost'},{n:'레이서',b:'marine',gm:'racer'},{n:'브레이커',b:'goliath',gm:'tank'},{n:'스트라이더',b:'goliath'},{n:'템페스트',b:'goliath',gm:'skyguard'},{n:'펠리컨',b:'marine',gm:'pelican',e:1},{n:'이지스',b:'marine',gm:'aegis',e:1},{n:'헬파이어',b:'marine',gm:'hellfire',e:1},{n:'드레드노트',b:'marine',gm:'dreadnought',e:1}],
-  swarm:    [{n:'채집충',b:'marine',gm:'worker_swarm'},{n:'너울',b:'marine',gm:'overlord',e:1},{n:'스내퍼',b:'hydra',gm:'snapper'},{n:'리퍼',b:'hydra'},{n:'베놈퀸',b:'hydra',gm:'thornqueen'},{n:'스팅어',b:'marine',gm:'stinger',e:1},{n:'와이번',b:'wyvern',gm:'wyvern',e:1},{n:'메두사',b:'marine',gm:'medusa',e:1},{n:'베놈',b:'marine',gm:'venom',e:1},{n:'베히모스',b:'behemoth',gm:'behemoth',e:1},{n:'스웜링',b:'hydra',gm:'broodling'},{n:'라바',b:'hydra',gm:'larva'},{n:'저거너트',b:'hydra',gm:'ultralisk'}],
-  aetherial:[{n:'결정체',b:'marine',gm:'worker_light'},{n:'센티넬',b:'dragoon'},{n:'워든',b:'dragoon',gm:'blade'},{n:'보이드',b:'archon'},{n:'팔콘',b:'marine',gm:'falcon',e:1},{n:'세라프',b:'marine',gm:'seraph',e:1},{n:'스카이댄서',b:'goliath',gm:'skydancer'},{n:'아크엔젤',b:'marine',gm:'archangel',e:1},{n:'와처',b:'marine',gm:'observer',e:1},{n:'크로노스',b:'marine',gm:'kronos',e:1},{n:'다크세이지',b:'ghost',gm:'dark_templar'},{n:'하이세이지',b:'marine',gm:'high_templar'}],
+// ═══ 공용 유닛 로스터(단일 출처) — 메인(관리자)·이펙트랩·건설 등 모든 구역이 이 하나를 참조. 유닛 추가/이름 변경은 여기 한 곳만 고치면 전 구역 반영 ═══
+// key = 유닛 식별자(= U/모델 키 · 스탯=Udef(key)/TECH_SPEC) · n = 표시 이름 · e = 적 표기(관리자 배치)
+const RACE_ROSTER={
+  union:[{n:'엔지니어',key:'worker_human'},{n:'레인저',key:'marine'},{n:'발칸',key:'machinegun'},{n:'메딕',key:'medic'},{n:'팬텀',key:'ghost'},{n:'레이서',key:'racer'},{n:'브레이커',key:'tank'},{n:'스트라이더',key:'goliath'},{n:'템페스트',key:'skyguard'},{n:'펠리컨',key:'pelican',e:1},{n:'이지스',key:'aegis',e:1},{n:'헬파이어',key:'hellfire',e:1},{n:'드레드노트',key:'dreadnought',e:1}],
+  swarm:[{n:'채집충',key:'worker_swarm'},{n:'너울',key:'overlord',e:1},{n:'스내퍼',key:'snapper'},{n:'리퍼',key:'hydra'},{n:'베놈퀸',key:'thornqueen'},{n:'스팅어',key:'stinger',e:1},{n:'와이번',key:'wyvern',e:1},{n:'메두사',key:'medusa',e:1},{n:'베놈',key:'venom',e:1},{n:'베히모스',key:'behemoth',e:1},{n:'스웜링',key:'broodling'},{n:'라바',key:'larva'},{n:'저거너트',key:'ultralisk'}],
+  aetherial:[{n:'결정체',key:'worker_light'},{n:'센티넬',key:'dragoon'},{n:'워든',key:'blade'},{n:'보이드',key:'archon'},{n:'팔콘',key:'falcon',e:1},{n:'세라프',key:'seraph',e:1},{n:'스카이댄서',key:'skydancer'},{n:'아크엔젤',key:'archangel',e:1},{n:'와처',key:'observer',e:1},{n:'크로노스',key:'kronos',e:1},{n:'다크세이지',key:'dark_templar'},{n:'하이세이지',key:'high_templar'}],
 };
+function _rosterName(key){ for(const r in RACE_ROSTER){ const f=RACE_ROSTER[r].find(u=>u.key===key); if(f) return f.n; } return (typeof U!=='undefined'&&U[key]&&U[key].name)||key; }   // 공용 표시 이름(전 구역 통일)
+function _rosterRaceOf(key){ for(const r in RACE_ROSTER){ if(RACE_ROSTER[r].some(u=>u.key===key)) return r; } return null; }
+// SANDBOX_ROSTER(관리자 메인 배치)는 공용 로스터에서 생성 — b/gm 모두 key(모델=스탯 키). 출력은 기존과 동일
+const SANDBOX_ROSTER=(function(){ const o={}; for(const r in RACE_ROSTER){ o[r]=RACE_ROSTER[r].map(u=>({n:u.n, b:u.key, gm:u.key, e:u.e})); } return o; })();
 const SANDBOX_RACE_ORDER=['union','swarm','aetherial'];   // 3종족(테란=유니온 / 저그=스웜 / 프로토스=에테리얼) — 일꾼은 각 종족 첫 자리
 const SANDBOX_RACE_KO={union:'유니온 (인간)',swarm:'스웜 (군체)',aetherial:'에테리얼 (외계)'};
 function placeSandboxUnits(){
@@ -10069,7 +10075,9 @@ TECH_SPEC.swarm={   // 저그: 건물 자동재생·유닛 자동재생(점막),
     medusa:{hp:120,ar:0,sh:0,atk:0,at:'-',rng:0,spd:'매우빠름',t:50,abil:'패러사이트·브루들링·인스네어'},
     venom:{hp:250,ar:2,sh:0,atk:25,at:'expl',rng:6,spd:'보통',t:40,abil:'공중전용 포자 디버프(디바우러)'},
     behemoth:{hp:150,ar:2,sh:0,atk:20,at:'norm',rng:8,spd:'느림',t:40,abil:'지상 전용 폭격'},
-    ultralisk:{hp:400,ar:1,sh:0,atk:20,at:'norm',rng:1,spd:'보통',t:60,abil:'방업 시 방어+2'} }
+    ultralisk:{hp:400,ar:1,sh:0,atk:20,at:'norm',rng:1,spd:'보통',t:60,abil:'방업 시 방어+2'},
+    broodling:{hp:30,ar:0,sh:0,atk:6,at:'norm',rng:1,spd:'매우빠름',t:20,abil:'브루들링(일정시간 후 소멸)'},
+    larva:{hp:25,ar:10,sh:0,atk:0,at:'-',rng:0,spd:'매우느림',t:20,abil:'변태(무공격)'} }
 };
 TECH_SPEC.aetherial={   // 프로토스: 건물·유닛 실드 자동재생(기본 방어 0, 건물 방어 1)
   bldg:{ nexus:{hp:750,sh:750,ar:1,size:[4,3],t:120}, pylon:{hp:300,sh:300,ar:1,size:[2,2],t:30}, assimilator:{hp:450,sh:450,ar:1,size:[4,2],t:40},
@@ -10094,7 +10102,9 @@ TECH_SPEC.aetherial={   // 프로토스: 건물·유닛 실드 자동재생(기�
     larva:{hp:100,ar:0,sh:80,atk:100,at:'norm',rng:8,spd:'매우느림',t:70,abil:'스캐럽 100→125·스플'} }
 };
 const _AT_KO={norm:'일반',conc:'진동',expl:'폭발','-':'무공격'};
-function techUnitSpec(race,id){ const s=TECH_SPEC[race]; return (s&&s.unit&&s.unit[id])||null; }
+function techUnitSpec(race,id){ const s=TECH_SPEC[race]; const cur=(s&&s.unit&&s.unit[id]); if(cur) return cur;
+  const b=(typeof Udef==='function')?Udef(id):(typeof U!=='undefined'?U[id]:null); if(!b) return null;   // 커스텀·신규 로스터 유닛: 공용 U/Udef에서 합성(별도 표 없어도 표시 통일)
+  return { hp:b.hp||0, ar:b.armor||0, sh:b.shield||0, atk:b.dmg||0, at:'norm', rng:(b.range>0?'-':0), spd:'보통', t:15, abil:'' }; }
 function techBldgSpec(race,k){ const s=TECH_SPEC[race]; return (s&&s.bldg&&s.bldg[k])||null; }
 // ── 테크트리 → 커맨드 그리드 모델 어댑터(재사용) ──
 function techGetBldg(race,k){ const t=TECH_TREE[race]; return t&&t.buildings.find(b=>b.k===k); }
@@ -10109,7 +10119,16 @@ const BASE_MV={  // 이동 픽셀/프레임(참고·추후 이동 반영용)
   worker_light:1.88, blade:1.88, dragoon:2.5, high_templar:1.56, dark_templar:2.5, archon:2.5, seraph:1.56, larva:0.94, observer:1.56, falcon:2.5, skydancer:3.13, archangel:1.56, kronos:2.5 };
 // 유닛 직책/이름/스탯(유닛·일꾼 패널 헤더+왼쪽) — 일꾼=생산자, 그 외 UNIT_CLS 병과
 function _techRoleOf(uid){ if(uid==='worker_human'||uid==='worker_swarm'||uid==='worker_light') return '생산자'; return (typeof UNIT_CLS!=='undefined'&&UNIT_CLS[uid])||''; }
-function _techRealName(race,uid){ const bs=(TECH_TREE[race]||{}).buildings||[]; for(const b of bs){ for(const p of (b.produces||[])){ if(p.id===uid) return p.name||uid; } } return uid; }   // 유닛 한글명 = produces에서 id로 조회
+function _techRealName(race,uid){ if(typeof _rosterName==='function'){ const rn=_rosterName(uid); if(rn) return rn; }   // 공용 로스터 이름 우선(전 구역 통일)
+  const bs=(TECH_TREE[race]||{}).buildings||[]; for(const b of bs){ for(const p of (b.produces||[])){ if(p.id===uid) return p.name||uid; } } return uid; }
+// 건설 테크트리에 공용 로스터의 모든 유닛이 생산 가능하도록 보정 — 트리에 없는 유닛은 주 생산 건물에 자동 추가(로스터에 유닛 넣으면 건설에도 자동 반영, 향후 구역도 동일 원칙)
+function _techEnsureRoster(race){ const t=TECH_TREE[race]; if(!t||t._rosterSynced) return; t._rosterSynced=true;
+  const roster=(typeof RACE_ROSTER!=='undefined'&&RACE_ROSTER[race])||[]; if(!roster.length) return;
+  const have=new Set(); for(const b of t.buildings) for(const p of (b.produces||[])) have.add(p.id);
+  let main=null,mx=-1; for(const b of t.buildings){ const n=(b.produces||[]).length; if(n>mx){ mx=n; main=b; } }   // 유닛을 가장 많이 뽑는 건물 = 주 생산 건물
+  if(!main) return; main.produces=main.produces||[];
+  for(const r of roster){ const key=r.key; if(!key||have.has(key)||/^worker/.test(key)) continue;   // 일꾼은 본진 기본이라 제외
+    const u=(typeof U!=='undefined'&&U[key])||{}; main.produces.push({id:key, name:r.n, m:(u.cost||50), g:0, pop:1}); have.add(key); } }
 function _techUnitStatList(spec,uid){ const cd=(typeof BASE_CD!=='undefined')?BASE_CD[uid]:null;   // 공격속도=SC 쿨다운 프레임(기본 공통 자료)
   return [['공격력', spec.atk?(''+spec.atk):'무공격'], ['사거리', spec.rng!=null?(''+spec.rng):'-'], ['공격속도', (cd&&cd>0)?(cd+'f'):'-'], ['처치','0']]; }
 function _techUnitPortrait(id){ return (typeof unitPortraitHTML==='function'&&unitPortraitHTML(id))||'<span class="pemoji">🔧</span>'; }
@@ -10117,7 +10136,7 @@ function _techUnitPortrait(id){ return (typeof unitPortraitHTML==='function'&&un
 const TECH_START={credit:1500, energy:1000};
 const _TECH_RKO={union:'유니온',swarm:'스웜',aetherial:'에테리얼'};
 const TECH_TIME_MUL=0.5;   // 스타 대비 생산·건설 시간 배율(전부 절반=속도감↑)
-function techUIInit(race){ if(!TECH_TREE[race]) race='union';
+function techUIInit(race){ if(!TECH_TREE[race]) race='union'; _techEnsureRoster(race);   // 공용 로스터 전 유닛 생산 가능하게 보정
   const keep=G.tech?{inf:G.tech.inf,nocool:G.tech.nocool}:{};
   G.tech={ race, credit:TECH_START.credit, energy:TECH_START.energy, built:{}, addon:{}, units:{}, research:{}, sup:0, supCap:0, inf:!!keep.inf, nocool:!!keep.nocool, ents:[], sel:null, selU:[], arm:null, eseq:1, pend:[], view:{x:0.5,y:0.5,zoom:1}, sheet:{open:false,sec:null} };
   const main=TECH_TREE[race].buildings[0]; if(main){ G.tech.built[main.k]=1; G.tech.supCap+=(main.supply||0); G.tech.ents.push({eid:G.tech.eseq++, type:'bldg', bk:main.k, x:0.5, y:0.3, bt:0}); }   // 본진 자동 배치(완성)
@@ -10211,10 +10230,10 @@ function techBuildListModel(){ const race=G.tech.race, t=TECH_TREE[race];
   return { mode:'build', title:t.name+' · 건설', icon:'<span class="pemoji">👷</span>', sub:'건물 탭 → 맵을 탭해 배치', items, info:_techResInfo() }; }
 function techBldgProdModel(b){ const race=G.tech.race;
   const items=b.produces.map(p=>{ const reqok=_techReqMet(p.req), afford=_techAfford(p.m,p.g), popok=G.tech.inf||!p.pop||(G.tech.sup+p.pop<=G.tech.supCap), cnt=G.tech.units[p.id]||0;
-    return { pro:_techUnitPortrait(p.id), sn:p.name, cr:p.m, en:p.g, meta:cnt?('×'+cnt):(p.pop?'👤'+p.pop:''), metaCls:cnt?'lv':'', state:(!reqok||!afford||!popok)?'dim':'ok', act:'onclick="techDoProduce(\''+p.id+'\',\''+b.k+'\')"' }; });
+    return { pro:_techUnitPortrait(p.id), sn:_techRealName(race,p.id), cr:p.m, en:p.g, meta:cnt?('×'+cnt):(p.pop?'👤'+p.pop:''), metaCls:cnt?'lv':'', state:(!reqok||!afford||!popok)?'dim':'ok', act:'onclick="techDoProduce(\''+p.id+'\',\''+b.k+'\')"' }; });
   const f=b.produces[0]||{}, fs=techUnitSpec(race,f.id)||{}, bs=techBldgSpec(race,b.k)||{};
   return { mode:'prod', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:'유닛 생산 — 탭', items,
-    info:{ eb:'생산', name:f.name||'', hideName:true, desc:fs.abil?('능력: '+fs.abil):'', stats:[['체력',(fs.hp!=null?fs.hp:'-')+(fs.sh?('/'+fs.sh):'')],['공격',fs.atk?(fs.atk+' '+(_AT_KO[fs.at]||'')):'무공격'],['사거리',''+(fs.rng!=null?fs.rng:'-')]], progLabel:'인구·시간', progVal:'👤'+(f.pop||1)+' · '+(fs.t||'?')+'s', prog:0, cr:f.m||0, en:f.g||0, time:'탭하여 생산' } }; }
+    info:{ eb:'생산', name:_techRealName(race,f.id)||'', hideName:true, desc:fs.abil?('능력: '+fs.abil):'', stats:[['체력',(fs.hp!=null?fs.hp:'-')+(fs.sh?('/'+fs.sh):'')],['공격',fs.atk?(fs.atk+' '+(_AT_KO[fs.at]||'')):'무공격'],['사거리',''+(fs.rng!=null?fs.rng:'-')]], progLabel:'인구·시간', progVal:'👤'+(f.pop||1)+' · '+(fs.t||'?')+'s', prog:0, cr:f.m||0, en:f.g||0, time:'탭하여 생산' } }; }
 function techBldgUpgModel(b){ const race=G.tech.race;
   const items=b.research.map(r=>{ const key=race+'_'+r.k; let meta,state,cr,en;
     if(r.tier){ const lv=G.tech.research[key]||0, isMax=lv>=r.tier.length, nx=r.tier[Math.min(lv,r.tier.length-1)]; meta=isMax?'MAX':('Lv.'+lv); cr=isMax?0:nx[0]; en=isMax?0:nx[1]; state=isMax?'max':(_techAfford(cr,en)?'ok':'dim'); }
@@ -11554,53 +11573,8 @@ function strikeWheel(e){ const S=STK; if(!S) return; if(e.cancelable) e.preventD
 //   공용 FX 코어 사용 → 여기서 확정한 크기/느낌이 전 유즈맵에 동일 반영.
 //   맵/줌 슬라이더가 3D 모델 크기와 이펙트 크기를 함께 스케일 → "작은맵=작게 / 확대=크게" 일관 시연.
 // ════════════════════════════════════════════════════════════════
-const FXLAB_ROSTER={
-  union:[
-    {n:'일꾼',        id:'marine',  gm:'worker_human'},
-    {n:'레인저',      id:'marine'},
-    {n:'발칸',        id:'marine',  gm:'machinegun'},
-    {n:'메딕',        id:'marine',  gm:'medic'},
-    {n:'팬텀',        id:'ghost'},
-    {n:'레이서',      id:'marine',  gm:'racer'},
-    {n:'브레이커',    id:'goliath', gm:'tank'},
-    {n:'스트라이더',  id:'goliath'},
-    {n:'템페스트',    id:'goliath', gm:'skyguard'},
-    {n:'펠리컨',      id:'marine',  gm:'pelican'},
-    {n:'이지스',     id:'marine',  gm:'aegis'},
-    {n:'헬파이어',    id:'marine',  gm:'hellfire'},
-    {n:'드래드노트',  id:'marine',  gm:'dreadnought'},
-  ],
-  swarm:[
-    {n:'일꾼',      id:'marine', gm:'worker_swarm'},
-    {n:'너울',    id:'marine', gm:'overlord'},
-    {n:'스내퍼',    id:'hydra',  gm:'snapper'},
-    {n:'리퍼',      id:'hydra'},
-    {n:'베놈퀸',    id:'hydra',  gm:'thornqueen'},
-    {n:'스팅어',    id:'marine', gm:'stinger'},
-    {n:'와이번',    id:'marine', gm:'wyvern'},
-    {n:'메두사',    id:'marine', gm:'medusa'},
-    {n:'베놈',      id:'marine', gm:'venom'},
-    {n:'베히모스',  id:'marine', gm:'behemoth'},
-    {n:'스웜링',  id:'hydra',  gm:'broodling'},
-    {n:'라바',      id:'hydra',  gm:'larva'},
-    {n:'저거너트',id:'hydra', gm:'ultralisk'},
-    {n:'브루드마더',id:'hydra',              todo:true},
-  ],
-  aetherial:[
-    {n:'일꾼',      id:'marine',  gm:'worker_light'},
-    {n:'워든',      id:'blade'},
-    {n:'센티넬',    id:'dragoon'},
-    {n:'보이드',    id:'archon'},
-    {n:'다크세이지',id:'ghost',   gm:'dark_templar'},
-    {n:'하이세이지',id:'marine',  gm:'high_templar'},
-    {n:'팔콘',      id:'marine',  gm:'falcon'},
-    {n:'세라프',    id:'marine',  gm:'seraph'},
-    {n:'스카이댄서',id:'goliath', gm:'skydancer'},
-    {n:'아크엔젤',  id:'marine',  gm:'archangel'},
-    {n:'와처',      id:'marine',  gm:'observer'},
-    {n:'크로노스',  id:'marine',  gm:'kronos'},
-  ],
-};
+// 이펙트랩 로스터도 공용 RACE_ROSTER에서 생성(id/gm 모두 key) — 메인·건설과 동일 유닛·이름·순서로 통일
+const FXLAB_ROSTER=(function(){ const o={}; const src=(typeof RACE_ROSTER!=='undefined')?RACE_ROSTER:{}; for(const r in src){ o[r]=src[r].map(u=>({n:u.n, id:u.key, gm:u.key})); } return o; })();
 const FXLAB_RACE_ORDER=['union','swarm','aetherial'];
 const FXLAB_RACE_KO={union:'🛡 유니온',swarm:'🦎 스웜',aetherial:'🔮 에테리얼'};
 const FXLAB={ store:null, attId:'marine', attGm:null, scale:1, mode:'attack', phase:'alive', t:0, cd:0, mv:1, ti:0, att:null, dummy:null, bldg:null, air:null };
