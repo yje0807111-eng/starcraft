@@ -6067,7 +6067,9 @@ function refreshSelCard(){ if(typeof G!=='undefined'){ G.boardArm=false; G.unloa
     const job=UNIT_CLS[u.gmodel||u.id]||'';
     portEl.innerHTML=unitPortraitHTML(u.gmodel||u.id)+(job?'<div class="portJob">'+job+'</div>':'');  // 초상화(가챠 전용 우선) + 직업 배지
     document.getElementById('uName').textContent=gNameStar(u,def)+(u.hero?' [영웅]':'');
-    const _rngV=(G.sandbox?effRange(u.gmodel||u.id, def.range):def.range)*(typeof gachaRangeMul==='function'?gachaRangeMul(u):1)*100; const _rng=G.sandbox?Math.round(_rngV*10)/10:Math.round(_rngV);   // 샌드박스: base_stats 사거리(전투와 동일)
+    const _sbKey=u.gmodel||u.id;
+    const _rng = G.sandbox ? Math.round(effRange(_sbKey,def.range)/SB_ANCHOR_RANGE*10)/10   // 관리자: base_stats 타일 사거리(건설 카드·base_stats와 동일 표시)
+      : Math.round(def.range*(typeof gachaRangeMul==='function'?gachaRangeMul(u):1)*100);
     const _arng=null;   // base_stats는 지상·공중 사거리 단일 — 별도 대공 사거리 표시 없음
     const _cdf=(typeof cdOf==='function')?cdOf(u,def):def.cd; const _sbcd=(G.sandbox)?_sbBaseCd(u.gmodel||u.id):null; const _spd=(_sbcd!=null)?(1/_sbcd).toFixed(1):(_cdf>0?(60/_cdf).toFixed(1):'-');   // 샌드박스: base_stats 공속(발사 리듬과 일치)
     const _vL=(mapCfg('infinite')?vetLevel(u):0);   // 무한모드 베테랑 계급
@@ -10131,8 +10133,8 @@ function _techEnsureRoster(race){ const t=TECH_TREE[race]; if(!t||t._rosterSynce
   if(!main) return; main.produces=main.produces||[];
   for(const r of roster){ const key=r.key; if(!key||have.has(key)||/^worker/.test(key)) continue;   // 일꾼은 본진 기본이라 제외
     const u=(typeof U!=='undefined'&&U[key])||{}; main.produces.push({id:key, name:r.n, m:(u.cost||50), g:0, pop:1}); have.add(key); } }
-function _techUnitStatList(spec,uid){ const cd=(typeof BASE_CD!=='undefined')?BASE_CD[uid]:null;   // 공격속도=SC 쿨다운 프레임(기본 공통 자료)
-  return [['공격력', spec.atk?(''+spec.atk):'무공격'], ['사거리', spec.rng!=null?(''+spec.rng):'-'], ['공격속도', (cd&&cd>0)?(cd+'f'):'-'], ['처치','0']]; }
+function _techUnitStatList(spec,uid){ const _spd=(spec.atk&&(typeof _sbBaseCd==='function'))?((1/_sbBaseCd(uid)).toFixed(1)+'/s'):'-';   // 공격속도 = base_stats 공속(/s) — 메인 배너와 동일 표시
+  return [['공격력', spec.atk?(''+spec.atk):'무공격'], ['사거리', spec.rng!=null?(''+spec.rng):'-'], ['공격속도', _spd], ['처치','0']]; }
 function _techUnitPortrait(id){ return (typeof unitPortraitHTML==='function'&&unitPortraitHTML(id))||'<span class="pemoji">🔧</span>'; }
 // ══ 건설 탭 — RTS식 배치 맵(종족→일꾼→건물 배치) + 선택 건물 생산/연구 카드 ══
 const TECH_START={credit:1500, energy:1000};
