@@ -2917,7 +2917,7 @@ const U = {
   worker_swarm: {name:'채집충', icon:'🐛', cost:50, dmg:4, up:2, hdmg:8, hup:3, range:0.035, cd:40, splash:false, melee:true, color:'#a8472e', size:13, wpn:'zrg', atk:'slash', hp:30, armor:0, shield:0, energy:0, moveSpd:0.14, model3d:'worker_swarm'},   // 일꾼 1:1:1(hp30/dmg4/cd40)
   medic: {name:'메딕', icon:'🔧', cost:0, dmg:0, up:0, hdmg:0, hup:0, range:0, cd:40, splash:false, color:'#4aa8ff', size:13, wpn:'inf', atk:'bullet', hp:60, armor:1, shield:0, energy:200, moveSpd:0.19, model3d:'medic'},   // 샌드박스 전용(보직 스탯) — 치유 지원(무공격)
   broodling: {name:'스웜링', icon:'🐛', cost:0, dmg:6, up:2, hdmg:12, hup:4, range:0.035, cd:22, splash:false, melee:true, color:'#a8472e', size:10, wpn:'zrg', atk:'slash', hp:30, armor:0, shield:0, energy:0, moveSpd:0.25, model3d:'broodling'},   // 샌드박스 전용(보직 스탯)
-  larva: {name:'라바', icon:'🐛', cost:0, dmg:0, up:0, hdmg:0, hup:0, range:0, cd:40, splash:false, color:'#a8472e', size:8, wpn:'zrg', atk:'slash', hp:25, armor:10, shield:0, energy:0, moveSpd:0.03, model3d:'larva'},   // 샌드박스 전용(보직 스탯) — 무공격
+  larva: {name:'리버', icon:'🛸', cost:0, dmg:40, up:16, hdmg:80, hup:32, range:0.28, cd:70, splash:true, color:'#ffc040', size:18, wpn:'pro', atk:'psi', hp:100, armor:0, shield:80, energy:0, moveSpd:0.09, model3d:'larva'},   // 리버(에테리얼 공성, 스캐럽 스플래시). 관리자 전투=base_stats 오버라이드. 모델 larva.glb
   ultralisk: {name:'저거너트', icon:'🐛', cost:0, dmg:65, up:26, hdmg:130, hup:52, range:0.045, cd:35, splash:false, melee:true, color:'#a8472e', size:26, wpn:'zrg', atk:'slash', hp:800, armor:4, shield:0, energy:0, moveSpd:0.2, model3d:'ultralisk'},   // 샌드박스 전용(보직 스탯)
   dark_templar: {name:'다크세이지', icon:'🔮', cost:0, dmg:80, up:32, hdmg:160, hup:64, range:0.04, cd:42, splash:false, melee:true, color:'#ffc040', size:14, wpn:'pro', atk:'slash', hp:80, armor:1, shield:80, shArmor:1, energy:0, moveSpd:0.19, model3d:'dark_templar'},   // 샌드박스 전용(보직 스탯)
   high_templar: {name:'하이세이지', icon:'🔮', cost:0, dmg:0, up:0, hdmg:0, hup:0, range:0, cd:40, splash:false, color:'#ffc040', size:12, wpn:'pro', atk:'psi', hp:40, armor:0, shield:40, shArmor:1, energy:200, moveSpd:0.12, model3d:'high_templar'},   // 샌드박스 전용(보직 스탯) — 시전형(무공격)
@@ -5957,14 +5957,14 @@ const UNIT_CLS={   // 유닛 직업/병과 — 모델 id(gmodel) 기준. 베이�
   overlord:'수송선', stinger:'자폭충', venom:'산성충', medusa:'군단여왕',
   wyvern:'전투기', behemoth:'공성생물',
   worker_human:'일꾼', worker_light:'일꾼', worker_swarm:'일꾼',
-  medic:'의무병', broodling:'소환수', larva:'유충', ultralisk:'돌격괴수', dark_templar:'암살자', high_templar:'대마법사',
+  medic:'의무병', broodling:'소환수', larva:'공성', ultralisk:'돌격괴수', dark_templar:'암살자', high_templar:'대마법사',
 };
 // 유닛 종족 → 좌측 바 색(유니온=파랑/스웜=초록/에테리얼=금색). 같은 모델을 다른 종족이 쓰기도 해 모델키(gmodel||id) 기준
 const RACE_BAR={ union:'#4aa8ff', swarm:'#a8472e', aetherial:'#ffc040' };
 const RACE_OF={
   marine:'union', goliath:'union', ghost:'union', racer:'union', machinegun:'union', tank:'union', skyguard:'union', hellfire:'union', pelican:'union', dreadnought:'union', aegis:'union', worker_human:'union', turret:'union', photon:'union', citizen:'union', medic:'union',
-  dragoon:'aetherial', archon:'aetherial', blade:'aetherial', skydancer:'aetherial', kronos:'aetherial', seraph:'aetherial', archangel:'aetherial', falcon:'aetherial', observer:'aetherial', worker_light:'aetherial', dark_templar:'aetherial', high_templar:'aetherial',
-  hydra:'swarm', snapper:'swarm', thornqueen:'swarm', matron:'swarm', overlord:'swarm', stinger:'swarm', venom:'swarm', medusa:'swarm', wyvern:'swarm', behemoth:'swarm', worker_swarm:'swarm', broodling:'swarm', larva:'swarm', ultralisk:'swarm',
+  dragoon:'aetherial', archon:'aetherial', blade:'aetherial', skydancer:'aetherial', kronos:'aetherial', seraph:'aetherial', archangel:'aetherial', falcon:'aetherial', observer:'aetherial', worker_light:'aetherial', dark_templar:'aetherial', high_templar:'aetherial', larva:'aetherial',
+  hydra:'swarm', snapper:'swarm', thornqueen:'swarm', matron:'swarm', overlord:'swarm', stinger:'swarm', venom:'swarm', medusa:'swarm', wyvern:'swarm', behemoth:'swarm', worker_swarm:'swarm', broodling:'swarm', ultralisk:'swarm',
 };
 function raceBarCol(u){ if(!u) return null; const r=(u.gid && typeof GACHA_UNITS!=='undefined' && GACHA_UNITS[u.gid] && GACHA_UNITS[u.gid].race) || RACE_OF[u.gmodel||u.id]; return RACE_BAR[r]||null; }
 // 관리자 사거리·공속 = base_stats 단일 소스(구 SB_RANGE/SB_CD/SB_AIR 파생표 제거). 전투(_sbUnitRange/_sbUnitDps)와 표시·발사 리듬이 완전히 동일값. 네모는 U 그대로.
@@ -6528,8 +6528,8 @@ function sbCombatUiSync(){ const t=document.getElementById('btCtlToggle'); const
 //    (구 SB_U 수동 밸런스 오버라이드는 base_stats 전환으로 완전히 덮여 제거됨. 네모는 원본 U 그대로) ──
 const BASE_UNIT={
   worker_human:[60,0,0,5,1], marine:[40,0,0,6,4], machinegun:[50,0,1,16,2], medic:[60,0,1,0,0], ghost:[45,0,0,10,7], racer:[80,0,0,20,5], tank:[150,0,1,30,7], goliath:[125,0,1,12,5], skyguard:[120,0,0,20,5], pelican:[150,0,1,0,0], hellfire:[200,0,2,48,6], aegis:[200,0,1,0,0], dreadnought:[500,0,3,25,6],
-  worker_swarm:[40,0,0,5,1], overlord:[200,0,0,0,0], snapper:[35,0,0,5,1], hydra:[80,0,0,10,4], thornqueen:[125,0,1,20,6], wyvern:[120,0,0,9,3], stinger:[25,0,0,110,1], medusa:[120,0,0,0,0], ultralisk:[400,0,1,20,1], behemoth:[150,0,2,20,8], venom:[250,0,2,25,6], broodling:[30,0,0,6,1], larva:[25,0,10,0,0],
-  worker_light:[20,20,0,5,1], blade:[100,60,1,16,1], dragoon:[100,80,1,20,4], high_templar:[40,40,0,0,0], dark_templar:[80,40,1,40,1], archon:[10,350,0,30,2], seraph:[80,60,1,0,0], observer:[40,20,0,0,0], falcon:[150,100,0,8,4], skydancer:[120,80,1,5,5], archangel:[300,150,4,6,8], kronos:[200,150,1,10,5] };
+  worker_swarm:[40,0,0,5,1], overlord:[200,0,0,0,0], snapper:[35,0,0,5,1], hydra:[80,0,0,10,4], thornqueen:[125,0,1,20,6], wyvern:[120,0,0,9,3], stinger:[25,0,0,110,1], medusa:[120,0,0,0,0], ultralisk:[400,0,1,20,1], behemoth:[150,0,2,20,8], venom:[250,0,2,25,6], broodling:[30,0,0,6,1],
+  worker_light:[20,20,0,5,1], blade:[100,60,1,16,1], dragoon:[100,80,1,20,4], high_templar:[40,40,0,0,0], dark_templar:[80,40,1,40,1], archon:[10,350,0,30,2], seraph:[80,60,1,0,0], observer:[40,20,0,0,0], falcon:[150,100,0,8,4], skydancer:[120,80,1,5,5], archangel:[300,150,4,6,8], kronos:[200,150,1,10,5], larva:[100,80,0,100,8] };   // larva=리버(에테리얼 공성, 스캐럽) — 콜로서스 데이터
 // 일꾼 앵커: 사거리·공속은 base_stats 그대로가 아니라 "현재 일꾼값 = base 1단위" 비율로 통일(전투가 과하게 안 달라지게)
 const SB_ANCHOR_RANGE=0.035;   // 일꾼 현재 사거리 0.035 ÷ base 1타일 → 유닛 사거리 = base타일 × 0.035
 const SB_ANCHOR_CD=40/15;      // 일꾼 현재 공속 cd40 ÷ base 15프레임 → 유닛 cd = base프레임 × (40/15)
@@ -9572,8 +9572,8 @@ function drawSandboxGround(ctx,W,H){
 // key = 유닛 식별자(= U/모델 키 · 스탯=Udef(key)/TECH_SPEC) · n = 표시 이름. 아군/적은 배치 상황이 정하는 것 — 유닛 고유 속성 아님
 const RACE_ROSTER={
   union:[{n:'엔지니어',key:'worker_human'},{n:'레인저',key:'marine'},{n:'발칸',key:'machinegun'},{n:'메딕',key:'medic'},{n:'팬텀',key:'ghost'},{n:'레이서',key:'racer'},{n:'브레이커',key:'tank'},{n:'스트라이더',key:'goliath'},{n:'템페스트',key:'skyguard'},{n:'펠리컨',key:'pelican'},{n:'이지스',key:'aegis'},{n:'헬파이어',key:'hellfire'},{n:'드레드노트',key:'dreadnought'}],
-  swarm:[{n:'채집충',key:'worker_swarm'},{n:'너울',key:'overlord'},{n:'스내퍼',key:'snapper'},{n:'리퍼',key:'hydra'},{n:'베놈퀸',key:'thornqueen'},{n:'스팅어',key:'stinger'},{n:'와이번',key:'wyvern'},{n:'메두사',key:'medusa'},{n:'베놈',key:'venom'},{n:'베히모스',key:'behemoth'},{n:'스웜링',key:'broodling'},{n:'라바',key:'larva'},{n:'저거너트',key:'ultralisk'}],
-  aetherial:[{n:'결정체',key:'worker_light'},{n:'센티넬',key:'dragoon'},{n:'워든',key:'blade'},{n:'보이드',key:'archon'},{n:'팔콘',key:'falcon'},{n:'세라프',key:'seraph'},{n:'스카이댄서',key:'skydancer'},{n:'아크엔젤',key:'archangel'},{n:'와처',key:'observer'},{n:'크로노스',key:'kronos'},{n:'다크세이지',key:'dark_templar'},{n:'하이세이지',key:'high_templar'}],
+  swarm:[{n:'채집충',key:'worker_swarm'},{n:'너울',key:'overlord'},{n:'스내퍼',key:'snapper'},{n:'리퍼',key:'hydra'},{n:'베놈퀸',key:'thornqueen'},{n:'스팅어',key:'stinger'},{n:'와이번',key:'wyvern'},{n:'메두사',key:'medusa'},{n:'베놈',key:'venom'},{n:'베히모스',key:'behemoth'},{n:'스웜링',key:'broodling'},{n:'저거너트',key:'ultralisk'}],
+  aetherial:[{n:'결정체',key:'worker_light'},{n:'센티넬',key:'dragoon'},{n:'워든',key:'blade'},{n:'보이드',key:'archon'},{n:'팔콘',key:'falcon'},{n:'세라프',key:'seraph'},{n:'스카이댄서',key:'skydancer'},{n:'아크엔젤',key:'archangel'},{n:'와처',key:'observer'},{n:'크로노스',key:'kronos'},{n:'다크세이지',key:'dark_templar'},{n:'하이세이지',key:'high_templar'},{n:'리버',key:'larva'}],
 };
 function _rosterName(key){ for(const r in RACE_ROSTER){ const f=RACE_ROSTER[r].find(u=>u.key===key); if(f) return f.n; } return (typeof U!=='undefined'&&U[key]&&U[key].name)||key; }   // 공용 표시 이름(전 구역 통일)
 function _rosterRaceOf(key){ for(const r in RACE_ROSTER){ if(RACE_ROSTER[r].some(u=>u.key===key)) return r; } return null; }
@@ -10080,8 +10080,7 @@ TECH_SPEC.swarm={   // 저그: 건물 자동재생·유닛 자동재생(점막),
     venom:{hp:250,ar:2,sh:0,atk:25,at:'expl',rng:6,t:40,abil:'공중전용 포자 디버프(디바우러)'},
     behemoth:{hp:150,ar:2,sh:0,atk:20,at:'norm',rng:8,t:40,abil:'지상 전용 폭격'},
     ultralisk:{hp:400,ar:1,sh:0,atk:20,at:'norm',rng:1,t:60,abil:'방업 시 방어+2'},
-    broodling:{hp:30,ar:0,sh:0,atk:6,at:'norm',rng:1,t:20,abil:'브루들링(일정시간 후 소멸)'},
-    larva:{hp:25,ar:10,sh:0,atk:0,at:'-',rng:0,t:20,abil:'변태(무공격)'} }
+    broodling:{hp:30,ar:0,sh:0,atk:6,at:'norm',rng:1,t:20,abil:'브루들링(일정시간 후 소멸)'} }
 };
 TECH_SPEC.aetherial={   // 프로토스: 건물·유닛 실드 자동재생(기본 방어 0, 건물 방어 1)
   bldg:{ nexus:{hp:750,sh:750,ar:1,size:[4,3],t:120}, pylon:{hp:300,sh:300,ar:1,size:[2,2],t:30}, assimilator:{hp:450,sh:450,ar:1,size:[4,2],t:40},
