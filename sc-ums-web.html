@@ -9682,7 +9682,7 @@ function loop(now){
       const list=[]; for(const e of (G.tech.ents||[])){ if(e.type!=='bldg'||e.bt>0) continue; const mk=(TECH_MODEL[race]||{})[e.bk]; if(!mk) continue; const _cfg=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[mk]:null; list.push({uid:'cst_'+race+'_'+mk+'_'+e.eid, id:'cb_'+mk, x:(e.x-_v.x)*_v.zoom+0.5, y:(e.y-_v.y)*_v.zoom+0.5, face:((race==='swarm')?0:(typeof CST_YAW!=='undefined'?CST_YAW:0))+((_cfg&&_cfg.f)||0), yoff:(typeof CST_YSHIFT!=='undefined'?CST_YSHIFT:34), sel:(G.tech&&G.tech.sel===e.eid)}); }   // 뷰 변환(팬/줌) 반영
       for(const e of (G.tech.ents||[])){ if(e.type!=='unit'&&e.type!=='worker') continue; const mk=(typeof _techEntModel==='function')?_techEntModel(e):null; if(!mk) continue;   // 🚶 일꾼·생산 유닛 3D
         const _selu=(G.tech.sel===e.eid)||(G.tech.selU&&G.tech.selU.indexOf(e.eid)>=0);
-        list.push({uid:'tu_'+e.eid, id:mk, x:(e.x-_v.x)*_v.zoom+0.5, y:(e.y-_v.y)*_v.zoom+0.5, face:(typeof CST_YAW!=='undefined'?CST_YAW:0), yoff:(typeof TECH_UNIT_YOFF!=='undefined'?TECH_UNIT_YOFF:6), moving:(e.tx!=null), sel:_selu}); }   // 크기=메인과 동일한 유닛별 SCALE
+        list.push({uid:'tu_'+e.eid, id:mk, x:(e.x-_v.x)*_v.zoom+0.5, y:(e.y-_v.y)*_v.zoom+0.5, face:(typeof CST_YAW!=='undefined'?CST_YAW:0)+(e.face||0), yoff:(typeof TECH_UNIT_YOFF!=='undefined'?TECH_UNIT_YOFF:6), moving:(e.tx!=null), sel:_selu}); }   // face = 건설뷰 기준각 + 이동방향(메인과 동일 응시)
       window.M3D.syncBuild(list, W, H, dt, _v.zoom);
     } else if(mcv) mcv.style.display='none';
     const _fcv=document.getElementById('cvFx'); if(_fcv) _fcv.style.display='none';
@@ -10131,12 +10131,34 @@ function techFinishProduce(q){ const race=G.tech.race; G.tech.units[q.id]=(G.tec
   const _ex=Math.max(0.04,Math.min(0.96,bx+Math.cos(ang)*rr)), _ey=Math.max(0.18,Math.min(0.96,by+0.1+Math.sin(ang)*rr*0.55));
   const _isWk=(q.id===(TECH_WORKER[race]||'worker_human'));   // 생산된 일꾼도 초기 일꾼과 동일한 type:'worker'(건설 가능)
   G.tech.ents.push(_isWk?{eid:G.tech.eseq++, type:'worker', x:_ex, y:_ey}:{eid:G.tech.eseq++, type:'unit', uid:q.id, x:_ex, y:_ey}); }
+// 건설 맵 유닛 이동: 건물을 관통하지 않고 돌아가도록 조향(바깥 밀어내기 + 접선 미끄러짐). 목표가 건물 안이면 그 건물은 장애물서 제외(그리로 가는 중).
+function _techAvoidSteer(e, tx, ty, hx, hy, obst){
+  if(!obst||!obst.length) return {hx,hy};
+  const GWp=(typeof GW!=='undefined'&&GW>0)?GW:390, race=G.tech.race, MM=(typeof TECH_MODEL!=='undefined'&&TECH_MODEL[race])||{};
+  let ax=0, ay=0, blocked=false;
+  for(const b of obst){ const cfg=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[MM[b.bk]]:null, s=(cfg&&cfg.s)||50;
+    const r=Math.min(0.13,(s*0.5*1.2)/GWp);   // 건물 회피 반경(정규화)
+    const rdx=e.x-b.x, rdy=e.y-b.y, dist=Math.hypot(rdx,rdy)||1e-4;
+    if(dist>r+0.10) continue;   // 충분히 멀면 무시
+    const tdx=tx-b.x, tdy=ty-b.y; if(tdx*tdx+tdy*tdy < r*r) continue;   // 목표가 건물 안 → 제외
+    if(dist>r && ((b.x-e.x)*hx+(b.y-e.y)*hy)<=0) continue;   // 건물이 진행 방향 뒤 & 바깥 → 무시
+    blocked=true;
+    const push=Math.max(0,(r+0.015-dist))/r; ax+=(rdx/dist)*push*1.1; ay+=(rdy/dist)*push*1.1;   // 바깥으로 밀기
+    const t1x=-rdy/dist, t1y=rdx/dist, dot1=t1x*hx+t1y*hy;   // 접선 — 진행방향에 부합하는 쪽으로 미끄러져 돌아감
+    ax+=(dot1>=0?t1x:-t1x)*0.95; ay+=(dot1>=0?t1y:-t1y)*0.95;
+  }
+  if(!blocked) return {hx,hy};
+  const nx=hx+ax, ny=hy+ay, nl=Math.hypot(nx,ny); if(nl<1e-4) return {hx,hy}; return {hx:nx/nl, hy:ny/nl};
+}
 function techTick(dt){ if(!G.tech) return; let active=false, done=false;
   for(const e of G.tech.ents){ if(e.type==='bldg'&&e.bt>0){ if(!e.waiting){ e.bt=Math.max(0,e.bt-dt); if(e.bt<=0){ techFinishBuild(e); done=true; } } active=true; } }   // waiting=일꾼 미도착 → 카운트다운 정지
+  const _obst=G.tech.ents.filter(x=>x.type==='bldg');   // 회피 대상 건물(건설 중 포함)
   for(const e of G.tech.ents){ if((e.type==='unit'||e.type==='worker')&&e.tx!=null){ const dx=e.tx-e.x, dy=e.ty-e.y, d=Math.hypot(dx,dy), step=_techSpdOf(e)*dt;   // 🚶 유닛 이동(스펙별 속도)
     if(d<=step||d<1e-4){ e.x=e.tx; e.y=e.ty; e.tx=null; e.ty=null;
       if(e.type==='worker'&&e.build!=null){ const bd=G.tech.ents.find(x=>x.eid===e.build); if(bd&&bd.waiting){ bd.waiting=false; done=true; } }   // 일꾼 도착 → 건설 시작
-    } else { e.x+=dx/d*step; e.y+=dy/d*step; } active=true; } }
+    } else { let hx=dx/d, hy=dy/d; const _st=_techAvoidSteer(e, e.tx, e.ty, hx, hy, _obst); hx=_st.hx; hy=_st.hy;   // 🧭 건물 돌아가기
+      e.x+=hx*step; e.y+=hy*step; const _fa=Math.atan2(hx,hy); e.face=Math.round(_fa/(Math.PI/8))*(Math.PI/8); }   // 이동 방향 응시(메인과 동일: atan2 + π/8 스냅)
+    active=true; } }
   if(G.tech.pend&&G.tech.pend.length){ const seen={}; for(let i=G.tech.pend.length-1;i>=0;i--){ const q=G.tech.pend[i]; if(seen[q.bk]){ continue; } seen[q.bk]=1; q.t=Math.max(0,q.t-dt); active=true; if(q.t<=0){ techFinishProduce(q); G.tech.pend.splice(i,1); done=true; } } }
   if(done) techUIRender(); else if(active) techMapRender(); }   // 완성=전체 갱신 / 진행중=맵만(진행바)
 // 건설 탭 건물 3D 프리뷰: TECH 건물키 → glb 모델키(선택/배치대기 시 하단 도크에 회전 렌더)
