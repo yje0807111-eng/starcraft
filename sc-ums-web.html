@@ -9689,7 +9689,7 @@ function loop(now){
       for(const e of (G.tech.ents||[])){ if(e.type!=='unit'&&e.type!=='worker') continue; const mk=(typeof _techEntModel==='function')?_techEntModel(e):null; if(!mk) continue;   // 🚶 일꾼·생산 유닛 3D
         const _selu=(G.tech.sel===e.eid)||(G.tech.selU&&G.tech.selU.indexOf(e.eid)>=0);
         const _isAir=(typeof FXLAB_AIR!=='undefined')&&FXLAB_AIR.has(mk);   // 공중 유닛: 메인과 동일한 고정 부양(syncBuild airlift)
-        list.push({uid:'tu_'+e.eid, id:mk, x:(e.x-_v.x)*_v.zoom+0.5, y:(e.y-_v.y)*_v.zoom+0.5, face:(typeof CST_YAW!=='undefined'?CST_YAW:0)+(e.face||0), yoff:(typeof TECH_UNIT_YOFF!=='undefined'?TECH_UNIT_YOFF:6), moving:(e.tx!=null), sel:_selu, airlift:_isAir}); }   // face = 건설뷰 기준각 + 이동방향(메인과 동일 응시)
+        list.push({uid:'tu_'+e.eid, id:mk, x:(e.x-_v.x)*_v.zoom+0.5, y:(e.y-_v.y)*_v.zoom+0.5, face:(typeof CST_YAW!=='undefined'?CST_YAW:0)+(e.face||0), yoff:(typeof TECH_UNIT_YOFF!=='undefined'?TECH_UNIT_YOFF:6), moving:(e.tx!=null), sel:_selu, airlift:_isAir, yawFix:true}); }   // face = 건설뷰 기준각 + 이동방향 + (syncBuild서)모델별 정면 보정
       window.M3D.syncBuild(list, W, H, dt, _v.zoom);
     } else if(mcv) mcv.style.display='none';
     const _fcv=document.getElementById('cvFx');   // 이동 트레일(메인과 동일 이펙트) — 3D 표시 중일 때만
@@ -10192,9 +10192,10 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
   for(const e of G.tech.ents){ if((e.type==='unit'||e.type==='worker')&&e.tx!=null){
     const key=_techEntKey(e), _air=_techAirOf(e);
     const dx=e.tx-e.x, dy=e.ty-e.y, d=Math.hypot(dx,dy);
-    const _end=()=>{ e.tx=null; e.ty=null; e.vx=0; e.vy=0; e._mvStuck=0; e._mvPrevD=null;
+    const _end=()=>{ e.tx=null; e.ty=null; e.vx=0; e.vy=0; e._mvStuck=0; e._mvPrevD=null; e._airDest=null;
       if(e.type==='worker'&&e.build!=null){ const bd=G.tech.ents.find(x=>x.eid===e.build); if(bd&&bd.waiting&&Math.hypot(bd.x-e.x,bd.y-e.y)<0.16){ bd.waiting=false; done=true; } } };   // 일꾼 도착(근접 포함) → 건설 시작
-    if(d<=0.012){ e.x=e.tx; e.y=e.ty; _end(); active=true; continue; }   // 도착 → 명령 종료
+    if(d<=0.012){ if(e._airDest){ e.tx=e._airDest.x; e.ty=e._airDest.y; e._airDest=null; e._mvStuck=0; e._mvPrevD=null; active=true; continue; }   // 공중: 중앙 집결 완료 → 자기 대형 자리로 퍼짐
+      e.x=e.tx; e.y=e.ty; _end(); active=true; continue; }   // 도착 → 명령 종료
     if(e._mvPrevD!=null && d>e._mvPrevD-0.0006) e._mvStuck=(e._mvStuck||0)+dt; else e._mvStuck=0;   // 혼잡·클램프로 더 못 가까워지면 정착
     e._mvPrevD=d;
     if(e._mvStuck>(_air?1.6:0.6)){ _end(); active=true; continue; }
@@ -10352,19 +10353,23 @@ function _techAirOf(e){ return (typeof FXLAB_AIR!=='undefined')&&FXLAB_AIR.has(_
 function _techSpdOf(e){ const b=(typeof Udef==='function'?Udef(_techEntKey(e)):U[_techEntKey(e)])||{}; return (b.moveSpd||0.13)*(typeof MOVE_MUL!=='undefined'?MOVE_MUL:3.0); }
 const _btPtrs=new Map(); let _btPinch=null, _btBox=null, _btCmd=null, _btMoved=false, _btDown=null;
 function _btRect(){ const m=document.getElementById('cstMain'); return m?m.getBoundingClientRect():null; }
+// 충돌 반경 기반 동심원 대형 슬롯(메인 assignFormation과 동일 공식)
+function _techRingSlots(list){ const slots=[{dx:0,dy:0}]; if(list.length<=1) return slots;
+  const r=(list.reduce((a,e)=>a+((U[_techEntKey(e)]||{}).size||14)*0.62,0)/list.length)*2.1;
+  let ring=1; while(slots.length<list.length){ const n=Math.floor(Math.PI*2*ring*0.9)||6;
+    for(let k=0;k<n&&slots.length<list.length;k++){ const a=(k/n)*Math.PI*2+ring*0.5; slots.push({dx:Math.cos(a)*ring*r, dy:Math.sin(a)*ring*r}); } ring++; }
+  return slots; }
 function _techAssignMove(wx,wy){ const sel=(G.tech.selU||[]).map(id=>G.tech.ents.find(e=>e.eid===id)).filter(e=>e&&(e.type==='unit'||e.type==='worker')); if(!sel.length) return;
   const cx=Math.max(0.04,Math.min(0.96,wx)), cy=Math.max(0.16,Math.min(0.96,wy));
-  const cX=x=>Math.max(0.04,Math.min(0.96,x)), cY=y=>Math.max(0.16,Math.min(0.96,y));
-  // 집합 방식 = 메인 assignFormation과 동일: 공중=한 지점 스택(스타식 겹치기) / 지상=충돌 반경 기반 동심원 대형
+  const cX=x=>Math.max(0.04,Math.min(0.96,x)), cY=y=>Math.max(0.16,Math.min(0.96,y)), GWp=GW||390, GHp=GH||390;
   const air=sel.filter(e=>_techAirOf(e)), ground=sel.filter(e=>!_techAirOf(e));
-  air.forEach(e=>{ e.tx=cx; e.ty=cy; e._mvStuck=0; e._mvPrevD=null; });
-  if(ground.length===1){ ground[0].tx=cx; ground[0].ty=cy; ground[0]._mvStuck=0; ground[0]._mvPrevD=null; }
-  else if(ground.length){ const GWp=GW||390, GHp=GH||390;
-    const r=(ground.reduce((a,e)=>a+((U[_techEntKey(e)]||{}).size||14)*0.62,0)/ground.length)*2.1;
-    const slots=[{dx:0,dy:0}]; let ring=1;
-    while(slots.length<ground.length){ const n2=Math.floor(Math.PI*2*ring*0.9)||6;
-      for(let k=0;k<n2&&slots.length<ground.length;k++){ const a=(k/n2)*Math.PI*2+ring*0.5; slots.push({dx:Math.cos(a)*ring*r, dy:Math.sin(a)*ring*r}); } ring++; }
-    ground.forEach((e,i)=>{ const s=slots[i]; e.tx=cX(cx+s.dx/GWp); e.ty=cY(cy+s.dy/GHp); e._mvStuck=0; e._mvPrevD=null; }); } }   // 효과음은 다운 1회만(드래그 재지정 스팸 방지)
+  // 공중: 먼저 한 점(중앙)에 집결 → 도착하면 각자 대형 슬롯으로 서서히 퍼져 자리 잡음(_airDest)
+  const aslots=_techRingSlots(air);
+  air.forEach((e,i)=>{ e.tx=cx; e.ty=cy; e._mvStuck=0; e._mvPrevD=null;
+    e._airDest=(air.length>1)?{x:cX(cx+aslots[i].dx/GWp), y:cY(cy+aslots[i].dy/GHp)}:null; });
+  // 지상: 충돌 반경 동심원 대형으로 바로 배치
+  const gslots=_techRingSlots(ground);
+  ground.forEach((e,i)=>{ e.tx=cX(cx+gslots[i].dx/GWp); e.ty=cY(cy+gslots[i].dy/GHp); e._mvStuck=0; e._mvPrevD=null; e._airDest=null; }); }   // 효과음은 다운 1회만(드래그 재지정 스팸 방지)
 function techPtrDown(ev){ if(!G.tech) return; const r=_btRect(); if(!r) return; if(ev.preventDefault)ev.preventDefault();
   _btPtrs.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
   const sx=(ev.clientX-r.left)/(r.width||1), sy=(ev.clientY-r.top)/(r.height||1);
@@ -10413,6 +10418,7 @@ function techArm(bk){ const race=G.tech.race, b=techGetBldg(race,bk); if(!b) ret
 function techPlace(x,y){ const race=G.tech.race, b=techGetBldg(race,G.tech.arm); if(!b){ G.tech.arm=null; techUIRender(); return; }
   if(!_techAfford(b.m,b.g)||(b.addonTo&&!(G.tech.built[b.addonTo]>0))||!_techReqMet(b.req)){ if(typeof toast==='function') toast('⛔ 건설 불가'); G.tech.arm=null; techUIRender(); return; }
   const bx=Math.max(0.06,Math.min(0.94,x)), by=Math.max(0.18,Math.min(0.94,y)), bt=_techBuildTime(race,b.k);
+  const _preWkIds=(G.tech.selU||[]).filter(id=>{ const e=G.tech.ents.find(x=>x.eid===id); return e&&e.type==='worker'; });   // 배치 전 지정된 일꾼(노쿨 유지용)
   let wk=null;
   if(bt>0){   // 노쿨이 아니면 일꾼이 걸어가서 건설 — 선택된 일꾼 우선, 없으면 가장 가까운 유휴 일꾼
     const sels=(G.tech.selU||[]).map(id=>G.tech.ents.find(e=>e.eid===id)).filter(e=>e&&e.type==='worker'&&e.build==null); wk=sels[0]||null;
@@ -10426,7 +10432,8 @@ function techPlace(x,y){ const race=G.tech.race, b=techGetBldg(race,G.tech.arm);
   else if(wk){ wk.build=ne.eid; wk.tx=Math.max(0.04,Math.min(0.96,bx)); wk.ty=Math.max(0.16,Math.min(0.96,by+0.05)); }   // 일꾼 → 건설지로 이동
   G.tech.arm=null; const sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null}); sh.open=true; sh.sec='ent';
   if(wk){ G.tech.sel=null; G.tech.selU=[wk.eid]; }   // 배치 후에도 건설한 일꾼 선택 유지
-  else { G.tech.sel=ne.eid; G.tech.selU=[]; }   // 노쿨(일꾼 없이 즉시 완성)일 땐 그 건물 시트로
+  else if(_preWkIds.length){ G.tech.sel=null; G.tech.selU=_preWkIds.slice(); }   // 노쿨: 지정했던 일꾼 그대로 유지(건물로 안 바뀜)
+  else { G.tech.sel=ne.eid; G.tech.selU=[]; }   // 지정 일꾼이 없을 때만 그 건물 시트로
   const body=document.getElementById('btSheetBody'); if(body) body._cgPage=0; if(typeof playSfx==='function') playSfx('ui_confirm'); techUIRender(); }
 function techDoProduce(id, bk){ const race=G.tech.race; if(!(G.tech.built[bk]>0)){ if(typeof toast==='function') toast('⛔ 건물 미건설'); return; }
   const b=techGetBldg(race,bk), p=b&&b.produces&&b.produces.find(x=>x.id===id); if(!p) return;
@@ -12767,7 +12774,7 @@ window.M3D={
       else if(it.moving){ if(m.inner)m.inner.visible=true; if(m.runInner)m.runInner.visible=false; if(m.gun)m.gun.visible=true; m.walk=(m.walk||0)+dt*WALK_SPD; m.anim.position.set(0,Math.abs(Math.sin(m.walk))*m.h*WALK_BOB,0); m.anim.rotation.z=Math.sin(m.walk*0.5)*WALK_SWAY; }   // 이동(달리기 모델 없음): 절차적 걷기
       else { if(m.inner)m.inner.visible=true; if(m.runInner)m.runInner.visible=false; if(m.gun)m.gun.visible=true; m.anim.position.set(0,0,0); m.anim.rotation.set(0,0,0); }   // 정지
       if(it.airlift && AIR_FLOAT[it.id]){ m.anim.position.x=0; m.anim.position.y=AIR_LIFT_PX/(SCALE[it.id]||MODEL_SCALE); m.anim.rotation.z=0; m.anim.rotation.x=0; if(m.shadow) m.shadow.material.opacity=0.26; }   // 공중 비행체: 메인 sync와 동일한 고정 부양(airlift 플래그 있을 때만 — 직스 등 기존 호출 무영향)
-      if(it.face!=null){ m.yaw.rotation.y=it.face; }
+      if(it.face!=null){ m.yaw.rotation.y=it.face + (it.yawFix?(MODEL_YAW_OFF[it.id]||0):0); }   // yawFix=모델별 정면 보정(메인과 동일: 템페스트·레이서·팔콘 등 옆으로 틀어지는 모델 +90° 등). 플래그 없으면 무영향
       m.holder.scale.setScalar((SCALE[it.id]||MODEL_SCALE)*mul*(it.scl||1));
       m.holder.position.set(it.x*W, (H-it.y*H)-Y_DROP-(it.yoff||0), 0);   // yoff=화면 아래로 내림
       m.holder.rotation.x = it.pitch||0;   // 건물 사선 틸트(SC식 부감) — 미지정=0(기존 동작 유지)
