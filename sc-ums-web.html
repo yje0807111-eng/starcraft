@@ -10207,7 +10207,7 @@ function _techBldgSteer(e, tx, ty, dirx, diry, obst){
 function _techEmitWeld(e){ if(!G._weldFx) G._weldFx=[]; if(G._weldFx.length>150) return;
   const c=(window.M3D&&M3D.centerAt)?M3D.centerAt('tu_'+e.eid):null; if(!c) return;
   const fx=Math.sin(e.face||0), fy=Math.cos(e.face||0);   // 바라보는(건물) 방향
-  const hx=c.x+fx*0.008, hy=c.y+fy*0.006+0.006;   // 손 근사 — 몸 중앙에서 건물 쪽으로 아주 조금 + 살짝 아래(바짝 붙임)
+  const hx=c.x+fx*0.006, hy=c.y+0.024;   // 손 근사 — centerN(몸통 중앙)에서 손·발 높이로 크게 내림(용접은 아래쪽) + 건물 쪽 아주 조금
   const n=1+((Math.random()*2)|0);
   for(let k=0;k<n;k++){ const a=(-Math.PI/2)+(Math.random()-0.5)*1.5, sp=0.04+Math.random()*0.09;   // 좁은 상방 분사 + 느린 속도 → 손 근처에 바짝 튀고 곧 낙하
     G._weldFx.push({x:hx+(Math.random()-0.5)*0.004, y:hy, vx:Math.cos(a)*sp+fx*0.02, vy:Math.sin(a)*sp*0.7, life:0.2+Math.random()*0.16, len:1.5+Math.random()*2, color:Math.random()<0.28?'#ffffff':(Math.random()<0.6?'#ffe28a':'#ff9440')}); }
@@ -10279,8 +10279,8 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
       } else { e._working=false; const _sd=_techBldgSide(bd,e._bpSide||0); e.tx=_sd.x; e.ty=_sd.y; }   // 멀리 있으면(재개 등) 건물로 복귀
       active=true; } }
   if(techSeparate()) active=true;   // 도착한 유닛 겹침 분리(메인과 동일) — 공중 한 점 집결 후 완만히 흩어짐
-  // 🧱 완성된 건물과 겹친 유닛을 자연스럽게 건물 밖으로 밀어냄(AABB 최소침투 방향) — 건설 중(bt>0)은 겹침 허용
-  for(const bd of G.tech.ents){ if(bd.type!=='bldg'||bd.bt>0) continue;
+  // 🧱 완성 or 일시정지(동결) 건물과 겹친 유닛을 자연스럽게 밖으로 밀어냄 — 진행 중(bt>0, 미일시정지)만 겹침 허용
+  for(const bd of G.tech.ents){ if(bd.type!=='bldg'||(bd.bt>0 && !bd._bpause)) continue;
     const f=(typeof _techFoot==='function')?_techFoot(G.tech.race,bd.bk):{w:2,h:2}, hw=(f.w/2)*_techCW()+0.006, hh=(f.h/2)*_techCH()+0.006;
     for(const e of G.tech.ents){ if(e.type!=='unit'&&e.type!=='worker') continue;
       const dx=e.x-bd.x, dy=e.y-bd.y; if(Math.abs(dx)>=hw||Math.abs(dy)>=hh) continue;   // 건물 밖
@@ -10433,6 +10433,16 @@ function techResumeBuild(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); i
   wk.build=bd.eid; wk.tx=Math.max(0.04,Math.min(0.96,bd.x)); wk.ty=Math.max(0.16,Math.min(0.96,bd.y+0.05)); wk._working=false; wk._bpSide=null; wk._bpT=null;
   bd._bpause=false; bd.waiting=true;   // 일꾼 도착까지 대기(카운트다운 정지) → 도착 시 이어서 건설
   if(typeof playSfx==='function') playSfx('ui_confirm'); techUIRender(); }   // 왼쪽: 유닛 스탯(자원은 맵 상단바)
+function techBldgBuildingModel(be){ const race=G.tech.race, b=techGetBldg(race,be.bk)||{}, bs=techBldgSpec(race,be.bk)||{};   // 건설 중·일시정지 건물 = 전부 잠금 + 진행도 비례 체력
+  const maxHp=bs.hp||0, maxSh=bs.sh||0, ratio=Math.max(0,Math.min(1,1-(be.bt/(be.btMax||1)))), pct=Math.round(ratio*100), paused=!!be._bpause;
+  const curHp=Math.round(maxHp*ratio), curSh=Math.round(maxSh*ratio);
+  let items=[];
+  if(b.produces) items=b.produces.map(p=>({ pro:_techUnitPortrait(p.id), sn:_techRealName(race,p.id), cr:p.m, en:p.g, meta:'🔒', metaCls:'', state:'dim', act:'' }));   // 생산 목록 표시하되 전부 잠금(클릭 불가)
+  else if(b.research) items=b.research.map(r=>({ pro:'<span class="pemoji">🔬</span>', sn:r.name, meta:'🔒', metaCls:'', state:'dim', act:'' }));
+  return { mode:'prod', title:b.name+(paused?' (일시정지)':' (건설 중)'), icon:'<span class="pemoji">'+(b.ico||'🏢')+'</span>',
+    hpsh:_cgHpShStr(curHp+'/'+maxHp, maxSh?(curSh+'/'+maxSh):0), status:(paused?'⏸ 일시정지':'🏗 '+pct+'%'), statusIdle:paused,
+    sub:(paused?'⏸ 미완성 — 건물 클릭 후 ▶ 재개로 이어서 건설':'🏗 건설 중 '+pct+'% — 완성 전 사용 불가'), items,
+    info:{ eb:'상태', name:b.name, hideName:true, desc:(paused?'일시정지된 미완성 건물. ▶ 재개 시 가장 가까운 일꾼이 이어서 건설.':'건설 중 — 완성되면 생산·연구 가능.'), progLabel:'건설 진행', progVal:pct+'%', prog:pct, cr:0, en:0, time:paused?'일시정지':Math.ceil(be.bt)+'s 남음' } }; }
 function techPanelRender(){ const body=document.getElementById('btSheetBody'), sheet=document.getElementById('btSheet'); if(!body||!sheet) return;
   const sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null});
   const selB=(G.tech.sel!=null)?G.tech.ents.find(e=>e.eid===G.tech.sel&&e.type==='bldg'):null;
@@ -10441,7 +10451,8 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
   const _selWk=selUs.some(e=>e.type==='worker');
   // 시트: 선택된 대상(일꾼=건설 그리드 / 유닛=이동 / 건물=생산·연구)만 표시. 별도 독 배너 없음 — 업그레이드 탭 시트처럼 그 영역만
   let model=null;
-  if(sh.open){ if(selB){ const b=techGetBldg(G.tech.race,selB.bk); model=(b&&b.produces)?techBldgProdModel(b):((b&&b.research)?techBldgUpgModel(b):((b&&b.unlocks)?techBldgInfoModel(b):null)); }
+  if(sh.open){ if(selB){ if(selB.bt>0){ model=techBldgBuildingModel(selB); }   // 건설 중·일시정지 = 잠금 프로필(진행도 HP)
+      else { const b=techGetBldg(G.tech.race,selB.bk); model=(b&&b.produces)?techBldgProdModel(b):((b&&b.research)?techBldgUpgModel(b):((b&&b.unlocks)?techBldgInfoModel(b):null)); } }
     else if(selUs.length) model=_selWk?techWorkerBuildModel(selUs):techUnitPanelModel(selUs); }
   sheet.classList.toggle('open', !!(sh.open&&model));
   if(model) renderCmdGrid(body, model);
