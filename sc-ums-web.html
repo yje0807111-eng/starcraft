@@ -989,12 +989,12 @@
   .bfoot.ok{border:1px solid rgba(70,240,106,.4);background-color:rgba(70,240,106,.06)}
   .bfoot.bad{border:1px solid rgba(255,90,90,.45);background-color:rgba(255,90,90,.09)}
   .bArmBtns{position:absolute;z-index:26;display:flex;gap:6px;transform:translate(-50%,calc(-100% - 26px));pointer-events:auto}   /* 고스트 바로 위에 떠서 함께 이동 · #cstLabels(pointer-events:none) 안에서도 버튼은 클릭 가능 */
-  .bArmBtn{font-size:18px;font-weight:900;width:40px;height:40px;display:flex;align-items:center;justify-content:center;padding:0;border-radius:12px;border:1.5px solid rgba(255,255,255,.14);background:linear-gradient(160deg,rgba(36,42,54,.95),rgba(15,18,25,.97));color:#eaf0f8;cursor:pointer;-webkit-tap-highlight-color:transparent;box-shadow:0 4px 12px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.08)}   /* 확정/취소 동일 크기(위계 없음) — 깔끔한 글래스 버튼 */
+  .bArmBtn{font-size:14px;font-weight:900;width:30px;height:30px;display:flex;align-items:center;justify-content:center;padding:0;border-radius:9px;border:1.5px solid rgba(255,255,255,.14);background:linear-gradient(160deg,rgba(36,42,54,.95),rgba(15,18,25,.97));color:#eaf0f8;cursor:pointer;-webkit-tap-highlight-color:transparent;box-shadow:0 3px 9px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.08)}   /* 확정/취소 동일 크기(위계 없음) — 깔끔한 글래스 버튼 */
   .bArmBtn.ok{border-color:rgba(90,223,138,.7);color:#8ff2b0;background:linear-gradient(160deg,rgba(26,54,39,.95),rgba(12,27,19,.97))}
   .bArmBtn.ok.dis{opacity:.4;filter:grayscale(.6)}
   .bArmBtn.cancel{border-color:rgba(255,130,130,.6);color:#ffb0b0;background:linear-gradient(160deg,rgba(52,31,35,.95),rgba(25,13,16,.97))}
   .bArmBtn:active{transform:translateY(1px) scale(.95)}
-  .bArmBtn.bResume{width:auto;height:38px;padding:0 18px;font-size:14px;font-weight:800;letter-spacing:.6px;border-radius:11px;color:#ffe6a0;border-color:rgba(255,210,74,.65);background:linear-gradient(160deg,rgba(46,38,20,.96),rgba(24,19,10,.98));box-shadow:0 4px 12px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06)}   /* 재개 — 아이콘 없이 깔끔한 금색 텍스트 버튼 */
+  .bArmBtn.bResume{width:auto;height:29px;padding:0 13px;font-size:12px;font-weight:800;letter-spacing:.4px;border-radius:9px;color:#ffe6a0;border-color:rgba(255,210,74,.65);background:linear-gradient(160deg,rgba(46,38,20,.96),rgba(24,19,10,.98));box-shadow:0 3px 9px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06)}   /* 재개 — 아이콘 없이 깔끔한 금색 텍스트 버튼(작게) */
   .bldHp{position:absolute;z-index:11;transform:translate(-50%,3px);height:5px;min-width:22px;border-radius:3px;background:rgba(0,0,0,.62);border:1px solid rgba(120,150,190,.4);overflow:hidden;pointer-events:none}   /* 각 건물 하단 체력/진행 바 — 발판 바로 아래 */
   .bldHp i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#2f7d4a,#5adf8a);box-shadow:0 0 5px rgba(90,223,138,.5);transition:width .12s linear}
   .bldHp.bld i{background:linear-gradient(90deg,#2f6fbf,#5cc8ff);box-shadow:0 0 5px rgba(92,200,255,.5)}   /* 건설 중 = 파란 진행 바 */
@@ -10366,7 +10366,7 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
     if(e.type==='bldg'){ const _b=techGetBldg(race,e.bk)||{}; cls='bldg live3d'; inner='';
       const _bf=(typeof _techFoot==='function')?_techFoot(race,e.bk):{w:2,h:2}, _byB=e.y+(_bf.h/2)*_techCH(), _sb=_techW2S(e.x,_byB);
       const _hw=Math.max(0.05,_bf.w*_techCW()*techView().zoom), _ratio=(e.bt>0)?Math.max(0,Math.min(1,1-e.bt/(e.btMax||1))):1;   // 바 폭=발판 폭(줌) · 건설 중=진행도/완성=풀
-      labels+='<div class="bldHp'+(e.bt>0?' bld':'')+'" style="left:'+(_sb.x*100).toFixed(2)+'%;top:'+(_sb.y*100).toFixed(2)+'%;width:'+(_hw*100).toFixed(2)+'%"><i style="width:'+(_ratio*100).toFixed(1)+'%"></i></div>';   // 각 건물 하단 체력 바(건설 중 실시간 차오름)
+      if(e.bt>0 || G.tech.sel===e.eid) labels+='<div class="bldHp'+(e.bt>0?' bld':'')+'" style="left:'+(_sb.x*100).toFixed(2)+'%;top:'+(_sb.y*100).toFixed(2)+'%;width:'+(_hw*100).toFixed(2)+'%"><i style="width:'+(_ratio*100).toFixed(1)+'%"></i></div>';   // 건설 중=항상 표시(실시간 차오름) · 완성=지정 시에만
       if(e.bt>0 && !e._bpause){ const _lbl=e.waiting?'<span class="bldSpin"></span>':(Math.ceil(e.bt)+'s');   // 일꾼 오는 중 스피너 / 건설 중 시간 · 일시정지는 라벨 없음(반투명 정지로 이미 표현)
         labels+='<div class="bldTime" style="left:'+(_sb.x*100).toFixed(2)+'%;top:'+(_sb.y*100).toFixed(2)+'%">'+_lbl+'</div>'; }
       else { const _pq=(G.tech.pend||[]).find(q=>q.bk===e.bk); if(_pq){ const _pp=Math.round((1-_pq.t/(_pq.tMax||1))*100); inner='<div class="bprog prod" style="bottom:0"><i style="width:'+_pp+'%"></i></div>'; } } }
@@ -10458,7 +10458,8 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
   const _selWk=selUs.some(e=>e.type==='worker');
   // 시트: 선택된 대상(일꾼=건설 그리드 / 유닛=이동 / 건물=생산·연구)만 표시. 별도 독 배너 없음 — 업그레이드 탭 시트처럼 그 영역만
   let model=null;
-  if(sh.open){ if(selB){ if(selB.bt>0){ model=techBldgBuildingModel(selB); }   // 건설 중·일시정지 = 잠금 프로필(진행도 HP)
+  const _resumeMode=!!(selB && selB.bt>0 && selB._bpause && selUs.length);   // 재개 모드(유닛 지정 + 일시정지 건물 선택): 건물 위 재개 버튼만, 하단은 지정 유닛 프로필
+  if(sh.open){ if(selB && !_resumeMode){ if(selB.bt>0){ model=techBldgBuildingModel(selB); }   // 건설 중·일시정지 = 잠금 프로필(진행도 HP)
       else { const b=techGetBldg(G.tech.race,selB.bk); model=(b&&b.produces)?techBldgProdModel(b):((b&&b.research)?techBldgUpgModel(b):((b&&b.unlocks)?techBldgInfoModel(b):null)); } }
     else if(selUs.length) model=_selWk?techWorkerBuildModel(selUs):techUnitPanelModel(selUs); }
   sheet.classList.toggle('open', !!(sh.open&&model));
