@@ -940,12 +940,12 @@
   #vBuild.on{display:flex;flex-direction:column;min-height:0}   /* .on일 때만 표시 — 없으면 .gview{display:none}로 숨김(탭 이탈 시 건설 상단바·시트 잔류 방지) */
   #cstMain{flex:1;min-height:0;width:100%;position:relative;overflow:hidden;padding:0}
   #bpBuild{display:none}   /* 건설은 자체 슬라이드 시트(#btSheet) 사용 → 하단 패널 미사용(다른 탭에서 32px 잔여공간 제거) */
-  .bmap{position:absolute;inset:0;overflow:hidden;cursor:crosshair;
+  .bmap{position:absolute;inset:0;overflow:hidden;cursor:crosshair;background:#0a0d14}
+  .bmapFloor{position:absolute;inset:0;z-index:0;pointer-events:none;transform-origin:0 0;   /* 바닥 타일·격자 = 메인맵 viewApply와 동일한 변환(translate 50% · scale zoom · translate -v)으로 유닛과 함께 확대/축소/팬 */
     background:linear-gradient(0deg,rgba(120,150,190,.06) 1px,transparent 1px),
       linear-gradient(90deg,rgba(120,150,190,.06) 1px,transparent 1px),
       url('/assets/tiles/badlands.webp');
-    background-repeat:repeat;
-    background-size:28px 28px,28px 28px,132px 132px}   /* 격자·타일 크기는 techMapRender에서 줌/팬에 맞춰 인라인으로 덮어씀 */
+    background-repeat:repeat;background-size:28px 28px,28px 28px,132px 132px}
   .bmap.arming{cursor:copy}
   .bmapTop{position:absolute;top:0;left:0;right:0;min-height:34px;display:flex;align-items:center;justify-content:space-between;gap:8px;
     padding:6px 10px;background:linear-gradient(180deg,rgba(6,10,18,.86),rgba(6,10,18,.5) 66%,transparent);z-index:5;pointer-events:auto;flex-wrap:wrap}   /* 진한 반투명 덮개 — 화면에 스며들며 약간의 구분 */
@@ -10403,10 +10403,8 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
   if(G.tech.sel!=null){ const _sb=G.tech.ents.find(e=>e.eid===G.tech.sel&&e.type==='bldg'); if(_sb&&_sb.bt>0&&_sb._bpause){ const _sbf=_techFoot(race,_sb.bk), _rs=_techW2S(_sb.x,_sb.y+(_sbf.h/2)*_techCH());   // 발판 하단 중앙
     resumeBtn='<div class="bArmBtns" style="left:'+(_rs.x*100).toFixed(2)+'%;top:'+(_rs.y*100).toFixed(2)+'%" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()"><button class="bArmBtn ok" onclick="techResumeBuild(event)" title="재개"><svg viewBox="0 0 24 24" width="15" height="15" style="display:block"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button><button class="bArmBtn cancel" onclick="techDemolishBuild(event)" title="철거">✕</button></div>'; } }   // 재개(▶) + 철거(✕) — 단순 아이콘
   const hint=G.tech.arm?('📍 '+((techGetBldg(race,G.tech.arm)||{}).name)+(G.tech.armXY?' — 드래그로 위치 조정 후 ✓ 확정':' — 지을 곳을 탭하세요')):((G.tech.selU&&G.tech.selU.length)?('👥 '+G.tech.selU.length+'기 지정 — 탭/드래그로 이동 · 해제는 우상단 ✕'):(G.tech.sel==null?'일꾼 탭=건설 메뉴 · 드래그=유닛 지정 · 두 손가락=화면 이동':'건물을 탭하면 하단 시트에 생산·연구가 표시됩니다'));
-  const _bz=techView().zoom, _bv=techView(), _br2=_btRect(), _bpw=(_br2&&_br2.width)||360, _bph=(_br2&&_br2.height)||420;   // 바닥 타일/격자도 유닛처럼 줌·팬에 맞춰 스케일 — 월드원점을 화면픽셀로 환산해 background-position, 크기는 ×zoom
-  const _gpx=(28*_bz).toFixed(2), _tpx=(132*_bz).toFixed(2), _bpx=((0.5-_bv.x*_bz)*_bpw).toFixed(2), _bpy=((0.5-_bv.y*_bz)*_bph).toFixed(2);
-  const _bgStyle='touch-action:none;background-size:'+_gpx+'px '+_gpx+'px,'+_gpx+'px '+_gpx+'px,'+_tpx+'px '+_tpx+'px;background-position:'+_bpx+'px '+_bpy+'px,'+_bpx+'px '+_bpy+'px,'+_bpx+'px '+_bpy+'px';
-  map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+'" onpointerdown="techPtrDown(event)" style="'+_bgStyle+'"><div class="bmapTop"><div class="techTabs">'+tabs+'</div><div class="bres">'+res+'</div></div>'+ents+foot+ghost+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div></div>';
+  const _floor='<div class="bmapFloor" style="transform:'+_techViewCSS()+'"></div>';   // 바닥 = 메인맵과 동일한 뷰 변환(_techViewCSS = viewApply의 CSS판)
+  map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none">'+_floor+'<div class="bmapTop"><div class="techTabs">'+tabs+'</div><div class="bres">'+res+'</div></div>'+ents+foot+ghost+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div></div>';
   const _lblLayer=document.getElementById('cstLabels'); if(_lblLayer) _lblLayer.innerHTML=labels+armBtns+resumeBtn; }   // 남은시간 라벨 + 배치 ✓/✕ + ▶재개 버튼을 전용 오버레이(z8)에 → 3D 유닛·건물 위(리파이너리 등 큰 건물에 안 가림)
 function techBldgInfoModel(b){ const race=G.tech.race, hb=TECH_TREE[race].buildings[0];
   const items=(b.unlocks||[]).map(uid=>{ const p=(hb.produces||[]).find(x=>x.id===uid)||{}; return { pro:_techUnitPortrait(uid), sn:p.name||uid, cr:p.m||0, en:p.g||0, meta:p.pop?'👤'+p.pop:'', state:'ok', act:'' }; });
@@ -10487,6 +10485,7 @@ function techDeselU(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.
 // 입력
 // 뷰(확대/축소·팬) — 월드좌표(0~1)↔화면좌표 변환 (메인탭 G.view와 동일 규약)
 function techView(){ if(!G.tech.view) G.tech.view={x:0.5,y:0.5,zoom:1}; return G.tech.view; }
+function _techViewCSS(){ const v=techView(); return 'translate(50%,50%) scale('+v.zoom.toFixed(4)+') translate('+(-v.x*100).toFixed(3)+'%,'+(-v.y*100).toFixed(3)+'%)'; }   // viewApply(translate W/2,H/2·scale zoom·translate -v.x*W,-v.y*H)의 CSS 등가 — 메인맵 뷰와 동일 규약
 function _techClampView(){ const v=G.tech.view; v.zoom=Math.max(1,Math.min(4,v.zoom)); const m=(1-1/v.zoom)*0.5; v.x=Math.max(0.5-m,Math.min(0.5+m,v.x)); v.y=Math.max(0.5-m,Math.min(0.5+m,v.y)); }
 function _techW2S(wx,wy){ const v=techView(); return { x:(wx-v.x)*v.zoom+0.5, y:(wy-v.y)*v.zoom+0.5 }; }   // 월드→화면
 function _techS2W(sx,sy){ const v=techView(); return { x:(sx-0.5)/v.zoom+v.x, y:(sy-0.5)/v.zoom+v.y }; }   // 화면→월드
