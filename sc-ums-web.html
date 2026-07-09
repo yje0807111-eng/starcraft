@@ -10600,7 +10600,8 @@ function techPlace(x,y){ const race=G.tech.race, b=techGetBldg(race,G.tech.arm);
   const _preWkIds=(G.tech.selU||[]).filter(id=>{ const e=G.tech.ents.find(x=>x.eid===id); return e&&e.type==='worker'; });   // 배치 전 지정된 일꾼(노쿨 유지용)
   let wk=null;
   if(bt>0){   // 노쿨이 아니면 일꾼이 걸어가서 건설 — 선택된 일꾼 우선, 없으면 가장 가까운 유휴 일꾼
-    const sels=(G.tech.selU||[]).map(id=>G.tech.ents.find(e=>e.eid===id)).filter(e=>e&&e.type==='worker'&&e.build==null); wk=sels[0]||null;
+    const sels=(G.tech.selU||[]).map(id=>G.tech.ents.find(e=>e.eid===id)).filter(e=>e&&e.type==='worker'&&e.build==null);
+    if(sels.length){ let bd=1e9; for(const e of sels){ const d=(e.x-bx)*(e.x-bx)+(e.y-by)*(e.y-by); if(d<bd){ bd=d; wk=e; } } }   // 지정 일꾼 중 건설지에 가장 가까운 일꾼이 건설
     if(!wk){ let bd=1e9; for(const e of G.tech.ents){ if(e.type==='worker'&&e.build==null){ const d=(e.x-bx)*(e.x-bx)+(e.y-by)*(e.y-by); if(d<bd){ bd=d; wk=e; } } } }
     if(!wk){ if(typeof toast==='function') toast('⛔ 건설할 일꾼이 없음'); G.tech.arm=null; techUIRender(); return; }
   }
@@ -10610,7 +10611,7 @@ function techPlace(x,y){ const race=G.tech.race, b=techGetBldg(race,G.tech.arm);
   if(bt<=0){ techFinishBuild(ne); }   // 즉시(노쿨) 완성
   else if(wk){ wk.build=ne.eid; wk.tx=Math.max(0.04,Math.min(0.96,bx)); wk.ty=Math.max(0.16,Math.min(0.96,by+0.05)); }   // 일꾼 → 건설지로 이동
   G.tech.arm=null; G.tech.armXY=null; const sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null}); sh.open=true; sh.sec='ent';
-  if(wk){ G.tech.sel=null; G.tech.selU=[wk.eid]; }   // 배치 후에도 건설한 일꾼 선택 유지
+  if(wk){ const rest=_preWkIds.filter(id=>id!==wk.eid); G.tech.sel=null; G.tech.selU=rest.length?rest:[wk.eid]; }   // 건설 일꾼은 지정에서 빠지고 나머지 일꾼은 지정 유지(계속 이어서 건설) — 혼자면 그 일꾼 유지
   else if(_preWkIds.length){ G.tech.sel=null; G.tech.selU=_preWkIds.slice(); }   // 노쿨: 지정했던 일꾼 그대로 유지(건물로 안 바뀜)
   else { G.tech.sel=ne.eid; G.tech.selU=[]; }   // 지정 일꾼이 없을 때만 그 건물 시트로
   const body=document.getElementById('btSheetBody'); if(body) body._cgPage=0; if(typeof playSfx==='function') playSfx('ui_confirm'); techUIRender(); }
