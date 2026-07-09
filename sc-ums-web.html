@@ -5942,7 +5942,7 @@ function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 
   document.getElementById('zoneLabel').textContent=ZONE_LABEL[id];
   document.body.classList.toggle('cstMode', id==='Build');   // 건설 탭: 게임 HUD 숨김
   if(id==='Build' && typeof techUIEnsure==='function') techUIEnsure(); else { if(typeof cstHidePreview==='function') cstHidePreview(); if(window.M3D&&M3D.techMap3DStop) M3D.techMap3DStop();
-    if(G.tech){ G.tech.sel=null; G.tech.selU=[]; G.tech.arm=null; if(G.tech.sheet){ G.tech.sheet.open=false; G.tech.sheet.sec=null; } } }   // 건설 진입 렌더 / 이탈 시 프리뷰·라이브3D 정지 + 지정·시트 해제
+    if(G.tech){ G.tech.sel=null; G.tech.selU=[]; G.tech.arm=null; if(G.tech.sheet){ G.tech.sheet.open=false; G.tech.sheet.sec=null; } } G._weldFx=null; }   // 건설 진입 렌더 / 이탈 시 프리뷰·라이브3D 정지 + 지정·시트·용접스파크 해제
   deselectUnit(); G.prodB=null; G.techB=null; G.mergeMode=false; { const mb=document.getElementById('mergeBtn'); if(mb) mb.classList.remove('on'); }
   if(typeof clearShopProfile==='function') clearShopProfile();   // 유닛뽑기 중립 선택 해제
   document.getElementById('prodHint').style.display='';
@@ -10202,6 +10202,23 @@ function _techBldgSteer(e, tx, ty, dirx, diry, obst){
   }
   return {sx:ax, sy:ay};
 }
+// 🔧 용접 스파크(엔지니어 일꾼 작업 중) — 오른손 근처에서 작은 불꽃이 튀며 낙하(cvFx에 직접 그림, 공용 FX 코어 무영향)
+function _techEmitWeld(e){ if(!G._weldFx) G._weldFx=[]; if(G._weldFx.length>150) return;
+  const c=(window.M3D&&M3D.centerAt)?M3D.centerAt('tu_'+e.eid):null; if(!c) return;
+  const fx=Math.sin(e.face||0), fy=Math.cos(e.face||0), rx=fy, ry=-fx;   // 바라보는(건물) 방향 + 오른쪽 방향
+  const hx=c.x+fx*0.016+rx*0.012, hy=c.y+fy*0.010+ry*0.012+0.004;   // 오른손 근사(앞·오른쪽·살짝 아래)
+  const n=1+((Math.random()*2)|0);
+  for(let k=0;k<n;k++){ const a=(-Math.PI/2)+(Math.random()-0.5)*2.4, sp=0.14+Math.random()*0.24;
+    G._weldFx.push({x:hx+(Math.random()-0.5)*0.006, y:hy, vx:Math.cos(a)*sp+fx*0.04, vy:Math.sin(a)*sp*0.7, life:0.26+Math.random()*0.2, len:2+Math.random()*3, color:Math.random()<0.28?'#ffffff':(Math.random()<0.6?'#ffe28a':'#ff9440')}); }
+  if(Math.random()<0.75) G._weldFx.push({x:hx, y:hy, vx:0, vy:0, life:0.09, flash:true, color:'#fff7d8'}); }   // 손끝 용접 코어(깜빡)
+function _techWeldStep(dt, s){ const arr=G._weldFx; if(!arr||!arr.length) return; const ctx=s.ctx, W=s.W, H=s.H;
+  ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.lineCap='round';
+  for(let i=arr.length-1;i>=0;i--){ const p=arr[i]; p.vy+=0.85*dt; p.x+=p.vx*dt; p.y+=p.vy*dt; p.life-=dt*(p.flash?10:3.6);
+    if(p.life<=0){ arr.splice(i,1); continue; }
+    const L=Math.max(0,p.life), cx=p.x*W, cy=p.y*H;
+    if(p.flash){ ctx.globalAlpha=Math.min(1,L*1.2); ctx.fillStyle=p.color; ctx.beginPath(); ctx.arc(cx,cy,2.4*(0.4+L),0,6.283); ctx.fill(); }
+    else { const sp=Math.hypot(p.vx,p.vy)||1e-4; ctx.globalAlpha=Math.min(1,L*1.7); ctx.strokeStyle=p.color; ctx.lineWidth=1.2; ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx-(p.vx/sp)*p.len, cy-(p.vy/sp)*p.len); ctx.stroke(); } }
+  ctx.restore(); }
 // 건설 맵 이동 트레일 — 메인 stepMoveTrails와 동일 레시피(TRAIL_UNIT/emitMoveTrail)를 건설 뷰(팬/줌) 좌표로 적용
 function techMoveTrails(dt){ if(typeof FX==='undefined'||typeof emitMoveTrail==='undefined'||!G.tech) return;
   if(!G._techFx) G._techFx=FX.store();
@@ -10215,8 +10232,10 @@ function techMoveTrails(dt){ if(typeof FX==='undefined'||typeof emitMoveTrail===
     else if(typeof e.face==='number') emitMoveTrail(G._techFx, gm, px, Math.sin(e.face), Math.cos(e.face), 1, dt);
     e._mtT=px._mtT; }
   FX.advance(G._techFx, dt);
+  for(const e of G.tech.ents){ if(e.type==='worker'&&e._working&&_techEntKey(e)==='worker_human') _techEmitWeld(e); }   // 🔧 엔지니어 작업 중 = 오른손 용접 스파크 방출
   if(typeof setup!=='function') return; const s=setup('cvFx');   // setup=캔버스 크기 재설정+클리어(메인 drawFx와 동일)
-  FX.drawShots(s.ctx, G._techFx, (x,y)=>({x:x*s.W, y:y*s.H}), 1.0); }
+  FX.drawShots(s.ctx, G._techFx, (x,y)=>({x:x*s.W, y:y*s.H}), 1.0);
+  _techWeldStep(dt, s); }   // 용접 스파크 갱신·그리기(cvFx, 같은 프레임)
 // 건설 유닛 겹침 분리 — 메인 separateUnits와 동일(공용 separatePass). 도착(정지)한 유닛만 대상 → 한 점에 모인 공중유닛이 메인처럼 완만히 흩어져 자리 잡음. 반환=움직였는지(리렌더 필요).
 function techSeparate(){ if(!G.tech||!GW||!GH) return false; const es=G.tech.ents;
   const items=[]; for(const e of es){ if((e.type!=='unit'&&e.type!=='worker')||e.tx!=null) continue;   // 이동 중 유닛 제외(도착한 것만)
@@ -10363,7 +10382,7 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
     const _r=_btRect(), _mW=(_r&&_r.width)||360, _mH=(_r&&_r.height)||420;
     foot='<div class="bfoot '+(_ok?'ok':'bad')+'" style="left:'+(_tl.x*100).toFixed(2)+'%;top:calc('+(_tl.y*100).toFixed(2)+'% + '+_off+'px);width:'+((_br.x-_tl.x)*100).toFixed(2)+'%;height:'+((_br.y-_tl.y)*100).toFixed(2)+'%;background-size:'+(_cw*_mW*_zm).toFixed(1)+'px '+(_ch*_mH*_zm).toFixed(1)+'px"></div>';
     if(!_is3d) ghost='<div class="bent bghost '+(_ok?'ok':'bad')+'" style="left:'+(_gs.x*100).toFixed(2)+'%;top:calc('+(_gs.y*100).toFixed(2)+'% + '+_off+'px);transform:translate(-50%,-50%) scale('+_zm.toFixed(2)+')"><span class="be-ico">'+(_ab.ico||'🏢')+'</span></div>';   // 3D 미가용 폴백(이모지)
-    armBtns='<div class="bArmBtns" style="left:'+(_gs.x*100).toFixed(2)+'%;top:'+(_gs.y*100).toFixed(2)+'%" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()"><button class="bArmBtn cancel" onclick="techCancelArm(event)">✕</button><button class="bArmBtn ok'+(_ok?'':' dis')+'" onclick="techConfirmPlace(event)">✓</button></div>'; }
+    armBtns='<div class="bArmBtns" style="left:'+(_gs.x*100).toFixed(2)+'%;top:'+(_gs.y*100).toFixed(2)+'%" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()"><button class="bArmBtn ok'+(_ok?'':' dis')+'" onclick="techConfirmPlace(event)">✓</button><button class="bArmBtn cancel" onclick="techCancelArm(event)">✕</button></div>'; }   // ✓ 왼쪽 · ✕ 오른쪽(위치 교체)
   const hint=G.tech.arm?('📍 '+((techGetBldg(race,G.tech.arm)||{}).name)+(G.tech.armXY?' — 드래그로 위치 조정 후 ✓ 확정':' — 지을 곳을 탭하세요')):((G.tech.selU&&G.tech.selU.length)?('👥 '+G.tech.selU.length+'기 지정 — 탭/드래그로 이동 · 해제는 우상단 ✕'):(G.tech.sel==null?'일꾼 탭=건설 메뉴 · 드래그=유닛 지정 · 두 손가락=화면 이동':'건물을 탭하면 하단 시트에 생산·연구가 표시됩니다'));
   map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none"><div class="bmapTop"><div class="techTabs">'+tabs+'</div><div class="bres">'+res+'</div></div>'+ents+foot+ghost+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div></div>';
   const _lblLayer=document.getElementById('cstLabels'); if(_lblLayer) _lblLayer.innerHTML=labels+armBtns; }   // 남은시간 라벨 + 배치 ✓/✕ 버튼을 전용 오버레이(z8)에 → 3D 유닛·건물 위(리파이너리 등 큰 건물에 안 가림)
