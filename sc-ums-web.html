@@ -995,7 +995,10 @@
   .bArmBtn.cancel{color:#ffb0b0;border-color:rgba(255,120,120,.4)}
   .bArmBtn:active{transform:translateY(1px)}
   .bArmBtn.bResume{width:auto;padding:0 12px;font-size:13px;gap:3px;color:#ffe27a;border-color:var(--gold);box-shadow:0 0 12px -3px rgba(255,210,74,.5)}   /* ▶ 재개 — 텍스트 버튼(넓게) */
-  .bldTime{position:absolute;z-index:12;transform:translate(-50%,9px);font:800 11px 'Rajdhani',sans-serif;color:#dff0ff;white-space:nowrap;pointer-events:none;text-shadow:0 1px 3px #000,0 0 5px #000,0 0 3px #000}   /* 건설 남은시간 — 발판 아래(건물에 안 가림), 아이콘 없이 시간만 */
+  .bldHp{position:absolute;z-index:11;transform:translate(-50%,3px);height:5px;min-width:22px;border-radius:3px;background:rgba(0,0,0,.62);border:1px solid rgba(120,150,190,.4);overflow:hidden;pointer-events:none}   /* 각 건물 하단 체력/진행 바 — 발판 바로 아래 */
+  .bldHp i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#2f7d4a,#5adf8a);box-shadow:0 0 5px rgba(90,223,138,.5);transition:width .12s linear}
+  .bldHp.bld i{background:linear-gradient(90deg,#2f6fbf,#5cc8ff);box-shadow:0 0 5px rgba(92,200,255,.5)}   /* 건설 중 = 파란 진행 바 */
+  .bldTime{position:absolute;z-index:12;transform:translate(-50%,15px);font:800 11px 'Rajdhani',sans-serif;color:#dff0ff;white-space:nowrap;pointer-events:none;text-shadow:0 1px 3px #000,0 0 5px #000,0 0 3px #000}   /* 건설 남은시간 — HP 바 아래 */
   .bldSpin{display:inline-block;width:14px;height:14px;border:2px solid rgba(210,230,255,.28);border-top-color:#dff0ff;border-radius:50%;animation:bldSpin .7s linear infinite;vertical-align:middle}   /* 일꾼 오는 중 = 로딩 스피너 */
   @keyframes bldSpin{to{transform:rotate(360deg)}}
   #cstLabels{position:absolute;inset:0;pointer-events:none;z-index:8}   /* 건설 남은시간 라벨 전용 오버레이 — 3D 캔버스(cvMarine z6·cvFx z7)보다 위 → 유닛에 안 가림 */
@@ -10205,9 +10208,9 @@ function _techBldgSteer(e, tx, ty, dirx, diry, obst){
 }
 // 🔧 용접 스파크(엔지니어 일꾼 작업 중) — 오른손 근처에서 작은 불꽃이 튀며 낙하(cvFx에 직접 그림, 공용 FX 코어 무영향)
 function _techEmitWeld(e){ if(!G._weldFx) G._weldFx=[]; if(G._weldFx.length>150) return;
-  const c=(window.M3D&&M3D.centerAt)?M3D.centerAt('tu_'+e.eid):null; if(!c) return;
+  const s=(typeof _techW2S==='function')?_techW2S(e.x,e.y):null; if(!s) return;   // 일꾼 발 위치(라벨·DOM과 동일 좌표계 — centerN 대신 사용해 위치 정확)
   const fx=Math.sin(e.face||0), fy=Math.cos(e.face||0);   // 바라보는(건물) 방향
-  const hx=c.x+fx*0.006, hy=c.y+0.024;   // 손 근사 — centerN(몸통 중앙)에서 손·발 높이로 크게 내림(용접은 아래쪽) + 건물 쪽 아주 조금
+  const hx=s.x+fx*0.012, hy=s.y-0.014;   // 손 근사 — 발에서 건물 쪽으로 조금 + 손 높이로 살짝 위
   const n=1+((Math.random()*2)|0);
   for(let k=0;k<n;k++){ const a=(-Math.PI/2)+(Math.random()-0.5)*1.5, sp=0.04+Math.random()*0.09;   // 좁은 상방 분사 + 느린 속도 → 손 근처에 바짝 튀고 곧 낙하
     G._weldFx.push({x:hx+(Math.random()-0.5)*0.004, y:hy, vx:Math.cos(a)*sp+fx*0.02, vy:Math.sin(a)*sp*0.7, life:0.2+Math.random()*0.16, len:1.5+Math.random()*2, color:Math.random()<0.28?'#ffffff':(Math.random()<0.6?'#ffe28a':'#ff9440')}); }
@@ -10290,7 +10293,10 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
       else { e.y+=(dy>=0?1:-1)*penY*step; }
       active=true; } }
   if(G.tech.pend&&G.tech.pend.length){ const seen={}; for(let i=G.tech.pend.length-1;i>=0;i--){ const q=G.tech.pend[i]; if(seen[q.bk]){ continue; } seen[q.bk]=1; q.t=Math.max(0,q.t-dt); active=true; if(q.t<=0){ techFinishProduce(q); G.tech.pend.splice(i,1); done=true; } } }
-  if(done) techUIRender(); else if(active) techMapRender(); }   // 완성=전체 갱신 / 진행중=맵만(진행바)
+  if(done) techUIRender();
+  else if(active){ techMapRender();
+    const _selB=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'):null;   // 선택된 미완성 건물 = 프로필(진행도·체력) 실시간 갱신(스로틀 5/s)
+    if(_selB && _selB.bt>0){ G.tech._panT=(G.tech._panT||0)+dt; if(G.tech._panT>=0.2){ G.tech._panT=0; techPanelRender(); } } } }   // 완성=전체 갱신 / 진행중=맵(+선택 미완성 건물 프로필)
 // 건설 탭 건물 3D 프리뷰: TECH 건물키 → glb 모델키(선택/배치대기 시 하단 도크에 회전 렌더)
 const TECH_MODEL={
   union:{ command:'union_command_center', supply:'union_supply_depot', refinery:'union_refinery', barracks:'union_barracks', academy:'union_academy', engbay:'union_engineering_bay', bunker:'union_bunker', turret:'union_missile_turret', factory:'union_factory', machshop:'union_machine_shop', armory:'union_armory', starport:'union_starport', control:'union_control_tower', scifac:'union_science_facility', covert:'union_covert_ops', physics:'union_physics_lab', comsat:'union_comsat_station', nuke:'union_nuclear_silo' },
@@ -10357,13 +10363,13 @@ function techBldgUpgModel(b){ const race=G.tech.race;
 function techUIRender(){ if(!G.tech) return; techMapRender(); techPanelRender(); techHidePreview(); }   // 3D 건물은 메인 렌더러(syncBuild)가 렌더
 function techMapRender(){ const map=document.getElementById('cstMain'); if(!map) return; const race=G.tech.race;
   let ents='', labels=''; for(const e of G.tech.ents){ let inner,cls;
-    if(e.type==='bldg'){ const _b=techGetBldg(race,e.bk)||{};
-      if(e.bt>0){ cls='bldg live3d'; inner='';   // 건설 중: 빈 live3d 앵커(3D가 하단→상단 채움), 시간표시는 건물에 안 가리게 발판 아래 + 전용 오버레이(유닛 위)
-        const _lbl=e._bpause?'⏸':(e.waiting?'<span class="bldSpin"></span>':(Math.ceil(e.bt)+'s'));   // 일시정지 = ⏸ / 일꾼 오는 중 = 스피너 / 건설 중 = 시간만
-        const _bf=(typeof _techFoot==='function')?_techFoot(race,e.bk):{w:2,h:2}, _byB=e.y+(_bf.h/2)*_techCH(), _sb=_techW2S(e.x,_byB);
-        labels+='<div class="bldTime" style="left:'+(_sb.x*100).toFixed(2)+'%;top:'+(_sb.y*100).toFixed(2)+'%">'+_lbl+'</div>'; }   // #cstLabels(z8)로 → 3D 유닛보다 위
-      else { cls='bldg live3d'; inner=''; const _pq=(G.tech.pend||[]).find(q=>q.bk===e.bk); if(_pq){ const _pp=Math.round((1-_pq.t/(_pq.tMax||1))*100); inner='<div class="bprog prod" style="bottom:0"><i style="width:'+_pp+'%"></i></div>'; }
-        if(G.tech.sel===e.eid){ const _cf=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[(TECH_MODEL[race]||{})[e.bk]]:null; const _sz=(_cf&&_cf.s)||50; inner+='<div class="uhp" style="width:44px;position:absolute;left:50%;transform:translateX(-50%);top:'+((CST_YSHIFT+10+Math.max(0,(_sz-36)*0.9))|0)+'px">'+barHTML('ub uH',100,hpBarColor(1))+'</div>'; } } }
+    if(e.type==='bldg'){ const _b=techGetBldg(race,e.bk)||{}; cls='bldg live3d'; inner='';
+      const _bf=(typeof _techFoot==='function')?_techFoot(race,e.bk):{w:2,h:2}, _byB=e.y+(_bf.h/2)*_techCH(), _sb=_techW2S(e.x,_byB);
+      const _hw=Math.max(0.05,_bf.w*_techCW()*techView().zoom), _ratio=(e.bt>0)?Math.max(0,Math.min(1,1-e.bt/(e.btMax||1))):1;   // 바 폭=발판 폭(줌) · 건설 중=진행도/완성=풀
+      labels+='<div class="bldHp'+(e.bt>0?' bld':'')+'" style="left:'+(_sb.x*100).toFixed(2)+'%;top:'+(_sb.y*100).toFixed(2)+'%;width:'+(_hw*100).toFixed(2)+'%"><i style="width:'+(_ratio*100).toFixed(1)+'%"></i></div>';   // 각 건물 하단 체력 바(건설 중 실시간 차오름)
+      if(e.bt>0){ const _lbl=e._bpause?'⏸':(e.waiting?'<span class="bldSpin"></span>':(Math.ceil(e.bt)+'s'));   // 일시정지 ⏸ / 일꾼 오는 중 스피너 / 건설 중 시간
+        labels+='<div class="bldTime" style="left:'+(_sb.x*100).toFixed(2)+'%;top:'+(_sb.y*100).toFixed(2)+'%">'+_lbl+'</div>'; }
+      else { const _pq=(G.tech.pend||[]).find(q=>q.bk===e.bk); if(_pq){ const _pp=Math.round((1-_pq.t/(_pq.tMax||1))*100); inner='<div class="bprog prod" style="bottom:0"><i style="width:'+_pp+'%"></i></div>'; } } }
     else if(e.type==='worker'||e.type==='unit'){ const _mk=_techEntModel(e);
       const _h3=!!(window.M3D&&M3D.ready&&M3D.ready()&&_mk&&M3D.hasModel&&M3D.hasModel(_mk)&&!(G.opt&&G.opt.model3d===false));   // 3D 모델 로드 완료 시 DOM은 빈 앵커, 아니면 초상화 폴백
       cls=(e.type==='worker'?'worker':'unit')+(_h3?' live3d':'');
@@ -10428,7 +10434,8 @@ function techPauseBuild(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if
   if(typeof playSfx==='function') playSfx('ui_open'); techUIRender(); }
 function techResumeBuild(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;   // ▶ 재개: 선택된 일시정지 건물에 가장 가까운 유휴 엔지니어를 보내 이어서 건설
   const bd=(G.tech.sel!=null)?G.tech.ents.find(e=>e.eid===G.tech.sel&&e.type==='bldg'):null; if(!bd||bd.bt<=0||!bd._bpause) return;
-  let wk=null,bdst=1e9; for(const e of G.tech.ents){ if(e.type==='worker'&&e.build==null){ const d=(e.x-bd.x)*(e.x-bd.x)+(e.y-bd.y)*(e.y-bd.y); if(d<bdst){ bdst=d; wk=e; } } }   // 건설 안 하는 가장 가까운 일꾼
+  let wk=(G.tech.selU||[]).map(id=>G.tech.ents.find(e=>e.eid===id)).find(e=>e&&e.type==='worker'&&e.build==null);   // 지정해둔 유휴 일꾼 우선(그 일꾼으로 재개)
+  if(!wk){ let bdst=1e9; for(const e of G.tech.ents){ if(e.type==='worker'&&e.build==null){ const d=(e.x-bd.x)*(e.x-bd.x)+(e.y-bd.y)*(e.y-bd.y); if(d<bdst){ bdst=d; wk=e; } } } }   // 없으면 가장 가까운 유휴 일꾼
   if(!wk){ if(typeof toast==='function') toast('⛔ 건설할 일꾼이 없음'); return; }
   wk.build=bd.eid; wk.tx=Math.max(0.04,Math.min(0.96,bd.x)); wk.ty=Math.max(0.16,Math.min(0.96,bd.y+0.05)); wk._working=false; wk._bpSide=null; wk._bpT=null;
   bd._bpause=false; bd.waiting=true;   // 일꾼 도착까지 대기(카운트다운 정지) → 도착 시 이어서 건설
@@ -10531,7 +10538,10 @@ function techPtrUp(ev){ if(!G.tech) return; const had=_btPtrs.has(ev.pointerId);
   if(!had||moved||!down||G.tab!=='Build'||down.sy<0.13) return;   // 핀치/드래그/상단바 = 탭 아님
   const w=_techS2W(down.sx, down.sy);
   const e=_techEntAt(w.x, w.y);
-  if(e){ if(e.type==='bldg'){ G.tech.sel=e.eid; G.tech.selU=[]; } else { G.tech.selU=[e.eid]; G.tech.sel=null; } sh.open=true; sh.sec='ent'; }   // 엔티티 탭 = 시트 즉시 교체(닫혔다 열리지 않음)
+  if(e){ if(e.type==='bldg'){ G.tech.sel=e.eid;
+      const _keepWk=(e.bt>0&&e._bpause&&(G.tech.selU||[]).some(id=>{ const w=G.tech.ents.find(x=>x.eid===id); return w&&w.type==='worker'&&w.build==null; }));   // 일시정지 건물 + 유휴 일꾼 지정 = 그 일꾼 지정 유지(재개 시 사용)
+      if(!_keepWk) G.tech.selU=[]; }
+    else { G.tech.selU=[e.eid]; G.tech.sel=null; } sh.open=true; sh.sec='ent'; }   // 엔티티 탭 = 시트 즉시 교체(닫혔다 열리지 않음)
   else { G.tech.sel=null; sh.open=false; }   // 빈 곳 탭 = 시트 닫기
   if(body) body._cgPage=0; techUIRender(); }
 if(typeof document!=='undefined'){ document.addEventListener('pointermove', function(e){ if(typeof techPtrMove==='function') techPtrMove(e); }, {passive:false});
