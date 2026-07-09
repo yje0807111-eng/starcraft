@@ -990,11 +990,11 @@
   .bfoot.bad{border:1px solid rgba(255,90,90,.45);background-color:rgba(255,90,90,.09)}
   .bArmBtns{position:absolute;z-index:26;display:flex;gap:6px;transform:translate(-50%,calc(-100% - 26px));pointer-events:auto}   /* 고스트 바로 위에 떠서 함께 이동 · #cstLabels(pointer-events:none) 안에서도 버튼은 클릭 가능 */
   .bArmBtn{font-size:15px;font-weight:800;width:34px;height:34px;display:flex;align-items:center;justify-content:center;padding:0;border-radius:9px;border:1px solid var(--metal-edge);background:linear-gradient(160deg,rgba(30,36,48,.96),rgba(12,14,20,.97));color:#dfe8f2;cursor:pointer;-webkit-tap-highlight-color:transparent;box-shadow:0 2px 6px rgba(0,0,0,.4)}
-  .bArmBtn.ok{border-color:var(--gold);color:#ffe27a;box-shadow:0 0 12px -3px rgba(255,210,74,.5)}
+  .bArmBtn.ok{width:44px;height:44px;font-size:22px;background:linear-gradient(160deg,#2eb063,#1a7a42);border-color:#7bf0a8;color:#fff;box-shadow:0 3px 12px rgba(40,190,95,.55)}   /* ✓ 확정 = 크고 초록 채움(주 액션) */
   .bArmBtn.ok.dis{opacity:.4;filter:grayscale(.6)}
-  .bArmBtn.cancel{color:#ffb0b0;border-color:rgba(255,120,120,.4)}
+  .bArmBtn.cancel{width:32px;height:32px;font-size:14px;background:linear-gradient(160deg,rgba(44,30,34,.92),rgba(22,14,16,.96));color:#ff9a9a;border-color:rgba(255,120,120,.45)}   /* ✕ 취소 = 작고 어두운 보조 액션 */
   .bArmBtn:active{transform:translateY(1px)}
-  .bArmBtn.bResume{width:auto;padding:0 12px;font-size:13px;gap:3px;color:#ffe27a;border-color:var(--gold);box-shadow:0 0 12px -3px rgba(255,210,74,.5)}   /* ▶ 재개 — 텍스트 버튼(넓게) */
+  .bArmBtn.bResume{width:auto;height:38px;padding:0 14px;font-size:14px;gap:3px;color:#ffe27a;border-color:var(--gold);background:linear-gradient(160deg,rgba(40,34,20,.95),rgba(22,18,10,.97));box-shadow:0 0 12px -3px rgba(255,210,74,.5)}   /* ▶ 재개 — 어두운 바탕 + 금색 텍스트 버튼(넓게) */
   .bldHp{position:absolute;z-index:11;transform:translate(-50%,3px);height:5px;min-width:22px;border-radius:3px;background:rgba(0,0,0,.62);border:1px solid rgba(120,150,190,.4);overflow:hidden;pointer-events:none}   /* 각 건물 하단 체력/진행 바 — 발판 바로 아래 */
   .bldHp i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#2f7d4a,#5adf8a);box-shadow:0 0 5px rgba(90,223,138,.5);transition:width .12s linear}
   .bldHp.bld i{background:linear-gradient(90deg,#2f6fbf,#5cc8ff);box-shadow:0 0 5px rgba(92,200,255,.5)}   /* 건설 중 = 파란 진행 바 */
@@ -10210,11 +10210,11 @@ function _techBldgSteer(e, tx, ty, dirx, diry, obst){
 function _techEmitWeld(e){ if(!G._weldFx) G._weldFx=[]; if(G._weldFx.length>150) return;
   const s=(typeof _techW2S==='function')?_techW2S(e.x,e.y):null; if(!s) return;   // 일꾼 발 위치(라벨·DOM과 동일 좌표계 — centerN 대신 사용해 위치 정확)
   const fx=Math.sin(e.face||0), fy=Math.cos(e.face||0);   // 바라보는(건물) 방향
-  const hx=s.x+fx*0.012, hy=s.y-0.014;   // 손 근사 — 발에서 건물 쪽으로 조금 + 손 높이로 살짝 위
-  const n=1+((Math.random()*2)|0);
-  for(let k=0;k<n;k++){ const a=(-Math.PI/2)+(Math.random()-0.5)*1.5, sp=0.04+Math.random()*0.09;   // 좁은 상방 분사 + 느린 속도 → 손 근처에 바짝 튀고 곧 낙하
-    G._weldFx.push({x:hx+(Math.random()-0.5)*0.004, y:hy, vx:Math.cos(a)*sp+fx*0.02, vy:Math.sin(a)*sp*0.7, life:0.2+Math.random()*0.16, len:1.5+Math.random()*2, color:Math.random()<0.28?'#ffffff':(Math.random()<0.6?'#ffe28a':'#ff9440')}); }
-  if(Math.random()<0.8) G._weldFx.push({x:hx, y:hy, vx:0, vy:0, life:0.08, flash:true, color:'#fff7d8'}); }   // 손끝 용접 코어(깜빡)
+  const hx=s.x+fx*0.03, hy=s.y+fy*0.03-0.01;   // 손 근사 — 발에서 팔이 뻗은 건물 쪽으로 살짝 앞 + 팔 높이(안쪽에서 나오던 것 보정)
+  const n=2+((Math.random()*3)|0);   // 스파크 더 많이(2~4/프레임)
+  for(let k=0;k<n;k++){ const a=(-Math.PI/2)+(Math.random()-0.5)*1.7, sp=0.05+Math.random()*0.12;   // 상방 분사 + 느린 속도 → 팔끝 근처에 튀고 곧 낙하
+    G._weldFx.push({x:hx+(Math.random()-0.5)*0.005, y:hy, vx:Math.cos(a)*sp+fx*0.03, vy:Math.sin(a)*sp*0.7, life:0.2+Math.random()*0.18, len:1.5+Math.random()*2.5, color:Math.random()<0.3?'#ffffff':(Math.random()<0.6?'#ffe28a':'#ff9440')}); }
+  G._weldFx.push({x:hx, y:hy, vx:0, vy:0, life:0.09, flash:true, color:'#fff7d8'}); }   // 손끝 용접 코어(매 프레임 깜빡)
 function _techWeldStep(dt, s){ const arr=G._weldFx; if(!arr||!arr.length) return; const ctx=s.ctx, W=s.W, H=s.H;
   ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.lineCap='round';
   for(let i=arr.length-1;i>=0;i--){ const p=arr[i]; p.vy+=0.6*dt; p.x+=p.vx*dt; p.y+=p.vy*dt; p.life-=dt*(p.flash?11:4.2);
@@ -10514,6 +10514,8 @@ function techPtrDown(ev){ if(!G.tech) return; const r=_btRect(); if(!r) return; 
   const selN=(G.tech.selU||[]).length;
   if(selN>0){ const w=_techS2W(sx,sy), e=_techEntAt(w.x,w.y);   // 지정 상태: 드래그/탭 = 이동(메인 규약 — 새 박스는 해제(✕) 후에만)
     if(selN===1 && e && (e.type==='unit'||e.type==='worker') && e.eid!==G.tech.selU[0]) return;   // 단일 지정 → 다른 유닛 탭 = 업에서 재지정
+    const _hasIdleWk=(G.tech.selU||[]).some(id=>{ const wk=G.tech.ents.find(x=>x.eid===id); return wk&&wk.type==='worker'&&wk.build==null; });
+    if(e && e.type==='bldg' && e.bt>0 && e._bpause && _hasIdleWk){ G.tech.sel=e.eid; const _sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null}); _sh.open=true; _sh.sec='ent'; if(typeof playSfx==='function') playSfx('ui_open'); techUIRender(); return; }   // 일꾼 지정 상태로 일시정지 건물 탭 = 이동 아니라 재개 대상 지정(일꾼 유지 → ▶ 재개 버튼 표시)
     _btCmd={}; _techAssignMove(w.x,w.y); if(typeof playSfx==='function') playSfx('ui_confirm'); return; }
   _btBox={sx0:sx, sy0:sy, sx1:sx, sy1:sy, active:false, rw:r.width, rh:r.height}; }   // 무지정 = 한 손가락 드래그로 유닛 지정 박스
 function techPtrMove(ev){ if(!G.tech||G.tab!=='Build'||!_btPtrs.has(ev.pointerId)) return; _btPtrs.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
