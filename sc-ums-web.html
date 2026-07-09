@@ -10184,9 +10184,16 @@ function _techBuildTime(race,k){ if(G.tech.nocool) return 0; return ((techBldgSp
 function _techProdTime(race,id){ if(G.tech.nocool) return 0; return ((techUnitSpec(race,id)||{}).t||15)*TECH_TIME_MUL; }
 function techFinishBuild(e){ const b=techGetBldg(G.tech.race,e.bk); if(!b) return; e.bt=0; e.waiting=false; if(b.addonTo) G.tech.addon[b.k]=true; else G.tech.built[b.k]=(G.tech.built[b.k]||0)+1; G.tech.supCap+=(b.supply||0);
   for(const w of G.tech.ents){ if(w.type==='worker'&&w.build===e.eid){ w.build=null; w._working=false; w._bpSide=null; w._bpT=null; w.tx=null; w.ty=null; } } }   // 건설 완료 → 일꾼 해방(작업상태 초기화)
+// 건물에서 유닛 소환 위치 = 발판 바로 바깥 링을 좌하단(≈7시)에서 반시계로 채워 최대한 건물에 붙임(화면 y-down 기준)
+function _techSpawnPos(be, uid){ const race=G.tech.race, f=(typeof _techFoot==='function')?_techFoot(race,be.bk):{w:2,h:2}, W=GW||390, H=GH||390;
+  const hwp=(f.w/2)*_techCW()*W, hhp=(f.h/2)*_techCH()*H, uRp=(((U[uid]&&U[uid].size)||14)*0.62), gap=uRp*0.3, step=2*uRp+gap;   // 발판 반폭·유닛 반경(px)
+  const idx=(be._spawnN=(be._spawnN||0)+1)-1;   // 이 건물의 n번째 소환(0부터)
+  let R=Math.max(hwp,hhp)+uRp+gap, rem=idx, cap=Math.max(1,Math.floor(2*Math.PI*R/step));
+  while(rem>=cap){ rem-=cap; R+=step; cap=Math.max(1,Math.floor(2*Math.PI*R/step)); }   // 안쪽 링부터 다 채우면 다음 링(바깥)으로 → 최대한 가깝게
+  const th=Math.PI*0.75-(rem/cap)*Math.PI*2;   // 시작 좌하단(135°, cos<0 왼쪽·sin>0 아래) · 반시계 = θ 감소
+  return { x:Math.max(0.04,Math.min(0.96,be.x+Math.cos(th)*R/W)), y:Math.max(0.14,Math.min(0.96,be.y+Math.sin(th)*R/H)) }; }
 function techFinishProduce(q){ const race=G.tech.race; G.tech.units[q.id]=(G.tech.units[q.id]||0)+1; if(q.supply) G.tech.supCap+=q.supply;
-  const be=G.tech.ents.find(e=>e.type==='bldg'&&e.bk===q.bk), bx=be?be.x:0.5, by=be?be.y:0.5, n=G.tech.units[q.id], ang=n*2.4, rr=0.045+((n%6)*0.014);
-  const _ex=Math.max(0.04,Math.min(0.96,bx+Math.cos(ang)*rr)), _ey=Math.max(0.18,Math.min(0.96,by+0.1+Math.sin(ang)*rr*0.55));
+  const be=G.tech.ents.find(e=>e.type==='bldg'&&e.bk===q.bk), p=be?_techSpawnPos(be,q.id):{x:0.5,y:0.6}, _ex=p.x, _ey=p.y;
   const _isWk=(q.id===(TECH_WORKER[race]||'worker_human'));   // 생산된 일꾼도 초기 일꾼과 동일한 type:'worker'(건설 가능)
   G.tech.ents.push(_isWk?{eid:G.tech.eseq++, type:'worker', x:_ex, y:_ey}:{eid:G.tech.eseq++, type:'unit', uid:q.id, x:_ex, y:_ey}); }
 // 건설 전용 추가 조향: 건물을 관통하지 않고 돌아가도록(바깥 밀어내기 + 접선 미끄러짐). stepUnitMove.extraSteer로 sx,sy 가산(지상만 반영 — 공중은 stepUnitMove에서 자동 무시).
