@@ -10577,8 +10577,8 @@ function _techSnap(x,y,w,h){ const cw=_techCW(), ch=_techCH(), rows=_techRows();
   let r0=Math.round((y-TECH_GRID.y0)/ch - h/2); r0=Math.max(0,Math.min(Math.max(0,rows-h), r0));
   return { c0, r0, w, h, cx:TECH_GRID.x0+(c0+w/2)*cw, cy:TECH_GRID.y0+(r0+h/2)*ch }; }
 function _techEntFoot(e){ const f=_techFoot(G.tech.race,e.bk); return _techSnap(e.x, e.y, f.w, f.h); }   // 기존 건물 점유 셀(중심 역산)
-// 건설을 막는 유닛 = 유휴 일꾼(build==null) + 지상 유닛(공중 제외). 작업중인 일꾼은 통과
-function _techBlocksBuild(e){ if(e.type==='worker') return e.build==null; if(e.type==='unit') return !_techAirOf(e); return false; }
+// 건설을 막는 유닛 = 유휴 일꾼(build==null) + 지상 유닛(공중 제외). 작업중인 일꾼, 그리고 내가 지정한(건설할) 일꾼은 통과
+function _techBlocksBuild(e){ if(e.type==='worker'){ if(e.build!=null) return false; if((G.tech.selU||[]).indexOf(e.eid)>=0) return false; return true; } if(e.type==='unit') return !_techAirOf(e); return false; }
 function _techFootBlockCells(s){ const cw=_techCW(), ch=_techCH(), out=[];   // 발판 셀 안에 걸친 차단 유닛의 점유 셀 목록
   for(const e of G.tech.ents){ if(!_techBlocksBuild(e)) continue;
     const cu=Math.floor((e.x-TECH_GRID.x0)/cw), ru=Math.floor((e.y-TECH_GRID.y0)/ch);
