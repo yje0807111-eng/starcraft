@@ -9722,7 +9722,7 @@ function loop(now){
       for(const e of (G.tech.ents||[])){ if(e.type!=='unit'&&e.type!=='worker') continue; const mk=(typeof _techEntModel==='function')?_techEntModel(e):null; if(!mk) continue;   // 🚶 일꾼·생산 유닛 3D
         const _selu=(G.tech.sel===e.eid)||(G.tech.selU&&G.tech.selU.indexOf(e.eid)>=0);
         const _isAir=(typeof FXLAB_AIR!=='undefined')&&FXLAB_AIR.has(mk);   // 공중 유닛: 메인과 동일한 고정 부양(syncBuild airlift)
-        list.push({uid:'tu_'+e.eid, id:mk, x:(e.x-_v.x)*_v.zoom+0.5, y:(e.y-_v.y)*_v.zoom+0.5, face:(e.face||0), yoff:(typeof TECH_UNIT_YOFF!=='undefined'?TECH_UNIT_YOFF:6), moving:(e.tx!=null), working:(e.type==='worker'&&!!e._working), sel:_selu, airlift:_isAir, yawFix:true}); }   // face = 이동방향 + (syncBuild서)모델별 정면 보정 — 메인과 100% 동일(CST_YAW는 건물 전용 아트 오프셋, 유닛은 미적용)
+        list.push({uid:'tu_'+e.eid, id:mk, x:(e.x-_v.x)*_v.zoom+0.5, y:(e.y-_v.y)*_v.zoom+0.5, face:(e.face||0), yoff:(typeof TECH_UNIT_YOFF!=='undefined'?TECH_UNIT_YOFF:6), moving:(e.tx!=null), working:(e.type==='worker'&&!!e._working), sel:_selu, airlift:_isAir, yawFix:true, scl:(typeof TECH_USCALE!=='undefined'?TECH_USCALE:1)}); }   // scl=건물 대비 유닛 절반 크기   // face = 이동방향 + (syncBuild서)모델별 정면 보정 — 메인과 100% 동일(CST_YAW는 건물 전용 아트 오프셋, 유닛은 미적용)
       window.M3D.syncBuild(list, W, H, dt, _v.zoom);
     } else if(mcv) mcv.style.display='none';
     const _fcv=document.getElementById('cvFx');   // 이동 트레일(메인과 동일 이펙트) — 3D 표시 중일 때만
@@ -10184,14 +10184,20 @@ function _techBuildTime(race,k){ if(G.tech.nocool) return 0; return ((techBldgSp
 function _techProdTime(race,id){ if(G.tech.nocool) return 0; return ((techUnitSpec(race,id)||{}).t||15)*TECH_TIME_MUL; }
 function techFinishBuild(e){ const b=techGetBldg(G.tech.race,e.bk); if(!b) return; e.bt=0; e.waiting=false; if(b.addonTo) G.tech.addon[b.k]=true; else G.tech.built[b.k]=(G.tech.built[b.k]||0)+1; G.tech.supCap+=(b.supply||0);
   for(const w of G.tech.ents){ if(w.type==='worker'&&w.build===e.eid){ w.build=null; w._working=false; w._bpSide=null; w._bpT=null; w.tx=null; w.ty=null; } } }   // 건설 완료 → 일꾼 해방(작업상태 초기화)
-// 건물에서 유닛 소환 위치 = 발판 바로 바깥 링을 좌하단(≈7시)에서 반시계로 채워 최대한 건물에 붙임(화면 y-down 기준)
+// 건물에서 유닛 소환 위치 = 발판을 사각형으로 둘러싸며 좌하단에서 반시계로 채움(하단→우측→상단→좌측), 최대한 건물에 붙임(화면 y-down 기준)
 function _techSpawnPos(be, uid){ const race=G.tech.race, f=(typeof _techFoot==='function')?_techFoot(race,be.bk):{w:2,h:2}, W=GW||390, H=GH||390;
-  const hwp=(f.w/2)*_techCW()*W, hhp=(f.h/2)*_techCH()*H, uRp=(((U[uid]&&U[uid].size)||14)*0.62), gap=uRp*0.3, step=2*uRp+gap;   // 발판 반폭·유닛 반경(px)
+  const hwp=(f.w/2)*_techCW()*W, hhp=(f.h/2)*_techCH()*H;   // 발판 반폭·반높이(px)
+  const uRp=(((U[uid]&&U[uid].size)||14)*0.62)*(typeof TECH_USCALE!=='undefined'?TECH_USCALE:1), gap=uRp*0.5, step=2*uRp+gap;   // 축소된 유닛 반경(px)
   const idx=(be._spawnN=(be._spawnN||0)+1)-1;   // 이 건물의 n번째 소환(0부터)
-  let R=Math.max(hwp,hhp)+uRp+gap, rem=idx, cap=Math.max(1,Math.floor(2*Math.PI*R/step));
-  while(rem>=cap){ rem-=cap; R+=step; cap=Math.max(1,Math.floor(2*Math.PI*R/step)); }   // 안쪽 링부터 다 채우면 다음 링(바깥)으로 → 최대한 가깝게
-  const th=Math.PI*0.75-(rem/cap)*Math.PI*2;   // 시작 좌하단(135°, cos<0 왼쪽·sin>0 아래) · 반시계 = θ 감소
-  return { x:Math.max(0.04,Math.min(0.96,be.x+Math.cos(th)*R/W)), y:Math.max(0.14,Math.min(0.96,be.y+Math.sin(th)*R/H)) }; }
+  let Hw=hwp+uRp+gap, Hh=hhp+uRp+gap, rem=idx;   // 첫 링: 발판 바로 바깥 사각 테두리
+  let perim=2*(2*Hw+2*Hh), cap=Math.max(4,Math.floor(perim/step));
+  while(rem>=cap){ rem-=cap; Hw+=step; Hh+=step; perim=2*(2*Hw+2*Hh); cap=Math.max(4,Math.floor(perim/step)); }   // 안쪽 테두리부터 다 채우면 다음(바깥) 테두리로
+  const cx=be.x*W, cy=be.y*H, t=(rem/cap)*perim, eB=2*Hw, eR=2*Hh, eT=2*Hw; let px, py;   // t=좌하단부터 둘레 거리
+  if(t<eB){ px=cx-Hw+t; py=cy+Hh; }                          // 하단(좌→우)
+  else if(t<eB+eR){ px=cx+Hw; py=cy+Hh-(t-eB); }             // 우측(아래→위)
+  else if(t<eB+eR+eT){ px=cx+Hw-(t-eB-eR); py=cy-Hh; }       // 상단(우→좌)
+  else { px=cx-Hw; py=cy-Hh+(t-eB-eR-eT); }                  // 좌측(위→아래)
+  return { x:Math.max(0.04,Math.min(0.96,px/W)), y:Math.max(0.14,Math.min(0.96,py/H)) }; }
 function techFinishProduce(q){ const race=G.tech.race; G.tech.units[q.id]=(G.tech.units[q.id]||0)+1; if(q.supply) G.tech.supCap+=q.supply;
   const be=G.tech.ents.find(e=>e.type==='bldg'&&e.bk===q.bk), p=be?_techSpawnPos(be,q.id):{x:0.5,y:0.6}, _ex=p.x, _ey=p.y;
   const _isWk=(q.id===(TECH_WORKER[race]||'worker_human'));   // 생산된 일꾼도 초기 일꾼과 동일한 type:'worker'(건설 가능)
@@ -10252,7 +10258,7 @@ function techMoveTrails(dt){ if(typeof FX==='undefined'||typeof emitMoveTrail===
 // 건설 유닛 겹침 분리 — 메인 separateUnits와 동일(공용 separatePass). 도착(정지)한 유닛만 대상 → 한 점에 모인 공중유닛이 메인처럼 완만히 흩어져 자리 잡음. 반환=움직였는지(리렌더 필요).
 function techSeparate(){ if(!G.tech||!GW||!GH) return false; const es=G.tech.ents;
   const items=[]; for(const e of es){ if((e.type!=='unit'&&e.type!=='worker')||e.tx!=null) continue;   // 이동 중 유닛 제외(도착한 것만)
-    const k=_techEntKey(e); items.push({ref:e, r:(((U[k]&&U[k].size)||14)*0.62), air:_techAirOf(e), fixed:false, settle:false}); }
+    const k=_techEntKey(e); items.push({ref:e, r:(((U[k]&&U[k].size)||14)*0.62)*(typeof TECH_USCALE!=='undefined'?TECH_USCALE:1), air:_techAirOf(e), fixed:false, settle:false}); }   // 축소된 시각 크기에 맞춰 충돌 반경도 절반
   if(items.length<2) return false;
   const b0=items.map(it=>[it.ref.x, it.ref.y]);   // 유닛별 위치 스냅(대칭 이동도 감지 — 합산은 상쇄되어 안 됨)
   for(let iter=0; iter<3; iter++){ separatePass(items, GW, GH);
@@ -10340,6 +10346,7 @@ const CST_YAW=-0.52;   // 유니온·에테리얼 정면 회전(라디안). -0.5
 try{ if(typeof window!=='undefined') window.CST_YAW=CST_YAW; }catch(_e){}   // 업그레이드 탭 각도 통일용(모듈에서 참조)
 const TECH_WORKER={ union:'worker_human', swarm:'worker_swarm', aetherial:'worker_light' };   // 종족별 일꾼 3D 모델
 const TECH_UNIT_YOFF=6;   // 건설 맵 3D 유닛 바닥 보정(px) — 크기는 메인과 동일한 유닛별 SCALE 그대로
+const TECH_USCALE=0.5;   // 건설 맵 전용 유닛 축소 배율(건물 대비 절반) — 시각 크기·충돌·소환 간격에 함께 적용(건물은 footprint 폭에 맞춰 렌더되어 무영향)
 function _techEntModel(e){ if(!e) return null; if(e.type==='worker') return (TECH_WORKER[G.tech.race]||'worker_human'); if(e.type==='unit') return e.uid; return null; }   // 엔티티 → 3D 모델 키
 function _techRaceUnitKeys(race){ const keys=new Set(); keys.add(TECH_WORKER[race]||'worker_human'); const bs=(TECH_TREE[race]&&TECH_TREE[race].buildings)||[]; for(const b of bs){ for(const p of (b.produces||[])) if(p&&p.id) keys.add(p.id); } return [...keys]; }   // 그 종족 건설 맵에서 쓸 유닛 모델 키(일꾼+생산 유닛)
 function techHidePreview(){ const prev=document.getElementById('cstPrev'), main=document.getElementById('cstMain'); if(prev) prev.classList.remove('on'); if(main) main.classList.remove('hasPrev'); if(window.M3D&&M3D.cstStop) M3D.cstStop(); }
