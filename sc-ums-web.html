@@ -10614,7 +10614,7 @@ function techPlace(x,y){ const race=G.tech.race, b=techGetBldg(race,G.tech.arm);
   if(wk){ const rest=_preWkIds.filter(id=>id!==wk.eid); G.tech.sel=null; G.tech.selU=rest.length?rest:[wk.eid]; }   // 건설 일꾼은 지정에서 빠지고 나머지 일꾼은 지정 유지(계속 이어서 건설) — 혼자면 그 일꾼 유지
   else if(_preWkIds.length){ G.tech.sel=null; G.tech.selU=_preWkIds.slice(); }   // 노쿨: 지정했던 일꾼 그대로 유지(건물로 안 바뀜)
   else { G.tech.sel=ne.eid; G.tech.selU=[]; }   // 지정 일꾼이 없을 때만 그 건물 시트로
-  const body=document.getElementById('btSheetBody'); if(body) body._cgPage=0; if(typeof playSfx==='function') playSfx('ui_confirm'); techUIRender(); }
+  if(typeof playSfx==='function') playSfx('ui_confirm'); techUIRender(); }   // 배치 후 그리드 페이지 유지(2페이지에서 지으면 남은 일꾼도 2페이지 유지) — 지정 해제 후 재지정 시에만 1페이지 복귀(탭/박스지정 핸들러가 _cgPage=0)
 function techDoProduce(id, bk){ const race=G.tech.race; if(!(G.tech.built[bk]>0)){ if(typeof toast==='function') toast('⛔ 건물 미건설'); return; }
   const b=techGetBldg(race,bk), p=b&&b.produces&&b.produces.find(x=>x.id===id); if(!p) return;
   if(!_techReqMet(p.req)){ if(typeof toast==='function') toast('⛔ 선행 미충족'); return; }
