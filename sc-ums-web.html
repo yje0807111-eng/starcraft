@@ -9707,7 +9707,7 @@ function loop(now){
       const _v=(G.tech&&G.tech.view)||{x:0.5,y:0.5,zoom:1};
       // 건물 base를 footprint 하단(중심 + ½h 아래)에 맞춤 → 건물이 자기 타일 위에 딱 올라감. yoff -3 = 모델 하단을 footprint 하단선보다 1px 위로(Y_DROP 2 보정)
       const _BLIFT=-3, _cwpx=_techCW()*W*_v.zoom;   // 셀 폭(px)
-      const list=[]; for(const e of (G.tech.ents||[])){ if(e.type!=='bldg'||e.bt>0) continue; const mk=(TECH_MODEL[race]||{})[e.bk]; if(!mk) continue; const _cfg=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[mk]:null; const _bf=(typeof _techFoot==='function')?_techFoot(race,e.bk):{w:2,h:2}; const _by=e.y+(_bf.h/2)*_techCH(); list.push({uid:'cst_'+race+'_'+mk+'_'+e.eid, id:'cb_'+mk, x:(e.x-_v.x)*_v.zoom+0.5, y:(_by-_v.y)*_v.zoom+0.5, face:((race==='swarm')?0:(typeof CST_YAW!=='undefined'?CST_YAW:0))+((_cfg&&_cfg.f)||0), yoff:_BLIFT, fitW:_bf.w*_cwpx, sel:(G.tech&&G.tech.sel===e.eid)}); }   // fitW=footprint 폭(px) → 좌우 넘침 방지
+      const list=[]; for(const e of (G.tech.ents||[])){ if(e.type!=='bldg') continue; const mk=(TECH_MODEL[race]||{})[e.bk]; if(!mk) continue; const _cfg=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[mk]:null; const _bf=(typeof _techFoot==='function')?_techFoot(race,e.bk):{w:2,h:2}; const _by=e.y+(_bf.h/2)*_techCH(); const _bp=(e.bt>0)?(e.waiting?0:Math.max(0,Math.min(1,1-e.bt/(e.btMax||1)))):null; list.push({uid:'cst_'+race+'_'+mk+'_'+e.eid, id:'cb_'+mk, x:(e.x-_v.x)*_v.zoom+0.5, y:(_by-_v.y)*_v.zoom+0.5, face:((race==='swarm')?0:(typeof CST_YAW!=='undefined'?CST_YAW:0))+((_cfg&&_cfg.f)||0), yoff:_BLIFT, fitW:_bf.w*_cwpx, sel:(G.tech&&G.tech.sel===e.eid), buildP:_bp}); }   // fitW=footprint 폭(px) → 좌우 넘침 방지 · buildP=건설 완료율(0~1, 일꾼 대기중=0, 완성=null) → 3D가 테두리(림)만→원색으로 채워짐(2D 아이콘 제거)
       if(G.tech.arm && G.tech.armXY){ const _gmk=(TECH_MODEL[race]||{})[G.tech.arm]; if(_gmk && M3D.hasModel && M3D.hasModel('cb_'+_gmk)){ const _gcfg=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[_gmk]:null; const _gf=(typeof _techFoot==='function')?_techFoot(race,G.tech.arm):{w:2,h:2}; const _gy=G.tech.armXY.y+(_gf.h/2)*_techCH(); list.push({uid:'__bghost__', id:'cb_'+_gmk, x:(G.tech.armXY.x-_v.x)*_v.zoom+0.5, y:(_gy-_v.y)*_v.zoom+0.5, face:((race==='swarm')?0:(typeof CST_YAW!=='undefined'?CST_YAW:0))+((_gcfg&&_gcfg.f)||0), yoff:_BLIFT, fitW:_gf.w*_cwpx, ghost:true }); } }   // 반투명 회색 예비 건물(배치 미리보기)
       for(const e of (G.tech.ents||[])){ if(e.type!=='unit'&&e.type!=='worker') continue; const mk=(typeof _techEntModel==='function')?_techEntModel(e):null; if(!mk) continue;   // 🚶 일꾼·생산 유닛 3D
         const _selu=(G.tech.sel===e.eid)||(G.tech.selU&&G.tech.selU.indexOf(e.eid)>=0);
@@ -10304,7 +10304,7 @@ function techUIRender(){ if(!G.tech) return; techMapRender(); techPanelRender();
 function techMapRender(){ const map=document.getElementById('cstMain'); if(!map) return; const race=G.tech.race;
   let ents=''; for(const e of G.tech.ents){ let inner,cls;
     if(e.type==='bldg'){ const _b=techGetBldg(race,e.bk)||{};
-      if(e.bt>0){ cls='bldg building'; const _p=Math.round((1-e.bt/(e.btMax||1))*100); const _lbl=e.waiting?'⏳ 일꾼 오는 중':('🏗 '+Math.ceil(e.bt)+'s'); inner='<span class="be-ico" style="opacity:.5">'+(_b.ico||'🏢')+'</span><div class="bprog"><i style="width:'+(e.waiting?0:_p)+'%"></i></div><div class="bpt">'+_lbl+'</div>'; }   // 건설 중(3D 미표시) / waiting=일꾼 도착 대기
+      if(e.bt>0){ cls='bldg live3d'; const _lbl=e.waiting?'⏳ 일꾼 오는 중':('🏗 '+Math.ceil(e.bt)+'s'); inner='<div class="bpt">'+_lbl+'</div>'; }   // 건설 중: 3D 건물이 테두리→원색으로 채워짐(2D 아이콘 제거), 상태 텍스트만 유지
       else { cls='bldg live3d'; inner=''; const _pq=(G.tech.pend||[]).find(q=>q.bk===e.bk); if(_pq){ const _pp=Math.round((1-_pq.t/(_pq.tMax||1))*100); inner='<div class="bprog prod" style="bottom:0"><i style="width:'+_pp+'%"></i></div>'; }
         if(G.tech.sel===e.eid){ const _cf=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[(TECH_MODEL[race]||{})[e.bk]]:null; const _sz=(_cf&&_cf.s)||50; inner+='<div class="uhp" style="width:44px;position:absolute;left:50%;transform:translateX(-50%);top:'+((CST_YSHIFT+10+Math.max(0,(_sz-36)*0.9))|0)+'px">'+barHTML('ub uH',100,hpBarColor(1))+'</div>'; } } }
     else if(e.type==='worker'||e.type==='unit'){ const _mk=_techEntModel(e);
@@ -12883,6 +12883,11 @@ window.M3D={
       m.holder.position.set(it.x*W, (H-it.y*H)-Y_DROP-(it.yoff||0), it.y*H*2.5);   // yoff=화면 아래로 내림 · z=화면 아래일수록 앞(겹칠 때 아래 건물이 앞에 보임)
       m.holder.rotation.x = it.pitch||0;   // 건물 사선 틸트(SC식 부감) — 미지정=0(기존 동작 유지)
       if(it.fitW){ const _fw=it.fitW*(CB_FIT_MUL[it.id]||1); m.holder.updateWorldMatrix(true,true); let _bb=new THREE.Box3().setFromObject(m.yaw); const _pw=_bb.max.x-_bb.min.x; if(_pw>0.5){ m.holder.scale.multiplyScalar(_fw/_pw); m.holder.updateWorldMatrix(true,true); _bb=new THREE.Box3().setFromObject(m.yaw); } m.holder.position.y += ((H-it.y*H)+1) - _bb.min.y; }   // 폭을 footprint에 꽉 맞춤(모델별 보정 배율) + 실제 최하단을 footprint 하단 1px 위로
+      if(it.buildP!=null){   // 🏗 건설 중: 완료율(0~1)에 따라 테두리(프레넬 림)만 보이는 투명 → 점점 원래 텍스처 색으로 채워짐(2D 아이콘 없이 3D가 진행도 표현)
+        if(!m._bldMats){ try{ m._bldMats=cloneMats(m.anim); }catch(_e){ m._bldMats=null; } }
+        const _op=0.12+0.88*Math.max(0,Math.min(1,it.buildP)); if(m._bldMats) for(const _mt of m._bldMats){ _mt.transparent=(_op<0.985); _mt.opacity=_op; _mt.depthWrite=_op>0.6; }
+        if(m.shadow) m.shadow.visible=false; }
+      else if(m._bldMats){ for(const _mt of m._bldMats){ _mt.opacity=1; _mt.transparent=false; _mt.depthWrite=true; } m._bldMats=null; }   // 완성 → 원색·불투명 복구
       if(m.anim && typeof it.id==='string' && it.id.indexOf('cb_')!==0){ m.holder.updateWorldMatrix(false,true); const _cc=new THREE.Box3().setFromObject(m.anim).getCenter(new THREE.Vector3()); _cc.project(camera); m.centerN={ x:_cc.x*0.5+0.5, y:0.5-_cc.y*0.5 }; } else m.centerN=null;   // 유닛(건물 cb_ 제외) 몸 중앙 2D 투영 — 이동 트레일 원점(메인 sync와 동일, 팬·줌·부양 정확 반영)
     }
     for(const [k,m] of buildModels){ if(!seen.has(k)) m.holder.visible=false; }
