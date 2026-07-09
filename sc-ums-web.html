@@ -988,7 +988,7 @@
     background-image:linear-gradient(rgba(255,255,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.07) 1px,transparent 1px);background-position:0 0}
   .bfoot.ok{border:1px solid rgba(70,240,106,.4);background-color:rgba(70,240,106,.06)}
   .bfoot.bad{border:1px solid rgba(255,90,90,.45);background-color:rgba(255,90,90,.09)}
-  .bArmBtns{position:absolute;z-index:26;display:flex;gap:6px;transform:translate(-50%,calc(-100% - 26px))}   /* 고스트 바로 위에 떠서 함께 이동 */
+  .bArmBtns{position:absolute;z-index:26;display:flex;gap:6px;transform:translate(-50%,calc(-100% - 26px));pointer-events:auto}   /* 고스트 바로 위에 떠서 함께 이동 · #cstLabels(pointer-events:none) 안에서도 버튼은 클릭 가능 */
   .bArmBtn{font-size:15px;font-weight:800;width:34px;height:34px;display:flex;align-items:center;justify-content:center;padding:0;border-radius:9px;border:1px solid var(--metal-edge);background:linear-gradient(160deg,rgba(30,36,48,.96),rgba(12,14,20,.97));color:#dfe8f2;cursor:pointer;-webkit-tap-highlight-color:transparent;box-shadow:0 2px 6px rgba(0,0,0,.4)}
   .bArmBtn.ok{border-color:var(--gold);color:#ffe27a;box-shadow:0 0 12px -3px rgba(255,210,74,.5)}
   .bArmBtn.ok.dis{opacity:.4;filter:grayscale(.6)}
@@ -10365,8 +10365,8 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
     if(!_is3d) ghost='<div class="bent bghost '+(_ok?'ok':'bad')+'" style="left:'+(_gs.x*100).toFixed(2)+'%;top:calc('+(_gs.y*100).toFixed(2)+'% + '+_off+'px);transform:translate(-50%,-50%) scale('+_zm.toFixed(2)+')"><span class="be-ico">'+(_ab.ico||'🏢')+'</span></div>';   // 3D 미가용 폴백(이모지)
     armBtns='<div class="bArmBtns" style="left:'+(_gs.x*100).toFixed(2)+'%;top:'+(_gs.y*100).toFixed(2)+'%" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()"><button class="bArmBtn cancel" onclick="techCancelArm(event)">✕</button><button class="bArmBtn ok'+(_ok?'':' dis')+'" onclick="techConfirmPlace(event)">✓</button></div>'; }
   const hint=G.tech.arm?('📍 '+((techGetBldg(race,G.tech.arm)||{}).name)+(G.tech.armXY?' — 드래그로 위치 조정 후 ✓ 확정':' — 지을 곳을 탭하세요')):((G.tech.selU&&G.tech.selU.length)?('👥 '+G.tech.selU.length+'기 지정 — 탭/드래그로 이동 · 해제는 우상단 ✕'):(G.tech.sel==null?'일꾼 탭=건설 메뉴 · 드래그=유닛 지정 · 두 손가락=화면 이동':'건물을 탭하면 하단 시트에 생산·연구가 표시됩니다'));
-  map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none"><div class="bmapTop"><div class="techTabs">'+tabs+'</div><div class="bres">'+res+'</div></div>'+ents+foot+ghost+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div>'+armBtns+'</div>';
-  const _lblLayer=document.getElementById('cstLabels'); if(_lblLayer) _lblLayer.innerHTML=labels; }   // 남은시간 라벨은 전용 오버레이(z8)에 → 3D 유닛 위
+  map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none"><div class="bmapTop"><div class="techTabs">'+tabs+'</div><div class="bres">'+res+'</div></div>'+ents+foot+ghost+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div></div>';
+  const _lblLayer=document.getElementById('cstLabels'); if(_lblLayer) _lblLayer.innerHTML=labels+armBtns; }   // 남은시간 라벨 + 배치 ✓/✕ 버튼을 전용 오버레이(z8)에 → 3D 유닛·건물 위(리파이너리 등 큰 건물에 안 가림)
 function techBldgInfoModel(b){ const race=G.tech.race, hb=TECH_TREE[race].buildings[0];
   const items=(b.unlocks||[]).map(uid=>{ const p=(hb.produces||[]).find(x=>x.id===uid)||{}; return { pro:_techUnitPortrait(uid), sn:p.name||uid, cr:p.m||0, en:p.g||0, meta:p.pop?'👤'+p.pop:'', state:'ok', act:'' }; });
   const bs=techBldgSpec(race,b.k)||{};
@@ -12938,16 +12938,23 @@ window.M3D={
       m.holder.position.set(it.x*W, (H-it.y*H)-Y_DROP-(it.yoff||0), it.y*H*2.5);   // yoff=화면 아래로 내림 · z=화면 아래일수록 앞(겹칠 때 아래 건물이 앞에 보임)
       m.holder.rotation.x = it.pitch||0;   // 건물 사선 틸트(SC식 부감) — 미지정=0(기존 동작 유지)
       if(it.fitW){ const _fw=it.fitW*(CB_FIT_MUL[it.id]||1); m.holder.updateWorldMatrix(true,true); let _bb=new THREE.Box3().setFromObject(m.yaw); const _pw=_bb.max.x-_bb.min.x; if(_pw>0.5){ m.holder.scale.multiplyScalar(_fw/_pw); m.holder.updateWorldMatrix(true,true); _bb=new THREE.Box3().setFromObject(m.yaw); } m.holder.position.y += ((H-it.y*H)+1) - _bb.min.y; }   // 폭을 footprint에 꽉 맞춤(모델별 보정 배율) + 실제 최하단을 footprint 하단 1px 위로
-      if(it.buildP!=null){   // 🏗 건설 중: 하단에서부터 완료율만큼 원색으로 채워지고(월드 Y 채움선), 위쪽 미완성부는 옅게 투명 — 2D 아이콘 없이 3D가 진행도 표현
-        if(!m._bldMats){ try{ m._bldMats=cloneMats(m.anim); if(m._bldMats) for(const _mt of m._bldMats){ const _orig=_mt.onBeforeCompile; _mt._fillY={value:-1e9};   // 채움선(월드 Y) 유니폼
-          _mt.onBeforeCompile=(sh)=>{ if(_orig) _orig(sh); sh.uniforms.uFillY=_mt._fillY;   // 원래 림 셰이더 유지 + 채움선 게이팅 추가
+      if(it.buildP!=null){   // 🏗 건설 중: 하단→상단 채움(월드 Y) + 유닛보다 뒤(z)에 그려 겹쳐도 유닛이 보임
+        if(!m._bldMats){ try{ m._bldMats=cloneMats(m.anim); if(m._bldMats) for(const _mt of m._bldMats){ const _orig=_mt.onBeforeCompile; _mt._fillY={value:-1e9}; _mt._flashY={value:-1e9}; _mt._flashI={value:0};   // 채움선 + 완성 빛 스윕 유니폼
+          _mt.onBeforeCompile=(sh)=>{ if(_orig) _orig(sh); sh.uniforms.uFillY=_mt._fillY; sh.uniforms.uFlashY=_mt._flashY; sh.uniforms.uFlashI=_mt._flashI;   // 원래 림 셰이더 유지 + 채움/빛 게이팅
             sh.vertexShader='varying float vBldWY;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n  vBldWY=(modelMatrix*vec4(transformed,1.0)).y;');
-            sh.fragmentShader='uniform float uFillY;\nvarying float vBldWY;\n'+sh.fragmentShader.replace('#include <dithering_fragment>','#include <dithering_fragment>\n  gl_FragColor.a *= mix(0.12, 1.0, step(vBldWY, uFillY));'); };   // 채움선 아래=원색 불투명 / 위=옅은 투명
+            sh.fragmentShader='uniform float uFillY;\nuniform float uFlashY;\nuniform float uFlashI;\nvarying float vBldWY;\n'+sh.fragmentShader.replace('#include <dithering_fragment>','#include <dithering_fragment>\n  gl_FragColor.a *= mix(0.12, 1.0, step(vBldWY, uFillY));\n  float _fb=max(0.0, 1.0 - abs(vBldWY-uFlashY)/24.0);\n  gl_FragColor.rgb += vec3(0.55,0.85,1.0)*(_fb*_fb)*uFlashI;'); };   // 채움선 아래=원색/위=옅은 투명 · 빛 밴드=아래→위 스윕
           _mt.transparent=true; _mt.depthWrite=false; _mt.needsUpdate=true; } }catch(_e){ m._bldMats=null; } }
         m.holder.updateWorldMatrix(true,true); const _bbb=new THREE.Box3().setFromObject(m.yaw); const _bpv=Math.max(0,Math.min(1,it.buildP)); const _fy=_bbb.min.y+_bpv*(_bbb.max.y-_bbb.min.y);   // 채움선 = 바닥→꼭대기 완료율 비례
-        if(m._bldMats) for(const _mt of m._bldMats){ if(_mt._fillY) _mt._fillY.value=_fy; _mt.transparent=(_bpv<0.995); _mt.depthWrite=(_bpv>=0.5); }
-        if(m.shadow) m.shadow.visible=false; }
-      else if(m._bldMats){ for(const _mt of m._bldMats){ if(_mt._fillY) _mt._fillY.value=1e9; _mt.transparent=false; _mt.depthWrite=true; } m._bldMats=null; }   // 완성 → 채움선 무한대(전체 원색·불투명)
+        if(m._bldMats) for(const _mt of m._bldMats){ if(_mt._fillY) _mt._fillY.value=_fy; if(_mt._flashI) _mt._flashI.value=0; _mt.transparent=true; _mt.depthWrite=false; }
+        m.holder.position.z=-100;   // 유닛(z≥0)보다 뒤 → 건설 중 겹쳐도 유닛이 안 가려짐
+        m._wasBuilding=true; if(m.shadow) m.shadow.visible=false; }
+      else {   // 완성됨: 정상 깊이(유닛을 가릴 수 있음). 방금 완성됐으면 아래→위 빛 스윕 1회
+        if(m._wasBuilding && m._bldMats){ m._flashT=0; m._wasBuilding=false; }
+        if(m._flashT!=null && m._bldMats){   // ✨ 완성 빛 스윕(아래→위 한 번)
+          m._flashT+=dt; const _FD=0.6, _ft=m._flashT/_FD;
+          if(_ft>=1){ for(const _mt of m._bldMats){ if(_mt._flashI)_mt._flashI.value=0; if(_mt._fillY)_mt._fillY.value=1e9; _mt.transparent=false; _mt.depthWrite=true; } m._flashT=null; m._bldMats=null; }
+          else { m.holder.updateWorldMatrix(true,true); const _fbb=new THREE.Box3().setFromObject(m.yaw); const _sweepY=_fbb.min.y+_ft*((_fbb.max.y-_fbb.min.y)+24);
+            for(const _mt of m._bldMats){ if(_mt._fillY)_mt._fillY.value=1e9; if(_mt._flashY)_mt._flashY.value=_sweepY; if(_mt._flashI)_mt._flashI.value=1.7*(1.0-_ft*0.4); _mt.transparent=false; _mt.depthWrite=true; } } } }
       if(m.anim && typeof it.id==='string' && it.id.indexOf('cb_')!==0){ m.holder.updateWorldMatrix(false,true); const _cc=new THREE.Box3().setFromObject(m.anim).getCenter(new THREE.Vector3()); _cc.project(camera); m.centerN={ x:_cc.x*0.5+0.5, y:0.5-_cc.y*0.5 }; } else m.centerN=null;   // 유닛(건물 cb_ 제외) 몸 중앙 2D 투영 — 이동 트레일 원점(메인 sync와 동일, 팬·줌·부양 정확 반영)
     }
     for(const [k,m] of buildModels){ if(!seen.has(k)) m.holder.visible=false; }
