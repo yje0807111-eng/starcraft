@@ -10439,7 +10439,8 @@ function techResumeBuild(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); i
   if(!wk){ if(typeof toast==='function') toast('⛔ 건설할 일꾼이 없음'); return; }
   wk.build=bd.eid; wk.tx=Math.max(0.04,Math.min(0.96,bd.x)); wk.ty=Math.max(0.16,Math.min(0.96,bd.y+0.05)); wk._working=false; wk._bpSide=null; wk._bpT=null;
   bd._bpause=false; bd.waiting=true;   // 일꾼 도착까지 대기(카운트다운 정지) → 도착 시 이어서 건설
-  if(typeof playSfx==='function') playSfx('ui_confirm'); techUIRender(); }   // 왼쪽: 유닛 스탯(자원은 맵 상단바)
+  G.tech.selU=[]; G.tech.sel=bd.eid;   // 재개 = 일꾼 중복 지정 해제하고 해당 건물만 지정(건물 프로필 표시)
+  if(typeof playSfx==='function') playSfx('ui_confirm'); techUIRender(); }
 function techBldgBuildingModel(be){ const race=G.tech.race, b=techGetBldg(race,be.bk)||{}, bs=techBldgSpec(race,be.bk)||{};   // 건설 중·일시정지 건물 = 전부 잠금 + 진행도 비례 체력
   const maxHp=bs.hp||0, maxSh=bs.sh||0, ratio=Math.max(0,Math.min(1,1-(be.bt/(be.btMax||1)))), pct=Math.round(ratio*100), paused=!!be._bpause;
   const curHp=Math.round(maxHp*ratio), curSh=Math.round(maxSh*ratio);
@@ -10517,7 +10518,7 @@ function techPtrDown(ev){ if(!G.tech) return; const r=_btRect(); if(!r) return; 
     if(selN===1 && e && (e.type==='unit'||e.type==='worker') && e.eid!==G.tech.selU[0]) return;   // 단일 지정 → 다른 유닛 탭 = 업에서 재지정
     const _hasIdleWk=(G.tech.selU||[]).some(id=>{ const wk=G.tech.ents.find(x=>x.eid===id); return wk&&wk.type==='worker'&&wk.build==null; });
     if(e && e.type==='bldg' && e.bt>0 && e._bpause && _hasIdleWk){ G.tech.sel=e.eid; const _sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null}); _sh.open=true; _sh.sec='ent'; if(typeof playSfx==='function') playSfx('ui_open'); techUIRender(); return; }   // 일꾼 지정 상태로 일시정지 건물 탭 = 이동 아니라 재개 대상 지정(일꾼 유지 → ▶ 재개 버튼 표시)
-    if(G.tech.sel!=null){ const _cur=G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'); if(_cur){ G.tech.sel=null; const _sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null}); _sh.open=true; _sh.sec='ent'; techUIRender(); return; } }   // 재개 대상 지정 상태에서 딴 곳/바닥 탭 = 건물 지정만 해제(일꾼 지정은 유지 = 원래 상태)
+    if(G.tech.sel!=null){ const _cur=G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'); if(_cur){ G.tech.sel=null; const _sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null}); _sh.open=true; _sh.sec='ent'; _btDown=null; techUIRender(); return; } }   // 재개 대상 지정 상태에서 딴 곳/바닥 탭 = 건물 지정만 해제(일꾼 지정·프로필 유지). _btDown=null → techPtrUp이 이 탭을 빈곳탭으로 재처리해 시트 닫는 것 방지
     _btCmd={}; _techAssignMove(w.x,w.y); if(typeof playSfx==='function') playSfx('ui_confirm'); return; }
   _btBox={sx0:sx, sy0:sy, sx1:sx, sy1:sy, active:false, rw:r.width, rh:r.height}; }   // 무지정 = 한 손가락 드래그로 유닛 지정 박스
 function techPtrMove(ev){ if(!G.tech||G.tab!=='Build'||!_btPtrs.has(ev.pointerId)) return; _btPtrs.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
