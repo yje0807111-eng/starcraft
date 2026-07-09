@@ -988,7 +988,7 @@
     background-image:linear-gradient(rgba(255,255,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.07) 1px,transparent 1px);background-position:0 0}
   .bfoot.ok{border:1px solid rgba(70,240,106,.4);background-color:rgba(70,240,106,.06)}
   .bfoot.bad{border:1px solid rgba(255,90,90,.45);background-color:rgba(255,90,90,.09)}
-  .bArmBtns{position:absolute;z-index:26;display:flex;gap:6px;transform:translate(-50%,calc(-100% - 26px));pointer-events:auto}   /* 고스트 바로 위에 떠서 함께 이동 · #cstLabels(pointer-events:none) 안에서도 버튼은 클릭 가능 */
+  .bArmBtns{position:absolute;z-index:26;display:flex;gap:6px;transform:translate(-50%,calc(-100% - 42px));pointer-events:auto}   /* 고스트 바로 위에 떠서 함께 이동 · #cstLabels(pointer-events:none) 안에서도 버튼은 클릭 가능 */
   .bArmBtn{font-size:14px;font-weight:900;width:30px;height:30px;display:flex;align-items:center;justify-content:center;padding:0;border-radius:9px;border:1.5px solid rgba(255,255,255,.16);background:linear-gradient(160deg,rgba(36,42,54,.5),rgba(15,18,25,.52));color:#eaf0f8;cursor:pointer;-webkit-tap-highlight-color:transparent;box-shadow:0 3px 9px rgba(0,0,0,.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}   /* 확정/취소·재개/철거 동일 — 반투명 글래스 버튼 */
   .bArmBtn.ok{border-color:rgba(90,223,138,.7);color:#9bf5bd;background:linear-gradient(160deg,rgba(26,54,39,.5),rgba(12,27,19,.52))}
   .bArmBtn.ok.dis{opacity:.4;filter:grayscale(.6)}
@@ -1393,7 +1393,7 @@
     background:radial-gradient(circle at 50% 34%,rgba(74,86,110,.45),#0a0d14 80%);display:flex;align-items:center;justify-content:center;font-size:22px}
   .cmdG .cgPro::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.22) 2px 3px)}
   .cmdG .cgPro svg{width:76%;height:76%} .cmdG .cgPro img{width:100%;height:100%;object-fit:cover} .cmdG .cgPro .pemoji{font-size:20px}
-  .cmdG .cgSlot.iconFill{justify-content:center;padding:6px} .cmdG .cgSlot.iconFill .cgPro{width:72%;height:auto;aspect-ratio:1;border:none;background:none;box-shadow:none} .cmdG .cgSlot.iconFill .cgPro svg{width:100%;height:100%}   /* 아이콘만 채우는 칸(일시정지 등): 칸 중앙에 크게 */
+  .cmdG .cgSlot.iconFill{justify-content:center;padding:6px} .cmdG .cgSlot.iconFill .cgPro{width:72%;height:auto;aspect-ratio:1;border:none;background:none;box-shadow:none} .cmdG .cgSlot.iconFill .cgPro svg{width:100%;height:100%} .cmdG .cgSlot.iconFill .cgName,.cmdG .cgSlot.iconFill .cgCost{display:none}   /* 아이콘만 채우는 칸(일시정지 등): 빈 이름/비용 줄 숨겨 아이콘이 칸 정중앙에 크게 */
   .cmdG .cgName{font:800 10px/1.05 sans-serif;color:#e6eefc;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .cmdG .cgCost{display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap;line-height:1;margin-top:auto}
   .cmdG .cc{display:inline-flex;align-items:center;gap:1px;font:800 10px/1 'Rajdhani',sans-serif;font-variant-numeric:tabular-nums}
