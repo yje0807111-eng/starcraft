@@ -10418,8 +10418,8 @@ function techUnitPanelModel(list){ const race=G.tech.race, grp={}, ord=[];   // 
     info:{ eb:'', hideName:true, stats:_techUnitStatList(spec,fid), cr:0, en:0 } }; }   // 왼쪽: 공격력/사거리/공속/처치(유닛=이름·체력·방어 제거)
 function techWorkerBuildModel(list){ const race=G.tech.race, fid=(TECH_WORKER[race]||'worker_human'), n=list.length;   // 일꾼 지정 시트 — 헤더=일꾼 프로필, 그리드=건물 생성 카드
   const ws=techUnitSpec(race,fid)||{}, rn=_techRealName(race,fid), role=_techRoleOf(fid);
-  const _bd=(list.length===1)?_techBuildBldg(list[0]):null;   // 단일 지정 + 건설 중(미일시정지) 일꾼 = 그리드 비우고 4번째 칸에 일시정지만
-  if(_bd && _bd.bt>0 && !_bd._bpause){
+  let _bd=null; for(const w of list){ const b=_techBuildBldg(w); if(b&&b.bt>0&&!b._bpause){ _bd=b; break; } }   // 지정 중 한 마리라도 건설 중(미일시정지) 일꾼이 있으면 = 작업 프로필(그리드 비우고 4번째 칸에 일시정지만)
+  if(_bd){
     const items=[null,null,null,{ pro:'<svg viewBox="0 0 24 24" style="display:block;width:100%;height:100%"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.4"/><line x1="6.2" y1="6.2" x2="17.8" y2="17.8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>', sn:'', state:'ok', cls:'iconFill', act:'onclick="techPauseBuild(event)"' }];   // 4번째(우상단) 칸 = 유닛 지정해제와 동일한 금지 아이콘(칸 중앙에 크게, 텍스트 없음), 나머지 비움 → 다른 행동 불가
     return { mode:'build', title:rn+(role?' ('+role+')':''), icon:_techUnitPortrait(fid), hpsh:_cgHpShDual(ws.hp,ws.sh),
       sub:'🔨 건설 중 — ⏸ 일시정지하면 자유 이동·다른 건물 건설 가능', items, info:{ eb:'', hideName:true, stats:_techUnitStatList(ws,fid), cr:0, en:0 } }; }
@@ -10427,10 +10427,12 @@ function techWorkerBuildModel(list){ const race=G.tech.race, fid=(TECH_WORKER[ra
   return { mode:'build', title:rn+(n>1?(' '+n+'기'):'')+(role?' ('+role+')':''), icon:_techUnitPortrait(fid), hpsh:_cgHpShDual(ws.hp,ws.sh),
     sub:'건물 선택 → 맵 탭해 배치 · 맵 탭 = 이동 · 해제 ✕', items:bl.items, info:{ eb:'', hideName:true, stats:_techUnitStatList(ws,fid), cr:0, en:0 } }; }
 function techPauseBuild(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;   // ⏸ 일시정지: 건물 동결 + 일꾼 완전 분리(처음 상태로 복귀)
-  const wk=(G.tech.selU||[]).map(id=>G.tech.ents.find(e=>e.eid===id)).find(e=>e&&e.type==='worker'&&e.build!=null); if(!wk) return;
-  const bd=_techBuildBldg(wk); if(!bd||bd.bt<=0) return;
-  bd._bpause=true; bd.waiting=false;   // 건물 = 반건설 상태로 동결(일꾼 없음, 카운트다운 정지)
-  wk.build=null; wk._working=false; wk._bpSide=null; wk._bpT=null; wk.tx=null; wk.ty=null;   // 일꾼 = 자유(다른 건물 건설·이동 가능)
+  const wks=(G.tech.selU||[]).map(id=>G.tech.ents.find(e=>e.eid===id)).filter(e=>e&&e.type==='worker'&&e.build!=null); if(!wks.length) return;   // 지정된 건설 중 일꾼 전체
+  let any=false;
+  for(const wk of wks){ const bd=_techBuildBldg(wk); if(!bd||bd.bt<=0) continue;
+    bd._bpause=true; bd.waiting=false;   // 건물 = 반건설 상태로 동결(일꾼 없음, 카운트다운 정지)
+    wk.build=null; wk._working=false; wk._bpSide=null; wk._bpT=null; wk.tx=null; wk.ty=null; any=true; }   // 일꾼 = 자유(다른 건물 건설·이동 가능)
+  if(!any) return;
   if(typeof playSfx==='function') playSfx('ui_open'); techUIRender(); }
 function techResumeBuild(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;   // ▶ 재개: 선택된 일시정지 건물에 가장 가까운 유휴 엔지니어를 보내 이어서 건설
   const bd=(G.tech.sel!=null)?G.tech.ents.find(e=>e.eid===G.tech.sel&&e.type==='bldg'):null; if(!bd||bd.bt<=0||!bd._bpause) return;
