@@ -995,6 +995,8 @@
   .bArmBtn.cancel{color:#ffb0b0;border-color:rgba(255,120,120,.4)}
   .bArmBtn:active{transform:translateY(1px)}
   .bldTime{position:absolute;z-index:12;transform:translate(-50%,9px);font:800 11px 'Rajdhani',sans-serif;color:#dff0ff;white-space:nowrap;pointer-events:none;text-shadow:0 1px 3px #000,0 0 5px #000,0 0 3px #000}   /* 건설 남은시간 — 발판 아래(건물에 안 가림), 아이콘 없이 시간만 */
+  .bldSpin{display:inline-block;width:14px;height:14px;border:2px solid rgba(210,230,255,.28);border-top-color:#dff0ff;border-radius:50%;animation:bldSpin .7s linear infinite;vertical-align:middle}   /* 일꾼 오는 중 = 로딩 스피너 */
+  @keyframes bldSpin{to{transform:rotate(360deg)}}
   /* ── ExoMiner식 하단 인터페이스: 아이콘 독(상시) + 슬라이드 시트(필요 시 올라옴) ── */
   #bpBuild.on{display:none}   /* 기존 하단 패널 영역 제거 → 맵이 화면을 가득 채움 */
   .btDockBtn{pointer-events:auto;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:7px;padding:0 13px;cursor:pointer;
@@ -9713,7 +9715,7 @@ function loop(now){
       for(const e of (G.tech.ents||[])){ if(e.type!=='unit'&&e.type!=='worker') continue; const mk=(typeof _techEntModel==='function')?_techEntModel(e):null; if(!mk) continue;   // 🚶 일꾼·생산 유닛 3D
         const _selu=(G.tech.sel===e.eid)||(G.tech.selU&&G.tech.selU.indexOf(e.eid)>=0);
         const _isAir=(typeof FXLAB_AIR!=='undefined')&&FXLAB_AIR.has(mk);   // 공중 유닛: 메인과 동일한 고정 부양(syncBuild airlift)
-        list.push({uid:'tu_'+e.eid, id:mk, x:(e.x-_v.x)*_v.zoom+0.5, y:(e.y-_v.y)*_v.zoom+0.5, face:(e.face||0), yoff:(typeof TECH_UNIT_YOFF!=='undefined'?TECH_UNIT_YOFF:6), moving:(e.tx!=null), sel:_selu, airlift:_isAir, yawFix:true}); }   // face = 이동방향 + (syncBuild서)모델별 정면 보정 — 메인과 100% 동일(CST_YAW는 건물 전용 아트 오프셋, 유닛은 미적용)
+        list.push({uid:'tu_'+e.eid, id:mk, x:(e.x-_v.x)*_v.zoom+0.5, y:(e.y-_v.y)*_v.zoom+0.5, face:(e.face||0), yoff:(typeof TECH_UNIT_YOFF!=='undefined'?TECH_UNIT_YOFF:6), moving:(e.tx!=null), working:(e.type==='worker'&&!!e._working), sel:_selu, airlift:_isAir, yawFix:true}); }   // face = 이동방향 + (syncBuild서)모델별 정면 보정 — 메인과 100% 동일(CST_YAW는 건물 전용 아트 오프셋, 유닛은 미적용)
       window.M3D.syncBuild(list, W, H, dt, _v.zoom);
     } else if(mcv) mcv.style.display='none';
     const _fcv=document.getElementById('cvFx');   // 이동 트레일(메인과 동일 이펙트) — 3D 표시 중일 때만
@@ -10174,7 +10176,7 @@ function techUIInit(race){ if(!TECH_TREE[race]) race='union'; _techEnsureRoster(
 function _techBuildTime(race,k){ if(G.tech.nocool) return 0; return ((techBldgSpec(race,k)||{}).t||20)*TECH_TIME_MUL; }
 function _techProdTime(race,id){ if(G.tech.nocool) return 0; return ((techUnitSpec(race,id)||{}).t||15)*TECH_TIME_MUL; }
 function techFinishBuild(e){ const b=techGetBldg(G.tech.race,e.bk); if(!b) return; e.bt=0; e.waiting=false; if(b.addonTo) G.tech.addon[b.k]=true; else G.tech.built[b.k]=(G.tech.built[b.k]||0)+1; G.tech.supCap+=(b.supply||0);
-  for(const w of G.tech.ents){ if(w.type==='worker'&&w.build===e.eid){ w.build=null; } } }   // 건설 완료 → 일꾼 해방
+  for(const w of G.tech.ents){ if(w.type==='worker'&&w.build===e.eid){ w.build=null; w._working=false; w._bpSide=null; w._bpT=null; w.tx=null; w.ty=null; } } }   // 건설 완료 → 일꾼 해방(작업상태 초기화)
 function techFinishProduce(q){ const race=G.tech.race; G.tech.units[q.id]=(G.tech.units[q.id]||0)+1; if(q.supply) G.tech.supCap+=q.supply;
   const be=G.tech.ents.find(e=>e.type==='bldg'&&e.bk===q.bk), bx=be?be.x:0.5, by=be?be.y:0.5, n=G.tech.units[q.id], ang=n*2.4, rr=0.045+((n%6)*0.014);
   const _ex=Math.max(0.04,Math.min(0.96,bx+Math.cos(ang)*rr)), _ey=Math.max(0.18,Math.min(0.96,by+0.1+Math.sin(ang)*rr*0.55));
@@ -10223,6 +10225,10 @@ function techSeparate(){ if(!G.tech||!GW||!GH) return false; const es=G.tech.ent
     for(const it of items){ it.ref.x=Math.max(0.02,Math.min(0.98,it.ref.x)); it.ref.y=Math.max(0.12,Math.min(0.98,it.ref.y)); } }
   for(let i=0;i<items.length;i++){ if(Math.abs(items[i].ref.x-b0[i][0])>1e-9 || Math.abs(items[i].ref.y-b0[i][1])>1e-9) return true; }
   return false; }
+function _techBldgSide(bd, i){ const race=G.tech.race, f=(typeof _techFoot==='function')?_techFoot(race,bd.bk):{w:2,h:2};   // 건물 상/우/하/좌 면 바깥 지점(발판 밖 약간) — 일꾼 순회 작업용
+  const hw=(f.w/2)*_techCW()+0.018, hh=(f.h/2)*_techCH()+0.018;
+  const sd=[{x:bd.x,y:bd.y-hh},{x:bd.x+hw,y:bd.y},{x:bd.x,y:bd.y+hh},{x:bd.x-hw,y:bd.y}][i%4];   // 상·우·하·좌
+  return { x:Math.max(0.04,Math.min(0.96,sd.x)), y:Math.max(0.14,Math.min(0.96,sd.y)) }; }
 function techTick(dt){ if(!G.tech) return; let active=false, done=false;
   for(const e of G.tech.ents){ if(e.type==='bldg'&&e.bt>0){ if(!e.waiting){ e.bt=Math.max(0,e.bt-dt); if(e.bt<=0){ techFinishBuild(e); done=true; } } active=true; } }   // waiting=일꾼 미도착 → 카운트다운 정지
   // 🚶 유닛 이동 — 메인과 100% 동일한 공용 stepUnitMove 사용(관성·회피·감속·정착·응시). 건물 회피만 건설 전용 extraSteer로 추가(지상만).
@@ -10235,6 +10241,16 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
     if(r.done){ e.tx=null; e.ty=null;
       if(e.type==='worker'&&e.build!=null){ const bd=G.tech.ents.find(x=>x.eid===e.build); if(bd&&bd.waiting&&Math.hypot(bd.x-e.x,bd.y-e.y)<0.16){ bd.waiting=false; done=true; } } }   // 일꾼 도착 → 건설 시작
     active=true; } }
+  // 🔨 건설 중 일꾼: 건물의 상하좌우를 순회하며 여러 곳을 짓는 듯 작업(도착→체류(작업모션)→다음 면)
+  for(const e of G.tech.ents){ if(e.type!=='worker'||e.build==null) continue;
+    const bd=G.tech.ents.find(x=>x.eid===e.build);
+    if(!bd||bd.type!=='bldg'||bd.bt<=0){ e._working=false; continue; }   // 건물 없음/완성 → 작업 종료
+    if(bd.waiting){ e._working=false; continue; }   // 첫 도착 전(이동 중) — 위 이동 루프가 도착 처리
+    if(e.tx==null){   // 한 면에 도착·정착 = 작업 모션
+      e._working=true;
+      e._bpT=(e._bpT!=null?e._bpT:0.5)-dt;
+      if(e._bpT<=0){ e._bpSide=((e._bpSide==null?(G.tech.eseq+e.eid)%4:e._bpSide)+1)%4; const _sd=_techBldgSide(bd,e._bpSide); e.tx=_sd.x; e.ty=_sd.y; e._bpT=0.9+((e.eid*37)%7)*0.1; e._working=false; }   // 체류 끝 → 다음 면으로 이동
+      active=true; } }
   if(techSeparate()) active=true;   // 도착한 유닛 겹침 분리(메인과 동일) — 공중 한 점 집결 후 완만히 흩어짐
   if(G.tech.pend&&G.tech.pend.length){ const seen={}; for(let i=G.tech.pend.length-1;i>=0;i--){ const q=G.tech.pend[i]; if(seen[q.bk]){ continue; } seen[q.bk]=1; q.t=Math.max(0,q.t-dt); active=true; if(q.t<=0){ techFinishProduce(q); G.tech.pend.splice(i,1); done=true; } } }
   if(done) techUIRender(); else if(active) techMapRender(); }   // 완성=전체 갱신 / 진행중=맵만(진행바)
@@ -10306,7 +10322,7 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
   let ents=''; for(const e of G.tech.ents){ let inner,cls,extra='';
     if(e.type==='bldg'){ const _b=techGetBldg(race,e.bk)||{};
       if(e.bt>0){ cls='bldg live3d'; inner='';   // 건설 중: 빈 live3d 앵커(3D가 하단→상단 채움), 시간표시는 건물에 안 가리게 발판 아래 별도 배치
-        const _lbl=e.waiting?'일꾼 오는 중':(Math.ceil(e.bt)+'s');   // 초 앞 아이콘 제거 → 시간만
+        const _lbl=e.waiting?'<span class="bldSpin"></span>':(Math.ceil(e.bt)+'s');   // 일꾼 오는 중 = 로딩 스피너 / 건설 중 = 시간만(아이콘 없이)
         const _bf=(typeof _techFoot==='function')?_techFoot(race,e.bk):{w:2,h:2}, _byB=e.y+(_bf.h/2)*_techCH(), _sb=_techW2S(e.x,_byB);
         extra='<div class="bldTime" style="left:'+(_sb.x*100).toFixed(2)+'%;top:'+(_sb.y*100).toFixed(2)+'%">'+_lbl+'</div>'; }   // 발판 하단(건물 아래)에 표시 → 건물이 자라도 안 가림
       else { cls='bldg live3d'; inner=''; const _pq=(G.tech.pend||[]).find(q=>q.bk===e.bk); if(_pq){ const _pp=Math.round((1-_pq.t/(_pq.tMax||1))*100); inner='<div class="bprog prod" style="bottom:0"><i style="width:'+_pp+'%"></i></div>'; }
@@ -12015,6 +12031,7 @@ const RUN_FOR={ marine:'marine_run.glb', ghost:'ghost_run.glb', goliath:'goliath
 const RUN_CLIP='Rifle_Charge_inplace';      // 이동 클립 이름(없으면 첫 클립 사용)
 const ATTACK_FOR={ blade:'blade_attect.glb', snapper:'snapper_attack.glb', worker_human:'worker_human_punch.glb', archon:'archon_attack.glb', dark_templar:'dark_templar_attack.glb', medic:'mender_healling.glb' };   // dragoon 공격 모션 제거(이펙트만 — 요청). 메딕=치유 모션
 const STAY_FOR={ marine:'marine_stay.glb', ghost:'ghost_stay.glb', goliath:'goliath_stay.glb', hydra:'hydralisk_stay.glb', worker_human:'worker_human_stay.glb', worker_light:'worker_light_stay.glb', archon:'archon_stay.glb', medic:'mender_stay.glb', high_templar:'high_templar_stay.glb' };   // 정지(대기) 애니
+const WORK_FOR={ worker_human:'worker_human_work.glb', worker_light:'worker_light_work.glb' };   // 건설(작업) 애니 — 일꾼이 건물 지을 때 재생(스웜 일꾼은 미보유 → 절차적 폴백)
 const RUN_SCALE_MUL=0.9;
 const RUN_SCALE_OVR={worker_swarm:0.88, dragoon:1.08};   // 달리기 모델 크기 점프 보정(모델별 — 정지/이동 크기 일치, 픽셀 실측 기반)
 const ATK_SCALE_OVR={ snapper:1.12 };   // 공격 모델 크기 보정(스내퍼: 공격 시 작아지지 않게 평상시 크기로)
@@ -12092,6 +12109,7 @@ const guns={};            // id -> 총 scene
 const runs={};            // id -> {scene, clips, off, h} 달리기 모델
 const atks={};            // id -> {scene, clips, off, h} 공격 애니 모델(워든 검 베기 등)
 const stays={};           // id -> {scene, clips, off, h} 정지(대기) 애니 모델
+const works={};           // id -> {scene, clips, off, h} 건설(작업) 애니 모델
 const swords={};          // id -> 검 scene(워든)
 // 워든 쌍검: 손 본(LeftHand/RightHand)에 부착. 튜닝값
 const ATK_SPEED=2.0;                           // 워든 검 베기 애니 배속(빠르게 쓱)
@@ -12169,7 +12187,7 @@ function init(){
   camera=new THREE.OrthographicCamera(0,1,1,0,-2000,2000); camera.position.set(0,0,800);
   ready=true;   // 렌더러 준비 즉시 가동 — 모델은 로드되는 대로 하나씩 등장(올-오어-나싱 30초 블랙아웃 제거). sync는 미로드 모델을 자동 스킵
   const L=new GLTFLoader();
-  let pending=Object.keys(MODELS).length+Object.keys(GUN_FOR).length+Object.keys(RUN_FOR).length+Object.keys(ATTACK_FOR).length+Object.keys(STAY_FOR).length+2;  // +1=비콘 +1=워든 검
+  let pending=Object.keys(MODELS).length+Object.keys(GUN_FOR).length+Object.keys(RUN_FOR).length+Object.keys(ATTACK_FOR).length+Object.keys(STAY_FOR).length+Object.keys(WORK_FOR).length+2;  // +1=비콘 +1=워든 검
   const done=()=>{ if(--pending<=0){ ready=true;   // 전체 로드 완료 → 2D 폴백 쓰던 화면(건물/시민) 1회 재렌더로 3D 전환
     try{ if(typeof G!=='undefined'){ if(G.tab==='Upgrade'&&typeof renderBldgs==='function') renderBldgs('vUpgrade',TECH,TECH_POS,G.techB,selectUpg); if(G.tab==='Unit'&&typeof buildClock==='function') buildClock(); } }catch(e){} } };
   // 합성 비콘 3D 모델(합체 베이·유닛 슬롯 발판) — 유닛과 같은 씬에 렌더
@@ -12204,6 +12222,15 @@ function init(){
       tintModel(s, id);
       done();
     }, undefined, e=>{ console.warn(STAY_FOR[id]+' load fail', e); done(); }); }
+  for(const id in WORK_FOR){ L.load('/assets/models/'+WORK_FOR[id], g=>{   // 건설(작업) 애니 — 정지/이동 모델과 동일 방식(본 위치로 크기·발 계산)
+      const s=g.scene; s.updateWorldMatrix(true,true);
+      let mn=1e9,mx=-1e9,cx=0,cz=0,nb=0;
+      s.traverse(o=>{ if(o.isBone){ const w=new THREE.Vector3(); o.getWorldPosition(w); if(w.y<mn)mn=w.y; if(w.y>mx)mx=w.y; cx+=w.x; cz+=w.z; nb++; } });
+      if(!nb){ const b=new THREE.Box3().setFromObject(s); mn=b.min.y; mx=b.max.y; cx=(b.min.x+b.max.x)/2; cz=(b.min.z+b.max.z)/2; nb=1; }
+      works[id]={ scene:s, clips:g.animations, off:{x:cx/nb, y:mn, z:cz/nb}, h:Math.max(.001,mx-mn) };
+      tintModel(s, id);
+      done();
+    }, undefined, e=>{ console.warn(WORK_FOR[id]+' load fail', e); done(); }); }
   for(const id in ATTACK_FOR){ L.load('/assets/models/'+ATTACK_FOR[id], g=>{
       const s=g.scene; s.updateWorldMatrix(true,true);
       let mn=1e9,mx=-1e9,cx=0,cz=0,nb=0;
@@ -12392,6 +12419,15 @@ function makeModel(id){
     let sclip=sb.clips[0]; if(sclip){ sclip=sclip.clone(); sclip.tracks=sclip.tracks.filter(t=>t.name.endsWith('.quaternion')); stayMixer.clipAction(sclip).play(); }
     if(id==='worker_human'||id==='worker_light'||id==='worker_swarm'){ rimModel(stayInner, unitRim(id)); }
   }
+  // 건설(작업) 애니 모델 — 일꾼이 건물 지을 때 반복 재생(정지 모델과 동일 구성)
+  let workInner=null, workMixer=null;
+  if(typeof WORK_FOR!=='undefined' && WORK_FOR[id] && works[id]){ const wb=works[id], ws=(base.h/wb.h)*RUN_SCALE_MUL*((typeof RUN_SCALE_OVR!=='undefined'&&RUN_SCALE_OVR[id])||1);
+    workInner=cloneSkinned(wb.scene); workInner.scale.setScalar(ws);
+    workInner.position.set(-wb.off.x*ws, -wb.off.y*ws, -wb.off.z*ws); workInner.visible=false; anim.add(workInner);
+    workMixer=new THREE.AnimationMixer(workInner);
+    let wclip=wb.clips[0]; if(wclip){ wclip=wclip.clone(); wclip.tracks=wclip.tracks.filter(t=>t.name.endsWith('.quaternion')); workMixer.clipAction(wclip).play(); }   // 회전만(제자리 작업)
+    if(id==='worker_human'||id==='worker_light'||id==='worker_swarm'){ rimModel(workInner, unitRim(id)); }
+  }
   // 공격 애니 모델(워든 검 베기) — 공격 시 1회 재생
   let atkInner=null, atkMixer=null, atkAction=null, atkDur=0.45;
   if(ATTACK_FOR[id] && atks[id]){ const ab=atks[id], s=(base.h/ab.h)*((typeof ATK_SCALE_OVR!=='undefined'&&ATK_SCALE_OVR[id])||RUN_SCALE_MUL);
@@ -12420,7 +12456,7 @@ function makeModel(id){
   const holder=new THREE.Group(); holder.add(view); holder.scale.setScalar(SCALE[id]||MODEL_SCALE);
   scene.add(holder);
   let muzzlePt=null; if(id==='tank'){ muzzlePt=new THREE.Object3D(); muzzlePt.position.set(-base.h*1.08, base.h*0.84, 0); yaw.add(muzzlePt); }   // 탱크 포구 기준점(yaw=조준방향 따라 회전) — 포신 끝(높이 포함) 화면 캘리브레이션 값
-  return { holder, view, yaw, anim, rim, gun, muzzlePt, aura, shadow, auraT:Math.random()*6.28, gunBase:(GUN_CFG[id]?{...GUN_CFG[id].pos}:{x:0,y:0,z:0}), reload:!!(GUN_CFG[id]&&GUN_CFG[id].reload), inner, runInner, runMixer, stayInner, stayMixer, atkInner, atkMixer, atkAction, atkDur, atkT:0, id, h:base.h, face:undefined, breathe:Math.random()*6.28, lean:0, seenSeq:0, dying:false, deadT:0 };
+  return { holder, view, yaw, anim, rim, gun, muzzlePt, aura, shadow, auraT:Math.random()*6.28, gunBase:(GUN_CFG[id]?{...GUN_CFG[id].pos}:{x:0,y:0,z:0}), reload:!!(GUN_CFG[id]&&GUN_CFG[id].reload), inner, runInner, runMixer, stayInner, stayMixer, workInner, workMixer, atkInner, atkMixer, atkAction, atkDur, atkT:0, id, h:base.h, face:undefined, breathe:Math.random()*6.28, lean:0, seenSeq:0, dying:false, deadT:0 };
 }
 
 // 비콘 톤다운 — 채도/밝기/발광을 낮춰 유닛이 비콘 위에서 돋보이게(쨍한 색 완화). 로드 시 1회.
@@ -12876,9 +12912,10 @@ window.M3D={
       seen.add(it.uid);
       let m=buildModels.get(it.uid); if(!m){ m=makeModel(it.id); if(!m) continue; m.kind='build'; buildModels.set(it.uid,m); }
       m.holder.visible=true; if(m.rim){ m.rim.visible=!!it.sel; if(it.sel) m.rim.scale.setScalar(1.12); } if(m.shadow) m.shadow.visible=(it.fitW?false:true);   // 그리드 건물(fitW)은 원형 그림자 숨김(하단 넘침 방지)
-      if(it.moving && m.runInner){ if(m.inner)m.inner.visible=false; m.runInner.visible=true; if(m.gun)m.gun.visible=false; if(m.atkInner)m.atkInner.visible=false; m.anim.position.set(0,0,0); m.anim.rotation.set(0,0,0); if(m.runMixer) m.runMixer.update(dt); }   // 이동: 달리기 모션
-      else if(it.moving){ if(m.inner)m.inner.visible=true; if(m.runInner)m.runInner.visible=false; if(m.gun)m.gun.visible=true; m.walk=(m.walk||0)+dt*WALK_SPD; m.anim.position.set(0,Math.abs(Math.sin(m.walk))*m.h*WALK_BOB,0); m.anim.rotation.z=Math.sin(m.walk*0.5)*WALK_SWAY; }   // 이동(달리기 모델 없음): 절차적 걷기
-      else { if(m.inner)m.inner.visible=true; if(m.runInner)m.runInner.visible=false; if(m.gun)m.gun.visible=true; m.anim.position.set(0,0,0); m.anim.rotation.set(0,0,0); }   // 정지
+      if(it.working && m.workInner){ if(m.inner)m.inner.visible=false; if(m.runInner)m.runInner.visible=false; m.workInner.visible=true; if(m.gun)m.gun.visible=false; if(m.atkInner)m.atkInner.visible=false; m.anim.position.set(0,0,0); m.anim.rotation.set(0,0,0); if(m.workMixer) m.workMixer.update(dt); }   // 🔨 건설(작업) 모션 — 일꾼이 건물 지을 때
+      else if(it.moving && m.runInner){ if(m.inner)m.inner.visible=false; m.runInner.visible=true; if(m.workInner)m.workInner.visible=false; if(m.gun)m.gun.visible=false; if(m.atkInner)m.atkInner.visible=false; m.anim.position.set(0,0,0); m.anim.rotation.set(0,0,0); if(m.runMixer) m.runMixer.update(dt); }   // 이동: 달리기 모션
+      else if(it.moving){ if(m.inner)m.inner.visible=true; if(m.runInner)m.runInner.visible=false; if(m.workInner)m.workInner.visible=false; if(m.gun)m.gun.visible=true; m.walk=(m.walk||0)+dt*WALK_SPD; m.anim.position.set(0,Math.abs(Math.sin(m.walk))*m.h*WALK_BOB,0); m.anim.rotation.z=Math.sin(m.walk*0.5)*WALK_SWAY; }   // 이동(달리기 모델 없음): 절차적 걷기
+      else { if(m.inner)m.inner.visible=true; if(m.runInner)m.runInner.visible=false; if(m.workInner)m.workInner.visible=false; if(m.gun)m.gun.visible=true; m.anim.position.set(0,0,0); m.anim.rotation.set(0,0,0); }   // 정지
       if(it.airlift && AIR_FLOAT[it.id]){ m.anim.position.x=0; m.anim.position.y=AIR_LIFT_PX/(SCALE[it.id]||MODEL_SCALE); m.anim.rotation.z=0; m.anim.rotation.x=0; if(m.shadow) m.shadow.material.opacity=0.26; }   // 공중 비행체: 메인 sync와 동일한 고정 부양(airlift 플래그 있을 때만 — 직스 등 기존 호출 무영향)
       if(it.face!=null){ const _tgt=it.face + (it.yawFix?(MODEL_YAW_OFF[it.id]||0):0);   // yawFix=모델별 정면 보정(템페스트·레이서·팔콘 등 옆으로 틀어지는 모델 +90° 등)
         if(it.yawFix){ let _d=_tgt-m.yaw.rotation.y; _d=Math.atan2(Math.sin(_d),Math.cos(_d)); m.yaw.rotation.y+=_d*Math.min(1,dt*ROT_SPD); }   // 메인 sync와 동일: 부드럽게 회전 보간(끊김 방지)
