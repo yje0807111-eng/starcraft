@@ -997,6 +997,7 @@
   .bldTime{position:absolute;z-index:12;transform:translate(-50%,9px);font:800 11px 'Rajdhani',sans-serif;color:#dff0ff;white-space:nowrap;pointer-events:none;text-shadow:0 1px 3px #000,0 0 5px #000,0 0 3px #000}   /* 건설 남은시간 — 발판 아래(건물에 안 가림), 아이콘 없이 시간만 */
   .bldSpin{display:inline-block;width:14px;height:14px;border:2px solid rgba(210,230,255,.28);border-top-color:#dff0ff;border-radius:50%;animation:bldSpin .7s linear infinite;vertical-align:middle}   /* 일꾼 오는 중 = 로딩 스피너 */
   @keyframes bldSpin{to{transform:rotate(360deg)}}
+  #cstLabels{position:absolute;inset:0;pointer-events:none;z-index:8}   /* 건설 남은시간 라벨 전용 오버레이 — 3D 캔버스(cvMarine z6·cvFx z7)보다 위 → 유닛에 안 가림 */
   /* ── ExoMiner식 하단 인터페이스: 아이콘 독(상시) + 슬라이드 시트(필요 시 올라옴) ── */
   #bpBuild.on{display:none}   /* 기존 하단 패널 영역 제거 → 맵이 화면을 가득 채움 */
   .btDockBtn{pointer-events:auto;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:7px;padding:0 13px;cursor:pointer;
@@ -2373,7 +2374,7 @@
     <div class="gview" id="vUpgrade"><canvas id="cvUpgrade"></canvas></div>
     <div class="gview" id="vPlayers"><canvas id="cvPlayer"></canvas></div>
     <div class="gview" id="vBoss"><canvas id="cvBoss"></canvas></div>
-    <div class="gview" id="vBuild"><div id="cstMain"></div><canvas id="techMap3d"></canvas><div id="cstPrev"><canvas id="cstPrevCv"></canvas><div id="cstPrevName"></div><div id="cstPrevInfo"></div><button id="cstPrevX" onclick="cstHidePreview()">✕ 닫기</button></div>
+    <div class="gview" id="vBuild"><div id="cstMain"></div><div id="cstLabels"></div><canvas id="techMap3d"></canvas><div id="cstPrev"><canvas id="cstPrevCv"></canvas><div id="cstPrevName"></div><div id="cstPrevInfo"></div><button id="cstPrevX" onclick="cstHidePreview()">✕ 닫기</button></div>
       <!-- ExoMiner식 하단 인터페이스: 슬라이드 시트 + 아이콘 독 + 유닛 지정 해제(메인 deselTop 재사용 디자인) -->
       <div id="btSheet"><div id="btSheetBody"></div></div>
       <div id="btDesel" onclick="techDeselU(event)" title="유닛 지정 해제"><svg viewBox="0 0 24 24" width="26" height="26"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.4"/><line x1="6.2" y1="6.2" x2="17.8" y2="17.8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></div>
@@ -10188,7 +10189,8 @@ function _techBldgSteer(e, tx, ty, dirx, diry, obst){
   if(!obst||!obst.length) return {sx:0,sy:0};
   const race=G.tech.race, MM=(typeof TECH_MODEL!=='undefined'&&TECH_MODEL[race])||{}, GWp=(typeof GW!=='undefined'&&GW>0)?GW:390;
   let ax=0, ay=0;
-  for(const b of obst){ const cfg=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[MM[b.bk]]:null, s=(cfg&&cfg.s)||50;
+  for(const b of obst){ if(b.eid===e.build) continue;   // 자기가 짓는 건물은 회피 안 함 → 위로 지나다니며 겹침 허용
+    const cfg=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[MM[b.bk]]:null, s=(cfg&&cfg.s)||50;
     const r=Math.min(0.13,(s*0.5*1.2)/GWp);   // 건물 회피 반경(정규화)
     const rdx=e.x-b.x, rdy=e.y-b.y, dist=Math.hypot(rdx,rdy)||1e-4;
     if(dist>r+0.10) continue;   // 충분히 멀면 무시
@@ -10225,8 +10227,8 @@ function techSeparate(){ if(!G.tech||!GW||!GH) return false; const es=G.tech.ent
     for(const it of items){ it.ref.x=Math.max(0.02,Math.min(0.98,it.ref.x)); it.ref.y=Math.max(0.12,Math.min(0.98,it.ref.y)); } }
   for(let i=0;i<items.length;i++){ if(Math.abs(items[i].ref.x-b0[i][0])>1e-9 || Math.abs(items[i].ref.y-b0[i][1])>1e-9) return true; }
   return false; }
-function _techBldgSide(bd, i){ const race=G.tech.race, f=(typeof _techFoot==='function')?_techFoot(race,bd.bk):{w:2,h:2};   // 건물 상/우/하/좌 면 바깥 지점(발판 밖 약간) — 일꾼 순회 작업용
-  const hw=(f.w/2)*_techCW()+0.018, hh=(f.h/2)*_techCH()+0.018;
+function _techBldgSide(bd, i){ const race=G.tech.race, f=(typeof _techFoot==='function')?_techFoot(race,bd.bk):{w:2,h:2};   // 건물 상/우/하/좌 지점 — 발판 안쪽(≈0.6배)이라 일꾼이 건물 위에 겹쳐 서고, 반대 면으로 갈 때 건물 중앙을 가로지름
+  const hw=(f.w/2)*_techCW()*0.6, hh=(f.h/2)*_techCH()*0.6;
   const sd=[{x:bd.x,y:bd.y-hh},{x:bd.x+hw,y:bd.y},{x:bd.x,y:bd.y+hh},{x:bd.x-hw,y:bd.y}][i%4];   // 상·우·하·좌
   return { x:Math.max(0.04,Math.min(0.96,sd.x)), y:Math.max(0.14,Math.min(0.96,sd.y)) }; }
 function techTick(dt){ if(!G.tech) return; let active=false, done=false;
@@ -10248,10 +10250,21 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
     if(bd.waiting){ e._working=false; continue; }   // 첫 도착 전(이동 중) — 위 이동 루프가 도착 처리
     if(e.tx==null){   // 한 면에 도착·정착 = 작업 모션
       e._working=true;
+      const _fdx=bd.x-e.x, _fdy=bd.y-e.y; if(_fdx*_fdx+_fdy*_fdy>1e-5) e.face=Math.atan2(_fdx,_fdy);   // 건물 내부 중앙을 향해 작업
       e._bpT=(e._bpT!=null?e._bpT:0.5)-dt;
       if(e._bpT<=0){ e._bpSide=((e._bpSide==null?(G.tech.eseq+e.eid)%4:e._bpSide)+1)%4; const _sd=_techBldgSide(bd,e._bpSide); e.tx=_sd.x; e.ty=_sd.y; e._bpT=0.9+((e.eid*37)%7)*0.1; e._working=false; }   // 체류 끝 → 다음 면으로 이동
       active=true; } }
   if(techSeparate()) active=true;   // 도착한 유닛 겹침 분리(메인과 동일) — 공중 한 점 집결 후 완만히 흩어짐
+  // 🧱 완성된 건물과 겹친 유닛을 자연스럽게 건물 밖으로 밀어냄(AABB 최소침투 방향) — 건설 중(bt>0)은 겹침 허용
+  for(const bd of G.tech.ents){ if(bd.type!=='bldg'||bd.bt>0) continue;
+    const f=(typeof _techFoot==='function')?_techFoot(G.tech.race,bd.bk):{w:2,h:2}, hw=(f.w/2)*_techCW()+0.006, hh=(f.h/2)*_techCH()+0.006;
+    for(const e of G.tech.ents){ if(e.type!=='unit'&&e.type!=='worker') continue;
+      const dx=e.x-bd.x, dy=e.y-bd.y; if(Math.abs(dx)>=hw||Math.abs(dy)>=hh) continue;   // 건물 밖
+      const penX=hw-Math.abs(dx), penY=hh-Math.abs(dy), step=Math.min(1,dt*6);   // 부드럽게 슬라이드
+      if(dx===0&&dy===0){ e.x+=hw*step; }
+      else if(penX<penY){ e.x+=(dx>=0?1:-1)*penX*step; }   // 좌우 최소침투 방향으로
+      else { e.y+=(dy>=0?1:-1)*penY*step; }
+      active=true; } }
   if(G.tech.pend&&G.tech.pend.length){ const seen={}; for(let i=G.tech.pend.length-1;i>=0;i--){ const q=G.tech.pend[i]; if(seen[q.bk]){ continue; } seen[q.bk]=1; q.t=Math.max(0,q.t-dt); active=true; if(q.t<=0){ techFinishProduce(q); G.tech.pend.splice(i,1); done=true; } } }
   if(done) techUIRender(); else if(active) techMapRender(); }   // 완성=전체 갱신 / 진행중=맵만(진행바)
 // 건설 탭 건물 3D 프리뷰: TECH 건물키 → glb 모델키(선택/배치대기 시 하단 도크에 회전 렌더)
@@ -10319,12 +10332,12 @@ function techBldgUpgModel(b){ const race=G.tech.race;
 // 렌더
 function techUIRender(){ if(!G.tech) return; techMapRender(); techPanelRender(); techHidePreview(); }   // 3D 건물은 메인 렌더러(syncBuild)가 렌더
 function techMapRender(){ const map=document.getElementById('cstMain'); if(!map) return; const race=G.tech.race;
-  let ents=''; for(const e of G.tech.ents){ let inner,cls,extra='';
+  let ents='', labels=''; for(const e of G.tech.ents){ let inner,cls;
     if(e.type==='bldg'){ const _b=techGetBldg(race,e.bk)||{};
-      if(e.bt>0){ cls='bldg live3d'; inner='';   // 건설 중: 빈 live3d 앵커(3D가 하단→상단 채움), 시간표시는 건물에 안 가리게 발판 아래 별도 배치
+      if(e.bt>0){ cls='bldg live3d'; inner='';   // 건설 중: 빈 live3d 앵커(3D가 하단→상단 채움), 시간표시는 건물에 안 가리게 발판 아래 + 전용 오버레이(유닛 위)
         const _lbl=e.waiting?'<span class="bldSpin"></span>':(Math.ceil(e.bt)+'s');   // 일꾼 오는 중 = 로딩 스피너 / 건설 중 = 시간만(아이콘 없이)
         const _bf=(typeof _techFoot==='function')?_techFoot(race,e.bk):{w:2,h:2}, _byB=e.y+(_bf.h/2)*_techCH(), _sb=_techW2S(e.x,_byB);
-        extra='<div class="bldTime" style="left:'+(_sb.x*100).toFixed(2)+'%;top:'+(_sb.y*100).toFixed(2)+'%">'+_lbl+'</div>'; }   // 발판 하단(건물 아래)에 표시 → 건물이 자라도 안 가림
+        labels+='<div class="bldTime" style="left:'+(_sb.x*100).toFixed(2)+'%;top:'+(_sb.y*100).toFixed(2)+'%">'+_lbl+'</div>'; }   // #cstLabels(z8)로 → 3D 유닛보다 위
       else { cls='bldg live3d'; inner=''; const _pq=(G.tech.pend||[]).find(q=>q.bk===e.bk); if(_pq){ const _pp=Math.round((1-_pq.t/(_pq.tMax||1))*100); inner='<div class="bprog prod" style="bottom:0"><i style="width:'+_pp+'%"></i></div>'; }
         if(G.tech.sel===e.eid){ const _cf=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[(TECH_MODEL[race]||{})[e.bk]]:null; const _sz=(_cf&&_cf.s)||50; inner+='<div class="uhp" style="width:44px;position:absolute;left:50%;transform:translateX(-50%);top:'+((CST_YSHIFT+10+Math.max(0,(_sz-36)*0.9))|0)+'px">'+barHTML('ub uH',100,hpBarColor(1))+'</div>'; } } }
     else if(e.type==='worker'||e.type==='unit'){ const _mk=_techEntModel(e);
@@ -10332,7 +10345,7 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
       cls=(e.type==='worker'?'worker':'unit')+(_h3?' live3d':'');
       inner=_h3?((e.type==='worker'&&e.build!=null)?'<span style="position:absolute;left:50%;top:-8px;transform:translateX(-50%);font-size:13px">🔨</span>':''):(e.type==='worker'?'<span class="be-ico">👷</span>':_techUnitPortrait(e.uid)); }
     const _seld=(G.tech.sel===e.eid)||(G.tech.selU&&G.tech.selU.indexOf(e.eid)>=0);
-    const _s=_techW2S(e.x,e.y); ents+='<div class="bent '+cls+(_seld?' sel':'')+'" style="left:'+(_s.x*100).toFixed(2)+'%;top:'+(_s.y*100).toFixed(2)+'%;transform:translate(-50%,-50%) scale('+techView().zoom.toFixed(2)+')">'+inner+'</div>'+extra; }
+    const _s=_techW2S(e.x,e.y); ents+='<div class="bent '+cls+(_seld?' sel':'')+'" style="left:'+(_s.x*100).toFixed(2)+'%;top:'+(_s.y*100).toFixed(2)+'%;transform:translate(-50%,-50%) scale('+techView().zoom.toFixed(2)+')">'+inner+'</div>'; }
   if(_btBox && _btBox.active){ const bx=Math.min(_btBox.sx0,_btBox.sx1),by=Math.min(_btBox.sy0,_btBox.sy1),bw=Math.abs(_btBox.sx1-_btBox.sx0),bh=Math.abs(_btBox.sy1-_btBox.sy0);   // 🔲 한 손가락 드래그 = 유닛 지정 박스
     ents+='<div class="techSelBox" style="left:'+(bx*100).toFixed(2)+'%;top:'+(by*100).toFixed(2)+'%;width:'+(bw*100).toFixed(2)+'%;height:'+(bh*100).toFixed(2)+'%;position:absolute;border:1.5px solid #46f06a;background:rgba(70,240,106,.14);pointer-events:none;z-index:23;border-radius:2px"></div>'; }
   let tabs=''; ['union','swarm','aetherial'].forEach(r=>{ tabs+='<span class="techTab'+(r===race?' on':'')+'" onclick="techRace(event,\''+r+'\')">'+_TECH_RKO[r]+'</span>'; });
@@ -10352,7 +10365,8 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
     if(!_is3d) ghost='<div class="bent bghost '+(_ok?'ok':'bad')+'" style="left:'+(_gs.x*100).toFixed(2)+'%;top:calc('+(_gs.y*100).toFixed(2)+'% + '+_off+'px);transform:translate(-50%,-50%) scale('+_zm.toFixed(2)+')"><span class="be-ico">'+(_ab.ico||'🏢')+'</span></div>';   // 3D 미가용 폴백(이모지)
     armBtns='<div class="bArmBtns" style="left:'+(_gs.x*100).toFixed(2)+'%;top:'+(_gs.y*100).toFixed(2)+'%" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()"><button class="bArmBtn cancel" onclick="techCancelArm(event)">✕</button><button class="bArmBtn ok'+(_ok?'':' dis')+'" onclick="techConfirmPlace(event)">✓</button></div>'; }
   const hint=G.tech.arm?('📍 '+((techGetBldg(race,G.tech.arm)||{}).name)+(G.tech.armXY?' — 드래그로 위치 조정 후 ✓ 확정':' — 지을 곳을 탭하세요')):((G.tech.selU&&G.tech.selU.length)?('👥 '+G.tech.selU.length+'기 지정 — 탭/드래그로 이동 · 해제는 우상단 ✕'):(G.tech.sel==null?'일꾼 탭=건설 메뉴 · 드래그=유닛 지정 · 두 손가락=화면 이동':'건물을 탭하면 하단 시트에 생산·연구가 표시됩니다'));
-  map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none"><div class="bmapTop"><div class="techTabs">'+tabs+'</div><div class="bres">'+res+'</div></div>'+ents+foot+ghost+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div>'+armBtns+'</div>'; }
+  map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none"><div class="bmapTop"><div class="techTabs">'+tabs+'</div><div class="bres">'+res+'</div></div>'+ents+foot+ghost+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div>'+armBtns+'</div>';
+  const _lblLayer=document.getElementById('cstLabels'); if(_lblLayer) _lblLayer.innerHTML=labels; }   // 남은시간 라벨은 전용 오버레이(z8)에 → 3D 유닛 위
 function techBldgInfoModel(b){ const race=G.tech.race, hb=TECH_TREE[race].buildings[0];
   const items=(b.unlocks||[]).map(uid=>{ const p=(hb.produces||[]).find(x=>x.id===uid)||{}; return { pro:_techUnitPortrait(uid), sn:p.name||uid, cr:p.m||0, en:p.g||0, meta:p.pop?'👤'+p.pop:'', state:'ok', act:'' }; });
   const bs=techBldgSpec(race,b.k)||{};
