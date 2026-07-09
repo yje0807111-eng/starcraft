@@ -994,6 +994,7 @@
   .bArmBtn.ok.dis{opacity:.4;filter:grayscale(.6)}
   .bArmBtn.cancel{color:#ffb0b0;border-color:rgba(255,120,120,.4)}
   .bArmBtn:active{transform:translateY(1px)}
+  .bldTime{position:absolute;z-index:12;transform:translate(-50%,9px);font:800 11px 'Rajdhani',sans-serif;color:#dff0ff;white-space:nowrap;pointer-events:none;text-shadow:0 1px 3px #000,0 0 5px #000,0 0 3px #000}   /* 건설 남은시간 — 발판 아래(건물에 안 가림), 아이콘 없이 시간만 */
   /* ── ExoMiner식 하단 인터페이스: 아이콘 독(상시) + 슬라이드 시트(필요 시 올라옴) ── */
   #bpBuild.on{display:none}   /* 기존 하단 패널 영역 제거 → 맵이 화면을 가득 채움 */
   .btDockBtn{pointer-events:auto;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:7px;padding:0 13px;cursor:pointer;
@@ -10302,9 +10303,12 @@ function techBldgUpgModel(b){ const race=G.tech.race;
 // 렌더
 function techUIRender(){ if(!G.tech) return; techMapRender(); techPanelRender(); techHidePreview(); }   // 3D 건물은 메인 렌더러(syncBuild)가 렌더
 function techMapRender(){ const map=document.getElementById('cstMain'); if(!map) return; const race=G.tech.race;
-  let ents=''; for(const e of G.tech.ents){ let inner,cls;
+  let ents=''; for(const e of G.tech.ents){ let inner,cls,extra='';
     if(e.type==='bldg'){ const _b=techGetBldg(race,e.bk)||{};
-      if(e.bt>0){ cls='bldg live3d'; const _lbl=e.waiting?'⏳ 일꾼 오는 중':('🏗 '+Math.ceil(e.bt)+'s'); inner='<div class="bpt">'+_lbl+'</div>'; }   // 건설 중: 3D 건물이 테두리→원색으로 채워짐(2D 아이콘 제거), 상태 텍스트만 유지
+      if(e.bt>0){ cls='bldg live3d'; inner='';   // 건설 중: 빈 live3d 앵커(3D가 하단→상단 채움), 시간표시는 건물에 안 가리게 발판 아래 별도 배치
+        const _lbl=e.waiting?'일꾼 오는 중':(Math.ceil(e.bt)+'s');   // 초 앞 아이콘 제거 → 시간만
+        const _bf=(typeof _techFoot==='function')?_techFoot(race,e.bk):{w:2,h:2}, _byB=e.y+(_bf.h/2)*_techCH(), _sb=_techW2S(e.x,_byB);
+        extra='<div class="bldTime" style="left:'+(_sb.x*100).toFixed(2)+'%;top:'+(_sb.y*100).toFixed(2)+'%">'+_lbl+'</div>'; }   // 발판 하단(건물 아래)에 표시 → 건물이 자라도 안 가림
       else { cls='bldg live3d'; inner=''; const _pq=(G.tech.pend||[]).find(q=>q.bk===e.bk); if(_pq){ const _pp=Math.round((1-_pq.t/(_pq.tMax||1))*100); inner='<div class="bprog prod" style="bottom:0"><i style="width:'+_pp+'%"></i></div>'; }
         if(G.tech.sel===e.eid){ const _cf=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[(TECH_MODEL[race]||{})[e.bk]]:null; const _sz=(_cf&&_cf.s)||50; inner+='<div class="uhp" style="width:44px;position:absolute;left:50%;transform:translateX(-50%);top:'+((CST_YSHIFT+10+Math.max(0,(_sz-36)*0.9))|0)+'px">'+barHTML('ub uH',100,hpBarColor(1))+'</div>'; } } }
     else if(e.type==='worker'||e.type==='unit'){ const _mk=_techEntModel(e);
@@ -10312,7 +10316,7 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
       cls=(e.type==='worker'?'worker':'unit')+(_h3?' live3d':'');
       inner=_h3?((e.type==='worker'&&e.build!=null)?'<span style="position:absolute;left:50%;top:-8px;transform:translateX(-50%);font-size:13px">🔨</span>':''):(e.type==='worker'?'<span class="be-ico">👷</span>':_techUnitPortrait(e.uid)); }
     const _seld=(G.tech.sel===e.eid)||(G.tech.selU&&G.tech.selU.indexOf(e.eid)>=0);
-    const _s=_techW2S(e.x,e.y); ents+='<div class="bent '+cls+(_seld?' sel':'')+'" style="left:'+(_s.x*100).toFixed(2)+'%;top:'+(_s.y*100).toFixed(2)+'%;transform:translate(-50%,-50%) scale('+techView().zoom.toFixed(2)+')">'+inner+'</div>'; }
+    const _s=_techW2S(e.x,e.y); ents+='<div class="bent '+cls+(_seld?' sel':'')+'" style="left:'+(_s.x*100).toFixed(2)+'%;top:'+(_s.y*100).toFixed(2)+'%;transform:translate(-50%,-50%) scale('+techView().zoom.toFixed(2)+')">'+inner+'</div>'+extra; }
   if(_btBox && _btBox.active){ const bx=Math.min(_btBox.sx0,_btBox.sx1),by=Math.min(_btBox.sy0,_btBox.sy1),bw=Math.abs(_btBox.sx1-_btBox.sx0),bh=Math.abs(_btBox.sy1-_btBox.sy0);   // 🔲 한 손가락 드래그 = 유닛 지정 박스
     ents+='<div class="techSelBox" style="left:'+(bx*100).toFixed(2)+'%;top:'+(by*100).toFixed(2)+'%;width:'+(bw*100).toFixed(2)+'%;height:'+(bh*100).toFixed(2)+'%;position:absolute;border:1.5px solid #46f06a;background:rgba(70,240,106,.14);pointer-events:none;z-index:23;border-radius:2px"></div>'; }
   let tabs=''; ['union','swarm','aetherial'].forEach(r=>{ tabs+='<span class="techTab'+(r===race?' on':'')+'" onclick="techRace(event,\''+r+'\')">'+_TECH_RKO[r]+'</span>'; });
@@ -12883,11 +12887,16 @@ window.M3D={
       m.holder.position.set(it.x*W, (H-it.y*H)-Y_DROP-(it.yoff||0), it.y*H*2.5);   // yoff=화면 아래로 내림 · z=화면 아래일수록 앞(겹칠 때 아래 건물이 앞에 보임)
       m.holder.rotation.x = it.pitch||0;   // 건물 사선 틸트(SC식 부감) — 미지정=0(기존 동작 유지)
       if(it.fitW){ const _fw=it.fitW*(CB_FIT_MUL[it.id]||1); m.holder.updateWorldMatrix(true,true); let _bb=new THREE.Box3().setFromObject(m.yaw); const _pw=_bb.max.x-_bb.min.x; if(_pw>0.5){ m.holder.scale.multiplyScalar(_fw/_pw); m.holder.updateWorldMatrix(true,true); _bb=new THREE.Box3().setFromObject(m.yaw); } m.holder.position.y += ((H-it.y*H)+1) - _bb.min.y; }   // 폭을 footprint에 꽉 맞춤(모델별 보정 배율) + 실제 최하단을 footprint 하단 1px 위로
-      if(it.buildP!=null){   // 🏗 건설 중: 완료율(0~1)에 따라 테두리(프레넬 림)만 보이는 투명 → 점점 원래 텍스처 색으로 채워짐(2D 아이콘 없이 3D가 진행도 표현)
-        if(!m._bldMats){ try{ m._bldMats=cloneMats(m.anim); }catch(_e){ m._bldMats=null; } }
-        const _op=0.12+0.88*Math.max(0,Math.min(1,it.buildP)); if(m._bldMats) for(const _mt of m._bldMats){ _mt.transparent=(_op<0.985); _mt.opacity=_op; _mt.depthWrite=_op>0.6; }
+      if(it.buildP!=null){   // 🏗 건설 중: 하단에서부터 완료율만큼 원색으로 채워지고(월드 Y 채움선), 위쪽 미완성부는 옅게 투명 — 2D 아이콘 없이 3D가 진행도 표현
+        if(!m._bldMats){ try{ m._bldMats=cloneMats(m.anim); if(m._bldMats) for(const _mt of m._bldMats){ const _orig=_mt.onBeforeCompile; _mt._fillY={value:-1e9};   // 채움선(월드 Y) 유니폼
+          _mt.onBeforeCompile=(sh)=>{ if(_orig) _orig(sh); sh.uniforms.uFillY=_mt._fillY;   // 원래 림 셰이더 유지 + 채움선 게이팅 추가
+            sh.vertexShader='varying float vBldWY;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n  vBldWY=(modelMatrix*vec4(transformed,1.0)).y;');
+            sh.fragmentShader='uniform float uFillY;\nvarying float vBldWY;\n'+sh.fragmentShader.replace('#include <dithering_fragment>','#include <dithering_fragment>\n  gl_FragColor.a *= mix(0.12, 1.0, step(vBldWY, uFillY));'); };   // 채움선 아래=원색 불투명 / 위=옅은 투명
+          _mt.transparent=true; _mt.depthWrite=false; _mt.needsUpdate=true; } }catch(_e){ m._bldMats=null; } }
+        m.holder.updateWorldMatrix(true,true); const _bbb=new THREE.Box3().setFromObject(m.yaw); const _bpv=Math.max(0,Math.min(1,it.buildP)); const _fy=_bbb.min.y+_bpv*(_bbb.max.y-_bbb.min.y);   // 채움선 = 바닥→꼭대기 완료율 비례
+        if(m._bldMats) for(const _mt of m._bldMats){ if(_mt._fillY) _mt._fillY.value=_fy; _mt.transparent=(_bpv<0.995); _mt.depthWrite=(_bpv>=0.5); }
         if(m.shadow) m.shadow.visible=false; }
-      else if(m._bldMats){ for(const _mt of m._bldMats){ _mt.opacity=1; _mt.transparent=false; _mt.depthWrite=true; } m._bldMats=null; }   // 완성 → 원색·불투명 복구
+      else if(m._bldMats){ for(const _mt of m._bldMats){ if(_mt._fillY) _mt._fillY.value=1e9; _mt.transparent=false; _mt.depthWrite=true; } m._bldMats=null; }   // 완성 → 채움선 무한대(전체 원색·불투명)
       if(m.anim && typeof it.id==='string' && it.id.indexOf('cb_')!==0){ m.holder.updateWorldMatrix(false,true); const _cc=new THREE.Box3().setFromObject(m.anim).getCenter(new THREE.Vector3()); _cc.project(camera); m.centerN={ x:_cc.x*0.5+0.5, y:0.5-_cc.y*0.5 }; } else m.centerN=null;   // 유닛(건물 cb_ 제외) 몸 중앙 2D 투영 — 이동 트레일 원점(메인 sync와 동일, 팬·줌·부양 정확 반영)
     }
     for(const [k,m] of buildModels){ if(!seen.has(k)) m.holder.visible=false; }
