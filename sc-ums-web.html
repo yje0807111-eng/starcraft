@@ -10257,6 +10257,7 @@ function _techBldgSide(bd, i){ const race=G.tech.race, f=(typeof _techFoot==='fu
   const sd=[{x:bd.x,y:bd.y-hh},{x:bd.x+hw,y:bd.y},{x:bd.x,y:bd.y+hh},{x:bd.x-hw,y:bd.y}][i%4];   // 상·우·하·좌
   return { x:Math.max(0.04,Math.min(0.96,sd.x)), y:Math.max(0.14,Math.min(0.96,sd.y)) }; }
 function techTick(dt){ if(!G.tech) return; let active=false, done=false;
+  const _vmoving=techViewTick(dt);   // 🎥 부드러운 줌/팬 보간(메인맵과 동일) — 애니메이션 중이면 매 프레임 재렌더
   for(const e of G.tech.ents){ if(e.type==='bldg'&&e.bt>0){ if(!e.waiting&&!e._bpause){ e.bt=Math.max(0,e.bt-dt); if(e.bt<=0){ techFinishBuild(e); done=true; } } active=true; } }   // waiting=일꾼 미도착 / _bpause=사용자 일시정지 → 카운트다운 정지
   // 🚶 유닛 이동 — 메인과 100% 동일한 공용 stepUnitMove 사용(관성·회피·감속·정착·응시). 건물 회피만 건설 전용 extraSteer로 추가(지상만).
   const _obst=G.tech.ents.filter(x=>x.type==='bldg');   // 회피 대상 건물(건설 중 포함)
@@ -10296,7 +10297,7 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
       active=true; } }
   if(G.tech.pend&&G.tech.pend.length){ const seen={}; for(let i=G.tech.pend.length-1;i>=0;i--){ const q=G.tech.pend[i]; if(seen[q.bk]){ continue; } seen[q.bk]=1; q.t=Math.max(0,q.t-dt); active=true; if(q.t<=0){ techFinishProduce(q); G.tech.pend.splice(i,1); done=true; } } }
   if(done) techUIRender();
-  else if(active){ techMapRender();
+  else if(active||_vmoving){ techMapRender();
     const _selB=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'):null;   // 선택된 미완성 건물 = 프로필(진행도·체력) 실시간 갱신(스로틀 5/s)
     if(_selB && _selB.bt>0){ G.tech._panT=(G.tech._panT||0)+dt; if(G.tech._panT>=0.2){ G.tech._panT=0; techPanelRender(); } } } }   // 완성=전체 갱신 / 진행중=맵(+선택 미완성 건물 프로필)
 // 건설 탭 건물 3D 프리뷰: TECH 건물키 → glb 모델키(선택/배치대기 시 하단 도크에 회전 렌더)
@@ -10485,8 +10486,12 @@ function techDeselU(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.
 // 입력
 // 뷰(확대/축소·팬) — 월드좌표(0~1)↔화면좌표 변환 (메인탭 G.view와 동일 규약)
 function techView(){ if(!G.tech.view) G.tech.view={x:0.5,y:0.5,zoom:1}; return G.tech.view; }
+function techViewT(){ if(!G.tech.viewT){ const v=techView(); G.tech.viewT={x:v.x,y:v.y,zoom:v.zoom}; } return G.tech.viewT; }   // 목표 뷰(핀치가 갱신) — G.view/G.viewT 규약과 동일
 function _techViewCSS(){ const v=techView(); return 'translate(50%,50%) scale('+v.zoom.toFixed(4)+') translate('+(-v.x*100).toFixed(3)+'%,'+(-v.y*100).toFixed(3)+'%)'; }   // viewApply(translate W/2,H/2·scale zoom·translate -v.x*W,-v.y*H)의 CSS 등가 — 메인맵 뷰와 동일 규약
-function _techClampView(){ const v=G.tech.view; v.zoom=Math.max(1,Math.min(4,v.zoom)); const m=(1-1/v.zoom)*0.5; v.x=Math.max(0.5-m,Math.min(0.5+m,v.x)); v.y=Math.max(0.5-m,Math.min(0.5+m,v.y)); }
+function _techClampView(v){ v=v||G.tech.view; if(!v) return; v.zoom=Math.max(1,Math.min(4,v.zoom)); const m=(1-1/v.zoom)*0.5; v.x=Math.max(0.5-m,Math.min(0.5+m,v.x)); v.y=Math.max(0.5-m,Math.min(0.5+m,v.y)); }
+function techViewTick(dt){ const v=techView(), t=techViewT(); if(v.zoom===t.zoom && v.x===t.x && v.y===t.y) return false;   // 메인맵 nemoViewTick과 동일한 보간(k=min(1,dt*9))
+  const k=Math.min(1,dt*9); v.zoom+=(t.zoom-v.zoom)*k; v.x+=(t.x-v.x)*k; v.y+=(t.y-v.y)*k;
+  if(Math.abs(v.zoom-t.zoom)<0.003 && Math.abs(v.x-t.x)<0.002 && Math.abs(v.y-t.y)<0.002){ v.zoom=t.zoom; v.x=t.x; v.y=t.y; } return true; }
 function _techW2S(wx,wy){ const v=techView(); return { x:(wx-v.x)*v.zoom+0.5, y:(wy-v.y)*v.zoom+0.5 }; }   // 월드→화면
 function _techS2W(sx,sy){ const v=techView(); return { x:(sx-0.5)/v.zoom+v.x, y:(sy-0.5)/v.zoom+v.y }; }   // 화면→월드
 // 이동 파라미터 = 메인과 동일한 공용 자료 사용: 속도=U.moveSpd×MOVE_MUL · 공중 판정=FXLAB_AIR (별도 표 없음)
@@ -10515,7 +10520,7 @@ function _techAssignMove(wx,wy){ const all=(G.tech.selU||[]).map(id=>G.tech.ents
 function techPtrDown(ev){ if(!G.tech) return; const r=_btRect(); if(!r) return; if(ev.preventDefault)ev.preventDefault();
   _btPtrs.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
   const sx=(ev.clientX-r.left)/(r.width||1), sy=(ev.clientY-r.top)/(r.height||1);
-  if(_btPtrs.size>=2){ _btBox=null; _btCmd=null; const p=[..._btPtrs.values()], v=techView();   // 두 손가락 = 화면 이동(팬 + 핀치 줌)
+  if(_btPtrs.size>=2){ _btBox=null; _btCmd=null; const p=[..._btPtrs.values()], v=techViewT();   // 두 손가락 = 화면 이동(팬 + 핀치 줌) — 목표 뷰 기준(부드럽게 보간)
     _btPinch={ d:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)||1, zoom:v.zoom, cx:(p[0].x+p[1].x)/2, cy:(p[0].y+p[1].y)/2, vx:v.x, vy:v.y, rw:r.width, rh:r.height }; _btMoved=true; return; }
   _btMoved=false; _btDown={sx, sy}; _btBox=null; _btCmd=null;
   if(sy<0.13) return;   // 상단바 = 탭만
@@ -10537,8 +10542,8 @@ function techPtrDown(ev){ if(!G.tech) return; const r=_btRect(); if(!r) return; 
     _btCmd={}; _techAssignMove(w.x,w.y); if(typeof playSfx==='function') playSfx('ui_confirm'); return; }
   _btBox={sx0:sx, sy0:sy, sx1:sx, sy1:sy, active:false, rw:r.width, rh:r.height}; }   // 무지정 = 한 손가락 드래그로 유닛 지정 박스
 function techPtrMove(ev){ if(!G.tech||G.tab!=='Build'||!_btPtrs.has(ev.pointerId)) return; _btPtrs.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
-  if(_btPinch && _btPtrs.size>=2){ const p=[..._btPtrs.values()], d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y), z=Math.max(1,Math.min(4,_btPinch.zoom*d/_btPinch.d)), v=techView(); v.zoom=z;
-    const cx=(p[0].x+p[1].x)/2, cy=(p[0].y+p[1].y)/2; v.x=_btPinch.vx-(cx-_btPinch.cx)/(_btPinch.rw||1)/z; v.y=_btPinch.vy-(cy-_btPinch.cy)/(_btPinch.rh||1)/z; _techClampView(); _btMoved=true; techMapRender(); return; }
+  if(_btPinch && _btPtrs.size>=2){ const p=[..._btPtrs.values()], d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y), z=Math.max(1,Math.min(4,_btPinch.zoom*d/_btPinch.d)), t=techViewT(); t.zoom=z;   // 목표 뷰만 갱신 → techViewTick이 부드럽게 따라감
+    const cx=(p[0].x+p[1].x)/2, cy=(p[0].y+p[1].y)/2; t.x=_btPinch.vx-(cx-_btPinch.cx)/(_btPinch.rw||1)/z; t.y=_btPinch.vy-(cy-_btPinch.cy)/(_btPinch.rh||1)/z; _techClampView(t); _btMoved=true; return; }
   if(_btArm){ const r=_btRect(); if(!r) return; _techArmTo((ev.clientX-r.left)/(r.width||1),(ev.clientY-r.top)/(r.height||1)); _btMoved=true; return; }   // 배치 고스트가 손가락을 따라 이동
   if(_btCmd){ const r=_btRect(); if(!r) return; const w=_techS2W((ev.clientX-r.left)/(r.width||1),(ev.clientY-r.top)/(r.height||1)); _techAssignMove(w.x,w.y); _btMoved=true; return; }   // 지정 유닛이 손가락을 따라 이동
   if(_btBox){ const r=_btRect(); if(!r) return; const sx=(ev.clientX-r.left)/(r.width||1), sy=(ev.clientY-r.top)/(r.height||1); _btBox.sx1=sx; _btBox.sy1=sy;
