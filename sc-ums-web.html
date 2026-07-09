@@ -994,7 +994,6 @@
   .bArmBtn.ok.dis{opacity:.4;filter:grayscale(.6)}
   .bArmBtn.cancel{border-color:rgba(255,130,130,.6);color:#ffb0b0;background:linear-gradient(160deg,rgba(52,31,35,.95),rgba(25,13,16,.97))}
   .bArmBtn:active{transform:translateY(1px) scale(.95)}
-  .bArmBtn.bResume{width:auto;height:29px;padding:0 13px;font-size:12px;font-weight:800;letter-spacing:.4px;border-radius:9px;color:#ffe6a0;border-color:rgba(255,210,74,.65);background:linear-gradient(160deg,rgba(46,38,20,.96),rgba(24,19,10,.98));box-shadow:0 3px 9px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06)}   /* 재개 — 아이콘 없이 깔끔한 금색 텍스트 버튼(작게) */
   .bldHp{position:absolute;z-index:11;transform:translate(-50%,3px);height:5px;min-width:22px;border-radius:3px;background:rgba(0,0,0,.62);border:1px solid rgba(120,150,190,.4);overflow:hidden;pointer-events:none}   /* 각 건물 하단 체력/진행 바 — 발판 바로 아래 */
   .bldHp i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#2f7d4a,#5adf8a);box-shadow:0 0 5px rgba(90,223,138,.5);transition:width .12s linear}
   .bldHp.bld i{background:linear-gradient(90deg,#2f6fbf,#5cc8ff);box-shadow:0 0 5px rgba(92,200,255,.5)}   /* 건설 중 = 파란 진행 바 */
@@ -10396,7 +10395,7 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
     armBtns='<div class="bArmBtns" style="left:'+(_gs.x*100).toFixed(2)+'%;top:'+(_gs.y*100).toFixed(2)+'%" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()"><button class="bArmBtn ok'+(_ok?'':' dis')+'" onclick="techConfirmPlace(event)">✓</button><button class="bArmBtn cancel" onclick="techCancelArm(event)">✕</button></div>'; }   // ✓ 왼쪽 · ✕ 오른쪽(위치 교체)
   let resumeBtn='';   // ▶ 재개 — 일시정지된 건물 선택 시 그 위에 뜸
   if(G.tech.sel!=null){ const _sb=G.tech.ents.find(e=>e.eid===G.tech.sel&&e.type==='bldg'); if(_sb&&_sb.bt>0&&_sb._bpause){ const _rs=_techW2S(_sb.x,_sb.y);
-    resumeBtn='<div class="bArmBtns" style="left:'+(_rs.x*100).toFixed(2)+'%;top:'+(_rs.y*100).toFixed(2)+'%" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()"><button class="bArmBtn bResume" onclick="techResumeBuild(event)">재개</button><button class="bArmBtn cancel" onclick="techDemolishBuild(event)" title="철거">✕</button></div>'; } }   // 재개 + 철거(✕)
+    resumeBtn='<div class="bArmBtns" style="left:'+(_rs.x*100).toFixed(2)+'%;top:'+(_rs.y*100).toFixed(2)+'%" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()"><button class="bArmBtn ok" onclick="techResumeBuild(event)" title="재개"><svg viewBox="0 0 24 24" width="15" height="15" style="display:block"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button><button class="bArmBtn cancel" onclick="techDemolishBuild(event)" title="철거">✕</button></div>'; } }   // 재개(▶) + 철거(✕) — 단순 아이콘
   const hint=G.tech.arm?('📍 '+((techGetBldg(race,G.tech.arm)||{}).name)+(G.tech.armXY?' — 드래그로 위치 조정 후 ✓ 확정':' — 지을 곳을 탭하세요')):((G.tech.selU&&G.tech.selU.length)?('👥 '+G.tech.selU.length+'기 지정 — 탭/드래그로 이동 · 해제는 우상단 ✕'):(G.tech.sel==null?'일꾼 탭=건설 메뉴 · 드래그=유닛 지정 · 두 손가락=화면 이동':'건물을 탭하면 하단 시트에 생산·연구가 표시됩니다'));
   map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none"><div class="bmapTop"><div class="techTabs">'+tabs+'</div><div class="bres">'+res+'</div></div>'+ents+foot+ghost+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div></div>';
   const _lblLayer=document.getElementById('cstLabels'); if(_lblLayer) _lblLayer.innerHTML=labels+armBtns+resumeBtn; }   // 남은시간 라벨 + 배치 ✓/✕ + ▶재개 버튼을 전용 오버레이(z8)에 → 3D 유닛·건물 위(리파이너리 등 큰 건물에 안 가림)
@@ -10443,7 +10442,7 @@ function techResumeBuild(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); i
   if(typeof playSfx==='function') playSfx('ui_confirm'); techUIRender(); }
 function techDemolishBuild(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech||G.tech.sel==null) return;   // 건설 중·일시정지 건물 즉시 철거(일꾼 도착 불필요) — 완성 전이라 built/supCap 미반영이므로 카운트 조정 없음
   const e=G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'); if(!e||e.bt<=0) return;
-  const b=techGetBldg(G.tech.race,e.bk); if(b && !G.tech.inf){ G.tech.credit+=(b.m||0); G.tech.energy+=(b.g||0); }   // 자원 환불(취소)
+  const b=techGetBldg(G.tech.race,e.bk); if(b && !G.tech.inf){ G.tech.credit+=Math.round((b.m||0)*0.75); G.tech.energy+=Math.round((b.g||0)*0.75); }   // 자원 75% 환불(취소)
   for(const w of G.tech.ents){ if(w.type==='worker'&&w.build===e.eid){ w.build=null; w._working=false; w._bpSide=null; w._bpT=null; w.tx=null; w.ty=null; } }   // 일꾼 해방
   G.tech.ents=G.tech.ents.filter(x=>x.eid!==e.eid); G.tech.sel=null;
   if(typeof playSfx==='function') playSfx('ui_denied'); techUIRender(); }
