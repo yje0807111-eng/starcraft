@@ -10227,7 +10227,7 @@ function _techNavUnitRects(e, sx, sy, tx, ty){ const out=[], GWp=GW||390, GHp=GH
     if(((typeof _techAirOf==='function')&&_techAirOf(o))!==eAir) continue;   // 같은 레이어만(지상↔공중 통과)
     if(_navExcl&&_navExcl.has(o.eid)) continue;   // 같은 명령 그룹 제외
     if(o.x<bx0||o.x>bx1||o.y<by0||o.y>by1) continue;
-    const rpx=(rr(_techEntKey(o))+rM)*1.05, rx=rpx/GWp, ry=rpx/GHp;
+    const rpx=(rr(_techEntKey(o))+rM)*1.18, rx=rpx/GWp, ry=rpx/GHp;   // 살짝 크게 — 서브픽셀 샛길을 경로 후보에서 제거
     out.push({x0:o.x-rx, x1:o.x+rx, y0:o.y-ry, y1:o.y+ry});
     if(out.length>=64) break; }   // 노드 폭주 방지
   return out; }
@@ -10317,6 +10317,7 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
   for(const e of G.tech.ents){ if((e.type==='unit'||e.type==='worker')&&e.tx!=null){
     const key=_techEntKey(e);
     while(e._wp && e._wp.length>1 && Math.hypot(e.tx-e.x,e.ty-e.y)<0.05 && _techSegClear(e, e.x, e.y, e._wp[1].x, e._wp[1].y)){ e._wp.shift(); const _n=e._wp[0]; e.tx=_n.x; e.ty=_n.y; e._mvStuck=0; e._mvPrevD=null; }   // 🏃 경유점 선행 전환(다음 구간이 뚫려 있을 때만): 모퉁이마다 멈췄다 가는 현상 제거 + 좁은 통로에선 지름길 금지
+    e._pfx=e.x; e._pfy=e.y;   // 이번 프레임 이동 전 위치(쐐기 판정 시 되돌림용)
     const r=stepUnitMove(e, {x:e.tx,y:e.ty}, key, key, dt, { GW:GW||390, GH:GH||390, clamp:_clamp, staticN:_staticN, avoidMul:0.16 });
     if(r.done){ const _far=Math.hypot(e.tx-e.x, e.ty-e.y)>0.035;   // 도착이 아니라 막혀서 멈춤(관성 정체)
       if(e._wp && e._wp.length>1){   // 경유점 남음 → 다음 경유점으로(막혔으면 현재 위치 기준 경로 재계산)
@@ -10346,16 +10347,38 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
       } else { e._working=false; const _sd=_techBldgSide(bd,e._bpSide||0); _techRoute(e,_sd.x,_sd.y); }   // 멀리 있으면(재개 등) 우회 경로로 건물 복귀
       active=true; } }
   if(techSeparate()) active=true;   // 도착한 유닛 겹침 분리(메인과 동일) — 공중 한 점 집결 후 완만히 흩어짐
-  // 🧱 완성 or 일시정지(동결) 건물과 겹친 유닛을 자연스럽게 밖으로 밀어냄 — 진행 중(bt>0, 미일시정지)만 겹침 허용
+  // 🧱 완성 or 일시정지(동결) 건물과 겹친 유닛을 즉시 경계로 보정 — 진행 중(bt>0, 미일시정지)만 겹침 허용
+  // 즉시 보정(속도는 유지) → 벽 안에 머무는 프레임이 없어 경유점 선행 전환이 안 끊김(벽 따라갈 때 속도 출렁임 제거)
   for(const bd of G.tech.ents){ if(bd.type!=='bldg'||(bd.bt>0 && !bd._bpause)) continue;
     for(const e of G.tech.ents){ if(e.type!=='unit'&&e.type!=='worker') continue;
       if(e.build===bd.eid) continue;   // 이 건물을 짓는 일꾼만 겹침 허용
       const R=_techCollRect(bd,e); if(R.x1<=R.x0||R.y1<=R.y0) continue;   // 심시티 판정 사각(유니온=그룹별 껍질+통과 등급)
       if(e.x<=R.x0||e.x>=R.x1||e.y<=R.y0||e.y>=R.y1) continue;   // 판정 밖
-      const pL=e.x-R.x0, pR=R.x1-e.x, pT=e.y-R.y0, pB=R.y1-e.y, step=Math.min(1,dt*14);   // 최소침투 방향으로 경계까지 슬라이드(속도는 손대지 않음 → 접선 관성 유지해 벽 따라 미끄러져 우회)
-      const mPen=Math.min(pL,pR,pT,pB);
-      if(mPen===pL) e.x-=pL*step; else if(mPen===pR) e.x+=pR*step; else if(mPen===pT) e.y-=pT*step; else e.y+=pB*step;
+      const pL=e.x-R.x0, pR=R.x1-e.x, pT=e.y-R.y0, pB=R.y1-e.y;
+      const mPen=Math.min(pL,pR,pT,pB);   // 최소침투 축으로 경계까지 즉시(관통 잔류 0 — 접선 속도는 그대로라 벽 따라 미끄러짐)
+      if(mPen===pL) e.x=R.x0; else if(mPen===pR) e.x=R.x1; else if(mPen===pT) e.y=R.y0; else e.y=R.y1;
       active=true; } }
+  // 🚧 이동 유닛 ↔ 정지 유닛 물리 충돌(정지 유닛 = 자리 차지) — 겹치면 이동 유닛을 접촉 거리까지 즉시 밀어냄(속도 유지)
+  // 틈을 유닛이 막고 있을 때 비비다 뚫고 지나가던 현상 방지(경로 회피 실패 시에도 물리적으로 통과 불가)
+  { const GWp=GW||390, GHp=GH||390, _rrP=k=>(((U[k]&&U[k].size)||14)*0.62)*(typeof TECH_USCALE!=='undefined'?TECH_USCALE:1)*(typeof TECH_PACK!=='undefined'?TECH_PACK:1);
+    for(const e of G.tech.ents){ if((e.type!=='unit'&&e.type!=='worker')||e.tx==null) continue;   // 이동 중 유닛만 보정(정지끼리는 techSeparate)
+      if(_techAirOf(e)) continue;   // 공중은 스택 허용(기존 규약)
+      const rM=_rrP(_techEntKey(e));
+      for(const o of G.tech.ents){ if(o===e||(o.type!=='unit'&&o.type!=='worker')||o.tx!=null) continue;
+        if(_techAirOf(o)) continue;
+        const cpx=rM+_rrP(_techEntKey(o));   // 접촉 거리(px)
+        let dxp=(e.x-o.x)*GWp, dyp=(e.y-o.y)*GHp, dp=Math.hypot(dxp,dyp);
+        if(dp>=cpx) continue;
+        if(dp<0.01){ dxp=1; dyp=0; dp=1; }   // 정확히 겹침 → 옆으로
+        e.x=o.x+(dxp/dp)*cpx/GWp; e.y=o.y+(dyp/dp)*cpx/GHp;   // 접촉 거리까지 즉시 밀어냄
+        for(const bd2 of G.tech.ents){ if(bd2.type!=='bldg'||(bd2.bt>0&&!bd2._bpause)||e.build===bd2.eid) continue;   // 밀어낸 자리가 건물 안이면 다시 경계로
+          const R2=_techCollRect(bd2,e); if(R2.x1<=R2.x0||R2.y1<=R2.y0) continue;
+          if(e.x<=R2.x0||e.x>=R2.x1||e.y<=R2.y0||e.y>=R2.y1) continue;
+          const pL2=e.x-R2.x0, pR2=R2.x1-e.x, pT2=e.y-R2.y0, pB2=R2.y1-e.y, mP2=Math.min(pL2,pR2,pT2,pB2);
+          if(mP2===pL2) e.x=R2.x0; else if(mP2===pR2) e.x=R2.x1; else if(mP2===pT2) e.y=R2.y0; else e.y=R2.y1; }
+        const ddx=(e.x-o.x)*GWp, ddy=(e.y-o.y)*GHp;   // 건물과 정지 유닛 사이 쐐기(둘 다 만족 불가) → 이번 프레임 이동 취소(조금씩 굴러 넘어가는 것 방지)
+        if(Math.hypot(ddx,ddy)<cpx*0.96 && e._pfx!=null){ e.x=e._pfx; e.y=e._pfy; e.vx=0; e.vy=0; }
+        active=true; } } }
   if(G.tech.pend&&G.tech.pend.length){ const seen={}; for(let i=G.tech.pend.length-1;i>=0;i--){ const q=G.tech.pend[i]; if(seen[q.bk]){ continue; } seen[q.bk]=1; q.t=Math.max(0,q.t-dt); active=true; if(q.t<=0){ techFinishProduce(q); G.tech.pend.splice(i,1); done=true; } } }
   if(done) techUIRender();
   else if(active||_vmoving){ techMapRender();
