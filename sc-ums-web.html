@@ -9161,7 +9161,7 @@ function stepUnitMove(u, tgt, sizeKey, airKey, dt, o){
   let mx, my;
   if(_air){ mx=dirx; my=diry; } else { mx=dirx+sx; my=diry+sy; const ml=Math.hypot(mx,my)||1; mx/=ml; my/=ml; }   // 지상=회피 반영 / 공중=목표 직선
   const maxSpd=(def.moveSpd||0.13)*MOVE_MUL; let dvx=mx*maxSpd, dvy=my*maxSpd;
-  if(d<AIR_ARRIVE){ const _f=d/AIR_ARRIVE; dvx*=_f; dvy*=_f; }   // 목표 근처 감속(안착)
+  if(d<AIR_ARRIVE && !o.noSlow){ const _f=d/AIR_ARRIVE; dvx*=_f; dvy*=_f; }   // 목표 근처 감속(안착) — noSlow=중간 경유점(감속 없이 모퉁이 통과)
   const _sz=(window.M3D&&M3D.scaleOf)?M3D.scaleOf(airKey):13;
   const _acc=_air?AIR_ACCEL:Math.max(GA_MIN, GA_MAX-(_sz-11)*GA_SLOPE);   // 공중=강한 관성 / 지상=크기 클수록 관성↑
   const _k=Math.min(1, _acc*dt); u.vx=(u.vx||0)+(dvx-(u.vx||0))*_k; u.vy=(u.vy||0)+(dvy-(u.vy||0))*_k;
@@ -10316,9 +10316,12 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
   const _staticN=[]; for(const o of G.tech.ents){ if((o.type!=='unit'&&o.type!=='worker')||o.tx!=null) continue; const k=_techEntKey(o); _staticN.push({ref:o, x:o.x, y:o.y, sizeKey:k, airKey:k}); }   // 정지 유닛만(이동 중 유닛끼리는 회피 제외)
   for(const e of G.tech.ents){ if((e.type==='unit'||e.type==='worker')&&e.tx!=null){
     const key=_techEntKey(e);
-    while(e._wp && e._wp.length>1 && Math.hypot(e.tx-e.x,e.ty-e.y)<0.05 && _techSegClear(e, e.x, e.y, e._wp[1].x, e._wp[1].y)){ e._wp.shift(); const _n=e._wp[0]; e.tx=_n.x; e.ty=_n.y; e._mvStuck=0; e._mvPrevD=null; }   // 🏃 경유점 선행 전환(다음 구간이 뚫려 있을 때만): 모퉁이마다 멈췄다 가는 현상 제거 + 좁은 통로에선 지름길 금지
+    while(e._wp && e._wp.length>1){ const _dw=Math.hypot(e.tx-e.x,e.ty-e.y);
+      if(_dw>=0.05) break;
+      if(_dw>0.018 && !_techSegClear(e, e.x, e.y, e._wp[1].x, e._wp[1].y)) break;   // 아직 코너 못 돌았고 다음 구간 막힘 → 유지(단 피벗 초근접(≤0.018)이면 강제 전환 — 감속 정지 방지)
+      e._wp.shift(); const _n=e._wp[0]; e.tx=_n.x; e.ty=_n.y; e._mvStuck=0; e._mvPrevD=null; }   // 🏃 경유점 선행 전환: 모퉁이마다 멈췄다 가는 현상 제거 + 좁은 통로에선 지름길 금지
     e._pfx=e.x; e._pfy=e.y;   // 이번 프레임 이동 전 위치(쐐기 판정 시 되돌림용)
-    const r=stepUnitMove(e, {x:e.tx,y:e.ty}, key, key, dt, { GW:GW||390, GH:GH||390, clamp:_clamp, staticN:_staticN, avoidMul:0.16 });
+    const r=stepUnitMove(e, {x:e.tx,y:e.ty}, key, key, dt, { GW:GW||390, GH:GH||390, clamp:_clamp, staticN:_staticN, avoidMul:0.22, noSlow:(e._wp&&e._wp.length>1) });   // avoidMul 0.22=슬롯 간격 미만 최대(접촉 전 미리 굽음) · 중간 경유점 감속 없음
     if(r.done){ const _far=Math.hypot(e.tx-e.x, e.ty-e.y)>0.035;   // 도착이 아니라 막혀서 멈춤(관성 정체)
       if(e._wp && e._wp.length>1){   // 경유점 남음 → 다음 경유점으로(막혔으면 현재 위치 기준 경로 재계산)
         if(_far && (e._rr||0)<4){ e._rr=(e._rr||0)+1; const _fin=e._wp[e._wp.length-1]; e._wp=_techFindPath(e,_fin.x,_fin.y); }
