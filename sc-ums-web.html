@@ -10215,14 +10215,15 @@ function _techBldgSteer(e, tx, ty, dirx, diry, obst){
   let ax=0, ay=0, anyNear=false, nearest=null, nearND=1e9;
   for(const b of obst){ if(b.eid===e.build) continue;   // 자기가 짓는 건물은 회피 안 함 → 위로 지나다니며 겹침 허용
     const f=(typeof _techFoot==='function')?_techFoot(race,b.bk):{w:2,h:2}, Hx=(f.w/2)*cw+uR, Hy=(f.h/2)*ch+uR;   // 발판 반폭 + 유닛 반경(확장 사각)
+    const bcy=b.y-(f.h/2)*ch*(typeof TECH_COLL_YUP!=='undefined'?TECH_COLL_YUP:0);   // 충돌 사각 중심 Y = 발판보다 위로(3D 모델 실루엣에 맞춤)
     // 목표가 발판 안이어도 회피(건물=지형지물) → 안으로 손가락을 눌러도 유닛은 발판에 못 들어가고 가장자리에 섬. 짓는 일꾼(b.eid===e.build)만 위에서 제외됨
-    const px=Math.max(b.x-Hx,Math.min(b.x+Hx,e.x)), py=Math.max(b.y-Hy,Math.min(b.y+Hy,e.y));   // 확장 사각 위 최근접점(유닛이 밖이면 경계점)
+    const px=Math.max(b.x-Hx,Math.min(b.x+Hx,e.x)), py=Math.max(bcy-Hy,Math.min(bcy+Hy,e.y));   // 확장 사각 위 최근접점(유닛이 밖이면 경계점)
     let nx=e.x-px, ny=e.y-py, nd=Math.hypot(nx,ny);   // 최근접점→유닛 = 바깥 법선
     if(nd>=BAND) continue;   // 충분히 멀면 무시
-    if(nd<1e-5){ nx=(e.x-b.x)||1e-4; ny=(e.y-b.y)||0; nd=Math.hypot(nx,ny)||1e-4; }   // 사각 안(관통) → 중심 반대로
+    if(nd<1e-5){ nx=(e.x-b.x)||1e-4; ny=(e.y-bcy)||0; nd=Math.hypot(nx,ny)||1e-4; }   // 사각 안(관통) → 중심 반대로
     anyNear=true; if(nd<nearND){ nearND=nd; nearest=b.eid; }
     const push=(BAND-nd)/BAND; nx/=nd; ny/=nd;
-    const tgtIn=(Math.abs(tx-b.x)<Hx && Math.abs(ty-b.y)<Hy);   // 목표가 이 건물 발판 안(도달 불가)
+    const tgtIn=(Math.abs(tx-b.x)<Hx && Math.abs(ty-bcy)<Hy);   // 목표가 이 건물 발판 안(도달 불가)
     if(tgtIn){ ax+=nx*push*1.3; ay+=ny*push*1.3; continue; }   // 안으로 명령 → 우회 없이 반경 밀기만 → 가장자리에서 멈춤(빙빙 돌지 않음)
     ax+=nx*push*0.8; ay+=ny*push*0.8;   // 발판 바깥으로 밀기(관통 방지) — 접선이 우회를 주도하도록 약하게, 관통은 하드 밀어냄이 보정
     const headOn=Math.max(0,-(nx*dirx+ny*diry));   // 진행방향이 발판 정면일수록 1 → 정체(로컬 미니멈) 위험
@@ -10285,9 +10286,10 @@ function _techBldgBlockInfo(e){ const race=G.tech.race, cw=_techCW(), ch=_techCH
   let near=false, targetIn=false;
   for(const b of G.tech.ents){ if(b.type!=='bldg'||b.eid===e.build||(b.bt>0&&!b._bpause)) continue;   // 완성/일시정지 건물만 '벽'
     const f=(typeof _techFoot==='function')?_techFoot(race,b.bk):{w:2,h:2}, Hx=(f.w/2)*cw+uR, Hy=(f.h/2)*ch+uR;
-    const px=Math.max(b.x-Hx,Math.min(b.x+Hx,e.x)), py=Math.max(b.y-Hy,Math.min(b.y+Hy,e.y));
+    const bcy=b.y-(f.h/2)*ch*(typeof TECH_COLL_YUP!=='undefined'?TECH_COLL_YUP:0);   // 충돌 사각 중심 Y = 발판보다 위로
+    const px=Math.max(b.x-Hx,Math.min(b.x+Hx,e.x)), py=Math.max(bcy-Hy,Math.min(bcy+Hy,e.y));
     if(Math.hypot(e.x-px,e.y-py)<0.06) near=true;   // 회피 밴드 안
-    if(e.tx!=null && Math.abs(e.tx-b.x)<Hx && Math.abs(e.ty-b.y)<Hy) targetIn=true;   // 목표가 발판 안(도달 불가)
+    if(e.tx!=null && Math.abs(e.tx-b.x)<Hx && Math.abs(e.ty-bcy)<Hy) targetIn=true;   // 목표가 발판 안(도달 불가)
   }
   return { near, targetIn }; }
 function _techBldgSide(bd, i){ const race=G.tech.race, f=(typeof _techFoot==='function')?_techFoot(race,bd.bk):{w:2,h:2};   // 건물 상/우/하/좌 지점 — 발판 안쪽(≈0.6배)이라 일꾼이 건물 위에 겹쳐 서고, 반대 면으로 갈 때 건물 중앙을 가로지름
@@ -10329,11 +10331,12 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
   const _GWp=(GW||390);
   for(const bd of G.tech.ents){ if(bd.type!=='bldg'||(bd.bt>0 && !bd._bpause)) continue;
     const f=(typeof _techFoot==='function')?_techFoot(G.tech.race,bd.bk):{w:2,h:2}, fhw=(f.w/2)*_techCW(), fhh=(f.h/2)*_techCH();
+    const _bcy=bd.y-fhh*(typeof TECH_COLL_YUP!=='undefined'?TECH_COLL_YUP:0);   // 충돌 사각 중심 Y = 발판보다 위로(모델 실루엣에 맞춤)
     for(const e of G.tech.ents){ if(e.type!=='unit'&&e.type!=='worker') continue;
       if(e.build===bd.eid) continue;   // 이 건물을 짓는 일꾼만 겹침 허용
       const uR=(((U[_techEntKey(e)]||{}).size||14)*0.62)*(typeof TECH_USCALE!=='undefined'?TECH_USCALE:1)*(typeof TECH_PACK!=='undefined'?TECH_PACK:1)/_GWp;   // 유닛 반경만큼만 바깥으로(발판에 딱 붙어 섬)
       const hw=fhw+uR, hh=fhh+uR;
-      const dx=e.x-bd.x, dy=e.y-bd.y; if(Math.abs(dx)>=hw||Math.abs(dy)>=hh) continue;   // 건물 밖
+      const dx=e.x-bd.x, dy=e.y-_bcy; if(Math.abs(dx)>=hw||Math.abs(dy)>=hh) continue;   // 건물 밖
       const penX=hw-Math.abs(dx), penY=hh-Math.abs(dy), step=Math.min(1,dt*14);   // 최소침투 축으로 경계까지 슬라이드(관통 보정만, 속도는 손대지 않음 → 접선 관성 유지해 벽 따라 미끄러져 우회)
       if(dx===0&&dy===0){ e.x+=hw*step; }
       else if(penX<=penY){ e.x+=(dx>=0?1:-1)*penX*step; }   // 좌우 최소침투 방향으로
@@ -10379,6 +10382,7 @@ const TECH_WORKER={ union:'worker_human', swarm:'worker_swarm', aetherial:'worke
 const TECH_UNIT_YOFF=6;   // 건설 맵 3D 유닛 바닥 보정(px) — 크기는 메인과 동일한 유닛별 SCALE 그대로
 const TECH_USCALE=0.5;   // 건설 맵 전용 유닛 축소 배율(건물 대비 절반) — 시각 크기·충돌·소환 간격에 함께 적용(건물은 footprint 폭에 맞춰 렌더되어 무영향)
 const TECH_PACK=0.6;   // 건설 맵 밀집도(충돌/소환 반경 = U.size*0.62*TECH_USCALE*TECH_PACK) — 낮을수록 여백 없이 따닥따닥. U.size(2D 충돌)는 3D 축소 시각보다 커서 이 값으로 실제 크기에 맞춤
+const TECH_COLL_YUP=0.7;   // 건물 이동충돌 사각을 발판 대비 위로 올리는 양(발판 높이의 배수) — 3D 모델이 발판 위로 솟아 보이므로 충돌존을 모델 실루엣에 맞춤. 값↑=위로(하단 막힘 줄고 상단 막힘 늘어남)
 function _techEntModel(e){ if(!e) return null; if(e.type==='worker') return (TECH_WORKER[G.tech.race]||'worker_human'); if(e.type==='unit') return e.uid; return null; }   // 엔티티 → 3D 모델 키
 function _techRaceUnitKeys(race){ const keys=new Set(); keys.add(TECH_WORKER[race]||'worker_human'); const bs=(TECH_TREE[race]&&TECH_TREE[race].buildings)||[]; for(const b of bs){ for(const p of (b.produces||[])) if(p&&p.id) keys.add(p.id); } return [...keys]; }   // 그 종족 건설 맵에서 쓸 유닛 모델 키(일꾼+생산 유닛)
 function techHidePreview(){ const prev=document.getElementById('cstPrev'), main=document.getElementById('cstMain'); if(prev) prev.classList.remove('on'); if(main) main.classList.remove('hasPrev'); if(window.M3D&&M3D.cstStop) M3D.cstStop(); }
