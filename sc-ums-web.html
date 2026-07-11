@@ -10300,7 +10300,7 @@ function _techNavUnitRects(e, sx, sy, tx, ty){ const out=[], GWp=GW||390, GHp=GH
   const rr=k=>(((U[k]&&U[k].size)||14)*0.62)*(typeof TECH_USCALE!=='undefined'?TECH_USCALE:1)*(typeof TECH_PACK!=='undefined'?TECH_PACK:1);
   const rM=rr(_techEntKey(e));
   const bx0=Math.min(sx,tx)-0.25, bx1=Math.max(sx,tx)+0.25, by0=Math.min(sy,ty)-0.25, by1=Math.max(sy,ty)+0.25;   // 통로 상자(경로 주변만 — 성능, 우회 여유 포함)
-  for(const o of G.tech.ents){ if(o===e||(o.type!=='unit'&&o.type!=='worker')||o.tx!=null) continue;   // 정지 유닛만(이동 중은 곧 비켜남)
+  for(const o of G.tech.ents){ if(o===e||(o.type!=='unit'&&o.type!=='worker')||o.tx!=null||o._ghost) continue;   // 정지 유닛만(이동 중·채취 유령 제외)
     if(((typeof _techAirOf==='function')&&_techAirOf(o))!==eAir) continue;   // 같은 레이어만(지상↔공중 통과)
     if(_navExcl&&_navExcl.has(o.eid)) continue;   // 같은 명령 그룹 제외
     if(o.x<bx0||o.x>bx1||o.y<by0||o.y>by1) continue;
@@ -10373,7 +10373,7 @@ function techMoveTrails(dt){ if(typeof FX==='undefined'||typeof emitMoveTrail===
   _techWeldStep(dt, s); }   // 용접 스파크 갱신·그리기(cvFx, 같은 프레임)
 // 건설 유닛 겹침 분리 — 메인 separateUnits와 동일(공용 separatePass). 도착(정지)한 유닛만 대상 → 한 점에 모인 공중유닛이 메인처럼 완만히 흩어져 자리 잡음. 반환=움직였는지(리렌더 필요).
 function techSeparate(){ if(!G.tech||!GW||!GH) return false; const es=G.tech.ents;
-  const items=[]; for(const e of es){ if((e.type!=='unit'&&e.type!=='worker')||e.tx!=null) continue;   // 이동 중 유닛 제외(도착한 것만)
+  const items=[]; for(const e of es){ if((e.type!=='unit'&&e.type!=='worker')||e.tx!=null||e._ghost) continue;   // 이동 중·채취 유령 제외(유령은 겹쳐 뭉침)
     const k=_techEntKey(e); items.push({ref:e, r:(((U[k]&&U[k].size)||14)*0.62)*(typeof TECH_USCALE!=='undefined'?TECH_USCALE:1)*(typeof TECH_PACK!=='undefined'?TECH_PACK:1), air:_techAirOf(e), fixed:false, settle:false}); }   // 축소 시각·밀집도에 맞춰 충돌 반경 축소(따닥따닥)
   if(items.length<2) return false;
   const b0=items.map(it=>[it.ref.x, it.ref.y]);   // 유닛별 위치 스냅(대칭 이동도 감지 — 합산은 상쇄되어 안 됨)
@@ -10391,9 +10391,18 @@ function _techMineralAt(wx,wy){ const m=G.tech.mineral; if(!m) return null; cons
 function _techGatherRes(w){ if(w._gKind==='mineral') return G.tech.mineral||null; if(w._gKind==='gas'){ const gb=G.tech.ents.find(e=>e.eid===w._gEid&&e.type==='bldg'); return (gb&&gb.bt<=0)?gb:null; } return null; }
 function _techReleaseGather(w){ if(G.tech.mineral && G.tech.mineral.worker===w.eid) G.tech.mineral.worker=null;   // 독점락 반환
   for(const e of G.tech.ents){ if(e.type==='bldg'&&e._gasWorker===w.eid) e._gasWorker=null; }
-  w._gKind=null; w._gEid=null; w._gSt=null; w._carry=false; w._working=false; }
-function _techAssignGather(wks, kind, eid){ for(const w of wks){ _techReleaseGather(w); w._gKind=kind; w._gEid=(kind==='gas'?eid:null); w._gSt='go'; w._carry=false; w.build=null;   // 채취 지정
-    const res=_techGatherRes(w); if(res) _techRoute(w,res.x,res.y); } }
+  w._gKind=null; w._gEid=null; w._gSt=null; w._carry=false; w._working=false; w._ghost=false; w._gSpot=null; w._gDep=false; }
+// 자원 상자(미네랄 1×1 / 가스건물 발판) 가장자리에 딱 붙는 채취 지점 — (fromX,fromY) 쪽 면. 어느 방향에서든 붙어서 캠
+function _techMineSpot(res, fromX, fromY){ const cw=_techCW(), ch=_techCH();
+  let hw, hh; if(res.bk){ const f=_techFoot(G.tech.race,res.bk); hw=(f.w/2)*cw; hh=(f.h/2)*ch; } else { hw=0.5*cw; hh=0.5*ch; }
+  let dx=fromX-res.x, dy=fromY-res.y; if(Math.abs(dx)<1e-6&&Math.abs(dy)<1e-6) dy=1;
+  const ang=Math.atan2(dy,dx), ca=Math.cos(ang), sa=Math.sin(ang);
+  const tX=Math.abs(ca)>1e-6?hw/Math.abs(ca):1e9, tY=Math.abs(sa)>1e-6?hh/Math.abs(sa):1e9, t=Math.min(tX,tY);   // 상자 가장자리까지 거리
+  const uRp=(((U[TECH_WORKER[G.tech.race]]||{}).size||14)*0.62)*((typeof TECH_USCALE!=='undefined'?TECH_USCALE:1))*((typeof TECH_PACK!=='undefined'?TECH_PACK:1))*0.7;
+  return { x:res.x+ca*(t)+ca*(uRp/(GW||390)), y:res.y+sa*(t)+sa*(uRp/(GH||390)) }; }   // 가장자리 + 일꾼 반경만큼만(딱 붙음)
+function _techGatherGoto(w, res, toward){ w._gSpot=_techMineSpot(res, toward.x, toward.y); w._gSt='go'; _techRoute(w, w._gSpot.x, w._gSpot.y); }
+function _techAssignGather(wks, kind, eid){ for(const w of wks){ _techReleaseGather(w); w._gKind=kind; w._gEid=(kind==='gas'?eid:null); w._carry=false; w.build=null; w._ghost=true; w._gDep=false;   // 채취 지정(유령 상태 — 겹침·유닛 통과)
+    const res=_techGatherRes(w); if(res) _techGatherGoto(w,res,{x:w.x,y:w.y}); else w._gSt='go'; } }   // 첫 채취 = 일꾼과 가장 가까운 방향
 function _techGatherTick(dt){ let dep=false, any=false;
   const mainB=_techMainB();
   for(const w of G.tech.ents){ if(w.type!=='worker'||!w._gKind) continue;
@@ -10401,12 +10410,12 @@ function _techGatherTick(dt){ let dep=false, any=false;
     const res=_techGatherRes(w); if(!res){ _techReleaseGather(w); continue; }   // 자원 소멸/미완성 가스건물
     any=true;
     if(w._gSt==='go'){
-      const reachR=(w._gKind==='gas')?(_techFoot(G.tech.race,res.bk).w*_techCW()*0.5+0.04):0.055;
-      const d=Math.hypot(res.x-w.x,res.y-w.y);
-      if(d<=reachR){ const owner=(w._gKind==='mineral')?res.worker:res._gasWorker;   // 도착 → 독점락
-        if(owner==null||owner===w.eid){ if(w._gKind==='mineral') res.worker=w.eid; else res._gasWorker=w.eid; w._gSt='mine'; w._gT=(w._gKind==='gas'?TECH_GAS_T:TECH_MINE_T); w.tx=null; w.ty=null; w._wp=null; w._working=true; }
-        else { w.tx=null; w.ty=null; w._wp=null; w._working=false; } }   // 선점됨 → 대기(주변에서 맴돔)
-      else if(w.tx==null) _techRoute(w,res.x,res.y); }
+      if(!w._gSpot) _techGatherGoto(w,res,{x:w.x,y:w.y});
+      const d=Math.hypot(w._gSpot.x-w.x, w._gSpot.y-w.y);
+      if(d<=0.032){ const owner=(w._gKind==='mineral')?res.worker:res._gasWorker;   // 채취 지점 도착 → 독점락
+        if(owner==null||owner===w.eid){ if(w._gKind==='mineral') res.worker=w.eid; else res._gasWorker=w.eid; w._gSt='mine'; w._gT=(w._gKind==='gas'?TECH_GAS_T:TECH_MINE_T); w.tx=null; w.ty=null; w._wp=null; w.x=w._gSpot.x; w.y=w._gSpot.y; w._working=true; }   // 지점에 스냅=딱 붙음
+        else { w.tx=null; w.ty=null; w._wp=null; w._working=false; w.x=w._gSpot.x; w.y=w._gSpot.y; } }   // 선점됨 → 그 지점에 겹쳐 대기(유령이라 뭉침)
+      else if(w.tx==null) _techRoute(w, w._gSpot.x, w._gSpot.y); }
     else if(w._gSt==='mine'){ w._working=true; const fx=res.x-w.x, fy=res.y-w.y; if(fx*fx+fy*fy>1e-6) w.face=Math.atan2(fx,fy);
       w._gT-=dt;
       if(w._gT<=0){ if(w._gKind==='mineral'){ if(res.worker===w.eid) res.worker=null; } else { if(res._gasWorker===w.eid) res._gasWorker=null; }   // 채취 완료 → 락 반환·운반
@@ -10416,7 +10425,7 @@ function _techGatherTick(dt){ let dep=false, any=false;
       if(Math.hypot(mainB.x-w.x,mainB.y-w.y)<=baseR){   // 본진 도착 → 적립
         if(w._gKind==='mineral'){ if(!G.tech.inf) G.tech.credit+=TECH_GATHER_AMT; if(G.tech.mineral) G.tech.mineral.amount=Math.max(0,G.tech.mineral.amount-TECH_GATHER_AMT); }
         else { if(!G.tech.inf) G.tech.energy+=TECH_GATHER_AMT; }
-        dep=true; w._carry=false; w._gSt='go'; _techRoute(w,res.x,res.y); }
+        dep=true; w._carry=false; w._gDep=true; _techGatherGoto(w,res,{x:mainB.x,y:mainB.y}); }   // 이후엔 본진↔자원 최단거리(본진 쪽 면)에서 채취
       else if(w.tx==null) _techRoute(w,mainB.x,mainB.y); } }
   return { any, dep }; }
 function techTick(dt){ if(!G.tech) return; let active=false, done=false;
@@ -10425,7 +10434,7 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
   const _gath=_techGatherTick(dt); if(_gath.any) active=true; if(_gath.dep) done=true;   // 💎⚡ 자원 채취 FSM(이동 목표 지정 → 아래 이동 루프가 수행)
   // 🚶 유닛 이동 — 공용 stepUnitMove(관성·유닛회피·감속·정착·응시) + 🧭 경유점(waypoint) 추종. 건물 회피 조향 없음(경로가 이미 우회) → 벽 비비기/틱틱 걸림 제거
   const _clamp=(x,y)=>({x:Math.max(0.02,Math.min(0.98,x)), y:Math.max(0.12,Math.min(0.98,y))});
-  const _staticN=[]; for(const o of G.tech.ents){ if((o.type!=='unit'&&o.type!=='worker')||o.tx!=null) continue; const k=_techEntKey(o); _staticN.push({ref:o, x:o.x, y:o.y, sizeKey:k, airKey:k}); }   // 정지 유닛만(이동 중 유닛끼리는 회피 제외)
+  const _staticN=[]; for(const o of G.tech.ents){ if((o.type!=='unit'&&o.type!=='worker')||o.tx!=null||o._ghost) continue; const k=_techEntKey(o); _staticN.push({ref:o, x:o.x, y:o.y, sizeKey:k, airKey:k}); }   // 정지 유닛만(이동 중·채취 유령 제외 — 유령은 통과 가능)
   for(const e of G.tech.ents){ if((e.type==='unit'||e.type==='worker')&&e.tx!=null){
     const key=_techEntKey(e);
     while(e._wp && e._wp.length>1){ const _dw=Math.hypot(e.tx-e.x,e.ty-e.y);
@@ -10433,7 +10442,7 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
       if(_dw>0.018 && !_techSegClear(e, e.x, e.y, e._wp[1].x, e._wp[1].y)) break;   // 아직 코너 못 돌았고 다음 구간 막힘 → 유지(단 피벗 초근접(≤0.018)이면 강제 전환 — 감속 정지 방지)
       e._wp.shift(); const _n=e._wp[0]; e.tx=_n.x; e.ty=_n.y; e._mvStuck=0; e._mvPrevD=null; }   // 🏃 경유점 선행 전환: 모퉁이마다 멈췄다 가는 현상 제거 + 좁은 통로에선 지름길 금지
     e._pfx=e.x; e._pfy=e.y;   // 이번 프레임 이동 전 위치(쐐기 판정 시 되돌림용)
-    const r=stepUnitMove(e, {x:e.tx,y:e.ty}, key, key, dt, { GW:GW||390, GH:GH||390, clamp:_clamp, staticN:_staticN, avoidMul:0.22, noSlow:(e._wp&&e._wp.length>1) });   // avoidMul 0.22=슬롯 간격 미만 최대(접촉 전 미리 굽음) · 중간 경유점 감속 없음
+    const r=stepUnitMove(e, {x:e.tx,y:e.ty}, key, key, dt, { GW:GW||390, GH:GH||390, clamp:_clamp, staticN:(e._ghost?[]:_staticN), avoidMul:0.22, noSlow:(e._wp&&e._wp.length>1) });   // 채취 유령=유닛 회피 없음(통과) / avoidMul 0.22=슬롯 간격 미만 최대
     if(r.done){ const _far=Math.hypot(e.tx-e.x, e.ty-e.y)>0.035;   // 도착이 아니라 막혀서 멈춤(관성 정체)
       if(e._wp && e._wp.length>1){   // 경유점 남음 → 다음 경유점으로(막혔으면 현재 위치 기준 경로 재계산)
         if(_far && (e._rr||0)<4){ e._rr=(e._rr||0)+1; const _fin=e._wp[e._wp.length-1]; e._wp=_techFindPath(e,_fin.x,_fin.y); }
