@@ -10187,7 +10187,7 @@ function techFinishBuild(e){ const b=techGetBldg(G.tech.race,e.bk); if(!b) retur
 // 건물에서 유닛 소환 위치 = 발판을 사각형으로 둘러싸며 좌하단에서 반시계로 채움(하단→우측→상단→좌측), 최대한 건물에 붙임(화면 y-down 기준)
 function _techSpawnPos(be, uid){ const race=G.tech.race, f=(typeof _techFoot==='function')?_techFoot(race,be.bk):{w:2,h:2}, W=GW||390, H=GH||390;
   const hwp=(f.w/2)*_techCW()*W, hhp=(f.h/2)*_techCH()*H;   // 발판 반폭·반높이(px)
-  const uRp=(((U[uid]&&U[uid].size)||14)*0.62)*(typeof TECH_USCALE!=='undefined'?TECH_USCALE:1)*(typeof TECH_PACK!=='undefined'?TECH_PACK:1), step=2*uRp;   // 밀집 유닛 반경(px) — 여백 없이 지름 간격
+  const uRp=(((U[uid]&&U[uid].size)||14)*0.62)*(typeof TECH_USCALE!=='undefined'?TECH_USCALE:1)*(typeof TECH_PACK!=='undefined'?TECH_PACK:1)*1.3, step=2*uRp;   // 소환 반경(px) — 이동 밀집도는 유지하고 소환만 1.3배 띄움
   const idx=(be._spawnN=(be._spawnN||0)+1)-1;   // 이 건물의 n번째 소환(0부터)
   let Hw=hwp+uRp, Hh=hhp+uRp, rem=idx;   // 첫 링: 발판 바로 바깥 사각 테두리(여백 없이 밀착)
   let perim=2*(2*Hw+2*Hh), cap=Math.max(4,Math.floor(perim/step));
