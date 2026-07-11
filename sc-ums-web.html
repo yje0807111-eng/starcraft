@@ -990,6 +990,13 @@
   .bfoot.ok{border:1px solid rgba(70,240,106,.4);background-color:rgba(70,240,106,.06)}
   .bfoot.bad{border:1px solid rgba(255,90,90,.45);background-color:rgba(255,90,90,.09)}
   .bfootBlk{position:absolute;z-index:24;pointer-events:none;box-sizing:border-box;border:1px solid rgba(255,70,70,.75);background-color:rgba(255,60,60,.32)}   /* 유닛이 점유한 셀 = 빨간색(건설 불가) */
+  .bGasZone{position:absolute;z-index:2;pointer-events:none;box-sizing:border-box;border:1.5px dashed rgba(120,232,150,.5);border-radius:4px;   /* ⛽ 가스 광산(고정 지형) — 가스 건물 전용 부지 */
+    background:radial-gradient(ellipse at 50% 45%,rgba(96,220,130,.20),rgba(60,160,95,.10) 62%,rgba(30,80,50,.06));
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+  .bGasZone .gzIco{font-size:15px;line-height:1;filter:drop-shadow(0 0 4px rgba(120,255,160,.5));animation:gzPuff 2.6s ease-in-out infinite}
+  .bGasZone .gzLbl{font:800 8px/1 sans-serif;color:#9fe8b4;text-shadow:0 1px 2px #000;letter-spacing:.4px}
+  .bGasZone.hot{border-color:rgba(140,255,170,.9);background:radial-gradient(ellipse at 50% 45%,rgba(96,232,130,.34),rgba(60,180,95,.18) 62%,rgba(30,90,50,.10));box-shadow:0 0 14px -2px rgba(110,240,150,.45)}   /* 가스 건물 배치 중 = 강조 */
+  @keyframes gzPuff{0%,100%{transform:translateY(0);opacity:.75}50%{transform:translateY(-2px);opacity:1}}
   .bArmBtns{position:absolute;z-index:26;display:flex;gap:6px;transform:translate(-50%,10px);pointer-events:auto}   /* 발판 하단 중앙에 앵커 → 바로 아래에 떠서 함께 이동 · #cstLabels(pointer-events:none) 안에서도 버튼은 클릭 가능 */
   .bArmBtn{font-size:14px;font-weight:900;width:30px;height:30px;display:flex;align-items:center;justify-content:center;padding:0;border-radius:9px;border:1.5px solid rgba(255,255,255,.16);background:linear-gradient(160deg,rgba(36,42,54,.5),rgba(15,18,25,.52));color:#eaf0f8;cursor:pointer;-webkit-tap-highlight-color:transparent;box-shadow:0 3px 9px rgba(0,0,0,.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}   /* 확정/취소·재개/철거 동일 — 반투명 글래스 버튼 */
   .bArmBtn.ok{border-color:rgba(90,223,138,.7);color:#9bf5bd;background:linear-gradient(160deg,rgba(26,54,39,.5),rgba(12,27,19,.52))}
@@ -10516,7 +10523,12 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
     resumeBtn='<div class="bArmBtns" style="left:'+(_rs.x*100).toFixed(2)+'%;top:'+(_rs.y*100).toFixed(2)+'%" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()"><button class="bArmBtn ok" onclick="techResumeBuild(event)" title="재개"><svg viewBox="0 0 24 24" width="15" height="15" style="display:block"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button><button class="bArmBtn cancel" onclick="techDemolishBuild(event)" title="철거">✕</button></div>'; } }   // 재개(▶) + 철거(✕) — 단순 아이콘
   const hint=G.tech.arm?('📍 '+((techGetBldg(race,G.tech.arm)||{}).name)+(G.tech.armXY?' — 드래그로 위치 조정 후 ✓ 확정':' — 지을 곳을 탭하세요')):((G.tech.selU&&G.tech.selU.length)?('👥 '+G.tech.selU.length+'기 지정 — 탭/드래그로 이동 · 해제는 우상단 ✕'):(G.tech.sel==null?'일꾼 탭=건설 메뉴 · 드래그=유닛 지정 · 두 손가락=화면 이동':'건물을 탭하면 하단 시트에 생산·연구가 표시됩니다'));
   const _floor='<div class="bmapFloor" style="transform:'+_techViewCSS()+'"></div>';   // 바닥 = 메인맵과 동일한 뷰 변환(_techViewCSS = viewApply의 CSS판)
-  map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none">'+_floor+'<div class="bmapTop"><div class="techTabs">'+tabs+'</div><div class="bres">'+res+'</div></div>'+ents+foot+ghost+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div></div>';
+  let gasZone='';   // ⛽ 가스 광산 구역(고정 지형) — 줌/팬 따라 이동, 가스 건물 배치 중이면 강조
+  { const _gcw=_techCW(), _gch=_techCH();
+    const _gtl=_techW2S(TECH_GRID.x0+TECH_GAS.c0*_gcw, TECH_GRID.y0+TECH_GAS.r0*_gch), _gbr=_techW2S(TECH_GRID.x0+(TECH_GAS.c0+TECH_GAS.w)*_gcw, TECH_GRID.y0+(TECH_GAS.r0+TECH_GAS.h)*_gch);
+    const _gArm=!!(G.tech.arm && (techGetBldg(race,G.tech.arm)||{}).gas);
+    gasZone='<div class="bGasZone'+(_gArm?' hot':'')+'" style="left:'+(_gtl.x*100).toFixed(2)+'%;top:'+(_gtl.y*100).toFixed(2)+'%;width:'+((_gbr.x-_gtl.x)*100).toFixed(2)+'%;height:'+((_gbr.y-_gtl.y)*100).toFixed(2)+'%"><span class="gzIco">💨</span><span class="gzLbl">가스 광산</span></div>'; }
+  map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none">'+_floor+gasZone+'<div class="bmapTop"><div class="techTabs">'+tabs+'</div><div class="bres">'+res+'</div></div>'+ents+foot+ghost+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div></div>';
   const _lblLayer=document.getElementById('cstLabels'); if(_lblLayer) _lblLayer.innerHTML=labels+armBtns+resumeBtn; }   // 남은시간 라벨 + 배치 ✓/✕ + ▶재개 버튼을 전용 오버레이(z8)에 → 3D 유닛·건물 위(리파이너리 등 큰 건물에 안 가림)
 function techBldgInfoModel(b){ const race=G.tech.race, hb=TECH_TREE[race].buildings[0];
   const items=(b.unlocks||[]).map(uid=>{ const p=(hb.produces||[]).find(x=>x.id===uid)||{}; return { pro:_techUnitPortrait(uid), sn:p.name||uid, cr:p.m||0, en:p.g||0, meta:p.pop?'👤'+p.pop:'', state:'ok', act:'' }; });
@@ -10708,8 +10720,14 @@ function _techFootBlockCells(s){ const cw=_techCW(), ch=_techCH(), out=[];   // 
     const cu=Math.floor((e.x-TECH_GRID.x0)/cw), ru=Math.floor((e.y-TECH_GRID.y0)/ch);
     if(cu>=s.c0 && cu<s.c0+s.w && ru>=s.r0 && ru<s.r0+s.h) out.push({c:cu,r:ru}); }
   return out; }
-// 배치 유효성: footprint 셀이 다른 건물과 안 겹치고, 발판 위에 차단 유닛(유휴 일꾼·지상 유닛)이 없으면 OK
+// ⛽ 가스 광산 구역(맵 고정 지형, 건설 격자 오른쪽 위 구석 4x2) — 가스 건물(리파이너리 등)은 이 위에만, 일반 건물은 침범 불가
+const TECH_GAS={ c0:TECH_GRID.cols-4, r0:0, w:4, h:2 };
+function _techGasOverlap(s){ return s.c0<TECH_GAS.c0+TECH_GAS.w && s.c0+s.w>TECH_GAS.c0 && s.r0<TECH_GAS.r0+TECH_GAS.h && s.r0+s.h>TECH_GAS.r0; }
+// 배치 유효성: footprint 셀이 다른 건물과 안 겹치고, 발판 위에 차단 유닛(유휴 일꾼·지상 유닛)이 없으면 OK. 가스 건물=광산 위 정확히, 일반 건물=광산 침범 불가
 function techArmValid(x,y){ if(!G.tech||!G.tech.arm) return false; const f=_techFoot(G.tech.race,G.tech.arm), s=_techSnap(x,y,f.w,f.h);
+  const _b=techGetBldg(G.tech.race,G.tech.arm);
+  if(_b&&_b.gas){ if(!(s.c0===TECH_GAS.c0 && s.r0===TECH_GAS.r0)) return false; }   // 가스 건물 = 가스 광산 위에 정확히 겹칠 때만
+  else if(_techGasOverlap(s)) return false;   // 일반 건물 = 가스 광산 칸 침범 불가(광산 예약)
   for(const e of G.tech.ents){ if(e.type!=='bldg') continue; const ef=_techEntFoot(e);
     if(s.c0<ef.c0+ef.w && s.c0+s.w>ef.c0 && s.r0<ef.r0+ef.h && s.r0+s.h>ef.r0) return false; }   // 셀 AABB 교차
   if(_techFootBlockCells(s).length) return false;   // 유휴 일꾼/지상 유닛이 발판을 차지 → 건설 불가
@@ -10718,7 +10736,8 @@ function _techArmTo(sx,sy){ if(!G.tech||!G.tech.arm) return; const w=_techS2W(sx
   const f=_techFoot(G.tech.race,G.tech.arm), s=_techSnap(w.x-ox, w.y-oy, f.w, f.h);
   G.tech.armXY={ x:s.cx, y:s.cy }; techMapRender(); }   // 손가락 위치 → 그리드 셀에 스냅
 function techConfirmPlace(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech||!G.tech.arm||!G.tech.armXY) return;
-  if(!techArmValid(G.tech.armXY.x,G.tech.armXY.y)){ if(typeof toast==='function') toast('⛔ 건물·유닛과 겹침 — 위치를 옮기세요'); return; }
+  if(!techArmValid(G.tech.armXY.x,G.tech.armXY.y)){ const _b=techGetBldg(G.tech.race,G.tech.arm);
+    if(typeof toast==='function') toast((_b&&_b.gas)?'⛔ 가스 광산 위에만 건설 가능':'⛔ 건물·유닛과 겹침 — 위치를 옮기세요'); return; }
   const p=G.tech.armXY; techPlace(p.x, p.y); }   // techPlace가 arm/armXY 정리
 function techCancelArm(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return; G.tech.arm=null; G.tech.armXY=null;
   const sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null}); sh.open=true; sh.sec='ent'; if(typeof playSfx==='function') playSfx('ui_back'); techUIRender(); }
@@ -10729,6 +10748,8 @@ function techArm(bk){ const race=G.tech.race, b=techGetBldg(race,bk); if(!b) ret
   if(b.addonTo){ techDockAddon(b); return; }   // 애드온 = 스타1식 자동 도킹(본체 오른쪽 하단 부착, 자유 배치 없음)
   G.tech.arm=(G.tech.arm===bk)?null:bk;
   G.tech.armXY=null;   // 예비 건물은 카드 탭이 아니라 '맵을 탭한 위치'에 등장(그 후 드래그로 조정)
+  if(G.tech.arm && b.gas){ const cw=_techCW(), ch=_techCH();   // ⛽ 가스 건물 = 유일한 유효 위치(가스 광산)에 고스트 바로 표시
+    G.tech.armXY={ x:TECH_GRID.x0+(TECH_GAS.c0+TECH_GAS.w/2)*cw, y:TECH_GRID.y0+(TECH_GAS.r0+TECH_GAS.h/2)*ch }; }
   const sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null}); sh.open=(G.tech.arm==null); if(G.tech.arm==null) sh.sec='ent';   // 배치 중 = 시트 내려 맵 확보, 취소 = 일꾼 건설 시트로 복귀
   techUIRender(); }
 // 🔗 애드온 자동 도킹(스타1): 완성된 본체 중 애드온이 없는 것을 찾아 오른쪽·하단 정렬로 즉시 부착. 본체가 직접 건설(일꾼 불필요) — 본체-애드온 사이는 심시티 판정상 완전 밀봉
