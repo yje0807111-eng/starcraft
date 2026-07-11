@@ -10401,6 +10401,14 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
         const ddx=(e.x-o.x)*GWp, ddy=(e.y-o.y)*GHp;   // 건물과 정지 유닛 사이 쐐기(둘 다 만족 불가) → 이번 프레임 이동 취소(조금씩 굴러 넘어가는 것 방지)
         if(Math.hypot(ddx,ddy)<cpx*0.96 && e._pfx!=null){ e.x=e._pfx; e.y=e._pfy; e.vx=0; e.vy=0; }
         active=true; } } }
+  // 🚫 터널링 방지: 겹치는 두 판정 사각(밀봉·차단 조합) 사이에 낀 유닛 — 순차 밀어냄이 반대편으로 뚫는 것을 차단. 보정 후에도 어느 사각 '안'이면 이번 프레임 이동 취소
+  for(const e of G.tech.ents){ if((e.type!=='unit'&&e.type!=='worker')||e.tx==null||e._pfx==null) continue;
+    let inR=false; for(const bd of G.tech.ents){ if(bd.type!=='bldg'||(bd.bt>0&&!bd._bpause)||e.build===bd.eid) continue;
+      const R=_techCollRect(bd,e); if(R.x1<=R.x0||R.y1<=R.y0) continue;
+      if(e.x>R.x0+1e-6&&e.x<R.x1-1e-6&&e.y>R.y0+1e-6&&e.y<R.y1-1e-6){ inR=true; break; } }
+    if(inR){ let pfIn=false; for(const bd of G.tech.ents){ if(bd.type!=='bldg'||(bd.bt>0&&!bd._bpause)||e.build===bd.eid) continue;
+        const R=_techCollRect(bd,e); if(e._pfx>R.x0+1e-6&&e._pfx<R.x1-1e-6&&e._pfy>R.y0+1e-6&&e._pfy<R.y1-1e-6){ pfIn=true; break; } }
+      if(!pfIn){ e.x=e._pfx; e.y=e._pfy; e.vx=0; e.vy=0; } } }   // 원래 밖에 있었을 때만 되돌림(스폰 겹침 등 예외 보호)
   if(G.tech.pend&&G.tech.pend.length){ const seen={}; for(let i=G.tech.pend.length-1;i>=0;i--){ const q=G.tech.pend[i]; if(seen[q.bk]){ continue; } seen[q.bk]=1;
     if(_techNeedsPower(q.bk) && !G.tech.ents.some(b=>b.type==='bldg'&&b.bk===q.bk&&b.bt<=0&&_techPowered(b.x,b.y))){ active=true; continue; }   // 🛑 블랙아웃: 동력 있는 생산 건물 없음 → 진행률 그대로 정지(동력 복구 시 이어서)
     q.t=Math.max(0,q.t-dt); active=true; if(q.t<=0){ techFinishProduce(q); G.tech.pend.splice(i,1); done=true; } } }
@@ -10452,7 +10460,7 @@ const TECH_SIM_GROUP={ command:'A',barracks:'A',engbay:'A',factory:'A',starport:
   forge:'pB',cyber:'pB',citadel:'pB',archives:'pB',robo:'pB',robobay:'pB',fleet:'pB',tribunal:'pB',observatory:'pB',   // pB=테크(3x3·옵저버터리 3x2)
   pylon:'pC',cannon:'pC',battery:'pC' };   // pC=소형(2x2)
 const TECH_SIM_MG={ A:{l:0.35,t:0.35,r:0,b:0}, B:{l:0.18,t:0.18,r:0.18,b:0.18}, C:{l:0.18,t:0.18,r:0.18,b:0.18},   // 유니온 판정 여백(셀) — A는 오른쪽/아래 판정이 두꺼움(여백 0, 스타1 엔진 비대칭)
-  pA:{l:0.55,t:0.55,r:0.15,b:0.15}, pB:{l:0.6,t:0.6,r:0.2,b:0.2}, pC:{l:0.05,t:0.05,r:0.2,b:0.2} };   // 에테리얼 — 공식: pA+pB=질럿 구멍(0.75, 3등급까지 통과·4등급 차단) · pA↖pC↘=완전 밀봉(0.20) · pC↖pA↘=틈(0.75) · pB+pB=질럿 구멍(0.8) · pC+pC=저글링만(0.25)
+  pA:{l:0.62,t:0.62,r:0.15,b:0.15}, pB:{l:0.6,t:0.6,r:0.2,b:0.2}, pC:{l:0.05,t:0.05,r:0.2,b:0.2} };   // 에테리얼 — 공식: pA+pB=질럿 구멍(0.75) · pA+pA=질럿 구멍(0.77, 게이트끼리도 틈 샘) · pA↖pC↘=완전 밀봉(0.20) · pC↖pA↘=틈(0.82) · pB+pB=질럿 구멍(0.8) · pC+pC=저글링만(0.25) — 질럿 구멍=3등급 통과·4등급 차단
 const TECH_GAP_GRADE={ ghost:1,snapper:1,broodling:1, marine:2,medic:2,high_templar:2,
   machinegun:3,worker_human:3,worker_swarm:3,worker_light:3,blade:3,hydra:3,dark_templar:3,
   racer:4,tank:4,goliath:4,dragoon:4,archon:4,larva:4,thornqueen:4,medusa:4,ultralisk:4 };   // 유닛 통과 등급(1=팬텀급 초소형 … 4=차량·대형). 미지정 지상유닛=3
