@@ -999,6 +999,7 @@
   @keyframes gzPuff{0%,100%{transform:translateY(0);opacity:.75}50%{transform:translateY(-2px);opacity:1}}
   .bPsi{position:absolute;z-index:2;pointer-events:none;border-radius:50%;border:1.5px dashed rgba(110,170,255,.55);   /* 🔵 파일런 동력장(배치 중 표시) */
     background:radial-gradient(ellipse at 50% 50%,rgba(90,150,255,.16),rgba(70,120,230,.08) 60%,rgba(50,90,200,.03) 82%,transparent)}
+  .bPsi.new{border-color:rgba(150,205,255,.85);background:radial-gradient(ellipse at 50% 50%,rgba(110,170,255,.24),rgba(85,140,240,.12) 60%,rgba(60,100,210,.05) 82%,transparent)}   /* 예비 파일런의 미래 동력장(강조) */
   .bldNoPow{position:absolute;z-index:9;pointer-events:none;transform:translate(-50%,-130%);font:800 8.5px/1 sans-serif;color:#ffd9a0;   /* 🛑 블랙아웃 라벨 */
     background:rgba(40,20,10,.82);border:1px solid rgba(255,170,80,.55);border-radius:5px;padding:2px 5px;white-space:nowrap;text-shadow:0 1px 1px #000}
   .bArmBtns{position:absolute;z-index:26;display:flex;gap:6px;transform:translate(-50%,10px);pointer-events:auto}   /* 발판 하단 중앙에 앵커 → 바로 아래에 떠서 함께 이동 · #cstLabels(pointer-events:none) 안에서도 버튼은 클릭 가능 */
@@ -10539,10 +10540,13 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
     resumeBtn='<div class="bArmBtns" style="left:'+(_rs.x*100).toFixed(2)+'%;top:'+(_rs.y*100).toFixed(2)+'%" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()"><button class="bArmBtn ok" onclick="techResumeBuild(event)" title="재개"><svg viewBox="0 0 24 24" width="15" height="15" style="display:block"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button><button class="bArmBtn cancel" onclick="techDemolishBuild(event)" title="철거">✕</button></div>'; } }   // 재개(▶) + 철거(✕) — 단순 아이콘
   const hint=G.tech.arm?('📍 '+((techGetBldg(race,G.tech.arm)||{}).name)+(G.tech.armXY?' — 드래그로 위치 조정 후 ✓ 확정':' — 지을 곳을 탭하세요')):((G.tech.selU&&G.tech.selU.length)?('👥 '+G.tech.selU.length+'기 지정 — 탭/드래그로 이동 · 해제는 우상단 ✕'):(G.tech.sel==null?'일꾼 탭=건설 메뉴 · 드래그=유닛 지정 · 두 손가락=화면 이동':'건물을 탭하면 하단 시트에 생산·연구가 표시됩니다'));
   const _floor='<div class="bmapFloor" style="transform:'+_techViewCSS()+'"></div>';   // 바닥 = 메인맵과 동일한 뷰 변환(_techViewCSS = viewApply의 CSS판)
-  let psi='';   // 🔵 파일런 동력장 표시 — 동력이 필요한 건물 배치 중일 때 각 완성 파일런의 타원 필드 렌더(스타1처럼)
-  if(G.tech.arm && _techNeedsPower(G.tech.arm)){ const _pcw=_techCW(), _pch=_techCH();
-    for(const pl of _techPylons()){ const _ptl=_techW2S(pl.x-TECH_PYLON_RX*_pcw, pl.y-TECH_PYLON_RY*_pch), _pbr=_techW2S(pl.x+TECH_PYLON_RX*_pcw, pl.y+TECH_PYLON_RY*_pch);
-      psi+='<div class="bPsi" style="left:'+(_ptl.x*100).toFixed(2)+'%;top:'+(_ptl.y*100).toFixed(2)+'%;width:'+((_pbr.x-_ptl.x)*100).toFixed(2)+'%;height:'+((_pbr.y-_ptl.y)*100).toFixed(2)+'%"></div>'; } }
+  let psi='';   // 🔵 파일런 동력장 표시 — 동력 필요 건물 또는 파일런 배치 중일 때 각 완성 파일런(+예비 파일런의 미래 필드) 타원 렌더(스타1처럼)
+  const _armPylon=(G.tech.arm==='pylon');
+  if(G.tech.arm && (_techNeedsPower(G.tech.arm)||_armPylon)){ const _pcw=_techCW(), _pch=_techCH();
+    const _psiOne=(px,py,ghost)=>{ const _ptl=_techW2S(px-TECH_PYLON_RX*_pcw, py-TECH_PYLON_RY*_pch), _pbr=_techW2S(px+TECH_PYLON_RX*_pcw, py+TECH_PYLON_RY*_pch);
+      return '<div class="bPsi'+(ghost?' new':'')+'" style="left:'+(_ptl.x*100).toFixed(2)+'%;top:'+(_ptl.y*100).toFixed(2)+'%;width:'+((_pbr.x-_ptl.x)*100).toFixed(2)+'%;height:'+((_pbr.y-_ptl.y)*100).toFixed(2)+'%"></div>'; };
+    for(const pl of _techPylons()) psi+=_psiOne(pl.x, pl.y, false);
+    if(_armPylon && G.tech.armXY) psi+=_psiOne(G.tech.armXY.x, G.tech.armXY.y, true); }   // 예비 파일런의 동력장 미리보기(강조)
   let gasZone='';   // ⛽ 가스 광산 구역(고정 지형) — 줌/팬 따라 이동, 가스 건물 배치 중이면 강조. 가스 건물이 서 있으면 숨김(겹쳐 보임 방지)
   const _gasBuilt=G.tech.ents.some(e=>e.type==='bldg'&&((techGetBldg(race,e.bk)||{}).gas));
   if(!_gasBuilt){ const _gcw=_techCW(), _gch=_techCH();
@@ -10744,7 +10748,7 @@ function _techFootBlockCells(s){ const cw=_techCW(), ch=_techCH(), out=[];   // 
 // ⛽ 가스 광산 구역(맵 고정 지형, 건설 격자 오른쪽 위 구석 4x2) — 가스 건물(리파이너리 등)은 이 위에만, 일반 건물은 침범 불가
 const TECH_GAS={ c0:TECH_GRID.cols-4, r0:0, w:4, h:2 };
 // 🔵 파일런 동력장(사이오닉 매트릭스, 에테리얼 전용) — 파일런 중심 타원. 넥서스·어시밀레이터·파일런 외 모든 건물은 동력장 안에만 소환 가능
-const TECH_PYLON_RX=4.2, TECH_PYLON_RY=3.0;   // 동력장 반경(셀) — 가로로 긴 타원
+const TECH_PYLON_RX=5.5, TECH_PYLON_RY=3.9;   // 동력장 반경(셀) — 가로로 긴 타원(×1.3 확대)
 function _techNeedsPower(bk){ return G.tech.race==='aetherial' && bk!=='nexus' && bk!=='pylon' && bk!=='assimilator'; }
 function _techPylons(){ const out=[]; if(G.tech.race!=='aetherial') return out; for(const e of G.tech.ents){ if(e.type==='bldg'&&e.bk==='pylon'&&e.bt<=0) out.push(e); } return out; }   // 완성 파일런만 동력 공급
 function _techPowered(x,y){ if(G.tech.race!=='aetherial') return true; const cw=_techCW(), ch=_techCH();
@@ -12459,7 +12463,7 @@ const ghostModels=new Map();  // 비활성 고정 슬롯(미건설 터렛/포토
 const buildModels=new Map();  // 직스 건설지 전용 전시 모델(일꾼·건물) — 게임/전시 풀과 분리(사망 스윕 무관)
 const buildGhostModels=new Map();  // 건설 배치 예비 건물(반투명 회색 3D 고스트) — 모델 id별 캐시
 // 건설 그리드 폭 맞춤 보정 배율 — bbox에 안테나·돌출부가 포함돼 몸통이 footprint보다 좁아 보이는 모델만 >1로 키움(스크린샷 실측 튜닝)
-const CB_FIT_MUL={ cb_union_command_center:1.2, cb_union_supply_depot:1.05, cb_union_refinery:1.1, cb_union_academy:1.08, cb_union_armory:1.12, cb_union_missile_turret:1.15, cb_union_machine_shop:1.1, cb_swarm_extractor:1.1 };
+const CB_FIT_MUL={ cb_union_command_center:1.2, cb_union_supply_depot:1.05, cb_union_refinery:1.1, cb_union_academy:1.08, cb_union_armory:1.12, cb_union_missile_turret:1.15, cb_union_machine_shop:1.1, cb_swarm_extractor:1.1, cb_aetherial_pylon:0.85, cb_aetherial_photon_cannon:1.18 };   // 파일런 살짝 작게 · 포톤 캐논 살짝 크게
 try{ window.CB_FIT_MUL=CB_FIT_MUL; }catch(_e){}
 const GHOST_SCALE=0.62;       // 고스트 크기 배율(실제보다 작게)
 let beaconBase=null;          // 합성 비콘 3D 모델 베이스(scene/off/h/w)
