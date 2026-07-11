@@ -10183,7 +10183,7 @@ function techUIInit(race){ if(!TECH_TREE[race]) race='union'; _techEnsureRoster(
 function _techBuildTime(race,k){ if(G.tech.nocool) return 0; return ((techBldgSpec(race,k)||{}).t||20)*TECH_TIME_MUL; }
 function _techProdTime(race,id){ if(G.tech.nocool) return 0; return ((techUnitSpec(race,id)||{}).t||15)*TECH_TIME_MUL; }
 function techFinishBuild(e){ const b=techGetBldg(G.tech.race,e.bk); if(!b) return; e.bt=0; e.waiting=false; if(b.addonTo) G.tech.addon[b.k]=true; else G.tech.built[b.k]=(G.tech.built[b.k]||0)+1; G.tech.supCap+=(b.supply||0);
-  for(const w of G.tech.ents){ if(w.type==='worker'&&w.build===e.eid){ w.build=null; w._working=false; w._bpSide=null; w._bpT=null; w.tx=null; w.ty=null; } } }   // 건설 완료 → 일꾼 해방(작업상태 초기화)
+  for(const w of G.tech.ents){ if(w.type==='worker'&&w.build===e.eid){ w.build=null; w._working=false; w._bpSide=null; w._bpT=null; w.tx=null; w.ty=null; w._wp=null; w._rr=0; } } }   // 건설 완료 → 일꾼 해방(작업상태 초기화)
 // 건물에서 유닛 소환 위치 = 발판을 사각형으로 둘러싸며 좌하단에서 반시계로 채움(하단→우측→상단→좌측), 최대한 건물에 붙임(화면 y-down 기준)
 function _techSpawnPos(be, uid){ const race=G.tech.race, f=(typeof _techFoot==='function')?_techFoot(race,be.bk):{w:2,h:2}, W=GW||390, H=GH||390;
   const hwp=(f.w/2)*_techCW()*W, hhp=(f.h/2)*_techCH()*H;   // 발판 반폭·반높이(px)
@@ -10205,34 +10205,43 @@ function techFinishProduce(q){ const race=G.tech.race; G.tech.units[q.id]=(G.tec
   const be=G.tech.ents.find(e=>e.type==='bldg'&&e.bk===q.bk), p=be?_techSpawnPos(be,q.id):{x:0.5,y:0.6}, _ex=p.x, _ey=p.y;
   const _isWk=(q.id===(TECH_WORKER[race]||'worker_human'));   // 생산된 일꾼도 초기 일꾼과 동일한 type:'worker'(건설 가능)
   G.tech.ents.push(_isWk?{eid:G.tech.eseq++, type:'worker', x:_ex, y:_ey}:{eid:G.tech.eseq++, type:'unit', uid:q.id, x:_ex, y:_ey}); }
-// 건설 전용 추가 조향: 건물 발판(사각)을 관통하지 않고 딱 붙어 돌아가도록. 원형이 아니라 실제 footprint 사각형의 최근접점 법선으로 밀어냄 → 넓은 건물의 위아래로 멀리 뜨거나 좌우로 관통하던 문제 해결.
-// 목표(tx,ty)가 건물 발판 안이면 그 건물은 제외(그리로 가는 중). 반환 {sx,sy}.
-function _techBldgSteer(e, tx, ty, dirx, diry, obst){
-  if(!obst||!obst.length) return {sx:0,sy:0};
-  const BAND=0.06;   // 이 거리 안에서만 비켜섬(너무 멀리서 안 피함) — 살짝 여유를 둬 옆으로 돌 공간 확보
-  let ax=0, ay=0, anyNear=false, nearest=null, nearND=1e9;
-  for(const b of obst){ if(b.eid===e.build) continue;   // 자기가 짓는 건물은 회피 안 함 → 위로 지나다니며 겹침 허용
-    const R=_techCollRect(b,e); if(R.x1<=R.x0||R.y1<=R.y0) continue;   // 심시티 판정 사각(유니온=그룹별 껍질+통과 등급, 그 외=발판+uR)
-    // 목표가 판정 안이어도 회피(건물=지형지물) → 안으로 손가락을 눌러도 유닛은 못 들어가고 가장자리에 섬. 짓는 일꾼(b.eid===e.build)만 위에서 제외됨
-    const px=Math.max(R.x0,Math.min(R.x1,e.x)), py=Math.max(R.y0,Math.min(R.y1,e.y));   // 판정 사각 위 최근접점(유닛이 밖이면 경계점)
-    let nx=e.x-px, ny=e.y-py, nd=Math.hypot(nx,ny);   // 최근접점→유닛 = 바깥 법선
-    if(nd>=BAND) continue;   // 충분히 멀면 무시
-    if(nd<1e-5){ nx=(e.x-(R.x0+R.x1)/2)||1e-4; ny=(e.y-(R.y0+R.y1)/2)||0; nd=Math.hypot(nx,ny)||1e-4; }   // 사각 안(관통) → 중심 반대로
-    anyNear=true; if(nd<nearND){ nearND=nd; nearest=b.eid; }
-    const push=(BAND-nd)/BAND; nx/=nd; ny/=nd;
-    const tgtIn=(tx>R.x0 && tx<R.x1 && ty>R.y0 && ty<R.y1);   // 목표가 이 건물 판정 안(도달 불가)
-    if(tgtIn){ ax+=nx*push*1.3; ay+=ny*push*1.3; continue; }   // 안으로 명령 → 우회 없이 반경 밀기만 → 가장자리에서 멈춤(빙빙 돌지 않음)
-    ax+=nx*push*0.8; ay+=ny*push*0.8;   // 발판 바깥으로 밀기(관통 방지) — 접선이 우회를 주도하도록 약하게, 관통은 하드 밀어냄이 보정
-    const headOn=Math.max(0,-(nx*dirx+ny*diry));   // 진행방향이 발판 정면일수록 1 → 정체(로컬 미니멈) 위험
-    const tanW=1.3+headOn*1.8;   // 정면일수록 접선(옆) 힘을 키워 확실히 우회(벽에 막혀 멈추지 않게)
-    const t1x=-ny, t1y=nx, dot1=t1x*dirx+t1y*diry;   // 접선(발판 변을 따라)
-    let side;   // 우회 방향을 한 번 정하면 그 건물을 벗어날 때까지 유지 → 정면에서 좌우로 떨리며 정체(진동)하지 않고 한쪽으로 확실히 돌아감
-    if(e._avBldg===b.eid && e._avSide){ side=e._avSide; } else { side=(dot1>=0)?1:-1; if(b.eid===nearest){ e._avBldg=b.eid; e._avSide=side; } }
-    ax+=side*t1x*tanW*push; ay+=side*t1y*tanW*push;
-  }
-  if(!anyNear){ e._avBldg=0; e._avSide=0; }   // 건물 완전히 벗어남 → 우회 방향 초기화(다음 건물은 새로 결정)
-  return {sx:ax, sy:ay};
-}
+// ── 🧭 경로 탐색(visibility graph) — 이동 명령 시 건물 판정 사각의 꼭짓점을 잇는 최단 우회 경로를 미리 계산 ──
+// 벽 비비기(반응형 조향) 대신 경유점을 따라 직선 이동 → 틱틱 걸리지 않고 깔끔. 심시티 틈새는 등급별 판정 사각 간 통로로 자동 발견됨
+function _segInRect(ax,ay,bx,by,R){ const dx=bx-ax, dy=by-ay; let t0=0, t1=1;   // 선분이 사각 '내부'를 지나는가(경계 스침은 허용 — 밀봉 틈새 통로가 경계선이므로)
+  const p=[-dx,dx,-dy,dy], q=[ax-R.x0, R.x1-ax, ay-R.y0, R.y1-ay];
+  for(let i=0;i<4;i++){ if(Math.abs(p[i])<1e-12){ if(q[i]<0) return false; }
+    else { const t=q[i]/p[i]; if(p[i]<0){ if(t>t0) t0=t; } else { if(t<t1) t1=t; } if(t0>t1) return false; } }
+  if(t1-t0<1e-9) return false;
+  const tm=(t0+t1)/2, mx=ax+dx*tm, my=ay+dy*tm, E=1e-9;
+  return mx>R.x0+E && mx<R.x1-E && my>R.y0+E && my<R.y1-E; }
+function _techNavRects(e){ const out=[]; for(const b of G.tech.ents){ if(b.type!=='bldg'||b.eid===e.build) continue; if(b.bt>0&&!b._bpause) continue;   // 벽 = 완성/일시정지 건물(건설 중은 통과 허용, 자기가 짓는 건물 제외)
+    const R=_techCollRect(b,e); if(R.x1>R.x0&&R.y1>R.y0) out.push(R); } return out; }
+// 시작→목표 최단 경로(경유점 배열, 마지막=목표). 직선 가능하면 [목표] 하나. 목표가 판정 안이면 가장 가까운 바깥 지점으로 보정
+function _techFindPath(e, tx, ty){
+  if(typeof _techAirOf==='function' && _techAirOf(e)) return [{x:tx,y:ty}];   // 공중 = 직선
+  const rects=_techNavRects(e);
+  for(const R of rects){ if(tx>R.x0&&tx<R.x1&&ty>R.y0&&ty<R.y1){ const dl=tx-R.x0, dr=R.x1-tx, dt2=ty-R.y0, db=R.y1-ty, m=Math.min(dl,dr,dt2,db);
+    if(m===dl) tx=R.x0; else if(m===dr) tx=R.x1; else if(m===dt2) ty=R.y0; else ty=R.y1; } }   // 목표 보정(건물 안 명령 → 가장자리)
+  const seg=(ax,ay,bx,by)=>{ for(const R of rects){ if(_segInRect(ax,ay,bx,by,R)) return true; } return false; };
+  if(!seg(e.x,e.y,tx,ty)) return [{x:tx,y:ty}];   // 직선 가능
+  const nodes=[[e.x,e.y],[tx,ty]];   // 노드 = 시작 + 목표 + 각 사각 꼭짓점(다른 사각 내부·맵 밖 제외)
+  const inR=(x,y)=>rects.some(R=>x>R.x0+1e-9&&x<R.x1-1e-9&&y>R.y0+1e-9&&y<R.y1-1e-9);
+  for(const R of rects){ for(const p of [[R.x0,R.y0],[R.x1,R.y0],[R.x0,R.y1],[R.x1,R.y1]]){
+    if(p[0]>0.02&&p[0]<0.98&&p[1]>0.12&&p[1]<0.98&&!inR(p[0],p[1])) nodes.push(p); } }
+  const N=nodes.length, gsc=new Array(N).fill(1e9), par=new Array(N).fill(-1), closed=new Array(N).fill(false);
+  gsc[0]=0;   // A* (시작=0, 목표=1)
+  for(let it=0;it<N;it++){ let cur=-1, best=1e9;
+    for(let i=0;i<N;i++){ if(!closed[i]&&gsc[i]<1e9){ const f=gsc[i]+Math.hypot(nodes[i][0]-tx,nodes[i][1]-ty); if(f<best){ best=f; cur=i; } } }
+    if(cur<0||cur===1) break; closed[cur]=true;
+    for(let j=0;j<N;j++){ if(closed[j]) continue; const d=Math.hypot(nodes[j][0]-nodes[cur][0], nodes[j][1]-nodes[cur][1]);
+      if(gsc[cur]+d>=gsc[j]) continue;
+      if(seg(nodes[cur][0],nodes[cur][1],nodes[j][0],nodes[j][1])) continue;   // 막힌 간선(비싼 검사라 개선 여지 있을 때만)
+      gsc[j]=gsc[cur]+d; par[j]=cur; } }
+  if(gsc[1]>=1e9) return [{x:tx,y:ty}];   // 경로 없음 → 직선 폴백(밀어냄이 안전망)
+  const out=[]; let c=1; while(c>0){ out.unshift({x:nodes[c][0], y:nodes[c][1]}); c=par[c]; }
+  return out.length?out:[{x:tx,y:ty}]; }
+// 유닛을 경로 따라 (x,y)로 보냄 — 경유점 저장 + 첫 경유점을 이동 목표로
+function _techRoute(e, x, y){ const wp=_techFindPath(e, x, y); e._wp=wp; e._rr=0; e.tx=wp[0].x; e.ty=wp[0].y; e._mvStuck=0; e._mvPrevD=null; }
 // 🔧 용접 스파크(엔지니어 일꾼 작업 중) — 오른손 근처에서 작은 불꽃이 튀며 낙하(cvFx에 직접 그림, 공용 FX 코어 무영향)
 function _techEmitWeld(e){ if(!G._weldFx) G._weldFx=[]; if(G._weldFx.length>150) return;
   const s=(typeof _techW2S==='function')?_techW2S(e.x,e.y):null; if(!s) return;   // 일꾼 발 위치(라벨·DOM과 동일 좌표계 — centerN 대신 사용해 위치 정확)
@@ -10277,15 +10286,6 @@ function techSeparate(){ if(!G.tech||!GW||!GH) return false; const es=G.tech.ent
     for(const it of items){ it.ref.x=Math.max(0.02,Math.min(0.98,it.ref.x)); it.ref.y=Math.max(0.12,Math.min(0.98,it.ref.y)); } }
   for(let i=0;i<items.length;i++){ if(Math.abs(items[i].ref.x-b0[i][0])>1e-9 || Math.abs(items[i].ref.y-b0[i][1])>1e-9) return true; }
   return false; }
-// 건물에 막혀 정체됐는지 판정: near=완성/일시정지 건물의 회피 밴드 안 · targetIn=목표가 그 발판 안(도달 불가) → 우회 지속 여부 결정
-function _techBldgBlockInfo(e){ let near=false, targetIn=false;
-  for(const b of G.tech.ents){ if(b.type!=='bldg'||b.eid===e.build||(b.bt>0&&!b._bpause)) continue;   // 완성/일시정지 건물만 '벽'
-    const R=_techCollRect(b,e); if(R.x1<=R.x0||R.y1<=R.y0) continue;   // 심시티 판정 사각
-    const px=Math.max(R.x0,Math.min(R.x1,e.x)), py=Math.max(R.y0,Math.min(R.y1,e.y));
-    if(Math.hypot(e.x-px,e.y-py)<0.06) near=true;   // 회피 밴드 안
-    if(e.tx!=null && e.tx>R.x0 && e.tx<R.x1 && e.ty>R.y0 && e.ty<R.y1) targetIn=true;   // 목표가 판정 안(도달 불가)
-  }
-  return { near, targetIn }; }
 function _techBldgSide(bd, i){ const race=G.tech.race, f=(typeof _techFoot==='function')?_techFoot(race,bd.bk):{w:2,h:2};   // 건물 상/우/하/좌 지점 — 발판 안쪽(≈0.6배)이라 일꾼이 건물 위에 겹쳐 서고, 반대 면으로 갈 때 건물 중앙을 가로지름
   const hw=(f.w/2)*_techCW()*0.6, hh=(f.h/2)*_techCH()*0.6;
   const sd=[{x:bd.x,y:bd.y-hh},{x:bd.x+hw,y:bd.y},{x:bd.x,y:bd.y+hh},{x:bd.x-hw,y:bd.y}][i%4];   // 상·우·하·좌
@@ -10293,16 +10293,22 @@ function _techBldgSide(bd, i){ const race=G.tech.race, f=(typeof _techFoot==='fu
 function techTick(dt){ if(!G.tech) return; let active=false, done=false;
   const _vmoving=techViewTick(dt);   // 🎥 부드러운 줌/팬 보간(메인맵과 동일) — 애니메이션 중이면 매 프레임 재렌더
   for(const e of G.tech.ents){ if(e.type==='bldg'&&e.bt>0){ if(!e.waiting&&!e._bpause){ e.bt=Math.max(0,e.bt-dt); if(e.bt<=0){ techFinishBuild(e); done=true; } } active=true; } }   // waiting=일꾼 미도착 / _bpause=사용자 일시정지 → 카운트다운 정지
-  // 🚶 유닛 이동 — 메인과 100% 동일한 공용 stepUnitMove 사용(관성·회피·감속·정착·응시). 건물 회피만 건설 전용 extraSteer로 추가(지상만).
-  const _obst=G.tech.ents.filter(x=>x.type==='bldg');   // 회피 대상 건물(건설 중 포함)
+  // 🚶 유닛 이동 — 공용 stepUnitMove(관성·유닛회피·감속·정착·응시) + 🧭 경유점(waypoint) 추종. 건물 회피 조향 없음(경로가 이미 우회) → 벽 비비기/틱틱 걸림 제거
   const _clamp=(x,y)=>({x:Math.max(0.02,Math.min(0.98,x)), y:Math.max(0.12,Math.min(0.98,y))});
   const _staticN=[]; for(const o of G.tech.ents){ if((o.type!=='unit'&&o.type!=='worker')||o.tx!=null) continue; const k=_techEntKey(o); _staticN.push({ref:o, x:o.x, y:o.y, sizeKey:k, airKey:k}); }   // 정지 유닛만(이동 중 유닛끼리는 회피 제외)
   for(const e of G.tech.ents){ if((e.type==='unit'||e.type==='worker')&&e.tx!=null){
     const key=_techEntKey(e);
-    const r=stepUnitMove(e, {x:e.tx,y:e.ty}, key, key, dt, { GW:GW||390, GH:GH||390, clamp:_clamp, staticN:_staticN, avoidMul:0.16, extraSteer:(dirx,diry)=>_techBldgSteer(e, e.tx, e.ty, dirx, diry, _obst) });   // 회피 반경 ≈ 대형 슬롯 간격(그보다 크면 슬롯에 못 앉고 공전) — 슬롯 안착 후 분리가 최종 정렬
-    if(r.done){ const _bi=_techBldgBlockInfo(e), _dT=Math.hypot(e.tx-e.x, e.ty-e.y);
-      if(_bi.near && !_bi.targetIn && _dT>0.03){ e._mvStuck=0; e._mvPrevD=null; }   // 건물에 막혀 정체 & 목표는 도달 가능(발판 밖) → 정착 말고 벽 따라 계속 우회
-      else { e.tx=null; e.ty=null;
+    const r=stepUnitMove(e, {x:e.tx,y:e.ty}, key, key, dt, { GW:GW||390, GH:GH||390, clamp:_clamp, staticN:_staticN, avoidMul:0.16 });
+    if(r.done){ const _far=Math.hypot(e.tx-e.x, e.ty-e.y)>0.035;   // 도착이 아니라 막혀서 멈춤(관성 정체)
+      if(e._wp && e._wp.length>1){   // 경유점 남음 → 다음 경유점으로(막혔으면 현재 위치 기준 경로 재계산)
+        if(_far && (e._rr||0)<4){ e._rr=(e._rr||0)+1; const _fin=e._wp[e._wp.length-1]; e._wp=_techFindPath(e,_fin.x,_fin.y); }
+        else e._wp.shift();
+        const _n=e._wp[0]; e.tx=_n.x; e.ty=_n.y; e._mvStuck=0; e._mvPrevD=null; }
+      else if(_far && (e._rr||0)<4 && !_techAirOf(e)){ e._rr=(e._rr||0)+1;   // 직행 중 새 벽에 막힘(도중 완성된 건물 등) → 우회 경로로 재시도
+        const _wp2=_techFindPath(e,e.tx,e.ty);
+        if(_wp2.length>1){ e._wp=_wp2; e.tx=_wp2[0].x; e.ty=_wp2[0].y; e._mvStuck=0; e._mvPrevD=null; }
+        else { e.tx=null; e.ty=null; e._wp=null; e._rr=0; } }
+      else { e.tx=null; e.ty=null; e._wp=null; e._rr=0;
         if(e.type==='worker'&&e.build!=null){ const bd=G.tech.ents.find(x=>x.eid===e.build); if(bd&&bd.waiting&&Math.hypot(bd.x-e.x,bd.y-e.y)<0.16){ bd.waiting=false; done=true; } } } }   // 일꾼 도착 → 건설 시작
     active=true; } }
   // 🔨 건설 중 일꾼: 건물의 상하좌우를 순회하며 여러 곳을 짓는 듯 작업(도착→체류(작업모션)→다음 면)
@@ -10318,7 +10324,7 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
         const _fdx=bd.x-e.x, _fdy=bd.y-e.y; if(_fdx*_fdx+_fdy*_fdy>1e-5) e.face=Math.atan2(_fdx,_fdy);   // 건물 내부 중앙을 향해 작업
         e._bpT=(e._bpT!=null?e._bpT:0.5)-dt;
         if(e._bpT<=0){ e._bpSide=((e._bpSide==null?(G.tech.eseq+e.eid)%4:e._bpSide)+1)%4; const _sd=_techBldgSide(bd,e._bpSide); e.tx=_sd.x; e.ty=_sd.y; e._bpT=0.9+((e.eid*37)%7)*0.1; e._working=false; }   // 체류 끝 → 다음 면으로 이동
-      } else { e._working=false; const _sd=_techBldgSide(bd,e._bpSide||0); e.tx=_sd.x; e.ty=_sd.y; }   // 멀리 있으면(재개 등) 건물로 복귀
+      } else { e._working=false; const _sd=_techBldgSide(bd,e._bpSide||0); _techRoute(e,_sd.x,_sd.y); }   // 멀리 있으면(재개 등) 우회 경로로 건물 복귀
       active=true; } }
   if(techSeparate()) active=true;   // 도착한 유닛 겹침 분리(메인과 동일) — 공중 한 점 집결 후 완만히 흩어짐
   // 🧱 완성 or 일시정지(동결) 건물과 겹친 유닛을 자연스럽게 밖으로 밀어냄 — 진행 중(bt>0, 미일시정지)만 겹침 허용
@@ -10495,7 +10501,7 @@ function techPauseBuild(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if
   let any=false;
   for(const wk of wks){ const bd=_techBuildBldg(wk); if(!bd||bd.bt<=0) continue;
     bd._bpause=true; bd.waiting=false;   // 건물 = 반건설 상태로 동결(일꾼 없음, 카운트다운 정지)
-    wk.build=null; wk._working=false; wk._bpSide=null; wk._bpT=null; wk.tx=null; wk.ty=null; any=true; }   // 일꾼 = 자유(다른 건물 건설·이동 가능)
+    wk.build=null; wk._working=false; wk._bpSide=null; wk._bpT=null; wk.tx=null; wk.ty=null; wk._wp=null; wk._rr=0; any=true; }   // 일꾼 = 자유(다른 건물 건설·이동 가능)
   if(!any) return;
   if(typeof playSfx==='function') playSfx('ui_open'); techUIRender(); }
 function techResumeBuild(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;   // ▶ 재개: 선택된 일시정지 건물에 가장 가까운 유휴 엔지니어를 보내 이어서 건설
@@ -10503,14 +10509,15 @@ function techResumeBuild(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); i
   let wk=(G.tech.selU||[]).map(id=>G.tech.ents.find(e=>e.eid===id)).find(e=>e&&e.type==='worker'&&e.build==null);   // 지정해둔 유휴 일꾼 우선(그 일꾼으로 재개)
   if(!wk){ let bdst=1e9; for(const e of G.tech.ents){ if(e.type==='worker'&&e.build==null){ const d=(e.x-bd.x)*(e.x-bd.x)+(e.y-bd.y)*(e.y-bd.y); if(d<bdst){ bdst=d; wk=e; } } } }   // 없으면 가장 가까운 유휴 일꾼
   if(!wk){ if(typeof toast==='function') toast('⛔ 건설할 일꾼이 없음'); return; }
-  wk.build=bd.eid; wk.tx=Math.max(0.04,Math.min(0.96,bd.x)); wk.ty=Math.max(0.16,Math.min(0.96,bd.y+0.05)); wk._working=false; wk._bpSide=null; wk._bpT=null;
+  wk.build=bd.eid; wk._working=false; wk._bpSide=null; wk._bpT=null;
+  _techRoute(wk, Math.max(0.04,Math.min(0.96,bd.x)), Math.max(0.16,Math.min(0.96,bd.y+0.05)));   // 건설지까지 우회 경로로 이동
   bd._bpause=false; bd.waiting=true;   // 일꾼 도착까지 대기(카운트다운 정지) → 도착 시 이어서 건설
   G.tech.selU=[]; G.tech.sel=bd.eid;   // 재개 = 일꾼 중복 지정 해제하고 해당 건물만 지정(건물 프로필 표시)
   if(typeof playSfx==='function') playSfx('ui_confirm'); techUIRender(); }
 function techDemolishBuild(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech||G.tech.sel==null) return;   // 건설 중·일시정지 건물 즉시 철거(일꾼 도착 불필요) — 완성 전이라 built/supCap 미반영이므로 카운트 조정 없음
   const e=G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'); if(!e||e.bt<=0) return;
   const b=techGetBldg(G.tech.race,e.bk); if(b && !G.tech.inf){ G.tech.credit+=Math.round((b.m||0)*0.75); G.tech.energy+=Math.round((b.g||0)*0.75); }   // 자원 75% 환불(취소)
-  for(const w of G.tech.ents){ if(w.type==='worker'&&w.build===e.eid){ w.build=null; w._working=false; w._bpSide=null; w._bpT=null; w.tx=null; w.ty=null; } }   // 일꾼 해방
+  for(const w of G.tech.ents){ if(w.type==='worker'&&w.build===e.eid){ w.build=null; w._working=false; w._bpSide=null; w._bpT=null; w.tx=null; w.ty=null; w._wp=null; w._rr=0; } }   // 일꾼 해방
   for(const p of G.tech.ents){ if(p._addonEid===e.eid) p._addonEid=null; }   // 애드온이면 본체 슬롯 해제(재부착 가능)
   G.tech.ents=G.tech.ents.filter(x=>x.eid!==e.eid); G.tech.sel=null;
   if(typeof playSfx==='function') playSfx('ui_denied'); techUIRender(); }
@@ -10572,10 +10579,10 @@ function _techAssignMove(wx,wy){ const all=(G.tech.selU||[]).map(id=>G.tech.ents
   const cX=x=>Math.max(0.04,Math.min(0.96,x)), cY=y=>Math.max(0.16,Math.min(0.96,y)), GWp=GW||390, GHp=GH||390;
   // 집합 = 메인 assignFormation과 100% 동일: 공중=한 지점 스택(강한 관성으로 자연스럽게 뭉쳤다 퍼짐) / 지상=충돌 반경 동심원 대형
   const air=sel.filter(e=>_techAirOf(e)), ground=sel.filter(e=>!_techAirOf(e));
-  air.forEach(e=>{ e.tx=cx; e.ty=cy; e._mvStuck=0; e._mvPrevD=null; });
+  air.forEach(e=>{ e.tx=cx; e.ty=cy; e._wp=null; e._rr=0; e._mvStuck=0; e._mvPrevD=null; });
   const gslots=_techRingSlots(ground).map(s=>({x:cX(cx+s.dx/GWp), y:cY(cy+s.dy/GHp), rr:s.dx*s.dx+s.dy*s.dy})).sort((a,b)=>a.rr-b.rr);   // 안쪽 슬롯부터
   const gsorted=ground.slice().sort((a,b)=>(((a.x-cx)*(a.x-cx)+(a.y-cy)*(a.y-cy))-((b.x-cx)*(b.x-cx)+(b.y-cy)*(b.y-cy))));   // 중심에 가까운 유닛부터 → 안쪽 슬롯 배정(군집 가로지르지 않고 안착, 촘촘해도 지터/공전 없음)
-  gsorted.forEach((e,i)=>{ const s=gslots[i]; e.tx=s.x; e.ty=s.y; e._mvStuck=0; e._mvPrevD=null; }); }   // 효과음은 다운 1회만(드래그 재지정 스팸 방지)
+  gsorted.forEach((e,i)=>{ const s=gslots[i]; _techRoute(e, s.x, s.y); }); }   // 지상 = 경로 탐색으로 우회 경로 배정 · 효과음은 다운 1회만(드래그 재지정 스팸 방지)
 function techPtrDown(ev){ if(!G.tech) return; const r=_btRect(); if(!r) return; if(ev.preventDefault)ev.preventDefault();
   _btPtrs.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
   const sx=(ev.clientX-r.left)/(r.width||1), sy=(ev.clientY-r.top)/(r.height||1);
@@ -10709,7 +10716,7 @@ function techPlace(x,y){ const race=G.tech.race, b=techGetBldg(race,G.tech.arm);
   const ne={eid:G.tech.eseq++, type:'bldg', bk:b.k, x:bx, y:by, bt:bt, btMax:bt, waiting:(bt>0&&!!wk)};
   G.tech.ents.push(ne);
   if(bt<=0){ techFinishBuild(ne); }   // 즉시(노쿨) 완성
-  else if(wk){ wk.build=ne.eid; wk.tx=Math.max(0.04,Math.min(0.96,bx)); wk.ty=Math.max(0.16,Math.min(0.96,by+0.05)); }   // 일꾼 → 건설지로 이동
+  else if(wk){ wk.build=ne.eid; _techRoute(wk, Math.max(0.04,Math.min(0.96,bx)), Math.max(0.16,Math.min(0.96,by+0.05))); }   // 일꾼 → 건설지까지 우회 경로로 이동
   G.tech.arm=null; G.tech.armXY=null; const sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null}); sh.open=true; sh.sec='ent';
   if(wk){ const rest=_preWkIds.filter(id=>id!==wk.eid); G.tech.sel=null; G.tech.selU=rest.length?rest:[wk.eid]; }   // 건설 일꾼은 지정에서 빠지고 나머지 일꾼은 지정 유지(계속 이어서 건설) — 혼자면 그 일꾼 유지
   else if(_preWkIds.length){ G.tech.sel=null; G.tech.selU=_preWkIds.slice(); }   // 노쿨: 지정했던 일꾼 그대로 유지(건물로 안 바뀜)
@@ -10742,7 +10749,7 @@ function techDemolish(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!
   if(!b||b.k===main.k){ if(typeof toast==='function') toast('본진은 철거 불가'); return; }
   if(b.addonTo) G.tech.addon[b.k]=false; else G.tech.built[b.k]=Math.max(0,(G.tech.built[b.k]||0)-1);
   G.tech.supCap=Math.max(0,G.tech.supCap-(b.supply||0));
-  for(const w of G.tech.ents){ if(w.type==='worker'&&w.build===e.eid){ w.build=null; w.tx=null; w.ty=null; } }   // 건설 중이던 일꾼 해방
+  for(const w of G.tech.ents){ if(w.type==='worker'&&w.build===e.eid){ w.build=null; w.tx=null; w.ty=null; w._wp=null; w._rr=0; } }   // 건설 중이던 일꾼 해방
   for(const p of G.tech.ents){ if(p._addonEid===e.eid) p._addonEid=null; }   // 애드온 철거 시 본체 슬롯 해제(재부착 가능)
   G.tech.ents=G.tech.ents.filter(x=>x.eid!==e.eid); G.tech.sel=null;
   if(typeof playSfx==='function') playSfx('ui_confirm'); if(typeof toast==='function') toast('🗑 '+b.name+' 철거 — 해금 유닛 재잠금'); techUIRender(); }
