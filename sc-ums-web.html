@@ -10470,7 +10470,8 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
       if(!pfIn){ e.x=e._pfx; e.y=e._pfy; e.vx=0; e.vy=0; } } }   // 원래 밖에 있었을 때만 되돌림(스폰 겹침 등 예외 보호)
   if(G.tech.race==='swarm'){   // 🐛 라바 생성(해처리당 최대 3, 8초 주기) + 🥚 알 부화
     let _zd=false;
-    for(const cc of G.tech.ents){ if(cc.type==='bldg'&&cc.bt<=0&&TECH_CREEP_MAX[cc.bk]&&(cc._crAge||0)<TECH_CREEP_GROW_T){ cc._crAge=(cc._crAge||0)+dt; active=true; } }   // 🟣 콜로니 크립 서서히 성장(8×8→11×11)
+    for(const cc of G.tech.ents){ if(cc.type!=='bldg'||cc.bt>0||!TECH_CREEP_EXT[cc.bk]) continue;   // 🟣 크립: 건물만 있다가 1타일씩 뚝뚝 확장(단계 바뀔 때만 렌더)
+      if((cc._crAge||0)<TECH_CREEP_GROW_T){ cc._crAge=(cc._crAge||0)+dt; const nk=_techCreepStep(cc); if(nk!==cc._crK){ cc._crK=nk; _zd=true; } } }
     for(const g2 of G.tech.ents){ if(g2.type!=='egg') continue; g2.t=Math.max(0,g2.t-dt); active=true; if(g2.t<=0){ g2._dead=true; _zd=true; techHatchEgg(g2); } }
     for(const h of G.tech.ents){ if(h.type!=='bldg'||h.bk!=='hatchery'||h.bt>0) continue;
       const _ln=G.tech.ents.reduce((a,l)=>a+((l.type==='larva'&&l.hatch===h.eid)?1:0),0);
@@ -10853,10 +10854,11 @@ function _techPylons(){ const out=[]; if(G.tech.race!=='aetherial') return out; 
 function _techPowered(x,y){ if(G.tech.race!=='aetherial') return true; const cw=_techCW(), ch=_techCH();
   for(const p of _techPylons()){ if(_techInEllip(x,y,p.x,p.y,TECH_PYLON_RX,TECH_PYLON_RY,cw,ch)) return true; } return false; }
 // 🟣 크립(스웜 전용 지형) — 해처리·레어·하이브(대) / 크립·성큰·스포어 콜로니(소) 주변 점막. 해처리·익스트랙터 외 모든 스웜 건물은 크립 위에만 건설 가능
-const TECH_CREEP_SRC={ hatchery:[6.0,5.5], lair:[6.0,5.5], hive:[6.0,5.5], creep:[4.0,4.0], sunken:[4.0,4.0], spore:[4.0,4.0] };   // [rx,ry] 셀 — 가이드: 해처리류 12x11타일(외곽+4) / 콜로니 8x8타일(외곽+3)
-const TECH_CREEP_MAX={ creep:[5.5,5.5], sunken:[5.5,5.5], spore:[5.5,5.5] };   // 콜로니(성큰/스포어)는 완성 후 서서히 8×8→11×11타일(반경 4→5.5셀)로 성장
-const TECH_CREEP_GROW_T=24;   // 초 — 기본→최대 성장 시간
-function _techCreepR(cs){ const base=TECH_CREEP_SRC[cs.bk]||[0,0], mx=TECH_CREEP_MAX[cs.bk]; if(!mx) return base; const p=Math.max(0,Math.min(1,(cs._crAge||0)/TECH_CREEP_GROW_T)); return [base[0]+(mx[0]-base[0])*p, base[1]+(mx[1]-base[1])*p]; }   // 콜로니 크립 성장 반경(경과시간 비례)
+const TECH_CREEP_SRC={ hatchery:[6.0,5.5], lair:[6.0,5.5], hive:[6.0,5.5], creep:[4.0,4.0], sunken:[4.0,4.0], spore:[4.0,4.0] };   // 최종 반경(셀) — 해처리류 12×11타일(발판4×3+사방4) / 콜로니 8×8타일(발판2×2+사방3)
+const TECH_CREEP_EXT={ hatchery:4, lair:4, hive:4, creep:3, sunken:3, spore:3 };   // 건물 외곽선 기준 사방 확장 타일 수(=성장 단계). 처음엔 건물만, 1타일씩 뚝뚝 확장
+const TECH_CREEP_GROW_T=16;   // 초 — 최종 확장까지(초반 빠르고 후반 적당: 2u-u² 이즈아웃)
+function _techCreepStep(cs){ const ext=TECH_CREEP_EXT[cs.bk]||0; if(!ext) return 0; const u=Math.max(0,Math.min(1,(cs._crAge||0)/TECH_CREEP_GROW_T)); return Math.round(ext*(2*u-u*u)); }   // 지금까지 뻗은 타일 수(정수 단계 — 뚝뚝 점프)
+function _techCreepR(cs){ const fin=TECH_CREEP_SRC[cs.bk]||[0,0], ext=TECH_CREEP_EXT[cs.bk]||0; if(!ext) return fin; const k=_techCreepStep(cs); return [fin[0]-ext+k, fin[1]-ext+k]; }   // 반경 = 최종−미확장분 + 현재단계(1타일=1셀 단위 점프, k=0이면 건물 발판만)
 function _techNeedsCreep(bk){ return G.tech.race==='swarm' && bk!=='hatchery' && bk!=='extractor'; }
 function _techCreepSrcs(){ const out=[]; if(G.tech.race!=='swarm') return out; for(const e of G.tech.ents){ if(e.type==='bldg'&&e.bt<=0&&TECH_CREEP_SRC[e.bk]) out.push(e); } return out; }   // 완성 건물만 점막 유지
 function _techOnCreep(x,y){ if(G.tech.race!=='swarm') return true; const cw=_techCW(), ch=_techCH();
