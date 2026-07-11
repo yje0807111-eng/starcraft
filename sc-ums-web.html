@@ -10212,21 +10212,27 @@ function _techBldgSteer(e, tx, ty, dirx, diry, obst){
   const race=G.tech.race, cw=_techCW(), ch=_techCH(), GWp=(typeof GW!=='undefined'&&GW>0)?GW:390;
   const uR=(((U[_techEntKey(e)]||{}).size||14)*0.62)*(typeof TECH_USCALE!=='undefined'?TECH_USCALE:1)*(typeof TECH_PACK!=='undefined'?TECH_PACK:1)/GWp;   // 유닛 반경(월드) = 발판 바깥 이만큼만 띄움(너무 멀지 않게)
   const BAND=0.06;   // 이 거리 안에서만 비켜섬(너무 멀리서 안 피함) — 살짝 여유를 둬 옆으로 돌 공간 확보
-  let ax=0, ay=0;
+  let ax=0, ay=0, anyNear=false, nearest=null, nearND=1e9;
   for(const b of obst){ if(b.eid===e.build) continue;   // 자기가 짓는 건물은 회피 안 함 → 위로 지나다니며 겹침 허용
     const f=(typeof _techFoot==='function')?_techFoot(race,b.bk):{w:2,h:2}, Hx=(f.w/2)*cw+uR, Hy=(f.h/2)*ch+uR;   // 발판 반폭 + 유닛 반경(확장 사각)
-    if(Math.abs(tx-b.x)<Hx && Math.abs(ty-b.y)<Hy) continue;   // 목표가 발판(확장) 안 → 그리로 가는 중이므로 회피 제외
+    // 목표가 발판 안이어도 회피(건물=지형지물) → 안으로 손가락을 눌러도 유닛은 발판에 못 들어가고 가장자리에 섬. 짓는 일꾼(b.eid===e.build)만 위에서 제외됨
     const px=Math.max(b.x-Hx,Math.min(b.x+Hx,e.x)), py=Math.max(b.y-Hy,Math.min(b.y+Hy,e.y));   // 확장 사각 위 최근접점(유닛이 밖이면 경계점)
     let nx=e.x-px, ny=e.y-py, nd=Math.hypot(nx,ny);   // 최근접점→유닛 = 바깥 법선
     if(nd>=BAND) continue;   // 충분히 멀면 무시
     if(nd<1e-5){ nx=(e.x-b.x)||1e-4; ny=(e.y-b.y)||0; nd=Math.hypot(nx,ny)||1e-4; }   // 사각 안(관통) → 중심 반대로
+    anyNear=true; if(nd<nearND){ nearND=nd; nearest=b.eid; }
     const push=(BAND-nd)/BAND; nx/=nd; ny/=nd;
+    const tgtIn=(Math.abs(tx-b.x)<Hx && Math.abs(ty-b.y)<Hy);   // 목표가 이 건물 발판 안(도달 불가)
+    if(tgtIn){ ax+=nx*push*1.3; ay+=ny*push*1.3; continue; }   // 안으로 명령 → 우회 없이 반경 밀기만 → 가장자리에서 멈춤(빙빙 돌지 않음)
     ax+=nx*push*0.8; ay+=ny*push*0.8;   // 발판 바깥으로 밀기(관통 방지) — 접선이 우회를 주도하도록 약하게, 관통은 하드 밀어냄이 보정
     const headOn=Math.max(0,-(nx*dirx+ny*diry));   // 진행방향이 발판 정면일수록 1 → 정체(로컬 미니멈) 위험
     const tanW=1.3+headOn*1.8;   // 정면일수록 접선(옆) 힘을 키워 확실히 우회(벽에 막혀 멈추지 않게)
-    const t1x=-ny, t1y=nx, dot1=t1x*dirx+t1y*diry;   // 접선(발판 변을 따라) — 진행방향에 맞는 쪽으로 미끄러져 돌아감
-    ax+=(dot1>=0?t1x:-t1x)*tanW*push; ay+=(dot1>=0?t1y:-t1y)*tanW*push;
+    const t1x=-ny, t1y=nx, dot1=t1x*dirx+t1y*diry;   // 접선(발판 변을 따라)
+    let side;   // 우회 방향을 한 번 정하면 그 건물을 벗어날 때까지 유지 → 정면에서 좌우로 떨리며 정체(진동)하지 않고 한쪽으로 확실히 돌아감
+    if(e._avBldg===b.eid && e._avSide){ side=e._avSide; } else { side=(dot1>=0)?1:-1; if(b.eid===nearest){ e._avBldg=b.eid; e._avSide=side; } }
+    ax+=side*t1x*tanW*push; ay+=side*t1y*tanW*push;
   }
+  if(!anyNear){ e._avBldg=0; e._avSide=0; }   // 건물 완전히 벗어남 → 우회 방향 초기화(다음 건물은 새로 결정)
   return {sx:ax, sy:ay};
 }
 // 🔧 용접 스파크(엔지니어 일꾼 작업 중) — 오른손 근처에서 작은 불꽃이 튀며 낙하(cvFx에 직접 그림, 공용 FX 코어 무영향)
@@ -10273,6 +10279,17 @@ function techSeparate(){ if(!G.tech||!GW||!GH) return false; const es=G.tech.ent
     for(const it of items){ it.ref.x=Math.max(0.02,Math.min(0.98,it.ref.x)); it.ref.y=Math.max(0.12,Math.min(0.98,it.ref.y)); } }
   for(let i=0;i<items.length;i++){ if(Math.abs(items[i].ref.x-b0[i][0])>1e-9 || Math.abs(items[i].ref.y-b0[i][1])>1e-9) return true; }
   return false; }
+// 건물에 막혀 정체됐는지 판정: near=완성/일시정지 건물의 회피 밴드 안 · targetIn=목표가 그 발판 안(도달 불가) → 우회 지속 여부 결정
+function _techBldgBlockInfo(e){ const race=G.tech.race, cw=_techCW(), ch=_techCH(), GWp=(GW||390);
+  const uR=(((U[_techEntKey(e)]||{}).size||14)*0.62)*(typeof TECH_USCALE!=='undefined'?TECH_USCALE:1)*(typeof TECH_PACK!=='undefined'?TECH_PACK:1)/GWp;
+  let near=false, targetIn=false;
+  for(const b of G.tech.ents){ if(b.type!=='bldg'||b.eid===e.build||(b.bt>0&&!b._bpause)) continue;   // 완성/일시정지 건물만 '벽'
+    const f=(typeof _techFoot==='function')?_techFoot(race,b.bk):{w:2,h:2}, Hx=(f.w/2)*cw+uR, Hy=(f.h/2)*ch+uR;
+    const px=Math.max(b.x-Hx,Math.min(b.x+Hx,e.x)), py=Math.max(b.y-Hy,Math.min(b.y+Hy,e.y));
+    if(Math.hypot(e.x-px,e.y-py)<0.06) near=true;   // 회피 밴드 안
+    if(e.tx!=null && Math.abs(e.tx-b.x)<Hx && Math.abs(e.ty-b.y)<Hy) targetIn=true;   // 목표가 발판 안(도달 불가)
+  }
+  return { near, targetIn }; }
 function _techBldgSide(bd, i){ const race=G.tech.race, f=(typeof _techFoot==='function')?_techFoot(race,bd.bk):{w:2,h:2};   // 건물 상/우/하/좌 지점 — 발판 안쪽(≈0.6배)이라 일꾼이 건물 위에 겹쳐 서고, 반대 면으로 갈 때 건물 중앙을 가로지름
   const hw=(f.w/2)*_techCW()*0.6, hh=(f.h/2)*_techCH()*0.6;
   const sd=[{x:bd.x,y:bd.y-hh},{x:bd.x+hw,y:bd.y},{x:bd.x,y:bd.y+hh},{x:bd.x-hw,y:bd.y}][i%4];   // 상·우·하·좌
@@ -10287,8 +10304,10 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
   for(const e of G.tech.ents){ if((e.type==='unit'||e.type==='worker')&&e.tx!=null){
     const key=_techEntKey(e);
     const r=stepUnitMove(e, {x:e.tx,y:e.ty}, key, key, dt, { GW:GW||390, GH:GH||390, clamp:_clamp, staticN:_staticN, avoidMul:0.16, extraSteer:(dirx,diry)=>_techBldgSteer(e, e.tx, e.ty, dirx, diry, _obst) });   // 회피 반경 ≈ 대형 슬롯 간격(그보다 크면 슬롯에 못 앉고 공전) — 슬롯 안착 후 분리가 최종 정렬
-    if(r.done){ e.tx=null; e.ty=null;
-      if(e.type==='worker'&&e.build!=null){ const bd=G.tech.ents.find(x=>x.eid===e.build); if(bd&&bd.waiting&&Math.hypot(bd.x-e.x,bd.y-e.y)<0.16){ bd.waiting=false; done=true; } } }   // 일꾼 도착 → 건설 시작
+    if(r.done){ const _bi=_techBldgBlockInfo(e), _dT=Math.hypot(e.tx-e.x, e.ty-e.y);
+      if(_bi.near && !_bi.targetIn && _dT>0.03){ e._mvStuck=0; e._mvPrevD=null; }   // 건물에 막혀 정체 & 목표는 도달 가능(발판 밖) → 정착 말고 벽 따라 계속 우회
+      else { e.tx=null; e.ty=null;
+        if(e.type==='worker'&&e.build!=null){ const bd=G.tech.ents.find(x=>x.eid===e.build); if(bd&&bd.waiting&&Math.hypot(bd.x-e.x,bd.y-e.y)<0.16){ bd.waiting=false; done=true; } } } }   // 일꾼 도착 → 건설 시작
     active=true; } }
   // 🔨 건설 중 일꾼: 건물의 상하좌우를 순회하며 여러 곳을 짓는 듯 작업(도착→체류(작업모션)→다음 면)
   for(const e of G.tech.ents){ if(e.type!=='worker'||e.build==null) continue;
@@ -10311,12 +10330,13 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
   for(const bd of G.tech.ents){ if(bd.type!=='bldg'||(bd.bt>0 && !bd._bpause)) continue;
     const f=(typeof _techFoot==='function')?_techFoot(G.tech.race,bd.bk):{w:2,h:2}, fhw=(f.w/2)*_techCW(), fhh=(f.h/2)*_techCH();
     for(const e of G.tech.ents){ if(e.type!=='unit'&&e.type!=='worker') continue;
+      if(e.build===bd.eid) continue;   // 이 건물을 짓는 일꾼만 겹침 허용
       const uR=(((U[_techEntKey(e)]||{}).size||14)*0.62)*(typeof TECH_USCALE!=='undefined'?TECH_USCALE:1)*(typeof TECH_PACK!=='undefined'?TECH_PACK:1)/_GWp;   // 유닛 반경만큼만 바깥으로(발판에 딱 붙어 섬)
       const hw=fhw+uR, hh=fhh+uR;
       const dx=e.x-bd.x, dy=e.y-bd.y; if(Math.abs(dx)>=hw||Math.abs(dy)>=hh) continue;   // 건물 밖
-      const penX=hw-Math.abs(dx), penY=hh-Math.abs(dy), step=Math.min(1,dt*12);   // 슬라이드(빠른 이동 관통 최소화 위해 보정 강화)
+      const penX=hw-Math.abs(dx), penY=hh-Math.abs(dy), step=Math.min(1,dt*14);   // 최소침투 축으로 경계까지 슬라이드(관통 보정만, 속도는 손대지 않음 → 접선 관성 유지해 벽 따라 미끄러져 우회)
       if(dx===0&&dy===0){ e.x+=hw*step; }
-      else if(penX<penY){ e.x+=(dx>=0?1:-1)*penX*step; }   // 좌우 최소침투 방향으로
+      else if(penX<=penY){ e.x+=(dx>=0?1:-1)*penX*step; }   // 좌우 최소침투 방향으로
       else { e.y+=(dy>=0?1:-1)*penY*step; }
       active=true; } }
   if(G.tech.pend&&G.tech.pend.length){ const seen={}; for(let i=G.tech.pend.length-1;i>=0;i--){ const q=G.tech.pend[i]; if(seen[q.bk]){ continue; } seen[q.bk]=1; q.t=Math.max(0,q.t-dt); active=true; if(q.t<=0){ techFinishProduce(q); G.tech.pend.splice(i,1); done=true; } } }
