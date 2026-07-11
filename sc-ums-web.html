@@ -10216,18 +10216,33 @@ function _segInRect(ax,ay,bx,by,R){ const dx=bx-ax, dy=by-ay; let t0=0, t1=1;   
   return mx>R.x0+E && mx<R.x1-E && my>R.y0+E && my<R.y1-E; }
 function _techNavRects(e){ const out=[]; for(const b of G.tech.ents){ if(b.type!=='bldg'||b.eid===e.build) continue; if(b.bt>0&&!b._bpause) continue;   // 벽 = 완성/일시정지 건물(건설 중은 통과 허용, 자기가 짓는 건물 제외)
     const R=_techCollRect(b,e); if(R.x1>R.x0&&R.y1>R.y0) out.push(R); } return out; }
+let _navExcl=null;   // 같은 이동 명령 그룹(eid Set) — 서로를 장애물로 안 봄(_techAssignMove가 설정)
+// 정지 유닛도 자리 차지(유닛 벽): 시작→목표 통로 상자 안의 같은 레이어 정지 유닛을 작은 사각 장애물로 등록
+function _techNavUnitRects(e, sx, sy, tx, ty){ const out=[], GWp=GW||390, GHp=GH||390;
+  const eAir=(typeof _techAirOf==='function')&&_techAirOf(e);
+  const rr=k=>(((U[k]&&U[k].size)||14)*0.62)*(typeof TECH_USCALE!=='undefined'?TECH_USCALE:1)*(typeof TECH_PACK!=='undefined'?TECH_PACK:1);
+  const rM=rr(_techEntKey(e));
+  const bx0=Math.min(sx,tx)-0.25, bx1=Math.max(sx,tx)+0.25, by0=Math.min(sy,ty)-0.25, by1=Math.max(sy,ty)+0.25;   // 통로 상자(경로 주변만 — 성능, 우회 여유 포함)
+  for(const o of G.tech.ents){ if(o===e||(o.type!=='unit'&&o.type!=='worker')||o.tx!=null) continue;   // 정지 유닛만(이동 중은 곧 비켜남)
+    if(((typeof _techAirOf==='function')&&_techAirOf(o))!==eAir) continue;   // 같은 레이어만(지상↔공중 통과)
+    if(_navExcl&&_navExcl.has(o.eid)) continue;   // 같은 명령 그룹 제외
+    if(o.x<bx0||o.x>bx1||o.y<by0||o.y>by1) continue;
+    const rpx=(rr(_techEntKey(o))+rM)*1.05, rx=rpx/GWp, ry=rpx/GHp;
+    out.push({x0:o.x-rx, x1:o.x+rx, y0:o.y-ry, y1:o.y+ry});
+    if(out.length>=64) break; }   // 노드 폭주 방지
+  return out; }
 // 시작→목표 최단 경로(경유점 배열, 마지막=목표). 직선 가능하면 [목표] 하나. 목표가 판정 안이면 가장 가까운 바깥 지점으로 보정
 function _techFindPath(e, tx, ty){
   if(typeof _techAirOf==='function' && _techAirOf(e)) return [{x:tx,y:ty}];   // 공중 = 직선
-  const rects=_techNavRects(e);
+  const bR=_techNavRects(e), uR2=_techNavUnitRects(e, e.x, e.y, tx, ty), rects=bR.concat(uR2);   // 건물 + 정지 유닛(유닛 벽도 우회)
   for(const R of rects){ if(tx>R.x0&&tx<R.x1&&ty>R.y0&&ty<R.y1){ const dl=tx-R.x0, dr=R.x1-tx, dt2=ty-R.y0, db=R.y1-ty, m=Math.min(dl,dr,dt2,db);
-    if(m===dl) tx=R.x0; else if(m===dr) tx=R.x1; else if(m===dt2) ty=R.y0; else ty=R.y1; } }   // 목표 보정(건물 안 명령 → 가장자리)
+    if(m===dl) tx=R.x0; else if(m===dr) tx=R.x1; else if(m===dt2) ty=R.y0; else ty=R.y1; } }   // 목표 보정(장애물 안 명령 → 가장자리)
   const seg=(ax,ay,bx,by)=>{ for(const R of rects){ if(_segInRect(ax,ay,bx,by,R)) return true; } return false; };
   if(!seg(e.x,e.y,tx,ty)) return [{x:tx,y:ty}];   // 직선 가능
-  const nodes=[[e.x,e.y],[tx,ty]];   // 노드 = 시작 + 목표 + 각 사각 꼭짓점(다른 사각 내부·맵 밖 제외)
+  const nodes=[[e.x,e.y],[tx,ty]];   // 노드 = 시작 + 목표 + 각 사각 꼭짓점(+살짝 띄운 꼭짓점 — 벽에 딱 붙지 않은 부드러운 경로용. 밀봉 틈새는 정확한 꼭짓점이 담당)
   const inR=(x,y)=>rects.some(R=>x>R.x0+1e-9&&x<R.x1-1e-9&&y>R.y0+1e-9&&y<R.y1-1e-9);
   for(const R of rects){ for(const p of [[R.x0,R.y0],[R.x1,R.y0],[R.x0,R.y1],[R.x1,R.y1]]){
-    if(p[0]>0.02&&p[0]<0.98&&p[1]>0.12&&p[1]<0.98&&!inR(p[0],p[1])) nodes.push(p); } }
+    if(p[0]>0.02&&p[0]<0.98&&p[1]>0.12&&p[1]<0.98&&!inR(p[0],p[1])) nodes.push(p); } }   // 정확한 꼭짓점(밀봉 틈새 통로 보존) — 이동 부드러움은 경유점 선행 전환이 담당
   const N=nodes.length, gsc=new Array(N).fill(1e9), par=new Array(N).fill(-1), closed=new Array(N).fill(false);
   gsc[0]=0;   // A* (시작=0, 목표=1)
   for(let it=0;it<N;it++){ let cur=-1, best=1e9;
@@ -10242,6 +10257,9 @@ function _techFindPath(e, tx, ty){
   return out.length?out:[{x:tx,y:ty}]; }
 // 유닛을 경로 따라 (x,y)로 보냄 — 경유점 저장 + 첫 경유점을 이동 목표로
 function _techRoute(e, x, y){ const wp=_techFindPath(e, x, y); e._wp=wp; e._rr=0; e.tx=wp[0].x; e.ty=wp[0].y; e._mvStuck=0; e._mvPrevD=null; }
+// (ax,ay)→(bx,by) 직선이 장애물(건물+정지 유닛)에 안 막히는가 — 경유점 선행 전환용
+function _techSegClear(e, ax, ay, bx, by){ const rects=_techNavRects(e).concat(_techNavUnitRects(e, ax, ay, bx, by));
+  for(const R of rects){ if(_segInRect(ax,ay,bx,by,R)) return false; } return true; }
 // 🔧 용접 스파크(엔지니어 일꾼 작업 중) — 오른손 근처에서 작은 불꽃이 튀며 낙하(cvFx에 직접 그림, 공용 FX 코어 무영향)
 function _techEmitWeld(e){ if(!G._weldFx) G._weldFx=[]; if(G._weldFx.length>150) return;
   const s=(typeof _techW2S==='function')?_techW2S(e.x,e.y):null; if(!s) return;   // 일꾼 발 위치(라벨·DOM과 동일 좌표계 — centerN 대신 사용해 위치 정확)
@@ -10298,6 +10316,7 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
   const _staticN=[]; for(const o of G.tech.ents){ if((o.type!=='unit'&&o.type!=='worker')||o.tx!=null) continue; const k=_techEntKey(o); _staticN.push({ref:o, x:o.x, y:o.y, sizeKey:k, airKey:k}); }   // 정지 유닛만(이동 중 유닛끼리는 회피 제외)
   for(const e of G.tech.ents){ if((e.type==='unit'||e.type==='worker')&&e.tx!=null){
     const key=_techEntKey(e);
+    while(e._wp && e._wp.length>1 && Math.hypot(e.tx-e.x,e.ty-e.y)<0.05 && _techSegClear(e, e.x, e.y, e._wp[1].x, e._wp[1].y)){ e._wp.shift(); const _n=e._wp[0]; e.tx=_n.x; e.ty=_n.y; e._mvStuck=0; e._mvPrevD=null; }   // 🏃 경유점 선행 전환(다음 구간이 뚫려 있을 때만): 모퉁이마다 멈췄다 가는 현상 제거 + 좁은 통로에선 지름길 금지
     const r=stepUnitMove(e, {x:e.tx,y:e.ty}, key, key, dt, { GW:GW||390, GH:GH||390, clamp:_clamp, staticN:_staticN, avoidMul:0.16 });
     if(r.done){ const _far=Math.hypot(e.tx-e.x, e.ty-e.y)>0.035;   // 도착이 아니라 막혀서 멈춤(관성 정체)
       if(e._wp && e._wp.length>1){   // 경유점 남음 → 다음 경유점으로(막혔으면 현재 위치 기준 경로 재계산)
@@ -10582,7 +10601,9 @@ function _techAssignMove(wx,wy){ const all=(G.tech.selU||[]).map(id=>G.tech.ents
   air.forEach(e=>{ e.tx=cx; e.ty=cy; e._wp=null; e._rr=0; e._mvStuck=0; e._mvPrevD=null; });
   const gslots=_techRingSlots(ground).map(s=>({x:cX(cx+s.dx/GWp), y:cY(cy+s.dy/GHp), rr:s.dx*s.dx+s.dy*s.dy})).sort((a,b)=>a.rr-b.rr);   // 안쪽 슬롯부터
   const gsorted=ground.slice().sort((a,b)=>(((a.x-cx)*(a.x-cx)+(a.y-cy)*(a.y-cy))-((b.x-cx)*(b.x-cx)+(b.y-cy)*(b.y-cy))));   // 중심에 가까운 유닛부터 → 안쪽 슬롯 배정(군집 가로지르지 않고 안착, 촘촘해도 지터/공전 없음)
-  gsorted.forEach((e,i)=>{ const s=gslots[i]; _techRoute(e, s.x, s.y); }); }   // 지상 = 경로 탐색으로 우회 경로 배정 · 효과음은 다운 1회만(드래그 재지정 스팸 방지)
+  _navExcl=new Set(sel.map(u=>u.eid));   // 같은 명령 그룹은 서로 장애물 아님(순차 배정 중 아직 안 움직인 동료 제외)
+  gsorted.forEach((e,i)=>{ const s=gslots[i]; _techRoute(e, s.x, s.y); });
+  _navExcl=null; }   // 지상 = 경로 탐색으로 우회 경로 배정 · 효과음은 다운 1회만(드래그 재지정 스팸 방지)
 function techPtrDown(ev){ if(!G.tech) return; const r=_btRect(); if(!r) return; if(ev.preventDefault)ev.preventDefault();
   _btPtrs.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
   const sx=(ev.clientX-r.left)/(r.width||1), sy=(ev.clientY-r.top)/(r.height||1);
