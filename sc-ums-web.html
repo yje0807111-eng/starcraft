@@ -10188,16 +10188,19 @@ function techFinishBuild(e){ const b=techGetBldg(G.tech.race,e.bk); if(!b) retur
 function _techSpawnPos(be, uid){ const race=G.tech.race, f=(typeof _techFoot==='function')?_techFoot(race,be.bk):{w:2,h:2}, W=GW||390, H=GH||390;
   const hwp=(f.w/2)*_techCW()*W, hhp=(f.h/2)*_techCH()*H;   // 발판 반폭·반높이(px)
   const uRp=(((U[uid]&&U[uid].size)||14)*0.62)*(typeof TECH_USCALE!=='undefined'?TECH_USCALE:1)*(typeof TECH_PACK!=='undefined'?TECH_PACK:1)*1.69, step=2*uRp;   // 소환 반경(px) — 이동 밀집도는 유지하고 소환만 1.69배(1.3×1.3) 띄움
-  const idx=(be._spawnN=(be._spawnN||0)+1)-1;   // 이 건물의 n번째 소환(0부터)
-  let Hw=hwp+uRp, Hh=hhp+uRp, rem=idx;   // 첫 링: 발판 바로 바깥 사각 테두리(여백 없이 밀착)
-  let perim=2*(2*Hw+2*Hh), cap=Math.max(4,Math.floor(perim/step));
-  while(rem>=cap){ rem-=cap; Hw+=step; Hh+=step; perim=2*(2*Hw+2*Hh); cap=Math.max(4,Math.floor(perim/step)); }   // 안쪽 테두리부터 다 채우면 다음(바깥) 테두리로
-  const cx=be.x*W, cy=be.y*H, t=(rem/cap)*perim, eB=2*Hw, eR=2*Hh, eT=2*Hw; let px, py;   // t=좌하단부터 둘레 거리
-  if(t<eB){ px=cx-Hw+t; py=cy+Hh; }                          // 하단(좌→우)
-  else if(t<eB+eR){ px=cx+Hw; py=cy+Hh-(t-eB); }             // 우측(아래→위)
-  else if(t<eB+eR+eT){ px=cx+Hw-(t-eB-eR); py=cy-Hh; }       // 상단(우→좌)
-  else { px=cx-Hw; py=cy-Hh+(t-eB-eR-eT); }                  // 좌측(위→아래)
-  return { x:Math.max(0.04,Math.min(0.96,px/W)), y:Math.max(0.14,Math.min(0.96,py/H)) }; }
+  const cx=be.x*W, cy=be.y*H;
+  const posAt=(idx)=>{ let Hw=hwp+uRp, Hh=hhp+uRp, rem=idx, perim=2*(2*Hw+2*Hh), cap=Math.max(4,Math.floor(perim/step));   // 좌하단→반시계 idx번째 슬롯(px)
+    while(rem>=cap){ rem-=cap; Hw+=step; Hh+=step; perim=2*(2*Hw+2*Hh); cap=Math.max(4,Math.floor(perim/step)); }   // 안쪽 테두리부터 다 채우면 다음(바깥) 테두리로
+    const t=(rem/cap)*perim, eB=2*Hw, eR=2*Hh, eT=2*Hw; let px, py;
+    if(t<eB){ px=cx-Hw+t; py=cy+Hh; }                          // 하단(좌→우)
+    else if(t<eB+eR){ px=cx+Hw; py=cy+Hh-(t-eB); }             // 우측(아래→위)
+    else if(t<eB+eR+eT){ px=cx+Hw-(t-eB-eR); py=cy-Hh; }       // 상단(우→좌)
+    else { px=cx-Hw; py=cy-Hh+(t-eB-eR-eT); }                  // 좌측(위→아래)
+    return { px, py }; };
+  const occ=G.tech.ents.filter(e=>e.type==='unit'||e.type==='worker'), occR2=(uRp*0.9)*(uRp*0.9);   // 슬롯 반경 안에 유닛 있으면 점유로 간주
+  let sp=posAt(0);   // 좌하단→반시계로 스캔해 '비어있는 첫 슬롯'에 소환 → 유닛을 치우면 그 앞 슬롯부터 다시 채움(카운터 이어가기 X)
+  for(let idx=0; idx<400; idx++){ const p=posAt(idx); if(!occ.some(u=>{ const ddx=u.x*W-p.px, ddy=u.y*H-p.py; return ddx*ddx+ddy*ddy<occR2; })){ sp=p; break; } }
+  return { x:Math.max(0.04,Math.min(0.96,sp.px/W)), y:Math.max(0.14,Math.min(0.96,sp.py/H)) }; }
 function techFinishProduce(q){ const race=G.tech.race; G.tech.units[q.id]=(G.tech.units[q.id]||0)+1; if(q.supply) G.tech.supCap+=q.supply;
   const be=G.tech.ents.find(e=>e.type==='bldg'&&e.bk===q.bk), p=be?_techSpawnPos(be,q.id):{x:0.5,y:0.6}, _ex=p.x, _ey=p.y;
   const _isWk=(q.id===(TECH_WORKER[race]||'worker_human'));   // 생산된 일꾼도 초기 일꾼과 동일한 type:'worker'(건설 가능)
@@ -10526,7 +10529,7 @@ const _btPtrs=new Map(); let _btPinch=null, _btBox=null, _btCmd=null, _btMoved=f
 function _btRect(){ const m=document.getElementById('cstMain'); return m?m.getBoundingClientRect():null; }
 // 충돌 반경 기반 동심원 대형 슬롯(메인 assignFormation과 동일 공식)
 function _techRingSlots(list){ const slots=[{dx:0,dy:0}]; if(list.length<=1) return slots;
-  const r=(list.reduce((a,e)=>a+((U[_techEntKey(e)]||{}).size||14)*0.62,0)/list.length)*1.6*(typeof TECH_USCALE!=='undefined'?TECH_USCALE:1);   // 대형 슬롯 간격 = 축소 유닛에 맞춰 촘촘(원래 2.1→1.6·×0.5). 분리 최소간격보단 넉넉해 슬롯에 안착(지터 방지)
+  const r=(list.reduce((a,e)=>a+((U[_techEntKey(e)]||{}).size||14)*0.62,0)/list.length)*2.2*(typeof TECH_USCALE!=='undefined'?TECH_USCALE:1);   // 대형 슬롯 간격(이동 시 서로 붙지 않게 넉넉히 · ×0.5 축소 반영). 분리 최소간격보다 크게 → 슬롯에 안착(지터 방지)
   let ring=1; while(slots.length<list.length){ const n=Math.floor(Math.PI*2*ring*0.9)||6;
     for(let k=0;k<n&&slots.length<list.length;k++){ const a=(k/n)*Math.PI*2+ring*0.5; slots.push({dx:Math.cos(a)*ring*r, dy:Math.sin(a)*ring*r}); } ring++; }
   return slots; }
