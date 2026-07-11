@@ -10371,6 +10371,9 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
         if(dp>=cpx) continue;
         if(dp<0.01){ dxp=1; dyp=0; dp=1; }   // 정확히 겹침 → 옆으로
         e.x=o.x+(dxp/dp)*cpx/GWp; e.y=o.y+(dyp/dp)*cpx/GHp;   // 접촉 거리까지 즉시 밀어냄
+        const nX=dxp/dp, nY=dyp/dp, vdx=e.vx||0, vdy=e.vy||0, rad=nX*vdx+nY*vdy;   // rad<0 = 정지 유닛 쪽으로 향하는 속도 성분
+        if(rad<0){ const tX=-nY, tY=nX, sgn=((tX*vdx+tY*vdy)>=0)?1:-1;   // 🫸 어깨 스침: 막힌 정면 성분을 접선으로 전환 → 밀리며 정체(_mvStuck 정지) 없이 옆으로 흘러 지나감
+          e.vx=vdx-nX*rad+sgn*tX*(-rad)*0.85; e.vy=vdy-nY*rad+sgn*tY*(-rad)*0.85; }
         for(const bd2 of G.tech.ents){ if(bd2.type!=='bldg'||(bd2.bt>0&&!bd2._bpause)||e.build===bd2.eid) continue;   // 밀어낸 자리가 건물 안이면 다시 경계로
           const R2=_techCollRect(bd2,e); if(R2.x1<=R2.x0||R2.y1<=R2.y0) continue;
           if(e.x<=R2.x0||e.x>=R2.x1||e.y<=R2.y0||e.y>=R2.y1) continue;
