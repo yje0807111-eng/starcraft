@@ -10122,11 +10122,11 @@ TECH_SPEC.swarm={   // 저그: 건물 자동재생·유닛 자동재생(점막),
 };
 TECH_SPEC.aetherial={   // 프로토스: 건물·유닛 실드 자동재생(기본 방어 0, 건물 방어 1)
   bldg:{ nexus:{hp:750,sh:750,ar:1,size:[4,3],t:120}, pylon:{hp:300,sh:300,ar:1,size:[2,2],t:30}, assimilator:{hp:450,sh:450,ar:1,size:[4,2],t:40},
-    forge:{hp:550,sh:550,ar:1,size:[2,2],t:40}, cannon:{hp:100,sh:100,ar:1,size:[2,2],t:50,atk:20},
-    gateway:{hp:500,sh:500,ar:1,size:[3,2],t:60}, battery:{hp:200,sh:200,ar:1,size:[2,2],t:30}, cyber:{hp:500,sh:500,ar:1,size:[3,2],t:60},
-    citadel:{hp:450,sh:450,ar:1,size:[3,2],t:60}, archives:{hp:500,sh:500,ar:1,size:[3,2],t:60},
-    robo:{hp:500,sh:500,ar:1,size:[3,2],t:80}, robobay:{hp:450,sh:450,ar:1,size:[3,2],t:30}, observatory:{hp:250,sh:250,ar:1,size:[2,2],t:30},
-    stargate:{hp:600,sh:600,ar:1,size:[3,2],t:70}, fleet:{hp:500,sh:500,ar:1,size:[3,2],t:60}, tribunal:{hp:500,sh:500,ar:1,size:[3,2],t:60} },
+    forge:{hp:550,sh:550,ar:1,size:[3,3],t:40}, cannon:{hp:100,sh:100,ar:1,size:[2,2],t:50,atk:20},
+    gateway:{hp:500,sh:500,ar:1,size:[4,3],t:60}, battery:{hp:200,sh:200,ar:1,size:[2,2],t:30}, cyber:{hp:500,sh:500,ar:1,size:[3,3],t:60},
+    citadel:{hp:450,sh:450,ar:1,size:[3,3],t:60}, archives:{hp:500,sh:500,ar:1,size:[3,3],t:60},
+    robo:{hp:500,sh:500,ar:1,size:[3,3],t:80}, robobay:{hp:450,sh:450,ar:1,size:[3,3],t:30}, observatory:{hp:250,sh:250,ar:1,size:[3,2],t:30},
+    stargate:{hp:600,sh:600,ar:1,size:[4,3],t:70}, fleet:{hp:500,sh:500,ar:1,size:[3,3],t:60}, tribunal:{hp:500,sh:500,ar:1,size:[3,3],t:60} },
   unit:{
     worker_light:{hp:20,ar:0,sh:20,atk:5,at:'norm',rng:1,t:20,abil:'건물 소환'},
     blade:{hp:100,ar:1,sh:60,atk:16,at:'norm',rng:1,t:40,abil:'발업(다리 강화)'},
@@ -10436,8 +10436,12 @@ const TECH_COLL_YUP=0.7;   // 건물 이동충돌 사각을 발판 대비 위로
 // ── 🧱 스타1식 심시티(길막) — 유니온 한정: 건물 그룹별 비대칭 판정 껍질 + 유닛 통과 등급 ──
 // 공식(가이드 재현): A↖+B↘ 붙이면 완전 밀봉(1등급도 불가) · B↖+A↘ = 1~2등급만 통과 · A+A, B+B = 1~2등급만 통과 · 1타일 띄우면 4등급도 통과
 const TECH_SIM_GROUP={ command:'A',barracks:'A',engbay:'A',factory:'A',starport:'A',scifac:'A',refinery:'A',
-  supply:'B',academy:'B',bunker:'B',armory:'B', turret:'C',comsat:'C',nuke:'C',machshop:'C',control:'C',covert:'C',physics:'C' };   // A=대형(4x3+리파이너리) B=중형(3x2) C=소형·애드온(2x2)
-const TECH_SIM_MG={ A:{l:0.35,t:0.35,r:0,b:0}, B:{l:0.18,t:0.18,r:0.18,b:0.18}, C:{l:0.18,t:0.18,r:0.18,b:0.18} };   // 판정 여백(셀) — A는 오른쪽/아래 판정이 두꺼움(여백 0, 스타1 엔진 비대칭)
+  supply:'B',academy:'B',bunker:'B',armory:'B', turret:'C',comsat:'C',nuke:'C',machshop:'C',control:'C',covert:'C',physics:'C',   // 유니온: A=대형(4x3+리파이너리) B=중형(3x2) C=소형·애드온(2x2)
+  nexus:'pA',gateway:'pA',stargate:'pA',assimilator:'pA',   // 에테리얼: pA=대형(4x3+어시밀레이터)
+  forge:'pB',cyber:'pB',citadel:'pB',archives:'pB',robo:'pB',robobay:'pB',fleet:'pB',tribunal:'pB',observatory:'pB',   // pB=테크(3x3·옵저버터리 3x2)
+  pylon:'pC',cannon:'pC',battery:'pC' };   // pC=소형(2x2)
+const TECH_SIM_MG={ A:{l:0.35,t:0.35,r:0,b:0}, B:{l:0.18,t:0.18,r:0.18,b:0.18}, C:{l:0.18,t:0.18,r:0.18,b:0.18},   // 유니온 판정 여백(셀) — A는 오른쪽/아래 판정이 두꺼움(여백 0, 스타1 엔진 비대칭)
+  pA:{l:0.55,t:0.55,r:0.15,b:0.15}, pB:{l:0.6,t:0.6,r:0.2,b:0.2}, pC:{l:0.05,t:0.05,r:0.2,b:0.2} };   // 에테리얼 — 공식: pA+pB=질럿 구멍(0.75, 3등급까지 통과·4등급 차단) · pA↖pC↘=완전 밀봉(0.20) · pC↖pA↘=틈(0.75) · pB+pB=질럿 구멍(0.8) · pC+pC=저글링만(0.25)
 const TECH_GAP_GRADE={ ghost:1,snapper:1,broodling:1, marine:2,medic:2,high_templar:2,
   machinegun:3,worker_human:3,worker_swarm:3,worker_light:3,blade:3,hydra:3,dark_templar:3,
   racer:4,tank:4,goliath:4,dragoon:4,archon:4,larva:4,thornqueen:4,medusa:4,ultralisk:4 };   // 유닛 통과 등급(1=팬텀급 초소형 … 4=차량·대형). 미지정 지상유닛=3
@@ -10448,7 +10452,7 @@ function _techMg(bk){ return TECH_SIM_MG[TECH_SIM_GROUP[bk]||'B']; }
 function _techCollRect(b, e){ const race=G.tech.race, cw=_techCW(), ch=_techCH(), f=(typeof _techFoot==='function')?_techFoot(race,b.bk):{w:2,h:2};
   const bcy=b.y-ch*(typeof TECH_COLL_YUP!=='undefined'?TECH_COLL_YUP:0), hx=(f.w/2)*cw, hy=(f.h/2)*ch;
   let mg, cr;   // mg=판정 여백(셀) · cr=유닛 통과 반경(셀)
-  if(race==='union'){ mg=_techMg(b.bk); cr=TECH_GRADE_D[_techGrade(_techEntKey(e))]/2; }
+  if(race==='union'||race==='aetherial'){ mg=_techMg(b.bk); cr=TECH_GRADE_D[_techGrade(_techEntKey(e))]/2; }   // 심시티 판정(유니온+에테리얼)
   else { const uRw=(((U[_techEntKey(e)]||{}).size||14)*0.62)*(typeof TECH_USCALE!=='undefined'?TECH_USCALE:1)*(typeof TECH_PACK!=='undefined'?TECH_PACK:1)/(GW||390); mg={l:0,t:0,r:0,b:0}; cr=uRw/cw; }
   return { x0:b.x-hx+(mg.l-cr)*cw, x1:b.x+hx-(mg.r-cr)*cw, y0:bcy-hy+(mg.t-cr)*ch, y1:bcy+hy-(mg.b-cr)*ch }; }
 function _techEntModel(e){ if(!e) return null; if(e.type==='worker') return (TECH_WORKER[G.tech.race]||'worker_human'); if(e.type==='unit') return e.uid; return null; }   // 엔티티 → 3D 모델 키
@@ -10523,8 +10527,9 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
     resumeBtn='<div class="bArmBtns" style="left:'+(_rs.x*100).toFixed(2)+'%;top:'+(_rs.y*100).toFixed(2)+'%" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()"><button class="bArmBtn ok" onclick="techResumeBuild(event)" title="재개"><svg viewBox="0 0 24 24" width="15" height="15" style="display:block"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button><button class="bArmBtn cancel" onclick="techDemolishBuild(event)" title="철거">✕</button></div>'; } }   // 재개(▶) + 철거(✕) — 단순 아이콘
   const hint=G.tech.arm?('📍 '+((techGetBldg(race,G.tech.arm)||{}).name)+(G.tech.armXY?' — 드래그로 위치 조정 후 ✓ 확정':' — 지을 곳을 탭하세요')):((G.tech.selU&&G.tech.selU.length)?('👥 '+G.tech.selU.length+'기 지정 — 탭/드래그로 이동 · 해제는 우상단 ✕'):(G.tech.sel==null?'일꾼 탭=건설 메뉴 · 드래그=유닛 지정 · 두 손가락=화면 이동':'건물을 탭하면 하단 시트에 생산·연구가 표시됩니다'));
   const _floor='<div class="bmapFloor" style="transform:'+_techViewCSS()+'"></div>';   // 바닥 = 메인맵과 동일한 뷰 변환(_techViewCSS = viewApply의 CSS판)
-  let gasZone='';   // ⛽ 가스 광산 구역(고정 지형) — 줌/팬 따라 이동, 가스 건물 배치 중이면 강조
-  { const _gcw=_techCW(), _gch=_techCH();
+  let gasZone='';   // ⛽ 가스 광산 구역(고정 지형) — 줌/팬 따라 이동, 가스 건물 배치 중이면 강조. 가스 건물이 서 있으면 숨김(겹쳐 보임 방지)
+  const _gasBuilt=G.tech.ents.some(e=>e.type==='bldg'&&((techGetBldg(race,e.bk)||{}).gas));
+  if(!_gasBuilt){ const _gcw=_techCW(), _gch=_techCH();
     const _gtl=_techW2S(TECH_GRID.x0+TECH_GAS.c0*_gcw, TECH_GRID.y0+TECH_GAS.r0*_gch), _gbr=_techW2S(TECH_GRID.x0+(TECH_GAS.c0+TECH_GAS.w)*_gcw, TECH_GRID.y0+(TECH_GAS.r0+TECH_GAS.h)*_gch);
     const _gArm=!!(G.tech.arm && (techGetBldg(race,G.tech.arm)||{}).gas);
     gasZone='<div class="bGasZone'+(_gArm?' hot':'')+'" style="left:'+(_gtl.x*100).toFixed(2)+'%;top:'+(_gtl.y*100).toFixed(2)+'%;width:'+((_gbr.x-_gtl.x)*100).toFixed(2)+'%;height:'+((_gbr.y-_gtl.y)*100).toFixed(2)+'%"><span class="gzIco">💨</span><span class="gzLbl">가스 광산</span></div>'; }
