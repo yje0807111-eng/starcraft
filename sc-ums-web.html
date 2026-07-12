@@ -1015,6 +1015,11 @@
   .bGasFx i:nth-child(4){left:-4px;animation-delay:1.02s}
   .bGasFx i:nth-child(5){left:2px;animation-delay:1.36s}
   @keyframes bGasSmoke{0%{transform:translateY(5px) scale(.5);opacity:0}20%{opacity:.92}100%{transform:translateY(-24px) scale(1.55);opacity:0}}
+  .bent .carryOre{position:absolute;left:64%;top:-5px;font-size:9px;line-height:1;pointer-events:none;z-index:3;   /* 🎒 운반 중 광물 덩어리(손 위치쯤, 살짝 들썩) */
+    filter:drop-shadow(0 0 3px rgba(120,200,255,.85));animation:carryBob .5s ease-in-out infinite alternate}
+  .bent i.carryOre{width:7px;height:7px;display:block}
+  .bent .carryOre.gas{border-radius:50%;background:radial-gradient(circle at 35% 30%,#d2ffe2,#41d772 58%,#1d8342);filter:drop-shadow(0 0 3px rgba(110,240,150,.85))}
+  @keyframes carryBob{from{transform:translate(-50%,0)}to{transform:translate(-50%,2.2px)}}
   .bPsi{position:absolute;z-index:2;pointer-events:none;border-radius:50%;border:1.5px dashed rgba(110,170,255,.55);   /* 🔵 파일런 동력장(배치 중 표시) */
     background:radial-gradient(ellipse at 50% 50%,rgba(90,150,255,.16),rgba(70,120,230,.08) 60%,rgba(50,90,200,.03) 82%,transparent)}
   .bPsi.new{border-color:rgba(150,205,255,.85);background:radial-gradient(ellipse at 50% 50%,rgba(110,170,255,.24),rgba(85,140,240,.12) 60%,rgba(60,100,210,.05) 82%,transparent)}   /* 예비 파일런의 미래 동력장(강조) */
@@ -10418,14 +10423,14 @@ function _techReleaseGather(w){ for(const m of (G.tech.minerals||[])){ if(m.owne
 // 자원 상자(미네랄 1×1 / 가스건물 발판) 가장자리에 딱 붙는 채취 지점 — 이상적으로는 (fromX,fromY) 쪽 면,
 // 그 면이 옆 미네랄에 막혀 있으면 막히지 않은(열린) 바깥 면으로 → 인접 미네랄은 돌아가서 캠
 function _techMineSpot(res, fromX, fromY){ const cw=_techCW(), ch=_techCH();
-  let hw, hh, others=[];
-  if(res.bk){ const f=_techFoot(G.tech.race,res.bk); hw=(f.w/2)*cw; hh=(f.h/2)*ch; }
+  let hw, hh, others=[], cx0=res.x, cy0=res.y;
+  if(res.bk){ const R=_techCollRect(res,{type:'worker'}); cx0=(R.x0+R.x1)/2; cy0=(R.y0+R.y1)/2; hw=Math.max(0.001,(R.x1-R.x0)/2); hh=Math.max(0.001,(R.y1-R.y0)/2); }   // 건물=이동충돌 사각 기준(발판보다 크고 위로 시프트) → 밀려나지 않는 진짜 닿는 면
   else { const ex=TECH_MINE_EXP*cw, ey=TECH_MINE_EXP*ch; hw=0.5*cw+ex; hh=0.5*ch+ey; others=(G.tech.minerals||[]).filter(m=>m!==res); }
   const uRp=(((U[TECH_WORKER[G.tech.race]]||{}).size||14)*0.62)*((typeof TECH_USCALE!=='undefined'?TECH_USCALE:1))*((typeof TECH_PACK!=='undefined'?TECH_PACK:1))*0.7;
   const gx=uRp/(GW||390), gy=uRp/(GH||390), bx=0.5*cw+TECH_MINE_EXP*cw, by=0.5*ch+TECH_MINE_EXP*ch;
-  let dx=fromX-res.x, dy=fromY-res.y; if(Math.abs(dx)<1e-6&&Math.abs(dy)<1e-6) dy=1;
+  let dx=fromX-cx0, dy=fromY-cy0; if(Math.abs(dx)<1e-6&&Math.abs(dy)<1e-6) dy=1;
   const ideal=Math.atan2(dy,dx);
-  const spotAt=(a)=>{ const ca=Math.cos(a), sa=Math.sin(a), tX=Math.abs(ca)>1e-6?hw/Math.abs(ca):1e9, tY=Math.abs(sa)>1e-6?hh/Math.abs(sa):1e9, t=Math.min(tX,tY); return { x:res.x+ca*t+ca*gx, y:res.y+sa*t+sa*gy }; };
+  const spotAt=(a)=>{ const ca=Math.cos(a), sa=Math.sin(a), tX=Math.abs(ca)>1e-6?hw/Math.abs(ca):1e9, tY=Math.abs(sa)>1e-6?hh/Math.abs(sa):1e9, t=Math.min(tX,tY); return { x:cx0+ca*t+ca*gx, y:cy0+sa*t+sa*gy }; };
   const blocked=(s)=> others.some(m=> s.x>m.x-bx && s.x<m.x+bx && s.y>m.y-by && s.y<m.y+by);   // 다른 미네랄 상자 안이면 막힘
   for(let i=0;i<8;i++){ const a=ideal + (i%2?1:-1)*Math.ceil(i/2)*(Math.PI/4); const s=spotAt(a); if(!blocked(s)) return s; }   // ideal 방향부터 ±45,±90,±135,180 순으로 열린 면 채택
   return spotAt(ideal); }   // 다 막히면 폴백
@@ -10467,24 +10472,28 @@ function _techGatherTick(dt){ let dep=false, any=false;
     any=true;
     if(w._gSt==='go'){
       if(!w._gSpot) _techGatherGoto(w,res,{x:w.x,y:w.y});
-      const d=Math.hypot(w._gSpot.x-w.x, w._gSpot.y-w.y);
-      if(d<=0.032){ const miner=(w._gKind==='mineral')?res.miner:res._gasWorker;   // 채취 지점 도착 → 채취락(1마리씩)
-        if(miner==null||miner===w.eid){ if(w._gKind==='mineral') res.miner=w.eid; else { res._gasWorker=w.eid; w._inGas=true; } w._gSt='mine'; w._gT=(w._gKind==='gas'?TECH_GAS_T:TECH_MINE_T); w.tx=null; w.ty=null; w._wp=null; w.x=w._gSpot.x; w.y=w._gSpot.y; w._working=true; }   // 지점 스냅=딱 붙음 · 가스=건물 안으로 진입(숨김)
-        else { w.tx=null; w.ty=null; w._wp=null; w._working=false; w.x=w._gSpot.x; w.y=w._gSpot.y; } }   // 선점됨 → 그 지점에 겹쳐 대기(교대·유령이라 뭉침)
-      else if(w.tx==null) _techRoute(w, w._gSpot.x, w._gSpot.y); }
+      const gdx=w._gSpot.x-w.x, gdy=w._gSpot.y-w.y, d=Math.hypot(gdx,gdy);
+      if(d<=0.008){ const miner=(w._gKind==='mineral')?res.miner:res._gasWorker;   // 채취 지점 도착 → 채취락(1마리씩). 스냅 없음(걸어서 이미 붙음)
+        if(miner==null||miner===w.eid){ if(w._gKind==='mineral') res.miner=w.eid; else { res._gasWorker=w.eid; w._inGas=true; } w._gSt='mine'; w._gT=(w._gKind==='gas'?TECH_GAS_T:TECH_MINE_T); w.tx=null; w.ty=null; w._wp=null; w._working=true; }
+        else { w.tx=null; w.ty=null; w._wp=null; w._working=false; const k2=Math.min(1,dt*6); w.x+=gdx*k2; w.y+=gdy*k2; } }   // 선점됨 → 스르륵 모여 겹쳐 대기(교대·유령)
+      else if(w.tx==null){ if(d<=0.07){ const st=Math.min(d,0.42*dt); w.x+=gdx/d*st; w.y+=gdy/d*st; w.face=Math.atan2(gdx,gdy); }   // 경로 종료 후 남은 거리 = 걷는 속도 그대로 마저 붙음(순간이동 X)
+        else _techRoute(w, w._gSpot.x, w._gSpot.y); } }
     else if(w._gSt==='mine'){ w._working=true; const fx=res.x-w.x, fy=res.y-w.y; if(fx*fx+fy*fy>1e-6) w.face=Math.atan2(fx,fy);
+      if(w._gSpot){ const k2=Math.min(1,dt*10); w.x+=(w._gSpot.x-w.x)*k2; w.y+=(w._gSpot.y-w.y)*k2; }   // 채취 중 지점에 부드럽게 정착
       w._gT-=dt;
       if(w._gT<=0){ if(w._gKind==='mineral'){ if(res.miner===w.eid) res.miner=null; } else { if(res._gasWorker===w.eid) res._gasWorker=null; w._inGas=false; }   // 채취 완료 → 채취락 반환·운반(가스=건물서 나옴)
         w._carry=true; w._gSt='back'; w._working=false; if(mainB){ w._gBaseSpot=_techMineSpot(mainB, w.x, w.y); _techRoute(w, w._gBaseSpot.x, w._gBaseSpot.y); } } }   // 본진 가장자리 딱 붙는 지점으로
     else if(w._gSt==='back'){ if(!mainB) continue;
       if(!w._gBaseSpot) w._gBaseSpot=_techMineSpot(mainB, w.x, w.y);
-      const bfx=mainB.x-w.x, bfy=mainB.y-w.y; if(bfx*bfx+bfy*bfy>1e-6) w.face=Math.atan2(bfx,bfy);   // 건물을 향해(넣는 자세)
-      if(Math.hypot(w._gBaseSpot.x-w.x, w._gBaseSpot.y-w.y)<=0.032){   // 건물에 딱 붙어 도착 → 적립
-        w.x=w._gBaseSpot.x; w.y=w._gBaseSpot.y; w.tx=null; w.ty=null; w._wp=null;   // 건물에 딱 붙게 스냅(멀리서 안 넣음)
+      const bdx=w._gBaseSpot.x-w.x, bdy=w._gBaseSpot.y-w.y, bD=Math.hypot(bdx,bdy);
+      if(bD<=0.03){ const bfx=mainB.x-w.x, bfy=mainB.y-w.y; if(bfx*bfx+bfy*bfy>1e-6) w.face=Math.atan2(bfx,bfy); }   // 붙었을 때만 건물을 응시(넣는 자세)
+      if(bD<=0.008){   // 건물에 딱 붙어 도착 → 적립(스냅 없음 — 걸어서 이미 붙음)
+        w.tx=null; w.ty=null; w._wp=null;
         if(w._gKind==='mineral'){ if(!G.tech.inf) G.tech.credit+=TECH_GATHER_AMT; res.amount=Math.max(0,res.amount-TECH_GATHER_AMT); }
         else { if(!G.tech.inf) G.tech.energy+=TECH_GATHER_AMT; }
-        dep=true; w._carry=false; w._gDep=true; w._gBaseSpot=null; _techGatherGoto(w,res,{x:mainB.x,y:mainB.y}); }   // 이후엔 본진↔자원 최단거리(본진 쪽 면)에서 채취
-      else if(w.tx==null) _techRoute(w, w._gBaseSpot.x, w._gBaseSpot.y); } }
+        dep=true; w._carry=false; w._gDep=true; w._gBaseSpot=null; _techGatherGoto(w,res,{x:mainB.x,y:mainB.y}); }   // 바로 뒤돌아 다음 왕복(끊김 없음) — 이후엔 본진↔자원 최단거리 면
+      else if(w.tx==null){ if(bD<=0.07){ const st=Math.min(bD,0.42*dt); w.x+=bdx/bD*st; w.y+=bdy/bD*st; w.face=Math.atan2(bdx,bdy); }   // 경로 종료 후 남은 거리 = 걷는 속도 그대로 마저 붙음
+        else _techRoute(w, w._gBaseSpot.x, w._gBaseSpot.y); } } }
   return { any, dep }; }
 function techTick(dt){ if(!G.tech) return; let active=false, done=false;
   const _vmoving=techViewTick(dt);   // 🎥 부드러운 줌/팬 보간(메인맵과 동일) — 애니메이션 중이면 매 프레임 재렌더
@@ -10719,7 +10728,8 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
     else if(e.type==='worker'||e.type==='unit'){ const _mk=_techEntModel(e);
       const _h3=!!(window.M3D&&M3D.ready&&M3D.ready()&&_mk&&M3D.hasModel&&M3D.hasModel(_mk)&&!(G.opt&&G.opt.model3d===false));   // 3D 모델 로드 완료 시 DOM은 빈 앵커, 아니면 초상화 폴백
       cls=(e.type==='worker'?'worker':'unit')+(_h3?' live3d':'');
-      inner=_h3?((e.type==='worker'&&e.build!=null)?'<span style="position:absolute;left:50%;top:-8px;transform:translateX(-50%);font-size:13px">🔨</span>':''):(e.type==='worker'?'<span class="be-ico">👷</span>':_techUnitPortrait(e.uid)); }
+      const _ore=(e.type==='worker'&&e._carry)?(e._gKind==='gas'?'<i class="carryOre gas"></i>':'<span class="carryOre">💎</span>'):'';   // 🎒 운반 중 = 작은 광물/가스 덩어리를 들고 이동
+      inner=(_h3?((e.type==='worker'&&e.build!=null)?'<span style="position:absolute;left:50%;top:-8px;transform:translateX(-50%);font-size:13px">🔨</span>':''):(e.type==='worker'?'<span class="be-ico">👷</span>':_techUnitPortrait(e.uid)))+_ore; }
     const _seld=(G.tech.sel===e.eid)||(G.tech.selU&&G.tech.selU.indexOf(e.eid)>=0);
     const _s=_techW2S(e.x,e.y); ents+='<div class="bent '+cls+(_seld?' sel':'')+'" style="left:'+(_s.x*100).toFixed(2)+'%;top:'+(_s.y*100).toFixed(2)+'%;transform:translate(-50%,-50%) scale('+techView().zoom.toFixed(2)+')">'+inner+'</div>'; }
   if(_btBox && _btBox.active){ const bx=Math.min(_btBox.sx0,_btBox.sx1),by=Math.min(_btBox.sy0,_btBox.sy1),bw=Math.abs(_btBox.sx1-_btBox.sx0),bh=Math.abs(_btBox.sy1-_btBox.sy0);   // 🔲 한 손가락 드래그 = 유닛 지정 박스
