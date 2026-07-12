@@ -1431,7 +1431,7 @@
   .cmdG .cgGasAuto .gaN{min-width:12px;text-align:center;font:800 13px/1 'Rajdhani',sans-serif;color:#dff7e6}
   .cmdG .cgBody{display:flex;gap:8px;align-items:stretch;flex:1;min-height:0}
   /* 좌측 보조 정보 */
-  .cmdG .cgInfo{flex:0 0 29%;max-width:150px;min-width:104px;display:flex;flex-direction:column;gap:4px;padding:7px 8px;overflow:hidden;
+  .cmdG .cgInfo{flex:0 0 35%;max-width:176px;min-width:120px;display:flex;flex-direction:column;gap:4px;padding:7px 8px;overflow:hidden;
     background:linear-gradient(160deg,rgba(18,23,34,.42),rgba(6,9,14,.5));border:1px solid var(--glass);border-radius:9px}
   .cmdG .cgEb{font:800 8px/1 sans-serif;letter-spacing:1px;color:var(--cgMuted)} .cmdG .cgDn{font-size:var(--fs-md);font-weight:800;color:#eaf1fb;line-height:1.15;word-break:keep-all}
   .cmdG .cgDd{font-size:9.5px;color:var(--cgDim);line-height:1.4;overflow:hidden}
@@ -1446,13 +1446,13 @@
   .cmdG .cgDcost{display:flex;align-items:center;gap:5px;margin-top:auto;padding-top:2px;font-family:'Rajdhani',sans-serif;font-weight:800;font-size:11.5px;flex-wrap:wrap}
   .cmdG .cgDcost .time{color:var(--cgMuted);font-size:9.5px;width:100%}
   /* 🔢 생산 대기열(최대 5) — 왼쪽 정보 영역. 앞 칸=진행바, 탭=취소(100% 환불) */
-  .cmdG .cgQ{display:flex;gap:3px;margin-top:2px} .cmdG .cgQlbl{font:800 8px/1 sans-serif;letter-spacing:.5px;color:var(--cgMuted);margin-top:2px}
-  .cmdG .cgQ .qs{flex:1;aspect-ratio:1;border-radius:5px;background:rgba(0,0,0,.42);border:1px solid var(--glass);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+  .cmdG .cgQ{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:1fr;gap:4px;margin-top:3px;flex:1;min-height:0} .cmdG .cgQlbl{font:800 8px/1 sans-serif;letter-spacing:.5px;color:var(--cgMuted);margin-top:2px}
+  .cmdG .cgQ .qs{border-radius:6px;background:rgba(0,0,0,.42);border:1px solid var(--glass);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
   .cmdG .cgQ .qs.empty{opacity:.32;background:rgba(0,0,0,.22)}
   .cmdG .cgQ .qs.front{border-color:var(--ca);box-shadow:0 0 6px var(--caG)}
   .cmdG .cgQ .qs.rdy{border-color:#46f06a;background:rgba(70,240,106,.16);box-shadow:0 0 5px rgba(70,240,106,.35)}
-  .cmdG .cgQ .qs .qpro{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:12px;line-height:1}
-  .cmdG .cgQ .qs .qpro>*{max-width:100%;max-height:100%} .cmdG .cgQ .qs .qpro .pemoji{font-size:13px}
+  .cmdG .cgQ .qs .qpro{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:16px;line-height:1}
+  .cmdG .cgQ .qs .qpro>*{max-width:100%;max-height:100%} .cmdG .cgQ .qs .qpro img{width:100%;height:100%;object-fit:cover} .cmdG .cgQ .qs .qpro .pemoji{font-size:22px}
   .cmdG .cgQ .qs .qb{position:absolute;left:0;bottom:0;height:3px;background:var(--ca);box-shadow:0 0 5px var(--caG);transition:width .12s linear}
   /* 그리드(주역) + 페이저 */
   .cmdG .cgCol{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
@@ -10790,7 +10790,7 @@ function techBldgProdModel(b, e){ const race=G.tech.race;
   const queue=[]; for(let i=0;i<5;i++){ const q=pq[i]; queue.push(q?{pro:_techUnitPortrait(q.id), front:i===0, prog:i===0?Math.round((1-q.t/(q.tMax||1))*100):0}:null); }
   const front=pq[0]; let progLabel,progVal,prog,time;
   if(front){ prog=Math.round((1-front.t/(front.tMax||1))*100); progLabel='생산 중'; progVal=(_techRealName(race,front.id)||''); time=Math.ceil(front.t)+'s 남음'; }
-  else { progLabel='생산 대기'; progVal=qFull?'대기열 가득참':''; prog=0; time=qFull?'최대 5기':'예약 시 순차 생산'; }
+  else { progLabel='생산 대기'; progVal=qFull?'대기열 가득참':''; prog=0; time=qFull?'최대 5기':''; }
   return { mode:'prod', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:'유닛 생산 — 탭(최대 5 예약)', items, topRight:_techAutoBtn(b),
     info:{ eb:'생산', hideName:true, queue, progLabel, progVal, prog, cr:0, en:0, time } }; }
 function techBldgUpgModel(b, e){ const race=G.tech.race; const rj=e&&e._rj;
