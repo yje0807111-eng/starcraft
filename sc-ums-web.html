@@ -7123,10 +7123,10 @@ function _cgInfoHTML(d){ if(!d) return '<div class="cgEb">정보</div><div class
 function renderCmdGrid(host, m){ const el=(typeof host==='string')?document.getElementById(host):host; if(!el||!m) return;
   const PER=m.compact?4:8, _items=m.compact?((m.items||[]).filter(Boolean)):(m.items||[]);   // 간소화=빈 칸 제거 후 조밀 배치(4칸/페이지)
   const total=_items.length, pages=Math.max(1,Math.ceil(total/PER));
-  let pg=Math.max(0,Math.min(m.page!=null?m.page:(el._cgPage||0),pages-1)); el._cgPage=pg; m.page=pg; el._cgModel=m;
+  let pg=(((m.page!=null?m.page:(el._cgPage||0))%pages)+pages)%pages; el._cgPage=pg; m.page=pg; el._cgModel=m;   // 순환(1페이지서 ◀=마지막 · 마지막서 ▶=1페이지)
   const start=pg*PER, cells=[]; for(let k=0;k<PER;k++) cells.push(_cgSlotHTML(_items[start+k]));
   let dots=''; for(let p=0;p<pages;p++) dots+='<span class="dot'+(p===pg?' on':'')+'"></span>';
-  const pager=(pages>1)?('<div class="cgPage"><button onclick="_cgTurn(this,-1)"'+(pg<=0?' disabled':'')+'>◀</button><span class="dots">'+dots+'</span><span class="pn">'+(pg+1)+' / '+pages+'</span><button onclick="_cgTurn(this,1)"'+(pg>=pages-1?' disabled':'')+'>▶</button></div>'):'';
+  const pager=(pages>1)?('<div class="cgPage"><button onclick="_cgTurn(this,-1)">◀</button><span class="dots">'+dots+'</span><span class="pn">'+(pg+1)+' / '+pages+'</span><button onclick="_cgTurn(this,1)">▶</button></div>'):'';
   const pill=m.status?('<span class="cgPill'+(m.statusIdle?' idle':'')+'">'+m.status+'</span>'):'';
   el.innerHTML='<div class="cmdG" data-mode="'+(m.mode||'upg')+'" data-compact="'+(m.compact?1:0)+'">'
     +'<div class="cgHead"><div class="cgPort">'+(m.icon||'')+'</div><div class="cgTtl"><div class="cgN">'+(m.title||'')+'</div>'+(m.hpsh?'<div class="cgHpsh">'+m.hpsh+'</div>':(m.sub?'<div class="cgS">'+m.sub+'</div>':''))+'</div>'+(m.topRight||'')+pill+pager+'</div>'
@@ -10382,9 +10382,9 @@ function _techSegClear(e, ax, ay, bx, by){ const rects=_techNavRects(e).concat(_
   for(const R of rects){ if(_segInRect(ax,ay,bx,by,R)) return false; } return true; }
 // 🔧 용접 스파크(엔지니어 일꾼 작업 중) — 오른손 근처에서 작은 불꽃이 튀며 낙하(cvFx에 직접 그림, 공용 FX 코어 무영향)
 function _techEmitWeld(e){ if(!G._weldFx) G._weldFx=[]; if(G._weldFx.length>150) return;
-  const s=(typeof _techW2S==='function')?_techW2S(e.x,e.y):null; if(!s) return;   // 일꾼 발 위치(라벨·DOM과 동일 좌표계 — centerN 대신 사용해 위치 정확)
-  const fx=Math.sin(e.face||0), fy=Math.cos(e.face||0);   // 바라보는(건물) 방향
-  const hx=s.x+fx*0.03, hy=s.y+fy*0.03-0.01;   // 손 근사 — 발에서 팔이 뻗은 건물 쪽으로 살짝 앞 + 팔 높이(안쪽에서 나오던 것 보정)
+  const fx=Math.sin(e.face||0), fy=Math.cos(e.face||0);   // 바라보는(대상) 방향
+  const s=(typeof _techW2S==='function')?_techW2S(e.x + fx*0.0075, e.y + fy*0.0075 - 0.0025):null; if(!s) return;   // 손 위치 = 월드 오프셋(발에서 앞·위) → _techW2S가 줌 반영 → 축소해도 일꾼 바로 앞에서 나옴
+  const hx=s.x, hy=s.y;
   const n=2+((Math.random()*3)|0);   // 스파크 더 많이(2~4/프레임)
   for(let k=0;k<n;k++){ const a=(-Math.PI/2)+(Math.random()-0.5)*1.7, sp=0.05+Math.random()*0.12;   // 상방 분사 + 느린 속도 → 팔끝 근처에 튀고 곧 낙하
     G._weldFx.push({x:hx+(Math.random()-0.5)*0.005, y:hy, vx:Math.cos(a)*sp+fx*0.03, vy:Math.sin(a)*sp*0.7, life:0.2+Math.random()*0.18, len:1.5+Math.random()*2.5, color:Math.random()<0.3?'#ffffff':(Math.random()<0.6?'#ffe28a':'#ff9440')}); }
