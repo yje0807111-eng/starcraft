@@ -10305,8 +10305,11 @@ function _segInRect(ax,ay,bx,by,R){ const dx=bx-ax, dy=by-ay; let t0=0, t1=1;   
   if(t1-t0<1e-9) return false;
   const tm=(t0+t1)/2, mx=ax+dx*tm, my=ay+dy*tm, E=1e-9;
   return mx>R.x0+E && mx<R.x1-E && my>R.y0+E && my<R.y1-E; }
+function _techMineralRects(){ const out=[], cw=_techCW(), ch=_techCH(); for(const m of (G.tech.minerals||[])){ out.push({x0:m.x-0.5*cw, x1:m.x+0.5*cw, y0:m.y-0.5*ch, y1:m.y+0.5*ch}); } return out; }   // 💎 미네랄 = 통과 불가 벽(1×1)
 function _techNavRects(e){ const out=[]; for(const b of G.tech.ents){ if(b.type!=='bldg'||b.eid===e.build) continue; if(b.bt>0&&!b._bpause) continue;   // 벽 = 완성/일시정지 건물(건설 중은 통과 허용, 자기가 짓는 건물 제외)
-    const R=_techCollRect(b,e); if(R.x1>R.x0&&R.y1>R.y0) out.push(R); } return out; }
+    const R=_techCollRect(b,e); if(R.x1>R.x0&&R.y1>R.y0) out.push(R); }
+  for(const R of _techMineralRects()) out.push(R);   // 💎 미네랄도 벽 → 경로가 우회
+  return out; }
 let _navExcl=null;   // 같은 이동 명령 그룹(eid Set) — 서로를 장애물로 안 봄(_techAssignMove가 설정)
 // 정지 유닛도 자리 차지(유닛 벽): 시작→목표 통로 상자 안의 같은 레이어 정지 유닛을 작은 사각 장애물로 등록
 function _techNavUnitRects(e, sx, sy, tx, ty){ const out=[], GWp=GW||390, GHp=GH||390;
@@ -10512,6 +10515,11 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
       if(e.x<=R.x0||e.x>=R.x1||e.y<=R.y0||e.y>=R.y1) continue;   // 판정 밖
       const pL=e.x-R.x0, pR=R.x1-e.x, pT=e.y-R.y0, pB=R.y1-e.y;
       const mPen=Math.min(pL,pR,pT,pB);   // 최소침투 축으로 경계까지 즉시(관통 잔류 0 — 접선 속도는 그대로라 벽 따라 미끄러짐)
+      if(mPen===pL) e.x=R.x0; else if(mPen===pR) e.x=R.x1; else if(mPen===pT) e.y=R.y0; else e.y=R.y1;
+      active=true; } }
+  for(const R of _techMineralRects()){ for(const e of G.tech.ents){ if(e.type!=='unit'&&e.type!=='worker') continue;   // 💎 미네랄 안에 들어온 유닛 즉시 경계로(통과 불가 — 유령 채취 일꾼도 미네랄은 못 뚫음)
+      if(e.x<=R.x0||e.x>=R.x1||e.y<=R.y0||e.y>=R.y1) continue;
+      const pL=e.x-R.x0, pR=R.x1-e.x, pT=e.y-R.y0, pB=R.y1-e.y, mPen=Math.min(pL,pR,pT,pB);
       if(mPen===pL) e.x=R.x0; else if(mPen===pR) e.x=R.x1; else if(mPen===pT) e.y=R.y0; else e.y=R.y1;
       active=true; } }
   // 🚧 이동 유닛 ↔ 정지 유닛 물리 충돌(정지 유닛 = 자리 차지) — 겹치면 이동 유닛을 접촉 거리까지 즉시 밀어냄(속도 유지)
