@@ -10444,11 +10444,14 @@ function _techAssignGatherMineral(wks, clickEid){ const minerals=G.tech.minerals
   const cw=_techCW(), ch=_techCH(), R=5;   // 탐색 반경 5칸(클릭 미네랄 기준)
   const near=minerals.filter(m=>{ const dx=(m.x-clicked.x)/cw, dy=(m.y-clicked.y)/ch; return dx*dx+dy*dy<=R*R+1e-6; })
     .sort((a,b)=> ((a.x-clicked.x)**2+(a.y-clicked.y)**2)-((b.x-clicked.x)**2+(b.y-clicked.y)**2));   // 클릭 미네랄=거리0으로 맨 앞
-  for(const w of wks){ _techReleaseGather(w);
-    let target=near.find(m=>m.owner==null);   // 아직 아무도 안 붙은 것 중 클릭에 가장 가까운 것
-    if(!target) target=clicked;   // 반경 내 다 찼으면 클릭 미네랄에서 대기(교대)
-    if(target.owner==null) target.owner=w.eid;   // 빈 것만 배정(대기자는 배정 안 함)
-    _techSetGather(w,'mineral',target.eid); } }
+  if(!near.length) return;
+  const cnt=new Map(near.map(m=>[m.eid,0]));   // 미네랄별 현재 배정 인원(재배정 대상 제외) — 균등 분배 기준
+  for(const w of G.tech.ents){ if(w.type==='worker'&&w._gKind==='mineral'&&cnt.has(w._gEid)&&wks.indexOf(w)<0) cnt.set(w._gEid,cnt.get(w._gEid)+1); }
+  for(const w of wks) _techReleaseGather(w);
+  for(const w of wks){ let best=near[0], bc=cnt.get(near[0].eid);   // 인원 가장 적은(동률=클릭에 가까운) 미네랄로 → 남는 일꾼도 다른 미네랄로 퍼짐(한 곳에 안 몰림)
+    for(const m of near){ const c=cnt.get(m.eid); if(c<bc){ bc=c; best=m; } }
+    cnt.set(best.eid, cnt.get(best.eid)+1); best.owner=best.owner||w.eid;   // owner=대표(첫 배정 일꾼) 표시용
+    _techSetGather(w,'mineral',best.eid); } }
 // 🔄 건물별 자동 채취(우상단 스텝퍼) 유지: 본진=크레딧(미네랄) / 가스 건물=에너지(그 건물)
 function _techApplyAuto(e){ if(!G.tech||!e||e.type!=='bldg'||e.bt>0) return; const race=G.tech.race, b=techGetBldg(race,e.bk); if(!b) return;
   const target=e._autoN||0, isMain=(b.k===((TECH_TREE[race].buildings[0])||{}).k);
