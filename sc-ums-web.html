@@ -1059,8 +1059,16 @@
     background:linear-gradient(180deg,rgba(13,18,28,.97),rgba(8,11,17,.985));border-top:1px solid rgba(90,140,210,.3);border-radius:14px 14px 0 0;
     box-shadow:0 -8px 24px rgba(0,0,0,.55);padding:9px 8px 12px;display:flex;flex-direction:column}
   #btSheet.open{transform:translateY(0)}
-  #btCardCtl{position:absolute;top:-15px;right:12px;z-index:31;width:34px;height:26px;border-radius:8px 8px 0 0;border:1px solid rgba(90,140,210,.4);border-bottom:none;background:linear-gradient(180deg,rgba(22,30,46,.98),rgba(13,18,28,.99));color:#bcd2f0;font:800 14px/1 sans-serif;display:none;align-items:center;justify-content:center;cursor:pointer;padding:0;box-shadow:0 -3px 10px rgba(0,0,0,.4)}   /* 프로필 간소화/최소화 사이클 버튼(상단 우측 밖) */
+  #btCardCtl{position:absolute;top:-17px;right:14px;z-index:31;width:46px;height:23px;padding:0;   /* 프로필 간소화/최소화 사이클 버튼(상단 우측 밖) */
+    border:1px solid rgba(120,160,220,.32);border-bottom:none;border-radius:9px 9px 0 0;
+    background:linear-gradient(180deg,rgba(27,35,52,.98),rgba(15,20,30,.99));color:#9db8e0;
+    display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 -4px 12px rgba(0,0,0,.35);
+    transition:color .15s,background .15s,transform .1s}
   #btSheet.open #btCardCtl{display:flex}
+  #btCardCtl:hover{color:#dbe8ff;background:linear-gradient(180deg,rgba(36,48,70,.98),rgba(20,27,40,.99))}
+  #btCardCtl:active{transform:translateY(1px)}
+  #btCardCtl svg{width:17px;height:17px;display:block;transition:transform .22s cubic-bezier(.2,.8,.25,1)}
+  #btCardCtl.up svg{transform:rotate(180deg)}
   #btSheet.simple #btSheetBody{height:auto;max-height:min(26vh,150px)}   /* 간소화 = 1줄 그리드 · 높이 축소 */
   #btSheet.simple .cmdG .cgGrid{grid-template-rows:1fr}
   #btSheet.mini #btSheetBody{display:none}   /* 최소화 = 본문 숨김(버튼 바만) */
@@ -2434,7 +2442,7 @@
     <div class="gview" id="vBoss"><canvas id="cvBoss"></canvas></div>
     <div class="gview" id="vBuild"><div id="cstMain"></div><div id="cstLabels"></div><canvas id="techMap3d"></canvas><div id="cstPrev"><canvas id="cstPrevCv"></canvas><div id="cstPrevName"></div><div id="cstPrevInfo"></div><button id="cstPrevX" onclick="cstHidePreview()">✕ 닫기</button></div>
       <!-- ExoMiner식 하단 인터페이스: 슬라이드 시트 + 아이콘 독 + 유닛 지정 해제(메인 deselTop 재사용 디자인) -->
-      <div id="btSheet"><button id="btCardCtl" onclick="techCardCycle(event)" title="간소화">▁</button><div id="btSheetBody"></div></div>
+      <div id="btSheet"><button id="btCardCtl" onclick="techCardCycle(event)" title="간소화"></button><div id="btSheetBody"></div></div>
       <div id="btDesel" onclick="techDeselU(event)" title="유닛 지정 해제"><svg viewBox="0 0 24 24" width="26" height="26"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.4"/><line x1="6.2" y1="6.2" x2="17.8" y2="17.8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></div>
     </div>   <!-- 건설 테스트 + 건물 3D 프리뷰 -->
     <!-- 공용 보스 토벌장 팝업(HP바 클릭 시) — 아레나는 vBoss/cvMarine로 뒤에 렌더, 여기는 컨트롤만 -->
@@ -10914,7 +10922,7 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
   sheet.classList.toggle('open', _shown);
   sheet.classList.toggle('simple', _shown&&cm===1);
   sheet.classList.toggle('mini', _shown&&cm===2);
-  const cardCtl=document.getElementById('btCardCtl'); if(cardCtl){ cardCtl.textContent=(cm===2?'▲':(cm===1?'▽':'▁')); cardCtl.title=(cm===2?'프로필 펼치기':(cm===1?'하단으로 최소화':'간소화')); }
+  const cardCtl=document.getElementById('btCardCtl'); if(cardCtl){ const _up=(cm===2); cardCtl.classList.toggle('up',_up); cardCtl.innerHTML='<svg viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'; cardCtl.title=(_up?'프로필 펼치기':(cm===1?'하단으로 최소화':'간소화')); }
   if(model) renderCmdGrid(body, model);
   const dz=document.getElementById('btDesel'); if(dz) dz.classList.toggle('on',(G.tech.selU||[]).length>0); }
 function techCardCycle(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return; G.tech.cardMode=((G.tech.cardMode||0)+1)%3; if(typeof playSfx==='function') playSfx('ui_open'); techPanelRender(); }   // 유닛 지정 해제 버튼(메인 deselTop 규약)
