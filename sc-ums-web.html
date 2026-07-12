@@ -1460,7 +1460,7 @@
   .cmdG .cgCost{display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap;line-height:1;margin-top:auto}
   .cmdG[data-build="1"] .cgName{text-overflow:clip;max-width:none}   /* 생략(...) 없이 — JS가 폰트 축소로 한 줄 */
   .cmdG[data-build="1"] .cgCost{flex-direction:column;flex-wrap:nowrap;gap:1px;margin-top:auto}   /* 크레딧(위)/에너지(아래) 각 한 줄 */
-  .cmdG[data-build="1"] .cgCost .cc{font-size:9px}
+  .cmdG[data-build="1"] .cgCost .cc{font-size:9px;min-height:10px;line-height:10px;display:block;text-align:center}   /* 빈 줄도 높이 유지(자리 예약) */
   .cmdG .cc{display:inline-flex;align-items:center;gap:1px;font:800 10px/1 'Rajdhani',sans-serif;font-variant-numeric:tabular-nums}
   .cmdG .cc.cr{color:var(--cgCr)} .cmdG .cc.en{color:var(--cgEn)}
   .cmdG .cgMeta{position:absolute;top:3px;right:4px;display:inline-flex;align-items:center;gap:1px;font:800 8.5px/1 'Rajdhani',sans-serif;
@@ -7110,7 +7110,7 @@ function bldgPortraitInner(b){
 //     items:[{ pro(초상화 HTML), sn(이름), cr(크레딧), en(에너지), meta(우상단 배지), metaCls:'lv'?, state:'ok'|'dim'|'busy'|'max'|'empty', sel, act(이벤트 속성 문자열) }],
 //     info:{ eb, name, desc, stats:[[라벨,값]] | val:{cur,nxt,unit}, progLabel, progVal, prog, cr, en, time }, page }
 function _cgFmt(n){ n=n||0; return n>=10000?((n/1000).toFixed(n>=100000?0:1)+'K'):(''+n); }
-function _cgCost(cr,en,ce){ let h=''; if(ce){ if(cr) h+='<span class="cc cr">'+_cgFmt(cr)+'c</span>'; if(en) h+='<span class="cc en">'+_cgFmt(en)+'e</span>'; return h; }   // 건설 카드=아이콘 없이 숫자 뒤 c/e(크레딧 위·에너지 아래)
+function _cgCost(cr,en,ce){ let h=''; if(ce){ h+='<span class="cc cr">'+(cr?(_cgFmt(cr)+'c'):'')+'</span>'+'<span class="cc en">'+(en?(_cgFmt(en)+'e'):'')+'</span>'; return h; }   // 건설 카드=아이콘 없이 c/e. 에너지 없어도 아래 줄 자리 항상 예약(크레딧 위 고정)
   if(cr) h+='<span class="cc cr">◈'+_cgFmt(cr)+'</span>'; if(en) h+='<span class="cc en">⚡'+_cgFmt(en)+'</span>'; return h; }   // 무료 표기 제거(빈칸)
 function _cgHpShStr(hp,sh){ let s=''; if(hp!=null&&hp!=='') s+='<span class="hpv">❤ '+hp+'</span>'; if(sh) s+='<span class="shv">🛡 '+sh+'</span>'; return s; }   // 헤더 HP/쉴드(건물 — 단일값)
 function _cgHpShDual(hp,sh){ let s=''; if(hp!=null&&hp!=='') s+='<span class="hpv">❤ '+hp+'/'+hp+'</span>'; if(sh) s+='<span class="shv">🛡 '+sh+'/'+sh+'</span>'; return s; }   // 헤더 HP/쉴드(유닛 — 현재/기본)
@@ -10386,14 +10386,15 @@ function _techRoute(e, x, y){ const wp=_techFindPath(e, x, y); e._wp=wp; e._rr=0
 function _techSegClear(e, ax, ay, bx, by){ const rects=_techNavRects(e).concat(_techNavUnitRects(e, ax, ay, bx, by));
   for(const R of rects){ if(_segInRect(ax,ay,bx,by,R)) return false; } return true; }
 // 🔧 용접 스파크(엔지니어 일꾼 작업 중) — 오른손 근처에서 작은 불꽃이 튀며 낙하(cvFx에 직접 그림, 공용 FX 코어 무영향)
-function _techEmitWeld(e){ if(!G._weldFx) G._weldFx=[]; if(G._weldFx.length>150) return;
+const TECH_MINE_FX={ union:['#ffffff','#ffe28a','#ff9440','#fff7d8'], swarm:['#eaffce','#b6f06a','#6fce34','#ecffd6'], aetherial:['#eaf4ff','#9fd8ff','#ffd76a','#f0f8ff'] };   // 종족별 채취 스파크 색(스파크3 + 코어1)
+function _techEmitWeld(e, cols){ cols=cols||TECH_MINE_FX.union; if(!G._weldFx) G._weldFx=[]; if(G._weldFx.length>150) return;
   const fx=Math.sin(e.face||0), fy=Math.cos(e.face||0);   // 바라보는(대상) 방향
   const s=(typeof _techW2S==='function')?_techW2S(e.x + fx*0.0075, e.y + fy*0.0075 - 0.0025):null; if(!s) return;   // 손 위치 = 월드 오프셋(발에서 앞·위) → _techW2S가 줌 반영 → 축소해도 일꾼 바로 앞에서 나옴
   const hx=s.x, hy=s.y;
   const n=2+((Math.random()*3)|0);   // 스파크 더 많이(2~4/프레임)
   for(let k=0;k<n;k++){ const a=(-Math.PI/2)+(Math.random()-0.5)*1.7, sp=0.05+Math.random()*0.12;   // 상방 분사 + 느린 속도 → 팔끝 근처에 튀고 곧 낙하
-    G._weldFx.push({x:hx+(Math.random()-0.5)*0.005, y:hy, vx:Math.cos(a)*sp+fx*0.03, vy:Math.sin(a)*sp*0.7, life:0.2+Math.random()*0.18, len:1.5+Math.random()*2.5, color:Math.random()<0.3?'#ffffff':(Math.random()<0.6?'#ffe28a':'#ff9440')}); }
-  G._weldFx.push({x:hx, y:hy, vx:0, vy:0, life:0.09, flash:true, color:'#fff7d8'}); }   // 손끝 용접 코어(매 프레임 깜빡)
+    G._weldFx.push({x:hx+(Math.random()-0.5)*0.005, y:hy, vx:Math.cos(a)*sp+fx*0.03, vy:Math.sin(a)*sp*0.7, life:0.2+Math.random()*0.18, len:1.5+Math.random()*2.5, color:Math.random()<0.3?cols[0]:(Math.random()<0.6?cols[1]:cols[2])}); }
+  G._weldFx.push({x:hx, y:hy, vx:0, vy:0, life:0.09, flash:true, color:cols[3]}); }   // 손끝 채취 코어(매 프레임 깜빡)
 function _techWeldStep(dt, s){ const arr=G._weldFx; if(!arr||!arr.length) return; const ctx=s.ctx, W=s.W, H=s.H;
   ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.lineCap='round';
   for(let i=arr.length-1;i>=0;i--){ const p=arr[i]; p.vy+=0.6*dt; p.x+=p.vx*dt; p.y+=p.vy*dt; p.life-=dt*(p.flash?11:4.2);
@@ -10415,7 +10416,9 @@ function techMoveTrails(dt){ if(typeof FX==='undefined'||typeof emitMoveTrail===
     else if(typeof e.face==='number') emitMoveTrail(G._techFx, gm, px, Math.sin(e.face), Math.cos(e.face), 1, dt);
     e._mtT=px._mtT; }
   FX.advance(G._techFx, dt);
-  for(const e of G.tech.ents){ if(e.type==='worker'&&e._working&&!e._inGas&&_techEntKey(e)==='worker_human') _techEmitWeld(e); }   // 🔧 엔지니어 건설 작업 중 = 오른손 용접 스파크(가스 건물 안=숨김이라 제외 → 건물 자체 연출만)
+  for(const e of G.tech.ents){ if(e.type!=='worker'||!e._working||e._inGas) continue;
+    if(_techEntKey(e)==='worker_human'){ _techEmitWeld(e, TECH_MINE_FX.union); }   // 🔧 유니온 엔지니어 = 건설·채취 용접 스파크
+    else if(e._gKind==='mineral'&&e._gSt==='mine'){ _techEmitWeld(e, TECH_MINE_FX[G.tech.race]||TECH_MINE_FX.union); } }   // 💎 스웜·에테리얼 일꾼 = 미네랄 채취 스파크(종족 색)
   if(typeof setup!=='function') return; const s=setup('cvFx');   // setup=캔버스 크기 재설정+클리어(메인 drawFx와 동일)
   FX.drawShots(s.ctx, G._techFx, (x,y)=>({x:x*s.W, y:y*s.H}), 1.0);
   _techWeldStep(dt, s); }   // 용접 스파크 갱신·그리기(cvFx, 같은 프레임)
