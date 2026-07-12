@@ -1003,12 +1003,18 @@
   .bMineral .mnIco{font-size:16px;line-height:1;filter:drop-shadow(0 0 5px rgba(120,200,255,.6));animation:mnGlint 2.2s ease-in-out infinite}
   .bMineral .mnLbl{font:800 8px/1 sans-serif;color:#a6d8ff;text-shadow:0 1px 2px #000;letter-spacing:.3px}
   @keyframes mnGlint{0%,100%{transform:scale(1);opacity:.85}50%{transform:scale(1.08);opacity:1}}
-  .bGasFx{position:absolute;pointer-events:none;transform:translate(-50%,-55%);width:0;height:0}   /* ⛽ 가스 채취 중 뿜어오르는 연출 */
-  .bGasFx span{position:absolute;font-size:12px;line-height:1;filter:drop-shadow(0 0 5px rgba(120,255,160,.7)) hue-rotate(-8deg);opacity:0;animation:bGasRise 1.35s ease-out infinite}
-  .bGasFx span:nth-child(1){left:-7px;animation-delay:0s}
-  .bGasFx span:nth-child(2){left:1px;animation-delay:.45s}
-  .bGasFx span:nth-child(3){left:-3px;animation-delay:.9s}
-  @keyframes bGasRise{0%{transform:translateY(6px) scale(.55);opacity:0}22%{opacity:.95}100%{transform:translateY(-18px) scale(1.15);opacity:0}}
+  .bGasGlow{position:absolute;width:46px;height:46px;transform:translate(-50%,-58%);pointer-events:none;border-radius:50%;mix-blend-mode:screen;   /* ⛽ 가스 건물 활성 발광(작동 중) */
+    background:radial-gradient(circle,rgba(120,255,160,.55),rgba(80,220,120,.22) 46%,transparent 70%);animation:bGasPulse 1.5s ease-in-out infinite}
+  @keyframes bGasPulse{0%,100%{opacity:.32;transform:translate(-50%,-58%) scale(.82)}50%{opacity:.8;transform:translate(-50%,-58%) scale(1.18)}}
+  .bGasFx{position:absolute;pointer-events:none;transform:translate(-50%,-55%);width:0;height:0}   /* ⛽ 피어오르는 초록 연기 */
+  .bGasFx i{position:absolute;display:block;width:11px;height:11px;border-radius:50%;filter:blur(.6px);opacity:0;
+    background:radial-gradient(circle at 50% 40%,rgba(160,255,185,.95),rgba(90,225,135,.6) 55%,rgba(50,155,90,0) 80%);animation:bGasSmoke 1.7s ease-out infinite}
+  .bGasFx i:nth-child(1){left:-8px;animation-delay:0s}
+  .bGasFx i:nth-child(2){left:-1px;animation-delay:.34s}
+  .bGasFx i:nth-child(3){left:6px;animation-delay:.68s}
+  .bGasFx i:nth-child(4){left:-4px;animation-delay:1.02s}
+  .bGasFx i:nth-child(5){left:2px;animation-delay:1.36s}
+  @keyframes bGasSmoke{0%{transform:translateY(5px) scale(.5);opacity:0}20%{opacity:.92}100%{transform:translateY(-24px) scale(1.55);opacity:0}}
   .bPsi{position:absolute;z-index:2;pointer-events:none;border-radius:50%;border:1.5px dashed rgba(110,170,255,.55);   /* 🔵 파일런 동력장(배치 중 표시) */
     background:radial-gradient(ellipse at 50% 50%,rgba(90,150,255,.16),rgba(70,120,230,.08) 60%,rgba(50,90,200,.03) 82%,transparent)}
   .bPsi.new{border-color:rgba(150,205,255,.85);background:radial-gradient(ellipse at 50% 50%,rgba(110,170,255,.24),rgba(85,140,240,.12) 60%,rgba(60,100,210,.05) 82%,transparent)}   /* 예비 파일런의 미래 동력장(강조) */
@@ -10373,7 +10379,7 @@ function techMoveTrails(dt){ if(typeof FX==='undefined'||typeof emitMoveTrail===
     else if(typeof e.face==='number') emitMoveTrail(G._techFx, gm, px, Math.sin(e.face), Math.cos(e.face), 1, dt);
     e._mtT=px._mtT; }
   FX.advance(G._techFx, dt);
-  for(const e of G.tech.ents){ if(e.type==='worker'&&e._working&&_techEntKey(e)==='worker_human') _techEmitWeld(e); }   // 🔧 엔지니어 작업 중 = 오른손 용접 스파크 방출
+  for(const e of G.tech.ents){ if(e.type==='worker'&&e._working&&!e._inGas&&_techEntKey(e)==='worker_human') _techEmitWeld(e); }   // 🔧 엔지니어 건설 작업 중 = 오른손 용접 스파크(가스 건물 안=숨김이라 제외 → 건물 자체 연출만)
   if(typeof setup!=='function') return; const s=setup('cvFx');   // setup=캔버스 크기 재설정+클리어(메인 drawFx와 동일)
   FX.drawShots(s.ctx, G._techFx, (x,y)=>({x:x*s.W, y:y*s.H}), 1.0);
   _techWeldStep(dt, s); }   // 용접 스파크 갱신·그리기(cvFx, 같은 프레임)
@@ -10650,7 +10656,9 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
       if(e.bt>0 || G.tech.sel===e.eid) labels+='<div class="bldHp'+(e.bt>0?' bld':'')+'" style="left:'+(_sb.x*100).toFixed(2)+'%;top:'+(_sb.y*100).toFixed(2)+'%;width:'+(_hw*100).toFixed(2)+'%"><i style="width:'+(_ratio*100).toFixed(1)+'%"></i></div>';   // 건설 중=항상 표시(실시간 차오름) · 완성=지정 시에만
       const _noPow=_techNeedsPower(e.bk)&&!_techPowered(e.x,e.y);   // 🛑 블랙아웃(동력 없음)
       if(_noPow){ const _sp=_techW2S(e.x,e.y-(_bf.h/2)*_techCH()); labels+='<div class="bldNoPow" style="left:'+(_sp.x*100).toFixed(2)+'%;top:'+(_sp.y*100).toFixed(2)+'%">⚡✕ 동력 없음</div>'; }
-      if(_b.gas && e.bt<=0 && e._gasWorker!=null){ const _gp=_techW2S(e.x, e.y-(_bf.h/2)*_techCH()); labels+='<div class="bGasFx" style="left:'+(_gp.x*100).toFixed(2)+'%;top:'+(_gp.y*100).toFixed(2)+'%"><span>💨</span><span>💨</span><span>💨</span></div>'; }   // ⛽ 가스 채취 중 = 뿜어오르는 연출
+      if(_b.gas && e.bt<=0 && e._gasWorker!=null){ const _gp=_techW2S(e.x, e.y-(_bf.h/2)*_techCH()), _gc=_techW2S(e.x, e.y);   // ⛽ 가스 채취 중 = 건물 활성 연출(초록 발광 + 피어오르는 연기)
+        labels+='<div class="bGasGlow" style="left:'+(_gc.x*100).toFixed(2)+'%;top:'+(_gc.y*100).toFixed(2)+'%"></div>';
+        labels+='<div class="bGasFx" style="left:'+(_gp.x*100).toFixed(2)+'%;top:'+(_gp.y*100).toFixed(2)+'%"><i></i><i></i><i></i><i></i><i></i></div>'; }
       if(e.bt>0 && !e._bpause){ const _lbl=e.waiting?'<span class="bldSpin"></span>':(_noPow?'⏸':(Math.ceil(e.bt)+'s'));   // 일꾼 오는 중 스피너 / 건설 중 시간 · 블랙아웃=정지 표시
         labels+='<div class="bldTime" style="left:'+(_sb.x*100).toFixed(2)+'%;top:'+(_sb.y*100).toFixed(2)+'%">'+_lbl+'</div>'; }
       else { const _pq=(G.tech.pend||[]).find(q=>q.bk===e.bk); if(_pq){ const _pp=Math.round((1-_pq.t/(_pq.tMax||1))*100); inner='<div class="bprog prod" style="bottom:0"><i style="width:'+_pp+'%"></i></div>'; } } }
