@@ -10577,7 +10577,9 @@ function _techGatherTick(dt){ let dep=false, any=false;
   return { any, dep }; }
 function techTick(dt){ if(!G.tech) return; let active=false, done=false;
   const _vmoving=techViewTick(dt);   // 🎥 부드러운 줌/팬 보간(메인맵과 동일) — 애니메이션 중이면 매 프레임 재렌더
-  for(const e of G.tech.ents){ if(e.type==='bldg'&&e.bt>0){ if(!e.waiting&&!e._bpause&&(!_techNeedsPower(e.bk)||_techPowered(e.x,e.y))){ e.bt=Math.max(0,e.bt-dt); if(e.bt<=0){ techFinishBuild(e); done=true; } } active=true; } }   // waiting=일꾼 미도착 / _bpause=일시정지 / 동력 없음(블랙아웃) → 카운트다운 정지
+  for(const e of G.tech.ents){ if(e.type==='bldg'&&e.bt>0){ const _frozen=e._bpause||(_techNeedsPower(e.bk)&&!_techPowered(e.x,e.y));   // 일시정지·블랙아웃 = 완전 정지(카운트다운·재렌더 불필요)
+    if(!e.waiting&&!_frozen){ e.bt=Math.max(0,e.bt-dt); if(e.bt<=0){ techFinishBuild(e); done=true; } }
+    if(!_frozen) active=true; } }   // 얼어붙은 건물은 active 제외 → 영구 매프레임 재렌더(=클릭 먹힘 방지) 차단. 진행·일꾼대기만 재렌더
   const _gath=_techGatherTick(dt); if(_gath.any) active=true; if(_gath.dep) done=true;   // 💎⚡ 자원 채취 FSM(이동 목표 지정 → 아래 이동 루프가 수행)
   { G.tech._gaT=(G.tech._gaT||0)+dt; if(G.tech._gaT>=1.2){ G.tech._gaT=0; _techRebalanceMinerals(); } }   // 🔄 주기적 미네랄 균형(빈 덩어리 자동 채움)
   // 🚶 유닛 이동 — 공용 stepUnitMove(관성·유닛회피·감속·정착·응시) + 🧭 경유점(waypoint) 추종. 건물 회피 조향 없음(경로가 이미 우회) → 벽 비비기/틱틱 걸림 제거
@@ -10788,7 +10790,7 @@ function techBldgProdModel(b, e){ const race=G.tech.race;
   const queue=[]; for(let i=0;i<5;i++){ const q=pq[i]; queue.push(q?{pro:_techUnitPortrait(q.id), front:i===0, prog:i===0?Math.round((1-q.t/(q.tMax||1))*100):0}:null); }
   const front=pq[0]; let progLabel,progVal,prog,time;
   if(front){ prog=Math.round((1-front.t/(front.tMax||1))*100); progLabel='생산 중'; progVal=(_techRealName(race,front.id)||''); time=Math.ceil(front.t)+'s 남음'; }
-  else { progLabel='생산 대기'; progVal=qFull?'대기열 가득참':'유닛 탭 = 예약'; prog=0; time=qFull?'최대 5기':'예약 시 순차 생산'; }
+  else { progLabel='생산 대기'; progVal=qFull?'대기열 가득참':''; prog=0; time=qFull?'최대 5기':'예약 시 순차 생산'; }
   return { mode:'prod', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:'유닛 생산 — 탭(최대 5 예약)', items, topRight:_techAutoBtn(b),
     info:{ eb:'생산', hideName:true, queue, progLabel, progVal, prog, cr:0, en:0, time } }; }
 function techBldgUpgModel(b, e){ const race=G.tech.race; const rj=e&&e._rj;
@@ -11089,9 +11091,11 @@ function techPtrUp(ev){ if(!G.tech) return; const had=_btPtrs.has(ev.pointerId);
     else { G.tech.selU=[e.eid]; G.tech.sel=null; } sh.open=true; sh.sec='ent'; }   // 엔티티 탭 = 시트 즉시 교체(닫혔다 열리지 않음)
   else { G.tech.sel=null; sh.open=false; }   // 빈 곳 탭 = 시트 닫기
   if(body) body._cgPage=0; techUIRender(); }
-if(typeof document!=='undefined'){ document.addEventListener('pointermove', function(e){ if(typeof techPtrMove==='function') techPtrMove(e); }, {passive:false});
-  document.addEventListener('pointerup', function(e){ if(typeof techPtrUp==='function') techPtrUp(e); });
-  document.addEventListener('pointercancel', function(e){ if(typeof techPtrUp==='function') techPtrUp(e); }); }
+// 전역 pointer 리스너 — 건설 탭에서만 동작(다른 화면 터치 무영향), passive(techPtrMove는 preventDefault 안 함 → 모바일 탭 신뢰도 유지)
+function _inBuildPtr(){ return typeof G!=='undefined' && G.tech && G.tab==='Build'; }
+if(typeof document!=='undefined'){ document.addEventListener('pointermove', function(e){ if(_inBuildPtr()&&typeof techPtrMove==='function') techPtrMove(e); }, {passive:true});
+  document.addEventListener('pointerup', function(e){ if(_inBuildPtr()&&typeof techPtrUp==='function') techPtrUp(e); });
+  document.addEventListener('pointercancel', function(e){ if(_inBuildPtr()&&typeof techPtrUp==='function') techPtrUp(e); }); }
 // ── 그리드 배치: 배치 영역(0.06~0.94 × 0.18~0.94)을 20×20 정사각(픽셀) 셀로 나눔. 건물은 size[w,h]만큼 셀 점유 ──
 const TECH_GRID={ cols:20, x0:0.06, y0:0.18, x1:0.94, y1:0.94 };
 function _techCW(){ return (TECH_GRID.x1-TECH_GRID.x0)/TECH_GRID.cols; }   // 셀 폭(월드 x비율)
