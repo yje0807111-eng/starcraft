@@ -1059,6 +1059,11 @@
     background:linear-gradient(180deg,rgba(13,18,28,.97),rgba(8,11,17,.985));border-top:1px solid rgba(90,140,210,.3);border-radius:14px 14px 0 0;
     box-shadow:0 -8px 24px rgba(0,0,0,.55);padding:9px 8px 12px;display:flex;flex-direction:column}
   #btSheet.open{transform:translateY(0)}
+  #btCardCtl{position:absolute;top:-15px;right:12px;z-index:31;width:34px;height:26px;border-radius:8px 8px 0 0;border:1px solid rgba(90,140,210,.4);border-bottom:none;background:linear-gradient(180deg,rgba(22,30,46,.98),rgba(13,18,28,.99));color:#bcd2f0;font:800 14px/1 sans-serif;display:none;align-items:center;justify-content:center;cursor:pointer;padding:0;box-shadow:0 -3px 10px rgba(0,0,0,.4)}   /* 프로필 간소화/최소화 사이클 버튼(상단 우측 밖) */
+  #btSheet.open #btCardCtl{display:flex}
+  #btSheet.simple #btSheetBody{height:auto;max-height:min(26vh,150px)}   /* 간소화 = 1줄 그리드 · 높이 축소 */
+  #btSheet.simple .cmdG .cgGrid{grid-template-rows:1fr}
+  #btSheet.mini #btSheetBody{display:none}   /* 최소화 = 본문 숨김(버튼 바만) */
   #btSheetBody{height:min(40vh,204px);max-height:min(40vh,204px);min-height:0;display:flex;flex-direction:column}   /* 일꾼 지정 패널 크기로 고정(건물·유닛 모두 동일 높이) */
   #btDesel{position:absolute;top:44px;right:10px;z-index:26;display:none;cursor:pointer;pointer-events:auto;
     width:42px;height:42px;border-radius:var(--r-lg);align-items:center;justify-content:center;
@@ -2429,7 +2434,7 @@
     <div class="gview" id="vBoss"><canvas id="cvBoss"></canvas></div>
     <div class="gview" id="vBuild"><div id="cstMain"></div><div id="cstLabels"></div><canvas id="techMap3d"></canvas><div id="cstPrev"><canvas id="cstPrevCv"></canvas><div id="cstPrevName"></div><div id="cstPrevInfo"></div><button id="cstPrevX" onclick="cstHidePreview()">✕ 닫기</button></div>
       <!-- ExoMiner식 하단 인터페이스: 슬라이드 시트 + 아이콘 독 + 유닛 지정 해제(메인 deselTop 재사용 디자인) -->
-      <div id="btSheet"><div id="btSheetBody"></div></div>
+      <div id="btSheet"><button id="btCardCtl" onclick="techCardCycle(event)" title="간소화">▁</button><div id="btSheetBody"></div></div>
       <div id="btDesel" onclick="techDeselU(event)" title="유닛 지정 해제"><svg viewBox="0 0 24 24" width="26" height="26"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.4"/><line x1="6.2" y1="6.2" x2="17.8" y2="17.8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></div>
     </div>   <!-- 건설 테스트 + 건물 3D 프리뷰 -->
     <!-- 공용 보스 토벌장 팝업(HP바 클릭 시) — 아레나는 vBoss/cvMarine로 뒤에 렌더, 여기는 컨트롤만 -->
@@ -7108,13 +7113,14 @@ function _cgInfoHTML(d){ if(!d) return '<div class="cgEb">정보</div><div class
     +(d.progLabel?('<div class="cgProg"><div class="pl"><span>'+d.progLabel+'</span><b>'+(d.progVal||'')+'</b></div><div class="cgBar"><i style="width:'+Math.max(4,d.prog||0)+'%"></i></div></div>'):'')
     +'<div class="cgDcost">'+_cgCost(d.cr,d.en)+(d.time?'<span class="time">'+d.time+'</span>':'')+'</div>'; }
 function renderCmdGrid(host, m){ const el=(typeof host==='string')?document.getElementById(host):host; if(!el||!m) return;
-  const PER=8, total=(m.items?m.items.length:0), pages=Math.max(1,Math.ceil(total/PER));
+  const PER=m.compact?4:8, _items=m.compact?((m.items||[]).filter(Boolean)):(m.items||[]);   // 간소화=빈 칸 제거 후 조밀 배치(4칸/페이지)
+  const total=_items.length, pages=Math.max(1,Math.ceil(total/PER));
   let pg=Math.max(0,Math.min(m.page!=null?m.page:(el._cgPage||0),pages-1)); el._cgPage=pg; m.page=pg; el._cgModel=m;
-  const start=pg*PER, cells=[]; for(let k=0;k<PER;k++) cells.push(_cgSlotHTML(m.items?m.items[start+k]:null));
+  const start=pg*PER, cells=[]; for(let k=0;k<PER;k++) cells.push(_cgSlotHTML(_items[start+k]));
   let dots=''; for(let p=0;p<pages;p++) dots+='<span class="dot'+(p===pg?' on':'')+'"></span>';
   const pager=(pages>1)?('<div class="cgPage"><button onclick="_cgTurn(this,-1)"'+(pg<=0?' disabled':'')+'>◀</button><span class="dots">'+dots+'</span><span class="pn">'+(pg+1)+' / '+pages+'</span><button onclick="_cgTurn(this,1)"'+(pg>=pages-1?' disabled':'')+'>▶</button></div>'):'';
   const pill=m.status?('<span class="cgPill'+(m.statusIdle?' idle':'')+'">'+m.status+'</span>'):'';
-  el.innerHTML='<div class="cmdG" data-mode="'+(m.mode||'upg')+'">'
+  el.innerHTML='<div class="cmdG" data-mode="'+(m.mode||'upg')+'" data-compact="'+(m.compact?1:0)+'">'
     +'<div class="cgHead"><div class="cgPort">'+(m.icon||'')+'</div><div class="cgTtl"><div class="cgN">'+(m.title||'')+'</div>'+(m.hpsh?'<div class="cgHpsh">'+m.hpsh+'</div>':(m.sub?'<div class="cgS">'+m.sub+'</div>':''))+'</div>'+(m.topRight||'')+pill+pager+'</div>'
     +'<div class="cgBody"><div class="cgInfo">'+_cgInfoHTML(m.info)+'</div><div class="cgCol"><div class="cgGrid">'+cells.join('')+'</div></div></div></div>'; }
 function _cgTurn(btn,delta){ let h=btn; while(h && !h._cgModel) h=h.parentElement; if(!h||!h._cgModel) return; h._cgModel.page=(h._cgPage||0)+delta; renderCmdGrid(h,h._cgModel); }
@@ -10402,8 +10408,8 @@ function techMoveTrails(dt){ if(typeof FX==='undefined'||typeof emitMoveTrail===
   _techWeldStep(dt, s); }   // 용접 스파크 갱신·그리기(cvFx, 같은 프레임)
 // 건설 유닛 겹침 분리 — 메인 separateUnits와 동일(공용 separatePass). 도착(정지)한 유닛만 대상 → 한 점에 모인 공중유닛이 메인처럼 완만히 흩어져 자리 잡음. 반환=움직였는지(리렌더 필요).
 function techSeparate(){ if(!G.tech||!GW||!GH) return false; const es=G.tech.ents;
-  const items=[]; for(const e of es){ if((e.type!=='unit'&&e.type!=='worker')||e.tx!=null||e._ghost) continue;   // 이동 중·채취 유령 제외(유령은 겹쳐 뭉침)
-    const k=_techEntKey(e); items.push({ref:e, r:(((U[k]&&U[k].size)||14)*0.62)*(typeof TECH_USCALE!=='undefined'?TECH_USCALE:1)*(typeof TECH_PACK!=='undefined'?TECH_PACK:1), air:_techAirOf(e), fixed:false, settle:false}); }   // 축소 시각·밀집도에 맞춰 충돌 반경 축소(따닥따닥)
+  const items=[]; for(const e of es){ if((e.type!=='unit'&&e.type!=='worker')||e.tx!=null) continue;   // 이동 중 제외
+    const k=_techEntKey(e); items.push({ref:e, r:(((U[k]&&U[k].size)||14)*0.62)*(typeof TECH_USCALE!=='undefined'?TECH_USCALE:1)*(typeof TECH_PACK!=='undefined'?TECH_PACK:1), air:_techAirOf(e), fixed:!!e._ghost, settle:false}); }   // 채취 유령=고정(서로는 겹쳐 뭉치되, 취소돼 유휴가 된 일꾼은 밀어내 빠져나오게)
   if(items.length<2) return false;
   const b0=items.map(it=>[it.ref.x, it.ref.y]);   // 유닛별 위치 스냅(대칭 이동도 감지 — 합산은 상쇄되어 안 됨)
   for(let iter=0; iter<3; iter++){ separatePass(items, GW, GH);
@@ -10903,9 +10909,15 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
   if(sh.open){ if(selB && !_resumeMode){ if(selB.bt>0){ model=techBldgBuildingModel(selB); }   // 건설 중·일시정지 = 잠금 프로필(진행도 HP)
       else { const b=techGetBldg(G.tech.race,selB.bk); model=(b&&b.produces)?techBldgProdModel(b):((b&&b.research)?techBldgUpgModel(b):((b&&b.unlocks)?techBldgInfoModel(b):techBldgPlainModel(b, selB))); } }   // 생산·연구·해금 없는 건물도 프로필(체력·에너지)
     else if(selUs.length){ const _selLv=selUs.filter(e=>e.type==='larva'); model=_selLv.length?techLarvaProdModel(_selLv):(_selWk?techWorkerBuildModel(selUs):techUnitPanelModel(selUs)); } }
-  sheet.classList.toggle('open', !!(sh.open&&model));
+  const cm=G.tech.cardMode||0, _shown=!!(sh.open&&model);   // 0=전체(4×2) / 1=간소화(4×1·페이지) / 2=최소화(하단)
+  if(model) model.compact=(cm===1);
+  sheet.classList.toggle('open', _shown);
+  sheet.classList.toggle('simple', _shown&&cm===1);
+  sheet.classList.toggle('mini', _shown&&cm===2);
+  const cardCtl=document.getElementById('btCardCtl'); if(cardCtl){ cardCtl.textContent=(cm===2?'▲':(cm===1?'▽':'▁')); cardCtl.title=(cm===2?'프로필 펼치기':(cm===1?'하단으로 최소화':'간소화')); }
   if(model) renderCmdGrid(body, model);
-  const dz=document.getElementById('btDesel'); if(dz) dz.classList.toggle('on',(G.tech.selU||[]).length>0); }   // 유닛 지정 해제 버튼(메인 deselTop 규약)
+  const dz=document.getElementById('btDesel'); if(dz) dz.classList.toggle('on',(G.tech.selU||[]).length>0); }
+function techCardCycle(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return; G.tech.cardMode=((G.tech.cardMode||0)+1)%3; if(typeof playSfx==='function') playSfx('ui_open'); techPanelRender(); }   // 유닛 지정 해제 버튼(메인 deselTop 규약)
 function techDeselU(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return; G.tech.selU=[];
   const sh=G.tech.sheet; if(sh&&sh.sec==='ent'){ sh.open=false; sh.sec=null; } techUIRender(); }   // 해제 후 다시 드래그=박스 지정(메인 규약)
 // 입력
