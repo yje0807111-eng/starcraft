@@ -10232,6 +10232,7 @@ const TECH_MINE_START=1500, TECH_GAS_START=5000, TECH_GATHER_AMT=8, TECH_MINE_T=
 function _techBuildTime(race,k){ if(G.tech.nocool) return 0; return ((techBldgSpec(race,k)||{}).t||20)*TECH_TIME_MUL; }
 function _techProdTime(race,id){ if(G.tech.nocool) return 0; return ((techUnitSpec(race,id)||{}).t||15)*TECH_TIME_MUL; }
 function techFinishBuild(e){ const b=techGetBldg(G.tech.race,e.bk); if(!b) return; e.bt=0; e.waiting=false; if(b.addonTo) G.tech.addon[b.k]=true; else G.tech.built[b.k]=(G.tech.built[b.k]||0)+1; G.tech.supCap+=(b.supply||0);
+  if(b.gas && e._gasAmt==null) e._gasAmt=TECH_GAS_START;   // ⛽ 가스 건물 = 에너지 매장량(총 5000)
   for(const w of G.tech.ents){ if(w.type==='worker'&&w.build===e.eid){ w.build=null; w._working=false; w._bpSide=null; w._bpT=null; w.tx=null; w.ty=null; w._wp=null; w._rr=0; } } }   // 건설 완료 → 일꾼 해방(작업상태 초기화)
 // 건물에서 유닛 소환 위치 = 발판을 사각형으로 둘러싸며 좌하단에서 반시계로 채움(하단→우측→상단→좌측), 최대한 건물에 붙임(화면 y-down 기준)
 // 🥚 알 부화(스웜): 그 자리에서 유닛 등장 — twin(스내퍼·스팅어)=2마리
@@ -10319,7 +10320,7 @@ const TECH_MINE_EXP=0.06;   // 미네랄 충돌 상자를 타일보다 살짝 �
 function _techMineralRects(){ const out=[], cw=_techCW(), ch=_techCH(), ex=TECH_MINE_EXP*cw, ey=TECH_MINE_EXP*ch; for(const m of (G.tech.minerals||[])){ out.push({x0:m.x-0.5*cw-ex, x1:m.x+0.5*cw+ex, y0:m.y-0.5*ch-ey, y1:m.y+0.5*ch+ey}); } return out; }   // 💎 미네랄 = 통과 불가 벽(1×1, 살짝 겹침)
 function _techNavRects(e){ const out=[]; for(const b of G.tech.ents){ if(b.type!=='bldg'||b.eid===e.build) continue; if(b.bt>0&&!b._bpause) continue;   // 벽 = 완성/일시정지 건물(건설 중은 통과 허용, 자기가 짓는 건물 제외)
     const R=_techCollRect(b,e); if(R.x1>R.x0&&R.y1>R.y0) out.push(R); }
-  for(const R of _techMineralRects()) out.push(R);   // 💎 미네랄도 벽 → 경로가 우회
+  if(!e._ghost) for(const R of _techMineralRects()) out.push(R);   // 💎 미네랄 벽 → 경로 우회(채취 유령 일꾼은 통과=낑김 없음)
   return out; }
 let _navExcl=null;   // 같은 이동 명령 그룹(eid Set) — 서로를 장애물로 안 봄(_techAssignMove가 설정)
 // 정지 유닛도 자리 차지(유닛 벽): 시작→목표 통로 상자 안의 같은 레이어 정지 유닛을 작은 사각 장애물로 등록
@@ -10490,7 +10491,7 @@ function _techGatherTick(dt){ let dep=false, any=false;
       if(bD<=0.008){   // 건물에 딱 붙어 도착 → 적립(스냅 없음 — 걸어서 이미 붙음)
         w.tx=null; w.ty=null; w._wp=null;
         if(w._gKind==='mineral'){ if(!G.tech.inf) G.tech.credit+=TECH_GATHER_AMT; res.amount=Math.max(0,res.amount-TECH_GATHER_AMT); }
-        else { if(!G.tech.inf) G.tech.energy+=TECH_GATHER_AMT; }
+        else { if(!G.tech.inf) G.tech.energy+=TECH_GATHER_AMT; res._gasAmt=Math.max(0,(res._gasAmt!=null?res._gasAmt:TECH_GAS_START)-TECH_GATHER_AMT); }
         dep=true; w._carry=false; w._gDep=true; w._gBaseSpot=null; _techGatherGoto(w,res,{x:mainB.x,y:mainB.y}); }   // 바로 뒤돌아 다음 왕복(끊김 없음) — 이후엔 본진↔자원 최단거리 면
       else if(w.tx==null){ if(bD<=0.07){ const st=Math.min(bD,0.42*dt); w.x+=bdx/bD*st; w.y+=bdy/bD*st; w.face=Math.atan2(bdx,bdy); }   // 경로 종료 후 남은 거리 = 걷는 속도 그대로 마저 붙음
         else _techRoute(w, w._gBaseSpot.x, w._gBaseSpot.y); } } }
@@ -10557,7 +10558,7 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
       const mPen=Math.min(pL,pR,pT,pB);   // 최소침투 축으로 경계까지 즉시(관통 잔류 0 — 접선 속도는 그대로라 벽 따라 미끄러짐)
       if(mPen===pL) e.x=R.x0; else if(mPen===pR) e.x=R.x1; else if(mPen===pT) e.y=R.y0; else e.y=R.y1;
       active=true; } }
-  for(const R of _techMineralRects()){ for(const e of G.tech.ents){ if(e.type!=='unit'&&e.type!=='worker') continue;   // 💎 미네랄 안에 들어온 유닛 즉시 경계로(통과 불가 — 유령 채취 일꾼도 미네랄은 못 뚫음)
+  for(const R of _techMineralRects()){ for(const e of G.tech.ents){ if((e.type!=='unit'&&e.type!=='worker')||e._ghost) continue;   // 💎 미네랄 안에 들어온 유닛 즉시 경계로(통과 불가 · 채취 유령 일꾼은 통과 허용)
       if(e.x<=R.x0||e.x>=R.x1||e.y<=R.y0||e.y>=R.y1) continue;
       const pL=e.x-R.x0, pR=R.x1-e.x, pT=e.y-R.y0, pB=R.y1-e.y, mPen=Math.min(pL,pR,pT,pB);
       if(mPen===pL) e.x=R.x0; else if(mPen===pR) e.x=R.x1; else if(mPen===pT) e.y=R.y0; else e.y=R.y1;
@@ -10682,7 +10683,7 @@ function _techEntAt(x,y){ let best=null,bd=1e9; const _W=(typeof GW!=='undefined
 function _techResInfo(){ return { eb:'자원', name:TECH_TREE[G.tech.race].name, desc:'일꾼 탭 → 건물 선택 → 맵을 탭해 배치', stats:[['크레딧',G.tech.inf?'∞':''+G.tech.credit],['에너지',G.tech.inf?'∞':''+G.tech.energy],['인구',G.tech.sup+'/'+G.tech.supCap]] }; }
 // 하단 패널 모델
 function techBuildListModel(){ const race=G.tech.race, t=TECH_TREE[race];
-  const items=t.buildings.map(b=>{ const cnt=(G.tech.built[b.k]||0)+(G.tech.addon[b.k]?1:0), spec=techBldgSpec(race,b.k)||{};
+  const items=t.buildings.filter(b=>!b.addonTo).map(b=>{ const cnt=(G.tech.built[b.k]||0)+(G.tech.addon[b.k]?1:0), spec=techBldgSpec(race,b.k)||{};   // 🔗 부속 건물은 제외 → 본체 프로필의 마지막 그리드에서 건설
     const parentOk=!b.addonTo||G.tech.built[b.addonTo]>0, reqok=_techReqMet(b.req)&&parentOk, afford=_techAfford(b.m,b.g), armed=(G.tech.arm===b.k);
     return { pro:'<span class="pemoji">'+b.ico+'</span>', sn:b.name, cr:b.m, en:b.g, meta:cnt?('✓'+(cnt>1?cnt:'')):(b.addonTo?'부속':(b.supply?'👤+'+b.supply:(spec.size?spec.size.join('×'):''))), metaCls:cnt?'lv':'', state:armed?'sel':((!reqok||!afford)?'dim':'ok'), act:'onclick="techArm(\''+b.k+'\')"' }; });
   return { mode:'build', title:t.name+' · 건설', icon:'<span class="pemoji">👷</span>', sub:'건물 탭 → 맵을 탭해 배치', items, info:_techResInfo() }; }
@@ -10696,6 +10697,7 @@ function techBldgProdModel(b){ const race=G.tech.race;
       info:{ eb:'생산', hideName:true, desc:'해처리가 라바를 낳습니다(최대 3). 라바를 선택해 각 유닛으로 변태시키세요.', stats:[['라바',_ln+'/3'],['생성','8s마다 1']], cr:0, en:0, time:'라바 선택' } }; }
   const items=b.produces.map(p=>{ const reqok=_techReqMet(p.req), afford=_techAfford(p.m,p.g), popok=G.tech.inf||!p.pop||(G.tech.sup+p.pop<=G.tech.supCap), cnt=G.tech.units[p.id]||0;
     return { pro:_techUnitPortrait(p.id), sn:_techRealName(race,p.id), cr:p.m, en:p.g, meta:cnt?('×'+cnt):(p.pop?'👤'+p.pop:''), metaCls:cnt?'lv':'', state:(!reqok||!afford||!popok)?'dim':'ok', act:'onclick="techDoProduce(\''+p.id+'\',\''+b.k+'\')"' }; });
+  items.push(..._techAddonCards(b.k));   // 🔗 부속 건물 카드(생산 카드 뒤 마지막 그리드) — 탭=즉시 건설
   const f=b.produces[0]||{}, fs=techUnitSpec(race,f.id)||{}, bs=techBldgSpec(race,b.k)||{};
   return { mode:'prod', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:'유닛 생산 — 탭', items, topRight:_techGasAutoBtn(b),
     info:{ eb:'생산', name:_techRealName(race,f.id)||'', hideName:true, desc:fs.abil?('능력: '+fs.abil):'', stats:[['체력',(fs.hp!=null?fs.hp:'-')+(fs.sh?('/'+fs.sh):'')],['공격',fs.atk?(fs.atk+' '+(_AT_KO[fs.at]||'')):'무공격'],['사거리',''+(fs.rng!=null?fs.rng:'-')]], progLabel:'인구·시간', progVal:'👤'+(f.pop||1)+' · '+(fs.t||'?')+'s', prog:0, cr:f.m||0, en:f.g||0, time:'탭하여 생산' } }; }
@@ -10784,9 +10786,30 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
   const _lblLayer=document.getElementById('cstLabels'); if(_lblLayer) _lblLayer.innerHTML=labels+armBtns+resumeBtn; }   // 남은시간 라벨 + 배치 ✓/✕ + ▶재개 버튼을 전용 오버레이(z8)에 → 3D 유닛·건물 위(리파이너리 등 큰 건물에 안 가림)
 function techBldgInfoModel(b){ const race=G.tech.race, hb=TECH_TREE[race].buildings[0];
   const items=(b.unlocks||[]).map(uid=>{ const p=(hb.produces||[]).find(x=>x.id===uid)||{}; return { pro:_techUnitPortrait(uid), sn:p.name||uid, cr:p.m||0, en:p.g||0, meta:p.pop?'👤'+p.pop:'', state:'ok', act:'' }; });
+  items.push(..._techAddonCards(b.k));   // 🔗 부속 건물 카드(마지막 그리드) — 탭=즉시 건설
   const bs=techBldgSpec(race,b.k)||{};
   return { mode:'prod', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:'이 건물이 해금 · 생산은 '+hb.name+'에서', items,
     info:{ eb:'해금', name:b.name, hideName:true, desc:'테크 건물 — 생산은 '+hb.name+'에서. 철거 시 해당 유닛 재잠금.', stats:[['해금 유닛',(b.unlocks||[]).length+'종']], cr:0, en:0 } }; }
+// 🔗 부속(애드온) 카드 — 그 본체(bk)에 붙는 부속 건물들. 탭 = 즉시 도킹 건설(일꾼 불필요)
+function _techAddonCards(bk){ const race=G.tech.race, t=TECH_TREE[race], out=[];
+  for(const x of t.buildings){ if(x.addonTo!==bk) continue;
+    const has=!!G.tech.addon[x.k], reqok=_techReqMet(x.req), afford=_techAfford(x.m,x.g);
+    out.push({ pro:'<span class="pemoji">'+x.ico+'</span>', sn:x.name+' (부속)', cr:x.m, en:x.g, meta:has?'✓':'＋부속', metaCls:has?'lv':'', state:has?'max':((!reqok||!afford)?'dim':'ok'), act:(!has&&reqok&&afford)?('onclick="techBuildAddon(event,\''+x.k+'\')"'):'' }); }
+  return out; }
+function techBuildAddon(ev, k){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;
+  const race=G.tech.race, b=techGetBldg(race,k); if(!b||!b.addonTo) return;
+  if(G.tech.addon[k]){ if(typeof toast==='function') toast('⛔ 이미 부속 건설됨'); return; }
+  if(!(G.tech.built[b.addonTo]>0)||!_techReqMet(b.req)){ if(typeof toast==='function') toast('⛔ 본체·선행 필요'); return; }
+  if(!_techAfford(b.m,b.g)){ if(typeof toast==='function') toast('⛔ 자원 부족'); return; }
+  techDockAddon(b, G.tech.sel); }   // 선택된 본체 우선
+// 생산·연구·해금이 없는 건물(리파이너리·서플라이 디팟 등)의 프로필 — 체력·에너지 매장량 등 정보
+function techBldgPlainModel(b, e){ const race=G.tech.race, bs=techBldgSpec(race,b.k)||{}, stats=[];
+  if(b.gas){ const tot=TECH_GAS_START, rem=(e&&e._gasAmt!=null)?e._gasAmt:tot; stats.push(['에너지 총량',''+tot],['남은 에너지', G.tech.inf?'∞':(''+rem)]); }
+  if(b.supply) stats.push(['공급 인구','+'+b.supply]);
+  if(b.detector) stats.push(['탐지','디텍터']);
+  const items=_techAddonCards(b.k);   // 🔗 부속 카드(마지막 그리드)
+  return { mode:'info', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:(b.gas?'⛽ 에너지 채취 건물':(b.supply?'👤 인구 공급':'건물 정보')), items,
+    info:{ eb:'건물 정보', name:b.name, hideName:true, desc:(b.gas?'일꾼이 이 건물에서 에너지(가스)를 채취합니다.':(b.supply?('최대 인구 +'+b.supply):'')), stats, cr:0, en:0 } }; }
 function _techUnitName(e){ if(!e) return null; if(e.type==='worker') return '일꾼';
   const bs=(TECH_TREE[G.tech.race]||{}).buildings||[]; for(const b of bs){ const p=(b.produces||[]).find(x=>x.id===e.uid); if(p) return p.name; } return e.uid; }
 function techUnitPanelModel(list){ const race=G.tech.race, grp={}, ord=[];   // 유닛 지정 시트 — 건물 그리드와 동일한 커맨드 그리드 재사용
@@ -10857,7 +10880,7 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
   let model=null;
   const _resumeMode=!!(selB && selB.bt>0 && selB._bpause && selUs.length);   // 재개 모드(유닛 지정 + 일시정지 건물 선택): 건물 위 재개 버튼만, 하단은 지정 유닛 프로필
   if(sh.open){ if(selB && !_resumeMode){ if(selB.bt>0){ model=techBldgBuildingModel(selB); }   // 건설 중·일시정지 = 잠금 프로필(진행도 HP)
-      else { const b=techGetBldg(G.tech.race,selB.bk); model=(b&&b.produces)?techBldgProdModel(b):((b&&b.research)?techBldgUpgModel(b):((b&&b.unlocks)?techBldgInfoModel(b):null)); } }
+      else { const b=techGetBldg(G.tech.race,selB.bk); model=(b&&b.produces)?techBldgProdModel(b):((b&&b.research)?techBldgUpgModel(b):((b&&b.unlocks)?techBldgInfoModel(b):techBldgPlainModel(b, selB))); } }   // 생산·연구·해금 없는 건물도 프로필(체력·에너지)
     else if(selUs.length){ const _selLv=selUs.filter(e=>e.type==='larva'); model=_selLv.length?techLarvaProdModel(_selLv):(_selWk?techWorkerBuildModel(selUs):techUnitPanelModel(selUs)); } }
   sheet.classList.toggle('open', !!(sh.open&&model));
   if(model) renderCmdGrid(body, model);
@@ -11041,9 +11064,10 @@ function techArm(bk){ const race=G.tech.race, b=techGetBldg(race,bk); if(!b) ret
   const sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null}); sh.open=(G.tech.arm==null); if(G.tech.arm==null) sh.sec='ent';   // 배치 중 = 시트 내려 맵 확보, 취소 = 일꾼 건설 시트로 복귀
   techUIRender(); }
 // 🔗 애드온 자동 도킹(스타1): 완성된 본체 중 애드온이 없는 것을 찾아 오른쪽·하단 정렬로 즉시 부착. 본체가 직접 건설(일꾼 불필요) — 본체-애드온 사이는 심시티 판정상 완전 밀봉
-function techDockAddon(b){ const race=G.tech.race, cw=_techCW(), ch=_techCH(), rows=_techRows(), f2=_techFoot(race,b.k);
+function techDockAddon(b, preferEid){ const race=G.tech.race, cw=_techCW(), ch=_techCH(), rows=_techRows(), f2=_techFoot(race,b.k);
   let parent=null, dock=null;
-  for(const p of G.tech.ents){ if(p.type!=='bldg'||p.bk!==b.addonTo||p.bt>0||p._addonEid) continue;   // 완성 본체 + 애드온 미부착
+  const _cand=G.tech.ents.filter(p=>p.type==='bldg'&&p.bk===b.addonTo&&p.bt<=0&&!p._addonEid).sort((a,c)=>((a.eid===preferEid)?-1:0)-((c.eid===preferEid)?-1:0));   // 선택된 본체 우선
+  for(const p of _cand){ if(p.type!=='bldg'||p.bk!==b.addonTo||p.bt>0||p._addonEid) continue;   // 완성 본체 + 애드온 미부착
     const pf=_techEntFoot(p), c0=pf.c0+pf.w, r0=pf.r0+pf.h-f2.h;   // 본체 바로 오른쪽·하단 정렬(스타1 규칙)
     if(c0+f2.w>TECH_GRID.cols||r0<0||r0+f2.h>rows) continue;   // 격자 밖
     const s={c0,r0,w:f2.w,h:f2.h}; let clash=false;
