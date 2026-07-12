@@ -10225,8 +10225,8 @@ function techUIInit(race){ if(!TECH_TREE[race]) race='union'; _techEnsureRoster(
   G.tech={ race, credit:TECH_START.credit, energy:TECH_START.energy, built:{}, addon:{}, units:{}, research:{}, sup:0, supCap:0, inf:!!keep.inf, nocool:!!keep.nocool, ents:[], sel:null, selU:[], arm:null, eseq:1, pend:[], view:{x:0.5,y:0.5,zoom:1}, sheet:{open:false,sec:null} };
   const main=TECH_TREE[race].buildings[0]; if(main){ G.tech.built[main.k]=1; G.tech.supCap+=(main.supply||0); const _mf=_techFoot(race,main.k), _ms=_techSnap(0.5,0.3,_mf.w,_mf.h); G.tech.ents.push({eid:G.tech.eseq++, type:'bldg', bk:main.k, x:_ms.cx, y:_ms.cy, bt:0}); }   // 본진 자동 배치(그리드 스냅)
   G.tech.ents.push({eid:G.tech.eseq++, type:'worker', x:0.32, y:0.62});   // 일꾼 1기
-  { const _mcw=_techCW(), _mch=_techCH(); G.tech.minerals=[];   // 💎 미네랄 6개 클러스터(가스 구역 왼쪽 3×2, 인접=다닥다닥) — 채취=크레딧
-    const _offs=[[-5,0.5],[-4,0.5],[-3,0.5],[-5,1.5],[-4,1.5],[-3,1.5]];   // (칸) c0 기준 왼쪽, 1칸 간격(딱 붙음)
+  { const _mcw=_techCW(), _mch=_techCH(); G.tech.minerals=[];   // 💎 미네랄 6개 한 줄(가스 구역 왼쪽, 인접=다닥다닥) — 채취=크레딧. 한 줄이라 모든 덩어리 아래(본진 쪽)가 열려 낑김 없음
+    const _offs=[[-7,1],[-6,1],[-5,1],[-4,1],[-3,1],[-2,1]];   // (칸) c0 기준 왼쪽, 가로 1줄·1칸 간격
     for(const o of _offs) G.tech.minerals.push({ eid:G.tech.eseq++, x:TECH_GRID.x0+(TECH_GAS.c0+o[0])*_mcw, y:TECH_GRID.y0+(TECH_GAS.r0+o[1])*_mch, amount:TECH_MINE_START, owner:null, miner:null }); } }
 const TECH_MINE_START=1500, TECH_GAS_START=5000, TECH_GATHER_AMT=8, TECH_MINE_T=1.2, TECH_GAS_T=1.2;   // 채취 상수: 매장량 · 1회 채취량 · 채취 소요시간
 function _techBuildTime(race,k){ if(G.tech.nocool) return 0; return ((techBldgSpec(race,k)||{}).t||20)*TECH_TIME_MUL; }
@@ -10320,7 +10320,7 @@ const TECH_MINE_EXP=0.06;   // 미네랄 충돌 상자를 타일보다 살짝 �
 function _techMineralRects(){ const out=[], cw=_techCW(), ch=_techCH(), ex=TECH_MINE_EXP*cw, ey=TECH_MINE_EXP*ch; for(const m of (G.tech.minerals||[])){ out.push({x0:m.x-0.5*cw-ex, x1:m.x+0.5*cw+ex, y0:m.y-0.5*ch-ey, y1:m.y+0.5*ch+ey}); } return out; }   // 💎 미네랄 = 통과 불가 벽(1×1, 살짝 겹침)
 function _techNavRects(e){ const out=[]; for(const b of G.tech.ents){ if(b.type!=='bldg'||b.eid===e.build) continue; if(b.bt>0&&!b._bpause) continue;   // 벽 = 완성/일시정지 건물(건설 중은 통과 허용, 자기가 짓는 건물 제외)
     const R=_techCollRect(b,e); if(R.x1>R.x0&&R.y1>R.y0) out.push(R); }
-  if(!e._ghost) for(const R of _techMineralRects()) out.push(R);   // 💎 미네랄 벽 → 경로 우회(채취 유령 일꾼은 통과=낑김 없음)
+  for(const R of _techMineralRects()) out.push(R);   // 💎 미네랄 = 지형지물(모든 유닛·일꾼이 돌아서 감)
   return out; }
 let _navExcl=null;   // 같은 이동 명령 그룹(eid Set) — 서로를 장애물로 안 봄(_techAssignMove가 설정)
 // 정지 유닛도 자리 차지(유닛 벽): 시작→목표 통로 상자 안의 같은 레이어 정지 유닛을 작은 사각 장애물로 등록
@@ -10449,22 +10449,29 @@ function _techAssignGatherMineral(wks, clickEid){ const minerals=G.tech.minerals
     if(!target) target=clicked;   // 반경 내 다 찼으면 클릭 미네랄에서 대기(교대)
     if(target.owner==null) target.owner=w.eid;   // 빈 것만 배정(대기자는 배정 안 함)
     _techSetGather(w,'mineral',target.eid); } }
-// ⚡ 에너지 자동 채취: 본진 10칸 이내 가스 건물에 gasAuto명을 유지(부족=유휴 일꾼 배정, 초과=반환)
-function _techApplyGasAuto(){ if(!G.tech) return; const race=G.tech.race, mainB=_techMainB(); if(!mainB) return;
-  const target=G.tech.gasAuto||0, cw=_techCW(), ch=_techCH(), R=10;
-  const gasBldgs=G.tech.ents.filter(e=>e.type==='bldg'&&e.bt<=0&&(techGetBldg(race,e.bk)||{}).gas && Math.hypot((e.x-mainB.x)/cw,(e.y-mainB.y)/ch)<=R);   // 본진 10칸 이내 완성 가스 건물
-  if(!gasBldgs.length) return;
-  const gasSet=new Set(gasBldgs.map(g=>g.eid));
-  const gathering=G.tech.ents.filter(e=>e.type==='worker'&&e._gKind==='gas'&&gasSet.has(e._gEid));
-  if(gathering.length<target){ const need=target-gathering.length;
-    const idle=G.tech.ents.filter(e=>e.type==='worker'&&e.build==null&&!e._gKind).sort((a,b)=>Math.hypot(a.x-mainB.x,a.y-mainB.y)-Math.hypot(b.x-mainB.x,b.y-mainB.y));   // 본진에 가까운 유휴 일꾼부터
-    for(let i=0;i<need&&i<idle.length;i++) _techAssignGather([idle[i]],'gas',gasBldgs[i%gasBldgs.length].eid); }
-  else if(gathering.length>target){ const rem=gathering.length-target; for(let i=0;i<rem;i++){ _techReleaseGather(gathering[i]); gathering[i].tx=null; gathering[i].ty=null; } } }
-function techGasAuto(delta, ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;
-  G.tech.gasAuto=Math.max(0,Math.min(9,(G.tech.gasAuto||0)+delta)); _techApplyGasAuto();
+// 🔄 건물별 자동 채취(우상단 스텝퍼) 유지: 본진=크레딧(미네랄) / 가스 건물=에너지(그 건물)
+function _techApplyAuto(e){ if(!G.tech||!e||e.type!=='bldg'||e.bt>0) return; const race=G.tech.race, b=techGetBldg(race,e.bk); if(!b) return;
+  const target=e._autoN||0, isMain=(b.k===((TECH_TREE[race].buildings[0])||{}).k);
+  if(isMain){   // ◈ 크레딧: 본진 10칸 이내 미네랄에 target명 유지 — 부족=유휴 일꾼 배정 / 초과=반환
+    const cw=_techCW(), ch=_techCH();
+    const near=(G.tech.minerals||[]).filter(m=>Math.hypot((m.x-e.x)/cw,(m.y-e.y)/ch)<=10); if(!near.length) return;
+    const gathering=G.tech.ents.filter(w=>w.type==='worker'&&w._gKind==='mineral');
+    if(gathering.length<target){ const idle=G.tech.ents.filter(w=>w.type==='worker'&&w.build==null&&!w._gKind).sort((a,c)=>Math.hypot(a.x-e.x,a.y-e.y)-Math.hypot(c.x-e.x,c.y-e.y));   // 본진에 가까운 유휴 일꾼부터
+      const pulled=idle.slice(0,target-gathering.length); if(pulled.length) _techAssignGatherMineral(pulled, near[0].eid); }
+    else if(gathering.length>target){ const rem=gathering.length-target, gs=gathering.slice(); for(let i=0;i<rem;i++){ _techReleaseGather(gs[i]); gs[i].tx=null; gs[i].ty=null; } } }
+  else if(b.gas){   // ⚡ 에너지: 이 가스 건물에 target명 유지 — 그 건물 구역서 가장 가까운, 건설 안 하고 '다른 가스'가 아닌 일꾼(미네랄 채취·유휴)을 데려옴
+    const gathering=G.tech.ents.filter(w=>w.type==='worker'&&w._gKind==='gas'&&w._gEid===e.eid);
+    if(gathering.length<target){ const pool=G.tech.ents.filter(w=>w.type==='worker'&&w.build==null && !(w._gKind==='gas'&&w._gEid!==e.eid)).sort((a,c)=>Math.hypot(a.x-e.x,a.y-e.y)-Math.hypot(c.x-e.x,c.y-e.y));   // 건설X·다른 가스X (미네랄 채취·유휴 OK) 중 가장 가까이
+      const need=target-gathering.length; for(let i=0,got=0;i<pool.length&&got<need;i++){ if(pool[i]._gEid===e.eid&&pool[i]._gKind==='gas') continue; _techAssignGather([pool[i]],'gas',e.eid); got++; } }
+    else if(gathering.length>target){ const rem=gathering.length-target, gs=gathering.slice(); for(let i=0;i<rem;i++){ _techReleaseGather(gs[i]); gs[i].tx=null; gs[i].ty=null; } } } }
+function techAutoAdjust(delta, ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;
+  const e=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'):null; if(!e) return;
+  e._autoN=Math.max(0,Math.min(24,(e._autoN||0)+delta)); _techApplyAuto(e);
   if(typeof playSfx==='function') playSfx('ui_confirm'); techUIRender(); }
-function _techGasAutoBtn(b){ if(!b || !G.tech || b.k!==((TECH_TREE[G.tech.race].buildings[0])||{}).k) return '';   // 본진 프로필에만
-  return '<div class="cgGasAuto" title="에너지 자동 채취 일꾼 수(본진 10칸 이내 가스)"><span class="gaLbl">⚡자동</span><button class="gaBtn" onclick="techGasAuto(-1,event)">−</button><b class="gaN">'+(G.tech.gasAuto||0)+'</b><button class="gaBtn" onclick="techGasAuto(1,event)">+</button></div>'; }
+function _techAutoBtn(b){ const e=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'):null; if(!e||e.bk!==b.k) return '';
+  const isMain=(b.k===((TECH_TREE[G.tech.race].buildings[0])||{}).k); if(!isMain && !b.gas) return '';   // 본진 또는 가스 건물만
+  const ic=isMain?'◈크레딧':'⚡에너지', tt=isMain?'크레딧 자동 채취 일꾼 수(본진 10칸 이내 미네랄)':'이 가스 건물 자동 채취 일꾼 수';
+  return '<div class="cgGasAuto" title="'+tt+'"><span class="gaLbl">'+ic+'</span><button class="gaBtn" onclick="techAutoAdjust(-1,event)">−</button><b class="gaN">'+(e._autoN||0)+'</b><button class="gaBtn" onclick="techAutoAdjust(1,event)">+</button></div>'; }
 function _techGatherTick(dt){ let dep=false, any=false;
   const mainB=_techMainB();
   for(const w of G.tech.ents){ if(w.type!=='worker'||!w._gKind) continue;
@@ -10500,7 +10507,7 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
   const _vmoving=techViewTick(dt);   // 🎥 부드러운 줌/팬 보간(메인맵과 동일) — 애니메이션 중이면 매 프레임 재렌더
   for(const e of G.tech.ents){ if(e.type==='bldg'&&e.bt>0){ if(!e.waiting&&!e._bpause&&(!_techNeedsPower(e.bk)||_techPowered(e.x,e.y))){ e.bt=Math.max(0,e.bt-dt); if(e.bt<=0){ techFinishBuild(e); done=true; } } active=true; } }   // waiting=일꾼 미도착 / _bpause=일시정지 / 동력 없음(블랙아웃) → 카운트다운 정지
   const _gath=_techGatherTick(dt); if(_gath.any) active=true; if(_gath.dep) done=true;   // 💎⚡ 자원 채취 FSM(이동 목표 지정 → 아래 이동 루프가 수행)
-  if((G.tech.gasAuto||0)>0){ G.tech._gaT=(G.tech._gaT||0)+dt; if(G.tech._gaT>=1.0){ G.tech._gaT=0; _techApplyGasAuto(); } }   // ⚡ 에너지 자동 채취 인원 유지(신규 일꾼 흡수)
+  { G.tech._gaT=(G.tech._gaT||0)+dt; if(G.tech._gaT>=1.0){ G.tech._gaT=0; for(const e of G.tech.ents){ if(e.type==='bldg'&&e.bt<=0&&(e._autoN||0)>0) _techApplyAuto(e); } } }   // 🔄 건물별 자동 채취 인원 유지(신규 일꾼 흡수)
   // 🚶 유닛 이동 — 공용 stepUnitMove(관성·유닛회피·감속·정착·응시) + 🧭 경유점(waypoint) 추종. 건물 회피 조향 없음(경로가 이미 우회) → 벽 비비기/틱틱 걸림 제거
   const _clamp=(x,y)=>({x:Math.max(0.02,Math.min(0.98,x)), y:Math.max(0.12,Math.min(0.98,y))});
   const _staticN=[]; for(const o of G.tech.ents){ if((o.type!=='unit'&&o.type!=='worker')||o.tx!=null||o._ghost) continue; const k=_techEntKey(o); _staticN.push({ref:o, x:o.x, y:o.y, sizeKey:k, airKey:k}); }   // 정지 유닛만(이동 중·채취 유령 제외 — 유령은 통과 가능)
@@ -10558,7 +10565,7 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
       const mPen=Math.min(pL,pR,pT,pB);   // 최소침투 축으로 경계까지 즉시(관통 잔류 0 — 접선 속도는 그대로라 벽 따라 미끄러짐)
       if(mPen===pL) e.x=R.x0; else if(mPen===pR) e.x=R.x1; else if(mPen===pT) e.y=R.y0; else e.y=R.y1;
       active=true; } }
-  for(const R of _techMineralRects()){ for(const e of G.tech.ents){ if((e.type!=='unit'&&e.type!=='worker')||e._ghost) continue;   // 💎 미네랄 안에 들어온 유닛 즉시 경계로(통과 불가 · 채취 유령 일꾼은 통과 허용)
+  for(const R of _techMineralRects()){ for(const e of G.tech.ents){ if(e.type!=='unit'&&e.type!=='worker') continue;   // 💎 미네랄 안에 들어온 유닛 즉시 경계로(모두 통과 불가 — 지형지물)
       if(e.x<=R.x0||e.x>=R.x1||e.y<=R.y0||e.y>=R.y1) continue;
       const pL=e.x-R.x0, pR=R.x1-e.x, pT=e.y-R.y0, pB=R.y1-e.y, mPen=Math.min(pL,pR,pT,pB);
       if(mPen===pL) e.x=R.x0; else if(mPen===pR) e.x=R.x1; else if(mPen===pT) e.y=R.y0; else e.y=R.y1;
@@ -10693,13 +10700,12 @@ function techBldgProdModel(b){ const race=G.tech.race;
     const selB=(G.tech.sel!=null)?G.tech.ents.find(e=>e.eid===G.tech.sel&&e.type==='bldg'):null, hid=selB?selB.eid:null;
     const _ln=hid!=null?G.tech.ents.reduce((a,l)=>a+((l.type==='larva'&&l.hatch===hid)?1:0),0):0;
     const items=[{ pro:'<span class="pemoji">🐛</span>', sn:'라바 선택', meta:_ln+'/3', metaCls:'lv', state:_ln>0?'ok':'dim', act:_ln>0?'onclick="techSelectLarva(event)"':'' }];
-    return { mode:'prod', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs0.hp,bs0.sh), sub:'🐛 라바 선택 후 유닛 생성', status:'🐛 라바 '+_ln+'/3', statusIdle:(_ln===0), items, topRight:_techGasAutoBtn(b),
+    return { mode:'prod', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs0.hp,bs0.sh), sub:'🐛 라바 선택 후 유닛 생성', status:'🐛 라바 '+_ln+'/3', statusIdle:(_ln===0), items, topRight:_techAutoBtn(b),
       info:{ eb:'생산', hideName:true, desc:'해처리가 라바를 낳습니다(최대 3). 라바를 선택해 각 유닛으로 변태시키세요.', stats:[['라바',_ln+'/3'],['생성','8s마다 1']], cr:0, en:0, time:'라바 선택' } }; }
-  const items=b.produces.map(p=>{ const reqok=_techReqMet(p.req), afford=_techAfford(p.m,p.g), popok=G.tech.inf||!p.pop||(G.tech.sup+p.pop<=G.tech.supCap), cnt=G.tech.units[p.id]||0;
-    return { pro:_techUnitPortrait(p.id), sn:_techRealName(race,p.id), cr:p.m, en:p.g, meta:cnt?('×'+cnt):(p.pop?'👤'+p.pop:''), metaCls:cnt?'lv':'', state:(!reqok||!afford||!popok)?'dim':'ok', act:'onclick="techDoProduce(\''+p.id+'\',\''+b.k+'\')"' }; });
-  items.push(..._techAddonCards(b.k));   // 🔗 부속 건물 카드(생산 카드 뒤 마지막 그리드) — 탭=즉시 건설
+  const items=_techWithAddons(b.produces.map(p=>{ const reqok=_techReqMet(p.req), afford=_techAfford(p.m,p.g), popok=G.tech.inf||!p.pop||(G.tech.sup+p.pop<=G.tech.supCap), cnt=G.tech.units[p.id]||0;
+    return { pro:_techUnitPortrait(p.id), sn:_techRealName(race,p.id), cr:p.m, en:p.g, meta:cnt?('×'+cnt):(p.pop?'👤'+p.pop:''), metaCls:cnt?'lv':'', state:(!reqok||!afford||!popok)?'dim':'ok', act:'onclick="techDoProduce(\''+p.id+'\',\''+b.k+'\')"' }; }), b.k);   // 🔗 부속 카드는 마지막 그리드로
   const f=b.produces[0]||{}, fs=techUnitSpec(race,f.id)||{}, bs=techBldgSpec(race,b.k)||{};
-  return { mode:'prod', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:'유닛 생산 — 탭', items, topRight:_techGasAutoBtn(b),
+  return { mode:'prod', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:'유닛 생산 — 탭', items, topRight:_techAutoBtn(b),
     info:{ eb:'생산', name:_techRealName(race,f.id)||'', hideName:true, desc:fs.abil?('능력: '+fs.abil):'', stats:[['체력',(fs.hp!=null?fs.hp:'-')+(fs.sh?('/'+fs.sh):'')],['공격',fs.atk?(fs.atk+' '+(_AT_KO[fs.at]||'')):'무공격'],['사거리',''+(fs.rng!=null?fs.rng:'-')]], progLabel:'인구·시간', progVal:'👤'+(f.pop||1)+' · '+(fs.t||'?')+'s', prog:0, cr:f.m||0, en:f.g||0, time:'탭하여 생산' } }; }
 function techBldgUpgModel(b){ const race=G.tech.race;
   const items=b.research.map(r=>{ const key=race+'_'+r.k; let meta,state,cr,en;
@@ -10785,8 +10791,7 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
   map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none">'+_floor+creepZ+psi+gasZone+mineZ+'<div class="bmapTop"><div class="techTabs">'+tabs+'</div><div class="bres">'+res+'</div></div>'+ents+foot+ghost+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div></div>';
   const _lblLayer=document.getElementById('cstLabels'); if(_lblLayer) _lblLayer.innerHTML=labels+armBtns+resumeBtn; }   // 남은시간 라벨 + 배치 ✓/✕ + ▶재개 버튼을 전용 오버레이(z8)에 → 3D 유닛·건물 위(리파이너리 등 큰 건물에 안 가림)
 function techBldgInfoModel(b){ const race=G.tech.race, hb=TECH_TREE[race].buildings[0];
-  const items=(b.unlocks||[]).map(uid=>{ const p=(hb.produces||[]).find(x=>x.id===uid)||{}; return { pro:_techUnitPortrait(uid), sn:p.name||uid, cr:p.m||0, en:p.g||0, meta:p.pop?'👤'+p.pop:'', state:'ok', act:'' }; });
-  items.push(..._techAddonCards(b.k));   // 🔗 부속 건물 카드(마지막 그리드) — 탭=즉시 건설
+  const items=_techWithAddons((b.unlocks||[]).map(uid=>{ const p=(hb.produces||[]).find(x=>x.id===uid)||{}; return { pro:_techUnitPortrait(uid), sn:p.name||uid, cr:p.m||0, en:p.g||0, meta:p.pop?'👤'+p.pop:'', state:'ok', act:'' }; }), b.k);   // 🔗 부속 카드는 마지막 그리드로
   const bs=techBldgSpec(race,b.k)||{};
   return { mode:'prod', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:'이 건물이 해금 · 생산은 '+hb.name+'에서', items,
     info:{ eb:'해금', name:b.name, hideName:true, desc:'테크 건물 — 생산은 '+hb.name+'에서. 철거 시 해당 유닛 재잠금.', stats:[['해금 유닛',(b.unlocks||[]).length+'종']], cr:0, en:0 } }; }
@@ -10796,6 +10801,9 @@ function _techAddonCards(bk){ const race=G.tech.race, t=TECH_TREE[race], out=[];
     const has=!!G.tech.addon[x.k], reqok=_techReqMet(x.req), afford=_techAfford(x.m,x.g);
     out.push({ pro:'<span class="pemoji">'+x.ico+'</span>', sn:x.name+' (부속)', cr:x.m, en:x.g, meta:has?'✓':'＋부속', metaCls:has?'lv':'', state:has?'max':((!reqok||!afford)?'dim':'ok'), act:(!has&&reqok&&afford)?('onclick="techBuildAddon(event,\''+x.k+'\')"'):'' }); }
   return out; }
+function _techWithAddons(items, bk){ const addons=_techAddonCards(bk); if(!addons.length) return items;   // 부속 카드를 그리드 맨 끝(7·8번)으로 — 앞은 빈 칸으로 채워 밀어냄
+  const PER=8; if(items.length+addons.length<=PER){ const out=items.slice(); while(out.length<PER-addons.length) out.push(null); out.push(...addons); return out; }
+  return items.concat(addons); }
 function techBuildAddon(ev, k){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;
   const race=G.tech.race, b=techGetBldg(race,k); if(!b||!b.addonTo) return;
   if(G.tech.addon[k]){ if(typeof toast==='function') toast('⛔ 이미 부속 건설됨'); return; }
@@ -10807,8 +10815,8 @@ function techBldgPlainModel(b, e){ const race=G.tech.race, bs=techBldgSpec(race,
   if(b.gas){ const tot=TECH_GAS_START, rem=(e&&e._gasAmt!=null)?e._gasAmt:tot; stats.push(['에너지 총량',''+tot],['남은 에너지', G.tech.inf?'∞':(''+rem)]); }
   if(b.supply) stats.push(['공급 인구','+'+b.supply]);
   if(b.detector) stats.push(['탐지','디텍터']);
-  const items=_techAddonCards(b.k);   // 🔗 부속 카드(마지막 그리드)
-  return { mode:'info', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:(b.gas?'⛽ 에너지 채취 건물':(b.supply?'👤 인구 공급':'건물 정보')), items,
+  const items=_techWithAddons([], b.k);   // 🔗 부속 카드(마지막 그리드)
+  return { mode:'info', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:(b.gas?'⛽ 에너지 채취 건물':(b.supply?'👤 인구 공급':'건물 정보')), items, topRight:_techAutoBtn(b),
     info:{ eb:'건물 정보', name:b.name, hideName:true, desc:(b.gas?'일꾼이 이 건물에서 에너지(가스)를 채취합니다.':(b.supply?('최대 인구 +'+b.supply):'')), stats, cr:0, en:0 } }; }
 function _techUnitName(e){ if(!e) return null; if(e.type==='worker') return '일꾼';
   const bs=(TECH_TREE[G.tech.race]||{}).buildings||[]; for(const b of bs){ const p=(b.produces||[]).find(x=>x.id===e.uid); if(p) return p.name; } return e.uid; }
