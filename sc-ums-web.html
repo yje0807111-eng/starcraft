@@ -1433,6 +1433,11 @@
   .cmdG .cgPill.idle{color:var(--cgMuted);border-color:var(--metal-edge)}
   .cmdG .cgGasAuto{flex:none;align-self:flex-start;display:flex;align-items:center;gap:3px;padding:3px 4px;border-radius:6px;background:rgba(96,220,130,.08);border:1px solid rgba(120,232,150,.4)}   /* ⚡ 에너지 자동 채취 스텝퍼 */
   .cmdG .cgGasAuto .gaLbl{font:800 8.5px/1 sans-serif;color:#9fe8b4;letter-spacing:.3px}
+  .cmdG .cgGasAuto .gaIc{font-size:12px;line-height:1;color:#dff7e6}   /* 심플: 아이콘만 */
+  .cmdG .cgLift{flex:none;align-self:flex-start;width:26px;height:24px;border-radius:6px;border:1px solid var(--glass);background:rgba(120,170,255,.14);color:#dbe8ff;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}   /* 🛫 부양 버튼(프로필 우상단) */
+  .cmdG .cgLift.on{border-color:#5ad1ff;background:rgba(90,209,255,.26);box-shadow:0 0 6px rgba(90,209,255,.45)}
+  .cmdG .cgLift:active{background:rgba(120,170,255,.34)}
+  .cmdG .cgProg .pl .pt{color:var(--caL);font:800 9px/1 'Rajdhani',sans-serif;margin-left:4px;letter-spacing:.2px}   /* 생산 중 옆 남은시간(작게) */
   .cmdG .cgGasAuto .gaBtn{width:18px;height:18px;flex:none;border-radius:4px;border:1px solid rgba(120,232,150,.5);background:rgba(120,232,150,.12);color:#c7f5d6;font:800 13px/1 sans-serif;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
   .cmdG .cgGasAuto .gaBtn:active{background:rgba(120,232,150,.3)}
   .cmdG .cgGasAuto .gaN{min-width:12px;text-align:center;font:800 13px/1 'Rajdhani',sans-serif;color:#dff7e6}
@@ -7232,7 +7237,7 @@ function _cgInfoHTML(d){ if(!d) return '<div class="cgEb">정보</div><div class
   let q=''; if(d.queue){ const cap=d.qcap||5, lbl=d.qlabel||'대기열', have=d.queue.filter(Boolean).length;
     q='<div class="cgQlbl">'+lbl+' '+have+'/'+cap+'</div><div class="cgQ">'+d.queue.map((s,i)=>s?('<div class="qs'+(s.front?' front':'')+(s.ready?' rdy':'')+'"'+(s.act?(' '+s.act+' title="탭 = 취소(100% 환불)"'):(s.ready?'':' onclick="techCancelQueue(event,'+i+')" title="탭 = 취소(100% 환불)"'))+'><span class="qpro">'+(s.pro||'')+'</span>'+(s.front?'<i class="qb" style="width:'+Math.max(0,s.prog||0)+'%"></i>':'')+'</div>'):'<div class="qs empty"></div>').join('')+'</div>'; }
   return (d.eb?'<div class="cgEb">'+d.eb+'</div>':'')+(d.hideName?'':'<div class="cgDn">'+(d.name||'')+'</div>')+(d.desc?'<div class="cgDd">'+d.desc+'</div>':'')+val
-    +(d.progLabel?('<div class="cgProg"><div class="pl"><span>'+d.progLabel+'</span><b>'+(d.progVal||'')+'</b></div><div class="cgBar"><i style="width:'+Math.max(4,d.prog||0)+'%"></i></div></div>'):'')+q
+    +(d.progLabel?('<div class="cgProg"><div class="pl"><span>'+d.progLabel+(d.progTime?' <em class="pt">'+d.progTime+'</em>':'')+'</span><b>'+(d.progVal||'')+'</b></div><div class="cgBar"><i style="width:'+Math.max(4,d.prog||0)+'%"></i></div></div>'):'')+q
     +'<div class="cgDcost">'+_cgCost(d.cr,d.en)+(d.time?'<span class="time">'+d.time+'</span>':'')+'</div>'; }
 function renderCmdGrid(host, m){ const el=(typeof host==='string')?document.getElementById(host):host; if(!el||!m) return;
   const PER=m.compact?4:8, _items=m.compact?((m.items||[]).filter(Boolean)):(m.items||[]);   // 간소화=빈 칸 제거 후 조밀 배치(4칸/페이지)
@@ -10643,8 +10648,11 @@ function techAutoAdjust(delta, ev){ if(ev&&ev.stopPropagation) ev.stopPropagatio
   if(typeof playSfx==='function') playSfx('ui_confirm'); techUIRender(); }
 function _techAutoBtn(b){ const e=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'):null; if(!e||e.bk!==b.k) return '';
   const isMain=(b.k===((TECH_TREE[G.tech.race].buildings[0])||{}).k); if(!isMain && !b.gas) return '';   // 본진 또는 가스 건물만
-  const ic=isMain?'◈크레딧':'⚡에너지', tt=isMain?'이 본진과 연동 중인 미네랄 채취 일꾼 수(10칸)':'이 가스 건물에서 작업 중인 일꾼 수', n=isMain?_techMineralWorkers(e).length:_techGasWorkers(e).length;
-  return '<div class="cgGasAuto" title="'+tt+'"><span class="gaLbl">'+ic+'</span><button class="gaBtn" onclick="techAutoAdjust(-1,event)">−</button><b class="gaN">'+n+'</b><button class="gaBtn" onclick="techAutoAdjust(1,event)">+</button></div>'; }
+  const ic=isMain?'◈':'⚡', tt=isMain?'이 본진과 연동 중인 미네랄 채취 일꾼 수':'이 가스 건물에서 작업 중인 일꾼 수', n=isMain?_techMineralWorkers(e).length:_techGasWorkers(e).length;   // 심플: 아이콘만(◈/⚡) + − n +
+  return '<div class="cgGasAuto" title="'+tt+'"><button class="gaBtn" onclick="techAutoAdjust(-1,event)">−</button><span class="gaIc">'+ic+'</span><b class="gaN">'+n+'</b><button class="gaBtn" onclick="techAutoAdjust(1,event)">+</button></div>'; }
+function _techLiftBtn(b){ const e=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'):null; if(!e||e.bk!==b.k||e.bt>0||!_techCanLift(b.k)) return '';   // 🛫 부양 버튼(프로필 우상단)
+  return '<button class="cgLift'+(e._lifted?' on':'')+'" onclick="techLiftToggle(event)" title="'+(e._lifted?'착륙':'부양')+'">'+(e._lifted?'🛬':'🛫')+'</button>'; }
+function _techBldgTR(b){ return _techAutoBtn(b)+_techLiftBtn(b); }   // 프로필 우상단 = [자원 스텝퍼(왼)] + [부양 버튼(오른)]
 function _techGatherTick(dt){ let dep=false, any=false;
   const mainB=_techMainB();
   for(const w of G.tech.ents){ if(w.type!=='worker'||!w._gKind) continue;
@@ -10882,7 +10890,7 @@ function techBldgProdModel(b, e){ const race=G.tech.race;
     const selB=(G.tech.sel!=null)?G.tech.ents.find(e=>e.eid===G.tech.sel&&e.type==='bldg'):null, hid=selB?selB.eid:null;
     const _ln=hid!=null?G.tech.ents.reduce((a,l)=>a+((l.type==='larva'&&l.hatch===hid)?1:0),0):0;
     const items=[{ pro:'<span class="pemoji">🐛</span>', sn:'라바 선택', meta:_ln+'/3', metaCls:'lv', state:_ln>0?'ok':'dim', act:_ln>0?'onclick="techSelectLarva(event)"':'' }];
-    return { mode:'prod', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs0.hp,bs0.sh), sub:'🐛 라바 선택 후 유닛 생성', status:'🐛 라바 '+_ln+'/3', statusIdle:(_ln===0), items, topRight:_techAutoBtn(b),
+    return { mode:'prod', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs0.hp,bs0.sh), sub:'🐛 라바 선택 후 유닛 생성', status:'🐛 라바 '+_ln+'/3', statusIdle:(_ln===0), items, topRight:_techBldgTR(b),
       info:{ eb:'생산', hideName:true, desc:'해처리가 라바를 낳습니다(최대 3). 라바를 선택해 각 유닛으로 변태시키세요.', stats:[['라바',_ln+'/3'],['생성','8s마다 1']], cr:0, en:0, time:'라바 선택' } }; }
   if(TECH_AMMO[b.k] && !TECH_AMMO[b.k].unit){ const a=TECH_AMMO[b.k], cap=_techAmmoCap(b.k), have=(e?((e._chc||0)+((e._chq||[]).length)):0);   // ☢️ 뉴클리어 사일로 = 단일 장전(5큐 아님)
     const aitems=[{ pro:'<span class="pemoji">'+a.ico+'</span>', sn:a.label+' 장전', cr:a.m, en:a.g, meta:have+'/'+cap, metaCls:'lv', state:(have>=cap||!_techAfford(a.m,a.g))?'dim':'ok', act:'onclick="techChargeAmmo(event,\''+b.k+'\')"' }];
@@ -10892,11 +10900,11 @@ function techBldgProdModel(b, e){ const race=G.tech.race;
     return { pro:_techUnitPortrait(p.id), sn:_techRealName(race,p.id), cr:p.m, en:p.g, meta:cnt?('×'+cnt):(p.pop?'👤'+p.pop:''), metaCls:cnt?'lv':'', state:(qFull||!reqok||!afford||!popok)?'dim':'ok', act:'onclick="techDoProduce(\''+p.id+'\',\''+b.k+'\')"' }; }), b.k);   // 🔗 부속 카드는 마지막 그리드로 · 대기열 가득참=비활성
   const bs=techBldgSpec(race,b.k)||{};
   const queue=[]; for(let i=0;i<5;i++){ const q=pq[i]; queue.push(q?{pro:_techUnitPortrait(q.id), front:i===0, prog:i===0?Math.round((1-q.t/(q.tMax||1))*100):0}:null); }
-  const front=pq[0]; let progLabel,progVal,prog,time;
-  if(front){ prog=Math.round((1-front.t/(front.tMax||1))*100); progLabel='생산 중'; progVal=(_techRealName(race,front.id)||''); time=Math.ceil(front.t)+'s 남음'; }
-  else { progLabel='생산 대기'; progVal=qFull?'대기열 가득참':''; prog=0; time=qFull?'최대 5기':''; }
-  return { mode:'prod', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:'유닛 생산 — 탭(최대 5 예약)', items, topRight:_techAutoBtn(b),
-    info:{ eb:'생산', hideName:true, queue, progLabel, progVal, prog, cr:0, en:0, time } }; }
+  const front=pq[0]; let progLabel,progVal,prog,time,progTime;
+  if(front){ prog=Math.round((1-front.t/(front.tMax||1))*100); progLabel='생산 중'; progTime=Math.ceil(front.t)+'s'; progVal=(_techRealName(race,front.id)||''); time=''; }   // 남은시간=progLabel 옆(작게)
+  else { progLabel='생산 대기'; progVal=qFull?'대기열 가득참':''; prog=0; time=qFull?'최대 5기':''; progTime=''; }
+  return { mode:'prod', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:'유닛 생산 — 탭(최대 5 예약)', items, topRight:_techBldgTR(b),
+    info:{ eb:'생산', hideName:true, queue, progLabel, progVal, prog, progTime, cr:0, en:0, time } }; }
 function techBldgUpgModel(b, e){ const race=G.tech.race; const rj=e&&e._rj;
   const items=b.research.map(r=>{ const key=race+'_'+r.k, isThis=!!(rj&&rj.rk===r.k); let meta,state,cr,en;
     if(r.tier){ const lv=G.tech.research[key]||0, isMax=lv>=r.tier.length, nx=r.tier[Math.min(lv,r.tier.length-1)]; meta=isMax?'MAX':('Lv.'+lv); cr=isMax?0:nx[0]; en=isMax?0:nx[1]; state=isThis?'busy':(isMax?'max':((rj||!_techAfford(cr,en))?'dim':'ok')); }
@@ -10905,7 +10913,7 @@ function techBldgUpgModel(b, e){ const race=G.tech.race; const rj=e&&e._rj;
   const bs=techBldgSpec(race,b.k)||{}; let progLabel,progVal,prog,time;
   if(rj){ prog=Math.round((1-rj.t/(rj.tMax||1))*100); progLabel='연구 중'; progVal=rj.name||''; time=Math.ceil(rj.t)+'s 남음 · 탭 = 취소'; }
   else { progLabel='연구 대기'; progVal='항목 탭 = 시작'; prog=0; time='단일 연구(순차)'; }
-  return { mode:'upg', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:'연구/업그레이드 — 탭', items,
+  return { mode:'upg', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:'연구/업그레이드 — 탭', items, topRight:_techBldgTR(b),
     info:{ eb:'업그레이드', hideName:true, progLabel, progVal, prog, cr:0, en:0, time } }; }
 // 렌더
 function techUIRender(){ if(!G.tech) return; techMapRender(); techPanelRender(); techHidePreview(); }   // 3D 건물은 메인 렌더러(syncBuild)가 렌더
@@ -10936,9 +10944,7 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
     ents+='<div class="techSelBox" style="left:'+(bx*100).toFixed(2)+'%;top:'+(by*100).toFixed(2)+'%;width:'+(bw*100).toFixed(2)+'%;height:'+(bh*100).toFixed(2)+'%;position:absolute;border:1.5px solid #46f06a;background:rgba(70,240,106,.14);pointer-events:none;z-index:23;border-radius:2px"></div>'; }
   let tabs=''; ['union','swarm','aetherial'].forEach(r=>{ tabs+='<span class="techTab'+(r===race?' on':'')+'" onclick="techRace(event,\''+r+'\')">'+_TECH_RKO[r]+'</span>'; });
   const selE=(G.tech.sel!=null)?G.tech.ents.find(e=>e.eid===G.tech.sel):null, canDemo=selE&&selE.type==='bldg'&&((techGetBldg(race,selE.bk)||{}).k!==TECH_TREE[race].buildings[0].k);
-  const _liftB=(selE&&selE.type==='bldg'&&selE.bt<=0&&_techCanLift(selE.bk))?selE:null;   // 🛫 부양 가능 건물 선택 시 버튼
   const res='<span class="res cr">'+(G.tech.inf?'∞':G.tech.credit)+'◈</span><span class="res gs">'+(G.tech.inf?'∞':G.tech.energy)+'⚡</span><span class="res sp">👤'+G.tech.sup+'/'+G.tech.supCap+'</span>'
-    +(_liftB?('<span class="cbtn'+(_liftB._lifted?' on':'')+'" onclick="techLiftToggle(event)" title="'+(_liftB._lifted?'착륙':'부양')+'">'+(_liftB._lifted?'🛬':'🛫')+'</span>'):'')
     +(canDemo?'<span class="cbtn dz" onclick="techDemolish(event)">🗑 철거</span>':'')+'<span class="cbtn'+(G.tech.inf?' on':'')+'" onclick="techInf(event)">∞</span><span class="cbtn'+(G.tech.nocool?' on':'')+'" onclick="techNocool(event)" title="즉시 건설·생산">⏱</span><span class="cbtn'+(techFogEnabled()?' on':'')+'" onclick="techFog(event)" title="전장의 안개">🌫️</span><span class="cbtn" onclick="techReset(event)">↺</span>';
   // 배치 고스트 + ✓/✕ 확정 버튼 (드래그로 위치 조정)
   let ghost='', armBtns='', foot='';
@@ -11019,7 +11025,7 @@ function techBldgPlainModel(b, e){ const race=G.tech.race, bs=techBldgSpec(race,
   if(b.detector) stats.push(['탐지','디텍터']);
   const items=_techWithAddons([], b.k);   // 🔗 부속 카드(마지막 그리드)
   const _def=_techIsDef(b.k);
-  return { mode:'info', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:(b.gas?'⛽ 에너지 채취 건물':(b.supply?'👤 인구 공급':(_def?'🛡 방어 건물':'건물 정보'))), items, topRight:_techAutoBtn(b),
+  return { mode:'info', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:(b.gas?'⛽ 에너지 채취 건물':(b.supply?'👤 인구 공급':(_def?'🛡 방어 건물':'건물 정보'))), items, topRight:_techBldgTR(b),
     info:{ eb:_techBldgKind(b), name:b.name, hideName:true, desc:(b.gas?'일꾼이 이 건물에서 에너지(가스)를 채취합니다.':(b.supply?('최대 인구 +'+b.supply):(_def?'적을 자동 공격하는 방어 건물.':''))), stats, cr:0, en:0 } }; }
 function _techUnitName(e){ if(!e) return null; if(e.type==='worker') return '일꾼';
   const bs=(TECH_TREE[G.tech.race]||{}).buildings||[]; for(const b of bs){ const p=(b.produces||[]).find(x=>x.id===e.uid); if(p) return p.name; } return e.uid; }
