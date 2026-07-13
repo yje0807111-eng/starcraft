@@ -3226,6 +3226,9 @@ const USEMAPS={
   tmp2:  { id:'tmp2',   name:'영웅 아레나 (임시)', desc:'임시 등록 유즈맵',               players:'2-8', pop:1900, icon:'⚔️', rec:false, isNew:false, playable:false, cfg:{} },
   tmp3:  { id:'tmp3',   name:'미로 탈출 (임시)',   desc:'임시 등록 유즈맵',               players:'1-4', pop:1200, icon:'🌀', rec:false, isNew:false, playable:false, cfg:{} },
 };
+// 🌫️ [임시] 전장의 안개 테스트 맵 — nemo 복제 + cfg.fog:'full'(시야 시스템 확인용, 확인 후 제거 예정)
+try{ USEMAPS.fogtest = { id:'fogtest', name:'🌫️ 안개 테스트', desc:'전장의 안개·시야 시스템 확인용(임시)', players:'1-8', pop:9999, icon:'🌫️', rec:false, isNew:true, playable:true,
+  cfg: Object.assign({}, USEMAPS.nemo.cfg, { fog:'full' }) }; }catch(e){}
 let MAP=USEMAPS.nemo;   // 현재 플레이 중인 유즈맵(게임 시작 시 _selMap으로 설정)
 // ===== [nemo 유즈맵 모듈] 밸런스 (등급 배율·적 HP 스케일) — 맵마다 다름. 새 맵은 이 구조를 복제해 cfg.bal로 오버라이드 =====
 const NEMO_BAL = {
@@ -4306,7 +4309,9 @@ function drawMain(cvId){ const {ctx,W,H}=setup(cvId||'cvMain'); GW=W;GH=H;
   } // /fxLite — 전투 이펙트 생략
   // 적(형상별 네온 도형) + 체력/쉴드 바
   const T=G.timeSec;
-  for(const e of G.enemies){ const p=posAt(e.d,W,H); const base=e.boss?11:8;
+  for(const e of G.enemies){ const p=posAt(e.d,W,H);
+    e._fogHidden=fogEnabled()&&fogVisAt(p.x/W,p.y/H)!==2; if(e._fogHidden) continue;   // 🌫️ 활성 시야 밖 적 숨김(2D 도형·HP바) — 3D는 M3D.sync가 같은 플래그로 숨김
+    const base=e.boss?11:8;
     const punch=1+(e.hit||0)*0.35; const r=base*punch; // 피격 시 순간 확대
     const col=e.special?'#ffd24a':(e.boss?COL.boss:COL.enemy);   // 스페셜=금색
     if(!e.model3d){  // 2D 네온 적(3D 모델 적은 WebGL이 렌더 → 도형 생략)
@@ -4330,6 +4335,7 @@ function drawMain(cvId){ const {ctx,W,H}=setup(cvId||'cvMain'); GW=W;GH=H;
     }
   }
   if(G.opt&&G.opt.model3d===false) drawUnits2D(ctx,W,H);   // 3D 끈 경우(저화질/절전) 2D 마커로 유닛 표시
+  if(fogEnabled()) drawFog(ctx,W,H);   // 🌫️ 전장의 안개 오버레이(지형·2D 이펙트 위, 유닛/줌 변환 안쪽)
   viewRestore(ctx,_vapply);   // 화면 줌/팬 변환 종료
 }
 // 3D 오버레이 OFF일 때 캔버스에 직접 그리는 유닛/적 2D 마커(저사양·절전용)
@@ -5076,6 +5082,11 @@ function _fogViewers(){ const out=[]; if(!G.units) return out;
 function fogComputeVision(){ const f=G&&G.fog; if(!f||!f.on) return;
   for(let i=0;i<f.state.length;i++){ if(f.state[i]===2) f.state[i]=1; }   // 활성(2)→탐색(1) 강등 후 재점등
   for(const v of _fogViewers()) _fogReveal(v.nx, v.ny, v.sight, v.air); }
+function drawFog(ctx,W,H){ const f=G&&G.fog; if(!f||!f.on) return;   // 🌫️ 안개 오버레이(cvMain 위) — 검정=미탐색 / 회색=탐색 / 투명=활성
+  const cw=W/f.cols, ch=H/f.rows; ctx.save();
+  for(let ty=0;ty<f.rows;ty++){ const yy=ty*ch; for(let tx=0;tx<f.cols;tx++){ const s=f.state[ty*f.cols+tx]; if(s===2) continue;
+    ctx.fillStyle=(s===0)?'rgba(2,3,8,0.97)':'rgba(2,3,8,0.5)'; ctx.fillRect(tx*cw, yy, cw+0.6, ch+0.6); } }   // +0.6=칸 사이 이음새 제거
+  ctx.restore(); }
 function step(dt){
   if(G.phase!=='playing') return;
   G.timeSec+=dt;   // 애니메이션용(증가 유지)
@@ -13596,6 +13607,7 @@ window.M3D={
       // 스폰 0.5초 뒤 반투명(클로킹) — 옵저버 등 지정 모델만, 인스턴스별 개별 타이밍
       m.age=(m.age||0)+dt; const to=(CLOAK_MODELS[m.id] && m.age>=CLOAK_DELAY)?CLOAK_OPACITY:1;
       if(m.mats) for(const mt of m.mats) mt.opacity += (to-mt.opacity)*Math.min(1, dt*5);
+      m.holder.visible = !e._fogHidden;   // 🌫️ 활성 시야 밖 적 3D 모델 숨김(사망 처리 X — live 유지)
     }
     // ── 사망 진행/제거 (아군=뒤로 쓰러짐 / 적=축소) ──
     for(const [key,m] of [...models]){ if(!m.dying) continue; m.deadT+=dt;
