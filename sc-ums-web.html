@@ -5046,9 +5046,40 @@ function beginActivePhase(){ G.roundPhase='active'; G.roundTime=isBossRound(G.ro
   else { G.roundMod=rollRoundMod(); let epr=mapCfg('enemiesPerRound',ENEMIES_PER_ROUND);
     if(G.roundMod && ROUND_MODS[G.roundMod].count) epr=Math.round(epr*ROUND_MODS[G.roundMod].count);   // 무리=수 증가
     G.toSpawn=epr; G.specialAt=1+Math.floor(Math.random()*epr); announceRoundMod(); } }
+// ═══════════════════════ 🌫️ 전장의 안개(Fog of War) — Phase 1 코어 ═══════════════════════
+// 맵별 토글: cfg.fog='full'(안개 켬) / 'off'(전부 보임, 기본). 격자 48×48(정규 0-1 맵).
+// state 칸: 0=미탐색(검정) · 1=탐색(회색 안개, 지형만 기억) · 2=활성(밝음, 적 실시간). height=타일 고저(저지→고지 시야 차단).
+const FOG_COLS=48, FOG_ROWS=48;
+const FOG_DEFAULT_SIGHT=6;   // 유닛 기본 시야 반경(격자 칸) — U[id].sight로 개별 지정 가능
+const FOG_BLDG_SIGHT=5;      // 고정 구조물(포탑 등) 기본 시야
+function fogEnabled(){ return !!(typeof G!=='undefined' && G.fog && G.fog.on); }
+function fogInit(){ const on=(mapCfg('fog','off')==='full'), cols=FOG_COLS, rows=FOG_ROWS;
+  G.fog={ on, cols, rows, state:new Uint8Array(cols*rows), height:new Uint8Array(cols*rows), t:0 };
+  const hm=mapCfg('heightMap',null); if(hm) fogLoadHeight(hm);   // 맵 제공 고저(없으면 평지=전부 0)
+  if(on) fogComputeVision(); }   // 시작 즉시 1회 점등(내 유닛 주변)
+function fogLoadHeight(hm){ const f=G.fog; if(!f) return;   // hm: (tx,ty,cols,rows)→h 함수 | 2D 배열
+  for(let ty=0;ty<f.rows;ty++){ for(let tx=0;tx<f.cols;tx++){ let h=0;
+    if(typeof hm==='function') h=hm(tx,ty,f.cols,f.rows)||0;
+    else if(Array.isArray(hm)){ const row=hm[Math.floor(ty/f.rows*hm.length)]; h=Array.isArray(row)?(row[Math.floor(tx/f.cols*row.length)]||0):(row||0); }
+    f.height[ty*f.cols+tx]=h|0; } } }
+function fogHeightAt(tx,ty){ const f=(typeof G!=='undefined')&&G.fog; if(!f) return 0; if(tx<0||ty<0||tx>=f.cols||ty>=f.rows) return 0; return f.height[ty*f.cols+tx]||0; }
+function _fogTile(nx,ny){ const f=G.fog; return { tx:Math.max(0,Math.min(f.cols-1,Math.floor(nx*f.cols))), ty:Math.max(0,Math.min(f.rows-1,Math.floor(ny*f.rows))) }; }
+function fogVisAt(nx,ny){ if(!fogEnabled()) return 2; const f=G.fog, t=_fogTile(nx,ny); return f.state[t.ty*f.cols+t.tx]; }   // 토글 off=항상 활성(전부 보임)
+function _fogReveal(nx,ny,sight,air){ const f=G.fog, t=_fogTile(nx,ny), vh=air?255:fogHeightAt(t.tx,t.ty), r=Math.max(1,sight|0), r2=r*r;
+  for(let dy=-r;dy<=r;dy++){ const ty=t.ty+dy; if(ty<0||ty>=f.rows) continue;
+    for(let dx=-r;dx<=r;dx++){ if(dx*dx+dy*dy>r2) continue; const tx=t.tx+dx; if(tx<0||tx>=f.cols) continue;
+      if(!air && fogHeightAt(tx,ty)>vh) continue;   // 저지→고지 차단(공중 유닛은 지형 무시)
+      f.state[ty*f.cols+tx]=2; } } }   // 활성
+function _fogViewers(){ const out=[]; if(!G.units) return out;
+  for(const u of G.units){ if(!u) continue; const def=(typeof U!=='undefined'&&U[u.id])||{}; const sight=def.sight||(u.fixed?FOG_BLDG_SIGHT:FOG_DEFAULT_SIGHT); out.push({nx:u.x, ny:u.y, sight, air:!!(def.air||def.flying)}); }
+  return out; }   // 내 유닛·고정 구조물이 시야 밝힘(적은 시야 안 밝힘)
+function fogComputeVision(){ const f=G&&G.fog; if(!f||!f.on) return;
+  for(let i=0;i<f.state.length;i++){ if(f.state[i]===2) f.state[i]=1; }   // 활성(2)→탐색(1) 강등 후 재점등
+  for(const v of _fogViewers()) _fogReveal(v.nx, v.ny, v.sight, v.air); }
 function step(dt){
   if(G.phase!=='playing') return;
   G.timeSec+=dt;   // 애니메이션용(증가 유지)
+  if(fogEnabled()){ G.fog.t+=dt; if(G.fog.t>=0.1){ G.fog.t=0; fogComputeVision(); } }   // 🌫️ 시야 갱신(~10/s, 토글 켜진 맵만)
   // 라운드 타이머(카운트다운): 준비 10초 → 전투 1:00. 0초 도달 시 자동 진행.
   if(G.roundTime==null) G.roundTime=mapCfg('prepTime',PREP_TIME);
   G.roundTime-=dt;
@@ -8510,6 +8541,7 @@ function startGameNow(activePlayers, myNum, names){
   for(let ti=0; ti<(G.metaB.startTurret||0) && ti<FIXED_SLOTS.turret.length; ti++){ const tp=FIXED_SLOTS.turret[ti];   // 메타: 시작 포탑(레벨당 1기, 최대 3기 무료 배치)
     G.units.push(initUnitStats({uid:G.idSeq++, id:'turret', hero:false, lv:1, x:tp.x, y:tp.y, cd:0, fixed:true})); }
   initPlayerSim();         // 다른 플레이어 트랙 적 누적 시뮬 초기화
+  if(typeof fogInit==='function') fogInit();   // 🌫️ 전장의 안개 초기화(맵별 cfg.fog 토글 — 기본 off)
   _leaveT=20+Math.random()*20;
   document.getElementById('ov').classList.add('hide');
   const lb=document.getElementById('lobby'); if(lb) lb.classList.add('hide');
