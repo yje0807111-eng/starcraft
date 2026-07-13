@@ -5121,11 +5121,12 @@ function techFogVisAt(nx,ny){ if(!techFogEnabled()) return 2; const f=G.tech.fog
 function techFogHidden(nx,ny){ return techFogEnabled() && techFogVisAt(nx,ny)!==2; }
 function techFogCompute(){ const f=G.tech&&G.tech.fog; if(!f||!f.on) return; const race=G.tech.race;
   const map=document.getElementById('cstMain'); const asp=(map&&map.clientWidth&&map.clientHeight)?map.clientWidth/map.clientHeight:0.62;   // 화면비 보정(세로 화면 → 원형 시야)
+  const cpt=_techCW()*f.cols;   // 게임 타일 1칸 = 안개 셀 수(x). 시야값(타일)을 실제 크기로 — 점막·파일런과 동일한 "본체 + 반지름" 알고리즘
   for(let i=0;i<f.state.length;i++){ if(f.state[i]===2) f.state[i]=1; }   // 활성→탐색 강등
   for(const e of G.tech.ents){ if(!e) continue;
-    if(e.type==='worker') _fogReveal(e.x,e.y,_fogSightCells(_techUnitSight(race,TECH_WORKER[race])),false,f,asp);           // 워커 시야(종족 일꾼)
-    else if(e.type==='bldg') _fogReveal(e.x,e.y,_fogSightCells(_techBldgSight(race,e.bk)),false,f,asp);                     // 건물 시야 — 배치 즉시(건설 중 포함) 밝힘(스타1식)
-    else if(e.type==='unit') _fogReveal(e.x,e.y,_fogSightCells(_techUnitSight(race,e.uid)),!!(typeof _techAirOf==='function'&&_techAirOf(e)),f,asp); } }   // 유닛 시야(공중=지형 무시)
+    if(e.type==='worker'){ const rt=_techUnitSight(race,TECH_WORKER[race])+0.5; _fogReveal(e.x,e.y,rt*cpt,false,f,asp); }                     // 워커: 반지름=시야+본체½
+    else if(e.type==='bldg'){ const ft=_techFoot(race,e.bk)||{w:2,h:2}; const rt=_techBldgSight(race,e.bk)+Math.max(ft.w,ft.h)/2; _fogReveal(e.x,e.y,rt*cpt,false,f,asp); }   // 건물: 반지름=시야+본체½(배치 즉시)
+    else if(e.type==='unit'){ const rt=_techUnitSight(race,e.uid)+0.5; _fogReveal(e.x,e.y,rt*cpt,!!(typeof _techAirOf==='function'&&_techAirOf(e)),f,asp); } } }   // 유닛(공중=지형 무시)
 function techFogDraw(){ const cv=document.getElementById('cstFog'); if(!cv) return;
   const map=document.getElementById('cstMain'); const W=(map&&map.clientWidth)||GW||360, H=(map&&map.clientHeight)||GH||420;
   if(cv.width!==W||cv.height!==H){ cv.width=W; cv.height=H; }
