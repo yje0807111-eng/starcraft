@@ -9912,7 +9912,7 @@ function loop(now){
       for(const e of (G.tech.ents||[])){ if(e.type!=='unit'&&e.type!=='worker') continue; if(e._inGas) continue; const mk=(typeof _techEntModel==='function')?_techEntModel(e):null; if(!mk) continue;   // 🚶 일꾼·생산 유닛 3D(가스 채취 중=건물 안, 숨김)
         const _selu=(G.tech.sel===e.eid)||(G.tech.selU&&G.tech.selU.indexOf(e.eid)>=0);
         const _isAir=(typeof FXLAB_AIR!=='undefined')&&FXLAB_AIR.has(mk);   // 공중 유닛: 메인과 동일한 고정 부양(syncBuild airlift)
-        list.push({uid:'tu_'+e.eid, id:mk, x:(e.x-_v.x)*_v.zoom+0.5, y:(e.y-_v.y)*_v.zoom+0.5, face:(e.face||0), yoff:(typeof TECH_UNIT_YOFF!=='undefined'?TECH_UNIT_YOFF:6), moving:(e.tx!=null), working:(e.type==='worker'&&!!e._working), sel:_selu, airlift:_isAir, yawFix:true, scl:(typeof TECH_USCALE!=='undefined'?TECH_USCALE:1), hidden:techFogHidden(e.x,e.y)}); }   // scl=건물 대비 유닛 절반 크기 · hidden=🌫️활성 시야 밖   // face = 이동방향 + 모델별 정면 보정(메인과 동일)
+        list.push({uid:'tu_'+e.eid, id:mk, x:(e.x-_v.x)*_v.zoom+0.5, y:(e.y-_v.y)*_v.zoom+0.5, face:(e.face||0), yoff:(typeof TECH_UNIT_YOFF!=='undefined'?TECH_UNIT_YOFF:6), moving:(e.tx!=null), working:(e.type==='worker'&&!!e._working), sel:_selu, airlift:_isAir, yawFix:true, scl:(typeof TECH_USCALE!=='undefined'?TECH_USCALE:1), hidden:techFogHidden(e.x,e.y), noShadow:_isAir}); }   // scl=건물 대비 유닛 절반 크기 · hidden=🌫️활성 시야 밖 · noShadow=공중 유닛은 3D 원형 그림자 끄고 DOM 지면 그림자로 대체   // face = 이동방향 + 모델별 정면 보정(메인과 동일)
       if(M3D.hasModel && M3D.hasModel('res_cn')){   // 💎⛽ 자원 3D: 미네랄 노드 · 가스 노드 · 일꾼 운반물(안개 시야 밖이면 숨김)
         for(const m of (G.tech.minerals||[])){ list.push({uid:'mn_'+m.eid, id:'res_cn', x:(m.x-_v.x)*_v.zoom+0.5, y:(m.y-_v.y)*_v.zoom+0.5, face:Math.PI, hidden:techFogHidden(m.x,m.y)}); }   // 미네랄 180° 회전(90+90)
         const _gasB=G.tech.ents.some(be=>be.type==='bldg'&&((techGetBldg(race,be.bk)||{}).gas));
@@ -10971,6 +10971,8 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
     else if(e.type==='egg'){ cls='eggE'; inner='<span class="eggWig">🥚</span>'; }   // 🥚 알(변태 중)
     else if(e.type==='worker'||e.type==='unit'){ const _mk=_techEntModel(e);
       const _h3=!!(window.M3D&&M3D.ready&&M3D.ready()&&_mk&&M3D.hasModel&&M3D.hasModel(_mk)&&!(G.opt&&G.opt.model3d===false));   // 3D 모델 로드 완료 시 DOM은 빈 앵커, 아니면 초상화 폴백
+      if(_h3 && typeof FXLAB_AIR!=='undefined' && FXLAB_AIR.has(_mk)){ const _as=_techW2S(e.x,e.y), _asw=Math.max(0.05,0.95*_techCW()*techView().zoom);   // 🛩 공중 유닛 지면 그림자(고정 고도 부양 → 건물 이륙 그림자와 동일 방식·고정 농도)
+        ents+='<div class="bLiftShadow" style="left:'+(_as.x*100).toFixed(2)+'%;top:'+(_as.y*100).toFixed(2)+'%;width:'+(_asw*100).toFixed(2)+'%;height:'+(_asw*0.5*100).toFixed(2)+'%;opacity:0.34"></div>'; }
       cls=(e.type==='worker'?'worker':'unit')+(_h3?' live3d':'');
       const _ore=(!_res3d&&e.type==='worker'&&e._carry)?((e._cKind||e._gKind)==='gas'?'<i class="carryOre gas"></i>':'<span class="carryOre">💎</span>'):'';   // 🎒 운반 중 = 작은 광물/가스 덩어리(3D 로드 시 3D 청크로 대체)
       inner=(_h3?((e.type==='worker'&&e.build!=null)?'<span style="position:absolute;left:50%;top:-8px;transform:translateX(-50%);font-size:13px">🔨</span>':''):(e.type==='worker'?'<span class="be-ico">👷</span>':_techUnitPortrait(e.uid)))+_ore; }
@@ -13842,7 +13844,7 @@ window.M3D={
       seen.add(it.uid);
       let m=buildModels.get(it.uid); if(m && m._mid!==it.id){ if(m.holder&&m.holder.parent) m.holder.parent.remove(m.holder); buildModels.delete(it.uid); m=null; }   // 종족 전환 시 eid 재사용으로 이전 종족 모델이 남던 버그 방지(모델 키 불일치 → 재생성)
       if(!m){ m=makeModel(it.id); if(!m) continue; m.kind='build'; m._mid=it.id; buildModels.set(it.uid,m); }
-      m.holder.visible=!it.hidden; if(m.rim){ m.rim.visible=!!it.sel&&!it.hidden; if(it.sel) m.rim.scale.setScalar(1.12); } if(m.shadow) m.shadow.visible=(it.fitW?false:true)&&!it.hidden;   // 🌫️ it.hidden=활성 시야 밖 → 숨김 · 그리드 건물(fitW)은 원형 그림자 숨김
+      m.holder.visible=!it.hidden; if(m.rim){ m.rim.visible=!!it.sel&&!it.hidden; if(it.sel) m.rim.scale.setScalar(1.12); } if(m.shadow) m.shadow.visible=((it.fitW||it.noShadow)?false:true)&&!it.hidden;   // 🌫️ it.hidden=활성 시야 밖 → 숨김 · 그리드 건물(fitW)·공중 유닛(noShadow)은 원형 그림자 숨김(DOM 그림자로 대체)
       if(it.hidden){ continue; }   // 시야 밖: 위치/애니 갱신 생략(숨김 유지)
       if(it.working && m.workInner){ if(m.inner)m.inner.visible=false; if(m.runInner)m.runInner.visible=false; m.workInner.visible=true; if(m.gun)m.gun.visible=false; if(m.atkInner)m.atkInner.visible=false; m.anim.position.set(0,0,0); m.anim.rotation.set(0,0,0); if(m.workMixer) m.workMixer.update(dt); }   // 🔨 건설(작업) 모션 — 일꾼이 건물 지을 때
       else if(it.moving && m.runInner){ if(m.inner)m.inner.visible=false; m.runInner.visible=true; if(m.workInner)m.workInner.visible=false; if(m.gun)m.gun.visible=false; if(m.atkInner)m.atkInner.visible=false; m.anim.position.set(0,0,0); m.anim.rotation.set(0,0,0); if(m.runMixer) m.runMixer.update(dt); }   // 이동: 달리기 모션
