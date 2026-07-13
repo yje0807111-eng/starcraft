@@ -966,7 +966,7 @@
   .bent.bldg.live3d{background:none;border:none;width:auto;height:auto;justify-content:flex-end}
   .bent.bldg.live3d .be-nm{margin-top:36px;background:rgba(6,10,16,.62);padding:1px 5px;border-radius:5px}
   #techMap3d{position:absolute;inset:0;pointer-events:none;z-index:7}
-#cstFog{position:absolute;inset:0;pointer-events:none;z-index:7}   /* 🌫️ 건설 안개 오버레이(DOM 엔티티 위 — 시야 밖 미네랄/라바 가림) */
+#cstFog{position:absolute;inset:0;pointer-events:none;z-index:7;filter:blur(3px)}   /* 🌫️ 건설 안개 오버레이(DOM 엔티티 위) — blur=칸 경계 부드럽게 */
   .bent.worker .be-ico{font-size:23px}
   .bent.unit{width:22px;height:22px}
   .bent.unit svg,.bent.unit img{width:20px;height:20px}
@@ -5091,22 +5091,24 @@ function fogLoadHeight(hm){ const f=G.fog; if(!f) return;   // hm: (tx,ty,cols,r
 function fogHeightAt(tx,ty,fog){ const f=fog||((typeof G!=='undefined')&&G.fog); if(!f) return 0; if(tx<0||ty<0||tx>=f.cols||ty>=f.rows) return 0; return f.height[ty*f.cols+tx]||0; }
 function _fogTile(nx,ny,fog){ const f=fog||G.fog; return { tx:Math.max(0,Math.min(f.cols-1,Math.floor(nx*f.cols))), ty:Math.max(0,Math.min(f.rows-1,Math.floor(ny*f.rows))) }; }
 function fogVisAt(nx,ny){ if(!fogEnabled()) return 2; const f=G.fog, t=_fogTile(nx,ny,f); return f.state[t.ty*f.cols+t.tx]; }   // 토글 off=항상 활성(전부 보임)
-function _fogReveal(nx,ny,sight,air,fog){ const f=fog||G.fog, t=_fogTile(nx,ny,f), vh=air?255:fogHeightAt(t.tx,t.ty,f), r=Math.max(1,sight|0), r2=r*r;
-  for(let dy=-r;dy<=r;dy++){ const ty=t.ty+dy; if(ty<0||ty>=f.rows) continue;
-    for(let dx=-r;dx<=r;dx++){ if(dx*dx+dy*dy>r2) continue; const tx=t.tx+dx; if(tx<0||tx>=f.cols) continue;
+function _fogReveal(nx,ny,sight,air,fog,asp){ const f=fog||G.fog, t=_fogTile(nx,ny,f), vh=air?255:fogHeightAt(t.tx,t.ty,f);
+  const rx=Math.max(1,sight), ry=Math.max(1,sight*(asp||1)), rxi=Math.ceil(rx), ryi=Math.ceil(ry);   // 화면상 원형이 되도록 세로 반경을 화면비(W/H)로 보정(정사각 격자가 세로 화면에 늘어나는 것 상쇄)
+  for(let dy=-ryi;dy<=ryi;dy++){ const ty=t.ty+dy; if(ty<0||ty>=f.rows) continue; const nyd=dy/ry;
+    for(let dx=-rxi;dx<=rxi;dx++){ const nxd=dx/rx; if(nxd*nxd+nyd*nyd>1) continue; const tx=t.tx+dx; if(tx<0||tx>=f.cols) continue;
       if(!air && fogHeightAt(tx,ty,f)>vh) continue;   // 저지→고지 차단(공중 유닛은 지형 무시)
-      f.state[ty*f.cols+tx]=2; } } }   // 활성
+      f.state[ty*f.cols+tx]=2; } } }   // 활성(타원 영역 → 화면에선 원)
 function _fogViewers(){ const out=[]; if(!G.units) return out;
   for(const u of G.units){ if(!u) continue; const def=(typeof U!=='undefined'&&U[u.id])||{}; const tiles=def.sight||(u.fixed?FOG_BLDG_TILE_DEFAULT:FOG_SIGHT_TILE_DEFAULT); out.push({nx:u.x, ny:u.y, sight:_fogSightCells(tiles), air:!!(def.air||def.flying)}); }
   return out; }   // 내 유닛·고정 구조물이 시야 밝힘(적은 시야 안 밝힘) · def.sight=SC 타일(미지정=기본)
-function fogComputeVision(){ const f=G&&G.fog; if(!f||!f.on) return;
+function fogComputeVision(){ const f=G&&G.fog; if(!f||!f.on) return; const asp=(typeof GW!=='undefined'&&GW&&GH)?GW/GH:1;
   for(let i=0;i<f.state.length;i++){ if(f.state[i]===2) f.state[i]=1; }   // 활성(2)→탐색(1) 강등 후 재점등
-  for(const v of _fogViewers()) _fogReveal(v.nx, v.ny, v.sight, v.air); }
-function drawFog(ctx,W,H){ const f=G&&G.fog; if(!f||!f.on) return;   // 🌫️ 안개 오버레이(cvMain 위) — 검정=미탐색 / 회색=탐색 / 투명=활성
-  const cw=W/f.cols, ch=H/f.rows; ctx.save();
-  for(let ty=0;ty<f.rows;ty++){ const yy=ty*ch; for(let tx=0;tx<f.cols;tx++){ const s=f.state[ty*f.cols+tx]; if(s===2) continue;
-    ctx.fillStyle=(s===0)?'rgba(2,3,8,0.97)':'rgba(2,3,8,0.5)'; ctx.fillRect(tx*cw, yy, cw+0.6, ch+0.6); } }   // +0.6=칸 사이 이음새 제거
-  ctx.restore(); }
+  for(const v of _fogViewers()) _fogReveal(v.nx, v.ny, v.sight, v.air, f, asp); }
+function _fogBuffer(f){ if(!f._buf){ f._buf=document.createElement('canvas'); f._buf.width=f.cols; f._buf.height=f.rows; f._bx=f._buf.getContext('2d'); f._bi=f._bx.createImageData(f.cols,f.rows); }   // 저해상도 안개 버퍼(칸=1px) → 확대 시 양선형 보간으로 부드럽게
+  const d=f._bi.data; for(let i=0,p=0;i<f.state.length;i++,p+=4){ const s=f.state[i]; d[p]=2; d[p+1]=3; d[p+2]=8; d[p+3]=(s===0)?247:(s===1?128:0); }
+  f._bx.putImageData(f._bi,0,0); return f._buf; }
+function drawFog(ctx,W,H){ const f=G&&G.fog; if(!f||!f.on) return;   // 🌫️ 안개 오버레이 — 검정=미탐색 / 회색=탐색 / 투명=활성. 저해상도 버퍼를 양선형 확대 → 부드러운 그라데이션
+  const buf=_fogBuffer(f), sm=ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled=true; if(ctx.imageSmoothingQuality) ctx.imageSmoothingQuality='high';
+  ctx.drawImage(buf, 0, 0, W, H); ctx.imageSmoothingEnabled=sm; }
 // ── 🌫️ 건설 구역(관리 탭) 전장의 안개 — G.tech.fog(메인과 독립). 🌫️ 버튼으로 토글, 내 워커·건물이 시야 밝힘 ──
 function techFogInit(on){ if(!G.tech) return; const cols=FOG_COLS, rows=FOG_ROWS;
   const height=new Uint8Array(cols*rows), H=TECH_HILL;   // ⛰ 좌하단 언덕 = 고지대(height h)
@@ -5118,20 +5120,21 @@ function techFogEnabled(){ return !!(G.tech && G.tech.fog && G.tech.fog.on); }
 function techFogVisAt(nx,ny){ if(!techFogEnabled()) return 2; const f=G.tech.fog, t=_fogTile(nx,ny,f); return f.state[t.ty*f.cols+t.tx]; }
 function techFogHidden(nx,ny){ return techFogEnabled() && techFogVisAt(nx,ny)!==2; }
 function techFogCompute(){ const f=G.tech&&G.tech.fog; if(!f||!f.on) return; const race=G.tech.race;
+  const map=document.getElementById('cstMain'); const asp=(map&&map.clientWidth&&map.clientHeight)?map.clientWidth/map.clientHeight:0.62;   // 화면비 보정(세로 화면 → 원형 시야)
   for(let i=0;i<f.state.length;i++){ if(f.state[i]===2) f.state[i]=1; }   // 활성→탐색 강등
   for(const e of G.tech.ents){ if(!e) continue;
-    if(e.type==='worker') _fogReveal(e.x,e.y,_fogSightCells(_techUnitSight(race,TECH_WORKER[race])),false,f);           // 워커 시야(종족 일꾼)
-    else if(e.type==='bldg' && e.bt<=0) _fogReveal(e.x,e.y,_fogSightCells(_techBldgSight(race,e.bk)),false,f);           // 완성 건물 시야
-    else if(e.type==='unit') _fogReveal(e.x,e.y,_fogSightCells(_techUnitSight(race,e.uid)),!!(typeof _techAirOf==='function'&&_techAirOf(e)),f); } }   // 유닛 시야(공중=지형 무시)
+    if(e.type==='worker') _fogReveal(e.x,e.y,_fogSightCells(_techUnitSight(race,TECH_WORKER[race])),false,f,asp);           // 워커 시야(종족 일꾼)
+    else if(e.type==='bldg' && e.bt<=0) _fogReveal(e.x,e.y,_fogSightCells(_techBldgSight(race,e.bk)),false,f,asp);           // 완성 건물 시야
+    else if(e.type==='unit') _fogReveal(e.x,e.y,_fogSightCells(_techUnitSight(race,e.uid)),!!(typeof _techAirOf==='function'&&_techAirOf(e)),f,asp); } }   // 유닛 시야(공중=지형 무시)
 function techFogDraw(){ const cv=document.getElementById('cstFog'); if(!cv) return;
   const map=document.getElementById('cstMain'); const W=(map&&map.clientWidth)||GW||360, H=(map&&map.clientHeight)||GH||420;
   if(cv.width!==W||cv.height!==H){ cv.width=W; cv.height=H; }
   const ctx=cv.getContext('2d'); ctx.clearRect(0,0,W,H);
   const f=G.tech&&G.tech.fog; if(!f||!f.on) return;
+  const buf=_fogBuffer(f), tl=_techW2S(0,0), br=_techW2S(1,1);   // 격자 전체(월드 0~1)를 뷰 변환 사각으로 → 양선형 확대(부드러움)
   ctx.save(); ctx.beginPath(); ctx.rect(0,34,W,H-34); ctx.clip();   // 상단바(탭·자원) 위엔 안개 안 그림
-  for(let ty=0;ty<f.rows;ty++){ for(let tx=0;tx<f.cols;tx++){ const s=f.state[ty*f.cols+tx]; if(s===2) continue;
-    const a=_techW2S(tx/f.cols, ty/f.rows), b=_techW2S((tx+1)/f.cols, (ty+1)/f.rows);   // 뷰(줌/팬) 변환 반영
-    ctx.fillStyle=(s===0)?'rgba(2,3,8,0.97)':'rgba(2,3,8,0.5)'; ctx.fillRect(a.x*W, a.y*H, (b.x-a.x)*W+1, (b.y-a.y)*H+1); } }
+  ctx.imageSmoothingEnabled=true; if(ctx.imageSmoothingQuality) ctx.imageSmoothingQuality='high';
+  ctx.drawImage(buf, tl.x*W, tl.y*H, (br.x-tl.x)*W, (br.y-tl.y)*H);
   ctx.restore(); }
 function techFog(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;
   if(!G.tech.fog) techFogInit(); G.tech.fog.on=!G.tech.fog.on; if(G.tech.fog.on) techFogCompute();
