@@ -998,6 +998,12 @@
   .bGasZone .gzLbl{font:800 8px/1 sans-serif;color:#9fe8b4;text-shadow:0 1px 2px #000;letter-spacing:.4px}
   .bGasZone.hot{border-color:rgba(140,255,170,.9);background:radial-gradient(ellipse at 50% 45%,rgba(96,232,130,.34),rgba(60,180,95,.18) 62%,rgba(30,90,50,.10));box-shadow:0 0 14px -2px rgba(110,240,150,.45)}   /* 가스 건물 배치 중 = 강조 */
   @keyframes gzPuff{0%,100%{transform:translateY(0);opacity:.75}50%{transform:translateY(-2px);opacity:1}}
+  .bHill{position:absolute;z-index:1;pointer-events:none;box-sizing:border-box;border-radius:7px;   /* ⛰ 고지대(언덕) — 지형(엔티티 아래) */
+    border:2px solid rgba(158,136,98,.78);
+    background:linear-gradient(180deg,rgba(126,110,80,.44),rgba(80,68,49,.34) 55%,rgba(52,44,32,.30));
+    box-shadow:inset 0 3px 0 rgba(214,194,152,.38), 0 6px 12px -2px rgba(0,0,0,.6);
+    display:flex;align-items:flex-start;justify-content:flex-start}
+  .bHill .hillLbl{font:800 9px/1 sans-serif;color:#ecdbad;text-shadow:0 1px 2px #000;letter-spacing:.5px;padding:3px 6px}
   .bMineral{position:absolute;z-index:2;pointer-events:none;box-sizing:border-box;border:1.5px solid rgba(90,190,255,.6);border-radius:5px;   /* 💎 미네랄 덩어리 */
     background:radial-gradient(ellipse at 50% 42%,rgba(96,190,255,.28),rgba(50,120,220,.14) 62%,rgba(24,60,130,.07));
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0px}
@@ -5059,6 +5065,7 @@ function beginActivePhase(){ G.roundPhase='active'; G.roundTime=isBossRound(G.ro
 const FOG_COLS=48, FOG_ROWS=48;
 const FOG_DEFAULT_SIGHT=6;   // 유닛 기본 시야 반경(격자 칸) — U[id].sight로 개별 지정 가능
 const FOG_BLDG_SIGHT=5;      // 고정 구조물(포탑 등) 기본 시야
+const TECH_HILL={ x0:0.075, y0:0.70, x1:0.33, y1:0.915, h:1 };   // ⛰ 건설 구역 좌하단 언덕(고지대, 월드 사각) — 고저 시야 테스트: 저지→고지 차단
 function fogEnabled(){ return !!(typeof G!=='undefined' && G.fog && G.fog.on); }
 function fogInit(){ const on=(mapCfg('fog','off')==='full'), cols=FOG_COLS, rows=FOG_ROWS;
   G.fog={ on, cols, rows, state:new Uint8Array(cols*rows), height:new Uint8Array(cols*rows), t:0 };
@@ -5090,7 +5097,10 @@ function drawFog(ctx,W,H){ const f=G&&G.fog; if(!f||!f.on) return;   // 🌫️ 
   ctx.restore(); }
 // ── 🌫️ 건설 구역(관리 탭) 전장의 안개 — G.tech.fog(메인과 독립). 🌫️ 버튼으로 토글, 내 워커·건물이 시야 밝힘 ──
 function techFogInit(on){ if(!G.tech) return; const cols=FOG_COLS, rows=FOG_ROWS;
-  G.tech.fog={ on:!!on, cols, rows, state:new Uint8Array(cols*rows), height:new Uint8Array(cols*rows), t:0 };
+  const height=new Uint8Array(cols*rows), H=TECH_HILL;   // ⛰ 좌하단 언덕 = 고지대(height h)
+  for(let ty=0;ty<rows;ty++){ const wy=(ty+0.5)/rows; for(let tx=0;tx<cols;tx++){ const wx=(tx+0.5)/cols;
+    if(wx>=H.x0&&wx<=H.x1&&wy>=H.y0&&wy<=H.y1) height[ty*cols+tx]=H.h; } }
+  G.tech.fog={ on:!!on, cols, rows, state:new Uint8Array(cols*rows), height, t:0 };
   if(on) techFogCompute(); }
 function techFogEnabled(){ return !!(G.tech && G.tech.fog && G.tech.fog.on); }
 function techFogVisAt(nx,ny){ if(!techFogEnabled()) return 2; const f=G.tech.fog, t=_fogTile(nx,ny,f); return f.state[t.ty*f.cols+t.tx]; }
@@ -10944,11 +10954,14 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
     const _gtl=_techW2S(TECH_GRID.x0+TECH_GAS.c0*_gcw, TECH_GRID.y0+TECH_GAS.r0*_gch), _gbr=_techW2S(TECH_GRID.x0+(TECH_GAS.c0+TECH_GAS.w)*_gcw, TECH_GRID.y0+(TECH_GAS.r0+TECH_GAS.h)*_gch);
     const _gArm=!!(G.tech.arm && (techGetBldg(race,G.tech.arm)||{}).gas);
     gasZone='<div class="bGasZone'+(_gArm?' hot':'')+'" style="left:'+(_gtl.x*100).toFixed(2)+'%;top:'+(_gtl.y*100).toFixed(2)+'%;width:'+((_gbr.x-_gtl.x)*100).toFixed(2)+'%;height:'+((_gbr.y-_gtl.y)*100).toFixed(2)+'%"><span class="gzIco">💨</span><span class="gzLbl">가스 광산</span></div>'; }
+  let hillZ='';   // ⛰ 고지대(언덕) — 좌하단 테스트 지형. 저지→고지 시야 차단 확인용
+  { const H=TECH_HILL, tl=_techW2S(H.x0,H.y0), br=_techW2S(H.x1,H.y1);
+    hillZ='<div class="bHill" style="left:'+(tl.x*100).toFixed(2)+'%;top:'+(tl.y*100).toFixed(2)+'%;width:'+((br.x-tl.x)*100).toFixed(2)+'%;height:'+((br.y-tl.y)*100).toFixed(2)+'%"><span class="hillLbl">⛰ 고지</span></div>'; }
   let mineZ='';   // 💎 미네랄 덩어리(1×1) 6개 클러스터 — 채취=크레딧
   { const _mcw=_techCW(), _mch=_techCH(); for(const m of (G.tech.minerals||[])){
     const _mtl=_techW2S(m.x-0.6*_mcw, m.y-0.6*_mch), _mbr=_techW2S(m.x+0.6*_mcw, m.y+0.6*_mch);
     mineZ+='<div class="bMineral" style="left:'+(_mtl.x*100).toFixed(2)+'%;top:'+(_mtl.y*100).toFixed(2)+'%;width:'+((_mbr.x-_mtl.x)*100).toFixed(2)+'%;height:'+((_mbr.y-_mtl.y)*100).toFixed(2)+'%"><span class="mnIco">💎</span><span class="mnLbl">'+(G.tech.inf?'∞':m.amount)+'</span></div>'; } }
-  map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none">'+_floor+creepZ+psi+gasZone+mineZ+'<div class="bmapTop"><div class="techTabs">'+tabs+'</div><div class="bres">'+res+'</div></div>'+ents+foot+ghost+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div></div>';
+  map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none">'+_floor+hillZ+creepZ+psi+gasZone+mineZ+'<div class="bmapTop"><div class="techTabs">'+tabs+'</div><div class="bres">'+res+'</div></div>'+ents+foot+ghost+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div></div>';
   const _lblLayer=document.getElementById('cstLabels'); if(_lblLayer) _lblLayer.innerHTML=labels+armBtns+resumeBtn;   // 남은시간 라벨 + 배치 ✓/✕ + ▶재개 버튼을 전용 오버레이(z8)에 → 3D 유닛·건물 위(리파이너리 등 큰 건물에 안 가림)
   techFogDraw(); }   // 🌫️ 건설 안개 오버레이 재그림(맵 재렌더마다)
 function techBldgInfoModel(b){ const race=G.tech.race, hb=TECH_TREE[race].buildings[0];
