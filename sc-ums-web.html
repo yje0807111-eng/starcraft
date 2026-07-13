@@ -11246,8 +11246,13 @@ function _techMorphOK(m){ if(m.needR && !G.tech.research['swarm_'+m.needR]) retu
   if(m.needB && !(G.tech.built[m.needB]>0)) return {ok:false, why:(techGetBldg('swarm',m.needB)||{}).name+' 필요'}; return {ok:true}; }
 function _techGasOverlap(s){ return s.c0<TECH_GAS.c0+TECH_GAS.w && s.c0+s.w>TECH_GAS.c0 && s.r0<TECH_GAS.r0+TECH_GAS.h && s.r0+s.h>TECH_GAS.r0; }
 // 배치 유효성: footprint 셀이 다른 건물과 안 겹치고, 발판 위에 차단 유닛(유휴 일꾼·지상 유닛)이 없으면 OK. 가스 건물=광산 위 정확히, 일반 건물=광산 침범 불가
+function _techFootUnexplored(s){ if(!techFogEnabled()) return false; const cw=_techCW(), ch=_techCH();   // 🌫️ footprint 셀 중 하나라도 완전 암흑(미탐색)이면 true → 건설 불가(스타1: 암흑엔 못 지음)
+  for(let r=s.r0;r<s.r0+s.h;r++){ for(let c=s.c0;c<s.c0+s.w;c++){
+    if(techFogVisAt(TECH_GRID.x0+(c+0.5)*cw, TECH_GRID.y0+(r+0.5)*ch)===0) return true; } }
+  return false; }
 function techArmValid(x,y){ if(!G.tech||!G.tech.arm) return false; const f=_techFoot(G.tech.race,G.tech.arm), s=_techSnap(x,y,f.w,f.h);
   const _b=techGetBldg(G.tech.race,G.tech.arm);
+  if(_techFootUnexplored(s)) return false;   // 🌫️ 완전 암흑(미탐색) 구역 = 건설 불가(정찰 강제 — 커서로 지형 파악 꼼수 차단)
   if(_b&&_b.gas){ if(!(s.c0===TECH_GAS.c0 && s.r0===TECH_GAS.r0)) return false; }   // 가스 건물 = 가스 광산 위에 정확히 겹칠 때만
   else if(_techGasOverlap(s)) return false;   // 일반 건물 = 가스 광산 칸 침범 불가(광산 예약)
   if(_techNeedsPower(G.tech.arm) && !_techPowered(s.cx,s.cy)) return false;   // 🔵 에테리얼 = 파일런 동력장 안에만 소환
@@ -11261,7 +11266,7 @@ function _techArmTo(sx,sy){ if(!G.tech||!G.tech.arm) return; const w=_techS2W(sx
   G.tech.armXY={ x:s.cx, y:s.cy }; techMapRender(); }   // 손가락 위치 → 그리드 셀에 스냅
 function techConfirmPlace(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech||!G.tech.arm||!G.tech.armXY) return;
   if(!techArmValid(G.tech.armXY.x,G.tech.armXY.y)){ const _b=techGetBldg(G.tech.race,G.tech.arm), _s=_techSnap(G.tech.armXY.x,G.tech.armXY.y,(_techFoot(G.tech.race,G.tech.arm)||{w:2,h:2}).w,(_techFoot(G.tech.race,G.tech.arm)||{w:2,h:2}).h);
-    if(typeof toast==='function') toast((_b&&_b.gas)?'⛔ 가스 광산 위에만 건설 가능':((_techNeedsPower(G.tech.arm)&&!_techPowered(_s.cx,_s.cy))?'⛔ 파일런 동력장 안에만 소환 가능':((_techNeedsCreep(G.tech.arm)&&!_techOnCreep(_s.cx,_s.cy))?'⛔ 크립 위에만 건설 가능':'⛔ 건물·유닛과 겹침 — 위치를 옮기세요'))); return; }
+    if(typeof toast==='function') toast(_techFootUnexplored(_s)?'⛔ 암흑 구역 — 유닛으로 정찰 후 건설 가능':((_b&&_b.gas)?'⛔ 가스 광산 위에만 건설 가능':((_techNeedsPower(G.tech.arm)&&!_techPowered(_s.cx,_s.cy))?'⛔ 파일런 동력장 안에만 소환 가능':((_techNeedsCreep(G.tech.arm)&&!_techOnCreep(_s.cx,_s.cy))?'⛔ 크립 위에만 건설 가능':'⛔ 건물·유닛과 겹침 — 위치를 옮기세요')))); return; }
   const p=G.tech.armXY; techPlace(p.x, p.y); }   // techPlace가 arm/armXY 정리
 function techCancelArm(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return; G.tech.arm=null; G.tech.armXY=null;
   const sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null}); sh.open=true; sh.sec='ent'; if(typeof playSfx==='function') playSfx('ui_back'); techUIRender(); }
