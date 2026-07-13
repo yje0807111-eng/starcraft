@@ -5078,6 +5078,10 @@ const TECH_SIGHT={
 function _techUnitSight(race,uid){ const t=TECH_SIGHT[race]&&TECH_SIGHT[race].unit[uid]; return (t!=null)?t:FOG_SIGHT_TILE_DEFAULT; }
 function _techBldgSight(race,bk){ const t=TECH_SIGHT[race]&&TECH_SIGHT[race].bldg[bk]; return (t!=null)?t:FOG_BLDG_TILE_DEFAULT; }
 function _fogSightCells(tiles){ return Math.max(2, Math.round((tiles||FOG_SIGHT_TILE_DEFAULT)*FOG_SIGHT_SCALE)); }   // SC 타일 → 안개 격자 셀 반경
+// 🛫 테란(유니온) 건물 부양(Lift-off) — 본체 생산·테크 6종만. 부양=공중 판정(지형 무시 시야) + 기능 정지 + 애드온 분리 + 아주 느린 이동. (전투/HP/수리는 이 관리 탭엔 없어 제외)
+const LIFT_BLDG={ command:1, barracks:1, engbay:1, factory:1, starport:1, scifac:1 };
+const TECH_LIFT_SPD=0.06;   // 부양 건물 이동속도(월드/초) — 아주 느림(오버로드급)
+function _techCanLift(bk){ return G.tech && G.tech.race==='union' && !!LIFT_BLDG[bk]; }
 function fogEnabled(){ return !!(typeof G!=='undefined' && G.fog && G.fog.on); }
 function fogInit(){ const on=(mapCfg('fog','off')==='full'), cols=FOG_COLS, rows=FOG_ROWS;
   G.fog={ on, cols, rows, state:new Uint8Array(cols*rows), height:new Uint8Array(cols*rows), t:0 };
@@ -5125,7 +5129,7 @@ function techFogCompute(){ const f=G.tech&&G.tech.fog; if(!f||!f.on) return; con
   for(let i=0;i<f.state.length;i++){ if(f.state[i]===2) f.state[i]=1; }   // 활성→탐색 강등
   for(const e of G.tech.ents){ if(!e) continue;
     if(e.type==='worker'){ const rt=_techUnitSight(race,TECH_WORKER[race])+0.5; _fogReveal(e.x,e.y,rt*cpt,false,f,asp); }                     // 워커: 반지름=시야+본체½
-    else if(e.type==='bldg'){ const ft=_techFoot(race,e.bk)||{w:2,h:2}; const rt=_techBldgSight(race,e.bk)+Math.max(ft.w,ft.h)/2; _fogReveal(e.x,e.y,rt*cpt,false,f,asp); }   // 건물: 반지름=시야+본체½(배치 즉시)
+    else if(e.type==='bldg'){ const ft=_techFoot(race,e.bk)||{w:2,h:2}; const rt=_techBldgSight(race,e.bk)+Math.max(ft.w,ft.h)/2; _fogReveal(e.x,e.y,rt*cpt,!!e._lifted,f,asp); }   // 건물: 반지름=시야+본체½ · 부양=공중(지형 무시)
     else if(e.type==='unit'){ const rt=_techUnitSight(race,e.uid)+0.5; _fogReveal(e.x,e.y,rt*cpt,!!(typeof _techAirOf==='function'&&_techAirOf(e)),f,asp); } } }   // 유닛(공중=지형 무시)
 function techFogDraw(){ const cv=document.getElementById('cstFog'); if(!cv) return;
   const map=document.getElementById('cstMain'); const W=(map&&map.clientWidth)||GW||360, H=(map&&map.clientHeight)||GH||420;
@@ -9890,7 +9894,7 @@ function loop(now){
       const _v=(G.tech&&G.tech.view)||{x:0.5,y:0.5,zoom:1};
       // 건물 base를 footprint 하단(중심 + ½h 아래)에 맞춤 → 건물이 자기 타일 위에 딱 올라감. yoff -3 = 모델 하단을 footprint 하단선보다 1px 위로(Y_DROP 2 보정)
       const _BLIFT=-3, _cwpx=_techCW()*W*_v.zoom;   // 셀 폭(px)
-      const list=[]; for(const e of (G.tech.ents||[])){ if(e.type!=='bldg') continue; const mk=(TECH_MODEL[race]||{})[e.bk]; if(!mk) continue; const _cfg=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[mk]:null; const _bf=(typeof _techFoot==='function')?_techFoot(race,e.bk):{w:2,h:2}; const _by=e.y+(_bf.h/2)*_techCH(); const _bp=(e.bt>0)?(e.waiting?0:Math.max(0,Math.min(1,1-e.bt/(e.btMax||1)))):null; list.push({uid:'cst_'+race+'_'+mk+'_'+e.eid, id:'cb_'+mk, x:(e.x-_v.x)*_v.zoom+0.5, y:(_by-_v.y)*_v.zoom+0.5, face:((race==='swarm')?0:(typeof CST_YAW!=='undefined'?CST_YAW:0))+((_cfg&&_cfg.f)||0), yoff:_BLIFT, fitW:_bf.w*_cwpx, sel:(G.tech&&G.tech.sel===e.eid), buildP:_bp, hidden:techFogHidden(e.x,e.y)}); }   // fitW=footprint 폭(px) · hidden=🌫️활성 시야 밖
+      const list=[]; for(const e of (G.tech.ents||[])){ if(e.type!=='bldg') continue; const mk=(TECH_MODEL[race]||{})[e.bk]; if(!mk) continue; const _cfg=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[mk]:null; const _bf=(typeof _techFoot==='function')?_techFoot(race,e.bk):{w:2,h:2}; const _by=e.y+(_bf.h/2)*_techCH(); const _bp=(e.bt>0)?(e.waiting?0:Math.max(0,Math.min(1,1-e.bt/(e.btMax||1)))):null; list.push({uid:'cst_'+race+'_'+mk+'_'+e.eid, id:'cb_'+mk, x:(e.x-_v.x)*_v.zoom+0.5, y:(_by-_v.y)*_v.zoom+0.5, face:((race==='swarm')?0:(typeof CST_YAW!=='undefined'?CST_YAW:0))+((_cfg&&_cfg.f)||0), yoff:_BLIFT-(e._lifted?30:0), fitW:_bf.w*_cwpx, sel:(G.tech&&G.tech.sel===e.eid), buildP:_bp, hidden:techFogHidden(e.x,e.y)}); }   // 🛫 부양=위로 띄움   // fitW=footprint 폭(px) · hidden=🌫️활성 시야 밖
       if(G.tech.arm && G.tech.armXY){ const _gmk=(TECH_MODEL[race]||{})[G.tech.arm]; if(_gmk && M3D.hasModel && M3D.hasModel('cb_'+_gmk)){ const _gcfg=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[_gmk]:null; const _gf=(typeof _techFoot==='function')?_techFoot(race,G.tech.arm):{w:2,h:2}; const _gy=G.tech.armXY.y+(_gf.h/2)*_techCH(); list.push({uid:'__bghost__', id:'cb_'+_gmk, x:(G.tech.armXY.x-_v.x)*_v.zoom+0.5, y:(_gy-_v.y)*_v.zoom+0.5, face:((race==='swarm')?0:(typeof CST_YAW!=='undefined'?CST_YAW:0))+((_gcfg&&_gcfg.f)||0), yoff:_BLIFT, fitW:_gf.w*_cwpx, ghost:true }); } }   // 반투명 회색 예비 건물(배치 미리보기)
       for(const e of (G.tech.ents||[])){ if(e.type!=='unit'&&e.type!=='worker') continue; if(e._inGas) continue; const mk=(typeof _techEntModel==='function')?_techEntModel(e):null; if(!mk) continue;   // 🚶 일꾼·생산 유닛 3D(가스 채취 중=건물 안, 숨김)
         const _selu=(G.tech.sel===e.eid)||(G.tech.selU&&G.tech.selU.indexOf(e.eid)>=0);
@@ -10471,7 +10475,7 @@ function _segInRect(ax,ay,bx,by,R){ const dx=bx-ax, dy=by-ay; let t0=0, t1=1;   
   return mx>R.x0+E && mx<R.x1-E && my>R.y0+E && my<R.y1-E; }
 const TECH_MINE_EXP=0.06;   // 미네랄 충돌 상자를 타일보다 살짝 키워(±0.06칸) 인접 상자끼리 겹치게 → 사이 틈(seam)으로 못 빠져나감
 function _techMineralRects(){ const out=[], cw=_techCW(), ch=_techCH(), ex=TECH_MINE_EXP*cw, ey=TECH_MINE_EXP*ch; for(const m of (G.tech.minerals||[])){ out.push({x0:m.x-0.5*cw-ex, x1:m.x+0.5*cw+ex, y0:m.y-0.5*ch-ey, y1:m.y+0.5*ch+ey}); } return out; }   // 💎 미네랄 = 통과 불가 벽(1×1, 살짝 겹침)
-function _techNavRects(e){ const out=[]; for(const b of G.tech.ents){ if(b.type!=='bldg'||b.eid===e.build) continue; if(b.bt>0&&!b._bpause) continue;   // 벽 = 완성/일시정지 건물(건설 중은 통과 허용, 자기가 짓는 건물 제외)
+function _techNavRects(e){ const out=[]; for(const b of G.tech.ents){ if(b.type!=='bldg'||b.eid===e.build||b._lifted) continue;   // 🛫 부양 건물=공중이라 지상 통과(장애물 아님) if(b.bt>0&&!b._bpause) continue;   // 벽 = 완성/일시정지 건물(건설 중은 통과 허용, 자기가 짓는 건물 제외)
     const R=_techCollRect(b,e); if(R.x1>R.x0&&R.y1>R.y0) out.push(R); }
   for(const R of _techMineralRects()) out.push(R);   // 💎 미네랄 = 지형지물(모든 유닛·일꾼이 돌아서 감)
   return out; }
@@ -10786,10 +10790,12 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
           G.tech.ents.push({eid:G.tech.eseq++, type:'larva', hatch:h.eid, x:h.x+(Math.random()-0.5)*_hf.w*_hcw*0.7, y:h.y+(_hf.h/2)*_hch+0.012+Math.random()*0.012}); _zd=true; } }
       else h._lvT=0; }
     if(_zd){ G.tech.ents=G.tech.ents.filter(x=>!x._dead); done=true; } }
-  for(const be of G.tech.ents){ if(be.type!=='bldg'||be.bt>0) continue;   // 🔢 건물별 생산 대기열(최대 5) — 맨 앞 1기만 진행 · 🔬 업그레이드(단일) 진행
+  for(const be of G.tech.ents){ if(be.type!=='bldg'||be.bt>0||be._lifted) continue;   // 🔢 생산 대기열 · 🔬 업그레이드 진행 — 🛫 부양 중=기능 정지(대기열 일시정지)
     const _blk=_techNeedsPower(be.bk)&&!_techPowered(be.x,be.y);   // 🛑 블랙아웃 = 진행 정지(복구 시 이어서)
     if(be._pq&&be._pq.length){ if(_blk){ active=true; } else { const q=be._pq[0]; q.t=Math.max(0,q.t-dt); active=true; if(q.t<=0){ techFinishProduce(q, be); be._pq.shift(); done=true; } } }
     if(be._rj){ if(_blk){ active=true; } else { const rj=be._rj; rj.t=Math.max(0,rj.t-dt); active=true; if(rj.t<=0){ techApplyResearch(be, rj); be._rj=null; done=true; } } } }
+  for(const e of G.tech.ents){ if(e.type==='bldg'&&e._lifted&&e.tx!=null){ const dx=e.tx-e.x, dy=e.ty-e.y, d=Math.hypot(dx,dy), spd=TECH_LIFT_SPD*dt;   // 🛫 부양 건물 = 아주 느린 이동(공중, 충돌 없음)
+    if(d<=spd||d<1e-4){ e.x=e.tx; e.y=e.ty; e.tx=null; e.ty=null; } else { e.x+=dx/d*spd; e.y+=dy/d*spd; } active=true; } }
   for(const e of G.tech.ents){ if(!e._chq||!e._chq.length) continue; if(e.type==='bldg'&&e.bt>0) continue;   // 🚀 내부 장전 큐(캐리어·리버·핵 사일로) — 맨 앞 1개만 진행
     const it=e._chq[0]; it.t=Math.max(0,it.t-dt); active=true; if(it.t<=0){ e._chc=(e._chc||0)+1; e._chq.shift(); done=true; } }
   if(done) techUIRender();
@@ -10930,7 +10936,9 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
     ents+='<div class="techSelBox" style="left:'+(bx*100).toFixed(2)+'%;top:'+(by*100).toFixed(2)+'%;width:'+(bw*100).toFixed(2)+'%;height:'+(bh*100).toFixed(2)+'%;position:absolute;border:1.5px solid #46f06a;background:rgba(70,240,106,.14);pointer-events:none;z-index:23;border-radius:2px"></div>'; }
   let tabs=''; ['union','swarm','aetherial'].forEach(r=>{ tabs+='<span class="techTab'+(r===race?' on':'')+'" onclick="techRace(event,\''+r+'\')">'+_TECH_RKO[r]+'</span>'; });
   const selE=(G.tech.sel!=null)?G.tech.ents.find(e=>e.eid===G.tech.sel):null, canDemo=selE&&selE.type==='bldg'&&((techGetBldg(race,selE.bk)||{}).k!==TECH_TREE[race].buildings[0].k);
+  const _liftB=(selE&&selE.type==='bldg'&&selE.bt<=0&&_techCanLift(selE.bk))?selE:null;   // 🛫 부양 가능 건물 선택 시 버튼
   const res='<span class="res cr">'+(G.tech.inf?'∞':G.tech.credit)+'◈</span><span class="res gs">'+(G.tech.inf?'∞':G.tech.energy)+'⚡</span><span class="res sp">👤'+G.tech.sup+'/'+G.tech.supCap+'</span>'
+    +(_liftB?('<span class="cbtn'+(_liftB._lifted?' on':'')+'" onclick="techLiftToggle(event)" title="'+(_liftB._lifted?'착륙':'부양')+'">'+(_liftB._lifted?'🛬':'🛫')+'</span>'):'')
     +(canDemo?'<span class="cbtn dz" onclick="techDemolish(event)">🗑 철거</span>':'')+'<span class="cbtn'+(G.tech.inf?' on':'')+'" onclick="techInf(event)">∞</span><span class="cbtn'+(G.tech.nocool?' on':'')+'" onclick="techNocool(event)" title="즉시 건설·생산">⏱</span><span class="cbtn'+(techFogEnabled()?' on':'')+'" onclick="techFog(event)" title="전장의 안개">🌫️</span><span class="cbtn" onclick="techReset(event)">↺</span>';
   // 배치 고스트 + ✓/✕ 확정 버튼 (드래그로 위치 조정)
   let ghost='', armBtns='', foot='';
@@ -11153,6 +11161,8 @@ function techPtrDown(ev){ if(!G.tech) return; const r=_btRect(); if(!r) return; 
     if(Math.abs(_px-_bx)<=_sp*0.8 && _py<=_by+_sp*0.45 && _py>=_by-_sp*1.6){   // 실루엣 hit-box(위로 넉넉) 안을 눌렀으면 잡기
       _btArm=true; const _w=_techS2W(sx,sy); _btArmOff={x:_w.x-G.tech.armXY.x, y:_w.y-G.tech.armXY.y}; }
     return; }
+  { const _lb=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'&&x._lifted):null;   // 🛫 부양 건물 선택 중 = 맵 탭으로 이동 명령
+    if(_lb && (G.tech.selU||[]).length===0){ const w=_techS2W(sx,sy); _lb.tx=Math.max(0.04,Math.min(0.96,w.x)); _lb.ty=Math.max(0.14,Math.min(0.96,w.y)); if(typeof playSfx==='function') playSfx('ui_confirm'); techMapRender(); return; } }
   const selN=(G.tech.selU||[]).length;
   if(selN>0){ const w=_techS2W(sx,sy), e=_techEntAt(w.x,w.y);   // 지정 상태: 드래그/탭 = 이동(메인 규약 — 새 박스는 해제(✕) 후에만)
     if(selN===1 && e && (e.type==='unit'||e.type==='worker'||e.type==='larva') && e.eid!==G.tech.selU[0]) return;   // 단일 지정 → 다른 유닛/라바 탭 = 업에서 재지정
@@ -11258,7 +11268,7 @@ function techArmValid(x,y){ if(!G.tech||!G.tech.arm) return false; const f=_tech
   else if(_techGasOverlap(s)) return false;   // 일반 건물 = 가스 광산 칸 침범 불가(광산 예약)
   if(_techNeedsPower(G.tech.arm) && !_techPowered(s.cx,s.cy)) return false;   // 🔵 에테리얼 = 파일런 동력장 안에만 소환
   if(_techNeedsCreep(G.tech.arm) && !_techOnCreep(s.cx,s.cy)) return false;   // 🟣 스웜 = 크립 위에만 건설
-  for(const e of G.tech.ents){ if(e.type!=='bldg') continue; const ef=_techEntFoot(e);
+  for(const e of G.tech.ents){ if(e.type!=='bldg'||e._lifted) continue; const ef=_techEntFoot(e);   // 🛫 부양 건물 자리는 비어있음(그 위/자리에 건설·착륙 가능)
     if(s.c0<ef.c0+ef.w && s.c0+s.w>ef.c0 && s.r0<ef.r0+ef.h && s.r0+s.h>ef.r0) return false; }   // 셀 AABB 교차
   if(_techFootBlockCells(s).length) return false;   // 유휴 일꾼/지상 유닛이 발판을 차지 → 건설 불가
   return true; }
@@ -11390,6 +11400,25 @@ function techNocool(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.
       if(e._rj){ techApplyResearch(e, e._rj); e._rj=null; } } }
   techUIRender(); }
 function techReset(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); const r=G.tech?G.tech.race:'union', inf=G.tech?G.tech.inf:false; techUIInit(r); G.tech.inf=inf; techUIRender(); }
+function techLiftToggle(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech||G.tech.sel==null) return;
+  const e=G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'); if(!e||e.bt>0) return;
+  if(!_techCanLift(e.bk)){ if(typeof toast==='function') toast('⛔ 부양 불가 건물'); return; }
+  if(e._lifted){   // 🛬 착륙 — 빈 평지 필요
+    if(!_techLandOK(e)){ if(typeof toast==='function') toast('⛔ 착륙 불가 — 빈 평지 필요(유닛·건물 없어야)'); return; }
+    e._lifted=false; e.tx=null; e.ty=null;
+    for(const ad of G.tech.ents){ if(ad.type==='bldg'&&ad._dockOf===e.eid) ad._orphan=false; }   // 애드온 재연결
+    if(typeof toast==='function') toast('🛬 착륙 — 기능 재개'); if(typeof playSfx==='function') playSfx('ui_confirm'); }
+  else {   // 🛫 부양 — 공중 판정(기능 정지, 지형 무시 시야, 애드온 분리)
+    e._lifted=true; e.tx=null; e.ty=null;
+    for(const ad of G.tech.ents){ if(ad.type==='bldg'&&ad._dockOf===e.eid) ad._orphan=true; }   // 애드온 남겨두고 분리(기능 정지)
+    if(typeof toast==='function') toast('🛫 부양 — 지형 무시 시야·이동 가능(맵 탭) · 기능 정지'); if(typeof playSfx==='function') playSfx('ui_open'); }
+  techUIRender(); }
+function _techLandOK(e){ const f=_techFoot(G.tech.race,e.bk), s=_techSnap(e.x,e.y,f.w,f.h);   // 착륙 = footprint가 빈 평지(다른 지상 건물·유닛 없음)
+  if(_techGasOverlap(s)) return false;   // 가스 광산 위 착륙 불가
+  for(const o of G.tech.ents){ if(o===e||o.type!=='bldg'||o._lifted) continue; const of=_techEntFoot(o);
+    if(s.c0<of.c0+of.w && s.c0+s.w>of.c0 && s.r0<of.r0+of.h && s.r0+s.h>of.r0) return false; }   // 다른 지상 건물과 겹침
+  if(_techFootBlockCells(s).length) return false;   // 발판에 유닛·워커
+  return true; }
 function techDemolish(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech||G.tech.sel==null) return;
   const e=G.tech.ents.find(x=>x.eid===G.tech.sel); if(!e||e.type!=='bldg') return; const race=G.tech.race, b=techGetBldg(race,e.bk), main=TECH_TREE[race].buildings[0];
   if(!b||b.k===main.k){ if(typeof toast==='function') toast('본진은 철거 불가'); return; }
