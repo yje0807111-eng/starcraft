@@ -5124,7 +5124,7 @@ function techFogCompute(){ const f=G.tech&&G.tech.fog; if(!f||!f.on) return; con
   for(let i=0;i<f.state.length;i++){ if(f.state[i]===2) f.state[i]=1; }   // 활성→탐색 강등
   for(const e of G.tech.ents){ if(!e) continue;
     if(e.type==='worker') _fogReveal(e.x,e.y,_fogSightCells(_techUnitSight(race,TECH_WORKER[race])),false,f,asp);           // 워커 시야(종족 일꾼)
-    else if(e.type==='bldg' && e.bt<=0) _fogReveal(e.x,e.y,_fogSightCells(_techBldgSight(race,e.bk)),false,f,asp);           // 완성 건물 시야
+    else if(e.type==='bldg') _fogReveal(e.x,e.y,_fogSightCells(_techBldgSight(race,e.bk)),false,f,asp);                     // 건물 시야 — 배치 즉시(건설 중 포함) 밝힘(스타1식)
     else if(e.type==='unit') _fogReveal(e.x,e.y,_fogSightCells(_techUnitSight(race,e.uid)),!!(typeof _techAirOf==='function'&&_techAirOf(e)),f,asp); } }   // 유닛 시야(공중=지형 무시)
 function techFogDraw(){ const cv=document.getElementById('cstFog'); if(!cv) return;
   const map=document.getElementById('cstMain'); const W=(map&&map.clientWidth)||GW||360, H=(map&&map.clientHeight)||GH||420;
