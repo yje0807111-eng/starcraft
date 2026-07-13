@@ -5066,6 +5066,18 @@ const FOG_COLS=48, FOG_ROWS=48;
 const FOG_DEFAULT_SIGHT=6;   // 유닛 기본 시야 반경(격자 칸) — U[id].sight로 개별 지정 가능
 const FOG_BLDG_SIGHT=5;      // 고정 구조물(포탑 등) 기본 시야
 const TECH_HILL={ x0:0.075, y0:0.70, x1:0.33, y1:0.915, h:1 };   // ⛰ 건설 구역 좌하단 언덕(고지대, 월드 사각) — 고저 시야 테스트: 저지→고지 차단
+// 👁 SC1 종족별 시야 범위(타일) — 건설 구역 유닛·건물. 미지정 유닛=7, 건물=8. 실제 격자 셀 반경 = 타일×FOG_SIGHT_SCALE
+const FOG_SIGHT_SCALE=0.85, FOG_SIGHT_TILE_DEFAULT=7, FOG_BLDG_TILE_DEFAULT=8;
+const TECH_SIGHT={
+  union:{ unit:{ worker_human:7, marine:7, machinegun:7, medic:9, ghost:9, racer:8, tank:10, goliath:8, skyguard:7, pelican:8, hellfire:8, aegis:10, dreadnought:11, nuke:0 },
+          bldg:{ command:10, bunker:10, turret:11 } },        // 미지정 건물=8 · 커맨드·벙커=10 · 터렛(디텍터)=11
+  swarm:{ unit:{ worker_swarm:7, overlord:9, snapper:5, hydra:6, thornqueen:8, wyvern:7, stinger:5, medusa:10, venom:10, behemoth:11, ultralisk:7, broodling:5, larva:4 },
+          bldg:{ hatchery:10, lair:10, hive:10, sunken:10, spore:10 } },   // 미지정 건물=8 · 본진·방어타워=10
+  aetherial:{ unit:{ worker_light:8, blade:7, dragoon:8, high_templar:8, dark_templar:7, seraph:8, observer:9, skydancer:8, falcon:9, archangel:9, kronos:9, archon:8, reaver:10 },
+              bldg:{ nexus:10, cannon:11 } } };               // 미지정 건물=8 · 넥서스=10 · 포톤캐논(디텍터)=11
+function _techUnitSight(race,uid){ const t=TECH_SIGHT[race]&&TECH_SIGHT[race].unit[uid]; return (t!=null)?t:FOG_SIGHT_TILE_DEFAULT; }
+function _techBldgSight(race,bk){ const t=TECH_SIGHT[race]&&TECH_SIGHT[race].bldg[bk]; return (t!=null)?t:FOG_BLDG_TILE_DEFAULT; }
+function _fogSightCells(tiles){ return Math.max(2, Math.round((tiles||FOG_SIGHT_TILE_DEFAULT)*FOG_SIGHT_SCALE)); }   // SC 타일 → 안개 격자 셀 반경
 function fogEnabled(){ return !!(typeof G!=='undefined' && G.fog && G.fog.on); }
 function fogInit(){ const on=(mapCfg('fog','off')==='full'), cols=FOG_COLS, rows=FOG_ROWS;
   G.fog={ on, cols, rows, state:new Uint8Array(cols*rows), height:new Uint8Array(cols*rows), t:0 };
@@ -5085,8 +5097,8 @@ function _fogReveal(nx,ny,sight,air,fog){ const f=fog||G.fog, t=_fogTile(nx,ny,f
       if(!air && fogHeightAt(tx,ty,f)>vh) continue;   // 저지→고지 차단(공중 유닛은 지형 무시)
       f.state[ty*f.cols+tx]=2; } } }   // 활성
 function _fogViewers(){ const out=[]; if(!G.units) return out;
-  for(const u of G.units){ if(!u) continue; const def=(typeof U!=='undefined'&&U[u.id])||{}; const sight=def.sight||(u.fixed?FOG_BLDG_SIGHT:FOG_DEFAULT_SIGHT); out.push({nx:u.x, ny:u.y, sight, air:!!(def.air||def.flying)}); }
-  return out; }   // 내 유닛·고정 구조물이 시야 밝힘(적은 시야 안 밝힘)
+  for(const u of G.units){ if(!u) continue; const def=(typeof U!=='undefined'&&U[u.id])||{}; const tiles=def.sight||(u.fixed?FOG_BLDG_TILE_DEFAULT:FOG_SIGHT_TILE_DEFAULT); out.push({nx:u.x, ny:u.y, sight:_fogSightCells(tiles), air:!!(def.air||def.flying)}); }
+  return out; }   // 내 유닛·고정 구조물이 시야 밝힘(적은 시야 안 밝힘) · def.sight=SC 타일(미지정=기본)
 function fogComputeVision(){ const f=G&&G.fog; if(!f||!f.on) return;
   for(let i=0;i<f.state.length;i++){ if(f.state[i]===2) f.state[i]=1; }   // 활성(2)→탐색(1) 강등 후 재점등
   for(const v of _fogViewers()) _fogReveal(v.nx, v.ny, v.sight, v.air); }
@@ -5105,12 +5117,12 @@ function techFogInit(on){ if(!G.tech) return; const cols=FOG_COLS, rows=FOG_ROWS
 function techFogEnabled(){ return !!(G.tech && G.tech.fog && G.tech.fog.on); }
 function techFogVisAt(nx,ny){ if(!techFogEnabled()) return 2; const f=G.tech.fog, t=_fogTile(nx,ny,f); return f.state[t.ty*f.cols+t.tx]; }
 function techFogHidden(nx,ny){ return techFogEnabled() && techFogVisAt(nx,ny)!==2; }
-function techFogCompute(){ const f=G.tech&&G.tech.fog; if(!f||!f.on) return;
+function techFogCompute(){ const f=G.tech&&G.tech.fog; if(!f||!f.on) return; const race=G.tech.race;
   for(let i=0;i<f.state.length;i++){ if(f.state[i]===2) f.state[i]=1; }   // 활성→탐색 강등
   for(const e of G.tech.ents){ if(!e) continue;
-    if(e.type==='worker') _fogReveal(e.x,e.y,FOG_DEFAULT_SIGHT,false,f);           // 워커 = 시야
-    else if(e.type==='bldg' && e.bt<=0) _fogReveal(e.x,e.y,FOG_BLDG_SIGHT,false,f); // 완성 건물 = 시야
-    else if(e.type==='unit'){ const def=(typeof U!=='undefined'&&U[e.uid])||{}; _fogReveal(e.x,e.y,def.sight||FOG_DEFAULT_SIGHT,!!(def.air||def.flying),f); } } }
+    if(e.type==='worker') _fogReveal(e.x,e.y,_fogSightCells(_techUnitSight(race,TECH_WORKER[race])),false,f);           // 워커 시야(종족 일꾼)
+    else if(e.type==='bldg' && e.bt<=0) _fogReveal(e.x,e.y,_fogSightCells(_techBldgSight(race,e.bk)),false,f);           // 완성 건물 시야
+    else if(e.type==='unit') _fogReveal(e.x,e.y,_fogSightCells(_techUnitSight(race,e.uid)),!!(typeof _techAirOf==='function'&&_techAirOf(e)),f); } }   // 유닛 시야(공중=지형 무시)
 function techFogDraw(){ const cv=document.getElementById('cstFog'); if(!cv) return;
   const map=document.getElementById('cstMain'); const W=(map&&map.clientWidth)||GW||360, H=(map&&map.clientHeight)||GH||420;
   if(cv.width!==W||cv.height!==H){ cv.width=W; cv.height=H; }
