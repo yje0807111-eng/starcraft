@@ -1454,7 +1454,7 @@
   .cmdG .cgProg .pl .pt{color:var(--caL);font:800 9px/1 'Rajdhani',sans-serif;margin-left:4px;letter-spacing:.2px}   /* 생산 중 옆 남은시간(작게) */
   .cmdG .cgGasAuto .gaBtn{width:23px;height:24px;flex:none;border-radius:6px;border:1px solid rgba(120,232,150,.4);background:rgba(120,232,150,.14);color:#c7f5d6;font:800 16px/1 sans-serif;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
   .cmdG .cgGasAuto .gaBtn:active{background:rgba(70,240,106,.32)}
-  .cmdG .cgGasAuto .gaN{min-width:18px;text-align:center;font:800 15px/1 'Rajdhani',sans-serif;color:#eafff0}
+  .cmdG .cgGasAuto .gaN{min-width:32px;padding:0 5px;text-align:center;font:800 15px/1 'Rajdhani',sans-serif;color:#eafff0}   /* 숫자 구역 가로로 여유 */
   .cmdG .cgBody{display:flex;gap:8px;align-items:stretch;flex:1;min-height:0}
   /* 좌측 보조 정보 */
   .cmdG .cgInfo{flex:0 0 35%;max-width:176px;min-width:120px;display:flex;flex-direction:column;gap:4px;padding:7px 8px;overflow:hidden;
@@ -10494,14 +10494,12 @@ function techFinishProduce(q, be){ const race=G.tech.race; G.tech.units[q.id]=(G
   const _nu=_isWk?{eid:G.tech.eseq++, type:'worker', x:_ex, y:_ey}:{eid:G.tech.eseq++, type:'unit', uid:q.id, x:_ex, y:_ey};
   G.tech.ents.push(_nu);
   if(be&&be._rally){ const d=_techRallyDest(be, _nu); if(typeof _techRoute==='function') _techRoute(_nu, d.x, d.y); else { _nu.tx=d.x; _nu.ty=d.y; } } }   // 🚩 랠리: 대형 슬롯으로 간격 맞춰 이동(한 점에 안 뭉침)
-function _ringSlotN(i, r){ if(i<=0) return {dx:0,dy:0}; let ring=1, idx=i;   // i번째 동심원 대형 슬롯(메인 _techRingSlots와 동일 배치)
-  while(true){ const cnt=Math.floor(Math.PI*2*ring*0.9)||6; if(idx<=cnt){ const a=((idx-1)/cnt)*Math.PI*2+ring*0.5; return {dx:Math.cos(a)*ring*r, dy:Math.sin(a)*ring*r}; } idx-=cnt; ring++; } }
-function _techRallyDest(be, nu){ const r=be._rally, GWp=GW||390, GHp=GH||390, R=110;   // 랠리 지점 대형 목적지 — 랠리로 향하거나 근처 정착한 유닛 수만큼 바깥 슬롯
-  let n=0; for(const e of G.tech.ents){ if(e===nu||(e.type!=='unit'&&e.type!=='worker')) continue;
-    let dx2=e.tx, dy2=e.ty; if(e._wp&&e._wp.length){ dx2=e._wp[e._wp.length-1].x; dy2=e._wp[e._wp.length-1].y; }   // 이동 목적지
-    const headTo=(dx2!=null && Math.hypot((dx2-r.x)*GWp,(dy2-r.y)*GHp)<R);   // 랠리로 향하는 중
-    const nearRally=(Math.hypot((e.x-r.x)*GWp,(e.y-r.y)*GHp)<R);              // 랠리 근처 정착
-    if(headTo||nearRally) n++; }
+function _ringSlotN(i, r){ if(i<=0) return {dx:0,dy:0}; let ring=1, idx=i;   // i번째 동심원 대형 슬롯 — 반시계 방향으로 링을 채워 나감
+  while(true){ const cnt=Math.floor(Math.PI*2*ring*0.9)||6; if(idx<=cnt){ const a=((idx-1)/cnt)*Math.PI*2+ring*0.5; return {dx:Math.cos(a)*ring*r, dy:-Math.sin(a)*ring*r}; } idx-=cnt; ring++; } }   // dy 반전=화면상 반시계
+function _techRallyDest(be, nu){ const r=be._rally, GWp=GW||390, GHp=GH||390;   // 랠리 대형 목적지 — 이 랠리 소속(_rallyOf) 유닛 슬롯 중 가장 낮은 빈 슬롯 배정(빙글빙글 나선 채움, 죽거나 이동해 빠진 자리 재사용)
+  const used=new Set(); for(const e of G.tech.ents){ if(e===nu||(e.type!=='unit'&&e.type!=='worker')) continue; if(e._rallyOf===be.eid && e._rallySlot!=null) used.add(e._rallySlot); }
+  let n=0; while(used.has(n)) n++;   // 가장 낮은 빈 슬롯(연속 채움 → 오른쪽 위에서 뭉치지 않고 계속 바깥으로)
+  nu._rallyOf=be.eid; nu._rallySlot=n;
   const sp=(((U[nu&&(nu.uid||'marine')]||{}).size||14)*0.62)*(typeof TECH_USCALE!=='undefined'?TECH_USCALE:1)*2.2, s=_ringSlotN(n, sp);
   return { x:Math.max(0.04,Math.min(0.96,r.x+s.dx/GWp)), y:Math.max(0.14,Math.min(0.96,r.y+s.dy/GHp)) }; }
 // ── 🧭 경로 탐색(visibility graph) — 이동 명령 시 건물 판정 사각의 꼭짓점을 잇는 최단 우회 경로를 미리 계산 ──
@@ -11254,7 +11252,7 @@ function _techRingSlots(list){ const slots=[{dx:0,dy:0}]; if(list.length<=1) ret
     for(let k=0;k<n&&slots.length<list.length;k++){ const a=(k/n)*Math.PI*2+ring*0.5; slots.push({dx:Math.cos(a)*ring*r, dy:Math.sin(a)*ring*r}); } ring++; }
   return slots; }
 function _techAssignMove(wx,wy){ const all=(G.tech.selU||[]).map(id=>G.tech.ents.find(e=>e.eid===id)).filter(e=>e&&(e.type==='unit'||e.type==='worker'));
-  all.forEach(e=>{ if(e.type==='worker'&&e._gKind) _techReleaseGather(e); });   // 이동 명령 = 채취 취소
+  all.forEach(e=>{ if(e.type==='worker'&&e._gKind) _techReleaseGather(e); e._rallyOf=null; e._rallySlot=null; });   // 이동 명령 = 채취 취소 + 랠리 소속 해제(그 슬롯은 다음 생산 유닛이 재사용)
   const sel=all.filter(e=>!_techBuildLocked(e));   // 건설 중 일꾼은 이동 잠금(일시정지해야 이동 가능)
   if(!sel.length){ if(all.length && !_btMoved && typeof toast==='function') toast('⏸ 건설 중 — 일꾼 프로필의 일시정지 후 이동'); return; }
   const cx=Math.max(0.04,Math.min(0.96,wx)), cy=Math.max(0.16,Math.min(0.96,wy));
@@ -11287,8 +11285,10 @@ function techPtrDown(ev){ if(!G.tech) return; const r=_btRect(); if(!r) return; 
     if(Math.abs(_px-_bx)<=_sp*0.8 && _py<=_by+_sp*0.45 && _py>=_by-_sp*1.6){   // 실루엣 hit-box(위로 넉넉) 안을 눌렀으면 잡기
       _btArm=true; const _w=_techS2W(sx,sy); _btArmOff={x:_w.x-G.tech.armXY.x, y:_w.y-G.tech.armXY.y}; }
     return; }
-  { const _lb=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'&&x._lifted&&x._liftPhase==='flying'):null;   // 🛫 비행 중(상승 완료)인 부양 건물만 맵 탭으로 이동
-    if(_lb && (G.tech.selU||[]).length===0){ const w=_techS2W(sx,sy); _btCmd={lift:_lb}; _lb.tx=Math.max(0.04,Math.min(0.96,w.x)); _lb.ty=Math.max(0.14,Math.min(0.96,w.y)); if(typeof playSfx==='function') playSfx('ui_confirm'); techMapRender(); return; } }   // _btCmd 설정 → techPtrUp이 지정 해제 안 함(계속 이동)
+  { const _lb=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'&&x._lifted&&(x._liftPhase==='flying'||x._liftPhase==='rising')):null;   // 🛫 비행 중 또는 이륙(상승) 중인 부양 건물 = 맵 탭으로 이동/이동 예약
+    if(_lb && (G.tech.selU||[]).length===0){ const w=_techS2W(sx,sy); _btCmd={lift:_lb}; _lb.tx=Math.max(0.04,Math.min(0.96,w.x)); _lb.ty=Math.max(0.14,Math.min(0.96,w.y));   // 상승 중이면 tx/ty=이동 예약(다 뜨면 자동 이동), 비행 중이면 즉시 이동
+      if(_lb._liftPhase==='rising' && typeof toast==='function') toast('🛫 이륙 후 이동 예약');
+      if(typeof playSfx==='function') playSfx('ui_confirm'); techMapRender(); return; } }   // _btCmd 설정 → techPtrUp이 지정 해제 안 함(상승 중 바닥 탭도 해제 방지)
   const selN=(G.tech.selU||[]).length;
   if(selN>0){ const w=_techS2W(sx,sy), e=_techEntAt(w.x,w.y);   // 지정 상태: 드래그/탭 = 이동(메인 규약 — 새 박스는 해제(✕) 후에만)
     if(selN===1 && e && (e.type==='unit'||e.type==='worker'||e.type==='larva') && e.eid!==G.tech.selU[0]) return;   // 단일 지정 → 다른 유닛/라바 탭 = 업에서 재지정
