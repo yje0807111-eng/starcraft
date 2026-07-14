@@ -1461,6 +1461,8 @@
   .cmdG .cgVal{display:flex;align-items:baseline;gap:4px;font-family:'Rajdhani',sans-serif;font-weight:700}
   .cmdG .cgVal .cur{font-size:13px;color:#c2ccda;font-variant-numeric:tabular-nums} .cmdG .cgVal .arw{color:var(--cgMuted);font-size:10px}
   .cmdG .cgVal .nxt{font-size:16px;color:var(--ca);text-shadow:0 0 7px var(--caG);font-variant-numeric:tabular-nums} .cmdG .cgVal .u{font-size:8.5px;color:var(--cgMuted);font-weight:600}
+  .cmdG .cgVal.sm{margin-top:3px;gap:3px}   /* 진행 바 아래 작은 단계 표시(0Lv ▸ 1Lv) */
+  .cmdG .cgVal.sm .cur{font-size:9.5px;color:#93a1b4} .cmdG .cgVal.sm .arw{font-size:8px} .cmdG .cgVal.sm .nxt{font-size:10.5px;text-shadow:none}
   .cmdG .cgStats{display:flex;flex-direction:column;gap:2px} .cmdG .cgStat{display:flex;justify-content:space-between;font-size:9.5px}
   .cmdG .cgStat span{color:var(--cgMuted)} .cmdG .cgStat b{color:#c2ccda;font-family:'Rajdhani',sans-serif;font-size:11px;font-variant-numeric:tabular-nums}
   .cmdG .cgProg{margin-top:1px} .cmdG .cgProg .pl{display:flex;justify-content:space-between;font-size:8.5px;color:var(--cgMuted);margin-bottom:2px} .cmdG .cgProg .pl b{color:var(--caL);font-family:'Rajdhani',sans-serif;font-size:10px}
@@ -7180,15 +7182,16 @@ function _cgHpShStr(hp,sh){ let s=''; if(hp!=null&&hp!=='') s+='<span class="hpv
 function _cgHpShDual(hp,sh){ let s=''; if(hp!=null&&hp!=='') s+='<span class="hpv">❤ '+hp+'/'+hp+'</span>'; if(sh) s+='<span class="shv">🛡 '+sh+'/'+sh+'</span>'; return s; }   // 헤더 HP/쉴드(유닛 — 현재/기본)
 function _cgSlotHTML(it, build){ if(!it||it.state==='empty') return '<div class="cgSlot empty"></div>';
   const cls='cgSlot '+(it.state==='busy'?'busy':it.state==='dim'?'dim':it.state==='max'?'max':'')+(it.sel?' sel':'')+(it.cls?(' '+it.cls):'');
-  const meta=(!build&&it.meta)?('<div class="cgMeta '+(it.metaCls||'')+'">'+it.meta+'</div>'):'';   // 건설 카드=우상단 메타(크기·인구) 제거
+  const meta=(it.tr!=null&&it.tr!=='')?('<div class="cgMeta '+(it.metaCls||'')+'">'+it.tr+'</div>'):((!build&&it.meta)?('<div class="cgMeta '+(it.metaCls||'')+'">'+it.meta+'</div>'):'');   // tr=건설 카드에서도 보이는 우상단 배지(업그레이드 다음 단계 등) · 그 외 건설 카드=메타 제거
   return '<div class="'+cls+'"'+(it.act?(' '+it.act):'')+'>'+meta+'<div class="cgPro">'+(it.pro||'')+'</div><div class="cgName">'+(it.sn||'')+'</div><div class="cgCost">'+_cgCost(it.cr,it.en,build)+'</div></div>'; }
 function _cgInfoHTML(d){ if(!d) return '<div class="cgEb">정보</div><div class="cgDd">항목을 선택하세요</div>';
   let val=''; if(d.stats) val='<div class="cgStats">'+d.stats.map(s=>'<div class="cgStat"><span>'+s[0]+'</span><b>'+s[1]+'</b></div>').join('')+'</div>';
-  else if(d.val) val='<div class="cgVal"><span class="cur">'+d.val.cur+'</span><span class="arw">▸</span><span class="nxt">'+d.val.nxt+'</span><span class="u">'+(d.val.unit||'')+'</span></div>';
+  else if(d.val&&!d.val.sm) val='<div class="cgVal"><span class="cur">'+d.val.cur+'</span><span class="arw">▸</span><span class="nxt">'+d.val.nxt+'</span><span class="u">'+(d.val.unit||'')+'</span></div>';
+  const valSm=(d.val&&d.val.sm)?('<div class="cgVal sm"><span class="cur">'+d.val.cur+'</span><span class="arw">▸</span><span class="nxt">'+d.val.nxt+'</span></div>'):'';   // sm=진행 바 아래 작게(업그레이드 단계)
   let q=''; if(d.queue){ const cap=d.qcap||5, lbl=d.qlabel||'대기열', have=d.queue.filter(Boolean).length;
     q='<div class="cgQlbl">'+lbl+' '+have+'/'+cap+'</div><div class="cgQ">'+d.queue.map((s,i)=>s?('<div class="qs'+(s.front?' front':'')+(s.ready?' rdy':'')+'"'+(s.act?(' '+s.act+' title="탭 = 취소(100% 환불)"'):(s.ready?'':' onclick="techCancelQueue(event,'+i+')" title="탭 = 취소(100% 환불)"'))+'><span class="qpro">'+(s.pro||'')+'</span>'+(s.front?'<i class="qb" style="width:'+Math.max(0,s.prog||0)+'%"></i>':'')+'</div>'):'<div class="qs empty"></div>').join('')+'</div>'; }
   return (d.eb?'<div class="cgEb">'+d.eb+'</div>':'')+(d.hideName?'':'<div class="cgDn">'+(d.name||'')+'</div>')+(d.desc?'<div class="cgDd">'+d.desc+'</div>':'')+val
-    +(d.progLabel?('<div class="cgProg"><div class="pl"><span>'+d.progLabel+(d.progTime?' <em class="pt">'+d.progTime+'</em>':'')+'</span><b>'+(d.progVal||'')+'</b></div><div class="cgBar"><i style="width:'+Math.max(4,d.prog||0)+'%"></i></div>'+(d.qbar?('<div class="cgQBar"'+(d.qbar.cancel!=null?' onclick="techCancelQueue(event,'+d.qbar.cancel+')" title="탭 = 마지막 예약 취소(100% 환불)" style="cursor:pointer"':'')+' aria-label="대기열 '+(d.qbar.n||0)+'/5"><i style="width:'+Math.max(0,d.qbar.fill||0)+'%'+(d.qbar.color?(';background:'+d.qbar.color):'')+'"></i></div>'):'')+'</div>'):'')+q
+    +(d.progLabel?('<div class="cgProg"><div class="pl"><span>'+d.progLabel+(d.progTime?' <em class="pt">'+d.progTime+'</em>':'')+'</span><b>'+(d.progVal||'')+'</b></div><div class="cgBar"><i style="width:'+Math.max(4,d.prog||0)+'%"></i></div>'+(d.qbar?('<div class="cgQBar"'+(d.qbar.cancel!=null?' onclick="techCancelQueue(event,'+d.qbar.cancel+')" title="탭 = 마지막 예약 취소(100% 환불)" style="cursor:pointer"':'')+' aria-label="대기열 '+(d.qbar.n||0)+'/5"><i style="width:'+Math.max(0,d.qbar.fill||0)+'%'+(d.qbar.color?(';background:'+d.qbar.color):'')+'"></i></div>'):'')+valSm+'</div>'):'')+q
     +'<div class="cgDcost">'+_cgCost(d.cr,d.en)+(d.time?'<span class="time">'+d.time+'</span>':'')+'</div>'; }
 function renderCmdGrid(host, m){ const el=(typeof host==='string')?document.getElementById(host):host; if(!el||!m) return;
   const PER=m.compact?4:8; let _items;   // 간소화=4칸/페이지, 전체=8칸/페이지
@@ -10956,14 +10959,14 @@ function techBldgProdModel(b, e){ const race=G.tech.race;
   return { mode:'prod', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:'유닛 생산 — 탭(최대 5 예약)', items, topRight:_techBldgTR(b),
     info:{ eb:'생산', hideName:true, progLabel, progVal, prog, progTime, qbar:{ fill:Math.round(_qn/5*100), color:(_qn>0?('rgb(255,'+_gb+','+_gb+')'):''), cancel:(_qn>0?(_qn-1):null), n:_qn }, cr:0, en:0, time:'' } }; }
 function techBldgUpgModel(b, e){ const race=G.tech.race; const rj=e&&e._rj;
-  const items=b.research.map(r=>{ const key=race+'_'+r.k, isThis=!!(rj&&rj.rk===r.k); let meta,state,cr,en;
-    if(r.tier){ const lv=G.tech.research[key]||0, isMax=lv>=r.tier.length, nx=r.tier[Math.min(lv,r.tier.length-1)]; meta=isMax?'MAX':((lv+1)+'단계'); cr=isMax?0:nx[0]; en=isMax?0:nx[1]; state=isThis?'busy':(isMax?'max':((rj||!_techAfford(cr,en))?'dim':'ok')); }   // 카드 = 다음에 올릴 단계 표시(0→"1단계")
+  const items=b.research.map(r=>{ const key=race+'_'+r.k, isThis=!!(rj&&rj.rk===r.k); let meta,state,cr,en,tr='';
+    if(r.tier){ const lv=G.tech.research[key]||0, isMax=lv>=r.tier.length, nx=r.tier[Math.min(lv,r.tier.length-1)]; meta=isMax?'MAX':((lv+1)+'단계'); tr=isMax?'MAX':''+(lv+1); cr=isMax?0:nx[0]; en=isMax?0:nx[1]; state=isThis?'busy':(isMax?'max':((rj||!_techAfford(cr,en))?'dim':'ok')); }   // 카드 우상단 tr = 다음에 올릴 단계 숫자(0→"1")
     else { const done=G.tech.research[key]; meta=done?'완료':'연구'; cr=done?0:r.m; en=done?0:r.g; state=isThis?'busy':(done?'max':((rj||!_techAfford(cr,en))?'dim':'ok')); }
     const _act=isThis?'onclick="techCancelResearch(event)"':(state==='max'?'':'onclick="techDoResearch(\''+b.k+'\',\''+r.k+'\')"');   // 완료/MAX = 비활성(탭 불가)
-    return { pro:'<span class="pemoji">🔬</span>', sn:r.name, cr, en, meta, metaCls:'lv', state, sel:isThis, act:_act }; });   // 진행 중=busy(탭 취소) · 그 외=대기(연구 중엔 dim)
+    return { pro:'<span class="pemoji">🔬</span>', sn:r.name, cr, en, meta, metaCls:'lv', tr, state, sel:isThis, act:_act }; });   // 진행 중=busy(탭 취소) · 그 외=대기(연구 중엔 dim)
   const bs=techBldgSpec(race,b.k)||{}; let progLabel,progVal,prog,progTime='',val=null;
   if(rj){ prog=Math.round((1-rj.t/(rj.tMax||1))*100); progLabel='연구 중'; progVal=rj.name||''; progTime=Math.ceil(rj.t)+'s';   // 남은 초 = 라벨 옆에 간단히(생산과 통합) · 취소는 진행 카드 탭
-    const rd=b.research.find(r=>r.k===rj.rk); if(rd&&rd.tier){ const lv=G.tech.research[race+'_'+rd.k]||0; val={ cur:lv+'Lv', nxt:(lv+1)+'Lv', unit:'' }; } }   // 단계형 = 좌하단에 0Lv ▸ 1Lv 표시
+    const rd=b.research.find(r=>r.k===rj.rk); if(rd&&rd.tier){ const lv=G.tech.research[race+'_'+rd.k]||0; val={ cur:lv+'Lv', nxt:(lv+1)+'Lv', unit:'', sm:true }; } }   // 단계형 = 진행 바 아래 작게 0Lv ▸ 1Lv
   else { progLabel='연구 대기'; progVal=''; prog=0; }
   return { mode:'upg', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:'연구/업그레이드 — 탭', items, topRight:_techBldgTR(b),
     info:{ eb:'업그레이드', hideName:true, val, progLabel, progVal, prog, progTime, cr:0, en:0, time:'' } }; }
