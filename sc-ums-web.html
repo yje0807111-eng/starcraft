@@ -1460,7 +1460,7 @@
   .cmdG .cgInfo{flex:0 0 35%;max-width:176px;min-width:120px;display:flex;flex-direction:column;gap:4px;padding:7px 8px;overflow:hidden;
     background:linear-gradient(160deg,rgba(18,23,34,.42),rgba(6,9,14,.5));border:1px solid var(--glass);border-radius:9px}
   .cmdG .cgEb{font:800 8px/1 sans-serif;letter-spacing:1px;color:var(--cgMuted)} .cmdG .cgDn{font-size:var(--fs-md);font-weight:800;color:#eaf1fb;line-height:1.15;word-break:keep-all}
-  .cmdG .cgDd{font-size:9.5px;color:var(--cgDim);line-height:1.4;overflow:hidden}
+  .cmdG .cgDd{font-size:9.5px;color:var(--cgDim);line-height:1.4;word-break:keep-all;overflow-wrap:break-word}   /* 한글 단어 안 끊기고 줄바꿈(잘림 방지) */
   .cmdG .cgVal{display:flex;align-items:baseline;gap:4px;font-family:'Rajdhani',sans-serif;font-weight:700}
   .cmdG .cgVal .cur{font-size:13px;color:#c2ccda;font-variant-numeric:tabular-nums} .cmdG .cgVal .arw{color:var(--cgMuted);font-size:10px}
   .cmdG .cgVal .nxt{font-size:16px;color:var(--ca);text-shadow:0 0 7px var(--caG);font-variant-numeric:tabular-nums} .cmdG .cgVal .u{font-size:8.5px;color:var(--cgMuted);font-weight:600}
@@ -11035,7 +11035,7 @@ function techBldgUpgModel(b, e){ const race=G.tech.race; const rj=e&&e._rj;
     return { pro:'<span class="pemoji">🔬</span>', sn:r.name, cr, en, meta, metaCls:'lv', state, sel:isThis, act:isThis?'onclick="techCancelResearch(event)"':'onclick="techDoResearch(\''+b.k+'\',\''+r.k+'\')"' }; });   // 진행 중=busy(탭 취소) · 그 외=대기(연구 중엔 dim)
   const bs=techBldgSpec(race,b.k)||{}; let progLabel,progVal,prog,time;
   if(rj){ prog=Math.round((1-rj.t/(rj.tMax||1))*100); progLabel='연구 중'; progVal=rj.name||''; time=Math.ceil(rj.t)+'s 남음 · 탭 = 취소'; }
-  else { progLabel='연구 대기'; progVal='항목 탭 = 시작'; prog=0; time='단일 연구(순차)'; }
+  else { progLabel='연구 대기'; progVal=''; prog=0; time=''; }
   return { mode:'upg', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:'연구/업그레이드 — 탭', items, topRight:_techBldgTR(b),
     info:{ eb:'업그레이드', hideName:true, progLabel, progVal, prog, cr:0, en:0, time } }; }
 // 렌더
@@ -11152,13 +11152,12 @@ function techBldgPlainModel(b, e){ const race=G.tech.race, bs=techBldgSpec(race,
   if(_amk){ const a=TECH_AMMO[_amk], cap=_techAmmoCap(_amk), have=(e?((e._chc||0)+((e._chq||[]).length)):0);
     const aitems=[{ pro:'<span class="pemoji">'+a.ico+'</span>', sn:a.label+' 장전', cr:a.m, en:a.g, meta:have+'/'+cap, metaCls:'lv', state:(have>=cap||!_techAfford(a.m,a.g))?'dim':'ok', act:'onclick="techChargeAmmo(event,\''+_amk+'\')"' }];
     return { mode:'info', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:'☢️ 단일 장전(최대 1)', items:aitems, info:_techAmmoInfo(e||{}, _amk) }; }
-  if(b.gas){ const tot=TECH_GAS_START, rem=_techGasRemain(); stats.push(['에너지 총량',''+tot],['남은 에너지', G.tech.inf?'∞':(''+rem)]); }
-  if(b.supply) stats.push(['공급 인구','+'+b.supply]);
-  if(b.detector) stats.push(['탐지','디텍터']);
+  let _gasHp='';
+  if(b.gas){ const tot=TECH_GAS_START, rem=_techGasRemain(); _gasHp='<span class="shv" style="color:#7ee081">⚡ '+(G.tech.inf?'∞':(rem+' / '+tot))+'</span>'; }   // ⚡ 에너지 총량/남은 = 체력 옆(하단 stats 아님)
   const items=_techWithAddons([], b.k);   // 🔗 부속 카드(마지막 그리드)
   const _def=_techIsDef(b.k);
-  return { mode:'info', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:(b.gas?'⛽ 에너지 채취 건물':(b.supply?'👤 인구 공급':(_def?'🛡 방어 건물':'건물 정보'))), items, topRight:_techBldgTR(b),
-    info:{ eb:_techBldgKind(b), name:b.name, hideName:true, desc:(b.gas?'일꾼이 이 건물에서 에너지(가스)를 채취합니다.':(b.supply?('최대 인구 +'+b.supply):(_def?'적을 자동 공격하는 방어 건물.':''))), stats, cr:0, en:0 } }; }
+  return { mode:'info', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh)+_gasHp, sub:(b.gas?'⛽ 에너지 채취 건물':(b.supply?'👤 인구 공급':(_def?'🛡 방어 건물':'건물 정보'))), items, topRight:_techBldgTR(b),
+    info:{ eb:_techBldgKind(b)+(b.detector?' (탐지)':''), name:b.name, hideName:true, desc:(b.gas?'일꾼이 이 건물에서 에너지를 채취합니다.':(b.supply?('최대 인구 +'+b.supply):(_def?'적을 자동 공격하는 방어 건물.':''))), stats, cr:0, en:0 } }; }
 // 💎⛽ 중립 자원(미네랄·가스 광산) 프로필 — 이름 + 하단 HP 자리에 잔량 표시
 function techResourceModel(res){ if(!res) return null;
   if(res.kind==='mineral'){ const m=(G.tech.minerals||[]).find(x=>x.eid===res.eid); if(!m) return null;
@@ -11170,7 +11169,7 @@ function techResourceModel(res){ if(!res) return null;
   const rem=_techGasRemain(), tot=TECH_GAS_START, pct=Math.max(0,Math.round(rem/tot*100));
   const hp=G.tech.inf?'<span class="hpv" style="color:#7ee081">∞ e</span>':'<span class="hpv" style="color:#7ee081">'+rem+' / '+tot+' e <em style="opacity:.75">('+pct+'%)</em></span>';
   return { mode:'info', title:'에너지 광산', icon:'<span class="pemoji">💨</span>', hpsh:hp, sub:'중립 지형 — 에너지', items:[],
-    info:{ eb:'중립 자원', name:'에너지 광산', hideName:true, desc:'에너지 건물 건설 후 채취 = 에너지. 건물을 파괴해도 잔량 유지.', cr:0, en:0 } };
+    info:{ eb:'중립 자원', name:'에너지 광산', hideName:true, desc:'에너지 건물 건설 후 채취 = 에너지.', cr:0, en:0 } };
 }
 function _techUnitName(e){ if(!e) return null; if(e.type==='worker') return '일꾼';
   const bs=(TECH_TREE[G.tech.race]||{}).buildings||[]; for(const b of bs){ const p=(b.produces||[]).find(x=>x.id===e.uid); if(p) return p.name; } return e.uid; }
@@ -13136,7 +13135,7 @@ function upgBldgYaw(id){ const map=UPG_BUILD_KEY[id];   // 건설 공식과 동�
   return (MODEL_YAW_OFF[id]||0)+0.5; }   // 미매핑 건물 폴백(기존 3/4 뷰)
 const NO_TURN={};  // 몸을 돌리지 않는 유닛(현재 없음)
 const TURN_MOVE_ONLY={ dragoon:true };  // 이동 중에만 회전(정지·공격 시 몸 고정) — 센티넬
-const RIM_RO_MUL={ racer:0.6 };  // 모델별 선택링 반경 배율. 레이서=크게 키워(SCALE20) 링이 굵어져 일반 유닛 크기로 축소
+const RIM_RO_MUL={ racer:0.6, res_en:0.5 };  // 모델별 선택링 반경 배율. 레이서=축소 · res_en(에너지 광산)=발판 넓어 링 과대 → 리파이너리급으로 축소
 // ── 코드 기반 애니메이션 파라미터 ──
 const BREATHE_AMP=0;      // idle 숨쉬기 진폭(모델높이 비율) — 바닥 고정(제자리 모션은 별도 추가 예정)
 const BREATHE_SPD=2.2;    // 숨쉬기 속도
