@@ -957,11 +957,8 @@
   .bmapTop .cbtn{width:54px;box-sizing:border-box;text-align:center;padding:5px 0;border-radius:6px;cursor:pointer;font-weight:800;font-size:14px;border:1px solid var(--metal-edge);background:linear-gradient(180deg,rgba(15,21,33,.85),rgba(9,13,21,.9));color:#dbe3ee}
   .bmapTop .cbtn.on{color:#fff;background:linear-gradient(180deg,#2f7d4a,#173a24);border-color:#46f06a}
   .bmapTop .cbtn.dz{width:auto;padding:5px 9px;font-size:12px;color:#ffc0c0;border-color:rgba(255,90,90,.5);background:rgba(70,18,18,.55)}
-  .bmapTop .bres{position:absolute;top:6px;right:8px;display:flex;gap:10px;align-items:center;pointer-events:auto;
-    background:linear-gradient(180deg,rgba(6,10,18,.82),rgba(6,10,18,.6));padding:4px 11px;border-radius:9px;border:1px solid var(--metal-edge)}
-  .bmapTop .bres .res{display:flex;align-items:center;gap:2.5px;padding:0;border:none;background:none}
-  .bmapTop .bres .res .ri{width:17px;height:17px;display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.8))}
-  .bmapTop .bres .res b{font:800 14px/1 'Rajdhani',sans-serif;color:#eaf4ff;font-variant-numeric:tabular-nums;text-shadow:0 1px 3px #000}
+  .bmapTop .bres{position:absolute;top:8px;right:10px;display:flex;align-items:center;gap:9px;pointer-events:auto;
+    font-size:var(--fs-md);font-weight:800;white-space:nowrap;text-shadow:0 2px 4px #000,0 0 8px #000}   /* 메인 #hudR과 완전 동일(전역 .res/.ri/b 규칙 그대로 사용, 박스 없음) */
   .bent{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;z-index:2}
   .bent .be-ico{font-size:26px;line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))}
   .bent .be-nm{font-size:8.5px;font-weight:800;color:#dfeaff;text-shadow:0 1px 2px #000;white-space:nowrap;margin-top:1px}
@@ -11035,15 +11032,16 @@ function techBldgProdModel(b, e){ const race=G.tech.race;
     info:{ eb:'생산', hideName:true, progLabel, progVal, prog, progTime, qbar:{ fill:Math.round(_qn/5*100), color:(_qn>0?('rgb(255,'+_gb+','+_gb+')'):''), cancel:(_qn>0?(_qn-1):null), n:_qn }, cr:0, en:0, time:'' } }; }
 function techBldgUpgModel(b, e){ const race=G.tech.race; const rj=e&&e._rj;
   const items=b.research.map(r=>{ const key=race+'_'+r.k, isThis=!!(rj&&rj.rk===r.k); let meta,state,cr,en;
-    if(r.tier){ const lv=G.tech.research[key]||0, isMax=lv>=r.tier.length, nx=r.tier[Math.min(lv,r.tier.length-1)]; meta=isMax?'MAX':('Lv.'+lv); cr=isMax?0:nx[0]; en=isMax?0:nx[1]; state=isThis?'busy':(isMax?'max':((rj||!_techAfford(cr,en))?'dim':'ok')); }
+    if(r.tier){ const lv=G.tech.research[key]||0, isMax=lv>=r.tier.length, nx=r.tier[Math.min(lv,r.tier.length-1)]; meta=isMax?'MAX':((lv+1)+'단계'); cr=isMax?0:nx[0]; en=isMax?0:nx[1]; state=isThis?'busy':(isMax?'max':((rj||!_techAfford(cr,en))?'dim':'ok')); }   // 카드 = 다음에 올릴 단계 표시(0→"1단계")
     else { const done=G.tech.research[key]; meta=done?'완료':'연구'; cr=done?0:r.m; en=done?0:r.g; state=isThis?'busy':(done?'max':((rj||!_techAfford(cr,en))?'dim':'ok')); }
     const _act=isThis?'onclick="techCancelResearch(event)"':(state==='max'?'':'onclick="techDoResearch(\''+b.k+'\',\''+r.k+'\')"');   // 완료/MAX = 비활성(탭 불가)
     return { pro:'<span class="pemoji">🔬</span>', sn:r.name, cr, en, meta, metaCls:'lv', state, sel:isThis, act:_act }; });   // 진행 중=busy(탭 취소) · 그 외=대기(연구 중엔 dim)
-  const bs=techBldgSpec(race,b.k)||{}; let progLabel,progVal,prog,progTime='';
-  if(rj){ prog=Math.round((1-rj.t/(rj.tMax||1))*100); progLabel='연구 중'; progVal=rj.name||''; progTime=Math.ceil(rj.t)+'s'; }   // 남은 초 = 라벨 옆에 간단히(생산과 통합) · 취소는 진행 카드 탭
+  const bs=techBldgSpec(race,b.k)||{}; let progLabel,progVal,prog,progTime='',val=null;
+  if(rj){ prog=Math.round((1-rj.t/(rj.tMax||1))*100); progLabel='연구 중'; progVal=rj.name||''; progTime=Math.ceil(rj.t)+'s';   // 남은 초 = 라벨 옆에 간단히(생산과 통합) · 취소는 진행 카드 탭
+    const rd=b.research.find(r=>r.k===rj.rk); if(rd&&rd.tier){ const lv=G.tech.research[race+'_'+rd.k]||0; val={ cur:lv+'Lv', nxt:(lv+1)+'Lv', unit:'' }; } }   // 단계형 = 좌하단에 0Lv ▸ 1Lv 표시
   else { progLabel='연구 대기'; progVal=''; prog=0; }
   return { mode:'upg', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:'연구/업그레이드 — 탭', items, topRight:_techBldgTR(b),
-    info:{ eb:'업그레이드', hideName:true, progLabel, progVal, prog, progTime, cr:0, en:0, time:'' } }; }
+    info:{ eb:'업그레이드', hideName:true, val, progLabel, progVal, prog, progTime, cr:0, en:0, time:'' } }; }
 // 렌더
 function techUIRender(){ if(!G.tech) return; techMapRender(); techPanelRender(); techHidePreview(); }   // 3D 건물은 메인 렌더러(syncBuild)가 렌더
 function techMapRender(){ const map=document.getElementById('cstMain'); if(!map) return; const race=G.tech.race;
@@ -11081,7 +11079,7 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
   const _RI_CR='<svg class="ri" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#ffd24a" stroke="#ffe6a0" stroke-width="1.2"/><circle cx="12" cy="12" r="6.6" fill="none" stroke="#b88a1e" stroke-width="1"/><path d="M14.8 8.8A4.4 4.4 0 1 0 14.8 15.2" fill="none" stroke="#7a5a12" stroke-width="2.2" stroke-linecap="round"/></svg>';   // 메인 HUD 자원 아이콘 재사용(크레딧=골드 코인)
   const _RI_EN='<svg class="ri" viewBox="0 0 24 24"><path d="M13.6 2L5.4 13H10l-1.6 9L18.6 10.5H13z" fill="#6ff0a0" stroke="#d6ffe6" stroke-width="1" stroke-linejoin="round"/></svg>';   // 에너지=번개
   const _RI_SP='<svg class="ri" viewBox="0 0 24 24"><circle cx="12" cy="7.5" r="3.3" fill="#bcd8f5" stroke="#eaf4ff" stroke-width="1"/><path d="M4.5 20c0-4.2 3.4-6.8 7.5-6.8s7.5 2.6 7.5 6.8z" fill="#94b8e2" stroke="#eaf4ff" stroke-width="1" stroke-linejoin="round"/></svg>';   // 인구=파란 인물
-  const res='<span class="res cr">'+_RI_CR+'<b>'+(G.tech.inf?'∞':G.tech.credit)+'</b></span><span class="res gs">'+_RI_EN+'<b>'+(G.tech.inf?'∞':G.tech.energy)+'</b></span><span class="res sp">'+_RI_SP+'<b>'+G.tech.sup+'/'+G.tech.supCap+'</b></span>';
+  const res='<span class="res min">'+_RI_CR+'<b>'+(G.tech.inf?'∞':G.tech.credit)+'</b></span><span class="res gas">'+_RI_EN+'<b>'+(G.tech.inf?'∞':G.tech.energy)+'</b></span><span class="res pop">'+_RI_SP+'<b>'+G.tech.sup+'/'+G.tech.supCap+'</b></span>';   // 메인 #hudR과 동일 마크업(res min/gas/pop + ri + b)
   const btns=(canDemo?'<span class="cbtn dz" onclick="techDemolish(event)">🗑 철거</span>':'')+'<span class="cbtn'+(G.tech.inf?' on':'')+'" onclick="techInf(event)" title="무제한 자원">∞</span><span class="cbtn'+(G.tech.nocool?' on':'')+'" onclick="techNocool(event)" title="즉시 건설·생산">⏱</span><span class="cbtn'+(techFogEnabled()?' on':'')+'" onclick="techFog(event)" title="전장의 안개">🌫️</span><span class="cbtn" onclick="techReset(event)" title="리셋">↺</span>';
   // 배치 고스트 + ✓/✕ 확정 버튼 (드래그로 위치 조정)
   let ghost='', armBtns='', foot='';
@@ -11193,8 +11191,7 @@ function _techUnitName(e){ if(!e) return null; if(e.type==='worker') return '일
   const bs=(TECH_TREE[G.tech.race]||{}).buildings||[]; for(const b of bs){ const p=(b.produces||[]).find(x=>x.id===e.uid); if(p) return p.name; } return e.uid; }
 function techUnitPanelModel(list){ const race=G.tech.race, grp={}, ord=[];   // 유닛 지정 시트 — 건물 그리드와 동일한 커맨드 그리드 재사용
   for(const e of list){ const k=(e.type==='worker')?'__wk':e.uid; if(!grp[k]){ grp[k]={n:0,e:e}; ord.push(k); } grp[k].n++; }
-  const items=ord.map(k=>{ const g=grp[k], id=(g.e.type==='worker')?(TECH_WORKER[race]||'worker_human'):g.e.uid;
-    return { pro:_techUnitPortrait(id), sn:_techUnitName(g.e)||id, meta:'×'+g.n, metaCls:'lv', state:'ok', act:'' }; });
+  const items=[];   // 유닛 초상 카드 제거 — 헤더 프로필과 중복(그리드는 변태·장전 등 행동 카드만)
   if(race==='swarm' && list.length===1 && list[0].type==='unit' && typeof TECH_MORPH!=='undefined' && TECH_MORPH[list[0].uid]){   // 🧬 2차 변태 버튼(단일 지정 시)
     for(const mm of TECH_MORPH[list[0].uid]){ const ok=_techMorphOK(mm);
       items.push({ pro:_techUnitPortrait(mm.to), sn:'변태→'+mm.name, cr:mm.m, en:mm.g, meta:'🧬', state:(ok.ok&&_techAfford(mm.m,mm.g))?'ok':'dim', act:ok.ok?('onclick="techDoMorph(event,\''+mm.to+'\')"'):'' }); } }
