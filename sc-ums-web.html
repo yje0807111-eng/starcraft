@@ -6441,6 +6441,7 @@ SKILL_ICON.nuke='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 
 SKILL_ICON.siege='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h18v3H3zM5 10h6l3-4h4l-2 4h2v2H5zM6 16v3H4v-3zM20 16v3h-2v-3z"/></svg>';   // 시즈=포탑
 SKILL_ICON.yamato='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 017 7c0 3-2 5-2 7l-5 6-5-6c0-2-2-4-2-7a7 7 0 017-7zm0 4a3 3 0 100 6 3 3 0 000-6z"/></svg>';   // 야마토=충전포
 SKILL_ICON.emp='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L5 13h5l-1 9 9-12h-5z"/><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".5"/></svg>';   // EMP=전자펄스
+SKILL_ICON.broodling='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c2 3 2 5 0 7-2-2-2-4 0-7zM5 9c3 1 4 3 3 6-3-1-4-3-3-6zM19 9c1 3 0 5-3 6-1-3 0-5 3-6zM12 13c2 3 2 6 0 9-2-3-2-6 0-9z"/></svg>';   // 브루들링=포자
 const SKILLS={
   // 하이템플러: 사이오닉 스톰 — 지정 지점 광역 지속 피해(연출: 보라 뇌운+번개)
   psi_storm:{ key:'psi_storm', name:'사이오닉 스톰', kind:'target_ground', energy:75, cd:12, dur:3, radius:0.075, dmg:14,
@@ -6469,12 +6470,16 @@ const SKILLS={
   yamato:{ key:'yamato', name:'야마토 포', kind:'target_enemy', energy:0, cd:12, dmg:260, arm:'💥 야마토: 조준할 적을 클릭하세요.' },
   // 이지스: EMP — 지정 지역 에너지·보호막 소거
   emp:{ key:'emp', name:'EMP', kind:'target_ground', energy:0, cd:10, radius:0.13, arm:'⚡ EMP: 지점을 클릭하세요.' },
+  // 메두사(퀸): 브루들링 — 스폰 브루들링 연구 해제. 지정 적 즉사 + 그 자리에 스웜링 2기
+  broodling:{ key:'broodling', name:'브루들링', kind:'target_enemy', energy:0, cd:12, spawn:2, arm:'🐛 브루들링: 즉사시킬 적을 클릭하세요.' },
 };
 // 모델키(gmodel||id) → 스킬 키 목록. 하단 선택 패널 '여분 구역'에 버튼 표시.
 // 다크템플러=상시 은신(PERMA_CLOAK)·와쳐/제플린=상시 탐지(U.detector) → 스킬 버튼 없음(패시브)
 const UNIT_SKILLS={ high_templar:['psi_storm'], medic:['heal'], kronos:['psi_cloak'], marine:['stim'], medusa:['ensnare'], racer:['spider_mine'],
   ghost:['lockdown','nuke'], tank:['siege'], dreadnought:['yamato'], aegis:['emp'] };
-function unitSkillKeys(u){ if(!u) return []; return UNIT_SKILLS[u.gmodel||u.id]||UNIT_SKILLS[u.id]||[]; }
+function unitSkillKeys(u){ if(!u) return []; let ks=(UNIT_SKILLS[u.gmodel||u.id]||UNIT_SKILLS[u.id]||[]).slice();
+  if((u.gmodel||u.id)==='medusa' && typeof G!=='undefined' && G.tech && G.tech.research && G.tech.research.swarm_broodling && ks.indexOf('broodling')<0) ks.push('broodling');   // 🐛 스폰 브루들링 연구 시 브루들링 스킬 부여
+  return ks; }
 function _skKey(u){ return (u&&(u.gmodel||u.id))||''; }
 function isCloaked(u){ return !!(u&&(PERMA_CLOAK[_skKey(u)] || (u.skillOn&&u.skillOn.cloak) || u._fieldCloak)); }   // 상시/토글/오라 은신
 function isDetector(u){ const d=u&&(typeof U!=='undefined')&&U[_skKey(u)]; return !!(d&&d.detector); }   // 탐지 유닛(U.detector)
@@ -6516,6 +6521,8 @@ function fireSkillEnemy(uid,key,foe){ const u=G.units.find(z=>z.uid===uid); cons
   u.skillCd=u.skillCd||{}; u.skillCd[key]=sk.cd||0; G.skillFx=G.skillFx||[];
   if(key==='lockdown'){ foe.stunT=Math.max(foe.stunT||0, sk.dur||6); G.skillFx.push({type:'lock', x:foe.x, y:foe.y, t:0, dur:sk.dur||6, foe:foe}); }
   else if(key==='yamato'){ G.skillFx.push({type:'beam', sx:u.x, sy:u.y-0.02, x:foe.x, y:foe.y, t:0, dur:0.55}); _skHurt(foe, sk.dmg, uid); }
+  else if(key==='broodling'){ const fx=foe.x, fy=foe.y; if(foe.hp!=null){ foe.hp=0; } foe.dead=true; foe._killer=u.uid;   // 🐛 대상 즉사 + 그 자리 스웜링 2기
+    for(let n=0;n<(sk.spawn||2);n++){ _spawnBroodling(u, fx, fy); } G.skillFx.push({type:'boom', x:fx, y:fy, t:0, dur:0.4, r:0.05}); }
   if(typeof playSfx==='function')playSfx('skill'); if(typeof addChat==='function') addChat('', sk.name+' 시전!'); renderSkillBar();
 }
 function _skEmp(x,y,r){ const L=_skFoes(), r2=r*r; for(const e of L){ if(e.dead) continue; const dx=e.x-x, dy=e.y-y; if(dx*dx+dy*dy<=r2){ if(e.sh!=null) e.sh=0; e.en=0; e.empT=1.5; } } }
@@ -6550,12 +6557,14 @@ function _skAura(u, key, sk){ if(!G.units) return; const r2=(sk.radius||0.12)*(s
   if(sk.cloakAllies){ for(const a of G.units){ if(a.fixed) continue; const dx=a.x-u.x, dy=a.y-u.y; if(dx*dx+dy*dy<=r2) a._fieldCloak=true; } }   // 오라 은신: 범위 내 아군
   if(sk.detect && G.enemies){ for(const e of G.enemies){ if(e.dead) continue; const dx=e.x-u.x, dy=e.y-u.y; if(dx*dx+dy*dy<=r2) e._revealed=true; } }   // 탐지 훅: 범위 내 적 표식(전투 유즈맵용)
 }
-const MEDUSA_BROOD_CD=10, MEDUSA_BROOD_MAX=6;   // 메두사 브루들링: 10초당 1기, 최대 6기(살아있는 자식 기준)
-function _spawnBroodling(m){ if(typeof G==='undefined'||!G.units) return; if(G.idSeq==null) G.idSeq=1;   // 메두사(m)가 자기 팀 브루들링 1기 생산
-  const child=initUnitStats({uid:G.idSeq++, id:'hydra', hero:false, lv:1, x:m.x+(Math.random()-0.5)*0.03, y:m.y+0.02+(Math.random()-0.5)*0.02, cd:0, fixed:false});
-  child.gmodel='broodling'; if(typeof _btModelStats==='function') _btModelStats(child,'broodling'); child.gname='스웜링'; child._broodOwner=m.uid;   // 스탯=broodling(hp30) · 소유 메두사 표식
+const MEDUSA_BROOD_CD=8, MEDUSA_BROOD_MAX=6, MEDUSA_BROOD_LIFE=60;   // 메두사 스웜링: 8초당 1기, 최대 6기, 60초 지속(체력 점감 후 소멸)
+function _spawnBroodling(m, x, y){ if(typeof G==='undefined'||!G.units) return null; if(G.idSeq==null) G.idSeq=1;   // 메두사(m) 팀 스웜링 1기 생산(x,y 지정 시 그 자리)
+  const bx=(x!=null?x:m.x)+(Math.random()-0.5)*0.03, by=(y!=null?y:m.y+0.02)+(Math.random()-0.5)*0.02;
+  const child=initUnitStats({uid:G.idSeq++, id:'hydra', hero:false, lv:1, x:bx, y:by, cd:0, fixed:false});
+  child.gmodel='broodling'; if(typeof _btModelStats==='function') _btModelStats(child,'broodling'); child.gname='스웜링'; child._broodOwner=m.uid;
+  child._broodLife=MEDUSA_BROOD_LIFE; child._broodHp0=child.maxHp||30;   // 60초 수명 · 기준 체력(점감 표시)
   if(m.team==='foe') child.team='foe'; G.units.push(child);
-  if(window.M3D&&M3D.spawnModel){ try{ M3D.spawnModel(child); }catch(_e){} } }
+  if(window.M3D&&M3D.spawnModel){ try{ M3D.spawnModel(child); }catch(_e){} } return child; }
 function stepSkills(dt){ if(typeof G==='undefined'||!G.units) return; G._skT=(G._skT||0)+dt;
   for(const u of G.units){ u._fieldCloak=false; u._healTgt=null; }   // 오라 은신·치유 대상 매 프레임 초기화
   for(const u of G.units){ if(u.fixed) continue;
@@ -6577,9 +6586,14 @@ function stepSkills(dt){ if(typeof G==='undefined'||!G.units) return; G._skT=(G.
   for(const u of G.units){ u._cloaked=isCloaked(u); u._detected=false; u._detAlly=false; u._detFoe=false; }   // 은신·팀별 탐지 초기화
   for(const d of G.units){ if(!isDetector(d)||d.dead) continue; const r2=DETECT_RANGE*DETECT_RANGE; const _dT=(d.team==='foe')?'foe':'ally';   // 탐지기 소속팀에만 은신 노출
     for(const u of G.units){ if(!u._cloaked) continue; const dx=u.x-d.x, dy=u.y-d.y; if(dx*dx+dy*dy<=r2){ u._detected=true; if(_dT==='foe') u._detFoe=true; else u._detAlly=true; } } }
-  { const _meds=[]; for(const u of G.units){ if(!u.fixed && (u.gmodel||u.id)==='medusa' && (u.hp!=null?u.hp:u.maxHp)>0) _meds.push(u); }   // 메두사 브루들링 자동 생산(10초/1기, 최대 6기)
-    for(const m of _meds){ m._broodT=(m._broodT||0)+dt; if(m._broodT<MEDUSA_BROOD_CD) continue; m._broodT=0;
-      let alive=0; for(const c of G.units){ if(c._broodOwner===m.uid && (c.hp!=null?c.hp:c.maxHp)>0) alive++; } if(alive<MEDUSA_BROOD_MAX) _spawnBroodling(m); } }
+  { const _meds=[]; for(const u of G.units){ if(!u.fixed && (u.gmodel||u.id)==='medusa' && (u.hp!=null?u.hp:u.maxHp)>0) _meds.push(u); }   // 메두사 스웜링 자동 생성(8초/1기, 최대 6기)
+    for(const m of _meds){ m._broodT=(m._broodT||0)+dt; if(m._broodT>=MEDUSA_BROOD_CD){ m._broodT=0;
+      let alive=0; for(const c of G.units){ if(c._broodOwner===m.uid && !c.dead) alive++; } if(alive<MEDUSA_BROOD_MAX) _spawnBroodling(m); } }
+    for(let i=G.units.length-1;i>=0;i--){ const c=G.units[i]; if(c._broodOwner==null) continue;   // 🐛 스웜링 수명(60초 체력 점감→소멸) + 소유 메두사 추종(유휴 시)
+      c._broodLife=(c._broodLife==null?MEDUSA_BROOD_LIFE:c._broodLife)-dt;
+      const _h0=c._broodHp0||c.maxHp||30; if(c.maxHp) c.hp=Math.max(1,Math.round(_h0*Math.max(0,c._broodLife)/MEDUSA_BROOD_LIFE));
+      if(c._broodLife<=0){ if(window.M3D&&M3D.dropModels){ try{ M3D.dropModels([c.uid]); }catch(_e){} } G.units.splice(i,1); if(G.sel) G.sel=G.sel.filter(id=>id!==c.uid); continue; }
+      const own=G.units.find(z=>z.uid===c._broodOwner&&!z.dead); if(own && !c.atkTarget && !c._chasing){ const dx=own.x-c.x, dy=own.y-c.y, d=Math.hypot(dx,dy); if(d>0.1) c.moveTo={x:own.x-(dx/d)*0.06, y:own.y-(dy/d)*0.06}; } } }
   if(G.skillFx&&G.skillFx.length){ for(let i=G.skillFx.length-1;i>=0;i--){ const f=G.skillFx[i]; f.t+=dt;
     if(f.type==='storm'){ f.boltT=(f.boltT||0)-dt; if(f.boltT<=0){ f.boltT=0.05; (f.bolts=f.bolts||[]).push({a:Math.random()*6.28, rr:Math.random(), t:0}); }
       if(f.bolts){ for(let b=f.bolts.length-1;b>=0;b--){ f.bolts[b].t+=dt; if(f.bolts[b].t>0.24) f.bolts.splice(b,1); } }
