@@ -7262,7 +7262,7 @@ function _cgInfoHTML(d){ if(!d) return '<div class="cgEb">정보</div><div class
   let q=''; if(d.queue){ const cap=d.qcap||5, lbl=d.qlabel||'대기열', have=d.queue.filter(Boolean).length;
     q='<div class="cgQlbl">'+lbl+' '+have+'/'+cap+'</div><div class="cgQ">'+d.queue.map((s,i)=>s?('<div class="qs'+(s.front?' front':'')+(s.ready?' rdy':'')+'"'+(s.act?(' '+s.act+' title="탭 = 취소(100% 환불)"'):(s.ready?'':' onclick="techCancelQueue(event,'+i+')" title="탭 = 취소(100% 환불)"'))+'><span class="qpro">'+(s.pro||'')+'</span>'+(s.front?'<i class="qb" style="width:'+Math.max(0,s.prog||0)+'%"></i>':'')+'</div>'):'<div class="qs empty"></div>').join('')+'</div>'; }
   return (d.eb?'<div class="cgEb">'+d.eb+'</div>':'')+(d.hideName?'':'<div class="cgDn">'+(d.name||'')+'</div>')+(d.desc?'<div class="cgDd">'+d.desc+'</div>':'')+val
-    +(d.progLabel?('<div class="cgProg"><div class="pl"><span>'+d.progLabel+(d.progTime?' <em class="pt">'+d.progTime+'</em>':'')+'</span><b>'+(d.progVal||'')+'</b></div><div class="cgBar"><i style="width:'+Math.max(4,d.prog||0)+'%"></i></div></div>'):'')+q
+    +(d.progLabel?('<div class="cgProg"><div class="pl"><span>'+d.progLabel+(d.progTime?' <em class="pt">'+d.progTime+'</em>':'')+'</span><b>'+(d.qlbl||d.progVal||'')+'</b></div><div class="cgBar"'+(d.progCancel!=null?' onclick="techCancelQueue(event,'+d.progCancel+')" title="탭 = 마지막 예약 취소(100% 환불)" style="cursor:pointer"':'')+'><i style="width:'+Math.max(4,d.prog||0)+'%'+(d.progColor?(';background:'+d.progColor+';box-shadow:0 0 7px '+d.progColor):'')+'"></i></div></div>'):'')+q
     +'<div class="cgDcost">'+_cgCost(d.cr,d.en)+(d.time?'<span class="time">'+d.time+'</span>':'')+'</div>'; }
 function renderCmdGrid(host, m){ const el=(typeof host==='string')?document.getElementById(host):host; if(!el||!m) return;
   const PER=m.compact?4:8; let _items;   // 간소화=4칸/페이지, 전체=8칸/페이지
@@ -10915,7 +10915,7 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
     if(e._liftPhase==='rising'){ e._liftT=Math.max(0,(e._liftT||0)-dt); e._liftH=Math.min(1,1-e._liftT/TECH_LIFT_T); active=true; if(e._liftT<=0){ e._liftH=1; e._liftPhase='flying'; done=true; } }
     else if(e._liftPhase==='descending'){ e._liftT=Math.max(0,(e._liftT||0)-dt); e._liftH=Math.max(0,e._liftT/TECH_LIFT_T); active=true;
       if(e._liftT<=0){ e._liftH=0; e._lifted=false; e._liftPhase=null; e._landXY=null; e.tx=null; e.ty=null; e._smkBurst=1;   // 착지 순간 먼지 poof
-        for(const ad of G.tech.ents){ if(ad.type==='bldg'&&ad._dockOf===e.eid) ad._orphan=false; } done=true; } }   // 착지 완료 → 애드온 재연결·기능 재개
+        for(const ad of G.tech.ents){ if(ad.type==='bldg'&&ad._dockOf===e.eid){ if(_techAddonAdjacent(e,ad)){ ad._orphan=false; } else { ad._dockOf=null; ad._orphan=false; if(e._addonEid===ad.eid) e._addonEid=null; } } } done=true; } }   // 착지 완료 → 같은 자리=재연결 / 다른 자리=부속 분리(연결 해제, 새 부속 건설 가능)
     else { const tgt=(e._liftPhase==='toland')?e._landXY:(e.tx!=null?{x:e.tx,y:e.ty}:null);   // 비행 이동 / 착륙 지점 이동
       if(tgt){ const dx=tgt.x-e.x, dy=tgt.y-e.y, d=Math.hypot(dx,dy), spd=TECH_LIFT_SPD*dt;
         if(d<=spd||d<1e-4){ e.x=tgt.x; e.y=tgt.y;
@@ -11022,12 +11022,13 @@ function techBldgProdModel(b, e){ const race=G.tech.race;
   const items=_techWithAddons(b.produces.map(p=>{ const reqok=_techReqMet(p.req), afford=_techAfford(p.m,p.g), popok=G.tech.inf||!p.pop||(G.tech.sup+p.pop<=G.tech.supCap), cnt=G.tech.units[p.id]||0;
     return { pro:_techUnitPortrait(p.id), sn:_techRealName(race,p.id), cr:p.m, en:p.g, meta:cnt?('×'+cnt):(p.pop?'👤'+p.pop:''), metaCls:cnt?'lv':'', state:(qFull||!reqok||!afford||!popok)?'dim':'ok', act:'onclick="techDoProduce(\''+p.id+'\',\''+b.k+'\')"' }; }), b.k);   // 🔗 부속 카드는 마지막 그리드로 · 대기열 가득참=비활성
   const bs=techBldgSpec(race,b.k)||{};
-  const queue=[]; for(let i=0;i<5;i++){ const q=pq[i]; queue.push(q?{pro:_techUnitPortrait(q.id), front:i===0, prog:i===0?Math.round((1-q.t/(q.tMax||1))*100):0}:null); }
-  const front=pq[0]; let progLabel,progVal,prog,time,progTime;
-  if(front){ prog=Math.round((1-front.t/(front.tMax||1))*100); progLabel='생산 중'; progTime=Math.ceil(front.t)+'s'; progVal=(_techRealName(race,front.id)||''); time=''; }   // 남은시간=progLabel 옆(작게)
-  else { progLabel='생산 대기'; progVal=qFull?'대기열 가득참':''; prog=0; time=qFull?'최대 5기':''; progTime=''; }
+  const front=pq[0]; let progLabel,progVal,progTime='';
+  if(front){ progLabel='생산 중'; progTime=Math.ceil(front.t)+'s'; progVal=(_techRealName(race,front.id)||''); }   // 남은시간=progLabel 옆(작게)
+  else { progLabel='생산 대기'; progVal=''; }
+  const _qn=pq.length, prog=Math.round(_qn/5*100);   // 🔢 하단 바 = 대기열 채움(1→1/5 … 5→5/5)
+  const _f=Math.max(0,Math.min(1,(_qn-1)/4)), _gb=Math.round(255-_f*190), progColor=(_qn>0?('rgb(255,'+_gb+','+_gb+')'):'');   // 색 = 흰색(1)→빨강(5)
   return { mode:'prod', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:'유닛 생산 — 탭(최대 5 예약)', items, topRight:_techBldgTR(b),
-    info:{ eb:'생산', hideName:true, queue, progLabel, progVal, prog, progTime, cr:0, en:0, time } }; }
+    info:{ eb:'생산', hideName:true, progLabel, progVal, prog, progTime, progColor, progCancel:(_qn>0?(_qn-1):null), qlbl:'대기열 '+_qn+'/5', cr:0, en:0, time:'' } }; }
 function techBldgUpgModel(b, e){ const race=G.tech.race; const rj=e&&e._rj;
   const items=b.research.map(r=>{ const key=race+'_'+r.k, isThis=!!(rj&&rj.rk===r.k); let meta,state,cr,en;
     if(r.tier){ const lv=G.tech.research[key]||0, isMax=lv>=r.tier.length, nx=r.tier[Math.min(lv,r.tier.length-1)]; meta=isMax?'MAX':('Lv.'+lv); cr=isMax?0:nx[0]; en=isMax?0:nx[1]; state=isThis?'busy':(isMax?'max':((rj||!_techAfford(cr,en))?'dim':'ok')); }
@@ -11133,16 +11134,25 @@ function techBldgInfoModel(b){ const race=G.tech.race, hb=TECH_TREE[race].buildi
   const bs=techBldgSpec(race,b.k)||{};
   return { mode:'prod', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:'이 건물이 해금 · 생산은 '+hb.name+'에서', items,
     info:{ eb:'해금', name:b.name, hideName:true, desc:'테크 건물 — 생산은 '+hb.name+'에서. 철거 시 해당 유닛 재잠금.', stats:[['해금 유닛',(b.unlocks||[]).length+'종']], cr:0, en:0 } }; }
-// 🔗 부속(애드온) 카드 — 그 본체(bk)에 붙는 부속 건물들. 탭 = 즉시 도킹 건설(일꾼 불필요)
+// 🔗 부속(애드온) 연결 판정 — 본체 오른쪽·하단 도크에 부속이 접지·인접해 붙어있으면 '연결'
+function _techAddonAdjacent(p, ad){ const pf=_techEntFoot(p), af=_techEntFoot(ad); return af.c0===pf.c0+pf.w && (af.r0+af.h)===(pf.r0+pf.h); }   // 도크 위치(우측 붙임 + 하단 정렬)
+function _techAddonConnected(p){ if(!p||p._lifted||p._addonEid==null) return false; const ad=G.tech.ents.find(x=>x.eid===p._addonEid&&x.type==='bldg'); return !!(ad && !ad._lifted && _techAddonAdjacent(p,ad)); }   // 이 본체에 부속이 붙어있는가(건설 중 포함)
+// 🔗 부속(애드온) 카드 — 그 본체(bk)에 붙는 부속 건물들. 이 본체에 연결된 부속이 있으면 모든 부속 카드 잠금(본체당 1개)
 function _techAddonCards(bk){ const race=G.tech.race, t=TECH_TREE[race], out=[];
+  const e=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'&&x.bk===bk):null;   // 현재 선택된 본체
+  const connected=_techAddonConnected(e), myAd=connected?G.tech.ents.find(x=>x.eid===e._addonEid&&x.type==='bldg'):null;
   for(const x of t.buildings){ if(x.addonTo!==bk) continue;
-    const has=!!G.tech.addon[x.k], reqok=_techReqMet(x.req), afford=_techAfford(x.m,x.g);
-    out.push({ _addon:true, pro:'<span class="pemoji">'+x.ico+'</span>', sn:x.name+' (부속)', cr:x.m, en:x.g, meta:has?'✓':'＋부속', metaCls:has?'lv':'', state:has?'max':((!reqok||!afford)?'dim':'ok'), act:(!has&&reqok&&afford)?('onclick="techBuildAddon(event,\''+x.k+'\')"'):'' }); }
+    const isMine=!!(myAd && myAd.bk===x.k), reqok=_techReqMet(x.req), afford=_techAfford(x.m,x.g);
+    out.push({ _addon:true, pro:'<span class="pemoji">'+x.ico+'</span>', sn:x.name+' (부속)', cr:x.m, en:x.g,
+      meta:isMine?'✓ 연결':(connected?'🔒':'＋부속'), metaCls:isMine?'lv':'',
+      state:(isMine||connected)?'max':((!reqok||!afford)?'dim':'ok'),   // 연결됨 = 이 카드+다른 부속 카드 모두 잠금
+      act:(!connected&&reqok&&afford)?('onclick="techBuildAddon(event,\''+x.k+'\')"'):'' }); }
   return out; }
 function _techWithAddons(items, bk){ const addons=_techAddonCards(bk); if(!addons.length) return items; return items.concat(addons); }   // 부속 카드(_addon)는 renderCmdGrid가 항상 그리드 맨 끝 슬롯에 고정 배치
 function techBuildAddon(ev, k){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;
   const race=G.tech.race, b=techGetBldg(race,k); if(!b||!b.addonTo) return;
-  if(G.tech.addon[k]){ if(typeof toast==='function') toast('⛔ 이미 부속 건설됨'); return; }
+  const selB=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'&&x.bk===b.addonTo):null;
+  if(selB && _techAddonConnected(selB)){ if(typeof toast==='function') toast('⛔ 이미 부속 연결됨'); return; }   // 이 본체에 이미 부속 연결 → 불가
   if(!(G.tech.built[b.addonTo]>0)||!_techReqMet(b.req)){ if(typeof toast==='function') toast('⛔ 본체·선행 필요'); return; }
   if(!_techAfford(b.m,b.g)){ if(typeof toast==='function') toast('⛔ 자원 부족'); return; }
   techDockAddon(b, G.tech.sel); }   // 선택된 본체 우선
