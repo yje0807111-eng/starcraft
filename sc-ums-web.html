@@ -1441,7 +1441,7 @@
   .cmdG .cgHpsh .hpv{color:#7ee081} .cmdG .cgHpsh .shv{color:#8fd8ff}
   .cmdG .cgPill{flex:none;align-self:flex-start;font:800 9px/1 sans-serif;letter-spacing:.5px;padding:4px 6px;border-radius:5px;color:var(--caL);background:rgba(255,255,255,.04);border:1px solid var(--caS)}
   .cmdG .cgPill.idle{color:var(--cgMuted);border-color:var(--metal-edge)}
-  .cmdG .cgGasAuto{flex:none;align-self:center;height:38px;display:flex;align-items:center;gap:1px;padding:0 3px;border-radius:9px;background:rgba(70,240,106,.13);border:1px solid var(--glass)}   /* 일꾼 수 스텝퍼 — 우상단 배너와 동일 톤(아이콘 제거) */
+  .cmdG .cgGasAuto{flex:none;align-self:center;height:32px;display:flex;align-items:center;gap:3px;padding:0 3px;border-radius:8px;background:rgba(70,240,106,.1);border:1px solid var(--glass)}   /* 일꾼 수 스텝퍼 — 배너 톤, −/+ 구분 셀 */
   .cmdG .cgLift{flex:none;align-self:center;width:38px;height:38px;border-radius:9px;border:1px solid var(--glass);background:rgba(120,170,255,.14);color:#dbe8ff;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}   /* 부양 버튼(프로필 우상단, 정사각 아이콘 카드) */
   .cmdG .cgLift svg{width:23px;height:23px;display:block}
   .cmdG .cgLift.on{border-color:#5ad1ff;background:rgba(90,209,255,.26);box-shadow:0 0 6px rgba(90,209,255,.45)}
@@ -1452,9 +1452,9 @@
   .cmdG .cgRally.on{border-color:#46f06a;background:rgba(70,240,106,.24);box-shadow:0 0 6px rgba(70,240,106,.45)}
   .cmdG .cgRally:active{background:rgba(70,240,106,.32)}
   .cmdG .cgProg .pl .pt{color:var(--caL);font:800 9px/1 'Rajdhani',sans-serif;margin-left:4px;letter-spacing:.2px}   /* 생산 중 옆 남은시간(작게) */
-  .cmdG .cgGasAuto .gaBtn{width:28px;height:32px;flex:none;border-radius:7px;border:none;background:transparent;color:#c7f5d6;font:800 21px/1 sans-serif;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
-  .cmdG .cgGasAuto .gaBtn:active{background:rgba(70,240,106,.28)}
-  .cmdG .cgGasAuto .gaN{min-width:22px;text-align:center;font:800 20px/1 'Rajdhani',sans-serif;color:#eafff0}
+  .cmdG .cgGasAuto .gaBtn{width:23px;height:24px;flex:none;border-radius:6px;border:1px solid rgba(120,232,150,.4);background:rgba(120,232,150,.14);color:#c7f5d6;font:800 16px/1 sans-serif;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+  .cmdG .cgGasAuto .gaBtn:active{background:rgba(70,240,106,.32)}
+  .cmdG .cgGasAuto .gaN{min-width:18px;text-align:center;font:800 15px/1 'Rajdhani',sans-serif;color:#eafff0}
   .cmdG .cgBody{display:flex;gap:8px;align-items:stretch;flex:1;min-height:0}
   /* 좌측 보조 정보 */
   .cmdG .cgInfo{flex:0 0 35%;max-width:176px;min-width:120px;display:flex;flex-direction:column;gap:4px;padding:7px 8px;overflow:hidden;
@@ -10742,13 +10742,18 @@ function _techGatherTick(dt){ let dep=false, any=false;
         w._carry=true; w._cKind=w._gKind; w._cEid=w._gEid; w._gSt='back'; w._working=false;
         const forceB=(w._forceCC!=null)?_techCCList().find(c=>c.eid===w._forceCC):null;   // 수동 + 강제 소속(접지 상태일 때만) 우선 반납
         const drop0=forceB||_techNearestCC(w.x,w.y)||mainB; w._dropEid=drop0?drop0.eid:null;   // 그 외엔 가장 가까운 CC → 더 가까운 CC가 생기면 다음 왕복부터 자동 이동
+        w._bStuck=0; w._bPrevD=null;
         if(drop0){ w._gBaseSpot=_techMineSpot(drop0, w.x, w.y); _techRoute(w, w._gBaseSpot.x, w._gBaseSpot.y); } } }   // CC 가장자리 딱 붙는 지점으로 · _cKind/_cEid=들고 있는 자원 종류·출처(재지정에도 유지)
     else if(w._gSt==='back'){ const dropB=(w._dropEid!=null?G.tech.ents.find(x=>x.eid===w._dropEid&&x.type==='bldg'&&x.bt<=0&&!x._lifted):null)||_techNearestCC(w.x,w.y)||mainB; if(!dropB) continue;   // 소속 CC 소멸/부양 시 최근접 CC로 폴백
       if(!w._gBaseSpot) w._gBaseSpot=_techMineSpot(dropB, w.x, w.y);
       const bdx=w._gBaseSpot.x-w.x, bdy=w._gBaseSpot.y-w.y, bD=Math.hypot(bdx,bdy);
+      // 🧩 끼임 감지: 진행이 멈춘 채 CC 발판 코앞이면 강제 반납(가까이 겹친 건물 사이에 껴서 못 붙는 경우 방지)
+      const _cD=Math.hypot(dropB.x-w.x, dropB.y-w.y), _bf2=(typeof _techFoot==='function')?_techFoot(G.tech.race,dropB.bk):{w:2,h:2}, _footR=Math.max(_bf2.w*_techCW(),_bf2.h*_techCH())*0.5;
+      if(w._bPrevD!=null && bD>w._bPrevD-0.0006) w._bStuck=(w._bStuck||0)+dt; else w._bStuck=0; w._bPrevD=bD;
+      const _wedged=(w._bStuck>0.6 && _cD<=_footR+0.05);
       if(bD<=0.03){ const bfx=dropB.x-w.x, bfy=dropB.y-w.y; if(bfx*bfx+bfy*bfy>1e-6) w.face=Math.atan2(bfx,bfy); }   // 붙었을 때만 건물을 응시(넣는 자세)
-      if(bD<=0.008){   // 건물에 딱 붙어 도착 → 적립(스냅 없음 — 걸어서 이미 붙음)
-        w.tx=null; w.ty=null; w._wp=null;
+      if(bD<=0.008 || _wedged){   // 건물에 딱 붙어 도착(또는 끼임 강제 반납) → 적립
+        w.tx=null; w.ty=null; w._wp=null; w._bStuck=0; w._bPrevD=null;
         const _ck=w._cKind||w._gKind, _ce=(w._cEid!=null?w._cEid:w._gEid);   // 들고 있는 자원 기준 적립(재지정 후에도 원래 캔 자원에서 차감)
         if(_ck==='mineral'){ if(!G.tech.inf) G.tech.credit+=TECH_GATHER_AMT; const _sm=(G.tech.minerals||[]).find(m=>m.eid===_ce)||((w._gKind==='mineral')?res:null); if(_sm) _sm.amount=Math.max(0,_sm.amount-TECH_GATHER_AMT); }
         else { if(!G.tech.inf) G.tech.energy+=TECH_GATHER_AMT; const _sg=G.tech.ents.find(x=>x.eid===_ce&&x.type==='bldg')||((w._gKind==='gas')?res:null); if(_sg) _sg._gasAmt=Math.max(0,(_sg._gasAmt!=null?_sg._gasAmt:TECH_GAS_START)-TECH_GATHER_AMT); }
@@ -10756,6 +10761,21 @@ function _techGatherTick(dt){ let dep=false, any=false;
       else if(w.tx==null){ if(bD<=0.07){ const st=Math.min(bD,0.42*dt); w.x+=bdx/bD*st; w.y+=bdy/bD*st; w.face=Math.atan2(bdx,bdy); }   // 경로 종료 후 남은 거리 = 걷는 속도 그대로 마저 붙음
         else _techRoute(w, w._gBaseSpot.x, w._gBaseSpot.y); } } }
   return { any, dep }; }
+function _techBFootRect(bk, cx, cy){ const f=(typeof _techFoot==='function')?_techFoot(G.tech.race,bk):{w:2,h:2}, hw=f.w*_techCW()/2, hh=f.h*_techCH()/2; return {x0:cx-hw,y0:cy-hh,x1:cx+hw,y1:cy+hh}; }   // 건물 발판 사각(월드)
+function _techLandOccupied(e, x, y){ const A=_techBFootRect(e.bk,x,y);   // 착륙 지점이 이미 접지·하강 중인 다른 건물과 겹치는가
+  for(const o of G.tech.ents){ if(o===e||o.type!=='bldg') continue;
+    const occ=(!o._lifted)||o._liftPhase==='descending'; if(!occ) continue;   // 지상에 자리했거나 지금 내려앉는 건물만 자리 차지
+    const B=_techBFootRect(o.bk,o.x,o.y); if(A.x1<=B.x0||A.x0>=B.x1||A.y1<=B.y0||A.y0>=B.y1) continue;   // 겹침 없음
+    const same=(o._liftPhase==='descending' && (o._liftT||0)>=TECH_LIFT_T-1e-6);   // 같은 프레임에 하강 시작(완전 동시) → 늦게 온 쪽 폭발
+    return { b:o, same }; }
+  return null; }
+function _techExplodeBldg(e){ if(G._techFx && typeof FX!=='undefined' && FX.death){ try{ FX.death(G._techFx, e.x, e.y, {unitSize:28, color:'#ff8a3a'}); }catch(_){} }
+  if(typeof playSfx==='function') playSfx('boom');
+  for(const ad of G.tech.ents){ if(ad.type==='bldg'&&ad._dockOf===e.eid) ad._orphan=true; }   // 애드온 고아 처리
+  const b=techGetBldg(G.tech.race,e.bk); if(b&&b.supply) G.tech.supCap=Math.max(0,G.tech.supCap-b.supply);
+  if(G.tech.built&&G.tech.built[e.bk]) G.tech.built[e.bk]=Math.max(0,G.tech.built[e.bk]-1);
+  if(G.tech.sel===e.eid) G.tech.sel=null; G.tech.selU=(G.tech.selU||[]).filter(id=>id!==e.eid);
+  e._dead=true; if(typeof toast==='function') toast('💥 착륙 지점 충돌 — 건물 파괴'); }
 function techTick(dt){ if(!G.tech) return; let active=false, done=false;
   const _vmoving=techViewTick(dt);   // 🎥 부드러운 줌/팬 보간(메인맵과 동일) — 애니메이션 중이면 매 프레임 재렌더
   if(G.tech.fog && G.tech.fog.on){ G.tech.fog.t=(G.tech.fog.t||0)+dt; if(G.tech.fog.t>=0.1){ G.tech.fog.t=0; techFogCompute(); techFogDraw(); } }   // 🌫️ 건설 안개 갱신(~10/s, 캔버스만 재그림)
@@ -10881,8 +10901,13 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
         for(const ad of G.tech.ents){ if(ad.type==='bldg'&&ad._dockOf===e.eid) ad._orphan=false; } done=true; } }   // 착지 완료 → 애드온 재연결·기능 재개
     else { const tgt=(e._liftPhase==='toland')?e._landXY:(e.tx!=null?{x:e.tx,y:e.ty}:null);   // 비행 이동 / 착륙 지점 이동
       if(tgt){ const dx=tgt.x-e.x, dy=tgt.y-e.y, d=Math.hypot(dx,dy), spd=TECH_LIFT_SPD*dt;
-        if(d<=spd||d<1e-4){ e.x=tgt.x; e.y=tgt.y; if(e._liftPhase==='toland'){ e._liftPhase='descending'; e._liftT=TECH_LIFT_T; done=true; } else { e.tx=null; e.ty=null; } }
+        if(d<=spd||d<1e-4){ e.x=tgt.x; e.y=tgt.y;
+          if(e._liftPhase==='toland'){ const occ=_techLandOccupied(e, e.x, e.y);   // 착륙 직전 자리 점검
+            if(occ){ if(occ.same){ _techExplodeBldg(e); } else { e._liftPhase='flying'; e._landXY=null; if(typeof toast==='function') toast('⛔ 착륙 자리 있음 — 다른 곳 지정'); } }   // 동시=폭발 / 선점=비행 유지(못 내려감)
+            else { e._liftPhase='descending'; e._liftT=TECH_LIFT_T; } done=true; }
+          else { e.tx=null; e.ty=null; } }
         else { e.x+=dx/d*spd; e.y+=dy/d*spd; } active=true; } } }
+  if(G.tech.ents.some(x=>x._dead)) G.tech.ents=G.tech.ents.filter(x=>!x._dead);   // 💥 폭발한 건물 제거
   for(const e of G.tech.ents){ if(!e._chq||!e._chq.length) continue; if(e.type==='bldg'&&e.bt>0) continue;   // 🚀 내부 장전 큐(캐리어·리버·핵 사일로) — 맨 앞 1개만 진행
     const it=e._chq[0]; it.t=Math.max(0,it.t-dt); active=true; if(it.t<=0){ e._chc=(e._chc||0)+1; e._chq.shift(); done=true; } }
   if(done) techUIRender();
