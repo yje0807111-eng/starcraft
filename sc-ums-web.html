@@ -1005,6 +1005,7 @@
     display:flex;align-items:flex-start;justify-content:flex-start}
   .bHill .hillLbl{font:800 9px/1 sans-serif;color:#ecdbad;text-shadow:0 1px 2px #000;letter-spacing:.5px;padding:3px 6px}
   .bLiftShadow{position:absolute;z-index:1;transform:translate(-50%,-50%);background:radial-gradient(ellipse at 50% 50%,rgba(0,0,0,.6),rgba(0,0,0,0) 68%);border-radius:50%;pointer-events:none}   /* 🛫 부양 건물 지면 그림자 */
+  .bAddonBridge{position:absolute;z-index:1;background:linear-gradient(160deg,#6b7686,#464f5c 55%,#2f3641);border:1px solid rgba(18,24,32,.85);border-radius:4px;box-shadow:inset 0 1px 2px rgba(255,255,255,.14),inset 0 -2px 3px rgba(0,0,0,.4),0 2px 5px rgba(0,0,0,.5);pointer-events:none}   /* 🔗 애드온–본체 연결 지면 커넥터 플레이트(3D 건물 뒤에 깔려 노치를 메움) */
   .bRallyLine{position:absolute;height:2px;background:repeating-linear-gradient(90deg,rgba(70,240,106,.7) 0 4px,transparent 4px 11px);transform-origin:0 50%;pointer-events:none;z-index:9}   /* 🟢 건물→랠리 얇은 듬성 초록 점선 */
   .bRallyLine.hot{background:repeating-linear-gradient(90deg,rgba(110,255,140,.95) 0 4px,transparent 4px 11px)}
   .bRallyMark{position:absolute;width:22px;height:22px;transform:translate(-50%,-50%);pointer-events:none;z-index:10;filter:drop-shadow(0 0 3px rgba(70,240,106,.6))}   /* 🟢 초록 원+점(이동 지시자) */
@@ -10601,10 +10602,9 @@ function techMoveTrails(dt){ if(typeof FX==='undefined'||typeof emitMoveTrail===
     if(sp>0.004) emitMoveTrail(G._techFx, gm, px, vx/sp, vy/sp, 1, dt);
     else if(typeof e.face==='number') emitMoveTrail(G._techFx, gm, px, Math.sin(e.face), Math.cos(e.face), 1, dt);
     e._mtT=px._mtT; }
-  if(typeof fxOff!=='function'||!fxOff()){ for(const e of G.tech.ents){ if(e.type!=='bldg'||!e._lifted||(e._liftPhase!=='rising'&&e._liftPhase!=='descending')) continue;   // 🛫 부양/착륙 먼지 — 상승·하강 중 발판에서 피어오름
-    e._smkT=(e._smkT||0)-dt; if(e._smkT>0) continue; e._smkT=0.05;
-    const _f=(typeof _techFoot==='function')?_techFoot(G.tech.race,e.bk):{w:2,h:2}, _fw=_f.w*_techCW()*z, _bx=(e.x-v.x)*z+0.5, _by=(e.y-v.y)*z+0.5+_f.h*_techCH()*z*0.34;   // 발판 하단(지면)
-    if(typeof FX!=='undefined'&&FX.smoke){ FX.smoke(G._techFx, _bx+(Math.random()-0.5)*_fw, _by); FX.smoke(G._techFx, _bx+(Math.random()-0.5)*_fw, _by); } } }
+  if(typeof fxOff!=='function'||!fxOff()){ for(const e of G.tech.ents){ if(e.type!=='bldg'||!e._smkBurst) continue;   // 🛫 이륙·착지 순간 한 번만 먼지 poof(계속 X)
+    e._smkBurst=0; const _f=(typeof _techFoot==='function')?_techFoot(G.tech.race,e.bk):{w:2,h:2}, _fw=_f.w*_techCW()*z, _bx=(e.x-v.x)*z+0.5, _by=(e.y-v.y)*z+0.5+_f.h*_techCH()*z*0.34;   // 발판 하단(지면)
+    if(typeof FX!=='undefined'&&FX.smoke){ for(let k=0;k<6;k++) FX.smoke(G._techFx, _bx+(Math.random()-0.5)*_fw, _by); } } }   // 짧은 먼지 구름 한 번
   FX.advance(G._techFx, dt);
   for(const e of G.tech.ents){ if(e.type!=='worker'||!e._working||e._inGas) continue;
     if(_techEntKey(e)==='worker_human'){ _techEmitWeld(e, TECH_MINE_FX.union); }   // 🔧 유니온 엔지니어 = 건설·채취 용접 스파크
@@ -10909,7 +10909,7 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
   for(const e of G.tech.ents){ if(e.type!=='bldg'||!e._lifted) continue;   // 🛫 부양 상태 머신: 상승(2s)→비행→(착륙지정)이동→하강(2s)→착지
     if(e._liftPhase==='rising'){ e._liftT=Math.max(0,(e._liftT||0)-dt); e._liftH=Math.min(1,1-e._liftT/TECH_LIFT_T); active=true; if(e._liftT<=0){ e._liftH=1; e._liftPhase='flying'; done=true; } }
     else if(e._liftPhase==='descending'){ e._liftT=Math.max(0,(e._liftT||0)-dt); e._liftH=Math.max(0,e._liftT/TECH_LIFT_T); active=true;
-      if(e._liftT<=0){ e._liftH=0; e._lifted=false; e._liftPhase=null; e._landXY=null; e.tx=null; e.ty=null;
+      if(e._liftT<=0){ e._liftH=0; e._lifted=false; e._liftPhase=null; e._landXY=null; e.tx=null; e.ty=null; e._smkBurst=1;   // 착지 순간 먼지 poof
         for(const ad of G.tech.ents){ if(ad.type==='bldg'&&ad._dockOf===e.eid) ad._orphan=false; } done=true; } }   // 착지 완료 → 애드온 재연결·기능 재개
     else { const tgt=(e._liftPhase==='toland')?e._landXY:(e.tx!=null?{x:e.tx,y:e.ty}:null);   // 비행 이동 / 착륙 지점 이동
       if(tgt){ const dx=tgt.x-e.x, dy=tgt.y-e.y, d=Math.hypot(dx,dy), spd=TECH_LIFT_SPD*dt;
@@ -10984,7 +10984,9 @@ function _techCollRect(b, e){ const race=G.tech.race, cw=_techCW(), ch=_techCH()
   let mg, cr;   // mg=판정 여백(셀) · cr=유닛 통과 반경(셀)
   if(race==='union'||race==='aetherial'){ mg=_techMg(b.bk); cr=TECH_GRADE_D[_techGrade(_techEntKey(e))]/2; }   // 심시티 판정(유니온+에테리얼)
   else { const uRw=(((U[_techEntKey(e)]||{}).size||14)*0.62)*(typeof TECH_USCALE!=='undefined'?TECH_USCALE:1)*(typeof TECH_PACK!=='undefined'?TECH_PACK:1)/(GW||390); mg={l:0,t:0,r:0,b:0}; cr=uRw/cw; }
-  return { x0:b.x-hx+(mg.l-cr)*cw, x1:b.x+hx-(mg.r-cr)*cw, y0:bcy-hy+(mg.t-cr)*ch, y1:bcy+hy-(mg.b-cr)*ch }; }
+  const R={ x0:b.x-hx+(mg.l-cr)*cw, x1:b.x+hx-(mg.r-cr)*cw, y0:bcy-hy+(mg.t-cr)*ch, y1:bcy+hy-(mg.b-cr)*ch };
+  if(b._dockOf!=null){ const par=G.tech.ents.find(p=>p.eid===b._dockOf&&p.type==='bldg'&&p.bt<=0&&!p._lifted); if(par){ const pr=_techCollRect(par,e); R.y0=Math.min(R.y0,pr.y0); R.x0=Math.min(R.x0,pr.x1-0.001); } }   // 🔗 애드온 = 본체와 한 덩어리: 위쪽 노치(빈칸)·이음새를 본체 상단·우측까지 확장해 봉인(유닛 통과 불가)
+  return R; }
 function _techEntModel(e){ if(!e) return null; if(e.type==='worker') return (TECH_WORKER[G.tech.race]||'worker_human'); if(e.type==='unit') return e.uid; if(e.type==='larva') return 'swarm_larva'; return null; }   // 엔티티 → 3D 모델 키 · 🐛 라바=swarm_larva 모델
 function _techRaceUnitKeys(race){ const keys=new Set(); keys.add(TECH_WORKER[race]||'worker_human'); if(race==='swarm') keys.add('swarm_larva'); const bs=(TECH_TREE[race]&&TECH_TREE[race].buildings)||[]; for(const b of bs){ for(const p of (b.produces||[])) if(p&&p.id) keys.add(p.id); } return [...keys]; }   // 그 종족 건설 맵에서 쓸 유닛 모델 키(일꾼+생산 유닛 + 스웜 라바)
 function techHidePreview(){ const prev=document.getElementById('cstPrev'), main=document.getElementById('cstMain'); if(prev) prev.classList.remove('on'); if(main) main.classList.remove('hasPrev'); if(window.M3D&&M3D.cstStop) M3D.cstStop(); }
@@ -11041,6 +11043,11 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
       const _hw=Math.max(0.05,_bf.w*_techCW()*techView().zoom), _ratio=(e.bt>0)?Math.max(0,Math.min(1,1-e.bt/(e.btMax||1))):1;   // 바 폭=발판 폭(줌) · 건설 중=진행도/완성=풀
       if(e._lifted){ const _sc=_sb, _sw=Math.max(0.07,_bf.w*_techCW()*techView().zoom*1.25);   // 🛫 지면 그림자(발판 하단) — 발판보다 넓게, 높이(_liftH)만큼 진해짐
         ents+='<div class="bLiftShadow" style="left:'+(_sc.x*100).toFixed(2)+'%;top:'+(_sc.y*100).toFixed(2)+'%;width:'+(_sw*100).toFixed(2)+'%;height:'+(_sw*0.46*100).toFixed(2)+'%;opacity:'+(0.15+0.4*(e._liftH||0)).toFixed(2)+'"></div>'; }
+      if(e._dockOf!=null && !e._lifted){ const _par=G.tech.ents.find(p=>p.eid===e._dockOf&&p.type==='bldg'&&!p._lifted);   // 🔗 애드온 연결 통로 — 본체–애드온 사이 지면 커넥터 플레이트(하나의 건물처럼)
+        if(_par){ const _pf=(typeof _techFoot==='function')?_techFoot(race,_par.bk):{w:2,h:2}, _cw=_techCW(), _ch=_techCH();
+          const _x0=_par.x+(_pf.w/2)*_cw-1.0*_cw, _x1=e.x+(_bf.w/2)*_cw, _y0=_par.y-(_pf.h/2)*_ch, _y1=e.y+(_bf.h/2)*_ch;   // 본체 우측 안쪽 1칸 ~ 애드온 우측 · 본체 상단 ~ 애드온 하단
+          const _tl=_techW2S(_x0,_y0), _br=_techW2S(_x1,_y1);
+          ents+='<div class="bAddonBridge" style="left:'+(_tl.x*100).toFixed(2)+'%;top:'+(_tl.y*100).toFixed(2)+'%;width:'+((_br.x-_tl.x)*100).toFixed(2)+'%;height:'+((_br.y-_tl.y)*100).toFixed(2)+'%"></div>'; } }
       if(e.bt>0 || G.tech.sel===e.eid) labels+='<div class="bldHp'+(e.bt>0?' bld':'')+'" style="left:'+(_sb.x*100).toFixed(2)+'%;top:'+(_sb.y*100).toFixed(2)+'%;width:'+(_hw*100).toFixed(2)+'%"><i style="width:'+(_ratio*100).toFixed(1)+'%"></i></div>';   // 건설 중=항상 표시(실시간 차오름) · 완성=지정 시에만
       const _noPow=_techNeedsPower(e.bk)&&!_techPowered(e.x,e.y);   // 🛑 블랙아웃(동력 없음)
       if(_noPow){ const _sp=_techW2S(e.x,e.y-(_bf.h/2)*_techCH()); labels+='<div class="bldNoPow" style="left:'+(_sp.x*100).toFixed(2)+'%;top:'+(_sp.y*100).toFixed(2)+'%">⚡✕ 동력 없음</div>'; }
@@ -11552,7 +11559,7 @@ function techLiftToggle(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if
   const e=G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'); if(!e||e.bt>0) return;
   if(!_techCanLift(e.bk)){ if(typeof toast==='function') toast('⛔ 부양 불가 건물'); return; }
   if(!e._lifted){   // 🛫 이륙 시작 — 상승 애니(2초) 후 이동 가능. 애드온 분리·기능 정지
-    e._lifted=true; e._liftPhase='rising'; e._liftT=TECH_LIFT_T; e._liftH=0; e.tx=null; e.ty=null;
+    e._lifted=true; e._liftPhase='rising'; e._liftT=TECH_LIFT_T; e._liftH=0; e.tx=null; e.ty=null; e._smkBurst=1;   // 이륙 순간 먼지 poof
     for(const ad of G.tech.ents){ if(ad.type==='bldg'&&ad._dockOf===e.eid) ad._orphan=true; }
     if(typeof toast==='function') toast('🛫 이륙 중 — 다 뜨면(약 2초) 이동 가능'); if(typeof playSfx==='function') playSfx('ui_open'); techUIRender(); return; }
   if(e._liftPhase==='flying'){   // 🛬 착륙 위치 지정 — 건설 실루엣(고스트) 시스템 재사용
