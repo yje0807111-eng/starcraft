@@ -1433,6 +1433,8 @@
     background:radial-gradient(circle at 50% 36%,rgba(74,86,110,.4),#080a10 78%);display:flex;align-items:center;justify-content:center;font-size:20px}
   .cmdG .cgPort svg{width:26px;height:26px;filter:drop-shadow(0 0 4px var(--caG))} .cmdG .cgPort .pemoji{font-size:22px}
   .cmdG .cgTtl{flex:1;min-width:0} .cmdG .cgN{font-size:var(--fs-xl);font-weight:800;color:var(--caL);text-shadow:0 0 8px var(--caG);line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cmdG .cgN .nsub{font-size:10px;font-weight:700;color:#9fb0c2;text-shadow:none;margin-left:3px}   /* 이름 옆 작은 괄호 수치(라바 수 등) */
+  .cmdG .cgPort:empty{display:none}   /* 아이콘 없는 프로필(라바) = 빈 초상 틀 숨김 */
   .cmdG .cgS{margin-top:1px;font-size:var(--fs-xs);color:var(--cgDim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .cmdG .cgS b{color:#cfe0f5;font-weight:700}
   .cmdG .cgHpsh{margin-top:2px;display:flex;gap:9px;font-family:'Rajdhani',sans-serif;font-weight:800;font-size:12.5px;line-height:1}
   .cmdG .cgHpsh .hpv{color:#7ee081} .cmdG .cgHpsh .shv{color:#8fd8ff}
@@ -10397,8 +10399,8 @@ function techSelectLarva(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); i
 function techLarvaProdModel(list){ const hb=techGetBldg('swarm','hatchery')||{produces:[]};
   const items=(hb.produces||[]).map(p=>{ const reqok=_techReqMet(p.req), afford=_techAfford(p.m,p.g), popok=G.tech.inf||!p.pop||(G.tech.sup+p.pop<=G.tech.supCap), cnt=G.tech.units[p.id]||0, twin=(p.id==='snapper'||p.id==='stinger');
     return { pro:_techUnitPortrait(p.id), sn:_techRealName('swarm',p.id)+(twin?' ×2':''), cr:p.m, en:p.g, meta:cnt?('×'+cnt):(p.pop?'👤'+p.pop:''), metaCls:cnt?'lv':'', state:(!reqok||!afford||!popok)?'dim':'ok', act:'onclick="techLarvaMorph(event,\''+p.id+'\')"' }; });
-  return { mode:'prod', title:'라바 '+list.length+'기', icon:'<span class="pemoji">🐛</span>', hpsh:'', sub:'🐛 카드 탭 = 지정 라바 '+list.length+'마리 전체 → 유닛 변태', status:'🐛 '+list.length+'기', items,
-    info:{ eb:'변태', hideName:true, desc:'지정한 라바 전체가 한번에 그 유닛으로 변태합니다(카드 1탭 = 라바 '+list.length+'마리 모두 알로). 스내퍼·스팅어는 라바 1마리당 2기.', stats:[['지정 라바',list.length+'기']], cr:0, en:0, time:'유닛 카드 탭' } }; }
+  return { mode:'prod', title:'라바 <span class="nsub">('+list.length+'기)</span>', icon:'', hpsh:'', sub:'', items,
+    info:{ eb:'변태', hideName:true, desc:'지정한 라바 전체가 한번에 선택한 유닛으로 변태합니다.', cr:0, en:0, time:'' } }; }   // 아이콘·이름 아래 설명·상단 N기 필·좌하단 스탯 제거(수는 이름 옆 괄호 하나로)
 // 라바 1마리 → 알(그 자리 변태). 스내퍼·스팅어=1알 2기
 function techLarvaMorph(ev, id){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech||G.tech.race!=='swarm') return;
   const lv=(G.tech.selU||[]).map(x=>G.tech.ents.find(e=>e.eid===x)).filter(e=>e&&e.type==='larva'); if(!lv.length){ if(typeof toast==='function') toast('⛔ 라바 없음'); return; }
@@ -10943,8 +10945,8 @@ function techBldgProdModel(b, e){ const race=G.tech.race;
     const selB=(G.tech.sel!=null)?G.tech.ents.find(e=>e.eid===G.tech.sel&&e.type==='bldg'):null, hid=selB?selB.eid:null;
     const _ln=hid!=null?G.tech.ents.reduce((a,l)=>a+((l.type==='larva'&&l.hatch===hid)?1:0),0):0;
     const items=[{ pro:'<span class="pemoji">🐛</span>', sn:'라바 선택', meta:_ln+'/3', metaCls:'lv', state:_ln>0?'ok':'dim', act:_ln>0?'onclick="techSelectLarva(event)"':'' }];
-    return { mode:'prod', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs0.hp,bs0.sh), sub:'🐛 라바 선택 후 유닛 생성', status:'🐛 라바 '+_ln+'/3', statusIdle:(_ln===0), items, topRight:_techBldgTR(b),
-      info:{ eb:'생산', hideName:true, desc:'해처리가 라바를 낳습니다(최대 3). 라바를 선택해 각 유닛으로 변태시키세요.', stats:[['라바',_ln+'/3'],['생성','8s마다 1']], cr:0, en:0, time:'라바 선택' } }; }
+    return { mode:'prod', title:b.name+' <span class="nsub">('+_ln+'/3)</span>', icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs0.hp,bs0.sh), sub:'🐛 라바 선택 후 유닛 생성', items, topRight:_techBldgTR(b),
+      info:{ eb:'생산', hideName:true, desc:'8초마다 라바 1기 생성(최대 3).', cr:0, en:0, time:'' } }; }   // 라바 수 = 이름 옆 괄호(중복 표시 제거: 우상단 필·좌측 스탯·하단 안내)
   if(TECH_AMMO[b.k] && !TECH_AMMO[b.k].unit){ const a=TECH_AMMO[b.k], cap=_techAmmoCap(b.k), have=(e?((e._chc||0)+((e._chq||[]).length)):0);   // ☢️ 뉴클리어 사일로 = 단일 장전(5큐 아님)
     const aitems=[{ pro:'<span class="pemoji">'+a.ico+'</span>', sn:a.label+' 장전', cr:a.m, en:a.g, meta:have+'/'+cap, metaCls:'lv', state:(have>=cap||!_techAfford(a.m,a.g))?'dim':'ok', act:'onclick="techChargeAmmo(event,\''+b.k+'\')"' }];
     return { mode:'prod', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs0.hp,bs0.sh), sub:'☢️ 단일 장전(최대 1)', items:aitems, info:_techAmmoInfo(e||{}, b.k) }; }
