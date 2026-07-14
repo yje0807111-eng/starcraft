@@ -1005,7 +1005,6 @@
     display:flex;align-items:flex-start;justify-content:flex-start}
   .bHill .hillLbl{font:800 9px/1 sans-serif;color:#ecdbad;text-shadow:0 1px 2px #000;letter-spacing:.5px;padding:3px 6px}
   .bLiftShadow{position:absolute;z-index:1;transform:translate(-50%,-50%);background:radial-gradient(ellipse at 50% 50%,rgba(0,0,0,.6),rgba(0,0,0,0) 68%);border-radius:50%;pointer-events:none}   /* 🛫 부양 건물 지면 그림자 */
-  .bAddonBridge{position:absolute;z-index:1;background:linear-gradient(160deg,#6b7686,#464f5c 55%,#2f3641);border:1px solid rgba(18,24,32,.85);border-radius:4px;box-shadow:inset 0 1px 2px rgba(255,255,255,.14),inset 0 -2px 3px rgba(0,0,0,.4),0 2px 5px rgba(0,0,0,.5);pointer-events:none}   /* 🔗 애드온–본체 연결 지면 커넥터 플레이트(3D 건물 뒤에 깔려 노치를 메움) */
   .bRallyLine{position:absolute;height:2px;background:repeating-linear-gradient(90deg,rgba(70,240,106,.7) 0 4px,transparent 4px 11px);transform-origin:0 50%;pointer-events:none;z-index:9}   /* 🟢 건물→랠리 얇은 듬성 초록 점선 */
   .bRallyLine.hot{background:repeating-linear-gradient(90deg,rgba(110,255,140,.95) 0 4px,transparent 4px 11px)}
   .bRallyMark{position:absolute;width:22px;height:22px;transform:translate(-50%,-50%);pointer-events:none;z-index:10;filter:drop-shadow(0 0 3px rgba(70,240,106,.6))}   /* 🟢 초록 원+점(이동 지시자) */
@@ -7266,7 +7265,11 @@ function _cgInfoHTML(d){ if(!d) return '<div class="cgEb">정보</div><div class
     +(d.progLabel?('<div class="cgProg"><div class="pl"><span>'+d.progLabel+(d.progTime?' <em class="pt">'+d.progTime+'</em>':'')+'</span><b>'+(d.progVal||'')+'</b></div><div class="cgBar"><i style="width:'+Math.max(4,d.prog||0)+'%"></i></div></div>'):'')+q
     +'<div class="cgDcost">'+_cgCost(d.cr,d.en)+(d.time?'<span class="time">'+d.time+'</span>':'')+'</div>'; }
 function renderCmdGrid(host, m){ const el=(typeof host==='string')?document.getElementById(host):host; if(!el||!m) return;
-  const PER=m.compact?4:8, _items=m.compact?((m.items||[]).filter(Boolean)):(m.items||[]);   // 간소화=빈 칸 제거 후 조밀 배치(4칸/페이지)
+  const PER=m.compact?4:8; let _items;   // 간소화=4칸/페이지, 전체=8칸/페이지
+  { const raw=m.items||[], adn=raw.filter(it=>it&&it._addon);   // 🔗 부속 카드는 항상 그리드 맨 끝 슬롯에 고정(앞의 빈 칸은 그대로, 부속만 마지막 페이지 끝으로)
+    if(adn.length){ const reg=raw.filter(it=>it&&!it._addon), T=Math.max(PER, Math.ceil((reg.length+adn.length)/PER)*PER), arr=new Array(T).fill(null);
+      for(let i=0;i<reg.length;i++) arr[i]=reg[i]; for(let i=0;i<adn.length;i++) arr[T-adn.length+i]=adn[i]; _items=arr; }
+    else _items=m.compact?raw.filter(Boolean):raw; }   // 부속 없음=기존(간소화는 빈 칸 제거 후 조밀)
   const total=_items.length, pages=Math.max(1,Math.ceil(total/PER));
   let pg=(((m.page!=null?m.page:(el._cgPage||0))%pages)+pages)%pages; el._cgPage=pg; m.page=pg; el._cgModel=m;   // 순환(1페이지서 ◀=마지막 · 마지막서 ▶=1페이지)
   const start=pg*PER, cells=[]; for(let k=0;k<PER;k++) cells.push(_cgSlotHTML(_items[start+k], m.build));
@@ -11043,11 +11046,6 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
       const _hw=Math.max(0.05,_bf.w*_techCW()*techView().zoom), _ratio=(e.bt>0)?Math.max(0,Math.min(1,1-e.bt/(e.btMax||1))):1;   // 바 폭=발판 폭(줌) · 건설 중=진행도/완성=풀
       if(e._lifted){ const _sc=_sb, _sw=Math.max(0.07,_bf.w*_techCW()*techView().zoom*1.25);   // 🛫 지면 그림자(발판 하단) — 발판보다 넓게, 높이(_liftH)만큼 진해짐
         ents+='<div class="bLiftShadow" style="left:'+(_sc.x*100).toFixed(2)+'%;top:'+(_sc.y*100).toFixed(2)+'%;width:'+(_sw*100).toFixed(2)+'%;height:'+(_sw*0.46*100).toFixed(2)+'%;opacity:'+(0.15+0.4*(e._liftH||0)).toFixed(2)+'"></div>'; }
-      if(e._dockOf!=null && !e._lifted){ const _par=G.tech.ents.find(p=>p.eid===e._dockOf&&p.type==='bldg'&&!p._lifted);   // 🔗 애드온 연결 통로 — 본체–애드온 사이 지면 커넥터 플레이트(하나의 건물처럼)
-        if(_par){ const _pf=(typeof _techFoot==='function')?_techFoot(race,_par.bk):{w:2,h:2}, _cw=_techCW(), _ch=_techCH();
-          const _x0=_par.x+(_pf.w/2)*_cw-1.0*_cw, _x1=e.x+(_bf.w/2)*_cw, _y0=_par.y-(_pf.h/2)*_ch, _y1=e.y+(_bf.h/2)*_ch;   // 본체 우측 안쪽 1칸 ~ 애드온 우측 · 본체 상단 ~ 애드온 하단
-          const _tl=_techW2S(_x0,_y0), _br=_techW2S(_x1,_y1);
-          ents+='<div class="bAddonBridge" style="left:'+(_tl.x*100).toFixed(2)+'%;top:'+(_tl.y*100).toFixed(2)+'%;width:'+((_br.x-_tl.x)*100).toFixed(2)+'%;height:'+((_br.y-_tl.y)*100).toFixed(2)+'%"></div>'; } }
       if(e.bt>0 || G.tech.sel===e.eid) labels+='<div class="bldHp'+(e.bt>0?' bld':'')+'" style="left:'+(_sb.x*100).toFixed(2)+'%;top:'+(_sb.y*100).toFixed(2)+'%;width:'+(_hw*100).toFixed(2)+'%"><i style="width:'+(_ratio*100).toFixed(1)+'%"></i></div>';   // 건설 중=항상 표시(실시간 차오름) · 완성=지정 시에만
       const _noPow=_techNeedsPower(e.bk)&&!_techPowered(e.x,e.y);   // 🛑 블랙아웃(동력 없음)
       if(_noPow){ const _sp=_techW2S(e.x,e.y-(_bf.h/2)*_techCH()); labels+='<div class="bldNoPow" style="left:'+(_sp.x*100).toFixed(2)+'%;top:'+(_sp.y*100).toFixed(2)+'%">⚡✕ 동력 없음</div>'; }
@@ -11137,11 +11135,9 @@ function techBldgInfoModel(b){ const race=G.tech.race, hb=TECH_TREE[race].buildi
 function _techAddonCards(bk){ const race=G.tech.race, t=TECH_TREE[race], out=[];
   for(const x of t.buildings){ if(x.addonTo!==bk) continue;
     const has=!!G.tech.addon[x.k], reqok=_techReqMet(x.req), afford=_techAfford(x.m,x.g);
-    out.push({ pro:'<span class="pemoji">'+x.ico+'</span>', sn:x.name+' (부속)', cr:x.m, en:x.g, meta:has?'✓':'＋부속', metaCls:has?'lv':'', state:has?'max':((!reqok||!afford)?'dim':'ok'), act:(!has&&reqok&&afford)?('onclick="techBuildAddon(event,\''+x.k+'\')"'):'' }); }
+    out.push({ _addon:true, pro:'<span class="pemoji">'+x.ico+'</span>', sn:x.name+' (부속)', cr:x.m, en:x.g, meta:has?'✓':'＋부속', metaCls:has?'lv':'', state:has?'max':((!reqok||!afford)?'dim':'ok'), act:(!has&&reqok&&afford)?('onclick="techBuildAddon(event,\''+x.k+'\')"'):'' }); }
   return out; }
-function _techWithAddons(items, bk){ const addons=_techAddonCards(bk); if(!addons.length) return items;   // 부속 카드를 그리드 맨 끝(7·8번)으로 — 앞은 빈 칸으로 채워 밀어냄
-  const PER=8; if(items.length+addons.length<=PER){ const out=items.slice(); while(out.length<PER-addons.length) out.push(null); out.push(...addons); return out; }
-  return items.concat(addons); }
+function _techWithAddons(items, bk){ const addons=_techAddonCards(bk); if(!addons.length) return items; return items.concat(addons); }   // 부속 카드(_addon)는 renderCmdGrid가 항상 그리드 맨 끝 슬롯에 고정 배치
 function techBuildAddon(ev, k){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;
   const race=G.tech.race, b=techGetBldg(race,k); if(!b||!b.addonTo) return;
   if(G.tech.addon[k]){ if(typeof toast==='function') toast('⛔ 이미 부속 건설됨'); return; }
