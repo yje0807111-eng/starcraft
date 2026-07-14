@@ -976,7 +976,7 @@
   .bent .bprog i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#2f7d4a,#5adf8a);box-shadow:0 0 6px rgba(90,223,138,.5);transition:width .12s linear}
   .bent .bprog.prod i{background:linear-gradient(90deg,#2f6fbf,#5cc8ff);box-shadow:0 0 6px rgba(92,200,255,.5)}
   .bent .bpt{position:absolute;left:50%;bottom:-21px;transform:translateX(-50%);font:800 9px 'Rajdhani',sans-serif;color:#8adf9a;white-space:nowrap;text-shadow:0 1px 2px #000}
-  .bent.bldg.live3d.sel,.bent.unit.live3d.sel,.bent.worker.live3d.sel{outline:none!important;box-shadow:none!important}
+  .bent.bldg.live3d.sel,.bent.unit.live3d.sel,.bent.worker.live3d.sel,.bent.larvaE.live3d.sel{outline:none!important;box-shadow:none!important}
   .bhint{position:absolute;bottom:66px;left:50%;transform:translateX(-50%);z-index:5;font-size:11px;font-weight:700;color:#bcd;
     background:rgba(6,9,14,.75);border:1px solid var(--metal-edge);border-radius:8px;padding:5px 12px;max-width:92%;text-align:center;pointer-events:none}
   .bhint.on{color:#ffe27a;border-color:var(--gold);box-shadow:0 0 12px -3px rgba(255,210,74,.5)}
@@ -1017,6 +1017,8 @@
   .bMineral .mnIco{font-size:16px;line-height:1;filter:drop-shadow(0 0 5px rgba(120,200,255,.6));animation:mnGlint 2.2s ease-in-out infinite}
   .bMineral .mnLbl{font:800 8px/1 sans-serif;color:#a6d8ff;text-shadow:0 1px 2px #000;letter-spacing:.3px}
   .bMineral.d3{border:none!important;background:none!important;box-shadow:none!important;justify-content:flex-end}   /* 3D 노드 표시 시 2D 사각 박스 숨김(수량 라벨만) */
+  .bMineral.sel,.bMineral.sel.d3{outline:2px solid #7fe0ff;outline-offset:2px;border-radius:6px;box-shadow:0 0 12px -1px rgba(127,224,255,.8)!important;background:rgba(127,224,255,.1)!important}   /* 💎 선택된 미네랄(중립 자원) */
+  .bGasZone.sel{border-color:#7ee081!important;border-style:solid!important;box-shadow:0 0 12px -1px rgba(126,224,129,.7),inset 0 0 14px rgba(126,224,129,.14)}   /* ⛽ 선택된 가스 광산 */
   .bGasZone.d3{border:none!important;background:none!important;box-shadow:none!important}   /* 3D 가스 노드 표시 시 하단 사각 박스 숨김 */
   .bGasZone.d3 .gzLbl{display:none}
   @keyframes mnGlint{0%,100%{transform:scale(1);opacity:.85}50%{transform:scale(1.08);opacity:1}}
@@ -10405,6 +10407,7 @@ function techUIInit(race){ if(!TECH_TREE[race]) race='union'; _techEnsureRoster(
     for(const o of _offs) G.tech.minerals.push({ eid:G.tech.eseq++, x:TECH_GRID.x0+(TECH_GAS.c0+o[0])*_mcw, y:TECH_GRID.y0+(TECH_GAS.r0+o[1])*_mch, amount:TECH_MINE_START, owner:null, miner:null }); }
   techFogInit(keep.fog); }   // 🌫️ 건설 안개(토글 상태는 종족 전환에도 유지)
 const TECH_MINE_START=1500, TECH_GAS_START=5000, TECH_GATHER_AMT=8, TECH_MINE_T=1.2, TECH_GAS_T=1.2;   // 채취 상수: 매장량 · 1회 채취량 · 채취 소요시간
+function _techGasRemain(){ if(!G.tech) return TECH_GAS_START; if(G.tech.gasAmt==null) G.tech.gasAmt=TECH_GAS_START; return G.tech.gasAmt; }   // ⛽ 가스 광산(지형) 잔량 = 지속값. 건물 파괴돼도 유지(캐고 남은 만큼 그대로)
 function _techBuildTime(race,k){ if(G.tech.nocool) return 0; return ((techBldgSpec(race,k)||{}).t||20)*TECH_TIME_MUL; }
 function _techProdTime(race,id){ if(G.tech.nocool) return 0; return ((techUnitSpec(race,id)||{}).t||15)*TECH_TIME_MUL; }
 function _techResearchTime(r){ if(G.tech.nocool) return 0; return (r&&r.t?r.t:(r&&r.tier?24:30))*TECH_TIME_MUL; }   // 업그레이드 소요(스펙 t 있으면 사용, 없으면 티어 24s·일회성 30s)
@@ -10430,7 +10433,7 @@ function _techAmmoInfo(e, key){ const a=TECH_AMMO[key], cap=_techAmmoCap(key), r
   else { progLabel=a.label+' 장전'; progVal=have+'/'+cap; prog=have>=cap?100:0; time=have>=cap?'가득 장전됨':'탭 = 장전'; }
   return { eb:a.label, hideName:true, queue, qcap:cap, qlabel:a.label, progLabel, progVal, prog, cr:0, en:0, time }; }
 function techFinishBuild(e){ const b=techGetBldg(G.tech.race,e.bk); if(!b) return; e.bt=0; e.waiting=false; if(b.addonTo) G.tech.addon[b.k]=true; else G.tech.built[b.k]=(G.tech.built[b.k]||0)+1; G.tech.supCap+=(b.supply||0);
-  if(b.gas && e._gasAmt==null) e._gasAmt=TECH_GAS_START;   // ⛽ 가스 건물 = 에너지 매장량(총 5000)
+  if(b.gas) e._gasAmt=_techGasRemain();   // ⛽ 가스 건물 = 광산 잔량을 이어받음(재건설 시 5000 리셋 아님)
   for(const w of G.tech.ents){ if(w.type==='worker'&&w.build===e.eid){ w.build=null; w._working=false; w._bpSide=null; w._bpT=null; w.tx=null; w.ty=null; w._wp=null; w._rr=0; } } }   // 건설 완료 → 일꾼 해방(작업상태 초기화)
 // 건물에서 유닛 소환 위치 = 발판을 사각형으로 둘러싸며 좌하단에서 반시계로 채움(하단→우측→상단→좌측), 최대한 건물에 붙임(화면 y-down 기준)
 // 🥚 알 부화(스웜): 그 자리에서 유닛 등장 — twin(스내퍼·스팅어)=2마리
@@ -10634,6 +10637,7 @@ function _techMainB(){ const k=((TECH_TREE[G.tech.race]||{}).buildings||[])[0]; 
 function _techCCList(){ const k=((TECH_TREE[G.tech.race]||{}).buildings||[])[0]; if(!k) return []; return G.tech.ents.filter(e=>e.type==='bldg'&&e.bk===k.k&&e.bt<=0&&!e._lifted); }   // 완공·접지된 모든 커맨드센터(자원 반납 가능 지점)
 function _techNearestCC(x,y){ const cw=_techCW(),ch=_techCH(); let best=null,bd=1e9; for(const c of _techCCList()){ const d=Math.hypot((c.x-x)/cw,(c.y-y)/ch); if(d<bd){ bd=d; best=c; } } return best; }   // (x,y)에서 가장 가까운 커맨드센터 — 소속·반납 자동 판단 기준
 function _techMineralAt(wx,wy){ const cw=_techCW(),ch=_techCH(); for(const m of (G.tech.minerals||[])){ if(Math.abs(wx-m.x)<=0.7*cw && Math.abs(wy-m.y)<=0.7*ch) return m; } return null; }
+function _techInGasZone(wx,wy){ const cw=_techCW(),ch=_techCH(), x0=TECH_GRID.x0+TECH_GAS.c0*cw, x1=TECH_GRID.x0+(TECH_GAS.c0+TECH_GAS.w)*cw, y0=TECH_GRID.y0+TECH_GAS.r0*ch, y1=TECH_GRID.y0+(TECH_GAS.r0+TECH_GAS.h)*ch; return wx>=x0&&wx<=x1&&wy>=y0&&wy<=y1; }   // ⛽ 가스 광산 구역 안?
 function _techGatherRes(w){ if(w._gKind==='mineral') return (G.tech.minerals||[]).find(m=>m.eid===w._gEid)||null; if(w._gKind==='gas'){ const gb=G.tech.ents.find(e=>e.eid===w._gEid&&e.type==='bldg'); return (gb&&gb.bt<=0)?gb:null; } return null; }
 function _techReleaseGather(w){ for(const m of (G.tech.minerals||[])){ if(m.owner===w.eid) m.owner=null; if(m.miner===w.eid) m.miner=null; }   // 배정·채취락 반환
   for(const e of G.tech.ents){ if(e.type==='bldg'&&e._gasWorker===w.eid) e._gasWorker=null; }
@@ -10771,7 +10775,7 @@ function _techGatherTick(dt){ let dep=false, any=false;
         w.tx=null; w.ty=null; w._wp=null; w._bStuck=0; w._bPrevD=null;
         const _ck=w._cKind||w._gKind, _ce=(w._cEid!=null?w._cEid:w._gEid);   // 들고 있는 자원 기준 적립(재지정 후에도 원래 캔 자원에서 차감)
         if(_ck==='mineral'){ if(!G.tech.inf) G.tech.credit+=TECH_GATHER_AMT; const _sm=(G.tech.minerals||[]).find(m=>m.eid===_ce)||((w._gKind==='mineral')?res:null); if(_sm) _sm.amount=Math.max(0,_sm.amount-TECH_GATHER_AMT); }
-        else { if(!G.tech.inf) G.tech.energy+=TECH_GATHER_AMT; const _sg=G.tech.ents.find(x=>x.eid===_ce&&x.type==='bldg')||((w._gKind==='gas')?res:null); if(_sg) _sg._gasAmt=Math.max(0,(_sg._gasAmt!=null?_sg._gasAmt:TECH_GAS_START)-TECH_GATHER_AMT); }
+        else { if(!G.tech.inf) G.tech.energy+=TECH_GATHER_AMT; const _sg=G.tech.ents.find(x=>x.eid===_ce&&x.type==='bldg')||((w._gKind==='gas')?res:null); if(_sg){ G.tech.gasAmt=Math.max(0,_techGasRemain()-TECH_GATHER_AMT); _sg._gasAmt=G.tech.gasAmt; } }   // ⛽ 광산 지속 잔량에서 차감(건물엔 미러)
         dep=true; w._carry=false; w._cKind=null; w._cEid=null; w._gDep=true; w._gBaseSpot=null; w._forceCC=null; _techGatherGoto(w,res,{x:dropB.x,y:dropB.y}); }   // 반납 완료 → 강제 소속 해제(1회 상호작용 끝, 이후 자동 판단) · 바로 다음 왕복
       else if(w.tx==null){ if(bD<=0.07){ const st=Math.min(bD,0.42*dt); w.x+=bdx/bD*st; w.y+=bdy/bD*st; w.face=Math.atan2(bdx,bdy); }   // 경로 종료 후 남은 거리 = 걷는 속도 그대로 마저 붙음
         else _techRoute(w, w._gBaseSpot.x, w._gBaseSpot.y); } } }
@@ -11055,7 +11059,7 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
       if(e.bt>0 && !e._bpause){ const _lbl=e.waiting?'<span class="bldSpin"></span>':(_noPow?'⏸':(Math.ceil(e.bt)+'s'));   // 일꾼 오는 중 스피너 / 건설 중 시간 · 블랙아웃=정지 표시
         labels+='<div class="bldTime" style="left:'+(_sb.x*100).toFixed(2)+'%;top:'+(_sb.y*100).toFixed(2)+'%">'+_lbl+'</div>'; }
       else { const _q0=(e._pq&&e._pq.length)?e._pq[0]:(e._rj||null); if(_q0){ const _pp=Math.round((1-_q0.t/(_q0.tMax||1))*100); inner='<div class="bprog prod" style="bottom:0"><i style="width:'+_pp+'%"></i></div>'; } } }
-    else if(e.type==='larva'){ const _lh3=!!(window.M3D&&M3D.ready&&M3D.ready()&&M3D.hasModel&&M3D.hasModel('swarm_larva')&&!(G.opt&&G.opt.model3d===false)); cls='larvaE'; inner=_lh3?'':'<span class="lvWig">🐛</span>'; }   // 🐛 라바(해처리 주변, 개별 지정 가능·통과 가능) · 3D 로드 시 빈 앵커(swarm_larva 모델로 렌더)
+    else if(e.type==='larva'){ const _lh3=!!(window.M3D&&M3D.ready&&M3D.ready()&&M3D.hasModel&&M3D.hasModel('swarm_larva')&&!(G.opt&&G.opt.model3d===false)); cls='larvaE'+(_lh3?' live3d':''); inner=_lh3?'':'<span class="lvWig">🐛</span>'; }   // 🐛 라바 · 3D 로드 시 빈 앵커 + live3d(2D 네모 아웃라인 제거 → 유닛과 동일한 3D 하단링)
     else if(e.type==='egg'){ cls='eggE'; inner='<span class="eggWig">🥚</span>'; }   // 🥚 알(변태 중)
     else if(e.type==='worker'||e.type==='unit'){ const _mk=_techEntModel(e);
       const _h3=!!(window.M3D&&M3D.ready&&M3D.ready()&&_mk&&M3D.hasModel&&M3D.hasModel(_mk)&&!(G.opt&&G.opt.model3d===false));   // 3D 모델 로드 완료 시 DOM은 빈 앵커, 아니면 초상화 폴백
@@ -11109,14 +11113,16 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
   if(!_gasBuilt){ const _gcw=_techCW(), _gch=_techCH();
     const _gtl=_techW2S(TECH_GRID.x0+TECH_GAS.c0*_gcw, TECH_GRID.y0+TECH_GAS.r0*_gch), _gbr=_techW2S(TECH_GRID.x0+(TECH_GAS.c0+TECH_GAS.w)*_gcw, TECH_GRID.y0+(TECH_GAS.r0+TECH_GAS.h)*_gch);
     const _gArm=!!(G.tech.arm && (techGetBldg(race,G.tech.arm)||{}).gas);
-    gasZone='<div class="bGasZone'+(_gArm?' hot':'')+(_res3d?' d3':'')+'" style="left:'+(_gtl.x*100).toFixed(2)+'%;top:'+(_gtl.y*100).toFixed(2)+'%;width:'+((_gbr.x-_gtl.x)*100).toFixed(2)+'%;height:'+((_gbr.y-_gtl.y)*100).toFixed(2)+'%">'+(_res3d?'':'<span class="gzIco">💨</span>')+'<span class="gzLbl">가스 광산</span></div>'; }
+    const _gSel=!!(G.tech.selRes&&G.tech.selRes.kind==='gas');
+    gasZone='<div class="bGasZone'+(_gArm?' hot':'')+(_gSel?' sel':'')+(_res3d?' d3':'')+'" style="left:'+(_gtl.x*100).toFixed(2)+'%;top:'+(_gtl.y*100).toFixed(2)+'%;width:'+((_gbr.x-_gtl.x)*100).toFixed(2)+'%;height:'+((_gbr.y-_gtl.y)*100).toFixed(2)+'%">'+(_res3d?'':'<span class="gzIco">💨</span>')+'<span class="gzLbl">가스 광산</span></div>'; }
   let hillZ='';   // ⛰ 고지대(언덕) — 좌하단 테스트 지형. 저지→고지 시야 차단 확인용
   { const H=TECH_HILL, tl=_techW2S(H.x0,H.y0), br=_techW2S(H.x1,H.y1);
     hillZ='<div class="bHill" style="left:'+(tl.x*100).toFixed(2)+'%;top:'+(tl.y*100).toFixed(2)+'%;width:'+((br.x-tl.x)*100).toFixed(2)+'%;height:'+((br.y-tl.y)*100).toFixed(2)+'%"><span class="hillLbl">⛰ 고지</span></div>'; }
   let mineZ='';   // 💎 미네랄 덩어리(1×1) 6개 클러스터 — 채취=크레딧
   { const _mcw=_techCW(), _mch=_techCH(); for(const m of (G.tech.minerals||[])){
     const _mtl=_techW2S(m.x-0.6*_mcw, m.y-0.6*_mch), _mbr=_techW2S(m.x+0.6*_mcw, m.y+0.6*_mch);
-    mineZ+='<div class="bMineral'+(_res3d?' d3':'')+'" style="left:'+(_mtl.x*100).toFixed(2)+'%;top:'+(_mtl.y*100).toFixed(2)+'%;width:'+((_mbr.x-_mtl.x)*100).toFixed(2)+'%;height:'+((_mbr.y-_mtl.y)*100).toFixed(2)+'%">'+(_res3d?'':'<span class="mnIco">💎</span>')+'<span class="mnLbl">'+(G.tech.inf?'∞':m.amount)+'</span></div>'; } }
+    const _mSel=!!(G.tech.selRes&&G.tech.selRes.kind==='mineral'&&G.tech.selRes.eid===m.eid);
+    mineZ+='<div class="bMineral'+(_mSel?' sel':'')+(_res3d?' d3':'')+'" style="left:'+(_mtl.x*100).toFixed(2)+'%;top:'+(_mtl.y*100).toFixed(2)+'%;width:'+((_mbr.x-_mtl.x)*100).toFixed(2)+'%;height:'+((_mbr.y-_mtl.y)*100).toFixed(2)+'%">'+(_res3d?'':'<span class="mnIco">💎</span>')+'<span class="mnLbl">'+(G.tech.inf?'∞':m.amount)+'</span></div>'; } }
   let rallyZ='';   // 🚩 랠리 포인트 — 선택된 건물의 랠리 위치 깃발 + 건물→랠리 점선(지정 모드=강조)
   { const _rb=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'):null;
     if(_rb && _rb._rally){ const _bs=_techW2S(_rb.x,_rb.y), _rs=_techW2S(_rb._rally.x,_rb._rally.y), _hot=(G.tech.rallySet===_rb.eid);
@@ -11150,13 +11156,26 @@ function techBldgPlainModel(b, e){ const race=G.tech.race, bs=techBldgSpec(race,
   if(_amk){ const a=TECH_AMMO[_amk], cap=_techAmmoCap(_amk), have=(e?((e._chc||0)+((e._chq||[]).length)):0);
     const aitems=[{ pro:'<span class="pemoji">'+a.ico+'</span>', sn:a.label+' 장전', cr:a.m, en:a.g, meta:have+'/'+cap, metaCls:'lv', state:(have>=cap||!_techAfford(a.m,a.g))?'dim':'ok', act:'onclick="techChargeAmmo(event,\''+_amk+'\')"' }];
     return { mode:'info', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:'☢️ 단일 장전(최대 1)', items:aitems, info:_techAmmoInfo(e||{}, _amk) }; }
-  if(b.gas){ const tot=TECH_GAS_START, rem=(e&&e._gasAmt!=null)?e._gasAmt:tot; stats.push(['에너지 총량',''+tot],['남은 에너지', G.tech.inf?'∞':(''+rem)]); }
+  if(b.gas){ const tot=TECH_GAS_START, rem=_techGasRemain(); stats.push(['에너지 총량',''+tot],['남은 에너지', G.tech.inf?'∞':(''+rem)]); }
   if(b.supply) stats.push(['공급 인구','+'+b.supply]);
   if(b.detector) stats.push(['탐지','디텍터']);
   const items=_techWithAddons([], b.k);   // 🔗 부속 카드(마지막 그리드)
   const _def=_techIsDef(b.k);
   return { mode:'info', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:(b.gas?'⛽ 에너지 채취 건물':(b.supply?'👤 인구 공급':(_def?'🛡 방어 건물':'건물 정보'))), items, topRight:_techBldgTR(b),
     info:{ eb:_techBldgKind(b), name:b.name, hideName:true, desc:(b.gas?'일꾼이 이 건물에서 에너지(가스)를 채취합니다.':(b.supply?('최대 인구 +'+b.supply):(_def?'적을 자동 공격하는 방어 건물.':''))), stats, cr:0, en:0 } }; }
+// 💎⛽ 중립 자원(미네랄·가스 광산) 프로필 — 이름 + 하단 HP 자리에 잔량 표시
+function techResourceModel(res){ if(!res) return null;
+  if(res.kind==='mineral'){ const m=(G.tech.minerals||[]).find(x=>x.eid===res.eid); if(!m) return null;
+    const rem=m.amount, tot=TECH_MINE_START, pct=Math.max(0,Math.round(rem/tot*100));
+    return { mode:'info', title:'미네랄', icon:'<span class="pemoji">💎</span>',
+      hpsh:'<span class="hpv" style="color:#8fd8ff">◈ '+(G.tech.inf?'∞':(rem+' / '+tot))+'</span>', sub:'중립 자원 — 미네랄(크레딧)', items:[],
+      info:{ eb:'중립 자원', name:'미네랄 덩어리', hideName:true, desc:'일꾼으로 채취 = 크레딧', stats:[['남은 매장량', G.tech.inf?'∞':(rem+'  ('+pct+'%)')],['총 매장량',''+tot]], cr:0, en:0 } };
+  }
+  const rem=_techGasRemain(), tot=TECH_GAS_START, pct=Math.max(0,Math.round(rem/tot*100));
+  return { mode:'info', title:'가스 광산', icon:'<span class="pemoji">💨</span>',
+    hpsh:'<span class="hpv" style="color:#7ee081">⚡ '+(G.tech.inf?'∞':(rem+' / '+tot))+'</span>', sub:'중립 지형 — 가스 광산(에너지)', items:[],
+    info:{ eb:'중립 자원', name:'가스 광산', hideName:true, desc:'가스 건물 건설 후 채취 = 에너지. 건물을 파괴해도 잔량 유지.', stats:[['남은 매장량', G.tech.inf?'∞':(rem+'  ('+pct+'%)')],['총 매장량',''+tot]], cr:0, en:0 } };
+}
 function _techUnitName(e){ if(!e) return null; if(e.type==='worker') return '일꾼';
   const bs=(TECH_TREE[G.tech.race]||{}).buildings||[]; for(const b of bs){ const p=(b.produces||[]).find(x=>x.id===e.uid); if(p) return p.name; } return e.uid; }
 function techUnitPanelModel(list){ const race=G.tech.race, grp={}, ord=[];   // 유닛 지정 시트 — 건물 그리드와 동일한 커맨드 그리드 재사용
@@ -11224,12 +11243,14 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
   const sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null});
   const selB=(G.tech.sel!=null)?G.tech.ents.find(e=>e.eid===G.tech.sel&&e.type==='bldg'):null;
   const selUs=(G.tech.selU||[]).map(id=>G.tech.ents.find(e=>e.eid===id)).filter(Boolean);
-  if(sh.sec==='ent' && !selB && !selUs.length){ sh.open=false; sh.sec=null; }   // 선택 사라짐 → 시트 닫기
+  let selRes=G.tech.selRes||null; if(selRes && selRes.kind==='mineral' && !(G.tech.minerals||[]).some(m=>m.eid===selRes.eid)){ G.tech.selRes=null; selRes=null; }   // 💎 소멸한 미네랄 지정 정리
+  if(sh.sec==='ent' && !selB && !selUs.length && !selRes){ sh.open=false; sh.sec=null; }   // 선택 사라짐 → 시트 닫기
   const _selWk=selUs.some(e=>e.type==='worker');
   // 시트: 선택된 대상(일꾼=건설 그리드 / 유닛=이동 / 건물=생산·연구)만 표시. 별도 독 배너 없음 — 업그레이드 탭 시트처럼 그 영역만
   let model=null;
   const _resumeMode=!!(selB && selB.bt>0 && selB._bpause && selUs.length);   // 재개 모드(유닛 지정 + 일시정지 건물 선택): 건물 위 재개 버튼만, 하단은 지정 유닛 프로필
-  if(sh.open){ if(selB && !_resumeMode){ if(selB.bt>0){ model=techBldgBuildingModel(selB); }   // 건설 중·일시정지 = 잠금 프로필(진행도 HP)
+  if(sh.open){ if(selRes){ model=techResourceModel(selRes); }   // 💎⛽ 중립 자원(미네랄·가스 광산) 프로필
+    else if(selB && !_resumeMode){ if(selB.bt>0){ model=techBldgBuildingModel(selB); }   // 건설 중·일시정지 = 잠금 프로필(진행도 HP)
       else { const b=techGetBldg(G.tech.race,selB.bk); model=(b&&b.produces)?techBldgProdModel(b, selB):((b&&b.research)?techBldgUpgModel(b, selB):((b&&b.unlocks)?techBldgInfoModel(b):techBldgPlainModel(b, selB))); } }   // 생산·연구·해금 없는 건물도 프로필(체력·에너지)
     else if(selUs.length){ const _selLv=selUs.filter(e=>e.type==='larva'); model=_selLv.length?techLarvaProdModel(_selLv):(_selWk?techWorkerBuildModel(selUs):techUnitPanelModel(selUs)); } }
   const cm=G.tech.cardMode||0, _shown=!!(sh.open&&model);   // 0=전체(4×2) / 1=간소화(4×1·페이지) / 2=최소화(하단)
@@ -11240,9 +11261,9 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
   const cardCtl=document.getElementById('btCardCtl'); if(cardCtl){ const _up=(cm===2); cardCtl.classList.toggle('up',_up); cardCtl.innerHTML='<svg viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'; cardCtl.title=(_up?'프로필 펼치기':(cm===1?'하단으로 최소화':'간소화')); }
   if(model) renderCmdGrid(body, model);
   const _liftSel=(G.tech.sel!=null)&&!!G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'&&x._lifted);   // 부양 건물 선택 = 바닥탭이 이동이라 금지버튼으로 해제
-  const dz=document.getElementById('btDesel'); if(dz) dz.classList.toggle('on',(G.tech.selU||[]).length>0 || _liftSel); }
+  const dz=document.getElementById('btDesel'); if(dz) dz.classList.toggle('on',(G.tech.selU||[]).length>0 || _liftSel || !!G.tech.selRes); }
 function techCardCycle(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return; G.tech.cardMode=((G.tech.cardMode||0)+1)%3; if(typeof playSfx==='function') playSfx('ui_open'); techPanelRender(); }   // 유닛 지정 해제 버튼(메인 deselTop 규약)
-function techDeselU(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return; G.tech.selU=[]; G.tech.sel=null;   // 유닛·건물(부양 포함) 지정 모두 해제
+function techDeselU(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return; G.tech.selU=[]; G.tech.sel=null; G.tech.selRes=null;   // 유닛·건물(부양 포함)·중립 자원 지정 모두 해제
   const sh=G.tech.sheet; if(sh&&sh.sec==='ent'){ sh.open=false; sh.sec=null; } techUIRender(); }   // 해제 후 다시 드래그=박스 지정(메인 규약)
 // 입력
 // 뷰(확대/축소·팬) — 월드좌표(0~1)↔화면좌표 변환 (메인탭 G.view와 동일 규약)
@@ -11339,16 +11360,19 @@ function techPtrUp(ev){ if(!G.tech) return; const had=_btPtrs.has(ev.pointerId);
     const x0=Math.min(box.sx0,box.sx1),y0=Math.min(box.sy0,box.sy1),x1=Math.max(box.sx0,box.sx1),y1=Math.max(box.sy0,box.sy1);
     if((x1-x0>0.015||y1-y0>0.015)){ const w0=_techS2W(x0,y0), w1=_techS2W(x1,y1);
       G.tech.selU=G.tech.ents.filter(e=>(e.type==='unit'||e.type==='worker'||e.type==='larva')&&e.x>=w0.x&&e.x<=w1.x&&e.y>=w0.y&&e.y<=w1.y).map(e=>e.eid);   // 🐛 라바도 드래그 박스로 지정(이동은 불가)
-      G.tech.sel=null; if(G.tech.selU.length){ sh.open=true; sh.sec='ent'; } if(body) body._cgPage=0; }
+      G.tech.sel=null; G.tech.selRes=null; if(G.tech.selU.length){ sh.open=true; sh.sec='ent'; } if(body) body._cgPage=0; }
     techUIRender(); return; }
   if(!had||moved||!down||G.tab!=='Build'||down.sy<0.13) return;   // 핀치/드래그/상단바 = 탭 아님
   const w=_techS2W(down.sx, down.sy);
   const e=_techEntAt(w.x, w.y);
-  if(e){ if(e.type==='bldg'){ G.tech.sel=e.eid;
+  if(e){ G.tech.selRes=null; if(e.type==='bldg'){ G.tech.sel=e.eid;
       const _keepWk=(e.bt>0&&e._bpause&&(G.tech.selU||[]).some(id=>{ const w=G.tech.ents.find(x=>x.eid===id); return w&&w.type==='worker'&&w.build==null; }));   // 일시정지 건물 + 유휴 일꾼 지정 = 그 일꾼 지정 유지(재개 시 사용)
       if(!_keepWk) G.tech.selU=[]; }
     else { G.tech.selU=[e.eid]; G.tech.sel=null; } sh.open=true; sh.sec='ent'; }   // 엔티티 탭 = 시트 즉시 교체(닫혔다 열리지 않음)
-  else { G.tech.sel=null; sh.open=false; }   // 빈 곳 탭 = 시트 닫기
+  else { const _mn=_techMineralAt(w.x,w.y), _gz=_techInGasZone(w.x,w.y);   // 💎⛽ 빈 곳 탭 = 중립 자원(미네랄·가스 광산) 지정(단 하나만). 자원 없으면 시트 닫기
+    if(_mn){ G.tech.selRes={kind:'mineral',eid:_mn.eid}; G.tech.sel=null; G.tech.selU=[]; sh.open=true; sh.sec='ent'; }
+    else if(_gz){ G.tech.selRes={kind:'gas'}; G.tech.sel=null; G.tech.selU=[]; sh.open=true; sh.sec='ent'; }
+    else { G.tech.sel=null; G.tech.selRes=null; sh.open=false; } }
   if(body) body._cgPage=0; techUIRender(); }
 // 전역 pointer 리스너 — 건설 탭에서만 동작(다른 화면 터치 무영향), passive(techPtrMove는 preventDefault 안 함 → 모바일 탭 신뢰도 유지)
 function _inBuildPtr(){ return typeof G!=='undefined' && G.tech && G.tab==='Build'; }
