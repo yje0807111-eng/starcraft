@@ -1509,7 +1509,7 @@
   .cmdG .cgSlot.sel{border-color:var(--ca);box-shadow:0 0 13px -2px var(--caG),inset 0 0 10px rgba(0,0,0,.35)}
   .cmdG .cgSlot.sel .cgPro{box-shadow:0 0 9px -2px var(--caG)}
   .cmdG .cgSlot:active{transform:translateY(1px)} .cmdG .cgSlot.dim{opacity:.5} .cmdG .cgSlot.dim .cc{color:var(--cgBad)!important}
-  .cmdG .cgSlot.max{cursor:default} .cmdG .cgSlot.busy .cgPro{color:var(--cgBad);border-color:var(--cgBad)} .cmdG .cgSlot.busy .cgName{color:var(--cgBad)}
+  .cmdG .cgSlot.max{cursor:default;opacity:.6} .cmdG .cgSlot.busy .cgPro{color:var(--cgBad);border-color:var(--cgBad)} .cmdG .cgSlot.busy .cgName{color:var(--cgBad)}
   .cmdG .cgSlot.empty{border-style:dashed;border-color:var(--glass);background:linear-gradient(160deg,rgba(20,22,28,.3),rgba(8,9,12,.4));cursor:default;box-shadow:none} .cmdG .cgSlot.empty::after{display:none}
   .cmdG .cgPage{display:flex;align-items:center;justify-content:center;gap:7px;height:20px;flex:0 0 auto;margin-left:auto}   /* 헤더 우측 상단 */
   .cmdG .cgPage button{width:24px;height:19px;border-radius:5px;border:1px solid var(--metal-edge);background:rgba(255,255,255,.04);color:var(--caL);cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center}
@@ -7274,7 +7274,7 @@ function renderCmdGrid(host, m){ const el=(typeof host==='string')?document.getE
   { const raw=m.items||[], adn=raw.filter(it=>it&&it._addon);   // 🔗 부속 카드는 항상 그리드 맨 끝 슬롯에 고정(앞의 빈 칸은 그대로, 부속만 마지막 페이지 끝으로)
     if(adn.length){ const reg=raw.filter(it=>it&&!it._addon), T=Math.max(PER, Math.ceil((reg.length+adn.length)/PER)*PER), arr=new Array(T).fill(null);
       for(let i=0;i<reg.length;i++) arr[i]=reg[i]; for(let i=0;i<adn.length;i++) arr[T-adn.length+i]=adn[i]; _items=arr; }
-    else _items=m.compact?raw.filter(Boolean):raw; }   // 부속 없음=기존(간소화는 빈 칸 제거 후 조밀)
+    else _items=raw; }   // 부속 없음 = 슬롯 위치 보존(간소화도 빈 칸 유지) → 5개↑는 페이지로 넘어가며 그리드 위치 그대로(예: 5·8 → 다음 페이지 1·4)
   const total=_items.length, pages=Math.max(1,Math.ceil(total/PER));
   let pg=(((m.page!=null?m.page:(el._cgPage||0))%pages)+pages)%pages; el._cgPage=pg; m.page=pg; el._cgModel=m;   // 순환(1페이지서 ◀=마지막 · 마지막서 ▶=1페이지)
   const start=pg*PER, cells=[]; for(let k=0;k<PER;k++) cells.push(_cgSlotHTML(_items[start+k], m.build));
@@ -11037,12 +11037,13 @@ function techBldgUpgModel(b, e){ const race=G.tech.race; const rj=e&&e._rj;
   const items=b.research.map(r=>{ const key=race+'_'+r.k, isThis=!!(rj&&rj.rk===r.k); let meta,state,cr,en;
     if(r.tier){ const lv=G.tech.research[key]||0, isMax=lv>=r.tier.length, nx=r.tier[Math.min(lv,r.tier.length-1)]; meta=isMax?'MAX':('Lv.'+lv); cr=isMax?0:nx[0]; en=isMax?0:nx[1]; state=isThis?'busy':(isMax?'max':((rj||!_techAfford(cr,en))?'dim':'ok')); }
     else { const done=G.tech.research[key]; meta=done?'완료':'연구'; cr=done?0:r.m; en=done?0:r.g; state=isThis?'busy':(done?'max':((rj||!_techAfford(cr,en))?'dim':'ok')); }
-    return { pro:'<span class="pemoji">🔬</span>', sn:r.name, cr, en, meta, metaCls:'lv', state, sel:isThis, act:isThis?'onclick="techCancelResearch(event)"':'onclick="techDoResearch(\''+b.k+'\',\''+r.k+'\')"' }; });   // 진행 중=busy(탭 취소) · 그 외=대기(연구 중엔 dim)
-  const bs=techBldgSpec(race,b.k)||{}; let progLabel,progVal,prog,time;
-  if(rj){ prog=Math.round((1-rj.t/(rj.tMax||1))*100); progLabel='연구 중'; progVal=rj.name||''; time=Math.ceil(rj.t)+'s 남음 · 탭 = 취소'; }
-  else { progLabel='연구 대기'; progVal=''; prog=0; time=''; }
+    const _act=isThis?'onclick="techCancelResearch(event)"':(state==='max'?'':'onclick="techDoResearch(\''+b.k+'\',\''+r.k+'\')"');   // 완료/MAX = 비활성(탭 불가)
+    return { pro:'<span class="pemoji">🔬</span>', sn:r.name, cr, en, meta, metaCls:'lv', state, sel:isThis, act:_act }; });   // 진행 중=busy(탭 취소) · 그 외=대기(연구 중엔 dim)
+  const bs=techBldgSpec(race,b.k)||{}; let progLabel,progVal,prog,progTime='';
+  if(rj){ prog=Math.round((1-rj.t/(rj.tMax||1))*100); progLabel='연구 중'; progVal=rj.name||''; progTime=Math.ceil(rj.t)+'s'; }   // 남은 초 = 라벨 옆에 간단히(생산과 통합) · 취소는 진행 카드 탭
+  else { progLabel='연구 대기'; progVal=''; prog=0; }
   return { mode:'upg', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:'연구/업그레이드 — 탭', items, topRight:_techBldgTR(b),
-    info:{ eb:'업그레이드', hideName:true, progLabel, progVal, prog, cr:0, en:0, time } }; }
+    info:{ eb:'업그레이드', hideName:true, progLabel, progVal, prog, progTime, cr:0, en:0, time:'' } }; }
 // 렌더
 function techUIRender(){ if(!G.tech) return; techMapRender(); techPanelRender(); techHidePreview(); }   // 3D 건물은 메인 렌더러(syncBuild)가 렌더
 function techMapRender(){ const map=document.getElementById('cstMain'); if(!map) return; const race=G.tech.race;
@@ -11265,11 +11266,10 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
     else if(selB && !_resumeMode){ if(selB.bt>0){ model=techBldgBuildingModel(selB); }   // 건설 중·일시정지 = 잠금 프로필(진행도 HP)
       else { const b=techGetBldg(G.tech.race,selB.bk); model=(b&&b.produces)?techBldgProdModel(b, selB):((b&&b.research)?techBldgUpgModel(b, selB):((b&&b.unlocks)?techBldgInfoModel(b):techBldgPlainModel(b, selB))); } }   // 생산·연구·해금 없는 건물도 프로필(체력·에너지)
     else if(selUs.length){ const _selLv=selUs.filter(e=>e.type==='larva'); model=_selLv.length?techLarvaProdModel(_selLv):(_selWk?techWorkerBuildModel(selUs):techUnitPanelModel(selUs)); } }
-  // 🔢 카드 개수 기준 기본 높이: 5개↑=전체(2줄, 높게) · 4개↓=간소화(1줄, 낮게)로 자동 · 4개 이하는 전체(빈 2줄) 상태를 아예 안 씀
-  const _alwaysFull=!!(model&&model.alwaysFull), _cardN=model?(model.items||[]).filter(Boolean).length:0, _hasMore=_alwaysFull||_cardN>4;   // alwaysFull(엔지니어 등)=항상 두 줄
+  // 🔢 모든 건물 = 4그리드 1줄(간소화)로 높이 통일. 5개↑는 2줄로 높이지 않고 페이지로 넘김(슬롯 위치 보존). cm2=최소화(본문 숨김)만 별도
   const _selKey=(G.tech.sel!=null)?('b'+G.tech.sel):((G.tech.selU&&G.tech.selU.length)?('u'+G.tech.selU.join(',')):(selRes?('r'+selRes.kind+(selRes.eid||'')):''));
-  if(_selKey && _selKey!==G.tech._lastSelKey){ G.tech.cardMode=_hasMore?0:1; G.tech._lastSelKey=_selKey; }   // 새 선택 = 개수 기준 기본 카드모드
-  let cm=G.tech.cardMode||0; if(!_hasMore && cm===0) cm=1; if(_alwaysFull && cm===1) cm=0; G.tech.cardMode=cm;   // 4개 이하=간소화 · alwaysFull=간소화(한 줄) 금지(두 줄 유지, 최소화는 허용)
+  if(_selKey && _selKey!==G.tech._lastSelKey){ G.tech.cardMode=1; G.tech._lastSelKey=_selKey; }   // 새 선택 = 항상 간소화(4그리드 1줄)로 시작
+  let cm=(G.tech.cardMode===2)?2:1; G.tech.cardMode=cm;   // cm0(2줄 전체) 제거 → 1(간소화) 또는 2(최소화)만. 사이클의 0은 1로 수렴
   const _shown=!!(sh.open&&model);
   if(model){ model.compact=(cm===1); model.build=true; }   // 건설 탭 카드 스타일(이름 축소·메타 제거·c/e 비용)
   sheet.classList.toggle('open', _shown);
