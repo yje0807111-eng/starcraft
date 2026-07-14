@@ -11193,10 +11193,10 @@ function techWorkerBuildModel(list){ const race=G.tech.race, fid=(TECH_WORKER[ra
   let _bd=null; for(const w of list){ const b=_techBuildBldg(w); if(b&&b.bt>0&&!b._bpause){ _bd=b; break; } }   // 지정 중 한 마리라도 건설 중(미일시정지) 일꾼이 있으면 = 작업 프로필(그리드 비우고 4번째 칸에 일시정지만)
   if(_bd){
     const items=[null,null,null,{ pro:'<svg viewBox="0 0 24 24" style="display:block;width:100%;height:100%"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.4"/><line x1="6.2" y1="6.2" x2="17.8" y2="17.8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>', sn:'', state:'ok', cls:'iconFill', act:'onclick="techPauseBuild(event)"' }];   // 4번째(우상단) 칸 = 유닛 지정해제와 동일한 금지 아이콘(칸 중앙에 크게, 텍스트 없음), 나머지 비움 → 다른 행동 불가
-    return { mode:'build', title:rn+(role?' ('+role+')':''), icon:_techUnitPortrait(fid), hpsh:_cgHpShDual(ws.hp,ws.sh),
-      sub:'🔨 건설 중 — ⏸ 일시정지하면 자유 이동·다른 건물 건설 가능', items, info:{ eb:'', hideName:true, stats:_techUnitStatList(ws,fid), cr:0, en:0 } }; }
+    return { mode:'build', alwaysFull:true, title:rn+(role?' ('+role+')':''), icon:_techUnitPortrait(fid), hpsh:_cgHpShDual(ws.hp,ws.sh),
+      sub:'🔨 건설 중 — ⏸ 일시정지하면 자유 이동·다른 건물 건설 가능', items, info:{ eb:'', hideName:true, stats:_techUnitStatList(ws,fid), cr:0, en:0 } }; }   // alwaysFull=항상 두 줄(작업 시 한 줄로 안 줄어듦 · 일시정지=4번 칸 유지)
   const bl=techBuildListModel();   // 그 외(자유 상태): 건물 카드(techArm) 재사용 — 처음처럼 다른 건물 건설 가능
-  return { mode:'build', title:rn+(n>1?(' '+n+'기'):'')+(role?' ('+role+')':''), icon:_techUnitPortrait(fid), hpsh:_cgHpShDual(ws.hp,ws.sh),
+  return { mode:'build', alwaysFull:true, title:rn+(n>1?(' '+n+'기'):'')+(role?' ('+role+')':''), icon:_techUnitPortrait(fid), hpsh:_cgHpShDual(ws.hp,ws.sh),
     sub:'건물 선택 → 맵 탭해 배치 · 맵 탭 = 이동 · 해제 ✕', items:bl.items, info:{ eb:'', hideName:true, stats:_techUnitStatList(ws,fid), cr:0, en:0 } }; }
 function techPauseBuild(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;   // ⏸ 일시정지: 건물 동결 + 일꾼 완전 분리(처음 상태로 복귀)
   const wks=(G.tech.selU||[]).map(id=>G.tech.ents.find(e=>e.eid===id)).filter(e=>e&&e.type==='worker'&&e.build!=null); if(!wks.length) return;   // 지정된 건설 중 일꾼 전체
@@ -11249,10 +11249,10 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
       else { const b=techGetBldg(G.tech.race,selB.bk); model=(b&&b.produces)?techBldgProdModel(b, selB):((b&&b.research)?techBldgUpgModel(b, selB):((b&&b.unlocks)?techBldgInfoModel(b):techBldgPlainModel(b, selB))); } }   // 생산·연구·해금 없는 건물도 프로필(체력·에너지)
     else if(selUs.length){ const _selLv=selUs.filter(e=>e.type==='larva'); model=_selLv.length?techLarvaProdModel(_selLv):(_selWk?techWorkerBuildModel(selUs):techUnitPanelModel(selUs)); } }
   // 🔢 카드 개수 기준 기본 높이: 5개↑=전체(2줄, 높게) · 4개↓=간소화(1줄, 낮게)로 자동 · 4개 이하는 전체(빈 2줄) 상태를 아예 안 씀
-  const _cardN=model?(model.items||[]).filter(Boolean).length:0, _hasMore=_cardN>4;
+  const _alwaysFull=!!(model&&model.alwaysFull), _cardN=model?(model.items||[]).filter(Boolean).length:0, _hasMore=_alwaysFull||_cardN>4;   // alwaysFull(엔지니어 등)=항상 두 줄
   const _selKey=(G.tech.sel!=null)?('b'+G.tech.sel):((G.tech.selU&&G.tech.selU.length)?('u'+G.tech.selU.join(',')):(selRes?('r'+selRes.kind+(selRes.eid||'')):''));
   if(_selKey && _selKey!==G.tech._lastSelKey){ G.tech.cardMode=_hasMore?0:1; G.tech._lastSelKey=_selKey; }   // 새 선택 = 개수 기준 기본 카드모드
-  let cm=G.tech.cardMode||0; if(!_hasMore && cm===0) cm=1; G.tech.cardMode=cm;   // 4개 이하 = 간소화(짧게)로 고정(높은 전체 상태 없음)
+  let cm=G.tech.cardMode||0; if(!_hasMore && cm===0) cm=1; if(_alwaysFull && cm===1) cm=0; G.tech.cardMode=cm;   // 4개 이하=간소화 · alwaysFull=간소화(한 줄) 금지(두 줄 유지, 최소화는 허용)
   const _shown=!!(sh.open&&model);
   if(model){ model.compact=(cm===1); model.build=true; }   // 건설 탭 카드 스타일(이름 축소·메타 제거·c/e 비용)
   sheet.classList.toggle('open', _shown);
