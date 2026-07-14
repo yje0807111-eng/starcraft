@@ -9909,7 +9909,7 @@ function loop(now){
       const _BLIFT=-3, _cwpx=_techCW()*W*_v.zoom;   // 셀 폭(px)
       const list=[]; for(const e of (G.tech.ents||[])){ if(e.type!=='bldg') continue; const mk=(TECH_MODEL[race]||{})[e.bk]; if(!mk) continue; const _cfg=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[mk]:null; const _bf=(typeof _techFoot==='function')?_techFoot(race,e.bk):{w:2,h:2}; const _by=e.y+(_bf.h/2)*_techCH(); const _bp=(e.bt>0)?(e.waiting?0:Math.max(0,Math.min(1,1-e.bt/(e.btMax||1)))):null; list.push({uid:'cst_'+race+'_'+mk+'_'+e.eid, id:'cb_'+mk, x:(e.x-_v.x)*_v.zoom+0.5, y:(_by-_v.y)*_v.zoom+0.5, face:((race==='swarm')?0:(typeof CST_YAW!=='undefined'?CST_YAW:0))+((_cfg&&_cfg.f)||0), yoff:_BLIFT-(e._liftH||0)*TECH_LIFT_PX, fitW:_bf.w*_cwpx, sel:(G.tech&&G.tech.sel===e.eid), buildP:_bp, hidden:techFogHidden(e.x,e.y)}); }   // 🛫 부양=_liftH(0~1)만큼 위로(상승/하강 애니)   // fitW=footprint 폭(px) · hidden=🌫️활성 시야 밖
       if(G.tech.arm && G.tech.armXY){ const _gmk=(TECH_MODEL[race]||{})[G.tech.arm]; if(_gmk && M3D.hasModel && M3D.hasModel('cb_'+_gmk)){ const _gcfg=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[_gmk]:null; const _gf=(typeof _techFoot==='function')?_techFoot(race,G.tech.arm):{w:2,h:2}; const _gy=G.tech.armXY.y+(_gf.h/2)*_techCH(); list.push({uid:'__bghost__', id:'cb_'+_gmk, x:(G.tech.armXY.x-_v.x)*_v.zoom+0.5, y:(_gy-_v.y)*_v.zoom+0.5, face:((race==='swarm')?0:(typeof CST_YAW!=='undefined'?CST_YAW:0))+((_gcfg&&_gcfg.f)||0), yoff:_BLIFT, fitW:_gf.w*_cwpx, ghost:true }); } }   // 반투명 회색 예비 건물(배치 미리보기)
-      for(const e of (G.tech.ents||[])){ if(e.type!=='unit'&&e.type!=='worker') continue; if(e._inGas) continue; const mk=(typeof _techEntModel==='function')?_techEntModel(e):null; if(!mk) continue;   // 🚶 일꾼·생산 유닛 3D(가스 채취 중=건물 안, 숨김)
+      for(const e of (G.tech.ents||[])){ if(e.type!=='unit'&&e.type!=='worker'&&e.type!=='larva') continue; if(e._inGas) continue; const mk=(typeof _techEntModel==='function')?_techEntModel(e):null; if(!mk) continue;   // 🚶 일꾼·생산 유닛·🐛라바 3D(가스 채취 중=건물 안, 숨김)
         const _selu=(G.tech.sel===e.eid)||(G.tech.selU&&G.tech.selU.indexOf(e.eid)>=0);
         const _isAir=(typeof FXLAB_AIR!=='undefined')&&FXLAB_AIR.has(mk);   // 공중 유닛: 메인과 동일한 고정 부양(syncBuild airlift)
         list.push({uid:'tu_'+e.eid, id:mk, x:(e.x-_v.x)*_v.zoom+0.5, y:(e.y-_v.y)*_v.zoom+0.5, face:(e.face||0), yoff:(typeof TECH_UNIT_YOFF!=='undefined'?TECH_UNIT_YOFF:6), moving:(e.tx!=null), working:(e.type==='worker'&&!!e._working), sel:_selu, airlift:_isAir, yawFix:true, scl:(typeof TECH_USCALE!=='undefined'?TECH_USCALE:1), hidden:techFogHidden(e.x,e.y), noShadow:_isAir}); }   // scl=건물 대비 유닛 절반 크기 · hidden=🌫️활성 시야 밖 · noShadow=공중 유닛은 3D 원형 그림자 끄고 DOM 지면 그림자로 대체   // face = 이동방향 + 모델별 정면 보정(메인과 동일)
@@ -10902,8 +10902,8 @@ function _techCollRect(b, e){ const race=G.tech.race, cw=_techCW(), ch=_techCH()
   if(race==='union'||race==='aetherial'){ mg=_techMg(b.bk); cr=TECH_GRADE_D[_techGrade(_techEntKey(e))]/2; }   // 심시티 판정(유니온+에테리얼)
   else { const uRw=(((U[_techEntKey(e)]||{}).size||14)*0.62)*(typeof TECH_USCALE!=='undefined'?TECH_USCALE:1)*(typeof TECH_PACK!=='undefined'?TECH_PACK:1)/(GW||390); mg={l:0,t:0,r:0,b:0}; cr=uRw/cw; }
   return { x0:b.x-hx+(mg.l-cr)*cw, x1:b.x+hx-(mg.r-cr)*cw, y0:bcy-hy+(mg.t-cr)*ch, y1:bcy+hy-(mg.b-cr)*ch }; }
-function _techEntModel(e){ if(!e) return null; if(e.type==='worker') return (TECH_WORKER[G.tech.race]||'worker_human'); if(e.type==='unit') return e.uid; return null; }   // 엔티티 → 3D 모델 키
-function _techRaceUnitKeys(race){ const keys=new Set(); keys.add(TECH_WORKER[race]||'worker_human'); const bs=(TECH_TREE[race]&&TECH_TREE[race].buildings)||[]; for(const b of bs){ for(const p of (b.produces||[])) if(p&&p.id) keys.add(p.id); } return [...keys]; }   // 그 종족 건설 맵에서 쓸 유닛 모델 키(일꾼+생산 유닛)
+function _techEntModel(e){ if(!e) return null; if(e.type==='worker') return (TECH_WORKER[G.tech.race]||'worker_human'); if(e.type==='unit') return e.uid; if(e.type==='larva') return 'swarm_larva'; return null; }   // 엔티티 → 3D 모델 키 · 🐛 라바=swarm_larva 모델
+function _techRaceUnitKeys(race){ const keys=new Set(); keys.add(TECH_WORKER[race]||'worker_human'); if(race==='swarm') keys.add('swarm_larva'); const bs=(TECH_TREE[race]&&TECH_TREE[race].buildings)||[]; for(const b of bs){ for(const p of (b.produces||[])) if(p&&p.id) keys.add(p.id); } return [...keys]; }   // 그 종족 건설 맵에서 쓸 유닛 모델 키(일꾼+생산 유닛 + 스웜 라바)
 function techHidePreview(){ const prev=document.getElementById('cstPrev'), main=document.getElementById('cstMain'); if(prev) prev.classList.remove('on'); if(main) main.classList.remove('hasPrev'); if(window.M3D&&M3D.cstStop) M3D.cstStop(); }
 function techUIEnsure(){ if(!G.tech||!TECH_TREE[G.tech.race]) techUIInit('union'); techUIRender(); }
 function _techReqMet(req){ if(!req) return true; for(const r of req){ if(!(G.tech.built[r]>0||G.tech.addon[r])) return false; } return true; }
@@ -10967,7 +10967,7 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
       if(e.bt>0 && !e._bpause){ const _lbl=e.waiting?'<span class="bldSpin"></span>':(_noPow?'⏸':(Math.ceil(e.bt)+'s'));   // 일꾼 오는 중 스피너 / 건설 중 시간 · 블랙아웃=정지 표시
         labels+='<div class="bldTime" style="left:'+(_sb.x*100).toFixed(2)+'%;top:'+(_sb.y*100).toFixed(2)+'%">'+_lbl+'</div>'; }
       else { const _q0=(e._pq&&e._pq.length)?e._pq[0]:(e._rj||null); if(_q0){ const _pp=Math.round((1-_q0.t/(_q0.tMax||1))*100); inner='<div class="bprog prod" style="bottom:0"><i style="width:'+_pp+'%"></i></div>'; } } }
-    else if(e.type==='larva'){ cls='larvaE'; inner='<span class="lvWig">🐛</span>'; }   // 🐛 라바(해처리 주변, 개별 지정 가능·통과 가능)
+    else if(e.type==='larva'){ const _lh3=!!(window.M3D&&M3D.ready&&M3D.ready()&&M3D.hasModel&&M3D.hasModel('swarm_larva')&&!(G.opt&&G.opt.model3d===false)); cls='larvaE'; inner=_lh3?'':'<span class="lvWig">🐛</span>'; }   // 🐛 라바(해처리 주변, 개별 지정 가능·통과 가능) · 3D 로드 시 빈 앵커(swarm_larva 모델로 렌더)
     else if(e.type==='egg'){ cls='eggE'; inner='<span class="eggWig">🥚</span>'; }   // 🥚 알(변태 중)
     else if(e.type==='worker'||e.type==='unit'){ const _mk=_techEntModel(e);
       const _h3=!!(window.M3D&&M3D.ready&&M3D.ready()&&_mk&&M3D.hasModel&&M3D.hasModel(_mk)&&!(G.opt&&G.opt.model3d===false));   // 3D 모델 로드 완료 시 DOM은 빈 앵커, 아니면 초상화 폴백
@@ -12936,7 +12936,7 @@ const MODELS={ marine:'marine.glb', goliath:'goliath.glb', ghost:'ghost.glb', ar
   // 신규 가챠 유닛 전용 모델(전설/초월)
   machinegun:'machinegun.glb', tank:'tank.glb', blade:'blade.glb', skyguard:'skyguard.glb', skydancer:'skydancer.glb', matron:'matron.glb', thornqueen:'thornqueen.glb',
   racer:'racer.glb', snapper:'snapper.glb', worker_human:'worker_human.glb', worker_light:'worker_light.glb', worker_swarm:'worker_swarm.glb',
-  medic:'mender.glb', broodling:'broodling.glb', larva:'larva.glb', ultralisk:'ultralisk.glb', dark_templar:'dark_templar.glb', high_templar:'high_templar.glb' };   // 신규: 메딕(멘더)·브루들링·라바·울트라리스크·다크/하이템플러
+  medic:'mender.glb', broodling:'broodling.glb', larva:'aetherial_reaver.glb', reaver:'aetherial_reaver.glb', swarm_larva:'swarm_larva.glb', ultralisk:'ultralisk.glb', dark_templar:'dark_templar.glb', high_templar:'high_templar.glb' };   // larva 키(도감·전투)·reaver 키(건설존 uid) 모두 리버 모델 · swarm_larva=스웜 라바(신규)
 const CLOAK_MODELS={ observer:true };  // 클로킹(반투명) 적용 모델만(옵저버). 오버로드 등은 불투명
 const AURA_UNITS={ archon:true };      // 공중 부유 + 에너지 오라(아칸 — 사이오닉 에너지 생명체)
 const AURA_LIFT=0.14;                  // 부유 기본 높이(모델높이 비율) — 아주 약간 떠 있음
@@ -12955,7 +12955,7 @@ const CLOAK_DELAY=0.5;    // 스폰 후 반투명(클로킹)까지(초) — 스�
 const CLOAK_OPACITY=0.5;  // 클로킹 시 불투명도(↑=덜 투명)
 const GUN_FOR={ marine:'marine_gun.glb', ghost:'ghost_gun.glb' };  // 손에 부착할 총(총만 있는 정적 메시)
 const RUN_FOR={ marine:'marine_run.glb', ghost:'ghost_run.glb', goliath:'goliath_run.glb', dragoon:'dragoon_run.glb', hydra:'hydralisk_run.glb', thornqueen:'thornqueen_run.glb', citizen:'civilian_run.glb', blade:'blade_run.glb', worker_human:'worker_human_run.glb', worker_light:'worker_light_run.glb', worker_swarm:'worker_swarm_run.glb',
-  archon:'archon_run.glb', medic:'mender_run.glb', broodling:'broodling_run.glb', larva:'larva_run.glb', ultralisk:'ultralisk_run.glb', dark_templar:'dark_templar_run.glb', high_templar:'high_templar_run.glb' };  // 이동 시 재생할 달리기 모델(리깅+클립)
+  archon:'archon_run.glb', medic:'mender_run.glb', broodling:'broodling_run.glb', larva:'aetherial_reaver_run.glb', reaver:'aetherial_reaver_run.glb', ultralisk:'ultralisk_run.glb', dark_templar:'dark_templar_run.glb', high_templar:'high_templar_run.glb' };  // 이동 시 재생할 달리기 모델(리깅+클립) · larva·reaver=리버 달리기 · swarm_larva는 이동 안 함(달리기 없음)
 const RUN_CLIP='Rifle_Charge_inplace';      // 이동 클립 이름(없으면 첫 클립 사용)
 const ATTACK_FOR={ blade:'blade_attect.glb', snapper:'snapper_attack.glb', worker_human:'worker_human_punch.glb', archon:'archon_attack.glb', dark_templar:'dark_templar_attack.glb', medic:'mender_healling.glb' };   // dragoon 공격 모션 제거(이펙트만 — 요청). 메딕=치유 모션
 const STAY_FOR={ marine:'marine_stay.glb', ghost:'ghost_stay.glb', goliath:'goliath_stay.glb', hydra:'hydralisk_stay.glb', worker_human:'worker_human_stay.glb', worker_light:'worker_light_stay.glb', archon:'archon_stay.glb', medic:'mender_stay.glb', high_templar:'high_templar_stay.glb' };   // 정지(대기) 애니
@@ -12977,14 +12977,14 @@ const SCALE={ marine:12, goliath:16, ghost:12, archon:18, dragoon:14, hydra:14, 
   hellfire:17, pelican:18, dreadnought:22, kronos:20, seraph:16, archangel:22, falcon:16, stinger:10, venom:17, medusa:18,   // 적 공중 유닛(초기값 — 보면서 조정). stinger(스커지)=약간 작게
   wyvern:16, aegis:18, behemoth:20,   // 개인보스 모델(초기값 — bossScale 2배 적용됨)
   racer:20, tank:22, blade:18, thornqueen:20, skyguard:17, skydancer:17, worker_human:13, worker_light:11, worker_swarm:8.8,
-  medic:12, broodling:9, larva:8, ultralisk:24, dark_templar:13, high_templar:12 };  // 유닛별 화면 스케일. 초월 비행체(템페스트·스카이댄서)=대형
+  medic:12, broodling:9, larva:8, reaver:8, swarm_larva:7, ultralisk:24, dark_templar:13, high_templar:12 };  // 유닛별 화면 스케일. 초월 비행체(템페스트·스카이댄서)=대형 · swarm_larva=작은 라바(초기값, 보면서 조정)
   // (구)타입별 색 — 현재는 플레이어색으로 통일(아래 PLAYER_COLOR)
 // 플레이어 색(스타크래프트식) — 한 플레이어의 모든 유닛·구조물을 같은 색으로 통일(아군 구별용)
 const PLAYER_PALETTE={ blue:0x2e7bff, red:0xff3b3b, orange:0xff9418, yellow:0xffd23b, white:0xeaf2ff, purple:0xb05bff, green:0x46d860, teal:0x2dd6c0 };
 let PLAYER_COLOR=PLAYER_PALETTE.blue;   // 현재 플레이어 통일색(키만 바꾸면 전체 색 변경)
 const PLAYER_MODELS=new Set(['marine','ghost','goliath','dragoon','hydra','archon','turret','photon',
   'machinegun','tank','blade','thornqueen','skyguard','skydancer','matron','racer','snapper','worker_human','worker_light','worker_swarm',
-  'medic','broodling','larva','ultralisk','dark_templar','high_templar']);  // 플레이어 소유(전장) 모델 — 플레이어색 림 적용(가챠 전용 모델 포함)
+  'medic','broodling','larva','reaver','swarm_larva','ultralisk','dark_templar','high_templar']);  // 플레이어 소유(전장) 모델 — 플레이어색 림 적용(가챠 전용 모델 포함)
 const RING_OP=0.9;        // 선택 링 불투명도
       // 모델 색 틴트 강도(0=원본, 1=완전 색칠) — 진한 색은 발광이 아닌 이 값으로(단단하게)
       // 플레이어색 발광(은은하게 — 마린/고스트처럼 부드러운 빛)
