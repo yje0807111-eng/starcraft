@@ -5092,7 +5092,7 @@ function _fogSightCells(tiles){ return Math.max(2, Math.round((tiles||FOG_SIGHT_
 const LIFT_BLDG={ command:1, barracks:1, engbay:1, factory:1, starport:1, scifac:1 };
 const TECH_LIFT_SPD=0.06;   // 부양 건물 이동속도(월드/초) — 아주 느림(오버로드급)
 const TECH_LIFT_T=2;        // 상승·하강 애니 시간(초) — 다 뜨면 이동 가능 / 다 내리면 생산 가능
-const TECH_LIFT_PX=36;      // 부양 최대 높이(px, 3D yoff + 히트박스 상승)
+const TECH_LIFT_PX=48;      // 부양 최대 높이(px, 3D + 히트박스 상승) — 확실히 떠오르게
 function _techCanLift(bk){ return G.tech && G.tech.race==='union' && !!LIFT_BLDG[bk]; }
 function fogEnabled(){ return !!(typeof G!=='undefined' && G.fog && G.fog.on); }
 function fogInit(){ const on=(mapCfg('fog','off')==='full'), cols=FOG_COLS, rows=FOG_ROWS;
@@ -9907,7 +9907,7 @@ function loop(now){
       const _v=(G.tech&&G.tech.view)||{x:0.5,y:0.5,zoom:1};
       // 건물 base를 footprint 하단(중심 + ½h 아래)에 맞춤 → 건물이 자기 타일 위에 딱 올라감. yoff -3 = 모델 하단을 footprint 하단선보다 1px 위로(Y_DROP 2 보정)
       const _BLIFT=-3, _cwpx=_techCW()*W*_v.zoom;   // 셀 폭(px)
-      const list=[]; for(const e of (G.tech.ents||[])){ if(e.type!=='bldg') continue; const mk=(TECH_MODEL[race]||{})[e.bk]; if(!mk) continue; const _cfg=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[mk]:null; const _bf=(typeof _techFoot==='function')?_techFoot(race,e.bk):{w:2,h:2}; const _by=e.y+(_bf.h/2)*_techCH(); const _bp=(e.bt>0)?(e.waiting?0:Math.max(0,Math.min(1,1-e.bt/(e.btMax||1)))):null; list.push({uid:'cst_'+race+'_'+mk+'_'+e.eid, id:'cb_'+mk, x:(e.x-_v.x)*_v.zoom+0.5, y:(_by-_v.y)*_v.zoom+0.5, face:((race==='swarm')?0:(typeof CST_YAW!=='undefined'?CST_YAW:0))+((_cfg&&_cfg.f)||0), yoff:_BLIFT-(e._liftH||0)*TECH_LIFT_PX, fitW:_bf.w*_cwpx, sel:(G.tech&&G.tech.sel===e.eid), buildP:_bp, hidden:techFogHidden(e.x,e.y)}); }   // 🛫 부양=_liftH(0~1)만큼 위로(상승/하강 애니)   // fitW=footprint 폭(px) · hidden=🌫️활성 시야 밖
+      const list=[]; for(const e of (G.tech.ents||[])){ if(e.type!=='bldg') continue; const mk=(TECH_MODEL[race]||{})[e.bk]; if(!mk) continue; const _cfg=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[mk]:null; const _bf=(typeof _techFoot==='function')?_techFoot(race,e.bk):{w:2,h:2}; const _by=e.y+(_bf.h/2)*_techCH(); const _bp=(e.bt>0)?(e.waiting?0:Math.max(0,Math.min(1,1-e.bt/(e.btMax||1)))):null; list.push({uid:'cst_'+race+'_'+mk+'_'+e.eid, id:'cb_'+mk, x:(e.x-_v.x)*_v.zoom+0.5, y:(_by-_v.y)*_v.zoom+0.5, face:((race==='swarm')?0:(typeof CST_YAW!=='undefined'?CST_YAW:0))+((_cfg&&_cfg.f)||0), yoff:_BLIFT, lift:(e._liftH||0)*TECH_LIFT_PX, fitW:_bf.w*_cwpx, sel:(G.tech&&G.tech.sel===e.eid), buildP:_bp, hidden:techFogHidden(e.x,e.y)}); }   // 🛫 lift=_liftH만큼 위로(fitW 지면고정 후 적용) · fitW=footprint 폭(px) · hidden=🌫️활성 시야 밖
       if(G.tech.arm && G.tech.armXY){ const _gmk=(TECH_MODEL[race]||{})[G.tech.arm]; if(_gmk && M3D.hasModel && M3D.hasModel('cb_'+_gmk)){ const _gcfg=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[_gmk]:null; const _gf=(typeof _techFoot==='function')?_techFoot(race,G.tech.arm):{w:2,h:2}; const _gy=G.tech.armXY.y+(_gf.h/2)*_techCH(); list.push({uid:'__bghost__', id:'cb_'+_gmk, x:(G.tech.armXY.x-_v.x)*_v.zoom+0.5, y:(_gy-_v.y)*_v.zoom+0.5, face:((race==='swarm')?0:(typeof CST_YAW!=='undefined'?CST_YAW:0))+((_gcfg&&_gcfg.f)||0), yoff:_BLIFT, fitW:_gf.w*_cwpx, ghost:true }); } }   // 반투명 회색 예비 건물(배치 미리보기)
       for(const e of (G.tech.ents||[])){ if(e.type!=='unit'&&e.type!=='worker'&&e.type!=='larva') continue; if(e._inGas) continue; const mk=(typeof _techEntModel==='function')?_techEntModel(e):null; if(!mk) continue;   // 🚶 일꾼·생산 유닛·🐛라바 3D(가스 채취 중=건물 안, 숨김)
         const _selu=(G.tech.sel===e.eid)||(G.tech.selU&&G.tech.selU.indexOf(e.eid)>=0);
@@ -10956,8 +10956,8 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
     if(e.type==='bldg'){ const _b=techGetBldg(race,e.bk)||{}; cls='bldg live3d'; inner='';
       const _bf=(typeof _techFoot==='function')?_techFoot(race,e.bk):{w:2,h:2}, _byB=e.y+(_bf.h/2)*_techCH(), _sb=_techW2S(e.x,_byB);
       const _hw=Math.max(0.05,_bf.w*_techCW()*techView().zoom), _ratio=(e.bt>0)?Math.max(0,Math.min(1,1-e.bt/(e.btMax||1))):1;   // 바 폭=발판 폭(줌) · 건설 중=진행도/완성=풀
-      if(e._lifted){ const _sc=_techW2S(e.x,e.y), _sw=Math.max(0.045,_bf.w*_techCW()*techView().zoom*0.82);   // 🛫 지면 그림자(건물은 위로 떠오름) — 높이(_liftH)에 따라 진해짐
-        ents+='<div class="bLiftShadow" style="left:'+(_sc.x*100).toFixed(2)+'%;top:'+(_sc.y*100).toFixed(2)+'%;width:'+(_sw*100).toFixed(2)+'%;height:'+(_sw*0.5*100).toFixed(2)+'%;opacity:'+(0.1+0.42*(e._liftH||0)).toFixed(2)+'"></div>'; }
+      if(e._lifted){ const _sc=_sb, _sw=Math.max(0.05,_bf.w*_techCW()*techView().zoom*(0.82-0.18*(e._liftH||0)));   // 🛫 지면 그림자(발판 하단) — 높이(_liftH)만큼 작아지고 진해짐(떠오른 느낌)
+        ents+='<div class="bLiftShadow" style="left:'+(_sc.x*100).toFixed(2)+'%;top:'+(_sc.y*100).toFixed(2)+'%;width:'+(_sw*100).toFixed(2)+'%;height:'+(_sw*0.5*100).toFixed(2)+'%;opacity:'+(0.12+0.4*(e._liftH||0)).toFixed(2)+'"></div>'; }
       if(e.bt>0 || G.tech.sel===e.eid) labels+='<div class="bldHp'+(e.bt>0?' bld':'')+'" style="left:'+(_sb.x*100).toFixed(2)+'%;top:'+(_sb.y*100).toFixed(2)+'%;width:'+(_hw*100).toFixed(2)+'%"><i style="width:'+(_ratio*100).toFixed(1)+'%"></i></div>';   // 건설 중=항상 표시(실시간 차오름) · 완성=지정 시에만
       const _noPow=_techNeedsPower(e.bk)&&!_techPowered(e.x,e.y);   // 🛑 블랙아웃(동력 없음)
       if(_noPow){ const _sp=_techW2S(e.x,e.y-(_bf.h/2)*_techCH()); labels+='<div class="bldNoPow" style="left:'+(_sp.x*100).toFixed(2)+'%;top:'+(_sp.y*100).toFixed(2)+'%">⚡✕ 동력 없음</div>'; }
@@ -13857,7 +13857,7 @@ window.M3D={
       m.holder.scale.setScalar((SCALE[it.id]||MODEL_SCALE)*mul*(it.scl||1));
       m.holder.position.set(it.x*W, (H-it.y*H)-Y_DROP-(it.yoff||0), it.y*H*2.5);   // yoff=화면 아래로 내림 · z=화면 아래일수록 앞(겹칠 때 아래 건물이 앞에 보임)
       m.holder.rotation.x = it.pitch||0;   // 건물 사선 틸트(SC식 부감) — 미지정=0(기존 동작 유지)
-      if(it.fitW){ const _fw=it.fitW*(CB_FIT_MUL[it.id]||1); m.holder.updateWorldMatrix(true,true); let _bb=new THREE.Box3().setFromObject(m.yaw); const _pw=_bb.max.x-_bb.min.x; if(_pw>0.5){ m.holder.scale.multiplyScalar(_fw/_pw); m.holder.updateWorldMatrix(true,true); _bb=new THREE.Box3().setFromObject(m.yaw); } m.holder.position.y += ((H-it.y*H)+1) - _bb.min.y; }   // 폭을 footprint에 꽉 맞춤(모델별 보정 배율) + 실제 최하단을 footprint 하단 1px 위로
+      if(it.fitW){ const _fw=it.fitW*(CB_FIT_MUL[it.id]||1); m.holder.updateWorldMatrix(true,true); let _bb=new THREE.Box3().setFromObject(m.yaw); const _pw=_bb.max.x-_bb.min.x; if(_pw>0.5){ m.holder.scale.multiplyScalar(_fw/_pw); m.holder.updateWorldMatrix(true,true); _bb=new THREE.Box3().setFromObject(m.yaw); } m.holder.position.y += ((H-it.y*H)+1) - _bb.min.y + (it.lift||0); }   // 폭을 footprint에 꽉 맞춤 + 최하단을 footprint 하단으로 + 🛫 lift(부양 높이) 적용
       if(it.buildP!=null){   // 🏗 건설 중: 하단→상단 채움(월드 Y) + 유닛보다 뒤(z)에 그려 겹쳐도 유닛이 보임
         if(!m._bldMats){ try{ m._bldMats=cloneMats(m.anim); if(m._bldMats) for(const _mt of m._bldMats){ const _orig=_mt.onBeforeCompile; _mt._fillY={value:-1e9}; _mt._flashY={value:-1e9}; _mt._flashI={value:0};   // 채움선 + 완성 빛 스윕 유니폼
           _mt.onBeforeCompile=(sh)=>{ if(_orig) _orig(sh); sh.uniforms.uFillY=_mt._fillY; sh.uniforms.uFlashY=_mt._flashY; sh.uniforms.uFlashI=_mt._flashI;   // 원래 림 셰이더 유지 + 채움/빛 게이팅
