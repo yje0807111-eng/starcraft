@@ -11248,7 +11248,12 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
     else if(selB && !_resumeMode){ if(selB.bt>0){ model=techBldgBuildingModel(selB); }   // 건설 중·일시정지 = 잠금 프로필(진행도 HP)
       else { const b=techGetBldg(G.tech.race,selB.bk); model=(b&&b.produces)?techBldgProdModel(b, selB):((b&&b.research)?techBldgUpgModel(b, selB):((b&&b.unlocks)?techBldgInfoModel(b):techBldgPlainModel(b, selB))); } }   // 생산·연구·해금 없는 건물도 프로필(체력·에너지)
     else if(selUs.length){ const _selLv=selUs.filter(e=>e.type==='larva'); model=_selLv.length?techLarvaProdModel(_selLv):(_selWk?techWorkerBuildModel(selUs):techUnitPanelModel(selUs)); } }
-  const cm=G.tech.cardMode||0, _shown=!!(sh.open&&model);   // 0=전체(4×2) / 1=간소화(4×1·페이지) / 2=최소화(하단)
+  // 🔢 카드 개수 기준 기본 높이: 5개↑=전체(2줄, 높게) · 4개↓=간소화(1줄, 낮게)로 자동 · 4개 이하는 전체(빈 2줄) 상태를 아예 안 씀
+  const _cardN=model?(model.items||[]).filter(Boolean).length:0, _hasMore=_cardN>4;
+  const _selKey=(G.tech.sel!=null)?('b'+G.tech.sel):((G.tech.selU&&G.tech.selU.length)?('u'+G.tech.selU.join(',')):(selRes?('r'+selRes.kind+(selRes.eid||'')):''));
+  if(_selKey && _selKey!==G.tech._lastSelKey){ G.tech.cardMode=_hasMore?0:1; G.tech._lastSelKey=_selKey; }   // 새 선택 = 개수 기준 기본 카드모드
+  let cm=G.tech.cardMode||0; if(!_hasMore && cm===0) cm=1; G.tech.cardMode=cm;   // 4개 이하 = 간소화(짧게)로 고정(높은 전체 상태 없음)
+  const _shown=!!(sh.open&&model);
   if(model){ model.compact=(cm===1); model.build=true; }   // 건설 탭 카드 스타일(이름 축소·메타 제거·c/e 비용)
   sheet.classList.toggle('open', _shown);
   sheet.classList.toggle('simple', _shown&&cm===1);
