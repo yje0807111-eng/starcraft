@@ -998,6 +998,13 @@
   .bRallyLine{position:absolute;height:2px;background:repeating-linear-gradient(90deg,rgba(70,240,106,.7) 0 4px,transparent 4px 11px);transform-origin:0 50%;pointer-events:none;z-index:9}   /* 🟢 건물→랠리 얇은 듬성 초록 점선 */
   .bRallyLine.hot{background:repeating-linear-gradient(90deg,rgba(110,255,140,.95) 0 4px,transparent 4px 11px)}
   .bRallyMark{position:absolute;width:22px;height:22px;transform:translate(-50%,-50%);pointer-events:none;z-index:10;filter:drop-shadow(0 0 3px rgba(70,240,106,.6))}   /* 🟢 초록 원+점(이동 지시자) */
+  .tkFx{position:absolute;border-radius:50%;pointer-events:none;z-index:7}   /* 🪄 스킬 FX(원형) — 스타일은 상태 기반 인라인 */
+  .tkBeam{position:absolute;height:3px;background:linear-gradient(90deg,rgba(160,220,255,.95),rgba(90,160,255,.5));transform-origin:0 50%;pointer-events:none;z-index:9;box-shadow:0 0 8px rgba(120,190,255,.9);border-radius:2px}
+  .tkLock,.tkHeal{position:absolute;width:20px;height:20px;transform:translate(-50%,-140%);pointer-events:none;z-index:10}
+  .tkLock svg{width:100%;height:100%;color:#ffd24a;filter:drop-shadow(0 0 4px rgba(255,200,60,.8))}
+  .tkHeal svg{width:100%;height:100%;color:#6ff0a0;filter:drop-shadow(0 0 4px rgba(90,240,150,.8))}
+  .cmdG .cgPro .skPro{display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:#8fd4ff}   /* 스킬 카드 아이콘(메인 SKILL_ICON svg 재사용) */
+  .cmdG .cgPro .skPro svg{width:68%;height:68%}
   .bRallyMark svg{width:100%;height:100%;display:block}
   .bRallyMark.hot{animation:rallyPulse .9s ease-in-out infinite}
   @keyframes rallyPulse{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:1}50%{transform:translate(-50%,-50%) scale(1.18);opacity:.75}}
@@ -9290,7 +9297,7 @@ function stepUnitMove(u, tgt, sizeKey, airKey, dt, o){
   if(o.extraSteer){ const es=o.extraSteer(dirx,diry); if(es){ sx+=es.sx; sy+=es.sy; } }   // 건설: 건물 회피(공중은 아래 mx=dirx로 자동 무시 → 위로 비행)
   let mx, my;
   if(_air){ mx=dirx; my=diry; } else { mx=dirx+sx; my=diry+sy; const ml=Math.hypot(mx,my)||1; mx/=ml; my/=ml; }   // 지상=회피 반영 / 공중=목표 직선
-  const maxSpd=(def.moveSpd||0.13)*MOVE_MUL; let dvx=mx*maxSpd, dvy=my*maxSpd;
+  const maxSpd=(def.moveSpd||0.13)*MOVE_MUL*(u._skSpdMul||1); let dvx=mx*maxSpd, dvy=my*maxSpd;   // 🪄 스킬 배율(스팀팩 1.4× · 인스네어 0.5×) — 미설정=1
   if(d<AIR_ARRIVE && !o.noSlow){ const _f=d/AIR_ARRIVE; dvx*=_f; dvy*=_f; }   // 목표 근처 감속(안착) — noSlow=중간 경유점(감속 없이 모퉁이 통과)
   const _sz=(window.M3D&&M3D.scaleOf)?M3D.scaleOf(airKey):13;
   const _acc=_air?AIR_ACCEL:Math.max(GA_MIN, GA_MAX-(_sz-11)*GA_SLOPE);   // 공중=강한 관성 / 지상=크기 클수록 관성↑
@@ -10713,6 +10720,7 @@ function _techExplodeBldg(e){ if(G._techFx && typeof FX!=='undefined' && FX.deat
   if(G.tech.sel===e.eid) G.tech.sel=null; G.tech.selU=(G.tech.selU||[]).filter(id=>id!==e.eid);
   e._dead=true; if(typeof toast==='function') toast('💥 착륙 지점 충돌 — 건물 파괴'); }
 function techTick(dt){ if(!G.tech) return; let active=false, done=false;
+  if(_techSkillTick(dt)) active=true;   // 🪄 스킬 쿨다운·버프·FX 진행(활동 중=계속 렌더)
   const _vmoving=techViewTick(dt);   // 🎥 부드러운 줌/팬 보간(메인맵과 동일) — 애니메이션 중이면 매 프레임 재렌더
   if(G.tech.fog && G.tech.fog.on){ G.tech.fog.t=(G.tech.fog.t||0)+dt; if(G.tech.fog.t>=0.1){ G.tech.fog.t=0; techFogCompute(); } techFogDraw(); }   // 🌫️ 시야 계산은 ~10/s, 그리기는 매 프레임(어두워짐 페이드 부드럽게)
   for(const e of G.tech.ents){ if(e.type==='bldg'&&e.bt>0){ const _frozen=e._bpause||(_techNeedsPower(e.bk)&&!_techPowered(e.x,e.y));   // 일시정지·블랙아웃 = 완전 정지(카운트다운·재렌더 불필요)
@@ -11017,7 +11025,7 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
   let resumeBtn='';   // ▶ 재개 — 일시정지된 건물 선택 시 발판 하단에 뜸
   if(G.tech.sel!=null){ const _sb=G.tech.ents.find(e=>e.eid===G.tech.sel&&e.type==='bldg'); if(_sb&&_sb.bt>0&&_sb._bpause){ const _sbf=_techFoot(race,_sb.bk), _rs=_techW2S(_sb.x,_sb.y+(_sbf.h/2)*_techCH());   // 발판 하단 중앙
     resumeBtn='<div class="bArmBtns" style="left:'+(_rs.x*100).toFixed(2)+'%;top:'+(_rs.y*100).toFixed(2)+'%" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()"><button class="bArmBtn ok" onclick="techResumeBuild(event)" title="재개"><svg viewBox="0 0 24 24" width="15" height="15" style="display:block"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button><button class="bArmBtn cancel" onclick="techDemolishBuild(event)" title="철거">✕</button></div>'; } }   // 재개(▶) + 철거(✕) — 단순 아이콘
-  const hint=G.tech.arm?('📍 '+((techGetBldg(race,G.tech.arm)||{}).name)+(G.tech.armXY?' — 드래그로 위치 조정 후 ✓ 확정':' — 지을 곳을 탭하세요')):((G.tech.selU&&G.tech.selU.length)?('👥 '+G.tech.selU.length+'기 지정 — 탭/드래그로 이동 · 해제는 우상단 ✕'):(G.tech.sel==null?'일꾼 탭=건설 메뉴 · 드래그=유닛 지정 · 두 손가락=화면 이동':'건물을 탭하면 하단 시트에 생산·연구가 표시됩니다'));
+  const hint=G.tech.skillArm?(((typeof SKILLS!=='undefined'&&SKILLS[G.tech.skillArm.key])||{}).arm||'🪄 대상을 탭하세요'):(G.tech.arm?('📍 '+((techGetBldg(race,G.tech.arm)||{}).name)+(G.tech.armXY?' — 드래그로 위치 조정 후 ✓ 확정':' — 지을 곳을 탭하세요')):((G.tech.selU&&G.tech.selU.length)?('👥 '+G.tech.selU.length+'기 지정 — 탭/드래그로 이동 · 해제는 우상단 ✕'):(G.tech.sel==null?'일꾼 탭=건설 메뉴 · 드래그=유닛 지정 · 두 손가락=화면 이동':'건물을 탭하면 하단 시트에 생산·연구가 표시됩니다')));
   const _floor='<div class="bmapFloor" style="transform:'+_techViewCSS()+'"></div>';   // 바닥 = 메인맵과 동일한 뷰 변환(_techViewCSS = viewApply의 CSS판)
   let creepZ='';   // 🟣 크립(스웜 지형) — 항상 표시, 스웜 건물 배치 중이면 강조
   if(race==='swarm'){ const _ccw=_techCW(), _cch=_techCH(), _hot=!!(G.tech.arm&&_techNeedsCreep(G.tech.arm));
@@ -11050,7 +11058,27 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
       const _len=Math.hypot((_rs.x-_bs.x)*(GW||390),(_rs.y-_bs.y)*(GH||390)), _ang=Math.atan2((_rs.y-_bs.y)*(GH||390),(_rs.x-_bs.x)*(GW||390))*180/Math.PI;
       rallyZ+='<div class="bRallyLine'+(_hot?' hot':'')+'" style="left:'+(_bs.x*100).toFixed(2)+'%;top:'+(_bs.y*100).toFixed(2)+'%;width:'+_len.toFixed(1)+'px;transform:rotate('+_ang.toFixed(1)+'deg)"></div>';
       rallyZ+='<div class="bRallyMark'+(_hot?' hot':'')+'" style="left:'+(_rs.x*100).toFixed(2)+'%;top:'+(_rs.y*100).toFixed(2)+'%"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="9.5" ry="6.6" fill="none" stroke="#46f06a" stroke-width="1.3"/><circle cx="12" cy="12" r="1.7" fill="#46f06a"/></svg></div>'; } }
-  map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+(G.tech.rallySet!=null?' rally':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none">'+_floor+hillZ+creepZ+psi+gasZone+mineZ+rallyZ+'<div class="bmapTop"><div class="techSide"><div class="techTabs">'+tabs+'</div><div class="techBtns">'+btns+'</div></div><div class="bres">'+res+'</div></div>'+ents+foot+ghost+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div></div>';
+  let skZ='';   // 🪄 스킬 FX 오버레이 — 상태값(fx.t) 기반 인라인 스타일(프레임 재구성에도 애니메이션 안정)
+  { const _skR=_btRect(), _skRW=(_skR&&_skR.width)||380;   // 픽셀 정원(컨테이너 종횡비로 타원 되는 것 방지)
+    const _circ=(x,y,r,css)=>{ const c=_techW2S(x,y), a=_techW2S(x-r,y), b2=_techW2S(x+r,y), wpx=Math.max(6,(b2.x-a.x)*_skRW);
+      return '<div class="tkFx" style="left:'+(c.x*100).toFixed(2)+'%;top:'+(c.y*100).toFixed(2)+'%;width:'+wpx.toFixed(1)+'px;height:'+wpx.toFixed(1)+'px;transform:translate(-50%,-50%);'+css+'"></div>'; };
+    for(const fx of (G.tech.skillFx||[])){
+      if(fx.type==='storm'){ const fl=0.55+0.35*Math.abs(Math.sin(fx.t*22)); skZ+=_circ(fx.x,fx.y,fx.r,'background:radial-gradient(circle,rgba(170,120,255,.55),rgba(90,40,190,.25) 60%,transparent 72%);box-shadow:inset 0 0 18px rgba(200,160,255,.8);opacity:'+fl.toFixed(2)); }
+      else if(fx.type==='ensnare'){ const op=Math.min(0.8,(fx.dur-fx.t)); skZ+=_circ(fx.x,fx.y,fx.r,'background:radial-gradient(circle,rgba(120,230,120,.4),rgba(60,160,60,.18) 65%,transparent 75%);border:1px dashed rgba(140,240,140,.5);opacity:'+op.toFixed(2)); }
+      else if(fx.type==='mine'){ const pu=0.6+0.4*Math.abs(Math.sin(fx.t*5)); skZ+=_circ(fx.x,fx.y,0.008,'background:#d8dfe8;border:1.5px solid #79808a;box-shadow:0 0 6px rgba(255,80,80,'+pu.toFixed(2)+')'); }
+      else if(fx.type==='nuke'&&fx.t<fx.delay){ const bl=(Math.sin(fx.t*12)>0)?0.9:0.35; skZ+=_circ(fx.x,fx.y,0.028,'border:2px solid rgba(255,70,70,'+bl+');background:radial-gradient(circle,rgba(255,60,60,.22),transparent 65%)'); }
+      else if(fx.type==='nuke'||fx.type==='boom'){ const bt=fx.type==='nuke'?(fx.t-fx.delay):fx.t, bd=fx.type==='nuke'?1.1:fx.dur, p=Math.max(0,Math.min(1,bt/bd)); skZ+=_circ(fx.x,fx.y,(fx.r||0.08)*(0.3+0.7*p),'background:radial-gradient(circle,rgba(255,230,150,'+(0.9*(1-p)).toFixed(2)+'),rgba(255,120,40,'+(0.55*(1-p)).toFixed(2)+') 55%,transparent 75%)'); }
+      else if(fx.type==='emp'){ const p=fx.t/fx.dur; skZ+=_circ(fx.x,fx.y,fx.r*(0.25+0.75*p),'border:2px solid rgba(120,190,255,'+(0.9*(1-p)).toFixed(2)+');background:radial-gradient(circle,rgba(120,190,255,'+(0.25*(1-p)).toFixed(2)+'),transparent 70%)'); }
+      else if(fx.type==='beam'){ const s=_techW2S(fx.sx,fx.sy), e2=_techW2S(fx.x,fx.y), len=Math.hypot((e2.x-s.x)*(GW||390),(e2.y-s.y)*(GH||390)), ang=Math.atan2((e2.y-s.y)*(GH||390),(e2.x-s.x)*(GW||390))*180/Math.PI, op=1-fx.t/fx.dur;
+        skZ+='<div class="tkBeam" style="left:'+(s.x*100).toFixed(2)+'%;top:'+(s.y*100).toFixed(2)+'%;width:'+len.toFixed(1)+'px;transform:rotate('+ang.toFixed(1)+'deg);opacity:'+op.toFixed(2)+'"></div>'; }
+      else if(fx.type==='lock'){ const t=G.tech.ents.find(x=>x.eid===fx.eid); if(t){ const p2=_techW2S(t.x,t.y), pu=0.6+0.4*Math.sin(fx.t*6);
+        skZ+='<div class="tkLock" style="left:'+(p2.x*100).toFixed(2)+'%;top:'+(p2.y*100).toFixed(2)+'%;opacity:'+pu.toFixed(2)+'">'+((typeof SKILL_ICON!=='undefined'&&SKILL_ICON.lockdown)||'🔒')+'</div>'; } }
+      else if(fx.type==='stim'){ const t=G.tech.ents.find(x=>x.eid===fx.eid); if(t){ skZ+=_circ(t.x,t.y,0.02*(1+fx.t*2),'border:2px solid rgba(255,120,120,'+(1-fx.t/fx.dur).toFixed(2)+')'); } } }
+    for(const e of G.tech.ents){ if(e.type!=='unit'&&e.type!=='worker') continue;   // 지속 상태 표시(토글·지정 힐)
+      if(e._skOn&&e._skOn.psi_cloak&&typeof SKILLS!=='undefined'&&SKILLS.psi_cloak) skZ+=_circ(e.x,e.y,SKILLS.psi_cloak.radius||0.12,'border:1px solid rgba(150,210,255,.55);background:radial-gradient(circle,rgba(150,210,255,.13),transparent 70%)');
+      if(e._skOn&&e._skOn.siege) skZ+=_circ(e.x,e.y,0.024,'border:2px solid rgba(255,180,80,.7);background:radial-gradient(circle,rgba(255,180,80,.14),transparent 70%)');
+      if(e._healF!=null){ const t=G.tech.ents.find(x=>x.eid===e._healF); if(t){ const p2=_techW2S(t.x,t.y); skZ+='<div class="tkHeal" style="left:'+(p2.x*100).toFixed(2)+'%;top:'+(p2.y*100).toFixed(2)+'%">'+((typeof SKILL_ICON!=='undefined'&&SKILL_ICON.heal)||'✚')+'</div>'; } } } }
+  map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+(G.tech.rallySet!=null?' rally':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none">'+_floor+hillZ+creepZ+psi+gasZone+mineZ+rallyZ+skZ+'<div class="bmapTop"><div class="techSide"><div class="techTabs">'+tabs+'</div><div class="techBtns">'+btns+'</div></div><div class="bres">'+res+'</div></div>'+ents+foot+ghost+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div></div>';
   const _lblLayer=document.getElementById('cstLabels'); if(_lblLayer) _lblLayer.innerHTML=labels+armBtns+resumeBtn;   // 남은시간 라벨 + 배치 ✓/✕ + ▶재개 버튼을 전용 오버레이(z8)에 → 3D 유닛·건물 위(리파이너리 등 큰 건물에 안 가림)
   techFogDraw(); }   // 🌫️ 건설 안개 오버레이 재그림(맵 재렌더마다)
 function techBldgInfoModel(b){ const race=G.tech.race, hb=TECH_TREE[race].buildings[0];
@@ -11107,6 +11135,52 @@ function techResourceModel(res){ if(!res) return null;
 }
 function _techUnitName(e){ if(!e) return null; if(e.type==='worker') return '일꾼';
   const bs=(TECH_TREE[G.tech.race]||{}).buildings||[]; for(const b of bs){ const p=(b.produces||[]).find(x=>x.id===e.uid); if(p) return p.name; } return e.uid; }
+// 🪄 건설 탭 유닛 스킬 어댑터 — 정의는 메인 SKILLS/SKILL_ICON/UNIT_SKILLS 단일 소스 그대로, 시전·FX만 tech 엔티티용(적 없음 = 효과는 이동·상태·연출)
+const TECH_SK_ENMAX=200;   // 시전 유닛 공통 에너지(스타 기본 200 · 재생 SKILL_EN_REGEN/s)
+function _techSkEn(u){ if(u._en==null) u._en=TECH_SK_ENMAX; return u._en; }
+function _techSkFx(){ return G.tech.skillFx||(G.tech.skillFx=[]); }
+function techCastSkill(ev,key){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech||(G.tech.selU||[]).length!==1) return;
+  const u=G.tech.ents.find(e=>e.eid===G.tech.selU[0]); const sk=(typeof SKILLS!=='undefined')&&SKILLS[key]; if(!u||!sk) return;
+  u._skCd=u._skCd||{}; u._skOn=u._skOn||{};
+  if((u._skCd[key]||0)>0){ if(typeof toast==='function') toast('쿨다운 '+Math.ceil(u._skCd[key])+'초'); return; }
+  if(sk.energy>0 && _techSkEn(u)<sk.energy){ if(typeof toast==='function') toast('에너지 부족 ('+sk.energy+'e)'); return; }
+  if(sk.kind==='self'){ u._skCd[key]=sk.cd||0; u._skStim=sk.dur||6; _techSkFx().push({type:'stim',eid:u.eid,t:0,dur:0.5});   // 스팀팩 = 즉시 자기 버프(이속↑)
+    if(typeof playSfx==='function') playSfx('skill'); techUIRender(); return; }
+  if(sk.kind==='toggle'||sk.kind==='aura'){ const nv=!u._skOn[key]; u._skOn[key]=nv;   // 시즈 모드 / 차원 은폐 = 토글
+    if(nv&&sk.kind==='toggle'){ u.tx=null; u.ty=null; u._wp=null; }   // 시즈 = 그 자리 고정
+    if(typeof playSfx==='function') playSfx('skill'); techUIRender(); return; }
+  G.tech.skillArm={eid:u.eid, key:key};   // 지정형(지점/유닛/대상) = 무장 후 맵 탭으로 시전
+  if(typeof toast==='function') toast(sk.arm||'ℹ️ 대상을 탭하세요'); techUIRender(); }
+function _techSkFire(u,key,wx,wy,tgt){ const sk=SKILLS[key]; u._skCd=u._skCd||{};
+  if(sk.energy>0){ if(_techSkEn(u)<sk.energy) return; u._en-=sk.energy; }
+  u._skCd[key]=sk.cd||0; const F=_techSkFx();
+  if(key==='psi_storm') F.push({type:'storm', x:wx, y:wy, t:0, dur:sk.dur||3, r:sk.radius});
+  else if(key==='ensnare') F.push({type:'ensnare', x:wx, y:wy, t:0, dur:sk.dur||8, r:sk.radius, slow:sk.slow});
+  else if(key==='spider_mine') F.push({type:'mine', x:wx, y:wy, t:0, dur:1e9, trig:sk.trig||0.045, r:sk.r||0.06, owner:u.eid});
+  else if(key==='nuke') F.push({type:'nuke', x:wx, y:wy, t:0, dur:(sk.delay||3.5)+1.1, delay:sk.delay||3.5, r:sk.radius||0.15});
+  else if(key==='emp') F.push({type:'emp', x:wx, y:wy, t:0, dur:0.7, r:sk.radius||0.13});
+  else if(key==='lockdown'&&tgt){ tgt._lockT=sk.dur||6; tgt.tx=null; tgt._wp=null; F.push({type:'lock', eid:tgt.eid, t:0, dur:sk.dur||6}); }
+  else if(key==='yamato'&&tgt) F.push({type:'beam', sx:u.x, sy:u.y-0.015, x:tgt.x, y:tgt.y, t:0, dur:0.55});
+  else if(key==='heal'&&tgt){ u._healF=(u._healF===tgt.eid)?null:tgt.eid; }   // 재시전 = 지정 해제(자동 복귀)
+  if(typeof playSfx==='function') playSfx('skill'); }
+function _techSkillTick(dt){ if(!G.tech) return false; const F=G.tech.skillFx; let live=false;
+  for(const e of G.tech.ents){ if(e.type!=='unit'&&e.type!=='worker') continue;
+    if(e._skCd) for(const k in e._skCd){ if(e._skCd[k]>0){ e._skCd[k]=Math.max(0,e._skCd[k]-dt); live=true; } }
+    if(e._en!=null&&e._en<TECH_SK_ENMAX){ e._en=Math.min(TECH_SK_ENMAX,e._en+SKILL_EN_REGEN*dt); }
+    if(e._skStim>0){ e._skStim-=dt; live=true; }
+    if(e._lockT>0){ e._lockT-=dt; e.tx=null; e._wp=null; live=true; }
+    if(e._skOn&&e._skOn.siege){ e.tx=null; e._wp=null; }   // 시즈 중 = 이동 불가 유지
+    e._skSpdMul=((e._skStim>0)?1.4:1)*((e._skSlow>0)?0.5:1); if(e._skSlow>0) e._skSlow-=dt;
+    if(e._healF!=null){ const t=G.tech.ents.find(x=>x.eid===e._healF); if(!t){ e._healF=null; }   // 지정 힐 = 대상 따라다님
+      else if(Math.hypot(t.x-e.x,t.y-e.y)>(HEAL_RANGE*0.85)){ e.tx=t.x; e.ty=t.y; } live=true; } }
+  if(F&&F.length){ live=true;
+    for(let i=F.length-1;i>=0;i--){ const fx=F[i]; fx.t+=dt;
+      if(fx.type==='mine'){ const hit=G.tech.ents.find(x=>(x.type==='unit'||x.type==='worker')&&x.eid!==fx.owner&&Math.hypot(x.x-fx.x,x.y-fx.y)<=fx.trig);
+        if(hit){ F[i]={type:'boom', x:fx.x, y:fx.y, t:0, dur:0.8, r:fx.r}; } continue; }
+      if(fx.type==='nuke'&&fx.t>=fx.delay&&!fx._boomed){ fx._boomed=true; }
+      if(fx.type==='ensnare'){ for(const x of G.tech.ents){ if((x.type==='unit'||x.type==='worker')&&Math.hypot(x.x-fx.x,x.y-fx.y)<=fx.r) x._skSlow=0.25; } }   // 범위 내 둔화(연출·테스트)
+      if(fx.t>=fx.dur) F.splice(i,1); } }
+  return live; }
 function techUnitPanelModel(list){ const race=G.tech.race, grp={}, ord=[];   // 유닛 지정 시트 — 건물 그리드와 동일한 커맨드 그리드 재사용
   for(const e of list){ const k=(e.type==='worker')?'__wk':e.uid; if(!grp[k]){ grp[k]={n:0,e:e}; ord.push(k); } grp[k].n++; }
   const items=[];   // 유닛 초상 카드 제거 — 헤더 프로필과 중복(그리드는 변태·장전 등 행동 카드만)
@@ -11116,6 +11190,14 @@ function techUnitPanelModel(list){ const race=G.tech.race, grp={}, ord=[];   // 
   const _amE=(list.length===1 && list[0].type==='unit' && TECH_AMMO[list[0].uid])?list[0]:null;   // 🚀 캐리어(요격기)·리버(스캐럽) = 내부 장전 큐
   if(_amE){ const key=_amE.uid, a=TECH_AMMO[key], cap=_techAmmoCap(key), have=(_amE._chc||0)+((_amE._chq||[]).length);
     items.push({ pro:'<span class="pemoji">'+a.ico+'</span>', sn:a.label+' 장전', cr:a.m, en:a.g, meta:have+'/'+cap, metaCls:'lv', state:(have>=cap||!_techAfford(a.m,a.g))?'dim':'ok', act:'onclick="techChargeAmmo(event,\''+key+'\')"' }); }
+  if(list.length===1 && list[0].type==='unit' && typeof UNIT_SKILLS!=='undefined'){   // 🪄 유닛 스킬 카드 — 메인 UNIT_SKILLS/SKILLS/SKILL_ICON 단일 소스 재사용
+    const _su=list[0]; for(const _k of (UNIT_SKILLS[_su.uid]||[])){ const sk=SKILLS[_k]; if(!sk) continue;
+      const cdv=Math.ceil((_su._skCd&&_su._skCd[_k])||0), armed=!!(G.tech.skillArm&&G.tech.skillArm.eid===_su.eid&&G.tech.skillArm.key===_k);
+      const on=!!((_su._skOn&&_su._skOn[_k])||(_k==='heal'&&_su._healF!=null)||(_k==='stim'&&_su._skStim>0));
+      const lowE=sk.energy>0&&_techSkEn(_su)<sk.energy;
+      items.push({ pro:'<span class="skPro">'+((typeof SKILL_ICON!=='undefined'&&SKILL_ICON[_k])||'✨')+'</span>', sn:sk.name,
+        meta:cdv>0?(cdv+'s'):(sk.energy>0?(sk.energy+'e'):(on?'ON':'')), metaCls:'lv', sel:armed||on,
+        state:(cdv>0||lowE)?'dim':'ok', act:'onclick="techCastSkill(event,\''+_k+'\')"' }); } }
   const f=list[0], fid=(f.type==='worker')?(TECH_WORKER[race]||'worker_human'):f.uid, spec=techUnitSpec(race,fid)||{};
   const rn=_techRealName(race,fid), role=_techRoleOf(fid);
   const nm=(list.length===1)?(rn+(role?' ('+role+')':'')):('유닛 '+list.length+'기');   // 이름 (직책)
@@ -11246,6 +11328,12 @@ function techPtrDown(ev){ if(!G.tech) return; const r=_btRect(); if(!r) return; 
     const rb=G.tech.ents.find(x=>x.eid===G.tech.rallySet&&x.type==='bldg'), w=_techS2W(sx,sy);
     if(rb) rb._rally={ x:Math.max(0.03,Math.min(0.97,w.x)), y:Math.max(0.14,Math.min(0.97,w.y)) };
     G.tech.rallySet=null; if(typeof playSfx==='function') playSfx('ui_confirm'); techUIRender(); return; }
+  if(G.tech.skillArm){ const sa=G.tech.skillArm, su=G.tech.ents.find(x=>x.eid===sa.eid), sk=(typeof SKILLS!=='undefined')&&SKILLS[sa.key];   // 🪄 스킬 무장 = 이번 탭으로 시전
+    G.tech.skillArm=null;
+    if(su&&sk){ const w=_techS2W(sx,sy);
+      if(sk.kind==='target_ground'){ _techSkFire(su,sa.key,w.x,w.y,null); }
+      else { const t=_techEntAt(w.x,w.y); if(t&&t.eid!==su.eid&&(t.type==='unit'||t.type==='worker')) _techSkFire(su,sa.key,t.x,t.y,t); else if(typeof toast==='function') toast('대상 유닛을 탭하세요 — 취소됨'); } }
+    techUIRender(); return; }
   if(G.tech.arm!=null){   // 배치 중
     if(!G.tech.armXY){ _btArm=true; _btArmOff={x:0,y:0}; _techArmTo(sx, sy); return; }   // 첫 탭 = 그 자리에 예비건물 배치
     // 이미 배치됨 → 예비 실루엣을 눌렀을 때만 잡고 드래그(다른 곳 탭은 무시=텔레포트 안 함)
