@@ -1444,13 +1444,15 @@
   .cmdG .cgGasAuto{flex:none;align-self:flex-start;display:flex;align-items:center;gap:3px;padding:3px 4px;border-radius:6px;background:rgba(96,220,130,.08);border:1px solid rgba(120,232,150,.4)}   /* ⚡ 에너지 자동 채취 스텝퍼 */
   .cmdG .cgGasAuto .gaLbl{font:800 8.5px/1 sans-serif;color:#9fe8b4;letter-spacing:.3px}
   .cmdG .cgGasAuto .gaIc{font-size:12px;line-height:1;color:#dff7e6}   /* 심플: 아이콘만 */
-  .cmdG .cgLift{flex:none;align-self:flex-start;width:26px;height:24px;border-radius:6px;border:1px solid var(--glass);background:rgba(120,170,255,.14);color:#dbe8ff;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}   /* 🛫 부양 버튼(프로필 우상단) */
+  .cmdG .cgLift{flex:none;align-self:center;width:38px;height:38px;border-radius:9px;border:1px solid var(--glass);background:rgba(120,170,255,.14);color:#dbe8ff;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}   /* 부양 버튼(프로필 우상단, 정사각 아이콘 카드) */
+  .cmdG .cgLift svg{width:23px;height:23px;display:block}
   .cmdG .cgLift.on{border-color:#5ad1ff;background:rgba(90,209,255,.26);box-shadow:0 0 6px rgba(90,209,255,.45)}
   .cmdG .cgLift:active{background:rgba(120,170,255,.34)}
   .cmdG .cgLift.busy{opacity:.6;cursor:default}
-  .cmdG .cgRally{flex:none;align-self:flex-start;width:26px;height:24px;border-radius:6px;border:1px solid var(--glass);background:rgba(255,200,90,.14);color:#ffe6a8;font-size:13px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}   /* 🚩 랠리 버튼 */
-  .cmdG .cgRally.on{border-color:#ffc24a;background:rgba(255,194,74,.26);box-shadow:0 0 6px rgba(255,194,74,.45)}
-  .cmdG .cgRally:active{background:rgba(255,200,90,.34)}
+  .cmdG .cgRally{flex:none;align-self:center;width:38px;height:38px;border-radius:9px;border:1px solid var(--glass);background:rgba(70,240,106,.13);color:#8ef2a8;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}   /* 랠리 버튼(정사각 아이콘 카드) */
+  .cmdG .cgRally svg{width:24px;height:24px;display:block}
+  .cmdG .cgRally.on{border-color:#46f06a;background:rgba(70,240,106,.24);box-shadow:0 0 6px rgba(70,240,106,.45)}
+  .cmdG .cgRally:active{background:rgba(70,240,106,.32)}
   .cmdG .cgProg .pl .pt{color:var(--caL);font:800 9px/1 'Rajdhani',sans-serif;margin-left:4px;letter-spacing:.2px}   /* 생산 중 옆 남은시간(작게) */
   .cmdG .cgGasAuto .gaBtn{width:18px;height:18px;flex:none;border-radius:4px;border:1px solid rgba(120,232,150,.5);background:rgba(120,232,150,.12);color:#c7f5d6;font:800 13px/1 sans-serif;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
   .cmdG .cgGasAuto .gaBtn:active{background:rgba(120,232,150,.3)}
@@ -10689,18 +10691,23 @@ function techAutoAdjust(delta, ev){ if(ev&&ev.stopPropagation) ev.stopPropagatio
     if(list.length){ const w=list[list.length-1]; _techReleaseGather(w); w.tx=null; w.ty=null; } }   // 1명 반환(유휴로)
   if(isMain) _techRebalanceMinerals();
   if(typeof playSfx==='function') playSfx('ui_confirm'); techUIRender(); }
+// 프로필 우상단 아이콘(이모지 제거 → 심플 라인 아이콘)
+const _SVG_ARR_UP='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 18.5V7.5"/><path d="M6.5 12.5l5.5-5.5 5.5 5.5"/></svg>';   // 짧고 굵은 위 화살표(부양)
+const _SVG_ARR_DOWN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.5v11"/><path d="M6.5 11.5l5.5 5.5 5.5-5.5"/></svg>';   // 짧고 굵은 아래 화살표(하강)
+const _SVG_RALLY='<svg viewBox="0 0 24 24" fill="none"><path d="M12 3v8.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M9.3 8.9l2.7 2.7 2.7-2.7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="12" cy="17.2" rx="6" ry="4.1" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="12" cy="17.2" r="1.5" fill="currentColor"/></svg>';   // 위→아래 얇은 화살표 + 원+점(웨이포인트와 통일)
 function _techAutoBtn(b){ const e=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'):null; if(!e||e.bk!==b.k) return '';
   const isMain=(b.k===((TECH_TREE[G.tech.race].buildings[0])||{}).k); if(!isMain && !b.gas) return '';   // 본진 또는 가스 건물만
   const ic=isMain?'◈':'⚡', tt=isMain?'이 본진과 연동 중인 미네랄 채취 일꾼 수':'이 가스 건물에서 작업 중인 일꾼 수', n=isMain?_techMineralWorkers(e).length:_techGasWorkers(e).length;   // 심플: 아이콘만(◈/⚡) + − n +
   return '<div class="cgGasAuto" title="'+tt+'"><button class="gaBtn" onclick="techAutoAdjust(-1,event)">−</button><span class="gaIc">'+ic+'</span><b class="gaN">'+n+'</b><button class="gaBtn" onclick="techAutoAdjust(1,event)">+</button></div>'; }
 function _techLiftBtn(b){ const e=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'):null; if(!e||e.bk!==b.k||e.bt>0||!_techCanLift(b.k)) return '';   // 🛫 부양 버튼(프로필 우상단) — 상태별
-  let ico,ttl,busy=false; const ph=e._liftPhase;
-  if(!e._lifted){ ico='🛫'; ttl='부양'; } else if(ph==='flying'){ ico='🛬'; ttl='착륙 위치 지정'; } else { ico='⏳'; ttl=(ph==='descending'?'착륙 중':(ph==='toland'?'착륙 지점 이동 중':'이륙 중')); busy=true; }
+  let up,ttl,busy=false; const ph=e._liftPhase;
+  if(!e._lifted){ up=true; ttl='부양'; } else if(ph==='flying'){ up=false; ttl='착륙 위치 지정'; } else { up=(ph==='rising'); ttl=(ph==='descending'?'착륙 중':(ph==='toland'?'착륙 지점 이동 중':'이륙 중')); busy=true; }
+  const ico=up?_SVG_ARR_UP:_SVG_ARR_DOWN;
   return '<button class="cgLift'+(e._lifted?' on':'')+(busy?' busy':'')+'"'+(busy?'':' onclick="techLiftToggle(event)"')+' title="'+ttl+'">'+ico+'</button>'; }
 function _techRallyBtn(b){ const e=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'):null; if(!e||e.bk!==b.k||e.bt>0) return '';   // 🚩 랠리 포인트(생성 유닛 자동 이동) — 유닛 생산 건물만
   if(!(b.produces&&b.produces.length)) return '';
   const on=(G.tech.rallySet===e.eid)||!!e._rally;
-  return '<button class="cgRally'+(on?' on':'')+'" onclick="techRallySet(event)" title="랠리 포인트 — 생성된 유닛이 자동으로 갈 위치 지정">🚩</button>'; }
+  return '<button class="cgRally'+(on?' on':'')+'" onclick="techRallySet(event)" title="랠리 포인트 — 생성된 유닛이 자동으로 갈 위치 지정">'+_SVG_RALLY+'</button>'; }
 function techRallySet(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech||G.tech.sel==null) return;
   const e=G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'); if(!e) return;
   if(G.tech.rallySet===e.eid){ G.tech.rallySet=null; e._rally=null; if(typeof toast==='function') toast('랠리 해제'); }   // 지정 중 다시 누르면 해제
@@ -11064,7 +11071,7 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
     if(_rb && _rb._rally){ const _bs=_techW2S(_rb.x,_rb.y), _rs=_techW2S(_rb._rally.x,_rb._rally.y), _hot=(G.tech.rallySet===_rb.eid);
       const _len=Math.hypot((_rs.x-_bs.x)*(GW||390),(_rs.y-_bs.y)*(GH||390)), _ang=Math.atan2((_rs.y-_bs.y)*(GH||390),(_rs.x-_bs.x)*(GW||390))*180/Math.PI;
       rallyZ+='<div class="bRallyLine'+(_hot?' hot':'')+'" style="left:'+(_bs.x*100).toFixed(2)+'%;top:'+(_bs.y*100).toFixed(2)+'%;width:'+_len.toFixed(1)+'px;transform:rotate('+_ang.toFixed(1)+'deg)"></div>';
-      rallyZ+='<div class="bRallyMark'+(_hot?' hot':'')+'" style="left:'+(_rs.x*100).toFixed(2)+'%;top:'+(_rs.y*100).toFixed(2)+'%"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="#46f06a" stroke-width="2"/><circle cx="12" cy="12" r="2.4" fill="#46f06a"/></svg></div>'; } }
+      rallyZ+='<div class="bRallyMark'+(_hot?' hot':'')+'" style="left:'+(_rs.x*100).toFixed(2)+'%;top:'+(_rs.y*100).toFixed(2)+'%"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="9.5" ry="6.6" fill="none" stroke="#46f06a" stroke-width="1.3"/><circle cx="12" cy="12" r="1.7" fill="#46f06a"/></svg></div>'; } }
   map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+(G.tech.rallySet!=null?' rally':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none">'+_floor+hillZ+creepZ+psi+gasZone+mineZ+rallyZ+'<div class="bmapTop"><div class="techTabs">'+tabs+'</div><div class="bres">'+res+'</div></div>'+ents+foot+ghost+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div></div>';
   const _lblLayer=document.getElementById('cstLabels'); if(_lblLayer) _lblLayer.innerHTML=labels+armBtns+resumeBtn;   // 남은시간 라벨 + 배치 ✓/✕ + ▶재개 버튼을 전용 오버레이(z8)에 → 3D 유닛·건물 위(리파이너리 등 큰 건물에 안 가림)
   techFogDraw(); }   // 🌫️ 건설 안개 오버레이 재그림(맵 재렌더마다)
