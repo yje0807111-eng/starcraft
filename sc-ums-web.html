@@ -912,9 +912,6 @@
   #cstPrevName{position:absolute;left:174px;top:16px;font-weight:800;color:#ffe0a0;font-size:15px;letter-spacing:.3px}
   #cstPrevInfo{position:absolute;left:174px;top:44px;right:40px;color:#aab6c6;font-size:12px;line-height:1.55}
   #cstPrevX{position:absolute;top:9px;right:10px;background:#141b28;border:1px solid #3a4a60;color:#9fb0c4;border-radius:6px;padding:3px 9px;font-size:13px;cursor:pointer}
-  .cstTabs{display:flex;gap:6px;margin-bottom:9px}
-  .cstTab{flex:1;padding:8px 4px;text-align:center;font-weight:800;font-size:13px;cursor:pointer;border-radius:8px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.012));border:1px solid var(--metal-edge);border-bottom:2px solid transparent;color:#aeb8c6}
-  .cstTab.on{color:#fff;border-bottom-color:var(--ca);box-shadow:inset 0 0 14px -6px var(--ca)}
   .cstGrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
   .cstCol h4{margin:2px 0 6px;font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:#8492a6;font-weight:800}
   .cstCard{display:flex;flex-direction:column;gap:2px;padding:7px 8px;margin-bottom:6px;border-radius:8px;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(0,0,0,.12));border:1px solid var(--metal-edge);border-left:2px solid var(--ca);cursor:pointer;transition:all .12s}
@@ -929,13 +926,6 @@
   .cstU{font-size:11px;font-weight:700;padding:3px 7px;border-radius:6px;background:rgba(90,160,255,.12);border:1px solid rgba(120,180,255,.3);color:#cfe0ff;cursor:pointer}
   .cstU.dim{opacity:.35;cursor:not-allowed}
   .cstU b{color:#fff}
-  #cstBar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 10px;font-size:13px}
-  #cstBar .res{font:800 14px 'Rajdhani',sans-serif;font-variant-numeric:tabular-nums;padding:3px 9px;border-radius:7px;border:1px solid var(--metal-edge);background:rgba(0,0,0,.2)}
-  #cstBar .res.cr{color:#ffce6a} #cstBar .res.gs{color:#6fd39a} #cstBar .res.sp{color:#b7a6e6}
-  #cstBar .cbtn{padding:6px 11px;font-size:12px;font-weight:800;border-radius:7px;cursor:pointer;background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.015));border:1px solid var(--metal-edge);color:#dbe3ee}
-  #cstBar .cbtn.on{color:#fff;background:linear-gradient(180deg,#2f7d4a,#173a24);border-color:#46f06a}
-  #cstBar .tally{flex:1 1 100%;font-size:11.5px;color:#9fb0c2;line-height:1.5}
-  #cstBar .tally b{color:#eaf0f8}
   /* 🏗 테크트리 건설 — RTS 배치 맵 + 하단 커맨드 그리드 */
   #vBuild.on{display:flex;flex-direction:column;min-height:0}   /* .on일 때만 표시 — 없으면 .gview{display:none}로 숨김(탭 이탈 시 건설 상단바·시트 잔류 방지) */
   #cstMain{flex:1;min-height:0;width:100%;position:relative;overflow:hidden;padding:0}
@@ -2480,7 +2470,7 @@
     <div class="gview" id="vUpgrade"><canvas id="cvUpgrade"></canvas></div>
     <div class="gview" id="vPlayers"><canvas id="cvPlayer"></canvas></div>
     <div class="gview" id="vBoss"><canvas id="cvBoss"></canvas></div>
-    <div class="gview" id="vBuild"><div id="cstMain"></div><canvas id="cstFog"></canvas><div id="cstLabels"></div><canvas id="techMap3d"></canvas><div id="cstPrev"><canvas id="cstPrevCv"></canvas><div id="cstPrevName"></div><div id="cstPrevInfo"></div><button id="cstPrevX" onclick="cstHidePreview()">✕ 닫기</button></div>
+    <div class="gview" id="vBuild"><div id="cstMain"></div><canvas id="cstFog"></canvas><div id="cstLabels"></div><canvas id="techMap3d"></canvas><div id="cstPrev"><canvas id="cstPrevCv"></canvas><div id="cstPrevName"></div><div id="cstPrevInfo"></div><button id="cstPrevX" onclick="techHidePreview()">✕ 닫기</button></div>
       <!-- ExoMiner식 하단 인터페이스: 슬라이드 시트 + 아이콘 독 + 유닛 지정 해제(메인 deselTop 재사용 디자인) -->
       <div id="btSheet"><button id="btCardCtl" onclick="techCardCycle(event)" title="간소화"></button><div id="btSheetBody"></div></div>
       <div id="btDesel" onclick="techDeselU(event)" title="유닛 지정 해제"><svg viewBox="0 0 24 24" width="26" height="26"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.4"/><line x1="6.2" y1="6.2" x2="17.8" y2="17.8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></div>
@@ -2817,7 +2807,7 @@
       </div>
     </div>
 
-    <div class="bp" id="bpBuild"><div id="cstBar"></div></div>
+    <div class="bp" id="bpBuild"></div>
     <div class="bp" id="bpBattle">
       <div class="btPickHead">⚔ 전투 실험 <span class="sbcSub">눌러 배치 · 드래그로 이동 · 화면 상단 버튼으로 전투 제어</span></div>
       <div class="btSplit">
@@ -6056,79 +6046,6 @@ function renderBldgs(viewId,list,posArr,selId,onSel){ const v=document.getElemen
 // 탭 / 선택 / 커맨드카드
 // ============================================================================
 const ZONE_LABEL={Main:'📍 내 디펜스 구역',Unit:'🏗 유닛 생산 구역',Upgrade:'⚙️ 업그레이드 구역',Players:'👥 다른 플레이어 화면',Boss:'👹 월드 보스방',Battle:'⚔ 전투 실험 구역',Build:'🏗 건설 테스트 구역'};
-// == 건설 테스트(데이터 전용) — 건물 건설·유닛 생산 테크트리 검증(전투 시뮬 없음) ==
-const BUILD_TREE={"union":{"name":"유니온","color":"#5ab0ff","main":"command","buildings":{"command":{"name":"커맨드 센터","tier":1,"credit":400,"gas":0,"time":60,"req":[],"supply":0,"gasNode":false,"main":true,"produces":["worker_human"]},"depot":{"name":"서플라이 디팟","tier":1,"credit":75,"gas":0,"time":20,"req":["command"],"supply":8,"gasNode":false,"main":false},"refinery":{"name":"리파이너리","tier":1,"credit":90,"gas":0,"time":24,"req":["command"],"supply":0,"gasNode":true,"main":false},"barracks":{"name":"배럭스","tier":1,"credit":140,"gas":0,"time":40,"req":["command"],"supply":0,"gasNode":false,"main":false,"produces":["marine","machinegun","medic","ghost"]},"factory":{"name":"팩토리","tier":2,"credit":160,"gas":50,"time":40,"req":["barracks"],"supply":0,"gasNode":false,"main":false,"produces":["racer","goliath","tank"]},"techlab":{"name":"테크랩(부속)","tier":2,"credit":60,"gas":40,"time":24,"req":["barracks"],"supply":0,"gasNode":false,"main":false},"starport":{"name":"스타포트","tier":2,"credit":170,"gas":80,"time":45,"req":["factory"],"supply":0,"gasNode":false,"main":false,"produces":["skyguard","hellfire","pelican","aegis"]},"armory":{"name":"아머리","tier":3,"credit":150,"gas":80,"time":40,"req":["factory"],"supply":0,"gasNode":false,"main":false},"fusioncore":{"name":"퓨전 코어","tier":4,"credit":220,"gas":180,"time":60,"req":["starport","armory"],"supply":0,"gasNode":false,"main":false,"produces":["dreadnought"]}},"units":{"worker_human":{"name":"엔지니어","tier":1,"credit":50,"gas":0,"supply":1,"time":15,"from":"command","req":[],"note":"","role":"일꾼(채취·건설)"},"marine":{"name":"레인저","tier":1,"credit":55,"gas":0,"supply":1,"time":15,"from":"barracks","req":[],"note":"","role":"기본 바이오닉 보병(첫 전투유닛)"},"machinegun":{"name":"발칸","tier":1,"credit":55,"gas":0,"supply":1,"time":15,"from":"barracks","req":["techlab"],"note":"","role":"근접 화염 보병(파이어뱃 · 대군집 스플래시)"},"medic":{"name":"메딕","tier":2,"credit":60,"gas":25,"supply":1,"time":18,"from":"barracks","req":["techlab"],"note":"","role":"바이오닉 힐러(무공격)"},"ghost":{"name":"팬텀","tier":3,"credit":100,"gas":75,"supply":2,"time":24,"from":"barracks","req":["techlab"],"note":"","role":"저격/시전(핵·락다운·EMP)"},"racer":{"name":"레이서","tier":2,"credit":75,"gas":25,"supply":2,"time":20,"from":"factory","req":[],"note":"","role":"기동 메카(견제·라인전)"},"goliath":{"name":"스트라이더","tier":2,"credit":100,"gas":50,"supply":2,"time":22,"from":"factory","req":["armory"],"note":"","role":"대공 메카 워커"},"tank":{"name":"브레이커","tier":3,"credit":175,"gas":100,"supply":3,"time":32,"from":"factory","req":["techlab"],"note":"","role":"시즈 포병(스플래시)"},"skyguard":{"name":"템페스트","tier":3,"credit":150,"gas":100,"supply":3,"time":28,"from":"starport","req":[],"note":"","role":"강력 전투기(공중 주력)"},"hellfire":{"name":"헬파이어","tier":3,"credit":160,"gas":90,"supply":3,"time":30,"from":"starport","req":["armory"],"note":"","role":"폭격기(공중전용 스플래시)"},"pelican":{"name":"펠리컨","tier":2,"credit":100,"gas":25,"supply":3,"time":22,"from":"starport","req":[],"note":"","role":"수송(무공격)"},"aegis":{"name":"이지스","tier":3,"credit":160,"gas":125,"supply":2,"time":30,"from":"starport","req":["techlab"],"note":"","role":"과학함(디텍터 · 서포트 캐스터)"},"dreadnought":{"name":"드레드노트","tier":4,"credit":450,"gas":320,"supply":8,"time":70,"from":"fusioncore","req":[],"note":"","role":"배틀크루저(주포·야마토)"}}},"swarm":{"name":"스웜","color":"#e8824c","main":"hatchery","buildings":{"hatchery":{"name":"부화소 (해처리)","tier":1,"credit":0,"gas":0,"time":0,"req":[],"supply":0,"gasNode":false,"main":true,"produces":["worker_swarm","overlord"]},"spawningpool":{"name":"산란못","tier":1,"credit":150,"gas":0,"time":16,"req":["hatchery"],"supply":0,"gasNode":false,"main":false,"produces":["snapper"]},"gasden":{"name":"가스 소굴","tier":1,"credit":50,"gas":0,"time":12,"req":["hatchery"],"supply":0,"gasNode":true,"main":false},"burrowden":{"name":"둔덕굴","tier":2,"credit":150,"gas":75,"time":24,"req":["spawningpool"],"supply":0,"gasNode":false,"main":false,"produces":["hydra","thornqueen"]},"spire":{"name":"둥지탑","tier":2,"credit":200,"gas":100,"time":28,"req":["burrowden"],"supply":0,"gasNode":false,"main":false,"produces":["stinger","wyvern"]},"queennest":{"name":"군단여왕굴","tier":3,"credit":175,"gas":100,"time":30,"req":["burrowden"],"supply":0,"gasNode":false,"main":false,"produces":["medusa"]},"grandspire":{"name":"대둥지탑","tier":4,"credit":250,"gas":200,"time":40,"req":["spire"],"supply":0,"gasNode":false,"main":false,"produces":["ultralisk","venom","behemoth"]}},"units":{"worker_swarm":{"name":"채집충","tier":1,"credit":50,"gas":0,"supply":1,"time":13,"from":"hatchery","req":[],"note":"","role":"일꾼(채취·건설, 건물로 변태)"},"overlord":{"name":"너울","tier":1,"credit":100,"gas":0,"supply":0,"time":16,"from":"hatchery","req":[],"note":"","role":"부유 감지·수송(디텍터)"},"snapper":{"name":"스내퍼","tier":1,"credit":40,"gas":0,"supply":1,"time":11,"from":"spawningpool","req":[],"note":"","role":"첫 기본 전투유닛(근접~단거리)"},"hydra":{"name":"리퍼","tier":2,"credit":70,"gas":25,"supply":2,"time":15,"from":"burrowden","req":[],"note":"","role":"범용 지상 원거리(주력 사거리)"},"thornqueen":{"name":"베놈퀸","tier":2,"credit":90,"gas":50,"supply":2,"time":17,"from":"burrowden","req":[],"note":"","role":"러커형(잠복 폭격, 스플래시)"},"stinger":{"name":"스팅어","tier":2,"credit":30,"gas":15,"supply":1,"time":12,"from":"spire","req":[],"note":"","role":"공중전용 자폭 스커지"},"wyvern":{"name":"와이번","tier":3,"credit":110,"gas":90,"supply":3,"time":20,"from":"spire","req":[],"note":"","role":"기본 공중(뮤탈 · 진화 베이스)"},"medusa":{"name":"메두사","tier":3,"credit":150,"gas":125,"supply":4,"time":26,"from":"queennest","req":[],"note":"","role":"군단여왕(브루들링 생성 · 처치 스킬)"},"ultralisk":{"name":"저거너트","tier":4,"credit":260,"gas":180,"supply":6,"time":34,"from":"grandspire","req":[],"note":"","role":"최강 지상 근접(대형)"},"venom":{"name":"베놈","tier":4,"credit":60,"gas":60,"supply":3,"time":14,"from":"grandspire","req":[],"note":"와이번 진화","role":"대공 진화체(디바우러)"},"behemoth":{"name":"베히모스","tier":4,"credit":110,"gas":110,"supply":5,"time":18,"from":"grandspire","req":[],"note":"와이번 진화","role":"지상 공성 진화체(가디언)"},"broodling":{"name":"스웜링","tier":1,"credit":0,"gas":0,"supply":0,"time":0,"from":null,"req":[],"note":"메두사 소환(생산X)","role":"메두사 소환 소모품(생산 X)"}}},"aeth":{"name":"에테리얼","color":"#ffc74a","main":"nexus","buildings":{"nexus":{"name":"코어 넥서스","tier":1,"credit":400,"gas":0,"time":60,"req":[],"supply":0,"gasNode":false,"main":true,"produces":["worker_light"]},"pylon":{"name":"파일런","tier":1,"credit":100,"gas":0,"time":18,"req":["nexus"],"supply":8,"gasNode":false,"main":false},"assimilator":{"name":"어시밀레이터","tier":1,"credit":100,"gas":0,"time":20,"req":["nexus"],"supply":0,"gasNode":true,"main":false},"gateway":{"name":"게이트웨이","tier":1,"credit":150,"gas":0,"time":30,"req":["nexus"],"supply":0,"gasNode":false,"main":false,"produces":["blade","dragoon","dark_templar","high_templar"]},"forge":{"name":"포지","tier":1,"credit":120,"gas":0,"time":25,"req":["nexus"],"supply":0,"gasNode":false,"main":false},"cybernetics":{"name":"사이버네틱스 코어","tier":2,"credit":150,"gas":50,"time":30,"req":["gateway"],"supply":0,"gasNode":false,"main":false},"robotics":{"name":"로보틱스 퍼실리티","tier":2,"credit":150,"gas":75,"time":34,"req":["cybernetics"],"supply":0,"gasNode":false,"main":false,"produces":["observer","larva","seraph"]},"stargate":{"name":"스타게이트","tier":3,"credit":150,"gas":100,"time":38,"req":["cybernetics"],"supply":0,"gasNode":false,"main":false,"produces":["falcon","skydancer","kronos","archangel"]},"templar_archive":{"name":"템플러 아카이브","tier":3,"credit":150,"gas":150,"time":40,"req":["cybernetics"],"supply":0,"gasNode":false,"main":false,"produces":["archon"]},"fleet_beacon":{"name":"플릿 비콘","tier":4,"credit":300,"gas":200,"time":50,"req":["stargate"],"supply":0,"gasNode":false,"main":false}},"units":{"worker_light":{"name":"결정체","tier":1,"credit":50,"gas":0,"supply":1,"time":17,"from":"nexus","req":[],"note":"","role":"일꾼(채취·건설)"},"blade":{"name":"워든","tier":1,"credit":110,"gas":0,"supply":2,"time":20,"from":"gateway","req":[],"note":"","role":"기본 근접 전투(질럿 포지션, 첫 전투유닛)"},"dragoon":{"name":"센티넬","tier":2,"credit":125,"gas":50,"supply":2,"time":28,"from":"gateway","req":["cybernetics"],"note":"","role":"원거리 지상/대공 견제(드라군 포지션)"},"dark_templar":{"name":"다크세이지","tier":3,"credit":150,"gas":100,"supply":2,"time":32,"from":"gateway","req":["templar_archive"],"note":"","role":"은신 근접 암살자"},"high_templar":{"name":"하이세이지","tier":3,"credit":100,"gas":150,"supply":2,"time":34,"from":"gateway","req":["templar_archive"],"note":"","role":"사이오닉 시전(스톰)"},"archon":{"name":"보이드","tier":3,"credit":120,"gas":200,"supply":4,"time":30,"from":"templar_archive","req":[],"note":"하이세이지 2 융합","role":"에너지 광역 근접 전차(아콘 포지션)"},"observer":{"name":"와처","tier":2,"credit":75,"gas":75,"supply":1,"time":24,"from":"robotics","req":[],"note":"","role":"은신 탐지 디텍터(무공격 정찰)"},"larva":{"name":"콜로서스","tier":3,"credit":200,"gas":100,"supply":4,"time":36,"from":"robotics","req":[],"note":"","role":"지상 공성(스캐럽 광역)"},"seraph":{"name":"세라프","tier":2,"credit":150,"gas":50,"supply":2,"time":30,"from":"robotics","req":[],"note":"","role":"공중 수송선(셔틀, 무공격)"},"falcon":{"name":"팔콘","tier":3,"credit":150,"gas":75,"supply":2,"time":26,"from":"stargate","req":[],"note":"","role":"공중 정찰전투기(스카웃 포지션)"},"skydancer":{"name":"스카이댄서","tier":3,"credit":175,"gas":125,"supply":3,"time":36,"from":"stargate","req":[],"note":"","role":"대공 특화 공중전투기(커세어 포지션)"},"kronos":{"name":"크로노스","tier":4,"credit":400,"gas":300,"supply":8,"time":60,"from":"stargate","req":["fleet_beacon"],"note":"","role":"캡탈 공중함(아비터 포지션, 스플래시+지원마법)"},"archangel":{"name":"아크엔젤","tier":4,"credit":500,"gas":350,"supply":10,"time":75,"from":"stargate","req":["fleet_beacon"],"note":"","role":"메가 캡탈 모함(캐리어/모함 포지션)"}}}};
-const CST_START={credit:1500, gas:1000};
-function cstInit(race){ if(!BUILD_TREE[race]) race='union'; const T=BUILD_TREE[race];
-  G.cst={ race:race, credit:CST_START.credit, gas:CST_START.gas, inf:false, supCap:10, built:{}, units:{} };
-  G.cst.built[T.main]=1; }
-function cstEnsure(){ if(!G.cst) cstInit('union'); cstRender(); }
-function cstSwitch(race){ cstInit(race); cstHidePreview(); cstRender(); }
-function cstReset(){ const inf=G.cst?G.cst.inf:false, race=G.cst?G.cst.race:'union'; cstInit(race); G.cst.inf=inf; cstRender(); }
-function cstToggleInf(){ if(!G.cst) return; G.cst.inf=!G.cst.inf; cstRender(); }
-function cstSupUsed(){ if(!G.cst) return 0; const T=BUILD_TREE[G.cst.race]; let u=0; for(const k in G.cst.units){ const d=T.units[k]; if(d) u+=G.cst.units[k]*(d.supply||0); } return u; }
-function cstReqMet(req){ for(const r of req){ if(!(G.cst.built[r]>0)) return false; } return true; }
-function cstCanBuild(bk){ const T=BUILD_TREE[G.cst.race], b=T.buildings[bk]; if(!b) return {ok:false};
-  if(!cstReqMet(b.req)) return {ok:false, why:'필요 '+b.req.map(r=>T.buildings[r].name).join('·')};
-  if(!G.cst.inf && (G.cst.credit<b.credit || G.cst.gas<b.gas)) return {ok:false, why:'자원 부족'};
-  return {ok:true}; }
-function cstCanProduce(uk){ const T=BUILD_TREE[G.cst.race], u=T.units[uk]; if(!u||!u.from) return {ok:false, why:(u&&u.note)?u.note:'생산 불가'};
-  if(!(G.cst.built[u.from]>0)) return {ok:false, why:'건물 '+T.buildings[u.from].name};
-  if(!cstReqMet(u.req)) return {ok:false, why:'선행 '+u.req.map(r=>T.buildings[r].name).join('·')};
-  if(!G.cst.inf && (G.cst.credit<u.credit || G.cst.gas<u.gas)) return {ok:false, why:'자원 부족'};
-  if(cstSupUsed()+(u.supply||0) > G.cst.supCap) return {ok:false, why:'인구 부족'};
-  return {ok:true}; }
-const CST_MODEL={
-  swarm:{ hatchery:'swarm_hatchery', spawningpool:'swarm_spawning_pool', gasden:'swarm_extractor', burrowden:'swarm_hydralisk_den', spire:'swarm_spire', queennest:'swarm_queens_nest', grandspire:'swarm_greater_spire' },
-  aeth:{ nexus:'aetherial_nexus', pylon:'aetherial_pylon', assimilator:'aetherial_assimilator', gateway:'aetherial_gatewa', forge:'aetherial_forge', cybernetics:'aetherial_cybernetics_core', robotics:'aetherial_robotics_facility', stargate:'aetherial_stargate', templar_archive:'aetherial_templar_archives', fleet_beacon:'aetherial_fleet_beacon' },
-  union:{ command:'union_command_center', depot:'union_supply_depot', refinery:'union_refinery', barracks:'union_barracks', factory:'union_factory', techlab:'union_machine_shop', starport:'union_starport', armory:'union_armory', fusioncore:'union_science_facility' }   // 유니온 9종(엔지니어링 베이 제외)
-};
-function cstShowPreview(bk){ if(!G.cst) return; const T=BUILD_TREE[G.cst.race], b=T&&T.buildings[bk]; if(!b) return;
-  const mk=(CST_MODEL[G.cst.race]||{})[bk];
-  const prev=document.getElementById('cstPrev'), cv=document.getElementById('cstPrevCv'), nm=document.getElementById('cstPrevName'), info=document.getElementById('cstPrevInfo'), main=document.getElementById('cstMain');
-  if(!prev||!cv) return;
-  if(!mk || !(window.M3D&&M3D.cstShow)){ cstHidePreview(); return; }   // 모델 없는 건물=프리뷰 없음
-  prev.classList.add('on'); if(main) main.classList.add('hasPrev'); if(nm) nm.textContent=b.name;
-  if(info){ const prod=(b.produces&&b.produces.length)?('생산: '+b.produces.map(function(p){return T.units[p]?T.units[p].name:p;}).join(', ')):'생산 없음'; info.innerHTML='T'+b.tier+' · '+b.credit+'C'+(b.gas?(' · '+b.gas+'G'):'')+'<br>'+_cstEsc(prod); }
-  M3D.cstShow(cv, mk); }
-function cstHidePreview(){ const prev=document.getElementById('cstPrev'), main=document.getElementById('cstMain'); if(prev) prev.classList.remove('on'); if(main) main.classList.remove('hasPrev'); if(window.M3D&&M3D.cstStop) M3D.cstStop(); }
-function cstBuild(bk){ if(!G.cst) return; cstShowPreview(bk); const c=cstCanBuild(bk); if(!c.ok){ if(typeof toast==='function') toast('⛔ '+(c.why||'건설 불가')); return; }
-  const b=BUILD_TREE[G.cst.race].buildings[bk]; if(!G.cst.inf){ G.cst.credit-=b.credit; G.cst.gas-=b.gas; }
-  G.cst.built[bk]=(G.cst.built[bk]||0)+1; G.cst.supCap+=(b.supply||0); if(typeof playSfx==='function') playSfx('ui_confirm'); cstRender(); }
-function cstProduce(uk){ if(!G.cst) return; const c=cstCanProduce(uk); if(!c.ok){ if(typeof toast==='function') toast('⛔ '+(c.why||'생산 불가')); return; }
-  const u=BUILD_TREE[G.cst.race].units[uk]; if(!G.cst.inf){ G.cst.credit-=u.credit; G.cst.gas-=u.gas; }
-  G.cst.units[uk]=(G.cst.units[uk]||0)+1; if(uk==='overlord') G.cst.supCap+=8; if(typeof playSfx==='function') playSfx('ui_confirm'); cstRender(); }
-function _cstEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function cstRender(){ if(!G.cst) return; const T=BUILD_TREE[G.cst.race]; const main=document.getElementById('cstMain'), bar=document.getElementById('cstBar'); if(!main||!bar) return; const ca=T.color;
-  let tabs='<div class="cstTabs" style="--ca:'+ca+'">';
-  ['union','swarm','aeth'].forEach(function(rk){ tabs+='<div class="cstTab'+(rk===G.cst.race?' on':'')+'" style="--ca:'+BUILD_TREE[rk].color+'" onclick="cstSwitch(\''+rk+'\')">'+BUILD_TREE[rk].name+'</div>'; });
-  tabs+='</div>';
-  const bks=Object.keys(T.buildings).sort(function(a,b){ return T.buildings[a].tier-T.buildings[b].tier; });
-  let bcol='<div class="cstCol"><h4>건물 · 건설</h4>';
-  bks.forEach(function(bk){ const b=T.buildings[bk], owned=G.cst.built[bk]>0, c=cstCanBuild(bk), dim=!c.ok&&!owned;
-    const tag=b.main?'본진':(b.supply?'+보급'+b.supply:(b.gasNode?'가스':''));
-    bcol+='<div class="cstCard'+(owned?' owned':'')+(dim?' dim':'')+'" style="--ca:'+ca+'" onclick="cstBuild(\''+bk+'\')">'
-      +'<div class="cn">'+_cstEsc(b.name)+(owned?' <span class="ct">×'+G.cst.built[bk]+'</span>':' <span class="ct">T'+b.tier+'</span>')+'</div>'
-      +'<div class="cc"><span class="cr">'+b.credit+'C</span>'+(b.gas?' <span class="gs">'+b.gas+'G</span>':'')+(tag?' · '+tag:'')+((!owned&&c.why)?' · <span class="rq">'+_cstEsc(c.why)+'</span>':'')+'</div>'
-      +((b.produces&&b.produces.length)?'<div class="cc" style="opacity:.65">생산: '+b.produces.map(function(p){ return T.units[p]?T.units[p].name:p; }).join(', ')+'</div>':'')
-      +'</div>'; });
-  bcol+='</div>';
-  let pcol='<div class="cstCol"><h4>유닛 · 생산</h4>';
-  bks.filter(function(bk){ return T.buildings[bk].produces&&T.buildings[bk].produces.length; }).forEach(function(bk){ const b=T.buildings[bk], bBuilt=G.cst.built[bk]>0;
-    pcol+='<div class="cstCard'+(bBuilt?' owned':' dim')+'" style="--ca:'+ca+';cursor:default">'
-      +'<div class="cn">'+_cstEsc(b.name)+(bBuilt?'':' <span class="ct">미건설</span>')+'</div><div class="cprod">';
-    b.produces.forEach(function(uk){ const u=T.units[uk], pc=cstCanProduce(uk), cnt=G.cst.units[uk]||0;
-      pcol+='<span class="cstU'+(pc.ok?'':' dim')+'" onclick="cstProduce(\''+uk+'\')" title="'+_cstEsc(u.role)+(pc.why?' — '+_cstEsc(pc.why):'')+'">'+_cstEsc(u.name)+' <span style="opacity:.65">'+u.credit+'C'+(u.gas?'/'+u.gas+'G':'')+'</span>'+(cnt?' <b>×'+cnt+'</b>':'')+'</span>'; });
-    pcol+='</div></div>'; });
-  const spec=Object.keys(T.units).filter(function(uk){ return T.units[uk].note; });
-  if(spec.length) pcol+='<div class="cc" style="opacity:.6;margin-top:2px">※ '+spec.map(function(uk){ return T.units[uk].name+'='+T.units[uk].note; }).join(' / ')+'</div>';
-  pcol+='</div>';
-  main.innerHTML=tabs+'<div class="cstGrid">'+bcol+pcol+'</div>';
-  const supU=cstSupUsed(); const un=Object.keys(G.cst.units).filter(function(k){ return G.cst.units[k]>0; }), bd=Object.keys(G.cst.built).filter(function(k){ return G.cst.built[k]>0; });
-  const tally='<div class="tally"><b>유닛</b> '+(un.length?un.map(function(k){ return T.units[k].name+'×'+G.cst.units[k]; }).join(', '):'—')+'　<b>건물</b> '+bd.map(function(k){ return T.buildings[k].name+(G.cst.built[k]>1?'×'+G.cst.built[k]:''); }).join(', ')+'</div>';
-  bar.innerHTML='<span class="res cr">'+(G.cst.inf?'∞':G.cst.credit)+' C</span><span class="res gs">'+(G.cst.inf?'∞':G.cst.gas)+' G</span><span class="res sp">인구 '+supU+'/'+G.cst.supCap+'</span>'
-    +'<span class="cbtn'+(G.cst.inf?' on':'')+'" onclick="cstToggleInf()">⚡ 빠른무한</span><span class="cbtn" onclick="cstReset()">↺ 리셋</span>'+tally;
-}
 function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 컴퓨터가 싸운다: 직스 탭 동작
   if(G.tab===id && id!=='Build'){   // 같은 탭 재탭 = 슬라이드 시트 열고/닫기(건설은 선택 기반)
     if(G.sandbox && (id==='Main'||id==='Upgrade')){   // 관리자 메인/업그레이드: 무선택이면 재탭 무반응(빈 시트 안 올라오게)
@@ -6150,7 +6067,7 @@ function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 
   requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220);
   document.getElementById('zoneLabel').textContent=ZONE_LABEL[id];
   document.body.classList.toggle('cstMode', id==='Build');   // 건설 탭: 게임 HUD 숨김
-  if(id==='Build' && typeof techUIEnsure==='function') techUIEnsure(); else { if(typeof cstHidePreview==='function') cstHidePreview(); if(window.M3D&&M3D.techMap3DStop) M3D.techMap3DStop();
+  if(id==='Build' && typeof techUIEnsure==='function') techUIEnsure(); else { if(typeof techHidePreview==='function') techHidePreview(); if(window.M3D&&M3D.techMap3DStop) M3D.techMap3DStop();
     if(G.tech){ G.tech.sel=null; G.tech.selU=[]; G.tech.arm=null; if(G.tech.sheet){ G.tech.sheet.open=false; G.tech.sheet.sec=null; } } G._weldFx=null; }   // 건설 진입 렌더 / 이탈 시 프리뷰·라이브3D 정지 + 지정·시트·용접스파크 해제
   deselectUnit(); G.prodB=null; G.techB=null; G.mergeMode=false; { const mb=document.getElementById('mergeBtn'); if(mb) mb.classList.remove('on'); }
   if(typeof clearShopProfile==='function') clearShopProfile();   // 유닛뽑기 중립 선택 해제
