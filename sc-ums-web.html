@@ -10493,17 +10493,17 @@ function _techSpawnPos(be, uid){ const race=G.tech.race, f=(typeof _techFoot==='
     else if(t<eB+eR+eT){ px=cx+Hw-(t-eB-eR); py=cy-Hh; }       // 상단(우→좌)
     else { px=cx-Hw; py=cy-Hh+(t-eB-eR-eT); }                  // 좌측(위→아래)
     return { px, py }; };
-  const occ=G.tech.ents.filter(e=>e.type==='unit'||e.type==='worker'), occR2=(uRp*0.9)*(uRp*0.9);   // 슬롯 반경 안에 유닛 있으면 점유로 간주
-  let sp=posAt(0);   // 좌하단→반시계로 스캔해 '비어있는 첫 슬롯'에 소환 → 유닛을 치우면 그 앞 슬롯부터 다시 채움(카운터 이어가기 X)
-  for(let idx=0; idx<400; idx++){ const p=posAt(idx); if(!occ.some(u=>{ const ddx=u.x*W-p.px, ddy=u.y*H-p.py; return ddx*ddx+ddy*ddy<occR2; })){ sp=p; break; } }
-  return { x:Math.max(0.04,Math.min(0.96,sp.px/W)), y:Math.max(0.14,Math.min(0.96,sp.py/H)) }; }
+  const used=new Set(); for(const e of G.tech.ents){ if((e.type==='unit'||e.type==='worker') && e._spawnOf===be.eid && e._spawnSlot!=null) used.add(e._spawnSlot); }   // 이 건물 소속 소환 슬롯을 '위치'가 아닌 '슬롯번호'로 판정 → 유닛이 밀려도(분리) 뭉치지 않음
+  let idx=0; while(used.has(idx)) idx++;   // 가장 낮은 빈 슬롯 = 사각 테두리를 좌하단→반시계로 순차 채움(빠진 자리 재사용)
+  const sp=posAt(idx);
+  return { slot:idx, x:Math.max(0.04,Math.min(0.96,sp.px/W)), y:Math.max(0.14,Math.min(0.96,sp.py/H)) }; }
 function techFinishProduce(q, be){ const race=G.tech.race; G.tech.units[q.id]=(G.tech.units[q.id]||0)+1; if(q.supply) G.tech.supCap+=q.supply;
   be=be||G.tech.ents.find(e=>e.type==='bldg'&&e.bk===q.bk); const p=be?_techSpawnPos(be,q.id):{x:0.5,y:0.6}, _ex=p.x, _ey=p.y;
   const _isWk=(q.id===(TECH_WORKER[race]||'worker_human'));   // 생산된 일꾼도 초기 일꾼과 동일한 type:'worker'(건설 가능)
   const _nu=_isWk?{eid:G.tech.eseq++, type:'worker', x:_ex, y:_ey}:{eid:G.tech.eseq++, type:'unit', uid:q.id, x:_ex, y:_ey};
+  if(be && p.slot!=null){ _nu._spawnOf=be.eid; _nu._spawnSlot=p.slot; }   // 소환 슬롯 점유 표시(사각 테두리 순차 채움 · 이동/사망 시 슬롯 반환)
   G.tech.ents.push(_nu);
-  if(be){ const gp = be._rally || _techDefaultGather(be); const d=_techRallyDest(be, _nu, gp); if(typeof _techRoute==='function') _techRoute(_nu, d.x, d.y); else { _nu.tx=d.x; _nu.ty=d.y; } } }   // 랠리 또는 기본 집결(건물 아래) 대형 슬롯으로 반시계 나선 채움(한 점에 안 뭉침)
-function _techDefaultGather(be){ const f=(typeof _techFoot==='function')?_techFoot(G.tech.race,be.bk):{w:2,h:2}; return { x:Math.max(0.04,Math.min(0.96,be.x)), y:Math.max(0.14,Math.min(0.96,be.y+(f.h/2)*_techCH()+0.045)) }; }   // 🚩 없을 때 기본 집결 = 건물 바로 아래
+  if(be&&be._rally){ const d=_techRallyDest(be, _nu, be._rally); if(typeof _techRoute==='function') _techRoute(_nu, d.x, d.y); else { _nu.tx=d.x; _nu.ty=d.y; } _nu._spawnOf=null; _nu._spawnSlot=null; } }   // 🚩 랠리 지정 시 = 랠리 대형으로 이동(소환 슬롯 미사용)
 function _ringSlotN(i, r){ if(i<=0) return {dx:0,dy:0}; let ring=1, idx=i;   // i번째 동심원 대형 슬롯 — 반시계 방향으로 링을 채워 나감
   while(true){ const cnt=Math.floor(Math.PI*2*ring*0.9)||6; if(idx<=cnt){ const a=((idx-1)/cnt)*Math.PI*2+ring*0.5; return {dx:Math.cos(a)*ring*r, dy:-Math.sin(a)*ring*r}; } idx-=cnt; ring++; } }   // dy 반전=화면상 반시계
 function _techRallyDest(be, nu, gp){ const r=gp||be._rally, GWp=GW||390, GHp=GH||390;   // 대형 목적지 — 이 건물 소속(_rallyOf) 유닛 슬롯 중 가장 낮은 빈 슬롯 배정(빙글빙글 나선 채움, 죽거나 이동해 빠진 자리 재사용)
@@ -11266,7 +11266,7 @@ function _techRingSlots(list){ const slots=[{dx:0,dy:0}]; if(list.length<=1) ret
     for(let k=0;k<n&&slots.length<list.length;k++){ const a=(k/n)*Math.PI*2+ring*0.5; slots.push({dx:Math.cos(a)*ring*r, dy:Math.sin(a)*ring*r}); } ring++; }
   return slots; }
 function _techAssignMove(wx,wy){ const all=(G.tech.selU||[]).map(id=>G.tech.ents.find(e=>e.eid===id)).filter(e=>e&&(e.type==='unit'||e.type==='worker'));
-  all.forEach(e=>{ if(e.type==='worker'&&e._gKind) _techReleaseGather(e); e._rallyOf=null; e._rallySlot=null; });   // 이동 명령 = 채취 취소 + 랠리 소속 해제(그 슬롯은 다음 생산 유닛이 재사용)
+  all.forEach(e=>{ if(e.type==='worker'&&e._gKind) _techReleaseGather(e); e._rallyOf=null; e._rallySlot=null; e._spawnOf=null; e._spawnSlot=null; });   // 이동 명령 = 채취 취소 + 랠리·소환 슬롯 반환(그 슬롯은 다음 생산 유닛이 재사용)
   const sel=all.filter(e=>!_techBuildLocked(e));   // 건설 중 일꾼은 이동 잠금(일시정지해야 이동 가능)
   if(!sel.length){ if(all.length && !_btMoved && typeof toast==='function') toast('⏸ 건설 중 — 일꾼 프로필의 일시정지 후 이동'); return; }
   const cx=Math.max(0.04,Math.min(0.96,wx)), cy=Math.max(0.16,Math.min(0.96,wy));
