@@ -5129,11 +5129,19 @@ function fogComputeVision(){ const f=G&&G.fog; if(!f||!f.on) return; const asp=(
   for(let i=0;i<f.state.length;i++){ if(f.state[i]===2) f.state[i]=1; }   // 활성(2)→탐색(1) 강등 후 재점등
   for(const v of _fogViewers()) _fogReveal(v.nx, v.ny, v.sight, v.air, f, asp); }
 function _fogBuffer(f){ if(!f._buf){ f._buf=document.createElement('canvas'); f._buf.width=f.cols; f._buf.height=f.rows; f._bx=f._buf.getContext('2d'); f._bi=f._bx.createImageData(f.cols,f.rows); }   // 저해상도 안개 버퍼(칸=1px) → 확대 시 양선형 보간으로 부드럽게
-  const d=f._bi.data; for(let i=0,p=0;i<f.state.length;i++,p+=4){ const s=f.state[i]; d[p]=2; d[p+1]=3; d[p+2]=8; d[p+3]=(s===0)?247:(s===1?128:0); }
+  const _tgt=(s)=>(s===0)?247:(s===1?128:0);   // 미탐색=247 / 탐색=128 / 활성=0(투명)
+  if(!f.ren||f.ren.length!==f.state.length){ f.ren=new Float32Array(f.state.length); for(let i=0;i<f.state.length;i++) f.ren[i]=_tgt(f.state[i]); }   // 렌더 알파(부드러운 전이) — 최초엔 상태와 일치
+  const now=(typeof performance!=='undefined'&&performance.now)?performance.now():0, dts=f._renT?Math.min(0.1,(now-f._renT)/1000):0.016; f._renT=now;
+  const FADE=1-Math.exp(-dts/0.4);   // 어두워짐 시상수 ≈0.4s(살짝 늘어짐) · 밝아짐은 즉시
+  const d=f._bi.data;
+  for(let i=0,p=0;i<f.state.length;i++,p+=4){ const tg=_tgt(f.state[i]); let r=f.ren[i];
+    if(tg<=r) r=tg; else r+=(tg-r)*FADE; f.ren[i]=r;   // 밝아짐(알파↓)=즉시 스냅 / 어두워짐(알파↑)=지연 페이드
+    d[p]=2; d[p+1]=3; d[p+2]=8; d[p+3]=r; }
   f._bx.putImageData(f._bi,0,0); return f._buf; }
 function drawFog(ctx,W,H){ const f=G&&G.fog; if(!f||!f.on) return;   // 🌫️ 안개 오버레이 — 검정=미탐색 / 회색=탐색 / 투명=활성. 저해상도 버퍼를 양선형 확대 → 부드러운 그라데이션
   const buf=_fogBuffer(f), sm=ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled=true; if(ctx.imageSmoothingQuality) ctx.imageSmoothingQuality='high';
-  ctx.drawImage(buf, 0, 0, W, H); ctx.imageSmoothingEnabled=sm; }
+  const _blur=Math.max(2,(W/f.cols)*0.9), _hf=('filter'in ctx); if(_hf) ctx.filter='blur('+_blur.toFixed(1)+'px)';   // 시야 테두리 더 둥글고 부드럽게
+  ctx.drawImage(buf, 0, 0, W, H); if(_hf) ctx.filter='none'; ctx.imageSmoothingEnabled=sm; }
 // ── 🌫️ 건설 구역(관리 탭) 전장의 안개 — G.tech.fog(메인과 독립). 🌫️ 버튼으로 토글, 내 워커·건물이 시야 밝힘 ──
 function techFogInit(on){ if(!G.tech) return; const cols=FOG_COLS, rows=FOG_ROWS;
   const height=new Uint8Array(cols*rows), H=TECH_HILL;   // ⛰ 좌하단 언덕 = 고지대(height h)
@@ -5160,8 +5168,9 @@ function techFogDraw(){ const cv=document.getElementById('cstFog'); if(!cv) retu
   const buf=_fogBuffer(f), tl=_techW2S(0,0), br=_techW2S(1,1);   // 격자 전체(월드 0~1)를 뷰 변환 사각으로 → 양선형 확대(부드러움)
   ctx.save(); ctx.beginPath(); ctx.rect(0,34,W,H-34); ctx.clip();   // 상단바(탭·자원) 위엔 안개 안 그림
   ctx.imageSmoothingEnabled=true; if(ctx.imageSmoothingQuality) ctx.imageSmoothingQuality='high';
+  const _cellPx=(br.x-tl.x)*W/f.cols, _blur=Math.max(2,_cellPx*0.9), _hf=('filter'in ctx); if(_hf) ctx.filter='blur('+_blur.toFixed(1)+'px)';   // 시야 테두리 더 둥글고 부드럽게
   ctx.drawImage(buf, tl.x*W, tl.y*H, (br.x-tl.x)*W, (br.y-tl.y)*H);
-  ctx.restore(); }
+  if(_hf) ctx.filter='none'; ctx.restore(); }
 function techFog(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;
   if(!G.tech.fog) techFogInit(); G.tech.fog.on=!G.tech.fog.on; if(G.tech.fog.on) techFogCompute();
   if(typeof playSfx==='function') playSfx('ui_open'); techUIRender(); }
@@ -10493,10 +10502,11 @@ function techFinishProduce(q, be){ const race=G.tech.race; G.tech.units[q.id]=(G
   const _isWk=(q.id===(TECH_WORKER[race]||'worker_human'));   // 생산된 일꾼도 초기 일꾼과 동일한 type:'worker'(건설 가능)
   const _nu=_isWk?{eid:G.tech.eseq++, type:'worker', x:_ex, y:_ey}:{eid:G.tech.eseq++, type:'unit', uid:q.id, x:_ex, y:_ey};
   G.tech.ents.push(_nu);
-  if(be&&be._rally){ const d=_techRallyDest(be, _nu); if(typeof _techRoute==='function') _techRoute(_nu, d.x, d.y); else { _nu.tx=d.x; _nu.ty=d.y; } } }   // 🚩 랠리: 대형 슬롯으로 간격 맞춰 이동(한 점에 안 뭉침)
+  if(be){ const gp = be._rally || _techDefaultGather(be); const d=_techRallyDest(be, _nu, gp); if(typeof _techRoute==='function') _techRoute(_nu, d.x, d.y); else { _nu.tx=d.x; _nu.ty=d.y; } } }   // 랠리 또는 기본 집결(건물 아래) 대형 슬롯으로 반시계 나선 채움(한 점에 안 뭉침)
+function _techDefaultGather(be){ const f=(typeof _techFoot==='function')?_techFoot(G.tech.race,be.bk):{w:2,h:2}; return { x:Math.max(0.04,Math.min(0.96,be.x)), y:Math.max(0.14,Math.min(0.96,be.y+(f.h/2)*_techCH()+0.045)) }; }   // 🚩 없을 때 기본 집결 = 건물 바로 아래
 function _ringSlotN(i, r){ if(i<=0) return {dx:0,dy:0}; let ring=1, idx=i;   // i번째 동심원 대형 슬롯 — 반시계 방향으로 링을 채워 나감
   while(true){ const cnt=Math.floor(Math.PI*2*ring*0.9)||6; if(idx<=cnt){ const a=((idx-1)/cnt)*Math.PI*2+ring*0.5; return {dx:Math.cos(a)*ring*r, dy:-Math.sin(a)*ring*r}; } idx-=cnt; ring++; } }   // dy 반전=화면상 반시계
-function _techRallyDest(be, nu){ const r=be._rally, GWp=GW||390, GHp=GH||390;   // 랠리 대형 목적지 — 이 랠리 소속(_rallyOf) 유닛 슬롯 중 가장 낮은 빈 슬롯 배정(빙글빙글 나선 채움, 죽거나 이동해 빠진 자리 재사용)
+function _techRallyDest(be, nu, gp){ const r=gp||be._rally, GWp=GW||390, GHp=GH||390;   // 대형 목적지 — 이 건물 소속(_rallyOf) 유닛 슬롯 중 가장 낮은 빈 슬롯 배정(빙글빙글 나선 채움, 죽거나 이동해 빠진 자리 재사용)
   const used=new Set(); for(const e of G.tech.ents){ if(e===nu||(e.type!=='unit'&&e.type!=='worker')) continue; if(e._rallyOf===be.eid && e._rallySlot!=null) used.add(e._rallySlot); }
   let n=0; while(used.has(n)) n++;   // 가장 낮은 빈 슬롯(연속 채움 → 오른쪽 위에서 뭉치지 않고 계속 바깥으로)
   nu._rallyOf=be.eid; nu._rallySlot=n;
@@ -10591,6 +10601,10 @@ function techMoveTrails(dt){ if(typeof FX==='undefined'||typeof emitMoveTrail===
     if(sp>0.004) emitMoveTrail(G._techFx, gm, px, vx/sp, vy/sp, 1, dt);
     else if(typeof e.face==='number') emitMoveTrail(G._techFx, gm, px, Math.sin(e.face), Math.cos(e.face), 1, dt);
     e._mtT=px._mtT; }
+  if(typeof fxOff!=='function'||!fxOff()){ for(const e of G.tech.ents){ if(e.type!=='bldg'||!e._lifted||(e._liftPhase!=='rising'&&e._liftPhase!=='descending')) continue;   // 🛫 부양/착륙 먼지 — 상승·하강 중 발판에서 피어오름
+    e._smkT=(e._smkT||0)-dt; if(e._smkT>0) continue; e._smkT=0.05;
+    const _f=(typeof _techFoot==='function')?_techFoot(G.tech.race,e.bk):{w:2,h:2}, _fw=_f.w*_techCW()*z, _bx=(e.x-v.x)*z+0.5, _by=(e.y-v.y)*z+0.5+_f.h*_techCH()*z*0.34;   // 발판 하단(지면)
+    if(typeof FX!=='undefined'&&FX.smoke){ FX.smoke(G._techFx, _bx+(Math.random()-0.5)*_fw, _by); FX.smoke(G._techFx, _bx+(Math.random()-0.5)*_fw, _by); } } }
   FX.advance(G._techFx, dt);
   for(const e of G.tech.ents){ if(e.type!=='worker'||!e._working||e._inGas) continue;
     if(_techEntKey(e)==='worker_human'){ _techEmitWeld(e, TECH_MINE_FX.union); }   // 🔧 유니온 엔지니어 = 건설·채취 용접 스파크
@@ -10776,7 +10790,7 @@ function _techExplodeBldg(e){ if(G._techFx && typeof FX!=='undefined' && FX.deat
   e._dead=true; if(typeof toast==='function') toast('💥 착륙 지점 충돌 — 건물 파괴'); }
 function techTick(dt){ if(!G.tech) return; let active=false, done=false;
   const _vmoving=techViewTick(dt);   // 🎥 부드러운 줌/팬 보간(메인맵과 동일) — 애니메이션 중이면 매 프레임 재렌더
-  if(G.tech.fog && G.tech.fog.on){ G.tech.fog.t=(G.tech.fog.t||0)+dt; if(G.tech.fog.t>=0.1){ G.tech.fog.t=0; techFogCompute(); techFogDraw(); } }   // 🌫️ 건설 안개 갱신(~10/s, 캔버스만 재그림)
+  if(G.tech.fog && G.tech.fog.on){ G.tech.fog.t=(G.tech.fog.t||0)+dt; if(G.tech.fog.t>=0.1){ G.tech.fog.t=0; techFogCompute(); } techFogDraw(); }   // 🌫️ 시야 계산은 ~10/s, 그리기는 매 프레임(어두워짐 페이드 부드럽게)
   for(const e of G.tech.ents){ if(e.type==='bldg'&&e.bt>0){ const _frozen=e._bpause||(_techNeedsPower(e.bk)&&!_techPowered(e.x,e.y));   // 일시정지·블랙아웃 = 완전 정지(카운트다운·재렌더 불필요)
     if(!e.waiting&&!_frozen){ e.bt=Math.max(0,e.bt-dt); if(e.bt<=0){ techFinishBuild(e); done=true; } }
     if(!_frozen) active=true; } }   // 얼어붙은 건물은 active 제외 → 영구 매프레임 재렌더(=클릭 먹힘 방지) 차단. 진행·일꾼대기만 재렌더
