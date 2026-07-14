@@ -1005,11 +1005,12 @@
     display:flex;align-items:flex-start;justify-content:flex-start}
   .bHill .hillLbl{font:800 9px/1 sans-serif;color:#ecdbad;text-shadow:0 1px 2px #000;letter-spacing:.5px;padding:3px 6px}
   .bLiftShadow{position:absolute;z-index:1;transform:translate(-50%,-50%);background:radial-gradient(ellipse at 50% 50%,rgba(0,0,0,.6),rgba(0,0,0,0) 68%);border-radius:50%;pointer-events:none}   /* 🛫 부양 건물 지면 그림자 */
-  .bRallyLine{position:absolute;height:0;border-top:2px dashed rgba(255,200,90,.6);transform-origin:0 50%;pointer-events:none;z-index:9}   /* 🚩 건물→랠리 점선 */
-  .bRallyLine.hot{border-top-color:rgba(255,214,110,.95)}
-  .bRallyFlag{position:absolute;transform:translate(-50%,-90%);font-size:18px;pointer-events:none;z-index:10;filter:drop-shadow(0 1px 2px rgba(0,0,0,.7))}
-  .bRallyFlag.hot{animation:rallyBob .8s ease-in-out infinite}
-  @keyframes rallyBob{0%,100%{transform:translate(-50%,-90%)}50%{transform:translate(-50%,-108%)}}
+  .bRallyLine{position:absolute;height:2px;background:repeating-linear-gradient(90deg,rgba(70,240,106,.7) 0 4px,transparent 4px 11px);transform-origin:0 50%;pointer-events:none;z-index:9}   /* 🟢 건물→랠리 얇은 듬성 초록 점선 */
+  .bRallyLine.hot{background:repeating-linear-gradient(90deg,rgba(110,255,140,.95) 0 4px,transparent 4px 11px)}
+  .bRallyMark{position:absolute;width:22px;height:22px;transform:translate(-50%,-50%);pointer-events:none;z-index:10;filter:drop-shadow(0 0 3px rgba(70,240,106,.6))}   /* 🟢 초록 원+점(이동 지시자) */
+  .bRallyMark svg{width:100%;height:100%;display:block}
+  .bRallyMark.hot{animation:rallyPulse .9s ease-in-out infinite}
+  @keyframes rallyPulse{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:1}50%{transform:translate(-50%,-50%) scale(1.18);opacity:.75}}
   .bMineral{position:absolute;z-index:2;pointer-events:none;box-sizing:border-box;border:1.5px solid rgba(90,190,255,.6);border-radius:5px;   /* 💎 미네랄 덩어리 */
     background:radial-gradient(ellipse at 50% 42%,rgba(96,190,255,.28),rgba(50,120,220,.14) 62%,rgba(24,60,130,.07));
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0px}
@@ -10492,7 +10493,17 @@ function techFinishProduce(q, be){ const race=G.tech.race; G.tech.units[q.id]=(G
   const _isWk=(q.id===(TECH_WORKER[race]||'worker_human'));   // 생산된 일꾼도 초기 일꾼과 동일한 type:'worker'(건설 가능)
   const _nu=_isWk?{eid:G.tech.eseq++, type:'worker', x:_ex, y:_ey}:{eid:G.tech.eseq++, type:'unit', uid:q.id, x:_ex, y:_ey};
   G.tech.ents.push(_nu);
-  if(be&&be._rally){ if(typeof _techRoute==='function') _techRoute(_nu, be._rally.x, be._rally.y); else { _nu.tx=be._rally.x; _nu.ty=be._rally.y; } } }   // 🚩 랠리 지정 시 생성 유닛 자동 이동
+  if(be&&be._rally){ const d=_techRallyDest(be, _nu); if(typeof _techRoute==='function') _techRoute(_nu, d.x, d.y); else { _nu.tx=d.x; _nu.ty=d.y; } } }   // 🚩 랠리: 대형 슬롯으로 간격 맞춰 이동(한 점에 안 뭉침)
+function _ringSlotN(i, r){ if(i<=0) return {dx:0,dy:0}; let ring=1, idx=i;   // i번째 동심원 대형 슬롯(메인 _techRingSlots와 동일 배치)
+  while(true){ const cnt=Math.floor(Math.PI*2*ring*0.9)||6; if(idx<=cnt){ const a=((idx-1)/cnt)*Math.PI*2+ring*0.5; return {dx:Math.cos(a)*ring*r, dy:Math.sin(a)*ring*r}; } idx-=cnt; ring++; } }
+function _techRallyDest(be, nu){ const r=be._rally, GWp=GW||390, GHp=GH||390, R=110;   // 랠리 지점 대형 목적지 — 랠리로 향하거나 근처 정착한 유닛 수만큼 바깥 슬롯
+  let n=0; for(const e of G.tech.ents){ if(e===nu||(e.type!=='unit'&&e.type!=='worker')) continue;
+    let dx2=e.tx, dy2=e.ty; if(e._wp&&e._wp.length){ dx2=e._wp[e._wp.length-1].x; dy2=e._wp[e._wp.length-1].y; }   // 이동 목적지
+    const headTo=(dx2!=null && Math.hypot((dx2-r.x)*GWp,(dy2-r.y)*GHp)<R);   // 랠리로 향하는 중
+    const nearRally=(Math.hypot((e.x-r.x)*GWp,(e.y-r.y)*GHp)<R);              // 랠리 근처 정착
+    if(headTo||nearRally) n++; }
+  const sp=(((U[nu&&(nu.uid||'marine')]||{}).size||14)*0.62)*(typeof TECH_USCALE!=='undefined'?TECH_USCALE:1)*2.2, s=_ringSlotN(n, sp);
+  return { x:Math.max(0.04,Math.min(0.96,r.x+s.dx/GWp)), y:Math.max(0.14,Math.min(0.96,r.y+s.dy/GHp)) }; }
 // ── 🧭 경로 탐색(visibility graph) — 이동 명령 시 건물 판정 사각의 꼭짓점을 잇는 최단 우회 경로를 미리 계산 ──
 // 벽 비비기(반응형 조향) 대신 경유점을 따라 직선 이동 → 틱틱 걸리지 않고 깔끔. 심시티 틈새는 등급별 판정 사각 간 통로로 자동 발견됨
 function _segInRect(ax,ay,bx,by,R){ const dx=bx-ax, dy=by-ay; let t0=0, t1=1;   // 선분이 사각 '내부'를 지나는가(경계 스침은 허용 — 밀봉 틈새 통로가 경계선이므로)
@@ -11053,7 +11064,7 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
     if(_rb && _rb._rally){ const _bs=_techW2S(_rb.x,_rb.y), _rs=_techW2S(_rb._rally.x,_rb._rally.y), _hot=(G.tech.rallySet===_rb.eid);
       const _len=Math.hypot((_rs.x-_bs.x)*(GW||390),(_rs.y-_bs.y)*(GH||390)), _ang=Math.atan2((_rs.y-_bs.y)*(GH||390),(_rs.x-_bs.x)*(GW||390))*180/Math.PI;
       rallyZ+='<div class="bRallyLine'+(_hot?' hot':'')+'" style="left:'+(_bs.x*100).toFixed(2)+'%;top:'+(_bs.y*100).toFixed(2)+'%;width:'+_len.toFixed(1)+'px;transform:rotate('+_ang.toFixed(1)+'deg)"></div>';
-      rallyZ+='<div class="bRallyFlag'+(_hot?' hot':'')+'" style="left:'+(_rs.x*100).toFixed(2)+'%;top:'+(_rs.y*100).toFixed(2)+'%">🚩</div>'; } }
+      rallyZ+='<div class="bRallyMark'+(_hot?' hot':'')+'" style="left:'+(_rs.x*100).toFixed(2)+'%;top:'+(_rs.y*100).toFixed(2)+'%"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="#46f06a" stroke-width="2"/><circle cx="12" cy="12" r="2.4" fill="#46f06a"/></svg></div>'; } }
   map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+(G.tech.rallySet!=null?' rally':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none">'+_floor+hillZ+creepZ+psi+gasZone+mineZ+rallyZ+'<div class="bmapTop"><div class="techTabs">'+tabs+'</div><div class="bres">'+res+'</div></div>'+ents+foot+ghost+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div></div>';
   const _lblLayer=document.getElementById('cstLabels'); if(_lblLayer) _lblLayer.innerHTML=labels+armBtns+resumeBtn;   // 남은시간 라벨 + 배치 ✓/✕ + ▶재개 버튼을 전용 오버레이(z8)에 → 3D 유닛·건물 위(리파이너리 등 큰 건물에 안 가림)
   techFogDraw(); }   // 🌫️ 건설 안개 오버레이 재그림(맵 재렌더마다)
