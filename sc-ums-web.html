@@ -11076,10 +11076,11 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
     ents+='<div class="techSelBox" style="left:'+(bx*100).toFixed(2)+'%;top:'+(by*100).toFixed(2)+'%;width:'+(bw*100).toFixed(2)+'%;height:'+(bh*100).toFixed(2)+'%;position:absolute;border:1.5px solid #46f06a;background:rgba(70,240,106,.14);pointer-events:none;z-index:23;border-radius:2px"></div>'; }
   let tabs=''; ['union','swarm','aetherial'].forEach(r=>{ tabs+='<span class="techTab'+(r===race?' on':'')+'" onclick="techRace(event,\''+r+'\')">'+_TECH_RKO[r]+'</span>'; });
   const selE=(G.tech.sel!=null)?G.tech.ents.find(e=>e.eid===G.tech.sel):null, canDemo=selE&&selE.type==='bldg'&&((techGetBldg(race,selE.bk)||{}).k!==TECH_TREE[race].buildings[0].k);
-  const _RI_CR='<svg class="ri" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#ffd24a" stroke="#ffe6a0" stroke-width="1.2"/><circle cx="12" cy="12" r="6.6" fill="none" stroke="#b88a1e" stroke-width="1"/><path d="M14.8 8.8A4.4 4.4 0 1 0 14.8 15.2" fill="none" stroke="#7a5a12" stroke-width="2.2" stroke-linecap="round"/></svg>';   // 메인 HUD 자원 아이콘 재사용(크레딧=골드 코인)
-  const _RI_EN='<svg class="ri" viewBox="0 0 24 24"><path d="M13.6 2L5.4 13H10l-1.6 9L18.6 10.5H13z" fill="#6ff0a0" stroke="#d6ffe6" stroke-width="1" stroke-linejoin="round"/></svg>';   // 에너지=번개
-  const _RI_SP='<svg class="ri" viewBox="0 0 24 24"><circle cx="12" cy="7.5" r="3.3" fill="#bcd8f5" stroke="#eaf4ff" stroke-width="1"/><path d="M4.5 20c0-4.2 3.4-6.8 7.5-6.8s7.5 2.6 7.5 6.8z" fill="#94b8e2" stroke="#eaf4ff" stroke-width="1" stroke-linejoin="round"/></svg>';   // 인구=파란 인물
-  const res='<span class="res min">'+_RI_CR+'<b>'+(G.tech.inf?'∞':G.tech.credit)+'</b></span><span class="res gas">'+_RI_EN+'<b>'+(G.tech.inf?'∞':G.tech.energy)+'</b></span><span class="res pop">'+_RI_SP+'<b>'+G.tech.sup+'/'+G.tech.supCap+'</b></span>';   // 메인 #hudR과 동일 마크업(res min/gas/pop + ri + b)
+  let res='';   // 🔁 메인 #hudR DOM을 그대로 클론(복사본 마크업 유지 X) — 메인 HUD 디자인 변경 시 자동 반영. 숫자만 이 탭 값으로 치환
+  { const _h=document.getElementById('hudR'); if(_h){ const c=_h.cloneNode(true);
+    const set=(id,v)=>{ const el=c.querySelector('#'+id); if(el){ el.innerHTML=v; el.removeAttribute('id'); } };   // id 제거(중복 방지)
+    set('hMin',(G.tech.inf?'∞':G.tech.credit)+'<i class="ru">C</i>'); set('hGas',(G.tech.inf?'∞':G.tech.energy)+'<i class="ru">E</i>'); set('hPop',G.tech.sup+'/'+G.tech.supCap+'<i class="ru">CP</i>');
+    res=c.innerHTML; } }
   const btns=(canDemo?'<span class="cbtn dz" onclick="techDemolish(event)">🗑 철거</span>':'')+'<span class="cbtn'+(G.tech.inf?' on':'')+'" onclick="techInf(event)" title="무제한 자원">∞</span><span class="cbtn'+(G.tech.nocool?' on':'')+'" onclick="techNocool(event)" title="즉시 건설·생산">⏱</span><span class="cbtn'+(techFogEnabled()?' on':'')+'" onclick="techFog(event)" title="전장의 안개">🌫️</span><span class="cbtn" onclick="techReset(event)" title="리셋">↺</span>';
   // 배치 고스트 + ✓/✕ 확정 버튼 (드래그로 위치 조정)
   let ghost='', armBtns='', foot='';
