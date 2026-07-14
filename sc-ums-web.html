@@ -1005,6 +1005,11 @@
     display:flex;align-items:flex-start;justify-content:flex-start}
   .bHill .hillLbl{font:800 9px/1 sans-serif;color:#ecdbad;text-shadow:0 1px 2px #000;letter-spacing:.5px;padding:3px 6px}
   .bLiftShadow{position:absolute;z-index:1;transform:translate(-50%,-50%);background:radial-gradient(ellipse at 50% 50%,rgba(0,0,0,.6),rgba(0,0,0,0) 68%);border-radius:50%;pointer-events:none}   /* 🛫 부양 건물 지면 그림자 */
+  .bRallyLine{position:absolute;height:0;border-top:2px dashed rgba(255,200,90,.6);transform-origin:0 50%;pointer-events:none;z-index:9}   /* 🚩 건물→랠리 점선 */
+  .bRallyLine.hot{border-top-color:rgba(255,214,110,.95)}
+  .bRallyFlag{position:absolute;transform:translate(-50%,-90%);font-size:18px;pointer-events:none;z-index:10;filter:drop-shadow(0 1px 2px rgba(0,0,0,.7))}
+  .bRallyFlag.hot{animation:rallyBob .8s ease-in-out infinite}
+  @keyframes rallyBob{0%,100%{transform:translate(-50%,-90%)}50%{transform:translate(-50%,-108%)}}
   .bMineral{position:absolute;z-index:2;pointer-events:none;box-sizing:border-box;border:1.5px solid rgba(90,190,255,.6);border-radius:5px;   /* 💎 미네랄 덩어리 */
     background:radial-gradient(ellipse at 50% 42%,rgba(96,190,255,.28),rgba(50,120,220,.14) 62%,rgba(24,60,130,.07));
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0px}
@@ -1442,6 +1447,9 @@
   .cmdG .cgLift.on{border-color:#5ad1ff;background:rgba(90,209,255,.26);box-shadow:0 0 6px rgba(90,209,255,.45)}
   .cmdG .cgLift:active{background:rgba(120,170,255,.34)}
   .cmdG .cgLift.busy{opacity:.6;cursor:default}
+  .cmdG .cgRally{flex:none;align-self:flex-start;width:26px;height:24px;border-radius:6px;border:1px solid var(--glass);background:rgba(255,200,90,.14);color:#ffe6a8;font-size:13px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}   /* 🚩 랠리 버튼 */
+  .cmdG .cgRally.on{border-color:#ffc24a;background:rgba(255,194,74,.26);box-shadow:0 0 6px rgba(255,194,74,.45)}
+  .cmdG .cgRally:active{background:rgba(255,200,90,.34)}
   .cmdG .cgProg .pl .pt{color:var(--caL);font:800 9px/1 'Rajdhani',sans-serif;margin-left:4px;letter-spacing:.2px}   /* 생산 중 옆 남은시간(작게) */
   .cmdG .cgGasAuto .gaBtn{width:18px;height:18px;flex:none;border-radius:4px;border:1px solid rgba(120,232,150,.5);background:rgba(120,232,150,.12);color:#c7f5d6;font:800 13px/1 sans-serif;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
   .cmdG .cgGasAuto .gaBtn:active{background:rgba(120,232,150,.3)}
@@ -10482,7 +10490,9 @@ function _techSpawnPos(be, uid){ const race=G.tech.race, f=(typeof _techFoot==='
 function techFinishProduce(q, be){ const race=G.tech.race; G.tech.units[q.id]=(G.tech.units[q.id]||0)+1; if(q.supply) G.tech.supCap+=q.supply;
   be=be||G.tech.ents.find(e=>e.type==='bldg'&&e.bk===q.bk); const p=be?_techSpawnPos(be,q.id):{x:0.5,y:0.6}, _ex=p.x, _ey=p.y;
   const _isWk=(q.id===(TECH_WORKER[race]||'worker_human'));   // 생산된 일꾼도 초기 일꾼과 동일한 type:'worker'(건설 가능)
-  G.tech.ents.push(_isWk?{eid:G.tech.eseq++, type:'worker', x:_ex, y:_ey}:{eid:G.tech.eseq++, type:'unit', uid:q.id, x:_ex, y:_ey}); }
+  const _nu=_isWk?{eid:G.tech.eseq++, type:'worker', x:_ex, y:_ey}:{eid:G.tech.eseq++, type:'unit', uid:q.id, x:_ex, y:_ey};
+  G.tech.ents.push(_nu);
+  if(be&&be._rally){ if(typeof _techRoute==='function') _techRoute(_nu, be._rally.x, be._rally.y); else { _nu.tx=be._rally.x; _nu.ty=be._rally.y; } } }   // 🚩 랠리 지정 시 생성 유닛 자동 이동
 // ── 🧭 경로 탐색(visibility graph) — 이동 명령 시 건물 판정 사각의 꼭짓점을 잇는 최단 우회 경로를 미리 계산 ──
 // 벽 비비기(반응형 조향) 대신 경유점을 따라 직선 이동 → 틱틱 걸리지 않고 깔끔. 심시티 틈새는 등급별 판정 사각 간 통로로 자동 발견됨
 function _segInRect(ax,ay,bx,by,R){ const dx=bx-ax, dy=by-ay; let t0=0, t1=1;   // 선분이 사각 '내부'를 지나는가(경계 스침은 허용 — 밀봉 틈새 통로가 경계선이므로)
@@ -10676,7 +10686,16 @@ function _techLiftBtn(b){ const e=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid==
   let ico,ttl,busy=false; const ph=e._liftPhase;
   if(!e._lifted){ ico='🛫'; ttl='부양'; } else if(ph==='flying'){ ico='🛬'; ttl='착륙 위치 지정'; } else { ico='⏳'; ttl=(ph==='descending'?'착륙 중':(ph==='toland'?'착륙 지점 이동 중':'이륙 중')); busy=true; }
   return '<button class="cgLift'+(e._lifted?' on':'')+(busy?' busy':'')+'"'+(busy?'':' onclick="techLiftToggle(event)"')+' title="'+ttl+'">'+ico+'</button>'; }
-function _techBldgTR(b){ return _techAutoBtn(b)+_techLiftBtn(b); }   // 프로필 우상단 = [자원 스텝퍼(왼)] + [부양 버튼(오른)]
+function _techRallyBtn(b){ const e=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'):null; if(!e||e.bk!==b.k||e.bt>0) return '';   // 🚩 랠리 포인트(생성 유닛 자동 이동) — 유닛 생산 건물만
+  if(!(b.produces&&b.produces.length)) return '';
+  const on=(G.tech.rallySet===e.eid)||!!e._rally;
+  return '<button class="cgRally'+(on?' on':'')+'" onclick="techRallySet(event)" title="랠리 포인트 — 생성된 유닛이 자동으로 갈 위치 지정">🚩</button>'; }
+function techRallySet(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech||G.tech.sel==null) return;
+  const e=G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'); if(!e) return;
+  if(G.tech.rallySet===e.eid){ G.tech.rallySet=null; e._rally=null; if(typeof toast==='function') toast('랠리 해제'); }   // 지정 중 다시 누르면 해제
+  else { G.tech.rallySet=e.eid; if(typeof toast==='function') toast('🚩 맵을 탭해 랠리 위치 지정'); }
+  if(typeof playSfx==='function') playSfx('ui_open'); techUIRender(); }
+function _techBldgTR(b){ return _techAutoBtn(b)+_techRallyBtn(b)+_techLiftBtn(b); }   // 프로필 우상단 = [자원 스텝퍼][랠리][부양]
 function _techGatherTick(dt){ let dep=false, any=false;
   const mainB=_techMainB();
   for(const w of G.tech.ents){ if(w.type!=='worker'||!w._gKind) continue;
@@ -11029,7 +11048,13 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
   { const _mcw=_techCW(), _mch=_techCH(); for(const m of (G.tech.minerals||[])){
     const _mtl=_techW2S(m.x-0.6*_mcw, m.y-0.6*_mch), _mbr=_techW2S(m.x+0.6*_mcw, m.y+0.6*_mch);
     mineZ+='<div class="bMineral'+(_res3d?' d3':'')+'" style="left:'+(_mtl.x*100).toFixed(2)+'%;top:'+(_mtl.y*100).toFixed(2)+'%;width:'+((_mbr.x-_mtl.x)*100).toFixed(2)+'%;height:'+((_mbr.y-_mtl.y)*100).toFixed(2)+'%">'+(_res3d?'':'<span class="mnIco">💎</span>')+'<span class="mnLbl">'+(G.tech.inf?'∞':m.amount)+'</span></div>'; } }
-  map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none">'+_floor+hillZ+creepZ+psi+gasZone+mineZ+'<div class="bmapTop"><div class="techTabs">'+tabs+'</div><div class="bres">'+res+'</div></div>'+ents+foot+ghost+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div></div>';
+  let rallyZ='';   // 🚩 랠리 포인트 — 선택된 건물의 랠리 위치 깃발 + 건물→랠리 점선(지정 모드=강조)
+  { const _rb=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'):null;
+    if(_rb && _rb._rally){ const _bs=_techW2S(_rb.x,_rb.y), _rs=_techW2S(_rb._rally.x,_rb._rally.y), _hot=(G.tech.rallySet===_rb.eid);
+      const _len=Math.hypot((_rs.x-_bs.x)*(GW||390),(_rs.y-_bs.y)*(GH||390)), _ang=Math.atan2((_rs.y-_bs.y)*(GH||390),(_rs.x-_bs.x)*(GW||390))*180/Math.PI;
+      rallyZ+='<div class="bRallyLine'+(_hot?' hot':'')+'" style="left:'+(_bs.x*100).toFixed(2)+'%;top:'+(_bs.y*100).toFixed(2)+'%;width:'+_len.toFixed(1)+'px;transform:rotate('+_ang.toFixed(1)+'deg)"></div>';
+      rallyZ+='<div class="bRallyFlag'+(_hot?' hot':'')+'" style="left:'+(_rs.x*100).toFixed(2)+'%;top:'+(_rs.y*100).toFixed(2)+'%">🚩</div>'; } }
+  map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+(G.tech.rallySet!=null?' rally':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none">'+_floor+hillZ+creepZ+psi+gasZone+mineZ+rallyZ+'<div class="bmapTop"><div class="techTabs">'+tabs+'</div><div class="bres">'+res+'</div></div>'+ents+foot+ghost+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div></div>';
   const _lblLayer=document.getElementById('cstLabels'); if(_lblLayer) _lblLayer.innerHTML=labels+armBtns+resumeBtn;   // 남은시간 라벨 + 배치 ✓/✕ + ▶재개 버튼을 전용 오버레이(z8)에 → 3D 유닛·건물 위(리파이너리 등 큰 건물에 안 가림)
   techFogDraw(); }   // 🌫️ 건설 안개 오버레이 재그림(맵 재렌더마다)
 function techBldgInfoModel(b){ const race=G.tech.race, hb=TECH_TREE[race].buildings[0];
@@ -11196,6 +11221,10 @@ function techPtrDown(ev){ if(!G.tech) return; const r=_btRect(); if(!r) return; 
     _btPinch={ d:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)||1, zoom:v.zoom, cx:(p[0].x+p[1].x)/2, cy:(p[0].y+p[1].y)/2, vx:v.x, vy:v.y, rw:r.width, rh:r.height }; _btMoved=true; return; }
   _btMoved=false; _btDown={sx, sy}; _btBox=null; _btCmd=null;
   if(sy<0.13) return;   // 상단바 = 탭만
+  if(G.tech.rallySet!=null){   // 🚩 랠리 지정 모드 = 맵 탭으로 랠리 위치 설정
+    const rb=G.tech.ents.find(x=>x.eid===G.tech.rallySet&&x.type==='bldg'), w=_techS2W(sx,sy);
+    if(rb) rb._rally={ x:Math.max(0.03,Math.min(0.97,w.x)), y:Math.max(0.14,Math.min(0.97,w.y)) };
+    G.tech.rallySet=null; if(typeof playSfx==='function') playSfx('ui_confirm'); techUIRender(); return; }
   if(G.tech.arm!=null){   // 배치 중
     if(!G.tech.armXY){ _btArm=true; _btArmOff={x:0,y:0}; _techArmTo(sx, sy); return; }   // 첫 탭 = 그 자리에 예비건물 배치
     // 이미 배치됨 → 예비 실루엣을 눌렀을 때만 잡고 드래그(다른 곳 탭은 무시=텔레포트 안 함)
@@ -11206,7 +11235,7 @@ function techPtrDown(ev){ if(!G.tech) return; const r=_btRect(); if(!r) return; 
       _btArm=true; const _w=_techS2W(sx,sy); _btArmOff={x:_w.x-G.tech.armXY.x, y:_w.y-G.tech.armXY.y}; }
     return; }
   { const _lb=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'&&x._lifted&&x._liftPhase==='flying'):null;   // 🛫 비행 중(상승 완료)인 부양 건물만 맵 탭으로 이동
-    if(_lb && (G.tech.selU||[]).length===0){ const w=_techS2W(sx,sy); _lb.tx=Math.max(0.04,Math.min(0.96,w.x)); _lb.ty=Math.max(0.14,Math.min(0.96,w.y)); if(typeof playSfx==='function') playSfx('ui_confirm'); techMapRender(); return; } }
+    if(_lb && (G.tech.selU||[]).length===0){ const w=_techS2W(sx,sy); _btCmd={lift:_lb}; _lb.tx=Math.max(0.04,Math.min(0.96,w.x)); _lb.ty=Math.max(0.14,Math.min(0.96,w.y)); if(typeof playSfx==='function') playSfx('ui_confirm'); techMapRender(); return; } }   // _btCmd 설정 → techPtrUp이 지정 해제 안 함(계속 이동)
   const selN=(G.tech.selU||[]).length;
   if(selN>0){ const w=_techS2W(sx,sy), e=_techEntAt(w.x,w.y);   // 지정 상태: 드래그/탭 = 이동(메인 규약 — 새 박스는 해제(✕) 후에만)
     if(selN===1 && e && (e.type==='unit'||e.type==='worker'||e.type==='larva') && e.eid!==G.tech.selU[0]) return;   // 단일 지정 → 다른 유닛/라바 탭 = 업에서 재지정
@@ -11225,7 +11254,9 @@ function techPtrMove(ev){ if(!G.tech||G.tab!=='Build'||!_btPtrs.has(ev.pointerId
   if(_btPinch && _btPtrs.size>=2){ const p=[..._btPtrs.values()], d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y), z=Math.max(1,Math.min(4,_btPinch.zoom*d/_btPinch.d)), t=techViewT(); t.zoom=z;   // 목표 뷰만 갱신 → techViewTick이 부드럽게 따라감
     const cx=(p[0].x+p[1].x)/2, cy=(p[0].y+p[1].y)/2; t.x=_btPinch.vx-(cx-_btPinch.cx)/(_btPinch.rw||1)/z; t.y=_btPinch.vy-(cy-_btPinch.cy)/(_btPinch.rh||1)/z; _techClampView(t); _btMoved=true; return; }
   if(_btArm){ const r=_btRect(); if(!r) return; _techArmTo((ev.clientX-r.left)/(r.width||1),(ev.clientY-r.top)/(r.height||1)); _btMoved=true; return; }   // 배치 고스트가 손가락을 따라 이동
-  if(_btCmd){ const r=_btRect(); if(!r) return; const w=_techS2W((ev.clientX-r.left)/(r.width||1),(ev.clientY-r.top)/(r.height||1)); _techAssignMove(w.x,w.y); _btMoved=true; return; }   // 지정 유닛이 손가락을 따라 이동
+  if(_btCmd){ const r=_btRect(); if(!r) return; const w=_techS2W((ev.clientX-r.left)/(r.width||1),(ev.clientY-r.top)/(r.height||1));
+    if(_btCmd.lift){ _btCmd.lift.tx=Math.max(0.04,Math.min(0.96,w.x)); _btCmd.lift.ty=Math.max(0.14,Math.min(0.96,w.y)); _btMoved=true; techMapRender(); return; }   // 🛫 부양 건물이 손가락 따라 이동
+    _techAssignMove(w.x,w.y); _btMoved=true; return; }   // 지정 유닛이 손가락을 따라 이동
   if(_btBox){ const r=_btRect(); if(!r) return; const sx=(ev.clientX-r.left)/(r.width||1), sy=(ev.clientY-r.top)/(r.height||1); _btBox.sx1=sx; _btBox.sy1=sy;
     if(!_btBox.active && (Math.abs(sx-_btBox.sx0)*(r.width||1)+Math.abs(sy-_btBox.sy0)*(r.height||1))>6) _btBox.active=true;
     if(_btBox.active){ _btMoved=true; techMapRender(); } } }
