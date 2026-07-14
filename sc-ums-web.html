@@ -10316,7 +10316,7 @@ function _techEnsureRoster(race){ const t=TECH_TREE[race]; if(!t||t._rosterSynce
   const have=new Set(); for(const b of t.buildings) for(const p of (b.produces||[])) have.add(p.id);
   let main=null,mx=-1; for(const b of t.buildings){ const n=(b.produces||[]).length; if(n>mx){ mx=n; main=b; } }   // 유닛을 가장 많이 뽑는 건물 = 주 생산 건물
   if(!main) return; main.produces=main.produces||[];
-  for(const r of roster){ const key=r.key; if(!key||have.has(key)||/^worker/.test(key)) continue;   // 일꾼은 본진 기본이라 제외
+  for(const r of roster){ const key=r.key; if(!key||have.has(key)||/^worker/.test(key)||key==='broodling') continue;   // 일꾼·스웜링(브루들링=메두사 소환 전용)은 라바 생산 제외
     if(typeof TECH_MORPH!=='undefined' && Object.keys(TECH_MORPH).some(src=>TECH_MORPH[src].some(m=>m.to===key))) continue;   // 🧬 2차 변태 전용 유닛(베놈퀸·베놈·베히모스)은 직접 생산 제외
     const u=(typeof U!=='undefined'&&U[key])||{}; main.produces.push({id:key, name:r.n, m:(u.cost||50), g:0, pop:1}); have.add(key); } }
 function _techUnitStatList(spec,uid){ const _spd=(spec.atk&&(typeof _sbBaseCd==='function'))?((1/_sbBaseCd(uid)).toFixed(1)+'/s'):'-';   // 공격속도 = base_stats 공속(/s) — 메인 배너와 동일 표시
@@ -10399,7 +10399,7 @@ function techSelectLarva(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); i
 function techLarvaProdModel(list){ const hb=techGetBldg('swarm','hatchery')||{produces:[]};
   const items=(hb.produces||[]).map(p=>{ const reqok=_techReqMet(p.req), afford=_techAfford(p.m,p.g), popok=G.tech.inf||!p.pop||(G.tech.sup+p.pop<=G.tech.supCap), cnt=G.tech.units[p.id]||0, twin=(p.id==='snapper'||p.id==='stinger');
     return { pro:_techUnitPortrait(p.id), sn:_techRealName('swarm',p.id)+(twin?' ×2':''), cr:p.m, en:p.g, meta:cnt?('×'+cnt):(p.pop?'👤'+p.pop:''), metaCls:cnt?'lv':'', state:(!reqok||!afford||!popok)?'dim':'ok', act:'onclick="techLarvaMorph(event,\''+p.id+'\')"' }; });
-  return { mode:'prod', title:'라바 <span class="nsub">('+list.length+'기)</span>', icon:'', hpsh:'', sub:'', items,
+  return { mode:'prod', title:'라바 <span class="nsub">('+list.length+'기)</span>', icon:'<span class="pemoji">🐛</span>', hpsh:'', sub:'', items,
     info:{ eb:'변태', hideName:true, desc:'지정한 라바 전체가 한번에 선택한 유닛으로 변태합니다.', cr:0, en:0, time:'' } }; }   // 아이콘·이름 아래 설명·상단 N기 필·좌하단 스탯 제거(수는 이름 옆 괄호 하나로)
 // 라바 1마리 → 알(그 자리 변태). 스내퍼·스팅어=1알 2기
 function techLarvaMorph(ev, id){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech||G.tech.race!=='swarm') return;
@@ -10946,7 +10946,7 @@ function techBldgProdModel(b, e){ const race=G.tech.race;
     const _ln=hid!=null?G.tech.ents.reduce((a,l)=>a+((l.type==='larva'&&l.hatch===hid)?1:0),0):0;
     const items=[{ pro:'<span class="pemoji">🐛</span>', sn:'라바 선택', meta:_ln+'/3', metaCls:'lv', state:_ln>0?'ok':'dim', act:_ln>0?'onclick="techSelectLarva(event)"':'' }];
     return { mode:'prod', title:b.name+' <span class="nsub">('+_ln+'/3)</span>', icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs0.hp,bs0.sh), sub:'🐛 라바 선택 후 유닛 생성', items, topRight:_techBldgTR(b),
-      info:{ eb:'생산', hideName:true, desc:'8초마다 라바 1기 생성(최대 3).', cr:0, en:0, time:'' } }; }   // 라바 수 = 이름 옆 괄호(중복 표시 제거: 우상단 필·좌측 스탯·하단 안내)
+      info:{ eb:'생산', hideName:true, desc:'8초마다 라바 1기 생성<br>(최대 3).', cr:0, en:0, time:'' } }; }   // 라바 수 = 이름 옆 괄호(중복 표시 제거: 우상단 필·좌측 스탯·하단 안내) · 괄호는 줄바꿈
   if(TECH_AMMO[b.k] && !TECH_AMMO[b.k].unit){ const a=TECH_AMMO[b.k], cap=_techAmmoCap(b.k), have=(e?((e._chc||0)+((e._chq||[]).length)):0);   // ☢️ 뉴클리어 사일로 = 단일 장전(5큐 아님)
     const aitems=[{ pro:'<span class="pemoji">'+a.ico+'</span>', sn:a.label+' 장전', cr:a.m, en:a.g, meta:have+'/'+cap, metaCls:'lv', state:(have>=cap||!_techAfford(a.m,a.g))?'dim':'ok', act:'onclick="techChargeAmmo(event,\''+b.k+'\')"' }];
     return { mode:'prod', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs0.hp,bs0.sh), sub:'☢️ 단일 장전(최대 1)', items:aitems, info:_techAmmoInfo(e||{}, b.k) }; }
@@ -11124,7 +11124,7 @@ function techBldgPlainModel(b, e){ const race=G.tech.race, bs=techBldgSpec(race,
   const items=_techWithAddons([], b.k);   // 🔗 부속 카드(마지막 그리드)
   const _def=_techIsDef(b.k);
   return { mode:'info', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh)+_gasHp, sub:(b.gas?'⛽ 에너지 채취 건물':(b.supply?'👤 인구 공급':(_def?'🛡 방어 건물':'건물 정보'))), items, topRight:_techBldgTR(b),
-    info:{ eb:_techBldgKind(b)+(b.detector?' (탐지)':''), name:b.name, hideName:true, desc:(b.gas?'일꾼이 이 건물에서 에너지를 채취합니다.':(b.supply?('최대 인구 +'+b.supply):(_def?'적을 자동 공격하는 방어 건물.':''))), stats, cr:0, en:0 } }; }
+    info:{ eb:_techBldgKind(b)+(b.detector?' (탐지)':''), name:b.name, hideName:true, desc:(TECH_BLDG_DESC[b.k]||(b.gas?'일꾼이 이 건물에서 에너지를 채취합니다.':(b.supply?('최대 인구 +'+b.supply):(_def?'적을 자동 공격하는 방어 건물.':'')))), stats, cr:0, en:0 } }; }
 // 💎⛽ 중립 자원(미네랄·가스 광산) 프로필 — 이름 + 하단 HP 자리에 잔량 표시
 function techResourceModel(res){ if(!res) return null;
   if(res.kind==='mineral'){ const m=(G.tech.minerals||[]).find(x=>x.eid===res.eid); if(!m) return null;
@@ -11189,9 +11189,11 @@ function _techSkillTick(dt){ if(!G.tech) return false; const F=G.tech.skillFx; l
 function techUnitPanelModel(list){ const race=G.tech.race, grp={}, ord=[];   // 유닛 지정 시트 — 건물 그리드와 동일한 커맨드 그리드 재사용
   for(const e of list){ const k=(e.type==='worker')?'__wk':e.uid; if(!grp[k]){ grp[k]={n:0,e:e}; ord.push(k); } grp[k].n++; }
   const items=[];   // 유닛 초상 카드 제거 — 헤더 프로필과 중복(그리드는 변태·장전 등 행동 카드만)
-  if(race==='swarm' && list.length===1 && list[0].type==='unit' && typeof TECH_MORPH!=='undefined' && TECH_MORPH[list[0].uid]){   // 🧬 2차 변태 버튼(단일 지정 시)
+  if(race==='swarm' && list.length===1 && list[0].type==='unit' && typeof TECH_MORPH!=='undefined' && TECH_MORPH[list[0].uid]){   // 🧬 2차 변태 카드(단일 지정 시) — 이름만(변태→ 없음), 지정 슬롯 위치
+    const _slot={ hydra:{thornqueen:3}, wyvern:{venom:2, behemoth:3} }[list[0].uid]||{};   // 리퍼=베놈퀸 4번칸 · 와이번=베놈 3·베히모스 4
     for(const mm of TECH_MORPH[list[0].uid]){ const ok=_techMorphOK(mm);
-      items.push({ pro:_techUnitPortrait(mm.to), sn:'변태→'+mm.name, cr:mm.m, en:mm.g, meta:'🧬', state:(ok.ok&&_techAfford(mm.m,mm.g))?'ok':'dim', act:ok.ok?('onclick="techDoMorph(event,\''+mm.to+'\')"'):'' }); } }
+      const card={ pro:_techUnitPortrait(mm.to), sn:mm.name, cr:mm.m, en:mm.g, meta:'', state:(ok.ok&&_techAfford(mm.m,mm.g))?'ok':'dim', act:ok.ok?('onclick="techDoMorph(event,\''+mm.to+'\')"'):'' };
+      const si=_slot[mm.to]; if(si!=null){ while(items.length<=si) items.push(null); items[si]=card; } else items.push(card); } }
   const _amE=(list.length===1 && list[0].type==='unit' && TECH_AMMO[list[0].uid])?list[0]:null;   // 🚀 캐리어(요격기)·리버(스캐럽) = 내부 장전 큐
   if(_amE){ const key=_amE.uid, a=TECH_AMMO[key], cap=_techAmmoCap(key), have=(_amE._chc||0)+((_amE._chq||[]).length);
     items.push({ pro:'<span class="pemoji">'+a.ico+'</span>', sn:a.label+' 장전', cr:a.m, en:a.g, meta:have+'/'+cap, metaCls:'lv', state:(have>=cap||!_techAfford(a.m,a.g))?'dim':'ok', act:'onclick="techChargeAmmo(event,\''+key+'\')"' }); }
@@ -11253,7 +11255,7 @@ function techBldgBuildingModel(be){ const race=G.tech.race, b=techGetBldg(race,b
   return { mode:'prod', title:b.name+(paused?' (일시정지)':' (건설 중)'), icon:'<span class="pemoji">'+(b.ico||'🏢')+'</span>',
     hpsh:_cgHpShStr(curHp+'/'+maxHp, maxSh?(curSh+'/'+maxSh):0), status:(paused?'⏸ 일시정지':'🏗 '+pct+'%'), statusIdle:paused,
     sub:(paused?'⏸ 미완성 — 건물 클릭 후 ▶ 재개로 이어서 건설':'🏗 건설 중 '+pct+'% — 완성 전 사용 불가'), items,
-    info:{ eb:'상태', name:b.name, hideName:true, desc:(paused?'일시정지된 미완성 건물. ▶ 재개 시 가장 가까운 일꾼이 이어서 건설.':'건설 중 — 완성되면 생산·연구 가능.'), progLabel:'건설 진행', progVal:pct+'%', prog:pct, cr:0, en:0, time:paused?'일시정지':Math.ceil(be.bt)+'s 남음' } }; }
+    info:{ eb:'상태', name:b.name, hideName:true, desc:(paused?'일시정지된 미완성 건물. ▶ 재개 시 가장 가까운 일꾼이 이어서 건설.':''), progLabel:'건설', progTime:(paused?'':(Math.ceil(be.bt)+'s')), progVal:pct+'%', prog:pct, cr:0, en:0, time:'' } }; }   // 남은 초 = 건설 라벨 옆(progTime) · 하단 안내/설명 제거
 function techPanelRender(){ const body=document.getElementById('btSheetBody'), sheet=document.getElementById('btSheet'); if(!body||!sheet) return;
   const sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null});
   const selB=(G.tech.sel!=null)?G.tech.ents.find(e=>e.eid===G.tech.sel&&e.type==='bldg'):null;
@@ -11446,6 +11448,7 @@ function _techCreepSrcs(){ const out=[]; if(G.tech.race!=='swarm') return out; f
 function _techOnCreep(x,y){ if(G.tech.race!=='swarm') return true; const cw=_techCW(), ch=_techCH();
   for(const cs of _techCreepSrcs()){ const r=_techCreepR(cs); if(_techInEllip(x,y,cs.x,cs.y,r[0],r[1],cw,ch)) return true; } return false; }
 // 🧬 2차 변태(스웜): 기존 유닛 → 고치(알) → 고급 유닛. dpop=인구 증가분
+const TECH_BLDG_DESC={ sunken:'지상 적을 자동 공격하는 방어 건물.', spore:'공중 적을 자동 공격하는 방어 건물.' };   // 건물별 설명 오버라이드(단일 소스)
 const TECH_MORPH={ hydra:[{to:'thornqueen', name:'베놈퀸', m:50, g:100, dpop:1, needR:'lurker'}],
   wyvern:[{to:'venom', name:'베놈', m:50, g:150, dpop:0, needB:'defilermound'},
           {to:'behemoth', name:'베히모스', m:50, g:100, dpop:0, needB:'gspire'}] };
