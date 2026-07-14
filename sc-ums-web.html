@@ -5092,7 +5092,7 @@ function _fogSightCells(tiles){ return Math.max(2, Math.round((tiles||FOG_SIGHT_
 const LIFT_BLDG={ command:1, barracks:1, engbay:1, factory:1, starport:1, scifac:1 };
 const TECH_LIFT_SPD=0.06;   // 부양 건물 이동속도(월드/초) — 아주 느림(오버로드급)
 const TECH_LIFT_T=2;        // 상승·하강 애니 시간(초) — 다 뜨면 이동 가능 / 다 내리면 생산 가능
-const TECH_LIFT_PX=48;      // 부양 최대 높이(px, 3D + 히트박스 상승) — 확실히 떠오르게
+const TECH_LIFT_PX=20;      // 부양 최대 높이(px, 3D + 히트박스 상승) — 살짝만 떠오르게(이전의 2/5)
 function _techCanLift(bk){ return G.tech && G.tech.race==='union' && !!LIFT_BLDG[bk]; }
 function fogEnabled(){ return !!(typeof G!=='undefined' && G.fog && G.fog.on); }
 function fogInit(){ const on=(mapCfg('fog','off')==='full'), cols=FOG_COLS, rows=FOG_ROWS;
@@ -10765,7 +10765,7 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
   if(techSeparate()) active=true;   // 도착한 유닛 겹침 분리(메인과 동일) — 공중 한 점 집결 후 완만히 흩어짐
   // 🧱 완성 or 일시정지(동결) 건물과 겹친 유닛을 즉시 경계로 보정 — 진행 중(bt>0, 미일시정지)만 겹침 허용
   // 즉시 보정(속도는 유지) → 벽 안에 머무는 프레임이 없어 경유점 선행 전환이 안 끊김(벽 따라갈 때 속도 출렁임 제거)
-  for(const bd of G.tech.ents){ if(bd.type!=='bldg'||(bd.bt>0 && !bd._bpause)) continue;
+  for(const bd of G.tech.ents){ if(bd.type!=='bldg'||bd._lifted||(bd.bt>0 && !bd._bpause)) continue;   // 🛫 부양 건물=공중이라 발판 비움(밀어내지 않음)
     for(const e of G.tech.ents){ if(e.type!=='unit'&&e.type!=='worker') continue;
       if(e.build===bd.eid) continue;   // 이 건물을 짓는 일꾼만 겹침 허용
       if(e._inGas && e._gEid===bd.eid) continue;   // ⛽ 가스 채취 중 = 그 건물 안에 머무름(밀어내지 않음)
@@ -10796,7 +10796,7 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
         const nX=dxp/dp, nY=dyp/dp, vdx=e.vx||0, vdy=e.vy||0, rad=nX*vdx+nY*vdy;   // rad<0 = 정지 유닛 쪽으로 향하는 속도 성분
         if(rad<0){ const tX=-nY, tY=nX, sgn=((tX*vdx+tY*vdy)>=0)?1:-1;   // 🫸 어깨 스침: 막힌 정면 성분을 접선으로 전환 → 밀리며 정체(_mvStuck 정지) 없이 옆으로 흘러 지나감
           e.vx=vdx-nX*rad+sgn*tX*(-rad)*0.85; e.vy=vdy-nY*rad+sgn*tY*(-rad)*0.85; }
-        for(const bd2 of G.tech.ents){ if(bd2.type!=='bldg'||(bd2.bt>0&&!bd2._bpause)||e.build===bd2.eid) continue;   // 밀어낸 자리가 건물 안이면 다시 경계로
+        for(const bd2 of G.tech.ents){ if(bd2.type!=='bldg'||bd2._lifted||(bd2.bt>0&&!bd2._bpause)||e.build===bd2.eid) continue;   // 밀어낸 자리가 건물 안이면 다시 경계로(부양 제외)
           const R2=_techCollRect(bd2,e); if(R2.x1<=R2.x0||R2.y1<=R2.y0) continue;
           if(e.x<=R2.x0||e.x>=R2.x1||e.y<=R2.y0||e.y>=R2.y1) continue;
           const pL2=e.x-R2.x0, pR2=R2.x1-e.x, pT2=e.y-R2.y0, pB2=R2.y1-e.y, mP2=Math.min(pL2,pR2,pT2,pB2);
@@ -10806,10 +10806,10 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
         active=true; } } }
   // 🚫 터널링 방지: 겹치는 두 판정 사각(밀봉·차단 조합) 사이에 낀 유닛 — 순차 밀어냄이 반대편으로 뚫는 것을 차단. 보정 후에도 어느 사각 '안'이면 이번 프레임 이동 취소
   for(const e of G.tech.ents){ if((e.type!=='unit'&&e.type!=='worker')||e.tx==null||e._pfx==null) continue;
-    let inR=false; for(const bd of G.tech.ents){ if(bd.type!=='bldg'||(bd.bt>0&&!bd._bpause)||e.build===bd.eid) continue;
+    let inR=false; for(const bd of G.tech.ents){ if(bd.type!=='bldg'||bd._lifted||(bd.bt>0&&!bd._bpause)||e.build===bd.eid) continue;
       const R=_techCollRect(bd,e); if(R.x1<=R.x0||R.y1<=R.y0) continue;
       if(e.x>R.x0+1e-6&&e.x<R.x1-1e-6&&e.y>R.y0+1e-6&&e.y<R.y1-1e-6){ inR=true; break; } }
-    if(inR){ let pfIn=false; for(const bd of G.tech.ents){ if(bd.type!=='bldg'||(bd.bt>0&&!bd._bpause)||e.build===bd.eid) continue;
+    if(inR){ let pfIn=false; for(const bd of G.tech.ents){ if(bd.type!=='bldg'||bd._lifted||(bd.bt>0&&!bd._bpause)||e.build===bd.eid) continue;
         const R=_techCollRect(bd,e); if(e._pfx>R.x0+1e-6&&e._pfx<R.x1-1e-6&&e._pfy>R.y0+1e-6&&e._pfy<R.y1-1e-6){ pfIn=true; break; } }
       if(!pfIn){ e.x=e._pfx; e.y=e._pfy; e.vx=0; e.vy=0; } } }   // 원래 밖에 있었을 때만 되돌림(스폰 겹침 등 예외 보호)
   if(G.tech.race==='swarm'){   // 🐛 라바 생성(해처리당 최대 3, 8초 주기) + 🥚 알 부화
@@ -10956,8 +10956,8 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
     if(e.type==='bldg'){ const _b=techGetBldg(race,e.bk)||{}; cls='bldg live3d'; inner='';
       const _bf=(typeof _techFoot==='function')?_techFoot(race,e.bk):{w:2,h:2}, _byB=e.y+(_bf.h/2)*_techCH(), _sb=_techW2S(e.x,_byB);
       const _hw=Math.max(0.05,_bf.w*_techCW()*techView().zoom), _ratio=(e.bt>0)?Math.max(0,Math.min(1,1-e.bt/(e.btMax||1))):1;   // 바 폭=발판 폭(줌) · 건설 중=진행도/완성=풀
-      if(e._lifted){ const _sc=_sb, _sw=Math.max(0.05,_bf.w*_techCW()*techView().zoom*(0.82-0.18*(e._liftH||0)));   // 🛫 지면 그림자(발판 하단) — 높이(_liftH)만큼 작아지고 진해짐(떠오른 느낌)
-        ents+='<div class="bLiftShadow" style="left:'+(_sc.x*100).toFixed(2)+'%;top:'+(_sc.y*100).toFixed(2)+'%;width:'+(_sw*100).toFixed(2)+'%;height:'+(_sw*0.5*100).toFixed(2)+'%;opacity:'+(0.12+0.4*(e._liftH||0)).toFixed(2)+'"></div>'; }
+      if(e._lifted){ const _sc=_sb, _sw=Math.max(0.07,_bf.w*_techCW()*techView().zoom*1.25);   // 🛫 지면 그림자(발판 하단) — 발판보다 넓게, 높이(_liftH)만큼 진해짐
+        ents+='<div class="bLiftShadow" style="left:'+(_sc.x*100).toFixed(2)+'%;top:'+(_sc.y*100).toFixed(2)+'%;width:'+(_sw*100).toFixed(2)+'%;height:'+(_sw*0.46*100).toFixed(2)+'%;opacity:'+(0.15+0.4*(e._liftH||0)).toFixed(2)+'"></div>'; }
       if(e.bt>0 || G.tech.sel===e.eid) labels+='<div class="bldHp'+(e.bt>0?' bld':'')+'" style="left:'+(_sb.x*100).toFixed(2)+'%;top:'+(_sb.y*100).toFixed(2)+'%;width:'+(_hw*100).toFixed(2)+'%"><i style="width:'+(_ratio*100).toFixed(1)+'%"></i></div>';   // 건설 중=항상 표시(실시간 차오름) · 완성=지정 시에만
       const _noPow=_techNeedsPower(e.bk)&&!_techPowered(e.x,e.y);   // 🛑 블랙아웃(동력 없음)
       if(_noPow){ const _sp=_techW2S(e.x,e.y-(_bf.h/2)*_techCH()); labels+='<div class="bldNoPow" style="left:'+(_sp.x*100).toFixed(2)+'%;top:'+(_sp.y*100).toFixed(2)+'%">⚡✕ 동력 없음</div>'; }
