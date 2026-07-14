@@ -947,18 +947,21 @@
       url('/assets/tiles/badlands.webp');
     background-repeat:repeat;background-size:28px 28px,28px 28px,132px 132px}
   .bmap.arming{cursor:copy}
-  .bmapTop{position:absolute;top:0;left:0;right:0;min-height:34px;display:flex;align-items:center;justify-content:space-between;gap:8px;
-    padding:6px 10px;background:linear-gradient(180deg,rgba(6,10,18,.86),rgba(6,10,18,.5) 66%,transparent);z-index:5;pointer-events:auto;flex-wrap:wrap}   /* 진한 반투명 덮개 — 화면에 스며들며 약간의 구분 */
-  .bmapTop .techTabs{display:flex;gap:4px}
-  .bmapTop .techTab{padding:5px 9px;font-size:12px;font-weight:800;border-radius:7px;cursor:pointer;white-space:nowrap;
-    background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.015));border:1px solid var(--metal-edge);color:#cbd5e6}
+  .bmapTop{position:absolute;top:0;left:0;right:0;z-index:5;pointer-events:none}   /* 상단 오버레이 — 종족(좌상단 세로) · 토글(그 아래 세로) · 자원(우상단, 메인 HUD 디자인) */
+  .bmapTop .techSide{position:absolute;top:6px;left:7px;display:flex;flex-direction:column;gap:7px;pointer-events:auto}
+  .bmapTop .techTabs{display:flex;flex-direction:column;gap:4px}
+  .bmapTop .techTab{min-width:54px;text-align:center;padding:6px 11px;font-size:12px;font-weight:800;border-radius:7px;cursor:pointer;white-space:nowrap;
+    background:linear-gradient(180deg,rgba(15,21,33,.9),rgba(9,13,21,.92));border:1px solid var(--metal-edge);color:#cbd5e6}
   .bmapTop .techTab.on{color:#fff;background:linear-gradient(180deg,#2f6fbf,#173a6e);border-color:#5aa8ff;box-shadow:0 0 10px -3px rgba(90,168,255,.6)}
-  .bmapTop .bres{display:flex;gap:5px;align-items:center;font:800 12px 'Rajdhani',sans-serif}
-  .bmapTop .res{padding:2px 7px;border-radius:6px;border:1px solid var(--metal-edge);background:rgba(0,0,0,.35);font-variant-numeric:tabular-nums;white-space:nowrap}
-  .bmapTop .res.cr{color:#ffce6a}.bmapTop .res.gs{color:#7fd0ff}.bmapTop .res.sp{color:#c8b6ff}
-  .bmapTop .cbtn{padding:2px 8px;border-radius:6px;cursor:pointer;font-weight:800;font-size:13px;border:1px solid var(--metal-edge);background:rgba(255,255,255,.05);color:#dbe3ee}
+  .bmapTop .techBtns{display:flex;flex-direction:column;gap:4px}
+  .bmapTop .cbtn{width:54px;box-sizing:border-box;text-align:center;padding:5px 0;border-radius:6px;cursor:pointer;font-weight:800;font-size:14px;border:1px solid var(--metal-edge);background:linear-gradient(180deg,rgba(15,21,33,.85),rgba(9,13,21,.9));color:#dbe3ee}
   .bmapTop .cbtn.on{color:#fff;background:linear-gradient(180deg,#2f7d4a,#173a24);border-color:#46f06a}
-  .bmapTop .cbtn.dz{color:#ffc0c0;border-color:rgba(255,90,90,.5);background:rgba(70,18,18,.5)}
+  .bmapTop .cbtn.dz{width:auto;padding:5px 9px;font-size:12px;color:#ffc0c0;border-color:rgba(255,90,90,.5);background:rgba(70,18,18,.55)}
+  .bmapTop .bres{position:absolute;top:6px;right:8px;display:flex;gap:10px;align-items:center;pointer-events:auto;
+    background:linear-gradient(180deg,rgba(6,10,18,.82),rgba(6,10,18,.6));padding:4px 11px;border-radius:9px;border:1px solid var(--metal-edge)}
+  .bmapTop .bres .res{display:flex;align-items:center;gap:2.5px;padding:0;border:none;background:none}
+  .bmapTop .bres .res .ri{width:17px;height:17px;display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.8))}
+  .bmapTop .bres .res b{font:800 14px/1 'Rajdhani',sans-serif;color:#eaf4ff;font-variant-numeric:tabular-nums;text-shadow:0 1px 3px #000}
   .bent{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;z-index:2}
   .bent .be-ico{font-size:26px;line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))}
   .bent .be-nm{font-size:8.5px;font-weight:800;color:#dfeaff;text-shadow:0 1px 2px #000;white-space:nowrap;margin-top:1px}
@@ -1076,7 +1079,7 @@
     background:linear-gradient(180deg,rgba(13,18,28,.97),rgba(8,11,17,.985));border-top:1px solid rgba(90,140,210,.3);border-radius:14px 14px 0 0;
     box-shadow:0 -8px 24px rgba(0,0,0,.55);padding:9px 8px 12px;display:flex;flex-direction:column}
   #btSheet.open{transform:translateY(0)}
-  #btCardCtl{position:absolute;top:-17px;right:14px;z-index:31;width:46px;height:23px;padding:0;   /* 프로필 간소화/최소화 사이클 버튼(상단 우측 밖) */
+  #btCardCtl{position:absolute;top:-28px;right:14px;z-index:31;width:46px;height:23px;padding:0;   /* 프로필 간소화/최소화 사이클 버튼(상단 우측 밖, 부양 버튼과 겹침 방지 위로) */
     border:1px solid rgba(120,160,220,.32);border-bottom:none;border-radius:9px 9px 0 0;
     background:linear-gradient(180deg,rgba(27,35,52,.98),rgba(15,20,30,.99));color:#9db8e0;
     display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 -4px 12px rgba(0,0,0,.35);
@@ -1469,6 +1472,8 @@
   .cmdG .cgProg{margin-top:1px} .cmdG .cgProg .pl{display:flex;justify-content:space-between;font-size:8.5px;color:var(--cgMuted);margin-bottom:2px} .cmdG .cgProg .pl b{color:var(--caL);font-family:'Rajdhani',sans-serif;font-size:10px}
   .cmdG .cgBar{height:6px;border-radius:3px;background:rgba(0,0,0,.55);overflow:hidden;box-shadow:inset 0 0 4px rgba(0,0,0,.7)}
   .cmdG .cgBar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,color-mix(in srgb,var(--ca) 55%,#000),var(--ca));box-shadow:0 0 7px var(--caG);transition:width .12s linear}
+  .cmdG .cgQBar{height:3px;border-radius:2px;background:rgba(0,0,0,.5);overflow:hidden;margin-top:3px}   /* 🔢 진행 바 아래 얇은 대기열 구분선 */
+  .cmdG .cgQBar i{display:block;height:100%;border-radius:2px;background:#fff;box-shadow:0 0 5px rgba(255,255,255,.45);transition:width .15s linear,background .2s linear}
   .cmdG .cgDcost{display:flex;align-items:center;gap:5px;margin-top:auto;padding-top:2px;font-family:'Rajdhani',sans-serif;font-weight:800;font-size:11.5px;flex-wrap:wrap}
   .cmdG .cgDcost .time{color:var(--cgMuted);font-size:9.5px;width:100%}
   /* 🔢 생산 대기열(최대 5) — 왼쪽 정보 영역. 앞 칸=진행바, 탭=취소(100% 환불) */
@@ -7262,7 +7267,7 @@ function _cgInfoHTML(d){ if(!d) return '<div class="cgEb">정보</div><div class
   let q=''; if(d.queue){ const cap=d.qcap||5, lbl=d.qlabel||'대기열', have=d.queue.filter(Boolean).length;
     q='<div class="cgQlbl">'+lbl+' '+have+'/'+cap+'</div><div class="cgQ">'+d.queue.map((s,i)=>s?('<div class="qs'+(s.front?' front':'')+(s.ready?' rdy':'')+'"'+(s.act?(' '+s.act+' title="탭 = 취소(100% 환불)"'):(s.ready?'':' onclick="techCancelQueue(event,'+i+')" title="탭 = 취소(100% 환불)"'))+'><span class="qpro">'+(s.pro||'')+'</span>'+(s.front?'<i class="qb" style="width:'+Math.max(0,s.prog||0)+'%"></i>':'')+'</div>'):'<div class="qs empty"></div>').join('')+'</div>'; }
   return (d.eb?'<div class="cgEb">'+d.eb+'</div>':'')+(d.hideName?'':'<div class="cgDn">'+(d.name||'')+'</div>')+(d.desc?'<div class="cgDd">'+d.desc+'</div>':'')+val
-    +(d.progLabel?('<div class="cgProg"><div class="pl"><span>'+d.progLabel+(d.progTime?' <em class="pt">'+d.progTime+'</em>':'')+'</span><b>'+(d.qlbl||d.progVal||'')+'</b></div><div class="cgBar"'+(d.progCancel!=null?' onclick="techCancelQueue(event,'+d.progCancel+')" title="탭 = 마지막 예약 취소(100% 환불)" style="cursor:pointer"':'')+'><i style="width:'+Math.max(4,d.prog||0)+'%'+(d.progColor?(';background:'+d.progColor+';box-shadow:0 0 7px '+d.progColor):'')+'"></i></div></div>'):'')+q
+    +(d.progLabel?('<div class="cgProg"><div class="pl"><span>'+d.progLabel+(d.progTime?' <em class="pt">'+d.progTime+'</em>':'')+'</span><b>'+(d.progVal||'')+'</b></div><div class="cgBar"><i style="width:'+Math.max(4,d.prog||0)+'%"></i></div>'+(d.qbar?('<div class="cgQBar"'+(d.qbar.cancel!=null?' onclick="techCancelQueue(event,'+d.qbar.cancel+')" title="탭 = 마지막 예약 취소(100% 환불)" style="cursor:pointer"':'')+' aria-label="대기열 '+(d.qbar.n||0)+'/5"><i style="width:'+Math.max(0,d.qbar.fill||0)+'%'+(d.qbar.color?(';background:'+d.qbar.color):'')+'"></i></div>'):'')+'</div>'):'')+q
     +'<div class="cgDcost">'+_cgCost(d.cr,d.en)+(d.time?'<span class="time">'+d.time+'</span>':'')+'</div>'; }
 function renderCmdGrid(host, m){ const el=(typeof host==='string')?document.getElementById(host):host; if(!el||!m) return;
   const PER=m.compact?4:8; let _items;   // 간소화=4칸/페이지, 전체=8칸/페이지
@@ -11022,13 +11027,12 @@ function techBldgProdModel(b, e){ const race=G.tech.race;
   const items=_techWithAddons(b.produces.map(p=>{ const reqok=_techReqMet(p.req), afford=_techAfford(p.m,p.g), popok=G.tech.inf||!p.pop||(G.tech.sup+p.pop<=G.tech.supCap), cnt=G.tech.units[p.id]||0;
     return { pro:_techUnitPortrait(p.id), sn:_techRealName(race,p.id), cr:p.m, en:p.g, meta:cnt?('×'+cnt):(p.pop?'👤'+p.pop:''), metaCls:cnt?'lv':'', state:(qFull||!reqok||!afford||!popok)?'dim':'ok', act:'onclick="techDoProduce(\''+p.id+'\',\''+b.k+'\')"' }; }), b.k);   // 🔗 부속 카드는 마지막 그리드로 · 대기열 가득참=비활성
   const bs=techBldgSpec(race,b.k)||{};
-  const front=pq[0]; let progLabel,progVal,progTime='';
-  if(front){ progLabel='생산 중'; progTime=Math.ceil(front.t)+'s'; progVal=(_techRealName(race,front.id)||''); }   // 남은시간=progLabel 옆(작게)
+  const front=pq[0]; let progLabel,progVal,progTime='',prog=0;
+  if(front){ progLabel='생산 중'; progTime=Math.ceil(front.t)+'s'; progVal=(_techRealName(race,front.id)||''); prog=Math.round((1-front.t/(front.tMax||1))*100); }   // 파랑 진행 바 = 앞 유닛 진행%(유지)
   else { progLabel='생산 대기'; progVal=''; }
-  const _qn=pq.length, prog=Math.round(_qn/5*100);   // 🔢 하단 바 = 대기열 채움(1→1/5 … 5→5/5)
-  const _f=Math.max(0,Math.min(1,(_qn-1)/4)), _gb=Math.round(255-_f*190), progColor=(_qn>0?('rgb(255,'+_gb+','+_gb+')'):'');   // 색 = 흰색(1)→빨강(5)
+  const _qn=pq.length, _f=Math.max(0,Math.min(1,(_qn-1)/4)), _gb=Math.round(255-_f*190);   // 🔢 진행 바 아래 얇은 선 = 대기열 채움(1→1/5 … 5=가득), 흰(1)→빨강(5)
   return { mode:'prod', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:'유닛 생산 — 탭(최대 5 예약)', items, topRight:_techBldgTR(b),
-    info:{ eb:'생산', hideName:true, progLabel, progVal, prog, progTime, progColor, progCancel:(_qn>0?(_qn-1):null), qlbl:'대기열 '+_qn+'/5', cr:0, en:0, time:'' } }; }
+    info:{ eb:'생산', hideName:true, progLabel, progVal, prog, progTime, qbar:{ fill:Math.round(_qn/5*100), color:(_qn>0?('rgb(255,'+_gb+','+_gb+')'):''), cancel:(_qn>0?(_qn-1):null), n:_qn }, cr:0, en:0, time:'' } }; }
 function techBldgUpgModel(b, e){ const race=G.tech.race; const rj=e&&e._rj;
   const items=b.research.map(r=>{ const key=race+'_'+r.k, isThis=!!(rj&&rj.rk===r.k); let meta,state,cr,en;
     if(r.tier){ const lv=G.tech.research[key]||0, isMax=lv>=r.tier.length, nx=r.tier[Math.min(lv,r.tier.length-1)]; meta=isMax?'MAX':('Lv.'+lv); cr=isMax?0:nx[0]; en=isMax?0:nx[1]; state=isThis?'busy':(isMax?'max':((rj||!_techAfford(cr,en))?'dim':'ok')); }
@@ -11073,8 +11077,11 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
     ents+='<div class="techSelBox" style="left:'+(bx*100).toFixed(2)+'%;top:'+(by*100).toFixed(2)+'%;width:'+(bw*100).toFixed(2)+'%;height:'+(bh*100).toFixed(2)+'%;position:absolute;border:1.5px solid #46f06a;background:rgba(70,240,106,.14);pointer-events:none;z-index:23;border-radius:2px"></div>'; }
   let tabs=''; ['union','swarm','aetherial'].forEach(r=>{ tabs+='<span class="techTab'+(r===race?' on':'')+'" onclick="techRace(event,\''+r+'\')">'+_TECH_RKO[r]+'</span>'; });
   const selE=(G.tech.sel!=null)?G.tech.ents.find(e=>e.eid===G.tech.sel):null, canDemo=selE&&selE.type==='bldg'&&((techGetBldg(race,selE.bk)||{}).k!==TECH_TREE[race].buildings[0].k);
-  const res='<span class="res cr">'+(G.tech.inf?'∞':G.tech.credit)+'◈</span><span class="res gs">'+(G.tech.inf?'∞':G.tech.energy)+'⚡</span><span class="res sp">👤'+G.tech.sup+'/'+G.tech.supCap+'</span>'
-    +(canDemo?'<span class="cbtn dz" onclick="techDemolish(event)">🗑 철거</span>':'')+'<span class="cbtn'+(G.tech.inf?' on':'')+'" onclick="techInf(event)">∞</span><span class="cbtn'+(G.tech.nocool?' on':'')+'" onclick="techNocool(event)" title="즉시 건설·생산">⏱</span><span class="cbtn'+(techFogEnabled()?' on':'')+'" onclick="techFog(event)" title="전장의 안개">🌫️</span><span class="cbtn" onclick="techReset(event)">↺</span>';
+  const _RI_CR='<svg class="ri" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#ffd24a" stroke="#ffe6a0" stroke-width="1.2"/><circle cx="12" cy="12" r="6.6" fill="none" stroke="#b88a1e" stroke-width="1"/><path d="M14.8 8.8A4.4 4.4 0 1 0 14.8 15.2" fill="none" stroke="#7a5a12" stroke-width="2.2" stroke-linecap="round"/></svg>';   // 메인 HUD 자원 아이콘 재사용(크레딧=골드 코인)
+  const _RI_EN='<svg class="ri" viewBox="0 0 24 24"><path d="M13.6 2L5.4 13H10l-1.6 9L18.6 10.5H13z" fill="#6ff0a0" stroke="#d6ffe6" stroke-width="1" stroke-linejoin="round"/></svg>';   // 에너지=번개
+  const _RI_SP='<svg class="ri" viewBox="0 0 24 24"><circle cx="12" cy="7.5" r="3.3" fill="#bcd8f5" stroke="#eaf4ff" stroke-width="1"/><path d="M4.5 20c0-4.2 3.4-6.8 7.5-6.8s7.5 2.6 7.5 6.8z" fill="#94b8e2" stroke="#eaf4ff" stroke-width="1" stroke-linejoin="round"/></svg>';   // 인구=파란 인물
+  const res='<span class="res cr">'+_RI_CR+'<b>'+(G.tech.inf?'∞':G.tech.credit)+'</b></span><span class="res gs">'+_RI_EN+'<b>'+(G.tech.inf?'∞':G.tech.energy)+'</b></span><span class="res sp">'+_RI_SP+'<b>'+G.tech.sup+'/'+G.tech.supCap+'</b></span>';
+  const btns=(canDemo?'<span class="cbtn dz" onclick="techDemolish(event)">🗑 철거</span>':'')+'<span class="cbtn'+(G.tech.inf?' on':'')+'" onclick="techInf(event)" title="무제한 자원">∞</span><span class="cbtn'+(G.tech.nocool?' on':'')+'" onclick="techNocool(event)" title="즉시 건설·생산">⏱</span><span class="cbtn'+(techFogEnabled()?' on':'')+'" onclick="techFog(event)" title="전장의 안개">🌫️</span><span class="cbtn" onclick="techReset(event)" title="리셋">↺</span>';
   // 배치 고스트 + ✓/✕ 확정 버튼 (드래그로 위치 조정)
   let ghost='', armBtns='', foot='';
   if(G.tech.arm && G.tech.armXY){ const _ab=techGetBldg(race,G.tech.arm)||{}, _gs=_techW2S(G.tech.armXY.x,G.tech.armXY.y), _ok=techArmValid(G.tech.armXY.x,G.tech.armXY.y);
@@ -11126,7 +11133,7 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
       const _len=Math.hypot((_rs.x-_bs.x)*(GW||390),(_rs.y-_bs.y)*(GH||390)), _ang=Math.atan2((_rs.y-_bs.y)*(GH||390),(_rs.x-_bs.x)*(GW||390))*180/Math.PI;
       rallyZ+='<div class="bRallyLine'+(_hot?' hot':'')+'" style="left:'+(_bs.x*100).toFixed(2)+'%;top:'+(_bs.y*100).toFixed(2)+'%;width:'+_len.toFixed(1)+'px;transform:rotate('+_ang.toFixed(1)+'deg)"></div>';
       rallyZ+='<div class="bRallyMark'+(_hot?' hot':'')+'" style="left:'+(_rs.x*100).toFixed(2)+'%;top:'+(_rs.y*100).toFixed(2)+'%"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="9.5" ry="6.6" fill="none" stroke="#46f06a" stroke-width="1.3"/><circle cx="12" cy="12" r="1.7" fill="#46f06a"/></svg></div>'; } }
-  map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+(G.tech.rallySet!=null?' rally':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none">'+_floor+hillZ+creepZ+psi+gasZone+mineZ+rallyZ+'<div class="bmapTop"><div class="techTabs">'+tabs+'</div><div class="bres">'+res+'</div></div>'+ents+foot+ghost+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div></div>';
+  map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+(G.tech.rallySet!=null?' rally':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none">'+_floor+hillZ+creepZ+psi+gasZone+mineZ+rallyZ+'<div class="bmapTop"><div class="techSide"><div class="techTabs">'+tabs+'</div><div class="techBtns">'+btns+'</div></div><div class="bres">'+res+'</div></div>'+ents+foot+ghost+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div></div>';
   const _lblLayer=document.getElementById('cstLabels'); if(_lblLayer) _lblLayer.innerHTML=labels+armBtns+resumeBtn;   // 남은시간 라벨 + 배치 ✓/✕ + ▶재개 버튼을 전용 오버레이(z8)에 → 3D 유닛·건물 위(리파이너리 등 큰 건물에 안 가림)
   techFogDraw(); }   // 🌫️ 건설 안개 오버레이 재그림(맵 재렌더마다)
 function techBldgInfoModel(b){ const race=G.tech.race, hb=TECH_TREE[race].buildings[0];
