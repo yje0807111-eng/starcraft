@@ -11042,11 +11042,19 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
   if(G.tech.ents.some(x=>x._dead)){ for(const x of G.tech.ents){ if(x._dead&&x.bk==='nydus') _techNydusUnlink(x); } G.tech.ents=G.tech.ents.filter(x=>!x._dead); }   // 💥 폭발한 건물 제거(🕳 나이더스=반대편 고장)
   for(const e of G.tech.ents){ if(!e._chq||!e._chq.length) continue; if(e.type==='bldg'&&e.bt>0) continue;   // 🚀 내부 장전 큐(캐리어·리버·핵 사일로) — 맨 앞 1개만 진행
     const it=e._chq[0]; it.t=Math.max(0,it.t-dt); active=true; if(it.t<=0){ e._chc=(e._chc||0)+1; e._chq.shift(); done=true; } }
+  // ⚡ 마나(에너지): 마법 유닛 = 생산 직후 50 + 자연 회복(1.2초당 1). 지정된 캐스터 회복 중이면 바만 스로틀 갱신(perma-render 방지)
+  let _manaSel=false;
+  for(const e of G.tech.ents){ if(e.type!=='unit'&&e.type!=='worker') continue;
+    const _mx=(typeof U!=='undefined'&&U[e.uid]&&U[e.uid].energy)||0; if(_mx<=0) continue;
+    if(e.maxEn!==_mx) e.maxEn=_mx;
+    if(e.en==null) e.en=Math.min(50,_mx);   // 생산 직후 50
+    else if(e.en<_mx){ e.en=Math.min(_mx, e.en+dt/1.2); if(G.tech.sel===e.eid||(G.tech.selU&&G.tech.selU.indexOf(e.eid)>=0)) _manaSel=true; } }
   if(done) techUIRender();
   else if(active||_vmoving){ techMapRender();
     const _selB=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'):null;   // 선택된 건물(건설·생산·연구·장전 진행) = 프로필 실시간 갱신(스로틀 5/s)
     const _selU1=((G.tech.selU||[]).length===1)?G.tech.ents.find(x=>x.eid===G.tech.selU[0]):null;   // 단일 지정 유닛(캐리어·리버 장전)
-    if((_selB && (_selB.bt>0 || (_selB._pq&&_selB._pq.length) || _selB._rj || (_selB._chq&&_selB._chq.length))) || (_selU1&&_selU1._chq&&_selU1._chq.length)){ G.tech._panT=(G.tech._panT||0)+dt; if(G.tech._panT>=0.2){ G.tech._panT=0; techPanelRender(); } } } }   // 완성=전체 갱신 / 진행중=맵(+선택 프로필)
+    if((_selB && (_selB.bt>0 || (_selB._pq&&_selB._pq.length) || _selB._rj || (_selB._chq&&_selB._chq.length))) || (_selU1&&_selU1._chq&&_selU1._chq.length)){ G.tech._panT=(G.tech._panT||0)+dt; if(G.tech._panT>=0.2){ G.tech._panT=0; techPanelRender(); } } }
+  else if(_manaSel){ G.tech._manaT=(G.tech._manaT||0)+dt; if(G.tech._manaT>=0.2){ G.tech._manaT=0; techMapRender(); } } }   // 완성=전체 갱신 / 진행중=맵(+선택 프로필)
 // 건설 탭 건물 3D 프리뷰: TECH 건물키 → glb 모델키(선택/배치대기 시 하단 도크에 회전 렌더)
 const TECH_MODEL={
   union:{ command:'union_command_center', supply:'union_supply_depot', refinery:'union_refinery', barracks:'union_barracks', academy:'union_academy', engbay:'union_engineering_bay', bunker:'union_bunker', turret:'union_missile_turret', factory:'union_factory', machshop:'union_machine_shop', armory:'union_armory', starport:'union_starport', control:'union_control_tower', scifac:'union_science_facility', covert:'union_covert_ops', physics:'union_physics_lab', comsat:'union_comsat_station', nuke:'union_nuclear_silo' },
@@ -11190,7 +11198,8 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
         _mHp=_bs.hp||0; _mSh=_bs.sh||0; _mEn=0; _bx=_sbb.x; _bTop=(_sbb.y*100).toFixed(2)+'%'; _bW=Math.max(0.05,_bf2.w*_techCW()*techView().zoom); }
       else { const _uid=(e.type==='worker')?(TECH_WORKER[race]||'worker_light'):e.uid, _sp=techUnitSpec(race,_uid)||{};
         _mHp=_sp.hp||0; _mSh=_sp.sh||0; _mEn=(typeof U!=='undefined'&&U[_uid]&&U[_uid].energy)||0; _bTop='calc('+(_s.y*100).toFixed(2)+'% + 10px)'; _bW=Math.max(0.05,0.9*_techCW()*techView().zoom); }
-      if(_mHp>0) labels+='<div class="bentBar" style="left:'+(_bx*100).toFixed(2)+'%;top:'+_bTop+';width:'+(_bW*100).toFixed(2)+'%">'+_barsHTML({ hpR:1, hpCol:hpBarColor(1), shR:_mSh>0?1:null, enR:_mEn>0?1:null })+'</div>'; } }
+      const _enR=_mEn>0?Math.max(0,Math.min(1,(e.en!=null?e.en:Math.min(50,_mEn))/_mEn)):null;   // ⚡ 실시간 마나(초기 50 → 자연 회복)
+      if(_mHp>0) labels+='<div class="bentBar" style="left:'+(_bx*100).toFixed(2)+'%;top:'+_bTop+';width:'+(_bW*100).toFixed(2)+'%">'+_barsHTML({ hpR:1, hpCol:hpBarColor(1), shR:_mSh>0?1:null, enR:_enR })+'</div>'; } }
   if(_btBox && _btBox.active){ const bx=Math.min(_btBox.sx0,_btBox.sx1),by=Math.min(_btBox.sy0,_btBox.sy1),bw=Math.abs(_btBox.sx1-_btBox.sx0),bh=Math.abs(_btBox.sy1-_btBox.sy0);   // 🔲 한 손가락 드래그 = 유닛 지정 박스
     ents+='<div class="techSelBox" style="left:'+(bx*100).toFixed(2)+'%;top:'+(by*100).toFixed(2)+'%;width:'+(bw*100).toFixed(2)+'%;height:'+(bh*100).toFixed(2)+'%;position:absolute;border:1.5px solid #46f06a;background:rgba(70,240,106,.14);pointer-events:none;z-index:23;border-radius:2px"></div>'; }
   let tabs=''; ['union','swarm','aetherial'].forEach(r=>{ tabs+='<span class="techTab'+(r===race?' on':'')+'" onclick="techRace(event,\''+r+'\')">'+_TECH_RKO[r]+'</span>'; });
