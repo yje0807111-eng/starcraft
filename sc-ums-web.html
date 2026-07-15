@@ -501,7 +501,7 @@
   /* 쉴드(하늘색)+HP=한 칸(딱 붙음) · 마나(보라)=한 줄 띄워 별도 칸(에테리얼 쉴드=위, HP=중간, 마나=아래) */
   .uhp{display:flex;flex-direction:column;gap:0;margin:2px 0 1px}
   .uhpMain{display:flex;flex-direction:column;gap:0;border-radius:1.5px;overflow:hidden;border:1px solid rgba(0,0,0,.78);background:rgba(4,8,12,.92);box-shadow:0 0 3px rgba(0,0,0,.5)}
-  .uhp .ub{height:3px;background:transparent;border:0;border-radius:0;overflow:hidden}
+  .uhp .ub{height:2px;background:transparent;border:0;border-radius:0;overflow:hidden}
   .uhpMain .ub+.ub{border-top:1px solid rgba(0,0,0,.55)}   /* 쉴드↔HP 사이 얇은 구분선(한 칸을 위/아래로 나눈 느낌) */
   .uhp .ub i{display:block;height:100%;border-radius:0}
   .uhp .uS i{background:#5ad1ff;box-shadow:0 0 5px rgba(90,209,255,.7)}
@@ -6585,7 +6585,7 @@ function _spawnBroodling(m, x, y){ if(typeof G==='undefined'||!G.units) return n
 function stepSkills(dt){ if(typeof G==='undefined'||!G.units) return; G._skT=(G._skT||0)+dt;
   for(const u of G.units){ u._fieldCloak=false; u._healTgt=null; }   // 오라 은신·치유 대상 매 프레임 초기화
   for(const u of G.units){ if(u.fixed) continue;
-    if(u.maxEn>0) u.en=Math.min(u.maxEn,(u.en||0)+SKILL_EN_REGEN*dt);   // 에너지 재생
+    if(u.maxEn>0) u.en=Math.min(u.maxEn,(u.en||0)+(G.sandbox?(1/1.2):SKILL_EN_REGEN)*dt);   // 에너지 재생 · 샌드박스(건설·전투실험)=SC 1.2초당 1 / 실게임=SKILL_EN_REGEN
     if(u.skillCd){ for(const k in u.skillCd){ if(u.skillCd[k]>0) u.skillCd[k]=Math.max(0,u.skillCd[k]-dt); } }
     if(u.skillOn){ for(const k in u.skillOn){ if(!u.skillOn[k]) continue; const sk=SKILLS[k]; if(!sk) continue;
       if(sk.drain&&u.maxEn>0){ u.en-=sk.drain*dt; if(u.en<=0){ u.en=0; u.skillOn[k]=false; continue; } }
@@ -9749,12 +9749,14 @@ function btAdd(sid, gm, name){ if(typeof G==='undefined') return; G.btUnits=G.bt
   const n=G.btUnits.filter(u=>u.team!=='foe').length, c=n%4, r=(n/4)|0;   // 아군만 카운트 → 좌측 격자
   const u=initUnitStats({uid:G.idSeq++, id:sid, hero:false, lv:1, x:0.10+c*0.05, y:0.44+r*0.052, cd:0, fixed:false});
   if(gm){ u.gmodel=gm; _btModelStats(u, gm); } u.gname=name;
+  if(u.maxEn>0) u.en=Math.min(50,u.maxEn);   // 🔮 마나: 마법 유닛 생산 직후 50(SC) → stepSkills가 자연 회복
   G.btUnits.push(u); if(G.tab==='Battle') G.units=G.btUnits;   // 전투실험 중이면 즉시 전장에 반영
   if(typeof toast==='function') toast(name+' 배치'); }
 function btAddFoe(sid, gm, name, quiet){ if(typeof G==='undefined') return; G.btUnits=G.btUnits||[]; if(G.idSeq==null) G.idSeq=1;
   const n=G.btUnits.filter(u=>u.team==='foe').length, c=n%4, r=(n/4)|0;   // 적군만 카운트 → 우측 격자
   const u=initUnitStats({uid:G.idSeq++, id:sid, hero:false, lv:1, x:0.90-c*0.05, y:0.44+r*0.052, cd:0, fixed:false});
   if(gm){ u.gmodel=gm; _btModelStats(u, gm); } u.gname=name||''; u.team='foe';   // 적팀 표식
+  if(u.maxEn>0) u.en=Math.min(50,u.maxEn);   // 🔮 마나: 생산 직후 50(SC)
   G.btUnits.push(u); if(G.tab==='Battle') G.units=G.btUnits;
   if(!quiet && typeof toast==='function') toast((name||sid)+' [적] 배치'); }
 function btClear(){ if(typeof G==='undefined'||!G.btUnits) return; G.btUnits.length=0; if(G.tab==='Battle') G.units=G.btUnits; G.sel=[]; if(window.M3D&&M3D.clearGameModels) M3D.clearGameModels(); if(typeof toast==='function') toast('전장 비움'); }
@@ -11197,7 +11199,7 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
       if(e.type==='bldg'){ const _bs=techBldgSpec(race,e.bk)||{}, _bf2=(typeof _techFoot==='function')?_techFoot(race,e.bk):{w:2,h:2}, _sbb=_techW2S(e.x,e.y+(_bf2.h/2)*_techCH());
         _mHp=_bs.hp||0; _mSh=_bs.sh||0; _mEn=0; _bx=_sbb.x; _bTop=(_sbb.y*100).toFixed(2)+'%'; _bW=Math.max(0.05,_bf2.w*_techCW()*techView().zoom); }
       else { const _uid=(e.type==='worker')?(TECH_WORKER[race]||'worker_light'):e.uid, _sp=techUnitSpec(race,_uid)||{};
-        _mHp=_sp.hp||0; _mSh=_sp.sh||0; _mEn=(typeof U!=='undefined'&&U[_uid]&&U[_uid].energy)||0; _bTop='calc('+(_s.y*100).toFixed(2)+'% + 10px)'; _bW=Math.max(0.05,0.9*_techCW()*techView().zoom); }
+        _mHp=_sp.hp||0; _mSh=_sp.sh||0; _mEn=(typeof U!=='undefined'&&U[_uid]&&U[_uid].energy)||0; _bTop='calc('+(_s.y*100).toFixed(2)+'% + 17px)'; _bW=Math.max(0.05,0.9*_techCW()*techView().zoom); }   // 유닛 바 = 초상 아래로 살짝 내림(딱 붙지 않게)
       const _enR=_mEn>0?Math.max(0,Math.min(1,(e.en!=null?e.en:Math.min(50,_mEn))/_mEn)):null;   // ⚡ 실시간 마나(초기 50 → 자연 회복)
       if(_mHp>0) labels+='<div class="bentBar" style="left:'+(_bx*100).toFixed(2)+'%;top:'+_bTop+';width:'+(_bW*100).toFixed(2)+'%">'+_barsHTML({ hpR:1, hpCol:hpBarColor(1), shR:_mSh>0?1:null, enR:_enR })+'</div>'; } }
   if(_btBox && _btBox.active){ const bx=Math.min(_btBox.sx0,_btBox.sx1),by=Math.min(_btBox.sy0,_btBox.sy1),bw=Math.abs(_btBox.sx1-_btBox.sx0),bh=Math.abs(_btBox.sy1-_btBox.sy0);   // 🔲 한 손가락 드래그 = 유닛 지정 박스
