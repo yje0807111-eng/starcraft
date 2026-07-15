@@ -506,7 +506,7 @@
   .uhp .ub i{display:block;height:100%;border-radius:0}
   .uhp .uS i{background:#5ad1ff;box-shadow:0 0 5px rgba(90,209,255,.7)}
   .uhp .uH i{box-shadow:0 0 4px rgba(70,211,105,.5)}
-  .uhp .uE{margin-top:2px;border-radius:1.5px;overflow:hidden;border:1px solid rgba(0,0,0,.78);background:rgba(4,8,12,.92);box-shadow:0 0 3px rgba(0,0,0,.5)}   /* 마나 = 살짝 띄운 별도 칸 */
+  .uhp .uE{height:4px;margin-top:2px;border-radius:1.5px;overflow:hidden;border:1px solid rgba(0,0,0,.78);background:rgba(4,8,12,.92);box-shadow:0 0 3px rgba(0,0,0,.5)}   /* 마나 = 살짝 띄운 별도 칸(내부 채움 2px = HP 두께와 동일) */
   .uhp .uE i{background:#b06bff;box-shadow:0 0 5px rgba(176,107,255,.6)}
   .bentBar{position:absolute;transform:translateX(-50%);z-index:22;pointer-events:none}   /* 건설 탭: 지정 유닛·건물 위 바 래퍼 */
   .bent.illusion{opacity:.45;filter:hue-rotate(200deg) saturate(1.4)}   /* 👥 할루시네이션 환영 = 반투명·푸른 틴트 */
@@ -11591,7 +11591,12 @@ function techUnitPanelModel(list){ const race=G.tech.race, grp={}, ord=[];   // 
   const f=list[0], fid=(f.type==='worker')?(TECH_WORKER[race]||'worker_human'):f.uid, spec=techUnitSpec(race,fid)||{};
   const rn=_techRealName(race,fid), role=_techRoleOf(fid);
   const nm=(list.length===1)?(rn+(role?' ('+role+')':'')):('유닛 '+list.length+'기');   // 이름 (직책)
-  return { mode:'prod', title:nm, icon:_techUnitPortrait(fid), hpsh:_cgHpShDual(spec.hp,spec.sh,(typeof U!=='undefined'&&U[fid]&&U[fid].energy)||0), sub:(_amE?'내부 장전 — 탭 · 맵 탭=이동':'맵을 탭하면 이동 · 해제는 우상단 ✕'), items,
+  const _hpsh=(list.length===1 && f && f.hp!=null)   // 🔴 단일 지정 = 실시간 HP/쉴드/마나(스팀팩 등 소모 반영) · 초기화 전이면 spec 폴백
+    ? _cgHpShStr(Math.round(f.hp)+'/'+Math.round(f.maxHp!=null?f.maxHp:spec.hp),
+        (f.maxSh>0)?(Math.round(f.sh!=null?f.sh:f.maxSh)+'/'+Math.round(f.maxSh)):0,
+        (f.maxEn>0)?(Math.round(f.en!=null?f.en:f.maxEn)+'/'+Math.round(f.maxEn)):0)
+    : _cgHpShDual(spec.hp,spec.sh,(typeof U!=='undefined'&&U[fid]&&U[fid].energy)||0);
+  return { mode:'prod', title:nm, icon:_techUnitPortrait(fid), hpsh:_hpsh, sub:(_amE?'내부 장전 — 탭 · 맵 탭=이동':'맵을 탭하면 이동 · 해제는 우상단 ✕'), items,
     info:_amE?_techAmmoInfo(_amE, _amE.uid):{ eb:'', hideName:true, stats:_techUnitStatList(spec,fid), cr:0, en:0 } }; }   // 왼쪽: 장전 큐(캐리어·리버) / 유닛 스탯
 function techWorkerBuildModel(list){ const race=G.tech.race, fid=(TECH_WORKER[race]||'worker_human'), n=list.length;   // 일꾼 지정 시트 — 헤더=일꾼 프로필, 그리드=건물 생성 카드
   const ws=techUnitSpec(race,fid)||{}, rn=_techRealName(race,fid), role=_techRoleOf(fid);
