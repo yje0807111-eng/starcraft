@@ -10166,10 +10166,15 @@ TECH_TREE.swarm={ name:'스웜', res:{m:'크레딧', g:'에너지'}, buildings:[
   { k:'nydus', name:'나이더스 커널', ico:'🕳', m:150, g:0, req:['hive'] },
 ]};
 TECH_TREE.aetherial={ name:'에테리얼', res:{m:'크레딧', g:'에너지'}, buildings:[
-  // ── 기본·방어 ──
+  // ── 순서: 넥서스·파일런·게이트웨이·어시밀레이터·포지·포톤캐논·사이버코어·쉴드배터리·스타게이트·플릿비콘·트리뷰널·로보·로보베이·옵저버터리·시타델·아카이브 ──
   { k:'nexus', name:'넥서스', ico:'🔷', m:400, g:0, supply:9, req:[],
     produces:[{id:'worker_light', name:'결정체', m:50, g:0, pop:1}] },                // 프로브
   { k:'pylon', name:'파일런', ico:'🔮', m:100, g:0, supply:8, req:[] },               // 동력장
+  { k:'gateway', name:'게이트웨이', ico:'⛩️', m:150, g:0, req:['nexus'],
+    produces:[
+      {id:'blade', name:'워든', m:100, g:0, pop:2},                                   // 질럿
+      {id:'dragoon', name:'센티넬', m:125, g:50, pop:2, req:['cyber']},               // 드라군
+      {id:'high_templar', name:'하이세이지', m:50, g:150, pop:2, req:['archives']}] },  // 하이세이지 → 다크세이지·보이드로 진화(TECH_MORPH)
   { k:'assimilator', name:'어시밀레이터', ico:'🛢', m:100, g:0, gas:true, req:[] },
   { k:'forge', name:'포지', ico:'⚒️', m:150, g:0, req:['nexus'],
     research:[
@@ -10177,43 +10182,12 @@ TECH_TREE.aetherial={ name:'에테리얼', res:{m:'크레딧', g:'에너지'}, b
       {k:'gnd_arm', name:'지상 장갑', desc:'지상 방어 +/티어', tier:[[100,100],[150,150],[200,200]]},
       {k:'shield', name:'플라즈마 보호막', desc:'모든 유닛 실드 +/티어', tier:[[200,200],[300,300],[400,400]]} ] },
   { k:'cannon', name:'포톤 캐논', ico:'☄️', m:150, g:0, req:['forge'], detector:true },
-  // ── 관문·지상군 ──
-  { k:'gateway', name:'게이트웨이', ico:'⛩️', m:150, g:0, req:['nexus'],
-    produces:[
-      {id:'blade', name:'워든', m:100, g:0, pop:2},                                   // 질럿
-      {id:'dragoon', name:'센티넬', m:125, g:50, pop:2, req:['cyber']},               // 드라군
-      {id:'high_templar', name:'하이템플러', m:50, g:150, pop:2, req:['archives']},
-      {id:'dark_templar', name:'다크템플러', m:125, g:100, pop:2, req:['archives']}] },
-  { k:'battery', name:'쉴드 배터리', ico:'🔋', m:100, g:0, req:['gateway'] },
   { k:'cyber', name:'사이버네틱스 코어', ico:'⚙️', m:200, g:0, req:['gateway'],
     research:[
       {k:'singularity', name:'특이점 장약', desc:'센티넬 사거리↑', m:150, g:150},
       {k:'air_wpn', name:'공중 무기', desc:'팔콘·스카이댄서·아크엔젤·크로노스 +/티어', tier:[[100,100],[175,175],[250,250]]},
       {k:'air_arm', name:'공중 장갑', desc:'공중 방어 +/티어', tier:[[150,150],[225,225],[300,300]]} ] },
-  { k:'citadel', name:'시타델 오브 아둔', ico:'🏯', m:150, g:100, req:['cyber'],
-    research:[{k:'legs', name:'다리 강화', desc:'워든 이동속도↑ (발업)', m:150, g:150}] },
-  { k:'archives', name:'템플러 아카이브', ico:'📚', m:150, g:200, req:['citadel'],
-    research:[
-      {k:'storm', name:'사이오닉 스톰', desc:'하이템플러 범위 번개', m:200, g:200},
-      {k:'hallucination', name:'할루시네이션', desc:'가짜 유닛 생성', m:150, g:150},
-      {k:'khaydarin', name:'케이다린 부적', desc:'하이템플러 최대 에너지 +50', m:150, g:150},
-      {k:'mindcontrol', name:'마인드 컨트롤', desc:'적 유닛 영구 탈취', m:200, g:200},
-      {k:'maelstrom', name:'메일스트롬', desc:'생체 유닛 일정시간 마비', m:100, g:100},
-      {k:'argus', name:'아르거스 부적', desc:'다크아콘 최대 에너지 +50', m:150, g:150} ] },
-  // ── 로보틱스 ──
-  { k:'robo', name:'로보틱스 퍼실리티', ico:'🤖', m:200, g:200, req:['cyber'],
-    produces:[
-      {id:'seraph', name:'세라프', m:200, g:0, pop:2},                                // 셔틀(수송)
-      {id:'reaver', name:'리버', m:200, g:100, pop:4, req:['robobay']},               // 리버(스캐럽 내부 큐)
-      {id:'observer', name:'와처', m:25, g:75, pop:1, req:['observatory'], detector:true}] },  // 옵저버
-  { k:'robobay', name:'로보틱스 서포트 베이', ico:'🔧', m:150, g:100, req:['robo'],
-    research:[
-      {k:'gravitic_shuttle', name:'중력자 추진기', desc:'세라프 이동속도↑', m:200, g:200},
-      {k:'reaver_cap', name:'스캐럽 수용력', desc:'리버 스캐럽 최대 5→10', m:200, g:200} ] },
-  { k:'observatory', name:'옵저버터리', ico:'🔭', m:50, g:100, req:['robo'],
-    research:[
-      {k:'gravitic_obs', name:'중력자 승압기', desc:'와처 이동속도↑', m:150, g:150},
-      {k:'sensor', name:'센서 배열', desc:'와처 시야↑', m:150, g:150} ] },
+  { k:'battery', name:'쉴드 배터리', ico:'🔋', m:100, g:0, req:['gateway'] },
   // ── 스타게이트·공중군 ──
   { k:'stargate', name:'스타게이트', ico:'🛸', m:150, g:150, req:['cyber'],
     produces:[
@@ -10233,6 +10207,30 @@ TECH_TREE.aetherial={ name:'에테리얼', res:{m:'크레딧', g:'에너지'}, b
       {k:'recall', name:'리콜', desc:'아군 대규모 순간이동', m:150, g:150},
       {k:'stasis', name:'스테이시스 필드', desc:'범위 유닛 무적·행동불가', m:150, g:150},
       {k:'khaydarin_core', name:'케이다린 코어', desc:'크로노스 최대 에너지 +50', m:150, g:150} ] },
+  // ── 로보틱스 ──
+  { k:'robo', name:'로보틱스 퍼실리티', ico:'🤖', m:200, g:200, req:['cyber'],
+    produces:[
+      {id:'seraph', name:'세라프', m:200, g:0, pop:2},                                // 셔틀(수송)
+      {id:'reaver', name:'리버', m:200, g:100, pop:4, req:['robobay']},               // 리버(스캐럽 내부 큐)
+      {id:'observer', name:'와처', m:25, g:75, pop:1, req:['observatory'], detector:true}] },  // 옵저버
+  { k:'robobay', name:'로보틱스 서포트 베이', ico:'🔧', m:150, g:100, req:['robo'],
+    research:[
+      {k:'gravitic_shuttle', name:'중력자 추진기', desc:'세라프 이동속도↑', m:200, g:200},
+      {k:'reaver_cap', name:'스캐럽 수용력', desc:'리버 스캐럽 최대 5→10', m:200, g:200} ] },
+  { k:'observatory', name:'옵저버터리', ico:'🔭', m:50, g:100, req:['robo'],
+    research:[
+      {k:'gravitic_obs', name:'중력자 승압기', desc:'와처 이동속도↑', m:150, g:150},
+      {k:'sensor', name:'센서 배열', desc:'와처 시야↑', m:150, g:150} ] },
+  { k:'citadel', name:'시타델 오브 아둔', ico:'🏯', m:150, g:100, req:['cyber'],
+    research:[{k:'legs', name:'다리 강화', desc:'워든 이동속도↑ (발업)', m:150, g:150}] },
+  { k:'archives', name:'템플러 아카이브', ico:'📚', m:150, g:200, req:['citadel'],
+    research:[
+      {k:'storm', name:'사이오닉 스톰', desc:'하이세이지 범위 번개', m:200, g:200},
+      {k:'hallucination', name:'할루시네이션', desc:'가짜 유닛 생성', m:150, g:150},
+      {k:'khaydarin', name:'케이다린 부적', desc:'하이세이지 최대 에너지 +50', m:150, g:150},
+      {k:'mindcontrol', name:'마인드 컨트롤', desc:'적 유닛 영구 탈취', m:200, g:200},
+      {k:'maelstrom', name:'메일스트롬', desc:'생체 유닛 일정시간 마비', m:100, g:100},
+      {k:'argus', name:'아르거스 부적', desc:'다크아콘 최대 에너지 +50', m:150, g:150} ] },
 ]};
 // ══ 테크트리 상세 스펙(SC1 기반, B안=실제 수치) — 건물{hp,ar,size,t(초)} / 유닛{hp,ar,sh,atk,at(공격형),rng,spd,t,abil} ══
 //   at: norm(일반형)·conc(진동형)·expl(폭발형)·'-'(무공격)
@@ -10336,7 +10334,7 @@ function _techEnsureRoster(race){ const t=TECH_TREE[race]; if(!t||t._rosterSynce
   const have=new Set(); for(const b of t.buildings) for(const p of (b.produces||[])) have.add(p.id);
   let main=null,mx=-1; for(const b of t.buildings){ const n=(b.produces||[]).length; if(n>mx){ mx=n; main=b; } }   // 유닛을 가장 많이 뽑는 건물 = 주 생산 건물
   if(!main) return; main.produces=main.produces||[];
-  for(const r of roster){ const key=r.key; if(!key||have.has(key)||/^worker/.test(key)||key==='broodling') continue;   // 일꾼·스웜링(브루들링=메두사 소환 전용)은 라바 생산 제외
+  for(const r of roster){ const key=r.key; if(!key||have.has(key)||/^worker/.test(key)||key==='broodling'||key==='larva') continue;   // 일꾼·스웜링(브루들링=메두사 소환 전용)·라바(리버 중복 키)는 자동 생산 제외
     if(typeof TECH_MORPH!=='undefined' && Object.keys(TECH_MORPH).some(src=>TECH_MORPH[src].some(m=>m.to===key))) continue;   // 🧬 2차 변태 전용 유닛(베놈퀸·베놈·베히모스)은 직접 생산 제외
     const u=(typeof U!=='undefined'&&U[key])||{}; main.produces.push({id:key, name:r.n, m:(u.cost||50), g:0, pop:1}); have.add(key); } }
 function _techUnitStatList(spec,uid){ const _spd=(spec.atk&&(typeof _sbBaseCd==='function'))?((1/_sbBaseCd(uid)).toFixed(1)+'/s'):'-';   // 공격속도 = base_stats 공속(/s) — 메인 배너와 동일 표시
@@ -10395,7 +10393,7 @@ function techHatchEgg(g){ const race=G.tech.race, n=g.twin?2:1;
       :{eid:G.tech.eseq++, type:'unit', uid:g.id, x:Math.max(0.04,Math.min(0.96,g.x+_off)), y:Math.max(0.16,Math.min(0.96,g.y+0.006))}); }
   if(g.supply) G.tech.supCap+=g.supply; }
 // 🧬 2차 변태: 선택한 유닛(리퍼/와이번)을 그 자리에서 고치(알)로 → 부화 시 고급 유닛
-function techDoMorph(ev, to){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech||G.tech.race!=='swarm') return;
+function techDoMorph(ev, to){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return; const race=G.tech.race; if(race!=='swarm'&&race!=='aetherial') return;
   const sel=(G.tech.selU||[]).map(id=>G.tech.ents.find(e=>e.eid===id)).filter(e=>e&&e.type==='unit');
   const u=sel.find(e=>TECH_MORPH[e.uid]&&TECH_MORPH[e.uid].some(m=>m.to===to)); if(!u) return;
   const m=TECH_MORPH[u.uid].find(x=>x.to===to);
@@ -10404,7 +10402,10 @@ function techDoMorph(ev, to){ if(ev&&ev.stopPropagation) ev.stopPropagation(); i
   if(!_techAfford(m.m,m.g)){ if(typeof toast==='function') toast('⛔ 자원 부족'); return; }
   _techSpend(m.m,m.g); G.tech.sup+=(m.dpop||0);
   G.tech.units[u.uid]=Math.max(0,(G.tech.units[u.uid]||0)-1);
-  const pt=_techProdTime('swarm',to);
+  if(race==='aetherial'){   // 🔮 프로토스: 알 없이 그 자리에서 즉시 진화 — 같은 엔티티 재사용(지정 유지)
+    G.tech.units[to]=(G.tech.units[to]||0)+1; u.uid=to; u._skCd=null; u._skOn=null; u._skStim=0; u._healF=null;
+    if(typeof playSfx==='function') playSfx('ui_confirm'); if(typeof toast==='function') toast('🔮 '+m.name+'(으)로 진화'); techUIRender(); return; }
+  const pt=_techProdTime('swarm',to);   // 🧬 스웜: 그 자리에서 고치(알) → 부화
   G.tech.ents=G.tech.ents.filter(x=>x.eid!==u.eid); G.tech.selU=(G.tech.selU||[]).filter(id=>id!==u.eid);
   const _egg={eid:G.tech.eseq++, type:'egg', x:u.x, y:u.y, id:to, t:pt, tMax:pt, pop:0, supply:0, twin:false};
   if(pt<=0) techHatchEgg(_egg); else G.tech.ents.push(_egg);
@@ -11362,8 +11363,8 @@ function _techSkillTick(dt){ if(!G.tech) return false; const F=G.tech.skillFx; l
 function techUnitPanelModel(list){ const race=G.tech.race, grp={}, ord=[];   // 유닛 지정 시트 — 건물 그리드와 동일한 커맨드 그리드 재사용
   for(const e of list){ const k=(e.type==='worker')?'__wk':e.uid; if(!grp[k]){ grp[k]={n:0,e:e}; ord.push(k); } grp[k].n++; }
   const items=[];   // 유닛 초상 카드 제거 — 헤더 프로필과 중복(그리드는 변태·장전 등 행동 카드만)
-  if(race==='swarm' && list.length===1 && list[0].type==='unit' && typeof TECH_MORPH!=='undefined' && TECH_MORPH[list[0].uid]){   // 🧬 2차 변태 카드(단일 지정 시) — 이름만(변태→ 없음), 지정 슬롯 위치
-    const _slot={ hydra:{thornqueen:3}, wyvern:{venom:2, behemoth:3} }[list[0].uid]||{};   // 리퍼=베놈퀸 4번칸 · 와이번=베놈 3·베히모스 4
+  if((race==='swarm'||race==='aetherial') && list.length===1 && list[0].type==='unit' && typeof TECH_MORPH!=='undefined' && TECH_MORPH[list[0].uid]){   // 🧬 2차 변태/진화 카드(단일 지정 시) — 이름만(변태→ 없음), 지정 슬롯 위치
+    const _slot={ hydra:{thornqueen:3}, wyvern:{venom:2, behemoth:3}, high_templar:{dark_templar:2, archon:3} }[list[0].uid]||{};   // 리퍼=베놈퀸 4번칸 · 와이번=베놈 3·베히모스 4 · 하이세이지=다크세이지 3번칸·보이드 4번칸
     for(const mm of TECH_MORPH[list[0].uid]){ const ok=_techMorphOK(mm);
       const card={ pro:_techUnitPortrait(mm.to), sn:mm.name, cr:mm.m, en:mm.g, meta:'', state:(ok.ok&&_techAfford(mm.m,mm.g))?'ok':'dim', act:ok.ok?('onclick="techDoMorph(event,\''+mm.to+'\')"'):'' };
       const si=_slot[mm.to]; if(si!=null){ while(items.length<=si) items.push(null); items[si]=card; } else items.push(card); } }
@@ -11640,7 +11641,10 @@ function _techOnCreep(x,y){ if(G.tech.race!=='swarm') return true; const cw=_tec
 const TECH_BLDG_DESC={ sunken:'지상 적을 자동 공격하는 방어 건물.', spore:'공중 적을 자동 공격하는 방어 건물.', creep:'방어 건물로 진화하기 전 형태. 바닥 타일(크립)을 넓혀줍니다.' };   // 건물별 설명 오버라이드(단일 소스)
 const TECH_MORPH={ hydra:[{to:'thornqueen', name:'베놈퀸', m:50, g:100, dpop:1, needR:'lurker'}],
   wyvern:[{to:'venom', name:'베놈', m:50, g:150, dpop:0, needB:'defilermound'},
-          {to:'behemoth', name:'베히모스', m:50, g:100, dpop:0, needB:'gspire'}] };
+          {to:'behemoth', name:'베히모스', m:50, g:100, dpop:0, needB:'gspire'}],
+  // 🔮 에테리얼: 하이세이지 → 다크세이지(3번칸) / 보이드(4번칸) 진화 (프로토스=알 없이 그 자리에서 즉시 변태)
+  high_templar:[{to:'dark_templar', name:'다크세이지', m:125, g:100, dpop:0},
+                {to:'archon', name:'보이드', m:0, g:0, dpop:0}] };
 function _techMorphOK(m){ if(m.needR && !G.tech.research['swarm_'+m.needR]) return {ok:false, why:'연구 필요: '+m.needR}; 
   if(m.needB && !(G.tech.built[m.needB]>0)) return {ok:false, why:(techGetBldg('swarm',m.needB)||{}).name+' 필요'}; return {ok:true}; }
 function _techGasOverlap(s){ return s.c0<TECH_GAS.c0+TECH_GAS.w && s.c0+s.w>TECH_GAS.c0 && s.r0<TECH_GAS.r0+TECH_GAS.h && s.r0+s.h>TECH_GAS.r0; }
