@@ -6500,9 +6500,9 @@ const SKILLS={
   broodling:{ key:'broodling', name:'브루들링', kind:'target_enemy', energy:0, enSc:150, cd:12, spawn:2, arm:'🐛 브루들링: 즉사시킬 적을 클릭하세요.' },
   // ── 🔮 에테리얼(프로토스) 마법 — 관리자=SC 마나(enSc), 네모 게임=0(제외) ──
   hallucination:{ key:'hallucination', name:'할루시네이션', kind:'target_unit', energy:0, enSc:100, cd:10, count:2, arm:'👥 할루시네이션: 환영을 만들 아군을 클릭하세요.' },   // 하이세이지 — 대상 환영 2기
-  feedback:{ key:'feedback', name:'피드백', kind:'target_unit', energy:0, enSc:50, cd:8, arm:'💥 피드백: 마나를 태울 대상을 클릭하세요.' },   // 다크보이드 — 대상 마나 소각+피해
+  feedback:{ key:'feedback', name:'피드백', kind:'target_enemy', energy:0, enSc:50, cd:8, arm:'💥 피드백: 마나를 태울 대상을 클릭하세요.' },   // 다크보이드 — 대상 마나 소각+피해
   maelstrom:{ key:'maelstrom', name:'메일스트롬', kind:'target_ground', energy:0, enSc:100, cd:12, dur:6, radius:0.1, arm:'🌀 메일스트롬: 지점을 클릭하세요.' },   // 다크보이드 — 범위 마비
-  mind_control:{ key:'mind_control', name:'마인드 컨트롤', kind:'target_unit', energy:0, enSc:150, cd:15, arm:'🧠 마인드 컨트롤: 장악할 대상을 클릭하세요.' },   // 다크보이드 — 장악(자신 쉴드 0)
+  mind_control:{ key:'mind_control', name:'마인드 컨트롤', kind:'target_enemy', energy:0, enSc:150, cd:15, arm:'🧠 마인드 컨트롤: 장악할 대상을 클릭하세요.' },   // 다크보이드 — 장악(자신 쉴드 0)
   disruption_web:{ key:'disruption_web', name:'디스럽션 웹', kind:'target_ground', energy:0, enSc:125, cd:10, dur:8, radius:0.11, arm:'🕸️ 디스럽션 웹: 지점을 클릭하세요.' },   // 팔콘 — 지상 결계
   stasis:{ key:'stasis', name:'스테이시스 필드', kind:'target_ground', energy:0, enSc:100, cd:12, dur:6, radius:0.1, arm:'🧊 스테이시스 필드: 지점을 클릭하세요.' },   // 크로노스 — 범위 정지+무적
   recall:{ key:'recall', name:'리콜', kind:'target_ground', energy:0, enSc:150, cd:12, radius:0.18, arm:'↩️ 리콜: 소환할 지점을 클릭하세요.' },   // 크로노스 — 근처 아군 순간이동
@@ -6560,11 +6560,20 @@ function fireSkillEnemy(uid,key,foe){ const u=G.units.find(z=>z.uid===uid); cons
   else if(key==='yamato'){ G.skillFx.push({type:'beam', sx:u.x, sy:u.y-0.02, x:foe.x, y:foe.y, t:0, dur:0.55}); _skHurt(foe, sk.dmg, uid); }
   else if(key==='broodling'){ const fx=foe.x, fy=foe.y; if(foe.hp!=null){ foe.hp=0; } foe.dead=true; foe._killer=u.uid;   // 🐛 대상 즉사 + 그 자리 스웜링 2기
     for(let n=0;n<(sk.spawn||2);n++){ _spawnBroodling(u, fx, fy); } G.skillFx.push({type:'boom', x:fx, y:fy, t:0, dur:0.4, r:0.05}); }
+  else if(key==='feedback'){ const burn=Math.round(foe.en||0); foe.en=0; if(burn>0) _skHurt(foe, burn, uid); G.skillFx.push({type:'boom', x:foe.x, y:foe.y, t:0, dur:0.45, r:0.035}); }   // 💥 마나 소각 + 소각량만큼 쉴드무시 피해
+  else if(key==='mind_control'){ if(u.team==='foe') foe.team='foe'; else delete foe.team; foe.target=null; foe._aggro=null; foe.moveTo=null; u.sh=0;   // 🧠 장악(팀 전환) + 시전자 쉴드 0
+    G.skillFx.push({type:'beam', sx:u.x, sy:u.y-0.02, x:foe.x, y:foe.y, t:0, dur:0.6}); }
   if(typeof playSfx==='function')playSfx('skill'); if(typeof addChat==='function') addChat('', sk.name+' 시전!'); renderSkillBar();
 }
 function _skEmp(x,y,r){ const L=_skFoes(), r2=r*r; for(const e of L){ if(e.dead) continue; const dx=e.x-x, dy=e.y-y; if(dx*dx+dy*dy<=r2){ if(e.sh!=null) e.sh=0; e.en=0; e.empT=1.5; } } }
 function fireSkillUnit(uid,key,tgtUid){ const u=G.units.find(z=>z.uid===uid), t=G.units.find(z=>z.uid===tgtUid); const sk=SKILLS[key]; if(!u||!t||!sk||t===u) return;
-  if(key==='heal') u.healFocus=tgtUid;   // 지정 힐: 따라다니며 이 유닛만 치료
+  { const _c=_skCost(sk); if(_c>0){ if((u.en||0)<_c) return; u.en-=_c; u.skillCd=u.skillCd||{}; u.skillCd[key]=sk.cd||0; } }
+  if(key==='heal'){ u.healFocus=tgtUid; }   // 지정 힐: 따라다니며 이 유닛만 치료
+  else if(key==='hallucination'){ G.skillFx=G.skillFx||[]; const n=sk.count||2;   // 👥 대상 환영 n기(0 공격·일정시간 후 소멸)
+    for(let i=0;i<n;i++){ const off=(i?1:-1)*0.02; const c=initUnitStats({uid:G.idSeq++, id:t.id, hero:false, lv:1, x:t.x+off, y:t.y+0.012, cd:0, fixed:false});
+      if(t.gmodel){ c.gmodel=t.gmodel; if(typeof _btModelStats==='function') _btModelStats(c,t.gmodel); } c.gname=(t.gname||''); c._illusion=true; c._illT=20; c.dmg=0; c.en=0; c.maxEn=0; if(t.team==='foe') c.team='foe';
+      G.units.push(c); if(window.M3D&&M3D.spawnModel){ try{ M3D.spawnModel(c); }catch(_e){} } }
+    G.skillFx.push({type:'boom', x:t.x, y:t.y, t:0, dur:0.4, r:0.03}); }
   if(typeof playSfx==='function')playSfx('skill'); if(typeof addChat==='function') addChat('', sk.name+': 대상 지정'); renderSkillBar();
 }
 function _healApply(u,t,dt){ if(u.maxEn>0){ if((u.en||0)<=0) return false; u.en=Math.max(0,u.en-10*dt); } if(t.maxHp){ t.hp=Math.min(t.maxHp,(t.hp!=null?t.hp:t.maxHp)+24*dt); } return true; }
@@ -6576,10 +6585,15 @@ function fireSkillGround(uid,key,x,y){ const u=G.units.find(z=>z.uid===uid); con
   else if(key==='spider_mine') G.skillFx.push({type:'mine', x:x, y:y, t:0, dur:1e9, r:sk.r, trig:sk.trig, dmg:sk.dmg, owner:uid, armT:1.0});
   else if(key==='nuke') G.skillFx.push({type:'nuke', x:x, y:y, t:0, dur:(sk.delay||3.5)+0.9, delay:sk.delay||3.5, r:sk.radius, dmg:sk.dmg, owner:uid, boomed:false});
   else if(key==='emp'){ G.skillFx.push({type:'emp', x:x, y:y, t:0, dur:0.6, r:sk.radius}); _skEmp(x,y,sk.radius); }
+  else if(key==='maelstrom'){ const L=_skFoes(), r=sk.radius||0.1, r2=r*r; for(const e of L){ if(e.dead) continue; const dx=e.x-x,dy=e.y-y; if(dx*dx+dy*dy<=r2) e.stunT=Math.max(e.stunT||0, sk.dur||6); } G.skillFx.push({type:'storm', x:x, y:y, t:0, dur:sk.dur||6, r:r, dmg:0, owner:uid}); }   // 🌀 범위 적 마비(생체) — 보라 연출(피해 0)
+  else if(key==='disruption_web') G.skillFx.push({type:'ensnare', x:x, y:y, t:0, dur:sk.dur||8, r:sk.radius||0.11, slow:0.5, owner:uid});   // 🕸️ 지상 결계 = 범위 적 무력화(둔화 근사)
+  else if(key==='stasis'){ const r=sk.radius||0.1, r2=r*r; for(const e of (G.units||[])){ if(e.fixed||e===u) continue; const dx=e.x-x,dy=e.y-y; if(dx*dx+dy*dy<=r2){ e.stunT=Math.max(e.stunT||0, sk.dur||6); e._stasis=sk.dur||6; } } G.skillFx.push({type:'emp', x:x, y:y, t:0, dur:sk.dur||6, r:r}); }   // 🧊 범위 유닛 정지+무적(아군/적)
+  else if(key==='recall'){ const r=sk.radius||0.18, r2=r*r, foeCaster=(u.team==='foe'); let n=0; for(const a of (G.units||[])){ if(a.fixed||a===u||((a.team==='foe')!==foeCaster)) continue; const dx=a.x-x,dy=a.y-y; if(dx*dx+dy*dy<=r2){ const off=(n%2?1:-1)*0.02*(1+((n/2)|0)); a.x=Math.max(0.02,Math.min(0.98,u.x+off)); a.y=Math.max(0.04,Math.min(0.96,u.y+0.03+0.012*((n/2)|0))); a.moveTo=null; a.target=null; n++; } } G.skillFx.push({type:'boom', x:x, y:y, t:0, dur:0.5, r:0.04}); G.skillFx.push({type:'boom', x:u.x, y:u.y, t:0, dur:0.5, r:0.04}); }   // ↩️ 근처 아군 → 시전자 위치로 순간이동
   if(typeof playSfx==='function')playSfx('skill'); if(typeof addChat==='function') addChat('', sk.name+' 시전!'); renderSkillBar();
 }
 function _skFoes(){ if(G.sandbox && G.tab==='Battle' && G.units){ return G.units.filter(u=>u.team==='foe' && !(u.maxHp&&(u.hp!=null?u.hp:u.maxHp)<=0)); } const a=G.enemies||[], b=G.sbFoes; return (b&&b.length)?(a.length?a.concat(b):b):a; }   // 전투실험=적팀 실유닛 / 그 외=실전 적+더미
-function _skHurt(e,dmg,owner){ if(e.eid!=null){ try{ _atkUid=owner; }catch(_){} if(typeof hitEnemy==='function') hitEnemy(e,dmg); }   // 정규 적=hitEnemy(방어/실드/킬귀속)
+function _skHurt(e,dmg,owner){ if(e._stasis>0) return;   // 🧊 스테이시스 = 무적(피해 무시)
+  if(e.eid!=null){ try{ _atkUid=owner; }catch(_){} if(typeof hitEnemy==='function') hitEnemy(e,dmg); }   // 정규 적=hitEnemy(방어/실드/킬귀속)
   else { e.hp-=dmg; e.flash=0.12; if(e.hp<=0) e.dead=true; } }   // 실험 더미=직접 피해
 function _skStormDamage(f){ const L=_skFoes(); if(!L.length) return; const r2=f.r*f.r;   // 범위 내 대상 지속 피해
   for(const e of L){ if(e.dead) continue; const dx=e.x-f.x, dy=e.y-f.y; if(dx*dx+dy*dy<=r2) _skHurt(e, f.dmg, f.owner); } }
@@ -6611,6 +6625,8 @@ function stepSkills(dt){ if(typeof G==='undefined'||!G.units) return; G._skT=(G.
       if(sk.drain&&u.maxEn>0){ u.en-=sk.drain*dt; if(u.en<=0){ u.en=0; u.skillOn[k]=false; continue; } }
       if(sk.kind==='aura') _skAura(u, k, sk); } }
     if(u.buff){ for(const k in u.buff){ const bf=u.buff[k]; if(bf&&bf.t>0){ bf.t-=dt; if(bf.t<=0) delete u.buff[k]; } } }   // 자기 강화(스팀팩 등) 지속시간
+    if(u._stasis>0){ u._stasis-=dt; u.moving=false; }   // 🧊 스테이시스 = 정지+무적(지속)
+    if(u._illusion){ u._illT=(u._illT||0)-dt; if(u._illT<=0) u.dead=true; }   // 👥 환영 = 수명 만료 시 소멸
     if(HEALER[_skKey(u)]){ let t=null;   // 메딕: 지정 힐(따라다니며 1명) or 자동(근처 부상 바이오닉)
       if(u.healFocus){ t=G.units.find(z=>z.uid===u.healFocus && !z.dead && !z.fixed); if(!t) u.healFocus=null; }
       if(t){ const dx=t.x-u.x, dy=t.y-u.y, d=Math.hypot(dx,dy)||0.0001;
@@ -6620,6 +6636,7 @@ function stepSkills(dt){ if(typeof G==='undefined'||!G.units) return; G._skT=(G.
         for(const a of G.units){ if(a===u||a.fixed||a.dead||!BIONIC[_skKey(a)]) continue; if(!a.maxHp||(a.hp!=null?a.hp:a.maxHp)>=a.maxHp) continue; const dx=a.x-u.x, dy=a.y-u.y, dd=dx*dx+dy*dy; if(dd<=bd){ bd=dd; best=a; } }
         if(best && _healApply(u,best,dt)) u._healTgt=best.uid; } }
   }
+  for(let i=G.units.length-1;i>=0;i--){ const u=G.units[i]; if(u._illusion&&u.dead){ if(window.M3D&&M3D.removeModel){ try{ M3D.removeModel(u); }catch(_e){} } G.units.splice(i,1); if(G.sel) G.sel=G.sel.filter(id=>id!==u.uid); } }   // 👥 소멸한 환영 제거
   for(const u of G.units){ u._cloaked=isCloaked(u); u._detected=false; u._detAlly=false; u._detFoe=false; }   // 은신·팀별 탐지 초기화
   for(const d of G.units){ if(!isDetector(d)||d.dead) continue; const r2=DETECT_RANGE*DETECT_RANGE; const _dT=(d.team==='foe')?'foe':'ally';   // 탐지기 소속팀에만 은신 노출
     for(const u of G.units){ if(!u._cloaked) continue; const dx=u.x-d.x, dy=u.y-d.y; if(dx*dx+dy*dy<=r2){ u._detected=true; if(_dT==='foe') u._detFoe=true; else u._detAlly=true; } } }
