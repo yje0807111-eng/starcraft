@@ -11172,12 +11172,21 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
     if(e._skCd) for(const k in e._skCd){ if(e._skCd[k]>0){ e._skCd[k]=Math.max(0,e._skCd[k]-dt); if(G.tech.sel===e.eid) _manaSel=true; } }
     if(e.maxEn!==_bm) e.maxEn=_bm; if(e.en==null) e.en=Math.min(50,_bm); else if(e.en<_bm){ e.en=Math.min(_bm, e.en+dt/1.2); if(G.tech.sel===e.eid) _manaSel=true; } }
   if(G.tech._scans&&G.tech._scans.length){ for(const s of G.tech._scans) s.t-=dt; const _had=G.tech._scans.length; G.tech._scans=G.tech._scans.filter(s=>s.t>0); if(G.tech._scans.length!==_had && G.tech.fog&&G.tech.fog.on){ techFogCompute(); techFogDraw(); } if(G.tech._scans.length) active=true; }   // 📡 스캐너 시야 만료
-  if(done) techUIRender();
-  else if(active||_vmoving){ techMapRender();
-    const _selB=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'):null;   // 선택된 건물(건설·생산·연구·장전 진행) = 프로필 실시간 갱신(스로틀 5/s)
-    const _selU1=((G.tech.selU||[]).length===1)?G.tech.ents.find(x=>x.eid===G.tech.selU[0]):null;   // 단일 지정 유닛(캐리어·리버 장전)
-    if((_selB && (_selB.bt>0 || (_selB._pq&&_selB._pq.length) || _selB._rj || (_selB._chq&&_selB._chq.length))) || (_selU1&&_selU1._chq&&_selU1._chq.length)){ G.tech._panT=(G.tech._panT||0)+dt; if(G.tech._panT>=0.2){ G.tech._panT=0; techPanelRender(); } } }
-  else if(_manaSel){ G.tech._manaT=(G.tech._manaT||0)+dt; if(G.tech._manaT>=0.2){ G.tech._manaT=0; techMapRender(); } } }   // 완성=전체 갱신 / 진행중=맵(+선택 프로필)
+  // 🔴 선택 프로필 실시간 스탯: 단일 지정 유닛 or 선택 건물의 표시 정수값(HP/쉴드/마나)이 바뀌면 패널 재렌더(선택 당시 고정 아님)
+  let _panEnt=null;
+  if((G.tech.selU||[]).length===1) _panEnt=G.tech.ents.find(x=>x.eid===G.tech.selU[0]);
+  else if(G.tech.sel!=null) _panEnt=G.tech.ents.find(x=>x.eid===G.tech.sel);
+  const _panSig=_panEnt?(Math.round(_panEnt.hp||0)+'/'+Math.round(_panEnt.sh||0)+'/'+Math.round(_panEnt.en||0)+'/'+Math.round(_panEnt.maxEn||0)):null;
+  const _panLive=(_panSig!=null && _panSig!==G.tech._panSig);   // 표시값(정수) 변화 감지
+  if(done){ techUIRender(); }
+  else { let _panDone=false;
+    if(active||_vmoving){ techMapRender();
+      const _selB=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'):null;   // 선택된 건물(건설·생산·연구·장전 진행) = 프로필 실시간 갱신(스로틀 5/s)
+      const _selU1=((G.tech.selU||[]).length===1)?G.tech.ents.find(x=>x.eid===G.tech.selU[0]):null;   // 단일 지정 유닛(캐리어·리버 장전)
+      if((_selB && (_selB.bt>0 || (_selB._pq&&_selB._pq.length) || _selB._rj || (_selB._chq&&_selB._chq.length))) || (_selU1&&_selU1._chq&&_selU1._chq.length)){ G.tech._panT=(G.tech._panT||0)+dt; if(G.tech._panT>=0.2){ G.tech._panT=0; techPanelRender(); _panDone=true; } } }
+    else if(_manaSel){ G.tech._manaT=(G.tech._manaT||0)+dt; if(G.tech._manaT>=0.2){ G.tech._manaT=0; techMapRender(); } }
+    if(_panLive && !_panDone){ techPanelRender(); } }   // 마나 회복·HP(힐/스팀팩)·쉴드 실시간 → 프로필 수치 갱신
+  G.tech._panSig=_panSig; }   // 완성=전체 갱신 / 진행중=맵(+선택 프로필)
 // 건설 탭 건물 3D 프리뷰: TECH 건물키 → glb 모델키(선택/배치대기 시 하단 도크에 회전 렌더)
 const TECH_MODEL={
   union:{ command:'union_command_center', supply:'union_supply_depot', refinery:'union_refinery', barracks:'union_barracks', academy:'union_academy', engbay:'union_engineering_bay', bunker:'union_bunker', turret:'union_missile_turret', factory:'union_factory', machshop:'union_machine_shop', armory:'union_armory', starport:'union_starport', control:'union_control_tower', scifac:'union_science_facility', covert:'union_covert_ops', physics:'union_physics_lab', comsat:'union_comsat_station', nuke:'union_nuclear_silo' },
@@ -11464,7 +11473,9 @@ function techBldgPlainModel(b, e){ const race=G.tech.race, bs=techBldgSpec(race,
     const cdv=Math.ceil((e._skCd&&e._skCd[_k])||0), armed=!!(G.tech.skillArm&&G.tech.skillArm.eid===e.eid&&G.tech.skillArm.key===_k), cost=_skCost(sk), lowE=cost>0&&(_techSkEn(e)<cost);
     items.push({ pro:'<span class="skPro">'+((typeof SKILL_ICON!=='undefined'&&SKILL_ICON[_k])||'✨')+'</span>', sn:sk.name, meta:cdv>0?(cdv+'s'):(cost>0?(cost+'e'):''), metaCls:'lv', sel:armed, state:(cdv>0||lowE)?'dim':'ok', act:'onclick="techCastBldgSkill(event,\''+_k+'\')"' }); } }
   const _def=_techIsDef(b.k);
-  return { mode:'info', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh,(typeof BLDG_EN!=='undefined'&&BLDG_EN[b.k])||0)+_gasHp, sub:(b.gas?'⛽ 에너지 채취 건물':(b.supply?'👤 인구 공급':(_def?'🛡 방어 건물':'건물 정보'))), items, topRight:_techBldgTR(b),
+  const _bMx=(typeof BLDG_EN!=='undefined'&&BLDG_EN[b.k])||0;   // 🏢 건물 마나(컴셋·쉴드배터리) = 실시간 현재/최대(선택 당시 고정 아님)
+  const _bEn=(_bMx>0)?((e&&e.en!=null)?(Math.round(e.en)+'/'+Math.round(e.maxEn||_bMx)):(_bMx+'/'+_bMx)):0;
+  return { mode:'info', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh,_bEn)+_gasHp, sub:(b.gas?'⛽ 에너지 채취 건물':(b.supply?'👤 인구 공급':(_def?'🛡 방어 건물':'건물 정보'))), items, topRight:_techBldgTR(b),
     info:{ eb:_techBldgKind(b)+(b.detector?' (탐지)':''), name:b.name, hideName:true, desc:(TECH_BLDG_DESC[b.k]||(b.gas?'일꾼이 이 건물에서 에너지를 채취합니다.':(b.supply?('최대 인구 +'+b.supply):(_def?'적을 자동 공격하는 방어 건물.':'')))), stats, cr:0, en:0 } }; }
 // 💎⛽ 중립 자원(미네랄·가스 광산) 프로필 — 이름 + 하단 HP 자리에 잔량 표시
 function techResourceModel(res){ if(!res) return null;
