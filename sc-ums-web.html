@@ -498,13 +498,17 @@
   .ulbl{font-size:8px;color:#9fc4dc;font-weight:600;letter-spacing:.3px;text-shadow:0 0 6px #000,0 1px 1px #000;white-space:nowrap}
   .ulbl.hero{color:#ffc040}
   /* 선택 유닛 위 얇은 체력/실드 바(스타크래프트식) */
-  /* 쉴드(하늘색)+HP를 한 칸처럼 — 거의 겹치게 세로로 붙여 하나의 테두리 안에 표시(에테리얼 쉴드=위, HP=아래) */
-  .uhp{display:flex;flex-direction:column;gap:0;margin:2px 0 1px;border-radius:1.5px;overflow:hidden;border:1px solid rgba(0,0,0,.78);background:rgba(4,8,12,.92);box-shadow:0 0 3px rgba(0,0,0,.5)}
+  /* 쉴드(하늘색)+HP=한 칸(딱 붙음) · 마나(보라)=한 줄 띄워 별도 칸(에테리얼 쉴드=위, HP=중간, 마나=아래) */
+  .uhp{display:flex;flex-direction:column;gap:0;margin:2px 0 1px}
+  .uhpMain{display:flex;flex-direction:column;gap:0;border-radius:1.5px;overflow:hidden;border:1px solid rgba(0,0,0,.78);background:rgba(4,8,12,.92);box-shadow:0 0 3px rgba(0,0,0,.5)}
   .uhp .ub{height:3px;background:transparent;border:0;border-radius:0;overflow:hidden}
-  .uhp .ub+.ub{border-top:1px solid rgba(0,0,0,.55)}   /* 쉴드↔HP 사이 얇은 구분선(한 칸을 위/아래로 나눈 느낌) */
+  .uhpMain .ub+.ub{border-top:1px solid rgba(0,0,0,.55)}   /* 쉴드↔HP 사이 얇은 구분선(한 칸을 위/아래로 나눈 느낌) */
   .uhp .ub i{display:block;height:100%;border-radius:0}
   .uhp .uS i{background:#5ad1ff;box-shadow:0 0 5px rgba(90,209,255,.7)}
   .uhp .uH i{box-shadow:0 0 4px rgba(70,211,105,.5)}
+  .uhp .uE{margin-top:2px;border-radius:1.5px;overflow:hidden;border:1px solid rgba(0,0,0,.78);background:rgba(4,8,12,.92);box-shadow:0 0 3px rgba(0,0,0,.5)}   /* 마나 = 살짝 띄운 별도 칸 */
+  .uhp .uE i{background:#b06bff;box-shadow:0 0 5px rgba(176,107,255,.6)}
+  .bentBar{position:absolute;transform:translateX(-50%);z-index:22;pointer-events:none}   /* 건설 탭: 지정 유닛·건물 위 바 래퍼 */
 
   /* 합체존 = 우하단 구석 지정 베이(테두리 없음 — 비콘 발판이 구역을 표시, 상단 표지 라벨만) */
   #mergeZone{position:absolute;z-index:5;pointer-events:none;display:flex;align-items:flex-start;justify-content:center}
@@ -3416,6 +3420,10 @@ const GACHA_MODEL = {
 // 등급 표시 색
 function hpBarColor(r){ return r>.5?'#46f06a':r>.25?'#ffd24a':'#ff5c5c'; }   // HP바 색(전 화면 공통)
 function barHTML(cls,pct,color){ return '<div class="'+cls+'"><i style="width:'+pct+'%'+(color?';background:'+color:'')+'"></i></div>'; }   // 진행바 공통 마크업
+function _barsHTML(o){   // 🛡 쉴드+HP(한 칸) + ⚡마나(아래 별도 칸) 공용 바 — o:{hpR, hpCol, shR(null=쉴드없음), enR(null=마나없음), w(px)}
+  let m='<div class="uhpMain">'+((o.shR!=null)?barHTML('ub uS',o.shR*100):'')+barHTML('ub uH',o.hpR*100,o.hpCol)+'</div>';
+  if(o.enR!=null) m+=barHTML('ub uE',o.enR*100);
+  return '<div class="uhp"'+(o.w?' style="width:'+o.w+'px"':'')+'>'+m+'</div>'; }
 function popShow(id){ const e=document.getElementById(id); if(e) e.classList.remove('hide'); return e; }   // 팝업 표시(공통)
 function popHide(id){ const e=document.getElementById(id); if(e) e.classList.add('hide'); return e; }    // 팝업 숨김(공통)
 const TIER_COLOR = { common:'#b8c0cc', rare:'#4aa8ff', epic:'#b06bff', unique:'#ffd23b', legend:'#ff8a3b', transcend:'#ff4d6d', god:'#ff2bd6' };
@@ -5991,8 +5999,9 @@ function renderUnits(){ const v=document.getElementById('vMain'); if(!v) return;
     el.style.left=(u.x*100)+'%'; el.style.top=(u.y*100)+'%';   // 위치는 매 프레임(부드러운 이동)
     const maxHp=u.maxHp||1, hpR=Math.max(0,Math.min(1,(u.hp!=null?u.hp:maxHp)/maxHp));
     const maxSh=u.maxSh||0, shR=maxSh>0?Math.max(0,Math.min(1,(u.sh!=null?u.sh:maxSh)/maxSh)):0;
+    const maxEn=u.maxEn||0, enR=maxEn>0?Math.max(0,Math.min(1,(u.en!=null?u.en:maxEn)/maxEn)):0;   // ⚡ 마나(에너지)
     const _foe=(u.team==='foe'), _showBar=seld||(G.tab==='Battle'&&G.sandbox);   // 전투실험: 양팀 HP 상시 표시
-    const sig=u.id+'|'+box+'|'+(seld?1:0)+'|'+(_foe?'F':'A')+'|'+(u.hero?(u.lv||1):0)+'|'+(_showBar?(Math.round(hpR*40)+','+Math.round(shR*40)):'')+'|c'+(u.cargo?u.cargo.length:0);
+    const sig=u.id+'|'+box+'|'+(seld?1:0)+'|'+(_foe?'F':'A')+'|'+(u.hero?(u.lv||1):0)+'|'+(_showBar?(Math.round(hpR*40)+','+Math.round(shR*40)+','+Math.round(enR*40)):'')+'|c'+(u.cargo?u.cargo.length:0);
     if(sig===rec.sig) continue;   // 모양 그대로 → DOM 재구성 생략(리플로우 방지)
     rec.sig=sig;
     el.className='unit'+(seld?' sel':'')+(_foe?' foe':'');
@@ -6000,9 +6009,7 @@ function renderUnits(){ const v=document.getElementById('vMain'); if(!v) return;
     const pad=Math.round(r*0.42);
     let barH='';
     if(_showBar){ const hpCol=_foe?'#ff5a5a':hpBarColor(hpR);
-      barH='<div class="uhp" style="width:'+box+'px">'
-        +(maxSh>0?barHTML('ub uS',shR*100):'')
-        +barHTML('ub uH',hpR*100,hpCol)+'</div>'; }
+      barH=_barsHTML({ w:box, hpR, hpCol, shR:maxSh>0?shR:null, enR:maxEn>0?enR:null }); }
     const _m3k=u.gmodel||def.model3d;   // 이 유닛이 쓸 3D 모델 키(가챠 전용 우선)
     const has3d=!!_m3k && !(G.opt&&G.opt.model3d===false) && window.M3D && window.M3D.hasModel && window.M3D.hasModel(_m3k);  // 모델이 실제 로드됐을 때만 투명(WebGL이 그림). 로드 전엔 SVG 폴백
     const iconHTML=has3d?'':unitSVG(u.id);
@@ -11156,7 +11163,7 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
       const _hw=Math.max(0.05,_bf.w*_techCW()*techView().zoom), _ratio=(e.bt>0)?Math.max(0,Math.min(1,1-e.bt/(e.btMax||1))):1;   // 바 폭=발판 폭(줌) · 건설 중=진행도/완성=풀
       if(e._lifted){ const _sc=_sb, _sw=Math.max(0.07,_bf.w*_techCW()*techView().zoom*1.25);   // 🛫 지면 그림자(발판 하단) — 발판보다 넓게, 높이(_liftH)만큼 진해짐
         ents+='<div class="bLiftShadow" style="left:'+(_sc.x*100).toFixed(2)+'%;top:'+(_sc.y*100).toFixed(2)+'%;width:'+(_sw*100).toFixed(2)+'%;height:'+(_sw*0.46*100).toFixed(2)+'%;opacity:'+(0.15+0.4*(e._liftH||0)).toFixed(2)+'"></div>'; }
-      if(e.bt>0 || G.tech.sel===e.eid) labels+='<div class="bldHp'+(e.bt>0?' bld':'')+'" style="left:'+(_sb.x*100).toFixed(2)+'%;top:'+(_sb.y*100).toFixed(2)+'%;width:'+(_hw*100).toFixed(2)+'%"><i style="width:'+(_ratio*100).toFixed(1)+'%"></i></div>';   // 건설 중=항상 표시(실시간 차오름) · 완성=지정 시에만
+      if(e.bt>0) labels+='<div class="bldHp bld" style="left:'+(_sb.x*100).toFixed(2)+'%;top:'+(_sb.y*100).toFixed(2)+'%;width:'+(_hw*100).toFixed(2)+'%"><i style="width:'+(_ratio*100).toFixed(1)+'%"></i></div>';   // 건설 중=진행도 바(실시간 차오름) · 완성+지정 = 아래 쉴드/HP/마나 바로 대체
       const _noPow=_techNeedsPower(e.bk)&&!_techPowered(e.x,e.y);   // 🛑 블랙아웃(동력 없음)
       if(_noPow){ const _sp=_techW2S(e.x,e.y-(_bf.h/2)*_techCH()); labels+='<div class="bldNoPow" style="left:'+(_sp.x*100).toFixed(2)+'%;top:'+(_sp.y*100).toFixed(2)+'%">⚡✕ 동력 없음</div>'; }
       if(_b.gas && e.bt<=0 && e._gasWorker!=null){ const _gp=_techW2S(e.x, e.y-(_bf.h/2)*_techCH()), _gc=_techW2S(e.x, e.y);   // ⛽ 가스 채취 중 = 건물 활성 연출(초록 발광 + 피어오르는 연기)
@@ -11176,7 +11183,14 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
       const _rep=(e.type==='worker'&&e._repairing)?'<span style="position:absolute;left:50%;top:-8px;transform:translateX(-50%);font-size:13px">🔧</span>':'';   // 🔧 수리 중 표시
       inner=(_h3?((e.type==='worker'&&e.build!=null)?'<span style="position:absolute;left:50%;top:-8px;transform:translateX(-50%);font-size:13px">🔨</span>':_rep):(e.type==='worker'?'<span class="be-ico">👷</span>'+_rep:_techUnitPortrait(e.uid)))+_ore; }
     const _seld=(G.tech.sel===e.eid)||(G.tech.selU&&G.tech.selU.indexOf(e.eid)>=0);
-    const _s=_techW2S(e.x,e.y); ents+='<div class="bent '+cls+(_seld?' sel':'')+'" style="left:'+(_s.x*100).toFixed(2)+'%;top:'+(_s.y*100).toFixed(2)+'%;transform:translate(-50%,-50%) scale('+techView().zoom.toFixed(2)+')">'+inner+'</div>'; }
+    const _s=_techW2S(e.x,e.y); ents+='<div class="bent '+cls+(_seld?' sel':'')+'" style="left:'+(_s.x*100).toFixed(2)+'%;top:'+(_s.y*100).toFixed(2)+'%;transform:translate(-50%,-50%) scale('+techView().zoom.toFixed(2)+')">'+inner+'</div>';
+    if(_seld && e.type!=='egg' && e.type!=='larva' && !(e.type==='bldg'&&e.bt>0)){   // 🛡 지정 시 쉴드+HP(+마나) 바 — 건설탭도 표시(전투 아님=항상 가득)
+      let _mHp=0,_mSh=0,_mEn=0,_bx=_s.x,_bTop,_bW;
+      if(e.type==='bldg'){ const _bs=techBldgSpec(race,e.bk)||{}, _bf2=(typeof _techFoot==='function')?_techFoot(race,e.bk):{w:2,h:2}, _sbb=_techW2S(e.x,e.y+(_bf2.h/2)*_techCH());
+        _mHp=_bs.hp||0; _mSh=_bs.sh||0; _mEn=0; _bx=_sbb.x; _bTop=(_sbb.y*100).toFixed(2)+'%'; _bW=Math.max(0.05,_bf2.w*_techCW()*techView().zoom); }
+      else { const _uid=(e.type==='worker')?(TECH_WORKER[race]||'worker_light'):e.uid, _sp=techUnitSpec(race,_uid)||{};
+        _mHp=_sp.hp||0; _mSh=_sp.sh||0; _mEn=(typeof U!=='undefined'&&U[_uid]&&U[_uid].energy)||0; _bTop='calc('+(_s.y*100).toFixed(2)+'% + 10px)'; _bW=Math.max(0.05,0.9*_techCW()*techView().zoom); }
+      if(_mHp>0) labels+='<div class="bentBar" style="left:'+(_bx*100).toFixed(2)+'%;top:'+_bTop+';width:'+(_bW*100).toFixed(2)+'%">'+_barsHTML({ hpR:1, hpCol:hpBarColor(1), shR:_mSh>0?1:null, enR:_mEn>0?1:null })+'</div>'; } }
   if(_btBox && _btBox.active){ const bx=Math.min(_btBox.sx0,_btBox.sx1),by=Math.min(_btBox.sy0,_btBox.sy1),bw=Math.abs(_btBox.sx1-_btBox.sx0),bh=Math.abs(_btBox.sy1-_btBox.sy0);   // 🔲 한 손가락 드래그 = 유닛 지정 박스
     ents+='<div class="techSelBox" style="left:'+(bx*100).toFixed(2)+'%;top:'+(by*100).toFixed(2)+'%;width:'+(bw*100).toFixed(2)+'%;height:'+(bh*100).toFixed(2)+'%;position:absolute;border:1.5px solid #46f06a;background:rgba(70,240,106,.14);pointer-events:none;z-index:23;border-radius:2px"></div>'; }
   let tabs=''; ['union','swarm','aetherial'].forEach(r=>{ tabs+='<span class="techTab'+(r===race?' on':'')+'" onclick="techRace(event,\''+r+'\')">'+_TECH_RKO[r]+'</span>'; });
