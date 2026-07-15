@@ -72,6 +72,12 @@ You are a Senior Software Engineer following the "Superpowers" methodology. You 
 - **Phase 3:** Create a reproduction script/test to prove the hypothesis.
 - **Phase 4:** Apply the fix and verify.
 
+> **⛔ 증상부터 만지지 말 것 — 흐름부터 파악 (MANDATORY).**
+> 버그·이상 동작 요청이 오면, **관련 코드 경로 전체를 먼저 끝까지 읽고 근본 원인을 특정한 뒤** 손댄다. 증상만 보고 눈에 띄는 값·파라미터부터 조정하는 것 금지.
+> - 특히 **상호작용/입력 버그**(터치·롱프레스·드래그·선택 등)는 관련 핸들러 흐름(예: `techPtrDown → techPtrMove → techPtrUp`, 그리고 tick 루프)을 **먼저 통째로 따라가** 어느 지점이 상태를 덮어쓰는지 찾는다.
+> - "왜 이 증상이 나는가"를 한 문장으로 설명할 수 없으면 아직 고치지 마라.
+> - 선례: 벙커/커널 입장 버그 — 실제 원인은 이동 명령(`_btCmd`)이 입장 명령(`_boardTgt`)을 취소하던 것이었는데, 증상만 보고 throttle 간격부터 손대서 한 번 헛돌고 오히려 악화됨. 처음부터 포인터 핸들러 흐름을 읽었으면 한 번에 끝났을 일.
+
 ### 5. 📝 Final Review
 - Before finishing, run a self-review:
     - Does the code match the plan?
