@@ -10422,7 +10422,7 @@ function _techResearchCard(b, r, e){ const race=G.tech.race, rj=e&&e._rj, key=ra
 function _techEvolveCards(b, e){ if(!b||!b.evolveTo) return []; const race=G.tech.race, evo=(e&&e._evo);
   const tos=Array.isArray(b.evolveTo)?b.evolveTo:[b.evolveTo];
   return tos.map(tk=>{ const tb=techGetBldg(race,tk)||{}, reqok=_techReqMet(tb.req), afford=G.tech.inf||_techAfford(tb.m,tb.g), busy=!!(evo&&evo.to===tk);
-    return { pro:'<span class="pemoji">'+(tb.ico||'🧬')+'</span>', sn:tb.name+' 진화', cr:busy?0:tb.m, en:busy?0:tb.g,
+    return { pro:'<span class="pemoji">'+(tb.ico||'🧬')+'</span>', sn:tb.name, cr:busy?0:tb.m, en:busy?0:tb.g,
       meta:busy?(Math.ceil(evo.t)+'s'):'진화', metaCls:'lv', sel:busy, state:evo?(busy?'busy':'dim'):((!reqok||!afford)?'dim':'ok'),
       act:(!evo&&reqok&&afford)?('onclick="techEvolveBldg(event,'+(e?e.eid:'null')+',\''+tk+'\')"'):'' }; }); }
 function techEvolveBldg(ev, eid, toK){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;
@@ -11179,7 +11179,9 @@ function techBldgPlainModel(b, e){ const race=G.tech.race, bs=techBldgSpec(race,
     return { mode:'info', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh), sub:'☢️ 단일 장전(최대 1)', items:aitems, info:_techAmmoInfo(e||{}, _amk) }; }
   let _gasHp='';
   if(b.gas){ const tot=TECH_GAS_START, rem=_techGasRemain(); _gasHp='<span class="shv" style="color:#7ee081">⚡ '+(G.tech.inf?'∞':(rem+' / '+tot))+'</span>'; }   // ⚡ 에너지 총량/남은 = 체력 옆(하단 stats 아님)
-  const items=_techWithAddons(_techEvolveCards(b, e), b.k);   // 🔗 부속 카드 + 🧬 진화 카드(크립 콜로니→성큰/스포어)
+  const _evc=_techEvolveCards(b, e); let _pit=[];   // 🧬 진화 카드 = 3·4번 슬롯(크립 콜로니→성큰/스포어)
+  if(_evc.length){ _pit=[null,null]; for(let i=0;i<_evc.length;i++) _pit[2+i]=_evc[i]; }
+  const items=_techWithAddons(_pit, b.k);   // 🔗 부속 카드 + 진화 카드
   const _def=_techIsDef(b.k);
   return { mode:'info', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh)+_gasHp, sub:(b.gas?'⛽ 에너지 채취 건물':(b.supply?'👤 인구 공급':(_def?'🛡 방어 건물':'건물 정보'))), items, topRight:_techBldgTR(b),
     info:{ eb:_techBldgKind(b)+(b.detector?' (탐지)':''), name:b.name, hideName:true, desc:(TECH_BLDG_DESC[b.k]||(b.gas?'일꾼이 이 건물에서 에너지를 채취합니다.':(b.supply?('최대 인구 +'+b.supply):(_def?'적을 자동 공격하는 방어 건물.':'')))), stats, cr:0, en:0 } }; }
@@ -11326,7 +11328,7 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
   const _resumeMode=!!(selB && selB.bt>0 && selB._bpause && selUs.length);   // 재개 모드(유닛 지정 + 일시정지 건물 선택): 건물 위 재개 버튼만, 하단은 지정 유닛 프로필
   if(sh.open){ if(selRes){ model=techResourceModel(selRes); }   // 💎⛽ 중립 자원(미네랄·가스 광산) 프로필
     else if(selB && !_resumeMode){ if(selB.bt>0){ model=techBldgBuildingModel(selB); }   // 건설 중·일시정지 = 잠금 프로필(진행도 HP)
-      else { const b=techGetBldg(G.tech.race,selB.bk); model=(G.tech.race==='swarm'&&TECH_LARVA_BLDG[selB.bk])?techBldgProdModel(b, selB):((b&&b.produces)?techBldgProdModel(b, selB):((b&&b.research)?techBldgUpgModel(b, selB):((b&&(b.unlocks||b.evolveTo))?techBldgInfoModel(b, selB):techBldgPlainModel(b, selB)))); } }   // 🐛 라바 건물(해처리·레어·하이브)=라바 프로필 우선 · 진화(evolveTo) 있으면 정보 모델
+      else { const b=techGetBldg(G.tech.race,selB.bk); model=(G.tech.race==='swarm'&&TECH_LARVA_BLDG[selB.bk])?techBldgProdModel(b, selB):((b&&b.produces)?techBldgProdModel(b, selB):((b&&b.research)?techBldgUpgModel(b, selB):((b&&b.unlocks)?techBldgInfoModel(b, selB):techBldgPlainModel(b, selB)))); } }   // 🐛 라바 건물 우선 · 해금(unlocks)=정보 모델(진화 카드 포함) · 진화만 있는 건물(크립)=플레인 모델
     else if(selUs.length){ const _selEgg=selUs.filter(e=>e.type==='egg'), _selLv=selUs.filter(e=>e.type==='larva');
       model=_selEgg.length?techEggModel(_selEgg):(_selLv.length?techLarvaProdModel(_selLv):(_selWk?techWorkerBuildModel(selUs):techUnitPanelModel(selUs))); } }   // 🥚 알 = 진화중(잠금) 프로필
   // 🔢 모든 건물 = 4그리드 1줄(간소화)로 높이 통일. 5개↑는 2줄로 높이지 않고 페이지로 넘김(슬롯 위치 보존). cm2=최소화(본문 숨김)만 별도
@@ -11509,7 +11511,7 @@ function _techCreepSrcs(){ const out=[]; if(G.tech.race!=='swarm') return out; f
 function _techOnCreep(x,y){ if(G.tech.race!=='swarm') return true; const cw=_techCW(), ch=_techCH();
   for(const cs of _techCreepSrcs()){ const r=_techCreepR(cs); if(_techInEllip(x,y,cs.x,cs.y,r[0],r[1],cw,ch)) return true; } return false; }
 // 🧬 2차 변태(스웜): 기존 유닛 → 고치(알) → 고급 유닛. dpop=인구 증가분
-const TECH_BLDG_DESC={ sunken:'지상 적을 자동 공격하는 방어 건물.', spore:'공중 적을 자동 공격하는 방어 건물.' };   // 건물별 설명 오버라이드(단일 소스)
+const TECH_BLDG_DESC={ sunken:'지상 적을 자동 공격하는 방어 건물.', spore:'공중 적을 자동 공격하는 방어 건물.', creep:'방어 건물로 진화하기 전 형태. 바닥 타일(크립)을 넓혀줍니다.' };   // 건물별 설명 오버라이드(단일 소스)
 const TECH_MORPH={ hydra:[{to:'thornqueen', name:'베놈퀸', m:50, g:100, dpop:1, needR:'lurker'}],
   wyvern:[{to:'venom', name:'베놈', m:50, g:150, dpop:0, needB:'defilermound'},
           {to:'behemoth', name:'베히모스', m:50, g:100, dpop:0, needB:'gspire'}] };
