@@ -509,6 +509,7 @@
   .uhp .uE{margin-top:2px;border-radius:1.5px;overflow:hidden;border:1px solid rgba(0,0,0,.78);background:rgba(4,8,12,.92);box-shadow:0 0 3px rgba(0,0,0,.5)}   /* 마나 = 살짝 띄운 별도 칸 */
   .uhp .uE i{background:#b06bff;box-shadow:0 0 5px rgba(176,107,255,.6)}
   .bentBar{position:absolute;transform:translateX(-50%);z-index:22;pointer-events:none}   /* 건설 탭: 지정 유닛·건물 위 바 래퍼 */
+  .bent.illusion{opacity:.45;filter:hue-rotate(200deg) saturate(1.4)}   /* 👥 할루시네이션 환영 = 반투명·푸른 틴트 */
 
   /* 합체존 = 우하단 구석 지정 베이(테두리 없음 — 비콘 발판이 구역을 표시, 상단 표지 라벨만) */
   #mergeZone{position:absolute;z-index:5;pointer-events:none;display:flex;align-items:flex-start;justify-content:center}
@@ -3038,10 +3039,10 @@ const U = {
   hellfire: {name:'헬파이어', icon:'🔧', cost:0, dmg:42, up:17, hdmg:84, hup:34, range:0.24, cd:30, splash:true, color:'#4aa8ff', size:18, wpn:'mech', atk:'missile', hp:150, armor:1, shield:0, energy:0, moveSpd:0.22, model3d:'hellfire'},   // 샌드박스 전용(보직 스탯)
   pelican: {name:'펠리컨', icon:'🔧', cost:0, dmg:0, up:0, hdmg:0, hup:0, range:0, cd:40, splash:false, color:'#4aa8ff', size:20, wpn:'mech', atk:'bullet', hp:220, armor:2, shield:0, energy:0, moveSpd:0.26, model3d:'pelican'},   // 샌드박스 전용(보직 스탯)
   dreadnought: {name:'드레드노트', icon:'🔧', cost:0, dmg:52, up:21, hdmg:104, hup:42, range:0.3, cd:42, splash:false, color:'#4aa8ff', size:24, wpn:'mech', atk:'shell', hp:520, armor:3, shield:0, energy:0, moveSpd:0.14, airDmg:44, airUp:18, hairDmg:88, hairUp:35, model3d:'dreadnought'},   // 샌드박스 전용(보직 스탯)
-  kronos: {name:'크로노스', icon:'🔮', cost:0, dmg:36, up:14, hdmg:72, hup:29, range:0.31, cd:40, splash:true, color:'#ffc040', size:22, wpn:'pro', atk:'plasma', hp:440, armor:2, shield:170, shArmor:1, energy:0, moveSpd:0.15, airDmg:30, airUp:12, hairDmg:60, hairUp:24, model3d:'kronos'},   // 샌드박스 전용(보직 스탯)
+  kronos: {name:'크로노스', icon:'🔮', cost:0, dmg:36, up:14, hdmg:72, hup:29, range:0.31, cd:40, splash:true, color:'#ffc040', size:22, wpn:'pro', atk:'plasma', hp:440, armor:2, shield:170, shArmor:1, energy:200, moveSpd:0.15, airDmg:30, airUp:12, hairDmg:60, hairUp:24, model3d:'kronos'},   // 샌드박스 전용(보직 스탯) · 에너지=아비터(스테이시스·리콜)
   seraph: {name:'세라프', icon:'🔮', cost:0, dmg:0, up:0, hdmg:0, hup:0, range:0, cd:40, splash:false, color:'#ffc040', size:18, wpn:'pro', atk:'bullet', hp:120, armor:1, shield:40, shArmor:1, energy:0, moveSpd:0.24, model3d:'seraph'},   // 샌드박스 전용(보직 스탯)
   archangel: {name:'아크엔젤', icon:'🔮', cost:0, dmg:22, up:9, hdmg:44, hup:18, range:0.3, cd:16, splash:true, color:'#ffc040', size:24, wpn:'pro', atk:'plasma', hp:560, armor:3, shield:200, shArmor:1, energy:0, moveSpd:0.12, airDmg:22, airUp:9, hairDmg:44, hairUp:18, model3d:'archangel'},   // 샌드박스 전용(보직 스탯)
-  falcon: {name:'팔콘', icon:'🔮', cost:0, dmg:24, up:10, hdmg:48, hup:19, range:0.24, cd:18, splash:false, color:'#ffc040', size:17, wpn:'pro', atk:'plasma', hp:130, armor:1, shield:50, shArmor:1, energy:0, moveSpd:0.26, airDmg:24, airUp:10, hairDmg:48, hairUp:19, model3d:'falcon'},   // 샌드박스 전용(보직 스탯)
+  falcon: {name:'팔콘', icon:'🔮', cost:0, dmg:24, up:10, hdmg:48, hup:19, range:0.24, cd:18, splash:false, color:'#ffc040', size:17, wpn:'pro', atk:'plasma', hp:130, armor:1, shield:50, shArmor:1, energy:200, moveSpd:0.26, airDmg:24, airUp:10, hairDmg:48, hairUp:19, model3d:'falcon'},   // 샌드박스 전용(보직 스탯) · 에너지=커세어(디스럽션 웹)
   observer: {name:'와처', icon:'🔮', cost:0, dmg:0, up:0, hdmg:0, hup:0, range:0.18, cd:34, splash:false, color:'#ffc040', size:14, wpn:'pro', atk:'bullet', hp:35, armor:0, shield:0, energy:0, moveSpd:0.26, detector:true, model3d:'observer'},   // 샌드박스 전용(보직 스탯)
   overlord: {name:'너울', icon:'🐛', cost:0, dmg:0, up:0, hdmg:0, hup:0, range:0.16, cd:40, splash:false, color:'#a8472e', size:20, wpn:'zrg', atk:'bullet', hp:110, armor:1, shield:0, energy:0, moveSpd:0.1, detector:true, model3d:'overlord'},   // 샌드박스 전용(보직 스탯)
   stinger: {name:'스팅어', icon:'🐛', cost:0, dmg:70, up:28, hdmg:140, hup:56, range:0.13, cd:50, splash:true, color:'#a8472e', size:14, wpn:'zrg', atk:'missile', hp:15, armor:0, shield:0, energy:0, moveSpd:0.3, airDmg:70, airUp:28, hairDmg:140, hairUp:56, model3d:'stinger'},   // 샌드박스 전용(보직 스탯)
@@ -6459,6 +6460,14 @@ SKILL_ICON.siege='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h18
 SKILL_ICON.yamato='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 017 7c0 3-2 5-2 7l-5 6-5-6c0-2-2-4-2-7a7 7 0 017-7zm0 4a3 3 0 100 6 3 3 0 000-6z"/></svg>';   // 야마토=충전포
 SKILL_ICON.emp='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L5 13h5l-1 9 9-12h-5z"/><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".5"/></svg>';   // EMP=전자펄스
 SKILL_ICON.broodling='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c2 3 2 5 0 7-2-2-2-4 0-7zM5 9c3 1 4 3 3 6-3-1-4-3-3-6zM19 9c1 3 0 5-3 6-1-3 0-5 3-6zM12 13c2 3 2 6 0 9-2-3-2-6 0-9z"/></svg>';   // 브루들링=포자
+// ── 🔮 에테리얼(프로토스) 마법 ──
+SKILL_ICON.hallucination='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="10" r="4"/><circle cx="15" cy="14" r="4" opacity=".55"/></svg>';   // 할루시네이션=겹친 환영
+SKILL_ICON.feedback='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h6l-1 8 9-12h-5z" opacity=".5"/><path d="M12 6l1.5 3 3 .4-2.2 2.1.6 3.1L12 16.3 9.1 17.7l.6-3.1L7.5 12.4l3-.4z"/></svg>';   // 피드백=마나 소각
+SKILL_ICON.maelstrom='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 4a8 8 0 108 8M12 8a4 4 0 104 4"/></svg>';   // 메일스트롬=소용돌이 마비
+SKILL_ICON.mind_control='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a5 5 0 00-5 5c0 1.3.5 2.5 1.3 3.4C7 12.3 6 14 6 16a6 6 0 0012 0c0-2-1-3.7-2.3-4.6A5 5 0 0012 3z" opacity=".5"/><circle cx="12" cy="15" r="2"/></svg>';   // 마인드컨트롤=뇌
+SKILL_ICON.disruption_web='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 3v18M3 12h18M6 6l12 12M18 6 6 18"/><circle cx="12" cy="12" r="4"/></svg>';   // 디스럽션웹=거미줄 결계
+SKILL_ICON.stasis='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 4-3 2-3-2zM12 22l-3-4 3-2 3 2zM2 12l4-3 2 3-2 3zM22 12l-4 3-2-3 2-3z" opacity=".85"/><path d="M9 9h6v6H9z" opacity=".4"/></svg>';   // 스테이시스=크리스탈
+SKILL_ICON.recall='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 7 4 12l5 5M4 12h11a5 5 0 015 5"/></svg>';   // 리콜=순간이동 화살
 const SKILLS={
   // 하이템플러: 사이오닉 스톰 — 지정 지점 광역 지속 피해(연출: 보라 뇌운+번개)
   psi_storm:{ key:'psi_storm', name:'사이오닉 스톰', kind:'target_ground', energy:75, cd:12, dur:3, radius:0.075, dmg:14,
@@ -6489,13 +6498,22 @@ const SKILLS={
   emp:{ key:'emp', name:'EMP', kind:'target_ground', energy:0, enSc:100, cd:10, radius:0.13, arm:'⚡ EMP: 지점을 클릭하세요.' },
   // 메두사(퀸): 브루들링 — 스폰 브루들링 연구 해제. 지정 적 즉사 + 그 자리에 스웜링 2기
   broodling:{ key:'broodling', name:'브루들링', kind:'target_enemy', energy:0, enSc:150, cd:12, spawn:2, arm:'🐛 브루들링: 즉사시킬 적을 클릭하세요.' },
+  // ── 🔮 에테리얼(프로토스) 마법 — 관리자=SC 마나(enSc), 네모 게임=0(제외) ──
+  hallucination:{ key:'hallucination', name:'할루시네이션', kind:'target_unit', energy:0, enSc:100, cd:10, count:2, arm:'👥 할루시네이션: 환영을 만들 아군을 클릭하세요.' },   // 하이세이지 — 대상 환영 2기
+  feedback:{ key:'feedback', name:'피드백', kind:'target_unit', energy:0, enSc:50, cd:8, arm:'💥 피드백: 마나를 태울 대상을 클릭하세요.' },   // 다크보이드 — 대상 마나 소각+피해
+  maelstrom:{ key:'maelstrom', name:'메일스트롬', kind:'target_ground', energy:0, enSc:100, cd:12, dur:6, radius:0.1, arm:'🌀 메일스트롬: 지점을 클릭하세요.' },   // 다크보이드 — 범위 마비
+  mind_control:{ key:'mind_control', name:'마인드 컨트롤', kind:'target_unit', energy:0, enSc:150, cd:15, arm:'🧠 마인드 컨트롤: 장악할 대상을 클릭하세요.' },   // 다크보이드 — 장악(자신 쉴드 0)
+  disruption_web:{ key:'disruption_web', name:'디스럽션 웹', kind:'target_ground', energy:0, enSc:125, cd:10, dur:8, radius:0.11, arm:'🕸️ 디스럽션 웹: 지점을 클릭하세요.' },   // 팔콘 — 지상 결계
+  stasis:{ key:'stasis', name:'스테이시스 필드', kind:'target_ground', energy:0, enSc:100, cd:12, dur:6, radius:0.1, arm:'🧊 스테이시스 필드: 지점을 클릭하세요.' },   // 크로노스 — 범위 정지+무적
+  recall:{ key:'recall', name:'리콜', kind:'target_ground', energy:0, enSc:150, cd:12, radius:0.18, arm:'↩️ 리콜: 소환할 지점을 클릭하세요.' },   // 크로노스 — 근처 아군 순간이동
 };
 // 🔮 스킬 마나 소모 단일 틀 — 관리자 페이지(샌드박스)=SC 가이드값(enSc), 네모네모 게임=기존 energy 그대로(제외). 표시·판정·차감 모두 이걸 사용
 function _skCost(sk){ return (typeof G!=='undefined'&&G.sandbox&&sk&&sk.enSc!=null)?sk.enSc:((sk&&sk.energy)||0); }
 // 모델키(gmodel||id) → 스킬 키 목록. 하단 선택 패널 '여분 구역'에 버튼 표시.
 // 다크템플러=상시 은신(PERMA_CLOAK)·와쳐/제플린=상시 탐지(U.detector) → 스킬 버튼 없음(패시브)
-const UNIT_SKILLS={ high_templar:['psi_storm'], medic:['heal'], kronos:['psi_cloak'], marine:['stim'], medusa:['ensnare'], racer:['spider_mine'],
-  ghost:['lockdown','nuke'], tank:['siege'], dreadnought:['yamato'], aegis:['emp'] };
+const UNIT_SKILLS={ high_templar:['psi_storm','hallucination'], medic:['heal'], kronos:['psi_cloak','stasis','recall'], marine:['stim'], medusa:['ensnare'], racer:['spider_mine'],
+  ghost:['lockdown','nuke'], tank:['siege'], dreadnought:['yamato'], aegis:['emp'],
+  dark_archon:['feedback','maelstrom','mind_control'], falcon:['disruption_web'] };   // 🔮 에테리얼 마법 유닛
 function unitSkillKeys(u){ if(!u) return []; let ks=(UNIT_SKILLS[u.gmodel||u.id]||UNIT_SKILLS[u.id]||[]).slice();
   if((u.gmodel||u.id)==='medusa' && typeof G!=='undefined' && G.tech && G.tech.research && G.tech.research.swarm_broodling && ks.indexOf('broodling')<0) ks.push('broodling');   // 🐛 스폰 브루들링 연구 시 브루들링 스킬 부여
   return ks; }
@@ -11198,7 +11216,7 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
       const _rep=(e.type==='worker'&&e._repairing)?'<span style="position:absolute;left:50%;top:-8px;transform:translateX(-50%);font-size:13px">🔧</span>':'';   // 🔧 수리 중 표시
       inner=(_h3?((e.type==='worker'&&e.build!=null)?'<span style="position:absolute;left:50%;top:-8px;transform:translateX(-50%);font-size:13px">🔨</span>':_rep):(e.type==='worker'?'<span class="be-ico">👷</span>'+_rep:_techUnitPortrait(e.uid)))+_ore; }
     const _seld=(G.tech.sel===e.eid)||(G.tech.selU&&G.tech.selU.indexOf(e.eid)>=0);
-    const _s=_techW2S(e.x,e.y); ents+='<div class="bent '+cls+(_seld?' sel':'')+'" style="left:'+(_s.x*100).toFixed(2)+'%;top:'+(_s.y*100).toFixed(2)+'%;transform:translate(-50%,-50%) scale('+techView().zoom.toFixed(2)+')">'+inner+'</div>';
+    const _s=_techW2S(e.x,e.y); ents+='<div class="bent '+cls+(_seld?' sel':'')+(e._illusion?' illusion':'')+'" style="left:'+(_s.x*100).toFixed(2)+'%;top:'+(_s.y*100).toFixed(2)+'%;transform:translate(-50%,-50%) scale('+techView().zoom.toFixed(2)+')">'+inner+'</div>';
     if(_seld && e.type!=='egg' && e.type!=='larva' && !(e.type==='bldg'&&e.bt>0)){   // 🛡 지정 시 쉴드+HP(+마나) 바 — 건설탭도 표시(전투 아님=항상 가득)
       let _mHp=0,_mSh=0,_mEn=0,_bx=_s.x,_bTop,_bW;
       if(e.type==='bldg'){ const _bs=techBldgSpec(race,e.bk)||{}, _bf2=(typeof _techFoot==='function')?_techFoot(race,e.bk):{w:2,h:2}, _sbb=_techW2S(e.x,e.y+(_bf2.h/2)*_techCH());
@@ -11285,8 +11303,14 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
         skZ+='<div class="tkBeam" style="left:'+(s.x*100).toFixed(2)+'%;top:'+(s.y*100).toFixed(2)+'%;width:'+len.toFixed(1)+'px;transform:rotate('+ang.toFixed(1)+'deg);opacity:'+op.toFixed(2)+'"></div>'; }
       else if(fx.type==='lock'){ const t=G.tech.ents.find(x=>x.eid===fx.eid); if(t){ const p2=_techW2S(t.x,t.y), pu=0.6+0.4*Math.sin(fx.t*6);
         skZ+='<div class="tkLock" style="left:'+(p2.x*100).toFixed(2)+'%;top:'+(p2.y*100).toFixed(2)+'%;opacity:'+pu.toFixed(2)+'">'+((typeof SKILL_ICON!=='undefined'&&SKILL_ICON.lockdown)||'🔒')+'</div>'; } }
-      else if(fx.type==='stim'){ const t=G.tech.ents.find(x=>x.eid===fx.eid); if(t){ skZ+=_circ(t.x,t.y,0.02*(1+fx.t*2),'border:2px solid rgba(255,120,120,'+(1-fx.t/fx.dur).toFixed(2)+')'); } } }
+      else if(fx.type==='stim'){ const t=G.tech.ents.find(x=>x.eid===fx.eid); if(t){ skZ+=_circ(t.x,t.y,0.02*(1+fx.t*2),'border:2px solid rgba(255,120,120,'+(1-fx.t/fx.dur).toFixed(2)+')'); } }
+      else if(fx.type==='halluc'){ const p=fx.t/fx.dur; skZ+=_circ(fx.x,fx.y,0.03*(1+p),'border:1.5px solid rgba(150,210,255,'+(0.8*(1-p)).toFixed(2)+');background:radial-gradient(circle,rgba(150,210,255,'+(0.25*(1-p)).toFixed(2)+'),transparent 70%)'); }   // 👥 할루시네이션 번쩍
+      else if(fx.type==='maelstrom'){ const pu=0.5+0.35*Math.abs(Math.sin(fx.t*10)), fade=Math.min(1,(fx.dur-fx.t)); skZ+=_circ(fx.x,fx.y,fx.r,'background:radial-gradient(circle,rgba(170,90,255,.4),rgba(110,40,190,.2) 60%,transparent 74%);border:1.5px solid rgba(190,130,255,'+(0.7*fade).toFixed(2)+');box-shadow:inset 0 0 14px rgba(200,150,255,'+pu.toFixed(2)+');opacity:'+Math.min(1,fade+0.2).toFixed(2)); }   // 🌀 메일스트롬
+      else if(fx.type==='dweb'){ const fade=Math.min(1,(fx.dur-fx.t)); skZ+=_circ(fx.x,fx.y,fx.r,'background:radial-gradient(circle,rgba(120,220,160,.18),transparent 72%);border:1.5px dashed rgba(150,240,190,'+(0.7*fade).toFixed(2)+');opacity:'+Math.min(1,fade+0.2).toFixed(2)); }   // 🕸️ 디스럽션 웹
+      else if(fx.type==='stasis'){ const fade=Math.min(1,(fx.dur-fx.t)), sh=0.5+0.4*Math.abs(Math.sin(fx.t*4)); skZ+=_circ(fx.x,fx.y,fx.r,'background:radial-gradient(circle,rgba(120,200,255,.32),rgba(70,140,230,.18) 60%,transparent 74%);border:2px solid rgba(150,220,255,'+(0.8*fade*sh).toFixed(2)+');box-shadow:inset 0 0 16px rgba(180,230,255,'+(0.7*fade).toFixed(2)+');opacity:'+Math.min(1,fade+0.2).toFixed(2)); }   // 🧊 스테이시스 필드
+      else if(fx.type==='warp'){ const p=fx.t/fx.dur; skZ+=_circ(fx.x,fx.y,0.05*(1-0.6*p),'border:2px solid rgba(150,210,255,'+(0.9*(1-p)).toFixed(2)+');background:radial-gradient(circle,rgba(150,210,255,'+(0.3*(1-p)).toFixed(2)+'),transparent 65%)'); } }   // ↩️ 리콜 워프
     for(const e of G.tech.ents){ if(e.type!=='unit'&&e.type!=='worker') continue;   // 지속 상태 표시(토글·지정 힐)
+      if(e._stasisT>0) skZ+=_circ(e.x,e.y,0.02,'border:2px solid rgba(150,220,255,.85);background:radial-gradient(circle,rgba(150,220,255,.2),transparent 70%)');   // 🧊 정지된 유닛
       if(e._skOn&&e._skOn.psi_cloak&&typeof SKILLS!=='undefined'&&SKILLS.psi_cloak) skZ+=_circ(e.x,e.y,SKILLS.psi_cloak.radius||0.12,'border:1px solid rgba(150,210,255,.55);background:radial-gradient(circle,rgba(150,210,255,.13),transparent 70%)');
       if(e._skOn&&e._skOn.siege) skZ+=_circ(e.x,e.y,0.024,'border:2px solid rgba(255,180,80,.7);background:radial-gradient(circle,rgba(255,180,80,.14),transparent 70%)');
       if(e._healF!=null){ const t=G.tech.ents.find(x=>x.eid===e._healF); if(t){ const p2=_techW2S(t.x,t.y); skZ+='<div class="tkHeal" style="left:'+(p2.x*100).toFixed(2)+'%;top:'+(p2.y*100).toFixed(2)+'%">'+((typeof SKILL_ICON!=='undefined'&&SKILL_ICON.heal)||'✚')+'</div>'; } } } }
@@ -11382,16 +11406,33 @@ function _techSkFire(u,key,wx,wy,tgt){ const sk=SKILLS[key]; u._skCd=u._skCd||{}
   else if(key==='lockdown'&&tgt){ tgt._lockT=sk.dur||6; tgt.tx=null; tgt._wp=null; F.push({type:'lock', eid:tgt.eid, t:0, dur:sk.dur||6}); }
   else if(key==='yamato'&&tgt) F.push({type:'beam', sx:u.x, sy:u.y-0.015, x:tgt.x, y:tgt.y, t:0, dur:0.55});
   else if(key==='heal'&&tgt){ u._healF=(u._healF===tgt.eid)?null:tgt.eid; }   // 재시전 = 지정 해제(자동 복귀)
+  // ── 🔮 에테리얼 마법 ──
+  else if(key==='hallucination'&&tgt){ const n=sk.count||2; for(let i=0;i<n;i++){ const off=(i?1:-1)*0.02;   // 👥 환영 복제 n기(반투명·일정시간 후 소멸)
+      G.tech.ents.push({eid:G.tech.eseq++, type:'unit', uid:tgt.uid, x:Math.max(0.04,Math.min(0.96,tgt.x+off)), y:Math.max(0.16,Math.min(0.96,tgt.y+0.012)), _illusion:true, _illT:20}); }
+      F.push({type:'halluc', x:tgt.x, y:tgt.y, t:0, dur:0.8}); }
+  else if(key==='feedback'&&tgt){ const burn=Math.round(tgt.en||0); tgt.en=0;   // 💥 마나 소각 + 소각량만큼 HP 피해
+      const mh=(tgt.maxHp!=null?tgt.maxHp:((techUnitSpec(G.tech.race,tgt.uid)||{}).hp||0)); if(tgt.maxHp==null&&mh>0) tgt.maxHp=mh; if(burn>0&&mh>0) tgt.hp=Math.max(1,(tgt.hp!=null?tgt.hp:mh)-burn);
+      F.push({type:'boom', x:tgt.x, y:tgt.y, t:0, dur:0.5, r:0.04}); }
+  else if(key==='maelstrom'){ const r=sk.radius||0.1, d=sk.dur||6; for(const x of G.tech.ents){ if((x.type==='unit'||x.type==='worker')&&x.eid!==u.eid&&Math.hypot(x.x-wx,x.y-wy)<=r){ x._lockT=Math.max(x._lockT||0,d); x.tx=null; x._wp=null; } } F.push({type:'maelstrom', x:wx, y:wy, t:0, dur:d, r:r}); }   // 🌀 범위 마비
+  else if(key==='mind_control'&&tgt){ u.sh=0; tgt._mcT=1.2; F.push({type:'beam', sx:u.x, sy:u.y-0.015, x:tgt.x, y:tgt.y, t:0, dur:0.6}); F.push({type:'halluc', x:tgt.x, y:tgt.y, t:0, dur:0.9}); }   // 🧠 장악(자신 쉴드 0 페널티)
+  else if(key==='disruption_web') F.push({type:'dweb', x:wx, y:wy, t:0, dur:sk.dur||8, r:sk.radius||0.11});   // 🕸️ 지상 결계 구역
+  else if(key==='stasis'){ const r=sk.radius||0.1, d=sk.dur||6; for(const x of G.tech.ents){ if((x.type==='unit'||x.type==='worker')&&Math.hypot(x.x-wx,x.y-wy)<=r){ x._lockT=Math.max(x._lockT||0,d); x._stasisT=d; x.tx=null; x._wp=null; } } F.push({type:'stasis', x:wx, y:wy, t:0, dur:d, r:r}); }   // 🧊 범위 정지+무적
+  else if(key==='recall'){ const r=sk.radius||0.18; let n=0; for(const x of G.tech.ents){ if((x.type==='unit'||x.type==='worker')&&x.eid!==u.eid&&Math.hypot(x.x-wx,x.y-wy)<=r){   // ↩️ 근처 아군 → 시전자 위치로 순간이동
+        const off=(n%2?1:-1)*0.02*(1+Math.floor(n/2)); x.x=Math.max(0.04,Math.min(0.96,u.x+off)); x.y=Math.max(0.16,Math.min(0.96,u.y+0.03+0.012*Math.floor(n/2))); x.tx=null; x._wp=null; n++; } } F.push({type:'warp', x:wx, y:wy, t:0, dur:0.6}); F.push({type:'warp', x:u.x, y:u.y, t:0, dur:0.6}); }
   if(typeof playSfx==='function') playSfx('skill'); }
-function _techSkillTick(dt){ if(!G.tech) return false; const F=G.tech.skillFx; let live=false;
+function _techSkillTick(dt){ if(!G.tech) return false; const F=G.tech.skillFx; let live=false, _illGone=false;
   for(const e of G.tech.ents){ if(e.type!=='unit'&&e.type!=='worker') continue;
     if(e._skCd) for(const k in e._skCd){ if(e._skCd[k]>0){ e._skCd[k]=Math.max(0,e._skCd[k]-dt); live=true; } }
     if(e._skStim>0){ e._skStim-=dt; live=true; }
+    if(e._illusion){ e._illT=(e._illT||0)-dt; live=true; if(e._illT<=0){ e._dead=true; _illGone=true; } }   // 👥 환영 수명
+    if(e._stasisT>0){ e._stasisT-=dt; e.tx=null; e._wp=null; live=true; }   // 🧊 스테이시스(정지+무적)
+    if(e._mcT>0){ e._mcT-=dt; live=true; }   // 🧠 장악 연출
     if(e._lockT>0){ e._lockT-=dt; e.tx=null; e._wp=null; live=true; }
     if(e._skOn&&e._skOn.siege){ e.tx=null; e._wp=null; }   // 시즈 중 = 이동 불가 유지
     e._skSpdMul=((e._skStim>0)?1.4:1)*((e._skSlow>0)?0.5:1); if(e._skSlow>0) e._skSlow-=dt;
     if(e._healF!=null){ const t=G.tech.ents.find(x=>x.eid===e._healF); if(!t){ e._healF=null; }   // 지정 힐 = 대상 따라다님
       else if(Math.hypot(t.x-e.x,t.y-e.y)>(HEAL_RANGE*0.85)){ e.tx=t.x; e.ty=t.y; } live=true; } }
+  if(_illGone){ for(let i=G.tech.ents.length-1;i>=0;i--){ const x=G.tech.ents[i]; if(x._illusion&&x._dead){ G.tech.ents.splice(i,1); if(G.tech.selU) G.tech.selU=G.tech.selU.filter(id=>id!==x.eid); } } }   // 👥 소멸한 환영 제거
   if(F&&F.length){ live=true;
     for(let i=F.length-1;i>=0;i--){ const fx=F[i]; fx.t+=dt;
       if(fx.type==='mine'){ const hit=G.tech.ents.find(x=>(x.type==='unit'||x.type==='worker')&&x.eid!==fx.owner&&Math.hypot(x.x-fx.x,x.y-fx.y)<=fx.trig);
