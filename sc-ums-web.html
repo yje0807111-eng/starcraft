@@ -11047,9 +11047,12 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
   // ⚡ 마나(에너지): 마법 유닛 = 생산 직후 50 + 자연 회복(1.2초당 1). 지정된 캐스터 회복 중이면 바만 스로틀 갱신(perma-render 방지)
   let _manaSel=false;
   for(const e of G.tech.ents){ if(e.type!=='unit'&&e.type!=='worker') continue;
+    const _uid=(e.type==='worker')?(TECH_WORKER[G.tech.race]||'worker_light'):e.uid, _sp=techUnitSpec(G.tech.race,_uid)||{};
+    if(e.maxHp==null) e.maxHp=_sp.hp||0; if(e.hp==null) e.hp=e.maxHp;   // ❤ 실시간 HP(스팀팩 등 소모 · 회복 없음=SC 테란)
+    if(e.maxSh==null) e.maxSh=_sp.sh||0; if(e.sh==null) e.sh=e.maxSh;   // 🛡 실시간 쉴드
     const _mx=(typeof U!=='undefined'&&U[e.uid]&&U[e.uid].energy)||0; if(_mx<=0) continue;
     if(e.maxEn!==_mx) e.maxEn=_mx;
-    if(e.en==null) e.en=Math.min(50,_mx);   // 생산 직후 50
+    if(e.en==null) e.en=Math.min(50,_mx);   // ⚡ 생산 직후 50
     else if(e.en<_mx){ e.en=Math.min(_mx, e.en+dt/1.2); if(G.tech.sel===e.eid||(G.tech.selU&&G.tech.selU.indexOf(e.eid)>=0)) _manaSel=true; } }
   if(done) techUIRender();
   else if(active||_vmoving){ techMapRender();
@@ -11199,9 +11202,11 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
       if(e.type==='bldg'){ const _bs=techBldgSpec(race,e.bk)||{}, _bf2=(typeof _techFoot==='function')?_techFoot(race,e.bk):{w:2,h:2}, _sbb=_techW2S(e.x,e.y+(_bf2.h/2)*_techCH());
         _mHp=_bs.hp||0; _mSh=_bs.sh||0; _mEn=0; _bx=_sbb.x; _bTop=(_sbb.y*100).toFixed(2)+'%'; _bW=Math.max(0.05,_bf2.w*_techCW()*techView().zoom); }
       else { const _uid=(e.type==='worker')?(TECH_WORKER[race]||'worker_light'):e.uid, _sp=techUnitSpec(race,_uid)||{};
-        _mHp=_sp.hp||0; _mSh=_sp.sh||0; _mEn=(typeof U!=='undefined'&&U[_uid]&&U[_uid].energy)||0; _bTop='calc('+(_s.y*100).toFixed(2)+'% + 17px)'; _bW=Math.max(0.05,0.9*_techCW()*techView().zoom); }   // 유닛 바 = 초상 아래로 살짝 내림(딱 붙지 않게)
-      const _enR=_mEn>0?Math.max(0,Math.min(1,(e.en!=null?e.en:Math.min(50,_mEn))/_mEn)):null;   // ⚡ 실시간 마나(초기 50 → 자연 회복)
-      if(_mHp>0) labels+='<div class="bentBar" style="left:'+(_bx*100).toFixed(2)+'%;top:'+_bTop+';width:'+(_bW*100).toFixed(2)+'%">'+_barsHTML({ hpR:1, hpCol:hpBarColor(1), shR:_mSh>0?1:null, enR:_enR })+'</div>'; } }
+        _mHp=(e.maxHp!=null?e.maxHp:_sp.hp)||0; _mSh=(e.maxSh!=null?e.maxSh:_sp.sh)||0; _mEn=(typeof U!=='undefined'&&U[_uid]&&U[_uid].energy)||0; _bTop='calc('+(_s.y*100).toFixed(2)+'% + 17px)'; _bW=Math.max(0.05,0.9*_techCW()*techView().zoom); }   // 유닛 바 = 초상 아래로 살짝 내림(딱 붙지 않게)
+      const _hpR=_mHp>0?Math.max(0,Math.min(1,(e.hp!=null?e.hp:_mHp)/_mHp)):1;   // ❤ 실시간 HP(스팀팩 소모 반영)
+      const _shR=_mSh>0?Math.max(0,Math.min(1,(e.sh!=null?e.sh:_mSh)/_mSh)):null;   // 🛡 실시간 쉴드
+      const _enR=_mEn>0?Math.max(0,Math.min(1,(e.en!=null?e.en:Math.min(50,_mEn))/_mEn)):null;   // ⚡ 실시간 마나(초기 50 → 자연 회복 → 스킬 소모)
+      if(_mHp>0) labels+='<div class="bentBar" style="left:'+(_bx*100).toFixed(2)+'%;top:'+_bTop+';width:'+(_bW*100).toFixed(2)+'%">'+_barsHTML({ hpR:_hpR, hpCol:hpBarColor(_hpR), shR:_shR, enR:_enR })+'</div>'; } }
   if(_btBox && _btBox.active){ const bx=Math.min(_btBox.sx0,_btBox.sx1),by=Math.min(_btBox.sy0,_btBox.sy1),bw=Math.abs(_btBox.sx1-_btBox.sx0),bh=Math.abs(_btBox.sy1-_btBox.sy0);   // 🔲 한 손가락 드래그 = 유닛 지정 박스
     ents+='<div class="techSelBox" style="left:'+(bx*100).toFixed(2)+'%;top:'+(by*100).toFixed(2)+'%;width:'+(bw*100).toFixed(2)+'%;height:'+(bh*100).toFixed(2)+'%;position:absolute;border:1.5px solid #46f06a;background:rgba(70,240,106,.14);pointer-events:none;z-index:23;border-radius:2px"></div>'; }
   let tabs=''; ['union','swarm','aetherial'].forEach(r=>{ tabs+='<span class="techTab'+(r===race?' on':'')+'" onclick="techRace(event,\''+r+'\')">'+_TECH_RKO[r]+'</span>'; });
@@ -11348,14 +11353,16 @@ function _techUnitName(e){ if(!e) return null; if(e.type==='worker') return '일
   const bs=(TECH_TREE[G.tech.race]||{}).buildings||[]; for(const b of bs){ const p=(b.produces||[]).find(x=>x.id===e.uid); if(p) return p.name; } return e.uid; }
 // 🪄 건설 탭 유닛 스킬 어댑터 — 정의는 메인 SKILLS/SKILL_ICON/UNIT_SKILLS 단일 소스 그대로, 시전·FX만 tech 엔티티용(적 없음 = 효과는 이동·상태·연출)
 const TECH_SK_ENMAX=200;   // 시전 유닛 공통 에너지(스타 기본 200 · 재생 SKILL_EN_REGEN/s)
-function _techSkEn(u){ if(u._en==null) u._en=TECH_SK_ENMAX; return u._en; }
+function _techSkEn(u){ if(u.en==null) u.en=Math.min(50,(u.maxEn!=null?u.maxEn:((typeof U!=='undefined'&&U[u.uid]&&U[u.uid].energy)||0))); return u.en; }   // 🔮 마나 = 바에 표시되는 en과 단일화(스킬 소모 = 바 감소)
 function _techSkFx(){ return G.tech.skillFx||(G.tech.skillFx=[]); }
 function techCastSkill(ev,key){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech||(G.tech.selU||[]).length!==1) return;
   const u=G.tech.ents.find(e=>e.eid===G.tech.selU[0]); const sk=(typeof SKILLS!=='undefined')&&SKILLS[key]; if(!u||!sk) return;
   u._skCd=u._skCd||{}; u._skOn=u._skOn||{};
   if((u._skCd[key]||0)>0){ if(typeof toast==='function') toast('쿨다운 '+Math.ceil(u._skCd[key])+'초'); return; }
   if(sk.energy>0 && _techSkEn(u)<sk.energy){ if(typeof toast==='function') toast('에너지 부족 ('+sk.energy+'e)'); return; }
-  if(sk.kind==='self'){ u._skCd[key]=sk.cd||0; u._skStim=sk.dur||6; _techSkFx().push({type:'stim',eid:u.eid,t:0,dur:0.5});   // 스팀팩 = 즉시 자기 버프(이속↑)
+  if(sk.kind==='self'){
+    if(sk.hpCost>0){ const _mh=(u.maxHp!=null?u.maxHp:((techUnitSpec(G.tech.race,u.uid)||{}).hp||0)), _hp=(u.hp!=null?u.hp:_mh); if(_mh>0&&u.maxHp==null) u.maxHp=_mh; if(_hp<=sk.hpCost){ if(typeof toast==='function') toast('⛔ 체력 부족 (스팀팩 '+sk.hpCost+' HP)'); return; } u.hp=Math.max(1,_hp-sk.hpCost); }   // 🩸 스팀팩 = 체력 소모(SC 10 HP) · 미초기화 시 스펙에서 HP 확보
+    u._skCd[key]=sk.cd||0; u._skStim=sk.dur||6; _techSkFx().push({type:'stim',eid:u.eid,t:0,dur:0.5});   // 스팀팩 = 즉시 자기 버프(이속↑) + 체력 소모
     if(typeof playSfx==='function') playSfx('skill'); techUIRender(); return; }
   if(sk.kind==='toggle'||sk.kind==='aura'){ const nv=!u._skOn[key]; u._skOn[key]=nv;   // 시즈 모드 / 차원 은폐 = 토글
     if(nv&&sk.kind==='toggle'){ u.tx=null; u.ty=null; u._wp=null; }   // 시즈 = 그 자리 고정
@@ -11363,7 +11370,7 @@ function techCastSkill(ev,key){ if(ev&&ev.stopPropagation) ev.stopPropagation();
   G.tech.skillArm={eid:u.eid, key:key};   // 지정형(지점/유닛/대상) = 무장 후 맵 탭으로 시전
   if(typeof toast==='function') toast(sk.arm||'ℹ️ 대상을 탭하세요'); techUIRender(); }
 function _techSkFire(u,key,wx,wy,tgt){ const sk=SKILLS[key]; u._skCd=u._skCd||{};
-  if(sk.energy>0){ if(_techSkEn(u)<sk.energy) return; u._en-=sk.energy; }
+  if(sk.energy>0){ if(_techSkEn(u)<sk.energy) return; u.en=Math.max(0,(u.en||0)-sk.energy); }   // 🔮 마나 소모(바에 반영)
   u._skCd[key]=sk.cd||0; const F=_techSkFx();
   if(key==='psi_storm') F.push({type:'storm', x:wx, y:wy, t:0, dur:sk.dur||3, r:sk.radius});
   else if(key==='ensnare') F.push({type:'ensnare', x:wx, y:wy, t:0, dur:sk.dur||8, r:sk.radius, slow:sk.slow});
@@ -11377,7 +11384,6 @@ function _techSkFire(u,key,wx,wy,tgt){ const sk=SKILLS[key]; u._skCd=u._skCd||{}
 function _techSkillTick(dt){ if(!G.tech) return false; const F=G.tech.skillFx; let live=false;
   for(const e of G.tech.ents){ if(e.type!=='unit'&&e.type!=='worker') continue;
     if(e._skCd) for(const k in e._skCd){ if(e._skCd[k]>0){ e._skCd[k]=Math.max(0,e._skCd[k]-dt); live=true; } }
-    if(e._en!=null&&e._en<TECH_SK_ENMAX){ e._en=Math.min(TECH_SK_ENMAX,e._en+SKILL_EN_REGEN*dt); }
     if(e._skStim>0){ e._skStim-=dt; live=true; }
     if(e._lockT>0){ e._lockT-=dt; e.tx=null; e._wp=null; live=true; }
     if(e._skOn&&e._skOn.siege){ e.tx=null; e._wp=null; }   // 시즈 중 = 이동 불가 유지
