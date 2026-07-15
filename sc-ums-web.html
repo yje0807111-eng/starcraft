@@ -10470,14 +10470,16 @@ function techOrderNydus(nydusEid, units){ const nyd=G.tech.ents.find(e=>e.eid===
   let n=0; for(const u of units){ if(_techAirOf(u)) continue; if(u.type==='worker'&&u._gKind) _techReleaseGather(u); u._nydusTgt=nydusEid; u.tx=nyd.x; u.ty=nyd.y; u._wp=null; u._mvStuck=0; u._mvPrevD=null; n++; }   // 커널로 이동 지시 → 도착 시 순간이동
   if(n){ if(typeof playSfx==='function') playSfx('ui_confirm'); if(typeof toast==='function') toast('🕳 커널 이동'); techMapRender(); } }
 function _techNydusTick(dt){ if(!G.tech||G.tech.race!=='swarm') return 0; let r=0;   // 지정 유닛만 명령 순간이동(양방향) · 출구는 좌하단→반시계
+  for(const e of G.tech.ents){ if(e.type==='bldg'&&e.bk==='nydus'&&e._entryCd>0) e._entryCd=Math.max(0,e._entryCd-dt); }   // 건물별 입장 간격 카운트다운(프레임당 1회)
   for(const u of G.tech.ents){ if((u.type!=='unit'&&u.type!=='worker')||u._nydusTgt==null) continue;
     const nyd=G.tech.ents.find(e=>e.eid===u._nydusTgt&&e.type==='bldg'&&e.bk==='nydus'&&e.bt<=0);
     if(!nyd||nyd._nydusLink==null||_techAirOf(u)){ u._nydusTgt=null; continue; }
     const link=G.tech.ents.find(e=>e.eid===nyd._nydusLink&&e.type==='bldg'&&e.bk==='nydus'&&e.bt<=0); if(!link){ u._nydusTgt=null; continue; }
     if(Math.hypot(u.x-nyd.x,u.y-nyd.y) < _techBunkerR(nyd)){   // 입구 도착 → 출구로 순간이동 + 지정 해제
+      if(nyd._entryCd>0){ if(r<1) r=1; continue; }   // 앞 유닛 입장 직후 → 간격만큼 대기(한 명씩 순서대로 쭉쭉)
       const sp=_techSpawnPos(link, u.uid||(TECH_WORKER[G.tech.race]||'worker_swarm'));
       u.x=sp.x; u.y=sp.y; u._spawnOf=link.eid; u._spawnSlot=sp.slot; u.tx=null; u.ty=null; u._wp=null; u._nydusTgt=null; u._mvStuck=0; u._mvPrevD=null;
-      if(G.tech.selU) G.tech.selU=G.tech.selU.filter(id=>id!==u.eid); r=2; }
+      if(G.tech.selU) G.tech.selU=G.tech.selU.filter(id=>id!==u.eid); nyd._entryCd=0.07; r=2; }
     else { u.tx=nyd.x; u.ty=nyd.y; if(r<1) r=1; } }
   return r; }
 // 🧱 벙커: 바이오닉·일꾼 최대 4기 탑승(대피). 유닛 지정 후 벙커 롱프레스 = 탑승 이동 → 도착 시 탑승 · 슬롯 탭 = 하차
@@ -10488,7 +10490,7 @@ function techEjectAllBunker(ev, bunkerEid){ if(ev&&ev.stopPropagation) ev.stopPr
   const bunk=G.tech.ents.find(x=>x.eid===bunkerEid&&x.type==='bldg'); if(!bunk||!bunk._cargo) return;
   const n=bunk._cargo.length; while(bunk._cargo.length) techUnboardBunker(null, bunkerEid, bunk._cargo.length-1);   // 뒤에서부터 전부 하차
   if(n&&typeof toast==='function') toast('🚪 벙커 전체 하차'); techUIRender(); }
-function _techBunkerR(bunk){ const r=_techCollRect(bunk,{type:'unit',uid:'marine'}); return Math.max((r.x1-r.x0),(r.y1-r.y0))/2+0.03; }   // 탑승 도착 = 벙커 충돌 사각(막히는 경계)에 닿으면 → 확실히 탑승
+function _techBunkerR(bunk){ const r=_techCollRect(bunk,{type:'unit',uid:'marine'}); return Math.max(0.075, Math.max((r.x1-r.x0),(r.y1-r.y0))/2+0.04); }   // 입장(탑승·순간이동) 도착 반경 = 충돌 사각 경계 + 여유(작은 건물도 최소 0.075) → 확실히 인식
 function techOrderBoard(bunkerEid){ if(!G.tech) return; const bunk=G.tech.ents.find(e=>e.eid===bunkerEid&&e.type==='bldg'&&e.bk==='bunker'&&e.bt<=0); if(!bunk) return;
   const cap=4-((bunk._cargo&&bunk._cargo.length)||0);
   if(cap<=0){ if(typeof toast==='function') toast('⛔ 벙커 가득 참 (4/4)'); return; }
@@ -10868,13 +10870,16 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
   if(_techSkillTick(dt)) active=true;   // 🪄 스킬 쿨다운·버프·FX 진행(활동 중=계속 렌더)
   if(_techRepairTick(dt)) active=true;   // 🔧 일꾼 수리(건설 중 건물 완성 가속 · b._repairN 집계)
   { const _nr=_techNydusTick(dt); if(_nr) active=true; if(_nr===2) done=true; }   // 🕳 나이더스 순간이동(지정 유닛 명령) · 텔레포트=지정 해제라 전체 갱신
+  for(const e of G.tech.ents){ if(e.type==='bldg'&&e.bk==='bunker'&&e._entryCd>0) e._entryCd=Math.max(0,e._entryCd-dt); }   // 벙커별 입장 간격 카운트다운(프레임당 1회)
   for(let i=G.tech.ents.length-1;i>=0;i--){ const u=G.tech.ents[i]; if(u._boardTgt==null) continue;   // 🧱 벙커 탑승 이동 중 → 도착 시 탑승
     const bunk=G.tech.ents.find(e=>e.eid===u._boardTgt&&e.type==='bldg'&&e.bk==='bunker'&&e.bt<=0);
     if(!bunk){ u._boardTgt=null; continue; } bunk._cargo=bunk._cargo||[];
     if(bunk._cargo.length>=4){ u._boardTgt=null; u.tx=null; continue; }   // 가득 → 탑승 취소
-    if(Math.hypot(u.x-bunk.x,u.y-bunk.y) < _techBunkerR(bunk)){ const uid=(u.type==='worker')?(TECH_WORKER[G.tech.race]||'worker_human'):u.uid;
+    if(Math.hypot(u.x-bunk.x,u.y-bunk.y) < _techBunkerR(bunk)){
+      if(bunk._entryCd>0){ active=true; continue; }   // 앞 유닛 탑승 직후 → 간격만큼 대기(도착 즉시 한 명씩 순서대로 입장)
+      const uid=(u.type==='worker')?(TECH_WORKER[G.tech.race]||'worker_human'):u.uid;
       bunk._cargo.push({ type:u.type, uid, hp:(techUnitSpec('union',uid)||{}).hp||0 });
-      if(G.tech.selU) G.tech.selU=G.tech.selU.filter(id=>id!==u.eid); G.tech.ents.splice(i,1); done=true; }
+      if(G.tech.selU) G.tech.selU=G.tech.selU.filter(id=>id!==u.eid); G.tech.ents.splice(i,1); bunk._entryCd=0.12; done=true; }
     else active=true; }
   for(const e of G.tech.ents){ if(e.type!=='bldg'||!e._evo) continue; e._evo.t=Math.max(0,e._evo.t-dt); active=true; if(e._evo.t<=0){ _techEvolveDone(e, e._evo.to); done=true; } }   // 🧬 건물 진화 진행
   const _vmoving=techViewTick(dt);   // 🎥 부드러운 줌/팬 보간(메인맵과 동일) — 애니메이션 중이면 매 프레임 재렌더
