@@ -498,10 +498,12 @@
   .ulbl{font-size:8px;color:#9fc4dc;font-weight:600;letter-spacing:.3px;text-shadow:0 0 6px #000,0 1px 1px #000;white-space:nowrap}
   .ulbl.hero{color:#ffc040}
   /* 선택 유닛 위 얇은 체력/실드 바(스타크래프트식) */
-  .uhp{display:flex;flex-direction:column;gap:1px;margin:2px 0 1px}
-  .uhp .ub{height:3px;border-radius:1px;background:rgba(4,8,12,.9);border:1px solid rgba(0,0,0,.7);overflow:hidden}
-  .uhp .ub i{display:block;height:100%;border-radius:1px}
-  .uhp .uS i{background:#5ad1ff;box-shadow:0 0 4px rgba(90,209,255,.6)}
+  /* 쉴드(하늘색)+HP를 한 칸처럼 — 거의 겹치게 세로로 붙여 하나의 테두리 안에 표시(에테리얼 쉴드=위, HP=아래) */
+  .uhp{display:flex;flex-direction:column;gap:0;margin:2px 0 1px;border-radius:1.5px;overflow:hidden;border:1px solid rgba(0,0,0,.78);background:rgba(4,8,12,.92);box-shadow:0 0 3px rgba(0,0,0,.5)}
+  .uhp .ub{height:3px;background:transparent;border:0;border-radius:0;overflow:hidden}
+  .uhp .ub+.ub{border-top:1px solid rgba(0,0,0,.55)}   /* 쉴드↔HP 사이 얇은 구분선(한 칸을 위/아래로 나눈 느낌) */
+  .uhp .ub i{display:block;height:100%;border-radius:0}
+  .uhp .uS i{background:#5ad1ff;box-shadow:0 0 5px rgba(90,209,255,.7)}
   .uhp .uH i{box-shadow:0 0 4px rgba(70,211,105,.5)}
 
   /* 합체존 = 우하단 구석 지정 베이(테두리 없음 — 비콘 발판이 구역을 표시, 상단 표지 라벨만) */
