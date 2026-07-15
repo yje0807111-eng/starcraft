@@ -3053,6 +3053,7 @@ const U = {
   ultralisk: {name:'저거너트', icon:'🐛', cost:0, dmg:65, up:26, hdmg:130, hup:52, range:0.045, cd:35, splash:false, melee:true, color:'#a8472e', size:26, wpn:'zrg', atk:'slash', hp:800, armor:4, shield:0, energy:0, moveSpd:0.2, model3d:'ultralisk'},   // 샌드박스 전용(보직 스탯)
   dark_templar: {name:'다크세이지', icon:'🔮', cost:0, dmg:80, up:32, hdmg:160, hup:64, range:0.04, cd:42, splash:false, melee:true, color:'#ffc040', size:14, wpn:'pro', atk:'slash', hp:80, armor:1, shield:80, shArmor:1, energy:0, moveSpd:0.19, model3d:'dark_templar'},   // 샌드박스 전용(보직 스탯)
   high_templar: {name:'하이세이지', icon:'🔮', cost:0, dmg:0, up:0, hdmg:0, hup:0, range:0, cd:40, splash:false, color:'#ffc040', size:12, wpn:'pro', atk:'psi', hp:40, armor:0, shield:40, shArmor:1, energy:200, moveSpd:0.12, model3d:'high_templar'},   // 샌드박스 전용(보직 스탯) — 시전형(무공격)
+  dark_archon: {name:'다크보이드', icon:'🌑', cost:0, dmg:0, up:0, hdmg:0, hup:0, range:0, cd:40, splash:false, color:'#b47aff', size:22, wpn:'pro', atk:'psi', hp:25, armor:0, shield:200, shArmor:1, energy:200, moveSpd:0.10, model3d:'archon'},   // 다크아칸(마인드컨트롤·메일스트롬·피드백) — 무공격 마법 · 임시 스탯 · 모델=archon 임시 재사용
 };
 const HERO_STAT_MUL=2; // 영웅은 체력/보호막 2배(기본값, 조정 가능)
 // 유닛 인스턴스에 생존 스탯 초기화(현재=최대). 추후 전투형 맵에서 u.hp 등을 깎으면 됨.
@@ -3077,6 +3078,8 @@ const UNIT_SVG = {
   goliath:'<rect x="7" y="6" width="10" height="8" rx="1.5" fill="currentColor" opacity=".2"/><rect x="7" y="6" width="10" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M8 6V3.5M11 6V4M16 8h4M16 11h4" stroke="currentColor" stroke-width="1.3"/><path d="M9 14l-2 6M15 14l2 6" stroke="currentColor" stroke-width="1.2"/>',
   // 아칸: 에너지 다이아 + 방전
   archon:'<path d="M12 3l5 9-5 9-5-9z" fill="currentColor" opacity=".25"/><path d="M12 3l5 9-5 9-5-9z" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="12" cy="12" r="2.4" fill="currentColor"/><path d="M12 6v2M12 16v2M8.5 12l-2 0M15.5 12l2 0" stroke="currentColor" stroke-width="1" opacity=".8"/>',
+  // 다크보이드(다크아칸): 역다이아 + 어두운 코어 + 방전
+  dark_archon:'<path d="M12 3l5 9-5 9-5-9z" fill="currentColor" opacity=".4"/><path d="M12 3l5 9-5 9-5-9z" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="12" cy="12" r="2.4" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M10.5 10.5l3 3M13.5 10.5l-3 3" stroke="currentColor" stroke-width="1"/>',
   // 터렛: 받침 + 회전포탑 + 미사일 포드
   turret:'<path d="M6 20h12l-2-4H8z" fill="currentColor" opacity=".2"/><path d="M6 20h12l-2-4H8z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><rect x="9" y="8" width="6" height="6" rx="1.5" fill="currentColor" opacity=".25"/><rect x="9" y="8" width="6" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M15 9.5l4-1.5M15 12l4 1" stroke="currentColor" stroke-width="1.3"/><path d="M12 8V4" stroke="currentColor" stroke-width="1.2"/>',
   // 포토캐논: 받침 + 결정 코어 + 방전
@@ -6121,13 +6124,13 @@ const UNIT_CLS={   // 유닛 직업/병과 — 모델 id(gmodel) 기준. 베이�
   overlord:'수송선', stinger:'자폭충', venom:'산성충', medusa:'군단여왕',
   wyvern:'전투기', behemoth:'공성생물',
   worker_human:'일꾼', worker_light:'일꾼', worker_swarm:'일꾼',
-  medic:'의무병', broodling:'소환수', larva:'공성', ultralisk:'돌격괴수', dark_templar:'암살자', high_templar:'대마법사',
+  medic:'의무병', broodling:'소환수', larva:'공성', ultralisk:'돌격괴수', dark_templar:'암살자', high_templar:'대마법사', dark_archon:'암흑마법사',
 };
 // 유닛 종족 → 좌측 바 색(유니온=파랑/스웜=초록/에테리얼=금색). 같은 모델을 다른 종족이 쓰기도 해 모델키(gmodel||id) 기준
 const RACE_BAR={ union:'#4aa8ff', swarm:'#a8472e', aetherial:'#ffc040' };
 const RACE_OF={
   marine:'union', goliath:'union', ghost:'union', racer:'union', machinegun:'union', tank:'union', skyguard:'union', hellfire:'union', pelican:'union', dreadnought:'union', aegis:'union', worker_human:'union', turret:'union', photon:'union', citizen:'union', medic:'union',
-  dragoon:'aetherial', archon:'aetherial', blade:'aetherial', skydancer:'aetherial', kronos:'aetherial', seraph:'aetherial', archangel:'aetherial', falcon:'aetherial', observer:'aetherial', worker_light:'aetherial', dark_templar:'aetherial', high_templar:'aetherial', larva:'aetherial',
+  dragoon:'aetherial', archon:'aetherial', blade:'aetherial', skydancer:'aetherial', kronos:'aetherial', seraph:'aetherial', archangel:'aetherial', falcon:'aetherial', observer:'aetherial', worker_light:'aetherial', dark_templar:'aetherial', high_templar:'aetherial', dark_archon:'aetherial', larva:'aetherial',
   hydra:'swarm', snapper:'swarm', thornqueen:'swarm', matron:'swarm', overlord:'swarm', stinger:'swarm', venom:'swarm', medusa:'swarm', wyvern:'swarm', behemoth:'swarm', worker_swarm:'swarm', broodling:'swarm', ultralisk:'swarm',
 };
 function raceBarCol(u){ if(!u) return null; const r=(u.gid && typeof GACHA_UNITS!=='undefined' && GACHA_UNITS[u.gid] && GACHA_UNITS[u.gid].race) || RACE_OF[u.gmodel||u.id]; return RACE_BAR[r]||null; }
@@ -6707,7 +6710,7 @@ function sbCombatUiSync(){ const t=document.getElementById('btCtlToggle'); const
 const BASE_UNIT={
   worker_human:[60,0,0,5,1], marine:[40,0,0,6,4], machinegun:[50,0,1,16,2], medic:[60,0,1,0,0], ghost:[45,0,0,10,7], racer:[80,0,0,20,5], tank:[150,0,1,30,7], goliath:[125,0,1,12,5], skyguard:[120,0,0,20,5], pelican:[150,0,1,0,0], hellfire:[200,0,2,48,6], aegis:[200,0,1,0,0], dreadnought:[500,0,3,25,6],
   worker_swarm:[40,0,0,5,1], overlord:[200,0,0,0,0], snapper:[35,0,0,5,1], hydra:[80,0,0,10,4], thornqueen:[125,0,1,20,6], wyvern:[120,0,0,9,3], stinger:[25,0,0,110,1], medusa:[120,0,0,0,0], ultralisk:[400,0,1,20,1], behemoth:[150,0,2,20,8], venom:[250,0,2,25,6], broodling:[30,0,0,6,1],
-  worker_light:[20,20,0,5,1], blade:[100,60,1,16,1], dragoon:[100,80,1,20,4], high_templar:[40,40,0,0,0], dark_templar:[80,40,1,40,1], archon:[10,350,0,30,2], seraph:[80,60,1,0,0], observer:[40,20,0,0,0], falcon:[150,100,0,8,4], skydancer:[120,80,1,5,5], archangel:[300,150,4,6,8], kronos:[200,150,1,10,5], larva:[100,80,0,100,8] };   // larva=리버(에테리얼 공성, 스캐럽) — 콜로서스 데이터
+  worker_light:[20,20,0,5,1], blade:[100,60,1,16,1], dragoon:[100,80,1,20,4], high_templar:[40,40,0,0,0], dark_templar:[80,40,1,40,1], archon:[10,350,0,30,2], dark_archon:[25,200,0,0,2], seraph:[80,60,1,0,0], observer:[40,20,0,0,0], falcon:[150,100,0,8,4], skydancer:[120,80,1,5,5], archangel:[300,150,4,6,8], kronos:[200,150,1,10,5], larva:[100,80,0,100,8] };   // larva=리버(에테리얼 공성, 스캐럽) — 콜로서스 데이터 · dark_archon=다크보이드(임시)
 // 일꾼 앵커: 사거리·공속은 base_stats 그대로가 아니라 "현재 일꾼값 = base 1단위" 비율로 통일(전투가 과하게 안 달라지게)
 const SB_ANCHOR_RANGE=0.035;   // 일꾼 현재 사거리 0.035 ÷ base 1타일 → 유닛 사거리 = base타일 × 0.035
 const SB_ANCHOR_CD=40/15;      // 일꾼 현재 공속 cd40 ÷ base 15프레임 → 유닛 cd = base프레임 × (40/15)
@@ -10174,7 +10177,8 @@ TECH_TREE.aetherial={ name:'에테리얼', res:{m:'크레딧', g:'에너지'}, b
     produces:[
       {id:'blade', name:'워든', m:100, g:0, pop:2},                                   // 질럿
       {id:'dragoon', name:'센티넬', m:125, g:50, pop:2, req:['cyber']},               // 드라군
-      {id:'high_templar', name:'하이세이지', m:50, g:150, pop:2, req:['archives']}] },  // 하이세이지 → 다크세이지·보이드로 진화(TECH_MORPH)
+      {id:'high_templar', name:'하이세이지', m:50, g:150, pop:2, req:['archives']},    // 하이세이지 → 보이드로 진화(TECH_MORPH)
+      {id:'dark_templar', name:'다크세이지', m:125, g:100, pop:2, req:['archives']}] },  // 다크세이지 → 다크보이드로 진화(TECH_MORPH)
   { k:'assimilator', name:'어시밀레이터', ico:'🛢', m:100, g:0, gas:true, req:[] },
   { k:'forge', name:'포지', ico:'⚒️', m:150, g:0, req:['nexus'],
     research:[
@@ -10191,8 +10195,8 @@ TECH_TREE.aetherial={ name:'에테리얼', res:{m:'크레딧', g:'에너지'}, b
   // ── 스타게이트·공중군 ──
   { k:'stargate', name:'스타게이트', ico:'🛸', m:150, g:150, req:['cyber'],
     produces:[
-      {id:'skydancer', name:'스카이댄서', m:275, g:125, pop:3},                        // 스카웃
       {id:'falcon', name:'팔콘', m:150, g:100, pop:2},                                 // 커세어
+      {id:'skydancer', name:'스카이댄서', m:275, g:125, pop:3},                        // 스카웃
       {id:'archangel', name:'아크엔젤', m:350, g:250, pop:6, req:['fleet']},            // 캐리어
       {id:'kronos', name:'크로노스', m:100, g:350, pop:4, req:['tribunal']}] },         // 아비터
   { k:'fleet', name:'플릿 비콘', ico:'📡', m:300, g:200, req:['stargate'],
@@ -10211,8 +10215,8 @@ TECH_TREE.aetherial={ name:'에테리얼', res:{m:'크레딧', g:'에너지'}, b
   { k:'robo', name:'로보틱스 퍼실리티', ico:'🤖', m:200, g:200, req:['cyber'],
     produces:[
       {id:'seraph', name:'세라프', m:200, g:0, pop:2},                                // 셔틀(수송)
-      {id:'reaver', name:'리버', m:200, g:100, pop:4, req:['robobay']},               // 리버(스캐럽 내부 큐)
-      {id:'observer', name:'와처', m:25, g:75, pop:1, req:['observatory'], detector:true}] },  // 옵저버
+      {id:'observer', name:'와처', m:25, g:75, pop:1, req:['observatory'], detector:true},  // 옵저버
+      {id:'reaver', name:'리버', m:200, g:100, pop:4, req:['robobay']}] },               // 리버(스캐럽 내부 큐)
   { k:'robobay', name:'로보틱스 서포트 베이', ico:'🔧', m:150, g:100, req:['robo'],
     research:[
       {k:'gravitic_shuttle', name:'중력자 추진기', desc:'세라프 이동속도↑', m:200, g:200},
@@ -10300,6 +10304,7 @@ TECH_SPEC.aetherial={   // 프로토스: 건물·유닛 실드 자동재생(기�
     archangel:{hp:300,ar:4,sh:150,atk:6,at:'norm',rng:8,t:140,abil:'인터셉터 최대 8기'},
     kronos:{hp:200,ar:1,sh:150,atk:10,at:'expl',rng:5,t:160,abil:'클로킹 필드·리콜·스테이시스'},
     archon:{hp:10,ar:0,sh:350,atk:30,at:'norm',rng:2,t:20,abil:'하이세이지 2 융합·스플'},
+    dark_archon:{hp:25,ar:0,sh:200,atk:0,at:'-',rng:0,t:20,abil:'마인드 컨트롤·메일스트롬·피드백'},   // 다크보이드(다크아칸) — 무공격 마법 · 임시 스탯
     reaver:{hp:100,ar:0,sh:80,atk:100,at:'norm',rng:8,t:70,abil:'스캐럽 최대 10기'},   // 리버
     larva:{hp:100,ar:0,sh:80,atk:100,at:'norm',rng:8,t:70,abil:'스캐럽 100→125·스플'} }
 };
@@ -10319,11 +10324,11 @@ function techGetBldg(race,k){ const t=TECH_TREE[race]; return t&&t.buildings.fin
 const BASE_CD={  // 0=공격 없음(수송·시전·자폭 등)
   worker_human:15, marine:15, machinegun:22, medic:0, ghost:22, racer:30, tank:37, goliath:22, skyguard:22, pelican:0, hellfire:64, aegis:0, dreadnought:30,
   worker_swarm:22, overlord:0, snapper:8, hydra:15, thornqueen:37, wyvern:30, stinger:0, medusa:0, ultralisk:15, behemoth:30, venom:100,
-  worker_light:22, blade:22, dragoon:30, high_templar:0, dark_templar:30, archon:30, seraph:0, larva:60, observer:0, falcon:22, skydancer:8, archangel:30, kronos:45 };
+  worker_light:22, blade:22, dragoon:30, high_templar:0, dark_templar:30, archon:30, dark_archon:0, seraph:0, larva:60, observer:0, falcon:22, skydancer:8, archangel:30, kronos:45 };
 const BASE_MV={  // 이동 픽셀/프레임(참고·추후 이동 반영용)
   worker_human:1.88, marine:1.88, machinegun:1.88, medic:1.88, ghost:1.88, racer:3.13, tank:1.88, goliath:1.88, skyguard:3.13, pelican:2.5, hellfire:2.5, aegis:2.5, dreadnought:1.25,
   worker_swarm:1.88, overlord:0.47, snapper:2.61, hydra:1.74, thornqueen:2.5, wyvern:3.13, stinger:3.13, medusa:3.13, ultralisk:2.5, behemoth:1.25, venom:2.5,
-  worker_light:1.88, blade:1.88, dragoon:2.5, high_templar:1.56, dark_templar:2.5, archon:2.5, seraph:1.56, larva:0.94, observer:1.56, falcon:2.5, skydancer:3.13, archangel:1.56, kronos:2.5 };
+  worker_light:1.88, blade:1.88, dragoon:2.5, high_templar:1.56, dark_templar:2.5, archon:2.5, dark_archon:2.5, seraph:1.56, larva:0.94, observer:1.56, falcon:2.5, skydancer:3.13, archangel:1.56, kronos:2.5 };
 // 유닛 직책/이름/스탯(유닛·일꾼 패널 헤더+왼쪽) — 일꾼=생산자, 그 외 UNIT_CLS 병과
 function _techRoleOf(uid){ if(uid==='worker_human'||uid==='worker_swarm'||uid==='worker_light') return '생산자'; return (typeof UNIT_CLS!=='undefined'&&UNIT_CLS[uid])||''; }
 function _techRealName(race,uid){ if(typeof _rosterName==='function'){ const rn=_rosterName(uid); if(rn && rn!==uid) return rn; }   // 공용 로스터 이름 우선(키만 되돌아오면=미등록 → 트리 이름 사용)
@@ -11364,7 +11369,7 @@ function techUnitPanelModel(list){ const race=G.tech.race, grp={}, ord=[];   // 
   for(const e of list){ const k=(e.type==='worker')?'__wk':e.uid; if(!grp[k]){ grp[k]={n:0,e:e}; ord.push(k); } grp[k].n++; }
   const items=[];   // 유닛 초상 카드 제거 — 헤더 프로필과 중복(그리드는 변태·장전 등 행동 카드만)
   if((race==='swarm'||race==='aetherial') && list.length===1 && list[0].type==='unit' && typeof TECH_MORPH!=='undefined' && TECH_MORPH[list[0].uid]){   // 🧬 2차 변태/진화 카드(단일 지정 시) — 이름만(변태→ 없음), 지정 슬롯 위치
-    const _slot={ hydra:{thornqueen:3}, wyvern:{venom:2, behemoth:3}, high_templar:{dark_templar:2, archon:3} }[list[0].uid]||{};   // 리퍼=베놈퀸 4번칸 · 와이번=베놈 3·베히모스 4 · 하이세이지=다크세이지 3번칸·보이드 4번칸
+    const _slot={ hydra:{thornqueen:3}, wyvern:{venom:2, behemoth:3}, high_templar:{archon:3}, dark_templar:{dark_archon:3} }[list[0].uid]||{};   // 리퍼=베놈퀸 4번칸 · 와이번=베놈 3·베히모스 4 · 하이세이지=보이드 4번칸 · 다크세이지=다크보이드 4번칸
     for(const mm of TECH_MORPH[list[0].uid]){ const ok=_techMorphOK(mm);
       const card={ pro:_techUnitPortrait(mm.to), sn:mm.name, cr:mm.m, en:mm.g, meta:'', state:(ok.ok&&_techAfford(mm.m,mm.g))?'ok':'dim', act:ok.ok?('onclick="techDoMorph(event,\''+mm.to+'\')"'):'' };
       const si=_slot[mm.to]; if(si!=null){ while(items.length<=si) items.push(null); items[si]=card; } else items.push(card); } }
@@ -11642,9 +11647,9 @@ const TECH_BLDG_DESC={ sunken:'지상 적을 자동 공격하는 방어 건물.'
 const TECH_MORPH={ hydra:[{to:'thornqueen', name:'베놈퀸', m:50, g:100, dpop:1, needR:'lurker'}],
   wyvern:[{to:'venom', name:'베놈', m:50, g:150, dpop:0, needB:'defilermound'},
           {to:'behemoth', name:'베히모스', m:50, g:100, dpop:0, needB:'gspire'}],
-  // 🔮 에테리얼: 하이세이지 → 다크세이지(3번칸) / 보이드(4번칸) 진화 (프로토스=알 없이 그 자리에서 즉시 변태)
-  high_templar:[{to:'dark_templar', name:'다크세이지', m:125, g:100, dpop:0},
-                {to:'archon', name:'보이드', m:0, g:0, dpop:0}] };
+  // 🔮 에테리얼 진화(합체) — 프로토스=알 없이 그 자리에서 즉시 변태. 하이세이지→보이드(아칸) · 다크세이지→다크보이드(다크아칸)
+  high_templar:[{to:'archon', name:'보이드', m:0, g:0, dpop:0}],
+  dark_templar:[{to:'dark_archon', name:'다크보이드', m:0, g:0, dpop:0}] };
 function _techMorphOK(m){ if(m.needR && !G.tech.research['swarm_'+m.needR]) return {ok:false, why:'연구 필요: '+m.needR}; 
   if(m.needB && !(G.tech.built[m.needB]>0)) return {ok:false, why:(techGetBldg('swarm',m.needB)||{}).name+' 필요'}; return {ok:true}; }
 function _techGasOverlap(s){ return s.c0<TECH_GAS.c0+TECH_GAS.w && s.c0+s.w>TECH_GAS.c0 && s.r0<TECH_GAS.r0+TECH_GAS.h && s.r0+s.h>TECH_GAS.r0; }
