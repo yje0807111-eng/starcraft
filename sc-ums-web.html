@@ -10410,6 +10410,8 @@ function techSelectLarva(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); i
   G.tech.sel=null; G.tech.selU=lv; const sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null}); sh.open=true; sh.sec='ent';   // 해처리 지정 해제하고 라바 전체 지정
   if(typeof playSfx==='function') playSfx('ui_open'); techUIRender(); }
 const TECH_LARVA_BLDG={ hatchery:1, lair:1, hive:1 };   // 🐛 라바 생성·라바 선택 프로필 건물(진화 체인 공통 — 진화해도 라바 계속)
+function _techLarvaBox(h){ const cw=_techCW(), ch=_techCH(), fh=_techFoot('swarm',h.bk||'hatchery'), yb=h.y+(fh.h/2)*ch;   // 🐛 라바 서식 박스: 가로 3타일, 세로 = 해처리 바로 아래 칸 상단 1/5
+  return { x0:h.x-1.5*cw, x1:h.x+1.5*cw, y0:yb, y1:yb+ch*0.2 }; }
 // 🔬 연구 카드(단계형=다음 단계 배지 tr · 완료/MAX=비활성) — techBldgUpgModel·라바 건물 공용 단일 소스
 function _techResearchCard(b, r, e){ const race=G.tech.race, rj=e&&e._rj, key=race+'_'+r.k, isThis=!!(rj&&rj.rk===r.k); let meta,state,cr,en,tr='';
   if(r.tier){ const lv=G.tech.research[key]||0, isMax=lv>=r.tier.length, nx=r.tier[Math.min(lv,r.tier.length-1)]; meta=isMax?'MAX':((lv+1)+'단계'); tr=isMax?'MAX':''+(lv+1); cr=isMax?0:nx[0]; en=isMax?0:nx[1]; state=isThis?'busy':(isMax?'max':((rj||!_techAfford(cr,en))?'dim':'ok')); }
@@ -10881,9 +10883,18 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
     for(const h of G.tech.ents){ if(h.type!=='bldg'||!TECH_LARVA_BLDG[h.bk]||h.bt>0) continue;   // 🐛 해처리·레어·하이브 = 라바 생성(진화 중에도 계속)
       const _ln=G.tech.ents.reduce((a,l)=>a+((l.type==='larva'&&l.hatch===h.eid)?1:0),0);
       if(_ln<3){ h._lvT=(h._lvT||0)+dt; active=true;
-        if(h._lvT>=8){ h._lvT=0; const _hf=_techFoot('swarm',h.bk), _hcw=_techCW(), _hch=_techCH();
-          G.tech.ents.push({eid:G.tech.eseq++, type:'larva', hatch:h.eid, x:h.x+(Math.random()-0.5)*_hf.w*_hcw*0.7, y:h.y+(_hf.h/2)*_hch+0.012+Math.random()*0.012}); _zd=true; } }
+        if(h._lvT>=8){ h._lvT=0; const _bx=_techLarvaBox(h);
+          G.tech.ents.push({eid:G.tech.eseq++, type:'larva', hatch:h.eid, x:_bx.x0+Math.random()*(_bx.x1-_bx.x0), y:_bx.y0+Math.random()*(_bx.y1-_bx.y0)}); _zd=true; } }
       else h._lvT=0; }
+    for(const lv of G.tech.ents){ if(lv.type!=='larva') continue;   // 🐛 라바 꾸물꾸물: 서식 박스 안에서만 이동↔정지 반복 · 개별 랜덤(동기화 금지)
+      const _h=G.tech.ents.find(e=>e.eid===lv.hatch&&e.type==='bldg'&&TECH_LARVA_BLDG[e.bk]); if(!_h) continue; const bx=_techLarvaBox(_h);
+      if(lv._wpause==null){ lv._wpause=Math.random()*1.8; lv._wtgt=null; }   // 각 라바 독립 시드
+      if(lv._wpause>0){ lv._wpause-=dt; }
+      else { if(!lv._wtgt){ const cw=_techCW(), ch=_techCH(); lv._wtgt={ x:Math.max(bx.x0,Math.min(bx.x1, lv.x+(Math.random()-0.5)*cw*0.8)), y:Math.max(bx.y0,Math.min(bx.y1, lv.y+(Math.random()-0.5)*ch*0.15)) }; }   // 근처 미세 목표
+        const dx=lv._wtgt.x-lv.x, dy=lv._wtgt.y-lv.y, d=Math.hypot(dx,dy);
+        if(d<0.0015){ lv._wtgt=null; lv._wpause=0.5+Math.random()*1.9; }   // 도착 → 정지(랜덤)
+        else { const step=Math.min(d, 0.008*dt); lv.x+=dx/d*step; lv.y+=dy/d*step; active=true; } }
+      lv.x=Math.max(bx.x0,Math.min(bx.x1,lv.x)); lv.y=Math.max(bx.y0,Math.min(bx.y1,lv.y)); }   // 항상 박스 안
     if(_zd){ G.tech.ents=G.tech.ents.filter(x=>!x._dead); done=true; } }
   for(const be of G.tech.ents){ if(be.type!=='bldg'||be.bt>0||be._lifted) continue;   // 🔢 생산 대기열 · 🔬 업그레이드 진행 — 🛫 부양 중=기능 정지(대기열 일시정지)
     const _blk=_techNeedsPower(be.bk)&&!_techPowered(be.x,be.y);   // 🛑 블랙아웃 = 진행 정지(복구 시 이어서)
