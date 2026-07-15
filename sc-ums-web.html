@@ -10466,15 +10466,20 @@ function _techPlaceNydusExit(x,y){ const entry=G.tech.ents.find(e=>e.eid===G.tec
   G.tech.arm=null; G.tech.armXY=null; G.tech.sel=entry.eid; const sh=G.tech.sheet||(G.tech.sheet={}); sh.open=true; sh.sec='ent';
   if(typeof playSfx==='function') playSfx('ui_confirm'); if(typeof toast==='function') toast('🕳 출구 연결 완료'); techUIRender(); }
 function _techNydusUnlink(e){ if(!e||e.bk!=='nydus'||e._nydusLink==null) return; const other=G.tech.ents.find(x=>x.eid===e._nydusLink&&x.type==='bldg'&&x.bk==='nydus'); if(other){ other._nydusLink=null; other._nydusBroken=true; } }
-function _techNydusTick(dt){ if(!G.tech||G.tech.race!=='swarm') return false; let live=false;
-  const nyds=G.tech.ents.filter(e=>e.type==='bldg'&&e.bk==='nydus'&&e.bt<=0&&e._nydusLink!=null); if(!nyds.length) return false;
-  for(const u of G.tech.ents){ if(u.type!=='unit'&&u.type!=='worker') continue;
-    if(u._nydusCd>0){ u._nydusCd-=dt; live=true; continue; }
-    if(_techAirOf(u)) continue;   // ✈️ 공중 유닛 = 통과 불가
-    for(const nyd of nyds){ const link=G.tech.ents.find(e=>e.eid===nyd._nydusLink&&e.type==='bldg'&&e.bk==='nydus'&&e.bt<=0); if(!link) continue;
-      if(Math.hypot(u.x-nyd.x,u.y-nyd.y) < _techBunkerR(nyd)){   // 입구에 닿음 → 반대편 출구로 즉시 순간이동
-        const rr=_techBunkerR(link); u.x=Math.max(0.04,Math.min(0.96,link.x)); u.y=Math.max(0.16,Math.min(0.96,link.y+rr+0.02)); u.tx=null; u.ty=null; u._wp=null; u._nydusCd=0.6; live=true; break; } } }
-  return live; }
+function techOrderNydus(nydusEid, units){ const nyd=G.tech.ents.find(e=>e.eid===nydusEid&&e.type==='bldg'&&e.bk==='nydus'&&e.bt<=0); if(!nyd||nyd._nydusLink==null) return;
+  let n=0; for(const u of units){ if(_techAirOf(u)) continue; if(u.type==='worker'&&u._gKind) _techReleaseGather(u); u._nydusTgt=nydusEid; u.tx=nyd.x; u.ty=nyd.y; u._wp=null; u._mvStuck=0; u._mvPrevD=null; n++; }   // 커널로 이동 지시 → 도착 시 순간이동
+  if(n){ if(typeof playSfx==='function') playSfx('ui_confirm'); if(typeof toast==='function') toast('🕳 커널 이동'); techMapRender(); } }
+function _techNydusTick(dt){ if(!G.tech||G.tech.race!=='swarm') return 0; let r=0;   // 지정 유닛만 명령 순간이동(양방향) · 출구는 좌하단→반시계
+  for(const u of G.tech.ents){ if((u.type!=='unit'&&u.type!=='worker')||u._nydusTgt==null) continue;
+    const nyd=G.tech.ents.find(e=>e.eid===u._nydusTgt&&e.type==='bldg'&&e.bk==='nydus'&&e.bt<=0);
+    if(!nyd||nyd._nydusLink==null||_techAirOf(u)){ u._nydusTgt=null; continue; }
+    const link=G.tech.ents.find(e=>e.eid===nyd._nydusLink&&e.type==='bldg'&&e.bk==='nydus'&&e.bt<=0); if(!link){ u._nydusTgt=null; continue; }
+    if(Math.hypot(u.x-nyd.x,u.y-nyd.y) < _techBunkerR(nyd)){   // 입구 도착 → 출구로 순간이동 + 지정 해제
+      const sp=_techSpawnPos(link, u.uid||(TECH_WORKER[G.tech.race]||'worker_swarm'));
+      u.x=sp.x; u.y=sp.y; u._spawnOf=link.eid; u._spawnSlot=sp.slot; u.tx=null; u.ty=null; u._wp=null; u._nydusTgt=null; u._mvStuck=0; u._mvPrevD=null;
+      if(G.tech.selU) G.tech.selU=G.tech.selU.filter(id=>id!==u.eid); r=2; }
+    else { u.tx=nyd.x; u.ty=nyd.y; if(r<1) r=1; } }
+  return r; }
 // 🧱 벙커: 바이오닉·일꾼 최대 4기 탑승(대피). 유닛 지정 후 벙커 롱프레스 = 탑승 이동 → 도착 시 탑승 · 슬롯 탭 = 하차
 function _techBunkerable(e){ return !!(e && e.type==='unit' && (typeof BIONIC!=='undefined') && BIONIC[e.uid]); }   // 바이오닉만(레인저·발칸·메딕·팬텀) — 일꾼 탑승 불가
 const _SVG_EJECT='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4H6a1 1 0 00-1 1v14a1 1 0 001 1h7"/><path d="M11 12h9"/><path d="M17 8l4 4-4 4"/></svg>';   // 🚪 문틀(3면) + 밖으로 나가는 화살표(전체 하차)
@@ -10500,6 +10505,7 @@ function techUnboardBunker(ev, bunkerEid, idx){ if(ev&&ev.stopPropagation) ev.st
 // 🔧 일꾼 수리: 지정 일꾼 + 건물 롱프레스 = 그 건물로 이동해 수리. 건설 중(bt>0) 건물은 수리로 완성 가속(+100%/일꾼). 완성 건물은 손상 개념이 없어 대기 자세.
 function techLongPressBldg(eid){ if(!G.tech) return; const b=G.tech.ents.find(x=>x.eid===eid&&x.type==='bldg'); if(!b) return;
   const sel=(G.tech.selU||[]).map(id=>G.tech.ents.find(e=>e.eid===id)).filter(Boolean);
+  if(b.bk==='nydus' && b.bt<=0 && b._nydusLink!=null){ const grd=sel.filter(x=>(x.type==='unit'||x.type==='worker')&&!_techAirOf(x)); if(grd.length){ techOrderNydus(eid, grd); return; } }   // 🕳 연결된 커널 = 지상 유닛 순간이동
   if(b.bk==='bunker' && b.bt<=0 && sel.some(_techBunkerable)) techOrderBoard(eid);   // 바이오닉 → 탑승
   const wks=sel.filter(x=>x.type==='worker'&&x.build==null); if(wks.length) techOrderRepair(eid, wks); }   // 일꾼 → 수리
 function techOrderRepair(bldgEid, wks){ const b=G.tech.ents.find(x=>x.eid===bldgEid&&x.type==='bldg'); if(!b) return;
@@ -10861,7 +10867,7 @@ function _techExplodeBldg(e){ if(G._techFx && typeof FX!=='undefined' && FX.deat
 function techTick(dt){ if(!G.tech) return; let active=false, done=false;
   if(_techSkillTick(dt)) active=true;   // 🪄 스킬 쿨다운·버프·FX 진행(활동 중=계속 렌더)
   if(_techRepairTick(dt)) active=true;   // 🔧 일꾼 수리(건설 중 건물 완성 가속 · b._repairN 집계)
-  if(_techNydusTick(dt)) active=true;   // 🕳 나이더스 순간이동(지상 유닛)
+  { const _nr=_techNydusTick(dt); if(_nr) active=true; if(_nr===2) done=true; }   // 🕳 나이더스 순간이동(지정 유닛 명령) · 텔레포트=지정 해제라 전체 갱신
   for(let i=G.tech.ents.length-1;i>=0;i--){ const u=G.tech.ents[i]; if(u._boardTgt==null) continue;   // 🧱 벙커 탑승 이동 중 → 도착 시 탑승
     const bunk=G.tech.ents.find(e=>e.eid===u._boardTgt&&e.type==='bldg'&&e.bk==='bunker'&&e.bt<=0);
     if(!bunk){ u._boardTgt=null; continue; } bunk._cargo=bunk._cargo||[];
@@ -11474,7 +11480,7 @@ function _techRingSlots(list){ const slots=[{dx:0,dy:0}]; if(list.length<=1) ret
     for(let k=0;k<n&&slots.length<list.length;k++){ const a=(k/n)*Math.PI*2+ring*0.5; slots.push({dx:Math.cos(a)*ring*r, dy:Math.sin(a)*ring*r}); } ring++; }
   return slots; }
 function _techAssignMove(wx,wy){ const all=(G.tech.selU||[]).map(id=>G.tech.ents.find(e=>e.eid===id)).filter(e=>e&&(e.type==='unit'||e.type==='worker'));
-  all.forEach(e=>{ if(e.type==='worker'&&e._gKind) _techReleaseGather(e); e._rallyOf=null; e._rallySlot=null; e._spawnOf=null; e._spawnSlot=null; e._repairTgt=null; e._repairing=false; e._boardTgt=null; });   // 이동 명령 = 채취·수리·탑승 취소 + 랠리·소환 슬롯 반환
+  all.forEach(e=>{ if(e.type==='worker'&&e._gKind) _techReleaseGather(e); e._rallyOf=null; e._rallySlot=null; e._spawnOf=null; e._spawnSlot=null; e._repairTgt=null; e._repairing=false; e._boardTgt=null; e._nydusTgt=null; });   // 이동 명령 = 채취·수리·탑승·커널이동 취소 + 랠리·소환 슬롯 반환
   const sel=all.filter(e=>!_techBuildLocked(e));   // 건설 중 일꾼은 이동 잠금(일시정지해야 이동 가능)
   if(!sel.length){ if(all.length && !_btMoved && typeof toast==='function') toast('⏸ 건설 중 — 일꾼 프로필의 일시정지 후 이동'); return; }
   const cx=Math.max(0.04,Math.min(0.96,wx)), cy=Math.max(0.16,Math.min(0.96,wy));
@@ -11534,7 +11540,8 @@ function techPtrDown(ev){ if(!G.tech) return; const r=_btRect(); if(!r) return; 
     { const _lpb=_techBldgAt(w.x,w.y);   // 🧱🔧 건물 롱프레스 = 바이오닉 탑승(벙커)/일꾼 수리 · 히트범위=선택과 동일(유닛이 위에 있어도 관통)
       if(_lpb){ const _su=(G.tech.selU||[]).map(id=>G.tech.ents.find(z=>z.eid===id)).filter(Boolean);
         const _canBoard=(_lpb.bk==='bunker'&&_lpb.bt<=0&&_su.some(_techBunkerable)), _canRepair=(!_lpb._lifted&&_su.some(x=>x.type==='worker'&&x.build==null));
-        if(_canBoard||_canRepair){ clearTimeout(_btLongT); const _be=_lpb.eid; _btLongT=setTimeout(()=>{ _btLongT=null; techLongPressBldg(_be); }, 420); } } }
+        const _canNydus=(_lpb.bk==='nydus'&&_lpb.bt<=0&&_lpb._nydusLink!=null&&_su.some(x=>(x.type==='unit'||x.type==='worker')&&!_techAirOf(x)));
+        if(_canBoard||_canNydus||_canRepair){ clearTimeout(_btLongT); const _be=_lpb.eid; _btLongT=setTimeout(()=>{ _btLongT=null; techLongPressBldg(_be); }, 420); } } }
     _btCmd={}; _techAssignMove(w.x,w.y); if(typeof playSfx==='function') playSfx('ui_confirm'); return; }
   _btBox={sx0:sx, sy0:sy, sx1:sx, sy1:sy, active:false, rw:r.width, rh:r.height}; }   // 무지정 = 한 손가락 드래그로 유닛 지정 박스
 function techPtrMove(ev){ if(!G.tech||G.tab!=='Build'||!_btPtrs.has(ev.pointerId)) return; _btPtrs.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
