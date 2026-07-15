@@ -3047,7 +3047,8 @@ const U = {
   overlord: {name:'너울', icon:'🐛', cost:0, dmg:0, up:0, hdmg:0, hup:0, range:0.16, cd:40, splash:false, color:'#a8472e', size:20, wpn:'zrg', atk:'bullet', hp:110, armor:1, shield:0, energy:0, moveSpd:0.1, detector:true, model3d:'overlord'},   // 샌드박스 전용(보직 스탯)
   stinger: {name:'스팅어', icon:'🐛', cost:0, dmg:70, up:28, hdmg:140, hup:56, range:0.13, cd:50, splash:true, color:'#a8472e', size:14, wpn:'zrg', atk:'missile', hp:15, armor:0, shield:0, energy:0, moveSpd:0.3, airDmg:70, airUp:28, hairDmg:140, hairUp:56, model3d:'stinger'},   // 샌드박스 전용(보직 스탯)
   venom: {name:'베놈', icon:'🐛', cost:0, dmg:20, up:8, hdmg:40, hup:16, range:0.24, cd:24, splash:false, color:'#a8472e', size:18, wpn:'zrg', atk:'spike', hp:140, armor:1, shield:0, energy:0, moveSpd:0.18, airDmg:46, airUp:18, hairDmg:92, hairUp:37, model3d:'venom'},   // 샌드박스 전용(보직 스탯)
-  medusa: {name:'메두사', icon:'🐛', cost:0, dmg:40, up:16, hdmg:80, hup:32, range:0.26, cd:26, splash:true, color:'#a8472e', size:20, wpn:'zrg', atk:'psi', hp:300, armor:2, shield:0, energy:200, moveSpd:0.16, airDmg:40, airUp:16, hairDmg:80, hairUp:32, model3d:'medusa'},   // 샌드박스 전용(보직 스탯) · 에너지=군단여왕(패러사이트·다크스웜·플레이그·컨슘)
+  medusa: {name:'메두사', icon:'🐛', cost:0, dmg:40, up:16, hdmg:80, hup:32, range:0.26, cd:26, splash:true, color:'#a8472e', size:20, wpn:'zrg', atk:'psi', hp:300, armor:2, shield:0, energy:200, moveSpd:0.16, airDmg:40, airUp:16, hairDmg:80, hairUp:32, model3d:'medusa'},   // 샌드박스 전용(보직 스탯) · 에너지=군단여왕(패러사이트·인스네어·브루들링)
+  defiler: {name:'디파일러', icon:'🦠', cost:0, dmg:0, up:0, hdmg:0, hup:0, range:0, cd:40, splash:false, color:'#8fb04a', size:18, wpn:'zrg', atk:'psi', hp:80, armor:1, shield:0, energy:200, moveSpd:0.14, model3d:'defiler'},   // 디파일러(다크스웜·플레이그·컨슘) — 무공격 마법 · 임시 2D(defiler SVG)
   aegis: {name:'이지스', icon:'🛰️', cost:160, dmg:0, up:0, hdmg:0, hup:0, range:0, cd:40, splash:false, color:'#7fd6ff', size:20, wpn:'mech', atk:'bullet', hp:200, armor:1, shield:0, energy:200, moveSpd:0.13, detector:true, model3d:'aegis'},   // 과학함(디텍터·서포트: 디펜시브매트릭스/이레디에이트/EMP)
   wyvern: {name:'와이번', icon:'🐛', cost:0, dmg:120, up:48, hdmg:240, hup:96, range:0.28, cd:20, splash:false, color:'#a8472e', size:22, wpn:'zrg', atk:'spike', hp:2200, armor:5, shield:0, energy:0, moveSpd:0.25, airDmg:120, airUp:48, hairDmg:240, hairUp:96, model3d:'wyvern'},   // 샌드박스 전용(보직 스탯)
   behemoth: {name:'베히모스', icon:'🐛', cost:0, dmg:190, up:76, hdmg:380, hup:152, range:0.46, cd:50, splash:true, color:'#a8472e', size:26, wpn:'zrg', atk:'shell', hp:3200, armor:6, shield:0, energy:0, moveSpd:0.1, airDmg:110, airUp:44, hairDmg:220, hairUp:88, model3d:'behemoth'},   // 샌드박스 전용(보직 스탯)
@@ -3060,7 +3061,7 @@ const U = {
   ultralisk: {name:'저거너트', icon:'🐛', cost:0, dmg:65, up:26, hdmg:130, hup:52, range:0.045, cd:35, splash:false, melee:true, color:'#a8472e', size:26, wpn:'zrg', atk:'slash', hp:800, armor:4, shield:0, energy:0, moveSpd:0.2, model3d:'ultralisk'},   // 샌드박스 전용(보직 스탯)
   dark_templar: {name:'다크세이지', icon:'🔮', cost:0, dmg:80, up:32, hdmg:160, hup:64, range:0.04, cd:42, splash:false, melee:true, color:'#ffc040', size:14, wpn:'pro', atk:'slash', hp:80, armor:1, shield:80, shArmor:1, energy:0, moveSpd:0.19, model3d:'dark_templar'},   // 샌드박스 전용(보직 스탯)
   high_templar: {name:'하이세이지', icon:'🔮', cost:0, dmg:0, up:0, hdmg:0, hup:0, range:0, cd:40, splash:false, color:'#ffc040', size:12, wpn:'pro', atk:'psi', hp:40, armor:0, shield:40, shArmor:1, energy:200, moveSpd:0.12, model3d:'high_templar'},   // 샌드박스 전용(보직 스탯) — 시전형(무공격)
-  dark_archon: {name:'다크보이드', icon:'🌑', cost:0, dmg:0, up:0, hdmg:0, hup:0, range:0, cd:40, splash:false, color:'#b47aff', size:22, wpn:'pro', atk:'psi', hp:25, armor:0, shield:200, shArmor:1, energy:200, moveSpd:0.10, model3d:'archon'},   // 다크아칸(마인드컨트롤·메일스트롬·피드백) — 무공격 마법 · 임시 스탯 · 모델=archon 임시 재사용
+  dark_archon: {name:'다크보이드', icon:'🌑', cost:0, dmg:0, up:0, hdmg:0, hup:0, range:0, cd:40, splash:false, color:'#b47aff', size:22, wpn:'pro', atk:'psi', hp:25, armor:0, shield:200, shArmor:1, energy:200, moveSpd:0.10, model3d:'dark_archon'},   // 다크아칸(마인드컨트롤·메일스트롬·피드백) — 무공격 마법 · 임시 2D(dark_archon SVG, 아칸 3D 재사용 안 함)
 };
 const HERO_STAT_MUL=2; // 영웅은 체력/보호막 2배(기본값, 조정 가능)
 // 유닛 인스턴스에 생존 스탯 초기화(현재=최대). 추후 전투형 맵에서 u.hp 등을 깎으면 됨.
@@ -3087,6 +3088,8 @@ const UNIT_SVG = {
   archon:'<path d="M12 3l5 9-5 9-5-9z" fill="currentColor" opacity=".25"/><path d="M12 3l5 9-5 9-5-9z" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="12" cy="12" r="2.4" fill="currentColor"/><path d="M12 6v2M12 16v2M8.5 12l-2 0M15.5 12l2 0" stroke="currentColor" stroke-width="1" opacity=".8"/>',
   // 다크보이드(다크아칸): 역다이아 + 어두운 코어 + 방전
   dark_archon:'<path d="M12 3l5 9-5 9-5-9z" fill="currentColor" opacity=".4"/><path d="M12 3l5 9-5 9-5-9z" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="12" cy="12" r="2.4" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M10.5 10.5l3 3M13.5 10.5l-3 3" stroke="currentColor" stroke-width="1"/>',
+  // 디파일러: 유기체 몸통 + 촉수 + 포자(임시 2D)
+  defiler:'<ellipse cx="12" cy="13" rx="6" ry="4.5" fill="currentColor" opacity=".28"/><ellipse cx="12" cy="13" rx="6" ry="4.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7 10c-1-2-1-3 0-4M17 10c1-2 1-3 0-4M12 8.5c-.6-2-.6-3.4 0-5" stroke="currentColor" stroke-width="1.2" fill="none"/><circle cx="9.5" cy="13" r="1" fill="currentColor"/><circle cx="14.5" cy="13" r="1" fill="currentColor"/><path d="M8 17l-1.5 3M12 18v3M16 17l1.5 3" stroke="currentColor" stroke-width="1.2"/>',
   // 터렛: 받침 + 회전포탑 + 미사일 포드
   turret:'<path d="M6 20h12l-2-4H8z" fill="currentColor" opacity=".2"/><path d="M6 20h12l-2-4H8z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><rect x="9" y="8" width="6" height="6" rx="1.5" fill="currentColor" opacity=".25"/><rect x="9" y="8" width="6" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M15 9.5l4-1.5M15 12l4 1" stroke="currentColor" stroke-width="1.3"/><path d="M12 8V4" stroke="currentColor" stroke-width="1.2"/>',
   // 포토캐논: 받침 + 결정 코어 + 방전
@@ -6131,7 +6134,7 @@ const UNIT_CLS={   // 유닛 직업/병과 — 모델 id(gmodel) 기준. 베이�
   thornqueen:'역병술사', snapper:'척후병',
   hellfire:'폭격기', pelican:'수송선', dreadnought:'전함', aegis:'지원함',
   kronos:'전함', seraph:'수송선', archangel:'모함', falcon:'전투기', observer:'정찰기',
-  overlord:'수송선', stinger:'자폭충', venom:'산성충', medusa:'군단여왕',
+  overlord:'수송선', stinger:'자폭충', venom:'산성충', medusa:'군단여왕', defiler:'오염술사',
   wyvern:'전투기', behemoth:'공성생물',
   worker_human:'일꾼', worker_light:'일꾼', worker_swarm:'일꾼',
   medic:'의무병', broodling:'소환수', larva:'공성', ultralisk:'돌격괴수', dark_templar:'암살자', high_templar:'대마법사', dark_archon:'암흑마법사',
@@ -6141,7 +6144,7 @@ const RACE_BAR={ union:'#4aa8ff', swarm:'#a8472e', aetherial:'#ffc040' };
 const RACE_OF={
   marine:'union', goliath:'union', ghost:'union', racer:'union', machinegun:'union', tank:'union', skyguard:'union', hellfire:'union', pelican:'union', dreadnought:'union', aegis:'union', worker_human:'union', turret:'union', photon:'union', citizen:'union', medic:'union',
   dragoon:'aetherial', archon:'aetherial', blade:'aetherial', skydancer:'aetherial', kronos:'aetherial', seraph:'aetherial', archangel:'aetherial', falcon:'aetherial', observer:'aetherial', worker_light:'aetherial', dark_templar:'aetherial', high_templar:'aetherial', dark_archon:'aetherial', larva:'aetherial',
-  hydra:'swarm', snapper:'swarm', thornqueen:'swarm', matron:'swarm', overlord:'swarm', stinger:'swarm', venom:'swarm', medusa:'swarm', wyvern:'swarm', behemoth:'swarm', worker_swarm:'swarm', broodling:'swarm', ultralisk:'swarm',
+  hydra:'swarm', snapper:'swarm', thornqueen:'swarm', matron:'swarm', overlord:'swarm', stinger:'swarm', venom:'swarm', medusa:'swarm', defiler:'swarm', wyvern:'swarm', behemoth:'swarm', worker_swarm:'swarm', broodling:'swarm', ultralisk:'swarm',
 };
 function raceBarCol(u){ if(!u) return null; const r=(u.gid && typeof GACHA_UNITS!=='undefined' && GACHA_UNITS[u.gid] && GACHA_UNITS[u.gid].race) || RACE_OF[u.gmodel||u.id]; return RACE_BAR[r]||null; }
 // 관리자 사거리·공속 = base_stats 단일 소스(구 SB_RANGE/SB_CD/SB_AIR 파생표 제거). 전투(_sbUnitRange/_sbUnitDps)와 표시·발사 리듬이 완전히 동일값. 네모는 U 그대로.
@@ -6521,7 +6524,7 @@ const SKILLS={
 function _skCost(sk){ return (typeof G!=='undefined'&&G.sandbox&&sk&&sk.enSc!=null)?sk.enSc:((sk&&sk.energy)||0); }
 // 모델키(gmodel||id) → 스킬 키 목록. 하단 선택 패널 '여분 구역'에 버튼 표시.
 // 다크템플러=상시 은신(PERMA_CLOAK)·와쳐/제플린=상시 탐지(U.detector) → 스킬 버튼 없음(패시브)
-const UNIT_SKILLS={ high_templar:['psi_storm','hallucination'], medic:['heal'], kronos:['psi_cloak','stasis','recall'], marine:['stim'], medusa:['ensnare','parasite','dark_swarm','plague','consume'], racer:['spider_mine'],
+const UNIT_SKILLS={ high_templar:['psi_storm','hallucination'], medic:['heal'], kronos:['psi_cloak','stasis','recall'], marine:['stim'], medusa:['ensnare','parasite'], defiler:['dark_swarm','plague','consume'], racer:['spider_mine'],
   ghost:['lockdown','nuke'], tank:['siege'], dreadnought:['yamato'], aegis:['emp'],
   dark_archon:['feedback','maelstrom','mind_control'], falcon:['disruption_web'] };   // 🔮 에테리얼 마법 유닛
 function unitSkillKeys(u){ if(!u) return []; let ks=(UNIT_SKILLS[u.gmodel||u.id]||UNIT_SKILLS[u.id]||[]).slice();
@@ -6775,7 +6778,7 @@ function sbCombatUiSync(){ const t=document.getElementById('btCtlToggle'); const
 //    (구 SB_U 수동 밸런스 오버라이드는 base_stats 전환으로 완전히 덮여 제거됨. 네모는 원본 U 그대로) ──
 const BASE_UNIT={
   worker_human:[60,0,0,5,1], marine:[40,0,0,6,4], machinegun:[50,0,1,16,2], medic:[60,0,1,0,0], ghost:[45,0,0,10,7], racer:[80,0,0,20,5], tank:[150,0,1,30,7], goliath:[125,0,1,12,5], skyguard:[120,0,0,20,5], pelican:[150,0,1,0,0], hellfire:[200,0,2,48,6], aegis:[200,0,1,0,0], dreadnought:[500,0,3,25,6],
-  worker_swarm:[40,0,0,5,1], overlord:[200,0,0,0,0], snapper:[35,0,0,5,1], hydra:[80,0,0,10,4], thornqueen:[125,0,1,20,6], wyvern:[120,0,0,9,3], stinger:[25,0,0,110,1], medusa:[120,0,0,0,0], ultralisk:[400,0,1,20,1], behemoth:[150,0,2,20,8], venom:[250,0,2,25,6], broodling:[30,0,0,6,1],
+  worker_swarm:[40,0,0,5,1], overlord:[200,0,0,0,0], snapper:[35,0,0,5,1], hydra:[80,0,0,10,4], thornqueen:[125,0,1,20,6], wyvern:[120,0,0,9,3], stinger:[25,0,0,110,1], medusa:[120,0,0,0,0], defiler:[80,0,1,0,0], ultralisk:[400,0,1,20,1], behemoth:[150,0,2,20,8], venom:[250,0,2,25,6], broodling:[30,0,0,6,1],
   worker_light:[20,20,0,5,1], blade:[100,60,1,16,1], dragoon:[100,80,1,20,4], high_templar:[40,40,0,0,0], dark_templar:[80,40,1,40,1], archon:[10,350,0,30,2], dark_archon:[25,200,0,0,2], seraph:[80,60,1,0,0], observer:[40,20,0,0,0], falcon:[150,100,0,8,4], skydancer:[120,80,1,5,5], archangel:[300,150,4,6,8], kronos:[200,150,1,10,5], larva:[100,80,0,100,8] };   // larva=리버(에테리얼 공성, 스캐럽) — 콜로서스 데이터 · dark_archon=다크보이드(임시)
 // 일꾼 앵커: 사거리·공속은 base_stats 그대로가 아니라 "현재 일꾼값 = base 1단위" 비율로 통일(전투가 과하게 안 달라지게)
 const SB_ANCHOR_RANGE=0.035;   // 일꾼 현재 사거리 0.035 ÷ base 1타일 → 유닛 사거리 = base타일 × 0.035
@@ -9833,7 +9836,7 @@ function drawSandboxGround(ctx,W,H){
 // key = 유닛 식별자(= U/모델 키 · 스탯=Udef(key)/TECH_SPEC) · n = 표시 이름. 아군/적은 배치 상황이 정하는 것 — 유닛 고유 속성 아님
 const RACE_ROSTER={
   union:[{n:'엔지니어',key:'worker_human'},{n:'레인저',key:'marine'},{n:'발칸',key:'machinegun'},{n:'메딕',key:'medic'},{n:'팬텀',key:'ghost'},{n:'레이서',key:'racer'},{n:'브레이커',key:'tank'},{n:'스트라이더',key:'goliath'},{n:'템페스트',key:'skyguard'},{n:'펠리컨',key:'pelican'},{n:'이지스',key:'aegis'},{n:'헬파이어',key:'hellfire'},{n:'드레드노트',key:'dreadnought'}],
-  swarm:[{n:'채집충',key:'worker_swarm'},{n:'너울',key:'overlord'},{n:'스내퍼',key:'snapper'},{n:'리퍼',key:'hydra'},{n:'베놈퀸',key:'thornqueen'},{n:'스팅어',key:'stinger'},{n:'와이번',key:'wyvern'},{n:'메두사',key:'medusa'},{n:'베놈',key:'venom'},{n:'베히모스',key:'behemoth'},{n:'스웜링',key:'broodling'},{n:'저거너트',key:'ultralisk'}],
+  swarm:[{n:'채집충',key:'worker_swarm'},{n:'너울',key:'overlord'},{n:'스내퍼',key:'snapper'},{n:'리퍼',key:'hydra'},{n:'베놈퀸',key:'thornqueen'},{n:'스팅어',key:'stinger'},{n:'와이번',key:'wyvern'},{n:'메두사',key:'medusa'},{n:'디파일러',key:'defiler'},{n:'베놈',key:'venom'},{n:'베히모스',key:'behemoth'},{n:'스웜링',key:'broodling'},{n:'저거너트',key:'ultralisk'}],
   aetherial:[{n:'결정체',key:'worker_light'},{n:'센티넬',key:'dragoon'},{n:'워든',key:'blade'},{n:'보이드',key:'archon'},{n:'팔콘',key:'falcon'},{n:'세라프',key:'seraph'},{n:'스카이댄서',key:'skydancer'},{n:'아크엔젤',key:'archangel'},{n:'와처',key:'observer'},{n:'크로노스',key:'kronos'},{n:'다크세이지',key:'dark_templar'},{n:'하이세이지',key:'high_templar'},{n:'리버',key:'larva'}],
 };
 function _rosterName(key){ for(const r in RACE_ROSTER){ const f=RACE_ROSTER[r].find(u=>u.key===key); if(f) return f.n; } return (typeof U!=='undefined'&&U[key]&&U[key].name)||key; }   // 공용 표시 이름(전 구역 통일)
@@ -10347,6 +10350,7 @@ TECH_SPEC.swarm={   // 저그: 건물 자동재생·유닛 자동재생(점막),
     wyvern:{hp:120,ar:0,sh:0,atk:9,at:'norm',rng:3,t:40,abil:'바운스 9-3-1'},
     stinger:{hp:25,ar:0,sh:0,atk:110,at:'norm',rng:1,t:28,abil:'2기 생산·공중전용 자폭'},
     medusa:{hp:120,ar:0,sh:0,atk:0,at:'-',rng:0,t:50,abil:'패러사이트·브루들링·인스네어'},
+    defiler:{hp:80,ar:1,sh:0,atk:0,at:'-',rng:0,t:50,abil:'다크 스웜·플레이그·컨슘'},   // 디파일러(오염술사) — 임시
     venom:{hp:250,ar:2,sh:0,atk:25,at:'expl',rng:6,t:40,abil:'공중전용 포자 디버프(디바우러)'},
     behemoth:{hp:150,ar:2,sh:0,atk:20,at:'norm',rng:8,t:40,abil:'지상 전용 폭격'},
     ultralisk:{hp:400,ar:1,sh:0,atk:20,at:'norm',rng:1,t:60,abil:'방업 시 방어+2'},
@@ -10391,11 +10395,11 @@ function techGetBldg(race,k){ const t=TECH_TREE[race]; return t&&t.buildings.fin
 // 기본 공통 자료(data/base_stats.md) — SC 원본 공격 쿨다운 프레임(cd, 작을수록 빠름·24f=1s) / 이동 픽셀(mv, 클수록 빠름). 게임 id 기준.
 const BASE_CD={  // 0=공격 없음(수송·시전·자폭 등)
   worker_human:15, marine:15, machinegun:22, medic:0, ghost:22, racer:30, tank:37, goliath:22, skyguard:22, pelican:0, hellfire:64, aegis:0, dreadnought:30,
-  worker_swarm:22, overlord:0, snapper:8, hydra:15, thornqueen:37, wyvern:30, stinger:0, medusa:0, ultralisk:15, behemoth:30, venom:100,
+  worker_swarm:22, overlord:0, snapper:8, hydra:15, thornqueen:37, wyvern:30, stinger:0, medusa:0, defiler:0, ultralisk:15, behemoth:30, venom:100,
   worker_light:22, blade:22, dragoon:30, high_templar:0, dark_templar:30, archon:30, dark_archon:0, seraph:0, larva:60, observer:0, falcon:22, skydancer:8, archangel:30, kronos:45 };
 const BASE_MV={  // 이동 픽셀/프레임(참고·추후 이동 반영용)
   worker_human:1.88, marine:1.88, machinegun:1.88, medic:1.88, ghost:1.88, racer:3.13, tank:1.88, goliath:1.88, skyguard:3.13, pelican:2.5, hellfire:2.5, aegis:2.5, dreadnought:1.25,
-  worker_swarm:1.88, overlord:0.47, snapper:2.61, hydra:1.74, thornqueen:2.5, wyvern:3.13, stinger:3.13, medusa:3.13, ultralisk:2.5, behemoth:1.25, venom:2.5,
+  worker_swarm:1.88, overlord:0.47, snapper:2.61, hydra:1.74, thornqueen:2.5, wyvern:3.13, stinger:3.13, medusa:3.13, defiler:2.0, ultralisk:2.5, behemoth:1.25, venom:2.5,
   worker_light:1.88, blade:1.88, dragoon:2.5, high_templar:1.56, dark_templar:2.5, archon:2.5, dark_archon:2.5, seraph:1.56, larva:0.94, observer:1.56, falcon:2.5, skydancer:3.13, archangel:1.56, kronos:2.5 };
 // 유닛 직책/이름/스탯(유닛·일꾼 패널 헤더+왼쪽) — 일꾼=생산자, 그 외 UNIT_CLS 병과
 function _techRoleOf(uid){ if(uid==='worker_human'||uid==='worker_swarm'||uid==='worker_light') return '생산자'; return (typeof UNIT_CLS!=='undefined'&&UNIT_CLS[uid])||''; }
