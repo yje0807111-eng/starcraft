@@ -10450,7 +10450,7 @@ function techEjectAllBunker(ev, bunkerEid){ if(ev&&ev.stopPropagation) ev.stopPr
   const bunk=G.tech.ents.find(x=>x.eid===bunkerEid&&x.type==='bldg'); if(!bunk||!bunk._cargo) return;
   const n=bunk._cargo.length; while(bunk._cargo.length) techUnboardBunker(null, bunkerEid, bunk._cargo.length-1);   // 뒤에서부터 전부 하차
   if(n&&typeof toast==='function') toast('🚪 벙커 전체 하차'); techUIRender(); }
-function _techBunkerR(bunk){ const fh=_techFoot('union',bunk.bk||'bunker'), ch=_techCH(); return (Math.max(fh.w,fh.h)/2)*ch+0.035; }   // 탑승 도착 반경(발판 가장자리+여유)
+function _techBunkerR(bunk){ const r=_techCollRect(bunk,{type:'unit',uid:'marine'}); return Math.max((r.x1-r.x0),(r.y1-r.y0))/2+0.03; }   // 탑승 도착 = 벙커 충돌 사각(막히는 경계)에 닿으면 → 확실히 탑승
 function techOrderBoard(bunkerEid){ if(!G.tech) return; const bunk=G.tech.ents.find(e=>e.eid===bunkerEid&&e.type==='bldg'&&e.bk==='bunker'&&e.bt<=0); if(!bunk) return;
   const cap=4-((bunk._cargo&&bunk._cargo.length)||0);
   if(cap<=0){ if(typeof toast==='function') toast('⛔ 벙커 가득 참 (4/4)'); return; }
@@ -10460,9 +10460,9 @@ function techOrderBoard(bunkerEid){ if(!G.tech) return; const bunk=G.tech.ents.f
   if(typeof playSfx==='function') playSfx('ui_confirm'); if(typeof toast==='function') toast('🧱 벙커로 탑승'); techMapRender(); }
 function techUnboardBunker(ev, bunkerEid, idx){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;
   const bunk=G.tech.ents.find(e=>e.eid===bunkerEid&&e.type==='bldg'&&e.bk==='bunker'); if(!bunk||!bunk._cargo||!bunk._cargo[idx]) return;
-  const c=bunk._cargo.splice(idx,1)[0], fh=_techFoot('union','bunker'), ch=_techCH(), cw=_techCW();
-  const nx=Math.max(0.04,Math.min(0.96, bunk.x+(Math.random()-0.5)*fh.w*cw)), ny=Math.max(0.16,Math.min(0.96, bunk.y+(fh.h/2)*ch+0.02+Math.random()*0.02));   // 벙커 아래로 하차
-  const ne={eid:G.tech.eseq++, type:c.type, x:nx, y:ny}; if(c.type==='unit') ne.uid=c.uid; G.tech.ents.push(ne);
+  const c=bunk._cargo.splice(idx,1)[0], uid=(c.type==='worker')?(TECH_WORKER[G.tech.race]||'worker_human'):c.uid;
+  const sp=_techSpawnPos(bunk, uid);   // 🧱 하차 = 유닛 생성과 동일하게 좌하단→반시계 일렬(슬롯 순차)
+  const ne={eid:G.tech.eseq++, type:c.type, x:sp.x, y:sp.y, _spawnOf:bunk.eid, _spawnSlot:sp.slot}; if(c.type==='unit') ne.uid=c.uid; G.tech.ents.push(ne);
   if(typeof playSfx==='function') playSfx('ui_confirm'); techUIRender(); }
 // 🔧 일꾼 수리: 지정 일꾼 + 건물 롱프레스 = 그 건물로 이동해 수리. 건설 중(bt>0) 건물은 수리로 완성 가속(+100%/일꾼). 완성 건물은 손상 개념이 없어 대기 자세.
 function techLongPressBldg(eid){ if(!G.tech) return; const b=G.tech.ents.find(x=>x.eid===eid&&x.type==='bldg'); if(!b) return;
@@ -11055,6 +11055,7 @@ function _techReqMet(req){ if(!req) return true; for(const r of req){ if(!(G.tec
 function _techAfford(m,g){ return G.tech.inf || (G.tech.credit>=(m||0) && G.tech.energy>=(g||0)); }
 function _techSpend(m,g){ if(G.tech.inf) return; G.tech.credit-=(m||0); G.tech.energy-=(g||0); }
 function _techEntAt(x,y){ let best=null,bd=1e9; const _W=(typeof GW!=='undefined'&&GW)?GW:380, _H=(typeof GH!=='undefined'&&GH)?GH:440, _ys=(typeof CST_YSHIFT!=='undefined'?CST_YSHIFT:34); for(let i=G.tech.ents.length-1;i>=0;i--){ const e=G.tech.ents[i]; let rad=(e.type==='larva'||e.type==='egg'?0.038:0.055), cy=e.y; if(e.type==='bldg'){ const _mk=(TECH_MODEL[G.tech.race]||{})[e.bk]; const _cf=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[_mk]:null; const _sz=(_cf&&_cf.s)||50; rad=(_sz*0.6)/_W; cy=e.y+(_ys-_sz*0.35)/_H; if(e._lifted) cy-=(e._liftH||0)*TECH_LIFT_PX/_H; } const dx=e.x-x, dy=cy-y, d=dx*dx+dy*dy; if(d<=rad*rad && d<bd){ bd=d; best=e; } } return best; }   // 🛫 부양=히트박스도 위로
+function _techBldgAt(x,y){ let best=null,bd=1e9; const _W=(typeof GW!=='undefined'&&GW)?GW:380, _H=(typeof GH!=='undefined'&&GH)?GH:440, _ys=(typeof CST_YSHIFT!=='undefined'?CST_YSHIFT:34); for(let i=G.tech.ents.length-1;i>=0;i--){ const e=G.tech.ents[i]; if(e.type!=='bldg') continue; const _mk=(TECH_MODEL[G.tech.race]||{})[e.bk]; const _cf=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[_mk]:null; const _sz=(_cf&&_cf.s)||50; const rad=(_sz*0.6)/_W; let cy=e.y+(_ys-_sz*0.35)/_H; if(e._lifted) cy-=(e._liftH||0)*TECH_LIFT_PX/_H; const dx=e.x-x, dy=cy-y, d=dx*dx+dy*dy; if(d<=rad*rad && d<bd){ bd=d; best=e; } } return best; }   // 🧱 건물만 히트(유닛이 위에 있어도 관통) — 선택 히트범위와 동일
 function _techResInfo(){ return { eb:'자원', name:TECH_TREE[G.tech.race].name, desc:'일꾼 탭 → 건물 선택 → 맵을 탭해 배치', stats:[['크레딧',G.tech.inf?'∞':''+G.tech.credit],['에너지',G.tech.inf?'∞':''+G.tech.energy],['인구',G.tech.sup+'/'+G.tech.supCap]] }; }
 // 하단 패널 모델
 function techBuildListModel(){ const race=G.tech.race, t=TECH_TREE[race];
@@ -11496,10 +11497,10 @@ function techPtrDown(ev){ if(!G.tech) return; const r=_btRect(); if(!r) return; 
     const _hasIdleWk=(G.tech.selU||[]).some(id=>{ const wk=G.tech.ents.find(x=>x.eid===id); return wk&&wk.type==='worker'&&wk.build==null; });
     if(e && e.type==='bldg' && e.bt>0 && e._bpause && _hasIdleWk){ G.tech.sel=e.eid; const _sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null}); _sh.open=true; _sh.sec='ent'; if(typeof playSfx==='function') playSfx('ui_open'); techUIRender(); return; }   // 일꾼 지정 상태로 일시정지 건물 탭 = 이동 아니라 재개 대상 지정(일꾼 유지 → ▶ 재개 버튼 표시)
     if(G.tech.sel!=null){ const _cur=G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'); if(_cur){ G.tech.sel=null; const _sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null}); _sh.open=true; _sh.sec='ent'; _btDown=null; techUIRender(); return; } }   // 재개 대상 지정 상태에서 딴 곳/바닥 탭 = 건물 지정만 해제(일꾼 지정·프로필 유지). _btDown=null → techPtrUp이 이 탭을 빈곳탭으로 재처리해 시트 닫는 것 방지
-    if(e && e.type==='bldg'){   // 🧱🔧 건물 롱프레스 = 바이오닉 탑승(벙커) / 일꾼 수리(짧게 탭=이동만)
-      const _su=(G.tech.selU||[]).map(id=>G.tech.ents.find(z=>z.eid===id)).filter(Boolean);
-      const _canBoard=(e.bk==='bunker'&&e.bt<=0&&_su.some(_techBunkerable)), _canRepair=(!e._lifted&&_su.some(x=>x.type==='worker'&&x.build==null));
-      if(_canBoard||_canRepair){ clearTimeout(_btLongT); const _be=e.eid; _btLongT=setTimeout(()=>{ _btLongT=null; techLongPressBldg(_be); }, 420); } }
+    { const _lpb=_techBldgAt(w.x,w.y);   // 🧱🔧 건물 롱프레스 = 바이오닉 탑승(벙커)/일꾼 수리 · 히트범위=선택과 동일(유닛이 위에 있어도 관통)
+      if(_lpb){ const _su=(G.tech.selU||[]).map(id=>G.tech.ents.find(z=>z.eid===id)).filter(Boolean);
+        const _canBoard=(_lpb.bk==='bunker'&&_lpb.bt<=0&&_su.some(_techBunkerable)), _canRepair=(!_lpb._lifted&&_su.some(x=>x.type==='worker'&&x.build==null));
+        if(_canBoard||_canRepair){ clearTimeout(_btLongT); const _be=_lpb.eid; _btLongT=setTimeout(()=>{ _btLongT=null; techLongPressBldg(_be); }, 420); } } }
     _btCmd={}; _techAssignMove(w.x,w.y); if(typeof playSfx==='function') playSfx('ui_confirm'); return; }
   _btBox={sx0:sx, sy0:sy, sx1:sx, sy1:sy, active:false, rw:r.width, rh:r.height}; }   // 무지정 = 한 손가락 드래그로 유닛 지정 박스
 function techPtrMove(ev){ if(!G.tech||G.tab!=='Build'||!_btPtrs.has(ev.pointerId)) return; _btPtrs.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
