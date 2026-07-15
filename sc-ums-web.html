@@ -10345,6 +10345,7 @@ function techUIInit(race){ if(!TECH_TREE[race]) race='union'; _techEnsureRoster(
   G.tech={ race, credit:TECH_START.credit, energy:TECH_START.energy, built:{}, addon:{}, units:{}, research:{}, sup:0, supCap:0, inf:!!keep.inf, nocool:!!keep.nocool, ents:[], sel:null, selU:[], arm:null, eseq:1, pend:[], view:{x:0.5,y:0.5,zoom:1}, sheet:{open:false,sec:null} };
   const main=TECH_TREE[race].buildings[0]; if(main){ G.tech.built[main.k]=1; G.tech.supCap+=(main.supply||0); const _mf=_techFoot(race,main.k), _ms=_techSnap(0.5,0.3,_mf.w,_mf.h); G.tech.ents.push({eid:G.tech.eseq++, type:'bldg', bk:main.k, x:_ms.cx, y:_ms.cy, bt:0}); }   // 본진 자동 배치(그리드 스냅)
   G.tech.ents.push({eid:G.tech.eseq++, type:'worker', x:0.32, y:0.62});   // 일꾼 1기
+  if(race==='swarm'){ const _ov=((main.produces||[]).find(p=>p.id==='overlord')||{}); G.tech.ents.push({eid:G.tech.eseq++, type:'unit', uid:'overlord', x:0.62, y:0.42}); G.tech.supCap+=(_ov.supply||8); }   // 🐛 스웜은 해처리 인구 1뿐 → 시작 시 너울 1기 기본 제공(+8 인구)
   { const _mcw=_techCW(), _mch=_techCH(); G.tech.minerals=[];   // 💎 미네랄 6개 한 줄(가스 구역 왼쪽, 인접=다닥다닥) — 채취=크레딧. 한 줄이라 모든 덩어리 아래(본진 쪽)가 열려 낑김 없음
     const _offs=[[-7,1],[-6,1],[-5,1],[-4,1],[-3,1],[-2,1]];   // (칸) c0 기준 왼쪽, 가로 1줄·1칸 간격
     for(const o of _offs) G.tech.minerals.push({ eid:G.tech.eseq++, x:TECH_GRID.x0+(TECH_GAS.c0+o[0])*_mcw, y:TECH_GRID.y0+(TECH_GAS.r0+o[1])*_mch, amount:TECH_MINE_START, owner:null, miner:null }); }
