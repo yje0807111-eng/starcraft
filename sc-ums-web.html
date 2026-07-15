@@ -6471,25 +6471,27 @@ const SKILLS={
   // 레인저(마린): 스팀팩 — 자기 강화(공속·이속↑, 체력 소모). 전투 유즈맵 훅: u.buff.stim
   stim:{ key:'stim', name:'스팀팩', kind:'self', cd:10, dur:6, atkMul:1.5, spdMul:1.4, hpCost:10 },
   // 메두사(퀸): 인스네어 — 지정 지역 적 둔화(가스). 훅: e.slowT
-  ensnare:{ key:'ensnare', name:'인스네어', kind:'target_ground', energy:0, cd:10, dur:8, radius:0.11, slow:0.5,
+  ensnare:{ key:'ensnare', name:'인스네어', kind:'target_ground', energy:0, enSc:75, cd:10, dur:8, radius:0.11, slow:0.5,
     arm:'🕸 인스네어: 퍼뜨릴 지점을 클릭하세요.' },
   // 레이서(벌처): 스파이더 마인 — 매설 후 적 접근 시 폭발(광역). 훅: 근접 적 감지
   spider_mine:{ key:'spider_mine', name:'스파이더 마인', kind:'target_ground', energy:0, cd:3, r:0.06, trig:0.045, dmg:60,
     arm:'💣 스파이더 마인: 매설 지점을 클릭하세요.' },
   // ── 유니온 배치 ──
   // 팬텀(고스트): 락다운 — 지정 적 정지(기계 무력화). 훅: e.stunT
-  lockdown:{ key:'lockdown', name:'락다운', kind:'target_enemy', energy:0, cd:9, dur:6, arm:'🔒 락다운: 정지시킬 적을 클릭하세요.' },
+  lockdown:{ key:'lockdown', name:'락다운', kind:'target_enemy', energy:0, enSc:100, cd:9, dur:6, arm:'🔒 락다운: 정지시킬 적을 클릭하세요.' },
   // 팬텀(고스트): 핵 공격 — 지정 지점에 지연 후 대형 폭발
   nuke:{ key:'nuke', name:'핵 공격', kind:'target_ground', energy:0, cd:22, delay:3.5, radius:0.15, dmg:400, arm:'☢ 핵: 투하 지점을 클릭하세요.' },
   // 브레이커(탱크): 시즈 모드 — 토글(사거리·공격↑, 정지). 훅: 이동불가
   siege:{ key:'siege', name:'시즈 모드', kind:'toggle', energy:0, atkMul:1.8, rngMul:1.6 },
   // 드레드노트: 야마토 포 — 지정 적에 고정 대형 피해(즉발)
-  yamato:{ key:'yamato', name:'야마토 포', kind:'target_enemy', energy:0, cd:12, dmg:260, arm:'💥 야마토: 조준할 적을 클릭하세요.' },
+  yamato:{ key:'yamato', name:'야마토 포', kind:'target_enemy', energy:0, enSc:150, cd:12, dmg:260, arm:'💥 야마토: 조준할 적을 클릭하세요.' },
   // 이지스: EMP — 지정 지역 에너지·보호막 소거
-  emp:{ key:'emp', name:'EMP', kind:'target_ground', energy:0, cd:10, radius:0.13, arm:'⚡ EMP: 지점을 클릭하세요.' },
+  emp:{ key:'emp', name:'EMP', kind:'target_ground', energy:0, enSc:100, cd:10, radius:0.13, arm:'⚡ EMP: 지점을 클릭하세요.' },
   // 메두사(퀸): 브루들링 — 스폰 브루들링 연구 해제. 지정 적 즉사 + 그 자리에 스웜링 2기
-  broodling:{ key:'broodling', name:'브루들링', kind:'target_enemy', energy:0, cd:12, spawn:2, arm:'🐛 브루들링: 즉사시킬 적을 클릭하세요.' },
+  broodling:{ key:'broodling', name:'브루들링', kind:'target_enemy', energy:0, enSc:150, cd:12, spawn:2, arm:'🐛 브루들링: 즉사시킬 적을 클릭하세요.' },
 };
+// 🔮 스킬 마나 소모 단일 틀 — 관리자 페이지(샌드박스)=SC 가이드값(enSc), 네모네모 게임=기존 energy 그대로(제외). 표시·판정·차감 모두 이걸 사용
+function _skCost(sk){ return (typeof G!=='undefined'&&G.sandbox&&sk&&sk.enSc!=null)?sk.enSc:((sk&&sk.energy)||0); }
 // 모델키(gmodel||id) → 스킬 키 목록. 하단 선택 패널 '여분 구역'에 버튼 표시.
 // 다크템플러=상시 은신(PERMA_CLOAK)·와쳐/제플린=상시 탐지(U.detector) → 스킬 버튼 없음(패시브)
 const UNIT_SKILLS={ high_templar:['psi_storm'], medic:['heal'], kronos:['psi_cloak'], marine:['stim'], medusa:['ensnare'], racer:['spider_mine'],
@@ -6509,11 +6511,11 @@ function renderSkillBar(){ const bar=document.getElementById('skillBar'); if(!ba
   for(const key of keys){ const sk=SKILLS[key]; if(!sk) continue;
     const cd=Math.ceil(u.skillCd[key]||0), armed=(G.skillArm&&G.skillArm.uid===u.uid&&G.skillArm.key===key)?1:0,
           on=((((sk.kind==='toggle'||sk.kind==='aura')&&u.skillOn&&u.skillOn[key])||(sk.kind==='target_unit'&&u.healFocus)||(sk.kind==='self'&&u.buff&&u.buff[key]&&u.buff[key].t>0))?1:0),
-          lowE=(sk.energy>0&&(u.en||0)<sk.energy)?1:0,
+          lowE=(_skCost(sk)>0&&(u.en||0)<_skCost(sk))?1:0,
           dis=(cd>0||lowE)&&!armed&&!on?1:0;
     sig+=key+cd+armed+on+lowE+';';
     const cls='skBtn'+(armed?' arm':'')+(on?' on':'')+(dis?' disabled':'')+(lowE?' lowE':'');
-    const badge=cd>0?('<span class="skCd">'+cd+'</span>'):(sk.energy>0?('<span class="skEn">'+sk.energy+'</span>'):'');
+    const _c=_skCost(sk); const badge=cd>0?('<span class="skCd">'+cd+'</span>'):(_c>0?('<span class="skEn">'+_c+'</span>'):'');
     html+='<button class="'+cls+'" onclick="castSkill(\''+key+'\')">'
       +'<span class="skIco">'+(SKILL_ICON[key]||'')+'</span>'
       +'<span class="skNm">'+sk.name+'</span>'+badge+'</button>';
@@ -6527,14 +6529,14 @@ function castSkill(key){ if(typeof G==='undefined'||G.sel.length!==1) return; co
   if((u.skillCd[key]||0)>0){ if(typeof toast==='function') toast('쿨다운 '+Math.ceil(u.skillCd[key])+'초'); return; }
   if(sk.kind==='toggle'||sk.kind==='aura'){ u.skillOn=u.skillOn||{}; const nv=!u.skillOn[key]; u.skillOn[key]=nv; if(typeof playSfx==='function')playSfx('skill'); if(typeof addChat==='function') addChat('', sk.name+(nv?' 켜짐':' 꺼짐')); renderSkillBar(); return; }
   if(sk.kind==='self'){ if(sk.hpCost&&u.maxHp){ u.hp=Math.max(1,(u.hp!=null?u.hp:u.maxHp)-sk.hpCost); } u.buff=u.buff||{}; u.buff[key]={t:sk.dur||3, atkMul:sk.atkMul||1, spdMul:sk.spdMul||1}; u.skillCd[key]=sk.cd||0; if(typeof playSfx==='function')playSfx('skill'); if(typeof addChat==='function') addChat('', sk.name+' 발동!'); renderSkillBar(); return; }
-  if(sk.energy>0 && (u.en||0)<sk.energy){ if(typeof toast==='function') toast('에너지 부족'); return; }
+  { const _c=_skCost(sk); if(_c>0 && (u.en||0)<_c){ if(typeof toast==='function') toast('에너지 부족'); return; } }
   if(sk.kind==='target_ground'){ G.skillArm={uid:u.uid,key:key,mode:'ground'}; G.focusArm=false; G.patrolArm=false; if(typeof addChat==='function') addChat('', sk.arm||'ℹ️ 대상 지점을 클릭하세요.'); renderSkillBar(); return; }
   if(sk.kind==='target_unit'){ if(u.healFocus){ u.healFocus=null; if(typeof addChat==='function') addChat('', sk.name+' 해제(자동 치료로 복귀)'); renderSkillBar(); return; } G.skillArm={uid:u.uid,key:key,mode:'unit'}; G.focusArm=false; G.patrolArm=false; if(typeof addChat==='function') addChat('', sk.arm||'ℹ️ 대상 아군을 클릭하세요.'); renderSkillBar(); return; }
   if(sk.kind==='target_enemy'){ G.skillArm={uid:u.uid,key:key,mode:'enemy'}; G.focusArm=false; G.patrolArm=false; if(typeof addChat==='function') addChat('', sk.arm||'ℹ️ 대상 적을 클릭하세요.'); renderSkillBar(); return; }
 }
 function _sbFoeAt(x,y){ const L=_skFoes(); let best=null, bd=0.055*0.055; for(const e of L){ if(e.dead||e.x==null) continue; const dx=e.x-x, dy=e.y-y, d=dx*dx+dy*dy; if(d<=bd){ bd=d; best=e; } } return best; }   // 탭 지점 근처 적 픽
 function fireSkillEnemy(uid,key,foe){ const u=G.units.find(z=>z.uid===uid); const sk=SKILLS[key]; if(!u||!sk||!foe) return;
-  if(sk.energy>0){ if((u.en||0)<sk.energy) return; u.en-=sk.energy; }
+  { const _c=_skCost(sk); if(_c>0){ if((u.en||0)<_c) return; u.en-=_c; } }
   u.skillCd=u.skillCd||{}; u.skillCd[key]=sk.cd||0; G.skillFx=G.skillFx||[];
   if(key==='lockdown'){ foe.stunT=Math.max(foe.stunT||0, sk.dur||6); G.skillFx.push({type:'lock', x:foe.x, y:foe.y, t:0, dur:sk.dur||6, foe:foe}); }
   else if(key==='yamato'){ G.skillFx.push({type:'beam', sx:u.x, sy:u.y-0.02, x:foe.x, y:foe.y, t:0, dur:0.55}); _skHurt(foe, sk.dmg, uid); }
@@ -6549,7 +6551,7 @@ function fireSkillUnit(uid,key,tgtUid){ const u=G.units.find(z=>z.uid===uid), t=
 }
 function _healApply(u,t,dt){ if(u.maxEn>0){ if((u.en||0)<=0) return false; u.en=Math.max(0,u.en-10*dt); } if(t.maxHp){ t.hp=Math.min(t.maxHp,(t.hp!=null?t.hp:t.maxHp)+24*dt); } return true; }
 function fireSkillGround(uid,key,x,y){ const u=G.units.find(z=>z.uid===uid); const sk=SKILLS[key]; if(!u||!sk) return;
-  if(sk.energy>0){ if((u.en||0)<sk.energy) return; u.en-=sk.energy; }
+  { const _c=_skCost(sk); if(_c>0){ if((u.en||0)<_c) return; u.en-=_c; } }
   u.skillCd=u.skillCd||{}; u.skillCd[key]=sk.cd||0; G.skillFx=G.skillFx||[];
   if(key==='psi_storm') G.skillFx.push({type:'storm', x:x, y:y, t:0, dur:sk.dur, r:sk.radius, dmg:sk.dmg, owner:uid});
   else if(key==='ensnare') G.skillFx.push({type:'ensnare', x:x, y:y, t:0, dur:sk.dur, r:sk.radius, slow:sk.slow, owner:uid});
@@ -11359,7 +11361,7 @@ function techCastSkill(ev,key){ if(ev&&ev.stopPropagation) ev.stopPropagation();
   const u=G.tech.ents.find(e=>e.eid===G.tech.selU[0]); const sk=(typeof SKILLS!=='undefined')&&SKILLS[key]; if(!u||!sk) return;
   u._skCd=u._skCd||{}; u._skOn=u._skOn||{};
   if((u._skCd[key]||0)>0){ if(typeof toast==='function') toast('쿨다운 '+Math.ceil(u._skCd[key])+'초'); return; }
-  if(sk.energy>0 && _techSkEn(u)<sk.energy){ if(typeof toast==='function') toast('에너지 부족 ('+sk.energy+'e)'); return; }
+  { const _c=_skCost(sk); if(_c>0 && _techSkEn(u)<_c){ if(typeof toast==='function') toast('에너지 부족 ('+_c+'e)'); return; } }
   if(sk.kind==='self'){
     if(sk.hpCost>0){ const _mh=(u.maxHp!=null?u.maxHp:((techUnitSpec(G.tech.race,u.uid)||{}).hp||0)), _hp=(u.hp!=null?u.hp:_mh); if(_mh>0&&u.maxHp==null) u.maxHp=_mh; if(_hp<=sk.hpCost){ if(typeof toast==='function') toast('⛔ 체력 부족 (스팀팩 '+sk.hpCost+' HP)'); return; } u.hp=Math.max(1,_hp-sk.hpCost); }   // 🩸 스팀팩 = 체력 소모(SC 10 HP) · 미초기화 시 스펙에서 HP 확보
     u._skCd[key]=sk.cd||0; u._skStim=sk.dur||6; _techSkFx().push({type:'stim',eid:u.eid,t:0,dur:0.5});   // 스팀팩 = 즉시 자기 버프(이속↑) + 체력 소모
@@ -11370,7 +11372,7 @@ function techCastSkill(ev,key){ if(ev&&ev.stopPropagation) ev.stopPropagation();
   G.tech.skillArm={eid:u.eid, key:key};   // 지정형(지점/유닛/대상) = 무장 후 맵 탭으로 시전
   if(typeof toast==='function') toast(sk.arm||'ℹ️ 대상을 탭하세요'); techUIRender(); }
 function _techSkFire(u,key,wx,wy,tgt){ const sk=SKILLS[key]; u._skCd=u._skCd||{};
-  if(sk.energy>0){ if(_techSkEn(u)<sk.energy) return; u.en=Math.max(0,(u.en||0)-sk.energy); }   // 🔮 마나 소모(바에 반영)
+  { const _c=_skCost(sk); if(_c>0){ if(_techSkEn(u)<_c) return; u.en=Math.max(0,(u.en||0)-_c); } }   // 🔮 마나 소모(바에 반영) — 관리자=SC값(enSc)
   u._skCd[key]=sk.cd||0; const F=_techSkFx();
   if(key==='psi_storm') F.push({type:'storm', x:wx, y:wy, t:0, dur:sk.dur||3, r:sk.radius});
   else if(key==='ensnare') F.push({type:'ensnare', x:wx, y:wy, t:0, dur:sk.dur||8, r:sk.radius, slow:sk.slow});
@@ -11413,9 +11415,9 @@ function techUnitPanelModel(list){ const race=G.tech.race, grp={}, ord=[];   // 
     const _su=list[0]; for(const _k of (UNIT_SKILLS[_su.uid]||[])){ const sk=SKILLS[_k]; if(!sk) continue;
       const cdv=Math.ceil((_su._skCd&&_su._skCd[_k])||0), armed=!!(G.tech.skillArm&&G.tech.skillArm.eid===_su.eid&&G.tech.skillArm.key===_k);
       const on=!!((_su._skOn&&_su._skOn[_k])||(_k==='heal'&&_su._healF!=null)||(_k==='stim'&&_su._skStim>0));
-      const lowE=sk.energy>0&&_techSkEn(_su)<sk.energy;
+      const _c=_skCost(sk), lowE=_c>0&&_techSkEn(_su)<_c;
       items.push({ pro:'<span class="skPro">'+((typeof SKILL_ICON!=='undefined'&&SKILL_ICON[_k])||'✨')+'</span>', sn:sk.name,
-        meta:cdv>0?(cdv+'s'):(sk.energy>0?(sk.energy+'e'):(on?'ON':'')), metaCls:'lv', sel:armed||on,
+        meta:cdv>0?(cdv+'s'):(_c>0?(_c+'e'):(on?'ON':'')), metaCls:'lv', sel:armed||on,
         state:(cdv>0||lowE)?'dim':'ok', act:'onclick="techCastSkill(event,\''+_k+'\')"' }); } }
   const f=list[0], fid=(f.type==='worker')?(TECH_WORKER[race]||'worker_human'):f.uid, spec=techUnitSpec(race,fid)||{};
   const rn=_techRealName(race,fid), role=_techRoleOf(fid);
