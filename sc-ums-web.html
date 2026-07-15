@@ -10831,6 +10831,7 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
   // 즉시 보정(속도는 유지) → 벽 안에 머무는 프레임이 없어 경유점 선행 전환이 안 끊김(벽 따라갈 때 속도 출렁임 제거)
   for(const bd of G.tech.ents){ if(bd.type!=='bldg'||bd._lifted||(bd.bt>0 && !bd._bpause)) continue;   // 🛫 부양 건물=공중이라 발판 비움(밀어내지 않음)
     for(const e of G.tech.ents){ if(e.type!=='unit'&&e.type!=='worker') continue;
+      if(_techAirOf(e)) continue;   // ✈️ 공중 유닛 = 지형지물(건물) 무시하고 통과
       if(e.build===bd.eid) continue;   // 이 건물을 짓는 일꾼만 겹침 허용
       if(e._inGas && e._gEid===bd.eid) continue;   // ⛽ 가스 채취 중 = 그 건물 안에 머무름(밀어내지 않음)
       const R=_techCollRect(bd,e); if(R.x1<=R.x0||R.y1<=R.y0) continue;   // 심시티 판정 사각(유니온=그룹별 껍질+통과 등급)
@@ -10839,7 +10840,8 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
       const mPen=Math.min(pL,pR,pT,pB);   // 최소침투 축으로 경계까지 즉시(관통 잔류 0 — 접선 속도는 그대로라 벽 따라 미끄러짐)
       if(mPen===pL) e.x=R.x0; else if(mPen===pR) e.x=R.x1; else if(mPen===pT) e.y=R.y0; else e.y=R.y1;
       active=true; } }
-  for(const R of _techMineralRects()){ for(const e of G.tech.ents){ if(e.type!=='unit'&&e.type!=='worker') continue;   // 💎 미네랄 안에 들어온 유닛 즉시 경계로(모두 통과 불가 — 지형지물)
+  for(const R of _techMineralRects()){ for(const e of G.tech.ents){ if(e.type!=='unit'&&e.type!=='worker') continue;   // 💎 미네랄 안에 들어온 유닛 즉시 경계로(지상만 — 지형지물)
+      if(_techAirOf(e)) continue;   // ✈️ 공중 유닛 = 미네랄 무시하고 통과
       if(e.x<=R.x0||e.x>=R.x1||e.y<=R.y0||e.y>=R.y1) continue;
       const pL=e.x-R.x0, pR=R.x1-e.x, pT=e.y-R.y0, pB=R.y1-e.y, mPen=Math.min(pL,pR,pT,pB);
       if(mPen===pL) e.x=R.x0; else if(mPen===pR) e.x=R.x1; else if(mPen===pT) e.y=R.y0; else e.y=R.y1;
@@ -10870,6 +10872,7 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
         active=true; } } }
   // 🚫 터널링 방지: 겹치는 두 판정 사각(밀봉·차단 조합) 사이에 낀 유닛 — 순차 밀어냄이 반대편으로 뚫는 것을 차단. 보정 후에도 어느 사각 '안'이면 이번 프레임 이동 취소
   for(const e of G.tech.ents){ if((e.type!=='unit'&&e.type!=='worker')||e.tx==null||e._pfx==null) continue;
+    if(_techAirOf(e)) continue;   // ✈️ 공중 유닛 = 지형지물 통과(터널링 방지 되돌림 제외)
     let inR=false; for(const bd of G.tech.ents){ if(bd.type!=='bldg'||bd._lifted||(bd.bt>0&&!bd._bpause)||e.build===bd.eid) continue;
       const R=_techCollRect(bd,e); if(R.x1<=R.x0||R.y1<=R.y0) continue;
       if(e.x>R.x0+1e-6&&e.x<R.x1-1e-6&&e.y>R.y0+1e-6&&e.y<R.y1-1e-6){ inR=true; break; } }
