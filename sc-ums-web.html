@@ -6476,6 +6476,11 @@ SKILL_ICON.parasite='<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12
 SKILL_ICON.dark_swarm='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 14a4 4 0 010-8 5 5 0 019.6-1A4 4 0 0118 14z" opacity=".8"/><circle cx="8" cy="17" r="1.3"/><circle cx="12" cy="18" r="1.3"/><circle cx="16" cy="17" r="1.3"/></svg>';   // 다크스웜=먹구름
 SKILL_ICON.plague='<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9" opacity=".3"/><path d="M12 6v6l4 2" stroke="currentColor" stroke-width="1.6" fill="none"/><circle cx="12" cy="12" r="2"/></svg>';   // 플레이그=역병
 SKILL_ICON.consume='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-3 3-3 6 0 9 3-3 3-6 0-9zM6 13c3 1 4 3 3 6-3-1-4-3-3-6zM18 13c-3 1-4 3-3 6 3-1 4-3 3-6z" opacity=".85"/></svg>';   // 컨슘=포식
+// ── 🛡 유니온(테란) 마법 ──
+SKILL_ICON.irradiate='<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="2.5"/><path d="M12 4a8 8 0 013 1.5l-3 5zM19 15a8 8 0 01-2.5 2.5l-4-4zM5 15a8 8 0 002.5 2.5l4-4z" opacity=".7"/></svg>';   // 이레디에이트=방사능
+SKILL_ICON.defensive_matrix='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M8 12l3 3 5-6"/></svg>';   // 디펜시브 매트릭스=보호막 방패
+SKILL_ICON.restoration='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21a9 9 0 10-9-9"/><path d="M3 12l3-3M3 12l3 3M9 9h4a3 3 0 010 6H9"/></svg>';   // 레스토레이션=해제 회전
+SKILL_ICON.optical_flare='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6S2 12 2 12z" opacity=".3"/><circle cx="12" cy="12" r="3"/><path d="M12 5V2M12 22v-3M5 12H2M22 12h-3" stroke="currentColor" stroke-width="1.4"/></svg>';   // 옵티컬 플레어=섬광 눈
 const SKILLS={
   // 하이템플러: 사이오닉 스톰 — 지정 지점 광역 지속 피해(연출: 보라 뇌운+번개)
   psi_storm:{ key:'psi_storm', name:'사이오닉 스톰', kind:'target_ground', energy:75, cd:12, dur:3, radius:0.075, dmg:14,
@@ -6519,13 +6524,18 @@ const SKILLS={
   dark_swarm:{ key:'dark_swarm', name:'다크 스웜', kind:'target_ground', energy:0, enSc:100, cd:12, dur:8, radius:0.13, arm:'☁️ 다크 스웜: 지점을 클릭하세요.' },   // 범위 내 아군 = 원거리 피해 0
   plague:{ key:'plague', name:'플레이그', kind:'target_ground', energy:0, enSc:150, cd:12, dur:6, radius:0.11, dps:18, arm:'🩸 플레이그: 지점을 클릭하세요.' },   // 범위 HP 지속 감소(체력 1까지, 쉴드 무시 안 함)
   consume:{ key:'consume', name:'컨슘', kind:'target_unit', energy:0, enSc:0, cd:2, gain:50, arm:'🍽 컨슘: 잡아먹을 아군 유닛을 클릭하세요.' },   // 아군 잡아먹어 마나 +50
+  // ── 🛡 유니온(테란) 마법 — 이지스(사이언스 베슬)·메딕 ──
+  irradiate:{ key:'irradiate', name:'이레디에이트', kind:'target_enemy', energy:0, enSc:75, cd:8, dur:8, dps:30, arm:'☢ 이레디에이트: 방사능을 씌울 적을 클릭하세요.' },   // 대상 지속 피해(생체)
+  defensive_matrix:{ key:'defensive_matrix', name:'디펜시브 매트릭스', kind:'target_unit', energy:0, enSc:100, cd:6, absorb:250, arm:'🛡 디펜시브 매트릭스: 보호할 아군을 클릭하세요.' },   // 아군에 250 흡수 보호막
+  restoration:{ key:'restoration', name:'레스토레이션', kind:'target_unit', energy:0, enSc:50, cd:4, arm:'✳ 레스토레이션: 해로운 효과를 치료할 아군을 클릭하세요.' },   // 아군 디버프 해제
+  optical_flare:{ key:'optical_flare', name:'옵티컬 플레어', kind:'target_enemy', energy:0, enSc:75, cd:6, dur:20, arm:'👁 옵티컬 플레어: 실명시킬 적을 클릭하세요.' },   // 적 시야 축소+디텍터 무력화
 };
 // 🔮 스킬 마나 소모 단일 틀 — 관리자 페이지(샌드박스)=SC 가이드값(enSc), 네모네모 게임=기존 energy 그대로(제외). 표시·판정·차감 모두 이걸 사용
 function _skCost(sk){ return (typeof G!=='undefined'&&G.sandbox&&sk&&sk.enSc!=null)?sk.enSc:((sk&&sk.energy)||0); }
 // 모델키(gmodel||id) → 스킬 키 목록. 하단 선택 패널 '여분 구역'에 버튼 표시.
 // 다크템플러=상시 은신(PERMA_CLOAK)·와쳐/제플린=상시 탐지(U.detector) → 스킬 버튼 없음(패시브)
-const UNIT_SKILLS={ high_templar:['psi_storm','hallucination'], medic:['heal'], kronos:['psi_cloak','stasis','recall'], marine:['stim'], medusa:['ensnare','parasite'], defiler:['dark_swarm','plague','consume'], racer:['spider_mine'],
-  ghost:['lockdown','nuke'], tank:['siege'], dreadnought:['yamato'], aegis:['emp'],
+const UNIT_SKILLS={ high_templar:['psi_storm','hallucination'], medic:['heal','restoration','optical_flare'], kronos:['psi_cloak','stasis','recall'], marine:['stim'], medusa:['ensnare','parasite'], defiler:['dark_swarm','plague','consume'], racer:['spider_mine'],
+  ghost:['lockdown','nuke'], tank:['siege'], dreadnought:['yamato'], aegis:['emp','irradiate','defensive_matrix'],
   dark_archon:['feedback','maelstrom','mind_control'], falcon:['disruption_web'] };   // 🔮 에테리얼 마법 유닛
 function unitSkillKeys(u){ if(!u) return []; let ks=(UNIT_SKILLS[u.gmodel||u.id]||UNIT_SKILLS[u.id]||[]).slice();
   if((u.gmodel||u.id)==='medusa' && typeof G!=='undefined' && G.tech && G.tech.research && G.tech.research.swarm_broodling && ks.indexOf('broodling')<0) ks.push('broodling');   // 🐛 스폰 브루들링 연구 시 브루들링 스킬 부여
@@ -6577,6 +6587,8 @@ function fireSkillEnemy(uid,key,foe){ const u=G.units.find(z=>z.uid===uid); cons
   else if(key==='mind_control'){ if(u.team==='foe') foe.team='foe'; else delete foe.team; foe.target=null; foe._aggro=null; foe.moveTo=null; u.sh=0;   // 🧠 장악(팀 전환) + 시전자 쉴드 0
     G.skillFx.push({type:'beam', sx:u.x, sy:u.y-0.02, x:foe.x, y:foe.y, t:0, dur:0.6}); }
   else if(key==='parasite'){ foe._parasited=1; foe._revealed=1; G.skillFx.push({type:'boom', x:foe.x, y:foe.y, t:0, dur:0.4, r:0.025}); }   // 🦠 기생 → 시야 공유(영구)
+  else if(key==='irradiate'){ foe._irradT=sk.dur||8; foe._irradDps=sk.dps||30; foe._irradBy=uid; foe._revealed=1; G.skillFx.push({type:'emp', x:foe.x, y:foe.y, t:0, dur:0.5, r:0.04}); }   // ☢ 방사능 지속 피해(생체)
+  else if(key==='optical_flare'){ foe._blind=sk.dur||20; foe._noDetect=1; G.skillFx.push({type:'boom', x:foe.x, y:foe.y, t:0, dur:0.4, r:0.03}); }   // 👁 실명(시야 축소·디텍터 무력화)
   if(typeof playSfx==='function')playSfx('skill'); if(typeof addChat==='function') addChat('', sk.name+' 시전!'); renderSkillBar();
 }
 function _skEmp(x,y,r){ const L=_skFoes(), r2=r*r; for(const e of L){ if(e.dead) continue; const dx=e.x-x, dy=e.y-y; if(dx*dx+dy*dy<=r2){ if(e.sh!=null) e.sh=0; e.en=0; e.empT=1.5; } } }
@@ -6585,6 +6597,8 @@ function fireSkillUnit(uid,key,tgtUid){ const u=G.units.find(z=>z.uid===uid), t=
   if(key==='heal'){ u.healFocus=tgtUid; }   // 지정 힐: 따라다니며 이 유닛만 치료
   else if(key==='consume'){ if(t.maxHp!=null) t.hp=0; t.dead=true; t._killer=u.uid;   // 🍽 아군 잡아먹기 → 마나 +gain
     if(u.maxEn>0) u.en=Math.min(u.maxEn,(u.en||0)+(sk.gain||50)); G.skillFx=G.skillFx||[]; G.skillFx.push({type:'boom', x:t.x, y:t.y, t:0, dur:0.4, r:0.03}); }
+  else if(key==='defensive_matrix'){ t._matrix=(t._matrix||0)+(sk.absorb||250); G.skillFx=G.skillFx||[]; G.skillFx.push({type:'emp', x:t.x, y:t.y, t:0, dur:0.5, r:0.045}); }   // 🛡 흡수 보호막
+  else if(key==='restoration'){ t.stunT=0; t.slowT=0; t.empT=0; t.ensnared=0; t._parasited=0; t._irradT=0; t._blind=0; t._plagued=0; G.skillFx=G.skillFx||[]; G.skillFx.push({type:'boom', x:t.x, y:t.y, t:0, dur:0.35, r:0.03}); }   // ✳ 디버프 해제
   else if(key==='hallucination'){ G.skillFx=G.skillFx||[]; const n=sk.count||2;   // 👥 대상 환영 n기(0 공격·일정시간 후 소멸)
     for(let i=0;i<n;i++){ const off=(i?1:-1)*0.02; const c=initUnitStats({uid:G.idSeq++, id:t.id, hero:false, lv:1, x:t.x+off, y:t.y+0.012, cd:0, fixed:false});
       if(t.gmodel){ c.gmodel=t.gmodel; if(typeof _btModelStats==='function') _btModelStats(c,t.gmodel); } c.gname=(t.gname||''); c._illusion=true; c._illT=20; c.dmg=0; c.en=0; c.maxEn=0; if(t.team==='foe') c.team='foe';
@@ -6611,6 +6625,7 @@ function fireSkillGround(uid,key,x,y){ const u=G.units.find(z=>z.uid===uid); con
 }
 function _skFoes(){ if(G.sandbox && G.tab==='Battle' && G.units){ return G.units.filter(u=>u.team==='foe' && !(u.maxHp&&(u.hp!=null?u.hp:u.maxHp)<=0)); } const a=G.enemies||[], b=G.sbFoes; return (b&&b.length)?(a.length?a.concat(b):b):a; }   // 전투실험=적팀 실유닛 / 그 외=실전 적+더미
 function _skHurt(e,dmg,owner){ if(e._stasis>0||e._darkSwarm>0) return;   // 🧊 스테이시스 무적 / ☁️ 다크스웜 = 원거리·스킬 피해 무효
+  if(e._matrix>0){ const a=Math.min(e._matrix,dmg); e._matrix-=a; dmg-=a; if(dmg<=0) return; }   // 🛡 디펜시브 매트릭스 흡수
   if(e.eid!=null){ try{ _atkUid=owner; }catch(_){} if(typeof hitEnemy==='function') hitEnemy(e,dmg); }   // 정규 적=hitEnemy(방어/실드/킬귀속)
   else { e.hp-=dmg; e.flash=0.12; if(e.hp<=0) e.dead=true; } }   // 실험 더미=직접 피해
 function _skPlague(f){ const L=_skFoes(); if(!L.length) return; const r2=f.r*f.r, dmg=(f.dps||18)*0.5;   // 🩸 체력만 감소(쉴드 무시), 1까지 · 0.5초 간격
@@ -6647,6 +6662,8 @@ function stepSkills(dt){ if(typeof G==='undefined'||!G.units) return; G._skT=(G.
     if(u.buff){ for(const k in u.buff){ const bf=u.buff[k]; if(bf&&bf.t>0){ bf.t-=dt; if(bf.t<=0) delete u.buff[k]; } } }   // 자기 강화(스팀팩 등) 지속시간
     if(u._stasis>0){ u._stasis-=dt; u.moving=false; }   // 🧊 스테이시스 = 정지+무적(지속)
     if(u._darkSwarm>0){ u._darkSwarm-=dt; }   // ☁️ 다크스웜 보호(존 안에서 매프레임 갱신 → 벗어나면 만료)
+    if(u._blind>0){ u._blind-=dt; if(u._blind<=0) u._noDetect=0; }   // 👁 옵티컬 플레어 실명
+    if(u._irradT>0){ u._irradT-=dt; const hp=(u.hp!=null?u.hp:u.maxHp); if(hp>1) u.hp=Math.max(1, hp-(u._irradDps||30)*dt); u.flash=0.08; if(u._irradT<=0) u._irradDps=0; }   // ☢ 이레디에이트 지속 피해(체력만, 1까지)
     if(u._illusion){ u._illT=(u._illT||0)-dt; if(u._illT<=0) u.dead=true; }   // 👥 환영 = 수명 만료 시 소멸
     if(HEALER[_skKey(u)]){ let t=null;   // 메딕: 지정 힐(따라다니며 1명) or 자동(근처 부상 바이오닉)
       if(u.healFocus){ t=G.units.find(z=>z.uid===u.healFocus && !z.dead && !z.fixed); if(!t) u.healFocus=null; }
@@ -11467,6 +11484,11 @@ function _techSkFire(u,key,wx,wy,tgt){ const sk=SKILLS[key]; u._skCd=u._skCd||{}
   else if(key==='dark_swarm'){ const r=sk.radius||0.13; for(const x of G.tech.ents){ if((x.type==='unit'||x.type==='worker')&&Math.hypot(x.x-wx,x.y-wy)<=r) x._darkSwarm=sk.dur||8; } F.push({type:'dswarm', x:wx, y:wy, t:0, dur:sk.dur||8, r:r}); }   // ☁️ 범위 보호(원거리 피해 무효)
   else if(key==='plague') F.push({type:'plague', x:wx, y:wy, t:0, dur:sk.dur||6, r:sk.radius||0.11, dps:sk.dps||18});   // 🩸 범위 HP 지속 감소(1까지)
   else if(key==='consume'&&tgt){ if(u.maxEn>0) u.en=Math.min(u.maxEn,(u.en||0)+(sk.gain||50)); const _fx={x:tgt.x,y:tgt.y}; G.tech.ents=G.tech.ents.filter(e=>e.eid!==tgt.eid); if(G.tech.selU) G.tech.selU=G.tech.selU.filter(id=>id!==tgt.eid); F.push({type:'boom', x:_fx.x, y:_fx.y, t:0, dur:0.4, r:0.025}); }   // 🍽 아군 잡아먹기 → 마나 +gain
+  // ── 🛡 유니온 마법 ──
+  else if(key==='irradiate'&&tgt){ tgt._irradT=sk.dur||8; tgt._irradDps=sk.dps||30; F.push({type:'boom', x:tgt.x, y:tgt.y, t:0, dur:0.4, r:0.03}); }   // ☢ 방사능 지속 피해
+  else if(key==='optical_flare'&&tgt){ tgt._blind=sk.dur||20; F.push({type:'boom', x:tgt.x, y:tgt.y, t:0, dur:0.4, r:0.025}); }   // 👁 실명
+  else if(key==='defensive_matrix'&&tgt){ tgt._matrix=(tgt._matrix||0)+(sk.absorb||250); F.push({type:'warp', x:tgt.x, y:tgt.y, t:0, dur:0.5}); }   // 🛡 흡수 보호막
+  else if(key==='restoration'&&tgt){ tgt._lockT=0; tgt._skSlow=0; tgt._irradT=0; tgt._blind=0; tgt._parasited=0; tgt._stasisT=0; tgt._darkSwarm=0; F.push({type:'warp', x:tgt.x, y:tgt.y, t:0, dur:0.4}); }   // ✳ 디버프 해제
   if(typeof playSfx==='function') playSfx('skill'); }
 function _techSkillTick(dt){ if(!G.tech) return false; const F=G.tech.skillFx; let live=false, _illGone=false;
   for(const e of G.tech.ents){ if(e.type!=='unit'&&e.type!=='worker') continue;
@@ -11475,6 +11497,8 @@ function _techSkillTick(dt){ if(!G.tech) return false; const F=G.tech.skillFx; l
     if(e._illusion){ e._illT=(e._illT||0)-dt; live=true; if(e._illT<=0){ e._dead=true; _illGone=true; } }   // 👥 환영 수명
     if(e._stasisT>0){ e._stasisT-=dt; e.tx=null; e._wp=null; live=true; }   // 🧊 스테이시스(정지+무적)
     if(e._darkSwarm>0){ e._darkSwarm-=dt; }   // ☁️ 다크스웜 보호(존 밖=만료)
+    if(e._blind>0){ e._blind-=dt; live=true; }   // 👁 옵티컬 플레어 실명
+    if(e._irradT>0){ e._irradT-=dt; live=true; if(e.hp>1) e.hp=Math.max(1, e.hp-(e._irradDps||30)*dt); if(e._irradT<=0) e._irradDps=0; }   // ☢ 이레디에이트 지속 피해(1까지)
     if(e._mcT>0){ e._mcT-=dt; live=true; }   // 🧠 장악 연출
     if(e._lockT>0){ e._lockT-=dt; e.tx=null; e._wp=null; live=true; }
     if(e._skOn&&e._skOn.siege){ e.tx=null; e._wp=null; }   // 시즈 중 = 이동 불가 유지
