@@ -1444,7 +1444,8 @@
   .cmdG .cgPort:empty{display:none}   /* 아이콘 없는 프로필(라바) = 빈 초상 틀 숨김 */
   .cmdG .cgS{margin-top:1px;font-size:var(--fs-xs);color:var(--cgDim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .cmdG .cgS b{color:#cfe0f5;font-weight:700}
   .cmdG .cgHpsh{margin-top:2px;display:flex;gap:9px;font-family:'Rajdhani',sans-serif;font-weight:800;font-size:12.5px;line-height:1}
-  .cmdG .cgHpsh .hpv{color:#7ee081} .cmdG .cgHpsh .shv{color:#8fd8ff}
+  .cmdG .cgHpsh .hpv{color:#7ee081} .cmdG .cgHpsh .shv{color:#8fd8ff} .cmdG .cgHpsh .env{color:#b06bff}
+  .cmdG .cgHpsh .stAb{font-style:normal;font-size:8.5px;font-weight:700;opacity:.7;margin-right:2px;vertical-align:1px;letter-spacing:.3px}   /* S/H/E 약자 프리픽스(아이콘 대체) */
   .cmdG .cgPill{flex:none;align-self:flex-start;font:800 9px/1 sans-serif;letter-spacing:.5px;padding:4px 6px;border-radius:5px;color:var(--caL);background:rgba(255,255,255,.04);border:1px solid var(--caS)}
   .cmdG .cgPill.idle{color:var(--cgMuted);border-color:var(--metal-edge)}
   .cmdG .cgGasAuto{flex:none;align-self:center;height:32px;display:flex;align-items:center;gap:3px;padding:0 3px;border-radius:8px;background:rgba(70,240,106,.1);border:1px solid var(--glass)}   /* 일꾼 수 스텝퍼 — 배너 톤, −/+ 구분 셀 */
@@ -7297,8 +7298,8 @@ function bldgPortraitInner(b){
 function _cgFmt(n){ n=n||0; return n>=10000?((n/1000).toFixed(n>=100000?0:1)+'K'):(''+n); }
 function _cgCost(cr,en,ce){ let h=''; if(ce){ h+='<span class="cc cr">'+(cr?(_cgFmt(cr)+'c'):'')+'</span>'+'<span class="cc en">'+(en?(_cgFmt(en)+'e'):'')+'</span>'; return h; }   // 건설 카드=아이콘 없이 c/e. 에너지 없어도 아래 줄 자리 항상 예약(크레딧 위 고정)
   if(cr) h+='<span class="cc cr">◈'+_cgFmt(cr)+'</span>'; if(en) h+='<span class="cc en">⚡'+_cgFmt(en)+'</span>'; return h; }   // 무료 표기 제거(빈칸)
-function _cgHpShStr(hp,sh){ let s=''; if(hp!=null&&hp!=='') s+='<span class="hpv">❤ '+hp+'</span>'; if(sh) s+='<span class="shv">🛡 '+sh+'</span>'; return s; }   // 헤더 HP/쉴드(건물 — 단일값)
-function _cgHpShDual(hp,sh){ let s=''; if(hp!=null&&hp!=='') s+='<span class="hpv">❤ '+hp+'/'+hp+'</span>'; if(sh) s+='<span class="shv">🛡 '+sh+'/'+sh+'</span>'; return s; }   // 헤더 HP/쉴드(유닛 — 현재/기본)
+function _cgHpShStr(hp,sh,en){ let s=''; if(sh) s+='<span class="shv"><i class="stAb">S</i>'+sh+'</span>'; if(hp!=null&&hp!=='') s+='<span class="hpv"><i class="stAb">H</i>'+hp+'</span>'; if(en) s+='<span class="env"><i class="stAb">E</i>'+en+'</span>'; return s; }   // 헤더: 쉴드(S)→HP(H)→마나(E) · 약자 프리픽스(아이콘 없음)
+function _cgHpShDual(hp,sh,en){ let s=''; if(sh) s+='<span class="shv"><i class="stAb">S</i>'+sh+'/'+sh+'</span>'; if(hp!=null&&hp!=='') s+='<span class="hpv"><i class="stAb">H</i>'+hp+'/'+hp+'</span>'; if(en) s+='<span class="env"><i class="stAb">E</i>'+en+'/'+en+'</span>'; return s; }   // 유닛 헤더: 쉴드→HP→마나(현재/기본)
 function _cgSlotHTML(it, build){ if(!it||it.state==='empty') return '<div class="cgSlot empty"></div>';
   const cls='cgSlot '+(it.state==='busy'?'busy':it.state==='dim'?'dim':it.state==='max'?'max':'')+(it.sel?' sel':'')+(it.cls?(' '+it.cls):'');
   const meta=(it.tr!=null&&it.tr!=='')?('<div class="cgMeta '+(it.metaCls||'')+'">'+it.tr+'</div>'):((!build&&it.meta)?('<div class="cgMeta '+(it.metaCls||'')+'">'+it.meta+'</div>'):'');   // tr=건설 카드에서도 보이는 우상단 배지(업그레이드 다음 단계 등) · 그 외 건설 카드=메타 제거
@@ -10501,18 +10502,42 @@ function techDoMorph(ev, to){ if(ev&&ev.stopPropagation) ev.stopPropagation(); i
   const u=sel.find(e=>TECH_MORPH[e.uid]&&TECH_MORPH[e.uid].some(m=>m.to===to)); if(!u) return;
   const m=TECH_MORPH[u.uid].find(x=>x.to===to);
   const ok=_techMorphOK(m); if(!ok.ok){ if(typeof toast==='function') toast('⛔ '+ok.why); return; }
-  if(m.dpop && !G.tech.inf && G.tech.sup+m.dpop>G.tech.supCap){ if(typeof toast==='function') toast('⛔ 인구 부족'); return; }
+  if(race==='aetherial'){   // 🔮 프로토스 융합: 같은 유닛 2마리가 서로 다가가 합쳐져 1마리 생성(홀수는 대기)
+    const srcUid=u.uid;
+    let pool=sel.filter(e=>e.uid===srcUid && e._fuseP==null);
+    if(pool.length<2){ const base=pool[0]||u; let p=null,bd=Infinity;   // 1마리 지정 = 근처 같은 유닛과 짝
+      for(const e of G.tech.ents){ if(e.type==='unit'&&e.uid===srcUid&&e!==base&&e._fuseP==null){ const d=Math.hypot(e.x-base.x,e.y-base.y); if(d<bd){ bd=d; p=e; } } }
+      if(!p){ if(typeof toast==='function') toast('⛔ 융합할 짝이 없음 (같은 유닛 2마리 필요)'); return; } pool=[base,p]; }
+    const pairs=_techPairUp(pool); if(!pairs.length){ if(typeof toast==='function') toast('⛔ 융합할 짝이 없음'); return; }
+    for(const pr of pairs) _techStartFusion(pr[0], pr[1], to);
+    if(typeof toast==='function') toast('🔮 '+m.name+' 융합('+pairs.length+'쌍)'+((pool.length%2)?' · 1마리 대기':''));
+    if(typeof playSfx==='function') playSfx('ui_confirm'); techUIRender(); return; }
+  if(m.dpop && !G.tech.inf && G.tech.sup+m.dpop>G.tech.supCap){ if(typeof toast==='function') toast('⛔ 인구 부족'); return; }   // 🧬 스웜: 그 자리에서 고치(알)
   if(!_techAfford(m.m,m.g)){ if(typeof toast==='function') toast('⛔ 자원 부족'); return; }
   _techSpend(m.m,m.g); G.tech.sup+=(m.dpop||0);
   G.tech.units[u.uid]=Math.max(0,(G.tech.units[u.uid]||0)-1);
-  if(race==='aetherial'){   // 🔮 프로토스: 알 없이 그 자리에서 즉시 진화 — 같은 엔티티 재사용(지정 유지)
-    G.tech.units[to]=(G.tech.units[to]||0)+1; u.uid=to; u._skCd=null; u._skOn=null; u._skStim=0; u._healF=null;
-    if(typeof playSfx==='function') playSfx('ui_confirm'); if(typeof toast==='function') toast('🔮 '+m.name+'(으)로 진화'); techUIRender(); return; }
-  const pt=_techProdTime('swarm',to);   // 🧬 스웜: 그 자리에서 고치(알) → 부화
+  const pt=_techProdTime('swarm',to);   // 그 자리에서 고치(알) → 부화
   G.tech.ents=G.tech.ents.filter(x=>x.eid!==u.eid); G.tech.selU=(G.tech.selU||[]).filter(id=>id!==u.eid);
   const _egg={eid:G.tech.eseq++, type:'egg', x:u.x, y:u.y, id:to, t:pt, tMax:pt, pop:0, supply:0, twin:false};
   if(pt<=0) techHatchEgg(_egg); else G.tech.ents.push(_egg);
   if(typeof playSfx==='function') playSfx('ui_confirm'); techUIRender(); }
+function _techPairUp(pool){ const rem=pool.slice(), pairs=[];   // 🔮 근접 그리디 짝짓기(2마리씩) — 홀수 1마리는 남김
+  while(rem.length>=2){ const a=rem.shift(); let bi=0,bd=Infinity; for(let i=0;i<rem.length;i++){ const d=Math.hypot(rem[i].x-a.x,rem[i].y-a.y); if(d<bd){ bd=d; bi=i; } } pairs.push([a, rem.splice(bi,1)[0]]); } return pairs; }
+function _techStartFusion(a,b,to){ const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;   // 두 유닛이 중간점으로 접근 → 만나면 융합
+  a._fuseP=b.eid; b._fuseP=a.eid; a._fuseTo=to; b._fuseTo=to; a.tx=mx; a.ty=my; a._wp=null; a._mvStuck=0; b.tx=mx; b.ty=my; b._wp=null; b._mvStuck=0; }
+function _techFusionTick(dt){ if(!G.tech||G.tech.race!=='aetherial') return 0; let live=false, done=false;
+  for(const a of G.tech.ents){ if(a.type!=='unit'||a._fuseP==null) continue;
+    const b=G.tech.ents.find(e=>e.eid===a._fuseP&&e.type==='unit');
+    if(!b||b._fuseP!==a.eid){ a._fuseP=null; a._fuseTo=null; a.tx=null; continue; }   // 짝 소멸 → 취소
+    live=true; if(a.eid>b.eid) continue;   // 낮은 eid에서만 완료(중복 방지)
+    if(Math.hypot(a.x-b.x,a.y-b.y)<0.03){   // 만남 → 융합
+      const to=a._fuseTo, mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+      G.tech.units[a.uid]=Math.max(0,(G.tech.units[a.uid]||0)-2); G.tech.units[to]=(G.tech.units[to]||0)+1;
+      G.tech.ents=G.tech.ents.filter(e=>e.eid!==a.eid&&e.eid!==b.eid);
+      if(G.tech.selU) G.tech.selU=G.tech.selU.filter(id=>id!==a.eid&&id!==b.eid);
+      const ne={eid:G.tech.eseq++, type:'unit', uid:to, x:mx, y:my}; G.tech.ents.push(ne); if(G.tech.selU) G.tech.selU.push(ne.eid);
+      _techSkFx().push({type:'warp', x:mx, y:my, t:0, dur:0.6}); done=true; if(typeof playSfx==='function') playSfx('ui_confirm'); } }
+  return done?2:(live?1:0); }
 // 🐛 라바 선택: 선택된 해처리의 라바 전체를 한 번에 잡음 → 라바 생산 패널로
 function techSelectLarva(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech||G.tech.race!=='swarm') return;
   const hb=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'&&x.bk==='hatchery'):null; if(!hb) return;
@@ -10639,7 +10664,7 @@ function techEggModel(list){ const e=list[0], id=e.id, race=G.tech.race, spec=te
   const rn=_techRealName(race,id)||id;
   const base=techUnitPanelModel([{type:'unit',uid:id}]);   // 그 유닛의 카드 그리드를 잠금 상태로 표시
   const items=(base.items||[]).map(it=>it?Object.assign({}, it, { state:'dim', act:'', sel:false }):null);
-  return { mode:'prod', title:rn+' <span class="nsub">(진화중)</span>', icon:_techUnitPortrait(id), hpsh:_cgHpShDual(spec.hp,spec.sh), sub:'', items,
+  return { mode:'prod', title:rn+' <span class="nsub">(진화중)</span>', icon:_techUnitPortrait(id), hpsh:_cgHpShDual(spec.hp,spec.sh,(typeof U!=='undefined'&&U[id]&&U[id].energy)||0), sub:'', items,
     info:{ eb:'진화', hideName:true, stats:_techUnitStatList(spec,id), cr:0, en:0 } }; }
 // 라바 지정 시 생산 패널 — 그리드=생성 가능 유닛(카드 1탭=라바 1마리 소모)
 function techLarvaProdModel(list){ const hb=techGetBldg('swarm','hatchery')||{produces:[]};
@@ -10974,6 +10999,7 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
   if(_techSkillTick(dt)) active=true;   // 🪄 스킬 쿨다운·버프·FX 진행(활동 중=계속 렌더)
   if(_techRepairTick(dt)) active=true;   // 🔧 일꾼 수리(건설 중 건물 완성 가속 · b._repairN 집계)
   { const _nr=_techNydusTick(dt); if(_nr) active=true; if(_nr===2) done=true; }   // 🕳 나이더스 순간이동(지정 유닛 명령) · 텔레포트=지정 해제라 전체 갱신
+  { const _fr=_techFusionTick(dt); if(_fr) active=true; if(_fr===2) done=true; }   // 🔮 융합(하이세이지×2→보이드 / 다크세이지×2→다크보이드)
   for(const e of G.tech.ents){ if(e.type==='bldg'&&e.bk==='bunker'&&e._entryCd>0) e._entryCd=Math.max(0,e._entryCd-dt); }   // 벙커별 입장 간격 카운트다운(프레임당 1회)
   for(let i=G.tech.ents.length-1;i>=0;i--){ const u=G.tech.ents[i]; if(u._boardTgt==null) continue;   // 🧱 벙커 탑승 이동 중 → 도착 시 탑승
     const bunk=G.tech.ents.find(e=>e.eid===u._boardTgt&&e.type==='bldg'&&e.bk==='bunker'&&e.bt<=0);
@@ -11437,7 +11463,7 @@ function techBldgPlainModel(b, e){ const race=G.tech.race, bs=techBldgSpec(race,
     const cdv=Math.ceil((e._skCd&&e._skCd[_k])||0), armed=!!(G.tech.skillArm&&G.tech.skillArm.eid===e.eid&&G.tech.skillArm.key===_k), cost=_skCost(sk), lowE=cost>0&&(_techSkEn(e)<cost);
     items.push({ pro:'<span class="skPro">'+((typeof SKILL_ICON!=='undefined'&&SKILL_ICON[_k])||'✨')+'</span>', sn:sk.name, meta:cdv>0?(cdv+'s'):(cost>0?(cost+'e'):''), metaCls:'lv', sel:armed, state:(cdv>0||lowE)?'dim':'ok', act:'onclick="techCastBldgSkill(event,\''+_k+'\')"' }); } }
   const _def=_techIsDef(b.k);
-  return { mode:'info', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh)+_gasHp, sub:(b.gas?'⛽ 에너지 채취 건물':(b.supply?'👤 인구 공급':(_def?'🛡 방어 건물':'건물 정보'))), items, topRight:_techBldgTR(b),
+  return { mode:'info', title:b.name, icon:'<span class="pemoji">'+b.ico+'</span>', hpsh:_cgHpShStr(bs.hp,bs.sh,(typeof BLDG_EN!=='undefined'&&BLDG_EN[b.k])||0)+_gasHp, sub:(b.gas?'⛽ 에너지 채취 건물':(b.supply?'👤 인구 공급':(_def?'🛡 방어 건물':'건물 정보'))), items, topRight:_techBldgTR(b),
     info:{ eb:_techBldgKind(b)+(b.detector?' (탐지)':''), name:b.name, hideName:true, desc:(TECH_BLDG_DESC[b.k]||(b.gas?'일꾼이 이 건물에서 에너지를 채취합니다.':(b.supply?('최대 인구 +'+b.supply):(_def?'적을 자동 공격하는 방어 건물.':'')))), stats, cr:0, en:0 } }; }
 // 💎⛽ 중립 자원(미네랄·가스 광산) 프로필 — 이름 + 하단 HP 자리에 잔량 표시
 function techResourceModel(res){ if(!res) return null;
@@ -11553,17 +11579,19 @@ function techUnitPanelModel(list){ const race=G.tech.race, grp={}, ord=[];   // 
   if(_amE){ const key=_amE.uid, a=TECH_AMMO[key], cap=_techAmmoCap(key), have=(_amE._chc||0)+((_amE._chq||[]).length);
     items.push({ pro:'<span class="pemoji">'+a.ico+'</span>', sn:a.label+' 장전', cr:a.m, en:a.g, meta:have+'/'+cap, metaCls:'lv', state:(have>=cap||!_techAfford(a.m,a.g))?'dim':'ok', act:'onclick="techChargeAmmo(event,\''+key+'\')"' }); }
   if(list.length===1 && list[0].type==='unit' && typeof UNIT_SKILLS!=='undefined'){   // 🪄 유닛 스킬 카드 — 메인 UNIT_SKILLS/SKILLS/SKILL_ICON 단일 소스 재사용
-    const _su=list[0]; for(const _k of (UNIT_SKILLS[_su.uid]||[])){ const sk=SKILLS[_k]; if(!sk) continue;
+    const _su=list[0]; const _skSlot={ high_templar:{psi_storm:0, hallucination:1} }[_su.uid]||null;   // 하이세이지 = 1스톰·2할루시네이션(4보이드) 한 페이지 고정
+    for(const _k of (UNIT_SKILLS[_su.uid]||[])){ const sk=SKILLS[_k]; if(!sk) continue;
       const cdv=Math.ceil((_su._skCd&&_su._skCd[_k])||0), armed=!!(G.tech.skillArm&&G.tech.skillArm.eid===_su.eid&&G.tech.skillArm.key===_k);
       const on=!!((_su._skOn&&_su._skOn[_k])||(_k==='heal'&&_su._healF!=null)||(_k==='stim'&&_su._skStim>0));
       const _c=_skCost(sk), lowE=_c>0&&_techSkEn(_su)<_c;
-      items.push({ pro:'<span class="skPro">'+((typeof SKILL_ICON!=='undefined'&&SKILL_ICON[_k])||'✨')+'</span>', sn:sk.name,
+      const _card={ pro:'<span class="skPro">'+((typeof SKILL_ICON!=='undefined'&&SKILL_ICON[_k])||'✨')+'</span>', sn:sk.name,
         meta:cdv>0?(cdv+'s'):(_c>0?(_c+'e'):(on?'ON':'')), metaCls:'lv', sel:armed||on,
-        state:(cdv>0||lowE)?'dim':'ok', act:'onclick="techCastSkill(event,\''+_k+'\')"' }); } }
+        state:(cdv>0||lowE)?'dim':'ok', act:'onclick="techCastSkill(event,\''+_k+'\')"' };
+      const _si=_skSlot&&_skSlot[_k]; if(_si!=null){ while(items.length<=_si) items.push(null); items[_si]=_card; } else items.push(_card); } }
   const f=list[0], fid=(f.type==='worker')?(TECH_WORKER[race]||'worker_human'):f.uid, spec=techUnitSpec(race,fid)||{};
   const rn=_techRealName(race,fid), role=_techRoleOf(fid);
   const nm=(list.length===1)?(rn+(role?' ('+role+')':'')):('유닛 '+list.length+'기');   // 이름 (직책)
-  return { mode:'prod', title:nm, icon:_techUnitPortrait(fid), hpsh:_cgHpShDual(spec.hp,spec.sh), sub:(_amE?'내부 장전 — 탭 · 맵 탭=이동':'맵을 탭하면 이동 · 해제는 우상단 ✕'), items,
+  return { mode:'prod', title:nm, icon:_techUnitPortrait(fid), hpsh:_cgHpShDual(spec.hp,spec.sh,(typeof U!=='undefined'&&U[fid]&&U[fid].energy)||0), sub:(_amE?'내부 장전 — 탭 · 맵 탭=이동':'맵을 탭하면 이동 · 해제는 우상단 ✕'), items,
     info:_amE?_techAmmoInfo(_amE, _amE.uid):{ eb:'', hideName:true, stats:_techUnitStatList(spec,fid), cr:0, en:0 } }; }   // 왼쪽: 장전 큐(캐리어·리버) / 유닛 스탯
 function techWorkerBuildModel(list){ const race=G.tech.race, fid=(TECH_WORKER[race]||'worker_human'), n=list.length;   // 일꾼 지정 시트 — 헤더=일꾼 프로필, 그리드=건물 생성 카드
   const ws=techUnitSpec(race,fid)||{}, rn=_techRealName(race,fid), role=_techRoleOf(fid);
