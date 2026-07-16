@@ -1468,6 +1468,12 @@
   .cmdG .cgRally svg{width:24px;height:24px;display:block}
   .cmdG .cgRally.on{border-color:#46f06a;background:rgba(70,240,106,.24);box-shadow:0 0 6px rgba(70,240,106,.45)}
   .cmdG .cgRally:active{background:rgba(70,240,106,.32)}
+  .cmdG .cgSelAll{flex:none;align-self:center;width:38px;height:38px;border-radius:9px;border:1px solid var(--glass);background:rgba(92,214,255,.13);color:#a9e4ff;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}   /* 👥 화면 내 같은 종류 전체 지정(정사각 아이콘 카드) */
+  .cmdG .cgSelAll svg{width:23px;height:23px;display:block}
+  .cmdG .cgSelAll:active{background:rgba(92,214,255,.3);border-color:var(--ca)}
+  .cmdG .cgTrash{display:flex;align-items:center;justify-content:center;width:100%;margin-top:auto;color:#ff6b6b;cursor:pointer;padding:1px 0}   /* 🗑 혼합 종류 카드 하단 = 빨간 휴지통(그 종류 지정 해제) */
+  .cmdG .cgTrash svg{width:15px;height:15px;display:block}
+  .cmdG .cgTrash:active{color:#ff3b3b;transform:scale(.88)}
   .cmdG .cgProg .pl .pt{color:var(--caL);font:800 9px/1 'Rajdhani',sans-serif;margin-left:4px;letter-spacing:.2px}   /* 생산 중 옆 남은시간(작게) */
   .cmdG .cgGasAuto .gaBtn{width:23px;height:24px;flex:none;border-radius:6px;border:1px solid rgba(120,232,150,.4);background:rgba(120,232,150,.14);color:#c7f5d6;font:800 16px/1 sans-serif;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
   .cmdG .cgGasAuto .gaBtn:active{background:rgba(70,240,106,.32)}
@@ -11014,6 +11020,8 @@ function techAutoAdjust(delta, ev){ if(ev&&ev.stopPropagation) ev.stopPropagatio
 const _SVG_ARR_UP='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 18.5V7.5"/><path d="M6.5 12.5l5.5-5.5 5.5 5.5"/></svg>';   // 짧고 굵은 위 화살표(부양)
 const _SVG_ARR_DOWN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.5v11"/><path d="M6.5 11.5l5.5 5.5 5.5-5.5"/></svg>';   // 짧고 굵은 아래 화살표(하강)
 const _SVG_RALLY='<svg viewBox="0 0 24 24" fill="none"><path d="M12 3v8.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M9.3 8.9l2.7 2.7 2.7-2.7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="12" cy="17.2" rx="6" ry="4.1" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="12" cy="17.2" r="1.5" fill="currentColor"/></svg>';   // 위→아래 얇은 화살표 + 원+점(웨이포인트와 통일)
+const _SVG_SELALL='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3.5" y="3.5" width="17" height="17" rx="2.5" stroke-dasharray="3 2.3"/><circle cx="9" cy="9" r="1.7" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="1.7" fill="currentColor" stroke="none"/><circle cx="9" cy="15" r="1.7" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="1.7" fill="currentColor" stroke="none"/></svg>';   // 👥 마퀴(점선 상자)+4점 = 화면 내 같은 종류 전체 지정
+const _SVG_TRASH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12"/><path d="M10 11v6M14 11v6"/></svg>';   // 🗑 휴지통 = 그 종류 지정 해제
 function _techAutoBtn(b){ const e=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'):null; if(!e||e.bk!==b.k) return '';
   const isMain=(b.k===((TECH_TREE[G.tech.race].buildings[0])||{}).k); if(!isMain && !b.gas) return '';   // 본진 또는 가스 건물만
   const tt=isMain?'이 본진과 연동 중인 미네랄 채취 일꾼 수':'이 가스 건물에서 작업 중인 일꾼 수', n=isMain?_techMineralWorkers(e).length:_techGasWorkers(e).length;   // 우상단 배너와 동일 톤 스텝퍼(아이콘 제거, − n +)
@@ -11033,6 +11041,22 @@ function techRallySet(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!
   else { G.tech.rallySet=e.eid; if(typeof toast==='function') toast('🚩 맵을 탭해 랠리 위치 지정'); }
   if(typeof playSfx==='function') playSfx('ui_open'); techUIRender(); }
 function _techBldgTR(b){ return _techAutoBtn(b)+_techRallyBtn(b)+_techLiftBtn(b); }   // 프로필 우상단 = [자원 스텝퍼][랠리][부양] (지정해제는 메인 금지버튼으로 통일)
+function _techSelAllBtn(key){ return '<button class="cgSelAll" onclick="techSelectAllType(event,\''+key+'\')" title="화면 안의 같은 종류 전체 지정">'+_SVG_SELALL+'</button>'; }   // 👥 프로필 우상단 = 화면 내 같은 종류 전체 지정
+function techSelectAllType(ev,key){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech||!G.tech.ents) return;
+  const keyOf=e=>(e.type==='worker')?'__wk':e.uid;
+  const list=G.tech.ents.filter(e=>{ if(e.type!=='unit'&&e.type!=='worker') return false; if(keyOf(e)!==key) return false;
+    const s=_techW2S(e.x,e.y); return s.x>=-0.03&&s.x<=1.03&&s.y>=-0.03&&s.y<=1.03; });   // 화면 안(약간 여유)
+  if(!list.length) return;
+  G.tech.selU=list.map(e=>e.eid); G.tech.sel=null; G.tech.selType=null;
+  const body=document.getElementById('btSheetBody'); if(body) body._cgPage=0;
+  const nm=_techRealName(G.tech.race, (key==='__wk')?(TECH_WORKER[G.tech.race]||'worker_human'):key);
+  if(typeof playSfx==='function') playSfx('ui_open'); if(typeof toast==='function') toast('👥 '+nm+' 전체 지정 ('+list.length+')'); techUIRender(); }
+function techRemoveType(ev,key){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech||!G.tech.selU) return;   // 🗑 혼합 지정에서 그 종류만 지정 해제(카드 사라지고 뒤 카드 당겨짐)
+  const keyOf=e=>(e.type==='worker')?'__wk':e.uid;
+  G.tech.selU=G.tech.selU.filter(id=>{ const e=G.tech.ents.find(x=>x.eid===id); return !(e&&keyOf(e)===key); });
+  if(G.tech.selType===key) G.tech.selType=null; _chipSwallow=true;   // 뒤따르는 합성 click 삼킴(재렌더 그리드 누수 방지)
+  const body=document.getElementById('btSheetBody'); if(body) body._cgPage=0;
+  if(typeof playSfx==='function') playSfx('ui_close'); techUIRender(); }
 function _techGatherTick(dt){ let dep=false, any=false;
   const mainB=_techMainB();
   const ccAvail=_techCCList().length>0;   // 접지된 커맨드센터가 하나도 없으면(전부 부양) 반납 불가 → 채취 정지
@@ -11720,13 +11744,14 @@ function _techMultiTypeModel(units, canBack){ const race=G.tech.race, uid=units[
   if(n>CAP) rows.push({ more:n-CAP });
   const rn=_techRealName(race,uid), role=_techRoleOf(uid);
   return { mode:'prod', title:rn+(role?' ('+role+')':'')+' <span class="nsub">×'+n+'</span>', icon:_techUnitPortrait(uid),
-    sub:'', items,
+    sub:'', items, topRight:_techSelAllBtn(uid),   // 👥 화면 내 같은 종류 전체 지정
     back:canBack?'<button class="cgLift cgBack" onclick="techSubSelectType(event,\'\')" title="전체 선택으로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6L4 11l5 5"/><path d="M4 11h9a6 6 0 0 1 6 6v1"/></svg></button>':'',   // 🔙 소프트선택 해제(전체 복귀) — 오른쪽 끝
     info:{ eb:'', hideName:true, units:rows, cr:0, en:0 } }; }
 function _techMultiMixedModel(list, grp, ord){ const race=G.tech.race, items=[];   // 👥 혼합 지정(여러 종류) — 종류 초상화 칩(탭=그 종류만) + 공통 스킬(교집합)만(SC식)
   const uidOf=k=>(k==='__wk')?(TECH_WORKER[race]||'worker_human'):k;
   for(const k of ord){ const uid=uidOf(k);
     items.push({ pro:_techUnitPortrait(uid), sn:_techRealName(race,uid), tr:'×'+grp[k].n, metaCls:'lv', state:'ok',
+      bottom:'<div class="cgTrash" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()" onclick="techRemoveType(event,\''+k+'\')" title="이 종류 지정 해제">'+_SVG_TRASH+'</div>',   // 🗑 카드 하단 = 그 종류만 지정 해제(카드 사라지고 뒤 카드 당겨짐)
       act:'onpointerdown="techChipDown(event,\''+k+'\')" onpointerup="techChipUp(event)" onpointerleave="techChipCancel()" onpointercancel="techChipCancel()" oncontextmenu="return false"' }); }   // 짧게=소프트(전부 유지) · 꾹=그 종류만 분리 · 전환은 pointerup에서(터치 롱프레스 대응) + 뒤따르는 click은 삼킴
   if(typeof UNIT_SKILLS!=='undefined'){ const sets=ord.filter(k=>k!=='__wk').map(k=>new Set(UNIT_SKILLS[grp[k].e.uid]||[]));
     const common=(sets.length&&sets.length===ord.length)?[...sets[0]].filter(kk=>sets.every(s=>s.has(kk))):[];   // 일꾼 포함 시 공통 없음
@@ -11771,6 +11796,7 @@ function techUnitPanelModel(list){ const race=G.tech.race, grp={}, ord=[];   // 
         (f.maxEn>0)?(Math.round(f.en!=null?f.en:f.maxEn)+'/'+Math.round(f.maxEn)):0)
     : _cgHpShDual(spec.hp,spec.sh,(typeof U!=='undefined'&&U[fid]&&U[fid].energy)||0);
   return { mode:'prod', title:nm, icon:_techUnitPortrait(fid), hpsh:_hpsh, sub:(_amE?'내부 장전 — 탭 · 맵 탭=이동':'맵을 탭하면 이동 · 해제는 우상단 ✕'), items,
+    topRight:_techSelAllBtn((f.type==='worker')?'__wk':fid),   // 👥 화면 내 같은 종류 전체 지정
     info:_amE?_techAmmoInfo(_amE, _amE.uid):{ eb:'', hideName:true, stats:_techUnitStatList(spec,fid), cr:0, en:0 } }; }   // 왼쪽: 장전 큐(캐리어·리버) / 유닛 스탯
 function techWorkerBuildModel(list, canBack){ const race=G.tech.race, fid=(TECH_WORKER[race]||'worker_human'), n=list.length;   // 일꾼 지정 시트 — 헤더=일꾼 프로필, 그리드=건물 생성 카드 · canBack=혼합 소프트선택에서 ▲ 복귀
   const ws=techUnitSpec(race,fid)||{}, rn=_techRealName(race,fid), role=_techRoleOf(fid);
