@@ -11797,8 +11797,7 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
   const _shown=!!(sh.open&&model && G.tech.arm==null && G.tech.rallySet==null);   // 🗺 배치·착륙(arm)·랠리 지정 중 = 프로필 시트 잠시 내려 맵을 넓게 확보(더 넓은 구역 탭) · 모드 종료 시 자동 복귀
   if(model){ model.compact=(cm===1); model.build=true; }   // 건설 탭 카드 스타일(이름 축소·메타 제거·c/e 비용)
   sheet.classList.toggle('open', _shown);
-  sheet.classList.toggle('simple', _shown&&cm===1);
-  sheet.classList.toggle('mini', _shown&&cm===2);
+  if(_shown){ sheet.classList.toggle('simple', cm===1); sheet.classList.toggle('mini', cm===2); }   // 숨길 땐 높이 클래스(.simple/.mini) 유지 → 현재 높이 그대로 아래로 슬라이드(150→204 즉시 확대로 위로 울컥이는 것 방지)
   const cardCtl=document.getElementById('btCardCtl'); if(cardCtl){ const _up=(cm===2); cardCtl.classList.toggle('up',_up); cardCtl.innerHTML='<svg viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'; cardCtl.title=(_up?'프로필 펼치기':(cm===1?'하단으로 최소화':'간소화')); }
   if(model) renderCmdGrid(body, model);
   const _liftSel=(G.tech.sel!=null)&&!!G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'&&x._lifted);   // 부양 건물 선택 = 바닥탭이 이동이라 금지버튼으로 해제
