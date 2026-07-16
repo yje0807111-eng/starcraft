@@ -11784,7 +11784,7 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
   const _allWk=selUs.length>0 && selUs.every(e=>e.type==='worker');   // 전원 일꾼 = 건설 프로필 · 일꾼+전투유닛 혼합 = 복합(칩) 프로필(칩 탭으로 종류별 전환)
   // 시트: 선택된 대상(일꾼=건설 그리드 / 유닛=이동 / 건물=생산·연구)만 표시. 별도 독 배너 없음 — 업그레이드 탭 시트처럼 그 영역만
   const _selKey=(G.tech.sel!=null)?('b'+G.tech.sel):((G.tech.selU&&G.tech.selU.length)?('u'+G.tech.selU.join(',')):(selRes?('r'+selRes.kind+(selRes.eid||'')):''));
-  if(_selKey && _selKey!==G.tech._lastSelKey){ G.tech.cardMode=1; G.tech.selType=null; G.tech._lastSelKey=_selKey; }   // 새 선택(selU 변경) = 간소화 초기화 + 종류 소프트선택(selType) 리셋 — 칩 탭(selU 불변)은 유지 · 모델 생성 전 실행
+  if(_selKey!==G.tech._lastSelKey){ G.tech.cardMode=1; G.tech.selType=null; G.tech._lastSelKey=_selKey; }   // 선택 변화(해제=''도 포함) = 간소화 초기화 + 종류 소프트선택(selType) 리셋 · 칩 탭(selU 불변)은 유지 — 해제도 기록해야 같은 유닛 재지정 시 첫 복합 화면으로 복귀
   let model=null;
   const _resumeMode=!!(selB && selB.bt>0 && selB._bpause && selUs.length);   // 재개 모드(유닛 지정 + 일시정지 건물 선택): 건물 위 재개 버튼만, 하단은 지정 유닛 프로필
   if(sh.open){ if(selRes){ model=techResourceModel(selRes); }   // 💎⛽ 중립 자원(미네랄·가스 광산) 프로필
