@@ -6157,6 +6157,36 @@ const RACE_OF={
   dragoon:'aetherial', archon:'aetherial', blade:'aetherial', skydancer:'aetherial', kronos:'aetherial', seraph:'aetherial', archangel:'aetherial', falcon:'aetherial', observer:'aetherial', worker_light:'aetherial', dark_templar:'aetherial', high_templar:'aetherial', dark_archon:'aetherial', larva:'aetherial',
   hydra:'swarm', snapper:'swarm', thornqueen:'swarm', matron:'swarm', overlord:'swarm', stinger:'swarm', venom:'swarm', medusa:'swarm', defiler:'swarm', wyvern:'swarm', behemoth:'swarm', worker_swarm:'swarm', broodling:'swarm', ultralisk:'swarm',
 };
+// ══ 건설 연구/업그레이드 효과 연결 (건설 샌드박스 전용 · nemo 무관 — G.tech.research만 읽음) ══
+// (A) 최대 마나 +50 부적 — 값은 반드시 U[uid].energy>0(실제 캐스터). apollo(→skyguard)·colossus(→dreadnought)는 대상이 비캐스터(energy0)라 무효 → 제외
+const AMULET_UNITS={ caduceus:['medic'], titan:['aegis'], moebius:['ghost'], gamete:['medusa'], metasynaptic:['defiler'],
+  khaydarin:['high_templar'], argus:['dark_archon'], khaydarin_core:['kronos'], argus_jewel:['falcon'] };
+// (B) 스펠 언락 — 스킬키 → 연구키(종족 접두사 없음). 연구 항목 있는 스펠만(heal·nuke·psi_cloak·defensive_matrix·parasite·dark_swarm·feedback = innate)
+const SKILL_RESEARCH={ stim:'stim', siege:'siege', spider_mine:'mine', lockdown:'lockdown', emp:'emp', irradiate:'irradiate', yamato:'yamato',
+  restoration:'restore', optical_flare:'flare', ensnare:'ensnare', broodling:'broodling', plague:'plague', consume:'consume',
+  psi_storm:'storm', hallucination:'hallucination', maelstrom:'maelstrom', mind_control:'mindcontrol', disruption_web:'disruption', stasis:'stasis', recall:'recall' };
+// (C) 무기/방어 티어 — uid → {atk,def,sh?}(uid당 각 1개 → 중복가산 없음). 지상/공중=FXLAB_AIR · 종족=RACE_OF
+const UNIT_UPG={
+  marine:{atk:'inf_atk',def:'inf_def'}, machinegun:{atk:'inf_atk',def:'inf_def'}, ghost:{atk:'inf_atk',def:'inf_def'}, medic:{def:'inf_def'},
+  racer:{atk:'veh_atk',def:'veh_def'}, tank:{atk:'veh_atk',def:'veh_def'}, goliath:{atk:'veh_atk',def:'veh_def'},
+  skyguard:{atk:'air_atk',def:'air_def'}, hellfire:{atk:'air_atk',def:'air_def'}, dreadnought:{atk:'air_atk',def:'air_def'}, pelican:{def:'air_def'}, aegis:{def:'air_def'},
+  snapper:{atk:'melee_atk',def:'gnd_def'}, broodling:{atk:'melee_atk',def:'gnd_def'}, ultralisk:{atk:'melee_atk',def:'gnd_def'},
+  hydra:{atk:'range_atk',def:'gnd_def'}, thornqueen:{atk:'range_atk',def:'gnd_def'}, matron:{def:'gnd_def'}, defiler:{def:'gnd_def'},
+  wyvern:{atk:'fly_atk',def:'fly_def'}, stinger:{atk:'fly_atk',def:'fly_def'}, behemoth:{atk:'fly_atk',def:'fly_def'}, venom:{atk:'fly_atk',def:'fly_def'}, overlord:{def:'fly_def'}, medusa:{def:'fly_def'},
+  blade:{atk:'gnd_wpn',def:'gnd_arm',sh:'shield'}, dragoon:{atk:'gnd_wpn',def:'gnd_arm',sh:'shield'}, archon:{atk:'gnd_wpn',def:'gnd_arm',sh:'shield'}, dark_templar:{atk:'gnd_wpn',def:'gnd_arm',sh:'shield'}, larva:{atk:'gnd_wpn',def:'gnd_arm',sh:'shield'},
+  high_templar:{def:'gnd_arm',sh:'shield'}, dark_archon:{def:'gnd_arm',sh:'shield'}, worker_light:{def:'gnd_arm',sh:'shield'},
+  falcon:{atk:'air_wpn',def:'air_arm',sh:'shield'}, skydancer:{atk:'air_wpn',def:'air_arm',sh:'shield'}, archangel:{atk:'air_wpn',def:'air_arm',sh:'shield'}, kronos:{atk:'air_wpn',def:'air_arm',sh:'shield'}, seraph:{def:'air_arm',sh:'shield'}, observer:{def:'air_arm',sh:'shield'} };
+function _techResearched(race,key){ return !!(typeof G!=='undefined'&&G.tech&&(G.tech.inf||(G.tech.research&&G.tech.research[race+'_'+key]))); }   // 게이트/효과 판정(inf=선행무시 우회)
+function _upgLv(race,key){ return (typeof G!=='undefined'&&G.tech&&G.tech.research&&(G.tech.research[race+'_'+key]|0))||0; }   // 티어 레벨(정수) · 배틀탭 G.tech null=0
+function _unitRace(u){ return (typeof RACE_OF!=='undefined'&&RACE_OF[u.gmodel||u.id])||null; }
+function _upgAtk(u){ const k=(UNIT_UPG[u.gmodel||u.id]||{}).atk, r=_unitRace(u); return (k&&r)?_upgLv(r,k):0; }   // 무기 티어 +lv
+function _upgDef(u){ const key=u.gmodel||u.id, m=UNIT_UPG[key]||{}, r=_unitRace(u); let d=(m.def&&r)?_upgLv(r,m.def):0; if(key==='ultralisk'&&r&&_techResearched(r,'chitinous')) d+=2; return d; }   // 방어 티어 +lv (+치티너스 2)
+function _upgShield(u){ const m=UNIT_UPG[u.gmodel||u.id]||{}, r=_unitRace(u); return (m.sh&&r)?_upgLv(r,m.sh):0; }   // 실드 티어 +lv
+function _techAmuletBonus(race,uid){ let b=0; for(const k in AMULET_UNITS){ if(AMULET_UNITS[k].indexOf(uid)>=0 && _techResearched(race,k)) b+=50; } return b; }   // 부적 +50
+function _skillLocked(race,key){ const rk=SKILL_RESEARCH[key]; if(!rk) return false; if(!(typeof G!=='undefined'&&G.tech)) return false; return !_techResearched(race,rk); }   // 스펠 언락(연구 전 잠금) · G.tech 없으면(순수 배틀) 자유
+function _techBldgOfResearch(race,rk){ const bs=((typeof TECH_TREE!=='undefined'&&TECH_TREE[race])||{}).buildings||[]; for(const b of bs){ if((b.research||[]).some(x=>x.k===rk)) return b.name; } return ''; }
+function techSkillLocked(ev,bname){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(typeof toast==='function') toast('🔒 연구 필요: '+(bname||'')); }
+function castSkillLocked(b){ if(typeof toast==='function') toast('🔒 연구 필요: '+(b||'')); }
 function raceBarCol(u){ if(!u) return null; const r=(u.gid && typeof GACHA_UNITS!=='undefined' && GACHA_UNITS[u.gid] && GACHA_UNITS[u.gid].race) || RACE_OF[u.gmodel||u.id]; return RACE_BAR[r]||null; }
 // 관리자 사거리·공속 = base_stats 단일 소스(구 SB_RANGE/SB_CD/SB_AIR 파생표 제거). 전투(_sbUnitRange/_sbUnitDps)와 표시·발사 리듬이 완전히 동일값. 네모는 U 그대로.
 function effRange(id, fb){ if(typeof BASE_UNIT!=='undefined' && id!=null && BASE_UNIT[id]) return BASE_UNIT[id][4]*SB_ANCHOR_RANGE; return fb; }   // 관리자 사거리 = base타일 × 앵커(전투 _sbUnitRange와 동일)
@@ -6569,14 +6599,16 @@ function renderSkillBar(){ const bar=document.getElementById('skillBar'); if(!ba
   u.skillCd=u.skillCd||{};
   let sig=u.uid+'|'+keys.length+'|', html='';
   for(const key of keys){ const sk=SKILLS[key]; if(!sk) continue;
+    const lk=_skillLocked(_unitRace(u),key)?1:0;   // 🔒 스펠 언락(건설 연구 반영 · G.tech 없으면 자유)
     const cd=Math.ceil(u.skillCd[key]||0), armed=(G.skillArm&&G.skillArm.uid===u.uid&&G.skillArm.key===key)?1:0,
           on=((((sk.kind==='toggle'||sk.kind==='aura')&&u.skillOn&&u.skillOn[key])||(sk.kind==='target_unit'&&u.healFocus)||(sk.kind==='self'&&u.buff&&u.buff[key]&&u.buff[key].t>0))?1:0),
           lowE=(_skCost(sk)>0&&(u.en||0)<_skCost(sk))?1:0,
           dis=(cd>0||lowE)&&!armed&&!on?1:0;
-    sig+=key+cd+armed+on+lowE+';';
-    const cls='skBtn'+(armed?' arm':'')+(on?' on':'')+(dis?' disabled':'')+(lowE?' lowE':'');
-    const _c=_skCost(sk); const badge=cd>0?('<span class="skCd">'+cd+'</span>'):(_c>0?('<span class="skEn">'+_c+'</span>'):'');
-    html+='<button class="'+cls+'" onclick="castSkill(\''+key+'\')">'
+    sig+=key+cd+armed+on+lowE+lk+';';
+    const cls='skBtn'+(armed?' arm':'')+(on?' on':'')+((dis||lk)?' disabled':'')+(lowE?' lowE':'')+(lk?' locked':'');
+    const _c=_skCost(sk); const badge=lk?'<span class="skCd">🔒</span>':(cd>0?('<span class="skCd">'+cd+'</span>'):(_c>0?('<span class="skEn">'+_c+'</span>'):''));
+    const _onc=lk?('castSkillLocked(\''+_techBldgOfResearch(_unitRace(u),SKILL_RESEARCH[key])+'\')'):('castSkill(\''+key+'\')');
+    html+='<button class="'+cls+'" onclick="'+_onc+'">'
       +'<span class="skIco">'+(SKILL_ICON[key]||'')+'</span>'
       +'<span class="skNm">'+sk.name+'</span>'+badge+'</button>';
   }
@@ -6585,6 +6617,7 @@ function renderSkillBar(){ const bar=document.getElementById('skillBar'); if(!ba
 }
 function castSkill(key){ if(typeof G==='undefined'||G.sel.length!==1) return; const u=G.units.find(x=>x.uid===G.sel[0]); if(!u) return;
   const sk=SKILLS[key]; if(!sk||unitSkillKeys(u).indexOf(key)<0) return;
+  if(_skillLocked(_unitRace(u),key)){ if(typeof toast==='function') toast('🔒 연구 필요'); return; }   // 🔒 스펠 언락 게이트(건설 연구 반영)
   u.skillCd=u.skillCd||{};
   if((u.skillCd[key]||0)>0){ if(typeof toast==='function') toast('쿨다운 '+Math.ceil(u.skillCd[key])+'초'); return; }
   if(sk.kind==='toggle'||sk.kind==='aura'){ u.skillOn=u.skillOn||{}; const nv=!u.skillOn[key]; u.skillOn[key]=nv; if(typeof playSfx==='function')playSfx('skill'); if(typeof addChat==='function') addChat('', sk.name+(nv?' 켜짐':' 꺼짐')); renderSkillBar(); return; }
@@ -6887,8 +6920,8 @@ function stepSbCombat(dt){ if(typeof G==='undefined'||!G.sandbox||G.tab!=='Battl
     if(dist<=rng){   // 사거리 내 → 정지·조준
       u.face=Math.atan2(tgt.x-u.x, tgt.y-u.y); u.moving=false;
       // ── 데미지: 부드러운 DPS(매 프레임) — 밸런스용(이산 발사 타이밍 영향 제거) ──
-      const _td=Ueff(tgt), _armor=(tgt.sh>0)?(_td.shArmor||0):(_td.armor||0);   // 유즈맵 유효 스탯 · 실드=shArmor/체력=armor
-      const _ad=Ueff(u), _dps=Math.max(0.5,(_ad.dmg||1)-_armor)*60/Math.max(0.2,(_ad.cd||22));   // 유즈맵 유효 스탯 · (공격력−방어력)×초당공격횟수
+      const _td=Ueff(tgt), _armor=((tgt.sh>0)?(_td.shArmor||0):(_td.armor||0))+_upgDef(tgt);   // 유즈맵 유효 스탯 · 실드=shArmor/체력=armor (+건설 방어 티어)
+      const _ad=Ueff(u), _dps=Math.max(0.5,((_ad.dmg||1)+_upgAtk(u))-_armor)*60/Math.max(0.2,(_ad.cd||22));   // 유즈맵 유효 스탯 · (공격력+무기티어−방어력)×초당공격횟수
       if(_ad.splash){ const _SR=0.05; for(const o of units){ if(o.fixed||_sbTeam(o)===myTeam||!_alive(o)) continue; const _sx=o.x-tgt.x,_sy=o.y-tgt.y; if(_sx*_sx+_sy*_sy<=_SR*_SR){ _dmgAcc[o.uid]=(_dmgAcc[o.uid]||0)+_dps*dt; o.flash=0.12; } } }   // 스플래시(광역): 대상 주변 적 동시 타격 → 물량 카운터
       else { _dmgAcc[tgt.uid]=(_dmgAcc[tgt.uid]||0)+_dps*dt; tgt.flash=0.12; }   // 단일 대상
       // ── 시각 발사 케이던스 = base_stats 공속(실제 DPS와 동일 리듬) ──
@@ -9847,7 +9880,8 @@ function _btRosterFlat(){ const out=[]; if(typeof SANDBOX_ROSTER==='undefined') 
 function renderBtPicker(){ const ea=document.getElementById('btPicker'), ef=document.getElementById('btPickerFoe');
   if(ea) ea.innerHTML=_btPickerHTML('btAdd'); if(ef) ef.innerHTML=_btPickerHTML('btAddFoe'); }
 function _btModelStats(u, gm){ const d=Udef(gm); if(!d) return; const m=(u.hero?HERO_STAT_MUL:1)*gachaTierMul(u);   // 전투실험 전용: HP/실드/에너지도 gmodel 기준 → 공격 정의와 일치(프랑켄슈타인 방지)
-  u.maxHp=Math.round((d.hp||0)*m); u.hp=u.maxHp; u.maxSh=Math.round((d.shield||0)*m); u.sh=u.maxSh; u.maxEn=d.energy||0; u.en=u.maxEn; }
+  u.maxHp=Math.round((d.hp||0)*m); u.hp=u.maxHp; u.maxSh=Math.round((d.shield||0)*m); u.sh=u.maxSh; u.maxEn=d.energy||0; u.en=u.maxEn;
+  if((d.shield||0)>0){ const _s=_upgShield(u); if(_s){ u.maxSh+=_s; u.sh=u.maxSh; } } }   // 🛡 에테리얼 실드 티어(생성 시 적용 · 무기/방어는 라이브)
 function btAdd(sid, gm, name){ if(typeof G==='undefined') return; G.btUnits=G.btUnits||[]; if(G.idSeq==null) G.idSeq=1;
   const n=G.btUnits.filter(u=>u.team!=='foe').length, c=n%4, r=(n/4)|0;   // 아군만 카운트 → 좌측 격자
   const u=initUnitStats({uid:G.idSeq++, id:sid, hero:false, lv:1, x:0.10+c*0.05, y:0.44+r*0.052, cd:0, fixed:false});
@@ -11179,7 +11213,8 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
     const _uid=(e.type==='worker')?(TECH_WORKER[G.tech.race]||'worker_light'):e.uid, _sp=techUnitSpec(G.tech.race,_uid)||{};
     if(e.maxHp==null) e.maxHp=_sp.hp||0; if(e.hp==null) e.hp=e.maxHp;   // ❤ 실시간 HP(스팀팩 등 소모 · 회복 없음=SC 테란)
     if(e.maxSh==null) e.maxSh=_sp.sh||0; if(e.sh==null) e.sh=e.maxSh;   // 🛡 실시간 쉴드
-    const _mx=(typeof U!=='undefined'&&U[e.uid]&&U[e.uid].energy)||0; if(_mx<=0) continue;
+    let _mx=(typeof U!=='undefined'&&U[e.uid]&&U[e.uid].energy)||0; if(_mx<=0) continue;
+    _mx+=_techAmuletBonus(G.tech.race, e.uid);   // 🔮 부적 연구(+50) — 매 tick 재계산이라 여기서 더해야 유지(khaydarin→하이세이지 200→250)
     if(e.maxEn!==_mx) e.maxEn=_mx;
     if(e.en==null) e.en=Math.min(50,_mx);   // ⚡ 생산 직후 50
     else if(e.en<_mx){ e.en=Math.min(_mx, e.en+dt/1.2); if(G.tech.sel===e.eid||(G.tech.selU&&G.tech.selU.indexOf(e.eid)>=0)) _manaSel=true; } }
@@ -11519,6 +11554,7 @@ function techCastBldgSkill(ev,key){ if(ev&&ev.stopPropagation) ev.stopPropagatio
 function _techSkFx(){ return G.tech.skillFx||(G.tech.skillFx=[]); }
 function techCastSkill(ev,key){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech||!(G.tech.selU||[]).length) return;
   const sk=(typeof SKILLS!=='undefined')&&SKILLS[key]; if(!sk) return;
+  if(_skillLocked(G.tech.race,key)){ if(typeof toast==='function') toast('🔒 연구 필요: '+_techBldgOfResearch(G.tech.race,SKILL_RESEARCH[key])); return; }   // 🔒 스펠 언락 게이트(권위) — 카드 dim은 표시용, 실제 차단은 여기
   // 👥 활성셋(SC식): 지정 중 이 스킬 보유 유닛 전부(동일종류=전체 · 혼합 공통 시전=보유 종류 전부)
   const _ents=G.tech.selU.map(id=>G.tech.ents.find(e=>e.eid===id)).filter(Boolean);
   const _owns=e=>(e.type==='unit')&&(((typeof UNIT_SKILLS!=='undefined'&&UNIT_SKILLS[e.uid])||[]).indexOf(key)>=0);
@@ -11628,9 +11664,10 @@ function _techMultiTypeModel(units){ const race=G.tech.race, uid=units[0].uid, s
         if((u._skOn&&u._skOn[_k])||(_k==='heal'&&u._healF!=null)||(_k==='stim'&&u._skStim>0)) on=true;
         if(cd<=0&&(_c<=0||_techSkEn(u)>=_c)) canCast=true; }
       const cdv=(!canCast&&cdMin>0&&cdMin<Infinity)?Math.ceil(cdMin):0;
+      const _lk=_skillLocked(race,_k), _lb=_lk?_techBldgOfResearch(race,SKILL_RESEARCH[_k]):'';   // 🔒 스펠 언락 미연구=잠금
       const _card={ pro:'<span class="skPro">'+((typeof SKILL_ICON!=='undefined'&&SKILL_ICON[_k])||'✨')+'</span>', sn:sk.name,
-        meta:cdv>0?(cdv+'s'):(_c>0?(_c+'e'):(on?'ON':'')), metaCls:'lv', sel:armed||on,
-        state:canCast?'ok':'dim', act:'onclick="techCastSkill(event,\''+_k+'\')"' };
+        meta:_lk?'🔒':(cdv>0?(cdv+'s'):(_c>0?(_c+'e'):(on?'ON':''))), metaCls:'lv', sel:!_lk&&(armed||on),
+        state:_lk?'dim':(canCast?'ok':'dim'), act:_lk?('onclick="techSkillLocked(event,\''+_lb+'\')"'):('onclick="techCastSkill(event,\''+_k+'\')"') };
       const _si=_skSlot&&_skSlot[_k]; if(_si!=null){ while(items.length<=_si) items.push(null); items[_si]=_card; } else items.push(_card); } }
   const CAP=12, rows=units.slice(0,CAP).map(u=>({ eid:u.eid, uid:u.uid, hp:(u.hp!=null?u.hp:(spec.hp||0)), maxHp:(u.maxHp||spec.hp||1),
     sh:(u.sh!=null?u.sh:(u.maxSh||0)), maxSh:(u.maxSh||0), en:(u.en!=null?u.en:0), maxEn:(u.maxEn||0) }));   // 와이어프레임식 유닛별 HP 리스트(탭=개별 지정)
@@ -11645,9 +11682,9 @@ function _techMultiMixedModel(list, grp, ord){ const race=G.tech.race, items=[];
     items.push({ pro:_techUnitPortrait(uid), sn:_techRealName(race,uid), tr:'×'+grp[k].n, metaCls:'lv', state:'ok', act:'onclick="techSubSelectType(event,\''+k+'\')"' }); }
   if(typeof UNIT_SKILLS!=='undefined'){ const sets=ord.filter(k=>k!=='__wk').map(k=>new Set(UNIT_SKILLS[grp[k].e.uid]||[]));
     const common=(sets.length&&sets.length===ord.length)?[...sets[0]].filter(kk=>sets.every(s=>s.has(kk))):[];   // 일꾼 포함 시 공통 없음
-    for(const _k of common){ const sk=SKILLS[_k]; if(!sk) continue; const _c=_skCost(sk);
+    for(const _k of common){ const sk=SKILLS[_k]; if(!sk) continue; const _c=_skCost(sk), _lk=_skillLocked(race,_k), _lb=_lk?_techBldgOfResearch(race,SKILL_RESEARCH[_k]):'';
       items.push({ pro:'<span class="skPro">'+((typeof SKILL_ICON!=='undefined'&&SKILL_ICON[_k])||'✨')+'</span>', sn:sk.name,
-        meta:(_c>0?(_c+'e'):''), metaCls:'lv', state:'ok', act:'onclick="techCastSkill(event,\''+_k+'\')"' }); } }
+        meta:_lk?'🔒':(_c>0?(_c+'e'):''), metaCls:'lv', state:_lk?'dim':'ok', act:_lk?('onclick="techSkillLocked(event,\''+_lb+'\')"'):('onclick="techCastSkill(event,\''+_k+'\')"') }); } }
   return { mode:'prod', title:'유닛 '+list.length+'기', icon:_techUnitPortrait(uidOf(ord[0])),
     sub:'유형 탭=그 종류만 · 맵 탭=이동', items,
     info:{ eb:'선택', hideName:true, stats:ord.map(k=>[_techRealName(race,uidOf(k)), '×'+grp[k].n]), cr:0, en:0 } }; }
@@ -11671,9 +11708,10 @@ function techUnitPanelModel(list){ const race=G.tech.race, grp={}, ord=[];   // 
       const cdv=Math.ceil((_su._skCd&&_su._skCd[_k])||0), armed=!!(G.tech.skillArm&&G.tech.skillArm.eid===_su.eid&&G.tech.skillArm.key===_k);
       const on=!!((_su._skOn&&_su._skOn[_k])||(_k==='heal'&&_su._healF!=null)||(_k==='stim'&&_su._skStim>0));
       const _c=_skCost(sk), lowE=_c>0&&_techSkEn(_su)<_c;
+      const _lk=_skillLocked(race,_k), _lb=_lk?_techBldgOfResearch(race,SKILL_RESEARCH[_k]):'';   // 🔒 스펠 언락 미연구=잠금
       const _card={ pro:'<span class="skPro">'+((typeof SKILL_ICON!=='undefined'&&SKILL_ICON[_k])||'✨')+'</span>', sn:sk.name,
-        meta:cdv>0?(cdv+'s'):(_c>0?(_c+'e'):(on?'ON':'')), metaCls:'lv', sel:armed||on,
-        state:(cdv>0||lowE)?'dim':'ok', act:'onclick="techCastSkill(event,\''+_k+'\')"' };
+        meta:_lk?'🔒':(cdv>0?(cdv+'s'):(_c>0?(_c+'e'):(on?'ON':''))), metaCls:'lv', sel:!_lk&&(armed||on),
+        state:_lk?'dim':((cdv>0||lowE)?'dim':'ok'), act:_lk?('onclick="techSkillLocked(event,\''+_lb+'\')"'):('onclick="techCastSkill(event,\''+_k+'\')"') };
       const _si=_skSlot&&_skSlot[_k]; if(_si!=null){ while(items.length<=_si) items.push(null); items[_si]=_card; } else items.push(_card); } }
   const f=list[0], fid=(f.type==='worker')?(TECH_WORKER[race]||'worker_human'):f.uid, spec=techUnitSpec(race,fid)||{};
   const rn=_techRealName(race,fid), role=_techRoleOf(fid);
