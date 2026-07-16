@@ -11793,7 +11793,7 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
       model=_selEgg.length?techEggModel(_selEgg):(_selLv.length?techLarvaProdModel(_selLv):(_allWk?techWorkerBuildModel(selUs):techUnitPanelModel(selUs))); } }   // 🥚 알 = 진화중(잠금) 프로필
   // 🔢 모든 건물 = 4그리드 1줄(간소화)로 높이 통일. 5개↑는 2줄로 높이지 않고 페이지로 넘김(슬롯 위치 보존). cm2=최소화(본문 숨김)만 별도
   let cm=(G.tech.cardMode===2)?2:1; G.tech.cardMode=cm;   // cm0(2줄 전체) 제거 → 1(간소화) 또는 2(최소화)만. 사이클의 0은 1로 수렴
-  const _shown=!!(sh.open&&model);
+  const _shown=!!(sh.open&&model && G.tech.arm==null && G.tech.rallySet==null);   // 🗺 배치·착륙(arm)·랠리 지정 중 = 프로필 시트 잠시 내려 맵을 넓게 확보(더 넓은 구역 탭) · 모드 종료 시 자동 복귀
   if(model){ model.compact=(cm===1); model.build=true; }   // 건설 탭 카드 스타일(이름 축소·메타 제거·c/e 비용)
   sheet.classList.toggle('open', _shown);
   sheet.classList.toggle('simple', _shown&&cm===1);
@@ -11873,7 +11873,7 @@ function techPtrDown(ev){ if(!G.tech) return; const r=_btRect(); if(!r) return; 
   if(G.tech.rallySet!=null){   // 🚩 랠리 지정 모드 = 맵 탭으로 랠리 위치 설정
     const rb=G.tech.ents.find(x=>x.eid===G.tech.rallySet&&x.type==='bldg'), w=_techS2W(sx,sy);
     if(rb) rb._rally={ x:Math.max(0.03,Math.min(0.97,w.x)), y:Math.max(0.14,Math.min(0.97,w.y)) };
-    G.tech.rallySet=null; if(typeof playSfx==='function') playSfx('ui_confirm'); techUIRender(); return; }
+    G.tech.rallySet=null; _btDown=null; if(typeof playSfx==='function') playSfx('ui_confirm'); techUIRender(); return; }   // _btDown=null → techPtrUp이 이 탭을 빈곳탭으로 재처리해 건물 지정 해제·시트 닫는 것 방지(랠리 설정 후 건물 지정 유지)
   if(G.tech.skillArm){ const sa=G.tech.skillArm, su=G.tech.ents.find(x=>x.eid===sa.eid), sk=(typeof SKILLS!=='undefined')&&SKILLS[sa.key];   // 🪄 스킬 무장 = 이번 탭으로 시전
     G.tech.skillArm=null;
     if(su&&sk){ const w=_techS2W(sx,sy);
