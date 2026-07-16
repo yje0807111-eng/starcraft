@@ -1090,7 +1090,7 @@
   #btCardCtl:active{transform:translateY(1px)}
   #btCardCtl svg{width:17px;height:17px;display:block;transition:transform .22s cubic-bezier(.2,.8,.25,1)}
   #btCardCtl.up svg{transform:rotate(180deg)}
-  #btSheet.simple #btSheetBody{height:auto;max-height:min(26vh,150px)}   /* 간소화 = 1줄 그리드 · 높이 축소 */
+  #btSheet.simple #btSheetBody{height:min(26vh,150px);max-height:min(26vh,150px)}   /* 간소화 = 1줄 그리드 · 높이 고정(개인·건물·다중·혼합 모두 동일 높이) */
   #btSheet.simple .cmdG .cgGrid{grid-template-rows:1fr}
   #btSheet.mini #btSheetBody{display:none}   /* 최소화 = 본문 숨김(버튼 바만) */
   #btSheetBody{height:min(40vh,204px);max-height:min(40vh,204px);min-height:0;display:flex;flex-direction:column}   /* 일꾼 지정 패널 크기로 고정(건물·유닛 모두 동일 높이) */
@@ -1486,16 +1486,16 @@
   .cmdG .cgStats{display:flex;flex-direction:column;gap:2px} .cmdG .cgStat{display:flex;justify-content:space-between;font-size:9.5px}
   .cmdG .cgStat span{color:var(--cgMuted)} .cmdG .cgStat b{color:#c2ccda;font-family:'Rajdhani',sans-serif;font-size:11px;font-variant-numeric:tabular-nums}
   /* 👥 다중 지정: 유닛별 HP 칩 그리드 — 칩 탭=개별 지정 */
-  .cmdG .cgUnits{display:grid;grid-template-columns:repeat(auto-fill,minmax(34px,1fr));gap:4px;overflow-y:auto;align-content:start;min-height:0;max-height:44px;margin-top:2px;scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}   /* 👥 유닛별 HP 칩 그리드 — max-height 자체 스크롤(부모 auto여도 본문 안 키움 · 12↑ 스크롤) · gap=칩 분리감 */
+  .cmdG .cgUnits{display:grid;grid-template-columns:repeat(auto-fill,minmax(34px,1fr));gap:4px;overflow-y:auto;align-content:start;min-height:0;max-height:56px;margin-top:2px;scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}   /* 👥 유닛별 HP 칩 그리드 — 4줄(≈12칸)까지 보이고 그 아래 스크롤(18마리 등) · gap=칩 분리감 */
   .cmdG .cgUChip{position:relative;height:11px;border-radius:3px;background:rgba(0,0,0,.5);border:1px solid var(--glass);overflow:hidden;cursor:pointer;box-shadow:inset 0 0 3px rgba(0,0,0,.6)}
   .cmdG .cgUChip:active{border-color:var(--ca)}
   .cmdG .cgUFill{position:absolute;left:0;top:50%;transform:translateY(-50%);height:6px;border-radius:2px;transition:width .15s linear,background .2s}   /* HP 선 — 기존 10px→6px(≈2/3 얇게), 세로 중앙 · 비율↓=빨강(hpBarColor) */
   .cmdG .cgUHp{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:800 7px/1 'Rajdhani',sans-serif;color:#fff;text-shadow:0 1px 1px #000,0 0 2px #000;font-variant-numeric:tabular-nums;letter-spacing:-.3px;pointer-events:none}   /* 칩 중앙 HP 수치 40/40(바 위 오버레이) */
   .cmdG .cgUMore{align-self:stretch;height:11px;display:flex;align-items:center;justify-content:center;color:var(--cgMuted);font:800 8px/1 sans-serif;border:1px dashed var(--glass);border-radius:3px}
-  .cmdG .cgStats.sc{max-height:45px;overflow-y:auto;padding-right:3px;scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}   /* 혼합 다중지정 좌측 종류 목록 = 3종류까지 보이고 그 아래 스크롤 */
-  .cmdG .cgUnits::-webkit-scrollbar,.cmdG .cgStats.sc::-webkit-scrollbar{width:4px;height:4px}
-  .cmdG .cgUnits::-webkit-scrollbar-thumb,.cmdG .cgStats.sc::-webkit-scrollbar-thumb{background:rgba(120,140,170,.4);border-radius:3px}
-  .cmdG .cgUnits::-webkit-scrollbar-track,.cmdG .cgStats.sc::-webkit-scrollbar-track{background:transparent}
+  .cmdG .cgStats.cgScr{flex:1 1 auto;min-height:0;justify-content:flex-start;overflow-y:auto;padding-right:3px;scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}   /* 혼합 다중지정 좌측 종류 목록 = 남은 좌측 높이 채우고 상단 정렬(전역 .sc 충돌 회피 클래스), 넘치면 위에서부터 스크롤 */
+  .cmdG .cgUnits::-webkit-scrollbar,.cmdG .cgStats.cgScr::-webkit-scrollbar{width:4px;height:4px}
+  .cmdG .cgUnits::-webkit-scrollbar-thumb,.cmdG .cgStats.cgScr::-webkit-scrollbar-thumb{background:rgba(120,140,170,.4);border-radius:3px}
+  .cmdG .cgUnits::-webkit-scrollbar-track,.cmdG .cgStats.cgScr::-webkit-scrollbar-track{background:transparent}
   .cmdG .cgBack{width:30px;height:30px;border-radius:8px}   /* ↩ 전체(소프트선택 복귀) — cgLift 변형(왼쪽 유턴 아이콘) */
   .cmdG .cgBack svg{width:18px;height:18px}
   .cmdG .cgProg{margin-top:1px} .cmdG .cgProg .pl{display:flex;justify-content:space-between;font-size:8.5px;color:var(--cgMuted);margin-bottom:2px} .cmdG .cgProg .pl b{color:var(--caL);font-family:'Rajdhani',sans-serif;font-size:10px}
@@ -7397,7 +7397,7 @@ function _cgSlotHTML(it, build){ if(!it||it.state==='empty') return '<div class=
   const bot=(it.bottom!=null)?it.bottom:('<div class="cgCost">'+_cgCost(it.cr,it.en,build)+'</div>');   // 🧱 bottom = 커스텀 하단 줄(벙커 HP 등)
   return '<div class="'+cls+'"'+(it.act?(' '+it.act):'')+'>'+meta+'<div class="cgPro">'+(it.pro||'')+'</div><div class="cgName">'+(it.sn||'')+'</div>'+bot+'</div>'; }
 function _cgInfoHTML(d){ if(!d) return '<div class="cgEb">정보</div><div class="cgDd">항목을 선택하세요</div>';
-  let val=''; if(d.stats) val='<div class="cgStats'+(d.statsScroll?' sc':'')+'">'+d.stats.map(s=>'<div class="cgStat"><span>'+s[0]+'</span><b>'+s[1]+'</b></div>').join('')+'</div>';
+  let val=''; if(d.stats) val='<div class="cgStats'+(d.statsScroll?' cgScr':'')+'">'+d.stats.map(s=>'<div class="cgStat"><span>'+s[0]+'</span><b>'+s[1]+'</b></div>').join('')+'</div>';
   else if(d.val&&!d.val.sm) val='<div class="cgVal"><span class="cur">'+d.val.cur+'</span><span class="arw">▸</span><span class="nxt">'+d.val.nxt+'</span><span class="u">'+(d.val.unit||'')+'</span></div>';
   const valSm=(d.val&&d.val.sm)?('<div class="cgVal sm"><span class="cur">'+d.val.cur+'</span><span class="arw">▸</span><span class="nxt">'+d.val.nxt+'</span></div>'):'';   // sm=진행 바 아래 작게(업그레이드 단계)
   let q=''; if(d.queue){ const cap=d.qcap||5, lbl=d.qlabel||'대기열', have=d.queue.filter(Boolean).length;
@@ -11567,8 +11567,8 @@ function techBldgPlainModel(b, e){ const race=G.tech.race, bs=techBldgSpec(race,
   if(_evc.length){ _pit=[null,null]; for(let i=0;i<_evc.length;i++) _pit[2+i]=_evc[i]; }
   const items=_techWithAddons(_pit, b.k);   // 🔗 부속 카드 + 진화 카드
   if(e && typeof BLDG_SKILLS!=='undefined' && BLDG_SKILLS[b.k]){ for(const _k of BLDG_SKILLS[b.k]){ const sk=SKILLS[_k]; if(!sk) continue;   // 🏢 건물 스킬 카드(컴셋 스캐너·쉴드배터리 충전)
-    const cdv=Math.ceil((e._skCd&&e._skCd[_k])||0), armed=!!(G.tech.skillArm&&G.tech.skillArm.eid===e.eid&&G.tech.skillArm.key===_k), cost=_skCost(sk), lowE=cost>0&&(_techSkEn(e)<cost);
-    items.push({ pro:'<span class="skPro">'+((typeof SKILL_ICON!=='undefined'&&SKILL_ICON[_k])||'✨')+'</span>', sn:sk.name, meta:cdv>0?(cdv+'s'):(cost>0?(cost+'e'):''), metaCls:'lv', sel:armed, state:(cdv>0||lowE)?'dim':'ok', act:'onclick="techCastBldgSkill(event,\''+_k+'\')"' }); } }
+    const armed=!!(G.tech.skillArm&&G.tech.skillArm.eid===e.eid&&G.tech.skillArm.key===_k), cost=_skCost(sk), lowE=cost>0&&(_techSkEn(e)<cost);   // 쿨다운 없음(SC식) — 마나만
+    items.push({ pro:'<span class="skPro">'+((typeof SKILL_ICON!=='undefined'&&SKILL_ICON[_k])||'✨')+'</span>', sn:sk.name, meta:'', metaCls:'lv', sel:armed, state:lowE?'dim':'ok', bottom:'<div class="cgCost">'+_skCostHTML(sk)+'</div>', act:'onclick="techCastBldgSkill(event,\''+_k+'\')"' }); } }
   const _def=_techIsDef(b.k);
   const _bMx=(typeof BLDG_EN!=='undefined'&&BLDG_EN[b.k])||0;   // 🏢 건물 마나(컴셋·쉴드배터리) = 실시간 현재/최대(선택 당시 고정 아님)
   const _bEn=(_bMx>0)?((e&&e.en!=null)?(Math.round(e.en)+'/'+Math.round(e.maxEn||_bMx)):(_bMx+'/'+_bMx)):0;
@@ -11594,8 +11594,7 @@ const TECH_SK_ENMAX=200;   // 시전 유닛 공통 에너지(스타 기본 200 �
 function _techSkEn(u){ if(u.en==null){ const _m=(u.type==='bldg')?((typeof BLDG_EN!=='undefined'&&BLDG_EN[u.bk])||0):(u.maxEn!=null?u.maxEn:((typeof U!=='undefined'&&U[u.uid]&&U[u.uid].energy)||0)); u.en=Math.min(50,_m); } return u.en; }   // 🔮 마나 = 바에 표시되는 en과 단일화(유닛·건물)
 function techCastBldgSkill(ev,key){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech||G.tech.sel==null) return;   // 🏢 건물 스킬 시전(선택 건물)
   const b=G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'); const sk=(typeof SKILLS!=='undefined')&&SKILLS[key]; if(!b||!sk) return;
-  b._skCd=b._skCd||{}; if((b._skCd[key]||0)>0){ if(typeof toast==='function') toast('쿨다운 '+Math.ceil(b._skCd[key])+'초'); return; }
-  const cost=_skCost(sk); if(cost>0 && _techSkEn(b)<cost){ if(typeof toast==='function') toast('에너지 부족 ('+cost+'e)'); return; }
+  const cost=_skCost(sk); if(cost>0 && _techSkEn(b)<cost){ if(typeof toast==='function') toast('에너지 부족 ('+cost+'e)'); return; }   // 쿨다운 없음(SC식) — 마나만 게이트
   G.tech.skillArm={eid:b.eid, key:key}; if(typeof toast==='function') toast(sk.arm||'ℹ️ 대상을 탭하세요'); techUIRender(); }
 function _techSkFx(){ return G.tech.skillFx||(G.tech.skillFx=[]); }
 function techCastSkill(ev,key){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech||!(G.tech.selU||[]).length) return;
@@ -11607,28 +11606,26 @@ function techCastSkill(ev,key){ if(ev&&ev.stopPropagation) ev.stopPropagation();
   const set=G.tech.selType?_ents.filter(e=>(((e.type==='worker')?'__wk':e.uid)===G.tech.selType)&&_owns(e)):_ents.filter(_owns);   // 활성셋 = selType 소프트선택 시 그 종류만 · 아니면 지정 중 이 스킬 보유자 전부
   if(!set.length) return;
   const _c=_skCost(sk);
-  if(sk.kind==='self'){ let did=0;   // ⚡ 즉시 자버프(스팀팩 등) = 활성셋 전체 발동(SC식) — 각자 쿨다운·체력·마나 개별 체크/차감
-    for(const u of set){ u._skCd=u._skCd||{};
-      if((u._skCd[key]||0)>0) continue;
+  if(sk.kind==='self'){ let did=0;   // ⚡ 즉시 자버프(스팀팩 등) = 활성셋 전체 발동(SC식: 쿨다운 없음 — 마나/체력만 게이트, 사용 직후 바로 재사용 가능)
+    for(const u of set){
       if(_c>0&&_techSkEn(u)<_c) continue;
       if(sk.hpCost>0){ const _mh=(u.maxHp!=null?u.maxHp:((techUnitSpec(G.tech.race,u.uid)||{}).hp||0)), _hp=(u.hp!=null?u.hp:_mh); if(_mh>0&&u.maxHp==null) u.maxHp=_mh; if(_hp<=sk.hpCost) continue; u.hp=Math.max(1,_hp-sk.hpCost); }   // 🩸 스팀팩 = 체력 소모(SC 10 HP)
       if(_c>0) u.en=Math.max(0,(u.en||0)-_c);
-      u._skCd[key]=sk.cd||0; u._skStim=sk.dur||6; _techSkFx().push({type:'stim',eid:u.eid,t:0,dur:0.5}); did++; }
-    if(!did){ if(typeof toast==='function'){ const u0=set[0], cd0=(u0._skCd&&u0._skCd[key])||0;   // 전원 불발 = 사유 안내(단일 지정과 동일 메시지)
-      toast(cd0>0?('쿨다운 '+Math.ceil(cd0)+'초'):((_c>0&&_techSkEn(u0)<_c)?('에너지 부족 ('+_c+'e)'):('⛔ 체력 부족 (스팀팩 '+(sk.hpCost||0)+' HP)'))); } return; }
+      u._skStim=sk.dur||6; _techSkFx().push({type:'stim',eid:u.eid,t:0,dur:0.5}); did++; }
+    if(!did){ if(typeof toast==='function'){ const u0=set[0];   // 전원 불발 = 사유 안내(마나/체력 부족만 · 쿨다운 없음)
+      toast((_c>0&&_techSkEn(u0)<_c)?('에너지 부족 ('+_c+'e)'):('⛔ 체력 부족 (스팀팩 '+(sk.hpCost||0)+' HP)')); } return; }
     if(typeof playSfx==='function') playSfx('skill'); techUIRender(); return; }
   if(sk.kind==='toggle'||sk.kind==='aura'){ const nv=!(set[0]._skOn&&set[0]._skOn[key]);   // 시즈/은폐 토글 = 그룹 일관(전원 같은 새 상태로)
     for(const u of set){ u._skOn=u._skOn||{}; u._skOn[key]=nv; if(nv&&sk.kind==='toggle'){ u.tx=null; u.ty=null; u._wp=null; } }   // 시즈 = 그 자리 고정
     if(typeof playSfx==='function') playSfx('skill'); techUIRender(); return; }
-  // 🎯 지정형(지점/유닛/대상) = 쿨다운·마나 충족하는 1기만 시전(SC식) — 무장 후 맵 탭
-  const caster=set.find(u=>(((u._skCd&&u._skCd[key])||0)<=0)&&(_c<=0||_techSkEn(u)>=_c));
-  if(!caster){ if(typeof toast==='function'){ const cdv=Math.min.apply(null,set.map(u=>(u._skCd&&u._skCd[key])||0));
-    toast(cdv>0?('쿨다운 '+Math.ceil(cdv)+'초'):('에너지 부족 ('+_c+'e)')); } return; }
+  // 🎯 지정형(지점/유닛/대상) = 마나 충족하는 1기만 시전(SC식: 쿨다운 없음) — 무장 후 맵 탭
+  const caster=set.find(u=>(_c<=0||_techSkEn(u)>=_c));
+  if(!caster){ if(typeof toast==='function') toast('에너지 부족 ('+_c+'e)'); return; }
   G.tech.skillArm={eid:caster.eid, key:key};
   if(typeof toast==='function') toast(sk.arm||'ℹ️ 대상을 탭하세요'); techUIRender(); }
-function _techSkFire(u,key,wx,wy,tgt){ const sk=SKILLS[key]; u._skCd=u._skCd||{};
-  { const _c=_skCost(sk); if(_c>0){ if(_techSkEn(u)<_c) return; u.en=Math.max(0,(u.en||0)-_c); } }   // 🔮 마나 소모(바에 반영) — 관리자=SC값(enSc)
-  u._skCd[key]=sk.cd||0; const F=_techSkFx();
+function _techSkFire(u,key,wx,wy,tgt){ const sk=SKILLS[key];
+  { const _c=_skCost(sk); if(_c>0){ if(_techSkEn(u)<_c) return; u.en=Math.max(0,(u.en||0)-_c); } }   // 🔮 마나 소모(바에 반영) — 관리자=SC값(enSc) · 쿨다운 없음(SC식)
+  const F=_techSkFx();
   if(key==='psi_storm') F.push({type:'storm', x:wx, y:wy, t:0, dur:sk.dur||3, r:sk.radius});
   else if(key==='ensnare') F.push({type:'ensnare', x:wx, y:wy, t:0, dur:sk.dur||8, r:sk.radius, slow:sk.slow});
   else if(key==='spider_mine') F.push({type:'mine', x:wx, y:wy, t:0, dur:1e9, trig:sk.trig||0.045, r:sk.r||0.06, owner:u.eid});
@@ -11704,15 +11701,14 @@ function _techMultiTypeModel(units, canBack){ const race=G.tech.race, uid=units[
   const items=[];
   if(typeof UNIT_SKILLS!=='undefined'){ const _skSlot={ high_templar:{psi_storm:0, hallucination:1} }[uid]||null;   // 단일 프로필과 동일한 고정 슬롯 유지
     for(const _k of (UNIT_SKILLS[uid]||[])){ const sk=SKILLS[_k]; if(!sk) continue; const _c=_skCost(sk);
-      let armed=false, on=false, canCast=false, cdMin=Infinity;   // 카드 상태 = 활성셋 집계(한 기라도 armed/ON=표시 · 전원 불가=dim)
-      for(const u of units){ const cd=(u._skCd&&u._skCd[_k])||0; if(cd<cdMin) cdMin=cd;
+      let armed=false, on=false, canCast=false;   // 카드 상태 = 활성셋 집계(쿨다운 없음 — 마나만 · 한 기라도 armed/ON=표시 · 전원 마나부족=dim)
+      for(const u of units){
         if(G.tech.skillArm&&G.tech.skillArm.eid===u.eid&&G.tech.skillArm.key===_k) armed=true;
         if((u._skOn&&u._skOn[_k])||(_k==='heal'&&u._healF!=null)||(_k==='stim'&&u._skStim>0)) on=true;
-        if(cd<=0&&(_c<=0||_techSkEn(u)>=_c)) canCast=true; }
-      const cdv=(!canCast&&cdMin>0&&cdMin<Infinity)?Math.ceil(cdMin):0;
+        if(_c<=0||_techSkEn(u)>=_c) canCast=true; }
       const _lk=_skillLocked(race,_k), _lb=_lk?_techBldgOfResearch(race,SKILL_RESEARCH[_k]):'';   // 🔒 스펠 언락 미연구=잠금
       const _card={ pro:'<span class="skPro">'+((typeof SKILL_ICON!=='undefined'&&SKILL_ICON[_k])||'✨')+'</span>', sn:sk.name,
-        meta:_lk?'🔒':(cdv>0?(cdv+'s'):(on?'ON':'')), metaCls:'lv', sel:!_lk&&(armed||on), bottom:'<div class="cgCost">'+_skCostHTML(sk)+'</div>',
+        meta:_lk?'🔒':(on?'ON':''), metaCls:'lv', sel:!_lk&&(armed||on), bottom:'<div class="cgCost">'+_skCostHTML(sk)+'</div>',
         state:_lk?'dim':(canCast?'ok':'dim'), act:'onpointerdown="techSkDown(event,\''+_k+'\')" onpointerup="techSkUp(event)" onpointerleave="techSkCancel()" onpointercancel="techSkCancel()" oncontextmenu="return false"' };
       const _si=_skSlot&&_skSlot[_k]; if(_si!=null){ while(items.length<=_si) items.push(null); items[_si]=_card; } else items.push(_card); } }
   const CAP=60, rows=units.slice(0,CAP).map(u=>({ eid:u.eid, uid:u.uid, hp:(u.hp!=null?u.hp:(spec.hp||0)), maxHp:(u.maxHp||spec.hp||1),
@@ -11754,13 +11750,13 @@ function techUnitPanelModel(list){ const race=G.tech.race, grp={}, ord=[];   // 
   if(list.length===1 && list[0].type==='unit' && typeof UNIT_SKILLS!=='undefined'){   // 🪄 유닛 스킬 카드 — 메인 UNIT_SKILLS/SKILLS/SKILL_ICON 단일 소스 재사용
     const _su=list[0]; const _skSlot={ high_templar:{psi_storm:0, hallucination:1} }[_su.uid]||null;   // 하이세이지 = 1스톰·2할루시네이션(4보이드) 한 페이지 고정
     for(const _k of (UNIT_SKILLS[_su.uid]||[])){ const sk=SKILLS[_k]; if(!sk) continue;
-      const cdv=Math.ceil((_su._skCd&&_su._skCd[_k])||0), armed=!!(G.tech.skillArm&&G.tech.skillArm.eid===_su.eid&&G.tech.skillArm.key===_k);
+      const armed=!!(G.tech.skillArm&&G.tech.skillArm.eid===_su.eid&&G.tech.skillArm.key===_k);
       const on=!!((_su._skOn&&_su._skOn[_k])||(_k==='heal'&&_su._healF!=null)||(_k==='stim'&&_su._skStim>0));
-      const _c=_skCost(sk), lowE=_c>0&&_techSkEn(_su)<_c;
+      const _c=_skCost(sk), lowE=_c>0&&_techSkEn(_su)<_c;   // 쿨다운 없음(SC식) — 마나 부족만 dim
       const _lk=_skillLocked(race,_k), _lb=_lk?_techBldgOfResearch(race,SKILL_RESEARCH[_k]):'';   // 🔒 스펠 언락 미연구=잠금
       const _card={ pro:'<span class="skPro">'+((typeof SKILL_ICON!=='undefined'&&SKILL_ICON[_k])||'✨')+'</span>', sn:sk.name,
-        meta:_lk?'🔒':(cdv>0?(cdv+'s'):(on?'ON':'')), metaCls:'lv', sel:!_lk&&(armed||on), bottom:'<div class="cgCost">'+_skCostHTML(sk)+'</div>',
-        state:_lk?'dim':((cdv>0||lowE)?'dim':'ok'), act:'onpointerdown="techSkDown(event,\''+_k+'\')" onpointerup="techSkUp(event)" onpointerleave="techSkCancel()" onpointercancel="techSkCancel()" oncontextmenu="return false"' };
+        meta:_lk?'🔒':(on?'ON':''), metaCls:'lv', sel:!_lk&&(armed||on), bottom:'<div class="cgCost">'+_skCostHTML(sk)+'</div>',
+        state:_lk?'dim':(lowE?'dim':'ok'), act:'onpointerdown="techSkDown(event,\''+_k+'\')" onpointerup="techSkUp(event)" onpointerleave="techSkCancel()" onpointercancel="techSkCancel()" oncontextmenu="return false"' };
       const _si=_skSlot&&_skSlot[_k]; if(_si!=null){ while(items.length<=_si) items.push(null); items[_si]=_card; } else items.push(_card); } }
   const f=list[0], fid=(f.type==='worker')?(TECH_WORKER[race]||'worker_human'):f.uid, spec=techUnitSpec(race,fid)||{};
   const rn=_techRealName(race,fid), role=_techRoleOf(fid);
@@ -11881,8 +11877,8 @@ function techSkUp(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(_tskT
     if(_skillLocked(G.tech.race,key)){ techSkillLocked(ev, _techBldgOfResearch(G.tech.race, SKILL_RESEARCH[key])); } else techCastSkill(ev, key); } }
 function techSkCancel(){ if(_tskT){ clearTimeout(_tskT); _tskT=null; } _tskKey=null; _tskDone=false; techHideSkTip(); }
 function techShowSkTip(key, rect){ const sk=(typeof SKILLS!=='undefined')?SKILLS[key]:null; if(!sk) return; const tip=document.getElementById('techSkTip'); if(!tip) return;
-  const cost=_skCostHTML(sk), cd=sk.cd?('<span class="tskCd">⏱'+sk.cd+'s</span>'):'';
-  tip.innerHTML='<div class="tskH"><span class="tskI">'+((typeof SKILL_ICON!=='undefined'&&SKILL_ICON[key])||'✨')+'</span><b>'+sk.name+'</b>'+(cost||cd?('<span class="tskC">'+cost+cd+'</span>'):'')+'</div><div class="tskD">'+_skillDesc(key)+'</div>';
+  const cost=_skCostHTML(sk);   // 쿨다운 표기 없음(SC식 — 마나/체력만)
+  tip.innerHTML='<div class="tskH"><span class="tskI">'+((typeof SKILL_ICON!=='undefined'&&SKILL_ICON[key])||'✨')+'</span><b>'+sk.name+'</b>'+(cost?('<span class="tskC">'+cost+'</span>'):'')+'</div><div class="tskD">'+_skillDesc(key)+'</div>';
   tip.classList.remove('hide');
   if(rect&&rect.width){ const tw=tip.offsetWidth, th=tip.offsetHeight;
     let left=rect.left+rect.width/2-tw/2; left=Math.max(6, Math.min(left, (window.innerWidth||420)-tw-6));
