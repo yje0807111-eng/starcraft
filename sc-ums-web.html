@@ -11683,7 +11683,7 @@ function _techMultiMixedModel(list, grp, ord){ const race=G.tech.race, items=[];
   const uidOf=k=>(k==='__wk')?(TECH_WORKER[race]||'worker_human'):k;
   for(const k of ord){ const uid=uidOf(k);
     items.push({ pro:_techUnitPortrait(uid), sn:_techRealName(race,uid), tr:'×'+grp[k].n, metaCls:'lv', state:'ok',
-      act:'onpointerdown="techChipDown(event,\''+k+'\')" onpointerup="techChipUp(event)" onpointerleave="techChipCancel()" onpointercancel="techChipCancel()" onclick="techChipClick(event,\''+k+'\')" oncontextmenu="return false"' }); }   // 짧게=소프트(전부 유지) · 꾹=그 종류만 분리 · 전환은 click에서만(누수 방지)
+      act:'onpointerdown="techChipDown(event,\''+k+'\')" onpointerup="techChipUp(event)" onpointerleave="techChipCancel()" onpointercancel="techChipCancel()" oncontextmenu="return false"' }); }   // 짧게=소프트(전부 유지) · 꾹=그 종류만 분리 · 전환은 pointerup에서(터치 롱프레스 대응) + 뒤따르는 click은 삼킴
   if(typeof UNIT_SKILLS!=='undefined'){ const sets=ord.filter(k=>k!=='__wk').map(k=>new Set(UNIT_SKILLS[grp[k].e.uid]||[]));
     const common=(sets.length&&sets.length===ord.length)?[...sets[0]].filter(kk=>sets.every(s=>s.has(kk))):[];   // 일꾼 포함 시 공통 없음
     for(const _k of common){ const sk=SKILLS[_k]; if(!sk) continue; const _c=_skCost(sk), _lk=_skillLocked(race,_k), _lb=_lk?_techBldgOfResearch(race,SKILL_RESEARCH[_k]):'';
@@ -11814,13 +11814,18 @@ function techSepSelectType(uid){ if(!G.tech||!uid) return;   // 👥 종류 칩 
   const ids=(G.tech.selU||[]).filter(id=>{ const e=G.tech.ents.find(x=>x.eid===id); return e && (((e.type==='worker')?'__wk':e.uid)===uid); });
   if(!ids.length) return; G.tech.selU=ids; G.tech.selType=null; const body=document.getElementById('btSheetBody'); if(body) body._cgPage=0;
   if(typeof playSfx==='function') playSfx('ui_open'); if(typeof toast==='function') toast('👥 해당 종류만 분리'); techUIRender(); }
-let _chipT=null, _chipK=null, _chipLong=false;   // 종류 칩 롱프레스(꾹=분리) 상태 — 재렌더는 click에서만(pointerup/타이머에서 미리 그리면 뒤따르는 합성 click이 새 그리드로 새어 커맨드센터 등 오발동)
+let _chipT=null, _chipK=null, _chipLong=false;   // 종류 칩: 짧게=소프트 · 꾹(롱프레스)=분리
+function _techSwallowNextClick(){ let t=null;   // pointerup 직후 뒤따르는 합성 click을 1회 삼킴 → 새 그리드(빌드 카드 등)로 새어 오발동하는 것 차단
+  const cleanup=()=>{ document.removeEventListener('click', h, true); if(t){ clearTimeout(t); t=null; } };
+  const h=(e)=>{ e.stopPropagation(); e.preventDefault(); cleanup(); };
+  document.addEventListener('click', h, true); t=setTimeout(cleanup, 500); }   // click 안 오면(터치 롱프레스로 억제) 자동 해제
 function techChipDown(ev,k){ if(ev&&ev.stopPropagation) ev.stopPropagation(); _chipK=k; _chipLong=false;
-  if(_chipT) clearTimeout(_chipT); _chipT=setTimeout(()=>{ _chipT=null; if(_chipK===k){ _chipLong=true; if(typeof toast==='function') toast('🔀 놓으면 그 종류만 분리'); if(typeof playSfx==='function') playSfx('ui_open'); } }, 480); }   // 480ms 유지 = 분리 예약(놓을 때 실행) · DOM 변경 없음(칩 유지 → pointerup/click 정상 발생)
-function techChipUp(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(_chipT){ clearTimeout(_chipT); _chipT=null; } }
-function techChipCancel(){ if(_chipT){ clearTimeout(_chipT); _chipT=null; } _chipLong=false; _chipK=null; }
-function techChipClick(ev,k){ if(ev&&ev.stopPropagation) ev.stopPropagation(); const long=_chipLong; _chipLong=false; _chipK=null;   // 실제 전환은 여기(click)에서만 → 이 탭이 새 그리드로 안 샘
+  if(_chipT) clearTimeout(_chipT); _chipT=setTimeout(()=>{ _chipT=null; if(_chipK===k){ _chipLong=true; if(typeof toast==='function') toast('🔀 놓으면 그 종류만 분리'); if(typeof playSfx==='function') playSfx('ui_open'); } }, 450); }   // 450ms 유지 = 분리 예약(놓을 때 실행) · DOM 미변경(칩 유지)
+function techChipUp(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); const k=_chipK, long=_chipLong;   // 실제 전환은 pointerup에서(터치는 롱프레스 후 click이 억제되므로 click에 의존 안 함)
+  if(_chipT){ clearTimeout(_chipT); _chipT=null; } _chipLong=false; _chipK=null;
+  if(k==null) return; _techSwallowNextClick();
   if(long) techSepSelectType(k); else techSubSelectType(ev,k); }
+function techChipCancel(){ if(_chipT){ clearTimeout(_chipT); _chipT=null; } _chipLong=false; _chipK=null; }   // 손가락이 칩 밖으로 벗어나면 취소
 function techSubSelectOne(ev,eid){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;   // 👤 유닛별 HP 행 탭 = 그 1기만 지정(단일 프로필)
   if(!G.tech.ents.some(e=>e.eid===eid)) return;
   G.tech.selU=[eid]; const body=document.getElementById('btSheetBody'); if(body) body._cgPage=0;
