@@ -1486,12 +1486,12 @@
   .cmdG .cgStats{display:flex;flex-direction:column;gap:2px} .cmdG .cgStat{display:flex;justify-content:space-between;font-size:9.5px}
   .cmdG .cgStat span{color:var(--cgMuted)} .cmdG .cgStat b{color:#c2ccda;font-family:'Rajdhani',sans-serif;font-size:11px;font-variant-numeric:tabular-nums}
   /* 👥 다중 지정: 유닛별 HP 칩 그리드 — 칩 탭=개별 지정 */
-  .cmdG .cgUnits{display:grid;grid-template-columns:repeat(auto-fill,minmax(34px,1fr));gap:4px;overflow-y:auto;align-content:start;min-height:0;max-height:56px;margin-top:2px;scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}   /* 👥 유닛별 HP 칩 그리드 — 4줄(≈12칸)까지 보이고 그 아래 스크롤(18마리 등) · gap=칩 분리감 */
-  .cmdG .cgUChip{position:relative;height:11px;border-radius:3px;background:rgba(0,0,0,.5);border:1px solid var(--glass);overflow:hidden;cursor:pointer;box-shadow:inset 0 0 3px rgba(0,0,0,.6)}
+  .cmdG .cgUnits{display:grid;grid-template-columns:repeat(auto-fill,minmax(34px,1fr));gap:3px;overflow-y:auto;align-content:start;flex:1 1 auto;min-height:0;margin-top:2px;scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}   /* 👥 유닛별 HP 칩 그리드 — 좌측 내부 구역을 꽉 채움(고정 높이 본문 기준 6줄), 넘치면 스크롤 · gap=칩 분리감 */
+  .cmdG .cgUChip{position:relative;height:10px;border-radius:3px;background:rgba(0,0,0,.5);border:1px solid var(--glass);overflow:hidden;cursor:pointer;box-shadow:inset 0 0 3px rgba(0,0,0,.6)}
   .cmdG .cgUChip:active{border-color:var(--ca)}
   .cmdG .cgUFill{position:absolute;left:0;top:50%;transform:translateY(-50%);height:6px;border-radius:2px;transition:width .15s linear,background .2s}   /* HP 선 — 기존 10px→6px(≈2/3 얇게), 세로 중앙 · 비율↓=빨강(hpBarColor) */
   .cmdG .cgUHp{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:800 7px/1 'Rajdhani',sans-serif;color:#fff;text-shadow:0 1px 1px #000,0 0 2px #000;font-variant-numeric:tabular-nums;letter-spacing:-.3px;pointer-events:none}   /* 칩 중앙 HP 수치 40/40(바 위 오버레이) */
-  .cmdG .cgUMore{align-self:stretch;height:11px;display:flex;align-items:center;justify-content:center;color:var(--cgMuted);font:800 8px/1 sans-serif;border:1px dashed var(--glass);border-radius:3px}
+  .cmdG .cgUMore{align-self:stretch;height:10px;display:flex;align-items:center;justify-content:center;color:var(--cgMuted);font:800 8px/1 sans-serif;border:1px dashed var(--glass);border-radius:3px}
   .cmdG .cgStats.cgScr{flex:1 1 auto;min-height:0;justify-content:flex-start;overflow-y:auto;padding-right:3px;scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}   /* 혼합 다중지정 좌측 종류 목록 = 남은 좌측 높이 채우고 상단 정렬(전역 .sc 충돌 회피 클래스), 넘치면 위에서부터 스크롤 */
   .cmdG .cgUnits::-webkit-scrollbar,.cmdG .cgStats.cgScr::-webkit-scrollbar{width:4px;height:4px}
   .cmdG .cgUnits::-webkit-scrollbar-thumb,.cmdG .cgStats.cgScr::-webkit-scrollbar-thumb{background:rgba(120,140,170,.4);border-radius:3px}
@@ -11684,7 +11684,11 @@ function _techSkillTick(dt){ if(!G.tech) return false; const F=G.tech.skillFx; l
       if(t){ const dx=t.x-e.x, dy=t.y-e.y, d=Math.hypot(dx,dy)||1e-4;
         if(d>HEAL_RANGE*0.85){ e.tx=t.x-(dx/d)*HEAL_RANGE*0.55; e.ty=t.y-(dy/d)*HEAL_RANGE*0.55; }   // 사거리 밖 → 접근(힐하러 이동)
         else { e.tx=null; e.ty=null; e._wp=null; }   // 도착 → 정지
-        if(d<=HEAL_RANGE) _healApply(e,t,dt);   // 사거리 내 → 치유
+        if(d<=HEAL_RANGE){   // 사거리 내 → 치유 · 💉 마나 히스테리시스: 0 소진 → 휴식(재충전 중 힐 안 함) → 풀충전되면 다시 힐(0에서 트리클 힐 방지)
+          if(e.maxEn>0){
+            if(e._healRest && e.en>=e.maxEn) e._healRest=false;   // 다 차면 재개
+            if(!e._healRest){ _healApply(e,t,dt); if((e.en||0)<=0) e._healRest=true; } }   // 힐(마나 차감) · 이번에 0 소진 → 휴식 진입
+          else _healApply(e,t,dt); }
         live=true; } } }
   if(_illGone){ for(let i=G.tech.ents.length-1;i>=0;i--){ const x=G.tech.ents[i]; if(x._illusion&&x._dead){ G.tech.ents.splice(i,1); if(G.tech.selU) G.tech.selU=G.tech.selU.filter(id=>id!==x.eid); } } }   // 👥 소멸한 환영 제거
   if(F&&F.length){ live=true;
