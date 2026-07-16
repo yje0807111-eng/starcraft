@@ -1484,6 +1484,7 @@
   .cmdG .cgUPro svg{width:82%;height:82%} .cmdG .cgUPro img{width:100%;height:100%;object-fit:cover} .cmdG .cgUPro .pemoji{font-size:12px}
   .cmdG .cgURow .uhp{flex:1;margin:0}   /* _barsHTML 래퍼 = 행 폭에 맞춰 확장 */
   .cmdG .cgUNum{flex:none;font:800 10px/1 'Rajdhani',sans-serif;color:#7ee081;font-variant-numeric:tabular-nums;min-width:22px;text-align:right}
+  .cmdG .cgBack{width:30px;height:30px;font:800 11px/1 sans-serif;border-radius:8px}   /* ▲ 전체(소프트선택 복귀) — cgLift 변형 */
   .cmdG .cgProg{margin-top:1px} .cmdG .cgProg .pl{display:flex;justify-content:space-between;font-size:8.5px;color:var(--cgMuted);margin-bottom:2px} .cmdG .cgProg .pl b{color:var(--caL);font-family:'Rajdhani',sans-serif;font-size:10px}
   .cmdG .cgBar{height:6px;border-radius:3px;background:rgba(0,0,0,.55);overflow:hidden;box-shadow:inset 0 0 4px rgba(0,0,0,.7)}
   .cmdG .cgBar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,color-mix(in srgb,var(--ca) 55%,#000),var(--ca));box-shadow:0 0 7px var(--caG);transition:width .12s linear}
@@ -11558,7 +11559,7 @@ function techCastSkill(ev,key){ if(ev&&ev.stopPropagation) ev.stopPropagation();
   // 👥 활성셋(SC식): 지정 중 이 스킬 보유 유닛 전부(동일종류=전체 · 혼합 공통 시전=보유 종류 전부)
   const _ents=G.tech.selU.map(id=>G.tech.ents.find(e=>e.eid===id)).filter(Boolean);
   const _owns=e=>(e.type==='unit')&&(((typeof UNIT_SKILLS!=='undefined'&&UNIT_SKILLS[e.uid])||[]).indexOf(key)>=0);
-  const set=_ents.filter(_owns);   // 활성셋 = 지정 유닛 중 이 스킬 보유자(동일종류=전부 · 혼합 공통 시전=보유 종류 전부)
+  const set=G.tech.selType?_ents.filter(e=>(((e.type==='worker')?'__wk':e.uid)===G.tech.selType)&&_owns(e)):_ents.filter(_owns);   // 활성셋 = selType 소프트선택 시 그 종류만 · 아니면 지정 중 이 스킬 보유자 전부
   if(!set.length) return;
   const _c=_skCost(sk);
   if(sk.kind==='self'){ let did=0;   // ⚡ 즉시 자버프(스팀팩 등) = 활성셋 전체 발동(SC식) — 각자 쿨다운·체력·마나 개별 체크/차감
@@ -11654,7 +11655,7 @@ function _techSkillTick(dt){ if(!G.tech) return false; const F=G.tech.skillFx; l
       if(fx.type==='dswarm'){ for(const x of G.tech.ents){ if((x.type==='unit'||x.type==='worker')&&Math.hypot(x.x-fx.x,x.y-fx.y)<=fx.r) x._darkSwarm=0.2; } }   // ☁️ 범위 보호 갱신
       if(fx.t>=fx.dur) F.splice(i,1); } }
   return live; }
-function _techMultiTypeModel(units){ const race=G.tech.race, uid=units[0].uid, spec=techUnitSpec(race,uid)||{}, n=units.length;   // 👥 동일 종류 다수 — 헤더 ×N + 유닛별 HP 리스트 + 그 종류 스킬 카드(SC식)
+function _techMultiTypeModel(units, canBack){ const race=G.tech.race, uid=units[0].uid, spec=techUnitSpec(race,uid)||{}, n=units.length;   // 👥 동일 종류 다수(or 종류 소프트선택) — 헤더 ×N + 유닛별 HP 리스트 + 그 종류 스킬 카드(SC식)
   const items=[];
   if(typeof UNIT_SKILLS!=='undefined'){ const _skSlot={ high_templar:{psi_storm:0, hallucination:1} }[uid]||null;   // 단일 프로필과 동일한 고정 슬롯 유지
     for(const _k of (UNIT_SKILLS[uid]||[])){ const sk=SKILLS[_k]; if(!sk) continue; const _c=_skCost(sk);
@@ -11675,23 +11676,25 @@ function _techMultiTypeModel(units){ const race=G.tech.race, uid=units[0].uid, s
   const rn=_techRealName(race,uid), role=_techRoleOf(uid);
   return { mode:'prod', title:rn+(role?' ('+role+')':'')+' <span class="nsub">×'+n+'</span>', icon:_techUnitPortrait(uid),
     sub:'행 탭=개별 지정 · 맵 탭=이동', items,
+    topRight:canBack?('<button class="cgLift cgBack" onclick="techSubSelectType(event,\'\')" title="전체 선택으로">▲</button>'):'',   // ▲ = 소프트선택 해제(전체 지정으로 복귀)
     info:{ eb:'', hideName:true, units:rows, cr:0, en:0 } }; }
 function _techMultiMixedModel(list, grp, ord){ const race=G.tech.race, items=[];   // 👥 혼합 지정(여러 종류) — 종류 초상화 칩(탭=그 종류만) + 공통 스킬(교집합)만(SC식)
   const uidOf=k=>(k==='__wk')?(TECH_WORKER[race]||'worker_human'):k;
   for(const k of ord){ const uid=uidOf(k);
-    items.push({ pro:_techUnitPortrait(uid), sn:_techRealName(race,uid), tr:'×'+grp[k].n, metaCls:'lv', state:'ok', act:'onclick="techSubSelectType(event,\''+k+'\')"' }); }
+    items.push({ pro:_techUnitPortrait(uid), sn:_techRealName(race,uid), tr:'×'+grp[k].n, metaCls:'lv', state:'ok',
+      act:'onpointerdown="techChipDown(event,\''+k+'\')" onpointerup="techChipUp(event,\''+k+'\')" onpointerleave="techChipCancel()" onpointercancel="techChipCancel()" oncontextmenu="return false"' }); }   // 짧게=소프트(전부 유지) · 꾹=그 종류만 분리
   if(typeof UNIT_SKILLS!=='undefined'){ const sets=ord.filter(k=>k!=='__wk').map(k=>new Set(UNIT_SKILLS[grp[k].e.uid]||[]));
     const common=(sets.length&&sets.length===ord.length)?[...sets[0]].filter(kk=>sets.every(s=>s.has(kk))):[];   // 일꾼 포함 시 공통 없음
     for(const _k of common){ const sk=SKILLS[_k]; if(!sk) continue; const _c=_skCost(sk), _lk=_skillLocked(race,_k), _lb=_lk?_techBldgOfResearch(race,SKILL_RESEARCH[_k]):'';
       items.push({ pro:'<span class="skPro">'+((typeof SKILL_ICON!=='undefined'&&SKILL_ICON[_k])||'✨')+'</span>', sn:sk.name,
         meta:_lk?'🔒':(_c>0?(_c+'e'):''), metaCls:'lv', state:_lk?'dim':'ok', act:_lk?('onclick="techSkillLocked(event,\''+_lb+'\')"'):('onclick="techCastSkill(event,\''+_k+'\')"') }); } }
   return { mode:'prod', title:'유닛 '+list.length+'기', icon:_techUnitPortrait(uidOf(ord[0])),
-    sub:'유형 탭=그 종류만 · 맵 탭=이동', items,
+    sub:'유형 탭=그 종류 프로필(전부 유지) · 꾹=그 종류만 분리 · 맵 탭=이동', items,
     info:{ eb:'선택', hideName:true, stats:ord.map(k=>[_techRealName(race,uidOf(k)), '×'+grp[k].n]), cr:0, en:0 } }; }
 function techUnitPanelModel(list){ const race=G.tech.race, grp={}, ord=[];   // 유닛 지정 시트 — 건물 그리드와 동일한 커맨드 그리드 재사용
   for(const e of list){ const k=(e.type==='worker')?'__wk':e.uid; if(!grp[k]){ grp[k]={n:0,e:e}; ord.push(k); } grp[k].n++; }
-  if(list.length>1){   // 👥 다중 지정: 동일종류(1종)=타입 모델(유닛별 HP 리스트+스킬) · 혼합(2종↑)=종류 칩 모델(칩 탭=그 종류만 지정)
-    if(ord.length===1) return _techMultiTypeModel(list);
+  if(list.length>1){ const _ak=(ord.length===1)?ord[0]:((G.tech.selType&&grp[G.tech.selType])?G.tech.selType:null);   // 👥 다중 지정: 동일종류(1종) or 종류 소프트선택(selType)=타입 모델 · 혼합=종류 칩 모델
+    if(_ak) return _techMultiTypeModel(list.filter(e=>(((e.type==='worker')?'__wk':e.uid)===_ak)), ord.length>1);
     return _techMultiMixedModel(list, grp, ord); }
   const items=[];   // 유닛 초상 카드 제거 — 헤더 프로필과 중복(그리드는 변태·장전 등 행동 카드만)
   if((race==='swarm'||race==='aetherial') && list.length===1 && list[0].type==='unit' && typeof TECH_MORPH!=='undefined' && TECH_MORPH[list[0].uid]){   // 🧬 2차 변태/진화 카드(단일 지정 시) — 이름만(변태→ 없음), 지정 슬롯 위치
@@ -11778,7 +11781,7 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
   const _selWk=selUs.some(e=>e.type==='worker');
   // 시트: 선택된 대상(일꾼=건설 그리드 / 유닛=이동 / 건물=생산·연구)만 표시. 별도 독 배너 없음 — 업그레이드 탭 시트처럼 그 영역만
   const _selKey=(G.tech.sel!=null)?('b'+G.tech.sel):((G.tech.selU&&G.tech.selU.length)?('u'+G.tech.selU.join(',')):(selRes?('r'+selRes.kind+(selRes.eid||'')):''));
-  if(_selKey && _selKey!==G.tech._lastSelKey){ G.tech.cardMode=1; G.tech._lastSelKey=_selKey; }   // 새 선택 = 항상 간소화(4그리드 1줄)로 시작 — 모델 생성 전에 실행(첫 렌더부터 반영)
+  if(_selKey && _selKey!==G.tech._lastSelKey){ G.tech.cardMode=1; G.tech.selType=null; G.tech._lastSelKey=_selKey; }   // 새 선택(selU 변경) = 간소화 초기화 + 종류 소프트선택(selType) 리셋 — 칩 탭(selU 불변)은 유지 · 모델 생성 전 실행
   let model=null;
   const _resumeMode=!!(selB && selB.bt>0 && selB._bpause && selUs.length);   // 재개 모드(유닛 지정 + 일시정지 건물 선택): 건물 위 재개 버튼만, 하단은 지정 유닛 프로필
   if(sh.open){ if(selRes){ model=techResourceModel(selRes); }   // 💎⛽ 중립 자원(미네랄·가스 광산) 프로필
@@ -11802,10 +11805,20 @@ function techDeselU(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.
   if(G.tech.arm!=null){ techCancelArm(ev); return; }   // 🚫 건설 배치 중 = 지정 해제(⊘) 버튼 = 건설 취소 → 일꾼 지정·프로필 복귀(맵에 올리지 않고도 취소)
   G.tech.selU=[]; G.tech.sel=null; G.tech.selRes=null;   // 유닛·건물(부양 포함)·중립 자원 지정 모두 해제
   const sh=G.tech.sheet; if(sh&&sh.sec==='ent'){ sh.open=false; sh.sec=null; } techUIRender(); }   // 해제 후 다시 드래그=박스 지정(메인 규약)
-function techSubSelectType(ev,uid){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech||!uid) return;   // 👥 혼합 지정 → 종류 칩 탭 = 그 종류 유닛만 지정(나머지 해제)
+function techSubSelectType(ev,uid){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;   // 👥 혼합 지정 → 종류 칩 짧게 탭 = 그 종류 프로필만 표시(selU는 전부 유지 · 소프트) · uid 빈값=전체로 복귀
+  G.tech.selType=uid||null; const body=document.getElementById('btSheetBody'); if(body) body._cgPage=0;
+  if(typeof playSfx==='function') playSfx('ui_open'); techPanelRender(); }
+function techSepSelectType(uid){ if(!G.tech||!uid) return;   // 👥 종류 칩 꾹(롱프레스) = 그 종류 유닛만 지정해 분리(나머지 해제)
   const ids=(G.tech.selU||[]).filter(id=>{ const e=G.tech.ents.find(x=>x.eid===id); return e && (((e.type==='worker')?'__wk':e.uid)===uid); });
-  if(!ids.length) return; G.tech.selU=ids; const body=document.getElementById('btSheetBody'); if(body) body._cgPage=0;
-  if(typeof playSfx==='function') playSfx('ui_open'); techUIRender(); }
+  if(!ids.length) return; G.tech.selU=ids; G.tech.selType=null; const body=document.getElementById('btSheetBody'); if(body) body._cgPage=0;
+  if(typeof playSfx==='function') playSfx('ui_open'); if(typeof toast==='function') toast('👥 해당 종류만 분리'); techUIRender(); }
+let _chipT=null, _chipK=null, _chipLong=false;   // 종류 칩 롱프레스(꾹=분리) 상태
+function techChipDown(ev,k){ if(ev&&ev.stopPropagation) ev.stopPropagation(); _chipK=k; _chipLong=false;
+  if(_chipT) clearTimeout(_chipT); _chipT=setTimeout(()=>{ _chipT=null; _chipLong=true; techSepSelectType(k); }, 480); }   // 480ms 유지 = 그 종류만 분리
+function techChipUp(ev,k){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(_chipT){ clearTimeout(_chipT); _chipT=null; }
+  if(!_chipLong && _chipK===k) techSubSelectType(ev,k);   // 짧게 탭 = 소프트(전부 유지)
+  _chipLong=false; _chipK=null; }
+function techChipCancel(){ if(_chipT){ clearTimeout(_chipT); _chipT=null; } _chipLong=false; _chipK=null; }
 function techSubSelectOne(ev,eid){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;   // 👤 유닛별 HP 행 탭 = 그 1기만 지정(단일 프로필)
   if(!G.tech.ents.some(e=>e.eid===eid)) return;
   G.tech.selU=[eid]; const body=document.getElementById('btSheetBody'); if(body) body._cgPage=0;
