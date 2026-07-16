@@ -1476,11 +1476,17 @@
   .cmdG .cgStats{display:flex;flex-direction:column;gap:2px} .cmdG .cgStat{display:flex;justify-content:space-between;font-size:9.5px}
   .cmdG .cgStat span{color:var(--cgMuted)} .cmdG .cgStat b{color:#c2ccda;font-family:'Rajdhani',sans-serif;font-size:11px;font-variant-numeric:tabular-nums}
   /* 👥 다중 지정: 유닛별 HP 칩 그리드 — 칩 탭=개별 지정 */
-  .cmdG .cgUnits{display:grid;grid-template-columns:repeat(auto-fill,minmax(26px,1fr));gap:3px;overflow-y:auto;align-content:start;min-height:0;flex:1;margin-top:2px}   /* 👥 유닛별 HP 칩 그리드(행 리스트 아님 → 프로필 높이 유지) */
-  .cmdG .cgUChip{height:13px;border-radius:3px;background:rgba(0,0,0,.5);border:1px solid var(--glass);overflow:hidden;cursor:pointer;box-shadow:inset 0 0 3px rgba(0,0,0,.6)}
-  .cmdG .cgUChip:active{border-color:var(--ca)}
-  .cmdG .cgUChip i{display:block;height:100%;border-radius:2px;transition:width .15s linear,background .2s}   /* HP 선만 — 비율↓=빨강(hpBarColor) */
-  .cmdG .cgUMore{height:13px;display:flex;align-items:center;justify-content:center;color:var(--cgMuted);font:800 9px/1 sans-serif;border:1px dashed var(--glass);border-radius:3px}
+  .cmdG .cgUnits{display:grid;grid-template-columns:repeat(auto-fill,minmax(32px,1fr));gap:4px;overflow-y:auto;align-content:start;min-height:0;flex:1;margin-top:2px;scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}   /* 👥 유닛별 HP 칩 그리드(행 리스트 아님 → 프로필 높이 유지 · 넘치면 스크롤) · gap↑=칩 분리감 */
+  .cmdG .cgUChip{display:flex;flex-direction:column;gap:1px;cursor:pointer}
+  .cmdG .cgUBar{height:10px;border-radius:3px;background:rgba(0,0,0,.5);border:1px solid var(--glass);overflow:hidden;box-shadow:inset 0 0 3px rgba(0,0,0,.6)}   /* HP 선 — 기존 13px보다 ~1/4 얇게 */
+  .cmdG .cgUChip:active .cgUBar{border-color:var(--ca)}
+  .cmdG .cgUBar i{display:block;height:100%;border-radius:2px;transition:width .15s linear,background .2s}   /* HP 선만 — 비율↓=빨강(hpBarColor) */
+  .cmdG .cgUHp{font:700 7px/1 'Rajdhani',sans-serif;color:var(--cgMuted);text-align:center;font-variant-numeric:tabular-nums;letter-spacing:-.3px}   /* 칩 아래 작은 HP 수치 40/40 */
+  .cmdG .cgUMore{align-self:stretch;height:10px;display:flex;align-items:center;justify-content:center;color:var(--cgMuted);font:800 8px/1 sans-serif;border:1px dashed var(--glass);border-radius:3px}
+  .cmdG .cgStats.sc{max-height:45px;overflow-y:auto;padding-right:3px;scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}   /* 혼합 다중지정 좌측 종류 목록 = 3종류까지 보이고 그 아래 스크롤 */
+  .cmdG .cgUnits::-webkit-scrollbar,.cmdG .cgStats.sc::-webkit-scrollbar{width:4px;height:4px}
+  .cmdG .cgUnits::-webkit-scrollbar-thumb,.cmdG .cgStats.sc::-webkit-scrollbar-thumb{background:rgba(120,140,170,.4);border-radius:3px}
+  .cmdG .cgUnits::-webkit-scrollbar-track,.cmdG .cgStats.sc::-webkit-scrollbar-track{background:transparent}
   .cmdG .cgBack{width:30px;height:30px;border-radius:8px}   /* ↩ 전체(소프트선택 복귀) — cgLift 변형(왼쪽 유턴 아이콘) */
   .cmdG .cgBack svg{width:18px;height:18px}
   .cmdG .cgProg{margin-top:1px} .cmdG .cgProg .pl{display:flex;justify-content:space-between;font-size:8.5px;color:var(--cgMuted);margin-bottom:2px} .cmdG .cgProg .pl b{color:var(--caL);font-family:'Rajdhani',sans-serif;font-size:10px}
@@ -7347,15 +7353,15 @@ function _cgSlotHTML(it, build){ if(!it||it.state==='empty') return '<div class=
   const bot=(it.bottom!=null)?it.bottom:('<div class="cgCost">'+_cgCost(it.cr,it.en,build)+'</div>');   // 🧱 bottom = 커스텀 하단 줄(벙커 HP 등)
   return '<div class="'+cls+'"'+(it.act?(' '+it.act):'')+'>'+meta+'<div class="cgPro">'+(it.pro||'')+'</div><div class="cgName">'+(it.sn||'')+'</div>'+bot+'</div>'; }
 function _cgInfoHTML(d){ if(!d) return '<div class="cgEb">정보</div><div class="cgDd">항목을 선택하세요</div>';
-  let val=''; if(d.stats) val='<div class="cgStats">'+d.stats.map(s=>'<div class="cgStat"><span>'+s[0]+'</span><b>'+s[1]+'</b></div>').join('')+'</div>';
+  let val=''; if(d.stats) val='<div class="cgStats'+(d.statsScroll?' sc':'')+'">'+d.stats.map(s=>'<div class="cgStat"><span>'+s[0]+'</span><b>'+s[1]+'</b></div>').join('')+'</div>';
   else if(d.val&&!d.val.sm) val='<div class="cgVal"><span class="cur">'+d.val.cur+'</span><span class="arw">▸</span><span class="nxt">'+d.val.nxt+'</span><span class="u">'+(d.val.unit||'')+'</span></div>';
   const valSm=(d.val&&d.val.sm)?('<div class="cgVal sm"><span class="cur">'+d.val.cur+'</span><span class="arw">▸</span><span class="nxt">'+d.val.nxt+'</span></div>'):'';   // sm=진행 바 아래 작게(업그레이드 단계)
   let q=''; if(d.queue){ const cap=d.qcap||5, lbl=d.qlabel||'대기열', have=d.queue.filter(Boolean).length;
     q='<div class="cgQlbl">'+lbl+' '+have+'/'+cap+'</div><div class="cgQ">'+d.queue.map((s,i)=>s?('<div class="qs'+(s.front?' front':'')+(s.ready?' rdy':'')+'"'+(s.act?(' '+s.act+' title="탭 = 취소(100% 환불)"'):(s.ready?'':' onclick="techCancelQueue(event,'+i+')" title="탭 = 취소(100% 환불)"'))+'><span class="qpro">'+(s.pro||'')+'</span>'+(s.front?'<i class="qb" style="width:'+Math.max(0,s.prog||0)+'%"></i>':'')+'</div>'):'<div class="qs empty"></div>').join('')+'</div>'; }
   let ul=''; if(d.units){ ul='<div class="cgUnits">'+d.units.map(u=>{ if(u.more!=null) return '<div class="cgUMore">+'+u.more+'</div>';
     const r=Math.max(0,Math.min(1,u.hp/(u.maxHp||1)));
-    return '<div class="cgUChip" onclick="techSubSelectOne(event,'+u.eid+')" title="HP '+Math.round(u.hp)+'/'+Math.round(u.maxHp||0)+' · 이 유닛만 지정"><i style="width:'+(r*100)+'%;background:'+hpBarColor(r)+'"></i></div>';
-  }).join('')+'</div>'; }   // 👥 유닛별 HP 칩 그리드 — HP 선만(비율↓=빨강), 탭=개별 지정 · 프로필 높이 유지
+    return '<div class="cgUChip" onclick="techSubSelectOne(event,'+u.eid+')" title="이 유닛만 지정"><span class="cgUBar"><i style="width:'+(r*100)+'%;background:'+hpBarColor(r)+'"></i></span><em class="cgUHp">'+Math.round(u.hp)+'/'+Math.round(u.maxHp||0)+'</em></div>';
+  }).join('')+'</div>'; }   // 👥 유닛별 HP 칩 그리드 — 얇은 HP 선(비율↓=빨강) + 아래 HP 수치(40/40), 탭=개별 지정 · 프로필 높이 유지(그리드 스크롤)
   return (d.eb?'<div class="cgEb">'+d.eb+'</div>':'')+(d.hideName?'':'<div class="cgDn">'+(d.name||'')+'</div>')+(d.desc?'<div class="cgDd">'+d.desc+'</div>':'')+val
     +(d.progLabel?('<div class="cgProg"><div class="pl"><span>'+d.progLabel+(d.progTime?' <em class="pt">'+d.progTime+'</em>':'')+'</span><b>'+(d.progVal||'')+'</b></div><div class="cgBar"><i style="width:'+Math.max(4,d.prog||0)+'%"></i></div>'+(d.qbar?('<div class="cgQBar"'+(d.qbar.cancel!=null?' onclick="techCancelQueue(event,'+d.qbar.cancel+')" title="탭 = 마지막 예약 취소(100% 환불)" style="cursor:pointer"':'')+' aria-label="대기열 '+(d.qbar.n||0)+'/5"><i style="width:'+Math.max(0,d.qbar.fill||0)+'%'+(d.qbar.color?(';background:'+d.qbar.color):'')+'"></i></div>'):'')+valSm+'</div>'):'')+q+ul
     +'<div class="cgDcost">'+_cgCost(d.cr,d.en)+(d.time?'<span class="time">'+d.time+'</span>':'')+'</div>'; }
@@ -11685,7 +11691,7 @@ function _techMultiMixedModel(list, grp, ord){ const race=G.tech.race, items=[];
         meta:_lk?'🔒':(_c>0?(_c+'e'):''), metaCls:'lv', state:_lk?'dim':'ok', act:_lk?('onclick="techSkillLocked(event,\''+_lb+'\')"'):('onclick="techCastSkill(event,\''+_k+'\')"') }); } }
   return { mode:'prod', title:'유닛 '+list.length+'기', icon:_techUnitPortrait(uidOf(ord[0])),
     sub:'', items,
-    info:{ eb:'선택', hideName:true, stats:ord.map(k=>[_techRealName(race,uidOf(k)), '×'+grp[k].n]), cr:0, en:0 } }; }
+    info:{ eb:'선택', hideName:true, statsScroll:true, stats:ord.map(k=>[_techRealName(race,uidOf(k)), '×'+grp[k].n]), cr:0, en:0 } }; }   // 좌측 종류 목록 = 3종류까지만 보이고 그 아래 스크롤(.sc)
 function techUnitPanelModel(list){ const race=G.tech.race, grp={}, ord=[];   // 유닛 지정 시트 — 건물 그리드와 동일한 커맨드 그리드 재사용
   for(const e of list){ const k=(e.type==='worker')?'__wk':e.uid; if(!grp[k]){ grp[k]={n:0,e:e}; ord.push(k); } grp[k].n++; }
   if(list.length>1){ const _ak=(ord.length===1)?ord[0]:((G.tech.selType&&grp[G.tech.selType])?G.tech.selType:null);   // 👥 다중 지정: 동일종류(1종) or 종류 소프트선택(selType)=타입 모델 · 혼합=종류 칩 모델
