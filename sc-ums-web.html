@@ -1090,7 +1090,7 @@
   #btCardCtl:active{transform:translateY(1px)}
   #btCardCtl svg{width:17px;height:17px;display:block;transition:transform .22s cubic-bezier(.2,.8,.25,1)}
   #btCardCtl.up svg{transform:rotate(180deg)}
-  #btSheet.simple #btSheetBody{height:min(26vh,150px);max-height:min(26vh,150px)}   /* 간소화 = 1줄 그리드 · 높이 고정(개인·건물·다중·혼합 모두 동일 높이) */
+  #btSheet.simple #btSheetBody{height:min(26vh,126px);max-height:min(26vh,126px)}   /* 간소화 = 1줄 그리드 · 높이 고정(건물 프로필 기준 ≈120px · 개인·다중·혼합 모두 동일) */
   #btSheet.simple .cmdG .cgGrid{grid-template-rows:1fr}
   #btSheet.mini #btSheetBody{display:none}   /* 최소화 = 본문 숨김(버튼 바만) */
   #btSheetBody{height:min(40vh,204px);max-height:min(40vh,204px);min-height:0;display:flex;flex-direction:column}   /* 일꾼 지정 패널 크기로 고정(건물·유닛 모두 동일 높이) */
@@ -1492,13 +1492,13 @@
   .cmdG .cgStats{display:flex;flex-direction:column;gap:2px} .cmdG .cgStat{display:flex;justify-content:space-between;font-size:9.5px}
   .cmdG .cgStat span{color:var(--cgMuted)} .cmdG .cgStat b{color:#c2ccda;font-family:'Rajdhani',sans-serif;font-size:11px;font-variant-numeric:tabular-nums}
   /* 👥 다중 지정: 유닛별 HP 칩 그리드 — 칩 탭=개별 지정 */
-  .cmdG .cgUnits{display:grid;grid-template-columns:repeat(auto-fill,minmax(34px,1fr));gap:3px;overflow-y:auto;align-content:start;flex:1 1 auto;min-height:0;margin-top:2px;scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}   /* 👥 유닛별 HP 칩 그리드 — 좌측 내부 구역을 꽉 채움(고정 높이 본문 기준 6줄), 넘치면 스크롤 · gap=칩 분리감 */
+  .cmdG .cgUnits{display:grid;grid-template-columns:repeat(auto-fill,minmax(34px,1fr));gap:3px;overflow-y:auto;align-content:start;min-height:0;max-height:49px;margin-top:2px;scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}   /* 👥 유닛별 HP 칩 그리드 — 4줄까지 보이고 그 아래 스크롤(건물 기준 낮은 높이에 맞춤) · gap=칩 분리감 */
   .cmdG .cgUChip{position:relative;height:10px;border-radius:3px;background:rgba(0,0,0,.5);border:1px solid var(--glass);overflow:hidden;cursor:pointer;box-shadow:inset 0 0 3px rgba(0,0,0,.6)}
   .cmdG .cgUChip:active{border-color:var(--ca)}
   .cmdG .cgUFill{position:absolute;left:0;top:50%;transform:translateY(-50%);height:6px;border-radius:2px;transition:width .15s linear,background .2s}   /* HP 선 — 기존 10px→6px(≈2/3 얇게), 세로 중앙 · 비율↓=빨강(hpBarColor) */
   .cmdG .cgUHp{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:800 7px/1 'Rajdhani',sans-serif;color:#fff;text-shadow:0 1px 1px #000,0 0 2px #000;font-variant-numeric:tabular-nums;letter-spacing:-.3px;pointer-events:none}   /* 칩 중앙 HP 수치 40/40(바 위 오버레이) */
   .cmdG .cgUMore{align-self:stretch;height:10px;display:flex;align-items:center;justify-content:center;color:var(--cgMuted);font:800 8px/1 sans-serif;border:1px dashed var(--glass);border-radius:3px}
-  .cmdG .cgStats.cgScr{flex:1 1 auto;min-height:0;justify-content:flex-start;overflow-y:auto;padding-right:3px;scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}   /* 혼합 다중지정 좌측 종류 목록 = 남은 좌측 높이 채우고 상단 정렬(전역 .sc 충돌 회피 클래스), 넘치면 위에서부터 스크롤 */
+  .cmdG .cgStats.cgScr{max-height:45px;justify-content:flex-start;overflow-y:auto;padding-right:3px;scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}   /* 혼합 다중지정 좌측 종류 목록 = 최대 3종류까지 보이고 상단 정렬(전역 .sc 충돌 회피 클래스), 넘치면 위에서부터 스크롤 */
   .cmdG .cgUnits::-webkit-scrollbar,.cmdG .cgStats.cgScr::-webkit-scrollbar{width:4px;height:4px}
   .cmdG .cgUnits::-webkit-scrollbar-thumb,.cmdG .cgStats.cgScr::-webkit-scrollbar-thumb{background:rgba(120,140,170,.4);border-radius:3px}
   .cmdG .cgUnits::-webkit-scrollbar-track,.cmdG .cgStats.cgScr::-webkit-scrollbar-track{background:transparent}
