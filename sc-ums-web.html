@@ -944,7 +944,7 @@
       url('/assets/tiles/badlands.webp');
     background-repeat:repeat;background-size:28px 28px,28px 28px,132px 132px}
   .bmap.arming{cursor:copy}
-  .bmapTop{position:absolute;top:0;left:0;right:0;z-index:5;pointer-events:none}   /* 상단 오버레이 — 종족(좌상단 세로) · 토글(그 아래 세로) · 자원(우상단, 메인 HUD 디자인) */
+  .bmapTop{position:absolute;top:0;left:0;right:0;z-index:30;pointer-events:none}   /* 상단 오버레이 — 유닛/건물·HP바(22)·배치버튼(26) 위로 떠서 겹치지 않게(z-index 30) · 종족(좌상단) · 토글 · 자원(우상단) */
   .bmapTop .techSide{position:absolute;top:6px;left:7px;display:flex;flex-direction:column;gap:7px;pointer-events:auto}
   .bmapTop .techTabs{display:flex;flex-direction:column;gap:4px}
   .bmapTop .techTab{min-width:54px;text-align:center;padding:6px 11px;font-size:12px;font-weight:800;border-radius:7px;cursor:pointer;white-space:nowrap;
@@ -11477,7 +11477,7 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
       if(e._skOn&&e._skOn.psi_cloak&&typeof SKILLS!=='undefined'&&SKILLS.psi_cloak) skZ+=_circ(e.x,e.y,SKILLS.psi_cloak.radius||0.12,'border:1px solid rgba(150,210,255,.55);background:radial-gradient(circle,rgba(150,210,255,.13),transparent 70%)');
       if(e._skOn&&e._skOn.siege) skZ+=_circ(e.x,e.y,0.024,'border:2px solid rgba(255,180,80,.7);background:radial-gradient(circle,rgba(255,180,80,.14),transparent 70%)');
       if(e._healF!=null){ const t=G.tech.ents.find(x=>x.eid===e._healF); if(t){ const p2=_techW2S(t.x,t.y); skZ+='<div class="tkHeal" style="left:'+(p2.x*100).toFixed(2)+'%;top:'+(p2.y*100).toFixed(2)+'%">'+((typeof SKILL_ICON!=='undefined'&&SKILL_ICON.heal)||'✚')+'</div>'; } } } }
-  map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+(G.tech.rallySet!=null?' rally':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none">'+_floor+hillZ+creepZ+psi+gasZone+mineZ+rallyZ+skZ+'<div class="bmapTop"><div class="techSide"><div class="techTabs">'+tabs+'</div><div class="techBtns">'+btns+'</div></div><div class="bres">'+res+'</div></div>'+ents+foot+ghost+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div></div>';
+  map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+(G.tech.rallySet!=null?' rally':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none">'+_floor+hillZ+creepZ+psi+gasZone+mineZ+rallyZ+skZ+'<div class="bmapTop"><div class="techSide" onpointerdown="event.stopPropagation()"><div class="techTabs">'+tabs+'</div><div class="techBtns">'+btns+'</div></div><div class="bres" onpointerdown="event.stopPropagation()">'+res+'</div></div>'+ents+foot+ghost+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div></div>';
   const _lblLayer=document.getElementById('cstLabels'); if(_lblLayer) _lblLayer.innerHTML=labels+armBtns+resumeBtn;   // 남은시간 라벨 + 배치 ✓/✕ + ▶재개 버튼을 전용 오버레이(z8)에 → 3D 유닛·건물 위(리파이너리 등 큰 건물에 안 가림)
   techFogDraw(); }   // 🌫️ 건설 안개 오버레이 재그림(맵 재렌더마다)
 function techBldgInfoModel(b, e){ const race=G.tech.race, hb=TECH_TREE[race].buildings[0], bs=techBldgSpec(race,b.k)||{};
@@ -11814,18 +11814,16 @@ function techSepSelectType(uid){ if(!G.tech||!uid) return;   // 👥 종류 칩 
   const ids=(G.tech.selU||[]).filter(id=>{ const e=G.tech.ents.find(x=>x.eid===id); return e && (((e.type==='worker')?'__wk':e.uid)===uid); });
   if(!ids.length) return; G.tech.selU=ids; G.tech.selType=null; const body=document.getElementById('btSheetBody'); if(body) body._cgPage=0;
   if(typeof playSfx==='function') playSfx('ui_open'); if(typeof toast==='function') toast('👥 해당 종류만 분리'); techUIRender(); }
-let _chipT=null, _chipK=null, _chipLong=false;   // 종류 칩: 짧게=소프트 · 꾹(롱프레스)=분리
-function _techSwallowNextClick(){ let t=null;   // pointerup 직후 뒤따르는 합성 click을 1회 삼킴 → 새 그리드(빌드 카드 등)로 새어 오발동하는 것 차단
-  const cleanup=()=>{ document.removeEventListener('click', h, true); if(t){ clearTimeout(t); t=null; } };
-  const h=(e)=>{ e.stopPropagation(); e.preventDefault(); cleanup(); };
-  document.addEventListener('click', h, true); t=setTimeout(cleanup, 500); }   // click 안 오면(터치 롱프레스로 억제) 자동 해제
-function techChipDown(ev,k){ if(ev&&ev.stopPropagation) ev.stopPropagation(); _chipK=k; _chipLong=false;
-  if(_chipT) clearTimeout(_chipT); _chipT=setTimeout(()=>{ _chipT=null; if(_chipK===k){ _chipLong=true; if(typeof toast==='function') toast('🔀 놓으면 그 종류만 분리'); if(typeof playSfx==='function') playSfx('ui_open'); } }, 450); }   // 450ms 유지 = 분리 예약(놓을 때 실행) · DOM 미변경(칩 유지)
-function techChipUp(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); const k=_chipK, long=_chipLong;   // 실제 전환은 pointerup에서(터치는 롱프레스 후 click이 억제되므로 click에 의존 안 함)
-  if(_chipT){ clearTimeout(_chipT); _chipT=null; } _chipLong=false; _chipK=null;
-  if(k==null) return; _techSwallowNextClick();
-  if(long) techSepSelectType(k); else techSubSelectType(ev,k); }
-function techChipCancel(){ if(_chipT){ clearTimeout(_chipT); _chipT=null; } _chipLong=false; _chipK=null; }   // 손가락이 칩 밖으로 벗어나면 취소
+const TECH_HOLD_MS=420;   // 롱프레스 유지 시간 — 벙커·드롭쉽(나이더스) 탑승/수리 상호작용과 통일
+let _chipT=null, _chipK=null, _chipDone=false, _chipSwallow=false;   // 종류 칩: 짧게=소프트(전부 유지) · 꾹(유지시간 경과)=자동 분리(손 안 떼도 프로필 변경)
+function techChipDown(ev,k){ if(ev&&ev.stopPropagation) ev.stopPropagation(); _chipSwallow=false; _chipK=k; _chipDone=false;
+  if(_chipT) clearTimeout(_chipT);
+  _chipT=setTimeout(()=>{ _chipT=null; if(_chipK===k){ _chipDone=true; _chipSwallow=true; if(typeof playSfx==='function') playSfx('ui_open'); techSepSelectType(k); } }, TECH_HOLD_MS); }   // 유지 경과 = 손 안 떼도 즉시 분리 + 뒤따르는 합성 click 삼킴(누수 차단)
+function techChipUp(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(_chipT){ clearTimeout(_chipT); _chipT=null; }
+  const k=_chipK, done=_chipDone; _chipK=null; _chipDone=false;
+  if(k!=null && !done){ _chipSwallow=true; techSubSelectType(ev,k); } }   // 유지 전 뗌 = 소프트선택(전부 유지)
+function techChipCancel(){ if(_chipT){ clearTimeout(_chipT); _chipT=null; } _chipK=null; _chipDone=false; }   // 손가락이 칩 밖으로 벗어나면 취소
+if(typeof document!=='undefined') document.addEventListener('click', function(e){ if(_chipSwallow){ _chipSwallow=false; e.stopPropagation(); e.preventDefault(); } }, true);   // 칩 액션(소프트/분리) 직후의 합성 click 1회 삼킴 → 새 그리드(빌드 카드 등)로 새어 오발동 차단
 function techSubSelectOne(ev,eid){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;   // 👤 유닛별 HP 행 탭 = 그 1기만 지정(단일 프로필)
   if(!G.tech.ents.some(e=>e.eid===eid)) return;
   G.tech.selU=[eid]; const body=document.getElementById('btSheetBody'); if(body) body._cgPage=0;
@@ -11917,7 +11915,7 @@ function techPtrDown(ev){ if(!G.tech) return; const r=_btRect(); if(!r) return; 
         const _canBoard=(_lpb.bk==='bunker'&&_lpb.bt<=0&&_su.some(_techBunkerable)), _canRepair=(!_lpb._lifted&&_su.some(x=>x.type==='worker'&&x.build==null));
         const _canNydus=(_lpb.bk==='nydus'&&_lpb.bt<=0&&_lpb._nydusLink!=null&&_su.some(x=>(x.type==='unit'||x.type==='worker')&&!_techAirOf(x)));
         if(_canBoard||_canNydus||_canRepair){ clearTimeout(_btLongT); const _be=_lpb.eid;   // 꾹 누르면 입장 시작 → 손을 건물 위에 유지하면 한 명씩 계속 입장, 떼면 중단
-          _btLongT=setTimeout(()=>{ _btLongT=null; if(!_btDown) return; techLongPressBldg(_be); _btHold={eid:_be, board:_canBoard||_canNydus}; }, 420);
+          _btLongT=setTimeout(()=>{ _btLongT=null; if(!_btDown) return; techLongPressBldg(_be); _btHold={eid:_be, board:_canBoard||_canNydus}; }, TECH_HOLD_MS);
           return; } } }   // 건물 위 손 유지 = 입장 모드 → 이동-추종(_btCmd) 안 함 = 입장 명령이 취소되지 않음
     _btCmd={}; _techAssignMove(w.x,w.y); if(typeof playSfx==='function') playSfx('ui_confirm'); return; }
   _btBox={sx0:sx, sy0:sy, sx1:sx, sy1:sy, active:false, rw:r.width, rh:r.height}; }   // 무지정 = 한 손가락 드래그로 유닛 지정 박스
@@ -12097,7 +12095,7 @@ function techPlace(x,y){ if(G.tech&&G.tech.armNydusExit!=null){ _techPlaceNydusE
   else if(wk){ wk.build=ne.eid; _techRoute(wk, Math.max(0.04,Math.min(0.96,bx)), Math.max(0.16,Math.min(0.96,by+0.05))); }   // 일꾼 → 건설지까지 우회 경로로 이동
   G.tech.arm=null; G.tech.armXY=null; const sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null}); sh.open=true; sh.sec='ent';
   if(wk){ const rest=_preAllIds.filter(id=>id!==wk.eid); G.tech.sel=null; G.tech.selType=null; G.tech.selU=rest.length?rest:[wk.eid]; }   // 🔨 건설 일꾼만 지정에서 빠지고 나머지 유닛(마린 등)은 지정 유지 — 혼자면 그 일꾼 유지
-  else if(_preWkIds.length){ G.tech.sel=null; G.tech.selU=_preWkIds.slice(); }   // 노쿨: 지정했던 일꾼 그대로 유지(건물로 안 바뀜)
+  else if(_preAllIds.length){ G.tech.sel=null; G.tech.selType=null; G.tech.selU=_preAllIds.slice(); }   // 노쿨(즉시건설): 지정했던 유닛 그대로 유지(건물로 안 바뀜)
   else { G.tech.sel=ne.eid; G.tech.selU=[]; }   // 지정 일꾼이 없을 때만 그 건물 시트로
   if(typeof playSfx==='function') playSfx('ui_confirm'); techUIRender(); }   // 배치 후 그리드 페이지 유지(2페이지에서 지으면 남은 일꾼도 2페이지 유지) — 지정 해제 후 재지정 시에만 1페이지 복귀(탭/박스지정 핸들러가 _cgPage=0)
 function techDoProduce(id, bk){ const race=G.tech.race; if(!(G.tech.built[bk]>0)){ if(typeof toast==='function') toast('⛔ 건물 미건설'); return; }
