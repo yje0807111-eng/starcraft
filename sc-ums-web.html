@@ -1484,7 +1484,8 @@
   .cmdG .cgUPro svg{width:82%;height:82%} .cmdG .cgUPro img{width:100%;height:100%;object-fit:cover} .cmdG .cgUPro .pemoji{font-size:12px}
   .cmdG .cgURow .uhp{flex:1;margin:0}   /* _barsHTML 래퍼 = 행 폭에 맞춰 확장 */
   .cmdG .cgUNum{flex:none;font:800 10px/1 'Rajdhani',sans-serif;color:#7ee081;font-variant-numeric:tabular-nums;min-width:22px;text-align:right}
-  .cmdG .cgBack{width:30px;height:30px;font:800 11px/1 sans-serif;border-radius:8px}   /* ▲ 전체(소프트선택 복귀) — cgLift 변형 */
+  .cmdG .cgBack{width:30px;height:30px;border-radius:8px}   /* ↩ 전체(소프트선택 복귀) — cgLift 변형(왼쪽 유턴 아이콘) */
+  .cmdG .cgBack svg{width:18px;height:18px}
   .cmdG .cgProg{margin-top:1px} .cmdG .cgProg .pl{display:flex;justify-content:space-between;font-size:8.5px;color:var(--cgMuted);margin-bottom:2px} .cmdG .cgProg .pl b{color:var(--caL);font-family:'Rajdhani',sans-serif;font-size:10px}
   .cmdG .cgBar{height:6px;border-radius:3px;background:rgba(0,0,0,.55);overflow:hidden;box-shadow:inset 0 0 4px rgba(0,0,0,.7)}
   .cmdG .cgBar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,color-mix(in srgb,var(--ca) 55%,#000),var(--ca));box-shadow:0 0 7px var(--caG);transition:width .12s linear}
@@ -11676,13 +11677,13 @@ function _techMultiTypeModel(units, canBack){ const race=G.tech.race, uid=units[
   const rn=_techRealName(race,uid), role=_techRoleOf(uid);
   return { mode:'prod', title:rn+(role?' ('+role+')':'')+' <span class="nsub">×'+n+'</span>', icon:_techUnitPortrait(uid),
     sub:'행 탭=개별 지정 · 맵 탭=이동', items,
-    topRight:canBack?('<button class="cgLift cgBack" onclick="techSubSelectType(event,\'\')" title="전체 선택으로">▲</button>'):'',   // ▲ = 소프트선택 해제(전체 지정으로 복귀)
+    topRight:canBack?('<button class="cgLift cgBack" onclick="techSubSelectType(event,\'\')" title="전체 선택으로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6L4 11l5 5"/><path d="M4 11h9a6 6 0 0 1 6 6v1"/></svg></button>'):'',   // ▲ = 소프트선택 해제(전체 지정으로 복귀)
     info:{ eb:'', hideName:true, units:rows, cr:0, en:0 } }; }
 function _techMultiMixedModel(list, grp, ord){ const race=G.tech.race, items=[];   // 👥 혼합 지정(여러 종류) — 종류 초상화 칩(탭=그 종류만) + 공통 스킬(교집합)만(SC식)
   const uidOf=k=>(k==='__wk')?(TECH_WORKER[race]||'worker_human'):k;
   for(const k of ord){ const uid=uidOf(k);
     items.push({ pro:_techUnitPortrait(uid), sn:_techRealName(race,uid), tr:'×'+grp[k].n, metaCls:'lv', state:'ok',
-      act:'onpointerdown="techChipDown(event,\''+k+'\')" onpointerup="techChipUp(event,\''+k+'\')" onpointerleave="techChipCancel()" onpointercancel="techChipCancel()" oncontextmenu="return false"' }); }   // 짧게=소프트(전부 유지) · 꾹=그 종류만 분리
+      act:'onpointerdown="techChipDown(event,\''+k+'\')" onpointerup="techChipUp(event)" onpointerleave="techChipCancel()" onpointercancel="techChipCancel()" onclick="techChipClick(event,\''+k+'\')" oncontextmenu="return false"' }); }   // 짧게=소프트(전부 유지) · 꾹=그 종류만 분리 · 전환은 click에서만(누수 방지)
   if(typeof UNIT_SKILLS!=='undefined'){ const sets=ord.filter(k=>k!=='__wk').map(k=>new Set(UNIT_SKILLS[grp[k].e.uid]||[]));
     const common=(sets.length&&sets.length===ord.length)?[...sets[0]].filter(kk=>sets.every(s=>s.has(kk))):[];   // 일꾼 포함 시 공통 없음
     for(const _k of common){ const sk=SKILLS[_k]; if(!sk) continue; const _c=_skCost(sk), _lk=_skillLocked(race,_k), _lb=_lk?_techBldgOfResearch(race,SKILL_RESEARCH[_k]):'';
@@ -11729,7 +11730,7 @@ function techUnitPanelModel(list){ const race=G.tech.race, grp={}, ord=[];   // 
     info:_amE?_techAmmoInfo(_amE, _amE.uid):{ eb:'', hideName:true, stats:_techUnitStatList(spec,fid), cr:0, en:0 } }; }   // 왼쪽: 장전 큐(캐리어·리버) / 유닛 스탯
 function techWorkerBuildModel(list, canBack){ const race=G.tech.race, fid=(TECH_WORKER[race]||'worker_human'), n=list.length;   // 일꾼 지정 시트 — 헤더=일꾼 프로필, 그리드=건물 생성 카드 · canBack=혼합 소프트선택에서 ▲ 복귀
   const ws=techUnitSpec(race,fid)||{}, rn=_techRealName(race,fid), role=_techRoleOf(fid);
-  const _bk=canBack?'<button class="cgLift cgBack" onclick="techSubSelectType(event,\'\')" title="전체 선택으로">▲</button>':'';
+  const _bk=canBack?'<button class="cgLift cgBack" onclick="techSubSelectType(event,\'\')" title="전체 선택으로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6L4 11l5 5"/><path d="M4 11h9a6 6 0 0 1 6 6v1"/></svg></button>':'';
   let _bd=null; for(const w of list){ const b=_techBuildBldg(w); if(b&&b.bt>0&&!b._bpause){ _bd=b; break; } }   // 지정 중 한 마리라도 건설 중(미일시정지) 일꾼이 있으면 = 작업 프로필(그리드 비우고 4번째 칸에 일시정지만)
   if(_bd){
     const items=[null,null,null,{ pro:'<svg viewBox="0 0 24 24" style="display:block;width:100%;height:100%"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.4"/><line x1="6.2" y1="6.2" x2="17.8" y2="17.8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>', sn:'', state:'ok', cls:'iconFill', act:'onclick="techPauseBuild(event)"' }];   // 4번째(우상단) 칸 = 유닛 지정해제와 동일한 금지 아이콘(칸 중앙에 크게, 텍스트 없음), 나머지 비움 → 다른 행동 불가
@@ -11814,13 +11815,13 @@ function techSepSelectType(uid){ if(!G.tech||!uid) return;   // 👥 종류 칩 
   const ids=(G.tech.selU||[]).filter(id=>{ const e=G.tech.ents.find(x=>x.eid===id); return e && (((e.type==='worker')?'__wk':e.uid)===uid); });
   if(!ids.length) return; G.tech.selU=ids; G.tech.selType=null; const body=document.getElementById('btSheetBody'); if(body) body._cgPage=0;
   if(typeof playSfx==='function') playSfx('ui_open'); if(typeof toast==='function') toast('👥 해당 종류만 분리'); techUIRender(); }
-let _chipT=null, _chipK=null, _chipLong=false;   // 종류 칩 롱프레스(꾹=분리) 상태
+let _chipT=null, _chipK=null, _chipLong=false;   // 종류 칩 롱프레스(꾹=분리) 상태 — 재렌더는 click에서만(pointerup/타이머에서 미리 그리면 뒤따르는 합성 click이 새 그리드로 새어 커맨드센터 등 오발동)
 function techChipDown(ev,k){ if(ev&&ev.stopPropagation) ev.stopPropagation(); _chipK=k; _chipLong=false;
-  if(_chipT) clearTimeout(_chipT); _chipT=setTimeout(()=>{ _chipT=null; _chipLong=true; techSepSelectType(k); }, 480); }   // 480ms 유지 = 그 종류만 분리
-function techChipUp(ev,k){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(_chipT){ clearTimeout(_chipT); _chipT=null; }
-  if(!_chipLong && _chipK===k) techSubSelectType(ev,k);   // 짧게 탭 = 소프트(전부 유지)
-  _chipLong=false; _chipK=null; }
+  if(_chipT) clearTimeout(_chipT); _chipT=setTimeout(()=>{ _chipT=null; if(_chipK===k){ _chipLong=true; if(typeof toast==='function') toast('🔀 놓으면 그 종류만 분리'); if(typeof playSfx==='function') playSfx('ui_open'); } }, 480); }   // 480ms 유지 = 분리 예약(놓을 때 실행) · DOM 변경 없음(칩 유지 → pointerup/click 정상 발생)
+function techChipUp(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(_chipT){ clearTimeout(_chipT); _chipT=null; } }
 function techChipCancel(){ if(_chipT){ clearTimeout(_chipT); _chipT=null; } _chipLong=false; _chipK=null; }
+function techChipClick(ev,k){ if(ev&&ev.stopPropagation) ev.stopPropagation(); const long=_chipLong; _chipLong=false; _chipK=null;   // 실제 전환은 여기(click)에서만 → 이 탭이 새 그리드로 안 샘
+  if(long) techSepSelectType(k); else techSubSelectType(ev,k); }
 function techSubSelectOne(ev,eid){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;   // 👤 유닛별 HP 행 탭 = 그 1기만 지정(단일 프로필)
   if(!G.tech.ents.some(e=>e.eid===eid)) return;
   G.tech.selU=[eid]; const body=document.getElementById('btSheetBody'); if(body) body._cgPage=0;
