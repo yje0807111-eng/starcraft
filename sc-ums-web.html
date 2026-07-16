@@ -1475,15 +1475,12 @@
   .cmdG .cgVal.sm .cur{font-size:9.5px;color:#93a1b4} .cmdG .cgVal.sm .arw{font-size:8px} .cmdG .cgVal.sm .nxt{font-size:10.5px;text-shadow:none}
   .cmdG .cgStats{display:flex;flex-direction:column;gap:2px} .cmdG .cgStat{display:flex;justify-content:space-between;font-size:9.5px}
   .cmdG .cgStat span{color:var(--cgMuted)} .cmdG .cgStat b{color:#c2ccda;font-family:'Rajdhani',sans-serif;font-size:11px;font-variant-numeric:tabular-nums}
-  /* 👥 다중 지정: 유닛별 HP 리스트(와이어프레임식) — 행 탭=개별 지정 */
-  .cmdG .cgUnits{display:flex;flex-direction:column;gap:3px;overflow-y:auto;min-height:0;flex:1;margin-top:2px}
-  .cmdG .cgURow{display:flex;align-items:center;gap:5px;padding:2px 3px;border-radius:5px;background:rgba(30,36,48,.5);border:1px solid var(--glass);cursor:pointer;flex:none}
-  .cmdG .cgURow:active{background:rgba(92,214,255,.18)}
-  .cmdG .cgURow.more{justify-content:center;color:var(--cgMuted);font:800 9px/1 sans-serif;background:none;border-style:dashed;cursor:default}
-  .cmdG .cgUPro{width:20px;height:20px;flex:none;position:relative;border-radius:4px;overflow:hidden;border:1px solid var(--glass);display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.35)}   /* position:relative 필수 — .portImg(absolute inset:0)를 20px 틀 안에 가둠(없으면 초상 이미지가 시트 전체로 터짐) */
-  .cmdG .cgUPro svg{width:82%;height:82%} .cmdG .cgUPro img{width:100%;height:100%;object-fit:cover} .cmdG .cgUPro .pemoji{font-size:12px}
-  .cmdG .cgURow .uhp{flex:1;margin:0}   /* _barsHTML 래퍼 = 행 폭에 맞춰 확장 */
-  .cmdG .cgUNum{flex:none;font:800 10px/1 'Rajdhani',sans-serif;color:#7ee081;font-variant-numeric:tabular-nums;min-width:22px;text-align:right}
+  /* 👥 다중 지정: 유닛별 HP 칩 그리드 — 칩 탭=개별 지정 */
+  .cmdG .cgUnits{display:grid;grid-template-columns:repeat(auto-fill,minmax(26px,1fr));gap:3px;overflow-y:auto;align-content:start;min-height:0;flex:1;margin-top:2px}   /* 👥 유닛별 HP 칩 그리드(행 리스트 아님 → 프로필 높이 유지) */
+  .cmdG .cgUChip{height:13px;border-radius:3px;background:rgba(0,0,0,.5);border:1px solid var(--glass);overflow:hidden;cursor:pointer;box-shadow:inset 0 0 3px rgba(0,0,0,.6)}
+  .cmdG .cgUChip:active{border-color:var(--ca)}
+  .cmdG .cgUChip i{display:block;height:100%;border-radius:2px;transition:width .15s linear,background .2s}   /* HP 선만 — 비율↓=빨강(hpBarColor) */
+  .cmdG .cgUMore{height:13px;display:flex;align-items:center;justify-content:center;color:var(--cgMuted);font:800 9px/1 sans-serif;border:1px dashed var(--glass);border-radius:3px}
   .cmdG .cgBack{width:30px;height:30px;border-radius:8px}   /* ↩ 전체(소프트선택 복귀) — cgLift 변형(왼쪽 유턴 아이콘) */
   .cmdG .cgBack svg{width:18px;height:18px}
   .cmdG .cgProg{margin-top:1px} .cmdG .cgProg .pl{display:flex;justify-content:space-between;font-size:8.5px;color:var(--cgMuted);margin-bottom:2px} .cmdG .cgProg .pl b{color:var(--caL);font-family:'Rajdhani',sans-serif;font-size:10px}
@@ -7355,13 +7352,10 @@ function _cgInfoHTML(d){ if(!d) return '<div class="cgEb">정보</div><div class
   const valSm=(d.val&&d.val.sm)?('<div class="cgVal sm"><span class="cur">'+d.val.cur+'</span><span class="arw">▸</span><span class="nxt">'+d.val.nxt+'</span></div>'):'';   // sm=진행 바 아래 작게(업그레이드 단계)
   let q=''; if(d.queue){ const cap=d.qcap||5, lbl=d.qlabel||'대기열', have=d.queue.filter(Boolean).length;
     q='<div class="cgQlbl">'+lbl+' '+have+'/'+cap+'</div><div class="cgQ">'+d.queue.map((s,i)=>s?('<div class="qs'+(s.front?' front':'')+(s.ready?' rdy':'')+'"'+(s.act?(' '+s.act+' title="탭 = 취소(100% 환불)"'):(s.ready?'':' onclick="techCancelQueue(event,'+i+')" title="탭 = 취소(100% 환불)"'))+'><span class="qpro">'+(s.pro||'')+'</span>'+(s.front?'<i class="qb" style="width:'+Math.max(0,s.prog||0)+'%"></i>':'')+'</div>'):'<div class="qs empty"></div>').join('')+'</div>'; }
-  let ul=''; if(d.units){ ul='<div class="cgUnits">'+d.units.map(u=> (u.more!=null)
-    ? '<div class="cgURow more">+'+u.more+' 더</div>'
-    : '<div class="cgURow" onclick="techSubSelectOne(event,'+u.eid+')" title="이 유닛만 지정"><span class="cgUPro">'+_techUnitPortrait(u.uid)+'</span>'
-      +_barsHTML({ hpR:Math.max(0,Math.min(1,u.hp/(u.maxHp||1))), hpCol:hpBarColor(Math.max(0,Math.min(1,u.hp/(u.maxHp||1)))),
-        shR:(u.maxSh>0)?Math.max(0,Math.min(1,u.sh/u.maxSh)):null, enR:(u.maxEn>0)?Math.max(0,Math.min(1,u.en/u.maxEn)):null })
-      +'<span class="cgUNum">'+Math.round(u.hp)+'</span></div>'
-  ).join('')+'</div>'; }   // 👥 유닛별 HP 리스트(와이어프레임식) — 미니 초상 + S/H/E 바(_barsHTML 단일 소스) + HP 숫자 · 탭=개별 지정
+  let ul=''; if(d.units){ ul='<div class="cgUnits">'+d.units.map(u=>{ if(u.more!=null) return '<div class="cgUMore">+'+u.more+'</div>';
+    const r=Math.max(0,Math.min(1,u.hp/(u.maxHp||1)));
+    return '<div class="cgUChip" onclick="techSubSelectOne(event,'+u.eid+')" title="HP '+Math.round(u.hp)+'/'+Math.round(u.maxHp||0)+' · 이 유닛만 지정"><i style="width:'+(r*100)+'%;background:'+hpBarColor(r)+'"></i></div>';
+  }).join('')+'</div>'; }   // 👥 유닛별 HP 칩 그리드 — HP 선만(비율↓=빨강), 탭=개별 지정 · 프로필 높이 유지
   return (d.eb?'<div class="cgEb">'+d.eb+'</div>':'')+(d.hideName?'':'<div class="cgDn">'+(d.name||'')+'</div>')+(d.desc?'<div class="cgDd">'+d.desc+'</div>':'')+val
     +(d.progLabel?('<div class="cgProg"><div class="pl"><span>'+d.progLabel+(d.progTime?' <em class="pt">'+d.progTime+'</em>':'')+'</span><b>'+(d.progVal||'')+'</b></div><div class="cgBar"><i style="width:'+Math.max(4,d.prog||0)+'%"></i></div>'+(d.qbar?('<div class="cgQBar"'+(d.qbar.cancel!=null?' onclick="techCancelQueue(event,'+d.qbar.cancel+')" title="탭 = 마지막 예약 취소(100% 환불)" style="cursor:pointer"':'')+' aria-label="대기열 '+(d.qbar.n||0)+'/5"><i style="width:'+Math.max(0,d.qbar.fill||0)+'%'+(d.qbar.color?(';background:'+d.qbar.color):'')+'"></i></div>'):'')+valSm+'</div>'):'')+q+ul
     +'<div class="cgDcost">'+_cgCost(d.cr,d.en)+(d.time?'<span class="time">'+d.time+'</span>':'')+'</div>'; }
@@ -11676,7 +11670,7 @@ function _techMultiTypeModel(units, canBack){ const race=G.tech.race, uid=units[
   if(n>CAP) rows.push({ more:n-CAP });
   const rn=_techRealName(race,uid), role=_techRoleOf(uid);
   return { mode:'prod', title:rn+(role?' ('+role+')':'')+' <span class="nsub">×'+n+'</span>', icon:_techUnitPortrait(uid),
-    sub:'행 탭=개별 지정 · 맵 탭=이동', items,
+    sub:'', items,
     back:canBack?'<button class="cgLift cgBack" onclick="techSubSelectType(event,\'\')" title="전체 선택으로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6L4 11l5 5"/><path d="M4 11h9a6 6 0 0 1 6 6v1"/></svg></button>':'',   // 🔙 소프트선택 해제(전체 복귀) — 오른쪽 끝
     info:{ eb:'', hideName:true, units:rows, cr:0, en:0 } }; }
 function _techMultiMixedModel(list, grp, ord){ const race=G.tech.race, items=[];   // 👥 혼합 지정(여러 종류) — 종류 초상화 칩(탭=그 종류만) + 공통 스킬(교집합)만(SC식)
@@ -11690,7 +11684,7 @@ function _techMultiMixedModel(list, grp, ord){ const race=G.tech.race, items=[];
       items.push({ pro:'<span class="skPro">'+((typeof SKILL_ICON!=='undefined'&&SKILL_ICON[_k])||'✨')+'</span>', sn:sk.name,
         meta:_lk?'🔒':(_c>0?(_c+'e'):''), metaCls:'lv', state:_lk?'dim':'ok', act:_lk?('onclick="techSkillLocked(event,\''+_lb+'\')"'):('onclick="techCastSkill(event,\''+_k+'\')"') }); } }
   return { mode:'prod', title:'유닛 '+list.length+'기', icon:_techUnitPortrait(uidOf(ord[0])),
-    sub:'유형 탭=그 종류 프로필(전부 유지) · 꾹=그 종류만 분리 · 맵 탭=이동', items,
+    sub:'', items,
     info:{ eb:'선택', hideName:true, stats:ord.map(k=>[_techRealName(race,uidOf(k)), '×'+grp[k].n]), cr:0, en:0 } }; }
 function techUnitPanelModel(list){ const race=G.tech.race, grp={}, ord=[];   // 유닛 지정 시트 — 건물 그리드와 동일한 커맨드 그리드 재사용
   for(const e of list){ const k=(e.type==='worker')?'__wk':e.uid; if(!grp[k]){ grp[k]={n:0,e:e}; ord.push(k); } grp[k].n++; }
