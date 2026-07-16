@@ -11694,6 +11694,7 @@ function _techMultiMixedModel(list, grp, ord){ const race=G.tech.race, items=[];
 function techUnitPanelModel(list){ const race=G.tech.race, grp={}, ord=[];   // 유닛 지정 시트 — 건물 그리드와 동일한 커맨드 그리드 재사용
   for(const e of list){ const k=(e.type==='worker')?'__wk':e.uid; if(!grp[k]){ grp[k]={n:0,e:e}; ord.push(k); } grp[k].n++; }
   if(list.length>1){ const _ak=(ord.length===1)?ord[0]:((G.tech.selType&&grp[G.tech.selType])?G.tech.selType:null);   // 👥 다중 지정: 동일종류(1종) or 종류 소프트선택(selType)=타입 모델 · 혼합=종류 칩 모델
+    if(_ak==='__wk') return techWorkerBuildModel(list.filter(e=>e.type==='worker'), ord.length>1);   // 🔨 일꾼 종류 선택 = 건설 프로필(혼합에서 소프트선택 시 ▲ 복귀)
     if(_ak) return _techMultiTypeModel(list.filter(e=>(((e.type==='worker')?'__wk':e.uid)===_ak)), ord.length>1);
     return _techMultiMixedModel(list, grp, ord); }
   const items=[];   // 유닛 초상 카드 제거 — 헤더 프로필과 중복(그리드는 변태·장전 등 행동 카드만)
@@ -11726,15 +11727,16 @@ function techUnitPanelModel(list){ const race=G.tech.race, grp={}, ord=[];   // 
     : _cgHpShDual(spec.hp,spec.sh,(typeof U!=='undefined'&&U[fid]&&U[fid].energy)||0);
   return { mode:'prod', title:nm, icon:_techUnitPortrait(fid), hpsh:_hpsh, sub:(_amE?'내부 장전 — 탭 · 맵 탭=이동':'맵을 탭하면 이동 · 해제는 우상단 ✕'), items,
     info:_amE?_techAmmoInfo(_amE, _amE.uid):{ eb:'', hideName:true, stats:_techUnitStatList(spec,fid), cr:0, en:0 } }; }   // 왼쪽: 장전 큐(캐리어·리버) / 유닛 스탯
-function techWorkerBuildModel(list){ const race=G.tech.race, fid=(TECH_WORKER[race]||'worker_human'), n=list.length;   // 일꾼 지정 시트 — 헤더=일꾼 프로필, 그리드=건물 생성 카드
+function techWorkerBuildModel(list, canBack){ const race=G.tech.race, fid=(TECH_WORKER[race]||'worker_human'), n=list.length;   // 일꾼 지정 시트 — 헤더=일꾼 프로필, 그리드=건물 생성 카드 · canBack=혼합 소프트선택에서 ▲ 복귀
   const ws=techUnitSpec(race,fid)||{}, rn=_techRealName(race,fid), role=_techRoleOf(fid);
+  const _bk=canBack?'<button class="cgLift cgBack" onclick="techSubSelectType(event,\'\')" title="전체 선택으로">▲</button>':'';
   let _bd=null; for(const w of list){ const b=_techBuildBldg(w); if(b&&b.bt>0&&!b._bpause){ _bd=b; break; } }   // 지정 중 한 마리라도 건설 중(미일시정지) 일꾼이 있으면 = 작업 프로필(그리드 비우고 4번째 칸에 일시정지만)
   if(_bd){
     const items=[null,null,null,{ pro:'<svg viewBox="0 0 24 24" style="display:block;width:100%;height:100%"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.4"/><line x1="6.2" y1="6.2" x2="17.8" y2="17.8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>', sn:'', state:'ok', cls:'iconFill', act:'onclick="techPauseBuild(event)"' }];   // 4번째(우상단) 칸 = 유닛 지정해제와 동일한 금지 아이콘(칸 중앙에 크게, 텍스트 없음), 나머지 비움 → 다른 행동 불가
-    return { mode:'build', alwaysFull:true, title:rn+(role?' ('+role+')':''), icon:_techUnitPortrait(fid), hpsh:_cgHpShDual(ws.hp,ws.sh),
+    return { mode:'build', alwaysFull:true, title:rn+(role?' ('+role+')':''), icon:_techUnitPortrait(fid), hpsh:_cgHpShDual(ws.hp,ws.sh), topRight:_bk,
       sub:'🔨 건설 중 — ⏸ 일시정지하면 자유 이동·다른 건물 건설 가능', items, info:{ eb:'', hideName:true, stats:_techUnitStatList(ws,fid), cr:0, en:0 } }; }   // alwaysFull=항상 두 줄(작업 시 한 줄로 안 줄어듦 · 일시정지=4번 칸 유지)
   const bl=techBuildListModel();   // 그 외(자유 상태): 건물 카드(techArm) 재사용 — 처음처럼 다른 건물 건설 가능
-  return { mode:'build', alwaysFull:true, title:rn+(n>1?(' '+n+'기'):'')+(role?' ('+role+')':''), icon:_techUnitPortrait(fid), hpsh:_cgHpShDual(ws.hp,ws.sh),
+  return { mode:'build', alwaysFull:true, title:rn+(n>1?(' '+n+'기'):'')+(role?' ('+role+')':''), icon:_techUnitPortrait(fid), hpsh:_cgHpShDual(ws.hp,ws.sh), topRight:_bk,
     sub:'건물 선택 → 맵 탭해 배치 · 맵 탭 = 이동 · 해제 ✕', items:bl.items, info:{ eb:'', hideName:true, stats:_techUnitStatList(ws,fid), cr:0, en:0 } }; }
 function techPauseBuild(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;   // ⏸ 일시정지: 건물 동결 + 일꾼 완전 분리(처음 상태로 복귀)
   const wks=(G.tech.selU||[]).map(id=>G.tech.ents.find(e=>e.eid===id)).filter(e=>e&&e.type==='worker'&&e.build!=null); if(!wks.length) return;   // 지정된 건설 중 일꾼 전체
@@ -11778,7 +11780,7 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
   const selUs=(G.tech.selU||[]).map(id=>G.tech.ents.find(e=>e.eid===id)).filter(Boolean);
   let selRes=G.tech.selRes||null; if(selRes && selRes.kind==='mineral' && !(G.tech.minerals||[]).some(m=>m.eid===selRes.eid)){ G.tech.selRes=null; selRes=null; }   // 💎 소멸한 미네랄 지정 정리
   if(sh.sec==='ent' && !selB && !selUs.length && !selRes){ sh.open=false; sh.sec=null; }   // 선택 사라짐 → 시트 닫기
-  const _selWk=selUs.some(e=>e.type==='worker');
+  const _allWk=selUs.length>0 && selUs.every(e=>e.type==='worker');   // 전원 일꾼 = 건설 프로필 · 일꾼+전투유닛 혼합 = 복합(칩) 프로필(칩 탭으로 종류별 전환)
   // 시트: 선택된 대상(일꾼=건설 그리드 / 유닛=이동 / 건물=생산·연구)만 표시. 별도 독 배너 없음 — 업그레이드 탭 시트처럼 그 영역만
   const _selKey=(G.tech.sel!=null)?('b'+G.tech.sel):((G.tech.selU&&G.tech.selU.length)?('u'+G.tech.selU.join(',')):(selRes?('r'+selRes.kind+(selRes.eid||'')):''));
   if(_selKey && _selKey!==G.tech._lastSelKey){ G.tech.cardMode=1; G.tech.selType=null; G.tech._lastSelKey=_selKey; }   // 새 선택(selU 변경) = 간소화 초기화 + 종류 소프트선택(selType) 리셋 — 칩 탭(selU 불변)은 유지 · 모델 생성 전 실행
@@ -11788,7 +11790,7 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
     else if(selB && !_resumeMode){ if(selB.bt>0){ model=techBldgBuildingModel(selB); }   // 건설 중·일시정지 = 잠금 프로필(진행도 HP)
       else { const b=techGetBldg(G.tech.race,selB.bk); model=(G.tech.race==='union'&&selB.bk==='bunker')?techBunkerModel(b, selB):((G.tech.race==='swarm'&&selB.bk==='nydus')?techNydusModel(b, selB):((G.tech.race==='swarm'&&TECH_LARVA_BLDG[selB.bk])?techBldgProdModel(b, selB):((b&&b.produces)?techBldgProdModel(b, selB):((b&&b.research)?techBldgUpgModel(b, selB):((b&&b.unlocks)?techBldgInfoModel(b, selB):techBldgPlainModel(b, selB)))))); } }   // 🧱 벙커·🕳 나이더스=전용 모델 · 🐛 라바 건물 우선 · 해금=정보 모델
     else if(selUs.length){ const _selEgg=selUs.filter(e=>e.type==='egg'), _selLv=selUs.filter(e=>e.type==='larva');
-      model=_selEgg.length?techEggModel(_selEgg):(_selLv.length?techLarvaProdModel(_selLv):(_selWk?techWorkerBuildModel(selUs):techUnitPanelModel(selUs))); } }   // 🥚 알 = 진화중(잠금) 프로필
+      model=_selEgg.length?techEggModel(_selEgg):(_selLv.length?techLarvaProdModel(_selLv):(_allWk?techWorkerBuildModel(selUs):techUnitPanelModel(selUs))); } }   // 🥚 알 = 진화중(잠금) 프로필
   // 🔢 모든 건물 = 4그리드 1줄(간소화)로 높이 통일. 5개↑는 2줄로 높이지 않고 페이지로 넘김(슬롯 위치 보존). cm2=최소화(본문 숨김)만 별도
   let cm=(G.tech.cardMode===2)?2:1; G.tech.cardMode=cm;   // cm0(2줄 전체) 제거 → 1(간소화) 또는 2(최소화)만. 사이클의 0은 1로 수렴
   const _shown=!!(sh.open&&model);
@@ -11942,9 +11944,11 @@ function techPtrUp(ev){ if(!G.tech) return; clearTimeout(_btLongT); _btLongT=nul
   if(!had||moved||!down||G.tab!=='Build'||down.sy<0.13) return;   // 핀치/드래그/상단바 = 탭 아님
   const w=_techS2W(down.sx, down.sy);
   const e=_techEntAt(w.x, w.y);
-  if(e){ G.tech.selRes=null; if(e.type==='bldg'){ G.tech.sel=e.eid;
+  if(e){ G.tech.selRes=null; if(e.type==='bldg'){
       const _keepWk=(e.bt>0&&e._bpause&&(G.tech.selU||[]).some(id=>{ const w=G.tech.ents.find(x=>x.eid===id); return w&&w.type==='worker'&&w.build==null; }));   // 일시정지 건물 + 유휴 일꾼 지정 = 그 일꾼 지정 유지(재개 시 사용)
-      if(!_keepWk) G.tech.selU=[]; }
+      const _movU=(G.tech.selU||[]).some(id=>{ const u=G.tech.ents.find(x=>x.eid===id); return u&&(u.type==='unit'||u.type==='worker'); });   // 🏗 이동 가능 유닛 지정 중 = 건물 짧게 탭 = 그 지점으로 이동(건물 지정 안 함 · 롱프레스 탑승/수리는 별도) → 건물 지정은 유닛 해제(✕) 후에만
+      if(_movU && !_keepWk){ _techAssignMove(w.x,w.y); if(typeof playSfx==='function') playSfx('ui_confirm'); if(body) body._cgPage=0; techMapRender(); return; }
+      G.tech.sel=e.eid; if(!_keepWk) G.tech.selU=[]; }
     else { G.tech.selU=[e.eid]; G.tech.sel=null; } sh.open=true; sh.sec='ent'; }   // 엔티티 탭 = 시트 즉시 교체(닫혔다 열리지 않음)
   else { const _mn=_techMineralAt(w.x,w.y), _gz=_techInGasZone(w.x,w.y);   // 💎⛽ 빈 곳 탭 = 중립 자원(미네랄·가스 광산) 지정(단 하나만). 자원 없으면 시트 닫기
     if(_mn){ G.tech.selRes={kind:'mineral',eid:_mn.eid}; G.tech.sel=null; G.tech.selU=[]; sh.open=true; sh.sec='ent'; }
