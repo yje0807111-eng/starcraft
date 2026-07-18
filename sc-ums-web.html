@@ -3063,7 +3063,7 @@ const U = {
   racer: {name:'레이서', icon:'🔧', cost:0, dmg:21, up:8, hdmg:42, hup:17, range:0.15, cd:24, splash:false, color:'#4aa8ff', size:18, wpn:'mech', atk:'bullet', hp:76, armor:1, shield:0, energy:0, moveSpd:0.19, model3d:'racer'},   // 샌드박스 전용 · 종족밸런스 ×0.80
   machinegun: {name:'화력병', icon:'🔥', cost:55, dmg:12, up:5, hdmg:0, hup:0, range:0.09, cd:16, splash:true, color:'#ff7a3c', size:18, wpn:'mech', atk:'bullet', hp:55, armor:1, shield:0, energy:0, moveSpd:0.16, model3d:'machinegun'},   // 파이어뱃(배럭스 바이오닉·근접 화염 스플래시)
   tank: {name:'공성전차', icon:'🔧', cost:0, dmg:58, up:23, hdmg:115, hup:46, range:0.34, cd:52, splash:true, color:'#4aa8ff', size:22, wpn:'mech', atk:'shell', hp:144, armor:2, shield:0, energy:0, moveSpd:0.07, model3d:'tank'},   // 샌드박스 전용 · 종족밸런스 ×0.80
-  blade: {name:'검사', icon:'🔮', cost:110, dmg:33, up:13, hdmg:64, hup:25, range:0.05, cd:24, splash:false, color:'#ffc040', size:18, wpn:'pro', atk:'slash', hp:156, armor:1, shield:48, shArmor:1, energy:0, moveSpd:0.18, model3d:'blade'},   // 첫 전투유닛(질럿) · 최강 개체 · 종족밸런스 ×1.20
+  blade: {name:'광전사', icon:'🔮', cost:110, dmg:33, up:13, hdmg:64, hup:25, range:0.05, cd:24, splash:false, color:'#ffc040', size:18, wpn:'pro', atk:'slash', hp:156, armor:1, shield:48, shArmor:1, energy:0, moveSpd:0.18, model3d:'blade'},   // 첫 전투유닛(질럿) · 최강 개체 · 종족밸런스 ×1.20
   matron: {name:'여제', icon:'🐛', cost:0, dmg:52, up:21, hdmg:104, hup:42, range:0.27, cd:26, splash:true, color:'#a8472e', size:23, wpn:'zrg', atk:'psi', hp:420, armor:3, shield:0, energy:0, moveSpd:0.15, airDmg:40, airUp:16, hairDmg:80, hairUp:32, model3d:'matron'},   // 샌드박스 전용(보직 스탯)
   thornqueen: {name:'가시여왕', icon:'🐛', cost:0, dmg:24, up:10, hdmg:48, hup:19, range:0.24, cd:30, splash:true, color:'#a8472e', size:20, wpn:'zrg', atk:'spike', hp:130, armor:1, shield:0, energy:0, moveSpd:0.13, model3d:'thornqueen'},   // 샌드박스 전용(보직 스탯)
   snapper: {name:'척후병', icon:'🐛', cost:40, dmg:12, up:6, hdmg:25, hup:10, range:0.20, cd:18, splash:false, color:'#a8472e', size:17, wpn:'zrg', atk:'spike', hp:56, armor:0, shield:0, energy:0, moveSpd:0.19, model3d:'snapper'},   // 첫 전투유닛(저글링급) · 종족밸런스 ×1.17
@@ -6550,13 +6550,13 @@ SKILL_ICON.scan='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 SKILL_ICON.recharge='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V5z" opacity=".3"/><path d="M13 6l-4 6h3l-1 5 4-6h-3z"/></svg>';   // 쉴드 충전=번개 방패
 const SKILLS={
   // 하이템플러: 사이오닉 스톰 — 지정 지점 광역 지속 피해(연출: 보라 뇌운+번개)
-  psi_storm:{ key:'psi_storm', name:'사이오닉 스톰', kind:'target_ground', energy:75, cd:12, dur:3, radius:0.075, dmg:14,
-    arm:'⚡ 사이오닉 스톰: 떨어뜨릴 지점을 클릭하세요.' },
+  psi_storm:{ key:'psi_storm', name:'번개 폭풍', kind:'target_ground', energy:75, cd:12, dur:3, radius:0.075, dmg:14,
+    arm:'⚡ 번개 폭풍: 떨어뜨릴 지점을 클릭하세요.' },
   // 메딕: 지정 힐 — 아군 1기를 지정해 따라다니며 치료(미지정 시 근처 부상 바이오닉 자동 치료)
   heal:{ key:'heal', name:'치유', kind:'target_unit', energy:0, drain:10, hps:24, range:HEAL_RANGE,
     arm:'✚ 치유: 따라다니며 치료할 아군을 클릭하세요.' },
   // 아비터(크로노스): 차원 은폐 — 오라(범위 내 아군 은신)
-  psi_cloak:{ key:'psi_cloak', name:'차원 은폐', kind:'aura', energy:0, radius:0.12, cloakAllies:true },
+  psi_cloak:{ key:'psi_cloak', name:'은신 장막', kind:'aura', energy:0, radius:0.12, cloakAllies:true },
   // 레인저(마린): 스팀팩 — 자기 강화(공속·이속↑, 체력 소모). 전투 유즈맵 훅: u.buff.stim
   stim:{ key:'stim', name:'광폭화', kind:'self', cd:10, dur:6, atkMul:1.5, spdMul:1.4, hpCost:10 },
   // 메두사(퀸): 인스네어 — 지정 지역 적 둔화(가스). 훅: e.slowT
@@ -6579,13 +6579,13 @@ const SKILLS={
   // 메두사(퀸): 브루들링 — 스폰 브루들링 연구 해제. 지정 적 즉사 + 그 자리에 스웜링 2기
   broodling:{ key:'broodling', name:'유충 폭발', kind:'target_enemy', energy:0, enSc:150, cd:12, spawn:2, arm:'🐛 유충 폭발: 즉사시킬 적을 클릭하세요.' },
   // ── 🔮 에테리얼(프로토스) 마법 — 관리자=SC 마나(enSc), 네모 게임=0(제외) ──
-  hallucination:{ key:'hallucination', name:'할루시네이션', kind:'target_unit', energy:0, enSc:100, cd:10, count:2, arm:'👥 할루시네이션: 환영을 만들 아군을 클릭하세요.' },   // 하이세이지 — 대상 환영 2기
-  feedback:{ key:'feedback', name:'피드백', kind:'target_enemy', energy:0, enSc:50, cd:8, arm:'💥 피드백: 마나를 태울 대상을 클릭하세요.' },   // 다크보이드 — 대상 마나 소각+피해
-  maelstrom:{ key:'maelstrom', name:'메일스트롬', kind:'target_ground', energy:0, enSc:100, cd:12, dur:6, radius:0.1, arm:'🌀 메일스트롬: 지점을 클릭하세요.' },   // 다크보이드 — 범위 마비
-  mind_control:{ key:'mind_control', name:'마인드 컨트롤', kind:'target_enemy', energy:0, enSc:150, cd:15, arm:'🧠 마인드 컨트롤: 장악할 대상을 클릭하세요.' },   // 다크보이드 — 장악(자신 쉴드 0)
-  disruption_web:{ key:'disruption_web', name:'디스럽션 웹', kind:'target_ground', energy:0, enSc:125, cd:10, dur:8, radius:0.11, arm:'🕸️ 디스럽션 웹: 지점을 클릭하세요.' },   // 팔콘 — 지상 결계
-  stasis:{ key:'stasis', name:'스테이시스 필드', kind:'target_ground', energy:0, enSc:100, cd:12, dur:6, radius:0.1, arm:'🧊 스테이시스 필드: 지점을 클릭하세요.' },   // 크로노스 — 범위 정지+무적
-  recall:{ key:'recall', name:'리콜', kind:'target_ground', energy:0, enSc:150, cd:12, radius:0.18, arm:'↩️ 리콜: 소환할 지점을 클릭하세요.' },   // 크로노스 — 근처 아군 순간이동
+  hallucination:{ key:'hallucination', name:'환영', kind:'target_unit', energy:0, enSc:100, cd:10, count:2, arm:'👥 환영: 환영을 만들 아군을 클릭하세요.' },   // 하이세이지 — 대상 환영 2기
+  feedback:{ key:'feedback', name:'마나 소각', kind:'target_enemy', energy:0, enSc:50, cd:8, arm:'💥 마나 소각: 마나를 태울 대상을 클릭하세요.' },   // 다크보이드 — 대상 마나 소각+피해
+  maelstrom:{ key:'maelstrom', name:'마비 폭풍', kind:'target_ground', energy:0, enSc:100, cd:12, dur:6, radius:0.1, arm:'🌀 마비 폭풍: 지점을 클릭하세요.' },   // 다크보이드 — 범위 마비
+  mind_control:{ key:'mind_control', name:'정신 지배', kind:'target_enemy', energy:0, enSc:150, cd:15, arm:'🧠 정신 지배: 장악할 대상을 클릭하세요.' },   // 다크보이드 — 장악(자신 쉴드 0)
+  disruption_web:{ key:'disruption_web', name:'교란 결계', kind:'target_ground', energy:0, enSc:125, cd:10, dur:8, radius:0.11, arm:'🕸️ 교란 결계: 지점을 클릭하세요.' },   // 팔콘 — 지상 결계
+  stasis:{ key:'stasis', name:'빙결', kind:'target_ground', energy:0, enSc:100, cd:12, dur:6, radius:0.1, arm:'🧊 빙결: 지점을 클릭하세요.' },   // 크로노스 — 범위 정지+무적
+  recall:{ key:'recall', name:'순간이동', kind:'target_ground', energy:0, enSc:150, cd:12, radius:0.18, arm:'↩️ 순간이동: 소환할 지점을 클릭하세요.' },   // 크로노스 — 근처 아군 순간이동
   // ── 🦎 스웜(저그) 마법 — 메두사(군단여왕) ──
   parasite:{ key:'parasite', name:'감염', kind:'target_enemy', energy:0, enSc:75, cd:6, arm:'🦠 감염: 기생시킬 적을 클릭하세요.' },   // 적 기생 → 시야 공유(영구)
   dark_swarm:{ key:'dark_swarm', name:'암흑 장막', kind:'target_ground', energy:0, enSc:100, cd:12, dur:8, radius:0.13, arm:'☁️ 암흑 장막: 지점을 클릭하세요.' },   // 범위 내 아군 = 원거리 피해 0
@@ -6604,9 +6604,9 @@ const BLDG_EN={ comsat:200, battery:200 };   // ⚡ 마나 보유 건물(생산 
 const BLDG_SKILLS={ comsat:['scan'], battery:['recharge'] };   // 건물별 스킬(프로필 카드)
 // 📖 스킬 한 줄 설명 — 롱프레스 팝업(단일 소스). 없으면 sk.arm/기본 문구로 폴백.
 const SKILL_DESC={
-  psi_storm:'지정 지점에 번개 폭풍을 떨어뜨려 범위 내 적에게 지속 광역 피해.',
+  psi_storm:'에너지 75. 좁은 범위에 3초간 초당 28(총 84) 피해.',
   heal:'지정 아군을 따라다니며 초당 24 회복(초당 에너지 10 소모, 미지정 시 근처 부상병 자동).',
-  psi_cloak:'주변 아군을 은폐시키는 오라(범위 내 상시).',
+  psi_cloak:'무료(오라). 넓은 범위 아군을 상시 은신.',
   stim:'체력 10을 소모해 6초간 공격 속도 1.5배·이동 속도 1.4배.',
   ensnare:'에너지 75. 넓은 범위 적을 8초간 둔화(이속·공속 50%↓).',
   spider_mine:'지정 지점에 지뢰를 매설, 적 접근 시 좁은 범위 폭발 피해 60. 기본 3개 충전, 사용 시마다 하나씩 소모(0이면 비활성).',
@@ -6616,13 +6616,13 @@ const SKILL_DESC={
   yamato:'에너지 150 소모. 적 하나에게 즉시 피해 260.',
   emp:'에너지 100 소모. 넓은 범위 안 적의 에너지·보호막을 모두 제거.',
   broodling:'에너지 150. 지정한 적을 즉사시키고 그 자리에 스웜링 2기 생성.',
-  hallucination:'지정한 아군의 환영 2기를 생성(피해는 없음).',
-  feedback:'지정한 적의 남은 마나를 태우고 그만큼 피해.',
-  maelstrom:'지정 지역의 생체 적을 일정 시간 마비.',
-  mind_control:'지정한 적 유닛을 영구 장악(시전 시 자신 보호막 소멸).',
-  disruption_web:'지정 지역에 결계를 쳐 안의 지상 유닛 공격 무력화.',
-  stasis:'지정 지역의 유닛을 정지시키고 무적으로 만듦(피아 모두).',
-  recall:'지정 지점 주변의 아군을 시전자 위치로 순간이동.',
+  hallucination:'에너지 100. 지정 아군의 가짜 분신 2기 생성(피해 0, 20초 후 소멸).',
+  feedback:'에너지 50. 지정한 적의 남은 마나를 태우고 그만큼 피해(보호막 무시).',
+  maelstrom:'에너지 100. 넓은 범위 생체 적을 6초간 마비.',
+  mind_control:'에너지 150. 적 하나를 영구 아군으로(시전 시 자신 보호막 0).',
+  disruption_web:'에너지 125. 넓은 범위 지상 유닛 공격을 8초간 무력화.',
+  stasis:'에너지 100. 넓은 범위 유닛을 6초간 정지+무적(피아 모두).',
+  recall:'에너지 150. 넓은 범위 아군을 시전자 위치로 순간이동.',
   parasite:'에너지 75. 지정한 적에 기생해 그 유닛 시야를 영구 공유.',
   dark_swarm:'에너지 100. 넓은 범위를 8초간 덮어 안의 아군이 받는 원거리 피해 0.',
   plague:'에너지 150. 넓은 범위 적을 6초간 초당 18(총 108) 피해(최소 1까지).',
@@ -9967,7 +9967,7 @@ function drawSandboxGround(ctx,W,H){
 const RACE_ROSTER={
   union:[{n:'정비공',key:'worker_human'},{n:'레인저',key:'marine'},{n:'화력병',key:'machinegun'},{n:'의무병',key:'medic'},{n:'저격수',key:'ghost'},{n:'레이서',key:'racer'},{n:'공성전차',key:'tank'},{n:'기갑병',key:'goliath'},{n:'전투기',key:'skyguard'},{n:'수송선',key:'pelican'},{n:'지원 정찰기',key:'aegis'},{n:'폭격기',key:'hellfire'},{n:'전함',key:'dreadnought'}],
   swarm:[{n:'생산자',key:'worker_swarm'},{n:'수송충',key:'overlord'},{n:'척후병',key:'snapper'},{n:'스파이크',key:'hydra'},{n:'가시여왕',key:'thornqueen'},{n:'자폭충',key:'stinger'},{n:'비행충',key:'wyvern'},{n:'군단여왕',key:'medusa'},{n:'오염술사',key:'defiler'},{n:'산성충',key:'venom'},{n:'포격충',key:'behemoth'},{n:'스웜링',key:'broodling'},{n:'돌격괴수',key:'ultralisk'}],
-  aetherial:[{n:'생산자',key:'worker_light'},{n:'센티넬',key:'dragoon'},{n:'검사',key:'blade'},{n:'보이드',key:'archon'},{n:'팔콘',key:'falcon'},{n:'수송선',key:'seraph'},{n:'요격기',key:'skydancer'},{n:'모함',key:'archangel'},{n:'정찰기',key:'observer'},{n:'전함',key:'kronos'},{n:'다크세이지',key:'dark_templar'},{n:'하이세이지',key:'high_templar'},{n:'공성체',key:'larva'}],
+  aetherial:[{n:'생산자',key:'worker_light'},{n:'센티넬',key:'dragoon'},{n:'광전사',key:'blade'},{n:'보이드',key:'archon'},{n:'팔콘',key:'falcon'},{n:'수송선',key:'seraph'},{n:'요격기',key:'skydancer'},{n:'모함',key:'archangel'},{n:'정찰기',key:'observer'},{n:'전함',key:'kronos'},{n:'다크세이지',key:'dark_templar'},{n:'하이세이지',key:'high_templar'},{n:'공성체',key:'larva'}],
 };
 function _rosterName(key){ for(const r in RACE_ROSTER){ const f=RACE_ROSTER[r].find(u=>u.key===key); if(f) return f.n; } return (typeof U!=='undefined'&&U[key]&&U[key].name)||key; }   // 공용 표시 이름(전 구역 통일)
 function _rosterRaceOf(key){ for(const r in RACE_ROSTER){ if(RACE_ROSTER[r].some(u=>u.key===key)) return r; } return null; }
@@ -10141,7 +10141,7 @@ const STK_UNITS={
   tank:      {name:'공성전차',   ico:'🛡', cost:350, hp:430, dmg:72, rng:330, cd:2.30, spd:115, size:24, splash:160},
   // 🔮 에테리얼 — 사이오닉 (원거리 포격 / 근접 돌격 / 광역 탱커)
   dragoon:   {name:'센티넬',    ico:'🤖', cost:200, hp:300, dmg:24, rng:245, cd:1.25, spd:230, size:18},
-  blade:     {name:'검사',      ico:'⚔️', cost:120, hp:300, dmg:22, rng:62,  cd:0.80, spd:340, size:17, melee:true},
+  blade:     {name:'광전사',      ico:'⚔️', cost:120, hp:300, dmg:22, rng:62,  cd:0.80, spd:340, size:17, melee:true},
   archon:    {name:'보이드',    ico:'🔮', cost:340, hp:400, dmg:34, rng:130, cd:1.05, spd:185, size:23, splash:120},
   // 🦎 스웜 — 유기체 (저가 원거리 / 근접 다수 / 도트 공성)
   hydra:     {name:'스파이크',      ico:'🦎', cost:110, hp:215, dmg:18, rng:215, cd:0.95, spd:300, size:17},
@@ -10376,22 +10376,22 @@ TECH_TREE.aetherial={ name:'에테리얼', res:{m:'크레딧', g:'에너지'}, b
   { k:'pylon', name:'동력탑', ico:'🔮', m:100, g:0, supply:8, req:[] },               // 동력장
   { k:'gateway', name:'지상 관문', ico:'⛩️', m:150, g:0, req:['nexus'],
     produces:[
-      {id:'blade', name:'검사', m:100, g:0, pop:2},                                   // 질럿
+      {id:'blade', name:'광전사', m:100, g:0, pop:2},                                   // 질럿
       {id:'dragoon', name:'센티넬', m:125, g:50, pop:2, req:['cyber']},               // 드라군
       {id:'high_templar', name:'하이세이지', m:50, g:150, pop:2, req:['archives']},    // 하이세이지 → 보이드로 진화(TECH_MORPH)
       {id:'dark_templar', name:'다크세이지', m:125, g:100, pop:2, req:['archives']}] },  // 다크세이지 → 다크보이드로 진화(TECH_MORPH)
   { k:'assimilator', name:'융합소', ico:'🛢', m:100, g:0, gas:true, req:[] },
   { k:'forge', name:'대장간', ico:'⚒️', m:150, g:0, req:['nexus'],
     research:[
-      {k:'gnd_wpn', name:'지상 무기', desc:'워든·센티넬·보이드 +/티어', tier:[[100,100],[150,150],[200,200]]},
-      {k:'gnd_arm', name:'지상 장갑', desc:'지상 방어 +/티어', tier:[[100,100],[150,150],[200,200]]},
-      {k:'shield', name:'플라즈마 보호막', desc:'모든 유닛 실드 +/티어', tier:[[200,200],[300,300],[400,400]]} ] },
+      {k:'gnd_wpn', name:'지상 무기', desc:'광전사·센티넬·보이드 +/티어', tier:[[100,100],[150,150],[200,200]]},
+      {k:'gnd_arm', name:'지상 방어', desc:'지상 방어 +/티어', tier:[[100,100],[150,150],[200,200]]},
+      {k:'shield', name:'실드 강화', desc:'모든 유닛 실드 +/티어', tier:[[200,200],[300,300],[400,400]]} ] },
   { k:'cannon', name:'광자포', ico:'☄️', m:150, g:0, req:['forge'], detector:true },
   { k:'cyber', name:'제어 핵', ico:'⚙️', m:200, g:0, req:['gateway'],
     research:[
-      {k:'singularity', name:'특이점 장약', desc:'센티넬 사거리↑', m:150, g:150},
-      {k:'air_wpn', name:'공중 무기', desc:'팔콘·스카이댄서·아크엔젤·크로노스 +/티어', tier:[[100,100],[175,175],[250,250]]},
-      {k:'air_arm', name:'공중 장갑', desc:'공중 방어 +/티어', tier:[[150,150],[225,225],[300,300]]} ] },
+      {k:'singularity', name:'사거리 강화', desc:'센티넬 사거리↑', m:150, g:150},
+      {k:'air_wpn', name:'공중 무기', desc:'팔콘·요격기·모함·전함 +/티어', tier:[[100,100],[175,175],[250,250]]},
+      {k:'air_arm', name:'공중 방어', desc:'공중 방어 +/티어', tier:[[150,150],[225,225],[300,300]]} ] },
   { k:'battery', name:'충전소', ico:'🔋', m:100, g:0, req:['gateway'] },
   // ── 스타게이트·공중군 ──
   { k:'stargate', name:'공중 관문', ico:'🛸', m:150, g:150, req:['cyber'],
@@ -10402,16 +10402,16 @@ TECH_TREE.aetherial={ name:'에테리얼', res:{m:'크레딧', g:'에너지'}, b
       {id:'kronos', name:'전함', m:100, g:350, pop:4, req:['tribunal']}] },         // 아비터
   { k:'fleet', name:'함대 관제', ico:'📡', m:300, g:200, req:['stargate'],
     research:[
-      {k:'apial', name:'에피얼 센서', desc:'스카이댄서 시야↑', m:100, g:100},
-      {k:'gravitic_scout', name:'중력자 추진기', desc:'스카이댄서 이동속도↑', m:200, g:200},
-      {k:'carrier_cap', name:'캐리어 수용력', desc:'요격기 최대 4→8', m:100, g:100},
-      {k:'disruption', name:'디스럽션 웹', desc:'팔콘: 지상 공격 무력화 그물', m:200, g:200},
-      {k:'argus_jewel', name:'아르거스 보석', desc:'팔콘 최대 에너지 +50', m:100, g:100} ] },
+      {k:'apial', name:'시야 강화', desc:'요격기 시야↑', m:100, g:100},
+      {k:'gravitic_scout', name:'이속 강화', desc:'요격기 이동속도↑', m:200, g:200},
+      {k:'carrier_cap', name:'요격기 증설', desc:'요격기 최대 4→8', m:100, g:100},
+      {k:'disruption', name:'교란 결계', desc:'팔콘: 지상 공격 무력화 그물', m:200, g:200},
+      {k:'argus_jewel', name:'마나 증폭', desc:'팔콘 최대 에너지 +50', m:100, g:100} ] },
   { k:'tribunal', name:'심판정', ico:'💎', m:200, g:150, req:['stargate','archives'],
     research:[
-      {k:'recall', name:'리콜', desc:'아군 대규모 순간이동', m:150, g:150},
-      {k:'stasis', name:'스테이시스 필드', desc:'범위 유닛 무적·행동불가', m:150, g:150},
-      {k:'khaydarin_core', name:'케이다린 코어', desc:'크로노스 최대 에너지 +50', m:150, g:150} ] },
+      {k:'recall', name:'순간이동', desc:'아군 대규모 순간이동', m:150, g:150},
+      {k:'stasis', name:'빙결', desc:'범위 유닛 무적·행동불가', m:150, g:150},
+      {k:'khaydarin_core', name:'마나 증폭', desc:'전함 최대 에너지 +50', m:150, g:150} ] },
   // ── 로보틱스 ──
   { k:'robo', name:'로봇 공창', ico:'🤖', m:200, g:200, req:['cyber'],
     produces:[
@@ -10420,22 +10420,22 @@ TECH_TREE.aetherial={ name:'에테리얼', res:{m:'크레딧', g:'에너지'}, b
       {id:'reaver', name:'공성체', m:200, g:100, pop:4, req:['robobay']}] },               // 리버(스캐럽 내부 큐)
   { k:'robobay', name:'로봇 정비소', ico:'🔧', m:150, g:100, req:['robo'],
     research:[
-      {k:'gravitic_shuttle', name:'중력자 추진기', desc:'세라프 이동속도↑', m:200, g:200},
-      {k:'reaver_cap', name:'스캐럽 수용력', desc:'리버 스캐럽 최대 5→10', m:200, g:200} ] },
+      {k:'gravitic_shuttle', name:'이속 강화', desc:'수송선 이동속도↑', m:200, g:200},
+      {k:'reaver_cap', name:'탄약 증설', desc:'공성체 스캐럽 최대 5→10', m:200, g:200} ] },
   { k:'observatory', name:'관측소', ico:'🔭', m:50, g:100, req:['robo'],
     research:[
-      {k:'gravitic_obs', name:'중력자 승압기', desc:'와처 이동속도↑', m:150, g:150},
-      {k:'sensor', name:'센서 배열', desc:'와처 시야↑', m:150, g:150} ] },
+      {k:'gravitic_obs', name:'이속 강화', desc:'정찰기 이동속도↑', m:150, g:150},
+      {k:'sensor', name:'시야 강화', desc:'정찰기 시야↑', m:150, g:150} ] },
   { k:'citadel', name:'성채', ico:'🏯', m:150, g:100, req:['cyber'],
-    research:[{k:'legs', name:'다리 강화', desc:'워든 이동속도↑ (발업)', m:150, g:150}] },
+    research:[{k:'legs', name:'이속 강화', desc:'광전사 이동속도↑ (발업)', m:150, g:150}] },
   { k:'archives', name:'기록 보관소', ico:'📚', m:150, g:200, req:['citadel'],
     research:[
-      {k:'storm', name:'사이오닉 스톰', desc:'하이세이지 범위 번개', m:200, g:200},
-      {k:'hallucination', name:'할루시네이션', desc:'가짜 유닛 생성', m:150, g:150},
-      {k:'khaydarin', name:'케이다린 부적', desc:'하이세이지 최대 에너지 +50', m:150, g:150},
-      {k:'mindcontrol', name:'마인드 컨트롤', desc:'적 유닛 영구 탈취', m:200, g:200},
-      {k:'maelstrom', name:'메일스트롬', desc:'생체 유닛 일정시간 마비', m:100, g:100},
-      {k:'argus', name:'아르거스 부적', desc:'다크아콘 최대 에너지 +50', m:150, g:150} ] },
+      {k:'storm', name:'번개 폭풍', desc:'하이세이지 범위 번개', m:200, g:200},
+      {k:'hallucination', name:'환영', desc:'가짜 유닛 생성', m:150, g:150},
+      {k:'khaydarin', name:'마나 증폭', desc:'하이세이지 최대 에너지 +50', m:150, g:150},
+      {k:'mindcontrol', name:'정신 지배', desc:'적 유닛 영구 탈취', m:200, g:200},
+      {k:'maelstrom', name:'마비 폭풍', desc:'생체 유닛 일정시간 마비', m:100, g:100},
+      {k:'argus', name:'마나 증폭', desc:'다크보이드 최대 에너지 +50', m:150, g:150} ] },
 ]};
 // ══ 테크트리 상세 스펙(SC1 기반, B안=실제 수치) — 건물{hp,ar,size,t(초)} / 유닛{hp,ar,sh,atk,at(공격형),rng,spd,t,abil} ══
 //   at: norm(일반형)·conc(진동형)·expl(폭발형)·'-'(무공격)
