@@ -6553,27 +6553,27 @@ const SKILLS={
   psi_storm:{ key:'psi_storm', name:'사이오닉 스톰', kind:'target_ground', energy:75, cd:12, dur:3, radius:0.075, dmg:14,
     arm:'⚡ 사이오닉 스톰: 떨어뜨릴 지점을 클릭하세요.' },
   // 메딕: 지정 힐 — 아군 1기를 지정해 따라다니며 치료(미지정 시 근처 부상 바이오닉 자동 치료)
-  heal:{ key:'heal', name:'지정 힐', kind:'target_unit', energy:0, drain:10, hps:24, range:HEAL_RANGE,
-    arm:'✚ 지정 힐: 따라다니며 치료할 아군을 클릭하세요.' },
+  heal:{ key:'heal', name:'치유', kind:'target_unit', energy:0, drain:10, hps:24, range:HEAL_RANGE,
+    arm:'✚ 치유: 따라다니며 치료할 아군을 클릭하세요.' },
   // 아비터(크로노스): 차원 은폐 — 오라(범위 내 아군 은신)
   psi_cloak:{ key:'psi_cloak', name:'차원 은폐', kind:'aura', energy:0, radius:0.12, cloakAllies:true },
   // 레인저(마린): 스팀팩 — 자기 강화(공속·이속↑, 체력 소모). 전투 유즈맵 훅: u.buff.stim
-  stim:{ key:'stim', name:'스팀팩', kind:'self', cd:10, dur:6, atkMul:1.5, spdMul:1.4, hpCost:10 },
+  stim:{ key:'stim', name:'광폭화', kind:'self', cd:10, dur:6, atkMul:1.5, spdMul:1.4, hpCost:10 },
   // 메두사(퀸): 인스네어 — 지정 지역 적 둔화(가스). 훅: e.slowT
   ensnare:{ key:'ensnare', name:'인스네어', kind:'target_ground', energy:0, enSc:75, cd:10, dur:8, radius:0.11, slow:0.5,
     arm:'🕸 인스네어: 퍼뜨릴 지점을 클릭하세요.' },
   // 레이서(벌처): 스파이더 마인 — 매설 후 적 접근 시 폭발(광역). 훅: 근접 적 감지
-  spider_mine:{ key:'spider_mine', name:'스파이더 마인', kind:'target_ground', energy:0, cd:3, r:0.06, trig:0.045, dmg:60,
-    arm:'💣 스파이더 마인: 매설 지점을 클릭하세요.' },
+  spider_mine:{ key:'spider_mine', name:'지뢰', kind:'target_ground', energy:0, cd:3, r:0.06, trig:0.045, dmg:60,
+    arm:'💣 지뢰: 매설 지점을 클릭하세요.' },
   // ── 유니온 배치 ──
   // 팬텀(고스트): 락다운 — 지정 적 정지(기계 무력화). 훅: e.stunT
-  lockdown:{ key:'lockdown', name:'락다운', kind:'target_enemy', energy:0, enSc:100, cd:9, dur:6, arm:'🔒 락다운: 정지시킬 적을 클릭하세요.' },
+  lockdown:{ key:'lockdown', name:'봉쇄', kind:'target_enemy', energy:0, enSc:100, cd:9, dur:6, arm:'🔒 봉쇄: 정지시킬 적을 클릭하세요.' },
   // 팬텀(고스트): 핵 공격 — 지정 지점에 지연 후 대형 폭발
-  nuke:{ key:'nuke', name:'핵 공격', kind:'target_ground', energy:0, cd:22, delay:3.5, radius:0.15, dmg:400, arm:'☢ 핵: 투하 지점을 클릭하세요.' },
+  nuke:{ key:'nuke', name:'핵 폭격', kind:'target_ground', energy:0, cd:22, delay:3.5, radius:0.15, dmg:400, arm:'☢ 핵 폭격: 투하 지점을 클릭하세요.' },
   // 브레이커(탱크): 시즈 모드 — 토글(사거리·공격↑, 정지). 훅: 이동불가
-  siege:{ key:'siege', name:'시즈 모드', kind:'toggle', energy:0, atkMul:1.8, rngMul:1.6 },
+  siege:{ key:'siege', name:'공성 모드', kind:'toggle', energy:0, atkMul:1.8, rngMul:1.6 },
   // 드레드노트: 야마토 포 — 지정 적에 고정 대형 피해(즉발)
-  yamato:{ key:'yamato', name:'야마토 포', kind:'target_enemy', energy:0, enSc:150, cd:12, dmg:260, arm:'💥 야마토: 조준할 적을 클릭하세요.' },
+  yamato:{ key:'yamato', name:'집중포', kind:'target_enemy', energy:0, enSc:150, cd:12, dmg:260, arm:'💥 집중포: 조준할 적을 클릭하세요.' },
   // 이지스: EMP — 지정 지역 에너지·보호막 소거
   emp:{ key:'emp', name:'EMP', kind:'target_ground', energy:0, enSc:100, cd:10, radius:0.13, arm:'⚡ EMP: 지점을 클릭하세요.' },
   // 메두사(퀸): 브루들링 — 스폰 브루들링 연구 해제. 지정 적 즉사 + 그 자리에 스웜링 2기
@@ -6592,10 +6592,10 @@ const SKILLS={
   plague:{ key:'plague', name:'플레이그', kind:'target_ground', energy:0, enSc:150, cd:12, dur:6, radius:0.11, dps:18, arm:'🩸 플레이그: 지점을 클릭하세요.' },   // 범위 HP 지속 감소(체력 1까지, 쉴드 무시 안 함)
   consume:{ key:'consume', name:'컨슘', kind:'target_unit', energy:0, enSc:0, cd:2, gain:50, arm:'🍽 컨슘: 잡아먹을 아군 유닛을 클릭하세요.' },   // 아군 잡아먹어 마나 +50
   // ── 🛡 유니온(테란) 마법 — 이지스(사이언스 베슬)·메딕 ──
-  irradiate:{ key:'irradiate', name:'이레디에이트', kind:'target_enemy', energy:0, enSc:75, cd:8, dur:8, dps:30, arm:'☢ 이레디에이트: 방사능을 씌울 적을 클릭하세요.' },   // 대상 지속 피해(생체)
-  defensive_matrix:{ key:'defensive_matrix', name:'디펜시브 매트릭스', kind:'target_unit', energy:0, enSc:100, cd:6, absorb:250, arm:'🛡 디펜시브 매트릭스: 보호할 아군을 클릭하세요.' },   // 아군에 250 흡수 보호막
-  restoration:{ key:'restoration', name:'레스토레이션', kind:'target_unit', energy:0, enSc:50, cd:4, arm:'✳ 레스토레이션: 해로운 효과를 치료할 아군을 클릭하세요.' },   // 아군 디버프 해제
-  optical_flare:{ key:'optical_flare', name:'옵티컬 플레어', kind:'target_enemy', energy:0, enSc:75, cd:6, dur:20, arm:'👁 옵티컬 플레어: 실명시킬 적을 클릭하세요.' },   // 적 시야 축소+디텍터 무력화
+  irradiate:{ key:'irradiate', name:'방사능', kind:'target_enemy', energy:0, enSc:75, cd:8, dur:8, dps:30, arm:'☢ 방사능: 씌울 적을 클릭하세요.' },   // 대상 지속 피해(생체)
+  defensive_matrix:{ key:'defensive_matrix', name:'보호막', kind:'target_unit', energy:0, enSc:100, cd:6, absorb:250, arm:'🛡 보호막: 보호할 아군을 클릭하세요.' },   // 아군에 250 흡수 보호막
+  restoration:{ key:'restoration', name:'정화', kind:'target_unit', energy:0, enSc:50, cd:4, arm:'✳ 정화: 해로운 효과를 치료할 아군을 클릭하세요.' },   // 아군 디버프 해제
+  optical_flare:{ key:'optical_flare', name:'섬광탄', kind:'target_enemy', energy:0, enSc:75, cd:6, dur:20, arm:'👁 섬광탄: 실명시킬 적을 클릭하세요.' },   // 적 시야 축소+디텍터 무력화
   // ── 🏢 건물 스킬 ──
   scan:{ key:'scan', name:'스캐너 스윕', kind:'target_ground', energy:0, enSc:50, cd:1, radius:0.15, dur:5, arm:'📡 스캐너 스윕: 밝힐 지점을 클릭하세요.', bldg:1 },   // 컴셋 = 지점 시야+탐지(일시)
   recharge:{ key:'recharge', name:'쉴드 충전', kind:'target_unit', energy:0, enSc:0, cd:0, rate:2, arm:'🔋 쉴드 충전: 충전할 아군을 클릭하세요.', bldg:1 },   // 쉴드 배터리 = 마나1→쉴드2
@@ -6605,16 +6605,16 @@ const BLDG_SKILLS={ comsat:['scan'], battery:['recharge'] };   // 건물별 스�
 // 📖 스킬 한 줄 설명 — 롱프레스 팝업(단일 소스). 없으면 sk.arm/기본 문구로 폴백.
 const SKILL_DESC={
   psi_storm:'지정 지점에 번개 폭풍을 떨어뜨려 범위 내 적에게 지속 광역 피해.',
-  heal:'지정한 아군 바이오닉을 따라다니며 치료(미지정 시 근처 부상병 자동).',
+  heal:'지정 아군을 따라다니며 초당 24 회복(초당 에너지 10 소모, 미지정 시 근처 부상병 자동).',
   psi_cloak:'주변 아군을 은폐시키는 오라(범위 내 상시).',
-  stim:'체력을 소모해 자신의 공격·이동 속도를 일정 시간 크게 올림.',
+  stim:'체력 10을 소모해 6초간 공격 속도 1.5배·이동 속도 1.4배.',
   ensnare:'지정 지역에 가스를 뿌려 범위 내 적을 둔화(이속·공속↓).',
-  spider_mine:'지정 지점에 지뢰를 매설, 적 접근 시 폭발해 광역 피해.',
-  lockdown:'지정한 기계 적을 일정 시간 완전 정지(무력화).',
-  nuke:'지정 지점에 핵을 투하, 지연 후 초대형 폭발.',
-  siege:'토글: 시즈 모드로 사거리·공격력↑ 대신 이동 불가.',
-  yamato:'지정한 적에게 야마토 포로 고정 대형 피해(즉발).',
-  emp:'지정 지역의 적 에너지와 보호막을 즉시 소거.',
+  spider_mine:'지정 지점에 지뢰를 매설, 적 접근 시 좁은 범위 폭발 피해 60. 기본 3개 충전, 사용 시마다 하나씩 소모(0이면 비활성).',
+  lockdown:'에너지 100 소모. 기계 적 하나를 6초간 완전히 멈춤.',
+  nuke:'충전된 핵을 지정 지점에 투하, 3.5초 뒤 넓은 범위 폭발 피해 400(에너지 무료).',
+  siege:'켜면 공격력 1.8배·사거리 1.6배, 이동 불가(다시 누르면 해제).',
+  yamato:'에너지 150 소모. 적 하나에게 즉시 피해 260.',
+  emp:'에너지 100 소모. 넓은 범위 안 적의 에너지·보호막을 모두 제거.',
   broodling:'지정한 적을 즉사시키고 그 자리에 브루들링을 소환.',
   hallucination:'지정한 아군의 환영 2기를 생성(피해는 없음).',
   feedback:'지정한 적의 남은 마나를 태우고 그만큼 피해.',
@@ -6627,10 +6627,10 @@ const SKILL_DESC={
   dark_swarm:'지정 지역을 덮어 안의 아군이 받는 원거리 피해를 0으로.',
   plague:'지정 지역 적의 체력을 일정 시간 지속 감소(최소 1까지).',
   consume:'아군 유닛을 잡아먹어 마나를 회복.',
-  irradiate:'지정한 적에 방사능을 씌워 생체 유닛에 지속 피해.',
-  defensive_matrix:'지정한 아군에 피해를 흡수하는 보호막을 부여.',
-  restoration:'지정한 아군의 해로운 상태 효과를 제거.',
-  optical_flare:'지정한 적의 시야를 줄이고 디텍터 능력을 무력화.',
+  irradiate:'에너지 75 소모. 지정한 적에 8초간 총 240 피해(생체).',
+  defensive_matrix:'에너지 100 소모. 지정 아군에 250 피해를 흡수하는 보호막.',
+  restoration:'에너지 50 소모. 지정 아군의 해로운 상태 효과를 제거.',
+  optical_flare:'에너지 75 소모. 지정한 적 시야를 20초간 줄이고 탐지 무력화.',
   parasite_note:'', scan:'지정 지점을 잠시 밝히고 은신 유닛을 탐지.', recharge:'지정한 아군의 보호막을 마나로 충전.' };
 function _skillDesc(key){ const sk=(typeof SKILLS!=='undefined')?SKILLS[key]:null; return (SKILL_DESC[key]||(sk&&sk.arm)||'특수 능력'); }
 // 🔮 스킬 마나 소모 단일 틀 — 관리자 페이지(샌드박스)=SC 가이드값(enSc), 네모네모 게임=기존 energy 그대로(제외). 표시·판정·차감 모두 이걸 사용
