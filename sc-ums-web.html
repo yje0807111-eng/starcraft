@@ -1090,7 +1090,7 @@
   #btCardCtl:active{transform:translateY(1px)}
   #btCardCtl svg{width:17px;height:17px;display:block;transition:transform .22s cubic-bezier(.2,.8,.25,1)}
   #btCardCtl.up svg{transform:rotate(180deg)}
-  #btSheet.simple #btSheetBody{height:min(26vh,150px);max-height:min(26vh,150px)}   /* 간소화 = 1줄 그리드 · 높이 고정(개인·건물·다중·혼합 모두 동일 높이) */
+  #btSheet.simple #btSheetBody{height:min(26vh,126px);max-height:min(26vh,126px)}   /* 간소화 = 1줄 그리드 · 높이 고정(건물 프로필 기준 ≈120px · 개인·다중·혼합 모두 동일) */
   #btSheet.simple .cmdG .cgGrid{grid-template-rows:1fr}
   #btSheet.mini #btSheetBody{display:none}   /* 최소화 = 본문 숨김(버튼 바만) */
   #btSheetBody{height:min(40vh,204px);max-height:min(40vh,204px);min-height:0;display:flex;flex-direction:column}   /* 일꾼 지정 패널 크기로 고정(건물·유닛 모두 동일 높이) */
@@ -1482,6 +1482,7 @@
   /* 좌측 보조 정보 */
   .cmdG .cgInfo{flex:0 0 35%;max-width:176px;min-width:120px;display:flex;flex-direction:column;gap:4px;padding:7px 8px;overflow:hidden;
     background:linear-gradient(160deg,rgba(18,23,34,.42),rgba(6,9,14,.5));border:1px solid var(--glass);border-radius:9px}
+  .cmdG .cgInfo:has(.cgUnits){padding-top:2px;padding-bottom:3px}   /* 👥 유닛 HP 칩 프로필: 세로 패딩 축소 → 칩 영역 넓혀 칩/텍스트 1.2× · 8기 4줄 무스크롤 유지 */
   .cmdG .cgEb{font:800 8px/1 sans-serif;letter-spacing:1px;color:var(--cgMuted)} .cmdG .cgDn{font-size:var(--fs-md);font-weight:800;color:#eaf1fb;line-height:1.15;word-break:keep-all}
   .cmdG .cgDd{font-size:9.5px;color:var(--cgDim);line-height:1.4;word-break:keep-all;overflow-wrap:break-word}   /* 한글 단어 안 끊기고 줄바꿈(잘림 방지) */
   .cmdG .cgVal{display:flex;align-items:baseline;gap:4px;font-family:'Rajdhani',sans-serif;font-weight:700}
@@ -1492,13 +1493,13 @@
   .cmdG .cgStats{display:flex;flex-direction:column;gap:2px} .cmdG .cgStat{display:flex;justify-content:space-between;font-size:9.5px}
   .cmdG .cgStat span{color:var(--cgMuted)} .cmdG .cgStat b{color:#c2ccda;font-family:'Rajdhani',sans-serif;font-size:11px;font-variant-numeric:tabular-nums}
   /* 👥 다중 지정: 유닛별 HP 칩 그리드 — 칩 탭=개별 지정 */
-  .cmdG .cgUnits{display:grid;grid-template-columns:repeat(auto-fill,minmax(34px,1fr));gap:3px;overflow-y:auto;align-content:start;flex:1 1 auto;min-height:0;margin-top:2px;scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}   /* 👥 유닛별 HP 칩 그리드 — 좌측 내부 구역을 꽉 채움(고정 높이 본문 기준 6줄), 넘치면 스크롤 · gap=칩 분리감 */
-  .cmdG .cgUChip{position:relative;height:10px;border-radius:3px;background:rgba(0,0,0,.5);border:1px solid var(--glass);overflow:hidden;cursor:pointer;box-shadow:inset 0 0 3px rgba(0,0,0,.6)}
+  .cmdG .cgUnits{display:grid;grid-template-columns:repeat(2,1fr);gap:2px;overflow-y:auto;align-content:stretch;grid-auto-rows:minmax(11px,1fr);flex:1 1 auto;min-height:0;max-height:none;margin-top:0;scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}   /* 👥 유닛별 HP 칩 그리드 — 2열 고정 → 왼쪽 구역 꽉 채움(위아래 분할 없이 행 stretch) · 8기=4줄 스크롤 없이 딱 맞음, 초과 시 스크롤 */
+  .cmdG .cgUChip{position:relative;min-height:11px;border-radius:3px;background:rgba(0,0,0,.5);border:1px solid var(--glass);overflow:hidden;cursor:pointer;box-shadow:inset 0 0 3px rgba(0,0,0,.6)}   /* 높이=그리드 행 stretch로 채움(min 11px) */
   .cmdG .cgUChip:active{border-color:var(--ca)}
-  .cmdG .cgUFill{position:absolute;left:0;top:50%;transform:translateY(-50%);height:6px;border-radius:2px;transition:width .15s linear,background .2s}   /* HP 선 — 기존 10px→6px(≈2/3 얇게), 세로 중앙 · 비율↓=빨강(hpBarColor) */
-  .cmdG .cgUHp{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:800 7px/1 'Rajdhani',sans-serif;color:#fff;text-shadow:0 1px 1px #000,0 0 2px #000;font-variant-numeric:tabular-nums;letter-spacing:-.3px;pointer-events:none}   /* 칩 중앙 HP 수치 40/40(바 위 오버레이) */
+  .cmdG .cgUFill{position:absolute;left:0;top:50%;transform:translateY(-50%);height:7px;border-radius:2px;transition:width .15s linear,background .2s}   /* HP 선 — 세로 중앙 · 비율↓=빨강(hpBarColor) · 칩 커짐에 맞춰 두께 6→7px */
+  .cmdG .cgUHp{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:800 8.5px/1 'Rajdhani',sans-serif;color:#fff;text-shadow:0 1px 1px #000,0 0 2px #000;font-variant-numeric:tabular-nums;letter-spacing:-.3px;pointer-events:none}   /* 칩 중앙 HP 수치 40/40(바 위 오버레이) · 가독성 7→8.5px */
   .cmdG .cgUMore{align-self:stretch;height:10px;display:flex;align-items:center;justify-content:center;color:var(--cgMuted);font:800 8px/1 sans-serif;border:1px dashed var(--glass);border-radius:3px}
-  .cmdG .cgStats.cgScr{flex:1 1 auto;min-height:0;justify-content:flex-start;overflow-y:auto;padding-right:3px;scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}   /* 혼합 다중지정 좌측 종류 목록 = 남은 좌측 높이 채우고 상단 정렬(전역 .sc 충돌 회피 클래스), 넘치면 위에서부터 스크롤 */
+  .cmdG .cgStats.cgScr{max-height:45px;justify-content:flex-start;overflow-y:auto;padding-right:3px;scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}   /* 혼합 다중지정 좌측 종류 목록 = 최대 3종류까지 보이고 상단 정렬(전역 .sc 충돌 회피 클래스), 넘치면 위에서부터 스크롤 */
   .cmdG .cgUnits::-webkit-scrollbar,.cmdG .cgStats.cgScr::-webkit-scrollbar{width:4px;height:4px}
   .cmdG .cgUnits::-webkit-scrollbar-thumb,.cmdG .cgStats.cgScr::-webkit-scrollbar-thumb{background:rgba(120,140,170,.4);border-radius:3px}
   .cmdG .cgUnits::-webkit-scrollbar-track,.cmdG .cgStats.cgScr::-webkit-scrollbar-track{background:transparent}
@@ -11760,7 +11761,7 @@ function _techMultiMixedModel(list, grp, ord){ const race=G.tech.race, items=[];
         meta:_lk?'🔒':'', metaCls:'lv', state:_lk?'dim':'ok', bottom:'<div class="cgCost">'+_skCostHTML(sk)+'</div>', act:'onpointerdown="techSkDown(event,\''+_k+'\')" onpointerup="techSkUp(event)" onpointerleave="techSkCancel()" onpointercancel="techSkCancel()" oncontextmenu="return false"' }); } }
   return { mode:'prod', title:'유닛 '+list.length+'기', icon:_techUnitPortrait(uidOf(ord[0])),
     sub:'', items,
-    info:{ eb:'선택', hideName:true, statsScroll:true, stats:ord.map(k=>[_techRealName(race,uidOf(k)), '×'+grp[k].n]), cr:0, en:0 } }; }   // 좌측 종류 목록 = 3종류까지만 보이고 그 아래 스크롤(.sc)
+    info:{ hideName:true, statsScroll:true, stats:ord.map(k=>[_techRealName(race,uidOf(k)), '×'+grp[k].n]), cr:0, en:0 } }; }   // 좌측 종류 목록 = 3종류까지만 보이고 그 아래 스크롤(.sc) · 상단 '선택' 라벨 제거
 function techUnitPanelModel(list){ const race=G.tech.race, grp={}, ord=[];   // 유닛 지정 시트 — 건물 그리드와 동일한 커맨드 그리드 재사용
   for(const e of list){ const k=(e.type==='worker')?'__wk':e.uid; if(!grp[k]){ grp[k]={n:0,e:e}; ord.push(k); } grp[k].n++; }
   if(list.length>1){ const _ak=(ord.length===1)?ord[0]:((G.tech.selType&&grp[G.tech.selType])?G.tech.selType:null);   // 👥 다중 지정: 동일종류(1종) or 종류 소프트선택(selType)=타입 모델 · 혼합=종류 칩 모델
