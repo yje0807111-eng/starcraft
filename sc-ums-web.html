@@ -10249,11 +10249,11 @@ TECH_TREE.union={ name:'유니온', res:{m:'크레딧', g:'에너지'}, building
       {id:'ghost', name:'저격수', m:25, g:75, pop:1, req:['scifac','covert']} ] },
   { k:'academy', name:'훈련소', ico:'🎓', m:150, g:0, req:['barracks'],
     research:[
-      {k:'u238', name:'U-238 탄환', desc:'레인저 사거리 +1', m:150, g:150},
+      {k:'u238', name:'강화 탄환', desc:'레인저 사거리 +1', m:150, g:150},
       {k:'stim', name:'광폭화', desc:'레인저·화력병 이속·공속↑(체력 소모)', m:100, g:100},
       {k:'flare', name:'섬광탄', desc:'의무병 실명 섬광 스킬', m:100, g:100},
       {k:'restore', name:'정화', desc:'의무병 디버프 해제', m:100, g:100},
-      {k:'caduceus', name:'카두세우스', desc:'의무병 최대 에너지 +50', m:150, g:150} ] },
+      {k:'caduceus', name:'에너지 증폭', desc:'의무병 최대 에너지 +50', m:150, g:150} ] },
   { k:'engbay', name:'공학소', ico:'⚙️', m:125, g:0, req:['command'], lift:true,
     research:[
       {k:'inf_atk', name:'보병 공격력', desc:'레인저·화력병·저격수 공격 +1/티어', tier:[[100,100],[175,175],[250,250]]},
@@ -10268,10 +10268,10 @@ TECH_TREE.union={ name:'유니온', res:{m:'크레딧', g:'에너지'}, building
       {id:'goliath', name:'기갑병', m:100, g:50, pop:2, req:['armory']} ] },
   { k:'machshop', name:'정비소', ico:'🛠', m:50, g:50, addonTo:'factory',
     research:[
-      {k:'ion', name:'이온 추진기', desc:'레이서 이동속도↑', m:100, g:100},
+      {k:'ion', name:'이동 강화', desc:'레이서 이동속도↑', m:100, g:100},
       {k:'mine', name:'지뢰', desc:'레이서 지뢰 3개 사용', m:100, g:100},
       {k:'siege', name:'공성 모드', desc:'공성전차 장거리 포격 모드', m:150, g:150},
-      {k:'charon', name:'카론 증폭기', desc:'기갑병 대공 사거리↑', m:150, g:150} ] },
+      {k:'charon', name:'대공 강화', desc:'기갑병 대공 사거리↑', m:150, g:150} ] },
   { k:'armory', name:'무기고', ico:'⚔️', m:100, g:50, req:['factory'],
     research:[
       {k:'veh_atk', name:'차량 공격력', desc:'레이서·공성전차·기갑병 +/티어', tier:[[100,100],[175,175],[250,250]]},
@@ -10287,24 +10287,24 @@ TECH_TREE.union={ name:'유니온', res:{m:'크레딧', g:'에너지'}, building
       {id:'dreadnought', name:'전함', m:400, g:300, pop:6, req:['control','physics']} ] },// 배틀크루저
   { k:'control', name:'관제탑', ico:'🗼', m:50, g:50, addonTo:'starport',
     research:[
-      {k:'cloak_w', name:'은폐장', desc:'전투기 은신 스킬', m:150, g:150},
-      {k:'apollo', name:'아폴로 반응로', desc:'전투기 최대 에너지 +50', m:150, g:150} ] },
+      {k:'cloak_w', name:'은신', desc:'전투기 은신 스킬', m:150, g:150},
+      {k:'apollo', name:'에너지 증폭', desc:'전투기 최대 에너지 +50', m:150, g:150} ] },
   // ── 고급 기술 ──
   { k:'scifac', name:'연구소', ico:'🔬', m:100, g:150, req:['starport'], lift:true,
     research:[
       {k:'emp', name:'EMP', desc:'대상 지역 에너지·보호막 소거', m:200, g:200},
       {k:'irradiate', name:'방사능', desc:'생체 유닛 지속 방사능 피해', m:200, g:200},
-      {k:'titan', name:'타이탄 반응로', desc:'지원 정찰기 최대 에너지 +50', m:150, g:150} ] },
+      {k:'titan', name:'에너지 증폭', desc:'지원 정찰기 최대 에너지 +50', m:150, g:150} ] },
   { k:'covert', name:'특수 작전실', ico:'👁️', m:50, g:50, addonTo:'scifac',
     research:[
       {k:'lockdown', name:'봉쇄', desc:'기계 유닛 일정시간 마비', m:200, g:200},
-      {k:'cloak_g', name:'은폐장', desc:'저격수 은신 스킬', m:100, g:100},
-      {k:'ocular', name:'오큘러 임플란트', desc:'저격수 시야·사거리 +1', m:100, g:100},
-      {k:'moebius', name:'뫼비우스 반응로', desc:'저격수 최대 에너지 +50', m:150, g:150} ] },
+      {k:'cloak_g', name:'은신', desc:'저격수 은신 스킬', m:100, g:100},
+      {k:'ocular', name:'시야 강화', desc:'저격수 시야·사거리 +1', m:100, g:100},
+      {k:'moebius', name:'에너지 증폭', desc:'저격수 최대 에너지 +50', m:150, g:150} ] },
   { k:'physics', name:'화력 연구소', ico:'🌌', m:50, g:50, addonTo:'scifac',
     research:[
       {k:'yamato', name:'집중포', desc:'전함 단일 대상 강력 포격', m:200, g:200},
-      {k:'colossus', name:'콜로서스 반응로', desc:'전함 최대 에너지 +50', m:150, g:150} ] },
+      {k:'colossus', name:'에너지 증폭', desc:'전함 최대 에너지 +50', m:150, g:150} ] },
   { k:'comsat', name:'통신소', ico:'📡', m:50, g:50, addonTo:'command', req:['academy'], detector:true },
   { k:'nuke', name:'핵 격납고', ico:'☢️', m:50, g:50, addonTo:'command', req:['covert'],
     produces:[{id:'nuke', name:'핵미사일', m:200, g:200, pop:8}] },
