@@ -11567,7 +11567,7 @@ function _techAddonCards(bk){ const race=G.tech.race, t=TECH_TREE[race], out=[];
   const connected=_techAddonConnected(e), myAd=connected?G.tech.ents.find(x=>x.eid===e._addonEid&&x.type==='bldg'):null;
   for(const x of t.buildings){ if(x.addonTo!==bk) continue;
     const isMine=!!(myAd && myAd.bk===x.k), reqok=_techReqMet(x.req), afford=_techAfford(x.m,x.g);
-    out.push({ _addon:true, pro:'<span class="pemoji">'+x.ico+'</span>', sn:x.name+' (부속)', cr:x.m, en:x.g,
+    out.push({ _addon:true, pro:'<span class="pemoji">'+x.ico+'</span>', sn:x.name, cr:x.m, en:x.g,
       meta:isMine?'✓ 연결':(connected?'🔒':'＋부속'), metaCls:isMine?'lv':'',
       state:(isMine||connected)?'max':((!reqok||!afford)?'dim':'ok'),   // 연결됨 = 이 카드+다른 부속 카드 모두 잠금
       act:(!connected&&reqok&&afford)?('onclick="techBuildAddon(event,\''+x.k+'\')"'):'' }); }
