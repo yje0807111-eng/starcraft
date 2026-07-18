@@ -1316,6 +1316,7 @@
     background:linear-gradient(180deg,rgba(14,12,18,.99),rgba(14,12,18,.86));padding:11px 0 7px;margin-bottom:1px;z-index:2}
   /* 폰이 화면을 꽉 채우는 좁은 뷰포트에서는 겹치므로 숨김 */
   @media(max-width:760px){.gachaDex{display:none !important}}
+  .gachaDex.hide{display:none !important}   /* 관리자 샌드박스 등 네모네모 외 구역에서 가챠 도감 숨김 */
   .gxTitle{font-size:var(--fs-md);font-weight:800;color:#cdd6e2;letter-spacing:.4px}
   .gxTitle small{font-weight:600;color:var(--txt-mute);margin-left:4px}
   .gxRoll{font-size:var(--fs-md);font-weight:800;color:var(--gold-lt);padding:4px 11px;border-radius:var(--r-md);
@@ -7074,9 +7075,9 @@ function checkPbossUnlocks(){
 // 개인 보스 버튼(메인 탭 우하단): 표시/쿨다운 실시간 갱신 + 열린 팝업 동기화
 function updatePbossFab(){ const b=document.getElementById('pbossBtn'); if(!b) return;
   if(!G.pbossCds) G.pbossCds={};
-  const show=(typeof G!=='undefined' && G.tab==='Main' && G.phase==='playing');
+  const show=(typeof G!=='undefined' && !G.sandbox && G.tab==='Main' && G.phase==='playing');   // 관리자 샌드박스에선 개인보스 숨김(네모네모 전용)
   b.classList.toggle('hide', !show);
-  if(!show){ const p=document.getElementById('pbossPopup'); if(p) p.classList.add('hide'); return; }   // 메인 외에선 버튼·팝업 숨김
+  if(!show){ const p=document.getElementById('pbossPopup'); if(p) p.classList.add('hide'); return; }   // 메인 외/샌드박스에선 버튼·팝업 숨김
   // FAB 우상단 배지 = 지금 소환 가능한(해금·쿨0·미활동) 보스 수. 소환하면 줄고, 0이면 숨김. (하단 시간초는 제거)
   let readyCount=0;
   for(const pt of PBOSS_TYPES){ const cdL=G.pbossCds[pt.id]||0;
@@ -10049,6 +10050,8 @@ function loop(now){
   if(typeof sbCombatUiSync==='function') sbCombatUiSync();   // ⚔ 전투 실험 컨트롤 표시/상태(관리자 Main)
   if(!G.sandbox) checkPbossUnlocks();// 개인 보스 해금 감지(채팅 알람 + 버튼 알림)
   updatePbossFab();   // 개인 보스 소환 FAB(메인·쿨다운 실시간)
+  { const gd=document.getElementById('gachaDex'); if(gd) gd.classList.toggle('hide', !!G.sandbox); }   // 가챠 도감(레전드·god 포함)은 네모네모 전용 → 관리자 샌드박스에선 숨김
+
   updateAutoFab();    // 자동화 묶음 버튼/팝업(표시·토글 상태)
   if(typeof renderRallyArrows==='function') renderRallyArrows();   // 자동 배치 ON 시 등급별 랠리 화살표(드래그)
   updateHud();
