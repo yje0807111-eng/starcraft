@@ -6168,7 +6168,7 @@ const UNIT_CLS={   // 유닛 직업/병과 — 모델 id(gmodel) 기준. 베이�
   thornqueen:'역병술사', snapper:'척후병',
   hellfire:'폭격기', pelican:'수송선', dreadnought:'전함', aegis:'지원함',
   kronos:'전함', seraph:'수송선', archangel:'모함', falcon:'전투기', observer:'정찰기',
-  overlord:'수송선', stinger:'자폭충', venom:'산성충', medusa:'군단여왕', defiler:'오염술사',
+  overlord:'수송충', stinger:'자폭충', venom:'산성충', medusa:'군단여왕', defiler:'오염술사',
   wyvern:'전투기', behemoth:'공성생물',
   worker_human:'일꾼', worker_light:'일꾼', worker_swarm:'일꾼',
   medic:'의무병', broodling:'소환수', larva:'공성', ultralisk:'돌격괴수', dark_templar:'암살자', high_templar:'대마법사', dark_archon:'암흑마법사',
@@ -6560,8 +6560,8 @@ const SKILLS={
   // 레인저(마린): 스팀팩 — 자기 강화(공속·이속↑, 체력 소모). 전투 유즈맵 훅: u.buff.stim
   stim:{ key:'stim', name:'광폭화', kind:'self', cd:10, dur:6, atkMul:1.5, spdMul:1.4, hpCost:10 },
   // 메두사(퀸): 인스네어 — 지정 지역 적 둔화(가스). 훅: e.slowT
-  ensnare:{ key:'ensnare', name:'인스네어', kind:'target_ground', energy:0, enSc:75, cd:10, dur:8, radius:0.11, slow:0.5,
-    arm:'🕸 인스네어: 퍼뜨릴 지점을 클릭하세요.' },
+  ensnare:{ key:'ensnare', name:'점착 가스', kind:'target_ground', energy:0, enSc:75, cd:10, dur:8, radius:0.11, slow:0.5,
+    arm:'🕸 점착 가스: 퍼뜨릴 지점을 클릭하세요.' },
   // 레이서(벌처): 스파이더 마인 — 매설 후 적 접근 시 폭발(광역). 훅: 근접 적 감지
   spider_mine:{ key:'spider_mine', name:'지뢰', kind:'target_ground', energy:0, cd:3, r:0.06, trig:0.045, dmg:60,
     arm:'💣 지뢰: 매설 지점을 클릭하세요.' },
@@ -6577,7 +6577,7 @@ const SKILLS={
   // 이지스: EMP — 지정 지역 에너지·보호막 소거
   emp:{ key:'emp', name:'EMP', kind:'target_ground', energy:0, enSc:100, cd:10, radius:0.13, arm:'⚡ EMP: 지점을 클릭하세요.' },
   // 메두사(퀸): 브루들링 — 스폰 브루들링 연구 해제. 지정 적 즉사 + 그 자리에 스웜링 2기
-  broodling:{ key:'broodling', name:'브루들링', kind:'target_enemy', energy:0, enSc:150, cd:12, spawn:2, arm:'🐛 브루들링: 즉사시킬 적을 클릭하세요.' },
+  broodling:{ key:'broodling', name:'유충 폭발', kind:'target_enemy', energy:0, enSc:150, cd:12, spawn:2, arm:'🐛 유충 폭발: 즉사시킬 적을 클릭하세요.' },
   // ── 🔮 에테리얼(프로토스) 마법 — 관리자=SC 마나(enSc), 네모 게임=0(제외) ──
   hallucination:{ key:'hallucination', name:'할루시네이션', kind:'target_unit', energy:0, enSc:100, cd:10, count:2, arm:'👥 할루시네이션: 환영을 만들 아군을 클릭하세요.' },   // 하이세이지 — 대상 환영 2기
   feedback:{ key:'feedback', name:'피드백', kind:'target_enemy', energy:0, enSc:50, cd:8, arm:'💥 피드백: 마나를 태울 대상을 클릭하세요.' },   // 다크보이드 — 대상 마나 소각+피해
@@ -6587,10 +6587,10 @@ const SKILLS={
   stasis:{ key:'stasis', name:'스테이시스 필드', kind:'target_ground', energy:0, enSc:100, cd:12, dur:6, radius:0.1, arm:'🧊 스테이시스 필드: 지점을 클릭하세요.' },   // 크로노스 — 범위 정지+무적
   recall:{ key:'recall', name:'리콜', kind:'target_ground', energy:0, enSc:150, cd:12, radius:0.18, arm:'↩️ 리콜: 소환할 지점을 클릭하세요.' },   // 크로노스 — 근처 아군 순간이동
   // ── 🦎 스웜(저그) 마법 — 메두사(군단여왕) ──
-  parasite:{ key:'parasite', name:'패러사이트', kind:'target_enemy', energy:0, enSc:75, cd:6, arm:'🦠 패러사이트: 기생시킬 적을 클릭하세요.' },   // 적 기생 → 시야 공유(영구)
-  dark_swarm:{ key:'dark_swarm', name:'다크 스웜', kind:'target_ground', energy:0, enSc:100, cd:12, dur:8, radius:0.13, arm:'☁️ 다크 스웜: 지점을 클릭하세요.' },   // 범위 내 아군 = 원거리 피해 0
-  plague:{ key:'plague', name:'플레이그', kind:'target_ground', energy:0, enSc:150, cd:12, dur:6, radius:0.11, dps:18, arm:'🩸 플레이그: 지점을 클릭하세요.' },   // 범위 HP 지속 감소(체력 1까지, 쉴드 무시 안 함)
-  consume:{ key:'consume', name:'컨슘', kind:'target_unit', energy:0, enSc:0, cd:2, gain:50, arm:'🍽 컨슘: 잡아먹을 아군 유닛을 클릭하세요.' },   // 아군 잡아먹어 마나 +50
+  parasite:{ key:'parasite', name:'감염', kind:'target_enemy', energy:0, enSc:75, cd:6, arm:'🦠 감염: 기생시킬 적을 클릭하세요.' },   // 적 기생 → 시야 공유(영구)
+  dark_swarm:{ key:'dark_swarm', name:'암흑 장막', kind:'target_ground', energy:0, enSc:100, cd:12, dur:8, radius:0.13, arm:'☁️ 암흑 장막: 지점을 클릭하세요.' },   // 범위 내 아군 = 원거리 피해 0
+  plague:{ key:'plague', name:'역병', kind:'target_ground', energy:0, enSc:150, cd:12, dur:6, radius:0.11, dps:18, arm:'🩸 역병: 지점을 클릭하세요.' },   // 범위 HP 지속 감소(체력 1까지, 쉴드 무시 안 함)
+  consume:{ key:'consume', name:'포식', kind:'target_unit', energy:0, enSc:0, cd:2, gain:50, arm:'🍽 포식: 잡아먹을 아군 유닛을 클릭하세요.' },   // 아군 잡아먹어 마나 +50
   // ── 🛡 유니온(테란) 마법 — 이지스(사이언스 베슬)·메딕 ──
   irradiate:{ key:'irradiate', name:'방사능', kind:'target_enemy', energy:0, enSc:75, cd:8, dur:8, dps:30, arm:'☢ 방사능: 씌울 적을 클릭하세요.' },   // 대상 지속 피해(생체)
   defensive_matrix:{ key:'defensive_matrix', name:'보호막', kind:'target_unit', energy:0, enSc:100, cd:6, absorb:250, arm:'🛡 보호막: 보호할 아군을 클릭하세요.' },   // 아군에 250 흡수 보호막
@@ -6608,14 +6608,14 @@ const SKILL_DESC={
   heal:'지정 아군을 따라다니며 초당 24 회복(초당 에너지 10 소모, 미지정 시 근처 부상병 자동).',
   psi_cloak:'주변 아군을 은폐시키는 오라(범위 내 상시).',
   stim:'체력 10을 소모해 6초간 공격 속도 1.5배·이동 속도 1.4배.',
-  ensnare:'지정 지역에 가스를 뿌려 범위 내 적을 둔화(이속·공속↓).',
+  ensnare:'에너지 75. 넓은 범위 적을 8초간 둔화(이속·공속 50%↓).',
   spider_mine:'지정 지점에 지뢰를 매설, 적 접근 시 좁은 범위 폭발 피해 60. 기본 3개 충전, 사용 시마다 하나씩 소모(0이면 비활성).',
   lockdown:'에너지 100 소모. 기계 적 하나를 6초간 완전히 멈춤.',
   nuke:'충전된 핵을 지정 지점에 투하, 3.5초 뒤 넓은 범위 폭발 피해 400(에너지 무료).',
   siege:'켜면 공격력 1.8배·사거리 1.6배, 이동 불가(다시 누르면 해제).',
   yamato:'에너지 150 소모. 적 하나에게 즉시 피해 260.',
   emp:'에너지 100 소모. 넓은 범위 안 적의 에너지·보호막을 모두 제거.',
-  broodling:'지정한 적을 즉사시키고 그 자리에 브루들링을 소환.',
+  broodling:'에너지 150. 지정한 적을 즉사시키고 그 자리에 스웜링 2기 생성.',
   hallucination:'지정한 아군의 환영 2기를 생성(피해는 없음).',
   feedback:'지정한 적의 남은 마나를 태우고 그만큼 피해.',
   maelstrom:'지정 지역의 생체 적을 일정 시간 마비.',
@@ -6623,10 +6623,10 @@ const SKILL_DESC={
   disruption_web:'지정 지역에 결계를 쳐 안의 지상 유닛 공격 무력화.',
   stasis:'지정 지역의 유닛을 정지시키고 무적으로 만듦(피아 모두).',
   recall:'지정 지점 주변의 아군을 시전자 위치로 순간이동.',
-  parasite:'지정한 적에 기생해 그 유닛의 시야를 영구 공유.',
-  dark_swarm:'지정 지역을 덮어 안의 아군이 받는 원거리 피해를 0으로.',
-  plague:'지정 지역 적의 체력을 일정 시간 지속 감소(최소 1까지).',
-  consume:'아군 유닛을 잡아먹어 마나를 회복.',
+  parasite:'에너지 75. 지정한 적에 기생해 그 유닛 시야를 영구 공유.',
+  dark_swarm:'에너지 100. 넓은 범위를 8초간 덮어 안의 아군이 받는 원거리 피해 0.',
+  plague:'에너지 150. 넓은 범위 적을 6초간 초당 18(총 108) 피해(최소 1까지).',
+  consume:'무료. 아군 유닛을 잡아먹어 에너지 +50 회복.',
   irradiate:'에너지 75 소모. 지정한 적에 8초간 총 240 피해(생체).',
   defensive_matrix:'에너지 100 소모. 지정 아군에 250 피해를 흡수하는 보호막.',
   restoration:'에너지 50 소모. 지정 아군의 해로운 상태 효과를 제거.',
@@ -10253,7 +10253,7 @@ TECH_TREE.union={ name:'유니온', res:{m:'크레딧', g:'에너지'}, building
       {k:'stim', name:'광폭화', desc:'레인저·화력병 이속·공속↑(체력 소모)', m:100, g:100},
       {k:'flare', name:'섬광탄', desc:'의무병 실명 섬광 스킬', m:100, g:100},
       {k:'restore', name:'정화', desc:'의무병 디버프 해제', m:100, g:100},
-      {k:'caduceus', name:'에너지 증폭', desc:'의무병 최대 에너지 +50', m:150, g:150} ] },
+      {k:'caduceus', name:'마나 증폭', desc:'의무병 최대 에너지 +50', m:150, g:150} ] },
   { k:'engbay', name:'공학소', ico:'⚙️', m:125, g:0, req:['command'], lift:true,
     research:[
       {k:'inf_atk', name:'보병 공격력', desc:'레인저·화력병·저격수 공격 +1/티어', tier:[[100,100],[175,175],[250,250]]},
@@ -10288,23 +10288,23 @@ TECH_TREE.union={ name:'유니온', res:{m:'크레딧', g:'에너지'}, building
   { k:'control', name:'관제탑', ico:'🗼', m:50, g:50, addonTo:'starport',
     research:[
       {k:'cloak_w', name:'은신', desc:'전투기 은신 스킬', m:150, g:150},
-      {k:'apollo', name:'에너지 증폭', desc:'전투기 최대 에너지 +50', m:150, g:150} ] },
+      {k:'apollo', name:'마나 증폭', desc:'전투기 최대 에너지 +50', m:150, g:150} ] },
   // ── 고급 기술 ──
   { k:'scifac', name:'연구소', ico:'🔬', m:100, g:150, req:['starport'], lift:true,
     research:[
       {k:'emp', name:'EMP', desc:'대상 지역 에너지·보호막 소거', m:200, g:200},
       {k:'irradiate', name:'방사능', desc:'생체 유닛 지속 방사능 피해', m:200, g:200},
-      {k:'titan', name:'에너지 증폭', desc:'지원 정찰기 최대 에너지 +50', m:150, g:150} ] },
+      {k:'titan', name:'마나 증폭', desc:'지원 정찰기 최대 에너지 +50', m:150, g:150} ] },
   { k:'covert', name:'특수 작전실', ico:'👁️', m:50, g:50, addonTo:'scifac',
     research:[
       {k:'lockdown', name:'봉쇄', desc:'기계 유닛 일정시간 마비', m:200, g:200},
       {k:'cloak_g', name:'은신', desc:'저격수 은신 스킬', m:100, g:100},
       {k:'ocular', name:'시야 강화', desc:'저격수 시야·사거리 +1', m:100, g:100},
-      {k:'moebius', name:'에너지 증폭', desc:'저격수 최대 에너지 +50', m:150, g:150} ] },
+      {k:'moebius', name:'마나 증폭', desc:'저격수 최대 에너지 +50', m:150, g:150} ] },
   { k:'physics', name:'화력 연구소', ico:'🌌', m:50, g:50, addonTo:'scifac',
     research:[
       {k:'yamato', name:'집중포', desc:'전함 단일 대상 강력 포격', m:200, g:200},
-      {k:'colossus', name:'에너지 증폭', desc:'전함 최대 에너지 +50', m:150, g:150} ] },
+      {k:'colossus', name:'마나 증폭', desc:'전함 최대 에너지 +50', m:150, g:150} ] },
   { k:'comsat', name:'통신소', ico:'📡', m:50, g:50, addonTo:'command', req:['academy'], detector:true },
   { k:'nuke', name:'핵 격납고', ico:'☢️', m:50, g:50, addonTo:'command', req:['covert'],
     produces:[{id:'nuke', name:'핵미사일', m:200, g:200, pop:8}] },
@@ -10321,52 +10321,52 @@ TECH_TREE.swarm={ name:'스웜', res:{m:'크레딧', g:'에너지'}, buildings:[
       {id:'stinger', name:'자폭충', m:25, g:75, pop:1, req:['spire']},
       {id:'medusa', name:'군단여왕', m:100, g:100, pop:2, req:['queensnest']},
       {id:'ultralisk', name:'돌격괴수', m:200, g:200, pop:4, req:['ultracavern']}],
-    research:[{k:'burrow', name:'버로우', desc:'지상 유닛 잠복', m:100, g:100}] },
+    research:[{k:'burrow', name:'매복', desc:'지상 유닛 잠복', m:100, g:100}] },
   { k:'extractor', name:'채취기', ico:'🛢', m:50, g:0, gas:true, req:['hatchery'] },
   { k:'pool', name:'번식지', ico:'🧫', m:200, g:0, req:['hatchery'], unlocks:['snapper'],   // 저글링 해금(생산=해처리)
     research:[
-      {k:'metabolic', name:'대사 촉진', desc:'스내퍼 이동속도↑', m:100, g:100},
-      {k:'adrenal', name:'아드레날린', desc:'스내퍼 공격속도↑', m:200, g:200, req:['hive']} ] },
+      {k:'metabolic', name:'이속 강화', desc:'척후병 이동속도↑', m:100, g:100},
+      {k:'adrenal', name:'광폭화', desc:'척후병 공격속도↑', m:200, g:200, req:['hive']} ] },
   { k:'evochamber', name:'진화장', ico:'🧬', m:50, g:0, req:['hatchery'],
     research:[
-      {k:'melee_atk', name:'근접 공격력', desc:'스내퍼·스웜링·저거너트 +/티어', tier:[[100,100],[150,150],[200,200]]},
-      {k:'range_atk', name:'원거리 공격력', desc:'리퍼·베놈퀸 +/티어', tier:[[100,100],[150,150],[200,200]]},
+      {k:'melee_atk', name:'근접 공격력', desc:'척후병·스웜링·돌격괴수 +/티어', tier:[[100,100],[150,150],[200,200]]},
+      {k:'range_atk', name:'원거리 공격력', desc:'스파이크·가시여왕 +/티어', tier:[[100,100],[150,150],[200,200]]},
       {k:'gnd_def', name:'지상 방어력', desc:'모든 지상 +/티어', tier:[[150,150],[225,225],[300,300]]} ] },
   { k:'hydraden', name:'스파이크 굴', ico:'🐍', m:100, g:50, req:['pool'], unlocks:['hydra','thornqueen'],   // 리퍼·럴커 해금
     research:[
-      {k:'muscle', name:'근육 보강', desc:'리퍼 이동속도↑', m:150, g:150},
-      {k:'grooved', name:'가시 홈', desc:'리퍼 사거리 +1', m:150, g:150},
-      {k:'lurker', name:'럴커 변태', desc:'리퍼→베놈퀸 변태 가능', m:200, g:200, req:['lair']} ] },
+      {k:'muscle', name:'이속 강화', desc:'스파이크 이동속도↑', m:150, g:150},
+      {k:'grooved', name:'사거리 강화', desc:'스파이크 사거리 +1', m:150, g:150},
+      {k:'lurker', name:'여왕 변태', desc:'스파이크→가시여왕 변태 가능', m:200, g:200, req:['lair']} ] },
   { k:'creep', name:'점막탑', ico:'🩸', m:75, g:0, req:['hatchery'], evolveTo:['sunken','spore'] },
   { k:'sunken', name:'가시탑', ico:'🦑', m:50, g:0, req:['pool'], evolveOnly:true },
   { k:'spore', name:'포자탑', ico:'🍄', m:50, g:0, req:['evochamber'], detector:true, evolveOnly:true },
   // ── 2티어(레어 단계) ──
   { k:'lair', name:'소굴', ico:'👁️', m:150, g:100, req:['pool'], evolveOnly:true, evolveTo:'hive',
     research:[
-      {k:'pneuma', name:'기낭 갑각', desc:'제플린 이동속도↑', m:150, g:150},
-      {k:'antennae', name:'촉각', desc:'제플린 시야↑', m:150, g:150},
-      {k:'ventral', name:'복강 주머니', desc:'제플린 수송(드랍) 가능', m:200, g:200} ] },
+      {k:'pneuma', name:'비행 가속', desc:'수송충 이동속도↑', m:150, g:150},
+      {k:'antennae', name:'시야 강화', desc:'수송충 시야↑', m:150, g:150},
+      {k:'ventral', name:'수송 능력 개발', desc:'수송충 수송(드랍) 가능', m:200, g:200} ] },
   { k:'spire', name:'첨탑', ico:'🦇', m:200, g:150, req:['lair'], unlocks:['wyvern','stinger'], evolveTo:'gspire',   // 와이번·스팅어 해금 · 거대 첨탑로 진화
     research:[
-      {k:'fly_atk', name:'비행 공격력', desc:'와이번·스팅어·베히모스 +/티어', tier:[[100,100],[175,175],[250,250]]},
+      {k:'fly_atk', name:'비행 공격력', desc:'비행충·자폭충·포격충 +/티어', tier:[[100,100],[175,175],[250,250]]},
       {k:'fly_def', name:'비행 방어력', desc:'비행 방어 +/티어', tier:[[150,150],[225,225],[300,300]]} ] },
   { k:'queensnest', name:'여왕 둥지', ico:'👑', m:150, g:150, req:['lair'], unlocks:['medusa'],   // 메두사(퀸) 해금
     research:[
-      {k:'ensnare', name:'인스네어', desc:'적 이동·공속 감소', m:100, g:100},
-      {k:'broodling', name:'스폰 브루들링', desc:'적 생체 즉사+스웜링 생성', m:100, g:100},
-      {k:'gamete', name:'생식 세포 분열', desc:'메두사 최대 에너지 +50', m:150, g:150} ] },
+      {k:'ensnare', name:'점착 가스', desc:'적 이동·공속 감소', m:100, g:100},
+      {k:'broodling', name:'유충 폭발', desc:'적 생체 즉사+스웜링 생성', m:100, g:100},
+      {k:'gamete', name:'마나 증폭', desc:'군단여왕 최대 에너지 +50', m:150, g:150} ] },
   // ── 3티어(하이브 단계) ──
   { k:'hive', name:'대군락', ico:'🌋', m:200, g:150, req:['queensnest'], evolveOnly:true },
   { k:'gspire', name:'거대 첨탑', ico:'🦅', m:100, g:150, req:['hive','spire'], unlocks:['behemoth'], evolveOnly:true },   // 가디언 해금 · 첨탑에서 진화
   { k:'defilermound', name:'오염 둥지', ico:'🦂', m:100, g:100, req:['hive'], unlocks:['venom'],   // 디파일러 해금
     research:[
-      {k:'consume', name:'컨슘', desc:'아군 잡아먹어 에너지 +50', m:100, g:100},
-      {k:'plague', name:'플레이그', desc:'광역 지속 체력 감소', m:200, g:200},
-      {k:'metasynaptic', name:'후성 신경절', desc:'베놈 최대 에너지 +50', m:150, g:150} ] },
+      {k:'consume', name:'포식', desc:'아군 잡아먹어 에너지 +50', m:100, g:100},
+      {k:'plague', name:'역병', desc:'광역 지속 체력 감소', m:200, g:200},
+      {k:'metasynaptic', name:'마나 증폭', desc:'산성충 최대 에너지 +50', m:150, g:150} ] },
   { k:'ultracavern', name:'돌격괴수 굴', ico:'🦏', m:150, g:200, req:['hive'], unlocks:['ultralisk'],   // 저거너트 해금
     research:[
-      {k:'anabolic', name:'동화작용', desc:'저거너트 이동속도↑', m:200, g:200},
-      {k:'chitinous', name:'키틴질 장갑', desc:'저거너트 방어력 +2', m:150, g:150} ] },
+      {k:'anabolic', name:'이속 강화', desc:'돌격괴수 이동속도↑', m:200, g:200},
+      {k:'chitinous', name:'방어 강화', desc:'돌격괴수 방어력 +2', m:150, g:150} ] },
   { k:'nydus', name:'땅굴', ico:'🕳', m:150, g:0, req:['hive'] },
 ]};
 TECH_TREE.aetherial={ name:'에테리얼', res:{m:'크레딧', g:'에너지'}, buildings:[
