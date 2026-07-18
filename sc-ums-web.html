@@ -10212,10 +10212,10 @@ const STK_BUILDINGS={
     {key:'ultracav',name:'돌격괴수 소굴',ico:'🐂', cost:820, fp:[4,4], produces:[{id:'ultralisk',  n:1}]},
   ],
   protoss:[
-    {key:'gateway', name:'지상 관문',         ico:'🌀', cost:250, fp:[3,2], produces:[{id:'blade',     n:3}]},
-    {key:'core',    name:'제어 핵',           ico:'💠', cost:340, fp:[4,3], produces:[{id:'dragoon',   n:2}]},
-    {key:'robo',    name:'로봇 공창',         ico:'🤖', cost:440, fp:[4,4], produces:[{id:'archon',    n:1}]},
-    {key:'stargate',name:'공중 관문',         ico:'✨', cost:420, fp:[4,4], produces:[{id:'falcon',    n:2}]},
+    {key:'gateway', name:'지상 차원문',       ico:'🌀', cost:250, fp:[3,2], produces:[{id:'blade',     n:3}]},
+    {key:'core',    name:'사이버 코어',       ico:'💠', cost:340, fp:[4,3], produces:[{id:'dragoon',   n:2}]},
+    {key:'robo',    name:'로봇 제작소',       ico:'🤖', cost:440, fp:[4,4], produces:[{id:'archon',    n:1}]},
+    {key:'stargate',name:'공중 차원문',       ico:'✨', cost:420, fp:[4,4], produces:[{id:'falcon',    n:2}]},
     {key:'beacon',  name:'함대 관제',         ico:'💃', cost:460, fp:[3,2], produces:[{id:'skydancer', n:2}]},
     {key:'tribunal',name:'심판정',            ico:'⏳', cost:580, fp:[4,3], produces:[{id:'kronos',    n:1}]},
     {key:'sanctum', name:'아크엔젤 성소',     ico:'👼', cost:700, fp:[4,4], produces:[{id:'archangel', n:1}]},
@@ -10377,27 +10377,27 @@ TECH_TREE.aetherial={ name:'에테리얼', res:{m:'크레딧', g:'에너지'}, b
   { k:'nexus', name:'본거지', ico:'🔷', m:400, g:0, supply:9, req:[],
     produces:[{id:'worker_light', name:'생산자', m:50, g:0, pop:1}] },                // 프로브
   { k:'pylon', name:'동력탑', ico:'🔮', m:100, g:0, supply:8, req:[] },               // 동력장
-  { k:'gateway', name:'지상 관문', ico:'⛩️', m:150, g:0, req:['nexus'],
+  { k:'gateway', name:'지상 차원문', ico:'⛩️', m:150, g:0, req:['nexus'],
     produces:[
       {id:'blade', name:'광전사', m:100, g:0, pop:2},                                   // 질럿
       {id:'dragoon', name:'센티넬', m:125, g:50, pop:2, req:['cyber']},               // 드라군
       {id:'high_templar', name:'하이세이지', m:50, g:150, pop:2, req:['archives']},    // 하이세이지 → 보이드로 진화(TECH_MORPH)
       {id:'dark_templar', name:'다크세이지', m:125, g:100, pop:2, req:['archives']}] },  // 다크세이지 → 다크보이드로 진화(TECH_MORPH)
   { k:'assimilator', name:'융합소', ico:'🛢', m:100, g:0, gas:true, req:[] },
-  { k:'forge', name:'대장간', ico:'⚒️', m:150, g:0, req:['nexus'],
+  { k:'forge', name:'강화소', ico:'⚒️', m:150, g:0, req:['nexus'],
     research:[
       {k:'gnd_wpn', name:'지상 무기', desc:'광전사·센티넬·보이드 +/티어', tier:[[100,100],[150,150],[200,200]]},
       {k:'gnd_arm', name:'지상 방어', desc:'지상 방어 +/티어', tier:[[100,100],[150,150],[200,200]]},
       {k:'shield', name:'실드 강화', desc:'모든 유닛 실드 +/티어', tier:[[200,200],[300,300],[400,400]]} ] },
-  { k:'cannon', name:'광자포', ico:'☄️', m:150, g:0, req:['forge'], detector:true },
-  { k:'cyber', name:'제어 핵', ico:'⚙️', m:200, g:0, req:['gateway'],
+  { k:'cannon', name:'에너지 타워', ico:'☄️', m:150, g:0, req:['forge'], detector:true },
+  { k:'cyber', name:'사이버 코어', ico:'⚙️', m:200, g:0, req:['gateway'],
     research:[
       {k:'singularity', name:'사거리 강화', desc:'센티넬 사거리↑', m:150, g:150},
       {k:'air_wpn', name:'공중 무기', desc:'팔콘·요격기·모함·전함 +/티어', tier:[[100,100],[175,175],[250,250]]},
       {k:'air_arm', name:'공중 방어', desc:'공중 방어 +/티어', tier:[[150,150],[225,225],[300,300]]} ] },
-  { k:'battery', name:'충전소', ico:'🔋', m:100, g:0, req:['gateway'] },
+  { k:'battery', name:'쉴드 충전', ico:'🔋', m:100, g:0, req:['gateway'] },
   // ── 스타게이트·공중군 ──
-  { k:'stargate', name:'공중 관문', ico:'🛸', m:150, g:150, req:['cyber'],
+  { k:'stargate', name:'공중 차원문', ico:'🛸', m:150, g:150, req:['cyber'],
     produces:[
       {id:'falcon', name:'팔콘', m:150, g:100, pop:2},                                 // 커세어
       {id:'skydancer', name:'요격기', m:275, g:125, pop:3},                        // 스카웃
@@ -10416,7 +10416,7 @@ TECH_TREE.aetherial={ name:'에테리얼', res:{m:'크레딧', g:'에너지'}, b
       {k:'stasis', name:'빙결', desc:'범위 유닛 무적·행동불가', m:150, g:150},
       {k:'khaydarin_core', name:'마나 증폭', desc:'전함 최대 에너지 +50', m:150, g:150} ] },
   // ── 로보틱스 ──
-  { k:'robo', name:'로봇 공창', ico:'🤖', m:200, g:200, req:['cyber'],
+  { k:'robo', name:'로봇 제작소', ico:'🤖', m:200, g:200, req:['cyber'],
     produces:[
       {id:'seraph', name:'수송선', m:200, g:0, pop:2},                                // 셔틀(수송)
       {id:'observer', name:'정찰기', m:25, g:75, pop:1, req:['observatory'], detector:true},  // 옵저버
