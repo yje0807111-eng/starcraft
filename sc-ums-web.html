@@ -952,7 +952,7 @@
   .bent .bprog i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#2f7d4a,#5adf8a);box-shadow:0 0 6px rgba(90,223,138,.5);transition:width .12s linear}
   .bent .bprog.prod i{background:linear-gradient(90deg,#2f6fbf,#5cc8ff);box-shadow:0 0 6px rgba(92,200,255,.5)}
   .bent .bpt{position:absolute;left:50%;bottom:-21px;transform:translateX(-50%);font:800 9px 'Rajdhani',sans-serif;color:#8adf9a;white-space:nowrap;text-shadow:0 1px 2px #000}
-  .bent.bldg.live3d.sel,.bent.unit.live3d.sel,.bent.worker.live3d.sel,.bent.larvaE.live3d.sel{outline:none!important;box-shadow:none!important}
+  .bent.bldg.live3d.sel,.bent.unit.live3d.sel,.bent.worker.live3d.sel,.bent.larvaE.live3d.sel,.bent.eggE.live3d.sel{outline:none!important;box-shadow:none!important}   /* 3D 렌더 중엔 2D 파랑 아웃라인 제거(선택 표시는 3D 하단 링) */
   .bhint{position:absolute;bottom:66px;left:50%;transform:translateX(-50%);z-index:5;font-size:11px;font-weight:700;color:#bcd;
     background:rgba(6,9,14,.75);border:1px solid var(--metal-edge);border-radius:8px;padding:5px 12px;max-width:92%;text-align:center;pointer-events:none}
   .bhint.on{color:#ffe27a;border-color:var(--gold);box-shadow:0 0 12px -3px rgba(255,210,74,.5)}
@@ -10005,17 +10005,29 @@ function loop(now){
       const _v=(G.tech&&G.tech.view)||{x:0.5,y:0.5,zoom:1};
       // 건물 base를 footprint 하단(중심 + ½h 아래)에 맞춤 → 건물이 자기 타일 위에 딱 올라감. yoff -3 = 모델 하단을 footprint 하단선보다 1px 위로(Y_DROP 2 보정)
       const _BLIFT=-3, _cwpx=_techCW()*W*_v.zoom;   // 셀 폭(px)
-      const list=[]; for(const e of (G.tech.ents||[])){ if(e.type!=='bldg') continue; const mk=(TECH_MODEL[race]||{})[e.bk]; if(!mk) continue; const _cfg=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[mk]:null; const _bf=(typeof _techFoot==='function')?_techFoot(race,e.bk):{w:2,h:2}; const _by=e.y+(_bf.h/2)*_techCH(); const _bp=(e.bt>0)?(e.waiting?0:Math.max(0,Math.min(1,1-e.bt/(e.btMax||1)))):null; list.push({uid:'cst_'+race+'_'+mk+'_'+e.eid, id:'cb_'+mk, x:(e.x-_v.x)*_v.zoom+0.5, y:(_by-_v.y)*_v.zoom+0.5, face:((race==='swarm')?0:(typeof CST_YAW!=='undefined'?CST_YAW:0))+((_cfg&&_cfg.f)||0), yoff:_BLIFT, lift:(e._liftH||0)*TECH_LIFT_PX, fitW:_bf.w*_cwpx, sel:(G.tech&&G.tech.sel===e.eid), buildP:_bp, hidden:techFogHidden(e.x,e.y)}); }   // 🛫 lift=_liftH만큼 위로(fitW 지면고정 후 적용) · fitW=footprint 폭(px) · hidden=🌫️활성 시야 밖
-      if(G.tech.arm && G.tech.armXY){ const _gmk=(TECH_MODEL[race]||{})[G.tech.arm]; if(_gmk && M3D.hasModel && M3D.hasModel('cb_'+_gmk)){ const _gcfg=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[_gmk]:null; const _gf=(typeof _techFoot==='function')?_techFoot(race,G.tech.arm):{w:2,h:2}; const _gy=G.tech.armXY.y+(_gf.h/2)*_techCH(); list.push({uid:'__bghost__', id:'cb_'+_gmk, x:(G.tech.armXY.x-_v.x)*_v.zoom+0.5, y:(_gy-_v.y)*_v.zoom+0.5, face:((race==='swarm')?0:(typeof CST_YAW!=='undefined'?CST_YAW:0))+((_gcfg&&_gcfg.f)||0), yoff:_BLIFT, fitW:_gf.w*_cwpx, ghost:true }); } }   // 반투명 회색 예비 건물(배치 미리보기)
-      for(const e of (G.tech.ents||[])){ if(e.type!=='unit'&&e.type!=='worker'&&e.type!=='larva') continue; if(e._inGas) continue; const mk=(typeof _techEntModel==='function')?_techEntModel(e):null; if(!mk) continue;   // 🚶 일꾼·생산 유닛·🐛라바 3D(가스 채취 중=건물 안, 숨김)
+      // 🗂 깊이 정렬 = 타일 행 기준(연속 y가 아님). 행마다 간격을 둬서 뒤 타일 건물이 앞 타일 유닛을 메시 두께로 덮지 못하게 함.
+      // 같은 행이면 유닛·라바·알이 건물보다 앞(+0.5행) — 건물 바로 아래 칸에서 스폰되는 알/라바가 항상 보이도록.
+      // ⚠ 카메라(z=800, near/far -2000~2000) 가시 범위 -1200~2800 안에 전 행이 들어와야 함 → 총 행수로 간격을 나눠 산출
+      const _ZROWS=Math.max(1,(typeof _techRows==='function')?_techRows():28), _ZSTEP=Math.min(60, 2600/(_ZROWS+1));
+      const _zOf=(wy,isB)=>{ const _r=Math.floor((wy-TECH_GRID.y0)/_techCH()); return -1000+(_r+(isB?0:0.5))*_ZSTEP; };
+      const _ZTOP=-1000+(_ZROWS+1)*_ZSTEP;   // 전 건물보다 앞(=공중 유닛 전용 평면). 가시범위(-1200~2800) 안
+      // ✈ 공중 유닛 = 지상 정렬과 분리된 상단 평면. 건물 위를 지날 때 모델에 묻히지 않고 위로 지나감(공중끼리는 행 순서 유지)
+      const _zAir=(wy)=>{ const _r=Math.floor((wy-TECH_GRID.y0)/_techCH()); return _ZTOP+_r*_ZSTEP*0.5; };
+      // 🥚 알은 자기를 낳은 해처리보다 반드시 앞 — 같은 행이라도 해처리 메시에 묻히지 않게 그 건물 z보다 한 칸 앞으로
+      const _zEgg=(e)=>{ let z=_zOf(e.y,false); if(e.hatch!=null){ const _h=G.tech.ents.find(x=>x.eid===e.hatch&&x.type==='bldg');
+        if(_h){ const _hf=(typeof _techFoot==='function')?_techFoot(race,_h.bk):{w:2,h:2}; const _hz=_zOf(_h.y+(_hf.h/2)*_techCH(),true);
+          if(z<=_hz) z=_hz+_ZSTEP*0.5; } } return z; };   // 부모 해처리 앞으로 끌어올림(다른 건물과의 정렬은 그대로)
+      const list=[]; for(const e of (G.tech.ents||[])){ if(e.type!=='bldg') continue; const mk=(TECH_MODEL[race]||{})[e.bk]; if(!mk) continue; const _cfg=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[mk]:null; const _bf=(typeof _techFoot==='function')?_techFoot(race,e.bk):{w:2,h:2}; const _by=e.y+(_bf.h/2)*_techCH(); const _bp=(e.bt>0)?(e.waiting?0:Math.max(0,Math.min(1,1-e.bt/(e.btMax||1)))):null; list.push({uid:'cst_'+race+'_'+mk+'_'+e.eid, id:'cb_'+mk, x:(e.x-_v.x)*_v.zoom+0.5, y:(_by-_v.y)*_v.zoom+0.5, face:((race==='swarm')?0:(typeof CST_YAW!=='undefined'?CST_YAW:0))+((_cfg&&_cfg.f)||0), yoff:_BLIFT, lift:(e._liftH||0)*TECH_LIFT_PX, fitW:_bf.w*_cwpx, sel:(G.tech&&G.tech.sel===e.eid), buildP:_bp, hidden:techFogHidden(e.x,e.y), z:_zOf(_by,true)}); }   // 🛫 lift=_liftH만큼 위로(fitW 지면고정 후 적용) · fitW=footprint 폭(px) · hidden=🌫️활성 시야 밖
+      if(G.tech.arm && G.tech.armXY){ const _gmk=(TECH_MODEL[race]||{})[G.tech.arm]; if(_gmk && M3D.hasModel && M3D.hasModel('cb_'+_gmk)){ const _gcfg=(typeof CST_BLDG_CFG!=='undefined')?CST_BLDG_CFG[_gmk]:null; const _gf=(typeof _techFoot==='function')?_techFoot(race,G.tech.arm):{w:2,h:2}; const _gy=G.tech.armXY.y+(_gf.h/2)*_techCH(); list.push({uid:'__bghost__', id:'cb_'+_gmk, x:(G.tech.armXY.x-_v.x)*_v.zoom+0.5, y:(_gy-_v.y)*_v.zoom+0.5, face:((race==='swarm')?0:(typeof CST_YAW!=='undefined'?CST_YAW:0))+((_gcfg&&_gcfg.f)||0), yoff:_BLIFT, fitW:_gf.w*_cwpx, ghost:true, z:_zOf(_gy,true) }); } }   // 반투명 회색 예비 건물(배치 미리보기)
+      for(const e of (G.tech.ents||[])){ if(e.type!=='unit'&&e.type!=='worker'&&e.type!=='larva'&&e.type!=='egg') continue; if(e._inGas) continue; const mk=(typeof _techEntModel==='function')?_techEntModel(e):null; if(!mk) continue;   // 🚶 일꾼·생산 유닛·🐛라바·🥚알 3D(가스 채취 중=건물 안, 숨김)
         const _selu=(G.tech.sel===e.eid)||(G.tech.selU&&G.tech.selU.indexOf(e.eid)>=0);
         const _isAir=(typeof FXLAB_AIR!=='undefined')&&FXLAB_AIR.has(mk);   // 공중 유닛: 메인과 동일한 고정 부양(syncBuild airlift)
-        list.push({uid:'tu_'+e.eid, id:mk, x:(e.x-_v.x)*_v.zoom+0.5, y:(e.y-_v.y)*_v.zoom+0.5, face:(e.face||0), yoff:(typeof TECH_UNIT_YOFF!=='undefined'?TECH_UNIT_YOFF:6), moving:(e.tx!=null), working:(e.type==='worker'&&!!e._working), sel:_selu, airlift:_isAir, yawFix:true, scl:(typeof TECH_USCALE!=='undefined'?TECH_USCALE:1), hidden:techFogHidden(e.x,e.y), noShadow:_isAir}); }   // scl=건물 대비 유닛 절반 크기 · hidden=🌫️활성 시야 밖 · noShadow=공중 유닛은 3D 원형 그림자 끄고 DOM 지면 그림자로 대체   // face = 이동방향 + 모델별 정면 보정(메인과 동일)
+        list.push({uid:'tu_'+e.eid, id:mk, x:(e.x-_v.x)*_v.zoom+0.5, y:(e.y-_v.y)*_v.zoom+0.5, face:(e.face||0), yoff:(typeof TECH_UNIT_YOFF!=='undefined'?TECH_UNIT_YOFF:6), moving:(e.tx!=null), working:(e.type==='worker'&&!!e._working), sel:_selu, airlift:_isAir, yawFix:true, scl:(typeof TECH_USCALE!=='undefined'?TECH_USCALE:1), hidden:techFogHidden(e.x,e.y), noShadow:_isAir, z:(_isAir?_zAir(e.y):(e.type==='egg'?_zEgg(e):_zOf(e.y,false)))}); }   // scl=건물 대비 유닛 절반 크기 · hidden=🌫️활성 시야 밖 · noShadow=공중 유닛은 3D 원형 그림자 끄고 DOM 지면 그림자로 대체   // face = 이동방향 + 모델별 정면 보정(메인과 동일)
       if(M3D.hasModel && M3D.hasModel('res_cn')){   // 💎⛽ 자원 3D: 미네랄 노드 · 가스 노드 · 일꾼 운반물(안개 시야 밖이면 숨김)
-        for(const m of (G.tech.minerals||[])){ list.push({uid:'mn_'+m.eid, id:'res_cn', x:(m.x-_v.x)*_v.zoom+0.5, y:(m.y-_v.y)*_v.zoom+0.5, face:Math.PI, sel:!!(G.tech.selRes&&G.tech.selRes.kind==='mineral'&&G.tech.selRes.eid===m.eid), hidden:techFogHidden(m.x,m.y)}); }   // 미네랄 180° 회전 · sel=유닛/건물과 동일한 3D 하단 링
+        for(const m of (G.tech.minerals||[])){ list.push({uid:'mn_'+m.eid, id:'res_cn', x:(m.x-_v.x)*_v.zoom+0.5, y:(m.y-_v.y)*_v.zoom+0.5, face:Math.PI, sel:!!(G.tech.selRes&&G.tech.selRes.kind==='mineral'&&G.tech.selRes.eid===m.eid), hidden:techFogHidden(m.x,m.y), z:_zOf(m.y,false)}); }   // 미네랄 180° 회전 · sel=유닛/건물과 동일한 3D 하단 링
         const _gasB=G.tech.ents.some(be=>be.type==='bldg'&&((techGetBldg(race,be.bk)||{}).gas));
-        if(!_gasB){ const _gx=TECH_GRID.x0+(TECH_GAS.c0+TECH_GAS.w/2)*_techCW(), _gy=TECH_GRID.y0+(TECH_GAS.r0+TECH_GAS.h-0.55)*_techCH(); list.push({uid:'gz_res', id:'res_en', x:(_gx-_v.x)*_v.zoom+0.5, y:(_gy-_v.y)*_v.zoom+0.5, face:Math.PI/2, fitW:TECH_GAS.w*_cwpx, sel:!!(G.tech.selRes&&G.tech.selRes.kind==='gas'), hidden:techFogHidden(_gx,_gy)}); }   // 가스 건물 없을 때만 · sel=3D 하단 링
-        for(const e of (G.tech.ents||[])){ if(e.type==='worker'&&e._carry&&!e._inGas){ const _cf=e.face||0, _cd=0.014; list.push({uid:'carry_'+e.eid, id:((e._cKind||e._gKind)==='gas'?'res_ec':'res_cc'), x:((e.x+Math.sin(_cf)*_cd)-_v.x)*_v.zoom+0.5, y:((e.y+Math.cos(_cf)*_cd)-_v.y)*_v.zoom+0.5, yoff:-3, hidden:techFogHidden(e.x,e.y)}); } }   // 운반 청크 = 일꾼 정면(진행 방향) 앞·손 높이 — 앞에서 들고 가는 느낌
+        if(!_gasB){ const _gx=TECH_GRID.x0+(TECH_GAS.c0+TECH_GAS.w/2)*_techCW(), _gy=TECH_GRID.y0+(TECH_GAS.r0+TECH_GAS.h-0.55)*_techCH(); list.push({uid:'gz_res', id:'res_en', x:(_gx-_v.x)*_v.zoom+0.5, y:(_gy-_v.y)*_v.zoom+0.5, face:Math.PI/2, fitW:TECH_GAS.w*_cwpx, sel:!!(G.tech.selRes&&G.tech.selRes.kind==='gas'), hidden:techFogHidden(_gx,_gy), z:_zOf(_gy,false)}); }   // 가스 건물 없을 때만 · sel=3D 하단 링
+        for(const e of (G.tech.ents||[])){ if(e.type==='worker'&&e._carry&&!e._inGas){ const _cf=e.face||0, _cd=0.014; list.push({uid:'carry_'+e.eid, id:((e._cKind||e._gKind)==='gas'?'res_ec':'res_cc'), x:((e.x+Math.sin(_cf)*_cd)-_v.x)*_v.zoom+0.5, y:((e.y+Math.cos(_cf)*_cd)-_v.y)*_v.zoom+0.5, yoff:-3, hidden:techFogHidden(e.x,e.y), z:_zOf(e.y,false)+1}); } }   // 운반 청크 = 일꾼 정면(진행 방향) 앞·손 높이 — 앞에서 들고 가는 느낌
       }
       window.M3D.syncBuild(list, W, H, dt, _v.zoom);
     } else if(mcv) mcv.style.display='none';
@@ -10711,7 +10723,7 @@ function techLarvaMorph(ev, id){ if(ev&&ev.stopPropagation) ev.stopPropagation()
     { const w=_techWhyPop(p.pop)||_techWhyRes(p.m,p.g); if(w){ blocked=w; break; } }   // 무엇이 부족한지(인구/크레딧/에너지) 사유 보존
     _techSpend(p.m,p.g); G.tech.sup+=(p.pop||0);
     G.tech.ents=G.tech.ents.filter(x=>x!==_lv); G.tech.selU=(G.tech.selU||[]).filter(x=>x!==_lv.eid);
-    const _egg={eid:G.tech.eseq++, type:'egg', x:_lv.x, y:_lv.y, id:id, t:pt, tMax:pt, pop:p.pop||0, supply:p.supply||0, twin};
+    const _egg={eid:G.tech.eseq++, type:'egg', x:_lv.x, y:_lv.y, id:id, t:pt, tMax:pt, pop:p.pop||0, supply:p.supply||0, twin, hatch:_lv.hatch};
     if(pt<=0) techHatchEgg(_egg); else G.tech.ents.push(_egg); made++; }
   if(!made){ if(blocked&&typeof toast==='function') toast(blocked); return; }
   if(blocked&&typeof toast==='function') toast(blocked);
@@ -11294,8 +11306,8 @@ function _techCollRect(b, e){ const race=G.tech.race, cw=_techCW(), ch=_techCH()
   const R={ x0:b.x-hx+(mg.l-cr)*cw, x1:b.x+hx-(mg.r-cr)*cw, y0:bcy-hy+(mg.t-cr)*ch, y1:bcy+hy-(mg.b-cr)*ch };
   if(b._dockOf!=null){ const par=G.tech.ents.find(p=>p.eid===b._dockOf&&p.type==='bldg'&&p.bt<=0&&!p._lifted); if(par){ const pr=_techCollRect(par,e); R.y0=Math.min(R.y0,pr.y0); R.x0=Math.min(R.x0,pr.x1-0.001); } }   // 🔗 애드온 = 본체와 한 덩어리: 위쪽 노치(빈칸)·이음새를 본체 상단·우측까지 확장해 봉인(유닛 통과 불가)
   return R; }
-function _techEntModel(e){ if(!e) return null; if(e.type==='worker') return (TECH_WORKER[G.tech.race]||'worker_human'); if(e.type==='unit') return e.uid; if(e.type==='larva') return 'swarm_larva'; return null; }   // 엔티티 → 3D 모델 키 · 🐛 라바=swarm_larva 모델
-function _techRaceUnitKeys(race){ const keys=new Set(); keys.add(TECH_WORKER[race]||'worker_human'); if(race==='swarm') keys.add('swarm_larva'); const bs=(TECH_TREE[race]&&TECH_TREE[race].buildings)||[]; for(const b of bs){ for(const p of (b.produces||[])) if(p&&p.id) keys.add(p.id); } return [...keys]; }   // 그 종족 건설 맵에서 쓸 유닛 모델 키(일꾼+생산 유닛 + 스웜 라바)
+function _techEntModel(e){ if(!e) return null; if(e.type==='worker') return (TECH_WORKER[G.tech.race]||'worker_human'); if(e.type==='unit') return e.uid; if(e.type==='larva') return 'swarm_larva'; if(e.type==='egg') return 'swarm_egg'; return null; }   // 엔티티 → 3D 모델 키 · 🐛 라바=swarm_larva · 🥚 알=swarm_egg
+function _techRaceUnitKeys(race){ const keys=new Set(); keys.add(TECH_WORKER[race]||'worker_human'); if(race==='swarm'){ keys.add('swarm_larva'); keys.add('swarm_egg'); } const bs=(TECH_TREE[race]&&TECH_TREE[race].buildings)||[]; for(const b of bs){ for(const p of (b.produces||[])) if(p&&p.id) keys.add(p.id); } return [...keys]; }   // 그 종족 건설 맵에서 쓸 유닛 모델 키(일꾼+생산 유닛 + 스웜 라바·알)
 function techHidePreview(){ const prev=document.getElementById('cstPrev'), main=document.getElementById('cstMain'); if(prev) prev.classList.remove('on'); if(main) main.classList.remove('hasPrev'); if(window.M3D&&M3D.cstStop) M3D.cstStop(); }
 function techUIEnsure(){ if(!G.tech||!TECH_TREE[G.tech.race]) techUIInit('union'); techUIRender(); }
 function _techReqMet(req){ if(!req) return true; for(const r of req){ if(!(G.tech.built[r]>0||G.tech.addon[r])) return false; } return true; }
@@ -11368,7 +11380,7 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
         labels+='<div class="bldTime" style="left:'+(_sb.x*100).toFixed(2)+'%;top:'+(_sb.y*100).toFixed(2)+'%">'+_lbl+'</div>'; }
       else { const _q0=(e._pq&&e._pq.length)?e._pq[0]:(e._rj||null); if(_q0){ const _pp=Math.round((1-_q0.t/(_q0.tMax||1))*100); inner='<div class="bprog prod" style="bottom:0"><i style="width:'+_pp+'%"></i></div>'; } } }
     else if(e.type==='larva'){ const _lh3=!!(window.M3D&&M3D.ready&&M3D.ready()&&M3D.hasModel&&M3D.hasModel('swarm_larva')&&!(G.opt&&G.opt.model3d===false)); cls='larvaE'+(_lh3?' live3d':''); inner=_lh3?'':'<span class="lvWig">🐛</span>'; }   // 🐛 라바 · 3D 로드 시 빈 앵커 + live3d(2D 네모 아웃라인 제거 → 유닛과 동일한 3D 하단링)
-    else if(e.type==='egg'){ cls='eggE'; inner='<span class="eggWig">🥚</span>'; }   // 🥚 알(변태 중)
+    else if(e.type==='egg'){ const _eh3=!!(window.M3D&&M3D.ready&&M3D.ready()&&M3D.hasModel&&M3D.hasModel('swarm_egg')&&!(G.opt&&G.opt.model3d===false)); cls='eggE'+(_eh3?' live3d':''); inner=_eh3?'':'<span class="eggWig">🥚</span>'; }   // 🥚 알(변태 중) · 3D 로드 시 빈 앵커(swarm_egg 모델로 렌더)
     else if(e.type==='worker'||e.type==='unit'){ const _mk=_techEntModel(e);
       const _h3=!!(window.M3D&&M3D.ready&&M3D.ready()&&_mk&&M3D.hasModel&&M3D.hasModel(_mk)&&!(G.opt&&G.opt.model3d===false));   // 3D 모델 로드 완료 시 DOM은 빈 앵커, 아니면 초상화 폴백
       if(_h3 && typeof FXLAB_AIR!=='undefined' && FXLAB_AIR.has(_mk)){ const _as=_techW2S(e.x,e.y), _asw=Math.max(0.05,0.95*_techCW()*techView().zoom);   // 🛩 공중 유닛 지면 그림자(고정 고도 부양 → 건물 이륙 그림자와 동일 방식·고정 농도)
@@ -12266,7 +12278,7 @@ function techDoProduce(id, bk){ const race=G.tech.race; if(!(G.tech.built[bk]>0)
   _techSpend(p.m,p.g); G.tech.sup+=(p.pop||0);   // 자원·인구 즉시 예약(선차감) — 취소 시 100% 환불
   const pt=_techProdTime(race,id);
   if(_lv){ G.tech.ents=G.tech.ents.filter(x=>x!==_lv);   // 라바 → 알(그 자리에서 변태, 부화 시 유닛)
-    const _egg={eid:G.tech.eseq++, type:'egg', x:_lv.x, y:_lv.y, id:id, t:pt, tMax:pt, pop:p.pop||0, supply:p.supply||0, twin:(id==='snapper'||id==='stinger')};   // 🥚 스내퍼·스팅어=1알 2기
+    const _egg={eid:G.tech.eseq++, type:'egg', x:_lv.x, y:_lv.y, id:id, t:pt, tMax:pt, pop:p.pop||0, supply:p.supply||0, twin:(id==='snapper'||id==='stinger'), hatch:_lv.hatch};   // 🥚 스내퍼·스팅어=1알 2기
     if(pt<=0) techHatchEgg(_egg); else G.tech.ents.push(_egg); }
   else { const q={id:id, bk:bk, t:pt, tMax:pt, pop:p.pop||0, supply:p.supply||0, m:p.m||0, g:p.g||0};   // m·g=환불용
     if(pt<=0) techFinishProduce(q, be); else (be._pq=be._pq||[]).push(q); }
@@ -13803,7 +13815,7 @@ const MODELS={ marine:'marine.glb', goliath:'goliath.glb', ghost:'ghost.glb', ar
   // 신규 가챠 유닛 전용 모델(전설/초월)
   machinegun:'machinegun.glb', tank:'tank.glb', blade:'blade.glb', skyguard:'skyguard.glb', skydancer:'skydancer.glb', matron:'matron.glb', thornqueen:'thornqueen.glb',
   racer:'racer.glb', snapper:'snapper.glb', worker_human:'worker_human.glb', worker_light:'worker_light.glb', worker_swarm:'worker_swarm.glb',
-  medic:'mender.glb', broodling:'broodling.glb', larva:'aetherial_reaver.glb', reaver:'aetherial_reaver.glb', swarm_larva:'swarm_larva.glb', ultralisk:'ultralisk.glb', dark_templar:'dark_templar.glb', high_templar:'high_templar.glb' };   // larva 키(도감·전투)·reaver 키(건설존 uid) 모두 리버 모델 · swarm_larva=스웜 라바(신규)
+  medic:'mender.glb', broodling:'broodling.glb', larva:'aetherial_reaver.glb', reaver:'aetherial_reaver.glb', swarm_larva:'swarm_larva.glb', swarm_egg:'Egg.glb', ultralisk:'ultralisk.glb', dark_templar:'dark_templar.glb', high_templar:'high_templar.glb' };   // larva 키(도감·전투)·reaver 키(건설존 uid) 모두 리버 모델 · swarm_larva=스웜 라바 · swarm_egg=변태 중 알
 const CLOAK_MODELS={ observer:true };  // 클로킹(반투명) 적용 모델만(옵저버). 오버로드 등은 불투명
 const AURA_UNITS={ archon:true };      // 공중 부유 + 에너지 오라(아칸 — 사이오닉 에너지 생명체)
 const AURA_LIFT=0.14;                  // 부유 기본 높이(모델높이 비율) — 아주 약간 떠 있음
@@ -13844,14 +13856,14 @@ const SCALE={ marine:12, goliath:16, ghost:12, archon:18, dragoon:14, hydra:14, 
   hellfire:17, pelican:18, dreadnought:22, kronos:20, seraph:16, archangel:22, falcon:16, stinger:10, venom:17, medusa:18,   // 적 공중 유닛(초기값 — 보면서 조정). stinger(스커지)=약간 작게
   wyvern:16, aegis:18, behemoth:20,   // 개인보스 모델(초기값 — bossScale 2배 적용됨)
   racer:20, tank:22, blade:18, thornqueen:20, skyguard:17, skydancer:17, worker_human:13, worker_light:11, worker_swarm:8.8,
-  medic:12, broodling:9, larva:8, reaver:8, swarm_larva:7, ultralisk:24, dark_templar:13, high_templar:12 };  // 유닛별 화면 스케일. 초월 비행체(템페스트·스카이댄서)=대형 · swarm_larva=작은 라바(초기값, 보면서 조정)
+  medic:12, broodling:9, larva:8, reaver:8, swarm_larva:7, swarm_egg:11, ultralisk:24, dark_templar:13, high_templar:12 };  // 유닛별 화면 스케일. 초월 비행체(템페스트·스카이댄서)=대형 · swarm_larva=작은 라바 · swarm_egg=알(라바보다 큼)
   // (구)타입별 색 — 현재는 플레이어색으로 통일(아래 PLAYER_COLOR)
 // 플레이어 색(스타크래프트식) — 한 플레이어의 모든 유닛·구조물을 같은 색으로 통일(아군 구별용)
 const PLAYER_PALETTE={ blue:0x2e7bff, red:0xff3b3b, orange:0xff9418, yellow:0xffd23b, white:0xeaf2ff, purple:0xb05bff, green:0x46d860, teal:0x2dd6c0 };
 let PLAYER_COLOR=PLAYER_PALETTE.blue;   // 현재 플레이어 통일색(키만 바꾸면 전체 색 변경)
 const PLAYER_MODELS=new Set(['marine','ghost','goliath','dragoon','hydra','archon','turret','photon',
   'machinegun','tank','blade','thornqueen','skyguard','skydancer','matron','racer','snapper','worker_human','worker_light','worker_swarm',
-  'medic','broodling','larva','reaver','swarm_larva','ultralisk','dark_templar','high_templar']);  // 플레이어 소유(전장) 모델 — 플레이어색 림 적용(가챠 전용 모델 포함)
+  'medic','broodling','larva','reaver','swarm_larva','swarm_egg','ultralisk','dark_templar','high_templar']);  // 플레이어 소유(전장) 모델 — 플레이어색 림 적용(가챠 전용 모델 포함)
 const RING_OP=0.9;        // 선택 링 불투명도
       // 모델 색 틴트 강도(0=원본, 1=완전 색칠) — 진한 색은 발광이 아닌 이 값으로(단단하게)
       // 플레이어색 발광(은은하게 — 마린/고스트처럼 부드러운 빛)
@@ -14728,7 +14740,7 @@ window.M3D={
         seenGhost.add(it.id); g.holder.visible=true; if(g.inner)g.inner.visible=true; if(g.shadow) g.shadow.visible=false;   // 원형 그림자 숨김(사각 footprint가 지면 역할 · 하단 넘침 방지)
         if(it.face!=null) g.yaw.rotation.y=it.face + (MODEL_YAW_OFF[it.id]||0);
         g.holder.scale.setScalar((SCALE[it.id]||MODEL_SCALE)*mul*(it.scl||1));
-        g.holder.position.set(it.x*W, (H-it.y*H)-Y_DROP-(it.yoff||0), it.y*H*2.5); g.holder.rotation.x=it.pitch||0;   // z=화면 아래일수록 앞(painter 정렬 — 겹칠 때 아래 건물이 위 건물을 가림)
+        g.holder.position.set(it.x*W, (H-it.y*H)-Y_DROP-(it.yoff||0), (it.z!=null?it.z:it.y*H*2.5)); g.holder.rotation.x=it.pitch||0;   // z=화면 아래일수록 앞(painter 정렬 — 겹칠 때 아래 건물이 위 건물을 가림)
         if(it.fitW){ const _fw=it.fitW*(CB_FIT_MUL[it.id]||1); g.holder.updateWorldMatrix(true,true); let _bb=new THREE.Box3().setFromObject(g.yaw); const _pw=_bb.max.x-_bb.min.x; if(_pw>0.5){ g.holder.scale.multiplyScalar(_fw/_pw); g.holder.updateWorldMatrix(true,true); _bb=new THREE.Box3().setFromObject(g.yaw); } g.holder.position.y += ((H-it.y*H)+1) - _bb.min.y; }   // 폭을 footprint에 꽉 맞춤(모델별 보정 배율) + 실제 최하단을 footprint 하단 1px 위로
         continue; }
       seen.add(it.uid);
@@ -14745,7 +14757,7 @@ window.M3D={
         if(it.yawFix){ let _d=_tgt-m.yaw.rotation.y; _d=Math.atan2(Math.sin(_d),Math.cos(_d)); m.yaw.rotation.y+=_d*Math.min(1,dt*ROT_SPD); }   // 메인 sync와 동일: 부드럽게 회전 보간(끊김 방지)
         else m.yaw.rotation.y=_tgt; }
       m.holder.scale.setScalar((SCALE[it.id]||MODEL_SCALE)*mul*(it.scl||1));
-      m.holder.position.set(it.x*W, (H-it.y*H)-Y_DROP-(it.yoff||0), it.y*H*2.5);   // yoff=화면 아래로 내림 · z=화면 아래일수록 앞(겹칠 때 아래 건물이 앞에 보임)
+      m.holder.position.set(it.x*W, (H-it.y*H)-Y_DROP-(it.yoff||0), (it.z!=null?it.z:it.y*H*2.5));   // yoff=화면 아래로 내림 · z=화면 아래일수록 앞(겹칠 때 아래 건물이 앞에 보임)
       m.holder.rotation.x = it.pitch||0;   // 건물 사선 틸트(SC식 부감) — 미지정=0(기존 동작 유지)
       if(it.fitW){ const _fw=it.fitW*(CB_FIT_MUL[it.id]||1); m.holder.updateWorldMatrix(true,true); let _bb=new THREE.Box3().setFromObject(m.yaw); const _pw=_bb.max.x-_bb.min.x; if(_pw>0.5){ m.holder.scale.multiplyScalar(_fw/_pw); m.holder.updateWorldMatrix(true,true); _bb=new THREE.Box3().setFromObject(m.yaw); } m.holder.position.y += ((H-it.y*H)+1) - _bb.min.y + (it.lift||0); }   // 폭을 footprint에 꽉 맞춤 + 최하단을 footprint 하단으로 + 🛫 lift(부양 높이) 적용
       if(it.buildP!=null){   // 🏗 건설 중: 하단→상단 채움(월드 Y) + 유닛보다 뒤(z)에 그려 겹쳐도 유닛이 보임
