@@ -932,6 +932,40 @@
   .bmapTop .techBtns{display:flex;flex-direction:column;gap:4px}
   .bmapTop .cbtn{width:54px;box-sizing:border-box;text-align:center;padding:5px 0;border-radius:6px;cursor:pointer;font-weight:800;font-size:14px;border:1px solid var(--metal-edge);background:linear-gradient(180deg,rgba(15,21,33,.85),rgba(9,13,21,.9));color:#dbe3ee}
   .bmapTop .cbtn.on{color:#fff;background:linear-gradient(180deg,#2f7d4a,#173a24);border-color:#46f06a}
+  /* 🎨 플레이어 색 확인 패널 — 실제 게임 렌더러로 8색을 즉시 전환해 비교 */
+  .bmap .pcPanel{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:31;pointer-events:auto;
+    display:flex;flex-direction:column;gap:6px;align-items:center;padding:8px 10px;border-radius:9px;
+    background:linear-gradient(180deg,rgba(13,18,28,.94),rgba(8,11,17,.96));border:1px solid var(--metal-edge);
+    box-shadow:0 6px 18px rgba(0,0,0,.55)}
+  .bmap .pcHead{font-size:11.5px;font-weight:800;color:#dbe3ee;letter-spacing:.3px}
+  .bmap .pcChips{display:flex;gap:5px}
+  .bmap .pcChip{width:24px;height:24px;border-radius:5px;cursor:pointer;display:flex;align-items:center;
+    justify-content:center;font:800 11px/1 'Rajdhani',sans-serif;color:#0b0e13;background:var(--pcc);
+    border:2px solid transparent;box-shadow:inset 0 0 0 1px rgba(0,0,0,.35)}
+  .bmap .pcChip.on{border-color:#fff;box-shadow:0 0 9px -1px var(--pcc),inset 0 0 0 1px rgba(0,0,0,.35)}
+  .bmap .pcActs{display:flex;gap:5px}
+  .bmap .pcAct{padding:4px 9px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:800;
+    border:1px solid var(--metal-edge);background:linear-gradient(180deg,rgba(15,21,33,.85),rgba(9,13,21,.9));color:#dbe3ee}
+  /* 메인 화면 색 확인 — 패널 자체는 건설 구역과 같은 .pcPanel 스타일을 공유 */
+  #pcFab{position:absolute;left:8px;bottom:120px;z-index:26;width:34px;height:34px;border-radius:9px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;font-size:17px;
+    border:1px solid var(--metal-edge);background:linear-gradient(180deg,rgba(15,21,33,.9),rgba(9,13,21,.94));
+    box-shadow:0 3px 10px rgba(0,0,0,.5)}
+  #pcFab.hide{display:none}
+  #pcMain{position:absolute;left:0;right:0;bottom:8px;z-index:27;display:flex;justify-content:center;pointer-events:none}
+  #pcMain .pcPanel{position:static;transform:none;pointer-events:auto;
+    display:flex;flex-direction:column;gap:6px;align-items:center;padding:8px 10px;border-radius:9px;
+    background:linear-gradient(180deg,rgba(13,18,28,.94),rgba(8,11,17,.96));border:1px solid var(--metal-edge);
+    box-shadow:0 6px 18px rgba(0,0,0,.55)}
+  #pcMain .pcHead{font-size:11.5px;font-weight:800;color:#dbe3ee;letter-spacing:.3px}
+  #pcMain .pcChips{display:flex;gap:5px}
+  #pcMain .pcChip{width:24px;height:24px;border-radius:5px;cursor:pointer;display:flex;align-items:center;
+    justify-content:center;font:800 11px/1 'Rajdhani',sans-serif;color:#0b0e13;background:var(--pcc);
+    border:2px solid transparent;box-shadow:inset 0 0 0 1px rgba(0,0,0,.35)}
+  #pcMain .pcChip.on{border-color:#fff;box-shadow:0 0 9px -1px var(--pcc),inset 0 0 0 1px rgba(0,0,0,.35)}
+  #pcMain .pcActs{display:flex;gap:5px}
+  #pcMain .pcAct{padding:4px 9px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:800;
+    border:1px solid var(--metal-edge);background:linear-gradient(180deg,rgba(15,21,33,.85),rgba(9,13,21,.9));color:#dbe3ee}
   .bmapTop .cbtn.dz{width:auto;padding:5px 9px;font-size:12px;color:#ffc0c0;border-color:rgba(255,90,90,.5);background:rgba(70,18,18,.55)}
   .bmapTop .bres{position:absolute;top:8px;right:10px;display:flex;align-items:center;gap:9px;pointer-events:auto;
     font-size:var(--fs-md);font-weight:800;white-space:nowrap;text-shadow:0 2px 4px #000,0 0 8px #000}   /* 메인 #hudR과 완전 동일(전역 .res/.ri/b 규칙 그대로 사용, 박스 없음) */
@@ -1101,7 +1135,7 @@
   /* 상단 HUD(크레딧·에너지·인구·라운드·킬·시계)는 모든 구역 공통 고정 — 건설 탭에서도 표시. 건설맵 상단바는 그 아래로 */
   body.cstMode .bmapTop{top:0}   /* #hud 숨김 → 건설 자체 상단바를 최상단으로 */
   /* 적군 유닛 구분(붉은 링) */
-  .unit.foe .ubox{box-shadow:0 0 0 2px rgba(255,66,66,.62),0 0 9px rgba(255,54,54,.5)!important}
+  .unit.foe .ubox:not(.model3d){box-shadow:0 0 0 2px rgba(255,66,66,.62),0 0 9px rgba(255,54,54,.5)!important}   /* 2D 폴백 전용 — 3D는 플레이어색 본체 틴트로 구분(적/아군 구분 안 함) */
   #cmdRow .selAll{align-self:stretch;display:flex;align-items:center;justify-content:center;padding:8px 9px;border-radius:var(--r-md);font-size:var(--fs-sm);flex:0 0 auto;white-space:nowrap}
   /* 초상화 — 쿨 메탈 프레임 + 사선 모서리(카드와 통일) */
   .scPortrait{width:64px;height:64px;flex:none;align-self:center;position:relative;overflow:hidden;color:var(--neon);
@@ -2497,6 +2531,8 @@
     <div id="pbossPopup" class="hide"></div>
     <!-- 자동화 묶음 버튼(메인 좌측): 자동 조합/유닛/에너지 토글 — 해금 업그레이드 보유 시 표시 -->
     <div id="autoFab" class="hide" onclick="toggleAutoPopup(event)" title="자동 설정"><span class="afTx">자동설정</span></div>
+    <!-- 🎨 플레이어 색 확인(메인) — 건설 구역과 같은 패널 컴포넌트, 유닛을 확대해 액센트 확인 -->
+    <div id="pcFab" class="hide" onclick="pcMainToggle(event)" title="플레이어 색 확인">🎨</div>
     <!-- 🎆 이펙트 테스트베드 동작 선택(관리자 Unit 탭, 우하단) — 공격/이동/사망 반복 -->
     <div id="fxLabActs" class="hide">
       <div class="fxlAct on" data-m="attack" onclick="fxLabSetMode('attack',this)"><span>⚔️</span><b>공격</b></div>
@@ -7421,7 +7457,11 @@ function tickResearch(dt){ if(!G.research) return;
     const pt=document.querySelector('.cmdG .cgDcost .time'); if(pt) pt.textContent=G.research.t.toFixed(1)+'s 남음';
   }
 }
-const PLAYER_VIEW_COLORS=['#4aa8ff','#ff4d4d','#1ecbb0','#b06bff','#ff9a2f','#ffd23b','#46d860','#e6e6ee'];  // 8인 플레이어 구분색(P1 파랑=나, 빨강/청록/보라/주황/노랑/초록/흰색)
+// 8인 플레이어 구분색 — 파랑/빨강/노랑/초록/보라/주황/갈색/흰색(스타 정통 팔레트)
+//   본체 틴트가 색조뿐 아니라 채도·명도까지 플레이어별로 가져가므로, 색조만으로는 불가능한
+//   갈색(주황과 같은 색조 + 어둡고 탁함)·흰색(무채색)도 확실히 구분됨 → 분홍·연두·청록 불필요
+//   각 hex의 HSL이 그대로 틴트 파라미터가 됨(단일 소스): H=색조 · S=채도 · L=명도 배율(L/0.58)
+const PLAYER_VIEW_COLORS=['#4570d3','#d6292f','#eadb3e','#2ba143','#ad5cd6','#ed691d','#6d422c','#dfe0e2'];
 function renderPlayers(){ const g=document.getElementById('plGrid'); g.innerHTML='';
   const mine=G.myPlayer||1; const active=G.activePlayers||[1,2,3,4,5,6,7,8];   // 게임에 입장한 플레이어만 활성
   for(let n=1;n<=8;n++){ const present=active.indexOf(n)>=0, lock=(n===mine);   // 내 슬롯은 잠금(나)
@@ -9971,6 +10011,7 @@ function loop(now){
   { const gd=document.getElementById('gachaDex'); if(gd) gd.classList.toggle('hide', !!G.sandbox); }   // 가챠 도감(레전드·god 포함)은 네모네모 전용 → 관리자 샌드박스에선 숨김
 
   updateAutoFab();    // 자동화 묶음 버튼/팝업(표시·토글 상태)
+  updatePcFab();      // 🎨 플레이어 색 확인 FAB — 관리자 샌드박스 메인 전용(네모네모 게임엔 미노출)
   if(typeof renderRallyArrows==='function') renderRallyArrows();   // 자동 배치 ON 시 등급별 랠리 화살표(드래그)
   updateHud();
   // '합체' 라벨 페이드: 1라운드만 표시, 2라운드부터 매 프레임 opacity 보간으로 부드럽게 사라짐
@@ -9978,7 +10019,7 @@ function loop(now){
     if(mzl){ const tgt=(G.bossOpen||G.round>1)?0:1; G._mzF=(G._mzF==null?1:G._mzF)+(tgt-(G._mzF==null?1:G._mzF))*Math.min(1,dt*(G.bossOpen?8:1.6));
       if(G._mzF<0.002)G._mzF=0; mzl.style.opacity=G._mzF.toFixed(3); } }
   // 아군 유닛 림 색: 플레이어 구역 관전 시 관전 플레이어 색(+또렷하게), 그 외엔 내 색(은은)
-  if(window.M3D && window.M3D.setPlayerRim){ if(G.tab==='Players') window.M3D.setPlayerRim(PLAYER_VIEW_COLORS[(G.curPlayer-1)%PLAYER_VIEW_COLORS.length], 1.7); else window.M3D.setPlayerRim(PLAYER_VIEW_COLORS[((G.myPlayer||1)-1)%PLAYER_VIEW_COLORS.length]); }   // 내 유닛·건물 테두리=내 플레이어 색
+  if(window.M3D && window.M3D.setPlayerRim){ if(G.tab==='Players') window.M3D.setPlayerRim(PLAYER_VIEW_COLORS[(G.curPlayer-1)%PLAYER_VIEW_COLORS.length], 0.9); else window.M3D.setPlayerRim(PLAYER_VIEW_COLORS[((G.myPlayer||1)-1)%PLAYER_VIEW_COLORS.length]); }   // 플레이어 구분=테두리(림) 색 하나로만 · 관전은 구별용으로 조금 더 강하게(0.9)
   const _specNum = (typeof specRemoteBoard==='function') ? specRemoteBoard() : null;   // 관전 중인 상대 번호
   // 관전 전환(내 화면 ↔ 상대 화면) 시 이전 모델 즉시 제거(쓰러지는 사망모션 없이 바로 사라짐)
   if(G.tab==='Main'||G.tab==='Players'){ const src=_specNum?('s'+_specNum):'main';
@@ -10040,7 +10081,7 @@ function loop(now){
     else drawMiniMap();
     const mcv=document.getElementById('cvMarine');
     if(window.M3D && window.M3D.ready()){ const show=(G.tab==='Main'||G.tab==='Battle'||G.tab==='Unit'||G.tab==='Upgrade'||G.tab==='Players') && !(G.opt&&G.opt.model3d===false); mcv.style.display=show?'block':'none';
-      if(G.tab==='Main'||G.tab==='Battle'||G.tab==='Players') window.M3D.sync(G.units, GW, GH, dt, G.sel, G.enemies, G.selEnemy, null, G.view);
+      if(G.tab==='Main'||G.tab==='Battle'||G.tab==='Players') window.M3D.sync(G.units, GW, GH, dt, G.sel, G.enemies, G.selEnemy, ((G.sandbox&&G.pcheck)?(G.pcScale||1):null), G.view);   // 🎨 색 확인(관리자 샌드박스 전용)만 유닛 확대 · 네모네모 게임은 항상 null=원본 동작
       else if(G.tab==='Unit') window.M3D.syncShop(GW, GH, dt);
       else if(G.tab==='Upgrade') window.M3D.syncBldg(GW, GH, dt); }
     const fcv=document.getElementById('cvFx');  // 투사체 오버레이(메인·관전) / 업그레이드 가동 파티클
@@ -11410,7 +11451,9 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
     const set=(id,v)=>{ const el=c.querySelector('#'+id); if(el){ el.innerHTML=v; el.removeAttribute('id'); } };   // id 제거(중복 방지)
     set('hMin',(G.tech.inf?'∞':G.tech.credit)+'<i class="ru">C</i>'); set('hGas',(G.tech.inf?'∞':G.tech.energy)+'<i class="ru">E</i>'); set('hPop',G.tech.sup+'/'+G.tech.supCap+'<i class="ru">CP</i>');
     res=c.innerHTML; } }
-  const btns=(canDemo?'<span class="cbtn dz" onclick="techDemolish(event)">🗑 철거</span>':'')+'<span class="cbtn'+(G.tech.inf?' on':'')+'" onclick="techInf(event)" title="무제한 자원">∞</span><span class="cbtn'+(G.tech.nocool?' on':'')+'" onclick="techNocool(event)" title="즉시 건설·생산">⏱</span><span class="cbtn'+(techFogEnabled()?' on':'')+'" onclick="techFog(event)" title="전장의 안개">🌫️</span><span class="cbtn" onclick="techReset(event)" title="리셋">↺</span>';
+  const btns=(canDemo?'<span class="cbtn dz" onclick="techDemolish(event)">🗑 철거</span>':'')+'<span class="cbtn'+(G.tech.inf?' on':'')+'" onclick="techInf(event)" title="무제한 자원">∞</span><span class="cbtn'+(G.tech.nocool?' on':'')+'" onclick="techNocool(event)" title="즉시 건설·생산">⏱</span><span class="cbtn'+(techFogEnabled()?' on':'')+'" onclick="techFog(event)" title="전장의 안개">🌫️</span><span class="cbtn'+(G.tech.pcheck?' on':'')+'" onclick="techPCheck(event)" title="플레이어 색 확인">🎨</span><span class="cbtn" onclick="techReset(event)" title="리셋">↺</span>';
+  const pcPanel=G.tech.pcheck?_techPCPanel():'';   // 🎨 플레이어 색 확인 패널(1P~8P 전환 + 전 건물 배치)
+  // (플레이어 색 확인 패널은 _techPCPanel에서 생성)
   // 배치 고스트 + ✓/✕ 확정 버튼 (드래그로 위치 조정)
   let ghost='', armBtns='', foot='';
   if(G.tech.arm && G.tech.armXY){ const _ab=techGetBldg(race,G.tech.arm)||{}, _gs=_techW2S(G.tech.armXY.x,G.tech.armXY.y), _ok=techArmValid(G.tech.armXY.x,G.tech.armXY.y);
@@ -11491,9 +11534,90 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
       if(e._skOn&&e._skOn.psi_cloak&&typeof SKILLS!=='undefined'&&SKILLS.psi_cloak) skZ+=_circ(e.x,e.y,SKILLS.psi_cloak.radius||0.12,'border:1px solid rgba(150,210,255,.55);background:radial-gradient(circle,rgba(150,210,255,.13),transparent 70%)');
       if(e._skOn&&e._skOn.siege) skZ+=_circ(e.x,e.y,0.024,'border:2px solid rgba(255,180,80,.7);background:radial-gradient(circle,rgba(255,180,80,.14),transparent 70%)');
       if(e._healF!=null){ const t=G.tech.ents.find(x=>x.eid===e._healF); if(t){ const p2=_techW2S(t.x,t.y); skZ+='<div class="tkHeal" style="left:'+(p2.x*100).toFixed(2)+'%;top:'+(p2.y*100).toFixed(2)+'%">'+((typeof SKILL_ICON!=='undefined'&&SKILL_ICON.heal)||'✚')+'</div>'; } } } }
-  map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+(G.tech.rallySet!=null?' rally':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none">'+_floor+hillZ+creepZ+psi+gasZone+mineZ+rallyZ+skZ+'<div class="bmapTop"><div class="techSide" onpointerdown="event.stopPropagation()"><div class="techTabs">'+tabs+'</div><div class="techBtns">'+btns+'</div></div><div class="bres" onpointerdown="event.stopPropagation()">'+res+'</div></div>'+ents+foot+ghost+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div></div>';
+  map.innerHTML='<div class="bmap'+(G.tech.arm?' arming':'')+(G.tech.rallySet!=null?' rally':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none">'+_floor+hillZ+creepZ+psi+gasZone+mineZ+rallyZ+skZ+'<div class="bmapTop"><div class="techSide" onpointerdown="event.stopPropagation()"><div class="techTabs">'+tabs+'</div><div class="techBtns">'+btns+'</div></div><div class="bres" onpointerdown="event.stopPropagation()">'+res+'</div></div>'+pcPanel+ents+foot+ghost+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div></div>';
   const _lblLayer=document.getElementById('cstLabels'); if(_lblLayer) _lblLayer.innerHTML=labels+armBtns+resumeBtn;   // 남은시간 라벨 + 배치 ✓/✕ + ▶재개 버튼을 전용 오버레이(z8)에 → 3D 유닛·건물 위(리파이너리 등 큰 건물에 안 가림)
   techFogDraw(); }   // 🌫️ 건설 안개 오버레이 재그림(맵 재렌더마다)
+// ══ 🎨 플레이어 색 확인 구역 ══
+//   실제 게임 렌더러·조명·틴트를 그대로 쓰므로 여기 보이는 색이 곧 인게임 색이다
+//   (건물 초상 렌더러에는 자동 노출이 있어 실제보다 진하게 보임 — 색 판단은 반드시 이 패널로)
+const PC_NAMES=['파랑','빨강','노랑','초록','보라','주황','갈색','흰색'];
+// 패널 마크업 단일 소스 — 건설 구역·메인 화면이 같은 컴포넌트를 쓴다(칩만 공용, 액션 버튼만 화면별로 주입)
+function _pcPanel(pickFn, actsHTML){ const me=(G.myPlayer||1);
+  const chips=PLAYER_VIEW_COLORS.map((c,i)=>'<span class="pcChip'+((i+1)===me?' on':'')+'" style="--pcc:'+c+'" onclick="'+pickFn+'(event,'+(i+1)+')" title="'+(i+1)+'P '+PC_NAMES[i]+'">'+(i+1)+'</span>').join('');
+  return '<div class="pcPanel" onpointerdown="event.stopPropagation()">'
+    +'<div class="pcHead">🎨 '+me+'P '+PC_NAMES[me-1]+'</div>'
+    +'<div class="pcChips">'+chips+'</div>'
+    +'<div class="pcActs">'+actsHTML+'</div></div>'; }
+function _techPCPanel(){ return _pcPanel('techPCPick',
+  '<span class="pcAct" onclick="techPCFill(event)">전 건물 배치</span>'
+  +'<span class="pcAct" onclick="techPCUnits(event)">전 유닛 배치</span>'); }
+function techPCheck(ev){ if(ev) ev.stopPropagation(); G.tech.pcheck=!G.tech.pcheck; techMapRender(); }
+function techPCPick(ev,n){ if(ev) ev.stopPropagation(); G.myPlayer=n; techMapRender(); }   // 루프가 매 프레임 setPlayerRim(내 플레이어색) → 전 모델 즉시 재틴트
+// 현재 종족의 모든 건물을 격자로 한 번에 배치(색 비교용)
+function techPCFill(ev){ if(ev) ev.stopPropagation(); const race=G.tech.race, list=TECH_TREE[race].buildings;
+  G.tech.ents=(G.tech.ents||[]).filter(e=>e.type!=='bldg');
+  const cols=5, x0=0.16, y0=0.30, dx=0.17, dy=0.15;
+  list.forEach((b,i)=>{ G.tech.ents.push({eid:G.tech.eseq++, type:'bldg', bk:b.k,
+    x:x0+(i%cols)*dx, y:y0+Math.floor(i/cols)*dy, done:1, hp:1000, maxHp:1000}); });
+  if(window.M3D&&M3D.cstEnsure) M3D.cstEnsure(list.map(b=>b.k), ()=>techMapRender());
+  techMapRender(); toast(race+' 건물 '+list.length+'개 배치'); }
+// 현재 종족의 모든 생산 유닛을 격자로 배치 — 목록은 3D 모델 로딩과 같은 소스(_techRaceUnitKeys)를 쓴다
+function techPCUnits(ev){ if(ev) ev.stopPropagation(); const race=G.tech.race;
+  const ids=(typeof _techRaceUnitKeys==='function')?_techRaceUnitKeys(race):[];   // 모델 없는 키(핵 등)는 syncBuild가 알아서 건너뜀
+  G.tech.ents=(G.tech.ents||[]).filter(e=>e.type!=='unit');
+  const cols=6, x0=0.14, y0=0.34, dx=0.145, dy=0.12;
+  ids.forEach((uid,i)=>{ G.tech.ents.push({eid:G.tech.eseq++, type:'unit', uid:uid,
+    x:x0+(i%cols)*dx, y:y0+Math.floor(i/cols)*dy}); });
+  if(window.M3D&&M3D.ensureUnits) M3D.ensureUnits(ids, ()=>techMapRender());
+  techMapRender(); toast(race+' 유닛 '+ids.length+'종 배치'); }
+
+// ══ 🎨 메인 화면 색 확인 뷰 ══
+//   건설 구역과 같은 패널 컴포넌트(_pcPanel)를 쓰고, 액션만 메인용으로 교체.
+//   메인은 유닛이 원래 크기로 렌더되므로 화면 줌(G.view.zoom)으로 키워서 액센트를 눈으로 확인할 수 있다.
+const PC_ZOOMS=[1,1.8,2.6,3.6];
+const PC_RACE_KR={union:'유니온', swarm:'스웜', aetherial:'에테리얼'};
+function pcMainPanel(){ const z=G.pcScale||1;
+  return _pcPanel('pcMainPick',
+    '<span class="pcAct" onclick="pcMainUnits(event)">전 유닛 배치</span>'
+    +'<span class="pcAct" onclick="pcMainRace(event)">'+(PC_RACE_KR[G.pcRace||'union'])+'</span>'
+    +'<span class="pcAct" onclick="pcMainZoom(event)">크기 ×'+z.toFixed(1)+'</span>'); }
+function pcMainSync(){ let el=document.getElementById('pcMain');
+  if(!G.pcheck){ if(el) el.remove(); return; }
+  if(!el){ el=document.createElement('div'); el.id='pcMain'; document.getElementById('gameArea').appendChild(el); }
+  el.innerHTML=pcMainPanel(); }
+// 🎨 색 확인은 관리자 샌드박스 메인에서만 — 네모네모 실게임에선 G.units가 실제 게임 유닛이라 건드리면 안 됨
+function updatePcFab(){ const b=document.getElementById('pcFab'); if(!b) return;
+  const show=!!(G.sandbox && G.tab==='Main' && !G.strike);
+  b.classList.toggle('hide', !show);
+  if(!show && G.pcheck){ G.pcheck=false; G.pcScale=1; pcMainSync(); }   // 다른 탭·게임으로 나가면 자동 종료
+}
+function pcMainToggle(ev){ if(ev) ev.stopPropagation(); if(!G.sandbox) return; G.pcheck=!G.pcheck; if(!G.pcheck) G.pcScale=1; pcMainSync(); }
+function pcMainPick(ev,n){ if(ev) ev.stopPropagation(); G.myPlayer=n; pcMainSync(); }
+function pcMainRace(ev){ if(ev) ev.stopPropagation();
+  const R=['union','swarm','aetherial']; G.pcRace=R[(R.indexOf(G.pcRace||'union')+1)%R.length];
+  pcMainUnits(); }
+function pcMainZoom(ev){ if(ev) ev.stopPropagation();
+  const i=PC_ZOOMS.indexOf(+((G.pcScale||1).toFixed(1)));
+  G.pcScale=PC_ZOOMS[(i<0?0:i+1)%PC_ZOOMS.length]; pcMainSync(); }
+// 확인 종족의 "전" 유닛 목록 — 건설 테크트리(_techRaceUnitKeys)만으로는 가챠·전투 유닛이 빠지므로
+//   종족표(RACE_OF) 전체를 합친다. NPC와 모델을 공유하는 유닛(레이스·드랍쉽 등)도 포함 —
+//   applyPlayerTintInst가 내 인스턴스만 따로 틴트하므로 색이 정상 전환된다.
+const PC_NOT_UNIT=new Set(['turret','photon','citizen','nuke','swarm_egg']);   // 방어탑·셀렉터 시민·핵·알은 유닛 아님
+function _pcRaceUnits(race){ const set=new Set();
+  if(typeof RACE_OF!=='undefined') for(const k in RACE_OF){ if(RACE_OF[k]===race) set.add(k); }
+  ((typeof _techRaceUnitKeys==='function')?_techRaceUnitKeys(race):[]).forEach(k=>set.add(k));
+  return [...set].filter(k=>k && !PC_NOT_UNIT.has(k));
+}
+// 현재 확인 종족의 전 유닛을 메인 맵에 격자 배치(전투 방해 없도록 정지 상태)
+function pcMainUnits(ev){ if(ev) ev.stopPropagation(); if(!G.sandbox) return; const race=G.pcRace||'union';
+  const want=_pcRaceUnits(race);
+  const place=()=>{ const ids=want.filter(k=>window.M3D&&M3D.hasModel&&M3D.hasModel(k));
+    G.units.length=0;
+    const cols=5, x0=0.14, y0=0.28, dx=0.18, dy=0.13;
+    ids.forEach((id,i)=>G.units.push({uid:'pc_'+id, id:id, gmodel:id,
+      x:x0+(i%cols)*dx, y:y0+Math.floor(i/cols)*dy, hp:100, maxHp:100, lv:1}));
+    pcMainSync(); toast(PC_RACE_KR[race]+' 유닛 '+ids.length+'/'+want.length+'종 배치'); };
+  if(window.M3D&&M3D.ensureUnits) M3D.ensureUnits(want, place); else place(); }
 function techBldgInfoModel(b, e){ const race=G.tech.race, hb=TECH_TREE[race].buildings[0], bs=techBldgSpec(race,b.k)||{};
   if(b.k==='gspire'){   // 🦅 그레이터 스파이어 = 해금은 유지하되 카드·해금유닛 스탯 없이 간단 설명
     return { mode:'prod', title:b.name, icon:_techBldgPortrait(b.k, b.ico), hpsh:_cgHpShStr(bs.hp,bs.sh), sub:'', items:_techWithAddons([], b.k),
@@ -12410,9 +12534,9 @@ function strikeNewState(){ const W=mapCfg('world',4800), hp=mapCfg('baseHp',3000
     world:W, cycleTime:mapCfg('cycleTime',30), cycleT:mapCfg('cycleTime',30),
     incomeBase:inc, mineIncome:mi,
     // 진영별 경제(me=나, ai=컴퓨터). 광산/돈 리더보드용. shield=중립 신전 보상 쉴드(다음 단계 전투에서 적용)
-    me:{ name:'나', compCol:(typeof PLAYER_VIEW_COLORS!=='undefined'?PLAYER_VIEW_COLORS[0]:'#4aa8ff'), base:{x:W*0.115,y:W*0.885, hp:hp, max:hp, dead:false}, hp:hp, max:hp, shield:0, gold:mapCfg('startGold',3000), mines:0, mineCost:mc, atkLv:0, hpLv:0, mineLv:0, bombs:0, units:[], buildings:[],
+    me:{ name:'나', compCol:(typeof PLAYER_VIEW_COLORS!=='undefined'?PLAYER_VIEW_COLORS[0]:'#4570d3'), base:{x:W*0.115,y:W*0.885, hp:hp, max:hp, dead:false}, hp:hp, max:hp, shield:0, gold:mapCfg('startGold',3000), mines:0, mineCost:mc, atkLv:0, hpLv:0, mineLv:0, bombs:0, units:[], buildings:[],
          sec:{x:W*0.339,y:W*0.661, hp:sHp, max:sHp, dead:false} },   // 좌하단 메인 + 2차 신전 / compCol=아군 컴퓨터(생산자) 색 / atkLv·hpLv=유닛강화, mineLv=채굴강화, bombs=폭탄 재고
-    ai:{ name:'컴퓨터', compCol:(typeof PLAYER_VIEW_COLORS!=='undefined'?PLAYER_VIEW_COLORS[1]:'#ff4d4d'), base:{x:W*0.885,y:W*0.115, hp:hp, max:hp, dead:false}, hp:hp, max:hp, shield:0, gold:mapCfg('startGold',3000), mines:0, mineCost:mc, atkLv:0, hpLv:0, mineLv:0, bombs:0, units:[], buildings:[], aiT:0,
+    ai:{ name:'컴퓨터', compCol:(typeof PLAYER_VIEW_COLORS!=='undefined'?PLAYER_VIEW_COLORS[1]:'#d6292f'), base:{x:W*0.885,y:W*0.115, hp:hp, max:hp, dead:false}, hp:hp, max:hp, shield:0, gold:mapCfg('startGold',3000), mines:0, mineCost:mc, atkLv:0, hpLv:0, mineLv:0, bombs:0, units:[], buildings:[], aiT:0,
          sec:{x:W*0.661,y:W*0.339, hp:sHp, max:sHp, dead:false} },   // 우상단 메인 + 2차 신전 / compCol=적군 컴퓨터 색
     central:{x:W*0.5,y:W*0.5, hp:cHp, max:cHp, owner:null, dead:false},   // 중앙 중립 보너스 신전(깬 팀 메인에 쉴드)
     cam:{x:W/2,y:W/2}, zoom:STK_DEFZOOM, viewWorld:Math.round(2600/STK_DEFZOOM), cw:0, ch:0, sel:null, userCam:false, supplySel:'mine',
@@ -12511,7 +12635,7 @@ function strikeSync3D(dt){ const S=STK; if(!S) return; const mcv=document.getEle
   for(const t of TT){ const o=t[1], n=w2n(o.x,o.y); list.push({uid:t[0], id:t[2], x:n.x, y:n.y, fixed:true, face:-0.42, dead:!!o.dead}); }   // 신전(고정, 살짝 사선) — 파괴 시 dead 플래그
   if(S.sizeCmp && S.cmpUnits){ for(const u of S.cmpUnits){ const n=w2n(u.x,u.y); list.push({uid:u.uid, id:u.id, x:n.x, y:n.y}); } }
   for(const side of ['me','ai']){ const ringCol=(side==='me')?'#3aa0ff':'#ff4d5e', foe=(side==='ai');   // 본체 림=플레이어색 / 하단 링=팀색 / 적군은 본체 적색 틴트
-    for(const u of S[side].units){ const n=w2n(u.x,u.y); list.push({uid:u.uid, id:u.id, x:n.x, y:n.y, face:u.face, moving:u.moving, rimCol:u.pcol, ringCol:ringCol, foeTint:foe, scl:STK_UNIT_SCALE}); } }   // moving=이동모션 / foeTint=적 본체 통일색
+    for(const u of S[side].units){ const n=w2n(u.x,u.y); list.push({uid:u.uid, id:u.id, x:n.x, y:n.y, face:u.face, moving:u.moving, rimCol:u.pcol, ringCol:ringCol, scl:STK_UNIT_SCALE}); } }   // moving=이동모션
   M3D.sync(list, W, H, dt, [], [], null, k); }
 // 건물 탭 전용: 내 전용 건설 맵(전장 아님). 화면 1/4 직사각형, 깔끔한 금속 타일 + 건설 격자
 function strikeDrawBuildMap(spec){ const S=STK; if(!S) return; const cvEl=document.getElementById('cvMain'); if(!cvEl) return;   // spec={cells,col,label} → 관전 모드(다른 플레이어 건설)
@@ -13859,7 +13983,8 @@ const SCALE={ marine:12, goliath:16, ghost:12, archon:18, dragoon:14, hydra:14, 
   medic:12, broodling:9, larva:8, reaver:8, swarm_larva:7, swarm_egg:11, ultralisk:24, dark_templar:13, high_templar:12 };  // 유닛별 화면 스케일. 초월 비행체(템페스트·스카이댄서)=대형 · swarm_larva=작은 라바 · swarm_egg=알(라바보다 큼)
   // (구)타입별 색 — 현재는 플레이어색으로 통일(아래 PLAYER_COLOR)
 // 플레이어 색(스타크래프트식) — 한 플레이어의 모든 유닛·구조물을 같은 색으로 통일(아군 구별용)
-const PLAYER_PALETTE={ blue:0x2e7bff, red:0xff3b3b, orange:0xff9418, yellow:0xffd23b, white:0xeaf2ff, purple:0xb05bff, green:0x46d860, teal:0x2dd6c0 };
+// PLAYER_VIEW_COLORS(45° 균등 배치)와 동일한 값 — 두 표가 어긋나면 기본 틴트 색과 실제 플레이어색이 달라짐
+const PLAYER_PALETTE={ blue:0x4570d3, red:0xd6292f, yellow:0xeadb3e, green:0x2ba143, purple:0xad5cd6, orange:0xed691d, brown:0x6d422c, white:0xdfe0e2 };
 let PLAYER_COLOR=PLAYER_PALETTE.blue;   // 현재 플레이어 통일색(키만 바꾸면 전체 색 변경)
 const PLAYER_MODELS=new Set(['marine','ghost','goliath','dragoon','hydra','archon','turret','photon',
   'machinegun','tank','blade','thornqueen','skyguard','skydancer','matron','racer','snapper','worker_human','worker_light','worker_swarm',
@@ -13867,7 +13992,7 @@ const PLAYER_MODELS=new Set(['marine','ghost','goliath','dragoon','hydra','archo
 const RING_OP=0.9;        // 선택 링 불투명도
       // 모델 색 틴트 강도(0=원본, 1=완전 색칠) — 진한 색은 발광이 아닌 이 값으로(단단하게)
       // 플레이어색 발광(은은하게 — 마린/고스트처럼 부드러운 빛)
-const RIM_INT=1.4;        // 프레넬 림 라이트 강도(환경광으로 밝아진 표면에서도 플레이어색이 또렷하게 — 0.85→1.4)
+const RIM_INT=0;          // 림 미사용 — 플레이어 구분은 본체 틴트(TINT_K)로만. 림/틴트 중 하나만 쓰는 방침
 const RIM_POW=2.0;        // 림 폭(클수록 가장자리에만 얇게) — 살짝 넓혀 색 띠가 더 보이게
 const RIM_WHITE=0.06;     // 림 색을 흰색 쪽으로 섞는 정도(낮을수록 플레이어색 선명 — 0.16→0.06)
 const ENEMY_RIM=0xff3322; // 적 유닛 림 색(선명한 적색 — 눈에 잘 띄되 옅은 분홍보다 덜 밝음)
@@ -13875,8 +14000,8 @@ const NEUTRAL_RIM=0xbfe0ff; // 구조물/기타 림 색(차가운 흰빛)
 // 아군 유닛 공용 림 색(Color 객체 1개를 모든 아군 재질이 공유 → setPlayerRim으로 한번에 색 전환: 플레이어 구역 관전용)
 const playerRim=new THREE.Color(PLAYER_COLOR).lerp(new THREE.Color(0xffffff), RIM_WHITE);
 const rimIntU={value:RIM_INT};   // 아군 림 강도 공유 uniform(관전 화면에선 키워서 플레이어색 구별 또렷하게)
-const subRimIntU={value:0.45};   // 적·기타 림 강도(고정·은은 — 내 유닛처럼) — 관전 부스트 영향 안 받음
-function setPlayerRim(hex, intensity){ playerRim.set(hex).lerp(new THREE.Color(0xffffff), RIM_WHITE); rimIntU.value=(intensity!=null?intensity:RIM_INT); }
+const subRimIntU={value:0};      // 림 미사용(위와 동일 방침) — 구분은 본체 틴트로만
+function setPlayerRim(hex, intensity){ playerRim.set(hex).lerp(new THREE.Color(0xffffff), RIM_WHITE); rimIntU.value=(intensity!=null?intensity:RIM_INT); setPlayerTint(hex); }   // 플레이어 색 전환 = 본체 틴트 색 전환
 const BEACON_RIM=new THREE.Color(0xff3b3b);   // 비콘 테두리(빨강 림) — 은은한 가장자리 포인트(유닛 안 가리게 약하게)
 const beaconRimIntU={value:0.15};
 const MODEL_SCALE=13;     // 기본 스케일(미지정 유닛) — 보드 축소(INSET 0.245)에 맞춰 추가 ~0.85 축소
@@ -14062,6 +14187,153 @@ function attachGun(anim, id){
   return pivot;   // 총구 섬광은 2D 스파크(게임 캔버스)
 }
 
+// 🎨 플레이어 구분 틴트 — 같은 유닛이라도 소유 플레이어 색으로 본체를 물들여 구분(적/아군 구분 아님, 슬롯별 색)
+//   HSV로 분해해 명도(V)는 원본 그대로 두고 색조(H)·채도(S)만 플레이어색으로 끌어옴
+//   → 단색 lerp와 달리 재질의 음영·굴곡 디테일이 그대로 살아있으면서 색은 확실히 플레이어색이 됨
+// 플레이어 hex → 틴트 파라미터(색조 · 채도 · 명도배율). 팔레트 hex의 HSL이 곧 파라미터(단일 소스)
+//   채도·명도까지 실어야 갈색(주황과 같은 색조인데 어둡고 탁함)·흰색(무채색)을 8색에 쓸 수 있다
+// ⚠ 튜닝은 반드시 인게임 조명(ACES 톤매핑 1.25 + RoomEnvironment + 4광원)에서 재야 한다.
+//   건물 초상 렌더러에는 자동 노출이 있어 실제보다 채도가 높게 보인다 — 대조표만 보고 낮추면 인게임에서 회색이 된다.
+//   인게임 실측 평균 채도: SGAIN 1.00 → 0.382 · 0.88 → 0.319 · 0.72 → 0.237(회색으로 무너짐)
+// ACES 톤매핑이 채도를 크게 깎으므로, 팔레트 채도를 그대로 넣으면(1.0) 액센트가 0.40까지 떨어져 탁해진다.
+//   1.35로 미리 올려 두면 톤매핑 후 팔레트 색 그대로 복원된다 — 실측 액센트 채도:
+//   1.00 → 0.40(탁함) · 1.35 → 0.62(파랑0.64 빨강0.81 노랑0.83 주황0.91) · 1.70 → 0.76(과함)
+//   갈색 0.39·흰색 0.19는 배율을 곱해도 낮게 남아 "탁한 갈색·무채색 흰색" 성격이 유지된다
+const TINT_SGAIN=1.35;   // 전체가 연해 보이는 조절은 채도가 아니라 아래 액센트 마스크 면적으로 한다
+const TINT_VREF=0.58;    // 명도 배율의 기준 L(이 밝기면 배율 1.0)
+// 채도 완화 — 쨍한 색만 조금 낮추고, 원래 탁한 색(갈색·흰색)은 건드리지 않는다.
+//   갈색은 "낮은 채도"가 정체성이라 같이 낮추면 회색이 되어 다른 색과 구분이 사라진다.
+const TINT_SOFT=0.85;    // 고채도 색에 적용할 배율(1.0=완화 없음)
+const TINT_SOFT_LO=0.45; // 이 채도 이하는 완화 0%(갈색 0.42·흰색 0.05 → 원본 유지)
+const TINT_SOFT_HI=0.65; // 이 채도 이상은 완화 100%(빨강 0.68·노랑 0.80·주황 0.85)
+// ⚠ getHSL()은 기본이 working(선형) 색공간이라 채도가 부풀고 명도가 눌린다(빨강: sRGB S.68 L.50 → 선형 S.94 L.35).
+//    그러면 갈색·주황이 둘 다 고채도로 뭉개져 구분이 사라지므로 반드시 sRGB 기준으로 읽는다.
+function _tintTargetOf(hex){ const c=new THREE.Color(hex); const hsl={}; c.getHSL(hsl, THREE.SRGBColorSpace);
+  const t=Math.max(0, Math.min(1, (hsl.s-TINT_SOFT_LO)/(TINT_SOFT_HI-TINT_SOFT_LO)));   // 팔레트 채도에 비례한 완화량
+  const soft=1+(TINT_SOFT-1)*(t*t*(3-2*t));                                             // smoothstep
+  return new THREE.Vector3(hsl.h, Math.min(1, hsl.s*TINT_SGAIN*soft), Math.max(0.5, Math.min(1.2, hsl.l/TINT_VREF))); }
+// 공유 uniform: 화면의 모든 내 모델이 한 번에 색 전환(관전 시 대상 플레이어 색으로 즉시 스왑)
+const playerTintU={value:_tintTargetOf(PLAYER_COLOR)};
+function setPlayerTint(hex){ playerTintU.value.copy(_tintTargetOf(hex)); }
+function _tintable(id){ if(typeof id!=='string') return false;
+  if(id.indexOf('res_')===0 || id.indexOf('temple')===0) return false;   // 중립 자원 노드·신전 = 소유자 없음
+  const _EM=(typeof ENEMY_MODEL!=='undefined')?ENEMY_MODEL:((typeof window!=='undefined'&&window.ENEMY_MODEL)||{});
+  if(Object.values(_EM).includes(id)) return false;   // NPC 웨이브 적(플레이어 소속 아님) → 원본 색 유지해야 내 유닛과 구분됨
+  return true; }
+// 색조·채도는 항상 100% 치환한다(비율 상수 없음) — 부분 치환은 중간 색조(분홍 등)를 만들어
+// 플레이어색이 아닌 색이 나오므로, 세기 조절은 오직 아래 액센트 마스크 면적으로만 한다
+const TINT_VMAX=0.88;         // 명도 상한 — 과노출로 흰색에 뜨는 것만 억제(너무 낮추면 전체가 어두워짐)
+// 액센트가 안 걸린 "본체"의 채도 배율. 원본 그대로 두면 유닛마다 원 텍스처 색이 달라
+//   같은 플레이어인데도 유닛별로 전체 인상이 제각각이 된다 → 본체를 중성 회색으로 눌러 통일하고
+//   색 정보는 액센트에만 남긴다(회색 본체 + 플레이어색 포인트 = 유닛 간 톤 일치).
+//   0.28로는 부족했다 — 원본이 강한 파랑인 탱크·전투기는 여전히 파랗게 남아 마린·골리앗(빨강)과 갈렸다.
+//   0.10이면 어떤 유닛이든 본체가 사실상 회색이 되어, 색 정보는 액센트(플레이어색)에만 남는다.
+const TINT_UBASE=0.10;        // 유닛 본체 채도 배율(0=완전 무채색, 1=원본 유지)
+// 🎯 액센트 마스크 — 전체를 물들이지 않고 "포인트로만" 넣기 위한 범위.
+//   원본 알베도에서 이미 채색된 부분(도색 패널·라이트)만 플레이어색이 되고, 회색 금속·콘크리트는 원본 유지.
+//   스타 원작의 팀컬러 영역과 같은 결과 — 원작자가 칠해둔 자리가 곧 팀컬러 자리가 된다.
+//   마스크는 조명 전 알베도 채도로 계산해야 한다(조명 후에는 환경광 색이 전체에 섞여 마스크가 무의미해짐).
+//   마스크를 흑백으로 렌더해 실측한 평균 적용 면적: 0.16~0.42 → 74%(거의 전체) · 0.42~0.68 → 44%
+//   · 0.55~0.80 → 28%(포인트로 적당) · 0.65~0.88 → 17%(첨탑·팩토리는 1~2%까지 떨어져 소유주 판별 불가)
+//   경계는 좁을수록 좋다 — 넓으면 액센트가 0.5~0.9의 어중간한 마스크로 칠해져 색이 탁해진다(0.55~0.80 → 0.58~0.68로 좁혀 순도 0.373→0.403)
+// 모델마다 텍스처 채도 분포가 완전히 달라서(마린 3.6% ↔ 스카이가드 34%) 공통 임계값으로는 절대 통일이 안 된다.
+//   → 모델별로 "칠해지는 면적이 18%(전함 기준)가 되는 채도 임계값"을 오프라인 탐색해 표로 박았다.
+//   측정은 마스크를 흑백 렌더 → sRGB→선형 역변환 후 평균(감마 보정 없이 재면 floor 0.04가 0.22로 부풀려짐).
+const TINT_AREA=0.25;         // 목표 액센트 면적(전함 수치)
+const TINT_BAND=0.06;         // 마스크 전이 폭 — 좁을수록 경계가 또렷해 얼룩덜룩함이 줄어든다
+const TINT_M0S={
+  marine:0.55, ghost:0.27, medic:0.44, worker_human:0.69, machinegun:0.60, racer:0.81, tank:0.74,
+  goliath:0.73, skyguard:0.69, hellfire:0.32, pelican:0.70, dreadnought:0.61, aegis:0.12,
+  hydra:0.39, snapper:0.40, thornqueen:0.32, matron:0.47, overlord:0.41, stinger:0.60, venom:0.45,
+  medusa:0.42, wyvern:0.33, behemoth:0.40, worker_swarm:0.40, broodling:0.28, ultralisk:0.44, swarm_larva:0.55,
+  dragoon:0.92, archon:0.77, blade:0.78, skydancer:0.73, kronos:0.85, seraph:0.87, archangel:0.86,
+  falcon:0.88, observer:0.90, worker_light:0.87, dark_templar:0.37, high_templar:0.47, reaver:0.90,
+  cb_union_command_center:0.60, cb_union_supply_depot:0.47, cb_union_refinery:0.41, cb_union_barracks:0.64,
+  cb_union_academy:0.48, cb_union_engineering_bay:0.57, cb_union_bunker:0.57, cb_union_missile_turret:0.63,
+  cb_union_factory:0.49, cb_union_machine_shop:0.57, cb_union_armory:0.45, cb_union_starport:0.52,
+  cb_union_control_tower:0.64, cb_union_science_facility:0.63, cb_union_covert_ops:0.59,
+  cb_union_physics_lab:0.55, cb_union_comsat_station:0.49, cb_union_nuclear_silo:0.52,
+  cb_swarm_hatchery:0.48, cb_swarm_extractor:0.47, cb_swarm_spawning_pool:0.56, cb_swarm_evolution_chamber:0.45,
+  cb_swarm_hydralisk_den:0.46, cb_swarm_creep_colony:0.35, cb_swarm_sunken_colony:0.37, cb_swarm_spore_colony:0.18,
+  cb_swarm_lair:0.34, cb_swarm_spire:0.40, cb_swarm_queens_nest:0.49, cb_swarm_hive:0.34,
+  cb_swarm_greater_spire:0.35, cb_swarm_defiler_mound:0.41, cb_swarm_ultralisk_cavern:0.45, cb_swarm_nydus_canal:0.39,
+  cb_aetherial_nexus:0.77, cb_aetherial_pylon:0.90, cb_aetherial_gateway:0.67, cb_aetherial_assimilator:0.70,
+  cb_aetherial_forge:0.81, cb_aetherial_photon_cannon:0.76, cb_aetherial_cybernetics_core:0.81,
+  cb_aetherial_shield_battery:0.85, cb_aetherial_stargate:0.72, cb_aetherial_fleet_beacon:0.88,
+  cb_aetherial_arbiter_tribunal:0.74, cb_aetherial_robotics_facility:0.75, cb_aetherial_robotics_support_bay:0.76,
+  cb_aetherial_observatory:0.68, cb_aetherial_temple_of_adun:0.85, cb_aetherial_templar_archives:0.84 };
+const TINT_M0_DEF=0.58;       // 표에 없는 모델의 기본 임계값
+const TINT_MFLOOR=0.02;       // 마스크 하한 — 거의 0(본체를 깔끔한 회색으로 두기 위해)
+// 보병(작고 원본이 어두운 모델)만 액센트가 검붉게 죽는다 — 원본 음영을 그대로 곱하기 때문.
+//   ⚠ 이 하한을 전 유닛에 걸면 차량·공중까지 색이 진해진다(그렇게 했다가 되돌림) → 보병에만 적용한다.
+const TINT_IMIN=0.34;         // 보병 액센트 명도 하한(그 외 유닛·건물은 0 = 원본 음영 그대로)
+const TINT_INF_IDS=new Set(['marine','ghost','medic','worker_human','worker_swarm','worker_light',
+  'broodling','stinger','dark_templar','high_templar']);   // 스펙 size ≤ 15 소형 보병
+// 건물 모델 판정 — 건설용 사본(cb_) + 메인 맵의 방어/업그레이드 구조물 키
+const TINT_BLDG_IDS=new Set(['turret','photon','acad','arm','forge','evo','pointlab']);
+// 틴트 종류: 'b'=건물 · 'i'=보병(명도 하한만 추가) · 'u'=그 외 유닛
+//   셋 다 "포인트 칠" 방식은 동일하고, 보병만 어두워서 액센트 명도 하한이 붙는다.
+function _tintKind(id){ if(typeof id!=='string') return 'u';
+  if(id.indexOf('cb_')===0 || TINT_BLDG_IDS.has(id)) return 'b';
+  return TINT_INF_IDS.has(id) ? 'i' : 'u'; }
+// 프래그먼트 셰이더에 HSV 틴트 삽입 — 알베도가 아니라 "조명까지 반영된 최종 색"에 적용.
+//   (알베도 단계에서는 조명 후 밝기를 알 수 없어, 밝게 조명되는 건물만 하얗게 뜨는 문제가 있었다)
+//   톤매핑 이후로 옮겨도 채도 차이가 없어(0.236→0.230) 표준 위치인 톤매핑 앞을 유지한다.
+// 명도(V)는 원본 음영을 유지한 채 플레이어 명도배율만 곱함 → 모델 굴곡·디테일은 그대로
+function _toneChunk(){ return '\nuniform vec3 toneT;\n'
+  +'vec3 _r2h(vec3 c){ vec4 K=vec4(0.,-1./3.,2./3.,-1.); vec4 p=mix(vec4(c.bg,K.wz),vec4(c.gb,K.xy),step(c.b,c.g)); vec4 q=mix(vec4(p.xyw,c.r),vec4(c.r,p.yzx),step(p.x,c.r)); float d=q.x-min(q.w,q.y); return vec3(abs(q.z+(q.w-q.y)/(6.*d+1e-10)), d/(q.x+1e-10), q.x); }\n'
+  +'vec3 _h2r(vec3 c){ vec4 K=vec4(1.,2./3.,1./3.,3.); vec3 p=abs(fract(c.xxx+K.xyz)*6.-K.www); return c.z*mix(K.xxx,clamp(p-K.xxx,0.,1.),c.y); }\n'; }
+// ① 알베도 단계: 도색된 부분만 골라내는 마스크를 만들어 둔다(조명 전이라 원본 의도가 그대로 남아 있음)
+//   임계값은 모델별 표(TINT_M0S) — 전 모델이 같은 면적(18%)으로 칠해지도록 미리 계산해 둔 값
+function _tintM0(id){ if(typeof id!=='string') return TINT_M0_DEF;
+  const v=TINT_M0S[id]; if(v!=null) return v;
+  const c=TINT_M0S['cb_'+id]; if(c!=null) return c;                       // 초상 렌더는 cb_ 접두사 없이 들어온다
+  return TINT_M0S[id.replace(/^cb_/,'')]!=null ? TINT_M0S[id.replace(/^cb_/,'')] : TINT_M0_DEF; }
+function _toneMask(id){ const m0=_tintM0(id), m1=Math.min(1, m0+TINT_BAND);
+  return 'float _tintM=max('+TINT_MFLOOR.toFixed(2)+', smoothstep('+m0.toFixed(2)+', '+m1.toFixed(2)+', _r2h(diffuseColor.rgb).y));'; }
+// ② 조명 후 단계: "완전히 틴트된 색"을 먼저 만들고, 마스크로 원본과 섞는다(면적만 마스크가 결정).
+//   ⚠ 마스크를 색조 회전량에 곱하면 안 된다 — 마스크 0.5인 곳은 파랑→빨강 중간인 '분홍'이 되어
+//     플레이어색이 아닌 엉뚱한 색이 나온다. 회전은 항상 100%로 하고, 섞는 비율만 마스크로 조절해야
+//     액센트가 팔레트 색 그대로(완전 파랑·완전 빨강·완전 노랑) 나온다.
+function _toneApply(kind){ const base=(kind==='b')?1.0:TINT_UBASE;
+  return '{ vec3 _hs=_r2h(outgoingLight);\n'
+  +'  vec3 _base=outgoingLight;\n'
+  +((base<1)?('  { vec3 _b=_hs; _b.y*='+base.toFixed(2)+'; _base=_h2r(_b); }\n'):'')   // 본체 채도↓ → 유닛마다 다르던 원 텍스처 색을 회색으로 통일
+  +'  _hs.x=toneT.x;\n'                                                        // 색조 = 플레이어 색조로 완전 치환
+  +'  _hs.y=toneT.y;\n'                                                        // 채도 = 플레이어 채도로 완전 치환(흰색 플레이어는 무채색)
+  +'  _hs.z=clamp(_hs.z, '+((kind==='i')?TINT_IMIN:0).toFixed(2)+', '+TINT_VMAX.toFixed(2)+')*toneT.z;\n'   // 명도 = 원본 음영 × 플레이어 배율 · 보병만 하한을 둬 검붉게 죽는 것 방지
+  +'  outgoingLight=mix(_base, _h2r(_hs), _tintM); }'; }                       // 회색 본체 ↔ 플레이어색 액센트
+function _toneInject(shader, tone, id){ shader.uniforms.toneT=tone;   // tone=uniform 객체 자체(공유 or 인스턴스 전용)
+  shader.fragmentShader=_toneChunk()+shader.fragmentShader;
+  const mAnchor=(shader.fragmentShader.indexOf('#include <alphamap_fragment>')>=0)?'#include <alphamap_fragment>':'#include <alphatest_fragment>';
+  shader.fragmentShader=shader.fragmentShader.replace(mAnchor, mAnchor+'\n'+_toneMask(id));   // 마스크는 알베도 확정 직후에 계산
+  const anchor=(shader.fragmentShader.indexOf('#include <opaque_fragment>')>=0)?'#include <opaque_fragment>':'#include <output_fragment>';   // three 버전별 최종 출력 청크
+  shader.fragmentShader=shader.fragmentShader.replace(anchor, _toneApply(_tintKind(id))+'\n'+anchor); }
+function addTone(mat, tone, id){ if(!tone || !('emissive' in mat)) return;
+  mat.onBeforeCompile=(shader)=>{ _toneInject(shader, tone, id); }; mat.needsUpdate=true; }
+// NPC 웨이브 적과 모델을 공유하는 유닛(레이스·발키리·드랍쉽·배틀 등)은 베이스 재질에 틴트를 걸 수 없다
+//   — 걸면 적 웨이브까지 내 색으로 물든다. 그래서 "플레이어가 소유한 인스턴스"에만 재질을 복제해 틴트한다.
+//   공유 uniform(playerTintU)을 그대로 쓰므로 1P~8P 전환도 똑같이 즉시 반영된다.
+function applyPlayerTintInst(m, id){ if(!m||m._pTint) return;
+  const _EM=(typeof ENEMY_MODEL!=='undefined')?ENEMY_MODEL:((typeof window!=='undefined'&&window.ENEMY_MODEL)||{});
+  if(!Object.values(_EM).includes(id)) return;   // 베이스에서 이미 틴트된 모델은 그대로
+  m._pTint=true;
+  const fix=function(root){ if(!root) return; root.traverse(o=>{ if(!o.isMesh||!o.material) return;
+    const arr=Array.isArray(o.material), ms=arr?o.material:[o.material];
+    const out=ms.map(mat=>{ if(!mat||!('emissive' in mat)) return mat; const c=mat.clone(); addTone(c, playerTintU, id); return c; });
+    o.material=arr?out:out[0]; }); };
+  fix(m.inner); fix(m.runInner); fix(m.atkInner); fix(m.stayInner); }
+// 인스턴스 전용 틴트(직스 등 한 화면에 여러 플레이어) — 재질 복제 후 자기 색 uniform 부여
+function applyTeamTint(m, hex){ if(!m||m._teamTint===hex) return; m._teamTint=hex;
+  const u={value:_tintTargetOf(hex)};
+  const fix=function(root){ if(!root) return; root.traverse(o=>{ if(!o.isMesh||!o.material) return;
+    const arr=Array.isArray(o.material), ms=arr?o.material:[o.material];
+    const out=ms.map(mat=>{ if(!mat||!('emissive' in mat)) return mat; const c=mat.clone(); addTone(c, u, (m&&m.id)||''); return c; });
+    o.material=arr?out:out[0]; }); };
+  fix(m.inner); fix(m.runInner); fix(m.atkInner); fix(m.stayInner); }
+function toneModel(root, id){ if(!_tintable(id)) return;
+  root.traverse(o=>{ if(!o.isMesh) return; const ms=Array.isArray(o.material)?o.material:[o.material];
+    ms.forEach(m=>{ if(m&&!m._toned){ addTone(m, playerTintU, id); m._toned=true; } }); }); }
 // 모델 재질을 타입색 쪽으로 살짝 칠하고 약한 발광 부여(클론들이 재질 공유 → 베이스 1회만 적용)
 function tintModel(root, id){
   // 본체는 원본 자연색 유지, 테두리(림)만 소유자 색으로 은은하게 발광 — 아군=플레이어색 / 적=붉은빛 / 기타=차가운 흰빛
@@ -14072,6 +14344,8 @@ function tintModel(root, id){
                        : new THREE.Color(isEnemy ? ENEMY_RIM : NEUTRAL_RIM);
   const intU = isPlayer ? rimIntU : subRimIntU;   // 적·기타는 고정 은은(관전 부스트 영향 X) — 내 유닛처럼
   const isTemple = (typeof id==='string') && id.indexOf('temple')===0;   // 직스 신전 → 사막 톤으로 통일
+  const _tone = _tintable(id) ? playerTintU : null;   // 플레이어 구분 틴트(중립 자원·신전 제외)
+                      // 건물/유닛에 따라 액센트 마스크 임계값이 다름
   root.traverse(o=>{ if(!o.isMesh) return; const ms=Array.isArray(o.material)?o.material:[o.material];
     ms.forEach(m=>{ if(!m||m._tinted) return;
       if(isTemple && m.color){   // 채도↓ + 사막 warm 톤 곱 + 약간 어둡게 → 배경 사막과 한 덩어리
@@ -14088,51 +14362,31 @@ function tintModel(root, id){
       }
       if(m.emissive && m.emissive.r>0.85 && m.emissive.g>0.85 && m.emissive.b>0.85 && ((m.emissiveIntensity==null)||m.emissiveIntensity>0.05)){ m.emissive.setRGB(0,0,0); if(m.emissiveMap) m.emissiveMap=null; m.needsUpdate=true; }   // 흰색 자체발광 베이크 제거(맵 유무 무관) — 공격 모델 등 일부가 완전 하얗게 뜨는 현상 방지
       if(typeof id==='string'&&id.indexOf('res_')===0){ if('envMapIntensity' in m) m.envMapIntensity=0.28; if('emissiveIntensity' in m && m.emissiveIntensity) m.emissiveIntensity*=0.4; if(m.emissive) m.emissive.multiplyScalar(0.4); if(id==='res_cn' && m.color) m.color.multiplyScalar(0.62); }   // 자원 노드(res_)=림·발광 없이 자연 톤 · 미네랄은 톤 더 낮춤(너무 밝음)
-      else if(!(typeof id==='string'&&id.indexOf('cb_')===0)) addRim(m, rim, intU);   // 건설 건물(cb_)은 림 생략 / 그 외 프레넬 림
+      else if(!(typeof id==='string'&&id.indexOf('cb_')===0)) addRim(m, rim, intU, _tone, id);   // 건설 건물(cb_)은 림 생략 / 그 외 프레넬 림
+      else addTone(m, _tone, id);                                                                // 건설 건물(cb_): 림 없이 플레이어 틴트만
       m._tinted=true; }); });
 }
 // 색칠 없이 림만 입힘(총 등 — 타입색 테두리만 발광)
 function rimModel(root, rimColor){ root.traverse(o=>{ if(!o.isMesh) return; const ms=Array.isArray(o.material)?o.material:[o.material];
   ms.forEach(m=>{ if(!m||m._tinted) return; addRim(m, rimColor); m._tinted=true; }); }); }
-// 인스턴스 전용 진영색 본체 림(직스: 아군/적군 동시 표시). 재질을 복제 → 그 인스턴스만 팀색 림(베이스 재질·nemo 무영향). 셰이더 코드 동일 → 프로그램 캐시로 재컴파일 비용 거의 없음
-const _teamRimCache={};   // hex → THREE.Color
-function applyTeamRim(m, hex){ if(!m||m._teamRim===hex) return; m._teamRim=hex;
-  const col=_teamRimCache[hex]||(_teamRimCache[hex]=new THREE.Color(hex));
-  const retint=function(root){ if(!root) return; root.traverse(o=>{ if(!o.isMesh||!o.material) return;
-    const arr=Array.isArray(o.material), ms=arr?o.material:[o.material];
-    const out=ms.map(mat=>{ if(!mat||!('emissive' in mat)) return mat; const c=mat.clone(); addRim(c, col, rimIntU); return c; });
-    o.material=arr?out:out[0]; }); };
-  retint(m.inner); retint(m.runInner); retint(m.atkInner); retint(m.stayInner); }
-// 샌드박스: 적 표시 유닛을 아군처럼 — 머티리얼 복제 후 본체색을 아군 톤 + 공용 플레이어 림(시작-틴트 경합 무관, 베이스/일반게임 무영향)
-const _SB_ALLY=new THREE.Color(0x3f7fd0);
-function sandboxAllyFix(m, rimOnly){ if(!m||m._sbAlly) return; m._sbAlly=true;
+// 샌드박스: 적 표시 유닛을 아군처럼 — 머티리얼 복제 후 공용 플레이어 림만 적용(본체 틴트 없음 · 베이스/일반게임 무영향)
+// 샌드박스(관리자): 모든 유닛이 내 소유 → 인스턴스 재질 복제 후 플레이어 틴트 적용.
+//   ⚠ 예전엔 여기서 addRim(림)을 걸었는데, 그게 틴트의 onBeforeCompile을 덮어써 색이 안 바뀌었다.
+//   이제 addTone(플레이어색 틴트)을 걸어야 ENEMY_MODEL 공유 모델(옵저버·오버로드 등)까지 색이 전환된다.
+function sandboxAllyFix(m, id){ if(!m||m._sbAlly) return; m._sbAlly=true;
   const fix=function(root){ if(!root) return; root.traverse(o=>{ if(!o.isMesh||!o.material) return;
     const arr=Array.isArray(o.material), ms=arr?o.material:[o.material];
-    const out=ms.map(mat=>{ if(!mat) return mat; const c=mat.clone();
-      if(!rimOnly){ if(c.color) c.color.lerp(_SB_ALLY,0.6);
-        if(c.emissive && (c.emissive.r+c.emissive.g+c.emissive.b)>0.05) c.emissive.lerp(_SB_ALLY,0.55); }
-      if('emissive' in c) addRim(c, playerRim, rimIntU);   // 테두리(림)를 아군색으로 통일(적/기타 baked 림 덮어씀)
-      c.needsUpdate=true; return c; });
+    const out=ms.map(mat=>{ if(!mat||!('emissive' in mat)) return mat; const c=mat.clone(); addTone(c, playerTintU, id); return c; });
     o.material=arr?out:out[0]; }); };
   fix(m.inner); fix(m.runInner); fix(m.atkInner); fix(m.stayInner); }
-// 직스: 적 유닛 본체를 통일 적색으로 틴트(모델 원래색이 파랑 등이어도 적군으로 구분). 인스턴스 재질 복제 → 베이스/일반게임 무영향
-const _STK_FOE=new THREE.Color(0xcf4a4a);
-function strikeFoeFix(m){ if(!m||m._stkFoe) return; m._stkFoe=true;
-  const fix=function(root){ if(!root) return; root.traverse(o=>{ if(!o.isMesh||!o.material) return;
-    const arr=Array.isArray(o.material), ms=arr?o.material:[o.material];
-    const out=ms.map(mat=>{ if(!mat) return mat; const c=mat.clone();
-      if(c.color) c.color.lerp(_STK_FOE,0.6);
-      if(c.emissive && (c.emissive.r+c.emissive.g+c.emissive.b)>0.05) c.emissive.lerp(_STK_FOE,0.5);
-      if('emissive' in c) addRim(c, _STK_FOE, rimIntU);
-      c.needsUpdate=true; return c; });
-    o.material=arr?out:out[0]; }); };
-  fix(m.inner); fix(m.runInner); fix(m.atkInner); fix(m.stayInner); }
+// 직스 적군 본체 적색 틴트는 제거 — 림과 마찬가지로 모델 원본 외형 그대로 표시(구분은 HP 바·UI로)
 // 밝은 림 색 — 아군은 플레이어색, 그 외 중립
 function unitRim(id){ return PLAYER_MODELS.has(id) ? playerRim : new THREE.Color(NEUTRAL_RIM); }
 // 재질 셰이더에 프레넬 림(가장자리 발광) 주입 — 시점 기준 실루엣이 항상 빛나 배경과 분리(MeshStandard/Physical)
-function addRim(mat, rimColor, intU){
+function addRim(mat, rimColor, intU, tone, id){
   if(!('emissive' in mat)) return;   // 빛 받는 재질만(basic 등 제외)
   mat.onBeforeCompile=(shader)=>{
+    if(tone) _toneInject(shader, tone, id);   // 플레이어 액센트 틴트 → 그 위에 림
     shader.uniforms.rimColor={value:rimColor};
     shader.uniforms.rimInt=intU||rimIntU;   // 아군=rimIntU(관전 부스트) / 적·기타=subRimIntU(고정 은은)
     shader.uniforms.rimPow={value:RIM_POW};
@@ -14442,7 +14696,8 @@ function bldgImage(key){ if(_bldgImgCache[key]!==undefined) return _bldgImgCache
       _biCam=new THREE.PerspectiveCamera(30,1,0.05,100); }
     const _L=BI_LIGHT[String(key).split('_')[0]]||BI_LIGHT.base;   // 종족별 조명(키 접두사 union_/swarm_/aetherial_) — 렌더 직전 적용, key당 1회 렌더라 서로 간섭 없음
     _biHemi.intensity=_L.hemi; _biDl.intensity=_L.dl; _biDl2.intensity=_L.dl2;
-    const model=g.scene, box=new THREE.Box3().setFromObject(model), c=box.getCenter(new THREE.Vector3()), sz=box.getSize(new THREE.Vector3()), maxd=Math.max(sz.x,sz.y,sz.z)||1;
+    const model=g.scene; toneModel(model, key);   // 인게임과 동일한 플레이어 틴트(채도 상한 포함)
+    const box=new THREE.Box3().setFromObject(model), c=box.getCenter(new THREE.Vector3()), sz=box.getSize(new THREE.Vector3()), maxd=Math.max(sz.x,sz.y,sz.z)||1;
     const _cfg=(typeof window!=='undefined'&&window.CST_BLDG_CFG)?window.CST_BLDG_CFG[key]:null;   // 인게임 건설 맵과 동일한 정면 회전: (스웜=0 / 그 외=CST_YAW) + 건물별 f
     const _yaw=((String(key).indexOf('swarm_')===0)?0:((typeof window!=='undefined'&&window.CST_YAW!=null)?window.CST_YAW:0))+((_cfg&&_cfg.f)||0);
     model.position.set(-c.x,-c.y,-c.z); const grp=new THREE.Group(); grp.add(model); grp.scale.setScalar(BI_FIT/maxd); grp.rotation.y=_yaw;
@@ -14528,9 +14783,9 @@ window.M3D={
     for(const [key,m] of models){ if(!live.has(key)&&!m.dying){ m.dying=true; m.deadT=0; m.lean=0; } }
     // ── 아군 유닛 ──
     for(const u of uList){ const _id=_mid(u); let m=models.get(u.uid); if(!m){ m=makeModel(_id); if(!m) continue; m.kind='unit'; models.set(u.uid,m); }
-      if(u.foeTint) strikeFoeFix(m);            // 직스 적군: 본체 통일 적색 틴트(모델 원래색 무관)
-      else if(u.rimCol) applyTeamRim(m, u.rimCol);   // 진영색 본체 림(아군)
-      if(typeof window!=='undefined' && window.__sandbox) sandboxAllyFix(m, true);   // 샌드박스: 모든 유닛 테두리(림)를 아군색 한 가지로 통일 — 유닛은 적/아군 고정이 아님(오버로드·옵저버 등 ENEMY_MODEL의 baked 적색 림 덮어씀)
+      if(u.rimCol) applyTeamTint(m, u.rimCol);   // 한 화면에 여러 플레이어(직스) → 인스턴스별 플레이어색 틴트
+      else if(typeof window!=='undefined' && window.__sandbox) sandboxAllyFix(m, _id);   // 샌드박스: 전 유닛 내 소유 → 인스턴스 틴트(ENEMY_MODEL 공유 모델 포함)
+      else applyPlayerTintInst(m, _id);          // 실게임: NPC와 모델 공유(레이스·드랍쉽 등) → 내 유닛 인스턴스만 틴트
       if(u.atBoss){ m.holder.visible=false; continue; }   // 보스방 파견 유닛은 트랙에 표시 안 함
       const px=u.x*W, worldY=H-u.y*H;
       if(u.ringCol){ m.rim.visible=true; m.rim.material.color.set(u.ringCol); m.rim.material.opacity=0.6; }   // 직스: 발밑 링=팀색(아군/적군 구분) — 살짝 연하게
@@ -14746,6 +15001,7 @@ window.M3D={
       seen.add(it.uid);
       let m=buildModels.get(it.uid); if(m && m._mid!==it.id){ if(m.holder&&m.holder.parent) m.holder.parent.remove(m.holder); buildModels.delete(it.uid); m=null; }   // 종족 전환 시 eid 재사용으로 이전 종족 모델이 남던 버그 방지(모델 키 불일치 → 재생성)
       if(!m){ m=makeModel(it.id); if(!m) continue; m.kind='build'; m._mid=it.id; buildModels.set(it.uid,m); }
+      applyPlayerTintInst(m, it.id);   // 건설 구역도 전부 내 유닛 → NPC 공유 모델(레이스·드랍쉽 등)에 인스턴스 틴트
       m.holder.visible=!it.hidden; if(m.rim){ m.rim.visible=!!it.sel&&!it.hidden; if(it.sel) m.rim.scale.setScalar(1.12); } if(m.shadow) m.shadow.visible=((it.fitW||it.noShadow)?false:true)&&!it.hidden;   // 🌫️ it.hidden=활성 시야 밖 → 숨김 · 그리드 건물(fitW)·공중 유닛(noShadow)은 원형 그림자 숨김(DOM 그림자로 대체)
       if(it.hidden){ continue; }   // 시야 밖: 위치/애니 갱신 생략(숨김 유지)
       if(it.working && m.workInner){ if(m.inner)m.inner.visible=false; if(m.runInner)m.runInner.visible=false; m.workInner.visible=true; if(m.gun)m.gun.visible=false; if(m.atkInner)m.atkInner.visible=false; m.anim.position.set(0,0,0); m.anim.rotation.set(0,0,0); if(m.workMixer) m.workMixer.update(dt); }   // 🔨 건설(작업) 모션 — 일꾼이 건물 지을 때
