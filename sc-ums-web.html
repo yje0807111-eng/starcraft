@@ -3080,7 +3080,7 @@ function citizenSVG(){ return '<svg viewBox="0 0 24 24" width="100%" height="100
   +'<path d="M9.2 18.5v2.5M14.8 18.5v2.5" stroke="#8a6b16" stroke-width="1" opacity=".7"/>'
   +'<path d="M12 14v3.2" stroke="#8a6b16" stroke-width="1" opacity=".6"/></svg>'; }
 // 충돌(분리) 판정용 반경 — 그림보다 작게 잡아 유닛끼리 더 촘촘히 붙게.
-function collideR(u){ return U[u.id].size * 0.62; }
+function collideR(u){ const s=U[u.id]; return (s?s.size:14) * 0.62; }   // 스펙 없는 표시용 유닛(색확인 swarm_larva 등)도 루프가 안 죽게 기본 14
 // 합성 사다리(가격 오름차순) — 같은 유닛 3개 → 다음 등급 영웅
 
 // 유닛뽑기: 유닛을 시계처럼 원형 배치. 중앙 시민(셀렉터)이 이동→통과 시 구매.
@@ -6123,6 +6123,7 @@ const RACE_OF={
   dragoon:'aetherial', archon:'aetherial', blade:'aetherial', skydancer:'aetherial', kronos:'aetherial', seraph:'aetherial', archangel:'aetherial', falcon:'aetherial', observer:'aetherial', worker_light:'aetherial', dark_templar:'aetherial', high_templar:'aetherial', dark_archon:'aetherial', larva:'aetherial',
   hydra:'swarm', snapper:'swarm', thornqueen:'swarm', matron:'swarm', overlord:'swarm', stinger:'swarm', venom:'swarm', medusa:'swarm', defiler:'swarm', wyvern:'swarm', behemoth:'swarm', worker_swarm:'swarm', broodling:'swarm', ultralisk:'swarm',
 };
+try{ if(typeof window!=='undefined') window.RACE_OF=RACE_OF; }catch(_e){}   // M3D 모듈(별도 스코프)에서 종족별 틴트 분기용
 // ══ 건설 연구/업그레이드 효과 연결 (건설 샌드박스 전용 · nemo 무관 — G.tech.research만 읽음) ══
 // (A) 최대 마나 +50 부적 — 값은 반드시 U[uid].energy>0(실제 캐스터). apollo(→skyguard)·colossus(→dreadnought)는 대상이 비캐스터(energy0)라 무효 → 제외
 const AMULET_UNITS={ caduceus:['medic'], titan:['aegis'], moebius:['ghost'], gamete:['medusa'], metasynaptic:['defiler'],
@@ -11610,7 +11611,7 @@ function _pcRaceUnits(race){ const set=new Set();
 }
 // 현재 확인 종족의 전 유닛을 메인 맵에 격자 배치(전투 방해 없도록 정지 상태)
 function pcMainUnits(ev){ if(ev) ev.stopPropagation(); if(!G.sandbox) return; const race=G.pcRace||'union';
-  const want=_pcRaceUnits(race);
+  const want=_pcRaceUnits(race).filter(k=>U[k]);   // U 스펙 없는 키(swarm_larva 등)는 배치 제외 — 게임 루프(충돌·스탯)가 U를 참조
   const place=()=>{ const ids=want.filter(k=>window.M3D&&M3D.hasModel&&M3D.hasModel(k));
     G.units.length=0;
     const cols=5, x0=0.14, y0=0.28, dx=0.18, dy=0.13;
@@ -13964,7 +13965,16 @@ const ATTACK_FOR={ blade:'blade_attect.glb', snapper:'snapper_attack.glb', worke
 const STAY_FOR={ marine:'marine_stay.glb', ghost:'ghost_stay.glb', goliath:'goliath_stay.glb', hydra:'hydralisk_stay.glb', worker_human:'worker_human_stay.glb', worker_light:'worker_light_stay.glb', archon:'archon_stay.glb', medic:'mender_stay.glb', high_templar:'high_templar_stay.glb' };   // 정지(대기) 애니
 const WORK_FOR={ worker_human:'worker_human_work.glb', worker_light:'worker_light_work.glb' };   // 건설(작업) 애니 — 일꾼이 건물 지을 때 재생(스웜 일꾼은 미보유 → 절차적 폴백)
 const RUN_SCALE_MUL=0.9;
-const RUN_SCALE_OVR={worker_swarm:0.88, dragoon:1.08};   // 달리기 모델 크기 점프 보정(모델별 — 정지/이동 크기 일치, 픽셀 실측 기반)
+const RUN_SCALE_OVR={worker_swarm:0.85, dragoon:1.08, thornqueen:0.81, ultralisk:0.93};   // 달리기 모델 크기 점프 보정(모델별 — 정지/이동 크기 일치, 픽셀 실측 기반). 달리기 포즈가 다리 펼쳐 커 보이는 만큼 축소
+const IDLE_SCALE_OVR={larva:1.4, worker_swarm:0.87};   // 대기(inner) 모델만 크기 보정 — 이동 모델과 대기 크기 불일치 교정(larva=대기가 작아 확대 / worker_swarm=대기가 커서 축소). run은 base.h 정규화라 무관 · 논리 크기·충돌엔 영향 없음
+const INNER_YAW_OFF={larva:Math.PI*1.5};   // 대기(inner) 모델 내장 정면 보정 — 이동 GLB와 정면이 다른 유닛(공성체=270°). 정지 시 이동 방향과 다른 곳 보는 것 교정
+// metalness=1 어두운 금속 재질이라 발광맵 없이 렌더되면 몸체가 검게 뜨는 유닛들 → 자기 베이스맵을 발광맵으로 부여해 색을 살림.
+//   ⓐ 이동(run) 모델엔 발광맵이 있으나 대기 모델엔 없어 색이 갈리는 유닛(hydra·thornqueen·worker_swarm·broodling·ultralisk) — 이동과 색 통일
+//   ⓑ 이동 모델 자체가 없는 정적 유닛인데 같은 이유로 검게 뜨는 유닛(venom·stinger) — 검정 부위 색 복원
+const IDLE_GLOW=new Set(['hydra','thornqueen','worker_swarm','broodling','ultralisk','venom','stinger','medusa',
+  'dragoon','archon','blade','worker_light','dark_templar','high_templar','larva']);   // 에테리얼: 이동 모델엔 발광맵이 있으나 대기 모델엔 없어 색이 갈리는 유닛들
+const IDLE_GLOW_INT=0.45;   // 대기 발광 강도(이동 모델은 0.6이나 전체 베이스맵을 쓰므로 약간 낮춰 통일)
+const IDLE_GLOW_INT_OVR={venom:0.95, stinger:0.8, thornqueen:0.95, medusa:0.8};   // 개별 상향: 검정이 짙거나 더 밝게 요청된 유닛
 const ATK_SCALE_OVR={ snapper:1.12 };   // 공격 모델 크기 보정(스내퍼: 공격 시 작아지지 않게 평상시 크기로)
 // 유닛별 총 부착 설정(길이/손위치/회전) — 모델마다 손 위치가 달라 개별 지정
 const GUN_CFG={
@@ -14229,6 +14239,11 @@ const TINT_VMAX=0.88;         // 명도 상한 — 과노출로 흰색에 뜨는
 //   0.28로는 부족했다 — 원본이 강한 파랑인 탱크·전투기는 여전히 파랗게 남아 마린·골리앗(빨강)과 갈렸다.
 //   0.10이면 어떤 유닛이든 본체가 사실상 회색이 되어, 색 정보는 액센트(플레이어색)에만 남는다.
 const TINT_UBASE=0.10;        // 유닛 본체 채도 배율(0=완전 무채색, 1=원본 유지)
+const TINT_AE_BASE=0.25;      // 에테리얼 유닛 본체 채도 배율 — 회색 느낌(1=원본색). 다른 종족(TINT_UBASE 0.10)보다는 덜 회색
+const TINT_SW_BASE=0.5;       // 스웜 유닛 본체 채도 배율 — 약간 회색감(1=원본색)
+const TINT_AE_SAT=1.4;        // 에테리얼 포인트(액센트) 채도 상향 — 본체는 원본색 유지, 포인트 색만 더 진하게(채도↑). 값이 클수록 완전 파랑/빨강에 가까워짐(1=플레이어 채도 그대로)
+const TINT_AE_VMUL=0.55;      // 에테리얼 포인트 명도 배율 — 반사값을 눌러 유니온처럼 음영 있는 금속 톤(하드클립 대신 스케일이라 밝은 부위도 그라데이션 유지 → 질감↑). 본체는 base=1.0라 무관
+const TINT_AE_BAND=0.13;      // 에테리얼 포인트 마스크 전이 폭 — 공통(0.06)보다 넓혀 색 경계를 부드럽게(그라데이션)
 // 🎯 액센트 마스크 — 전체를 물들이지 않고 "포인트로만" 넣기 위한 범위.
 //   원본 알베도에서 이미 채색된 부분(도색 패널·라이트)만 플레이어색이 되고, 회색 금속·콘크리트는 원본 유지.
 //   스타 원작의 팀컬러 영역과 같은 결과 — 원작자가 칠해둔 자리가 곧 팀컬러 자리가 된다.
@@ -14242,12 +14257,12 @@ const TINT_UBASE=0.10;        // 유닛 본체 채도 배율(0=완전 무채색,
 const TINT_AREA=0.25;         // 목표 액센트 면적(전함 수치)
 const TINT_BAND=0.06;         // 마스크 전이 폭 — 좁을수록 경계가 또렷해 얼룩덜룩함이 줄어든다
 const TINT_M0S={
-  marine:0.55, ghost:0.27, medic:0.44, worker_human:0.69, machinegun:0.60, racer:0.81, tank:0.74,
-  goliath:0.73, skyguard:0.69, hellfire:0.32, pelican:0.70, dreadnought:0.61, aegis:0.12,
-  hydra:0.39, snapper:0.40, thornqueen:0.32, matron:0.47, overlord:0.41, stinger:0.60, venom:0.45,
-  medusa:0.42, wyvern:0.33, behemoth:0.40, worker_swarm:0.40, broodling:0.28, ultralisk:0.44, swarm_larva:0.55,
-  dragoon:0.92, archon:0.77, blade:0.78, skydancer:0.73, kronos:0.85, seraph:0.87, archangel:0.86,
-  falcon:0.88, observer:0.90, worker_light:0.87, dark_templar:0.37, high_templar:0.47, reaver:0.90,
+  marine:0.40, ghost:0.18, medic:0.30, worker_human:0.62, machinegun:0.43, racer:0.52, tank:0.60,
+  goliath:0.52, skyguard:0.63, hellfire:0.32, pelican:0.56, dreadnought:0.61, aegis:0.12,
+  hydra:0.33, snapper:0.34, thornqueen:0.32, matron:0.47, overlord:0.41, stinger:0.60, venom:0.45,
+  medusa:0.42, wyvern:0.33, behemoth:0.40, worker_swarm:0.32, broodling:0.20, ultralisk:0.44, swarm_larva:0.55,
+  dragoon:0.91, archon:0.71, blade:0.72, skydancer:0.67, kronos:0.79, seraph:0.81, archangel:0.91,
+  falcon:0.82, observer:0.84, worker_light:0.81, dark_templar:0.31, high_templar:0.41, reaver:0.90, larva:0.76,
   cb_union_command_center:0.60, cb_union_supply_depot:0.47, cb_union_refinery:0.41, cb_union_barracks:0.64,
   cb_union_academy:0.48, cb_union_engineering_bay:0.57, cb_union_bunker:0.57, cb_union_missile_turret:0.63,
   cb_union_factory:0.49, cb_union_machine_shop:0.57, cb_union_armory:0.45, cb_union_starport:0.52,
@@ -14266,7 +14281,12 @@ const TINT_M0_DEF=0.58;       // 표에 없는 모델의 기본 임계값
 const TINT_MFLOOR=0.02;       // 마스크 하한 — 거의 0(본체를 깔끔한 회색으로 두기 위해)
 // 보병(작고 원본이 어두운 모델)만 액센트가 검붉게 죽는다 — 원본 음영을 그대로 곱하기 때문.
 //   ⚠ 이 하한을 전 유닛에 걸면 차량·공중까지 색이 진해진다(그렇게 했다가 되돌림) → 보병에만 적용한다.
-const TINT_IMIN=0.34;         // 보병 액센트 명도 하한(그 외 유닛·건물은 0 = 원본 음영 그대로)
+const TINT_IMIN=0.16;         // 보병 액센트 명도 하한(그 외 유닛·건물은 0 = 원본 음영 그대로)
+// 유닛 액센트 명도 압축 — 원본 텍스처 밝기가 모델마다 달라(비행충=밝음→파스텔 / 스내퍼=어두움→검붉음)
+//   같은 플레이어색인데 진하기·재질감이 제각각으로 보임. 중간값(VMID)으로 당겨 유니온 수준으로 수렴.
+const TINT_VMID=0.50;         // 수렴 기준 명도(유니온 금속류의 중간 명도)
+const TINT_VKEEP=0.60;        // 원본 음영 유지율(1=압축 없음, 0=완전 평탄) — 디테일은 남기고 밝기만 수렴
+const TINT_VFLOOR=0.0;        // 명도 하한 없음 — 검정 방지용 회색 들어올림 제거(대비 유지, 어두운 부위는 원래대로)
 const TINT_INF_IDS=new Set(['marine','ghost','medic','worker_human','worker_swarm','worker_light',
   'broodling','stinger','dark_templar','high_templar']);   // 스펙 size ≤ 15 소형 보병
 // 건물 모델 판정 — 건설용 사본(cb_) + 메인 맵의 방어/업그레이드 구조물 키
@@ -14276,6 +14296,14 @@ const TINT_BLDG_IDS=new Set(['turret','photon','acad','arm','forge','evo','point
 function _tintKind(id){ if(typeof id!=='string') return 'u';
   if(id.indexOf('cb_')===0 || TINT_BLDG_IDS.has(id)) return 'b';
   return TINT_INF_IDS.has(id) ? 'i' : 'u'; }
+// 모델 종족 판정 — 유닛=RACE_OF / 건물=cb_ 접두사. 명도 압축을 유니온만 제외(유니온=기준·이전버전 유지)하려고 씀
+function _tintRace(id){ if(typeof id!=='string') return null;
+  if(id.indexOf('cb_')===0){ const m=id.slice(3);
+    return m.indexOf('union_')===0?'union':m.indexOf('swarm_')===0?'swarm':m.indexOf('aetherial_')===0?'aetherial':null; }
+  const R=(typeof RACE_OF!=='undefined')?RACE_OF:((typeof window!=='undefined'&&window.RACE_OF)||{});
+  return R[id]||null; }
+// 에테리얼 유닛(건물 제외) — 본체 원본색 + 포인트만 도색(음영 유지·부드러운 경계)
+function _aeUnit(id){ return typeof id==='string' && id.indexOf('cb_')!==0 && id.indexOf('aetherial')!==0 && _tintRace(id)==='aetherial'; }
 // 프래그먼트 셰이더에 HSV 틴트 삽입 — 알베도가 아니라 "조명까지 반영된 최종 색"에 적용.
 //   (알베도 단계에서는 조명 후 밝기를 알 수 없어, 밝게 조명되는 건물만 하얗게 뜨는 문제가 있었다)
 //   톤매핑 이후로 옮겨도 채도 차이가 없어(0.236→0.230) 표준 위치인 톤매핑 앞을 유지한다.
@@ -14289,27 +14317,40 @@ function _tintM0(id){ if(typeof id!=='string') return TINT_M0_DEF;
   const v=TINT_M0S[id]; if(v!=null) return v;
   const c=TINT_M0S['cb_'+id]; if(c!=null) return c;                       // 초상 렌더는 cb_ 접두사 없이 들어온다
   return TINT_M0S[id.replace(/^cb_/,'')]!=null ? TINT_M0S[id.replace(/^cb_/,'')] : TINT_M0_DEF; }
-function _toneMask(id){ const m0=_tintM0(id), m1=Math.min(1, m0+TINT_BAND);
+function _toneMask(id){ const m0=_tintM0(id), m1=Math.min(1, m0+(_aeUnit(id)?TINT_AE_BAND:TINT_BAND));
   return 'float _tintM=max('+TINT_MFLOOR.toFixed(2)+', smoothstep('+m0.toFixed(2)+', '+m1.toFixed(2)+', _r2h(diffuseColor.rgb).y));'; }
 // ② 조명 후 단계: "완전히 틴트된 색"을 먼저 만들고, 마스크로 원본과 섞는다(면적만 마스크가 결정).
 //   ⚠ 마스크를 색조 회전량에 곱하면 안 된다 — 마스크 0.5인 곳은 파랑→빨강 중간인 '분홍'이 되어
 //     플레이어색이 아닌 엉뚱한 색이 나온다. 회전은 항상 100%로 하고, 섞는 비율만 마스크로 조절해야
 //     액센트가 팔레트 색 그대로(완전 파랑·완전 빨강·완전 노랑) 나온다.
-function _toneApply(kind){ const base=(kind==='b')?1.0:TINT_UBASE;
+function _toneApply(kind, race){ const base=(kind==='b')?1.0:(race==='aetherial'?TINT_AE_BASE:race==='swarm'?TINT_SW_BASE:TINT_UBASE);   // 에테리얼·스웜=약간 회색(부분 채도↓), 유니온보다 덜하게
+  // 명도 압축 사용 안 함 — 3종족(유니온·스웜·에테리얼) 모두 압축 없이 원본 음영 그대로(같은 경로). 압축은 대비를 죽여 색이 연해짐
+  const compress=false;
+  const aeUnit=(race==='aetherial' && kind!=='b');   // 에테리얼 유닛: 본체 원본색 + 포인트만 채도↑(_hs는 포인트에만 쓰임)
   return '{ vec3 _hs=_r2h(outgoingLight);\n'
+  +(aeUnit?('  _hs.z*='+TINT_AE_VMUL.toFixed(2)+';\n'):'')   // 포인트 명도 배율(스케일) → 밝은 부위도 음영 유지, 유니온처럼 어두운 금속 톤
   +'  vec3 _base=outgoingLight;\n'
-  +((base<1)?('  { vec3 _b=_hs; _b.y*='+base.toFixed(2)+'; _base=_h2r(_b); }\n'):'')   // 본체 채도↓ → 유닛마다 다르던 원 텍스처 색을 회색으로 통일
+  +((base<1)?('  { vec3 _b=_hs; _b.y*='+base.toFixed(2)+'; _base=_h2r(_b); }\n'):'')   // 본체 채도↓
   +'  _hs.x=toneT.x;\n'                                                        // 색조 = 플레이어 색조로 완전 치환
-  +'  _hs.y=toneT.y;\n'                                                        // 채도 = 플레이어 채도로 완전 치환(흰색 플레이어는 무채색)
-  +'  _hs.z=clamp(_hs.z, '+((kind==='i')?TINT_IMIN:0).toFixed(2)+', '+TINT_VMAX.toFixed(2)+')*toneT.z;\n'   // 명도 = 원본 음영 × 플레이어 배율 · 보병만 하한을 둬 검붉게 죽는 것 방지
+  +'  _hs.y='+(aeUnit?'min(1.0, toneT.y*'+TINT_AE_SAT.toFixed(2)+')':'toneT.y')+';\n'   // 채도 = 플레이어 채도(에테리얼 포인트는 채도↑로 더 진하게)
+  +'  _hs.z='+(compress?'max(_hs.z,'+TINT_VFLOOR.toFixed(2)+')':'_hs.z')+';\n'   // 스웜·에테리얼: 액센트도 검정 방지 하한
+  +'  _hs.z=clamp(_hs.z, '+((kind==='i')?TINT_IMIN:0).toFixed(2)+', '+TINT_VMAX.toFixed(2)+');\n'
+  // 스웜·에테리얼: 액센트 명도를 유니온 기준(VMID)으로 압축 — 원본 텍스처가 밝은/어두운 모델의 진하기 편차를 유니온에 수렴
+  +(compress?('  _hs.z='+TINT_VMID.toFixed(2)+'+(_hs.z-'+TINT_VMID.toFixed(2)+')*'+TINT_VKEEP.toFixed(2)+';\n'):'')
+  +'  _hs.z*=toneT.z;\n'                                                       // × 플레이어 명도배율(갈색=어둡게, 흰색=밝게)
   +'  outgoingLight=mix(_base, _h2r(_hs), _tintM); }'; }                       // 회색 본체 ↔ 플레이어색 액센트
 function _toneInject(shader, tone, id){ shader.uniforms.toneT=tone;   // tone=uniform 객체 자체(공유 or 인스턴스 전용)
   shader.fragmentShader=_toneChunk()+shader.fragmentShader;
   const mAnchor=(shader.fragmentShader.indexOf('#include <alphamap_fragment>')>=0)?'#include <alphamap_fragment>':'#include <alphatest_fragment>';
   shader.fragmentShader=shader.fragmentShader.replace(mAnchor, mAnchor+'\n'+_toneMask(id));   // 마스크는 알베도 확정 직후에 계산
   const anchor=(shader.fragmentShader.indexOf('#include <opaque_fragment>')>=0)?'#include <opaque_fragment>':'#include <output_fragment>';   // three 버전별 최종 출력 청크
-  shader.fragmentShader=shader.fragmentShader.replace(anchor, _toneApply(_tintKind(id))+'\n'+anchor); }
+  shader.fragmentShader=shader.fragmentShader.replace(anchor, _toneApply(_tintKind(id), _tintRace(id))+'\n'+anchor); }
 function addTone(mat, tone, id){ if(!tone || !('emissive' in mat)) return;
+  // ⚠ three는 customProgramCacheKey가 없으면 재질 파라미터로 프로그램을 캐싱한다.
+  //   NPC 공유 모델(레이스·전함 등)은 베이스가 "림만(틴트 없음)"으로 먼저 컴파일돼 있어,
+  //   복제 후 틴트 onBeforeCompile을 걸어도 캐시된 림-전용 프로그램을 재사용해 틴트가 무시됐다(공중유닛 색 안 바뀜).
+  //   모델별 고유 키를 줘서 틴트 프로그램을 새로 컴파일하게 한다(임계값·kind가 id로 결정되므로 id로 충분).
+  mat.customProgramCacheKey=()=>'ptint_'+(id||'');
   mat.onBeforeCompile=(shader)=>{ _toneInject(shader, tone, id); }; mat.needsUpdate=true; }
 // NPC 웨이브 적과 모델을 공유하는 유닛(레이스·발키리·드랍쉽·배틀 등)은 베이스 재질에 틴트를 걸 수 없다
 //   — 걸면 적 웨이브까지 내 색으로 물든다. 그래서 "플레이어가 소유한 인스턴스"에만 재질을 복제해 틴트한다.
@@ -14360,7 +14401,14 @@ function tintModel(root, id){
         if(id==='cb_swarm_extractor'){ m.color.r*=1.24; m.color.g*=1.10; m.color.b*=1.26; }   // 익스트랙터: 원래 어둡고 초록 → 밝기↑·초록기↓
         else { m.color.r*=1.045; m.color.g*=1.02; m.color.b*=1.05; }                          // 그 외 건설 건물(전 종족): 익스트랙터와 같은 성격(밝기↑·초록기↓)을 아주 연하고 미세하게만
       }
-      if(m.emissive && m.emissive.r>0.85 && m.emissive.g>0.85 && m.emissive.b>0.85 && ((m.emissiveIntensity==null)||m.emissiveIntensity>0.05)){ m.emissive.setRGB(0,0,0); if(m.emissiveMap) m.emissiveMap=null; m.needsUpdate=true; }   // 흰색 자체발광 베이크 제거(맵 유무 무관) — 공격 모델 등 일부가 완전 하얗게 뜨는 현상 방지
+      if(m.emissive && m.emissive.r>0.85 && m.emissive.g>0.85 && m.emissive.b>0.85 && ((m.emissiveIntensity==null)||m.emissiveIntensity>0.05)){
+        if(!m.emissiveMap){ m.emissive.setRGB(0,0,0); }   // 맵 없는 균일 흰색 발광 = 모델 전체가 하얗게 뜸(워시아웃) → 제거
+        else if('emissiveIntensity' in m){ m.emissiveIntensity=Math.min(m.emissiveIntensity==null?1:m.emissiveIntensity, 0.6); }   // ⚠ 맵이 있으면 선택적 발광(균열·발광부만) → null 하면 그 부위가 검정 디퓨즈만 남아 검게 뜸(산성충·돌격괴수 등). 맵 유지하고 강도만 완화
+        m.needsUpdate=true; }
+      // 대기 모델 색 살리기: 이동(run) 모델엔 발광맵이 있으나 대기(idle) 모델엔 없어 칙칙 → 자기 베이스맵을 발광맵으로 부여해 통일.
+      //   조건 '베이스맵 있음 & 발광맵 없음'이 이동 모델(발광맵 보유)을 자연 제외 → 대기 모델에만 적용됨.
+      else if(IDLE_GLOW.has(id) && m.map && !m.emissiveMap && ('emissiveIntensity' in m) && m.emissive){
+        m.emissiveMap=m.map; m.emissive.setRGB(1,1,1); m.emissiveIntensity=(IDLE_GLOW_INT_OVR[id]||IDLE_GLOW_INT); m.needsUpdate=true; }
       if(typeof id==='string'&&id.indexOf('res_')===0){ if('envMapIntensity' in m) m.envMapIntensity=0.28; if('emissiveIntensity' in m && m.emissiveIntensity) m.emissiveIntensity*=0.4; if(m.emissive) m.emissive.multiplyScalar(0.4); if(id==='res_cn' && m.color) m.color.multiplyScalar(0.62); }   // 자원 노드(res_)=림·발광 없이 자연 톤 · 미네랄은 톤 더 낮춤(너무 밝음)
       else if(!(typeof id==='string'&&id.indexOf('cb_')===0)) addRim(m, rim, intU, _tone, id);   // 건설 건물(cb_)은 림 생략 / 그 외 프레넬 림
       else addTone(m, _tone, id);                                                                // 건설 건물(cb_): 림 없이 플레이어 틴트만
@@ -14385,6 +14433,7 @@ function unitRim(id){ return PLAYER_MODELS.has(id) ? playerRim : new THREE.Color
 // 재질 셰이더에 프레넬 림(가장자리 발광) 주입 — 시점 기준 실루엣이 항상 빛나 배경과 분리(MeshStandard/Physical)
 function addRim(mat, rimColor, intU, tone, id){
   if(!('emissive' in mat)) return;   // 빛 받는 재질만(basic 등 제외)
+  if(tone) mat.customProgramCacheKey=()=>'ptint_'+(id||'');   // 모델별 틴트 임계값이 프로그램에 박히므로 고유 키(캐시 충돌·재사용 방지)
   mat.onBeforeCompile=(shader)=>{
     if(tone) _toneInject(shader, tone, id);   // 플레이어 액센트 틴트 → 그 위에 림
     shader.uniforms.rimColor={value:rimColor};
@@ -14444,7 +14493,12 @@ function auraTexture(){ if(_auraTex) return _auraTex;
 function makeModel(id){
   const base=bases[id]; if(!base) return null;
   const inner=cloneSkinned(base.scene);
-  inner.position.set(-base.off.x, -base.off.y, -base.off.z);  // 수평중앙 + 발을 y=0
+  const _isc=(typeof IDLE_SCALE_OVR!=='undefined'&&IDLE_SCALE_OVR[id])||1;   // 대기 모델 확대(이동 크기 맞춤)
+  if(_isc!==1) inner.scale.setScalar(_isc);
+  const _iyaw=(typeof INNER_YAW_OFF!=='undefined'&&INNER_YAW_OFF[id])||0;   // 대기 모델 내장 정면 보정(이동 GLB와 다른 유닛)
+  if(_iyaw) inner.rotation.y=_iyaw;
+  { const ax=base.off.x*_isc, ay=base.off.y*_isc, az=base.off.z*_isc, c=Math.cos(_iyaw), s=Math.sin(_iyaw);
+    inner.position.set(-(ax*c+az*s), -ay, ax*s-az*c); }  // -R_y(off): 회전·스케일 후에도 수평중앙 + 발 y=0 유지
   const anim=new THREE.Group(); anim.add(inner);             // 절차적 애니(숨쉬기/공격숙임/사망)
   // 에너지 오라(아칸): 소프트 헤일로 + 프레넬 에너지 보호막 셸 — 가장자리만 빛나고 중심은 투명한 버블(감싸는 느낌)
   let aura=null;
