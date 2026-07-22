@@ -2,7 +2,8 @@
 
 ## Project Context (this repo)
 - Deliverable: a single self-contained file `sc-ums-web.html` — a mobile StarCraft-style usemap (vanilla JS + inline CSS/HTML, Three.js 3D, Supabase realtime). No build step and **no test framework**.
-- Therefore the **"TDD / tests first"** rule below maps to **behavioral verification in the live app**: use the browser preview (`preview_eval`, DOM/render checks, screenshots) to confirm behavior *before and after* every change. Never claim "done" without proof.
+- **Read `ARCHITECTURE.md` first** — section map (jump by banner search strings), global state, frame pipeline, M3D API, and a pitfall list. Update it when structure changes.
+- Behavioral verification = **`npm test`** (headless smoke suite: `test/smoke.js` + `test/run-smoke.mjs`, groups lobby/game/sandbox, ~10s) plus browser preview for visuals. Run it after every change; add a `step(...)` when you add a feature. Never claim "done" without it passing.
 - After editing inline JS, **syntax-check** the non-module `<script>` (extract it and `new vm.Script(...)`).
 - Edit with exact-string replacements; match the surrounding style and line endings.
 - Commit only when asked; end commit messages with the `Co-Authored-By` trailer.
