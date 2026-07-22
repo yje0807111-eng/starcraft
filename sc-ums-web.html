@@ -600,24 +600,26 @@
     background:none;   /* 투명 — 프레임의 지형 타일이 그대로 비침(한 지면처럼) */
     box-shadow:0 -10px 24px -6px rgba(0,0,0,.55)}   /* 위쪽으로 부드러운 그림자 → 자연스러운 섹션 경계 */
   #phone:not(.inGame) #bot{display:none}   /* 게임 중(.inGame)에만 하단 콘솔 표시 — 타이틀/방찾기/로비 등에서는 숨김 */
-  #bot::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;z-index:2;   /* 가장자리로 사라지는 빨강 하이라이트(자연스러운 구분선) */
-    background:linear-gradient(90deg,transparent,var(--neon-soft) 50%,transparent);opacity:.55;box-shadow:0 0 8px var(--neon-faint)}
-  /* 최상위 네비 = 별도 섹션 밴드(SC 콘솔 탭 카드, 활성=빨간 부각 카드) — 하단 콘텐츠와 위계 분리 */
-  #tabs{display:flex;gap:4px;flex-shrink:0;position:relative;margin:0;padding:3px 7px 5px;z-index:45;
-    background:linear-gradient(180deg,#171922,#090b10);   /* 불투명 — 뒤로 내려간 시트가 비쳐 보이지 않게 */
-    border-bottom:1px solid var(--glass-edge);box-shadow:inset 0 -10px 14px -12px rgba(0,0,0,.7)}
+  #bot::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;z-index:2;   /* 상단 경계 = 중립 저채도 하이라이트(빨강 제거) */
+    background:linear-gradient(90deg,transparent,rgba(150,170,200,.28) 50%,transparent);opacity:.7;box-shadow:none}
+  /* 최상위 네비 = 하나의 통(단일 바) — 섹션은 얇은 세로줄로만 구분, 활성=청록 포인트 인디케이터 */
+  #tabs{display:flex;gap:0;flex-shrink:0;position:relative;margin:0;padding:0;z-index:45;
+    --tabAcc:#5cd6ff;--tabAccG:rgba(92,214,255,.6);
+    background:linear-gradient(180deg,#151a24,#0a0d13);   /* 불투명 단일 바 — 뒤로 내려간 시트가 비쳐 보이지 않게 */
+    border-top:1px solid var(--glass-edge);box-shadow:inset 0 1px 0 rgba(255,255,255,.045),inset 0 -10px 14px -12px rgba(0,0,0,.6)}
   .tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0;position:relative;
-    padding:4px 2px;text-align:center;font-size:var(--fs-xs);color:#7c8ba0;cursor:pointer;font-weight:800;line-height:1.15;text-shadow:0 1px 1px #000;
-    background:linear-gradient(160deg,rgba(44,50,62,.4),rgba(10,12,18,.52));border:1px solid var(--metal-edge);
-    clip-path:polygon(5px 0,100% 0,100% calc(100% - 5px),calc(100% - 5px) 100%,0 100%,0 5px);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.04);transition:all .15s}
-  .tab::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);pointer-events:none}
-  .tab .ti{display:block;margin-bottom:2px;line-height:0;transition:all .15s}
+    padding:6px 2px 7px;text-align:center;font-size:var(--fs-xs);color:#7c8ba0;cursor:pointer;font-weight:800;line-height:1.15;text-shadow:0 1px 1px #000;
+    background:none;border:none;transition:color .16s}
+  /* 섹션 구분 = 탭 사이 얇은 세로줄 하나만 */
+  .tab+.tab::before{content:'';position:absolute;left:0;top:24%;bottom:24%;width:1px;background:linear-gradient(180deg,transparent,rgba(255,255,255,.10),transparent);pointer-events:none}
+  /* 활성 인디케이터 = 상단 청록 라인(카드 아님 · 포인트 색만) */
+  .tab::after{content:'';position:absolute;left:16%;right:16%;top:0;height:2px;border-radius:0 0 3px 3px;background:linear-gradient(90deg,transparent,var(--tabAcc),transparent);box-shadow:0 0 8px var(--tabAccG);opacity:0;transition:opacity .18s;pointer-events:none}
+  .tab .ti{display:block;margin-bottom:2px;line-height:0;transition:color .16s}
   .tab .ti svg{width:18px;height:18px;display:block;margin:0 auto}   /* 모던 라인 아이콘(currentColor=탭색) */
-  .tab:hover{color:#cdd6e2;border-color:rgba(255,120,120,.35)}
-  .tab.on{color:#fff;background:linear-gradient(160deg,rgba(190,54,54,.52),rgba(74,18,20,.66));border-color:#ff5b5b;
-    box-shadow:0 0 15px -3px rgba(255,80,80,.6),inset 0 1px 0 rgba(255,255,255,.15);transform:translateY(-1px)}
-  .tab.on .ti{filter:drop-shadow(0 0 6px var(--neon-glow))}
+  .tab:hover{color:#cdd6e2}
+  .tab.on{color:#e6f6ff}
+  .tab.on::after{opacity:1}
+  .tab.on .ti{color:var(--tabAcc);filter:drop-shadow(0 0 5px var(--tabAccG))}
   .tabSet{flex:0 0 44px;padding:4px 0}   /* 우측 고정폭 설정 칸 */
   .tabSet .ti{margin:0;line-height:0}
   .tabSet .ti svg{width:20px;height:20px}
