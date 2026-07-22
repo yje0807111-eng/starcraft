@@ -1660,22 +1660,31 @@
   /* 방 찾기(룸 리스트) */
   #rooms{position:absolute;inset:0;z-index:46;display:flex;align-items:center;justify-content:center;padding:20px;background:transparent}   /* 로비 배경 사용(::before) */
   #rooms.hide{display:none}
-  .rmCard{width:92%;max-width:350px;max-height:88%;display:flex;flex-direction:column;padding:18px}
+  .rmCard{width:92%;max-width:350px;max-height:90%;display:flex;flex-direction:column;padding:18px 18px 22px}
   .rmHead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
   .rmTitle{font-size:17px;font-weight:800;color:var(--neon);text-shadow:0 0 10px var(--neon-glow);letter-spacing:.5px}
   .rmHeadR{display:flex;align-items:center;gap:8px;flex:0 0 auto}
   .rmOnline{font-size:var(--fs-md);color:var(--txt-dim)}.rmOnline b{color:var(--hud)}
-  /* 우상단 난이도 필터 드롭다운(팝다운) */
-  .rmDiffSel{font-family:inherit;font-size:var(--fs-md);font-weight:800;color:#cfeaff;cursor:pointer;outline:none;
-    -webkit-appearance:none;appearance:none;padding:6px 26px 6px 9px;border-radius:var(--r-md);
-    background:rgba(0,229,255,.09);border:1px solid rgba(0,229,255,.42);
-    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237fd8ff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");
-    background-repeat:no-repeat;background-position:right 8px center}
-  .rmDiffSel:focus{border-color:rgba(0,229,255,.7)}
-  .rmDiffSel option{background:#0d1420;color:#eaf4ff}
+  /* 우상단 난이도 필터 = 커스텀 팝다운(테마 통일) */
+  .rmCard>.rmHead{z-index:20}   /* 헤드를 목록 위로 → 드롭다운 메뉴가 방 목록에 가려 비치지 않게 */
+  .rmDiff{position:relative;flex:0 0 auto}
+  .rmDiffBtn{display:flex;align-items:center;gap:5px;font-family:inherit;font-size:var(--fs-md);font-weight:800;color:#cfeaff;cursor:pointer;
+    padding:6px 8px 6px 10px;border-radius:var(--r-md);background:rgba(0,229,255,.09);border:1px solid rgba(0,229,255,.42);transition:border-color .12s,background .12s}
+  .rmDiffBtn:active{transform:translateY(1px)}
+  .rmDiff.open .rmDiffBtn{border-color:rgba(0,229,255,.72);background:rgba(0,229,255,.14)}
+  .rmDiffChev{width:12px;height:12px;flex:0 0 auto;color:#7fd8ff;transition:transform .18s}
+  .rmDiff.open .rmDiffChev{transform:rotate(180deg)}
+  .rmDiffMenu{position:absolute;top:calc(100% + 5px);right:0;z-index:30;min-width:104px;display:flex;flex-direction:column;gap:1px;padding:4px;
+    background:linear-gradient(180deg,rgba(16,22,32,.985),rgba(9,13,20,.99));border:1px solid rgba(0,229,255,.34);border-radius:var(--r-md);
+    box-shadow:0 12px 28px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.04)}
+  .rmDiffMenu.hide{display:none}
+  .rmDiffOpt{display:flex;align-items:center;gap:7px;font-family:inherit;font-size:var(--fs-md);font-weight:700;color:#c6d2df;text-align:left;cursor:pointer;white-space:nowrap;
+    padding:6px 9px;border-radius:calc(var(--r-md) - 2px);background:transparent;border:1px solid transparent;transition:background .1s,border-color .1s,color .1s}
+  .rmDiffOpt:hover{background:rgba(255,255,255,.05)}
+  .rmDiffOpt.on{color:#fff;background:rgba(0,229,255,.13);border-color:rgba(0,229,255,.42)}
+  .rmDiffDot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;box-shadow:0 0 0 2px rgba(255,255,255,.05)}
   .rmTop{display:flex;gap:8px;margin-bottom:12px}
-  .rmQuick,.rmCreate{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px 8px;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-lg);font-weight:800;cursor:pointer;letter-spacing:.2px;white-space:nowrap;transition:transform .08s}
-  .rmIco{width:16px;height:16px;flex:0 0 auto;display:block}   /* 버튼 좌측 커스텀 아이콘(빠른입장=번개 / 방만들기=생성) */
+  .rmQuick,.rmCreate{flex:1;min-width:0;padding:13px 8px;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-lg);font-weight:800;cursor:pointer;letter-spacing:.2px;white-space:nowrap;transition:transform .08s}
   .rmQuick{color:#fff;background:linear-gradient(180deg,var(--neon-face1),var(--neon-d1));border:1px solid var(--neon);box-shadow:0 0 11px -3px var(--neon-glow),inset 0 1px 0 rgba(255,255,255,.2)}
   .rmCreate{color:#cfeaff;background:linear-gradient(180deg,rgba(11,40,54,.9),rgba(5,16,26,.9));border:1px solid rgba(0,229,255,.5)}
   .rmQuick:active,.rmCreate:active{transform:translateY(1px)}
@@ -1772,7 +1781,7 @@
   .cpMake,.ecGo{color:#fff;background:linear-gradient(180deg,var(--neon-face1),var(--neon-d1));border:1px solid var(--neon);box-shadow:0 0 11px -3px var(--neon-glow)}
   .cpCancel:active,.cpMake:active{transform:translateY(1px)}
   /* 6칸 고정 높이: 방이 적어도 크기 유지(빈 공간), 많으면 내부 드래그 스크롤 */
-  .rmList{--rmRows:5;--rmItemH:54px;--rmGap:6px;flex:none;
+  .rmList{--rmRows:6;--rmItemH:54px;--rmGap:6px;flex:none;
     height:calc(var(--rmRows) * var(--rmItemH) + (var(--rmRows) - 1) * var(--rmGap));
     overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
     display:flex;flex-direction:column;gap:var(--rmGap);padding-right:2px}
@@ -1793,9 +1802,9 @@
   .riCnt.full{color:#ff7676}
   .riStat{font-size:var(--fs-xs);font-weight:700;margin-top:2px}
   .riStat.wait{color:var(--ok)}.riStat.play{color:var(--txt-mute)}
-  .rmBtns{display:flex;gap:7px;margin-top:12px;align-items:center}
+  .rmBtns{display:flex;gap:8px;margin-top:24px;align-items:center}
   /* 뒤로·새로고침 = 정사각 아이콘 버튼(랜덤입장·방만들기보다 위계 낮게 = 조금 작고 은은하게) */
-  .rmSq{flex:0 0 auto;width:38px;height:38px;display:flex;align-items:center;justify-content:center;padding:0;
+  .rmSq{flex:0 0 auto;width:42px;height:42px;display:flex;align-items:center;justify-content:center;padding:0;
     border-radius:var(--r-md);cursor:pointer;transition:transform .08s;
     color:#9fb0c2;background:rgba(255,255,255,.045);border:1px solid var(--metal-edge)}
   .rmSq svg{width:19px;height:19px;display:block}
@@ -2582,13 +2591,16 @@
           <span class="rmTitle">방 찾기</span>
           <span class="rmHeadR">
             <span class="rmOnline">방 <b id="roomCount">0</b>개</span>
-            <select class="rmDiffSel" id="rmDiffSel" onchange="setRoomFilter(this.value)" title="난이도 필터">
-              <option value="all">전체 난이도</option>
-              <option value="easy">이지</option>
-              <option value="normal">노말</option>
-              <option value="hard">하드</option>
-              <option value="hell">헬</option>
-            </select>
+            <div class="rmDiff" id="rmDiff">
+              <button class="rmDiffBtn" type="button" onclick="toggleRmDiff(event)" title="난이도 필터"><span id="rmDiffLabel">전체 난이도</span><svg class="rmDiffChev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+              <div class="rmDiffMenu hide" id="rmDiffMenu" role="listbox">
+                <button type="button" class="rmDiffOpt on" data-f="all" onclick="pickRmDiff('all')">전체 난이도</button>
+                <button type="button" class="rmDiffOpt" data-f="easy" onclick="pickRmDiff('easy')"><span class="rmDiffDot" style="background:var(--ok)"></span>이지</button>
+                <button type="button" class="rmDiffOpt" data-f="normal" onclick="pickRmDiff('normal')"><span class="rmDiffDot" style="background:var(--info)"></span>노말</button>
+                <button type="button" class="rmDiffOpt" data-f="hard" onclick="pickRmDiff('hard')"><span class="rmDiffDot" style="background:var(--warn)"></span>하드</button>
+                <button type="button" class="rmDiffOpt" data-f="hell" onclick="pickRmDiff('hell')"><span class="rmDiffDot" style="background:var(--bad)"></span>헬</button>
+              </div>
+            </div>
           </span>
         </div>
         <div class="rmNum">
@@ -2598,8 +2610,8 @@
         <div class="rmList" id="roomList"></div>
         <div class="rmBtns">
           <button class="rmSq rmBack" onclick="backToTitle()" title="로비로 돌아가기" aria-label="로비로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
-          <button class="rmQuick" onclick="quickJoin()"><svg class="rmIco" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>빠른 입장</button>
-          <button class="rmCreate" data-sfx="ui_open" onclick="createRoom()"><svg class="rmIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.6" y="3.6" width="16.8" height="16.8" rx="3.6"/><path d="M12 8.4v7.2M8.4 12h7.2"/></svg>방 만들기</button>
+          <button class="rmQuick" onclick="quickJoin()">빠른 입장</button>
+          <button class="rmCreate" data-sfx="ui_open" onclick="createRoom()">방 만들기</button>
           <button class="rmSq rmRefresh" onclick="refreshRooms()" title="새로고침" aria-label="새로고침"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 12a8.4 8.4 0 0 1 14.5-5.8M20.4 12a8.4 8.4 0 0 1-14.5 5.8"/><path d="M18.4 2.9v3.6h-3.6M5.6 21.1v-3.6h3.6"/></svg></button>
         </div>
       </div>
@@ -3266,7 +3278,7 @@ const USEMAPS={
   tmp3:  { id:'tmp3',   name:'미로 탈출 (임시)',   desc:'임시 등록 유즈맵',               players:'1-4', pop:1200, icon:'🌀', rec:false, isNew:false, playable:false, cfg:{} },
 };
 // 🌫️ [임시] 전장의 안개 테스트 맵 — nemo 복제 + cfg.fog:'full'(시야 시스템 확인용, 확인 후 제거 예정)
-try{ USEMAPS.fogtest = { id:'fogtest', name:'🌫️ 안개 테스트', desc:'전장의 안개·시야 시스템 확인용(임시)', players:'1-8', pop:9999, icon:'🌫️', rec:false, isNew:true, playable:true,
+try{ USEMAPS.fogtest = { id:'fogtest', name:'🌫️ 안개 테스트', desc:'전장의 안개·시야 시스템 확인용(임시)', players:'1-8', pop:9999, icon:'🌫️', rec:false, isNew:true, playable:true, hidden:true,   // 유즈맵 목록에서 숨김(관리자 페이지 안개로 충분)
   cfg: Object.assign({}, USEMAPS.nemo.cfg, { fog:'full' }) }; }catch(e){}
 let MAP=USEMAPS.nemo;   // 현재 플레이 중인 유즈맵(게임 시작 시 _selMap으로 설정)
 // ===== [nemo 유즈맵 모듈] 밸런스 (등급 배율·적 HP 스케일) — 맵마다 다름. 새 맵은 이 구조를 복제해 cfg.bal로 오버라이드 =====
@@ -3946,6 +3958,7 @@ function closeBossPopup(){ const p=document.getElementById('bossPopup'); if(p) p
 document.addEventListener('pointerdown', function(ev){ const p=document.getElementById('bossPopup'); if(!p||p.classList.contains('hide'))return; if(ev.target.closest&&(ev.target.closest('#bossPopup')||ev.target.closest('#coopBossBar')))return; closeBossPopup(); }, true);
 document.addEventListener('pointerdown', function(ev){ const p=document.getElementById('pbossPopup'); if(!p||p.classList.contains('hide'))return; if(ev.target.closest&&(ev.target.closest('#pbossPopup')||ev.target.closest('#pbossBtn')))return; closePbossPopup(); }, true);
 document.addEventListener('pointerdown', function(ev){ const p=document.getElementById('autoPopup'); if(!p||p.classList.contains('hide'))return; if(ev.target.closest&&(ev.target.closest('#autoPopup')||ev.target.closest('#autoFab')))return; closeAutoPopup(); }, true);
+document.addEventListener('pointerdown', function(ev){ const m=document.getElementById('rmDiffMenu'); if(!m||m.classList.contains('hide'))return; if(ev.target.closest&&ev.target.closest('#rmDiff'))return; if(typeof _rmDiffClose==='function') _rmDiffClose(); }, true);   // 방찾기 난이도 팝다운 바깥 클릭 닫기
 function openBossFromPopup(){ closeBossPopup(); if(typeof toggleBossArena==='function')toggleBossArena(); }
 function updateBossViewBtn(){ const b=document.getElementById('bossViewBtn'); if(b){ b.textContent=G.bossOpen?'메인':'보스방'; b.classList.toggle('viewing', !!G.bossOpen); } }
 // ── 토벌장 전용 이펙트 저장소 — 메인 트랙 이펙트와 완전 분리(두 화면이 서로 영향 없음) ──
@@ -7799,7 +7812,7 @@ function tickRooms(){ if(!_roomList||document.getElementById('rooms').classList.
 }
 function openRooms(){ setInGame(false); document.getElementById('ov').classList.add('hide'); document.getElementById('lobby').classList.add('hide');
   const rm=document.getElementById('rooms'); rm.classList.remove('hide'); if(typeof playScreenFx==='function') playScreenFx(rm);
-  _roomFilter='all'; { const _ds=document.getElementById('rmDiffSel'); if(_ds) _ds.value='all'; }   // 진입 시 난이도 필터 초기화(우상단 드롭다운)
+  _roomFilter='all'; { const _lbl=document.getElementById('rmDiffLabel'); if(_lbl) _lbl.textContent='전체 난이도'; document.querySelectorAll('#rmDiffMenu .rmDiffOpt').forEach(o=>o.classList.toggle('on', o.dataset.f==='all')); if(typeof _rmDiffClose==='function') _rmDiffClose(); }   // 진입 시 난이도 필터 초기화(우상단 팝다운)
   if(rtRoomsActive()){ rtRoomsEnsure(); rtRoomsSync(); }   // 실제 방 목록(presence) — 시뮬 정지
   else { buildRoomList(); startRoomsTick(); } }
 function backToTitle(){ stopRoomsTick(); document.getElementById('rooms').classList.add('hide'); openMapSelect(); }   // 방찾기 뒤로 → 유즈맵 선택
@@ -8738,8 +8751,15 @@ function buildRoomList(){ _roomList=[];
 function diffBadge(d){ const D=DIFFICULTY[d]||DIFFICULTY.normal; return '<span class="riDiff" style="--dc:'+(DIFF_COLOR[d]||'#888')+'">'+D.name+'</span>'; }
 let _roomFilter='all';
 function setRoomFilter(f){ _roomFilter=f;
-  document.querySelectorAll('#rmFilter .rmfBtn').forEach(b=>b.classList.toggle('on', b.dataset.f===f));
   if(typeof playSfx==='function') playSfx('ui_tab'); renderRoomList(); }
+// 우상단 난이도 커스텀 팝다운
+const _RM_DIFF_KO={all:'전체 난이도',easy:'이지',normal:'노말',hard:'하드',hell:'헬'};
+function _rmDiffClose(){ const m=document.getElementById('rmDiffMenu'); if(m) m.classList.add('hide'); const d=document.getElementById('rmDiff'); if(d) d.classList.remove('open'); }
+function toggleRmDiff(ev){ if(ev){ ev.stopPropagation(); ev.preventDefault(); } const m=document.getElementById('rmDiffMenu'), d=document.getElementById('rmDiff'); if(!m||!d) return;
+  const willOpen=m.classList.contains('hide'); m.classList.toggle('hide', !willOpen); d.classList.toggle('open', willOpen); if(typeof playSfx==='function') playSfx('ui_tab'); }
+function pickRmDiff(f){ const lbl=document.getElementById('rmDiffLabel'); if(lbl) lbl.textContent=_RM_DIFF_KO[f]||f;
+  document.querySelectorAll('#rmDiffMenu .rmDiffOpt').forEach(o=>o.classList.toggle('on', o.dataset.f===f));
+  _rmDiffClose(); if(typeof setRoomFilter==='function') setRoomFilter(f); }
 function renderRoomList(){ const list=document.getElementById('roomList'); if(!list) return; list.innerHTML='';
   const shown=(_roomFilter==='all')?_roomList:_roomList.filter(r=>r.diff===_roomFilter);   // 난이도 필터
   const rc=document.getElementById('roomCount'); if(rc) rc.textContent=shown.length;
