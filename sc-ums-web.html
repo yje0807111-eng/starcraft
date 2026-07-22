@@ -1606,9 +1606,9 @@
     background:
       radial-gradient(ellipse 78% 60% at 50% 50%, rgba(2,3,8,.72), rgba(2,3,8,.3) 70%),
       linear-gradient(180deg, rgba(2,3,8,.9) 0%, rgba(2,3,8,.35) 22%, rgba(2,3,8,.35) 78%, rgba(2,3,8,.92) 100%)}
-  .lbCard{width:90%;max-width:340px;height:92%;max-height:92%;overflow:hidden;padding:16px;display:flex;flex-direction:column}   /* flex 컬럼 → 채팅이 남는 공간 흡수 */
-  /* 대기실 채팅 — flex:1로 슬롯 얇아진 만큼 넓어짐 */
-  .lbChat{flex:1;min-height:70px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;padding:8px 10px;margin-bottom:8px;border-radius:var(--r-md);
+  .lbCard{width:90%;max-width:340px;max-height:90%;overflow:hidden;padding:16px;display:flex;flex-direction:column}   /* 콘텐츠 높이(채팅 6줄 고정) → 팝업 높이 자동 축소 */
+  /* 대기실 채팅 — 6줄 고정 높이 */
+  .lbChat{flex:0 0 auto;height:126px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;padding:8px 10px;margin-bottom:8px;border-radius:var(--r-md);
     background:rgba(0,0,0,.28);border:1px solid var(--metal-edge)}
   .lbChat::-webkit-scrollbar{width:4px}.lbChat::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
   .lbMsg{font-size:var(--fs-md);line-height:1.35;color:#d6d2d2;word-break:break-all}
@@ -1633,17 +1633,20 @@
   .lbSlot.empty{opacity:.85;border-style:dashed}
   .lbSlot.empty.locked{opacity:.5}
   /* 빈 슬롯 중앙: 이동 버튼 / 잠김 표시 · 호스트 잠금 토글 · 추방 버튼 */
-  .lbEmptyMid{flex:1;display:flex;align-items:center;justify-content:center}
-  .lbMoveBtn{padding:3px 14px;border-radius:4px;font-family:inherit;font-size:var(--fs-sm);font-weight:800;cursor:pointer;color:#cfe0ec;
-    background:rgba(0,229,255,.09);border:1px solid rgba(0,229,255,.4);transition:all .1s}
-  .lbMoveBtn:hover{background:rgba(0,229,255,.16)} .lbMoveBtn:active{transform:translateY(1px)}
+  /* 슬롯 탭 = 드롭다운 메뉴(이동/잠금 · 친구추가/추방). 카드에 직접 버튼 없음 */
+  .lbSlot.tapmenu{cursor:pointer} .lbSlot.tapmenu:hover{border-color:rgba(198,208,222,.4)}
+  .lbEmptyMid{flex:1;display:flex;align-items:center;justify-content:center;gap:6px}
+  .lbEmpty{font-size:var(--fs-sm);color:#7a8696}
   .lbLockTxt{font-size:var(--fs-sm);color:#8a93a0;font-weight:700}
-  .lbLockBtn{flex:0 0 auto;margin-left:auto;width:26px;height:24px;padding:0;border-radius:4px;cursor:pointer;font-size:12px;line-height:1;
-    background:rgba(255,255,255,.05);border:1px solid var(--metal-edge)}
-  .lbLockBtn:active{transform:translateY(1px)}
-  .lbKick{flex:0 0 auto;width:24px;height:22px;padding:0;border-radius:4px;cursor:pointer;font-size:12px;font-weight:800;line-height:1;color:#ffb3b3;
-    background:rgba(200,50,50,.16);border:1px solid rgba(255,90,90,.4)}
-  .lbKick:hover{background:rgba(200,50,50,.28)} .lbKick:active{transform:translateY(1px)}
+  .lbSlotCaret{font-size:9px;color:#6b7686;line-height:1}
+  .lbMenu{position:fixed;z-index:60;min-width:112px;display:flex;flex-direction:column;gap:2px;padding:5px;
+    background:linear-gradient(180deg,rgba(18,22,32,.99),rgba(10,13,20,.995));border:1px solid rgba(120,140,180,.32);border-radius:var(--r-md);box-shadow:0 10px 28px rgba(0,0,0,.65)}
+  .lbMenu.hide{display:none}
+  .lbMenuOpt{font-family:inherit;font-size:var(--fs-md);font-weight:700;color:#d3dde8;text-align:left;cursor:pointer;white-space:nowrap;
+    padding:9px 12px;border-radius:calc(var(--r-md) - 2px);background:transparent;border:1px solid transparent;transition:background .1s}
+  .lbMenuOpt:hover{background:rgba(255,255,255,.06)}
+  .lbMenuOpt.danger{color:#ff9a9a} .lbMenuOpt.danger:hover{background:rgba(200,50,50,.18)}
+  .lbMenuOpt:active{transform:translateY(1px)}
   .lbNum{font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:800;color:var(--pc,var(--info));filter:saturate(.4);min-width:14px;text-align:center;text-shadow:0 1px 2px #000}   /* 채도↓ → 미세한 진영색 차이만 */
   .lbInfo{min-width:0;flex:1;text-align:left;display:flex;align-items:baseline;gap:8px}   /* 1열 넓은 카드: 이름+상태 한 줄 */
   .lbName{flex:0 1 auto;font-size:var(--fs-lg);font-weight:700;color:#e6e2e2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.15}
@@ -1788,6 +1791,7 @@
   #pwField{margin-bottom:8px}
   #pwErr{min-height:15px;color:#ff6b6b}
   .cpHint{font-size:var(--fs-sm);color:var(--txt-mute);margin-bottom:18px;padding-left:2px}
+  .cpHint:empty{display:none}   /* 안내 텍스트 없을 땐 공간 차지 안 함(에러 시에만 표시) */
   .cpBtns{display:flex;gap:8px}
   .cpCancel,.cpMake,.ecCancel,.ecGo{flex:1;padding:12px;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-xl);font-weight:800;cursor:pointer;transition:transform .08s}
   .cpCancel,.ecCancel{color:var(--txt);background:var(--glass);border:1px solid var(--metal-edge)}
@@ -2440,11 +2444,13 @@
   .rmfBtn.on{color:#fff;border-color:var(--dc,var(--neon));background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(0,0,0,.12));box-shadow:0 0 10px -3px var(--dc,var(--neon-glow))}
   .rmEmpty{text-align:center;color:#7d8b98;font-size:var(--fs-lg);font-weight:700;padding:26px 0}
   .cpDiffBtns{margin-bottom:4px}
-  .cpMaxBtns{display:flex;gap:5px;margin-bottom:4px}
-  .cpMaxBtn{flex:1;padding:9px 0;border-radius:var(--r-md);font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:800;cursor:pointer;
-    color:var(--txt-mute);background:var(--glass);border:1px solid var(--metal-edge);transition:all .12s}
-  .cpMaxBtn.on{color:#fff;background:linear-gradient(180deg,var(--neon-face1),var(--neon-d1));border-color:var(--neon);box-shadow:0 0 10px -3px var(--neon-glow)}
-  .cpMaxBtn:active{transform:translateY(1px)}
+  .cpStepper{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+  .cpStepBtn{flex:0 0 auto;width:44px;height:42px;border-radius:var(--r-md);font-family:inherit;font-size:22px;font-weight:800;line-height:1;cursor:pointer;
+    color:#cfeaff;background:rgba(0,229,255,.09);border:1px solid rgba(0,229,255,.42);transition:all .1s}
+  .cpStepBtn:hover{background:rgba(0,229,255,.16)} .cpStepBtn:active{transform:translateY(1px)}
+  .cpStepBtn:disabled{opacity:.35;cursor:default;background:var(--glass);border-color:var(--metal-edge);color:var(--txt-mute)}
+  .cpStepVal{flex:1;text-align:center;font-family:'Rajdhani',sans-serif;font-size:24px;font-weight:800;color:#fff;
+    padding:7px 0;border-radius:var(--r-md);background:rgba(0,0,0,.28);border:1px solid var(--metal-edge);font-variant-numeric:tabular-nums}
   /* 개인 플레이 난이도: 2×2 그리드, 난이도별 색으로 구분, 여유로운 버튼 */
   .soloDiffBtns{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:8px 0 12px}
   .soloDiffBtns .moDiffBtn{padding:14px 8px 12px;border-radius:10px;border:1.5px solid var(--dc);
@@ -2620,6 +2626,7 @@
           <button class="lbStart" id="lbStart" onclick="lobbyStart()" disabled>대기 중…</button>
         </div>
       </div>
+      <div class="lbMenu hide" id="lbMenu"></div>   <!-- 슬롯 탭 시 나오는 드롭다운(이동/잠금 · 친구추가/추방) -->
     </div>
     <!-- 방 찾기(룸 리스트) -->
     <div id="rooms" class="hide spaceBg">
@@ -2662,14 +2669,10 @@
         <label class="cpLabel">난이도</label>
         <div class="moDiffBtns cpDiffBtns" id="cpDiffBtns"></div>
         <label class="cpLabel">최대 인원</label>
-        <div class="cpMaxBtns" id="cpMaxBtns">
-          <button class="cpMaxBtn" data-m="2" onclick="setCpMax(2)">2</button>
-          <button class="cpMaxBtn" data-m="3" onclick="setCpMax(3)">3</button>
-          <button class="cpMaxBtn" data-m="4" onclick="setCpMax(4)">4</button>
-          <button class="cpMaxBtn" data-m="5" onclick="setCpMax(5)">5</button>
-          <button class="cpMaxBtn" data-m="6" onclick="setCpMax(6)">6</button>
-          <button class="cpMaxBtn" data-m="7" onclick="setCpMax(7)">7</button>
-          <button class="cpMaxBtn on" data-m="8" onclick="setCpMax(8)">8</button>
+        <div class="cpStepper" id="cpMaxStep">
+          <button class="cpStepBtn" id="cpMaxDec" onclick="stepCpMax(-1)" aria-label="인원 감소">−</button>
+          <span class="cpStepVal" id="cpMaxVal">8</span>
+          <button class="cpStepBtn" id="cpMaxInc" onclick="stepCpMax(1)" aria-label="인원 증가">+</button>
         </div>
         <label class="cpLabel">공개 설정</label>
         <div class="cpSeg" id="cpVis">
@@ -2680,7 +2683,7 @@
           <label class="cpLabel">비밀번호</label>
           <input id="cpPw" type="text" inputmode="numeric" placeholder="비밀번호 설정 (숫자)" maxlength="8">
         </div>
-        <div class="cpHint" id="cpHint">공개: 방 목록에 표시됩니다.</div>
+        <div class="cpHint" id="cpHint"></div>
         <div class="cpBtns">
           <button class="cpCancel" onclick="closeCreate()">취소</button>
           <button class="cpMake" onclick="confirmCreate()">만들기</button>
@@ -4010,6 +4013,7 @@ document.addEventListener('pointerdown', function(ev){ const p=document.getEleme
 document.addEventListener('pointerdown', function(ev){ const p=document.getElementById('autoPopup'); if(!p||p.classList.contains('hide'))return; if(ev.target.closest&&(ev.target.closest('#autoPopup')||ev.target.closest('#autoFab')))return; closeAutoPopup(); }, true);
 document.addEventListener('pointerdown', function(ev){ const m=document.getElementById('rmDiffMenu'); if(!m||m.classList.contains('hide'))return; if(ev.target.closest&&ev.target.closest('#rmDiff'))return; if(typeof _rmDiffClose==='function') _rmDiffClose(); }, true);   // 방찾기 난이도 팝다운 바깥 클릭 닫기
 document.addEventListener('pointerdown', function(ev){ const m=document.getElementById('msScopeMenu'); if(!m||m.classList.contains('hide'))return; if(ev.target.closest&&ev.target.closest('#msScopeDD'))return; if(typeof _msScopeClose==='function') _msScopeClose(); }, true);   // 로비 채팅 범위 팝다운 바깥 클릭 닫기
+document.addEventListener('pointerdown', function(ev){ const m=document.getElementById('lbMenu'); if(!m||m.classList.contains('hide'))return; if(ev.target.closest&&(ev.target.closest('#lbMenu')||ev.target.closest('.lbSlot.tapmenu')))return; if(typeof _lbMenuClose==='function') _lbMenuClose(); }, true);   // 대기실 슬롯 메뉴 바깥 클릭 닫기
 function openBossFromPopup(){ closeBossPopup(); if(typeof toggleBossArena==='function')toggleBossArena(); }
 function updateBossViewBtn(){ const b=document.getElementById('bossViewBtn'); if(b){ b.textContent=G.bossOpen?'메인':'보스방'; b.classList.toggle('viewing', !!G.bossOpen); } }
 // ── 토벌장 전용 이펙트 저장소 — 메인 트랙 이펙트와 완전 분리(두 화면이 서로 영향 없음) ──
@@ -8798,7 +8802,11 @@ function joinByNumber(){ const f=document.getElementById('roomNumField'); if(!f)
   openLobby({num:num, name:'#'+num+' 방', host:host, startCount:1+Math.floor(Math.random()*4), joining:true, visibility:'private', diff:['easy','normal','normal','hard','hell'][Math.floor(Math.random()*5)]}); }
 // 방 만들기 모달
 let _createVis='public', _createDiff='easy', _createMax=8;
-function setCpMax(m){ m=Math.max(2,Math.min(8,m|0)); _createMax=m; document.querySelectorAll('#cpMaxBtns .cpMaxBtn').forEach(b=>b.classList.toggle('on', +b.dataset.m===m)); if(typeof playSfx==='function') playSfx('ui_toggle'); }
+function setCpMax(m, silent){ m=Math.max(2,Math.min(8,m|0)); _createMax=m;
+  const v=document.getElementById('cpMaxVal'); if(v) v.textContent=m;
+  const dec=document.getElementById('cpMaxDec'), inc=document.getElementById('cpMaxInc'); if(dec) dec.disabled=(m<=2); if(inc) inc.disabled=(m>=8);
+  if(!silent && typeof playSfx==='function') playSfx('ui_toggle'); }
+function stepCpMax(d){ setCpMax(_createMax+d); }
 function renderCpDiff(){ const box=document.getElementById('cpDiffBtns'); if(!box) return; box.innerHTML='';
   DIFFICULTY_ORDER.forEach(d=>{ const D=DIFFICULTY[d]; const b=document.createElement('div');
     b.className='moDiffBtn'+(d===_createDiff?' on':''); b.style.setProperty('--dc', DIFF_COLOR[d]||'#fff');
@@ -8811,7 +8819,7 @@ function closeCreate(){ popHide('createPanel'); }
 function setRoomVis(v){ _createVis=v;
   document.querySelectorAll('#cpVis .cpSegBtn').forEach(b=>b.classList.toggle('on', b.dataset.v===v));
   const w=document.getElementById('cpPwWrap'); if(w) w.classList.toggle('hide', v!=='private');
-  const h=document.getElementById('cpHint'); if(h){ h.style.color=''; h.textContent = v==='public'?'공개: 방 목록에 표시됩니다.':'비공개: 목록엔 보이지만 비밀번호를 입력해야 입장할 수 있습니다.'; } }
+  const h=document.getElementById('cpHint'); if(h){ h.style.color=''; h.textContent=''; } }   // 안내 텍스트 제거(에러만 표시)
 function confirmCreate(){ const nmEl=document.getElementById('cpName');
   const name=((nmEl&&nmEl.value)||'').trim()||'나의 대기실';
   let pw=''; if(_createVis==='private'){ const pwEl=document.getElementById('cpPw'); pw=((pwEl&&pwEl.value)||'').replace(/\s/g,'');
@@ -9244,14 +9252,11 @@ function renderLobby(){ const g=document.getElementById('lbGrid'); if(!g) return
       const chip = raceOn
         ? '<div class="lbRace'+(s.me?' me':'')+'" style="'+raceVars(R.col)+'"'+(s.me?' onclick="openLobbyRace(this)" title="종족 선택"':'')+'><span class="lrNm">'+R.name+'</span>'+(s.me?'<span class="lrCaret">▾</span>':'')+'</div>'
         : '<div class="lbRace lk" title="이 유즈맵은 종족이 없습니다"><span class="lrNm">잠금</span></div>';
-      const kick = (meHost && !s.host && !s.me) ? '<button class="lbKick" title="추방" onclick="kickSlot('+i+')">✕</button>' : '';
-      el.innerHTML='<div class="lbNum">'+(i+1)+'</div><div class="lbInfo"><span class="lbName">'+escHtml(s.me?myNick():(s.label||s.name))+'</span><span class="lbStat '+cls+'">'+stt+'</span></div>'+chip+kick;
-    } else {   // 빈 슬롯: 잠김=🔒 / 열림=이동 버튼. 호스트는 잠금 토글.
-      const mid = locked
-        ? '<div class="lbEmptyMid"><span class="lbLockTxt">🔒 잠긴 자리</span></div>'
-        : '<div class="lbEmptyMid"><button class="lbMoveBtn" onclick="moveToSlot('+i+')">이 자리로 이동</button></div>';
-      const lockBtn = meHost ? '<button class="lbLockBtn" title="'+(locked?'잠금 해제':'자리 잠금')+'" onclick="toggleSlotLock('+i+')">'+(locked?'🔓':'🔒')+'</button>' : '';
-      el.innerHTML='<div class="lbNum">'+(i+1)+'</div>'+mid+lockBtn;
+      el.innerHTML='<div class="lbNum">'+(i+1)+'</div><div class="lbInfo"><span class="lbName">'+escHtml(s.me?myNick():(s.label||s.name))+'</span><span class="lbStat '+cls+'">'+stt+'</span></div>'+chip;
+      if(!s.me){ el.classList.add('tapmenu'); el.onclick=(e)=>openSlotMenu(i,e); }   // 남의 프로필 탭 → 친구추가/추방 메뉴
+    } else {   // 빈 슬롯: 탭하면 메뉴(이동/잠금). 잠김이면 표시.
+      el.innerHTML='<div class="lbNum">'+(i+1)+'</div><div class="lbEmptyMid">'+(locked?'<span class="lbLockTxt">🔒 잠긴 자리</span>':'<span class="lbEmpty">빈 자리</span>')+'<span class="lbSlotCaret">▾</span></div>';
+      el.classList.add('tapmenu'); el.onclick=(e)=>openSlotMenu(i,e);
     }
     g.appendChild(el);
   }
@@ -9265,6 +9270,20 @@ function kickSlot(i){ const me=_lobbySlots.find(s=>s&&s.me); if(!(me&&me.host)){
   const s=_lobbySlots[i]; if(!s||s.host||s.me) return; const nm=s.label||s.name;
   if(_lobbyRoom&&_lobbyRoom.real&&typeof rtRoomKickUid==='function'&&s.uid){ try{ rtRoomKickUid(s.uid); }catch(e){} }   // 실방: 추방 통지(가능 시)
   _lobbySlots[i]=null; if(typeof playSfx==='function') playSfx('ui_denied'); if(typeof addLobbyMsg==='function') addLobbyMsg('', nm+'님을 추방했습니다.'); renderLobby(); updateLobbyStart(); }
+function lobbyAddFriend(i){ const s=_lobbySlots[i]; if(!s) return; const nm=s.label||s.name;
+  if(s.uid && typeof friendAdd==='function'){ try{ friendAdd(s.uid); }catch(e){} }
+  if(typeof toast==='function') toast('👤 '+nm+'님에게 친구 요청을 보냈습니다'); }
+function _lbMenuClose(){ const m=document.getElementById('lbMenu'); if(m) m.classList.add('hide'); }
+function openSlotMenu(i, ev){ if(ev){ ev.stopPropagation(); ev.preventDefault(); }
+  const meSlot=_lobbySlots.find(s=>s&&s.me), meHost=!!(meSlot&&meSlot.host), s=_lobbySlots[i], locked=(_lobbyLock.indexOf(i)>=0), opts=[];
+  if(!s){ if(!locked) opts.push({t:'이 자리로 이동', fn:'moveToSlot('+i+')'}); if(meHost) opts.push({t:locked?'🔓 잠금 해제':'🔒 자리 잠금', fn:'toggleSlotLock('+i+')'}); }
+  else if(!s.me){ opts.push({t:'친구 추가', fn:'lobbyAddFriend('+i+')'}); if(meHost && !s.host) opts.push({t:'추방', fn:'kickSlot('+i+')', danger:true}); }
+  const m=document.getElementById('lbMenu'); if(!m || !opts.length){ _lbMenuClose(); return; }
+  m.innerHTML=opts.map(o=>'<button class="lbMenuOpt'+(o.danger?' danger':'')+'" onclick="'+o.fn+';_lbMenuClose()">'+o.t+'</button>').join('');
+  m.classList.remove('hide');
+  const px=(ev&&ev.clientX)||120, py=(ev&&ev.clientY)||120, vw=window.innerWidth, vh=window.innerHeight, mw=m.offsetWidth, mh=m.offsetHeight;
+  m.style.left=Math.max(6,Math.min(px, vw-mw-6))+'px'; m.style.top=Math.max(6,Math.min(py+4, vh-mh-6))+'px';   // 클릭 지점 근처(화면 안으로 클램프)
+  if(typeof playSfx==='function') playSfx('ui_tab'); }
 function updateLobbyStart(){ const players=_lobbySlots.filter(Boolean), cnt=players.length, allReady=players.every(s=>s.ready);
   const meSlot=_lobbySlots.find(s=>s&&s.me), meHost=!!(meSlot&&meSlot.host);
   const btn=document.getElementById('lbStart');
