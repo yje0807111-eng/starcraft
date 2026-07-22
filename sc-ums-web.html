@@ -1092,7 +1092,8 @@
   #btSheet{position:absolute;left:0;right:0;bottom:0;z-index:30;transform:translateY(103%);transition:transform .26s cubic-bezier(.2,.8,.25,1);display:flex;flex-direction:column}
   /* 프로필 시트 박스 규격(배경·테두리·모서리·그림자·여백) = 건설 시트가 단일 소스. 메인 프로필 표시 중(#bpMain에 #unitCmd.on)도 그대로 공유 → 높이·폭 동일.
      ※ display/위치는 각자 유지(건설=맵 위 슬라이드 시트 / 메인=하단 패널) */
-  #btSheet,#bpMain:has(#unitCmd.on),#bpMain:has(#defaultCmd:not(.hide)){
+  #playerProfile{display:none}#playerProfile.on{display:flex}   /* 관전 프로필 = 메인 프로필과 동일 커맨드 그리드 호스트 */
+  #btSheet,#bpMain:has(#unitCmd.on),#bpMain:has(#defaultCmd:not(.hide)),#bpPlayers:has(#playerProfile.on){
     background:linear-gradient(180deg,rgba(13,18,28,.97),rgba(8,11,17,.985));border-top:1px solid rgba(90,140,210,.3);border-radius:14px 14px 0 0;
     box-shadow:0 -8px 24px rgba(0,0,0,.55);padding:9px 8px 12px;gap:0}
   #btSheet.open{transform:translateY(0)}
@@ -1106,10 +1107,10 @@
   #btCardCtl:active{transform:translateY(1px)}
   #btCardCtl svg{width:17px;height:17px;display:block;transition:transform .22s cubic-bezier(.2,.8,.25,1)}
   #btCardCtl.up svg{transform:rotate(180deg)}
-  #btSheet.simple #btSheetBody,#unitCmd.simple{height:min(26vh,126px);max-height:min(26vh,126px)}   /* 간소화 = 1줄 그리드 · 높이 고정(건물 프로필 기준 ≈120px · 개인·다중·혼합 모두 동일) · 메인 프로필(#unitCmd)도 동일 규격 */
+  #btSheet.simple #btSheetBody,#unitCmd.simple,#playerProfile.simple{height:min(26vh,126px);max-height:min(26vh,126px)}   /* 간소화 = 1줄 그리드 · 높이 고정(건물 프로필 기준 ≈120px · 개인·다중·혼합 모두 동일) · 메인 프로필(#unitCmd)도 동일 규격 */
   #btSheet.simple .cmdG .cgGrid,#unitCmd.simple .cmdG .cgGrid{grid-template-rows:1fr}
   #btSheet.mini #btSheetBody{display:none}   /* 최소화 = 본문 숨김(버튼 바만) */
-  #btSheetBody,#unitCmd{height:min(40vh,204px);max-height:min(40vh,204px);min-height:0;flex-direction:column}   /* 일꾼 지정 패널 크기로 고정(건물·유닛 모두 동일 높이) · #unitCmd는 display만 .on에서 제어 */
+  #btSheetBody,#unitCmd,#playerProfile{height:min(40vh,204px);max-height:min(40vh,204px);min-height:0;flex-direction:column}   /* 일꾼 지정 패널 크기로 고정(건물·유닛 모두 동일 높이) · #unitCmd는 display만 .on에서 제어 */
   #btSheetBody{display:flex}
   #techSkTip{position:fixed;z-index:60;max-width:210px;padding:7px 9px;border-radius:10px;pointer-events:none;   /* 🔮 스킬 롱프레스 설명 팝업 — 프로필 시트와 동일 글래스 톤 */
     background:linear-gradient(180deg,rgba(16,22,34,.98),rgba(9,13,21,.99));border:1px solid rgba(90,140,210,.35);box-shadow:0 6px 20px rgba(0,0,0,.6);color:#dfe7f2}
@@ -2845,11 +2846,8 @@
 
     <div class="bp" id="bpPlayers">
       <!-- 관전 중 유닛 클릭 시 그 유닛 1마리 정보(적군처럼 단일) -->
-      <div class="scPanel" id="playerProfile" style="display:none">
-        <div class="scPortrait" id="ppPortrait"></div>
-        <div class="scMid"><div class="scName" id="ppName"></div><div class="scType" id="ppType"></div><div class="scHp" id="ppHp"></div></div>
-        <div class="scStats" id="ppStats"></div>
-      </div>
+      <!-- 관전 유닛 프로필 = 메인과 동일 커맨드 그리드(renderCmdGrid) · 읽기전용 호스트 -->
+      <div id="playerProfile"></div>
       <div id="plGridWrap">
         <div class="plGrid" id="plGrid"></div>
       </div>
@@ -9656,8 +9654,7 @@ function showShopProfile(id){ const def=U[id]; if(!def) return;
   document.getElementById('prodHint').style.display='none';
   const card=document.getElementById('shopProfile'); card.style.display='flex';   // 프로필=상단, 생산고 안내는 그대로 아래에 유지
   document.getElementById('bpUnit').classList.add('profOn');   // 프로필 표시 → 생산고 안내 카드 컴팩트
-  const sjob=UNIT_CLS[id]||'';
-  document.getElementById('spPortrait').innerHTML=unitPortraitHTML(id)+(sjob?'<div class="portJob">'+sjob+'</div>':'');
+  document.getElementById('spPortrait').innerHTML=unitPortraitHTML(id);
   document.getElementById('spName').textContent=def.name;
   document.getElementById('spType').textContent='';   // 타입 라인 제거(직업은 초상화 하단 배지로)
   const pseudo={id:id};   // 인스턴스 없는 신규 유닛 → 풀스탯 표시
@@ -9676,7 +9673,7 @@ function showCitizenProfile(){ const card=document.getElementById('shopProfile')
   const ph=document.getElementById('prodHint'); if(ph) ph.style.display='none';
   card.style.display='flex';   // 프로필=상단, 생산고 안내는 아래에 유지
   document.getElementById('bpUnit').classList.add('profOn');   // 프로필 표시 → 생산고 안내 카드 컴팩트
-  document.getElementById('spPortrait').innerHTML=unitPortraitHTML('citizen')+'<div class="portJob">시민</div>';
+  document.getElementById('spPortrait').innerHTML=unitPortraitHTML('citizen');
   document.getElementById('spName').textContent='시민';
   document.getElementById('spType').textContent='유닛 생산 일꾼';
   document.getElementById('spHp').innerHTML='<div class="czDesc">뽑기 비콘으로 이동해 <b>랜덤 유닛</b>을 뽑습니다 <span class="czCost">◎'+mapCfg('gachaCost',GACHA_COST)+'</span></div>';
@@ -9767,29 +9764,28 @@ vu.addEventListener('pointercancel', function(e){ onUnitUp(e); });
 function evPosIn(viewId,e){ const v=document.getElementById(viewId).getBoundingClientRect();
   const t=e.changedTouches?e.changedTouches[0]:(e.touches?e.touches[0]:e);
   return {x:(t.clientX-v.left)/v.width, y:(t.clientY-v.top)/v.height}; }
-function showPlayerProfile(u){ const def=U[u.id]; if(!def) return;
-  // 관전 중이면 상대 플레이어의 공격 업그레이드 레벨로 공격력 계산
-  const rb=(typeof specRemoteBoard==='function')&&specRemoteBoard();
-  const _savedAtk=(rb && G.coopUpg && G.coopUpg[rb]) ? G.atkLv : undefined;
-  if(_savedAtk!==undefined) G.atkLv=G.coopUpg[rb];
-  try{
-    document.getElementById('plGridWrap').style.display='none';
-    const card=document.getElementById('playerProfile'); card.style.display='flex';
-    const pjob=UNIT_CLS[u.gmodel||u.id]||'';
-    document.getElementById('ppPortrait').innerHTML=unitPortraitHTML(u.gmodel||u.id)+(pjob?'<div class="portJob">'+pjob+'</div>':'');
-    document.getElementById('ppName').textContent=gNameStar(u,def)+(u.hero?' [영웅]':'');
-    document.getElementById('ppType').innerHTML=u.gtier?tierLabelHTML(u.gtier):'';   // 등급 라벨(등급색 칩)
-    document.getElementById('ppHp').innerHTML=scHpHTML(u);
-    document.getElementById('ppStats').innerHTML=scStatBoxesHTML(u); fitStatNumbers();
-  } finally { if(_savedAtk!==undefined) G.atkLv=_savedAtk; }
-}
+// 관전 유닛 프로필 = 메인 단일 프로필과 동일 커맨드 그리드(읽기전용: 스킬 카드 비활성 → 남의 유닛 시전 방지)
+function _specUnitModel(u){ const def=U[u.id]||{};
+  const cards=(typeof _mainSkillCards==='function')?_mainSkillCards([u]).map(function(it){ return Object.assign({}, it, {act:'', state:'dim'}); }):[];
+  return { mode:'prod', compact:true, build:true, title:gNameStar(u,def)+(u.hero?' [영웅]':''), icon:_mainPort(u), hpsh:_mainHpsh(u),
+    sub:'👁 '+((typeof playerName==='function')?playerName(G.curPlayer):('P'+G.curPlayer))+' 관전', items:cards,
+    info:{ eb:'', hideName:true, stats:_mainUnitStatList(u) } }; }
+function renderSpecProfile(u){ const host=document.getElementById('playerProfile'); if(!host||!host.classList.contains('on')) return;
+  const rb=(typeof specRemoteBoard==='function')&&specRemoteBoard();   // 관전=상대 공격 업글 레벨로 스탯 계산
+  const _sv=(rb && G.coopUpg && G.coopUpg[rb]) ? G.atkLv : undefined; if(_sv!==undefined) G.atkLv=G.coopUpg[rb];
+  try{ const sig='spec|'+u.uid+'|'+Math.round(u.hp||0)+'|'+Math.round(u.sh||0)+'|'+(host._cgPage||0);   // HP/실드 변하면만 재빌드(라이브 갱신)
+    if(host._gSig!==sig){ host._gSig=sig; host._cgSig=undefined; renderCmdGrid(host, _specUnitModel(u)); } }
+  finally{ if(_sv!==undefined) G.atkLv=_sv; } }
+function showPlayerProfile(u){ if(!U[u.id]) return;
+  document.getElementById('plGridWrap').style.display='none';
+  const host=document.getElementById('playerProfile'); host.classList.add('on','simple'); host._gSig=undefined; renderSpecProfile(u); }
 // 관전 중 상호작용 대상 유닛 목록(상대=실시간 보드, 나=내 유닛)
 function _plUnitList(){ const rb=(typeof specRemoteBoard==='function')&&specRemoteBoard();
   return rb && G.coopBoard && G.coopBoard[rb] ? (G.coopBoard[rb].units||[]) : G.units; }
 function selectPlayerUnit(uid){ const u=_plUnitList().find(x=>x.uid===uid); if(!u){ clearPlayerSel(); return; }
   G.sel=[uid]; G.specSel=uid; G.selEnemy=null; showPlayerProfile(u); updateDeselTop();   // 단일(M3D 림 표시)
 }
-function clearPlayerSel(){ G.sel=[]; G.specSel=null; const c=document.getElementById('playerProfile'); if(c) c.style.display='none';
+function clearPlayerSel(){ G.sel=[]; G.specSel=null; const c=document.getElementById('playerProfile'); if(c){ c.classList.remove('on'); c._gSig=undefined; }
   const w=document.getElementById('plGridWrap'); if(w) w.style.display=''; updateDeselTop(); }
 let _plStart=null, _plBox=null, _plMoved=false;
 function _hitPlayerUnit(x,y){ let best=1e9,hit=null; for(const u of _plUnitList()){ const d=Math.hypot((u.x-x)*GW,(u.y-y)*GH); if(d<=unitRadius(u)+6 && d<best){ best=d; hit=u; } } return hit; }
@@ -10128,7 +10124,7 @@ function loop(now){
     if(!se) deselectUnit(); }   // 적 프로필 HP 실시간 갱신은 아래 mainProfileRender가 담당
   // 플레이어(관전) 탭: 선택 유닛 HP 실시간 갱신 / 죽으면 해제
   if(G.tab==='Players' && G.sel.length===1){ const pu=(typeof _plUnitList==='function'?_plUnitList():G.units).find(x=>x.uid===G.sel[0]);
-    if(!pu) clearPlayerSel(); else { const e=document.getElementById('ppHp'); if(e && getComputedStyle(document.getElementById('playerProfile')).display!=='none') e.innerHTML=scHpHTML(pu); } }
+    if(!pu) clearPlayerSel(); else { const pf=document.getElementById('playerProfile'); if(pf && pf.classList.contains('on')) renderSpecProfile(pu); } }
   if(G.sel.length>=1 && document.getElementById('unitCmd').classList.contains('on')) updateCmdRow();   // 명령 행 상태 갱신(단일/다중)
   if(typeof mainProfileRender==='function') mainProfileRender();   // 🎛 선택 프로필 실시간(HP/마나/쿨다운) — 시그니처 캐시로 저비용, 변화 없으면 DOM 유지
   updateSkillFab();   // 스킬 FAB 쿨다운/버프 실시간(탭 전환·해제도 내부 처리)
