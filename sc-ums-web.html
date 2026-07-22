@@ -1660,7 +1660,7 @@
   /* 방 찾기(룸 리스트) */
   #rooms{position:absolute;inset:0;z-index:46;display:flex;align-items:center;justify-content:center;padding:20px;background:transparent}   /* 로비 배경 사용(::before) */
   #rooms.hide{display:none}
-  .rmCard{width:92%;max-width:350px;max-height:94%;display:flex;flex-direction:column;padding:18px}
+  .rmCard{width:92%;max-width:350px;max-height:90%;display:flex;flex-direction:column;padding:18px 18px 22px}
   .rmHead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
   .rmTitle{font-size:17px;font-weight:800;color:var(--neon);text-shadow:0 0 10px var(--neon-glow);letter-spacing:.5px}
   .rmHeadR{display:flex;align-items:center;gap:8px;flex:0 0 auto}
@@ -1674,17 +1674,17 @@
   .rmDiff.open .rmDiffBtn{border-color:rgba(0,229,255,.72);background:rgba(0,229,255,.14)}
   .rmDiffChev{width:12px;height:12px;flex:0 0 auto;color:#7fd8ff;transition:transform .18s}
   .rmDiff.open .rmDiffChev{transform:rotate(180deg)}
-  .rmDiffMenu{position:absolute;top:calc(100% + 6px);right:0;z-index:30;min-width:136px;display:flex;flex-direction:column;gap:2px;padding:6px;
+  .rmDiffMenu{position:absolute;top:calc(100% + 5px);right:0;z-index:30;min-width:104px;display:flex;flex-direction:column;gap:1px;padding:4px;
     background:linear-gradient(180deg,rgba(16,22,32,.985),rgba(9,13,20,.99));border:1px solid rgba(0,229,255,.34);border-radius:var(--r-md);
     box-shadow:0 12px 28px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.04)}
   .rmDiffMenu.hide{display:none}
-  .rmDiffOpt{display:flex;align-items:center;gap:9px;font-family:inherit;font-size:var(--fs-md);font-weight:700;color:#c6d2df;text-align:left;cursor:pointer;
-    padding:8px 10px;border-radius:calc(var(--r-md) - 2px);background:transparent;border:1px solid transparent;transition:background .1s,border-color .1s,color .1s}
+  .rmDiffOpt{display:flex;align-items:center;gap:7px;font-family:inherit;font-size:var(--fs-md);font-weight:700;color:#c6d2df;text-align:left;cursor:pointer;white-space:nowrap;
+    padding:6px 9px;border-radius:calc(var(--r-md) - 2px);background:transparent;border:1px solid transparent;transition:background .1s,border-color .1s,color .1s}
   .rmDiffOpt:hover{background:rgba(255,255,255,.05)}
   .rmDiffOpt.on{color:#fff;background:rgba(0,229,255,.13);border-color:rgba(0,229,255,.42)}
   .rmDiffDot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;box-shadow:0 0 0 2px rgba(255,255,255,.05)}
   .rmTop{display:flex;gap:8px;margin-bottom:12px}
-  .rmQuick,.rmCreate{flex:1;min-width:0;padding:11px 8px;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-lg);font-weight:800;cursor:pointer;letter-spacing:.2px;white-space:nowrap;transition:transform .08s}
+  .rmQuick,.rmCreate{flex:1;min-width:0;padding:13px 8px;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-lg);font-weight:800;cursor:pointer;letter-spacing:.2px;white-space:nowrap;transition:transform .08s}
   .rmQuick{color:#fff;background:linear-gradient(180deg,var(--neon-face1),var(--neon-d1));border:1px solid var(--neon);box-shadow:0 0 11px -3px var(--neon-glow),inset 0 1px 0 rgba(255,255,255,.2)}
   .rmCreate{color:#cfeaff;background:linear-gradient(180deg,rgba(11,40,54,.9),rgba(5,16,26,.9));border:1px solid rgba(0,229,255,.5)}
   .rmQuick:active,.rmCreate:active{transform:translateY(1px)}
@@ -1781,7 +1781,7 @@
   .cpMake,.ecGo{color:#fff;background:linear-gradient(180deg,var(--neon-face1),var(--neon-d1));border:1px solid var(--neon);box-shadow:0 0 11px -3px var(--neon-glow)}
   .cpCancel:active,.cpMake:active{transform:translateY(1px)}
   /* 6칸 고정 높이: 방이 적어도 크기 유지(빈 공간), 많으면 내부 드래그 스크롤 */
-  .rmList{--rmRows:7;--rmItemH:54px;--rmGap:6px;flex:none;
+  .rmList{--rmRows:6;--rmItemH:54px;--rmGap:6px;flex:none;
     height:calc(var(--rmRows) * var(--rmItemH) + (var(--rmRows) - 1) * var(--rmGap));
     overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
     display:flex;flex-direction:column;gap:var(--rmGap);padding-right:2px}
@@ -1802,9 +1802,9 @@
   .riCnt.full{color:#ff7676}
   .riStat{font-size:var(--fs-xs);font-weight:700;margin-top:2px}
   .riStat.wait{color:var(--ok)}.riStat.play{color:var(--txt-mute)}
-  .rmBtns{display:flex;gap:7px;margin-top:18px;align-items:center}
+  .rmBtns{display:flex;gap:8px;margin-top:24px;align-items:center}
   /* 뒤로·새로고침 = 정사각 아이콘 버튼(랜덤입장·방만들기보다 위계 낮게 = 조금 작고 은은하게) */
-  .rmSq{flex:0 0 auto;width:38px;height:38px;display:flex;align-items:center;justify-content:center;padding:0;
+  .rmSq{flex:0 0 auto;width:42px;height:42px;display:flex;align-items:center;justify-content:center;padding:0;
     border-radius:var(--r-md);cursor:pointer;transition:transform .08s;
     color:#9fb0c2;background:rgba(255,255,255,.045);border:1px solid var(--metal-edge)}
   .rmSq svg{width:19px;height:19px;display:block}
@@ -3278,7 +3278,7 @@ const USEMAPS={
   tmp3:  { id:'tmp3',   name:'미로 탈출 (임시)',   desc:'임시 등록 유즈맵',               players:'1-4', pop:1200, icon:'🌀', rec:false, isNew:false, playable:false, cfg:{} },
 };
 // 🌫️ [임시] 전장의 안개 테스트 맵 — nemo 복제 + cfg.fog:'full'(시야 시스템 확인용, 확인 후 제거 예정)
-try{ USEMAPS.fogtest = { id:'fogtest', name:'🌫️ 안개 테스트', desc:'전장의 안개·시야 시스템 확인용(임시)', players:'1-8', pop:9999, icon:'🌫️', rec:false, isNew:true, playable:true,
+try{ USEMAPS.fogtest = { id:'fogtest', name:'🌫️ 안개 테스트', desc:'전장의 안개·시야 시스템 확인용(임시)', players:'1-8', pop:9999, icon:'🌫️', rec:false, isNew:true, playable:true, hidden:true,   // 유즈맵 목록에서 숨김(관리자 페이지 안개로 충분)
   cfg: Object.assign({}, USEMAPS.nemo.cfg, { fog:'full' }) }; }catch(e){}
 let MAP=USEMAPS.nemo;   // 현재 플레이 중인 유즈맵(게임 시작 시 _selMap으로 설정)
 // ===== [nemo 유즈맵 모듈] 밸런스 (등급 배율·적 HP 스케일) — 맵마다 다름. 새 맵은 이 구조를 복제해 cfg.bal로 오버라이드 =====
