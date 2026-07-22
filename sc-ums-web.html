@@ -1409,6 +1409,7 @@
     --cgDim:#8a94a6;--cgMuted:#657085;--cgGood:#6ff0a0;--cgBad:#ff7676;--cgCr:#8fd8ff;--cgEn:#ffd24a;--cgPop:#c8b6ff}
   .cmdG[data-mode="prod"]{--ca:#5cd6ff;--caG:rgba(92,214,255,.45);--caS:rgba(92,214,255,.5);--caL:#dff4ff}
   .cmdG[data-mode="build"]{--ca:var(--gold);--caG:rgba(255,210,74,.45);--caS:rgba(255,210,74,.5);--caL:var(--gold-lt)}
+  .cmdG[data-mode="boss"]{--ca:#ff5c6e;--caG:rgba(255,92,110,.45);--caS:rgba(255,92,110,.5);--caL:#ffd6db}   /* 보스 시트 = 붉은 강조 */
   .cmdG .cgHead{display:flex;align-items:center;gap:8px;padding:1px 2px 6px;position:relative;flex:none}
   .cmdG .cgHead::after{content:'';position:absolute;left:2px;right:6px;bottom:0;height:1px;background:linear-gradient(90deg,var(--caS),transparent 72%)}
   .cmdG .cgPort{width:38px;height:38px;flex:none;position:relative;overflow:hidden;color:var(--ca);border:1.5px solid var(--caS);
@@ -1509,6 +1510,9 @@
   .cmdG[data-build="1"] .cgName{text-overflow:clip;max-width:none}   /* 생략(...) 없이 — JS가 폰트 축소로 한 줄 */
   .cmdG[data-build="1"] .cgCost{flex-direction:column;flex-wrap:nowrap;gap:1px;margin-top:auto}   /* 크레딧(위)/에너지(아래) 각 한 줄 */
   .cmdG[data-build="1"] .cgCost .cc{font-size:9px;min-height:10px;line-height:10px;display:block;text-align:center}   /* 빈 줄도 높이 유지(자리 예약) */
+  .cmdG .cgCost.cgRwd{flex-direction:row;flex-wrap:nowrap;gap:4px;font-size:9px;font-weight:800;color:var(--cgGood);white-space:nowrap}   /* 보스 셀: 소환 무료 → 코스트 대신 처치 보상(+초록=획득 신호, 한 줄) */
+  .cmdG .cgCost.cgRwd span{display:inline-flex;align-items:center;gap:2px}
+  .cmdG .cgCost.cgRwd .rE{color:var(--cgEn);font-style:normal}
   .cmdG .cc{display:inline-flex;align-items:center;gap:1px;font:800 10px/1 'Rajdhani',sans-serif;font-variant-numeric:tabular-nums}
   .cmdG .cc.cr{color:var(--cgCr)} .cmdG .cc.en{color:var(--cgEn)} .cmdG .cc.hp{color:#ff8a8a}   /* 스킬 HP 코스트(아드레날린) */
   .cmdG .cgMeta{position:absolute;top:3px;right:4px;display:inline-flex;align-items:center;gap:1px;font:800 8.5px/1 'Rajdhani',sans-serif;
@@ -2531,18 +2535,11 @@
     </div>
     <div id="zoneLabel">📍 내 디펜스 구역</div>
     <!-- 상시 공용 보스(협동) HP 바 — 메인 전투 화면 상단 -->
-    <div id="coopBossBar" class="hide" onclick="toggleBossPopup(event)" title="보스 메뉴">
+    <div id="coopBossBar" class="hide" onclick="openBossSheet()" title="보스 (개인보스·포인트방)">
       <div class="cbMid">
         <div class="cbTop"><span class="cbName" id="cbName"></span></div>
         <div class="cbBarOuter"><div class="cbBarFill" id="cbFill"></div><span class="cbHpTxt" id="cbHp"></span></div>
       </div>
-    </div>
-    <!-- 보스 액션 팝업: 상단 보스바를 누르면 표시(파견/회수/보스장) -->
-    <div id="bossPopup" class="hide">
-      <div class="bpHead"><span>월드 보스</span><span class="bpCnt"><b id="bdSent">0</b>/<span id="bdTotal">2</span></span></div>
-      <button class="hbDeploy" id="bossPickBtn" onclick="armBossPick();closeBossPopup()"><span class="bdLabel">파견</span></button>
-      <button class="hbRecall" onclick="recallFromBoss('all')">회수</button>
-      <button class="hbOpen" id="bossViewBtn" onclick="openBossFromPopup()">보스방</button>
     </div>
     <div id="miniWrap"><div id="miniBox"><canvas id="miniMap"></canvas></div></div>
     <!-- 조합 버튼: 메인 탭에서 미니맵 자리(우하단 코너)에 표시 -->
@@ -2591,10 +2588,8 @@
       <input id="chatField" type="text" placeholder="메시지…" maxlength="120" autocomplete="off">
       <button id="chatSend" onclick="sendChat()">전송</button>
     </div>
-    <!-- 개인 보스 버튼: 메인 탭에서 미니맵 자리(우하단)에 표시 -->
-    <div id="pbossBtn" class="hide" onclick="togglePbossPopup(event)" title="개인 보스 소환"><span class="pbTx">개인보스</span><span class="pbCd" id="pbossBtnCd"></span><span class="pbDot" id="pbossNotifyDot"></span></div>
-    <!-- 개인 보스 소환 팝업(4종) -->
-    <div id="pbossPopup" class="hide"></div>
+    <!-- 보스 버튼(우하단): 개인보스 소환 + 포인트방 파견을 하단 시트로 통합 진입 -->
+    <div id="pbossBtn" class="hide" onclick="openBossSheet()" title="보스 (개인보스·포인트방)"><span class="pbTx">보스</span><span class="pbCd" id="pbossBtnCd"></span><span class="pbDot" id="pbossNotifyDot"></span></div>
     <!-- 자동화 묶음 버튼(메인 좌측): 자동 조합/유닛/에너지 토글 — 해금 업그레이드 보유 시 표시 -->
     <div id="autoFab" class="hide" onclick="toggleAutoPopup(event)" title="자동 설정"><span class="afTx">자동설정</span></div>
     <!-- 🎨 플레이어 색 확인(메인) — 건설 구역과 같은 패널 컴포넌트, 유닛을 확대해 액센트 확인 -->
@@ -6531,8 +6526,44 @@ function renderPlayersSheet(){ const host=document.getElementById('unitCmd'); if
   const sig='p|'+(G.myPlayer||1)+'|'+((G.activePlayers||[]).join('.'))+'|'+(G.curPlayer||0)+'|'+(host._cgPage||0);
   if(host._gSig!==sig){ host._gSig=sig; host._cgSig=undefined; renderCmdGrid(host, _playersSheetModel()); } }
 function viewPlayerFromSheet(n){ G.curPlayer=n; if(typeof playSfx==='function') playSfx('ui_open'); switchTab('Players', document.querySelector('.tab[data-tab="Players"]')); }
-// 🎛 메인 시트 모드 디스패처(유닛뽑기·업그레이드·플레이어 …) — 매 프레임/선택변경 시 해당 그리드 렌더
-function renderMainSheet(){ if(G.mainSheet==='gacha') renderGachaSheet(); else if(G.mainSheet==='upgrade') renderUpgradeSheet(); else if(G.mainSheet==='players') renderPlayersSheet(); }
+// 💀 보스 시트 — 개인보스 소환(4종) + 포인트방(파견·회수·토벌장). 기존 떠다니던 pbossPopup·bossPopup을 하단 시트로 흡수.
+function _bossSkullSVG(col){ return '<svg viewBox="0 0 24 24" style="color:'+(col||'#ff9aa6')+'"><path d="M12 2.5c-4 0-6.5 2.8-6.5 6.4 0 2.3 1.1 3.7 2.2 4.7v2.2c0 .7.5 1.1 1.2 1.1.4 1.1 1.6 1.9 3.1 1.9s2.7-.8 3.1-1.9c.7 0 1.2-.4 1.2-1.1v-2.2c1.1-1 2.2-2.4 2.2-4.7 0-3.6-2.5-6.4-6.5-6.4z" fill="currentColor" opacity=".22"/><path d="M12 2.5c-4 0-6.5 2.8-6.5 6.4 0 2.3 1.1 3.7 2.2 4.7v2.2c0 .7.5 1.1 1.2 1.1.4 1.1 1.6 1.9 3.1 1.9s2.7-.8 3.1-1.9c.7 0 1.2-.4 1.2-1.1v-2.2c1.1-1 2.2-2.4 2.2-4.7 0-3.6-2.5-6.4-6.5-6.4z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="9.3" cy="9.2" r="1.5" fill="currentColor"/><circle cx="14.7" cy="9.2" r="1.5" fill="currentColor"/></svg>'; }
+function _bossSheetModel(){
+  const coinMult=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).coinMult||1, autoAvail=autoUsable('pboss');
+  const items=PBOSS_TYPES.map(function(pt){
+    const unlocked=pbossUnlocked(pt), active=G.enemies.some(e=>e.pboss&&e.pbId===pt.id), cd=Math.ceil((G.pbossCds&&G.pbossCds[pt.id])||0);
+    const autoOn=!!(G.auto&&G.auto.pboss&&G.auto.pboss[pt.id]);
+    let state='ok', tr=autoOn?'⟳':'';
+    if(!unlocked){ state='dim'; tr='🔒'; }
+    else if(active){ state='dim'; tr=autoOn?'⟳⚔':'⚔'; }
+    else if(cd>0){ state='dim'; tr=(autoOn?'⟳ ':'')+cd+'s'; }
+    // 소환은 무료(코스트 표기 생략 — 크레딧 가격으로 오인 방지) · 하단 줄엔 처치 보상을 '+' 초록으로(획득 신호)
+    return { pro:_bossSkullSVG(pt.col), sn:pt.name, cr:0, en:0, tr:tr, metaCls:'lv', state:state, sel:autoOn,
+      bottom:'<div class="cgCost cgRwd" title="처치 보상: 코인 '+Math.round(pt.bonus*coinMult)+' · 에너지 '+(pt.egy||0)+'"><span>+'+COIN_SM+Math.round(pt.bonus*coinMult)+'</span></div>',
+      act:'onpointerdown="bossHoldStart(\''+pt.id+'\',event)"' }; });
+  const sent=bossDeployedCount(), hasBoss=!!(G.coopBoss&&!G.coopBoss.dead);
+  items.push({ pro:'<span class="pemoji">📍</span>', sn:'유닛 파견', tr:sent+'/'+BOSS_DEPLOY_CAP, metaCls:'lv', state:(sent>=BOSS_DEPLOY_CAP?'dim':'ok'), act:'onclick="armBossPick()"' });
+  items.push({ pro:'<span class="pemoji">↩️</span>', sn:'회수', state:(sent>0?'ok':'dim'), act:'onclick="recallFromBoss(\'all\')"' });
+  items.push({ pro:'<span class="pemoji">⚔️</span>', sn:'토벌장', state:(hasBoss?'ok':'dim'), act:(hasBoss?'onclick="openBossArena()"':'') });
+  const info={ eb:'보스', name:'개인보스 · 포인트방', desc:autoAvail?'탭=소환/파견 · 개인보스 길게=자동소환':'셀을 눌러 소환·파견·진입' };
+  return { mode:'boss', title:'보스', icon:'<span class="pemoji">💀</span>', sub:'개인보스 소환 · 포인트방 파견', compact:true, build:true, info:info, items:items }; }
+function renderBossSheet(){ const host=document.getElementById('unitCmd'); if(!host) return; host.classList.add('simple');
+  const sig='b|'+PBOSS_TYPES.map(pt=>(pbossUnlocked(pt)?1:0)+''+(G.enemies.some(e=>e.pboss&&e.pbId===pt.id)?1:0)+Math.ceil((G.pbossCds&&G.pbossCds[pt.id])||0)+((G.auto&&G.auto.pboss&&G.auto.pboss[pt.id])?'a':'')).join('')+'|'+bossDeployedCount()+'|'+(!!(G.coopBoss&&!G.coopBoss.dead)?1:0)+'|'+(host._cgPage||0);
+  if(host._gSig!==sig){ host._gSig=sig; host._cgSig=undefined; renderCmdGrid(host, _bossSheetModel()); } }
+// 보스 셀: 탭=개인보스 소환 · 길게(0.5s)=자동소환 토글(자동 개인보스 해금 시). 손 떼기 처리는 문서 전역에서.
+let _bossHold=null;
+function bossHoldStart(id, ev){ if(ev){ ev.preventDefault(); ev.stopPropagation(); }
+  bossHoldClear(); _bossHold={id:id, held:false};
+  const pt=PBOSS_TYPES.find(t=>t.id===id);
+  if(autoUsable('pboss') && pt && pbossUnlocked(pt)){
+    _bossHold.t=setTimeout(function(){ if(_bossHold&&_bossHold.id===id){ _bossHold.held=true; togglePbossAuto(null, id);
+      const h=document.getElementById('unitCmd'); if(h){ h._gSig=undefined; renderBossSheet(); } } }, 500); } }
+function bossHoldEnd(){ if(!_bossHold) return; const id=_bossHold.id, held=_bossHold.held; bossHoldClear(); if(!held) summonPersonalBoss(id); }
+function bossHoldClear(){ if(_bossHold){ if(_bossHold.t) clearTimeout(_bossHold.t); _bossHold=null; } }
+['pointerup','pointercancel'].forEach(e=>document.addEventListener(e, bossHoldEnd));
+window.addEventListener('blur', bossHoldClear);
+// 🎛 메인 시트 모드 디스패처(유닛뽑기·업그레이드·플레이어·보스 …) — 매 프레임/선택변경 시 해당 그리드 렌더
+function renderMainSheet(){ if(G.mainSheet==='gacha') renderGachaSheet(); else if(G.mainSheet==='upgrade') renderUpgradeSheet(); else if(G.mainSheet==='players') renderPlayersSheet(); else if(G.mainSheet==='boss') renderBossSheet(); }
 // 하단 탭 하이라이트 = 활성 섹션(메인/유닛뽑기/업그레이드/플레이어). 게임 화면과 무관하게 섹션 탭만 표시.
 function _setBottomTab(tab){ document.querySelectorAll('#tabs .tab').forEach(function(t){ t.classList.toggle('on', t.getAttribute('data-tab')===tab); }); }
 // 하단 탭 버튼 → 화면 이동 대신 메인 뷰 유지 + 하단 섹션만 전환(모드별) + 탭 하이라이트 이동. 관리자 샌드박스는 기존 탭 동작 유지.
@@ -6558,6 +6589,17 @@ function openMainHome(el){
 function openGachaSheet(el){ openMainSheet('gacha', el, 'Unit'); }
 function openUpgradeSheet(el){ openMainSheet('upgrade', el, 'Upgrade'); }
 function openPlayersSheet(el){ openMainSheet('players', el, 'Players'); }
+// 💀 보스 진입점(우하단 FAB · 우상단 보스바) → 하단 보스 시트. 전용 탭이 없어 하이라이트는 해제(FAB 구동).
+function openBossSheet(){
+  if(G.sandbox) return;   // 관리자 샌드박스에선 보스 미사용(네모네모 전용)
+  if(G.tab==='Main' && G.mainSheet==='boss'){   // 재탭(FAB 재탭) = 시트 내리기/올리기 토글
+    const open=document.body.classList.toggle('sheetOpen'); G.sheetDown=!open;
+    if(typeof _syncSheetLift==='function'){ requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); }
+    if(typeof playSfx==='function') playSfx('ui_open'); return; }
+  if(G.tab!=='Main') switchTab('Main', document.querySelector('.tab[data-tab="Main"]'));
+  G.sel=[]; G.selEnemy=null; G.selType=null; G.mainSheet='boss'; G.sheetDown=false; _setBottomTab('');   // 보스=탭 없음 → 하단 탭 하이라이트 해제
+  document.body.classList.add('sheetOpen');
+  if(typeof playSfx==='function') playSfx('ui_open'); refreshSelCard(); }
 // 커스텀 초상화 이미지(유닛/건물 id → 파일). 있으면 3D/라인아트 대신 사용.
 const PORTRAIT_DIR='assets/portraits/'; const PORTRAIT_VER='?v=4';
 const _PI_RAW={
