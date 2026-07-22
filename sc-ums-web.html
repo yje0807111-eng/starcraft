@@ -3363,47 +3363,47 @@ function _gUnit(id, displayName, tier, race, attackType, opt){ opt=opt||{};
 const GACHA_UNITS = {   // 4종 × 7등급 = 28 (이름 확정)
   // ── 일반 (common) ──
   ranger_c:   _gUnit('ranger_c','레인저','common','union','single'),
-  strider_c:  _gUnit('strider_c','스트라이더','common','union','single'),
+  strider_c:  _gUnit('strider_c','기갑병','common','union','single'),
   sentinel_c: _gUnit('sentinel_c','센티넬','common','aetherial','single'),
-  reaper_c:   _gUnit('reaper_c','리퍼','common','swarm','single'),
+  reaper_c:   _gUnit('reaper_c','스파이크','common','swarm','single'),
   // ── 레어 (rare) = 일반 라인 강화형 (3× 해당 common → rare) ──
   ranger_r:   _gUnit('ranger_r','레인저','rare','union','single', {combineFrom:'ranger_c'}),
-  strider_r:  _gUnit('strider_r','스트라이더','rare','union','single', {combineFrom:'strider_c'}),
+  strider_r:  _gUnit('strider_r','기갑병','rare','union','single', {combineFrom:'strider_c'}),
   sentinel_r: _gUnit('sentinel_r','센티넬','rare','aetherial','single', {combineFrom:'sentinel_c'}),
-  reaper_r:   _gUnit('reaper_r','리퍼','rare','swarm','single', {combineFrom:'reaper_c'}),
+  reaper_r:   _gUnit('reaper_r','스파이크','rare','swarm','single', {combineFrom:'reaper_c'}),
   // ── 에픽 (epic) ──
-  phantom_e:  _gUnit('phantom_e','팬텀','epic','union','single'),
+  phantom_e:  _gUnit('phantom_e','저격수','epic','union','single'),
   racer_e:    _gUnit('racer_e','레이서','epic','union','single'),
   void_e:     _gUnit('void_e','보이드','epic','aetherial','single'),
-  snapper_e:  _gUnit('snapper_e','스내퍼','epic','swarm','single'),
+  snapper_e:  _gUnit('snapper_e','척후병','epic','swarm','single'),
   // ── 유니크 (unique) = 에픽 라인 강화형 (3× 해당 epic → unique) ──
-  phantom_u:  _gUnit('phantom_u','팬텀','unique','union','single', {combineFrom:'phantom_e'}),
+  phantom_u:  _gUnit('phantom_u','저격수','unique','union','single', {combineFrom:'phantom_e'}),
   racer_u:    _gUnit('racer_u','레이서','unique','union','single', {combineFrom:'racer_e'}),
   void_u:     _gUnit('void_u','보이드','unique','aetherial','single', {combineFrom:'void_e'}),
-  snapper_u:  _gUnit('snapper_u','스내퍼','unique','swarm','single', {combineFrom:'snapper_e'}),
+  snapper_u:  _gUnit('snapper_u','척후병','unique','swarm','single', {combineFrom:'snapper_e'}),
   // ── 레전드 (legend) = 특성 1개 ──
-  machinegun_l: _gUnit('machinegun_l','발칸','legend','union','single_rapid', {traits:['atkspd_buff']}),
-  tank_l:       _gUnit('tank_l','브레이커','legend','union','aoe_single', {traits:['def_down']}),
-  blade_l:      _gUnit('blade_l','워든','legend','aetherial','single', {traits:['armor_pierce']}),
-  thornqueen_l: _gUnit('thornqueen_l','베놈퀸','legend','swarm','dot', {traits:['poison']}),
+  machinegun_l: _gUnit('machinegun_l','화력병','legend','union','single_rapid', {traits:['atkspd_buff']}),
+  tank_l:       _gUnit('tank_l','공성전차','legend','union','aoe_single', {traits:['def_down']}),
+  blade_l:      _gUnit('blade_l','광전사','legend','aetherial','single', {traits:['armor_pierce']}),
+  thornqueen_l: _gUnit('thornqueen_l','가시여왕','legend','swarm','dot', {traits:['poison']}),
   // ── 초월 (transcend) = 특성 1~2개 ──
-  phantom_t:    _gUnit('phantom_t','디토네이터','transcend','union','aoe_single', {traits:['armor_pierce','def_down']}),
-  skyguard_t:   _gUnit('skyguard_t','템페스트','transcend','union','aoe_single', {traits:['slow']}),
-  skydancer_t:  _gUnit('skydancer_t','스카이댄서','transcend','aetherial','aoe_rapid', {traits:['atk_buff']}),
-  matron_t:     _gUnit('matron_t','매트론','transcend','swarm','single_chain', {traits:['slow','poison']}),
+  phantom_t:    _gUnit('phantom_t','저격수','transcend','union','aoe_single', {traits:['armor_pierce','def_down']}),
+  skyguard_t:   _gUnit('skyguard_t','전투기','transcend','union','aoe_single', {traits:['slow']}),
+  skydancer_t:  _gUnit('skydancer_t','요격기','transcend','aetherial','aoe_rapid', {traits:['atk_buff']}),
+  matron_t:     _gUnit('matron_t','여제','transcend','swarm','single_chain', {traits:['slow','poison']}),
   // ── 갓 (god) = 특성 2개 ──
   ranger_god:   _gUnit('ranger_god','레인저','god','union','single_chain', {traits:['atk_buff','armor_pierce']}),
-  strider_god:  _gUnit('strider_god','스트라이더','god','union','aoe_rapid', {traits:['def_down','slow']}),
+  strider_god:  _gUnit('strider_god','기갑병','god','union','aoe_rapid', {traits:['def_down','slow']}),
   sentinel_god: _gUnit('sentinel_god','센티넬','god','aetherial','single_rapid', {traits:['atkspd_buff','atk_buff']}),
-  reaper_god:   _gUnit('reaper_god','리퍼','god','swarm','dot', {traits:['poison','slow']}),
+  reaper_god:   _gUnit('reaper_god','스파이크','god','swarm','dot', {traits:['poison','slow']}),
 };
 // 초월 레시피(특수 조합 전용) — 합체존에 재료 유닛을 모으면 해당 초월 생성. 형식: 결과ID: [재료 gid 3개]
 // (기본: 특정 레전드 3개 → 특정 초월. 추후 혼합 레시피로 조정 가능)
 const TRANSCEND_RECIPE = {
-  phantom_t:   ['machinegun_l','machinegun_l','machinegun_l'],   // 발칸×3 → 디토네이터
-  skyguard_t:  ['tank_l','tank_l','tank_l'],                     // 브레이커×3 → 템페스트
-  skydancer_t: ['blade_l','blade_l','blade_l'],                  // 워든×3 → 스카이댄서
-  matron_t:    ['thornqueen_l','thornqueen_l','thornqueen_l'],   // 베놈퀸×3 → 매트론
+  phantom_t:   ['machinegun_l','machinegun_l','machinegun_l'],   // 화력병(레전드)×3 → 저격수(초월)
+  skyguard_t:  ['tank_l','tank_l','tank_l'],                     // 공성전차(레전드)×3 → 전투기(초월)
+  skydancer_t: ['blade_l','blade_l','blade_l'],                  // 광전사(레전드)×3 → 요격기(초월)
+  matron_t:    ['thornqueen_l','thornqueen_l','thornqueen_l'],   // 가시여왕(레전드)×3 → 여제(초월)
 };
 // 2단계 임시 매핑: 가챠 유닛 → 기존 유닛 ID(모델·성능). 실제 전용 모델·수치는 4단계에서 교체.
 const GACHA_PROXY = {
