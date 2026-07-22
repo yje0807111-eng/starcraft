@@ -1607,31 +1607,45 @@
     background:
       radial-gradient(ellipse 78% 60% at 50% 50%, rgba(2,3,8,.72), rgba(2,3,8,.3) 70%),
       linear-gradient(180deg, rgba(2,3,8,.9) 0%, rgba(2,3,8,.35) 22%, rgba(2,3,8,.35) 78%, rgba(2,3,8,.92) 100%)}
-  .lbCard{width:90%;max-width:340px;max-height:92%;overflow:auto;padding:16px}
-  /* 대기실 채팅 */
-  .lbChat{height:62px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;padding:7px 9px;margin-bottom:7px;border-radius:var(--r-md);   /* 1열 8줄(약간 키운 카드) 자리 확보 위해 축소 */
+  .lbCard{width:90%;max-width:340px;height:92%;max-height:92%;overflow:hidden;padding:16px;display:flex;flex-direction:column}   /* flex 컬럼 → 채팅이 남는 공간 흡수 */
+  /* 대기실 채팅 — flex:1로 슬롯 얇아진 만큼 넓어짐 */
+  .lbChat{flex:1;min-height:70px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;padding:8px 10px;margin-bottom:8px;border-radius:var(--r-md);
     background:rgba(0,0,0,.28);border:1px solid var(--metal-edge)}
   .lbChat::-webkit-scrollbar{width:4px}.lbChat::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
   .lbMsg{font-size:var(--fs-md);line-height:1.35;color:#d6d2d2;word-break:break-all}
   .lbMsg b{font-weight:700}
   .lbMsg.sys{color:var(--txt-mute);font-style:italic;font-size:var(--fs-sm)}
-  .lbChatBar{display:flex;gap:6px;margin-bottom:14px}
+  .lbChatBar{flex:0 0 auto;display:flex;gap:6px;margin-bottom:10px}
   .lbChatBar input{flex:1;min-width:0;background:rgba(0,0,0,.28);border:1px solid var(--metal-edge);border-radius:var(--r-md);color:#e0dcdc;font-size:var(--fs-lg);padding:8px 11px;outline:none}
   .lbChatBar input:focus{border-color:var(--neon-soft)}
   .lbChatBar input::placeholder{color:#7a7072}
   .lbChatBar button{background:rgba(255,59,59,.12);border:1px solid var(--neon-soft);color:var(--neon-lt);border-radius:var(--r-md);padding:0 15px;font-size:var(--fs-lg);font-weight:700;cursor:pointer;white-space:nowrap}
   .lbChatBar button:active{transform:translateY(1px)}
-  .lbHead{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:5px}
-  .lbTitle{font-size:16px;font-weight:800;color:var(--neon);text-shadow:0 0 10px var(--neon-glow);letter-spacing:.5px}
+  .lbHead{flex:0 0 auto;display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:8px}
+  .lbTitleWrap{display:flex;align-items:baseline;gap:7px;min-width:0}
+  .lbTitle{font-size:16px;font-weight:800;color:var(--neon);text-shadow:0 0 10px var(--neon-glow);letter-spacing:.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lbCount{flex:0 0 auto;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:800;color:var(--hud)}
   .lbRoom{font-size:var(--fs-md);color:var(--hud);text-shadow:0 0 6px var(--hud-glow);white-space:nowrap}
-  .lbStatus{font-size:var(--fs-md);color:#c8bbbd;margin-bottom:13px}
-  .lbGrid{display:grid;grid-template-columns:1fr;gap:5px;margin-bottom:12px}   /* 1열(가로로 긴 8줄) — 카드 넓어 닉네임/상태/종족 한 줄에 여유 */
-  .lbSlot{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:4px;position:relative;overflow:hidden;
+  .lbGrid{flex:0 0 auto;display:grid;grid-template-columns:1fr;gap:4px;margin-bottom:9px}
+  .lbSlot{display:flex;align-items:center;gap:8px;padding:3px 9px;min-height:30px;border-radius:4px;position:relative;overflow:hidden;
     background:linear-gradient(180deg,rgba(30,32,38,.9),rgba(12,13,17,.92));border:1px solid var(--metal-edge)}
   .lbSlot::after{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--pc,var(--info));opacity:.22}   /* 진영색=아주 은은한 왼쪽 띠 */
   .lbSlot.me{border-color:rgba(198,208,222,.5)}   /* 내 카드=중립 밝은 테두리(알록달록 글로우 제거) */
-  .lbSlot.empty{opacity:.4;border-style:dashed}
-  .lbNum{font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:800;color:var(--pc,var(--info));filter:saturate(.4);min-width:15px;text-align:center;text-shadow:0 1px 2px #000}   /* 채도↓ → 미세한 진영색 차이만 */
+  .lbSlot.empty{opacity:.85;border-style:dashed}
+  .lbSlot.empty.locked{opacity:.5}
+  /* 빈 슬롯 중앙: 이동 버튼 / 잠김 표시 · 호스트 잠금 토글 · 추방 버튼 */
+  .lbEmptyMid{flex:1;display:flex;align-items:center;justify-content:center}
+  .lbMoveBtn{padding:3px 14px;border-radius:4px;font-family:inherit;font-size:var(--fs-sm);font-weight:800;cursor:pointer;color:#cfe0ec;
+    background:rgba(0,229,255,.09);border:1px solid rgba(0,229,255,.4);transition:all .1s}
+  .lbMoveBtn:hover{background:rgba(0,229,255,.16)} .lbMoveBtn:active{transform:translateY(1px)}
+  .lbLockTxt{font-size:var(--fs-sm);color:#8a93a0;font-weight:700}
+  .lbLockBtn{flex:0 0 auto;margin-left:auto;width:26px;height:24px;padding:0;border-radius:4px;cursor:pointer;font-size:12px;line-height:1;
+    background:rgba(255,255,255,.05);border:1px solid var(--metal-edge)}
+  .lbLockBtn:active{transform:translateY(1px)}
+  .lbKick{flex:0 0 auto;width:24px;height:22px;padding:0;border-radius:4px;cursor:pointer;font-size:12px;font-weight:800;line-height:1;color:#ffb3b3;
+    background:rgba(200,50,50,.16);border:1px solid rgba(255,90,90,.4)}
+  .lbKick:hover{background:rgba(200,50,50,.28)} .lbKick:active{transform:translateY(1px)}
+  .lbNum{font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:800;color:var(--pc,var(--info));filter:saturate(.4);min-width:14px;text-align:center;text-shadow:0 1px 2px #000}   /* 채도↓ → 미세한 진영색 차이만 */
   .lbInfo{min-width:0;flex:1;text-align:left;display:flex;align-items:baseline;gap:8px}   /* 1열 넓은 카드: 이름+상태 한 줄 */
   .lbName{flex:0 1 auto;font-size:var(--fs-lg);font-weight:700;color:#e6e2e2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.15}
   .lbStat{flex:0 0 auto;font-size:var(--fs-xs);color:#9aa6b4;letter-spacing:.2px;white-space:nowrap}
@@ -1651,8 +1665,8 @@
   .lbRace.lk{clip-path:none;border-radius:4px;border-style:dashed;background:rgba(255,255,255,.03);opacity:.42}
   .lbRace.lk::before{display:none}
   .lbRace.lk .lrNm{color:#8a93a0;text-shadow:none}
-  .lbBtns{display:flex;gap:8px}
-  .lbLeave,.lbStart{padding:12px;border-radius:var(--r-md);font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:.5px;transition:all .12s}
+  .lbBtns{flex:0 0 auto;display:flex;gap:8px}
+  .lbLeave,.lbStart{padding:10px;border-radius:var(--r-md);font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:.5px;transition:all .12s}
   .lbLeave{flex:0 0 34%;color:#ffd2d2;background:rgba(200,50,50,.16);border:1px solid rgba(255,80,80,.45)}
   .lbStart{flex:1;color:#cfcfd4;background:linear-gradient(180deg,rgba(70,70,76,.5),rgba(34,34,40,.5));border:1px solid var(--metal-edge)}
   .lbStart.ready{color:#fff;background:linear-gradient(180deg,var(--neon-face1),var(--neon-d1));border-color:var(--neon);box-shadow:0 0 13px -3px var(--neon-glow),inset 0 1px 0 rgba(255,255,255,.22)}
@@ -2348,18 +2362,18 @@
     background:linear-gradient(135deg,rgba(36,38,47,.84),rgba(13,14,19,.9));border:1px solid var(--metal-edge);   /* 쉬는 상태=중립(빨강 남발 제거). 강조는 호버에만 */
     box-shadow:0 5px 15px -11px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05);transition:transform .15s,border-color .15s,box-shadow .15s}
   .mapItem::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:11px 0 0 11px;
-    background:linear-gradient(180deg,rgba(150,172,205,.5),rgba(150,172,205,.06));opacity:.75}   /* 좌측 액센트바 중립(쿨톤) — 호버 시 빨강으로 */
+    background:linear-gradient(180deg,var(--mapAccent,#8aa0c8),rgba(150,172,205,.05));opacity:.85}   /* 좌측 액센트바 = 맵별 색(호버 시 빨강으로) */
   .mapItem:hover{border-color:var(--neon);transform:translateY(-1px);box-shadow:0 7px 20px -8px var(--neon-glow),inset 0 1px 0 rgba(255,255,255,.08)}
   .mapItem:hover::before{background:linear-gradient(180deg,var(--neon),rgba(255,59,59,.2));opacity:.95}   /* 호버 시 좌측바 빨강 강조(상호작용 액센트) */
   .mapItem:active{transform:translateY(0)}
   .mapItem.soon{opacity:.6}
   .mapThumb{position:relative;width:48px;height:48px;flex:none;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;
-    background:radial-gradient(circle at 50% 30%,rgba(120,140,175,.16),rgba(7,7,11,.85));border:1px solid rgba(255,255,255,.1);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 0 13px -5px rgba(120,150,200,.3)}   /* 썸네일 중립화 → 맵 아이콘 색이 드러나게 */
+    background:radial-gradient(circle at 50% 30%,rgba(120,140,175,.14),rgba(7,7,11,.85));border:1px solid rgba(255,255,255,.1);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 0 14px -4px var(--mapAccent,#6d86b8)}   /* 썸네일 은은한 글로우 = 맵별 색(음수 스프레드로 페이드) */
   .mapThumb.mm{background:#0d0c10;box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}   /* 미니맵 변형(빨강 글로우 X) */
   .mapThumb .mmBg{position:absolute;inset:0;width:100%;height:100%}
   .mapThumb .mmIco{position:relative;z-index:1;display:flex;align-items:center;justify-content:center}
-  .mapThumb .mmIco .ic{width:22px;height:22px;color:#cbd8e6}   /* 아이콘 붉은톤 → 밝은 중립 */
+  .mapThumb .mmIco .ic{width:22px;height:22px;color:var(--mapAccent,#cbd8e6)}   /* 아이콘 = 맵별 아이덴티티 색 */
   .mapMain{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}
   .mapName{font-size:14px;font-weight:700;color:#f7f3f3;letter-spacing:-.2px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .mapDesc{font-size:var(--fs-sm);font-weight:400;color:#929ba6;margin-top:3.5px;line-height:1.35;letter-spacing:.1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -2427,6 +2441,11 @@
   .rmfBtn.on{color:#fff;border-color:var(--dc,var(--neon));background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(0,0,0,.12));box-shadow:0 0 10px -3px var(--dc,var(--neon-glow))}
   .rmEmpty{text-align:center;color:#7d8b98;font-size:var(--fs-lg);font-weight:700;padding:26px 0}
   .cpDiffBtns{margin-bottom:4px}
+  .cpMaxBtns{display:flex;gap:5px;margin-bottom:4px}
+  .cpMaxBtn{flex:1;padding:9px 0;border-radius:var(--r-md);font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:800;cursor:pointer;
+    color:var(--txt-mute);background:var(--glass);border:1px solid var(--metal-edge);transition:all .12s}
+  .cpMaxBtn.on{color:#fff;background:linear-gradient(180deg,var(--neon-face1),var(--neon-d1));border-color:var(--neon);box-shadow:0 0 10px -3px var(--neon-glow)}
+  .cpMaxBtn:active{transform:translateY(1px)}
   /* 개인 플레이 난이도: 2×2 그리드, 난이도별 색으로 구분, 여유로운 버튼 */
   .soloDiffBtns{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:8px 0 12px}
   .soloDiffBtns .moDiffBtn{padding:14px 8px 12px;border-radius:10px;border:1.5px solid var(--dc);
@@ -2589,8 +2608,8 @@
     <!-- 멀티플레이 대기실(로비) -->
     <div id="lobby" class="hide spaceBg">
       <div class="lbCard">
-        <div class="lbHead"><span class="lbTitle">멀티플레이 대기실</span><span class="lbRoom">◈ 용암 정거장</span></div>
-        <div class="lbStatus" id="lbStatus">플레이어 입장 대기 중…</div>
+        <div class="lbHead"><span class="lbTitleWrap"><span class="lbTitle">멀티플레이 대기실</span><span class="lbCount" id="lbCount"></span></span><span class="lbRoom">◈ 용암 정거장</span></div>
+        <div class="lbStatus" id="lbStatus" style="display:none"></div>
         <div class="lbGrid" id="lbGrid"></div>
         <div class="lbChat" id="lbChat"></div>
         <div class="lbChatBar">
@@ -2643,6 +2662,16 @@
         <input id="cpName" type="text" placeholder="방 이름을 입력하세요" maxlength="18">
         <label class="cpLabel">난이도</label>
         <div class="moDiffBtns cpDiffBtns" id="cpDiffBtns"></div>
+        <label class="cpLabel">최대 인원</label>
+        <div class="cpMaxBtns" id="cpMaxBtns">
+          <button class="cpMaxBtn" data-m="2" onclick="setCpMax(2)">2</button>
+          <button class="cpMaxBtn" data-m="3" onclick="setCpMax(3)">3</button>
+          <button class="cpMaxBtn" data-m="4" onclick="setCpMax(4)">4</button>
+          <button class="cpMaxBtn" data-m="5" onclick="setCpMax(5)">5</button>
+          <button class="cpMaxBtn" data-m="6" onclick="setCpMax(6)">6</button>
+          <button class="cpMaxBtn" data-m="7" onclick="setCpMax(7)">7</button>
+          <button class="cpMaxBtn on" data-m="8" onclick="setCpMax(8)">8</button>
+        </div>
         <label class="cpLabel">공개 설정</label>
         <div class="cpSeg" id="cpVis">
           <button class="cpSegBtn on" data-v="public" onclick="setRoomVis('public')"><span data-ico="globe"></span>공개</button>
@@ -8079,6 +8108,8 @@ const NEMO_MINIMAP='<svg class="mmBg" viewBox="0 0 48 48" fill="none">'
 function mapThumbHTML(m){ return m.id==='nemo'
   ? '<div class="mapThumb mm">'+NEMO_MINIMAP+'</div>'                       // 네모네모: 미니맵
   : '<div class="mapThumb"><span class="mmIco">'+mapIco(m)+'</span></div>'; }   // 그 외: 이전 아이콘 박스
+// 맵별 아이덴티티 색(아이콘·좌측바·썸네일 글로우에만 — 카드 크롬은 중립 유지 → 통일성). 없으면 중립 폴백.
+const MAP_ACCENT={ nemo:'#4aa8ff', sunken:'#5dff8f', marine:'#ffb14d', temple:'#b98cff', cpu:'#22d3ee', nemo_inf:'#ff9a6b', admin:'#9aa6b2' };
 // 상태 점(대기=초록 링, 게임=빨강 채움) — 작아서 색으로 의미 전달
 const ICO_WAIT='<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6.4" fill="none" stroke="#5dff8f" stroke-width="3.4"/></svg>';
 const ICO_PLAY='<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.2" fill="#ff6b6b"/></svg>';
@@ -8659,6 +8690,7 @@ function renderMaps(){ const list=document.getElementById('msList'); if(!list) r
   list.innerHTML='';
   if(!arr.length){ list.innerHTML='<div class="msEmpty">⭐ 즐겨찾기한 유즈맵이 없습니다.<br>맵 카드의 별(☆)을 눌러 추가하세요.</div>'; updateMapBanner(); return; }
   arr.forEach(m=>{ const el=document.createElement('div'); el.className='mapItem';
+    { const _ac=MAP_ACCENT[m.id]; if(_ac) el.style.setProperty('--mapAccent', _ac); }   // 맵별 아이덴티티 색
     const nm=escHtml(m.name)+(m.isNew?' <span class="mapTag new">신규</span>':'');
     el.innerHTML=mapThumbHTML(m)
       +'<div class="mapMain"><div class="mapName">'+nm+'</div><div class="mapDesc">'+escHtml(m.desc)+'</div>'
@@ -8794,7 +8826,7 @@ function renderRoomList(){ const list=document.getElementById('roomList'); if(!l
   if(!shown.length){ const e=document.createElement('div'); e.className='rmEmpty'; e.textContent=(_roomFilter==='all')?'대기 중인 방이 없습니다 · 새로고침 또는 방 만들기':'해당 난이도의 방이 없습니다'; list.appendChild(e); return; }
   shown.forEach(r=>{ const full=r.cur>=r.max, waiting=r.status==='wait', fits=(r.max-r.cur)>=need, joinable=waiting&&!full&&fits, priv=r.visibility==='private';
     const el=document.createElement('div'); el.className='roomItem'+(joinable?'':' locked');
-    el.innerHTML='<div class="riMain"><div class="riName">'+diffBadge(r.diff)+'<span class="riNum">#'+r.num+'</span>'+(priv?'<span class="riLock">🔒</span>':'')+escHtml(r.name)+'</div><div class="riSub">방장 '+escHtml(r.host)+(need>1&&waiting&&!full&&!fits?' · <span class="riOver">파티 자리 부족</span>':'')+'</div></div>'
+    el.innerHTML='<div class="riMain"><div class="riName">'+diffBadge(r.diff)+'<span class="riNum">#'+r.num+'</span>'+(priv?'<span class="riLock">🔒</span>':'')+escHtml(r.name)+'</div><div class="riSub">방장 - '+escHtml(r.host)+(need>1&&waiting&&!full&&!fits?' · <span class="riOver">파티 자리 부족</span>':'')+'</div></div>'
       +'<div class="riRight"><div class="riCnt'+(full?' full':'')+'">'+r.cur+'/'+r.max+'</div><div class="riStat '+(waiting?'wait':'play')+'">'+(waiting?(full?'가득참':'대기중'):(r.round?('게임중 '+r.round+'R'):'게임중'))+'</div></div>';
     if(joinable) el.onclick=()=> priv? openPwPrompt(r) : joinRoom(r);
     else if(waiting && !full && !fits) el.onclick=()=>{ if(typeof playSfx==='function') playSfx('ui_denied'); toast('⚠️ 파티 인원이 초과되었습니다 (남은 자리 '+(r.max-r.cur)+' / 필요 '+need+')'); };
@@ -8825,14 +8857,15 @@ function joinByNumber(){ const f=document.getElementById('roomNumField'); if(!f)
   const host=LOBBY_NAMES[Math.floor(Math.random()*LOBBY_NAMES.length)];
   openLobby({num:num, name:'#'+num+' 방', host:host, startCount:1+Math.floor(Math.random()*4), joining:true, visibility:'private', diff:['easy','normal','normal','hard','hell'][Math.floor(Math.random()*5)]}); }
 // 방 만들기 모달
-let _createVis='public', _createDiff='easy';
+let _createVis='public', _createDiff='easy', _createMax=8;
+function setCpMax(m){ m=Math.max(2,Math.min(8,m|0)); _createMax=m; document.querySelectorAll('#cpMaxBtns .cpMaxBtn').forEach(b=>b.classList.toggle('on', +b.dataset.m===m)); if(typeof playSfx==='function') playSfx('ui_toggle'); }
 function renderCpDiff(){ const box=document.getElementById('cpDiffBtns'); if(!box) return; box.innerHTML='';
   DIFFICULTY_ORDER.forEach(d=>{ const D=DIFFICULTY[d]; const b=document.createElement('div');
     b.className='moDiffBtn'+(d===_createDiff?' on':''); b.style.setProperty('--dc', DIFF_COLOR[d]||'#fff');
     b.innerHTML='<span class="ddN">'+D.name+'</span><span class="ddC">포인트 ×'+D.coinMult+'</span>';
     b.onclick=()=>setCpDiff(d); box.appendChild(b); }); }
 function setCpDiff(d){ if(!DIFFICULTY[d]) return; _createDiff=d; renderCpDiff(); if(typeof playSfx==='function') playSfx('ui_confirm'); }
-function createRoom(){ const nm=document.getElementById('cpName'); if(nm) nm.value=''; const pw=document.getElementById('cpPw'); if(pw) pw.value=''; setRoomVis('public'); _createDiff='easy'; renderCpDiff();
+function createRoom(){ const nm=document.getElementById('cpName'); if(nm) nm.value=''; const pw=document.getElementById('cpPw'); if(pw) pw.value=''; setRoomVis('public'); _createDiff='easy'; renderCpDiff(); setCpMax(8);
   const cp=document.getElementById('createPanel'); cp.classList.remove('hide'); if(typeof fxPop==='function') fxPop(cp.querySelector('.cpCard')); if(typeof paintIcons==='function') paintIcons(cp); if(nm) nm.focus(); }
 function closeCreate(){ popHide('createPanel'); }
 function setRoomVis(v){ _createVis=v;
@@ -8845,11 +8878,11 @@ function confirmCreate(){ const nmEl=document.getElementById('cpName');
     if(!pw){ const h=document.getElementById('cpHint'); if(h){ h.textContent='비공개 방은 비밀번호를 설정해야 합니다.'; h.style.color='#ff6b6b'; } if(pwEl) pwEl.focus(); return; } }
   closeCreate();
   if(rtRoomsActive()){   // 실제 방 생성: rooms 채널에 게시 + 대기실 채널 입장
-    const meta={ num:newRoomNum(), name:name, host:myNick(), hostUid:myUid(), cur:1, max:8, status:'wait',
+    const meta={ num:newRoomNum(), name:name, host:myNick(), hostUid:myUid(), cur:1, max:_createMax, status:'wait',
                  visibility:_createVis, pw:pw, diff:_createDiff, createdAt:Date.now() };
     rtRoomsEnsure(); rtRoomPublish(meta); rtRoomJoin(meta.num, true);
     openLobby(Object.assign({real:true, joining:false, startCount:1}, meta)); return; }
-  openLobby({num:newRoomNum(), name:name, host:myNick(), startCount:1, joining:false, visibility:_createVis, pw:pw, diff:_createDiff}); }   // (오프라인 폴백) 시뮬 방
+  openLobby({num:newRoomNum(), name:name, host:myNick(), startCount:1, joining:false, visibility:_createVis, pw:pw, diff:_createDiff, max:_createMax}); }   // (오프라인 폴백) 시뮬 방
 // 비공개 방 비밀번호 입력
 let _pwRoom=null;
 function openPwPrompt(r){ _pwRoom=r;
@@ -9155,8 +9188,10 @@ function rtRoomOnStart(p){ if(!_lobbyRoom || !_lobbyRoom.real || RTROOM.started)
 // ── 멀티플레이 대기실(로비) ──
 const LOBBY_NAMES=['Striker','GG준비됨','리퍼장인','Crystalize','보이드킹','노바777','Sentinel','막눈'];
 let _lobbyT=null, _lobbySlots=[];
+let _lobbyMax=8, _lobbyLock=[];   // 방 정원(2~8) · 호스트가 잠근 빈 슬롯 인덱스
 let _lobbyRoom=null;
 function openLobby(room){ _lobbyRoom=room||{name:'나의 대기실',host:'나',joining:false,startCount:1};
+  _lobbyMax=Math.max(2,Math.min(8, _lobbyRoom.max||8)); _lobbyLock=[];   // 정원 확정 + 잠금 초기화
   // 파티장이면 파티원도 같은 방으로 호출(실연동 파티)
   if(typeof RT!=='undefined' && RT.active && iAmPartyLeader() && _party && _party.members && _party.members.length>1){
     _lobbyRoom.party=true; if(_selMap) _lobbyRoom.map=_selMap.name; if(!_lobbyRoom._followed) rtSendPartyRoom(_lobbyRoom); }
@@ -9210,7 +9245,7 @@ function startLobbySim(room){ room=room||{joining:false,startCount:1,host:'나'}
     return;   // 파티방은 봇 입장 시뮬 없음
   }
   if(room.joining){   // 기존 방 참여: P1=호스트…, 나는 들어간 순서대로 다음 번호
-    const existing=Math.max(1,Math.min(7,room.startCount||2));
+    const existing=Math.max(1,Math.min(_lobbyMax-1,room.startCount||2));
     for(let k=0;k<existing;k++){ _lobbySlots[k]={name:'P'+(k+1), label:k===0?room.host:names[ni++%names.length], bot:true, ready:true, host:k===0}; }
     _lobbySlots[existing]={me:true, name:'P'+(existing+1), ready:true, host:false};   // 나 = 다음 슬롯
   } else {   // 방 생성: 내가 P1 호스트
@@ -9219,10 +9254,10 @@ function startLobbySim(room){ room=room||{joining:false,startCount:1,host:'나'}
   renderLobby(); updateLobbyStart();
   addLobbyMsg('', myNick()+'님이 입장하였습니다.');   // 내 입장부터 표시(기존 입장자는 생략, 이후 입장자만 안내)
   const cur=_lobbySlots.filter(Boolean).length;
-  const target=Math.min(8, cur + (room.joining? Math.floor(Math.random()*3) : 1+Math.floor(Math.random()*5)));   // 추가 입장
+  const target=Math.min(_lobbyMax, cur + (room.joining? Math.floor(Math.random()*3) : 1+Math.floor(Math.random()*5)));   // 추가 입장(정원 이내)
   _lobbyT=setInterval(()=>{
-    const empty=_lobbySlots.indexOf(null), filled=_lobbySlots.filter(Boolean).length;
-    if(empty<0 || filled>=target){ stopLobbySim(); updateLobbyStart(); return; }
+    const empty=_lobbySlots.slice(0,_lobbyMax).indexOf(null), filled=_lobbySlots.filter(Boolean).length;   // 빈 슬롯은 정원 이내에서만, 잠금 제외
+    if(empty<0 || _lobbyLock.indexOf(empty)>=0 || filled>=target){ stopLobbySim(); updateLobbyStart(); return; }
     const slot={name:'P'+(empty+1),label:names[ni++%names.length],bot:true,ready:false,joining:true};
     _lobbySlots[empty]=slot; renderLobby(); updateLobbyStart();
     setTimeout(()=>{ if(_lobbySlots.indexOf(slot)>=0){ slot.joining=false; slot.ready=true; renderLobby(); updateLobbyStart();
@@ -9259,8 +9294,9 @@ function openLobbyRace(anchor){ if(!lobbyRaceEnabled()) return; const me=_lobbyS
   showRaceMenu(anchor, cur, function(k){ if(me) me.race=k; _selRace=k; renderLobby(); }); }   // 칩 아래 인라인 드롭다운 → 내 종족 변경(게임 반영)
 function renderLobby(){ const g=document.getElementById('lbGrid'); if(!g) return; g.innerHTML='';
   const raceOn=lobbyRaceEnabled();
-  for(let i=0;i<8;i++){ const s=_lobbySlots[i], col=PLAYER_VIEW_COLORS[i%PLAYER_VIEW_COLORS.length];
-    const el=document.createElement('div'); el.className='lbSlot'+(s?'':' empty')+(s&&s.me?' me':''); el.style.setProperty('--pc',col);
+  const meSlot=_lobbySlots.find(s=>s&&s.me), meHost=!!(meSlot&&meSlot.host);
+  for(let i=0;i<_lobbyMax;i++){ const s=_lobbySlots[i], col=PLAYER_VIEW_COLORS[i%PLAYER_VIEW_COLORS.length], locked=(_lobbyLock.indexOf(i)>=0);
+    const el=document.createElement('div'); el.className='lbSlot'+(s?'':' empty')+(s&&s.me?' me':'')+((!s&&locked)?' locked':''); el.style.setProperty('--pc',col);
     if(s){ const stt = s.host?'호스트' : (s.joining?'입장 중…' : (s.ready?'준비 완료':'대기'));
       const cls = s.host?'host' : (s.ready?'ok':'');
       if(!s.race) s.race = s.me ? (STK_RACES[_selRace]?_selRace:'terran') : strikeRandomRace();   // 종족 지연 배정(나=선택값, 봇=랜덤)
@@ -9268,20 +9304,35 @@ function renderLobby(){ const g=document.getElementById('lbGrid'); if(!g) return
       const chip = raceOn
         ? '<div class="lbRace'+(s.me?' me':'')+'" style="'+raceVars(R.col)+'"'+(s.me?' onclick="openLobbyRace(this)" title="종족 선택"':'')+'><span class="lrNm">'+R.name+'</span>'+(s.me?'<span class="lrCaret">▾</span>':'')+'</div>'
         : '<div class="lbRace lk" title="이 유즈맵은 종족이 없습니다"><span class="lrNm">잠금</span></div>';
-      el.innerHTML='<div class="lbNum">'+(i+1)+'</div><div class="lbInfo"><span class="lbName">'+escHtml(s.me?myNick():(s.label||s.name))+'</span><span class="lbStat '+cls+'">'+stt+'</span></div>'+chip;
-    } else el.innerHTML='<div class="lbNum">'+(i+1)+'</div><div class="lbInfo"><div class="lbEmpty">빈 자리</div></div>';
+      const kick = (meHost && !s.host && !s.me) ? '<button class="lbKick" title="추방" onclick="kickSlot('+i+')">✕</button>' : '';
+      el.innerHTML='<div class="lbNum">'+(i+1)+'</div><div class="lbInfo"><span class="lbName">'+escHtml(s.me?myNick():(s.label||s.name))+'</span><span class="lbStat '+cls+'">'+stt+'</span></div>'+chip+kick;
+    } else {   // 빈 슬롯: 잠김=🔒 / 열림=이동 버튼. 호스트는 잠금 토글.
+      const mid = locked
+        ? '<div class="lbEmptyMid"><span class="lbLockTxt">🔒 잠긴 자리</span></div>'
+        : '<div class="lbEmptyMid"><button class="lbMoveBtn" onclick="moveToSlot('+i+')">이 자리로 이동</button></div>';
+      const lockBtn = meHost ? '<button class="lbLockBtn" title="'+(locked?'잠금 해제':'자리 잠금')+'" onclick="toggleSlotLock('+i+')">'+(locked?'🔓':'🔒')+'</button>' : '';
+      el.innerHTML='<div class="lbNum">'+(i+1)+'</div>'+mid+lockBtn;
+    }
     g.appendChild(el);
   }
 }
+function moveToSlot(i){ if(i<0||i>=_lobbyMax||_lobbySlots[i]) return; if(_lobbyLock.indexOf(i)>=0){ if(typeof toast==='function') toast('🔒 잠긴 자리입니다'); return; }
+  const j=_lobbySlots.findIndex(s=>s&&s.me); if(j<0||j===i) return;
+  _lobbySlots[i]=_lobbySlots[j]; _lobbySlots[j]=null; if(typeof playSfx==='function') playSfx('ui_confirm'); renderLobby(); updateLobbyStart(); }
+function toggleSlotLock(i){ const me=_lobbySlots.find(s=>s&&s.me); if(!(me&&me.host)){ if(typeof toast==='function') toast('호스트만 가능합니다'); return; } if(_lobbySlots[i]) return;
+  const k=_lobbyLock.indexOf(i); if(k>=0) _lobbyLock.splice(k,1); else _lobbyLock.push(i); if(typeof playSfx==='function') playSfx('ui_toggle'); renderLobby(); updateLobbyStart(); }
+function kickSlot(i){ const me=_lobbySlots.find(s=>s&&s.me); if(!(me&&me.host)){ if(typeof toast==='function') toast('호스트만 가능합니다'); return; }
+  const s=_lobbySlots[i]; if(!s||s.host||s.me) return; const nm=s.label||s.name;
+  if(_lobbyRoom&&_lobbyRoom.real&&typeof rtRoomKickUid==='function'&&s.uid){ try{ rtRoomKickUid(s.uid); }catch(e){} }   // 실방: 추방 통지(가능 시)
+  _lobbySlots[i]=null; if(typeof playSfx==='function') playSfx('ui_denied'); if(typeof addLobbyMsg==='function') addLobbyMsg('', nm+'님을 추방했습니다.'); renderLobby(); updateLobbyStart(); }
 function updateLobbyStart(){ const players=_lobbySlots.filter(Boolean), cnt=players.length, allReady=players.every(s=>s.ready);
   const meSlot=_lobbySlots.find(s=>s&&s.me), meHost=!!(meSlot&&meSlot.host);
-  const st=document.getElementById('lbStatus'), btn=document.getElementById('lbStart');
+  const btn=document.getElementById('lbStart');
+  const cntEl=document.getElementById('lbCount'); if(cntEl) cntEl.textContent='('+cnt+'/'+_lobbyMax+')';   // 헤더: 현재/정원
   if(meHost){   // 방장: 직접 시작
-    if(st) st.textContent=(cnt>=8?'대기실이 가득 찼습니다':'플레이어 입장 대기 중…')+' ('+cnt+'/8)';
     if(btn){ const ok=cnt>=2&&allReady; btn.disabled=!ok; btn.textContent=ok?'게임 시작':'대기 중…'; btn.classList.toggle('ready',ok); }
   } else {   // 참가자: 시작 불가(방장만)
     const ready=cnt>=2 && allReady && _lobbyT===null;
-    if(st) st.textContent= ready?'방장이 시작하면 함께 시작합니다…':('플레이어 입장 대기 중… ('+cnt+'/8)');
     if(btn){ btn.disabled=true; btn.textContent='방장 대기 중'; btn.classList.remove('ready'); }
     // 파티방: 방장이 시작 신호를 보낼 때까지 대기(자동 시작 안 함). 일반 시뮬방만 자동 시작.
     if(!(_lobbyRoom && (_lobbyRoom.party||_lobbyRoom.real)) && ready && !_autoStartT){ _autoStartT=setTimeout(()=>{ _autoStartT=null;
