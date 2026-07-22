@@ -368,9 +368,9 @@
   .bdBtn.bdBack{color:var(--txt-hud);background:var(--glass);border-color:var(--metal-edge)}
   #coopBossBar{cursor:pointer;pointer-events:auto}
   /* 메인 홈 하단 — 좌(판매)·우(보스 파견): 칸 없이 중앙 구분선으로만 분리 */
-  .homeCols{position:relative;display:flex;gap:0;align-items:stretch}
-  .homeSell,.homeBoss{display:flex;flex-direction:column;gap:7px;padding:2px 12px;background:none;border:none;min-width:0}
-  .homeSell{flex:1;position:relative;justify-content:flex-start;padding-left:2px}   /* 단일 칼럼(풀폭) */
+  .homeCols{position:relative;display:flex;gap:0;align-items:stretch;flex:1;min-height:0}
+  .homeSell,.homeBoss{display:flex;flex-direction:column;gap:4px;padding:0 8px;background:none;border:none;min-width:0}
+  .homeSell{flex:1;position:relative;justify-content:flex-start;padding-left:2px;min-height:0}   /* 단일 칼럼(풀폭) */
   /* .homeBoss 제거 — 보스는 탭으로 통합 */
   /* .homeSell::after 분리선 제거 — 단일 칼럼 */
   .hsTitle svg{color:var(--gold);filter:drop-shadow(0 0 4px rgba(255,210,74,.5))}
@@ -386,7 +386,7 @@
   .hsTier:hover{background:rgba(255,255,255,.08);border-color:var(--tc,#888)}
   .hsTier:active{transform:translateY(1px)}
   .hsTier.on{color:#0c0a08;background:var(--tc,var(--gold));border-color:var(--tc,var(--gold));box-shadow:0 0 9px -3px var(--tc,var(--gold));text-shadow:0 1px 0 rgba(255,255,255,.25)}
-  .hsGrid{display:flex;flex-wrap:nowrap;gap:5px;align-items:flex-start;overflow:hidden;padding-bottom:3px}
+  .hsGrid{display:flex;flex-wrap:nowrap;gap:5px;align-items:flex-start;overflow-x:auto;overflow-y:hidden;padding-bottom:3px;flex:1;min-height:0}
   .hsGrid::-webkit-scrollbar{height:4px}.hsGrid::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
   /* 유닛 셀 = 통일된 SC 카드(메탈+네온 엣지+사선 모서리+스캔라인) */
   .hsCell{position:relative;flex:1 1 0;min-width:0;max-width:80px;padding:0;cursor:pointer;overflow:hidden;transition:all .12s;
@@ -414,7 +414,7 @@
   .selTierChip:active{background:var(--tc,#fff)22;transform:translateY(1px)}
   .selTierChip .stc{opacity:.7;font-weight:700;margin-left:2px}
   /* 모드 전환(지정/판매/조합) = 납작한 밑줄 탭(2차 — 최상위 카드 네비보다 가볍게) */
-  .hsTabs{gap:2px;padding:1px 0 7px;margin-bottom:0;border-bottom:1px solid var(--glass-edge)}
+  .hsTabs{gap:2px;padding:0 0 3px;margin-bottom:0;border-bottom:1px solid var(--glass-edge)}
   .hsTab{flex:1 1 0;min-width:0;min-height:30px;display:flex;align-items:center;justify-content:center;gap:4px;
     font-family:inherit;font-size:var(--fs-md);font-weight:800;letter-spacing:.2px;color:var(--txt-mute);cursor:pointer;white-space:nowrap;
     background:none;border:none;border-bottom:2px solid transparent;border-radius:0;clip-path:none;box-shadow:none;padding:4px 2px;transition:color .14s,border-color .14s}
@@ -1092,7 +1092,8 @@
   #btSheet{position:absolute;left:0;right:0;bottom:0;z-index:30;transform:translateY(103%);transition:transform .26s cubic-bezier(.2,.8,.25,1);display:flex;flex-direction:column}
   /* 프로필 시트 박스 규격(배경·테두리·모서리·그림자·여백) = 건설 시트가 단일 소스. 메인 프로필 표시 중(#bpMain에 #unitCmd.on)도 그대로 공유 → 높이·폭 동일.
      ※ display/위치는 각자 유지(건설=맵 위 슬라이드 시트 / 메인=하단 패널) */
-  #btSheet,#bpMain:has(#unitCmd.on){
+  #playerProfile{display:none}#playerProfile.on{display:flex}   /* 관전 프로필 = 메인 프로필과 동일 커맨드 그리드 호스트 */
+  #btSheet,#bpMain:has(#unitCmd.on),#bpMain:has(#defaultCmd:not(.hide)),#bpPlayers:has(#playerProfile.on){
     background:linear-gradient(180deg,rgba(13,18,28,.97),rgba(8,11,17,.985));border-top:1px solid rgba(90,140,210,.3);border-radius:14px 14px 0 0;
     box-shadow:0 -8px 24px rgba(0,0,0,.55);padding:9px 8px 12px;gap:0}
   #btSheet.open{transform:translateY(0)}
@@ -1106,10 +1107,10 @@
   #btCardCtl:active{transform:translateY(1px)}
   #btCardCtl svg{width:17px;height:17px;display:block;transition:transform .22s cubic-bezier(.2,.8,.25,1)}
   #btCardCtl.up svg{transform:rotate(180deg)}
-  #btSheet.simple #btSheetBody,#unitCmd.simple{height:min(26vh,126px);max-height:min(26vh,126px)}   /* 간소화 = 1줄 그리드 · 높이 고정(건물 프로필 기준 ≈120px · 개인·다중·혼합 모두 동일) · 메인 프로필(#unitCmd)도 동일 규격 */
+  #btSheet.simple #btSheetBody,#unitCmd.simple,#playerProfile.simple{height:min(26vh,126px);max-height:min(26vh,126px)}   /* 간소화 = 1줄 그리드 · 높이 고정(건물 프로필 기준 ≈120px · 개인·다중·혼합 모두 동일) · 메인 프로필(#unitCmd)도 동일 규격 */
   #btSheet.simple .cmdG .cgGrid,#unitCmd.simple .cmdG .cgGrid{grid-template-rows:1fr}
   #btSheet.mini #btSheetBody{display:none}   /* 최소화 = 본문 숨김(버튼 바만) */
-  #btSheetBody,#unitCmd{height:min(40vh,204px);max-height:min(40vh,204px);min-height:0;flex-direction:column}   /* 일꾼 지정 패널 크기로 고정(건물·유닛 모두 동일 높이) · #unitCmd는 display만 .on에서 제어 */
+  #btSheetBody,#unitCmd,#playerProfile{height:min(40vh,204px);max-height:min(40vh,204px);min-height:0;flex-direction:column}   /* 일꾼 지정 패널 크기로 고정(건물·유닛 모두 동일 높이) · #unitCmd는 display만 .on에서 제어 */
   #btSheetBody{display:flex}
   #techSkTip{position:fixed;z-index:60;max-width:210px;padding:7px 9px;border-radius:10px;pointer-events:none;   /* 🔮 스킬 롱프레스 설명 팝업 — 프로필 시트와 동일 글래스 톤 */
     background:linear-gradient(180deg,rgba(16,22,34,.98),rgba(9,13,21,.99));border:1px solid rgba(90,140,210,.35);box-shadow:0 6px 20px rgba(0,0,0,.6);color:#dfe7f2}
@@ -1190,7 +1191,7 @@
   .scBox .sl{font-size:8.5px;font-weight:700;letter-spacing:0;white-space:nowrap;line-height:1.2}
   .scBox .sl.def{color:#9ec2ff}.scBox .sl.shd{color:#8fd8ff}.scBox .sl.atk{color:#ffb088}  /* 칩 없이 방어=파랑·쉴드=청록·공격=주황 텍스트 */
   /* (구 다중선택 칩 UI CSS 제거 — 프로필은 커맨드 그리드(.cmdG)가 담당) */
-  #defaultCmd{display:flex;flex-direction:column;gap:7px;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden}#defaultCmd.hide{display:none}
+  #defaultCmd{display:flex;flex-direction:column;gap:4px;height:min(26vh,126px);max-height:min(26vh,126px);min-height:0;overflow:hidden}#defaultCmd.hide{display:none}   /* 유닛지정/판매도 프로필 시트와 동일 고정 높이(무선택·유닛유무 무관) → 시트 교체 시 높이 안 튐 */
 
   /* 안내문: 검은 인셋 패널(SC 정보창 느낌) */
   .hint{font-size:var(--fs-md);color:var(--txt);text-align:center;margin:auto;line-height:1.7;padding:8px 12px;
@@ -2815,9 +2816,9 @@
 
   <div id="bot">
     <div id="tabs">
-      <div class="tab on" data-tab="Main"  onclick="switchTab('Main',this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 11L12 4.3 20.4 11"/><path d="M5.7 9.4V19.6h12.6V9.4"/><path d="M9.8 19.6v-4.7h4.4v4.7"/></svg></span>메인</div>
-      <div class="tab" data-tab="Unit"     onclick="switchTab('Unit',this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9.5" cy="8.5" r="3"/><path d="M4 19.5c0-3 2.5-5.2 5.5-5.2s5.5 2.2 5.5 5.2"/><path d="M18.5 4v5M16 6.5h5"/></svg></span><span id="unitTabLbl">유닛뽑기</span></div>
-      <div class="tab" data-tab="Upgrade"  onclick="switchTab('Upgrade',this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5l5.3 5.3h-3.1v4.6h-4.4V9.8H6.7z"/><path d="M7 18.5h10"/></svg></span>업그레이드</div>
+      <div class="tab on" data-tab="Main"  onclick="openMainHome(this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 11L12 4.3 20.4 11"/><path d="M5.7 9.4V19.6h12.6V9.4"/><path d="M9.8 19.6v-4.7h4.4v4.7"/></svg></span>메인</div>
+      <div class="tab" data-tab="Unit"     onclick="openGachaSheet(this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9.5" cy="8.5" r="3"/><path d="M4 19.5c0-3 2.5-5.2 5.5-5.2s5.5 2.2 5.5 5.2"/><path d="M18.5 4v5M16 6.5h5"/></svg></span><span id="unitTabLbl">유닛뽑기</span></div>
+      <div class="tab" data-tab="Upgrade"  onclick="openUpgradeSheet(this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5l5.3 5.3h-3.1v4.6h-4.4V9.8H6.7z"/><path d="M7 18.5h10"/></svg></span>업그레이드</div>
       <div class="tab" data-tab="Players"  onclick="switchTab('Players',this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.6" r="2.7"/><path d="M3.8 19c0-2.9 2.3-4.9 5.2-4.9s5.2 2 5.2 4.9"/><circle cx="16.9" cy="9.2" r="2.1"/><path d="M15.4 14.5c2.4.3 4.6 2 4.6 4.5"/></svg></span>플레이어</div>
       <div class="tab" id="battleTab" data-tab="Battle" style="display:none" onclick="switchTab('Battle',this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5 15 15M19 5 9 15M14.5 15.5 17.5 18.5M9.5 15.5 6.5 18.5"/></svg></span>전투실험</div>
       <div class="tab" id="buildTab" data-tab="Build" style="display:none" onclick="switchTab('Build',this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16M6 20V9l6-4 6 4v11M9.5 20v-5h5v5"/></svg></span>건설</div>
@@ -2877,11 +2878,8 @@
 
     <div class="bp" id="bpPlayers">
       <!-- 관전 중 유닛 클릭 시 그 유닛 1마리 정보(적군처럼 단일) -->
-      <div class="scPanel" id="playerProfile" style="display:none">
-        <div class="scPortrait" id="ppPortrait"></div>
-        <div class="scMid"><div class="scName" id="ppName"></div><div class="scType" id="ppType"></div><div class="scHp" id="ppHp"></div></div>
-        <div class="scStats" id="ppStats"></div>
-      </div>
+      <!-- 관전 유닛 프로필 = 메인과 동일 커맨드 그리드(renderCmdGrid) · 읽기전용 호스트 -->
+      <div id="playerProfile"></div>
       <div id="plGridWrap">
         <div class="plGrid" id="plGrid"></div>
       </div>
@@ -3416,47 +3414,47 @@ function _gUnit(id, displayName, tier, race, attackType, opt){ opt=opt||{};
 const GACHA_UNITS = {   // 4종 × 7등급 = 28 (이름 확정)
   // ── 일반 (common) ──
   ranger_c:   _gUnit('ranger_c','레인저','common','union','single'),
-  strider_c:  _gUnit('strider_c','스트라이더','common','union','single'),
+  strider_c:  _gUnit('strider_c','기갑병','common','union','single'),
   sentinel_c: _gUnit('sentinel_c','센티넬','common','aetherial','single'),
-  reaper_c:   _gUnit('reaper_c','리퍼','common','swarm','single'),
+  reaper_c:   _gUnit('reaper_c','스파이크','common','swarm','single'),
   // ── 레어 (rare) = 일반 라인 강화형 (3× 해당 common → rare) ──
   ranger_r:   _gUnit('ranger_r','레인저','rare','union','single', {combineFrom:'ranger_c'}),
-  strider_r:  _gUnit('strider_r','스트라이더','rare','union','single', {combineFrom:'strider_c'}),
+  strider_r:  _gUnit('strider_r','기갑병','rare','union','single', {combineFrom:'strider_c'}),
   sentinel_r: _gUnit('sentinel_r','센티넬','rare','aetherial','single', {combineFrom:'sentinel_c'}),
-  reaper_r:   _gUnit('reaper_r','리퍼','rare','swarm','single', {combineFrom:'reaper_c'}),
+  reaper_r:   _gUnit('reaper_r','스파이크','rare','swarm','single', {combineFrom:'reaper_c'}),
   // ── 에픽 (epic) ──
-  phantom_e:  _gUnit('phantom_e','팬텀','epic','union','single'),
+  phantom_e:  _gUnit('phantom_e','저격수','epic','union','single'),
   racer_e:    _gUnit('racer_e','레이서','epic','union','single'),
   void_e:     _gUnit('void_e','보이드','epic','aetherial','single'),
-  snapper_e:  _gUnit('snapper_e','스내퍼','epic','swarm','single'),
+  snapper_e:  _gUnit('snapper_e','척후병','epic','swarm','single'),
   // ── 유니크 (unique) = 에픽 라인 강화형 (3× 해당 epic → unique) ──
-  phantom_u:  _gUnit('phantom_u','팬텀','unique','union','single', {combineFrom:'phantom_e'}),
+  phantom_u:  _gUnit('phantom_u','저격수','unique','union','single', {combineFrom:'phantom_e'}),
   racer_u:    _gUnit('racer_u','레이서','unique','union','single', {combineFrom:'racer_e'}),
   void_u:     _gUnit('void_u','보이드','unique','aetherial','single', {combineFrom:'void_e'}),
-  snapper_u:  _gUnit('snapper_u','스내퍼','unique','swarm','single', {combineFrom:'snapper_e'}),
+  snapper_u:  _gUnit('snapper_u','척후병','unique','swarm','single', {combineFrom:'snapper_e'}),
   // ── 레전드 (legend) = 특성 1개 ──
-  machinegun_l: _gUnit('machinegun_l','발칸','legend','union','single_rapid', {traits:['atkspd_buff']}),
-  tank_l:       _gUnit('tank_l','브레이커','legend','union','aoe_single', {traits:['def_down']}),
-  blade_l:      _gUnit('blade_l','워든','legend','aetherial','single', {traits:['armor_pierce']}),
-  thornqueen_l: _gUnit('thornqueen_l','베놈퀸','legend','swarm','dot', {traits:['poison']}),
+  machinegun_l: _gUnit('machinegun_l','화력병','legend','union','single_rapid', {traits:['atkspd_buff']}),
+  tank_l:       _gUnit('tank_l','공성전차','legend','union','aoe_single', {traits:['def_down']}),
+  blade_l:      _gUnit('blade_l','광전사','legend','aetherial','single', {traits:['armor_pierce']}),
+  thornqueen_l: _gUnit('thornqueen_l','가시여왕','legend','swarm','dot', {traits:['poison']}),
   // ── 초월 (transcend) = 특성 1~2개 ──
-  phantom_t:    _gUnit('phantom_t','디토네이터','transcend','union','aoe_single', {traits:['armor_pierce','def_down']}),
-  skyguard_t:   _gUnit('skyguard_t','템페스트','transcend','union','aoe_single', {traits:['slow']}),
-  skydancer_t:  _gUnit('skydancer_t','스카이댄서','transcend','aetherial','aoe_rapid', {traits:['atk_buff']}),
-  matron_t:     _gUnit('matron_t','매트론','transcend','swarm','single_chain', {traits:['slow','poison']}),
+  phantom_t:    _gUnit('phantom_t','저격수','transcend','union','aoe_single', {traits:['armor_pierce','def_down']}),
+  skyguard_t:   _gUnit('skyguard_t','전투기','transcend','union','aoe_single', {traits:['slow']}),
+  skydancer_t:  _gUnit('skydancer_t','요격기','transcend','aetherial','aoe_rapid', {traits:['atk_buff']}),
+  matron_t:     _gUnit('matron_t','여제','transcend','swarm','single_chain', {traits:['slow','poison']}),
   // ── 갓 (god) = 특성 2개 ──
   ranger_god:   _gUnit('ranger_god','레인저','god','union','single_chain', {traits:['atk_buff','armor_pierce']}),
-  strider_god:  _gUnit('strider_god','스트라이더','god','union','aoe_rapid', {traits:['def_down','slow']}),
+  strider_god:  _gUnit('strider_god','기갑병','god','union','aoe_rapid', {traits:['def_down','slow']}),
   sentinel_god: _gUnit('sentinel_god','센티넬','god','aetherial','single_rapid', {traits:['atkspd_buff','atk_buff']}),
-  reaper_god:   _gUnit('reaper_god','리퍼','god','swarm','dot', {traits:['poison','slow']}),
+  reaper_god:   _gUnit('reaper_god','스파이크','god','swarm','dot', {traits:['poison','slow']}),
 };
 // 초월 레시피(특수 조합 전용) — 합체존에 재료 유닛을 모으면 해당 초월 생성. 형식: 결과ID: [재료 gid 3개]
 // (기본: 특정 레전드 3개 → 특정 초월. 추후 혼합 레시피로 조정 가능)
 const TRANSCEND_RECIPE = {
-  phantom_t:   ['machinegun_l','machinegun_l','machinegun_l'],   // 발칸×3 → 디토네이터
-  skyguard_t:  ['tank_l','tank_l','tank_l'],                     // 브레이커×3 → 템페스트
-  skydancer_t: ['blade_l','blade_l','blade_l'],                  // 워든×3 → 스카이댄서
-  matron_t:    ['thornqueen_l','thornqueen_l','thornqueen_l'],   // 베놈퀸×3 → 매트론
+  phantom_t:   ['machinegun_l','machinegun_l','machinegun_l'],   // 화력병(레전드)×3 → 저격수(초월)
+  skyguard_t:  ['tank_l','tank_l','tank_l'],                     // 공성전차(레전드)×3 → 전투기(초월)
+  skydancer_t: ['blade_l','blade_l','blade_l'],                  // 광전사(레전드)×3 → 요격기(초월)
+  matron_t:    ['thornqueen_l','thornqueen_l','thornqueen_l'],   // 가시여왕(레전드)×3 → 여제(초월)
 };
 // 2단계 임시 매핑: 가챠 유닛 → 기존 유닛 ID(모델·성능). 실제 전용 모델·수치는 4단계에서 교체.
 const GACHA_PROXY = {
@@ -6152,6 +6150,7 @@ function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 
   if(G.view){ G.view.x=0.5; G.view.y=0.5; G.view.zoom=1; } if(G.viewT){ G.viewT.x=0.5; G.viewT.y=0.5; G.viewT.zoom=1; } _nptrs.clear(); _nemoPinch=null; _fxPinch=null;   // 탭 전환 시 화면 줌/팬 초기화(다른 탭 3D 카메라 보호)
   if(G.bossOpen && typeof closeBossArena==='function') closeBossArena();   // 탭 전환 시 보스 팝업 닫기
   if(G.bossPickArm){ G.bossPickArm=false; if(typeof updateBossPickBtn==='function') updateBossPickBtn(); }
+  G.mainSheet=null;   // 🎰 실제 탭 전환 = 유닛뽑기 등 메인 시트 모드 종료
   G.tab=id;
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on')); el.classList.add('on');
   document.querySelectorAll('.gview').forEach(v=>v.classList.remove('on')); document.getElementById('v'+(id==='Battle'?'Main':id)).classList.add('on');   // 전투실험은 메인 아레나 뷰 공유
@@ -6373,14 +6372,14 @@ function _mainSelAllBtn(u){ if(typeof isBuilding==='function'&&isBuilding(u.id))
   const key=_mainTypeKey(u), cnt=G.units.filter(x=>!isBuilding(x.id)&&_mainTypeKey(x)===key).length;
   return (cnt>1)?('<button class="cgSelAll" onclick="selectAllOfType()" title="같은 종류 전체 지정">'+_SVG_SELALL+'</button>'):''; }
 function _mainSingleModel(u){ const def=U[u.id]||{}, role=_mainRole(u);
-  return { mode:'prod', title:gNameStar(u,def)+(u.hero?' [영웅]':'')+(role?' ('+role+')':''), icon:_mainPort(u), hpsh:_mainHpsh(u),
+  return { mode:'prod', title:gNameStar(u,def)+(u.hero?' [영웅]':''), icon:_mainPort(u), hpsh:_mainHpsh(u),   // 이름 옆 (보직/직업) 표기 제거 — 건설 프로필과 통일
     sub:'맵을 탭하면 이동 · 해제는 우상단 ✕', items:_mainSkillCards([u]).concat(_mainTransportCards(u)), topRight:_mainSelAllBtn(u),
     info:{ eb:'', hideName:true, stats:_mainUnitStatList(u), cr:0, en:0 } }; }
 function _mainTypeModel(list, canBack){ const u0=list[0], def=U[u0.id]||{}, n=list.length, role=_mainRole(u0), CAP=60;   // canBack=소프트선택 중 → ↩(전체 복귀) 버튼
   const rows=list.slice(0,CAP).map(u=>({ uid:u.uid, hp:(u.hp!=null?u.hp:_mainMaxHp(u)), maxHp:_mainMaxHp(u)||1,
     act:'onclick="mainSubSelectOne(event,'+u.uid+')"' }));   // 칩 탭 = 그 1기만 지정
   if(n>CAP) rows.push({ more:n-CAP });
-  return { mode:'prod', title:gNameStar(u0,def)+(role?' ('+role+')':'')+' <span class="nsub">×'+n+'</span>', icon:_mainPort(u0),
+  return { mode:'prod', title:gNameStar(u0,def)+' <span class="nsub">×'+n+'</span>', icon:_mainPort(u0),   // 이름 옆 (보직/직업) 표기 제거
     sub:'', items:_mainSkillCards(list), topRight:_mainSelAllBtn(u0),   // 활성셋 전체 기준 상태(ON·마나·쿨다운)
     back:canBack?'<button class="cgLift cgBack" onclick="mainSubSelectType(event,\'\')" title="전체 선택으로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6L4 11l5 5"/><path d="M4 11h9a6 6 0 0 1 6 6v1"/></svg></button>':'',   // 🔙 소프트선택 해제(전체 복귀)
     info:{ eb:'', hideName:true, units:rows, cr:0, en:0 } }; }
@@ -6461,7 +6460,13 @@ function refreshSelCard(){ if(typeof G!=='undefined'){ G.boardArm=false; G.unloa
     if(!hasSel){ document.getElementById('unitCmd').classList.remove('on'); renderUnits(); return; }
     // 선택됨 → 아래 유닛 프로필(unitCmd) 렌더로 진행
   } else {
-    if(G.tab==='Main' && _homeMode==='select' && _selViaTab && !en && G.sel.length>=1){   // 지정 탭에서 선택 → 지정 패널 유지(드래그 박스 선택은 selMulti 칩)
+    if(G.sel.length>=1 || en) G.mainSheet=null;   // 🎛 유닛/적 지정 = 메인 시트(유닛뽑기·업그레이드) 종료
+    if(G.tab==='Main' && G.mainSheet && !en && G.sel.length===0){   // 🎛 메인 시트: 프로필 자리에 해당 그리드
+      document.getElementById('defaultCmd').classList.add('hide');
+      document.getElementById('unitCmd').classList.add('on');
+      document.body.classList.add('sheetOpen'); if(typeof _syncSheetLift==='function') requestAnimationFrame(_syncSheetLift);
+      renderMainSheet(); renderUnits(); return; }
+    if(G.tab==='Main' && _selViaTab && !en && G.sel.length>=1){   // 하단 지정구역 경유 선택 → 홈 패널 유지(지정/판매/조합 어느 탭이든). 프로필은 화면 직접 터치 시에만
       document.getElementById('defaultCmd').classList.remove('hide');
       document.getElementById('unitCmd').classList.remove('on'); renderHomeLeft(); renderUnits(); return; }
     if(G.sel.length===0 && !en){ document.getElementById('defaultCmd').classList.remove('hide');
@@ -6475,6 +6480,8 @@ function refreshSelCard(){ if(typeof G!=='undefined'){ G.boardArm=false; G.unloa
 // 🎛 메인 선택 프로필 렌더 — 선택 변경(refreshSelCard) + 매 프레임(루프) 양쪽에서 호출.
 // 구조 시그니처가 바뀔 때만 재빌드(매 프레임 innerHTML 재빌드=클릭 먹힘 방지) · HP 등 연속값은 _mainCmdLive가 인플레이스 갱신
 function mainProfileRender(){ const host=document.getElementById('unitCmd'); if(!host||!host.classList.contains('on')) return;
+  if(G.mainSheet){ renderMainSheet(); return; }   // 🎛 메인 시트 모드(유닛뽑기·업그레이드) — 선택 프로필 대신 해당 그리드(매 프레임 갱신)
+  host._gSig=undefined;   // 시트→프로필 전환 시 다음 렌더 강제 재빌드
   { const k=(G.selEnemy!=null)?('e'+G.selEnemy):((G.sel||[]).join(',')); if(k!==G._lastSelKey){ G.selType=null; host._cgPage=0; G._lastSelKey=k; } }   // 지정이 실제로 바뀌면 소프트선택(selType)·페이지 리셋 · 칩 탭(G.sel 불변)은 유지
   const m=cmdGridModelForSel(); if(!m) return;
   m.compact=true; m.build=true;   // 건설 탭 프로필과 동일: 간소화(4그리드 1줄) + 건설 카드 스타일
@@ -6482,6 +6489,66 @@ function mainProfileRender(){ const host=document.getElementById('unitCmd'); if(
   const sig=_mainCmdSig(m);
   if(host._cgSig!==sig){ host._cgSig=sig; m.page=host._cgPage||0; renderCmdGrid(host,m); }
   _mainCmdLive(); }
+// 🎰 유닛뽑기 시트 — 하단 프로필 자리(#unitCmd)에 4그리드(유닛1회·에너지·가드타워·플라즈마). 캔버스 이동 대신 시트 슬라이드업. 셀=runBeacon 직접 실행.
+const GACHA_SHEET_CELLS=['draw','energy','buyTurret','buyPhoton'];
+function _gachaSheetModel(){
+  const items=GACHA_SHEET_CELLS.map(id=>{ const b=(DRAW_BEACONS.find(x=>x.id===id))||{id:id,name:id}, cost=beaconCost(id), afford=((G.mineral||0)>=cost);
+    return { pro:'<svg viewBox="0 0 24 24">'+beaconIcon(id)+'</svg>', sn:b.name, cr:cost, en:0, state:afford?'ok':'dim', act:'onclick="runBeacon(\''+id+'\')"' }; });
+  return { mode:'gacha', title:'유닛 뽑기', icon:'<svg viewBox="0 0 24 24">'+BEACON_ICON.unit+'</svg>', sub:'셀을 눌러 뽑기·구매', compact:true, build:true,
+    info:{ eb:'유닛 뽑기', name:'⛁ '+Math.floor(G.mineral||0), desc:'셀을 눌러 뽑기·타워 구매' }, items:items }; }
+function renderGachaSheet(){ const host=document.getElementById('unitCmd'); if(!host) return; host.classList.add('simple');
+  const sig='g|'+Math.floor(G.mineral||0)+'|'+(host._cgPage||0);
+  if(host._gSig!==sig){ host._gSig=sig; host._cgSig=undefined; renderCmdGrid(host, _gachaSheetModel()); } }
+// ⬆️ 업그레이드 시트 — 하단 프로필 자리에 8칸(2페이지). 1p: 보병·메카닉·스웜·에테리얼 무기 강화(꾹=연속). 2p: 뽑기확률·크레딧획득·(빈)·영구강화(팝업).
+const UPG_CATS=[ {wpn:'inf',name:'보병'}, {wpn:'mech',name:'메카닉'}, {wpn:'zrg',name:'스웜'}, {wpn:'pro',name:'에테리얼'} ];
+function _upgradeSheetModel(){
+  const items=UPG_CATS.map(c=>{ const lv=(G.atkLv&&G.atkLv[c.wpn])||0, isMax=lv>=UPG_MAX, cost=upgCost(c.wpn), afford=((G.gas||0)>=cost);
+    return { pro:wpnBadgeSVG(c.wpn,'#ff3b3b'), sn:c.name, en:cost, cr:0, tr:isMax?'MAX':('Lv.'+lv), metaCls:'lv',
+      state:isMax?'max':(afford?'ok':'dim'), act:isMax?'':('onpointerdown="upgHoldStart(\''+c.wpn+'\',event)"') }; });
+  const gLv=(G.gachaLuckLv||0), gMax=gLv>=GACHA_UP_MAX, gC=gachaUpCost();
+  items.push({ pro:'<svg viewBox="0 0 24 24">'+beaconIcon('gachaUp')+'</svg>', sn:'뽑기 확률', cr:gC, en:0, tr:gMax?'MAX':('Lv.'+gLv), metaCls:'lv',
+    state:gMax?'max':(((G.mineral||0)>=gC)?'ok':'dim'), act:gMax?'':'onclick="buyGachaUp()"' });
+  const cLv=(G.creditLv||0), cMax=cLv>=CREDIT_UP_MAX, cC=creditUpCost();
+  items.push({ pro:'<svg viewBox="0 0 24 24">'+beaconIcon('creditUp')+'</svg>', sn:'크레딧 획득', cr:cC, en:0, tr:cMax?'MAX':('Lv.'+cLv), metaCls:'lv',
+    state:cMax?'max':(((G.mineral||0)>=cC)?'ok':'dim'), act:cMax?'':'onclick="buyCreditUp()"' });
+  items.push(null);   // 2페이지 3번 = 빈칸
+  items.push({ pro:'<span class="pemoji">⬆️</span>', sn:'영구 강화', cr:0, en:0, state:'ok', act:'onclick="openPointUpgrade()"' });
+  return { mode:'upg', title:'업그레이드', icon:'<span class="pemoji">⬆️</span>', sub:'무기 강화 · 뽑기/크레딧 · 영구', compact:true, build:true,
+    info:{ eb:'업그레이드', name:'⛁ '+Math.floor(G.mineral||0)+'  ⚡ '+Math.floor(G.gas||0), desc:'셀을 눌러 강화 · 무기 길게=연속' }, items:items }; }
+function renderUpgradeSheet(){ const host=document.getElementById('unitCmd'); if(!host) return; host.classList.add('simple');
+  const sig='u|'+((G.atkLv&&[G.atkLv.inf,G.atkLv.mech,G.atkLv.zrg,G.atkLv.pro].join('.'))||'')+'|'+(G.gachaLuckLv||0)+'|'+(G.creditLv||0)+'|'+Math.floor(G.mineral||0)+'|'+Math.floor(G.gas||0)+'|'+(host._cgPage||0);
+  if(host._gSig!==sig){ host._gSig=sig; host._cgSig=undefined; renderCmdGrid(host, _upgradeSheetModel()); } }
+// 👥 플레이어 시트 — 메인 유지 + 활성 플레이어 그리드. 셀 탭 = 그 플레이어 화면(관전)으로 이동.
+function _playersSheetModel(){
+  const me=G.myPlayer||1, active=G.activePlayers||[1,2,3,4,5,6,7,8];
+  const items=active.map(n=>{ const isMe=(n===me);
+    return { pro:'<span class="pemoji">'+n+'P</span>', sn:(typeof playerName==='function'?playerName(n):('P'+n))+(isMe?' (나)':''),
+      tr:isMe?'현재':'관전', metaCls:'lv', state:isMe?'max':'ok', sel:isMe && n===G.curPlayer,
+      act:isMe?'':('onclick="viewPlayerFromSheet('+n+')"') }; });
+  return { mode:'players', title:'플레이어', icon:'<span class="pemoji">👥</span>', sub:'다른 플레이어 화면 보기', compact:true, build:true,
+    info:{ eb:'플레이어', name:'다른 플레이어 관전', desc:'플레이어를 눌러 그 화면으로 이동' }, items:items }; }
+function renderPlayersSheet(){ const host=document.getElementById('unitCmd'); if(!host) return; host.classList.add('simple');
+  const sig='p|'+(G.myPlayer||1)+'|'+((G.activePlayers||[]).join('.'))+'|'+(G.curPlayer||0)+'|'+(host._cgPage||0);
+  if(host._gSig!==sig){ host._gSig=sig; host._cgSig=undefined; renderCmdGrid(host, _playersSheetModel()); } }
+function viewPlayerFromSheet(n){ G.curPlayer=n; if(typeof playSfx==='function') playSfx('ui_open'); switchTab('Players', document.querySelector('.tab[data-tab="Players"]')); }
+// 🎛 메인 시트 모드 디스패처(유닛뽑기·업그레이드·플레이어 …) — 매 프레임/선택변경 시 해당 그리드 렌더
+function renderMainSheet(){ if(G.mainSheet==='gacha') renderGachaSheet(); else if(G.mainSheet==='upgrade') renderUpgradeSheet(); else if(G.mainSheet==='players') renderPlayersSheet(); }
+// 하단 탭 하이라이트 = 활성 섹션(메인/유닛뽑기/업그레이드/플레이어). 게임 화면과 무관하게 섹션 탭만 표시.
+function _setBottomTab(tab){ document.querySelectorAll('#tabs .tab').forEach(function(t){ t.classList.toggle('on', t.getAttribute('data-tab')===tab); }); }
+// 하단 탭 버튼 → 화면 이동 대신 메인 뷰 유지 + 하단 섹션만 전환(모드별) + 탭 하이라이트 이동. 관리자 샌드박스는 기존 탭 동작 유지.
+function openMainSheet(mode, el, sbTab){
+  if(G.sandbox){ switchTab(sbTab, el||document.querySelector('.tab[data-tab="'+sbTab+'"]')); return; }
+  if(G.tab!=='Main') switchTab('Main', document.querySelector('.tab[data-tab="Main"]'));   // 다른 뷰(건설 등)에서 왔으면 메인 뷰 복귀
+  G.sel=[]; G.selEnemy=null; G.selType=null; G.mainSheet=mode; _setBottomTab(sbTab);   // 이 섹션으로 전환 + 하이라이트 이동
+  if(typeof playSfx==='function') playSfx('ui_open'); refreshSelCard(); }
+// 메인 탭 = 유닛지정/판매/조합 섹션(하단 홈). 다른 섹션에서 눌러도 반드시 메인 섹션으로 복귀.
+function openMainHome(el){
+  if(G.sandbox){ switchTab('Main', el||document.querySelector('.tab[data-tab="Main"]')); return; }
+  if(G.tab!=='Main') switchTab('Main', document.querySelector('.tab[data-tab="Main"]'));
+  G.mainSheet=null; G.sel=[]; G.selEnemy=null; G.selType=null; _selViaTab=false; _setBottomTab('Main'); if(typeof playSfx==='function') playSfx('ui_open'); refreshSelCard(); }
+function openGachaSheet(el){ openMainSheet('gacha', el, 'Unit'); }
+function openUpgradeSheet(el){ openMainSheet('upgrade', el, 'Upgrade'); }
+function openPlayersSheet(el){ openMainSheet('players', el, 'Players'); }
 // 커스텀 초상화 이미지(유닛/건물 id → 파일). 있으면 3D/라인아트 대신 사용.
 const PORTRAIT_DIR='assets/portraits/'; const PORTRAIT_VER='?v=4';
 const _PI_RAW={
@@ -9664,8 +9731,7 @@ function showShopProfile(id){ const def=U[id]; if(!def) return;
   document.getElementById('prodHint').style.display='none';
   const card=document.getElementById('shopProfile'); card.style.display='flex';   // 프로필=상단, 생산고 안내는 그대로 아래에 유지
   document.getElementById('bpUnit').classList.add('profOn');   // 프로필 표시 → 생산고 안내 카드 컴팩트
-  const sjob=UNIT_CLS[id]||'';
-  document.getElementById('spPortrait').innerHTML=unitPortraitHTML(id)+(sjob?'<div class="portJob">'+sjob+'</div>':'');
+  document.getElementById('spPortrait').innerHTML=unitPortraitHTML(id);
   document.getElementById('spName').textContent=def.name;
   document.getElementById('spType').textContent='';   // 타입 라인 제거(직업은 초상화 하단 배지로)
   const pseudo={id:id};   // 인스턴스 없는 신규 유닛 → 풀스탯 표시
@@ -9684,7 +9750,7 @@ function showCitizenProfile(){ const card=document.getElementById('shopProfile')
   const ph=document.getElementById('prodHint'); if(ph) ph.style.display='none';
   card.style.display='flex';   // 프로필=상단, 생산고 안내는 아래에 유지
   document.getElementById('bpUnit').classList.add('profOn');   // 프로필 표시 → 생산고 안내 카드 컴팩트
-  document.getElementById('spPortrait').innerHTML=unitPortraitHTML('citizen')+'<div class="portJob">시민</div>';
+  document.getElementById('spPortrait').innerHTML=unitPortraitHTML('citizen');
   document.getElementById('spName').textContent='시민';
   document.getElementById('spType').textContent='유닛 생산 일꾼';
   document.getElementById('spHp').innerHTML='<div class="czDesc">뽑기 비콘으로 이동해 <b>랜덤 유닛</b>을 뽑습니다 <span class="czCost">◎'+mapCfg('gachaCost',GACHA_COST)+'</span></div>';
@@ -9775,29 +9841,28 @@ vu.addEventListener('pointercancel', function(e){ onUnitUp(e); });
 function evPosIn(viewId,e){ const v=document.getElementById(viewId).getBoundingClientRect();
   const t=e.changedTouches?e.changedTouches[0]:(e.touches?e.touches[0]:e);
   return {x:(t.clientX-v.left)/v.width, y:(t.clientY-v.top)/v.height}; }
-function showPlayerProfile(u){ const def=U[u.id]; if(!def) return;
-  // 관전 중이면 상대 플레이어의 공격 업그레이드 레벨로 공격력 계산
-  const rb=(typeof specRemoteBoard==='function')&&specRemoteBoard();
-  const _savedAtk=(rb && G.coopUpg && G.coopUpg[rb]) ? G.atkLv : undefined;
-  if(_savedAtk!==undefined) G.atkLv=G.coopUpg[rb];
-  try{
-    document.getElementById('plGridWrap').style.display='none';
-    const card=document.getElementById('playerProfile'); card.style.display='flex';
-    const pjob=UNIT_CLS[u.gmodel||u.id]||'';
-    document.getElementById('ppPortrait').innerHTML=unitPortraitHTML(u.gmodel||u.id)+(pjob?'<div class="portJob">'+pjob+'</div>':'');
-    document.getElementById('ppName').textContent=gNameStar(u,def)+(u.hero?' [영웅]':'');
-    document.getElementById('ppType').innerHTML=u.gtier?tierLabelHTML(u.gtier):'';   // 등급 라벨(등급색 칩)
-    document.getElementById('ppHp').innerHTML=scHpHTML(u);
-    document.getElementById('ppStats').innerHTML=scStatBoxesHTML(u); fitStatNumbers();
-  } finally { if(_savedAtk!==undefined) G.atkLv=_savedAtk; }
-}
+// 관전 유닛 프로필 = 메인 단일 프로필과 동일 커맨드 그리드(읽기전용: 스킬 카드 비활성 → 남의 유닛 시전 방지)
+function _specUnitModel(u){ const def=U[u.id]||{};
+  const cards=(typeof _mainSkillCards==='function')?_mainSkillCards([u]).map(function(it){ return Object.assign({}, it, {act:'', state:'dim'}); }):[];
+  return { mode:'prod', compact:true, build:true, title:gNameStar(u,def)+(u.hero?' [영웅]':''), icon:_mainPort(u), hpsh:_mainHpsh(u),
+    sub:'👁 '+((typeof playerName==='function')?playerName(G.curPlayer):('P'+G.curPlayer))+' 관전', items:cards,
+    info:{ eb:'', hideName:true, stats:_mainUnitStatList(u) } }; }
+function renderSpecProfile(u){ const host=document.getElementById('playerProfile'); if(!host||!host.classList.contains('on')) return;
+  const rb=(typeof specRemoteBoard==='function')&&specRemoteBoard();   // 관전=상대 공격 업글 레벨로 스탯 계산
+  const _sv=(rb && G.coopUpg && G.coopUpg[rb]) ? G.atkLv : undefined; if(_sv!==undefined) G.atkLv=G.coopUpg[rb];
+  try{ const sig='spec|'+u.uid+'|'+Math.round(u.hp||0)+'|'+Math.round(u.sh||0)+'|'+(host._cgPage||0);   // HP/실드 변하면만 재빌드(라이브 갱신)
+    if(host._gSig!==sig){ host._gSig=sig; host._cgSig=undefined; renderCmdGrid(host, _specUnitModel(u)); } }
+  finally{ if(_sv!==undefined) G.atkLv=_sv; } }
+function showPlayerProfile(u){ if(!U[u.id]) return;
+  document.getElementById('plGridWrap').style.display='none';
+  const host=document.getElementById('playerProfile'); host.classList.add('on','simple'); host._gSig=undefined; renderSpecProfile(u); }
 // 관전 중 상호작용 대상 유닛 목록(상대=실시간 보드, 나=내 유닛)
 function _plUnitList(){ const rb=(typeof specRemoteBoard==='function')&&specRemoteBoard();
   return rb && G.coopBoard && G.coopBoard[rb] ? (G.coopBoard[rb].units||[]) : G.units; }
 function selectPlayerUnit(uid){ const u=_plUnitList().find(x=>x.uid===uid); if(!u){ clearPlayerSel(); return; }
   G.sel=[uid]; G.specSel=uid; G.selEnemy=null; showPlayerProfile(u); updateDeselTop();   // 단일(M3D 림 표시)
 }
-function clearPlayerSel(){ G.sel=[]; G.specSel=null; const c=document.getElementById('playerProfile'); if(c) c.style.display='none';
+function clearPlayerSel(){ G.sel=[]; G.specSel=null; const c=document.getElementById('playerProfile'); if(c){ c.classList.remove('on'); c._gSig=undefined; }
   const w=document.getElementById('plGridWrap'); if(w) w.style.display=''; updateDeselTop(); }
 let _plStart=null, _plBox=null, _plMoved=false;
 function _hitPlayerUnit(x,y){ let best=1e9,hit=null; for(const u of _plUnitList()){ const d=Math.hypot((u.x-x)*GW,(u.y-y)*GH); if(d<=unitRadius(u)+6 && d<best){ best=d; hit=u; } } return hit; }
@@ -10136,7 +10201,7 @@ function loop(now){
     if(!se) deselectUnit(); }   // 적 프로필 HP 실시간 갱신은 아래 mainProfileRender가 담당
   // 플레이어(관전) 탭: 선택 유닛 HP 실시간 갱신 / 죽으면 해제
   if(G.tab==='Players' && G.sel.length===1){ const pu=(typeof _plUnitList==='function'?_plUnitList():G.units).find(x=>x.uid===G.sel[0]);
-    if(!pu) clearPlayerSel(); else { const e=document.getElementById('ppHp'); if(e && getComputedStyle(document.getElementById('playerProfile')).display!=='none') e.innerHTML=scHpHTML(pu); } }
+    if(!pu) clearPlayerSel(); else { const pf=document.getElementById('playerProfile'); if(pf && pf.classList.contains('on')) renderSpecProfile(pu); } }
   if(G.sel.length>=1 && document.getElementById('unitCmd').classList.contains('on')) updateCmdRow();   // 명령 행 상태 갱신(단일/다중)
   if(typeof mainProfileRender==='function') mainProfileRender();   // 🎛 선택 프로필 실시간(HP/마나/쿨다운) — 시그니처 캐시로 저비용, 변화 없으면 DOM 유지
   updateSkillFab();   // 스킬 FAB 쿨다운/버프 실시간(탭 전환·해제도 내부 처리)
