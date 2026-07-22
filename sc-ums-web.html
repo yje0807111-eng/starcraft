@@ -368,9 +368,9 @@
   .bdBtn.bdBack{color:var(--txt-hud);background:var(--glass);border-color:var(--metal-edge)}
   #coopBossBar{cursor:pointer;pointer-events:auto}
   /* 메인 홈 하단 — 좌(판매)·우(보스 파견): 칸 없이 중앙 구분선으로만 분리 */
-  .homeCols{position:relative;display:flex;gap:0;align-items:stretch}
-  .homeSell,.homeBoss{display:flex;flex-direction:column;gap:7px;padding:2px 12px;background:none;border:none;min-width:0}
-  .homeSell{flex:1;position:relative;justify-content:flex-start;padding-left:2px}   /* 단일 칼럼(풀폭) */
+  .homeCols{position:relative;display:flex;gap:0;align-items:stretch;flex:1;min-height:0}
+  .homeSell,.homeBoss{display:flex;flex-direction:column;gap:4px;padding:0 8px;background:none;border:none;min-width:0}
+  .homeSell{flex:1;position:relative;justify-content:flex-start;padding-left:2px;min-height:0}   /* 단일 칼럼(풀폭) */
   /* .homeBoss 제거 — 보스는 탭으로 통합 */
   /* .homeSell::after 분리선 제거 — 단일 칼럼 */
   .hsTitle svg{color:var(--gold);filter:drop-shadow(0 0 4px rgba(255,210,74,.5))}
@@ -386,7 +386,7 @@
   .hsTier:hover{background:rgba(255,255,255,.08);border-color:var(--tc,#888)}
   .hsTier:active{transform:translateY(1px)}
   .hsTier.on{color:#0c0a08;background:var(--tc,var(--gold));border-color:var(--tc,var(--gold));box-shadow:0 0 9px -3px var(--tc,var(--gold));text-shadow:0 1px 0 rgba(255,255,255,.25)}
-  .hsGrid{display:flex;flex-wrap:nowrap;gap:5px;align-items:flex-start;overflow:hidden;padding-bottom:3px}
+  .hsGrid{display:flex;flex-wrap:nowrap;gap:5px;align-items:flex-start;overflow-x:auto;overflow-y:hidden;padding-bottom:3px;flex:1;min-height:0}
   .hsGrid::-webkit-scrollbar{height:4px}.hsGrid::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
   /* 유닛 셀 = 통일된 SC 카드(메탈+네온 엣지+사선 모서리+스캔라인) */
   .hsCell{position:relative;flex:1 1 0;min-width:0;max-width:80px;padding:0;cursor:pointer;overflow:hidden;transition:all .12s;
@@ -414,7 +414,7 @@
   .selTierChip:active{background:var(--tc,#fff)22;transform:translateY(1px)}
   .selTierChip .stc{opacity:.7;font-weight:700;margin-left:2px}
   /* 모드 전환(지정/판매/조합) = 납작한 밑줄 탭(2차 — 최상위 카드 네비보다 가볍게) */
-  .hsTabs{gap:2px;padding:1px 0 7px;margin-bottom:0;border-bottom:1px solid var(--glass-edge)}
+  .hsTabs{gap:2px;padding:0 0 3px;margin-bottom:0;border-bottom:1px solid var(--glass-edge)}
   .hsTab{flex:1 1 0;min-width:0;min-height:30px;display:flex;align-items:center;justify-content:center;gap:4px;
     font-family:inherit;font-size:var(--fs-md);font-weight:800;letter-spacing:.2px;color:var(--txt-mute);cursor:pointer;white-space:nowrap;
     background:none;border:none;border-bottom:2px solid transparent;border-radius:0;clip-path:none;box-shadow:none;padding:4px 2px;transition:color .14s,border-color .14s}
@@ -1092,7 +1092,8 @@
   #btSheet{position:absolute;left:0;right:0;bottom:0;z-index:30;transform:translateY(103%);transition:transform .26s cubic-bezier(.2,.8,.25,1);display:flex;flex-direction:column}
   /* 프로필 시트 박스 규격(배경·테두리·모서리·그림자·여백) = 건설 시트가 단일 소스. 메인 프로필 표시 중(#bpMain에 #unitCmd.on)도 그대로 공유 → 높이·폭 동일.
      ※ display/위치는 각자 유지(건설=맵 위 슬라이드 시트 / 메인=하단 패널) */
-  #btSheet,#bpMain:has(#unitCmd.on){
+  #playerProfile{display:none}#playerProfile.on{display:flex}   /* 관전 프로필 = 메인 프로필과 동일 커맨드 그리드 호스트 */
+  #btSheet,#bpMain:has(#unitCmd.on),#bpMain:has(#defaultCmd:not(.hide)),#bpPlayers:has(#playerProfile.on){
     background:linear-gradient(180deg,rgba(13,18,28,.97),rgba(8,11,17,.985));border-top:1px solid rgba(90,140,210,.3);border-radius:14px 14px 0 0;
     box-shadow:0 -8px 24px rgba(0,0,0,.55);padding:9px 8px 12px;gap:0}
   #btSheet.open{transform:translateY(0)}
@@ -1106,10 +1107,10 @@
   #btCardCtl:active{transform:translateY(1px)}
   #btCardCtl svg{width:17px;height:17px;display:block;transition:transform .22s cubic-bezier(.2,.8,.25,1)}
   #btCardCtl.up svg{transform:rotate(180deg)}
-  #btSheet.simple #btSheetBody,#unitCmd.simple{height:min(26vh,126px);max-height:min(26vh,126px)}   /* 간소화 = 1줄 그리드 · 높이 고정(건물 프로필 기준 ≈120px · 개인·다중·혼합 모두 동일) · 메인 프로필(#unitCmd)도 동일 규격 */
+  #btSheet.simple #btSheetBody,#unitCmd.simple,#playerProfile.simple{height:min(26vh,126px);max-height:min(26vh,126px)}   /* 간소화 = 1줄 그리드 · 높이 고정(건물 프로필 기준 ≈120px · 개인·다중·혼합 모두 동일) · 메인 프로필(#unitCmd)도 동일 규격 */
   #btSheet.simple .cmdG .cgGrid,#unitCmd.simple .cmdG .cgGrid{grid-template-rows:1fr}
   #btSheet.mini #btSheetBody{display:none}   /* 최소화 = 본문 숨김(버튼 바만) */
-  #btSheetBody,#unitCmd{height:min(40vh,204px);max-height:min(40vh,204px);min-height:0;flex-direction:column}   /* 일꾼 지정 패널 크기로 고정(건물·유닛 모두 동일 높이) · #unitCmd는 display만 .on에서 제어 */
+  #btSheetBody,#unitCmd,#playerProfile{height:min(40vh,204px);max-height:min(40vh,204px);min-height:0;flex-direction:column}   /* 일꾼 지정 패널 크기로 고정(건물·유닛 모두 동일 높이) · #unitCmd는 display만 .on에서 제어 */
   #btSheetBody{display:flex}
   #techSkTip{position:fixed;z-index:60;max-width:210px;padding:7px 9px;border-radius:10px;pointer-events:none;   /* 🔮 스킬 롱프레스 설명 팝업 — 프로필 시트와 동일 글래스 톤 */
     background:linear-gradient(180deg,rgba(16,22,34,.98),rgba(9,13,21,.99));border:1px solid rgba(90,140,210,.35);box-shadow:0 6px 20px rgba(0,0,0,.6);color:#dfe7f2}
@@ -1190,7 +1191,7 @@
   .scBox .sl{font-size:8.5px;font-weight:700;letter-spacing:0;white-space:nowrap;line-height:1.2}
   .scBox .sl.def{color:#9ec2ff}.scBox .sl.shd{color:#8fd8ff}.scBox .sl.atk{color:#ffb088}  /* 칩 없이 방어=파랑·쉴드=청록·공격=주황 텍스트 */
   /* (구 다중선택 칩 UI CSS 제거 — 프로필은 커맨드 그리드(.cmdG)가 담당) */
-  #defaultCmd{display:flex;flex-direction:column;gap:7px;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden}#defaultCmd.hide{display:none}
+  #defaultCmd{display:flex;flex-direction:column;gap:4px;height:min(26vh,126px);max-height:min(26vh,126px);min-height:0;overflow:hidden}#defaultCmd.hide{display:none}   /* 유닛지정/판매도 프로필 시트와 동일 고정 높이(무선택·유닛유무 무관) → 시트 교체 시 높이 안 튐 */
 
   /* 안내문: 검은 인셋 패널(SC 정보창 느낌) */
   .hint{font-size:var(--fs-md);color:var(--txt);text-align:center;margin:auto;line-height:1.7;padding:8px 12px;
@@ -1408,6 +1409,7 @@
     --cgDim:#8a94a6;--cgMuted:#657085;--cgGood:#6ff0a0;--cgBad:#ff7676;--cgCr:#8fd8ff;--cgEn:#ffd24a;--cgPop:#c8b6ff}
   .cmdG[data-mode="prod"]{--ca:#5cd6ff;--caG:rgba(92,214,255,.45);--caS:rgba(92,214,255,.5);--caL:#dff4ff}
   .cmdG[data-mode="build"]{--ca:var(--gold);--caG:rgba(255,210,74,.45);--caS:rgba(255,210,74,.5);--caL:var(--gold-lt)}
+  .cmdG[data-mode="boss"]{--ca:#ff5c6e;--caG:rgba(255,92,110,.45);--caS:rgba(255,92,110,.5);--caL:#ffd6db}   /* 보스 시트 = 붉은 강조 */
   .cmdG .cgHead{display:flex;align-items:center;gap:8px;padding:1px 2px 6px;position:relative;flex:none}
   .cmdG .cgHead::after{content:'';position:absolute;left:2px;right:6px;bottom:0;height:1px;background:linear-gradient(90deg,var(--caS),transparent 72%)}
   .cmdG .cgPort{width:38px;height:38px;flex:none;position:relative;overflow:hidden;color:var(--ca);border:1.5px solid var(--caS);
@@ -1508,6 +1510,9 @@
   .cmdG[data-build="1"] .cgName{text-overflow:clip;max-width:none}   /* 생략(...) 없이 — JS가 폰트 축소로 한 줄 */
   .cmdG[data-build="1"] .cgCost{flex-direction:column;flex-wrap:nowrap;gap:1px;margin-top:auto}   /* 크레딧(위)/에너지(아래) 각 한 줄 */
   .cmdG[data-build="1"] .cgCost .cc{font-size:9px;min-height:10px;line-height:10px;display:block;text-align:center}   /* 빈 줄도 높이 유지(자리 예약) */
+  .cmdG .cgCost.cgRwd{flex-direction:row;flex-wrap:nowrap;gap:4px;font-size:9px;font-weight:800;color:var(--cgGood);white-space:nowrap}   /* 보스 셀: 소환 무료 → 코스트 대신 처치 보상(+초록=획득 신호, 한 줄) */
+  .cmdG .cgCost.cgRwd span{display:inline-flex;align-items:center;gap:2px}
+  .cmdG .cgCost.cgRwd .rE{color:var(--cgEn);font-style:normal}
   .cmdG .cc{display:inline-flex;align-items:center;gap:1px;font:800 10px/1 'Rajdhani',sans-serif;font-variant-numeric:tabular-nums}
   .cmdG .cc.cr{color:var(--cgCr)} .cmdG .cc.en{color:var(--cgEn)} .cmdG .cc.hp{color:#ff8a8a}   /* 스킬 HP 코스트(아드레날린) */
   .cmdG .cgMeta{position:absolute;top:3px;right:4px;display:inline-flex;align-items:center;gap:1px;font:800 8.5px/1 'Rajdhani',sans-serif;
@@ -1524,9 +1529,9 @@
   .cmdG .cgPage .dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.18)} .cmdG .cgPage .dot.on{background:var(--ca);box-shadow:0 0 6px var(--caG)}
   .cmdG .cgPage .pn{font:800 10px/1 'Rajdhani',sans-serif;color:var(--cgDim);letter-spacing:.5px}
   /* 플레이어 선택: 8인 그리드(4×2) — 깔끔한 다크 카드 + 컬러 액센트 */
-  #plGridWrap{display:flex;flex-direction:column;flex:1;min-height:0}   /* 콘솔 세로 가득 채움 */
+  #plGridWrap{display:flex;flex-direction:column;flex:none;height:min(26vh,126px);max-height:min(26vh,126px);min-height:0}   /* 다른 하단 섹션(유닛지정/뽑기/업그레이드)과 동일한 126px 고정 높이 */
   /* 플레이어 관전 슬롯 = 통일된 SC 카드(메탈+사선 모서리+플레이어색 좌측 액센트+스캔라인) */
-  .plGrid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:64px;align-content:center;gap:6px;flex:1;min-height:0;padding:2px 0}
+  .plGrid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:58px;align-content:center;gap:6px;flex:1;min-height:0;padding:2px 0}
   .plbtn{--pc:var(--info);position:relative;cursor:pointer;overflow:hidden;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;padding:7px 10px;
     background:linear-gradient(160deg,rgba(42,48,60,.5),rgba(10,12,17,.7));border:1px solid var(--metal-edge);
     clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
@@ -1606,31 +1611,48 @@
     background:
       radial-gradient(ellipse 78% 60% at 50% 50%, rgba(2,3,8,.72), rgba(2,3,8,.3) 70%),
       linear-gradient(180deg, rgba(2,3,8,.9) 0%, rgba(2,3,8,.35) 22%, rgba(2,3,8,.35) 78%, rgba(2,3,8,.92) 100%)}
-  .lbCard{width:90%;max-width:340px;max-height:92%;overflow:auto;padding:16px}
-  /* 대기실 채팅 */
-  .lbChat{height:62px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;padding:7px 9px;margin-bottom:7px;border-radius:var(--r-md);   /* 1열 8줄(약간 키운 카드) 자리 확보 위해 축소 */
+  .lbCard{width:90%;max-width:340px;max-height:90%;overflow:hidden;padding:16px;display:flex;flex-direction:column}   /* 콘텐츠 높이(채팅 6줄 고정) → 팝업 높이 자동 축소 */
+  /* 대기실 채팅 — 6줄 고정 높이 */
+  .lbChat{flex:0 0 auto;height:126px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;padding:8px 10px;margin-bottom:8px;border-radius:var(--r-md);
     background:rgba(0,0,0,.28);border:1px solid var(--metal-edge)}
   .lbChat::-webkit-scrollbar{width:4px}.lbChat::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
   .lbMsg{font-size:var(--fs-md);line-height:1.35;color:#d6d2d2;word-break:break-all}
   .lbMsg b{font-weight:700}
   .lbMsg.sys{color:var(--txt-mute);font-style:italic;font-size:var(--fs-sm)}
-  .lbChatBar{display:flex;gap:6px;margin-bottom:14px}
+  .lbChatBar{flex:0 0 auto;display:flex;gap:6px;margin-bottom:10px}
   .lbChatBar input{flex:1;min-width:0;background:rgba(0,0,0,.28);border:1px solid var(--metal-edge);border-radius:var(--r-md);color:#e0dcdc;font-size:var(--fs-lg);padding:8px 11px;outline:none}
   .lbChatBar input:focus{border-color:var(--neon-soft)}
   .lbChatBar input::placeholder{color:#7a7072}
   .lbChatBar button{background:rgba(255,59,59,.12);border:1px solid var(--neon-soft);color:var(--neon-lt);border-radius:var(--r-md);padding:0 15px;font-size:var(--fs-lg);font-weight:700;cursor:pointer;white-space:nowrap}
   .lbChatBar button:active{transform:translateY(1px)}
-  .lbHead{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:5px}
-  .lbTitle{font-size:16px;font-weight:800;color:var(--neon);text-shadow:0 0 10px var(--neon-glow);letter-spacing:.5px}
+  .lbHead{flex:0 0 auto;display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:8px}
+  .lbTitleWrap{display:flex;align-items:baseline;gap:7px;min-width:0}
+  .lbTitle{font-size:16px;font-weight:800;color:var(--neon);text-shadow:0 0 10px var(--neon-glow);letter-spacing:.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lbCount{flex:0 0 auto;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:800;color:var(--hud)}
   .lbRoom{font-size:var(--fs-md);color:var(--hud);text-shadow:0 0 6px var(--hud-glow);white-space:nowrap}
-  .lbStatus{font-size:var(--fs-md);color:#c8bbbd;margin-bottom:13px}
-  .lbGrid{display:grid;grid-template-columns:1fr;gap:5px;margin-bottom:12px}   /* 1열(가로로 긴 8줄) — 카드 넓어 닉네임/상태/종족 한 줄에 여유 */
-  .lbSlot{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:4px;position:relative;overflow:hidden;
+  .lbGrid{flex:0 0 auto;display:grid;grid-template-columns:1fr;gap:4px;margin-bottom:9px}
+  .lbSlot{display:flex;align-items:center;gap:8px;padding:3px 9px;min-height:30px;border-radius:4px;position:relative;overflow:hidden;
     background:linear-gradient(180deg,rgba(30,32,38,.9),rgba(12,13,17,.92));border:1px solid var(--metal-edge)}
   .lbSlot::after{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--pc,var(--info));opacity:.22}   /* 진영색=아주 은은한 왼쪽 띠 */
   .lbSlot.me{border-color:rgba(198,208,222,.5)}   /* 내 카드=중립 밝은 테두리(알록달록 글로우 제거) */
-  .lbSlot.empty{opacity:.4;border-style:dashed}
-  .lbNum{font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:800;color:var(--pc,var(--info));filter:saturate(.4);min-width:15px;text-align:center;text-shadow:0 1px 2px #000}   /* 채도↓ → 미세한 진영색 차이만 */
+  .lbSlot.empty{opacity:.85;border-style:dashed}
+  .lbSlot.empty.locked{opacity:.5}
+  /* 빈 슬롯 중앙: 이동 버튼 / 잠김 표시 · 호스트 잠금 토글 · 추방 버튼 */
+  /* 슬롯 탭 = 드롭다운 메뉴(이동/잠금 · 친구추가/추방). 카드에 직접 버튼 없음 */
+  .lbSlot.tapmenu{cursor:pointer} .lbSlot.tapmenu:hover{border-color:rgba(198,208,222,.4)}
+  .lbEmptyMid{flex:1;display:flex;align-items:center;justify-content:center;gap:6px}
+  .lbEmpty{font-size:var(--fs-sm);color:#7a8696}
+  .lbLockTxt{font-size:var(--fs-sm);color:#8a93a0;font-weight:700}
+  .lbSlotCaret{font-size:9px;color:#6b7686;line-height:1}
+  .lbMenu{position:fixed;z-index:60;min-width:112px;display:flex;flex-direction:column;gap:2px;padding:5px;
+    background:linear-gradient(180deg,rgba(18,22,32,.99),rgba(10,13,20,.995));border:1px solid rgba(120,140,180,.32);border-radius:var(--r-md);box-shadow:0 10px 28px rgba(0,0,0,.65)}
+  .lbMenu.hide{display:none}
+  .lbMenuOpt{font-family:inherit;font-size:var(--fs-md);font-weight:700;color:#d3dde8;text-align:left;cursor:pointer;white-space:nowrap;
+    padding:9px 12px;border-radius:calc(var(--r-md) - 2px);background:transparent;border:1px solid transparent;transition:background .1s}
+  .lbMenuOpt:hover{background:rgba(255,255,255,.06)}
+  .lbMenuOpt.danger{color:#ff9a9a} .lbMenuOpt.danger:hover{background:rgba(200,50,50,.18)}
+  .lbMenuOpt:active{transform:translateY(1px)}
+  .lbNum{font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:800;color:var(--pc,var(--info));filter:saturate(.4);min-width:14px;text-align:center;text-shadow:0 1px 2px #000}   /* 채도↓ → 미세한 진영색 차이만 */
   .lbInfo{min-width:0;flex:1;text-align:left;display:flex;align-items:baseline;gap:8px}   /* 1열 넓은 카드: 이름+상태 한 줄 */
   .lbName{flex:0 1 auto;font-size:var(--fs-lg);font-weight:700;color:#e6e2e2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.15}
   .lbStat{flex:0 0 auto;font-size:var(--fs-xs);color:#9aa6b4;letter-spacing:.2px;white-space:nowrap}
@@ -1650,8 +1672,8 @@
   .lbRace.lk{clip-path:none;border-radius:4px;border-style:dashed;background:rgba(255,255,255,.03);opacity:.42}
   .lbRace.lk::before{display:none}
   .lbRace.lk .lrNm{color:#8a93a0;text-shadow:none}
-  .lbBtns{display:flex;gap:8px}
-  .lbLeave,.lbStart{padding:12px;border-radius:var(--r-md);font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:.5px;transition:all .12s}
+  .lbBtns{flex:0 0 auto;display:flex;gap:8px}
+  .lbLeave,.lbStart{padding:10px;border-radius:var(--r-md);font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:.5px;transition:all .12s}
   .lbLeave{flex:0 0 34%;color:#ffd2d2;background:rgba(200,50,50,.16);border:1px solid rgba(255,80,80,.45)}
   .lbStart{flex:1;color:#cfcfd4;background:linear-gradient(180deg,rgba(70,70,76,.5),rgba(34,34,40,.5));border:1px solid var(--metal-edge)}
   .lbStart.ready{color:#fff;background:linear-gradient(180deg,var(--neon-face1),var(--neon-d1));border-color:var(--neon);box-shadow:0 0 13px -3px var(--neon-glow),inset 0 1px 0 rgba(255,255,255,.22)}
@@ -1660,12 +1682,31 @@
   /* 방 찾기(룸 리스트) */
   #rooms{position:absolute;inset:0;z-index:46;display:flex;align-items:center;justify-content:center;padding:20px;background:transparent}   /* 로비 배경 사용(::before) */
   #rooms.hide{display:none}
-  .rmCard{width:92%;max-width:350px;max-height:88%;display:flex;flex-direction:column;padding:18px}
-  .rmHead{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px}
+  .rmCard{width:92%;max-width:350px;max-height:90%;display:flex;flex-direction:column;padding:18px 18px 22px}
+  .rmHead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
   .rmTitle{font-size:17px;font-weight:800;color:var(--neon);text-shadow:0 0 10px var(--neon-glow);letter-spacing:.5px}
+  .rmHeadR{display:flex;align-items:center;gap:8px;flex:0 0 auto}
   .rmOnline{font-size:var(--fs-md);color:var(--txt-dim)}.rmOnline b{color:var(--hud)}
+  /* 우상단 난이도 필터 = 커스텀 팝다운(테마 통일) */
+  .rmCard>.rmHead{z-index:20}   /* 헤드를 목록 위로 → 드롭다운 메뉴가 방 목록에 가려 비치지 않게 */
+  .rmDiff{position:relative;flex:0 0 auto}
+  .rmDiffBtn{display:flex;align-items:center;gap:5px;font-family:inherit;font-size:var(--fs-md);font-weight:800;color:#cfeaff;cursor:pointer;
+    padding:6px 8px 6px 10px;border-radius:var(--r-md);background:rgba(0,229,255,.09);border:1px solid rgba(0,229,255,.42);transition:border-color .12s,background .12s}
+  .rmDiffBtn:active{transform:translateY(1px)}
+  .rmDiff.open .rmDiffBtn{border-color:rgba(0,229,255,.72);background:rgba(0,229,255,.14)}
+  .rmDiffChev{width:12px;height:12px;flex:0 0 auto;color:#7fd8ff;transition:transform .18s}
+  .rmDiff.open .rmDiffChev{transform:rotate(180deg)}
+  .rmDiffMenu{position:absolute;top:calc(100% + 5px);right:0;z-index:30;min-width:104px;display:flex;flex-direction:column;gap:1px;padding:4px;
+    background:linear-gradient(180deg,rgba(16,22,32,.985),rgba(9,13,20,.99));border:1px solid rgba(0,229,255,.34);border-radius:var(--r-md);
+    box-shadow:0 12px 28px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.04)}
+  .rmDiffMenu.hide{display:none}
+  .rmDiffOpt{display:flex;align-items:center;gap:7px;font-family:inherit;font-size:var(--fs-md);font-weight:700;color:#c6d2df;text-align:left;cursor:pointer;white-space:nowrap;
+    padding:6px 9px;border-radius:calc(var(--r-md) - 2px);background:transparent;border:1px solid transparent;transition:background .1s,border-color .1s,color .1s}
+  .rmDiffOpt:hover{background:rgba(255,255,255,.05)}
+  .rmDiffOpt.on{color:#fff;background:rgba(0,229,255,.13);border-color:rgba(0,229,255,.42)}
+  .rmDiffDot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;box-shadow:0 0 0 2px rgba(255,255,255,.05)}
   .rmTop{display:flex;gap:8px;margin-bottom:12px}
-  .rmQuick,.rmCreate{flex:1;padding:11px;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-xl);font-weight:800;cursor:pointer;letter-spacing:.3px;transition:transform .08s}
+  .rmQuick,.rmCreate{flex:1;min-width:0;padding:13px 8px;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-lg);font-weight:800;cursor:pointer;letter-spacing:.2px;white-space:nowrap;transition:transform .08s}
   .rmQuick{color:#fff;background:linear-gradient(180deg,var(--neon-face1),var(--neon-d1));border:1px solid var(--neon);box-shadow:0 0 11px -3px var(--neon-glow),inset 0 1px 0 rgba(255,255,255,.2)}
   .rmCreate{color:#cfeaff;background:linear-gradient(180deg,rgba(11,40,54,.9),rgba(5,16,26,.9));border:1px solid rgba(0,229,255,.5)}
   .rmQuick:active,.rmCreate:active{transform:translateY(1px)}
@@ -1755,6 +1796,7 @@
   #pwField{margin-bottom:8px}
   #pwErr{min-height:15px;color:#ff6b6b}
   .cpHint{font-size:var(--fs-sm);color:var(--txt-mute);margin-bottom:18px;padding-left:2px}
+  .cpHint:empty{display:none}   /* 안내 텍스트 없을 땐 공간 차지 안 함(에러 시에만 표시) */
   .cpBtns{display:flex;gap:8px}
   .cpCancel,.cpMake,.ecCancel,.ecGo{flex:1;padding:12px;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-xl);font-weight:800;cursor:pointer;transition:transform .08s}
   .cpCancel,.ecCancel{color:var(--txt);background:var(--glass);border:1px solid var(--metal-edge)}
@@ -1762,7 +1804,7 @@
   .cpMake,.ecGo{color:#fff;background:linear-gradient(180deg,var(--neon-face1),var(--neon-d1));border:1px solid var(--neon);box-shadow:0 0 11px -3px var(--neon-glow)}
   .cpCancel:active,.cpMake:active{transform:translateY(1px)}
   /* 6칸 고정 높이: 방이 적어도 크기 유지(빈 공간), 많으면 내부 드래그 스크롤 */
-  .rmList{--rmRows:5;--rmItemH:54px;--rmGap:6px;flex:none;
+  .rmList{--rmRows:6;--rmItemH:54px;--rmGap:6px;flex:none;
     height:calc(var(--rmRows) * var(--rmItemH) + (var(--rmRows) - 1) * var(--rmGap));
     overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
     display:flex;flex-direction:column;gap:var(--rmGap);padding-right:2px}
@@ -1783,11 +1825,14 @@
   .riCnt.full{color:#ff7676}
   .riStat{font-size:var(--fs-xs);font-weight:700;margin-top:2px}
   .riStat.wait{color:var(--ok)}.riStat.play{color:var(--txt-mute)}
-  .rmBtns{display:flex;gap:8px;margin-top:12px}
-  .rmBack,.rmRefresh{padding:10px;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-lg);font-weight:700;cursor:pointer;transition:transform .08s}
-  .rmBack{flex:0 0 34%;color:var(--txt);background:var(--glass);border:1px solid var(--metal-edge)}
-  .rmRefresh{flex:1;color:#cfeaff;background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.3)}
-  .rmBack:active,.rmRefresh:active{transform:translateY(1px)}
+  .rmBtns{display:flex;gap:8px;margin-top:24px;align-items:center}
+  /* 뒤로·새로고침 = 정사각 아이콘 버튼(랜덤입장·방만들기보다 위계 낮게 = 조금 작고 은은하게) */
+  .rmSq{flex:0 0 auto;width:42px;height:42px;display:flex;align-items:center;justify-content:center;padding:0;
+    border-radius:var(--r-md);cursor:pointer;transition:transform .08s;
+    color:#9fb0c2;background:rgba(255,255,255,.045);border:1px solid var(--metal-edge)}
+  .rmSq svg{width:19px;height:19px;display:block}
+  .rmSq:active{transform:translateY(1px)}
+  .rmSq.rmRefresh{color:#bfe6ff;border-color:rgba(0,229,255,.28);background:rgba(0,229,255,.06)}   /* 리롤은 살짝 하늘색 */
   /* 토스트 */
   #toast{position:absolute;bottom:46px;left:50%;transform:translateX(-50%);z-index:95;
     background:rgba(10,20,35,.92);border:1px solid var(--neon-soft);border-radius:var(--r-lg);padding:7px 14px;
@@ -2128,16 +2173,18 @@
   .msDivider{flex:0 0 auto;height:1px;margin:7px 2px 2px;background:linear-gradient(90deg,transparent,var(--neon-soft) 18%,var(--neon-soft) 82%,transparent)}
   /* 하단 소셜 박스: 탭(헤더) + 콘텐츠를 하나의 외곽 안에 포함 */
   .msSocial{flex:1;min-height:80px;display:flex;flex-direction:column;margin-top:9px;overflow:hidden;
-    background:linear-gradient(180deg,rgba(6,7,11,.42),rgba(4,5,8,.5));border:1px solid var(--neon-soft);border-radius:var(--r-lg);
-    box-shadow:inset 0 0 16px -9px var(--neon-glow)}
+    background:linear-gradient(180deg,rgba(6,7,11,.42),rgba(4,5,8,.5));border:1px solid var(--metal-edge);border-radius:var(--r-lg);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}   /* 테두리 중립(빨강 글로우 제거) */
   /* 탭(채팅/파티/친구) — 박스 안 헤더, 밑줄 인디케이터로 자연스럽게 전환 */
-  .msTabs2{flex:0 0 auto;display:flex;border-bottom:1px solid rgba(255,59,59,.16);background:rgba(255,255,255,.015)}
+  .msTabs2{flex:0 0 auto;display:flex;border-bottom:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.015)}
   .msTab2{flex:1;position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 4px;line-height:1;
     font-family:inherit;font-size:var(--fs-lg);font-weight:700;cursor:pointer;color:var(--txt-hud);background:transparent;border:none;
     border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .16s,border-color .16s}
   .msTab2 .ic{position:relative;top:-.75px}
   .msTab2:hover{color:#cdd7e1}
-  .msTab2.on{color:var(--neon);border-bottom-color:var(--neon)}
+  .msTab2.on{color:#5fd0ff;border-bottom-color:#00e5ff}   /* 채팅=청록 포인트(빨강 제거) */
+  .msTab2[data-bt="party"].on{color:#b98cff;border-bottom-color:#8a56ff}   /* 파티=진한 보라 포인트 */
+  .msTab2[data-bt="friend"].on{color:#7fa8ff;border-bottom-color:#3a6ee0}   /* 친구=짙은 파랑 포인트 */
   .msTab2:active{opacity:.85}
   .msPanelBody{flex:1;min-height:60px;padding:8px 9px;overflow-y:auto;overflow-x:hidden;background:transparent;border:none}
   .msPanelBody::-webkit-scrollbar{width:4px}.msPanelBody::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:var(--r-bar)}
@@ -2146,13 +2193,28 @@
   .msChat{flex:1;min-height:0;padding:8px 9px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;
     background:transparent;border:none;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
   .msChat::-webkit-scrollbar{width:4px}.msChat::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:var(--r-bar)}
-  /* 채팅 범위 선택(전체/파티/친구) */
-  .msScope{flex:0 0 auto;display:flex;gap:4px;padding:6px 7px 0}
-  .msScopeBtn{padding:5px 12px;border-radius:var(--r-md);cursor:pointer;font-family:inherit;font-size:var(--fs-sm);font-weight:700;letter-spacing:.2px;
-    color:var(--txt-hud);background:rgba(9,11,17,.55);border:1px solid var(--metal-edge);transition:all .14s}
-  .msScopeBtn:hover{color:#cdd7e1;border-color:rgba(255,255,255,.18)}
-  .msScopeBtn.on{color:var(--neon-lt);background:rgba(255,59,59,.1);border-color:var(--neon-soft)}
-  .msScopeBtn:active{transform:translateY(1px)}
+  /* 채팅 범위(전체/파티/친구) = 입력줄 내 컴팩트 팝다운(설정 구역). 현재 범위 색: 전체=청록 · 파티=보라 · 친구=파랑 */
+  .msScopeDD{position:relative;flex:0 0 auto}
+  .msScopeTrig{display:flex;align-items:center;gap:3px;font-family:inherit;font-size:var(--fs-sm);font-weight:800;cursor:pointer;white-space:nowrap;
+    padding:5px 6px 5px 9px;border-radius:var(--r-md);transition:border-color .12s,background .12s,color .12s;
+    color:#cfe0ec;background:rgba(255,255,255,.05);border:1px solid var(--metal-edge)}
+  .msScopeTrig:active{transform:translateY(1px)}
+  .msScopeChev{width:11px;height:11px;flex:0 0 auto;opacity:.85;transition:transform .18s}
+  .msScopeDD.open .msScopeChev{transform:rotate(180deg)}
+  .msScopeDD[data-sc="all"] .msScopeTrig{color:#bfe6ff;background:rgba(0,229,255,.1);border-color:rgba(0,229,255,.42)}
+  .msScopeDD[data-sc="party"] .msScopeTrig{color:#d6bcff;background:rgba(138,86,255,.18);border-color:rgba(138,86,255,.6)}
+  .msScopeDD[data-sc="friend"] .msScopeTrig{color:#bcd2ff;background:rgba(58,110,224,.2);border-color:rgba(58,110,224,.62)}
+  .msScopeMenu{position:absolute;bottom:calc(100% + 6px);right:0;z-index:30;min-width:86px;display:flex;flex-direction:column;gap:1px;padding:4px;
+    background:linear-gradient(180deg,rgba(16,20,30,.985),rgba(9,12,19,.99));border:1px solid rgba(120,140,180,.3);border-radius:var(--r-md);box-shadow:0 -10px 26px rgba(0,0,0,.6)}
+  .msScopeMenu.hide{display:none}
+  .msScopeOpt{font-family:inherit;font-size:var(--fs-sm);font-weight:700;color:#c6d2df;text-align:left;cursor:pointer;white-space:nowrap;
+    padding:6px 11px;border-radius:calc(var(--r-md) - 2px);background:transparent;border:1px solid transparent;transition:background .1s,color .1s,border-color .1s}
+  .msScopeOpt[data-sc="party"]{color:#c9b0ff} .msScopeOpt[data-sc="friend"]{color:#b3c8ff}
+  .msScopeOpt:hover{background:rgba(255,255,255,.05)}
+  .msScopeOpt.on{color:#fff}
+  .msScopeOpt[data-sc="all"].on{background:rgba(0,229,255,.15);border-color:rgba(0,229,255,.42)}
+  .msScopeOpt[data-sc="party"].on{background:rgba(138,86,255,.22);border-color:rgba(138,86,255,.55)}
+  .msScopeOpt[data-sc="friend"].on{background:rgba(58,110,224,.24);border-color:rgba(58,110,224,.58)}
   .msChat .mcLine{font-size:var(--fs-lg);line-height:1.38;color:#cdd7e1;word-break:break-word}
   /* 범위별 표시 필터(귓속말은 항상 표시) */
   .msChat .mcLine{display:none}
@@ -2169,17 +2231,17 @@
   .msChat .mcLine.whisper{color:#cdb8ff}
   .msChat .mcLine.whisper .mcWhisper{font-weight:800;color:#b6a0ff}
   .msChat .mcLine.whisper .mcArrow{color:#7d6fb0;font-weight:700}
-  .msChatBar{flex:0 0 auto;display:flex;align-items:center;gap:2px;padding:3px 4px;border-top:1px solid rgba(255,59,59,.16)}
+  .msChatBar{flex:0 0 auto;display:flex;align-items:center;gap:2px;padding:3px 4px;border-top:1px solid rgba(255,255,255,.08)}
   .msFriendBtn{flex:0 0 auto;width:46px;border-radius:var(--r-md);cursor:pointer;font-size:17px;position:relative;
     border:1px solid rgba(0,229,255,.4);background:rgba(0,229,255,.09);color:var(--hud);box-shadow:inset 0 0 8px rgba(0,229,255,.06)}
   .msFriendBtn:active{transform:translateY(1px)}
   .msFriendBadge{position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;line-height:16px;border-radius:var(--r-lg);
-    background:var(--neon);color:#fff;font-size:var(--fs-xs);font-weight:800;text-align:center;padding:0 3px;box-shadow:0 0 6px var(--neon-glow)}
+    background:#3a6ee0;color:#fff;font-size:var(--fs-xs);font-weight:800;text-align:center;padding:0 3px;box-shadow:0 0 6px rgba(58,110,224,.6)}   /* 친구 배지=친구 파랑 포인트 */
   .msFriendBadge.hide{display:none}
   .msChatBar input{flex:1;min-width:0;padding:7px 8px;background:transparent;border:none;color:var(--txt);font-family:inherit;font-size:var(--fs-lg);outline:none}
   .msChatBar input::placeholder{color:#6f757d}
   .msChatSend{flex:0 0 auto;padding:5px 10px 5px 12px;margin-left:3px;cursor:pointer;font-family:inherit;font-weight:800;font-size:var(--fs-md);
-    border:none;border-left:1px solid rgba(255,59,59,.16);background:rgba(205,45,45,.24);color:#ffd6d6;text-shadow:0 0 6px var(--neon-glow)}
+    border:none;border-left:1px solid rgba(255,255,255,.08);background:rgba(0,229,255,.13);color:#bfe6ff}   /* 전송=청록 포인트(빨강 제거) */
   .msChatSend:active{transform:translateY(1px)}
   /* 친구 오버레이(스텁 — 다음 단계에서 친구목록/메시지/파티 채움) */
   .foCard{width:84%;max-width:300px;max-height:80%;display:flex;flex-direction:column;padding:15px 14px;border-radius:10px;
@@ -2305,20 +2367,21 @@
     font-size:var(--fs-md);font-weight:600;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;box-shadow:0 6px 20px var(--shade)}
   .lobbyToast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   .mapItem{flex:0 0 auto;position:relative;display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:11px;cursor:pointer;overflow:hidden;
-    background:linear-gradient(135deg,rgba(36,38,47,.84),rgba(13,14,19,.9));border:1px solid var(--neon-soft);
-    box-shadow:0 5px 16px -10px var(--neon-glow),inset 0 1px 0 rgba(255,255,255,.06);transition:transform .15s,border-color .15s,box-shadow .15s}
+    background:linear-gradient(135deg,rgba(36,38,47,.84),rgba(13,14,19,.9));border:1px solid var(--metal-edge);   /* 쉬는 상태=중립(빨강 남발 제거). 강조는 호버에만 */
+    box-shadow:0 5px 15px -11px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05);transition:transform .15s,border-color .15s,box-shadow .15s}
   .mapItem::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:11px 0 0 11px;
-    background:linear-gradient(180deg,var(--neon),rgba(255,59,59,.2));opacity:.9}   /* 좌측 네온 액센트바(상시) */
+    background:linear-gradient(180deg,var(--mapAccent,#8aa0c8),rgba(150,172,205,.05));opacity:.85}   /* 좌측 액센트바 = 맵별 색(호버 시 빨강으로) */
   .mapItem:hover{border-color:var(--neon);transform:translateY(-1px);box-shadow:0 7px 20px -8px var(--neon-glow),inset 0 1px 0 rgba(255,255,255,.08)}
+  .mapItem:hover::before{background:linear-gradient(180deg,var(--neon),rgba(255,59,59,.2));opacity:.95}   /* 호버 시 좌측바 빨강 강조(상호작용 액센트) */
   .mapItem:active{transform:translateY(0)}
   .mapItem.soon{opacity:.6}
   .mapThumb{position:relative;width:48px;height:48px;flex:none;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;
-    background:radial-gradient(circle at 50% 30%,rgba(255,59,59,.22),rgba(7,7,11,.85));border:1px solid rgba(255,255,255,.1);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 0 13px -5px rgba(255,59,59,.45)}
+    background:radial-gradient(circle at 50% 30%,rgba(120,140,175,.14),rgba(7,7,11,.85));border:1px solid rgba(255,255,255,.1);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 0 14px -4px var(--mapAccent,#6d86b8)}   /* 썸네일 은은한 글로우 = 맵별 색(음수 스프레드로 페이드) */
   .mapThumb.mm{background:#0d0c10;box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}   /* 미니맵 변형(빨강 글로우 X) */
   .mapThumb .mmBg{position:absolute;inset:0;width:100%;height:100%}
   .mapThumb .mmIco{position:relative;z-index:1;display:flex;align-items:center;justify-content:center}
-  .mapThumb .mmIco .ic{width:22px;height:22px;color:#ffb8b8}
+  .mapThumb .mmIco .ic{width:22px;height:22px;color:var(--mapAccent,#cbd8e6)}   /* 아이콘 = 맵별 아이덴티티 색 */
   .mapMain{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}
   .mapName{font-size:14px;font-weight:700;color:#f7f3f3;letter-spacing:-.2px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .mapDesc{font-size:var(--fs-sm);font-weight:400;color:#929ba6;margin-top:3.5px;line-height:1.35;letter-spacing:.1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -2386,6 +2449,13 @@
   .rmfBtn.on{color:#fff;border-color:var(--dc,var(--neon));background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(0,0,0,.12));box-shadow:0 0 10px -3px var(--dc,var(--neon-glow))}
   .rmEmpty{text-align:center;color:#7d8b98;font-size:var(--fs-lg);font-weight:700;padding:26px 0}
   .cpDiffBtns{margin-bottom:4px}
+  .cpStepper{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+  .cpStepBtn{flex:0 0 auto;width:44px;height:42px;border-radius:var(--r-md);font-family:inherit;font-size:22px;font-weight:800;line-height:1;cursor:pointer;
+    color:#cfeaff;background:rgba(0,229,255,.09);border:1px solid rgba(0,229,255,.42);transition:all .1s}
+  .cpStepBtn:hover{background:rgba(0,229,255,.16)} .cpStepBtn:active{transform:translateY(1px)}
+  .cpStepBtn:disabled{opacity:.35;cursor:default;background:var(--glass);border-color:var(--metal-edge);color:var(--txt-mute)}
+  .cpStepVal{flex:1;text-align:center;font-family:'Rajdhani',sans-serif;font-size:24px;font-weight:800;color:#fff;
+    padding:7px 0;border-radius:var(--r-md);background:rgba(0,0,0,.28);border:1px solid var(--metal-edge);font-variant-numeric:tabular-nums}
   /* 개인 플레이 난이도: 2×2 그리드, 난이도별 색으로 구분, 여유로운 버튼 */
   .soloDiffBtns{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:8px 0 12px}
   .soloDiffBtns .moDiffBtn{padding:14px 8px 12px;border-radius:10px;border:1.5px solid var(--dc);
@@ -2465,18 +2535,11 @@
     </div>
     <div id="zoneLabel">📍 내 디펜스 구역</div>
     <!-- 상시 공용 보스(협동) HP 바 — 메인 전투 화면 상단 -->
-    <div id="coopBossBar" class="hide" onclick="toggleBossPopup(event)" title="보스 메뉴">
+    <div id="coopBossBar" class="hide" onclick="openBossSheet()" title="보스 (개인보스·포인트방)">
       <div class="cbMid">
         <div class="cbTop"><span class="cbName" id="cbName"></span></div>
         <div class="cbBarOuter"><div class="cbBarFill" id="cbFill"></div><span class="cbHpTxt" id="cbHp"></span></div>
       </div>
-    </div>
-    <!-- 보스 액션 팝업: 상단 보스바를 누르면 표시(파견/회수/보스장) -->
-    <div id="bossPopup" class="hide">
-      <div class="bpHead"><span>월드 보스</span><span class="bpCnt"><b id="bdSent">0</b>/<span id="bdTotal">2</span></span></div>
-      <button class="hbDeploy" id="bossPickBtn" onclick="armBossPick();closeBossPopup()"><span class="bdLabel">파견</span></button>
-      <button class="hbRecall" onclick="recallFromBoss('all')">회수</button>
-      <button class="hbOpen" id="bossViewBtn" onclick="openBossFromPopup()">보스방</button>
     </div>
     <div id="miniWrap"><div id="miniBox"><canvas id="miniMap"></canvas></div></div>
     <!-- 조합 버튼: 메인 탭에서 미니맵 자리(우하단 코너)에 표시 -->
@@ -2525,10 +2588,8 @@
       <input id="chatField" type="text" placeholder="메시지…" maxlength="120" autocomplete="off">
       <button id="chatSend" onclick="sendChat()">전송</button>
     </div>
-    <!-- 개인 보스 버튼: 메인 탭에서 미니맵 자리(우하단)에 표시 -->
-    <div id="pbossBtn" class="hide" onclick="togglePbossPopup(event)" title="개인 보스 소환"><span class="pbTx">개인보스</span><span class="pbCd" id="pbossBtnCd"></span><span class="pbDot" id="pbossNotifyDot"></span></div>
-    <!-- 개인 보스 소환 팝업(4종) -->
-    <div id="pbossPopup" class="hide"></div>
+    <!-- 보스 버튼(우하단): 개인보스 소환 + 포인트방 파견을 하단 시트로 통합 진입 -->
+    <div id="pbossBtn" class="hide" onclick="openBossSheet()" title="보스 (개인보스·포인트방)"><span class="pbTx">보스</span><span class="pbCd" id="pbossBtnCd"></span><span class="pbDot" id="pbossNotifyDot"></span></div>
     <!-- 자동화 묶음 버튼(메인 좌측): 자동 조합/유닛/에너지 토글 — 해금 업그레이드 보유 시 표시 -->
     <div id="autoFab" class="hide" onclick="toggleAutoPopup(event)" title="자동 설정"><span class="afTx">자동설정</span></div>
     <!-- 🎨 플레이어 색 확인(메인) — 건설 구역과 같은 패널 컴포넌트, 유닛을 확대해 액센트 확인 -->
@@ -2548,8 +2609,8 @@
     <!-- 멀티플레이 대기실(로비) -->
     <div id="lobby" class="hide spaceBg">
       <div class="lbCard">
-        <div class="lbHead"><span class="lbTitle">멀티플레이 대기실</span><span class="lbRoom">◈ 용암 정거장</span></div>
-        <div class="lbStatus" id="lbStatus">플레이어 입장 대기 중…</div>
+        <div class="lbHead"><span class="lbTitleWrap"><span class="lbTitle">멀티플레이 대기실</span><span class="lbCount" id="lbCount"></span></span><span class="lbRoom">◈ 용암 정거장</span></div>
+        <div class="lbStatus" id="lbStatus" style="display:none"></div>
         <div class="lbGrid" id="lbGrid"></div>
         <div class="lbChat" id="lbChat"></div>
         <div class="lbChatBar">
@@ -2561,21 +2622,26 @@
           <button class="lbStart" id="lbStart" onclick="lobbyStart()" disabled>대기 중…</button>
         </div>
       </div>
+      <div class="lbMenu hide" id="lbMenu"></div>   <!-- 슬롯 탭 시 나오는 드롭다운(이동/잠금 · 친구추가/추방) -->
     </div>
     <!-- 방 찾기(룸 리스트) -->
     <div id="rooms" class="hide spaceBg">
       <div class="rmCard">
-        <div class="rmHead"><span class="rmTitle">방 찾기</span><span class="rmOnline">방 <b id="roomCount">0</b>개</span></div>
-        <div class="rmTop">
-          <button class="rmQuick" onclick="quickJoin()">⚡ 랜덤 입장</button>
-          <button class="rmCreate" data-sfx="ui_open" onclick="createRoom()">＋ 방 만들기</button>
-        </div>
-        <div class="rmFilter" id="rmFilter">
-          <button class="rmfBtn on" data-f="all" onclick="setRoomFilter('all')">전체</button>
-          <button class="rmfBtn" data-f="easy" onclick="setRoomFilter('easy')">이지</button>
-          <button class="rmfBtn" data-f="normal" onclick="setRoomFilter('normal')">노말</button>
-          <button class="rmfBtn" data-f="hard" onclick="setRoomFilter('hard')">하드</button>
-          <button class="rmfBtn" data-f="hell" onclick="setRoomFilter('hell')">헬</button>
+        <div class="rmHead">
+          <span class="rmTitle">방 찾기</span>
+          <span class="rmHeadR">
+            <span class="rmOnline">방 <b id="roomCount">0</b>개</span>
+            <div class="rmDiff" id="rmDiff">
+              <button class="rmDiffBtn" type="button" onclick="toggleRmDiff(event)" title="난이도 필터"><span id="rmDiffLabel">전체 난이도</span><svg class="rmDiffChev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+              <div class="rmDiffMenu hide" id="rmDiffMenu" role="listbox">
+                <button type="button" class="rmDiffOpt on" data-f="all" onclick="pickRmDiff('all')">전체 난이도</button>
+                <button type="button" class="rmDiffOpt" data-f="easy" onclick="pickRmDiff('easy')"><span class="rmDiffDot" style="background:var(--ok)"></span>이지</button>
+                <button type="button" class="rmDiffOpt" data-f="normal" onclick="pickRmDiff('normal')"><span class="rmDiffDot" style="background:var(--info)"></span>노말</button>
+                <button type="button" class="rmDiffOpt" data-f="hard" onclick="pickRmDiff('hard')"><span class="rmDiffDot" style="background:var(--warn)"></span>하드</button>
+                <button type="button" class="rmDiffOpt" data-f="hell" onclick="pickRmDiff('hell')"><span class="rmDiffDot" style="background:var(--bad)"></span>헬</button>
+              </div>
+            </div>
+          </span>
         </div>
         <div class="rmNum">
           <input id="roomNumField" type="text" inputmode="numeric" placeholder="방 번호로 입장 (친구 방)" maxlength="5" onkeydown="if(event.key==='Enter')joinByNumber()">
@@ -2583,8 +2649,10 @@
         </div>
         <div class="rmList" id="roomList"></div>
         <div class="rmBtns">
-          <button class="rmBack" onclick="backToTitle()">← 로비</button>
-          <button class="rmRefresh" onclick="refreshRooms()">↻ 새로고침</button>
+          <button class="rmSq rmBack" onclick="backToTitle()" title="로비로 돌아가기" aria-label="로비로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+          <button class="rmQuick" onclick="quickJoin()">빠른 입장</button>
+          <button class="rmCreate" data-sfx="ui_open" onclick="createRoom()">방 만들기</button>
+          <button class="rmSq rmRefresh" onclick="refreshRooms()" title="새로고침" aria-label="새로고침"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 12a8.4 8.4 0 0 1 14.5-5.8M20.4 12a8.4 8.4 0 0 1-14.5 5.8"/><path d="M18.4 2.9v3.6h-3.6M5.6 21.1v-3.6h3.6"/></svg></button>
         </div>
       </div>
     </div>
@@ -2596,6 +2664,12 @@
         <input id="cpName" type="text" placeholder="방 이름을 입력하세요" maxlength="18">
         <label class="cpLabel">난이도</label>
         <div class="moDiffBtns cpDiffBtns" id="cpDiffBtns"></div>
+        <label class="cpLabel">최대 인원</label>
+        <div class="cpStepper" id="cpMaxStep">
+          <button class="cpStepBtn" id="cpMaxDec" onclick="stepCpMax(-1)" aria-label="인원 감소">−</button>
+          <span class="cpStepVal" id="cpMaxVal">8</span>
+          <button class="cpStepBtn" id="cpMaxInc" onclick="stepCpMax(1)" aria-label="인원 증가">+</button>
+        </div>
         <label class="cpLabel">공개 설정</label>
         <div class="cpSeg" id="cpVis">
           <button class="cpSegBtn on" data-v="public" onclick="setRoomVis('public')"><span data-ico="globe"></span>공개</button>
@@ -2605,7 +2679,7 @@
           <label class="cpLabel">비밀번호</label>
           <input id="cpPw" type="text" inputmode="numeric" placeholder="비밀번호 설정 (숫자)" maxlength="8">
         </div>
-        <div class="cpHint" id="cpHint">공개: 방 목록에 표시됩니다.</div>
+        <div class="cpHint" id="cpHint"></div>
         <div class="cpBtns">
           <button class="cpCancel" onclick="closeCreate()">취소</button>
           <button class="cpMake" onclick="confirmCreate()">만들기</button>
@@ -2699,14 +2773,17 @@
           <button class="msTab2" data-bt="friend" onclick="setBottomTab('friend')"><span data-ico="friend"></span>친구<span class="msFriendBadge hide" id="msFriendBadge">0</span></button>
         </div>
         <div class="msChatWrap" id="msChatWrap">
-          <div class="msScope" id="msScope">
-            <button class="msScopeBtn on" data-sc="all" onclick="setChatScope('all')">전체</button>
-            <button class="msScopeBtn" data-sc="party" onclick="setChatScope('party')">파티</button>
-            <button class="msScopeBtn" data-sc="friend" onclick="setChatScope('friend')">친구</button>
-          </div>
           <div class="msChat" id="msChat" data-scope="all"></div>
           <div class="msChatBar" id="msChatBar">
             <input id="msChatInput" type="text" placeholder="전체 채팅…" maxlength="120" autocomplete="off" onkeydown="if(event.key==='Enter')sendGlobalChat()">
+            <div class="msScopeDD" id="msScopeDD" data-sc="all">
+              <button class="msScopeTrig" type="button" onclick="toggleMsScope(event)" title="채팅 범위"><span class="msScopeLbl" id="msScopeLbl">전체</span><svg class="msScopeChev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button>
+              <div class="msScopeMenu hide" id="msScopeMenu">
+                <button class="msScopeOpt on" data-sc="all" onclick="pickMsScope('all')">전체</button>
+                <button class="msScopeOpt" data-sc="party" onclick="pickMsScope('party')">파티</button>
+                <button class="msScopeOpt" data-sc="friend" onclick="pickMsScope('friend')">친구</button>
+              </div>
+            </div>
             <button class="msChatSend" onclick="sendGlobalChat()">전송</button>
           </div>
         </div>
@@ -2734,9 +2811,9 @@
 
   <div id="bot">
     <div id="tabs">
-      <div class="tab on" data-tab="Main"  onclick="switchTab('Main',this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 11L12 4.3 20.4 11"/><path d="M5.7 9.4V19.6h12.6V9.4"/><path d="M9.8 19.6v-4.7h4.4v4.7"/></svg></span>메인</div>
-      <div class="tab" data-tab="Unit"     onclick="switchTab('Unit',this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9.5" cy="8.5" r="3"/><path d="M4 19.5c0-3 2.5-5.2 5.5-5.2s5.5 2.2 5.5 5.2"/><path d="M18.5 4v5M16 6.5h5"/></svg></span><span id="unitTabLbl">유닛뽑기</span></div>
-      <div class="tab" data-tab="Upgrade"  onclick="switchTab('Upgrade',this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5l5.3 5.3h-3.1v4.6h-4.4V9.8H6.7z"/><path d="M7 18.5h10"/></svg></span>업그레이드</div>
+      <div class="tab on" data-tab="Main"  onclick="openMainHome(this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 11L12 4.3 20.4 11"/><path d="M5.7 9.4V19.6h12.6V9.4"/><path d="M9.8 19.6v-4.7h4.4v4.7"/></svg></span>메인</div>
+      <div class="tab" data-tab="Unit"     onclick="openGachaSheet(this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9.5" cy="8.5" r="3"/><path d="M4 19.5c0-3 2.5-5.2 5.5-5.2s5.5 2.2 5.5 5.2"/><path d="M18.5 4v5M16 6.5h5"/></svg></span><span id="unitTabLbl">유닛뽑기</span></div>
+      <div class="tab" data-tab="Upgrade"  onclick="openUpgradeSheet(this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5l5.3 5.3h-3.1v4.6h-4.4V9.8H6.7z"/><path d="M7 18.5h10"/></svg></span>업그레이드</div>
       <div class="tab" data-tab="Players"  onclick="switchTab('Players',this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.6" r="2.7"/><path d="M3.8 19c0-2.9 2.3-4.9 5.2-4.9s5.2 2 5.2 4.9"/><circle cx="16.9" cy="9.2" r="2.1"/><path d="M15.4 14.5c2.4.3 4.6 2 4.6 4.5"/></svg></span>플레이어</div>
       <div class="tab" id="battleTab" data-tab="Battle" style="display:none" onclick="switchTab('Battle',this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5 15 15M19 5 9 15M14.5 15.5 17.5 18.5M9.5 15.5 6.5 18.5"/></svg></span>전투실험</div>
       <div class="tab" id="buildTab" data-tab="Build" style="display:none" onclick="switchTab('Build',this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16M6 20V9l6-4 6 4v11M9.5 20v-5h5v5"/></svg></span>건설</div>
@@ -2796,11 +2873,8 @@
 
     <div class="bp" id="bpPlayers">
       <!-- 관전 중 유닛 클릭 시 그 유닛 1마리 정보(적군처럼 단일) -->
-      <div class="scPanel" id="playerProfile" style="display:none">
-        <div class="scPortrait" id="ppPortrait"></div>
-        <div class="scMid"><div class="scName" id="ppName"></div><div class="scType" id="ppType"></div><div class="scHp" id="ppHp"></div></div>
-        <div class="scStats" id="ppStats"></div>
-      </div>
+      <!-- 관전 유닛 프로필 = 메인과 동일 커맨드 그리드(renderCmdGrid) · 읽기전용 호스트 -->
+      <div id="playerProfile"></div>
       <div id="plGridWrap">
         <div class="plGrid" id="plGrid"></div>
       </div>
@@ -3250,7 +3324,7 @@ const USEMAPS={
   tmp3:  { id:'tmp3',   name:'미로 탈출 (임시)',   desc:'임시 등록 유즈맵',               players:'1-4', pop:1200, icon:'🌀', rec:false, isNew:false, playable:false, cfg:{} },
 };
 // 🌫️ [임시] 전장의 안개 테스트 맵 — nemo 복제 + cfg.fog:'full'(시야 시스템 확인용, 확인 후 제거 예정)
-try{ USEMAPS.fogtest = { id:'fogtest', name:'🌫️ 안개 테스트', desc:'전장의 안개·시야 시스템 확인용(임시)', players:'1-8', pop:9999, icon:'🌫️', rec:false, isNew:true, playable:true,
+try{ USEMAPS.fogtest = { id:'fogtest', name:'🌫️ 안개 테스트', desc:'전장의 안개·시야 시스템 확인용(임시)', players:'1-8', pop:9999, icon:'🌫️', rec:false, isNew:true, playable:true, hidden:true,   // 유즈맵 목록에서 숨김(관리자 페이지 안개로 충분)
   cfg: Object.assign({}, USEMAPS.nemo.cfg, { fog:'full' }) }; }catch(e){}
 let MAP=USEMAPS.nemo;   // 현재 플레이 중인 유즈맵(게임 시작 시 _selMap으로 설정)
 // ===== [nemo 유즈맵 모듈] 밸런스 (등급 배율·적 HP 스케일) — 맵마다 다름. 새 맵은 이 구조를 복제해 cfg.bal로 오버라이드 =====
@@ -3335,47 +3409,47 @@ function _gUnit(id, displayName, tier, race, attackType, opt){ opt=opt||{};
 const GACHA_UNITS = {   // 4종 × 7등급 = 28 (이름 확정)
   // ── 일반 (common) ──
   ranger_c:   _gUnit('ranger_c','레인저','common','union','single'),
-  strider_c:  _gUnit('strider_c','스트라이더','common','union','single'),
+  strider_c:  _gUnit('strider_c','기갑병','common','union','single'),
   sentinel_c: _gUnit('sentinel_c','센티넬','common','aetherial','single'),
-  reaper_c:   _gUnit('reaper_c','리퍼','common','swarm','single'),
+  reaper_c:   _gUnit('reaper_c','스파이크','common','swarm','single'),
   // ── 레어 (rare) = 일반 라인 강화형 (3× 해당 common → rare) ──
   ranger_r:   _gUnit('ranger_r','레인저','rare','union','single', {combineFrom:'ranger_c'}),
-  strider_r:  _gUnit('strider_r','스트라이더','rare','union','single', {combineFrom:'strider_c'}),
+  strider_r:  _gUnit('strider_r','기갑병','rare','union','single', {combineFrom:'strider_c'}),
   sentinel_r: _gUnit('sentinel_r','센티넬','rare','aetherial','single', {combineFrom:'sentinel_c'}),
-  reaper_r:   _gUnit('reaper_r','리퍼','rare','swarm','single', {combineFrom:'reaper_c'}),
+  reaper_r:   _gUnit('reaper_r','스파이크','rare','swarm','single', {combineFrom:'reaper_c'}),
   // ── 에픽 (epic) ──
-  phantom_e:  _gUnit('phantom_e','팬텀','epic','union','single'),
+  phantom_e:  _gUnit('phantom_e','저격수','epic','union','single'),
   racer_e:    _gUnit('racer_e','레이서','epic','union','single'),
   void_e:     _gUnit('void_e','보이드','epic','aetherial','single'),
-  snapper_e:  _gUnit('snapper_e','스내퍼','epic','swarm','single'),
+  snapper_e:  _gUnit('snapper_e','척후병','epic','swarm','single'),
   // ── 유니크 (unique) = 에픽 라인 강화형 (3× 해당 epic → unique) ──
-  phantom_u:  _gUnit('phantom_u','팬텀','unique','union','single', {combineFrom:'phantom_e'}),
+  phantom_u:  _gUnit('phantom_u','저격수','unique','union','single', {combineFrom:'phantom_e'}),
   racer_u:    _gUnit('racer_u','레이서','unique','union','single', {combineFrom:'racer_e'}),
   void_u:     _gUnit('void_u','보이드','unique','aetherial','single', {combineFrom:'void_e'}),
-  snapper_u:  _gUnit('snapper_u','스내퍼','unique','swarm','single', {combineFrom:'snapper_e'}),
+  snapper_u:  _gUnit('snapper_u','척후병','unique','swarm','single', {combineFrom:'snapper_e'}),
   // ── 레전드 (legend) = 특성 1개 ──
-  machinegun_l: _gUnit('machinegun_l','발칸','legend','union','single_rapid', {traits:['atkspd_buff']}),
-  tank_l:       _gUnit('tank_l','브레이커','legend','union','aoe_single', {traits:['def_down']}),
-  blade_l:      _gUnit('blade_l','워든','legend','aetherial','single', {traits:['armor_pierce']}),
-  thornqueen_l: _gUnit('thornqueen_l','베놈퀸','legend','swarm','dot', {traits:['poison']}),
+  machinegun_l: _gUnit('machinegun_l','화력병','legend','union','single_rapid', {traits:['atkspd_buff']}),
+  tank_l:       _gUnit('tank_l','공성전차','legend','union','aoe_single', {traits:['def_down']}),
+  blade_l:      _gUnit('blade_l','광전사','legend','aetherial','single', {traits:['armor_pierce']}),
+  thornqueen_l: _gUnit('thornqueen_l','가시여왕','legend','swarm','dot', {traits:['poison']}),
   // ── 초월 (transcend) = 특성 1~2개 ──
-  phantom_t:    _gUnit('phantom_t','디토네이터','transcend','union','aoe_single', {traits:['armor_pierce','def_down']}),
-  skyguard_t:   _gUnit('skyguard_t','템페스트','transcend','union','aoe_single', {traits:['slow']}),
-  skydancer_t:  _gUnit('skydancer_t','스카이댄서','transcend','aetherial','aoe_rapid', {traits:['atk_buff']}),
-  matron_t:     _gUnit('matron_t','매트론','transcend','swarm','single_chain', {traits:['slow','poison']}),
+  phantom_t:    _gUnit('phantom_t','저격수','transcend','union','aoe_single', {traits:['armor_pierce','def_down']}),
+  skyguard_t:   _gUnit('skyguard_t','전투기','transcend','union','aoe_single', {traits:['slow']}),
+  skydancer_t:  _gUnit('skydancer_t','요격기','transcend','aetherial','aoe_rapid', {traits:['atk_buff']}),
+  matron_t:     _gUnit('matron_t','여제','transcend','swarm','single_chain', {traits:['slow','poison']}),
   // ── 갓 (god) = 특성 2개 ──
   ranger_god:   _gUnit('ranger_god','레인저','god','union','single_chain', {traits:['atk_buff','armor_pierce']}),
-  strider_god:  _gUnit('strider_god','스트라이더','god','union','aoe_rapid', {traits:['def_down','slow']}),
+  strider_god:  _gUnit('strider_god','기갑병','god','union','aoe_rapid', {traits:['def_down','slow']}),
   sentinel_god: _gUnit('sentinel_god','센티넬','god','aetherial','single_rapid', {traits:['atkspd_buff','atk_buff']}),
-  reaper_god:   _gUnit('reaper_god','리퍼','god','swarm','dot', {traits:['poison','slow']}),
+  reaper_god:   _gUnit('reaper_god','스파이크','god','swarm','dot', {traits:['poison','slow']}),
 };
 // 초월 레시피(특수 조합 전용) — 합체존에 재료 유닛을 모으면 해당 초월 생성. 형식: 결과ID: [재료 gid 3개]
 // (기본: 특정 레전드 3개 → 특정 초월. 추후 혼합 레시피로 조정 가능)
 const TRANSCEND_RECIPE = {
-  phantom_t:   ['machinegun_l','machinegun_l','machinegun_l'],   // 발칸×3 → 디토네이터
-  skyguard_t:  ['tank_l','tank_l','tank_l'],                     // 브레이커×3 → 템페스트
-  skydancer_t: ['blade_l','blade_l','blade_l'],                  // 워든×3 → 스카이댄서
-  matron_t:    ['thornqueen_l','thornqueen_l','thornqueen_l'],   // 베놈퀸×3 → 매트론
+  phantom_t:   ['machinegun_l','machinegun_l','machinegun_l'],   // 화력병(레전드)×3 → 저격수(초월)
+  skyguard_t:  ['tank_l','tank_l','tank_l'],                     // 공성전차(레전드)×3 → 전투기(초월)
+  skydancer_t: ['blade_l','blade_l','blade_l'],                  // 광전사(레전드)×3 → 요격기(초월)
+  matron_t:    ['thornqueen_l','thornqueen_l','thornqueen_l'],   // 가시여왕(레전드)×3 → 여제(초월)
 };
 // 2단계 임시 매핑: 가챠 유닛 → 기존 유닛 ID(모델·성능). 실제 전용 모델·수치는 4단계에서 교체.
 const GACHA_PROXY = {
@@ -3930,6 +4004,9 @@ function closeBossPopup(){ const p=document.getElementById('bossPopup'); if(p) p
 document.addEventListener('pointerdown', function(ev){ const p=document.getElementById('bossPopup'); if(!p||p.classList.contains('hide'))return; if(ev.target.closest&&(ev.target.closest('#bossPopup')||ev.target.closest('#coopBossBar')))return; closeBossPopup(); }, true);
 document.addEventListener('pointerdown', function(ev){ const p=document.getElementById('pbossPopup'); if(!p||p.classList.contains('hide'))return; if(ev.target.closest&&(ev.target.closest('#pbossPopup')||ev.target.closest('#pbossBtn')))return; closePbossPopup(); }, true);
 document.addEventListener('pointerdown', function(ev){ const p=document.getElementById('autoPopup'); if(!p||p.classList.contains('hide'))return; if(ev.target.closest&&(ev.target.closest('#autoPopup')||ev.target.closest('#autoFab')))return; closeAutoPopup(); }, true);
+document.addEventListener('pointerdown', function(ev){ const m=document.getElementById('rmDiffMenu'); if(!m||m.classList.contains('hide'))return; if(ev.target.closest&&ev.target.closest('#rmDiff'))return; if(typeof _rmDiffClose==='function') _rmDiffClose(); }, true);   // 방찾기 난이도 팝다운 바깥 클릭 닫기
+document.addEventListener('pointerdown', function(ev){ const m=document.getElementById('msScopeMenu'); if(!m||m.classList.contains('hide'))return; if(ev.target.closest&&ev.target.closest('#msScopeDD'))return; if(typeof _msScopeClose==='function') _msScopeClose(); }, true);   // 로비 채팅 범위 팝다운 바깥 클릭 닫기
+document.addEventListener('pointerdown', function(ev){ const m=document.getElementById('lbMenu'); if(!m||m.classList.contains('hide'))return; if(ev.target.closest&&(ev.target.closest('#lbMenu')||ev.target.closest('.lbSlot.tapmenu')))return; if(typeof _lbMenuClose==='function') _lbMenuClose(); }, true);   // 대기실 슬롯 메뉴 바깥 클릭 닫기
 function openBossFromPopup(){ closeBossPopup(); if(typeof toggleBossArena==='function')toggleBossArena(); }
 function updateBossViewBtn(){ const b=document.getElementById('bossViewBtn'); if(b){ b.textContent=G.bossOpen?'메인':'보스방'; b.classList.toggle('viewing', !!G.bossOpen); } }
 // ── 토벌장 전용 이펙트 저장소 — 메인 트랙 이펙트와 완전 분리(두 화면이 서로 영향 없음) ──
@@ -6068,6 +6145,7 @@ function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 
   if(G.view){ G.view.x=0.5; G.view.y=0.5; G.view.zoom=1; } if(G.viewT){ G.viewT.x=0.5; G.viewT.y=0.5; G.viewT.zoom=1; } _nptrs.clear(); _nemoPinch=null; _fxPinch=null;   // 탭 전환 시 화면 줌/팬 초기화(다른 탭 3D 카메라 보호)
   if(G.bossOpen && typeof closeBossArena==='function') closeBossArena();   // 탭 전환 시 보스 팝업 닫기
   if(G.bossPickArm){ G.bossPickArm=false; if(typeof updateBossPickBtn==='function') updateBossPickBtn(); }
+  G.mainSheet=null; G.sheetDown=false;   // 🎰 실제 탭 전환 = 유닛뽑기 등 메인 시트 모드 종료 + 접힘상태 해제
   G.tab=id;
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on')); el.classList.add('on');
   document.querySelectorAll('.gview').forEach(v=>v.classList.remove('on')); document.getElementById('v'+(id==='Battle'?'Main':id)).classList.add('on');   // 전투실험은 메인 아레나 뷰 공유
@@ -6289,14 +6367,14 @@ function _mainSelAllBtn(u){ if(typeof isBuilding==='function'&&isBuilding(u.id))
   const key=_mainTypeKey(u), cnt=G.units.filter(x=>!isBuilding(x.id)&&_mainTypeKey(x)===key).length;
   return (cnt>1)?('<button class="cgSelAll" onclick="selectAllOfType()" title="같은 종류 전체 지정">'+_SVG_SELALL+'</button>'):''; }
 function _mainSingleModel(u){ const def=U[u.id]||{}, role=_mainRole(u);
-  return { mode:'prod', title:gNameStar(u,def)+(u.hero?' [영웅]':'')+(role?' ('+role+')':''), icon:_mainPort(u), hpsh:_mainHpsh(u),
+  return { mode:'prod', title:gNameStar(u,def)+(u.hero?' [영웅]':''), icon:_mainPort(u), hpsh:_mainHpsh(u),   // 이름 옆 (보직/직업) 표기 제거 — 건설 프로필과 통일
     sub:'맵을 탭하면 이동 · 해제는 우상단 ✕', items:_mainSkillCards([u]).concat(_mainTransportCards(u)), topRight:_mainSelAllBtn(u),
     info:{ eb:'', hideName:true, stats:_mainUnitStatList(u), cr:0, en:0 } }; }
 function _mainTypeModel(list, canBack){ const u0=list[0], def=U[u0.id]||{}, n=list.length, role=_mainRole(u0), CAP=60;   // canBack=소프트선택 중 → ↩(전체 복귀) 버튼
   const rows=list.slice(0,CAP).map(u=>({ uid:u.uid, hp:(u.hp!=null?u.hp:_mainMaxHp(u)), maxHp:_mainMaxHp(u)||1,
     act:'onclick="mainSubSelectOne(event,'+u.uid+')"' }));   // 칩 탭 = 그 1기만 지정
   if(n>CAP) rows.push({ more:n-CAP });
-  return { mode:'prod', title:gNameStar(u0,def)+(role?' ('+role+')':'')+' <span class="nsub">×'+n+'</span>', icon:_mainPort(u0),
+  return { mode:'prod', title:gNameStar(u0,def)+' <span class="nsub">×'+n+'</span>', icon:_mainPort(u0),   // 이름 옆 (보직/직업) 표기 제거
     sub:'', items:_mainSkillCards(list), topRight:_mainSelAllBtn(u0),   // 활성셋 전체 기준 상태(ON·마나·쿨다운)
     back:canBack?'<button class="cgLift cgBack" onclick="mainSubSelectType(event,\'\')" title="전체 선택으로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6L4 11l5 5"/><path d="M4 11h9a6 6 0 0 1 6 6v1"/></svg></button>':'',   // 🔙 소프트선택 해제(전체 복귀)
     info:{ eb:'', hideName:true, units:rows, cr:0, en:0 } }; }
@@ -6377,7 +6455,13 @@ function refreshSelCard(){ if(typeof G!=='undefined'){ G.boardArm=false; G.unloa
     if(!hasSel){ document.getElementById('unitCmd').classList.remove('on'); renderUnits(); return; }
     // 선택됨 → 아래 유닛 프로필(unitCmd) 렌더로 진행
   } else {
-    if(G.tab==='Main' && _homeMode==='select' && _selViaTab && !en && G.sel.length>=1){   // 지정 탭에서 선택 → 지정 패널 유지(드래그 박스 선택은 selMulti 칩)
+    if(G.sel.length>=1 || en){ G.mainSheet=null; G.sheetDown=false; }   // 🎛 유닛/적 지정 = 메인 시트(유닛뽑기·업그레이드) 종료 + 접힘상태 해제
+    if(G.tab==='Main' && G.mainSheet && !en && G.sel.length===0){   // 🎛 메인 시트: 프로필 자리에 해당 그리드
+      document.getElementById('defaultCmd').classList.add('hide');
+      document.getElementById('unitCmd').classList.add('on');
+      document.body.classList.toggle('sheetOpen', !G.sheetDown); if(typeof _syncSheetLift==='function') requestAnimationFrame(_syncSheetLift);   // 재탭으로 접었으면(G.sheetDown) 매프레임 재오픈 안 함
+      renderMainSheet(); renderUnits(); return; }
+    if(G.tab==='Main' && _selViaTab && !en && G.sel.length>=1){   // 하단 지정구역 경유 선택 → 홈 패널 유지(지정/판매/조합 어느 탭이든). 프로필은 화면 직접 터치 시에만
       document.getElementById('defaultCmd').classList.remove('hide');
       document.getElementById('unitCmd').classList.remove('on'); renderHomeLeft(); renderUnits(); return; }
     if(G.sel.length===0 && !en){ document.getElementById('defaultCmd').classList.remove('hide');
@@ -6391,6 +6475,8 @@ function refreshSelCard(){ if(typeof G!=='undefined'){ G.boardArm=false; G.unloa
 // 🎛 메인 선택 프로필 렌더 — 선택 변경(refreshSelCard) + 매 프레임(루프) 양쪽에서 호출.
 // 구조 시그니처가 바뀔 때만 재빌드(매 프레임 innerHTML 재빌드=클릭 먹힘 방지) · HP 등 연속값은 _mainCmdLive가 인플레이스 갱신
 function mainProfileRender(){ const host=document.getElementById('unitCmd'); if(!host||!host.classList.contains('on')) return;
+  if(G.mainSheet){ renderMainSheet(); return; }   // 🎛 메인 시트 모드(유닛뽑기·업그레이드) — 선택 프로필 대신 해당 그리드(매 프레임 갱신)
+  host._gSig=undefined;   // 시트→프로필 전환 시 다음 렌더 강제 재빌드
   { const k=(G.selEnemy!=null)?('e'+G.selEnemy):((G.sel||[]).join(',')); if(k!==G._lastSelKey){ G.selType=null; host._cgPage=0; G._lastSelKey=k; } }   // 지정이 실제로 바뀌면 소프트선택(selType)·페이지 리셋 · 칩 탭(G.sel 불변)은 유지
   const m=cmdGridModelForSel(); if(!m) return;
   m.compact=true; m.build=true;   // 건설 탭 프로필과 동일: 간소화(4그리드 1줄) + 건설 카드 스타일
@@ -6398,6 +6484,122 @@ function mainProfileRender(){ const host=document.getElementById('unitCmd'); if(
   const sig=_mainCmdSig(m);
   if(host._cgSig!==sig){ host._cgSig=sig; m.page=host._cgPage||0; renderCmdGrid(host,m); }
   _mainCmdLive(); }
+// 🎰 유닛뽑기 시트 — 하단 프로필 자리(#unitCmd)에 4그리드(유닛1회·에너지·가드타워·플라즈마). 캔버스 이동 대신 시트 슬라이드업. 셀=runBeacon 직접 실행.
+const GACHA_SHEET_CELLS=['draw','energy','buyTurret','buyPhoton'];
+function _gachaSheetModel(){
+  const items=GACHA_SHEET_CELLS.map(id=>{ const b=(DRAW_BEACONS.find(x=>x.id===id))||{id:id,name:id}, cost=beaconCost(id), afford=((G.mineral||0)>=cost);
+    return { pro:'<svg viewBox="0 0 24 24">'+beaconIcon(id)+'</svg>', sn:b.name, cr:cost, en:0, state:afford?'ok':'dim', act:'onpointerdown="gachaHoldStart(\''+id+'\',event)"' }; });
+  return { mode:'gacha', title:'유닛 뽑기', icon:'<svg viewBox="0 0 24 24">'+BEACON_ICON.unit+'</svg>', sub:'셀을 눌러 뽑기·구매', compact:true, build:true,
+    info:{ eb:'유닛 뽑기', name:'유닛 및 타워 구매', desc:'길게 누르면 연속 구매' }, items:items }; }
+function renderGachaSheet(){ const host=document.getElementById('unitCmd'); if(!host) return; host.classList.add('simple');
+  const sig='g|'+Math.floor(G.mineral||0)+'|'+(host._cgPage||0);
+  if(host._gSig!==sig){ host._gSig=sig; host._cgSig=undefined; renderCmdGrid(host, _gachaSheetModel()); } }
+// ⬆️ 업그레이드 시트 — 하단 프로필 자리에 8칸(2페이지). 1p: 보병·메카닉·스웜·에테리얼 무기 강화(꾹=연속). 2p: 뽑기확률·크레딧획득·(빈)·영구강화(팝업).
+const UPG_CATS=[ {wpn:'inf',name:'보병'}, {wpn:'mech',name:'메카닉'}, {wpn:'zrg',name:'스웜'}, {wpn:'pro',name:'에테리얼'} ];
+function _upgradeSheetModel(){
+  const items=UPG_CATS.map(c=>{ const lv=(G.atkLv&&G.atkLv[c.wpn])||0, isMax=lv>=UPG_MAX, cost=upgCost(c.wpn), afford=((G.gas||0)>=cost);
+    return { pro:wpnBadgeSVG(c.wpn,'#ff3b3b'), sn:c.name, en:cost, cr:0, tr:isMax?'MAX':('Lv.'+lv), metaCls:'lv',
+      state:isMax?'max':(afford?'ok':'dim'), act:isMax?'':('onpointerdown="upgHoldStart(\''+c.wpn+'\',event)"') }; });
+  const gLv=(G.gachaLuckLv||0), gMax=gLv>=GACHA_UP_MAX, gC=gachaUpCost();
+  items.push({ pro:'<svg viewBox="0 0 24 24">'+beaconIcon('gachaUp')+'</svg>', sn:'뽑기 확률', cr:gC, en:0, tr:gMax?'MAX':('Lv.'+gLv), metaCls:'lv',
+    state:gMax?'max':(((G.mineral||0)>=gC)?'ok':'dim'), act:gMax?'':'onclick="buyGachaUp()"' });
+  const cLv=(G.creditLv||0), cMax=cLv>=CREDIT_UP_MAX, cC=creditUpCost();
+  items.push({ pro:'<svg viewBox="0 0 24 24">'+beaconIcon('creditUp')+'</svg>', sn:'크레딧 획득', cr:cC, en:0, tr:cMax?'MAX':('Lv.'+cLv), metaCls:'lv',
+    state:cMax?'max':(((G.mineral||0)>=cC)?'ok':'dim'), act:cMax?'':'onclick="buyCreditUp()"' });
+  items.push(null);   // 2페이지 3번 = 빈칸
+  items.push({ pro:'<span class="pemoji">⬆️</span>', sn:'영구 강화', cr:0, en:0, state:'ok', act:'onclick="openPointUpgrade()"' });
+  return { mode:'upg', title:'업그레이드', icon:'<span class="pemoji">⬆️</span>', sub:'무기 강화 · 뽑기/크레딧 · 영구', compact:true, build:true,
+    info:{ eb:'업그레이드', name:'공격력 강화 및 업그레이드', desc:'길게 누르면 연속 구매' }, items:items }; }
+function renderUpgradeSheet(){ const host=document.getElementById('unitCmd'); if(!host) return; host.classList.add('simple');
+  const sig='u|'+((G.atkLv&&[G.atkLv.inf,G.atkLv.mech,G.atkLv.zrg,G.atkLv.pro].join('.'))||'')+'|'+(G.gachaLuckLv||0)+'|'+(G.creditLv||0)+'|'+Math.floor(G.mineral||0)+'|'+Math.floor(G.gas||0)+'|'+(host._cgPage||0);
+  if(host._gSig!==sig){ host._gSig=sig; host._cgSig=undefined; renderCmdGrid(host, _upgradeSheetModel()); } }
+// 👥 플레이어 시트 — 메인 유지 + 활성 플레이어 그리드. 셀 탭 = 그 플레이어 화면(관전)으로 이동.
+function _playersSheetModel(){
+  const me=G.myPlayer||1, active=G.activePlayers||[1,2,3,4,5,6,7,8];
+  const items=active.map(n=>{ const isMe=(n===me);
+    return { pro:'<span class="pemoji">'+n+'P</span>', sn:(typeof playerName==='function'?playerName(n):('P'+n))+(isMe?' (나)':''),
+      tr:isMe?'현재':'관전', metaCls:'lv', state:isMe?'max':'ok', sel:isMe && n===G.curPlayer,
+      act:isMe?'':('onclick="viewPlayerFromSheet('+n+')"') }; });
+  return { mode:'players', title:'플레이어', icon:'<span class="pemoji">👥</span>', sub:'다른 플레이어 화면 보기', compact:true, build:true,
+    info:{ eb:'플레이어', name:'다른 플레이어 관전', desc:'플레이어를 눌러 그 화면으로 이동' }, items:items }; }
+function renderPlayersSheet(){ const host=document.getElementById('unitCmd'); if(!host) return; host.classList.add('simple');
+  const sig='p|'+(G.myPlayer||1)+'|'+((G.activePlayers||[]).join('.'))+'|'+(G.curPlayer||0)+'|'+(host._cgPage||0);
+  if(host._gSig!==sig){ host._gSig=sig; host._cgSig=undefined; renderCmdGrid(host, _playersSheetModel()); } }
+function viewPlayerFromSheet(n){ G.curPlayer=n; if(typeof playSfx==='function') playSfx('ui_open'); switchTab('Players', document.querySelector('.tab[data-tab="Players"]')); }
+// 💀 보스 시트 — 개인보스 소환(4종) + 포인트방(파견·회수·토벌장). 기존 떠다니던 pbossPopup·bossPopup을 하단 시트로 흡수.
+function _bossSkullSVG(col){ return '<svg viewBox="0 0 24 24" style="color:'+(col||'#ff9aa6')+'"><path d="M12 2.5c-4 0-6.5 2.8-6.5 6.4 0 2.3 1.1 3.7 2.2 4.7v2.2c0 .7.5 1.1 1.2 1.1.4 1.1 1.6 1.9 3.1 1.9s2.7-.8 3.1-1.9c.7 0 1.2-.4 1.2-1.1v-2.2c1.1-1 2.2-2.4 2.2-4.7 0-3.6-2.5-6.4-6.5-6.4z" fill="currentColor" opacity=".22"/><path d="M12 2.5c-4 0-6.5 2.8-6.5 6.4 0 2.3 1.1 3.7 2.2 4.7v2.2c0 .7.5 1.1 1.2 1.1.4 1.1 1.6 1.9 3.1 1.9s2.7-.8 3.1-1.9c.7 0 1.2-.4 1.2-1.1v-2.2c1.1-1 2.2-2.4 2.2-4.7 0-3.6-2.5-6.4-6.5-6.4z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="9.3" cy="9.2" r="1.5" fill="currentColor"/><circle cx="14.7" cy="9.2" r="1.5" fill="currentColor"/></svg>'; }
+function _bossSheetModel(){
+  const coinMult=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).coinMult||1, autoAvail=autoUsable('pboss');
+  const items=PBOSS_TYPES.map(function(pt){
+    const unlocked=pbossUnlocked(pt), active=G.enemies.some(e=>e.pboss&&e.pbId===pt.id), cd=Math.ceil((G.pbossCds&&G.pbossCds[pt.id])||0);
+    const autoOn=!!(G.auto&&G.auto.pboss&&G.auto.pboss[pt.id]);
+    let state='ok', tr=autoOn?'⟳':'';
+    if(!unlocked){ state='dim'; tr='🔒'; }
+    else if(active){ state='dim'; tr=autoOn?'⟳⚔':'⚔'; }
+    else if(cd>0){ state='dim'; tr=(autoOn?'⟳ ':'')+cd+'s'; }
+    // 소환은 무료(코스트 표기 생략 — 크레딧 가격으로 오인 방지) · 하단 줄엔 처치 보상을 '+' 초록으로(획득 신호)
+    return { pro:_bossSkullSVG(pt.col), sn:pt.name, cr:0, en:0, tr:tr, metaCls:'lv', state:state, sel:autoOn,
+      bottom:'<div class="cgCost cgRwd" title="처치 보상: 코인 '+Math.round(pt.bonus*coinMult)+' · 에너지 '+(pt.egy||0)+'"><span>+'+COIN_SM+Math.round(pt.bonus*coinMult)+'</span></div>',
+      act:'onpointerdown="bossHoldStart(\''+pt.id+'\',event)"' }; });
+  const sent=bossDeployedCount(), hasBoss=!!(G.coopBoss&&!G.coopBoss.dead);
+  items.push({ pro:'<span class="pemoji">📍</span>', sn:'유닛 파견', tr:sent+'/'+BOSS_DEPLOY_CAP, metaCls:'lv', state:(sent>=BOSS_DEPLOY_CAP?'dim':'ok'), act:'onclick="armBossPick()"' });
+  items.push({ pro:'<span class="pemoji">↩️</span>', sn:'회수', state:(sent>0?'ok':'dim'), act:'onclick="recallFromBoss(\'all\')"' });
+  items.push({ pro:'<span class="pemoji">⚔️</span>', sn:'토벌장', state:(hasBoss?'ok':'dim'), act:(hasBoss?'onclick="openBossArena()"':'') });
+  const info={ eb:'보스', name:'개인보스 · 포인트방', desc:autoAvail?'탭=소환/파견 · 개인보스 길게=자동소환':'셀을 눌러 소환·파견·진입' };
+  return { mode:'boss', title:'보스', icon:'<span class="pemoji">💀</span>', sub:'개인보스 소환 · 포인트방 파견', compact:true, build:true, info:info, items:items }; }
+function renderBossSheet(){ const host=document.getElementById('unitCmd'); if(!host) return; host.classList.add('simple');
+  const sig='b|'+PBOSS_TYPES.map(pt=>(pbossUnlocked(pt)?1:0)+''+(G.enemies.some(e=>e.pboss&&e.pbId===pt.id)?1:0)+Math.ceil((G.pbossCds&&G.pbossCds[pt.id])||0)+((G.auto&&G.auto.pboss&&G.auto.pboss[pt.id])?'a':'')).join('')+'|'+bossDeployedCount()+'|'+(!!(G.coopBoss&&!G.coopBoss.dead)?1:0)+'|'+(host._cgPage||0);
+  if(host._gSig!==sig){ host._gSig=sig; host._cgSig=undefined; renderCmdGrid(host, _bossSheetModel()); } }
+// 보스 셀: 탭=개인보스 소환 · 길게(0.5s)=자동소환 토글(자동 개인보스 해금 시). 손 떼기 처리는 문서 전역에서.
+let _bossHold=null;
+function bossHoldStart(id, ev){ if(ev){ ev.preventDefault(); ev.stopPropagation(); }
+  bossHoldClear(); _bossHold={id:id, held:false};
+  const pt=PBOSS_TYPES.find(t=>t.id===id);
+  if(autoUsable('pboss') && pt && pbossUnlocked(pt)){
+    _bossHold.t=setTimeout(function(){ if(_bossHold&&_bossHold.id===id){ _bossHold.held=true; togglePbossAuto(null, id);
+      const h=document.getElementById('unitCmd'); if(h){ h._gSig=undefined; renderBossSheet(); } } }, 500); } }
+function bossHoldEnd(){ if(!_bossHold) return; const id=_bossHold.id, held=_bossHold.held; bossHoldClear(); if(!held) summonPersonalBoss(id); }
+function bossHoldClear(){ if(_bossHold){ if(_bossHold.t) clearTimeout(_bossHold.t); _bossHold=null; } }
+['pointerup','pointercancel'].forEach(e=>document.addEventListener(e, bossHoldEnd));
+window.addEventListener('blur', bossHoldClear);
+// 🎛 메인 시트 모드 디스패처(유닛뽑기·업그레이드·플레이어·보스 …) — 매 프레임/선택변경 시 해당 그리드 렌더
+function renderMainSheet(){ if(G.mainSheet==='gacha') renderGachaSheet(); else if(G.mainSheet==='upgrade') renderUpgradeSheet(); else if(G.mainSheet==='players') renderPlayersSheet(); else if(G.mainSheet==='boss') renderBossSheet(); }
+// 하단 탭 하이라이트 = 활성 섹션(메인/유닛뽑기/업그레이드/플레이어). 게임 화면과 무관하게 섹션 탭만 표시.
+function _setBottomTab(tab){ document.querySelectorAll('#tabs .tab').forEach(function(t){ t.classList.toggle('on', t.getAttribute('data-tab')===tab); }); }
+// 하단 탭 버튼 → 화면 이동 대신 메인 뷰 유지 + 하단 섹션만 전환(모드별) + 탭 하이라이트 이동. 관리자 샌드박스는 기존 탭 동작 유지.
+function openMainSheet(mode, el, sbTab){
+  if(G.sandbox){ switchTab(sbTab, el||document.querySelector('.tab[data-tab="'+sbTab+'"]')); return; }
+  if(G.tab==='Main' && G.mainSheet===mode){   // 활성 섹션 재탭 = 하단 시트 내리기/올리기 토글
+    const open=document.body.classList.toggle('sheetOpen'); G.sheetDown=!open;   // 접힘상태 기록(매프레임 refreshSelCard가 덮어쓰지 않도록)
+    if(typeof _syncSheetLift==='function'){ requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); }
+    if(typeof playSfx==='function') playSfx('ui_open'); return; }
+  if(G.tab!=='Main') switchTab('Main', document.querySelector('.tab[data-tab="Main"]'));   // 다른 뷰(건설 등)에서 왔으면 메인 뷰 복귀
+  G.sel=[]; G.selEnemy=null; G.selType=null; G.mainSheet=mode; G.sheetDown=false; _setBottomTab(sbTab);   // 이 섹션으로 전환 + 하이라이트 이동
+  document.body.classList.add('sheetOpen');   // 섹션 전환 = 시트 올림(직전에 토글로 내려놨을 수 있으므로 명시)
+  if(typeof playSfx==='function') playSfx('ui_open'); refreshSelCard(); }
+// 메인 탭 = 유닛지정/판매/조합 섹션(하단 홈). 다른 섹션에서 눌러도 반드시 메인 섹션으로 복귀.
+function openMainHome(el){
+  if(G.sandbox){ switchTab('Main', el||document.querySelector('.tab[data-tab="Main"]')); return; }
+  if(G.tab==='Main' && G.mainSheet==null && G.sel.length===0 && G.selEnemy==null){   // 홈 섹션 재탭(무선택) = 하단 시트 내리기/올리기 토글
+    const open=document.body.classList.toggle('sheetOpen'); G.sheetDown=!open;
+    if(typeof _syncSheetLift==='function'){ requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); }
+    if(typeof playSfx==='function') playSfx('ui_open'); return; }
+  if(G.tab!=='Main') switchTab('Main', document.querySelector('.tab[data-tab="Main"]'));
+  G.mainSheet=null; G.sel=[]; G.selEnemy=null; G.selType=null; _selViaTab=false; G.sheetDown=false; _setBottomTab('Main'); document.body.classList.add('sheetOpen'); if(typeof playSfx==='function') playSfx('ui_open'); refreshSelCard(); }
+function openGachaSheet(el){ openMainSheet('gacha', el, 'Unit'); }
+function openUpgradeSheet(el){ openMainSheet('upgrade', el, 'Upgrade'); }
+function openPlayersSheet(el){ openMainSheet('players', el, 'Players'); }
+// 💀 보스 진입점(우하단 FAB · 우상단 보스바) → 하단 보스 시트. 전용 탭이 없어 하이라이트는 해제(FAB 구동).
+function openBossSheet(){
+  if(G.sandbox) return;   // 관리자 샌드박스에선 보스 미사용(네모네모 전용)
+  if(G.tab==='Main' && G.mainSheet==='boss'){   // 재탭(FAB 재탭) = 시트 내리기/올리기 토글
+    const open=document.body.classList.toggle('sheetOpen'); G.sheetDown=!open;
+    if(typeof _syncSheetLift==='function'){ requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); }
+    if(typeof playSfx==='function') playSfx('ui_open'); return; }
+  if(G.tab!=='Main') switchTab('Main', document.querySelector('.tab[data-tab="Main"]'));
+  G.sel=[]; G.selEnemy=null; G.selType=null; G.mainSheet='boss'; G.sheetDown=false; _setBottomTab('');   // 보스=탭 없음 → 하단 탭 하이라이트 해제
+  document.body.classList.add('sheetOpen');
+  if(typeof playSfx==='function') playSfx('ui_open'); refreshSelCard(); }
 // 커스텀 초상화 이미지(유닛/건물 id → 파일). 있으면 3D/라인아트 대신 사용.
 const PORTRAIT_DIR='assets/portraits/'; const PORTRAIT_VER='?v=4';
 const _PI_RAW={
@@ -7447,6 +7649,21 @@ function upgHoldStart(wpn, ev){ if(ev){ ev.preventDefault(); ev.stopPropagation(
 function upgHoldStop(){ if(_upgHold){ clearTimeout(_upgHold.delay); if(_upgHold.rep) clearInterval(_upgHold.rep); _upgHold=null; } }
 ['pointerup','pointercancel'].forEach(e=>document.addEventListener(e, upgHoldStop));   // 손 떼면 어디서든 중단
 window.addEventListener('blur', upgHoldStop);
+// 🎰 유닛뽑기: 셀 길게 누르면 연속 구매 — 즉시 1회 + 0.5초 후부터 0.5초마다 뗄 때까지. 크레딧 부족 시 중단.
+let _gachaHold=null;
+function gachaHoldStart(id, ev){ if(ev){ ev.preventDefault(); ev.stopPropagation(); }
+  runBeacon(id);   // 즉시 1회(짧게 탭)
+  gachaHoldStop();
+  _gachaHold={id:id};
+  _gachaHold.delay=setTimeout(function(){ if(!_gachaHold||_gachaHold.id!==id) return;
+    if((G.mineral||0)<beaconCost(id)){ gachaHoldStop(); return; }
+    runBeacon(id);   // 0.5초 시점 첫 연속 구매
+    _gachaHold.rep=setInterval(function(){
+      if((G.mineral||0)<beaconCost(id)){ gachaHoldStop(); return; }   // 크레딧 부족 → 연속 중단
+      runBeacon(id); }, 500); }, 500); }   // 이후 0.5초마다
+function gachaHoldStop(){ if(_gachaHold){ clearTimeout(_gachaHold.delay); if(_gachaHold.rep) clearInterval(_gachaHold.rep); _gachaHold=null; } }
+['pointerup','pointercancel'].forEach(e=>document.addEventListener(e, gachaHoldStop));
+window.addEventListener('blur', gachaHoldStop);
 // 매 프레임 연구 타이머 진행(루프에서 호출) — 탭과 무관하게 백그라운드 진행
 function tickResearch(dt){ if(!G.research) return;
   G.research.t-=dt;
@@ -7721,7 +7938,7 @@ function tickRooms(){ if(!_roomList||document.getElementById('rooms').classList.
 }
 function openRooms(){ setInGame(false); document.getElementById('ov').classList.add('hide'); document.getElementById('lobby').classList.add('hide');
   const rm=document.getElementById('rooms'); rm.classList.remove('hide'); if(typeof playScreenFx==='function') playScreenFx(rm);
-  _roomFilter='all'; document.querySelectorAll('#rmFilter .rmfBtn').forEach(b=>b.classList.toggle('on', b.dataset.f==='all'));   // 진입 시 필터 초기화
+  _roomFilter='all'; { const _lbl=document.getElementById('rmDiffLabel'); if(_lbl) _lbl.textContent='전체 난이도'; document.querySelectorAll('#rmDiffMenu .rmDiffOpt').forEach(o=>o.classList.toggle('on', o.dataset.f==='all')); if(typeof _rmDiffClose==='function') _rmDiffClose(); }   // 진입 시 난이도 필터 초기화(우상단 팝다운)
   if(rtRoomsActive()){ rtRoomsEnsure(); rtRoomsSync(); }   // 실제 방 목록(presence) — 시뮬 정지
   else { buildRoomList(); startRoomsTick(); } }
 function backToTitle(){ stopRoomsTick(); document.getElementById('rooms').classList.add('hide'); openMapSelect(); }   // 방찾기 뒤로 → 유즈맵 선택
@@ -7968,6 +8185,8 @@ const NEMO_MINIMAP='<svg class="mmBg" viewBox="0 0 48 48" fill="none">'
 function mapThumbHTML(m){ return m.id==='nemo'
   ? '<div class="mapThumb mm">'+NEMO_MINIMAP+'</div>'                       // 네모네모: 미니맵
   : '<div class="mapThumb"><span class="mmIco">'+mapIco(m)+'</span></div>'; }   // 그 외: 이전 아이콘 박스
+// 맵별 아이덴티티 색(아이콘·좌측바·썸네일 글로우에만 — 카드 크롬은 중립 유지 → 통일성). 없으면 중립 폴백.
+const MAP_ACCENT={ nemo:'#4aa8ff', sunken:'#5dff8f', marine:'#ffb14d', temple:'#b98cff', cpu:'#22d3ee', nemo_inf:'#ff9a6b', admin:'#9aa6b2' };
 // 상태 점(대기=초록 링, 게임=빨강 채움) — 작아서 색으로 의미 전달
 const ICO_WAIT='<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6.4" fill="none" stroke="#5dff8f" stroke-width="3.4"/></svg>';
 const ICO_PLAY='<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.2" fill="#ff6b6b"/></svg>';
@@ -8000,10 +8219,17 @@ function stopMapLive(){ if(_mapLiveT){ clearInterval(_mapLiveT); _mapLiveT=null;
 const GLOBAL_CHATTER=['ㅎㅇ 다들~','같이 하실 분','네모네모 재밌네요','용병키우기 고수 계신가요?','풀방 가즈아','초보 환영합니다','지금 인원 많네요 ㅋㅋ','가시탑 ㄱㄱ','친추 받아요','3렙인데 잘 부탁','오늘 잘 풀린다','파티 2명 구함','성소공성전 해보신 분?','ㅇㅈ','반가워요~','오토배틀 한판 ㄱㄱ','방 만들었어요 들어오세요','gg 또 만나요'];
 let _gChatT=null;
 let _chatScope='all';
+const _MS_SCOPE_KO={all:'전체',party:'파티',friend:'친구'};
 function setChatScope(sc){ _chatScope=sc;
-  document.querySelectorAll('.msScopeBtn').forEach(b=>b.classList.toggle('on', b.dataset.sc===sc));
+  const dd=document.getElementById('msScopeDD'); if(dd) dd.dataset.sc=sc;
+  const lbl=document.getElementById('msScopeLbl'); if(lbl) lbl.textContent=(_MS_SCOPE_KO[sc]||sc);
+  document.querySelectorAll('#msScopeMenu .msScopeOpt').forEach(o=>o.classList.toggle('on', o.dataset.sc===sc));
   const c=document.getElementById('msChat'); if(c){ c.dataset.scope=sc; c.scrollTop=c.scrollHeight; }
   const inp=document.getElementById('msChatInput'); if(inp) inp.placeholder=(sc==='party'?'파티 채팅…':sc==='friend'?'친구 채팅…':'전체 채팅…'); }
+function _msScopeClose(){ const m=document.getElementById('msScopeMenu'); if(m) m.classList.add('hide'); const d=document.getElementById('msScopeDD'); if(d) d.classList.remove('open'); }
+function toggleMsScope(ev){ if(ev){ ev.stopPropagation(); ev.preventDefault(); } const m=document.getElementById('msScopeMenu'), d=document.getElementById('msScopeDD'); if(!m||!d) return;
+  const willOpen=m.classList.contains('hide'); m.classList.toggle('hide', !willOpen); d.classList.toggle('open', willOpen); if(typeof playSfx==='function') playSfx('ui_tab'); }
+function pickMsScope(sc){ _msScopeClose(); if(typeof setChatScope==='function') setChatScope(sc); }
 function addGlobalMsg(who, text, cls, scope){ const box=document.getElementById('msChat'); if(!box) return;
   const d=document.createElement('div'); d.className='mcLine sc-'+(scope||'all')+(cls?(' '+cls):'');
   d.innerHTML=(who?'<span class="mcWho">'+escHtml(who)+'</span><span class="mcSep"> : </span>':'')+escHtml(text);
@@ -8541,6 +8767,7 @@ function renderMaps(){ const list=document.getElementById('msList'); if(!list) r
   list.innerHTML='';
   if(!arr.length){ list.innerHTML='<div class="msEmpty">⭐ 즐겨찾기한 유즈맵이 없습니다.<br>맵 카드의 별(☆)을 눌러 추가하세요.</div>'; updateMapBanner(); return; }
   arr.forEach(m=>{ const el=document.createElement('div'); el.className='mapItem';
+    { const _ac=MAP_ACCENT[m.id]; if(_ac) el.style.setProperty('--mapAccent', _ac); }   // 맵별 아이덴티티 색
     const nm=escHtml(m.name)+(m.isNew?' <span class="mapTag new">신규</span>':'');
     el.innerHTML=mapThumbHTML(m)
       +'<div class="mapMain"><div class="mapName">'+nm+'</div><div class="mapDesc">'+escHtml(m.desc)+'</div>'
@@ -8660,8 +8887,15 @@ function buildRoomList(){ _roomList=[];
 function diffBadge(d){ const D=DIFFICULTY[d]||DIFFICULTY.normal; return '<span class="riDiff" style="--dc:'+(DIFF_COLOR[d]||'#888')+'">'+D.name+'</span>'; }
 let _roomFilter='all';
 function setRoomFilter(f){ _roomFilter=f;
-  document.querySelectorAll('#rmFilter .rmfBtn').forEach(b=>b.classList.toggle('on', b.dataset.f===f));
   if(typeof playSfx==='function') playSfx('ui_tab'); renderRoomList(); }
+// 우상단 난이도 커스텀 팝다운
+const _RM_DIFF_KO={all:'전체 난이도',easy:'이지',normal:'노말',hard:'하드',hell:'헬'};
+function _rmDiffClose(){ const m=document.getElementById('rmDiffMenu'); if(m) m.classList.add('hide'); const d=document.getElementById('rmDiff'); if(d) d.classList.remove('open'); }
+function toggleRmDiff(ev){ if(ev){ ev.stopPropagation(); ev.preventDefault(); } const m=document.getElementById('rmDiffMenu'), d=document.getElementById('rmDiff'); if(!m||!d) return;
+  const willOpen=m.classList.contains('hide'); m.classList.toggle('hide', !willOpen); d.classList.toggle('open', willOpen); if(typeof playSfx==='function') playSfx('ui_tab'); }
+function pickRmDiff(f){ const lbl=document.getElementById('rmDiffLabel'); if(lbl) lbl.textContent=_RM_DIFF_KO[f]||f;
+  document.querySelectorAll('#rmDiffMenu .rmDiffOpt').forEach(o=>o.classList.toggle('on', o.dataset.f===f));
+  _rmDiffClose(); if(typeof setRoomFilter==='function') setRoomFilter(f); }
 function renderRoomList(){ const list=document.getElementById('roomList'); if(!list) return; list.innerHTML='';
   const shown=(_roomFilter==='all')?_roomList:_roomList.filter(r=>r.diff===_roomFilter);   // 난이도 필터
   const rc=document.getElementById('roomCount'); if(rc) rc.textContent=shown.length;
@@ -8669,7 +8903,7 @@ function renderRoomList(){ const list=document.getElementById('roomList'); if(!l
   if(!shown.length){ const e=document.createElement('div'); e.className='rmEmpty'; e.textContent=(_roomFilter==='all')?'대기 중인 방이 없습니다 · 새로고침 또는 방 만들기':'해당 난이도의 방이 없습니다'; list.appendChild(e); return; }
   shown.forEach(r=>{ const full=r.cur>=r.max, waiting=r.status==='wait', fits=(r.max-r.cur)>=need, joinable=waiting&&!full&&fits, priv=r.visibility==='private';
     const el=document.createElement('div'); el.className='roomItem'+(joinable?'':' locked');
-    el.innerHTML='<div class="riMain"><div class="riName">'+diffBadge(r.diff)+'<span class="riNum">#'+r.num+'</span>'+(priv?'<span class="riLock">🔒</span>':'')+escHtml(r.name)+'</div><div class="riSub">방장 '+escHtml(r.host)+(need>1&&waiting&&!full&&!fits?' · <span class="riOver">파티 자리 부족</span>':'')+'</div></div>'
+    el.innerHTML='<div class="riMain"><div class="riName">'+diffBadge(r.diff)+'<span class="riNum">#'+r.num+'</span>'+(priv?'<span class="riLock">🔒</span>':'')+escHtml(r.name)+'</div><div class="riSub">방장 - '+escHtml(r.host)+(need>1&&waiting&&!full&&!fits?' · <span class="riOver">파티 자리 부족</span>':'')+'</div></div>'
       +'<div class="riRight"><div class="riCnt'+(full?' full':'')+'">'+r.cur+'/'+r.max+'</div><div class="riStat '+(waiting?'wait':'play')+'">'+(waiting?(full?'가득참':'대기중'):(r.round?('게임중 '+r.round+'R'):'게임중'))+'</div></div>';
     if(joinable) el.onclick=()=> priv? openPwPrompt(r) : joinRoom(r);
     else if(waiting && !full && !fits) el.onclick=()=>{ if(typeof playSfx==='function') playSfx('ui_denied'); toast('⚠️ 파티 인원이 초과되었습니다 (남은 자리 '+(r.max-r.cur)+' / 필요 '+need+')'); };
@@ -8700,31 +8934,36 @@ function joinByNumber(){ const f=document.getElementById('roomNumField'); if(!f)
   const host=LOBBY_NAMES[Math.floor(Math.random()*LOBBY_NAMES.length)];
   openLobby({num:num, name:'#'+num+' 방', host:host, startCount:1+Math.floor(Math.random()*4), joining:true, visibility:'private', diff:['easy','normal','normal','hard','hell'][Math.floor(Math.random()*5)]}); }
 // 방 만들기 모달
-let _createVis='public', _createDiff='easy';
+let _createVis='public', _createDiff='easy', _createMax=8;
+function setCpMax(m, silent){ m=Math.max(2,Math.min(8,m|0)); _createMax=m;
+  const v=document.getElementById('cpMaxVal'); if(v) v.textContent=m;
+  const dec=document.getElementById('cpMaxDec'), inc=document.getElementById('cpMaxInc'); if(dec) dec.disabled=(m<=2); if(inc) inc.disabled=(m>=8);
+  if(!silent && typeof playSfx==='function') playSfx('ui_toggle'); }
+function stepCpMax(d){ setCpMax(_createMax+d); }
 function renderCpDiff(){ const box=document.getElementById('cpDiffBtns'); if(!box) return; box.innerHTML='';
   DIFFICULTY_ORDER.forEach(d=>{ const D=DIFFICULTY[d]; const b=document.createElement('div');
     b.className='moDiffBtn'+(d===_createDiff?' on':''); b.style.setProperty('--dc', DIFF_COLOR[d]||'#fff');
     b.innerHTML='<span class="ddN">'+D.name+'</span><span class="ddC">포인트 ×'+D.coinMult+'</span>';
     b.onclick=()=>setCpDiff(d); box.appendChild(b); }); }
 function setCpDiff(d){ if(!DIFFICULTY[d]) return; _createDiff=d; renderCpDiff(); if(typeof playSfx==='function') playSfx('ui_confirm'); }
-function createRoom(){ const nm=document.getElementById('cpName'); if(nm) nm.value=''; const pw=document.getElementById('cpPw'); if(pw) pw.value=''; setRoomVis('public'); _createDiff='easy'; renderCpDiff();
+function createRoom(){ const nm=document.getElementById('cpName'); if(nm) nm.value=''; const pw=document.getElementById('cpPw'); if(pw) pw.value=''; setRoomVis('public'); _createDiff='easy'; renderCpDiff(); setCpMax(8);
   const cp=document.getElementById('createPanel'); cp.classList.remove('hide'); if(typeof fxPop==='function') fxPop(cp.querySelector('.cpCard')); if(typeof paintIcons==='function') paintIcons(cp); if(nm) nm.focus(); }
 function closeCreate(){ popHide('createPanel'); }
 function setRoomVis(v){ _createVis=v;
   document.querySelectorAll('#cpVis .cpSegBtn').forEach(b=>b.classList.toggle('on', b.dataset.v===v));
   const w=document.getElementById('cpPwWrap'); if(w) w.classList.toggle('hide', v!=='private');
-  const h=document.getElementById('cpHint'); if(h){ h.style.color=''; h.textContent = v==='public'?'공개: 방 목록에 표시됩니다.':'비공개: 목록엔 보이지만 비밀번호를 입력해야 입장할 수 있습니다.'; } }
+  const h=document.getElementById('cpHint'); if(h){ h.style.color=''; h.textContent=''; } }   // 안내 텍스트 제거(에러만 표시)
 function confirmCreate(){ const nmEl=document.getElementById('cpName');
   const name=((nmEl&&nmEl.value)||'').trim()||'나의 대기실';
   let pw=''; if(_createVis==='private'){ const pwEl=document.getElementById('cpPw'); pw=((pwEl&&pwEl.value)||'').replace(/\s/g,'');
     if(!pw){ const h=document.getElementById('cpHint'); if(h){ h.textContent='비공개 방은 비밀번호를 설정해야 합니다.'; h.style.color='#ff6b6b'; } if(pwEl) pwEl.focus(); return; } }
   closeCreate();
   if(rtRoomsActive()){   // 실제 방 생성: rooms 채널에 게시 + 대기실 채널 입장
-    const meta={ num:newRoomNum(), name:name, host:myNick(), hostUid:myUid(), cur:1, max:8, status:'wait',
+    const meta={ num:newRoomNum(), name:name, host:myNick(), hostUid:myUid(), cur:1, max:_createMax, status:'wait',
                  visibility:_createVis, pw:pw, diff:_createDiff, createdAt:Date.now() };
     rtRoomsEnsure(); rtRoomPublish(meta); rtRoomJoin(meta.num, true);
     openLobby(Object.assign({real:true, joining:false, startCount:1}, meta)); return; }
-  openLobby({num:newRoomNum(), name:name, host:myNick(), startCount:1, joining:false, visibility:_createVis, pw:pw, diff:_createDiff}); }   // (오프라인 폴백) 시뮬 방
+  openLobby({num:newRoomNum(), name:name, host:myNick(), startCount:1, joining:false, visibility:_createVis, pw:pw, diff:_createDiff, max:_createMax}); }   // (오프라인 폴백) 시뮬 방
 // 비공개 방 비밀번호 입력
 let _pwRoom=null;
 function openPwPrompt(r){ _pwRoom=r;
@@ -9030,8 +9269,10 @@ function rtRoomOnStart(p){ if(!_lobbyRoom || !_lobbyRoom.real || RTROOM.started)
 // ── 멀티플레이 대기실(로비) ──
 const LOBBY_NAMES=['Striker','GG준비됨','리퍼장인','Crystalize','보이드킹','노바777','Sentinel','막눈'];
 let _lobbyT=null, _lobbySlots=[];
+let _lobbyMax=8, _lobbyLock=[];   // 방 정원(2~8) · 호스트가 잠근 빈 슬롯 인덱스
 let _lobbyRoom=null;
 function openLobby(room){ _lobbyRoom=room||{name:'나의 대기실',host:'나',joining:false,startCount:1};
+  _lobbyMax=Math.max(2,Math.min(8, _lobbyRoom.max||8)); _lobbyLock=[];   // 정원 확정 + 잠금 초기화
   // 파티장이면 파티원도 같은 방으로 호출(실연동 파티)
   if(typeof RT!=='undefined' && RT.active && iAmPartyLeader() && _party && _party.members && _party.members.length>1){
     _lobbyRoom.party=true; if(_selMap) _lobbyRoom.map=_selMap.name; if(!_lobbyRoom._followed) rtSendPartyRoom(_lobbyRoom); }
@@ -9085,7 +9326,7 @@ function startLobbySim(room){ room=room||{joining:false,startCount:1,host:'나'}
     return;   // 파티방은 봇 입장 시뮬 없음
   }
   if(room.joining){   // 기존 방 참여: P1=호스트…, 나는 들어간 순서대로 다음 번호
-    const existing=Math.max(1,Math.min(7,room.startCount||2));
+    const existing=Math.max(1,Math.min(_lobbyMax-1,room.startCount||2));
     for(let k=0;k<existing;k++){ _lobbySlots[k]={name:'P'+(k+1), label:k===0?room.host:names[ni++%names.length], bot:true, ready:true, host:k===0}; }
     _lobbySlots[existing]={me:true, name:'P'+(existing+1), ready:true, host:false};   // 나 = 다음 슬롯
   } else {   // 방 생성: 내가 P1 호스트
@@ -9094,10 +9335,10 @@ function startLobbySim(room){ room=room||{joining:false,startCount:1,host:'나'}
   renderLobby(); updateLobbyStart();
   addLobbyMsg('', myNick()+'님이 입장하였습니다.');   // 내 입장부터 표시(기존 입장자는 생략, 이후 입장자만 안내)
   const cur=_lobbySlots.filter(Boolean).length;
-  const target=Math.min(8, cur + (room.joining? Math.floor(Math.random()*3) : 1+Math.floor(Math.random()*5)));   // 추가 입장
+  const target=Math.min(_lobbyMax, cur + (room.joining? Math.floor(Math.random()*3) : 1+Math.floor(Math.random()*5)));   // 추가 입장(정원 이내)
   _lobbyT=setInterval(()=>{
-    const empty=_lobbySlots.indexOf(null), filled=_lobbySlots.filter(Boolean).length;
-    if(empty<0 || filled>=target){ stopLobbySim(); updateLobbyStart(); return; }
+    const empty=_lobbySlots.slice(0,_lobbyMax).indexOf(null), filled=_lobbySlots.filter(Boolean).length;   // 빈 슬롯은 정원 이내에서만, 잠금 제외
+    if(empty<0 || _lobbyLock.indexOf(empty)>=0 || filled>=target){ stopLobbySim(); updateLobbyStart(); return; }
     const slot={name:'P'+(empty+1),label:names[ni++%names.length],bot:true,ready:false,joining:true};
     _lobbySlots[empty]=slot; renderLobby(); updateLobbyStart();
     setTimeout(()=>{ if(_lobbySlots.indexOf(slot)>=0){ slot.joining=false; slot.ready=true; renderLobby(); updateLobbyStart();
@@ -9134,8 +9375,9 @@ function openLobbyRace(anchor){ if(!lobbyRaceEnabled()) return; const me=_lobbyS
   showRaceMenu(anchor, cur, function(k){ if(me) me.race=k; _selRace=k; renderLobby(); }); }   // 칩 아래 인라인 드롭다운 → 내 종족 변경(게임 반영)
 function renderLobby(){ const g=document.getElementById('lbGrid'); if(!g) return; g.innerHTML='';
   const raceOn=lobbyRaceEnabled();
-  for(let i=0;i<8;i++){ const s=_lobbySlots[i], col=PLAYER_VIEW_COLORS[i%PLAYER_VIEW_COLORS.length];
-    const el=document.createElement('div'); el.className='lbSlot'+(s?'':' empty')+(s&&s.me?' me':''); el.style.setProperty('--pc',col);
+  const meSlot=_lobbySlots.find(s=>s&&s.me), meHost=!!(meSlot&&meSlot.host);
+  for(let i=0;i<_lobbyMax;i++){ const s=_lobbySlots[i], col=PLAYER_VIEW_COLORS[i%PLAYER_VIEW_COLORS.length], locked=(_lobbyLock.indexOf(i)>=0);
+    const el=document.createElement('div'); el.className='lbSlot'+(s?'':' empty')+(s&&s.me?' me':'')+((!s&&locked)?' locked':''); el.style.setProperty('--pc',col);
     if(s){ const stt = s.host?'호스트' : (s.joining?'입장 중…' : (s.ready?'준비 완료':'대기'));
       const cls = s.host?'host' : (s.ready?'ok':'');
       if(!s.race) s.race = s.me ? (STK_RACES[_selRace]?_selRace:'terran') : strikeRandomRace();   // 종족 지연 배정(나=선택값, 봇=랜덤)
@@ -9144,19 +9386,45 @@ function renderLobby(){ const g=document.getElementById('lbGrid'); if(!g) return
         ? '<div class="lbRace'+(s.me?' me':'')+'" style="'+raceVars(R.col)+'"'+(s.me?' onclick="openLobbyRace(this)" title="종족 선택"':'')+'><span class="lrNm">'+R.name+'</span>'+(s.me?'<span class="lrCaret">▾</span>':'')+'</div>'
         : '<div class="lbRace lk" title="이 유즈맵은 종족이 없습니다"><span class="lrNm">잠금</span></div>';
       el.innerHTML='<div class="lbNum">'+(i+1)+'</div><div class="lbInfo"><span class="lbName">'+escHtml(s.me?myNick():(s.label||s.name))+'</span><span class="lbStat '+cls+'">'+stt+'</span></div>'+chip;
-    } else el.innerHTML='<div class="lbNum">'+(i+1)+'</div><div class="lbInfo"><div class="lbEmpty">빈 자리</div></div>';
+      if(!s.me){ el.classList.add('tapmenu'); el.onclick=(e)=>openSlotMenu(i,e); }   // 남의 프로필 탭 → 친구추가/추방 메뉴
+    } else {   // 빈 슬롯: 탭하면 메뉴(이동/잠금). 잠김이면 표시.
+      el.innerHTML='<div class="lbNum">'+(i+1)+'</div><div class="lbEmptyMid">'+(locked?'<span class="lbLockTxt">🔒 잠긴 자리</span>':'<span class="lbEmpty">빈 자리</span>')+'<span class="lbSlotCaret">▾</span></div>';
+      el.classList.add('tapmenu'); el.onclick=(e)=>openSlotMenu(i,e);
+    }
     g.appendChild(el);
   }
 }
+function moveToSlot(i){ if(i<0||i>=_lobbyMax||_lobbySlots[i]) return; if(_lobbyLock.indexOf(i)>=0){ if(typeof toast==='function') toast('🔒 잠긴 자리입니다'); return; }
+  const j=_lobbySlots.findIndex(s=>s&&s.me); if(j<0||j===i) return;
+  _lobbySlots[i]=_lobbySlots[j]; _lobbySlots[j]=null; if(typeof playSfx==='function') playSfx('ui_confirm'); renderLobby(); updateLobbyStart(); }
+function toggleSlotLock(i){ const me=_lobbySlots.find(s=>s&&s.me); if(!(me&&me.host)){ if(typeof toast==='function') toast('호스트만 가능합니다'); return; } if(_lobbySlots[i]) return;
+  const k=_lobbyLock.indexOf(i); if(k>=0) _lobbyLock.splice(k,1); else _lobbyLock.push(i); if(typeof playSfx==='function') playSfx('ui_toggle'); renderLobby(); updateLobbyStart(); }
+function kickSlot(i){ const me=_lobbySlots.find(s=>s&&s.me); if(!(me&&me.host)){ if(typeof toast==='function') toast('호스트만 가능합니다'); return; }
+  const s=_lobbySlots[i]; if(!s||s.host||s.me) return; const nm=s.label||s.name;
+  if(_lobbyRoom&&_lobbyRoom.real&&typeof rtRoomKickUid==='function'&&s.uid){ try{ rtRoomKickUid(s.uid); }catch(e){} }   // 실방: 추방 통지(가능 시)
+  _lobbySlots[i]=null; if(typeof playSfx==='function') playSfx('ui_denied'); if(typeof addLobbyMsg==='function') addLobbyMsg('', nm+'님을 추방했습니다.'); renderLobby(); updateLobbyStart(); }
+function lobbyAddFriend(i){ const s=_lobbySlots[i]; if(!s) return; const nm=s.label||s.name;
+  if(s.uid && typeof friendAdd==='function'){ try{ friendAdd(s.uid); }catch(e){} }
+  if(typeof toast==='function') toast('👤 '+nm+'님에게 친구 요청을 보냈습니다'); }
+function _lbMenuClose(){ const m=document.getElementById('lbMenu'); if(m) m.classList.add('hide'); }
+function openSlotMenu(i, ev){ if(ev){ ev.stopPropagation(); ev.preventDefault(); }
+  const meSlot=_lobbySlots.find(s=>s&&s.me), meHost=!!(meSlot&&meSlot.host), s=_lobbySlots[i], locked=(_lobbyLock.indexOf(i)>=0), opts=[];
+  if(!s){ if(!locked) opts.push({t:'이 자리로 이동', fn:'moveToSlot('+i+')'}); if(meHost) opts.push({t:locked?'🔓 잠금 해제':'🔒 자리 잠금', fn:'toggleSlotLock('+i+')'}); }
+  else if(!s.me){ opts.push({t:'친구 추가', fn:'lobbyAddFriend('+i+')'}); if(meHost && !s.host) opts.push({t:'추방', fn:'kickSlot('+i+')', danger:true}); }
+  const m=document.getElementById('lbMenu'); if(!m || !opts.length){ _lbMenuClose(); return; }
+  m.innerHTML=opts.map(o=>'<button class="lbMenuOpt'+(o.danger?' danger':'')+'" onclick="'+o.fn+';_lbMenuClose()">'+o.t+'</button>').join('');
+  m.classList.remove('hide');
+  const px=(ev&&ev.clientX)||120, py=(ev&&ev.clientY)||120, vw=window.innerWidth, vh=window.innerHeight, mw=m.offsetWidth, mh=m.offsetHeight;
+  m.style.left=Math.max(6,Math.min(px, vw-mw-6))+'px'; m.style.top=Math.max(6,Math.min(py+4, vh-mh-6))+'px';   // 클릭 지점 근처(화면 안으로 클램프)
+  if(typeof playSfx==='function') playSfx('ui_tab'); }
 function updateLobbyStart(){ const players=_lobbySlots.filter(Boolean), cnt=players.length, allReady=players.every(s=>s.ready);
   const meSlot=_lobbySlots.find(s=>s&&s.me), meHost=!!(meSlot&&meSlot.host);
-  const st=document.getElementById('lbStatus'), btn=document.getElementById('lbStart');
+  const btn=document.getElementById('lbStart');
+  const cntEl=document.getElementById('lbCount'); if(cntEl) cntEl.textContent='('+cnt+'/'+_lobbyMax+')';   // 헤더: 현재/정원
   if(meHost){   // 방장: 직접 시작
-    if(st) st.textContent=(cnt>=8?'대기실이 가득 찼습니다':'플레이어 입장 대기 중…')+' ('+cnt+'/8)';
     if(btn){ const ok=cnt>=2&&allReady; btn.disabled=!ok; btn.textContent=ok?'게임 시작':'대기 중…'; btn.classList.toggle('ready',ok); }
   } else {   // 참가자: 시작 불가(방장만)
     const ready=cnt>=2 && allReady && _lobbyT===null;
-    if(st) st.textContent= ready?'방장이 시작하면 함께 시작합니다…':('플레이어 입장 대기 중… ('+cnt+'/8)');
     if(btn){ btn.disabled=true; btn.textContent='방장 대기 중'; btn.classList.remove('ready'); }
     // 파티방: 방장이 시작 신호를 보낼 때까지 대기(자동 시작 안 함). 일반 시뮬방만 자동 시작.
     if(!(_lobbyRoom && (_lobbyRoom.party||_lobbyRoom.real)) && ready && !_autoStartT){ _autoStartT=setTimeout(()=>{ _autoStartT=null;
@@ -9529,8 +9797,7 @@ function showShopProfile(id){ const def=U[id]; if(!def) return;
   document.getElementById('prodHint').style.display='none';
   const card=document.getElementById('shopProfile'); card.style.display='flex';   // 프로필=상단, 생산고 안내는 그대로 아래에 유지
   document.getElementById('bpUnit').classList.add('profOn');   // 프로필 표시 → 생산고 안내 카드 컴팩트
-  const sjob=UNIT_CLS[id]||'';
-  document.getElementById('spPortrait').innerHTML=unitPortraitHTML(id)+(sjob?'<div class="portJob">'+sjob+'</div>':'');
+  document.getElementById('spPortrait').innerHTML=unitPortraitHTML(id);
   document.getElementById('spName').textContent=def.name;
   document.getElementById('spType').textContent='';   // 타입 라인 제거(직업은 초상화 하단 배지로)
   const pseudo={id:id};   // 인스턴스 없는 신규 유닛 → 풀스탯 표시
@@ -9549,7 +9816,7 @@ function showCitizenProfile(){ const card=document.getElementById('shopProfile')
   const ph=document.getElementById('prodHint'); if(ph) ph.style.display='none';
   card.style.display='flex';   // 프로필=상단, 생산고 안내는 아래에 유지
   document.getElementById('bpUnit').classList.add('profOn');   // 프로필 표시 → 생산고 안내 카드 컴팩트
-  document.getElementById('spPortrait').innerHTML=unitPortraitHTML('citizen')+'<div class="portJob">시민</div>';
+  document.getElementById('spPortrait').innerHTML=unitPortraitHTML('citizen');
   document.getElementById('spName').textContent='시민';
   document.getElementById('spType').textContent='유닛 생산 일꾼';
   document.getElementById('spHp').innerHTML='<div class="czDesc">뽑기 비콘으로 이동해 <b>랜덤 유닛</b>을 뽑습니다 <span class="czCost">◎'+mapCfg('gachaCost',GACHA_COST)+'</span></div>';
@@ -9640,29 +9907,28 @@ vu.addEventListener('pointercancel', function(e){ onUnitUp(e); });
 function evPosIn(viewId,e){ const v=document.getElementById(viewId).getBoundingClientRect();
   const t=e.changedTouches?e.changedTouches[0]:(e.touches?e.touches[0]:e);
   return {x:(t.clientX-v.left)/v.width, y:(t.clientY-v.top)/v.height}; }
-function showPlayerProfile(u){ const def=U[u.id]; if(!def) return;
-  // 관전 중이면 상대 플레이어의 공격 업그레이드 레벨로 공격력 계산
-  const rb=(typeof specRemoteBoard==='function')&&specRemoteBoard();
-  const _savedAtk=(rb && G.coopUpg && G.coopUpg[rb]) ? G.atkLv : undefined;
-  if(_savedAtk!==undefined) G.atkLv=G.coopUpg[rb];
-  try{
-    document.getElementById('plGridWrap').style.display='none';
-    const card=document.getElementById('playerProfile'); card.style.display='flex';
-    const pjob=UNIT_CLS[u.gmodel||u.id]||'';
-    document.getElementById('ppPortrait').innerHTML=unitPortraitHTML(u.gmodel||u.id)+(pjob?'<div class="portJob">'+pjob+'</div>':'');
-    document.getElementById('ppName').textContent=gNameStar(u,def)+(u.hero?' [영웅]':'');
-    document.getElementById('ppType').innerHTML=u.gtier?tierLabelHTML(u.gtier):'';   // 등급 라벨(등급색 칩)
-    document.getElementById('ppHp').innerHTML=scHpHTML(u);
-    document.getElementById('ppStats').innerHTML=scStatBoxesHTML(u); fitStatNumbers();
-  } finally { if(_savedAtk!==undefined) G.atkLv=_savedAtk; }
-}
+// 관전 유닛 프로필 = 메인 단일 프로필과 동일 커맨드 그리드(읽기전용: 스킬 카드 비활성 → 남의 유닛 시전 방지)
+function _specUnitModel(u){ const def=U[u.id]||{};
+  const cards=(typeof _mainSkillCards==='function')?_mainSkillCards([u]).map(function(it){ return Object.assign({}, it, {act:'', state:'dim'}); }):[];
+  return { mode:'prod', compact:true, build:true, title:gNameStar(u,def)+(u.hero?' [영웅]':''), icon:_mainPort(u), hpsh:_mainHpsh(u),
+    sub:'👁 '+((typeof playerName==='function')?playerName(G.curPlayer):('P'+G.curPlayer))+' 관전', items:cards,
+    info:{ eb:'', hideName:true, stats:_mainUnitStatList(u) } }; }
+function renderSpecProfile(u){ const host=document.getElementById('playerProfile'); if(!host||!host.classList.contains('on')) return;
+  const rb=(typeof specRemoteBoard==='function')&&specRemoteBoard();   // 관전=상대 공격 업글 레벨로 스탯 계산
+  const _sv=(rb && G.coopUpg && G.coopUpg[rb]) ? G.atkLv : undefined; if(_sv!==undefined) G.atkLv=G.coopUpg[rb];
+  try{ const sig='spec|'+u.uid+'|'+Math.round(u.hp||0)+'|'+Math.round(u.sh||0)+'|'+(host._cgPage||0);   // HP/실드 변하면만 재빌드(라이브 갱신)
+    if(host._gSig!==sig){ host._gSig=sig; host._cgSig=undefined; renderCmdGrid(host, _specUnitModel(u)); } }
+  finally{ if(_sv!==undefined) G.atkLv=_sv; } }
+function showPlayerProfile(u){ if(!U[u.id]) return;
+  document.getElementById('plGridWrap').style.display='none';
+  const host=document.getElementById('playerProfile'); host.classList.add('on','simple'); host._gSig=undefined; renderSpecProfile(u); }
 // 관전 중 상호작용 대상 유닛 목록(상대=실시간 보드, 나=내 유닛)
 function _plUnitList(){ const rb=(typeof specRemoteBoard==='function')&&specRemoteBoard();
   return rb && G.coopBoard && G.coopBoard[rb] ? (G.coopBoard[rb].units||[]) : G.units; }
 function selectPlayerUnit(uid){ const u=_plUnitList().find(x=>x.uid===uid); if(!u){ clearPlayerSel(); return; }
   G.sel=[uid]; G.specSel=uid; G.selEnemy=null; showPlayerProfile(u); updateDeselTop();   // 단일(M3D 림 표시)
 }
-function clearPlayerSel(){ G.sel=[]; G.specSel=null; const c=document.getElementById('playerProfile'); if(c) c.style.display='none';
+function clearPlayerSel(){ G.sel=[]; G.specSel=null; const c=document.getElementById('playerProfile'); if(c){ c.classList.remove('on'); c._gSig=undefined; }
   const w=document.getElementById('plGridWrap'); if(w) w.style.display=''; updateDeselTop(); }
 let _plStart=null, _plBox=null, _plMoved=false;
 function _hitPlayerUnit(x,y){ let best=1e9,hit=null; for(const u of _plUnitList()){ const d=Math.hypot((u.x-x)*GW,(u.y-y)*GH); if(d<=unitRadius(u)+6 && d<best){ best=d; hit=u; } } return hit; }
@@ -10001,7 +10267,7 @@ function loop(now){
     if(!se) deselectUnit(); }   // 적 프로필 HP 실시간 갱신은 아래 mainProfileRender가 담당
   // 플레이어(관전) 탭: 선택 유닛 HP 실시간 갱신 / 죽으면 해제
   if(G.tab==='Players' && G.sel.length===1){ const pu=(typeof _plUnitList==='function'?_plUnitList():G.units).find(x=>x.uid===G.sel[0]);
-    if(!pu) clearPlayerSel(); else { const e=document.getElementById('ppHp'); if(e && getComputedStyle(document.getElementById('playerProfile')).display!=='none') e.innerHTML=scHpHTML(pu); } }
+    if(!pu) clearPlayerSel(); else { const pf=document.getElementById('playerProfile'); if(pf && pf.classList.contains('on')) renderSpecProfile(pu); } }
   if(G.sel.length>=1 && document.getElementById('unitCmd').classList.contains('on')) updateCmdRow();   // 명령 행 상태 갱신(단일/다중)
   if(typeof mainProfileRender==='function') mainProfileRender();   // 🎛 선택 프로필 실시간(HP/마나/쿨다운) — 시그니처 캐시로 저비용, 변화 없으면 DOM 유지
   updateSkillFab();   // 스킬 FAB 쿨다운/버프 실시간(탭 전환·해제도 내부 처리)
