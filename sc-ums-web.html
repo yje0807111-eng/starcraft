@@ -2168,16 +2168,16 @@
   .msDivider{flex:0 0 auto;height:1px;margin:7px 2px 2px;background:linear-gradient(90deg,transparent,var(--neon-soft) 18%,var(--neon-soft) 82%,transparent)}
   /* 하단 소셜 박스: 탭(헤더) + 콘텐츠를 하나의 외곽 안에 포함 */
   .msSocial{flex:1;min-height:80px;display:flex;flex-direction:column;margin-top:9px;overflow:hidden;
-    background:linear-gradient(180deg,rgba(6,7,11,.42),rgba(4,5,8,.5));border:1px solid var(--neon-soft);border-radius:var(--r-lg);
-    box-shadow:inset 0 0 16px -9px var(--neon-glow)}
+    background:linear-gradient(180deg,rgba(6,7,11,.42),rgba(4,5,8,.5));border:1px solid var(--metal-edge);border-radius:var(--r-lg);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}   /* 테두리 중립(빨강 글로우 제거) */
   /* 탭(채팅/파티/친구) — 박스 안 헤더, 밑줄 인디케이터로 자연스럽게 전환 */
-  .msTabs2{flex:0 0 auto;display:flex;border-bottom:1px solid rgba(255,59,59,.16);background:rgba(255,255,255,.015)}
+  .msTabs2{flex:0 0 auto;display:flex;border-bottom:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.015)}
   .msTab2{flex:1;position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 4px;line-height:1;
     font-family:inherit;font-size:var(--fs-lg);font-weight:700;cursor:pointer;color:var(--txt-hud);background:transparent;border:none;
     border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .16s,border-color .16s}
   .msTab2 .ic{position:relative;top:-.75px}
   .msTab2:hover{color:#cdd7e1}
-  .msTab2.on{color:var(--neon);border-bottom-color:var(--neon)}
+  .msTab2.on{color:#5fd0ff;border-bottom-color:#00e5ff}   /* 채팅=청록 포인트(빨강 제거) */
   .msTab2[data-bt="party"].on{color:#b98cff;border-bottom-color:#8a56ff}   /* 파티=진한 보라 포인트 */
   .msTab2[data-bt="friend"].on{color:#7fa8ff;border-bottom-color:#3a6ee0}   /* 친구=짙은 파랑 포인트 */
   .msTab2:active{opacity:.85}
@@ -2226,17 +2226,17 @@
   .msChat .mcLine.whisper{color:#cdb8ff}
   .msChat .mcLine.whisper .mcWhisper{font-weight:800;color:#b6a0ff}
   .msChat .mcLine.whisper .mcArrow{color:#7d6fb0;font-weight:700}
-  .msChatBar{flex:0 0 auto;display:flex;align-items:center;gap:2px;padding:3px 4px;border-top:1px solid rgba(255,59,59,.16)}
+  .msChatBar{flex:0 0 auto;display:flex;align-items:center;gap:2px;padding:3px 4px;border-top:1px solid rgba(255,255,255,.08)}
   .msFriendBtn{flex:0 0 auto;width:46px;border-radius:var(--r-md);cursor:pointer;font-size:17px;position:relative;
     border:1px solid rgba(0,229,255,.4);background:rgba(0,229,255,.09);color:var(--hud);box-shadow:inset 0 0 8px rgba(0,229,255,.06)}
   .msFriendBtn:active{transform:translateY(1px)}
   .msFriendBadge{position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;line-height:16px;border-radius:var(--r-lg);
-    background:var(--neon);color:#fff;font-size:var(--fs-xs);font-weight:800;text-align:center;padding:0 3px;box-shadow:0 0 6px var(--neon-glow)}
+    background:#3a6ee0;color:#fff;font-size:var(--fs-xs);font-weight:800;text-align:center;padding:0 3px;box-shadow:0 0 6px rgba(58,110,224,.6)}   /* 친구 배지=친구 파랑 포인트 */
   .msFriendBadge.hide{display:none}
   .msChatBar input{flex:1;min-width:0;padding:7px 8px;background:transparent;border:none;color:var(--txt);font-family:inherit;font-size:var(--fs-lg);outline:none}
   .msChatBar input::placeholder{color:#6f757d}
   .msChatSend{flex:0 0 auto;padding:5px 10px 5px 12px;margin-left:3px;cursor:pointer;font-family:inherit;font-weight:800;font-size:var(--fs-md);
-    border:none;border-left:1px solid rgba(255,59,59,.16);background:rgba(205,45,45,.24);color:#ffd6d6;text-shadow:0 0 6px var(--neon-glow)}
+    border:none;border-left:1px solid rgba(255,255,255,.08);background:rgba(0,229,255,.13);color:#bfe6ff}   /* 전송=청록 포인트(빨강 제거) */
   .msChatSend:active{transform:translateY(1px)}
   /* 친구 오버레이(스텁 — 다음 단계에서 친구목록/메시지/파티 채움) */
   .foCard{width:84%;max-width:300px;max-height:80%;display:flex;flex-direction:column;padding:15px 14px;border-radius:10px;
