@@ -2160,6 +2160,8 @@
   .msTab2 .ic{position:relative;top:-.75px}
   .msTab2:hover{color:#cdd7e1}
   .msTab2.on{color:var(--neon);border-bottom-color:var(--neon)}
+  .msTab2[data-bt="party"].on{color:#b98cff;border-bottom-color:#8a56ff}   /* 파티=진한 보라 포인트 */
+  .msTab2[data-bt="friend"].on{color:#7fa8ff;border-bottom-color:#3a6ee0}   /* 친구=짙은 파랑 포인트 */
   .msTab2:active{opacity:.85}
   .msPanelBody{flex:1;min-height:60px;padding:8px 9px;overflow-y:auto;overflow-x:hidden;background:transparent;border:none}
   .msPanelBody::-webkit-scrollbar{width:4px}.msPanelBody::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:var(--r-bar)}
@@ -2168,13 +2170,28 @@
   .msChat{flex:1;min-height:0;padding:8px 9px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;
     background:transparent;border:none;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
   .msChat::-webkit-scrollbar{width:4px}.msChat::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:var(--r-bar)}
-  /* 채팅 범위 선택(전체/파티/친구) */
-  .msScope{flex:0 0 auto;display:flex;gap:4px;padding:6px 7px 0}
-  .msScopeBtn{padding:5px 12px;border-radius:var(--r-md);cursor:pointer;font-family:inherit;font-size:var(--fs-sm);font-weight:700;letter-spacing:.2px;
-    color:var(--txt-hud);background:rgba(9,11,17,.55);border:1px solid var(--metal-edge);transition:all .14s}
-  .msScopeBtn:hover{color:#cdd7e1;border-color:rgba(255,255,255,.18)}
-  .msScopeBtn.on{color:var(--neon-lt);background:rgba(255,59,59,.1);border-color:var(--neon-soft)}
-  .msScopeBtn:active{transform:translateY(1px)}
+  /* 채팅 범위(전체/파티/친구) = 입력줄 내 컴팩트 팝다운(설정 구역). 현재 범위 색: 전체=청록 · 파티=보라 · 친구=파랑 */
+  .msScopeDD{position:relative;flex:0 0 auto}
+  .msScopeTrig{display:flex;align-items:center;gap:3px;font-family:inherit;font-size:var(--fs-sm);font-weight:800;cursor:pointer;white-space:nowrap;
+    padding:5px 6px 5px 9px;border-radius:var(--r-md);transition:border-color .12s,background .12s,color .12s;
+    color:#cfe0ec;background:rgba(255,255,255,.05);border:1px solid var(--metal-edge)}
+  .msScopeTrig:active{transform:translateY(1px)}
+  .msScopeChev{width:11px;height:11px;flex:0 0 auto;opacity:.85;transition:transform .18s}
+  .msScopeDD.open .msScopeChev{transform:rotate(180deg)}
+  .msScopeDD[data-sc="all"] .msScopeTrig{color:#bfe6ff;background:rgba(0,229,255,.1);border-color:rgba(0,229,255,.42)}
+  .msScopeDD[data-sc="party"] .msScopeTrig{color:#d6bcff;background:rgba(138,86,255,.18);border-color:rgba(138,86,255,.6)}
+  .msScopeDD[data-sc="friend"] .msScopeTrig{color:#bcd2ff;background:rgba(58,110,224,.2);border-color:rgba(58,110,224,.62)}
+  .msScopeMenu{position:absolute;bottom:calc(100% + 6px);right:0;z-index:30;min-width:86px;display:flex;flex-direction:column;gap:1px;padding:4px;
+    background:linear-gradient(180deg,rgba(16,20,30,.985),rgba(9,12,19,.99));border:1px solid rgba(120,140,180,.3);border-radius:var(--r-md);box-shadow:0 -10px 26px rgba(0,0,0,.6)}
+  .msScopeMenu.hide{display:none}
+  .msScopeOpt{font-family:inherit;font-size:var(--fs-sm);font-weight:700;color:#c6d2df;text-align:left;cursor:pointer;white-space:nowrap;
+    padding:6px 11px;border-radius:calc(var(--r-md) - 2px);background:transparent;border:1px solid transparent;transition:background .1s,color .1s,border-color .1s}
+  .msScopeOpt[data-sc="party"]{color:#c9b0ff} .msScopeOpt[data-sc="friend"]{color:#b3c8ff}
+  .msScopeOpt:hover{background:rgba(255,255,255,.05)}
+  .msScopeOpt.on{color:#fff}
+  .msScopeOpt[data-sc="all"].on{background:rgba(0,229,255,.15);border-color:rgba(0,229,255,.42)}
+  .msScopeOpt[data-sc="party"].on{background:rgba(138,86,255,.22);border-color:rgba(138,86,255,.55)}
+  .msScopeOpt[data-sc="friend"].on{background:rgba(58,110,224,.24);border-color:rgba(58,110,224,.58)}
   .msChat .mcLine{font-size:var(--fs-lg);line-height:1.38;color:#cdd7e1;word-break:break-word}
   /* 범위별 표시 필터(귓속말은 항상 표시) */
   .msChat .mcLine{display:none}
@@ -2727,14 +2744,17 @@
           <button class="msTab2" data-bt="friend" onclick="setBottomTab('friend')"><span data-ico="friend"></span>친구<span class="msFriendBadge hide" id="msFriendBadge">0</span></button>
         </div>
         <div class="msChatWrap" id="msChatWrap">
-          <div class="msScope" id="msScope">
-            <button class="msScopeBtn on" data-sc="all" onclick="setChatScope('all')">전체</button>
-            <button class="msScopeBtn" data-sc="party" onclick="setChatScope('party')">파티</button>
-            <button class="msScopeBtn" data-sc="friend" onclick="setChatScope('friend')">친구</button>
-          </div>
           <div class="msChat" id="msChat" data-scope="all"></div>
           <div class="msChatBar" id="msChatBar">
             <input id="msChatInput" type="text" placeholder="전체 채팅…" maxlength="120" autocomplete="off" onkeydown="if(event.key==='Enter')sendGlobalChat()">
+            <div class="msScopeDD" id="msScopeDD" data-sc="all">
+              <button class="msScopeTrig" type="button" onclick="toggleMsScope(event)" title="채팅 범위"><span class="msScopeLbl" id="msScopeLbl">전체</span><svg class="msScopeChev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button>
+              <div class="msScopeMenu hide" id="msScopeMenu">
+                <button class="msScopeOpt on" data-sc="all" onclick="pickMsScope('all')">전체</button>
+                <button class="msScopeOpt" data-sc="party" onclick="pickMsScope('party')">파티</button>
+                <button class="msScopeOpt" data-sc="friend" onclick="pickMsScope('friend')">친구</button>
+              </div>
+            </div>
             <button class="msChatSend" onclick="sendGlobalChat()">전송</button>
           </div>
         </div>
@@ -3959,6 +3979,7 @@ document.addEventListener('pointerdown', function(ev){ const p=document.getEleme
 document.addEventListener('pointerdown', function(ev){ const p=document.getElementById('pbossPopup'); if(!p||p.classList.contains('hide'))return; if(ev.target.closest&&(ev.target.closest('#pbossPopup')||ev.target.closest('#pbossBtn')))return; closePbossPopup(); }, true);
 document.addEventListener('pointerdown', function(ev){ const p=document.getElementById('autoPopup'); if(!p||p.classList.contains('hide'))return; if(ev.target.closest&&(ev.target.closest('#autoPopup')||ev.target.closest('#autoFab')))return; closeAutoPopup(); }, true);
 document.addEventListener('pointerdown', function(ev){ const m=document.getElementById('rmDiffMenu'); if(!m||m.classList.contains('hide'))return; if(ev.target.closest&&ev.target.closest('#rmDiff'))return; if(typeof _rmDiffClose==='function') _rmDiffClose(); }, true);   // 방찾기 난이도 팝다운 바깥 클릭 닫기
+document.addEventListener('pointerdown', function(ev){ const m=document.getElementById('msScopeMenu'); if(!m||m.classList.contains('hide'))return; if(ev.target.closest&&ev.target.closest('#msScopeDD'))return; if(typeof _msScopeClose==='function') _msScopeClose(); }, true);   // 로비 채팅 범위 팝다운 바깥 클릭 닫기
 function openBossFromPopup(){ closeBossPopup(); if(typeof toggleBossArena==='function')toggleBossArena(); }
 function updateBossViewBtn(){ const b=document.getElementById('bossViewBtn'); if(b){ b.textContent=G.bossOpen?'메인':'보스방'; b.classList.toggle('viewing', !!G.bossOpen); } }
 // ── 토벌장 전용 이펙트 저장소 — 메인 트랙 이펙트와 완전 분리(두 화면이 서로 영향 없음) ──
@@ -8029,10 +8050,17 @@ function stopMapLive(){ if(_mapLiveT){ clearInterval(_mapLiveT); _mapLiveT=null;
 const GLOBAL_CHATTER=['ㅎㅇ 다들~','같이 하실 분','네모네모 재밌네요','용병키우기 고수 계신가요?','풀방 가즈아','초보 환영합니다','지금 인원 많네요 ㅋㅋ','가시탑 ㄱㄱ','친추 받아요','3렙인데 잘 부탁','오늘 잘 풀린다','파티 2명 구함','성소공성전 해보신 분?','ㅇㅈ','반가워요~','오토배틀 한판 ㄱㄱ','방 만들었어요 들어오세요','gg 또 만나요'];
 let _gChatT=null;
 let _chatScope='all';
+const _MS_SCOPE_KO={all:'전체',party:'파티',friend:'친구'};
 function setChatScope(sc){ _chatScope=sc;
-  document.querySelectorAll('.msScopeBtn').forEach(b=>b.classList.toggle('on', b.dataset.sc===sc));
+  const dd=document.getElementById('msScopeDD'); if(dd) dd.dataset.sc=sc;
+  const lbl=document.getElementById('msScopeLbl'); if(lbl) lbl.textContent=(_MS_SCOPE_KO[sc]||sc);
+  document.querySelectorAll('#msScopeMenu .msScopeOpt').forEach(o=>o.classList.toggle('on', o.dataset.sc===sc));
   const c=document.getElementById('msChat'); if(c){ c.dataset.scope=sc; c.scrollTop=c.scrollHeight; }
   const inp=document.getElementById('msChatInput'); if(inp) inp.placeholder=(sc==='party'?'파티 채팅…':sc==='friend'?'친구 채팅…':'전체 채팅…'); }
+function _msScopeClose(){ const m=document.getElementById('msScopeMenu'); if(m) m.classList.add('hide'); const d=document.getElementById('msScopeDD'); if(d) d.classList.remove('open'); }
+function toggleMsScope(ev){ if(ev){ ev.stopPropagation(); ev.preventDefault(); } const m=document.getElementById('msScopeMenu'), d=document.getElementById('msScopeDD'); if(!m||!d) return;
+  const willOpen=m.classList.contains('hide'); m.classList.toggle('hide', !willOpen); d.classList.toggle('open', willOpen); if(typeof playSfx==='function') playSfx('ui_tab'); }
+function pickMsScope(sc){ _msScopeClose(); if(typeof setChatScope==='function') setChatScope(sc); }
 function addGlobalMsg(who, text, cls, scope){ const box=document.getElementById('msChat'); if(!box) return;
   const d=document.createElement('div'); d.className='mcLine sc-'+(scope||'all')+(cls?(' '+cls):'');
   d.innerHTML=(who?'<span class="mcWho">'+escHtml(who)+'</span><span class="mcSep"> : </span>':'')+escHtml(text);
