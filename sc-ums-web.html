@@ -2347,18 +2347,18 @@
     background:linear-gradient(135deg,rgba(36,38,47,.84),rgba(13,14,19,.9));border:1px solid var(--metal-edge);   /* 쉬는 상태=중립(빨강 남발 제거). 강조는 호버에만 */
     box-shadow:0 5px 15px -11px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05);transition:transform .15s,border-color .15s,box-shadow .15s}
   .mapItem::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:11px 0 0 11px;
-    background:linear-gradient(180deg,rgba(150,172,205,.5),rgba(150,172,205,.06));opacity:.75}   /* 좌측 액센트바 중립(쿨톤) — 호버 시 빨강으로 */
+    background:linear-gradient(180deg,var(--mapAccent,#8aa0c8),rgba(150,172,205,.05));opacity:.85}   /* 좌측 액센트바 = 맵별 색(호버 시 빨강으로) */
   .mapItem:hover{border-color:var(--neon);transform:translateY(-1px);box-shadow:0 7px 20px -8px var(--neon-glow),inset 0 1px 0 rgba(255,255,255,.08)}
   .mapItem:hover::before{background:linear-gradient(180deg,var(--neon),rgba(255,59,59,.2));opacity:.95}   /* 호버 시 좌측바 빨강 강조(상호작용 액센트) */
   .mapItem:active{transform:translateY(0)}
   .mapItem.soon{opacity:.6}
   .mapThumb{position:relative;width:48px;height:48px;flex:none;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;
-    background:radial-gradient(circle at 50% 30%,rgba(120,140,175,.16),rgba(7,7,11,.85));border:1px solid rgba(255,255,255,.1);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 0 13px -5px rgba(120,150,200,.3)}   /* 썸네일 중립화 → 맵 아이콘 색이 드러나게 */
+    background:radial-gradient(circle at 50% 30%,rgba(120,140,175,.14),rgba(7,7,11,.85));border:1px solid rgba(255,255,255,.1);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 0 14px -4px var(--mapAccent,#6d86b8)}   /* 썸네일 은은한 글로우 = 맵별 색(음수 스프레드로 페이드) */
   .mapThumb.mm{background:#0d0c10;box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}   /* 미니맵 변형(빨강 글로우 X) */
   .mapThumb .mmBg{position:absolute;inset:0;width:100%;height:100%}
   .mapThumb .mmIco{position:relative;z-index:1;display:flex;align-items:center;justify-content:center}
-  .mapThumb .mmIco .ic{width:22px;height:22px;color:#cbd8e6}   /* 아이콘 붉은톤 → 밝은 중립 */
+  .mapThumb .mmIco .ic{width:22px;height:22px;color:var(--mapAccent,#cbd8e6)}   /* 아이콘 = 맵별 아이덴티티 색 */
   .mapMain{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}
   .mapName{font-size:14px;font-weight:700;color:#f7f3f3;letter-spacing:-.2px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .mapDesc{font-size:var(--fs-sm);font-weight:400;color:#929ba6;margin-top:3.5px;line-height:1.35;letter-spacing:.1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -8019,6 +8019,8 @@ const NEMO_MINIMAP='<svg class="mmBg" viewBox="0 0 48 48" fill="none">'
 function mapThumbHTML(m){ return m.id==='nemo'
   ? '<div class="mapThumb mm">'+NEMO_MINIMAP+'</div>'                       // 네모네모: 미니맵
   : '<div class="mapThumb"><span class="mmIco">'+mapIco(m)+'</span></div>'; }   // 그 외: 이전 아이콘 박스
+// 맵별 아이덴티티 색(아이콘·좌측바·썸네일 글로우에만 — 카드 크롬은 중립 유지 → 통일성). 없으면 중립 폴백.
+const MAP_ACCENT={ nemo:'#4aa8ff', sunken:'#5dff8f', marine:'#ffb14d', temple:'#b98cff', cpu:'#22d3ee', nemo_inf:'#ff9a6b', admin:'#9aa6b2' };
 // 상태 점(대기=초록 링, 게임=빨강 채움) — 작아서 색으로 의미 전달
 const ICO_WAIT='<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6.4" fill="none" stroke="#5dff8f" stroke-width="3.4"/></svg>';
 const ICO_PLAY='<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.2" fill="#ff6b6b"/></svg>';
@@ -8599,6 +8601,7 @@ function renderMaps(){ const list=document.getElementById('msList'); if(!list) r
   list.innerHTML='';
   if(!arr.length){ list.innerHTML='<div class="msEmpty">⭐ 즐겨찾기한 유즈맵이 없습니다.<br>맵 카드의 별(☆)을 눌러 추가하세요.</div>'; updateMapBanner(); return; }
   arr.forEach(m=>{ const el=document.createElement('div'); el.className='mapItem';
+    { const _ac=MAP_ACCENT[m.id]; if(_ac) el.style.setProperty('--mapAccent', _ac); }   // 맵별 아이덴티티 색
     const nm=escHtml(m.name)+(m.isNew?' <span class="mapTag new">신규</span>':'');
     el.innerHTML=mapThumbHTML(m)
       +'<div class="mapMain"><div class="mapName">'+nm+'</div><div class="mapDesc">'+escHtml(m.desc)+'</div>'
