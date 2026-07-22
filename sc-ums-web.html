@@ -2813,7 +2813,7 @@
 
   <div id="bot">
     <div id="tabs">
-      <div class="tab on" data-tab="Main"  onclick="switchTab('Main',this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 11L12 4.3 20.4 11"/><path d="M5.7 9.4V19.6h12.6V9.4"/><path d="M9.8 19.6v-4.7h4.4v4.7"/></svg></span>메인</div>
+      <div class="tab on" data-tab="Main"  onclick="openMainHome(this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 11L12 4.3 20.4 11"/><path d="M5.7 9.4V19.6h12.6V9.4"/><path d="M9.8 19.6v-4.7h4.4v4.7"/></svg></span>메인</div>
       <div class="tab" data-tab="Unit"     onclick="openGachaSheet(this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9.5" cy="8.5" r="3"/><path d="M4 19.5c0-3 2.5-5.2 5.5-5.2s5.5 2.2 5.5 5.2"/><path d="M18.5 4v5M16 6.5h5"/></svg></span><span id="unitTabLbl">유닛뽑기</span></div>
       <div class="tab" data-tab="Upgrade"  onclick="openUpgradeSheet(this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5l5.3 5.3h-3.1v4.6h-4.4V9.8H6.7z"/><path d="M7 18.5h10"/></svg></span>업그레이드</div>
       <div class="tab" data-tab="Players"  onclick="openPlayersSheet(this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.6" r="2.7"/><path d="M3.8 19c0-2.9 2.3-4.9 5.2-4.9s5.2 2 5.2 4.9"/><circle cx="16.9" cy="9.2" r="2.1"/><path d="M15.4 14.5c2.4.3 4.6 2 4.6 4.5"/></svg></span>플레이어</div>
@@ -6529,12 +6529,19 @@ function renderPlayersSheet(){ const host=document.getElementById('unitCmd'); if
 function viewPlayerFromSheet(n){ G.curPlayer=n; if(typeof playSfx==='function') playSfx('ui_open'); switchTab('Players', document.querySelector('.tab[data-tab="Players"]')); }
 // 🎛 메인 시트 모드 디스패처(유닛뽑기·업그레이드·플레이어 …) — 매 프레임/선택변경 시 해당 그리드 렌더
 function renderMainSheet(){ if(G.mainSheet==='gacha') renderGachaSheet(); else if(G.mainSheet==='upgrade') renderUpgradeSheet(); else if(G.mainSheet==='players') renderPlayersSheet(); }
-// 하단 탭 버튼 → 화면 이동 대신 메인 유지 + 시트 슬라이드업(모드별). 관리자 샌드박스는 기존 탭 동작 유지.
+// 하단 탭 하이라이트 = 활성 섹션(메인/유닛뽑기/업그레이드/플레이어). 게임 화면과 무관하게 섹션 탭만 표시.
+function _setBottomTab(tab){ document.querySelectorAll('#tabs .tab').forEach(function(t){ t.classList.toggle('on', t.getAttribute('data-tab')===tab); }); }
+// 하단 탭 버튼 → 화면 이동 대신 메인 뷰 유지 + 하단 섹션만 전환(모드별) + 탭 하이라이트 이동. 관리자 샌드박스는 기존 탭 동작 유지.
 function openMainSheet(mode, el, sbTab){
   if(G.sandbox){ switchTab(sbTab, el||document.querySelector('.tab[data-tab="'+sbTab+'"]')); return; }
+  if(G.tab!=='Main') switchTab('Main', document.querySelector('.tab[data-tab="Main"]'));   // 다른 뷰(건설 등)에서 왔으면 메인 뷰 복귀
+  G.sel=[]; G.selEnemy=null; G.selType=null; G.mainSheet=mode; _setBottomTab(sbTab);   // 이 섹션으로 전환 + 하이라이트 이동
+  if(typeof playSfx==='function') playSfx('ui_open'); refreshSelCard(); }
+// 메인 탭 = 유닛지정/판매/조합 섹션(하단 홈). 다른 섹션에서 눌러도 반드시 메인 섹션으로 복귀.
+function openMainHome(el){
+  if(G.sandbox){ switchTab('Main', el||document.querySelector('.tab[data-tab="Main"]')); return; }
   if(G.tab!=='Main') switchTab('Main', document.querySelector('.tab[data-tab="Main"]'));
-  if(G.mainSheet===mode){ G.mainSheet=null; if(typeof playSfx==='function') playSfx('ui_close'); refreshSelCard(); return; }   // 재탭 = 닫기
-  G.sel=[]; G.selEnemy=null; G.selType=null; G.mainSheet=mode; if(typeof playSfx==='function') playSfx('ui_open'); refreshSelCard(); }
+  G.mainSheet=null; _setBottomTab('Main'); if(typeof playSfx==='function') playSfx('ui_open'); refreshSelCard(); }
 function openGachaSheet(el){ openMainSheet('gacha', el, 'Unit'); }
 function openUpgradeSheet(el){ openMainSheet('upgrade', el, 'Upgrade'); }
 function openPlayersSheet(el){ openMainSheet('players', el, 'Players'); }
