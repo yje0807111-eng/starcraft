@@ -2344,20 +2344,21 @@
     font-size:var(--fs-md);font-weight:600;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;box-shadow:0 6px 20px var(--shade)}
   .lobbyToast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   .mapItem{flex:0 0 auto;position:relative;display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:11px;cursor:pointer;overflow:hidden;
-    background:linear-gradient(135deg,rgba(36,38,47,.84),rgba(13,14,19,.9));border:1px solid var(--neon-soft);
-    box-shadow:0 5px 16px -10px var(--neon-glow),inset 0 1px 0 rgba(255,255,255,.06);transition:transform .15s,border-color .15s,box-shadow .15s}
+    background:linear-gradient(135deg,rgba(36,38,47,.84),rgba(13,14,19,.9));border:1px solid var(--metal-edge);   /* 쉬는 상태=중립(빨강 남발 제거). 강조는 호버에만 */
+    box-shadow:0 5px 15px -11px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05);transition:transform .15s,border-color .15s,box-shadow .15s}
   .mapItem::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:11px 0 0 11px;
-    background:linear-gradient(180deg,var(--neon),rgba(255,59,59,.2));opacity:.9}   /* 좌측 네온 액센트바(상시) */
+    background:linear-gradient(180deg,rgba(150,172,205,.5),rgba(150,172,205,.06));opacity:.75}   /* 좌측 액센트바 중립(쿨톤) — 호버 시 빨강으로 */
   .mapItem:hover{border-color:var(--neon);transform:translateY(-1px);box-shadow:0 7px 20px -8px var(--neon-glow),inset 0 1px 0 rgba(255,255,255,.08)}
+  .mapItem:hover::before{background:linear-gradient(180deg,var(--neon),rgba(255,59,59,.2));opacity:.95}   /* 호버 시 좌측바 빨강 강조(상호작용 액센트) */
   .mapItem:active{transform:translateY(0)}
   .mapItem.soon{opacity:.6}
   .mapThumb{position:relative;width:48px;height:48px;flex:none;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;
-    background:radial-gradient(circle at 50% 30%,rgba(255,59,59,.22),rgba(7,7,11,.85));border:1px solid rgba(255,255,255,.1);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 0 13px -5px rgba(255,59,59,.45)}
+    background:radial-gradient(circle at 50% 30%,rgba(120,140,175,.16),rgba(7,7,11,.85));border:1px solid rgba(255,255,255,.1);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 0 13px -5px rgba(120,150,200,.3)}   /* 썸네일 중립화 → 맵 아이콘 색이 드러나게 */
   .mapThumb.mm{background:#0d0c10;box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}   /* 미니맵 변형(빨강 글로우 X) */
   .mapThumb .mmBg{position:absolute;inset:0;width:100%;height:100%}
   .mapThumb .mmIco{position:relative;z-index:1;display:flex;align-items:center;justify-content:center}
-  .mapThumb .mmIco .ic{width:22px;height:22px;color:#ffb8b8}
+  .mapThumb .mmIco .ic{width:22px;height:22px;color:#cbd8e6}   /* 아이콘 붉은톤 → 밝은 중립 */
   .mapMain{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}
   .mapName{font-size:14px;font-weight:700;color:#f7f3f3;letter-spacing:-.2px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .mapDesc{font-size:var(--fs-sm);font-weight:400;color:#929ba6;margin-top:3.5px;line-height:1.35;letter-spacing:.1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
