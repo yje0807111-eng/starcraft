@@ -2409,7 +2409,7 @@
   .moHud{clip-path:polygon(22px 0,calc(100% - 22px) 0,100% 22px,100% calc(100% - 18px),calc(100% - 18px) 100%,18px 100%,0 calc(100% - 18px),0 22px)}
   /* 방 만들기/찾기/대기실 카드와 통일: 반투명 + 각진 외형 + 네온 그라데이션 테두리 */
   .moCard{width:92%;max-width:350px;min-height:min(540px,90%);max-height:90%}   /* 방찾기(.rmCard)와 동일 크기감 */
-  .moInner{position:relative;z-index:1;width:100%;height:100%;text-align:center;display:flex;flex-direction:column;justify-content:flex-start;padding:26px 22px 22px}
+  .moInner{position:relative;z-index:1;width:100%;height:100%;text-align:center;display:flex;flex-direction:column;justify-content:center;padding:26px 22px 22px}
   .moClose{position:absolute;top:11px;right:12px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;z-index:2;
     color:#9fb0c2;background:rgba(255,255,255,.04);border:1px solid var(--metal-edge);border-radius:var(--r-lg);cursor:pointer;
     transition:all .18s}
@@ -2426,7 +2426,17 @@
   .moThumb.mm{background:radial-gradient(circle at 50% 45%,rgba(120,140,175,.12),rgba(10,12,16,.95))}
   .moThumb.mm .mmBg{position:absolute;inset:16px;width:auto;height:auto}
   .moThumb .mmIco .ic{width:68px;height:68px;color:var(--mapAccent,#cbd8e6);filter:drop-shadow(0 0 9px var(--mapAccent,#6d86b8))}
-  .moDesc{font-size:var(--fs-md);color:#c4ccd6;line-height:1.6;margin:0 2px 14px;text-shadow:0 1px 2px var(--shade);word-break:keep-all}   /* 중앙 설명 = 여러 줄 문단 */
+  .moDesc{font-size:var(--fs-md);color:#c4ccd6;line-height:1.6;margin:0 2px 13px;text-shadow:0 1px 2px var(--shade);word-break:keep-all}   /* 중앙 설명 = 여러 줄 문단 */
+  /* 메타 칩 = 맵 카드 태그 언어 재사용(인원·접속·추천/신규) */
+  .moMeta{display:flex;flex-wrap:wrap;justify-content:center;gap:7px;margin:0 0 2px}
+  .moChip{display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-sm);font-weight:800;letter-spacing:.2px;line-height:1;
+    padding:6px 11px;border-radius:var(--r-lg);color:#cfe0ec;background:rgba(255,255,255,.05);border:1px solid var(--metal-edge)}
+  .moChip .mcIco{width:12px;height:12px;flex:none;opacity:.85}
+  .moChip .mcDot{width:7px;height:7px;flex:none;border-radius:50%;background:#5dff8f;box-shadow:0 0 6px rgba(93,255,143,.85);animation:mcPulse 1.8s ease-in-out infinite}
+  .moChip.live{color:#c2eccd}
+  .moChip.rec{color:var(--gold);background:rgba(255,210,74,.1);border-color:rgba(255,210,74,.38)}
+  .moChip.new{color:var(--ok);background:rgba(93,255,143,.1);border-color:rgba(93,255,143,.38)}
+  @keyframes mcPulse{0%,100%{opacity:1}50%{opacity:.3}}
   /* 난이도 선택 */
   .moDiff{margin:0 4px 16px}
   .moDiffLbl{font-size:var(--fs-sm);font-weight:800;letter-spacing:1px;color:var(--txt-mute);margin-bottom:7px;display:flex;align-items:center;gap:6px}
@@ -2463,7 +2473,7 @@
   .soloDiffBtns .moDiffBtn .ddC{font-size:var(--fs-sm);font-weight:700;color:#c4ccd6;white-space:normal;line-height:1.45;margin-top:5px}
   .soloDiffBtns .moDiffBtn:active{transform:scale(.96)}
   /* 개인/멀티 = 방찾기 빠른입장/방만들기 버튼과 동일: 둥근 사각·하단 나란히 */
-  .moBtns{display:flex;gap:8px;margin-top:auto;align-items:stretch}
+  .moBtns{display:flex;gap:8px;margin-top:20px;align-items:stretch}
   .moBtn{position:relative;flex:1;min-width:0;padding:13px 8px;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-lg);font-weight:800;letter-spacing:.2px;cursor:pointer;white-space:nowrap;
     display:flex;align-items:center;justify-content:center;gap:8px;transition:transform .08s,filter .14s}
   .moBtn .ic{width:18px;height:18px;flex:none}   /* 아이콘=텍스트 바로 왼쪽(인라인) */
@@ -2788,6 +2798,7 @@
           <div class="moMap" id="moMap">유즈맵</div>
           <div class="moThumb" id="moThumb"></div>
           <div class="moDesc" id="moDesc"></div>
+          <div class="moMeta" id="moMeta"></div>
           <div class="moBtns">
             <button class="moBtn moSolo" onclick="chooseSolo()"><span data-ico="solo"></span>개인 플레이</button>
             <button class="moBtn moMulti" onclick="chooseMulti()"><span data-ico="globe"></span>멀티플레이</button>
@@ -8716,6 +8727,12 @@ function openModeSheet(m){ _selMap=m; renderDiffBtns();
   { const card=document.querySelector('#modeSheet .moCard'); if(card){ const ac=(typeof MAP_ACCENT!=='undefined'&&MAP_ACCENT[m.id])||'#7f93b0'; card.style.setProperty('--mapAccent', ac); } }   // 팝업 강조색 = 맵별 아이덴티티(카드와 통일)
   document.getElementById('moMap').textContent=m.name;
   document.getElementById('moDesc').textContent=m.long||(m.desc+' · '+m.players+'인');
+  { const mt=document.getElementById('moMeta'); if(mt){ const on=(typeof liveTotal==='function')?liveTotal(m):0;   // 메타 칩: 인원·현재 접속·추천/신규
+    let h='<span class="moChip"><svg class="mcIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.6" r="2.7"/><path d="M3.8 19c0-2.9 2.3-4.9 5.2-4.9s5.2 2 5.2 4.9"/><circle cx="16.9" cy="9.2" r="2.1"/><path d="M15.4 14.5c2.4.3 4.6 2 4.6 4.5"/></svg>'+escHtml(m.players)+'인</span>'
+      +'<span class="moChip live"><i class="mcDot"></i>'+((typeof _kfmt==='function')?_kfmt(on):on)+'명 접속</span>';
+    if(m.rec) h+='<span class="moChip rec">추천</span>';
+    if(m.isNew) h+='<span class="moChip new">신규</span>';
+    mt.innerHTML=h; } }
   const th=document.getElementById('moThumb');   // 큰 미니맵/아이콘
   if(th){ if(m.id==='nemo'){ th.className='moThumb mm'; th.innerHTML=NEMO_MINIMAP; }
     else { th.className='moThumb'; th.innerHTML='<span class="mmIco">'+mapIco(m)+'</span>'; } }
