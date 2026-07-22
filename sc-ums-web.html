@@ -8729,7 +8729,7 @@ function openModeSheet(m){ _selMap=m; renderDiffBtns();
   document.getElementById('moDesc').textContent=m.long||(m.desc+' · '+m.players+'인');
   { const mt=document.getElementById('moMeta'); if(mt){ const on=(typeof liveTotal==='function')?liveTotal(m):0;   // 메타 칩: 인원·현재 접속·추천/신규
     let h='<span class="moChip"><svg class="mcIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.6" r="2.7"/><path d="M3.8 19c0-2.9 2.3-4.9 5.2-4.9s5.2 2 5.2 4.9"/><circle cx="16.9" cy="9.2" r="2.1"/><path d="M15.4 14.5c2.4.3 4.6 2 4.6 4.5"/></svg>'+escHtml(m.players)+'인</span>'
-      +'<span class="moChip live"><i class="mcDot"></i>'+((typeof _kfmt==='function')?_kfmt(on):on)+'명 접속</span>';
+      +'<span class="moChip live"><i class="mcDot"></i>'+(on||0).toLocaleString('en-US')+'명 접속</span>';   // 천단위 콤마(8,300명)
     if(m.rec) h+='<span class="moChip rec">추천</span>';
     if(m.isNew) h+='<span class="moChip new">신규</span>';
     mt.innerHTML=h; } }
