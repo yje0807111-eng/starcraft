@@ -6319,14 +6319,14 @@ function _mainSelAllBtn(u){ if(typeof isBuilding==='function'&&isBuilding(u.id))
   const key=_mainTypeKey(u), cnt=G.units.filter(x=>!isBuilding(x.id)&&_mainTypeKey(x)===key).length;
   return (cnt>1)?('<button class="cgSelAll" onclick="selectAllOfType()" title="같은 종류 전체 지정">'+_SVG_SELALL+'</button>'):''; }
 function _mainSingleModel(u){ const def=U[u.id]||{}, role=_mainRole(u);
-  return { mode:'prod', title:gNameStar(u,def)+(u.hero?' [영웅]':'')+(role?' ('+role+')':''), icon:_mainPort(u), hpsh:_mainHpsh(u),
+  return { mode:'prod', title:gNameStar(u,def)+(u.hero?' [영웅]':''), icon:_mainPort(u), hpsh:_mainHpsh(u),   // 이름 옆 (보직/직업) 표기 제거 — 건설 프로필과 통일
     sub:'맵을 탭하면 이동 · 해제는 우상단 ✕', items:_mainSkillCards([u]).concat(_mainTransportCards(u)), topRight:_mainSelAllBtn(u),
     info:{ eb:'', hideName:true, stats:_mainUnitStatList(u), cr:0, en:0 } }; }
 function _mainTypeModel(list, canBack){ const u0=list[0], def=U[u0.id]||{}, n=list.length, role=_mainRole(u0), CAP=60;   // canBack=소프트선택 중 → ↩(전체 복귀) 버튼
   const rows=list.slice(0,CAP).map(u=>({ uid:u.uid, hp:(u.hp!=null?u.hp:_mainMaxHp(u)), maxHp:_mainMaxHp(u)||1,
     act:'onclick="mainSubSelectOne(event,'+u.uid+')"' }));   // 칩 탭 = 그 1기만 지정
   if(n>CAP) rows.push({ more:n-CAP });
-  return { mode:'prod', title:gNameStar(u0,def)+(role?' ('+role+')':'')+' <span class="nsub">×'+n+'</span>', icon:_mainPort(u0),
+  return { mode:'prod', title:gNameStar(u0,def)+' <span class="nsub">×'+n+'</span>', icon:_mainPort(u0),   // 이름 옆 (보직/직업) 표기 제거
     sub:'', items:_mainSkillCards(list), topRight:_mainSelAllBtn(u0),   // 활성셋 전체 기준 상태(ON·마나·쿨다운)
     back:canBack?'<button class="cgLift cgBack" onclick="mainSubSelectType(event,\'\')" title="전체 선택으로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6L4 11l5 5"/><path d="M4 11h9a6 6 0 0 1 6 6v1"/></svg></button>':'',   // 🔙 소프트선택 해제(전체 복귀)
     info:{ eb:'', hideName:true, units:rows, cr:0, en:0 } }; }
