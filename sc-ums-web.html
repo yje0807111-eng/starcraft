@@ -1525,9 +1525,9 @@
   .cmdG .cgPage .dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.18)} .cmdG .cgPage .dot.on{background:var(--ca);box-shadow:0 0 6px var(--caG)}
   .cmdG .cgPage .pn{font:800 10px/1 'Rajdhani',sans-serif;color:var(--cgDim);letter-spacing:.5px}
   /* 플레이어 선택: 8인 그리드(4×2) — 깔끔한 다크 카드 + 컬러 액센트 */
-  #plGridWrap{display:flex;flex-direction:column;flex:1;min-height:0}   /* 콘솔 세로 가득 채움 */
+  #plGridWrap{display:flex;flex-direction:column;flex:none;height:min(26vh,126px);max-height:min(26vh,126px);min-height:0}   /* 다른 하단 섹션(유닛지정/뽑기/업그레이드)과 동일한 126px 고정 높이 */
   /* 플레이어 관전 슬롯 = 통일된 SC 카드(메탈+사선 모서리+플레이어색 좌측 액센트+스캔라인) */
-  .plGrid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:64px;align-content:center;gap:6px;flex:1;min-height:0;padding:2px 0}
+  .plGrid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:58px;align-content:center;gap:6px;flex:1;min-height:0;padding:2px 0}
   .plbtn{--pc:var(--info);position:relative;cursor:pointer;overflow:hidden;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;padding:7px 10px;
     background:linear-gradient(160deg,rgba(42,48,60,.5),rgba(10,12,17,.7));border:1px solid var(--metal-edge);
     clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
@@ -6150,7 +6150,7 @@ function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 
   if(G.view){ G.view.x=0.5; G.view.y=0.5; G.view.zoom=1; } if(G.viewT){ G.viewT.x=0.5; G.viewT.y=0.5; G.viewT.zoom=1; } _nptrs.clear(); _nemoPinch=null; _fxPinch=null;   // 탭 전환 시 화면 줌/팬 초기화(다른 탭 3D 카메라 보호)
   if(G.bossOpen && typeof closeBossArena==='function') closeBossArena();   // 탭 전환 시 보스 팝업 닫기
   if(G.bossPickArm){ G.bossPickArm=false; if(typeof updateBossPickBtn==='function') updateBossPickBtn(); }
-  G.mainSheet=null;   // 🎰 실제 탭 전환 = 유닛뽑기 등 메인 시트 모드 종료
+  G.mainSheet=null; G.sheetDown=false;   // 🎰 실제 탭 전환 = 유닛뽑기 등 메인 시트 모드 종료 + 접힘상태 해제
   G.tab=id;
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on')); el.classList.add('on');
   document.querySelectorAll('.gview').forEach(v=>v.classList.remove('on')); document.getElementById('v'+(id==='Battle'?'Main':id)).classList.add('on');   // 전투실험은 메인 아레나 뷰 공유
@@ -6460,11 +6460,11 @@ function refreshSelCard(){ if(typeof G!=='undefined'){ G.boardArm=false; G.unloa
     if(!hasSel){ document.getElementById('unitCmd').classList.remove('on'); renderUnits(); return; }
     // 선택됨 → 아래 유닛 프로필(unitCmd) 렌더로 진행
   } else {
-    if(G.sel.length>=1 || en) G.mainSheet=null;   // 🎛 유닛/적 지정 = 메인 시트(유닛뽑기·업그레이드) 종료
+    if(G.sel.length>=1 || en){ G.mainSheet=null; G.sheetDown=false; }   // 🎛 유닛/적 지정 = 메인 시트(유닛뽑기·업그레이드) 종료 + 접힘상태 해제
     if(G.tab==='Main' && G.mainSheet && !en && G.sel.length===0){   // 🎛 메인 시트: 프로필 자리에 해당 그리드
       document.getElementById('defaultCmd').classList.add('hide');
       document.getElementById('unitCmd').classList.add('on');
-      document.body.classList.add('sheetOpen'); if(typeof _syncSheetLift==='function') requestAnimationFrame(_syncSheetLift);
+      document.body.classList.toggle('sheetOpen', !G.sheetDown); if(typeof _syncSheetLift==='function') requestAnimationFrame(_syncSheetLift);   // 재탭으로 접었으면(G.sheetDown) 매프레임 재오픈 안 함
       renderMainSheet(); renderUnits(); return; }
     if(G.tab==='Main' && _selViaTab && !en && G.sel.length>=1){   // 하단 지정구역 경유 선택 → 홈 패널 유지(지정/판매/조합 어느 탭이든). 프로필은 화면 직접 터치 시에만
       document.getElementById('defaultCmd').classList.remove('hide');
@@ -6493,9 +6493,9 @@ function mainProfileRender(){ const host=document.getElementById('unitCmd'); if(
 const GACHA_SHEET_CELLS=['draw','energy','buyTurret','buyPhoton'];
 function _gachaSheetModel(){
   const items=GACHA_SHEET_CELLS.map(id=>{ const b=(DRAW_BEACONS.find(x=>x.id===id))||{id:id,name:id}, cost=beaconCost(id), afford=((G.mineral||0)>=cost);
-    return { pro:'<svg viewBox="0 0 24 24">'+beaconIcon(id)+'</svg>', sn:b.name, cr:cost, en:0, state:afford?'ok':'dim', act:'onclick="runBeacon(\''+id+'\')"' }; });
+    return { pro:'<svg viewBox="0 0 24 24">'+beaconIcon(id)+'</svg>', sn:b.name, cr:cost, en:0, state:afford?'ok':'dim', act:'onpointerdown="gachaHoldStart(\''+id+'\',event)"' }; });
   return { mode:'gacha', title:'유닛 뽑기', icon:'<svg viewBox="0 0 24 24">'+BEACON_ICON.unit+'</svg>', sub:'셀을 눌러 뽑기·구매', compact:true, build:true,
-    info:{ eb:'유닛 뽑기', name:'⛁ '+Math.floor(G.mineral||0), desc:'셀을 눌러 뽑기·타워 구매' }, items:items }; }
+    info:{ eb:'유닛 뽑기', name:'유닛 및 타워 구매', desc:'길게 누르면 연속 구매' }, items:items }; }
 function renderGachaSheet(){ const host=document.getElementById('unitCmd'); if(!host) return; host.classList.add('simple');
   const sig='g|'+Math.floor(G.mineral||0)+'|'+(host._cgPage||0);
   if(host._gSig!==sig){ host._gSig=sig; host._cgSig=undefined; renderCmdGrid(host, _gachaSheetModel()); } }
@@ -6514,7 +6514,7 @@ function _upgradeSheetModel(){
   items.push(null);   // 2페이지 3번 = 빈칸
   items.push({ pro:'<span class="pemoji">⬆️</span>', sn:'영구 강화', cr:0, en:0, state:'ok', act:'onclick="openPointUpgrade()"' });
   return { mode:'upg', title:'업그레이드', icon:'<span class="pemoji">⬆️</span>', sub:'무기 강화 · 뽑기/크레딧 · 영구', compact:true, build:true,
-    info:{ eb:'업그레이드', name:'⛁ '+Math.floor(G.mineral||0)+'  ⚡ '+Math.floor(G.gas||0), desc:'셀을 눌러 강화 · 무기 길게=연속' }, items:items }; }
+    info:{ eb:'업그레이드', name:'공격력 강화 및 업그레이드', desc:'길게 누르면 연속 구매' }, items:items }; }
 function renderUpgradeSheet(){ const host=document.getElementById('unitCmd'); if(!host) return; host.classList.add('simple');
   const sig='u|'+((G.atkLv&&[G.atkLv.inf,G.atkLv.mech,G.atkLv.zrg,G.atkLv.pro].join('.'))||'')+'|'+(G.gachaLuckLv||0)+'|'+(G.creditLv||0)+'|'+Math.floor(G.mineral||0)+'|'+Math.floor(G.gas||0)+'|'+(host._cgPage||0);
   if(host._gSig!==sig){ host._gSig=sig; host._cgSig=undefined; renderCmdGrid(host, _upgradeSheetModel()); } }
@@ -6538,14 +6538,23 @@ function _setBottomTab(tab){ document.querySelectorAll('#tabs .tab').forEach(fun
 // 하단 탭 버튼 → 화면 이동 대신 메인 뷰 유지 + 하단 섹션만 전환(모드별) + 탭 하이라이트 이동. 관리자 샌드박스는 기존 탭 동작 유지.
 function openMainSheet(mode, el, sbTab){
   if(G.sandbox){ switchTab(sbTab, el||document.querySelector('.tab[data-tab="'+sbTab+'"]')); return; }
+  if(G.tab==='Main' && G.mainSheet===mode){   // 활성 섹션 재탭 = 하단 시트 내리기/올리기 토글
+    const open=document.body.classList.toggle('sheetOpen'); G.sheetDown=!open;   // 접힘상태 기록(매프레임 refreshSelCard가 덮어쓰지 않도록)
+    if(typeof _syncSheetLift==='function'){ requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); }
+    if(typeof playSfx==='function') playSfx('ui_open'); return; }
   if(G.tab!=='Main') switchTab('Main', document.querySelector('.tab[data-tab="Main"]'));   // 다른 뷰(건설 등)에서 왔으면 메인 뷰 복귀
-  G.sel=[]; G.selEnemy=null; G.selType=null; G.mainSheet=mode; _setBottomTab(sbTab);   // 이 섹션으로 전환 + 하이라이트 이동
+  G.sel=[]; G.selEnemy=null; G.selType=null; G.mainSheet=mode; G.sheetDown=false; _setBottomTab(sbTab);   // 이 섹션으로 전환 + 하이라이트 이동
+  document.body.classList.add('sheetOpen');   // 섹션 전환 = 시트 올림(직전에 토글로 내려놨을 수 있으므로 명시)
   if(typeof playSfx==='function') playSfx('ui_open'); refreshSelCard(); }
 // 메인 탭 = 유닛지정/판매/조합 섹션(하단 홈). 다른 섹션에서 눌러도 반드시 메인 섹션으로 복귀.
 function openMainHome(el){
   if(G.sandbox){ switchTab('Main', el||document.querySelector('.tab[data-tab="Main"]')); return; }
+  if(G.tab==='Main' && G.mainSheet==null && G.sel.length===0 && G.selEnemy==null){   // 홈 섹션 재탭(무선택) = 하단 시트 내리기/올리기 토글
+    const open=document.body.classList.toggle('sheetOpen'); G.sheetDown=!open;
+    if(typeof _syncSheetLift==='function'){ requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); }
+    if(typeof playSfx==='function') playSfx('ui_open'); return; }
   if(G.tab!=='Main') switchTab('Main', document.querySelector('.tab[data-tab="Main"]'));
-  G.mainSheet=null; G.sel=[]; G.selEnemy=null; G.selType=null; _selViaTab=false; _setBottomTab('Main'); if(typeof playSfx==='function') playSfx('ui_open'); refreshSelCard(); }
+  G.mainSheet=null; G.sel=[]; G.selEnemy=null; G.selType=null; _selViaTab=false; G.sheetDown=false; _setBottomTab('Main'); document.body.classList.add('sheetOpen'); if(typeof playSfx==='function') playSfx('ui_open'); refreshSelCard(); }
 function openGachaSheet(el){ openMainSheet('gacha', el, 'Unit'); }
 function openUpgradeSheet(el){ openMainSheet('upgrade', el, 'Upgrade'); }
 function openPlayersSheet(el){ openMainSheet('players', el, 'Players'); }
@@ -7598,6 +7607,21 @@ function upgHoldStart(wpn, ev){ if(ev){ ev.preventDefault(); ev.stopPropagation(
 function upgHoldStop(){ if(_upgHold){ clearTimeout(_upgHold.delay); if(_upgHold.rep) clearInterval(_upgHold.rep); _upgHold=null; } }
 ['pointerup','pointercancel'].forEach(e=>document.addEventListener(e, upgHoldStop));   // 손 떼면 어디서든 중단
 window.addEventListener('blur', upgHoldStop);
+// 🎰 유닛뽑기: 셀 길게 누르면 연속 구매 — 즉시 1회 + 0.5초 후부터 0.5초마다 뗄 때까지. 크레딧 부족 시 중단.
+let _gachaHold=null;
+function gachaHoldStart(id, ev){ if(ev){ ev.preventDefault(); ev.stopPropagation(); }
+  runBeacon(id);   // 즉시 1회(짧게 탭)
+  gachaHoldStop();
+  _gachaHold={id:id};
+  _gachaHold.delay=setTimeout(function(){ if(!_gachaHold||_gachaHold.id!==id) return;
+    if((G.mineral||0)<beaconCost(id)){ gachaHoldStop(); return; }
+    runBeacon(id);   // 0.5초 시점 첫 연속 구매
+    _gachaHold.rep=setInterval(function(){
+      if((G.mineral||0)<beaconCost(id)){ gachaHoldStop(); return; }   // 크레딧 부족 → 연속 중단
+      runBeacon(id); }, 500); }, 500); }   // 이후 0.5초마다
+function gachaHoldStop(){ if(_gachaHold){ clearTimeout(_gachaHold.delay); if(_gachaHold.rep) clearInterval(_gachaHold.rep); _gachaHold=null; } }
+['pointerup','pointercancel'].forEach(e=>document.addEventListener(e, gachaHoldStop));
+window.addEventListener('blur', gachaHoldStop);
 // 매 프레임 연구 타이머 진행(루프에서 호출) — 탭과 무관하게 백그라운드 진행
 function tickResearch(dt){ if(!G.research) return;
   G.research.t-=dt;
