@@ -1661,11 +1661,20 @@
   #rooms{position:absolute;inset:0;z-index:46;display:flex;align-items:center;justify-content:center;padding:20px;background:transparent}   /* 로비 배경 사용(::before) */
   #rooms.hide{display:none}
   .rmCard{width:92%;max-width:350px;max-height:88%;display:flex;flex-direction:column;padding:18px}
-  .rmHead{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px}
+  .rmHead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
   .rmTitle{font-size:17px;font-weight:800;color:var(--neon);text-shadow:0 0 10px var(--neon-glow);letter-spacing:.5px}
+  .rmHeadR{display:flex;align-items:center;gap:8px;flex:0 0 auto}
   .rmOnline{font-size:var(--fs-md);color:var(--txt-dim)}.rmOnline b{color:var(--hud)}
+  /* 우상단 난이도 필터 드롭다운(팝다운) */
+  .rmDiffSel{font-family:inherit;font-size:var(--fs-md);font-weight:800;color:#cfeaff;cursor:pointer;outline:none;
+    -webkit-appearance:none;appearance:none;padding:6px 26px 6px 9px;border-radius:var(--r-md);
+    background:rgba(0,229,255,.09);border:1px solid rgba(0,229,255,.42);
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237fd8ff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");
+    background-repeat:no-repeat;background-position:right 8px center}
+  .rmDiffSel:focus{border-color:rgba(0,229,255,.7)}
+  .rmDiffSel option{background:#0d1420;color:#eaf4ff}
   .rmTop{display:flex;gap:8px;margin-bottom:12px}
-  .rmQuick,.rmCreate{flex:1;padding:11px;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-xl);font-weight:800;cursor:pointer;letter-spacing:.3px;transition:transform .08s}
+  .rmQuick,.rmCreate{flex:1;min-width:0;padding:11px 8px;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-lg);font-weight:800;cursor:pointer;letter-spacing:.2px;white-space:nowrap;transition:transform .08s}
   .rmQuick{color:#fff;background:linear-gradient(180deg,var(--neon-face1),var(--neon-d1));border:1px solid var(--neon);box-shadow:0 0 11px -3px var(--neon-glow),inset 0 1px 0 rgba(255,255,255,.2)}
   .rmCreate{color:#cfeaff;background:linear-gradient(180deg,rgba(11,40,54,.9),rgba(5,16,26,.9));border:1px solid rgba(0,229,255,.5)}
   .rmQuick:active,.rmCreate:active{transform:translateY(1px)}
@@ -1783,11 +1792,14 @@
   .riCnt.full{color:#ff7676}
   .riStat{font-size:var(--fs-xs);font-weight:700;margin-top:2px}
   .riStat.wait{color:var(--ok)}.riStat.play{color:var(--txt-mute)}
-  .rmBtns{display:flex;gap:8px;margin-top:12px}
-  .rmBack,.rmRefresh{padding:10px;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-lg);font-weight:700;cursor:pointer;transition:transform .08s}
-  .rmBack{flex:0 0 34%;color:var(--txt);background:var(--glass);border:1px solid var(--metal-edge)}
-  .rmRefresh{flex:1;color:#cfeaff;background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.3)}
-  .rmBack:active,.rmRefresh:active{transform:translateY(1px)}
+  .rmBtns{display:flex;gap:7px;margin-top:12px;align-items:center}
+  /* 뒤로·새로고침 = 정사각 아이콘 버튼(랜덤입장·방만들기보다 위계 낮게 = 조금 작고 은은하게) */
+  .rmSq{flex:0 0 auto;width:38px;height:38px;display:flex;align-items:center;justify-content:center;padding:0;
+    border-radius:var(--r-md);cursor:pointer;transition:transform .08s;
+    color:#9fb0c2;background:rgba(255,255,255,.045);border:1px solid var(--metal-edge)}
+  .rmSq svg{width:19px;height:19px;display:block}
+  .rmSq:active{transform:translateY(1px)}
+  .rmSq.rmRefresh{color:#bfe6ff;border-color:rgba(0,229,255,.28);background:rgba(0,229,255,.06)}   /* 리롤은 살짝 하늘색 */
   /* 토스트 */
   #toast{position:absolute;bottom:46px;left:50%;transform:translateX(-50%);z-index:95;
     background:rgba(10,20,35,.92);border:1px solid var(--neon-soft);border-radius:var(--r-lg);padding:7px 14px;
@@ -2565,17 +2577,18 @@
     <!-- 방 찾기(룸 리스트) -->
     <div id="rooms" class="hide spaceBg">
       <div class="rmCard">
-        <div class="rmHead"><span class="rmTitle">방 찾기</span><span class="rmOnline">방 <b id="roomCount">0</b>개</span></div>
-        <div class="rmTop">
-          <button class="rmQuick" onclick="quickJoin()">⚡ 랜덤 입장</button>
-          <button class="rmCreate" data-sfx="ui_open" onclick="createRoom()">＋ 방 만들기</button>
-        </div>
-        <div class="rmFilter" id="rmFilter">
-          <button class="rmfBtn on" data-f="all" onclick="setRoomFilter('all')">전체</button>
-          <button class="rmfBtn" data-f="easy" onclick="setRoomFilter('easy')">이지</button>
-          <button class="rmfBtn" data-f="normal" onclick="setRoomFilter('normal')">노말</button>
-          <button class="rmfBtn" data-f="hard" onclick="setRoomFilter('hard')">하드</button>
-          <button class="rmfBtn" data-f="hell" onclick="setRoomFilter('hell')">헬</button>
+        <div class="rmHead">
+          <span class="rmTitle">방 찾기</span>
+          <span class="rmHeadR">
+            <span class="rmOnline">방 <b id="roomCount">0</b>개</span>
+            <select class="rmDiffSel" id="rmDiffSel" onchange="setRoomFilter(this.value)" title="난이도 필터">
+              <option value="all">전체 난이도</option>
+              <option value="easy">이지</option>
+              <option value="normal">노말</option>
+              <option value="hard">하드</option>
+              <option value="hell">헬</option>
+            </select>
+          </span>
         </div>
         <div class="rmNum">
           <input id="roomNumField" type="text" inputmode="numeric" placeholder="방 번호로 입장 (친구 방)" maxlength="5" onkeydown="if(event.key==='Enter')joinByNumber()">
@@ -2583,8 +2596,10 @@
         </div>
         <div class="rmList" id="roomList"></div>
         <div class="rmBtns">
-          <button class="rmBack" onclick="backToTitle()">← 로비</button>
-          <button class="rmRefresh" onclick="refreshRooms()">↻ 새로고침</button>
+          <button class="rmSq rmBack" onclick="backToTitle()" title="로비로 돌아가기" aria-label="로비로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+          <button class="rmQuick" onclick="quickJoin()">⚡ 랜덤 입장</button>
+          <button class="rmCreate" data-sfx="ui_open" onclick="createRoom()">＋ 방 만들기</button>
+          <button class="rmSq rmRefresh" onclick="refreshRooms()" title="새로고침" aria-label="새로고침"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 12a8.4 8.4 0 0 1 14.5-5.8M20.4 12a8.4 8.4 0 0 1-14.5 5.8"/><path d="M18.4 2.9v3.6h-3.6M5.6 21.1v-3.6h3.6"/></svg></button>
         </div>
       </div>
     </div>
@@ -7721,7 +7736,7 @@ function tickRooms(){ if(!_roomList||document.getElementById('rooms').classList.
 }
 function openRooms(){ setInGame(false); document.getElementById('ov').classList.add('hide'); document.getElementById('lobby').classList.add('hide');
   const rm=document.getElementById('rooms'); rm.classList.remove('hide'); if(typeof playScreenFx==='function') playScreenFx(rm);
-  _roomFilter='all'; document.querySelectorAll('#rmFilter .rmfBtn').forEach(b=>b.classList.toggle('on', b.dataset.f==='all'));   // 진입 시 필터 초기화
+  _roomFilter='all'; { const _ds=document.getElementById('rmDiffSel'); if(_ds) _ds.value='all'; }   // 진입 시 난이도 필터 초기화(우상단 드롭다운)
   if(rtRoomsActive()){ rtRoomsEnsure(); rtRoomsSync(); }   // 실제 방 목록(presence) — 시뮬 정지
   else { buildRoomList(); startRoomsTick(); } }
 function backToTitle(){ stopRoomsTick(); document.getElementById('rooms').classList.add('hide'); openMapSelect(); }   // 방찾기 뒤로 → 유즈맵 선택
