@@ -14002,9 +14002,10 @@ const PLAYER_MODELS=new Set(['marine','ghost','goliath','dragoon','hydra','archo
 const RING_OP=0.9;        // 선택 링 불투명도
       // 모델 색 틴트 강도(0=원본, 1=완전 색칠) — 진한 색은 발광이 아닌 이 값으로(단단하게)
       // 플레이어색 발광(은은하게 — 마린/고스트처럼 부드러운 빛)
-const RIM_INT=0;          // 림 미사용 — 플레이어 구분은 본체 틴트(TINT_K)로만. 림/틴트 중 하나만 쓰는 방침
-const RIM_POW=2.0;        // 림 폭(클수록 가장자리에만 얇게) — 살짝 넓혀 색 띠가 더 보이게
-const RIM_WHITE=0.06;     // 림 색을 흰색 쪽으로 섞는 정도(낮을수록 플레이어색 선명 — 0.16→0.06)
+const RIM_INT=1.5;        // 플레이어색 외곽 림 강도(은은) — 작아도 실루엣이 플레이어색으로
+const RIM_POW=3.0;        // 림 폭(클수록 얇게) — 최대한 얇게(본체 색을 안 가리도록)
+const RIM_WHITE=0.0;      // 림 색을 흰색 쪽으로 섞는 정도(0=순수 플레이어색 → 색 선명하게 드러남)
+const RIM_MUL={aegis:1.8};  // 유닛별 림 강도 배율 — 원반형 등 평평한 유닛은 프레넬 림이 약해 개별 부스트(얇아도 보이게)
 const ENEMY_RIM=0xff3322; // 적 유닛 림 색(선명한 적색 — 눈에 잘 띄되 옅은 분홍보다 덜 밝음)
 const NEUTRAL_RIM=0xbfe0ff; // 구조물/기타 림 색(차가운 흰빛)
 // 아군 유닛 공용 림 색(Color 객체 1개를 모든 아군 재질이 공유 → setPlayerRim으로 한번에 색 전환: 플레이어 구역 관전용)
@@ -14258,10 +14259,10 @@ const TINT_AREA=0.25;         // 목표 액센트 면적(전함 수치)
 const TINT_BAND=0.06;         // 마스크 전이 폭 — 좁을수록 경계가 또렷해 얼룩덜룩함이 줄어든다
 const TINT_M0S={
   marine:0.40, ghost:0.18, medic:0.30, worker_human:0.62, machinegun:0.43, racer:0.52, tank:0.60,
-  goliath:0.52, skyguard:0.63, hellfire:0.32, pelican:0.56, dreadnought:0.61, aegis:0.12,
+  goliath:0.52, skyguard:0.63, hellfire:0.32, pelican:0.56, dreadnought:0.61, aegis:0.15,
   hydra:0.33, snapper:0.34, thornqueen:0.32, matron:0.47, overlord:0.41, stinger:0.60, venom:0.45,
   medusa:0.42, wyvern:0.33, behemoth:0.40, worker_swarm:0.32, broodling:0.20, ultralisk:0.44, swarm_larva:0.55,
-  dragoon:0.91, archon:0.71, blade:0.72, skydancer:0.67, kronos:0.79, seraph:0.81, archangel:0.91,
+  dragoon:0.91, archon:0.71, blade:0.72, skydancer:0.67, kronos:0.79, seraph:0.81, archangel:0.82,
   falcon:0.82, observer:0.84, worker_light:0.81, dark_templar:0.31, high_templar:0.41, reaver:0.90, larva:0.76,
   cb_union_command_center:0.60, cb_union_supply_depot:0.47, cb_union_refinery:0.41, cb_union_barracks:0.64,
   cb_union_academy:0.48, cb_union_engineering_bay:0.57, cb_union_bunker:0.57, cb_union_missile_turret:0.63,
@@ -14323,10 +14324,14 @@ function _toneMask(id){ const m0=_tintM0(id), m1=Math.min(1, m0+(_aeUnit(id)?TIN
 //   ⚠ 마스크를 색조 회전량에 곱하면 안 된다 — 마스크 0.5인 곳은 파랑→빨강 중간인 '분홍'이 되어
 //     플레이어색이 아닌 엉뚱한 색이 나온다. 회전은 항상 100%로 하고, 섞는 비율만 마스크로 조절해야
 //     액센트가 팔레트 색 그대로(완전 파랑·완전 빨강·완전 노랑) 나온다.
-function _toneApply(kind, race){ const base=(kind==='b')?1.0:(race==='aetherial'?TINT_AE_BASE:race==='swarm'?TINT_SW_BASE:TINT_UBASE);   // 에테리얼·스웜=약간 회색(부분 채도↓), 유니온보다 덜하게
+const TINT_AEGIS_LIGHTEN=1.3;   // 지원정찰기(aegis) 액센트 명도 부스트 — 색을 조금 연하게(밝게), 모함(archangel) 수준
+const TINT_BASE_OVR={aegis:1.0, archangel:1.0};   // 유닛별 본체 채도 오버라이드 — aegis·archangel은 원본 금속 질감 유지 위해 채도 원본(1.0), 포인트만 도색
+function _toneApply(kind, race, id){
+  let base=(kind==='b')?1.0:(race==='aetherial'?TINT_AE_BASE:race==='swarm'?TINT_SW_BASE:TINT_UBASE);   // 에테리얼·스웜=약간 회색(부분 채도↓), 유니온보다 덜하게
+  if(kind!=='b' && typeof id==='string' && TINT_BASE_OVR[id]!=null) base=TINT_BASE_OVR[id];   // 유닛별 회색 오버라이드
   // 명도 압축 사용 안 함 — 3종족(유니온·스웜·에테리얼) 모두 압축 없이 원본 음영 그대로(같은 경로). 압축은 대비를 죽여 색이 연해짐
   const compress=false;
-  const aeUnit=(race==='aetherial' && kind!=='b');   // 에테리얼 유닛: 본체 원본색 + 포인트만 채도↑(_hs는 포인트에만 쓰임)
+  const aeUnit=(race==='aetherial' && kind!=='b');   // 에테리얼 유닛: 포인트에 명도 배율·채도 상향(base=1.0인 archangel은 본체 무관, 액센트만 통일)
   return '{ vec3 _hs=_r2h(outgoingLight);\n'
   +(aeUnit?('  _hs.z*='+TINT_AE_VMUL.toFixed(2)+';\n'):'')   // 포인트 명도 배율(스케일) → 밝은 부위도 음영 유지, 유니온처럼 어두운 금속 톤
   +'  vec3 _base=outgoingLight;\n'
@@ -14335,6 +14340,7 @@ function _toneApply(kind, race){ const base=(kind==='b')?1.0:(race==='aetherial'
   +'  _hs.y='+(aeUnit?'min(1.0, toneT.y*'+TINT_AE_SAT.toFixed(2)+')':'toneT.y')+';\n'   // 채도 = 플레이어 채도(에테리얼 포인트는 채도↑로 더 진하게)
   +'  _hs.z='+(compress?'max(_hs.z,'+TINT_VFLOOR.toFixed(2)+')':'_hs.z')+';\n'   // 스웜·에테리얼: 액센트도 검정 방지 하한
   +'  _hs.z=clamp(_hs.z, '+((kind==='i')?TINT_IMIN:0).toFixed(2)+', '+TINT_VMAX.toFixed(2)+');\n'
+  +((id==='aegis')?('  _hs.z=min('+TINT_VMAX.toFixed(2)+', _hs.z*'+TINT_AEGIS_LIGHTEN.toFixed(2)+');\n'):'')   // aegis: 액센트 명도↑ → 색 연하게(모함 수준)
   // 스웜·에테리얼: 액센트 명도를 유니온 기준(VMID)으로 압축 — 원본 텍스처가 밝은/어두운 모델의 진하기 편차를 유니온에 수렴
   +(compress?('  _hs.z='+TINT_VMID.toFixed(2)+'+(_hs.z-'+TINT_VMID.toFixed(2)+')*'+TINT_VKEEP.toFixed(2)+';\n'):'')
   +'  _hs.z*=toneT.z;\n'                                                       // × 플레이어 명도배율(갈색=어둡게, 흰색=밝게)
@@ -14344,7 +14350,7 @@ function _toneInject(shader, tone, id){ shader.uniforms.toneT=tone;   // tone=un
   const mAnchor=(shader.fragmentShader.indexOf('#include <alphamap_fragment>')>=0)?'#include <alphamap_fragment>':'#include <alphatest_fragment>';
   shader.fragmentShader=shader.fragmentShader.replace(mAnchor, mAnchor+'\n'+_toneMask(id));   // 마스크는 알베도 확정 직후에 계산
   const anchor=(shader.fragmentShader.indexOf('#include <opaque_fragment>')>=0)?'#include <opaque_fragment>':'#include <output_fragment>';   // three 버전별 최종 출력 청크
-  shader.fragmentShader=shader.fragmentShader.replace(anchor, _toneApply(_tintKind(id), _tintRace(id))+'\n'+anchor); }
+  shader.fragmentShader=shader.fragmentShader.replace(anchor, _toneApply(_tintKind(id), _tintRace(id), id)+'\n'+anchor); }
 function addTone(mat, tone, id){ if(!tone || !('emissive' in mat)) return;
   // ⚠ three는 customProgramCacheKey가 없으면 재질 파라미터로 프로그램을 캐싱한다.
   //   NPC 공유 모델(레이스·전함 등)은 베이스가 "림만(틴트 없음)"으로 먼저 컴파일돼 있어,
@@ -14361,7 +14367,7 @@ function applyPlayerTintInst(m, id){ if(!m||m._pTint) return;
   m._pTint=true;
   const fix=function(root){ if(!root) return; root.traverse(o=>{ if(!o.isMesh||!o.material) return;
     const arr=Array.isArray(o.material), ms=arr?o.material:[o.material];
-    const out=ms.map(mat=>{ if(!mat||!('emissive' in mat)) return mat; const c=mat.clone(); addTone(c, playerTintU, id); return c; });
+    const out=ms.map(mat=>{ if(!mat||!('emissive' in mat)) return mat; const c=mat.clone(); addRim(c, playerRim, rimIntU, playerTintU, id); return c; });   // 틴트 + 플레이어색 림(공유 모델도 게임/건설서 림 표시)
     o.material=arr?out:out[0]; }); };
   fix(m.inner); fix(m.runInner); fix(m.atkInner); fix(m.stayInner); }
 // 인스턴스 전용 틴트(직스 등 한 화면에 여러 플레이어) — 재질 복제 후 자기 색 uniform 부여
@@ -14424,7 +14430,7 @@ function rimModel(root, rimColor){ root.traverse(o=>{ if(!o.isMesh) return; cons
 function sandboxAllyFix(m, id){ if(!m||m._sbAlly) return; m._sbAlly=true;
   const fix=function(root){ if(!root) return; root.traverse(o=>{ if(!o.isMesh||!o.material) return;
     const arr=Array.isArray(o.material), ms=arr?o.material:[o.material];
-    const out=ms.map(mat=>{ if(!mat||!('emissive' in mat)) return mat; const c=mat.clone(); addTone(c, playerTintU, id); return c; });
+    const out=ms.map(mat=>{ if(!mat||!('emissive' in mat)) return mat; const c=mat.clone(); addRim(c, playerRim, rimIntU, playerTintU, id); return c; });   // 틴트 + 플레이어색 림(작을 때 색 식별) — addRim이 _toneInject 먼저 걸어 색 전환도 정상
     o.material=arr?out:out[0]; }); };
   fix(m.inner); fix(m.runInner); fix(m.atkInner); fix(m.stayInner); }
 // 직스 적군 본체 적색 틴트는 제거 — 림과 마찬가지로 모델 원본 외형 그대로 표시(구분은 HP 바·UI로)
@@ -14440,8 +14446,9 @@ function addRim(mat, rimColor, intU, tone, id){
     shader.uniforms.rimInt=intU||rimIntU;   // 아군=rimIntU(관전 부스트) / 적·기타=subRimIntU(고정 은은)
     shader.uniforms.rimPow={value:RIM_POW};
     shader.fragmentShader='uniform vec3 rimColor;\nuniform float rimInt;\nuniform float rimPow;\n'+shader.fragmentShader;
+    const _rmul=(typeof RIM_MUL!=='undefined'&&RIM_MUL[id])||1;   // 평평한 유닛(aegis 등) 림 강도 개별 부스트
     shader.fragmentShader=shader.fragmentShader.replace('#include <emissivemap_fragment>',
-      '#include <emissivemap_fragment>\n  float _rim=pow(1.0-max(dot(normalize(normal), vec3(0.0,0.0,1.0)),0.0), rimPow);\n  totalEmissiveRadiance += rimColor*_rim*rimInt;');
+      '#include <emissivemap_fragment>\n  float _rim=pow(1.0-max(dot(normalize(normal), vec3(0.0,0.0,1.0)),0.0), rimPow);\n  totalEmissiveRadiance += rimColor*_rim*rimInt*'+_rmul.toFixed(2)+';');
   };
   mat.needsUpdate=true;
 }
