@@ -2078,12 +2078,12 @@
   .ptPips i.on{background:var(--setAcc)}
   .ptPips i.tr{background:#c79af2}   /* 초월 단계=연보라 */
   .ptPips.mini{gap:2px}.ptPips.mini i{height:3px}
-  /* 강화 가능 = 네비 섹션 하이라이트처럼 시안 그라데이션 + 발광 */
+  /* 강화 가능 = 메인 하단 버튼처럼 빨강 그라데이션 + 발광 */
   .ptBtn{flex:0 0 auto;min-width:56px;display:flex;flex-direction:column;align-items:center;gap:1px;padding:7px 10px;border-radius:var(--r-bar);cursor:pointer;
-    font-family:inherit;color:#dff4ff;background:linear-gradient(180deg,rgba(92,214,255,.32),rgba(92,214,255,.1));
-    border:1px solid rgba(92,214,255,.6);box-shadow:0 0 12px -3px rgba(92,214,255,.55),inset 0 1px 0 rgba(255,255,255,.1);transition:all .12s}
-  .ptBtn:not(:disabled):not(.poor):active{transform:translateY(1px);box-shadow:0 0 8px -3px rgba(92,214,255,.5)}
-  .ptBtn b{font-family:'Rajdhani',sans-serif;font-size:var(--fs-lg);font-weight:800;line-height:1.1;color:#eaf7ff;text-shadow:0 0 6px rgba(92,214,255,.6)}
+    font-family:inherit;color:#ffdede;background:linear-gradient(180deg,rgba(255,59,59,.32),rgba(255,59,59,.1));
+    border:1px solid rgba(255,59,59,.6);box-shadow:0 0 12px -3px rgba(255,59,59,.55),inset 0 1px 0 rgba(255,255,255,.1);transition:all .12s}
+  .ptBtn:not(:disabled):not(.poor):active{transform:translateY(1px);box-shadow:0 0 8px -3px rgba(255,59,59,.5)}
+  .ptBtn b{font-family:'Rajdhani',sans-serif;font-size:var(--fs-lg);font-weight:800;line-height:1.1;color:#ffefef;text-shadow:0 0 6px rgba(255,80,80,.6)}
   .ptBtn span{font-size:var(--fs-xs);font-weight:700;opacity:.8}
   /* 강화 불가(포인트 부족) = 색·발광 거의 없음 */
   .ptBtn.poor{cursor:default;color:#727b87;background:rgba(255,255,255,.03);border-color:var(--metal-edge);box-shadow:none}
@@ -3819,7 +3819,7 @@ const _PT_ICO={
   eco:'<circle cx="12" cy="12" r="8"/><path d="M14.4 9.6a3.3 3.3 0 1 0 0 4.8"/>',                          // 경제=코인
   prod:'<circle cx="9.5" cy="8.5" r="3"/><path d="M4 19.5c0-3 2.5-5.2 5.5-5.2s5.5 2.2 5.5 5.2"/><path d="M18.5 4v5M16 6.5h5"/>',   // 생산=유닛 뽑기(인물+)
   combat:'<path d="M5 5 15 15M19 5 9 15M14.5 15.5 17.5 18.5M9.5 15.5 6.5 18.5"/>',                          // 전투=교차 검
-  team:'<text x="12" y="16" text-anchor="middle" font-family="Rajdhani,sans-serif" font-size="10.5" font-weight="800" letter-spacing="0.3" fill="currentColor" stroke="none">ALL</text>',   // 전체=ALL 텍스트
+  team:'<text x="12" y="15.4" text-anchor="middle" font-family="Rajdhani,sans-serif" font-size="8.6" font-weight="800" letter-spacing="0.2" fill="currentColor" stroke="none">ALL</text>',   // 전체=ALL 텍스트(다른 아이콘 크기에 맞춤)
   coop:'<path d="M12 3.6c-3.9 0-6.9 2.8-6.9 6.5 0 2.2 1 3.9 2.5 4.9v3.4h8.8V15c1.5-1 2.5-2.7 2.5-4.9 0-3.7-3-6.5-6.9-6.5z"/><circle cx="9.4" cy="10.4" r="1.15"/><circle cx="14.6" cy="10.4" r="1.15"/><path d="M10.6 18.4v2M13.4 18.4v2"/>' };  // 보스=해골
 function renderPtTabs(){ const box=document.getElementById('ptTabs'); if(!box) return;
   box.innerHTML=_PT_TABS.map(function(t){ return '<button class="ptTab'+(t[0]===_ptGroup?' on':'')+'" onclick="setPtGroup(\''+t[0]+'\')"><span class="ptTabIco"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+(_PT_ICO[t[0]]||'')+'</svg></span>'+t[1]+'</button>'; }).join(''); }
