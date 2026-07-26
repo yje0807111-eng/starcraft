@@ -2038,11 +2038,11 @@
   #pointPanel.hide,#ptHelpPop.hide{display:none}
   #ptHelpPop{z-index:57}
   .ptCard{width:312px;max-width:86vw;height:82%;display:flex;flex-direction:column}
-  .ptTitle{justify-content:flex-start;gap:8px}
+  .ptTitle{justify-content:flex-start;gap:6px}
   .ptTitle .ptTtl{flex:0 0 auto;font-size:15px;font-weight:800;color:#eaf1fb}
-  .ptHelp{flex:0 0 auto;width:20px;height:20px;display:flex;align-items:center;justify-content:center;border-radius:50%;cursor:pointer;
-    font-size:12px;font-weight:800;font-family:inherit;color:var(--setAcc);background:rgba(92,214,255,.1);border:1px solid var(--setAccS)}
-  .ptHelp:active{background:rgba(92,214,255,.22)}
+  .ptHelp{flex:0 0 auto;width:15px;height:15px;display:flex;align-items:center;justify-content:center;border-radius:50%;cursor:pointer;
+    font-size:9.5px;font-weight:800;font-family:inherit;color:var(--setAcc);background:rgba(92,214,255,.12);border:1px solid var(--setAccS);align-self:center}
+  .ptHelp:active{background:rgba(92,214,255,.24)}
   .ptBal{margin-left:auto;flex:0 0 auto;font-family:'Rajdhani',sans-serif;font-size:var(--fs-md);color:var(--txt-mute);white-space:nowrap;display:flex;align-items:baseline;gap:3px}
   .setTitle .ptBal b{font-size:16px;font-weight:800;color:#5cd6ff}   /* .ptTitle b(파티 패널 빨강)와 클래스명 충돌 → 우선순위로 시안 고정 */
   #pointPanel .setX .mIco,#ptHelpPop .setX .mIco{color:inherit}   /* 닫기 X = 은은한 회색(빨강 mIco 기본색 차단) */
@@ -2052,11 +2052,13 @@
   .ptTab.on{color:#0b1016;font-weight:800;background:var(--setAcc);border-color:var(--setAcc)}
   .ppList{flex:1;min-height:90px;overflow-y:auto;display:flex;flex-direction:column;padding-right:3px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
   .ppList::-webkit-scrollbar{width:5px}.ppList::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:var(--r-bar)}
-  .ptSect{display:flex;align-items:center;gap:6px;font-size:var(--fs-sm);font-weight:800;color:#aeb8c6;letter-spacing:.4px;margin:9px 1px 3px;padding-bottom:2px}
-  .ptSect:first-child{margin-top:1px}
-  .ptSect .ptSectBar{width:3px;height:11px;background:var(--setAcc);border-radius:1px;flex:0 0 auto;opacity:.85}
-  .ptRow{display:flex;align-items:center;gap:10px;padding:11px 2px}   /* 설정 setItem 톤: 박스 없이 구분선만 */
-  .ptRow+.ptRow,.ptSect+.ptRow{border-top:1px solid rgba(255,255,255,.07)}
+  .ptSect{display:flex;align-items:center;gap:6px;font-size:var(--fs-md);font-weight:800;color:#d3dbe6;letter-spacing:.4px;margin:13px 1px 7px;padding-bottom:5px;
+    border-bottom:1px solid rgba(92,214,255,.22)}   /* 섹션 = 밝은 라벨 + 시안 밑줄로 확실히 구분 */
+  .ptSect:first-child{margin-top:2px}
+  .ptSect .ptSectBar{width:3px;height:13px;background:var(--setAcc);border-radius:1px;flex:0 0 auto;box-shadow:0 0 6px rgba(92,214,255,.5)}
+  .ptRow{display:flex;align-items:center;gap:10px;padding:9px 11px;margin-bottom:6px;border-radius:var(--r-sm);   /* 카드 = 은은한 박스로 개별 구분 */
+    background:rgba(255,255,255,.022);border:1px solid rgba(255,255,255,.07)}
+  .ptRow:last-child{margin-bottom:2px}
   .ptRow.deferred{opacity:.5}
   .ptInfo{flex:1;min-width:0}
   .ptNameRow{display:flex;align-items:baseline;gap:7px;margin-bottom:5px}
@@ -2067,19 +2069,23 @@
   .ptPips i.on{background:var(--setAcc)}
   .ptPips i.tr{background:#c79af2}   /* 초월 단계=연보라 */
   .ptPips.mini{gap:2px}.ptPips.mini i{height:3px}
+  /* 강화 가능 = 네비 섹션 하이라이트처럼 시안 그라데이션 + 발광 */
   .ptBtn{flex:0 0 auto;min-width:56px;display:flex;flex-direction:column;align-items:center;gap:1px;padding:7px 10px;border-radius:var(--r-bar);cursor:pointer;
-    font-family:inherit;color:var(--setAcc);background:rgba(92,214,255,.1);border:1px solid var(--setAccS);transition:all .12s}
-  .ptBtn:not(:disabled):not(.poor):active{transform:translateY(1px);background:rgba(92,214,255,.2)}
-  .ptBtn b{font-family:'Rajdhani',sans-serif;font-size:var(--fs-lg);font-weight:800;line-height:1.1;color:var(--setAcc)}
-  .ptBtn span{font-size:var(--fs-xs);font-weight:700;opacity:.75}
-  .ptBtn.poor{cursor:default;color:#7d8590;background:rgba(255,255,255,.03);border-color:var(--metal-edge);opacity:.7}
-  .ptBtn.poor b{color:#8b93a0}
-  .ptBtn:disabled:not(.maxed){cursor:default;color:#7d8590;background:rgba(255,255,255,.03);border-color:var(--metal-edge)}
-  .ptBtn:disabled:not(.maxed) b{color:var(--txt-mute)}
-  .ptBtn.maxed{color:#9fb0c2;background:rgba(255,255,255,.05)}
-  .ptBtn.trans{color:#e0c8ff;background:rgba(168,85,247,.16);border-color:rgba(190,120,255,.5)}   /* 초월=연보라(효과 ×2 점프) */
-  .ptBtn.trans b{color:#eddcff}
-  .ptBtn.trans.poor{color:#9a86b5;opacity:.7}
+    font-family:inherit;color:#dff4ff;background:linear-gradient(180deg,rgba(92,214,255,.32),rgba(92,214,255,.1));
+    border:1px solid rgba(92,214,255,.6);box-shadow:0 0 12px -3px rgba(92,214,255,.55),inset 0 1px 0 rgba(255,255,255,.1);transition:all .12s}
+  .ptBtn:not(:disabled):not(.poor):active{transform:translateY(1px);box-shadow:0 0 8px -3px rgba(92,214,255,.5)}
+  .ptBtn b{font-family:'Rajdhani',sans-serif;font-size:var(--fs-lg);font-weight:800;line-height:1.1;color:#eaf7ff;text-shadow:0 0 6px rgba(92,214,255,.6)}
+  .ptBtn span{font-size:var(--fs-xs);font-weight:700;opacity:.8}
+  /* 강화 불가(포인트 부족) = 색·발광 거의 없음 */
+  .ptBtn.poor{cursor:default;color:#727b87;background:rgba(255,255,255,.03);border-color:var(--metal-edge);box-shadow:none}
+  .ptBtn.poor b{color:#7f8794;text-shadow:none}
+  .ptBtn:disabled:not(.maxed){cursor:default;color:#727b87;background:rgba(255,255,255,.03);border-color:var(--metal-edge);box-shadow:none}
+  .ptBtn:disabled:not(.maxed) b{color:var(--txt-mute);text-shadow:none}
+  .ptBtn.maxed{color:#9fb0c2;background:rgba(255,255,255,.05);box-shadow:none}
+  .ptBtn.trans{color:#f0e2ff;background:linear-gradient(180deg,rgba(168,85,247,.34),rgba(120,40,200,.12));border-color:rgba(190,120,255,.62);box-shadow:0 0 12px -3px rgba(168,85,247,.6),inset 0 1px 0 rgba(255,255,255,.08)}   /* 초월=보라 발광 */
+  .ptBtn.trans b{color:#f4ecff;text-shadow:0 0 6px rgba(190,120,255,.7)}
+  .ptBtn.trans.poor{color:#8a7ba3;background:rgba(255,255,255,.03);border-color:var(--metal-edge);box-shadow:none}
+  .ptBtn.trans.poor b{color:#8a7ba3;text-shadow:none}
   .ptT{display:inline-block;margin-left:4px;padding:0 5px;border-radius:6px;font-size:9px;font-weight:800;color:#e0c8ff;background:rgba(168,85,247,.2);border:1px solid rgba(190,120,255,.45)}
   .ptEmpty{text-align:center;color:#7d8590;font-size:var(--fs-md);padding:18px}
   /* ? 상세 정보 팝업 */
@@ -2974,8 +2980,8 @@
   <div id="pointPanel" class="hide" onclick="if(event.target===this)closePointUpgrade()">
     <div class="setCard ptCard">
       <div class="setTitle ptTitle">
+        <span class="ptTtl">코인 공학소</span>
         <button class="ptHelp" onclick="openPtHelp()" aria-label="상세 정보">?</button>
-        <span class="ptTtl">공학소</span>
         <span class="ptBal"><b id="ptCoins">0</b>P</span>
         <div class="setX" onclick="closePointUpgrade()"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></div>
       </div>
