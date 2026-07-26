@@ -348,10 +348,9 @@
   .hsThumb img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))}.hsThumb svg{width:32px;height:32px}
   .hsCnt{position:absolute;top:3px;left:4px;z-index:5;font-family:'Rajdhani',sans-serif;font-size:var(--fs-sm);font-weight:800;color:#fff;
     padding:0 4px;border-radius:var(--r-bar);background:rgba(6,8,12,.78);border:1px solid rgba(255,255,255,.18);line-height:1.45;text-shadow:0 1px 2px #000}
-  .hsVal{display:block;font-family:'Rajdhani',sans-serif;font-size:var(--fs-md);font-weight:800;color:var(--gold);text-align:center;line-height:15px;letter-spacing:.2px;
-    background:rgba(6,8,12,.82);border-top:1px solid rgba(255,210,74,.4);text-shadow:0 1px 2px #000,0 0 4px rgba(0,0,0,.9)}
-  .hsName{display:block;font-size:9px;font-weight:700;color:#dbe3ee;text-align:center;line-height:12px;padding:2px 2px 1px;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:rgba(6,8,12,.62);border-top:1px solid rgba(255,255,255,.07)}
+  .hsMeta{display:flex;align-items:baseline;gap:3px;padding:2px 5px 3px;background:rgba(6,8,12,.66);border-top:1px solid rgba(255,255,255,.07)}   /* 이름(좌) · 회수가(우) 한 줄 */
+  .hsName{flex:1 1 auto;min-width:0;font-size:9px;font-weight:700;color:#dbe3ee;text-align:left;line-height:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hsVal{flex:0 0 auto;font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:800;color:var(--gold);line-height:12px;letter-spacing:.2px;text-shadow:0 1px 2px #000}
   .hsEmpty{font-size:var(--fs-xs);color:#7d8590;padding:8px 2px}
   
   
@@ -1481,12 +1480,13 @@
   .plbtn:active{transform:translateY(1px)}
   .plbtn.me{border-color:var(--pc);background:linear-gradient(160deg,rgba(58,44,50,.58),rgba(18,12,16,.74));box-shadow:0 0 13px -4px var(--pc),inset 0 1px 0 rgba(255,255,255,.08)}  /* 관전 중 */
   .plbtn.me::after{opacity:1;box-shadow:0 0 6px var(--pc)}
-  .plbtn.off{cursor:default;pointer-events:none;opacity:.32;filter:saturate(.25)}   /* 미입장/이탈 슬롯(관전 불가) */
-  .plbtn.off::after{opacity:.25}
-  .plbtn.off .plnum{color:#6a7682}.plbtn.off .plst{color:#6a7682}
-  .plbtn.lock{cursor:default;opacity:.55;filter:saturate(.5)}   /* 내 슬롯=잠금(관전 불가) */
-  .plbtn.lock::after{opacity:.35}
-  .plbtn.lock .plnum{color:#9aa8b8}
+  .plbtn.off{cursor:default;pointer-events:none;filter:brightness(.6) saturate(.12)}   /* 빈 자리(미입장): 색 없음 · 흰색 계열 + 약한 어둠 */
+  .plbtn.off::after{opacity:.14}
+  .plbtn.off .plnum{color:#b6bdc8}.plbtn.off .plst{color:#7d8590}
+  .plbtn.mine{cursor:default;pointer-events:none;filter:saturate(.6) brightness(.72)}   /* 내 슬롯: 내 색 유지 · 채도↓·어둡게 · 관전 불가(잠금 아이콘 없음) */
+  .plbtn.mine::after{opacity:.7}
+  .plbtn.gone{cursor:default;pointer-events:none;filter:saturate(.55) brightness(.58)}   /* 탈락: 그 플레이어 색 유지 + 어두운 필터 · 관전 불가 */
+  .plbtn.gone::after{opacity:.5}
   .plnum{font-size:18px;font-weight:800;font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif;color:var(--pc);line-height:1;text-shadow:0 1px 2px #000}
   .plst{font-size:var(--fs-xs);font-weight:700;letter-spacing:.3px;color:#9aa6b4;max-width:96%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .plcnt{font-size:8.5px;font-weight:700;color:var(--txt-hud);margin-top:2px;font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif}
@@ -3023,7 +3023,7 @@
         <div class="voteResult"><span>현재 배속</span><b id="voteResult">1x</b></div>
       </div>
       </div>
-      <button class="setPause" id="setPauseBtn" onclick="togglePause()"><span class="pIco">⏸</span><span id="pauseLbl">일시정지</span></button>
+      <button class="setPause" id="setPauseBtn" onclick="togglePause()"><span class="pIco"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6.5v11M14.5 6.5v11"/></svg></span><span id="pauseLbl">일시정지</span></button>
       <button class="setExit" id="setExit" data-sfx="ui_open" onclick="exitGame()">게임에서 나가기</button>
       <button class="setLogout" id="setLogout" onclick="closeSettings();doLogout()">로그아웃</button>
     </div>
@@ -3083,6 +3083,8 @@ const MSG_ICO={
   '⚠️':_MI('<path d="M12 4.4 21 19.6H3z"/><path d="M12 10v4.1"/><circle cx="12" cy="17.2" r=".95" fill="currentColor" stroke="none"/>'),
   '⛔':_MI('<circle cx="12" cy="12" r="8.3"/><path d="M6.2 6.2 17.8 17.8"/>'),
   '🔒':_MI('<rect x="5.4" y="10.6" width="13.2" height="9" rx="2"/><path d="M8.4 10.6V8.4a3.6 3.6 0 0 1 7.2 0v2.2"/>'),
+  '⏸':_MI('<path d="M9.5 6.5v11M14.5 6.5v11"/>'),
+  '▶':_MI('<path d="M8.5 6 18 12 8.5 18Z"/>'),
   '🔓':_MI('<rect x="5.4" y="10.6" width="13.2" height="9" rx="2"/><path d="M8.4 10.6V8.4a3.6 3.6 0 0 1 6.6-1.9"/>','ok'),
   '✓':_MI('<path d="M5 12.6 9.4 17 19 7.4"/>','ok'),
   '💰':_MI('<circle cx="12" cy="12" r="8"/><path d="M14.4 9.6a3.3 3.3 0 1 0 0 4.8"/>','coin'),
@@ -4046,7 +4048,7 @@ function renderSellPanel(){ const tiersBox=document.getElementById('hsTiers'), g
     const thumb=img?('<img src="'+img+'" draggable="false">'):(typeof unitSVG==='function'?unitSVG(GACHA_PROXY[gid]||'marine'):'');
     const val=unitSellValue(list[0]);
     cells+='<button class="hsCell" onclick="sellOneOfType(\''+gid+'\')" title="'+escHtml(gu.displayName)+' 판매 +'+val+'"><div class="hsThumb">'+thumb+'</div>'
-      +'<span class="hsCnt">×'+list.length+'</span><span class="hsName">'+escHtml(gu.displayName)+'</span><span class="hsVal">+'+val+'</span></button>';
+      +'<span class="hsCnt">×'+list.length+'</span><div class="hsMeta"><span class="hsName">'+escHtml(gu.displayName)+'</span><span class="hsVal">+'+val+'</span></div></button>';
   }
   grid.innerHTML=cells;
 }
@@ -7815,13 +7817,15 @@ function tickResearch(dt){ if(!G.research) return;
 const PLAYER_VIEW_COLORS=['#4570d3','#d6292f','#eadb3e','#2ba143','#ad5cd6','#ed691d','#6d422c','#dfe0e2'];
 function renderPlayers(){ const g=document.getElementById('plGrid'); g.innerHTML='';
   const mine=G.myPlayer||1; const active=G.activePlayers||[1,2,3,4,5,6,7,8];   // 게임에 입장한 플레이어만 활성
-  for(let n=1;n<=8;n++){ const present=active.indexOf(n)>=0, lock=(n===mine);   // 내 슬롯은 잠금(나)
+  for(let n=1;n<=8;n++){ const isMe=(n===mine), present=active.indexOf(n)>=0;
+    const elim=!isMe && !present && (G.eliminated||[]).indexOf(n)>=0;   // 입장했다가 탈락한 슬롯(색 유지·어둡게)
     const el=document.createElement('div');
-    el.className='plbtn'+(present&&n===G.curPlayer&&!lock?' me':'')+(lock?' lock':'')+(!present?' off':'');   // 미입장=off
-    el.style.setProperty('--pc', PLAYER_VIEW_COLORS[(n-1)%PLAYER_VIEW_COLORS.length]);
-    const _bo=!lock && present && G.coopState && G.coopState[n] && G.coopState[n].bo;   // 상대가 토벌장 보는 중
-el.innerHTML='<div class="plnum">'+n+'P</div><div class="plst">'+(lock?(escHtml(myNick())+' '+pIco('🔒','sm')):(present?(escHtml(playerName(n))+(_bo?(' <span title="보스방 입장 중">'+pIco('👹','sm')+'</span>'):'')):'빈 자리'))+'</div>';
-    if(!lock && present) el.onclick=()=>{ G.curPlayer=n; renderPlayers(); drawPlayer(); updateSpecLabel(); };   // 입장한 다른 플레이어만 관전 가능
+    el.className='plbtn'+(isMe?' mine':(present?(n===G.curPlayer?' me':''):(elim?' gone':' off')));   // 나=mine · 활성=관전가능(현재관전=me) · 탈락=gone · 빈자리=off
+    const showColor=(isMe||present||elim);   // 빈 자리만 무채색(흰색 계열)
+    el.style.setProperty('--pc', showColor?PLAYER_VIEW_COLORS[(n-1)%PLAYER_VIEW_COLORS.length]:'#b6bdc8');
+    const _bo=!isMe && present && G.coopState && G.coopState[n] && G.coopState[n].bo;   // 상대가 토벌장 보는 중
+el.innerHTML='<div class="plnum">'+n+'P</div><div class="plst">'+(isMe?escHtml(myNick()):(present?(escHtml(playerName(n))+(_bo?(' <span title="보스방 입장 중">'+pIco('👹','sm')+'</span>'):'')):(elim?escHtml(playerName(n)):'빈 자리')))+'</div>';
+    if(!isMe && present) el.onclick=()=>{ G.curPlayer=n; renderPlayers(); drawPlayer(); updateSpecLabel(); };   // 입장한 다른 플레이어만 관전 가능
     g.appendChild(el);
   } }
 function updatePlayerCounts(){ const active=G.activePlayers||[];   // Players 탭에서 실시간 적 수 갱신
@@ -7918,7 +7922,7 @@ function updatePauseBtn(){
   const remain=PAUSE_MAX-(G.pauseUsed||0);
   if(btn){ btn.classList.toggle('paused',G.paused); btn.classList.toggle('disabled', !G.paused && remain<=0); }
   if(lbl) lbl.textContent = G.paused ? '재개' : ('일시정지 ('+remain+'회 남음)');
-  if(ico) ico.textContent = G.paused?'▶':'⏸'; }
+  if(ico) ico.innerHTML = (G.paused?MSG_ICO['▶']:MSG_ICO['⏸']).d; }
 function exitGame(){
   if(typeof closeSettings==='function') closeSettings();   // 설정 팝업 닫기(확인창이 위에 뜨도록)
   if(G && G.strike){ strikeEnd(); return; }   // 컴퓨터가 싸운다: 즉시 로비로
@@ -9279,6 +9283,7 @@ function startGameNow(activePlayers, myNum, names){
 function playerLeave(n){ if(!G.activePlayers) return; const mine=G.myPlayer||1; if(n===mine) return;
   const i=G.activePlayers.indexOf(n); if(i<0) return;
   G.activePlayers.splice(i,1);
+  (G.eliminated=G.eliminated||[]).push(n);   // 탈락 기록(관전 그리드: 색 유지·어둡게 표시)
   addChat('', '⚠️ '+n+'번 플레이어가 탈락하였습니다.');
   if(G.curPlayer===n){ const other=G.activePlayers.filter(x=>x!==mine); G.curPlayer=other[0]||mine;
     if(G.tab==='Players'){ if(typeof drawPlayer==='function') drawPlayer(); updateSpecLabel(); } }
