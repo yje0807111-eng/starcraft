@@ -2081,9 +2081,9 @@
   /* 강화 가능 = 메인 하단 버튼처럼 빨강 그라데이션 + 발광 */
   .ptBtn{flex:0 0 auto;min-width:56px;display:flex;flex-direction:column;align-items:center;gap:1px;padding:7px 10px;border-radius:var(--r-bar);cursor:pointer;
     font-family:inherit;color:#ffdede;background:linear-gradient(180deg,rgba(255,59,59,.32),rgba(255,59,59,.1));
-    border:1px solid rgba(255,59,59,.6);box-shadow:0 0 12px -3px rgba(255,59,59,.55),inset 0 1px 0 rgba(255,255,255,.1);transition:all .12s}
-  .ptBtn:not(:disabled):not(.poor):active{transform:translateY(1px);box-shadow:0 0 8px -3px rgba(255,59,59,.5)}
-  .ptBtn b{font-family:'Rajdhani',sans-serif;font-size:var(--fs-lg);font-weight:800;line-height:1.1;color:#ffefef;text-shadow:0 0 6px rgba(255,80,80,.6)}
+    border:1px solid rgba(255,59,59,.6);box-shadow:inset 0 1px 0 rgba(255,255,255,.08);transition:all .12s}   /* 글로우 없음 */
+  .ptBtn:not(:disabled):not(.poor):active{transform:translateY(1px)}
+  .ptBtn b{font-family:'Rajdhani',sans-serif;font-size:var(--fs-lg);font-weight:800;line-height:1.1;color:#ffefef}
   .ptBtn span{font-size:var(--fs-xs);font-weight:700;opacity:.8}
   /* 강화 불가(포인트 부족) = 색·발광 거의 없음 */
   .ptBtn.poor{cursor:default;color:#727b87;background:rgba(255,255,255,.03);border-color:var(--metal-edge);box-shadow:none}
