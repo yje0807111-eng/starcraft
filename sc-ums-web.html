@@ -2046,10 +2046,15 @@
   .ptBal{margin-left:auto;flex:0 0 auto;font-family:'Rajdhani',sans-serif;font-size:var(--fs-md);color:var(--txt-mute);white-space:nowrap;display:flex;align-items:baseline;gap:3px}
   .setTitle .ptBal b{font-size:16px;font-weight:800;color:#5cd6ff}   /* .ptTitle b(파티 패널 빨강)와 클래스명 충돌 → 우선순위로 시안 고정 */
   #pointPanel .setX .mIco,#ptHelpPop .setX .mIco{color:inherit}   /* 닫기 X = 은은한 회색(빨강 mIco 기본색 차단) */
-  .ptSeg{display:flex;gap:5px;margin-bottom:10px}   /* 카테고리 = 설정 세그먼트 톤 */
-  .ptTab{flex:1;min-width:0;padding:7px 2px;border-radius:var(--r-bar);font-family:inherit;font-size:var(--fs-md);font-weight:700;cursor:pointer;white-space:nowrap;
-    color:var(--txt-dim);background:rgba(0,0,0,.16);border:1px solid var(--metal-edge);transition:all .12s}
-  .ptTab.on{color:#0b1016;font-weight:800;background:var(--setAcc);border-color:var(--setAcc)}
+  /* 카테고리 = 게임 하단 네비 바처럼: 하나의 바 + 탭 사이 세로줄 + 활성=상단 시안 라인 */
+  .ptSeg{display:flex;gap:0;margin-bottom:11px;position:relative;overflow:hidden;border-radius:var(--r-sm);
+    background:linear-gradient(180deg,#151a24,#0a0d13);border:1px solid var(--glass-edge);box-shadow:inset 0 1px 0 rgba(255,255,255,.045)}
+  .ptTab{flex:1;min-width:0;position:relative;padding:8px 2px;text-align:center;font-family:inherit;font-size:var(--fs-md);font-weight:800;cursor:pointer;white-space:nowrap;
+    color:#7c8ba0;background:none;border:none;transition:color .16s}
+  .ptTab+.ptTab::before{content:'';position:absolute;left:0;top:24%;bottom:24%;width:1px;background:linear-gradient(180deg,transparent,rgba(255,255,255,.1),transparent);pointer-events:none}
+  .ptTab::after{content:'';position:absolute;left:16%;right:16%;top:0;height:2px;border-radius:0 0 3px 3px;background:linear-gradient(90deg,transparent,var(--setAcc),transparent);box-shadow:0 0 8px rgba(92,214,255,.6);opacity:0;transition:opacity .18s;pointer-events:none}
+  .ptTab.on{color:#e6f6ff}
+  .ptTab.on::after{opacity:1}
   .ppList{flex:1;min-height:90px;overflow-y:auto;display:flex;flex-direction:column;padding-right:3px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
   .ppList::-webkit-scrollbar{width:5px}.ppList::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:var(--r-bar)}
   .ptSect{display:flex;align-items:center;gap:6px;font-size:var(--fs-md);font-weight:800;color:#d3dbe6;letter-spacing:.4px;margin:13px 1px 7px;padding-bottom:5px;
@@ -2061,9 +2066,10 @@
   .ptRow:last-child{margin-bottom:2px}
   .ptRow.deferred{opacity:.5}
   .ptInfo{flex:1;min-width:0}
-  .ptNameRow{display:flex;align-items:baseline;gap:7px;margin-bottom:5px}
+  .ptNameRow{display:flex;align-items:baseline;gap:5px;margin-bottom:5px}
   .ptName{font-size:var(--fs-lg);font-weight:700;color:#dbe3ec}
-  .ptVal{flex:0 1 auto;min-width:0;font-family:'Rajdhani',sans-serif;font-size:var(--fs-sm);font-weight:700;color:#7fd4ee;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}   /* 수치 변화 힌트(소프트 시안) */
+  .ptVal{flex:0 1 auto;min-width:0;display:inline-flex;align-items:center;gap:2px;font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;color:#8a94a3;white-space:nowrap}   /* 수치 힌트: 제목 옆에 붙임·작게·회색(잘 안 보여도 무방) */
+  .ptArw{font-style:normal;font-size:10px;line-height:1;color:#767f8c}   /* 상승 화살표 = 수치 사이 중앙 높이 */
   .ptLv{flex:0 0 auto;margin-left:auto;padding-left:8px;font-size:var(--fs-sm);font-weight:700;color:var(--txt-mute);font-family:'Rajdhani',sans-serif}
   .ptPips{display:flex;gap:3px}
   .ptPips i{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.08);max-width:26px}
@@ -3849,10 +3855,10 @@ function ptValHint(id, b, lv){ const maxed=lv>=b.max;
   let base=null;
   if(id==='start_credit') base=(typeof mapCfg==='function'?mapCfg('startCredits',START_MIN):250);
   else if(id==='start_energy') base=(typeof mapCfg==='function'?mapCfg('startEnergy',START_GAS):0);
-  const cur=lv*step, nxt=(lv+1)*step;
-  if(base!=null){ const cv=base+cur, nv=base+nxt; return maxed?num(cv):(num(cv)+' → '+num(nv)); }
+  const cur=lv*step, nxt=(lv+1)*step, ARW='<i class="ptArw">→</i>';   // 화살표=중앙정렬용 별도 span
+  if(base!=null){ const cv=base+cur, nv=base+nxt; return maxed?num(cv):(num(cv)+ARW+num(nv)); }
   const sgn=x=>((x>0?'+':'')+num(x)+(pct?'%':''));
-  return maxed?sgn(cur):(sgn(cur)+' → '+sgn(nxt)); }
+  return maxed?sgn(cur):(sgn(cur)+ARW+sgn(nxt)); }
 // 레벨 세그먼트 pip — 채워진 칸 시안(초월 단계는 연보라). 칸 많으면(>12) 얇게.
 function ptPips(lv, max, n){ const N=Math.max(1,max), norm=(n!=null?n:N);
   let s='<div class="ptPips'+(N>12?' mini':'')+'">';
