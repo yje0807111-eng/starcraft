@@ -6839,6 +6839,7 @@ function openMainSheet(mode, el, sbTab){
   if(typeof playSfx==='function') playSfx('ui_open'); refreshSelCard(); }
 // 메인 탭 = 유닛지정/판매/조합 섹션(하단 홈). 다른 섹션에서 눌러도 반드시 메인 섹션으로 복귀.
 function openMainHome(el){
+  if(G.strike){ switchTab('Main', el||document.querySelector('.tab[data-tab="Main"]')); return; }   // 직스: 전투 탭 → 직스 라우팅
   if(G.sandbox){ switchTab('Main', el||document.querySelector('.tab[data-tab="Main"]')); return; }
   if(G.tab==='Main' && G.mainSheet==null && G.sel.length===0 && G.selEnemy==null){   // 홈 섹션 재탭(무선택) = 하단 시트 내리기/올리기 토글
     const open=document.body.classList.toggle('sheetOpen'); G.sheetDown=!open;
@@ -6846,8 +6847,8 @@ function openMainHome(el){
     if(typeof playSfx==='function') playSfx('ui_open'); return; }
   if(G.tab!=='Main') switchTab('Main', document.querySelector('.tab[data-tab="Main"]'));
   G.mainSheet=null; G.sel=[]; G.selEnemy=null; G.selType=null; _selViaTab=false; G.sheetDown=false; _setBottomTab('Main'); document.body.classList.add('sheetOpen'); if(typeof playSfx==='function') playSfx('ui_open'); refreshSelCard(); }
-function openGachaSheet(el){ openMainSheet('gacha', el, 'Unit'); }
-function openUpgradeSheet(el){ openMainSheet('upgrade', el, 'Upgrade'); }
+function openGachaSheet(el){ if(G.strike){ switchTab('Unit', el||document.querySelector('.tab[data-tab="Unit"]')); return; } openMainSheet('gacha', el, 'Unit'); }   // 직스: 건설지 탭
+function openUpgradeSheet(el){ if(G.strike){ switchTab('Upgrade', el||document.querySelector('.tab[data-tab="Upgrade"]')); return; } openMainSheet('upgrade', el, 'Upgrade'); }   // 직스: 보급 탭
 function openAutoSheet(el){ openMainSheet('auto', el, ''); }   // 전송 옆 자동설정 버튼 → 하단 자동화 그리드(전용 탭 없음)
 // ⚙ 자동화 설정 시트 — 팝업 대신 하단 그리드(on/off 셀). 켜두면 유지되는 것들이라 여기서 한 번 설정.
 const AUTO_SHEET_DEFS=[
@@ -13178,7 +13179,7 @@ function strikeSetTabLabels(map){ for(const t in map){ const el=document.querySe
   if(span){ span.textContent=map[t]; continue; }
   let tn=null; el.childNodes.forEach(n=>{ if(n.nodeType===3 && n.textContent.trim()) tn=n; });
   if(tn) tn.textContent=map[t]; else el.appendChild(document.createTextNode(map[t])); } }
-function strikeHideNemoChrome(on){ ['coopBossBar','mergeFab','skillFab','autoFab','deselTop','cvMarine','cvFx','mergeZone','miniWrap','defaultCmd','zoneLabel'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display=on?'none':''; });   // unitCmd 제외: 직스 선택 프로필(커맨드 그리드) 호스트로 사용 → .on 클래스로 표시 제어
+function strikeHideNemoChrome(on){ ['coopBossBar','mergeFab','skillFab','autoFab','deselTop','cvMarine','cvFx','mergeZone','miniWrap','defaultCmd','zoneLabel','chatBar'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display=on?'none':''; });   // unitCmd 제외: 직스 선택 프로필(커맨드 그리드) 호스트로 사용 → .on 클래스로 표시 제어 · chatBar 숨김(전투화면 하단 비움)
   { const uc=document.getElementById('unitCmd'); if(uc){ uc.classList.remove('on','simple'); uc.innerHTML=''; uc._stkSig=null; uc.style.display=''; } }   // 진입/종료 시 초기화(인라인 display 잔존 제거)
   const kill=document.querySelector('#hudL .kill'); if(kill) kill.style.display=on?'none':'';
   const stage=document.querySelector('#hudL .stage'); if(stage) stage.style.display=on?'none':'';   // 좌상단 ROUND 숨김
@@ -13934,7 +13935,10 @@ function strikeRenderSelInfo(){ const S=STK; const host=document.getElementById(
   else if(S && S.selEnemy && !S.selEnemy.dead){ const u=S.selEnemy; model=_stkUnitModel(u,'ai'); sig='e|'+u.id+'|'+Math.round(u.hp); }
   else if(S){ const u=(S.selAllies||[]).map(uid=>strikeFindUnit(S.me.units,uid)).filter(Boolean)[0]; if(u){ model=_stkUnitModel(u,'me'); sig='a|'+u.id+'|'+Math.round(u.hp); } }
   if(model){ host.classList.add('on','simple'); if(host._stkSig!==sig){ host._stkSig=sig; renderCmdGrid(host, model); } }
-  else if(host._stkSig!=null || host.classList.contains('on')){ host.classList.remove('on'); host._stkSig=null; host.innerHTML=''; } }
+  else if(host._stkSig!=null || host.classList.contains('on')){ host.classList.remove('on'); host._stkSig=null; host.innerHTML=''; }
+  // 전투(Main) 탭: 프로필 있을 때만 하단 시트 올림 → 무선택 시 하단 섹션 완전 비움
+  if(G.tab==='Main'){ const show=!!model; if(host._stkShown!==show){ host._stkShown=show; document.body.classList.toggle('sheetOpen', show);
+    if(typeof _syncSheetLift==='function'){ requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); } } } }
 function strikeDrawFx(ctx,w2s,scale,S){ if(!S||!S.fx) return;   // 공용 FX 코어로 렌더(네모와 동일 비주얼). sz=픽셀 스케일(줌 연동)
   const sz=Math.max(0.8, Math.min(2.6, scale*8.5)); FX.drawShots(ctx, S.fx, w2s, sz); }
 function strikeDrawUnits(ctx,w2s,scale,S){ if(!S) return;
@@ -14107,6 +14111,9 @@ function strikeSwitchTab(id,el){ const S=STK; if(!S) return; G.tab=id; S.userCam
   if(zl){ const _m={Main:['⚔️','전장'],Unit:['🏗','건설지'],Upgrade:['📦','보급'],Players:['👁','관전']}[id];
     zl.innerHTML=_m? pIco(_m[0])+'<span class="zlTx">'+_m[1]+'</span>' : ''; }
   if(id==='Upgrade') strikeRenderEcon(); else if(id==='Unit') strikeRenderBuild(); else if(id==='Players') strikeRenderSpec();
+  // 전투(Main)=선택 있을 때만 하단 프로필 시트 · 그 외 탭=패널 상시 표시
+  if(id==='Main'){ const uc=document.getElementById('unitCmd'); if(uc) uc._stkShown=undefined; strikeRenderSelInfo(); }
+  else { document.body.classList.add('sheetOpen'); if(typeof _syncSheetLift==='function'){ requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); } }
   if(typeof playSfx==='function') playSfx('ui_tab'); }
 
 // ── 보급(내 진영) — 화면 시설 탭 → 하단 패널 ──
