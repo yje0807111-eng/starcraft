@@ -9661,7 +9661,9 @@ function lobbyStart(){ const players=_lobbySlots.filter(Boolean); if(players.len
     try{ RT.lobby.send({type:'broadcast', event:'party_start', payload:{ partyId:RT.partyId, from:myUid() }}); }catch(e){} }
   const active=[]; let myNum=1; const names={}; const slotInfo=[];
   _lobbySlots.forEach((s,i)=>{ if(s){ active.push(i+1); if(s.me){ myNum=i+1; names[i+1]=myNick(); } else names[i+1]=s.label||s.name; slotInfo.push({num:i+1, uid:s.uid}); } });   // 입장 순서대로 슬롯 번호 + 닉네임 + uid
-  stopLobbySim(); stopLobbyChat(); startGameNow(active, myNum, names);
+  stopLobbySim(); stopLobbyChat();
+  document.getElementById('lobby').classList.add('hide');   // 대기실 숨김(실제 방 경로와 동일) — 직스/오토배틀은 opening 오버레이가 없어 안 가리면 대기실이 게임 위에 남음
+  startGameNow(active, myNum, names);
   if(_lobbyRoom && _lobbyRoom.party) startGameCoop(slotInfo); }   // 파티 게임이면 실시간 동기화 시작
 function startLobbySim(room){ room=room||{joining:false,startCount:1,host:'나'};
   const names=LOBBY_NAMES.slice().sort(()=>Math.random()-0.5); let ni=0;
