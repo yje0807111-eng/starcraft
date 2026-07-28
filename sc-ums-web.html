@@ -7992,7 +7992,12 @@ function exitGame(){
   const p=document.getElementById('exitConfirm'); if(p){ p.classList.remove('hide'); if(typeof fxPop==='function') fxPop(p.querySelector('.ecCard')); }   // 진행 중이든 아니든 확인부터
 }
 function confirmExitGame(){ closeExitConfirm();
-  if(G && G.phase==='playing'){ G.phase='quit'; if(typeof showOverlay==='function') showOverlay(); return; }   // 진행 중 = 현재까지의 결과로 종료
+  if(G && G.phase==='playing'){ G.phase='quit';   // 진행 중 = 현재까지의 결과로 종료
+    if(G.bossOpen && typeof closeBossArena==='function') closeBossArena();   // showOverlay가 하던 정리(보스 팝업/바/BGM)를 여기서 수행
+    if(typeof updateCoopBossBar==='function') updateCoopBossBar();
+    if(typeof bgmStop==='function') bgmStop();
+    if(typeof openResultScreen==='function'){ openResultScreen(); return; }   // 게임종료 오버레이 확인 단계 생략 → 바로 종합 정보(결과) 화면
+    if(typeof showOverlay==='function'){ showOverlay(); return; } return; }   // 폴백(통계 미사용 맵 등)
   location.reload(); }
 function closeExitConfirm(){ popHide('exitConfirm'); }
 function setExpand(id){ const b=document.getElementById('body-'+id), menu=document.querySelector('#settingsPop .setMenu');
