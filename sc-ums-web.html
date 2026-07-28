@@ -13228,7 +13228,7 @@ function strikeEnd(){ if(!STK && !(G&&G.strike)) return;
 }
 
 // ── 프레임/시뮬 ──
-function strikeFrame(dt){ const S=STK; if(!S) return; strikeStep(dt);
+function strikeFrame(dt){ const S=STK; if(!S) return; strikeStep(dt*(G.speedMul||1));   // 게임 배속(설정 배속 시스템 반영) — 로딩/종료 중엔 strikeStep 내부에서 정지
   if(G.tab==='Unit') strikeDrawBuildMap();
   else if(G.tab==='Upgrade') strikeDrawSupply();   // 보급: 시설 화면(탭하면 하단 패널 열림)
   else if(G.tab==='Players' && S.specView) strikeDrawBuildMap(strikeSpecView(S.specView));   // 관전: 그 플레이어 건설 화면(그의 색)
