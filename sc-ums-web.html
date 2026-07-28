@@ -2107,6 +2107,64 @@
   .ptHelpBody .phSect{font-size:var(--fs-sm);font-weight:800;color:var(--setAcc);letter-spacing:.4px;margin:12px 0 4px}
   .ptHelpBody .phItem{padding:6px 0;border-top:1px solid rgba(255,255,255,.06)}
   .ptHelpBody .phItem b{color:#dbe3ec;font-weight:700}
+  /* ── 🎯 시작 선택 허브 ── */
+  #hubScreen.hide,#townScreen.hide{display:none}   /* id 특정성으로 .hide 우선(아래 #id{display:flex}가 .hide를 이기지 않게) */
+  #hubScreen{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center}
+  .hubWrap{display:flex;flex-direction:column;align-items:center;gap:22px;padding:20px;width:100%;max-width:420px}
+  .hubTitle{font-size:18px;font-weight:800;color:#eaf1fb;letter-spacing:.5px;text-shadow:0 2px 6px #000}
+  .hubCards{display:flex;gap:14px;width:100%;justify-content:center}
+  .hubCard{flex:1;max-width:170px;min-height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;
+    border-radius:16px;padding:20px 12px;font-family:inherit;color:#dbe3ec;
+    background:linear-gradient(180deg,rgba(30,38,54,.9),rgba(12,16,24,.95));border:1px solid var(--metal-edge);box-shadow:0 10px 30px -12px #000;transition:transform .1s}
+  .hubCard:active{transform:translateY(1px)}
+  .hubUse{border-color:rgba(92,214,255,.5);box-shadow:0 0 22px -10px rgba(92,214,255,.6)}
+  .hubRpg{border-color:rgba(255,200,90,.5);box-shadow:0 0 22px -10px rgba(255,200,90,.6)}
+  .hubIco{font-size:44px;line-height:1}
+  .hubName{font-size:16px;font-weight:800;color:#fff}
+  .hubSub{font-size:11px;color:var(--txt-mute);text-align:center}
+  /* ── 🏘 마을 ── */
+  #townScreen{position:absolute;inset:0;z-index:60;display:flex;flex-direction:column}
+  .twBar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:10px 12px;background:linear-gradient(180deg,rgba(13,18,28,.96),rgba(8,11,17,.9));border-bottom:1px solid var(--glass-edge)}
+  .twBack{flex:0 0 auto;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;color:#cdd6e2;background:rgba(255,255,255,.06);border:1px solid var(--metal-edge)}
+  .twBack .mIco{width:18px;height:18px;color:inherit}
+  .twName{font-size:14px;font-weight:800;color:#eaf1fb}
+  .twLv{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:800;color:var(--gold-lt)}
+  .twCoin{margin-left:auto;font-family:'Rajdhani',sans-serif;font-size:13px;color:var(--txt-mute)}
+  .twCoin b{font-size:16px;font-weight:800;color:#ffd24a}
+  .twMap{position:relative;flex:1;min-height:0;overflow:hidden;background:radial-gradient(circle at 50% 42%,#2a3550,#0c1018 82%)}
+  .twZone{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;z-index:2}
+  .tzIco{font-size:30px;line-height:1;filter:drop-shadow(0 3px 5px rgba(0,0,0,.6))}
+  .tzLbl{font-size:11px;font-weight:800;color:#dbe3ec;background:rgba(6,8,12,.7);padding:2px 7px;border-radius:10px;border:1px solid var(--metal-edge);white-space:nowrap}
+  .twZone:active{transform:translate(-50%,-50%) scale(.94)}
+  .twAvatar{position:absolute;transform:translate(-50%,-50%);font-size:26px;z-index:3;transition:left .5s ease,top .5s ease;filter:drop-shadow(0 3px 5px rgba(0,0,0,.7));pointer-events:none}
+  .twToast{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:5;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:700;color:#fff;
+    background:rgba(10,14,20,.92);border:1px solid rgba(255,210,74,.5);box-shadow:0 6px 18px -6px #000;white-space:nowrap;transition:opacity .3s}
+  .twToast.hide{opacity:0;pointer-events:none}
+  /* 마을 시설 팝업 */
+  #townPanel{position:absolute;inset:0;z-index:62;display:flex;align-items:center;justify-content:center;background:var(--ov-dim);backdrop-filter:blur(2px)}
+  #townPanel.hide{display:none}
+  #townPanel .setX .mIco{color:inherit}
+  .twCard{width:320px;max-width:88vw;max-height:82%;display:flex;flex-direction:column}
+  .twBody{overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:2px}
+  .twHead{font-size:12px;color:var(--txt-mute);margin:2px 2px 10px;line-height:1.5}
+  .twHead b{color:var(--gold-lt)}
+  .twSectLbl{font-size:12px;font-weight:800;color:#aeb8c6;margin:12px 2px 5px;padding-bottom:3px;border-bottom:1px solid rgba(255,255,255,.08)}
+  .twStatGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px}
+  .twStat{display:flex;align-items:center;gap:6px;padding:7px 9px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--metal-edge)}
+  .twStat .tsL{font-size:12px;color:var(--txt-mute);flex:1}
+  .twStat .tsV{font-family:'Rajdhani',sans-serif;font-weight:800;color:#dbe3ec;min-width:20px;text-align:right}
+  .twStat button{flex:0 0 auto;width:22px;height:22px;border-radius:6px;cursor:pointer;font-weight:800;line-height:1;color:#dff4ff;background:rgba(92,214,255,.2);border:1px solid rgba(92,214,255,.5)}
+  .twStat button:disabled{opacity:.3;cursor:default}
+  .twRow{display:flex;align-items:center;gap:10px;padding:9px 3px;border-top:1px solid rgba(255,255,255,.07)}
+  .twRowInfo{flex:1;min-width:0}
+  .twRowName{font-size:13px;font-weight:700;color:#dbe3ec}
+  .twRowSub{font-size:11px;color:var(--txt-mute);margin-top:2px}
+  .twRowSub.ok{color:#6ff0a0}.twRowSub.lock{color:#e0a04a}
+  .twBtn{flex:0 0 auto;min-width:56px;padding:7px 10px;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:800;font-size:12px;text-align:center;
+    color:#dff4ff;background:linear-gradient(180deg,rgba(92,214,255,.28),rgba(92,214,255,.1));border:1px solid rgba(92,214,255,.55)}
+  .twBtn.on{color:#0b1016;background:var(--setAcc);border-color:var(--setAcc)}
+  .twBtn:disabled{cursor:default;color:#7d8590;background:rgba(255,255,255,.03);border-color:var(--metal-edge)}
+  .twBtn:not(:disabled):active{transform:translateY(1px)}
   .msUser{display:flex;align-items:center;gap:5px;font-size:var(--fs-sm);color:var(--txt-hud)}
   .msUser .ic{color:#7e8896}
   .msUser b{color:#e8eef5;font-weight:700;max-width:128px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -2989,6 +3047,42 @@
     <div class="opBtns"><button class="opQuit" id="rsQuit" onclick="resultToLobby()"><i class="autoBar" id="rsAutoBar"></i><span class="ovBtnTx">나가기</span></button></div>
   </div>
 
+  <!-- 🎯 시작 선택 화면: 유즈맵 / 내 캐릭터(RPG) -->
+  <div id="hubScreen" class="appScreen spaceBg hide">
+    <div class="hubWrap">
+      <div class="hubTitle">무엇을 할까요?</div>
+      <div class="hubCards">
+        <button class="hubCard hubUse" onclick="hubGoMap()"><span class="hubIco">🗺️</span><span class="hubName">유즈맵</span><span class="hubSub">맵을 골라 판을 깬다</span></button>
+        <button class="hubCard hubRpg" onclick="hubGoTown()"><span class="hubIco">🧍</span><span class="hubName">내 캐릭터</span><span class="hubSub">마을에서 캐릭터를 키운다</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🏘 RPG 마을 -->
+  <div id="townScreen" class="appScreen spaceBg hide">
+    <div class="twBar">
+      <button class="twBack" onclick="townToHub()" aria-label="뒤로"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <span class="twName" id="twName">캐릭터</span><span class="twLv" id="twLv">Lv.1</span>
+      <span class="twCoin"><b id="twCoin">0</b> P</span>
+    </div>
+    <div class="twMap" id="twMap">
+      <div class="twZone" data-zone="gate"  style="left:50%;top:20%" onclick="townGo('gate')"><span class="tzIco">🔒</span><span class="tzLbl">관문</span></div>
+      <div class="twZone" data-zone="shop"  style="left:22%;top:45%" onclick="townGo('shop')"><span class="tzIco">🛒</span><span class="tzLbl">장비 상점</span></div>
+      <div class="twZone" data-zone="gym"   style="left:78%;top:45%" onclick="townGo('gym')"><span class="tzIco">🏋️</span><span class="tzLbl">훈련장</span></div>
+      <div class="twZone" data-zone="plaza" style="left:50%;top:72%" onclick="townGo('plaza')"><span class="tzIco">🏠</span><span class="tzLbl">광장</span></div>
+      <div class="twAvatar" id="twAvatar" style="left:50%;top:72%">🧍</div>
+    </div>
+    <div id="twToast" class="twToast hide"></div>
+  </div>
+
+  <!-- 마을 시설 팝업(구역 도착 시) -->
+  <div id="townPanel" class="hide" onclick="if(event.target===this)closeTownPanel()">
+    <div class="setCard twCard">
+      <div class="setTitle"><span id="tpTitle">시설</span><div class="setX" onclick="closeTownPanel()"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></div></div>
+      <div class="twBody" id="tpBody"></div>
+    </div>
+  </div>
+
   <div id="pointPanel" class="hide" onclick="if(event.target===this)closePointUpgrade()">
     <div class="setCard ptCard">
       <div class="setTitle ptTitle">
@@ -3716,18 +3810,155 @@ function _metaEffFromRaw(b, lv){ if(!b) return lv; const n=metaNMax(b); return (
 function metaEffLv(id){ return _metaEffFromRaw(META_BUILDS[id], buildLevel(id)); }
    // 다음 강화가 초월 레벨인지
 // 플레이어 메타(계정별 영구 데이터)
-function defaultMeta(){ return { coins:0, buildLevels:{}, highestRound:0, clearedDifficulty:'' }; }   // clearedDifficulty:''=아무것도 클리어 안 함(이지만 개방)
+// 🧍 개인 프로필 RPG(1단계) 기본값 — 유즈맵 경제와 완전 분리(재화명 pcoin, coins 아님). 자세한 규칙은 PROF_* 블록 참조.
+function defaultProfile(){ return { ver:1, xp:0, level:1, statPoints:0, pcoin:0,
+  unit:{ jobId:'recruit', level:1, evoStars:0, stats:{pow:0,vit:0,foc:0,agi:0}, gear:{weapon:0,armor:0,trinket:0} },
+  idle:{ sourceId:'drill', lastClaimTs:0 }, unlocks:{}, lastSeenTs:0 }; }
+function defaultMeta(){ return { coins:0, buildLevels:{}, highestRound:0, clearedDifficulty:'', profile:defaultProfile() }; }   // clearedDifficulty:''=아무것도 클리어 안 함(이지만 개방)
 let PLAYER_META = defaultMeta();
 const TEMP_COIN_TEST=false;   // [임시] 포인트 상점 밸런스 테스트 — 포인트 무한 + 로비 진입 시 업그레이드 초기화. 끝나면 false 또는 이 블록 제거.
 function metaKey(){ const u=(typeof AUTH!=='undefined' && AUTH.user) ? AUTH.user : null;
   return 'nm_meta_' + (u ? (u.uid || u.email || u.nick || 'guest') : 'guest'); }
 function loadMeta(){ try{ const raw=localStorage.getItem(metaKey());
   PLAYER_META = raw ? Object.assign(defaultMeta(), JSON.parse(raw)) : defaultMeta();
-  if(!PLAYER_META.buildLevels) PLAYER_META.buildLevels={}; }catch(e){ PLAYER_META=defaultMeta(); }
+  if(!PLAYER_META.buildLevels) PLAYER_META.buildLevels={};
+  migrateProfile(); }catch(e){ PLAYER_META=defaultMeta(); }
   return PLAYER_META; }
+// 얕은 병합(로컬/서버) 대비: profile 블록 보정 + 내부 신규 키 back-fill(ver 기준). 손상돼도 기본값으로 복구.
+function migrateProfile(){ const d=defaultProfile();
+  if(!PLAYER_META.profile || typeof PLAYER_META.profile!=='object'){ PLAYER_META.profile=d; return; }
+  const p=PLAYER_META.profile;
+  for(const k in d){ if(p[k]===undefined) p[k]=d[k]; }                 // 최상위 키 채움
+  if(!p.unit) p.unit=d.unit; else { for(const k in d.unit) if(p.unit[k]===undefined) p.unit[k]=d.unit[k];
+    if(!p.unit.stats) p.unit.stats=Object.assign({},d.unit.stats); else for(const k in d.unit.stats) if(p.unit.stats[k]===undefined) p.unit.stats[k]=0;
+    if(!p.unit.gear)  p.unit.gear =Object.assign({},d.unit.gear);  else for(const k in d.unit.gear)  if(p.unit.gear[k]===undefined)  p.unit.gear[k]=0; }
+  if(!p.idle) p.idle=d.idle; else for(const k in d.idle) if(p.idle[k]===undefined) p.idle[k]=d.idle[k];
+  if(!p.unlocks) p.unlocks={};
+  p.ver=d.ver; }
+function PROF(){ return PLAYER_META.profile || (PLAYER_META.profile=defaultProfile()); }   // 안전 접근자
 function saveMeta(){ try{ localStorage.setItem(metaKey(), JSON.stringify(PLAYER_META)); }catch(e){}
   if(typeof sbSaveMetaDebounced==='function') sbSaveMetaDebounced(); }   // 로컬 + 계정(서버) 동시 저장
 function buildLevel(id){ return (PLAYER_META.buildLevels && PLAYER_META.buildLevels[id]) || 0; }
+
+// ============================================================================
+// 🧍 개인 프로필 RPG (1단계) — 유즈맵 경제와 완전 분리. 재화=pcoin(≠coins). G/유즈맵 밸런스 절대 미접촉.
+// 이 블록은 PLAYER_META.profile만 읽고 쓴다. metaBonus/bankRunPoints/gainMineral/step에는 절대 등장 금지.
+// ============================================================================
+const PROF_STATS=['pow','vit','foc','agi'];   // 공격 / 체력 / 집중(치명) / 민첩(속도)
+const PROF_STAT_NAME={pow:'공격',vit:'체력',foc:'집중',agi:'민첩'};
+const PROF_JOBS={
+  recruit:{ name:'훈련병', tier:0, reqLv:1,  base:{pow:5,vit:5,foc:3,agi:3},   next:['soldier','scout'] },
+  soldier:{ name:'전사',   tier:1, reqLv:10, base:{pow:9,vit:8,foc:3,agi:4},   next:['knight','berserker'] },
+  scout:  { name:'정찰병', tier:1, reqLv:10, base:{pow:6,vit:5,foc:6,agi:8},   next:['ranger','assassin'] },
+  knight:   { name:'기사',   tier:2, reqLv:25, base:{pow:12,vit:14,foc:4,agi:4},  next:[] },
+  berserker:{ name:'광전사', tier:2, reqLv:25, base:{pow:16,vit:9, foc:5,agi:6},  next:[] },
+  ranger:   { name:'레인저', tier:2, reqLv:25, base:{pow:11,vit:7, foc:11,agi:9}, next:[] },
+  assassin: { name:'암살자', tier:2, reqLv:25, base:{pow:13,vit:6, foc:13,agi:12},next:[] },
+};
+const PROF_GEAR={ weapon:{name:'무기',stat:'pow',per:3,baseCost:50}, armor:{name:'방어구',stat:'vit',per:4,baseCost:50}, trinket:{name:'장신구',stat:'foc',per:2,baseCost:70,reqUnlock:'gear_trinket'} };
+const PROF_IDLE_SOURCES={ drill:{name:'훈련장',rate:0.6,tip:'공격 위주'}, library:{name:'수련관',rate:0.6,tip:'집중 위주'}, arena:{name:'투기장',rate:1.0,reqUnlock:'idle_arena',tip:'고수익'} };
+const PROF_UNLOCKS=[ {id:'gear_trinket',power:80,label:'장신구 슬롯'}, {id:'idle_arena',power:200,label:'투기장 자동수익'}, {id:'evolve',power:350,label:'유닛 진화(★)'}, {id:'idle_8h',power:600,label:'오프라인 8시간·100%'} ];
+const PROF_OFF_CAP_MIN=4*60, PROF_OFF_RATE=0.5, PROF_OFF_CAP8_MIN=8*60, PROF_OFF_RATE8=1.0;   // 오프라인 상한/비율(idle_8h 해금 시 8h/100%)
+// 곡선(순수함수)
+function profXpForLevel(lv){ return Math.round(50*Math.pow(lv,1.5)); }
+function profGearCost(slot,tier){ const g=PROF_GEAR[slot]; return g? Math.round(g.baseCost*(tier+1)) : 0; }
+function profClassCost(jobId){ const J=PROF_JOBS[jobId]; return J? J.tier*400 : 0; }
+// 스탯/파워(전부 read-only)
+function profStat(k){ const p=PROF(), J=PROF_JOBS[p.unit.jobId]||PROF_JOBS.recruit;
+  let gear=0; for(const slot in p.unit.gear){ const g=PROF_GEAR[slot]; if(g&&g.stat===k) gear+=(p.unit.gear[slot]||0)*g.per; }
+  return (J.base[k]||0) + (p.unit.stats[k]||0) + gear + p.unit.level + p.unit.evoStars*2; }
+function profPower(){ return Math.round(profStat('pow')*3 + profStat('vit')*2 + profStat('foc')*2 + profStat('agi')*1.5); }
+function profHasUnlock(id){ const p=PROF(); if(p.unlocks[id]) return true; const u=PROF_UNLOCKS.find(x=>x.id===id); return !!u && profPower()>=u.power; }
+function profSyncUnlocks(){ const p=PROF(), pw=profPower(); for(const u of PROF_UNLOCKS){ if(!p.unlocks[u.id] && pw>=u.power) p.unlocks[u.id]=true; } }   // 한 번 넘으면 영구
+// 레벨업(xp→level, statPoints 지급). 유닛 레벨도 동반 상승.
+function profApplyLevelUps(p){ p=p||PROF(); let ups=0; while(p.xp>=profXpForLevel(p.level) && ups<9999){ p.xp-=profXpForLevel(p.level); p.level++; p.unit.level++; p.statPoints+=3; ups++; } return ups; }
+// 방치 수익(분당 pcoin) = 파워 기반 × 소스 배율
+function profIdleRate(){ const p=PROF(), src=PROF_IDLE_SOURCES[p.idle.sourceId]||PROF_IDLE_SOURCES.drill; return (1 + profPower()*0.01) * (src.rate||0.6); }
+// 액션(성공 true · saveMeta 포함 · 재렌더는 호출측)
+function profAllocStat(k){ const p=PROF(); if(p.statPoints<=0 || PROF_STATS.indexOf(k)<0) return false; p.unit.stats[k]=(p.unit.stats[k]||0)+1; p.statPoints--; profSyncUnlocks(); saveMeta(); return true; }
+function profBuyGear(slot){ const p=PROF(), g=PROF_GEAR[slot]; if(!g) return false; if(g.reqUnlock && !profHasUnlock(g.reqUnlock)) return false;
+  const tier=p.unit.gear[slot]||0, cost=profGearCost(slot,tier); if(p.pcoin<cost) return false; p.pcoin-=cost; p.unit.gear[slot]=tier+1; profSyncUnlocks(); saveMeta(); return true; }
+function profClassChange(jobId){ const p=PROF(), cur=PROF_JOBS[p.unit.jobId], J=PROF_JOBS[jobId]; if(!cur||!J) return false;
+  if(cur.next.indexOf(jobId)<0) return false; if(p.unit.level<J.reqLv) return false; const cost=profClassCost(jobId); if(p.pcoin<cost) return false;
+  p.pcoin-=cost; p.unit.jobId=jobId; profSyncUnlocks(); saveMeta(); return true; }
+function profSetIdleSource(id){ const p=PROF(), src=PROF_IDLE_SOURCES[id]; if(!src) return false; if(src.reqUnlock && !profHasUnlock(src.reqUnlock)) return false; p.idle.sourceId=id; saveMeta(); return true; }
+// 판 종료 보상 — 순수 read G / write profile. 자체 난이도배율(유즈맵 coinMult와 무관). _runSummary에서 1회 호출.
+function profRunReward(){ const p=PROF();
+  const dMul={easy:0.8,normal:1,hard:1.4,hell:1.8,nightmare:2.4}[G.difficulty||'normal']||1;
+  const k=G.kills||0, rd=G.round||0;
+  const xp=Math.round((10 + k*0.5 + rd*8)*dMul), pc=Math.round((5 + k*0.2 + rd*4)*dMul);
+  p.xp+=xp; const ups=profApplyLevelUps(p); p.pcoin+=pc; profSyncUnlocks(); saveMeta();
+  return { xp:xp, pc:pc, ups:ups, level:p.level }; }
+// 방치 정산(오프라인/켜둠) — Date.now 기준(1단계 클라이언트 신뢰). 유즈맵과 무관.
+function profOfflineCapMin(){ return profHasUnlock('idle_8h')?PROF_OFF_CAP8_MIN:PROF_OFF_CAP_MIN; }
+function profOfflineRate(){ return profHasUnlock('idle_8h')?PROF_OFF_RATE8:PROF_OFF_RATE; }
+function profClaimOffline(){ const p=PROF(), now=Date.now(), last=p.idle.lastClaimTs||p.lastSeenTs||now;
+  const mins=Math.max(0, Math.min((now-last)/60000, profOfflineCapMin())), gained=Math.round(profIdleRate()*mins*profOfflineRate());
+  p.idle.lastClaimTs=now; p.lastSeenTs=now; if(gained>0){ p.pcoin+=gained; saveMeta(); } return gained; }
+function profIdleTick(){ if(!PLAYER_META||!PLAYER_META.profile) return; const p=PROF();   // 켜둔 동안 60초마다 100%
+  p.pcoin+=profIdleRate(); const now=Date.now(); p.lastSeenTs=now; p.idle.lastClaimTs=now; saveMeta();
+  if(typeof _townOpen!=='undefined' && _townOpen && typeof renderTownIdle==='function') renderTownIdle(); }
+function profStampSeen(){ if(PLAYER_META&&PLAYER_META.profile){ PLAYER_META.profile.lastSeenTs=Date.now(); try{ localStorage.setItem(metaKey(), JSON.stringify(PLAYER_META)); }catch(e){} } }
+
+// ── 🎯 시작 허브 + 🏘 마을 UI ──
+let _townOpen=false, _twZone=null, _twMoveT=null;
+const ZONE_POS={ plaza:[50,72], shop:[22,45], gym:[78,45], gate:[50,20] };
+function openHub(){ loadMeta(); if(typeof bgmStart==='function') bgmStart('lobby'); showAppScreen('hubScreen'); }
+function hubGoMap(){ if(typeof playSfx==='function') playSfx('ui_open'); openMapSelect(); }
+function hubGoTown(){ if(typeof playSfx==='function') playSfx('ui_open'); openTown(); }
+function openTown(){ loadMeta(); _townOpen=true; showAppScreen('townScreen');
+  const av=document.getElementById('twAvatar'); if(av){ av.style.left='50%'; av.style.top='72%'; }
+  const g=profClaimOffline(); renderTownBar(); if(g>0) showTownToast('오프라인 보상 +'+g+' P'); }
+function townToHub(){ _townOpen=false; closeTownPanel(); profStampSeen(); if(typeof playSfx==='function') playSfx('ui_close'); openHub(); }
+function renderTownBar(){ const p=PROF();
+  const nm=document.getElementById('twName'); if(nm) nm.textContent=(typeof myNick==='function'?myNick():'캐릭터');
+  const lv=document.getElementById('twLv'); if(lv) lv.textContent='Lv.'+p.level;
+  const cn=document.getElementById('twCoin'); if(cn) cn.textContent=Math.floor(p.pcoin); }
+function showTownToast(msg){ const t=document.getElementById('twToast'); if(!t) return; t.textContent=msg; t.classList.remove('hide');
+  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.add('hide'), 2600); }
+function townGo(zone){ const pos=ZONE_POS[zone]; if(!pos) return; if(typeof playSfx==='function') playSfx('ui_open');
+  const av=document.getElementById('twAvatar'); if(av){ av.style.left=pos[0]+'%'; av.style.top=pos[1]+'%'; }
+  if(_twMoveT) clearTimeout(_twMoveT); _twMoveT=setTimeout(function(){ _twMoveT=null; openTownPanel(zone); }, 520); }
+function openTownPanel(zone){ _twZone=zone; const t=document.getElementById('tpTitle');
+  const T={plaza:'광장 · 내 캐릭터',shop:'장비 상점',gym:'훈련장',gate:'관문'}; if(t) t.textContent=T[zone]||'시설';
+  refreshTownPanel(); popShow('townPanel'); }
+function refreshTownPanel(){ const body=document.getElementById('tpBody'); if(!body||!_twZone) return;
+  body.innerHTML = _twZone==='plaza'?renderProfStats() : _twZone==='shop'?renderProfGear() : _twZone==='gym'?renderProfIdle() : renderProfGate(); }
+function closeTownPanel(){ popHide('townPanel'); _twZone=null; }
+function renderTownIdle(){ renderTownBar(); const tp=document.getElementById('townPanel'); if(_twZone==='gym' && tp && !tp.classList.contains('hide')) refreshTownPanel(); }
+// 광장: 스탯 + 전직
+function renderProfStats(){ const p=PROF(), J=PROF_JOBS[p.unit.jobId]||PROF_JOBS.recruit;
+  let h='<div class="twHead">직업 <b>'+J.name+'</b> · Lv.'+p.level+' · 파워 <b>'+profPower()+'</b><br>남은 스탯 포인트 <b>'+p.statPoints+'</b> · 다음 레벨까지 '+Math.max(0,profXpForLevel(p.level)-p.xp)+' XP</div><div class="twStatGrid">';
+  for(const k of PROF_STATS){ h+='<div class="twStat"><span class="tsL">'+PROF_STAT_NAME[k]+'</span><span class="tsV">'+profStat(k)+'</span><button onclick="profDoAlloc(\''+k+'\')"'+(p.statPoints>0?'':' disabled')+'>+</button></div>'; }
+  h+='</div>';
+  if(J.next && J.next.length){ h+='<div class="twSectLbl">전직</div>';
+    for(const nx of J.next){ const N=PROF_JOBS[nx], cost=profClassCost(nx), okLv=p.unit.level>=N.reqLv, ok=okLv&&p.pcoin>=cost;
+      h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+N.name+'</div><div class="twRowSub'+(okLv?'':' lock')+'">필요 Lv.'+N.reqLv+' · 비용 '+cost+' P</div></div><button class="twBtn" onclick="profDoClass(\''+nx+'\')"'+(ok?'':' disabled')+'>전직</button></div>'; } }
+  return h; }
+function profDoAlloc(k){ if(profAllocStat(k)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); } }
+function profDoClass(id){ if(profClassChange(id)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); showTownToast('전직 완료!'); } }
+// 장비 상점
+function renderProfGear(){ const p=PROF();
+  let h='<div class="twHead">보유 <b>'+Math.floor(p.pcoin)+' P</b> · 장비를 강화해 스탯을 올립니다.</div>';
+  for(const slot in PROF_GEAR){ const g=PROF_GEAR[slot], locked=g.reqUnlock&&!profHasUnlock(g.reqUnlock), tier=p.unit.gear[slot]||0, cost=profGearCost(slot,tier), poor=p.pcoin<cost;
+    const reqP=(PROF_UNLOCKS.find(u=>u.id===g.reqUnlock)||{}).power;
+    const sub = locked ? ('🔒 파워 '+reqP+' 필요') : ('Lv.'+tier+' · +'+PROF_STAT_NAME[g.stat]+' '+(tier*g.per)+' → '+((tier+1)*g.per));
+    h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+g.name+'</div><div class="twRowSub'+(locked?' lock':'')+'">'+sub+'</div></div><button class="twBtn" onclick="profDoGear(\''+slot+'\')"'+((locked||poor)?' disabled':'')+'>'+(locked?'잠김':cost+' P')+'</button></div>'; }
+  return h; }
+function profDoGear(slot){ if(profBuyGear(slot)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); } }
+// 훈련장(방치)
+function renderProfIdle(){ const p=PROF();
+  let h='<div class="twHead">켜두면 분당 <b>'+profIdleRate().toFixed(1)+' P</b> 자동 적립.<br>껐다 켜면 최대 '+(profOfflineCapMin()/60)+'시간 · '+(profOfflineRate()*100)+'% 정산.</div><div class="twSectLbl">일하는 곳 고르기</div>';
+  for(const id in PROF_IDLE_SOURCES){ const s=PROF_IDLE_SOURCES[id], locked=s.reqUnlock&&!profHasUnlock(s.reqUnlock), on=p.idle.sourceId===id;
+    const reqP=(PROF_UNLOCKS.find(u=>u.id===s.reqUnlock)||{}).power;
+    h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+s.name+'</div><div class="twRowSub'+(locked?' lock':'')+'">'+(locked?('🔒 파워 '+reqP+' 필요'):('배율 '+s.rate+'× · '+(s.tip||'')))+'</div></div><button class="twBtn'+(on?' on':'')+'" onclick="profDoIdle(\''+id+'\')"'+(locked?' disabled':'')+'>'+(on?'선택됨':'선택')+'</button></div>'; }
+  return h; }
+function profDoIdle(id){ if(profSetIdleSource(id)){ if(typeof playSfx==='function') playSfx('ui_open'); refreshTownPanel(); } }
+// 관문(해금 사다리)
+function renderProfGate(){ let h='<div class="twHead">캐릭터 파워 <b>'+profPower()+'</b>. 파워가 오르면 아래가 열립니다.</div>';
+  for(const u of PROF_UNLOCKS){ const open=profHasUnlock(u.id);
+    h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+u.label+'</div><div class="twRowSub '+(open?'ok':'lock')+'">'+(open?'✓ 열림':('🔒 파워 '+u.power+' 필요'))+'</div></div></div>'; }
+  return h; }
 // 현재 빌드 레벨 → 게임 효과(개인 적용). 게임 시작 시 G.metaB에 캐시.
 //  team_* = 전체 강화: 협동에선 파티 중 '최고 레벨'이 모두에게 적용(인원수 인플레 방지). 솔로면 내 레벨.
 const _TEAM_IDS=['team_atk','team_aspd','team_enemy_hp','team_enemy_def','team_credit','team_luck'];
@@ -8103,6 +8334,7 @@ function _runSummary(){ if(G._runSum) return G._runSum;
   const nowInf=(typeof infiniteUnlocked==='function')&&infiniteUnlocked();
   let nextName=''; if(nowDiff!==hadDiff){ const nx=DIFF_RANK[DIFF_RANK.indexOf(nowDiff)+1]; if(nx&&DIFFICULTY[nx]) nextName=DIFFICULTY[nx].name; }
   G._runSum={ coins:bankRunPoints(), kills:G.kills||0, round:G.round, time:G.timeSec, newDiff:nextName, infNew:(!hadInf&&nowInf) };
+  G._runSum.prof=(typeof profRunReward==='function')?profRunReward():null;   // 🧍 프로필 RPG 보상(유즈맵 재화와 완전 분리)
   return G._runSum; }
 function fmtTime(sec){ sec=Math.max(0,Math.floor(sec||0)); const m=Math.floor(sec/60), s=sec%60; return (m<10?'0':'')+m+':'+(s<10?'0':'')+s; }
 function _ovBtnTx(btn,txt){ const t=btn&&btn.querySelector('.ovBtnTx'); if(t) t.textContent=txt; }   // 라벨만 교체(진행 바 유지)
@@ -8143,7 +8375,9 @@ function openResultScreen(){ const sc=document.getElementById('resultScreen'); i
    +ovStatRow('플레이타임', fmtTime(S.time))
    +(S.newDiff?ovStatRow('난이도 해금','<b class="osNew">'+S.newDiff+'</b>'):'')
    +(S.infNew?ovStatRow('모드 해금','<b class="osNew">무한 모드</b>'):'')
-   +ovStatRow('보유 포인트','◎ '+(((typeof PLAYER_META!=='undefined')&&PLAYER_META.coins)||0));
+   +ovStatRow('보유 포인트','◎ '+(((typeof PLAYER_META!=='undefined')&&PLAYER_META.coins)||0))
+   +((S.prof)?(ovStatRow('내 캐릭터 XP','<b class="osNew">+'+S.prof.xp+'</b>'+(S.prof.ups?' · Lv.'+S.prof.level:''))
+             +ovStatRow('수련 코인','<b class="osNew">+'+S.prof.pc+'</b>')):'');   // 🧍 프로필 RPG 보상 표기
   if(typeof setInGame==='function') setInGame(false);   // 게임 크롬(하단 콘솔) 정리
   sc.classList.remove('hide'); _rsStartAuto(); }        // 10초 뒤 자동으로 로비
 function resultToLobby(){ _rsClearAuto(); const sc=document.getElementById('resultScreen'); if(sc) sc.classList.add('hide');
@@ -8257,7 +8491,7 @@ function playScreenFx(el){
 function fxPop(card){ if(!card) return; card.classList.remove('fxPop'); void card.offsetWidth; card.classList.add('fxPop');
   clearTimeout(card._fxT); card._fxT=setTimeout(()=>card.classList.remove('fxPop'),470); }
 // ── 앱 화면 전환 ──
-const APP_SCREENS=['opening','auth','mapSelect','modeSheet'];
+const APP_SCREENS=['opening','auth','mapSelect','modeSheet','hubScreen','townScreen'];
 function showAppScreen(id){ setInGame(false);
   if(id!=='mapSelect' && id!=='modeSheet' && typeof stopMapLive==='function') stopMapLive();   // 유즈맵 화면 떠나면 실시간 갱신 정지
   ['ov','lobby','rooms','createPanel','pwPanel'].forEach(x=>{const e=document.getElementById(x); if(e)e.classList.add('hide');});
@@ -8364,7 +8598,10 @@ function _gsFinish(){ const op=document.getElementById('opening'); if(!op||op._f
 // ── 부팅 흐름: 오프닝 → (자동로그인 ? 유즈맵 : 로그인) ──
 async function bootApp(){ await initAuth();
   if(!AUTH.user){ AUTH.user={id:'dev', nick:'플레이어'}; try{ _lsSet('nm_session', AUTH.user); }catch(e){} }   // (임시) 자동 로그인 — 로그인 화면 건너뜀(고정 유저로 진행 유지). 되돌릴 때 이 줄 제거
-  setTimeout(()=>{ if(AUTH.user) openMapSelect(); else openAuth(); }, 1700); }   // 오프닝 최소 노출
+  setTimeout(()=>{ if(AUTH.user) openHub(); else openAuth(); }, 1700); }   // 오프닝 최소 노출 → 시작 선택(유즈맵/내 캐릭터)
+// 🧍 방치 하트비트: 앱 켜져 있으면 60초마다 100% 자동 적립(유즈맵과 무관)
+try{ setInterval(profIdleTick, 60000); }catch(e){}
+window.addEventListener('beforeunload', function(){ try{ profStampSeen(); }catch(e){} });   // 종료 시 시각 스탬프(다음 접속 오프라인 정산 기준)
 // ── 로그인 화면 ──
 let _authTab='login';
 function openAuth(){
@@ -9397,7 +9634,8 @@ function coopReconnect(){ if(!G || G.phase!=='playing' || !G.coopSlotInfo) retur
 // 브라우저 네트워크 상태 — 끊김 알림 + 복귀 시 자동 재접속
 window.addEventListener('offline', ()=>{ if(typeof toast==='function') toast('⚠️ 네트워크 연결이 끊겼습니다'); });
 document.addEventListener('visibilitychange', ()=>{   // 백그라운드 탭: 10Hz 송신 정지(대역·배터리 절약), 복귀 시 재개
-  if(document.hidden){ if(typeof G!=='undefined' && G && G.coopStateT){ clearInterval(G.coopStateT); G.coopStateT=null; } }
+  if(document.hidden){ if(typeof profStampSeen==='function') profStampSeen();   // 🧍 숨김 = 방치 시각 스탬프(오프라인 정산 기준)
+    if(typeof G!=='undefined' && G && G.coopStateT){ clearInterval(G.coopStateT); G.coopStateT=null; } }
   else if(typeof G!=='undefined' && G && !G.coopStateT && typeof coopActive==='function' && coopActive()){ G.coopStateT=setInterval(coopBroadcastState, 100); } });
 window.addEventListener('online', ()=>{ if(typeof toast==='function') toast('✓ 네트워크가 다시 연결되었습니다');
   if(G && G.phase==='playing' && G.coopSlotInfo && !coopActive()) coopReconnect();
