@@ -8330,6 +8330,9 @@ function gsQuitToMaps(){ const op=document.getElementById('opening'); if(!op) re
   op.classList.remove('counting','ready','timing','warp');
   const nm=document.getElementById('opNum'); if(nm){ nm.textContent=''; }
   if(typeof G!=='undefined'&&G) G.loading=false;
+  if(typeof G!=='undefined'&&G&&G.strike){ G.strike=false; STK=null;   // 직스: 카운트다운 중 나가기 → 직스 크롬 원복(대기실 잔존 방지)
+    if(typeof strikeSetTabLabels==='function') strikeSetTabLabels(STK_NEMOLABEL);
+    if(typeof strikeHideNemoChrome==='function') strikeHideNemoChrome(false); }
   if(typeof setInGame==='function') setInGame(false);
   if(typeof playSfx==='function') playSfx('ui_close');
   overlayToLobby(); }   // G 리셋·코옵 종료·방 닫기 → 로딩 → 유즈맵 선택
@@ -9321,7 +9324,7 @@ function submitPw(){ if(!_pwRoom) return; const f=document.getElementById('pwFie
   else { if(typeof playSfx==='function') playSfx('ui_denied'); document.getElementById('pwErr').textContent='비밀번호가 일치하지 않습니다.'; if(f){ f.value=''; f.focus(); } } }
 function startGameNow(activePlayers, myNum, names){
   MAP=(typeof _selMap!=='undefined' && _selMap && USEMAPS[_selMap.id]) || USEMAPS.nemo; if(typeof applyMapBalance==='function') applyMapBalance();   // 현재 유즈맵 확정 + 맵별 밸런스 주입
-  if(mapCfg('mode')==='strike'){ strikeStart(); return; }   // 직스 모드 → 독립 모듈(nemo 우회). (3D 에셋은 추후 단계에서 loadMapModels)
+  if(mapCfg('mode')==='strike'){ strikeStart(activePlayers, myNum, names); return; }   // 직스 모드 → 독립 모듈(nemo 우회). (3D 에셋은 추후 단계에서 loadMapModels)
   if(mapCfg('mode')==='sandbox'){ enterSandbox(); return; }   // 관리자용 샌드박스 — 게임 진행 X, 유닛 진열·기본값 편집
   if(typeof bgmStop==='function') bgmStop();   // 게임 진입 시 로비 BGM 정지
   G=newGame(); G.phase='playing'; G.difficulty=(mapCfg('fixedDiff')||_selDiff); G.roundPhase='prep'; G.roundTime=mapCfg('prepTime',PREP_TIME); G.toSpawn=0;
@@ -13183,8 +13186,9 @@ function strikeHideNemoChrome(on){ ['coopBossBar','mergeFab','skillFab','autoFab
   const uh=document.getElementById('upgHint'), ul=document.getElementById('upgList'); if(uh&&on) uh.style.display='none'; if(ul&&on) ul.style.display='none';
   const sb=document.getElementById('stBuildBp'), se=document.getElementById('stEconBp'); if(sb) sb.classList.toggle('hide',!on); if(se) se.classList.toggle('hide',!on);
 }
-function strikeStart(){ if(typeof bgmStop==='function') bgmStop();
+function strikeStart(activePlayers, myNum, names){ if(typeof bgmStop==='function') bgmStop();
   G=newGame(); G.strike=true; G.phase='playing'; G.tab='Main'; G.sel=[]; G.selEnemy=null;
+  G.activePlayers=(activePlayers&&activePlayers.length)?activePlayers.slice():[1]; G.myPlayer=myNum||1; G.playerNames=names||{};   // 로딩화면 플레이어 목록·닉네임(네모와 동일)
   STK=strikeNewState();
   STK.me.race=(STK_RACES[_selRace]?_selRace:'terran'); STK.ai.race=strikeRandomRace();   // 내 종족=선택, 상대=랜덤 → 각자 그 종족 유닛만 소환
   STK.buildMenu=strikeBuildable(STK.me.race);   // 내 종족 빌드 메뉴 캐시(이전 판 잔존 방지)
@@ -13206,7 +13210,9 @@ function strikeStart(){ if(typeof bgmStop==='function') bgmStop();
   strikeSetTabLabels(STK_TABLABEL);
   const mn=document.getElementById('mapName'); if(mn) mn.textContent='◈ 오토 배틀';
   strikeSwitchTab('Main');
-  if(typeof showLoading==='function') showLoading(null, 1300);   // 직스 진입 로딩 화면(게임 셋업 후 1.3초 노출)
+  G.loading=true;   // 로딩 동안 시뮬 정지(네모와 동일 — 오프닝 워프 후 진행)
+  if(typeof gameStartCountdown==='function') gameStartCountdown();   // 네모와 동일한 게임 진입 로딩 화면(맵 썸네일·특징 설명·플레이어·준비) — 설명은 cpu.feats(오토배틀용)
+  else if(typeof showLoading==='function') showLoading(null, 1300);   // 폴백
   if(typeof playSfx==='function') playSfx('game_start');
 }
 function strikeEnd(){ if(!STK && !(G&&G.strike)) return;
@@ -13304,7 +13310,7 @@ function strikeDrawBuildMap(spec){ const S=STK; if(!S) return; const cvEl=docume
 function strikeBuildClamp(b,sc,W,H){ const hvx=(W/sc)/2, hvy=(H/sc)/2;
   b.cam.x = (b.W<=hvx*2) ? b.W/2 : Math.max(hvx, Math.min(b.W-hvx, b.cam.x));
   b.cam.y = (b.H<=hvy*2) ? b.H/2 : Math.max(hvy, Math.min(b.H-hvy, b.cam.y)); }
-function strikeStep(dt){ const S=STK; if(!S) return; if(S.over) return; S.t+=dt;   // 종료 시 시뮬·소환 정지(결과창 표시 중)
+function strikeStep(dt){ const S=STK; if(!S) return; if(S.over) return; if(G&&G.loading) return; S.t+=dt;   // 종료·로딩(오프닝) 중 시뮬·소환 정지
   strikeStepUnits(dt);   // 전투 시뮬(소환·진격·교전·신전 타격)
   S.cycleT-=dt;
   if(S.cycleT<=0){ S.cycleT+=S.cycleTime; S.round++;
