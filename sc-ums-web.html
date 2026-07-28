@@ -348,10 +348,9 @@
   .hsThumb img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))}.hsThumb svg{width:32px;height:32px}
   .hsCnt{position:absolute;top:3px;left:4px;z-index:5;font-family:'Rajdhani',sans-serif;font-size:var(--fs-sm);font-weight:800;color:#fff;
     padding:0 4px;border-radius:var(--r-bar);background:rgba(6,8,12,.78);border:1px solid rgba(255,255,255,.18);line-height:1.45;text-shadow:0 1px 2px #000}
-  .hsVal{display:block;font-family:'Rajdhani',sans-serif;font-size:var(--fs-md);font-weight:800;color:var(--gold);text-align:center;line-height:15px;letter-spacing:.2px;
-    background:rgba(6,8,12,.82);border-top:1px solid rgba(255,210,74,.4);text-shadow:0 1px 2px #000,0 0 4px rgba(0,0,0,.9)}
-  .hsName{display:block;font-size:9px;font-weight:700;color:#dbe3ee;text-align:center;line-height:12px;padding:2px 2px 1px;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:rgba(6,8,12,.62);border-top:1px solid rgba(255,255,255,.07)}
+  .hsMeta{display:flex;align-items:baseline;gap:3px;padding:2px 5px 3px;background:rgba(6,8,12,.66);border-top:1px solid rgba(255,255,255,.07)}   /* 이름(좌) · 회수가(우) 한 줄 */
+  .hsName{flex:1 1 auto;min-width:0;font-size:9px;font-weight:700;color:#dbe3ee;text-align:left;line-height:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hsVal{flex:0 0 auto;font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:800;color:var(--gold);line-height:12px;letter-spacing:.2px;text-shadow:0 1px 2px #000}
   .hsEmpty{font-size:var(--fs-xs);color:#7d8590;padding:8px 2px}
   
   
@@ -493,7 +492,7 @@
   .bldg:active .bframe{transform:translateY(1px)}
   .bldg.sel .bframe{border-color:#fff;box-shadow:0 0 18px var(--bc,#ff3b3b),inset 0 0 14px rgba(0,0,0,.45)}
   
-  /* 엔지니어링 베이 = 비콘 패드(바닥 발광 링 + 떠 있는 코어) */
+  /* 공학소 = 비콘 패드(바닥 발광 링 + 떠 있는 코어) */
   .bldg .bbeacon{position:relative;width:64px;height:64px;margin:0 auto;display:flex;align-items:center;justify-content:center}
   .bldg .bbRing{position:absolute;left:50%;bottom:5px;transform:translateX(-50%);width:52px;height:18px;border-radius:50%;
     border:2px solid var(--bc,#ffd24a);background:radial-gradient(ellipse at 50% 50%,rgba(255,210,74,.22),transparent 70%);
@@ -1481,12 +1480,13 @@
   .plbtn:active{transform:translateY(1px)}
   .plbtn.me{border-color:var(--pc);background:linear-gradient(160deg,rgba(58,44,50,.58),rgba(18,12,16,.74));box-shadow:0 0 13px -4px var(--pc),inset 0 1px 0 rgba(255,255,255,.08)}  /* 관전 중 */
   .plbtn.me::after{opacity:1;box-shadow:0 0 6px var(--pc)}
-  .plbtn.off{cursor:default;pointer-events:none;opacity:.32;filter:saturate(.25)}   /* 미입장/이탈 슬롯(관전 불가) */
-  .plbtn.off::after{opacity:.25}
-  .plbtn.off .plnum{color:#6a7682}.plbtn.off .plst{color:#6a7682}
-  .plbtn.lock{cursor:default;opacity:.55;filter:saturate(.5)}   /* 내 슬롯=잠금(관전 불가) */
-  .plbtn.lock::after{opacity:.35}
-  .plbtn.lock .plnum{color:#9aa8b8}
+  .plbtn.off{cursor:default;pointer-events:none;filter:brightness(.6) saturate(.12)}   /* 빈 자리(미입장): 색 없음 · 흰색 계열 + 약한 어둠 */
+  .plbtn.off::after{opacity:.14}
+  .plbtn.off .plnum{color:#b6bdc8}.plbtn.off .plst{color:#7d8590}
+  .plbtn.mine{cursor:default;pointer-events:none;filter:saturate(.6) brightness(.72)}   /* 내 슬롯: 내 색 유지 · 채도↓·어둡게 · 관전 불가(잠금 아이콘 없음) */
+  .plbtn.mine::after{opacity:.7}
+  .plbtn.gone{cursor:default;pointer-events:none;filter:saturate(.55) brightness(.58)}   /* 탈락: 그 플레이어 색 유지 + 어두운 필터 · 관전 불가 */
+  .plbtn.gone::after{opacity:.5}
   .plnum{font-size:18px;font-weight:800;font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif;color:var(--pc);line-height:1;text-shadow:0 1px 2px #000}
   .plst{font-size:var(--fs-xs);font-weight:700;letter-spacing:.3px;color:#9aa6b4;max-width:96%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .plcnt{font-size:8.5px;font-weight:700;color:var(--txt-hud);margin-top:2px;font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif}
@@ -1527,7 +1527,7 @@
   /* 본문 = 별도 상자 없이 카드 안에 그대로 */
   .ovPanel{padding:2px 2px 0}
   #ovDesc{font-size:var(--fs-md);color:#c2ccda;line-height:1.5;margin:0;white-space:pre-line;word-break:keep-all}
-  /* 결과 통계(플레이타임·도달 라운드·받은 코인) */
+  /* 결과 통계(플레이타임·도달 라운드·받은 포인트) */
   /* 결과 통계 = 하나의 글래스 패널 + 구분선(방 만들기 폼·대기실과 통일) */
   .ovStats{display:flex;flex-direction:column;gap:0;margin:0 0 16px;text-align:left;padding:1px 13px;border-radius:12px;
     background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.016));border:1px solid var(--metal-edge)}
@@ -2033,59 +2033,77 @@
   
   
   
-  /* 엔지니어링 베이 — 팝업 형식. 기존 HUD 카드(cpCard) 톤과 동일하게 통일(어두운 레드 네온) */
-  #pointPanel{position:absolute;inset:0;z-index:56;display:flex;align-items:center;justify-content:center;background:var(--ov-dim);backdrop-filter:blur(2px)}
-  #pointPanel.hide{display:none}
-  #pointPanel .ppCard{width:312px;max-width:86vw;height:84%;display:flex;flex-direction:column;padding:18px 18px 16px}   /* 높이 고정 — 탭 전환 시 카드가 꿀렁이지 않게(목록만 내부 스크롤) */
-  .ppHead{display:flex;align-items:baseline;gap:10px;margin-bottom:5px}
-  .ppTitle{font-size:16px;font-weight:800;color:#eef1f6;text-shadow:0 1px 3px rgba(0,0,0,.65)}   /* 제목 = 화이트 통일 */
-  .ppBal{margin-left:auto;font-size:var(--fs-md);color:var(--txt-mute);display:flex;align-items:baseline;gap:3px;white-space:nowrap}
-  .ppBal b{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:800;color:#e9c98a}
-  .ppSub{font-size:var(--fs-sm);color:var(--txt-mute);line-height:1.5;margin-bottom:13px}
-  .ppSub b{color:var(--txt)}
-  .ppTabs{display:flex;gap:5px;margin-bottom:9px}
-  .ptTab{flex:1;min-width:0;padding:8px 2px;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-md);font-weight:800;cursor:pointer;white-space:nowrap;
-    color:var(--txt-mute);background:var(--glass);border:1px solid var(--metal-edge);transition:all .12s}
-  .ptTab.on{color:#fff;background:linear-gradient(180deg,var(--neon-face1),var(--neon-d1));border-color:var(--neon);box-shadow:0 0 10px -3px var(--neon-glow)}
-  .ppNote{font-size:var(--fs-sm);color:var(--txt-mute);line-height:1.5;margin-bottom:9px;min-height:14px}
-  .ppList{flex:1;min-height:90px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding-right:3px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+  /* 공학소 — 설정 팝업(.setCard) 외형 공유 · 시안 강조 최소 · 자잘한 설명은 ? 버튼 팝업으로 분리 */
+  #pointPanel,#ptHelpPop{position:absolute;inset:0;z-index:56;display:flex;align-items:center;justify-content:center;background:var(--ov-dim);backdrop-filter:blur(2px)}
+  #pointPanel.hide,#ptHelpPop.hide{display:none}
+  #ptHelpPop{z-index:57}
+  .ptCard{width:312px;max-width:86vw;height:82%;display:flex;flex-direction:column}
+  .ptTitle{justify-content:flex-start;gap:6px}
+  .ptTitle .ptTtl{flex:0 0 auto;font-size:15px;font-weight:800;color:#eaf1fb}
+  .ptHelp{flex:0 0 auto;width:15px;height:15px;display:flex;align-items:center;justify-content:center;border-radius:50%;cursor:pointer;
+    font-size:9.5px;font-weight:800;font-family:inherit;color:var(--setAcc);background:rgba(92,214,255,.12);border:1px solid var(--setAccS);align-self:center}
+  .ptHelp:active{background:rgba(92,214,255,.24)}
+  .ptBal{margin-left:auto;flex:0 0 auto;font-family:'Rajdhani',sans-serif;font-size:var(--fs-md);color:var(--txt-mute);white-space:nowrap;display:flex;align-items:baseline;gap:3px}
+  .setTitle .ptBal b{font-size:16px;font-weight:800;color:#5cd6ff}   /* .ptTitle b(파티 패널 빨강)와 클래스명 충돌 → 우선순위로 시안 고정 */
+  #pointPanel .setX .mIco,#ptHelpPop .setX .mIco{color:inherit}   /* 닫기 X = 은은한 회색(빨강 mIco 기본색 차단) */
+  /* 카테고리 = 게임 하단 네비 바처럼: 하나의 바(가로 꽉 참) + 탭 사이 세로줄 + 아이콘 + 활성=하단 시안 라인 */
+  .ptSeg{display:flex;gap:0;margin:0 -14px 11px;position:relative;
+    background:linear-gradient(180deg,#232c3b,#161c27);border-top:1px solid rgba(255,255,255,.14);border-bottom:1px solid rgba(0,0,0,.4);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}   /* 선택 가능함이 보이도록 조금 밝게 */
+  .ptTab{flex:1;min-width:0;position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px 7px;font-family:inherit;font-size:var(--fs-xs);font-weight:800;cursor:pointer;white-space:nowrap;
+    color:#a7b4c6;background:none;border:none;transition:color .16s}
+  .ptTab .ptTabIco{line-height:0}.ptTab .ptTabIco svg{width:17px;height:17px;display:block;transition:color .16s}
+  .ptTab+.ptTab::before{content:'';position:absolute;left:0;top:22%;bottom:22%;width:1px;background:linear-gradient(180deg,transparent,rgba(255,255,255,.1),transparent);pointer-events:none}
+  .ptTab::after{content:'';position:absolute;left:16%;right:16%;bottom:0;height:2px;border-radius:3px 3px 0 0;background:linear-gradient(90deg,transparent,var(--setAcc),transparent);box-shadow:0 0 8px rgba(92,214,255,.6);opacity:0;transition:opacity .18s;pointer-events:none}
+  .ptTab.on{color:#e6f6ff}
+  .ptTab.on::after{opacity:1}
+  .ptTab.on .ptTabIco{color:var(--setAcc);filter:drop-shadow(0 0 5px rgba(92,214,255,.6))}
+  .ppList{flex:1;min-height:90px;overflow-y:auto;display:flex;flex-direction:column;padding-right:3px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
   .ppList::-webkit-scrollbar{width:5px}.ppList::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:var(--r-bar)}
-  /* 섹션 헤더(2단 세분화) */
-  .ptSect{display:flex;align-items:center;gap:6px;font-size:var(--fs-sm);font-weight:800;color:var(--neon-lt);letter-spacing:.5px;
-    margin:7px 1px 1px;padding-bottom:4px;border-bottom:1px solid rgba(255,90,90,.18);text-shadow:0 1px 2px #000}
-  .ptSect:first-child{margin-top:0}
-  .ptSect .ptSectBar{width:3px;height:12px;background:var(--neon);box-shadow:0 0 6px var(--neon-glow);border-radius:1px;flex:0 0 auto}
-  .ptRow{display:flex;align-items:center;gap:11px;padding:10px 11px;border-radius:var(--r-md);
-    background:rgba(0,0,0,.32);border:1px solid var(--metal-edge);border-left:2px solid var(--neon-soft)}
-  .ptRow.team{border-left-color:#caa24a}
+  .ptSect{display:flex;align-items:center;gap:6px;font-size:var(--fs-md);font-weight:800;color:#d3dbe6;letter-spacing:.4px;margin:13px 1px 7px;padding-bottom:5px;
+    border-bottom:1px solid rgba(92,214,255,.22)}   /* 섹션 = 밝은 라벨 + 시안 밑줄로 확실히 구분 */
+  .ptSect:first-child{margin-top:2px}
+  .ptSect .ptSectBar{width:3px;height:13px;background:var(--setAcc);border-radius:1px;flex:0 0 auto;box-shadow:0 0 6px rgba(92,214,255,.5)}
+  .ptRow{display:flex;align-items:center;gap:10px;padding:9px 11px;margin-bottom:6px;border-radius:var(--r-sm);   /* 카드 = 은은한 박스로 개별 구분 */
+    background:rgba(255,255,255,.022);border:1px solid rgba(255,255,255,.07)}
+  .ptRow:last-child{margin-bottom:2px}
   .ptRow.deferred{opacity:.5}
   .ptInfo{flex:1;min-width:0}
-  .ptNameRow{display:flex;align-items:baseline;gap:7px;margin-bottom:2px}
-  .ptName{font-size:var(--fs-xl);font-weight:800;color:var(--txt)}
-  .ptLv{flex:0 0 auto;font-size:var(--fs-sm);font-weight:700;color:var(--txt-mute)}
-  .ptDesc{font-size:var(--fs-sm);color:var(--txt-mute);margin-bottom:6px}
-  .ptBar{height:4px;border-radius:var(--r-bar);background:rgba(255,255,255,.07);overflow:hidden}
-  .ptBar i{display:block;height:100%;background:linear-gradient(90deg,var(--neon-d1),var(--neon-soft));box-shadow:0 0 6px var(--neon-glow)}
-  .ptRow.team .ptBar i{background:linear-gradient(90deg,#7a5e1e,#caa24a);box-shadow:0 0 6px rgba(202,162,74,.45)}
-  .ptBtn{flex:0 0 auto;min-width:58px;display:flex;flex-direction:column;align-items:center;gap:1px;padding:9px 11px;border-radius:var(--r-md);cursor:pointer;
-    font-family:inherit;color:#e8c9c9;background:linear-gradient(180deg,rgba(255,59,59,.14),rgba(255,59,59,.06));
-    border:1px solid var(--neon-soft);box-shadow:0 0 9px -5px var(--neon-glow);transition:all .12s}
-  .ptBtn:not(:disabled):not(.poor):hover{background:linear-gradient(180deg,rgba(255,59,59,.22),rgba(255,59,59,.1));box-shadow:0 0 11px -4px var(--neon-glow);color:#fff}
-  .ptBtn b{font-size:var(--fs-lg);font-weight:800;line-height:1.1;color:#ffcf9a}
+  .ptNameRow{display:flex;align-items:baseline;gap:5px;margin-bottom:5px}
+  .ptName{font-size:var(--fs-lg);font-weight:700;color:#dbe3ec}
+  .ptVal{flex:0 1 auto;min-width:0;display:inline-flex;align-items:center;gap:2px;font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;color:#8a94a3;white-space:nowrap}   /* 수치 힌트: 제목 옆에 붙임·작게·회색(잘 안 보여도 무방) */
+  .ptArw{font-style:normal;font-size:10px;line-height:1;color:#767f8c}   /* 상승 화살표 = 수치 사이 중앙 높이 */
+  .ptLv{flex:0 0 auto;margin-left:auto;padding-left:8px;font-size:var(--fs-sm);font-weight:700;color:var(--txt-mute);font-family:'Rajdhani',sans-serif}
+  .ptPips{display:flex;gap:3px}
+  .ptPips i{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.08);max-width:26px}
+  .ptPips i.on{background:var(--setAcc)}
+  .ptPips i.tr{background:#c79af2}   /* 초월 단계=연보라 */
+  .ptPips.mini{gap:2px}.ptPips.mini i{height:3px}
+  /* 강화 가능 = 메인 하단 버튼처럼 빨강 그라데이션 + 발광 */
+  .ptBtn{flex:0 0 auto;min-width:56px;display:flex;flex-direction:column;align-items:center;gap:1px;padding:7px 10px;border-radius:var(--r-bar);cursor:pointer;
+    font-family:inherit;color:#ffdede;background:linear-gradient(180deg,rgba(255,59,59,.32),rgba(255,59,59,.1));
+    border:1px solid rgba(255,59,59,.6);box-shadow:inset 0 1px 0 rgba(255,255,255,.08);transition:all .12s}   /* 글로우 없음 */
+  .ptBtn:not(:disabled):not(.poor):active{transform:translateY(1px)}
+  .ptBtn b{font-family:'Rajdhani',sans-serif;font-size:var(--fs-lg);font-weight:800;line-height:1.1;color:#ffefef}
   .ptBtn span{font-size:var(--fs-xs);font-weight:700;opacity:.8}
-  .ptBtn:active{transform:translateY(1px)}
-  .ptBtn.poor{cursor:default;color:#caa3a3;background:linear-gradient(180deg,rgba(255,59,59,.07),rgba(255,59,59,.03));border-color:rgba(255,59,59,.28);box-shadow:none;opacity:.78}
-  .ptBtn.poor b{color:#d6b48a}
-  .ptBtn:disabled:not(.maxed){cursor:default;color:#7d8590;background:rgba(255,255,255,.03);border-color:var(--metal-edge);box-shadow:none}
-  .ptBtn:disabled:not(.maxed) b{color:var(--txt-mute)}
-  .ptBtn.maxed{color:#e9c98a;background:rgba(233,201,138,.08)}
-  /* 초월 강화: 보라 네온(효과 ×2 점프·엄청 비쌈) */
-  .ptBtn.trans{color:#e9d2ff;background:linear-gradient(180deg,rgba(168,85,247,.22),rgba(120,40,200,.1));border-color:rgba(190,120,255,.55);box-shadow:0 0 9px rgba(168,85,247,.3),inset 0 0 6px rgba(168,85,247,.12)}
-  .ptBtn.trans b{color:#fff;text-shadow:0 0 6px rgba(200,140,255,.7)}
-  .ptBtn.trans.poor{color:#b79ad0;box-shadow:none;opacity:.78}
-  .ptT{display:inline-block;margin-left:5px;padding:0 5px;border-radius:6px;font-size:9px;font-weight:800;letter-spacing:.4px;color:#e9d2ff;background:rgba(168,85,247,.22);border:1px solid rgba(190,120,255,.5)}
+  /* 강화 불가(포인트 부족) = 색·발광 거의 없음 */
+  .ptBtn.poor{cursor:default;color:#727b87;background:rgba(255,255,255,.03);border-color:var(--metal-edge);box-shadow:none}
+  .ptBtn.poor b{color:#7f8794;text-shadow:none}
+  .ptBtn:disabled:not(.maxed){cursor:default;color:#727b87;background:rgba(255,255,255,.03);border-color:var(--metal-edge);box-shadow:none}
+  .ptBtn:disabled:not(.maxed) b{color:var(--txt-mute);text-shadow:none}
+  .ptBtn.maxed{color:#9fb0c2;background:rgba(255,255,255,.05);box-shadow:none}
+  .ptBtn.trans{color:#f0e2ff;background:linear-gradient(180deg,rgba(168,85,247,.34),rgba(120,40,200,.12));border-color:rgba(190,120,255,.62);box-shadow:0 0 12px -3px rgba(168,85,247,.6),inset 0 1px 0 rgba(255,255,255,.08)}   /* 초월=보라 발광 */
+  .ptBtn.trans b{color:#f4ecff;text-shadow:0 0 6px rgba(190,120,255,.7)}
+  .ptBtn.trans.poor{color:#8a7ba3;background:rgba(255,255,255,.03);border-color:var(--metal-edge);box-shadow:none}
+  .ptBtn.trans.poor b{color:#8a7ba3;text-shadow:none}
+  .ptT{display:inline-block;margin-left:4px;padding:0 5px;border-radius:6px;font-size:9px;font-weight:800;color:#e0c8ff;background:rgba(168,85,247,.2);border:1px solid rgba(190,120,255,.45)}
   .ptEmpty{text-align:center;color:#7d8590;font-size:var(--fs-md);padding:18px}
-  .ppClose{width:100%;margin-top:12px;flex:0 0 auto;padding:10px}   /* cpCancel의 flex-basis 34% 상속 차단 — 세로 카드에서 거대해지는 것 방지 */
+  /* ? 상세 정보 팝업 */
+  .ptHelpCard{width:320px;max-width:88vw;max-height:80%}
+  .ptHelpBody{overflow-y:auto;-webkit-overflow-scrolling:touch;font-size:var(--fs-md);color:var(--txt-mute);line-height:1.5;padding-right:3px}
+  .ptHelpBody .phGen{color:var(--txt);margin-bottom:6px}.ptHelpBody .phGen b{color:var(--setAcc)}
+  .ptHelpBody .phSect{font-size:var(--fs-sm);font-weight:800;color:var(--setAcc);letter-spacing:.4px;margin:12px 0 4px}
+  .ptHelpBody .phItem{padding:6px 0;border-top:1px solid rgba(255,255,255,.06)}
+  .ptHelpBody .phItem b{color:#dbe3ec;font-weight:700}
   .msUser{display:flex;align-items:center;gap:5px;font-size:var(--fs-sm);color:var(--txt-hud)}
   .msUser .ic{color:#7e8896}
   .msUser b{color:#e8eef5;font-weight:700;max-width:128px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -2497,13 +2515,13 @@
   .soloDiffBtns .moDiffBtn::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--dc);box-shadow:0 0 14px 0 var(--dc)}   /* 좌측 난이도 색 바(항상) */
   .soloDiffBtns .moDiffBtn .ddN{flex:1;min-width:0;font-size:13px;font-weight:800;color:#f2f6fb;text-shadow:0 1px 2px rgba(0,0,0,.45);margin:0}
   .soloDiffBtns .moDiffBtn .ddC{flex:none;font-size:11.5px;font-weight:700;color:#a6b1bf;white-space:nowrap;margin:0;line-height:1.2}
-  /* 스탯 = 두 줄 텍스트(적 HP / 코인 획득량) — 라벨+값을 붙여 한 덩어리로, 각 줄은 우측 정렬 */
+  /* 스탯 = 두 줄 텍스트(적 HP / 포인트 획득량) — 라벨+값을 붙여 한 덩어리로, 각 줄은 우측 정렬 */
   .soloDiffBtns .ddStats{display:flex;flex-direction:column;justify-content:center;align-items:flex-end;gap:3px}
   .soloDiffBtns .ddStat{display:flex;align-items:baseline;gap:6px;line-height:1.15}
   .soloDiffBtns .ddLbl{font-size:9px;font-weight:700;letter-spacing:.2px}   /* 색은 스탯별로(라벨=흐린 같은 색) */
   .soloDiffBtns .ddStat em{font-family:'Rajdhani',sans-serif;font-style:normal;font-size:11.5px;font-weight:700;font-variant-numeric:tabular-nums}   /* 값 크기·굵기 다운 */
   .soloDiffBtns .ddEnemy .ddLbl{color:#b58585} .soloDiffBtns .ddEnemy em{color:#ff9e9e}   /* 적 HP = 붉은 한 쌍(라벨 흐림·값 진함) */
-  .soloDiffBtns .ddCoin .ddLbl{color:#b59d63} .soloDiffBtns .ddCoin em{color:#ffd485}      /* 코인 획득량 = 금색 한 쌍 */
+  .soloDiffBtns .ddCoin .ddLbl{color:#b59d63} .soloDiffBtns .ddCoin em{color:#ffd485}      /* 포인트 획득량 = 금색 한 쌍 */
   .soloDiffBtns .moDiffBtn .ddGo{flex:none;width:15px;height:15px;color:#7a8593}
   .soloDiffBtns .moDiffBtn:active{transform:scale(.99) translateY(1px)}
   /* 무한 모드 = 살짝 띄운 특별 항목(설명 줄바꿈) */
@@ -2554,7 +2572,7 @@
       </div>
       <div id="hudRwrap">
         <div id="hudR">
-          <span class="res min"><svg class="ri" viewBox="0 0 24 24"><!-- 크레딧: 골드 코인 -->
+          <span class="res min"><svg class="ri" viewBox="0 0 24 24"><!-- 크레딧: 골드 포인트 -->
             <circle cx="12" cy="12" r="9" fill="#ffd24a" stroke="#ffe6a0" stroke-width="1.2"/>
             <circle cx="12" cy="12" r="6.6" fill="none" stroke="#b88a1e" stroke-width="1"/>
             <path d="M14.8 8.8A4.4 4.4 0 1 0 14.8 15.2" fill="none" stroke="#7a5a12" stroke-width="2.2" stroke-linecap="round"/>
@@ -2786,7 +2804,7 @@
         <input id="authPw2" class="authField hide" type="password" placeholder="비밀번호 확인" autocomplete="new-password" autocapitalize="off" spellcheck="false" lang="en" oninput="this.value=this.value.replace(/[^\x21-\x7E]/g,'')" onkeydown="if(event.key==='Enter')authSubmit()">
         <div class="authErr" id="authErr"></div>
         <button class="authBtn" id="authBtn" onclick="authSubmit()">로그인</button>
-        <div class="authNote" id="authNote">아이디로 즉시 가입 · 코인·강화는 계정에 저장됩니다</div>
+        <div class="authNote" id="authNote">아이디로 즉시 가입 · 포인트·강화는 계정에 저장됩니다</div>
       </div>
     </div>
 
@@ -2968,17 +2986,24 @@
     <div class="opBtns"><button class="opQuit" id="rsQuit" onclick="resultToLobby()"><i class="autoBar" id="rsAutoBar"></i><span class="ovBtnTx">나가기</span></button></div>
   </div>
 
-  <div id="pointPanel" class="hide">
-    <div class="cpCard ppCard">
-      <div class="ppHead">
-        <span class="ppTitle">엔지니어링 베이</span>
-        <span class="ppBal"><b id="ptCoins">0</b> P</span>
+  <div id="pointPanel" class="hide" onclick="if(event.target===this)closePointUpgrade()">
+    <div class="setCard ptCard">
+      <div class="setTitle ptTitle">
+        <span class="ptTtl">코인 공학소</span>
+        <button class="ptHelp" onclick="openPtHelp()" aria-label="상세 정보">?</button>
+        <span class="ptBal"><b id="ptCoins">0</b>P</span>
+        <div class="setX" onclick="closePointUpgrade()"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></div>
       </div>
-      <div class="ppSub">판 종료 시 <b>포인트</b> 정산 · 강화하면 <b>이번 판에 즉시 적용</b> (시작 자원·유닛은 다음 판)</div>
-      <div class="ppTabs" id="ptTabs"></div>
-      <div class="ppNote" id="ptNote"></div>
+      <div class="ptSeg" id="ptTabs"></div>
       <div class="ppList" id="ptList"></div>
-      <button class="cpCancel ppClose" onclick="closePointUpgrade()">닫기</button>
+    </div>
+  </div>
+
+  <!-- 공학소 ? 상세 정보 팝업 -->
+  <div id="ptHelpPop" class="hide" onclick="if(event.target===this)closePtHelp()">
+    <div class="setCard ptHelpCard">
+      <div class="setTitle"><span>공학소 안내</span><div class="setX" onclick="closePtHelp()"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></div></div>
+      <div class="ptHelpBody" id="ptHelpBody"></div>
     </div>
   </div>
 
@@ -3023,7 +3048,7 @@
         <div class="voteResult"><span>현재 배속</span><b id="voteResult">1x</b></div>
       </div>
       </div>
-      <button class="setPause" id="setPauseBtn" onclick="togglePause()"><span class="pIco">⏸</span><span id="pauseLbl">일시정지</span></button>
+      <button class="setPause" id="setPauseBtn" onclick="togglePause()"><span class="pIco"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6.5v11M14.5 6.5v11"/></svg></span><span id="pauseLbl">일시정지</span></button>
       <button class="setExit" id="setExit" data-sfx="ui_open" onclick="exitGame()">게임에서 나가기</button>
       <button class="setLogout" id="setLogout" onclick="closeSettings();doLogout()">로그아웃</button>
     </div>
@@ -3083,6 +3108,8 @@ const MSG_ICO={
   '⚠️':_MI('<path d="M12 4.4 21 19.6H3z"/><path d="M12 10v4.1"/><circle cx="12" cy="17.2" r=".95" fill="currentColor" stroke="none"/>'),
   '⛔':_MI('<circle cx="12" cy="12" r="8.3"/><path d="M6.2 6.2 17.8 17.8"/>'),
   '🔒':_MI('<rect x="5.4" y="10.6" width="13.2" height="9" rx="2"/><path d="M8.4 10.6V8.4a3.6 3.6 0 0 1 7.2 0v2.2"/>'),
+  '⏸':_MI('<path d="M9.5 6.5v11M14.5 6.5v11"/>'),
+  '▶':_MI('<path d="M8.5 6 18 12 8.5 18Z"/>'),
   '🔓':_MI('<rect x="5.4" y="10.6" width="13.2" height="9" rx="2"/><path d="M8.4 10.6V8.4a3.6 3.6 0 0 1 6.6-1.9"/>','ok'),
   '✓':_MI('<path d="M5 12.6 9.4 17 19 7.4"/>','ok'),
   '💰':_MI('<circle cx="12" cy="12" r="8"/><path d="M14.4 9.6a3.3 3.3 0 1 0 0 4.8"/>','coin'),
@@ -3317,7 +3344,7 @@ const BEACON_ICON={
   premium:'<path d="M12 1.8l2.5 6.6 6.7.3-5.2 4.2 1.8 6.5L12 16.1l-5.6 3.3 1.8-6.5L3 8.7l6.7-.3z" fill="currentColor"/>',
   energy:'<path d="M13.4 2L4.5 13.4h5.2L8.6 22l9-11.7h-5.4z" fill="currentColor"/>',
   gachaUp:'<rect x="3.4" y="9" width="11.6" height="11.6" rx="2.6" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="6.9" cy="12.5" r="1.15" fill="currentColor"/><circle cx="11.5" cy="17.1" r="1.15" fill="currentColor"/><circle cx="9.2" cy="14.8" r="1.15" fill="currentColor"/><path d="M14.6 8.2 20.4 2.4M16.6 2.4h3.8v3.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>',  // 별+상승(확률↑)
-  creditUp:'<circle cx="10.4" cy="14.2" r="6.4" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12.6 11.8a3 3 0 1 0 0 4.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M15.4 8.2 21 2.6M17.4 2.6h3.6v3.6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>',  // 코인+상승화살(획득↑)
+  creditUp:'<circle cx="10.4" cy="14.2" r="6.4" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12.6 11.8a3 3 0 1 0 0 4.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M15.4 8.2 21 2.6M17.4 2.6h3.6v3.6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>',  // 포인트+상승화살(획득↑)
 tower:'<path d="M9 3h6v3l-1.5 1v6.5h2.5L18 21H6l2-7.5h2.5V7L9 6z" fill="currentColor"/>',
 spire:'<path d="M12 2.6a4.4 4.4 0 1 1 0 8.8 4.4 4.4 0 0 1 0-8.8zM8.5 13h7L17 21H7z" fill="currentColor"/>',
 pboss:'<path d="M12 2.5c-4 0-6.5 2.8-6.5 6.4 0 2.3 1.1 3.7 2.2 4.7v2.2c0 .7.5 1.1 1.2 1.1.4 1.1 1.6 1.9 3.1 1.9s2.7-.8 3.1-1.9c.7 0 1.2-.4 1.2-1.1v-2.2c1.1-1 2.2-2.4 2.2-4.7 0-3.6-2.5-6.4-6.5-6.4z" fill="currentColor" opacity=".22"/><path d="M12 2.5c-4 0-6.5 2.8-6.5 6.4 0 2.3 1.1 3.7 2.2 4.7v2.2c0 .7.5 1.1 1.2 1.1.4 1.1 1.6 1.9 3.1 1.9s2.7-.8 3.1-1.9c.7 0 1.2-.4 1.2-1.1v-2.2c1.1-1 2.2-2.4 2.2-4.7 0-3.6-2.5-6.4-6.5-6.4z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="9.3" cy="9.2" r="1.5" fill="currentColor"/><circle cx="14.7" cy="9.2" r="1.5" fill="currentColor"/><path d="M10.4 16.5v2M12 16.7v2.1M13.6 16.5v2" stroke="currentColor" stroke-width="1"/>',
@@ -3344,9 +3371,9 @@ const TECH=[
   {id:'arm',  name:'아스널',   icon:'🛡️', wpn:'mech', wname:'기계 무기',    units:'스트라이더'},
   {id:'forge',name:'크리스탈 워크스', icon:'🔱', wpn:'pro',  wname:'루멘 무기', units:'센티넬·보이드'},
   {id:'evo',  name:'바이오 코어', icon:'🧬', wpn:'zrg',  wname:'스웜 근접 무기', units:'리퍼'},
-  {id:'pointlab', name:'엔지니어링 베이', icon:'⬆️', wpn:'meta', wname:'영구 강화', units:'즉시 적용', meta:true},  // 포인트로 영구 강화(판 종료 시 정산, 강화 즉시 적용)
+  {id:'pointlab', name:'공학소', icon:'⬆️', wpn:'meta', wname:'영구 강화', units:'즉시 적용', meta:true},  // 포인트로 영구 강화(판 종료 시 정산, 강화 즉시 적용)
 ];
-// 상단 2×2(무기 계열) + 하단 중앙 1(엔지니어링 베이)
+// 상단 2×2(무기 계열) + 하단 중앙 1(공학소)
 const TECH_POS=[{x:.28,y:.26},{x:.72,y:.26},{x:.28,y:.47},{x:.72,y:.47},{x:.5,y:.74}];   // 상단 2×2(무기) + 하단중앙 포인트연구소(채팅 위로 올림)
 // 계열별 색 (meta=골드)
 const WPN_COL={inf:'#4aa8ff',mech:'#5ad1ff',pro:'#ffc040',zrg:'#9fd356',meta:'#ffd24a'};
@@ -3416,8 +3443,8 @@ function enemyRace(n){ return ENEMY_RACE[n]||'terran'; }
 //        맵별 값 → USEMAPS[id].cfg (+ cfg.bal). 엔진은 mapCfg()/applyMapBalance()로 주입.
 // =====================================================================
 const USEMAPS={
-  nemo:  { id:'nemo',   name:'네모네모 디펜스', desc:'유닛을 뽑고 합성해 트랙의 적을 막는 협동 디펜스', long:'유닛을 뽑아 같은 유닛 3개를 합치면 더 높은 등급으로 진화합니다. 사각 트랙을 도는 적을 막아내고, 라운드마다 모은 자원으로 경제와 화력을 강화하며 버티세요. 10라운드마다 나오는 월드보스를 함께 잡으면 코인을 얻어 영구 강화까지. 혼자서도, 최대 8인 협동으로도 즐길 수 있습니다.',
-           feats:[ {ic:'merge',kw:'합성',tx:'같은 유닛 3개 → 상위 등급'}, {ic:'shield',kw:'디펜스',tx:'트랙을 도는 적 막기'}, {ic:'growth',kw:'성장',tx:'라운드마다 경제·화력 강화'}, {ic:'boss',kw:'월드보스',tx:'협동 처치로 코인·영구 강화'}, {ic:'coop',kw:'협동',tx:'솔로 또는 최대 8인'} ],
+  nemo:  { id:'nemo',   name:'네모네모 디펜스', desc:'유닛을 뽑고 합성해 트랙의 적을 막는 협동 디펜스', long:'유닛을 뽑아 같은 유닛 3개를 합치면 더 높은 등급으로 진화합니다. 사각 트랙을 도는 적을 막아내고, 라운드마다 모은 자원으로 경제와 화력을 강화하며 버티세요. 10라운드마다 나오는 월드보스를 함께 잡으면 포인트을 얻어 영구 강화까지. 혼자서도, 최대 8인 협동으로도 즐길 수 있습니다.',
+           feats:[ {ic:'merge',kw:'합성',tx:'같은 유닛 3개 → 상위 등급'}, {ic:'shield',kw:'디펜스',tx:'트랙을 도는 적 막기'}, {ic:'growth',kw:'성장',tx:'라운드마다 경제·화력 강화'}, {ic:'boss',kw:'월드보스',tx:'협동 처치로 포인트·영구 강화'}, {ic:'coop',kw:'협동',tx:'솔로 또는 최대 8인'} ],
            players:'1-8', pop:9820, icon:'🟥', rec:true,  isNew:false, playable:true,
            cfg:{ stats:true,   // 종료 후 통계 화면 사용(필요한 맵만)
                  rounds:30, roundTime:90, prepTime:10, startCredits:250, startEnergy:0, maxUnits:100,
@@ -3618,7 +3645,7 @@ function gachaRangeMul(u){ if(u&&u.gid==='phantom_t') return 1.8;   // 디토네
 // ============================================================================
 // 메타 성장 시스템 — 데이터 레이어 (1단계: 데이터 + 저장/로드만. 게임플레이 연결은 다음 단계)
 //   설계서: "네모네모 디펜스 — 메타 성장 시스템 설계서"
-//   ※ 코인=영구(계정별), 빌드 효과=개인 적용 예정, coop 그룹=데이터만(효과 보류)
+//   ※ 포인트=영구(계정별), 빌드 효과=개인 적용 예정, coop 그룹=데이터만(효과 보류)
 // ============================================================================
 const DIFFICULTY = {
   easy:   { name:'EASY', enemyHp:0.5,  enemyAtk:1.0, coinMult:1.0, bossHp:1.0 },   // 비콘너프+보스필수 반영 재튠. 약간메타 ~50%·기본 1~2랩 ~80%
@@ -3628,7 +3655,7 @@ const DIFFICULTY = {
   nightmare:{ name:'FINAL', enemyHp:360.0, enemyAtk:2.5, coinMult:3.0, bossHp:3.0 },   // 최종 단계(영문 FINAL = 끝까지 도전 동기). 초월 '완성'(t9) + 운(봇 t9 ~50%·t8 ~22%)
 };
 const DIFFICULTY_ORDER = ['easy','normal','hard','hell','nightmare'];
-// 보스 처치 코인(기본, 난이도 coinMult 적용 전). 표에 없는 라운드는 라운드 비례 폴백.
+// 보스 처치 포인트(기본, 난이도 coinMult 적용 전). 표에 없는 라운드는 라운드 비례 폴백.
 // 메타 빌드 정의(설계서 4번). group: util / power / coop. 다음레벨 비용 = floor(start * rate^level)
 // start=1레벨 비용 기준값, nMax=일반 레벨 수, max=일반+초월(초월 3레벨·효과 ×2/×4/×8). 비용은 metaNextCost(완만 감소배율) 참조.
 const META_BUILDS = {   // 탭(group) → 섹션(sect) 2단 분류. 같은 sect끼리 묶여 헤더로 구분됨
@@ -3664,7 +3691,7 @@ const META_BUILDS = {   // 탭(group) → 섹션(sect) 2단 분류. 같은 sect�
   boss_hp_down:  { name:'월드보스 체력 감소', desc:'월드 보스 체력 감소 (-1.5%/Lv)', start:8, nMax:20, max:20, group:'team', sect:'월드 보스' },
   boss_atk_up:   { name:'파견 유닛 데미지', desc:'파견 유닛 보스 데미지 증가 (+1%/Lv)', start:8, nMax:20, max:20, group:'team', sect:'월드 보스' },
   // ── 보스(월드·개인·라운드) — 모두 10레벨 ──
-  boss_reward_up:{ name:'월드보스 코인 보상', desc:'월드 보스 처치 코인 보상 증가 (+10%/Lv)', start:20, nMax:10, max:10, group:'coop', sect:'월드 보스' },
+  boss_reward_up:{ name:'월드보스 포인트 보상', desc:'월드 보스 처치 포인트 보상 증가 (+10%/Lv)', start:20, nMax:10, max:10, group:'coop', sect:'월드 보스' },
   pboss_reward:  { name:'개인 보스 보상', desc:'개인 보스 처치 보상 증가 (+5%/Lv)', start:20, nMax:10, max:10, group:'coop', sect:'개인 보스' },
   pboss_cd:      { name:'개인 보스 쿨감', desc:'개인 보스 재소환 쿨다운 감소 (-2.5%/Lv)', start:20, nMax:10, max:10, group:'coop', sect:'개인 보스' },
   rboss_hp_down: { name:'라운드 보스 체력 감소', desc:'10·20·30라운드 보스 체력 감소 (-2%/Lv)', start:20, nMax:10, max:10, group:'coop', sect:'라운드 보스' },
@@ -3688,7 +3715,7 @@ function metaEffLv(id){ return _metaEffFromRaw(META_BUILDS[id], buildLevel(id));
 // 플레이어 메타(계정별 영구 데이터)
 function defaultMeta(){ return { coins:0, buildLevels:{}, highestRound:0, clearedDifficulty:'' }; }   // clearedDifficulty:''=아무것도 클리어 안 함(이지만 개방)
 let PLAYER_META = defaultMeta();
-const TEMP_COIN_TEST=false;   // [임시] 코인 상점 밸런스 테스트 — 코인 무한 + 로비 진입 시 업그레이드 초기화. 끝나면 false 또는 이 블록 제거.
+const TEMP_COIN_TEST=false;   // [임시] 포인트 상점 밸런스 테스트 — 포인트 무한 + 로비 진입 시 업그레이드 초기화. 끝나면 false 또는 이 블록 제거.
 function metaKey(){ const u=(typeof AUTH!=='undefined' && AUTH.user) ? AUTH.user : null;
   return 'nm_meta_' + (u ? (u.uid || u.email || u.nick || 'guest') : 'guest'); }
 function loadMeta(){ try{ const raw=localStorage.getItem(metaKey());
@@ -3742,11 +3769,11 @@ function gainMineral(n){ G.mineral += Math.round(n*((G.metaB&&G.metaB.creditMul)
 function gainGas(n){ G.gas += Math.round(n*((G.metaB&&G.metaB.energyMul)||1)); }            // 메타: 에너지 획득↑
 function maxUnits(){ return mapCfg('maxUnits',MAX_UNITS) + ((G.metaB&&G.metaB.unitCap)||0); }                  // 메타: 유닛 수 증가
 // 게임 종료 정산: 이번 판에서 모은 포인트(G.points)에 난이도 배율을 곱해 계정에 누적·저장(1회만).
-// 코인(◎ = 다음 판 업그레이드 화폐)은 '월드보스(공용 보스)' 처치로만 획득 — coopBossDown()이 G.points에 적립.
+// 포인트(◎ = 다음 판 업그레이드 화폐)은 '월드보스(공용 보스)' 처치로만 획득 — coopBossDown()이 G.points에 적립.
    // 이번 판 적립 포인트(월드보스 처치 합) = 정산 대상
 function bankRunPoints(){ if(G._pointsBanked) return G._bankedAmt||0; G._pointsBanked=true;
   const cm=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).coinMult;
-  const gained=Math.round((G.points||0)*cm);   // 코인 = 월드보스 처치 포인트 × 난이도 배율
+  const gained=Math.round((G.points||0)*cm);   // 포인트 = 월드보스 처치 포인트 × 난이도 배율
   if(gained>0){ PLAYER_META.coins=(PLAYER_META.coins||0)+gained; saveMeta(); }
   G._bankedAmt=gained; return gained; }
 const DIFF_RANK=['easy','normal','hard','hell','nightmare'];
@@ -3761,16 +3788,16 @@ function recordRunResult(){ try{
       const cur=DIFF_RANK.indexOf(G.difficulty), had=(PLAYER_META.clearedDifficulty?DIFF_RANK.indexOf(PLAYER_META.clearedDifficulty):-1);   // ''=미클리어(-1) → 이지 클리어도 기록
       if(cur>had){ PLAYER_META.clearedDifficulty=G.difficulty; saveMeta(); } }
   }catch(e){} }
-// 메타 빌드 레벨업(코인 차감)
+// 메타 빌드 레벨업(포인트 차감)
 function buildUpgrade(id){ const b=META_BUILDS[id]; if(!b) return false;
   if(b.deferred){ toast('🔒 준비 중인 빌드입니다'); return false; }
   const lv=buildLevel(id); if(lv>=b.max){ toast('⚠️ 최대 레벨입니다'); return false; }
-  const cost=metaNextCost(id, lv); if((PLAYER_META.coins||0)<cost){ toast('🪙 코인 부족 (필요 '+cost+')'); return false; }
+  const cost=metaNextCost(id, lv); if((PLAYER_META.coins||0)<cost){ toast('🪙 포인트 부족 (필요 '+cost+')'); return false; }
   PLAYER_META.coins-=cost; PLAYER_META.buildLevels[id]=lv+1; saveMeta();
   if(typeof G!=='undefined' && G){ G.metaB=metaBonus(); if(typeof updateHud==='function') updateHud(); }   // 즉시 적용(이번 판 효과 재계산) — 시작 자원/유닛 등 시작 한정은 다음 판부터
   if(typeof playSfx==='function') playSfx('ui_confirm'); return true; }
 
-// ── 엔지니어링 베이(인게임 업그레이드 구역 건물) — 영구 강화 리스트. PLAYER_META 데이터, 구매 시 G.metaB 재계산으로 즉시 적용(시작 자원/유닛만 다음 판) ──
+// ── 공학소(인게임 업그레이드 구역 건물) — 영구 강화 리스트. PLAYER_META 데이터, 구매 시 G.metaB 재계산으로 즉시 적용(시작 자원/유닛만 다음 판) ──
 let _ptGroup='eco';
 const _PT_TABS=[['eco','경제'],['prod','생산'],['combat','전투'],['team','전체'],['coop','보스']];
 const _PT_NOTE={
@@ -3780,19 +3807,25 @@ const _PT_NOTE={
   team:'전체 강화 · 협동에서 파티 중 최고 레벨이 모두에게 적용',
   coop:'월드 보스 공략 + 개인 보스 보상·쿨감 강화'
 };
-// 엔지니어링 베이 선택 → 팝업으로 영구 강화 리스트 표시(하단 구역이 좁아 팝업 사용)
+// 공학소 선택 → 팝업으로 영구 강화 리스트 표시(하단 구역이 좁아 팝업 사용)
 function openPointUpgrade(){ loadMeta(); _ptGroup='eco';
   renderPtTabs(); renderPt();
   popShow('pointPanel'); }
 function closePointUpgrade(){ popHide('pointPanel');
   if(typeof G!=='undefined' && G.tab==='Upgrade' && typeof clearUpgSel==='function') clearUpgSel(); }
 function setPtGroup(g){ _ptGroup=g; renderPtTabs(); renderPt(); }
+// 카테고리 아이콘(메인 하단 네비와 톤 통일 · 24/1.7/currentColor 라인)
+const _PT_ICO={
+  eco:'<circle cx="12" cy="12" r="8"/><path d="M14.4 9.6a3.3 3.3 0 1 0 0 4.8"/>',                          // 경제=코인
+  prod:'<circle cx="9.5" cy="8.5" r="3"/><path d="M4 19.5c0-3 2.5-5.2 5.5-5.2s5.5 2.2 5.5 5.2"/><path d="M18.5 4v5M16 6.5h5"/>',   // 생산=유닛 뽑기(인물+)
+  combat:'<path d="M5 5 15 15M19 5 9 15M14.5 15.5 17.5 18.5M9.5 15.5 6.5 18.5"/>',                          // 전투=교차 검
+  team:'<text x="12" y="15.4" text-anchor="middle" font-family="Rajdhani,sans-serif" font-size="8.6" font-weight="800" letter-spacing="0.2" fill="currentColor" stroke="none">ALL</text>',   // 전체=ALL 텍스트(다른 아이콘 크기에 맞춤)
+  coop:'<path d="M12 3.6c-3.9 0-6.9 2.8-6.9 6.5 0 2.2 1 3.9 2.5 4.9v3.4h8.8V15c1.5-1 2.5-2.7 2.5-4.9 0-3.7-3-6.5-6.9-6.5z"/><circle cx="9.4" cy="10.4" r="1.15"/><circle cx="14.6" cy="10.4" r="1.15"/><path d="M10.6 18.4v2M13.4 18.4v2"/>' };  // 보스=해골
 function renderPtTabs(){ const box=document.getElementById('ptTabs'); if(!box) return;
-  box.innerHTML=_PT_TABS.map(function(t){ return '<button class="ptTab'+(t[0]===_ptGroup?' on':'')+'" onclick="setPtGroup(\''+t[0]+'\')">'+t[1]+'</button>'; }).join(''); }
+  box.innerHTML=_PT_TABS.map(function(t){ return '<button class="ptTab'+(t[0]===_ptGroup?' on':'')+'" onclick="setPtGroup(\''+t[0]+'\')"><span class="ptTabIco"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+(_PT_ICO[t[0]]||'')+'</svg></span>'+t[1]+'</button>'; }).join(''); }
 function renderPt(){ const list=document.getElementById('ptList'); if(!list) return;
-  if(TEMP_COIN_TEST) PLAYER_META.coins=9999999;   // [임시] 코인 항상 넉넉(상점 렌더 시 보충)
+  if(TEMP_COIN_TEST) PLAYER_META.coins=9999999;   // [임시] 포인트 항상 넉넉(상점 렌더 시 보충)
   const cE=document.getElementById('ptCoins'); if(cE) cE.textContent=PLAYER_META.coins||0;
-  const nE=document.getElementById('ptNote'); if(nE) nE.textContent=_PT_NOTE[_ptGroup]||'';
   let rows='', _lastSect=null;
   for(const id in META_BUILDS){ const b=META_BUILDS[id]; if(b.group!==_ptGroup) continue;
     if(b.sect && b.sect!==_lastSect){ _lastSect=b.sect; rows+='<div class="ptSect"><span class="ptSectBar"></span>'+b.sect+'</div>'; }   // 섹션 헤더(세분화)
@@ -3801,28 +3834,56 @@ function renderPt(){ const list=document.getElementById('ptList'); if(!list) ret
     let btn;
     if(deferred) btn='<button class="ptBtn" disabled>준비중</button>';
     else if(maxed) btn='<button class="ptBtn maxed" disabled>MAX</button>';
-    else btn='<button class="ptBtn'+(poor?' poor':'')+(nextTrans?' trans':'')+'" onclick="doPtUp(\''+id+'\')"><b>'+cost+'P</b><span>'+(nextTrans?'초월':'강화')+'</span></button>';
+    else btn='<button class="ptBtn'+(poor?' poor':'')+(nextTrans?' trans':'')+'" onclick="doPtUp(\''+id+'\')"><b>'+cost+'P</b></button>';   // 비용만(강화/초월 텍스트 제거)
     const lvTag=(lv>n)?' <span class="ptT">초월'+(lv-n)+'</span>':'';   // 이미 초월 단계면 표시
+    const vh=ptValHint(id,b,lv);   // 수치 변화 힌트(이름 오른쪽)
     rows+='<div class="ptRow'+(deferred?' deferred':'')+(_ptGroup==='team'?' team':'')+'">'
-      +'<div class="ptInfo"><div class="ptNameRow"><span class="ptName">'+b.name+'</span><span class="ptLv">Lv '+lv+' / '+b.max+lvTag+'</span></div>'
-      +'<div class="ptDesc">'+b.desc.replace(/\s*\(/,'<br>(')+'</div>'
-      +barHTML('ptBar',Math.round(lv/b.max*100))+'</div>'
+      +'<div class="ptInfo"><div class="ptNameRow"><span class="ptName">'+b.name+'</span>'+(vh?'<span class="ptVal">'+vh+'</span>':'')+'<span class="ptLv">Lv '+lv+' / '+b.max+lvTag+'</span></div>'
+      +ptPips(lv,b.max,n)+'</div>'
       +btn+'</div>';
   }
   if(!rows) rows='<div class="ptEmpty">항목 없음</div>';
   list.innerHTML=rows;
 }
+// 공학소 ? 상세 정보 — 자잘한 설명(정산 방식 + 현재 카테고리 항목별 효과)을 별도 팝업으로 분리.
+function openPtHelp(){ const body=document.getElementById('ptHelpBody'); if(!body) return;
+  let h='<div class="phGen">판이 끝나면 모은 <b>포인트(P)</b>가 정산되고, 강화하면 <b>이번 판에 즉시 적용</b>됩니다. (시작 자원·유닛은 다음 판부터)</div>';
+  const tab=(_PT_TABS.find(t=>t[0]===_ptGroup)||[])[1]||'';
+  h+='<div class="phSect">'+tab+(_PT_NOTE[_ptGroup]?' · '+_PT_NOTE[_ptGroup]:'')+'</div>';
+  for(const id in META_BUILDS){ const b=META_BUILDS[id]; if(b.group!==_ptGroup) continue;
+    h+='<div class="phItem"><b>'+b.name+'</b> — '+b.desc+'</div>'; }
+  body.innerHTML=h; popShow('ptHelpPop'); if(typeof playSfx==='function') playSfx('ui_open'); }
+function closePtHelp(){ popHide('ptHelpPop'); }
+// 항목별 수치 변화 힌트 — 시작 크레딧: 250→275 · 시작 포탑: 포탑 공격력 N · 나머지: 누적 효과(+/%)
+function ptValHint(id, b, lv){ const maxed=lv>=b.max;
+  if(id==='start_turret'){ const t=(typeof U!=='undefined'&&U.turret)?U.turret:null; return t?('포탑 공격력 '+t.dmg):''; }
+  if(b.max===1) return '';   // 토글 해금 = 수치 표기 없음
+  const m=b.desc.match(/([+-]?\d+(?:\.\d+)?)(%?)\s*\/\s*Lv/); if(!m) return '';
+  const step=parseFloat(m[1]), pct=(m[2]==='%');
+  const num=x=>Number.isInteger(x)?(''+x):x.toFixed(1);
+  let base=null;
+  if(id==='start_credit') base=(typeof mapCfg==='function'?mapCfg('startCredits',START_MIN):250);
+  else if(id==='start_energy') base=(typeof mapCfg==='function'?mapCfg('startEnergy',START_GAS):0);
+  const cur=lv*step, nxt=(lv+1)*step, ARW='<i class="ptArw">→</i>';   // 화살표=중앙정렬용 별도 span
+  if(base!=null){ const cv=base+cur, nv=base+nxt; return maxed?num(cv):(num(cv)+ARW+num(nv)); }
+  const sgn=x=>((x>0?'+':'')+num(x)+(pct?'%':''));
+  return maxed?sgn(cur):(sgn(cur)+ARW+sgn(nxt)); }
+// 레벨 세그먼트 pip — 채워진 칸 시안(초월 단계는 연보라). 칸 많으면(>12) 얇게.
+function ptPips(lv, max, n){ const N=Math.max(1,max), norm=(n!=null?n:N);
+  let s='<div class="ptPips'+(N>12?' mini':'')+'">';
+  for(let i=0;i<N;i++){ const on=i<lv, tr=on&&i>=norm; s+='<i class="'+(tr?'on tr':(on?'on':''))+'"></i>'; }
+  return s+'</div>'; }
 function doPtUp(id){ if(buildUpgrade(id)) renderPt(); }
 
 // ── 상시 공용 보스(협동/솔로) ──
 const BOSS_VIEW={x:0,y:0};    // 보스방 드래그 패닝 오프셋(px)
 const BOSS_FEET_FRAC=0.41;    // 보스(건물) 발이 닿는 화면 세로 비율 — 위로(하단 시트 답답함 완화)
 // 유닛 이동 가능 구역(이전 값) — 이 영역을 덮도록 타일(플랫폼)을 더 크게 설정
-function bossWalkBounds(){ return {lo:0.10, hi:0.90, top:0.31, bot:0.55}; }   // 가로로 넓고 세로로 짧은 이동 범위(코인방) · 위로
-const BOSS_PLATFORM={x:0.05,y:0.21,w:0.90,h:0.40};   // 코인방 플랫폼 — 가로로 길게 · 위로(이동가능 0.10~0.90 × 0.31~0.55 감쌈)
+function bossWalkBounds(){ return {lo:0.10, hi:0.90, top:0.31, bot:0.55}; }   // 가로로 넓고 세로로 짧은 이동 범위(포인트방) · 위로
+const BOSS_PLATFORM={x:0.05,y:0.21,w:0.90,h:0.40};   // 포인트방 플랫폼 — 가로로 길게 · 위로(이동가능 0.10~0.90 × 0.31~0.55 감쌈)
 function coopBossPlayers(){ return (typeof coopActive==='function'&&coopActive()&&G.coopNumToUid)?Math.max(1,Object.keys(G.coopNumToUid).length):1; }
 function coopBossMaxHp(lv){
-  const diff=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).bossHp||1;   // 보스 전용 난이도 계수(트랙 enemyHp와 분리 — enemyHp를 낮춰도 보스/코인 인플레 안 되게)
+  const diff=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).bossHp||1;   // 보스 전용 난이도 계수(트랙 enemyHp와 분리 — enemyHp를 낮춰도 보스/포인트 인플레 안 되게)
   const hpDown=Math.max(0.4, 1 - buildLevel('boss_hp_down')*0.015);
   // 월드보스: 단계마다 ×2, 5단계부터 추가 ×2 가속(후반 벽) → 이지·솔로 45k·90k·180k·360k·1.44M·5.76M·23M.
   // 초반 base를 높여(45k) 강한 유닛도 1~4단계를 즉사시키지 못함(월드보스 체감). 봇시뮬: 중간메타 ~4단계·만렙 ~6~8단계 캡.
@@ -3830,7 +3891,7 @@ function coopBossMaxHp(lv){
   const late=Math.pow(2.0, Math.max(0, lv-4));
   return Math.round(45000*diff*coopBossPlayers()*Math.pow(2.0, lv-1)*late*hpDown);
 }
-// 🏢 코인방 순차 파괴: 레벨마다 다른 건물(부수면 다음 레벨 = 다음 건물). 관리자 건설 구역 건물들(cb_ 모델 · nemo 전체 로드) 그대로 사용. 전투/멀티는 coopBoss 하나 그대로.
+// 🏢 포인트방 순차 파괴: 레벨마다 다른 건물(부수면 다음 레벨 = 다음 건물). 관리자 건설 구역 건물들(cb_ 모델 · nemo 전체 로드) 그대로 사용. 전투/멀티는 coopBoss 하나 그대로.
 const COIN_BLDG_SEQ=[   // 3종족 건설 건물 순환 — 유니온 → 스웜 → 에테리얼
   'cb_union_command_center','cb_union_barracks','cb_union_engineering_bay','cb_union_academy','cb_union_armory',
   'cb_union_factory','cb_union_starport','cb_union_science_facility','cb_union_bunker','cb_union_missile_turret',
@@ -3843,9 +3904,9 @@ function coinBldgId(lv){ lv=lv||((G.coopBoss&&G.coopBoss.lv)||1); const n=COIN_B
 function coinBldgName(lv){ const id=coinBldgId(lv);   // 건물 한글명 = 건설 트리에서 조회(cb_모델키 ↔ TECH_MODEL 매핑)
   try{ for(const race of ['union','swarm','aetherial']){ const bs=((typeof TECH_TREE!=='undefined'&&TECH_TREE[race])||{}).buildings||[];
     for(const b of bs){ const mk=(typeof TECH_MODEL!=='undefined'&&(TECH_MODEL[race]||{})[b.k]); if(mk&&('cb_'+mk)===id) return b.name; } } }catch(_e){}
-  return '코인 시설'; }
+  return '포인트 시설'; }
 function makeCoopBoss(lv){ const max=coopBossMaxHp(lv);
-  return { lv:lv, hp:max, max:max, dead:false, name:coinBldgName(lv) }; }   // 코인방 = 현 레벨 건물(부수면 다음 건물)
+  return { lv:lv, hp:max, max:max, dead:false, name:coinBldgName(lv) }; }   // 포인트방 = 현 레벨 건물(부수면 다음 건물)
 function spawnCoopBoss(lv){ G.coopBoss=makeCoopBoss(lv); updateCoopBossBar(); }
 // 적에게 데미지를 줄 때 공용 보스 체력 차감(기여도 시스템 제거)
 function coopBossDamage(amt, num, remote){ const cb=G.coopBoss; if(!cb||cb.dead) return;
@@ -3865,11 +3926,11 @@ function coopBossDown(){ const cb=G.coopBoss; if(!cb||cb.dead) return; cb.dead=t
   updateCoopBossBar(); }
 function updateCoopBossBar(){ const bar=document.getElementById('coopBossBar'); if(!bar) return;
   const cb=G.coopBoss; const bldHp=document.getElementById('bossBldHp');
-  if(G.bossOpen){   // 🏢 코인방: 상단 보스바 대신 건물 아래 HP바(기존 .bldHp 재사용)
+  if(G.bossOpen){   // 🏢 포인트방: 상단 보스바 대신 건물 아래 HP바(기존 .bldHp 재사용)
     bar.classList.add('hide');
     const show=(cb && !cb.dead && G.phase==='playing');
     if(bldHp){ bldHp.style.display=show?'block':'none';
-      if(show){ const hpR=Math.max(0,Math.min(1,cb.hp/cb.max));   // 건설 구역 건물 바(.bentBar + _barsHTML) 그대로 재사용 — 코인방 건물은 HP만(쉴드·마나 없음)
+      if(show){ const hpR=Math.max(0,Math.min(1,cb.hp/cb.max));   // 건설 구역 건물 바(.bentBar + _barsHTML) 그대로 재사용 — 포인트방 건물은 HP만(쉴드·마나 없음)
         let fill=bldHp.querySelector('.uH i'); if(!fill){ bldHp.innerHTML=_barsHTML({ hpR:hpR, hpCol:hpBarColor(hpR), shR:null, enR:null }); fill=bldHp.querySelector('.uH i'); }
         if(fill){ fill.style.width=(hpR*100)+'%'; fill.style.background=hpBarColor(hpR); }
         bldHp.style.left='50%'; bldHp.style.top=(BOSS_FEET_FRAC*100+8).toFixed(1)+'%'; bldHp.style.width='40%'; } }   // 건물 발밑보다 더 아래
@@ -4046,7 +4107,7 @@ function renderSellPanel(){ const tiersBox=document.getElementById('hsTiers'), g
     const thumb=img?('<img src="'+img+'" draggable="false">'):(typeof unitSVG==='function'?unitSVG(GACHA_PROXY[gid]||'marine'):'');
     const val=unitSellValue(list[0]);
     cells+='<button class="hsCell" onclick="sellOneOfType(\''+gid+'\')" title="'+escHtml(gu.displayName)+' 판매 +'+val+'"><div class="hsThumb">'+thumb+'</div>'
-      +'<span class="hsCnt">×'+list.length+'</span><span class="hsName">'+escHtml(gu.displayName)+'</span><span class="hsVal">+'+val+'</span></button>';
+      +'<span class="hsCnt">×'+list.length+'</span><div class="hsMeta"><span class="hsName">'+escHtml(gu.displayName)+'</span><span class="hsVal">+'+val+'</span></div></button>';
   }
   grid.innerHTML=cells;
 }
@@ -4060,7 +4121,7 @@ function bossUnitPos(i,n){ const PER=7; const rows=Math.max(1,Math.ceil(n/PER));
 // 보스 구역 바닥 — 화산: 바깥은 화산암(badlands), 보스가 서는 중앙은 용암(ash+발광)
 function drawBossFloor(ctx,ox,oy,bw,bh,t,fy){
   const R=16, lw=Math.max(9,Math.min(bw,bh)*0.05), Ri=Math.max(4,R-lw*0.5);
-  // 안쪽 = 지형 바닥(메인 맵 톤) + 은은한 금색 중앙 발광(코인방 분위기)
+  // 안쪽 = 지형 바닥(메인 맵 톤) + 은은한 금색 중앙 발광(포인트방 분위기)
   ctx.save(); ctx.beginPath(); rRpath(ctx,ox,oy,bw,bh,R); ctx.clip();
   ctx.fillStyle=mkPat(ctx,TILE_BAD,BAD_TILE)||'#241410'; ctx.fillRect(ox,oy,bw,bh);
   const gg=ctx.createRadialGradient(ox+bw/2,oy+bh*0.52,4,ox+bw/2,oy+bh*0.52,Math.max(bw,bh)*0.45);
@@ -4071,12 +4132,12 @@ function drawBossFloor(ctx,ox,oy,bw,bh,t,fy){
   ctx.fillStyle=mkPat(ctx,TILE_ASH,ASH_TILE)||'#1a0a06'; ctx.fillRect(ox,oy,bw,bh);
   ctx.fillStyle='rgba(0,0,0,.3)'; ctx.fillRect(ox,oy,bw,bh); ctx.restore();
   ctx.save(); ctx.beginPath(); rRpath(ctx,ox+lw,oy+lw,bw-2*lw,bh-2*lw,Ri); ctx.lineWidth=lw*0.4; ctx.strokeStyle='rgba(0,0,0,.5)'; ctx.stroke(); ctx.restore();
-  // 🪙 코인방 = 금색 발광 테두리(안쪽 밝은 림 + 바깥 은은한 금색)
+  // 🪙 포인트방 = 금색 발광 테두리(안쪽 밝은 림 + 바깥 은은한 금색)
   ctx.save(); ctx.beginPath(); rRpath(ctx,ox+lw*0.5,oy+lw*0.5,bw-lw,bh-lw,Ri); ctx.lineWidth=1.5; ctx.strokeStyle='rgba(255,216,104,.6)'; ctx.stroke(); ctx.restore();
   ctx.save(); ctx.beginPath(); rRpath(ctx,ox,oy,bw,bh,R); ctx.lineWidth=2.5; ctx.strokeStyle='rgba(255,198,70,.4)'; ctx.stroke(); ctx.restore();
 }
 let BAW=0,BAH=0;   // 토벌장 캔버스 크기(메인 GW/GH와 분리 — 두 화면 좌표계 독립)
-// 🪙 코인방 분위기 입자(맵 주변 우주에 느리게 떠오르는 금빛) — 결정적 분포(프레임마다 재랜덤 없음)
+// 🪙 포인트방 분위기 입자(맵 주변 우주에 느리게 떠오르는 금빛) — 결정적 분포(프레임마다 재랜덤 없음)
 const COIN_MOTES=(function(){ const a=[]; for(let k=0;k<16;k++){ const f=n=>((k+1)*n)%1;
   a.push({ x:0.03+0.94*f(0.3701), y:f(0.2903), rise:0.006+0.006*f(0.531), sp:0.25+0.45*f(0.191), tw:0.7+1.3*f(0.413), ph:k*0.77, r:0.7+1.5*f(0.611) }); } return a; })();
 function drawCoinMotes(ctx,W,H,t){ ctx.save(); ctx.globalCompositeOperation='lighter';
@@ -4157,8 +4218,8 @@ function drawBossBox(){ let el=document.getElementById('bossSelBox'); const host
   el.style.cssText='position:absolute;border:1px solid #46f06a;background:rgba(70,240,106,.14);pointer-events:none;z-index:23;left:'+(x*100)+'%;top:'+(y*100)+'%;width:'+(w*100)+'%;height:'+(h*100)+'%'; }
 function clearBossBox(){ const el=document.getElementById('bossSelBox'); if(el) el.remove(); _ba.box=null; }
 function bossDeselect(){ _baSel=[]; if(typeof G!=='undefined') G.bossBldSel=false; }
-// 코인방 건물 히트박스(정규화): 중앙 상단 몸통 + 발밑
-function _bossBldHit(p){ return Math.abs(p.x-0.5)<0.16 && p.y>(BOSS_FEET_FRAC-0.20) && p.y<(BOSS_FEET_FRAC+0.04); }   // 코인방 건물(중앙 1채) 히트박스
+// 포인트방 건물 히트박스(정규화): 중앙 상단 몸통 + 발밑
+function _bossBldHit(p){ return Math.abs(p.x-0.5)<0.16 && p.y>(BOSS_FEET_FRAC-0.20) && p.y<(BOSS_FEET_FRAC+0.04); }   // 포인트방 건물(중앙 1채) 히트박스
 function onBossArenaDown(e){ if(!G.bossOpen) return; if(e.target&&e.target.closest&&e.target.closest('#deselTop,#coopBossBar,.bossDeployBar')) return;
   const p=bossArenaPoint(e); _ba.moved=false;
   const u=bossUnitUnder(p);
@@ -4191,7 +4252,7 @@ function newGame(){ return {
   phase:'ready', round:1, kills:0, timeSec:0, speedMul:1, difficulty:'normal',
   view:{x:0.5, y:0.5, zoom:1}, viewT:{x:0.5, y:0.5, zoom:1},   // view=렌더(보간) / viewT=핀치 목표. zoom1·중심0.5=항등(기존과 동일)
   mineral:mapCfg('startCredits',START_MIN), gas:mapCfg('startEnergy',START_GAS), atkLv:{inf:0,mech:0,pro:0,zrg:0}, // 계열별 공격 업글 레벨
-  points:0, _pointsBanked:false,   // 이번 판에서 모은 포인트(월드보스 처치 합) — 게임 종료 시 코인으로 정산 → 다음 판 강화
+  points:0, _pointsBanked:false,   // 이번 판에서 모은 포인트(월드보스 처치 합) — 게임 종료 시 포인트으로 정산 → 다음 판 강화
   coopBoss:null, bossOpen:false, bossPickArm:false,   // 상시 공용 보스 + 토벌장 팝업 + 지정 파견
   units:[], enemies:[], beams:[], shots:[], impacts:[], muzzles:[], debris:[], pendingHits:[], recalls:[], sparks:[], pendSpawn:[], // 이펙트 + 명중대기 + 출현이펙트/대기 + 스파크
   toSpawn:0, spawnTimer:0, roundGap:0,
@@ -4899,7 +4960,7 @@ function energyDrawAll(){
 // ── 자동화 유틸(해금 업그레이드 + 인게임 on/off 토글) — 0.33초마다 1틱(한 번에 폭주 방지) ──
 let _autoAcc=0;
 const AUTO_INT=0.33;
-// 예시(프리뷰) 모드: true면 코인 업그레이드 미해금이어도 자동화 토글을 켜고 동작시켜 볼 수 있음(테스트용).
+// 예시(프리뷰) 모드: true면 포인트 업그레이드 미해금이어도 자동화 토글을 켜고 동작시켜 볼 수 있음(테스트용).
 // 정식 게이팅으로 되돌리려면 false로만 바꾸면 됨.
 const AUTO_PREVIEW=true;
 function autoUsable(kind){ if(AUTO_PREVIEW) return true; const mb=G.metaB||{};
@@ -6256,7 +6317,7 @@ function renderBldgs(viewId,list,posArr,selId,onSel){ const v=document.getElemen
     const el=document.createElement('div'); el.className='bldg'+(b.id===selId?' sel':'')+(b.meta?' metaBeacon':'');
     el.style.left=(p.x*100)+'%'; el.style.top=(p.y*100)+'%'; el.style.setProperty('--bc',col);
     const visual = (b.meta && !has3d)
-      ? '<div class="bbeacon"><div class="bbRing"></div><div class="bbCore"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5l5.3 5.3h-3.1v5h-4.4v-5H6.7z"/><path d="M7 18.5h10"/></svg></div></div>'   // 엔지니어링 베이 = 비콘 패드(3D 모델 미로드 시 폴백)
+      ? '<div class="bbeacon"><div class="bbRing"></div><div class="bbCore"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5l5.3 5.3h-3.1v5h-4.4v-5H6.7z"/><path d="M7 18.5h10"/></svg></div></div>'   // 공학소 = 비콘 패드(3D 모델 미로드 시 폴백)
       : '<div class="bframe'+(has3d?' nofig':'')+'" style="color:'+col+'">'+svg+'</div>';   // 3D 모델(command_center) 로드 시 모델 표시
     el.innerHTML=visual+'<div class="bname" style="color:'+col+'">'+b.name+'</div><div class="bsub">'+b.wname+'</div>';
     el.onclick=()=>onSel(b.id); v.appendChild(el);
@@ -6649,16 +6710,16 @@ function _bossArenaSlot(i){ const dep=G.units.filter(u=>u.atBoss), u=dep[i], has
     return { pro:unitPortraitHTML(id), sn:nm, metaCls:'lv', state:'ok',
       bottom:'<div class="cgTrash" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()" onclick="bossRecallSlot(event,'+i+')" title="회수">'+_SVG_TRASH+'</div>', act:'' }; }
   return { pro:'<svg viewBox="0 0 24 24">'+_PIN_SVG+'</svg>', sn:'파견', state:hasBoss?'ok':'dim', act:'onclick="bossSlotTap('+i+')"' }; }
-// 🏢 코인방 건물 프로필 — 이름 + 체력 + 처치 코인(간단). 관리자 건물 프로필과 동일한 build 카드.
+// 🏢 포인트방 건물 프로필 — 이름 + 체력 + 처치 포인트(간단). 관리자 건물 프로필과 동일한 build 카드.
 const _BLD_ICON_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M4 20h16M6 20V9l6-4 6 4v11M9.5 20v-5h5v5"/></svg>';
 function _bossBldReward(){ const cb=G.coopBoss||{}; const mul=1+((typeof buildLevel==='function'?buildLevel('boss_reward_up'):0)*0.1);
   return Math.max(1, Math.round((cb.lv||1)*mul)); }
 function _bossBldProfileModel(){ const cb=G.coopBoss||{};
   const hp=Math.max(0,Math.round(cb.hp||0)), mx=cb.max||0, coins=_bossBldReward();
-  const nm=((typeof coinBldgName==='function')?coinBldgName(cb.lv):null)||cb.name||'코인 시설';
-  return { mode:'prod', title:nm, icon:_BLD_ICON_SVG, sub:'코인 건물', items:[],
+  const nm=((typeof coinBldgName==='function')?coinBldgName(cb.lv):null)||cb.name||'포인트 시설';
+  return { mode:'prod', title:nm, icon:_BLD_ICON_SVG, sub:'포인트 건물', items:[],
     hpsh:_cgHpShStr(hp.toLocaleString()+' / '+mx.toLocaleString(),0,0),
-    info:{ eb:'', hideName:true, stats:[ ['단계', 'Lv.'+(cb.lv||1)], ['처치 코인', '+'+coins+' (전원 동일)'] ], cr:0, en:0 } }; }
+    info:{ eb:'', hideName:true, stats:[ ['단계', 'Lv.'+(cb.lv||1)], ['처치 포인트', '+'+coins+' (전원 동일)'] ], cr:0, en:0 } }; }
 function renderBossBldProfile(){ const host=document.getElementById('unitCmd'); if(!host) return; host.classList.add('simple');
   const cb=G.coopBoss||{}; const sig='bbp|'+Math.round(cb.hp||0)+'|'+(cb.max||0)+'|'+(cb.lv||1)+'|'+_bossBldReward();
   if(host._gSig!==sig){ host._gSig=sig; host._cgSig=undefined; renderCmdGrid(host, _bossBldProfileModel()); } }
@@ -6666,8 +6727,8 @@ function _bossArenaSheetModel(){ const dep=G.units.filter(u=>u.atBoss);
   const items=[ _bossArenaSlot(0), _bossArenaSlot(1),
     { pro:_RECALL_SVG, sn:'전체 회수', state:(dep.length>0?'ok':'dim'), act:'onclick="recallFromBoss(\'all\')"' },
     { pro:_BACK_SVG, sn:'돌아가기', state:'ok', act:'onclick="closeBossArena()"' } ];
-  return { mode:'bossArena', title:'코인방', icon:pIco('💀'), sub:'', compact:true, build:true,
-    info:{ eb:'', name:'코인 획득 방', desc:'건물 파괴로 코인 획득 · 모두 동일' }, items:items }; }
+  return { mode:'bossArena', title:'포인트방', icon:pIco('💀'), sub:'', compact:true, build:true,
+    info:{ eb:'', name:'포인트 획득 방', desc:'건물 파괴로 포인트 획득 · 모두 동일' }, items:items }; }
 function renderBossArenaSheet(){ const host=document.getElementById('unitCmd'); if(!host) return; host.classList.add('simple');
   const dep=G.units.filter(u=>u.atBoss);
   const sig='ba|'+dep.map(u=>u.uid+':'+(u.gmodel||u.id)).join(',')+'|'+(!!(G.coopBoss&&!G.coopBoss.dead)?1:0)+'|'+(host._cgPage||0);
@@ -6738,7 +6799,7 @@ function _bossSheetModel(){
     else if(cd>0){ state='dim'; tr=(autoOn?'⟳ ':'')+cd+'s'; }
     // 소환은 무료(코스트 표기 생략 — 크레딧 가격으로 오인 방지) · 하단 줄엔 처치 보상을 '+' 초록으로(획득 신호)
     return { pro:_bossSkullSVG(pt.col), sn:pt.name, cr:0, en:0, tr:tr, metaCls:'lv', state:state, sel:autoOn,
-      bottom:'<div class="cgCost cgRwd" title="처치 보상: 코인 '+Math.round(pt.bonus*coinMult)+' · 에너지 '+(pt.egy||0)+'"><span>+'+COIN_SM+Math.round(pt.bonus*coinMult)+'</span></div>',
+      bottom:'<div class="cgCost cgRwd" title="처치 보상: 포인트 '+Math.round(pt.bonus*coinMult)+' · 에너지 '+(pt.egy||0)+'"><span>+'+COIN_SM+Math.round(pt.bonus*coinMult)+'</span></div>',
       act:'onpointerdown="bossHoldStart(\''+pt.id+'\',event)"' }; });
   const info={ eb:'', name:'개인보스 소환', desc:autoAvail?'길게 = 자동소환':'셀을 눌러 소환' };
   return { mode:'boss', title:'개인보스', icon:pIco('💀'), sub:'', compact:true, build:true, info:info, items:items }; }
@@ -6795,7 +6856,7 @@ function _autoSheetModel(){ const o=autoUtilOwned(); if(!G.auto) G.auto={unit:fa
   const items=AUTO_SHEET_DEFS.map(function(d){ const kind=d[0], owned=!!o[kind], on=!!G.auto[kind];
     return { pro:d[2], sn:d[1], state:owned?'ok':'dim', sel:owned&&on,   // 이름 아래 토글 스위치(.sel=켜짐) · 셀 전체 클릭으로 토글
       bottom: owned ? '<div class="cgSwWrap"><span class="cgSw"></span></div>' : '<div class="cgSwWrap lk">'+pIco('🔒','sm')+'</div>',
-      act:owned?('onclick="toggleAuto(\''+kind+'\')"'):'onclick="toast(\'🔒 코인 연구소에서 해금\')"' }; });
+      act:owned?('onclick="toggleAuto(\''+kind+'\')"'):'onclick="toast(\'🔒 포인트 연구소에서 해금\')"' }; });
   // 유닛 배치 ON일 때만: 오른쪽(2페이지 2번 슬롯)에 화살표(구역) 표시 토글 셀
   if(o.place && G.auto.place){ const shown=(G.rallyShow!==false);
     items.push({ pro:pIco('🚩'), sn:'구역 표시', state:'ok', sel:shown,
@@ -7742,7 +7803,7 @@ function cmdGridModelForUpg(b){ const its=bldgUpgs(b), R=G.research;
 // 생산 모델 빌더(STK 건물 → 유닛 그리드). actFn(unitId)→이벤트 속성 문자열(미지정 시 미리보기만)
 // 건설 모델 빌더(STK 건물 목록 → 건물 그리드·페이지 자동). actFn(bldgKey)→이벤트 속성 문자열
 function selectUpg(id){ const _b0=TECH.find(x=>x.id===id);
-  if(_b0&&_b0.meta){ if(typeof playSfx==='function') playSfx('ui_open'); openPointUpgrade(); return; }   // 엔지니어링 베이 → 영구 강화 팝업
+  if(_b0&&_b0.meta){ if(typeof playSfx==='function') playSfx('ui_open'); openPointUpgrade(); return; }   // 공학소 → 영구 강화 팝업
   const _bchg=(G.techB!==id); G.techB=id;
   if(_bchg && typeof playSfx==='function'){ playSfx('bldg_protoss'); }   // 모든 건물 작동음을 크리스탈 워크스(프로토스) 소리로 통일
   renderBldgs('vUpgrade',TECH,TECH_POS,id,selectUpg);
@@ -7815,13 +7876,15 @@ function tickResearch(dt){ if(!G.research) return;
 const PLAYER_VIEW_COLORS=['#4570d3','#d6292f','#eadb3e','#2ba143','#ad5cd6','#ed691d','#6d422c','#dfe0e2'];
 function renderPlayers(){ const g=document.getElementById('plGrid'); g.innerHTML='';
   const mine=G.myPlayer||1; const active=G.activePlayers||[1,2,3,4,5,6,7,8];   // 게임에 입장한 플레이어만 활성
-  for(let n=1;n<=8;n++){ const present=active.indexOf(n)>=0, lock=(n===mine);   // 내 슬롯은 잠금(나)
+  for(let n=1;n<=8;n++){ const isMe=(n===mine), present=active.indexOf(n)>=0;
+    const elim=!isMe && !present && (G.eliminated||[]).indexOf(n)>=0;   // 입장했다가 탈락한 슬롯(색 유지·어둡게)
     const el=document.createElement('div');
-    el.className='plbtn'+(present&&n===G.curPlayer&&!lock?' me':'')+(lock?' lock':'')+(!present?' off':'');   // 미입장=off
-    el.style.setProperty('--pc', PLAYER_VIEW_COLORS[(n-1)%PLAYER_VIEW_COLORS.length]);
-    const _bo=!lock && present && G.coopState && G.coopState[n] && G.coopState[n].bo;   // 상대가 토벌장 보는 중
-el.innerHTML='<div class="plnum">'+n+'P</div><div class="plst">'+(lock?(escHtml(myNick())+' '+pIco('🔒','sm')):(present?(escHtml(playerName(n))+(_bo?(' <span title="보스방 입장 중">'+pIco('👹','sm')+'</span>'):'')):'빈 자리'))+'</div>';
-    if(!lock && present) el.onclick=()=>{ G.curPlayer=n; renderPlayers(); drawPlayer(); updateSpecLabel(); };   // 입장한 다른 플레이어만 관전 가능
+    el.className='plbtn'+(isMe?' mine':(present?(n===G.curPlayer?' me':''):(elim?' gone':' off')));   // 나=mine · 활성=관전가능(현재관전=me) · 탈락=gone · 빈자리=off
+    const showColor=(isMe||present||elim);   // 빈 자리만 무채색(흰색 계열)
+    el.style.setProperty('--pc', showColor?PLAYER_VIEW_COLORS[(n-1)%PLAYER_VIEW_COLORS.length]:'#b6bdc8');
+    const _bo=!isMe && present && G.coopState && G.coopState[n] && G.coopState[n].bo;   // 상대가 토벌장 보는 중
+el.innerHTML='<div class="plnum">'+n+'P</div><div class="plst">'+(isMe?escHtml(myNick()):(present?(escHtml(playerName(n))+(_bo?(' <span title="보스방 입장 중">'+pIco('👹','sm')+'</span>'):'')):(elim?escHtml(playerName(n)):'빈 자리')))+'</div>';
+    if(!isMe && present) el.onclick=()=>{ G.curPlayer=n; renderPlayers(); drawPlayer(); updateSpecLabel(); };   // 입장한 다른 플레이어만 관전 가능
     g.appendChild(el);
   } }
 function updatePlayerCounts(){ const active=G.activePlayers||[];   // Players 탭에서 실시간 적 수 갱신
@@ -7918,7 +7981,7 @@ function updatePauseBtn(){
   const remain=PAUSE_MAX-(G.pauseUsed||0);
   if(btn){ btn.classList.toggle('paused',G.paused); btn.classList.toggle('disabled', !G.paused && remain<=0); }
   if(lbl) lbl.textContent = G.paused ? '재개' : ('일시정지 ('+remain+'회 남음)');
-  if(ico) ico.textContent = G.paused?'▶':'⏸'; }
+  if(ico) ico.innerHTML = (G.paused?MSG_ICO['▶']:MSG_ICO['⏸']).d; }
 function exitGame(){
   if(typeof closeSettings==='function') closeSettings();   // 설정 팝업 닫기(확인창이 위에 뜨도록)
   if(G && G.strike){ strikeEnd(); return; }   // 컴퓨터가 싸운다: 즉시 로비로
@@ -8065,13 +8128,13 @@ function openResultScreen(){ const sc=document.getElementById('resultScreen'); i
   _mapThumbInto(document.getElementById('rsThumb'), MAP, 'opThumb');
   document.getElementById('rsName').textContent=(MAP&&MAP.name)||'';
   document.getElementById('rsStats').innerHTML=
-    ovStatRow('받은 코인','<b class="osCoin">◎ '+S.coins+'</b>')
+    ovStatRow('받은 포인트','<b class="osCoin">◎ '+S.coins+'</b>')
    +ovStatRow('처치', (S.kills||0).toLocaleString())
    +ovStatRow('도달 라운드', inf?(S.round+'  (최고 '+((PLAYER_META&&PLAYER_META.highestRound)||S.round)+')'):(S.round+' / '+mapCfg('rounds',TOTAL_ROUNDS)))
    +ovStatRow('플레이타임', fmtTime(S.time))
    +(S.newDiff?ovStatRow('난이도 해금','<b class="osNew">'+S.newDiff+'</b>'):'')
    +(S.infNew?ovStatRow('모드 해금','<b class="osNew">무한 모드</b>'):'')
-   +ovStatRow('보유 코인','◎ '+(((typeof PLAYER_META!=='undefined')&&PLAYER_META.coins)||0));
+   +ovStatRow('보유 포인트','◎ '+(((typeof PLAYER_META!=='undefined')&&PLAYER_META.coins)||0));
   if(typeof setInGame==='function') setInGame(false);   // 게임 크롬(하단 콘솔) 정리
   sc.classList.remove('hide'); _rsStartAuto(); }        // 10초 뒤 자동으로 로비
 function resultToLobby(){ _rsClearAuto(); const sc=document.getElementById('resultScreen'); if(sc) sc.classList.add('hide');
@@ -8145,7 +8208,7 @@ async function initAuth(){
       _sb=m.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey); AUTH.mode='supabase';
       const { data }=await _sb.auth.getSession();   // 자동 로그인: 저장된 세션 복원(같은 기기 재실행 — 정식 계정만)
       const u=data&&data.session&&data.session.user; AUTH.user = u ? sbUser(u) : null;
-      if(AUTH.user){ await sbEnsureProfile(); await sbSyncMetaOnLogin(); }   // 프로필 보정 + 계정 메타(코인) 로드
+      if(AUTH.user){ await sbEnsureProfile(); await sbSyncMetaOnLogin(); }   // 프로필 보정 + 계정 메타(포인트) 로드
       _sb.auth.onAuthStateChange((_e,sess)=>{ AUTH.user = (sess&&sess.user) ? sbUser(sess.user) : null; if(AUTH.user) sbEnsureProfile(); });
       return;
     }catch(e){ console.warn('Supabase 초기화 실패 → 로컬 계정 모드', e); AUTH.mode='local'; }
@@ -8565,7 +8628,7 @@ async function sbEnsureProfile(){ if(!sbReady()) return;
   catch(e){ console.warn('ensureProfile', e.message||e); }
   if(typeof updateMyNameTag==='function') updateMyNameTag();   // 코드 로드 후 헤더 갱신
   if(typeof RT!=='undefined' && RT.active && RT.lobby){ try{ RT.lobby.track(_rtTrackPayload()); }catch(e){} } }   // 프레즌스에 코드 반영
-// ── 메타(코인·강화) 서버 저장: profiles.meta(jsonb)에 계정별 저장 → 다른 기기에서도 코인·강화 유지 ──
+// ── 메타(포인트·강화) 서버 저장: profiles.meta(jsonb)에 계정별 저장 → 다른 기기에서도 포인트·강화 유지 ──
 async function sbSaveMeta(){ if(!sbReady()||!(AUTH.user&&AUTH.user.uid)) return;
   try{ await _sb.from('profiles').update({ meta: PLAYER_META }).eq('id', AUTH.user.uid); }
   catch(e){ console.warn('메타 서버 저장 실패(profiles.meta jsonb 컬럼 필요)', e.message||e); } }
@@ -8939,7 +9002,7 @@ document.addEventListener('pointerdown', function(e){
   playSfx(_sfxForEl(t));
 }, true);
 function openMapSelect(){ updateMyNameTag(); bgmStart('lobby'); loadMeta();
-  if(TEMP_COIN_TEST){ PLAYER_META.buildLevels={}; PLAYER_META.coins=9999999; saveMeta(); }   // [임시] 로비 진입(게임 나갔다 오면) 시 코인 상점 업그레이드 초기화(저장까지 → 상점 재오픈 loadMeta가 덮어쓰지 않게)   // 계정별 메타 성장 데이터 로드(메인/로비 진입 시 로비 BGM)
+  if(TEMP_COIN_TEST){ PLAYER_META.buildLevels={}; PLAYER_META.coins=9999999; saveMeta(); }   // [임시] 로비 진입(게임 나갔다 오면) 시 포인트 상점 업그레이드 초기화(저장까지 → 상점 재오픈 loadMeta가 덮어쓰지 않게)   // 계정별 메타 성장 데이터 로드(메인/로비 진입 시 로비 BGM)
   if(sbReady()){ rtStart(); rtSetStatus('online',''); }   // 실시간 소셜 연결 + 로비 상태
   initMapLive(); showAppScreen('mapSelect'); paintIcons(document.getElementById('mapSelect')); renderMaps(); startMapLive();
   if(typeof setBottomTab==='function') setBottomTab('chat'); if(typeof refreshFriendBadge==='function') refreshFriendBadge(); }
@@ -8993,7 +9056,7 @@ function renderDiffBtns(){ const box=document.getElementById('moDiffBtns'); if(!
     b.className='moDiffBtn'+(d===_selDiff?' on':''); b.style.setProperty('--dc', DIFF_COLOR[d]||'#fff');
     b.innerHTML='<span class="ddN">'+D.name+'</span><span class="ddC">포인트 ×'+D.coinMult+'</span>';
     b.onclick=()=>setDiff(d); box.appendChild(b); });
-  const h=document.getElementById('moDiffHint'); if(h){ const D=DIFFICULTY[_selDiff]; h.textContent='적 강도 ×'+(D.enemyHp/DIFFICULTY.easy.enemyHp).toFixed(1)+' · 코인 ×'+D.coinMult; }
+  const h=document.getElementById('moDiffHint'); if(h){ const D=DIFFICULTY[_selDiff]; h.textContent='적 강도 ×'+(D.enemyHp/DIFFICULTY.easy.enemyHp).toFixed(1)+' · 포인트 ×'+D.coinMult; }
 }
 function setDiff(d){ if(!DIFFICULTY[d]) return; _selDiff=d; renderDiffBtns(); if(typeof playSfx==='function') playSfx('ui_confirm'); }
 // 모드시트 설명 = 구역별 아이콘(라인 스타일 · 맵 강조색으로 틴트)
@@ -9107,7 +9170,7 @@ function openSoloDiff(){ const box=document.getElementById('soloDiffBtns'); if(b
         const _atk=(D.enemyHp/DIFFICULTY.easy.enemyHp).toFixed(1);
         b.innerHTML='<span class="ddN">'+D.name+'</span>'
           +'<span class="ddC ddStats"><span class="ddStat ddEnemy"><span class="ddLbl">적 HP</span><em>×'+_atk+'</em></span>'
-          +'<span class="ddStat ddCoin"><span class="ddLbl">코인 획득량</span><em>×'+D.coinMult+'</em></span></span>'
+          +'<span class="ddStat ddCoin"><span class="ddLbl">포인트 획득량</span><em>×'+D.coinMult+'</em></span></span>'
           +'<svg class="ddGo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
         b.onclick=()=>startSoloWithDiff(d);
       } else {
@@ -9212,7 +9275,7 @@ function renderCpDiff(){ const box=document.getElementById('cpDiffBtns'); if(box
   const info=document.getElementById('cpDiffInfo');   // 선택 세부: 무한=고정 문구 / 난이도=ENEMY HP·COIN 페어(솔로 카드와 동일 색)
   if(info){ if(_createInf){ info.innerHTML='<span class="cpdInf">노말 고정 · 끝없이 도전</span>'; }
     else { const D=DIFFICULTY[_createDiff]||DIFFICULTY.easy, atk=(D.enemyHp/DIFFICULTY.easy.enemyHp).toFixed(1);
-      info.innerHTML='<span class="cpdE">적 HP <b>×'+atk+'</b></span><span class="cpdC">코인 획득량 <b>×'+D.coinMult+'</b></span>'; } } }
+      info.innerHTML='<span class="cpdE">적 HP <b>×'+atk+'</b></span><span class="cpdC">포인트 획득량 <b>×'+D.coinMult+'</b></span>'; } } }
 function setCpDiff(d){ if(!DIFFICULTY[d]) return; _createDiff=d; _createInf=false; renderCpDiff(); if(typeof playSfx==='function') playSfx('ui_confirm'); }
 function setCpInf(){ _createInf=!_createInf; renderCpDiff(); if(typeof playSfx==='function') playSfx('ui_confirm'); }   // 무한 모드 토글 = 난이도 대신 무한(노말 고정)
 function mapHasDiff(){ return !(typeof _selMap!=='undefined' && _selMap && _selMap.noDiff); }   // 대인전 유즈맵 = 난이도 개념 없음
@@ -9279,6 +9342,7 @@ function startGameNow(activePlayers, myNum, names){
 function playerLeave(n){ if(!G.activePlayers) return; const mine=G.myPlayer||1; if(n===mine) return;
   const i=G.activePlayers.indexOf(n); if(i<0) return;
   G.activePlayers.splice(i,1);
+  (G.eliminated=G.eliminated||[]).push(n);   // 탈락 기록(관전 그리드: 색 유지·어둡게 표시)
   addChat('', '⚠️ '+n+'번 플레이어가 탈락하였습니다.');
   if(G.curPlayer===n){ const other=G.activePlayers.filter(x=>x!==mine); G.curPlayer=other[0]||mine;
     if(G.tab==='Players'){ if(typeof drawPlayer==='function') drawPlayer(); updateSpecLabel(); } }
@@ -14698,10 +14762,10 @@ const beaconInsts=new Map();  // 비콘 인스턴스(key 'bay' / 'shop0..7' -> {
 let bossModel=null;           // 공용 보스 3D 모델(임의 유닛 1종)
 const BOSS_MODEL='archon';    // 공용 보스 폴백 모델(공중 기함 미로드 시)
 const BOSS_MODEL_AIR='dreadnought';   // 공용 보스 = 공중 기함(배틀크루저). 로드 시 우선 사용
-const BOSS_MODEL_BLD='pointlab';   // 🏢 코인방 = 부술 건물(엔지니어링 베이). 로드 시 최우선 — 지상 고정 렌더
+const BOSS_MODEL_BLD='pointlab';   // 🏢 포인트방 = 부술 건물(공학소). 로드 시 최우선 — 지상 고정 렌더
 const BOSS_SCALE_MUL=2.0;     // 보스 확대 배율(유닛보다 크되 과하지 않게)
 const BOSS_BLD_SCALE_MUL=4; // 건물 보스 확대 배율(튜닝값 · 업그레이드 모델용)
-const COIN_CB_SCALE_MUL=2.4; // 건설(cb_) 건물 배율 — SCALE=cfg.s/max(h,w) 정규화 후, 코인방 표시 크기 배율
+const COIN_CB_SCALE_MUL=2.4; // 건설(cb_) 건물 배율 — SCALE=cfg.s/max(h,w) 정규화 후, 포인트방 표시 크기 배율
 const SHOP_SCALE_MUL=1.16;    // 슬롯 전시 모델·시민 크기 배율 — 유닛/시민 살짝 키움
 const SHOP_BW_MUL=1.7;        // 슬롯 비콘 폭 배율(min*0.10 * 이값) — 유닛 축소에 맞춰 비콘도 ~0.85 축소
   // 유닛뽑기: 유닛을 비콘 단(deck) 위로 올리는 높이(비콘 폭 대비)
@@ -15755,13 +15819,13 @@ window.M3D={
     const alive=(typeof G!=='undefined' && G.coopBoss && !G.coopBoss.dead);
     // ── 보스 ──
     const _cbId = (typeof coinBldgId==='function') ? coinBldgId() : BOSS_MODEL_BLD;   // 🏢 순차 파괴: 레벨마다 다른 유니온 테크 건물(부수면 다음 레벨=다음 건물)
-    const bossId = bases[_cbId] ? _cbId : (bases[BOSS_MODEL_AIR] ? BOSS_MODEL_AIR : BOSS_MODEL);   // 코인방=현 레벨 건물(로드 시) / 공중 기함 / archon 폴백
+    const bossId = bases[_cbId] ? _cbId : (bases[BOSS_MODEL_AIR] ? BOSS_MODEL_AIR : BOSS_MODEL);   // 포인트방=현 레벨 건물(로드 시) / 공중 기함 / archon 폴백
     const bossBld=(bossId===_cbId);   // 건물 = 지상 고정(부양·흔들림 없음)
     if(MODELS[bossId] && alive){
       let m=bossModel; if(m && m.id!==bossId){ scene.remove(m.holder); bossModel=null; m=null; }   // 모델 바뀌면 교체(레벨업 = 다음 건물)
       if(!m){ m=makeModel(bossId); if(m){ m.kind='boss'; bossModel=m; } }
       if(m){ m.holder.visible=true; if(m.inner)m.inner.visible=true; if(m.runInner)m.runInner.visible=false; if(m.gun)m.gun.visible=(!bossBld);
-        if(m.rim){ if(bossBld){ const selB=(typeof G!=='undefined'&&G.bossBldSel); m.rim.visible=!!selB; if(selB) m.rim.scale.setScalar(1.12); } else m.rim.visible=false; }   // 코인방 건물 하단링 = 건설 구역과 완전 동일(기본 teal 셀렉션 링·scale 1.12·지정 시에만)
+        if(m.rim){ if(bossBld){ const selB=(typeof G!=='undefined'&&G.bossBldSel); m.rim.visible=!!selB; if(selB) m.rim.scale.setScalar(1.12); } else m.rim.visible=false; }   // 포인트방 건물 하단링 = 건설 구역과 완전 동일(기본 teal 셀렉션 링·scale 1.12·지정 시에만)
         { const _isCb=bossId.indexOf('cb_')===0; m.holder.scale.setScalar((SCALE[bossId]||MODEL_SCALE)*(bossBld?(_isCb?COIN_CB_SCALE_MUL:BOSS_BLD_SCALE_MUL):BOSS_SCALE_MUL)); }
         m.yaw.rotation.y = bossBld ? upgBldgYaw(bossId) : (MODEL_YAW_OFF[bossId]||0);   // 건물 = 건설 구역과 각도 통일(CST_YAW+f · 대각 3/4 뷰)
         if(bossBld){ m.anim.position.set(0,0,0); m.anim.rotation.set(0,0,0); }   // 건물: 지상 고정
