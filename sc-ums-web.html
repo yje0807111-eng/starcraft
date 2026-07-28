@@ -2047,16 +2047,17 @@
   .setTitle .ptBal b{font-size:16px;font-weight:800;color:#5cd6ff}   /* .ptTitle b(파티 패널 빨강)와 클래스명 충돌 → 우선순위로 시안 고정 */
   #pointPanel .setX .mIco,#ptHelpPop .setX .mIco{color:inherit}   /* 닫기 X = 은은한 회색(빨강 mIco 기본색 차단) */
   /* 카테고리 = 게임 하단 네비 바처럼: 하나의 바(가로 꽉 참) + 탭 사이 세로줄 + 아이콘 + 활성=하단 시안 라인 */
-  .ptSeg{display:flex;gap:0;margin:0 -14px 11px;position:relative;
-    background:linear-gradient(180deg,#232c3b,#161c27);border-top:1px solid rgba(255,255,255,.14);border-bottom:1px solid rgba(0,0,0,.4);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}   /* 선택 가능함이 보이도록 조금 밝게 */
-  .ptTab{flex:1;min-width:0;position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px 7px;font-family:inherit;font-size:var(--fs-xs);font-weight:800;cursor:pointer;white-space:nowrap;
-    color:#a7b4c6;background:none;border:none;transition:color .16s}
-  .ptTab .ptTabIco{line-height:0}.ptTab .ptTabIco svg{width:17px;height:17px;display:block;transition:color .16s}
-  .ptTab+.ptTab::before{content:'';position:absolute;left:0;top:22%;bottom:22%;width:1px;background:linear-gradient(180deg,transparent,rgba(255,255,255,.1),transparent);pointer-events:none}
-  .ptTab::after{content:'';position:absolute;left:16%;right:16%;bottom:0;height:2px;border-radius:3px 3px 0 0;background:linear-gradient(90deg,transparent,var(--setAcc),transparent);box-shadow:0 0 8px rgba(92,214,255,.6);opacity:0;transition:opacity .18s;pointer-events:none}
-  .ptTab.on{color:#e6f6ff}
-  .ptTab.on::after{opacity:1}
-  .ptTab.on .ptTabIco{color:var(--setAcc);filter:drop-shadow(0 0 5px rgba(92,214,255,.6))}
+  /* 카테고리 바 = 세그먼트 필: 선택 탭에 라운드 배경 · 하단 선·세로 구분선 없음 */
+  /* 바 = 팝업 카드와 같은 톤: 별도 색 판때기 대신 은은한 글래스 + 아래 구분선만 */
+  .ptSeg{display:flex;gap:4px;margin:0 0 11px;padding:4px;position:relative;border-radius:10px;
+    background:rgba(255,255,255,.04);border:1px solid var(--metal-edge);box-shadow:none}
+  .ptTab{flex:1;min-width:0;position:relative;display:flex;align-items:center;justify-content:center;gap:4px;
+    padding:6px 2px;border-radius:8px;font-family:inherit;font-size:var(--fs-xs);font-weight:800;cursor:pointer;white-space:nowrap;
+    color:#93a1b3;background:none;border:1px solid transparent;transition:color .16s,background .16s,border-color .16s}
+  .ptTab .ptTabIco{line-height:0;flex:none}.ptTab .ptTabIco svg{width:14px;height:14px;display:block;transition:color .16s}
+  .ptTab:active{background:rgba(255,255,255,.05)}
+  .ptTab.on{color:#eaf6ff;background:rgba(92,214,255,.14);border-color:rgba(92,214,255,.34)}
+  .ptTab.on .ptTabIco{color:var(--setAcc)}
   .ppList{flex:1;min-height:90px;overflow-y:auto;display:flex;flex-direction:column;padding-right:3px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
   .ppList::-webkit-scrollbar{width:5px}.ppList::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:var(--r-bar)}
   .ptSect{display:flex;align-items:center;gap:6px;font-size:var(--fs-md);font-weight:800;color:#d3dbe6;letter-spacing:.4px;margin:13px 1px 7px;padding-bottom:5px;
@@ -2069,8 +2070,8 @@
   .ptRow.deferred{opacity:.5}
   .ptInfo{flex:1;min-width:0}
   .ptNameRow{display:flex;align-items:baseline;gap:5px;margin-bottom:5px}
-  .ptName{font-size:var(--fs-lg);font-weight:700;color:#dbe3ec}
-  .ptVal{flex:0 1 auto;min-width:0;display:inline-flex;align-items:center;gap:2px;font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;color:#8a94a3;white-space:nowrap}   /* 수치 힌트: 제목 옆에 붙임·작게·회색(잘 안 보여도 무방) */
+  .ptName{flex:0 0 auto;font-size:var(--fs-lg);font-weight:700;color:#dbe3ec;white-space:nowrap}   /* 항목명은 항상 한 줄 */
+  .ptVal{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;display:inline-flex;align-items:center;gap:2px;font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;color:#8a94a3;white-space:nowrap}   /* 수치 힌트: 제목 옆에 붙임·작게·회색(잘 안 보여도 무방) */
   .ptArw{font-style:normal;font-size:10px;line-height:1;color:#767f8c}   /* 상승 화살표 = 수치 사이 중앙 높이 */
   .ptLv{flex:0 0 auto;margin-left:auto;padding-left:8px;font-size:var(--fs-sm);font-weight:700;color:var(--txt-mute);font-family:'Rajdhani',sans-serif}
   .ptPips{display:flex;gap:3px}
@@ -2084,6 +2085,8 @@
     border:1px solid rgba(255,59,59,.6);box-shadow:inset 0 1px 0 rgba(255,255,255,.08);transition:all .12s}   /* 글로우 없음 */
   .ptBtn:not(:disabled):not(.poor):active{transform:translateY(1px)}
   .ptBtn b{font-family:'Rajdhani',sans-serif;font-size:var(--fs-lg);font-weight:800;line-height:1.1;color:#ffefef}
+  .ptBtnLv{font-family:'Rajdhani',sans-serif;font-style:normal;font-size:9px;font-weight:700;line-height:1;color:var(--txt-mute);letter-spacing:.2px}   /* 레벨 = 비용 아래(이름줄 폭 확보) */
+  .ptBtnLv.trans{color:#c6a3ee}   /* 초월 단계 */
   .ptBtn span{font-size:var(--fs-xs);font-weight:700;opacity:.8}
   /* 강화 불가(포인트 부족) = 색·발광 거의 없음 */
   .ptBtn.poor{cursor:default;color:#727b87;background:rgba(255,255,255,.03);border-color:var(--metal-edge);box-shadow:none}
@@ -2283,7 +2286,7 @@
   .ptSlot.empty:hover .ptAddLbl{color:var(--neon-lt)}
   
   
-  .ptName{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.2}
+  .ptSlot .ptName{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.2}   /* 파티 슬롯 전용 — 공학소 행(.ptNameRow)의 이름까지 늘어나지 않게 범위 한정 */
   .ptNick{font-size:var(--fs-md);font-weight:700;color:#e8eef5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .ptRole{font-style:normal;font-size:var(--fs-xs);color:#79838f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .ptSlot.fill.leader .ptRole{color:var(--neon-lt)}
@@ -3675,7 +3678,7 @@ const META_BUILDS = {   // 탭(group) → 섹션(sect) 2단 분류. 같은 sect�
   auto_energy:  { name:'자동 에너지 변환', desc:'크레딧→에너지 자동 변환 토글 해금 (0.33초마다)',      start:220, nMax:1, max:1, group:'prod', sect:'자동화' },
   auto_pboss:   { name:'자동 개인 보스',   desc:'개인 보스를 쿨마다 자동 소환 토글 해금 (보스별 on/off)', start:400, nMax:1, max:1, group:'prod', sect:'자동화' },
   auto_place:   { name:'자동 유닛 배치',   desc:'새 유닛을 트랙에 자동 정렬 토글 해금 (가운데 쌓임 방지)', start:200, nMax:1, max:1, group:'prod', sect:'자동화' },
-  auto_bossdeploy:{ name:'자동 보스 파견', desc:'가장 강한 유닛을 월드 보스에 자동 파견 토글 해금 (빈 슬롯 채움)', start:300, nMax:1, max:1, group:'prod', sect:'자동화' },
+  auto_bossdeploy:{ name:'자동 보스 파견', desc:'가장 강한 유닛을 포인트방 보스에 자동 파견 토글 해금 (빈 슬롯 채움)', start:300, nMax:1, max:1, group:'prod', sect:'자동화' },
   // ── 전투(아군 강화 · 적 약화) — 모두 10레벨 ──
   unit_atk_up:   { name:'공격력 증가',  desc:'유닛 공격력 증가 (+2.5%/Lv)', start:18, nMax:10, max:10, group:'combat', sect:'아군 강화' },
   unit_aspd:     { name:'공격 속도',    desc:'아군 공격 속도 증가 (+2%/Lv)', start:18, nMax:10, max:10, group:'combat', sect:'아군 강화' },
@@ -3688,14 +3691,14 @@ const META_BUILDS = {   // 탭(group) → 섹션(sect) 2단 분류. 같은 sect�
   team_credit:   { name:'전체 시작 크레딧',desc:'모든 플레이어 시작 크레딧 (+10/Lv)', start:8, nMax:20, max:20, group:'team', sect:'팀 강화' },
   team_enemy_hp: { name:'전체 적 체력',  desc:'모든 적 체력 감소 (-1%/Lv)', start:8, nMax:20, max:20, group:'team', sect:'팀 적 약화' },
   team_enemy_def:{ name:'전체 적 방어', desc:'모든 적 방어력 감소 (-0.5/Lv)',  start:8, nMax:20, max:20, group:'team', sect:'팀 적 약화' },
-  boss_hp_down:  { name:'월드보스 체력 감소', desc:'월드 보스 체력 감소 (-1.5%/Lv)', start:8, nMax:20, max:20, group:'team', sect:'월드 보스' },
-  boss_atk_up:   { name:'파견 유닛 데미지', desc:'파견 유닛 보스 데미지 증가 (+1%/Lv)', start:8, nMax:20, max:20, group:'team', sect:'월드 보스' },
+  boss_hp_down:  { name:'포인트방 체력 감소', desc:'포인트방 보스 체력 감소 (-1.5%/Lv)', start:8, nMax:20, max:20, group:'team', sect:'포인트방' },
+  boss_atk_up:   { name:'파견 유닛 피해', desc:'파견 유닛의 포인트방 보스 피해 증가 (+1%/Lv)', start:8, nMax:20, max:20, group:'team', sect:'포인트방' },
   // ── 보스(월드·개인·라운드) — 모두 10레벨 ──
-  boss_reward_up:{ name:'월드보스 포인트 보상', desc:'월드 보스 처치 포인트 보상 증가 (+10%/Lv)', start:20, nMax:10, max:10, group:'coop', sect:'월드 보스' },
-  pboss_reward:  { name:'개인 보스 보상', desc:'개인 보스 처치 보상 증가 (+5%/Lv)', start:20, nMax:10, max:10, group:'coop', sect:'개인 보스' },
-  pboss_cd:      { name:'개인 보스 쿨감', desc:'개인 보스 재소환 쿨다운 감소 (-2.5%/Lv)', start:20, nMax:10, max:10, group:'coop', sect:'개인 보스' },
-  rboss_hp_down: { name:'라운드 보스 체력 감소', desc:'10·20·30라운드 보스 체력 감소 (-2%/Lv)', start:20, nMax:10, max:10, group:'coop', sect:'라운드 보스' },
-  rboss_dmg_up:  { name:'라운드 보스 피해 증가', desc:'10·20·30라운드 보스에 주는 피해 증가 (+2%/Lv)', start:20, nMax:10, max:10, group:'coop', sect:'라운드 보스' },
+  boss_reward_up:{ name:'포인트방 보상', desc:'포인트방 보스 처치 포인트 보상 증가 (+10%/Lv)', start:20, nMax:10, max:10, group:'coop', sect:'포인트방' },
+  pboss_reward:  { name:'개인보스 보상', desc:'개인 보스 처치 보상 증가 (+5%/Lv)', start:20, nMax:10, max:10, group:'coop', sect:'개인 보스' },
+  pboss_cd:      { name:'개인보스 쿨감', desc:'개인 보스 재소환 쿨다운 감소 (-2.5%/Lv)', start:20, nMax:10, max:10, group:'coop', sect:'개인 보스' },
+  rboss_hp_down: { name:'라운드보스 체력', desc:'10·20·30라운드 보스 체력 감소 (-2%/Lv)', start:20, nMax:10, max:10, group:'coop', sect:'라운드 보스' },
+  rboss_dmg_up:  { name:'라운드보스 피해', desc:'10·20·30라운드 보스에 주는 피해 증가 (+2%/Lv)', start:20, nMax:10, max:10, group:'coop', sect:'라운드 보스' },
 };
 // 비용 곡선: 일반 레벨 = start×(lv+1) (선형 — 1단계 start, 2단계 2×start … 딱 떨어지는 가격), 초월 레벨 = 일반 누적×[..] (5단위 반올림).
 const META_COST_POW=1.0;
@@ -3799,7 +3802,7 @@ function buildUpgrade(id){ const b=META_BUILDS[id]; if(!b) return false;
 
 // ── 공학소(인게임 업그레이드 구역 건물) — 영구 강화 리스트. PLAYER_META 데이터, 구매 시 G.metaB 재계산으로 즉시 적용(시작 자원/유닛만 다음 판) ──
 let _ptGroup='eco';
-const _PT_TABS=[['eco','경제'],['prod','생산'],['combat','전투'],['team','전체'],['coop','보스']];
+const _PT_TABS=[['team','전체'],['eco','경제'],['prod','생산'],['combat','전투'],['coop','보스']];
 const _PT_NOTE={
   eco:'크레딧·에너지 수급 강화 · 즉시 적용 (시작 자원은 다음 판)',
   prod:'뽑기·시작유닛 + 자동화 해금 · 즉시 적용 (시작 유닛은 다음 판)',
@@ -3819,7 +3822,7 @@ const _PT_ICO={
   eco:'<circle cx="12" cy="12" r="8"/><path d="M14.4 9.6a3.3 3.3 0 1 0 0 4.8"/>',                          // 경제=코인
   prod:'<circle cx="9.5" cy="8.5" r="3"/><path d="M4 19.5c0-3 2.5-5.2 5.5-5.2s5.5 2.2 5.5 5.2"/><path d="M18.5 4v5M16 6.5h5"/>',   // 생산=유닛 뽑기(인물+)
   combat:'<path d="M5 5 15 15M19 5 9 15M14.5 15.5 17.5 18.5M9.5 15.5 6.5 18.5"/>',                          // 전투=교차 검
-  team:'<text x="12" y="15.4" text-anchor="middle" font-family="Rajdhani,sans-serif" font-size="8.6" font-weight="800" letter-spacing="0.2" fill="currentColor" stroke="none">ALL</text>',   // 전체=ALL 텍스트(다른 아이콘 크기에 맞춤)
+  team:'<rect x="3.8" y="3.8" width="7" height="7" rx="1.6"/><rect x="13.2" y="3.8" width="7" height="7" rx="1.6"/><rect x="3.8" y="13.2" width="7" height="7" rx="1.6"/><rect x="13.2" y="13.2" width="7" height="7" rx="1.6"/>',   // 전체=ALL 텍스트(다른 아이콘 크기에 맞춤)
   coop:'<path d="M12 3.6c-3.9 0-6.9 2.8-6.9 6.5 0 2.2 1 3.9 2.5 4.9v3.4h8.8V15c1.5-1 2.5-2.7 2.5-4.9 0-3.7-3-6.5-6.9-6.5z"/><circle cx="9.4" cy="10.4" r="1.15"/><circle cx="14.6" cy="10.4" r="1.15"/><path d="M10.6 18.4v2M13.4 18.4v2"/>' };  // 보스=해골
 function renderPtTabs(){ const box=document.getElementById('ptTabs'); if(!box) return;
   box.innerHTML=_PT_TABS.map(function(t){ return '<button class="ptTab'+(t[0]===_ptGroup?' on':'')+'" onclick="setPtGroup(\''+t[0]+'\')"><span class="ptTabIco"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+(_PT_ICO[t[0]]||'')+'</svg></span>'+t[1]+'</button>'; }).join(''); }
@@ -3831,14 +3834,15 @@ function renderPt(){ const list=document.getElementById('ptList'); if(!list) ret
     if(b.sect && b.sect!==_lastSect){ _lastSect=b.sect; rows+='<div class="ptSect"><span class="ptSectBar"></span>'+b.sect+'</div>'; }   // 섹션 헤더(세분화)
     const lv=buildLevel(id), n=metaNMax(b), maxed=lv>=b.max, cost=metaNextCost(id,lv), deferred=!!b.deferred, poor=(PLAYER_META.coins||0)<cost;
     const nextTrans=!maxed && lv>=n;   // 다음 강화가 초월 레벨
+    // 레벨 표기는 강화 버튼 안(비용 아래)으로 — 이름줄 폭을 수치 힌트에 양보
+    const lvTxt=(lv>n)?('초월'+(lv-n)):(lv+' / '+b.max);
     let btn;
-    if(deferred) btn='<button class="ptBtn" disabled>준비중</button>';
-    else if(maxed) btn='<button class="ptBtn maxed" disabled>MAX</button>';
-    else btn='<button class="ptBtn'+(poor?' poor':'')+(nextTrans?' trans':'')+'" onclick="doPtUp(\''+id+'\')"><b>'+cost+'P</b></button>';   // 비용만(강화/초월 텍스트 제거)
-    const lvTag=(lv>n)?' <span class="ptT">초월'+(lv-n)+'</span>':'';   // 이미 초월 단계면 표시
+    if(deferred) btn='<button class="ptBtn" disabled><b>준비중</b></button>';
+    else if(maxed) btn='<button class="ptBtn maxed" disabled><b>MAX</b><i class="ptBtnLv">'+lvTxt+'</i></button>';
+    else btn='<button class="ptBtn'+(poor?' poor':'')+(nextTrans?' trans':'')+'" onclick="doPtUp(\''+id+'\')"><b>'+cost+'P</b><i class="ptBtnLv'+(lv>n?' trans':'')+'">'+lvTxt+'</i></button>';
     const vh=ptValHint(id,b,lv);   // 수치 변화 힌트(이름 오른쪽)
     rows+='<div class="ptRow'+(deferred?' deferred':'')+(_ptGroup==='team'?' team':'')+'">'
-      +'<div class="ptInfo"><div class="ptNameRow"><span class="ptName">'+b.name+'</span>'+(vh?'<span class="ptVal">'+vh+'</span>':'')+'<span class="ptLv">Lv '+lv+' / '+b.max+lvTag+'</span></div>'
+      +'<div class="ptInfo"><div class="ptNameRow"><span class="ptName">'+b.name+'</span>'+(vh?'<span class="ptVal">'+vh+'</span>':'')+'</div>'
       +ptPips(lv,b.max,n)+'</div>'
       +btn+'</div>';
   }
