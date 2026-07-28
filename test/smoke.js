@@ -121,7 +121,7 @@ async function groupGame(){
     assert(host.classList.contains('on'),'건물 프로필 시트 비활성');
     const txt=host.innerText; const _bnm=(typeof coinBldgName==='function')?coinBldgName(G.coopBoss&&G.coopBoss.lv):'';
     assert(_bnm && txt.includes(_bnm),'건물 이름 누락(현 레벨 건물명)');
-    assert(/처치 코인/.test(txt) && /Lv\./.test(txt),'코인 보상/레벨 라벨 누락');
+    assert(/처치 포인트/.test(txt) && /Lv\./.test(txt),'포인트 보상/레벨 라벨 누락');
     // 순차 파괴: 레벨마다 다른 건물 모델
     assert(typeof coinBldgId==='function' && coinBldgId(1)!==coinBldgId(2),'레벨별 건물 모델이 동일(순차 파괴 아님)');
     assert($('deselTop').classList.contains('on'),'해제버튼 미표시');
@@ -134,7 +134,7 @@ async function groupGame(){
     assert((G.pbossCds[pt.id]||0)>0,'쿨다운 미설정(소환 거부됨)');
     assert(G.enemies.length>b || (G.pendSpawn||[]).length>bp,'적/대기열 미증가'); return pt.name; });
   await step('포인트 강화 팝업', ()=>{ skipIf(typeof openPointUpgrade!=='function','없음'); openPointUpgrade();
-    assert(visible(document.querySelector('#pointPanel .ppHead, .ppHead')),'ppHead 안 보임'); closePointUpgrade(); return 'ok'; });
+    assert(visible(document.querySelector('#pointPanel .ptTitle, #pointPanel .ppHead')),'공학소 팝업 헤더 안 보임'); closePointUpgrade(); return 'ok'; });
   await step('설정 팝업', ()=>{ openSettings(); assert(visible($('settingsPop')),'settingsPop 안 보임'); closeSettings(); return 'ok'; });
   await step('유닛 판매(홈 판매 API)', ()=>{ skipIf(typeof sellUnit!=='function','sellUnit 없음');
     const u=G.units.find(x=>!x.fixed && !x.hero && !x.atBoss); skipIf(!u,'판매할 유닛 없음'); const b=G.units.length;
