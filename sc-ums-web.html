@@ -2131,9 +2131,16 @@
   .twLv{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:800;color:var(--gold-lt)}
   .twCoin{margin-left:auto;font-family:'Rajdhani',sans-serif;font-size:13px;color:var(--txt-mute)}
   .twCoin b{font-size:16px;font-weight:800;color:#ffd24a}
-  .twMap{position:relative;flex:1;min-height:0;overflow:hidden;background:radial-gradient(circle at 50% 42%,#2a3550,#0c1018 82%)}
+  .twPow{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:800;color:#ff8a9a}
+  .twMap{position:relative;flex:1;min-height:0;overflow:hidden;background:radial-gradient(circle at 50% 40%,#28324a 0%,#141b28 55%,#0a0e16 100%)}
+  .twGround{position:absolute;left:8%;right:8%;top:12%;bottom:8%;border-radius:46% 46% 34% 34%/34% 34% 30% 30%;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 42%,rgba(74,96,74,.22),rgba(40,54,74,.06) 72%);border:1px solid rgba(255,255,255,.05);box-shadow:inset 0 0 40px -10px rgba(0,0,0,.5)}
   .twZone{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;z-index:2}
+  .twZone::before{content:'';position:absolute;left:50%;top:16px;transform:translate(-50%,-50%);width:50px;height:50px;border-radius:50%;z-index:-1;pointer-events:none;
+    background:radial-gradient(circle,rgba(92,214,255,.16),transparent 68%)}
   .tzIco{font-size:30px;line-height:1;filter:drop-shadow(0 3px 5px rgba(0,0,0,.6))}
+  .twStars{color:#ffd24a;font-size:11px;letter-spacing:1px}
+  .twPet{flex:0 0 auto;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:20px;border-radius:9px;background:rgba(255,255,255,.05);border:1px solid var(--metal-edge)}
   .tzLbl{font-size:11px;font-weight:800;color:#dbe3ec;background:rgba(6,8,12,.7);padding:2px 7px;border-radius:10px;border:1px solid var(--metal-edge);white-space:nowrap}
   .twZone:active{transform:translate(-50%,-50%) scale(.94)}
   .twAvatar{position:absolute;transform:translate(-50%,-50%);font-size:26px;z-index:3;transition:left .5s ease,top .5s ease;filter:drop-shadow(0 3px 5px rgba(0,0,0,.7));pointer-events:none}
@@ -3062,15 +3069,17 @@
   <div id="townScreen" class="appScreen spaceBg hide">
     <div class="twBar">
       <button class="twBack" onclick="townToHub()" aria-label="뒤로"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
-      <span class="twName" id="twName">캐릭터</span><span class="twLv" id="twLv">Lv.1</span>
+      <span class="twName" id="twName">캐릭터</span><span class="twLv" id="twLv">Lv.1</span><span class="twPow" id="twPow">⚔ 0</span>
       <span class="twCoin"><b id="twCoin">0</b> P</span>
     </div>
     <div class="twMap" id="twMap">
-      <div class="twZone" data-zone="gate"  style="left:50%;top:20%" onclick="townGo('gate')"><span class="tzIco">🔒</span><span class="tzLbl">관문</span></div>
-      <div class="twZone" data-zone="shop"  style="left:22%;top:45%" onclick="townGo('shop')"><span class="tzIco">🛒</span><span class="tzLbl">장비 상점</span></div>
-      <div class="twZone" data-zone="gym"   style="left:78%;top:45%" onclick="townGo('gym')"><span class="tzIco">🏋️</span><span class="tzLbl">훈련장</span></div>
-      <div class="twZone" data-zone="plaza" style="left:50%;top:72%" onclick="townGo('plaza')"><span class="tzIco">🏠</span><span class="tzLbl">광장</span></div>
-      <div class="twAvatar" id="twAvatar" style="left:50%;top:72%">🧍</div>
+      <div class="twGround"></div>
+      <div class="twZone" data-zone="gacha" style="left:22%;top:22%" onclick="townGo('gacha')"><span class="tzIco">🎁</span><span class="tzLbl">뽑기집</span></div>
+      <div class="twZone" data-zone="gate"  style="left:78%;top:22%" onclick="townGo('gate')"><span class="tzIco">🔒</span><span class="tzLbl">관문</span></div>
+      <div class="twZone" data-zone="shop"  style="left:20%;top:47%" onclick="townGo('shop')"><span class="tzIco">🛒</span><span class="tzLbl">장비 상점</span></div>
+      <div class="twZone" data-zone="gym"   style="left:80%;top:47%" onclick="townGo('gym')"><span class="tzIco">🏋️</span><span class="tzLbl">훈련장</span></div>
+      <div class="twZone" data-zone="plaza" style="left:50%;top:74%" onclick="townGo('plaza')"><span class="tzIco">🏠</span><span class="tzLbl">광장</span></div>
+      <div class="twAvatar" id="twAvatar" style="left:50%;top:74%">🧍</div>
     </div>
     <div id="twToast" class="twToast hide"></div>
   </div>
@@ -3811,9 +3820,10 @@ function metaEffLv(id){ return _metaEffFromRaw(META_BUILDS[id], buildLevel(id));
    // 다음 강화가 초월 레벨인지
 // 플레이어 메타(계정별 영구 데이터)
 // 🧍 개인 프로필 RPG(1단계) 기본값 — 유즈맵 경제와 완전 분리(재화명 pcoin, coins 아님). 자세한 규칙은 PROF_* 블록 참조.
-function defaultProfile(){ return { ver:1, xp:0, level:1, statPoints:0, pcoin:0,
+function defaultProfile(){ return { ver:2, xp:0, level:1, statPoints:0, pcoin:0,
   unit:{ jobId:'recruit', level:1, evoStars:0, stats:{pow:0,vit:0,foc:0,agi:0}, gear:{weapon:0,armor:0,trinket:0} },
-  idle:{ sourceId:'drill', lastClaimTs:0 }, unlocks:{}, lastSeenTs:0 }; }
+  idle:{ sourceId:'drill', lastClaimTs:0 }, unlocks:{}, lastSeenTs:0,
+  pets:{}, equip:[], petSlots:2 }; }   // 🐾 2단계: 펫(중복=별) · 장착 슬롯
 function defaultMeta(){ return { coins:0, buildLevels:{}, highestRound:0, clearedDifficulty:'', profile:defaultProfile() }; }   // clearedDifficulty:''=아무것도 클리어 안 함(이지만 개방)
 let PLAYER_META = defaultMeta();
 const TEMP_COIN_TEST=false;   // [임시] 포인트 상점 밸런스 테스트 — 포인트 무한 + 로비 진입 시 업그레이드 초기화. 끝나면 false 또는 이 블록 제거.
@@ -3834,6 +3844,8 @@ function migrateProfile(){ const d=defaultProfile();
     if(!p.unit.gear)  p.unit.gear =Object.assign({},d.unit.gear);  else for(const k in d.unit.gear)  if(p.unit.gear[k]===undefined)  p.unit.gear[k]=0; }
   if(!p.idle) p.idle=d.idle; else for(const k in d.idle) if(p.idle[k]===undefined) p.idle[k]=d.idle[k];
   if(!p.unlocks) p.unlocks={};
+  if(!p.pets||typeof p.pets!=='object') p.pets={};                 // 🐾 펫
+  if(!Array.isArray(p.equip)) p.equip=[]; if(typeof p.petSlots!=='number') p.petSlots=2;
   p.ver=d.ver; }
 function PROF(){ return PLAYER_META.profile || (PLAYER_META.profile=defaultProfile()); }   // 안전 접근자
 function saveMeta(){ try{ localStorage.setItem(metaKey(), JSON.stringify(PLAYER_META)); }catch(e){}
@@ -3866,14 +3878,48 @@ function profClassCost(jobId){ const J=PROF_JOBS[jobId]; return J? J.tier*400 : 
 // 스탯/파워(전부 read-only)
 function profStat(k){ const p=PROF(), J=PROF_JOBS[p.unit.jobId]||PROF_JOBS.recruit;
   let gear=0; for(const slot in p.unit.gear){ const g=PROF_GEAR[slot]; if(g&&g.stat===k) gear+=(p.unit.gear[slot]||0)*g.per; }
-  return (J.base[k]||0) + (p.unit.stats[k]||0) + gear + p.unit.level + p.unit.evoStars*2; }
+  let v=(J.base[k]||0) + (p.unit.stats[k]||0) + gear + p.unit.level + p.unit.evoStars*2;
+  if(k==='pow') v*=(1+profPetBonus('atk'));   // 🐾 펫 % 보너스(프로필 전용)
+  else if(k==='vit') v*=(1+profPetBonus('vit'));
+  return Math.round(v); }
 function profPower(){ return Math.round(profStat('pow')*3 + profStat('vit')*2 + profStat('foc')*2 + profStat('agi')*1.5); }
 function profHasUnlock(id){ const p=PROF(); if(p.unlocks[id]) return true; const u=PROF_UNLOCKS.find(x=>x.id===id); return !!u && profPower()>=u.power; }
 function profSyncUnlocks(){ const p=PROF(), pw=profPower(); for(const u of PROF_UNLOCKS){ if(!p.unlocks[u.id] && pw>=u.power) p.unlocks[u.id]=true; } }   // 한 번 넘으면 영구
 // 레벨업(xp→level, statPoints 지급). 유닛 레벨도 동반 상승.
 function profApplyLevelUps(p){ p=p||PROF(); let ups=0; while(p.xp>=profXpForLevel(p.level) && ups<9999){ p.xp-=profXpForLevel(p.level); p.level++; p.unit.level++; p.statPoints+=3; ups++; } return ups; }
 // 방치 수익(분당 pcoin) = 파워 기반 × 소스 배율
-function profIdleRate(){ const p=PROF(), src=PROF_IDLE_SOURCES[p.idle.sourceId]||PROF_IDLE_SOURCES.drill; return (1 + profPower()*0.01) * (src.rate||0.6); }
+function profIdleRate(){ const p=PROF(), src=PROF_IDLE_SOURCES[p.idle.sourceId]||PROF_IDLE_SOURCES.drill; return (1 + profPower()*0.01) * (src.rate||0.6) * (1+profPetBonus('coin')); }
+// 🐾 펫 (프로필 전용 % 보너스 — 유즈맵과 무관). 중복 = 별(★). 티어 색은 TIER_COLOR 재사용.
+const PROF_PETS={
+  slime:  {name:'슬라임',   emoji:'🟢', tier:'common', bonus:{type:'coin',val:0.03}},
+  chick:  {name:'병아리',   emoji:'🐤', tier:'common', bonus:{type:'vit', val:0.02}},
+  wolf:   {name:'늑대',     emoji:'🐺', tier:'rare',   bonus:{type:'atk', val:0.04}},
+  owl:    {name:'부엉이',   emoji:'🦉', tier:'rare',   bonus:{type:'coin',val:0.05}},
+  golem:  {name:'골렘',     emoji:'🗿', tier:'epic',   bonus:{type:'vit', val:0.07}},
+  tiger:  {name:'호랑이',   emoji:'🐯', tier:'epic',   bonus:{type:'atk', val:0.08}},
+  phoenix:{name:'불사조',   emoji:'🔥', tier:'unique', bonus:{type:'coin',val:0.10}},
+  dragon: {name:'드래곤',   emoji:'🐲', tier:'legend', bonus:{type:'atk', val:0.15}},
+};
+const PROF_PET_GACHA_COST=300;
+const PROF_BONUS_NAME={atk:'공격 %',vit:'체력 %',coin:'코인 %'};
+function profPetStar(id){ return Math.max(0,((PROF().pets[id]||{}).count||0)-1); }        // 중복 수 - 1 = 별
+function profPetVal(id){ const P=PROF_PETS[id]; return P? P.bonus.val*(1+profPetStar(id)*0.2) : 0; }
+function profPetBonus(type){ const p=PROF(); let s=0; for(const id of (p.equip||[])){ const P=PROF_PETS[id]; if(P&&P.bonus.type===type) s+=profPetVal(id); } return s; }
+function profPetRoll(){ const p=PROF(); if(p.pcoin<PROF_PET_GACHA_COST) return null; p.pcoin-=PROF_PET_GACHA_COST;
+  const avail={}; for(const id in PROF_PETS){ (avail[PROF_PETS[id].tier]=avail[PROF_PETS[id].tier]||[]).push(id); }
+  const tw=[]; let tot=0; for(const t of GACHA_TIER_ORDER){ if(avail[t]){ tw.push([t,GACHA_TIERS[t].prob]); tot+=GACHA_TIERS[t].prob; } }
+  let r=Math.random()*tot, tier=tw[0][0]; for(const e of tw){ if(r<e[1]){ tier=e[0]; break; } r-=e[1]; }
+  const pool=avail[tier], id=pool[Math.floor(Math.random()*pool.length)];
+  p.pets[id]=p.pets[id]||{count:0}; p.pets[id].count++; const isNew=(p.pets[id].count===1);
+  if(isNew && (p.equip||[]).length<(p.petSlots||2)) p.equip.push(id);   // 신규 + 빈 슬롯 = 자동 장착
+  saveMeta(); return { id:id, tier:tier, star:profPetStar(id), isNew:isNew }; }
+function profPetEquip(id){ const p=PROF(); if(!p.pets[id]) return false; const i=p.equip.indexOf(id);
+  if(i>=0){ p.equip.splice(i,1); saveMeta(); return true; }                                // 토글 해제
+  if(p.equip.length>=(p.petSlots||2)) return false; p.equip.push(id); saveMeta(); return true; }
+// 🌟 유닛 진화(별) — evolve 해금(파워 350) 필요. 별마다 레벨 문턱·pcoin 비용↑. profStat에서 evoStars*2 반영.
+function profEvolveReq(){ const p=PROF(); const s=p.unit.evoStars; return { unlock:profHasUnlock('evolve'), stars:s, maxed:s>=5, lvReq:(s+1)*10, cost:(s+1)*500 }; }
+function profEvolve(){ const p=PROF(), r=profEvolveReq(); if(!r.unlock||r.maxed) return false; if(p.unit.level<r.lvReq) return false; if(p.pcoin<r.cost) return false;
+  p.pcoin-=r.cost; p.unit.evoStars++; profSyncUnlocks(); saveMeta(); return true; }
 // 액션(성공 true · saveMeta 포함 · 재렌더는 호출측)
 function profAllocStat(k){ const p=PROF(); if(p.statPoints<=0 || PROF_STATS.indexOf(k)<0) return false; p.unit.stats[k]=(p.unit.stats[k]||0)+1; p.statPoints--; profSyncUnlocks(); saveMeta(); return true; }
 function profBuyGear(slot){ const p=PROF(), g=PROF_GEAR[slot]; if(!g) return false; if(g.reqUnlock && !profHasUnlock(g.reqUnlock)) return false;
@@ -3886,7 +3932,7 @@ function profSetIdleSource(id){ const p=PROF(), src=PROF_IDLE_SOURCES[id]; if(!s
 function profRunReward(){ const p=PROF();
   const dMul={easy:0.8,normal:1,hard:1.4,hell:1.8,nightmare:2.4}[G.difficulty||'normal']||1;
   const k=G.kills||0, rd=G.round||0;
-  const xp=Math.round((10 + k*0.5 + rd*8)*dMul), pc=Math.round((5 + k*0.2 + rd*4)*dMul);
+  const xp=Math.round((10 + k*0.5 + rd*8)*dMul), pc=Math.round((5 + k*0.2 + rd*4)*dMul*(1+profPetBonus('coin')));   // 🐾 펫 코인% 반영
   p.xp+=xp; const ups=profApplyLevelUps(p); p.pcoin+=pc; profSyncUnlocks(); saveMeta();
   return { xp:xp, pc:pc, ups:ups, level:p.level }; }
 // 방치 정산(오프라인/켜둠) — Date.now 기준(1단계 클라이언트 신뢰). 유즈맵과 무관.
@@ -3902,7 +3948,7 @@ function profStampSeen(){ if(PLAYER_META&&PLAYER_META.profile){ PLAYER_META.prof
 
 // ── 🎯 시작 허브 + 🏘 마을 UI ──
 let _townOpen=false, _twZone=null, _twMoveT=null;
-const ZONE_POS={ plaza:[50,72], shop:[22,45], gym:[78,45], gate:[50,20] };
+const ZONE_POS={ plaza:[50,74], shop:[20,47], gym:[80,47], gacha:[22,22], gate:[78,22] };
 function openHub(){ loadMeta(); if(typeof bgmStart==='function') bgmStart('lobby'); showAppScreen('hubScreen'); }
 function hubGoMap(){ if(typeof playSfx==='function') playSfx('ui_open'); openMapSelect(); }
 function hubGoTown(){ if(typeof playSfx==='function') playSfx('ui_open'); openTown(); }
@@ -3913,6 +3959,7 @@ function townToHub(){ _townOpen=false; closeTownPanel(); profStampSeen(); if(typ
 function renderTownBar(){ const p=PROF();
   const nm=document.getElementById('twName'); if(nm) nm.textContent=(typeof myNick==='function'?myNick():'캐릭터');
   const lv=document.getElementById('twLv'); if(lv) lv.textContent='Lv.'+p.level;
+  const pw=document.getElementById('twPow'); if(pw) pw.textContent='⚔ '+profPower();
   const cn=document.getElementById('twCoin'); if(cn) cn.textContent=Math.floor(p.pcoin); }
 function showTownToast(msg){ const t=document.getElementById('twToast'); if(!t) return; t.textContent=msg; t.classList.remove('hide');
   clearTimeout(t._t); t._t=setTimeout(()=>t.classList.add('hide'), 2600); }
@@ -3920,10 +3967,10 @@ function townGo(zone){ const pos=ZONE_POS[zone]; if(!pos) return; if(typeof play
   const av=document.getElementById('twAvatar'); if(av){ av.style.left=pos[0]+'%'; av.style.top=pos[1]+'%'; }
   if(_twMoveT) clearTimeout(_twMoveT); _twMoveT=setTimeout(function(){ _twMoveT=null; openTownPanel(zone); }, 520); }
 function openTownPanel(zone){ _twZone=zone; const t=document.getElementById('tpTitle');
-  const T={plaza:'광장 · 내 캐릭터',shop:'장비 상점',gym:'훈련장',gate:'관문'}; if(t) t.textContent=T[zone]||'시설';
+  const T={plaza:'광장 · 내 캐릭터',shop:'장비 상점',gym:'훈련장',gacha:'뽑기집 · 펫',gate:'관문'}; if(t) t.textContent=T[zone]||'시설';
   refreshTownPanel(); popShow('townPanel'); }
 function refreshTownPanel(){ const body=document.getElementById('tpBody'); if(!body||!_twZone) return;
-  body.innerHTML = _twZone==='plaza'?renderProfStats() : _twZone==='shop'?renderProfGear() : _twZone==='gym'?renderProfIdle() : renderProfGate(); }
+  body.innerHTML = _twZone==='plaza'?renderProfStats() : _twZone==='shop'?renderProfGear() : _twZone==='gym'?renderProfIdle() : _twZone==='gacha'?renderProfGacha() : renderProfGate(); }
 function closeTownPanel(){ popHide('townPanel'); _twZone=null; }
 function renderTownIdle(){ renderTownBar(); const tp=document.getElementById('townPanel'); if(_twZone==='gym' && tp && !tp.classList.contains('hide')) refreshTownPanel(); }
 // 광장: 스탯 + 전직
@@ -3934,7 +3981,31 @@ function renderProfStats(){ const p=PROF(), J=PROF_JOBS[p.unit.jobId]||PROF_JOBS
   if(J.next && J.next.length){ h+='<div class="twSectLbl">전직</div>';
     for(const nx of J.next){ const N=PROF_JOBS[nx], cost=profClassCost(nx), okLv=p.unit.level>=N.reqLv, ok=okLv&&p.pcoin>=cost;
       h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+N.name+'</div><div class="twRowSub'+(okLv?'':' lock')+'">필요 Lv.'+N.reqLv+' · 비용 '+cost+' P</div></div><button class="twBtn" onclick="profDoClass(\''+nx+'\')"'+(ok?'':' disabled')+'>전직</button></div>'; } }
+  const r=profEvolveReq();   // 🌟 진화(별)
+  h+='<div class="twSectLbl">진화 <span class="twStars">'+('★'.repeat(r.stars)+'☆'.repeat(5-r.stars))+'</span></div>';
+  if(!r.unlock) h+='<div class="twRow"><div class="twRowInfo"><div class="twRowSub lock">🔒 파워 350 달성 시 진화 개방</div></div></div>';
+  else if(r.maxed) h+='<div class="twRow"><div class="twRowInfo"><div class="twRowSub ok">✓ 최대 진화(★5)</div></div></div>';
+  else { const ok=p.unit.level>=r.lvReq && p.pcoin>=r.cost;
+    h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">별 +1 (스탯 강화)</div><div class="twRowSub'+(p.unit.level>=r.lvReq?'':' lock')+'">필요 Lv.'+r.lvReq+' · 비용 '+r.cost+' P</div></div><button class="twBtn" onclick="profDoEvolve()"'+(ok?'':' disabled')+'>진화</button></div>'; }
   return h; }
+function profDoEvolve(){ if(profEvolve()){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); showTownToast('⭐ 진화 성공!'); } }
+// 뽑기집: 펫 뽑기 + 보유 펫 장착
+function renderProfGacha(){ const p=PROF(), poor=p.pcoin<PROF_PET_GACHA_COST, eq=p.equip||[];
+  let h='<div class="twHead">펫을 뽑아 장착하면 <b>코인·공격·체력 %</b>가 오릅니다.<br>보유 <b>'+Math.floor(p.pcoin)+' P</b> · 장착 '+eq.length+'/'+(p.petSlots||2)+'</div>';
+  h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">펫 1회 뽑기</div><div class="twRowSub">중복 펫은 별(★)로 강화</div></div><button class="twBtn" onclick="profDoGacha()"'+(poor?' disabled':'')+'>'+PROF_PET_GACHA_COST+' P</button></div>';
+  const owned=Object.keys(p.pets||{}).filter(id=>PROF_PETS[id]).sort((a,b)=>GACHA_TIER_ORDER.indexOf(PROF_PETS[b].tier)-GACHA_TIER_ORDER.indexOf(PROF_PETS[a].tier));
+  h+='<div class="twSectLbl">보유 펫 ('+owned.length+')</div>';
+  if(!owned.length) h+='<div class="twRow"><div class="twRowInfo"><div class="twRowSub">아직 없음 — 뽑아보세요!</div></div></div>';
+  for(const id of owned){ const P=PROF_PETS[id], col=TIER_COLOR[P.tier], star=profPetStar(id), on=eq.indexOf(id)>=0, full=eq.length>=(p.petSlots||2);
+    h+='<div class="twRow"><span class="twPet" style="color:'+col+';border-color:'+col+'55">'+P.emoji+'</span>'
+      +'<div class="twRowInfo"><div class="twRowName">'+P.name+' <span class="twStars">'+'★'.repeat(star)+'</span></div>'
+      +'<div class="twRowSub" style="color:'+col+'">'+GACHA_TIERS[P.tier].name+' · '+PROF_BONUS_NAME[P.bonus.type]+' +'+Math.round(profPetVal(id)*100)+'%</div></div>'
+      +'<button class="twBtn'+(on?' on':'')+'" onclick="profDoPetEquip(\''+id+'\')"'+((!on&&full)?' disabled':'')+'>'+(on?'장착중':'장착')+'</button></div>'; }
+  return h; }
+function profDoGacha(){ const res=profPetRoll(); if(!res) return; if(typeof playSfx==='function') playSfx('ui_open');
+  const P=PROF_PETS[res.id]; renderTownBar(); refreshTownPanel();
+  showTownToast((res.isNew?'🎉 ':'⭐ ')+GACHA_TIERS[res.tier].name+' '+P.name+(res.isNew?' 획득!':' ★'+res.star)); }
+function profDoPetEquip(id){ if(profPetEquip(id)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); } }
 function profDoAlloc(k){ if(profAllocStat(k)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); } }
 function profDoClass(id){ if(profClassChange(id)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); showTownToast('전직 완료!'); } }
 // 장비 상점
