@@ -13178,7 +13178,8 @@ function strikeSetTabLabels(map){ for(const t in map){ const el=document.querySe
   if(span){ span.textContent=map[t]; continue; }
   let tn=null; el.childNodes.forEach(n=>{ if(n.nodeType===3 && n.textContent.trim()) tn=n; });
   if(tn) tn.textContent=map[t]; else el.appendChild(document.createTextNode(map[t])); } }
-function strikeHideNemoChrome(on){ ['coopBossBar','mergeFab','skillFab','autoFab','deselTop','cvMarine','cvFx','mergeZone','miniWrap','defaultCmd','unitCmd','zoneLabel'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display=on?'none':''; });
+function strikeHideNemoChrome(on){ ['coopBossBar','mergeFab','skillFab','autoFab','deselTop','cvMarine','cvFx','mergeZone','miniWrap','defaultCmd','zoneLabel'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display=on?'none':''; });   // unitCmd 제외: 직스 선택 프로필(커맨드 그리드) 호스트로 사용 → .on 클래스로 표시 제어
+  { const uc=document.getElementById('unitCmd'); if(uc){ uc.classList.remove('on','simple'); uc.innerHTML=''; uc._stkSig=null; uc.style.display=''; } }   // 진입/종료 시 초기화(인라인 display 잔존 제거)
   const kill=document.querySelector('#hudL .kill'); if(kill) kill.style.display=on?'none':'';
   const stage=document.querySelector('#hudL .stage'); if(stage) stage.style.display=on?'none':'';   // 좌상단 ROUND 숨김
   // nemo 하단 패널의 비-직스 자식 숨김(직스 패널만 보이게)
@@ -13906,33 +13907,34 @@ function strikeDrawSelection(ctx,w2s,scale,S){ if(!S) return;
     ctx.save(); ctx.strokeStyle='#ffd24a'; ctx.lineWidth=2.4; ctx.setLineDash([7,5]); ctx.beginPath(); ctx.ellipse(p.x,p.y,Math.max(40,95*scale),Math.max(20,46*scale),0,0,6.283); ctx.stroke(); ctx.restore(); } }
 // 직스 유닛 역할 라벨(STK_UNITS 기반)
 function strikeUnitRole(id){ const s=STK_UNITS[id]||{}; return s.melee?'근접':(s.splash?'광역':'원거리'); }
-// 네모/관리자 하단 프로필(scPanel) 그대로 — 초상화 + 이름 + 체력 + 스탯박스
-function strikeProfileHTML(o){ const ac=o.accent||'#7fd0ff';
-  const hp=Math.ceil(o.hp), mx=Math.round(o.maxHp), team=o.team?(' <span style="font-size:10px;font-weight:700;color:'+o.teamCol+'">'+o.team+'</span>'):'';
-  let h='<div class="scPanel" style="--neon:'+ac+';--neon-lt:#eaf2ff;--neon-glow:'+ac+'55;align-self:center;max-width:420px;width:100%">';
-  h+='<div class="scPortrait">'+o.portrait+(o.job?'<div class="portJob">'+escHtml(o.job)+'</div>':'')+'</div>';
-  h+='<div class="scMid"><div class="scName">'+escHtml(o.name)+team+'</div>';
-  if(o.type) h+='<div class="scType">'+escHtml(o.type)+'</div>';
-  h+='<div class="scHp"><div class="hpline hp"><span class="lab">체력</span>'+hp.toLocaleString()+' / '+mx.toLocaleString()+'</div></div></div>';
-  if(o.stats&&o.stats.length){ h+='<div class="scStats">'; for(const s of o.stats) h+='<div class="scBox"><div class="sv">'+s.val+'</div><div class="sl '+(s.cls||'')+'">'+s.label+'</div></div>'; h+='</div>'; }
-  return h+'</div>'; }
-function strikeRenderSelInfo(){ const S=STK; const el=document.getElementById('stSelInfo'); if(!el) return;
-  let html=null;
-  if(S && S.selTemple && !S.selTemple.dead){ const o=S.selTemple, nm=S.selTempleName||'신전',
-      enemy=nm.indexOf('적')>=0, neut=nm.indexOf('중립')>=0, ac=enemy?'#ff6b7a':(neut?'#ffd24a':'#7fd0ff');
-    html=strikeProfileHTML({ accent:ac, name:nm, type:'구조물', job:'신전', hp:o.hp, maxHp:o.max,
-      portrait:'<svg viewBox="0 0 24 24" width="62" height="62" style="position:absolute;inset:0;margin:auto"><path d="M4 20h16M5 20V10l7-5 7 5v10M9 20v-6h6v6" fill="none" stroke="'+ac+'" stroke-width="1.4" stroke-linejoin="round"/></svg>' }); }
-  else if(S && S.selEnemy && !S.selEnemy.dead){ const u=S.selEnemy;
-    html=strikeProfileHTML({ accent:'#ff6b7a', name:strikeUnitName(u.id), team:'적군', teamCol:'#ff6b7a',
-      type:(STK_RACES[S.ai.race]&&STK_RACES[S.ai.race].name||'')+' · '+strikeUnitRole(u.id), job:strikeUnitRole(u.id),
-      hp:u.hp, maxHp:u.maxHp, portrait:unitPortraitHTML(u.id),
-      stats:[{label:'공격력',val:u.dmg,cls:'atk'},{label:'사거리',val:Math.round(u.rng),cls:''}] }); }
-  else if(S){ const u=(S.selAllies||[]).map(uid=>strikeFindUnit(S.me.units,uid)).filter(Boolean)[0], col=S.me.compCol||'#7fd0ff';
-    if(u){ html=strikeProfileHTML({ accent:col, name:strikeUnitName(u.id), team:'아군', teamCol:col,
-      type:(STK_RACES[S.me.race]&&STK_RACES[S.me.race].name||'')+' · '+strikeUnitRole(u.id), job:strikeUnitRole(u.id),
-      hp:u.hp, maxHp:u.maxHp, portrait:unitPortraitHTML(u.id),
-      stats:[{label:'공격력',val:u.dmg,cls:'atk'},{label:'사거리',val:Math.round(u.rng),cls:''}] }); } }
-  if(html){ el.innerHTML=html; el.classList.remove('hide'); } else { el.classList.add('hide'); el.innerHTML=''; } }
+// 직스 유닛/건물 선택 프로필 = 관리자(메인) 커맨드 그리드(renderCmdGrid) 재사용 — 모델만 직스 데이터로 구성
+//   적=upg(빨강) · 아군/내 구조물=prod(청록) · 중립=build(골드) 로 강조색 통일
+function _stkUnitModel(u, side){ const def=STK_UNITS[u.id]||{};
+  const race=(side==='ai')?(STK&&STK.ai.race):(STK&&STK.me.race), raceName=(STK_RACES[race]&&STK_RACES[race].name)||'';
+  const cd=u.cdMax||u.cd||def.cd||0, spd=cd>0?((1/cd).toFixed(1)+'/s'):'-', teamKo=(side==='ai')?'적군':'아군';
+  return { mode:(side==='ai')?'upg':'prod', compact:true, build:true,
+    title: escHtml(strikeUnitName(u.id)), icon: unitPortraitHTML(u.id),
+    hpsh: _cgHpShStr(Math.round(u.hp)+'/'+Math.round(u.maxHp||def.hp||0), 0, 0),
+    items: [],
+    info: { eb: teamKo+(raceName?(' · '+raceName):''), hideName:true,
+      stats: [ ['공격력', ''+Math.round(u.dmg||def.dmg||0)], ['사거리', ''+Math.round(u.rng||def.rng||0)], ['공격속도', spd], ['유형', strikeUnitRole(u.id)] ] } }; }
+function _stkTempleModel(o, name){ const enemy=name.indexOf('적')>=0, neut=name.indexOf('중립')>=0;
+  const pct=Math.max(0,Math.round((o.hp/(o.max||1))*100));
+  return { mode:enemy?'upg':(neut?'build':'prod'), compact:true, build:true,
+    title: escHtml(name),
+    icon: '<svg viewBox="0 0 24 24"><path d="M4 20h16M5 20V10l7-5 7 5v10M9 20v-6h6v6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
+    hpsh: _cgHpShStr(Math.round(o.hp)+'/'+Math.round(o.max||0), 0, 0),
+    items: [],
+    info: { eb:'구조물', hideName:true, desc:'점령·방어 목표', stats: [ ['유형','신전'], ['내구도', pct+'%'] ] } }; }
+function strikeRenderSelInfo(){ const S=STK; const host=document.getElementById('unitCmd');
+  { const old=document.getElementById('stSelInfo'); if(old && !old.classList.contains('hide')){ old.classList.add('hide'); old.innerHTML=''; } }   // 구 프로필 사용 안 함
+  if(!host) return;
+  let model=null, sig=null;
+  if(S && S.selTemple && !S.selTemple.dead){ const o=S.selTemple, nm=S.selTempleName||'신전'; model=_stkTempleModel(o,nm); sig='t|'+nm+'|'+Math.round(o.hp); }
+  else if(S && S.selEnemy && !S.selEnemy.dead){ const u=S.selEnemy; model=_stkUnitModel(u,'ai'); sig='e|'+u.id+'|'+Math.round(u.hp); }
+  else if(S){ const u=(S.selAllies||[]).map(uid=>strikeFindUnit(S.me.units,uid)).filter(Boolean)[0]; if(u){ model=_stkUnitModel(u,'me'); sig='a|'+u.id+'|'+Math.round(u.hp); } }
+  if(model){ host.classList.add('on','simple'); if(host._stkSig!==sig){ host._stkSig=sig; renderCmdGrid(host, model); } }
+  else if(host._stkSig!=null || host.classList.contains('on')){ host.classList.remove('on'); host._stkSig=null; host.innerHTML=''; } }
 function strikeDrawFx(ctx,w2s,scale,S){ if(!S||!S.fx) return;   // 공용 FX 코어로 렌더(네모와 동일 비주얼). sz=픽셀 스케일(줌 연동)
   const sz=Math.max(0.8, Math.min(2.6, scale*8.5)); FX.drawShots(ctx, S.fx, w2s, sz); }
 function strikeDrawUnits(ctx,w2s,scale,S){ if(!S) return;
