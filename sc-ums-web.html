@@ -1844,7 +1844,7 @@
   .stBtn:active{transform:translateY(1px)}.stBtn:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.4)}
   #stBuildBp:not(.hide){display:flex;flex-direction:column;flex:1 1 auto;min-height:0}   /* 직스 건설 패널: .bp 높이 채움 */
   #stBuildBp .stBpHead{flex:0 0 auto}
-  #stBuildPalette{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;flex:1 1 auto;min-height:0;overflow-y:auto;align-content:start;padding-bottom:4px;-webkit-overflow-scrolling:touch}   /* 카드 넘치면 내부 스크롤 */
+  #stBuildPalette{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;overflow:hidden}   /* 관리자 커맨드 그리드(renderCmdGrid) 호스트 */
   .stUnitCard.sel{border-color:#7fd0ff !important;box-shadow:0 0 11px -2px rgba(127,208,255,.7),inset 0 0 8px rgba(127,208,255,.12)}
   /* 유닛뽑기 하단 액션 버튼 */
   #gachaActions{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:100%;max-width:380px;margin:6px auto 0;box-sizing:border-box}
@@ -7146,6 +7146,7 @@ function openMainSheet(mode, el, sbTab){
   if(typeof playSfx==='function') playSfx('ui_open'); refreshSelCard(); }
 // 메인 탭 = 유닛지정/판매/조합 섹션(하단 홈). 다른 섹션에서 눌러도 반드시 메인 섹션으로 복귀.
 function openMainHome(el){
+  if(G.strike){ switchTab('Main', el||document.querySelector('.tab[data-tab="Main"]')); return; }   // 직스: 전투 탭 → 직스 라우팅
   if(G.sandbox){ switchTab('Main', el||document.querySelector('.tab[data-tab="Main"]')); return; }
   if(G.tab==='Main' && G.mainSheet==null && G.sel.length===0 && G.selEnemy==null){   // 홈 섹션 재탭(무선택) = 하단 시트 내리기/올리기 토글
     const open=document.body.classList.toggle('sheetOpen'); G.sheetDown=!open;
@@ -7153,8 +7154,8 @@ function openMainHome(el){
     if(typeof playSfx==='function') playSfx('ui_open'); return; }
   if(G.tab!=='Main') switchTab('Main', document.querySelector('.tab[data-tab="Main"]'));
   G.mainSheet=null; G.sel=[]; G.selEnemy=null; G.selType=null; _selViaTab=false; G.sheetDown=false; _setBottomTab('Main'); document.body.classList.add('sheetOpen'); if(typeof playSfx==='function') playSfx('ui_open'); refreshSelCard(); }
-function openGachaSheet(el){ openMainSheet('gacha', el, 'Unit'); }
-function openUpgradeSheet(el){ openMainSheet('upgrade', el, 'Upgrade'); }
+function openGachaSheet(el){ if(G.strike){ switchTab('Unit', el||document.querySelector('.tab[data-tab="Unit"]')); return; } openMainSheet('gacha', el, 'Unit'); }   // 직스: 건설지 탭
+function openUpgradeSheet(el){ if(G.strike){ switchTab('Upgrade', el||document.querySelector('.tab[data-tab="Upgrade"]')); return; } openMainSheet('upgrade', el, 'Upgrade'); }   // 직스: 보급 탭
 function openAutoSheet(el){ openMainSheet('auto', el, ''); }   // 전송 옆 자동설정 버튼 → 하단 자동화 그리드(전용 탭 없음)
 // ⚙ 자동화 설정 시트 — 팝업 대신 하단 그리드(on/off 셀). 켜두면 유지되는 것들이라 여기서 한 번 설정.
 const AUTO_SHEET_DEFS=[
@@ -8403,6 +8404,8 @@ function closeSheet(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); docume
 function ovStatRow(label,val){ return '<div class="ovStat"><span class="osL">'+label+'</span><span class="osV">'+val+'</span></div>'; }
 // 이번 판 획득 요약 1회 계산(해금 감지 포함)
 function _runSummary(){ if(G._runSum) return G._runSum;
+  if(G.strike){ const S=(typeof STK!=='undefined'&&STK)?STK:{}, me=S.me||{};   // 직스: 라운드·코인 대신 결과·처치·플레이타임
+    G._runSum={ strike:true, result:(G.phase==='won')?'win':'lose', kills:(me.kills||0), time:(S.t||0), gold:Math.floor(me.gold||0) }; return G._runSum; }
   const hadDiff=(typeof PLAYER_META!=='undefined'&&PLAYER_META.clearedDifficulty)||'';
   const hadInf=(typeof infiniteUnlocked==='function')&&infiniteUnlocked();
   recordRunResult();
@@ -8438,12 +8441,19 @@ function showOverlay(){ const ov=document.getElementById('ov'),tt=document.getEl
   }
 }
 // 통계 창(전체 화면) — 게임 진입 로딩 창과 같은 구조: 미니맵 + 맵 이름 + 기록 패널 + 나가기
-function openResultScreen(){ const sc=document.getElementById('resultScreen'); if(!sc||!mapCfg('stats')){ overlayToLobby(); return; }   // 통계는 쓰는 맵에서만
+function openResultScreen(){ const sc=document.getElementById('resultScreen'); if(!sc||(!mapCfg('stats')&&!G.strike)){ overlayToLobby(); return; }   // 통계는 쓰는 맵 + 직스에서만
   const S=_runSummary(), inf=mapCfg('infinite');
   document.getElementById('ov').classList.add('hide');
   { const ac=(typeof MAP_ACCENT!=='undefined'&&MAP&&MAP_ACCENT[MAP.id])||'#7f93b0'; sc.style.setProperty('--mapAccent', ac); }
   _mapThumbInto(document.getElementById('rsThumb'), MAP, 'opThumb');
   document.getElementById('rsName').textContent=(MAP&&MAP.name)||'';
+  if(G.strike){ document.getElementById('rsStats').innerHTML=   // 직스 통계: 결과·처치·플레이타임·최종 자원
+      ovStatRow('결과', S.result==='win'?'<b class="osNew">승리</b>':'<b style="color:#ff6b7a">패배</b>')
+     +ovStatRow('처치', (S.kills||0).toLocaleString())
+     +ovStatRow('플레이타임', fmtTime(S.time))
+     +ovStatRow('최종 자원', '⛁ '+(S.gold||0).toLocaleString());
+    if(typeof setInGame==='function') setInGame(false);
+    sc.classList.remove('hide'); _rsStartAuto(); return; }
   document.getElementById('rsStats').innerHTML=
     ovStatRow('받은 포인트','<b class="osCoin">◎ '+S.coins+'</b>')
    +ovStatRow('처치', (S.kills||0).toLocaleString())
@@ -8460,6 +8470,9 @@ function resultToLobby(){ _rsClearAuto(); const sc=document.getElementById('resu
   if(typeof playSfx==='function') playSfx('ui_close');
   overlayToLobby(); }
 function overlayToLobby(){ _ovClearAuto(); _rsClearAuto(); document.getElementById('ov').classList.add('hide');   // 로비로 돌아가기(승/패 공통)
+  if(typeof G!=='undefined'&&G&&G.strike){ if(typeof STK!=='undefined') STK=null;   // 직스 크롬 원복(탭 라벨·nemo 크롬)
+    if(typeof strikeSetTabLabels==='function') strikeSetTabLabels(STK_NEMOLABEL);
+    if(typeof strikeHideNemoChrome==='function') strikeHideNemoChrome(false); }
   if(typeof stopGameCoop==='function') stopGameCoop(); if(typeof rtRoomClose==='function') rtRoomClose();
   G=newGame(); showLoading(openMapSelect, 1100); }
 function overlaySpectate(){ _ovClearAuto(); document.getElementById('ov').classList.add('hide'); setInGame(true);   // 관전하기 = 창을 닫고 전장 보기(자동 진행 취소)
@@ -8478,7 +8491,7 @@ function _ovStartAuto(){ _ovClearAuto(); _barRun(document.getElementById('ovAuto
 function _rsStartAuto(){ _rsClearAuto(); _barRun(document.getElementById('rsAutoBar'), RS_AUTO_MS, true);
   _rsAutoT=setTimeout(function(){ _rsAutoT=null; resultToLobby(); }, RS_AUTO_MS); }
 // 확인 = 통계 쓰는 맵이면 통계 화면, 아니면 바로 로비
-function _ovConfirm(){ _ovClearAuto(); if(mapCfg('stats')) openResultScreen(); else overlayToLobby(); }
+function _ovConfirm(){ _ovClearAuto(); if(mapCfg('stats')||G.strike) openResultScreen(); else overlayToLobby(); }
 document.getElementById('ovBtn').onclick=()=>{
   if(G.phase==='ready'){ openRooms(); return; }   // 멀티플레이 → 방 찾기
   _ovConfirm();                                   // 확인 → 통계(또는 로비)
@@ -8640,6 +8653,9 @@ function gsQuitToMaps(){ const op=document.getElementById('opening'); if(!op) re
   op.classList.remove('counting','ready','timing','warp');
   const nm=document.getElementById('opNum'); if(nm){ nm.textContent=''; }
   if(typeof G!=='undefined'&&G) G.loading=false;
+  if(typeof G!=='undefined'&&G&&G.strike){ G.strike=false; STK=null;   // 직스: 카운트다운 중 나가기 → 직스 크롬 원복(대기실 잔존 방지)
+    if(typeof strikeSetTabLabels==='function') strikeSetTabLabels(STK_NEMOLABEL);
+    if(typeof strikeHideNemoChrome==='function') strikeHideNemoChrome(false); }
   if(typeof setInGame==='function') setInGame(false);
   if(typeof playSfx==='function') playSfx('ui_close');
   overlayToLobby(); }   // G 리셋·코옵 종료·방 닫기 → 로딩 → 유즈맵 선택
@@ -9634,7 +9650,7 @@ function submitPw(){ if(!_pwRoom) return; const f=document.getElementById('pwFie
   else { if(typeof playSfx==='function') playSfx('ui_denied'); document.getElementById('pwErr').textContent='비밀번호가 일치하지 않습니다.'; if(f){ f.value=''; f.focus(); } } }
 function startGameNow(activePlayers, myNum, names){
   MAP=(typeof _selMap!=='undefined' && _selMap && USEMAPS[_selMap.id]) || USEMAPS.nemo; if(typeof applyMapBalance==='function') applyMapBalance();   // 현재 유즈맵 확정 + 맵별 밸런스 주입
-  if(mapCfg('mode')==='strike'){ strikeStart(); return; }   // 직스 모드 → 독립 모듈(nemo 우회). (3D 에셋은 추후 단계에서 loadMapModels)
+  if(mapCfg('mode')==='strike'){ strikeStart(activePlayers, myNum, names); return; }   // 직스 모드 → 독립 모듈(nemo 우회). (3D 에셋은 추후 단계에서 loadMapModels)
   if(mapCfg('mode')==='sandbox'){ enterSandbox(); return; }   // 관리자용 샌드박스 — 게임 진행 X, 유닛 진열·기본값 편집
   if(typeof bgmStop==='function') bgmStop();   // 게임 진입 시 로비 BGM 정지
   G=newGame(); G.phase='playing'; G.difficulty=(mapCfg('fixedDiff')||_selDiff); G.roundPhase='prep'; G.roundTime=mapCfg('prepTime',PREP_TIME); G.toSpawn=0;
@@ -9975,7 +9991,9 @@ function lobbyStart(){ const players=_lobbySlots.filter(Boolean); if(players.len
     try{ RT.lobby.send({type:'broadcast', event:'party_start', payload:{ partyId:RT.partyId, from:myUid() }}); }catch(e){} }
   const active=[]; let myNum=1; const names={}; const slotInfo=[];
   _lobbySlots.forEach((s,i)=>{ if(s){ active.push(i+1); if(s.me){ myNum=i+1; names[i+1]=myNick(); } else names[i+1]=s.label||s.name; slotInfo.push({num:i+1, uid:s.uid}); } });   // 입장 순서대로 슬롯 번호 + 닉네임 + uid
-  stopLobbySim(); stopLobbyChat(); startGameNow(active, myNum, names);
+  stopLobbySim(); stopLobbyChat();
+  document.getElementById('lobby').classList.add('hide');   // 대기실 숨김(실제 방 경로와 동일) — 직스/오토배틀은 opening 오버레이가 없어 안 가리면 대기실이 게임 위에 남음
+  startGameNow(active, myNum, names);
   if(_lobbyRoom && _lobbyRoom.party) startGameCoop(slotInfo); }   // 파티 게임이면 실시간 동기화 시작
 function startLobbySim(room){ room=room||{joining:false,startCount:1,host:'나'};
   const names=LOBBY_NAMES.slice().sort(()=>Math.random()-0.5); let ni=0;
@@ -11129,7 +11147,33 @@ const STK_BUILDINGS={
   ],
 };
 // 건물 key → 3D 모델 키(건물 모델 추가 시 여기에 매핑). 매핑/로드 전엔 2D 렌더로 폴백.
-const STK_BUILD_MODEL={};   // 예: { supply:'supply_bld', barracks:'barracks_bld', factory:'factory_bld', ... }
+// 건물 선행 조건(테크트리) — 관리자 TECH_TREE.req 이식. 해당 건물이 완성돼 있어야 건설 가능(본진은 항상 충족).
+const STK_BUILD_REQ={
+  // 테란
+  bunker:['barracks'], machshop:['barracks'], factory:['barracks'], missile:['barracks'],
+  armory:['factory'], starport:['factory'], vessel:['starport'], aegis:['starport'],
+  // 저그
+  den:['pool'], nest:['pool'], spire:['pool'], garden:['creep'], cavern:['den'], gspire:['spire'], pit:['cavern'], ultracav:['cavern'],
+  // 프로토스
+  core:['gateway'], robo:['core'], stargate:['core'], tribunal:['core'], sanctum:['core'], archives:['core'], beacon:['stargate'],
+};
+function _stkBuiltKeys(){ const S=STK, set=new Set(); if(!S||!S.build) return set; const mk=(STK_MAIN[S.me.race]||{}).key; if(mk) set.add(mk);
+  for(const c of (S.build.cells||[])){ if(c.built>=1 && c.type&&c.type.key) set.add(c.type.key); } return set; }
+function _stkReqMet(u, builtKeys){ if(!u||!u.req||!u.req.length) return true; const bk=builtKeys||_stkBuiltKeys(); return u.req.every(k=>bk.has(k)); }
+function _stkBuildName(key){ for(const r in STK_BUILDINGS){ const f=(STK_BUILDINGS[r]||[]).find(b=>b.key===key); if(f) return f.name; } const m=Object.values(STK_MAIN).find(b=>b.key===key); return m?m.name:key; }
+// 건물 key → 관리자 건설 3D 모델 키(cb_ 접두 = 관리자 TECH_MODEL/CST_BLDG_CFG와 동일 에셋). 미매핑·미로드 시 2D 이모지 폴백.
+const STK_BUILD_MODEL={
+  // 테란 → 유니온
+  command:'cb_union_command_center', supply:'cb_union_supply_depot', barracks:'cb_union_barracks', bunker:'cb_union_bunker',
+  machshop:'cb_union_machine_shop', factory:'cb_union_factory', armory:'cb_union_armory', starport:'cb_union_starport',
+  missile:'cb_union_missile_turret', vessel:'cb_union_science_facility',
+  // 저그 → 스웜
+  hatchery:'cb_swarm_hatchery', pool:'cb_swarm_spawning_pool', creep:'cb_swarm_creep_colony', den:'cb_swarm_hydralisk_den',
+  garden:'cb_swarm_sunken_colony', spire:'cb_swarm_spire', gspire:'cb_swarm_greater_spire', cavern:'cb_swarm_ultralisk_cavern', nest:'cb_swarm_queens_nest',
+  // 프로토스 → 에테리얼
+  nexus:'cb_aetherial_nexus', gateway:'cb_aetherial_gateway', core:'cb_aetherial_cybernetics_core', robo:'cb_aetherial_robotics_facility',
+  stargate:'cb_aetherial_stargate', beacon:'cb_aetherial_fleet_beacon', tribunal:'cb_aetherial_arbiter_tribunal', archives:'cb_aetherial_templar_archives', sanctum:'cb_aetherial_temple_of_adun',
+};
 // 종족 → 일꾼 3D 모델 키(모델 이미 존재 → 건설지에서 3D로 표시)
 const STK_WORKER_MODEL={ terran:'worker_human', zerg:'worker_swarm', protoss:'worker_light' };
 // 종족별 시작 본진(팔레트에 없음 · 처음부터 왼쪽 위에 1채 · 전투유닛 생산 없음)
@@ -13487,7 +13531,8 @@ function strikeSetTabLabels(map){ for(const t in map){ const el=document.querySe
   if(span){ span.textContent=map[t]; continue; }
   let tn=null; el.childNodes.forEach(n=>{ if(n.nodeType===3 && n.textContent.trim()) tn=n; });
   if(tn) tn.textContent=map[t]; else el.appendChild(document.createTextNode(map[t])); } }
-function strikeHideNemoChrome(on){ ['coopBossBar','mergeFab','skillFab','autoFab','deselTop','cvMarine','cvFx','mergeZone','miniWrap','defaultCmd','unitCmd','zoneLabel'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display=on?'none':''; });
+function strikeHideNemoChrome(on){ ['coopBossBar','mergeFab','skillFab','autoFab','deselTop','cvMarine','cvFx','mergeZone','miniWrap','defaultCmd','zoneLabel','chatBar'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display=on?'none':''; });   // unitCmd 제외: 직스 선택 프로필(커맨드 그리드) 호스트로 사용 → .on 클래스로 표시 제어 · chatBar 숨김(전투화면 하단 비움)
+  { const uc=document.getElementById('unitCmd'); if(uc){ uc.classList.remove('on','simple'); uc.innerHTML=''; uc._stkSig=null; uc.style.display=''; } }   // 진입/종료 시 초기화(인라인 display 잔존 제거)
   const kill=document.querySelector('#hudL .kill'); if(kill) kill.style.display=on?'none':'';
   const stage=document.querySelector('#hudL .stage'); if(stage) stage.style.display=on?'none':'';   // 좌상단 ROUND 숨김
   // nemo 하단 패널의 비-직스 자식 숨김(직스 패널만 보이게)
@@ -13495,8 +13540,9 @@ function strikeHideNemoChrome(on){ ['coopBossBar','mergeFab','skillFab','autoFab
   const uh=document.getElementById('upgHint'), ul=document.getElementById('upgList'); if(uh&&on) uh.style.display='none'; if(ul&&on) ul.style.display='none';
   const sb=document.getElementById('stBuildBp'), se=document.getElementById('stEconBp'); if(sb) sb.classList.toggle('hide',!on); if(se) se.classList.toggle('hide',!on);
 }
-function strikeStart(){ if(typeof bgmStop==='function') bgmStop();
+function strikeStart(activePlayers, myNum, names){ if(typeof bgmStop==='function') bgmStop();
   G=newGame(); G.strike=true; G.phase='playing'; G.tab='Main'; G.sel=[]; G.selEnemy=null;
+  G.activePlayers=(activePlayers&&activePlayers.length)?activePlayers.slice():[1]; G.myPlayer=myNum||1; G.playerNames=names||{};   // 로딩화면 플레이어 목록·닉네임(네모와 동일)
   STK=strikeNewState();
   STK.me.race=(STK_RACES[_selRace]?_selRace:'terran'); STK.ai.race=strikeRandomRace();   // 내 종족=선택, 상대=랜덤 → 각자 그 종족 유닛만 소환
   STK.buildMenu=strikeBuildable(STK.me.race);   // 내 종족 빌드 메뉴 캐시(이전 판 잔존 방지)
@@ -13518,7 +13564,9 @@ function strikeStart(){ if(typeof bgmStop==='function') bgmStop();
   strikeSetTabLabels(STK_TABLABEL);
   const mn=document.getElementById('mapName'); if(mn) mn.textContent='◈ 오토 배틀';
   strikeSwitchTab('Main');
-  if(typeof showLoading==='function') showLoading(null, 1300);   // 직스 진입 로딩 화면(게임 셋업 후 1.3초 노출)
+  G.loading=true;   // 로딩 동안 시뮬 정지(네모와 동일 — 오프닝 워프 후 진행)
+  if(typeof gameStartCountdown==='function') gameStartCountdown();   // 네모와 동일한 게임 진입 로딩 화면(맵 썸네일·특징 설명·플레이어·준비) — 설명은 cpu.feats(오토배틀용)
+  else if(typeof showLoading==='function') showLoading(null, 1300);   // 폴백
   if(typeof playSfx==='function') playSfx('game_start');
 }
 function strikeEnd(){ if(!STK && !(G&&G.strike)) return;
@@ -13532,7 +13580,7 @@ function strikeEnd(){ if(!STK && !(G&&G.strike)) return;
 }
 
 // ── 프레임/시뮬 ──
-function strikeFrame(dt){ const S=STK; if(!S) return; strikeStep(dt);
+function strikeFrame(dt){ const S=STK; if(!S) return; strikeStep(dt*(G.speedMul||1));   // 게임 배속(설정 배속 시스템 반영) — 로딩/종료 중엔 strikeStep 내부에서 정지
   if(G.tab==='Unit') strikeDrawBuildMap();
   else if(G.tab==='Upgrade') strikeDrawSupply();   // 보급: 시설 화면(탭하면 하단 패널 열림)
   else if(G.tab==='Players' && S.specView) strikeDrawBuildMap(strikeSpecView(S.specView));   // 관전: 그 플레이어 건설 화면(그의 색)
@@ -13543,6 +13591,8 @@ function strikeFrame(dt){ const S=STK; if(!S) return; strikeStep(dt);
 function strikeSync3D(dt){ const S=STK; if(!S) return; const mcv=document.getElementById('cvMarine');
   const ok3d=window.M3D && M3D.ready && M3D.ready() && !(G.opt&&G.opt.model3d===false);
   if(ok3d && G.tab==='Unit'){   // 건설지: 일꾼(+3D 모델 보유 건물) 3D 렌더
+    if(M3D.cstEnsure && S._cstRace!==S.me.race){ S._cstRace=S.me.race;   // 종족 건물 3D 모델 로드(관리자와 동일 에셋, cb_ 접두) — 1회
+      try{ const menu=strikeBuildMenu(), mk=[STK_MAIN[S.me.race]].concat(menu).map(u=>u&&STK_BUILD_MODEL[u.key]).filter(Boolean).map(v=>v.slice(3)); if(mk.length) M3D.cstEnsure(mk); }catch(_e){} }
     if(mcv) mcv.style.display='block';
     const b=S.build, W=S.cw||1, H=S.ch||1, bs=b._sc||0.2, list=[];
     const mul=Math.min(1.2, Math.max(0.12, (2600/3)/(Math.min(W,H)/bs)));   // 보드 스케일 연동(전투와 동일 규약)
@@ -13589,6 +13639,7 @@ function strikeDrawBuildMap(spec){ const S=STK; if(!S) return; const cvEl=docume
       ctx.globalAlpha=1; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font=Math.max(12,Math.min(fw,fh)*0.5)+'px sans-serif'; ctx.fillStyle='#fff'; ctx.fillText(c.type.ico, cx, cy);
     }
     if(!built){ const bw=fw*0.82, by2=ry+fh+5; ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillRect(cx-bw/2,by2,bw,5); ctx.fillStyle='#6fe89a'; ctx.fillRect(cx-bw/2,by2,bw*c.built,5); }   // 건설 진행바(3D여도 표시)
+    if(!spec && c===b.selBld && built){ ctx.globalAlpha=1; ctx.strokeStyle='#ffe08a'; ctx.lineWidth=Math.max(2.5,Math.min(fw,fh)*0.06); ctx.setLineDash([]); _strkRR(ctx,rx-3,ry-3,fw+6,fh+6,rr+2); ctx.stroke(); }   // 선택 건물 강조 링
     ctx.restore(); }
   // 배치 실루엣(손 누르는 중) — 그리드 스냅 위치에 표시. 유효=초록 / 무효(겹침·보드밖)=빨강 테두리
   if(!spec && b.placing && b.ghost){ const fp=strikeFootprint(b.placing), sp=strikeSnap(b,b.ghost.x,b.ghost.y,fp.w,fp.h), ok=strikeCanPlace(b,sp.x,sp.y,fp.w,fp.h);
@@ -13596,7 +13647,10 @@ function strikeDrawBuildMap(spec){ const S=STK; if(!S) return; const cvEl=docume
     ctx.save(); ctx.globalAlpha=0.42; ctx.fillStyle=ok?'rgba(110,235,150,.4)':'rgba(255,70,80,.32)'; _strkRR(ctx,gx-gw/2,gy-gh/2,gw,gh,rr); ctx.fill();
     ctx.globalAlpha=1; ctx.lineWidth=3; ctx.strokeStyle=ok?'#7dffb0':'#ff4650'; _strkRR(ctx,gx-gw/2,gy-gh/2,gw,gh,rr); ctx.stroke();
     ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font=Math.max(12,Math.min(gw,gh)*0.42)+'px sans-serif'; ctx.fillStyle=ok?'#eaffef':'#ffdadd'; ctx.fillText(b.placing.ico, gx, gy);
-    ctx.restore(); }
+    ctx.restore();
+    if(b.armed){ const el=_strikeArmBtns(); if(el){ el.style.left=(gx/W*100).toFixed(2)+'%'; el.style.top=((gy+gh/2)/H*100).toFixed(2)+'%'; el.style.display='flex'; const _ok=el.querySelector('.bArmBtn.ok'); if(_ok) _ok.classList.toggle('dis', !ok); } }   // ▶확정/✕취소 = 고스트 하단 중앙
+    else { const el=document.getElementById('stArmBtns'); if(el) el.style.display='none'; } }
+  else if(!spec){ const el=document.getElementById('stArmBtns'); if(el) el.style.display='none'; }
   // 일꾼 — 3D면 syncBuild가 렌더(2D 생략). 2D 폴백: 종족색 원반 + 일꾼 이모지
   if(!spec && !use3d){ const _wid={terran:'worker_human',zerg:'worker_swarm',protoss:'worker_light'}[S.me.race]||'worker_human';
     const _wico=(typeof U!=='undefined'&&U[_wid]&&U[_wid].icon)||'🔧', _wcol=(STK_RACES[S.me.race]&&STK_RACES[S.me.race].col)||'#ffd24a';
@@ -13616,7 +13670,7 @@ function strikeDrawBuildMap(spec){ const S=STK; if(!S) return; const cvEl=docume
 function strikeBuildClamp(b,sc,W,H){ const hvx=(W/sc)/2, hvy=(H/sc)/2;
   b.cam.x = (b.W<=hvx*2) ? b.W/2 : Math.max(hvx, Math.min(b.W-hvx, b.cam.x));
   b.cam.y = (b.H<=hvy*2) ? b.H/2 : Math.max(hvy, Math.min(b.H-hvy, b.cam.y)); }
-function strikeStep(dt){ const S=STK; if(!S) return; if(S.over) return; S.t+=dt;   // 종료 시 시뮬·소환 정지(결과창 표시 중)
+function strikeStep(dt){ const S=STK; if(!S) return; if(S.over) return; if(G&&G.loading) return; S.t+=dt;   // 종료·로딩(오프닝) 중 시뮬·소환 정지
   strikeStepUnits(dt);   // 전투 시뮬(소환·진격·교전·신전 타격)
   S.cycleT-=dt;
   if(S.cycleT<=0){ S.cycleT+=S.cycleTime; S.round++;
@@ -13726,17 +13780,11 @@ function strikeMoveToward(u,tx,ty,dt){ const S=STK; let dx=tx-u.x, dy=ty-u.y, d=
    // 적 2차 신전 → 메인 신전 순
 function strikeCheckOver(){ const S=STK; if(S.over) return;
   if(S.me.base.hp<=0) S.over='lose'; else if(S.ai.base.hp<=0) S.over='win';
-  if(S.over){ if(typeof toast==='function') toast(S.over==='win'?'⚔️ 승리! 적 메인 신전 파괴':'💥 패배 — 메인 신전 붕괴'); strikeShowResult(S.over==='win'); } }
-function strikeShowResult(win){ const S=STK; if(!S||S._resultEl) return;   // 종료 결과 오버레이(승/패) — 없으면 전투가 멈춘 채 방치됨
-  const host=document.getElementById('phone')||document.body, el=document.createElement('div'); el.id='stResult';
-  el.style.cssText='position:absolute;inset:0;z-index:80;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:rgba(4,7,12,.78)';
-  const col=win?'#7fe0ff':'#ff6b7a';
-  el.innerHTML='<div style="font-size:34px;font-weight:900;letter-spacing:3px;color:'+col+';text-shadow:0 0 24px '+col+'88">'+(win?'승 리':'패 배')+'</div>'
-    +'<div style="font-size:13px;color:#cfe0f4;opacity:.92">'+(win?'적 메인 신전을 파괴했습니다':'아군 메인 신전이 붕괴되었습니다')+'</div>'
-    +'<button id="stResultBtn" style="margin-top:6px;padding:11px 28px;border-radius:11px;border:1px solid '+col+';background:linear-gradient(160deg,rgba(30,44,66,.72),rgba(10,16,28,.82));color:#fff;font-size:14px;font-weight:800;cursor:pointer">로비로 돌아가기</button>';
-  host.appendChild(el); S._resultEl=el;
-  const btn=document.getElementById('stResultBtn'); if(btn) btn.onclick=function(){ try{ el.remove(); }catch(_){ } strikeEnd(); };
-  if(typeof playSfx==='function') playSfx(win?'win':'lose'); }
+  if(S.over){ if(typeof toast==='function') toast(S.over==='win'?'⚔️ 승리! 적 메인 신전 파괴':'💥 패배 — 메인 신전 붕괴');
+    G.phase=(S.over==='win')?'won':'lost';   // 네모와 동일한 승패 오버레이 → 통계 화면 흐름 재사용
+    document.body.classList.remove('sheetOpen'); const uc=document.getElementById('unitCmd'); if(uc){ uc.classList.remove('on'); uc.innerHTML=''; uc._stkSig=null; }   // 하단 프로필 정리
+    if(typeof playSfx==='function') playSfx(S.over==='win'?'win':'lose');
+    if(typeof showOverlay==='function') showOverlay(); } }
 // ── 건설(스타식 일꾼) — A* 격자 경로탐색: 건물을 장애물로 마킹 → 최단 경로 웨이포인트 추종(+국소 반발 스무딩) ──
 const BLD_GP=BUILD_UNIT;   // 경로탐색 격자 셀(월드)
 // 점유 격자: 목표 건물(target) 제외한 건물 사각형(여유 포함) 셀을 막음
@@ -13787,7 +13835,9 @@ function strikeStepBuild(dt){ const S=STK, b=S&&S.build; if(!b) return;
 function strikeFootprint(t){ const f=(t&&t.fp)||[4,4]; return {w:f[0]*BUILD_UNIT, h:f[1]*BUILD_UNIT}; }
 // (cx,cy)=월드 중심에 w×h 건물이 놓일 수 있는지(보드 안 + 기존 건물과 미겹침)
 function strikeCanPlace(b,cx,cy,w,h){ if(cx-w/2<0||cy-h/2<0||cx+w/2>b.W||cy+h/2>b.H) return false;   // 보드 밖
-  for(const c of b.cells){ if(Math.abs(cx-c.x)<(w+c.w)/2 && Math.abs(cy-c.y)<(h+c.h)/2) return false; }   // AABB 겹침
+  const GAP=BUILD_UNIT*0.6;   // 건물 간 최소 간격(일꾼 통행 + 깔끔한 배치)
+  for(const c of b.cells){ if(Math.abs(cx-c.x)<(w+c.w)/2+GAP && Math.abs(cy-c.y)<(h+c.h)/2+GAP) return false; }   // 겹침 + 최소 간격
+  for(const wk of (b.workers||[])){ if(Math.abs(cx-wk.x)<=w/2 && Math.abs(cy-wk.y)<=h/2) return false; }   // 일꾼 위 금지(관리자 유닛-점유 셀 검사 이식)
   return true; }
 // 그리드 스냅: 건물 좌상단을 격자(BUILD_UNIT)에 맞춰 정렬 → 정수 비율 건물이 딱 맞게 타일링
 function strikeSnap(b,cx,cy,w,h){ const G=BUILD_UNIT;
@@ -13796,13 +13846,29 @@ function strikeSnap(b,cx,cy,w,h){ const G=BUILD_UNIT;
   return {x:x0+w/2, y:y0+h/2}; }
 // 실루엣(b.ghost) 위치에 확정 배치 — 손 뗄 때 호출(그리드 스냅)
 function strikePlaceGhost(){ const S=STK, b=S.build; if(!b.placing||!b.ghost) return; const t=b.placing, fp=strikeFootprint(t), sp=strikeSnap(b,b.ghost.x,b.ghost.y,fp.w,fp.h), cx=sp.x, cy=sp.y;
+  if(!_stkReqMet(t)){ const bk=_stkBuiltKeys(), need=(t.req||[]).find(k=>!bk.has(k)); strikeToast('🔒 '+_stkBuildName(need)+' 먼저 건설해야 합니다'); return; }   // 선행 조건(철거 등으로 사후 미충족 방지)
   if(!strikeCanPlace(b,cx,cy,fp.w,fp.h)){ strikeToast('여기엔 지을 수 없습니다'); return; }
   if(S.me.gold<t.cost){ strikeToast('골드 부족 (필요 '+t.cost+')'); return; }
   S.me.gold-=t.cost; b.cells.push({type:t,built:0,x:cx,y:cy,w:fp.w,h:fp.h});
   for(const w of (b.workers||[])) w.path=null;   // 새 건물 → 일꾼 경로 즉시 재탐색(새 장애물 반영)
   if(typeof playSfx==='function') playSfx('buy_unit');
-  b.placing=null; b.ghost=null; strikeRenderBuild(); }   // 배치 후 카드 선택 해제(다시 누르면 또 지음)
-function strikePickBuild(i){ const S=STK; if(!S) return; const t=strikeBuildMenu()[i]; if(!t) return; S.build.placing=(S.build.placing===t)?null:t; S.build.ghost=null; strikeRenderBuild(); if(S.build.placing) strikeToast(t.name+' — 맵을 눌러 위치를 조정하고 손을 떼면 건설'); }
+  b.placing=null; b.ghost=null; b.armed=false; strikeRenderBuild(); }   // 배치 후 카드 선택 해제(다시 누르면 또 지음)
+// 관리자식 배치 확정/취소 버튼(.bArmBtns) — #vMain 위 DOM 오버레이(고스트 하단 중앙)
+function _strikeArmBtns(){ let el=document.getElementById('stArmBtns'); if(el) return el;
+  const host=document.getElementById('vMain'); if(!host) return null;
+  el=document.createElement('div'); el.id='stArmBtns'; el.className='bArmBtns'; el.style.position='absolute'; el.style.display='none';
+  el.innerHTML='<button class="bArmBtn ok" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()" onclick="strikeConfirmPlace(event)" title="확정"><svg viewBox="0 0 24 24" width="15" height="15" style="display:block"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button><button class="bArmBtn cancel" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()" onclick="strikeCancelArm(event)" title="취소">✕</button>';
+  host.appendChild(el); return el; }
+function strikeConfirmPlace(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); const S=STK, b=S&&S.build; if(!b||!b.placing||!b.ghost) return;
+  strikePlaceGhost();   // 검증·골드·배치·일꾼 경로·팔레트 갱신 포함(성공 시 placing/ghost/armed 해제)
+  if(!b.placing){ const el=document.getElementById('stArmBtns'); if(el) el.style.display='none'; } }   // 실패(무효·골드부족) 시 고스트 유지 → 재조정 가능
+function strikeCancelArm(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); const S=STK, b=S&&S.build; if(b){ b.placing=null; b.ghost=null; b.armed=false; strikeRenderBuild(); }
+  const el=document.getElementById('stArmBtns'); if(el) el.style.display='none'; if(typeof playSfx==='function') playSfx('ui_close'); }
+function strikePickBuild(i){ const S=STK; if(!S) return; const t=strikeBuildMenu()[i]; if(!t) return;
+  if(S.build.placing!==t && !_stkReqMet(t)){ const bk=_stkBuiltKeys(), need=(t.req||[]).find(k=>!bk.has(k)); strikeToast('🔒 '+_stkBuildName(need)+' 먼저 건설해야 합니다'); if(typeof playSfx==='function') playSfx('ui_denied'); return; }   // 선행 조건
+  S.build.selBld=null; S.build.placing=(S.build.placing===t)?null:t; S.build.ghost=null; S.build.armed=false;
+  { const el=document.getElementById('stArmBtns'); if(el) el.style.display='none'; }
+  strikeRenderBuild(); if(S.build.placing) strikeToast(t.name+' — 맵을 탭해 위치를 정하고 ▶로 확정'); }
 // ═══ 공용 FX 코어(모든 유즈맵 공통 유닛별 공격 이펙트) ═══
 // 유닛 id → 공격 스타일. 네모 발사체 비주얼을 그대로 — 한 곳에서 정의해 어느 맵이든 같은 느낌.
 const ATK_STYLE={
@@ -14175,8 +14241,8 @@ function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
             if(!tgt.tgtUid) tgt.tgtUid=u.uid;                     // 맞은 유닛이 반격(공격자 겨냥)
             strikeAlert(foe.units, u.uid, tgt.x, tgt.y, 420);     // 주변 아군도 공격자에 가담(스타식 자동교전)
             if(u.splash>0){ const sr2=u.splash*u.splash, sd=u.dmg*0.6;   // 광역: 타겟 주변 적에게 60% 추가타
-              for(const e of foe.units){ if(e===tgt||e.dead) continue; const ex=e.x-tgt.x, ey=e.y-tgt.y; if(ex*ex+ey*ey<=sr2){ e.hp-=sd; if(e.hp<=0) e.dead=true; } } }
-            if(tgt.hp<=0) tgt.dead=true; } }
+              for(const e of foe.units){ if(e===tgt||e.dead) continue; const ex=e.x-tgt.x, ey=e.y-tgt.y; if(ex*ex+ey*ey<=sr2){ e.hp-=sd; if(e.hp<=0){ e.dead=true; me.kills=(me.kills||0)+1; } } } }
+            if(tgt.hp<=0){ tgt.dead=true; me.kills=(me.kills||0)+1; } } }   // 처치 집계(통계용)
         else strikeMoveToward(u,tgt.x,tgt.y,dt);
       } else { const d=Math.hypot(front.x-u.x, front.y-u.y);   // 인지 적 없음 → 최전방 신전 1개로 진격/공격
         if(d<=u.rng+120){ u.moving=false; u.face=Math.atan2(front.x-u.x, front.y-u.y); u.cd-=dt; if(u.cd<=0){ u.cd=u.cdMax; front.hp-=u.dmg; strikeFx(u,front.x,front.y,col); if(front.hp<=0){ front.dead=true; front.deadBy=side; strikeCheckOver(); } } }
@@ -14212,33 +14278,37 @@ function strikeDrawSelection(ctx,w2s,scale,S){ if(!S) return;
     ctx.save(); ctx.strokeStyle='#ffd24a'; ctx.lineWidth=2.4; ctx.setLineDash([7,5]); ctx.beginPath(); ctx.ellipse(p.x,p.y,Math.max(40,95*scale),Math.max(20,46*scale),0,0,6.283); ctx.stroke(); ctx.restore(); } }
 // 직스 유닛 역할 라벨(STK_UNITS 기반)
 function strikeUnitRole(id){ const s=STK_UNITS[id]||{}; return s.melee?'근접':(s.splash?'광역':'원거리'); }
-// 네모/관리자 하단 프로필(scPanel) 그대로 — 초상화 + 이름 + 체력 + 스탯박스
-function strikeProfileHTML(o){ const ac=o.accent||'#7fd0ff';
-  const hp=Math.ceil(o.hp), mx=Math.round(o.maxHp), team=o.team?(' <span style="font-size:10px;font-weight:700;color:'+o.teamCol+'">'+o.team+'</span>'):'';
-  let h='<div class="scPanel" style="--neon:'+ac+';--neon-lt:#eaf2ff;--neon-glow:'+ac+'55;align-self:center;max-width:420px;width:100%">';
-  h+='<div class="scPortrait">'+o.portrait+(o.job?'<div class="portJob">'+escHtml(o.job)+'</div>':'')+'</div>';
-  h+='<div class="scMid"><div class="scName">'+escHtml(o.name)+team+'</div>';
-  if(o.type) h+='<div class="scType">'+escHtml(o.type)+'</div>';
-  h+='<div class="scHp"><div class="hpline hp"><span class="lab">체력</span>'+hp.toLocaleString()+' / '+mx.toLocaleString()+'</div></div></div>';
-  if(o.stats&&o.stats.length){ h+='<div class="scStats">'; for(const s of o.stats) h+='<div class="scBox"><div class="sv">'+s.val+'</div><div class="sl '+(s.cls||'')+'">'+s.label+'</div></div>'; h+='</div>'; }
-  return h+'</div>'; }
-function strikeRenderSelInfo(){ const S=STK; const el=document.getElementById('stSelInfo'); if(!el) return;
-  let html=null;
-  if(S && S.selTemple && !S.selTemple.dead){ const o=S.selTemple, nm=S.selTempleName||'신전',
-      enemy=nm.indexOf('적')>=0, neut=nm.indexOf('중립')>=0, ac=enemy?'#ff6b7a':(neut?'#ffd24a':'#7fd0ff');
-    html=strikeProfileHTML({ accent:ac, name:nm, type:'구조물', job:'신전', hp:o.hp, maxHp:o.max,
-      portrait:'<svg viewBox="0 0 24 24" width="62" height="62" style="position:absolute;inset:0;margin:auto"><path d="M4 20h16M5 20V10l7-5 7 5v10M9 20v-6h6v6" fill="none" stroke="'+ac+'" stroke-width="1.4" stroke-linejoin="round"/></svg>' }); }
-  else if(S && S.selEnemy && !S.selEnemy.dead){ const u=S.selEnemy;
-    html=strikeProfileHTML({ accent:'#ff6b7a', name:strikeUnitName(u.id), team:'적군', teamCol:'#ff6b7a',
-      type:(STK_RACES[S.ai.race]&&STK_RACES[S.ai.race].name||'')+' · '+strikeUnitRole(u.id), job:strikeUnitRole(u.id),
-      hp:u.hp, maxHp:u.maxHp, portrait:unitPortraitHTML(u.id),
-      stats:[{label:'공격력',val:u.dmg,cls:'atk'},{label:'사거리',val:Math.round(u.rng),cls:''}] }); }
-  else if(S){ const u=(S.selAllies||[]).map(uid=>strikeFindUnit(S.me.units,uid)).filter(Boolean)[0], col=S.me.compCol||'#7fd0ff';
-    if(u){ html=strikeProfileHTML({ accent:col, name:strikeUnitName(u.id), team:'아군', teamCol:col,
-      type:(STK_RACES[S.me.race]&&STK_RACES[S.me.race].name||'')+' · '+strikeUnitRole(u.id), job:strikeUnitRole(u.id),
-      hp:u.hp, maxHp:u.maxHp, portrait:unitPortraitHTML(u.id),
-      stats:[{label:'공격력',val:u.dmg,cls:'atk'},{label:'사거리',val:Math.round(u.rng),cls:''}] }); } }
-  if(html){ el.innerHTML=html; el.classList.remove('hide'); } else { el.classList.add('hide'); el.innerHTML=''; } }
+// 직스 유닛/건물 선택 프로필 = 관리자(메인) 커맨드 그리드(renderCmdGrid) 재사용 — 모델만 직스 데이터로 구성
+//   적=upg(빨강) · 아군/내 구조물=prod(청록) · 중립=build(골드) 로 강조색 통일
+function _stkUnitModel(u, side){ const def=STK_UNITS[u.id]||{};
+  const race=(side==='ai')?(STK&&STK.ai.race):(STK&&STK.me.race), raceName=(STK_RACES[race]&&STK_RACES[race].name)||'';
+  const cd=u.cdMax||u.cd||def.cd||0, spd=cd>0?((1/cd).toFixed(1)+'/s'):'-', teamKo=(side==='ai')?'적군':'아군';
+  return { mode:(side==='ai')?'upg':'prod', compact:true, build:true,
+    title: escHtml(strikeUnitName(u.id)), icon: unitPortraitHTML(u.id),
+    hpsh: _cgHpShStr(Math.round(u.hp)+'/'+Math.round(u.maxHp||def.hp||0), 0, 0),
+    items: [],
+    info: { eb: teamKo+(raceName?(' · '+raceName):''), hideName:true,
+      stats: [ ['공격력', ''+Math.round(u.dmg||def.dmg||0)], ['사거리', ''+Math.round(u.rng||def.rng||0)], ['공격속도', spd], ['유형', strikeUnitRole(u.id)] ] } }; }
+function _stkTempleModel(o, name){ const enemy=name.indexOf('적')>=0, neut=name.indexOf('중립')>=0;
+  const pct=Math.max(0,Math.round((o.hp/(o.max||1))*100));
+  return { mode:enemy?'upg':(neut?'build':'prod'), compact:true, build:true,
+    title: escHtml(name),
+    icon: '<svg viewBox="0 0 24 24"><path d="M4 20h16M5 20V10l7-5 7 5v10M9 20v-6h6v6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
+    hpsh: _cgHpShStr(Math.round(o.hp)+'/'+Math.round(o.max||0), 0, 0),
+    items: [],
+    info: { eb:'구조물', hideName:true, desc:'점령·방어 목표', stats: [ ['유형','신전'], ['내구도', pct+'%'] ] } }; }
+function strikeRenderSelInfo(){ const S=STK; const host=document.getElementById('unitCmd');
+  { const old=document.getElementById('stSelInfo'); if(old && !old.classList.contains('hide')){ old.classList.add('hide'); old.innerHTML=''; } }   // 구 프로필 사용 안 함
+  if(!host) return;
+  let model=null, sig=null;
+  if(S && S.selTemple && !S.selTemple.dead){ const o=S.selTemple, nm=S.selTempleName||'신전'; model=_stkTempleModel(o,nm); sig='t|'+nm+'|'+Math.round(o.hp); }
+  else if(S && S.selEnemy && !S.selEnemy.dead){ const u=S.selEnemy; model=_stkUnitModel(u,'ai'); sig='e|'+u.id+'|'+Math.round(u.hp); }
+  else if(S){ const u=(S.selAllies||[]).map(uid=>strikeFindUnit(S.me.units,uid)).filter(Boolean)[0]; if(u){ model=_stkUnitModel(u,'me'); sig='a|'+u.id+'|'+Math.round(u.hp); } }
+  if(model){ host.classList.add('on','simple'); if(host._stkSig!==sig){ host._stkSig=sig; renderCmdGrid(host, model); } }
+  else if(host._stkSig!=null || host.classList.contains('on')){ host.classList.remove('on'); host._stkSig=null; host.innerHTML=''; }
+  // 전투(Main) 탭: 프로필 있을 때만 하단 시트 올림 → 무선택 시 하단 섹션 완전 비움
+  if(G.tab==='Main'){ const show=!!model; if(host._stkShown!==show){ host._stkShown=show; document.body.classList.toggle('sheetOpen', show);
+    if(typeof _syncSheetLift==='function'){ requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); } } } }
 function strikeDrawFx(ctx,w2s,scale,S){ if(!S||!S.fx) return;   // 공용 FX 코어로 렌더(네모와 동일 비주얼). sz=픽셀 스케일(줌 연동)
   const sz=Math.max(0.8, Math.min(2.6, scale*8.5)); FX.drawShots(ctx, S.fx, w2s, sz); }
 function strikeDrawUnits(ctx,w2s,scale,S){ if(!S) return;
@@ -14410,7 +14480,11 @@ function strikeSwitchTab(id,el){ const S=STK; if(!S) return; G.tab=id; S.userCam
   const zl=document.getElementById('zoneLabel');
   if(zl){ const _m={Main:['⚔️','전장'],Unit:['🏗','건설지'],Upgrade:['📦','보급'],Players:['👁','관전']}[id];
     zl.innerHTML=_m? pIco(_m[0])+'<span class="zlTx">'+_m[1]+'</span>' : ''; }
+  if(id!=='Unit'){ const S=STK; if(S&&S.build){ S.build.placing=null; S.build.ghost=null; S.build.armed=false; } const el=document.getElementById('stArmBtns'); if(el) el.style.display='none'; }   // 건설지 이탈 = 배치 취소 + 버튼 숨김
   if(id==='Upgrade') strikeRenderEcon(); else if(id==='Unit') strikeRenderBuild(); else if(id==='Players') strikeRenderSpec();
+  // 전투(Main)=선택 있을 때만 하단 프로필 시트 · 그 외 탭=패널 상시 표시
+  if(id==='Main'){ const uc=document.getElementById('unitCmd'); if(uc) uc._stkShown=undefined; strikeRenderSelInfo(); }
+  else { document.body.classList.add('sheetOpen'); if(typeof _syncSheetLift==='function'){ requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); } }
   if(typeof playSfx==='function') playSfx('ui_tab'); }
 
 // ── 보급(내 진영) — 화면 시설 탭 → 하단 패널 ──
@@ -14484,12 +14558,37 @@ function strikeDrawSupply(){ const S=STK; if(!S) return; const cvEl=document.get
   ctx.textBaseline='alphabetic'; }
 // 종족별 빌드 메뉴(그 종족 소환 유닛 = 지을 수 있는 생산 건물). STK_UNITS에서 이름·아이콘·비용 도출
 function strikeBuildable(race){ const r=race||(STK&&STK.me&&STK.me.race)||'terran';
-  return (STK_BUILDINGS[r]||STK_BUILDINGS.terran).map(b=>({key:b.key, name:b.name, ico:b.ico, cost:b.cost, fp:b.fp, produces:b.produces})); }   // fp 포함(누락 시 전부 기본 2×2로 나오던 버그 수정)
+  return (STK_BUILDINGS[r]||STK_BUILDINGS.terran).map(b=>({key:b.key, name:b.name, ico:b.ico, cost:b.cost, fp:b.fp, produces:b.produces, req:STK_BUILD_REQ[b.key]||[]})); }   // fp·req 포함
 // 건물 카드에 표시할 생산 유닛 요약 문자열(예: "레인저×3")
 function strikeProdLabel(b){ const ps=(b&&b.produces)||[]; return ps.map(p=>{ const d=STK_UNITS[p.id]||{}; return (d.name||p.id)+'×'+p.n; }).join(', '); }
 function strikeBuildMenu(){ const S=STK; if(!S) return []; if(!S.buildMenu) S.buildMenu=strikeBuildable(S.me&&S.me.race); return S.buildMenu; }   // 캐시(placing 객체 동일성 유지)
-function strikeRenderBuild(){ const el=document.getElementById('stBuildPalette'); if(!el) return; const S=STK; const menu=strikeBuildMenu();
-  el.innerHTML=menu.map((u,i)=>`<div class="stUnitCard${S&&S.build&&S.build.placing===u?' sel':''}" onclick="strikePickBuild(${i})"><div class="uc">${u.ico}</div>${u.name}<div class="ucProd">${strikeProdLabel(u)}</div><div class="ucCost">⛁${u.cost}</div></div>`).join(''); }
+// 직스 건설 팔레트 = 관리자 건설 탭과 동일한 커맨드 그리드(renderCmdGrid) — techBuildListModel 구조 재현
+function _strikeBuildModel(){ const S=STK, menu=strikeBuildMenu(), gold=Math.floor((S&&S.me&&S.me.gold)||0);
+  const race=(S&&S.me&&S.me.race)||'terran', raceName=(STK_RACES[race]&&STK_RACES[race].name)||'';
+  const bk=_stkBuiltKeys();
+  const items=menu.map((u,i)=>{ const afford=gold>=u.cost, reqMet=_stkReqMet(u,bk), armed=!!(S&&S.build&&S.build.placing===u);
+    return { pro:pIco(u.ico), sn:u.name, cr:u.cost, en:0, tr:reqMet?(u.fp?u.fp.join('×'):''):'🔒', metaCls:reqMet?'':'lv',
+      state:armed?'sel':((reqMet&&afford)?'ok':'dim'), act:'onclick="strikePickBuild('+i+')"' }; });   // 선행 조건 미충족 = 🔒·비활성
+  return { mode:'build', title:raceName+' · 건설', icon:pIco('👷'), sub:'건물 선택 → 맵을 탭해 배치', items,
+    info:{ eb:'건설', hideName:true, desc:'건물을 선택하고 맵을 탭해 배치합니다.', stats:[['보유 자원','⛁ '+gold.toLocaleString()]] } }; }
+// 건물 선택 프로필 = 관리자 건물 생산 시트(techBldgProdModel) 톤 — 생산 유닛 카드 + 철거 · 읽기전용(오토배틀=자동 생산)
+function _stkBldProfileModel(c){ const t=c.type||{}, prod=(t.produces&&t.produces.length)?t.produces:[{id:t.id,n:1}];
+  const items=prod.map(p=>({ pro:(typeof unitPortraitHTML==='function'?unitPortraitHTML(p.id):''), sn:strikeUnitName(p.id), meta:'×'+(p.n||1), metaCls:'lv', state:'ok', act:'' }));
+  return { mode:'prod', compact:true, build:false,
+    title: escHtml(t.name||'건물'), icon: pIco(t.ico||'🏢'), sub:'출격 주기마다 자동 생산',
+    items,
+    info:{ eb:'생산 건물', hideName:true, desc:'출격 때마다 아래 유닛을 자동 생산합니다.', stats:[ ['발자국', (t.fp||[]).join('×')||'-'], ['생산 수', ''+prod.reduce((a,p)=>a+(p.n||1),0)+'기'] ] },
+    back:'<button class="cgLift cgBack" onclick="strikeBuildBack(event)" title="건설 목록으로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6L4 11l5 5"/><path d="M4 11h9a6 6 0 0 1 6 6v1"/></svg></button>',
+    topRight:'<button class="cgLift" style="border-color:rgba(255,107,107,.5);background:rgba(255,80,80,.14);color:#ff8f8f" onclick="strikeDemolishBld(event)" title="철거(75% 환불)"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg></button>' }; }
+function strikeBuildBack(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); const S=STK; if(S&&S.build) S.build.selBld=null; strikeRenderBuild(); if(typeof playSfx==='function') playSfx('ui_close'); }
+function strikeDemolishBld(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); const S=STK, b=S&&S.build; if(!b||!b.selBld) return;
+  const idx=b.cells.indexOf(b.selBld); if(idx<0){ b.selBld=null; strikeRenderBuild(); return; }
+  const refund=Math.round((b.selBld.type.cost||0)*0.75); S.me.gold+=refund;
+  b.cells.splice(idx,1); b.selBld=null; for(const w of (b.workers||[])) w.path=null;   // 장애물 제거 → 경로 재탐색
+  strikeToast('철거 — '+refund+' 환불'); if(typeof playSfx==='function') playSfx('ui_confirm'); strikeRenderBuild(); }
+function strikeRenderBuild(){ const host=document.getElementById('stBuildPalette'); if(!host) return; const S=STK; if(!S) return; const b=S.build;
+  if(b.selBld && b.cells.indexOf(b.selBld)>=0 && b.selBld.built>=1){ renderCmdGrid(host, _stkBldProfileModel(b.selBld)); return; }   // 건물 선택 시 프로필
+  b.selBld=null; renderCmdGrid(host, _strikeBuildModel()); }
 // 관전: nemo .plbtn/.plGrid(4×2) 재사용. 팀 1-4(아군 파랑) vs 5-8(적군 빨강). 빈 자리=잠금
 function strikePColor(slot){ return (typeof PLAYER_VIEW_COLORS!=='undefined')?PLAYER_VIEW_COLORS[(slot-1)%PLAYER_VIEW_COLORS.length]:'#7fd0ff'; }
 function strikeSpecBuildCells(slot){ const S=STK; if(!S.specBuilds) S.specBuilds={};   // 데모 건물(추후 실제 멀티 데이터로 교체) — 자유 배치(월드)
@@ -14546,10 +14645,15 @@ function strikeOnMove(e){ const S=STK; if(!S) return; const r=strikeViewRect(), 
       else { const W=S.cw||1,H=S.ch||1,scale=Math.min(W,H)/S.viewWorld; S.cam.x=_stkDrag.camx-dx/scale; S.cam.y=_stkDrag.camy-dy/scale; S.userCam=true; S.lastCam=S.t; strikeClampCam(); } } } }
 function strikeOnUp(e){ const S=STK; if(!S) return; if(e) _stkPtrs.delete(e.pointerId);
   if(_stkPtrs.size<2) _stkPinch=null;
-  if(_stkDrag && _stkDrag.ghost){ strikePlaceGhost(); if(S.build) S.build.ghost=null; _stkDrag=null; return; }   // 건설: 손 떼면 실루엣 위치에 배치(유효할 때만)
+  if(_stkDrag && _stkDrag.ghost){ if(S.build) S.build.armed=true; _stkDrag=null; return; }   // 건설: 손 떼면 고스트 유지 + ▶확정/✕취소 버튼(관리자식) — 즉시 배치 안 함
   if(_stkDrag && !_stkDrag.moved && G.tab==='Upgrade'){ const r=strikeViewRect();   // 보급 탭: 시설 탭 → 하단 패널
     const px=(e&&e.clientX!=null?e.clientX:r.left)-r.left, py=(e&&e.clientY!=null?e.clientY:r.top)-r.top;
     const hit=(S._supHit||[]).find(f=> px>=f.x&&px<=f.x+f.w&&py>=f.y&&py<=f.y+f.h); if(hit) strikeSupplySelect(hit.key); _stkDrag=null; return; }
+  if(_stkDrag && !_stkDrag.moved && G.tab==='Unit' && !(S.build&&S.build.placing)){ const r=strikeViewRect();   // 건설지: 완성 건물 탭 = 선택(프로필) / 빈 곳 = 해제
+    const px=(e&&e.clientX!=null?e.clientX:r.left)-r.left, py=(e&&e.clientY!=null?e.clientY:r.top)-r.top;
+    const b=S.build, wx=(px-(b._ox||0))/(b._sc||1), wy=(py-(b._oy||0))/(b._sc||1);
+    const hit=(b.cells||[]).find(c=>c.built>=1 && Math.abs(wx-c.x)<=(c.w||60)/2 && Math.abs(wy-c.y)<=(c.h||60)/2);
+    b.selBld=hit||null; strikeRenderBuild(); if(hit&&typeof playSfx==='function') playSfx('ui_tab'); _stkDrag=null; return; }
   if(_stkDrag && !_stkDrag.moved && G.tab!=='Unit'){ const r=strikeViewRect();   // 전장 탭(이동 없음)=단일 선택
     const px=(e&&e.clientX!=null?e.clientX:r.left+r.width/2)-r.left, py=(e&&e.clientY!=null?e.clientY:r.top+r.height/2)-r.top;
     const w=strikeScreenToWorld(px,py); strikeSelectAt(w.x,w.y); }
