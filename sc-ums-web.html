@@ -13521,7 +13521,9 @@ function strikeStepBuild(dt){ const S=STK, b=S&&S.build; if(!b) return;
 function strikeFootprint(t){ const f=(t&&t.fp)||[4,4]; return {w:f[0]*BUILD_UNIT, h:f[1]*BUILD_UNIT}; }
 // (cx,cy)=월드 중심에 w×h 건물이 놓일 수 있는지(보드 안 + 기존 건물과 미겹침)
 function strikeCanPlace(b,cx,cy,w,h){ if(cx-w/2<0||cy-h/2<0||cx+w/2>b.W||cy+h/2>b.H) return false;   // 보드 밖
-  for(const c of b.cells){ if(Math.abs(cx-c.x)<(w+c.w)/2 && Math.abs(cy-c.y)<(h+c.h)/2) return false; }   // AABB 겹침
+  const GAP=BUILD_UNIT*0.6;   // 건물 간 최소 간격(일꾼 통행 + 깔끔한 배치)
+  for(const c of b.cells){ if(Math.abs(cx-c.x)<(w+c.w)/2+GAP && Math.abs(cy-c.y)<(h+c.h)/2+GAP) return false; }   // 겹침 + 최소 간격
+  for(const wk of (b.workers||[])){ if(Math.abs(cx-wk.x)<=w/2 && Math.abs(cy-wk.y)<=h/2) return false; }   // 일꾼 위 금지(관리자 유닛-점유 셀 검사 이식)
   return true; }
 // 그리드 스냅: 건물 좌상단을 격자(BUILD_UNIT)에 맞춰 정렬 → 정수 비율 건물이 딱 맞게 타일링
 function strikeSnap(b,cx,cy,w,h){ const G=BUILD_UNIT;
