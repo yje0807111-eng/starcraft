@@ -13304,7 +13304,10 @@ function strikeDrawBuildMap(spec){ const S=STK; if(!S) return; const cvEl=docume
     ctx.save(); ctx.globalAlpha=0.42; ctx.fillStyle=ok?'rgba(110,235,150,.4)':'rgba(255,70,80,.32)'; _strkRR(ctx,gx-gw/2,gy-gh/2,gw,gh,rr); ctx.fill();
     ctx.globalAlpha=1; ctx.lineWidth=3; ctx.strokeStyle=ok?'#7dffb0':'#ff4650'; _strkRR(ctx,gx-gw/2,gy-gh/2,gw,gh,rr); ctx.stroke();
     ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font=Math.max(12,Math.min(gw,gh)*0.42)+'px sans-serif'; ctx.fillStyle=ok?'#eaffef':'#ffdadd'; ctx.fillText(b.placing.ico, gx, gy);
-    ctx.restore(); }
+    ctx.restore();
+    if(b.armed){ const el=_strikeArmBtns(); if(el){ el.style.left=(gx/W*100).toFixed(2)+'%'; el.style.top=((gy+gh/2)/H*100).toFixed(2)+'%'; el.style.display='flex'; const _ok=el.querySelector('.bArmBtn.ok'); if(_ok) _ok.classList.toggle('dis', !ok); } }   // ▶확정/✕취소 = 고스트 하단 중앙
+    else { const el=document.getElementById('stArmBtns'); if(el) el.style.display='none'; } }
+  else if(!spec){ const el=document.getElementById('stArmBtns'); if(el) el.style.display='none'; }
   // 일꾼 — 3D면 syncBuild가 렌더(2D 생략). 2D 폴백: 종족색 원반 + 일꾼 이모지
   if(!spec && !use3d){ const _wid={terran:'worker_human',zerg:'worker_swarm',protoss:'worker_light'}[S.me.race]||'worker_human';
     const _wico=(typeof U!=='undefined'&&U[_wid]&&U[_wid].icon)||'🔧', _wcol=(STK_RACES[S.me.race]&&STK_RACES[S.me.race].col)||'#ffd24a';
@@ -13503,8 +13506,21 @@ function strikePlaceGhost(){ const S=STK, b=S.build; if(!b.placing||!b.ghost) re
   S.me.gold-=t.cost; b.cells.push({type:t,built:0,x:cx,y:cy,w:fp.w,h:fp.h});
   for(const w of (b.workers||[])) w.path=null;   // 새 건물 → 일꾼 경로 즉시 재탐색(새 장애물 반영)
   if(typeof playSfx==='function') playSfx('buy_unit');
-  b.placing=null; b.ghost=null; strikeRenderBuild(); }   // 배치 후 카드 선택 해제(다시 누르면 또 지음)
-function strikePickBuild(i){ const S=STK; if(!S) return; const t=strikeBuildMenu()[i]; if(!t) return; S.build.placing=(S.build.placing===t)?null:t; S.build.ghost=null; strikeRenderBuild(); if(S.build.placing) strikeToast(t.name+' — 맵을 눌러 위치를 조정하고 손을 떼면 건설'); }
+  b.placing=null; b.ghost=null; b.armed=false; strikeRenderBuild(); }   // 배치 후 카드 선택 해제(다시 누르면 또 지음)
+// 관리자식 배치 확정/취소 버튼(.bArmBtns) — #vMain 위 DOM 오버레이(고스트 하단 중앙)
+function _strikeArmBtns(){ let el=document.getElementById('stArmBtns'); if(el) return el;
+  const host=document.getElementById('vMain'); if(!host) return null;
+  el=document.createElement('div'); el.id='stArmBtns'; el.className='bArmBtns'; el.style.position='absolute'; el.style.display='none';
+  el.innerHTML='<button class="bArmBtn ok" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()" onclick="strikeConfirmPlace(event)" title="확정"><svg viewBox="0 0 24 24" width="15" height="15" style="display:block"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button><button class="bArmBtn cancel" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()" onclick="strikeCancelArm(event)" title="취소">✕</button>';
+  host.appendChild(el); return el; }
+function strikeConfirmPlace(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); const S=STK, b=S&&S.build; if(!b||!b.placing||!b.ghost) return;
+  strikePlaceGhost();   // 검증·골드·배치·일꾼 경로·팔레트 갱신 포함(성공 시 placing/ghost/armed 해제)
+  if(!b.placing){ const el=document.getElementById('stArmBtns'); if(el) el.style.display='none'; } }   // 실패(무효·골드부족) 시 고스트 유지 → 재조정 가능
+function strikeCancelArm(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); const S=STK, b=S&&S.build; if(b){ b.placing=null; b.ghost=null; b.armed=false; strikeRenderBuild(); }
+  const el=document.getElementById('stArmBtns'); if(el) el.style.display='none'; if(typeof playSfx==='function') playSfx('ui_close'); }
+function strikePickBuild(i){ const S=STK; if(!S) return; const t=strikeBuildMenu()[i]; if(!t) return; S.build.placing=(S.build.placing===t)?null:t; S.build.ghost=null; S.build.armed=false;
+  { const el=document.getElementById('stArmBtns'); if(el) el.style.display='none'; }
+  strikeRenderBuild(); if(S.build.placing) strikeToast(t.name+' — 맵을 탭해 위치를 정하고 ▶로 확정'); }
 // ═══ 공용 FX 코어(모든 유즈맵 공통 유닛별 공격 이펙트) ═══
 // 유닛 id → 공격 스타일. 네모 발사체 비주얼을 그대로 — 한 곳에서 정의해 어느 맵이든 같은 느낌.
 const ATK_STYLE={
@@ -14116,6 +14132,7 @@ function strikeSwitchTab(id,el){ const S=STK; if(!S) return; G.tab=id; S.userCam
   const zl=document.getElementById('zoneLabel');
   if(zl){ const _m={Main:['⚔️','전장'],Unit:['🏗','건설지'],Upgrade:['📦','보급'],Players:['👁','관전']}[id];
     zl.innerHTML=_m? pIco(_m[0])+'<span class="zlTx">'+_m[1]+'</span>' : ''; }
+  if(id!=='Unit'){ const S=STK; if(S&&S.build){ S.build.placing=null; S.build.ghost=null; S.build.armed=false; } const el=document.getElementById('stArmBtns'); if(el) el.style.display='none'; }   // 건설지 이탈 = 배치 취소 + 버튼 숨김
   if(id==='Upgrade') strikeRenderEcon(); else if(id==='Unit') strikeRenderBuild(); else if(id==='Players') strikeRenderSpec();
   // 전투(Main)=선택 있을 때만 하단 프로필 시트 · 그 외 탭=패널 상시 표시
   if(id==='Main'){ const uc=document.getElementById('unitCmd'); if(uc) uc._stkShown=undefined; strikeRenderSelInfo(); }
@@ -14263,7 +14280,7 @@ function strikeOnMove(e){ const S=STK; if(!S) return; const r=strikeViewRect(), 
       else { const W=S.cw||1,H=S.ch||1,scale=Math.min(W,H)/S.viewWorld; S.cam.x=_stkDrag.camx-dx/scale; S.cam.y=_stkDrag.camy-dy/scale; S.userCam=true; S.lastCam=S.t; strikeClampCam(); } } } }
 function strikeOnUp(e){ const S=STK; if(!S) return; if(e) _stkPtrs.delete(e.pointerId);
   if(_stkPtrs.size<2) _stkPinch=null;
-  if(_stkDrag && _stkDrag.ghost){ strikePlaceGhost(); if(S.build) S.build.ghost=null; _stkDrag=null; return; }   // 건설: 손 떼면 실루엣 위치에 배치(유효할 때만)
+  if(_stkDrag && _stkDrag.ghost){ if(S.build) S.build.armed=true; _stkDrag=null; return; }   // 건설: 손 떼면 고스트 유지 + ▶확정/✕취소 버튼(관리자식) — 즉시 배치 안 함
   if(_stkDrag && !_stkDrag.moved && G.tab==='Upgrade'){ const r=strikeViewRect();   // 보급 탭: 시설 탭 → 하단 패널
     const px=(e&&e.clientX!=null?e.clientX:r.left)-r.left, py=(e&&e.clientY!=null?e.clientY:r.top)-r.top;
     const hit=(S._supHit||[]).find(f=> px>=f.x&&px<=f.x+f.w&&py>=f.y&&py<=f.y+f.h); if(hit) strikeSupplySelect(hit.key); _stkDrag=null; return; }
