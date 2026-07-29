@@ -8097,6 +8097,8 @@ function closeSheet(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); docume
 function ovStatRow(label,val){ return '<div class="ovStat"><span class="osL">'+label+'</span><span class="osV">'+val+'</span></div>'; }
 // 이번 판 획득 요약 1회 계산(해금 감지 포함)
 function _runSummary(){ if(G._runSum) return G._runSum;
+  if(G.strike){ const S=(typeof STK!=='undefined'&&STK)?STK:{}, me=S.me||{};   // 직스: 라운드·코인 대신 결과·처치·플레이타임
+    G._runSum={ strike:true, result:(G.phase==='won')?'win':'lose', kills:(me.kills||0), time:(S.t||0), gold:Math.floor(me.gold||0) }; return G._runSum; }
   const hadDiff=(typeof PLAYER_META!=='undefined'&&PLAYER_META.clearedDifficulty)||'';
   const hadInf=(typeof infiniteUnlocked==='function')&&infiniteUnlocked();
   recordRunResult();
@@ -8131,12 +8133,19 @@ function showOverlay(){ const ov=document.getElementById('ov'),tt=document.getEl
   }
 }
 // 통계 창(전체 화면) — 게임 진입 로딩 창과 같은 구조: 미니맵 + 맵 이름 + 기록 패널 + 나가기
-function openResultScreen(){ const sc=document.getElementById('resultScreen'); if(!sc||!mapCfg('stats')){ overlayToLobby(); return; }   // 통계는 쓰는 맵에서만
+function openResultScreen(){ const sc=document.getElementById('resultScreen'); if(!sc||(!mapCfg('stats')&&!G.strike)){ overlayToLobby(); return; }   // 통계는 쓰는 맵 + 직스에서만
   const S=_runSummary(), inf=mapCfg('infinite');
   document.getElementById('ov').classList.add('hide');
   { const ac=(typeof MAP_ACCENT!=='undefined'&&MAP&&MAP_ACCENT[MAP.id])||'#7f93b0'; sc.style.setProperty('--mapAccent', ac); }
   _mapThumbInto(document.getElementById('rsThumb'), MAP, 'opThumb');
   document.getElementById('rsName').textContent=(MAP&&MAP.name)||'';
+  if(G.strike){ document.getElementById('rsStats').innerHTML=   // 직스 통계: 결과·처치·플레이타임·최종 자원
+      ovStatRow('결과', S.result==='win'?'<b class="osNew">승리</b>':'<b style="color:#ff6b7a">패배</b>')
+     +ovStatRow('처치', (S.kills||0).toLocaleString())
+     +ovStatRow('플레이타임', fmtTime(S.time))
+     +ovStatRow('최종 자원', '⛁ '+(S.gold||0).toLocaleString());
+    if(typeof setInGame==='function') setInGame(false);
+    sc.classList.remove('hide'); _rsStartAuto(); return; }
   document.getElementById('rsStats').innerHTML=
     ovStatRow('받은 포인트','<b class="osCoin">◎ '+S.coins+'</b>')
    +ovStatRow('처치', (S.kills||0).toLocaleString())
@@ -8151,6 +8160,9 @@ function resultToLobby(){ _rsClearAuto(); const sc=document.getElementById('resu
   if(typeof playSfx==='function') playSfx('ui_close');
   overlayToLobby(); }
 function overlayToLobby(){ _ovClearAuto(); _rsClearAuto(); document.getElementById('ov').classList.add('hide');   // 로비로 돌아가기(승/패 공통)
+  if(typeof G!=='undefined'&&G&&G.strike){ if(typeof STK!=='undefined') STK=null;   // 직스 크롬 원복(탭 라벨·nemo 크롬)
+    if(typeof strikeSetTabLabels==='function') strikeSetTabLabels(STK_NEMOLABEL);
+    if(typeof strikeHideNemoChrome==='function') strikeHideNemoChrome(false); }
   if(typeof stopGameCoop==='function') stopGameCoop(); if(typeof rtRoomClose==='function') rtRoomClose();
   G=newGame(); showLoading(openMapSelect, 1100); }
 function overlaySpectate(){ _ovClearAuto(); document.getElementById('ov').classList.add('hide'); setInGame(true);   // 관전하기 = 창을 닫고 전장 보기(자동 진행 취소)
@@ -8169,7 +8181,7 @@ function _ovStartAuto(){ _ovClearAuto(); _barRun(document.getElementById('ovAuto
 function _rsStartAuto(){ _rsClearAuto(); _barRun(document.getElementById('rsAutoBar'), RS_AUTO_MS, true);
   _rsAutoT=setTimeout(function(){ _rsAutoT=null; resultToLobby(); }, RS_AUTO_MS); }
 // 확인 = 통계 쓰는 맵이면 통계 화면, 아니면 바로 로비
-function _ovConfirm(){ _ovClearAuto(); if(mapCfg('stats')) openResultScreen(); else overlayToLobby(); }
+function _ovConfirm(){ _ovClearAuto(); if(mapCfg('stats')||G.strike) openResultScreen(); else overlayToLobby(); }
 document.getElementById('ovBtn').onclick=()=>{
   if(G.phase==='ready'){ openRooms(); return; }   // 멀티플레이 → 방 찾기
   _ovConfirm();                                   // 확인 → 통계(또는 로비)
@@ -13422,17 +13434,11 @@ function strikeMoveToward(u,tx,ty,dt){ const S=STK; let dx=tx-u.x, dy=ty-u.y, d=
    // 적 2차 신전 → 메인 신전 순
 function strikeCheckOver(){ const S=STK; if(S.over) return;
   if(S.me.base.hp<=0) S.over='lose'; else if(S.ai.base.hp<=0) S.over='win';
-  if(S.over){ if(typeof toast==='function') toast(S.over==='win'?'⚔️ 승리! 적 메인 신전 파괴':'💥 패배 — 메인 신전 붕괴'); strikeShowResult(S.over==='win'); } }
-function strikeShowResult(win){ const S=STK; if(!S||S._resultEl) return;   // 종료 결과 오버레이(승/패) — 없으면 전투가 멈춘 채 방치됨
-  const host=document.getElementById('phone')||document.body, el=document.createElement('div'); el.id='stResult';
-  el.style.cssText='position:absolute;inset:0;z-index:80;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:rgba(4,7,12,.78)';
-  const col=win?'#7fe0ff':'#ff6b7a';
-  el.innerHTML='<div style="font-size:34px;font-weight:900;letter-spacing:3px;color:'+col+';text-shadow:0 0 24px '+col+'88">'+(win?'승 리':'패 배')+'</div>'
-    +'<div style="font-size:13px;color:#cfe0f4;opacity:.92">'+(win?'적 메인 신전을 파괴했습니다':'아군 메인 신전이 붕괴되었습니다')+'</div>'
-    +'<button id="stResultBtn" style="margin-top:6px;padding:11px 28px;border-radius:11px;border:1px solid '+col+';background:linear-gradient(160deg,rgba(30,44,66,.72),rgba(10,16,28,.82));color:#fff;font-size:14px;font-weight:800;cursor:pointer">로비로 돌아가기</button>';
-  host.appendChild(el); S._resultEl=el;
-  const btn=document.getElementById('stResultBtn'); if(btn) btn.onclick=function(){ try{ el.remove(); }catch(_){ } strikeEnd(); };
-  if(typeof playSfx==='function') playSfx(win?'win':'lose'); }
+  if(S.over){ if(typeof toast==='function') toast(S.over==='win'?'⚔️ 승리! 적 메인 신전 파괴':'💥 패배 — 메인 신전 붕괴');
+    G.phase=(S.over==='win')?'won':'lost';   // 네모와 동일한 승패 오버레이 → 통계 화면 흐름 재사용
+    document.body.classList.remove('sheetOpen'); const uc=document.getElementById('unitCmd'); if(uc){ uc.classList.remove('on'); uc.innerHTML=''; uc._stkSig=null; }   // 하단 프로필 정리
+    if(typeof playSfx==='function') playSfx(S.over==='win'?'win':'lose');
+    if(typeof showOverlay==='function') showOverlay(); } }
 // ── 건설(스타식 일꾼) — A* 격자 경로탐색: 건물을 장애물로 마킹 → 최단 경로 웨이포인트 추종(+국소 반발 스무딩) ──
 const BLD_GP=BUILD_UNIT;   // 경로탐색 격자 셀(월드)
 // 점유 격자: 목표 건물(target) 제외한 건물 사각형(여유 포함) 셀을 막음
@@ -13871,8 +13877,8 @@ function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
             if(!tgt.tgtUid) tgt.tgtUid=u.uid;                     // 맞은 유닛이 반격(공격자 겨냥)
             strikeAlert(foe.units, u.uid, tgt.x, tgt.y, 420);     // 주변 아군도 공격자에 가담(스타식 자동교전)
             if(u.splash>0){ const sr2=u.splash*u.splash, sd=u.dmg*0.6;   // 광역: 타겟 주변 적에게 60% 추가타
-              for(const e of foe.units){ if(e===tgt||e.dead) continue; const ex=e.x-tgt.x, ey=e.y-tgt.y; if(ex*ex+ey*ey<=sr2){ e.hp-=sd; if(e.hp<=0) e.dead=true; } } }
-            if(tgt.hp<=0) tgt.dead=true; } }
+              for(const e of foe.units){ if(e===tgt||e.dead) continue; const ex=e.x-tgt.x, ey=e.y-tgt.y; if(ex*ex+ey*ey<=sr2){ e.hp-=sd; if(e.hp<=0){ e.dead=true; me.kills=(me.kills||0)+1; } } } }
+            if(tgt.hp<=0){ tgt.dead=true; me.kills=(me.kills||0)+1; } } }   // 처치 집계(통계용)
         else strikeMoveToward(u,tgt.x,tgt.y,dt);
       } else { const d=Math.hypot(front.x-u.x, front.y-u.y);   // 인지 적 없음 → 최전방 신전 1개로 진격/공격
         if(d<=u.rng+120){ u.moving=false; u.face=Math.atan2(front.x-u.x, front.y-u.y); u.cd-=dt; if(u.cd<=0){ u.cd=u.cdMax; front.hp-=u.dmg; strikeFx(u,front.x,front.y,col); if(front.hp<=0){ front.dead=true; front.deadBy=side; strikeCheckOver(); } } }
