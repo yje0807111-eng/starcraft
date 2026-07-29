@@ -10833,6 +10833,20 @@ const STK_BUILDINGS={
   ],
 };
 // 건물 key → 3D 모델 키(건물 모델 추가 시 여기에 매핑). 매핑/로드 전엔 2D 렌더로 폴백.
+// 건물 선행 조건(테크트리) — 관리자 TECH_TREE.req 이식. 해당 건물이 완성돼 있어야 건설 가능(본진은 항상 충족).
+const STK_BUILD_REQ={
+  // 테란
+  bunker:['barracks'], machshop:['barracks'], factory:['barracks'], missile:['barracks'],
+  armory:['factory'], starport:['factory'], vessel:['starport'], aegis:['starport'],
+  // 저그
+  den:['pool'], nest:['pool'], spire:['pool'], garden:['creep'], cavern:['den'], gspire:['spire'], pit:['cavern'], ultracav:['cavern'],
+  // 프로토스
+  core:['gateway'], robo:['core'], stargate:['core'], tribunal:['core'], sanctum:['core'], archives:['core'], beacon:['stargate'],
+};
+function _stkBuiltKeys(){ const S=STK, set=new Set(); if(!S||!S.build) return set; const mk=(STK_MAIN[S.me.race]||{}).key; if(mk) set.add(mk);
+  for(const c of (S.build.cells||[])){ if(c.built>=1 && c.type&&c.type.key) set.add(c.type.key); } return set; }
+function _stkReqMet(u, builtKeys){ if(!u||!u.req||!u.req.length) return true; const bk=builtKeys||_stkBuiltKeys(); return u.req.every(k=>bk.has(k)); }
+function _stkBuildName(key){ for(const r in STK_BUILDINGS){ const f=(STK_BUILDINGS[r]||[]).find(b=>b.key===key); if(f) return f.name; } const m=Object.values(STK_MAIN).find(b=>b.key===key); return m?m.name:key; }
 // 건물 key → 관리자 건설 3D 모델 키(cb_ 접두 = 관리자 TECH_MODEL/CST_BLDG_CFG와 동일 에셋). 미매핑·미로드 시 2D 이모지 폴백.
 const STK_BUILD_MODEL={
   // 테란 → 유니온
@@ -13516,6 +13530,7 @@ function strikeSnap(b,cx,cy,w,h){ const G=BUILD_UNIT;
   return {x:x0+w/2, y:y0+h/2}; }
 // 실루엣(b.ghost) 위치에 확정 배치 — 손 뗄 때 호출(그리드 스냅)
 function strikePlaceGhost(){ const S=STK, b=S.build; if(!b.placing||!b.ghost) return; const t=b.placing, fp=strikeFootprint(t), sp=strikeSnap(b,b.ghost.x,b.ghost.y,fp.w,fp.h), cx=sp.x, cy=sp.y;
+  if(!_stkReqMet(t)){ const bk=_stkBuiltKeys(), need=(t.req||[]).find(k=>!bk.has(k)); strikeToast('🔒 '+_stkBuildName(need)+' 먼저 건설해야 합니다'); return; }   // 선행 조건(철거 등으로 사후 미충족 방지)
   if(!strikeCanPlace(b,cx,cy,fp.w,fp.h)){ strikeToast('여기엔 지을 수 없습니다'); return; }
   if(S.me.gold<t.cost){ strikeToast('골드 부족 (필요 '+t.cost+')'); return; }
   S.me.gold-=t.cost; b.cells.push({type:t,built:0,x:cx,y:cy,w:fp.w,h:fp.h});
@@ -13533,7 +13548,9 @@ function strikeConfirmPlace(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation()
   if(!b.placing){ const el=document.getElementById('stArmBtns'); if(el) el.style.display='none'; } }   // 실패(무효·골드부족) 시 고스트 유지 → 재조정 가능
 function strikeCancelArm(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); const S=STK, b=S&&S.build; if(b){ b.placing=null; b.ghost=null; b.armed=false; strikeRenderBuild(); }
   const el=document.getElementById('stArmBtns'); if(el) el.style.display='none'; if(typeof playSfx==='function') playSfx('ui_close'); }
-function strikePickBuild(i){ const S=STK; if(!S) return; const t=strikeBuildMenu()[i]; if(!t) return; S.build.selBld=null; S.build.placing=(S.build.placing===t)?null:t; S.build.ghost=null; S.build.armed=false;
+function strikePickBuild(i){ const S=STK; if(!S) return; const t=strikeBuildMenu()[i]; if(!t) return;
+  if(S.build.placing!==t && !_stkReqMet(t)){ const bk=_stkBuiltKeys(), need=(t.req||[]).find(k=>!bk.has(k)); strikeToast('🔒 '+_stkBuildName(need)+' 먼저 건설해야 합니다'); if(typeof playSfx==='function') playSfx('ui_denied'); return; }   // 선행 조건
+  S.build.selBld=null; S.build.placing=(S.build.placing===t)?null:t; S.build.ghost=null; S.build.armed=false;
   { const el=document.getElementById('stArmBtns'); if(el) el.style.display='none'; }
   strikeRenderBuild(); if(S.build.placing) strikeToast(t.name+' — 맵을 탭해 위치를 정하고 ▶로 확정'); }
 // ═══ 공용 FX 코어(모든 유즈맵 공통 유닛별 공격 이펙트) ═══
@@ -14225,16 +14242,17 @@ function strikeDrawSupply(){ const S=STK; if(!S) return; const cvEl=document.get
   ctx.textBaseline='alphabetic'; }
 // 종족별 빌드 메뉴(그 종족 소환 유닛 = 지을 수 있는 생산 건물). STK_UNITS에서 이름·아이콘·비용 도출
 function strikeBuildable(race){ const r=race||(STK&&STK.me&&STK.me.race)||'terran';
-  return (STK_BUILDINGS[r]||STK_BUILDINGS.terran).map(b=>({key:b.key, name:b.name, ico:b.ico, cost:b.cost, fp:b.fp, produces:b.produces})); }   // fp 포함(누락 시 전부 기본 2×2로 나오던 버그 수정)
+  return (STK_BUILDINGS[r]||STK_BUILDINGS.terran).map(b=>({key:b.key, name:b.name, ico:b.ico, cost:b.cost, fp:b.fp, produces:b.produces, req:STK_BUILD_REQ[b.key]||[]})); }   // fp·req 포함
 // 건물 카드에 표시할 생산 유닛 요약 문자열(예: "레인저×3")
 function strikeProdLabel(b){ const ps=(b&&b.produces)||[]; return ps.map(p=>{ const d=STK_UNITS[p.id]||{}; return (d.name||p.id)+'×'+p.n; }).join(', '); }
 function strikeBuildMenu(){ const S=STK; if(!S) return []; if(!S.buildMenu) S.buildMenu=strikeBuildable(S.me&&S.me.race); return S.buildMenu; }   // 캐시(placing 객체 동일성 유지)
 // 직스 건설 팔레트 = 관리자 건설 탭과 동일한 커맨드 그리드(renderCmdGrid) — techBuildListModel 구조 재현
 function _strikeBuildModel(){ const S=STK, menu=strikeBuildMenu(), gold=Math.floor((S&&S.me&&S.me.gold)||0);
   const race=(S&&S.me&&S.me.race)||'terran', raceName=(STK_RACES[race]&&STK_RACES[race].name)||'';
-  const items=menu.map((u,i)=>{ const afford=gold>=u.cost, armed=!!(S&&S.build&&S.build.placing===u);
-    return { pro:pIco(u.ico), sn:u.name, cr:u.cost, en:0, tr:(u.fp?u.fp.join('×'):''), metaCls:'',
-      state:armed?'sel':(afford?'ok':'dim'), act:'onclick="strikePickBuild('+i+')"' }; });
+  const bk=_stkBuiltKeys();
+  const items=menu.map((u,i)=>{ const afford=gold>=u.cost, reqMet=_stkReqMet(u,bk), armed=!!(S&&S.build&&S.build.placing===u);
+    return { pro:pIco(u.ico), sn:u.name, cr:u.cost, en:0, tr:reqMet?(u.fp?u.fp.join('×'):''):'🔒', metaCls:reqMet?'':'lv',
+      state:armed?'sel':((reqMet&&afford)?'ok':'dim'), act:'onclick="strikePickBuild('+i+')"' }; });   // 선행 조건 미충족 = 🔒·비활성
   return { mode:'build', title:raceName+' · 건설', icon:pIco('👷'), sub:'건물 선택 → 맵을 탭해 배치', items,
     info:{ eb:'건설', hideName:true, desc:'건물을 선택하고 맵을 탭해 배치합니다.', stats:[['보유 자원','⛁ '+gold.toLocaleString()]] } }; }
 // 건물 선택 프로필 = 관리자 건물 생산 시트(techBldgProdModel) 톤 — 생산 유닛 카드 + 철거 · 읽기전용(오토배틀=자동 생산)
