@@ -13311,6 +13311,7 @@ function strikeDrawBuildMap(spec){ const S=STK; if(!S) return; const cvEl=docume
       ctx.globalAlpha=1; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font=Math.max(12,Math.min(fw,fh)*0.5)+'px sans-serif'; ctx.fillStyle='#fff'; ctx.fillText(c.type.ico, cx, cy);
     }
     if(!built){ const bw=fw*0.82, by2=ry+fh+5; ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillRect(cx-bw/2,by2,bw,5); ctx.fillStyle='#6fe89a'; ctx.fillRect(cx-bw/2,by2,bw*c.built,5); }   // 건설 진행바(3D여도 표시)
+    if(!spec && c===b.selBld && built){ ctx.globalAlpha=1; ctx.strokeStyle='#ffe08a'; ctx.lineWidth=Math.max(2.5,Math.min(fw,fh)*0.06); ctx.setLineDash([]); _strkRR(ctx,rx-3,ry-3,fw+6,fh+6,rr+2); ctx.stroke(); }   // 선택 건물 강조 링
     ctx.restore(); }
   // 배치 실루엣(손 누르는 중) — 그리드 스냅 위치에 표시. 유효=초록 / 무효(겹침·보드밖)=빨강 테두리
   if(!spec && b.placing && b.ghost){ const fp=strikeFootprint(b.placing), sp=strikeSnap(b,b.ghost.x,b.ghost.y,fp.w,fp.h), ok=strikeCanPlace(b,sp.x,sp.y,fp.w,fp.h);
@@ -13532,7 +13533,7 @@ function strikeConfirmPlace(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation()
   if(!b.placing){ const el=document.getElementById('stArmBtns'); if(el) el.style.display='none'; } }   // 실패(무효·골드부족) 시 고스트 유지 → 재조정 가능
 function strikeCancelArm(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); const S=STK, b=S&&S.build; if(b){ b.placing=null; b.ghost=null; b.armed=false; strikeRenderBuild(); }
   const el=document.getElementById('stArmBtns'); if(el) el.style.display='none'; if(typeof playSfx==='function') playSfx('ui_close'); }
-function strikePickBuild(i){ const S=STK; if(!S) return; const t=strikeBuildMenu()[i]; if(!t) return; S.build.placing=(S.build.placing===t)?null:t; S.build.ghost=null; S.build.armed=false;
+function strikePickBuild(i){ const S=STK; if(!S) return; const t=strikeBuildMenu()[i]; if(!t) return; S.build.selBld=null; S.build.placing=(S.build.placing===t)?null:t; S.build.ghost=null; S.build.armed=false;
   { const el=document.getElementById('stArmBtns'); if(el) el.style.display='none'; }
   strikeRenderBuild(); if(S.build.placing) strikeToast(t.name+' — 맵을 탭해 위치를 정하고 ▶로 확정'); }
 // ═══ 공용 FX 코어(모든 유즈맵 공통 유닛별 공격 이펙트) ═══
@@ -14236,8 +14237,24 @@ function _strikeBuildModel(){ const S=STK, menu=strikeBuildMenu(), gold=Math.flo
       state:armed?'sel':(afford?'ok':'dim'), act:'onclick="strikePickBuild('+i+')"' }; });
   return { mode:'build', title:raceName+' · 건설', icon:pIco('👷'), sub:'건물 선택 → 맵을 탭해 배치', items,
     info:{ eb:'건설', hideName:true, desc:'건물을 선택하고 맵을 탭해 배치합니다.', stats:[['보유 자원','⛁ '+gold.toLocaleString()]] } }; }
-function strikeRenderBuild(){ const host=document.getElementById('stBuildPalette'); if(!host) return; const S=STK; if(!S) return;
-  renderCmdGrid(host, _strikeBuildModel()); }
+// 건물 선택 프로필 = 관리자 건물 생산 시트(techBldgProdModel) 톤 — 생산 유닛 카드 + 철거 · 읽기전용(오토배틀=자동 생산)
+function _stkBldProfileModel(c){ const t=c.type||{}, prod=(t.produces&&t.produces.length)?t.produces:[{id:t.id,n:1}];
+  const items=prod.map(p=>({ pro:(typeof unitPortraitHTML==='function'?unitPortraitHTML(p.id):''), sn:strikeUnitName(p.id), meta:'×'+(p.n||1), metaCls:'lv', state:'ok', act:'' }));
+  return { mode:'prod', compact:true, build:false,
+    title: escHtml(t.name||'건물'), icon: pIco(t.ico||'🏢'), sub:'출격 주기마다 자동 생산',
+    items,
+    info:{ eb:'생산 건물', hideName:true, desc:'출격 때마다 아래 유닛을 자동 생산합니다.', stats:[ ['발자국', (t.fp||[]).join('×')||'-'], ['생산 수', ''+prod.reduce((a,p)=>a+(p.n||1),0)+'기'] ] },
+    back:'<button class="cgLift cgBack" onclick="strikeBuildBack(event)" title="건설 목록으로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6L4 11l5 5"/><path d="M4 11h9a6 6 0 0 1 6 6v1"/></svg></button>',
+    topRight:'<button class="cgLift" style="border-color:rgba(255,107,107,.5);background:rgba(255,80,80,.14);color:#ff8f8f" onclick="strikeDemolishBld(event)" title="철거(75% 환불)"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg></button>' }; }
+function strikeBuildBack(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); const S=STK; if(S&&S.build) S.build.selBld=null; strikeRenderBuild(); if(typeof playSfx==='function') playSfx('ui_close'); }
+function strikeDemolishBld(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); const S=STK, b=S&&S.build; if(!b||!b.selBld) return;
+  const idx=b.cells.indexOf(b.selBld); if(idx<0){ b.selBld=null; strikeRenderBuild(); return; }
+  const refund=Math.round((b.selBld.type.cost||0)*0.75); S.me.gold+=refund;
+  b.cells.splice(idx,1); b.selBld=null; for(const w of (b.workers||[])) w.path=null;   // 장애물 제거 → 경로 재탐색
+  strikeToast('철거 — '+refund+' 환불'); if(typeof playSfx==='function') playSfx('ui_confirm'); strikeRenderBuild(); }
+function strikeRenderBuild(){ const host=document.getElementById('stBuildPalette'); if(!host) return; const S=STK; if(!S) return; const b=S.build;
+  if(b.selBld && b.cells.indexOf(b.selBld)>=0 && b.selBld.built>=1){ renderCmdGrid(host, _stkBldProfileModel(b.selBld)); return; }   // 건물 선택 시 프로필
+  b.selBld=null; renderCmdGrid(host, _strikeBuildModel()); }
 // 관전: nemo .plbtn/.plGrid(4×2) 재사용. 팀 1-4(아군 파랑) vs 5-8(적군 빨강). 빈 자리=잠금
 function strikePColor(slot){ return (typeof PLAYER_VIEW_COLORS!=='undefined')?PLAYER_VIEW_COLORS[(slot-1)%PLAYER_VIEW_COLORS.length]:'#7fd0ff'; }
 function strikeSpecBuildCells(slot){ const S=STK; if(!S.specBuilds) S.specBuilds={};   // 데모 건물(추후 실제 멀티 데이터로 교체) — 자유 배치(월드)
@@ -14298,6 +14315,11 @@ function strikeOnUp(e){ const S=STK; if(!S) return; if(e) _stkPtrs.delete(e.poin
   if(_stkDrag && !_stkDrag.moved && G.tab==='Upgrade'){ const r=strikeViewRect();   // 보급 탭: 시설 탭 → 하단 패널
     const px=(e&&e.clientX!=null?e.clientX:r.left)-r.left, py=(e&&e.clientY!=null?e.clientY:r.top)-r.top;
     const hit=(S._supHit||[]).find(f=> px>=f.x&&px<=f.x+f.w&&py>=f.y&&py<=f.y+f.h); if(hit) strikeSupplySelect(hit.key); _stkDrag=null; return; }
+  if(_stkDrag && !_stkDrag.moved && G.tab==='Unit' && !(S.build&&S.build.placing)){ const r=strikeViewRect();   // 건설지: 완성 건물 탭 = 선택(프로필) / 빈 곳 = 해제
+    const px=(e&&e.clientX!=null?e.clientX:r.left)-r.left, py=(e&&e.clientY!=null?e.clientY:r.top)-r.top;
+    const b=S.build, wx=(px-(b._ox||0))/(b._sc||1), wy=(py-(b._oy||0))/(b._sc||1);
+    const hit=(b.cells||[]).find(c=>c.built>=1 && Math.abs(wx-c.x)<=(c.w||60)/2 && Math.abs(wy-c.y)<=(c.h||60)/2);
+    b.selBld=hit||null; strikeRenderBuild(); if(hit&&typeof playSfx==='function') playSfx('ui_tab'); _stkDrag=null; return; }
   if(_stkDrag && !_stkDrag.moved && G.tab!=='Unit'){ const r=strikeViewRect();   // 전장 탭(이동 없음)=단일 선택
     const px=(e&&e.clientX!=null?e.clientX:r.left+r.width/2)-r.left, py=(e&&e.clientY!=null?e.clientY:r.top+r.height/2)-r.top;
     const w=strikeScreenToWorld(px,py); strikeSelectAt(w.x,w.y); }
