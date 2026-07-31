@@ -13145,8 +13145,12 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
       model=_selEgg.length?techEggModel(_selEgg):(_selLv.length?techLarvaProdModel(_selLv):(_allWk?techWorkerBuildModel(selUs):techUnitPanelModel(selUs))); } }   // 🥚 알 = 진화중(잠금) 프로필
   // 🔢 모든 건물 = 4그리드 1줄(간소화)로 높이 통일. 5개↑는 2줄로 높이지 않고 페이지로 넘김(슬롯 위치 보존). cm2=최소화(본문 숨김)만 별도
   let cm=(G.tech.cardMode===2)?2:1; G.tech.cardMode=cm;   // cm0(2줄 전체) 제거 → 1(간소화) 또는 2(최소화)만. 사이클의 0은 1로 수렴
-  const _shown=!!(sh.open&&model && G.tech.arm==null && G.tech.rallySet==null);   // 🗺 배치·착륙(arm)·랠리 지정 중 = 프로필 시트 잠시 내려 맵을 넓게 확보(더 넓은 구역 탭) · 모드 종료 시 자동 복귀
-  if(model){ model.compact=(cm===1); model.build=true; }   // 건설 탭 카드 스타일(이름 축소·메타 제거·c/e 비용)
+  // 📦 보급 시트는 화면 전환이 아니라 하단 시트 토글이라, 건설지에서도 같은 호스트(#btSheetBody)에 그대로 올린다.
+  //   모델(_stkSupplyModel)과 렌더(renderCmdGrid)는 전투 화면과 동일한 것을 쓴다 — UI를 두 번 만들지 않는다.
+  let _sup=false;
+  if(typeof STK!=='undefined' && STK && STK.supSheet && typeof _stkSupplyModel==='function'){ model=_stkSupplyModel(); _sup=true; }
+  const _shown=!!((sh.open||_sup) && model && G.tech.arm==null && G.tech.rallySet==null);   // 🗺 배치·착륙(arm)·랠리 지정 중 = 프로필 시트 잠시 내려 맵을 넓게 확보 · 모드 종료 시 자동 복귀
+  if(model && !_sup){ model.compact=(cm===1); model.build=true; }   // 건설 탭 카드 스타일(업그레이드 시트는 모델이 이미 같은 스타일을 들고 온다)
   sheet.classList.toggle('open', _shown);
   if(_shown){ sheet.classList.toggle('simple', cm===1); sheet.classList.toggle('mini', cm===2); }   // 숨길 땐 높이 클래스(.simple/.mini) 유지 → 현재 높이 그대로 아래로 슬라이드(150→204 즉시 확대로 위로 울컥이는 것 방지)
   const cardCtl=document.getElementById('btCardCtl'); if(cardCtl){ const _up=(cm===2); cardCtl.classList.toggle('up',_up); cardCtl.innerHTML='<svg viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'; cardCtl.title=(_up?'프로필 펼치기':(cm===1?'하단으로 최소화':'간소화')); }
@@ -13255,7 +13259,7 @@ function _techUnitDesc(uid){ const race=G.tech.race, s=(typeof techUnitSpec==='f
 // 📖 카드 롱프레스 설명 — kind: b=건물 · u=유닛(생산) · r=연구. 짧게 탭은 기존 onclick 그대로 동작(길게일 때만 _chipSwallow로 클릭 삼킴)
 function _techTipTime(sec){ sec=Math.round(sec||0); return sec>0?(sec+'초'):''; }   // 우상단 소요 시간(즉시건설 토글과 무관하게 원래 스펙 기준)
 function _techCardTip(kind, key, bk){ const race=G.tech.race;
-  if(kind==='sup'){ const S=STK, me=S&&S.me; if(!me) return null;   // 📦 보급 카드 설명
+  if(kind==='sup'){ const S=STK, me=S&&S.me; if(!me) return null;   // 📦 업그레이드 카드 설명
     const T={ mine:{ n:'광산', d:'웨이브 수입을 늘립니다. 5개를 모두 지으면 건설지가 확장됩니다.' },
       upg:{ n:'강화', d:'전장 유닛의 공격력과 체력을 강화합니다.' },
       bomb:{ n:'특수무기', d:'가장 밀집한 적 무리에 폭탄을 투하합니다.' },
@@ -13788,7 +13792,7 @@ function strikeDrawScenery(ctx,w2s,scale,S,W,H){ if(!S.dec) S.dec=strikeGenScene
   ctx.fillStyle='rgba(222,212,182,.15)';   // 떠다니는 먼지(다이나믹)
   for(const m of D.motes){ const p=w2s(m.x+Math.sin(t*m.sp+m.ph)*m.amp, m.y+Math.cos(t*m.sp*0.7+m.ph)*m.amp*0.6); if(p.x<0||p.x>W||p.y<0||p.y>H) continue; ctx.beginPath(); ctx.arc(p.x,p.y,1.5+Math.sin(t*2+m.ph)*0.6,0,6.28); ctx.fill(); }
   ctx.restore(); }
-const STK_TABLABEL ={ Main:'전투', Build:'건설지', Upgrade:'보급', Players:'관전' };   // 건설지 = 관리자 건설 탭(Build) 그대로 사용
+const STK_TABLABEL ={ Main:'전투', Build:'건설지', Upgrade:'업그레이드', Players:'관전' };   // 건설지 = 관리자 건설 탭(Build) 그대로 사용
 const STK_NEMOLABEL={ Main:'메인', Unit:'유닛뽑기', Upgrade:'업그레이드', Players:'플레이어', Build:'건설' };
 const STK_TECH_RACE={ terran:'union', zerg:'swarm', protoss:'aetherial' };   // 직스 종족 → 관리자 건설 트리 종족
 const STK_TECH_COLS=48;      // 오토배틀 건설지 가로 칸 수(관리자 20칸 → 보드처럼 넓게, 이전 32칸의 1.5배)
@@ -13858,7 +13862,9 @@ function strikeSetTabOrder(order){ const el0=document.querySelector('.tab[data-t
   if(!_navOrder0) _navOrder0=tabs.map(t=>t.getAttribute('data-tab'));
   const want=order||_navOrder0, seen={};
   want.forEach(function(k){ const t=tabs.find(x=>x.getAttribute('data-tab')===k); if(t){ par.appendChild(t); seen[k]=1; } });
-  tabs.forEach(function(t){ if(!seen[t.getAttribute('data-tab')]) par.appendChild(t); }); }   // 목록에 없는 탭은 뒤로
+  tabs.forEach(function(t){ if(!seen[t.getAttribute('data-tab')]) par.appendChild(t); });   // 목록에 없는 탭은 뒤로
+  const set=par.querySelector('#settingsBtn'); if(set) par.appendChild(set); }   // ⚠ 설정 버튼은 data-tab이 없어 위 목록에 안 잡힌다 —
+  // 재배치가 appendChild(=뒤로 보내기)라 그냥 두면 나머지 탭이 전부 그 뒤로 가서 설정이 맨 왼쪽으로 밀린다. 항상 마지막에 붙여 오른쪽 끝 고정.
 function strikeSetTabLabels(map){ for(const t in map){ const el=document.querySelector('.tab[data-tab="'+t+'"]'); if(!el) continue;
   const span=el.querySelector('#unitTabLbl');   // Unit 탭은 라벨이 <span>에 들어있음 → 텍스트노드 덧붙이기(겹침) 대신 스팬 갱신
   if(span){ span.textContent=map[t]; continue; }
@@ -13917,13 +13923,15 @@ function strikeEnd(){ if(!STK && !(G&&G.strike)) return;
 
 // ── 프레임/시뮬 ──
 function strikeFrame(dt){ const S=STK; if(!S) return; strikeStep(dt*(G.speedMul||1));   // 게임 배속(설정 배속 시스템 반영) — 로딩/종료 중엔 strikeStep 내부에서 정지
-  if(G.tab==='Build'){ techSyncWallet(); renderBuildTab(dt); strikeHud(); return; }   // 🏗 건설지 = 관리자 건설 탭과 동일한 렌더·틱(단일 소스)
+  if(G.tab==='Build'){ techSyncWallet(); renderBuildTab(dt); strikeHud();
+    if(S.supSheet){ S._spT=(S._spT||0)-dt; if(S._spT<=0){ S._spT=0.22; if(typeof techPanelRender==='function') techPanelRender(); } }   // 📦 보급 시트 수치 갱신(전투 화면의 _siT와 동일 주기)
+    return; }   // 🏗 건설지 = 관리자 건설 탭과 동일한 렌더·틱(단일 소스)
   if(G.tab==='Upgrade') strikeDrawSupply();   // 보급: 시설 화면(탭하면 하단 패널 열림)
   else if(G.tab==='Players' && S.specView) strikeDrawBuildMap(strikeSpecView(S.specView));   // 관전: 그 플레이어 건설 화면(그의 색)
   else strikeDrawMain();
   { const U=STK._fxU; if(U){ if(U.pend&&U.pend.length){ for(let i=U.pend.length-1;i>=0;i--){ const p=U.pend[i]; p.t-=dt; if(p.t<=0){ FX.spawn(U.store,p.id,p.sx,p.sy,p.tx,p.ty,p.opt); U.pend.splice(i,1); } } }
     if(typeof tickUnitFx==='function') tickUnitFx(U, dt); if(FX.advance) FX.advance(U.store, dt); } }   // 유닛별 이펙트 진행(대기 발사·가스 이미터 등)
-  strikeHud(); strikeLeaderboard(dt); strikeSync3D(dt);
+  strikeTempleTick(dt); strikeHud(); strikeLeaderboard(dt); strikeSync3D(dt);
   if(G.tab==='Main'){ S._siT=(S._siT||0)-dt; if(S._siT<=0){ S._siT=0.22; strikeRenderSelInfo(); } } }   // 선택 정보 라이브 갱신(HP)
 // 직스 3D 오버레이 — 신전(메인/2차/중립, 항상) + 크기비교 샘플유닛(sizeCmp일 때). 카메라 좌표→정규화, M3D.sync로 cvMarine 렌더(전투 탭, 맵 스케일 연동)
 const STK_AQ_LOW=0.55, STK_AQ_HI=1.0, STK_AQ_BAD=26, STK_AQ_GOOD=15;   // 목표 프레임(ms) — 26 초과가 이어지면 낮추고, 15 미만이 이어지면 되돌림
@@ -13946,7 +13954,9 @@ function strikeSync3D(dt){ const S=STK; if(!S) return; strikeAutoQuality(dt); co
   const list=[];
   const TT=[['tmpMeMain',S.me.base,'temple_main'],['tmpAiMain',S.ai.base,'temple_main'],['tmpMeSec',S.me.sec,'temple_stone'],['tmpAiSec',S.ai.sec,'temple_stone'],['tmpCentral',S.central,'temple_neutral']];
   for(const t of TT){ const o=t[1], n=w2n(o.x,o.y); o._mk=t[2];   // _mk = 이 신전의 3D 모델 키(프로필 초상 단일 소스에서 사용)
-    list.push({uid:t[0], id:t[2], x:n.x, y:n.y, fixed:true, face:-0.42, dead:!!o.dead, ringCol:(S.selTemple===o?'#ffd24a':null)}); }   // 지정한 신전만 노란 하단 링 }   // 신전(고정, 살짝 사선) — 파괴 시 dead 플래그
+    const _ta=strikeTempleAlpha(o); if(_ta<=0) continue;   // 다 사라진 신전은 3D도 넘기지 않는다
+    list.push({uid:t[0], id:t[2], x:n.x, y:n.y, fixed:true, face:-0.42, dead:!!o.dead, fade:_ta,
+      ringCol:(!o.dead && S.selTemple===o)?'#ffd24a':null}); }   // 지정한 신전만 노란 하단 링(파괴되면 지정 불가 → 링 없음)
   if(S.sizeCmp && S.cmpUnits){ for(const u of S.cmpUnits){ const n=w2n(u.x,u.y); list.push({uid:u.uid, id:u.id, x:n.x, y:n.y}); } }
   for(const side of ['me','ai']){ const ringCol=(side==='me')?'#46f06a':'#ff5c5c', foe=(side==='ai');   // 본체 림=플레이어색 / 하단 링=팀색 / 적군은 본체 적색 틴트
     for(const u of S[side].units){ const n=w2n(u.x,u.y);
@@ -14072,7 +14082,11 @@ function strikeFocus(){ const S=STK; if(!S) return {x:0,y:0}; const c=S.world/2;
 const WORKER_KR={worker_human:'유니온 일꾼',worker_light:'에테리얼 일꾼',worker_swarm:'스웜 일꾼'};   // 신규 일꾼 표시명
 function strikeUnitName(id){ return (STK_UNITS[id]&&STK_UNITS[id].name)||(WORKER_KR[id])||(typeof MODEL_NAME_KR!=='undefined'&&MODEL_NAME_KR[id])||(U[id]&&U[id].name)||id; }   // 직스 유닛 표시명(신규 유닛 포함)
 // 인지 거리 = 사거리×1.6, 단 하한 340(근접도 인식)·상한 560(장거리 과도추격 방지)
-function strikeAcq(rng){ return Math.max(340, Math.min(560, rng*1.6)); }
+// 오토배틀 전용 이동속도 오버라이드 — 공성전차 0.07 / 기갑병(구 스트라이더) 0.08은 다른 유닛(0.13~0.19) 대비 2배 이상 느려
+// 전선에 도착하기 전에 전투가 끝난다. 여전히 최저속이되 따라는 갈 수 있는 값으로.
+const STK_SPD_OVR={ tank:0.13, goliath:0.13 };
+const STK_ACQ_FAR=1.4;   // 교전 판단 반경 배율(획득·유지 공통) — 두 곳에서 다른 값을 쓰면 위 문제가 재발한다
+function strikeAcq(rng){ return Math.max(560, Math.min(900, rng*1.9)); }   // 인지 범위 — 신전 공격 중에도 접근한 적을 놓치지 않게 넓힘(구 340~560)
 // 유닛 전투 수치 = 관리자 유닛 카탈로그(U)를 단일 소스로 환산. 오토배틀 고유값은 체력·크기·스플래시·근접 여부만.
 const STK_RNG_MUL=850, STK_SPD_MUL=1800, STK_CD_DIV=22;   // U(정규화) → 오토배틀 월드 단위 환산 계수
 // 유닛 몸 반지름 = 3D 모델의 실제 표시 반경(발밑 링과 같은 규격). 사거리·겹침 간격·회피가 모두 이 값 하나를 쓴다.
@@ -14098,7 +14112,7 @@ function strikeUnitStats(id){ const s=STK_UNITS[id], d=U[id]||{};
   const rng=(d.range!=null?d.range:0.2)*STK_RNG_MUL;                       // 사거리
   const dmg=(d.dmg!=null?d.dmg:15);                                        // 공격력
   const cd=Math.max(0.45,(d.cd!=null?d.cd:22)/STK_CD_DIV);                 // 공격속도(쿨다운)
-  const spd=(d.moveSpd!=null?d.moveSpd:0.19)*STK_SPD_MUL;                  // 이동속도
+  const spd=(STK_SPD_OVR[id]!=null?STK_SPD_OVR[id]:(d.moveSpd!=null?d.moveSpd:0.19))*STK_SPD_MUL;   // 이동속도(직스 오버라이드 우선)
   if(s){ return { hp:s.hp, dmg:dmg, rng:rng, cdMax:cd, spd:spd,
       color:d.color||'#cfd6e2', size:strikeBodyR(id), splash:s.splash||0, melee:!!s.melee, acq:strikeAcq(rng) }; }
   return { hp:Math.round((d.hp||40)*3), dmg:dmg, rng:rng, cdMax:cd, spd:spd,   // 폴백(오토배틀 전용값 없는 유닛) — 체력만 U에서 환산
@@ -14288,6 +14302,9 @@ function strikeSuddenDeath(dt){ const S=STK; if(!S||S.over) return;
   for(const sd of ['me','ai']){ const b=S[sd].base; if(!b||b.dead) continue;
     b.hp-=d; if(b.hp<=0){ b.hp=0; b.dead=true; } }
   strikeCheckOver(); }
+const STK_TEMPLE_FADE=6;   // 신전 파괴 후 완전히 사라지기까지(초) — 서서히 흐려진다
+function strikeTempleAlpha(o){ if(!o||!o.dead) return 1;   // 1=멀쩡 … 0=사라짐
+  return Math.max(0, 1 - (o.deadT||0)/STK_TEMPLE_FADE); }
 function strikeCheckOver(){ const S=STK; if(S.over) return;
   if(S.me.base.hp<=0) S.over='lose'; else if(S.ai.base.hp<=0) S.over='win';
   if(S.over){ if(typeof toast==='function') toast(S.over==='win'?'⚔️ 승리! 적 메인 신전 파괴':'💥 패배 — 메인 신전 붕괴');
@@ -14345,7 +14362,7 @@ const ATK_STYLE={
 const FX={
   sizeMul:1,   // 전역 크기 노브(이펙트 랩에서 조정 → 전 맵 즉시 반영)
   REF:18,      // 기준 유닛 월드크기 — 이펙트 크기 = sz × (유닛크기/REF). 큰 유닛=큰 이펙트
-  store(){ return {shots:[], impacts:[], melee:[], deaths:[], smoke:[], flashes:[]}; },
+  store(){ return {shots:[], impacts:[], melee:[], deaths:[], smoke:[], flashes:[], hitK:1}; },   // hitK = 피격·사망 이펙트 세기(1=기본). 유즈맵별로 낮출 수 있게 스토어 단위로 둔다(공용 코어는 손대지 않음)
   spawn(store, id, sx,sy, tx,ty, opts){ if(!store) return; opts=opts||{}; const st=ATK_STYLE[id]||ATK_STYLE._default, col=opts.color||st.color;
     const szf=(opts.unitSize||FX.REF)/FX.REF*(st.szm||1);   // 유닛 크기 비례 계수 × 스타일별 크기 배율(szm)
     const dx=tx-sx, dy=ty-sy, dist=Math.hypot(dx,dy)||1, ang=Math.atan2(dy,dx);
@@ -14373,7 +14390,8 @@ const FX={
     for(let b=0;b<burst;b++) for(let i=0;i<n;i++){ const a=ang+(n>1?(i-(n-1)/2)*0.13:0);
       store.shots.push({x:sx,y:sy,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,t:0,dur:dur,kind:st.kind,color:col,boom:st.boom||4,szf:szf,delay:b*bgap,mx:sx,my:sy,dist:dist,ex:sx+Math.cos(a)*dist,ey:sy+Math.sin(a)*dist,lng:st.lng||1,hd:st.hd||1,wd:st.wd||1,tr:(st.tr==null?1:st.tr),core:st.core,fz:st.fz,ramp:st.ramp}); } },
   death(store, x,y, opts){ if(!store) return; opts=opts||{}; const szf=(opts.unitSize||FX.REF)/FX.REF, col=opts.color||'#ffd0a0', parts=[];
-    for(let i=0;i<9;i++){ const a=Math.random()*6.283; parts.push({a:a, sp:42+Math.random()*70, len:4+Math.random()*5, col:(i%3===0?'#ffe6b0':col)}); }
+    const _pn=(opts.parts==null?9:opts.parts);   // 파편 수(대군 전투에선 줄인다)
+    for(let i=0;i<_pn;i++){ const a=Math.random()*6.283; parts.push({a:a, sp:42+Math.random()*70, len:4+Math.random()*5, col:(i%3===0?'#ffe6b0':col)}); }
     store.deaths.push({x:x,y:y,life:1,col:col,szf:szf,parts:parts}); },   // 통합 죽음 이펙트(섬광 링 + 코어 + 파편)
   smoke(store, x,y){ if(!store||!store.smoke) return;   // 어깨 포드 발사 연기(골리앗 등) — 위로 피어오르는 회색 구름
     for(let k=0;k<3;k++){ store.smoke.push({x:x+(Math.random()-0.5)*0.012, y:y, vx:(Math.random()-0.5)*0.03, vy:-0.05-Math.random()*0.045, life:1, r0:2.4+Math.random()*2, col:(k%2?'#5a5a66':'#7a7a86')}); } },
@@ -14400,7 +14418,8 @@ const FX={
       if(s._dn && (s.kind==='bullet'||s.kind==='sniper'||s.kind==='mg'||s.kind==='shell'||s.kind==='shuriken')){ const _tu=Math.min(52, s._dn*_pxn/Math.max(0.001,z)); if(_tu>8){ ctx.globalAlpha=0.3*(s.tr==null?1:s.tr); ctx.strokeStyle=s.color; ctx.lineWidth=0.8; ctx.beginPath(); ctx.moveTo(-5,0); ctx.lineTo(-_tu,0); ctx.stroke(); ctx.globalAlpha=1; } }   // 프레임 간 이동 잔상 연결(빠른 탄이 점선처럼 여러발로 보이는 것 방지 → 하나의 연속 궤적)
       FX._shot(ctx,s); ctx.restore(); }
     ctx.globalCompositeOperation='lighter';
-    for(const im of store.impacts){ const c=toScreen(im.x,im.y), L=Math.max(0,im.life), p=1-L, z=sz*(im.szf||1); ctx.save(); ctx.translate(c.x,c.y);
+    const _hk=(store.hitK==null?1:store.hitK);   // 피격·사망 세기
+    for(const im of store.impacts){ const c=toScreen(im.x,im.y), L=Math.max(0,im.life), p=1-L, z=sz*(im.szf||1)*_hk; ctx.save(); ctx.translate(c.x,c.y);
       if(im.kind==='shell'){ ctx.globalCompositeOperation='lighter';
         ctx.globalAlpha=L*0.45; ctx.fillStyle='#fff2c0'; ctx.beginPath(); ctx.arc(0,0,(1.2+p*1.4)*z,0,6.283); ctx.fill();   // 옅은 화염 코어
         ctx.globalAlpha=L*0.16; ctx.fillStyle='#ff9a3c'; ctx.beginPath(); ctx.arc(0,0,(2.0+p*2.6)*z,0,6.283); ctx.fill(); }   // 아주 옅은 글로우(산탄 제거)
@@ -14563,7 +14582,7 @@ const FX={
         ctx.globalAlpha=L*0.55; ctx.strokeStyle='#ffffff'; ctx.lineWidth=0.7*z; ctx.beginPath(); ctx.moveTo(-l*0.92,0); ctx.lineTo(l*0.92,0); ctx.stroke();   // 희미한 칼날 선
         ctx.restore(); }
       else { const c=toScreen(m.x,m.y), R=20*z, a0=m.ang-0.9, a1=m.ang+0.9; ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=L*0.9; ctx.strokeStyle='#ff8f8f'; ctx.lineWidth=2*z; ctx.beginPath(); ctx.arc(c.x,c.y,R,a0,a1); ctx.stroke(); ctx.lineWidth=1.4*z; ctx.beginPath(); ctx.arc(c.x,c.y,R*0.66,a0,a1); ctx.stroke(); } }   // claw(매트론)
-    for(const d of store.deaths){ const c=toScreen(d.x,d.y), L=Math.max(0,d.life), p=1-L, z=sz*(d.szf||1); ctx.save(); ctx.translate(c.x,c.y); ctx.globalCompositeOperation='lighter';
+    for(const d of store.deaths){ const c=toScreen(d.x,d.y), L=Math.max(0,d.life), p=1-L, z=sz*(d.szf||1)*_hk; ctx.save(); ctx.translate(c.x,c.y); ctx.globalCompositeOperation='lighter';
       ctx.globalAlpha=L*0.8; ctx.strokeStyle='#fff2d0'; ctx.lineWidth=2*z; ctx.beginPath(); ctx.arc(0,0,(6+p*34)*z,0,6.283); ctx.stroke();   // 섬광 링
       ctx.globalAlpha=L*0.6; ctx.fillStyle=d.col; ctx.beginPath(); ctx.arc(0,0,10*z*L,0,6.283); ctx.fill();   // 코어 플래시
       for(const pt of d.parts){ const dd=pt.sp*p*z, px=Math.cos(pt.a)*dd, py=Math.sin(pt.a)*dd; ctx.globalAlpha=L; ctx.strokeStyle=pt.col; ctx.lineWidth=1.4*z;   // 파편
@@ -14617,16 +14636,25 @@ const FX={
       ctx.restore(); break; }
     default: ctx.globalAlpha=1; ctx.fillStyle=s.color; ctx.beginPath();ctx.arc(0,0,2,0,6.28);ctx.fill(); } }
 };
-function strikeFx(u,tx,ty){ const S=STK; if(!S) return; if(!S.fx||!S.fx.shots) S.fx=FX.store();
+// 피격·사망 연출 세기 — 오토배틀은 수백 기가 동시에 싸워 기본값이면 화면이 이펙트로 덮인다
+const STK_HIT_K=0.5;        // 피격 이펙트 크기 배율(1=공용 기본)
+const STK_DEATH_PARTS=5;    // 사망 파편 수(공용 기본 9)
+function strikeFx(u,tx,ty){ const S=STK; if(!S) return; if(!S.fx||!S.fx.shots){ S.fx=FX.store(); S.fx.hitK=STK_HIT_K; }
   // 유닛별 공격 이펙트 = 관리자(이펙트 랩·전투실험)와 같은 디스패치(unitFireFx). 전용 스토어는 정규화(0~1) 좌표계.
   if(typeof unitFireFx==='function'){
-    if(!S._fxU) S._fxU={ store:FX.store(), pend:[], vnJet:null };
+    if(!S._fxU){ S._fxU={ store:FX.store(), pend:[], vnJet:null }; S._fxU.store.hitK=STK_HIT_K; }
     const _W=STK_FX_SPAN, _pu={ uid:u.uid, id:u.id, gmodel:u.gm||u.gmodel, x:u.x/_W, y:u.y/_W, size:u.size, face:u.face };
     try{ unitFireFx(S._fxU, _pu, tx/_W, ty/_W, u.size, false); return; }catch(e){}
   }
   FX.spawn(S.fx, u.id, u.x,u.y, tx,ty, {speed:2600, unitSize:u.size}); }   // 폴백(디스패치 불가 시 기본 발사체)
 function strikeFindUnit(arr,uid){ if(!uid) return null; for(const u of arr){ if(u.uid===uid&&!u.dead) return u; } return null; }
-function strikeAlert(allies, attackerUid, ax, ay, r){ const r2=r*r; for(const a of allies){ if(a.dead||a.wait>0||a.tgtUid) continue; const dx=a.x-ax, dy=a.y-ay; if(dx*dx+dy*dy<=r2){ a.tgtUid=attackerUid; a._acqT=0; } } }   // 주변 아군 가담
+// 주변 아군 가담 — ⚠ 공격자를 실제로 때릴 수 있는 아군만 부른다.
+// (지상 전용 유닛이 공중 공격자를 표적으로 잡아봐야 다음 판단에서 취소돼 한 프레임 낭비일 뿐이고,
+//  정작 대공 가능한 아군은 안 불려 오는 상태였다 → 대공 가능한 아군에게 넘기는 것이 목적)
+function strikeAlert(allies, attackerUid, ax, ay, r, atkAir){ const r2=r*r;
+  for(const a of allies){ if(a.dead||a.wait>0||a.tgtUid) continue;
+    if(atkAir!=null && a._atk && !(atkAir? a._atk.air : a._atk.gnd)) continue;   // 못 때리는 아군은 부르지 않음
+    const dx=a.x-ax, dy=a.y-ay; if(dx*dx+dy*dy<=r2){ a.tgtUid=attackerUid; a._acqT=0; } } }
 function strikeSpawnWave(){ const S=STK; if(!S) return;   // 출격 주기(30초): ME=건설지에서 생산해 둔 유닛이 출격 / AI=컴퓨터 자동 소환
   let myCount=0;
   if(G.tech && G.tech.ents){   // 🏭 완성된 건물마다 담당 유닛 1기를 무료 배출(건물 수 = 생산력) — 여러 종을 담당하면 주기마다 순환
@@ -14723,14 +14751,23 @@ function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
           const _cap=(e)=>Math.max(3, Math.floor(6.2832*strikeReach(u,e)/Math.max(1,(u.size||14)*2*STK_SEP)));   // 그 표적 주위에 내가 설 수 있는 자리 수
           const _okT=(e)=>{ if(u._btT>0 && e.uid===u._btgt) return false;   // 방금 포기한 표적은 잠시 제외
             return ((_load.get(e.uid)||0) - (u.tgtUid===e.uid?1:0)) < _cap(e); };   // 정원이 찼으면 후보에서 제외(나 자신은 빼고 센다)
-          const keep = tgt && _canHit(tgt) && _okT(tgt) && _d2(tgt)<=(u.acq*1.25)*(u.acq*1.25);
+          const _AR=u.acq*STK_ACQ_FAR, _AR2=_AR*_AR;   // 교전 판단은 이 반경 하나로만 한다(아래 신전 분기와 동일)
+          const keep = tgt && _canHit(tgt) && _okT(tgt) && _d2(tgt)<=_AR2;
           u._acqT=(u._acqT||0)-dt;
           if(!keep || u._acqT<=0){ u._acqT=0.35+Math.random()*0.2;
             let bs=Infinity, best=null;
-            const _ab=strikeNear(u.x,u.y,u.acq,u._acBuf||(u._acBuf=[]));
+            const _ab=strikeNear(u.x,u.y,_AR,u._acBuf||(u._acBuf=[]));
             for(let _i=0;_i<_ab.length;_i++){ const e=_ab[_i]; if(e._sd===u._sd||e.dead||!_canHit(e)||!_okT(e)) continue;
-              const d2=_d2(e); if(d2>u.acq*u.acq) continue; if(d2<bs){ bs=d2; best=e; } }   // 정원이 남은 적 중 최근접(격자)
+              const d2=_d2(e); if(d2>_AR2) continue; if(d2<bs){ bs=d2; best=e; } }   // 정원이 남은 적 중 최근접(격자)
             if(best && tgt && best!==tgt && _canHit(tgt) && bs > _d2(tgt)*0.8) best=tgt;   // 눈에 띄게 가깝지 않으면 기존 목표 유지
+            // ⚠ 정원(_okT)에 막혀 후보가 없으면 tgt=null → 신전 분기로 빠진다.
+            //   그러면 "신전 때리는 무리 옆에 적이 서 있는데 서로 무시"가 된다(정원은 몰림 방지용이지 교전 회피용이 아님).
+            //   → 정원을 무시하고 한 번 더 찾는다. 적 유닛이 인지 범위에 있으면 신전보다 항상 먼저.
+            if(!best){ let bs2=Infinity, b2=null;
+              const _ab2=strikeNear(u.x,u.y,_AR,u._acBuf||(u._acBuf=[]));
+              for(let _i=0;_i<_ab2.length;_i++){ const e=_ab2[_i]; if(e._sd===u._sd||e.dead||!_canHit(e)) continue;
+                const d2=_d2(e); if(d2>_AR2) continue; if(d2<bs2){ bs2=d2; b2=e; } }
+              if(b2) best=b2; }
             if(best) tgt=best; else if(!keep) tgt=null; } } }
       { const _pt=u.tgtUid; u.tgtUid = tgt?tgt.uid:null;   // 표적이 바뀌면 배정 인원도 즉시 갱신(같은 프레임의 뒤 유닛이 정확한 수를 본다)
         if(_pt!==u.tgtUid){ if(_pt&&_load.has(_pt)) _load.set(_pt, Math.max(0,_load.get(_pt)-1));
@@ -14739,24 +14776,35 @@ function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
       if(tgt){ const d=Math.hypot(tgt.x-u.x,tgt.y-u.y);   // 유닛 우선 교전
         if(d<=strikeReach(u,tgt)){ u.moving=false; u._blk=0; u._swp=0; u.face=Math.atan2(tgt.x-u.x, tgt.y-u.y); u.cd-=dt;
           if(u.cd<=0){ u.cd=u.cdMax; u.fireSeq=(u.fireSeq||0)+1; tgt.hp-=u.dmg*strikeSkillAtkMul(u)*strikeAtkMul(me); strikeFx(u,tgt.x,tgt.y,col);   // fireSeq++ = 3D 공격 모션 트리거
-            if(!tgt.tgtUid) tgt.tgtUid=u.uid; tgt._acqT=0;        // 맞으면 즉시 재판단 → 가장 가까운 적(대개 때린 상대)부터 반격
-            strikeAlert(foe.units, u.uid, tgt.x, tgt.y, 420);     // 주변 아군도 공격자에 가담(스타식 자동교전)
+            { const _uAir=strikeIsAir(u);
+              if(!tgt.tgtUid && (!tgt._atk || (_uAir? tgt._atk.air : tgt._atk.gnd))) tgt.tgtUid=u.uid;   // 반격은 때릴 수 있을 때만
+              tgt._acqT=0;                                        // 맞으면 즉시 재판단
+              strikeAlert(foe.units, u.uid, tgt.x, tgt.y, 420, _uAir); }   // 주변 아군 가담(때릴 수 있는 아군만)
             if(u.splash>0){ const sr2=u.splash*u.splash, sd=u.dmg*0.6;   // 광역: 타겟 주변 적에게 60% 추가타
               for(const e of foe.units){ if(e===tgt||e.dead) continue; const ex=e.x-tgt.x, ey=e.y-tgt.y; if(ex*ex+ey*ey<=sr2){ e.hp-=sd; if(e.hp<=0){ e.dead=true; me.kills=(me.kills||0)+1; me.gold+=strikeKillGold(e); } } } }
             if(tgt.hp<=0){ tgt.dead=true; me.kills=(me.kills||0)+1; me.gold+=strikeKillGold(tgt); } } }   // 처치 집계 + 킬 보상
         else { const _gq=(front&&!front.dead)?strikeTempleGap(front,u.x,u.y):1e9;
-          if(u._atk.gnd && _gq<=u.rng+(u.size||14)*1.05){ _toTemple=true; _fireT=true; }   // 표적엔 못 닿지만 신전은 사거리 안 → 놀지 말고 신전을 때린다
-          else { const _ap=strikeApproachPt(u, tgt.x, tgt.y, strikeReach(u,tgt)*0.9, tgt.uid, dt);
+          // ⚠ 적 표적이 있으면 **접근이 실제로 막혔을 때만** 신전을 때린다.
+          //   예전엔 "표적이 아직 사거리 밖"이기만 하면 그 자리에서 신전을 쐈고(_fireT=true),
+          //   그 _fireT가 아래 _foeNear(적이 근처면 신전 공격 중단) 가드까지 무력화해
+          //   "적이 코앞인데 서로 신전만 두들기는" 상태가 됐다. 이제는 다가가는 것이 우선.
+          if(u._atk.gnd && (u._blk||0)>STK_GIVEUP*0.5 && _gq<=u.rng+(u.size||14)*1.05){ _toTemple=true; _fireT=true; }   // 앞이 꽉 차 접근 불가일 때만(놀지 않게)
+          else { let _ap=strikeApproachPt(u, tgt.x, tgt.y, strikeReach(u,tgt)*0.9, tgt.uid, dt);
+            // 링(표적 주위 사거리 원) 위의 점을 노리는 건 여러 유닛이 한 표적을 둘러싸게 하려는 것인데,
+            // 근접·공중에는 표적 앞에서 자리를 찾느라 빙글 도는 동작으로만 나타난다(접근도 2배 느려짐).
+            // 겹침은 간격 규칙이 이미 막으므로 이 둘은 표적 중심으로 곧장 간다.
+            if(u.melee || strikeIsAir(u)) _ap={x:tgt.x, y:tgt.y};
             if((u._blk||0)>STK_GIVEUP){ u._btgt=tgt.uid; u._btT=STK_BLIST; u._blk=0; u._swp=0; u._pck=null; _toTemple=true; }   // 오래 못 다가감 = 앞이 꽉 참 → 표적 포기하고 신전으로
             else strikeMoveToward(u, _ap.x, _ap.y, dt); } }   // 사거리 링 위로 접근 — 막히면 링을 따라 옆으로 흘러 빈 곳을 찾는다
       }
-      if(_toTemple){ let _foeNear=false;   // 인지 범위(1.4배) 안에 적이 있으면 신전보다 교전을 우선 — 양 진영이 만나기 전에 중립 신전만 깨는 문제 방지
-        { const _fr=u.acq*1.4, _fr2=_fr*_fr, _nb2=strikeNear(u.x,u.y,_fr,u._fnBuf||(u._fnBuf=[]));
-          for(let _i=0;_i<_nb2.length;_i++){ const e=_nb2[_i]; if(e._sd===u._sd||e.dead||!_canHit(e)) continue;
-            const _ax=e.x-u.x,_ay=e.y-u.y; if(_ax*_ax+_ay*_ay<=_fr2){ _foeNear=true; break; } } }
+      if(_toTemple){
+        // ⚠ 예전엔 여기서 "인지범위 1.4배 안에 적이 있으면 신전 공격 중단"(_foeNear)을 따로 판정했다.
+        //   그런데 표적 획득 반경은 1.0배라, 그 사이 구간의 적은 "때리지 마라"고 막기만 하고 표적으로 주지는 않았다.
+        //   결과: 표적 없이 신전 접근 링을 따라 움직여 제자리에서 쏘면 될 것을 앞으로 나가거나 빙글 돌았다.
+        //   → 획득 반경을 같은 값으로 통일(STK_ACQ_FAR)해 별도 가드를 없앴다. 적이 있으면 애초에 표적이 잡힌다.
         const _th=strikeTempleHalf(front);
         const _cd=Math.hypot(u.x-front.x, u.y-front.y);   // 중심 거리
-        const d=(!u._atk.gnd||(_foeNear&&!_fireT))?1e9:strikeTempleGap(front,u.x,u.y);   // 사각형 표면까지의 실거리(모서리에서 과도하게 파고드는 문제 제거)
+        const d=(!u._atk.gnd)?1e9:strikeTempleGap(front,u.x,u.y);   // 사각형 표면까지의 실거리(모서리에서 과도하게 파고드는 문제 제거)
         if(d<=u.rng+(u.size||14)*1.05){ u.moving=false; u._blk=0; u._swp=0; u.face=Math.atan2(front.x-u.x, front.y-u.y); u.cd-=dt;
           if(u.cd<=0){ u.cd=u.cdMax; u.fireSeq=(u.fireSeq||0)+1; front.hp-=u.dmg*strikeSkillAtkMul(u)*strikeAtkMul(me); strikeFx(u,front.x,front.y,col); if(front.hp<=0){ front.dead=true; front.deadBy=side; strikeCheckOver(); } } }   // fireSeq++ = 3D 공격 모션
         else { const _sr=strikeTempleR(front, Math.atan2(u.y-front.y, u.x-front.x))+u.rng*0.75;   // 그 방향의 사각형 표면 + 사거리 여유
@@ -14764,13 +14812,18 @@ function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
           // ↑ 신전을 때릴 수 없는 유닛(공대공 전용·비전투)은 링에 닿으면 그대로 대기.
           //   때릴 수 없는 대상에는 거리가 영원히 줄지 않아 막힘 타이머가 무한 누적 → 우회가 상시 발동 → 신전 주위를 계속 도는 원인이었다.
           else {
-          let _ap=strikeApproachPt(u, front.x, front.y, _sr, 'T'+strikeGoalKey(front), dt);
+          // 공중 유닛은 신전 형상을 완전히 무시하고 중심으로 직진한다(실제 비행체처럼 위를 그대로 지나감).
+          //   접근점(strikeApproachPt)은 "사각형 표면 + 사거리" 링 위의 점 = 지상 충돌 개념이라,
+          //   공중에 그대로 쓰면 가장자리를 따라 돌아가는 것처럼 보였다.
+          let _ap=strikeIsAir(u) ? {x:front.x, y:front.y}
+                                 : strikeApproachPt(u, front.x, front.y, _sr, 'T'+strikeGoalKey(front), dt);
           if(!strikeIsAir(u) && !u._swp && _cd>STK_FF_NEAR){   // 먼 거리 행군 = 공유 흐름장(지형·신전을 알아서 우회) · 공중은 직선 비행
             const _fd=strikeFlowDir(strikeFlowField(front), u.x, u.y);
             if(_fd) _ap={x:u.x+_fd.x*STK_FF_LOOK, y:u.y+_fd.y*STK_FF_LOOK}; }
           strikeMoveToward(u, _ap.x, _ap.y, dt); } } } }   // 근거리는 사거리 링 위로 — 앞이 차면 옆으로 흘러 빈 곳을 찾는다
     const _dead=me.units.filter(u=>u.dead);
-    if(_dead.length){ if(!S.fx||!S.fx.shots) S.fx=FX.store(); for(const du of _dead) FX.death(S.fx, du.x, du.y, {unitSize:(du.size||14)*0.5, color:du.color}); }   // 사망 폭발은 절반 크기(과한 연출 억제) · 통합 죽음 이펙트
+    if(_dead.length){ if(!S.fx||!S.fx.shots){ S.fx=FX.store(); S.fx.hitK=STK_HIT_K; }
+      for(const du of _dead) FX.death(S.fx, du.x, du.y, {unitSize:(du.size||14)*0.5, color:du.color, parts:STK_DEATH_PARTS}); }   // 400기 난전에서 화면이 이펙트로 덮이지 않게 크기·파편 수를 낮춤
     if(_dead.length && window.M3D && M3D.dropModels){ try{ M3D.dropModels(_dead.map(u=>u.uid)); }catch(e){} }   // 모델 제거
     me.units=me.units.filter(u=>!u.dead); }
   strikeSuddenDeath(dt);   // ☠ 장기전 방지
@@ -14817,34 +14870,36 @@ function _stkTempleDesc(o){ const S=STK; if(!S) return '';
 function strikeToggleSupply(on){ const S=STK; if(!S) return;
   S.supSheet=(on==null)?!S.supSheet:!!on; S.supPage=null;
   const h=document.getElementById('unitCmd'); if(h) h._stkSig=null;
+  if(G.tab==='Build' && typeof techPanelRender==='function') techPanelRender();   // 건설지에서는 시트 호스트가 달라 즉시 다시 그린다
   if(typeof playSfx==='function') playSfx('ui_tab'); }
 function strikeSupPage(p){ const S=STK; if(!S) return; S.supPage=p||null;
   const h=document.getElementById('unitCmd'); if(h) h._stkSig=null; }
-// 📦 보급 시트 — 4그리드(① 광산 ② 강화 ③ 특수무기). 구매·강화·투하는 기존 함수를 그대로 호출.
+// 📦 업그레이드 시트 — 4그리드(① 광산 ② 강화 ④ 특수무기 / 3번은 비움). 구매·강화·투하는 기존 함수를 그대로 호출.
 function _stkLv(cur,max){ return (cur>=max)?'MAX':(cur+'/'+max); }   // 카드 우상단 표기 통일
 function _stkSupplyModel(){ const S=STK, me=S.me, gold=Math.floor(me.gold||0);
   if(S.supPage==='upg'){
     const items=[['atk','공격력','⚔'],['hp','체력','❤']].map(function(kv){
       const k=kv[0], lv=(k==='atk'?me.atkLv:k==='hp'?me.hpLv:me.mineLv), max=(k==='mine'?STK_MINE_MAX:10), cost=strikeUpCost(k,lv), full=(lv>=max);
       const eff=(k==='atk')?('공격 +'+Math.round(lv*12)+'%'):('체력 +'+Math.round(lv*16)+'%');
-      return { pro:pIco(kv[2]), sn:kv[1], cr:(full?0:cost), meta:_stkLv(lv,max), metaCls:'lv', tip:(k==='mine'?'mineeff':k),
+      return { pro:pIco(kv[2]), sn:kv[1], cr:(full?0:cost), tr:_stkLv(lv,max), metaCls:'lv', tip:(k==='mine'?'mineeff':k),   // 레벨 = 우상단 배지(tr = build 카드에서도 표시)
         state:(full||gold<cost)?'dim':'on', act:full?'':('onclick="strikeUpg(\''+k+'\')"')+_techTipAttr('sup',(k==='mine'?'mineeff':k)) }; });
-    items.push({ pro:pIco('↩'), sn:'뒤로', act:'onclick="strikeSupPage(null)"' });
-    return { mode:'prod', compact:true, title:'보급 · 강화', icon:pIco('🔧'), items:items,
+    items.push({state:'empty'});                                                     // 3번 칸 = 빈 칸(네모 하단에서 카드가 모자랄 때와 같은 공용 스타일)
+    items.push({ pro:pIco('↩'), sn:'뒤로', act:'onclick="strikeSupPage(null)"' });     // 뒤로가기 = 4번 칸
+    return { mode:'prod', compact:true, build:true, title:'업그레이드 · 강화', icon:pIco('🔧'), items:items,
       info:{ eb:'강화', hideName:true,
         desc:'카드를 길게 누르면 설명이 나옵니다.' } }; }
   const hasBomb=(me.bombs||0)>0;
   const items=[
-    { pro:pIco('⛏'), sn:'광산', cr:me.mineCost, meta:_stkLv(me.mines||0, STK_MINE_CAP), metaCls:'lv',
+    { pro:pIco('⛏'), sn:'광산', cr:me.mineCost, tr:_stkLv(me.mines||0, STK_MINE_CAP), metaCls:'lv',
       state:((me.mines||0)>=STK_MINE_CAP||gold<me.mineCost)?'dim':'on', act:'onclick="strikeBuyMine()"'+_techTipAttr('sup','mine') },
-    { pro:pIco('🔧'), sn:'강화', metaCls:'lv',
+    { pro:pIco('🔧'), sn:'강화',
       act:'onclick="strikeSupPage(\'upg\')"'+_techTipAttr('sup','upg') },
-    { pro:pIco('💣'), sn:'특수무기', cr:(hasBomb?0:STK_BOMB_COST), meta:_stkLv(me.bombs||0, STK_BOMB_CAP), metaCls:'lv',
+    {state:'empty'},                                                                 // 3번 칸 = 빈 칸(네모 하단과 동일한 공용 스타일)
+    { pro:pIco('💣'), sn:'특수무기', cr:(hasBomb?0:STK_BOMB_COST), tr:_stkLv(me.bombs||0, STK_BOMB_CAP), metaCls:'lv',
       state:(hasBomb||gold>=STK_BOMB_COST)?'on':'dim',
-      act:'onclick="'+(hasBomb?'strikeDropBomb()':'strikeBuyBomb()')+'"'+_techTipAttr('sup','bomb') },
-    {} ];
-  return { mode:'prod', compact:true, title:'보급', icon:pIco('📦'), items:items,
-    info:{ eb:'보급', hideName:true,
+      act:'onclick="'+(hasBomb?'strikeDropBomb()':'strikeBuyBomb()')+'"'+_techTipAttr('sup','bomb') } ];   // 특수무기 = 4번 칸
+  return { mode:'prod', compact:true, build:true, title:'업그레이드', icon:pIco('📦'), items:items,
+    info:{ eb:'업그레이드', hideName:true,
       desc:'수입 '+strikeIncome(me)+'/웨이브<br>카드를 길게 누르면 설명이 나옵니다.' } }; }
 function strikeRenderSelInfo(){ const S=STK; const host=document.getElementById('unitCmd');
   { const old=document.getElementById('stSelInfo'); if(old && !old.classList.contains('hide')){ old.classList.add('hide'); old.innerHTML=''; } }   // 구 프로필 사용 안 함
@@ -15031,7 +15086,10 @@ function strikeHud(){ const S=STK; if(!S) return;
 // ── 탭(nemo 탭+하단 .bp 재사용, 직스 전용 동작) ──
 function strikeSwitchTab(id,el){ const S=STK; if(!S) return;
   if(id==='Upgrade'){ strikeToggleSupply(); return; }   // 📦 보급 = 화면 이동 없이 하단 시트만 토글
-  if(S.supSheet) strikeToggleSupply(false);             // 다른 탭으로 가면 시트 닫기
+  // 지금 보고 있는 화면의 탭을 다시 누르면 = 보급 시트만 내린다(화면은 그대로).
+  //   내린 뒤에는 각 화면의 원래 규칙으로 복귀 — 지정한 대상이 있으면 그 프로필, 없으면 하단 구역 자체가 사라진다.
+  if(S.supSheet && id===G.tab){ strikeToggleSupply(false); return; }
+  if(S.supSheet) strikeToggleSupply(false);   // 다른 화면으로 이동하면 업그레이드 시트는 내린다(전투↔건설지 포함) — 넘어간 화면이 그대로 보이게
   G.tab=id; S.userCam=false; if(id!=='Players') S.specView=null;   // 관전 종료
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
   (el||document.querySelector('.tab[data-tab="'+id+'"]'))?.classList.add('on');
@@ -15082,7 +15140,7 @@ function strikeDropBomb(){ const S=STK; if(!S||!S.me.bombs) return; const me=S.m
   let best=alive[0], bestN=-1; for(const a of alive){ let n=0; for(const b of alive){ const dx=a.x-b.x, dy=a.y-b.y; if(dx*dx+dy*dy<STK_BOMB_R*STK_BOMB_R) n++; } if(n>bestN){ bestN=n; best=a; } }
   me.bombs--; const r2=STK_BOMB_R*STK_BOMB_R; let hit=0;
   for(const e of alive){ const dx=e.x-best.x, dy=e.y-best.y, d2=dx*dx+dy*dy; if(d2<=r2){ e.hp-=STK_BOMB_DMG*(1-Math.sqrt(d2)/STK_BOMB_R*0.5); if(e.hp<=0) e.dead=true; hit++; } }   // 중심일수록 큰 피해
-  if(!S.fx||!S.fx.shots) S.fx=FX.store(); FX.death(S.fx, best.x, best.y, {unitSize:60, color:'#ff9a4c'});   // 폭발 이펙트(임시로 death FX 재사용)
+  if(!S.fx||!S.fx.shots){ S.fx=FX.store(); S.fx.hitK=STK_HIT_K; } FX.death(S.fx, best.x, best.y, {unitSize:60, color:'#ff9a4c'});   // 특수무기 폭탄 — 여긴 연출이 요점이라 파편 수는 기본값 유지
   if(typeof playSfx==='function') playSfx('boss_hit'); strikeToast('💥 폭탄 투하 — '+hit+'기 타격'); strikeRenderSupply(); }
 function strikeSupplySelect(key){ const S=STK; if(!S) return; S.supplySel=key; if(typeof playSfx==='function') playSfx('ui_tab'); strikeRenderSupply(); }
 // 하단 패널: 선택 시설의 내용 렌더(골드는 항상 상단 표기)
@@ -15202,6 +15260,11 @@ function strikeOnUp(e){ const S=STK; if(!S) return; if(e) _stkPtrs.delete(e.poin
     const w=strikeScreenToWorld(px,py); strikeSelectAt(w.x,w.y); }
   _stkDrag=null; }
 function strikeClearSel(){ const S=STK; S.selAllies=[]; S.selEnemy=null; S.selTemple=null; }
+function strikeTempleTick(dt){ const S=STK; if(!S) return;   // 파괴 경과 시간 누적 + 파괴된 신전 지정 해제
+  for(const t of strikeTemples()){ const o=t[0]; if(!o||!o.dead) continue;
+    o.deadT=(o.deadT||0)+dt;
+    if(S.selTemple===o){ S.selTemple=null; S.selTempleName=null; } }   // 파괴되면 지정 불가(지정 중이었으면 즉시 해제)
+}
 function strikeTemples(){ const S=STK; return [[S.me.base,'메인 신전'],[S.ai.base,'메인 신전'],[S.me.sec,'2차 신전'],[S.ai.sec,'2차 신전'],[S.central,'중립 신전']]; }   // 진영은 색으로만 구분(텍스트 표기 없음)
 function strikeSelectAt(wx,wy){ const S=STK; strikeClearSel();
   let bu=null,bud=1e9; for(const u of S.me.units.concat(S.ai.units)){ if(u.dead) continue; const d=(u.x-wx)**2+(u.y-wy)**2; if(d<bud){bud=d;bu=u;} }
@@ -15685,8 +15748,8 @@ function ensureRingInst(){ if(ringInst) return ringInst;
   ringInst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   ringInst.frustumCulled=false; ringInst.renderOrder=1;   // 그림자(renderOrder 0) 위에 그려짐 보장
   ringInst.count=0; scene.add(ringInst); return ringInst; }
-function _ringPush(n, x, y, r, col){ const R=ensureRingInst(); if(n>=RING_MAX) return n;
-  _ringP.set(x,y,0); _ringS.set(r,r,1); _ringM.compose(_ringP,_ringQ,_ringS);
+function _ringPush(n, x, y, r, col, z){ const R=ensureRingInst(); if(n>=RING_MAX) return n;
+  _ringP.set(x,y,(z||0)-1); _ringS.set(r,r,1); _ringM.compose(_ringP,_ringQ,_ringS);   // z=유닛 깊이 - 1(깊이 정렬 도입 후 링이 앞 유닛에 가려 사라지지 않게)
   R.setMatrixAt(n,_ringM); R.setColorAt(n,_ringC.set(col)); return n+1; }
 // ── 그림자 인스턴스 배치: 유닛·적마다 상시 떠 있는 발밑 그림자 원(=드로우콜)을
 //    불투명도 그룹별 InstancedMesh 2개(지상 0.22 / 공중 0.26)로 합침 ──
@@ -15703,7 +15766,7 @@ function _shadowInstPass(){   // 게임 모델(models+토벌장 원격) 전체 �
     if(sh.visible) sh.visible=false;   // 개별 메시 상시 숨김(전시 풀 모델은 영향 없음 — 게임 모델 맵만)
     if(!m.holder.visible) continue;
     const sc=m.holder.scale.x, r=(sh.geometry.parameters&&sh.geometry.parameters.radius||0.5)*sc;
-    _ringP.set(m.holder.position.x, m.holder.position.y + sh.position.y*sc*_SH_COS, 0);
+    _ringP.set(m.holder.position.x, m.holder.position.y + sh.position.y*sc*_SH_COS, m.holder.position.z-2);   // 유닛과 같은 깊이(살짝 뒤) — 지면 그림자
     _ringS.set(r,r,1); _ringM.compose(_ringP,_ringQ,_ringS);
     const air=sh.material.opacity>0.24;   // AIR_FLOAT 분기가 0.26으로 올려둔 모델=공중 그룹
     if(air){ if(b<RING_MAX) shInstB.setMatrixAt(b++,_ringM); }
@@ -15713,13 +15776,54 @@ function _shadowInstPass(){   // 게임 모델(models+토벌장 원격) 전체 �
   if(a) shInstA.instanceMatrix.needsUpdate=true;
   if(b) shInstB.instanceMatrix.needsUpdate=true;
 }
-// ── 대군 애니메이션 스태거: 유닛 수가 많으면 스킨드 믹서를 2프레임에 1회(dt 누적)로 갱신 ──
-let _syncTick=0, _mixHeavy=false;
+// ── 렌더 프로파일(벤치 전용, 기본 off) — sync의 JS 루프 시간과 renderer.render 시간을 분리 측정 ──
+let _prof=null;
+// ── 대군 애니메이션 스태거: 유닛이 많으면 스킨드 믹서를 N프레임에 1회(dt 누적)로 갱신한다.
+//    ★ 갱신을 건너뛴 프레임엔 스켈레톤(본 행렬 계산 + 본 텍스처 GPU 업로드)도 같이 멈춘다.
+//    본 포즈가 그대로이므로 화면은 완전히 동일한데, three.js 렌더 비용의 큰 몫이 사라진다.
+//    (믹서만 건너뛰면 three.js가 매 프레임 skeleton.update()를 그대로 호출해 효과가 거의 없음)
+const MIX_N2=60, MIX_N3=150;   // 이 유닛 수를 넘으면 각각 2프레임·3프레임에 1회 갱신
+let _syncTick=0, _mixStride=1, _modelSeq=0, _mixForce=0;   // _mixForce = 벤치용 강제 분산값(0=자동)
+function _mixStrideFor(n){ if(_mixForce) return _mixForce;
+  if(typeof G!=='undefined'&&G.opt&&G.opt.lite3d) return 3;   // 저사양 모드는 항상 최대 분산
+  return n>MIX_N3?3:(n>MIX_N2?2:1); }
+function _skels(m){ if(m._skels) return m._skels; const a=[];   // 이 모델이 쓰는 스켈레톤 목록(모델당 1회 수집)
+  for(const r of [m.inner,m.runInner,m.stayInner,m.workInner,m.atkInner]){ if(!r) continue;
+    r.traverse(o=>{ if(o.isSkinnedMesh&&o.skeleton) a.push(o.skeleton); }); }
+  for(const s of a){ if(s._u0) continue; s._u0=s.update; s.update=function(){ if(!this._hold) this._u0(); }; }   // three.js가 매 프레임 부르는 갱신을 홀드 플래그로 차단
+  return (m._skels=a); }
+function _mixHold(m, hold){ const a=_skels(m); for(let i=0;i<a.length;i++) a[i]._hold=hold; }
 function _mixStep(m, mixer, dt){ if(!mixer) return;
-  if(!_mixHeavy){ if(m._mdt){ dt+=m._mdt; m._mdt=0; } mixer.update(dt); return; }
-  if(m._mixPh==null) m._mixPh=(_syncTick&1);
+  if(_mixStride<2){ if(m._skels&&m._skels.length&&m._skels[0]._hold) _mixHold(m,false);   // 분산 해제(유닛이 줄었을 때) — 홀드 잔재 정리
+    if(m._mdt){ dt+=m._mdt; m._mdt=0; } mixer.update(dt); return; }
+  if(m._mixPh==null) m._mixPh=_modelSeq++;   // 모델마다 고정 위상 → 갱신 프레임이 고르게 흩어짐(한 프레임에 몰리지 않음)
   m._mdt=(m._mdt||0)+dt;
-  if(((_syncTick+m._mixPh)&1)===0){ mixer.update(m._mdt); m._mdt=0; } }
+  if((_syncTick+m._mixPh)%_mixStride===0){ mixer.update(m._mdt); m._mdt=0; }
+  else _mixHold(m, true); }
+// ── 자세(어느 내장 모델을 보여줄지) 단일 소스 ──
+// 어느 내장 모델(정지/달리기/대기/공격 GLB)을 보여줄지의 규칙을 한곳에 모은 것.
+// 분기마다 따로 적어두면 "달리기인데 총이 남아있다" 같은 어긋남이 생긴다.
+const POSE_MIXER={ run:'runMixer', atk:'atkMixer', stay:'stayMixer', static:null };
+function poseOf(m, id, moving, atkT){
+  if(!moving && id==='worker_light' && m.runInner) return 'run';   // 에테리얼 일꾼: 제자리에서도 run 모션(두 팔 앞으로)
+  if(!moving && atkT>0 && m.atkInner) return 'atk';                // 공격 모션(정지 시 1회)
+  if(moving) return m.runInner?'run':'static';                     // 달리기 모델 없으면 정적 모델 + 절차적 걷기
+  if(id==='blade' && m.runInner) return 'run';                     // 워든 정지 = 리깅 모델 frame0 고정
+  return m.stayInner?'stay':'static';
+}
+function poseShow(m, which){   // 총은 정지·대기 자세에서만(달리기/공격 GLB엔 총이 이미 들어있음)
+  if(m.inner)    m.inner.visible=(which==='static');
+  if(m.runInner) m.runInner.visible=(which==='run');
+  if(m.stayInner)m.stayInner.visible=(which==='stay');
+  if(m.atkInner) m.atkInner.visible=(which==='atk');
+  if(m.gun)      m.gun.visible=(which==='static'||which==='stay');
+}
+function walkPose(m, id, walk){   // 절차적 걷기(달리기 GLB 없는 유닛)
+  m.anim.position.x=0;
+  if(id==='tank'||id==='racer'){ m.anim.position.y=Math.abs(Math.sin(walk))*m.h*WALK_BOB*0.3; m.anim.rotation.z=0; m.anim.rotation.x=0; }   // 차량: 앞뒤/좌우 흔들림 없이 미세 상하만
+  else { m.anim.position.y=Math.abs(Math.sin(walk))*m.h*WALK_BOB; m.anim.rotation.z=Math.sin(walk*0.5)*WALK_SWAY; m.anim.rotation.x=WALK_LEAN; }
+}
+
 const bossRemoteModels=new Map();   // 토벌장 원격(다른 플레이어) 유닛 모델 — 게임 모델 사망 스윕과 분리
 const shopModels=new Map();   // 유닛뽑기 슬롯 전시용 모델(uid -> model). 게임 모델과 분리(사망 스윕 영향 없음)
 const bldgModels=new Map();   // 업그레이드 탭 건물 전시 모델(TECH id -> model)
@@ -15749,6 +15853,13 @@ const BLDG_SCALE_MUL=1.5;    // 업그레이드 건물 전시 크기 배율(5건
           // 건물 전시 회전 속도(천천히)
 const DPR=Math.min(devicePixelRatio||1,2);
 
+// 인게임 조명 구성(단일 소스) — 오프스크린 렌더 등 다른 씬에서도 같은 광원을 재현할 수 있게 함수로 둔다.
+function addGameLights(sc){
+  sc.add(new THREE.AmbientLight(0xffffff,1.25));   // 환경광이 채움 → 앰비언트 낮춰 대비 확보
+  const d1=new THREE.DirectionalLight(0xffffff,1.9); d1.position.set(0.5,1,0.9); sc.add(d1);
+  const d2=new THREE.DirectionalLight(0xbfe0ff,0.7); d2.position.set(-0.6,0.3,-0.5); sc.add(d2);
+  const d3=new THREE.DirectionalLight(0xffffff,0.6); d3.position.set(0,0.4,-1); sc.add(d3); // 정면 보강광
+}
 function init(){
   const cv=document.getElementById('cvMarine'); if(!cv) return;
   renderer=new THREE.WebGLRenderer({canvas:cv, alpha:true, antialias:true});
@@ -15757,10 +15868,7 @@ function init(){
   scene=new THREE.Scene();
   // 환경광(IBL): RoomEnvironment 기반 부드러운 반사 → 금속·플라스틱 재질이 평면적으로 안 보이게(품질 핵심)
   try{ const _pmrem=new THREE.PMREMGenerator(renderer); scene.environment=_pmrem.fromScene(new RoomEnvironment(renderer),0.04).texture; }catch(_){ }
-  scene.add(new THREE.AmbientLight(0xffffff,1.25));   // 환경광이 채움 → 앰비언트 낮춰 대비 확보
-  const d1=new THREE.DirectionalLight(0xffffff,1.9); d1.position.set(0.5,1,0.9); scene.add(d1);
-  const d2=new THREE.DirectionalLight(0xbfe0ff,0.7); d2.position.set(-0.6,0.3,-0.5); scene.add(d2);
-  const d3=new THREE.DirectionalLight(0xffffff,0.6); d3.position.set(0,0.4,-1); scene.add(d3); // 정면 보강광
+  addGameLights(scene);
   camera=new THREE.OrthographicCamera(0,1,1,0,-2000,2000); camera.position.set(0,0,800);
   ready=true;   // 렌더러 준비 즉시 가동 — 모델은 로드되는 대로 하나씩 등장(올-오어-나싱 30초 블랙아웃 제거). sync는 미로드 모델을 자동 스킵
   const L=new GLTFLoader();
@@ -15819,6 +15927,16 @@ function init(){
     }, undefined, e=>{ console.warn(ATTACK_FOR[id]+' load fail', e); done(); }); }
 }
 
+// ── 본 서브트리 렌더 순회 제외 ──
+// three.js는 매 프레임 씬 전체를 순회(projectObject)하며 그릴 것을 고르는데, 본(Bone)은 그려지지 않으면서도
+// 개수가 압도적이다(400기 전투 = 씬 오브젝트 11,800개 중 본이 7,300개). visible=false면 그 서브트리를
+// 통째로 건너뛴다. 스키닝에 필요한 본 월드행렬은 updateMatrixWorld가 계산하고 이쪽은 visible을 보지 않으므로
+// 화면 결과는 완전히 동일하다.
+// ⚠ 손 본에 검 등 메시를 붙인 모델(워든)은 그 메시까지 사라지므로 제외 — 자동 판정(본 아래 메시 유무).
+function hideBoneRoots(root){ if(!root) return;
+  root.traverse(o=>{ if(!o.isBone || (o.parent&&o.parent.isBone)) return;   // 본 트리의 최상단만 검사
+    let hasMesh=false; o.traverse(c=>{ if(c!==o && (c.isMesh||c.isSkinnedMesh)) hasMesh=true; });
+    if(!hasMesh){ o.visible=false; o._boneRoot=true; } }); }
 // 총을 손 위치에 부착(정적 메시 — 본 없으니 모델 로컬 좌표로 직접 배치). anim 자식 → yaw/숙임/사망 따라감
 function attachGun(anim, id){
   if(!guns[id]) return null;
@@ -16130,6 +16248,20 @@ function auraTexture(){ if(_auraTex) return _auraTex;
   g.fillStyle=gr; g.fillRect(0,0,128,128);
   _auraTex=new THREE.CanvasTexture(c); return _auraTex;
 }
+// 사망 모션이 걸렸던 모델을 되살린다 — 쓰러짐 각도·축소 등 사망 루프가 건드린 값을 전부 원복.
+// (목록에서 잠깐 빠졌다 돌아오는 경우: 직스의 화면 밖 컬링 등)
+// 화면 깊이 = 관리자 건설맵(syncBuild)과 같은 규칙: **화면 아래일수록 앞**(z 큼).
+// 전부 z=0이면 유닛과 신전이 같은 깊이에서 다퉈, 겹칠 때 유닛이 신전에 파묻힌다.
+// 공중 유닛은 지상 무엇보다도 항상 앞(하늘을 나는 것이 건물에 가리면 안 됨).
+// 직교 카메라 near/far = -2000..2000 (카메라 z=800) → 유효 z 범위 -1200..2800. 아래 값은 그 안.
+const Z_AIR=2200, Z_AIR_K=0.2, Z_GND_K=2.5;
+function _zOf(u, id, worldY, H){ const ny=(H-worldY)/Math.max(1,H);   // 0=화면 위 … 1=화면 아래
+  return AIR_FLOAT[id] ? (Z_AIR + ny*H*Z_AIR_K) : (ny*H*Z_GND_K); }
+function reviveModel(m, id){
+  m.dying=false; m.deadT=0; m.lean=0;
+  if(m.anim){ m.anim.rotation.x=0; m.anim.position.y=0; }
+  m.holder.scale.setScalar((SCALE[id]||MODEL_SCALE)*(m.bossScale||1));   // 적 사망은 축소로 표현 → 스케일 복구
+}
 function makeModel(id){
   const base=bases[id]; if(!base) return null;
   const inner=cloneSkinned(base.scene);
@@ -16210,6 +16342,7 @@ function makeModel(id){
     new THREE.MeshBasicMaterial({color:0x000000, transparent:true, opacity:0.22, depthWrite:false}));
   shadow.rotation.x=-Math.PI/2; shadow.position.y=0.012; view.add(shadow);
   const holder=new THREE.Group(); holder.add(view); holder.scale.setScalar(SCALE[id]||MODEL_SCALE);
+  for(const r of [inner, runInner, stayInner, workInner, atkInner]) hideBoneRoots(r);   // 본 서브트리를 렌더 순회에서 제외(검·프롭 부착 모델은 자동 제외)
   scene.add(holder);
   let muzzlePt=null; if(id==='tank'){ muzzlePt=new THREE.Object3D(); muzzlePt.position.set(-base.h*1.08, base.h*0.84, 0); yaw.add(muzzlePt); }   // 탱크 포구 기준점(yaw=조준방향 따라 회전) — 포신 끝(높이 포함) 화면 캘리브레이션 값
   return { holder, view, yaw, anim, rim, gun, muzzlePt, aura, shadow, auraT:Math.random()*6.28, gunBase:(GUN_CFG[id]?{...GUN_CFG[id].pos}:{x:0,y:0,z:0}), reload:!!(GUN_CFG[id]&&GUN_CFG[id].reload), inner, runInner, runMixer, stayInner, stayMixer, workInner, workMixer, atkInner, atkMixer, atkAction, atkDur, atkT:0, id, h:base.h, face:undefined, breathe:Math.random()*6.28, lean:0, seenSeq:0, dying:false, deadT:0 };
@@ -16458,6 +16591,7 @@ window.M3D={
   centerAt:(uid)=>{ const m=models.get(uid)||buildModels.get(uid); return (m&&m.centerN)?m.centerN:null; },   // 유닛 몸 중앙 2D 좌표(메인·건설 공용) — 발이 아닌 몸통 조준·트레일 원점용
   sync(units, W, H, dt, sel, enemies, selEnemy, scaleMul, view){
     if(!ready||!W||!H) return;
+    if(_prof) _prof.t0=performance.now();
     // 화질 옵션(resScale) → 3D 렌더 해상도 연동(모바일 GPU 부하 직결 — 2D 캔버스와 동일 배율)
     { const _pr=Math.min(devicePixelRatio||1,2)*((typeof G!=='undefined'&&G.opt&&G.opt.resScale)||1);
       if(Math.abs(renderer.getPixelRatio()-_pr)>0.001){ renderer.setPixelRatio(_pr); renderer._w=0; } }
@@ -16476,26 +16610,34 @@ window.M3D={
     const eList=(enemies||[]).filter(e=>e.model3d && MODELS[e.model3d]); // 3D 적
     const selSet=new Set(sel||[]);
     let ringN=0;   // 이번 프레임 인스턴스 선택링 수(아군 루프에서 _ringPush로 채움)
-    _syncTick++; _mixHeavy=uList.length>60 || !!(typeof G!=='undefined'&&G.opt&&G.opt.lite3d);   // 대군 또는 저사양 모드 = 스킨드 애니 2프레임 1회(시각 차이 미미)
+    _syncTick++; _mixStride=_mixStrideFor(uList.length);   // 대군·저사양 = 스킨드 애니(+스켈레톤) 갱신을 2~3프레임에 1회로 분산
     const live=new Set();
     for(const u of uList) live.add(u.uid);
     for(const e of eList) live.add('e'+e.eid);
     // 사라진(죽은) 모델 → 사망 모션
     for(const [key,m] of models){ if(!live.has(key)&&!m.dying){ m.dying=true; m.deadT=0; m.lean=0; } }
+    // ⚠ "목록에서 빠짐"이 곧 사망은 아니다. 직스는 화면 밖 유닛을 잘라내(STK_CULL) 목록에서 빼므로,
+    //   화면 밖으로 나갔다 2초(DEAD_HOLD) 안에 돌아온 유닛은 사망 모션이 걸린 모델을 그대로 재사용하게 된다.
+    //   그 상태로 두면 자세 분기가 세워놓은 것을 아래 사망 루프가 매 프레임 다시 눕혀서
+    //   "멀쩡한 유닛이 누운 채로 이동하다가 모델이 제거·재생성될 때 벌떡 일어나는" 현상이 된다. → 되살아나면 해제.
     // ── 아군 유닛 ──
     for(const u of uList){ const _id=_mid(u); let m=models.get(u.uid); if(!m){ m=makeModel(_id); if(!m) continue; m.kind='unit'; models.set(u.uid,m); }
+      if(m.dying) reviveModel(m, _id);
       if(u.rimCol) applyTeamTint(m, u.rimCol);   // 한 화면에 여러 플레이어(직스) → 인스턴스별 플레이어색 틴트
       else if(typeof window!=='undefined' && window.__sandbox) sandboxAllyFix(m, _id);   // 샌드박스: 전 유닛 내 소유 → 인스턴스 틴트(ENEMY_MODEL 공유 모델 포함)
       else applyPlayerTintInst(m, _id);          // 실게임: NPC와 모델 공유(레이스·드랍쉽 등) → 내 유닛 인스턴스만 틴트
       if(u.atBoss){ m.holder.visible=false; continue; }   // 보스방 파견 유닛은 트랙에 표시 안 함
       const px=u.x*W, worldY=H-u.y*H;
+      const _ds=(u.dead&&u.fixed)?0.82:1;   // 파괴 시 약간 움츠러듦
+      const _us=u.scl||1;                   // 유닛별 추가 배율(직스 전투 유닛 확대 등) — 신전엔 미적용
+      const _hs=(SCALE[_id]||MODEL_SCALE)*(scaleMul||1)*_ds*_us;   // 이번 프레임 holder 스케일 = 화면 px 배율
+      const _ro=(m.rim.geometry.parameters&&m.rim.geometry.parameters.outerRadius)||1;
       if(u.ringCol){ m.rim.visible=true; m.rim.material.color.set(u.ringCol); m.rim.material.opacity=RING_OP;
-        m.rim.scale.setScalar(selSet.has(u.uid)?1.22:1); }   // 직스: 발밑 링 = 관리자 선택 링 규격을 상시 표시(색=진영) · 내가 지정한 유닛만 링을 굵게
+        m.rim.scale.setScalar(selSet.has(u.uid)?1.22:1); }   // 직스: 발밑 링 = 선택 링 규격을 상시 표시(색=진영) · 내가 지정한 유닛만 굵게
       else { m.rim.visible=false;   // 일반 선택링 → 인스턴스 배치(다중 선택 시 전체 1드로우콜)
         if(selSet.has(u.uid)){   // 선택링 색: 영웅=금색 / 가챠=등급색(유닛도감과 동일) / 일반=청록
           const _tc=(u.gtier && typeof TIER_COLOR!=='undefined')?TIER_COLOR[u.gtier]:null;
-          const _ro=(m.rim.geometry.parameters&&m.rim.geometry.parameters.outerRadius)||1;
-          ringN=_ringPush(ringN, px, worldY-Y_DROP, _ro*m.holder.scale.x, u.hero?0xffc24a:(_tc||0x37e0c8));
+          ringN=_ringPush(ringN, px, worldY-Y_DROP, _ro*_hs, u.hero?0xffc24a:(_tc||0x37e0c8), _zOf(u,_id,worldY,H));
         } }
       // 영웅 상시 식별: 발밑 은은한 금색 링 + 미세한 반짝임(눈에 띄지 않게)
       if(u.hero){
@@ -16514,35 +16656,30 @@ window.M3D={
       if(typeof u.face==='number' && !NO_TURN[_id] && (!TURN_MOVE_ONLY[_id] || u.moving)){ const tgt=u.face+ROT_OFFSET+(MODEL_YAW_OFF[_id]||0);  // TURN_MOVE_ONLY(센티넬)=이동 중에만 회전
         let d=tgt-m.yaw.rotation.y; d=Math.atan2(Math.sin(d),Math.cos(d));
         m.yaw.rotation.y += d*Math.min(1, dt*ROT_SPD); }
-      if(m.stayInner) m.stayInner.visible=false;   // 정지 애니: 기본 숨김(정지 분기서만 표시)
+      if(m._skels||_mixStride>1) _mixHold(m,false);   // 스켈레톤 홀드 해제(이번 프레임 갱신 대상이면 _mixStep이 다시 건다)
+      const _pose=poseOf(m, _id, !!u.moving, m.atkT||0);   // 어느 내장 모델을 보여줄지 = 단일 소스
+      poseShow(m, _pose);
       if(!u.moving && _id==='worker_light' && m.runInner){   // 에테리얼 일꾼: 제자리 run 모션 상시(두 팔 앞으로) — 끊김 없이
-        if(m.inner) m.inner.visible=false; m.runInner.visible=true; if(m.gun) m.gun.visible=false; if(m.atkInner) m.atkInner.visible=false;
         m.anim.position.set(0,0,0); m.anim.rotation.x=0; m.anim.rotation.z=0;
         _mixStep(m, m.runMixer, dt);
-      } else if(!u.moving && m.atkT>0 && m.atkInner){   // 워든 검 베기 공격 애니(정지 시 1회 재생) — 정적/총 숨김
-        if(m.inner) m.inner.visible=false; if(m.runInner) m.runInner.visible=false; if(m.gun) m.gun.visible=false; m.atkInner.visible=true;
+      } else if(!u.moving && m.atkT>0 && m.atkInner){   // 워든 검 베기 공격 애니(정지 시 1회 재생)
         m.anim.position.set(0,0,0); m.anim.rotation.x=0; m.anim.rotation.z=0;
         _mixStep(m, m.atkMixer, dt);   // (atkT 감소는 위에서 일괄 처리)
-      } else if(u.moving && m.runInner){          // 달리기 모델(클립 재생) — 정적 마린/총 숨김
-        if(m.inner) m.inner.visible=false; m.runInner.visible=true; if(m.gun) m.gun.visible=false; if(m.atkInner) m.atkInner.visible=false;
+      } else if(u.moving && m.runInner){          // 달리기 모델(클립 재생)
         m.anim.position.set(0,0,0); m.anim.rotation.x=0; m.anim.rotation.z=0;
         _mixStep(m, m.runMixer, dt);
       } else if(u.moving){                  // 달리기 모델 없는 유닛 → 절차적 걷기
-        if(m.inner) m.inner.visible=true; if(m.runInner) m.runInner.visible=false; if(m.gun) m.gun.visible=true; if(m.atkInner) m.atkInner.visible=false;
         m.walk = (m.walk||0) + dt*WALK_SPD;
         m.anim.position.x = 0;
         if(_id==='tank'||_id==='racer'){ m.anim.position.y = Math.abs(Math.sin(m.walk))*m.h*WALK_BOB*0.3; m.anim.rotation.z=0; m.anim.rotation.x=0; }   // 탱크·레이서(차량): 앞뒤/좌우 흔들림 없이 미세 상하만
         else { m.anim.position.y = Math.abs(Math.sin(m.walk))*m.h*WALK_BOB; m.anim.rotation.z = Math.sin(m.walk*0.5)*WALK_SWAY; m.anim.rotation.x = WALK_LEAN; }
       } else if(_id==='blade' && m.runInner){   // 워든 정지: 리깅 모델 frame0 고정(내장검 있는 정적 blade.glb 미사용)
-        if(m.inner) m.inner.visible=false; m.runInner.visible=true; if(m.gun) m.gun.visible=false; if(m.atkInner) m.atkInner.visible=false;
         m.anim.position.set(0,0,0); m.anim.rotation.set(0,0,0);
         m.runMixer.setTime(0);
-      } else if(m.stayInner){              // 정지: 대기(idle) 애니 재생 — 정적/총 숨김
-        if(m.inner) m.inner.visible=false; m.stayInner.visible=true; if(m.runInner) m.runInner.visible=false; if(m.gun) m.gun.visible=true; if(m.atkInner) m.atkInner.visible=false;   // 정지 모델엔 총 없음 → 부착총 유지
+      } else if(m.stayInner){              // 정지: 대기(idle) 애니 재생(정지 모델엔 총이 없어 부착총 유지)
         m.anim.position.set(0,0,0); m.anim.rotation.set(0,0,0);
         _mixStep(m, m.stayMixer, dt);
       } else {                              // 정지: 정적 모델 + 숨쉬기/발사 떨림
-        if(m.inner) m.inner.visible=true; if(m.runInner) m.runInner.visible=false; if(m.gun) m.gun.visible=true; if(m.atkInner) m.atkInner.visible=false;
         m.breathe += dt*BREATHE_SPD;
         const tr = u.fixed ? 0 : m.lean*TREMBLE*m.h;                    // 구조물(터렛/포토)은 떨림 없음(움찔 제거)
         const bob = u.fixed ? 0 : Math.sin(m.breathe)*m.h*BREATHE_AMP;  // 구조물은 숨쉬기 없음
@@ -16577,18 +16714,18 @@ window.M3D={
           const t=1-Math.min(1, Math.abs(p-0.5)/RELOAD_WIN); rl=t*t*(3-2*t); }  // 중앙에서만 잠깐 내림 → 나머지는 들고 조준
         m.gun.position.set(m.gunBase.x, m.gunBase.y - rl*RELOAD_DIP, m.gunBase.z - m.lean*GUN_RECOIL);
         m.gun.rotation.x = rl*RELOAD_TILT; }
-      m.holder.position.set(px, worldY - Y_DROP, 0);
-      if(u.dead&&u.fixed){ if(!m._deadDim){ m._deadDim=true; if(m.rim) m.rim.visible=false; const mats=cloneMats(m.inner); for(const mt of mats) dimDeadMat(mt); } }   // 파괴된 신전(고정 구조물): 무채색 반투명(1회 적용)
-      const _ds=(u.dead&&u.fixed)?0.82:1;   // 파괴 시 약간 움츠러듦
-      const _us=u.scl||1;   // 유닛별 추가 배율(직스 전투 유닛 확대 등) — 신전엔 미적용
-      if((scaleMul&&scaleMul!==1)||_ds!==1||_us!==1) m.holder.scale.setScalar((SCALE[_id]||MODEL_SCALE)*(scaleMul||1)*_ds*_us);   // 맵 스케일 연동 + 파괴 축소 + 유닛 배율
+      m.holder.position.set(px, worldY - Y_DROP, _zOf(u, _id, worldY, H));
+      if(u.dead&&u.fixed){ if(!m._deadDim){ m._deadDim=true; if(m.rim) m.rim.visible=false; m._deadMats=cloneMats(m.inner); for(const mt of m._deadMats) dimDeadMat(mt); }   // 파괴된 신전: 무채색 반투명(1회 적용)
+        if(u.fade!=null && m._deadMats) for(const mt of m._deadMats){ mt.transparent=true; mt.depthWrite=false; mt.opacity=(mt._dimOp==null?(mt._dimOp=mt.opacity):mt._dimOp)*u.fade; } }   // 그 뒤 서서히 사라짐(파괴 잔해가 전장에 계속 남지 않게)
+      if(m.holder.scale.x!==_hs) m.holder.scale.setScalar(_hs);   // 맵 스케일 연동 + 파괴 축소 + 유닛 배율
       if(u._cloaked || m._cloakMats){ const _vis=(u._detected || (selSet&&selSet.has(u.uid))); _applyCloak(m, u._cloaked?(_vis?0.42:0.0):1, dt); }   // 🪄 은신: 감지/선택=반투명, 미감지=투명
       if(typeof window!=='undefined' && window.__sandbox && m.muzzlePt){ m.muzzlePt.updateWorldMatrix(true,false); const _mw=m.muzzlePt.getWorldPosition(new THREE.Vector3()); _mw.project(camera); m.muzzleN={ x:_mw.x*0.5+0.5, y:0.5-_mw.y*0.5 }; }   // 포구 기준점(3D) 투영 — 각도 완전 대응
       else if(typeof window!=='undefined' && window.__sandbox && m.gun && m.gun.visible){ m.gun.updateWorldMatrix(true,false); const _gw=m.gun.getWorldPosition(new THREE.Vector3()); _gw.project(camera); m.muzzleN={ x:_gw.x*0.5+0.5, y:0.5-_gw.y*0.5 }; } else m.muzzleN=null;   // 총구 2D 투영(각도 무관 머즐 원점)
       if(typeof window!=='undefined' && window.__sandbox && m.anim){ const _cc=new THREE.Box3().setFromObject(m.anim).getCenter(new THREE.Vector3()); _cc.project(camera); m.centerN={ x:_cc.x*0.5+0.5, y:0.5-_cc.y*0.5 }; } else m.centerN=null;   // 몸 중앙 2D 투영(발 X — 조준 타겟)
     }
     // ── 적 유닛(공중: 부유 + 진행방향 회전) ──
-    for(const e of eList){ const key='e'+e.eid; let m=models.get(key); if(!m){ m=makeModel(e.model3d); if(!m) continue; m.kind='enemy'; m.age=0; if(CLOAK_MODELS[m.id]) m.mats=cloneMats(m.inner); models.set(key,m); }  // 클로킹 모델만 투명재질(나머지는 불투명 유지)
+    for(const e of eList){ const key='e'+e.eid; let m=models.get(key); if(!m){ m=makeModel(e.model3d); if(!m) continue; m.kind='enemy'; m.age=0; if(CLOAK_MODELS[m.id]) m.mats=cloneMats(m.inner); models.set(key,m); }
+      if(m.dying) reviveModel(m, m.id);   // 목록에 다시 들어온 적 = 사망 축소를 되돌린다  // 클로킹 모델만 투명재질(나머지는 불투명 유지)
       const p=posAt(e.d,W,H), p2=posAt(e.d+0.0015,W,H);     // 현재/직후 위치 → 진행방향
       m.rim.visible = (selEnemy!=null && selEnemy===e.eid); // 선택 시에만 링
       const fa=Math.atan2(p2.x-p.x, p2.y-p.y)+(MODEL_YAW_OFF[m.id]||0);  // 시계방향 이동 방향 바라봄(+모델보정)
@@ -16607,6 +16744,7 @@ window.M3D={
       m.holder.visible = !e._fogHidden;   // 🌫️ 활성 시야 밖 적 3D 모델 숨김(사망 처리 X — live 유지)
     }
     // ── 사망 진행/제거 (아군=뒤로 쓰러짐 / 적=축소) ──
+    // (되살리기는 위 두 루프에서 reviveModel로 처리 — 사망 모션이 진행 중이던 값들을 전부 원복)
     for(const [key,m] of [...models]){ if(!m.dying) continue; m.deadT+=dt;
       if(m.kind==='enemy'){ const pp=Math.min(1, m.deadT/ENEMY_DEATH);
         m.holder.scale.setScalar((SCALE[m.id]||MODEL_SCALE)*(m.bossScale||1)*(1-pp));   // 보스도 확대 유지하며 축소
@@ -16642,6 +16780,11 @@ window.M3D={
     if(ringInst){ ringInst.count=ringN;   // 인스턴스 선택링 커밋(0=전부 숨김)
       if(ringN){ ringInst.instanceMatrix.needsUpdate=true; if(ringInst.instanceColor) ringInst.instanceColor.needsUpdate=true; } }
     _shadowInstPass();   // 발밑 그림자 일괄 커밋(모델별 그림자 메시 대체 — 드로우콜 2개)
+    if(_prof){ const t1=performance.now(); _prof.loop=t1-_prof.t0;
+      scene.updateMatrixWorld(true); const t2=performance.now(); _prof.mw=t2-t1;   // 씬그래프(본 포함) 월드행렬 갱신 — 렌더러가 내부에서 하는 일을 미리 해 비용 분리
+      if(_prof.objs==null||(_syncTick&31)===0){ let c=0,b=0; scene.traverse(o=>{ c++; if(o.isBone) b++; }); _prof.objs=c; _prof.bones=b; }
+      renderer.render(scene,camera); _prof.render=performance.now()-t2;
+      _prof.calls=renderer.info.render.calls; _prof.tris=renderer.info.render.triangles; _prof.progs=renderer.info.programs?renderer.info.programs.length:0; return; }
     renderer.render(scene,camera);
   },
   // 유닛뽑기 탭: 각 슬롯(CLOCK_POS) 위에 실제 3D 모델을 세움(턴테이블 회전). 게임 모델과 분리된 shopModels 사용.
@@ -16863,7 +17006,11 @@ window.M3D={
 init();
 window.M3D.matDbg=(uid)=>{ const m=models.get(uid); if(!m) return null; const dump=(root)=>{ const out=[]; if(!root) return out; root.traverse(o=>{ if(!o.isMesh) return; const ms=Array.isArray(o.material)?o.material:[o.material]; ms.forEach(mt=>{ if(!mt) return; out.push({nm:mt.name||"", type:mt.type, color:mt.color?"#"+mt.color.getHexString():null, emis:mt.emissive?"#"+mt.emissive.getHexString():null, emisInt:mt.emissiveIntensity, emisMap:!!mt.emissiveMap, map:!!mt.map, metal:mt.metalness, rough:mt.roughness, envInt:mt.envMapIntensity, tinted:!!mt._tinted}); }); }); return out; };
   return {inner:dump(m.inner), run:dump(m.runInner), stay:dump(m.stayInner), atk:dump(m.atkInner)}; };   // 재질 디버그(정지/이동 룩 차이 진단용)
-window.M3D.dbg=()=>({ n:models.size, ready, loaded:Object.keys(bases), anims:[...models].map(([uid,m])=>({uid,id:m.id,dying:m.dying,yaw:+m.yaw.rotation.y.toFixed(2),pos:[Math.round(m.holder.position.x),Math.round(m.holder.position.y)]})) });
+window.M3D.dbg=()=>({ n:models.size, ready, loaded:Object.keys(bases), anims:[...models].map(([uid,m])=>({uid,id:m.id,dying:m.dying,yaw:+m.yaw.rotation.y.toFixed(2),px:Math.round(m.h*m.holder.scale.x),pos:[Math.round(m.holder.position.x),Math.round(m.holder.position.y)], z:Math.round(m.holder.position.z)})) });   // px = 화면상 모델 높이
+window.M3D.prof=(on)=>{ if(on!==undefined) _prof=on?(_prof||{}):null; return _prof; };   // 렌더 프로파일 on/off — {loop, render} 최근 프레임 ms(벤치 전용)
+window.M3D.mixForce=(n)=>{ _mixForce=n|0; return _mixForce; };   // 애니 분산값 강제(0=자동) — 벤치 A/B 전용
+window.M3D.boneVis=(on)=>{ let n=0; for(const [,m] of models) for(const r of [m.inner,m.runInner,m.stayInner,m.workInner,m.atkInner]){ if(!r) continue;
+  r.traverse(o=>{ if(o._boneRoot){ o.visible=!!on; n++; } }); } return n; };   // 본 서브트리 순회 제외 on/off — 벤치 A/B 전용
 window.M3D.setPlayerRim=setPlayerRim;   // 아군 림 색 전환(플레이어 구역 관전: 관전 플레이어 색으로)
 window.M3D.dropModels=(uids)=>{ for(const uid of uids){ const m=models.get(uid); if(m){ scene.remove(m.holder); models.delete(uid); } } };  // 즉시 제거(합성 소모 유닛 — 사망모션 생략)
 window.M3D.clearGameModels=()=>{ for(const [uid,m] of [...models]){ scene.remove(m.holder); models.delete(uid); } };   // 전체 즉시 제거(관전 전환 — 사망모션 생략)

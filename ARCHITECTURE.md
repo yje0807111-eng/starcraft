@@ -70,8 +70,10 @@
 ## 6. 3D 모듈 (window.M3D)
 - 진입: `M3D.sync(units, GW, GH, dt, sel, enemies, selEnemy, scaleMul, view)` — 유닛/적 모델 동기화+렌더. 그 외 `syncShop/syncBuild/syncBldg/syncBoss`(탭별), `portrait`, `hasModel`, `loadMapModels/keepOnlyMap`(맵별 VRAM), `dbg()/matDbg(uid)`(디버그).
 - `makeModel(id)` → `{holder(위치/스케일)→view(부감틸트)→yaw(회전)→anim(모션)}` + `inner/runInner/stayInner/atkInner`(정지/달리기/대기/공격 GLB) + `rim`(선택링 메시) + `shadow`.
+- **피격·사망 연출 세기**: FX 스토어의 `hitK`(기본 1)가 impact·death 크기를 배율로 줄인다. 직스는 `STK_HIT_K=0.5` + `STK_DEATH_PARTS=5`(공용 기본 9) — 수백 기가 동시에 싸워 기본값이면 화면이 이펙트로 덮인다. **공용 FX 코어는 기본값 그대로**라 네모는 영향 없음.
 - **인스턴싱(드로우콜 절감)**: 선택링=`ringInst`(_ringPush), 그림자=`shInstA/B`(_shadowInstPass, 지상0.22/공중0.26). 개별 `m.rim`은 직스 팀색·토벌장·적 선택용으로만 남음. 새 발밑 표시는 인스턴스 경로를 따를 것.
-- **대군 최적화**: `_mixHeavy`(유닛>60) 시 스킨드 믹서 2프레임 1회(`_mixStep`). 해상도는 `G.opt.resScale`을 sync가 매 프레임 반영(품질 프리셋과 연동).
+- **대군 최적화**: `_mixStride`(유닛>60 → 2프레임, >150 → 3프레임에 1회)로 스킨드 믹서를 분산(`_mixStep`). 건너뛴 프레임엔 `skeleton.update`도 홀드(`_mixHold`/`_skels`) — 본 포즈가 그대로라 화면은 동일하고 본 행렬·본 텍스처 업로드가 사라진다. 본 서브트리는 `hideBoneRoots`로 `visible=false` → three.js 렌더 순회에서 제외(손 본에 검 등 메시를 붙인 모델은 자동 제외). 해상도는 `G.opt.resScale`을 sync가 매 프레임 반영(품질 프리셋과 연동).
+- **측정 훅(기본 off)**: `M3D.prof(true)` → `{loop, mw, render, calls, tris, objs, bones}`. `M3D.mixForce(n)`/`M3D.boneVis(on)` = 벤치 A/B 강제 토글.
 - 플레이어색: `_toneInject`(HSV 본체 회색화+액센트 마스크) + fresnel 림(`addRim`). 상수: `TINT_*`, `RIM_*`(`RIM_MUL` 유닛별 배율).
 
 ## 7. 유즈맵 모듈 시스템
@@ -84,7 +86,10 @@ Supabase Realtime presence 기반(방 목록·로비·파티·귓말). 방 목�
 ```bash
 npm test                      # 전 그룹: lobby / game / sandbox (헤드리스 크롬, ~10초)
 node test/run-smoke.mjs game  # 한 그룹만
+node test/bench-strike.mjs 400 80 4   # 대규모 전투 렌더 벤치(유닛수 프레임수 반복수)
 ```
+- 벤치(`test/bench-strike.mjs`)는 직스 맵에 유닛을 강제 소환해 프레임을 `strikeStep`/`M3D.sync`(JS루프·월드행렬·renderer.render)로 쪼개 잰다. **실제 GPU가 필요해 창을 띄운다(headful) — 창을 가리면 컴포지팅이 멈춰 값이 무의미**해진다. 조건은 한 페이지 안에서 교대(A/B/B/A) 측정 — 전투가 진행될수록 유닛이 뭉쳐 부하가 오르므로 순서를 고정하면 뒤 조건이 손해를 본다. 런 간 편차 ±5% 수준이라 그보다 작은 개선은 이 벤치로 판정 불가.
+- 환경변수: `BENCH_URL=주소`(이미 떠 있는 개발 서버로 측정) · `LOWPOLY=1`(삼각형이 병목인지) · `BONEVIS=1`(본 순회 제외 효과) · `PXDBG=1`(화면상 유닛 px) · `SHOT=경로`(시뮬 정지 후 3배 해상도 스크린샷) · `FORCEID=유닛id`(전 유닛을 한 종류로 — 1:1 비교) · `BONECHK=유닛id`(부착물 모델이 본 제외에서 빠지는지 검증).
 - 스위트 본체: `test/smoke.js` (인페이지 주입, `runSmoke(group)`), 러너: `test/run-smoke.mjs`(내장 정적 서버+puppeteer-core→시스템 크롬).
 - 스텝 추가법: `test/smoke.js`의 해당 그룹 함수에 `await step('이름', ()=>{ ... assert(...) })` 한 줄. 없는 기능은 `skipIf`.
 - 수정 후 `npm test` 통과 없이 "완료" 선언 금지. 구문 검사는 vm.Script(classic)+`node --check`(module).
@@ -95,4 +100,7 @@ node test/run-smoke.mjs game  # 한 그룹만
 - **백그라운드 탭 측정 왜곡**: 브라우저 팬이 숨겨지면 rAF 정지·WebGL 스로틀 → 성능 절대값 비교 불가. 같은 표시 상태끼리만 비교.
 - `THREE.GLTFLoader: Couldn't load texture blob` 콘솔 오류 = 기지 이슈(동시 로드), 스모크에서 knownNoise로 분류.
 - 스킨드 메시 bbox 부정확 · WebGL 캔버스 preserveDrawingBuffer=false(픽셀 읽기 불가).
+- **`M3D.sync` 목록에서 빠진 것 = 사망으로 처리된다**: 직스는 화면 밖 유닛을 잘라내(`STK_CULL`) 목록에서 빼므로, 나갔다 `DEAD_HOLD`(2초) 안에 돌아온 유닛은 사망 모션이 걸린 모델을 그대로 재사용한다. 되살리지 않으면 **멀쩡한 유닛이 누운 채 이동하다가 모델 재생성 시 벌떡 일어난다.** → 아군·적 루프 진입부에서 `reviveModel`로 해제. 컬링을 새로 넣는 코드는 이 상호작용을 반드시 확인할 것.
+- **임포스터(스프라이트 대체)는 만들었다가 제품 판단으로 걷어냈다**: 400기 기준 드로우콜 1,340 → 144, 26 → 39 FPS까지 나왔지만, 직스 기본 줌에서 유닛이 4~19px이라 전환 임계(20px) 아래 = 사실상 전투 내내 스프라이트로 보였다. "항상 3D 모델로 움직여야 한다"는 요구와 맞지 않아 제거(2026-07-31). 다시 필요하면 그때 측정치와 함정(밉맵 금지·정사각 프레임 금지·premultipliedAlpha 필수)을 참고할 것.
+- **대군 렌더 병목은 삼각형도 재질도 아니다(실측)**: 400기에서 전 유닛을 1/7 폴리곤 모델로 바꿔도, 전 유닛 재질을 공유 단일 재질로 바꿔도 프레임이 나아지지 않았다. `renderer.render` 시간은 **드로우콜 수에 거의 선형**(229콜 4.9ms / 488콜 9ms / 1250콜 22ms ≈ 18µs·콜). → 지오메트리 LOD·텍스처 축소는 헛수고, 줄일 것은 **오브젝트/드로우콜 수**(유닛당 2~3콜).
 - 상호작용 버그는 핸들러 흐름(`techPtrDown→Move→Up`, tick)을 끝까지 읽고 나서 수정(CLAUDE.md 원칙).

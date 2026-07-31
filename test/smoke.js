@@ -140,6 +140,29 @@ async function groupGame(){
     const u=G.units.find(x=>!x.fixed && !x.hero && !x.atBoss); skipIf(!u,'판매할 유닛 없음'); const b=G.units.length;
     sellUnit(u);   // 유닛 객체를 받는다(uid 아님)
     assert(G.units.length===b-1,'판매 후 수 변화 없음 '+b+'→'+G.units.length); return 'ok'; });
+  // 설정 버튼은 data-tab이 없어 탭 재배치 목록에서 빠진다 → 재배치 후 맨 왼쪽으로 밀렸던 적 있음(직스 진입/복귀 시)
+  await step('네비바: 설정은 항상 오른쪽 끝', ()=>{ skipIf(typeof strikeSetTabOrder!=='function','strikeSetTabOrder 없음');
+    const par=$('tabs'), set=$('settingsBtn'); skipIf(!par||!set,'네비바 없음');
+    const last=()=>par.lastElementChild===set;
+    strikeSetTabOrder(['Main','Build','Upgrade','Players']);   // 직스 진입 시 순서
+    assert(last(),'직스 순서 적용 후 설정이 끝이 아님');
+    strikeSetTabOrder(null);                                   // 네모 복귀(resetGameChrome 경로)
+    assert(last(),'원복 후 설정이 끝이 아님');
+    return '위치 ok'; });
+  // 목록에서 잠깐 빠졌다 돌아온 유닛(직스의 화면 밖 컬링 등)이 사망 모션에 갇히면
+  // 멀쩡한 유닛이 누운 채로 이동하다가 모델 재생성 때 벌떡 일어난다 → 되살아나야 한다
+  await step('사망 모션: 목록 복귀 시 해제', async()=>{
+    skipIf(!(window.M3D&&M3D.sync&&M3D.dbg),'M3D 없음');
+    const id=(M3D.hasModel&&M3D.hasModel('marine'))?'marine':null; skipIf(!id,'marine 모델 미로드');
+    const U=[{uid:'zz_revive', id:id, x:0.5, y:0.5}];
+    const find=()=>M3D.dbg().anims.find(a=>a.uid==='zz_revive');
+    M3D.sync(U, 300, 300, 0.016, [], [], null, 1); skipIf(!find(),'모델 생성 실패');
+    for(let i=0;i<6;i++) M3D.sync([], 300, 300, 0.05, [], [], null, 1);   // 목록에서 빠짐 → 사망 모션 시작
+    assert(find() && find().dying===true, '사망 처리가 안 걸림(테스트 전제 실패)');
+    M3D.sync(U, 300, 300, 0.016, [], [], null, 1);                        // 다시 목록에 등장
+    const a=find(); assert(a && a.dying===false, '복귀했는데 사망 모션이 안 풀림');
+    for(let i=0;i<3;i++) M3D.sync([], 300, 300, 1.0, [], [], null, 1);    // 정리
+    return 'ok'; });
 }
 
 // ── 그룹: sandbox (관리자) ──
