@@ -13926,7 +13926,15 @@ function strikeFrame(dt){ const S=STK; if(!S) return; strikeStep(dt*(G.speedMul|
   strikeHud(); strikeLeaderboard(dt); strikeSync3D(dt);
   if(G.tab==='Main'){ S._siT=(S._siT||0)-dt; if(S._siT<=0){ S._siT=0.22; strikeRenderSelInfo(); } } }   // 선택 정보 라이브 갱신(HP)
 // 직스 3D 오버레이 — 신전(메인/2차/중립, 항상) + 크기비교 샘플유닛(sizeCmp일 때). 카메라 좌표→정규화, M3D.sync로 cvMarine 렌더(전투 탭, 맵 스케일 연동)
-function strikeSync3D(dt){ const S=STK; if(!S) return; const mcv=document.getElementById('cvMarine');
+const STK_AQ_LOW=0.55, STK_AQ_HI=1.0, STK_AQ_BAD=26, STK_AQ_GOOD=15;   // 목표 프레임(ms) — 26 초과가 이어지면 낮추고, 15 미만이 이어지면 되돌림
+function strikeAutoQuality(dt){ const S=STK; if(!S) return; const O=G.opt||(G.opt={});   // 옵션 객체가 없으면 만든다
+  if(O._aqOff) return;                           // 사용자가 직접 화질을 만졌으면 자동 조절 중단
+  const ms=Math.min(200, dt*1000); S._aq=(S._aq==null?ms:S._aq*0.9+ms*0.1);   // 평활 프레임 시간
+  S._aqT=(S._aqT||0)-dt; if(S._aqT>0) return; S._aqT=1.0;   // 1초에 한 번만 조정(요동 방지)
+  const cur=(O.resScale!=null?O.resScale:1);
+  if(S._aq>STK_AQ_BAD && cur>STK_AQ_LOW) O.resScale=Math.max(STK_AQ_LOW, cur-0.15);
+  else if(S._aq<STK_AQ_GOOD && cur<STK_AQ_HI) O.resScale=Math.min(STK_AQ_HI, cur+0.1); }
+function strikeSync3D(dt){ const S=STK; if(!S) return; strikeAutoQuality(dt); const mcv=document.getElementById('cvMarine');
   const ok3d=window.M3D && M3D.ready && M3D.ready() && !(G.opt&&G.opt.model3d===false);
   // (제거) 구 건설 3D 분기 — 건설지 3D는 renderBuildTab(관리자와 동일 경로)이 담당
   const on=(G.tab==='Main' && ok3d);
