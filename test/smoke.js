@@ -54,6 +54,18 @@ async function groupLobby(){
     const w=mo.getBoundingClientRect().width; assert(w>200&&w<400,'moCard 폭 이상: '+w); closeModeSheet(); return 'w='+w; });
   await step('방찾기 열림+목록', ()=>{ openRooms(); const rm=document.querySelector('#rooms .rmCard'); assert(visible(rm),'rmCard 안 보임');
     const n=$('roomList').children.length; assert(n>0,'방 목록 비어있음'); $('rooms').classList.add('hide'); return n+'개 방'; });
+  await step('마을 입장: 캐릭터 생성 → 그대로 입장', ()=>{ skipIf(typeof openCharScreen!=='function','캐릭터 시스템 없음');
+    PROF().chars.length=0; PROF().curId='';           // 이전 실행이 남긴 캐릭터를 지우고 첫 진입 상태로
+    hubGoTown();
+    assert(visible($('charScreen')),'마을 입장 시 캐릭터 화면이 안 뜸');
+    assert($('csTitle').textContent.indexOf('만들기')>=0,'캐릭터가 없는데 생성 화면이 아님: '+$('csTitle').textContent);
+    const inp=$('ccName'); assert(inp,'이름 입력칸 없음'); inp.value='테스트';
+    charDoCreate('warden');
+    const c=CHAR(); assert(c,'캐릭터가 안 만들어짐');
+    assert(c.cls==='warden' && c.name==='테스트','생성 결과 불일치: '+c.cls+'/'+c.name);
+    assert(_townOpen,'생성 후 마을로 안 들어감');
+    assert(document.querySelector('#twAvatar .twAvBody').textContent===PROF_CLASSES.warden.ico,'아바타가 캐릭터 종류를 안 따라감');
+    return c.name+'('+PROF_JOBS[c.unit.jobId].name+')'; });
   // 마을: 월드 좌표계 + 카메라. 헤드리스는 rAF가 멈춰 있어 twStep(dt)을 직접 pump한다.
   await step('마을: 월드 카메라 + 캐릭터 중앙 고정', ()=>{ skipIf(typeof openTown!=='function','마을 없음');
     openTown();
@@ -62,9 +74,9 @@ async function groupLobby(){
     assert(Math.abs(parseFloat(w.style.width)-mr.width*TW_WORLD_W_MUL)<2,'월드 폭이 화면×'+TW_WORLD_W_MUL+'가 아님: '+w.style.width);
     assert(parseFloat(w.style.width)>parseFloat(w.style.height),'가로로 긴 월드가 아님');
     assert(w.querySelectorAll('.twZone').length===Object.keys(TOWN_ZONES).length,'구역 아이콘 수 불일치');
-    const off=Object.keys(TOWN_ZONES).filter(id=>!_twEdgeEl[id].classList.contains('hide'));
-    assert(off.length===Object.keys(TOWN_ZONES).length-1 && off.indexOf('plaza')<0,
-      '화면 밖 구역 방향 표시가 어긋남(발밑 광장은 숨고 나머지는 떠야 함): '+off.join(','));
+    const shown=Object.keys(TOWN_ZONES).filter(id=>!_twEdgeEl[id].classList.contains('hide'));
+    assert(['plaza','charmake','charsel'].every(id=>shown.indexOf(id)<0),'화면 안에 보이는 구역인데 가장자리 표시가 뜸: '+shown.join(','));
+    assert(['gacha','gate','shop','gym'].every(id=>shown.indexOf(id)>=0),'화면 밖 모서리 구역의 가장자리 표시가 없음: '+shown.join(','));
     const t0=w.style.transform, g=twZonePx('gacha'); twSetTarget(g[0],g[1]);
     for(let i=0;i<60;i++) twStep(0.016);
     assert(w.style.transform!==t0,'월드(배경)가 안 움직임');
@@ -81,6 +93,36 @@ async function groupLobby(){
     assert(visible($('townPanel')),'구역에 도착했는데 시설 팝업이 안 열림');
     assert($('tpTitle').textContent.indexOf('뽑기집')>=0,'팝업 제목 불일치: '+$('tpTitle').textContent);
     townToHub(); return n+'프레임 이동'; });
+  await step('마을: 구역 옆을 스쳐 지날 땐 안 열림', ()=>{ skipIf(typeof twSetTarget!=='function','마을 없음');
+    openTown(); closeTownPanel();
+    const c=twZonePx('charmake');
+    _twChar.x=c[0]+220; _twChar.y=c[1]; _twEntered=null;   // 생성소 정동쪽에서 출발해
+    twSetTarget(c[0]-220, c[1]);                           // 생성소 정중앙을 관통해 서쪽으로 간다
+    let through=false, n=0;
+    while(_twChar.mode!==null && n<4000){ twStep(0.016); n++;
+      if(Math.hypot(c[0]-_twChar.x,c[1]-_twChar.y)<=TW_ZONE_R) through=true;
+      assert(_twZone!=='charmake','생성소를 지나가는 중에 팝업이 열림'); }
+    assert(through,'경로가 생성소 반경을 통과하지 않음 — 테스트가 무의미');
+    twSetTarget(c[0],c[1]);                                // 이번엔 목적지로 지정 → 열려야 한다
+    n=0; while(_twChar.mode!==null && n<4000){ twStep(0.016); n++; }
+    assert(_twZone==='charmake','목적지로 지정했는데 시설이 안 열림');
+    closeTownPanel(); townToHub(); return '통과=무반응 / 목적지=열림'; });
+  await step('캐릭터 UI 단일 소스: 입장 화면 = 마을 구역', ()=>{ skipIf(typeof renderCharSelect!=='function','캐릭터 시스템 없음');
+    assert(TOWN_ZONES.charsel.render()===renderCharSelect(),'보관소 구역이 입장 화면과 다른 마크업을 그림(복제 의심)');
+    assert(TOWN_ZONES.charmake.render()===renderCharCreate(),'생성소 구역이 입장 화면과 다른 마크업을 그림(복제 의심)');
+    return '동일'; });
+  await step('캐릭터: 성장은 따로 · 재화와 펫은 공용', ()=>{ skipIf(typeof profCreateChar!=='function','캐릭터 시스템 없음');
+    const p=PROF(); p.pcoin=1000; p.pets={wolf:{count:1}}; p.equip=['wolf'];
+    const a=CHAR(); a.statPoints=3; assert(profAllocStat('pow'),'스탯 분배 실패');
+    const powA=profStat('pow'), spA=a.statPoints;
+    const b=profCreateChar('scout','둘째'); assert(b,'두 번째 캐릭터 생성 실패');
+    assert(CHAR().id===b.id,'새로 만든 캐릭터가 선택되지 않음');
+    assert(PROF().pcoin===1000,'재화가 캐릭터를 따라감(공용이어야 함): '+PROF().pcoin);
+    assert(PROF().equip.length===1,'펫 장착이 캐릭터를 따라감(공용이어야 함)');
+    assert(b.statPoints===0 && b.level===1,'새 캐릭터가 성장을 물려받음');
+    assert(profSelectChar(a.id),'되돌아가기 실패');
+    assert(a.statPoints===spA && profStat('pow')===powA,'되돌아온 캐릭터의 성장이 바뀜');
+    return '슬롯 '+PROF().chars.length+'/'+PROF_MAX_CHARS; });
 }
 
 // ── 그룹: game (솔로 무한) ──
