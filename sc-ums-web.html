@@ -11271,7 +11271,7 @@ const STK_UNITS={
   // 🦎 스웜 확장
   venom:     {name:'산성충',      ico:'🐛', cost:130, hp:200, dmg:22, rng:230, cd:1.00, spd:260, size:18},   // 공중 산성 포자
   medusa:    {name:'군단여왕',    ico:'🐍', cost:240, hp:340, dmg:34, rng:240, cd:1.30, spd:180, size:20, splash:120},   // 공중 사이오닉 광역
-  wyvern:    {name:'비행충',    ico:'🐲', cost:420, hp:750, dmg:70, rng:250, cd:1.30, spd:240, size:22},   // 공중 준보스(고화력)
+  wyvern:    {name:'비행충',    ico:'🐲', cost:420, hp:430, dmg:70, sdmg:52, rng:250, cd:1.30, spd:240, size:22},   // 공중 준보스 · 밸런스: 무패였음 → hp750→430·실효공격120→52(sdmg). 대공 유닛에 잡히도록
   behemoth:  {name:'포격충',  ico:'🦣', cost:620, hp:1100,dmg:95, rng:300, cd:2.40, spd:120, size:26, splash:180},   // 공중 대형 보스(광역)
   // 🔮 에테리얼 확장
   skydancer: {name:'요격기',ico:'💃', cost:180, hp:240, dmg:24, rng:250, cd:1.00, spd:320, size:18},   // 공중 고속 기동
@@ -14179,7 +14179,7 @@ function strikeRngMul(u){ return (u.skillOn&&u.skillOn.siege)?(SKILLS.siege.rngM
 // (제거) strikeSpdMul — 미사용(스팀 속도 로직은 14x 인라인으로 중복)
 function strikeUnitStats(id){ const s=STK_UNITS[id], d=U[id]||{};
   const rng=(d.range!=null?d.range:0.2)*STK_RNG_MUL;                       // 사거리
-  const dmg=(d.dmg!=null?d.dmg:15);                                        // 공격력
+  const dmg=((s&&s.sdmg!=null)?s.sdmg:(d.dmg!=null?d.dmg:15));             // 공격력 — strike 전용 오버라이드(sdmg) 있으면 사용(nemo 무영향), 없으면 U
   const cd=Math.max(0.45,(d.cd!=null?d.cd:22)/STK_CD_DIV);                 // 공격속도(쿨다운)
   const spd=(STK_SPD_OVR[id]!=null?STK_SPD_OVR[id]:(d.moveSpd!=null?d.moveSpd:0.19))*STK_SPD_MUL;   // 이동속도(직스 오버라이드 우선)
   if(s){ return { hp:s.hp, dmg:dmg, rng:rng, cdMax:cd, spd:spd,
