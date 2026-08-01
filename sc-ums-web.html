@@ -1480,7 +1480,7 @@
   .plGrid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:58px;align-content:center;gap:6px;flex:1;min-height:0;padding:2px 0}
   /* 오토배틀 관전 시트 = 전용 .plbtn 그리드를 시트 호스트에 그대로(커맨드 그리드 아님) */
   #unitCmd.stkSpec,#btSheetBody.stkSpec{display:flex;flex-direction:column;min-height:0;padding:2px 6px 4px}
-  #unitCmd.stkSpec .plGrid,#btSheetBody.stkSpec .plGrid{flex:1;min-height:0}
+  #unitCmd.stkSpec .plGrid,#btSheetBody.stkSpec .plGrid{flex:1;min-height:0;grid-auto-rows:auto;grid-template-rows:repeat(2,1fr);padding:0}   /* 4×2=8칸이 시트 높이에 꽉 차게 */
   .plbtn{--pc:var(--info);position:relative;cursor:pointer;overflow:hidden;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;padding:7px 10px;
     background:linear-gradient(160deg,rgba(42,48,60,.5),rgba(10,12,17,.7));border:1px solid var(--metal-edge);
     clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
@@ -14995,12 +14995,14 @@ function strikeSpecPick(n){ const S=STK; if(!S) return;
 // 👁 오토배틀 관전 시트 = 네모(renderPlayers)와 동일한 관전 전용 .plbtn 플레이어 그리드(커맨드 그리드 아님).
 //   실제 참가자만(G.activePlayers) · 팀=슬롯 절반(1-4 vs 5-8) · 나=mine(잠금) · 적=off(암흑 시야) · 관전중=me
 function _stkSpecGridHTML(){ const S=STK, me=(G.myPlayer||1), myA=(me<=4), names=G.playerNames||{};
-  const active=((G.activePlayers&&G.activePlayers.length)?G.activePlayers.slice():[me]).sort(function(a,b){return a-b;});
+  const active=G.activePlayers||[me];   // 네모 renderPlayers 와 동일: 항상 8칸(4×2), 없는 자리는 빈자리
   let h='<div class="plGrid stkSpecGrid">';
-  for(let i=0;i<active.length;i++){ const n=active[i], enemy=((n<=4)!==myA), isMe=(n===me), watching=(S.specView===n), col=strikePColor(n);
-    const cls='plbtn'+(isMe?' mine':(enemy?' off':(watching?' me':'')));
-    const nm=isMe?escHtml(names[n]||'나'):(enemy?'적군 🌑':escHtml(names[n]||(n+'P')));
-    const click=(isMe||enemy)?'':(' onclick="strikeSpecPick('+n+')"');
+  for(let n=1;n<=8;n++){ const isMe=(n===me), present=active.indexOf(n)>=0, enemy=present&&((n<=4)!==myA), ally=present&&!isMe&&!enemy, watching=(S&&S.specView===n);
+    const cls='plbtn'+(isMe?' mine':(ally?(watching?' me':''):' off'));   // 나=mine · 아군=관전가능(관전중=me) · 적군/빈자리=off(잠금)
+    const col=(isMe||present)?strikePColor(n):'#b6bdc8';   // 빈 자리만 무채색(흰색 계열)
+    let nm; if(isMe) nm=escHtml(names[n]||(typeof myNick==='function'?myNick():'나'));
+      else if(enemy) nm='적군 🌑'; else if(present) nm=escHtml(names[n]||(n+'P')); else nm='빈 자리';
+    const click=ally?(' onclick="strikeSpecPick('+n+')"'):'';   // 입장한 아군만 관전 가능
     h+='<div class="'+cls+'" style="--pc:'+col+'"'+click+'><div class="plnum">'+n+'P</div><div class="plst">'+nm+'</div></div>'; }
   return h+'</div>'; }
 // 📦 업그레이드 시트 — 4그리드(① 광산 ② 강화 ④ 특수무기 / 3번은 비움). 구매·강화·투하는 기존 함수를 그대로 호출.
