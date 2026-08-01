@@ -85,28 +85,32 @@ async function groupLobby(){
     assert(dx<3&&dy<3,'아바타가 화면 중앙에서 벗어남: '+dx.toFixed(1)+','+dy.toFixed(1));
     assert($('twAvatar').classList.contains('walk'),'이동 중인데 걷기 모션 클래스 없음');
     return '월드 '+w.style.width+'×'+w.style.height; });
-  await step('마을: 걸어서 구역 자동 진입', ()=>{ skipIf(typeof openTown!=='function','마을 없음');
+  await step('마을: 멀리서 구역을 지정하면 걸어가서 열림', ()=>{ skipIf(typeof openTown!=='function','마을 없음');
     closeTownPanel();
-    const g=twZonePx('gacha'); twSetTarget(g[0],g[1]);
+    townGo('gacha');   // 화면 밖 구역 지정 — 아이콘/가장자리 표시 탭과 같은 경로
+    assert(_twGoZone==='gacha','구역 지정이 안 됨');
     let n=0; while(_twChar.mode!==null && n<4000){ twStep(0.016); n++; }
     assert(n<4000,'목적지에 도착하지 못함');
-    assert(visible($('townPanel')),'구역에 도착했는데 시설 팝업이 안 열림');
+    assert(visible($('townPanel')),'지정한 구역에 도착했는데 시설 팝업이 안 열림');
     assert($('tpTitle').textContent.indexOf('뽑기집')>=0,'팝업 제목 불일치: '+$('tpTitle').textContent);
     townToHub(); return n+'프레임 이동'; });
-  await step('마을: 구역 옆을 스쳐 지날 땐 안 열림', ()=>{ skipIf(typeof twSetTarget!=='function','마을 없음');
+  await step('마을: 지정하지 않으면 안 열림(스쳐 지남·겹쳐 섬)', ()=>{ skipIf(typeof twSetTarget!=='function','마을 없음');
     openTown(); closeTownPanel();
     const c=twZonePx('charmake');
-    _twChar.x=c[0]+220; _twChar.y=c[1]; _twEntered=null;   // 생성소 정동쪽에서 출발해
-    twSetTarget(c[0]-220, c[1]);                           // 생성소 정중앙을 관통해 서쪽으로 간다
+    _twChar.x=c[0]+220; _twChar.y=c[1];                    // ① 생성소 정중앙을 관통해 지나가기
+    twSetTarget(c[0]-220, c[1]);
     let through=false, n=0;
     while(_twChar.mode!==null && n<4000){ twStep(0.016); n++;
       if(Math.hypot(c[0]-_twChar.x,c[1]-_twChar.y)<=TW_ZONE_R) through=true;
-      assert(_twZone!=='charmake','생성소를 지나가는 중에 팝업이 열림'); }
+      assert(!visible($('townPanel')),'지나가는 중에 팝업이 열림'); }
     assert(through,'경로가 생성소 반경을 통과하지 않음 — 테스트가 무의미');
-    twSetTarget(c[0],c[1]);                                // 이번엔 목적지로 지정 → 열려야 한다
+    twSetTarget(c[0], c[1]);                               // ② 땅을 눌러 구역 위에 정확히 겹쳐 서기
     n=0; while(_twChar.mode!==null && n<4000){ twStep(0.016); n++; }
-    assert(_twZone==='charmake','목적지로 지정했는데 시설이 안 열림');
-    closeTownPanel(); townToHub(); return '통과=무반응 / 목적지=열림'; });
+    for(let i=0;i<30;i++) twStep(0.016);                   // 멈춘 뒤에도 계속 안 열려야 한다
+    assert(!visible($('townPanel')),'구역 위에 겹쳐 섰다고 팝업이 열림');
+    townGo('charmake');                                    // ③ 그 자리에서 구역을 누르면 열린다
+    assert(visible($('townPanel')) && _twZone==='charmake','겹쳐 선 채로 구역을 눌렀는데 안 열림');
+    closeTownPanel(); townToHub(); return '통과·겹침=무반응 / 지정=열림'; });
   await step('캐릭터 UI 단일 소스: 입장 화면 = 마을 구역', ()=>{ skipIf(typeof renderCharSelect!=='function','캐릭터 시스템 없음');
     assert(TOWN_ZONES.charsel.render()===renderCharSelect(),'보관소 구역이 입장 화면과 다른 마크업을 그림(복제 의심)');
     assert(TOWN_ZONES.charmake.render()===renderCharCreate(),'생성소 구역이 입장 화면과 다른 마크업을 그림(복제 의심)');
