@@ -14881,13 +14881,13 @@ function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
       let _toTemple=!tgt, _fireT=false;   // _toTemple=신전 분기로 처리 · _fireT=표적에 못 닿는 동안 사거리 안 신전을 대신 사격
       if(tgt){ const d=Math.hypot(tgt.x-u.x,tgt.y-u.y);   // 유닛 우선 교전
         if(d<=strikeReach(u,tgt)){ u.moving=false; u._blk=0; u._swp=0; u.face=Math.atan2(tgt.x-u.x, tgt.y-u.y); u.cd-=dt;
-          if(u.cd<=0){ u.cd=u.cdMax; u.fireSeq=(u.fireSeq||0)+1; tgt.hp-=u.dmg*strikeSkillAtkMul(u)*strikeAtkMul(me); strikeFx(u,tgt.x,tgt.y,col);   // fireSeq++ = 3D 공격 모션 트리거
+          if(u.cd<=0){ u.cd=u.cdMax; u.fireSeq=(u.fireSeq||0)+1; tgt.hp-=u.dmg*strikeSkillAtkMul(u)*strikeAtkMul(me)*_sbTypeMul(u,tgt); strikeFx(u,tgt.x,tgt.y,col);   // fireSeq++ = 3D 공격 모션 · ×상성(타입×크기)
             { const _uAir=strikeIsAir(u);
               if(!tgt.tgtUid && (!tgt._atk || (_uAir? tgt._atk.air : tgt._atk.gnd))) tgt.tgtUid=u.uid;   // 반격은 때릴 수 있을 때만
               tgt._acqT=0; tgt._inrT=0;                           // 맞으면 즉시 재판단(사거리 안 스캔 주기도 리셋)
               strikeAlert(foe.units, u.uid, tgt.x, tgt.y, 420, _uAir); }   // 주변 아군 가담(때릴 수 있는 아군만)
             if(u.splash>0){ const sr2=u.splash*u.splash, sd=u.dmg*0.6;   // 광역: 타겟 주변 적에게 60% 추가타
-              for(const e of foe.units){ if(e===tgt||e.dead) continue; const ex=e.x-tgt.x, ey=e.y-tgt.y; if(ex*ex+ey*ey<=sr2){ e.hp-=sd; if(e.hp<=0){ e.dead=true; me.kills=(me.kills||0)+1; me.gold+=strikeKillGold(e); } } } }
+              for(const e of foe.units){ if(e===tgt||e.dead) continue; const ex=e.x-tgt.x, ey=e.y-tgt.y; if(ex*ex+ey*ey<=sr2){ e.hp-=sd*_sbTypeMul(u,e); if(e.hp<=0){ e.dead=true; me.kills=(me.kills||0)+1; me.gold+=strikeKillGold(e); } } } }   // ×대상별 상성
             if(tgt.hp<=0){ tgt.dead=true; me.kills=(me.kills||0)+1; me.gold+=strikeKillGold(tgt); } } }   // 처치 집계 + 킬 보상
         else { const _gq=(front&&!front.dead)?strikeTempleGap(front,u.x,u.y):1e9;
           // ⚠ 적 표적이 있으면 **접근이 실제로 막혔을 때만** 신전을 때린다.
