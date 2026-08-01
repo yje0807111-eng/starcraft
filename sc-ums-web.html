@@ -2163,7 +2163,7 @@
   .twEdge:active{transform:translate(-50%,-50%) scale(.92)}
   .twTapFx{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;border:2px solid rgba(92,214,255,.85);pointer-events:none;z-index:1;animation:twTap .5s ease-out forwards}
   @keyframes twTap{from{transform:scale(.4);opacity:.9}to{transform:scale(1.6);opacity:0}}
-  .twGround{position:absolute;left:8%;right:8%;top:12%;bottom:8%;border-radius:46% 46% 34% 34%/34% 34% 30% 30%;pointer-events:none;
+  .twGround{position:absolute;left:9%;right:9%;top:12%;bottom:12%;border-radius:64px;pointer-events:none;
     background:radial-gradient(ellipse at 50% 42%,rgba(74,96,74,.22),rgba(40,54,74,.06) 72%);border:1px solid rgba(255,255,255,.05);box-shadow:inset 0 0 40px -10px rgba(0,0,0,.5)}
   .twZone{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;z-index:2}
   .twZone::before{content:'';position:absolute;left:50%;top:16px;transform:translate(-50%,-50%);width:50px;height:50px;border-radius:50%;z-index:-1;pointer-events:none;
@@ -3986,14 +3986,15 @@ function profStampSeen(){ if(PLAYER_META&&PLAYER_META.profile){ PLAYER_META.prof
 // ── 마을(월드 + 카메라) ──
 // 좌표계: 월드 픽셀. 캐릭터는 화면 정중앙에 CSS로 고정되고, 매 프레임 #twWorld의 transform만 바뀐다.
 // 구역 추가는 TOWN_ZONES에 한 줄 추가로 끝난다(아이콘 DOM·좌표·패널 제목·렌더러가 전부 여기 모여 있음).
+// 배치: 가로로 긴 직사각형의 네 모서리 + 정중앙 광장(주 이동 방향이 가로라 좌우로 넓게 잡는다)
 const TOWN_ZONES={
-  plaza:{ x:50, y:78, ico:'🏠',   label:'광장',      title:'광장 · 내 캐릭터', render:()=>renderProfStats() },
-  shop: { x:20, y:52, ico:'🛒',   label:'장비 상점', title:'장비 상점',        render:()=>renderProfGear()  },
-  gym:  { x:80, y:52, ico:'🏋️',  label:'훈련장',    title:'훈련장',           render:()=>renderProfIdle()  },
-  gacha:{ x:24, y:24, ico:'🎁',   label:'뽑기집',    title:'뽑기집 · 펫',      render:()=>renderProfGacha() },
-  gate: { x:76, y:24, ico:'🔒',   label:'관문',      title:'관문',             render:()=>renderProfGate()  },
+  plaza:{ x:50, y:50, ico:'🏠',   label:'광장',      title:'광장 · 내 캐릭터', render:()=>renderProfStats() },
+  gacha:{ x:22, y:24, ico:'🎁',   label:'뽑기집',    title:'뽑기집 · 펫',      render:()=>renderProfGacha() },   // 좌상
+  gate: { x:78, y:24, ico:'🔒',   label:'관문',      title:'관문',             render:()=>renderProfGate()  },   // 우상
+  shop: { x:22, y:76, ico:'🛒',   label:'장비 상점', title:'장비 상점',        render:()=>renderProfGear()  },   // 좌하
+  gym:  { x:78, y:76, ico:'🏋️',  label:'훈련장',    title:'훈련장',           render:()=>renderProfIdle()  },   // 우하
 };
-const TW_WORLD_MUL=3;        // 월드 = 화면의 N배(가로·세로). 마을을 넓히려면 이 값만 올린다
+const TW_WORLD_W_MUL=3, TW_WORLD_H_MUL=1.35;   // 월드 = 화면의 가로 N배 × 세로 M배. 마을을 넓히려면 이 값만 올린다
 const TW_SPEED=190;          // 캐릭터 이동 속도(월드 px/초)
 const TW_ARRIVE=4;           // 목적지 도착 판정(px)
 const TW_ZONE_R=52;          // 구역 자동 진입 반경(px)
@@ -4039,7 +4040,7 @@ function twEdgeApply(){ const M=24, cx=_twVW/2, cy=_twVH/2;
 // 월드 픽셀 크기 산출 + 구역 배치. 화면 크기가 바뀌면 캐릭터 좌표도 비례로 옮겨 상대 위치를 지킨다.
 function twLayout(){ const map=document.getElementById('twMap'), w=document.getElementById('twWorld'); if(!map||!w) return;
   const r=map.getBoundingClientRect(); _twVW=r.width; _twVH=r.height; _twVL=r.left; _twVT=r.top;
-  const nw=Math.round(r.width*TW_WORLD_MUL), nh=Math.round(r.height*TW_WORLD_MUL);
+  const nw=Math.round(r.width*TW_WORLD_W_MUL), nh=Math.round(r.height*TW_WORLD_H_MUL);
   if(_twW&&_twH&&(nw!==_twW||nh!==_twH)){ const sx=nw/_twW, sy=nh/_twH;
     _twChar.x*=sx; _twChar.y*=sy; _twChar.tx*=sx; _twChar.ty*=sy; }
   _twW=nw; _twH=nh; w.style.width=nw+'px'; w.style.height=nh+'px';

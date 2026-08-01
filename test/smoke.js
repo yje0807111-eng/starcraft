@@ -59,7 +59,8 @@ async function groupLobby(){
     openTown();
     const map=$('twMap'), w=$('twWorld'); assert(w,'#twWorld 없음');
     const mr=map.getBoundingClientRect();
-    assert(Math.abs(parseFloat(w.style.width)-mr.width*TW_WORLD_MUL)<2,'월드 폭이 화면×'+TW_WORLD_MUL+'가 아님: '+w.style.width);
+    assert(Math.abs(parseFloat(w.style.width)-mr.width*TW_WORLD_W_MUL)<2,'월드 폭이 화면×'+TW_WORLD_W_MUL+'가 아님: '+w.style.width);
+    assert(parseFloat(w.style.width)>parseFloat(w.style.height),'가로로 긴 월드가 아님');
     assert(w.querySelectorAll('.twZone').length===Object.keys(TOWN_ZONES).length,'구역 아이콘 수 불일치');
     const off=Object.keys(TOWN_ZONES).filter(id=>!_twEdgeEl[id].classList.contains('hide'));
     assert(off.length===Object.keys(TOWN_ZONES).length-1 && off.indexOf('plaza')<0,
