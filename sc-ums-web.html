@@ -7748,6 +7748,28 @@ function _sbStingerKamikaze(u, tgt, dt, units, myTeam, MM){   // 스팅어(자�
     u.hp=0; u._sbExploded=true;   // 자폭=사망(중복 death boom 억제)
   }
 }
+// ══ 상성 엔진: 데미지 타입 × 유닛 크기(스타크래프트식) ══════════════════
+// 타입: normal(전부100%) · concussive(진동: 소100·중50·대25) · explosive(폭발: 대100·중75·소50)
+// 크기: s(소형)·m(중형)·l(대형). ⚠ 프로토스식 쉴드는 크기 무관 100%(공식은 _sbEffAtk에서 sh>0 처리)
+const TYPE_VS_SIZE={ normal:{s:1,m:1,l:1}, concussive:{s:1,m:0.5,l:0.25}, explosive:{s:0.5,m:0.75,l:1} };
+// 유닛 전투 분류(model3d/기본 id 기준) — dt=공격 데미지타입, sz=피격 크기. 밸런싱 단일 소스.
+const UNIT_COMBAT_CLASS={
+  // 유니온
+  marine:{dt:'normal',sz:'s'}, machinegun:{dt:'concussive',sz:'s'}, ghost:{dt:'concussive',sz:'s'},
+  racer:{dt:'concussive',sz:'m'}, tank:{dt:'explosive',sz:'l'}, goliath:{dt:'explosive',sz:'l'},
+  skyguard:{dt:'normal',sz:'l'}, hellfire:{dt:'normal',sz:'l'}, dreadnought:{dt:'explosive',sz:'l'},
+  // 스웜
+  snapper:{dt:'normal',sz:'s'}, hydra:{dt:'explosive',sz:'m'}, thornqueen:{dt:'normal',sz:'m'},
+  stinger:{dt:'normal',sz:'s'}, wyvern:{dt:'explosive',sz:'l'}, venom:{dt:'explosive',sz:'m'},
+  behemoth:{dt:'explosive',sz:'l'}, broodling:{dt:'normal',sz:'s'}, ultralisk:{dt:'normal',sz:'l'},
+  // 에테리얼
+  dragoon:{dt:'explosive',sz:'l'}, blade:{dt:'normal',sz:'s'}, archon:{dt:'normal',sz:'l'},
+  falcon:{dt:'explosive',sz:'m'}, skydancer:{dt:'explosive',sz:'m'}, archangel:{dt:'normal',sz:'l'},
+  kronos:{dt:'explosive',sz:'l'}, dark_templar:{dt:'normal',sz:'s'}, larva:{dt:'normal',sz:'l'} };
+function _uClass(u){ return u&&(UNIT_COMBAT_CLASS[u.id]||UNIT_COMBAT_CLASS[u.gmodel]); }
+function _sbTypeMul(atk, tgt){ const A=_uClass(atk); if(!A||A.dt==='normal') return 1;   // 무분류·일반형=100%
+  const B=_uClass(tgt); const sz=(B&&B.sz)||'m'; const row=TYPE_VS_SIZE[A.dt];   // 대상 크기(미분류=중형 취급)
+  return (row&&row[sz]!=null)?row[sz]:1; }
 function stepSbCombat(dt){ if(typeof G==='undefined'||!G.sandbox||G.tab!=='Battle'||!G.sbCombat||!G.units||!G.units.length) return;   // ⚔ 양방향 실전 전투(적팀=team:'foe')
   const units=G.units; if(!G.btFx) G.btFx=FX.store(); if(!G.btPend) G.btPend=[]; const _dmgAcc={};   // 동시 데미지(처리순서 편향 제거)
   const _alive=u=>!(u.maxHp&&(u.hp!=null?u.hp:u.maxHp)<=0), _MM=(typeof MOVE_MUL!=='undefined'?MOVE_MUL:1);
@@ -7770,10 +7792,12 @@ function stepSbCombat(dt){ if(typeof G==='undefined'||!G.sandbox||G.tab!=='Battl
     if(dist<=rng){   // 사거리 내 → 정지·조준
       u.face=Math.atan2(tgt.x-u.x, tgt.y-u.y); u.moving=false;
       // ── 데미지: 부드러운 DPS(매 프레임) — 밸런스용(이산 발사 타이밍 영향 제거) ──
-      const _td=Ueff(tgt), _armor=((tgt.sh>0)?(_td.shArmor||0):(_td.armor||0))+_upgDef(tgt);   // 유즈맵 유효 스탯 · 실드=shArmor/체력=armor (+건설 방어 티어)
-      const _ad=Ueff(u), _dps=Math.max(0.5,((_ad.dmg||1)+_upgAtk(u))-_armor)*60/Math.max(0.2,(_ad.cd||22));   // 유즈맵 유효 스탯 · (공격력+무기티어−방어력)×초당공격횟수
-      if(_ad.splash){ const _SR=0.05; for(const o of units){ if(o.fixed||_sbTeam(o)===myTeam||!_alive(o)) continue; const _sx=o.x-tgt.x,_sy=o.y-tgt.y; if(_sx*_sx+_sy*_sy<=_SR*_SR){ _dmgAcc[o.uid]=(_dmgAcc[o.uid]||0)+_dps*dt; o.flash=0.12; } } }   // 스플래시(광역): 대상 주변 적 동시 타격 → 물량 카운터
-      else { _dmgAcc[tgt.uid]=(_dmgAcc[tgt.uid]||0)+_dps*dt; tgt.flash=0.12; }   // 단일 대상
+      const _ad=Ueff(u), _atk=(_ad.dmg||1)+_upgAtk(u), _rate=60/Math.max(0.2,(_ad.cd||22));   // 유효 공격력 + 무기티어 · 초당공격횟수
+      // 대상별 실효 DPS = max(0.5, (공격력 × 타입상성) − 방어력) × 공속. 쉴드 있으면 상성 무시(100%)·shArmor 사용
+      const _eff=(o)=>{ const _od=Ueff(o), _oarm=((o.sh>0)?(_od.shArmor||0):(_od.armor||0))+_upgDef(o), _mul=(o.sh>0)?1:_sbTypeMul(u,o);
+        return Math.max(0.5, _atk*_mul - _oarm)*_rate; };
+      if(_ad.splash){ const _SR=0.05; for(const o of units){ if(o.fixed||_sbTeam(o)===myTeam||!_alive(o)) continue; const _sx=o.x-tgt.x,_sy=o.y-tgt.y; if(_sx*_sx+_sy*_sy<=_SR*_SR){ _dmgAcc[o.uid]=(_dmgAcc[o.uid]||0)+_eff(o)*dt; o.flash=0.12; } } }   // 스플래시(광역): 주변 적 각자 크기 상성으로 동시 타격
+      else { _dmgAcc[tgt.uid]=(_dmgAcc[tgt.uid]||0)+_eff(tgt)*dt; tgt.flash=0.12; }   // 단일 대상
       // ── 시각 발사 케이던스 = base_stats 공속(실제 DPS와 동일 리듬) ──
       if(!G._balSim && !(u._btCd>0)){ const cd=(typeof fxLabStats==='function')?Math.max(0.42,fxLabStats(u.id,u.gmodel).cd):0.6; u._btCd=cd; u.fireSeq=(u.fireSeq||0)+1;
         if(typeof playUnitAttack==='function') playUnitAttack(u.gmodel||u.id);
@@ -11653,7 +11677,9 @@ const TECH_BLDG_UNIT={
 function _techBU(race,bk){ return (TECH_BLDG_UNIT[race]||{})[bk]||null; }
 function techBldgUnit(race, bk){ const e=_techBU(race,bk);
   return (e && typeof STK_UNITS!=='undefined' && STK_UNITS[e.u]) ? e.u : null; }
-function techBldgCount(race, bk){ const e=_techBU(race,bk); return Math.max(1, ((e&&e.n)||1)*TECH_WAVE_MUL); }
+// 종족 평준화: 건물당 배출 수를 종족별로 스케일 — 유니온 기준(1.0) · 에테리얼 소수정예(2/3) · 스웜 물량(1.5배)
+const STK_RACE_SPAWN={ union:1, aetherial:2/3, swarm:1.5 };
+function techBldgCount(race, bk){ const e=_techBU(race,bk); const rm=(STK_RACE_SPAWN[race]||1); return Math.max(1, Math.round(((e&&e.n)||1)*TECH_WAVE_MUL*rm)); }
 // 기본 공통 자료(data/base_stats.md) — SC 원본 공격 쿨다운 프레임(cd, 작을수록 빠름·24f=1s) / 이동 픽셀(mv, 클수록 빠름). 게임 id 기준.
 const BASE_CD={  // 0=공격 없음(수송·시전·자폭 등)
   worker_human:15, marine:15, machinegun:22, medic:0, ghost:22, racer:30, tank:37, goliath:22, skyguard:22, pelican:0, hellfire:64, aegis:0, dreadnought:30,
@@ -14767,7 +14793,16 @@ function strikeSpawnWave(){ const S=STK; if(!S) return;   // 출격 주기(30초
       strikeSpawnUnit('me', e.uid); myCount++; }
     if(out.length && G.tab==='Build' && typeof techUIRender==='function') techUIRender(); }
   if(!myCount){ strikeSpawnUnit('me'); strikeSpawnUnit('me'); myCount=2; }   // 생산이 없으면 기본 소량(전멸 방지)
-  const n=Math.max(2, myCount)+(Math.random()*2|0); for(let i=0;i<n;i++) strikeSpawnUnit('ai'); }   // AI는 내 총 생산량에 맞춰 대응
+  // 🤖 AI = 자기 종족 건물로 직접 배출(미러링 제거). 플레이어의 완성 생산건물 수만큼 자기 종족 건물을 갖춘 것으로 보고,
+  //    그 종족의 배출 수(techBldgCount)로 소환 → 종족 조합·배출 배수가 싱글에서도 진짜 종족 대결로 반영. 난이도는 내 건물 수에 연동.
+  { const _ar=S.ai.race, _keys=Object.keys(TECH_BLDG_UNIT[_ar]||{});
+    let _pb=0; if(G.tech && G.tech.ents){ const _mr=G.tech.race; for(const e of G.tech.ents){ if(e.type==='bldg' && (e.bt||0)<=0 && techBldgUnit(_mr, e.bk)) _pb++; } }
+    _pb=Math.max(2, _pb);   // 플레이어 생산건물 수(난이도 기준) · 최소 2
+    let _aiN=0;
+    if(_keys.length){ for(let i=0;i<_pb;i++){ const bk=_keys[i % _keys.length], uid=techBldgUnit(_ar, bk); if(!uid) continue;
+      const _cnt=techBldgCount(_ar, bk);
+      for(let k=0;k<_cnt;k++){ const _b4=S.ai.units.length; strikeSpawnUnit('ai', uid); if(S.ai.units.length<=_b4) break; _aiN++; } } }
+    if(!_aiN){ strikeSpawnUnit('ai'); strikeSpawnUnit('ai'); } } }   // 폴백(전멸 방지)
 function strikeFrontStruct(side){ const S=STK, foe=S[side==='me'?'ai':'me'];   // 가장 앞 신전: 중립 살아있으면 중립(그 뒤 신전은 못 때림) → 적 2차 → 적 메인
   if(S.central && !S.central.dead) return S.central;
   if(foe.sec && !foe.sec.dead) return foe.sec;
@@ -14879,13 +14914,13 @@ function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
       let _toTemple=!tgt, _fireT=false;   // _toTemple=신전 분기로 처리 · _fireT=표적에 못 닿는 동안 사거리 안 신전을 대신 사격
       if(tgt){ const d=Math.hypot(tgt.x-u.x,tgt.y-u.y);   // 유닛 우선 교전
         if(d<=strikeReach(u,tgt)){ u.moving=false; u._blk=0; u._swp=0; u.face=Math.atan2(tgt.x-u.x, tgt.y-u.y); u.cd-=dt;
-          if(u.cd<=0){ u.cd=u.cdMax; u.fireSeq=(u.fireSeq||0)+1; tgt.hp-=u.dmg*strikeSkillAtkMul(u)*strikeAtkMul(me); strikeFx(u,tgt.x,tgt.y,col);   // fireSeq++ = 3D 공격 모션 트리거
+          if(u.cd<=0){ u.cd=u.cdMax; u.fireSeq=(u.fireSeq||0)+1; tgt.hp-=u.dmg*strikeSkillAtkMul(u)*strikeAtkMul(me)*_sbTypeMul(u,tgt); strikeFx(u,tgt.x,tgt.y,col);   // fireSeq++ = 3D 공격 모션 · ×상성(타입×크기)
             { const _uAir=strikeIsAir(u);
               if(!tgt.tgtUid && (!tgt._atk || (_uAir? tgt._atk.air : tgt._atk.gnd))) tgt.tgtUid=u.uid;   // 반격은 때릴 수 있을 때만
               tgt._acqT=0; tgt._inrT=0;                           // 맞으면 즉시 재판단(사거리 안 스캔 주기도 리셋)
               strikeAlert(foe.units, u.uid, tgt.x, tgt.y, 420, _uAir); }   // 주변 아군 가담(때릴 수 있는 아군만)
             if(u.splash>0){ const sr2=u.splash*u.splash, sd=u.dmg*0.6;   // 광역: 타겟 주변 적에게 60% 추가타
-              for(const e of foe.units){ if(e===tgt||e.dead) continue; const ex=e.x-tgt.x, ey=e.y-tgt.y; if(ex*ex+ey*ey<=sr2){ e.hp-=sd; if(e.hp<=0){ e.dead=true; me.kills=(me.kills||0)+1; me.gold+=strikeKillGold(e); } } } }
+              for(const e of foe.units){ if(e===tgt||e.dead) continue; const ex=e.x-tgt.x, ey=e.y-tgt.y; if(ex*ex+ey*ey<=sr2){ e.hp-=sd*_sbTypeMul(u,e); if(e.hp<=0){ e.dead=true; me.kills=(me.kills||0)+1; me.gold+=strikeKillGold(e); } } } }   // ×대상별 상성
             if(tgt.hp<=0){ tgt.dead=true; me.kills=(me.kills||0)+1; me.gold+=strikeKillGold(tgt); } } }   // 처치 집계 + 킬 보상
         else { const _gq=(front&&!front.dead)?strikeTempleGap(front,u.x,u.y):1e9;
           // ⚠ 적 표적이 있으면 **접근이 실제로 막혔을 때만** 신전을 때린다.
