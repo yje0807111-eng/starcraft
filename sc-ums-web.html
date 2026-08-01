@@ -7107,15 +7107,36 @@ function _upgradeSheetModel(){
 function renderUpgradeSheet(){ const host=document.getElementById('unitCmd'); if(!host) return; host.classList.add('simple');
   const sig='u|'+((G.atkLv&&[G.atkLv.inf,G.atkLv.mech,G.atkLv.zrg,G.atkLv.pro].join('.'))||'')+'|'+(G.gachaLuckLv||0)+'|'+(G.creditLv||0)+'|'+Math.floor(G.mineral||0)+'|'+Math.floor(G.gas||0)+'|'+(host._cgPage||0);
   if(host._gSig!==sig){ host._gSig=sig; host._cgSig=undefined; renderCmdGrid(host, _upgradeSheetModel()); } }
-// 👥 플레이어 시트 — 메인 유지 + 활성 플레이어 그리드. 셀 탭 = 그 플레이어 화면(관전)으로 이동.
-function _playersSheetModel(){
-  const me=G.myPlayer||1, active=G.activePlayers||[1,2,3,4,5,6,7,8];
-  const items=active.map(n=>{ const isMe=(n===me);
-    return { pro:'<span class="pemoji">'+n+'P</span>', sn:(typeof playerName==='function'?playerName(n):('P'+n))+(isMe?' (나)':''),
-      tr:isMe?'현재':'관전', metaCls:'lv', state:isMe?'max':'ok', sel:isMe && n===G.curPlayer,
-      act:isMe?'':('onclick="viewPlayerFromSheet('+n+')"') }; });
-  return { mode:'players', title:'플레이어', icon:pIco('👥'), sub:'다른 플레이어 화면 보기', compact:true, build:true,
-    info:{ eb:'플레이어', name:'다른 플레이어 관전', desc:'플레이어를 눌러 그 화면으로 이동' }, items:items }; }
+// ═══ 공통 관전 플레이어 시트 빌더(단일 소스) — 협동/대전(versus)을 옵션으로. 네모·오토배틀·향후 유즈맵 공용 ═══
+//   cfg: { me, active[], names{}, versus, team(n), color(n), portrait(n,o), nameOf(n), badgeOf(n,o), watchingOf(n),
+//          selOf(n,isMe), pickAttr(n), selfPickable, selfState, mode, title, icon, sub, info }
+//   o = {isMe, enemy, watching, col} (카드별 상태). versus=true면 team(n)!==team(me) = 적(잠금).
+function playerSheetModel(cfg){
+  const me=cfg.me, active=(cfg.active&&cfg.active.length)?cfg.active:[me], names=cfg.names||{};
+  const myTeam=cfg.versus?cfg.team(me):null;
+  const items=active.map(function(n){
+    const isMe=(n===me), enemy=cfg.versus?(cfg.team(n)!==myTeam):false, watching=cfg.watchingOf?!!cfg.watchingOf(n):false;
+    const clickable=!enemy && (isMe?(cfg.selfPickable!==false):true), col=cfg.color?cfg.color(n):'#7fd0ff';
+    const o={isMe:isMe, enemy:enemy, watching:watching, col:col};
+    return { pro:cfg.portrait?cfg.portrait(n,o):('<span class="pemoji">'+n+'P</span>'),
+      sn:cfg.nameOf?cfg.nameOf(n):(names[n]||(n+'P')),
+      tr:cfg.badgeOf?cfg.badgeOf(n,o):(isMe?'현재':(n+'P')), metaCls:'lv',
+      state:enemy?'dim':(clickable?((isMe&&cfg.selfState)?cfg.selfState:'ok'):'max'),
+      sel:watching||(cfg.selOf?!!cfg.selOf(n,isMe):false),
+      act:clickable?cfg.pickAttr(n):'' }; });
+  return { mode:cfg.mode||'players', title:cfg.title||'플레이어', icon:cfg.icon||pIco('👥'), sub:cfg.sub||'',
+    compact:true, build:true, info:cfg.info||{ eb:'플레이어', hideName:true, desc:'' }, items:items }; }
+// 👥 네모(협동) 플레이어 시트 — 나 빼고 전부 관전 가능. 셀 탭 = 그 플레이어 화면.
+function _playersSheetModel(){ const me=G.myPlayer||1;
+  return playerSheetModel({ me:me, active:G.activePlayers||[1,2,3,4,5,6,7,8], versus:false,
+    selfPickable:false, selfState:'max',
+    nameOf:function(n){ return (typeof playerName==='function'?playerName(n):('P'+n))+(n===me?' (나)':''); },
+    badgeOf:function(n,o){ return o.isMe?'현재':'관전'; },
+    selOf:function(n,isMe){ return isMe && n===G.curPlayer; },
+    portrait:function(n){ return '<span class="pemoji">'+n+'P</span>'; },
+    pickAttr:function(n){ return 'onclick="viewPlayerFromSheet('+n+')"'; },
+    mode:'players', title:'플레이어', icon:pIco('👥'), sub:'다른 플레이어 화면 보기',
+    info:{ eb:'플레이어', name:'다른 플레이어 관전', desc:'플레이어를 눌러 그 화면으로 이동' } }); }
 function renderPlayersSheet(){ const host=document.getElementById('unitCmd'); if(!host) return; host.classList.add('simple');
   const sig='p|'+(G.myPlayer||1)+'|'+((G.activePlayers||[]).join('.'))+'|'+(G.curPlayer||0)+'|'+(host._cgPage||0);
   if(host._gSig!==sig){ host._gSig=sig; host._cgSig=undefined; renderCmdGrid(host, _playersSheetModel()); } }
@@ -14967,15 +14988,19 @@ function strikeSpecPick(n){ const S=STK; if(!S) return;
   const h=document.getElementById('unitCmd'); if(h) h._stkSig=null;
   if(G.tab==='Build' && typeof techPanelRender==='function') techPanelRender();
   if(typeof playSfx==='function') playSfx('ui_confirm'); }
-function _stkSpecModel(){ const S=STK;
-  const me=(G.myPlayer||1), myA=(me<=4), names=G.playerNames||{};   // 팀 = 슬롯 절반(1-4 vs 5-8), 내 팀 기준으로 적 판정
-  const active=((G.activePlayers&&G.activePlayers.length)?G.activePlayers.slice():[me]).sort(function(a,b){return a-b;});   // 실제 참가 플레이어만
-  const items=active.map(function(n){ const enemy=((n<=4)!==myA), isMe=(n===me), col=strikePColor(n), watching=(S.specView===n);
-    return { pro:'<span class="pemoji" style="color:'+(enemy?'#6b7480':col)+';filter:drop-shadow(0 0 5px '+(enemy?'#0006':col)+')">'+(enemy?'🌑':'◈')+'</span>',
-      sn:(names[n]||(isMe?'나':(n+'P'))), tr:watching?'관전중':(isMe?'나':(n+'P')), metaCls:'lv',
-      state:enemy?'dim':(watching?'sel':'on'), act:enemy?'':('onclick="strikeSpecPick('+n+')"') }; });
-  return { mode:'prod', compact:true, build:true, title:'관전 · 플레이어', icon:pIco('👁'), items:items,
-    info:{ eb:'관전', hideName:true, desc:'우리 팀 플레이어를 선택하면 그 진영 건설을 관전합니다.<br>적 진영은 암흑 시야(🌑)로 잠깁니다.' } }; }
+// 👁 오토배틀(대전) 관전 시트 — 공통 빌더의 versus 버전(팀=슬롯 절반, 적 팀 잠금, 나 포함 내 팀 관전 가능)
+function _stkSpecModel(){ const S=STK, me=(G.myPlayer||1);
+  return playerSheetModel({ me:me,
+    active:((G.activePlayers&&G.activePlayers.length)?G.activePlayers.slice():[me]).sort(function(a,b){return a-b;}),
+    names:G.playerNames||{}, versus:true, team:function(n){ return n<=4?'A':'B'; },   // 슬롯 절반(1-4 vs 5-8)
+    selfPickable:true, selfState:'ok', color:function(n){ return strikePColor(n); },
+    portrait:function(n,o){ return '<span class="pemoji" style="color:'+(o.enemy?'#6b7480':o.col)+';filter:drop-shadow(0 0 5px '+(o.enemy?'#0006':o.col)+')">'+(o.enemy?'🌑':'◈')+'</span>'; },
+    nameOf:function(n){ return (G.playerNames||{})[n]||(n===me?'나':(n+'P')); },
+    badgeOf:function(n,o){ return o.watching?'관전중':(o.isMe?'나':(n+'P')); },
+    watchingOf:function(n){ return S.specView===n; },
+    pickAttr:function(n){ return 'onclick="strikeSpecPick('+n+')"'; },
+    mode:'prod', title:'관전 · 플레이어', icon:pIco('👁'),
+    info:{ eb:'관전', hideName:true, desc:'우리 팀 플레이어를 선택하면 그 진영 건설을 관전합니다.<br>적 진영은 암흑 시야(🌑)로 잠깁니다.' } }); }
 // 📦 업그레이드 시트 — 4그리드(① 광산 ② 강화 ④ 특수무기 / 3번은 비움). 구매·강화·투하는 기존 함수를 그대로 호출.
 function _stkLv(cur,max){ return (cur>=max)?'MAX':(cur+'/'+max); }   // 카드 우상단 표기 통일
 function _stkSupplyModel(){ const S=STK, me=S.me, gold=Math.floor(me.gold||0);
