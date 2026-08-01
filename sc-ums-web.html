@@ -1865,7 +1865,6 @@
   .stEconRow.stEconTot b{color:#8fe6a0;font-size:16px}
   .stBtn{width:100%;margin-top:9px;padding:9px;border-radius:9px;cursor:pointer;font-family:inherit;font-weight:800;font-size:13px;color:#0b1118;background:linear-gradient(180deg,#ffd24a,#f0a82e);border:none}
   .stBtn:active{transform:translateY(1px)}.stBtn:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.4)}
-  .stUnitCard.sel{border-color:#7fd0ff !important;box-shadow:0 0 11px -2px rgba(127,208,255,.7),inset 0 0 8px rgba(127,208,255,.12)}
   /* 유닛뽑기 하단 액션 버튼 */
   #gachaActions{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:100%;max-width:380px;margin:6px auto 0;box-sizing:border-box}
   #gachaActions:empty{display:none}
@@ -11292,17 +11291,7 @@ const STK_BUILDINGS={
   ],
 };
 // 건물 key → 3D 모델 키(건물 모델 추가 시 여기에 매핑). 매핑/로드 전엔 2D 렌더로 폴백.
-// 건물 선행 조건(테크트리) — 관리자 TECH_TREE.req 이식. 해당 건물이 완성돼 있어야 건설 가능(본진은 항상 충족).
-const STK_BUILD_REQ={
-  // 테란
-  bunker:['barracks'], machshop:['barracks'], factory:['barracks'], missile:['barracks'],
-  armory:['factory'], starport:['factory'], vessel:['starport'], aegis:['starport'],
-  // 저그
-  den:['pool'], nest:['pool'], spire:['pool'], garden:['creep'], cavern:['den'], gspire:['spire'], pit:['cavern'], ultracav:['cavern'],
-  // 프로토스
-  core:['gateway'], robo:['core'], stargate:['core'], tribunal:['core'], sanctum:['core'], archives:['core'], beacon:['stargate'],
-};
-// (제거) _stkBuiltKeys/_stkReqMet/_stkBuildName — 구 건설 선행조건 헬퍼(관리자 _techReqMet으로 대체)
+// (제거) STK_BUILD_REQ·_stkBuiltKeys/_stkReqMet/_stkBuildName — 구 건설 선행조건(관리자 TECH_TREE.req/_techReqMet으로 대체)
 // 건물 key → 관리자 건설 3D 모델 키(cb_ 접두 = 관리자 TECH_MODEL/CST_BLDG_CFG와 동일 에셋). 미매핑·미로드 시 2D 이모지 폴백.
 const STK_BUILD_MODEL={
   // 테란 → 유니온
@@ -11316,14 +11305,7 @@ const STK_BUILD_MODEL={
   nexus:'cb_aetherial_nexus', gateway:'cb_aetherial_gateway', core:'cb_aetherial_cybernetics_core', robo:'cb_aetherial_robotics_facility',
   stargate:'cb_aetherial_stargate', beacon:'cb_aetherial_fleet_beacon', tribunal:'cb_aetherial_arbiter_tribunal', archives:'cb_aetherial_templar_archives', sanctum:'cb_aetherial_temple_of_adun',
 };
-// 종족 → 일꾼 3D 모델 키(모델 이미 존재 → 건설지에서 3D로 표시)
-const STK_WORKER_MODEL={ terran:'worker_human', zerg:'worker_swarm', protoss:'worker_light' };
-// 종족별 시작 본진(팔레트에 없음 · 처음부터 왼쪽 위에 1채 · 전투유닛 생산 없음)
-const STK_MAIN={
-  terran:  {key:'command',  name:'본부',       ico:'🏢', fp:[4,3], produces:[]},
-  zerg:    {key:'hatchery', name:'부화장',      ico:'🥚', fp:[4,3], produces:[]},
-  protoss: {key:'nexus',    name:'본거지',      ico:'🔷', fp:[4,3], produces:[]},
-};
+// (제거) STK_WORKER_MODEL·STK_MAIN — 구 오토배틀 전용 건설 잔해(관리자 G.tech 통합으로 미사용)
 // ══ 테크트리 데이터(SC1 구조 → 게임 로스터·개명 유닛 매핑) ══
 //   자원: SC1 미네랄→크레딧(m,◈) / 가스→에너지(g,⚡) · 신규 이중자원 없음(기존 재화 재활용)
 //   b = 건물 { k,name,ico, m,g(건설비), req[](선행 건물키), supply,gas,lift,detector, addonTo(애드온 부착 대상),
@@ -13913,7 +13895,6 @@ function strikeStart(activePlayers, myNum, names){ if(typeof bgmStop==='function
   G.activePlayers=(activePlayers&&activePlayers.length)?activePlayers.slice():[1]; G.myPlayer=myNum||1; G.playerNames=names||{};   // 로딩화면 플레이어 목록·닉네임(네모와 동일)
   STK=strikeNewState();
   STK.me.race=(STK_RACES[_selRace]?_selRace:'terran'); STK.ai.race=strikeRandomRace();   // 내 종족=선택, 상대=랜덤 → 각자 그 종족 유닛만 소환
-  STK.buildMenu=strikeBuildable(STK.me.race);   // 내 종족 빌드 메뉴 캐시(이전 판 잔존 방지)
   { const b=STK.build; b.cam.x=b.W*0.25; b.cam.y=b.H*0.25; }   // 관전 보드 카메라만 초기화(내 건설은 G.tech가 담당)
   if(STK.sizeCmp){   // 크기 비교용 샘플 유닛: 중앙 신전 주변 4×2 그리드(월드 좌표)
     const W=STK.world, sp=560, cols=4;
@@ -14079,12 +14060,7 @@ function strikeAiEconomy(){ const S=STK, ai=S.ai;
   const mc=strikeUpCost('mine', ai.mineLv);   // 채굴 강화
   if(ai.gold>=mc && ai.mines>0 && ai.mineLv<6 && Math.random()<0.4){ ai.gold-=mc; ai.mineLv++; } }
 // 카메라가 맵 밖으로 못 나가게 클램프(검은 화면 방지)
-function strikeSheetPx(){ const v=document.getElementById('vMain'); if(!v) return 0;   // 전장을 덮는 하단 UI(프로필 시트·콘솔)가 가리는 픽셀
-  const vr=v.getBoundingClientRect(); let top=vr.bottom;
-  ['bpMain','unitCmd','bot'].forEach(function(id){ const e=document.getElementById(id); if(!e) return;
-    const cs=getComputedStyle(e); if(cs.display==='none'||cs.visibility==='hidden') return;
-    const b=e.getBoundingClientRect(); if(b.height>4 && b.top<top) top=b.top; });
-  return Math.max(0, Math.min(vr.height*0.5, vr.bottom-top)); }
+// (제거) strikeSheetPx — 미사용 헬퍼(하단 UI 가림 픽셀 계산, 호출부 없음)
 function strikeClampCam(){ const S=STK; if(!S||!S.cw) return; const scale=Math.min(S.cw,S.ch)/S.viewWorld;
   const hx=(S.cw/scale)/2, hy=(S.ch/scale)/2, W=S.world, c=W/2;
   const _pad=(S.ch/scale)*STK_MAP_PAD;   // 맵 바깥 여백 = 화면 높이의 일정 비율(상하좌우 동일) → 가장자리 유닛도 화면 안쪽에서 본다
@@ -14165,7 +14141,7 @@ function strikeSkillCost(sk){ return (sk && sk.enSc!=null) ? sk.enSc : ((sk&&sk.
 function strikeSkillAtkMul(u){ let m=1; const b=u.buff||{}, on=u.skillOn||{};
   if(b.stim>0) m*=(SKILLS.stim.atkMul||1); if(on.siege) m*=(SKILLS.siege.atkMul||1); return m; }
 function strikeRngMul(u){ return (u.skillOn&&u.skillOn.siege)?(SKILLS.siege.rngMul||1):1; }
-function strikeSpdMul(u){ return ((u.buff&&u.buff.stim>0)?(SKILLS.stim.spdMul||1):1)*((u.skillOn&&u.skillOn.siege)?0:1); }
+// (제거) strikeSpdMul — 미사용(스팀 속도 로직은 14x 인라인으로 중복)
 function strikeUnitStats(id){ const s=STK_UNITS[id], d=U[id]||{};
   const rng=(d.range!=null?d.range:0.2)*STK_RNG_MUL;                       // 사거리
   const dmg=(d.dmg!=null?d.dmg:15);                                        // 공격력
@@ -15257,7 +15233,6 @@ function strikeUpg(kind){ const S=STK; if(!S) return; const me=S.me;   // 유닛
   if(lv>=max){ if(typeof playSfx==='function') playSfx('ui_denied'); return; }
   if(me.gold<cost){ if(typeof playSfx==='function') playSfx('ui_denied'); return; }
   me.gold-=cost; if(kind==='atk') me.atkLv++; else if(kind==='hp'){ me.hpLv++; strikeApplyHpUpg(me); } else me.mineLv++;
-  if(false){ if(G.tech&&typeof techUIRender==='function'&&G.tab==='Build') techUIRender(); }
   if(typeof playSfx==='function') playSfx('ui_confirm'); strikeRenderSupply(); }
 function strikeBuyBomb(){ const S=STK; if(!S) return; const me=S.me;
   if((me.bombs||0)>=STK_BOMB_CAP){ if(typeof playSfx==='function') playSfx('ui_denied'); return; }
@@ -15317,9 +15292,8 @@ function strikeDrawSupply(){ const S=STK; if(!S) return; const cvEl=document.get
   ctx.textBaseline='alphabetic'; }
 // 종족별 빌드 메뉴(그 종족 소환 유닛 = 지을 수 있는 생산 건물). STK_UNITS에서 이름·아이콘·비용 도출
 function strikeBuildable(race){ const r=race||(STK&&STK.me&&STK.me.race)||'terran';
-  return (STK_BUILDINGS[r]||STK_BUILDINGS.terran).map(b=>({key:b.key, name:b.name, ico:b.ico, cost:b.cost, fp:b.fp, produces:b.produces, req:STK_BUILD_REQ[b.key]||[]})); }   // fp·req 포함
-// (제거) strikeProdLabel — 구 오토배틀 전용 건설 구현. 건설지는 관리자 건설 시스템(G.tech)으로 통합됨
-function strikeBuildMenu(){ const S=STK; if(!S) return []; if(!S.buildMenu) S.buildMenu=strikeBuildable(S.me&&S.me.race); return S.buildMenu; }   // 캐시(placing 객체 동일성 유지)
+  return (STK_BUILDINGS[r]||STK_BUILDINGS.terran).map(b=>({key:b.key, name:b.name, ico:b.ico, cost:b.cost, fp:b.fp, produces:b.produces})); }   // 관전 데모 빌드용(fp만 사용)
+// (제거) strikeProdLabel·strikeBuildMenu·STK.buildMenu 캐시 — 구 오토배틀 전용 건설. 건설지는 관리자 건설 시스템(G.tech)으로 통합됨
 // (제거) _strikeBuildModel~strikeRenderBuild — 구 오토배틀 전용 건설 구현. 건설지는 관리자 건설 시스템(G.tech)으로 통합됨
 // 관전: nemo .plbtn/.plGrid(4×2) 재사용. 팀 1-4(아군 파랑) vs 5-8(적군 빨강). 빈 자리=잠금
 function strikePColor(slot){ return (typeof PLAYER_VIEW_COLORS!=='undefined')?PLAYER_VIEW_COLORS[(slot-1)%PLAYER_VIEW_COLORS.length]:'#7fd0ff'; }
