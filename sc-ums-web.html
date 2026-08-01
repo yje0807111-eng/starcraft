@@ -11208,6 +11208,7 @@ const BUILD_UNIT=48;         // 건설 건물 크기 = 스냅 격자(월드/풋�
 const STK_UNITS={
   // 🛡 유니온 — 보병·기계 (저가 원거리 / 기계 탱커 / 공성) · 공격 이펙트는 ATK_STYLE(공용 FX 코어)에서 id로 매핑
   marine:    {name:'레인저',    ico:'🪖', cost:100, hp:130, dmg:16, rng:200, cd:0.85, spd:340, size:14},
+  medic:     {name:'의무병',    ico:'💉', cost:110, hp:140, dmg:0, rng:0, cd:0, spd:340, size:14},   // 무공격 지원 — HEALER 분기로 바이오닉 치유(strikeHealStep)
   goliath:   {name:'기갑병', ico:'⚙️', cost:220, hp:380, dmg:30, rng:235, cd:1.30, spd:155, size:21},
   tank:      {name:'공성전차',   ico:'🛡', cost:350, hp:430, dmg:72, rng:330, cd:2.30, spd:115, size:24, splash:160},
   // 🔮 에테리얼 — 사이오닉 (원거리 포격 / 근접 돌격 / 광역 탱커)
@@ -11620,17 +11621,24 @@ function techGetBldg(race,k){ const t=TECH_TREE[race]; return t&&t.buildings.fin
 //   제외: 비행충(pow 412 — 곡선 이탈) · 저격수(pow 10) · 지원 정찰기(공격력 0) 등 자동 배출에 부적합한 유닛.
 //   마릿수(n)는 '건물당 웨이브 기여도 ≈ TECH_WAVE_POW'가 되도록 산정 — 싼 건물은 여러 기, 고급 건물은 소수 정예.
 //   기여도 = pow × n. pow는 실측값(주석)이며, 상한 8기(3D 성능)·하한 1기.
+//   ⚠ 실제 배출량 = n × TECH_WAVE_MUL. 전투 규모를 키울 땐 개별 n이 아니라 이 배수를 올린다 —
+//     한 건물만 올리면 그 건물이 최적해가 되어 조합이 붕괴한다(같은 비율로 커져야 건물 간 서열이 유지됨).
 const TECH_WAVE_POW=47;   // 웨이브 20초 기준(30초 시절 70 → 2/3)
+const TECH_WAVE_MUL=2;    // 전역 배출 배수. 2 = 보급소 레인저 6 · 병영 화력병 4 · 훈련소 의무병 2
+const STK_BLDG_LOCK={ bunker:1, turret:1 };   // 🔒 오토배틀에서만 건설 불가(방어 건물 — 담당 유닛 없음). 관리자 건설 목록은 그대로.
 const TECH_BLDG_UNIT={
-  union:{      // 부속 건물(정비소·관제탑·화력연구소)도 배출원으로 사용
-    barracks:{u:'marine', n:3},       // 550 · pow 19 → 76
-    academy:{u:'machinegun', n:2},    // 700 · pow 22 → 66
-    factory:{u:'racer', n:2},         // 850 · pow 24 → 72
-    machshop:{u:'tank', n:1},         // 부속 · pow 51 → 51
-    armory:{u:'goliath', n:1},        // 1000 · pow 43 → 86
-    starport:{u:'hellfire', n:1},     // 1100 · pow 44 → 88
-    control:{u:'skyguard', n:1},      // 부속 · pow 83 → 83
-    physics:{u:'dreadnought', n:1} }, // 부속 · pow 68 → 68
+  union:{      // 부속(관제탑·특수작전실·화력연구소)도 배출원 · 정비소는 공성전차 업그레이드 전용이라 제외
+    supply:{u:'marine', n:3},         // 보급소 100 · pow 19 → 57
+    barracks:{u:'machinegun', n:2},   // 병영 150 · pow 22 → 44
+    academy:{u:'medic', n:1},         // 훈련소 150 · 무공격 치유 지원(바이오닉 회복)
+    engbay:{u:'racer', n:2},          // 공학소 125 · pow 24 → 48
+    factory:{u:'tank', n:1},          // 기갑공장 300 · pow 51 → 51
+    armory:{u:'goliath', n:1},        // 무기고 150 · pow 43 → 43
+    starport:{u:'skyguard', n:1},     // 비행장 250 · pow 83 → 83
+    control:{u:'hellfire', n:1},      // 부속 100 · pow 44 → 44
+    scifac:{u:'aegis', n:1},          // 연구소 250 · 공중 방벽(초고체력 저공격)
+    covert:{u:'ghost', n:2},          // 부속 100 · pow 10 → 20 (무력화 스킬은 마법 시스템 미구현)
+    physics:{u:'dreadnought', n:1} }, // 부속 100 · pow 68 → 68
   swarm:{
     pool:{u:'snapper', n:3},          // 500 · pow 17 → 68
     hydraden:{u:'hydra', n:2},        // 650 · pow 22 → 66
@@ -11650,7 +11658,7 @@ const TECH_BLDG_UNIT={
 function _techBU(race,bk){ return (TECH_BLDG_UNIT[race]||{})[bk]||null; }
 function techBldgUnit(race, bk){ const e=_techBU(race,bk);
   return (e && typeof STK_UNITS!=='undefined' && STK_UNITS[e.u]) ? e.u : null; }
-function techBldgCount(race, bk){ const e=_techBU(race,bk); return Math.max(1, (e&&e.n)||1); }
+function techBldgCount(race, bk){ const e=_techBU(race,bk); return Math.max(1, ((e&&e.n)||1)*TECH_WAVE_MUL); }
 // 기본 공통 자료(data/base_stats.md) — SC 원본 공격 쿨다운 프레임(cd, 작을수록 빠름·24f=1s) / 이동 픽셀(mv, 클수록 빠름). 게임 id 기준.
 const BASE_CD={  // 0=공격 없음(수송·시전·자폭 등)
   worker_human:15, marine:15, machinegun:22, medic:0, ghost:22, racer:30, tank:37, goliath:22, skyguard:22, pelican:0, hellfire:64, aegis:0, dreadnought:30,
@@ -11701,7 +11709,7 @@ function _techProdTime(race,id){ if(G.tech.nocool) return 0; return ((techUnitSp
 function _techResearchTime(r){ if(G.tech.nocool) return 0; return (r&&r.t?r.t:(r&&r.tier?24:30))*TECH_TIME_MUL; }   // 업그레이드 소요(스펙 t 있으면 사용, 없으면 티어 24s·일회성 30s)
 const TECH_DEF_BLDG={ union:['bunker','turret'], swarm:['sunken','spore'], aetherial:['cannon'] };   // 🛡 방어 건물(공격형)
 function _techIsDef(bk){ return (TECH_DEF_BLDG[G.tech.race]||[]).indexOf(bk)>=0; }
-function _techBldgKind(b){ if(!b) return '건물'; if(b.produces) return '생산'; if(b.research) return '업그레이드'; if(b.gas) return '에너지 채취'; if(_techIsDef(b.k)) return '방어'; if(b.supply) return '인구 공급'; if(b.unlocks) return '해금'; return '건물'; }
+function _techBldgKind(b){ if(!b) return '건물'; if(b.produces) return '생산'; if(_techResList(b).length) return '업그레이드'; if(b.gas) return '에너지 채취'; if(_techIsDef(b.k)) return '방어'; if(b.supply) return '인구 공급'; if(b.unlocks) return '해금'; return '건물'; }
 // ── 🚀 내부 장전 큐: 캐리어(요격기)·리버(스캐럽) 유닛 + 뉴클리어 사일로(핵) 단일 — 전투 없는 관리 탭이라 '장전 UI'(카운트+타이머+취소 환불) ──
 const TECH_AMMO={
   archangel:{ label:'요격기', ico:'✈️', unit:true, m:25, g:0, t:8, cap:4, capUp:8, upKey:'aetherial_carrier_cap' },   // 캐리어 = 인터셉터(최대 4→8)
@@ -12453,7 +12461,9 @@ const TECH_MODEL={
 // 타일 비율 기준 크기(s): 4x3=64 · 4x2=58 · 3x3=52 · 3x2=46 · 2x2=36 · f=정면 yaw
 const CST_BLDG_CFG={
   // 유니온(테란)
-  union_command_center:{s:64,f:0,dy:8},   // dy = 발판 대비 세로 미세 보정(px, +면 아래로) — 다른 건물과 눈높이 맞춤 union_barracks:{s:64,f:0}, union_engineering_bay:{s:64,f:Math.PI}, union_factory:{s:64,f:0}, union_starport:{s:64,f:0}, union_science_facility:{s:64,f:0},
+  union_command_center:{s:64,f:0,dy:8},   // dy = 발판 대비 세로 미세 보정(px, +면 아래로) — 다른 건물과 눈높이 맞춤
+  // ⚠ 아래 5개는 위 주석에 줄이 합쳐져 통째로 주석 처리돼 있었다(크기·정면 미적용 → 공학소가 늘 뒷모습). 한 줄에 이어 붙이지 말 것.
+  union_barracks:{s:64,f:0}, union_engineering_bay:{s:64,f:Math.PI}, union_factory:{s:64,f:0}, union_starport:{s:64,f:0}, union_science_facility:{s:64,f:0},
   union_refinery:{s:58,f:0},
   union_supply_depot:{s:46,f:0}, union_academy:{s:46,f:0}, union_bunker:{s:46,f:0}, union_armory:{s:46,f:0},
   union_missile_turret:{s:36,f:0}, union_comsat_station:{s:36,f:0}, union_nuclear_silo:{s:36,f:0}, union_machine_shop:{s:36,f:0}, union_control_tower:{s:36,f:0}, union_covert_ops:{s:36,f:0}, union_physics_lab:{s:36,f:0},
@@ -12559,22 +12569,30 @@ function _techResInfo(){ techSyncWallet();
 function techBuildListModel(){ const race=G.tech.race, t=TECH_TREE[race];
   const items=t.buildings.filter(b=>!b.addonTo&&!b.evolveOnly&&!(techWallet()&&b.gas)).map(b=>{ const cnt=(G.tech.built[b.k]||0)+(G.tech.addon[b.k]?1:0), spec=techBldgSpec(race,b.k)||{};   // 🔗 부속·🧬 진화 전용(레어·하이브·성큰·스포어·그레이터스파이어)은 일꾼 건설 목록 제외
     const parentOk=!b.addonTo||G.tech.built[b.addonTo]>0, reqok=_techReqMet(b.req)&&parentOk, afford=_techAfford(b.m,b.g), armed=(G.tech.arm===b.k);
-    return { pro:_techBldgPortrait(b.k, b.ico), sn:b.name, cr:b.m, en:b.g, meta:cnt?('✓'+(cnt>1?cnt:'')):(b.addonTo?'부속':(b.supply?'👤+'+b.supply:(spec.size?spec.size.join('×'):''))), metaCls:cnt?'lv':'', state:armed?'sel':((!reqok||!afford)?'dim':'ok'), act:'onclick="techArm(\''+b.k+'\')"'+_techTipAttr('b',b.k) }; });   // 길게 = 건물 설명
+    const lock=!!(techWallet() && STK_BLDG_LOCK[b.k]);   // 🔒 오토배틀 전용 잠금(관리자 건설은 영향 없음)
+    return { pro:_techBldgPortrait(b.k, b.ico), sn:b.name, cr:b.m, en:b.g, meta:lock?'🔒':(cnt?('✓'+(cnt>1?cnt:'')):(b.addonTo?'부속':(b.supply?'👤+'+b.supply:(spec.size?spec.size.join('×'):'')))), metaCls:cnt&&!lock?'lv':'', state:armed?'sel':((lock||!reqok||!afford)?'dim':'ok'), act:lock?'onclick="toast(\'준비 중인 건물입니다\')"':('onclick="techArm(\''+b.k+'\')"'+_techTipAttr('b',b.k)) }; });   // 길게 = 건물 설명
   return { mode:'build', title:t.name+' · 건설', icon:pIco('👷'), sub:'건물 탭 → 맵을 탭해 배치', items, info:_techResInfo() }; }
+// 🔬 이 건물의 연구 목록. 오토배틀은 건물 연구(업그레이드) 자체를 쓰지 않는다 —
+//   강화는 업그레이드 탭(_stkSupplyModel)의 전역 항목으로만 하고, 건물은 병력 공급원 역할만 한다.
+function _techResList(b){ return (techWallet() || !b) ? [] : (b.research||[]); }
+// 🏭 이 건물이 '생산' 프로필을 쓰는가. 관리자 = produces가 하나라도 있으면 생산 건물.
+//   오토배틀만 예외 — 전투 유닛은 건물이 웨이브마다 자동 배출(TECH_BLDG_UNIT)하므로 수동 생산은 일꾼뿐이다.
+function _techHasProd(b){ const ps=(b&&b.produces)||[];
+  return techWallet() ? ps.some(p=>p.id===TECH_WORKER[G.tech.race]) : ps.length>0; }
 function techBldgProdModel(b, e){ const race=G.tech.race;
   const bs0=techBldgSpec(race,b.k)||{};
   if(race==='swarm' && TECH_LARVA_BLDG[b.k]){   // 🐛 해처리·레어·하이브 = 유닛 직접 생산 X → 1번 칸 '라바 선택' · 4번 칸 진화 · 페이지2 = 연구 업그레이드
     const selB=(G.tech.sel!=null)?G.tech.ents.find(e=>e.eid===G.tech.sel&&e.type==='bldg'):null, hid=selB?selB.eid:null;
     const _ln=hid!=null?G.tech.ents.reduce((a,l)=>a+((l.type==='larva'&&l.hatch===hid)?1:0),0):0;
     const items=[{ pro:pIco('🐛'), sn:'라바 선택', meta:_ln+'/3', metaCls:'lv', state:_ln>0?'ok':'dim', act:_ln>0?'onclick="techSelectLarva(event)"':'' }, null, null, (_techEvolveCards(b, selB)[0]||null)];   // 4번 슬롯 = 진화(레어/하이브) · 하이브=진화 없음
-    for(const r of (b.research||[])) items.push(_techResearchCard(b, r, selB));   // 페이지2(슬롯 1~3) = 이 건물 연구
+    for(const r of _techResList(b)) items.push(_techResearchCard(b, r, selB));   // 페이지2(슬롯 1~3) = 이 건물 연구(오토배틀은 없음)
     return { mode:'prod', title:b.name+' <span class="nsub">('+_ln+'/3)</span>', icon:_techBldgPortrait(b.k, b.ico), hpsh:_cgHpShStr(bs0.hp,bs0.sh), sub:'🐛 라바 선택 후 유닛 생성', items, topRight:_techBldgTR(b),
       info:{ eb:'생산', hideName:true, desc:'8초마다 라바 1기 생성<br>(최대 3).', cr:0, en:0, time:'' } }; }   // 라바 수 = 이름 옆 괄호 · 괄호는 줄바꿈
   if(TECH_AMMO[b.k] && !TECH_AMMO[b.k].unit){ const a=TECH_AMMO[b.k], cap=_techAmmoCap(b.k), have=(e?((e._chc||0)+((e._chq||[]).length)):0);   // ☢️ 뉴클리어 사일로 = 단일 장전(5큐 아님)
     const aitems=[{ pro:pIco(a.ico), sn:a.label+' 장전', cr:a.m, en:a.g, meta:have+'/'+cap, metaCls:'lv', state:(have>=cap||!_techAfford(a.m,a.g))?'dim':'ok', act:'onclick="techChargeAmmo(event,\''+b.k+'\')"' }];
     return { mode:'prod', title:b.name, icon:_techBldgPortrait(b.k, b.ico), hpsh:_cgHpShStr(bs0.hp,bs0.sh), sub:'☢️ 단일 장전(최대 1)', items:aitems, info:_techAmmoInfo(e||{}, b.k) }; }
   const pq=(e&&e._pq)||[], qFull=pq.length>=5;   // 🔢 건물별 생산 대기열(최대 5)
-  const _prodShow=(b.produces||[]).filter(p=>p.id===TECH_WORKER[race]);   // 🏭 전투 유닛은 건물이 자동 배출 → 수동 생산은 일꾼만
+  const _prodShow=techWallet() ? (b.produces||[]).filter(p=>p.id===TECH_WORKER[race]) : (b.produces||[]);   // 🎮 오토배틀만: 전투 유닛은 건물이 자동 배출(TECH_BLDG_UNIT)이라 수동 생산은 일꾼만. 관리자 건설은 전 유닛 생산 그대로.
   const items=_techWithAddons(_prodShow.map(p=>{ const reqok=_techReqMet(p.req), afford=_techAfford(p.m,p.g), popok=G.tech.inf||!p.pop||(G.tech.sup+p.pop<=G.tech.supCap), cnt=G.tech.units[p.id]||0;
     return { pro:_techUnitPortrait(p.id), sn:_techRealName(race,p.id), cr:p.m, en:p.g, meta:cnt?('×'+cnt):(p.pop?'👤'+p.pop:''), metaCls:cnt?'lv':'', state:(qFull||!reqok||!afford||!popok)?'dim':'ok', act:'onclick="techDoProduce(\''+p.id+'\',\''+b.k+'\')"'+_techTipAttr('u',p.id,b.k) }; }), b.k);   // 길게 = 유닛 설명   // 🔗 부속 카드는 마지막 그리드로 · 대기열 가득참=비활성
   const bs=techBldgSpec(race,b.k)||{};
@@ -12585,7 +12603,7 @@ function techBldgProdModel(b, e){ const race=G.tech.race;
   return { mode:'prod', title:b.name, icon:_techBldgPortrait(b.k, b.ico), hpsh:_cgHpShStr(bs.hp,bs.sh), sub:'유닛 생산 — 탭(최대 5 예약)', items, topRight:_techBldgTR(b),
     info:{ eb:'생산', hideName:true, progLabel, progVal, prog, progTime, qbar:{ fill:Math.round(_qn/5*100), color:(_qn>0?('rgb(255,'+_gb+','+_gb+')'):''), cancel:(_qn>0?(_qn-1):null), n:_qn }, cr:0, en:0, time:'' } }; }
 function techBldgUpgModel(b, e){ const race=G.tech.race; const rj=e&&e._rj;
-  const items=_techWithAddons(b.research.map(r=>_techResearchCard(b, r, e)), b.k);   // 🔬 연구 카드(단일 소스 _techResearchCard) + 🔗 부속 카드(사이언스 퍼실리티=코버트 옵스·피직스 랩 — 연구 전용 건물이라 빠져 있던 것)
+  const items=_techWithAddons(_techResList(b).map(r=>_techResearchCard(b, r, e)), b.k);   // 🔬 연구 카드(단일 소스 _techResearchCard) + 🔗 부속 카드(사이언스 퍼실리티=코버트 옵스·피직스 랩 — 연구 전용 건물이라 빠져 있던 것)
   const bs=techBldgSpec(race,b.k)||{}; let progLabel,progVal,prog,progTime='',val=null;
   if(rj){ prog=Math.round((1-rj.t/(rj.tMax||1))*100); progLabel='연구 중'; progVal=rj.name||''; progTime=Math.ceil(rj.t)+'s';   // 남은 초 = 라벨 옆에 간단히(생산과 통합) · 취소는 진행 카드 탭
     const rd=b.research.find(r=>r.k===rj.rk); if(rd&&rd.tier){ const lv=G.tech.research[race+'_'+rd.k]||0; val={ cur:lv+'Lv', nxt:(lv+1)+'Lv', unit:'', sm:true }; } }   // 단계형 = 진행 바 아래 작게 0Lv ▸ 1Lv
@@ -12849,7 +12867,13 @@ function _techAddonCards(bk){ const race=G.tech.race, t=TECH_TREE[race], out=[];
       state:(isMine||connected)?'max':((!reqok||!afford)?'dim':'ok'),   // 연결됨 = 이 카드+다른 부속 카드 모두 잠금
       act:((!connected&&reqok&&afford)?('onclick="techBuildAddon(event,\''+x.k+'\')"'):'')+_techTipAttr('b',x.k) }); }   // 길게 = 부속 건물 설명(잠금 상태여도 설명은 보임)
   return out; }
-function _techWithAddons(items, bk){ const addons=_techAddonCards(bk); if(!addons.length) return items; return items.concat(addons); }   // 부속 카드(_addon)는 renderCmdGrid가 항상 그리드 맨 끝 슬롯에 고정 배치
+// 🎮 오토배틀 전용 — 이 건물이 웨이브마다 내보내는 유닛을 '누를 수 없는 정보 카드'로 1번 칸에 보여준다.
+//   생산 버튼이 없어 빈 그리드로 보이던 것을 메꾼다(건물 = 병력 공급원이라는 규칙을 프로필에서 바로 읽히게).
+function _techSpawnCard(bk){ if(!techWallet() || typeof techBldgUnit!=='function') return null;
+  const race=G.tech.race, uid=techBldgUnit(race,bk); if(!uid) return null;
+  return { pro:_techUnitPortrait(uid), sn:_techRealName(race,uid), tr:'×'+techBldgCount(race,bk), metaCls:'lv', state:'dim', act:'' }; }   // tr = 건설 카드에서도 보이는 우상단 배지(meta는 build:true에서 숨겨짐)
+function _techWithAddons(items, bk){ const sc=_techSpawnCard(bk), base=sc?[sc].concat(items):items;   // 배출 카드=1번 칸
+  const addons=_techAddonCards(bk); if(!addons.length) return base; return base.concat(addons); }   // 부속 카드(_addon)는 renderCmdGrid가 항상 그리드 맨 끝 슬롯에 고정 배치
 function techBuildAddon(ev, k){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;
   const race=G.tech.race, b=techGetBldg(race,k); if(!b||!b.addonTo) return;
   const selB=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'&&x.bk===b.addonTo):null;
@@ -12875,7 +12899,7 @@ function techBldgPlainModel(b, e){ const race=G.tech.race, bs=techBldgSpec(race,
   const _bMx=(typeof BLDG_EN!=='undefined'&&BLDG_EN[b.k])||0;   // 🏢 건물 마나(컴셋·쉴드배터리) = 실시간 현재/최대(선택 당시 고정 아님)
   const _bEn=(_bMx>0)?((e&&e.en!=null)?(Math.round(e.en)+'/'+Math.round(e.maxEn||_bMx)):(_bMx+'/'+_bMx)):0;
   return { mode:'info', title:b.name, icon:_techBldgPortrait(b.k, b.ico), hpsh:_cgHpShStr(bs.hp,bs.sh,_bEn)+_gasHp, sub:(b.gas?'⛽ 에너지 채취 건물':(b.supply?'👤 인구 공급':(_def?'🛡 방어 건물':'건물 정보'))), items, topRight:_techBldgTR(b),
-    info:{ eb:_techBldgKind(b)+(b.detector?' (탐지)':''), name:b.name, hideName:true, desc:_techBldgSummary(b), stats, cr:0, en:0 } }; }   // 프로필은 요약 한 줄(팝업은 섹션 포함 _techBldgDesc)
+    info:{ eb:(_techSpawnCard(b.k)?'':_techBldgKind(b)+(b.detector?' (탐지)':'')), name:b.name, hideName:true, desc:_techBldgSummary(b), stats, cr:0, en:0 } }; }   // 프로필은 요약 한 줄(팝업은 섹션 포함 _techBldgDesc) · 오토배틀 배출 건물은 라벨 없이 배출 정보만
 // 💎⛽ 중립 자원(미네랄·가스 광산) 프로필 — 이름 + 하단 HP 자리에 잔량 표시
 function techResourceModel(res){ if(!res) return null;
   if(res.kind==='mineral'){ const m=(G.tech.minerals||[]).find(x=>x.eid===res.eid); if(!m) return null;
@@ -13121,7 +13145,7 @@ function techBldgBuildingModel(be){ const race=G.tech.race, b=techGetBldg(race,b
   const curHp=Math.round(maxHp*ratio), curSh=Math.round(maxSh*ratio);
   let items=[];
   if(b.produces) items=b.produces.map(p=>({ pro:_techUnitPortrait(p.id), sn:_techRealName(race,p.id), cr:p.m, en:p.g, meta:'🔒', metaCls:'', state:'dim', act:'' }));   // 생산 목록 표시하되 전부 잠금(클릭 불가)
-  else if(b.research) items=b.research.map(r=>({ pro:pIco('🔬'), sn:r.name, meta:'🔒', metaCls:'', state:'dim', act:'' }));
+  else if(_techResList(b).length) items=_techResList(b).map(r=>({ pro:pIco('🔬'), sn:r.name, meta:'🔒', metaCls:'', state:'dim', act:'' }));
   return { mode:'prod', title:b.name+(paused?' (일시정지)':' (건설 중)'), icon:pIco(b.ico||'🏢'),
     hpsh:_cgHpShStr(curHp+'/'+maxHp, maxSh?(curSh+'/'+maxSh):0), status:(paused?'⏸ 일시정지':'🏗 '+pct+'%'), statusIdle:paused,
     sub:(paused?'⏸ 미완성 — 건물 클릭 후 ▶ 재개로 이어서 건설':'🏗 건설 중 '+pct+'% — 완성 전 사용 불가'), items,
@@ -13140,7 +13164,7 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
   const _resumeMode=!!(selB && selB.bt>0 && selB._bpause && selUs.length);   // 재개 모드(유닛 지정 + 일시정지 건물 선택): 건물 위 재개 버튼만, 하단은 지정 유닛 프로필
   if(sh.open){ if(selRes){ model=techResourceModel(selRes); }   // 💎⛽ 중립 자원(미네랄·가스 광산) 프로필
     else if(selB && !_resumeMode){ if(selB.bt>0){ model=techBldgBuildingModel(selB); }   // 건설 중·일시정지 = 잠금 프로필(진행도 HP)
-      else { const b=techGetBldg(G.tech.race,selB.bk); model=(G.tech.race==='union'&&selB.bk==='bunker')?techBunkerModel(b, selB):((G.tech.race==='swarm'&&selB.bk==='nydus')?techNydusModel(b, selB):((G.tech.race==='swarm'&&TECH_LARVA_BLDG[selB.bk])?techBldgProdModel(b, selB):((b&&(b.produces||[]).some(pp=>pp.id===TECH_WORKER[G.tech.race]))?techBldgProdModel(b, selB):((b&&b.research)?techBldgUpgModel(b, selB):((b&&b.unlocks)?techBldgInfoModel(b, selB):techBldgPlainModel(b, selB)))))); } }   // 🧱 벙커·🕳 나이더스=전용 모델 · 🐛 라바 건물 우선 · 해금=정보 모델
+      else { const b=techGetBldg(G.tech.race,selB.bk); model=(G.tech.race==='union'&&selB.bk==='bunker')?techBunkerModel(b, selB):((G.tech.race==='swarm'&&selB.bk==='nydus')?techNydusModel(b, selB):((G.tech.race==='swarm'&&TECH_LARVA_BLDG[selB.bk])?techBldgProdModel(b, selB):(_techHasProd(b)?techBldgProdModel(b, selB):((_techResList(b).length)?techBldgUpgModel(b, selB):((b&&b.unlocks)?techBldgInfoModel(b, selB):techBldgPlainModel(b, selB)))))); } }   // 🧱 벙커·🕳 나이더스=전용 모델 · 🐛 라바 건물 우선 · 해금=정보 모델
     else if(selUs.length){ const _selEgg=selUs.filter(e=>e.type==='egg'), _selLv=selUs.filter(e=>e.type==='larva');
       model=_selEgg.length?techEggModel(_selEgg):(_selLv.length?techLarvaProdModel(_selLv):(_allWk?techWorkerBuildModel(selUs):techUnitPanelModel(selUs))); } }   // 🥚 알 = 진화중(잠금) 프로필
   // 🔢 모든 건물 = 4그리드 1줄(간소화)로 높이 통일. 5개↑는 2줄로 높이지 않고 페이지로 넘김(슬롯 위치 보존). cm2=최소화(본문 숨김)만 별도
@@ -13209,10 +13233,11 @@ function techShowSkTip(key, rect){ const sk=(typeof SKILLS!=='undefined')?SKILLS
 function _tskSec(t,l){ return '<div class="tskSec"><div class="tskSecT">'+t+'</div><div class="tskSecL">'+l+'</div></div>'; }   // 📖 설명 섹션(제목 + 내용)
 // 🏢 건물 요약 한 줄(프로필 하단 .cgDd용 — 좁은 영역이라 섹션 없이 문장만)
 function _techSpawnText(b){ if(!b || typeof techBldgUnit!=='function') return '';
+  if(!techWallet()) return '';   // 🎮 자동 배출은 오토배틀 전용 규칙 — 관리자 건설 프로필에는 넣지 않는다
   const race=G.tech.race, uid=techBldgUnit(race,b.k); if(!uid) return '';
-  return '출격 시 '+_techRealName(race,uid)+' x'+techBldgCount(race,b.k); }
-function _techBldgSummary(b){ const s=_techSpawnText(b), o=_techBldgSummary0(b);   // 배출 정보 우선 + 기존 요약
-  return s ? (o ? (s+' · '+o) : s) : o; }
+  return _techRealName(race,uid)+' ×'+techBldgCount(race,b.k); }
+function _techBldgSummary(b){ const s=_techSpawnText(b), o=_techBldgSummary0(b);
+  return s || o; }   // 오토배틀은 배출 정보만 한 줄(관리자는 기존 요약 그대로)
 function _techBldgSummary0(b){ if(!b) return '';
   const race=G.tech.race;
   if(typeof TECH_BLDG_DESC!=='undefined' && TECH_BLDG_DESC[b.k]) return TECH_BLDG_DESC[b.k];
@@ -13225,9 +13250,9 @@ function _techBldgSummary0(b){ if(!b) return '';
 function _techBldgDesc(b){ if(!b) return '';
   const race=G.tech.race, out=[], sum=_techBldgSummary(b);
   if(sum) out.push('<div class="tskSecL">'+sum+'</div>');
-  { const _mp=(b.produces||[]).filter(p=>p.id===TECH_WORKER[race]);   // 수동 생산은 일꾼만(전투 유닛은 건물이 자동 배출)
+  { const _mp=techWallet() ? (b.produces||[]).filter(p=>p.id===TECH_WORKER[race]) : (b.produces||[]);   // 🎮 오토배틀만 일꾼으로 축약(전투 유닛은 자동 배출) · 관리자는 생산 전체 표기
     if(_mp.length) out.push(_tskSec('생산', _mp.map(p=>_techRealName(race,p.id)).join(' · '))); }
-  if(b.research&&b.research.length) out.push(_tskSec('연구', b.research.map(r=>r.name).join(' · ')));
+  if(_techResList(b).length) out.push(_tskSec('연구', _techResList(b).map(r=>r.name).join(' · ')));
   if(b.unlocks&&b.unlocks.length) out.push(_tskSec('해금', b.unlocks.map(id=>_techRealName(race,id)).join(' · ')));
   return out.length?out.join(''):'건물입니다.'; }
 // 🚶 유닛 설명(단일 소스) — 역할 + 핵심 스탯 + 고유 능력(spec.abil)
@@ -13358,6 +13383,7 @@ function techPanMove(ev){ if(!_btPan) return; const t=techViewT();
   t.x=_btPan.vx-(ev.clientX-_btPan.x)/(_btPan.rw||1)/_btPan.zoom;
   t.y=_btPan.vy-(ev.clientY-_btPan.y)/(_btPan.rh||1)/_btPan.zoom; _techClampView(t); }
 function techPtrDown(ev){ if(!G.tech) return; const r=_btRect(); if(!r) return; if(ev.preventDefault)ev.preventDefault();
+  if(typeof STK!=='undefined' && STK && STK.supSheet && typeof strikeToggleSupply==='function') strikeToggleSupply(false);   // 업그레이드 시트가 올라와 있으면 맵 탭으로 내린다(전투 화면과 같은 규칙)
   if(ev.button===1 || (ev.shiftKey && ev.pointerType==='mouse')){ _btPtrs.set(ev.pointerId,{x:ev.clientX,y:ev.clientY}); techPanStart(ev); return; }   // 마우스 팬(두 손가락 대체)
   _btPtrs.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
   const sx=(ev.clientX-r.left)/(r.width||1), sy=(ev.clientY-r.top)/(r.height||1);
@@ -13934,14 +13960,18 @@ function strikeFrame(dt){ const S=STK; if(!S) return; strikeStep(dt*(G.speedMul|
   strikeTempleTick(dt); strikeHud(); strikeLeaderboard(dt); strikeSync3D(dt);
   if(G.tab==='Main'){ S._siT=(S._siT||0)-dt; if(S._siT<=0){ S._siT=0.22; strikeRenderSelInfo(); } } }   // 선택 정보 라이브 갱신(HP)
 // 직스 3D 오버레이 — 신전(메인/2차/중립, 항상) + 크기비교 샘플유닛(sizeCmp일 때). 카메라 좌표→정규화, M3D.sync로 cvMarine 렌더(전투 탭, 맵 스케일 연동)
-const STK_AQ_LOW=0.55, STK_AQ_HI=1.0, STK_AQ_BAD=26, STK_AQ_GOOD=15;   // 목표 프레임(ms) — 26 초과가 이어지면 낮추고, 15 미만이 이어지면 되돌림
+// ⚠ 임계값은 '이 기기의 프레임 바닥(주사율)' 대비 **배수**다. 절대 ms 상수로 쓰면 안 된다 —
+//   60Hz는 아무리 가벼워도 vsync 때문에 16.7ms 밑으로 못 내려가므로 '15ms 미만이면 복구'는
+//   영원히 성립하지 않아, 한 번 낮아진 화질이 유닛이 줄어도 되돌아오지 않는다(실제로 겪은 버그).
+const STK_AQ_LOW=0.55, STK_AQ_HI=1.0, STK_AQ_BAD=1.55, STK_AQ_GOOD=1.12;   // 바닥×1.55 초과=낮춤 / 바닥×1.12 미만=되돌림
 function strikeAutoQuality(dt){ const S=STK; if(!S) return; const O=G.opt||(G.opt={});   // 옵션 객체가 없으면 만든다
   if(O._aqOff) return;                           // 사용자가 직접 화질을 만졌으면 자동 조절 중단
   const ms=Math.min(200, dt*1000); S._aq=(S._aq==null?ms:S._aq*0.9+ms*0.1);   // 평활 프레임 시간
+  S._aqMin=Math.min(S._aqMin==null?S._aq:S._aqMin, S._aq);   // 관측된 최저 '평활' 프레임 = 주사율 바닥(단발 이상치에 안 끌려감)
   S._aqT=(S._aqT||0)-dt; if(S._aqT>0) return; S._aqT=1.0;   // 1초에 한 번만 조정(요동 방지)
-  const cur=(O.resScale!=null?O.resScale:1);
-  if(S._aq>STK_AQ_BAD && cur>STK_AQ_LOW) O.resScale=Math.max(STK_AQ_LOW, cur-0.15);
-  else if(S._aq<STK_AQ_GOOD && cur<STK_AQ_HI) O.resScale=Math.min(STK_AQ_HI, cur+0.1); }
+  const cur=(O.resScale!=null?O.resScale:1), fl=Math.max(6, Math.min(34, S._aqMin));   // 6~34ms = 144Hz~30Hz 범위로 제한
+  if(S._aq>fl*STK_AQ_BAD && cur>STK_AQ_LOW) O.resScale=Math.max(STK_AQ_LOW, cur-0.15);
+  else if(S._aq<fl*STK_AQ_GOOD && cur<STK_AQ_HI) O.resScale=Math.min(STK_AQ_HI, cur+0.1); }
 function strikeSync3D(dt){ const S=STK; if(!S) return; strikeAutoQuality(dt); const mcv=document.getElementById('cvMarine');
   const ok3d=window.M3D && M3D.ready && M3D.ready() && !(G.opt&&G.opt.model3d===false);
   // (제거) 구 건설 3D 분기 — 건설지 3D는 renderBuildTab(관리자와 동일 경로)이 담당
@@ -13958,11 +13988,14 @@ function strikeSync3D(dt){ const S=STK; if(!S) return; strikeAutoQuality(dt); co
     list.push({uid:t[0], id:t[2], x:n.x, y:n.y, fixed:true, face:-0.42, dead:!!o.dead, fade:_ta,
       ringCol:(!o.dead && S.selTemple===o)?'#ffd24a':null}); }   // 지정한 신전만 노란 하단 링(파괴되면 지정 불가 → 링 없음)
   if(S.sizeCmp && S.cmpUnits){ for(const u of S.cmpUnits){ const n=w2n(u.x,u.y); list.push({uid:u.uid, id:u.id, x:n.x, y:n.y}); } }
-  for(const side of ['me','ai']){ const ringCol=(side==='me')?'#46f06a':'#ff5c5c', foe=(side==='ai');   // 본체 림=플레이어색 / 하단 링=팀색 / 적군은 본체 적색 틴트
+  for(const side of ['me','ai']){ const foe=(side==='ai');   // 진영 구분 = 본체 색(rimCol=플레이어색 · 적군은 적색 틴트)만 사용
+    // 상시 팀색 하단 링은 제거 — 대군에서 링이 바닥을 덮어 유닛이 안 보였다. 하단 링은 '지정 표시' 전용(단일 소스 인스턴스 링).
     for(const u of S[side].units){ const n=w2n(u.x,u.y);
       if(n.x<-STK_CULL||n.x>1+STK_CULL||n.y<-STK_CULL||n.y>1+STK_CULL) continue;   // ⚡ 화면 밖 = 3D 생략(보이지 않으므로 시각 변화 없음)
-      list.push({uid:u.uid, id:u.id, x:n.x, y:n.y, face:u.face, moving:u.moving, rimCol:u.pcol, ringCol:ringCol, scl:STK_UNIT_SCALE, fireSeq:(u.fireSeq||0)}); } }   // fireSeq = 공격 모션(관리자와 동일 규약)
+      list.push({uid:u.uid, id:u.id, x:n.x, y:n.y, face:u.face, moving:u.moving, rimCol:u.pcol, scl:STK_UNIT_SCALE, fireSeq:(u.fireSeq||0),
+        selCol:(foe?0xff5c5c:undefined)}); } }   // 지정 링 색 — 아군=기본 청록 / 적군=빨강   // fireSeq = 공격 모션(관리자와 동일 규약)
   const _sel=(S.selAllies||[]).slice(), _selE=(S.selEnemy&&!S.selEnemy.dead)?S.selEnemy:null;   // 지정 표시 = 관리자·네모와 같은 3D 하단 링(단일 소스)   // moving=이동모션
+  if(_selE) _sel.push(_selE.uid);   // 적군도 같은 하단 링으로 표시 — 직스는 양 진영이 한 목록(units)이라 sync의 enemies 경로를 안 탄다
   M3D.sync(list, W, H, dt, _sel, [], _selE, k); }
 // 건물 탭 전용: 내 전용 건설 맵(전장 아님). 화면 1/4 직사각형, 깔끔한 금속 타일 + 건설 격자
 function strikeDrawBuildMap(spec){ const S=STK; if(!S) return; const cvEl=document.getElementById('cvMain'); if(!cvEl) return;   // spec={cells,col,label} → 관전 모드(다른 플레이어 건설)
@@ -14024,11 +14057,16 @@ function strikeStep(dt){ const S=STK; if(!S) return; if(S.over) return; if(G&&G.
   if(S.userCam && (S.t-(S.lastCam||0))>5) S.userCam=false;   // 마지막 조작 5초 후 자동 전장 복귀(줌은 유지)
   if(G.tab==='Unit' || !S.userCam){   // 건물뷰=내 진영 고정 / 전투뷰=교전 팔로우(사용자 패닝 전까지)
     if(G.tab==='Unit'){ const k=Math.min(1,dt*5.5); S.cam.x+=(S.me.base.x-S.cam.x)*k; S.cam.y+=(S.me.base.y-S.cam.y)*k; S._fx=null; }
-    else { const f=strikeFocus();   // 격전 중심(밀집도 가중) → 타깃 스무딩 + 데드존(미세 흔들림 억제)
+    else {   // 전투뷰 = 최대 격전지를 '끊김 없이 천천히' 트래킹
+      S._fT=(S._fT||0)-dt;
+      if(S._fT<=0 || !S._fc){ S._fT=STK_CAM_FT; S._fc=strikeFocus(); }   // 격전지 재계산(주기적 — 매 프레임은 낭비)
+      const f=S._fc;
       if(S._fx==null){ S._fx=f.x; S._fy=f.y; }
-      const ddx=f.x-S._fx, ddy=f.y-S._fy, dd=Math.hypot(ddx,ddy);
-      if(dd>50){ const fk=Math.min(1,dt*1.3), ov=(dd-50)/dd; S._fx+=ddx*ov*fk; S._fy+=ddy*ov*fk; }   // 데드존(50) 밖 초과분만 추적 → 잔떨림 제거
-      const k=Math.min(1,dt*2.3); S.cam.x+=(S._fx-S.cam.x)*k; S.cam.y+=(S._fy-S.cam.y)*k;   // 카메라 스무딩(이중)
+      const tk=Math.min(1, dt*STK_CAM_LAG); S._fx+=(f.x-S._fx)*tk; S._fy+=(f.y-S._fy)*tk;   // 목표점 1차 필터(격전지가 바뀌어도 급전환 없음)
+      // ⚠ 데드존으로 목표를 '얼리지' 않는다 — 멈췄다 튀는 원인이었다. 속도 제한 글라이드로 항상 조금씩 흐른다.
+      const dx=S._fx-S.cam.x, dy=S._fy-S.cam.y, d=Math.hypot(dx,dy);
+      if(d>0.5){ const step=Math.min(d, Math.min(STK_CAM_SPD, d*STK_CAM_EASE)*dt);
+        S.cam.x+=dx/d*step; S.cam.y+=dy/d*step; }
     }
   }
   strikeClampCam();
@@ -14064,6 +14102,12 @@ function strikeLeaderboard(dt){ const S=STK; S.leadT-=dt; const ranked=strikeRan
   const p=ranked[S.leadIdx%ranked.length]; const sl=document.getElementById('specLabel'); if(!sl||!p) return;
   const rank=S.leadIdx%ranked.length+1;
   sl.innerHTML='<span id="stLead"><span class="lp">#'+rank+' '+p.name+'</span> <span class="lm">⛏'+p.mines+'</span> <span class="lg">💰'+Math.floor(p.gold)+'</span></span>'; }
+// 🎥 자동 카메라 — 목표점(격전지) 선정 + 추적 상수
+const STK_CAM_HYST=0.6;    // 보던 격전지가 최고 밀집도의 60% 이상이면 유지(전선 사이 왕복 방지)
+const STK_CAM_FT=0.25;     // 격전지 재계산 주기(초) — 매 프레임 O(아군×적군)이라 비싸고, 추적이 느려서 더 자주 볼 필요가 없다
+const STK_CAM_LAG=0.8;     // 목표점 1차 필터(작을수록 급전환을 더 흡수)
+const STK_CAM_SPD=150;     // 카메라 최대 추적 속도(월드/초) — 천천히 흐르게
+const STK_CAM_EASE=0.9;    // 목표에 가까울수록 감속(도착 시 진동 방지)
 function strikeFocus(){ const S=STK; if(!S) return {x:0,y:0}; const c=S.world/2;
   const me=S.me.units, ai=S.ai.units;
   // 1) 교전 지점 수집: 적↔아군 근접 쌍의 중점(근접도 가중)
@@ -14071,10 +14115,21 @@ function strikeFocus(){ const S=STK; if(!S) return {x:0,y:0}; const c=S.world/2;
   for(const a of me){ if(a.dead) continue; let bd=ENG2, bn=null;
     for(const b of ai){ if(b.dead) continue; const dx=b.x-a.x, dy=b.y-a.y, d=dx*dx+dy*dy; if(d<bd){ bd=d; bn=b; } }
     if(bn) pts.push({x:(a.x+bn.x)/2, y:(a.y+bn.y)/2, w:1-Math.sqrt(bd)/ENG}); }
-  // 2) 밀집도 가중: 주변에 교전이 몰린 지점을 강조 → 여러 전선의 평균(빈 가운데)이 아닌 '가장 큰 격전지'에 집중
-  if(pts.length){ const R2=620*620; let wx=0, wy=0, ws=0;
-    for(const p of pts){ let dens=0; for(const q of pts){ const dx=p.x-q.x, dy=p.y-q.y; if(dx*dx+dy*dy<R2) dens+=q.w; } const w=p.w*dens; wx+=p.x*w; wy+=p.y*w; ws+=w; }
-    if(ws>0.0001) return {x:wx/ws, y:wy/ws}; }
+  // 2) 가장 큰 격전지 '하나'를 고른다. ⚠ 전체 가중 평균을 쓰면 안 된다 —
+  //    외곽에 한두 기가 붙기만 해도 중심이 끌려가고, 전선이 둘이면 그 사이 빈 공간을 비춘다.
+  //    밀집도 최대 지점(모드)을 찾고, 그 반경 안의 점만 평균해서 클러스터 중심을 낸다.
+  if(pts.length){ const R2=620*620;
+    let best=null, bestD=-1;
+    for(const p of pts){ let dens=0; for(const q of pts){ const dx=p.x-q.x, dy=p.y-q.y; if(dx*dx+dy*dy<R2) dens+=q.w; }
+      p._d=dens; if(dens>bestD){ bestD=dens; best=p; } }
+    // 히스테리시스: 보던 격전지가 아직 최고의 STK_CAM_HYST 이상이면 유지 — 비슷한 규모 둘 사이를 왔다갔다 하지 않게
+    if(S._fcx!=null){ let cur=0;
+      for(const q of pts){ const dx=S._fcx-q.x, dy=S._fcy-q.y; if(dx*dx+dy*dy<R2) cur+=q.w; }
+      if(cur>=bestD*STK_CAM_HYST){ best={x:S._fcx, y:S._fcy}; } }
+    let wx=0, wy=0, ws=0;   // 선택된 클러스터 '안'의 점만 평균(바깥 소규모 교전은 무시)
+    for(const p of pts){ const dx=p.x-best.x, dy=p.y-best.y; if(dx*dx+dy*dy>=R2) continue;
+      const w=p.w*(p._d||1); wx+=p.x*w; wy+=p.y*w; ws+=w; }
+    if(ws>0.0001){ S._fcx=wx/ws; S._fcy=wy/ws; return {x:S._fcx, y:S._fcy}; } }
   const all=me.concat(ai); if(!all.length) return {x:c,y:c};   // 교전 전(대치) → 전체 평균
   let sx=0,sy=0; for(const u of all){ sx+=u.x; sy+=u.y; } return {x:sx/all.length, y:sy/all.length}; }
 
@@ -14086,6 +14141,9 @@ function strikeUnitName(id){ return (STK_UNITS[id]&&STK_UNITS[id].name)||(WORKER
 // 전선에 도착하기 전에 전투가 끝난다. 여전히 최저속이되 따라는 갈 수 있는 값으로.
 const STK_SPD_OVR={ tank:0.13, goliath:0.13 };
 const STK_ACQ_FAR=1.4;   // 교전 판단 반경 배율(획득·유지 공통) — 두 곳에서 다른 값을 쓰면 위 문제가 재발한다
+const STK_INR_T=0.12;    // '사거리 안 표적' 전체 재탐색 주기(초). 표적을 들고 있는 동안은 O(1) 검증만 하고 이 스캔을 건너뛴다.
+                         //   대군에서 유닛마다 매 프레임 격자 질의를 돌리는 게 시뮬 최대 비용이었다. 0.12초 = 최대 7프레임 지연(체감 없음).
+                         //   피격 시에는 _inrT=0으로 즉시 재탐색시켜 반응성을 유지한다.
 function strikeAcq(rng){ return Math.max(560, Math.min(900, rng*1.9)); }   // 인지 범위 — 신전 공격 중에도 접근한 적을 놓치지 않게 넓힘(구 340~560)
 // 유닛 전투 수치 = 관리자 유닛 카탈로그(U)를 단일 소스로 환산. 오토배틀 고유값은 체력·크기·스플래시·근접 여부만.
 const STK_RNG_MUL=850, STK_SPD_MUL=1800, STK_CD_DIV=22;   // U(정규화) → 오토배틀 월드 단위 환산 계수
@@ -14134,8 +14192,34 @@ function strikeSpawnUnit(side, forceId){ const S=STK, me=S[side]; if(!me||me.uni
 const STK_RALLY_D=560, STK_RALLY_R=150;   // 소환 후 집결 지점(본진 앞 대각선 거리) · 집결 완료 판정 반경
 function strikeRallyPoint(side){ const S=STK, b=S[side].base, cx=S.world/2, cy=S.world/2;   // 본진 → 중앙 방향 레인 위
   const dx=cx-b.x, dy=cy-b.y, d=Math.hypot(dx,dy)||1; return {x:b.x+dx/d*STK_RALLY_D, y:b.y+dy/d*STK_RALLY_D}; }
-function strikeIsAir(u){ const k=u&&(u.gm||u.id); return !!(k && typeof FXLAB_AIR!=='undefined' && FXLAB_AIR.has(k)); }   // 공중 유닛 = 지상 충돌·건물 통과
-function strikeReach(u,t){ return u.rng*((typeof strikeRngMul==='function')?strikeRngMul(u):1) + ((u.size||14)+((t&&t.size)||14))*0.95; }   // 유효 사거리 = 사거리 + 두 유닛 반경(겹침 방지 간격보다 넉넉하게 — 밀려나도 계속 타격)
+// 공중 유닛 = 지상 충돌·건물 통과.
+// ⚡ 결과는 유닛 id에만 의존하고 id/gm은 생성 후 바뀌지 않으므로 최초 1회만 판정해 굳힌다 —
+//    분리(회피) 루프에서 쌍마다 불려 600기 기준 프레임당 10만 회 이상 호출되던 지점.
+function strikeIsAir(u){ if(!u) return false;
+  if(u._air===undefined){ const k=u.gm||u.id; u._air=!!(k && typeof FXLAB_AIR!=='undefined' && FXLAB_AIR.has(k)); }
+  return u._air; }
+// 💉 무공격 지원 유닛(HEALER=의무병) — 스스로 표적을 잡지 않고 부상 아군 바이오닉을 따라다니며 치유한다.
+//   치유 대상이 없으면 가장 가까운 전투 아군을 따라 전진해 본대에서 떨어지지 않는다.
+const STK_HEAL_HPS=22, STK_HEAL_RNG=110, STK_HEAL_SEEK=900, STK_HEAL_EN=0.5;   // 초당 회복 · 치유 사거리 · 탐색 반경 · 회복 1당 에너지
+function strikeHealStep(u, me, dt){
+  let t=null, td=Infinity;   // ① 가장 가까운 부상 바이오닉
+  for(const a of me.units){ if(a===u || a.dead || a.hp>=a.maxHp || !BIONIC[a.gm||a.id]) continue;
+    const dx=a.x-u.x, dy=a.y-u.y, d2=dx*dx+dy*dy; if(d2<td){ td=d2; t=a; } }
+  if(t && td<=STK_HEAL_SEEK*STK_HEAL_SEEK){
+    if(td>STK_HEAL_RNG*STK_HEAL_RNG){ strikeMoveToward(u, t.x, t.y, dt); return; }
+    u.moving=false; u.face=Math.atan2(t.x-u.x, t.y-u.y);
+    let amt=STK_HEAL_HPS*dt;
+    if(u.maxEn>0){ amt=Math.min(amt, (u.en||0)/STK_HEAL_EN); u.en=Math.max(0,(u.en||0)-amt*STK_HEAL_EN); }   // 에너지 소진 시 치유 중단
+    t.hp=Math.min(t.maxHp, t.hp+amt); return; }
+  let f=null, fd=Infinity;   // ② 치유할 대상이 없으면 본대를 따라간다
+  for(const a of me.units){ if(a===u || a.dead || HEALER[a.gm||a.id]) continue;
+    const dx=a.x-u.x, dy=a.y-u.y, d2=dx*dx+dy*dy; if(d2<fd){ fd=d2; f=a; } }
+  if(f && fd>STK_HEAL_RNG*STK_HEAL_RNG) strikeMoveToward(u, f.x, f.y, dt); else u.moving=false; }
+// ⚡ u쪽 항(사거리×배수 + 내 반경)은 프레임 안에서 불변 → 유닛당 프레임 1회만 계산하고 재사용.
+//    표적 탐색 루프에서 600기 기준 프레임당 7만 회 이상 불리던 지점(호출마다 typeof + 함수호출 + 곱셈이 있었다).
+function strikeReach(u,t){ const _t=(typeof STK!=='undefined'&&STK)?STK.t:0;
+  if(u._rchT!==_t){ u._rchT=_t; u._rchU=u.rng*((typeof strikeRngMul==='function')?strikeRngMul(u):1)+(u.size||14)*0.95; }
+  return u._rchU + ((t&&t.size)||14)*0.95; }   // 유효 사거리 = 사거리 + 두 유닛 반경(겹침 방지 간격보다 넉넉하게 — 밀려나도 계속 타격)
 const STK_UNIT_CAP=0;   // 진영당 유닛 상한 — 0=무제한(인구 제한 없음)
 const STK_CELL=105;          // 전장 1칸(월드) — 신전 점유 구역 계산 기준
 function strikeTempleCells(o){ const S=STK; return (S&&o===S.central)?2:4; }   // 메인·2차=4×4 / 중립=2×2
@@ -14295,7 +14379,7 @@ function strikeSkillTick(dt){ const S=STK; if(!S||typeof SKILLS==='undefined') r
         else if(sk.kind==='aura'){ u.skillOn[k]=true; }   // 은신 장막 — 상시
       } } } }
 const STK_SD_AT=900, STK_SD_DPS=12, STK_SD_RAMP=0.02;   // 15분 후 시작 · 초당 피해(시간이 지날수록 가속)
-function strikeSuddenDeath(dt){ const S=STK; if(!S||S.over) return;
+function strikeSuddenDeath(dt){ const S=STK; if(!S||S.over||S.stress) return;   // 🧪 관측 모드는 서든 데스 없음(끝나면 안 됨)
   const t=(S.t||0)-STK_SD_AT; if(t<=0) return;
   if(!S._sdMsg){ S._sdMsg=true; if(typeof strikeToast==='function') strikeToast('☠ 서든 데스 — 양 진영 메인 신전이 무너지기 시작합니다'); }
   const d=(STK_SD_DPS+t*STK_SD_RAMP)*dt;
@@ -14654,8 +14738,36 @@ function strikeFindUnit(arr,uid){ if(!uid) return null; for(const u of arr){ if(
 function strikeAlert(allies, attackerUid, ax, ay, r, atkAir){ const r2=r*r;
   for(const a of allies){ if(a.dead||a.wait>0||a.tgtUid) continue;
     if(atkAir!=null && a._atk && !(atkAir? a._atk.air : a._atk.gnd)) continue;   // 못 때리는 아군은 부르지 않음
-    const dx=a.x-ax, dy=a.y-ay; if(dx*dx+dy*dy<=r2){ a.tgtUid=attackerUid; a._acqT=0; } } }
+    const dx=a.x-ax, dy=a.y-ay; if(dx*dx+dy*dy<=r2){ a.tgtUid=attackerUid; a._acqT=0; a._inrT=0; } } }   // _inrT=0 → 사거리 안 재탐색도 즉시
+// ═══ 🧪 대규모 전투 관측 모드(임시 · 정상 플레이 경로는 건드리지 않음) ═══
+//   `strikeStress(n)` = 신전을 사실상 무적으로 만들어 게임이 끝나지 않게 하고,
+//   양 진영이 **같은 티어 표**로 웨이브마다 n기씩 소환하며 계속 싸운다(전력 대등 → 순수 전투 관측).
+//   라운드가 오를수록 상위 티어로 올라가 후반에 대규모·고화력 전투가 된다. `strikeStress(0)`으로 해제.
+const STK_STRESS_HP=200;        // 신전 체력 배수(끝나지 않게)
+const STK_STRESS_STEP=2;        // 티어 1단계 상승에 필요한 웨이브 수
+const STK_TIERS={               // 종족이 달라도 같은 인덱스 = 같은 급 — "비슷한 공격력·단계"
+  terran: [['marine'],['marine','machinegun'],['machinegun','medic','racer'],['racer','goliath','tank'],
+           ['tank','goliath','ghost'],['tank','skyguard','hellfire'],['hellfire','dreadnought','aegis']],
+  zerg:   [['snapper'],['snapper','hydra'],['hydra','broodling','venom'],['venom','thornqueen','stinger'],
+           ['thornqueen','matron','stinger'],['matron','medusa','ultralisk'],['ultralisk','medusa','behemoth']],
+  protoss:[['blade'],['blade','dragoon'],['dragoon','falcon','dark_templar'],['falcon','archon','skydancer'],
+           ['archon','skydancer','dark_templar'],['archon','kronos','archangel'],['archangel','kronos','skydancer']] };
+function _stkTierList(side){ const S=STK, t=STK_TIERS[S[side].race]||STK_TIERS.terran;
+  const i=Math.min(t.length-1, Math.floor((S.round||0)/STK_STRESS_STEP));
+  return t[i].filter(u=>STK_UNITS[u]) .length ? t[i].filter(u=>STK_UNITS[u]) : ['marine']; }
+function strikeStress(n){ const S=STK; if(!S) return '오토배틀이 아닙니다';
+  S.stress=Math.max(0, n|0);
+  if(S.stress && !S._stressHp){ S._stressHp=true;   // 체력 부풀리기는 1회만(중복 호출 방지)
+    for(const t of [S.me.base, S.me.sec, S.ai.base, S.ai.sec, S.central]){ if(!t) continue;
+      t.max=Math.round((t.max||t.hp||1)*STK_STRESS_HP); t.hp=t.max; t.dead=false; t.deadT=0; }
+    S.me.max=S.me.base.max; S.me.hp=S.me.base.hp; S.ai.max=S.ai.base.max; S.ai.hp=S.ai.base.hp;
+    S.over=null; G.phase='playing'; }
+  return '전투 관측 모드 '+(S.stress?('ON — 웨이브마다 진영별 '+S.stress+'기, '+STK_STRESS_STEP+'웨이브마다 티어 상승'):'OFF'); }
+function strikeSpawnStress(){ const S=STK, n=S.stress|0;
+  for(const side of ['me','ai']){ const list=_stkTierList(side);
+    for(let i=0;i<n;i++) strikeSpawnUnit(side, list[(Math.random()*list.length)|0]); } }
 function strikeSpawnWave(){ const S=STK; if(!S) return;   // 출격 주기(30초): ME=건설지에서 생산해 둔 유닛이 출격 / AI=컴퓨터 자동 소환
+  if(S.stress){ strikeSpawnStress(); return; }   // 🧪 관측 모드 = 건물 무시, 양 진영 대칭 소환
   let myCount=0;
   if(G.tech && G.tech.ents){   // 🏭 완성된 건물마다 담당 유닛 1기를 무료 배출(건물 수 = 생산력) — 여러 종을 담당하면 주기마다 순환
     const _race=G.tech.race;
@@ -14709,10 +14821,11 @@ function strikeSeparate(){ const S=STK; if(!S) return; const all=S.me.units.conc
     strikeGridBuild();   // ⚡ 반복마다 격자 갱신(위치가 바뀌므로) — 전체 쌍 순회 대신 근접 질의
     for(let i=0;i<all.length;i++){ const a=all[i]; if(a.dead) continue;   // 스폰 대기(wait) 유닛도 분리 대상
       strikeNear(a.x, a.y, (a.size||14)*2*STK_SEP+40, _nb);
+      const aAir=strikeIsAir(a), aSepK=(aAir?STK_SEP_AIR:STK_SEP);   // ⚡ a쪽 값은 안쪽 루프에서 불변 → 밖으로 꺼낸다
       for(let j=0;j<_nb.length;j++){ const b=_nb[j]; if(b===a||b.dead) continue;
         if((b.uid||0)<=(a.uid||0)) continue;   // 각 쌍을 한 번만 처리
-        if(strikeIsAir(a)!==strikeIsAir(b)) continue;   // 레이어가 다르면(공중↔지상) 충돌하지 않음 — 아래로 지나감
-        let dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy); const min=(a.size+b.size)*(strikeIsAir(a)?STK_SEP_AIR:STK_SEP);   // 간격 단일 기준(회피 반경도 여기서 파생) · 공중은 더 조밀
+        if(aAir!==strikeIsAir(b)) continue;   // 레이어가 다르면(공중↔지상) 충돌하지 않음 — 아래로 지나감
+        let dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy); const min=(a.size+b.size)*aSepK;   // 간격 단일 기준(회피 반경도 여기서 파생) · 공중은 더 조밀
         if(d<min){ if(d<0.01){ dx=Math.random()-0.5; dy=Math.random()-0.5; d=1; } const p=(min-d), ux=dx/d, uy=dy/d;
           const aFix=!a.moving, bFix=!b.moving;   // 정지(공격/대기) 유닛은 앵커 — 지나가는 유닛이 비켜감
           if(aFix&&!bFix){ b.x+=ux*p; b.y+=uy*p; _sepVel(b, ux, uy); }          // a=정지(공격 중) 앵커 → 이동 중인 b만 돌아감(정지 유닛은 절대 밀리지 않음)
@@ -14735,6 +14848,7 @@ function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
       if(u._btT>0){ u._btT-=dt; if(u._btT<=0) u._btgt=null; }   // 포기했던 표적의 재선정 금지 시간
       if(!u._atk) u._atk=(typeof _sbAtkMode==='function')?_sbAtkMode({id:u.id, gmodel:u.gm}):{air:true,gnd:true};   // 공격 가능 레이어(관리자 전투실험과 동일 규칙)
       const _canHit=(o)=>{ const k=o.gm||o.id, air=(typeof FXLAB_AIR!=='undefined'&&FXLAB_AIR.has(k)); return air?u._atk.air:u._atk.gnd; };
+      if(HEALER[u.gm||u.id]){ strikeHealStep(u, me, dt); continue; }   // 💉 무공격 지원 — 표적 선정 전체를 건너뛴다
       if(!u.rallied){ const _rp=strikeRallyPoint(side);   // 소환 직후: 본진 앞 집결 지점에 모였다가 출발(양 옆으로 흩어져 맵 끝을 도는 것 방지)
         if(Math.hypot(_rp.x-u.x,_rp.y-u.y)<=STK_RALLY_R) u.rallied=true;
         else { let _eng=false;
@@ -14742,10 +14856,18 @@ function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
           if(!_eng){ strikeMoveToward(u, _rp.x, _rp.y, dt); continue; } } }   // 사거리 안에 적이 있으면 그대로 교전
       let tgt=strikeFindUnit(foe.units, u.tgtUid);   // 현재 타겟
       const _d2=(o)=>{ const dx=o.x-u.x, dy=o.y-u.y; return dx*dx+dy*dy; };
-      { let inR=null, inRd=Infinity;   // ① 사거리 안에 때릴 수 있는 적 중 '가장 가까운' 적 (격자 질의)
-        const _fr=u.rng+120, _fb=strikeNear(u.x,u.y,_fr,u._tgBuf||(u._tgBuf=[]));
-        for(let _i=0;_i<_fb.length;_i++){ const e=_fb[_i]; if(e._sd===u._sd||e.dead||!_canHit(e)) continue;
-          const d2=_d2(e); const _rc=strikeReach(u,e); if(d2<=_rc*_rc && d2<inRd){ inRd=d2; inR=e; } }
+      { let inR=null;   // ① 사거리 안에 때릴 수 있는 적 중 '가장 가까운' 적
+        // ⚡ 들고 있던 표적이 아직 사거리 안이면 O(1) 검증만 하고 격자 질의를 건너뛴다(참조로 보관 — uid 재조회는 선형 탐색이라 더 비싸다).
+        const _c=u._inrObj;
+        if(_c && !_c.dead && _c._sd!==u._sd && _canHit(_c)){ const _rc=strikeReach(u,_c); if(_d2(_c)<=_rc*_rc) inR=_c; }
+        if(!inR) u._inrObj=null;
+        u._inrT=(u._inrT||0)-dt;
+        if(!inR && u._inrT<=0){ u._inrT=STK_INR_T*(0.75+Math.random()*0.5);   // 유닛마다 위상을 흩어 한 프레임에 몰리지 않게
+          let inRd=Infinity;
+          const _fr=u.rng+120, _fb=strikeNear(u.x,u.y,_fr,u._tgBuf||(u._tgBuf=[]));
+          for(let _i=0;_i<_fb.length;_i++){ const e=_fb[_i]; if(e._sd===u._sd||e.dead||!_canHit(e)) continue;
+            const d2=_d2(e); const _rc=strikeReach(u,e); if(d2<=_rc*_rc && d2<inRd){ inRd=d2; inR=e; } }
+          u._inrObj=inR; }
         if(inR) tgt=inR;
         else {   // ② 사거리 밖: 인지 범위 안 최근접을 주기적으로 재탐색(잦은 전환 방지)
           const _cap=(e)=>Math.max(3, Math.floor(6.2832*strikeReach(u,e)/Math.max(1,(u.size||14)*2*STK_SEP)));   // 그 표적 주위에 내가 설 수 있는 자리 수
@@ -14778,7 +14900,7 @@ function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
           if(u.cd<=0){ u.cd=u.cdMax; u.fireSeq=(u.fireSeq||0)+1; tgt.hp-=u.dmg*strikeSkillAtkMul(u)*strikeAtkMul(me); strikeFx(u,tgt.x,tgt.y,col);   // fireSeq++ = 3D 공격 모션 트리거
             { const _uAir=strikeIsAir(u);
               if(!tgt.tgtUid && (!tgt._atk || (_uAir? tgt._atk.air : tgt._atk.gnd))) tgt.tgtUid=u.uid;   // 반격은 때릴 수 있을 때만
-              tgt._acqT=0;                                        // 맞으면 즉시 재판단
+              tgt._acqT=0; tgt._inrT=0;                           // 맞으면 즉시 재판단(사거리 안 스캔 주기도 리셋)
               strikeAlert(foe.units, u.uid, tgt.x, tgt.y, 420, _uAir); }   // 주변 아군 가담(때릴 수 있는 아군만)
             if(u.splash>0){ const sr2=u.splash*u.splash, sd=u.dmg*0.6;   // 광역: 타겟 주변 적에게 60% 추가타
               for(const e of foe.units){ if(e===tgt||e.dead) continue; const ex=e.x-tgt.x, ey=e.y-tgt.y; if(ex*ex+ey*ey<=sr2){ e.hp-=sd; if(e.hp<=0){ e.dead=true; me.kills=(me.kills||0)+1; me.gold+=strikeKillGold(e); } } } }
@@ -15085,7 +15207,13 @@ function strikeHud(){ const S=STK; if(!S) return;
 
 // ── 탭(nemo 탭+하단 .bp 재사용, 직스 전용 동작) ──
 function strikeSwitchTab(id,el){ const S=STK; if(!S) return;
-  if(id==='Upgrade'){ strikeToggleSupply(); return; }   // 📦 보급 = 화면 이동 없이 하단 시트만 토글
+  if(id==='Upgrade'){
+    // 업그레이드 탭으로 **내릴** 때는 지정도 함께 해제해 하단을 완전히 비운다.
+    //   (전투·건설지 탭으로 내릴 때와 다르다 — 그쪽은 지정해 둔 대상의 프로필로 복귀한다)
+    if(S.supSheet){ strikeClearSel();
+      if(G.tab==='Build' && G.tech){ G.tech.sel=null; G.tech.selU=[]; G.tech.selRes=null;
+        if(G.tech.sheet){ G.tech.sheet.open=false; G.tech.sheet.sec=null; } } }
+    strikeToggleSupply(); return; }   // 📦 업그레이드 = 화면 이동 없이 하단 시트만 토글
   // 지금 보고 있는 화면의 탭을 다시 누르면 = 보급 시트만 내린다(화면은 그대로).
   //   내린 뒤에는 각 화면의 원래 규칙으로 복귀 — 지정한 대상이 있으면 그 프로필, 없으면 하단 구역 자체가 사라진다.
   if(S.supSheet && id===G.tab){ strikeToggleSupply(false); return; }
@@ -15274,6 +15402,9 @@ function strikeSelectAt(wx,wy){ const S=STK; strikeClearSel();
   const uOk=bu&&bud<10000, tOk=!!bt;   // 유닛 ~100 반경 / 신전 = 점유 사각형 내부에서만
   if(uOk && (!tOk || bud<btd)){ if(bu.side==='me') S.selAllies=[bu.uid]; else S.selEnemy=bu; }   // 아군=다중가능(여기선 1) / 적군=최대 1
   else if(tOk){ S.selTemple=bt; S.selTempleName=btn; }
+  // 업그레이드 시트가 올라와 있으면 화면(시트 바깥) 탭으로 내린다.
+  //   대상을 골랐으면 그 프로필이 뜨고, 빈 곳을 눌렀으면 아무것도 남지 않는다.
+  if(S.supSheet) strikeToggleSupply(false);
   strikeRenderSelInfo(); }
 function strikeWheel(e){ const S=STK; if(!S) return; if(e.cancelable) e.preventDefault();
   { S.zoom=Math.min(STK_MAXZOOM, Math.max(STK_MINZOOM, S.zoom*(e.deltaY>0?0.9:1.1))); strikeClampCam(); } }
@@ -15811,12 +15942,17 @@ function poseOf(m, id, moving, atkT){
   if(id==='blade' && m.runInner) return 'run';                     // 워든 정지 = 리깅 모델 frame0 고정
   return m.stayInner?'stay':'static';
 }
+// 🔫 총(별도 정적 메시)은 유닛당 드로우콜을 하나 더 쓴다. 대군에서는 이게 렌더 비용의 25%까지 차지한다.
+//   화면상 유닛이 이 높이보다 작으면 총은 몇 픽셀짜리 얼룩이라 그리지 않는다 — 직스(대군)에서만 적용.
+//   네모는 유닛이 23~32px라 항상 총이 보인다(실측). 직스는 기본 13~15px·줌인 26px → 줌인하면 다시 보인다.
+const GUN_MIN_PX=20;
 function poseShow(m, which){   // 총은 정지·대기 자세에서만(달리기/공격 GLB엔 총이 이미 들어있음)
   if(m.inner)    m.inner.visible=(which==='static');
   if(m.runInner) m.runInner.visible=(which==='run');
   if(m.stayInner)m.stayInner.visible=(which==='stay');
   if(m.atkInner) m.atkInner.visible=(which==='atk');
-  if(m.gun)      m.gun.visible=(which==='static'||which==='stay');
+  if(m.gun){ const _big=!(typeof G!=='undefined'&&G.strike) || (m.h*(m.holder?m.holder.scale.x:1))>=GUN_MIN_PX;
+    m.gun.visible=(which==='static'||which==='stay') && _big; }
 }
 function walkPose(m, id, walk){   // 절차적 걷기(달리기 GLB 없는 유닛)
   m.anim.position.x=0;
@@ -16637,7 +16773,7 @@ window.M3D={
       else { m.rim.visible=false;   // 일반 선택링 → 인스턴스 배치(다중 선택 시 전체 1드로우콜)
         if(selSet.has(u.uid)){   // 선택링 색: 영웅=금색 / 가챠=등급색(유닛도감과 동일) / 일반=청록
           const _tc=(u.gtier && typeof TIER_COLOR!=='undefined')?TIER_COLOR[u.gtier]:null;
-          ringN=_ringPush(ringN, px, worldY-Y_DROP, _ro*_hs, u.hero?0xffc24a:(_tc||0x37e0c8), _zOf(u,_id,worldY,H));
+          ringN=_ringPush(ringN, px, worldY-Y_DROP, _ro*_hs, (u.selCol!=null?u.selCol:(u.hero?0xffc24a:(_tc||0x37e0c8))), _zOf(u,_id,worldY,H));   // selCol = 호출부 지정색(직스 적군=빨강)
         } }
       // 영웅 상시 식별: 발밑 은은한 금색 링 + 미세한 반짝임(눈에 띄지 않게)
       if(u.hero){
@@ -17006,7 +17142,7 @@ window.M3D={
 init();
 window.M3D.matDbg=(uid)=>{ const m=models.get(uid); if(!m) return null; const dump=(root)=>{ const out=[]; if(!root) return out; root.traverse(o=>{ if(!o.isMesh) return; const ms=Array.isArray(o.material)?o.material:[o.material]; ms.forEach(mt=>{ if(!mt) return; out.push({nm:mt.name||"", type:mt.type, color:mt.color?"#"+mt.color.getHexString():null, emis:mt.emissive?"#"+mt.emissive.getHexString():null, emisInt:mt.emissiveIntensity, emisMap:!!mt.emissiveMap, map:!!mt.map, metal:mt.metalness, rough:mt.roughness, envInt:mt.envMapIntensity, tinted:!!mt._tinted}); }); }); return out; };
   return {inner:dump(m.inner), run:dump(m.runInner), stay:dump(m.stayInner), atk:dump(m.atkInner)}; };   // 재질 디버그(정지/이동 룩 차이 진단용)
-window.M3D.dbg=()=>({ n:models.size, ready, loaded:Object.keys(bases), anims:[...models].map(([uid,m])=>({uid,id:m.id,dying:m.dying,yaw:+m.yaw.rotation.y.toFixed(2),px:Math.round(m.h*m.holder.scale.x),pos:[Math.round(m.holder.position.x),Math.round(m.holder.position.y)], z:Math.round(m.holder.position.z)})) });   // px = 화면상 모델 높이
+window.M3D.dbg=()=>({ n:models.size, ready, loaded:Object.keys(bases), rings:(ringInst?ringInst.count:0), anims:[...models].map(([uid,m])=>({uid,id:m.id,dying:m.dying,yaw:+m.yaw.rotation.y.toFixed(2),px:Math.round(m.h*m.holder.scale.x),pos:[Math.round(m.holder.position.x),Math.round(m.holder.position.y)], z:Math.round(m.holder.position.z)})) });   // px = 화면상 모델 높이
 window.M3D.prof=(on)=>{ if(on!==undefined) _prof=on?(_prof||{}):null; return _prof; };   // 렌더 프로파일 on/off — {loop, render} 최근 프레임 ms(벤치 전용)
 window.M3D.mixForce=(n)=>{ _mixForce=n|0; return _mixForce; };   // 애니 분산값 강제(0=자동) — 벤치 A/B 전용
 window.M3D.boneVis=(on)=>{ let n=0; for(const [,m] of models) for(const r of [m.inner,m.runInner,m.stayInner,m.workInner,m.atkInner]){ if(!r) continue;

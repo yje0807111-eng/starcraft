@@ -163,6 +163,73 @@ async function groupGame(){
     const a=find(); assert(a && a.dying===false, '복귀했는데 사망 모션이 안 풀림');
     for(let i=0;i<3;i++) M3D.sync([], 300, 300, 1.0, [], [], null, 1);    // 정리
     return 'ok'; });
+  // 건물 = 전장 병력 공급원(오토배틀 전용). 표의 건물 키·유닛 id가 실재해야 웨이브에서 실제로 배출된다.
+  // 또한 이 규칙은 관리자 건설에 새어 나가면 안 된다(건물 프로필 설명 오염 선례).
+  await step('건물→전장 배출표: 키 실재 + 관리자 미오염', ()=>{
+    skipIf(typeof TECH_BLDG_UNIT==='undefined' || typeof STK_UNITS==='undefined','표 없음');
+    let n=0;
+    for(const race in TECH_BLDG_UNIT){ const bks=new Set((TECH_TREE[race]||{buildings:[]}).buildings.map(b=>b.k));
+      for(const bk in TECH_BLDG_UNIT[race]){ const e=TECH_BLDG_UNIT[race][bk]; n++;
+        assert(bks.has(bk), race+'/'+bk+': 그런 건물 없음');
+        assert(!!STK_UNITS[e.u], race+'/'+bk+' → '+e.u+': STK_UNITS에 없음');
+        assert(techBldgUnit(race,bk)===e.u, race+'/'+bk+': 유닛 조회 불일치');
+        assert(techBldgCount(race,bk)===e.n*TECH_WAVE_MUL, race+'/'+bk+': 배출량 = n×TECH_WAVE_MUL 이어야 함'); } }
+    assert(techBldgCount('union','supply')===6 && techBldgCount('union','barracks')===4
+      && techBldgCount('union','academy')===2, '보병 배출량(레인저6·화력병4·의무병2)이 바뀜');
+    assert(!techWallet(), '오토배틀이 아닌 상태여야 함');
+    assert(_techSpawnText({k:'barracks'})==='', '관리자 건물 프로필에 오토배틀 배출 문구가 붙음');
+    assert(_techSpawnCard('barracks')===null, '관리자 건물 프로필에 오토배틀 배출 카드가 붙음');
+    return n+'항목'; });
+  // 관리자 건설에서 건물을 고르면 그 건물의 유닛 생산 버튼이 나와야 한다.
+  // 오토배틀은 건물이 자동 배출하므로 수동 생산이 일꾼뿐 — 이 규칙이 관리자로 새면 생산 그리드가 통째로 빈다(선례 2회).
+  await step('관리자 건설: 건물 유닛 생산 그리드 유지', ()=>{
+    skipIf(typeof _techHasProd!=='function' || typeof TECH_TREE==='undefined','건설 시스템 없음');
+    assert(!techWallet(), '오토배틀이 아닌 상태여야 함');
+    const race=(G.tech&&G.tech.race)||'union', t=TECH_TREE[race]; skipIf(!t, race+' 트리 없음');
+    const prod=t.buildings.filter(b=>(b.produces||[]).length);
+    assert(prod.length>1, '생산 건물이 '+prod.length+'개뿐 — 트리 손상');
+    for(const b of prod) assert(_techHasProd(b), race+'/'+b.k+': 생산 건물인데 생산 모델을 안 씀');
+    return prod.length+'개 생산 건물'; });   // 실제 카드 생성은 건설 상태가 필요 → sandbox 그룹에서 검증
+  // 🧪 전투 관측 모드: 티어 표의 유닛 id가 실재해야 소환이 되고, 기본값은 꺼져 있어야 정상 플레이가 안 바뀐다.
+  await step('전투 관측 모드(strikeStress) 티어 표', ()=>{
+    skipIf(typeof STK_TIERS==='undefined' || typeof STK_UNITS==='undefined','관측 모드 없음');
+    assert(typeof strikeStress==='function','strikeStress 없음');
+    let n=0;
+    for(const race in STK_TIERS){ const t=STK_TIERS[race];
+      assert(t.length>1, race+': 티어가 1단계뿐');
+      t.forEach((lv,i)=>{ assert(lv.length, race+' 티어'+i+': 빈 목록');
+        lv.forEach(u=>{ n++; assert(!!STK_UNITS[u], race+' 티어'+i+' → '+u+': STK_UNITS에 없음'); }); }); }
+    assert(!(typeof STK!=='undefined' && STK && STK.stress), '관측 모드가 기본으로 켜져 있음');
+    return n+'칸'; });
+  // 자동 화질 조절 임계값은 '프레임 바닥(주사율) 대비 배수'여야 한다.
+  // ms 상수로 두면 60Hz의 바닥(16.7ms)보다 낮은 복구 임계값이 영원히 성립하지 않아,
+  // 한 번 낮아진 해상도가 유닛이 줄어도 되돌아오지 않는다(실제로 겪은 버그).
+  await step('자동 화질: 복구 임계값이 도달 가능한가', ()=>{
+    skipIf(typeof STK_AQ_GOOD==='undefined','자동 화질 조절 없음');
+    assert(STK_AQ_GOOD>1, '복구 임계값('+STK_AQ_GOOD+')이 프레임 바닥(×1) 이하 — 60Hz에서 복구 불가');
+    assert(STK_AQ_BAD>STK_AQ_GOOD, '낮춤('+STK_AQ_BAD+') ≤ 복구('+STK_AQ_GOOD+') — 히스테리시스 없음(요동)');
+    assert(STK_AQ_BAD<3 && STK_AQ_GOOD<3, 'ms 상수처럼 보임 — 배수여야 함');
+    assert(STK_AQ_LOW>0 && STK_AQ_LOW<STK_AQ_HI, '해상도 하한/상한 이상');
+    return '바닥×'+STK_AQ_GOOD+' 복구 / ×'+STK_AQ_BAD+' 낮춤'; });
+  // 자동 카메라: 데드존으로 목표를 얼리면 '멈췄다 튀는' 움직임이 된다 → 속도 제한 글라이드 상수만 검사.
+  await step('자동 카메라 추적 상수', ()=>{
+    skipIf(typeof STK_CAM_SPD==='undefined','자동 카메라 없음');
+    assert(STK_CAM_SPD>0 && STK_CAM_SPD<=600, '추적 속도('+STK_CAM_SPD+')가 비정상 — 너무 빠르면 화면이 튄다');
+    assert(STK_CAM_HYST>0 && STK_CAM_HYST<1, '히스테리시스('+STK_CAM_HYST+')는 0~1 — 전선 사이 왕복 방지용');
+    assert(STK_CAM_FT>0.05, '격전지 재계산 주기('+STK_CAM_FT+'s)가 너무 짧음 — O(아군×적군)이라 프레임을 먹는다');
+    assert(STK_CAM_EASE>0, '감속 계수 이상');
+    return STK_CAM_SPD+'/s · 재계산 '+STK_CAM_FT+'s · 유지 '+STK_CAM_HYST; });
+  // CST_BLDG_CFG는 한 줄에 여러 건물을 나열한다 — 앞 줄 주석에 합쳐지면 그 항목들이 통째로 주석 처리돼
+  // 크기·정면(f)이 조용히 사라진다(선례: 공학소가 늘 뒷모습, 대형 건물 4종 크기 축소).
+  await step('건물 3D 스펙(CST_BLDG_CFG) 누락 없음', ()=>{
+    skipIf(typeof CST_BLDG_CFG==='undefined','스펙 표 없음');
+    const need=['union_command_center','union_barracks','union_engineering_bay','union_factory',
+      'union_starport','union_science_facility','union_academy','union_armory'];
+    const miss=need.filter(k=>!CST_BLDG_CFG[k]);
+    assert(!miss.length, '스펙 누락(주석에 먹혔는지 확인): '+miss.join(', '));
+    for(const k of need) assert(CST_BLDG_CFG[k].s>0, k+': 크기(s) 없음');
+    assert(Math.abs(CST_BLDG_CFG.union_engineering_bay.f-Math.PI)<1e-6, '공학소 정면 보정(f=π)이 사라짐');
+    return need.length+'종 확인'; });
 }
 
 // ── 그룹: sandbox (관리자) ──
@@ -172,6 +239,16 @@ async function groupSandbox(){
   await step('샌드박스 탭 구성(전투실험·건설 표시, 보스 숨김)', ()=>{ updatePbossFab();
     assert($('battleTab').style.display!=='none','battleTab 숨김'); assert($('buildTab').style.display!=='none','buildTab 숨김');
     assert($('bossTab').style.display==='none','bossTab이 샌드박스에 노출'); return 'ok'; });
+  // 관리자 건설 탭에서 병영을 고르면 레인저·화력병·의무병·저격수 카드가 실제로 그려져야 한다.
+  await step('관리자 건설: 병영 생산 카드', async()=>{
+    switchTab('Build', document.querySelector('.tab[data-tab="Build"]')); await sleep(400);
+    skipIf(!G.tech || typeof techBldgProdModel!=='function','건설 상태 없음');
+    const bar=techGetBldg(G.tech.race,'barracks'); skipIf(!bar,'병영 없음');
+    assert(_techHasProd(bar),'병영이 생산 모델을 안 씀');
+    const names=techBldgProdModel(bar,null).items.filter(i=>i&&i.sn).map(i=>i.sn);
+    assert(names.length>=bar.produces.length, '카드 '+names.length+'개 < produces '+bar.produces.length+'개');
+    switchTab('Main', document.querySelector('.tab[data-tab="Main"]'));
+    return names.join('·'); });
   await step('전투실험 탭 전환', ()=>{ switchTab('Battle', document.querySelector('.tab[data-tab="Battle"]'));
     assert(G.tab==='Battle','tab='+G.tab); switchTab('Main', document.querySelector('.tab[data-tab="Main"]')); return 'ok'; });
 }
