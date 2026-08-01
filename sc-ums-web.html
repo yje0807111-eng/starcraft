@@ -15340,23 +15340,7 @@ function strikeMyBuildCells(){ const S=STK, b=S&&S.build; if(!b||!G.tech||!G.tec
   return out; }
 function strikeSpecView(slot){ const S=STK; const isMe=(slot===(G.myPlayer||1)); const cells=isMe?strikeMyBuildCells():strikeSpecBuildCells(slot);
   return {cells:cells, col:strikePColor(slot), label:(isMe?'내 ':(((G.playerNames&&G.playerNames[slot])||(slot+'P'))+' '))+'건설'}; }
-function strikeSpecSelect(slot, enemy){ const S=STK; if(!S) return;
-  if(enemy){ strikeToast('적 진영은 암흑 시야입니다 🌑'); return; }
-  S.specView=(S.specView===slot)?null:slot;   // 같은 슬롯 다시 누르면 전장으로 복귀
-  strikeRenderSpec(); if(typeof playSfx==='function') playSfx('ui_tab'); }
-function strikeRenderSpec(){ const S=STK; const g=document.getElementById('plGrid'); if(!g) return;
-  const pp=document.getElementById('playerProfile'); if(pp) pp.style.display='none';
-  g.style.display=''; g.style.gap=''; g.innerHTML='';
-  const meNick=(typeof myNick==='function'?myNick():'나');
-  for(let n=1;n<=8;n++){ const enemy=n>=5, col=strikePColor(n);
-    const el=document.createElement('div');
-    el.className='plbtn'+((S&&S.specView===n)?' me':'')+(enemy?' off':'');   // 적군=흐리게(암흑 시야)
-    el.style.setProperty('--pc', col);
-    const nm=(n===1)?escHtml(meNick):(enemy?'컴퓨터 🌑':n+'P');
-    el.innerHTML='<div class="plnum">'+n+'P</div><div class="plst">'+nm+'</div>';
-    el.onclick=()=>strikeSpecSelect(n, enemy);
-    g.appendChild(el);
-  } }
+// (제거) strikeSpecSelect/strikeRenderSpec — 구 Players-탭 .plbtn 렌더러. 관전이 하단 시트(_stkSpecGridHTML)로 이동해 진입점 없어짐.
 function strikeToast(msg){ if(typeof lobbyToast==='function') lobbyToast(msg); else if(typeof toast==='function') toast(msg); }
 
 // ── 입력(전장 패닝/핀치줌/선택) ──
