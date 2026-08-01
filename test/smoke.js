@@ -127,6 +127,15 @@ async function groupLobby(){
     assert(profSelectChar(a.id),'되돌아가기 실패');
     assert(a.statPoints===spA && profStat('pow')===powA,'되돌아온 캐릭터의 성장이 바뀜');
     return '슬롯 '+PROF().chars.length+'/'+PROF_MAX_CHARS; });
+  await step('캐릭터 이름은 HTML로 해석되지 않음', ()=>{ skipIf(typeof profCreateChar!=='function','캐릭터 시스템 없음');
+    const p=PROF(); p.chars.length=0; p.curId='';
+    profCreateChar('scout','<b>x</b>');                 // 이름은 사용자 입력 — innerHTML에 그대로 들어가면 안 된다
+    const host=document.createElement('div');
+    host.innerHTML=renderCharSelect();
+    assert(host.textContent.indexOf('<b>x</b>')>=0,'보관소에서 이름이 마크업으로 해석됨');
+    host.innerHTML=renderProfStats();
+    assert(host.textContent.indexOf('<b>x</b>')>=0,'광장에서 이름이 마크업으로 해석됨');
+    return '이스케이프 확인'; });
 }
 
 // ── 그룹: game (솔로 무한) ──
