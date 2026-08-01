@@ -173,7 +173,8 @@ async function groupGame(){
         assert(bks.has(bk), race+'/'+bk+': 그런 건물 없음');
         assert(!!STK_UNITS[e.u], race+'/'+bk+' → '+e.u+': STK_UNITS에 없음');
         assert(techBldgUnit(race,bk)===e.u, race+'/'+bk+': 유닛 조회 불일치');
-        assert(techBldgCount(race,bk)===e.n*TECH_WAVE_MUL, race+'/'+bk+': 배출량 = n×TECH_WAVE_MUL 이어야 함'); } }
+        const rm=(typeof STK_RACE_SPAWN!=='undefined'?(STK_RACE_SPAWN[race]||1):1);   // 종족별 배출 배수(union1·aetherial⅔·swarm1.5) 반영
+        assert(techBldgCount(race,bk)===Math.max(1,Math.round(e.n*TECH_WAVE_MUL*rm)), race+'/'+bk+': 배출량 = n×TECH_WAVE_MUL×종족배수 이어야 함'); } }
     assert(techBldgCount('union','supply')===6 && techBldgCount('union','barracks')===4
       && techBldgCount('union','academy')===2, '보병 배출량(레인저6·화력병4·의무병2)이 바뀜');
     assert(!techWallet(), '오토배틀이 아닌 상태여야 함');
