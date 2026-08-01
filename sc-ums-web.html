@@ -13866,8 +13866,11 @@ function strikeUpCost(kind, lv){ const B={atk:120, hp:120}; return Math.round((B
 function strikeKillGold(e){ return Math.max(1, Math.min(5, Math.round((e&&e.maxHp||130)/250))); }   // 처치 보상(티어 비례)
 const STK_BOMB_COST=150, STK_BOMB_DMG=520, STK_BOMB_R=520;   // 폭탄: 비용/피해/반경
 // 유닛 강화 배율(소환 시 적용) — 공격 +12%/Lv, 체력 +16%/Lv
-function strikeAtkMul(side){ return 1 + (side.atkLv||0)*0.12; }
-function strikeHpMul(side){ return 1 + (side.hpLv||0)*0.16; }
+// 종족 전투 파워 배수(hp·공격 동시) — 배출 배수(테마)는 고정하고 이 값으로 종족 균형을 맞춘다. 밸런싱 단일 소스.
+const STK_RACE_POWER={ union:1.15, swarm:0.5, aetherial:2.5 };
+function _racePow(side){ return (side && STK_RACE_POWER[side.race]) || 1; }
+function strikeAtkMul(side){ return (1 + (side.atkLv||0)*0.12) * _racePow(side); }
+function strikeHpMul(side){ return (1 + (side.hpLv||0)*0.16) * _racePow(side); }
 function strikeApplyHpUpg(side){ const S=STK; if(!S||!side) return;   // 글로벌 체력 업그레이드 — 이미 소환된 유닛의 최대 체력도 즉시 상향(비율 유지)
   const m=strikeHpMul(side), prev=side._hpMulApplied||1; if(m===prev) return; side._hpMulApplied=m;
   const k=m/prev; for(const u of side.units){ if(u.dead) continue; const r=u.maxHp?u.hp/u.maxHp:1;
