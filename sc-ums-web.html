@@ -11248,8 +11248,8 @@ const STK_UNITS={
   goliath:   {name:'기갑병', ico:'⚙️', cost:220, hp:380, dmg:30, rng:235, cd:1.30, spd:155, size:21},
   tank:      {name:'공성전차',   ico:'🛡', cost:350, hp:430, dmg:72, rng:330, cd:2.30, spd:115, size:24, splash:160},
   // 🔮 에테리얼 — 사이오닉 (원거리 포격 / 근접 돌격 / 광역 탱커)
-  dragoon:   {name:'센티넬',    ico:'🤖', cost:200, hp:300, dmg:24, rng:245, cd:1.25, spd:230, size:18},
-  blade:     {name:'광전사',      ico:'⚔️', cost:120, hp:300, dmg:22, rng:49,  cd:0.80, spd:340, size:17, melee:true},
+  dragoon:   {name:'센티넬',    ico:'🤖', cost:200, hp:380, dmg:24, sdmg:38, scd:1.0, rng:245, cd:1.25, spd:230, size:18},   // 밸런스: 0%였음(핵심 기본) → hp380·실효공격38·실효쿨1.36→1.0(scd)
+  blade:     {name:'광전사',      ico:'⚔️', cost:120, hp:360, dmg:22, sdmg:42, rng:49,  cd:0.80, spd:340, size:17, melee:true},   // 밸런스: 17% → hp300→360·실효공격33→42(sdmg)
   archon:    {name:'보이드',    ico:'🔮', cost:340, hp:400, dmg:34, rng:130, cd:1.05, spd:185, size:23, splash:120},
   // 🦎 스웜 — 유기체 (저가 원거리 / 근접 다수 / 도트 공성)
   hydra:     {name:'스파이크',      ico:'🦎', cost:110, hp:215, dmg:18, rng:215, cd:0.95, spd:300, size:17},
@@ -11270,12 +11270,12 @@ const STK_UNITS={
   aegis:     {name:'지원 정찰기',    ico:'🛡', cost:480, hp:1400,dmg:14, rng:230, cd:1.20, spd:110, size:22},   // 공중 방벽(초고체력 저공격)
   // 🦎 스웜 확장
   venom:     {name:'산성충',      ico:'🐛', cost:130, hp:200, dmg:22, rng:230, cd:1.00, spd:260, size:18},   // 공중 산성 포자
-  medusa:    {name:'군단여왕',    ico:'🐍', cost:240, hp:340, dmg:34, rng:240, cd:1.30, spd:180, size:20, splash:120},   // 공중 사이오닉 광역
+  medusa:    {name:'군단여왕',    ico:'🐍', cost:240, hp:400, dmg:34, rng:240, cd:1.30, spd:180, size:20, splash:120},   // 밸런스: 33% → hp340→400   // 공중 사이오닉 광역
   wyvern:    {name:'비행충',    ico:'🐲', cost:420, hp:720, dmg:70, sdmg:95, rng:250, cd:1.30, spd:240, size:22},   // 공중 준보스(모프 유닛·희소) · 강한 프리미엄 유지: hp720·실효공격95(sdmg)
-  behemoth:  {name:'포격충',  ico:'🦣', cost:620, hp:1100,dmg:95, rng:300, cd:2.40, spd:120, size:26, splash:180},   // 공중 대형 보스(광역)
+  behemoth:  {name:'포격충',  ico:'🦣', cost:620, hp:900, dmg:95, sdmg:150, rng:300, cd:2.40, spd:120, size:26, splash:180},   // 밸런스: 83% → hp1100→900·실효공격190→150(sdmg)   // 공중 대형 보스(광역)
   // 🔮 에테리얼 확장
   skydancer: {name:'요격기',ico:'💃', cost:180, hp:240, dmg:24, rng:250, cd:1.00, spd:320, size:18},   // 공중 고속 기동
-  archangel: {name:'모함',  ico:'👼', cost:420, hp:640, dmg:32, rng:280, cd:1.60, spd:140, size:24, splash:150},   // 공중 성채(광역)
+  archangel: {name:'모함',  ico:'👼', cost:420, hp:460, dmg:32, sdmg:18, scd:1.4, rng:280, cd:1.60, spd:140, size:24, splash:150},   // 밸런스: 100% 무패(빠른 스플래시) → hp460·공격18·실효쿨0.73→1.4(scd, 공속 반감)   // 공중 성채(광역)
   kronos:    {name:'전함',  ico:'⏳', cost:340, hp:520, dmg:42, rng:300, cd:1.80, spd:150, size:22, splash:140},   // 공중 시공 포격(광역)
   // ── 신규 전투 유닛(6a7cff7 이식) — 근접형 3종 · 지원형(메딕·라바·하이템플러)은 무공격이라 직스 생산 제외(연습 랩 전용) ──
   broodling:  {name:'스웜링',  ico:'🐛', cost:70,  hp:80,   dmg:12, rng:60, cd:0.60, spd:380, size:12, melee:true},   // 스웜 초저가 고속 근접 다수
