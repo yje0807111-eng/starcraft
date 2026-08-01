@@ -13893,7 +13893,7 @@ function strikeKillGold(e){ return Math.max(1, Math.min(5, Math.round((e&&e.maxH
 const STK_BOMB_COST=150, STK_BOMB_DMG=520, STK_BOMB_R=520;   // 폭탄: 비용/피해/반경
 // 유닛 강화 배율(소환 시 적용) — 공격 +12%/Lv, 체력 +16%/Lv
 // 종족 전투 파워 배수(hp·공격 동시) — 배출 배수(테마)는 고정하고 이 값으로 종족 균형을 맞춘다. 밸런싱 단일 소스.
-const STK_RACE_POWER={ union:1.07, swarm:0.46, aetherial:2.04 };
+const STK_RACE_POWER={ union:1.01, swarm:0.47, aetherial:2.12 };
 function _racePow(side){ return (side && STK_RACE_POWER[side.race]) || 1; }
 function strikeAtkMul(side){ return (1 + (side.atkLv||0)*0.12) * _racePow(side); }
 function strikeHpMul(side){ return (1 + (side.hpLv||0)*0.16) * _racePow(side); }
