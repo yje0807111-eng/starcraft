@@ -8361,6 +8361,7 @@ function setQuality(q){ G.opt=G.opt||{sfx:true,bgm:true}; G.opt.quality=q;   // 
   if(q==='low'){      G.opt.model3d=true;  G.opt.resLvl='low';  G.opt.resScale=RES_SCALE.low;  G.opt.fx='off';  G.opt.fps=30; G.opt.lite3d=true; }
   else if(q==='mid'){ G.opt.model3d=true;  G.opt.resLvl='mid';  G.opt.resScale=RES_SCALE.mid;  G.opt.fx='min';  G.opt.fps=60; G.opt.lite3d=false; }
   else {              G.opt.model3d=true;  G.opt.resLvl='high'; G.opt.resScale=RES_SCALE.high; G.opt.fx='full'; G.opt.fps=0; G.opt.lite3d=false; }
+  G.opt._aqOff=true;   // 사용자가 화질을 직접 골랐으니 자동 화질조절 중단(선택 존중) — strikeAutoQuality가 1초 뒤 되덮는 문제 방지
   setModel3d(G.opt.model3d); applyVideo(); }
 function _bgmApplyVol(){ if(_bgm.audio) _bgm.audio.volume=_bgmVol(); }   // 현재 재생 중 BGM에 즉시 반영
 function _sndDisp(k){ return SND[k+'On'] ? SND[k] : 0; }   // 표시값: 끄기=0, 켜기=저장값
@@ -13935,7 +13936,7 @@ function strikeAutoQuality(dt){ const S=STK; if(!S) return; const O=G.opt||(G.op
   const ms=Math.min(200, dt*1000); S._aq=(S._aq==null?ms:S._aq*0.9+ms*0.1);   // 평활 프레임 시간
   S._aqMin=Math.min(S._aqMin==null?S._aq:S._aqMin, S._aq);   // 관측된 최저 '평활' 프레임 = 주사율 바닥(단발 이상치에 안 끌려감)
   S._aqT=(S._aqT||0)-dt; if(S._aqT>0) return; S._aqT=1.0;   // 1초에 한 번만 조정(요동 방지)
-  const cur=(O.resScale!=null?O.resScale:1), fl=Math.max(6, Math.min(34, S._aqMin));   // 6~34ms = 144Hz~30Hz 범위로 제한
+  const cur=(O.resScale!=null?O.resScale:1), fl=Math.max(16, Math.min(34, S._aqMin));   // 목표 프레임 = 60~30fps로만 제한. 16ms 미만(60fps↑)은 목표로 삼지 않는다 — 120/144Hz 화면에서 '주사율을 못 채우니 해상도를 깎자'는 오판(태블릿 저해상도 버그)을 막는다
   if(S._aq>fl*STK_AQ_BAD && cur>STK_AQ_LOW) O.resScale=Math.max(STK_AQ_LOW, cur-0.15);
   else if(S._aq<fl*STK_AQ_GOOD && cur<STK_AQ_HI) O.resScale=Math.min(STK_AQ_HI, cur+0.1); }
 function strikeSync3D(dt){ const S=STK; if(!S) return; strikeAutoQuality(dt); const mcv=document.getElementById('cvMarine');
