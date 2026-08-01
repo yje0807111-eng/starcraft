@@ -13144,6 +13144,7 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
   //   모델(_stkSupplyModel)과 렌더(renderCmdGrid)는 전투 화면과 동일한 것을 쓴다 — UI를 두 번 만들지 않는다.
   let _sup=false;
   if(typeof STK!=='undefined' && STK && STK.supSheet && typeof _stkSupplyModel==='function'){ model=_stkSupplyModel(); _sup=true; }
+  else if(typeof STK!=='undefined' && STK && STK.specSheet && typeof _stkSpecModel==='function'){ model=_stkSpecModel(); _sup=true; }   // 👁 관전 시트도 건설지 호스트에 동일하게
   const _shown=!!((sh.open||_sup) && model && G.tech.arm==null && G.tech.rallySet==null);   // 🗺 배치·착륙(arm)·랠리 지정 중 = 프로필 시트 잠시 내려 맵을 넓게 확보 · 모드 종료 시 자동 복귀
   if(model && !_sup){ model.compact=(cm===1); model.build=true; }   // 건설 탭 카드 스타일(업그레이드 시트는 모델이 이미 같은 스타일을 들고 온다)
   sheet.classList.toggle('open', _shown);
@@ -13920,7 +13921,7 @@ function strikeFrame(dt){ const S=STK; if(!S) return; strikeStep(dt*(G.speedMul|
   if(G.tab==='Build'){ techSyncWallet(); renderBuildTab(dt); strikeHud();
     if(S.supSheet){ S._spT=(S._spT||0)-dt; if(S._spT<=0){ S._spT=0.22; if(typeof techPanelRender==='function') techPanelRender(); } }   // 📦 보급 시트 수치 갱신(전투 화면의 _siT와 동일 주기)
     return; }   // 🏗 건설지 = 관리자 건설 탭과 동일한 렌더·틱(단일 소스)
-  if(G.tab==='Players' && S.specView) strikeDrawBuildMap(strikeSpecView(S.specView));   // 관전: 그 플레이어 건설 화면(그의 색)
+  if(S.specView) strikeDrawBuildMap(strikeSpecView(S.specView));   // 👁 관전: specView 있으면 어느 탭에서든 그 플레이어 건설 화면(그의 색)
   else strikeDrawMain();
   { const U=STK._fxU; if(U){ if(U.pend&&U.pend.length){ for(let i=U.pend.length-1;i>=0;i--){ const p=U.pend[i]; p.t-=dt; if(p.t<=0){ FX.spawn(U.store,p.id,p.sx,p.sy,p.tx,p.ty,p.opt); U.pend.splice(i,1); } } }
     if(typeof tickUnitFx==='function') tickUnitFx(U, dt); if(FX.advance) FX.advance(U.store, dt); } }   // 유닛별 이펙트 진행(대기 발사·가스 이미터 등)
@@ -14940,11 +14941,32 @@ function _stkTempleDesc(o){ const S=STK; if(!S) return '';
   return '파괴되면<br>즉시 패배합니다.'; }
 function strikeToggleSupply(on){ const S=STK; if(!S) return;
   S.supSheet=(on==null)?!S.supSheet:!!on; S.supPage=null;
+  if(S.supSheet){ S.specSheet=false; S.specView=null; }   // 보급↔관전 상호배타
   const h=document.getElementById('unitCmd'); if(h) h._stkSig=null;
   if(G.tab==='Build' && typeof techPanelRender==='function') techPanelRender();   // 건설지에서는 시트 호스트가 달라 즉시 다시 그린다
   if(typeof playSfx==='function') playSfx('ui_tab'); }
 function strikeSupPage(p){ const S=STK; if(!S) return; S.supPage=p||null;
   const h=document.getElementById('unitCmd'); if(h) h._stkSig=null; }
+// 👁 관전 시트 — 보급과 동일한 하단 시트 토글(화면 이동 X). 플레이어 카드 선택 시 그 진영 건설을 관전(specView). 시트 내리면 관전 종료(전장 복귀).
+function strikeToggleSpec(on){ const S=STK; if(!S) return;
+  S.specSheet=(on==null)?!S.specSheet:!!on;
+  if(S.specSheet){ S.supSheet=false; } else { S.specView=null; }   // 상호배타 · 내리면 관전 종료
+  const h=document.getElementById('unitCmd'); if(h) h._stkSig=null;
+  if(G.tab==='Build' && typeof techPanelRender==='function') techPanelRender();
+  if(typeof playSfx==='function') playSfx('ui_tab'); }
+function strikeSpecPick(n){ const S=STK; if(!S) return;
+  if(n>=5){ strikeToast('적 진영은 암흑 시야입니다 🌑'); return; }
+  S.specView=(S.specView===n)?null:n;   // 같은 플레이어 다시 = 전장 복귀
+  const h=document.getElementById('unitCmd'); if(h) h._stkSig=null;
+  if(G.tab==='Build' && typeof techPanelRender==='function') techPanelRender();
+  if(typeof playSfx==='function') playSfx('ui_confirm'); }
+function _stkSpecModel(){ const S=STK, meNick=(typeof myNick==='function'?myNick():'나');
+  const items=[]; for(let n=1;n<=8;n++){ const enemy=n>=5, col=strikePColor(n), watching=(S.specView===n);
+    items.push({ pro:'<span class="pemoji" style="color:'+col+';filter:drop-shadow(0 0 5px '+col+')">'+(enemy?'🌑':'◈')+'</span>',
+      sn:(n===1?meNick:(enemy?'컴퓨터':(n+'P'))), tr:watching?'관전중':(n+'P'), metaCls:'lv',
+      state:enemy?'dim':(watching?'sel':'on'), act:enemy?'':('onclick="strikeSpecPick('+n+')"') }); }
+  return { mode:'prod', compact:true, build:true, title:'관전 · 플레이어', icon:pIco('👁'), items:items,
+    info:{ eb:'관전', hideName:true, desc:'플레이어를 선택하면 그 진영 건설을 관전합니다.<br>적 진영은 암흑 시야(🌑)입니다.' } }; }
 // 📦 업그레이드 시트 — 4그리드(① 광산 ② 강화 ④ 특수무기 / 3번은 비움). 구매·강화·투하는 기존 함수를 그대로 호출.
 function _stkLv(cur,max){ return (cur>=max)?'MAX':(cur+'/'+max); }   // 카드 우상단 표기 통일
 function _stkSupplyModel(){ const S=STK, me=S.me, gold=Math.floor(me.gold||0);
@@ -14977,6 +14999,7 @@ function strikeRenderSelInfo(){ const S=STK; const host=document.getElementById(
   let model=null, sig=null;
   if(S && S.supSheet){ model=_stkSupplyModel();
     sig='sup|'+(S.supPage||'-')+'|'+Math.floor(S.me.gold)+'|'+(S.me.mines||0)+'|'+((S.me.atkLv||0)+'-'+(S.me.hpLv||0))+'|'+(S.me.bombs||0)+'|'+S.me.mineCost; }
+  else if(S && S.specSheet){ model=_stkSpecModel(); sig='spec|'+(S.specView||'-'); }   // 👁 관전 시트(플레이어 선택)
   else if(S && S.selTemple && !S.selTemple.dead){ const o=S.selTemple, nm=S.selTempleName||'신전'; model=_stkTempleModel(o,nm); sig='t|'+nm+'|'+Math.round(o.hp); }
   else if(S && S.selEnemy && !S.selEnemy.dead){ const u=S.selEnemy; model=_stkUnitModel(u,'ai'); sig='e|'+u.id+'|'+Math.round(u.hp); }
   else if(S){ const u=(S.selAllies||[]).map(uid=>strikeFindUnit(S.me.units,uid)).filter(Boolean)[0]; if(u){ model=_stkUnitModel(u,'me'); sig='a|'+u.id+'|'+Math.round(u.hp); } }
@@ -15162,10 +15185,13 @@ function strikeSwitchTab(id,el){ const S=STK; if(!S) return;
       if(G.tab==='Build' && G.tech){ G.tech.sel=null; G.tech.selU=[]; G.tech.selRes=null;
         if(G.tech.sheet){ G.tech.sheet.open=false; G.tech.sheet.sec=null; } } }
     strikeToggleSupply(); return; }   // 📦 업그레이드 = 화면 이동 없이 하단 시트만 토글
-  // 지금 보고 있는 화면의 탭을 다시 누르면 = 보급 시트만 내린다(화면은 그대로).
-  //   내린 뒤에는 각 화면의 원래 규칙으로 복귀 — 지정한 대상이 있으면 그 프로필, 없으면 하단 구역 자체가 사라진다.
+  if(id==='Players'){   // 👁 관전 = 보급과 동일 — 화면 이동 없이 하단 시트만 토글(플레이어 선택 → 관전 진입)
+    if(S.specSheet){ strikeClearSel(); }   // 내릴 때 지정 해제(하단 완전 비움)
+    strikeToggleSpec(); return; }
+  // 지금 보고 있는 화면의 탭을 다시 누르면 = 보급/관전 시트만 내린다(화면은 그대로).
   if(S.supSheet && id===G.tab){ strikeToggleSupply(false); return; }
-  if(S.supSheet) strikeToggleSupply(false);   // 다른 화면으로 이동하면 업그레이드 시트는 내린다(전투↔건설지 포함) — 넘어간 화면이 그대로 보이게
+  if(S.supSheet) strikeToggleSupply(false);   // 다른 화면으로 이동하면 시트는 내린다
+  if(S.specSheet) strikeToggleSpec(false);    // 관전 시트도 다른 화면 이동 시 내림(관전 종료)
   G.tab=id; S.userCam=false; if(id!=='Players') S.specView=null;   // 관전 종료
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
   (el||document.querySelector('.tab[data-tab="'+id+'"]'))?.classList.add('on');
@@ -15181,7 +15207,6 @@ function strikeSwitchTab(id,el){ const S=STK; if(!S) return;
   const zl=document.getElementById('zoneLabel');
   if(zl){ const _m={Main:['⚔️','전장'],Upgrade:['📦','보급'],Players:['👁','관전']}[id];
     zl.innerHTML=_m? pIco(_m[0])+'<span class="zlTx">'+_m[1]+'</span>' : ''; }
-  if(id==='Players') strikeRenderSpec();
   // 전투(Main)=선택 있을 때만 하단 프로필 시트 · 그 외 탭=패널 상시 표시
   if(id==='Main'){ const uc=document.getElementById('unitCmd'); if(uc) uc._stkShown=undefined; strikeRenderSelInfo(); }
   else { document.body.classList.add('sheetOpen'); if(typeof _syncSheetLift==='function'){ requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); } }
