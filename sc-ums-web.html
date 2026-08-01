@@ -14760,7 +14760,16 @@ function strikeSpawnWave(){ const S=STK; if(!S) return;   // 출격 주기(30초
       strikeSpawnUnit('me', e.uid); myCount++; }
     if(out.length && G.tab==='Build' && typeof techUIRender==='function') techUIRender(); }
   if(!myCount){ strikeSpawnUnit('me'); strikeSpawnUnit('me'); myCount=2; }   // 생산이 없으면 기본 소량(전멸 방지)
-  const n=Math.max(2, myCount)+(Math.random()*2|0); for(let i=0;i<n;i++) strikeSpawnUnit('ai'); }   // AI는 내 총 생산량에 맞춰 대응
+  // 🤖 AI = 자기 종족 건물로 직접 배출(미러링 제거). 플레이어의 완성 생산건물 수만큼 자기 종족 건물을 갖춘 것으로 보고,
+  //    그 종족의 배출 수(techBldgCount)로 소환 → 종족 조합·배출 배수가 싱글에서도 진짜 종족 대결로 반영. 난이도는 내 건물 수에 연동.
+  { const _ar=S.ai.race, _keys=Object.keys(TECH_BLDG_UNIT[_ar]||{});
+    let _pb=0; if(G.tech && G.tech.ents){ const _mr=G.tech.race; for(const e of G.tech.ents){ if(e.type==='bldg' && (e.bt||0)<=0 && techBldgUnit(_mr, e.bk)) _pb++; } }
+    _pb=Math.max(2, _pb);   // 플레이어 생산건물 수(난이도 기준) · 최소 2
+    let _aiN=0;
+    if(_keys.length){ for(let i=0;i<_pb;i++){ const bk=_keys[i % _keys.length], uid=techBldgUnit(_ar, bk); if(!uid) continue;
+      const _cnt=techBldgCount(_ar, bk);
+      for(let k=0;k<_cnt;k++){ const _b4=S.ai.units.length; strikeSpawnUnit('ai', uid); if(S.ai.units.length<=_b4) break; _aiN++; } } }
+    if(!_aiN){ strikeSpawnUnit('ai'); strikeSpawnUnit('ai'); } } }   // 폴백(전멸 방지)
 function strikeFrontStruct(side){ const S=STK, foe=S[side==='me'?'ai':'me'];   // 가장 앞 신전: 중립 살아있으면 중립(그 뒤 신전은 못 때림) → 적 2차 → 적 메인
   if(S.central && !S.central.dead) return S.central;
   if(foe.sec && !foe.sec.dead) return foe.sec;
