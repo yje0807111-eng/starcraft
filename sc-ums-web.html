@@ -1478,6 +1478,9 @@
   #plGridWrap{display:flex;flex-direction:column;flex:none;height:min(26vh,126px);max-height:min(26vh,126px);min-height:0}   /* 다른 하단 섹션(유닛지정/뽑기/업그레이드)과 동일한 126px 고정 높이 */
   /* 플레이어 관전 슬롯 = 통일된 SC 카드(메탈+사선 모서리+플레이어색 좌측 액센트+스캔라인) */
   .plGrid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:58px;align-content:center;gap:6px;flex:1;min-height:0;padding:2px 0}
+  /* 오토배틀 관전 시트 = 전용 .plbtn 그리드를 시트 호스트에 그대로(커맨드 그리드 아님) */
+  #unitCmd.stkSpec,#btSheetBody.stkSpec{display:flex;flex-direction:column;min-height:0;padding:2px 6px 4px}
+  #unitCmd.stkSpec .plGrid,#btSheetBody.stkSpec .plGrid{flex:1;min-height:0}
   .plbtn{--pc:var(--info);position:relative;cursor:pointer;overflow:hidden;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;padding:7px 10px;
     background:linear-gradient(160deg,rgba(42,48,60,.5),rgba(10,12,17,.7));border:1px solid var(--metal-edge);
     clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
@@ -13163,15 +13166,16 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
   let cm=(G.tech.cardMode===2)?2:1; G.tech.cardMode=cm;   // cm0(2줄 전체) 제거 → 1(간소화) 또는 2(최소화)만. 사이클의 0은 1로 수렴
   // 📦 보급 시트는 화면 전환이 아니라 하단 시트 토글이라, 건설지에서도 같은 호스트(#btSheetBody)에 그대로 올린다.
   //   모델(_stkSupplyModel)과 렌더(renderCmdGrid)는 전투 화면과 동일한 것을 쓴다 — UI를 두 번 만들지 않는다.
-  let _sup=false;
-  if(typeof STK!=='undefined' && STK && STK.supSheet && typeof _stkSupplyModel==='function'){ model=_stkSupplyModel(); _sup=true; }
-  else if(typeof STK!=='undefined' && STK && STK.specSheet && typeof _stkSpecModel==='function'){ model=_stkSpecModel(); _sup=true; }   // 👁 관전 시트도 건설지 호스트에 동일하게
-  const _shown=!!((sh.open||_sup) && model && G.tech.arm==null && G.tech.rallySet==null);   // 🗺 배치·착륙(arm)·랠리 지정 중 = 프로필 시트 잠시 내려 맵을 넓게 확보 · 모드 종료 시 자동 복귀
+  let _sup=false, specHTML=null;
+  if(typeof STK!=='undefined' && STK && STK.specSheet && typeof _stkSpecGridHTML==='function'){ specHTML=_stkSpecGridHTML(); _sup=true; }   // 👁 관전 = 전용 .plbtn 그리드(건설지 호스트에도 동일)
+  else if(typeof STK!=='undefined' && STK && STK.supSheet && typeof _stkSupplyModel==='function'){ model=_stkSupplyModel(); _sup=true; }
+  const _shown=!!((sh.open||_sup) && (model||specHTML) && G.tech.arm==null && G.tech.rallySet==null);   // 🗺 배치·착륙(arm)·랠리 지정 중 = 프로필 시트 잠시 내려 맵을 넓게 확보 · 모드 종료 시 자동 복귀
   if(model && !_sup){ model.compact=(cm===1); model.build=true; }   // 건설 탭 카드 스타일(업그레이드 시트는 모델이 이미 같은 스타일을 들고 온다)
   sheet.classList.toggle('open', _shown);
   if(_shown){ sheet.classList.toggle('simple', cm===1); sheet.classList.toggle('mini', cm===2); }   // 숨길 땐 높이 클래스(.simple/.mini) 유지 → 현재 높이 그대로 아래로 슬라이드(150→204 즉시 확대로 위로 울컥이는 것 방지)
   const cardCtl=document.getElementById('btCardCtl'); if(cardCtl){ const _up=(cm===2); cardCtl.classList.toggle('up',_up); cardCtl.innerHTML='<svg viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'; cardCtl.title=(_up?'프로필 펼치기':(cm===1?'하단으로 최소화':'간소화')); }
-  if(model) renderCmdGrid(body, model);
+  body.classList.toggle('stkSpec', specHTML!=null);
+  if(specHTML!=null) body.innerHTML=specHTML; else if(model) renderCmdGrid(body, model);
   const _liftSel=(G.tech.sel!=null)&&!!G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'&&x._lifted);   // 부양 건물 선택 = 바닥탭이 이동이라 금지버튼으로 해제
   const dz=document.getElementById('btDesel'); if(dz) dz.classList.toggle('on',(G.tech.selU||[]).length>0 || _liftSel || !!G.tech.selRes); }
 function techCardCycle(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return; G.tech.cardMode=((G.tech.cardMode||0)+1)%3; if(typeof playSfx==='function') playSfx('ui_open'); techPanelRender(); }   // 유닛 지정 해제 버튼(메인 deselTop 규약)
@@ -14988,19 +14992,17 @@ function strikeSpecPick(n){ const S=STK; if(!S) return;
   const h=document.getElementById('unitCmd'); if(h) h._stkSig=null;
   if(G.tab==='Build' && typeof techPanelRender==='function') techPanelRender();
   if(typeof playSfx==='function') playSfx('ui_confirm'); }
-// 👁 오토배틀(대전) 관전 시트 — 공통 빌더의 versus 버전(팀=슬롯 절반, 적 팀 잠금, 나 포함 내 팀 관전 가능)
-function _stkSpecModel(){ const S=STK, me=(G.myPlayer||1);
-  return playerSheetModel({ me:me,
-    active:((G.activePlayers&&G.activePlayers.length)?G.activePlayers.slice():[me]).sort(function(a,b){return a-b;}),
-    names:G.playerNames||{}, versus:true, team:function(n){ return n<=4?'A':'B'; },   // 슬롯 절반(1-4 vs 5-8)
-    selfPickable:true, selfState:'ok', color:function(n){ return strikePColor(n); },
-    portrait:function(n,o){ return '<span class="pemoji" style="color:'+(o.enemy?'#6b7480':o.col)+';filter:drop-shadow(0 0 5px '+(o.enemy?'#0006':o.col)+')">'+(o.enemy?'🌑':'◈')+'</span>'; },
-    nameOf:function(n){ return (G.playerNames||{})[n]||(n===me?'나':(n+'P')); },
-    badgeOf:function(n,o){ return o.watching?'관전중':(o.isMe?'나':(n+'P')); },
-    watchingOf:function(n){ return S.specView===n; },
-    pickAttr:function(n){ return 'onclick="strikeSpecPick('+n+')"'; },
-    mode:'prod', title:'관전 · 플레이어', icon:pIco('👁'),
-    info:{ eb:'관전', hideName:true, desc:'우리 팀 플레이어를 선택하면 그 진영 건설을 관전합니다.<br>적 진영은 암흑 시야(🌑)로 잠깁니다.' } }); }
+// 👁 오토배틀 관전 시트 = 네모(renderPlayers)와 동일한 관전 전용 .plbtn 플레이어 그리드(커맨드 그리드 아님).
+//   실제 참가자만(G.activePlayers) · 팀=슬롯 절반(1-4 vs 5-8) · 나=mine(잠금) · 적=off(암흑 시야) · 관전중=me
+function _stkSpecGridHTML(){ const S=STK, me=(G.myPlayer||1), myA=(me<=4), names=G.playerNames||{};
+  const active=((G.activePlayers&&G.activePlayers.length)?G.activePlayers.slice():[me]).sort(function(a,b){return a-b;});
+  let h='<div class="plGrid stkSpecGrid">';
+  for(let i=0;i<active.length;i++){ const n=active[i], enemy=((n<=4)!==myA), isMe=(n===me), watching=(S.specView===n), col=strikePColor(n);
+    const cls='plbtn'+(isMe?' mine':(enemy?' off':(watching?' me':'')));
+    const nm=isMe?escHtml(names[n]||'나'):(enemy?'적군 🌑':escHtml(names[n]||(n+'P')));
+    const click=(isMe||enemy)?'':(' onclick="strikeSpecPick('+n+')"');
+    h+='<div class="'+cls+'" style="--pc:'+col+'"'+click+'><div class="plnum">'+n+'P</div><div class="plst">'+nm+'</div></div>'; }
+  return h+'</div>'; }
 // 📦 업그레이드 시트 — 4그리드(① 광산 ② 강화 ④ 특수무기 / 3번은 비움). 구매·강화·투하는 기존 함수를 그대로 호출.
 function _stkLv(cur,max){ return (cur>=max)?'MAX':(cur+'/'+max); }   // 카드 우상단 표기 통일
 function _stkSupplyModel(){ const S=STK, me=S.me, gold=Math.floor(me.gold||0);
@@ -15030,17 +15032,19 @@ function _stkSupplyModel(){ const S=STK, me=S.me, gold=Math.floor(me.gold||0);
 function strikeRenderSelInfo(){ const S=STK; const host=document.getElementById('unitCmd');
   { const old=document.getElementById('stSelInfo'); if(old && !old.classList.contains('hide')){ old.classList.add('hide'); old.innerHTML=''; } }   // 구 프로필 사용 안 함
   if(!host) return;
-  let model=null, sig=null;
-  if(S && S.supSheet){ model=_stkSupplyModel();
+  let model=null, sig=null, specHTML=null;
+  if(S && S.specSheet){ specHTML=_stkSpecGridHTML(); sig='spec|'+(S.specView||'-')+'|'+((G.activePlayers||[]).join('.'))+'|'+(G.myPlayer||1); }   // 👁 관전 = 전용 .plbtn 그리드(커맨드 그리드 아님)
+  else if(S && S.supSheet){ model=_stkSupplyModel();
     sig='sup|'+(S.supPage||'-')+'|'+Math.floor(S.me.gold)+'|'+(S.me.mines||0)+'|'+((S.me.atkLv||0)+'-'+(S.me.hpLv||0))+'|'+(S.me.bombs||0)+'|'+S.me.mineCost; }
-  else if(S && S.specSheet){ model=_stkSpecModel(); sig='spec|'+(S.specView||'-'); }   // 👁 관전 시트(플레이어 선택)
   else if(S && S.selTemple && !S.selTemple.dead){ const o=S.selTemple, nm=S.selTempleName||'신전'; model=_stkTempleModel(o,nm); sig='t|'+nm+'|'+Math.round(o.hp); }
   else if(S && S.selEnemy && !S.selEnemy.dead){ const u=S.selEnemy; model=_stkUnitModel(u,'ai'); sig='e|'+u.id+'|'+Math.round(u.hp); }
   else if(S){ const u=(S.selAllies||[]).map(uid=>strikeFindUnit(S.me.units,uid)).filter(Boolean)[0]; if(u){ model=_stkUnitModel(u,'me'); sig='a|'+u.id+'|'+Math.round(u.hp); } }
-  if(model){ host.classList.add('on','simple'); if(host._stkSig!==sig){ host._stkSig=sig; renderCmdGrid(host, model); } }
-  else if(host._stkSig!=null || host.classList.contains('on')){ host.classList.remove('on'); host._stkSig=null; host.innerHTML=''; }
+  const has=(specHTML!=null)||!!model;
+  if(has){ host.classList.add('on','simple'); host.classList.toggle('stkSpec', specHTML!=null);   // 관전 = 전용 .plbtn 그리드 스타일(높이는 126px 동일)
+    if(host._stkSig!==sig){ host._stkSig=sig; if(specHTML!=null) host.innerHTML=specHTML; else renderCmdGrid(host, model); } }
+  else if(host._stkSig!=null || host.classList.contains('on')){ host.classList.remove('on','simple','stkSpec'); host._stkSig=null; host.innerHTML=''; }
   // 전투(Main) 탭: 프로필 있을 때만 하단 시트 올림 → 무선택 시 하단 섹션 완전 비움
-  if(G.tab==='Main'){ const show=!!model; if(host._stkShown!==show){ host._stkShown=show; document.body.classList.toggle('sheetOpen', show);
+  if(G.tab==='Main'){ const show=has; if(host._stkShown!==show){ host._stkShown=show; document.body.classList.toggle('sheetOpen', show);
     if(typeof _syncSheetLift==='function'){ requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); } } } }
 function strikeDrawFx(ctx,w2s,scale,S){ if(!S||!S.fx) return;   // 공용 FX 코어로 렌더(네모와 동일 비주얼). sz=픽셀 스케일(줌 연동)
   const sz=Math.max(0.8, Math.min(2.6, scale*8.5)); FX.drawShots(ctx, S.fx, w2s, sz);
