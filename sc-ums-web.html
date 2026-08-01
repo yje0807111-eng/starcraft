@@ -2215,6 +2215,10 @@
   .twBtn.on{color:#0b1016;background:var(--setAcc);border-color:var(--setAcc)}
   .twBtn:disabled{cursor:default;color:#7d8590;background:rgba(255,255,255,.03);border-color:var(--metal-edge)}
   .twBtn:not(:disabled):active{transform:translateY(1px)}
+  .twBtn.del{color:#ffd7dd;background:linear-gradient(180deg,rgba(255,77,109,.3),rgba(255,77,109,.12));border-color:rgba(255,77,109,.6)}
+  .twDel{flex:0 0 auto;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:7px;cursor:pointer;font-size:12px;line-height:1;
+    color:#8d97a4;background:rgba(255,255,255,.04);border:1px solid var(--metal-edge)}
+  .twDel:active{transform:translateY(1px)}
   .msUser{display:flex;align-items:center;gap:5px;font-size:var(--fs-sm);color:var(--txt-hud)}
   .msUser .ic{color:#7e8896}
   .msUser b{color:#e8eef5;font-weight:700;max-width:128px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -3953,6 +3957,9 @@ const PROF_JOBS={
   void:      { name:'보이드',    cls:'warden', unit:'archon',       tier:2, reqLv:25, base:{pow:18,vit:22,foc:10,agi:6},  next:[] },
   highsage:  { name:'하이세이지',cls:'warden', unit:'high_templar', tier:2, reqLv:25, base:{pow:21,vit:13,foc:18,agi:12}, next:[] },
 };
+// 자식→부모 역인덱스(전직 경로 되짚기용). PROF_JOBS의 next로부터 자동 생성 — 트리를 고쳐도 따라온다.
+const PROF_JOB_PARENT=(function(){ const m={}; for(const id in PROF_JOBS) for(const nx of PROF_JOBS[id].next) m[nx]=id; return m; })();
+const PROF_REFUND_RATE=1.0;   // 캐릭터 삭제 환급률(1.0=쓴 재화 전액). 경험치·레벨은 환급 없음
 const PROF_GEAR={ weapon:{name:'무기',stat:'pow',per:3,baseCost:50}, armor:{name:'방어구',stat:'vit',per:4,baseCost:50}, trinket:{name:'장신구',stat:'foc',per:2,baseCost:70,reqUnlock:'gear_trinket'} };
 const PROF_IDLE_SOURCES={ drill:{name:'훈련장',rate:0.6,tip:'공격 위주'}, library:{name:'수련관',rate:0.6,tip:'집중 위주'}, arena:{name:'투기장',rate:1.0,reqUnlock:'idle_arena',tip:'고수익'} };
 const PROF_UNLOCKS=[ {id:'gear_trinket',power:80,label:'장신구 슬롯'}, {id:'idle_arena',power:200,label:'투기장 자동수익'}, {id:'evolve',power:350,label:'유닛 진화(★)'}, {id:'idle_8h',power:600,label:'오프라인 8시간·100%'} ];
@@ -4004,7 +4011,8 @@ function profPetEquip(id){ const p=PROF(); if(!p.pets[id]) return false; const i
   if(i>=0){ p.equip.splice(i,1); saveMeta(); return true; }                                // 토글 해제
   if(p.equip.length>=(p.petSlots||2)) return false; p.equip.push(id); saveMeta(); return true; }
 // 🌟 유닛 진화(별) — evolve 해금(파워 350) 필요. 별마다 레벨 문턱·pcoin 비용↑. profStat에서 evoStars*2 반영.
-function profEvolveReq(){ const c=CHAR(), s=c?c.unit.evoStars:0; return { unlock:profHasUnlock('evolve'), stars:s, maxed:s>=5, lvReq:(s+1)*10, cost:(s+1)*500 }; }
+function profEvolveCost(stars){ return (stars+1)*500; }   // 별 stars → stars+1 로 올리는 비용(환급 계산과 공용)
+function profEvolveReq(){ const c=CHAR(), s=c?c.unit.evoStars:0; return { unlock:profHasUnlock('evolve'), stars:s, maxed:s>=5, lvReq:(s+1)*10, cost:profEvolveCost(s) }; }
 function profEvolve(){ const p=PROF(), c=CHAR(), r=profEvolveReq(); if(!c||!r.unlock||r.maxed) return false;
   if(c.unit.level<r.lvReq) return false; if(p.pcoin<r.cost) return false;
   p.pcoin-=r.cost; c.unit.evoStars++; profSyncUnlocks(); saveMeta(); return true; }
@@ -4021,6 +4029,18 @@ function profClassChange(jobId){ const p=PROF(), c=CHAR(); if(!c) return false;
 function profCreateChar(cls, name){ const p=PROF(); if(!PROF_CLASSES[cls] || p.chars.length>=PROF_MAX_CHARS) return null;
   const c=defaultChar(cls, (name||'').trim().slice(0,10)); p.chars.push(c); p.curId=c.id; profSyncUnlocks(); saveMeta(); return c; }
 function profSelectChar(id){ const p=PROF(); if(!p.chars.some(c=>c.id===id)) return false; p.curId=id; profSyncUnlocks(); saveMeta(); return true; }
+// 이 캐릭터에 '재화로' 넣은 것의 합 — 장비 강화 + 전직 + 진화. 경험치·레벨·스탯포인트는 대상이 아니다(삭제 시 소멸).
+function profSpentOn(c){ if(!c) return 0; let t=0;
+  for(const slot in PROF_GEAR){ const n=c.unit.gear[slot]||0; for(let i=0;i<n;i++) t+=profGearCost(slot,i); }
+  for(let id=c.unit.jobId; PROF_JOB_PARENT[id]; id=PROF_JOB_PARENT[id]) t+=profClassCost(id);   // 뿌리까지 거슬러 전직 비용
+  for(let i=0;i<(c.unit.evoStars||0);i++) t+=profEvolveCost(i);
+  return t; }
+function profRefundOf(c){ return Math.floor(profSpentOn(c)*PROF_REFUND_RATE); }
+function profDeleteChar(id){ const p=PROF(), i=(p.chars||[]).findIndex(c=>c.id===id); if(i<0) return -1;
+  const refund=profRefundOf(p.chars[i]);
+  p.chars.splice(i,1); p.pcoin+=refund;
+  if(p.curId===id) p.curId=p.chars.length? p.chars[0].id : '';
+  saveMeta(); return refund; }
 function profSetIdleSource(id){ const p=PROF(), src=PROF_IDLE_SOURCES[id]; if(!src) return false; if(src.reqUnlock && !profHasUnlock(src.reqUnlock)) return false; p.idle.sourceId=id; saveMeta(); return true; }
 // 판 종료 보상 — 순수 read G / write profile. 자체 난이도배율(유즈맵 coinMult와 무관). _runSummary에서 1회 호출.
 function profRunReward(){ const p=PROF();
@@ -4175,17 +4195,26 @@ function openTownPanel(zone){ _twZone=zone; _twChar.mode=null; _twPtr=null;   //
   refreshTownPanel(); popShow('townPanel'); }
 function refreshTownPanel(){ const body=document.getElementById('tpBody'), z=TOWN_ZONES[_twZone]; if(!body||!z) return;
   body.innerHTML = z.render(); }
-function closeTownPanel(){ popHide('townPanel'); _twZone=null; }
+function closeTownPanel(){ popHide('townPanel'); _twZone=null; _charDelId=null; }
 // ── 🧍 캐릭터 선택/생성 ─────────────────────────────────────────────────────
 // 렌더러는 한 벌뿐이고 입장 화면(#charScreen)과 마을 구역(보관소·생성소)이 같은 것을 쓴다. 복제 금지.
 function renderCharSelect(){ const p=PROF(), list=p.chars||[];
   let h='<div class="twHead">캐릭터를 골라 마을로 들어갑니다. 슬롯 <b>'+list.length+'/'+PROF_MAX_CHARS+'</b><br>재화(P)와 펫은 모든 캐릭터가 함께 씁니다.</div>';
   if(!list.length) h+='<div class="twRow"><div class="twRowInfo"><div class="twRowSub">아직 캐릭터가 없습니다 — 먼저 만들어 주세요.</div></div></div>';
   for(const c of list){ const C=PROF_CLASSES[c.cls], J=PROF_JOBS[c.unit.jobId]||PROF_JOBS[c.cls], on=(c.id===p.curId);
+    if(_charDelId===c.id){   // 삭제 확인 — 무엇을 잃고 무엇을 돌려받는지 그 자리에서 보여준다
+      h+='<div class="twRow"><span class="twPet">'+C.ico+'</span><div class="twRowInfo">'
+        +'<div class="twRowName">'+escHtml(c.name)+' 삭제할까요?</div>'
+        +'<div class="twRowSub ok">'+profRefundOf(c)+' P 반환</div>'
+        +'<div class="twRowSub lock">Lv.'+c.level+' · 경험치 소멸</div></div>'
+        +'<button class="twBtn" onclick="charCancelDelete()">취소</button>'
+        +'<button class="twBtn del" onclick="charDoDelete(\''+c.id+'\')">삭제</button></div>';
+      continue; }
     h+='<div class="twRow"><span class="twPet">'+C.ico+'</span><div class="twRowInfo">'
       +'<div class="twRowName">'+escHtml(c.name)+(on?' <span class="twStars">선택중</span>':'')+'</div>'
       +'<div class="twRowSub">'+(J.name===C.name? C.name : C.name+' 계열 · '+J.name)+' · Lv.'+c.level+'</div></div>'
-      +'<button class="twBtn'+(on?' on':'')+'" onclick="charPick(\''+c.id+'\')">'+(on?'입장':'선택')+'</button></div>'; }
+      +'<button class="twBtn'+(on?' on':'')+'" onclick="charPick(\''+c.id+'\')">'+(on?'입장':'선택')+'</button>'
+      +'<button class="twDel" onclick="charAskDelete(\''+c.id+'\')" aria-label="삭제">✕</button></div>'; }
   if(list.length<PROF_MAX_CHARS)
     h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">새 캐릭터 만들기</div><div class="twRowSub">레인저 · 척후병 · 워든</div></div><button class="twBtn" onclick="charGoCreate()">만들기</button></div>';
   return h; }
@@ -4202,14 +4231,23 @@ function renderCharCreate(){ const p=PROF(), full=(p.chars||[]).length>=PROF_MAX
   return h; }
 // 지금 떠 있는 호스트(마을 구역 / 입장 화면)를 그대로 두고 내용만 바꾼다
 function _charHostRender(mode){ if(_townOpen && _twZone){ openTownPanel(mode==='create'?'charmake':'charsel'); return; } openCharScreen(mode); }
-function charGoCreate(){ if(typeof playSfx==='function') playSfx('ui_open'); _charHostRender('create'); }
+let _charDelId=null;   // 삭제 확인 중인 캐릭터(한 번 더 눌러야 지워진다)
+function charAskDelete(id){ _charDelId=id; if(typeof playSfx==='function') playSfx('ui_open'); _charHostRender('select'); }
+function charCancelDelete(){ _charDelId=null; _charHostRender('select'); }
+function charDoDelete(id){ const c=(PROF().chars||[]).find(x=>x.id===id); if(!c) return;
+  const nm=c.name, rf=profDeleteChar(id); if(rf<0) return;
+  _charDelId=null; if(typeof playSfx==='function') playSfx('ui_close');
+  if(!CHAR()){ closeTownPanel(); _townOpen=false; twStopLoop(); openCharScreen('create'); return; }   // 마지막 한 명을 지웠으면 생성 화면으로
+  if(_townOpen){ twApplyChar(); renderTownBar(); showTownToast(nm+' 삭제 · '+rf+' P 반환'); }
+  _charHostRender('select'); }
+function charGoCreate(){ _charDelId=null; if(typeof playSfx==='function') playSfx('ui_open'); _charHostRender('create'); }
 function charGoSelect(){ if(typeof playSfx==='function') playSfx('ui_open'); _charHostRender('select'); }
 function charPick(id){ if(!profSelectChar(id)) return; if(typeof playSfx==='function') playSfx('ui_open'); _charEnter(); }
 function charDoCreate(cls){ const el=document.getElementById('ccName'), c=profCreateChar(cls, el?el.value:'');
   if(!c){ if(_townOpen) showTownToast('슬롯이 가득 찼습니다'); return; }
   if(typeof playSfx==='function') playSfx('ui_open'); _charEnter(); }
 // 선택 직후 — 마을 안이면 그 자리에서 교체, 밖(입장 화면)이면 마을로 입장
-function _charEnter(){ const c=CHAR();
+function _charEnter(){ const c=CHAR(); _charDelId=null;
   if(_townOpen){ closeTownPanel(); twApplyChar(); renderTownBar(); if(c) showTownToast(c.name+' 선택'); }
   else openTown(); }
 let _csMode='select';

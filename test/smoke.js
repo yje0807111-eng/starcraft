@@ -127,6 +127,25 @@ async function groupLobby(){
     assert(profSelectChar(a.id),'되돌아가기 실패');
     assert(a.statPoints===spA && profStat('pow')===powA,'되돌아온 캐릭터의 성장이 바뀜');
     return '슬롯 '+PROF().chars.length+'/'+PROF_MAX_CHARS; });
+  await step('캐릭터 삭제: 쓴 재화는 환급 · 경험치는 소멸', ()=>{ skipIf(typeof profDeleteChar!=='function','캐릭터 삭제 없음');
+    const p=PROF(); p.chars.length=0; p.curId=''; p.pcoin=100000; p.unlocks={evolve:true};
+    const c=profCreateChar('ranger','환급'); assert(c,'캐릭터 생성 실패');
+    const before=p.pcoin;
+    assert(profBuyGear('weapon') && profBuyGear('weapon'),'장비 강화 실패');
+    c.unit.level=30;                                     // 전직·진화 레벨 요건 충족
+    assert(profClassChange('sniper'),'전직 실패');
+    assert(profEvolve(),'진화 실패');
+    const spent=before-p.pcoin; assert(spent>0,'지출이 0');
+    c.xp=999; c.level=12; c.statPoints=7;                 // 경험치로 얻은 것 — 환급 대상이 아니어야 한다
+    assert(profRefundOf(c)===spent,'환급액이 쓴 재화와 다름: '+profRefundOf(c)+' vs '+spent);
+    _charDelId=c.id;                                      // 확인 UI(무엇을 잃고 얻는지)
+    const html=renderCharSelect(); _charDelId=null;
+    assert(html.indexOf('삭제할까요')>=0 && html.indexOf('P 반환')>=0 && html.indexOf('경험치 소멸')>=0,'삭제 확인 UI가 안 나옴');
+    const cash=p.pcoin, got=profDeleteChar(c.id);
+    assert(got===spent,'삭제 환급액 불일치: '+got);
+    assert(p.pcoin===cash+spent,'재화가 안 돌아옴: '+p.pcoin);
+    assert(p.chars.length===0 && CHAR()===null,'캐릭터가 안 지워짐');
+    return '지출 '+spent+'P → 전액 환급'; });
   await step('캐릭터 이름은 HTML로 해석되지 않음', ()=>{ skipIf(typeof profCreateChar!=='function','캐릭터 시스템 없음');
     const p=PROF(); p.chars.length=0; p.curId='';
     profCreateChar('scout','<b>x</b>');                 // 이름은 사용자 입력 — innerHTML에 그대로 들어가면 안 된다
