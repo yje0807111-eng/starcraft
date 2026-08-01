@@ -54,6 +54,32 @@ async function groupLobby(){
     const w=mo.getBoundingClientRect().width; assert(w>200&&w<400,'moCard 폭 이상: '+w); closeModeSheet(); return 'w='+w; });
   await step('방찾기 열림+목록', ()=>{ openRooms(); const rm=document.querySelector('#rooms .rmCard'); assert(visible(rm),'rmCard 안 보임');
     const n=$('roomList').children.length; assert(n>0,'방 목록 비어있음'); $('rooms').classList.add('hide'); return n+'개 방'; });
+  // 마을: 월드 좌표계 + 카메라. 헤드리스는 rAF가 멈춰 있어 twStep(dt)을 직접 pump한다.
+  await step('마을: 월드 카메라 + 캐릭터 중앙 고정', ()=>{ skipIf(typeof openTown!=='function','마을 없음');
+    openTown();
+    const map=$('twMap'), w=$('twWorld'); assert(w,'#twWorld 없음');
+    const mr=map.getBoundingClientRect();
+    assert(Math.abs(parseFloat(w.style.width)-mr.width*TW_WORLD_MUL)<2,'월드 폭이 화면×'+TW_WORLD_MUL+'가 아님: '+w.style.width);
+    assert(w.querySelectorAll('.twZone').length===Object.keys(TOWN_ZONES).length,'구역 아이콘 수 불일치');
+    const off=Object.keys(TOWN_ZONES).filter(id=>!_twEdgeEl[id].classList.contains('hide'));
+    assert(off.length===Object.keys(TOWN_ZONES).length-1 && off.indexOf('plaza')<0,
+      '화면 밖 구역 방향 표시가 어긋남(발밑 광장은 숨고 나머지는 떠야 함): '+off.join(','));
+    const t0=w.style.transform, g=twZonePx('gacha'); twSetTarget(g[0],g[1]);
+    for(let i=0;i<60;i++) twStep(0.016);
+    assert(w.style.transform!==t0,'월드(배경)가 안 움직임');
+    const av=$('twAvatar').getBoundingClientRect();
+    const dx=Math.abs((av.left+av.width/2)-(mr.left+mr.width/2)), dy=Math.abs((av.top+av.height/2)-(mr.top+mr.height/2));
+    assert(dx<3&&dy<3,'아바타가 화면 중앙에서 벗어남: '+dx.toFixed(1)+','+dy.toFixed(1));
+    assert($('twAvatar').classList.contains('walk'),'이동 중인데 걷기 모션 클래스 없음');
+    return '월드 '+w.style.width+'×'+w.style.height; });
+  await step('마을: 걸어서 구역 자동 진입', ()=>{ skipIf(typeof openTown!=='function','마을 없음');
+    closeTownPanel();
+    const g=twZonePx('gacha'); twSetTarget(g[0],g[1]);
+    let n=0; while(_twChar.mode!==null && n<4000){ twStep(0.016); n++; }
+    assert(n<4000,'목적지에 도착하지 못함');
+    assert(visible($('townPanel')),'구역에 도착했는데 시설 팝업이 안 열림');
+    assert($('tpTitle').textContent.indexOf('뽑기집')>=0,'팝업 제목 불일치: '+$('tpTitle').textContent);
+    townToHub(); return n+'프레임 이동'; });
 }
 
 // ── 그룹: game (솔로 무한) ──

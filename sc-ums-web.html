@@ -2153,7 +2153,16 @@
   .twCoin{margin-left:auto;font-family:'Rajdhani',sans-serif;font-size:13px;color:var(--txt-mute)}
   .twCoin b{font-size:16px;font-weight:800;color:#ffd24a}
   .twPow{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:800;color:#ff8a9a}
-  .twMap{position:relative;flex:1;min-height:0;overflow:hidden;background:radial-gradient(circle at 50% 40%,#28324a 0%,#141b28 55%,#0a0e16 100%)}
+  .twMap{position:relative;flex:1;min-height:0;overflow:hidden;touch-action:none;background:radial-gradient(circle at 50% 40%,#28324a 0%,#141b28 55%,#0a0e16 100%)}
+  /* 월드 레이어 — 화면보다 큰 마을 전체. 카메라 = 이 요소의 transform 한 줄만 매 프레임 갱신(구역이 늘어도 비용 불변) */
+  .twWorld{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+  /* 화면 밖 구역 방향 표시(임시 최소 UI — 디자인 단계에서 교체 예정) */
+  .twEdge{position:absolute;transform:translate(-50%,-50%);z-index:2;display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;font-size:17px;cursor:pointer;
+    background:rgba(10,14,20,.82);border:1px solid rgba(92,214,255,.45);box-shadow:0 4px 12px -4px #000}
+  .twEdge.hide{display:none}
+  .twEdge:active{transform:translate(-50%,-50%) scale(.92)}
+  .twTapFx{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;border:2px solid rgba(92,214,255,.85);pointer-events:none;z-index:1;animation:twTap .5s ease-out forwards}
+  @keyframes twTap{from{transform:scale(.4);opacity:.9}to{transform:scale(1.6);opacity:0}}
   .twGround{position:absolute;left:8%;right:8%;top:12%;bottom:8%;border-radius:46% 46% 34% 34%/34% 34% 30% 30%;pointer-events:none;
     background:radial-gradient(ellipse at 50% 42%,rgba(74,96,74,.22),rgba(40,54,74,.06) 72%);border:1px solid rgba(255,255,255,.05);box-shadow:inset 0 0 40px -10px rgba(0,0,0,.5)}
   .twZone{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;z-index:2}
@@ -2164,7 +2173,14 @@
   .twPet{flex:0 0 auto;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:20px;border-radius:9px;background:rgba(255,255,255,.05);border:1px solid var(--metal-edge)}
   .tzLbl{font-size:11px;font-weight:800;color:#dbe3ec;background:rgba(6,8,12,.7);padding:2px 7px;border-radius:10px;border:1px solid var(--metal-edge);white-space:nowrap}
   .twZone:active{transform:translate(-50%,-50%) scale(.94)}
-  .twAvatar{position:absolute;transform:translate(-50%,-50%);font-size:26px;z-index:3;transition:left .5s ease,top .5s ease;filter:drop-shadow(0 3px 5px rgba(0,0,0,.7));pointer-events:none}
+  /* 아바타 — 화면 정중앙에 고정. 움직이는 것은 월드 쪽이다(카메라가 항상 캐릭터를 따라간다) */
+  .twAvatar{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:3;pointer-events:none}
+  .twAvFlip{display:block;transition:transform .12s ease}
+  .twAvFlip.l{transform:scaleX(-1)}
+  .twAvBody{display:block;font-size:26px;line-height:1;filter:drop-shadow(0 3px 5px rgba(0,0,0,.7))}
+  .twAvatar.walk .twAvBody{animation:twStep .36s linear infinite}
+  @keyframes twStep{0%,100%{transform:translateY(0) rotate(0)}25%{transform:translateY(-3px) rotate(-5deg)}75%{transform:translateY(-3px) rotate(5deg)}}
+  .twAvShadow{position:absolute;left:50%;bottom:-5px;transform:translateX(-50%);width:20px;height:6px;border-radius:50%;background:rgba(0,0,0,.45);filter:blur(1px)}
   .twToast{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:5;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:700;color:#fff;
     background:rgba(10,14,20,.92);border:1px solid rgba(255,210,74,.5);box-shadow:0 6px 18px -6px #000;white-space:nowrap;transition:opacity .3s}
   .twToast.hide{opacity:0;pointer-events:none}
@@ -3088,14 +3104,10 @@
       <span class="twName" id="twName">캐릭터</span><span class="twLv" id="twLv">Lv.1</span><span class="twPow" id="twPow">⚔ 0</span>
       <span class="twCoin"><b id="twCoin">0</b> P</span>
     </div>
-    <div class="twMap" id="twMap">
-      <div class="twGround"></div>
-      <div class="twZone" data-zone="gacha" style="left:22%;top:22%" onclick="townGo('gacha')"><span class="tzIco">🎁</span><span class="tzLbl">뽑기집</span></div>
-      <div class="twZone" data-zone="gate"  style="left:78%;top:22%" onclick="townGo('gate')"><span class="tzIco">🔒</span><span class="tzLbl">관문</span></div>
-      <div class="twZone" data-zone="shop"  style="left:20%;top:47%" onclick="townGo('shop')"><span class="tzIco">🛒</span><span class="tzLbl">장비 상점</span></div>
-      <div class="twZone" data-zone="gym"   style="left:80%;top:47%" onclick="townGo('gym')"><span class="tzIco">🏋️</span><span class="tzLbl">훈련장</span></div>
-      <div class="twZone" data-zone="plaza" style="left:50%;top:74%" onclick="townGo('plaza')"><span class="tzIco">🏠</span><span class="tzLbl">광장</span></div>
-      <div class="twAvatar" id="twAvatar" style="left:50%;top:74%">🧍</div>
+    <div class="twMap" id="twMap" onpointerdown="twPtrDown(event)" onpointermove="twPtrMove(event)" onpointerup="twPtrUp(event)" onpointercancel="twPtrUp(event)">
+      <!-- 월드(화면보다 큼) — 구역 아이콘은 TOWN_ZONES에서 생성한다(twBuildZones). 좌표·아이콘·라벨·패널이 한 곳 -->
+      <div class="twWorld" id="twWorld"><div class="twGround"></div></div>
+      <div class="twAvatar" id="twAvatar"><span class="twAvShadow"></span><span class="twAvFlip" id="twAvFlip"><span class="twAvBody">🧍</span></span></div>
     </div>
     <div id="twToast" class="twToast hide"></div>
   </div>
@@ -3971,16 +3983,121 @@ function profIdleTick(){ if(!PLAYER_META||!PLAYER_META.profile) return; const p=
 function profStampSeen(){ if(PLAYER_META&&PLAYER_META.profile){ PLAYER_META.profile.lastSeenTs=Date.now(); try{ localStorage.setItem(metaKey(), JSON.stringify(PLAYER_META)); }catch(e){} } }
 
 // ── 🎯 시작 허브 + 🏘 마을 UI ──
-let _townOpen=false, _twZone=null, _twMoveT=null;
-const ZONE_POS={ plaza:[50,74], shop:[20,47], gym:[80,47], gacha:[22,22], gate:[78,22] };
+// ── 마을(월드 + 카메라) ──
+// 좌표계: 월드 픽셀. 캐릭터는 화면 정중앙에 CSS로 고정되고, 매 프레임 #twWorld의 transform만 바뀐다.
+// 구역 추가는 TOWN_ZONES에 한 줄 추가로 끝난다(아이콘 DOM·좌표·패널 제목·렌더러가 전부 여기 모여 있음).
+const TOWN_ZONES={
+  plaza:{ x:50, y:78, ico:'🏠',   label:'광장',      title:'광장 · 내 캐릭터', render:()=>renderProfStats() },
+  shop: { x:20, y:52, ico:'🛒',   label:'장비 상점', title:'장비 상점',        render:()=>renderProfGear()  },
+  gym:  { x:80, y:52, ico:'🏋️',  label:'훈련장',    title:'훈련장',           render:()=>renderProfIdle()  },
+  gacha:{ x:24, y:24, ico:'🎁',   label:'뽑기집',    title:'뽑기집 · 펫',      render:()=>renderProfGacha() },
+  gate: { x:76, y:24, ico:'🔒',   label:'관문',      title:'관문',             render:()=>renderProfGate()  },
+};
+const TW_WORLD_MUL=3;        // 월드 = 화면의 N배(가로·세로). 마을을 넓히려면 이 값만 올린다
+const TW_SPEED=190;          // 캐릭터 이동 속도(월드 px/초)
+const TW_ARRIVE=4;           // 목적지 도착 판정(px)
+const TW_ZONE_R=52;          // 구역 자동 진입 반경(px)
+const TW_ZONE_OUT=1.5;       // 이 배율 밖으로 나가야 같은 구역이 다시 열린다(지나갈 때마다 재개봉 방지)
+const TW_TAP_MS=260, TW_TAP_PX=10;   // 이보다 길게 누르거나 많이 움직이면 '탭'이 아니라 '꾹 누르기'
+let _townOpen=false, _twZone=null;
+let _twW=0,_twH=0, _twVW=0,_twVH=0, _twVL=0,_twVT=0;   // 월드 크기 / 화면(뷰포트) 크기·위치
+let _twChar={x:0,y:0,tx:0,ty:0,dx:0,dy:0,mode:null,face:1};   // mode: null=정지 | 'to'=목적지 이동 | 'dir'=방향 이동
+let _twPtr=null, _twEntered=null, _twRaf=0, _twLast=0;
+let _twEdgeEl={};   // 구역 id → 화면 가장자리 방향 표시 엘리먼트
 function openHub(){ loadMeta(); if(typeof bgmStart==='function') bgmStart('lobby'); showAppScreen('hubScreen'); }
 function hubGoMap(){ if(typeof playSfx==='function') playSfx('ui_open'); openMapSelect(); }
 function mapToHub(){ if(typeof stopRoomsTick==='function') stopRoomsTick(); if(typeof playSfx==='function') playSfx('ui_close'); openHub(); }   // 유즈맵 선택 → 시작 선택(허브)로 복귀
 function hubGoTown(){ if(typeof playSfx==='function') playSfx('ui_open'); openTown(); }
 function openTown(){ loadMeta(); _townOpen=true; showAppScreen('townScreen');
-  const av=document.getElementById('twAvatar'); if(av){ av.style.left='50%'; av.style.top='72%'; }
+  twBuildZones(); twLayout();
+  const p=twZonePx('plaza')||[_twW/2,_twH/2];   // 광장에서 시작
+  _twChar.x=_twChar.tx=p[0]; _twChar.y=_twChar.ty=p[1]; _twChar.mode=null; _twChar.face=1;
+  _twEntered='plaza';   // 시작 지점이 광장이므로 진입 처리해 둔다(들어가자마자 팝업이 뜨지 않게)
+  twCamApply(); twStartLoop();
   const g=profClaimOffline(); renderTownBar(); if(g>0) showTownToast('오프라인 보상 +'+g+' P'); }
-function townToHub(){ _townOpen=false; closeTownPanel(); profStampSeen(); if(typeof playSfx==='function') playSfx('ui_close'); openHub(); }
+function townToHub(){ _townOpen=false; twStopLoop(); closeTownPanel(); profStampSeen(); if(typeof playSfx==='function') playSfx('ui_close'); openHub(); }
+
+// ── 월드/카메라 ──
+function twBuildZones(){ const w=document.getElementById('twWorld'), map=document.getElementById('twMap'); if(!w||!map||w._zonesBuilt) return;
+  for(const id in TOWN_ZONES){ const z=TOWN_ZONES[id];
+    const d=document.createElement('div');       // 월드 안의 구역 아이콘
+    d.className='twZone'; d.dataset.zone=id; d.onclick=function(){ townGo(id); };
+    d.innerHTML='<span class="tzIco">'+z.ico+'</span><span class="tzLbl">'+z.label+'</span>'; w.appendChild(d);
+    const e=document.createElement('div');       // 화면 밖일 때 가장자리에 뜨는 방향 표시
+    e.className='twEdge hide'; e.textContent=z.ico; e.title=z.label; e.onclick=function(){ townGo(id); };
+    map.appendChild(e); _twEdgeEl[id]=e; }
+  w._zonesBuilt=true; }
+// 화면 밖 구역을 화면 가장자리에 표시 — 월드가 넓어 구역이 안 보일 때 어디로 가야 할지 알려준다.
+function twEdgeApply(){ const M=24, cx=_twVW/2, cy=_twVH/2;
+  for(const id in TOWN_ZONES){ const el=_twEdgeEl[id]; if(!el) continue;
+    const p=twZonePx(id), sx=p[0]-_twChar.x+cx, sy=p[1]-_twChar.y+cy;
+    if(sx>M && sx<_twVW-M && sy>M && sy<_twVH-M){ el.classList.add('hide'); continue; }   // 화면 안이면 아이콘 자체가 보인다
+    el.classList.remove('hide');
+    const dx=sx-cx, dy=sy-cy, hw=cx-M, hh=cy-M;                                            // 중심→구역 방향을 화면 사각형 경계에 투영
+    const t=Math.min(hw/Math.max(Math.abs(dx),1e-6), hh/Math.max(Math.abs(dy),1e-6));
+    el.style.left=(cx+dx*t).toFixed(1)+'px'; el.style.top=(cy+dy*t).toFixed(1)+'px'; } }
+// 월드 픽셀 크기 산출 + 구역 배치. 화면 크기가 바뀌면 캐릭터 좌표도 비례로 옮겨 상대 위치를 지킨다.
+function twLayout(){ const map=document.getElementById('twMap'), w=document.getElementById('twWorld'); if(!map||!w) return;
+  const r=map.getBoundingClientRect(); _twVW=r.width; _twVH=r.height; _twVL=r.left; _twVT=r.top;
+  const nw=Math.round(r.width*TW_WORLD_MUL), nh=Math.round(r.height*TW_WORLD_MUL);
+  if(_twW&&_twH&&(nw!==_twW||nh!==_twH)){ const sx=nw/_twW, sy=nh/_twH;
+    _twChar.x*=sx; _twChar.y*=sy; _twChar.tx*=sx; _twChar.ty*=sy; }
+  _twW=nw; _twH=nh; w.style.width=nw+'px'; w.style.height=nh+'px';
+  for(const el of w.querySelectorAll('.twZone')){ const z=TOWN_ZONES[el.dataset.zone]; if(z){ el.style.left=z.x+'%'; el.style.top=z.y+'%'; } } }
+function twZonePx(id){ const z=TOWN_ZONES[id]; return z? [_twW*z.x/100, _twH*z.y/100] : null; }
+function twScreenToWorld(cx,cy){ return [ _twChar.x+(cx-_twVL)-_twVW/2, _twChar.y+(cy-_twVT)-_twVH/2 ]; }   // 캐릭터가 화면 중앙이므로 = 캐릭터 + (터치점 - 화면중앙)
+function twSetTarget(wx,wy){ _twChar.tx=Math.max(0,Math.min(_twW,wx)); _twChar.ty=Math.max(0,Math.min(_twH,wy)); _twChar.mode='to'; }
+function twTapFx(wx,wy){ const w=document.getElementById('twWorld'); if(!w) return;
+  const d=document.createElement('div'); d.className='twTapFx'; d.style.left=wx+'px'; d.style.top=wy+'px';
+  w.appendChild(d); setTimeout(()=>{ if(d.parentNode) d.parentNode.removeChild(d); }, 520); }
+// 카메라 = 월드 transform 한 줄. 아바타는 DOM상 고정이고 걷기/방향 클래스만 바뀐다.
+function twCamApply(){ const w=document.getElementById('twWorld'); if(!w) return;
+  w.style.transform='translate3d('+(_twVW/2-_twChar.x).toFixed(1)+'px,'+(_twVH/2-_twChar.y).toFixed(1)+'px,0)';
+  const av=document.getElementById('twAvatar'); if(av) av.classList.toggle('walk', _twChar.mode!==null);
+  const f=document.getElementById('twAvFlip'); if(f) f.classList.toggle('l', _twChar.face<0);
+  twEdgeApply(); }
+// 한 프레임 전진. rAF(twTick)와 스모크가 같은 함수를 쓴다(헤드리스는 rAF가 멈춰 있어 수동 호출이 필요).
+function twStep(dt){ if(!_twW) return;
+  const c=_twChar;
+  if(_twPtr && !_twPtr.hold && Date.now()-_twPtr.t>TW_TAP_MS) _twPtr.hold=true;   // 가만히 누르고 있어도 꾹 누르기로 전환(move 이벤트가 안 오므로 여기서 판정)
+  if(_twPtr && _twPtr.hold){ const dx=_twPtr.x-(_twVL+_twVW/2), dy=_twPtr.y-(_twVT+_twVH/2), d=Math.hypot(dx,dy);
+    if(d>4){ c.mode='dir'; c.dx=dx/d; c.dy=dy/d; } else if(c.mode==='dir') c.mode=null; }
+  let mx=0,my=0;
+  if(c.mode==='dir'){ mx=c.dx; my=c.dy; }
+  else if(c.mode==='to'){ const ax=c.tx-c.x, ay=c.ty-c.y, d=Math.hypot(ax,ay);
+    if(d<=TW_ARRIVE){ c.x=c.tx; c.y=c.ty; c.mode=null; } else { mx=ax/d; my=ay/d; } }
+  if(mx||my){ let s=TW_SPEED*dt;
+    if(c.mode==='to') s=Math.min(s, Math.hypot(c.tx-c.x,c.ty-c.y));
+    c.x=Math.max(0,Math.min(_twW,c.x+mx*s)); c.y=Math.max(0,Math.min(_twH,c.y+my*s));
+    if(mx>0.05) c.face=1; else if(mx<-0.05) c.face=-1; }
+  twCamApply(); twCheckZones(); }
+// 구역 반경에 들어가면 자동으로 시설 팝업. 한 번 연 구역은 충분히 벗어나야 다시 열린다.
+function twCheckZones(){
+  if(_twEntered){ const pe=twZonePx(_twEntered);
+    if(!pe || Math.hypot(pe[0]-_twChar.x,pe[1]-_twChar.y)>TW_ZONE_R*TW_ZONE_OUT) _twEntered=null; }
+  const tp=document.getElementById('townPanel'); if(tp && !tp.classList.contains('hide')) return;   // 이미 열려 있으면 판정 보류
+  let near=null, nd=1e9;
+  for(const id in TOWN_ZONES){ const p=twZonePx(id), d=Math.hypot(p[0]-_twChar.x,p[1]-_twChar.y); if(d<nd){ nd=d; near=id; } }
+  if(near && nd<=TW_ZONE_R && _twEntered!==near){ _twEntered=near; _twChar.mode=null; openTownPanel(near); } }
+function twTick(ts){ if(!_townOpen){ _twRaf=0; return; }
+  const dt=_twLast? Math.min(0.05,(ts-_twLast)/1000) : 0.016; _twLast=ts;
+  twStep(dt); _twRaf=requestAnimationFrame(twTick); }
+function twStartLoop(){ if(_twRaf) return; _twLast=0; _twRaf=requestAnimationFrame(twTick); }
+function twStopLoop(){ if(_twRaf){ cancelAnimationFrame(_twRaf); _twRaf=0; } _twPtr=null; _twChar.mode=null; }
+
+// ── 입력: 탭 = 그 지점으로 이동 / 꾹 누르기 = 손가락 방향으로 계속 이동 ──
+function twPtrDown(e){ if(!_townOpen) return;
+  if(e.target && e.target.closest && e.target.closest('.twZone,.twEdge')) return;   // 구역 아이콘·방향 표시는 자체 클릭(townGo)이 처리
+  _twPtr={ id:e.pointerId, x:e.clientX, y:e.clientY, sx:e.clientX, sy:e.clientY, t:Date.now(), hold:false };
+  const map=document.getElementById('twMap'); if(map){ try{ map.setPointerCapture(e.pointerId); }catch(_){} } }
+function twPtrMove(e){ if(!_twPtr || e.pointerId!==_twPtr.id) return;
+  _twPtr.x=e.clientX; _twPtr.y=e.clientY;
+  if(!_twPtr.hold && Math.hypot(e.clientX-_twPtr.sx, e.clientY-_twPtr.sy)>TW_TAP_PX) _twPtr.hold=true; }
+function twPtrUp(e){ if(!_twPtr || e.pointerId!==_twPtr.id) return;
+  const p=_twPtr; _twPtr=null;
+  if(p.hold){ if(_twChar.mode==='dir') _twChar.mode=null; return; }   // 꾹 누르기였으면 떼는 순간 정지
+  const w=twScreenToWorld(p.x,p.y); twSetTarget(w[0],w[1]); twTapFx(w[0],w[1]); }
+window.addEventListener('resize', function(){ if(_townOpen){ twLayout(); twCamApply(); } });
 function renderTownBar(){ const p=PROF();
   const nm=document.getElementById('twName'); if(nm) nm.textContent=(typeof myNick==='function'?myNick():'캐릭터');
   const lv=document.getElementById('twLv'); if(lv) lv.textContent='Lv.'+p.level;
@@ -3988,14 +4105,15 @@ function renderTownBar(){ const p=PROF();
   const cn=document.getElementById('twCoin'); if(cn) cn.textContent=Math.floor(p.pcoin); }
 function showTownToast(msg){ const t=document.getElementById('twToast'); if(!t) return; t.textContent=msg; t.classList.remove('hide');
   clearTimeout(t._t); t._t=setTimeout(()=>t.classList.add('hide'), 2600); }
-function townGo(zone){ const pos=ZONE_POS[zone]; if(!pos) return; if(typeof playSfx==='function') playSfx('ui_open');
-  const av=document.getElementById('twAvatar'); if(av){ av.style.left=pos[0]+'%'; av.style.top=pos[1]+'%'; }
-  if(_twMoveT) clearTimeout(_twMoveT); _twMoveT=setTimeout(function(){ _twMoveT=null; openTownPanel(zone); }, 520); }
-function openTownPanel(zone){ _twZone=zone; const t=document.getElementById('tpTitle');
-  const T={plaza:'광장 · 내 캐릭터',shop:'장비 상점',gym:'훈련장',gacha:'뽑기집 · 펫',gate:'관문'}; if(t) t.textContent=T[zone]||'시설';
+// 구역 아이콘 탭 = 그 구역을 목적지로. 이미 그 앞에 서 있으면 바로 연다(닫았다 다시 누르는 경우).
+function townGo(zone){ const p=twZonePx(zone); if(!p) return; if(typeof playSfx==='function') playSfx('ui_open');
+  if(Math.hypot(p[0]-_twChar.x,p[1]-_twChar.y)<=TW_ZONE_R){ _twChar.mode=null; _twEntered=zone; openTownPanel(zone); return; }
+  twSetTarget(p[0],p[1]); }
+function openTownPanel(zone){ _twZone=zone; _twChar.mode=null; _twPtr=null;   // 시설에 들어가면 걸음을 멈춘다
+  const t=document.getElementById('tpTitle'), z=TOWN_ZONES[zone]; if(t) t.textContent=(z&&z.title)||'시설';
   refreshTownPanel(); popShow('townPanel'); }
-function refreshTownPanel(){ const body=document.getElementById('tpBody'); if(!body||!_twZone) return;
-  body.innerHTML = _twZone==='plaza'?renderProfStats() : _twZone==='shop'?renderProfGear() : _twZone==='gym'?renderProfIdle() : _twZone==='gacha'?renderProfGacha() : renderProfGate(); }
+function refreshTownPanel(){ const body=document.getElementById('tpBody'), z=TOWN_ZONES[_twZone]; if(!body||!z) return;
+  body.innerHTML = z.render(); }
 function closeTownPanel(){ popHide('townPanel'); _twZone=null; }
 function renderTownIdle(){ renderTownBar(); const tp=document.getElementById('townPanel'); if(_twZone==='gym' && tp && !tp.classList.contains('hide')) refreshTownPanel(); }
 // 광장: 스탯 + 전직
