@@ -13918,11 +13918,18 @@ function strikeEnd(){ if(!STK && !(G&&G.strike)) return;
 
 // ── 프레임/시뮬 ──
 function strikeFrame(dt){ const S=STK; if(!S) return; strikeStep(dt*(G.speedMul||1));   // 게임 배속(설정 배속 시스템 반영) — 로딩/종료 중엔 strikeStep 내부에서 정지
+  // 👁 관전 중(specView) = 탭보다 우선. 어느 탭이든 vMain에 그 플레이어 건설을 렌더(건설지에서 열었어도 카드 선택 시 그 플레이어 화면).
+  { const _spec=!!S.specView; if(_spec!==S._specGview){ S._specGview=_spec; const _bld=(G.tab==='Build');
+      document.querySelectorAll('.gview').forEach(v=>v.classList.toggle('on', v.id===((_spec||!_bld)?'vMain':'vBuild'))); } }
+  if(S.specView){ const _mcv=document.getElementById('cvMarine'); if(_mcv) _mcv.style.display='none';   // 관전=2D 빌드맵(전투 3D 오버레이 숨김)
+    strikeDrawBuildMap(strikeSpecView(S.specView)); strikeTempleTick(dt); strikeHud(); strikeLeaderboard(dt);
+    if(G.tab==='Build'){ if(S.specSheet&&typeof techPanelRender==='function'){ S._spT=(S._spT||0)-dt; if(S._spT<=0){ S._spT=0.22; techPanelRender(); } } }
+    else { S._siT=(S._siT||0)-dt; if(S._siT<=0){ S._siT=0.22; strikeRenderSelInfo(); } }
+    return; }
   if(G.tab==='Build'){ techSyncWallet(); renderBuildTab(dt); strikeHud();
-    if(S.supSheet){ S._spT=(S._spT||0)-dt; if(S._spT<=0){ S._spT=0.22; if(typeof techPanelRender==='function') techPanelRender(); } }   // 📦 보급 시트 수치 갱신(전투 화면의 _siT와 동일 주기)
+    if(S.supSheet||S.specSheet){ S._spT=(S._spT||0)-dt; if(S._spT<=0){ S._spT=0.22; if(typeof techPanelRender==='function') techPanelRender(); } }   // 📦 보급/관전 시트 수치 갱신
     return; }   // 🏗 건설지 = 관리자 건설 탭과 동일한 렌더·틱(단일 소스)
-  if(S.specView) strikeDrawBuildMap(strikeSpecView(S.specView));   // 👁 관전: specView 있으면 어느 탭에서든 그 플레이어 건설 화면(그의 색)
-  else strikeDrawMain();
+  strikeDrawMain();
   { const U=STK._fxU; if(U){ if(U.pend&&U.pend.length){ for(let i=U.pend.length-1;i>=0;i--){ const p=U.pend[i]; p.t-=dt; if(p.t<=0){ FX.spawn(U.store,p.id,p.sx,p.sy,p.tx,p.ty,p.opt); U.pend.splice(i,1); } } }
     if(typeof tickUnitFx==='function') tickUnitFx(U, dt); if(FX.advance) FX.advance(U.store, dt); } }   // 유닛별 이펙트 진행(대기 발사·가스 이미터 등)
   strikeTempleTick(dt); strikeHud(); strikeLeaderboard(dt); strikeSync3D(dt);
@@ -14955,18 +14962,20 @@ function strikeToggleSpec(on){ const S=STK; if(!S) return;
   if(G.tab==='Build' && typeof techPanelRender==='function') techPanelRender();
   if(typeof playSfx==='function') playSfx('ui_tab'); }
 function strikeSpecPick(n){ const S=STK; if(!S) return;
-  if(n>=5){ strikeToast('적 진영은 암흑 시야입니다 🌑'); return; }
+  const me=(G.myPlayer||1); if((n<=4)!==(me<=4)){ strikeToast('적 진영은 암흑 시야입니다 🌑'); return; }   // 내 팀 아니면 관전 불가
   S.specView=(S.specView===n)?null:n;   // 같은 플레이어 다시 = 전장 복귀
   const h=document.getElementById('unitCmd'); if(h) h._stkSig=null;
   if(G.tab==='Build' && typeof techPanelRender==='function') techPanelRender();
   if(typeof playSfx==='function') playSfx('ui_confirm'); }
-function _stkSpecModel(){ const S=STK, meNick=(typeof myNick==='function'?myNick():'나');
-  const items=[]; for(let n=1;n<=8;n++){ const enemy=n>=5, col=strikePColor(n), watching=(S.specView===n);
-    items.push({ pro:'<span class="pemoji" style="color:'+col+';filter:drop-shadow(0 0 5px '+col+')">'+(enemy?'🌑':'◈')+'</span>',
-      sn:(n===1?meNick:(enemy?'컴퓨터':(n+'P'))), tr:watching?'관전중':(n+'P'), metaCls:'lv',
-      state:enemy?'dim':(watching?'sel':'on'), act:enemy?'':('onclick="strikeSpecPick('+n+')"') }); }
+function _stkSpecModel(){ const S=STK;
+  const me=(G.myPlayer||1), myA=(me<=4), names=G.playerNames||{};   // 팀 = 슬롯 절반(1-4 vs 5-8), 내 팀 기준으로 적 판정
+  const active=((G.activePlayers&&G.activePlayers.length)?G.activePlayers.slice():[me]).sort(function(a,b){return a-b;});   // 실제 참가 플레이어만
+  const items=active.map(function(n){ const enemy=((n<=4)!==myA), isMe=(n===me), col=strikePColor(n), watching=(S.specView===n);
+    return { pro:'<span class="pemoji" style="color:'+(enemy?'#6b7480':col)+';filter:drop-shadow(0 0 5px '+(enemy?'#0006':col)+')">'+(enemy?'🌑':'◈')+'</span>',
+      sn:(names[n]||(isMe?'나':(n+'P'))), tr:watching?'관전중':(isMe?'나':(n+'P')), metaCls:'lv',
+      state:enemy?'dim':(watching?'sel':'on'), act:enemy?'':('onclick="strikeSpecPick('+n+')"') }; });
   return { mode:'prod', compact:true, build:true, title:'관전 · 플레이어', icon:pIco('👁'), items:items,
-    info:{ eb:'관전', hideName:true, desc:'플레이어를 선택하면 그 진영 건설을 관전합니다.<br>적 진영은 암흑 시야(🌑)입니다.' } }; }
+    info:{ eb:'관전', hideName:true, desc:'우리 팀 플레이어를 선택하면 그 진영 건설을 관전합니다.<br>적 진영은 암흑 시야(🌑)로 잠깁니다.' } }; }
 // 📦 업그레이드 시트 — 4그리드(① 광산 ② 강화 ④ 특수무기 / 3번은 비움). 구매·강화·투하는 기존 함수를 그대로 호출.
 function _stkLv(cur,max){ return (cur>=max)?'MAX':(cur+'/'+max); }   // 카드 우상단 표기 통일
 function _stkSupplyModel(){ const S=STK, me=S.me, gold=Math.floor(me.gold||0);
@@ -15260,8 +15269,8 @@ function strikeMyBuildCells(){ const S=STK, b=S&&S.build; if(!b||!G.tech||!G.tec
     out.push({ type:{key:e.bk, name:bd.name||'', ico:bd.ico||'🏢'}, built:(e.bt>0?0:1),
       x:((e.x-TECH_GRID.x0)/cw)*cell, y:((e.y-techY0())/ch)*cell, w:f.w*cell, h:f.h*cell }); }
   return out; }
-function strikeSpecView(slot){ const S=STK; const cells=(slot===1)?strikeMyBuildCells():strikeSpecBuildCells(slot);
-  return {cells:cells, col:strikePColor(slot), label:(slot===1?'내 ':(slot+'P '))+'건설'}; }
+function strikeSpecView(slot){ const S=STK; const isMe=(slot===(G.myPlayer||1)); const cells=isMe?strikeMyBuildCells():strikeSpecBuildCells(slot);
+  return {cells:cells, col:strikePColor(slot), label:(isMe?'내 ':(((G.playerNames&&G.playerNames[slot])||(slot+'P'))+' '))+'건설'}; }
 function strikeSpecSelect(slot, enemy){ const S=STK; if(!S) return;
   if(enemy){ strikeToast('적 진영은 암흑 시야입니다 🌑'); return; }
   S.specView=(S.specView===slot)?null:slot;   // 같은 슬롯 다시 누르면 전장으로 복귀
