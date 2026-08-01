@@ -3164,9 +3164,8 @@
       <div class="setBody" id="body-vid">
         <div class="setRowLbl">그래픽 품질</div>
         <div class="setSeg" id="seg-q">
-          <button class="segBtn" data-q="low" onclick="event.stopPropagation();setQuality('low')">저</button>
-          <button class="segBtn" data-q="mid" onclick="event.stopPropagation();setQuality('mid')">중</button>
-          <button class="segBtn on" data-q="high" onclick="event.stopPropagation();setQuality('high')">고</button>
+          <button class="segBtn" data-q="saver" onclick="event.stopPropagation();setQuality('saver')">절전모드</button>
+          <button class="segBtn on" data-q="high" onclick="event.stopPropagation();setQuality('high')">고화질</button>
         </div>
         <div class="setHint" id="qHint"></div>
       </div>
@@ -4615,9 +4614,9 @@ let G=newGame();
 // 캔버스 + 트랙
 // ============================================================================
 const DPR=Math.min(devicePixelRatio||1,2);
-function setup(id){ const cv=document.getElementById(id),p=cv.parentElement;
+function setup(id, scale){ const cv=document.getElementById(id),p=cv.parentElement;
   const w=p.offsetWidth,h=p.offsetHeight;
-  const eff=DPR*((typeof G!=='undefined'&&G.opt&&G.opt.resScale)||1);   // 화질(해상도) 배율
+  const eff=DPR*(scale!=null?scale:1);   // 렌더 배율 — 기본 네이티브(건설지·다른 화면). 직스 전장만 호출부에서 배율 전달
   const W=Math.max(1,Math.round(w*eff)), H=Math.max(1,Math.round(h*eff));
   const ctx=cv.getContext('2d');
   if(cv.width!==W||cv.height!==H){ cv.width=W; cv.height=H; }   // 크기 변할 때만 재할당
@@ -8360,21 +8359,19 @@ function setModel3d(on){ G.opt=G.opt||{sfx:true,bgm:true}; G.opt.model3d=on;
   const fb=document.getElementById('flag-m3d'); if(fb) fb.textContent=on?'ON':'OFF';
   const cv=document.getElementById('cvMarine'); if(cv && !on) cv.style.display='none';   /* 켜기는 렌더 루프가 탭에 맞춰 처리 */
   refreshModelViews(); }
-const RES_SCALE={low:.42,mid:.78,high:1};   // 저 = 3D 유지하면서 렌더 해상도를 크게 낮춤(GPU 부하 직결)
 function segOn(id,val){ const c=document.getElementById(id); if(!c) return; c.querySelectorAll('.segBtn').forEach(b=>b.classList.toggle('on', b.dataset.v===val||b.dataset.q===val)); }
-function applyVideo(){ G.opt=G.opt||{sfx:true,bgm:true};   // 현재 비디오 옵션 → 세그먼트 하이라이트/라이트모드 반영
-  segOn('seg-q', G.opt.quality||'high');   // 품질은 프리셋 하나로만 조절(세부 항목은 프리셋이 일괄 적용)
-  const qh=document.getElementById('qHint'); if(qh){ const q=G.opt.quality||'high';
-    qh.textContent = q==='low' ? '절전 — 3D 유지 · 해상도·이펙트 최소 · 30FPS'
-      : (q==='mid' ? '균형 — 무거운 이펙트만 축소 · 60FPS' : '최고 — 모든 효과 표시');
-    qh.classList.toggle('save', q==='low'); }
-  document.body.classList.toggle('lite', (G.opt.fx==='off')||(G.opt.quality==='low')); }
-function setQuality(q){ G.opt=G.opt||{sfx:true,bgm:true}; G.opt.quality=q;   // 프리셋: 세부값 일괄 적용
-  // 저 = 2D 폴백이 아니라 "저사양 3D": 3D는 유지하고 해상도·애니·이펙트를 최소화
-  if(q==='low'){      G.opt.model3d=true;  G.opt.resLvl='low';  G.opt.resScale=RES_SCALE.low;  G.opt.fx='off';  G.opt.fps=30; G.opt.lite3d=true; }
-  else if(q==='mid'){ G.opt.model3d=true;  G.opt.resLvl='mid';  G.opt.resScale=RES_SCALE.mid;  G.opt.fx='min';  G.opt.fps=60; G.opt.lite3d=false; }
-  else {              G.opt.model3d=true;  G.opt.resLvl='high'; G.opt.resScale=RES_SCALE.high; G.opt.fx='full'; G.opt.fps=0; G.opt.lite3d=false; }
-  G.opt._aqOff=true;   // 사용자가 화질을 직접 골랐으니 자동 화질조절 중단(선택 존중) — strikeAutoQuality가 1초 뒤 되덮는 문제 방지
+function applyVideo(){ G.opt=G.opt||{sfx:true,bgm:true};   // 그래픽 품질 = 절전/고화질 2단계(기본 고화질)
+  const q=(G.opt.quality==='saver')?'saver':'high';
+  segOn('seg-q', q);
+  const qh=document.getElementById('qHint'); if(qh){
+    qh.textContent = q==='saver' ? '절전모드 — 오토배틀 전장만 해상도·이펙트를 낮춰 배터리 절약'
+      : '고화질 — 오토배틀 전장을 더 선명하게(건설지·다른 화면엔 영향 없음)';
+    qh.classList.toggle('save', q==='saver'); }
+  document.body.classList.toggle('lite', G.opt.fx!=='full'); }
+function setQuality(q){ G.opt=G.opt||{sfx:true,bgm:true}; q=(q==='saver')?'saver':'high'; G.opt.quality=q;
+  // 해상도(전장 렌더 배율)는 setup·M3D.sync가 quality로 직접 계산 — 여기선 이펙트/모델만 일괄 적용
+  if(q==='saver'){ G.opt.model3d=true; G.opt.fx='min'; G.opt.fps=60; G.opt.lite3d=true; }
+  else           { G.opt.model3d=true; G.opt.fx='full'; G.opt.fps=0;  G.opt.lite3d=false; }
   setModel3d(G.opt.model3d); applyVideo(); }
 function _bgmApplyVol(){ if(_bgm.audio) _bgm.audio.volume=_bgmVol(); }   // 현재 재생 중 BGM에 즉시 반영
 function _sndDisp(k){ return SND[k+'On'] ? SND[k] : 0; }   // 표시값: 끄기=0, 켜기=저장값
@@ -11199,6 +11196,9 @@ let STK=null, _stkDrag=null, _stkPtrs=new Map(), _stkPinch=null;
 const STRIKE_SAMPLE=[{id:'marine'},{id:'ghost'},{id:'hydra'},{id:'dragoon'},{id:'goliath'},{id:'archon'},{id:'tank',nm:'중전차'},{id:'skyguard',nm:'템페스트'}];
 // 전장 줌 한계: 최소(가장 축소)=1.2, 기본 시작=1.2, 최대(가장 확대)=2.5
 const STK_MINZOOM=1.2, STK_DEFZOOM=1.2, STK_MAXZOOM=2.5, BUILD_MAXZOOM=3;
+// 오토배틀 전장 렌더 배율 — 고화질=3D 살짝 슈퍼샘플(1.2×)·2D 네이티브 / 절전=저해상도(0.6×). 오직 직스 전장에만 적용, 건설지·다른 맵·초상엔 안 준다
+const STK_RES={ high:{cv:1, gl:1.2}, saver:{cv:0.6, gl:0.6} };
+function strikeResMode(){ return (typeof G!=='undefined'&&G.opt&&G.opt.quality==='saver')?'saver':'high'; }
 const STK_MAP_PAD=0.22;      // 전장 사방 여백(화면 높이 비율) — 맵을 그만큼 확장해서 여유 공간 확보
 const STK_FX_SPAN=1400;      // 유닛별 이펙트 좌표계: 월드 1400 = 관리자 화면 폭 1.0 (오프셋·크기를 관리자와 같은 체감으로)
 const STK_UNIT_SCALE=1.35;   // 직스 전투 유닛 3D 확대 배율(신전 제외) — 전장에서 잘 보이게
@@ -13961,19 +13961,8 @@ function strikeFrame(dt){ const S=STK; if(!S) return; strikeStep(dt*(G.speedMul|
   strikeTempleTick(dt); strikeHud(); strikeLeaderboard(dt); strikeSync3D(dt);
   if(G.tab==='Main'){ S._siT=(S._siT||0)-dt; if(S._siT<=0){ S._siT=0.22; strikeRenderSelInfo(); } } }   // 선택 정보 라이브 갱신(HP)
 // 직스 3D 오버레이 — 신전(메인/2차/중립, 항상) + 크기비교 샘플유닛(sizeCmp일 때). 카메라 좌표→정규화, M3D.sync로 cvMarine 렌더(전투 탭, 맵 스케일 연동)
-// ⚠ 임계값은 '이 기기의 프레임 바닥(주사율)' 대비 **배수**다. 절대 ms 상수로 쓰면 안 된다 —
-//   60Hz는 아무리 가벼워도 vsync 때문에 16.7ms 밑으로 못 내려가므로 '15ms 미만이면 복구'는
-//   영원히 성립하지 않아, 한 번 낮아진 화질이 유닛이 줄어도 되돌아오지 않는다(실제로 겪은 버그).
-const STK_AQ_LOW=0.55, STK_AQ_HI=1.0, STK_AQ_BAD=1.55, STK_AQ_GOOD=1.12;   // 바닥×1.55 초과=낮춤 / 바닥×1.12 미만=되돌림
-function strikeAutoQuality(dt){ const S=STK; if(!S) return; const O=G.opt||(G.opt={});   // 옵션 객체가 없으면 만든다
-  if(O._aqOff) return;                           // 사용자가 직접 화질을 만졌으면 자동 조절 중단
-  const ms=Math.min(200, dt*1000); S._aq=(S._aq==null?ms:S._aq*0.9+ms*0.1);   // 평활 프레임 시간
-  S._aqMin=Math.min(S._aqMin==null?S._aq:S._aqMin, S._aq);   // 관측된 최저 '평활' 프레임 = 주사율 바닥(단발 이상치에 안 끌려감)
-  S._aqT=(S._aqT||0)-dt; if(S._aqT>0) return; S._aqT=1.0;   // 1초에 한 번만 조정(요동 방지)
-  const cur=(O.resScale!=null?O.resScale:1), fl=Math.max(16, Math.min(34, S._aqMin));   // 목표 프레임 = 60~30fps로만 제한. 16ms 미만(60fps↑)은 목표로 삼지 않는다 — 120/144Hz 화면에서 '주사율을 못 채우니 해상도를 깎자'는 오판(태블릿 저해상도 버그)을 막는다
-  if(S._aq>fl*STK_AQ_BAD && cur>STK_AQ_LOW) O.resScale=Math.max(STK_AQ_LOW, cur-0.15);
-  else if(S._aq<fl*STK_AQ_GOOD && cur<STK_AQ_HI) O.resScale=Math.min(STK_AQ_HI, cur+0.1); }
-function strikeSync3D(dt){ const S=STK; if(!S) return; strikeAutoQuality(dt); const mcv=document.getElementById('cvMarine');
+// 해상도는 자동조절하지 않고 설정(절전/고화질)으로 고정 — 전장 배율은 STK_RES/strikeResMode가 담당(M3D.sync·strikeDrawMain)
+function strikeSync3D(dt){ const S=STK; if(!S) return; const mcv=document.getElementById('cvMarine');
   const ok3d=window.M3D && M3D.ready && M3D.ready() && !(G.opt&&G.opt.model3d===false);
   // (제거) 구 건설 3D 분기 — 건설지 3D는 renderBuildTab(관리자와 동일 경로)이 담당
   const on=(G.tab==='Main' && ok3d);
@@ -15063,7 +15052,7 @@ function strikeDrawUnits(ctx,w2s,scale,S){ if(!S) return;
 
 // ── 전장 렌더(#cvMain) ──
 function strikeDrawMain(){ const S=STK; if(!S) return; const cvEl=document.getElementById('cvMain'); if(!cvEl) return;
-  const r=setup('cvMain'); const ctx=r.ctx, W=r.W, H=r.H; GW=W; GH=H; S.cw=W; S.ch=H;
+  const r=setup('cvMain', STK_RES[strikeResMode()].cv); const ctx=r.ctx, W=r.W, H=r.H; GW=W; GH=H; S.cw=W; S.ch=H;   // 전장 2D만 배율(절전=0.6·고화질=네이티브)
   const scale=Math.min(W,H)/S.viewWorld;
   const w2s=(x,y)=>({x:(x-S.cam.x)*scale+W/2, y:(y-S.cam.y)*scale+H/2});
   strikeDrawGround(ctx,W,H,S,scale);
@@ -16729,8 +16718,9 @@ window.M3D={
   sync(units, W, H, dt, sel, enemies, selEnemy, scaleMul, view){
     if(!ready||!W||!H) return;
     if(_prof) _prof.t0=performance.now();
-    // 화질 옵션(resScale) → 3D 렌더 해상도 연동(모바일 GPU 부하 직결 — 2D 캔버스와 동일 배율)
-    { const _pr=Math.min(devicePixelRatio||1,2)*((typeof G!=='undefined'&&G.opt&&G.opt.resScale)||1);
+    // 3D 렌더 해상도: 직스 전장만 quality 배율(고화질=1.2× 슈퍼샘플·절전=0.6×). 네모 등 다른 게임(G.strike 거짓)은 네이티브 고정
+    { const _ss=(typeof G!=='undefined'&&G.strike)?(STK_RES[strikeResMode()].gl):1;
+      const _pr=Math.min(devicePixelRatio||1,2)*_ss;
       if(Math.abs(renderer.getPixelRatio()-_pr)>0.001){ renderer.setPixelRatio(_pr); renderer._w=0; } }
     if(renderer._w!==W||renderer._h!==H){ renderer.setSize(W,H,false); renderer._w=W;renderer._h=H; }
     { const vz=(view&&view.zoom)||1, vx=(view&&view.x!=null)?view.x:0.5, vy=(view&&view.y!=null)?view.y:0.5;   // 화면 줌/팬 → 직교 카메라 프러스텀(전체 3D가 한 번에 줌/팬). 기본=항등
@@ -16965,6 +16955,7 @@ window.M3D={
   // 직스 건설지 탭: 일꾼(+3D 모델 보유 건물)을 화면 정규화 좌표에 3D로 세움. buildModels 풀(게임/전시와 분리).
   syncBuild(list, W, H, dt, scaleMul){
     if(!ready||!W||!H) return;
+    { const _pr=Math.min(devicePixelRatio||1,2); if(Math.abs(renderer.getPixelRatio()-_pr)>0.001){ renderer.setPixelRatio(_pr); renderer._w=0; } }   // 건설지는 항상 네이티브 — 전장이 올린 슈퍼샘플 배율을 물려받지 않게 명시 리셋
     if(renderer._w!==W||renderer._h!==H){ renderer.setSize(W,H,false); renderer._w=W;renderer._h=H; }
     camera.left=0;camera.right=W;camera.top=H;camera.bottom=0;camera.updateProjectionMatrix();
     for(const [,m] of models) m.holder.visible=false;
