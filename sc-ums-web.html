@@ -2130,6 +2130,44 @@
   .ptHelpBody .phItem b{color:#dbe3ec;font-weight:700}
   /* ── 🎯 시작 선택 허브 ── */
   #hubScreen.hide,#townScreen.hide,#charScreen.hide{display:none}
+  /* ⚔ 던전 화면 */
+  #dgScreen{position:absolute;inset:0;z-index:60;display:flex;flex-direction:column}
+  #dgScreen.hide{display:none}
+  .dgWrap{flex:1;min-height:0;display:flex;flex-direction:column;padding:8px 10px 12px;gap:8px}
+  .dgArena{position:relative;flex:1;min-height:0;border-radius:14px;overflow:hidden;
+    background:radial-gradient(ellipse at 50% 30%,rgba(80,60,110,.28),rgba(12,14,22,.9) 70%),#0b0e16;border:1px solid var(--metal-edge);
+    box-shadow:inset 0 0 40px -8px #000}
+  .dgU{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:2px;pointer-events:none;will-change:left,top}
+  .dgIco{font-size:24px;line-height:1;filter:drop-shadow(0 3px 4px rgba(0,0,0,.7))}
+  .dgU.boss .dgIco{font-size:34px}
+  .dgU.me .dgIco{font-size:26px}
+  .dgU.me.buff .dgIco{filter:drop-shadow(0 0 8px #5cd6ff) drop-shadow(0 3px 4px rgba(0,0,0,.7))}
+  .dgHp{display:block;width:26px;height:3px;border-radius:2px;background:rgba(0,0,0,.6);overflow:hidden}
+  .dgHp b{display:block;height:100%;width:100%;background:#ff5a72}
+  .dgU.me .dgHp b{background:#6ff0a0}
+  .dgU.boss .dgHp{width:44px;height:4px}
+  .dgDmg{position:absolute;transform:translate(-50%,-50%);font-family:'Rajdhani',sans-serif;font-weight:800;font-size:13px;pointer-events:none;
+    color:#ffe9a8;text-shadow:0 2px 3px #000;animation:dgFloat .62s ease-out forwards}
+  .dgDmg.foe{color:#ff8a9a}.dgDmg.crit{color:#fff;font-size:17px}
+  @keyframes dgFloat{from{opacity:1;transform:translate(-50%,-50%)}to{opacity:0;transform:translate(-50%,-160%)}}
+  .dgBar{flex:0 0 auto}
+  .dgBar i{display:block;height:8px;border-radius:5px;background:rgba(255,255,255,.07);border:1px solid var(--metal-edge);overflow:hidden}
+  .dgBar b{display:block;height:100%;width:100%;background:linear-gradient(90deg,#6ff0a0,#3fd08a)}
+  .dgBtns{flex:0 0 auto;display:flex;justify-content:center}
+  .dgSkillBtn{position:relative;width:62px;height:62px;border-radius:50%;cursor:pointer;font-size:26px;line-height:1;
+    color:#dff4ff;background:linear-gradient(180deg,rgba(92,214,255,.3),rgba(92,214,255,.1));border:2px solid rgba(92,214,255,.6)}
+  .dgSkillBtn.off{opacity:.45}
+  .dgSkillBtn.on{background:linear-gradient(180deg,rgba(92,214,255,.6),rgba(92,214,255,.3));box-shadow:0 0 14px -2px #5cd6ff}
+  .dgSkillBtn i{position:absolute;inset:0;display:none;align-items:center;justify-content:center;font-style:normal;border-radius:50%;
+    font-family:'Rajdhani',sans-serif;font-weight:800;font-size:22px;color:#fff;text-shadow:0 2px 4px #000;background:rgba(6,9,14,.66)}
+  .dgResult{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;background:var(--ov-dim);backdrop-filter:blur(2px)}
+  .dgResult.hide{display:none}
+  .dgRCard{width:280px;max-width:86vw;padding:20px 18px;border-radius:14px;text-align:center;
+    background:linear-gradient(180deg,rgba(20,26,38,.98),rgba(12,16,24,.98));border:1px solid var(--metal-edge);box-shadow:0 14px 40px -12px #000}
+  .dgRT{font-size:19px;font-weight:800;margin-bottom:6px}
+  .dgRT.ok{color:#6ff0a0}.dgRT.bad{color:#ff8a9a}
+  .dgRS{font-size:12px;color:var(--txt-mute);margin-bottom:14px}
+  .dgRBtns{display:flex;gap:8px;justify-content:center}
   /* 캐릭터 선택/생성 입장 화면 */
   #charScreen{position:absolute;inset:0;z-index:61;display:flex;align-items:center;justify-content:center}
   .csCard{width:330px;max-width:90vw;max-height:86%}
@@ -3130,6 +3168,21 @@
     </div>
   </div>
 
+  <!-- ⚔ 던전 — 캐릭터가 직접 싸우는 전용 화면(유즈맵과 완전 분리) -->
+  <div id="dgScreen" class="appScreen spaceBg hide">
+    <div class="twBar">
+      <button class="twBack" onclick="dgFlee()" aria-label="나가기"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <span class="twName">던전</span><span class="twLv" id="dgWave">1층 · 1/3</span>
+      <span class="twCoin"><b id="dgHpTxt">0</b> HP</span>
+    </div>
+    <div class="dgWrap">
+      <div class="dgArena" id="dgArena"></div>
+      <div class="dgBar"><i><b id="dgHpBar"></b></i></div>
+      <div class="dgBtns"><button class="dgSkillBtn" id="dgSkillBtn" onclick="dgSkill()"><span id="dgSkillIco">🎯</span><i id="dgSkillCd"></i></button></div>
+    </div>
+    <div id="dgResult" class="dgResult hide"></div>
+  </div>
+
   <!-- 마을 시설 팝업(구역 도착 시) -->
   <div id="townPanel" class="hide" onclick="if(event.target===this)closeTownPanel()">
     <div class="setCard twCard">
@@ -3880,7 +3933,7 @@ function defaultProfile(){ return { ver:3, pcoin:0, chars:[], curId:'',
   pets:{}, equip:[], petSlots:2 }; }   // 🐾 펫(중복=별)·장착 슬롯 — 캐릭터를 새로 만들어도 그대로 쓴다
 function defaultChar(cls, name){ const C=PROF_CLASSES[cls]||PROF_CLASSES.ranger, id=(PROF_CLASSES[cls]?cls:'ranger');
   return { id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), cls:id, name:(name||C.name),
-    xp:0, level:1, statPoints:0,
+    xp:0, level:1, statPoints:0, dgFloor:0,
     unit:{ jobId:id, level:1, evoStars:0, stats:{pow:0,vit:0,foc:0,agi:0}, gear:{weapon:0,armor:0,trinket:0} } }; }
 function defaultMeta(){ return { coins:0, buildLevels:{}, highestRound:0, clearedDifficulty:'', profile:defaultProfile() }; }   // clearedDifficulty:''=아무것도 클리어 안 함(이지만 개방)
 let PLAYER_META = defaultMeta();
@@ -4314,10 +4367,166 @@ function renderProfIdle(){ const p=PROF();
   return h; }
 function profDoIdle(id){ if(profSetIdleSource(id)){ if(typeof playSfx==='function') playSfx('ui_open'); refreshTownPanel(); } }
 // 관문(해금 사다리)
-function renderProfGate(){ let h='<div class="twHead">캐릭터 파워 <b>'+profPower()+'</b>. 파워가 오르면 아래가 열립니다.</div>';
+function renderProfGate(){ const mx=dgMaxFloor(), nx=mx+1;
+  let h='<div class="twHead">던전에 들어가 직접 싸웁니다. 보상은 <b>P</b>와 경험치.<br>최고 기록 <b>'+(mx?mx+'층':'없음')+'</b> · 캐릭터 파워 <b>'+profPower()+'</b></div>';
+  const rN=dgFloorReward(nx);
+  h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+nx+'층 도전</div><div class="twRowSub ok">새 기록 · '+rN.pc+' P · '+rN.xp+' XP</div></div><button class="twBtn" onclick="dgEnter('+nx+')">입장</button></div>';
+  if(mx>0){ const rM=dgFloorReward(mx);
+    h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+mx+'층 반복</div><div class="twRowSub">클리어한 층 · '+rM.pc+' P · '+rM.xp+' XP</div></div><button class="twBtn" onclick="dgEnter('+mx+')">입장</button></div>'; }
+  h+='<div class="twSectLbl">파워 해금</div>';
   for(const u of PROF_UNLOCKS){ const open=profHasUnlock(u.id);
     h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+u.label+'</div><div class="twRowSub '+(open?'ok':'lock')+'">'+(open?'✓ 열림':('🔒 파워 '+u.power+' 필요'))+'</div></div></div>'; }
   return h; }
+
+// ============================================================================
+// ⚔ 던전 — 캐릭터가 직접 싸우는 전용 화면
+// ⛔ 유즈맵(네모네모·직스)과 완전 분리. G / step / loop / U / GACHA_* / mapCfg /
+//    metaBonus 를 한 줄도 참조하지 않는다. 적 표·밸런스·루프·렌더를 전부 자체 보유.
+//    스모크 '던전: 유즈맵 상태 미접촉'이 이 규칙을 정적(소스 검사)·동적(G 스냅샷)으로 지킨다.
+// ============================================================================
+const DG_WAVES=3;                    // 층당 웨이브 수(마지막은 보스)
+const DG_W=320, DG_H=380;            // 전장 자체 좌표계(px). 가로는 고정, 세로는 화면 비율로 맞춘다(DG.h)
+const DG_GAP=0.8;                    // 웨이브 사이 간격(초)
+const DG_SEP=32;                     // 적끼리 최소 간격(px) — 없으면 전부 한 점에 포개진다
+// 던전 전용 적 표 — 유즈맵 유닛 정의(U/GACHA_UNITS)와 무관.
+// range = 공격 사거리 겸 '접근을 멈추는 거리'라, 근접이라도 스프라이트 반지름(약 14) 두 개분은 띄워야 겹치지 않는다.
+const DG_FOES={
+  slime: { name:'슬라임', ico:'🟢', hp:34,  atk:5,  spd:34, range:30, cd:1.2 },
+  bat:   { name:'박쥐',   ico:'🦇', hp:24,  atk:8,  spd:64, range:28, cd:0.9 },
+  golem: { name:'석상',   ico:'🗿', hp:88,  atk:13, spd:22, range:33, cd:1.7 },
+  wraith:{ name:'망령',   ico:'👻', hp:48,  atk:12, spd:46, range:88, cd:1.5 },
+  keeper:{ name:'수문장', ico:'👹', hp:240, atk:24, spd:28, range:38, cd:1.3, boss:true },
+};
+const DG_SKILLS={                    // 직업 계열별 1스킬
+  ranger:{ name:'집중 사격', ico:'🎯', cd:9,  dur:3.5, tip:'공격 속도 2배' },
+  scout: { name:'질풍',     ico:'💨', cd:9,  dur:3.5, tip:'이동·공격 속도 상승' },
+  warden:{ name:'수호',     ico:'🛡',  cd:11, dur:4.5, tip:'받는 피해 절반' },
+};
+function dgFloorReward(floor){ return { pc:Math.round(40+floor*22), xp:Math.round(25+floor*14) }; }
+function dgMaxFloor(){ const c=CHAR(); return c? (c.dgFloor||0) : 0; }
+function dgWaveFoes(floor, wave){
+  if(wave>=DG_WAVES) return ['keeper'];
+  const pool=(floor<3)?['slime','bat']:(floor<6)?['slime','bat','golem']:['bat','golem','wraith'];
+  const n=Math.min(6, 2+Math.floor(floor/2)+(wave>1?1:0));
+  const out=[]; for(let i=0;i<n;i++) out.push(pool[(floor+wave+i)%pool.length]);
+  return out; }
+function dgFoeStat(key, floor){ const f=DG_FOES[key], k=Math.pow(1.28, floor-1);
+  return { key:key, name:f.name, ico:f.ico, boss:!!f.boss, hpMax:Math.round(f.hp*k),
+           atk:Math.round(f.atk*k*0.92), spd:f.spd, range:f.range, cd:f.cd }; }
+// 캐릭터 스탯 → 전투 수치. '스펙업이 체감되는' 유일한 환산 지점이다.
+function dgMySpec(){ const pow=profStat('pow'), vit=profStat('vit'), foc=profStat('foc'), agi=profStat('agi');
+  return { hpMax:Math.round(70+vit*13), atk:Math.round(5+pow*1.7), crit:Math.min(0.5, foc*0.007),
+           spd:52+agi*1.5, range:52, cd:Math.max(0.34, 1.05-agi*0.013) }; }
+
+let DG=null, _dgRaf=0, _dgLast=0;
+function dgEnter(floor){ dgStopLoop(); closeTownPanel(); twStopLoop(); _townOpen=false;
+  if(typeof playSfx==='function') playSfx('ui_open'); dgStart(floor); }
+function dgStart(floor){ const c=CHAR(); if(!c) return false;
+  const sp=dgMySpec();
+  DG={ floor:floor, wave:0, gap:0.3, over:0, reward:null, _els:null,
+       h:DG_H, me:{ x:DG_W/2, y:DG_H-46, hp:sp.hpMax, sp:sp, t:0 }, skill:{ cd:0, left:0 }, foes:[] };
+  showAppScreen('dgScreen');
+  const ar=document.getElementById('dgArena');
+  if(ar){ ar.innerHTML='';
+    const w=ar.clientWidth||0, hh=ar.clientHeight||0;
+    if(w>0&&hh>0) DG.h=Math.round(DG_W*hh/w); }   // 가로 배율 하나로 그리므로 세로 논리 크기를 화면 비율에 맞춘다
+  DG.me.y=DG.h-46;
+  dgRender(); dgStartLoop(); return true; }
+function dgSpawnWave(){ DG.wave++;
+  const keys=dgWaveFoes(DG.floor, DG.wave);
+  DG.foes=keys.map((k,i)=>{ const f=dgFoeStat(k, DG.floor);
+    return Object.assign(f, { id:'f'+DG.wave+'_'+i, hp:f.hpMax, t:0.4+i*0.15,
+      x:34+((i+0.5)/keys.length)*(DG_W-68), y:34+((i%2)*30) }); }); }
+// 한 프레임 전진 — rAF(dgTick)와 스모크가 같은 함수를 쓴다(헤드리스는 rAF가 안 돈다)
+function dgStep(dt){ if(!DG || DG.over) return;
+  const me=DG.me, sp=me.sp, cls=(CHAR()||{}).cls, buff=DG.skill.left>0;
+  const guard=(cls==='warden'&&buff), haste=(cls!=='warden'&&buff)?2:1, dash=(cls==='scout'&&buff)?1.5:1;
+  if(DG.skill.cd>0)   DG.skill.cd=Math.max(0, DG.skill.cd-dt);
+  if(DG.skill.left>0) DG.skill.left=Math.max(0, DG.skill.left-dt);
+  if(!DG.foes.length){ DG.gap-=dt;
+    if(DG.gap<=0){ if(DG.wave>=DG_WAVES){ dgWin(); return; } dgSpawnWave(); DG.gap=DG_GAP; }
+    dgRender(); return; }
+  let t=null, td=1e9;                                        // 가장 가까운 적을 향해
+  for(const f of DG.foes){ const d=Math.hypot(f.x-me.x, f.y-me.y); if(d<td){ td=d; t=f; } }
+  if(td>sp.range){ const k=Math.min(1, sp.spd*dash*dt/Math.max(td,1e-6));
+    me.x+=(t.x-me.x)*k; me.y+=(t.y-me.y)*k; }
+  else { me.t-=dt*haste;
+    if(me.t<=0){ me.t=sp.cd;
+      const crit=Math.random()<sp.crit, dmg=Math.round(sp.atk*(crit?2:1));
+      t.hp-=dmg; dgHit(t.x, t.y, dmg, crit?'crit':'me');
+      if(t.hp<=0) DG.foes=DG.foes.filter(f=>f!==t); } }
+  for(const f of DG.foes){ const d=Math.hypot(me.x-f.x, me.y-f.y);
+    if(d>f.range){ const k=Math.min(1, f.spd*dt/Math.max(d,1e-6)); f.x+=(me.x-f.x)*k; f.y+=(me.y-f.y)*k; }
+    else { f.t-=dt;
+      if(f.t<=0){ f.t=f.cd;
+        const dmg=Math.max(1, Math.round(f.atk*(guard?0.5:1)));
+        me.hp-=dmg; dgHit(me.x, me.y, dmg, 'foe');
+        if(me.hp<=0){ me.hp=0; dgLose(); return; } } } }
+  for(let i=0;i<DG.foes.length;i++) for(let j=i+1;j<DG.foes.length;j++){   // 적끼리 밀어내기(최대 6기라 O(n²)로 충분)
+    const a=DG.foes[i], b=DG.foes[j], dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy);
+    if(d>1e-3 && d<DG_SEP){ const k=(DG_SEP-d)/d*0.5; a.x-=dx*k; a.y-=dy*k; b.x+=dx*k; b.y+=dy*k; } }
+  for(const f of DG.foes){ f.x=Math.max(14, Math.min(DG_W-14, f.x)); f.y=Math.max(14, Math.min(DG.h-14, f.y)); }
+  me.x=Math.max(14, Math.min(DG_W-14, me.x)); me.y=Math.max(14, Math.min(DG.h-14, me.y));
+  dgRender(); }
+function dgWin(){ const c=CHAR(), p=PROF(), r=dgFloorReward(DG.floor);
+  DG.over=1; DG.reward=r;
+  p.pcoin+=r.pc;
+  if(c){ c.xp+=r.xp; profApplyLevelUps(c); if((c.dgFloor||0)<DG.floor) c.dgFloor=DG.floor; }
+  profSyncUnlocks(); saveMeta(); dgStopLoop(); dgRender(); }
+function dgLose(){ DG.over=-1; dgStopLoop(); dgRender(); }
+function dgSkill(){ if(!DG || DG.over || DG.skill.cd>0) return;
+  const S=DG_SKILLS[(CHAR()||{}).cls] || DG_SKILLS.ranger;
+  DG.skill.cd=S.cd; DG.skill.left=S.dur;
+  if(typeof playSfx==='function') playSfx('ui_open'); dgRender(); }
+function dgFlee(){ dgStopLoop(); DG=null; openTown(); }
+function dgTick(ts){ if(!DG){ _dgRaf=0; return; }
+  const dt=_dgLast? Math.min(0.05,(ts-_dgLast)/1000) : 0.016; _dgLast=ts;
+  dgStep(dt); if(DG && !DG.over) _dgRaf=requestAnimationFrame(dgTick); else _dgRaf=0; }
+function dgStartLoop(){ if(_dgRaf) return; _dgLast=0; _dgRaf=requestAnimationFrame(dgTick); }
+function dgStopLoop(){ if(_dgRaf){ cancelAnimationFrame(_dgRaf); _dgRaf=0; } }
+
+// ── 렌더 계층 — DOM을 만지는 곳은 여기(dgRender/dgHit)뿐이다. 3D로 갈아끼울 땐 이 둘만 교체하면 된다 ──
+function _dgScale(ar){ return (ar.clientWidth||DG_W)/DG_W; }
+function dgHit(x, y, n, kind){ const ar=document.getElementById('dgArena'); if(!ar) return;
+  const sc=_dgScale(ar), d=document.createElement('div');
+  d.className='dgDmg '+kind; d.textContent=(kind==='foe'?'-':'')+n;
+  d.style.left=((x+(Math.random()*18-9))*sc)+'px'; d.style.top=(y*sc)+'px'; ar.appendChild(d);
+  setTimeout(()=>{ if(d.parentNode) d.parentNode.removeChild(d); }, 620); }
+function _dgUnit(ar, els, id, cls, ico){ let e=els[id];
+  if(!e){ e=document.createElement('div'); e.className='dgU '+cls;
+    e.innerHTML='<span class="dgIco">'+ico+'</span><i class="dgHp"><b></b></i>';
+    ar.appendChild(e); els[id]=e; }
+  return e; }
+function dgRender(){ if(!DG) return;
+  const ar=document.getElementById('dgArena'); if(!ar) return;
+  const sc=_dgScale(ar), els=DG._els||(DG._els={}), live={};
+  const c=CHAR(), ico=(c && PROF_CLASSES[c.cls] && PROF_CLASSES[c.cls].ico) || '🧍';
+  live.me=1; const me=_dgUnit(ar, els, 'me', 'me', ico);
+  me.style.left=(DG.me.x*sc)+'px'; me.style.top=(DG.me.y*sc)+'px';
+  me.classList.toggle('buff', DG.skill.left>0);
+  me.querySelector('.dgHp b').style.width=Math.max(0,(DG.me.hp/DG.me.sp.hpMax*100))+'%';
+  for(const f of DG.foes){ live[f.id]=1;
+    const e=_dgUnit(ar, els, f.id, 'foe'+(f.boss?' boss':''), f.ico);
+    e.style.left=(f.x*sc)+'px'; e.style.top=(f.y*sc)+'px';
+    e.querySelector('.dgHp b').style.width=Math.max(0,(f.hp/f.hpMax*100))+'%'; }
+  for(const k in els) if(!live[k]){ if(els[k].parentNode) els[k].parentNode.removeChild(els[k]); delete els[k]; }
+  const w=document.getElementById('dgWave'); if(w) w.textContent=DG.floor+'층 · '+Math.max(1,DG.wave)+'/'+DG_WAVES;
+  const ht=document.getElementById('dgHpTxt'); if(ht) ht.textContent=Math.ceil(DG.me.hp);
+  const hb=document.getElementById('dgHpBar'); if(hb) hb.style.width=Math.max(0,(DG.me.hp/DG.me.sp.hpMax*100))+'%';
+  const S=DG_SKILLS[(c||{}).cls]||DG_SKILLS.ranger;
+  const si=document.getElementById('dgSkillIco'); if(si) si.textContent=S.ico;
+  const sb=document.getElementById('dgSkillBtn');
+  if(sb){ sb.classList.toggle('off', DG.skill.cd>0); sb.classList.toggle('on', DG.skill.left>0);
+    const cd=document.getElementById('dgSkillCd');
+    if(cd){ const on=DG.skill.cd>0; cd.textContent=on? Math.ceil(DG.skill.cd) : ''; cd.style.display=on?'flex':'none'; } }
+  const rs=document.getElementById('dgResult');
+  if(rs){ if(!DG.over) rs.classList.add('hide');
+    else { rs.classList.remove('hide');
+      rs.innerHTML = (DG.over>0)
+        ? '<div class="dgRCard"><div class="dgRT ok">'+DG.floor+'층 클리어!</div><div class="dgRS">+'+DG.reward.pc+' P · +'+DG.reward.xp+' XP</div>'
+          +'<div class="dgRBtns"><button class="twBtn" onclick="dgEnter('+(DG.floor+1)+')">다음 층</button><button class="twBtn" onclick="dgFlee()">마을로</button></div></div>'
+        : '<div class="dgRCard"><div class="dgRT bad">패배</div><div class="dgRS">'+DG.floor+'층 '+DG.wave+'웨이브에서 쓰러졌습니다</div>'
+          +'<div class="dgRBtns"><button class="twBtn" onclick="dgEnter('+DG.floor+')">재도전</button><button class="twBtn" onclick="dgFlee()">마을로</button></div></div>'; } } }
 // 현재 빌드 레벨 → 게임 효과(개인 적용). 게임 시작 시 G.metaB에 캐시.
 //  team_* = 전체 강화: 협동에선 파티 중 '최고 레벨'이 모두에게 적용(인원수 인플레 방지). 솔로면 내 레벨.
 const _TEAM_IDS=['team_atk','team_aspd','team_enemy_hp','team_enemy_def','team_credit','team_luck'];
@@ -8865,7 +9074,7 @@ function playScreenFx(el){
 function fxPop(card){ if(!card) return; card.classList.remove('fxPop'); void card.offsetWidth; card.classList.add('fxPop');
   clearTimeout(card._fxT); card._fxT=setTimeout(()=>card.classList.remove('fxPop'),470); }
 // ── 앱 화면 전환 ──
-const APP_SCREENS=['opening','auth','mapSelect','modeSheet','hubScreen','charScreen','townScreen'];
+const APP_SCREENS=['opening','auth','mapSelect','modeSheet','hubScreen','charScreen','townScreen','dgScreen'];
 function showAppScreen(id){ setInGame(false);
   if(id!=='mapSelect' && id!=='modeSheet' && typeof stopMapLive==='function') stopMapLive();   // 유즈맵 화면 떠나면 실시간 갱신 정지
   ['ov','lobby','rooms','createPanel','pwPanel'].forEach(x=>{const e=document.getElementById(x); if(e)e.classList.add('hide');});

@@ -146,6 +146,36 @@ async function groupLobby(){
     assert(p.pcoin===cash+spent,'재화가 안 돌아옴: '+p.pcoin);
     assert(p.chars.length===0 && CHAR()===null,'캐릭터가 안 지워짐');
     return '지출 '+spent+'P → 전액 환급'; });
+  // 던전 — 유즈맵과 완전 분리라는 것이 이 기능의 핵심 요구라, 정적·동적 양쪽으로 지킨다.
+  await step('던전: 유즈맵 상태를 건드리지 않음', ()=>{ skipIf(typeof dgStart!=='function','던전 없음');
+    const src=[dgStep,dgStart,dgSpawnWave,dgWin,dgLose,dgMySpec,dgFoeStat,dgWaveFoes,dgRender,dgSkill,dgFloorReward]
+      .map(f=>f.toString()).join('\n');
+    const bad=[[/\bG\s*\./,'G.'],[/\bmapCfg\b/,'mapCfg'],[/\bGACHA_/,'GACHA_'],[/\bmetaBonus\b/,'metaBonus'],
+               [/\bspawnEnemy\b/,'spawnEnemy'],[/\bU\[/,'U[']].filter(x=>x[0].test(src)).map(x=>x[1]);
+    assert(!bad.length,'던전 코드가 유즈맵 전역을 참조: '+bad.join(','));
+    const snap=()=>JSON.stringify({p:G.phase,u:G.units.length,e:G.enemies.length,c:G.credits,
+      m:G.mineral,g:G.gas,r:G.round,t:G.tab,s:G.mainSheet,k:G.kills});
+    const before=snap();
+    const p=PROF(); p.chars.length=0; p.curId=''; const c=profCreateChar('warden','던전');
+    c.unit.stats={pow:40,vit:40,foc:0,agi:10};                 // 1층은 확실히 이기는 스펙
+    const coin=p.pcoin;
+    assert(dgStart(1),'던전 진입 실패'); dgStopLoop();
+    let n=0; while(DG && !DG.over && n<20000){ dgStep(0.016); n++; }
+    assert(DG && DG.over>0,'1층 클리어 실패(over='+(DG&&DG.over)+', '+n+'프레임)');
+    const r=DG.reward; DG=null;
+    assert(snap()===before,'던전이 유즈맵 상태 G를 바꿈');
+    assert(p.pcoin===coin+r.pc,'보상 P가 안 들어옴');
+    assert(CHAR().dgFloor===1,'최고 층이 기록되지 않음');
+    return n+'프레임 · +'+r.pc+'P/+'+r.xp+'XP'; });
+  await step('던전: 스펙이 오르면 같은 층이 빨리 끝남', ()=>{ skipIf(typeof dgStart!=='function','던전 없음');
+    const run=(stats)=>{ const p=PROF(); p.chars.length=0; p.curId='';
+      const c=profCreateChar('ranger','T'); c.unit.stats=stats;   // foc=0 → 치명타 없음 = 결정적
+      dgStart(1); dgStopLoop(); let n=0; while(DG && !DG.over && n<20000){ dgStep(0.016); n++; }
+      const o=DG.over; DG=null; return {over:o, n:n}; };
+    const weak=run({pow:12,vit:40,foc:0,agi:0}), strong=run({pow:60,vit:40,foc:0,agi:0});
+    assert(weak.over>0 && strong.over>0,'비교하려면 둘 다 이겨야 함: '+weak.over+'/'+strong.over);
+    assert(strong.n < weak.n*0.9,'공격력을 올렸는데 클리어가 안 빨라짐: '+weak.n+'→'+strong.n);
+    return weak.n+' → '+strong.n+'프레임'; });
   await step('캐릭터 이름은 HTML로 해석되지 않음', ()=>{ skipIf(typeof profCreateChar!=='function','캐릭터 시스템 없음');
     const p=PROF(); p.chars.length=0; p.curId='';
     profCreateChar('scout','<b>x</b>');                 // 이름은 사용자 입력 — innerHTML에 그대로 들어가면 안 된다

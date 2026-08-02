@@ -27,6 +27,7 @@
 | `🧍 개인 프로필 RPG` | 캐릭터 육성 — 종류 3종(`PROF_CLASSES`)·직업 트리(`PROF_JOBS`)·스탯·장비·펫·진화·방치수익. **유즈맵 경제와 완전 분리**(재화 `pcoin`) |
 | `🧍 캐릭터 선택/생성` | `renderCharSelect`/`renderCharCreate` — 입장 화면 `#charScreen`과 마을 구역이 **같은 렌더러**를 쓴다 |
 | `마을(월드 + 카메라)` | `TOWN_ZONES`(구역 단일 출처) · `twStep`/`twCamApply` · 입력 `twPtrDown→Move→Up` |
+| `⚔ 던전` | 캐릭터 직접 전투 — `DG` 상태 · `dgStep`/`dgTick` 자체 루프 · `DG_FOES` 자체 적 표 · `dgRender`(DOM 유일 접점). **유즈맵과 완전 분리** |
 | `게임 상태` | `G` 전역 + `newGame()` |
 | `캔버스 + 트랙` | 2D 캔버스(#cvMain) 트랙/적 그리기, `DPR`(2D쪽) |
 | `유닛/적 로직` | `spawnEnemy`(→`G.pendSpawn` 대기열!), `summonPersonalBoss`, `sellUnit(유닛객체)` , 전투 판정 |
@@ -108,6 +109,8 @@ node test/bench-strike.mjs 400 80 4   # 대규모 전투 렌더 벤치(유닛수
 - **대군 렌더 병목은 삼각형도 재질도 아니다(실측)**: 400기에서 전 유닛을 1/7 폴리곤 모델로 바꿔도, 전 유닛 재질을 공유 단일 재질로 바꿔도 프레임이 나아지지 않았다. `renderer.render` 시간은 **드로우콜 수에 거의 선형**(229콜 4.9ms / 488콜 9ms / 1250콜 22ms ≈ 18µs·콜). → 지오메트리 LOD·텍스처 축소는 헛수고, 줄일 것은 **오브젝트/드로우콜 수**(유닛당 2~3콜).
 - 상호작용 버그는 핸들러 흐름(`techPtrDown→Move→Up`, tick)을 끝까지 읽고 나서 수정(CLAUDE.md 원칙).
 - **마을은 월드 좌표 + 카메라다(화면 % 아님)**: 캐릭터는 CSS로 화면 정중앙 고정이고 매 프레임 `#twWorld`의 `transform` 한 줄만 바뀐다(구역이 늘어도 비용 불변). 구역 추가·좌표·아이콘·패널은 전부 `TOWN_ZONES` 한 곳 — DOM은 `twBuildZones`가 만든다(마크업에 좌표를 적지 말 것). 월드는 화면×`TW_WORLD_MUL`이라 **구역 대부분이 화면 밖**이고, 화면 가장자리 방향 표시(`twEdgeApply`)가 유일한 길잡이다. 이동 로직은 `twStep(dt)`로 분리 — rAF(`twTick`)와 헤드리스 스모크가 같은 함수를 쓴다(헤드리스는 rAF가 안 돌아 수동 pump 필요).
+- **던전은 유즈맵과 코드가 닿아선 안 된다**: `DG` 상태 + `dgTick` 자체 rAF + `#dgScreen`으로 돌고, `G`/`step`/`loop`/`U`/`GACHA_*`/`mapCfg`/`metaBonus`를 **한 줄도 참조하지 않는다**(적 표·밸런스도 `DG_FOES`로 자체 보유). 스모크 `던전: 유즈맵 상태를 건드리지 않음`이 ① 던전 함수들의 `toString()`에 유즈맵 전역이 등장하는지(정적) ② 한 판 돌린 뒤 `G` 스냅샷이 그대로인지(동적) 두 방향으로 지킨다 — 새 던전 코드를 쓸 때 이 스텝을 먼저 볼 것.
+- **던전 전장은 가로 배율 하나로 그린다**: `DG_W`는 고정, 세로 `DG.h`는 진입 시 아레나 실제 비율로 계산(`DG_W*clientH/clientW`). 이걸 상수로 두면 세로가 긴 화면에서 전투가 위쪽에 몰리고 아래가 텅 빈다. 적의 `range`는 공격 사거리이자 **접근을 멈추는 거리**라, 근접이라도 스프라이트 반지름 2개분(≈28+) 이상이어야 서로 파묻히지 않는다(16으로 뒀다가 캐릭터와 적이 완전히 겹쳤다). 적끼리는 `DG_SEP` 밀어내기가 없으면 한 점에 포개진다.
 - **캐릭터 삭제 환급은 "재화로 넣은 것"만 돌려준다**(`profSpentOn`/`profRefundOf`): 장비 강화 + 전직(뿌리까지 `PROF_JOB_PARENT`로 역추적) + 진화. 레벨·경험치·스탯포인트는 환급 없음 = 삭제의 유일한 비용. 비율은 `PROF_REFUND_RATE`(현재 1.0). ⚠️ **캐릭터별 어빌리티/뽑기를 나중에 붙일 땐 환급 대상에서 빼거나 비율을 낮출 것** — 전액 환급이면 "좋은 게 나올 때까지 만들고 지우기"가 공짜가 된다. 비용 공식은 `profGearCost`/`profClassCost`/`profEvolveCost` 한 곳뿐이라 환급이 자동으로 따라온다(새 지출을 만들면 `profSpentOn`에도 더할 것).
 - **`PLAYER_META.profile`은 계정 공용 + 캐릭터별로 나뉜다**(ver3): 공용 = `pcoin`·`pets`·`equip`·`unlocks`·`idle`, 캐릭터별 = `chars[]`의 `level/xp/statPoints/unit{jobId,stats,gear,evoStars}`. **`PROF()`는 계정, `CHAR()`는 현재 캐릭터** — 새 코드에서 레벨·스탯을 `PROF()`에서 읽으면 조용히 틀린다(ver2까지는 거기 있었다). 캐릭터 종류 = 뿌리 직업 id(`ranger`/`scout`/`warden`)로 `PROF_CLASSES`와 `PROF_JOBS`가 같은 키를 공유한다. 마이그레이션은 `migrateProfile`(ver2 단일 캐릭터 → `chars[0]`)과 `fixChar`.
 - **시설 팝업은 "내가 지정한 구역"에 도착했을 때만 열린다**(`twCheckZones` + `_twGoZone`): 구역 아이콘·가장자리 방향 표시를 눌러야 지정되고(`townGo`), 땅을 누르거나 꾹 눌러 이동하면 지정이 풀린다(`twSetTarget`/`dir` 모드에서 `_twGoZone=null`). **반경 안에 있다는 사실만으로는 절대 열리지 않는다** — 옆을 스쳐 지나가도, 걸어가서 구역 위에 겹쳐 서도 안 열리고, 그 자리에서 구역을 다시 눌러야 열린다(아바타는 `pointer-events:none`이라 겹쳐도 아래 아이콘이 눌린다). 반경 근접만으로 열던 초기 구현은 광장→모서리 경로에서 생성소를 스쳐 팝업이 튀어나왔다(여유가 54px뿐이었다). 스모크 `마을: 지정하지 않으면 안 열림(스쳐 지남·겹쳐 섬)`이 세 경우를 모두 지킨다.
