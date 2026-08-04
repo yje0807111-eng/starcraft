@@ -3931,13 +3931,13 @@ function metaEffLv(id){ return _metaEffFromRaw(META_BUILDS[id], buildLevel(id));
 // 플레이어 메타(계정별 영구 데이터)
 // 🧍 개인 프로필 RPG(1단계) 기본값 — 유즈맵 경제와 완전 분리(재화명 pcoin, coins 아님). 자세한 규칙은 PROF_* 블록 참조.
 // 계정 공용(재화·펫·해금·방치) + 캐릭터별(chars[]: 레벨·경험치·스탯·장비·진화)로 나뉜다.
-function defaultProfile(){ return { ver:3, pcoin:0, chars:[], curId:'',
+function defaultProfile(){ return { ver:4, pcoin:0, chars:[], curId:'', items:[],
   idle:{ sourceId:'drill', lastClaimTs:0 }, unlocks:{}, lastSeenTs:0,
   pets:{}, equip:[], petSlots:2 }; }   // 🐾 펫(중복=별)·장착 슬롯 — 캐릭터를 새로 만들어도 그대로 쓴다
 function defaultChar(cls, name){ const C=PROF_CLASSES[cls]||PROF_CLASSES.ranger, id=(PROF_CLASSES[cls]?cls:'ranger');
   return { id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), cls:id, name:(name||C.name),
     xp:0, level:1, statPoints:0, dgFloor:0,
-    unit:{ jobId:id, level:1, evoStars:0, stats:{pow:0,vit:0,foc:0,agi:0}, gear:{weapon:0,armor:0,trinket:0} } }; }
+    unit:{ jobId:id, level:1, evoStars:0, stats:{pow:0,vit:0,foc:0,agi:0}, gear:{weapon:'',armor:'',trinket:''} } }; }
 function defaultMeta(){ return { coins:0, buildLevels:{}, highestRound:0, clearedDifficulty:'', profile:defaultProfile() }; }   // clearedDifficulty:''=아무것도 클리어 안 함(이지만 개방)
 let PLAYER_META = defaultMeta();
 const TEMP_COIN_TEST=false;   // [임시] 포인트 상점 밸런스 테스트 — 포인트 무한 + 로비 진입 시 업그레이드 초기화. 끝나면 false 또는 이 블록 제거.
@@ -3960,6 +3960,16 @@ function migrateProfile(){ const d=defaultProfile();
     p.chars.push(c); p.curId=c.id; }
   delete p.unit; delete p.xp; delete p.level; delete p.statPoints;      // 캐릭터별로 옮겨간 필드
   for(const c of p.chars) fixChar(c);
+  if(!Array.isArray(p.items)) p.items=[];
+  if((p.ver||0)<4){                                                    // ver3 = 슬롯당 정수 티어 → 동등 성능 아이템으로 변환(스탯 손실 없음)
+    const OLD_PER={weapon:3, armor:4, trinket:2};
+    for(const c of p.chars){ const gr=c.unit&&c.unit.gear; if(!gr) continue;
+      for(const slot in gr){ const n=gr[slot];
+        if(typeof n==='number' && n>0){
+          const it={ iid:'it'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), slot:slot,
+                     tier:'common', lv:1, main:n*(OLD_PER[slot]||3), opts:[], legacy:true };
+          p.items.push(it); gr[slot]=it.iid; }
+        else if(typeof n!=='string') gr[slot]=''; } } }
   if(p.chars.length && !p.chars.some(c=>c.id===p.curId)) p.curId=p.chars[0].id;
   if(!p.idle) p.idle=d.idle; else for(const k in d.idle) if(p.idle[k]===undefined) p.idle[k]=d.idle[k];
   if(!p.unlocks) p.unlocks={};
@@ -3972,7 +3982,7 @@ function fixChar(c){ const d=defaultChar(c&&c.cls, c&&c.name);
   for(const k in d) if(c[k]===undefined) c[k]=d[k];
   if(!c.unit) c.unit=d.unit; else { for(const k in d.unit) if(c.unit[k]===undefined) c.unit[k]=d.unit[k];
     if(!c.unit.stats) c.unit.stats=Object.assign({},d.unit.stats); else for(const k in d.unit.stats) if(c.unit.stats[k]===undefined) c.unit.stats[k]=0;
-    if(!c.unit.gear)  c.unit.gear =Object.assign({},d.unit.gear);  else for(const k in d.unit.gear)  if(c.unit.gear[k]===undefined)  c.unit.gear[k]=0; }
+    if(!c.unit.gear)  c.unit.gear =Object.assign({},d.unit.gear);  else for(const k in d.unit.gear)  if(c.unit.gear[k]===undefined)  c.unit.gear[k]=''; }
   if(!PROF_JOBS[c.unit.jobId] || PROF_JOBS[c.unit.jobId].cls!==c.cls) c.unit.jobId=c.cls;   // 구 직업 트리는 폐기 → 뿌리로
   return c; }
 function PROF(){ return PLAYER_META.profile || (PLAYER_META.profile=defaultProfile()); }   // 안전 접근자
@@ -4016,17 +4026,73 @@ const PROF_JOBS={
 // 자식→부모 역인덱스(전직 경로 되짚기용). PROF_JOBS의 next로부터 자동 생성 — 트리를 고쳐도 따라온다.
 const PROF_JOB_PARENT=(function(){ const m={}; for(const id in PROF_JOBS) for(const nx of PROF_JOBS[id].next) m[nx]=id; return m; })();
 const PROF_REFUND_RATE=1.0;   // 캐릭터 삭제 환급률(1.0=쓴 재화 전액). 경험치·레벨은 환급 없음
-const PROF_GEAR={ weapon:{name:'무기',stat:'pow',per:3,baseCost:50}, armor:{name:'방어구',stat:'vit',per:4,baseCost:50}, trinket:{name:'장신구',stat:'foc',per:2,baseCost:70,reqUnlock:'gear_trinket'} };
+const PROF_GEAR={ weapon:{name:'무기',stat:'pow',base:6}, armor:{name:'방어구',stat:'vit',base:8}, trinket:{name:'장신구',stat:'foc',base:5,reqUnlock:'gear_trinket'} };
+// 장비 아이템 — 인벤토리는 계정 공용(PROF().items), 장착은 캐릭터별(c.unit.gear[slot]=iid).
+// 등급 확률은 프로필 전용 표다. 유즈맵 가챠 밸런스(GACHA_TIERS.prob)를 절대 건드리지 않는다(표시 색만 TIER_COLOR 공용).
+const PROF_ITEM_TIERS=[
+  { id:'common', mul:1.00, opts:0, p:55, cost:120  },
+  { id:'rare',   mul:1.35, opts:1, p:27, cost:340  },
+  { id:'epic',   mul:1.80, opts:2, p:12, cost:900  },
+  { id:'unique', mul:2.40, opts:3, p:5,  cost:2200 },
+  { id:'legend', mul:3.20, opts:4, p:1,  cost:0    },   // cost 0 = 상점 판매 안 함(드랍 전용)
+];
+const PROF_ITEM_PREFIX={ common:'낡은', rare:'단단한', epic:'벼려진', unique:'각인된', legend:'전설의' };
+const PROF_INV_MAX=40;               // 가방 칸(계정 공용)
+function profItemTier(id){ return PROF_ITEM_TIERS.find(t=>t.id===id) || PROF_ITEM_TIERS[0]; }
+function _profTierRoll(bonus){       // bonus↑ = 상위 등급 가중(던전 층이 깊을수록)
+  const w=PROF_ITEM_TIERS.map((t,i)=>t.p*(1+i*(bonus||0)));
+  let tot=0; for(const v of w) tot+=v;
+  let r=Math.random()*tot;
+  for(let i=0;i<w.length;i++){ if(r<w[i]) return PROF_ITEM_TIERS[i]; r-=w[i]; }
+  return PROF_ITEM_TIERS[0]; }
+function profSlots(){ return Object.keys(PROF_GEAR).filter(s=>{ const g=PROF_GEAR[s]; return !g.reqUnlock || profHasUnlock(g.reqUnlock); }); }
+function profMakeItem(slot, lv, tierId){ const g=PROF_GEAR[slot]; if(!g) return null;
+  lv=Math.max(1, lv||1);
+  const T=tierId? profItemTier(tierId) : _profTierRoll(Math.min(0.9,(lv-1)*0.06));
+  const main=Math.max(1, Math.round(g.base*T.mul*(1+(lv-1)*0.35)));
+  const opts=[], pool=PROF_STATS.filter(k=>k!==g.stat);
+  for(let i=0;i<T.opts;i++){ const k=pool[Math.floor(Math.random()*pool.length)];
+    const v=Math.max(1, Math.round(g.base*0.4*T.mul*(1+(lv-1)*0.28)*(0.7+Math.random()*0.6)));
+    const ex=opts.find(o=>o.k===k); if(ex) ex.v+=v; else opts.push({k:k, v:v}); }
+  return { iid:'it'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+           slot:slot, tier:T.id, lv:lv, main:main, opts:opts }; }
+function profItemName(it){ const g=PROF_GEAR[it.slot]; return (PROF_ITEM_PREFIX[it.tier]||'')+' '+(g?g.name:'장비'); }
+function profItemPower(it){ let s=it.main; for(const o of it.opts) s+=o.v; return s; }
+function profItems(){ const p=PROF(); if(!Array.isArray(p.items)) p.items=[]; return p.items; }
+function profFindItem(iid){ return iid? (profItems().find(i=>i.iid===iid)||null) : null; }
+function profItemHolder(iid){ if(!iid) return null;
+  for(const c of PROF().chars) for(const s in c.unit.gear) if(c.unit.gear[s]===iid) return c;
+  return null; }
+function profAddItem(it){ if(!it) return null; const inv=profItems();
+  if(inv.length>=PROF_INV_MAX) return null; inv.push(it); return it; }
+function profEquipItem(iid){ const c=CHAR(), it=profFindItem(iid); if(!c||!it) return false;
+  const g=PROF_GEAR[it.slot]; if(g && g.reqUnlock && !profHasUnlock(g.reqUnlock)) return false;
+  const h=profItemHolder(iid); if(h && h!==c) return false;              // 다른 캐릭터가 장착 중
+  c.unit.gear[it.slot] = (c.unit.gear[it.slot]===iid) ? '' : iid;        // 같은 것을 누르면 해제
+  profSyncUnlocks(); saveMeta(); return true; }
+function profScrapValue(it){ const T=profItemTier(it.tier); return Math.round(12*T.mul*(1+(it.lv-1)*0.5)); }
+function profScrapItem(iid){ const p=PROF(), inv=profItems(), i=inv.findIndex(x=>x.iid===iid);
+  if(i<0 || profItemHolder(iid)) return -1;                              // 장착 중엔 분해 불가
+  const v=profScrapValue(inv[i]); inv.splice(i,1); p.pcoin+=v; saveMeta(); return v; }
+function profBuyItem(tierId){ const p=PROF(), T=profItemTier(tierId);
+  if(!T.cost || p.pcoin<T.cost) return null;
+  if(profItems().length>=PROF_INV_MAX) return null;
+  const sl=profSlots(); if(!sl.length) return null;
+  const it=profMakeItem(sl[Math.floor(Math.random()*sl.length)], Math.max(1, dgMaxFloor()), tierId);
+  if(!profAddItem(it)) return null;
+  p.pcoin-=T.cost; saveMeta(); return it; }
 const PROF_IDLE_SOURCES={ drill:{name:'훈련장',rate:0.6,tip:'공격 위주'}, library:{name:'수련관',rate:0.6,tip:'집중 위주'}, arena:{name:'투기장',rate:1.0,reqUnlock:'idle_arena',tip:'고수익'} };
 const PROF_UNLOCKS=[ {id:'gear_trinket',power:80,label:'장신구 슬롯'}, {id:'idle_arena',power:200,label:'투기장 자동수익'}, {id:'evolve',power:350,label:'유닛 진화(★)'}, {id:'idle_8h',power:600,label:'오프라인 8시간·100%'} ];
 const PROF_OFF_CAP_MIN=4*60, PROF_OFF_RATE=0.5, PROF_OFF_CAP8_MIN=8*60, PROF_OFF_RATE8=1.0;   // 오프라인 상한/비율(idle_8h 해금 시 8h/100%)
 // 곡선(순수함수)
 function profXpForLevel(lv){ return Math.round(50*Math.pow(lv,1.5)); }
-function profGearCost(slot,tier){ const g=PROF_GEAR[slot]; return g? Math.round(g.baseCost*(tier+1)) : 0; }
 function profClassCost(jobId){ const J=PROF_JOBS[jobId]; return J? J.tier*400 : 0; }
 // 스탯/파워(전부 read-only)
 function profStat(k){ const c=CHAR(); if(!c) return 0; const J=PROF_JOBS[c.unit.jobId]||PROF_JOBS[c.cls]||PROF_JOBS.ranger;
-  let gear=0; for(const slot in c.unit.gear){ const g=PROF_GEAR[slot]; if(g&&g.stat===k) gear+=(c.unit.gear[slot]||0)*g.per; }
+  let gear=0;
+  for(const slot in c.unit.gear){ const it=profFindItem(c.unit.gear[slot]); if(!it) continue;
+    const g=PROF_GEAR[slot]; if(g && g.stat===k) gear+=it.main;
+    for(const o of it.opts) if(o.k===k) gear+=o.v; }
   let v=(J.base[k]||0) + (c.unit.stats[k]||0) + gear + c.unit.level + c.unit.evoStars*2;
   if(k==='pow') v*=(1+profPetBonus('atk'));   // 🐾 펫 % 보너스(프로필 전용)
   else if(k==='vit') v*=(1+profPetBonus('vit'));
@@ -4075,8 +4141,6 @@ function profEvolve(){ const p=PROF(), c=CHAR(), r=profEvolveReq(); if(!c||!r.un
 // 액션(성공 true · saveMeta 포함 · 재렌더는 호출측)
 function profAllocStat(k){ const c=CHAR(); if(!c || c.statPoints<=0 || PROF_STATS.indexOf(k)<0) return false;
   c.unit.stats[k]=(c.unit.stats[k]||0)+1; c.statPoints--; profSyncUnlocks(); saveMeta(); return true; }
-function profBuyGear(slot){ const p=PROF(), c=CHAR(), g=PROF_GEAR[slot]; if(!c||!g) return false; if(g.reqUnlock && !profHasUnlock(g.reqUnlock)) return false;
-  const tier=c.unit.gear[slot]||0, cost=profGearCost(slot,tier); if(p.pcoin<cost) return false; p.pcoin-=cost; c.unit.gear[slot]=tier+1; profSyncUnlocks(); saveMeta(); return true; }
 function profClassChange(jobId){ const p=PROF(), c=CHAR(); if(!c) return false;
   const cur=PROF_JOBS[c.unit.jobId], J=PROF_JOBS[jobId]; if(!cur||!J) return false;
   if(cur.next.indexOf(jobId)<0) return false; if(c.unit.level<J.reqLv) return false; const cost=profClassCost(jobId); if(p.pcoin<cost) return false;
@@ -4086,8 +4150,8 @@ function profCreateChar(cls, name){ const p=PROF(); if(!PROF_CLASSES[cls] || p.c
   const c=defaultChar(cls, (name||'').trim().slice(0,10)); p.chars.push(c); p.curId=c.id; profSyncUnlocks(); saveMeta(); return c; }
 function profSelectChar(id){ const p=PROF(); if(!p.chars.some(c=>c.id===id)) return false; p.curId=id; profSyncUnlocks(); saveMeta(); return true; }
 // 이 캐릭터에 '재화로' 넣은 것의 합 — 장비 강화 + 전직 + 진화. 경험치·레벨·스탯포인트는 대상이 아니다(삭제 시 소멸).
+// 장비 아이템은 계정 공용 자산이라 환급 대상이 아니다 — 캐릭터를 지우면 장착만 풀리고 가방에 남는다.
 function profSpentOn(c){ if(!c) return 0; let t=0;
-  for(const slot in PROF_GEAR){ const n=c.unit.gear[slot]||0; for(let i=0;i<n;i++) t+=profGearCost(slot,i); }
   for(let id=c.unit.jobId; PROF_JOB_PARENT[id]; id=PROF_JOB_PARENT[id]) t+=profClassCost(id);   // 뿌리까지 거슬러 전직 비용
   for(let i=0;i<(c.unit.evoStars||0);i++) t+=profEvolveCost(i);
   return t; }
@@ -4353,14 +4417,46 @@ function profDoPetEquip(id){ if(profPetEquip(id)){ if(typeof playSfx==='function
 function profDoAlloc(k){ if(profAllocStat(k)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); } }
 function profDoClass(id){ if(profClassChange(id)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); showTownToast('전직 완료!'); } }
 // 장비 상점
+// 장비 상점 — 장착 슬롯 / 상점 / 가방 세 구획. 아이템 한 줄은 _profItemRow 하나로 통일한다.
+function _profItemRow(it, right, sub2){ const col=TIER_COLOR[it.tier]||'#b8c0cc', g=PROF_GEAR[it.slot];
+  const opts=it.opts.map(o=>PROF_STAT_NAME[o.k]+' +'+o.v).join(' · ');
+  return '<div class="twRow"><span class="twPet" style="color:'+col+';border-color:'+col+'55">'+(it.tier==='legend'?'🔱':'⚔')+'</span>'
+    +'<div class="twRowInfo"><div class="twRowName" style="color:'+col+'">'+profItemName(it)+' <span class="twStars">Lv.'+it.lv+'</span></div>'
+    +'<div class="twRowSub">'+PROF_STAT_NAME[g.stat]+' +'+it.main+(opts?(' · '+opts):'')+'</div>'
+    +(sub2?('<div class="twRowSub ok">'+sub2+'</div>'):'')+'</div>'+right+'</div>'; }
 function renderProfGear(){ const p=PROF(), c=CHAR(); if(!c) return '<div class="twHead">캐릭터가 없습니다.</div>';
-  let h='<div class="twHead">보유 <b>'+Math.floor(p.pcoin)+' P</b>(모든 캐릭터 공용) · 장비를 강화해 스탯을 올립니다.</div>';
-  for(const slot in PROF_GEAR){ const g=PROF_GEAR[slot], locked=g.reqUnlock&&!profHasUnlock(g.reqUnlock), tier=c.unit.gear[slot]||0, cost=profGearCost(slot,tier), poor=p.pcoin<cost;
-    const reqP=(PROF_UNLOCKS.find(u=>u.id===g.reqUnlock)||{}).power;
-    const sub = locked ? ('🔒 파워 '+reqP+' 필요') : ('Lv.'+tier+' · +'+PROF_STAT_NAME[g.stat]+' '+(tier*g.per)+' → '+((tier+1)*g.per));
-    h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+g.name+'</div><div class="twRowSub'+(locked?' lock':'')+'">'+sub+'</div></div><button class="twBtn" onclick="profDoGear(\''+slot+'\')"'+((locked||poor)?' disabled':'')+'>'+(locked?'잠김':cost+' P')+'</button></div>'; }
+  const inv=profItems(), lv=Math.max(1, dgMaxFloor());
+  let h='<div class="twHead">보유 <b>'+Math.floor(p.pcoin)+' P</b> · 가방 <b>'+inv.length+'/'+PROF_INV_MAX+'</b><br>가방은 모든 캐릭터가 함께 쓰고, 장착은 캐릭터마다 따로입니다.</div>';
+  h+='<div class="twSectLbl">장착 중</div>';
+  for(const slot in PROF_GEAR){ const g=PROF_GEAR[slot], locked=g.reqUnlock&&!profHasUnlock(g.reqUnlock);
+    const it=profFindItem(c.unit.gear[slot]);
+    if(locked){ const reqP=(PROF_UNLOCKS.find(u=>u.id===g.reqUnlock)||{}).power;
+      h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+g.name+'</div><div class="twRowSub lock">🔒 파워 '+reqP+' 필요</div></div></div>'; continue; }
+    if(!it){ h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+g.name+'</div><div class="twRowSub">비어 있음</div></div></div>'; continue; }
+    h+=_profItemRow(it, '<button class="twBtn" onclick="profDoEquip(\''+it.iid+'\')">해제</button>', null); }
+  h+='<div class="twSectLbl">상점 · Lv.'+lv+' 장비(슬롯 무작위)</div>';
+  for(const T of PROF_ITEM_TIERS){ if(!T.cost) continue;
+    const poor=p.pcoin<T.cost, full=inv.length>=PROF_INV_MAX, col=TIER_COLOR[T.id];
+    h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName" style="color:'+col+'">'+GACHA_TIERS[T.id].name+' 장비</div>'
+      +'<div class="twRowSub">주 스탯 ×'+T.mul.toFixed(2)+' · 추가 옵션 '+T.opts+'개</div></div>'
+      +'<button class="twBtn" onclick="profDoBuyItem(\''+T.id+'\')"'+((poor||full)?' disabled':'')+'>'+(full?'가방 참':T.cost+' P')+'</button></div>'; }
+  h+='<div class="twSectLbl">가방 ('+inv.length+')</div>';
+  if(!inv.length) h+='<div class="twRow"><div class="twRowInfo"><div class="twRowSub">비어 있음 — 던전에서 줍거나 상점에서 사세요.</div></div></div>';
+  const order=PROF_ITEM_TIERS.map(t=>t.id);
+  const sorted=inv.slice().sort((a,b)=> (order.indexOf(b.tier)-order.indexOf(a.tier)) || (profItemPower(b)-profItemPower(a)));
+  for(const it of sorted){ const on=(c.unit.gear[it.slot]===it.iid), h2=profItemHolder(it.iid);
+    const busy = h2 && h2!==c;
+    const btn = busy ? '<button class="twBtn" disabled>'+escHtml(h2.name)+'</button>'
+      : '<button class="twBtn'+(on?' on':'')+'" onclick="profDoEquip(\''+it.iid+'\')">'+(on?'장착중':'장착')+'</button>'
+        + (on?'':'<button class="twDel" onclick="profDoScrap(\''+it.iid+'\')" aria-label="분해">♻</button>');
+    h+=_profItemRow(it, btn, busy? null : (on? null : '분해 시 '+profScrapValue(it)+' P')); }
   return h; }
-function profDoGear(slot){ if(profBuyGear(slot)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); } }
+function profDoEquip(iid){ if(profEquipItem(iid)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); } }
+function profDoScrap(iid){ const v=profScrapItem(iid); if(v<0) return;
+  if(typeof playSfx==='function') playSfx('ui_close'); renderTownBar(); refreshTownPanel(); showTownToast('분해 · +'+v+' P'); }
+function profDoBuyItem(tierId){ const it=profBuyItem(tierId); if(!it) return;
+  if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel();
+  showTownToast(profItemName(it)+' 획득'); }
 // 훈련장(방치)
 function renderProfIdle(){ const p=PROF();
   let h='<div class="twHead">켜두면 분당 <b>'+profIdleRate().toFixed(1)+' P</b> 자동 적립.<br>껐다 켜면 최대 '+(profOfflineCapMin()/60)+'시간 · '+(profOfflineRate()*100)+'% 정산.</div><div class="twSectLbl">일하는 곳 고르기</div>';
@@ -4471,8 +4567,11 @@ function dgStep(dt){ if(!DG || DG.over) return;
   for(const f of DG.foes){ f.x=Math.max(14, Math.min(DG_W-14, f.x)); f.y=Math.max(14, Math.min(DG.h-14, f.y)); }
   me.x=Math.max(14, Math.min(DG_W-14, me.x)); me.y=Math.max(14, Math.min(DG.h-14, me.y));
   dgRender(); }
+const DG_DROP_P=0.55;   // 층 클리어 시 장비가 떨어질 확률
 function dgWin(){ const c=CHAR(), p=PROF(), r=dgFloorReward(DG.floor);
   DG.over=1; DG.reward=r;
+  const sl=profSlots();   // 층이 깊을수록 고등급·고레벨(profMakeItem이 층을 레벨로 받는다)
+  r.item=(sl.length && Math.random()<DG_DROP_P) ? profAddItem(profMakeItem(sl[Math.floor(Math.random()*sl.length)], DG.floor)) : null;
   p.pcoin+=r.pc;
   if(c){ c.xp+=r.xp; profApplyLevelUps(c); if((c.dgFloor||0)<DG.floor) c.dgFloor=DG.floor; }
   profSyncUnlocks(); saveMeta(); dgStopLoop(); dgRender(); }
@@ -4526,7 +4625,8 @@ function dgRender(){ if(!DG) return;
   if(rs){ if(!DG.over) rs.classList.add('hide');
     else { rs.classList.remove('hide');
       rs.innerHTML = (DG.over>0)
-        ? '<div class="dgRCard"><div class="dgRT ok">'+DG.floor+'층 클리어!</div><div class="dgRS">+'+DG.reward.pc+' P · +'+DG.reward.xp+' XP</div>'
+        ? '<div class="dgRCard"><div class="dgRT ok">'+DG.floor+'층 클리어!</div><div class="dgRS">+'+DG.reward.pc+' P · +'+DG.reward.xp+' XP'
+          +(DG.reward.item? ('<br><b style="color:'+(TIER_COLOR[DG.reward.item.tier]||'#fff')+'">'+profItemName(DG.reward.item)+'</b> 획득') : '')+'</div>'
           +'<div class="dgRBtns"><button class="twBtn" onclick="dgEnter('+(DG.floor+1)+')">다음 층</button><button class="twBtn" onclick="dgFlee()">마을로</button></div></div>'
         : '<div class="dgRCard"><div class="dgRT bad">패배</div><div class="dgRS">'+DG.floor+'층 '+DG.wave+'웨이브에서 쓰러졌습니다</div>'
           +'<div class="dgRBtns"><button class="twBtn" onclick="dgEnter('+DG.floor+')">재도전</button><button class="twBtn" onclick="dgFlee()">마을로</button></div></div>'; } } }

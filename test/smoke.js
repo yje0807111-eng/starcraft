@@ -127,17 +127,17 @@ async function groupLobby(){
     assert(profSelectChar(a.id),'되돌아가기 실패');
     assert(a.statPoints===spA && profStat('pow')===powA,'되돌아온 캐릭터의 성장이 바뀜');
     return '슬롯 '+PROF().chars.length+'/'+PROF_MAX_CHARS; });
-  await step('캐릭터 삭제: 쓴 재화는 환급 · 경험치는 소멸', ()=>{ skipIf(typeof profDeleteChar!=='function','캐릭터 삭제 없음');
-    const p=PROF(); p.chars.length=0; p.curId=''; p.pcoin=100000; p.unlocks={evolve:true};
+  await step('캐릭터 삭제: 재화는 환급 · 경험치는 소멸 · 장비는 가방에 남음', ()=>{ skipIf(typeof profDeleteChar!=='function','캐릭터 삭제 없음');
+    const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0; p.pcoin=100000; p.unlocks={evolve:true};
     const c=profCreateChar('ranger','환급'); assert(c,'캐릭터 생성 실패');
     const before=p.pcoin;
-    assert(profBuyGear('weapon') && profBuyGear('weapon'),'장비 강화 실패');
     c.unit.level=30;                                     // 전직·진화 레벨 요건 충족
     assert(profClassChange('sniper'),'전직 실패');
     assert(profEvolve(),'진화 실패');
     const spent=before-p.pcoin; assert(spent>0,'지출이 0');
+    const it=profAddItem(profMakeItem('weapon',3,'rare')); assert(profEquipItem(it.iid),'장비 장착 실패');
     c.xp=999; c.level=12; c.statPoints=7;                 // 경험치로 얻은 것 — 환급 대상이 아니어야 한다
-    assert(profRefundOf(c)===spent,'환급액이 쓴 재화와 다름: '+profRefundOf(c)+' vs '+spent);
+    assert(profRefundOf(c)===spent,'환급액이 쓴 재화와 다름(장비가 섞였는지 확인): '+profRefundOf(c)+' vs '+spent);
     _charDelId=c.id;                                      // 확인 UI(무엇을 잃고 얻는지)
     const html=renderCharSelect(); _charDelId=null;
     assert(html.indexOf('삭제할까요')>=0 && html.indexOf('P 반환')>=0 && html.indexOf('경험치 소멸')>=0,'삭제 확인 UI가 안 나옴');
@@ -145,7 +145,45 @@ async function groupLobby(){
     assert(got===spent,'삭제 환급액 불일치: '+got);
     assert(p.pcoin===cash+spent,'재화가 안 돌아옴: '+p.pcoin);
     assert(p.chars.length===0 && CHAR()===null,'캐릭터가 안 지워짐');
-    return '지출 '+spent+'P → 전액 환급'; });
+    assert(profItems().length===1 && !profItemHolder(it.iid),'장비가 사라졌거나 장착이 안 풀림');
+    return '지출 '+spent+'P → 전액 환급 · 장비는 가방에 남음'; });
+  await step('장비: 던전 드랍 → 장착하면 스탯에 반영', ()=>{ skipIf(typeof profMakeItem!=='function','장비 아이템 없음');
+    const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0; p.unlocks={};
+    p.pets={}; p.equip=[];                                // 펫 %보너스가 곱해지면 장비 기여분만 떼어 볼 수 없다
+    profCreateChar('ranger','장비');
+    const base=profStat('pow');
+    const it=profMakeItem('weapon', 5, 'epic'); assert(it && it.main>0,'아이템 생성 실패');
+    assert(it.opts.length>=1,'에픽인데 추가 옵션이 없음');
+    profAddItem(it); assert(profEquipItem(it.iid),'장착 실패');
+    const optPow=it.opts.filter(o=>o.k==='pow').reduce((s,o)=>s+o.v,0);
+    assert(profStat('pow')===base+it.main+optPow,'공격 반영 불일치: '+profStat('pow')+' vs '+(base+it.main+optPow));
+    assert(profEquipItem(it.iid) && CHAR().unit.gear.weapon==='','같은 것을 다시 누르면 해제되어야 함');
+    return '주스탯 +'+it.main+' · 옵션 '+it.opts.length+'개'; });
+  await step('장비: 가방은 공용 · 남이 장착 중이면 못 씀 · 분해 환급', ()=>{ skipIf(typeof profScrapItem!=='function','장비 아이템 없음');
+    const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0; p.pcoin=0;
+    const a=profCreateChar('ranger','A'), it=profAddItem(profMakeItem('weapon',2,'rare'));
+    assert(profEquipItem(it.iid),'A 장착 실패');
+    profCreateChar('scout','B');                          // 새 캐릭터가 현재 선택된다
+    assert(profItems().length===1,'가방이 캐릭터를 따라감(계정 공용이어야 함)');
+    assert(!profEquipItem(it.iid),'다른 캐릭터가 장착 중인데 장착됨');
+    assert(profScrapItem(it.iid)===-1,'장착 중인데 분해됨');
+    assert(profSelectChar(a.id) && profEquipItem(it.iid),'A로 돌아가 해제 실패');
+    const v=profScrapValue(it), got=profScrapItem(it.iid);
+    assert(got===v && p.pcoin===v,'분해 환급 불일치: '+got+'/'+p.pcoin);
+    assert(profItems().length===0,'가방에서 안 사라짐');
+    return '분해 +'+v+'P'; });
+  await step('장비 마이그레이션: 구버전 정수 티어 → 아이템(스탯 유지)', ()=>{ skipIf(typeof migrateProfile!=='function','마이그레이션 없음');
+    const keep=JSON.parse(JSON.stringify(PLAYER_META));
+    PLAYER_META.profile={ ver:3, pcoin:0, curId:'cX', items:[], chars:[{ id:'cX', cls:'ranger', name:'구버전',
+      xp:0, level:1, statPoints:0, dgFloor:0, unit:{ jobId:'ranger', level:1, evoStars:0,
+        stats:{pow:0,vit:0,foc:0,agi:0}, gear:{weapon:3, armor:2, trinket:0} } }],
+      idle:{sourceId:'drill',lastClaimTs:0}, unlocks:{}, lastSeenTs:0, pets:{}, equip:[], petSlots:2 };
+    migrateProfile();
+    const c=CHAR(), w=profFindItem(c.unit.gear.weapon), ar=profFindItem(c.unit.gear.armor);
+    assert(w && ar,'정수 장비가 아이템으로 변환되지 않음');
+    assert(w.main===9 && ar.main===8,'스탯이 보존되지 않음(무기 3×3=9, 방어구 2×4=8): '+w.main+'/'+ar.main);
+    assert(c.unit.gear.trinket==='','0이던 슬롯이 아이템을 만듦');
+    PLAYER_META=keep; return '무기 +'+w.main+' · 방어구 +'+ar.main; });
   // 던전 — 유즈맵과 완전 분리라는 것이 이 기능의 핵심 요구라, 정적·동적 양쪽으로 지킨다.
   await step('던전: 유즈맵 상태를 건드리지 않음', ()=>{ skipIf(typeof dgStart!=='function','던전 없음');
     const src=[dgStep,dgStart,dgSpawnWave,dgWin,dgLose,dgMySpec,dgFoeStat,dgWaveFoes,dgRender,dgSkill,dgFloorReward]
