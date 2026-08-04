@@ -4085,17 +4085,17 @@ const PROF_GEAR={
   cape:    {name:'망토',    stat:'agi', base:5,  part:'armor', x:21, y:32, reqLv:30, ico:'🧣'},
   top:     {name:'상의',    stat:'vit', base:8,  part:'armor', x:50, y:33, reqLv:1,  ico:'👕'},
   gloves:  {name:'장갑',    stat:'pow', base:5,  part:'armor', x:79, y:32, reqLv:5,  ico:'🧤'},
-  belt:    {name:'벨트',    stat:'vit', base:5,  part:'armor', x:50, y:56, reqLv:8,  ico:'🎗'},
+  weapon:  {name:'무기',    stat:'pow', base:10, part:'armor', x:50, y:56, reqLv:1,  ico:'⚔'},
   bottom:  {name:'하의',    stat:'vit', base:7,  part:'armor', x:29, y:80, reqLv:1,  ico:'👖'},
   shoes:   {name:'신발',    stat:'agi', base:6,  part:'armor', x:71, y:80, reqLv:1,  ico:'👟'},
   earring: {name:'귀고리',  stat:'foc', base:5,  part:'acc',   x:26, y:12, reqLv:16, ico:'💠'},
   necklace:{name:'목걸이',  stat:'foc', base:6,  part:'acc',   x:50, y:27, reqLv:12, ico:'📿'},
   sub:     {name:'보조무기', stat:'pow', base:5, part:'acc',   x:21, y:50, reqLv:25, ico:'🛡'},
-  weapon:  {name:'무기',    stat:'pow', base:10, part:'acc',   x:79, y:50, reqLv:1,  ico:'⚔'},
-  ring:    {name:'반지',    stat:'foc', base:4,  part:'acc',   x:50, y:72, reqLv:20, ico:'💍'},
+  ring:    {name:'반지',    stat:'foc', base:4,  part:'acc',   x:79, y:50, reqLv:20, ico:'💍'},
+  belt:    {name:'벨트',    stat:'vit', base:5,  part:'acc',   x:50, y:66, reqLv:8,  ico:'🎗'},
 };
-// 페이퍼돌 페이지 — 방어구와 무기·장신구를 섞지 않는다(한 페이지엔 자기 part만).
-const PROF_GEAR_PAGES=[{id:'armor',name:'방어구'},{id:'acc',name:'무기·장신구'}];
+// 페이퍼돌 페이지 — 장비와 장신구를 섞지 않는다(한 페이지엔 자기 part만).
+const PROF_GEAR_PAGES=[{id:'armor',name:'장비'},{id:'acc',name:'장신구'}];
 function profPageSlots(pg){ return Object.keys(PROF_GEAR).filter(k=>PROF_GEAR[k].part===pg); }
 // 슬롯 라인아트 글리프(자체 제작 · viewBox 24) — 이모지 대신 이걸 쓴다.
 // 각 장비가 한눈에 구분되도록 특징부(투구 바이저 · 벨트 버클 · 검 손잡이 · 방패 문양 …)까지 그린다.
