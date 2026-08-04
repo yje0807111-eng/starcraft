@@ -76,7 +76,7 @@ async function groupLobby(){
     assert(w.querySelectorAll('.twZone').length===Object.keys(TOWN_ZONES).length,'구역 아이콘 수 불일치');
     const shown=Object.keys(TOWN_ZONES).filter(id=>!_twEdgeEl[id].classList.contains('hide'));
     assert(['plaza','charmake','charsel'].every(id=>shown.indexOf(id)<0),'화면 안에 보이는 구역인데 가장자리 표시가 뜸: '+shown.join(','));
-    assert(['gacha','gate','shop','gym'].every(id=>shown.indexOf(id)>=0),'화면 밖 모서리 구역의 가장자리 표시가 없음: '+shown.join(','));
+    assert(['gacha','gate','gear','gym'].every(id=>shown.indexOf(id)>=0),'화면 밖 모서리 구역의 가장자리 표시가 없음: '+shown.join(','));
     const t0=w.style.transform, g=twZonePx('gacha'); twSetTarget(g[0],g[1]);
     for(let i=0;i<60;i++) twStep(0.016);
     assert(w.style.transform!==t0,'월드(배경)가 안 움직임');
@@ -172,37 +172,43 @@ async function groupLobby(){
     assert(got===v && p.pcoin===v,'분해 환급 불일치: '+got+'/'+p.pcoin);
     assert(profItems().length===0,'가방에서 안 사라짐');
     return '분해 +'+v+'P'; });
-  await step('장비 페이퍼돌: 슬롯 3개 + 초상 + 슬롯별 선택 화면', ()=>{ skipIf(typeof profPickSlot!=='function','페이퍼돌 없음');
-    const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0; p.unlocks={gear_trinket:true};
-    const c=profCreateChar('ranger','돌');
+  await step('장비 페이퍼돌: 12칸 + 초반 5칸만 해금 + 슬롯별 선택', ()=>{ skipIf(typeof profPickSlot!=='function','페이퍼돌 없음');
+    const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0;
+    const c=profCreateChar('ranger','돌'); c.dgFloor=0;
     const it=profAddItem(profMakeItem('weapon',4,'epic')); profEquipItem(it.iid);
+    profAddItem(profMakeItem('top',4,'rare'));
     _gearPick=null;
     const host=document.createElement('div'); host.innerHTML=renderProfGear();
     const slots=host.querySelectorAll('.pdSlot');
     assert(slots.length===Object.keys(PROF_GEAR).length,'슬롯 수 불일치: '+slots.length);
-    assert(host.querySelector('.pdFig'),'캐릭터 그림 영역이 없음');
-    assert(host.querySelector('.pdFig svg path'),'전신 외곽선 도형이 없음');
-    for(const k in PROF_CLASSES) assert(PROF_FIGURE[k],'종족 도형 누락: '+k);
+    assert(host.querySelector('.pdFig svg path'),'캐릭터 도형이 없음');
     const eq=host.querySelector('.pdSlot.on'); assert(eq,'장착한 슬롯이 on으로 안 보임');
     assert(eq.querySelector('.pdLv').textContent==='4','슬롯에 아이템 레벨이 안 뜸');
+    // 초반(0층)엔 기본 5칸만 열리고 나머지는 잠겨 있어야 한다
+    const open=Object.keys(PROF_GEAR).filter(k=>!profSlotLocked(k));
+    assert(open.length===5,'초반 해금 슬롯이 5칸이 아님: '+open.join(','));
+    for(const k of ['helmet','top','bottom','shoes','weapon']) assert(open.indexOf(k)>=0,'기본 슬롯이 잠김: '+k);
+    assert(host.querySelectorAll('.pdSlot.lock').length===Object.keys(PROF_GEAR).length-5,'잠긴 칸 표시가 안 맞음');
+    assert(host.textContent.indexOf(' P')<0 || host.textContent.indexOf('상점')<0,'상점이 아직 붙어 있음');
     profPickSlot('weapon');                                   // 슬롯 탭 → 그 슬롯만 고르는 화면
     host.innerHTML=renderProfGear();
     assert(host.textContent.indexOf('무기 슬롯')>=0,'슬롯 선택 화면이 아님');
-    assert(host.textContent.indexOf('방어구')<0,'다른 슬롯 아이템이 섞임');
+    assert(host.textContent.indexOf('상의')<0,'다른 슬롯 아이템이 섞임');
     profPickBack(); assert(_gearPick===null,'뒤로가기 실패');
-    return c.cls+' 도형 · 슬롯 '+slots.length+'개'; });
-  await step('장비 마이그레이션: 구버전 정수 티어 → 아이템(스탯 유지)', ()=>{ skipIf(typeof migrateProfile!=='function','마이그레이션 없음');
+    return '슬롯 '+slots.length+'칸(해금 '+open.length+')'; });
+  await step('장비 마이그레이션: 구버전 정수 티어 → 아이템 + 12칸 재편', ()=>{ skipIf(typeof migrateProfile!=='function','마이그레이션 없음');
     const keep=JSON.parse(JSON.stringify(PLAYER_META));
     PLAYER_META.profile={ ver:3, pcoin:0, curId:'cX', items:[], chars:[{ id:'cX', cls:'ranger', name:'구버전',
       xp:0, level:1, statPoints:0, dgFloor:0, unit:{ jobId:'ranger', level:1, evoStars:0,
         stats:{pow:0,vit:0,foc:0,agi:0}, gear:{weapon:3, armor:2, trinket:0} } }],
       idle:{sourceId:'drill',lastClaimTs:0}, unlocks:{}, lastSeenTs:0, pets:{}, equip:[], petSlots:2 };
     migrateProfile();
-    const c=CHAR(), w=profFindItem(c.unit.gear.weapon), ar=profFindItem(c.unit.gear.armor);
-    assert(w && ar,'정수 장비가 아이템으로 변환되지 않음');
-    assert(w.main===9 && ar.main===8,'스탯이 보존되지 않음(무기 3×3=9, 방어구 2×4=8): '+w.main+'/'+ar.main);
-    assert(c.unit.gear.trinket==='','0이던 슬롯이 아이템을 만듦');
-    PLAYER_META=keep; return '무기 +'+w.main+' · 방어구 +'+ar.main; });
+    const c=CHAR(), w=profFindItem(c.unit.gear.weapon), tp=profFindItem(c.unit.gear.top);
+    assert(w && tp,'정수 장비가 아이템으로 변환되지 않음');
+    assert(w.main===9 && tp.main===8,'스탯이 보존되지 않음(무기 3×3=9, 방어구 2×4=8): '+w.main+'/'+tp.main);
+    assert(c.unit.gear.necklace==='','0이던 장신구 칸이 아이템을 만듦');
+    assert(Object.keys(c.unit.gear).length===Object.keys(PROF_GEAR).length,'슬롯 키가 새 12칸으로 재편되지 않음');
+    PLAYER_META=keep; return '무기 +'+w.main+' · 상의 +'+tp.main+'(구 방어구)'; });
   // 던전 — 유즈맵과 완전 분리라는 것이 이 기능의 핵심 요구라, 정적·동적 양쪽으로 지킨다.
   await step('던전: 유즈맵 상태를 건드리지 않음', ()=>{ skipIf(typeof dgStart!=='function','던전 없음');
     const src=[dgStep,dgStart,dgSpawnWave,dgWin,dgLose,dgMySpec,dgFoeStat,dgWaveFoes,dgRender,dgSkill,dgFloorReward]
