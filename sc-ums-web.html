@@ -2133,6 +2133,21 @@
   .ptHelpBody .phItem b{color:#dbe3ec;font-weight:700}
   /* ── 🎯 시작 선택 허브 ── */
   #hubScreen.hide,#townScreen.hide,#charScreen.hide{display:none}
+  /* 장비 페이퍼돌 — 캐릭터 초상 + 신체 위치 슬롯 */
+  .pdWrap{position:relative;height:196px;margin:2px 0 4px;display:flex;align-items:center;justify-content:center}
+  .pdFig{position:relative;width:136px;height:136px;border-radius:50%;overflow:hidden;border:1px solid var(--metal-edge);
+    background:radial-gradient(circle at 50% 32%,rgba(92,214,255,.16),rgba(10,14,20,.92) 72%);
+    display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 26px -6px #000}
+  .pdFig .portImg{width:100%;height:100%;object-fit:cover;display:block}
+  .pdFig .pdEmo{font-size:56px;line-height:1}
+  .pdSlot{position:absolute;z-index:2;width:52px;height:52px;border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    font-size:21px;color:#8d97a4;background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);box-shadow:0 5px 14px -8px #000}
+  .pdSlot.on{background:rgba(92,214,255,.09)}
+  .pdSlot.lock{opacity:.4;cursor:default}
+  .pdSlot:not(.lock):active{transform:translateY(1px)}
+  .pdSlot .pdLbl{position:absolute;bottom:-15px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:700;color:var(--txt-mute);white-space:nowrap}
+  .pdSlot .pdLv{position:absolute;top:-8px;right:-6px;font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:800;
+    padding:0 4px;border-radius:6px;color:inherit;background:#0b0e16;border:1px solid currentColor}
   /* ⚔ 던전 화면 */
   #dgScreen{position:absolute;inset:0;z-index:60;display:flex;flex-direction:column}
   #dgScreen.hide{display:none}
@@ -4315,7 +4330,7 @@ function openTownPanel(zone){ _twZone=zone; _twChar.mode=null; _twPtr=null;   //
   refreshTownPanel(); popShow('townPanel'); }
 function refreshTownPanel(){ const body=document.getElementById('tpBody'), z=TOWN_ZONES[_twZone]; if(!body||!z) return;
   body.innerHTML = z.render(); }
-function closeTownPanel(){ popHide('townPanel'); _twZone=null; _charDelId=null; }
+function closeTownPanel(){ popHide('townPanel'); _twZone=null; _charDelId=null; _gearPick=null; }
 // ── 🧍 캐릭터 선택/생성 ─────────────────────────────────────────────────────
 // 렌더러는 한 벌뿐이고 입장 화면(#charScreen)과 마을 구역(보관소·생성소)이 같은 것을 쓴다. 복제 금지.
 function renderCharSelect(){ const p=PROF(), list=p.chars||[];
@@ -4417,40 +4432,82 @@ function profDoPetEquip(id){ if(profPetEquip(id)){ if(typeof playSfx==='function
 function profDoAlloc(k){ if(profAllocStat(k)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); } }
 function profDoClass(id){ if(profClassChange(id)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); showTownToast('전직 완료!'); } }
 // 장비 상점
-// 장비 상점 — 장착 슬롯 / 상점 / 가방 세 구획. 아이템 한 줄은 _profItemRow 하나로 통일한다.
+// 장비 상점 — 캐릭터 초상 위에 슬롯을 배치한 페이퍼돌 + 상점 + 가방.
+// 슬롯 좌표는 '흉상 초상' 기준. 전신 렌더로 바꾸면 이 표만 갈면 된다(신체 위치 매핑의 단일 출처).
+const PROF_SLOT_POS={
+  trinket:{ side:'left',  top:'4%'  },   // 목·장신구 높이
+  armor:  { side:'left',  top:'54%' },   // 몸통
+  weapon: { side:'right', top:'30%' },   // 무기를 든 쪽
+};
+let _gearPick=null;   // 슬롯 선택 화면(무기/방어구/장신구) — null이면 페이퍼돌
 function _profItemRow(it, right, sub2){ const col=TIER_COLOR[it.tier]||'#b8c0cc', g=PROF_GEAR[it.slot];
   const opts=it.opts.map(o=>PROF_STAT_NAME[o.k]+' +'+o.v).join(' · ');
   return '<div class="twRow"><span class="twPet" style="color:'+col+';border-color:'+col+'55">'+(it.tier==='legend'?'🔱':'⚔')+'</span>'
     +'<div class="twRowInfo"><div class="twRowName" style="color:'+col+'">'+profItemName(it)+' <span class="twStars">Lv.'+it.lv+'</span></div>'
     +'<div class="twRowSub">'+PROF_STAT_NAME[g.stat]+' +'+it.main+(opts?(' · '+opts):'')+'</div>'
     +(sub2?('<div class="twRowSub ok">'+sub2+'</div>'):'')+'</div>'+right+'</div>'; }
+// 캐릭터 그림 = 현재 직업의 유닛 초상(전직하면 그림도 바뀐다). 공용 단일 소스 unitPortraitHTML을 그대로 쓴다.
+function _profFigureHTML(c){ const J=PROF_JOBS[c.unit.jobId]||PROF_JOBS[c.cls], uk=J&&J.unit;
+  const html=(uk && typeof unitPortraitHTML==='function') ? unitPortraitHTML(uk) : '';
+  return html || '<span class="pdEmo">'+((PROF_CLASSES[c.cls]||{}).ico||'🧍')+'</span>'; }
+function _profPaperdoll(c){
+  let h='<div class="pdWrap"><div class="pdFig">'+_profFigureHTML(c)+'</div>';
+  for(const slot in PROF_GEAR){ const g=PROF_GEAR[slot], pos=PROF_SLOT_POS[slot]||{side:'left',top:'50%'};
+    const locked=g.reqUnlock && !profHasUnlock(g.reqUnlock);
+    const it=locked? null : profFindItem(c.unit.gear[slot]);
+    const col=it? (TIER_COLOR[it.tier]||'#b8c0cc') : null;
+    const style=(pos.side==='right'?'right:6%;':'left:6%;')+'top:'+pos.top+';'+(col?('border-color:'+col+'88;color:'+col+';'):'');
+    h+='<div class="pdSlot'+(locked?' lock':(it?' on':''))+'" style="'+style+'"'
+      +(locked?'':' onclick="profPickSlot(\''+slot+'\')"')+'>'
+      +(locked?'🔒':(it?(it.tier==='legend'?'🔱':'⚔'):'＋'))
+      +(it?('<i class="pdLv">'+it.lv+'</i>'):'')
+      +'<span class="pdLbl">'+g.name+'</span></div>'; }
+  h+='</div>';
+  let sum=0; for(const slot in c.unit.gear){ const it=profFindItem(c.unit.gear[slot]); if(it) sum+=profItemPower(it); }
+  h+='<div class="twHead" style="text-align:center">장비 합계 <b>+'+sum+'</b> · 슬롯을 눌러 교체</div>';
+  return h; }
+// 슬롯 하나만 놓고 고르는 화면 — 가방 전체를 훑지 않아도 된다
+function _profGearPick(slot){ const c=CHAR(), g=PROF_GEAR[slot], cur=profFindItem(c.unit.gear[slot]);
+  let h='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+g.name+' 슬롯</div>'
+    +'<div class="twRowSub">주 스탯 '+PROF_STAT_NAME[g.stat]+'</div></div>'
+    +'<button class="twBtn" onclick="profPickBack()">← 뒤로</button></div>';
+  if(cur){ h+='<div class="twSectLbl">장착 중</div>'
+    +_profItemRow(cur, '<button class="twBtn" onclick="profDoEquip(\''+cur.iid+'\')">해제</button>', null); }
+  const order=PROF_ITEM_TIERS.map(t=>t.id);
+  const list=profItems().filter(i=>i.slot===slot && (!cur||i.iid!==cur.iid))
+    .sort((a,b)=>(order.indexOf(b.tier)-order.indexOf(a.tier))||(profItemPower(b)-profItemPower(a)));
+  h+='<div class="twSectLbl">가방의 '+g.name+' ('+list.length+')</div>';
+  if(!list.length) h+='<div class="twRow"><div class="twRowInfo"><div class="twRowSub">없음 — 던전에서 줍거나 상점에서 사세요.</div></div></div>';
+  for(const it of list){ const h2=profItemHolder(it.iid), busy=h2&&h2!==c;
+    const btn = busy ? '<button class="twBtn" disabled>'+escHtml(h2.name)+'</button>'
+      : '<button class="twBtn" onclick="profDoEquip(\''+it.iid+'\')">장착</button>'
+        +'<button class="twDel" onclick="profDoScrap(\''+it.iid+'\')" aria-label="분해">♻</button>';
+    h+=_profItemRow(it, btn, busy? null : ('분해 시 '+profScrapValue(it)+' P')); }
+  return h; }
 function renderProfGear(){ const p=PROF(), c=CHAR(); if(!c) return '<div class="twHead">캐릭터가 없습니다.</div>';
+  if(_gearPick && PROF_GEAR[_gearPick]) return _profGearPick(_gearPick);
   const inv=profItems(), lv=Math.max(1, dgMaxFloor());
-  let h='<div class="twHead">보유 <b>'+Math.floor(p.pcoin)+' P</b> · 가방 <b>'+inv.length+'/'+PROF_INV_MAX+'</b><br>가방은 모든 캐릭터가 함께 쓰고, 장착은 캐릭터마다 따로입니다.</div>';
-  h+='<div class="twSectLbl">장착 중</div>';
-  for(const slot in PROF_GEAR){ const g=PROF_GEAR[slot], locked=g.reqUnlock&&!profHasUnlock(g.reqUnlock);
-    const it=profFindItem(c.unit.gear[slot]);
-    if(locked){ const reqP=(PROF_UNLOCKS.find(u=>u.id===g.reqUnlock)||{}).power;
-      h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+g.name+'</div><div class="twRowSub lock">🔒 파워 '+reqP+' 필요</div></div></div>'; continue; }
-    if(!it){ h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+g.name+'</div><div class="twRowSub">비어 있음</div></div></div>'; continue; }
-    h+=_profItemRow(it, '<button class="twBtn" onclick="profDoEquip(\''+it.iid+'\')">해제</button>', null); }
+  let h=_profPaperdoll(c);
+  h+='<div class="twHead">보유 <b>'+Math.floor(p.pcoin)+' P</b> · 가방 <b>'+inv.length+'/'+PROF_INV_MAX+'</b> (모든 캐릭터 공용)</div>';
   h+='<div class="twSectLbl">상점 · Lv.'+lv+' 장비(슬롯 무작위)</div>';
   for(const T of PROF_ITEM_TIERS){ if(!T.cost) continue;
     const poor=p.pcoin<T.cost, full=inv.length>=PROF_INV_MAX, col=TIER_COLOR[T.id];
     h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName" style="color:'+col+'">'+GACHA_TIERS[T.id].name+' 장비</div>'
       +'<div class="twRowSub">주 스탯 ×'+T.mul.toFixed(2)+' · 추가 옵션 '+T.opts+'개</div></div>'
       +'<button class="twBtn" onclick="profDoBuyItem(\''+T.id+'\')"'+((poor||full)?' disabled':'')+'>'+(full?'가방 참':T.cost+' P')+'</button></div>'; }
-  h+='<div class="twSectLbl">가방 ('+inv.length+')</div>';
-  if(!inv.length) h+='<div class="twRow"><div class="twRowInfo"><div class="twRowSub">비어 있음 — 던전에서 줍거나 상점에서 사세요.</div></div></div>';
   const order=PROF_ITEM_TIERS.map(t=>t.id);
-  const sorted=inv.slice().sort((a,b)=> (order.indexOf(b.tier)-order.indexOf(a.tier)) || (profItemPower(b)-profItemPower(a)));
-  for(const it of sorted){ const on=(c.unit.gear[it.slot]===it.iid), h2=profItemHolder(it.iid);
-    const busy = h2 && h2!==c;
+  const rest=inv.filter(i=>c.unit.gear[i.slot]!==i.iid)
+    .sort((a,b)=>(order.indexOf(b.tier)-order.indexOf(a.tier))||(profItemPower(b)-profItemPower(a)));
+  h+='<div class="twSectLbl">가방 ('+rest.length+')</div>';
+  if(!rest.length) h+='<div class="twRow"><div class="twRowInfo"><div class="twRowSub">비어 있음 — 던전에서 줍거나 상점에서 사세요.</div></div></div>';
+  for(const it of rest){ const h2=profItemHolder(it.iid), busy=h2&&h2!==c;
     const btn = busy ? '<button class="twBtn" disabled>'+escHtml(h2.name)+'</button>'
-      : '<button class="twBtn'+(on?' on':'')+'" onclick="profDoEquip(\''+it.iid+'\')">'+(on?'장착중':'장착')+'</button>'
-        + (on?'':'<button class="twDel" onclick="profDoScrap(\''+it.iid+'\')" aria-label="분해">♻</button>');
-    h+=_profItemRow(it, btn, busy? null : (on? null : '분해 시 '+profScrapValue(it)+' P')); }
+      : '<button class="twBtn" onclick="profDoEquip(\''+it.iid+'\')">장착</button>'
+        +'<button class="twDel" onclick="profDoScrap(\''+it.iid+'\')" aria-label="분해">♻</button>';
+    h+=_profItemRow(it, btn, busy? null : ('분해 시 '+profScrapValue(it)+' P')); }
   return h; }
+function profPickSlot(slot){ _gearPick=slot; if(typeof playSfx==='function') playSfx('ui_open'); refreshTownPanel(); }
+function profPickBack(){ _gearPick=null; if(typeof playSfx==='function') playSfx('ui_close'); refreshTownPanel(); }
 function profDoEquip(iid){ if(profEquipItem(iid)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); } }
 function profDoScrap(iid){ const v=profScrapItem(iid); if(v<0) return;
   if(typeof playSfx==='function') playSfx('ui_close'); renderTownBar(); refreshTownPanel(); showTownToast('분해 · +'+v+' P'); }

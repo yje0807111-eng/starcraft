@@ -172,6 +172,25 @@ async function groupLobby(){
     assert(got===v && p.pcoin===v,'분해 환급 불일치: '+got+'/'+p.pcoin);
     assert(profItems().length===0,'가방에서 안 사라짐');
     return '분해 +'+v+'P'; });
+  await step('장비 페이퍼돌: 슬롯 3개 + 초상 + 슬롯별 선택 화면', ()=>{ skipIf(typeof profPickSlot!=='function','페이퍼돌 없음');
+    const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0; p.unlocks={gear_trinket:true};
+    const c=profCreateChar('ranger','돌');
+    const it=profAddItem(profMakeItem('weapon',4,'epic')); profEquipItem(it.iid);
+    _gearPick=null;
+    const host=document.createElement('div'); host.innerHTML=renderProfGear();
+    const slots=host.querySelectorAll('.pdSlot');
+    assert(slots.length===Object.keys(PROF_GEAR).length,'슬롯 수 불일치: '+slots.length);
+    assert(host.querySelector('.pdFig'),'캐릭터 그림 영역이 없음');
+    const uk=PROF_JOBS[c.unit.jobId].unit;
+    assert(host.querySelector('.pdFig .portImg, .pdFig .pdEmo'),'초상/폴백 둘 다 없음');
+    const eq=host.querySelector('.pdSlot.on'); assert(eq,'장착한 슬롯이 on으로 안 보임');
+    assert(eq.querySelector('.pdLv').textContent==='4','슬롯에 아이템 레벨이 안 뜸');
+    profPickSlot('weapon');                                   // 슬롯 탭 → 그 슬롯만 고르는 화면
+    host.innerHTML=renderProfGear();
+    assert(host.textContent.indexOf('무기 슬롯')>=0,'슬롯 선택 화면이 아님');
+    assert(host.textContent.indexOf('방어구')<0,'다른 슬롯 아이템이 섞임');
+    profPickBack(); assert(_gearPick===null,'뒤로가기 실패');
+    return uk+' 초상 · 슬롯 '+slots.length+'개'; });
   await step('장비 마이그레이션: 구버전 정수 티어 → 아이템(스탯 유지)', ()=>{ skipIf(typeof migrateProfile!=='function','마이그레이션 없음');
     const keep=JSON.parse(JSON.stringify(PLAYER_META));
     PLAYER_META.profile={ ver:3, pcoin:0, curId:'cX', items:[], chars:[{ id:'cX', cls:'ranger', name:'구버전',
