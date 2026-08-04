@@ -1999,6 +1999,8 @@
   #auth{z-index:48;align-items:center;justify-content:center;padding:22px}
   .authCard{width:90%;max-width:310px;padding:20px 18px;box-sizing:border-box}
   .authLogo{font-size:17px;font-weight:800;letter-spacing:1px;color:var(--neon);text-align:center;text-shadow:0 0 12px var(--neon-glow);margin-bottom:2px}
+  .authLogo .alg1{color:#f3f6fb;text-shadow:0 0 8px rgba(255,255,255,.22)}   /* STAR(흰) — 로딩 타이틀과 동일 2톤 */
+  .authLogo .alg2{color:var(--neon)}
   .authSub{font-size:var(--fs-xs);color:#8a8086;text-align:center;letter-spacing:.5px;margin-bottom:15px}
   .authSeg{display:flex;gap:7px;margin-bottom:13px}
   .authSegBtn{flex:1;padding:8px;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-lg);font-weight:800;cursor:pointer;color:var(--txt-mute);
@@ -2885,7 +2887,7 @@
     <div id="auth" class="appScreen spaceBg hide">
       <button class="authGear" data-sfx="ui_open" onclick="openAppSettings()" title="설정" aria-label="설정"><svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg></button>
       <div class="authCard">
-        <div class="authLogo">UMS ARENA</div>
+        <div class="authLogo"><span class="alg1">STAR </span><span class="alg2">WAR</span></div>
         <div class="authSub" id="authSub">로그인하고 시작하세요</div>
         <div class="authSeg">
           <button class="authSegBtn on" id="segLogin" onclick="authMode('login')">로그인</button>
@@ -3194,8 +3196,8 @@
   <div id="opening" class="appScreen spaceBg">
     <div class="opWrap">
       <div class="opLogo"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M24 4 L40 9 V24 C40 33 33 39.5 24 43 C15 39.5 8 33 8 24 V9 Z"/><path d="M24 15 L27 23 L24 31 L21 23 Z" fill="currentColor" stroke="none"/><path d="M17 20 L24 23 L31 20" stroke-width="1.5"/></svg></div>
-      <div class="opTitle"><span class="opT1">UMS </span><span class="opT2">ARENA</span></div>
-      <div class="opSub">STAR WAR ARENA</div>
+      <div class="opTitle"><span class="opT1">STAR </span><span class="opT2">WAR</span></div>
+      <div class="opSub">BATTLE ARENA</div>
       <div class="opBarWrap"><div class="opBar"></div></div>
       <div class="opLoading">LOADING…</div>
       <div class="opMap" id="opMap">
