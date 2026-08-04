@@ -26,7 +26,7 @@
 | `메타 성장 시스템` | 코인·포인트 영구강화(`G.metaB`, `loadMeta/saveMeta`) |
 | `🧍 개인 프로필 RPG` | 캐릭터 육성 — 종류 3종(`PROF_CLASSES`)·직업 트리(`PROF_JOBS`)·스탯·장비·펫·진화·방치수익. **유즈맵 경제와 완전 분리**(재화 `pcoin`) |
 | `장비 아이템` | `PROF_ITEM_TIERS`(등급)·`profMakeItem`(생성)·`profEquipItem`/`profScrapItem` — 가방은 계정 공용(`PROF().items`), 장착은 캐릭터별(`c.unit.gear[slot]=iid`) |
-| `장비창(페이퍼돌 + 하단 시트)` | `_profPaperdoll`(5×5 격자 둘레 12슬롯, 본 화면 무스크롤) · `gearSheetRender`/`gearSheetOpen`(`#gearSheet`) · `_profGearGrid`/`_profGearInfo` · `_gearPick`/`_gearSel`/`_gearSheetOn` |
+| `장비창(상=페이퍼돌 / 하=가방)` | `PROF_SLOT_ICON`(슬롯 라인아트 12종)·`_slotGlyph` · `_profPaperdoll`(아바타 위 3열×4행 오버레이) · `_profGearGrid`/`_profGearInfo` · `_gearPick`/`_gearSel` |
 | `🧍 캐릭터 선택/생성` | `renderCharSelect`/`renderCharCreate` — 입장 화면 `#charScreen`과 마을 구역이 **같은 렌더러**를 쓴다 |
 | `마을(월드 + 카메라)` | `TOWN_ZONES`(구역 단일 출처) · `twStep`/`twCamApply` · 입력 `twPtrDown→Move→Up` |
 | `⚔ 던전` | 캐릭터 직접 전투 — `DG` 상태 · `dgStep`/`dgTick` 자체 루프 · `DG_FOES` 자체 적 표 · `dgRender`(DOM 유일 접점). **유즈맵과 완전 분리** |
@@ -116,8 +116,9 @@ node test/bench-strike.mjs 400 80 4   # 대규모 전투 렌더 벤치(유닛수
 - **장비는 아이템이다(ver4)** — `c.unit.gear[slot]`은 **정수 티어가 아니라 아이템 id(문자열)**다(ver3까지는 정수였고 `migrateProfile`이 동등 성능 아이템으로 변환한다). 가방(`PROF().items`, `PROF_INV_MAX`칸)은 **계정 공용**이라 캐릭터를 지워도 남고 장착만 풀린다 → **환급 대상이 아니다**(`profSpentOn`에 장비를 다시 넣지 말 것). 한 아이템은 한 캐릭터만 장착(`profItemHolder`로 검사). 등급 확률·가격은 **프로필 전용 표 `PROF_ITEM_TIERS`** — 유즈맵 가챠 밸런스(`GACHA_TIERS.prob`)를 쓰면 안 된다(표시 이름·색만 공용). 아이템 한 줄 UI는 `_profItemRow` 하나로 통일.
 - **장비 화면은 페이퍼돌이다**: 가운데 캐릭터 도형(`PROF_FIGURE` — 종족 구분 없는 단일 인간 외곽선 SVG, viewBox 100×200 자체 제작) 좌우에 6칸씩 **12슬롯**. 슬롯 위치는 `PROF_GEAR`의 `side`/`row` 하나에서 나온다(별도 좌표표 없음). 구워둔 초상(`assets/portraits`)은 **흉상**이라 신체 위치를 잡을 수 없어 쓰지 않는다.
 - **해금 축은 캐릭터 레벨 하나로 통일한다**: 장비 슬롯은 `PROF_GEAR[slot].reqLv`(판정 `profSlotLocked`) — Lv.1엔 헬멧·상의·하의·신발·무기 5칸, 이후 장갑5·벨트8·목걸이12·귀고리16·반지20·보조무기25·망토30. 던전 층도 같은 축이다: `dgFloorCap()` = `1+floor((level-1)/DG_LV_PER_FLOOR)`, 역산은 `dgFloorReqLv(floor)`. 드랍·구매(`profSlots`)·장착(`profEquipItem`)·던전 입장(`dgEnter`)이 전부 이 판정을 거치므로 **잠긴 칸용 장비가 떨어지지도, 못 갈 층에 들어가지도 않는다.** 파워 기반 해금(`PROF_UNLOCKS`)은 방치수익 쪽에만 남았다 — 장비에 다시 섞지 말 것.
-- **장비창 본 화면은 스크롤이 없어야 한다**: 페이퍼돌은 `.pdWrap` 5×5 CSS 격자로, 캐릭터가 가운데 3×3(`grid-column:2/5;grid-row:2/5`)을 차지하고 슬롯 12칸이 둘레를 감싼다(위 3·좌 3·우 3·아래 3, 좌표는 `PROF_GEAR`의 `col`/`gr`). 칸 라벨은 붙이지 않는다(아이콘으로 구분 — 이름은 시트에서). **목록·상세를 본문에 이어 붙이면 위쪽이 잘리므로 전부 하단 시트(`#gearSheet`)로 뺀다**: 슬롯/가방 버튼을 누르면 시트가 올라오고(`gearSheetOpen`), 격자(`_profGearGrid` 5열)에서 고른 하나만 상세(`_profGearInfo`, "지금 낀 것 대비 증감")로 펼친다. 시트는 `#townPanel` 직속 형제라 `refreshTownPanel()`(본문 재렌더)에 영향받지 않는다 — 갱신은 `gearSheetRender()`를 따로 부를 것. 배경 탭은 `townPanelBackdrop()`이 받아 **시트가 떠 있으면 시트만** 닫는다.
-- **`.pdWrap` 첫 줄 레벨 배지**는 칸 밖(`top:-8px`)으로 나가므로 위 여백이 없으면 잘린다.
+- **장비창은 위/아래 두 구역이고 전체가 스크롤 없이 들어간다**: 위 = 아바타(`.pdFig`, `opacity:.34`로 흐린 배경) **위에 겹친 슬롯 12칸**(`.pdSlot`, 좌표는 `PROF_GEAR`의 `x`/`y` %, 3열 × 4행으로 머리·상체·허리·하체 줄에 맞춤), 아래 = 가방(`.bagSec`, 늘 열려 있고 `.bagBody`만 따로 스크롤). 카드에 `gearFull` 클래스를 붙여 높이를 고정해야(`openTownPanel`) 두 구역이 나뉜다 — 안 붙이면 본문이 늘어나 위쪽이 잘린다. **목록을 본문 아래로 이어 붙이거나 슬라이드 시트로 감추지 말 것**(둘 다 해봤고 각각 스크롤·가려짐 문제가 났다).
+- **슬롯/아이템 아이콘은 이모지가 아니라 라인아트 글리프**(`PROF_SLOT_ICON` + `_slotGlyph`, viewBox 24 stroke-only): 빈 칸은 글리프를 흐리게 깔고 가운데 `＋`, 채운 칸은 등급 색 + 레벨 배지, 잠긴 칸은 전체를 흐리게 + 🔒. 가방 격자도 같은 글리프를 써서 표기를 하나로 유지한다.
+- **`.pdWrap` 첫 줄 레벨 배지**는 칸 밖(`top:-7px`)으로 나가므로 위 여백이 없으면 잘린다.
 - **페이퍼돌 행 간격**: `.pdWrap` 높이 ÷ `PROF_GEAR_ROWS`가 슬롯(46px)+라벨(14px)보다 커야 한다. 좁으면 라벨이 아래 칸 레벨 배지와 겹친다(346px로 뒀다가 2px 겹쳤다).
 - **외곽선 캐릭터 도형을 그릴 때**: 팔·다리를 단선(`stroke`)으로 그으면 막대 인간이 되고 겹친 선이 뭉쳐 형태가 안 읽힌다(실제로 한 번 그렇게 나왔다). **각 부위를 닫힌 외곽선으로 그리고 배경색 채움(`fill="rgba(10,14,22,.82)"`)으로 뒤를 가린 뒤, 먼 것부터(다리 → 몸통 → 팔 → 머리) 쌓을 것.**
 - **`.portImg`는 `position:absolute;inset:0`이다**: 감싸는 요소에 `position:relative`가 없으면 positioned 조상까지 거슬러 올라가 화면을 뚫는다(페이퍼돌에서 실제로 초상이 패널을 덮었다). 초상을 새 컨테이너에 넣을 땐 그 컨테이너에 `position:relative`를, 위에 얹을 버튼엔 `z-index:2` 이상을 줄 것(`.portImg`가 `z-index:1`).

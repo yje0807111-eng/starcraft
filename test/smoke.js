@@ -172,21 +172,24 @@ async function groupLobby(){
     assert(got===v && p.pcoin===v,'분해 환급 불일치: '+got+'/'+p.pcoin);
     assert(profItems().length===0,'가방에서 안 사라짐');
     return '분해 +'+v+'P'; });
-  await step('장비창: 12칸 사방 배치 · 본 화면 무스크롤 · 하단 시트', ()=>{ skipIf(typeof profPickSlot!=='function','페이퍼돌 없음');
+  await step('장비창: 아바타 위 부위별 12칸 · 가방 상시 노출', ()=>{ skipIf(typeof profPickSlot!=='function','페이퍼돌 없음');
     const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0;
     profCreateChar('ranger','돌');
     const it=profAddItem(profMakeItem('weapon',4,'epic')); profEquipItem(it.iid);
     profAddItem(profMakeItem('top',4,'rare')); saveMeta();
-    gearSheetClose();
+    _gearPick=null; _gearSel=null;
     openTown(); openTownPanel('gear');                        // openTown이 loadMeta로 다시 읽으므로 CHAR()는 이 뒤에 잡는다
     const c=CHAR(); c.level=1; refreshTownPanel();
-    const body=$('tpBody'), sheet=$('gearSheet');
+    const body=$('tpBody');
     const slots=body.querySelectorAll('.pdSlot');
     assert(slots.length===Object.keys(PROF_GEAR).length,'슬롯 수 불일치: '+slots.length);
     assert(body.querySelector('.pdFig svg path'),'캐릭터 도형이 없음');
-    // 슬롯이 좌우만이 아니라 사방을 감싸야 한다(위·아래 줄에도 칸이 있음)
-    const gr=[...slots].map(e=>e.style.gridRow);
-    assert(gr.indexOf('1')>=0 && gr.indexOf('5')>=0,'상·하단 줄에 슬롯이 없음(좌우만 쓰고 있음)');
+    // 슬롯이 아바타 위에 부위별로 겹쳐 있어야 한다(상·하·좌·우 다 씀)
+    const ys=[...slots].map(e=>parseFloat(e.style.top)), xs=[...slots].map(e=>parseFloat(e.style.left));
+    assert(Math.min(...ys)<15 && Math.max(...ys)>85,'슬롯이 위아래로 안 퍼짐: '+Math.min(...ys)+'~'+Math.max(...ys));
+    assert(Math.min(...xs)<25 && Math.max(...xs)>75 && xs.indexOf(50)>=0,'슬롯이 좌우·중앙으로 안 퍼짐');
+    assert(body.querySelectorAll('.pdSlot .slIco').length===slots.length,'슬롯 아이콘이 라인아트가 아님');
+    assert(body.querySelectorAll('.pdSlot.empty .pdPlus').length>0,'빈 칸에 ＋가 없음');
     const eq=body.querySelector('.pdSlot.on'); assert(eq,'장착한 슬롯이 on으로 안 보임');
     assert(eq.querySelector('.pdLv').textContent==='4','슬롯에 아이템 레벨이 안 뜸');
     // Lv.1엔 기본 5칸만 열리고 나머지는 레벨로 잠겨 있어야 한다
@@ -196,21 +199,19 @@ async function groupLobby(){
     assert(body.querySelectorAll('.pdSlot.lock').length===Object.keys(PROF_GEAR).length-5,'잠긴 칸 표시가 안 맞음');
     CHAR().level=30; assert(Object.keys(PROF_GEAR).every(k=>!profSlotLocked(k)),'Lv.30인데 안 열린 칸이 있음');
     CHAR().level=1;
-    // 본 화면엔 목록이 없어야 한다(스크롤로 밀리지 않게) — 목록·상세는 하단 시트에만
-    assert(!body.querySelector('.igGrid'),'본 화면에 격자가 남아 있음');
-    assert(sheet.classList.contains('hide'),'시트가 처음부터 열려 있음');
-    gearBagOpen();
-    assert(!sheet.classList.contains('hide') && _gearSheetOn,'가방 시트가 안 열림');
-    assert(sheet.querySelectorAll('.igGrid .igCell').length===2,'시트 격자 칸 수 불일치');
-    assert(!sheet.querySelector('.igInfo'),'아무것도 안 골랐는데 상세가 뜸');
+    // 가방은 아래 구역에 늘 열려 있어야 한다(시트로 감추지 않음)
+    assert(body.querySelector('.bagSec .bagBody .igGrid'),'가방 구역이 안 보임');
+    assert(body.querySelectorAll('.igGrid .igCell').length===2,'가방 격자 칸 수 불일치');
+    assert(!body.querySelector('.igInfo'),'아무것도 안 골랐는데 상세가 뜸');
     profSelItem(it.iid);
-    const info=sheet.querySelector('.igInfo'); assert(info,'고른 아이템 상세가 없음');
+    const info=$('tpBody').querySelector('.igInfo'); assert(info,'고른 아이템 상세가 없음');
     assert(info.textContent.indexOf('해제')>=0,'장착 중인데 해제 버튼이 아님');
-    profSlotTap('weapon');                                    // 슬롯 탭 → 그 칸 장비만
-    assert(sheet.querySelectorAll('.igGrid .igCell').length===1,'슬롯 필터가 안 걸림');
-    gearSheetClose(); assert(sheet.classList.contains('hide') && !_gearSheetOn,'시트가 안 닫힘');
+    profSlotTap('weapon');                                    // 슬롯 탭 → 가방을 그 칸으로 거른다
+    assert($('tpBody').querySelectorAll('.igGrid .igCell').length===1,'슬롯 필터가 안 걸림');
+    profSlotTap('weapon'); assert(_gearPick===null,'같은 칸을 다시 눌러도 전체로 안 돌아옴');
+    assert(document.querySelector('#townPanel .twCard').classList.contains('gearFull'),'장비창 카드 높이 고정이 안 걸림');
     townToHub();
-    return '슬롯 '+slots.length+'칸(Lv.1 해금 '+open.length+') · 시트 분리'; });
+    return '슬롯 '+slots.length+'칸(Lv.1 해금 '+open.length+') · 상하 2구역'; });
   await step('던전: 도전 가능 층이 레벨로 열린다', ()=>{ skipIf(typeof dgFloorCap!=='function','층 해금 없음');
     const p=PROF(); p.chars.length=0; p.curId='';
     const c=profCreateChar('ranger','층'); c.level=1;
