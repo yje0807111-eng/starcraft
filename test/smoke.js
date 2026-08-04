@@ -186,8 +186,10 @@ async function groupLobby(){
     assert(body.querySelector('.pdFig svg path'),'캐릭터 도형이 없음');
     // 슬롯이 아바타 위에 부위별로 겹쳐 있어야 한다(상·하·좌·우 다 씀)
     const ys=[...slots].map(e=>parseFloat(e.style.top)), xs=[...slots].map(e=>parseFloat(e.style.left));
-    assert(Math.min(...ys)<15 && Math.max(...ys)>85,'슬롯이 위아래로 안 퍼짐: '+Math.min(...ys)+'~'+Math.max(...ys));
-    assert(Math.min(...xs)<25 && Math.max(...xs)>75 && xs.indexOf(50)>=0,'슬롯이 좌우·중앙으로 안 퍼짐');
+    const rows=[...new Set(ys)].sort((a,b)=>a-b), cols=[...new Set(xs)].sort((a,b)=>a-b);
+    assert(rows.length>=4 && rows[0]<20 && rows[rows.length-1]>70,'슬롯이 위아래 여러 줄로 안 퍼짐: '+rows.join(','));
+    assert(cols.length>=3 && cols[0]<40 && cols[cols.length-1]>60 && cols.indexOf(50)>=0,
+      '슬롯이 좌·중·우로 안 퍼짐(가운데 열이 몸통에 겹쳐야 함): '+cols.join(','));
     assert(body.querySelectorAll('.pdSlot .slIco').length===slots.length,'슬롯 아이콘이 라인아트가 아님');
     assert(body.querySelectorAll('.pdSlot.empty .pdPlus').length>0,'빈 칸에 ＋가 없음');
     const eq=body.querySelector('.pdSlot.on'); assert(eq,'장착한 슬롯이 on으로 안 보임');
