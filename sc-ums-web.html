@@ -11248,20 +11248,20 @@ const STK_UNITS={
   // 🛡 유니온 — 보병·기계 (저가 원거리 / 기계 탱커 / 공성) · 공격 이펙트는 ATK_STYLE(공용 FX 코어)에서 id로 매핑
   marine:    {name:'레인저',    ico:'🪖', cost:100, hp:130, dmg:16, rng:200, cd:0.85, spd:340, size:14},
   medic:     {name:'의무병',    ico:'💉', cost:110, hp:140, dmg:0, rng:0, cd:0, spd:340, size:14},   // 무공격 지원 — HEALER 분기로 바이오닉 치유(strikeHealStep)
-  goliath:   {name:'기갑병', ico:'⚙️', cost:220, hp:380, dmg:30, rng:235, cd:1.30, spd:155, size:21},
+  goliath:   {name:'기갑병', ico:'⚙️', cost:220, hp:380, dmg:35, rng:235, cd:1.30, spd:155, size:21},   // 개별튜닝: 종족내 과약(0.79) → dmg30→35
   tank:      {name:'공성전차',   ico:'🛡', cost:350, hp:430, dmg:72, rng:330, cd:2.30, spd:115, size:24, splash:160},
   // 🔮 에테리얼 — 사이오닉 (원거리 포격 / 근접 돌격 / 광역 탱커)
-  dragoon:   {name:'센티넬',    ico:'🤖', cost:200, hp:380, dmg:24, sdmg:38, scd:1.0, rng:245, cd:1.25, spd:230, size:18},   // 밸런스: 0%였음(핵심 기본) → hp380·실효공격38·실효쿨1.36→1.0(scd)
-  blade:     {name:'광전사',      ico:'⚔️', cost:120, hp:360, dmg:22, sdmg:42, rng:49,  cd:0.80, spd:340, size:17, melee:true},   // 밸런스: 17% → hp300→360·실효공격33→42(sdmg)
+  dragoon:   {name:'센티넬',    ico:'🤖', cost:200, hp:350, dmg:24, sdmg:32, scd:1.0, rng:245, cd:1.25, spd:230, size:18},   // 개별튜닝: 종족내 과강(1.82) → hp380→350·sdmg38→32
+  blade:     {name:'광전사',      ico:'⚔️', cost:120, hp:240, dmg:22, sdmg:26, rng:49,  cd:0.80, spd:340, size:17, melee:true},   // 개별튜닝: 종족내 극단 과강(2.90) → hp360→240·sdmg42→26(2차 폴리시)
   archon:    {name:'보이드',    ico:'🔮', cost:340, hp:400, dmg:34, rng:130, cd:1.05, spd:185, size:23, splash:120},
   // 🦎 스웜 — 유기체 (저가 원거리 / 근접 다수 / 도트 공성)
-  hydra:     {name:'스파이크',      ico:'🦎', cost:110, hp:215, dmg:18, rng:215, cd:0.95, spd:300, size:17},
-  matron:    {name:'여제', ico:'🧬', cost:210, hp:470, dmg:26, rng:49,  cd:0.95, spd:205, size:22, melee:true},
-  thornqueen:{name:'가시여왕',   ico:'🐛', cost:330, hp:360, dmg:42, rng:300, cd:1.70, spd:125, size:22, splash:150},
+  hydra:     {name:'스파이크',      ico:'🦎', cost:110, hp:215, dmg:24, rng:215, cd:0.95, spd:300, size:17},   // 개별튜닝: 종족내 과약(0.45) → dmg18→24
+  matron:    {name:'여제', ico:'🧬', cost:210, hp:410, dmg:22, rng:49,  cd:0.95, spd:205, size:22, melee:true},   // 개별튜닝: 종족내 과강(1.48) → hp470→410·dmg26→22
+  thornqueen:{name:'가시여왕',   ico:'🐛', cost:330, hp:360, dmg:52, rng:300, cd:1.70, spd:125, size:22, splash:150},   // 개별튜닝: 종족내 과약(0.39) → dmg42→52
   // ── 건설지 확장 유닛(직스 밸런스) — 모델 기존 재사용 ──
   ghost:     {name:'저격수',      ico:'👻', cost:130, hp:150, dmg:28, sdmg:34, scd:0.9, rng:260, cd:1.40, spd:300, size:15},   // 유니온 저격 보병 · 밸런스: hp150·실효공격34·실효쿨0.9(scd, 공속↑)
-  snapper:   {name:'척후병',    ico:'🐛', cost:90,  hp:130, dmg:14, rng:41, cd:0.70, spd:360, size:15, melee:true},   // 스웜 고속 소형 다수(근접 — 낫 베기)
-  stinger:   {name:'자폭충',    ico:'🐝', cost:160, hp:90,  dmg:40, rng:210, cd:1.60, spd:300, size:15, splash:120},   // 스웜 광역 유리대포
+  snapper:   {name:'척후병',    ico:'🐛', cost:90,  hp:150, dmg:19, rng:41, cd:0.70, spd:360, size:15, melee:true},   // 스웜 고속 소형 다수(근접) · 개별튜닝: 과약(0.32) → hp130→150·dmg14→19
+  stinger:   {name:'자폭충',    ico:'🐝', cost:160, hp:90,  dmg:52, rng:210, cd:1.60, spd:300, size:15, splash:120},   // 스웜 광역 유리대포 · 개별튜닝: 과약(0.35) → dmg40→52
   falcon:    {name:'팔콘',      ico:'🦅', cost:150, hp:170, dmg:22, rng:240, cd:1.00, spd:320, size:17},   // 에테리얼 기동 원거리
   // ── 관리자 맵 유닛 이식(건설지 확장) — id=gmodel 키 → 모델·이펙트·부양 자동 연결 ──
   // 🛡 유니온 확장
@@ -11272,16 +11272,16 @@ const STK_UNITS={
   dreadnought:{name:'전함',ico:'💥', cost:360, hp:560, dmg:60, sdmg:48, rng:300, cd:2.20, spd:130, size:24, splash:150},   // 공중 중포함 · 밸런스: 무패라 hp620→560·실효공격52→48(sdmg)
   aegis:     {name:'지원 정찰기',    ico:'🛡', cost:480, hp:1400,dmg:14, rng:230, cd:1.20, spd:110, size:22},   // 공중 방벽(초고체력 저공격)
   // 🦎 스웜 확장
-  venom:     {name:'산성충',      ico:'🐛', cost:130, hp:200, dmg:22, rng:230, cd:1.00, spd:260, size:18},   // 공중 산성 포자
+  venom:     {name:'산성충',      ico:'🐛', cost:130, hp:200, dmg:29, rng:230, cd:1.00, spd:260, size:18},   // 공중 산성 포자 · 개별튜닝: 과약(0.42) → dmg22→29
   medusa:    {name:'군단여왕',    ico:'🐍', cost:240, hp:400, dmg:34, rng:240, cd:1.30, spd:180, size:20, splash:120},   // 밸런스: 33% → hp340→400   // 공중 사이오닉 광역
   wyvern:    {name:'비행충',    ico:'🐲', cost:420, hp:720, dmg:70, sdmg:95, rng:250, cd:1.30, spd:240, size:22},   // 공중 준보스(모프 유닛·희소) · 강한 프리미엄 유지: hp720·실효공격95(sdmg)
   behemoth:  {name:'포격충',  ico:'🦣', cost:620, hp:900, dmg:95, sdmg:150, rng:300, cd:2.40, spd:120, size:26, splash:180},   // 밸런스: 83% → hp1100→900·실효공격190→150(sdmg)   // 공중 대형 보스(광역)
   // 🔮 에테리얼 확장
   skydancer: {name:'요격기',ico:'💃', cost:180, hp:240, dmg:24, rng:250, cd:1.00, spd:320, size:18},   // 공중 고속 기동
-  archangel: {name:'모함',  ico:'👼', cost:420, hp:460, dmg:32, sdmg:18, scd:1.4, rng:280, cd:1.60, spd:140, size:24, splash:150},   // 밸런스: 100% 무패(빠른 스플래시) → hp460·공격18·실효쿨0.73→1.4(scd, 공속 반감)   // 공중 성채(광역)
+  archangel: {name:'모함',  ico:'👼', cost:420, hp:460, dmg:32, sdmg:28, scd:1.4, rng:280, cd:1.60, spd:140, size:24, splash:150},   // 공중 성채(광역) · 개별튜닝: 종족내 과약(0.48) → sdmg18→28
   kronos:    {name:'전함',  ico:'⏳', cost:340, hp:520, dmg:42, rng:300, cd:1.80, spd:150, size:22, splash:140},   // 공중 시공 포격(광역)
   // ── 신규 전투 유닛(6a7cff7 이식) — 근접형 3종 · 지원형(메딕·라바·하이템플러)은 무공격이라 직스 생산 제외(연습 랩 전용) ──
-  broodling:  {name:'스웜링',  ico:'🐛', cost:70,  hp:80,   dmg:12, rng:60, cd:0.60, spd:380, size:12, melee:true},   // 스웜 초저가 고속 근접 다수
+  broodling:  {name:'스웜링',  ico:'🐛', cost:70,  hp:105,  dmg:17, rng:60, cd:0.60, spd:380, size:12, melee:true},   // 스웜 초저가 고속 근접 다수 · 개별튜닝: 극단 과약(0.10) → hp80→105·dmg12→17
   ultralisk:  {name:'돌격괴수',ico:'🐂', cost:560, hp:1100, dmg:80, rng:80, cd:1.40, spd:150, size:26, melee:true},   // 스웜 대형 근접 보스(고체력)
   dark_templar:{name:'다크세이지', ico:'🌑', cost:210, hp:240,  dmg:48, rng:62, cd:1.05, spd:320, size:15, melee:true},   // 에테리얼 고화력 고속 근접 암살
 };
@@ -14182,7 +14182,7 @@ function strikeRngMul(u){ return (u.skillOn&&u.skillOn.siege)?(SKILLS.siege.rngM
 // (제거) strikeSpdMul — 미사용(스팀 속도 로직은 14x 인라인으로 중복)
 // 종족 스탯 정규화 배율 — 파워 배수(중립1) 대신 "세기를 스탯으로" 조절하는 단일 노브.
 //   스폰 수 차이(스웜 다수·에테리얼 소수)를 상쇄해 army 밸런스 ~50%. hp·공격 양쪽에 곱(전투 소스 strikeUnitStats에만 반영 → 표시=전투 일치).
-const STK_RACE_STAT={ union:1.00, swarm:0.85, aetherial:1.10 };
+const STK_RACE_STAT={ union:1.00, swarm:0.83, aetherial:1.15 };   // 개별튜닝(blade·dragoon 너프 등)으로 이동한 종족 총합 재센터링
 function strikeUnitStats(id){ const s=STK_UNITS[id], d=U[id]||{};
   const rs=(typeof RACE_OF!=='undefined'&&STK_RACE_STAT[RACE_OF[id]])||1;   // 종족 세기 배율(스탯)
   const rng=(d.range!=null?d.range:0.2)*STK_RNG_MUL;                       // 사거리
