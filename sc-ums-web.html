@@ -4195,7 +4195,9 @@ function _frActHTML(f){ const a=f.act||{};
   const badge=a.type==='rpg'?'<span class="frBadge rpg">RPG</span>':'<span class="frBadge usemap">USEMAP</span>';
   if(f.status==='away')    // 온라인이지만 게임 내 5분+ 무터치 → 즉시 (자리비움 - N분)
     return badge+'<span class="frActTx">'+escHtml(a.map?a.map+' ':'')+'<span class="frAway">(자리비움 - '+(a.idle||5)+'분)</span></span>';
-  const body=escHtml((a.map?a.map+' ':'')+(a.label||''));   // 진행 중인 게임 + 상태
+  if(a.type==='rpg')       // RPG = 플레이타임만 표기
+    return badge+'<span class="frActTx">'+(a.pt?escHtml('('+_ptFmt(a.pt)+')'):'플레이 중')+'</span>';
+  const body=escHtml((a.map?a.map+' ':'')+'플레이 중');   // USEMAP = 게임명 + '플레이 중'(통일)
   const pt=a.pt?' <span class="frPt">('+_ptFmt(a.pt)+')</span>':'';   // 플레이타임 괄호
   return badge+'<span class="frActTx">'+body+pt+'</span>'; }
 const _FR_CHAT_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5a7.5 7.5 0 0 1-10.8 6.75L4 20l1.3-4.9A7.5 7.5 0 1 1 20 11.5z"/></svg>';
