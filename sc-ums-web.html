@@ -2147,13 +2147,13 @@
   #hubScreen{flex-direction:column}
   /* 상단 유저 프로필 바 */
   .hubTop{flex:none;width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px 4px;box-sizing:border-box}
-  .hubProf{display:flex;align-items:center;gap:9px;min-width:0}
-  .hubAv{width:34px;height:34px;flex:none;display:flex;align-items:center;justify-content:center;font-size:18px;border-radius:50%;
+  .hubProf{display:flex;align-items:center;gap:7px;min-width:0}
+  .hubAv{width:29px;height:29px;flex:none;display:flex;align-items:center;justify-content:center;font-size:16px;border-radius:50%;
     background:radial-gradient(circle at 50% 35%,rgba(120,140,175,.25),rgba(10,12,18,.9));border:1px solid var(--metal-edge)}
-  .hubPName{display:flex;flex-direction:column;gap:2px;min-width:0;line-height:1}
-  .hubPName b{font-size:13.5px;font-weight:800;color:#eaf1fb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:38vw}
-  .hubLv{font-size:10px;font-weight:800;letter-spacing:.4px;color:var(--gold)}
-  .hubTopR{display:flex;align-items:center;gap:9px;flex:none}
+  .hubPName{display:flex;flex-direction:column;gap:1px;min-width:0;line-height:1;align-items:flex-end}
+  .hubPName b{font-size:12px;font-weight:800;color:#eaf1fb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:24vw}
+  .hubLv{font-size:9px;font-weight:800;letter-spacing:.4px;color:var(--gold)}
+  .hubTopR{display:flex;align-items:center;gap:8px;flex:none}
   .hubCoin{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:800;color:#eaf1fb;padding:6px 11px;border-radius:var(--r-lg);
     background:rgba(255,210,74,.09);border:1px solid rgba(255,210,74,.32)}
   .hubCoinIco{color:var(--gold);font-size:13px;line-height:1}
@@ -2161,23 +2161,23 @@
     background:rgba(255,255,255,.04);border:1px solid var(--metal-edge);border-radius:var(--r-lg);transition:all .16s}
   .hubGear svg{width:17px;height:17px}
   .hubGear:hover{color:#fff;background:rgba(255,255,255,.1);border-color:var(--glass-edge)}
-  /* 브랜드+선택 = 상단 컴팩트 블록(하단 소셜에 공간 양보) */
-  .hubCenter{flex:none;width:100%;display:flex;flex-direction:column;align-items:center;gap:18px;padding:2.2vh 0 0.5vh}
-  /* 브랜드(엠블럼 + 게임명 2톤) */
-  .hubBrand{flex:none;display:flex;flex-direction:column;align-items:center;gap:6px}
+  /* 좌상단 로고(엠블럼 + 게임명 축소) */
+  .hubLogo{display:flex;align-items:center;gap:8px;min-width:0}
   .hubEmblem{color:var(--neon);line-height:0}
-  .hubEmblem svg{width:38px;height:38px;filter:drop-shadow(0 0 9px var(--neon-glow))}
-  .hubBrandTx{font-size:23px;font-weight:800;letter-spacing:4px;text-shadow:0 2px 5px #000}
-  .hubBrand .opT1{color:#f3f6fb;text-shadow:0 0 10px rgba(255,255,255,.22),0 2px 4px #000}
-  .hubBrand .opT2{color:var(--neon);text-shadow:0 0 16px var(--neon-glow),0 2px 4px #000}
+  .hubLogo .hubEmblem svg{width:23px;height:23px;filter:drop-shadow(0 0 6px var(--neon-glow))}
+  .hubBrandTx{font-size:15px;font-weight:800;letter-spacing:1.5px;text-shadow:0 1px 3px #000;white-space:nowrap}
+  .hubBrandTx .opT1{color:#f3f6fb}
+  .hubBrandTx .opT2{color:var(--neon);text-shadow:0 0 11px var(--neon-glow)}
+  /* 선택 영역 = 상단 컴팩트 블록(하단 소셜에 공간 양보) */
+  .hubCenter{flex:none;width:100%;display:flex;flex-direction:column;align-items:center;padding:1.6vh 0 0.5vh}
   /* 게임명 아래 나머지 공간 중앙에 선택 영역 */
   .hubBody{flex:none;width:100%;display:flex;flex-direction:column;align-items:center;gap:20px;padding:0 18px}
   .hubSel{display:flex;align-items:center;gap:11px;font-size:13px;font-weight:800;letter-spacing:2px;color:#c7d0db}
   .hubSel::before,.hubSel::after{content:'';height:1px;width:32px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.30),transparent)}
   .hubCards{display:flex;flex-direction:column;gap:13px;width:100%;max-width:360px}   /* 세로 스택 */
   /* 카드 = 유즈맵 목록(.mapItem) 언어: 전체 폭 가로 행(썸네일 좌 · 내용 우 · 화살표) + 각진 네온 프레임 */
-  .hubCard{--ca:#5cd6ff;position:relative;display:flex;flex-direction:row;align-items:center;gap:14px;cursor:pointer;text-align:left;
-    padding:15px 16px;font-family:inherit;color:#dbe3ec;overflow:hidden;
+  .hubCard{--ca:#5cd6ff;position:relative;display:flex;flex-direction:row;align-items:center;gap:15px;cursor:pointer;text-align:left;min-height:114px;
+    padding:19px 17px;font-family:inherit;color:#dbe3ec;overflow:hidden;   /* 세로 1.2배(min-height+패딩) */
     clip-path:polygon(13px 0,100% 0,100% calc(100% - 13px),calc(100% - 13px) 100%,0 100%,0 13px);   /* 각진 HUD 외형 */
     background:linear-gradient(160deg,rgba(28,34,48,.94),rgba(9,12,19,.97));
     box-shadow:0 12px 30px -16px #000;transition:transform .1s,box-shadow .18s}
@@ -2191,10 +2191,10 @@
   .hubUse{--ca:#5cd6ff}
   .hubRpg{--ca:#ffc85a}
   /* 글로우 썸네일(moThumb 언어 축소판) */
-  .hubcThumb{position:relative;flex:none;width:64px;height:64px;display:flex;align-items:center;justify-content:center;border-radius:14px;
+  .hubcThumb{position:relative;flex:none;width:72px;height:72px;display:flex;align-items:center;justify-content:center;border-radius:15px;
     background:radial-gradient(circle at 50% 38%,color-mix(in srgb,var(--ca) 22%,transparent),rgba(9,12,18,.9) 74%);
     border:1px solid var(--metal-edge);box-shadow:inset 0 0 20px -6px var(--ca),0 5px 14px -10px #000}
-  .hubIco{font-size:33px;line-height:1;filter:drop-shadow(0 2px 5px rgba(0,0,0,.5))}
+  .hubIco{font-size:37px;line-height:1;filter:drop-shadow(0 2px 5px rgba(0,0,0,.5))}
   .hubcMain{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
   .hubcName{font-size:18px;font-weight:800;color:#fff;letter-spacing:1.5px;line-height:1;text-shadow:0 0 13px color-mix(in srgb,var(--ca) 55%,transparent),0 2px 4px #000}
   .hubcSub{font-size:11.5px;color:var(--txt-mute);letter-spacing:.2px;line-height:1.35;word-break:keep-all}
@@ -2217,6 +2217,12 @@
   .hsHTitle svg{width:15px;height:15px;color:#8fa0b2}
   .hsOn{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;color:#c2eccd}
   .hsOnDot{width:6px;height:6px;border-radius:50%;background:#5dff8f;box-shadow:0 0 6px rgba(93,255,143,.85);animation:mcPulse 1.8s ease-in-out infinite}
+  /* 친구 분류 탭(전체/유즈맵/RPG/친한친구) */
+  .hsTabs{flex:none;display:flex;gap:6px;padding:0 1px 8px}
+  .hsTabBtn{flex:1;padding:7px 4px;border-radius:9px;font-family:inherit;font-size:11px;font-weight:800;letter-spacing:.2px;cursor:pointer;
+    color:var(--txt-mute);background:var(--glass);border:1px solid var(--metal-edge);transition:all .12s}
+  .hsTabBtn:hover{color:#dfe7f0;border-color:var(--glass-edge)}
+  .hsTabBtn.on{color:#fff;background:rgba(255,255,255,.13);border-color:var(--glass-edge);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
   .hsList{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:1px;scrollbar-width:thin}
   .hsList::-webkit-scrollbar{width:4px}.hsList::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:var(--r-bar)}
   .frRow{flex:none;display:flex;align-items:center;gap:11px;padding:8px 11px;border-radius:11px;cursor:pointer;
@@ -2228,10 +2234,11 @@
     background:radial-gradient(circle at 50% 35%,rgba(120,140,175,.22),rgba(10,12,18,.9));border:1px solid var(--metal-edge)}
   .frDot{position:absolute;right:-1px;bottom:-1px;width:11px;height:11px;border-radius:50%;border:2.5px solid #0c0f16}
   .frDot.active{background:#5dff8f;box-shadow:0 0 5px rgba(93,255,143,.7)}
-  .frDot.away{background:#ffb454}
+  .frDot.away{background:#ff5c5c;box-shadow:0 0 5px rgba(255,92,92,.7)}   /* 자리비움 = 빨강 */
   .frDot.offline{background:#5b6675}
   .frMain{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
   .frName{font-size:13px;font-weight:800;color:#eaf1fb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .frFav{color:var(--gold);font-size:9.5px;margin-left:4px;vertical-align:1px}
   .frAct{font-size:10.5px;color:#93a0af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:5px;min-width:0}
   .frBadge{flex:none;font-weight:800;padding:1.5px 6px;border-radius:6px;font-size:8.5px;letter-spacing:.2px}
   .frBadge.usemap{color:#bfe9ff;background:rgba(92,214,255,.14);border:1px solid rgba(92,214,255,.3)}
@@ -2250,7 +2257,7 @@
   .dmAv{position:relative;width:38px;height:38px;flex:none;display:flex;align-items:center;justify-content:center;font-size:19px;border-radius:50%;
     background:radial-gradient(circle at 50% 35%,rgba(120,140,175,.22),rgba(10,12,18,.9));border:1px solid var(--metal-edge)}
   .dmStat{position:absolute;right:-1px;bottom:-1px;width:11px;height:11px;border-radius:50%;border:2.5px solid #0c0f16;background:#5b6675}
-  .dmStat.active{background:#5dff8f}.dmStat.away{background:#ffb454}
+  .dmStat.active{background:#5dff8f}.dmStat.away{background:#ff5c5c}
   .dmWho{display:flex;flex-direction:column;gap:2px;min-width:0}
   .dmWho b{font-size:15px;font-weight:800;color:#eaf1fb}
   .dmSt{font-size:10.5px;color:#93a0af}
@@ -3195,23 +3202,19 @@
 
   <!-- 🎯 시작 선택 화면: 유즈맵 / 내 캐릭터(RPG) -->
   <div id="hubScreen" class="appScreen spaceBg hide">
-    <!-- 상단 유저 프로필 바 -->
+    <!-- 상단 바: 좌=로고 / 우=프로필·코인·설정 -->
     <div class="hubTop">
-      <div class="hubProf">
-        <span class="hubAv">👤</span>
-        <span class="hubPName"><b id="hubNick">게스트</b><span class="hubLv" id="hubLevel">Lv.1</span></span>
+      <div class="hubLogo">
+        <span class="hubEmblem"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M24 4 L40 9 V24 C40 33 33 39.5 24 43 C15 39.5 8 33 8 24 V9 Z"/><path d="M24 15 L27 23 L24 31 L21 23 Z" fill="currentColor" stroke="none"/><path d="M17 20 L24 23 L31 20" stroke-width="1.7"/></svg></span>
+        <span class="hubBrandTx"><span class="opT1">STAR </span><span class="opT2">WAR</span></span>
       </div>
       <div class="hubTopR">
+        <div class="hubProf"><span class="hubAv">👤</span><span class="hubPName"><b id="hubNick">게스트</b><span class="hubLv" id="hubLevel">Lv.1</span></span></div>
         <span class="hubCoin"><span class="hubCoinIco">◎</span><b id="hubCoins">0</b></span>
         <button class="hubGear" data-sfx="ui_open" onclick="openAppSettings()" title="설정" aria-label="설정"><svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg></button>
       </div>
     </div>
     <div class="hubCenter">
-    <!-- 브랜드(엠블럼 + 게임명) -->
-    <div class="hubBrand">
-      <span class="hubEmblem"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M24 4 L40 9 V24 C40 33 33 39.5 24 43 C15 39.5 8 33 8 24 V9 Z"/><path d="M24 15 L27 23 L24 31 L21 23 Z" fill="currentColor" stroke="none"/><path d="M17 20 L24 23 L31 20" stroke-width="1.5"/></svg></span>
-      <span class="hubBrandTx"><span class="opT1">STAR </span><span class="opT2">WAR</span></span>
-    </div>
     <div class="hubBody">
       <div class="hubSel">게임 선택</div>
       <div class="hubCards">
@@ -3241,6 +3244,12 @@
       <div class="hsHead">
         <span class="hsHTitle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.6" r="2.7"/><path d="M3.8 18.8c0-2.9 2.3-4.9 5.2-4.9s5.2 2 5.2 4.9"/><circle cx="16.9" cy="9.2" r="2.1"/><path d="M15.4 14.3c2.4.3 4.6 2 4.6 4.5"/></svg>친구</span>
         <span class="hsOn"><i class="hsOnDot"></i><b id="hubFriendOn">0</b> 접속</span>
+      </div>
+      <div class="hsTabs" id="hubFriendTabs">
+        <button class="hsTabBtn on" data-fil="all" onclick="setFriendFilter('all',this)">전체</button>
+        <button class="hsTabBtn" data-fil="usemap" onclick="setFriendFilter('usemap',this)">유즈맵</button>
+        <button class="hsTabBtn" data-fil="rpg" onclick="setFriendFilter('rpg',this)">RPG</button>
+        <button class="hsTabBtn" data-fil="close" onclick="setFriendFilter('close',this)">친한친구</button>
       </div>
       <div class="hsList" id="hubFriends"></div>
     </div>
@@ -4166,37 +4175,49 @@ function renderHub(){ try{
   if(typeof renderFriends==='function') renderFriends();
 }catch(e){} }
 // ── 하단 소셜: 친구 목록 + DM(현재 데모 데이터 — 실제 친구/프레즌스 연동은 별도 백엔드) ──
+//   status: active(초록) / away(빨강=게임 내 5분+ 무터치 자리비움) / offline(회색) · close=친한친구 · act.type=usemap|rpg|off
 const HUB_FRIENDS=[
-  { name:'별빛사냥꾼', av:'🦊', status:'active',  act:{type:'usemap', map:'네모네모 디펜스', label:'플레이 중'} },
-  { name:'NovaWolf',  av:'🐺', status:'active',  act:{type:'usemap', map:'오토배틀',       label:'대전 중'} },
-  { name:'모험가_K',  av:'🐱', status:'active',  act:{type:'rpg',                          label:'캐릭터 육성 중'} },
-  { name:'철수123',   av:'🐸', status:'away',    act:{type:'lobby',                        label:'로비에서 대기'} },
-  { name:'수면중',    av:'🐼', status:'away',    act:{type:'idle',                         label:'자리 비움'} },
-  { name:'구름',      av:'🦉', status:'offline', act:{type:'off',                          label:'오프라인'} },
-  { name:'다크나이트',av:'🐲', status:'offline', act:{type:'off',                          label:'2시간 전 접속'} },
+  { name:'별빛사냥꾼', av:'🦊', status:'active',  close:true,  act:{type:'usemap', map:'네모네모 디펜스', label:'플레이 중'} },
+  { name:'NovaWolf',  av:'🐺', status:'active',  close:false, act:{type:'usemap', map:'오토배틀',       label:'대전 중'} },
+  { name:'모험가_K',  av:'🐱', status:'active',  close:true,  act:{type:'rpg',                          label:'캐릭터 육성 중'} },
+  { name:'느긋한곰',  av:'🐻', status:'away',    close:false, act:{type:'usemap', map:'네모네모 디펜스', idle:7} },   // 게임 내 자리비움
+  { name:'슬리피H',   av:'🦁', status:'away',    close:true,  act:{type:'rpg',    map:'RPG 마을',        idle:12} },   // RPG 자리비움
+  { name:'구름',      av:'🦉', status:'offline', close:true,  act:{type:'off',                          label:'2시간 전 접속'} },
+  { name:'다크나이트',av:'🐲', status:'offline', close:false, act:{type:'off',                          label:'오프라인'} },
 ];
 function _frActHTML(f){ const a=f.act||{};
   if(f.status==='offline') return '<span class="frActTx">'+escHtml(a.label||'오프라인')+'</span>';
+  if(f.status==='away'){   // 온라인이지만 게임 내 5분+ 무터치 → 해당 게임에서 자리비움
+    const badge=a.type==='rpg'?'<span class="frBadge rpg">RPG</span>':'<span class="frBadge usemap">USEMAP</span>';
+    return badge+'<span class="frActTx">'+escHtml((a.map?a.map+' · ':'')+'자리비움 ('+(a.idle||5)+'분 조작 없음)')+'</span>'; }
   if(a.type==='usemap')    return '<span class="frBadge usemap">USEMAP</span><span class="frActTx">'+escHtml((a.map?a.map+' ':'')+(a.label||''))+'</span>';
   if(a.type==='rpg')       return '<span class="frBadge rpg">RPG</span><span class="frActTx">'+escHtml(a.label||'')+'</span>';
   return '<span class="frActTx">'+escHtml(a.label||'')+'</span>'; }
 const _FR_CHAT_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5a7.5 7.5 0 0 1-10.8 6.75L4 20l1.3-4.9A7.5 7.5 0 1 1 20 11.5z"/></svg>';
-function renderFriends(){ const box=document.getElementById('hubFriends'); if(!box) return; box.innerHTML=''; let on=0;
-  HUB_FRIENDS.forEach((f,i)=>{ if(f.status!=='offline') on++;
+let _friendFil='all';
+function _friendMatch(f){ if(_friendFil==='all') return true; if(_friendFil==='close') return !!f.close; return (f.act&&f.act.type===_friendFil); }
+function setFriendFilter(fil, btn){ _friendFil=fil;
+  document.querySelectorAll('#hubFriendTabs .hsTabBtn').forEach(b=>b.classList.toggle('on', b===btn));
+  renderFriends(); if(typeof playSfx==='function') playSfx('ui_tab'); }
+function renderFriends(){ const box=document.getElementById('hubFriends'); if(!box) return; box.innerHTML='';
+  let on=0; HUB_FRIENDS.forEach(f=>{ if(f.status!=='offline') on++; });
+  const list=HUB_FRIENDS.filter(_friendMatch);
+  if(!list.length){ box.innerHTML='<div class="hsEmpty">해당하는 친구가 없어요.</div>'; }
+  else list.forEach(f=>{ const i=HUB_FRIENDS.indexOf(f);
     const el=document.createElement('div'); el.className='frRow'+(f.status==='offline'?' off':'');
     el.innerHTML='<span class="frAv">'+f.av+'<i class="frDot '+f.status+'"></i></span>'
-      +'<span class="frMain"><span class="frName">'+escHtml(f.name)+'</span><span class="frAct">'+_frActHTML(f)+'</span></span>'
+      +'<span class="frMain"><span class="frName">'+escHtml(f.name)+(f.close?'<span class="frFav">★</span>':'')+'</span><span class="frAct">'+_frActHTML(f)+'</span></span>'
       +'<span class="frChat">'+_FR_CHAT_SVG+'</span>';
     el.onclick=()=>openDM(i); box.appendChild(el); });
   const c=document.getElementById('hubFriendOn'); if(c) c.textContent=on; }
 // ── 친구 DM ──
 let _dmFriend=-1; const _dmMsgs={};
 function _seedDM(f){ if(f.status==='offline') return [{sys:1,t:'오프라인 상태예요. 보낸 메시지는 접속하면 전달돼요.'}];
-  const a=f.act||{}; let g='안녕! 뭐해?';
+  const a=f.act||{};
+  if(f.status==='away') return [{sys:1,t:(a.map?a.map+'에서 ':'')+(a.idle||5)+'분간 조작이 없어 자리비움 상태예요.'}];
+  let g='안녕! 뭐해?';
   if(a.type==='usemap') g='지금 '+(a.map||'유즈맵')+' 하는 중! 같이 할래?';
   else if(a.type==='rpg') g='마을에서 캐릭터 키우는 중이야 ㅎㅎ';
-  else if(a.type==='lobby') g='로비에서 방 기다리는 중~';
-  else if(a.type==='idle') g='(자리 비움)';
   return [{me:0,t:g}]; }
 function openDM(i){ const f=HUB_FRIENDS[i]; if(!f) return; _dmFriend=i;
   const nm=document.getElementById('dmName'); if(nm) nm.textContent=f.name;
