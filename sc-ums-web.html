@@ -3658,7 +3658,7 @@ const GACHA_TIERS = {   // 확률 합 = 1.000 (0.547+0.25+0.12+0.055+0.02+0.006+
   epic:      { name:'에픽',   prob:0.120, combine:true,     serverNotify:false },
   unique:    { name:'유니크', prob:0.055, combine:true,     serverNotify:false },
   legend:    { name:'레전드', prob:0.020, combine:true,     serverNotify:true  },
-  transcend: { name:'초월',   prob:0.006, combine:'recipe', serverNotify:true  },
+  transcend: { name:'초월',   prob:0.006, combine:true,     serverNotify:true  },
   god:       { name:'갓',     prob:0.002, combine:false,    serverNotify:true  },
 };
 const GACHA_TIER_ORDER = ['common','rare','epic','unique','legend','transcend','god'];
@@ -3704,14 +3704,8 @@ const GACHA_UNITS = {   // 4종 × 7등급 = 28 (이름 확정)
   sentinel_god: _gUnit('sentinel_god','센티넬','god','aetherial','single_rapid', {traits:['atkspd_buff','atk_buff']}),
   reaper_god:   _gUnit('reaper_god','스파이크','god','swarm','dot', {traits:['poison','slow']}),
 };
-// 초월 레시피(특수 조합 전용) — 합체존에 재료 유닛을 모으면 해당 초월 생성. 형식: 결과ID: [재료 gid 3개]
-// (기본: 특정 레전드 3개 → 특정 초월. 추후 혼합 레시피로 조정 가능)
-const TRANSCEND_RECIPE = {
-  phantom_t:   ['machinegun_l','machinegun_l','machinegun_l'],   // 화력병(레전드)×3 → 저격수(초월)
-  skyguard_t:  ['tank_l','tank_l','tank_l'],                     // 공성전차(레전드)×3 → 전투기(초월)
-  skydancer_t: ['blade_l','blade_l','blade_l'],                  // 광전사(레전드)×3 → 요격기(초월)
-  matron_t:    ['thornqueen_l','thornqueen_l','thornqueen_l'],   // 가시여왕(레전드)×3 → 여제(초월)
-};
+// 초월 레시피 폐지 — 레전드 3개도 단순 조합으로 초월(랜덤)이 된다. (빈 맵 유지: 참조 안전)
+const TRANSCEND_RECIPE = {};
 // 2단계 임시 매핑: 가챠 유닛 → 기존 유닛 ID(모델·성능). 실제 전용 모델·수치는 4단계에서 교체.
 const GACHA_PROXY = {
   ranger_c:'marine',  strider_c:'goliath', sentinel_c:'dragoon', reaper_c:'hydra',
@@ -3746,8 +3740,8 @@ const TIER_COLOR = { common:'#b8c0cc', rare:'#4aa8ff', epic:'#b06bff', unique:'#
 /* TIER_MUL → NEMO_BAL.tierMul */   // 레어=높은 기본뎀(초반 체감↑) / 초월·갓 기본 배율 소폭 하향(105→92, 270→235: 확률 상향 보상)
 /* UP_TIER_MUL → NEMO_BAL.upTierMul */   // 레어 업글배율=일반과 근접(중반엔 일반과 수렴) / 유니크는 에픽보다 확실히 높음 / 초월·갓 집중   // 레전드 13→9: 풀업 레전드가 20라운드를 깨지 않게(초월=클리어 라인 유지, 봇 시뮬 검증)   // 업그레이드 1회당 증가폭 등급 배율(기본딜 배율의 절반 강도)   // 등급당 ×2.2 — 등급 업=급격한 성장(설계: 초월 조합=클리어 라인, 갓=초반 캐리)
 function gachaTierMul(u){ return (u && u.gtier && TIER_MUL[u.gtier]) || 1; }
-// 단순 조합 사다리: 같은 유닛 3개 → 다음 등급 랜덤 1종. (legend↑는 단순조합 없음 — 초월=레시피, 갓=뽑기전용)
-const SIMPLE_COMBINE_TIERS = { common:'rare', rare:'epic', epic:'unique', unique:'legend', transcend:'god' };   // 초월 3개 → 갓 랜덤(조합으로 갓 획득 가능). 초월 모으기 자체가 어려워 갓은 자연히 희소
+// 단순 조합 사다리: 같은 유닛 3개 → 다음 등급 랜덤 1종. 갓까지 전부 단순 조합으로 도달(갓=최종).
+const SIMPLE_COMBINE_TIERS = { common:'rare', rare:'epic', epic:'unique', unique:'legend', legend:'transcend', transcend:'god' };   // 단순 조합으로 끝까지: 레전드 3개 → 초월 랜덤 / 초월 3개 → 갓 랜덤 (레시피 폐지)
 // 별은 등급별로 늘어나지 않음 — 같은 이름이 두 등급에 걸쳐 있어(일반·레어=레인저, 에픽·유니크=팬텀)
 // 강화형(레어·유니크)만 ★ 하나로 구분하는 단순 장치. 나머지(이름이 겹치지 않는 등급)는 별 없음.
 const UPGRADED_TIER = { rare:true, unique:true };
@@ -4352,7 +4346,7 @@ let _homeMode='select', _combTier=null, _combSig=''; let _selTierH=null, _selSig
 const LEGEND_TO_TRANSCEND={};   // 3-같은 레시피 역매핑(machinegun_l→phantom_t 등)
 for(const _res in TRANSCEND_RECIPE){ const _m=TRANSCEND_RECIPE[_res]; if(_m.length===3 && _m[0]===_m[1] && _m[1]===_m[2]) LEGEND_TO_TRANSCEND[_m[0]]=_res; }
 function combineResultFor(gid,gtier){ const nt=SIMPLE_COMBINE_TIERS[gtier]; if(nt) return {type:'simple', nextTier:nt};
-  if(LEGEND_TO_TRANSCEND[gid]) return {type:'transcend', id:LEGEND_TO_TRANSCEND[gid]}; return null; }   // 단순 3개 / 레전드→초월 레시피 / 그 외 조합 불가
+  if(LEGEND_TO_TRANSCEND[gid]) return {type:'transcend', id:LEGEND_TO_TRANSCEND[gid]}; return null; }   // 전부 단순 3개 조합(갓=최종=null) · 레시피 폐지(LEGEND_TO_TRANSCEND 빈 맵)
 function ownedCombineGroups(){ const grp={};   // gid별 묶음(고정·파견 제외) — 3개 이상 & 조합 결과 있는 것만
   for(const u of G.units){ if(u.fixed||u.atBoss||!u.gid) continue; (grp[u.gid]=grp[u.gid]||[]).push(u); }
   const out={}; for(const gid in grp){ if(grp[gid].length>=3 && combineResultFor(gid, grp[gid][0].gtier)) out[gid]=grp[gid]; } return out; }
@@ -5358,7 +5352,7 @@ function renderRallyArrows(){ const host=document.getElementById('vMain'); if(!h
       el.style.setProperty('--rc', TIER_COLOR[t]||'#fff'); attachRallyDrag(el, t); host.appendChild(el); }
     el.style.display='flex'; const r=G.rally[t]; el.style.left=(r.x*100)+'%'; el.style.top=(r.y*100)+'%'; });
 }
-// 자동 조합: 가장 낮은 등급부터 1건. 'simple'(레전드 이하 생성)만 → 레전드→초월(레시피)은 자동 제외
+// 자동 조합: 가장 낮은 등급부터 1건. 전 등급 단순 조합(갓=최종은 대상 없음 → 자연 제외)
 function autoCombineStep(){
   const groups=ownedCombineGroups(); let bestGid=null, bestRank=99;
   for(const gid in groups){ const list=groups[gid]; const res=combineResultFor(gid, list[0].gtier);
@@ -5443,7 +5437,7 @@ function _consumeUnits(con){ G.units=G.units.filter(x=>!con.has(x.uid)); G.sel=G
   if(window.M3D&&M3D.dropModels) M3D.dropModels([...con]); }   // 합성 소비: 유닛/선택/3D모델 제거
 function combine(){
   const inz=G.units.filter(u=>inZone(u)&&!u.hero&&!u.fixed);
-  // 1) 초월 레시피 우선 — 합체존에 재료가 다 모이면 해당 초월 생성
+  // 1) (레시피 폐지 — TRANSCEND_RECIPE 빈 맵이라 이 루프는 건너뜀. 참조 안전용으로 유지)
   const cnt={}; for(const u of inz){ if(u.gid) cnt[u.gid]=(cnt[u.gid]||0)+1; }
   for(const res in TRANSCEND_RECIPE){ const need={}; TRANSCEND_RECIPE[res].forEach(id=>need[id]=(need[id]||0)+1);
     if(Object.keys(need).every(id=>(cnt[id]||0)>=need[id])){
@@ -5454,10 +5448,10 @@ function combine(){
       refreshSelCard(); renderUnits(); updateHud(); return true;
     }
   }
-  // 2) 단순 조합 — 같은 유닛 3개 → 다음 등급 랜덤(legend↑ 제외) / 레거시=영웅
+  // 2) 단순 조합 — 같은 유닛 3개 → 다음 등급 랜덤(갓=최종 제외) / 레거시=영웅
   const grp={}; for(const u of inz){ const key=u.gid||('@'+u.id); (grp[key]=grp[key]||[]).push(u); }
   for(const k in grp){ const g=grp[k]; if(g.length<3) continue; const pick=g.slice(0,3), base=pick[0], con=new Set(pick.map(x=>x.uid));
-    if(base.gid){ const nt=SIMPLE_COMBINE_TIERS[base.gtier]; if(!nt) continue;   // 단순조합 대상 아님(legend↑) → 다른 그룹 시도
+    if(base.gid){ const nt=SIMPLE_COMBINE_TIERS[base.gtier]; if(!nt) continue;   // 단순조합 대상 아님(갓=최종) → 다른 그룹 시도
       const pool=gachaUnitsOfTier(nt), tgt=pool[Math.floor(Math.random()*pool.length)];   // 다음 등급 랜덤 1종
       _consumeUnits(con); const c=zoneCenter(); spawnGachaUnit(tgt.id, c.x, c.y);
       toast('⭐ '+tgt.displayName+' '+GACHA_TIERS[nt].name+' 진화!');
@@ -5470,7 +5464,7 @@ function combine(){
   }
   // 3) 안내
   const stuck=Object.values(grp).some(g=>g.length>=3 && g[0].gid && !SIMPLE_COMBINE_TIERS[g[0].gtier]);
-  toast(stuck ? 'ℹ️ 레전드↑는 단순 조합이 안 됩니다 (초월=특수 레시피 / 갓=뽑기 전용)' : 'ℹ️ 합체존에 같은 유닛 3개를 모으세요');
+  toast(stuck ? 'ℹ️ 갓은 최종 등급이라 더 조합되지 않습니다' : 'ℹ️ 합체존에 같은 유닛 3개를 모으세요');
   return false;
 }
 
