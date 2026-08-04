@@ -2161,13 +2161,13 @@
     background:rgba(255,255,255,.04);border:1px solid var(--metal-edge);border-radius:var(--r-lg);transition:all .16s}
   .hubGear svg{width:17px;height:17px}
   .hubGear:hover{color:#fff;background:rgba(255,255,255,.1);border-color:var(--glass-edge)}
-  /* 브랜드+선택을 한 그룹으로 화면 세로 중앙 배치(여백 균형) */
-  .hubCenter{flex:1;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:34px;padding:1vh 0 3vh}
+  /* 브랜드+선택 = 상단 컴팩트 블록(하단 소셜에 공간 양보) */
+  .hubCenter{flex:none;width:100%;display:flex;flex-direction:column;align-items:center;gap:18px;padding:2.2vh 0 0.5vh}
   /* 브랜드(엠블럼 + 게임명 2톤) */
-  .hubBrand{flex:none;display:flex;flex-direction:column;align-items:center;gap:8px}
+  .hubBrand{flex:none;display:flex;flex-direction:column;align-items:center;gap:6px}
   .hubEmblem{color:var(--neon);line-height:0}
-  .hubEmblem svg{width:44px;height:44px;filter:drop-shadow(0 0 9px var(--neon-glow))}
-  .hubBrandTx{font-size:25px;font-weight:800;letter-spacing:4px;text-shadow:0 2px 5px #000}
+  .hubEmblem svg{width:38px;height:38px;filter:drop-shadow(0 0 9px var(--neon-glow))}
+  .hubBrandTx{font-size:23px;font-weight:800;letter-spacing:4px;text-shadow:0 2px 5px #000}
   .hubBrand .opT1{color:#f3f6fb;text-shadow:0 0 10px rgba(255,255,255,.22),0 2px 4px #000}
   .hubBrand .opT2{color:var(--neon);text-shadow:0 0 16px var(--neon-glow),0 2px 4px #000}
   /* 게임명 아래 나머지 공간 중앙에 선택 영역 */
@@ -2210,6 +2210,62 @@
     background:color-mix(in srgb,var(--ca) 12%,rgba(255,255,255,.03));border:1px solid color-mix(in srgb,var(--ca) 34%,var(--metal-edge))}
   .hubcGo{flex:none;display:flex;align-items:center;justify-content:center;color:color-mix(in srgb,var(--ca) 82%,#fff)}
   .hubcGo svg{width:20px;height:20px;filter:drop-shadow(0 0 5px color-mix(in srgb,var(--ca) 60%,transparent))}
+  /* ── 하단 소셜 구역(친구 · 디스코드 느낌) ── */
+  .hubSocial{flex:1;min-height:0;width:100%;max-width:412px;margin:6px auto 0;display:flex;flex-direction:column;padding:10px 15px 12px;box-sizing:border-box}
+  .hsHead{flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 3px 9px}
+  .hsHTitle{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:800;letter-spacing:1.5px;color:#c7d0db}
+  .hsHTitle svg{width:15px;height:15px;color:#8fa0b2}
+  .hsOn{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;color:#c2eccd}
+  .hsOnDot{width:6px;height:6px;border-radius:50%;background:#5dff8f;box-shadow:0 0 6px rgba(93,255,143,.85);animation:mcPulse 1.8s ease-in-out infinite}
+  .hsList{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:1px;scrollbar-width:thin}
+  .hsList::-webkit-scrollbar{width:4px}.hsList::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:var(--r-bar)}
+  .frRow{flex:none;display:flex;align-items:center;gap:11px;padding:8px 11px;border-radius:11px;cursor:pointer;
+    background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.014));border:1px solid var(--metal-edge);transition:border-color .13s,background .13s,transform .1s}
+  .frRow:hover{border-color:var(--glass-edge);background:rgba(255,255,255,.07);transform:translateY(-1px)}
+  .frRow:active{transform:translateY(0)}
+  .frRow.off{opacity:.5}
+  .frAv{position:relative;width:37px;height:37px;flex:none;display:flex;align-items:center;justify-content:center;font-size:18px;border-radius:50%;
+    background:radial-gradient(circle at 50% 35%,rgba(120,140,175,.22),rgba(10,12,18,.9));border:1px solid var(--metal-edge)}
+  .frDot{position:absolute;right:-1px;bottom:-1px;width:11px;height:11px;border-radius:50%;border:2.5px solid #0c0f16}
+  .frDot.active{background:#5dff8f;box-shadow:0 0 5px rgba(93,255,143,.7)}
+  .frDot.away{background:#ffb454}
+  .frDot.offline{background:#5b6675}
+  .frMain{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .frName{font-size:13px;font-weight:800;color:#eaf1fb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .frAct{font-size:10.5px;color:#93a0af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:5px;min-width:0}
+  .frBadge{flex:none;font-weight:800;padding:1.5px 6px;border-radius:6px;font-size:8.5px;letter-spacing:.2px}
+  .frBadge.usemap{color:#bfe9ff;background:rgba(92,214,255,.14);border:1px solid rgba(92,214,255,.3)}
+  .frBadge.rpg{color:#ffe0a3;background:rgba(255,200,90,.13);border:1px solid rgba(255,200,90,.3)}
+  .frActTx{min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .frChat{flex:none;color:#7c8a99;display:flex;align-items:center;transition:color .13s}
+  .frChat svg{width:17px;height:17px}
+  .frRow:hover .frChat{color:#cfe0ec}
+  .hsEmpty{flex:none;text-align:center;color:#7a8390;font-size:11.5px;padding:18px 0;line-height:1.7}
+  /* ── 친구 DM 채팅 오버레이 ── */
+  .dmChat{position:absolute;inset:0;z-index:120;display:flex;flex-direction:column;background:linear-gradient(180deg,#0e1219,#070a10)}
+  .dmChat.hide{display:none}
+  .dmHead{flex:none;display:flex;align-items:center;gap:11px;padding:15px 14px 12px;border-bottom:1px solid var(--metal-edge);background:rgba(255,255,255,.02)}
+  .dmBack{width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#9fb0c2;background:rgba(255,255,255,.04);border:1px solid var(--metal-edge);border-radius:9px}
+  .dmBack svg{width:17px;height:17px}
+  .dmAv{position:relative;width:38px;height:38px;flex:none;display:flex;align-items:center;justify-content:center;font-size:19px;border-radius:50%;
+    background:radial-gradient(circle at 50% 35%,rgba(120,140,175,.22),rgba(10,12,18,.9));border:1px solid var(--metal-edge)}
+  .dmStat{position:absolute;right:-1px;bottom:-1px;width:11px;height:11px;border-radius:50%;border:2.5px solid #0c0f16;background:#5b6675}
+  .dmStat.active{background:#5dff8f}.dmStat.away{background:#ffb454}
+  .dmWho{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .dmWho b{font-size:15px;font-weight:800;color:#eaf1fb}
+  .dmSt{font-size:10.5px;color:#93a0af}
+  .dmBody{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:16px 14px}
+  .dmBody::-webkit-scrollbar{width:4px}.dmBody::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:var(--r-bar)}
+  .dmMsg{max-width:76%;padding:9px 12px;border-radius:13px;font-size:13px;line-height:1.42;word-break:break-word}
+  .dmMsg.them{align-self:flex-start;background:rgba(255,255,255,.06);border:1px solid var(--metal-edge);border-top-left-radius:4px;color:#dce4ee}
+  .dmMsg.me{align-self:flex-end;background:linear-gradient(180deg,#2f74b6,#1f5891);color:#fff;border-top-right-radius:4px}
+  .dmSys{align-self:center;font-size:10.5px;color:#7d8b98;font-style:italic;padding:2px 0}
+  .dmInputBar{flex:none;display:flex;gap:8px;padding:11px 12px;border-top:1px solid var(--metal-edge);background:rgba(255,255,255,.02)}
+  .dmInputBar input{flex:1;min-width:0;padding:11px 13px;border-radius:11px;background:rgba(0,0,0,.4);border:1px solid var(--metal-edge);color:#eaf1fb;font-family:inherit;font-size:13px;outline:none}
+  .dmInputBar input:focus{border-color:var(--neon-soft)}
+  .dmInputBar input::placeholder{color:#6f757d}
+  .dmSend{width:44px;flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;background:linear-gradient(180deg,#2f74b6,#1f5891);border:none;border-radius:11px}
+  .dmSend svg{width:18px;height:18px}
   /* ── 🏘 마을 ── */
   #townScreen{position:absolute;inset:0;z-index:60;display:flex;flex-direction:column}
   .twBar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:10px 12px;background:linear-gradient(180deg,rgba(13,18,28,.96),rgba(8,11,17,.9));border-bottom:1px solid var(--glass-edge)}
@@ -3180,6 +3236,28 @@
       </div>
     </div>
     </div>
+    <!-- 하단 소셜 구역(친구 · 디스코드 느낌) -->
+    <div class="hubSocial">
+      <div class="hsHead">
+        <span class="hsHTitle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.6" r="2.7"/><path d="M3.8 18.8c0-2.9 2.3-4.9 5.2-4.9s5.2 2 5.2 4.9"/><circle cx="16.9" cy="9.2" r="2.1"/><path d="M15.4 14.3c2.4.3 4.6 2 4.6 4.5"/></svg>친구</span>
+        <span class="hsOn"><i class="hsOnDot"></i><b id="hubFriendOn">0</b> 접속</span>
+      </div>
+      <div class="hsList" id="hubFriends"></div>
+    </div>
+  </div>
+
+  <!-- 💬 친구 DM 채팅(허브 소셜) -->
+  <div id="dmChat" class="dmChat hide">
+    <div class="dmHead">
+      <button class="dmBack" onclick="closeDM()" aria-label="뒤로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <span class="dmAv" id="dmAv"><i class="dmStat" id="dmStat"></i></span>
+      <span class="dmWho"><b id="dmName">친구</b><span class="dmSt" id="dmStTx">오프라인</span></span>
+    </div>
+    <div class="dmBody" id="dmBody"></div>
+    <div class="dmInputBar">
+      <input id="dmInput" type="text" placeholder="메시지 입력…" maxlength="200" autocomplete="off" onkeydown="if(event.key==='Enter')sendDM()">
+      <button class="dmSend" onclick="sendDM()" aria-label="전송"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.4 20.4 21 12 3.4 3.6 3.4 10l12 2-12 2z"/></svg></button>
+    </div>
   </div>
 
   <!-- 🏘 RPG 마을 -->
@@ -4085,7 +4163,58 @@ function renderHub(){ try{
   if(typeof initMapLive==='function') initMapLive();   // 접속수 시드(허브에서 첫 진입 시)
   let live=0; for(const id in _mapLive){ const o=_mapLive[id]; live+=(o.wait||0)+(o.play||0); }
   set('hubUseLive', live.toLocaleString('en-US'));
+  if(typeof renderFriends==='function') renderFriends();
 }catch(e){} }
+// ── 하단 소셜: 친구 목록 + DM(현재 데모 데이터 — 실제 친구/프레즌스 연동은 별도 백엔드) ──
+const HUB_FRIENDS=[
+  { name:'별빛사냥꾼', av:'🦊', status:'active',  act:{type:'usemap', map:'네모네모 디펜스', label:'플레이 중'} },
+  { name:'NovaWolf',  av:'🐺', status:'active',  act:{type:'usemap', map:'오토배틀',       label:'대전 중'} },
+  { name:'모험가_K',  av:'🐱', status:'active',  act:{type:'rpg',                          label:'캐릭터 육성 중'} },
+  { name:'철수123',   av:'🐸', status:'away',    act:{type:'lobby',                        label:'로비에서 대기'} },
+  { name:'수면중',    av:'🐼', status:'away',    act:{type:'idle',                         label:'자리 비움'} },
+  { name:'구름',      av:'🦉', status:'offline', act:{type:'off',                          label:'오프라인'} },
+  { name:'다크나이트',av:'🐲', status:'offline', act:{type:'off',                          label:'2시간 전 접속'} },
+];
+function _frActHTML(f){ const a=f.act||{};
+  if(f.status==='offline') return '<span class="frActTx">'+escHtml(a.label||'오프라인')+'</span>';
+  if(a.type==='usemap')    return '<span class="frBadge usemap">USEMAP</span><span class="frActTx">'+escHtml((a.map?a.map+' ':'')+(a.label||''))+'</span>';
+  if(a.type==='rpg')       return '<span class="frBadge rpg">RPG</span><span class="frActTx">'+escHtml(a.label||'')+'</span>';
+  return '<span class="frActTx">'+escHtml(a.label||'')+'</span>'; }
+const _FR_CHAT_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5a7.5 7.5 0 0 1-10.8 6.75L4 20l1.3-4.9A7.5 7.5 0 1 1 20 11.5z"/></svg>';
+function renderFriends(){ const box=document.getElementById('hubFriends'); if(!box) return; box.innerHTML=''; let on=0;
+  HUB_FRIENDS.forEach((f,i)=>{ if(f.status!=='offline') on++;
+    const el=document.createElement('div'); el.className='frRow'+(f.status==='offline'?' off':'');
+    el.innerHTML='<span class="frAv">'+f.av+'<i class="frDot '+f.status+'"></i></span>'
+      +'<span class="frMain"><span class="frName">'+escHtml(f.name)+'</span><span class="frAct">'+_frActHTML(f)+'</span></span>'
+      +'<span class="frChat">'+_FR_CHAT_SVG+'</span>';
+    el.onclick=()=>openDM(i); box.appendChild(el); });
+  const c=document.getElementById('hubFriendOn'); if(c) c.textContent=on; }
+// ── 친구 DM ──
+let _dmFriend=-1; const _dmMsgs={};
+function _seedDM(f){ if(f.status==='offline') return [{sys:1,t:'오프라인 상태예요. 보낸 메시지는 접속하면 전달돼요.'}];
+  const a=f.act||{}; let g='안녕! 뭐해?';
+  if(a.type==='usemap') g='지금 '+(a.map||'유즈맵')+' 하는 중! 같이 할래?';
+  else if(a.type==='rpg') g='마을에서 캐릭터 키우는 중이야 ㅎㅎ';
+  else if(a.type==='lobby') g='로비에서 방 기다리는 중~';
+  else if(a.type==='idle') g='(자리 비움)';
+  return [{me:0,t:g}]; }
+function openDM(i){ const f=HUB_FRIENDS[i]; if(!f) return; _dmFriend=i;
+  const nm=document.getElementById('dmName'); if(nm) nm.textContent=f.name;
+  const av=document.getElementById('dmAv'); if(av) av.innerHTML=f.av+'<i class="dmStat '+f.status+'" id="dmStat"></i>';
+  const st=document.getElementById('dmStTx'); if(st) st.textContent=(f.status==='active'?'온라인':(f.status==='away'?'자리 비움':'오프라인'));
+  if(!_dmMsgs[i]) _dmMsgs[i]=_seedDM(f);
+  renderDM();
+  const el=document.getElementById('dmChat'); if(el) el.classList.remove('hide');
+  if(typeof playSfx==='function') playSfx('ui_open'); }
+function closeDM(){ const el=document.getElementById('dmChat'); if(el) el.classList.add('hide'); if(typeof playSfx==='function') playSfx('ui_tab'); }
+function renderDM(){ const body=document.getElementById('dmBody'); if(!body) return; const msgs=_dmMsgs[_dmFriend]||[];
+  body.innerHTML=msgs.map(m=> m.sys ? ('<div class="dmSys">'+escHtml(m.t)+'</div>') : ('<div class="dmMsg '+(m.me?'me':'them')+'">'+escHtml(m.t)+'</div>')).join('');
+  body.scrollTop=body.scrollHeight; }
+const _DM_REPLIES=['ㅇㅋ!','좋아 콜 ㅋㅋ','지금 바로 갈게','잠만, 이거만 깨고!','오 그래?','굿굿 👍','ㅋㅋㅋㅋ','어 어디서 봐?'];
+function sendDM(){ const inp=document.getElementById('dmInput'); if(!inp||_dmFriend<0) return; const t=inp.value.trim(); if(!t) return;
+  const f=HUB_FRIENDS[_dmFriend], msgs=_dmMsgs[_dmFriend]||(_dmMsgs[_dmFriend]=[]);
+  msgs.push({me:1,t}); inp.value=''; renderDM();
+  if(f && f.status!=='offline'){ setTimeout(()=>{ if(_dmFriend<0) return; msgs.push({me:0,t:_DM_REPLIES[(Math.random()*_DM_REPLIES.length)|0]}); renderDM(); }, 650+Math.random()*700); } }
 function hubGoMap(){ if(typeof playSfx==='function') playSfx('ui_open'); openMapSelect(); }
 function mapToHub(){ if(typeof stopRoomsTick==='function') stopRoomsTick(); if(typeof playSfx==='function') playSfx('ui_close'); openHub(); }   // 유즈맵 선택 → 시작 선택(허브)로 복귀
 function hubGoTown(){ if(typeof playSfx==='function') playSfx('ui_open'); openTown(); }
