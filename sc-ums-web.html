@@ -2135,10 +2135,11 @@
   #hubScreen.hide,#townScreen.hide,#charScreen.hide{display:none}
   /* 장비 페이퍼돌 — 캐릭터 초상 + 신체 위치 슬롯 */
   /* ── 장비창 — 위: 아바타 + 부위별 슬롯 / 아래: 가방(늘 열림) ── */
-  .twCard.gearFull{height:82%}
+  .twCard.gearFull{width:372px;max-width:94vw;height:90%;max-height:90%}   /* 장비창만 화면을 넓게 쓴다 */
   .twCard.gearFull .twBody{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
   .gearWrap{flex:1;min-height:0;display:flex;flex-direction:column}
-  .pdWrap{position:relative;flex:0 0 270px;margin:9px 0 2px}
+  /* 아바타는 남는 높이를 먹되(flex-grow) 가방 최소 높이는 침범하지 못한다 */
+  .pdWrap{position:relative;flex:0 1 268px;min-height:190px;margin:8px 0 2px;transition:flex-basis .18s}
   .pdFig{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);height:100%;width:auto;color:#5f7183;opacity:.34}
   .pdFig svg{display:block;height:100%;width:auto}
   .pdSlot{position:absolute;transform:translate(-50%,-50%);width:46px;height:46px;border-radius:13px;cursor:pointer;
@@ -2159,13 +2160,23 @@
   .gearSum{flex:0 0 auto;text-align:center;font-size:12px;color:var(--txt-mute);padding:2px 0 8px}
   .gearSum b{color:#eaf1fb}
   /* 아래 구역: 가방 */
-  .bagSec{flex:1;min-height:0;display:flex;flex-direction:column;border-top:1px solid rgba(255,255,255,.09);padding-top:8px}
+  .bagSec{flex:1 1 0;min-height:226px;   /* basis 0 — 짐이 아무리 많아도 아바타 높이를 밀어내지 않는다 */
+display:flex;flex-direction:column;border-top:1px solid rgba(255,255,255,.09);padding-top:9px}
   .bagHead{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}
   .bagTtl{font-size:12px;font-weight:800;color:#aeb8c6}
   .gsSub{font-size:11px;font-weight:700;color:var(--txt-mute)}
   .igBack{min-width:0;padding:4px 10px;font-size:11px}
-  .bagBody{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
-  .igGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;padding-bottom:2px}
+  /* 스크롤은 .bagBody 안에서만 — 카드는 늘어나지 않는다. 겉면(.bagScroll)은 "더 있음" 그림자 담당 */
+  .bagScroll{position:relative;flex:1 1 auto;min-height:0;display:flex}
+  .bagScroll::after{content:'';position:absolute;left:0;right:0;bottom:0;height:26px;pointer-events:none;opacity:0;transition:opacity .18s;
+    background:linear-gradient(180deg,rgba(6,9,14,0),rgba(6,9,14,.72) 55%,rgba(6,9,14,.97))}
+  .bagScroll.more::after{opacity:1}
+  /* 상세 바(.igInfo)가 붙는 만큼 아바타를 줄여 격자 3줄을 지킨다 — bagSec에 큰 min을 주면 짧은 화면에서 카드를 넘친다 */
+  .gearWrap.hasInfo .pdWrap{flex:0 1 172px;min-height:118px}
+  .bagBody{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+  .bagBody::-webkit-scrollbar{width:4px}
+  .bagBody::-webkit-scrollbar-thumb{border-radius:3px;background:rgba(255,255,255,.18)}
+  .igGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;padding:0 3px 8px 0}
   .igCell{position:relative;aspect-ratio:1;border-radius:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;
     background:linear-gradient(180deg,rgba(24,31,44,.9),rgba(14,19,28,.9));border:1px solid var(--metal-edge)}
   .igCell .slIco{width:25px;height:25px}
@@ -4386,9 +4397,16 @@ function openTownPanel(zone){ _twZone=zone; _twChar.mode=null; _twPtr=null;   //
   const card=document.querySelector('#townPanel .twCard');
   if(card) card.classList.toggle('gearFull', zone==='gear');   // 장비창만 카드 높이를 고정해 위/아래 구역을 나눈다
   const t=document.getElementById('tpTitle'), z=TOWN_ZONES[zone]; if(t) t.textContent=(z&&z.title)||'시설';
-  refreshTownPanel(); popShow('townPanel'); }
+  refreshTownPanel(); popShow('townPanel'); bagScrollHint(); }   // 숨은 동안은 높이가 0이라 표시 후 한 번 더 재본다
 function refreshTownPanel(){ const body=document.getElementById('tpBody'), z=TOWN_ZONES[_twZone]; if(!body||!z) return;
-  body.innerHTML = z.render(); }
+  const old=body.querySelector('.bagBody'), keep=old?old.scrollTop:0;   // 다시 그려도 가방을 보던 위치를 유지
+  body.innerHTML = z.render();
+  const nb=body.querySelector('.bagBody'); if(nb&&keep) nb.scrollTop=keep;
+  bagScrollHint(); }
+// 가방에 더 볼 게 남았는지(스크롤 가능 여부)를 아래 그림자로 알린다
+function bagScrollHint(){ const s=document.querySelector('#tpBody .bagScroll'); if(!s) return;
+  const b=s.querySelector('.bagBody'); if(!b) return;
+  s.classList.toggle('more', b.scrollHeight-b.scrollTop-b.clientHeight>4); }
 function closeTownPanel(){ popHide('townPanel'); _twZone=null; _charDelId=null; _gearPick=null; _gearSel=null; }
 // ── 🧍 캐릭터 선택/생성 ─────────────────────────────────────────────────────
 // 렌더러는 한 벌뿐이고 입장 화면(#charScreen)과 마을 구역(보관소·생성소)이 같은 것을 쓴다. 복제 금지.
@@ -4576,14 +4594,14 @@ function renderProfGear(){ const c=CHAR(); if(!c) return '<div class="twHead">�
     .sort((a,b)=>(order.indexOf(b.tier)-order.indexOf(a.tier))||(profItemPower(b)-profItemPower(a)));
   let sum=0, n=0;
   for(const k in c.unit.gear){ const it=profFindItem(c.unit.gear[k]); if(it){ sum+=profItemPower(it); n++; } }
-  let h='<div class="gearWrap">'+_profPaperdoll(c)
+  const sel=profFindItem(_gearSel), hasInfo=!!(sel && (!slot || sel.slot===slot));
+  let h='<div class="gearWrap'+(hasInfo?' hasInfo':'')+'">'+_profPaperdoll(c)   // 상세 바가 뜨면 가방 몫을 늘린다
     +'<div class="gearSum">착용 <b>'+n+'</b>/'+Object.keys(PROF_GEAR).length+' · 장비 합계 <b>+'+sum+'</b></div>'
     +'<div class="bagSec"><div class="bagHead"><span class="bagTtl">'
       +(g? (g.name+' <span class="gsSub">'+list.length+'</span>') : ('가방 <span class="gsSub">'+profItems().length+'/'+PROF_INV_MAX+'</span>'))
       +'</span>'+(g?'<button class="twBtn igBack" onclick="profPickBack()">전체</button>':'')+'</div>'
-    +'<div class="bagBody">'+_profGearGrid(c, list)+'</div>';
-  const sel=profFindItem(_gearSel);
-  if(sel && (!slot || sel.slot===slot)) h+=_profGearInfo(c, sel);
+    +'<div class="bagScroll"><div class="bagBody" onscroll="bagScrollHint()">'+_profGearGrid(c, list)+'</div></div>';
+  if(hasInfo) h+=_profGearInfo(c, sel);
   return h+'</div></div>'; }
 // 잠긴 칸은 조건만 알려주고, 열린 칸은 가방을 그 칸으로 거른다(다시 누르면 전체)
 function profSlotTap(slot){ const g=PROF_GEAR[slot];

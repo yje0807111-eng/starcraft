@@ -218,6 +218,47 @@ async function groupLobby(){
     assert(document.querySelector('#townPanel .twCard').classList.contains('gearFull'),'장비창 카드 높이 고정이 안 걸림');
     townToHub();
     return '슬롯 '+slots.length+'칸(Lv.1 해금 '+open.length+') · 상하 2구역'; });
+  await step('장비창: 짐이 많아도 카드가 안 늘어나고 가방만 스크롤', ()=>{ skipIf(typeof bagScrollHint!=='function','가방 스크롤 없음');
+    const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0;
+    profCreateChar('ranger','짐');
+    const ks=Object.keys(PROF_GEAR), ts=PROF_ITEM_TIERS.map(t=>t.id);
+    for(let i=0;i<26;i++) profAddItem(profMakeItem(ks[i%ks.length], 1+(i%5), ts[i%ts.length]));
+    saveMeta(); _gearPick=null; _gearSel=null;
+    openTown(); openTownPanel('gear'); CHAR().level=40; refreshTownPanel();
+    const body=$('tpBody'), card=document.querySelector('#townPanel .twCard');
+    const sc=body.querySelector('.bagScroll'), bag=body.querySelector('.bagBody'), sec=body.querySelector('.bagSec');
+    assert(sc&&bag,'가방 스크롤 영역이 없음');
+    // ① 넘치는 건 가방 안에서만 — 카드 본문 자체는 늘어나지도 스크롤되지도 않는다
+    assert(body.scrollHeight<=body.clientHeight+2,'짐이 많으면 카드 본문이 늘어남: '+body.scrollHeight+'>'+body.clientHeight);
+    assert(bag.scrollHeight>bag.clientHeight+4,'가방이 스크롤되지 않음(격자가 안 넘침)');
+    assert(getComputedStyle(bag).overflowY==='auto','가방 본문이 스크롤 영역이 아님');
+    // ② 가방 구역이 카드 밖으로 잘리지 않는다
+    const cr=card.getBoundingClientRect(), sr=sec.getBoundingClientRect();
+    assert(sr.bottom<=cr.bottom+1,'가방 구역이 카드 아래로 잘림: '+Math.round(sr.bottom)+'>'+Math.round(cr.bottom));
+    assert(sr.top>=cr.top,'가방 구역이 카드 위로 벗어남');
+    assert(sr.height>=200,'가방 구역이 너무 눌림: '+Math.round(sr.height)+'px');
+    assert(cr.bottom<=innerHeight+1 && cr.top>=-1,'카드가 화면 밖으로 나감');
+    // ③ 더 볼 게 남았다는 표시
+    assert(sc.classList.contains('more'),'스크롤이 남았는데 "더 있음" 표시가 없음');
+    // 재렌더 뒤엔 아래 노드들이 떨어져 나가 크기가 0이 되므로 여기서 숫자를 잡아 둔다
+    const bh=bag.clientHeight, bs=bag.scrollHeight;
+    const rows=Math.floor(bh/(body.querySelector('.igCell').getBoundingClientRect().height+8));
+    assert(rows>=3,'가방이 한 화면에 3줄도 못 보여줌: '+rows+'줄('+Math.round(bh)+'px)');
+    // ④ 스크롤한 채로 아이템을 골라 다시 그려도 보던 위치를 유지한다
+    bag.scrollTop=90; bagScrollHint();
+    profSelItem(profItems()[12].iid);
+    const bag2=$('tpBody').querySelector('.bagBody');
+    assert(Math.abs(bag2.scrollTop-90)<=2,'다시 그리면 가방 스크롤이 맨 위로 튐: '+bag2.scrollTop);
+    // ⑤ 상세 바가 붙어도 카드를 넘치지 않고 격자 3줄은 남는다
+    assert($('tpBody').querySelector('.igInfo'),'고른 아이템 상세가 없음');
+    assert($('tpBody').querySelector('.gearWrap.hasInfo'),'상세가 떴는데 hasInfo 배치가 아님');
+    const sec2=$('tpBody').querySelector('.bagSec'), cr2=card.getBoundingClientRect();
+    assert(sec2.getBoundingClientRect().bottom<=cr2.bottom+1,
+      '상세 바가 붙자 가방이 카드를 넘침: '+Math.round(sec2.getBoundingClientRect().bottom)+'>'+Math.round(cr2.bottom));
+    const step2=$('tpBody').querySelector('.igCell').getBoundingClientRect().height+8;
+    assert(Math.floor(bag2.clientHeight/step2)>=3,'상세를 열면 가방이 3줄 미만: '+Math.floor(bag2.clientHeight/step2)+'줄');
+    townToHub();
+    return '가방 '+Math.round(bh)+'px에 '+rows+'줄 · 내용 '+bs+'px'; });
   await step('던전: 도전 가능 층이 레벨로 열린다', ()=>{ skipIf(typeof dgFloorCap!=='function','층 해금 없음');
     const p=PROF(); p.chars.length=0; p.curId='';
     const c=profCreateChar('ranger','층'); c.level=1;
