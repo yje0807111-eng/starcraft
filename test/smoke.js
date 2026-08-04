@@ -186,7 +186,7 @@ async function groupLobby(){
     const armor=profPageSlots('armor'), acc=profPageSlots('acc');
     assert(armor.length+acc.length===Object.keys(PROF_GEAR).length,'페이지에 안 들어간 슬롯이 있음');
     assert(armor.length>=5 && acc.length>=3,'페이지 분배가 한쪽으로 쏠림: '+armor.length+'/'+acc.length);
-    for(const k of ['necklace','earring','ring','belt']) assert(acc.indexOf(k)>=0,'장신구 쪽에 있어야 할 슬롯이 장비 쪽에 있음: '+k);
+    for(const k of ['necklace','earring','ring','belt','cape']) assert(acc.indexOf(k)>=0,'장신구 쪽에 있어야 할 슬롯이 장비 쪽에 있음: '+k);
     for(const k of ['weapon','helmet','top','bottom','shoes']) assert(armor.indexOf(k)>=0,'장비 쪽에 있어야 할 슬롯이 장신구 쪽에 있음: '+k);
     assert(slots.length===armor.length,'장비 페이지 슬롯 수 불일치: '+slots.length);
     const shown=[...slots].map(e=>e.getAttribute('title'));
