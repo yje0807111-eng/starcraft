@@ -190,8 +190,17 @@ async function groupLobby(){
     assert(slots.length===armor.length,'방어구 페이지 슬롯 수 불일치: '+slots.length);
     const shown=[...slots].map(e=>e.getAttribute('title'));
     for(const k of acc) assert(shown.indexOf(PROF_GEAR[k].name)<0,'방어구 페이지에 '+PROF_GEAR[k].name+'이(가) 나옴');
-    assert(body.querySelector('.pdNav .pdDot.on'),'페이지 표시(점)가 없음');
-    assert(body.querySelector('.pdNav .pdPgName').textContent===PROF_GEAR_PAGES[0].name,'페이지 이름이 안 맞음');
+    // 섹션 이동은 화살표 버튼이 아니라 바(세그먼트) — 바는 아바타 아래, 장비 합계는 위
+    const seg=body.querySelector('.pdNav .pdSeg'); assert(seg,'섹션 이동 바가 없음');
+    assert(seg.querySelectorAll('.pdSegBtn').length===PROF_GEAR_PAGES.length,'바에 섹션이 다 안 들어감');
+    assert(seg.querySelector('.pdSegInd'),'바에 현재 섹션 표시가 없음');
+    assert(seg.querySelector('.pdSegBtn.on').textContent===PROF_GEAR_PAGES[0].name,'바에 켜진 섹션이 안 맞음');
+    const kids=[...body.querySelector('.gearWrap').children].map(e=>e.className.split(' ')[0]);
+    assert(kids.join('>')==='gearSum>pdWrap>pdNav>bagSec','장비창 세로 순서가 다름: '+kids.join('>'));
+    // 바를 눌러 섹션 이동
+    seg.querySelectorAll('.pdSegBtn')[1].click();
+    assert(_gearPage===PROF_GEAR_PAGES[1].id,'바를 눌러도 섹션이 안 바뀜');
+    profGearPageAt(0);
     // ② 넘기면 장신구 페이지 — 슬롯이 통째로 갈린다
     profGearPageStep(1);
     assert(_gearPage===PROF_GEAR_PAGES[1].id,'페이지가 안 넘어감');
@@ -260,21 +269,33 @@ async function groupLobby(){
     // ③ 가방은 위 구역보다 작아야 한다(짐이 늘어도 아바타를 잡아먹지 않음)
     const pdr=body.querySelector('.pdWrap').getBoundingClientRect();
     assert(pdr.height>sr.height,'가방이 착용 구역보다 큼: 가방 '+Math.round(sr.height)+' / 착용 '+Math.round(pdr.height));
-    // ④ 더 볼 게 남았다는 표시
+    // ④ 더 볼 게 남았다는 표시 · 6그리드 · 분류
     assert(sc.classList.contains('more'),'스크롤이 남았는데 "더 있음" 표시가 없음');
     // 재렌더 뒤엔 아래 노드들이 떨어져 나가 크기가 0이 되므로 여기서 숫자를 잡아 둔다
     const bh=bag.clientHeight, bs=bag.scrollHeight;
     const cells=[...body.querySelectorAll('.igCell')].slice(0,8).map(e=>e.getBoundingClientRect());
     const perRow=cells.filter(r=>Math.abs(r.top-cells[0].top)<2).length;
-    assert(perRow===4,'가방이 4그리드가 아님: 한 줄 '+perRow+'칸');
-    const rows=Math.floor(bh/(cells[0].height+9));
-    assert(rows>=2,'가방이 한 화면에 2줄도 못 보여줌: '+rows+'줄('+Math.round(bh)+'px)');
-    // ④ 스크롤한 채로 아이템을 골라 다시 그려도 보던 위치를 유지한다
-    bag.scrollTop=90; bagScrollHint();
+    assert(perRow===6,'가방이 6그리드가 아님: 한 줄 '+perRow+'칸');
+    assert(cells[0].width<=54,'가방 칸이 너무 큼: '+Math.round(cells[0].width)+'px');
+    const rows=Math.floor(bh/(cells[0].height+6));
+    assert(rows>=3,'가방이 한 화면에 3줄도 못 보여줌: '+rows+'줄('+Math.round(bh)+'px)');
+    // 분류 칩 — 고른 분류의 장비만 남아야 한다
+    const cats=body.querySelectorAll('.bagHead .bagCat');
+    assert(cats.length===PROF_BAG_CATS.length,'가방 분류 칩 수 불일치: '+cats.length);
+    assert(body.querySelector('.bagCat.on').textContent===PROF_BAG_CATS[0].name,'기본 분류가 전체가 아님');
+    profBagCat('acc');
+    const accItems=profItems().filter(i=>PROF_GEAR[i.slot].part==='acc').length;
+    assert($('tpBody').querySelectorAll('.igCell').length===accItems,'분류를 골라도 방어구가 같이 나옴');
+    assert(accItems>0 && accItems<profItems().length,'분류 검사용 표본이 치우침');
+    profBagCat('');
+    assert($('tpBody').querySelectorAll('.igCell').length===profItems().length,'전체로 안 돌아옴');
+    // ⑤ 스크롤한 채로 아이템을 골라 다시 그려도 보던 위치를 유지한다(위 분류 조작으로 노드가 갈렸으니 다시 잡는다)
+    const bagNow=$('tpBody').querySelector('.bagBody');
+    bagNow.scrollTop=90; bagScrollHint();
     profSelItem(profItems()[12].iid);
     const bag2=$('tpBody').querySelector('.bagBody');
     assert(Math.abs(bag2.scrollTop-90)<=2,'다시 그리면 가방 스크롤이 맨 위로 튐: '+bag2.scrollTop);
-    // ⑤ 상세는 가방 위로 겹쳐 뜨는 팝업 — 레이아웃을 밀지 않는다
+    // ⑥ 상세는 가방 위로 겹쳐 뜨는 팝업 — 레이아웃을 밀지 않는다
     const info=$('tpBody').querySelector('.igInfo'); assert(info,'고른 아이템 상세가 없음');
     const sec2=$('tpBody').querySelector('.bagSec'), pd2=$('tpBody').querySelector('.pdWrap');
     assert(Math.abs(sec2.getBoundingClientRect().height-sr.height)<=1,'상세가 뜨자 가방 구역 높이가 바뀜(밀어냄)');
