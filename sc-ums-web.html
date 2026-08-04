@@ -2154,8 +2154,8 @@
   .hubUse{border-color:rgba(92,214,255,.5);box-shadow:0 0 22px -10px rgba(92,214,255,.6)}
   .hubRpg{border-color:rgba(255,200,90,.5);box-shadow:0 0 22px -10px rgba(255,200,90,.6)}
   .hubIco{font-size:44px;line-height:1}
-  .hubName{font-size:16px;font-weight:800;color:#fff}
-  .hubSub{font-size:11px;color:var(--txt-mute);text-align:center}
+  .hubName{font-size:17px;font-weight:800;color:#fff;letter-spacing:1.5px}   /* 영문 캡스 로고 톤 */
+  .hubSub{font-size:11px;color:var(--txt-mute);text-align:center;letter-spacing:.2px;line-height:1.45;word-break:keep-all}   /* 한글 단어 단위 줄바꿈(중간 끊김 방지) */
   /* ── 🏘 마을 ── */
   #townScreen{position:absolute;inset:0;z-index:60;display:flex;flex-direction:column}
   .twBar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:10px 12px;background:linear-gradient(180deg,rgba(13,18,28,.96),rgba(8,11,17,.9));border-bottom:1px solid var(--glass-edge)}
@@ -3088,8 +3088,8 @@
     <div class="hubWrap">
       <div class="hubTitle">무엇을 할까요?</div>
       <div class="hubCards">
-        <button class="hubCard hubUse" onclick="hubGoMap()"><span class="hubIco">🗺️</span><span class="hubName">유즈맵</span><span class="hubSub">맵을 골라 판을 깬다</span></button>
-        <button class="hubCard hubRpg" onclick="hubGoTown()"><span class="hubIco">🧍</span><span class="hubName">내 캐릭터</span><span class="hubSub">마을에서 캐릭터를 키운다</span></button>
+        <button class="hubCard hubUse" onclick="hubGoMap()"><span class="hubIco">🗺️</span><span class="hubName">USEMAP</span><span class="hubSub">골라서 즐기는 아케이드 대전</span></button>
+        <button class="hubCard hubRpg" onclick="hubGoTown()"><span class="hubIco">⚔️</span><span class="hubName">RPG</span><span class="hubSub">캐릭터를 키우는 나만의 모험</span></button>
       </div>
     </div>
   </div>
