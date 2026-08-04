@@ -7751,21 +7751,24 @@ function _sbStingerKamikaze(u, tgt, dt, units, myTeam, MM){   // 스팅어(자�
 // ══ 상성 엔진: 데미지 타입 × 유닛 크기(스타크래프트식) ══════════════════
 // 타입: normal(전부100%) · concussive(진동: 소100·중50·대25) · explosive(폭발: 대100·중75·소50)
 // 크기: s(소형)·m(중형)·l(대형). ⚠ 프로토스식 쉴드는 크기 무관 100%(공식은 _sbEffAtk에서 sh>0 처리)
-const TYPE_VS_SIZE={ normal:{s:1,m:1,l:1}, concussive:{s:1,m:0.5,l:0.25}, explosive:{s:0.5,m:0.75,l:1} };
+// 상성표: 증폭까지 포함(좋은 상성=보너스, 나쁜 상성=페널티, 중형=중립) → 상성이 승패를 좌우.
+//   진동(對人): 소형 +50% / 대형 반감    ·    폭발(對大): 대형 +50% / 소형 반감    ·    일반: 상성 없음
+const TYPE_VS_SIZE={ normal:{s:1,m:1,l:1}, concussive:{s:1.5,m:1,l:0.5}, explosive:{s:0.5,m:1,l:1.5} };
 // 유닛 전투 분류(model3d/기본 id 기준) — dt=공격 데미지타입, sz=피격 크기. 밸런싱 단일 소스.
 const UNIT_COMBAT_CLASS={
-  // 유니온
-  marine:{dt:'normal',sz:'s'}, machinegun:{dt:'concussive',sz:'s'}, ghost:{dt:'concussive',sz:'s'},
-  racer:{dt:'concussive',sz:'m'}, tank:{dt:'explosive',sz:'l'}, goliath:{dt:'explosive',sz:'l'},
-  skyguard:{dt:'normal',sz:'l'}, hellfire:{dt:'normal',sz:'l'}, dreadnought:{dt:'explosive',sz:'l'},
-  // 스웜
-  snapper:{dt:'normal',sz:'s'}, hydra:{dt:'explosive',sz:'m'}, thornqueen:{dt:'normal',sz:'m'},
-  stinger:{dt:'normal',sz:'s'}, wyvern:{dt:'explosive',sz:'l'}, venom:{dt:'explosive',sz:'m'},
-  behemoth:{dt:'explosive',sz:'l'}, broodling:{dt:'normal',sz:'s'}, ultralisk:{dt:'normal',sz:'l'},
-  // 에테리얼
-  dragoon:{dt:'explosive',sz:'l'}, blade:{dt:'normal',sz:'s'}, archon:{dt:'normal',sz:'l'},
-  falcon:{dt:'explosive',sz:'m'}, skydancer:{dt:'explosive',sz:'m'}, archangel:{dt:'normal',sz:'l'},
-  kronos:{dt:'explosive',sz:'l'}, dark_templar:{dt:'normal',sz:'s'}, larva:{dt:'normal',sz:'l'} };
+  // 유니온 — 만능 툴박스(진동 대인 + 폭발 대형 혼합)
+  marine:{dt:'normal',sz:'s'}, ghost:{dt:'concussive',sz:'s'}, machinegun:{dt:'concussive',sz:'s'},
+  racer:{dt:'concussive',sz:'m'}, goliath:{dt:'explosive',sz:'l'}, tank:{dt:'explosive',sz:'l'},
+  skyguard:{dt:'normal',sz:'l'}, hellfire:{dt:'explosive',sz:'l'}, dreadnought:{dt:'explosive',sz:'l'},
+  // 스웜 — 다수 물량(일반 다수) + 폭발 산성 소수
+  snapper:{dt:'normal',sz:'s'}, hydra:{dt:'concussive',sz:'m'}, thornqueen:{dt:'explosive',sz:'m'},
+  matron:{dt:'normal',sz:'l'}, venom:{dt:'explosive',sz:'m'}, stinger:{dt:'explosive',sz:'s'},
+  medusa:{dt:'normal',sz:'m'}, broodling:{dt:'normal',sz:'s'}, ultralisk:{dt:'normal',sz:'l'},
+  wyvern:{dt:'explosive',sz:'l'}, behemoth:{dt:'explosive',sz:'l'},   // (로스터 외 프리미엄/모프 — 분류 유지)
+  // 에테리얼 — 대형 폭발 브루저 + 진동 암살
+  blade:{dt:'normal',sz:'s'}, dragoon:{dt:'explosive',sz:'l'}, archon:{dt:'normal',sz:'l'},
+  falcon:{dt:'explosive',sz:'m'}, skydancer:{dt:'concussive',sz:'m'}, kronos:{dt:'explosive',sz:'l'},
+  archangel:{dt:'explosive',sz:'l'}, dark_templar:{dt:'concussive',sz:'s'}, larva:{dt:'normal',sz:'l'} };
 function _uClass(u){ return u&&(UNIT_COMBAT_CLASS[u.id]||UNIT_COMBAT_CLASS[u.gmodel]); }
 function _sbTypeMul(atk, tgt){ const A=_uClass(atk); if(!A||A.dt==='normal') return 1;   // 무분류·일반형=100%
   const B=_uClass(tgt); const sz=(B&&B.sz)||'m'; const row=TYPE_VS_SIZE[A.dt];   // 대상 크기(미분류=중형 취급)
