@@ -2135,7 +2135,95 @@
   .ptHelpBody .phItem{padding:6px 0;border-top:1px solid rgba(255,255,255,.06)}
   .ptHelpBody .phItem b{color:#dbe3ec;font-weight:700}
   /* ── 🎯 시작 선택 허브 ── */
-  #hubScreen.hide,#townScreen.hide{display:none}   /* id 특정성으로 .hide 우선(아래 #id{display:flex}가 .hide를 이기지 않게) */
+  #hubScreen.hide,#townScreen.hide,#charScreen.hide{display:none}
+  /* 장비 페이퍼돌 — 캐릭터 초상 + 신체 위치 슬롯 */
+  /* ── 장비창 — 위: 아바타 + 부위별 슬롯 / 아래: 가방(늘 열림) ── */
+  .twCard.gearFull{width:372px;max-width:94vw;height:90%;max-height:90%}   /* 장비창만 화면을 넓게 쓴다 */
+  .twCard.gearFull .twBody{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+  .gearWrap{flex:1;min-height:0;display:flex;flex-direction:column}
+  /* 섹션 이동 바(방어구 ↔ 무기·장신구) — 아바타 아래에 놓인다 */
+  .pdNav{flex:0 0 auto;padding:2px 0 9px}
+  .pdSeg{position:relative;display:flex;width:100%;max-width:286px;margin:0 auto;padding:3px;border-radius:11px;
+    background:rgba(255,255,255,.045);border:1px solid var(--metal-edge)}
+  .pdSegInd{position:absolute;top:3px;bottom:3px;width:calc((100% - 6px)/var(--n));border-radius:9px;transition:left .2s cubic-bezier(.3,.8,.3,1);
+    background:linear-gradient(180deg,rgba(92,214,255,.26),rgba(92,214,255,.1));border:1px solid rgba(92,214,255,.45)}
+  .pdSegBtn{position:relative;z-index:1;flex:1;min-width:0;padding:6px 4px;border:none;background:none;cursor:pointer;
+    font-family:inherit;font-size:12px;font-weight:800;color:#8e9bab;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pdSegBtn.on{color:#eaf1fb}
+  /* 아바타 구역이 남는 높이를 전부 먹는다(가방은 아래에서 고정) */
+  .pdWrap{position:relative;flex:1 1 auto;min-height:186px;margin:2px 0}
+  .pdFig{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);height:100%;width:auto;color:#5f7183;opacity:.34}
+  .pdFig svg{display:block;height:100%;width:auto}
+  .pdSlot{position:absolute;transform:translate(-50%,-50%);width:46px;height:46px;border-radius:13px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;color:#7f8b99;
+    background:linear-gradient(180deg,rgba(24,31,44,.92),rgba(14,19,28,.92));border:1px solid var(--metal-edge);
+    box-shadow:0 6px 16px -10px #000, inset 0 1px 0 rgba(255,255,255,.05)}
+  .pdSlot .slIco{width:27px;height:27px}
+  .pdSlot.empty .slIco{opacity:.24}
+  .pdSlot.lock .slIco{opacity:.4}
+  .pdSlot.empty .pdPlus{position:absolute;font-style:normal;font-size:19px;font-weight:300;color:#8e9bab;line-height:1}
+  .pdSlot .pdLockIco{position:absolute;width:19px;height:19px;color:#95a3b3}
+  .pdSlot.on{background:linear-gradient(180deg,rgba(30,42,58,.95),rgba(16,22,32,.95))}
+  .pdSlot.lock{opacity:.62}
+  .pdSlot.pick{box-shadow:0 0 0 2px rgba(92,214,255,.75),0 6px 16px -10px #000}
+  .pdSlot:active{transform:translate(-50%,-50%) translateY(1px)}
+  .pdSlot .pdLv{position:absolute;top:-7px;right:-5px;font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:800;font-style:normal;
+    padding:0 4px;border-radius:6px;color:inherit;background:#0b0e16;border:1px solid currentColor}
+  .gearSum{flex:0 0 auto;text-align:center;font-size:12px;color:var(--txt-mute);padding:4px 0 2px}
+  .gearSum b{color:#eaf1fb}
+  /* 아래 구역: 가방 */
+  /* 가방은 높이 고정(2줄) — 짐이 아무리 많아도 위 구역을 밀어내지 않는다. 상세 팝업의 기준 상자이기도 하다 */
+  .bagSec{position:relative;flex:0 0 auto;display:flex;flex-direction:column;border-top:1px solid rgba(255,255,255,.09);padding-top:9px}
+  /* 가방 분류 칩 — 페이퍼돌 섹션과 같은 축(전체 + PROF_GEAR_PAGES). 섹션 바와 헷갈리지 않게 작고 가볍게 */
+  .bagCats{display:flex;gap:5px;min-width:0;overflow:hidden}
+  .bagCat{flex:0 0 auto;padding:4px 9px;border-radius:14px;cursor:pointer;font-family:inherit;font-size:10.5px;font-weight:800;
+    color:#8b98a8;background:rgba(255,255,255,.035);border:1px solid var(--metal-edge);white-space:nowrap}
+  .bagCat.on{color:#dff4ff;background:rgba(92,214,255,.15);border-color:rgba(92,214,255,.45)}
+  .bagCat:active{transform:translateY(1px)}
+  .bagCnt{flex:0 0 auto}
+  .bagHead{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}
+  .bagTtl{font-size:12px;font-weight:800;color:#aeb8c6}
+  .gsSub{font-size:11px;font-weight:700;color:var(--txt-mute)}
+  .igBack{min-width:0;padding:4px 10px;font-size:11px}
+  /* 스크롤은 .bagBody 안에서만 — 카드는 늘어나지 않는다. 겉면(.bagScroll)은 "더 있음" 그림자 담당 */
+  .bagScroll{position:relative;flex:0 0 auto;height:172px;display:flex}   /* 6열 × 3줄 + 다음 줄 살짝 */
+  .bagScroll::after{content:'';position:absolute;left:0;right:0;bottom:0;height:26px;pointer-events:none;opacity:0;transition:opacity .18s;
+    background:linear-gradient(180deg,rgba(6,9,14,0),rgba(6,9,14,.72) 55%,rgba(6,9,14,.97))}
+  .bagScroll.more::after{opacity:1}
+  .bagBody{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+  .bagBody::-webkit-scrollbar{width:4px}
+  .bagBody::-webkit-scrollbar-thumb{border-radius:3px;background:rgba(255,255,255,.18)}
+  .igGrid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;padding:0 3px 8px 0;justify-items:center}
+  .igCell{position:relative;width:100%;max-width:52px;aspect-ratio:1;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;
+    background:linear-gradient(180deg,rgba(24,31,44,.9),rgba(14,19,28,.9));border:1px solid var(--metal-edge)}
+  .igCell .slIco{width:21px;height:21px}
+  .igCell.sel{box-shadow:0 0 0 2px #5cd6ff}
+  .igCell.busy{opacity:.4}
+  .igCell:active{transform:translateY(1px)}
+  .igCell .igLv{position:absolute;right:2px;bottom:0;font-family:'Rajdhani',sans-serif;font-size:9px;font-weight:800;font-style:normal;color:#dbe3ec}
+  .igCell .igOn{position:absolute;left:3px;top:3px;width:4px;height:4px;border-radius:50%;background:#6ff0a0}
+  .igEmpty{padding:16px 4px;font-size:12px;color:var(--txt-mute);text-align:center}
+  /* 상세 = 가방을 밀어내지 않고 가방 위로 올라오는 팝업(.bagSec 기준) */
+  .igInfo{position:absolute;left:0;right:0;bottom:0;z-index:4;display:flex;align-items:center;gap:10px;padding:10px 11px 11px;
+    border-radius:13px 13px 0 0;background:linear-gradient(180deg,rgba(26,33,46,.985),rgba(11,15,23,.995));
+    border:1px solid var(--metal-edge);border-bottom:none;box-shadow:0 -12px 28px -10px #000;
+    animation:igUp .16s ease-out}
+  @keyframes igUp{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+  .igClose{position:absolute;right:7px;top:6px;width:20px;height:20px;border-radius:6px;cursor:pointer;font-size:11px;line-height:1;
+    color:#93a1b1;background:rgba(255,255,255,.05);border:1px solid var(--metal-edge)}
+  .igTxt{flex:1;min-width:0}
+  .igName{font-size:12.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .igSlotTag{font-size:10px;font-weight:700;color:var(--txt-mute);padding:1px 6px;border-radius:8px;background:rgba(255,255,255,.06)}
+  .igStat{font-size:11px;color:var(--txt-mute);margin-top:3px;line-height:1.45}
+  .igStat .ok{color:#6ff0a0}.igStat .lock{color:#e0a04a}.igSep{opacity:.45}.igArrow{color:#7d8b98}
+  .igBtns{flex:0 0 auto;display:flex;gap:6px}
+  .igBtns .twBtn{min-width:52px;padding:7px 9px}
+  /* 캐릭터 선택/생성 입장 화면 */
+  #charScreen{position:absolute;inset:0;z-index:61;display:flex;align-items:center;justify-content:center}
+  .csCard{width:330px;max-width:90vw;max-height:86%}
+  .twInput{flex:0 0 auto;width:118px;padding:7px 9px;border-radius:8px;font-family:inherit;font-size:13px;color:#eaf1fb;
+    background:rgba(255,255,255,.05);border:1px solid var(--metal-edge)}
+  .twInput:focus{outline:none;border-color:rgba(92,214,255,.6)}   /* id 특정성으로 .hide 우선(아래 #id{display:flex}가 .hide를 이기지 않게) */
   #hubScreen{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center}
   /* 허브 전용 배경 = 별밭 타일(.spaceBg::before) 위에 행성 아크 + 성운 글로우 + 비네트(중앙·상단은 어둡게 유지 → 카드 가독성) */
   #hubScreen::after{background:
@@ -2287,8 +2375,17 @@
   .twCoin{margin-left:auto;font-family:'Rajdhani',sans-serif;font-size:13px;color:var(--txt-mute)}
   .twCoin b{font-size:16px;font-weight:800;color:#ffd24a}
   .twPow{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:800;color:#ff8a9a}
-  .twMap{position:relative;flex:1;min-height:0;overflow:hidden;background:radial-gradient(circle at 50% 40%,#28324a 0%,#141b28 55%,#0a0e16 100%)}
-  .twGround{position:absolute;left:8%;right:8%;top:12%;bottom:8%;border-radius:46% 46% 34% 34%/34% 34% 30% 30%;pointer-events:none;
+  .twMap{position:relative;flex:1;min-height:0;overflow:hidden;touch-action:none;background:radial-gradient(circle at 50% 40%,#28324a 0%,#141b28 55%,#0a0e16 100%)}
+  /* 월드 레이어 — 화면보다 큰 마을 전체. 카메라 = 이 요소의 transform 한 줄만 매 프레임 갱신(구역이 늘어도 비용 불변) */
+  .twWorld{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+  /* 화면 밖 구역 방향 표시(임시 최소 UI — 디자인 단계에서 교체 예정) */
+  .twEdge{position:absolute;transform:translate(-50%,-50%);z-index:2;display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;font-size:17px;cursor:pointer;
+    background:rgba(10,14,20,.82);border:1px solid rgba(92,214,255,.45);box-shadow:0 4px 12px -4px #000}
+  .twEdge.hide{display:none}
+  .twEdge:active{transform:translate(-50%,-50%) scale(.92)}
+  .twTapFx{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;border:2px solid rgba(92,214,255,.85);pointer-events:none;z-index:1;animation:twTap .5s ease-out forwards}
+  @keyframes twTap{from{transform:scale(.4);opacity:.9}to{transform:scale(1.6);opacity:0}}
+  .twGround{position:absolute;left:9%;right:9%;top:12%;bottom:12%;border-radius:64px;pointer-events:none;
     background:radial-gradient(ellipse at 50% 42%,rgba(74,96,74,.22),rgba(40,54,74,.06) 72%);border:1px solid rgba(255,255,255,.05);box-shadow:inset 0 0 40px -10px rgba(0,0,0,.5)}
   .twZone{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;z-index:2}
   .twZone::before{content:'';position:absolute;left:50%;top:16px;transform:translate(-50%,-50%);width:50px;height:50px;border-radius:50%;z-index:-1;pointer-events:none;
@@ -2298,7 +2395,14 @@
   .twPet{flex:0 0 auto;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:20px;border-radius:9px;background:rgba(255,255,255,.05);border:1px solid var(--metal-edge)}
   .tzLbl{font-size:11px;font-weight:800;color:#dbe3ec;background:rgba(6,8,12,.7);padding:2px 7px;border-radius:10px;border:1px solid var(--metal-edge);white-space:nowrap}
   .twZone:active{transform:translate(-50%,-50%) scale(.94)}
-  .twAvatar{position:absolute;transform:translate(-50%,-50%);font-size:26px;z-index:3;transition:left .5s ease,top .5s ease;filter:drop-shadow(0 3px 5px rgba(0,0,0,.7));pointer-events:none}
+  /* 아바타 — 화면 정중앙에 고정. 움직이는 것은 월드 쪽이다(카메라가 항상 캐릭터를 따라간다) */
+  .twAvatar{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:3;pointer-events:none}
+  .twAvFlip{display:block;transition:transform .12s ease}
+  .twAvFlip.l{transform:scaleX(-1)}
+  .twAvBody{display:block;font-size:26px;line-height:1;filter:drop-shadow(0 3px 5px rgba(0,0,0,.7))}
+  .twAvatar.walk .twAvBody{animation:twStep .36s linear infinite}
+  @keyframes twStep{0%,100%{transform:translateY(0) rotate(0)}25%{transform:translateY(-3px) rotate(-5deg)}75%{transform:translateY(-3px) rotate(5deg)}}
+  .twAvShadow{position:absolute;left:50%;bottom:-5px;transform:translateX(-50%);width:20px;height:6px;border-radius:50%;background:rgba(0,0,0,.45);filter:blur(1px)}
   .twToast{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:5;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:700;color:#fff;
     background:rgba(10,14,20,.92);border:1px solid rgba(255,210,74,.5);box-shadow:0 6px 18px -6px #000;white-space:nowrap;transition:opacity .3s}
   .twToast.hide{opacity:0;pointer-events:none}
@@ -2327,6 +2431,10 @@
   .twBtn.on{color:#0b1016;background:var(--setAcc);border-color:var(--setAcc)}
   .twBtn:disabled{cursor:default;color:#7d8590;background:rgba(255,255,255,.03);border-color:var(--metal-edge)}
   .twBtn:not(:disabled):active{transform:translateY(1px)}
+  .twBtn.del{color:#ffd7dd;background:linear-gradient(180deg,rgba(255,77,109,.3),rgba(255,77,109,.12));border-color:rgba(255,77,109,.6)}
+  .twDel{flex:0 0 auto;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:7px;cursor:pointer;font-size:12px;line-height:1;
+    color:#8d97a4;background:rgba(255,255,255,.04);border:1px solid var(--metal-edge)}
+  .twDel:active{transform:translateY(1px)}
   .msUser{display:flex;align-items:center;gap:5px;font-size:var(--fs-sm);color:var(--txt-hud)}
   .msUser .ic{color:#7e8896}
   .msUser b{color:#e8eef5;font-weight:700;max-width:128px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -3280,16 +3388,35 @@
       <span class="twName" id="twName">캐릭터</span><span class="twLv" id="twLv">Lv.1</span><span class="twPow" id="twPow">⚔ 0</span>
       <span class="twCoin"><b id="twCoin">0</b> P</span>
     </div>
-    <div class="twMap" id="twMap">
-      <div class="twGround"></div>
-      <div class="twZone" data-zone="gacha" style="left:22%;top:22%" onclick="townGo('gacha')"><span class="tzIco">🎁</span><span class="tzLbl">뽑기집</span></div>
-      <div class="twZone" data-zone="gate"  style="left:78%;top:22%" onclick="townGo('gate')"><span class="tzIco">🔒</span><span class="tzLbl">관문</span></div>
-      <div class="twZone" data-zone="shop"  style="left:20%;top:47%" onclick="townGo('shop')"><span class="tzIco">🛒</span><span class="tzLbl">장비 상점</span></div>
-      <div class="twZone" data-zone="gym"   style="left:80%;top:47%" onclick="townGo('gym')"><span class="tzIco">🏋️</span><span class="tzLbl">훈련장</span></div>
-      <div class="twZone" data-zone="plaza" style="left:50%;top:74%" onclick="townGo('plaza')"><span class="tzIco">🏠</span><span class="tzLbl">광장</span></div>
-      <div class="twAvatar" id="twAvatar" style="left:50%;top:74%">🧍</div>
+    <div class="twMap" id="twMap" onpointerdown="twPtrDown(event)" onpointermove="twPtrMove(event)" onpointerup="twPtrUp(event)" onpointercancel="twPtrUp(event)">
+      <!-- 월드(화면보다 큼) — 구역 아이콘은 TOWN_ZONES에서 생성한다(twBuildZones). 좌표·아이콘·라벨·패널이 한 곳 -->
+      <div class="twWorld" id="twWorld"><div class="twGround"></div></div>
+      <div class="twAvatar" id="twAvatar"><span class="twAvShadow"></span><span class="twAvFlip" id="twAvFlip"><span class="twAvBody">🧍</span></span></div>
     </div>
     <div id="twToast" class="twToast hide"></div>
+  </div>
+
+  <!-- 캐릭터 선택/생성 입장 화면 — 내용은 마을 구역과 같은 렌더러를 쓴다 -->
+  <div id="charScreen" class="appScreen spaceBg hide">
+    <div class="setCard twCard csCard">
+      <div class="setTitle"><span id="csTitle">캐릭터 선택</span><div class="setX" onclick="charBackToHub()"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></div></div>
+      <div class="twBody" id="csBody"></div>
+    </div>
+  </div>
+
+  <!-- ⚔ 던전 — 캐릭터가 직접 싸우는 전용 화면(유즈맵과 완전 분리) -->
+  <div id="dgScreen" class="appScreen spaceBg hide">
+    <div class="twBar">
+      <button class="twBack" onclick="dgFlee()" aria-label="나가기"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <span class="twName">던전</span><span class="twLv" id="dgWave">1층 · 1/3</span>
+      <span class="twCoin"><b id="dgHpTxt">0</b> HP</span>
+    </div>
+    <div class="dgWrap">
+      <div class="dgArena" id="dgArena"></div>
+      <div class="dgBar"><i><b id="dgHpBar"></b></i></div>
+      <div class="dgBtns"><button class="dgSkillBtn" id="dgSkillBtn" onclick="dgSkill()"><span id="dgSkillIco">🎯</span><i id="dgSkillCd"></i></button></div>
+    </div>
+    <div id="dgResult" class="dgResult hide"></div>
   </div>
 
   <!-- 마을 시설 팝업(구역 도착 시) -->
@@ -4036,10 +4163,14 @@ function metaEffLv(id){ return _metaEffFromRaw(META_BUILDS[id], buildLevel(id));
    // 다음 강화가 초월 레벨인지
 // 플레이어 메타(계정별 영구 데이터)
 // 🧍 개인 프로필 RPG(1단계) 기본값 — 유즈맵 경제와 완전 분리(재화명 pcoin, coins 아님). 자세한 규칙은 PROF_* 블록 참조.
-function defaultProfile(){ return { ver:2, xp:0, level:1, statPoints:0, pcoin:0,
-  unit:{ jobId:'recruit', level:1, evoStars:0, stats:{pow:0,vit:0,foc:0,agi:0}, gear:{weapon:0,armor:0,trinket:0} },
+// 계정 공용(재화·펫·해금·방치) + 캐릭터별(chars[]: 레벨·경험치·스탯·장비·진화)로 나뉜다.
+function defaultProfile(){ return { ver:5, pcoin:0, chars:[], curId:'', items:[],
   idle:{ sourceId:'drill', lastClaimTs:0 }, unlocks:{}, lastSeenTs:0,
-  pets:{}, equip:[], petSlots:2 }; }   // 🐾 2단계: 펫(중복=별) · 장착 슬롯
+  pets:{}, equip:[], petSlots:2 }; }   // 🐾 펫(중복=별)·장착 슬롯 — 캐릭터를 새로 만들어도 그대로 쓴다
+function defaultChar(cls, name){ const C=PROF_CLASSES[cls]||PROF_CLASSES.ranger, id=(PROF_CLASSES[cls]?cls:'ranger');
+  return { id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), cls:id, name:(name||C.name),
+    xp:0, level:1, statPoints:0, dgFloor:0,
+    unit:{ jobId:id, level:1, evoStars:0, stats:{pow:0,vit:0,foc:0,agi:0}, gear:_emptyGear() } }; }
 function defaultMeta(){ return { coins:0, buildLevels:{}, highestRound:0, clearedDifficulty:'', profile:defaultProfile() }; }   // clearedDifficulty:''=아무것도 클리어 안 함(이지만 개방)
 let PLAYER_META = defaultMeta();
 const TEMP_COIN_TEST=false;   // [임시] 포인트 상점 밸런스 테스트 — 포인트 무한 + 로비 진입 시 업그레이드 초기화. 끝나면 false 또는 이 블록 제거.
@@ -4055,15 +4186,47 @@ function migrateProfile(){ const d=defaultProfile();
   if(!PLAYER_META.profile || typeof PLAYER_META.profile!=='object'){ PLAYER_META.profile=d; return; }
   const p=PLAYER_META.profile;
   for(const k in d){ if(p[k]===undefined) p[k]=d[k]; }                 // 최상위 키 채움
-  if(!p.unit) p.unit=d.unit; else { for(const k in d.unit) if(p.unit[k]===undefined) p.unit[k]=d.unit[k];
-    if(!p.unit.stats) p.unit.stats=Object.assign({},d.unit.stats); else for(const k in d.unit.stats) if(p.unit.stats[k]===undefined) p.unit.stats[k]=0;
-    if(!p.unit.gear)  p.unit.gear =Object.assign({},d.unit.gear);  else for(const k in d.unit.gear)  if(p.unit.gear[k]===undefined)  p.unit.gear[k]=0; }
+  if(!Array.isArray(p.chars)) p.chars=[];
+  if((p.ver||0)<3 && p.unit){                                          // ver2 = 캐릭터 1명 구조 → 첫 슬롯으로 승격
+    const c=defaultChar('ranger','캐릭터');
+    c.xp=p.xp||0; c.level=p.level||1; c.statPoints=p.statPoints||0; c.unit=p.unit;
+    p.chars.push(c); p.curId=c.id; }
+  delete p.unit; delete p.xp; delete p.level; delete p.statPoints;      // 캐릭터별로 옮겨간 필드
+  for(const c of p.chars) fixChar(c);
+  if(!Array.isArray(p.items)) p.items=[];
+  if((p.ver||0)<4){                                                    // ver3 = 슬롯당 정수 티어 → 동등 성능 아이템으로 변환(스탯 손실 없음)
+    const OLD_PER={weapon:3, armor:4, trinket:2};
+    for(const c of p.chars){ const gr=c.unit&&c.unit.gear; if(!gr) continue;
+      for(const slot in gr){ const n=gr[slot];
+        if(typeof n==='number' && n>0){
+          const it={ iid:'it'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), slot:slot,
+                     tier:'common', lv:1, main:n*(OLD_PER[slot]||3), opts:[], legacy:true };
+          p.items.push(it); gr[slot]=it.iid; }
+        else if(typeof n!=='string') gr[slot]=''; } } }
+  if((p.ver||0)<5){                                                    // ver4 = 3슬롯(무기·방어구·장신구) → 12슬롯 재편
+    const MAP={weapon:'weapon', armor:'top', trinket:'necklace'};
+    for(const it of p.items) if(MAP[it.slot]) it.slot=MAP[it.slot];
+    for(const c of p.chars){ const old=c.unit.gear||{}, ng=_emptyGear();
+      for(const k in old){ const nk=MAP[k]; if(nk && old[k]) ng[nk]=old[k]; }
+      c.unit.gear=ng; } }
+  if(p.chars.length && !p.chars.some(c=>c.id===p.curId)) p.curId=p.chars[0].id;
   if(!p.idle) p.idle=d.idle; else for(const k in d.idle) if(p.idle[k]===undefined) p.idle[k]=d.idle[k];
   if(!p.unlocks) p.unlocks={};
   if(!p.pets||typeof p.pets!=='object') p.pets={};                 // 🐾 펫
   if(!Array.isArray(p.equip)) p.equip=[]; if(typeof p.petSlots!=='number') p.petSlots=2;
   p.ver=d.ver; }
+// 캐릭터 1건 보정(신규 키 back-fill + 폐기된 직업 id 복구)
+function fixChar(c){ const d=defaultChar(c&&c.cls, c&&c.name);
+  if(!PROF_CLASSES[c.cls]) c.cls='ranger';
+  for(const k in d) if(c[k]===undefined) c[k]=d[k];
+  if(!c.unit) c.unit=d.unit; else { for(const k in d.unit) if(c.unit[k]===undefined) c.unit[k]=d.unit[k];
+    if(!c.unit.stats) c.unit.stats=Object.assign({},d.unit.stats); else for(const k in d.unit.stats) if(c.unit.stats[k]===undefined) c.unit.stats[k]=0;
+    if(!c.unit.gear)  c.unit.gear =Object.assign({},d.unit.gear);  else for(const k in d.unit.gear)  if(c.unit.gear[k]===undefined)  c.unit.gear[k]=''; }
+  if(!PROF_JOBS[c.unit.jobId] || PROF_JOBS[c.unit.jobId].cls!==c.cls) c.unit.jobId=c.cls;   // 구 직업 트리는 폐기 → 뿌리로
+  return c; }
 function PROF(){ return PLAYER_META.profile || (PLAYER_META.profile=defaultProfile()); }   // 안전 접근자
+function CHAR(){ const p=PROF(); if(!p.chars||!p.chars.length) return null;                // 현재 조종 중인 캐릭터(없으면 null)
+  return p.chars.find(c=>c.id===p.curId) || p.chars[0]; }
 function saveMeta(){ try{ localStorage.setItem(metaKey(), JSON.stringify(PLAYER_META)); }catch(e){}
   if(typeof sbSaveMetaDebounced==='function') sbSaveMetaDebounced(); }   // 로컬 + 계정(서버) 동시 저장
 function buildLevel(id){ return (PLAYER_META.buildLevels && PLAYER_META.buildLevels[id]) || 0; }
@@ -4074,27 +4237,159 @@ function buildLevel(id){ return (PLAYER_META.buildLevels && PLAYER_META.buildLev
 // ============================================================================
 const PROF_STATS=['pow','vit','foc','agi'];   // 공격 / 체력 / 집중(치명) / 민첩(속도)
 const PROF_STAT_NAME={pow:'공격',vit:'체력',foc:'집중',agi:'민첩'};
-const PROF_JOBS={
-  recruit:{ name:'훈련병', tier:0, reqLv:1,  base:{pow:5,vit:5,foc:3,agi:3},   next:['soldier','scout'] },
-  soldier:{ name:'전사',   tier:1, reqLv:10, base:{pow:9,vit:8,foc:3,agi:4},   next:['knight','berserker'] },
-  scout:  { name:'정찰병', tier:1, reqLv:10, base:{pow:6,vit:5,foc:6,agi:8},   next:['ranger','assassin'] },
-  knight:   { name:'기사',   tier:2, reqLv:25, base:{pow:12,vit:14,foc:4,agi:4},  next:[] },
-  berserker:{ name:'광전사', tier:2, reqLv:25, base:{pow:16,vit:9, foc:5,agi:6},  next:[] },
-  ranger:   { name:'레인저', tier:2, reqLv:25, base:{pow:11,vit:7, foc:11,agi:9}, next:[] },
-  assassin: { name:'암살자', tier:2, reqLv:25, base:{pow:13,vit:6, foc:13,agi:12},next:[] },
+// 캐릭터 종류 3종(종족당 하나) — 게임에 이미 있는 유닛을 그대로 쓴다(초상·3D 모델 공용). id = 뿌리 직업 id.
+const PROF_CLASSES={
+  ranger:{ name:'레인저', unit:'marine',  race:'union',     ico:'🪖', tip:'원거리 사격 · 균형' },
+  scout: { name:'척후병', unit:'snapper', race:'swarm',     ico:'🐛', tip:'빠른 기동 · 근접' },
+  warden:{ name:'워든',   unit:'blade',   race:'aetherial', ico:'🔮', tip:'중장갑 근접 · 방어' },
 };
-const PROF_GEAR={ weapon:{name:'무기',stat:'pow',per:3,baseCost:50}, armor:{name:'방어구',stat:'vit',per:4,baseCost:50}, trinket:{name:'장신구',stat:'foc',per:2,baseCost:70,reqUnlock:'gear_trinket'} };
+const PROF_MAX_CHARS=6;   // 캐릭터 슬롯(같은 종류 중복 허용)
+// 직업 트리 — 3종류가 뿌리(tier0), 각자 2갈래로 갈라져 한 단계 더. 이름·unit은 종족 로스터에서 가져왔다.
+const PROF_JOBS={
+  ranger:    { name:'레인저',    cls:'ranger', unit:'marine',       tier:0, reqLv:1,  base:{pow:8, vit:6, foc:7, agi:5},  next:['sniper','gunner'] },
+  sniper:    { name:'저격수',    cls:'ranger', unit:'ghost',        tier:1, reqLv:10, base:{pow:12,vit:7, foc:13,agi:8},  next:['phantom'] },
+  gunner:    { name:'화력병',    cls:'ranger', unit:'machinegun',   tier:1, reqLv:10, base:{pow:14,vit:10,foc:6, agi:5},  next:['goliath'] },
+  phantom:   { name:'팬텀',      cls:'ranger', unit:'ghost',        tier:2, reqLv:25, base:{pow:17,vit:9, foc:19,agi:13}, next:[] },
+  goliath:   { name:'기갑병',    cls:'ranger', unit:'goliath',      tier:2, reqLv:25, base:{pow:20,vit:16,foc:8, agi:6},  next:[] },
+  scout:     { name:'척후병',    cls:'scout',  unit:'snapper',      tier:0, reqLv:1,  base:{pow:6, vit:5, foc:5, agi:10}, next:['spike','swarmling'] },
+  spike:     { name:'스파이크',  cls:'scout',  unit:'hydra',        tier:1, reqLv:10, base:{pow:10,vit:8, foc:9, agi:12}, next:['thornqueen'] },
+  swarmling: { name:'스웜링',    cls:'scout',  unit:'broodling',    tier:1, reqLv:10, base:{pow:9, vit:6, foc:6, agi:17}, next:['ultra'] },
+  thornqueen:{ name:'가시여왕',  cls:'scout',  unit:'thornqueen',   tier:2, reqLv:25, base:{pow:15,vit:12,foc:14,agi:16}, next:[] },
+  ultra:     { name:'돌격괴수',  cls:'scout',  unit:'ultralisk',    tier:2, reqLv:25, base:{pow:19,vit:18,foc:6, agi:20}, next:[] },
+  warden:    { name:'워든',      cls:'warden', unit:'blade',        tier:0, reqLv:1,  base:{pow:9, vit:9, foc:4, agi:4},  next:['sentinel','darksage'] },
+  sentinel:  { name:'센티넬',    cls:'warden', unit:'dragoon',      tier:1, reqLv:10, base:{pow:13,vit:13,foc:7, agi:5},  next:['void'] },
+  darksage:  { name:'다크세이지',cls:'warden', unit:'dark_templar', tier:1, reqLv:10, base:{pow:15,vit:9, foc:11,agi:9},  next:['highsage'] },
+  void:      { name:'보이드',    cls:'warden', unit:'archon',       tier:2, reqLv:25, base:{pow:18,vit:22,foc:10,agi:6},  next:[] },
+  highsage:  { name:'하이세이지',cls:'warden', unit:'high_templar', tier:2, reqLv:25, base:{pow:21,vit:13,foc:18,agi:12}, next:[] },
+};
+// 자식→부모 역인덱스(전직 경로 되짚기용). PROF_JOBS의 next로부터 자동 생성 — 트리를 고쳐도 따라온다.
+const PROF_JOB_PARENT=(function(){ const m={}; for(const id in PROF_JOBS) for(const nx of PROF_JOBS[id].next) m[nx]=id; return m; })();
+const PROF_REFUND_RATE=1.0;   // 캐릭터 삭제 환급률(1.0=쓴 재화 전액). 경험치·레벨은 환급 없음
+// 장비 슬롯 — reqLv = 캐릭터 레벨(성장 축 하나로 통일).
+// 초반엔 기본 5칸(헬멧·상의·하의·신발·무기)만 열려 있고 레벨이 오르며 나머지가 열린다.
+// part = 페이퍼돌 페이지(PROF_GEAR_PAGES). 한 페이지에 자기 part만 나오므로 칸이 널널하다.
+// x/y = 그 페이지 아바타 위에 겹쳐 놓을 위치(%). 그 장비가 실제로 붙는 부위에 맞춘다.
+const PROF_GEAR={
+  helmet:  {name:'헬멧',    stat:'vit', base:6,  part:'armor', x:50, y:9,  reqLv:1,  ico:'🪖'},
+  gloves:  {name:'장갑',    stat:'pow', base:5,  part:'armor', x:21, y:34, reqLv:5,  ico:'🧤'},
+  top:     {name:'상의',    stat:'vit', base:8,  part:'armor', x:50, y:34, reqLv:1,  ico:'👕'},
+  weapon:  {name:'무기',    stat:'pow', base:10, part:'armor', x:79, y:34, reqLv:1,  ico:'⚔'},
+  bottom:  {name:'하의',    stat:'vit', base:7,  part:'armor', x:50, y:60, reqLv:1,  ico:'👖'},
+  shoes:   {name:'신발',    stat:'agi', base:6,  part:'armor', x:50, y:84, reqLv:1,  ico:'👟'},
+  earring: {name:'귀고리',  stat:'foc', base:5,  part:'acc',   x:26, y:11, reqLv:16, ico:'💠'},
+  cape:    {name:'망토',    stat:'agi', base:5,  part:'acc',   x:74, y:11, reqLv:30, ico:'🧣'},
+  necklace:{name:'목걸이',  stat:'foc', base:6,  part:'acc',   x:50, y:28, reqLv:12, ico:'📿'},
+  sub:     {name:'보조무기', stat:'pow', base:5, part:'acc',   x:21, y:52, reqLv:25, ico:'🛡'},
+  ring:    {name:'반지',    stat:'foc', base:4,  part:'acc',   x:79, y:52, reqLv:20, ico:'💍'},
+  belt:    {name:'벨트',    stat:'vit', base:5,  part:'acc',   x:50, y:73, reqLv:8,  ico:'🎗'},
+};
+// 페이퍼돌 페이지 — 장비와 장신구를 섞지 않는다(한 페이지엔 자기 part만).
+const PROF_GEAR_PAGES=[{id:'armor',name:'장비'},{id:'acc',name:'장신구'}];
+function profPageSlots(pg){ return Object.keys(PROF_GEAR).filter(k=>PROF_GEAR[k].part===pg); }
+// 슬롯 라인아트 글리프(자체 제작 · viewBox 24) — 이모지 대신 이걸 쓴다.
+// 각 장비가 한눈에 구분되도록 특징부(투구 바이저 · 벨트 버클 · 검 손잡이 · 방패 문양 …)까지 그린다.
+const PROF_SLOT_ICON={
+  helmet:'<path d="M5 15.2v-2.4a7 7 0 0 1 14 0v2.4a5 5 0 0 1-2.3 4.2l-1.4.9H8.7l-1.4-.9A5 5 0 0 1 5 15.2z"/>'
+        +'<path d="M9 10.6h6v3.2h-2v3.4h-2v-3.4H9z"/>',
+  top:'<path d="M8.6 3.4L4 6.1l1.9 4.3 2.1-1V20.6h8V9.4l2.1 1L20 6.1l-4.6-2.7a3.4 3.4 0 0 1-6.8 0z"/>'
+     +'<path d="M9.4 3.7L12 6.6l2.6-2.9"/>',
+  bottom:'<path d="M6.4 3.4h11.2v2.8H6.4z"/><path d="M6.7 6.4h10.6l.9 14.2h-4.1L12 12.2l-2.1 8.4H5.8z"/>',
+  shoes:'<path d="M7.4 3.6h4.2v9.1l5 2.4c1.9.9 2.9 2 2.9 3.5v1.8H7.4z"/>'
+       +'<path d="M7.4 17.7h12.1"/><path d="M8.4 6.2h2.6M8.4 8.7h2.6"/>',
+  gloves:'<path d="M8 15.9L5.5 14a1.5 1.5 0 0 1 1.8-2.4l1.7 1.3z"/>'      /* 엄지 */
+        +'<path d="M8.9 13.6V8.8a1.2 1.2 0 0 1 2.4 0v4.8z"/>'              /* 손가락 3 */
+        +'<path d="M11.3 13.6V7.5a1.2 1.2 0 0 1 2.4 0v6.1z"/>'
+        +'<path d="M13.7 13.6V8.3a1.2 1.2 0 0 1 2.4 0v5.3z"/>'
+        +'<path d="M7.6 12.5h9.5v8.1H7.6z"/><path d="M7.6 18h9.5"/>',       /* 손등 + 커프 */
+  belt:'<path d="M1.6 10.4h7.6v3.4H1.6z"/><path d="M14.8 10.4h7.6v3.4h-7.6z"/>'
+      +'<path d="M9.2 8.3h5.6v7.6H9.2z"/><path d="M12 8.3v7.6"/>'
+      +'<circle cx="17.6" cy="12.1" r=".8"/><circle cx="20.2" cy="12.1" r=".8"/>',
+  weapon:'<path d="M12 2.2l2.7 3.5v9.1H9.3V5.7z"/><path d="M12 5.2v9.6"/>'
+        +'<path d="M6.4 14.9h11.2v2H6.4z"/><path d="M10.7 16.9h2.6v3.1h-2.6z"/><circle cx="12" cy="21" r="1.1"/>',
+  sub:'<path d="M12 2.5l7.7 2.9v5.7c0 4.7-3.4 7.9-7.7 8.6-4.3-.7-7.7-3.9-7.7-8.6V5.4z"/>'
+     +'<path d="M12 5.1l5.2 2v3.9c0 3.2-2.3 5.5-5.2 6-2.9-.5-5.2-2.8-5.2-6V7.1z"/><path d="M12 5.1v11.9M6.8 11.1h10.4"/>',
+  necklace:'<path d="M5.2 3.8a9.2 7.4 0 0 0 13.6 0"/><path d="M12 8.8v2.9"/>'
+          +'<path d="M12 11.7l3 3.4-3 4.6-3-4.6z"/>',
+  earring:'<path d="M9.2 5.4a2.9 2.9 0 0 1 5.4 1.5v1.9"/><path d="M12 9.4l3.3 3.7-3.3 5.3-3.3-5.3z"/>',
+  ring:'<circle cx="12" cy="15.6" r="5.3"/><circle cx="12" cy="15.6" r="2.9"/>'
+      +'<path d="M12 3.2l2.9 3.1-2.9 3.4-2.9-3.4z"/><path d="M9.5 9.6h5"/>',
+  cape:'<path d="M6.6 4.2c2 1.5 3.6 2.1 5.4 2.1s3.4-.6 5.4-2.1l3 16.4H3.6z"/>'
+      +'<path d="M9 4.5a3.2 3.2 0 0 0 6 0"/><path d="M12 6.4v14.2M8.4 9.4l-1.3 11.2M15.6 9.4l1.3 11.2"/>',
+};
+// 잠금 표시 — 이모지 대신 자물쇠 아이콘을 칸 가운데에 얹는다
+const PROF_LOCK_SVG='<svg class="pdLockIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round">'
+  +'<path d="M7.6 10.4V7.6a4.4 4.4 0 0 1 8.8 0v2.8"/><path d="M5.4 10.4h13.2v9.4H5.4z"/><circle cx="12" cy="14.6" r="1.4"/><path d="M12 16v1.8"/></svg>';
+function _slotGlyph(slot){ return '<svg class="slIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linejoin="round" stroke-linecap="round">'
+  +(PROF_SLOT_ICON[slot]||'')+'</svg>'; }
+function _emptyGear(){ const o={}; for(const k in PROF_GEAR) o[k]=''; return o; }
+function profSlotLocked(slot){ const g=PROF_GEAR[slot], c=CHAR(); return !g || !c || c.level < (g.reqLv||1); }
+// 장비 아이템 — 인벤토리는 계정 공용(PROF().items), 장착은 캐릭터별(c.unit.gear[slot]=iid).
+// 등급 확률은 프로필 전용 표다. 유즈맵 가챠 밸런스(GACHA_TIERS.prob)를 절대 건드리지 않는다(표시 색만 TIER_COLOR 공용).
+const PROF_ITEM_TIERS=[
+  { id:'common', mul:1.00, opts:0, p:55, cost:120  },
+  { id:'rare',   mul:1.35, opts:1, p:27, cost:340  },
+  { id:'epic',   mul:1.80, opts:2, p:12, cost:900  },
+  { id:'unique', mul:2.40, opts:3, p:5,  cost:2200 },
+  { id:'legend', mul:3.20, opts:4, p:1,  cost:0    },   // cost 0 = 상점 판매 안 함(드랍 전용)
+];
+const PROF_ITEM_PREFIX={ common:'낡은', rare:'단단한', epic:'벼려진', unique:'각인된', legend:'전설의' };
+const PROF_INV_MAX=40;               // 가방 칸(계정 공용)
+function profItemTier(id){ return PROF_ITEM_TIERS.find(t=>t.id===id) || PROF_ITEM_TIERS[0]; }
+function _profTierRoll(bonus){       // bonus↑ = 상위 등급 가중(던전 층이 깊을수록)
+  const w=PROF_ITEM_TIERS.map((t,i)=>t.p*(1+i*(bonus||0)));
+  let tot=0; for(const v of w) tot+=v;
+  let r=Math.random()*tot;
+  for(let i=0;i<w.length;i++){ if(r<w[i]) return PROF_ITEM_TIERS[i]; r-=w[i]; }
+  return PROF_ITEM_TIERS[0]; }
+function profSlots(){ return Object.keys(PROF_GEAR).filter(s=>!profSlotLocked(s)); }
+function profMakeItem(slot, lv, tierId){ const g=PROF_GEAR[slot]; if(!g) return null;
+  lv=Math.max(1, lv||1);
+  const T=tierId? profItemTier(tierId) : _profTierRoll(Math.min(0.9,(lv-1)*0.06));
+  const main=Math.max(1, Math.round(g.base*T.mul*(1+(lv-1)*0.35)));
+  const opts=[], pool=PROF_STATS.filter(k=>k!==g.stat);
+  for(let i=0;i<T.opts;i++){ const k=pool[Math.floor(Math.random()*pool.length)];
+    const v=Math.max(1, Math.round(g.base*0.4*T.mul*(1+(lv-1)*0.28)*(0.7+Math.random()*0.6)));
+    const ex=opts.find(o=>o.k===k); if(ex) ex.v+=v; else opts.push({k:k, v:v}); }
+  return { iid:'it'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+           slot:slot, tier:T.id, lv:lv, main:main, opts:opts }; }
+function profItemName(it){ const g=PROF_GEAR[it.slot]; return (PROF_ITEM_PREFIX[it.tier]||'')+' '+(g?g.name:'장비'); }
+function profItemPower(it){ let s=it.main; for(const o of it.opts) s+=o.v; return s; }
+function profItems(){ const p=PROF(); if(!Array.isArray(p.items)) p.items=[]; return p.items; }
+function profFindItem(iid){ return iid? (profItems().find(i=>i.iid===iid)||null) : null; }
+function profItemHolder(iid){ if(!iid) return null;
+  for(const c of PROF().chars) for(const s in c.unit.gear) if(c.unit.gear[s]===iid) return c;
+  return null; }
+function profAddItem(it){ if(!it) return null; const inv=profItems();
+  if(inv.length>=PROF_INV_MAX) return null; inv.push(it); return it; }
+function profEquipItem(iid){ const c=CHAR(), it=profFindItem(iid); if(!c||!it) return false;
+  if(profSlotLocked(it.slot)) return false;
+  const h=profItemHolder(iid); if(h && h!==c) return false;              // 다른 캐릭터가 장착 중
+  c.unit.gear[it.slot] = (c.unit.gear[it.slot]===iid) ? '' : iid;        // 같은 것을 누르면 해제
+  profSyncUnlocks(); saveMeta(); return true; }
+function profScrapValue(it){ const T=profItemTier(it.tier); return Math.round(12*T.mul*(1+(it.lv-1)*0.5)); }
+function profScrapItem(iid){ const p=PROF(), inv=profItems(), i=inv.findIndex(x=>x.iid===iid);
+  if(i<0 || profItemHolder(iid)) return -1;                              // 장착 중엔 분해 불가
+  const v=profScrapValue(inv[i]); inv.splice(i,1); p.pcoin+=v; saveMeta(); return v; }
+function profBuyItem(tierId){ const p=PROF(), T=profItemTier(tierId);
+  if(!T.cost || p.pcoin<T.cost) return null;
+  if(profItems().length>=PROF_INV_MAX) return null;
+  const sl=profSlots(); if(!sl.length) return null;
+  const it=profMakeItem(sl[Math.floor(Math.random()*sl.length)], Math.max(1, dgMaxFloor()), tierId);
+  if(!profAddItem(it)) return null;
+  p.pcoin-=T.cost; saveMeta(); return it; }
 const PROF_IDLE_SOURCES={ drill:{name:'훈련장',rate:0.6,tip:'공격 위주'}, library:{name:'수련관',rate:0.6,tip:'집중 위주'}, arena:{name:'투기장',rate:1.0,reqUnlock:'idle_arena',tip:'고수익'} };
-const PROF_UNLOCKS=[ {id:'gear_trinket',power:80,label:'장신구 슬롯'}, {id:'idle_arena',power:200,label:'투기장 자동수익'}, {id:'evolve',power:350,label:'유닛 진화(★)'}, {id:'idle_8h',power:600,label:'오프라인 8시간·100%'} ];
+const PROF_UNLOCKS=[ {id:'idle_arena',power:200,label:'투기장 자동수익'}, {id:'evolve',power:350,label:'유닛 진화(★)'}, {id:'idle_8h',power:600,label:'오프라인 8시간·100%'} ];
 const PROF_OFF_CAP_MIN=4*60, PROF_OFF_RATE=0.5, PROF_OFF_CAP8_MIN=8*60, PROF_OFF_RATE8=1.0;   // 오프라인 상한/비율(idle_8h 해금 시 8h/100%)
 // 곡선(순수함수)
 function profXpForLevel(lv){ return Math.round(50*Math.pow(lv,1.5)); }
-function profGearCost(slot,tier){ const g=PROF_GEAR[slot]; return g? Math.round(g.baseCost*(tier+1)) : 0; }
 function profClassCost(jobId){ const J=PROF_JOBS[jobId]; return J? J.tier*400 : 0; }
 // 스탯/파워(전부 read-only)
-function profStat(k){ const p=PROF(), J=PROF_JOBS[p.unit.jobId]||PROF_JOBS.recruit;
-  let gear=0; for(const slot in p.unit.gear){ const g=PROF_GEAR[slot]; if(g&&g.stat===k) gear+=(p.unit.gear[slot]||0)*g.per; }
-  let v=(J.base[k]||0) + (p.unit.stats[k]||0) + gear + p.unit.level + p.unit.evoStars*2;
+function profStat(k){ const c=CHAR(); if(!c) return 0; const J=PROF_JOBS[c.unit.jobId]||PROF_JOBS[c.cls]||PROF_JOBS.ranger;
+  let gear=0;
+  for(const slot in c.unit.gear){ const it=profFindItem(c.unit.gear[slot]); if(!it) continue;
+    const g=PROF_GEAR[slot]; if(g && g.stat===k) gear+=it.main;
+    for(const o of it.opts) if(o.k===k) gear+=o.v; }
+  let v=(J.base[k]||0) + (c.unit.stats[k]||0) + gear + c.unit.level + c.unit.evoStars*2;
   if(k==='pow') v*=(1+profPetBonus('atk'));   // 🐾 펫 % 보너스(프로필 전용)
   else if(k==='vit') v*=(1+profPetBonus('vit'));
   return Math.round(v); }
@@ -4102,7 +4397,8 @@ function profPower(){ return Math.round(profStat('pow')*3 + profStat('vit')*2 + 
 function profHasUnlock(id){ const p=PROF(); if(p.unlocks[id]) return true; const u=PROF_UNLOCKS.find(x=>x.id===id); return !!u && profPower()>=u.power; }
 function profSyncUnlocks(){ const p=PROF(), pw=profPower(); for(const u of PROF_UNLOCKS){ if(!p.unlocks[u.id] && pw>=u.power) p.unlocks[u.id]=true; } }   // 한 번 넘으면 영구
 // 레벨업(xp→level, statPoints 지급). 유닛 레벨도 동반 상승.
-function profApplyLevelUps(p){ p=p||PROF(); let ups=0; while(p.xp>=profXpForLevel(p.level) && ups<9999){ p.xp-=profXpForLevel(p.level); p.level++; p.unit.level++; p.statPoints+=3; ups++; } return ups; }
+function profApplyLevelUps(c){ c=c||CHAR(); if(!c) return 0; let ups=0;
+  while(c.xp>=profXpForLevel(c.level) && ups<9999){ c.xp-=profXpForLevel(c.level); c.level++; c.unit.level++; c.statPoints+=3; ups++; } return ups; }
 // 방치 수익(분당 pcoin) = 파워 기반 × 소스 배율
 function profIdleRate(){ const p=PROF(), src=PROF_IDLE_SOURCES[p.idle.sourceId]||PROF_IDLE_SOURCES.drill; return (1 + profPower()*0.01) * (src.rate||0.6) * (1+profPetBonus('coin')); }
 // 🐾 펫 (프로필 전용 % 보너스 — 유즈맵과 무관). 중복 = 별(★). 티어 색은 TIER_COLOR 재사용.
@@ -4133,24 +4429,42 @@ function profPetEquip(id){ const p=PROF(); if(!p.pets[id]) return false; const i
   if(i>=0){ p.equip.splice(i,1); saveMeta(); return true; }                                // 토글 해제
   if(p.equip.length>=(p.petSlots||2)) return false; p.equip.push(id); saveMeta(); return true; }
 // 🌟 유닛 진화(별) — evolve 해금(파워 350) 필요. 별마다 레벨 문턱·pcoin 비용↑. profStat에서 evoStars*2 반영.
-function profEvolveReq(){ const p=PROF(); const s=p.unit.evoStars; return { unlock:profHasUnlock('evolve'), stars:s, maxed:s>=5, lvReq:(s+1)*10, cost:(s+1)*500 }; }
-function profEvolve(){ const p=PROF(), r=profEvolveReq(); if(!r.unlock||r.maxed) return false; if(p.unit.level<r.lvReq) return false; if(p.pcoin<r.cost) return false;
-  p.pcoin-=r.cost; p.unit.evoStars++; profSyncUnlocks(); saveMeta(); return true; }
+function profEvolveCost(stars){ return (stars+1)*500; }   // 별 stars → stars+1 로 올리는 비용(환급 계산과 공용)
+function profEvolveReq(){ const c=CHAR(), s=c?c.unit.evoStars:0; return { unlock:profHasUnlock('evolve'), stars:s, maxed:s>=5, lvReq:(s+1)*10, cost:profEvolveCost(s) }; }
+function profEvolve(){ const p=PROF(), c=CHAR(), r=profEvolveReq(); if(!c||!r.unlock||r.maxed) return false;
+  if(c.unit.level<r.lvReq) return false; if(p.pcoin<r.cost) return false;
+  p.pcoin-=r.cost; c.unit.evoStars++; profSyncUnlocks(); saveMeta(); return true; }
 // 액션(성공 true · saveMeta 포함 · 재렌더는 호출측)
-function profAllocStat(k){ const p=PROF(); if(p.statPoints<=0 || PROF_STATS.indexOf(k)<0) return false; p.unit.stats[k]=(p.unit.stats[k]||0)+1; p.statPoints--; profSyncUnlocks(); saveMeta(); return true; }
-function profBuyGear(slot){ const p=PROF(), g=PROF_GEAR[slot]; if(!g) return false; if(g.reqUnlock && !profHasUnlock(g.reqUnlock)) return false;
-  const tier=p.unit.gear[slot]||0, cost=profGearCost(slot,tier); if(p.pcoin<cost) return false; p.pcoin-=cost; p.unit.gear[slot]=tier+1; profSyncUnlocks(); saveMeta(); return true; }
-function profClassChange(jobId){ const p=PROF(), cur=PROF_JOBS[p.unit.jobId], J=PROF_JOBS[jobId]; if(!cur||!J) return false;
-  if(cur.next.indexOf(jobId)<0) return false; if(p.unit.level<J.reqLv) return false; const cost=profClassCost(jobId); if(p.pcoin<cost) return false;
-  p.pcoin-=cost; p.unit.jobId=jobId; profSyncUnlocks(); saveMeta(); return true; }
+function profAllocStat(k){ const c=CHAR(); if(!c || c.statPoints<=0 || PROF_STATS.indexOf(k)<0) return false;
+  c.unit.stats[k]=(c.unit.stats[k]||0)+1; c.statPoints--; profSyncUnlocks(); saveMeta(); return true; }
+function profClassChange(jobId){ const p=PROF(), c=CHAR(); if(!c) return false;
+  const cur=PROF_JOBS[c.unit.jobId], J=PROF_JOBS[jobId]; if(!cur||!J) return false;
+  if(cur.next.indexOf(jobId)<0) return false; if(c.unit.level<J.reqLv) return false; const cost=profClassCost(jobId); if(p.pcoin<cost) return false;
+  p.pcoin-=cost; c.unit.jobId=jobId; profSyncUnlocks(); saveMeta(); return true; }
+// ── 캐릭터 슬롯(생성/선택) ──
+function profCreateChar(cls, name){ const p=PROF(); if(!PROF_CLASSES[cls] || p.chars.length>=PROF_MAX_CHARS) return null;
+  const c=defaultChar(cls, (name||'').trim().slice(0,10)); p.chars.push(c); p.curId=c.id; profSyncUnlocks(); saveMeta(); return c; }
+function profSelectChar(id){ const p=PROF(); if(!p.chars.some(c=>c.id===id)) return false; p.curId=id; profSyncUnlocks(); saveMeta(); return true; }
+// 이 캐릭터에 '재화로' 넣은 것의 합 — 장비 강화 + 전직 + 진화. 경험치·레벨·스탯포인트는 대상이 아니다(삭제 시 소멸).
+// 장비 아이템은 계정 공용 자산이라 환급 대상이 아니다 — 캐릭터를 지우면 장착만 풀리고 가방에 남는다.
+function profSpentOn(c){ if(!c) return 0; let t=0;
+  for(let id=c.unit.jobId; PROF_JOB_PARENT[id]; id=PROF_JOB_PARENT[id]) t+=profClassCost(id);   // 뿌리까지 거슬러 전직 비용
+  for(let i=0;i<(c.unit.evoStars||0);i++) t+=profEvolveCost(i);
+  return t; }
+function profRefundOf(c){ return Math.floor(profSpentOn(c)*PROF_REFUND_RATE); }
+function profDeleteChar(id){ const p=PROF(), i=(p.chars||[]).findIndex(c=>c.id===id); if(i<0) return -1;
+  const refund=profRefundOf(p.chars[i]);
+  p.chars.splice(i,1); p.pcoin+=refund;
+  if(p.curId===id) p.curId=p.chars.length? p.chars[0].id : '';
+  saveMeta(); return refund; }
 function profSetIdleSource(id){ const p=PROF(), src=PROF_IDLE_SOURCES[id]; if(!src) return false; if(src.reqUnlock && !profHasUnlock(src.reqUnlock)) return false; p.idle.sourceId=id; saveMeta(); return true; }
 // 판 종료 보상 — 순수 read G / write profile. 자체 난이도배율(유즈맵 coinMult와 무관). _runSummary에서 1회 호출.
 function profRunReward(){ const p=PROF();
   const dMul={easy:0.8,normal:1,hard:1.4,hell:1.8,nightmare:2.4}[G.difficulty||'normal']||1;
   const k=G.kills||0, rd=G.round||0;
   const xp=Math.round((10 + k*0.5 + rd*8)*dMul), pc=Math.round((5 + k*0.2 + rd*4)*dMul*(1+profPetBonus('coin')));   // 🐾 펫 코인% 반영
-  p.xp+=xp; const ups=profApplyLevelUps(p); p.pcoin+=pc; profSyncUnlocks(); saveMeta();
-  return { xp:xp, pc:pc, ups:ups, level:p.level }; }
+  const c=CHAR(); if(c) c.xp+=xp; const ups=profApplyLevelUps(c); p.pcoin+=pc; profSyncUnlocks(); saveMeta();
+  return { xp:xp, pc:pc, ups:ups, level:c?c.level:1 }; }
 // 방치 정산(오프라인/켜둠) — Date.now 기준(1단계 클라이언트 신뢰). 유즈맵과 무관.
 function profOfflineCapMin(){ return profHasUnlock('idle_8h')?PROF_OFF_CAP8_MIN:PROF_OFF_CAP_MIN; }
 function profOfflineRate(){ return profHasUnlock('idle_8h')?PROF_OFF_RATE8:PROF_OFF_RATE; }
@@ -4163,8 +4477,6 @@ function profIdleTick(){ if(!PLAYER_META||!PLAYER_META.profile) return; const p=
 function profStampSeen(){ if(PLAYER_META&&PLAYER_META.profile){ PLAYER_META.profile.lastSeenTs=Date.now(); try{ localStorage.setItem(metaKey(), JSON.stringify(PLAYER_META)); }catch(e){} } }
 
 // ── 🎯 시작 허브 + 🏘 마을 UI ──
-let _townOpen=false, _twZone=null, _twMoveT=null;
-const ZONE_POS={ plaza:[50,74], shop:[20,47], gym:[80,47], gacha:[22,22], gate:[78,22] };
 function openHub(){ loadMeta(); if(typeof bgmStart==='function') bgmStart('lobby'); showAppScreen('hubScreen'); renderHub(); }
 function renderHub(){ try{
   const set=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
@@ -4244,44 +4556,228 @@ function sendDM(){ const inp=document.getElementById('dmInput'); if(!inp||_dmFri
   const f=HUB_FRIENDS[_dmFriend], msgs=_dmMsgs[_dmFriend]||(_dmMsgs[_dmFriend]=[]);
   msgs.push({me:1,t}); inp.value=''; renderDM();
   if(f && f.status!=='offline'){ setTimeout(()=>{ if(_dmFriend<0) return; msgs.push({me:0,t:_DM_REPLIES[(Math.random()*_DM_REPLIES.length)|0]}); renderDM(); }, 650+Math.random()*700); } }
+// ── 마을(월드 + 카메라) ──
+// 좌표계: 월드 픽셀. 캐릭터는 화면 정중앙에 CSS로 고정되고, 매 프레임 #twWorld의 transform만 바뀐다.
+// 구역 추가는 TOWN_ZONES에 한 줄 추가로 끝난다(아이콘 DOM·좌표·패널 제목·렌더러가 전부 여기 모여 있음).
+// 배치: 가로로 긴 직사각형의 네 모서리 + 정중앙 광장(주 이동 방향이 가로라 좌우로 넓게 잡는다)
+const TOWN_ZONES={
+  plaza:{ x:50, y:50, ico:'🏠',   label:'광장',      title:'광장 · 내 캐릭터', render:()=>renderProfStats() },
+  gacha:{ x:22, y:24, ico:'🎁',   label:'뽑기집',    title:'뽑기집 · 펫',      render:()=>renderProfGacha() },   // 좌상
+  gate: { x:78, y:24, ico:'🔒',   label:'관문',      title:'관문',             render:()=>renderProfGate()  },   // 우상
+  gear: { x:22, y:76, ico:'🎒',   label:'장비',      title:'장비',             render:()=>renderProfGear()  },   // 좌하
+  gym:  { x:78, y:76, ico:'🏋️',  label:'훈련장',    title:'훈련장',           render:()=>renderProfIdle()  },   // 우하
+  charmake:{ x:37, y:50, ico:'🧬', label:'생성소',   title:'캐릭터 생성소',    render:()=>renderCharCreate() },   // 광장 왼쪽(화면 안에 들어오는 거리)
+  charsel: { x:63, y:50, ico:'🧳', label:'보관소',   title:'캐릭터 보관소',    render:()=>renderCharSelect() },   // 광장 오른쪽
+};
+const TW_WORLD_W_MUL=3, TW_WORLD_H_MUL=1.35;   // 월드 = 화면의 가로 N배 × 세로 M배. 마을을 넓히려면 이 값만 올린다
+const TW_SPEED=190;          // 캐릭터 이동 속도(월드 px/초)
+const TW_ARRIVE=4;           // 목적지 도착 판정(px)
+const TW_ZONE_R=52;          // 구역 도착 판정 반경(px)
+const TW_TAP_MS=260, TW_TAP_PX=10;   // 이보다 길게 누르거나 많이 움직이면 '탭'이 아니라 '꾹 누르기'
+let _townOpen=false, _twZone=null;
+let _twW=0,_twH=0, _twVW=0,_twVH=0, _twVL=0,_twVT=0;   // 월드 크기 / 화면(뷰포트) 크기·위치
+let _twChar={x:0,y:0,tx:0,ty:0,dx:0,dy:0,mode:null,face:1};   // mode: null=정지 | 'to'=목적지 이동 | 'dir'=방향 이동
+let _twPtr=null, _twGoZone=null, _twRaf=0, _twLast=0;   // _twGoZone = 지금 향하고 있는 '지정한' 구역(도착하면 그것만 열린다)
+let _twEdgeEl={};   // 구역 id → 화면 가장자리 방향 표시 엘리먼트
 function hubGoMap(){ if(typeof playSfx==='function') playSfx('ui_open'); openMapSelect(); }
 function mapToHub(){ if(typeof stopRoomsTick==='function') stopRoomsTick(); if(typeof playSfx==='function') playSfx('ui_close'); openHub(); }   // 유즈맵 선택 → 시작 선택(허브)로 복귀
-function hubGoTown(){ if(typeof playSfx==='function') playSfx('ui_open'); openTown(); }
-function openTown(){ loadMeta(); _townOpen=true; showAppScreen('townScreen');
-  const av=document.getElementById('twAvatar'); if(av){ av.style.left='50%'; av.style.top='72%'; }
+function hubGoTown(){ if(typeof playSfx==='function') playSfx('ui_open'); openCharScreen(); }   // 마을 입장 = 캐릭터 선택부터
+function openTown(){ loadMeta(); if(!CHAR()){ openCharScreen('create'); return; }   // 캐릭터가 없으면 생성 화면으로
+  _townOpen=true; showAppScreen('townScreen');
+  twBuildZones(); twLayout(); twApplyChar();
+  const p=twZonePx('plaza')||[_twW/2,_twH/2];   // 광장 앞에서 시작(아이콘과 겹치지 않게 살짝 아래)
+  _twChar.x=_twChar.tx=p[0]; _twChar.y=_twChar.ty=Math.min(_twH, p[1]+TW_ZONE_R*1.2); _twChar.mode=null; _twChar.face=1;
+  _twGoZone=null;   // 지정한 구역 없음 — 들어가자마자 팝업이 뜨지 않는다
+  twCamApply(); twStartLoop();
   const g=profClaimOffline(); renderTownBar(); if(g>0) showTownToast('오프라인 보상 +'+g+' P'); }
-function townToHub(){ _townOpen=false; closeTownPanel(); profStampSeen(); if(typeof playSfx==='function') playSfx('ui_close'); openHub(); }
-function renderTownBar(){ const p=PROF();
-  const nm=document.getElementById('twName'); if(nm) nm.textContent=(typeof myNick==='function'?myNick():'캐릭터');
-  const lv=document.getElementById('twLv'); if(lv) lv.textContent='Lv.'+p.level;
+function townToHub(){ _townOpen=false; twStopLoop(); closeTownPanel(); profStampSeen(); if(typeof playSfx==='function') playSfx('ui_close'); openHub(); }
+
+// ── 월드/카메라 ──
+function twBuildZones(){ const w=document.getElementById('twWorld'), map=document.getElementById('twMap'); if(!w||!map||w._zonesBuilt) return;
+  for(const id in TOWN_ZONES){ const z=TOWN_ZONES[id];
+    const d=document.createElement('div');       // 월드 안의 구역 아이콘
+    d.className='twZone'; d.dataset.zone=id; d.onclick=function(){ townGo(id); };
+    d.innerHTML='<span class="tzIco">'+z.ico+'</span><span class="tzLbl">'+z.label+'</span>'; w.appendChild(d);
+    const e=document.createElement('div');       // 화면 밖일 때 가장자리에 뜨는 방향 표시
+    e.className='twEdge hide'; e.textContent=z.ico; e.title=z.label; e.onclick=function(){ townGo(id); };
+    map.appendChild(e); _twEdgeEl[id]=e; }
+  w._zonesBuilt=true; }
+// 화면 밖 구역을 화면 가장자리에 표시 — 월드가 넓어 구역이 안 보일 때 어디로 가야 할지 알려준다.
+function twEdgeApply(){ const M=24, cx=_twVW/2, cy=_twVH/2;
+  for(const id in TOWN_ZONES){ const el=_twEdgeEl[id]; if(!el) continue;
+    const p=twZonePx(id), sx=p[0]-_twChar.x+cx, sy=p[1]-_twChar.y+cy;
+    if(sx>M && sx<_twVW-M && sy>M && sy<_twVH-M){ el.classList.add('hide'); continue; }   // 화면 안이면 아이콘 자체가 보인다
+    el.classList.remove('hide');
+    const dx=sx-cx, dy=sy-cy, hw=cx-M, hh=cy-M;                                            // 중심→구역 방향을 화면 사각형 경계에 투영
+    const t=Math.min(hw/Math.max(Math.abs(dx),1e-6), hh/Math.max(Math.abs(dy),1e-6));
+    el.style.left=(cx+dx*t).toFixed(1)+'px'; el.style.top=(cy+dy*t).toFixed(1)+'px'; } }
+// 월드 픽셀 크기 산출 + 구역 배치. 화면 크기가 바뀌면 캐릭터 좌표도 비례로 옮겨 상대 위치를 지킨다.
+function twLayout(){ const map=document.getElementById('twMap'), w=document.getElementById('twWorld'); if(!map||!w) return;
+  const r=map.getBoundingClientRect(); _twVW=r.width; _twVH=r.height; _twVL=r.left; _twVT=r.top;
+  const nw=Math.round(r.width*TW_WORLD_W_MUL), nh=Math.round(r.height*TW_WORLD_H_MUL);
+  if(_twW&&_twH&&(nw!==_twW||nh!==_twH)){ const sx=nw/_twW, sy=nh/_twH;
+    _twChar.x*=sx; _twChar.y*=sy; _twChar.tx*=sx; _twChar.ty*=sy; }
+  _twW=nw; _twH=nh; w.style.width=nw+'px'; w.style.height=nh+'px';
+  for(const el of w.querySelectorAll('.twZone')){ const z=TOWN_ZONES[el.dataset.zone]; if(z){ el.style.left=z.x+'%'; el.style.top=z.y+'%'; } } }
+function twZonePx(id){ const z=TOWN_ZONES[id]; return z? [_twW*z.x/100, _twH*z.y/100] : null; }
+function twScreenToWorld(cx,cy){ return [ _twChar.x+(cx-_twVL)-_twVW/2, _twChar.y+(cy-_twVT)-_twVH/2 ]; }   // 캐릭터가 화면 중앙이므로 = 캐릭터 + (터치점 - 화면중앙)
+function twSetTarget(wx,wy){ _twChar.tx=Math.max(0,Math.min(_twW,wx)); _twChar.ty=Math.max(0,Math.min(_twH,wy)); _twChar.mode='to'; _twGoZone=null; }
+function twTapFx(wx,wy){ const w=document.getElementById('twWorld'); if(!w) return;
+  const d=document.createElement('div'); d.className='twTapFx'; d.style.left=wx+'px'; d.style.top=wy+'px';
+  w.appendChild(d); setTimeout(()=>{ if(d.parentNode) d.parentNode.removeChild(d); }, 520); }
+// 카메라 = 월드 transform 한 줄. 아바타는 DOM상 고정이고 걷기/방향 클래스만 바뀐다.
+function twCamApply(){ const w=document.getElementById('twWorld'); if(!w) return;
+  w.style.transform='translate3d('+(_twVW/2-_twChar.x).toFixed(1)+'px,'+(_twVH/2-_twChar.y).toFixed(1)+'px,0)';
+  const av=document.getElementById('twAvatar'); if(av) av.classList.toggle('walk', _twChar.mode!==null);
+  const f=document.getElementById('twAvFlip'); if(f) f.classList.toggle('l', _twChar.face<0);
+  twEdgeApply(); }
+// 한 프레임 전진. rAF(twTick)와 스모크가 같은 함수를 쓴다(헤드리스는 rAF가 멈춰 있어 수동 호출이 필요).
+function twStep(dt){ if(!_twW) return;
+  const c=_twChar;
+  if(_twPtr && !_twPtr.hold && Date.now()-_twPtr.t>TW_TAP_MS) _twPtr.hold=true;   // 가만히 누르고 있어도 꾹 누르기로 전환(move 이벤트가 안 오므로 여기서 판정)
+  if(_twPtr && _twPtr.hold){ const dx=_twPtr.x-(_twVL+_twVW/2), dy=_twPtr.y-(_twVT+_twVH/2), d=Math.hypot(dx,dy);
+    if(d>4){ c.mode='dir'; c.dx=dx/d; c.dy=dy/d; _twGoZone=null; } else if(c.mode==='dir') c.mode=null; }
+  let mx=0,my=0;
+  if(c.mode==='dir'){ mx=c.dx; my=c.dy; }
+  else if(c.mode==='to'){ const ax=c.tx-c.x, ay=c.ty-c.y, d=Math.hypot(ax,ay);
+    if(d<=TW_ARRIVE){ c.x=c.tx; c.y=c.ty; c.mode=null; } else { mx=ax/d; my=ay/d; } }
+  if(mx||my){ let s=TW_SPEED*dt;
+    if(c.mode==='to') s=Math.min(s, Math.hypot(c.tx-c.x,c.ty-c.y));
+    c.x=Math.max(0,Math.min(_twW,c.x+mx*s)); c.y=Math.max(0,Math.min(_twH,c.y+my*s));
+    if(mx>0.05) c.face=1; else if(mx<-0.05) c.face=-1; }
+  twCamApply(); twCheckZones(); }
+// 시설은 '내가 지정한 구역'에 도착했을 때만 열린다.
+// 옆을 스쳐 지나가는 것도, 땅을 눌러 걸어가 그 위에 겹쳐 서는 것도 열지 않는다 — 구역을 직접 눌러야 한다.
+function twCheckZones(){
+  if(!_twGoZone) return;
+  const tp=document.getElementById('townPanel'); if(tp && !tp.classList.contains('hide')) return;
+  const p=twZonePx(_twGoZone); if(!p){ _twGoZone=null; return; }
+  if(Math.hypot(p[0]-_twChar.x,p[1]-_twChar.y)>TW_ZONE_R) return;   // 아직 가는 중
+  const z=_twGoZone; _twGoZone=null; _twChar.mode=null; openTownPanel(z); }
+function twTick(ts){ if(!_townOpen){ _twRaf=0; return; }
+  const dt=_twLast? Math.min(0.05,(ts-_twLast)/1000) : 0.016; _twLast=ts;
+  twStep(dt); _twRaf=requestAnimationFrame(twTick); }
+function twStartLoop(){ if(_twRaf) return; _twLast=0; _twRaf=requestAnimationFrame(twTick); }
+function twStopLoop(){ if(_twRaf){ cancelAnimationFrame(_twRaf); _twRaf=0; } _twPtr=null; _twChar.mode=null; _twGoZone=null; }
+
+// ── 입력: 탭 = 그 지점으로 이동 / 꾹 누르기 = 손가락 방향으로 계속 이동 ──
+function twPtrDown(e){ if(!_townOpen) return;
+  if(e.target && e.target.closest && e.target.closest('.twZone,.twEdge')) return;   // 구역 아이콘·방향 표시는 자체 클릭(townGo)이 처리
+  _twPtr={ id:e.pointerId, x:e.clientX, y:e.clientY, sx:e.clientX, sy:e.clientY, t:Date.now(), hold:false };
+  const map=document.getElementById('twMap'); if(map){ try{ map.setPointerCapture(e.pointerId); }catch(_){} } }
+function twPtrMove(e){ if(!_twPtr || e.pointerId!==_twPtr.id) return;
+  _twPtr.x=e.clientX; _twPtr.y=e.clientY;
+  if(!_twPtr.hold && Math.hypot(e.clientX-_twPtr.sx, e.clientY-_twPtr.sy)>TW_TAP_PX) _twPtr.hold=true; }
+function twPtrUp(e){ if(!_twPtr || e.pointerId!==_twPtr.id) return;
+  const p=_twPtr; _twPtr=null;
+  if(p.hold){ if(_twChar.mode==='dir') _twChar.mode=null; return; }   // 꾹 누르기였으면 떼는 순간 정지
+  const w=twScreenToWorld(p.x,p.y); twSetTarget(w[0],w[1]); twTapFx(w[0],w[1]); }
+window.addEventListener('resize', function(){ if(_townOpen){ twLayout(); twCamApply(); } });
+function renderTownBar(){ const p=PROF(), c=CHAR();
+  const nm=document.getElementById('twName'); if(nm) nm.textContent=c?c.name:'캐릭터';
+  const lv=document.getElementById('twLv'); if(lv) lv.textContent='Lv.'+(c?c.level:1);
   const pw=document.getElementById('twPow'); if(pw) pw.textContent='⚔ '+profPower();
   const cn=document.getElementById('twCoin'); if(cn) cn.textContent=Math.floor(p.pcoin); }
 function showTownToast(msg){ const t=document.getElementById('twToast'); if(!t) return; t.textContent=msg; t.classList.remove('hide');
   clearTimeout(t._t); t._t=setTimeout(()=>t.classList.add('hide'), 2600); }
-function townGo(zone){ const pos=ZONE_POS[zone]; if(!pos) return; if(typeof playSfx==='function') playSfx('ui_open');
-  const av=document.getElementById('twAvatar'); if(av){ av.style.left=pos[0]+'%'; av.style.top=pos[1]+'%'; }
-  if(_twMoveT) clearTimeout(_twMoveT); _twMoveT=setTimeout(function(){ _twMoveT=null; openTownPanel(zone); }, 520); }
-function openTownPanel(zone){ _twZone=zone; const t=document.getElementById('tpTitle');
-  const T={plaza:'광장 · 내 캐릭터',shop:'장비 상점',gym:'훈련장',gacha:'뽑기집 · 펫',gate:'관문'}; if(t) t.textContent=T[zone]||'시설';
-  refreshTownPanel(); popShow('townPanel'); }
-function refreshTownPanel(){ const body=document.getElementById('tpBody'); if(!body||!_twZone) return;
-  body.innerHTML = _twZone==='plaza'?renderProfStats() : _twZone==='shop'?renderProfGear() : _twZone==='gym'?renderProfIdle() : _twZone==='gacha'?renderProfGacha() : renderProfGate(); }
-function closeTownPanel(){ popHide('townPanel'); _twZone=null; }
+// 구역 아이콘(또는 가장자리 방향 표시) 탭 = 그 구역을 지정. 이미 그 위에 서 있으면 바로 연다.
+function townGo(zone){ const p=twZonePx(zone); if(!p) return; if(typeof playSfx==='function') playSfx('ui_open');
+  if(Math.hypot(p[0]-_twChar.x,p[1]-_twChar.y)<=TW_ZONE_R){ _twChar.mode=null; _twGoZone=null; openTownPanel(zone); return; }
+  twSetTarget(p[0],p[1]); _twGoZone=zone; }   // twSetTarget이 지정을 지우므로 그 뒤에 세운다
+function openTownPanel(zone){ _twZone=zone; _twChar.mode=null; _twPtr=null;   // 시설에 들어가면 걸음을 멈춘다
+  const card=document.querySelector('#townPanel .twCard');
+  if(card) card.classList.toggle('gearFull', zone==='gear');   // 장비창만 카드 높이를 고정해 위/아래 구역을 나눈다
+  const t=document.getElementById('tpTitle'), z=TOWN_ZONES[zone]; if(t) t.textContent=(z&&z.title)||'시설';
+  refreshTownPanel(); popShow('townPanel'); bagScrollHint(); }   // 숨은 동안은 높이가 0이라 표시 후 한 번 더 재본다
+function refreshTownPanel(){ const body=document.getElementById('tpBody'), z=TOWN_ZONES[_twZone]; if(!body||!z) return;
+  const old=body.querySelector('.bagBody'), keep=old?old.scrollTop:0;   // 다시 그려도 가방을 보던 위치를 유지
+  body.innerHTML = z.render();
+  const nb=body.querySelector('.bagBody'); if(nb&&keep) nb.scrollTop=keep;
+  bagScrollHint(); }
+// 가방에 더 볼 게 남았는지(스크롤 가능 여부)를 아래 그림자로 알린다
+function bagScrollHint(){ const s=document.querySelector('#tpBody .bagScroll'); if(!s) return;
+  const b=s.querySelector('.bagBody'); if(!b) return;
+  s.classList.toggle('more', b.scrollHeight-b.scrollTop-b.clientHeight>4); }
+function closeTownPanel(){ popHide('townPanel'); _twZone=null; _charDelId=null; _gearPick=null; _gearSel=null; _gearCat=''; }
+// ── 🧍 캐릭터 선택/생성 ─────────────────────────────────────────────────────
+// 렌더러는 한 벌뿐이고 입장 화면(#charScreen)과 마을 구역(보관소·생성소)이 같은 것을 쓴다. 복제 금지.
+function renderCharSelect(){ const p=PROF(), list=p.chars||[];
+  let h='<div class="twHead">캐릭터를 골라 마을로 들어갑니다. 슬롯 <b>'+list.length+'/'+PROF_MAX_CHARS+'</b><br>재화(P)와 펫은 모든 캐릭터가 함께 씁니다.</div>';
+  if(!list.length) h+='<div class="twRow"><div class="twRowInfo"><div class="twRowSub">아직 캐릭터가 없습니다 — 먼저 만들어 주세요.</div></div></div>';
+  for(const c of list){ const C=PROF_CLASSES[c.cls], J=PROF_JOBS[c.unit.jobId]||PROF_JOBS[c.cls], on=(c.id===p.curId);
+    if(_charDelId===c.id){   // 삭제 확인 — 무엇을 잃고 무엇을 돌려받는지 그 자리에서 보여준다
+      h+='<div class="twRow"><span class="twPet">'+C.ico+'</span><div class="twRowInfo">'
+        +'<div class="twRowName">'+escHtml(c.name)+' 삭제할까요?</div>'
+        +'<div class="twRowSub ok">'+profRefundOf(c)+' P 반환</div>'
+        +'<div class="twRowSub lock">Lv.'+c.level+' · 경험치 소멸</div></div>'
+        +'<button class="twBtn" onclick="charCancelDelete()">취소</button>'
+        +'<button class="twBtn del" onclick="charDoDelete(\''+c.id+'\')">삭제</button></div>';
+      continue; }
+    h+='<div class="twRow"><span class="twPet">'+C.ico+'</span><div class="twRowInfo">'
+      +'<div class="twRowName">'+escHtml(c.name)+(on?' <span class="twStars">선택중</span>':'')+'</div>'
+      +'<div class="twRowSub">'+(J.name===C.name? C.name : C.name+' 계열 · '+J.name)+' · Lv.'+c.level+'</div></div>'
+      +'<button class="twBtn'+(on?' on':'')+'" onclick="charPick(\''+c.id+'\')">'+(on?'입장':'선택')+'</button>'
+      +'<button class="twDel" onclick="charAskDelete(\''+c.id+'\')" aria-label="삭제">✕</button></div>'; }
+  if(list.length<PROF_MAX_CHARS)
+    h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">새 캐릭터 만들기</div><div class="twRowSub">레인저 · 척후병 · 워든</div></div><button class="twBtn" onclick="charGoCreate()">만들기</button></div>';
+  return h; }
+function renderCharCreate(){ const p=PROF(), full=(p.chars||[]).length>=PROF_MAX_CHARS;
+  let h='<div class="twHead">종류를 고르면 그 자리에서 캐릭터가 만들어집니다.<br>종류마다 기본 스탯과 전직 트리가 다릅니다.</div>';
+  h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">이름</div><div class="twRowSub">비우면 종류 이름으로</div></div><input id="ccName" class="twInput" maxlength="10" placeholder="10자 이내"></div>';
+  for(const id in PROF_CLASSES){ const C=PROF_CLASSES[id], J=PROF_JOBS[id];
+    const bs=PROF_STATS.map(k=>PROF_STAT_NAME[k]+' '+J.base[k]).join(' · ');
+    const nx=J.next.map(n=>PROF_JOBS[n].name).join(' / ');
+    h+='<div class="twRow"><span class="twPet">'+C.ico+'</span><div class="twRowInfo"><div class="twRowName">'+C.name+'</div>'
+      +'<div class="twRowSub">'+C.tip+'</div><div class="twRowSub">'+bs+'</div><div class="twRowSub">전직 → '+nx+'</div></div>'
+      +'<button class="twBtn" onclick="charDoCreate(\''+id+'\')"'+(full?' disabled':'')+'>'+(full?'슬롯 참':'만들기')+'</button></div>'; }
+  if((p.chars||[]).length) h+='<div class="twRow"><div class="twRowInfo"><div class="twRowSub">이미 만든 캐릭터를 고르려면</div></div><button class="twBtn" onclick="charGoSelect()">보관소</button></div>';
+  return h; }
+// 지금 떠 있는 호스트(마을 구역 / 입장 화면)를 그대로 두고 내용만 바꾼다
+function _charHostRender(mode){ if(_townOpen && _twZone){ openTownPanel(mode==='create'?'charmake':'charsel'); return; } openCharScreen(mode); }
+let _charDelId=null;   // 삭제 확인 중인 캐릭터(한 번 더 눌러야 지워진다)
+function charAskDelete(id){ _charDelId=id; if(typeof playSfx==='function') playSfx('ui_open'); _charHostRender('select'); }
+function charCancelDelete(){ _charDelId=null; _charHostRender('select'); }
+function charDoDelete(id){ const c=(PROF().chars||[]).find(x=>x.id===id); if(!c) return;
+  const nm=c.name, rf=profDeleteChar(id); if(rf<0) return;
+  _charDelId=null; if(typeof playSfx==='function') playSfx('ui_close');
+  if(!CHAR()){ closeTownPanel(); _townOpen=false; twStopLoop(); openCharScreen('create'); return; }   // 마지막 한 명을 지웠으면 생성 화면으로
+  if(_townOpen){ twApplyChar(); renderTownBar(); showTownToast(nm+' 삭제 · '+rf+' P 반환'); }
+  _charHostRender('select'); }
+function charGoCreate(){ _charDelId=null; if(typeof playSfx==='function') playSfx('ui_open'); _charHostRender('create'); }
+function charGoSelect(){ if(typeof playSfx==='function') playSfx('ui_open'); _charHostRender('select'); }
+function charPick(id){ if(!profSelectChar(id)) return; if(typeof playSfx==='function') playSfx('ui_open'); _charEnter(); }
+function charDoCreate(cls){ const el=document.getElementById('ccName'), c=profCreateChar(cls, el?el.value:'');
+  if(!c){ if(_townOpen) showTownToast('슬롯이 가득 찼습니다'); return; }
+  if(typeof playSfx==='function') playSfx('ui_open'); _charEnter(); }
+// 선택 직후 — 마을 안이면 그 자리에서 교체, 밖(입장 화면)이면 마을로 입장
+function _charEnter(){ const c=CHAR(); _charDelId=null;
+  if(_townOpen){ closeTownPanel(); twApplyChar(); renderTownBar(); if(c) showTownToast(c.name+' 선택'); }
+  else openTown(); }
+let _csMode='select';
+function openCharScreen(mode){ loadMeta();
+  _csMode=(mode==='create' || !(PROF().chars||[]).length) ? 'create' : 'select';
+  const t=document.getElementById('csTitle'); if(t) t.textContent=(_csMode==='create')?'캐릭터 만들기':'캐릭터 선택';
+  const b=document.getElementById('csBody'); if(b) b.innerHTML=(_csMode==='create')?renderCharCreate():renderCharSelect();
+  showAppScreen('charScreen'); }
+function charBackToHub(){ if(typeof playSfx==='function') playSfx('ui_close'); openHub(); }
+function twApplyChar(){ const c=CHAR(), b=document.querySelector('#twAvatar .twAvBody');   // 아바타 겉모습 = 현재 캐릭터 종류
+  if(b) b.textContent=(c && PROF_CLASSES[c.cls] && PROF_CLASSES[c.cls].ico) || '🧍'; }
 function renderTownIdle(){ renderTownBar(); const tp=document.getElementById('townPanel'); if(_twZone==='gym' && tp && !tp.classList.contains('hide')) refreshTownPanel(); }
 // 광장: 스탯 + 전직
-function renderProfStats(){ const p=PROF(), J=PROF_JOBS[p.unit.jobId]||PROF_JOBS.recruit;
-  let h='<div class="twHead">직업 <b>'+J.name+'</b> · Lv.'+p.level+' · 파워 <b>'+profPower()+'</b><br>남은 스탯 포인트 <b>'+p.statPoints+'</b> · 다음 레벨까지 '+Math.max(0,profXpForLevel(p.level)-p.xp)+' XP</div><div class="twStatGrid">';
-  for(const k of PROF_STATS){ h+='<div class="twStat"><span class="tsL">'+PROF_STAT_NAME[k]+'</span><span class="tsV">'+profStat(k)+'</span><button onclick="profDoAlloc(\''+k+'\')"'+(p.statPoints>0?'':' disabled')+'>+</button></div>'; }
+function renderProfStats(){ const p=PROF(), c=CHAR(); if(!c) return '<div class="twHead">캐릭터가 없습니다.</div>';
+  const C=PROF_CLASSES[c.cls], J=PROF_JOBS[c.unit.jobId]||PROF_JOBS[c.cls];
+  let h='<div class="twHead">'+C.ico+' <b>'+escHtml(c.name)+'</b> · '+C.name+' 계열<br>현재 <b>'+J.name+'</b> · Lv.'+c.level+' · 파워 <b>'+profPower()+'</b><br>남은 스탯 포인트 <b>'+c.statPoints+'</b> · 다음 레벨까지 '+Math.max(0,profXpForLevel(c.level)-c.xp)+' XP</div><div class="twStatGrid">';
+  for(const k of PROF_STATS){ h+='<div class="twStat"><span class="tsL">'+PROF_STAT_NAME[k]+'</span><span class="tsV">'+profStat(k)+'</span><button onclick="profDoAlloc(\''+k+'\')"'+(c.statPoints>0?'':' disabled')+'>+</button></div>'; }
   h+='</div>';
   if(J.next && J.next.length){ h+='<div class="twSectLbl">전직</div>';
-    for(const nx of J.next){ const N=PROF_JOBS[nx], cost=profClassCost(nx), okLv=p.unit.level>=N.reqLv, ok=okLv&&p.pcoin>=cost;
+    for(const nx of J.next){ const N=PROF_JOBS[nx], cost=profClassCost(nx), okLv=c.unit.level>=N.reqLv, ok=okLv&&p.pcoin>=cost;
       h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+N.name+'</div><div class="twRowSub'+(okLv?'':' lock')+'">필요 Lv.'+N.reqLv+' · 비용 '+cost+' P</div></div><button class="twBtn" onclick="profDoClass(\''+nx+'\')"'+(ok?'':' disabled')+'>전직</button></div>'; } }
   const r=profEvolveReq();   // 🌟 진화(별)
   h+='<div class="twSectLbl">진화 <span class="twStars">'+('★'.repeat(r.stars)+'☆'.repeat(5-r.stars))+'</span></div>';
   if(!r.unlock) h+='<div class="twRow"><div class="twRowInfo"><div class="twRowSub lock">🔒 파워 350 달성 시 진화 개방</div></div></div>';
   else if(r.maxed) h+='<div class="twRow"><div class="twRowInfo"><div class="twRowSub ok">✓ 최대 진화(★5)</div></div></div>';
-  else { const ok=p.unit.level>=r.lvReq && p.pcoin>=r.cost;
-    h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">별 +1 (스탯 강화)</div><div class="twRowSub'+(p.unit.level>=r.lvReq?'':' lock')+'">필요 Lv.'+r.lvReq+' · 비용 '+r.cost+' P</div></div><button class="twBtn" onclick="profDoEvolve()"'+(ok?'':' disabled')+'>진화</button></div>'; }
+  else { const ok=c.unit.level>=r.lvReq && p.pcoin>=r.cost;
+    h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">별 +1 (스탯 강화)</div><div class="twRowSub'+(c.unit.level>=r.lvReq?'':' lock')+'">필요 Lv.'+r.lvReq+' · 비용 '+r.cost+' P</div></div><button class="twBtn" onclick="profDoEvolve()"'+(ok?'':' disabled')+'>진화</button></div>'; }
   return h; }
 function profDoEvolve(){ if(profEvolve()){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); showTownToast('⭐ 진화 성공!'); } }
 // 뽑기집: 펫 뽑기 + 보유 펫 장착
@@ -4303,15 +4799,143 @@ function profDoGacha(){ const res=profPetRoll(); if(!res) return; if(typeof play
 function profDoPetEquip(id){ if(profPetEquip(id)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); } }
 function profDoAlloc(k){ if(profAllocStat(k)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); } }
 function profDoClass(id){ if(profClassChange(id)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); showTownToast('전직 완료!'); } }
-// 장비 상점
-function renderProfGear(){ const p=PROF();
-  let h='<div class="twHead">보유 <b>'+Math.floor(p.pcoin)+' P</b> · 장비를 강화해 스탯을 올립니다.</div>';
-  for(const slot in PROF_GEAR){ const g=PROF_GEAR[slot], locked=g.reqUnlock&&!profHasUnlock(g.reqUnlock), tier=p.unit.gear[slot]||0, cost=profGearCost(slot,tier), poor=p.pcoin<cost;
-    const reqP=(PROF_UNLOCKS.find(u=>u.id===g.reqUnlock)||{}).power;
-    const sub = locked ? ('🔒 파워 '+reqP+' 필요') : ('Lv.'+tier+' · +'+PROF_STAT_NAME[g.stat]+' '+(tier*g.per)+' → '+((tier+1)*g.per));
-    h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+g.name+'</div><div class="twRowSub'+(locked?' lock':'')+'">'+sub+'</div></div><button class="twBtn" onclick="profDoGear(\''+slot+'\')"'+((locked||poor)?' disabled':'')+'>'+(locked?'잠김':cost+' P')+'</button></div>'; }
-  return h; }
-function profDoGear(slot){ if(profBuyGear(slot)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); } }
+// ── 장비창(위=아바타+슬롯 / 아래=가방) ──
+// 아바타 = SF 파워아머 실루엣(자체 제작). 얼굴은 그리지 않고 바이저로 대신한다.
+// 부위마다 닫힌 외곽선 + 배경색 채움으로 겹침을 가리고, 먼 것부터(다리 → 골반 → 몸통 → 팔 → 어깨판 → 투구) 쌓는다.
+const _FIG_ATTR='viewBox="0 0 100 200" width="100%" height="100%" fill="rgba(10,14,22,.9)" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"';
+const PROF_FIGURE='<svg '+_FIG_ATTR+'>'
+  /* 다리: 허벅지 → 정강이 → 부츠 (각진 판으로 끊어서 관절을 만든다) */
+  +'<path d="M38 110L48 110L47 141L36 141Z"/><path d="M62 110L52 110L53 141L64 141Z"/>'
+  +'<path d="M36 141L47 141L46 176L34 176Z"/><path d="M64 141L53 141L54 176L66 176Z"/>'
+  +'<path d="M32 176L48 176L49.5 191L29 191Z"/><path d="M68 176L52 176L50.5 191L71 191Z"/>'
+  +'<path d="M36.5 143h10M53.5 143h10" opacity=".4" fill="none"/>'
+  /* 골반 장갑 */
+  +'<path d="M38 95L62 95L64 111L36 111Z"/><path d="M50 96v14" opacity=".35" fill="none"/>'
+  /* 흉갑 */
+  +'<path d="M35 44L65 44L67 77L61 96L39 96L33 77Z"/>'
+  +'<path d="M44 52L56 52L57.5 71L42.5 71Z" opacity=".45"/>'
+  +'<path d="M50 46v48" opacity=".3" fill="none"/>'
+  /* 팔: 상완 → 전완 → 건틀릿 (다리에 닿지 않게 짧고 좁게) */
+  +'<path d="M26 60L34 60L33 85L24 85Z"/><path d="M24 85L33 85L34 109L22 109Z"/><path d="M22.5 109L33.5 109L33 120L23 120Z"/>'
+  +'<path d="M74 60L66 60L67 85L76 85Z"/><path d="M76 85L67 85L66 109L78 109Z"/><path d="M77.5 109L66.5 109L67 120L77 120Z"/>'
+  /* 어깨판 — 둥근 덩어리 대신 각진 장갑판 */
+  +'<path d="M35 43L21 45L15 58L18.5 69L33 66.5Z"/><path d="M65 43L79 45L85 58L81.5 69L67 66.5Z"/>'
+  +'<path d="M21.5 52l10-2M78.5 52l-10-2" opacity=".4" fill="none"/>'
+  /* 목가리개 + 투구(얼굴 없음 · 바이저) */
+  +'<path d="M45 36L55 36L56.5 44L43.5 44Z"/>'
+  +'<path d="M39 24L41 12.5L50 8.5L59 12.5L61 24L61 31L55 37.5L45 37.5L39 31Z"/>'
+  +'<path d="M43 19.5L57 19.5L55 29L45 29Z" opacity=".5"/>'
+  +'<path d="M59.5 13L68 4.5" opacity=".65" fill="none"/></svg>';
+function _profFigureHTML(){ return PROF_FIGURE; }
+let _gearPick=null;   // 가방을 한 슬롯으로 거를 때 그 슬롯(null=전체)
+let _gearSel=null;    // 격자에서 고른 아이템 iid(상세 팝업 대상)
+let _gearPage=PROF_GEAR_PAGES[0].id;   // 페이퍼돌 페이지(방어구 ↔ 무기·장신구)
+function profGearPageAt(i){ const n=PROF_GEAR_PAGES.length;
+  _gearPage=PROF_GEAR_PAGES[((i%n)+n)%n].id; _gearSel=null; _gearPick=null;
+  if(typeof playSfx==='function') playSfx('ui_open'); refreshTownPanel(); }
+function profGearPageStep(d){ profGearPageAt(PROF_GEAR_PAGES.findIndex(p=>p.id===_gearPage)+d); }
+// 가방 분류 — 페이퍼돌 섹션과 같은 축(전체 + PROF_GEAR_PAGES)이라 표기가 하나로 유지된다
+const PROF_BAG_CATS=[{id:'',name:'전체'}].concat(PROF_GEAR_PAGES.map(p=>({id:p.id,name:p.name})));
+let _gearCat='';
+function profBagCat(id){ _gearCat=(_gearCat===id?'':id); _gearSel=null; _gearPick=null;
+  if(typeof playSfx==='function') playSfx('ui_open'); refreshTownPanel(); }
+function _profBagCats(){ let h='<div class="bagCats">';
+  for(const t of PROF_BAG_CATS) h+='<button class="bagCat'+(_gearCat===t.id?' on':'')+'" onclick="profBagCat(\''+t.id+'\')">'+t.name+'</button>';
+  return h+'</div>'; }
+// 아이템 1개가 주는 스탯 합(주 스탯 + 옵션) — 비교 표시와 합계에 함께 쓴다
+function _profItemStats(it){ const o={pow:0,vit:0,foc:0,agi:0}; if(!it) return o;
+  const g=PROF_GEAR[it.slot]; if(g) o[g.stat]+=it.main;
+  for(const x of it.opts) o[x.k]=(o[x.k]||0)+x.v;
+  return o; }
+// 장비창 = 위(아바타 + 부위별 슬롯) / 아래(가방) 두 구역. 가방은 늘 열려 있고 각 구역이 따로 스크롤한다.
+// 섹션 이동 바(세그먼트) — 화살표 버튼이 아니라 바에서 골라 넘긴다. 목록은 PROF_GEAR_PAGES 한 곳에서만 온다.
+function _profPageNav(){ const n=PROF_GEAR_PAGES.length, i=PROF_GEAR_PAGES.findIndex(p=>p.id===_gearPage);
+  let h='<div class="pdSeg" style="--n:'+n+'"><i class="pdSegInd" style="left:calc(3px + '+i+'*(100% - 6px)/'+n+')"></i>';
+  PROF_GEAR_PAGES.forEach((p,k)=>{ h+='<button class="pdSegBtn'+(k===i?' on':'')+'" onclick="profGearPageAt('+k+')">'+p.name+'</button>'; });
+  return '<div class="pdNav">'+h+'</div></div>'; }
+function _profPaperdoll(c){
+  let h='<div class="pdWrap"><div class="pdFig">'+_profFigureHTML()+'</div>';
+  for(const slot of profPageSlots(_gearPage)){ const g=PROF_GEAR[slot];
+    const locked=profSlotLocked(slot), it=locked? null : profFindItem(c.unit.gear[slot]);
+    const col=it? (TIER_COLOR[it.tier]||'#b8c0cc') : null;
+    const cls='pdSlot'+(locked?' lock':(it?' on':' empty'))+(_gearPick===slot?' pick':'');
+    h+='<div class="'+cls+'" style="left:'+g.x+'%;top:'+g.y+'%;'+(col?('border-color:'+col+'aa;color:'+col+';'):'')+'"'
+      +' title="'+g.name+'" onclick="profSlotTap(\''+slot+'\')">'
+      +_slotGlyph(slot)
+      +(locked? PROF_LOCK_SVG : (it?('<i class="pdLv">'+it.lv+'</i>'):'<i class="pdPlus">＋</i>'))
+      +'</div>'; }
+  return h+'</div>'+_profPageNav(); }   // 섹션 바는 아바타 아래
+function _profGearGrid(c, list){
+  if(!list.length) return '<div class="igEmpty">비어 있음 — 던전에서 장비를 구해 오세요.</div>';
+  let h='<div class="igGrid">';
+  for(const it of list){ const col=TIER_COLOR[it.tier]||'#b8c0cc';
+    const holder=profItemHolder(it.iid), mine=(holder===c), busy=holder&&!mine;
+    h+='<div class="igCell'+(_gearSel===it.iid?' sel':'')+(busy?' busy':'')+'" style="border-color:'+col+'88;color:'+col+'"'
+      +' onclick="profSelItem(\''+it.iid+'\')">'+_slotGlyph(it.slot)
+      +(mine?'<i class="igOn"></i>':'')+'<i class="igLv">'+it.lv+'</i></div>'; }
+  return h+'</div>'; }
+// 고른 아이템 — 이름/스탯/증감/버튼을 한 덩어리로 압축(구역을 밀어내지 않게)
+function _profGearInfo(c, it){ const g=PROF_GEAR[it.slot], col=TIER_COLOR[it.tier]||'#b8c0cc';
+  const cur=profFindItem(c.unit.gear[it.slot]), on=(cur&&cur.iid===it.iid);
+  const holder=profItemHolder(it.iid), busy=holder&&holder!==c, lk=profSlotLocked(it.slot);
+  const a=_profItemStats(it), b0=_profItemStats(on?null:cur);
+  const line=PROF_STATS.filter(k=>a[k]).map(k=>PROF_STAT_NAME[k]+' +'+a[k]).join(' · ');
+  const diff=PROF_STATS.map(k=>{ const d=a[k]-b0[k]; if(!d) return null;
+    return '<b style="color:'+(d>0?'#6ff0a0':'#ff8a9a')+'">'+PROF_STAT_NAME[k]+' '+(d>0?'+':'')+d+'</b>'; }).filter(Boolean).join(' ');
+  let note='';
+  if(busy) note='<span class="lock">'+escHtml(holder.name)+' 장착 중</span>';
+  else if(lk) note='<span class="lock">🔒 Lv.'+g.reqLv+'부터</span>';
+  else if(!on && diff) note='<span class="igArrow">→</span> '+diff;
+  else if(!on && !cur) note='<span class="ok">빈 칸</span>';
+  // 가방 아래로 밀어내지 않고 가방 위로 겹쳐 올라오는 팝업이다(.bagSec 기준 absolute)
+  return '<div class="igInfo" style="border-color:'+col+'55">'
+    +'<button class="igClose" onclick="profCloseInfo()" aria-label="닫기">✕</button>'
+    +'<div class="igTxt"><div class="igName" style="color:'+col+'">'+profItemName(it)
+      +' <span class="twStars">Lv.'+it.lv+'</span> <span class="igSlotTag">'+g.name+'</span></div>'
+    +'<div class="igStat">'+line+(note?(' <span class="igSep">·</span> '+note):'')+'</div></div>'
+    +'<div class="igBtns">'
+    +((busy||lk)?'<button class="twBtn" disabled>장착</button>'
+      :'<button class="twBtn'+(on?' on':'')+'" onclick="profDoEquip(\''+it.iid+'\')">'+(on?'해제':'장착')+'</button>')
+    +(on||busy?'':'<button class="twBtn del" onclick="profDoScrap(\''+it.iid+'\')">분해</button>')
+    +'</div></div>'; }
+function profCloseInfo(){ _gearSel=null; if(typeof playSfx==='function') playSfx('ui_close'); refreshTownPanel(); }
+function renderProfGear(){ const c=CHAR(); if(!c) return '<div class="twHead">캐릭터가 없습니다.</div>';
+  const slot=(_gearPick && PROF_GEAR[_gearPick]) ? _gearPick : null, g=slot? PROF_GEAR[slot] : null;
+  const order=PROF_ITEM_TIERS.map(t=>t.id);
+  // 칸을 지정했으면 그 칸만, 아니면 분류(전체/방어구/무기·장신구)로 거른다
+  const list=profItems().filter(i=>slot? (i.slot===slot) : (!_gearCat || (PROF_GEAR[i.slot]||{}).part===_gearCat))
+    .sort((a,b)=>(order.indexOf(b.tier)-order.indexOf(a.tier))||(profItemPower(b)-profItemPower(a)));
+  let sum=0, n=0;
+  for(const k in c.unit.gear){ const it=profFindItem(c.unit.gear[k]); if(it){ sum+=profItemPower(it); n++; } }
+  const sel=profFindItem(_gearSel), hasInfo=!!(sel && (!slot || sel.slot===slot));
+  let h='<div class="gearWrap">'
+    +'<div class="gearSum">착용 <b>'+n+'</b>/'+Object.keys(PROF_GEAR).length+' · 장비 합계 <b>+'+sum+'</b></div>'
+    +_profPaperdoll(c)                                        // 아바타 + 그 아래 섹션 이동 바
+    +'<div class="bagSec"><div class="bagHead">'                // 분류 줄 + 개수를 한 줄에(높이 절약)
+      +(g? ('<span class="bagTtl">'+g.name+' <span class="gsSub">'+list.length+'</span></span>'
+            +'<button class="twBtn igBack" onclick="profPickBack()">전체</button>')
+         : (_profBagCats()+'<span class="gsSub bagCnt">'+list.length+'/'+PROF_INV_MAX+'</span>'))
+      +'</div>'
+    +'<div class="bagScroll"><div class="bagBody" onscroll="bagScrollHint()">'+_profGearGrid(c, list)+'</div></div>'
+    +(hasInfo? _profGearInfo(c, sel) : '');   // 가방 구역 안에 겹쳐 뜨는 팝업
+  return h+'</div></div>'; }
+// 잠긴 칸은 조건만 알려주고, 열린 칸은 가방을 그 칸으로 거른다(다시 누르면 전체)
+function profSlotTap(slot){ const g=PROF_GEAR[slot];
+  if(profSlotLocked(slot)){ if(typeof playSfx==='function') playSfx('ui_close');
+    showTownToast(g.name+' — Lv.'+g.reqLv+'부터 열립니다'); return; }
+  if(_gearPick===slot) return profPickBack();
+  _gearPick=slot; _gearSel=CHAR().unit.gear[slot]||null;
+  if(typeof playSfx==='function') playSfx('ui_open'); refreshTownPanel(); }
+function profSelItem(iid){ _gearSel=(_gearSel===iid)?null:iid; if(typeof playSfx==='function') playSfx('ui_open'); refreshTownPanel(); }
+function profPickSlot(slot){ profSlotTap(slot); }        // 예전 이름 유지(외부 호출)
+function profPickBack(){ _gearPick=null; _gearSel=null; if(typeof playSfx==='function') playSfx('ui_close'); refreshTownPanel(); }
+function profDoEquip(iid){ if(!profEquipItem(iid)) return; if(typeof playSfx==='function') playSfx('ui_open');
+  renderTownBar(); refreshTownPanel(); }
+function profDoScrap(iid){ const v=profScrapItem(iid); if(v<0) return; if(_gearSel===iid) _gearSel=null;
+  if(typeof playSfx==='function') playSfx('ui_close'); renderTownBar(); refreshTownPanel(); showTownToast('분해 · +'+v+' P'); }
+function profDoBuyItem(tierId){ const it=profBuyItem(tierId); if(!it) return;
+  if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel();
+  showTownToast(profItemName(it)+' 획득'); }
 // 훈련장(방치)
 function renderProfIdle(){ const p=PROF();
   let h='<div class="twHead">켜두면 분당 <b>'+profIdleRate().toFixed(1)+' P</b> 자동 적립.<br>껐다 켜면 최대 '+(profOfflineCapMin()/60)+'시간 · '+(profOfflineRate()*100)+'% 정산.</div><div class="twSectLbl">일하는 곳 고르기</div>';
@@ -4321,10 +4945,177 @@ function renderProfIdle(){ const p=PROF();
   return h; }
 function profDoIdle(id){ if(profSetIdleSource(id)){ if(typeof playSfx==='function') playSfx('ui_open'); refreshTownPanel(); } }
 // 관문(해금 사다리)
-function renderProfGate(){ let h='<div class="twHead">캐릭터 파워 <b>'+profPower()+'</b>. 파워가 오르면 아래가 열립니다.</div>';
+function renderProfGate(){ const mx=dgMaxFloor(), nx=mx+1;
+  const c0=CHAR();
+  let h='<div class="twHead">던전에 들어가 직접 싸웁니다. 보상은 <b>P</b>와 경험치.<br>최고 기록 <b>'+(mx?mx+'층':'없음')+'</b> · Lv.<b>'+(c0?c0.level:1)+'</b> 기준 <b>'+dgFloorCap()+'층</b>까지 개방</div>';
+  const rN=dgFloorReward(nx), cap=dgFloorCap(), okLv=nx<=cap;
+  h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+nx+'층 도전</div>'
+    +'<div class="twRowSub'+(okLv?' ok':' lock')+'">'+(okLv?('새 기록 · '+rN.pc+' P · '+rN.xp+' XP'):('🔒 Lv.'+dgFloorReqLv(nx)+' 필요 — 레벨이 오르면 열립니다'))+'</div></div>'
+    +'<button class="twBtn" onclick="dgEnter('+nx+')"'+(okLv?'':' disabled')+'>입장</button></div>';
+  if(mx>0){ const rM=dgFloorReward(mx);
+    h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+mx+'층 반복</div><div class="twRowSub">클리어한 층 · '+rM.pc+' P · '+rM.xp+' XP</div></div><button class="twBtn" onclick="dgEnter('+mx+')">입장</button></div>'; }
+  h+='<div class="twSectLbl">파워 해금</div>';
   for(const u of PROF_UNLOCKS){ const open=profHasUnlock(u.id);
     h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+u.label+'</div><div class="twRowSub '+(open?'ok':'lock')+'">'+(open?'✓ 열림':('🔒 파워 '+u.power+' 필요'))+'</div></div></div>'; }
   return h; }
+
+// ============================================================================
+// ⚔ 던전 — 캐릭터가 직접 싸우는 전용 화면
+// ⛔ 유즈맵(네모네모·직스)과 완전 분리. G / step / loop / U / GACHA_* / mapCfg /
+//    metaBonus 를 한 줄도 참조하지 않는다. 적 표·밸런스·루프·렌더를 전부 자체 보유.
+//    스모크 '던전: 유즈맵 상태 미접촉'이 이 규칙을 정적(소스 검사)·동적(G 스냅샷)으로 지킨다.
+// ============================================================================
+const DG_WAVES=3;                    // 층당 웨이브 수(마지막은 보스)
+const DG_W=320, DG_H=380;            // 전장 자체 좌표계(px). 가로는 고정, 세로는 화면 비율로 맞춘다(DG.h)
+const DG_GAP=0.8;                    // 웨이브 사이 간격(초)
+const DG_SEP=32;                     // 적끼리 최소 간격(px) — 없으면 전부 한 점에 포개진다
+// 던전 전용 적 표 — 유즈맵 유닛 정의(U/GACHA_UNITS)와 무관.
+// range = 공격 사거리 겸 '접근을 멈추는 거리'라, 근접이라도 스프라이트 반지름(약 14) 두 개분은 띄워야 겹치지 않는다.
+const DG_FOES={
+  slime: { name:'슬라임', ico:'🟢', hp:34,  atk:5,  spd:34, range:30, cd:1.2 },
+  bat:   { name:'박쥐',   ico:'🦇', hp:24,  atk:8,  spd:64, range:28, cd:0.9 },
+  golem: { name:'석상',   ico:'🗿', hp:88,  atk:13, spd:22, range:33, cd:1.7 },
+  wraith:{ name:'망령',   ico:'👻', hp:48,  atk:12, spd:46, range:88, cd:1.5 },
+  keeper:{ name:'수문장', ico:'👹', hp:240, atk:24, spd:28, range:38, cd:1.3, boss:true },
+};
+const DG_SKILLS={                    // 직업 계열별 1스킬
+  ranger:{ name:'집중 사격', ico:'🎯', cd:9,  dur:3.5, tip:'공격 속도 2배' },
+  scout: { name:'질풍',     ico:'💨', cd:9,  dur:3.5, tip:'이동·공격 속도 상승' },
+  warden:{ name:'수호',     ico:'🛡',  cd:11, dur:4.5, tip:'받는 피해 절반' },
+};
+function dgFloorReward(floor){ return { pc:Math.round(40+floor*22), xp:Math.round(25+floor*14) }; }
+function dgMaxFloor(){ const c=CHAR(); return c? (c.dgFloor||0) : 0; }
+const DG_LV_PER_FLOOR=2;                 // 레벨 N당 한 층씩 열린다(장비 슬롯과 같은 성장 축)
+function dgFloorCap(){ const c=CHAR(); return c? 1+Math.floor((c.level-1)/DG_LV_PER_FLOOR) : 1; }
+function dgFloorReqLv(floor){ return 1+(floor-1)*DG_LV_PER_FLOOR; }
+function dgWaveFoes(floor, wave){
+  if(wave>=DG_WAVES) return ['keeper'];
+  const pool=(floor<3)?['slime','bat']:(floor<6)?['slime','bat','golem']:['bat','golem','wraith'];
+  const n=Math.min(6, 2+Math.floor(floor/2)+(wave>1?1:0));
+  const out=[]; for(let i=0;i<n;i++) out.push(pool[(floor+wave+i)%pool.length]);
+  return out; }
+function dgFoeStat(key, floor){ const f=DG_FOES[key], k=Math.pow(1.28, floor-1);
+  return { key:key, name:f.name, ico:f.ico, boss:!!f.boss, hpMax:Math.round(f.hp*k),
+           atk:Math.round(f.atk*k*0.92), spd:f.spd, range:f.range, cd:f.cd }; }
+// 캐릭터 스탯 → 전투 수치. '스펙업이 체감되는' 유일한 환산 지점이다.
+function dgMySpec(){ const pow=profStat('pow'), vit=profStat('vit'), foc=profStat('foc'), agi=profStat('agi');
+  return { hpMax:Math.round(70+vit*13), atk:Math.round(5+pow*1.7), crit:Math.min(0.5, foc*0.007),
+           spd:52+agi*1.5, range:52, cd:Math.max(0.34, 1.05-agi*0.013) }; }
+
+let DG=null, _dgRaf=0, _dgLast=0;
+function dgEnter(floor){ if(floor>dgFloorCap()){ showTownToast('Lv.'+dgFloorReqLv(floor)+'부터 도전할 수 있습니다'); return; }
+  dgStopLoop(); closeTownPanel(); twStopLoop(); _townOpen=false;
+  if(typeof playSfx==='function') playSfx('ui_open'); dgStart(floor); }
+function dgStart(floor){ const c=CHAR(); if(!c) return false;
+  const sp=dgMySpec();
+  DG={ floor:floor, wave:0, gap:0.3, over:0, reward:null, _els:null,
+       h:DG_H, me:{ x:DG_W/2, y:DG_H-46, hp:sp.hpMax, sp:sp, t:0 }, skill:{ cd:0, left:0 }, foes:[] };
+  showAppScreen('dgScreen');
+  const ar=document.getElementById('dgArena');
+  if(ar){ ar.innerHTML='';
+    const w=ar.clientWidth||0, hh=ar.clientHeight||0;
+    if(w>0&&hh>0) DG.h=Math.round(DG_W*hh/w); }   // 가로 배율 하나로 그리므로 세로 논리 크기를 화면 비율에 맞춘다
+  DG.me.y=DG.h-46;
+  dgRender(); dgStartLoop(); return true; }
+function dgSpawnWave(){ DG.wave++;
+  const keys=dgWaveFoes(DG.floor, DG.wave);
+  DG.foes=keys.map((k,i)=>{ const f=dgFoeStat(k, DG.floor);
+    return Object.assign(f, { id:'f'+DG.wave+'_'+i, hp:f.hpMax, t:0.4+i*0.15,
+      x:34+((i+0.5)/keys.length)*(DG_W-68), y:34+((i%2)*30) }); }); }
+// 한 프레임 전진 — rAF(dgTick)와 스모크가 같은 함수를 쓴다(헤드리스는 rAF가 안 돈다)
+function dgStep(dt){ if(!DG || DG.over) return;
+  const me=DG.me, sp=me.sp, cls=(CHAR()||{}).cls, buff=DG.skill.left>0;
+  const guard=(cls==='warden'&&buff), haste=(cls!=='warden'&&buff)?2:1, dash=(cls==='scout'&&buff)?1.5:1;
+  if(DG.skill.cd>0)   DG.skill.cd=Math.max(0, DG.skill.cd-dt);
+  if(DG.skill.left>0) DG.skill.left=Math.max(0, DG.skill.left-dt);
+  if(!DG.foes.length){ DG.gap-=dt;
+    if(DG.gap<=0){ if(DG.wave>=DG_WAVES){ dgWin(); return; } dgSpawnWave(); DG.gap=DG_GAP; }
+    dgRender(); return; }
+  let t=null, td=1e9;                                        // 가장 가까운 적을 향해
+  for(const f of DG.foes){ const d=Math.hypot(f.x-me.x, f.y-me.y); if(d<td){ td=d; t=f; } }
+  if(td>sp.range){ const k=Math.min(1, sp.spd*dash*dt/Math.max(td,1e-6));
+    me.x+=(t.x-me.x)*k; me.y+=(t.y-me.y)*k; }
+  else { me.t-=dt*haste;
+    if(me.t<=0){ me.t=sp.cd;
+      const crit=Math.random()<sp.crit, dmg=Math.round(sp.atk*(crit?2:1));
+      t.hp-=dmg; dgHit(t.x, t.y, dmg, crit?'crit':'me');
+      if(t.hp<=0) DG.foes=DG.foes.filter(f=>f!==t); } }
+  for(const f of DG.foes){ const d=Math.hypot(me.x-f.x, me.y-f.y);
+    if(d>f.range){ const k=Math.min(1, f.spd*dt/Math.max(d,1e-6)); f.x+=(me.x-f.x)*k; f.y+=(me.y-f.y)*k; }
+    else { f.t-=dt;
+      if(f.t<=0){ f.t=f.cd;
+        const dmg=Math.max(1, Math.round(f.atk*(guard?0.5:1)));
+        me.hp-=dmg; dgHit(me.x, me.y, dmg, 'foe');
+        if(me.hp<=0){ me.hp=0; dgLose(); return; } } } }
+  for(let i=0;i<DG.foes.length;i++) for(let j=i+1;j<DG.foes.length;j++){   // 적끼리 밀어내기(최대 6기라 O(n²)로 충분)
+    const a=DG.foes[i], b=DG.foes[j], dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy);
+    if(d>1e-3 && d<DG_SEP){ const k=(DG_SEP-d)/d*0.5; a.x-=dx*k; a.y-=dy*k; b.x+=dx*k; b.y+=dy*k; } }
+  for(const f of DG.foes){ f.x=Math.max(14, Math.min(DG_W-14, f.x)); f.y=Math.max(14, Math.min(DG.h-14, f.y)); }
+  me.x=Math.max(14, Math.min(DG_W-14, me.x)); me.y=Math.max(14, Math.min(DG.h-14, me.y));
+  dgRender(); }
+const DG_DROP_P=0.55;   // 층 클리어 시 장비가 떨어질 확률
+function dgWin(){ const c=CHAR(), p=PROF(), r=dgFloorReward(DG.floor);
+  DG.over=1; DG.reward=r;
+  const sl=profSlots();   // 층이 깊을수록 고등급·고레벨(profMakeItem이 층을 레벨로 받는다)
+  r.item=(sl.length && Math.random()<DG_DROP_P) ? profAddItem(profMakeItem(sl[Math.floor(Math.random()*sl.length)], DG.floor)) : null;
+  p.pcoin+=r.pc;
+  if(c){ c.xp+=r.xp; profApplyLevelUps(c); if((c.dgFloor||0)<DG.floor) c.dgFloor=DG.floor; }
+  profSyncUnlocks(); saveMeta(); dgStopLoop(); dgRender(); }
+function dgLose(){ DG.over=-1; dgStopLoop(); dgRender(); }
+function dgSkill(){ if(!DG || DG.over || DG.skill.cd>0) return;
+  const S=DG_SKILLS[(CHAR()||{}).cls] || DG_SKILLS.ranger;
+  DG.skill.cd=S.cd; DG.skill.left=S.dur;
+  if(typeof playSfx==='function') playSfx('ui_open'); dgRender(); }
+function dgFlee(){ dgStopLoop(); DG=null; openTown(); }
+function dgTick(ts){ if(!DG){ _dgRaf=0; return; }
+  const dt=_dgLast? Math.min(0.05,(ts-_dgLast)/1000) : 0.016; _dgLast=ts;
+  dgStep(dt); if(DG && !DG.over) _dgRaf=requestAnimationFrame(dgTick); else _dgRaf=0; }
+function dgStartLoop(){ if(_dgRaf) return; _dgLast=0; _dgRaf=requestAnimationFrame(dgTick); }
+function dgStopLoop(){ if(_dgRaf){ cancelAnimationFrame(_dgRaf); _dgRaf=0; } }
+
+// ── 렌더 계층 — DOM을 만지는 곳은 여기(dgRender/dgHit)뿐이다. 3D로 갈아끼울 땐 이 둘만 교체하면 된다 ──
+function _dgScale(ar){ return (ar.clientWidth||DG_W)/DG_W; }
+function dgHit(x, y, n, kind){ const ar=document.getElementById('dgArena'); if(!ar) return;
+  const sc=_dgScale(ar), d=document.createElement('div');
+  d.className='dgDmg '+kind; d.textContent=(kind==='foe'?'-':'')+n;
+  d.style.left=((x+(Math.random()*18-9))*sc)+'px'; d.style.top=(y*sc)+'px'; ar.appendChild(d);
+  setTimeout(()=>{ if(d.parentNode) d.parentNode.removeChild(d); }, 620); }
+function _dgUnit(ar, els, id, cls, ico){ let e=els[id];
+  if(!e){ e=document.createElement('div'); e.className='dgU '+cls;
+    e.innerHTML='<span class="dgIco">'+ico+'</span><i class="dgHp"><b></b></i>';
+    ar.appendChild(e); els[id]=e; }
+  return e; }
+function dgRender(){ if(!DG) return;
+  const ar=document.getElementById('dgArena'); if(!ar) return;
+  const sc=_dgScale(ar), els=DG._els||(DG._els={}), live={};
+  const c=CHAR(), ico=(c && PROF_CLASSES[c.cls] && PROF_CLASSES[c.cls].ico) || '🧍';
+  live.me=1; const me=_dgUnit(ar, els, 'me', 'me', ico);
+  me.style.left=(DG.me.x*sc)+'px'; me.style.top=(DG.me.y*sc)+'px';
+  me.classList.toggle('buff', DG.skill.left>0);
+  me.querySelector('.dgHp b').style.width=Math.max(0,(DG.me.hp/DG.me.sp.hpMax*100))+'%';
+  for(const f of DG.foes){ live[f.id]=1;
+    const e=_dgUnit(ar, els, f.id, 'foe'+(f.boss?' boss':''), f.ico);
+    e.style.left=(f.x*sc)+'px'; e.style.top=(f.y*sc)+'px';
+    e.querySelector('.dgHp b').style.width=Math.max(0,(f.hp/f.hpMax*100))+'%'; }
+  for(const k in els) if(!live[k]){ if(els[k].parentNode) els[k].parentNode.removeChild(els[k]); delete els[k]; }
+  const w=document.getElementById('dgWave'); if(w) w.textContent=DG.floor+'층 · '+Math.max(1,DG.wave)+'/'+DG_WAVES;
+  const ht=document.getElementById('dgHpTxt'); if(ht) ht.textContent=Math.ceil(DG.me.hp);
+  const hb=document.getElementById('dgHpBar'); if(hb) hb.style.width=Math.max(0,(DG.me.hp/DG.me.sp.hpMax*100))+'%';
+  const S=DG_SKILLS[(c||{}).cls]||DG_SKILLS.ranger;
+  const si=document.getElementById('dgSkillIco'); if(si) si.textContent=S.ico;
+  const sb=document.getElementById('dgSkillBtn');
+  if(sb){ sb.classList.toggle('off', DG.skill.cd>0); sb.classList.toggle('on', DG.skill.left>0);
+    const cd=document.getElementById('dgSkillCd');
+    if(cd){ const on=DG.skill.cd>0; cd.textContent=on? Math.ceil(DG.skill.cd) : ''; cd.style.display=on?'flex':'none'; } }
+  const rs=document.getElementById('dgResult');
+  if(rs){ if(!DG.over) rs.classList.add('hide');
+    else { rs.classList.remove('hide');
+      rs.innerHTML = (DG.over>0)
+        ? '<div class="dgRCard"><div class="dgRT ok">'+DG.floor+'층 클리어!</div><div class="dgRS">+'+DG.reward.pc+' P · +'+DG.reward.xp+' XP'
+          +(DG.reward.item? ('<br><b style="color:'+(TIER_COLOR[DG.reward.item.tier]||'#fff')+'">'+profItemName(DG.reward.item)+'</b> 획득') : '')+'</div>'
+          +'<div class="dgRBtns"><button class="twBtn" onclick="dgEnter('+(DG.floor+1)+')">다음 층</button><button class="twBtn" onclick="dgFlee()">마을로</button></div></div>'
+        : '<div class="dgRCard"><div class="dgRT bad">패배</div><div class="dgRS">'+DG.floor+'층 '+DG.wave+'웨이브에서 쓰러졌습니다</div>'
+          +'<div class="dgRBtns"><button class="twBtn" onclick="dgEnter('+DG.floor+')">재도전</button><button class="twBtn" onclick="dgFlee()">마을로</button></div></div>'; } } }
 // 현재 빌드 레벨 → 게임 효과(개인 적용). 게임 시작 시 G.metaB에 캐시.
 //  team_* = 전체 강화: 협동에선 파티 중 '최고 레벨'이 모두에게 적용(인원수 인플레 방지). 솔로면 내 레벨.
 const _TEAM_IDS=['team_atk','team_aspd','team_enemy_hp','team_enemy_def','team_credit','team_luck'];
@@ -8920,7 +9711,7 @@ function playScreenFx(el){
 function fxPop(card){ if(!card) return; card.classList.remove('fxPop'); void card.offsetWidth; card.classList.add('fxPop');
   clearTimeout(card._fxT); card._fxT=setTimeout(()=>card.classList.remove('fxPop'),470); }
 // ── 앱 화면 전환 ──
-const APP_SCREENS=['opening','auth','mapSelect','modeSheet','hubScreen','townScreen'];
+const APP_SCREENS=['opening','auth','mapSelect','modeSheet','hubScreen','charScreen','townScreen','dgScreen'];
 function showAppScreen(id){ setInGame(false);
   if(id!=='mapSelect' && id!=='modeSheet' && typeof stopMapLive==='function') stopMapLive();   // 유즈맵 화면 떠나면 실시간 갱신 정지
   ['ov','lobby','rooms','createPanel','pwPanel'].forEach(x=>{const e=document.getElementById(x); if(e)e.classList.add('hide');});
@@ -9352,7 +10143,9 @@ function sbSaveMetaDebounced(){ if(!sbReady()||!(AUTH.user&&AUTH.user.uid)) retu
 async function sbSyncMetaOnLogin(){ if(!sbReady()||!(AUTH.user&&AUTH.user.uid)) return;
   try{ const {data}=await _sb.from('profiles').select('meta').eq('id',AUTH.user.uid).maybeSingle();
     const sm=data&&data.meta;
-    if(sm && typeof sm==='object'){ PLAYER_META=Object.assign(defaultMeta(), sm); if(!PLAYER_META.buildLevels) PLAYER_META.buildLevels={}; try{ localStorage.setItem(metaKey(), JSON.stringify(PLAYER_META)); }catch(e){} }   // 서버 메타 우선 → 로컬 캐시
+    if(sm && typeof sm==='object'){ PLAYER_META=Object.assign(defaultMeta(), sm); if(!PLAYER_META.buildLevels) PLAYER_META.buildLevels={};
+      migrateProfile();   // ⚠ 서버 메타는 구버전(ver2, 캐릭터 1명)일 수 있다 — 여기서 안 올리면 마을에 들어가기 전까지 CHAR()가 null이라 판 보상 경험치가 사라진다
+      try{ localStorage.setItem(metaKey(), JSON.stringify(PLAYER_META)); }catch(e){} }   // 서버 메타 우선 → 로컬 캐시
     else { await sbSaveMeta(); }   // 서버에 없으면 현재(로컬) 메타 업로드
     if(typeof G!=='undefined' && G) G.metaB=metaBonus(); }
   catch(e){ console.warn('메타 서버 로드 실패', e.message||e); } }

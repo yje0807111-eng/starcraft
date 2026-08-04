@@ -54,6 +54,321 @@ async function groupLobby(){
     const w=mo.getBoundingClientRect().width; assert(w>200&&w<400,'moCard 폭 이상: '+w); closeModeSheet(); return 'w='+w; });
   await step('방찾기 열림+목록', ()=>{ openRooms(); const rm=document.querySelector('#rooms .rmCard'); assert(visible(rm),'rmCard 안 보임');
     const n=$('roomList').children.length; assert(n>0,'방 목록 비어있음'); $('rooms').classList.add('hide'); return n+'개 방'; });
+  await step('마을 입장: 캐릭터 생성 → 그대로 입장', ()=>{ skipIf(typeof openCharScreen!=='function','캐릭터 시스템 없음');
+    PROF().chars.length=0; PROF().curId='';           // 이전 실행이 남긴 캐릭터를 지우고 첫 진입 상태로
+    hubGoTown();
+    assert(visible($('charScreen')),'마을 입장 시 캐릭터 화면이 안 뜸');
+    assert($('csTitle').textContent.indexOf('만들기')>=0,'캐릭터가 없는데 생성 화면이 아님: '+$('csTitle').textContent);
+    const inp=$('ccName'); assert(inp,'이름 입력칸 없음'); inp.value='테스트';
+    charDoCreate('warden');
+    const c=CHAR(); assert(c,'캐릭터가 안 만들어짐');
+    assert(c.cls==='warden' && c.name==='테스트','생성 결과 불일치: '+c.cls+'/'+c.name);
+    assert(_townOpen,'생성 후 마을로 안 들어감');
+    assert(document.querySelector('#twAvatar .twAvBody').textContent===PROF_CLASSES.warden.ico,'아바타가 캐릭터 종류를 안 따라감');
+    return c.name+'('+PROF_JOBS[c.unit.jobId].name+')'; });
+  // 마을: 월드 좌표계 + 카메라. 헤드리스는 rAF가 멈춰 있어 twStep(dt)을 직접 pump한다.
+  await step('마을: 월드 카메라 + 캐릭터 중앙 고정', ()=>{ skipIf(typeof openTown!=='function','마을 없음');
+    openTown();
+    const map=$('twMap'), w=$('twWorld'); assert(w,'#twWorld 없음');
+    const mr=map.getBoundingClientRect();
+    assert(Math.abs(parseFloat(w.style.width)-mr.width*TW_WORLD_W_MUL)<2,'월드 폭이 화면×'+TW_WORLD_W_MUL+'가 아님: '+w.style.width);
+    assert(parseFloat(w.style.width)>parseFloat(w.style.height),'가로로 긴 월드가 아님');
+    assert(w.querySelectorAll('.twZone').length===Object.keys(TOWN_ZONES).length,'구역 아이콘 수 불일치');
+    const shown=Object.keys(TOWN_ZONES).filter(id=>!_twEdgeEl[id].classList.contains('hide'));
+    assert(['plaza','charmake','charsel'].every(id=>shown.indexOf(id)<0),'화면 안에 보이는 구역인데 가장자리 표시가 뜸: '+shown.join(','));
+    assert(['gacha','gate','gear','gym'].every(id=>shown.indexOf(id)>=0),'화면 밖 모서리 구역의 가장자리 표시가 없음: '+shown.join(','));
+    const t0=w.style.transform, g=twZonePx('gacha'); twSetTarget(g[0],g[1]);
+    for(let i=0;i<60;i++) twStep(0.016);
+    assert(w.style.transform!==t0,'월드(배경)가 안 움직임');
+    const av=$('twAvatar').getBoundingClientRect();
+    const dx=Math.abs((av.left+av.width/2)-(mr.left+mr.width/2)), dy=Math.abs((av.top+av.height/2)-(mr.top+mr.height/2));
+    assert(dx<3&&dy<3,'아바타가 화면 중앙에서 벗어남: '+dx.toFixed(1)+','+dy.toFixed(1));
+    assert($('twAvatar').classList.contains('walk'),'이동 중인데 걷기 모션 클래스 없음');
+    return '월드 '+w.style.width+'×'+w.style.height; });
+  await step('마을: 멀리서 구역을 지정하면 걸어가서 열림', ()=>{ skipIf(typeof openTown!=='function','마을 없음');
+    closeTownPanel();
+    townGo('gacha');   // 화면 밖 구역 지정 — 아이콘/가장자리 표시 탭과 같은 경로
+    assert(_twGoZone==='gacha','구역 지정이 안 됨');
+    let n=0; while(_twChar.mode!==null && n<4000){ twStep(0.016); n++; }
+    assert(n<4000,'목적지에 도착하지 못함');
+    assert(visible($('townPanel')),'지정한 구역에 도착했는데 시설 팝업이 안 열림');
+    assert($('tpTitle').textContent.indexOf('뽑기집')>=0,'팝업 제목 불일치: '+$('tpTitle').textContent);
+    townToHub(); return n+'프레임 이동'; });
+  await step('마을: 지정하지 않으면 안 열림(스쳐 지남·겹쳐 섬)', ()=>{ skipIf(typeof twSetTarget!=='function','마을 없음');
+    openTown(); closeTownPanel();
+    const c=twZonePx('charmake');
+    _twChar.x=c[0]+220; _twChar.y=c[1];                    // ① 생성소 정중앙을 관통해 지나가기
+    twSetTarget(c[0]-220, c[1]);
+    let through=false, n=0;
+    while(_twChar.mode!==null && n<4000){ twStep(0.016); n++;
+      if(Math.hypot(c[0]-_twChar.x,c[1]-_twChar.y)<=TW_ZONE_R) through=true;
+      assert(!visible($('townPanel')),'지나가는 중에 팝업이 열림'); }
+    assert(through,'경로가 생성소 반경을 통과하지 않음 — 테스트가 무의미');
+    twSetTarget(c[0], c[1]);                               // ② 땅을 눌러 구역 위에 정확히 겹쳐 서기
+    n=0; while(_twChar.mode!==null && n<4000){ twStep(0.016); n++; }
+    for(let i=0;i<30;i++) twStep(0.016);                   // 멈춘 뒤에도 계속 안 열려야 한다
+    assert(!visible($('townPanel')),'구역 위에 겹쳐 섰다고 팝업이 열림');
+    townGo('charmake');                                    // ③ 그 자리에서 구역을 누르면 열린다
+    assert(visible($('townPanel')) && _twZone==='charmake','겹쳐 선 채로 구역을 눌렀는데 안 열림');
+    closeTownPanel(); townToHub(); return '통과·겹침=무반응 / 지정=열림'; });
+  await step('캐릭터 UI 단일 소스: 입장 화면 = 마을 구역', ()=>{ skipIf(typeof renderCharSelect!=='function','캐릭터 시스템 없음');
+    assert(TOWN_ZONES.charsel.render()===renderCharSelect(),'보관소 구역이 입장 화면과 다른 마크업을 그림(복제 의심)');
+    assert(TOWN_ZONES.charmake.render()===renderCharCreate(),'생성소 구역이 입장 화면과 다른 마크업을 그림(복제 의심)');
+    return '동일'; });
+  await step('캐릭터: 성장은 따로 · 재화와 펫은 공용', ()=>{ skipIf(typeof profCreateChar!=='function','캐릭터 시스템 없음');
+    const p=PROF(); p.pcoin=1000; p.pets={wolf:{count:1}}; p.equip=['wolf'];
+    const a=CHAR(); a.statPoints=3; assert(profAllocStat('pow'),'스탯 분배 실패');
+    const powA=profStat('pow'), spA=a.statPoints;
+    const b=profCreateChar('scout','둘째'); assert(b,'두 번째 캐릭터 생성 실패');
+    assert(CHAR().id===b.id,'새로 만든 캐릭터가 선택되지 않음');
+    assert(PROF().pcoin===1000,'재화가 캐릭터를 따라감(공용이어야 함): '+PROF().pcoin);
+    assert(PROF().equip.length===1,'펫 장착이 캐릭터를 따라감(공용이어야 함)');
+    assert(b.statPoints===0 && b.level===1,'새 캐릭터가 성장을 물려받음');
+    assert(profSelectChar(a.id),'되돌아가기 실패');
+    assert(a.statPoints===spA && profStat('pow')===powA,'되돌아온 캐릭터의 성장이 바뀜');
+    return '슬롯 '+PROF().chars.length+'/'+PROF_MAX_CHARS; });
+  await step('캐릭터 삭제: 재화는 환급 · 경험치는 소멸 · 장비는 가방에 남음', ()=>{ skipIf(typeof profDeleteChar!=='function','캐릭터 삭제 없음');
+    const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0; p.pcoin=100000; p.unlocks={evolve:true};
+    const c=profCreateChar('ranger','환급'); assert(c,'캐릭터 생성 실패');
+    const before=p.pcoin;
+    c.unit.level=30;                                     // 전직·진화 레벨 요건 충족
+    assert(profClassChange('sniper'),'전직 실패');
+    assert(profEvolve(),'진화 실패');
+    const spent=before-p.pcoin; assert(spent>0,'지출이 0');
+    const it=profAddItem(profMakeItem('weapon',3,'rare')); assert(profEquipItem(it.iid),'장비 장착 실패');
+    c.xp=999; c.level=12; c.statPoints=7;                 // 경험치로 얻은 것 — 환급 대상이 아니어야 한다
+    assert(profRefundOf(c)===spent,'환급액이 쓴 재화와 다름(장비가 섞였는지 확인): '+profRefundOf(c)+' vs '+spent);
+    _charDelId=c.id;                                      // 확인 UI(무엇을 잃고 얻는지)
+    const html=renderCharSelect(); _charDelId=null;
+    assert(html.indexOf('삭제할까요')>=0 && html.indexOf('P 반환')>=0 && html.indexOf('경험치 소멸')>=0,'삭제 확인 UI가 안 나옴');
+    const cash=p.pcoin, got=profDeleteChar(c.id);
+    assert(got===spent,'삭제 환급액 불일치: '+got);
+    assert(p.pcoin===cash+spent,'재화가 안 돌아옴: '+p.pcoin);
+    assert(p.chars.length===0 && CHAR()===null,'캐릭터가 안 지워짐');
+    assert(profItems().length===1 && !profItemHolder(it.iid),'장비가 사라졌거나 장착이 안 풀림');
+    return '지출 '+spent+'P → 전액 환급 · 장비는 가방에 남음'; });
+  await step('장비: 던전 드랍 → 장착하면 스탯에 반영', ()=>{ skipIf(typeof profMakeItem!=='function','장비 아이템 없음');
+    const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0; p.unlocks={};
+    p.pets={}; p.equip=[];                                // 펫 %보너스가 곱해지면 장비 기여분만 떼어 볼 수 없다
+    profCreateChar('ranger','장비');
+    const base=profStat('pow');
+    const it=profMakeItem('weapon', 5, 'epic'); assert(it && it.main>0,'아이템 생성 실패');
+    assert(it.opts.length>=1,'에픽인데 추가 옵션이 없음');
+    profAddItem(it); assert(profEquipItem(it.iid),'장착 실패');
+    const optPow=it.opts.filter(o=>o.k==='pow').reduce((s,o)=>s+o.v,0);
+    assert(profStat('pow')===base+it.main+optPow,'공격 반영 불일치: '+profStat('pow')+' vs '+(base+it.main+optPow));
+    assert(profEquipItem(it.iid) && CHAR().unit.gear.weapon==='','같은 것을 다시 누르면 해제되어야 함');
+    return '주스탯 +'+it.main+' · 옵션 '+it.opts.length+'개'; });
+  await step('장비: 가방은 공용 · 남이 장착 중이면 못 씀 · 분해 환급', ()=>{ skipIf(typeof profScrapItem!=='function','장비 아이템 없음');
+    const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0; p.pcoin=0;
+    const a=profCreateChar('ranger','A'), it=profAddItem(profMakeItem('weapon',2,'rare'));
+    assert(profEquipItem(it.iid),'A 장착 실패');
+    profCreateChar('scout','B');                          // 새 캐릭터가 현재 선택된다
+    assert(profItems().length===1,'가방이 캐릭터를 따라감(계정 공용이어야 함)');
+    assert(!profEquipItem(it.iid),'다른 캐릭터가 장착 중인데 장착됨');
+    assert(profScrapItem(it.iid)===-1,'장착 중인데 분해됨');
+    assert(profSelectChar(a.id) && profEquipItem(it.iid),'A로 돌아가 해제 실패');
+    const v=profScrapValue(it), got=profScrapItem(it.iid);
+    assert(got===v && p.pcoin===v,'분해 환급 불일치: '+got+'/'+p.pcoin);
+    assert(profItems().length===0,'가방에서 안 사라짐');
+    return '분해 +'+v+'P'; });
+  await step('장비창: 장비/장신구 페이지 분리 · 가방 상시 노출', ()=>{ skipIf(typeof profPickSlot!=='function','페이퍼돌 없음');
+    const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0;
+    profCreateChar('ranger','돌');
+    const it=profAddItem(profMakeItem('top',4,'epic')); profEquipItem(it.iid);
+    profAddItem(profMakeItem('shoes',4,'rare')); saveMeta();
+    _gearPick=null; _gearSel=null; _gearPage=PROF_GEAR_PAGES[0].id;
+    openTown(); openTownPanel('gear');                        // openTown이 loadMeta로 다시 읽으므로 CHAR()는 이 뒤에 잡는다
+    const c=CHAR(); c.level=1; refreshTownPanel();
+    const body=$('tpBody');
+    const slots=body.querySelectorAll('.pdSlot');
+    // ① 한 페이지엔 자기 part만 — 장비 페이지에 장신구가 섞이면 안 된다
+    const armor=profPageSlots('armor'), acc=profPageSlots('acc');
+    assert(armor.length+acc.length===Object.keys(PROF_GEAR).length,'페이지에 안 들어간 슬롯이 있음');
+    assert(armor.length>=5 && acc.length>=3,'페이지 분배가 한쪽으로 쏠림: '+armor.length+'/'+acc.length);
+    for(const k of ['necklace','earring','ring','belt','cape']) assert(acc.indexOf(k)>=0,'장신구 쪽에 있어야 할 슬롯이 장비 쪽에 있음: '+k);
+    for(const k of ['weapon','helmet','top','bottom','shoes']) assert(armor.indexOf(k)>=0,'장비 쪽에 있어야 할 슬롯이 장신구 쪽에 있음: '+k);
+    assert(slots.length===armor.length,'장비 페이지 슬롯 수 불일치: '+slots.length);
+    const shown=[...slots].map(e=>e.getAttribute('title'));
+    for(const k of acc) assert(shown.indexOf(PROF_GEAR[k].name)<0,'장비 페이지에 '+PROF_GEAR[k].name+'이(가) 나옴');
+    // 섹션 이동은 화살표 버튼이 아니라 바(세그먼트) — 바는 아바타 아래, 장비 합계는 위
+    const seg=body.querySelector('.pdNav .pdSeg'); assert(seg,'섹션 이동 바가 없음');
+    assert(seg.querySelectorAll('.pdSegBtn').length===PROF_GEAR_PAGES.length,'바에 섹션이 다 안 들어감');
+    assert(seg.querySelector('.pdSegInd'),'바에 현재 섹션 표시가 없음');
+    assert(seg.querySelector('.pdSegBtn.on').textContent===PROF_GEAR_PAGES[0].name,'바에 켜진 섹션이 안 맞음');
+    const kids=[...body.querySelector('.gearWrap').children].map(e=>e.className.split(' ')[0]);
+    assert(kids.join('>')==='gearSum>pdWrap>pdNav>bagSec','장비창 세로 순서가 다름: '+kids.join('>'));
+    // 바를 눌러 섹션 이동
+    seg.querySelectorAll('.pdSegBtn')[1].click();
+    assert(_gearPage===PROF_GEAR_PAGES[1].id,'바를 눌러도 섹션이 안 바뀜');
+    profGearPageAt(0);
+    // ② 넘기면 장신구 페이지 — 슬롯이 통째로 갈린다
+    profGearPageStep(1);
+    assert(_gearPage===PROF_GEAR_PAGES[1].id,'페이지가 안 넘어감');
+    const slots2=$('tpBody').querySelectorAll('.pdSlot');
+    assert(slots2.length===acc.length,'장신구 페이지 슬롯 수 불일치: '+slots2.length);
+    const shown2=[...slots2].map(e=>e.getAttribute('title'));
+    for(const k of armor) assert(shown2.indexOf(PROF_GEAR[k].name)<0,'장신구 페이지에 '+PROF_GEAR[k].name+'이(가) 나옴');
+    profGearPageStep(-1);                                     // 장비 페이지로 되돌려 놓고 이어서 검사
+    assert(body.querySelector('.pdFig svg path'),'캐릭터 도형이 없음');
+    // 슬롯이 아바타 위에 부위별로 겹쳐 있어야 한다(상·하·좌·우 다 씀)
+    const ys=[...slots].map(e=>parseFloat(e.style.top)), xs=[...slots].map(e=>parseFloat(e.style.left));
+    const rows=[...new Set(ys)].sort((a,b)=>a-b), cols=[...new Set(xs)].sort((a,b)=>a-b);
+    assert(rows.length>=4 && rows[0]<20 && rows[rows.length-1]>70,'슬롯이 위아래 여러 줄로 안 퍼짐: '+rows.join(','));
+    assert(cols.length>=3 && cols[0]<40 && cols[cols.length-1]>60 && cols.indexOf(50)>=0,
+      '슬롯이 좌·중·우로 안 퍼짐(가운데 열이 몸통에 겹쳐야 함): '+cols.join(','));
+    assert(body.querySelectorAll('.pdSlot .slIco').length===slots.length,'슬롯 아이콘이 라인아트가 아님');
+    assert(body.querySelectorAll('.pdSlot.empty .pdPlus').length>0,'빈 칸에 ＋가 없음');
+    assert(body.querySelectorAll('.pdSlot.lock .pdLockIco').length===body.querySelectorAll('.pdSlot.lock').length,
+      '잠긴 칸에 자물쇠 아이콘이 없음(이모지로 남아 있는지 확인)');
+    assert(body.innerHTML.indexOf('🔒')<0,'슬롯에 자물쇠 이모지가 남아 있음');
+    for(const k in PROF_GEAR) assert(PROF_SLOT_ICON[k],'슬롯 아이콘 누락: '+k);
+    const eq=body.querySelector('.pdSlot.on'); assert(eq,'장착한 슬롯이 on으로 안 보임');
+    assert(eq.querySelector('.pdLv').textContent==='4','슬롯에 아이템 레벨이 안 뜸');
+    // Lv.1엔 기본 5칸만 열리고 나머지는 레벨로 잠겨 있어야 한다
+    const open=Object.keys(PROF_GEAR).filter(k=>!profSlotLocked(k));
+    assert(open.length===5,'Lv.1 해금 슬롯이 5칸이 아님: '+open.join(','));
+    for(const k of ['helmet','top','bottom','shoes','weapon']) assert(open.indexOf(k)>=0,'기본 슬롯이 잠김: '+k);
+    assert(body.querySelectorAll('.pdSlot.lock').length===armor.filter(k=>profSlotLocked(k)).length,'잠긴 칸 표시가 안 맞음');
+    CHAR().level=30; assert(Object.keys(PROF_GEAR).every(k=>!profSlotLocked(k)),'Lv.30인데 안 열린 칸이 있음');
+    CHAR().level=1;
+    // 가방은 아래 구역에 늘 열려 있어야 한다(시트로 감추지 않음)
+    assert(body.querySelector('.bagSec .bagBody .igGrid'),'가방 구역이 안 보임');
+    assert(body.querySelectorAll('.igGrid .igCell').length===2,'가방 격자 칸 수 불일치');
+    assert(!body.querySelector('.igInfo'),'아무것도 안 골랐는데 상세가 뜸');
+    profSelItem(it.iid);
+    const info=$('tpBody').querySelector('.igInfo'); assert(info,'고른 아이템 상세가 없음');
+    assert(info.textContent.indexOf('해제')>=0,'장착 중인데 해제 버튼이 아님');
+    assert(info.parentElement.classList.contains('bagSec'),'상세가 가방 구역 안에 겹치지 않음');
+    assert(getComputedStyle(info).position==='absolute','상세가 가방을 밀어내는 배치임(팝업이 아님)');
+    profCloseInfo(); assert(!$('tpBody').querySelector('.igInfo'),'상세 팝업이 안 닫힘');
+    profSlotTap('top');                                       // 슬롯 탭 → 가방을 그 칸으로 거른다
+    assert($('tpBody').querySelectorAll('.igGrid .igCell').length===1,'슬롯 필터가 안 걸림');
+    profSlotTap('top'); assert(_gearPick===null,'같은 칸을 다시 눌러도 전체로 안 돌아옴');
+    assert(document.querySelector('#townPanel .twCard').classList.contains('gearFull'),'장비창 카드 높이 고정이 안 걸림');
+    townToHub();
+    return '장비 '+armor.length+'칸 / 장신구 '+acc.length+'칸(Lv.1 해금 '+open.length+')'; });
+  await step('장비창: 짐이 많아도 카드가 안 늘어나고 가방만 스크롤', ()=>{ skipIf(typeof bagScrollHint!=='function','가방 스크롤 없음');
+    const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0;
+    profCreateChar('ranger','짐');
+    const ks=Object.keys(PROF_GEAR), ts=PROF_ITEM_TIERS.map(t=>t.id);
+    for(let i=0;i<26;i++) profAddItem(profMakeItem(ks[i%ks.length], 1+(i%5), ts[i%ts.length]));
+    saveMeta(); _gearPick=null; _gearSel=null;
+    openTown(); openTownPanel('gear'); CHAR().level=40; refreshTownPanel();
+    const body=$('tpBody'), card=document.querySelector('#townPanel .twCard');
+    const sc=body.querySelector('.bagScroll'), bag=body.querySelector('.bagBody'), sec=body.querySelector('.bagSec');
+    assert(sc&&bag,'가방 스크롤 영역이 없음');
+    // ① 넘치는 건 가방 안에서만 — 카드 본문 자체는 늘어나지도 스크롤되지도 않는다
+    assert(body.scrollHeight<=body.clientHeight+2,'짐이 많으면 카드 본문이 늘어남: '+body.scrollHeight+'>'+body.clientHeight);
+    assert(bag.scrollHeight>bag.clientHeight+4,'가방이 스크롤되지 않음(격자가 안 넘침)');
+    assert(getComputedStyle(bag).overflowY==='auto','가방 본문이 스크롤 영역이 아님');
+    // ② 가방 구역이 카드 밖으로 잘리지 않는다
+    const cr=card.getBoundingClientRect(), sr=sec.getBoundingClientRect();
+    assert(sr.bottom<=cr.bottom+1,'가방 구역이 카드 아래로 잘림: '+Math.round(sr.bottom)+'>'+Math.round(cr.bottom));
+    assert(sr.top>=cr.top,'가방 구역이 카드 위로 벗어남');
+    assert(cr.bottom<=innerHeight+1 && cr.top>=-1,'카드가 화면 밖으로 나감');
+    // ③ 가방은 위 구역보다 작아야 한다(짐이 늘어도 아바타를 잡아먹지 않음)
+    const pdr=body.querySelector('.pdWrap').getBoundingClientRect();
+    assert(pdr.height>sr.height,'가방이 착용 구역보다 큼: 가방 '+Math.round(sr.height)+' / 착용 '+Math.round(pdr.height));
+    // ④ 더 볼 게 남았다는 표시 · 6그리드 · 분류
+    assert(sc.classList.contains('more'),'스크롤이 남았는데 "더 있음" 표시가 없음');
+    // 재렌더 뒤엔 아래 노드들이 떨어져 나가 크기가 0이 되므로 여기서 숫자를 잡아 둔다
+    const bh=bag.clientHeight, bs=bag.scrollHeight;
+    const cells=[...body.querySelectorAll('.igCell')].slice(0,8).map(e=>e.getBoundingClientRect());
+    const perRow=cells.filter(r=>Math.abs(r.top-cells[0].top)<2).length;
+    assert(perRow===6,'가방이 6그리드가 아님: 한 줄 '+perRow+'칸');
+    assert(cells[0].width<=54,'가방 칸이 너무 큼: '+Math.round(cells[0].width)+'px');
+    const rows=Math.floor(bh/(cells[0].height+6));
+    assert(rows>=3,'가방이 한 화면에 3줄도 못 보여줌: '+rows+'줄('+Math.round(bh)+'px)');
+    // 분류 칩 — 고른 분류의 장비만 남아야 한다
+    const cats=body.querySelectorAll('.bagHead .bagCat');
+    assert(cats.length===PROF_BAG_CATS.length,'가방 분류 칩 수 불일치: '+cats.length);
+    assert(body.querySelector('.bagCat.on').textContent===PROF_BAG_CATS[0].name,'기본 분류가 전체가 아님');
+    profBagCat('acc');
+    const accItems=profItems().filter(i=>PROF_GEAR[i.slot].part==='acc').length;
+    assert($('tpBody').querySelectorAll('.igCell').length===accItems,'분류를 골라도 다른 분류가 같이 나옴');
+    assert(accItems>0 && accItems<profItems().length,'분류 검사용 표본이 치우침');
+    profBagCat('');
+    assert($('tpBody').querySelectorAll('.igCell').length===profItems().length,'전체로 안 돌아옴');
+    // ⑤ 스크롤한 채로 아이템을 골라 다시 그려도 보던 위치를 유지한다(위 분류 조작으로 노드가 갈렸으니 다시 잡는다)
+    const bagNow=$('tpBody').querySelector('.bagBody');
+    bagNow.scrollTop=90; bagScrollHint();
+    profSelItem(profItems()[12].iid);
+    const bag2=$('tpBody').querySelector('.bagBody');
+    assert(Math.abs(bag2.scrollTop-90)<=2,'다시 그리면 가방 스크롤이 맨 위로 튐: '+bag2.scrollTop);
+    // ⑥ 상세는 가방 위로 겹쳐 뜨는 팝업 — 레이아웃을 밀지 않는다
+    const info=$('tpBody').querySelector('.igInfo'); assert(info,'고른 아이템 상세가 없음');
+    const sec2=$('tpBody').querySelector('.bagSec'), pd2=$('tpBody').querySelector('.pdWrap');
+    assert(Math.abs(sec2.getBoundingClientRect().height-sr.height)<=1,'상세가 뜨자 가방 구역 높이가 바뀜(밀어냄)');
+    assert(Math.abs(pd2.getBoundingClientRect().height-pdr.height)<=1,'상세가 뜨자 착용 구역이 밀림');
+    const ir=info.getBoundingClientRect(), bsr=$('tpBody').querySelector('.bagScroll').getBoundingClientRect();
+    assert(ir.top<bsr.bottom-8,'상세가 가방 위로 겹치지 않고 아래에 붙음');
+    assert(ir.bottom<=card.getBoundingClientRect().bottom+1,'상세 팝업이 카드를 넘침');
+    assert(info.querySelector('.igClose'),'상세 팝업에 닫기 버튼이 없음');
+    townToHub();
+    return '가방 '+Math.round(bh)+'px에 '+rows+'줄 · 내용 '+bs+'px'; });
+  await step('던전: 도전 가능 층이 레벨로 열린다', ()=>{ skipIf(typeof dgFloorCap!=='function','층 해금 없음');
+    const p=PROF(); p.chars.length=0; p.curId='';
+    const c=profCreateChar('ranger','층'); c.level=1;
+    assert(dgFloorCap()===1,'Lv.1인데 1층이 아님: '+dgFloorCap());
+    c.level=1+DG_LV_PER_FLOOR*4; assert(dgFloorCap()===5,'레벨 대비 개방 층 불일치: '+dgFloorCap());
+    assert(dgFloorReqLv(5)===c.level,'필요 레벨 역산 불일치');
+    c.level=1; const before=DG;
+    dgEnter(9);                                                // 레벨보다 높은 층은 못 들어간다
+    assert(DG===before,'레벨 상한을 넘겼는데 던전이 시작됨');
+    return 'Lv당 '+DG_LV_PER_FLOOR+'레벨에 1층'; });
+  await step('장비 마이그레이션: 구버전 정수 티어 → 아이템 + 12칸 재편', ()=>{ skipIf(typeof migrateProfile!=='function','마이그레이션 없음');
+    const keep=JSON.parse(JSON.stringify(PLAYER_META));
+    PLAYER_META.profile={ ver:3, pcoin:0, curId:'cX', items:[], chars:[{ id:'cX', cls:'ranger', name:'구버전',
+      xp:0, level:1, statPoints:0, dgFloor:0, unit:{ jobId:'ranger', level:1, evoStars:0,
+        stats:{pow:0,vit:0,foc:0,agi:0}, gear:{weapon:3, armor:2, trinket:0} } }],
+      idle:{sourceId:'drill',lastClaimTs:0}, unlocks:{}, lastSeenTs:0, pets:{}, equip:[], petSlots:2 };
+    migrateProfile();
+    const c=CHAR(), w=profFindItem(c.unit.gear.weapon), tp=profFindItem(c.unit.gear.top);
+    assert(w && tp,'정수 장비가 아이템으로 변환되지 않음');
+    assert(w.main===9 && tp.main===8,'스탯이 보존되지 않음(무기 3×3=9, 방어구 2×4=8): '+w.main+'/'+tp.main);
+    assert(c.unit.gear.necklace==='','0이던 장신구 칸이 아이템을 만듦');
+    assert(Object.keys(c.unit.gear).length===Object.keys(PROF_GEAR).length,'슬롯 키가 새 12칸으로 재편되지 않음');
+    PLAYER_META=keep; return '무기 +'+w.main+' · 상의 +'+tp.main+'(구 방어구)'; });
+  // 던전 — 유즈맵과 완전 분리라는 것이 이 기능의 핵심 요구라, 정적·동적 양쪽으로 지킨다.
+  await step('던전: 유즈맵 상태를 건드리지 않음', ()=>{ skipIf(typeof dgStart!=='function','던전 없음');
+    const src=[dgStep,dgStart,dgSpawnWave,dgWin,dgLose,dgMySpec,dgFoeStat,dgWaveFoes,dgRender,dgSkill,dgFloorReward]
+      .map(f=>f.toString()).join('\n');
+    const bad=[[/\bG\s*\./,'G.'],[/\bmapCfg\b/,'mapCfg'],[/\bGACHA_/,'GACHA_'],[/\bmetaBonus\b/,'metaBonus'],
+               [/\bspawnEnemy\b/,'spawnEnemy'],[/\bU\[/,'U[']].filter(x=>x[0].test(src)).map(x=>x[1]);
+    assert(!bad.length,'던전 코드가 유즈맵 전역을 참조: '+bad.join(','));
+    const snap=()=>JSON.stringify({p:G.phase,u:G.units.length,e:G.enemies.length,c:G.credits,
+      m:G.mineral,g:G.gas,r:G.round,t:G.tab,s:G.mainSheet,k:G.kills});
+    const before=snap();
+    const p=PROF(); p.chars.length=0; p.curId=''; const c=profCreateChar('warden','던전');
+    c.unit.stats={pow:40,vit:40,foc:0,agi:10};                 // 1층은 확실히 이기는 스펙
+    const coin=p.pcoin;
+    assert(dgStart(1),'던전 진입 실패'); dgStopLoop();
+    let n=0; while(DG && !DG.over && n<20000){ dgStep(0.016); n++; }
+    assert(DG && DG.over>0,'1층 클리어 실패(over='+(DG&&DG.over)+', '+n+'프레임)');
+    const r=DG.reward; DG=null;
+    assert(snap()===before,'던전이 유즈맵 상태 G를 바꿈');
+    assert(p.pcoin===coin+r.pc,'보상 P가 안 들어옴');
+    assert(CHAR().dgFloor===1,'최고 층이 기록되지 않음');
+    return n+'프레임 · +'+r.pc+'P/+'+r.xp+'XP'; });
+  await step('던전: 스펙이 오르면 같은 층이 빨리 끝남', ()=>{ skipIf(typeof dgStart!=='function','던전 없음');
+    const run=(stats)=>{ const p=PROF(); p.chars.length=0; p.curId='';
+      const c=profCreateChar('ranger','T'); c.unit.stats=stats;   // foc=0 → 치명타 없음 = 결정적
+      dgStart(1); dgStopLoop(); let n=0; while(DG && !DG.over && n<20000){ dgStep(0.016); n++; }
+      const o=DG.over; DG=null; return {over:o, n:n}; };
+    const weak=run({pow:12,vit:40,foc:0,agi:0}), strong=run({pow:60,vit:40,foc:0,agi:0});
+    assert(weak.over>0 && strong.over>0,'비교하려면 둘 다 이겨야 함: '+weak.over+'/'+strong.over);
+    assert(strong.n < weak.n*0.9,'공격력을 올렸는데 클리어가 안 빨라짐: '+weak.n+'→'+strong.n);
+    return weak.n+' → '+strong.n+'프레임'; });
+  await step('캐릭터 이름은 HTML로 해석되지 않음', ()=>{ skipIf(typeof profCreateChar!=='function','캐릭터 시스템 없음');
+    const p=PROF(); p.chars.length=0; p.curId='';
+    profCreateChar('scout','<b>x</b>');                 // 이름은 사용자 입력 — innerHTML에 그대로 들어가면 안 된다
+    const host=document.createElement('div');
+    host.innerHTML=renderCharSelect();
+    assert(host.textContent.indexOf('<b>x</b>')>=0,'보관소에서 이름이 마크업으로 해석됨');
+    host.innerHTML=renderProfStats();
+    assert(host.textContent.indexOf('<b>x</b>')>=0,'광장에서 이름이 마크업으로 해석됨');
+    return '이스케이프 확인'; });
 }
 
 // ── 그룹: game (솔로 무한) ──
