@@ -2145,12 +2145,33 @@
     radial-gradient(ellipse at 50% 44%, rgba(52,8,12,.30), transparent 62%),         /* 중앙 붉은 앰비언트 */
     linear-gradient(180deg, rgba(3,4,10,.55) 0%, rgba(2,3,8,.26) 44%, rgba(2,3,8,.86) 100%)}   /* 수직 톤(상·하 어둡게) */
   #hubScreen{flex-direction:column}
-  /* 최상단 게임명(로딩·로그인과 동일 2톤) */
-  .hubBrand{flex:none;margin-top:9.5vh;font-size:27px;font-weight:800;letter-spacing:4px;text-shadow:0 2px 5px #000}
+  /* 상단 유저 프로필 바 */
+  .hubTop{flex:none;width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px 4px;box-sizing:border-box}
+  .hubProf{display:flex;align-items:center;gap:9px;min-width:0}
+  .hubAv{width:34px;height:34px;flex:none;display:flex;align-items:center;justify-content:center;font-size:18px;border-radius:50%;
+    background:radial-gradient(circle at 50% 35%,rgba(120,140,175,.25),rgba(10,12,18,.9));border:1px solid var(--metal-edge)}
+  .hubPName{display:flex;flex-direction:column;gap:2px;min-width:0;line-height:1}
+  .hubPName b{font-size:13.5px;font-weight:800;color:#eaf1fb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:38vw}
+  .hubLv{font-size:10px;font-weight:800;letter-spacing:.4px;color:var(--gold)}
+  .hubTopR{display:flex;align-items:center;gap:9px;flex:none}
+  .hubCoin{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:800;color:#eaf1fb;padding:6px 11px;border-radius:var(--r-lg);
+    background:rgba(255,210,74,.09);border:1px solid rgba(255,210,74,.32)}
+  .hubCoinIco{color:var(--gold);font-size:13px;line-height:1}
+  .hubGear{width:34px;height:34px;flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#9fb0c2;
+    background:rgba(255,255,255,.04);border:1px solid var(--metal-edge);border-radius:var(--r-lg);transition:all .16s}
+  .hubGear svg{width:17px;height:17px}
+  .hubGear:hover{color:#fff;background:rgba(255,255,255,.1);border-color:var(--glass-edge)}
+  /* 브랜드+선택을 한 그룹으로 화면 세로 중앙 배치(여백 균형) */
+  .hubCenter{flex:1;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:34px;padding:1vh 0 3vh}
+  /* 브랜드(엠블럼 + 게임명 2톤) */
+  .hubBrand{flex:none;display:flex;flex-direction:column;align-items:center;gap:8px}
+  .hubEmblem{color:var(--neon);line-height:0}
+  .hubEmblem svg{width:44px;height:44px;filter:drop-shadow(0 0 9px var(--neon-glow))}
+  .hubBrandTx{font-size:25px;font-weight:800;letter-spacing:4px;text-shadow:0 2px 5px #000}
   .hubBrand .opT1{color:#f3f6fb;text-shadow:0 0 10px rgba(255,255,255,.22),0 2px 4px #000}
   .hubBrand .opT2{color:var(--neon);text-shadow:0 0 16px var(--neon-glow),0 2px 4px #000}
   /* 게임명 아래 나머지 공간 중앙에 선택 영역 */
-  .hubBody{flex:1;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:0 18px 9vh}
+  .hubBody{flex:none;width:100%;display:flex;flex-direction:column;align-items:center;gap:20px;padding:0 18px}
   .hubSel{display:flex;align-items:center;gap:11px;font-size:13px;font-weight:800;letter-spacing:2px;color:#c7d0db}
   .hubSel::before,.hubSel::after{content:'';height:1px;width:32px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.30),transparent)}
   .hubCards{display:flex;flex-direction:column;gap:13px;width:100%;max-width:360px}   /* 세로 스택 */
@@ -2177,6 +2198,13 @@
   .hubcMain{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
   .hubcName{font-size:18px;font-weight:800;color:#fff;letter-spacing:1.5px;line-height:1;text-shadow:0 0 13px color-mix(in srgb,var(--ca) 55%,transparent),0 2px 4px #000}
   .hubcSub{font-size:11.5px;color:var(--txt-mute);letter-spacing:.2px;line-height:1.35;word-break:keep-all}
+  /* 카드 메타 행 = 라이브/레벨 스탯 + 태그칩 */
+  .hubcMeta{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:2px}
+  .hubcLive{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:800;color:#c2eccd}
+  .hubcLive b{color:#eaf7ee;font-family:'Rajdhani',sans-serif;font-variant-numeric:tabular-nums}
+  .hubcDot{width:6px;height:6px;flex:none;border-radius:50%;background:#5dff8f;box-shadow:0 0 6px rgba(93,255,143,.85);animation:mcPulse 1.8s ease-in-out infinite}
+  .hubcLvl{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:800;color:#b9c4d1}
+  .hubcLvl b{color:var(--gold);font-family:'Rajdhani',sans-serif}
   .hubcTags{display:flex;flex-wrap:wrap;gap:5px;margin-top:1px}
   .hubTag{font-size:9px;font-weight:800;letter-spacing:.3px;color:#cfe0ec;padding:3.5px 8px;border-radius:var(--r-lg);
     background:color-mix(in srgb,var(--ca) 12%,rgba(255,255,255,.03));border:1px solid color-mix(in srgb,var(--ca) 34%,var(--metal-edge))}
@@ -3111,7 +3139,23 @@
 
   <!-- 🎯 시작 선택 화면: 유즈맵 / 내 캐릭터(RPG) -->
   <div id="hubScreen" class="appScreen spaceBg hide">
-    <div class="hubBrand"><span class="opT1">STAR </span><span class="opT2">WAR</span></div>
+    <!-- 상단 유저 프로필 바 -->
+    <div class="hubTop">
+      <div class="hubProf">
+        <span class="hubAv">👤</span>
+        <span class="hubPName"><b id="hubNick">게스트</b><span class="hubLv" id="hubLevel">Lv.1</span></span>
+      </div>
+      <div class="hubTopR">
+        <span class="hubCoin"><span class="hubCoinIco">◎</span><b id="hubCoins">0</b></span>
+        <button class="hubGear" data-sfx="ui_open" onclick="openAppSettings()" title="설정" aria-label="설정"><svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg></button>
+      </div>
+    </div>
+    <div class="hubCenter">
+    <!-- 브랜드(엠블럼 + 게임명) -->
+    <div class="hubBrand">
+      <span class="hubEmblem"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M24 4 L40 9 V24 C40 33 33 39.5 24 43 C15 39.5 8 33 8 24 V9 Z"/><path d="M24 15 L27 23 L24 31 L21 23 Z" fill="currentColor" stroke="none"/><path d="M17 20 L24 23 L31 20" stroke-width="1.5"/></svg></span>
+      <span class="hubBrandTx"><span class="opT1">STAR </span><span class="opT2">WAR</span></span>
+    </div>
     <div class="hubBody">
       <div class="hubSel">게임 선택</div>
       <div class="hubCards">
@@ -3120,7 +3164,7 @@
           <div class="hubcMain">
             <div class="hubcName">USEMAP</div>
             <div class="hubcSub">골라서 즐기는 아케이드 대전</div>
-            <div class="hubcTags"><span class="hubTag">아케이드</span><span class="hubTag">멀티</span></div>
+            <div class="hubcMeta"><span class="hubcLive"><i class="hubcDot"></i><b id="hubUseLive">0</b>명 접속</span><span class="hubTag">아케이드</span><span class="hubTag">멀티</span></div>
           </div>
           <div class="hubcGo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>
         </button>
@@ -3129,11 +3173,12 @@
           <div class="hubcMain">
             <div class="hubcName">RPG</div>
             <div class="hubcSub">캐릭터를 키우는 나만의 모험</div>
-            <div class="hubcTags"><span class="hubTag">성장</span><span class="hubTag">모험</span></div>
+            <div class="hubcMeta"><span class="hubcLvl">내 캐릭터 <b id="hubRpgLv">Lv.1</b></span><span class="hubTag">성장</span><span class="hubTag">모험</span></div>
           </div>
           <div class="hubcGo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>
         </button>
       </div>
+    </div>
     </div>
   </div>
 
@@ -4029,7 +4074,18 @@ function profStampSeen(){ if(PLAYER_META&&PLAYER_META.profile){ PLAYER_META.prof
 // ── 🎯 시작 허브 + 🏘 마을 UI ──
 let _townOpen=false, _twZone=null, _twMoveT=null;
 const ZONE_POS={ plaza:[50,74], shop:[20,47], gym:[80,47], gacha:[22,22], gate:[78,22] };
-function openHub(){ loadMeta(); if(typeof bgmStart==='function') bgmStart('lobby'); showAppScreen('hubScreen'); }
+function openHub(){ loadMeta(); if(typeof bgmStart==='function') bgmStart('lobby'); showAppScreen('hubScreen'); renderHub(); }
+function renderHub(){ try{
+  const set=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
+  const p=(typeof PROF==='function'?PROF():(PLAYER_META&&PLAYER_META.profile))||{};
+  set('hubNick', (typeof myNick==='function'?myNick():'게스트'));
+  set('hubLevel', 'Lv.'+(p.level||1));
+  set('hubCoins', ((PLAYER_META&&PLAYER_META.coins)||0).toLocaleString('en-US'));
+  set('hubRpgLv', 'Lv.'+(p.level||1));
+  if(typeof initMapLive==='function') initMapLive();   // 접속수 시드(허브에서 첫 진입 시)
+  let live=0; for(const id in _mapLive){ const o=_mapLive[id]; live+=(o.wait||0)+(o.play||0); }
+  set('hubUseLive', live.toLocaleString('en-US'));
+}catch(e){} }
 function hubGoMap(){ if(typeof playSfx==='function') playSfx('ui_open'); openMapSelect(); }
 function mapToHub(){ if(typeof stopRoomsTick==='function') stopRoomsTick(); if(typeof playSfx==='function') playSfx('ui_close'); openHub(); }   // 유즈맵 선택 → 시작 선택(허브)로 복귀
 function hubGoTown(){ if(typeof playSfx==='function') playSfx('ui_open'); openTown(); }
