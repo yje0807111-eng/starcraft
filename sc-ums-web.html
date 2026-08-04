@@ -11681,7 +11681,7 @@ function _techBU(race,bk){ return (TECH_BLDG_UNIT[race]||{})[bk]||null; }
 function techBldgUnit(race, bk){ const e=_techBU(race,bk);
   return (e && typeof STK_UNITS!=='undefined' && STK_UNITS[e.u]) ? e.u : null; }
 // 종족 평준화: 건물당 배출 수를 종족별로 스케일 — 유니온 기준(1.0) · 에테리얼 소수정예(2/3) · 스웜 물량(1.5배)
-const STK_RACE_SPAWN={ union:1, aetherial:2/3, swarm:1.5 };
+const STK_RACE_SPAWN={ union:1, aetherial:0.85, swarm:1.25 };   // 종족 배출 수 배수(완화) — 스웜=다수/에테리얼=소수 정체성. 스탯 배율(STK_RACE_STAT)이 이 수 차이를 상쇄해 army 밸런스 ~50%.
 function techBldgCount(race, bk){ const e=_techBU(race,bk); const rm=(STK_RACE_SPAWN[race]||1); return Math.max(1, Math.round(((e&&e.n)||1)*TECH_WAVE_MUL*rm)); }
 // 기본 공통 자료(data/base_stats.md) — SC 원본 공격 쿨다운 프레임(cd, 작을수록 빠름·24f=1s) / 이동 픽셀(mv, 클수록 빠름). 게임 id 기준.
 const BASE_CD={  // 0=공격 없음(수송·시전·자폭 등)
@@ -14180,14 +14180,18 @@ function strikeSkillAtkMul(u){ let m=1; const b=u.buff||{}, on=u.skillOn||{};
   if(b.stim>0) m*=(SKILLS.stim.atkMul||1); if(on.siege) m*=(SKILLS.siege.atkMul||1); return m; }
 function strikeRngMul(u){ return (u.skillOn&&u.skillOn.siege)?(SKILLS.siege.rngMul||1):1; }
 // (제거) strikeSpdMul — 미사용(스팀 속도 로직은 14x 인라인으로 중복)
+// 종족 스탯 정규화 배율 — 파워 배수(중립1) 대신 "세기를 스탯으로" 조절하는 단일 노브.
+//   스폰 수 차이(스웜 다수·에테리얼 소수)를 상쇄해 army 밸런스 ~50%. hp·공격 양쪽에 곱(전투 소스 strikeUnitStats에만 반영 → 표시=전투 일치).
+const STK_RACE_STAT={ union:1.00, swarm:0.85, aetherial:1.10 };
 function strikeUnitStats(id){ const s=STK_UNITS[id], d=U[id]||{};
+  const rs=(typeof RACE_OF!=='undefined'&&STK_RACE_STAT[RACE_OF[id]])||1;   // 종족 세기 배율(스탯)
   const rng=(d.range!=null?d.range:0.2)*STK_RNG_MUL;                       // 사거리
-  const dmg=((s&&s.sdmg!=null)?s.sdmg:(d.dmg!=null?d.dmg:15));             // 공격력 — strike 전용 오버라이드(sdmg) 있으면 사용(nemo 무영향), 없으면 U
+  const dmg=((s&&s.sdmg!=null)?s.sdmg:(d.dmg!=null?d.dmg:15))*rs;          // 공격력 — strike 오버라이드(sdmg) 우선 × 종족배율
   const cd=Math.max(0.45,(s&&s.scd!=null)?s.scd:((d.cd!=null?d.cd:22)/STK_CD_DIV));   // 공격속도(쿨) — strike 전용 오버라이드(scd, 초) 우선(nemo 무영향)
   const spd=(STK_SPD_OVR[id]!=null?STK_SPD_OVR[id]:(d.moveSpd!=null?d.moveSpd:0.19))*STK_SPD_MUL;   // 이동속도(직스 오버라이드 우선)
-  if(s){ return { hp:s.hp, dmg:dmg, rng:rng, cdMax:cd, spd:spd,
+  if(s){ return { hp:Math.round(s.hp*rs), dmg:dmg, rng:rng, cdMax:cd, spd:spd,   // 체력·공격 × 종족배율
       color:d.color||'#cfd6e2', size:strikeBodyR(id), splash:s.splash||0, melee:!!s.melee, acq:strikeAcq(rng) }; }
-  return { hp:Math.round((d.hp||40)*3), dmg:dmg, rng:rng, cdMax:cd, spd:spd,   // 폴백(오토배틀 전용값 없는 유닛) — 체력만 U에서 환산
+  return { hp:Math.round((d.hp||40)*3*rs), dmg:dmg, rng:rng, cdMax:cd, spd:spd,   // 폴백(오토배틀 전용값 없는 유닛) — 체력만 U에서 환산 × 종족배율
     color:d.color||'#cfd6e2', size:d.size||13, splash:0, melee:false, acq:strikeAcq(rng) }; }
 function strikeSpawnPads(side){ const S=STK, b=S[side].base, D=360, CS=180;   // 메인신전 양 옆 네모 스폰존(strikeDrawSpawnPad와 동일 위치)
   return side==='me' ? [{x:b.x-D+CS,y:b.y-D-CS},{x:b.x+D+CS,y:b.y+D-CS}] : [{x:b.x-D-CS,y:b.y-D+CS},{x:b.x+D-CS,y:b.y+D+CS}]; }
