@@ -1478,6 +1478,9 @@
   #plGridWrap{display:flex;flex-direction:column;flex:none;height:min(26vh,126px);max-height:min(26vh,126px);min-height:0}   /* 다른 하단 섹션(유닛지정/뽑기/업그레이드)과 동일한 126px 고정 높이 */
   /* 플레이어 관전 슬롯 = 통일된 SC 카드(메탈+사선 모서리+플레이어색 좌측 액센트+스캔라인) */
   .plGrid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:58px;align-content:center;gap:6px;flex:1;min-height:0;padding:2px 0}
+  /* 오토배틀 관전 시트 = 전용 .plbtn 그리드를 시트 호스트에 그대로(커맨드 그리드 아님) */
+  #unitCmd.stkSpec,#btSheetBody.stkSpec{display:flex;flex-direction:column;min-height:0;padding:2px 6px 4px}
+  #unitCmd.stkSpec .plGrid,#btSheetBody.stkSpec .plGrid{flex:1;min-height:0;grid-auto-rows:auto;grid-template-rows:repeat(2,1fr);padding:0}   /* 4×2=8칸이 시트 높이에 꽉 차게 */
   .plbtn{--pc:var(--info);position:relative;cursor:pointer;overflow:hidden;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;padding:7px 10px;
     background:linear-gradient(160deg,rgba(42,48,60,.5),rgba(10,12,17,.7));border:1px solid var(--metal-edge);
     clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
@@ -7579,15 +7582,36 @@ function _upgradeSheetModel(){
 function renderUpgradeSheet(){ const host=document.getElementById('unitCmd'); if(!host) return; host.classList.add('simple');
   const sig='u|'+((G.atkLv&&[G.atkLv.inf,G.atkLv.mech,G.atkLv.zrg,G.atkLv.pro].join('.'))||'')+'|'+(G.gachaLuckLv||0)+'|'+(G.creditLv||0)+'|'+Math.floor(G.mineral||0)+'|'+Math.floor(G.gas||0)+'|'+(host._cgPage||0);
   if(host._gSig!==sig){ host._gSig=sig; host._cgSig=undefined; renderCmdGrid(host, _upgradeSheetModel()); } }
-// 👥 플레이어 시트 — 메인 유지 + 활성 플레이어 그리드. 셀 탭 = 그 플레이어 화면(관전)으로 이동.
-function _playersSheetModel(){
-  const me=G.myPlayer||1, active=G.activePlayers||[1,2,3,4,5,6,7,8];
-  const items=active.map(n=>{ const isMe=(n===me);
-    return { pro:'<span class="pemoji">'+n+'P</span>', sn:(typeof playerName==='function'?playerName(n):('P'+n))+(isMe?' (나)':''),
-      tr:isMe?'현재':'관전', metaCls:'lv', state:isMe?'max':'ok', sel:isMe && n===G.curPlayer,
-      act:isMe?'':('onclick="viewPlayerFromSheet('+n+')"') }; });
-  return { mode:'players', title:'플레이어', icon:pIco('👥'), sub:'다른 플레이어 화면 보기', compact:true, build:true,
-    info:{ eb:'플레이어', name:'다른 플레이어 관전', desc:'플레이어를 눌러 그 화면으로 이동' }, items:items }; }
+// ═══ 공통 관전 플레이어 시트 빌더(단일 소스) — 협동/대전(versus)을 옵션으로. 네모·오토배틀·향후 유즈맵 공용 ═══
+//   cfg: { me, active[], names{}, versus, team(n), color(n), portrait(n,o), nameOf(n), badgeOf(n,o), watchingOf(n),
+//          selOf(n,isMe), pickAttr(n), selfPickable, selfState, mode, title, icon, sub, info }
+//   o = {isMe, enemy, watching, col} (카드별 상태). versus=true면 team(n)!==team(me) = 적(잠금).
+function playerSheetModel(cfg){
+  const me=cfg.me, active=(cfg.active&&cfg.active.length)?cfg.active:[me], names=cfg.names||{};
+  const myTeam=cfg.versus?cfg.team(me):null;
+  const items=active.map(function(n){
+    const isMe=(n===me), enemy=cfg.versus?(cfg.team(n)!==myTeam):false, watching=cfg.watchingOf?!!cfg.watchingOf(n):false;
+    const clickable=!enemy && (isMe?(cfg.selfPickable!==false):true), col=cfg.color?cfg.color(n):'#7fd0ff';
+    const o={isMe:isMe, enemy:enemy, watching:watching, col:col};
+    return { pro:cfg.portrait?cfg.portrait(n,o):('<span class="pemoji">'+n+'P</span>'),
+      sn:cfg.nameOf?cfg.nameOf(n):(names[n]||(n+'P')),
+      tr:cfg.badgeOf?cfg.badgeOf(n,o):(isMe?'현재':(n+'P')), metaCls:'lv',
+      state:enemy?'dim':(clickable?((isMe&&cfg.selfState)?cfg.selfState:'ok'):'max'),
+      sel:watching||(cfg.selOf?!!cfg.selOf(n,isMe):false),
+      act:clickable?cfg.pickAttr(n):'' }; });
+  return { mode:cfg.mode||'players', title:cfg.title||'플레이어', icon:cfg.icon||pIco('👥'), sub:cfg.sub||'',
+    compact:true, build:true, info:cfg.info||{ eb:'플레이어', hideName:true, desc:'' }, items:items }; }
+// 👥 네모(협동) 플레이어 시트 — 나 빼고 전부 관전 가능. 셀 탭 = 그 플레이어 화면.
+function _playersSheetModel(){ const me=G.myPlayer||1;
+  return playerSheetModel({ me:me, active:G.activePlayers||[1,2,3,4,5,6,7,8], versus:false,
+    selfPickable:false, selfState:'max',
+    nameOf:function(n){ return (typeof playerName==='function'?playerName(n):('P'+n))+(n===me?' (나)':''); },
+    badgeOf:function(n,o){ return o.isMe?'현재':'관전'; },
+    selOf:function(n,isMe){ return isMe && n===G.curPlayer; },
+    portrait:function(n){ return '<span class="pemoji">'+n+'P</span>'; },
+    pickAttr:function(n){ return 'onclick="viewPlayerFromSheet('+n+')"'; },
+    mode:'players', title:'플레이어', icon:pIco('👥'), sub:'다른 플레이어 화면 보기',
+    info:{ eb:'플레이어', name:'다른 플레이어 관전', desc:'플레이어를 눌러 그 화면으로 이동' } }); }
 function renderPlayersSheet(){ const host=document.getElementById('unitCmd'); if(!host) return; host.classList.add('simple');
   const sig='p|'+(G.myPlayer||1)+'|'+((G.activePlayers||[]).join('.'))+'|'+(G.curPlayer||0)+'|'+(host._cgPage||0);
   if(host._gSig!==sig){ host._gSig=sig; host._cgSig=undefined; renderCmdGrid(host, _playersSheetModel()); } }
@@ -8196,6 +8220,28 @@ function _sbStingerKamikaze(u, tgt, dt, units, myTeam, MM){   // 스팅어(자�
     u.hp=0; u._sbExploded=true;   // 자폭=사망(중복 death boom 억제)
   }
 }
+// ══ 상성 엔진: 데미지 타입 × 유닛 크기(스타크래프트식) ══════════════════
+// 타입: normal(전부100%) · concussive(진동: 소100·중50·대25) · explosive(폭발: 대100·중75·소50)
+// 크기: s(소형)·m(중형)·l(대형). ⚠ 프로토스식 쉴드는 크기 무관 100%(공식은 _sbEffAtk에서 sh>0 처리)
+const TYPE_VS_SIZE={ normal:{s:1,m:1,l:1}, concussive:{s:1,m:0.5,l:0.25}, explosive:{s:0.5,m:0.75,l:1} };
+// 유닛 전투 분류(model3d/기본 id 기준) — dt=공격 데미지타입, sz=피격 크기. 밸런싱 단일 소스.
+const UNIT_COMBAT_CLASS={
+  // 유니온
+  marine:{dt:'normal',sz:'s'}, machinegun:{dt:'concussive',sz:'s'}, ghost:{dt:'concussive',sz:'s'},
+  racer:{dt:'concussive',sz:'m'}, tank:{dt:'explosive',sz:'l'}, goliath:{dt:'explosive',sz:'l'},
+  skyguard:{dt:'normal',sz:'l'}, hellfire:{dt:'normal',sz:'l'}, dreadnought:{dt:'explosive',sz:'l'},
+  // 스웜
+  snapper:{dt:'normal',sz:'s'}, hydra:{dt:'explosive',sz:'m'}, thornqueen:{dt:'normal',sz:'m'},
+  stinger:{dt:'normal',sz:'s'}, wyvern:{dt:'explosive',sz:'l'}, venom:{dt:'explosive',sz:'m'},
+  behemoth:{dt:'explosive',sz:'l'}, broodling:{dt:'normal',sz:'s'}, ultralisk:{dt:'normal',sz:'l'},
+  // 에테리얼
+  dragoon:{dt:'explosive',sz:'l'}, blade:{dt:'normal',sz:'s'}, archon:{dt:'normal',sz:'l'},
+  falcon:{dt:'explosive',sz:'m'}, skydancer:{dt:'explosive',sz:'m'}, archangel:{dt:'normal',sz:'l'},
+  kronos:{dt:'explosive',sz:'l'}, dark_templar:{dt:'normal',sz:'s'}, larva:{dt:'normal',sz:'l'} };
+function _uClass(u){ return u&&(UNIT_COMBAT_CLASS[u.id]||UNIT_COMBAT_CLASS[u.gmodel]); }
+function _sbTypeMul(atk, tgt){ const A=_uClass(atk); if(!A||A.dt==='normal') return 1;   // 무분류·일반형=100%
+  const B=_uClass(tgt); const sz=(B&&B.sz)||'m'; const row=TYPE_VS_SIZE[A.dt];   // 대상 크기(미분류=중형 취급)
+  return (row&&row[sz]!=null)?row[sz]:1; }
 function stepSbCombat(dt){ if(typeof G==='undefined'||!G.sandbox||G.tab!=='Battle'||!G.sbCombat||!G.units||!G.units.length) return;   // ⚔ 양방향 실전 전투(적팀=team:'foe')
   const units=G.units; if(!G.btFx) G.btFx=FX.store(); if(!G.btPend) G.btPend=[]; const _dmgAcc={};   // 동시 데미지(처리순서 편향 제거)
   const _alive=u=>!(u.maxHp&&(u.hp!=null?u.hp:u.maxHp)<=0), _MM=(typeof MOVE_MUL!=='undefined'?MOVE_MUL:1);
@@ -8218,10 +8264,12 @@ function stepSbCombat(dt){ if(typeof G==='undefined'||!G.sandbox||G.tab!=='Battl
     if(dist<=rng){   // 사거리 내 → 정지·조준
       u.face=Math.atan2(tgt.x-u.x, tgt.y-u.y); u.moving=false;
       // ── 데미지: 부드러운 DPS(매 프레임) — 밸런스용(이산 발사 타이밍 영향 제거) ──
-      const _td=Ueff(tgt), _armor=((tgt.sh>0)?(_td.shArmor||0):(_td.armor||0))+_upgDef(tgt);   // 유즈맵 유효 스탯 · 실드=shArmor/체력=armor (+건설 방어 티어)
-      const _ad=Ueff(u), _dps=Math.max(0.5,((_ad.dmg||1)+_upgAtk(u))-_armor)*60/Math.max(0.2,(_ad.cd||22));   // 유즈맵 유효 스탯 · (공격력+무기티어−방어력)×초당공격횟수
-      if(_ad.splash){ const _SR=0.05; for(const o of units){ if(o.fixed||_sbTeam(o)===myTeam||!_alive(o)) continue; const _sx=o.x-tgt.x,_sy=o.y-tgt.y; if(_sx*_sx+_sy*_sy<=_SR*_SR){ _dmgAcc[o.uid]=(_dmgAcc[o.uid]||0)+_dps*dt; o.flash=0.12; } } }   // 스플래시(광역): 대상 주변 적 동시 타격 → 물량 카운터
-      else { _dmgAcc[tgt.uid]=(_dmgAcc[tgt.uid]||0)+_dps*dt; tgt.flash=0.12; }   // 단일 대상
+      const _ad=Ueff(u), _atk=(_ad.dmg||1)+_upgAtk(u), _rate=60/Math.max(0.2,(_ad.cd||22));   // 유효 공격력 + 무기티어 · 초당공격횟수
+      // 대상별 실효 DPS = max(0.5, (공격력 × 타입상성) − 방어력) × 공속. 쉴드 있으면 상성 무시(100%)·shArmor 사용
+      const _eff=(o)=>{ const _od=Ueff(o), _oarm=((o.sh>0)?(_od.shArmor||0):(_od.armor||0))+_upgDef(o), _mul=(o.sh>0)?1:_sbTypeMul(u,o);
+        return Math.max(0.5, _atk*_mul - _oarm)*_rate; };
+      if(_ad.splash){ const _SR=0.05; for(const o of units){ if(o.fixed||_sbTeam(o)===myTeam||!_alive(o)) continue; const _sx=o.x-tgt.x,_sy=o.y-tgt.y; if(_sx*_sx+_sy*_sy<=_SR*_SR){ _dmgAcc[o.uid]=(_dmgAcc[o.uid]||0)+_eff(o)*dt; o.flash=0.12; } } }   // 스플래시(광역): 주변 적 각자 크기 상성으로 동시 타격
+      else { _dmgAcc[tgt.uid]=(_dmgAcc[tgt.uid]||0)+_eff(tgt)*dt; tgt.flash=0.12; }   // 단일 대상
       // ── 시각 발사 케이던스 = base_stats 공속(실제 DPS와 동일 리듬) ──
       if(!G._balSim && !(u._btCd>0)){ const cd=(typeof fxLabStats==='function')?Math.max(0.42,fxLabStats(u.id,u.gmodel).cd):0.6; u._btCd=cd; u.fireSeq=(u.fireSeq||0)+1;
         if(typeof playUnitAttack==='function') playUnitAttack(u.gmodel||u.id);
@@ -11674,34 +11722,34 @@ const STK_UNITS={
   goliath:   {name:'기갑병', ico:'⚙️', cost:220, hp:380, dmg:30, rng:235, cd:1.30, spd:155, size:21},
   tank:      {name:'공성전차',   ico:'🛡', cost:350, hp:430, dmg:72, rng:330, cd:2.30, spd:115, size:24, splash:160},
   // 🔮 에테리얼 — 사이오닉 (원거리 포격 / 근접 돌격 / 광역 탱커)
-  dragoon:   {name:'센티넬',    ico:'🤖', cost:200, hp:300, dmg:24, rng:245, cd:1.25, spd:230, size:18},
-  blade:     {name:'광전사',      ico:'⚔️', cost:120, hp:300, dmg:22, rng:49,  cd:0.80, spd:340, size:17, melee:true},
+  dragoon:   {name:'센티넬',    ico:'🤖', cost:200, hp:380, dmg:24, sdmg:38, scd:1.0, rng:245, cd:1.25, spd:230, size:18},   // 밸런스: 0%였음(핵심 기본) → hp380·실효공격38·실효쿨1.36→1.0(scd)
+  blade:     {name:'광전사',      ico:'⚔️', cost:120, hp:360, dmg:22, sdmg:42, rng:49,  cd:0.80, spd:340, size:17, melee:true},   // 밸런스: 17% → hp300→360·실효공격33→42(sdmg)
   archon:    {name:'보이드',    ico:'🔮', cost:340, hp:400, dmg:34, rng:130, cd:1.05, spd:185, size:23, splash:120},
   // 🦎 스웜 — 유기체 (저가 원거리 / 근접 다수 / 도트 공성)
   hydra:     {name:'스파이크',      ico:'🦎', cost:110, hp:215, dmg:18, rng:215, cd:0.95, spd:300, size:17},
   matron:    {name:'여제', ico:'🧬', cost:210, hp:470, dmg:26, rng:49,  cd:0.95, spd:205, size:22, melee:true},
   thornqueen:{name:'가시여왕',   ico:'🐛', cost:330, hp:360, dmg:42, rng:300, cd:1.70, spd:125, size:22, splash:150},
   // ── 건설지 확장 유닛(직스 밸런스) — 모델 기존 재사용 ──
-  ghost:     {name:'저격수',      ico:'👻', cost:130, hp:110, dmg:28, rng:260, cd:1.40, spd:300, size:15},   // 유니온 저격 보병(유리 대포)
+  ghost:     {name:'저격수',      ico:'👻', cost:130, hp:150, dmg:28, sdmg:34, scd:0.9, rng:260, cd:1.40, spd:300, size:15},   // 유니온 저격 보병 · 밸런스: hp150·실효공격34·실효쿨0.9(scd, 공속↑)
   snapper:   {name:'척후병',    ico:'🐛', cost:90,  hp:130, dmg:14, rng:41, cd:0.70, spd:360, size:15, melee:true},   // 스웜 고속 소형 다수(근접 — 낫 베기)
   stinger:   {name:'자폭충',    ico:'🐝', cost:160, hp:90,  dmg:40, rng:210, cd:1.60, spd:300, size:15, splash:120},   // 스웜 광역 유리대포
   falcon:    {name:'팔콘',      ico:'🦅', cost:150, hp:170, dmg:22, rng:240, cd:1.00, spd:320, size:17},   // 에테리얼 기동 원거리
   // ── 관리자 맵 유닛 이식(건설지 확장) — id=gmodel 키 → 모델·이펙트·부양 자동 연결 ──
   // 🛡 유니온 확장
-  machinegun:{name:'화력병',      ico:'🔫', cost:130, hp:180, dmg:11, rng:210, cd:0.45, spd:200, size:18},   // 고속 기관총
-  racer:     {name:'레이서',    ico:'🏍', cost:120, hp:150, dmg:22, rng:190, cd:0.90, spd:330, size:18},   // 경량 고속 차량
-  skyguard:  {name:'전투기',  ico:'✈️', cost:200, hp:280, dmg:28, rng:250, cd:1.10, spd:300, size:20},   // 공중 전투기
-  hellfire:  {name:'폭격기',  ico:'🔥', cost:220, hp:200, dmg:34, rng:240, cd:1.40, spd:240, size:18, splash:130},   // 공중 미사일(광역)
-  dreadnought:{name:'전함',ico:'💥', cost:360, hp:620, dmg:60, rng:300, cd:2.20, spd:130, size:24, splash:150},   // 공중 중포함
+  machinegun:{name:'화력병',      ico:'🔫', cost:130, hp:210, dmg:11, sdmg:22, rng:210, cd:0.45, spd:200, size:18},   // 고속 기관총 · 밸런스 버프: hp180→210·실효공격→22(sdmg)
+  racer:     {name:'레이서',    ico:'🏍', cost:120, hp:210, dmg:22, sdmg:30, rng:190, cd:0.90, spd:330, size:18},   // 경량 고속 차량 · 밸런스 버프: hp150→210·실효공격→30(sdmg)
+  skyguard:  {name:'전투기',  ico:'✈️', cost:200, hp:280, dmg:28, sdmg:44, rng:250, cd:1.10, spd:300, size:20},   // 공중 전투기 · 밸런스: 실효공격54→44(sdmg) 미세 너프
+  hellfire:  {name:'폭격기',  ico:'🔥', cost:220, hp:240, dmg:34, sdmg:50, rng:240, cd:1.40, spd:240, size:18, splash:130},   // 공중 미사일(광역) · 밸런스 버프: hp200→240·실효공격→50(sdmg)
+  dreadnought:{name:'전함',ico:'💥', cost:360, hp:560, dmg:60, sdmg:48, rng:300, cd:2.20, spd:130, size:24, splash:150},   // 공중 중포함 · 밸런스: 무패라 hp620→560·실효공격52→48(sdmg)
   aegis:     {name:'지원 정찰기',    ico:'🛡', cost:480, hp:1400,dmg:14, rng:230, cd:1.20, spd:110, size:22},   // 공중 방벽(초고체력 저공격)
   // 🦎 스웜 확장
   venom:     {name:'산성충',      ico:'🐛', cost:130, hp:200, dmg:22, rng:230, cd:1.00, spd:260, size:18},   // 공중 산성 포자
-  medusa:    {name:'군단여왕',    ico:'🐍', cost:240, hp:340, dmg:34, rng:240, cd:1.30, spd:180, size:20, splash:120},   // 공중 사이오닉 광역
-  wyvern:    {name:'비행충',    ico:'🐲', cost:420, hp:750, dmg:70, rng:250, cd:1.30, spd:240, size:22},   // 공중 준보스(고화력)
-  behemoth:  {name:'포격충',  ico:'🦣', cost:620, hp:1100,dmg:95, rng:300, cd:2.40, spd:120, size:26, splash:180},   // 공중 대형 보스(광역)
+  medusa:    {name:'군단여왕',    ico:'🐍', cost:240, hp:400, dmg:34, rng:240, cd:1.30, spd:180, size:20, splash:120},   // 밸런스: 33% → hp340→400   // 공중 사이오닉 광역
+  wyvern:    {name:'비행충',    ico:'🐲', cost:420, hp:720, dmg:70, sdmg:95, rng:250, cd:1.30, spd:240, size:22},   // 공중 준보스(모프 유닛·희소) · 강한 프리미엄 유지: hp720·실효공격95(sdmg)
+  behemoth:  {name:'포격충',  ico:'🦣', cost:620, hp:900, dmg:95, sdmg:150, rng:300, cd:2.40, spd:120, size:26, splash:180},   // 밸런스: 83% → hp1100→900·실효공격190→150(sdmg)   // 공중 대형 보스(광역)
   // 🔮 에테리얼 확장
   skydancer: {name:'요격기',ico:'💃', cost:180, hp:240, dmg:24, rng:250, cd:1.00, spd:320, size:18},   // 공중 고속 기동
-  archangel: {name:'모함',  ico:'👼', cost:420, hp:640, dmg:32, rng:280, cd:1.60, spd:140, size:24, splash:150},   // 공중 성채(광역)
+  archangel: {name:'모함',  ico:'👼', cost:420, hp:460, dmg:32, sdmg:18, scd:1.4, rng:280, cd:1.60, spd:140, size:24, splash:150},   // 밸런스: 100% 무패(빠른 스플래시) → hp460·공격18·실효쿨0.73→1.4(scd, 공속 반감)   // 공중 성채(광역)
   kronos:    {name:'전함',  ico:'⏳', cost:340, hp:520, dmg:42, rng:300, cd:1.80, spd:150, size:22, splash:140},   // 공중 시공 포격(광역)
   // ── 신규 전투 유닛(6a7cff7 이식) — 근접형 3종 · 지원형(메딕·라바·하이템플러)은 무공격이라 직스 생산 제외(연습 랩 전용) ──
   broodling:  {name:'스웜링',  ico:'🐛', cost:70,  hp:80,   dmg:12, rng:60, cd:0.60, spd:380, size:12, melee:true},   // 스웜 초저가 고속 근접 다수
@@ -12103,7 +12151,9 @@ const TECH_BLDG_UNIT={
 function _techBU(race,bk){ return (TECH_BLDG_UNIT[race]||{})[bk]||null; }
 function techBldgUnit(race, bk){ const e=_techBU(race,bk);
   return (e && typeof STK_UNITS!=='undefined' && STK_UNITS[e.u]) ? e.u : null; }
-function techBldgCount(race, bk){ const e=_techBU(race,bk); return Math.max(1, ((e&&e.n)||1)*TECH_WAVE_MUL); }
+// 종족 평준화: 건물당 배출 수를 종족별로 스케일 — 유니온 기준(1.0) · 에테리얼 소수정예(2/3) · 스웜 물량(1.5배)
+const STK_RACE_SPAWN={ union:1, aetherial:2/3, swarm:1.5 };
+function techBldgCount(race, bk){ const e=_techBU(race,bk); const rm=(STK_RACE_SPAWN[race]||1); return Math.max(1, Math.round(((e&&e.n)||1)*TECH_WAVE_MUL*rm)); }
 // 기본 공통 자료(data/base_stats.md) — SC 원본 공격 쿨다운 프레임(cd, 작을수록 빠름·24f=1s) / 이동 픽셀(mv, 클수록 빠름). 게임 id 기준.
 const BASE_CD={  // 0=공격 없음(수송·시전·자폭 등)
   worker_human:15, marine:15, machinegun:22, medic:0, ghost:22, racer:30, tank:37, goliath:22, skyguard:22, pelican:0, hellfire:64, aegis:0, dreadnought:30,
@@ -13616,14 +13666,16 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
   let cm=(G.tech.cardMode===2)?2:1; G.tech.cardMode=cm;   // cm0(2줄 전체) 제거 → 1(간소화) 또는 2(최소화)만. 사이클의 0은 1로 수렴
   // 📦 보급 시트는 화면 전환이 아니라 하단 시트 토글이라, 건설지에서도 같은 호스트(#btSheetBody)에 그대로 올린다.
   //   모델(_stkSupplyModel)과 렌더(renderCmdGrid)는 전투 화면과 동일한 것을 쓴다 — UI를 두 번 만들지 않는다.
-  let _sup=false;
-  if(typeof STK!=='undefined' && STK && STK.supSheet && typeof _stkSupplyModel==='function'){ model=_stkSupplyModel(); _sup=true; }
-  const _shown=!!((sh.open||_sup) && model && G.tech.arm==null && G.tech.rallySet==null);   // 🗺 배치·착륙(arm)·랠리 지정 중 = 프로필 시트 잠시 내려 맵을 넓게 확보 · 모드 종료 시 자동 복귀
+  let _sup=false, specHTML=null;
+  if(typeof STK!=='undefined' && STK && STK.specSheet && typeof _stkSpecGridHTML==='function'){ specHTML=_stkSpecGridHTML(); _sup=true; }   // 👁 관전 = 전용 .plbtn 그리드(건설지 호스트에도 동일)
+  else if(typeof STK!=='undefined' && STK && STK.supSheet && typeof _stkSupplyModel==='function'){ model=_stkSupplyModel(); _sup=true; }
+  const _shown=!!((sh.open||_sup) && (model||specHTML) && G.tech.arm==null && G.tech.rallySet==null);   // 🗺 배치·착륙(arm)·랠리 지정 중 = 프로필 시트 잠시 내려 맵을 넓게 확보 · 모드 종료 시 자동 복귀
   if(model && !_sup){ model.compact=(cm===1); model.build=true; }   // 건설 탭 카드 스타일(업그레이드 시트는 모델이 이미 같은 스타일을 들고 온다)
   sheet.classList.toggle('open', _shown);
   if(_shown){ sheet.classList.toggle('simple', cm===1); sheet.classList.toggle('mini', cm===2); }   // 숨길 땐 높이 클래스(.simple/.mini) 유지 → 현재 높이 그대로 아래로 슬라이드(150→204 즉시 확대로 위로 울컥이는 것 방지)
   const cardCtl=document.getElementById('btCardCtl'); if(cardCtl){ const _up=(cm===2); cardCtl.classList.toggle('up',_up); cardCtl.innerHTML='<svg viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'; cardCtl.title=(_up?'프로필 펼치기':(cm===1?'하단으로 최소화':'간소화')); }
-  if(model) renderCmdGrid(body, model);
+  body.classList.toggle('stkSpec', specHTML!=null);
+  if(specHTML!=null) body.innerHTML=specHTML; else if(model) renderCmdGrid(body, model);
   const _liftSel=(G.tech.sel!=null)&&!!G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'&&x._lifted);   // 부양 건물 선택 = 바닥탭이 이동이라 금지버튼으로 해제
   const dz=document.getElementById('btDesel'); if(dz) dz.classList.toggle('on',(G.tech.selU||[]).length>0 || _liftSel || !!G.tech.selRes); }
 function techCardCycle(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return; G.tech.cardMode=((G.tech.cardMode||0)+1)%3; if(typeof playSfx==='function') playSfx('ui_open'); techPanelRender(); }   // 유닛 지정 해제 버튼(메인 deselTop 규약)
@@ -14287,8 +14339,8 @@ function strikeTechLayout(){ if(!G.tech) return; const race=G.tech.race, cw=_tec
     const _vy=cy+STK_TECH_LIFT/STK_TECH_ZOOM;   // 하단 프로필 시트를 피해 건설 구역을 화면 위쪽으로(초기 뷰만)
     G.tech.view={x:cx, y:_vy, zoom:STK_TECH_ZOOM}; G.tech.viewT={x:cx, y:_vy, zoom:STK_TECH_ZOOM};
     _techClampView(G.tech.view); _techClampView(G.tech.viewT); } }
-function strikeNewState(){ const W=mapCfg('world',4800), hp=mapCfg('baseHp',3000), inc=mapCfg('incomeBase',150), mc=mapCfg('mineCost',300), mi=mapCfg('mineIncome',120);
-  const sHp=mapCfg('secHp',Math.round(hp*0.5)), cHp=mapCfg('centralHp',Math.round(hp*0.35));
+function strikeNewState(){ const W=mapCfg('world',4800), hp=mapCfg('baseHp',7500), inc=mapCfg('incomeBase',150), mc=mapCfg('mineCost',300), mi=mapCfg('mineIncome',120);   // 메인신전 체력 3000→7500(전투 지속력↑)
+  const sHp=mapCfg('secHp',Math.round(hp*0.5)), cHp=mapCfg('centralHp',Math.round(hp*0.35));   // 2차=메인×0.5(3750) · 중앙=메인×0.35(2625) — 메인 비례 상승
   // 레인: me 메인 → me 2차 → 중앙 중립 → ai 2차 → ai 메인 (대각선 한 줄). t=0.27/0.5/0.73 지점
   return { t:0, over:null, round:1,
     world:W, cycleTime:mapCfg('cycleTime',30), cycleT:mapCfg('cycleTime',30),
@@ -14314,8 +14366,11 @@ function strikeUpCost(kind, lv){ const B={atk:120, hp:120}; return Math.round((B
 function strikeKillGold(e){ return Math.max(1, Math.min(5, Math.round((e&&e.maxHp||130)/250))); }   // 처치 보상(티어 비례)
 const STK_BOMB_COST=150, STK_BOMB_DMG=520, STK_BOMB_R=520;   // 폭탄: 비용/피해/반경
 // 유닛 강화 배율(소환 시 적용) — 공격 +12%/Lv, 체력 +16%/Lv
-function strikeAtkMul(side){ return 1 + (side.atkLv||0)*0.12; }
-function strikeHpMul(side){ return 1 + (side.hpLv||0)*0.16; }
+// 종족 전투 파워 배수(hp·공격 동시) — 배출 배수(테마)는 고정하고 이 값으로 종족 균형을 맞춘다. 밸런싱 단일 소스.
+const STK_RACE_POWER={ union:1.00, swarm:0.51, aetherial:1.95 };
+function _racePow(side){ return (side && STK_RACE_POWER[side.race]) || 1; }
+function strikeAtkMul(side){ return (1 + (side.atkLv||0)*0.12) * _racePow(side); }
+function strikeHpMul(side){ return (1 + (side.hpLv||0)*0.16) * _racePow(side); }
 function strikeApplyHpUpg(side){ const S=STK; if(!S||!side) return;   // 글로벌 체력 업그레이드 — 이미 소환된 유닛의 최대 체력도 즉시 상향(비율 유지)
   const m=strikeHpMul(side), prev=side._hpMulApplied||1; if(m===prev) return; side._hpMulApplied=m;
   const k=m/prev; for(const u of side.units){ if(u.dead) continue; const r=u.maxHp?u.hp/u.maxHp:1;
@@ -14391,11 +14446,18 @@ function strikeEnd(){ if(!STK && !(G&&G.strike)) return;
 
 // ── 프레임/시뮬 ──
 function strikeFrame(dt){ const S=STK; if(!S) return; strikeStep(dt*(G.speedMul||1));   // 게임 배속(설정 배속 시스템 반영) — 로딩/종료 중엔 strikeStep 내부에서 정지
+  // 👁 관전 중(specView) = 탭보다 우선. 어느 탭이든 vMain에 그 플레이어 건설을 렌더(건설지에서 열었어도 카드 선택 시 그 플레이어 화면).
+  { const _spec=!!S.specView; if(_spec!==S._specGview){ S._specGview=_spec; const _bld=(G.tab==='Build');
+      document.querySelectorAll('.gview').forEach(v=>v.classList.toggle('on', v.id===((_spec||!_bld)?'vMain':'vBuild'))); } }
+  if(S.specView){ const _mcv=document.getElementById('cvMarine'); if(_mcv) _mcv.style.display='none';   // 관전=2D 빌드맵(전투 3D 오버레이 숨김)
+    strikeDrawBuildMap(strikeSpecView(S.specView)); strikeTempleTick(dt); strikeHud(); strikeLeaderboard(dt);
+    if(G.tab==='Build'){ if(S.specSheet&&typeof techPanelRender==='function'){ S._spT=(S._spT||0)-dt; if(S._spT<=0){ S._spT=0.22; techPanelRender(); } } }
+    else { S._siT=(S._siT||0)-dt; if(S._siT<=0){ S._siT=0.22; strikeRenderSelInfo(); } }
+    return; }
   if(G.tab==='Build'){ techSyncWallet(); renderBuildTab(dt); strikeHud();
-    if(S.supSheet){ S._spT=(S._spT||0)-dt; if(S._spT<=0){ S._spT=0.22; if(typeof techPanelRender==='function') techPanelRender(); } }   // 📦 보급 시트 수치 갱신(전투 화면의 _siT와 동일 주기)
+    if(S.supSheet||S.specSheet){ S._spT=(S._spT||0)-dt; if(S._spT<=0){ S._spT=0.22; if(typeof techPanelRender==='function') techPanelRender(); } }   // 📦 보급/관전 시트 수치 갱신
     return; }   // 🏗 건설지 = 관리자 건설 탭과 동일한 렌더·틱(단일 소스)
-  if(G.tab==='Players' && S.specView) strikeDrawBuildMap(strikeSpecView(S.specView));   // 관전: 그 플레이어 건설 화면(그의 색)
-  else strikeDrawMain();
+  strikeDrawMain();
   { const U=STK._fxU; if(U){ if(U.pend&&U.pend.length){ for(let i=U.pend.length-1;i>=0;i--){ const p=U.pend[i]; p.t-=dt; if(p.t<=0){ FX.spawn(U.store,p.id,p.sx,p.sy,p.tx,p.ty,p.opt); U.pend.splice(i,1); } } }
     if(typeof tickUnitFx==='function') tickUnitFx(U, dt); if(FX.advance) FX.advance(U.store, dt); } }   // 유닛별 이펙트 진행(대기 발사·가스 이미터 등)
   strikeTempleTick(dt); strikeHud(); strikeLeaderboard(dt); strikeSync3D(dt);
@@ -14591,8 +14653,8 @@ function strikeRngMul(u){ return (u.skillOn&&u.skillOn.siege)?(SKILLS.siege.rngM
 // (제거) strikeSpdMul — 미사용(스팀 속도 로직은 14x 인라인으로 중복)
 function strikeUnitStats(id){ const s=STK_UNITS[id], d=U[id]||{};
   const rng=(d.range!=null?d.range:0.2)*STK_RNG_MUL;                       // 사거리
-  const dmg=(d.dmg!=null?d.dmg:15);                                        // 공격력
-  const cd=Math.max(0.45,(d.cd!=null?d.cd:22)/STK_CD_DIV);                 // 공격속도(쿨다운)
+  const dmg=((s&&s.sdmg!=null)?s.sdmg:(d.dmg!=null?d.dmg:15));             // 공격력 — strike 전용 오버라이드(sdmg) 있으면 사용(nemo 무영향), 없으면 U
+  const cd=Math.max(0.45,(s&&s.scd!=null)?s.scd:((d.cd!=null?d.cd:22)/STK_CD_DIV));   // 공격속도(쿨) — strike 전용 오버라이드(scd, 초) 우선(nemo 무영향)
   const spd=(STK_SPD_OVR[id]!=null?STK_SPD_OVR[id]:(d.moveSpd!=null?d.moveSpd:0.19))*STK_SPD_MUL;   // 이동속도(직스 오버라이드 우선)
   if(s){ return { hp:s.hp, dmg:dmg, rng:rng, cdMax:cd, spd:spd,
       color:d.color||'#cfd6e2', size:strikeBodyR(id), splash:s.splash||0, melee:!!s.melee, acq:strikeAcq(rng) }; }
@@ -15208,7 +15270,16 @@ function strikeSpawnWave(){ const S=STK; if(!S) return;   // 출격 주기(30초
       strikeSpawnUnit('me', e.uid); myCount++; }
     if(out.length && G.tab==='Build' && typeof techUIRender==='function') techUIRender(); }
   if(!myCount){ strikeSpawnUnit('me'); strikeSpawnUnit('me'); myCount=2; }   // 생산이 없으면 기본 소량(전멸 방지)
-  const n=Math.max(2, myCount)+(Math.random()*2|0); for(let i=0;i<n;i++) strikeSpawnUnit('ai'); }   // AI는 내 총 생산량에 맞춰 대응
+  // 🤖 AI = 자기 종족 건물로 직접 배출(미러링 제거). 플레이어의 완성 생산건물 수만큼 자기 종족 건물을 갖춘 것으로 보고,
+  //    그 종족의 배출 수(techBldgCount)로 소환 → 종족 조합·배출 배수가 싱글에서도 진짜 종족 대결로 반영. 난이도는 내 건물 수에 연동.
+  { const _ar=S.ai.race, _keys=Object.keys(TECH_BLDG_UNIT[_ar]||{});
+    let _pb=0; if(G.tech && G.tech.ents){ const _mr=G.tech.race; for(const e of G.tech.ents){ if(e.type==='bldg' && (e.bt||0)<=0 && techBldgUnit(_mr, e.bk)) _pb++; } }
+    _pb=Math.max(2, _pb);   // 플레이어 생산건물 수(난이도 기준) · 최소 2
+    let _aiN=0;
+    if(_keys.length){ for(let i=0;i<_pb;i++){ const bk=_keys[i % _keys.length], uid=techBldgUnit(_ar, bk); if(!uid) continue;
+      const _cnt=techBldgCount(_ar, bk);
+      for(let k=0;k<_cnt;k++){ const _b4=S.ai.units.length; strikeSpawnUnit('ai', uid); if(S.ai.units.length<=_b4) break; _aiN++; } } }
+    if(!_aiN){ strikeSpawnUnit('ai'); strikeSpawnUnit('ai'); } } }   // 폴백(전멸 방지)
 function strikeFrontStruct(side){ const S=STK, foe=S[side==='me'?'ai':'me'];   // 가장 앞 신전: 중립 살아있으면 중립(그 뒤 신전은 못 때림) → 적 2차 → 적 메인
   if(S.central && !S.central.dead) return S.central;
   if(foe.sec && !foe.sec.dead) return foe.sec;
@@ -15320,13 +15391,13 @@ function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
       let _toTemple=!tgt, _fireT=false;   // _toTemple=신전 분기로 처리 · _fireT=표적에 못 닿는 동안 사거리 안 신전을 대신 사격
       if(tgt){ const d=Math.hypot(tgt.x-u.x,tgt.y-u.y);   // 유닛 우선 교전
         if(d<=strikeReach(u,tgt)){ u.moving=false; u._blk=0; u._swp=0; u.face=Math.atan2(tgt.x-u.x, tgt.y-u.y); u.cd-=dt;
-          if(u.cd<=0){ u.cd=u.cdMax; u.fireSeq=(u.fireSeq||0)+1; tgt.hp-=u.dmg*strikeSkillAtkMul(u)*strikeAtkMul(me); strikeFx(u,tgt.x,tgt.y,col);   // fireSeq++ = 3D 공격 모션 트리거
+          if(u.cd<=0){ u.cd=u.cdMax; u.fireSeq=(u.fireSeq||0)+1; tgt.hp-=u.dmg*strikeSkillAtkMul(u)*strikeAtkMul(me)*_sbTypeMul(u,tgt); strikeFx(u,tgt.x,tgt.y,col);   // fireSeq++ = 3D 공격 모션 · ×상성(타입×크기)
             { const _uAir=strikeIsAir(u);
               if(!tgt.tgtUid && (!tgt._atk || (_uAir? tgt._atk.air : tgt._atk.gnd))) tgt.tgtUid=u.uid;   // 반격은 때릴 수 있을 때만
               tgt._acqT=0; tgt._inrT=0;                           // 맞으면 즉시 재판단(사거리 안 스캔 주기도 리셋)
               strikeAlert(foe.units, u.uid, tgt.x, tgt.y, 420, _uAir); }   // 주변 아군 가담(때릴 수 있는 아군만)
             if(u.splash>0){ const sr2=u.splash*u.splash, sd=u.dmg*0.6;   // 광역: 타겟 주변 적에게 60% 추가타
-              for(const e of foe.units){ if(e===tgt||e.dead) continue; const ex=e.x-tgt.x, ey=e.y-tgt.y; if(ex*ex+ey*ey<=sr2){ e.hp-=sd; if(e.hp<=0){ e.dead=true; me.kills=(me.kills||0)+1; me.gold+=strikeKillGold(e); } } } }
+              for(const e of foe.units){ if(e===tgt||e.dead) continue; const ex=e.x-tgt.x, ey=e.y-tgt.y; if(ex*ex+ey*ey<=sr2){ e.hp-=sd*_sbTypeMul(u,e); if(e.hp<=0){ e.dead=true; me.kills=(me.kills||0)+1; me.gold+=strikeKillGold(e); } } } }   // ×대상별 상성
             if(tgt.hp<=0){ tgt.dead=true; me.kills=(me.kills||0)+1; me.gold+=strikeKillGold(tgt); } } }   // 처치 집계 + 킬 보상
         else { const _gq=(front&&!front.dead)?strikeTempleGap(front,u.x,u.y):1e9;
           // ⚠ 적 표적이 있으면 **접근이 실제로 막혔을 때만** 신전을 때린다.
@@ -15414,11 +15485,38 @@ function _stkTempleDesc(o){ const S=STK; if(!S) return '';
   return '파괴되면<br>즉시 패배합니다.'; }
 function strikeToggleSupply(on){ const S=STK; if(!S) return;
   S.supSheet=(on==null)?!S.supSheet:!!on; S.supPage=null;
+  if(S.supSheet){ S.specSheet=false; S.specView=null; }   // 보급↔관전 상호배타
   const h=document.getElementById('unitCmd'); if(h) h._stkSig=null;
   if(G.tab==='Build' && typeof techPanelRender==='function') techPanelRender();   // 건설지에서는 시트 호스트가 달라 즉시 다시 그린다
   if(typeof playSfx==='function') playSfx('ui_tab'); }
 function strikeSupPage(p){ const S=STK; if(!S) return; S.supPage=p||null;
   const h=document.getElementById('unitCmd'); if(h) h._stkSig=null; }
+// 👁 관전 시트 — 보급과 동일한 하단 시트 토글(화면 이동 X). 플레이어 카드 선택 시 그 진영 건설을 관전(specView). 시트 내리면 관전 종료(전장 복귀).
+function strikeToggleSpec(on){ const S=STK; if(!S) return;
+  S.specSheet=(on==null)?!S.specSheet:!!on;
+  if(S.specSheet){ S.supSheet=false; } else { S.specView=null; }   // 상호배타 · 내리면 관전 종료
+  const h=document.getElementById('unitCmd'); if(h) h._stkSig=null;
+  if(G.tab==='Build' && typeof techPanelRender==='function') techPanelRender();
+  if(typeof playSfx==='function') playSfx('ui_tab'); }
+function strikeSpecPick(n){ const S=STK; if(!S) return;
+  const me=(G.myPlayer||1); if((n<=4)!==(me<=4)){ strikeToast('적 진영은 암흑 시야입니다 🌑'); return; }   // 내 팀 아니면 관전 불가
+  S.specView=(S.specView===n)?null:n;   // 같은 플레이어 다시 = 전장 복귀
+  const h=document.getElementById('unitCmd'); if(h) h._stkSig=null;
+  if(G.tab==='Build' && typeof techPanelRender==='function') techPanelRender();
+  if(typeof playSfx==='function') playSfx('ui_confirm'); }
+// 👁 오토배틀 관전 시트 = 네모(renderPlayers)와 동일한 관전 전용 .plbtn 플레이어 그리드(커맨드 그리드 아님).
+//   실제 참가자만(G.activePlayers) · 팀=슬롯 절반(1-4 vs 5-8) · 나=mine(잠금) · 적=off(암흑 시야) · 관전중=me
+function _stkSpecGridHTML(){ const S=STK, me=(G.myPlayer||1), myA=(me<=4), names=G.playerNames||{};
+  const active=G.activePlayers||[me];   // 네모 renderPlayers 와 동일: 항상 8칸(4×2), 없는 자리는 빈자리
+  let h='<div class="plGrid stkSpecGrid">';
+  for(let n=1;n<=8;n++){ const isMe=(n===me), present=active.indexOf(n)>=0, enemy=present&&((n<=4)!==myA), ally=present&&!isMe&&!enemy, watching=(S&&S.specView===n);
+    const cls='plbtn'+(isMe?' mine':(ally?(watching?' me':''):' off'));   // 나=mine · 아군=관전가능(관전중=me) · 적군/빈자리=off(잠금)
+    const col=(isMe||present)?strikePColor(n):'#b6bdc8';   // 빈 자리만 무채색(흰색 계열)
+    let nm; if(isMe) nm=escHtml(names[n]||(typeof myNick==='function'?myNick():'나'));
+      else if(enemy) nm='적군 🌑'; else if(present) nm=escHtml(names[n]||(n+'P')); else nm='빈 자리';
+    const click=ally?(' onclick="strikeSpecPick('+n+')"'):'';   // 입장한 아군만 관전 가능
+    h+='<div class="'+cls+'" style="--pc:'+col+'"'+click+'><div class="plnum">'+n+'P</div><div class="plst">'+nm+'</div></div>'; }
+  return h+'</div>'; }
 // 📦 업그레이드 시트 — 4그리드(① 광산 ② 강화 ④ 특수무기 / 3번은 비움). 구매·강화·투하는 기존 함수를 그대로 호출.
 function _stkLv(cur,max){ return (cur>=max)?'MAX':(cur+'/'+max); }   // 카드 우상단 표기 통일
 function _stkSupplyModel(){ const S=STK, me=S.me, gold=Math.floor(me.gold||0);
@@ -15448,16 +15546,19 @@ function _stkSupplyModel(){ const S=STK, me=S.me, gold=Math.floor(me.gold||0);
 function strikeRenderSelInfo(){ const S=STK; const host=document.getElementById('unitCmd');
   { const old=document.getElementById('stSelInfo'); if(old && !old.classList.contains('hide')){ old.classList.add('hide'); old.innerHTML=''; } }   // 구 프로필 사용 안 함
   if(!host) return;
-  let model=null, sig=null;
-  if(S && S.supSheet){ model=_stkSupplyModel();
+  let model=null, sig=null, specHTML=null;
+  if(S && S.specSheet){ specHTML=_stkSpecGridHTML(); sig='spec|'+(S.specView||'-')+'|'+((G.activePlayers||[]).join('.'))+'|'+(G.myPlayer||1); }   // 👁 관전 = 전용 .plbtn 그리드(커맨드 그리드 아님)
+  else if(S && S.supSheet){ model=_stkSupplyModel();
     sig='sup|'+(S.supPage||'-')+'|'+Math.floor(S.me.gold)+'|'+(S.me.mines||0)+'|'+((S.me.atkLv||0)+'-'+(S.me.hpLv||0))+'|'+(S.me.bombs||0)+'|'+S.me.mineCost; }
   else if(S && S.selTemple && !S.selTemple.dead){ const o=S.selTemple, nm=S.selTempleName||'신전'; model=_stkTempleModel(o,nm); sig='t|'+nm+'|'+Math.round(o.hp); }
   else if(S && S.selEnemy && !S.selEnemy.dead){ const u=S.selEnemy; model=_stkUnitModel(u,'ai'); sig='e|'+u.id+'|'+Math.round(u.hp); }
   else if(S){ const u=(S.selAllies||[]).map(uid=>strikeFindUnit(S.me.units,uid)).filter(Boolean)[0]; if(u){ model=_stkUnitModel(u,'me'); sig='a|'+u.id+'|'+Math.round(u.hp); } }
-  if(model){ host.classList.add('on','simple'); if(host._stkSig!==sig){ host._stkSig=sig; renderCmdGrid(host, model); } }
-  else if(host._stkSig!=null || host.classList.contains('on')){ host.classList.remove('on'); host._stkSig=null; host.innerHTML=''; }
+  const has=(specHTML!=null)||!!model;
+  if(has){ host.classList.add('on','simple'); host.classList.toggle('stkSpec', specHTML!=null);   // 관전 = 전용 .plbtn 그리드 스타일(높이는 126px 동일)
+    if(host._stkSig!==sig){ host._stkSig=sig; if(specHTML!=null) host.innerHTML=specHTML; else renderCmdGrid(host, model); } }
+  else if(host._stkSig!=null || host.classList.contains('on')){ host.classList.remove('on','simple','stkSpec'); host._stkSig=null; host.innerHTML=''; }
   // 전투(Main) 탭: 프로필 있을 때만 하단 시트 올림 → 무선택 시 하단 섹션 완전 비움
-  if(G.tab==='Main'){ const show=!!model; if(host._stkShown!==show){ host._stkShown=show; document.body.classList.toggle('sheetOpen', show);
+  if(G.tab==='Main'){ const show=has; if(host._stkShown!==show){ host._stkShown=show; document.body.classList.toggle('sheetOpen', show);
     if(typeof _syncSheetLift==='function'){ requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); } } } }
 function strikeDrawFx(ctx,w2s,scale,S){ if(!S||!S.fx) return;   // 공용 FX 코어로 렌더(네모와 동일 비주얼). sz=픽셀 스케일(줌 연동)
   const sz=Math.max(0.8, Math.min(2.6, scale*8.5)); FX.drawShots(ctx, S.fx, w2s, sz);
@@ -15636,10 +15737,13 @@ function strikeSwitchTab(id,el){ const S=STK; if(!S) return;
       if(G.tab==='Build' && G.tech){ G.tech.sel=null; G.tech.selU=[]; G.tech.selRes=null;
         if(G.tech.sheet){ G.tech.sheet.open=false; G.tech.sheet.sec=null; } } }
     strikeToggleSupply(); return; }   // 📦 업그레이드 = 화면 이동 없이 하단 시트만 토글
-  // 지금 보고 있는 화면의 탭을 다시 누르면 = 보급 시트만 내린다(화면은 그대로).
-  //   내린 뒤에는 각 화면의 원래 규칙으로 복귀 — 지정한 대상이 있으면 그 프로필, 없으면 하단 구역 자체가 사라진다.
+  if(id==='Players'){   // 👁 관전 = 보급과 동일 — 화면 이동 없이 하단 시트만 토글(플레이어 선택 → 관전 진입)
+    if(S.specSheet){ strikeClearSel(); }   // 내릴 때 지정 해제(하단 완전 비움)
+    strikeToggleSpec(); return; }
+  // 지금 보고 있는 화면의 탭을 다시 누르면 = 보급/관전 시트만 내린다(화면은 그대로).
   if(S.supSheet && id===G.tab){ strikeToggleSupply(false); return; }
-  if(S.supSheet) strikeToggleSupply(false);   // 다른 화면으로 이동하면 업그레이드 시트는 내린다(전투↔건설지 포함) — 넘어간 화면이 그대로 보이게
+  if(S.supSheet) strikeToggleSupply(false);   // 다른 화면으로 이동하면 시트는 내린다
+  if(S.specSheet) strikeToggleSpec(false);    // 관전 시트도 다른 화면 이동 시 내림(관전 종료)
   G.tab=id; S.userCam=false; if(id!=='Players') S.specView=null;   // 관전 종료
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
   (el||document.querySelector('.tab[data-tab="'+id+'"]'))?.classList.add('on');
@@ -15655,7 +15759,6 @@ function strikeSwitchTab(id,el){ const S=STK; if(!S) return;
   const zl=document.getElementById('zoneLabel');
   if(zl){ const _m={Main:['⚔️','전장'],Upgrade:['📦','보급'],Players:['👁','관전']}[id];
     zl.innerHTML=_m? pIco(_m[0])+'<span class="zlTx">'+_m[1]+'</span>' : ''; }
-  if(id==='Players') strikeRenderSpec();
   // 전투(Main)=선택 있을 때만 하단 프로필 시트 · 그 외 탭=패널 상시 표시
   if(id==='Main'){ const uc=document.getElementById('unitCmd'); if(uc) uc._stkShown=undefined; strikeRenderSelInfo(); }
   else { document.body.classList.add('sheetOpen'); if(typeof _syncSheetLift==='function'){ requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); } }
@@ -15709,25 +15812,9 @@ function strikeMyBuildCells(){ const S=STK, b=S&&S.build; if(!b||!G.tech||!G.tec
     out.push({ type:{key:e.bk, name:bd.name||'', ico:bd.ico||'🏢'}, built:(e.bt>0?0:1),
       x:((e.x-TECH_GRID.x0)/cw)*cell, y:((e.y-techY0())/ch)*cell, w:f.w*cell, h:f.h*cell }); }
   return out; }
-function strikeSpecView(slot){ const S=STK; const cells=(slot===1)?strikeMyBuildCells():strikeSpecBuildCells(slot);
-  return {cells:cells, col:strikePColor(slot), label:(slot===1?'내 ':(slot+'P '))+'건설'}; }
-function strikeSpecSelect(slot, enemy){ const S=STK; if(!S) return;
-  if(enemy){ strikeToast('적 진영은 암흑 시야입니다 🌑'); return; }
-  S.specView=(S.specView===slot)?null:slot;   // 같은 슬롯 다시 누르면 전장으로 복귀
-  strikeRenderSpec(); if(typeof playSfx==='function') playSfx('ui_tab'); }
-function strikeRenderSpec(){ const S=STK; const g=document.getElementById('plGrid'); if(!g) return;
-  const pp=document.getElementById('playerProfile'); if(pp) pp.style.display='none';
-  g.style.display=''; g.style.gap=''; g.innerHTML='';
-  const meNick=(typeof myNick==='function'?myNick():'나');
-  for(let n=1;n<=8;n++){ const enemy=n>=5, col=strikePColor(n);
-    const el=document.createElement('div');
-    el.className='plbtn'+((S&&S.specView===n)?' me':'')+(enemy?' off':'');   // 적군=흐리게(암흑 시야)
-    el.style.setProperty('--pc', col);
-    const nm=(n===1)?escHtml(meNick):(enemy?'컴퓨터 🌑':n+'P');
-    el.innerHTML='<div class="plnum">'+n+'P</div><div class="plst">'+nm+'</div>';
-    el.onclick=()=>strikeSpecSelect(n, enemy);
-    g.appendChild(el);
-  } }
+function strikeSpecView(slot){ const S=STK; const isMe=(slot===(G.myPlayer||1)); const cells=isMe?strikeMyBuildCells():strikeSpecBuildCells(slot);
+  return {cells:cells, col:strikePColor(slot), label:(isMe?'내 ':(((G.playerNames&&G.playerNames[slot])||(slot+'P'))+' '))+'건설'}; }
+// (제거) strikeSpecSelect/strikeRenderSpec — 구 Players-탭 .plbtn 렌더러. 관전이 하단 시트(_stkSpecGridHTML)로 이동해 진입점 없어짐.
 function strikeToast(msg){ if(typeof lobbyToast==='function') lobbyToast(msg); else if(typeof toast==='function') toast(msg); }
 
 // ── 입력(전장 패닝/핀치줌/선택) ──
