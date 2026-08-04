@@ -2134,16 +2134,30 @@
   /* ── 🎯 시작 선택 허브 ── */
   #hubScreen.hide,#townScreen.hide,#charScreen.hide{display:none}
   /* 장비 페이퍼돌 — 캐릭터 초상 + 신체 위치 슬롯 */
-  .pdWrap{position:relative;height:380px;margin:2px 0 10px}
-  .pdFig{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:106px;height:236px;color:#9fb4c6}
-  .pdFig svg{display:block;width:100%;height:100%;filter:drop-shadow(0 0 7px rgba(92,214,255,.3))}
-  .pdSlot{position:absolute;z-index:2;width:46px;height:46px;border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;
-    font-size:20px;color:#8d97a4;background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);box-shadow:0 5px 14px -8px #000}
+  /* 페이퍼돌 — 캐릭터가 가운데 3×3, 슬롯 12칸이 5×5 격자의 둘레를 감싼다(스크롤 없이 한 화면) */
+  .pdWrap{display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:48px 1fr 1fr 1fr 48px;gap:6px;
+    height:290px;margin:11px 0 6px;align-items:center;justify-items:center}   /* 위 여백 = 첫 줄 레벨 배지가 잘리지 않게 */
+  .pdFig{grid-column:2/5;grid-row:2/5;height:100%;width:100%;display:flex;align-items:center;justify-content:center;color:#9fb4c6}
+  .pdFig svg{display:block;height:100%;width:auto;filter:drop-shadow(0 0 7px rgba(92,214,255,.3))}
+  .pdSlot{position:relative;width:48px;height:48px;border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    font-size:21px;color:#8d97a4;background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);box-shadow:0 5px 14px -8px #000}
   .pdSlot.on{background:rgba(92,214,255,.09)}
-  .pdSlot.lock{opacity:.42}
+  .pdSlot.lock{opacity:.4}
   .pdSlot:active{transform:translateY(1px)}
-  .pdSlot .pdLbl{position:absolute;bottom:-14px;left:50%;transform:translateX(-50%);font-size:9.5px;font-weight:700;color:var(--txt-mute);white-space:nowrap}
-  .pdSlot.pick{box-shadow:0 0 0 2px rgba(92,214,255,.7)}
+  .pdSlot .pdLock{position:absolute;left:2px;top:1px;font-size:9px;font-style:normal}
+  .pdSum{text-align:center;font-size:12px;color:var(--txt-mute);line-height:1.6}
+  .pdSum b{color:#eaf1fb}
+  .pdBag{display:flex;justify-content:center;margin-top:9px}
+  .pdBag .twBtn{min-width:150px;padding:9px 14px}
+  /* 하단 시트 */
+  .gsSheet{position:absolute;left:0;right:0;bottom:0;z-index:64;transition:transform .18s ease}
+  .gsSheet.hide{transform:translateY(105%);pointer-events:none}
+  .gsCard{border-radius:16px 16px 0 0;padding:12px 14px 16px;max-height:64vh;display:flex;flex-direction:column;
+    background:linear-gradient(180deg,rgba(22,28,40,.99),rgba(11,15,23,.99));border-top:1px solid var(--metal-edge);box-shadow:0 -14px 34px -12px #000}
+  .gsHead{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .gsTtl{flex:1;font-size:14px;font-weight:800;color:#eaf1fb}
+  .gsSub{font-size:11px;font-weight:700;color:var(--txt-mute)}
+  .gsBody{overflow-y:auto;-webkit-overflow-scrolling:touch}
   /* 가방 = 아이콘 격자 + 고른 것 하나만 상세 카드 */
   .igHead{display:flex;align-items:center;justify-content:space-between;gap:8px}
   .igBack{min-width:0;padding:4px 9px;font-size:11px}
@@ -3219,11 +3233,13 @@
   </div>
 
   <!-- 마을 시설 팝업(구역 도착 시) -->
-  <div id="townPanel" class="hide" onclick="if(event.target===this)closeTownPanel()">
+  <div id="townPanel" class="hide" onclick="if(event.target===this)townPanelBackdrop()">
     <div class="setCard twCard">
       <div class="setTitle"><span id="tpTitle">시설</span><div class="setX" onclick="closeTownPanel()"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></div></div>
       <div class="twBody" id="tpBody"></div>
     </div>
+    <!-- 장비 선택 하단 시트 — 본 화면을 밀어내지 않도록 목록·상세를 여기에 담는다 -->
+    <div id="gearSheet" class="gsSheet hide"></div>
   </div>
 
   <div id="pointPanel" class="hide" onclick="if(event.target===this)closePointUpgrade()">
@@ -4066,21 +4082,21 @@ const PROF_JOB_PARENT=(function(){ const m={}; for(const id in PROF_JOBS) for(co
 const PROF_REFUND_RATE=1.0;   // 캐릭터 삭제 환급률(1.0=쓴 재화 전액). 경험치·레벨은 환급 없음
 // 장비 슬롯 — 왼쪽 열=장구류, 오른쪽 열=무기·장신구. reqLv = 캐릭터 레벨(성장 축 하나로 통일).
 // 초반엔 기본 5칸(헬멧·상의·하의·신발·무기)만 열려 있고 레벨이 오르며 나머지가 열린다.
+// col/gr = 5×5 격자에서의 칸 위치(캐릭터가 가운데 3×3을 차지하고 슬롯이 둘레를 감싼다)
 const PROF_GEAR={
-  helmet:  {name:'헬멧',    stat:'vit', base:6,  side:'left',  row:0, reqLv:1,  ico:'🪖'},
-  top:     {name:'상의',    stat:'vit', base:8,  side:'left',  row:1, reqLv:1,  ico:'👕'},
-  bottom:  {name:'하의',    stat:'vit', base:7,  side:'left',  row:2, reqLv:1,  ico:'👖'},
-  shoes:   {name:'신발',    stat:'agi', base:6,  side:'left',  row:3, reqLv:1,  ico:'👟'},
-  gloves:  {name:'장갑',    stat:'pow', base:5,  side:'left',  row:4, reqLv:5,  ico:'🧤'},
-  belt:    {name:'벨트',    stat:'vit', base:5,  side:'left',  row:5, reqLv:8,  ico:'🎗'},
-  weapon:  {name:'무기',    stat:'pow', base:10, side:'right', row:0, reqLv:1,  ico:'⚔'},
-  sub:     {name:'보조무기', stat:'pow', base:5, side:'right', row:1, reqLv:25, ico:'🛡'},
-  necklace:{name:'목걸이',  stat:'foc', base:6,  side:'right', row:2, reqLv:12, ico:'📿'},
-  earring: {name:'귀고리',  stat:'foc', base:5,  side:'right', row:3, reqLv:16, ico:'💠'},
-  ring:    {name:'반지',    stat:'foc', base:4,  side:'right', row:4, reqLv:20, ico:'💍'},
-  cape:    {name:'망토',    stat:'agi', base:5,  side:'right', row:5, reqLv:30, ico:'🧣'},
+  necklace:{name:'목걸이',  stat:'foc', base:6,  col:2, gr:1, reqLv:12, ico:'📿'},
+  helmet:  {name:'헬멧',    stat:'vit', base:6,  col:3, gr:1, reqLv:1,  ico:'🪖'},
+  earring: {name:'귀고리',  stat:'foc', base:5,  col:4, gr:1, reqLv:16, ico:'💠'},
+  top:     {name:'상의',    stat:'vit', base:8,  col:1, gr:2, reqLv:1,  ico:'👕'},
+  bottom:  {name:'하의',    stat:'vit', base:7,  col:1, gr:3, reqLv:1,  ico:'👖'},
+  gloves:  {name:'장갑',    stat:'pow', base:5,  col:1, gr:4, reqLv:5,  ico:'🧤'},
+  weapon:  {name:'무기',    stat:'pow', base:10, col:5, gr:2, reqLv:1,  ico:'⚔'},
+  sub:     {name:'보조무기', stat:'pow', base:5, col:5, gr:3, reqLv:25, ico:'🛡'},
+  ring:    {name:'반지',    stat:'foc', base:4,  col:5, gr:4, reqLv:20, ico:'💍'},
+  belt:    {name:'벨트',    stat:'vit', base:5,  col:2, gr:5, reqLv:8,  ico:'🎗'},
+  shoes:   {name:'신발',    stat:'agi', base:6,  col:3, gr:5, reqLv:1,  ico:'👟'},
+  cape:    {name:'망토',    stat:'agi', base:5,  col:4, gr:5, reqLv:30, ico:'🧣'},
 };
-const PROF_GEAR_ROWS=6;
 function _emptyGear(){ const o={}; for(const k in PROF_GEAR) o[k]=''; return o; }
 function profSlotLocked(slot){ const g=PROF_GEAR[slot], c=CHAR(); return !g || !c || c.level < (g.reqLv||1); }
 // 장비 아이템 — 인벤토리는 계정 공용(PROF().items), 장착은 캐릭터별(c.unit.gear[slot]=iid).
@@ -4371,7 +4387,8 @@ function openTownPanel(zone){ _twZone=zone; _twChar.mode=null; _twPtr=null;   //
   refreshTownPanel(); popShow('townPanel'); }
 function refreshTownPanel(){ const body=document.getElementById('tpBody'), z=TOWN_ZONES[_twZone]; if(!body||!z) return;
   body.innerHTML = z.render(); }
-function closeTownPanel(){ popHide('townPanel'); _twZone=null; _charDelId=null; _gearPick=null; _gearSel=null; }
+function closeTownPanel(){ popHide('townPanel'); _twZone=null; _charDelId=null; gearSheetClose(); }
+function townPanelBackdrop(){ if(_gearSheetOn) gearSheetClose(); else closeTownPanel(); }   // 시트가 떠 있으면 시트만 닫는다
 // ── 🧍 캐릭터 선택/생성 ─────────────────────────────────────────────────────
 // 렌더러는 한 벌뿐이고 입장 화면(#charScreen)과 마을 구역(보관소·생성소)이 같은 것을 쓴다. 복제 금지.
 function renderCharSelect(){ const p=PROF(), list=p.chars||[];
@@ -4489,30 +4506,34 @@ const PROF_FIGURE='<svg '+_FIG_ATTR+'>'
 function _profFigureHTML(){ return PROF_FIGURE; }
 let _gearPick=null;   // 가방을 한 슬롯으로 거를 때 그 슬롯(null=전체)
 let _gearSel=null;    // 격자에서 고른 아이템 iid(상세 카드 대상)
+let _gearSheetOn=false;   // 하단 시트 표시 여부
 // 아이템 1개가 주는 스탯 합(주 스탯 + 옵션) — 비교 표시와 합계에 함께 쓴다
 function _profItemStats(it){ const o={pow:0,vit:0,foc:0,agi:0}; if(!it) return o;
   const g=PROF_GEAR[it.slot]; if(g) o[g.stat]+=it.main;
   for(const x of it.opts) o[x.k]=(o[x.k]||0)+x.v;
   return o; }
-// 슬롯은 좌우 두 열에 row 순으로 놓인다(좌표는 PROF_GEAR의 side/row 하나에서 나온다)
+// 페이퍼돌 — 캐릭터가 가운데, 슬롯 12칸이 사방을 감싼다. 스크롤 없이 한 화면에 들어가야 하므로
+// 칸 라벨은 붙이지 않고(아이콘으로 구분), 이름·스탯은 하단 시트에서 보여준다.
 function _profPaperdoll(c){
   let h='<div class="pdWrap"><div class="pdFig">'+_profFigureHTML()+'</div>';
   for(const slot in PROF_GEAR){ const g=PROF_GEAR[slot];
     const locked=profSlotLocked(slot), it=locked? null : profFindItem(c.unit.gear[slot]);
     const col=it? (TIER_COLOR[it.tier]||'#b8c0cc') : null;
-    const on=(_gearPick===slot);
-    const style=(g.side==='right'?'right:2px;':'left:2px;')
-      +'top:'+(g.row*(100/PROF_GEAR_ROWS)+0.5).toFixed(1)+'%;'+(col?('border-color:'+col+'99;color:'+col+';'):'');
-    h+='<div class="pdSlot'+(locked?' lock':(it?' on':''))+(on?' pick':'')+'" style="'+style+'" onclick="profSlotTap(\''+slot+'\')">'
-      +(locked?'🔒':(it? g.ico : '＋'))
-      +(it?('<i class="pdLv">'+it.lv+'</i>'):'')
-      +'<span class="pdLbl">'+g.name+'</span></div>'; }
+    const style='grid-column:'+g.col+';grid-row:'+g.gr+';'+(col?('border-color:'+col+'99;color:'+col+';'):'');
+    h+='<div class="pdSlot'+(locked?' lock':(it?' on':''))+'" style="'+style+'" title="'+g.name+'" onclick="profSlotTap(\''+slot+'\')">'
+      +g.ico
+      +(locked?'<i class="pdLock">🔒</i>':'')
+      +(it?('<i class="pdLv">'+it.lv+'</i>'):'')+'</div>'; }
   h+='</div>';
   let sum=0, n=0;
   for(const slot in c.unit.gear){ const it=profFindItem(c.unit.gear[slot]); if(it){ sum+=profItemPower(it); n++; } }
-  h+='<div class="twHead" style="text-align:center">착용 <b>'+n+'</b>칸 · 장비 합계 <b>+'+sum+'</b><br>칸을 누르면 그 칸 장비만 · 🔒는 레벨 해금</div>';
+  h+='<div class="pdSum">착용 <b>'+n+'</b>칸 · 장비 합계 <b>+'+sum+'</b> · 가방 <b>'+profItems().length+'/'+PROF_INV_MAX+'</b></div>'
+    +'<div class="pdBag"><button class="twBtn" onclick="gearBagOpen()">🎒 가방 열기</button></div>';
   return h; }
-// 가방 = 아이콘 격자. 줄글을 늘어놓지 않고, 고른 것 하나만 아래 상세 카드로 보여준다(모바일 장비창의 표준형)
+function renderProfGear(){ const c=CHAR(); if(!c) return '<div class="twHead">캐릭터가 없습니다.</div>';
+  return _profPaperdoll(c); }
+// ── 하단 시트: 슬롯/가방에서 장비 고르기 ─────────────────────────────────────
+// 본 화면을 아래로 밀어 잘리게 하지 않으려고, 목록·상세를 전부 이 시트에 담는다.
 function _profGearGrid(c, list){
   if(!list.length) return '<div class="igEmpty">비어 있음 — 던전에서 장비를 구해 오세요.</div>';
   let h='<div class="igGrid">';
@@ -4522,7 +4543,6 @@ function _profGearGrid(c, list){
       +' onclick="profSelItem(\''+it.iid+'\')">'+g.ico
       +(mine?'<i class="igOn">●</i>':'')+'<i class="igLv">'+it.lv+'</i></div>'; }
   return h+'</div>'; }
-// 고른 아이템 상세 — 스탯, 지금 낀 것과의 증감, 장착/분해
 function _profGearInfo(c, it){ const g=PROF_GEAR[it.slot], col=TIER_COLOR[it.tier]||'#b8c0cc';
   const cur=profFindItem(c.unit.gear[it.slot]), on=(cur&&cur.iid===it.iid);
   const holder=profItemHolder(it.iid), busy=holder&&holder!==c, lk=profSlotLocked(it.slot);
@@ -4543,30 +4563,39 @@ function _profGearInfo(c, it){ const g=PROF_GEAR[it.slot], col=TIER_COLOR[it.tie
     +(on||busy?'':'<button class="twBtn del" onclick="profDoScrap(\''+it.iid+'\')">분해 '+profScrapValue(it)+' P</button>')
     +'</div></div>';
   return h; }
-function renderProfGear(){ const c=CHAR(); if(!c) return '<div class="twHead">캐릭터가 없습니다.</div>';
-  const slot=(_gearPick && PROF_GEAR[_gearPick]) ? _gearPick : null;
-  let h=_profPaperdoll(c);
+function gearSheetRender(){ const el=document.getElementById('gearSheet'), c=CHAR(); if(!el||!c) return;
+  const slot=(_gearPick && PROF_GEAR[_gearPick]) ? _gearPick : null, g=slot? PROF_GEAR[slot] : null;
   const order=PROF_ITEM_TIERS.map(t=>t.id);
   const list=profItems().filter(i=>!slot || i.slot===slot)
     .sort((a,b)=>(order.indexOf(b.tier)-order.indexOf(a.tier))||(profItemPower(b)-profItemPower(a)));
-  h+='<div class="twSectLbl igHead">'+(slot? (PROF_GEAR[slot].ico+' '+PROF_GEAR[slot].name+' ('+list.length+')') : ('가방 ('+profItems().length+'/'+PROF_INV_MAX+')'))
-    +(slot? '<button class="twBtn igBack" onclick="profPickBack()">전체 보기</button>' : '')+'</div>';
-  h+=_profGearGrid(c, list);
+  let h='<div class="gsCard"><div class="gsHead"><span class="gsTtl">'
+    +(g? (g.ico+' '+g.name+' <span class="gsSub">'+PROF_STAT_NAME[g.stat]+' 계열</span>') : ('🎒 가방 <span class="gsSub">'+profItems().length+'/'+PROF_INV_MAX+'</span>'))
+    +'</span>'+(g?'<button class="twBtn igBack" onclick="gearBagOpen()">전체</button>':'')
+    +'<div class="setX" onclick="gearSheetClose()"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></div></div>'
+    +'<div class="gsBody">'+_profGearGrid(c, list);
   const sel=profFindItem(_gearSel);
   if(sel && (!slot || sel.slot===slot)) h+=_profGearInfo(c, sel);
-  return h; }
-// 잠긴 칸을 누르면 조건을 알려주고, 열린 칸은 그 칸 장비만 걸러 본다
+  el.innerHTML=h+'</div></div>'; }
+function gearSheetOpen(){ const el=document.getElementById('gearSheet'); if(!el) return;
+  _gearSheetOn=true; gearSheetRender(); el.classList.remove('hide'); }
+function gearSheetClose(){ const el=document.getElementById('gearSheet'); if(el) el.classList.add('hide');
+  _gearSheetOn=false; _gearSel=null; _gearPick=null;
+  if(typeof playSfx==='function') playSfx('ui_close'); }
+function gearBagOpen(){ _gearPick=null; _gearSel=null; if(typeof playSfx==='function') playSfx('ui_open'); gearSheetOpen(); }
+// 잠긴 칸은 조건만 알려주고, 열린 칸은 그 칸 장비를 시트로 올린다
 function profSlotTap(slot){ const g=PROF_GEAR[slot];
   if(profSlotLocked(slot)){ if(typeof playSfx==='function') playSfx('ui_close');
     showTownToast(g.name+' — Lv.'+g.reqLv+'부터 열립니다'); return; }
-  if(_gearPick===slot) return profPickBack();          // 같은 칸을 다시 누르면 전체 보기
-  profPickSlot(slot); }
-function profSelItem(iid){ _gearSel=(_gearSel===iid)?null:iid; if(typeof playSfx==='function') playSfx('ui_open'); refreshTownPanel(); }
-function profPickSlot(slot){ _gearPick=slot; _gearSel=null; if(typeof playSfx==='function') playSfx('ui_open'); refreshTownPanel(); }
-function profPickBack(){ _gearPick=null; _gearSel=null; if(typeof playSfx==='function') playSfx('ui_close'); refreshTownPanel(); }
-function profDoEquip(iid){ if(profEquipItem(iid)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); } }
+  _gearPick=slot; _gearSel=''+(CHAR().unit.gear[slot]||'') || null;
+  if(typeof playSfx==='function') playSfx('ui_open'); gearSheetOpen(); }
+function profSelItem(iid){ _gearSel=(_gearSel===iid)?null:iid; if(typeof playSfx==='function') playSfx('ui_open'); gearSheetRender(); }
+function profPickSlot(slot){ profSlotTap(slot); }        // 예전 이름 유지(스모크·외부 호출)
+function profPickBack(){ gearBagOpen(); }
+function profDoEquip(iid){ if(!profEquipItem(iid)) return; if(typeof playSfx==='function') playSfx('ui_open');
+  renderTownBar(); refreshTownPanel(); if(_gearSheetOn) gearSheetRender(); }
 function profDoScrap(iid){ const v=profScrapItem(iid); if(v<0) return; if(_gearSel===iid) _gearSel=null;
-  if(typeof playSfx==='function') playSfx('ui_close'); renderTownBar(); refreshTownPanel(); showTownToast('분해 · +'+v+' P'); }
+  if(typeof playSfx==='function') playSfx('ui_close'); renderTownBar(); refreshTownPanel();
+  if(_gearSheetOn) gearSheetRender(); showTownToast('분해 · +'+v+' P'); }
 function profDoBuyItem(tierId){ const it=profBuyItem(tierId); if(!it) return;
   if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel();
   showTownToast(profItemName(it)+' 획득'); }
