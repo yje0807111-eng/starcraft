@@ -2137,6 +2137,13 @@
   /* ── 🎯 시작 선택 허브 ── */
   #hubScreen.hide,#townScreen.hide{display:none}   /* id 특정성으로 .hide 우선(아래 #id{display:flex}가 .hide를 이기지 않게) */
   #hubScreen{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center}
+  /* 허브 전용 배경 = 별밭 타일(.spaceBg::before) 위에 행성 아크 + 성운 글로우 + 비네트(중앙·상단은 어둡게 유지 → 카드 가독성) */
+  #hubScreen::after{background:
+    radial-gradient(88% 60% at 20% 20%, rgba(205,55,62,.24), transparent 58%),      /* 붉은 성운(좌상 · 메인 포인트) */
+    radial-gradient(72% 55% at 84% 28%, rgba(72,135,205,.14), transparent 60%),      /* 청색 성운(우상 · 보색 대비) */
+    radial-gradient(95% 52% at 50% 120%, rgba(95,135,185,.30) 0%, rgba(45,70,110,.14) 26%, transparent 52%),   /* 하단 지평 대기광(궤도 느낌) */
+    radial-gradient(ellipse at 50% 44%, rgba(52,8,12,.30), transparent 62%),         /* 중앙 붉은 앰비언트 */
+    linear-gradient(180deg, rgba(3,4,10,.55) 0%, rgba(2,3,8,.26) 44%, rgba(2,3,8,.86) 100%)}   /* 수직 톤(상·하 어둡게) */
   .hubWrap{display:flex;flex-direction:column;align-items:center;gap:22px;padding:20px;width:100%;max-width:420px}
   .hubTitle{font-size:18px;font-weight:800;color:#eaf1fb;letter-spacing:.5px;text-shadow:0 2px 6px #000}
   .hubCards{display:flex;gap:14px;width:100%;justify-content:center}
