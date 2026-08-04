@@ -4471,20 +4471,33 @@ function profDoGacha(){ const res=profPetRoll(); if(!res) return; if(typeof play
 function profDoPetEquip(id){ if(profPetEquip(id)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); } }
 function profDoAlloc(k){ if(profAllocStat(k)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); } }
 function profDoClass(id){ if(profClassChange(id)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); showTownToast('전직 완료!'); } }
-// ── 장비창(페이퍼돌 + 가방 격자) ──
-// 캐릭터 도형 — 종족 구분 없이 하나. 단순·귀여운 비율(큰 머리 + 짧은 몸)로 그렸다.
-// 부위마다 닫힌 외곽선 + 배경색 채움이라 겹쳐도 실루엣이 또렷하다. 먼 것부터(다리 → 몸통 → 팔 → 머리) 쌓는다.
-const _FIG_ATTR='viewBox="0 0 100 200" width="100%" height="100%" fill="rgba(10,14,22,.85)" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"';
+// ── 장비창(위=아바타+슬롯 / 아래=가방) ──
+// 아바타 = SF 파워아머 실루엣(자체 제작). 얼굴은 그리지 않고 바이저로 대신한다.
+// 부위마다 닫힌 외곽선 + 배경색 채움으로 겹침을 가리고, 먼 것부터(다리 → 골반 → 몸통 → 팔 → 어깨판 → 투구) 쌓는다.
+const _FIG_ATTR='viewBox="0 0 100 200" width="100%" height="100%" fill="rgba(10,14,22,.9)" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"';
 const PROF_FIGURE='<svg '+_FIG_ATTR+'>'
-  +'<path d="M41 126L48 126L48 158L39 158Z"/><path d="M59 126L52 126L52 158L61 158Z"/>'
-  +'<ellipse cx="42" cy="163" rx="10" ry="6"/><ellipse cx="58" cy="163" rx="10" ry="6"/>'
-  +'<path d="M36 88Q27 94 26 110Q26 119 33 118Q38 115 37 106Z"/>'
-  +'<path d="M64 88Q73 94 74 110Q74 119 67 118Q62 115 63 106Z"/>'
-  +'<path d="M37 84Q50 78 63 84L64 126Q50 132 36 126Z"/>'
-  +'<circle cx="50" cy="47" r="28"/>'
-  +'<circle cx="41" cy="45" r="3.2" fill="currentColor" stroke="none"/>'
-  +'<circle cx="59" cy="45" r="3.2" fill="currentColor" stroke="none"/>'
-  +'<path d="M44 57Q50 62 56 57" fill="none"/></svg>';
+  /* 다리: 허벅지 → 정강이 → 부츠 (각진 판으로 끊어서 관절을 만든다) */
+  +'<path d="M38 110L48 110L47 141L36 141Z"/><path d="M62 110L52 110L53 141L64 141Z"/>'
+  +'<path d="M36 141L47 141L46 176L34 176Z"/><path d="M64 141L53 141L54 176L66 176Z"/>'
+  +'<path d="M32 176L48 176L49.5 191L29 191Z"/><path d="M68 176L52 176L50.5 191L71 191Z"/>'
+  +'<path d="M36.5 143h10M53.5 143h10" opacity=".4" fill="none"/>'
+  /* 골반 장갑 */
+  +'<path d="M38 95L62 95L64 111L36 111Z"/><path d="M50 96v14" opacity=".35" fill="none"/>'
+  /* 흉갑 */
+  +'<path d="M35 44L65 44L67 77L61 96L39 96L33 77Z"/>'
+  +'<path d="M44 52L56 52L57.5 71L42.5 71Z" opacity=".45"/>'
+  +'<path d="M50 46v48" opacity=".3" fill="none"/>'
+  /* 팔: 상완 → 전완 → 건틀릿 (다리에 닿지 않게 짧고 좁게) */
+  +'<path d="M26 60L34 60L33 85L24 85Z"/><path d="M24 85L33 85L34 109L22 109Z"/><path d="M22.5 109L33.5 109L33 120L23 120Z"/>'
+  +'<path d="M74 60L66 60L67 85L76 85Z"/><path d="M76 85L67 85L66 109L78 109Z"/><path d="M77.5 109L66.5 109L67 120L77 120Z"/>'
+  /* 어깨판 — 둥근 덩어리 대신 각진 장갑판 */
+  +'<path d="M35 43L21 45L15 58L18.5 69L33 66.5Z"/><path d="M65 43L79 45L85 58L81.5 69L67 66.5Z"/>'
+  +'<path d="M21.5 52l10-2M78.5 52l-10-2" opacity=".4" fill="none"/>'
+  /* 목가리개 + 투구(얼굴 없음 · 바이저) */
+  +'<path d="M45 36L55 36L56.5 44L43.5 44Z"/>'
+  +'<path d="M39 24L41 12.5L50 8.5L59 12.5L61 24L61 31L55 37.5L45 37.5L39 31Z"/>'
+  +'<path d="M43 19.5L57 19.5L55 29L45 29Z" opacity=".5"/>'
+  +'<path d="M59.5 13L68 4.5" opacity=".65" fill="none"/></svg>';
 function _profFigureHTML(){ return PROF_FIGURE; }
 let _gearPick=null;   // 가방을 한 슬롯으로 거를 때 그 슬롯(null=전체)
 let _gearSel=null;    // 격자에서 고른 아이템 iid(상세 카드 대상)
