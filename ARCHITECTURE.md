@@ -26,7 +26,7 @@
 | `메타 성장 시스템` | 코인·포인트 영구강화(`G.metaB`, `loadMeta/saveMeta`) |
 | `🧍 개인 프로필 RPG` | 캐릭터 육성 — 종류 3종(`PROF_CLASSES`)·직업 트리(`PROF_JOBS`)·스탯·장비·펫·진화·방치수익. **유즈맵 경제와 완전 분리**(재화 `pcoin`) |
 | `장비 아이템` | `PROF_ITEM_TIERS`(등급)·`profMakeItem`(생성)·`profEquipItem`/`profScrapItem` — 가방은 계정 공용(`PROF().items`), 장착은 캐릭터별(`c.unit.gear[slot]=iid`) |
-| `장비 페이퍼돌` | `PROF_FIGURE`(단일 인간 외곽선 SVG) · `_profPaperdoll`(좌우 6칸씩 12슬롯) · `_profGearPick`(슬롯별 선택) · `_gearPick` |
+| `장비창(페이퍼돌 + 가방 격자)` | `PROF_FIGURE`(단일 인간 외곽선 SVG) · `_profPaperdoll`(좌우 6칸씩 12슬롯) · `_profGearGrid`(아이콘 격자) · `_profGearInfo`(상세+증감) · `_gearPick`/`_gearSel` |
 | `🧍 캐릭터 선택/생성` | `renderCharSelect`/`renderCharCreate` — 입장 화면 `#charScreen`과 마을 구역이 **같은 렌더러**를 쓴다 |
 | `마을(월드 + 카메라)` | `TOWN_ZONES`(구역 단일 출처) · `twStep`/`twCamApply` · 입력 `twPtrDown→Move→Up` |
 | `⚔ 던전` | 캐릭터 직접 전투 — `DG` 상태 · `dgStep`/`dgTick` 자체 루프 · `DG_FOES` 자체 적 표 · `dgRender`(DOM 유일 접점). **유즈맵과 완전 분리** |
@@ -115,7 +115,8 @@ node test/bench-strike.mjs 400 80 4   # 대규모 전투 렌더 벤치(유닛수
 - **던전 전장은 가로 배율 하나로 그린다**: `DG_W`는 고정, 세로 `DG.h`는 진입 시 아레나 실제 비율로 계산(`DG_W*clientH/clientW`). 이걸 상수로 두면 세로가 긴 화면에서 전투가 위쪽에 몰리고 아래가 텅 빈다. 적의 `range`는 공격 사거리이자 **접근을 멈추는 거리**라, 근접이라도 스프라이트 반지름 2개분(≈28+) 이상이어야 서로 파묻히지 않는다(16으로 뒀다가 캐릭터와 적이 완전히 겹쳤다). 적끼리는 `DG_SEP` 밀어내기가 없으면 한 점에 포개진다.
 - **장비는 아이템이다(ver4)** — `c.unit.gear[slot]`은 **정수 티어가 아니라 아이템 id(문자열)**다(ver3까지는 정수였고 `migrateProfile`이 동등 성능 아이템으로 변환한다). 가방(`PROF().items`, `PROF_INV_MAX`칸)은 **계정 공용**이라 캐릭터를 지워도 남고 장착만 풀린다 → **환급 대상이 아니다**(`profSpentOn`에 장비를 다시 넣지 말 것). 한 아이템은 한 캐릭터만 장착(`profItemHolder`로 검사). 등급 확률·가격은 **프로필 전용 표 `PROF_ITEM_TIERS`** — 유즈맵 가챠 밸런스(`GACHA_TIERS.prob`)를 쓰면 안 된다(표시 이름·색만 공용). 아이템 한 줄 UI는 `_profItemRow` 하나로 통일.
 - **장비 화면은 페이퍼돌이다**: 가운데 캐릭터 도형(`PROF_FIGURE` — 종족 구분 없는 단일 인간 외곽선 SVG, viewBox 100×200 자체 제작) 좌우에 6칸씩 **12슬롯**. 슬롯 위치는 `PROF_GEAR`의 `side`/`row` 하나에서 나온다(별도 좌표표 없음). 구워둔 초상(`assets/portraits`)은 **흉상**이라 신체 위치를 잡을 수 없어 쓰지 않는다.
-- **장비 슬롯 해금은 던전 층으로 건다**(`PROF_GEAR[slot].reqFloor` ↔ `dgMaxFloor()`, 판정은 `profSlotLocked`): 초반엔 헬멧·상의·하의·신발·무기 5칸만 열리고 장갑3·벨트5·목걸이7·귀고리10·반지13·보조무기16·망토20층에서 열린다. 드랍·구매(`profSlots`)와 장착(`profEquipItem`)이 전부 이 판정을 거치므로 **잠긴 칸용 장비가 떨어지지 않는다**. 파워 기반 해금(`PROF_UNLOCKS`)과 섞지 말 것 — 장신구 슬롯을 파워로 열던 `gear_trinket`은 제거됐다.
+- **해금 축은 캐릭터 레벨 하나로 통일한다**: 장비 슬롯은 `PROF_GEAR[slot].reqLv`(판정 `profSlotLocked`) — Lv.1엔 헬멧·상의·하의·신발·무기 5칸, 이후 장갑5·벨트8·목걸이12·귀고리16·반지20·보조무기25·망토30. 던전 층도 같은 축이다: `dgFloorCap()` = `1+floor((level-1)/DG_LV_PER_FLOOR)`, 역산은 `dgFloorReqLv(floor)`. 드랍·구매(`profSlots`)·장착(`profEquipItem`)·던전 입장(`dgEnter`)이 전부 이 판정을 거치므로 **잠긴 칸용 장비가 떨어지지도, 못 갈 층에 들어가지도 않는다.** 파워 기반 해금(`PROF_UNLOCKS`)은 방치수익 쪽에만 남았다 — 장비에 다시 섞지 말 것.
+- **가방은 줄글 목록이 아니라 아이콘 격자다**(`_profGearGrid` 5열 + `_profGearInfo` 상세 카드, 선택 상태 `_gearSel`): 아이템마다 3줄짜리 행을 쌓으면 10여 개만 돼도 화면이 감당이 안 된다. 격자 칸은 등급 테두리·레벨·착용 점만 보여주고, **고른 하나만** 아래 카드에서 스탯 + "지금 낀 것 대비 증감"으로 펼친다. 페이퍼돌 슬롯을 누르면 그 칸으로 격자를 거른다(`_gearPick`).
 - **페이퍼돌 행 간격**: `.pdWrap` 높이 ÷ `PROF_GEAR_ROWS`가 슬롯(46px)+라벨(14px)보다 커야 한다. 좁으면 라벨이 아래 칸 레벨 배지와 겹친다(346px로 뒀다가 2px 겹쳤다).
 - **외곽선 캐릭터 도형을 그릴 때**: 팔·다리를 단선(`stroke`)으로 그으면 막대 인간이 되고 겹친 선이 뭉쳐 형태가 안 읽힌다(실제로 한 번 그렇게 나왔다). **각 부위를 닫힌 외곽선으로 그리고 배경색 채움(`fill="rgba(10,14,22,.82)"`)으로 뒤를 가린 뒤, 먼 것부터(다리 → 몸통 → 팔 → 머리) 쌓을 것.**
 - **`.portImg`는 `position:absolute;inset:0`이다**: 감싸는 요소에 `position:relative`가 없으면 positioned 조상까지 거슬러 올라가 화면을 뚫는다(페이퍼돌에서 실제로 초상이 패널을 덮었다). 초상을 새 컨테이너에 넣을 땐 그 컨테이너에 `position:relative`를, 위에 얹을 버튼엔 `z-index:2` 이상을 줄 것(`.portImg`가 `z-index:1`).

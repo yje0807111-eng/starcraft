@@ -172,30 +172,46 @@ async function groupLobby(){
     assert(got===v && p.pcoin===v,'분해 환급 불일치: '+got+'/'+p.pcoin);
     assert(profItems().length===0,'가방에서 안 사라짐');
     return '분해 +'+v+'P'; });
-  await step('장비 페이퍼돌: 12칸 + 초반 5칸만 해금 + 슬롯별 선택', ()=>{ skipIf(typeof profPickSlot!=='function','페이퍼돌 없음');
+  await step('장비 페이퍼돌: 12칸 · Lv.1엔 5칸 · 격자+상세 카드', ()=>{ skipIf(typeof profPickSlot!=='function','페이퍼돌 없음');
     const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0;
-    const c=profCreateChar('ranger','돌'); c.dgFloor=0;
+    const c=profCreateChar('ranger','돌'); c.level=1;
     const it=profAddItem(profMakeItem('weapon',4,'epic')); profEquipItem(it.iid);
     profAddItem(profMakeItem('top',4,'rare'));
-    _gearPick=null;
+    _gearPick=null; _gearSel=null;
     const host=document.createElement('div'); host.innerHTML=renderProfGear();
     const slots=host.querySelectorAll('.pdSlot');
     assert(slots.length===Object.keys(PROF_GEAR).length,'슬롯 수 불일치: '+slots.length);
     assert(host.querySelector('.pdFig svg path'),'캐릭터 도형이 없음');
     const eq=host.querySelector('.pdSlot.on'); assert(eq,'장착한 슬롯이 on으로 안 보임');
     assert(eq.querySelector('.pdLv').textContent==='4','슬롯에 아이템 레벨이 안 뜸');
-    // 초반(0층)엔 기본 5칸만 열리고 나머지는 잠겨 있어야 한다
+    // Lv.1엔 기본 5칸만 열리고 나머지는 레벨로 잠겨 있어야 한다
     const open=Object.keys(PROF_GEAR).filter(k=>!profSlotLocked(k));
-    assert(open.length===5,'초반 해금 슬롯이 5칸이 아님: '+open.join(','));
+    assert(open.length===5,'Lv.1 해금 슬롯이 5칸이 아님: '+open.join(','));
     for(const k of ['helmet','top','bottom','shoes','weapon']) assert(open.indexOf(k)>=0,'기본 슬롯이 잠김: '+k);
     assert(host.querySelectorAll('.pdSlot.lock').length===Object.keys(PROF_GEAR).length-5,'잠긴 칸 표시가 안 맞음');
-    assert(host.textContent.indexOf(' P')<0 || host.textContent.indexOf('상점')<0,'상점이 아직 붙어 있음');
-    profPickSlot('weapon');                                   // 슬롯 탭 → 그 슬롯만 고르는 화면
+    c.level=30; assert(Object.keys(PROF_GEAR).every(k=>!profSlotLocked(k)),'Lv.30인데 안 열린 칸이 있음');
+    c.level=1;
+    // 가방은 줄글이 아니라 아이콘 격자, 상세는 고른 것 하나만
+    assert(host.querySelectorAll('.igGrid .igCell').length===2,'격자 칸 수 불일치');
+    assert(!host.querySelector('.igInfo'),'아무것도 안 골랐는데 상세 카드가 뜸');
+    profSelItem(it.iid); host.innerHTML=renderProfGear();
+    const info=host.querySelector('.igInfo'); assert(info,'고른 아이템 상세가 없음');
+    assert(info.textContent.indexOf('해제')>=0,'장착 중인데 해제 버튼이 아님');
+    profPickSlot('weapon');                                   // 슬롯 탭 → 그 칸 장비만 걸러 보기
     host.innerHTML=renderProfGear();
-    assert(host.textContent.indexOf('무기 슬롯')>=0,'슬롯 선택 화면이 아님');
-    assert(host.textContent.indexOf('상의')<0,'다른 슬롯 아이템이 섞임');
-    profPickBack(); assert(_gearPick===null,'뒤로가기 실패');
-    return '슬롯 '+slots.length+'칸(해금 '+open.length+')'; });
+    assert(host.querySelectorAll('.igGrid .igCell').length===1,'슬롯 필터가 안 걸림');
+    profPickBack(); assert(_gearPick===null && _gearSel===null,'전체 보기 복귀 실패');
+    return '슬롯 '+slots.length+'칸(Lv.1 해금 '+open.length+')'; });
+  await step('던전: 도전 가능 층이 레벨로 열린다', ()=>{ skipIf(typeof dgFloorCap!=='function','층 해금 없음');
+    const p=PROF(); p.chars.length=0; p.curId='';
+    const c=profCreateChar('ranger','층'); c.level=1;
+    assert(dgFloorCap()===1,'Lv.1인데 1층이 아님: '+dgFloorCap());
+    c.level=1+DG_LV_PER_FLOOR*4; assert(dgFloorCap()===5,'레벨 대비 개방 층 불일치: '+dgFloorCap());
+    assert(dgFloorReqLv(5)===c.level,'필요 레벨 역산 불일치');
+    c.level=1; const before=DG;
+    dgEnter(9);                                                // 레벨보다 높은 층은 못 들어간다
+    assert(DG===before,'레벨 상한을 넘겼는데 던전이 시작됨');
+    return 'Lv당 '+DG_LV_PER_FLOOR+'레벨에 1층'; });
   await step('장비 마이그레이션: 구버전 정수 티어 → 아이템 + 12칸 재편', ()=>{ skipIf(typeof migrateProfile!=='function','마이그레이션 없음');
     const keep=JSON.parse(JSON.stringify(PLAYER_META));
     PLAYER_META.profile={ ver:3, pcoin:0, curId:'cX', items:[], chars:[{ id:'cX', cls:'ranger', name:'구버전',

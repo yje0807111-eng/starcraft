@@ -2143,6 +2143,26 @@
   .pdSlot.lock{opacity:.42}
   .pdSlot:active{transform:translateY(1px)}
   .pdSlot .pdLbl{position:absolute;bottom:-14px;left:50%;transform:translateX(-50%);font-size:9.5px;font-weight:700;color:var(--txt-mute);white-space:nowrap}
+  .pdSlot.pick{box-shadow:0 0 0 2px rgba(92,214,255,.7)}
+  /* 가방 = 아이콘 격자 + 고른 것 하나만 상세 카드 */
+  .igHead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .igBack{min-width:0;padding:4px 9px;font-size:11px}
+  .igGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin:2px 0 4px}
+  .igCell{position:relative;aspect-ratio:1;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:19px;cursor:pointer;
+    background:rgba(255,255,255,.05);border:1px solid var(--metal-edge)}
+  .igCell.sel{box-shadow:0 0 0 2px #5cd6ff}
+  .igCell.busy{opacity:.42}
+  .igCell:active{transform:translateY(1px)}
+  .igCell .igLv{position:absolute;right:3px;bottom:1px;font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:800;font-style:normal;color:#fff;text-shadow:0 1px 2px #000}
+  .igCell .igOn{position:absolute;left:3px;top:2px;font-size:8px;font-style:normal;color:#6ff0a0}
+  .igEmpty{padding:14px 4px;font-size:12px;color:var(--txt-mute);text-align:center}
+  .igInfo{margin-top:6px;padding:11px 12px;border-radius:11px;background:rgba(255,255,255,.04);border:1px solid var(--metal-edge)}
+  .igName{font-size:13px;font-weight:800}
+  .igSlotTag{font-size:10px;font-weight:700;color:var(--txt-mute);padding:1px 6px;border-radius:8px;background:rgba(255,255,255,.06)}
+  .igStat{font-size:12px;color:var(--txt-mute);margin-top:5px;line-height:1.5}
+  .igStat.ok{color:#6ff0a0}.igStat.lock{color:#e0a04a}
+  .igBtns{display:flex;gap:8px;margin-top:10px}
+  .igBtns .twBtn{flex:1}
   .pdSlot .pdLv{position:absolute;top:-8px;right:-6px;font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:800;
     padding:0 4px;border-radius:6px;color:inherit;background:#0b0e16;border:1px solid currentColor}
   /* ⚔ 던전 화면 */
@@ -4044,25 +4064,25 @@ const PROF_JOBS={
 // 자식→부모 역인덱스(전직 경로 되짚기용). PROF_JOBS의 next로부터 자동 생성 — 트리를 고쳐도 따라온다.
 const PROF_JOB_PARENT=(function(){ const m={}; for(const id in PROF_JOBS) for(const nx of PROF_JOBS[id].next) m[nx]=id; return m; })();
 const PROF_REFUND_RATE=1.0;   // 캐릭터 삭제 환급률(1.0=쓴 재화 전액). 경험치·레벨은 환급 없음
-// 장비 슬롯 — 왼쪽 열=장구류, 오른쪽 열=무기·장신구. reqFloor = 던전 그 층을 클리어해야 열린다(0=처음부터).
-// 초반엔 기본 5칸(헬멧·상의·하의·신발·무기)만 열려 있고 나머지는 진행하며 해금된다.
+// 장비 슬롯 — 왼쪽 열=장구류, 오른쪽 열=무기·장신구. reqLv = 캐릭터 레벨(성장 축 하나로 통일).
+// 초반엔 기본 5칸(헬멧·상의·하의·신발·무기)만 열려 있고 레벨이 오르며 나머지가 열린다.
 const PROF_GEAR={
-  helmet:  {name:'헬멧',    stat:'vit', base:6,  side:'left',  row:0, reqFloor:0,  ico:'🪖'},
-  top:     {name:'상의',    stat:'vit', base:8,  side:'left',  row:1, reqFloor:0,  ico:'👕'},
-  bottom:  {name:'하의',    stat:'vit', base:7,  side:'left',  row:2, reqFloor:0,  ico:'👖'},
-  shoes:   {name:'신발',    stat:'agi', base:6,  side:'left',  row:3, reqFloor:0,  ico:'👟'},
-  gloves:  {name:'장갑',    stat:'pow', base:5,  side:'left',  row:4, reqFloor:3,  ico:'🧤'},
-  belt:    {name:'벨트',    stat:'vit', base:5,  side:'left',  row:5, reqFloor:5,  ico:'🎗'},
-  weapon:  {name:'무기',    stat:'pow', base:10, side:'right', row:0, reqFloor:0,  ico:'⚔'},
-  sub:     {name:'보조무기', stat:'pow', base:5, side:'right', row:1, reqFloor:16, ico:'🛡'},
-  necklace:{name:'목걸이',  stat:'foc', base:6,  side:'right', row:2, reqFloor:7,  ico:'📿'},
-  earring: {name:'귀고리',  stat:'foc', base:5,  side:'right', row:3, reqFloor:10, ico:'💠'},
-  ring:    {name:'반지',    stat:'foc', base:4,  side:'right', row:4, reqFloor:13, ico:'💍'},
-  cape:    {name:'망토',    stat:'agi', base:5,  side:'right', row:5, reqFloor:20, ico:'🧣'},
+  helmet:  {name:'헬멧',    stat:'vit', base:6,  side:'left',  row:0, reqLv:1,  ico:'🪖'},
+  top:     {name:'상의',    stat:'vit', base:8,  side:'left',  row:1, reqLv:1,  ico:'👕'},
+  bottom:  {name:'하의',    stat:'vit', base:7,  side:'left',  row:2, reqLv:1,  ico:'👖'},
+  shoes:   {name:'신발',    stat:'agi', base:6,  side:'left',  row:3, reqLv:1,  ico:'👟'},
+  gloves:  {name:'장갑',    stat:'pow', base:5,  side:'left',  row:4, reqLv:5,  ico:'🧤'},
+  belt:    {name:'벨트',    stat:'vit', base:5,  side:'left',  row:5, reqLv:8,  ico:'🎗'},
+  weapon:  {name:'무기',    stat:'pow', base:10, side:'right', row:0, reqLv:1,  ico:'⚔'},
+  sub:     {name:'보조무기', stat:'pow', base:5, side:'right', row:1, reqLv:25, ico:'🛡'},
+  necklace:{name:'목걸이',  stat:'foc', base:6,  side:'right', row:2, reqLv:12, ico:'📿'},
+  earring: {name:'귀고리',  stat:'foc', base:5,  side:'right', row:3, reqLv:16, ico:'💠'},
+  ring:    {name:'반지',    stat:'foc', base:4,  side:'right', row:4, reqLv:20, ico:'💍'},
+  cape:    {name:'망토',    stat:'agi', base:5,  side:'right', row:5, reqLv:30, ico:'🧣'},
 };
 const PROF_GEAR_ROWS=6;
 function _emptyGear(){ const o={}; for(const k in PROF_GEAR) o[k]=''; return o; }
-function profSlotLocked(slot){ const g=PROF_GEAR[slot]; return !g || dgMaxFloor() < (g.reqFloor||0); }
+function profSlotLocked(slot){ const g=PROF_GEAR[slot], c=CHAR(); return !g || !c || c.level < (g.reqLv||1); }
 // 장비 아이템 — 인벤토리는 계정 공용(PROF().items), 장착은 캐릭터별(c.unit.gear[slot]=iid).
 // 등급 확률은 프로필 전용 표다. 유즈맵 가챠 밸런스(GACHA_TIERS.prob)를 절대 건드리지 않는다(표시 색만 TIER_COLOR 공용).
 const PROF_ITEM_TIERS=[
@@ -4351,7 +4371,7 @@ function openTownPanel(zone){ _twZone=zone; _twChar.mode=null; _twPtr=null;   //
   refreshTownPanel(); popShow('townPanel'); }
 function refreshTownPanel(){ const body=document.getElementById('tpBody'), z=TOWN_ZONES[_twZone]; if(!body||!z) return;
   body.innerHTML = z.render(); }
-function closeTownPanel(){ popHide('townPanel'); _twZone=null; _charDelId=null; _gearPick=null; }
+function closeTownPanel(){ popHide('townPanel'); _twZone=null; _charDelId=null; _gearPick=null; _gearSel=null; }
 // ── 🧍 캐릭터 선택/생성 ─────────────────────────────────────────────────────
 // 렌더러는 한 벌뿐이고 입장 화면(#charScreen)과 마을 구역(보관소·생성소)이 같은 것을 쓴다. 복제 금지.
 function renderCharSelect(){ const p=PROF(), list=p.chars||[];
@@ -4452,102 +4472,100 @@ function profDoGacha(){ const res=profPetRoll(); if(!res) return; if(typeof play
 function profDoPetEquip(id){ if(profPetEquip(id)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); } }
 function profDoAlloc(k){ if(profAllocStat(k)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); } }
 function profDoClass(id){ if(profClassChange(id)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); showTownToast('전직 완료!'); } }
-// 장비 상점
-// 장비 상점 — 캐릭터 초상 위에 슬롯을 배치한 페이퍼돌 + 상점 + 가방.
-// 슬롯 좌표는 '흉상 초상' 기준. 전신 렌더로 바꾸면 이 표만 갈면 된다(신체 위치 매핑의 단일 출처).
-const PROF_SLOT_POS={                  // 전신 도형(viewBox 100×200) 기준 신체 위치
-  trinket:{ side:'left',  top:'8%'  },   // 머리·목
-  armor:  { side:'left',  top:'40%' },   // 몸통
-  weapon: { side:'right', top:'40%' },   // 손
-};
-let _gearPick=null;   // 슬롯 선택 화면(무기/방어구/장신구) — null이면 페이퍼돌
-function _profItemRow(it, right, sub2){ const col=TIER_COLOR[it.tier]||'#b8c0cc', g=PROF_GEAR[it.slot];
-  const opts=it.opts.map(o=>PROF_STAT_NAME[o.k]+' +'+o.v).join(' · ');
-  return '<div class="twRow"><span class="twPet" style="color:'+col+';border-color:'+col+'55">'+(it.tier==='legend'?'🔱':'⚔')+'</span>'
-    +'<div class="twRowInfo"><div class="twRowName" style="color:'+col+'">'+profItemName(it)+' <span class="twStars">Lv.'+it.lv+'</span></div>'
-    +'<div class="twRowSub">'+PROF_STAT_NAME[g.stat]+' +'+it.main+(opts?(' · '+opts):'')+'</div>'
-    +(sub2?('<div class="twRowSub ok">'+sub2+'</div>'):'')+'</div>'+right+'</div>'; }
-// 종족별 전신 외곽선 도형(자체 제작) — 장비 페이퍼돌 전용. 초상 이미지(흉상)로는 신체 위치에 슬롯을 놓을 수 없어 새로 그렸다.
-// viewBox 100×200 · 선만(fill 없음) · currentColor라 테마/등급 색을 그대로 받는다. 슬롯 좌표(PROF_SLOT_POS)는 이 비율 기준.
+// ── 장비창(페이퍼돌 + 가방 격자) ──
 // 캐릭터 도형 — 종족 구분 없이 하나. 단순·귀여운 비율(큰 머리 + 짧은 몸)로 그렸다.
 // 부위마다 닫힌 외곽선 + 배경색 채움이라 겹쳐도 실루엣이 또렷하다. 먼 것부터(다리 → 몸통 → 팔 → 머리) 쌓는다.
 const _FIG_ATTR='viewBox="0 0 100 200" width="100%" height="100%" fill="rgba(10,14,22,.85)" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"';
 const PROF_FIGURE='<svg '+_FIG_ATTR+'>'
-  +'<path d="M41 126L48 126L48 158L39 158Z"/><path d="M59 126L52 126L52 158L61 158Z"/>'       /* 다리 */
-  +'<ellipse cx="42" cy="163" rx="10" ry="6"/><ellipse cx="58" cy="163" rx="10" ry="6"/>'    /* 발 */
-  +'<path d="M36 88Q27 94 26 110Q26 119 33 118Q38 115 37 106Z"/>'                            /* 왼팔 */
-  +'<path d="M64 88Q73 94 74 110Q74 119 67 118Q62 115 63 106Z"/>'                            /* 오른팔 */
-  +'<path d="M37 84Q50 78 63 84L64 126Q50 132 36 126Z"/>'                                    /* 몸통 */
-  +'<circle cx="50" cy="47" r="28"/>'                                                        /* 머리 */
+  +'<path d="M41 126L48 126L48 158L39 158Z"/><path d="M59 126L52 126L52 158L61 158Z"/>'
+  +'<ellipse cx="42" cy="163" rx="10" ry="6"/><ellipse cx="58" cy="163" rx="10" ry="6"/>'
+  +'<path d="M36 88Q27 94 26 110Q26 119 33 118Q38 115 37 106Z"/>'
+  +'<path d="M64 88Q73 94 74 110Q74 119 67 118Q62 115 63 106Z"/>'
+  +'<path d="M37 84Q50 78 63 84L64 126Q50 132 36 126Z"/>'
+  +'<circle cx="50" cy="47" r="28"/>'
   +'<circle cx="41" cy="45" r="3.2" fill="currentColor" stroke="none"/>'
   +'<circle cx="59" cy="45" r="3.2" fill="currentColor" stroke="none"/>'
-  +'<path d="M44 57Q50 62 56 57" fill="none"/></svg>';                                       /* 입 */
+  +'<path d="M44 57Q50 62 56 57" fill="none"/></svg>';
 function _profFigureHTML(){ return PROF_FIGURE; }
-function _profItemRow(it, right, sub2){ const col=TIER_COLOR[it.tier]||'#b8c0cc', g=PROF_GEAR[it.slot];
-  const opts=it.opts.map(o=>PROF_STAT_NAME[o.k]+' +'+o.v).join(' · ');
-  return '<div class="twRow"><span class="twPet" style="color:'+col+';border-color:'+col+'55">'+((g&&g.ico)||'⚔')+'</span>'
-    +'<div class="twRowInfo"><div class="twRowName" style="color:'+col+'">'+profItemName(it)+' <span class="twStars">Lv.'+it.lv+'</span></div>'
-    +'<div class="twRowSub">'+PROF_STAT_NAME[g.stat]+' +'+it.main+(opts?(' · '+opts):'')+'</div>'
-    +(sub2?('<div class="twRowSub ok">'+sub2+'</div>'):'')+'</div>'+right+'</div>'; }
+let _gearPick=null;   // 가방을 한 슬롯으로 거를 때 그 슬롯(null=전체)
+let _gearSel=null;    // 격자에서 고른 아이템 iid(상세 카드 대상)
+// 아이템 1개가 주는 스탯 합(주 스탯 + 옵션) — 비교 표시와 합계에 함께 쓴다
+function _profItemStats(it){ const o={pow:0,vit:0,foc:0,agi:0}; if(!it) return o;
+  const g=PROF_GEAR[it.slot]; if(g) o[g.stat]+=it.main;
+  for(const x of it.opts) o[x.k]=(o[x.k]||0)+x.v;
+  return o; }
 // 슬롯은 좌우 두 열에 row 순으로 놓인다(좌표는 PROF_GEAR의 side/row 하나에서 나온다)
 function _profPaperdoll(c){
   let h='<div class="pdWrap"><div class="pdFig">'+_profFigureHTML()+'</div>';
   for(const slot in PROF_GEAR){ const g=PROF_GEAR[slot];
     const locked=profSlotLocked(slot), it=locked? null : profFindItem(c.unit.gear[slot]);
     const col=it? (TIER_COLOR[it.tier]||'#b8c0cc') : null;
+    const on=(_gearPick===slot);
     const style=(g.side==='right'?'right:2px;':'left:2px;')
       +'top:'+(g.row*(100/PROF_GEAR_ROWS)+0.5).toFixed(1)+'%;'+(col?('border-color:'+col+'99;color:'+col+';'):'');
-    h+='<div class="pdSlot'+(locked?' lock':(it?' on':''))+'" style="'+style+'" onclick="profSlotTap(\''+slot+'\')">'
+    h+='<div class="pdSlot'+(locked?' lock':(it?' on':''))+(on?' pick':'')+'" style="'+style+'" onclick="profSlotTap(\''+slot+'\')">'
       +(locked?'🔒':(it? g.ico : '＋'))
       +(it?('<i class="pdLv">'+it.lv+'</i>'):'')
       +'<span class="pdLbl">'+g.name+'</span></div>'; }
   h+='</div>';
   let sum=0, n=0;
   for(const slot in c.unit.gear){ const it=profFindItem(c.unit.gear[slot]); if(it){ sum+=profItemPower(it); n++; } }
-  h+='<div class="twHead" style="text-align:center">착용 <b>'+n+'</b>칸 · 장비 합계 <b>+'+sum+'</b><br>슬롯을 눌러 교체 · 🔒는 던전을 진행하면 열립니다</div>';
+  h+='<div class="twHead" style="text-align:center">착용 <b>'+n+'</b>칸 · 장비 합계 <b>+'+sum+'</b><br>칸을 누르면 그 칸 장비만 · 🔒는 레벨 해금</div>';
   return h; }
-// 슬롯 하나만 놓고 고르는 화면 — 가방 전체를 훑지 않아도 된다
-function _profGearPick(slot){ const c=CHAR(), g=PROF_GEAR[slot], cur=profFindItem(c.unit.gear[slot]);
-  let h='<div class="twRow"><span class="twPet">'+g.ico+'</span><div class="twRowInfo"><div class="twRowName">'+g.name+' 슬롯</div>'
-    +'<div class="twRowSub">주 스탯 '+PROF_STAT_NAME[g.stat]+'</div></div>'
-    +'<button class="twBtn" onclick="profPickBack()">← 뒤로</button></div>';
-  if(cur){ h+='<div class="twSectLbl">장착 중</div>'
-    +_profItemRow(cur, '<button class="twBtn" onclick="profDoEquip(\''+cur.iid+'\')">해제</button>', null); }
-  const order=PROF_ITEM_TIERS.map(t=>t.id);
-  const list=profItems().filter(i=>i.slot===slot && (!cur||i.iid!==cur.iid))
-    .sort((a,b)=>(order.indexOf(b.tier)-order.indexOf(a.tier))||(profItemPower(b)-profItemPower(a)));
-  h+='<div class="twSectLbl">가방의 '+g.name+' ('+list.length+')</div>';
-  if(!list.length) h+='<div class="twRow"><div class="twRowInfo"><div class="twRowSub">없음 — 던전에서 구해 오세요.</div></div></div>';
-  for(const it of list){ const h2=profItemHolder(it.iid), busy=h2&&h2!==c;
-    const btn = busy ? '<button class="twBtn" disabled>'+escHtml(h2.name)+'</button>'
-      : '<button class="twBtn" onclick="profDoEquip(\''+it.iid+'\')">장착</button>'
-        +'<button class="twDel" onclick="profDoScrap(\''+it.iid+'\')" aria-label="분해">♻</button>';
-    h+=_profItemRow(it, btn, busy? null : ('분해 시 '+profScrapValue(it)+' P')); }
+// 가방 = 아이콘 격자. 줄글을 늘어놓지 않고, 고른 것 하나만 아래 상세 카드로 보여준다(모바일 장비창의 표준형)
+function _profGearGrid(c, list){
+  if(!list.length) return '<div class="igEmpty">비어 있음 — 던전에서 장비를 구해 오세요.</div>';
+  let h='<div class="igGrid">';
+  for(const it of list){ const col=TIER_COLOR[it.tier]||'#b8c0cc', g=PROF_GEAR[it.slot];
+    const holder=profItemHolder(it.iid), mine=(holder===c), busy=holder&&!mine;
+    h+='<div class="igCell'+(_gearSel===it.iid?' sel':'')+(busy?' busy':'')+'" style="border-color:'+col+'88;color:'+col+'"'
+      +' onclick="profSelItem(\''+it.iid+'\')">'+g.ico
+      +(mine?'<i class="igOn">●</i>':'')+'<i class="igLv">'+it.lv+'</i></div>'; }
+  return h+'</div>'; }
+// 고른 아이템 상세 — 스탯, 지금 낀 것과의 증감, 장착/분해
+function _profGearInfo(c, it){ const g=PROF_GEAR[it.slot], col=TIER_COLOR[it.tier]||'#b8c0cc';
+  const cur=profFindItem(c.unit.gear[it.slot]), on=(cur&&cur.iid===it.iid);
+  const holder=profItemHolder(it.iid), busy=holder&&holder!==c, lk=profSlotLocked(it.slot);
+  const a=_profItemStats(it), b0=_profItemStats(on?null:cur);
+  const line=PROF_STATS.filter(k=>a[k]).map(k=>PROF_STAT_NAME[k]+' +'+a[k]).join(' · ');
+  const diff=PROF_STATS.map(k=>{ const d=a[k]-b0[k]; if(!d) return null;
+    return '<b style="color:'+(d>0?'#6ff0a0':'#ff8a9a')+'">'+PROF_STAT_NAME[k]+' '+(d>0?'+':'')+d+'</b>'; }).filter(Boolean).join(' · ');
+  let h='<div class="igInfo" style="border-color:'+col+'55">'
+    +'<div class="igName" style="color:'+col+'">'+profItemName(it)+' <span class="twStars">Lv.'+it.lv+'</span> <span class="igSlotTag">'+g.name+'</span></div>'
+    +'<div class="igStat">'+line+'</div>';
+  if(busy) h+='<div class="igStat lock">'+escHtml(holder.name)+' 가 장착 중</div>';
+  else if(lk) h+='<div class="igStat lock">🔒 '+g.name+' 칸은 Lv.'+g.reqLv+'부터</div>';
+  else if(!on && diff) h+='<div class="igStat">지금 낀 것 대비 '+diff+'</div>';
+  else if(!on && !cur) h+='<div class="igStat ok">빈 칸에 바로 낄 수 있습니다</div>';
+  h+='<div class="igBtns">'
+    +((busy||lk)?'<button class="twBtn" disabled>장착</button>'
+      :'<button class="twBtn'+(on?' on':'')+'" onclick="profDoEquip(\''+it.iid+'\')">'+(on?'해제':'장착')+'</button>')
+    +(on||busy?'':'<button class="twBtn del" onclick="profDoScrap(\''+it.iid+'\')">분해 '+profScrapValue(it)+' P</button>')
+    +'</div></div>';
   return h; }
-function renderProfGear(){ const p=PROF(), c=CHAR(); if(!c) return '<div class="twHead">캐릭터가 없습니다.</div>';
-  if(_gearPick && PROF_GEAR[_gearPick]) return _profGearPick(_gearPick);
-  const inv=profItems();
+function renderProfGear(){ const c=CHAR(); if(!c) return '<div class="twHead">캐릭터가 없습니다.</div>';
+  const slot=(_gearPick && PROF_GEAR[_gearPick]) ? _gearPick : null;
   let h=_profPaperdoll(c);
   const order=PROF_ITEM_TIERS.map(t=>t.id);
-  const rest=inv.filter(i=>c.unit.gear[i.slot]!==i.iid)
+  const list=profItems().filter(i=>!slot || i.slot===slot)
     .sort((a,b)=>(order.indexOf(b.tier)-order.indexOf(a.tier))||(profItemPower(b)-profItemPower(a)));
-  h+='<div class="twSectLbl">가방 ('+inv.length+'/'+PROF_INV_MAX+') · 모든 캐릭터 공용</div>';
-  if(!rest.length) h+='<div class="twRow"><div class="twRowInfo"><div class="twRowSub">비어 있음 — 던전에서 장비를 구해 오세요.</div></div></div>';
-  for(const it of rest){ const h2=profItemHolder(it.iid), busy=h2&&h2!==c, lk=profSlotLocked(it.slot);
-    const btn = busy ? '<button class="twBtn" disabled>'+escHtml(h2.name)+'</button>'
-      : (lk ? '<button class="twBtn" disabled>🔒</button>'
-            : '<button class="twBtn" onclick="profDoEquip(\''+it.iid+'\')">장착</button>')
-        +'<button class="twDel" onclick="profDoScrap(\''+it.iid+'\')" aria-label="분해">♻</button>';
-    h+=_profItemRow(it, btn, busy? null : ('분해 시 '+profScrapValue(it)+' P')); }
+  h+='<div class="twSectLbl igHead">'+(slot? (PROF_GEAR[slot].ico+' '+PROF_GEAR[slot].name+' ('+list.length+')') : ('가방 ('+profItems().length+'/'+PROF_INV_MAX+')'))
+    +(slot? '<button class="twBtn igBack" onclick="profPickBack()">전체 보기</button>' : '')+'</div>';
+  h+=_profGearGrid(c, list);
+  const sel=profFindItem(_gearSel);
+  if(sel && (!slot || sel.slot===slot)) h+=_profGearInfo(c, sel);
   return h; }
-// 잠긴 칸을 누르면 조건을 알려준다
-function profSlotTap(slot){ if(!profSlotLocked(slot)) return profPickSlot(slot);
-  const g=PROF_GEAR[slot]; if(typeof playSfx==='function') playSfx('ui_close');
-  showTownToast(g.name+' — 던전 '+g.reqFloor+'층을 클리어하면 열립니다'); }
-function profPickSlot(slot){ _gearPick=slot; if(typeof playSfx==='function') playSfx('ui_open'); refreshTownPanel(); }
-function profPickBack(){ _gearPick=null; if(typeof playSfx==='function') playSfx('ui_close'); refreshTownPanel(); }
+// 잠긴 칸을 누르면 조건을 알려주고, 열린 칸은 그 칸 장비만 걸러 본다
+function profSlotTap(slot){ const g=PROF_GEAR[slot];
+  if(profSlotLocked(slot)){ if(typeof playSfx==='function') playSfx('ui_close');
+    showTownToast(g.name+' — Lv.'+g.reqLv+'부터 열립니다'); return; }
+  if(_gearPick===slot) return profPickBack();          // 같은 칸을 다시 누르면 전체 보기
+  profPickSlot(slot); }
+function profSelItem(iid){ _gearSel=(_gearSel===iid)?null:iid; if(typeof playSfx==='function') playSfx('ui_open'); refreshTownPanel(); }
+function profPickSlot(slot){ _gearPick=slot; _gearSel=null; if(typeof playSfx==='function') playSfx('ui_open'); refreshTownPanel(); }
+function profPickBack(){ _gearPick=null; _gearSel=null; if(typeof playSfx==='function') playSfx('ui_close'); refreshTownPanel(); }
 function profDoEquip(iid){ if(profEquipItem(iid)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); } }
-function profDoScrap(iid){ const v=profScrapItem(iid); if(v<0) return;
+function profDoScrap(iid){ const v=profScrapItem(iid); if(v<0) return; if(_gearSel===iid) _gearSel=null;
   if(typeof playSfx==='function') playSfx('ui_close'); renderTownBar(); refreshTownPanel(); showTownToast('분해 · +'+v+' P'); }
 function profDoBuyItem(tierId){ const it=profBuyItem(tierId); if(!it) return;
   if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel();
@@ -4562,9 +4580,12 @@ function renderProfIdle(){ const p=PROF();
 function profDoIdle(id){ if(profSetIdleSource(id)){ if(typeof playSfx==='function') playSfx('ui_open'); refreshTownPanel(); } }
 // 관문(해금 사다리)
 function renderProfGate(){ const mx=dgMaxFloor(), nx=mx+1;
-  let h='<div class="twHead">던전에 들어가 직접 싸웁니다. 보상은 <b>P</b>와 경험치.<br>최고 기록 <b>'+(mx?mx+'층':'없음')+'</b> · 캐릭터 파워 <b>'+profPower()+'</b></div>';
-  const rN=dgFloorReward(nx);
-  h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+nx+'층 도전</div><div class="twRowSub ok">새 기록 · '+rN.pc+' P · '+rN.xp+' XP</div></div><button class="twBtn" onclick="dgEnter('+nx+')">입장</button></div>';
+  const c0=CHAR();
+  let h='<div class="twHead">던전에 들어가 직접 싸웁니다. 보상은 <b>P</b>와 경험치.<br>최고 기록 <b>'+(mx?mx+'층':'없음')+'</b> · Lv.<b>'+(c0?c0.level:1)+'</b> 기준 <b>'+dgFloorCap()+'층</b>까지 개방</div>';
+  const rN=dgFloorReward(nx), cap=dgFloorCap(), okLv=nx<=cap;
+  h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+nx+'층 도전</div>'
+    +'<div class="twRowSub'+(okLv?' ok':' lock')+'">'+(okLv?('새 기록 · '+rN.pc+' P · '+rN.xp+' XP'):('🔒 Lv.'+dgFloorReqLv(nx)+' 필요 — 레벨이 오르면 열립니다'))+'</div></div>'
+    +'<button class="twBtn" onclick="dgEnter('+nx+')"'+(okLv?'':' disabled')+'>입장</button></div>';
   if(mx>0){ const rM=dgFloorReward(mx);
     h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+mx+'층 반복</div><div class="twRowSub">클리어한 층 · '+rM.pc+' P · '+rM.xp+' XP</div></div><button class="twBtn" onclick="dgEnter('+mx+')">입장</button></div>'; }
   h+='<div class="twSectLbl">파워 해금</div>';
@@ -4598,6 +4619,9 @@ const DG_SKILLS={                    // 직업 계열별 1스킬
 };
 function dgFloorReward(floor){ return { pc:Math.round(40+floor*22), xp:Math.round(25+floor*14) }; }
 function dgMaxFloor(){ const c=CHAR(); return c? (c.dgFloor||0) : 0; }
+const DG_LV_PER_FLOOR=2;                 // 레벨 N당 한 층씩 열린다(장비 슬롯과 같은 성장 축)
+function dgFloorCap(){ const c=CHAR(); return c? 1+Math.floor((c.level-1)/DG_LV_PER_FLOOR) : 1; }
+function dgFloorReqLv(floor){ return 1+(floor-1)*DG_LV_PER_FLOOR; }
 function dgWaveFoes(floor, wave){
   if(wave>=DG_WAVES) return ['keeper'];
   const pool=(floor<3)?['slime','bat']:(floor<6)?['slime','bat','golem']:['bat','golem','wraith'];
@@ -4613,7 +4637,8 @@ function dgMySpec(){ const pow=profStat('pow'), vit=profStat('vit'), foc=profSta
            spd:52+agi*1.5, range:52, cd:Math.max(0.34, 1.05-agi*0.013) }; }
 
 let DG=null, _dgRaf=0, _dgLast=0;
-function dgEnter(floor){ dgStopLoop(); closeTownPanel(); twStopLoop(); _townOpen=false;
+function dgEnter(floor){ if(floor>dgFloorCap()){ showTownToast('Lv.'+dgFloorReqLv(floor)+'부터 도전할 수 있습니다'); return; }
+  dgStopLoop(); closeTownPanel(); twStopLoop(); _townOpen=false;
   if(typeof playSfx==='function') playSfx('ui_open'); dgStart(floor); }
 function dgStart(floor){ const c=CHAR(); if(!c) return false;
   const sp=dgMySpec();
