@@ -29,6 +29,7 @@
 | 유닛 초상 | `_techUnitPortrait(uid)` | 카드·헤더·대기열 공용 |
 | 프리뷰 패널 | `#cstPrev` + `techHidePreview()` | (구 cstHidePreview는 삭제됨) |
 | 알림/사운드 | `toast()` / `playSfx()`·`playSfxT()` | |
+| 세로 스크롤바 | `.uiScroll` (CSS 공용) | 스크롤 영역에 클래스만 추가 · `::-webkit-scrollbar`를 새로 정의하지 말 것 (Chrome 최신은 웹킷 의사요소를 무시하고 표준 `scrollbar-width`/`scrollbar-color`만 적용 → 화면마다 굵기가 달라지는 원인이었음) |
 
 ## Scope — when to run the full workflow (operating mode: A)
 Scale the process to the change:
