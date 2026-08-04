@@ -181,8 +181,8 @@ async function groupLobby(){
     const slots=host.querySelectorAll('.pdSlot');
     assert(slots.length===Object.keys(PROF_GEAR).length,'슬롯 수 불일치: '+slots.length);
     assert(host.querySelector('.pdFig'),'캐릭터 그림 영역이 없음');
-    const uk=PROF_JOBS[c.unit.jobId].unit;
-    assert(host.querySelector('.pdFig .portImg, .pdFig .pdEmo'),'초상/폴백 둘 다 없음');
+    assert(host.querySelector('.pdFig svg path'),'전신 외곽선 도형이 없음');
+    for(const k in PROF_CLASSES) assert(PROF_FIGURE[k],'종족 도형 누락: '+k);
     const eq=host.querySelector('.pdSlot.on'); assert(eq,'장착한 슬롯이 on으로 안 보임');
     assert(eq.querySelector('.pdLv').textContent==='4','슬롯에 아이템 레벨이 안 뜸');
     profPickSlot('weapon');                                   // 슬롯 탭 → 그 슬롯만 고르는 화면
@@ -190,7 +190,7 @@ async function groupLobby(){
     assert(host.textContent.indexOf('무기 슬롯')>=0,'슬롯 선택 화면이 아님');
     assert(host.textContent.indexOf('방어구')<0,'다른 슬롯 아이템이 섞임');
     profPickBack(); assert(_gearPick===null,'뒤로가기 실패');
-    return uk+' 초상 · 슬롯 '+slots.length+'개'; });
+    return c.cls+' 도형 · 슬롯 '+slots.length+'개'; });
   await step('장비 마이그레이션: 구버전 정수 티어 → 아이템(스탯 유지)', ()=>{ skipIf(typeof migrateProfile!=='function','마이그레이션 없음');
     const keep=JSON.parse(JSON.stringify(PLAYER_META));
     PLAYER_META.profile={ ver:3, pcoin:0, curId:'cX', items:[], chars:[{ id:'cX', cls:'ranger', name:'구버전',

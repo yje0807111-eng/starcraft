@@ -2134,12 +2134,11 @@
   /* ── 🎯 시작 선택 허브 ── */
   #hubScreen.hide,#townScreen.hide,#charScreen.hide{display:none}
   /* 장비 페이퍼돌 — 캐릭터 초상 + 신체 위치 슬롯 */
-  .pdWrap{position:relative;height:196px;margin:2px 0 4px;display:flex;align-items:center;justify-content:center}
-  .pdFig{position:relative;width:136px;height:136px;border-radius:50%;overflow:hidden;border:1px solid var(--metal-edge);
-    background:radial-gradient(circle at 50% 32%,rgba(92,214,255,.16),rgba(10,14,20,.92) 72%);
-    display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 26px -6px #000}
-  .pdFig .portImg{width:100%;height:100%;object-fit:cover;display:block}
-  .pdFig .pdEmo{font-size:56px;line-height:1}
+  .pdWrap{position:relative;height:224px;margin:2px 0 6px;display:flex;align-items:center;justify-content:center}
+  .pdFig{position:relative;width:112px;height:212px;border-radius:14px;overflow:hidden;border:1px solid var(--metal-edge);
+    background:radial-gradient(ellipse at 50% 38%,rgba(92,214,255,.13),rgba(10,14,20,.92) 74%);
+    display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 30px -8px #000;color:#9fb4c6}
+  .pdFig svg{display:block;width:100%;height:100%;filter:drop-shadow(0 0 6px rgba(92,214,255,.28))}
   .pdSlot{position:absolute;z-index:2;width:52px;height:52px;border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;
     font-size:21px;color:#8d97a4;background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);box-shadow:0 5px 14px -8px #000}
   .pdSlot.on{background:rgba(92,214,255,.09)}
@@ -4434,10 +4433,10 @@ function profDoClass(id){ if(profClassChange(id)){ if(typeof playSfx==='function
 // 장비 상점
 // 장비 상점 — 캐릭터 초상 위에 슬롯을 배치한 페이퍼돌 + 상점 + 가방.
 // 슬롯 좌표는 '흉상 초상' 기준. 전신 렌더로 바꾸면 이 표만 갈면 된다(신체 위치 매핑의 단일 출처).
-const PROF_SLOT_POS={
-  trinket:{ side:'left',  top:'4%'  },   // 목·장신구 높이
-  armor:  { side:'left',  top:'54%' },   // 몸통
-  weapon: { side:'right', top:'30%' },   // 무기를 든 쪽
+const PROF_SLOT_POS={                  // 전신 도형(viewBox 100×200) 기준 신체 위치
+  trinket:{ side:'left',  top:'8%'  },   // 머리·목
+  armor:  { side:'left',  top:'40%' },   // 몸통
+  weapon: { side:'right', top:'40%' },   // 손
 };
 let _gearPick=null;   // 슬롯 선택 화면(무기/방어구/장신구) — null이면 페이퍼돌
 function _profItemRow(it, right, sub2){ const col=TIER_COLOR[it.tier]||'#b8c0cc', g=PROF_GEAR[it.slot];
@@ -4446,10 +4445,42 @@ function _profItemRow(it, right, sub2){ const col=TIER_COLOR[it.tier]||'#b8c0cc'
     +'<div class="twRowInfo"><div class="twRowName" style="color:'+col+'">'+profItemName(it)+' <span class="twStars">Lv.'+it.lv+'</span></div>'
     +'<div class="twRowSub">'+PROF_STAT_NAME[g.stat]+' +'+it.main+(opts?(' · '+opts):'')+'</div>'
     +(sub2?('<div class="twRowSub ok">'+sub2+'</div>'):'')+'</div>'+right+'</div>'; }
-// 캐릭터 그림 = 현재 직업의 유닛 초상(전직하면 그림도 바뀐다). 공용 단일 소스 unitPortraitHTML을 그대로 쓴다.
-function _profFigureHTML(c){ const J=PROF_JOBS[c.unit.jobId]||PROF_JOBS[c.cls], uk=J&&J.unit;
-  const html=(uk && typeof unitPortraitHTML==='function') ? unitPortraitHTML(uk) : '';
-  return html || '<span class="pdEmo">'+((PROF_CLASSES[c.cls]||{}).ico||'🧍')+'</span>'; }
+// 종족별 전신 외곽선 도형(자체 제작) — 장비 페이퍼돌 전용. 초상 이미지(흉상)로는 신체 위치에 슬롯을 놓을 수 없어 새로 그렸다.
+// viewBox 100×200 · 선만(fill 없음) · currentColor라 테마/등급 색을 그대로 받는다. 슬롯 좌표(PROF_SLOT_POS)는 이 비율 기준.
+const _FIG_ATTR='viewBox="0 0 100 200" width="100%" height="100%" fill="rgba(10,14,22,.82)" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round"';
+// 각 부위를 '닫힌 외곽선'으로 그리고 뒤쪽부터 쌓는다(다리 → 몸통 → 팔 → 머리) — 채움이 뒤 선을 가려 실루엣이 또렷해진다.
+const PROF_FIGURE={
+  // 인간 — 파워아머 보병(정면)
+  ranger:'<svg '+_FIG_ATTR+'>'
+    +'<path d="M39 100L47 100L47 140L45 172L35 172L37 140Z"/><path d="M61 100L53 100L53 140L55 172L65 172L63 140Z"/>'
+    +'<path d="M33 172L49 172L49 182L31 182Z"/><path d="M67 172L51 172L51 182L69 182Z"/>'
+    +'<path d="M76 82L84 82L84 132L76 132Z"/><path d="M72 96L76 96L76 110L72 110Z" opacity=".8"/>'
+    +'<path d="M39 52L61 52L63 100L37 100Z"/><path d="M50 58L50 96M41 70L59 70" opacity=".4"/>'
+    +'<path d="M39 52Q24 53 22 68Q21 79 30 80L37 76L39 60Z"/><path d="M61 52Q76 53 78 68Q79 79 70 80L63 76L61 60Z"/>'
+    +'<path d="M30 80L37 80L36 110L28 110Z"/><path d="M70 80L63 80L64 110L72 110Z"/>'
+    +'<path d="M38 41L38 22Q38 13 50 13Q62 13 62 22L62 41Q50 47 38 41Z"/>'
+    +'<path d="M43 25L57 25L55 34L45 34Z" opacity=".55"/></svg>',
+  // 스웜 — 갑각 몸통·큰 턱·낫 모양 앞다리(정면)
+  scout:'<svg '+_FIG_ATTR+'>'
+    +'<path d="M40 96L47 96L44 124L48 152L38 152L36 124Z"/><path d="M60 96L53 96L56 124L52 152L62 152L64 124Z"/>'
+    +'<path d="M32 152L45 152L47 163L30 163Z"/><path d="M68 152L55 152L53 163L70 163Z"/>'
+    +'<path d="M37 58L22 72L11 93L18 97L29 77L42 65Z"/><path d="M63 58L78 72L89 93L82 97L71 77L58 65Z"/>'
+    +'<path d="M38 50Q50 45 62 50L67 94Q50 104 33 94Z"/><path d="M42 62L58 62M40 76L60 76" opacity=".4"/>'
+    +'<path d="M40 42L40 30Q50 16 60 30L60 42Q50 51 40 42Z"/>'
+    +'<path d="M40 39L29 47L33 54L42 45Z"/><path d="M60 39L71 47L67 54L58 45Z"/>'
+    +'<path d="M44 32L47 36M56 32L53 36" opacity=".7"/></svg>',
+  // 에테리얼 — 길쭉한 두상·뒤로 흐르는 신경삭·손목 검
+  warden:'<svg '+_FIG_ATTR+'>'
+    +'<path d="M42 96L49 96L48 132L44 168L36 168L39 132Z"/><path d="M58 96L51 96L52 132L56 168L64 168L61 132Z"/>'
+    +'<path d="M34 168L50 168L50 178L32 178Z"/><path d="M66 168L50 168L50 178L68 178Z"/>'
+    +'<path d="M30 104L36 104L21 134L15 130Z"/><path d="M70 104L64 104L79 134L85 130Z"/>'
+    +'<path d="M40 54L60 54L62 92Q50 102 38 92Z"/><path d="M45 61L55 61L57 79L43 79Z" opacity=".45"/>'
+    +'<path d="M40 54Q27 55 25 69Q24 78 31 80L37 76L40 62Z"/><path d="M60 54Q73 55 75 69Q76 78 69 80L63 76L60 62Z"/>'
+    +'<path d="M31 80L37 80L36 106L30 106Z"/><path d="M69 80L63 80L64 106L70 106Z"/>'
+    +'<path d="M44 42L43 24Q46 13 52 13Q59 15 58 27L58 42Q51 48 44 42Z"/>'
+    +'<path d="M57 21Q74 17 86 25M58 29Q78 29 88 40" fill="none" opacity=".6"/></svg>',
+};
+function _profFigureHTML(c){ return PROF_FIGURE[c.cls] || PROF_FIGURE.ranger; }
 function _profPaperdoll(c){
   let h='<div class="pdWrap"><div class="pdFig">'+_profFigureHTML(c)+'</div>';
   for(const slot in PROF_GEAR){ const g=PROF_GEAR[slot], pos=PROF_SLOT_POS[slot]||{side:'left',top:'50%'};
