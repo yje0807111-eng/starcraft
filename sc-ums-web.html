@@ -1900,13 +1900,14 @@
   /* 오프닝 로딩 */
   #opening{z-index:90;align-items:center;justify-content:center;text-align:center}
   .opWrap{display:flex;flex-direction:column;align-items:center;gap:14px;padding:30px}
-  .opLogo{width:72px;height:72px;display:flex;align-items:center;justify-content:center;border-radius:16px;color:var(--neon);
-    background:radial-gradient(circle at 50% 30%,rgba(255,59,59,.22),rgba(10,8,10,.6) 75%);border:1px solid var(--neon-soft);
-    box-shadow:0 0 24px -4px var(--neon-glow),inset 0 0 16px var(--shade);animation:opPulse 1.7s ease-in-out infinite}
-  @keyframes opPulse{0%,100%{box-shadow:0 0 16px -6px var(--neon-glow),inset 0 0 16px var(--shade)}50%{box-shadow:0 0 30px -1px var(--neon-glow),inset 0 0 16px var(--shade)}}
-  .opLogo svg{width:40px;height:40px;filter:drop-shadow(0 0 6px var(--neon-glow))}
-  .opTitle{font-size:21px;font-weight:800;letter-spacing:2px;color:var(--neon);text-shadow:0 0 16px var(--neon-glow),0 2px 4px #000}
-  .opSub{font-size:var(--fs-xs);color:#9a8a8c;letter-spacing:3px}
+  .opLogo{width:82px;height:82px;display:flex;align-items:center;justify-content:center;color:var(--neon)}   /* 방패 엠블럼 = 박스 없이 아이콘만(글로우 펄스) */
+  .opLogo svg{width:76px;height:76px;filter:drop-shadow(0 0 8px var(--neon-glow));animation:opPulse 1.7s ease-in-out infinite}
+  @keyframes opPulse{0%,100%{filter:drop-shadow(0 0 7px var(--neon-glow))}50%{filter:drop-shadow(0 0 15px var(--neon-glow))}}
+  .opTitle{font-size:22px;font-weight:800;letter-spacing:3px;text-shadow:0 2px 4px #000}   /* 2톤: UMS(흰) + ARENA(네온) */
+  .opTitle .opT1{color:#f3f6fb;text-shadow:0 0 10px rgba(255,255,255,.22),0 2px 4px #000}
+  .opTitle .opT2{color:var(--neon);text-shadow:0 0 16px var(--neon-glow),0 2px 4px #000}
+  .opSub{display:flex;align-items:center;gap:8px;font-size:var(--fs-xs);color:#8b939f;letter-spacing:3px}   /* 양옆 얇은 디바이더 라인 */
+  .opSub::before,.opSub::after{content:'';height:1px;width:26px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent)}
   .opBarWrap{width:170px;height:5px;border-radius:var(--r-bar);background:rgba(255,255,255,.08);overflow:hidden;margin-top:5px}
   .opBar{height:100%;width:8%;border-radius:var(--r-bar);background:linear-gradient(90deg,var(--neon-d2),var(--neon));box-shadow:0 0 10px var(--neon-glow);animation:opLoad 1.6s ease-out forwards}
   @keyframes opLoad{0%{width:8%}60%{width:72%}100%{width:100%}}
@@ -3192,9 +3193,9 @@
   <!-- ===== 오프닝/게임 로딩(폰 전체 덮음) ===== -->
   <div id="opening" class="appScreen spaceBg">
     <div class="opWrap">
-      <div class="opLogo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="2.6"/><path d="M12 7.7 13.1 10.3 15.9 10.6 13.5 12.4 14.3 15.2 12 13.6 9.7 15.2 10.5 12.4 8.1 10.6 10.9 10.3Z" fill="currentColor" stroke="none"/></svg></div>
-      <div class="opTitle">UMS ARENA</div>
-      <div class="opSub">RTS USEMAP ARCADE</div>
+      <div class="opLogo"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M24 4 L40 9 V24 C40 33 33 39.5 24 43 C15 39.5 8 33 8 24 V9 Z"/><path d="M24 15 L27 23 L24 31 L21 23 Z" fill="currentColor" stroke="none"/><path d="M17 20 L24 23 L31 20" stroke-width="1.5"/></svg></div>
+      <div class="opTitle"><span class="opT1">UMS </span><span class="opT2">ARENA</span></div>
+      <div class="opSub">STRATEGY ARENA</div>
       <div class="opBarWrap"><div class="opBar"></div></div>
       <div class="opLoading">LOADING…</div>
       <div class="opMap" id="opMap">
