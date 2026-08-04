@@ -13868,8 +13868,8 @@ function strikeTechLayout(){ if(!G.tech) return; const race=G.tech.race, cw=_tec
     const _vy=cy+STK_TECH_LIFT/STK_TECH_ZOOM;   // 하단 프로필 시트를 피해 건설 구역을 화면 위쪽으로(초기 뷰만)
     G.tech.view={x:cx, y:_vy, zoom:STK_TECH_ZOOM}; G.tech.viewT={x:cx, y:_vy, zoom:STK_TECH_ZOOM};
     _techClampView(G.tech.view); _techClampView(G.tech.viewT); } }
-function strikeNewState(){ const W=mapCfg('world',4800), hp=mapCfg('baseHp',3000), inc=mapCfg('incomeBase',150), mc=mapCfg('mineCost',300), mi=mapCfg('mineIncome',120);
-  const sHp=mapCfg('secHp',Math.round(hp*0.5)), cHp=mapCfg('centralHp',Math.round(hp*0.35));
+function strikeNewState(){ const W=mapCfg('world',4800), hp=mapCfg('baseHp',7500), inc=mapCfg('incomeBase',150), mc=mapCfg('mineCost',300), mi=mapCfg('mineIncome',120);   // 메인신전 체력 3000→7500(전투 지속력↑)
+  const sHp=mapCfg('secHp',Math.round(hp*0.5)), cHp=mapCfg('centralHp',Math.round(hp*0.35));   // 2차=메인×0.5(3750) · 중앙=메인×0.35(2625) — 메인 비례 상승
   // 레인: me 메인 → me 2차 → 중앙 중립 → ai 2차 → ai 메인 (대각선 한 줄). t=0.27/0.5/0.73 지점
   return { t:0, over:null, round:1,
     world:W, cycleTime:mapCfg('cycleTime',30), cycleT:mapCfg('cycleTime',30),
