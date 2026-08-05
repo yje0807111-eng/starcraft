@@ -11268,14 +11268,14 @@ const STK_UNITS={
   venom:     {name:'산성충',      ico:'🐛', cost:130, hp:200, dmg:22, rng:230, cd:1.00, spd:260, size:18},   // 공중 산성 포자
   medusa:    {name:'군단여왕',    ico:'🐍', cost:240, hp:400, dmg:34, rng:240, cd:1.30, spd:180, size:20, splash:120},   // 밸런스: 33% → hp340→400   // 공중 사이오닉 광역
   wyvern:    {name:'비행충',    ico:'🐲', cost:420, hp:720, dmg:70, sdmg:95, rng:250, cd:1.30, spd:240, size:22},   // 공중 준보스(모프 유닛·희소) · 강한 프리미엄 유지: hp720·실효공격95(sdmg)
-  behemoth:  {name:'포격충',  ico:'🦣', cost:620, hp:900, dmg:95, sdmg:150, rng:300, cd:2.40, spd:120, size:26, splash:180},   // 밸런스: 83% → hp1100→900·실효공격190→150(sdmg)   // 공중 대형 보스(광역)
+  behemoth:  {name:'포격충',  ico:'🦣', cost:620, hp:650, dmg:95, sdmg:105, rng:300, cd:2.40, spd:120, size:26, splash:180},   // 밸런스: 최종테크 곡선폭증 완화 hp900→650·실효공격150→105(sdmg)   // 공중 대형 보스(광역)
   // 🔮 에테리얼 확장
   skydancer: {name:'요격기',ico:'💃', cost:180, hp:240, dmg:24, rng:250, cd:1.00, spd:320, size:18},   // 공중 고속 기동
   archangel: {name:'모함',  ico:'👼', cost:420, hp:460, dmg:32, sdmg:18, scd:1.4, rng:280, cd:1.60, spd:140, size:24, splash:150},   // 밸런스: 100% 무패(빠른 스플래시) → hp460·공격18·실효쿨0.73→1.4(scd, 공속 반감)   // 공중 성채(광역)
   kronos:    {name:'전함',  ico:'⏳', cost:340, hp:520, dmg:42, rng:300, cd:1.80, spd:150, size:22, splash:140},   // 공중 시공 포격(광역)
   // ── 신규 전투 유닛(6a7cff7 이식) — 근접형 3종 · 지원형(메딕·라바·하이템플러)은 무공격이라 직스 생산 제외(연습 랩 전용) ──
   broodling:  {name:'스웜링',  ico:'🐛', cost:70,  hp:80,   dmg:12, rng:60, cd:0.60, spd:380, size:12, melee:true},   // 스웜 초저가 고속 근접 다수
-  ultralisk:  {name:'돌격괴수',ico:'🐂', cost:560, hp:1100, dmg:80, rng:80, cd:1.40, spd:150, size:26, melee:true},   // 스웜 대형 근접 보스(고체력)
+  ultralisk:  {name:'돌격괴수',ico:'🐂', cost:560, hp:800, dmg:62, rng:80, cd:1.40, spd:150, size:26, melee:true},   // 스웜 대형 근접 보스(고체력) · 밸런스: 최종테크 곡선폭증 완화 hp1100→800·dmg80→62
   dark_templar:{name:'다크세이지', ico:'🌑', cost:210, hp:240,  dmg:48, rng:62, cd:1.05, spd:320, size:15, melee:true},   // 에테리얼 고화력 고속 근접 암살
 };
 const STK_RACES={
@@ -11674,7 +11674,7 @@ function _techBU(race,bk){ return (TECH_BLDG_UNIT[race]||{})[bk]||null; }
 function techBldgUnit(race, bk){ const e=_techBU(race,bk);
   return (e && typeof STK_UNITS!=='undefined' && STK_UNITS[e.u]) ? e.u : null; }
 // 종족 평준화: 건물당 배출 수를 종족별로 스케일 — 유니온 기준(1.0) · 에테리얼 소수정예(2/3) · 스웜 물량(1.5배)
-const STK_RACE_SPAWN={ union:1, aetherial:2/3, swarm:1.5 };
+const STK_RACE_SPAWN={ union:1, aetherial:2/3, swarm:1.4 };
 function techBldgCount(race, bk){ const e=_techBU(race,bk); const rm=(STK_RACE_SPAWN[race]||1); return Math.max(1, Math.round(((e&&e.n)||1)*TECH_WAVE_MUL*rm)); }
 // 기본 공통 자료(data/base_stats.md) — SC 원본 공격 쿨다운 프레임(cd, 작을수록 빠름·24f=1s) / 이동 픽셀(mv, 클수록 빠름). 게임 id 기준.
 const BASE_CD={  // 0=공격 없음(수송·시전·자폭 등)
@@ -13889,7 +13889,7 @@ function strikeKillGold(e){ return Math.max(1, Math.min(5, Math.round((e&&e.maxH
 const STK_BOMB_COST=150, STK_BOMB_DMG=520, STK_BOMB_R=520;   // 폭탄: 비용/피해/반경
 // 유닛 강화 배율(소환 시 적용) — 공격 +12%/Lv, 체력 +16%/Lv
 // 종족 전투 파워 배수(hp·공격 동시) — 배출 배수(테마)는 고정하고 이 값으로 종족 균형을 맞춘다. 밸런싱 단일 소스.
-const STK_RACE_POWER={ union:1.00, swarm:0.51, aetherial:1.95 };
+const STK_RACE_POWER={ union:1.00, swarm:0.70, aetherial:1.40 };   // 종족 레벨(정예/물량 개성). 단계평균 승률 최적 타협. 티어 형태는 유닛 스탯으로 조정.
 function _racePow(side){ return (side && STK_RACE_POWER[side.race]) || 1; }
 function strikeAtkMul(side){ return (1 + (side.atkLv||0)*0.12) * _racePow(side); }
 function strikeHpMul(side){ return (1 + (side.hpLv||0)*0.16) * _racePow(side); }
