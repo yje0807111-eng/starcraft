@@ -5478,7 +5478,7 @@ try{ window.ENEMY_MODEL=ENEMY_MODEL; }catch(e){}   // M3D 모듈(별도 스코�
 // 적/보스 표시 이름 — 모델 id → 한글 이름(스타크래프트명 대신 새 기함 이름). 매핑 없으면 적 한글명 그대로.
 const MODEL_NAME_KR={ hellfire:'헬파이어', pelican:'펠리컨', dreadnought:'드레드노트', kronos:'크로노스', seraph:'세라프', archangel:'아크엔젤', falcon:'팔콘', stinger:'스팅어', venom:'베놈', medusa:'메두사',
   observer:'와처', overlord:'제플린', skyguard:'템페스트', skydancer:'스카이댄서', racer:'레이서', machinegun:'발칸', snapper:'스내퍼' };   // 옵저버→와처, 오버로드→제플린, 레이스→템페스트, 커세어→스카이댄서
-function enemyName(n){ const mdl=ENEMY_MODEL[n]; return (mdl&&MODEL_NAME_KR[mdl])||n; }   // 스타크래프트명 → 새 기함 이름(없으면 그대로)
+function enemyName(n){ const mdl=ENEMY_MODEL[n]; return (mdl&&((U[mdl]&&U[mdl].name)||MODEL_NAME_KR[mdl]))||n; }   // 관리자 유닛 이름(U) 우선 → MODEL_NAME_KR 폴백
 // 라운드 보스 3D 모델 풀(공중유닛 순환) — 보스 라운드마다 다른 기함. 모델 미로드 맵에선 null→2D capital 폴백.
 const BOSS_AIR=['archangel','kronos','dreadnought','pelican','venom','medusa','seraph','hellfire','falcon','stinger'];
 const BOSS_SCALE_E=2.0;   // 라운드 보스 모델 확대 배율(일반 적 대비)
@@ -5507,6 +5507,7 @@ function pbossUnlocked(pt){ if(!G.pbUnlockedOnce) G.pbUnlockedOnce={};
   if(live) G.pbUnlockedOnce[pt.id]=true;
   return live; }
 function spawnEnemy(opts){ opts=opts||{}; const pt=opts.pbType||null; const pboss=!!opts.pboss||!!pt, boss=!!opts.boss||pboss, special=!!opts.special; const m=roundDef(G.round);
+  const idn=(!boss&&!special&&!pboss&&G.round>20)?MON[((G.round-21)%9+9)%9]:m;   // R21~29: 겉모습(이름·모델·도형·종족)만 R1~9 순환 · 스탯(hp/sh/ar)은 m 유지
   const mb=G.metaB||{};   // 메타 강화: 적 체력/방어/이속 감소(개인)
   const _D=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal);
   const _inf=mapCfg('infinite'); const _effR=_inf?Math.min(G.round,30):G.round;   // 무한모드: 라운드 램프는 R30에서 고정, 이후 루프 배수로 연속 성장
@@ -5526,16 +5527,16 @@ function spawnEnemy(opts){ opts=opts||{}; const pt=opts.pbType||null; const pbos
   let ar = pt ? pt.ar : Math.max(0, (boss?Math.round(m.ar*0.5):m.ar) - (mb.enemyArmor||0));   // 보스 방어=그 라운드의 절반(등급 관문은 일반 라운드가 담당)
   let spd = (0.018+(boss?0:0.004))*(mb.enemySlowMul||1);
   if(mod){ if(mod.spd) spd*=mod.spd; if(mod.ar) ar=Math.round(ar*mod.ar); }
-  if(!boss && m && m.n==='스커지') spd*=1.5;   // 스커지: 고속 비행(자폭형) — 이동속도 ↑
+  if(!boss && idn && idn.n==='스커지') spd*=1.5;   // 스커지: 고속 비행(자폭형) — 이동속도 ↑
   const _rbm = (boss && !pboss) ? roundBossModel() : null;   // 라운드 보스 전용 3D 모델(공중유닛, 로드된 경우만)
   const _ptm = (pt && pt.model && window.M3D && M3D.hasModel && M3D.hasModel(pt.model)) ? pt.model : null;   // 개인보스 3D 모델(공중유닛, 로드된 경우만)
   const e={eid:G.eSeq++, d:0, hp:hp, maxHp:hp, sh:sh, maxSh:sh, ar:ar,   // 개인 보스도 일반 적처럼 시작지점(d=0)에서 등장 후 트랙 따라 이동
     regen:(mod&&mod.regen)||0, split:(mod&&mod.split&&Math.random()<0.6)?1:0,   // 재생/분열 모디파이어
     speed:spd, boss:boss, special:special, pboss:pboss, pbId:pt?pt.id:null, life:pboss?120:null, pbCol:pt?pt.col:null,
     bonus:pt?Math.round(pt.bonus*coinMult*((mb.pbossRewardMul)||1)):0, bonusE:pt?Math.round((pt.egy||0)*((mb.pbossRewardMul)||1)):0,   // 처치 보상(coinMult×메타 개인보스 보상)
-    flash:0, name:pt?pt.name:((boss&&!pboss)?(MODEL_NAME_KR[_rbm]||'보스'):(special?'스페셜':enemyName(m.n))),   // 라운드 보스=기함 이름, 일반=새 적 이름
-    shape:boss?'capital':enemyShape(m.n), race:enemyRace(m.n), ph:(G.eSeq*0.7)%6.283, hit:0,
-    model3d: pt ? _ptm : ((boss&&!pboss)?_rbm:(boss?null:(ENEMY_MODEL[m.n]||null))), bossScale:(_ptm||_rbm)?BOSS_SCALE_E:undefined};   // 개인보스=전용 모델 / 라운드보스=공중 기함 / 일반=기존
+    flash:0, name:pt?pt.name:((boss&&!pboss)?((U[_rbm]&&U[_rbm].name)||MODEL_NAME_KR[_rbm]||'보스'):(special?'스페셜':enemyName(idn.n))),   // 라운드 보스=관리자 유닛명, 일반=관리자 유닛명(R21~29=R1~9 겉모습)
+    shape:boss?'capital':enemyShape(idn.n), race:enemyRace(idn.n), ph:(G.eSeq*0.7)%6.283, hit:0,
+    model3d: pt ? _ptm : ((boss&&!pboss)?_rbm:(boss?null:(ENEMY_MODEL[idn.n]||null))), bossScale:(_ptm||_rbm)?BOSS_SCALE_E:undefined};   // 개인보스=전용 모델 / 라운드보스=공중 기함 / 일반=기존(R21~29=R1~9 모델)
   G.recalls.push({life:1, boss:boss, special:special});   // ① 출현 이펙트(에너지 모임) 먼저 시작
   G.pendSpawn.push({t:SPAWN_LEAD, e:e});                   // ② 모임 완료(플래시) 시점에 실제 등장(효과음도 이때)
 }
