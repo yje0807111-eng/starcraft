@@ -805,6 +805,15 @@ async function groupGame(){
     assert(bWin.length===2,'결과 창 버튼 2개를 못 찾음');
     assert(bWin[0]===bLose[0] && bWin[1]===bLose[1],'승/패에 따라 버튼 색이 바뀜(통일 안 됨)');
     assert(bWin[0]===bWin[1],'확인과 관전하기의 스타일이 다름');
+    // 중립 회색이어야 한다(색을 띠면 채널 편차가 커진다)
+    for(const el of [$('ovBtn'),$('ovBtn2')].filter(Boolean)){
+      for(const prop of ['color','borderTopColor']){
+        const ch=(getComputedStyle(el)[prop].match(/\d+/g)||[]).slice(0,3).map(Number);
+        assert(ch.length===3 && Math.max.apply(null,ch)-Math.min.apply(null,ch)<=30,
+          '버튼이 회색이 아님('+prop+'): '+getComputedStyle(el)[prop]); } }
+    // 자동 진행은 면이 차오르는 것만 — 앞머리 선(::after)을 두지 않는다
+    const abAfter=getComputedStyle(document.querySelector('#ovBtn .autoBar'),'::after').content;
+    assert(abAfter==='none' || abAfter==='normal','자동 진행 표시에 앞머리 선이 남아 있음: '+abAfter);
     const ecGo=document.querySelector('#exitConfirm .ecGo'), ecC=document.querySelector('#exitConfirm .ecCancel');
     if(ecGo&&ecC){ assert(btnStyle(ecGo)===btnStyle(ecC),'취소와 나가기의 스타일이 다름');
       assert(btnStyle(ecGo)===bWin[0],'확인창 버튼과 결과창 버튼의 스타일이 다름'); }
