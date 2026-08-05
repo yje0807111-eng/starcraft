@@ -809,7 +809,9 @@ async function groupGame(){
       for(const id of ['ov','exitConfirm','settingsPop']){ const e=$(id); if(!e) continue;
         const cs=getComputedStyle(e), bf=cs.backdropFilter||cs.webkitBackdropFilter||'';
         const m=/blur\((\d+(?:\.\d+)?)px\)/.exec(bf);
-        assert(m && parseFloat(m[1])>=5, '#'+id+' 배경 흐림이 약함: '+bf); got.push(m[1]); }
+        const v=m?parseFloat(m[1]):0;
+        assert(v>=4, '#'+id+' 배경 흐림이 약함: '+bf);
+        assert(v<=6, '#'+id+' 배경 흐림이 과함(게임 배경이 묻힘): '+bf); got.push(m[1]); }
     } finally { if(wasLite) document.body.classList.add('lite'); }
     const blurTxt='blur '+got.join('/')+'px'
     return '승 '+win+' / 패 '+lose+' · 제목 '+tSz+'/설명 '+dSz+'px · '+blurTxt; });

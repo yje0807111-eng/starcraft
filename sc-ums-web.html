@@ -560,9 +560,9 @@
   .tabSet .ti svg{width:20px;height:20px}
   /* 설정 팝업 */
   #settingsPop{position:absolute;inset:0;z-index:72;   /* 허브(60)·마을(60)·캐릭터(61)보다 위 */display:flex;align-items:center;justify-content:center;
-    background-color:rgba(2,3,6,.76);
-    background-image:radial-gradient(ellipse 300px 320px at 50% 50%,rgba(92,214,255,.12),transparent 72%);
-    backdrop-filter:blur(7px) saturate(.72);-webkit-backdrop-filter:blur(7px) saturate(.72)}
+    background-color:rgba(2,3,6,.62);
+    background-image:radial-gradient(ellipse 300px 320px at 50% 50%,rgba(92,214,255,.13),transparent 72%);
+    backdrop-filter:blur(5px) saturate(.9);-webkit-backdrop-filter:blur(5px) saturate(.9)}
   #settingsPop.hide{display:none}
   /* 컨텍스트: 앱(로비/로그인)에선 게임 전용 항목 숨기고 로그아웃 표시 */
   #settingsPop.appCtx{background:rgba(2,3,6,.82)}                                       /* 뒤 화면 강하게 가림 */
@@ -653,9 +653,9 @@
   .setExit:active{transform:translateY(1px);background:rgba(255,80,80,.14)}
   /* 나가기 확인 창 */
   #exitConfirm{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
-    background-color:rgba(2,3,6,.76);
-    background-image:radial-gradient(ellipse 290px 180px at 50% 50%,rgba(92,214,255,.13),transparent 72%);
-    backdrop-filter:blur(7px) saturate(.72);-webkit-backdrop-filter:blur(7px) saturate(.72)}
+    background-color:rgba(2,3,6,.6);
+    background-image:radial-gradient(ellipse 290px 180px at 50% 50%,rgba(92,214,255,.14),transparent 72%);
+    backdrop-filter:blur(5px) saturate(.9);-webkit-backdrop-filter:blur(5px) saturate(.9)}
   #exitConfirm.hide{display:none}
   /* 나가기 확인 = 설정 창과 같은 규격(각진 카드 · 제목+강조 언더라인 · 44px 버튼) */
   .ecCard{--ecAcc:#5cd6ff;width:86%;max-width:320px;padding:14px 14px 13px;box-sizing:border-box;text-align:center;
@@ -1557,8 +1557,8 @@
   #ov{position:absolute;inset:0;z-index:46;display:flex;align-items:center;justify-content:center;text-align:center;padding:26px;
     --aura:rgba(92,214,255,.15);
     background:radial-gradient(ellipse 300px 220px at 50% 50%,var(--aura),transparent 72%),
-               radial-gradient(circle at 50% 42%,rgba(40,8,12,.42),rgba(3,5,10,.78) 82%);
-    backdrop-filter:blur(7px) saturate(.72);-webkit-backdrop-filter:blur(7px) saturate(.72)}
+               radial-gradient(circle at 50% 42%,rgba(40,8,12,.3),rgba(3,5,10,.6) 82%);
+    backdrop-filter:blur(5px) saturate(.9);-webkit-backdrop-filter:blur(5px) saturate(.9)}
   /* 오라 색은 카드 상태를 따라간다 — 카드에 clip-path가 있어 바깥 그림자를 못 쓰기 때문에 덮개 배경으로 낸다 */
   #ov:has(.ovCard.win){--aura:rgba(255,210,74,.17)}
   #ov:has(.ovCard.lose){--aura:rgba(255,107,122,.16)}
@@ -2529,9 +2529,9 @@
   .twToast.hide{opacity:0;pointer-events:none}
   /* 마을 시설 팝업 */
   #townPanel{position:absolute;inset:0;z-index:62;display:flex;align-items:center;justify-content:center;
-    background-color:rgba(2,3,6,.7);
-    background-image:radial-gradient(ellipse 300px 320px at 50% 50%,rgba(92,214,255,.12),transparent 72%);
-    backdrop-filter:blur(7px) saturate(.72);-webkit-backdrop-filter:blur(7px) saturate(.72)}
+    background-color:rgba(2,3,6,.58);
+    background-image:radial-gradient(ellipse 300px 320px at 50% 50%,rgba(92,214,255,.13),transparent 72%);
+    backdrop-filter:blur(5px) saturate(.9);-webkit-backdrop-filter:blur(5px) saturate(.9)}
   #townPanel.hide{display:none}
   #townPanel .setX .mIco{color:inherit}
   .twCard{width:320px;max-width:88vw;max-height:82%;display:flex;flex-direction:column}
