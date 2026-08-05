@@ -48,6 +48,7 @@
     --bad:#ff5c5c;                         /* 위험/헬 */
     --txt-hud:#9aa6b2;                     /* HUD 레이블 */
     --txt-mute:#9aa0a8;                    /* 비활성 텍스트 */
+    --acc-sel:#5cd6ff;                     /* 역할 액센트: 지금 선택된 것(DESIGN.md §2) */
     --glass:rgba(255,255,255,.05);         /* 유리 버튼/칩 배경 */
     --glass-edge:rgba(255,255,255,.12);    /* 유리 테두리 */
     --shade:rgba(0,0,0,.5);         /* 공통 음영 */
@@ -2162,19 +2163,22 @@
   .twCard.gearFull .twBody{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
   .gearWrap{flex:1;min-height:0;display:flex;flex-direction:column}
   /* 섹션 이동 바(방어구 ↔ 무기·장신구) — 아바타 아래에 놓인다 */
-  .pdNav{flex:0 0 auto;padding:2px 0 9px}
-  .pdSeg{position:relative;display:flex;width:100%;max-width:286px;margin:0 auto;padding:3px;border-radius:11px;
+  .pdNav{flex:0 0 auto;padding:4px 0 8px}
+  .pdSeg{position:relative;display:flex;width:100%;max-width:286px;margin:0 auto;padding:4px;border-radius:var(--r-lg);
     background:rgba(255,255,255,.045);border:1px solid var(--metal-edge)}
-  .pdSegInd{position:absolute;top:3px;bottom:3px;width:calc((100% - 6px)/var(--n));border-radius:9px;transition:left .2s cubic-bezier(.3,.8,.3,1);
-    background:linear-gradient(180deg,rgba(92,214,255,.26),rgba(92,214,255,.1));border:1px solid rgba(92,214,255,.45)}
-  .pdSegBtn{position:relative;z-index:1;flex:1;min-width:0;padding:6px 4px;border:none;background:none;cursor:pointer;
+  /* 현재 섹션 = 중립 판 + 아래 2px 시안 라인(네비바 .tab::after와 같은 문법). 시안 면을 채우지 않는다 */
+  .pdSegInd{position:absolute;top:4px;bottom:4px;width:calc((100% - 8px)/var(--n));border-radius:var(--r-md);transition:left .2s cubic-bezier(.3,.8,.3,1);
+    background:linear-gradient(160deg,rgba(30,36,48,.62),rgba(8,10,14,.72));border:1px solid var(--metal-edge)}
+  .pdSegInd::after{content:'';position:absolute;left:24%;right:24%;bottom:2px;height:2px;border-radius:var(--r-bar);
+    background:linear-gradient(90deg,transparent,var(--acc-sel),transparent);box-shadow:0 0 6px rgba(92,214,255,.45)}
+  .pdSegBtn{position:relative;z-index:1;flex:1;min-width:0;padding:8px 4px;border:none;background:none;cursor:pointer;
     font-family:inherit;font-size:12px;font-weight:800;color:#8e9bab;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .pdSegBtn.on{color:#eaf1fb}
   /* 아바타 구역이 남는 높이를 전부 먹는다(가방은 아래에서 고정) */
-  .pdWrap{position:relative;flex:1 1 auto;min-height:186px;margin:2px 0}
+  .pdWrap{position:relative;flex:1 1 auto;min-height:186px;margin:4px 0}
   .pdFig{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);height:100%;width:auto;color:#5f7183;opacity:.34}
   .pdFig svg{display:block;height:100%;width:auto}
-  .pdSlot{position:absolute;transform:translate(-50%,-50%);width:46px;height:46px;border-radius:13px;cursor:pointer;
+  .pdSlot{position:absolute;transform:translate(-50%,-50%);width:46px;height:46px;border-radius:var(--r-lg);cursor:pointer;
     display:flex;align-items:center;justify-content:center;color:#7f8b99;
     background:linear-gradient(180deg,rgba(24,31,44,.92),rgba(14,19,28,.92));border:1px solid var(--metal-edge);
     box-shadow:0 6px 16px -10px #000, inset 0 1px 0 rgba(255,255,255,.05)}
@@ -2185,26 +2189,26 @@
   .pdSlot .pdLockIco{position:absolute;width:19px;height:19px;color:#95a3b3}
   .pdSlot.on{background:linear-gradient(180deg,rgba(30,42,58,.95),rgba(16,22,32,.95))}
   .pdSlot.lock{opacity:.62}
-  .pdSlot.pick{box-shadow:0 0 0 2px rgba(92,214,255,.75),0 6px 16px -10px #000}
+  .pdSlot.pick{border-color:#7d8b9c;color:#dbe3ec;background:linear-gradient(180deg,rgba(44,54,70,.95),rgba(20,26,36,.95))}   /* 가방 필터 중 = 중립 강조(시안 아님) */
   .pdSlot:active{transform:translate(-50%,-50%) translateY(1px)}
   .pdSlot .pdLv{position:absolute;top:-7px;right:-5px;font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:800;font-style:normal;
-    padding:0 4px;border-radius:6px;color:inherit;background:#0b0e16;border:1px solid currentColor}
-  .gearSum{flex:0 0 auto;text-align:center;font-size:12px;color:var(--txt-mute);padding:4px 0 2px}
-  .gearSum b{color:#eaf1fb}
+    font-variant-numeric:tabular-nums;padding:0 4px;border-radius:var(--r-bar);color:inherit;background:#0b0e16;border:1px solid currentColor}
+  .gearSum{flex:0 0 auto;text-align:center;font-size:12px;color:var(--txt-mute);padding:4px 0}
+  .gearSum b{color:#eaf1fb;font-family:'Rajdhani',sans-serif;font-size:13px;font-variant-numeric:tabular-nums}
   /* 아래 구역: 가방 */
   /* 가방은 높이 고정(2줄) — 짐이 아무리 많아도 위 구역을 밀어내지 않는다. 상세 팝업의 기준 상자이기도 하다 */
-  .bagSec{position:relative;flex:0 0 auto;display:flex;flex-direction:column;border-top:1px solid rgba(255,255,255,.09);padding-top:9px}
+  .bagSec{position:relative;flex:0 0 auto;display:flex;flex-direction:column;border-top:1px solid rgba(255,255,255,.09);padding-top:8px}
   /* 가방 분류 칩 — 페이퍼돌 섹션과 같은 축(전체 + PROF_GEAR_PAGES). 섹션 바와 헷갈리지 않게 작고 가볍게 */
-  .bagCats{display:flex;gap:5px;min-width:0;overflow:hidden}
-  .bagCat{flex:0 0 auto;padding:4px 9px;border-radius:14px;cursor:pointer;font-family:inherit;font-size:10.5px;font-weight:800;
+  .bagCats{display:flex;gap:4px;min-width:0;overflow:hidden}
+  .bagCat{flex:0 0 auto;padding:4px 8px;border-radius:var(--r-md);cursor:pointer;font-family:inherit;font-size:10.5px;font-weight:800;
     color:#8b98a8;background:rgba(255,255,255,.035);border:1px solid var(--metal-edge);white-space:nowrap}
-  .bagCat.on{color:#dff4ff;background:rgba(92,214,255,.15);border-color:rgba(92,214,255,.45)}
+  .bagCat.on{color:#eaf1fb;background:linear-gradient(160deg,rgba(30,36,48,.62),rgba(8,10,14,.72));border-color:#5b6675}   /* 켜짐 = 중립 강조(시안은 고른 아이템에만) */
   .bagCat:active{transform:translateY(1px)}
   .bagCnt{flex:0 0 auto}
-  .bagHead{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}
+  .bagHead{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
   .bagTtl{font-size:12px;font-weight:800;color:#aeb8c6}
-  .gsSub{font-size:11px;font-weight:700;color:var(--txt-mute)}
-  .igBack{min-width:0;padding:4px 10px;font-size:11px}
+  .gsSub{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--txt-mute)}
+  .igBack{min-width:0;padding:4px 8px;font-size:11px}
   /* 스크롤은 .bagBody 안에서만 — 카드는 늘어나지 않는다. 겉면(.bagScroll)은 "더 있음" 그림자 담당 */
   .bagScroll{position:relative;flex:0 0 auto;height:172px;display:flex}   /* 6열 × 3줄 + 다음 줄 살짝 */
   .bagScroll::after{content:'';position:absolute;left:0;right:0;bottom:0;height:26px;pointer-events:none;opacity:0;transition:opacity .18s;
@@ -2213,31 +2217,31 @@
   .bagBody{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
   .bagBody::-webkit-scrollbar{width:4px}
   .bagBody::-webkit-scrollbar-thumb{border-radius:3px;background:rgba(255,255,255,.18)}
-  .igGrid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;padding:0 3px 8px 0;justify-items:center}
+  .igGrid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;padding:0 4px 8px 0;justify-items:center}
   .igCell{position:relative;width:100%;max-width:52px;aspect-ratio:1;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;
     background:linear-gradient(180deg,rgba(24,31,44,.9),rgba(14,19,28,.9));border:1px solid var(--metal-edge)}
   .igCell .slIco{width:21px;height:21px}
-  .igCell.sel{box-shadow:0 0 0 2px #5cd6ff}
+  .igCell.sel{border-color:var(--acc-sel);box-shadow:0 0 0 1px rgba(92,214,255,.45),0 0 10px -3px rgba(92,214,255,.5)}   /* 선택 = 시안(--acc-sel) */
   .igCell.busy{opacity:.4}
   .igCell:active{transform:translateY(1px)}
-  .igCell .igLv{position:absolute;right:2px;bottom:0;font-family:'Rajdhani',sans-serif;font-size:9px;font-weight:800;font-style:normal;color:#dbe3ec}
+  .igCell .igLv{position:absolute;right:2px;bottom:0;font-family:'Rajdhani',sans-serif;font-size:9px;font-weight:800;font-style:normal;font-variant-numeric:tabular-nums;color:#dbe3ec}
   .igCell .igOn{position:absolute;left:3px;top:3px;width:4px;height:4px;border-radius:50%;background:#6ff0a0}
   .igEmpty{padding:16px 4px;font-size:12px;color:var(--txt-mute);text-align:center}
   /* 상세 = 가방을 밀어내지 않고 가방 위로 올라오는 팝업(.bagSec 기준) */
-  .igInfo{position:absolute;left:0;right:0;bottom:0;z-index:4;display:flex;align-items:center;gap:10px;padding:10px 11px 11px;
-    border-radius:13px 13px 0 0;background:linear-gradient(180deg,rgba(26,33,46,.985),rgba(11,15,23,.995));
+  .igInfo{position:absolute;left:0;right:0;bottom:0;z-index:4;display:flex;align-items:center;gap:8px;padding:8px 12px 12px;
+    border-radius:var(--r-lg) var(--r-lg) 0 0;background:linear-gradient(180deg,rgba(26,33,46,.985),rgba(11,15,23,.995));
     border:1px solid var(--metal-edge);border-bottom:none;box-shadow:0 -12px 28px -10px #000;
     animation:igUp .16s ease-out}
   @keyframes igUp{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
-  .igClose{position:absolute;right:7px;top:6px;width:20px;height:20px;border-radius:6px;cursor:pointer;font-size:11px;line-height:1;
+  .igClose{position:absolute;right:8px;top:8px;width:20px;height:20px;border-radius:var(--r-md);cursor:pointer;font-size:11px;line-height:1;
     color:#93a1b1;background:rgba(255,255,255,.05);border:1px solid var(--metal-edge)}
   .igTxt{flex:1;min-width:0}
   .igName{font-size:12.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .igSlotTag{font-size:10px;font-weight:700;color:var(--txt-mute);padding:1px 6px;border-radius:8px;background:rgba(255,255,255,.06)}
+  .igSlotTag{font-size:10px;font-weight:700;color:var(--txt-mute);padding:1px 6px;border-radius:var(--r-bar);background:rgba(255,255,255,.06)}
   .igStat{font-size:11px;color:var(--txt-mute);margin-top:3px;line-height:1.45}
   .igStat .ok{color:#6ff0a0}.igStat .lock{color:#e0a04a}.igSep{opacity:.45}.igArrow{color:#7d8b98}
-  .igBtns{flex:0 0 auto;display:flex;gap:6px}
-  .igBtns .twBtn{min-width:52px;padding:7px 9px}
+  .igBtns{flex:0 0 auto;display:flex;gap:8px}
+  .igBtns .twBtn{min-width:52px;padding:8px}
   /* 캐릭터 선택/생성 입장 화면 */
   #charScreen{position:absolute;inset:0;z-index:61;display:flex;align-items:center;justify-content:center}
   .csCard{width:330px;max-width:90vw;max-height:86%}
@@ -2500,7 +2504,7 @@
   .twRowName{font-size:13px;font-weight:700;color:#dbe3ec}
   .twRowSub{font-size:11px;color:var(--txt-mute);margin-top:2px}
   .twRowSub.ok{color:#6ff0a0}.twRowSub.lock{color:#e0a04a}
-  .twBtn{flex:0 0 auto;min-width:56px;padding:7px 10px;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:800;font-size:12px;text-align:center;
+  .twBtn{flex:0 0 auto;min-width:56px;padding:7px 10px;border-radius:var(--r-lg);cursor:pointer;font-family:inherit;font-weight:800;font-size:12px;text-align:center;
     color:#dff4ff;background:linear-gradient(180deg,rgba(92,214,255,.28),rgba(92,214,255,.1));border:1px solid rgba(92,214,255,.55)}
   .twBtn.on{color:#0b1016;background:var(--setAcc);border-color:var(--setAcc)}
   .twBtn:disabled{cursor:default;color:#7d8590;background:rgba(255,255,255,.03);border-color:var(--metal-edge)}
@@ -5018,7 +5022,7 @@ function _profItemStats(it){ const o={pow:0,vit:0,foc:0,agi:0}; if(!it) return o
 // 장비창 = 위(아바타 + 부위별 슬롯) / 아래(가방) 두 구역. 가방은 늘 열려 있고 각 구역이 따로 스크롤한다.
 // 섹션 이동 바(세그먼트) — 화살표 버튼이 아니라 바에서 골라 넘긴다. 목록은 PROF_GEAR_PAGES 한 곳에서만 온다.
 function _profPageNav(){ const n=PROF_GEAR_PAGES.length, i=PROF_GEAR_PAGES.findIndex(p=>p.id===_gearPage);
-  let h='<div class="pdSeg" style="--n:'+n+'"><i class="pdSegInd" style="left:calc(3px + '+i+'*(100% - 6px)/'+n+')"></i>';
+  let h='<div class="pdSeg" style="--n:'+n+'"><i class="pdSegInd" style="left:calc(4px + '+i+'*(100% - 8px)/'+n+')"></i>';
   PROF_GEAR_PAGES.forEach((p,k)=>{ h+='<button class="pdSegBtn'+(k===i?' on':'')+'" onclick="profGearPageAt('+k+')">'+p.name+'</button>'; });
   return '<div class="pdNav">'+h+'</div></div>'; }
 function _profPaperdoll(c){

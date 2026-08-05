@@ -569,6 +569,45 @@ async function groupLobby(){
     assert(info.querySelector('.igClose'),'상세 팝업에 닫기 버튼이 없음');
     townToHub();
     return '가방 '+Math.round(bh)+'px에 '+rows+'줄 · 내용 '+bs+'px'; });
+  // DESIGN.md 규칙을 이 화면에만 강제한다. 다른 화면은 전환될 때 각자 스텝을 추가할 것.
+  await step('장비창: DESIGN.md 규칙(라운드 토큰 · 시안 1곳 · 1px 테두리)', ()=>{
+    skipIf(typeof profPickSlot!=='function','장비창 없음');
+    const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0;
+    profCreateChar('ranger','룰');
+    const ks=Object.keys(PROF_GEAR), ts=PROF_ITEM_TIERS.map(t=>t.id);
+    for(let i=0;i<14;i++) profAddItem(profMakeItem(ks[i%ks.length], 1+(i%5), ts[i%ts.length]));
+    saveMeta(); _gearPick=null; _gearSel=null; _gearCat=''; _gearPage=PROF_GEAR_PAGES[0].id;
+    openTown(); openTownPanel('gear'); CHAR().level=40; refreshTownPanel();
+    const body=$('tpBody'), OK=['3px','6px','9px'];
+    const scan=()=>{ const bad=[], cyan=[];
+      for(const e of body.querySelectorAll('*')){ const c=getComputedStyle(e);
+        for(const v of c.borderRadius.split(/[\s\/]+/))
+          if(v && v!=='0px' && v!=='50%' && OK.indexOf(v)<0) bad.push((e.className||e.tagName)+'='+v);
+        if(parseFloat(c.borderTopWidth)>1.5) bad.push((e.className||e.tagName)+' 테두리 '+c.borderTopWidth);
+        // 면·링을 시안으로 채운 요소만 센다(2px 밑줄 라인은 ::after라 여기 안 잡힘)
+        const t=c.borderColor+' '+c.backgroundImage+' '+c.boxShadow+' '+c.backgroundColor;
+        if(/92,\s*214,\s*255|5cd6ff/i.test(t)) cyan.push(e.className||e.tagName);
+      } return {bad:bad, cyan:cyan}; };
+    let r=scan();
+    assert(!r.bad.length,'토큰 밖 라운드/두꺼운 테두리: '+r.bad.slice(0,4).join(', '));
+    // 아무것도 안 골랐으면 시안 채움은 없어야 한다(탭·분류는 중립 강조)
+    assert(!r.cyan.length,'선택 전인데 시안을 쓴 요소가 있음: '+r.cyan.slice(0,4).join(', '));
+    profGearPageAt(1); profBagCat('acc');
+    r=scan(); assert(!r.cyan.length,'섹션/분류가 시안을 채움: '+r.cyan.slice(0,4).join(', '));
+    profBagCat(''); profGearPageAt(0);
+    // 아이템을 고르면 그 칸 하나만 시안(공용 .twBtn 제외 — 마을 전체 전환 때 처리)
+    profSelItem(profItems()[2].iid);
+    r=scan();
+    const own=r.cyan.filter(c=>String(c).indexOf('twBtn')<0);
+    assert(own.length===1 && String(own[0]).indexOf('igCell')>=0,
+      '선택 시 시안이 정확히 고른 칸 하나가 아님: '+JSON.stringify(own));
+    // 숫자는 Rajdhani + tabular-nums
+    for(const sel of ['.gearSum b','.gsSub','.igCell .igLv']){ const e=body.querySelector(sel);
+      if(!e) continue; const c=getComputedStyle(e);
+      assert(/Rajdhani/i.test(c.fontFamily), sel+' 숫자가 Rajdhani가 아님: '+c.fontFamily);
+      assert(c.fontVariantNumeric.indexOf('tabular-nums')>=0, sel+' tabular-nums 없음'); }
+    profCloseInfo(); townToHub();
+    return '라운드 3/6/9 · 시안 1곳 · 테두리 1px'; });
   await step('던전: 도전 가능 층이 레벨로 열린다', ()=>{ skipIf(typeof dgFloorCap!=='function','층 해금 없음');
     const p=PROF(); p.chars.length=0; p.curId='';
     const c=profCreateChar('ranger','층'); c.level=1;
