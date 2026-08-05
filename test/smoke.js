@@ -762,6 +762,12 @@ async function groupGame(){
           if(v && v!=='0px' && v!=='50%' && OK.indexOf(v)<0) bad.push((e.className||e.tagName)+'='+v);
         if(parseFloat(c.borderTopWidth)>1.5) bad.push((e.className||e.tagName)+' 테두리 '+c.borderTopWidth); }
       return bad; };
+    // 결과 제목 문구(승리는 VICTORY) · 나가기 확인은 한 줄
+    assert(showOverlay.toString().indexOf("'VICTORY'")>=0,'승리 제목이 VICTORY가 아님');
+    assert(showOverlay.toString().indexOf("'CLEAR'")<0,'옛 제목 CLEAR가 남아 있음');
+    const ecm=document.querySelector('#exitConfirm .ecMsg');
+    assert(ecm && ecm.innerHTML.indexOf('<br')<0 && ecm.textContent.trim()==='정말 나가시겠습니까?',
+      '나가기 확인 문구가 한 줄이 아님: '+(ecm?ecm.textContent.trim():'없음'));
     openSettings();
     const sp=$('settingsPop');
     assert(!sp.classList.contains('appCtx'),'게임 안인데 게임 밖(appCtx) 규격임');
@@ -778,8 +784,27 @@ async function groupGame(){
     const base=acc(null), win=acc('win'), lose=acc('lose');
     assert(win!==base && lose!==base && win!==lose,
       '승/패 액센트가 안 갈림: 기본 '+base+' 승 '+win+' 패 '+lose);
+    // 결과 제목은 화면의 주인공 — 설명보다 한참 커야 한다
+    card.classList.add('win');
+    const tSz=parseFloat(getComputedStyle($('ovTitle')).fontSize);
+    const dSz=parseFloat(getComputedStyle($('ovDesc')).fontSize);
+    assert(tSz>=30,'승/패 제목이 작음: '+tSz+'px');
+    assert(tSz>=dSz*2.5,'제목과 설명의 크기 차이가 작음: '+tSz+' vs '+dSz);
+    assert(dSz<=10.5,'설명 글자가 큼: '+dSz+'px');
     card.classList.remove('win','lose');
-    return '승 '+win+' / 패 '+lose; });
+    // 창이 뜨면 뒤가 확실히 흐려져야 한다.
+    // 절전 모드(body.lite)는 blur를 끄는 게 정상이라, 검사 동안만 lite를 벗겨 CSS 자체를 잰다.
+    const wasLite=document.body.classList.contains('lite');
+    if(wasLite) document.body.classList.remove('lite');
+    const got=[];
+    try{
+      for(const id of ['ov','exitConfirm','settingsPop']){ const e=$(id); if(!e) continue;
+        const cs=getComputedStyle(e), bf=cs.backdropFilter||cs.webkitBackdropFilter||'';
+        const m=/blur\((\d+(?:\.\d+)?)px\)/.exec(bf);
+        assert(m && parseFloat(m[1])>=5, '#'+id+' 배경 흐림이 약함: '+bf); got.push(m[1]); }
+    } finally { if(wasLite) document.body.classList.add('lite'); }
+    const blurTxt='blur '+got.join('/')+'px'
+    return '승 '+win+' / 패 '+lose+' · 제목 '+tSz+'/설명 '+dSz+'px · '+blurTxt; });
   await step('유닛 판매(홈 판매 API)', ()=>{ skipIf(typeof sellUnit!=='function','sellUnit 없음');
     const u=G.units.find(x=>!x.fixed && !x.hero && !x.atBoss); skipIf(!u,'판매할 유닛 없음'); const b=G.units.length;
     sellUnit(u);   // 유닛 객체를 받는다(uid 아님)

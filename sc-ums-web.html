@@ -560,7 +560,7 @@
   .tabSet .ti svg{width:20px;height:20px}
   /* 설정 팝업 */
   #settingsPop{position:absolute;inset:0;z-index:72;   /* 허브(60)·마을(60)·캐릭터(61)보다 위 */display:flex;align-items:center;justify-content:center;
-    background:var(--ov-dim);backdrop-filter:blur(2px)}
+    background:rgba(2,3,6,.76);backdrop-filter:blur(7px) saturate(.72);-webkit-backdrop-filter:blur(7px) saturate(.72)}
   #settingsPop.hide{display:none}
   /* 컨텍스트: 앱(로비/로그인)에선 게임 전용 항목 숨기고 로그아웃 표시 */
   #settingsPop.appCtx{background:rgba(2,3,6,.82)}                                       /* 뒤 화면 강하게 가림 */
@@ -650,7 +650,8 @@
     --btnIn:rgba(255,120,120,.3);background:rgba(255,80,80,.08);border:1px solid rgba(255,80,80,.32);border-radius:var(--r-md);transition:background .16s,border-color .16s}
   .setExit:active{transform:translateY(1px);background:rgba(255,80,80,.14)}
   /* 나가기 확인 창 */
-  #exitConfirm{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:var(--ov-dim);backdrop-filter:blur(2px)}
+  #exitConfirm{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(2,3,6,.76);
+    backdrop-filter:blur(7px) saturate(.72);-webkit-backdrop-filter:blur(7px) saturate(.72)}
   #exitConfirm.hide{display:none}
   /* 나가기 확인 = 설정 창과 같은 규격(각진 카드 · 제목+강조 언더라인 · 44px 버튼) */
   .ecCard{--ecAcc:#5cd6ff;width:86%;max-width:320px;padding:14px 14px 13px;box-sizing:border-box;text-align:center;
@@ -660,7 +661,7 @@
   .ecTitle{position:relative;font-size:15px;font-weight:800;letter-spacing:.5px;color:#eaf1fb;text-shadow:0 1px 3px rgba(0,0,0,.65);
     margin-bottom:11px;padding-bottom:9px}
   .ecTitle::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;background:linear-gradient(90deg,var(--ecAcc),transparent 72%);opacity:.5}
-  .ecMsg{font-size:var(--fs-md);line-height:1.55;color:#c2ccda;margin:0 0 12px;word-break:keep-all}
+  .ecMsg{font-size:var(--fs-sm);font-weight:500;line-height:1.55;color:var(--txt-mute);letter-spacing:.2px;margin:0 0 12px;word-break:keep-all}
   .ecBtns{display:flex;gap:8px}
   /* 버튼 = 설정 규격(중립 글래스 / 위험은 붉은 글자·테두리만) — 방 만들기 버튼과 공유하지 않게 카드 안에서만 재정의 */
   .ecCard .ecCancel,.ecCard .ecGo{flex:1 1 0;min-width:0;height:44px;padding:0 12px;border-radius:var(--r-md);
@@ -1549,9 +1550,9 @@
   /* 오버레이(시작/승패) */
   /* 시작 화면 — 검정+빨강 네온 카드 */
   /* 승/패 오버레이 = 게임 화면 위 모달(뒤로 게임이 흐리게 비침) */
-  #ov{position:absolute;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;text-align:center;padding:26px;
-    background:radial-gradient(circle at 50% 42%,rgba(40,8,12,.34),rgba(4,6,12,.6) 82%);
-    backdrop-filter:blur(2.5px) saturate(.85);-webkit-backdrop-filter:blur(2.5px) saturate(.85)}
+  #ov{position:absolute;inset:0;z-index:46;display:flex;align-items:center;justify-content:center;text-align:center;padding:26px;
+    background:radial-gradient(circle at 50% 42%,rgba(40,8,12,.42),rgba(3,5,10,.78) 82%);
+    backdrop-filter:blur(7px) saturate(.72);-webkit-backdrop-filter:blur(7px) saturate(.72)}
   #ov.hide{display:none}
   #ov:not(.hide) .ovCard{animation:ovPop .26s cubic-bezier(.2,.9,.3,1.2)}
   @keyframes ovPop{from{opacity:0;transform:translateY(8px) scale(.94)}to{opacity:1;transform:none}}
@@ -1559,8 +1560,11 @@
   .ovCard.win{--ovAcc:var(--gold);--ovAccG:rgba(255,210,74,.5)}     /* 승리 = 보상 금색 */
   .ovCard.lose{--ovAcc:#ff6b7a;--ovAccG:rgba(255,107,122,.5)}       /* 패배 = 위험 빨강 */
   .ovCard.win .ovTop::after,.ovCard.lose .ovTop::after{opacity:.9;height:2px}
-  .ovCard.win #ovTitle{color:var(--gold-lt);text-shadow:0 0 12px rgba(255,210,74,.4)}
-  .ovCard.lose #ovTitle{color:#ffd0d6}
+  /* VICTORY / DEFEAT = 카드의 주인공. 한글 제목(기록 종료·게임 종료)엔 적용하지 않는다 */
+  .ovCard.win #ovTitle,.ovCard.lose #ovTitle{font-size:38px;line-height:1.02;letter-spacing:3px;font-weight:800}
+  .ovCard.win .ovTop,.ovCard.lose .ovTop{padding-bottom:12px;margin-bottom:12px}
+  .ovCard.win #ovTitle{color:var(--gold-lt);text-shadow:0 0 4px rgba(255,210,74,.5),0 0 22px rgba(255,210,74,.45),0 2px 4px #000}
+  .ovCard.lose #ovTitle{color:#ffd0d6;text-shadow:0 0 4px rgba(255,107,122,.5),0 0 22px rgba(255,107,122,.4),0 2px 4px #000}
   .ovCard{width:86%;max-width:320px;padding:14px 14px 13px;text-align:center;--ovAcc:#5cd6ff;--ovAccG:rgba(92,214,255,.5);
     display:flex;flex-direction:column;box-sizing:border-box;
     background:linear-gradient(160deg,rgba(19,24,35,.96),rgba(6,9,14,.975));border:1px solid var(--metal-edge);
@@ -1574,7 +1578,7 @@
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   /* 본문 = 별도 상자 없이 카드 안에 그대로 */
   .ovPanel{padding:2px 2px 0}
-  #ovDesc{font-size:var(--fs-md);color:#c2ccda;line-height:1.5;margin:0;white-space:pre-line;word-break:keep-all}
+  #ovDesc{font-size:var(--fs-sm);font-weight:500;color:var(--txt-mute);line-height:1.5;margin:0;letter-spacing:.2px;white-space:pre-line;word-break:keep-all}
   /* 결과 통계(플레이타임·도달 라운드·받은 포인트) */
   /* 결과 통계 = 하나의 글래스 패널 + 구분선(방 만들기 폼·대기실과 통일) */
   .ovStats{display:flex;flex-direction:column;gap:0;margin:0 0 12px;text-align:left;padding:0 12px;border-radius:var(--r-lg);
@@ -3626,7 +3630,7 @@
   <div id="exitConfirm" class="hide" onclick="if(event.target===this)closeExitConfirm()">
     <div class="ecCard">
       <div class="ecTitle">게임에서 나가기</div>
-      <div class="ecMsg">지금 나가면 이 판으로 다시 돌아올 수 없습니다.<br>정말 나가시겠습니까?</div>
+      <div class="ecMsg">정말 나가시겠습니까?</div>
       <div class="ecBtns">
         <button class="ecCancel" onclick="closeExitConfirm()">취소</button>
         <button class="ecGo" onclick="confirmExitGame()">나가기</button>
@@ -9768,7 +9772,7 @@ function showOverlay(){ const ov=document.getElementById('ov'),tt=document.getEl
     ov.classList.remove('spaceBg');   // 자체 배경 제거 → 뒤로 게임이 비침
     _runSummary();   // 기록 반영 + 이번 판 요약(1회)
     const won=(G.phase==='won'), quit=(G.phase==='quit'), inf=mapCfg('infinite');
-    tt.textContent=inf?'기록 종료':(won?'CLEAR':(quit?'게임 종료':'DEFEAT')); tt.style.color='';   // 제목 = 흰색 통일
+    tt.textContent=inf?'기록 종료':(won?'VICTORY':(quit?'게임 종료':'DEFEAT')); tt.style.color='';   // 제목 = 흰색 통일
     const ovc=ov.querySelector('.ovCard');   // 승/패에 따라 카드 액센트 교체(제목·언더라인·주 버튼이 함께 따라온다)
     if(ovc){ ovc.classList.toggle('win', !!won && !quit); ovc.classList.toggle('lose', !won && !quit && !inf); }
     // 대사 = 맵 종류와 무관하게 통하는 한 줄(보상 유무·라운드 등 맵 고유 표현 없음)
