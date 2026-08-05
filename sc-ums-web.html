@@ -13896,7 +13896,8 @@ function strikeHpMul(side){ return (1 + (side.hpLv||0)*0.16) * _racePow(side); }
 function strikeApplyHpUpg(side){ const S=STK; if(!S||!side) return;   // 글로벌 체력 업그레이드 — 이미 소환된 유닛의 최대 체력도 즉시 상향(비율 유지)
   const m=strikeHpMul(side), prev=side._hpMulApplied||1; if(m===prev) return; side._hpMulApplied=m;
   const k=m/prev; for(const u of side.units){ if(u.dead) continue; const r=u.maxHp?u.hp/u.maxHp:1;
-    u.maxHp=Math.round(u.maxHp*k); u.hp=Math.round(u.maxHp*r); } }
+    u.maxHp=Math.round(u.maxHp*k); u.hp=Math.round(u.maxHp*r);
+    if(u.maxSh){ const sr=u.sh/u.maxSh; u.maxSh=Math.round(u.maxSh*k); u.sh=Math.round(u.maxSh*sr); } } }   // 실드도 함께 상향(비율 유지)
 // 진영 리더보드(광산 수 → 돈 순). leadIdx로 5초마다 회전 표시
 function strikeRanked(){ const S=STK; return [S.me,S.ai].slice().sort((a,b)=> (b.mines-a.mines) || (b.gold-a.gold)); }
 
@@ -14178,10 +14179,17 @@ function strikeUnitStats(id){ const s=STK_UNITS[id], d=U[id]||{};
   const dmg=((s&&s.sdmg!=null)?s.sdmg:(d.dmg!=null?d.dmg:15));             // 공격력 — strike 전용 오버라이드(sdmg) 있으면 사용(nemo 무영향), 없으면 U
   const cd=Math.max(0.45,(s&&s.scd!=null)?s.scd:((d.cd!=null?d.cd:22)/STK_CD_DIV));   // 공격속도(쿨) — strike 전용 오버라이드(scd, 초) 우선(nemo 무영향)
   const spd=(STK_SPD_OVR[id]!=null?STK_SPD_OVR[id]:(d.moveSpd!=null?d.moveSpd:0.19))*STK_SPD_MUL;   // 이동속도(직스 오버라이드 우선)
-  if(s){ return { hp:s.hp, dmg:dmg, rng:rng, cdMax:cd, spd:spd,
+  const armor=((s&&s.sarmor!=null)?s.sarmor:(d.armor||0));        // 방어 — strike 오버라이드(sarmor) 우선, 없으면 U
+  const shield=((s&&s.sshield!=null)?s.sshield:(d.shield||0));    // 실드 — strike 오버라이드(sshield) 우선, 없으면 U
+  const sharmor=((s&&s.sharmor!=null)?s.sharmor:(d.shArmor||0));  // 실드 전용 방어
+  if(s){ return { hp:s.hp, dmg:dmg, rng:rng, cdMax:cd, spd:spd, armor:armor, shield:shield, sharmor:sharmor,
       color:d.color||'#cfd6e2', size:strikeBodyR(id), splash:s.splash||0, melee:!!s.melee, acq:strikeAcq(rng) }; }
-  return { hp:Math.round((d.hp||40)*3), dmg:dmg, rng:rng, cdMax:cd, spd:spd,   // 폴백(오토배틀 전용값 없는 유닛) — 체력만 U에서 환산
+  return { hp:Math.round((d.hp||40)*3), dmg:dmg, rng:rng, cdMax:cd, spd:spd, armor:armor, shield:shield, sharmor:sharmor,   // 폴백(오토배틀 전용값 없는 유닛) — 체력만 U에서 환산
     color:d.color||'#cfd6e2', size:d.size||13, splash:0, melee:false, acq:strikeAcq(rng) }; }
+function strikeHit(tgt, rawAtk, atk){   // 표준 데미지 적용: 실드 먼저(상성 무시) → 체력((공격−방어)×상성)
+  if(tgt.sh>0){ const d=Math.max(0.5, rawAtk-(tgt.shArmor||0));   // 실드 상태: 상성 무시 · 실드 전용 방어
+    if(d<=tgt.sh){ tgt.sh-=d; return; } tgt.hp-=(d-tgt.sh); tgt.sh=0; return; }   // 실드 초과분만 체력으로
+  tgt.hp -= Math.max(0.5, rawAtk-(tgt.armor||0)) * _sbTypeMul(atk, tgt); }   // (공격−방어) 먼저, 상성은 그 뒤
 function strikeSpawnPads(side){ const S=STK, b=S[side].base, D=360, CS=180;   // 메인신전 양 옆 네모 스폰존(strikeDrawSpawnPad와 동일 위치)
   return side==='me' ? [{x:b.x-D+CS,y:b.y-D-CS},{x:b.x+D+CS,y:b.y+D-CS}] : [{x:b.x-D-CS,y:b.y-D+CS},{x:b.x+D-CS,y:b.y+D+CS}]; }
 function strikeSpawnUnit(side, forceId){ const S=STK, me=S[side]; if(!me||me.units.length>=STK_UNIT_CAP && STK_UNIT_CAP>0) return;   // 진영당 상한(3D 성능 고려)
@@ -14190,10 +14198,10 @@ function strikeSpawnUnit(side, forceId){ const S=STK, me=S[side]; if(!me||me.uni
   const pads=strikeSpawnPads(side), pad=pads[(Math.random()*pads.length)|0], c=S.world/2;
   const x=pad.x+(Math.random()-.5)*260, y=pad.y+(Math.random()-.5)*260;   // 네모 스폰존 안에서 출현
   const pcol=me.compCol||((typeof PLAYER_VIEW_COLORS!=='undefined')?PLAYER_VIEW_COLORS[(side==='me')?0:1]:'#cfd6e2');   // 본체색=팀 대표 컴퓨터(생산자) 색 1개(개별 플레이어색 X — 그건 관전 화면에서)
-  const _hpM=strikeHpMul(me), _hp=Math.round(st.hp*_hpM), _dmg=st.dmg;   // 체력만 소환 시 반영 · 공격력은 사용 시점(글로벌 업그레이드)
+  const _hpM=strikeHpMul(me), _hp=Math.round(st.hp*_hpM), _dmg=st.dmg, _sh=Math.round((st.shield||0)*_hpM);   // 체력·실드 소환 시 반영(파워/체력강화) · 공격력은 사용 시점 · 방어는 뺄셈이라 flat
   me.units.push({uid:'su'+(S.uidSeq=(S.uidSeq||0)+1), id:id, side:side, x:x, y:y, pcol:pcol,
     maxEn:((U[id]||{}).energy||0), en:((U[id]||{}).energy||0), skillCd:{}, skillOn:{}, buff:{},
-    hp:_hp, maxHp:_hp, dmg:_dmg, rng:st.rng, acq:st.acq, splash:st.splash||0, melee:!!st.melee, tgtUid:null, cd:Math.random()*st.cdMax, cdMax:st.cdMax, spd:st.spd, color:st.color, size:st.size,
+    hp:_hp, maxHp:_hp, armor:st.armor||0, sh:_sh, maxSh:_sh, shArmor:st.sharmor||0, dmg:_dmg, rng:st.rng, acq:st.acq, splash:st.splash||0, melee:!!st.melee, tgtUid:null, cd:Math.random()*st.cdMax, cdMax:st.cdMax, spd:st.spd, color:st.color, size:st.size,
     _flank:(Math.random()<0.5?1:-1),   // 좌우 전개 선호(대칭 혼잡 시 분산 방향)
     wait:0.5, face:Math.atan2(c-x, c-y), dead:false}); }   // 인지범위/광역/근접 스탯 반영 / 0.5초 대기 후 진격
 const STK_RALLY_D=560, STK_RALLY_R=150;   // 소환 후 집결 지점(본진 앞 대각선 거리) · 집결 완료 판정 반경
@@ -14913,13 +14921,13 @@ function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
       let _toTemple=!tgt, _fireT=false;   // _toTemple=신전 분기로 처리 · _fireT=표적에 못 닿는 동안 사거리 안 신전을 대신 사격
       if(tgt){ const d=Math.hypot(tgt.x-u.x,tgt.y-u.y);   // 유닛 우선 교전
         if(d<=strikeReach(u,tgt)){ u.moving=false; u._blk=0; u._swp=0; u.face=Math.atan2(tgt.x-u.x, tgt.y-u.y); u.cd-=dt;
-          if(u.cd<=0){ u.cd=u.cdMax; u.fireSeq=(u.fireSeq||0)+1; tgt.hp-=u.dmg*strikeSkillAtkMul(u)*strikeAtkMul(me)*_sbTypeMul(u,tgt); strikeFx(u,tgt.x,tgt.y,col);   // fireSeq++ = 3D 공격 모션 · ×상성(타입×크기)
+          if(u.cd<=0){ u.cd=u.cdMax; u.fireSeq=(u.fireSeq||0)+1; strikeHit(tgt, u.dmg*strikeSkillAtkMul(u)*strikeAtkMul(me), u); strikeFx(u,tgt.x,tgt.y,col);   // fireSeq++ = 3D 공격 모션 · 실드/방어/상성 표준 적용
             { const _uAir=strikeIsAir(u);
               if(!tgt.tgtUid && (!tgt._atk || (_uAir? tgt._atk.air : tgt._atk.gnd))) tgt.tgtUid=u.uid;   // 반격은 때릴 수 있을 때만
               tgt._acqT=0; tgt._inrT=0;                           // 맞으면 즉시 재판단(사거리 안 스캔 주기도 리셋)
               strikeAlert(foe.units, u.uid, tgt.x, tgt.y, 420, _uAir); }   // 주변 아군 가담(때릴 수 있는 아군만)
             if(u.splash>0){ const sr2=u.splash*u.splash, sd=u.dmg*0.6;   // 광역: 타겟 주변 적에게 60% 추가타
-              for(const e of foe.units){ if(e===tgt||e.dead) continue; const ex=e.x-tgt.x, ey=e.y-tgt.y; if(ex*ex+ey*ey<=sr2){ e.hp-=sd*_sbTypeMul(u,e); if(e.hp<=0){ e.dead=true; me.kills=(me.kills||0)+1; me.gold+=strikeKillGold(e); } } } }   // ×대상별 상성
+              for(const e of foe.units){ if(e===tgt||e.dead) continue; const ex=e.x-tgt.x, ey=e.y-tgt.y; if(ex*ex+ey*ey<=sr2){ strikeHit(e, sd, u); if(e.hp<=0){ e.dead=true; me.kills=(me.kills||0)+1; me.gold+=strikeKillGold(e); } } } }   // 실드/방어/대상별 상성
             if(tgt.hp<=0){ tgt.dead=true; me.kills=(me.kills||0)+1; me.gold+=strikeKillGold(tgt); } } }   // 처치 집계 + 킬 보상
         else { const _gq=(front&&!front.dead)?strikeTempleGap(front,u.x,u.y):1e9;
           // ⚠ 적 표적이 있으면 **접근이 실제로 막혔을 때만** 신전을 때린다.
