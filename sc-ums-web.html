@@ -11244,7 +11244,7 @@ const STK_UNITS={
   goliath:   {name:'기갑병', ico:'⚙️', cost:220, hp:380, dmg:30, rng:235, cd:1.30, spd:155, size:21},
   tank:      {name:'공성전차',   ico:'🛡', cost:350, hp:430, dmg:72, rng:330, cd:2.30, spd:115, size:24, splash:160},
   // 🔮 에테리얼 — 사이오닉 (원거리 포격 / 근접 돌격 / 광역 탱커)
-  dragoon:   {name:'센티넬',    ico:'🤖', cost:200, hp:380, dmg:24, sdmg:38, scd:1.0, rng:245, cd:1.25, spd:230, size:18},   // 밸런스: 0%였음(핵심 기본) → hp380·실효공격38·실효쿨1.36→1.0(scd)
+  dragoon:   {name:'센티넬',    ico:'🤖', cost:200, hp:300, dmg:24, sdmg:30, scd:1.0, rng:245, cd:1.25, spd:230, size:18},   // 밸런스: 티어1 곡선폭증(vs유니온 전단계 압도) 완화 hp380→300·실효공격38→30
   blade:     {name:'광전사',      ico:'⚔️', cost:120, hp:360, dmg:22, sdmg:42, rng:49,  cd:0.80, spd:340, size:17, melee:true},   // 밸런스: 17% → hp300→360·실효공격33→42(sdmg)
   archon:    {name:'보이드',    ico:'🔮', cost:340, hp:400, dmg:34, rng:130, cd:1.05, spd:185, size:23, splash:120},
   // 🦎 스웜 — 유기체 (저가 원거리 / 근접 다수 / 도트 공성)
@@ -13889,7 +13889,7 @@ function strikeKillGold(e){ return Math.max(1, Math.min(5, Math.round((e&&e.maxH
 const STK_BOMB_COST=150, STK_BOMB_DMG=520, STK_BOMB_R=520;   // 폭탄: 비용/피해/반경
 // 유닛 강화 배율(소환 시 적용) — 공격 +12%/Lv, 체력 +16%/Lv
 // 종족 전투 파워 배수(hp·공격 동시) — 배출 배수(테마)는 고정하고 이 값으로 종족 균형을 맞춘다. 밸런싱 단일 소스.
-const STK_RACE_POWER={ union:1.00, swarm:0.70, aetherial:1.40 };   // 종족 레벨(정예/물량 개성). 단계평균 승률 최적 타협. 티어 형태는 유닛 스탯으로 조정.
+const STK_RACE_POWER={ union:1.00, swarm:0.70, aetherial:1.47 };   // 종족 레벨(정예/물량 개성). 단계평균 승률 최적 타협. 티어 형태는 유닛 스탯으로 조정.
 function _racePow(side){ return (side && STK_RACE_POWER[side.race]) || 1; }
 function strikeAtkMul(side){ return (1 + (side.atkLv||0)*0.12) * _racePow(side); }
 function strikeHpMul(side){ return (1 + (side.hpLv||0)*0.16) * _racePow(side); }
