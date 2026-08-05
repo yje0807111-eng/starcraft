@@ -56,6 +56,19 @@ async function groupLobby(){
     assert(!visible($('hubScreen')),'로그인 전에 게임 선택 화면이 떠 있음');
     assert(visible($('authId')) && visible($('authPw')),'아이디/비밀번호 입력칸이 없음');
     assert($('authNick').classList.contains('hide'),'로그인 탭인데 닉네임 칸이 보임');
+    // 탭은 허브·유즈맵과 같은 공용 컴포넌트를 쓴다(로그인 화면만 별도 세그먼트 금지)
+    var lt=$('segLogin');
+    assert(lt.classList.contains('msTab2'),'로그인 탭이 공용 탭(.msTab2)이 아님: '+lt.className);
+    assert(document.querySelector('.authTabs').classList.contains('msTabs2'),'탭 바가 .msTabs2가 아님');
+    assert(lt.querySelector('svg'),'탭 아이콘이 없음(paintIcons 누락)');
+    var ac=getComputedStyle(document.querySelector('.authCard'));
+    // 배경이 단색이든 그라데든, 뒤 배경이 비치지 않을 만큼 불투명해야 한다
+    var acAlpha=(ac.backgroundImage.indexOf('gradient')>=0)
+      ? Math.min.apply(null,(ac.backgroundImage.match(/rgba([^)]*)/g)||['rgba(0,0,0,1)']).map(function(c){var m=c.match(/[0-9.]+/g);return parseFloat(m[3]||1);}))
+      : parseFloat((ac.backgroundColor.match(/[0-9.]+/g)||[])[3]||0);
+    assert(acAlpha>0.6,'로그인 카드가 투명해 배경과 겹침(alpha '+acAlpha+')');
+    assert(ac.boxShadow!=='none','로그인 카드에 질감(그림자)이 없음');
+    assert(ac.clipPath && ac.clipPath!=='none','로그인 카드 외곽이 각진 HUD 형태가 아님');
     authMode('signup');
     assert(!$('authNick').classList.contains('hide'),'회원가입인데 닉네임 칸이 안 보임');
     assert(!$('authPw2').classList.contains('hide'),'회원가입인데 비밀번호 확인 칸이 안 보임');
@@ -72,17 +85,38 @@ async function groupLobby(){
     const b=card.querySelector('.frBadge'); assert(b,'카드 배지가 .frBadge(소셜 공용)가 아님');
     // 표면 재질: 유리 토큰(--glass-edge 계열)로 하단과 동일 계열
     // 표면은 '그라데이션 없는' 불투명 판이어야 한다(배경이 비쳐 글씨가 묻히던 문제 → 평면으로 전환)
-    const cc=getComputedStyle(card);
-    assert(cc.backgroundImage==='none','카드 안에 그라데이션이 다시 생김: '+cc.backgroundImage.slice(0,40));
-    const ca=cc.backgroundColor.match(/[0-9.]+/g)||[];
-    assert(parseFloat(ca[3]||1)>=0.5,'카드 배경이 너무 투명함(배경과 겹침): '+cc.backgroundColor);
+    // 카드는 이제 '감싸는 상자'가 아니라 블록(헤더 · 인기맵 · 추천맵) 컨테이너 → 불투명 판은 각 블록이 갖는다
+    assert(!card.querySelector(':scope > .hubcQuick[style]'),'');
+    const surf=[card.querySelector('.hubcTopRow'), card.querySelector('.hqRow')].filter(Boolean);
+    assert(surf.length===2,'헤더/맵 블록이 분리되어 있지 않음: '+surf.length);
+    surf.forEach(el=>{ const cc=getComputedStyle(el);
+      assert(cc.backgroundImage==='none','블록 안에 그라데이션이 다시 생김: '+cc.backgroundImage.slice(0,40));
+      const ca=cc.backgroundColor.match(/[0-9.]+/g)||[];
+      assert(parseFloat(ca[3]||1)>=0.5,'블록 배경이 너무 투명함(배경과 겹침): '+cc.backgroundColor); });
+    // 감싸는 카드의 좌측 세로 액센트 바는 제거된 상태여야 한다
+    assert(getComputedStyle(card,'::before').content==='none','카드 좌측 세로 바가 남아 있음');
     // 섹션 헤더도 하단과 같은 컴포넌트
     // 제목은 상단 바로 올라갔다 — 유즈맵 선택 헤더(.msHeadL/.twBack/.msTitle)와 같은 구성
     const head=document.querySelector('#hubScreen .msHeadL');
     assert(head,'상단 바에 헤더(.msHeadL)가 없음');
-    assert(head.querySelector('.twBack'),'뒤로가기 버튼이 없음(유즈맵 선택과 같은 .twBack)');
+    var lb=head.querySelector('.twBack');
+    assert(lb,'좌상단 버튼이 없음');
+    // ← 뒤로가기 화살표는 관례상 '이전 화면'을 뜻한다. 여기선 로그아웃이므로 아이콘·라벨이 그래야 한다.
+    assert(lb.getAttribute('aria-label')==='로그아웃','좌상단 버튼 라벨이 로그아웃이 아님: '+lb.getAttribute('aria-label'));
+    assert(lb.querySelectorAll('path').length>1,'아이콘이 단순 화살표(뒤로가기)로 되돌아감');
     assert(head.querySelector('.msTitle') && head.querySelector('.msTitle').textContent.indexOf('게임 선택')>=0,'상단 바 제목이 "게임 선택"이 아님');
     assert(!document.querySelector('#hubScreen .hubLogo'),'STAR WAR 로고가 남아 있음');
+    // 상단 구분선 = 유즈맵 선택 헤더와 같은 값
+    var hbTop=getComputedStyle(document.querySelector('.hubTop'));
+    assert(parseFloat(hbTop.borderBottomWidth)>0,'상단 구분선이 없음');
+    // 우상단 프로필 = 유즈맵과 같은 컴포넌트(.msUser)이고 크기·색이 일치
+    // 우상단 프로필: 아바타 + 이름 + 이름 아래 레벨
+    var hp=document.querySelector('#hubScreen .hubProf');
+    assert(hp,'허브 우상단 프로필이 없음');
+    assert(hp.querySelector('.hubAv[data-ico]'),'프로필 이미지가 아이콘 아바타가 아님');
+    assert(hp.querySelector('.hubLv') && $('hubLevel'),'이름 아래 레벨 표시가 없음');
+    assert(!document.querySelector('#hubScreen .hubLvBadge'),'옛 레벨 배지가 남아 있음');
+    assert(document.querySelector('.hubSubTx'),'게임 선택 아래 설명 문구가 없음');
     // 정보 밀도: 카드가 빈 상자가 아니어야 한다(이름·설명·메타·배지)
     for(const sel of ['.hubcName','.hubcSub','.frBadge'])
       assert(card.querySelector(sel),'카드에 '+sel+' 없음');
@@ -91,20 +125,52 @@ async function groupLobby(){
     const scr=$('hubScreen').getBoundingClientRect().height;
     assert(scr>100,'허브가 안 보임 — 레이아웃 검사 불가');
     const ch=card.getBoundingClientRect().height, sh=document.querySelector('.hubSocial').getBoundingClientRect().height;
-    assert(ch>=70&&ch<=240,'카드 높이가 범위를 벗어남(빈 상자화 의심): '+Math.round(ch)+'px');   // 상단행 + 바로가기 리스트(최대 3행)
+    // 선택된 카드는 남는 높이를 채운다 — 다만 내부가 텅 비지 않도록 바로가기 행이 실제로 늘어나야 한다
+    assert(ch>=70,'카드가 너무 낮음: '+Math.round(ch)+'px');
+    var qk=card.querySelector('.hubcQuick');
+    if(qk){ var used=card.querySelector('.hubcTopRow').getBoundingClientRect().height+qk.getBoundingClientRect().height;
+      assert(used>=ch*0.78,'카드 안이 비어 있음(내용 '+Math.round(used)+' / 카드 '+Math.round(ch)+')'); }
     // 섹션 헤더는 라벨만 — 접속 수 같은 곁가지가 다시 붙으면 자리를 뺏는다
-    // 뒤로가기 = 로그아웃 확인
+    // 뒤로가기 = 로그아웃 확인 / 설정 = 설정 팝업. 둘 다 허브(z:60) 위로 떠야 실제로 눌린다.
     assert(typeof hubAskLogout==='function' && typeof hubDoLogout==='function','로그아웃 확인 핸들러 없음');
-    assert($('logoutPanel'),'로그아웃 확인창이 없음');
+    var lp=$('logoutPanel'); assert(lp,'로그아웃 확인창이 없음');
+    var hz=parseInt(getComputedStyle($('hubScreen')).zIndex,10)||0;
+    var lz=parseInt(getComputedStyle(lp).zIndex,10)||0;
+    assert(lz>hz,'로그아웃 창이 허브 뒤에 깔림(z '+lz+' ≤ '+hz+')');
+    assert(getComputedStyle(lp).position==='absolute','로그아웃 창이 오버레이가 아님(문서 흐름에 그려짐)');
+    var sp=$('settingsPop'); assert(sp,'설정 팝업이 없음');
+    var sz=parseInt(getComputedStyle(sp).zIndex,10)||0;
+    assert(sz>hz,'설정 팝업이 허브 뒤에 깔림(z '+sz+' ≤ '+hz+')');
+    assert(document.querySelector('#hubScreen .hubGear, #hubScreen .msGear'),'허브에 설정 버튼이 없음');
+    // 게임 선택 탭 = 전환식(고른 게임의 카드만 보인다)
+    var gt=$('hubGameTabs'); assert(gt,'게임 선택 탭이 없음');
+    assert(gt.classList.contains('msTabs2'),'게임 선택 탭이 공용 컴포넌트(.msTabs2)가 아님');
+    var gb=gt.querySelectorAll('button'); assert(gb.length===2,'게임 탭이 2개가 아님: '+gb.length);
+    var useC=document.querySelector('.hubCard.hubUse'), rpgC=document.querySelector('.hubCard.hubRpg');
+    hubPickGame('use', gb[0]);
+    assert(!useC.classList.contains('hide') && rpgC.classList.contains('hide'),'USEMAP 탭인데 카드 전환이 안 됨');
+    hubPickGame('rpg', gb[1]);
+    assert(useC.classList.contains('hide') && !rpgC.classList.contains('hide'),'RPG 탭인데 카드 전환이 안 됨');
+    assert(gb[1].classList.contains('on') && !gb[0].classList.contains('on'),'탭 선택 표시가 안 옮겨감');
+    var gap=gt.getBoundingClientRect().top-document.querySelector('.hubTop').getBoundingClientRect().bottom;
+    assert(gap>=0 && gap<=28,'게임 탭이 상단 바에 붙어 있지 않음(간격 '+Math.round(gap)+'px)');
+    hubPickGame('use', gb[0]);
     // 두 카드는 각자 액센트로 확실히 구분돼야 한다(배경·테두리가 서로 달라야 함)
+    // 테두리·배경은 이제 카드가 아니라 그 안의 블록이 갖는다(액센트는 카드에서 상속)
     const cs2=[].slice.call(document.querySelectorAll('.hubCard')).map(function(c){var g=getComputedStyle(c);
-      return {ca:g.getPropertyValue('--ca').trim(), bd:g.borderColor, bg:g.backgroundImage};});
+      var blk=getComputedStyle(c.querySelector('.hubcTopRow'));
+      return {ca:g.getPropertyValue('--ca').trim(), bd:blk.borderColor, bg:blk.backgroundImage};});
     assert(cs2.length===2,'허브 카드가 2개가 아님');
     assert(cs2[0].ca && cs2[1].ca && cs2[0].ca!==cs2[1].ca,'두 카드의 액센트색이 같음: '+cs2[0].ca+' / '+cs2[1].ca);
     assert(cs2[0].bd!==cs2[1].bd,'두 카드의 테두리색이 같음(구분 안 됨)');
+    // 면적이 큰 곳(배경·제목)이 갈려야 실제로 구분된다 — 얇은 테두리만으로는 약하다
+    var bgs=[].slice.call(document.querySelectorAll('.hubCard')).map(function(c){return getComputedStyle(c.querySelector('.hubcTopRow')).backgroundColor;});
+    assert(bgs[0]!==bgs[1],'두 카드의 배경색이 같음(가장 큰 면적이 구분되지 않음)');
+    var nm=[].slice.call(document.querySelectorAll('.hubcName')).map(function(e){return getComputedStyle(e).color;});
+    assert(nm[0]!==nm[1],'게임 이름 색이 같음(제목으로도 구분되지 않음)');
     // 구분은 액센트 테두리로만(그라데이션 제거 후)
     assert(cs2[0].bd!==cs2[1].bd,'카드 구분이 테두리색으로도 되지 않음');
-    assert(sh>=scr*0.24 && sh<=scr*0.36,'소셜 비율 이탈(24~36% 기대): '+Math.round(sh/scr*100)+'%');
+    assert(sh>=scr*0.30 && sh<=scr*0.42,'소셜 비율 이탈(30~42% 기대): '+Math.round(sh/scr*100)+'%');
     const cen=document.querySelector('.hubCenter').getBoundingClientRect().height;
     assert(cen>sh,'게임 선택 구역이 소셜보다 작음: '+Math.round(cen)+' vs '+Math.round(sh));
     return '카드 '+Math.round(ch)+'px · 소셜 '+Math.round(sh/scr*100)+'%'; });
@@ -114,7 +180,7 @@ async function groupLobby(){
     const mb=$('hubQuickMaps'), cb=$('hubQuickChars'); skipIf(!mb||!cb,'바로가기 구역 없음');
     const rows=mb.querySelectorAll('.hqRow');
     assert(rows.length>0,'인기맵 바로가기가 비어 있음');
-    assert(rows.length<=2,'맵 바로가기는 인기1+최근1 = 최대 2행: '+rows.length);
+    assert(rows.length<=3,'맵 바로가기는 최대 3행: '+rows.length);
     [].slice.call(rows).forEach(function(r){ assert(r.querySelector('.hqTag'),'행에 인기/최근 태그가 없음'); });
     // 세로 리스트 배치여야 한다(가로 그리드 아님)
     assert(getComputedStyle(mb).flexDirection==='column','바로가기가 세로 리스트가 아님: '+getComputedStyle(mb).flexDirection);
@@ -168,8 +234,12 @@ async function groupLobby(){
     assert(!document.querySelector('.hubSocial .hsHead'),'소셜 헤더 행이 남아 있음(컴팩트화 실패)');
     // 네비 바도 카드처럼 미세한 질감을 가진다
     var tb=getComputedStyle($('hubFriendTabs'));
-    assert(tb.boxShadow && tb.boxShadow!=='none','네비 바에 질감(그림자)이 없음');
+    assert(parseFloat(tb.borderBottomWidth)>0,'소셜 탭 바와 목록 사이 구분선이 없음');
     var tba=(tb.backgroundColor.match(/[0-9.]+/g)||[]); assert(parseFloat(tba[3]||0)>0.3,'네비 바 배경이 거의 투명함');
+    // 섹션 선택 + 카드가 하나의 패널로 묶여야 한다
+    var pnl=document.querySelector('.hubPanel');
+    assert(pnl,'게임 선택 탭과 카드가 한 패널로 묶이지 않음');
+    assert(pnl.contains($('hubGameTabs')) && pnl.querySelector('.hubCards'),'패널이 탭·카드를 함께 담고 있지 않음');
     // 친구가 하나도 없을 때 안내가 떠야 한다(필터로 비었을 때와 문구가 달라야 함)
     var keepF=HUB_FRIENDS.splice(0); renderFriends();
     var emp=$('hubFriends').querySelector('.hsEmpty');
@@ -183,8 +253,8 @@ async function groupLobby(){
     const all=[].slice.call(document.querySelectorAll('.frRow'));
     const full=all.filter(function(r){var b=r.getBoundingClientRect();return b.top>=lr.top-1&&b.bottom<=lr.bottom+1;}).length;
     const half=all.filter(function(r){var b=r.getBoundingClientRect();return b.top<lr.bottom-2&&b.bottom>lr.bottom+2;}).length;
-    assert(full===3,'온전히 보이는 친구 행이 3개가 아님: '+full);
-    assert(half===1,'4번째 행이 반쯤 보이지 않음(스크롤 유도 실패): '+half);
+    assert(full===4,'온전히 보이는 친구 행이 4개가 아님: '+full);
+    assert(half===1,'5번째 행이 살짝 걸쳐 보이지 않음(4.2행 기대): '+half);
     assert(lst.scrollHeight>lst.clientHeight,'4행 초과분이 스크롤되지 않음');
     return '맵 '+rows.length+'행 · 소셜 고정 '+Math.round(h0)+'px'; });
   // 허브 소셜: 상단(게임 선택)과 시각적으로 분리되고, '친구'가 한눈에 읽혀야 한다.
@@ -198,19 +268,18 @@ async function groupLobby(){
   await step('탭 바 단일 소스: 허브 소셜 = 유즈맵 하단', ()=>{
     const hub=$('hubFriendTabs'); skipIf(!hub,'허브 소셜 탭 없음');
     assert(hub.classList.contains('msTabs2'),'허브 소셜이 공용 탭 바(.msTabs2)를 안 씀');
-    const map=[...document.querySelectorAll('.msTabs2')].find(b=>b!==hub);
+    const map=document.querySelector('#mapSelect .msTabs2');   // 유즈맵 하단 바를 정확히 지정(로그인 화면도 같은 컴포넌트를 쓴다)
     assert(map,'유즈맵 하단 탭 바를 못 찾음');
     const hb=hub.querySelectorAll('button'), mb=map.querySelectorAll('button');
     assert(hb.length && mb.length,'탭 버튼이 없음');
     hb.forEach(b=>assert(b.classList.contains('msTab2'), '허브 탭 버튼에 .msTab2 없음: '+b.textContent.trim()));
-    // 허브는 얇은 변형(.slim) — 복제가 아니라 같은 컴포넌트의 크기 변형이어야 한다.
-    assert(hub.classList.contains('slim'),'허브 탭 바가 얇은 변형(.slim)을 안 씀');
-    assert(!map.classList.contains('slim'),'유즈맵 하단까지 얇아짐(변형이 새어나감)');
+    // 허브는 두꺼운 변형 — 복제가 아니라 같은 컴포넌트의 크기 변형이어야 한다(크기 override가 유즈맵 하단으로 새면 안 됨).
+    const pad=e=>parseFloat(getComputedStyle(e).paddingTop);
+    assert(pad(hb[1])>pad(mb[1]),'허브 소셜 바가 유즈맵 하단보다 두껍지 않음: '+pad(hb[1])+' vs '+pad(mb[1]));
+    assert(pad(mb[1])<=10,'유즈맵 하단까지 두꺼워짐(변형이 새어나감): '+pad(mb[1]));
     const key=b=>{ const c=getComputedStyle(b);
       return [c.flex,c.fontWeight,c.borderBottomWidth,c.justifyContent,c.alignItems].join('|'); };
     assert(key(hb[1])===key(mb[1]), '크기 외 형태가 다름\n허브: '+key(hb[1])+'\n유즈맵: '+key(mb[1]));
-    const px=b=>parseFloat(getComputedStyle(b).paddingTop);
-    assert(px(hb[1])<px(mb[1]), '허브 탭이 유즈맵보다 얇지 않음: '+px(hb[1])+' vs '+px(mb[1]));
     assert(hub.querySelectorAll('svg').length===hb.length, '탭 아이콘이 안 그려짐(paintIcons 누락)');
     // 선택 표시가 새 클래스에서도 동작하는지
     setFriendFilter('rpg', hb[2]);

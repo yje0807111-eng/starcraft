@@ -558,7 +558,7 @@
   .tabSet .ti{margin:0;line-height:0}
   .tabSet .ti svg{width:20px;height:20px}
   /* 설정 팝업 */
-  #settingsPop{position:absolute;inset:0;z-index:56;display:flex;align-items:center;justify-content:center;
+  #settingsPop{position:absolute;inset:0;z-index:72;   /* 허브(60)·마을(60)·캐릭터(61)보다 위 */display:flex;align-items:center;justify-content:center;
     background:var(--ov-dim);backdrop-filter:blur(2px)}
   #settingsPop.hide{display:none}
   /* 컨텍스트: 앱(로비/로그인)에선 게임 전용 항목 숨기고 로그아웃 표시 */
@@ -1767,6 +1767,9 @@
   #cpPw::placeholder,#pwField::placeholder{color:#6f757d;letter-spacing:.5px}
   #pwPanel{position:absolute;inset:0;z-index:51;display:flex;align-items:center;justify-content:center;background:var(--ov-dim);backdrop-filter:blur(2px)}
   #pwPanel.hide{display:none}
+  /* 로그아웃 확인 — 허브(60) 위에 떠야 한다. 규칙이 없으면 문서 흐름에 그려져 보이지 않는다 */
+  #logoutPanel{position:absolute;inset:0;z-index:73;display:flex;align-items:center;justify-content:center;background:var(--ov-dim);backdrop-filter:blur(2px)}
+  #logoutPanel.hide{display:none}
   #soloDiffPanel{position:absolute;inset:0;z-index:54;display:flex;align-items:center;justify-content:center;background:rgba(2,3,6,.84);backdrop-filter:blur(3px)}   /* 뒤 화면과 확실히 구분 = 진한 딤 */
   #soloDiffPanel.hide{display:none}
   #raceSelPanel{position:absolute;inset:0;z-index:54;display:flex;align-items:center;justify-content:center;background:var(--ov-dim);backdrop-filter:blur(2px)}
@@ -2004,24 +2007,34 @@
   #opening .opWrap{position:relative;z-index:1}
   /* 로그인/회원가입 */
   #auth{z-index:48;align-items:center;justify-content:center;padding:22px}
-  .authCard{width:90%;max-width:310px;padding:20px 18px;box-sizing:border-box}
-  .authLogo{font-size:17px;font-weight:800;letter-spacing:1px;color:var(--neon);text-align:center;text-shadow:0 0 12px var(--neon-glow);margin-bottom:2px}
+  /* 카드 = 각진 HUD 창(clip-path) + 마스크 그라데 테두리. 내부는 청록 콘솔 톤 */
+  .authCard{--ac:#5cd6ff;position:relative;width:90%;max-width:326px;padding:22px 18px 18px;box-sizing:border-box;
+    clip-path:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px);
+    background:linear-gradient(168deg,rgba(16,26,38,.93),rgba(9,13,20,.96));
+    box-shadow:0 22px 52px -26px #000,inset 0 0 60px -34px color-mix(in srgb,var(--ac) 80%,transparent)}
+  .authCard::before{content:'';position:absolute;inset:0;padding:1.4px;pointer-events:none;z-index:0;
+    background:linear-gradient(155deg,var(--ac),rgba(255,255,255,.06) 46%,color-mix(in srgb,var(--ac) 70%,transparent));
+    clip-path:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px);
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.8}
+  .authCard::after{content:'';position:absolute;left:18px;right:18px;top:82px;height:1px;z-index:1;
+    background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--ac) 55%,transparent),transparent)}
+  .authCard>*{position:relative;z-index:1}
+  .authTabs{margin-bottom:12px}
+  .authLogo{font-size:20px;font-weight:900;letter-spacing:1.6px;text-align:center;margin-bottom:3px}
   .authLogo .alg1{color:#f3f6fb;text-shadow:0 0 8px rgba(255,255,255,.22)}   /* STAR(흰) — 로딩 타이틀과 동일 2톤 */
-  .authLogo .alg2{color:var(--neon)}
-  .authSub{font-size:var(--fs-xs);color:#8a8086;text-align:center;letter-spacing:.5px;margin-bottom:15px}
-  .authSeg{display:flex;gap:7px;margin-bottom:13px}
-  .authSegBtn{flex:1;padding:8px;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-lg);font-weight:800;cursor:pointer;color:var(--txt-mute);
-    background:var(--glass);border:1px solid var(--metal-edge);transition:all .12s}
-  .authSegBtn.on{color:#fff;background:linear-gradient(180deg,var(--neon-face1),var(--neon-d1));border-color:var(--neon);box-shadow:0 0 10px -3px var(--neon-glow)}
-  .authField{width:100%;box-sizing:border-box;padding:9px 11px;margin-bottom:8px;border-radius:var(--r-md);background:rgba(0,0,0,.4);
-    border:1px solid var(--metal-edge);color:var(--txt);font-family:inherit;font-size:var(--fs-lg);outline:none}
-  .authField:focus{border-color:var(--neon-soft)}
+  .authLogo .alg2{color:var(--ac,#5cd6ff);text-shadow:0 0 14px rgba(92,214,255,.55)}
+  .authSub{font-size:var(--fs-xs);color:#7f8b99;text-align:center;letter-spacing:.6px;margin-bottom:26px}
+  .authField{width:100%;box-sizing:border-box;padding:10px 12px;margin-bottom:8px;border-radius:9px;background:rgba(26,34,46,.78);
+    border:1px solid rgba(255,255,255,.09);color:var(--txt);font-family:inherit;font-size:var(--fs-lg);outline:none;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08),inset 0 0 18px -12px rgba(150,205,255,.85);transition:border-color .13s,box-shadow .16s}
+  .authField:focus{border-color:rgba(92,214,255,.55);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.12),inset 0 0 22px -10px rgba(150,205,255,1),0 0 0 3px rgba(92,214,255,.12)}
   .authField::placeholder{color:#6f757d}
   .authField.hide{display:none}
   .authErr{min-height:14px;font-size:var(--fs-sm);color:#ff6b6b;margin:1px 1px 7px;line-height:1.4}
   .authBtn{width:100%;padding:11px;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-xl);font-weight:800;letter-spacing:.5px;cursor:pointer;
-    color:#fff;background:linear-gradient(180deg,var(--neon-face1),var(--neon-d1) 60%,var(--neon-d2));border:1px solid var(--neon);
-    box-shadow:0 0 14px -3px var(--neon-glow),inset 0 1px 0 rgba(255,255,255,.2)}
+    color:#04121b;background:linear-gradient(180deg,#7fe0ff,#39b6ec 58%,#1f8ec2);border:1px solid rgba(150,235,255,.9);
+    box-shadow:0 0 18px -4px rgba(92,214,255,.75),inset 0 1px 0 rgba(255,255,255,.45)}
   .authBtn:active{transform:translateY(1px)}
   .authGuest{display:block;width:100%;margin-top:9px;padding:8px;background:none;border:none;cursor:pointer;
     font-family:inherit;font-size:var(--fs-md);color:var(--txt-hud);text-decoration:underline;text-underline-offset:3px}
@@ -2235,65 +2248,89 @@
   /* 배경 = 유즈맵 선택·방찾기와 같은 로비 배경(lobby_bg). 위 선택자에 #hubScreen을 합류시켜 규칙을 공유한다 — 전용 배경을 따로 만들면 통일이 깨진다 */
   #hubScreen{flex-direction:column}
   /* 상단 유저 프로필 바 */
-  .hubTop{flex:none;width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 15px 3px;box-sizing:border-box}   /* 간결하게 — 로고·프로필 한 단계 축소 */
+  .hubTop{flex:none;width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 15px 9px;box-sizing:border-box;
+    border-bottom:1px solid rgba(255,255,255,.06)}
   /* 우상단 = 심플·세련: 아바타(레벨 배지)+닉 / 코인 / 설정 */
   .hubTopR{display:flex;align-items:center;gap:9px;flex:none}
-  .hubProf{display:flex;align-items:center;gap:6px;min-width:0;cursor:default}
-  .hubAv{position:relative;width:24px;height:24px;flex:none;display:flex;align-items:center;justify-content:center;font-size:13px;border-radius:50%;
+  .hubProf{display:flex;align-items:center;gap:7px;min-width:0;cursor:default}
+  .hubAv{position:relative;width:26px;height:26px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:50%;
     background:radial-gradient(circle at 50% 32%,rgba(120,140,175,.28),rgba(10,12,18,.92));border:1px solid var(--metal-edge)}
   .hubLvBadge{position:absolute;right:-3px;bottom:-3px;min-width:13px;height:13px;padding:0 2.5px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;
     font-size:9px;font-weight:800;font-style:normal;color:#1a1204;background:var(--gold);border:1.5px solid #0c0f16;border-radius:8px;line-height:1}
-  .hubNick{font-size:11px;font-weight:800;color:#eaf1fb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:22vw}
+  .hubNick{font-size:10.5px;font-weight:800;color:#eaf1fb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:22vw}
   .hubGear{width:24px;height:24px;flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#8b98a8;background:none;border:none;transition:color .16s}
   .hubGear svg{width:16px;height:16px}
   .hubGear:hover{color:#fff}
   /* 좌상단 로고(엠블럼 + 게임명 축소) */
   /* 선택 영역 = 상단 컴팩트 블록(하단 소셜에 공간 양보) */
-  .hubCenter{flex:1 1 auto;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.2vh 0 0.5vh}   /* 남는 위쪽 공간에서 카드가 가운데 정렬 */
+  .hubCenter{flex:1 1 auto;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:10px 0 4px}
   /* 게임명 아래 나머지 공간 중앙에 선택 영역 */
-  .hubBody{flex:none;width:100%;display:flex;flex-direction:column;align-items:center;gap:13px;padding:0 18px}
+  .hubBody{flex:1 1 auto;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:0;padding:0 15px}
   /* 게임 선택 = 좌측 정렬 + 네온 액센트 바(중앙 디바이더 대체) */
   .hubSel{width:100%;max-width:360px;display:flex;align-items:center;gap:9px;font-size:15px;font-weight:800;letter-spacing:.5px;color:#eef3fa;text-shadow:0 1px 3px #000}
   .hubSel::before{content:'';flex:none;width:3.5px;height:16px;border-radius:2px;background:linear-gradient(180deg,var(--neon),var(--neon-d1));box-shadow:0 0 8px var(--neon-glow)}
-  .hubCards{flex:none;display:flex;flex-direction:column;gap:15px;width:100%;max-width:360px}   /* 세로 스택 · 카드는 내용 높이(조밀) · 남는 높이는 소셜이 가져간다 */
+  /* ── 허브 팔레트: 짙은 남색 패널 + 파랑 액센트 ── */
+  #hubScreen{--hbPanel:rgba(11,16,29,.93);--hbEdge:rgba(88,118,188,.22);--hbCard:rgba(20,29,50,.78);--hbRow:rgba(28,40,66,.85)}
+  .hubTitles{display:flex;flex-direction:column;gap:1px;min-width:0}
+  .hubSubTx{font-size:9.5px;font-style:normal;color:#7d8ba0;letter-spacing:.2px;white-space:nowrap}
+  .hubMe{display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:0}
+  .hubLv{font-style:normal;font-size:7.5px;font-weight:800;letter-spacing:.3px;color:#9ec6ff;
+    padding:1px 5px;border-radius:4px;background:rgba(79,157,255,.15);border:1px solid rgba(79,157,255,.3)}
+  .hubLv b{font-family:'Rajdhani',sans-serif;color:#cfe4ff}
+  /* 섹션 선택 + 카드 = 하나의 패널 */
+  .hubPanel{flex:0 1 auto;min-height:0;width:100%;max-width:360px;display:flex;flex-direction:column;
+    border-radius:16px;background:var(--hbPanel);border:1px solid var(--hbEdge);overflow:hidden;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 14px 34px -20px #000}
+  .hubGameTabs{flex:none;width:100%;border-bottom:1px solid var(--hbEdge);background:rgba(9,14,26,.55)}
+  #hubFriendTabs{background-color:rgba(16,24,42,.92);
+    background-image:linear-gradient(180deg,rgba(70,110,180,.10),rgba(70,110,180,0));
+    border-bottom:1px solid var(--hbEdge);margin:0 0 9px}
+  #hubFriendTabs .msTab2{padding:14px 4px;font-size:11.5px;gap:6px;letter-spacing:.3px}
+  #hubFriendTabs .msTab2 svg{width:14px;height:14px}
+  #hubFriendTabs .msTab2.on{background:rgba(79,157,255,.13);box-shadow:inset 0 1px 0 rgba(140,185,255,.16)}
+  .hubGameTabs .msTab2{padding:11px 4px;font-size:12.5px;font-weight:900;letter-spacing:.6px;border-bottom:none}
+  .hubGameTabs .msTab2 svg{width:15px;height:15px}
+  .hubGameTabs .msTab2[data-g="use"].on{color:#a9cdff;background:rgba(79,157,255,.14);
+    box-shadow:inset 0 -2.5px 0 #4f9dff,inset 0 0 26px -12px rgba(79,157,255,.9)}
+  .hubGameTabs .msTab2[data-g="rpg"].on{color:#c7b4ff;background:rgba(150,120,255,.15);
+    box-shadow:inset 0 -2.5px 0 #8b6bff,inset 0 0 26px -12px rgba(150,120,255,.9)}
+  .hubCard.hide{display:none}
+  .hubCards{flex:0 0 auto;min-height:0;display:flex;flex-direction:column;width:100%;padding:11px;box-sizing:border-box}
+  .hubCards>.hubCard{flex:0 0 auto;min-height:0}
+  .hubCards>.hubCard>.hubcQuick{flex:0 0 auto;min-height:0}
+  .hubcQuick>.hqRow{flex:none;min-height:0}   /* 세로 스택 · 카드는 내용 높이(조밀) · 남는 높이는 소셜이 가져간다 */
   /* 허브 카드 = 유즈맵 목록 카드(.mapItem)와 같은 디자인의 '큰 변형' — 목록용은 그대로 두고 여기서만 키운다 */
   /* ── 허브 카드 = 하단 소셜(친구 행)과 같은 디자인 언어 ──
      재질(유리+--glass-edge)·호버·배지(.frBadge)·타이포를 하단에 맞춘다.
      ⚠ 목록용 .mapItem을 늘려 쓰면 '큰 빈 상자'가 된다 — 그건 10개가 반복되는 리스트 행 디자인이라 존재감이 없다. */
-  .hubCard{--ca:#5cd6ff;position:relative;display:flex;flex-direction:column;align-items:stretch;gap:9px;width:100%;
-    padding:11px 12px;border-radius:14px;cursor:pointer;text-align:left;font-family:inherit;color:#dbe3ec;
-    background:rgba(20,24,32,.62);
-    border:1px solid color-mix(in srgb,var(--ca) 36%,var(--glass-edge));overflow:hidden;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 8px 22px -16px color-mix(in srgb,var(--ca) 70%,#000);
+  .hubCard{--ca:#5cd6ff;position:relative;display:flex;flex-direction:column;align-items:stretch;gap:8px;width:100%;
+    text-align:left;font-family:inherit;color:#dbe3ec;background:none;border:none;padding:0}
+  /* 블록 공통 껍데기 — 헤더 블록과 개별 맵 블록이 같은 재질을 쓴다(단일 소스) */
+  .hubcTopRow,.hqRow{background:var(--cbg,rgba(20,24,32,.62));
+    border:1px solid color-mix(in srgb,var(--ca) 40%,var(--glass-edge));border-radius:13px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 8px 20px -16px color-mix(in srgb,var(--ca) 70%,#000);
     transition:background .13s,border-color .13s,transform .13s,box-shadow .13s}
-  .hubCard::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;   /* 좌측 액센트 바 = 카드 구분 */
-    background:linear-gradient(180deg,var(--ca),color-mix(in srgb,var(--ca) 8%,transparent))}
-  .hubCard>*{position:relative;z-index:1}
-  .hubCard:hover{border-color:color-mix(in srgb,var(--ca) 62%,var(--glass-edge));transform:translateY(-1px);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.09),0 12px 26px -14px color-mix(in srgb,var(--ca) 85%,#000)}
-  .hubCard:active{transform:translateY(0)}
-  .hubUse{--ca:#5cd6ff}
-  .hubRpg{--ca:#ffc85a}
-  .hubcThumb{position:relative;flex:none;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:14px;
+  .hubcTopRow:hover,.hqRow:hover{border-color:color-mix(in srgb,var(--ca) 62%,var(--glass-edge));transform:translateY(-1px)}
+  .hubcTopRow:active{transform:translateY(0)}
+  .hubUse{--ca:#4f9dff;--cbg:var(--hbCard)}
+  .hubRpg{--ca:#8b6bff;--cbg:rgba(30,24,54,.78)}
+  .hubcThumb{position:relative;flex:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:14px;
     background:radial-gradient(circle at 50% 36%,color-mix(in srgb,var(--ca) 26%,transparent),rgba(9,12,18,.85) 76%);
     border:1px solid color-mix(in srgb,var(--ca) 32%,var(--glass-edge));box-shadow:inset 0 0 16px -6px var(--ca)}
-  .hubcThumb .ic{width:23px;height:23px;color:color-mix(in srgb,var(--ca) 80%,#fff)}
-  .hubcTopRow{display:flex;align-items:center;gap:11px;cursor:pointer;min-width:0}
+  .hubcThumb .ic{width:18px;height:18px;color:color-mix(in srgb,var(--ca) 80%,#fff)}
+  .hubcTopRow{display:flex;align-items:center;gap:9px;cursor:pointer;min-width:0;padding:8px 11px}
   /* 카드 하단 바로가기 — 인기맵 / 내 캐릭터. 세로 리스트 + 오른쪽 즉시 플레이. 재질은 친구 행과 같은 유리 계열 */
-  .hubcQuick{display:flex;flex-direction:column;gap:7px;padding-top:10px;margin-top:1px;
-    border-top:1px solid color-mix(in srgb,var(--ca) 26%,rgba(255,255,255,.07))}
-  .hqRow{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:11px;
-    background:rgba(42,48,60,.78);border:1px solid color-mix(in srgb,var(--ca) 22%,var(--glass-edge));
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.06);transition:background .12s,border-color .12s}
-  .hqRow:hover{background:rgba(255,255,255,.115);border-color:color-mix(in srgb,var(--ca) 45%,var(--glass-edge))}
+  .hubcQuick{display:flex;flex-direction:column;gap:8px}
+  .hqRow{display:flex;align-items:center;gap:8px;padding:7px 9px}
+  .hqRow:hover{background:rgba(40,56,92,.95);border-color:color-mix(in srgb,var(--ca) 45%,var(--glass-edge))}
   .hqChip{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:7px;cursor:pointer;
     background:none;border:none;padding:0;font-family:inherit;text-align:left;color:inherit}
   .hqIco{flex:none;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:15px;
     color:color-mix(in srgb,var(--ca) 80%,#fff)}
   .hqIco .ic{width:20px;height:20px}
   /* 인기맵 썸네일 = 유즈맵 선택과 같은 .mapThumb, 행 크기에 맞춰 축소만 */
-  .hqRow .mapThumb{flex:none;width:34px;height:34px;border-radius:9px}
-  .hqRow .mapThumb .mmIco .ic{width:17px;height:17px}
+  .hqRow .mapThumb{flex:none;width:29px;height:29px;border-radius:8px}
+  .hqRow .mapThumb .mmIco .ic{width:15px;height:15px}
   .hqTag{display:inline-block;margin-right:5px;padding:1px 5px;border-radius:5px;font-size:8px;font-weight:800;letter-spacing:.2px;
     color:color-mix(in srgb,var(--ca) 88%,#fff);background:color-mix(in srgb,var(--ca) 16%,transparent);
     border:1px solid color-mix(in srgb,var(--ca) 40%,transparent);vertical-align:middle}
@@ -2312,7 +2349,8 @@
   .hqPlay svg{width:11px;height:11px}
   .hubcMain{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
   .hubcHead{display:flex;align-items:center;gap:6px;min-width:0;flex-wrap:wrap}
-  .hubcName{font-size:15px;font-weight:800;letter-spacing:.4px;color:#eaf1fb;white-space:nowrap}
+  .hubcName{font-size:13.5px;font-weight:900;letter-spacing:.5px;white-space:nowrap;
+    color:color-mix(in srgb,var(--ca) 82%,#fff);text-shadow:0 0 12px color-mix(in srgb,var(--ca) 45%,transparent),0 2px 4px #000}
   .hubcSubRow{display:flex;align-items:center;gap:8px;min-width:0}
   .hubcSub{flex:1 1 auto;font-size:10.5px;color:#93a0af;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .hubcLive{flex:none;display:inline-flex;align-items:center;gap:4px;font-size:9.5px;font-weight:800;color:#a9cdb4}
@@ -2323,12 +2361,14 @@
   .hubTag{font-size:9px;font-weight:800;letter-spacing:.3px;color:#cfe0ec;padding:3.5px 8px;border-radius:var(--r-lg);
     background:color-mix(in srgb,var(--ca) 12%,rgba(255,255,255,.03));border:1px solid color-mix(in srgb,var(--ca) 34%,var(--metal-edge))}
   .hubcGo{flex:none;display:flex;align-items:center;justify-content:center;color:color-mix(in srgb,var(--ca) 82%,#fff)}
-  .hubcGo svg{width:20px;height:20px;filter:drop-shadow(0 0 5px color-mix(in srgb,var(--ca) 60%,transparent))}
+  .hubcGo svg{width:16px;height:16px;filter:drop-shadow(0 0 5px color-mix(in srgb,var(--ca) 60%,transparent))}
   /* ── 하단 소셜 구역(친구 · 디스코드 느낌) ── */
   /* 부수적 소셜 구역 = 컴팩트·상단 구분선 */
   .hubSocial{flex:none;   /* 고정 — 친구 수와 무관하게 구역 높이 유지 */
     min-height:0;width:100%;max-width:396px;margin:0 auto;display:flex;flex-direction:column;padding:9px 15px 10px;box-sizing:border-box;position:relative}   /* 화면의 40% 고정 — 카드와 소셜의 균형점 */
-  .hubSocial{border-top:1px solid rgba(255,255,255,.16);margin-top:5px;padding-top:8px;background:rgba(8,11,17,.86)}   /* 불투명 판 — 로비 배경이 비쳐 글씨가 묻히던 문제 */
+  .hubSocial{border:1px solid var(--hbEdge);border-radius:16px;margin:11px auto 0;padding:0;background:var(--hbPanel);overflow:hidden;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 14px 34px -20px #000}
+  .hubSocial>.hsList{margin:0 11px 11px}
   .hubSocial::before{content:'';position:absolute;left:0;right:0;top:-1px;height:2px;   /* 구역 경계선(가운데가 밝은 띠) */
     background:linear-gradient(90deg,transparent,rgba(127,208,255,.5),transparent)}
   .hsHead{flex:none;display:flex;align-items:center;justify-content:space-between;padding:2px 2px 7px}
@@ -2342,14 +2382,14 @@
   .hsTabBtn:hover{color:#dfe7f0;border-color:var(--glass-edge)}
   .hsTabBtn.on{color:#fff;background:rgba(255,255,255,.13);border-color:var(--glass-edge);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
   /* 친구 목록 = 3.5행 노출(더 있다는 걸 반쯤 보여줘 스크롤을 유도). --frRow만 고치면 따라온다 */
-  .hsList{--frRow:43px;--frGap:4px;flex:none;height:calc(var(--frRow)*3.5 + var(--frGap)*3);
+  .hsList{--frRow:43px;--frGap:4px;flex:none;height:calc(var(--frRow)*4.2 + var(--frGap)*4);
     overflow-y:auto;display:flex;flex-direction:column;gap:var(--frGap);padding:1px}   /* 스크롤바 = .uiScroll(공용) */
   /* 회색 판 + 미세 글로우 질감: 상단 하이라이트 · 내부 은은한 광 · 바깥 소프트 섀도 */
   .frRow{flex:none;display:flex;align-items:center;gap:7px;padding:4px 8px;border-radius:9px;cursor:pointer;
-    background:rgba(40,46,57,.74);border:1px solid rgba(255,255,255,.09);
+    background:var(--hbRow,rgba(28,40,66,.85));border:1px solid rgba(120,160,225,.16);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.10),inset 0 0 22px -12px rgba(150,200,255,.8),0 2px 9px -6px rgba(0,0,0,.75);
     transition:border-color .13s,background .13s,box-shadow .16s,transform .1s}
-  .frRow:hover{border-color:rgba(127,208,255,.36);background:rgba(56,64,78,.86);transform:translateY(-1px);
+  .frRow:hover{border-color:rgba(105,160,255,.45);background:rgba(38,54,88,.92);transform:translateY(-1px);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.16),inset 0 0 26px -10px rgba(150,200,255,.95),0 5px 16px -7px rgba(127,208,255,.4)}
   .frRow:active{transform:translateY(0)}
   .frRow.off{opacity:.5}
@@ -2528,8 +2568,7 @@
     border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .16s,border-color .16s}
   .msTab2 .ic{position:relative;top:-.75px}
   /* 얇은 변형 — 같은 컴포넌트의 크기 변형(복제 금지). 유즈맵 하단은 기본 두께 유지 */
-  .msTabs2.slim{background:rgba(30,35,45,.66);border-radius:10px;border:1px solid rgba(255,255,255,.07);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.07),inset 0 0 20px -12px rgba(150,200,255,.7);margin-bottom:6px}
+  .msTabs2.slim{background:rgba(9,14,26,.55);border-bottom:1px solid var(--hbEdge,rgba(90,120,190,.26));margin:0 0 9px}
   .msTabs2.slim .msTab2{padding:7px 4px;font-size:10.5px;gap:5px}
   .msTabs2.slim .msTab2 svg{width:12px;height:12px}
   .msTab2:hover{color:#cdd7e1}
@@ -3176,9 +3215,9 @@
       <div class="authCard">
         <div class="authLogo"><span class="alg1">STAR </span><span class="alg2">WAR</span></div>
         <div class="authSub" id="authSub">로그인하고 시작하세요</div>
-        <div class="authSeg">
-          <button class="authSegBtn on" id="segLogin" onclick="authMode('login')">로그인</button>
-          <button class="authSegBtn" id="segSignup" onclick="authMode('signup')">회원가입</button>
+        <div class="msTabs2 slim authTabs">
+          <button class="msTab2 on" id="segLogin" onclick="authMode('login')"><span data-ico="user"></span>로그인</button>
+          <button class="msTab2" id="segSignup" onclick="authMode('signup')"><span data-ico="new"></span>회원가입</button>
         </div>
         <input id="authId" class="authField" type="text" placeholder="아이디 (로그인용 · 영문·숫자 3~16자)" maxlength="16" autocomplete="username" onkeydown="if(event.key==='Enter')authSubmit()">
         <input id="authNick" class="authField hide" type="text" placeholder="닉네임 (게임 내 표시)" maxlength="12" autocomplete="off" onkeydown="if(event.key==='Enter')authSubmit()">
@@ -3368,16 +3407,21 @@
     <!-- 상단 바: 좌=로고 / 우=프로필·코인·설정 -->
     <div class="hubTop">
       <div class="msHeadL">
-        <button class="twBack" onclick="hubAskLogout()" aria-label="뒤로" title="로그아웃"> <svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
-        <span class="msTitle">게임 선택</span>
+        <button class="twBack" onclick="hubAskLogout()" aria-label="로그아웃" title="로그아웃"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4.6h3.7A1.8 1.8 0 0 1 20 6.4v11.2a1.8 1.8 0 0 1-1.8 1.8h-3.7"/><path d="M10.6 8.2L14.4 12l-3.8 3.8"/><path d="M14.4 12H4"/></svg></button>
+        <span class="hubTitles"><b class="msTitle">게임 선택</b><em class="hubSubTx">원하는 게임을 선택하고 플레이하세요!</em></span>
       </div>
       <div class="hubTopR">
-        <div class="hubProf"><span class="hubAv">👤<i class="hubLvBadge" id="hubLevel">1</i></span><b class="hubNick" id="hubNick">게스트</b></div>
+        <div class="hubProf"><span class="hubAv" data-ico="user"></span><span class="hubMe"><b class="hubNick" id="hubNick">게스트</b><i class="hubLv">LV. <b id="hubLevel">1</b></i></span></div>
         <button class="hubGear" data-sfx="ui_open" onclick="openAppSettings()" title="설정" aria-label="설정"><svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg></button>
       </div>
     </div>
     <div class="hubCenter">
     <div class="hubBody">
+      <div class="hubPanel">
+      <div class="msTabs2 hubGameTabs" id="hubGameTabs">
+        <button class="msTab2 on" data-g="use" onclick="hubPickGame('use',this)"><span data-ico="map"></span>USEMAP</button>
+        <button class="msTab2" data-g="rpg" onclick="hubPickGame('rpg',this)"><span data-ico="hero"></span>RPG</button>
+      </div>
       <div class="hubCards">
         <div class="hubCard hubUse">
           <div class="hubcTopRow" onclick="hubGoMap()">
@@ -3402,12 +3446,13 @@
           <div class="hubcQuick" id="hubQuickChars"></div>
         </div>
       </div>
+      </div>
     </div>
     </div>
     <!-- 하단 소셜 구역(친구 · 디스코드 느낌) -->
     <div class="hubSocial">
       <!-- 탭 바 = 유즈맵 하단(채팅·파티·친구)과 같은 단일 소스 .msTabs2/.msTab2 · 접속 수는 오른쪽 끝에 작게 -->
-      <div class="msTabs2 slim" id="hubFriendTabs">
+      <div class="msTabs2" id="hubFriendTabs">
         <button class="msTab2 on" data-fil="all" onclick="setFriendFilter('all',this)"><span data-ico="friend"></span>전체</button>
         <button class="msTab2" data-fil="usemap" onclick="setFriendFilter('usemap',this)"><span data-ico="map"></span>유즈맵</button>
         <button class="msTab2" data-fil="rpg" onclick="setFriendFilter('rpg',this)"><span data-ico="hero"></span>RPG</button>
@@ -4539,6 +4584,8 @@ function renderHub(){ try{
   set('hubUseLive', live.toLocaleString('en-US'));
   set('hubRpgLive', ((_mapLive.__rpg&&_mapLive.__rpg.play)||0).toLocaleString('en-US'));
   renderHubQuick();
+  hubPickGame(_hubGame);   // 선택된 게임 카드만 표시
+  set('hubLevel', String((p&&p.level)||1));
   if(typeof renderFriends==='function') renderFriends();
 }catch(e){} }
 // 🚪 허브 뒤로가기 = 로그아웃 확인(허브가 첫 화면이라 되돌아갈 곳이 로그인뿐)
@@ -4547,6 +4594,15 @@ function hubAskLogout(){ const p=document.getElementById('logoutPanel'); if(!p) 
   if(typeof paintIcons==='function') paintIcons(p); if(typeof playSfx==='function') playSfx('ui_open'); }
 function hubCloseLogout(){ const p=document.getElementById('logoutPanel'); if(p) p.classList.add('hide'); }
 function hubDoLogout(){ hubCloseLogout(); if(typeof doLogout==='function') doLogout(); else openAuth(); }
+// 🎮 게임 선택 탭 — 고른 게임의 카드만 남긴다
+let _hubGame='use';
+function hubPickGame(g, btn){ _hubGame=g;
+  const tabs=document.getElementById('hubGameTabs');
+  if(tabs) tabs.querySelectorAll('button').forEach(b=>b.classList.toggle('on', btn?b===btn:b.dataset.g===g));
+  const use=document.querySelector('.hubCard.hubUse'), rpg=document.querySelector('.hubCard.hubRpg');
+  if(use) use.classList.toggle('hide', g!=='use');
+  if(rpg) rpg.classList.toggle('hide', g!=='rpg');
+  if(btn && typeof playSfx==='function') playSfx('ui_tab'); }
 // 🎯 카드 하단 바로가기 — 인기 유즈맵 / 내 캐릭터. 행 탭=상세(모드 선택·캐릭터 화면), 오른쪽 버튼=즉시 플레이
 function renderHubQuick(){
   const mb=document.getElementById('hubQuickMaps');
@@ -9966,7 +10022,9 @@ let _authTab='login';
 function openAuth(){
   document.getElementById('authId').value=''; document.getElementById('authPw').value='';
   document.getElementById('authNick').value=''; document.getElementById('authPw2').value='';
-  authMode('login'); showAppScreen('auth'); if(typeof bgmStart==='function') bgmStart('lobby'); }   // 로그인 화면부터 로비 BGM
+  authMode('login'); showAppScreen('auth');
+  if(typeof paintIcons==='function') paintIcons(document.getElementById('auth'));   // data-ico → 아이콘(부팅 시점에만 의존하지 않게)
+  if(typeof bgmStart==='function') bgmStart('lobby'); }   // 로그인 화면부터 로비 BGM
 function authMode(m){ _authTab=m;
   document.getElementById('segLogin').classList.toggle('on', m==='login');
   document.getElementById('segSignup').classList.toggle('on', m==='signup');
@@ -10611,7 +10669,7 @@ function _sfxForEl(el){
   if(el.classList.contains('locked')) return 'ui_denied';
   if(el.matches('.tab, .msTab2, .msScopeBtn')) return 'ui_tab';                                   // 탭 전환
   if(el.matches('.msSortCur, .msSortOpt')) return 'ui_dropdown';                                  // 정렬 드롭다운
-  if(el.matches('.segBtn, .sndBtn, .cpSegBtn, .authSegBtn, .voteCol')) return 'ui_toggle';        // 켜기↔끄기/세그먼트/배속
+  if(el.matches('.segBtn, .sndBtn, .cpSegBtn, .msTab2, .voteCol')) return 'ui_toggle';        // 켜기↔끄기/세그먼트/배속
   if(el.matches('.moClose, .setX, .cpCancel, .ecCancel, .rmBack, .lbLeave')) return 'ui_close';   // 닫기/취소/뒤로
   if(el.matches('.opStart, .moBtn, .cpMake, .rmQuick, .lbStart, .ecGo, .authBtn, .authGuest, #chatSend, .msChatSend')) return 'ui_confirm';  // 시작·만들기·전송·확정
   return 'click';                                                                                  // 일반 버튼 기본음
