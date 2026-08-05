@@ -587,9 +587,23 @@
   .setCard{--setAcc:#5cd6ff;--setAccS:rgba(92,214,255,.5);
     position:relative;width:86%;max-width:320px;padding:14px 14px 13px;color:var(--txt);box-sizing:border-box;max-height:92%;overflow:hidden;
     display:flex;flex-direction:column;
-    background:linear-gradient(160deg,rgba(19,24,35,.96),rgba(6,9,14,.975));border:1px solid var(--glass);
+    background:linear-gradient(160deg,rgba(19,24,35,.96),rgba(6,9,14,.975));border:1px solid var(--metal-edge);
     clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px);
-    box-shadow:0 16px 44px -12px #000}
+    box-shadow:0 16px 44px -12px #000,inset 0 1px 0 rgba(255,255,255,.05)}
+  /* ══ 게임 안 창 = 이중 테두리 프레임 ══
+     바깥 1px(금속 엣지) + 안쪽 1px(액센트 헤어라인). 선을 굵히지 않고 "두 겹"으로 화려하게.
+     안쪽 선은 ::before에 같은 모양의 모서리 컷을 줘서 카드 윤곽을 따라간다. */
+  .setCard,.ecCard,.ovCard{position:relative}
+  .setCard::before,.ecCard::before,.ovCard::before{content:'';position:absolute;inset:4px;pointer-events:none;z-index:0;
+    border:1px solid var(--frameAcc,rgba(120,150,180,.22));
+    /* 컷 길이는 카드와 동일한 11px — 짧게 주면 대각선이 평행하지 않아 모서리가 어긋난다 */
+    clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px)}
+  .setCard>*,.ecCard>*,.ovCard>*{position:relative;z-index:1}
+  #settingsPop.appCtx .setCard::before{display:none}   /* 게임 밖은 별도 방향 — 프레임 미적용 */
+  .ecCard{--frameAcc:rgba(92,214,255,.18)}
+  .ovCard{--frameAcc:rgba(92,214,255,.18)}
+  .ovCard.win{--frameAcc:rgba(255,210,74,.3)}
+  .ovCard.lose{--frameAcc:rgba(255,107,122,.3)}
   /* 바깥 화면(유즈맵 선택 등) = 라운드 글래스 팝업 + 메인 강조색 */
   #settingsPop.appCtx .setCard{--setAcc:var(--neon);--setAccS:var(--neon-soft);
     border-radius:16px;clip-path:none;border:1px solid var(--metal-edge);
@@ -600,7 +614,7 @@
   /* 일시정지(상단) / 나가기(하단) */
   .setPause{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin:10px 0 0;height:44px;padding:0;cursor:pointer;
     font-family:inherit;font-size:var(--fs-lg);font-weight:800;letter-spacing:.3px;color:#dfe7f0;
-    background:rgba(255,255,255,.07);border:1px solid var(--glass-edge);border-radius:var(--r-md);box-shadow:none;transition:background .16s,border-color .16s}
+    --btnIn:rgba(92,214,255,.26);background:rgba(255,255,255,.07);border:1px solid var(--glass-edge);border-radius:var(--r-md);transition:background .16s,border-color .16s}
   .setPause .pIco{font-size:var(--fs-lg);color:var(--setAcc)}
   .setPause.paused{color:var(--setAcc);border-color:var(--setAccS);background:rgba(255,255,255,.1)}
   .setPause:active{transform:translateY(1px)}
@@ -633,14 +647,14 @@
   /* 위험 액션 = 채움 대신 붉은 글자·테두리만(차분하게) */
   .setExit{display:block;width:100%;margin:8px 0 0;height:44px;padding:0;cursor:pointer;
     font-family:inherit;font-size:var(--fs-lg);font-weight:800;letter-spacing:.3px;color:#ff9a9a;
-    background:rgba(255,80,80,.08);border:1px solid rgba(255,80,80,.32);border-radius:var(--r-md);box-shadow:none;transition:background .16s,border-color .16s}
+    --btnIn:rgba(255,120,120,.3);background:rgba(255,80,80,.08);border:1px solid rgba(255,80,80,.32);border-radius:var(--r-md);transition:background .16s,border-color .16s}
   .setExit:active{transform:translateY(1px);background:rgba(255,80,80,.14)}
   /* 나가기 확인 창 */
   #exitConfirm{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:var(--ov-dim);backdrop-filter:blur(2px)}
   #exitConfirm.hide{display:none}
   /* 나가기 확인 = 설정 창과 같은 규격(각진 카드 · 제목+강조 언더라인 · 44px 버튼) */
   .ecCard{--ecAcc:#5cd6ff;width:86%;max-width:320px;padding:14px 14px 13px;box-sizing:border-box;text-align:center;
-    background:linear-gradient(160deg,rgba(19,24,35,.96),rgba(6,9,14,.975));border:1px solid var(--glass);
+    background:linear-gradient(160deg,rgba(19,24,35,.96),rgba(6,9,14,.975));border:1px solid var(--metal-edge);
     clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px);
     box-shadow:0 16px 44px -12px #000,inset 0 1px 0 rgba(255,255,255,.05)}
   .ecTitle{position:relative;font-size:15px;font-weight:800;letter-spacing:.5px;color:#eaf1fb;text-shadow:0 1px 3px rgba(0,0,0,.65);
@@ -652,8 +666,12 @@
   .ecCard .ecCancel,.ecCard .ecGo{flex:1 1 0;min-width:0;height:44px;padding:0 12px;border-radius:var(--r-md);
     font-family:inherit;font-size:var(--fs-lg);font-weight:800;letter-spacing:.3px;
     display:flex;align-items:center;justify-content:center;box-shadow:none;transition:background .16s,border-color .16s}
+  /* 이중 테두리 = 바깥 border 1px + inset 1px 어두운 틈 + inset 2px 안쪽 선. 선을 굵히지 않는다 */
+  .ecCard .ecCancel,.ecCard .ecGo,#ovBtn,#ovBtn2.ghost,.setPause,.setExit,.setLogout,.twBtn{
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.55),inset 0 0 0 2px var(--btnIn,rgba(255,255,255,.1))}
+  .twBtn{--btnIn:rgba(92,214,255,.26)} .twBtn.del{--btnIn:rgba(255,120,120,.3)}
   .ecCard .ecCancel{color:#dfe7f0;background:rgba(255,255,255,.07);border:1px solid var(--glass-edge)}
-  .ecCard .ecGo{color:#ff9a9a;background:rgba(255,80,80,.08);border:1px solid rgba(255,80,80,.32)}
+  .ecCard .ecGo{--btnIn:rgba(255,120,120,.3);color:#ff9a9a;background:rgba(255,80,80,.08);border:1px solid rgba(255,80,80,.32)}
   .ecCard .ecCancel:active{background:rgba(255,255,255,.1)} .ecCard .ecGo:active{background:rgba(255,80,80,.14)}
   
   
@@ -1545,7 +1563,7 @@
   .ovCard.lose #ovTitle{color:#ffd0d6}
   .ovCard{width:86%;max-width:320px;padding:14px 14px 13px;text-align:center;--ovAcc:#5cd6ff;--ovAccG:rgba(92,214,255,.5);
     display:flex;flex-direction:column;box-sizing:border-box;
-    background:linear-gradient(160deg,rgba(19,24,35,.96),rgba(6,9,14,.975));border:1px solid var(--glass);
+    background:linear-gradient(160deg,rgba(19,24,35,.96),rgba(6,9,14,.975));border:1px solid var(--metal-edge);
     clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px);
     box-shadow:0 16px 44px -12px #000,inset 0 1px 0 rgba(255,255,255,.05)}
   /* 제목 줄 = 설정 제목과 동일(흰 제목 + 강조 언더라인) · 아이콘 없음 */
@@ -1583,7 +1601,7 @@
     font-family:inherit;font-size:var(--fs-lg);font-weight:800;letter-spacing:.3px;cursor:pointer;white-space:nowrap;
     display:flex;align-items:center;justify-content:center;transition:background .16s,border-color .16s}
   #ovBtn2.ghost{order:-1;color:#dfe7f0;background:rgba(255,255,255,.07);border:1px solid var(--glass-edge)}   /* 보조 = 중립 글래스 */
-  #ovBtn{color:var(--ovAcc,#5cd6ff);background:rgba(92,214,255,.1);border:1px solid var(--ovAccG,rgba(92,214,255,.5))}   /* 주 액션 = 강조색 테두리·글자(채움 없이) */
+  #ovBtn{--btnIn:color-mix(in srgb,var(--ovAcc,#5cd6ff) 34%,transparent);color:var(--ovAcc,#5cd6ff);background:rgba(92,214,255,.1);border:1px solid var(--ovAccG,rgba(92,214,255,.5))}   /* 주 액션 = 강조색 테두리·글자(채움 없이) */
   #ovBtn:active{background:rgba(92,214,255,.17)} #ovBtn2.ghost:active{background:rgba(255,255,255,.1)}
   #ovBtn,#ovBtn2.ghost{transform:none}
   #ovBtn:active,#ovBtn2.ghost:active{transform:translateY(1px)}
