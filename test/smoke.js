@@ -796,7 +796,8 @@ async function groupGame(){
     const fa=/rgba?\([^)]*?,\s*([\d.]+)\)/.exec(fc);
     assert(fa && parseFloat(fa[1])>=0.4,'안쪽 프레임이 흐림: '+fc);
     // 팝업 액션 버튼 4종은 카드 액센트를 따라가지 않고 한 스타일이어야 한다
-    const btnStyle=(el)=>{ const c=getComputedStyle(el); return c.color+'|'+c.borderTopColor+'|'+c.backgroundColor; };
+    const btnStyle=(el)=>{ const c=getComputedStyle(el);
+      return c.color+'|'+c.borderTopColor+'|'+c.backgroundColor+'|'+c.fontSize+'|'+c.height+'|'+c.borderRadius; };
     card.classList.add('win');
     const bWin=[$('ovBtn'),$('ovBtn2')].filter(Boolean).map(btnStyle);
     card.classList.remove('win'); card.classList.add('lose');
@@ -817,10 +818,10 @@ async function groupGame(){
     if(wasLite0) document.body.classList.remove('lite');
     try{
       const ob=getComputedStyle($('ovBtn'));
-      assert(parseFloat(ob.height)<=40,'버튼이 큼: '+ob.height);
+      assert(parseFloat(ob.height)<=34,'버튼이 큼: '+ob.height);
       assert(ob.boxShadow.indexOf('0px 0px 0px 2px')<0,'버튼에 이중 테두리가 남아 있음');
-      assert(/inset/.test(ob.boxShadow) && /0px [2-9]px [2-9]px/.test(ob.boxShadow),
-        '오목(위쪽 안쪽 그림자)이 없음: '+ob.boxShadow);
+      assert(/0px 1px 0px[^,]*inset/.test(ob.boxShadow),'볼록(윗변 하이라이트)이 없음: '+ob.boxShadow);
+      assert(/0px -\d+px \d+px[^,]*inset/.test(ob.boxShadow),'볼록(아래 안쪽 그림자)이 없음: '+ob.boxShadow);
       const rTop=parseFloat(ob.borderTopLeftRadius), rBot=parseFloat(ob.borderBottomLeftRadius);
       assert(rTop<rBot,'윗변이 아랫변보다 평평하지 않음: 위 '+rTop+' / 아래 '+rBot);
     } finally { if(wasLite0) document.body.classList.add('lite'); }
