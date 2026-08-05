@@ -811,6 +811,19 @@ async function groupGame(){
         const ch=(getComputedStyle(el)[prop].match(/\d+/g)||[]).slice(0,3).map(Number);
         assert(ch.length===3 && Math.max.apply(null,ch)-Math.min.apply(null,ch)<=30,
           '버튼이 회색이 아님('+prop+'): '+getComputedStyle(el)[prop]); } }
+    // 작고 · 오목하고 · 위가 평평한 판이어야 한다(이중 테두리 아님)
+    // ⚠️ body.lite가 box-shadow를 통째로 끄므로 검사 동안만 벗긴다(blur 검사와 같은 함정)
+    const wasLite0=document.body.classList.contains('lite');
+    if(wasLite0) document.body.classList.remove('lite');
+    try{
+      const ob=getComputedStyle($('ovBtn'));
+      assert(parseFloat(ob.height)<=40,'버튼이 큼: '+ob.height);
+      assert(ob.boxShadow.indexOf('0px 0px 0px 2px')<0,'버튼에 이중 테두리가 남아 있음');
+      assert(/inset/.test(ob.boxShadow) && /0px [2-9]px [2-9]px/.test(ob.boxShadow),
+        '오목(위쪽 안쪽 그림자)이 없음: '+ob.boxShadow);
+      const rTop=parseFloat(ob.borderTopLeftRadius), rBot=parseFloat(ob.borderBottomLeftRadius);
+      assert(rTop<rBot,'윗변이 아랫변보다 평평하지 않음: 위 '+rTop+' / 아래 '+rBot);
+    } finally { if(wasLite0) document.body.classList.add('lite'); }
     // 자동 진행은 면이 차오르는 것만 — 앞머리 선(::after)을 두지 않는다
     const abAfter=getComputedStyle(document.querySelector('#ovBtn .autoBar'),'::after').content;
     assert(abAfter==='none' || abAfter==='normal','자동 진행 표시에 앞머리 선이 남아 있음: '+abAfter);

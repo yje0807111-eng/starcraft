@@ -668,16 +668,28 @@
   .ecMsg{font-size:var(--fs-sm);font-weight:500;line-height:1.55;color:var(--txt-mute);letter-spacing:.2px;margin:0 0 12px;word-break:keep-all}
   .ecBtns{display:flex;gap:8px}
   /* 버튼 = 설정 규격(중립 글래스 / 위험은 붉은 글자·테두리만) — 방 만들기 버튼과 공유하지 않게 카드 안에서만 재정의 */
-  .ecCard .ecCancel,.ecCard .ecGo{flex:1 1 0;min-width:0;height:44px;padding:0 12px;border-radius:var(--r-md);
+  .ecCard .ecCancel,.ecCard .ecGo{flex:1 1 0;min-width:0;padding:0 8px;
     font-family:inherit;font-size:var(--fs-lg);font-weight:800;letter-spacing:.3px;
     display:flex;align-items:center;justify-content:center;box-shadow:none;transition:background .16s,border-color .16s}
   /* 이중 테두리 = 바깥 border 1px + inset 1px 어두운 틈 + inset 2px 안쪽 선. 선을 굵히지 않는다 */
-  .ecCard .ecCancel,.ecCard .ecGo,#ovBtn,#ovBtn2.ghost,.setPause,.setExit,.setLogout,.twBtn{
+  .setPause,.setExit,.setLogout,.twBtn{
     box-shadow:inset 0 0 0 1px rgba(0,0,0,.55),inset 0 0 0 2px var(--btnIn,rgba(255,255,255,.1))}
+  /* ══ 팝업 액션 버튼(확인·관전하기·취소·나가기) = 살짝 오목한 각진 판 ══
+     위가 어둡고 아래가 밝은 그라데 + 위쪽 안쪽 그림자 = 눌러 넣은 느낌.
+     윗변에 밝은 하이라이트를 주지 않아야 "위가 평평"하게 읽힌다(주면 볼록해 보인다).
+     라운드는 --r-bar(3px)로 최소 — 둥글면 오목함이 물방울처럼 보인다. */
+  .ecCard .ecCancel,.ecCard .ecGo,#ovBtn,#ovBtn2.ghost{
+    height:36px;border-radius:0 0 var(--r-bar) var(--r-bar);   /* 위는 완전히 평평, 아래만 살짝 — 둘 다 토큰 값 */
+    background:linear-gradient(180deg,rgba(4,6,10,.88) 0%,rgba(16,20,28,.7) 34%,rgba(34,42,56,.5) 100%);
+    border:1px solid var(--metal-edge);
+    box-shadow:inset 0 3px 5px -2px rgba(0,0,0,.9),      /* 위에서 파고든 그림자 = 오목 */
+               inset 0 -1px 0 rgba(255,255,255,.1),      /* 바닥 반사 */
+               0 1px 0 rgba(255,255,255,.05)}            /* 아래 턱 = 파여 있는 느낌 */
+  .ecCard .ecCancel:active,.ecCard .ecGo:active,#ovBtn:active,#ovBtn2.ghost:active{
+    box-shadow:inset 0 4px 7px -2px rgba(0,0,0,.95),inset 0 -1px 0 rgba(255,255,255,.06)}
   .twBtn{--btnIn:rgba(92,214,255,.26)} .twBtn.del{--btnIn:rgba(255,120,120,.3)}
   /* 팝업 액션 버튼은 카드 액센트를 따라가지 않고 한 스타일로 통일한다(기준 = 나가기 버튼) */
-  .ecCard .ecCancel,.ecCard .ecGo{--btnIn:rgba(255,255,255,.12);color:#dfe7f0;background:rgba(255,255,255,.07);border:1px solid var(--glass-edge)}
-  .ecCard .ecCancel:active,.ecCard .ecGo:active{background:rgba(255,255,255,.11)}
+  .ecCard .ecCancel,.ecCard .ecGo{color:#dfe7f0}
   
   
   
@@ -1608,13 +1620,12 @@
   /* 앞머리 선·발광은 두지 않는다 — 면이 차오르는 것만 */
   .autoBar.run{animation:opBarSweep var(--autoDur,5s) linear forwards}
   .ovBtnTx{position:relative;z-index:1}
-  #ovBtn,#ovBtn2.ghost{position:relative;overflow:hidden;flex:1 1 0;min-width:0;height:44px;padding:0 12px;border-radius:var(--r-md);
+  #ovBtn,#ovBtn2.ghost{position:relative;overflow:hidden;flex:1 1 0;min-width:0;padding:0 8px;
     font-family:inherit;font-size:var(--fs-lg);font-weight:800;letter-spacing:.3px;cursor:pointer;white-space:nowrap;
     display:flex;align-items:center;justify-content:center;transition:background .16s,border-color .16s}
   #ovBtn2.ghost{order:-1}
   /* 확인·관전하기도 같은 한 스타일 — 카드가 금색이든 붉은빛이든 버튼은 안 바뀐다 */
-  #ovBtn,#ovBtn2.ghost{--btnIn:rgba(255,255,255,.12);color:#dfe7f0;background:rgba(255,255,255,.07);border:1px solid var(--glass-edge)}
-  #ovBtn:active,#ovBtn2.ghost:active{background:rgba(255,255,255,.11)}
+  #ovBtn,#ovBtn2.ghost{color:#dfe7f0}
   #ovBtn .autoBar{--abC:#dfe7f0}   /* 차오르는 빛도 버튼 색을 따른다 */
   #ovBtn,#ovBtn2.ghost{transform:none}
   #ovBtn:active,#ovBtn2.ghost:active{transform:translateY(1px)}
