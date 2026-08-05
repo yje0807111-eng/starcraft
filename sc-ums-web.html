@@ -1383,9 +1383,9 @@
   .cmdG .cgSelAll{flex:none;align-self:center;width:38px;height:38px;border-radius:9px;border:1px solid var(--glass);background:rgba(92,214,255,.13);color:#a9e4ff;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}   /* 👥 화면 내 같은 종류 전체 지정(정사각 아이콘 카드) */
   .cmdG .cgSelAll svg{width:23px;height:23px;display:block}
   .cmdG .cgSelAll:active{background:rgba(92,214,255,.3);border-color:var(--ca)}
-  .cmdG .cgTrash{display:flex;align-items:center;justify-content:center;width:100%;margin-top:auto;color:#ff6b6b;cursor:pointer;padding:1px 0}   /* 🗑 혼합 종류 카드 하단 = 빨간 휴지통(그 종류 지정 해제) */
-  .cmdG .cgTrash svg{width:15px;height:15px;display:block}
-  .cmdG .cgTrash:active{color:#ff3b3b;transform:scale(.88)}
+  .cmdG .cgTrash{display:flex;align-items:center;justify-content:center;width:100%;margin-top:auto;color:#6d7787;cursor:pointer;padding:0}   /* 🗑 종류 지정 해제 — 파괴 동작이라도 평소엔 초상보다 약해야 한다 */
+  .cmdG .cgTrash svg{width:13px;height:13px;display:block}
+  .cmdG .cgTrash:active{color:var(--neon);transform:scale(.88)}
   .cmdG .cgProg .pl .pt{color:var(--caL);font:800 9px/1 'Rajdhani',sans-serif;margin-left:4px;letter-spacing:.2px}   /* 생산 중 옆 남은시간(작게) */
   .cmdG .cgGasAuto .gaBtn{width:23px;height:24px;flex:none;border-radius:6px;border:1px solid rgba(120,232,150,.4);background:rgba(120,232,150,.14);color:#c7f5d6;font:800 16px/1 sans-serif;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
   .cmdG .cgGasAuto .gaBtn:active{background:rgba(70,240,106,.32)}
@@ -1403,7 +1403,9 @@
   .cmdG .cgVal.sm{margin-top:3px;gap:3px}   /* 진행 바 아래 작은 단계 표시(0Lv ▸ 1Lv) */
   .cmdG .cgVal.sm .cur{font-size:9.5px;color:#93a1b4} .cmdG .cgVal.sm .arw{font-size:8px} .cmdG .cgVal.sm .nxt{font-size:10.5px;text-shadow:none}
   .cmdG .cgStats{display:flex;flex-direction:column;gap:2px} .cmdG .cgStat{display:flex;justify-content:space-between;font-size:9.5px}
-  .cmdG .cgStat span{color:var(--cgMuted)} .cmdG .cgStat b{color:#c2ccda;font-family:'Rajdhani',sans-serif;font-size:11px;font-variant-numeric:tabular-nums}
+  .cmdG .cgStat span{color:#9aa6b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cmdG .cgStat b{color:#e6eefc;font-family:'Rajdhani',sans-serif;font-size:11.5px;font-variant-numeric:tabular-nums}
+  .cmdG .cgStats.cgScr .cgStat+.cgStat{border-top:1px solid rgba(255,255,255,.045)}   /* 행 구분 — 5줄이 한 덩어리로 뭉치지 않게 */
   /* 👥 다중 지정: 유닛별 HP 칩 그리드 — 칩 탭=개별 지정 */
   .cmdG .cgUnits{display:grid;grid-template-columns:repeat(2,1fr);gap:2px;overflow-y:auto;align-content:start;grid-auto-rows:calc((100% - 6px)/4);flex:1 1 auto;min-height:0;max-height:none;margin-top:0;scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}   /* 👥 유닛별 HP 칩 그리드 — 2열 고정 · 행 높이=구역의 1/4(gap 3칸 제외) → 8기=4줄이 구역을 정확히 꽉 채움 / 소수 선택 시엔 늘어나지 않고 정상 높이 유지 / 8기 초과=스크롤 */
   .cmdG .cgUChip{position:relative;min-height:11px;border-radius:3px;background:rgba(0,0,0,.5);border:1px solid var(--glass);overflow:hidden;cursor:pointer;box-shadow:inset 0 0 3px rgba(0,0,0,.6)}   /* 높이=그리드 행 stretch로 채움(min 11px) */
@@ -1436,18 +1438,22 @@
   .cmdG .cgQ .qs .qb{position:absolute;left:0;bottom:0;height:3px;background:var(--ca);box-shadow:0 0 5px var(--caG);transition:width .12s linear}
   /* 그리드(주역) + 페이저 */
   .cmdG .cgCol{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
-  .cmdG .cgGrid{flex:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(2,1fr);gap:5px;min-height:0}
-  .cmdG .cgSlot{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:2px;cursor:pointer;padding:5px 3px 4px;touch-action:none;
-    border:1px solid var(--metal-edge);border-radius:8px;background:linear-gradient(160deg,rgba(30,36,48,.62),rgba(8,10,14,.72));transition:.12s}
+  .cmdG .cgGrid{flex:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(2,1fr);gap:4px;min-height:0}
+  .cmdG .cgSlot{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:3px;cursor:pointer;padding:4px 4px 3px;touch-action:none;
+    border:1px solid var(--metal-edge);border-radius:var(--r-lg);background:linear-gradient(160deg,rgba(30,36,48,.62),rgba(8,10,14,.72));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05);transition:.12s}
   .cmdG .cgSlot::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent)}
-  .cmdG .cgPro{width:clamp(28px,42%,40px);aspect-ratio:1;flex:none;position:relative;overflow:hidden;color:var(--ca);border:1px solid var(--caS);border-radius:6px;
+  .cmdG .cgPro{width:100%;aspect-ratio:1.2;flex:none;position:relative;overflow:hidden;color:var(--ca);border:1px solid var(--caS);border-radius:var(--r-md);
     background:radial-gradient(circle at 50% 34%,rgba(74,86,110,.45),#0a0d14 80%);display:flex;align-items:center;justify-content:center;font-size:22px}
-  .cmdG .cgPro::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.22) 2px 3px)}
+  /* 스캔라인 + 아래쪽 비네트 — 초상이 커진 만큼 재질을 주고 이름줄과 분리한다 */
+  .cmdG .cgPro::after{content:'';position:absolute;inset:0;
+    background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.26) 2px 3px),
+               linear-gradient(180deg,rgba(0,0,0,0) 58%,rgba(4,6,10,.55))}
   .cmdG .cgPro svg{width:76%;height:76%} .cmdG .cgPro img{width:100%;height:100%;object-fit:cover} .cmdG .cgPro .pemoji{font-size:20px}
   /* 업그레이드 아이콘 = 네모 초상 틀은 유지하고, 안쪽 배지 원만 없앤 뒤 아이콘을 크게 */
   .cmdG .cgPro .wpnIco{width:84%;height:84%}
   .cmdG .cgSlot.iconFill{justify-content:center;padding:6px} .cmdG .cgSlot.iconFill .cgPro{width:72%;height:auto;aspect-ratio:1;border:none;background:none;box-shadow:none} .cmdG .cgSlot.iconFill .cgPro svg{width:100%;height:100%} .cmdG .cgSlot.iconFill .cgName,.cmdG .cgSlot.iconFill .cgCost{display:none}   /* 아이콘만 채우는 칸(일시정지 등): 빈 이름/비용 줄 숨겨 아이콘이 칸 정중앙에 크게 */
-  .cmdG .cgName{font:800 10px/1.05 sans-serif;color:#e6eefc;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cmdG .cgName{font:800 10px/1.05 sans-serif;letter-spacing:-.2px;color:#e6eefc;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* 🧱 벙커 탑승 슬롯: 가로 꽉 찬 초상 → 이름 → HP 세로 스택 */
   .cmdG .cgSlot.cgBunk{justify-content:flex-start;gap:3px;padding:5px 4px}
   .cmdG .cgSlot.cgBunk .cgPro{width:100%;height:auto;aspect-ratio:1.35;border-radius:6px}
@@ -1462,7 +1468,7 @@
   
   .cmdG .cc{display:inline-flex;align-items:center;gap:1px;font:800 10px/1 'Rajdhani',sans-serif;font-variant-numeric:tabular-nums}
   .cmdG .cc.cr{color:var(--cgCr)} .cmdG .cc.en{color:var(--cgEn)} .cmdG .cc.hp{color:#ff8a8a}   /* 스킬 HP 코스트(아드레날린) */
-  .cmdG .cgMeta{position:absolute;top:3px;right:4px;display:inline-flex;align-items:center;gap:1px;font:800 8.5px/1 'Rajdhani',sans-serif;
+  .cmdG .cgMeta{position:absolute;top:5px;right:5px;display:inline-flex;align-items:center;gap:1px;font:800 8.5px/1 'Rajdhani',sans-serif;
     color:var(--cgPop);background:rgba(10,12,20,.72);border:1px solid rgba(200,182,255,.3);border-radius:4px;padding:2px 3px;font-variant-numeric:tabular-nums;z-index:1}
   .cmdG .cgMeta.lv{color:var(--caL);border-color:var(--caS)}
   .cmdG .cgSlot.sel{border-color:var(--ca);box-shadow:0 0 13px -2px var(--caG),inset 0 0 10px rgba(0,0,0,.35)}
