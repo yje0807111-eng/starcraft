@@ -271,13 +271,29 @@ box-shadow:inset 0 0 0 1px rgba(0,0,0,.55),      /* 틈 */
 | 항목 | 전 | 후 |
 |---|---|---|
 | 승리 제목 | `CLEAR` | **`VICTORY`** |
-| 승/패 제목 크기 | 15px (본문과 거의 같음) | **38px** + 자간 3px + 발광 |
+| 승/패 제목 크기 | 15px (본문과 거의 같음) | **27px** + 자간 2px + 발광 |
 | 설명 `#ovDesc`·`.ecMsg` | 11px `#c2ccda` | **10px** `--txt-mute` (작고 여리게) |
 | 나가기 확인 문구 | 2줄("돌아올 수 없습니다" + 질문) | **"정말 나가시겠습니까?"** 한 줄 |
 | 배경 딤 | blur 2~2.5px · 딤 .6~.62 | **blur 7px** + saturate .72 · 딤 .76~.78 |
 | `#ov` z-index | 40 (네비바 45보다 아래 → 네비바가 안 흐려짐) | **46** |
 
-**큰 제목은 `.win`/`.lose`에만 붙인다** — 한글 제목(`기록 종료`·`게임 종료`)까지 38px로 키우면 카드를 넘친다.
+**큰 제목은 `.win`/`.lose`에만 붙인다** — 한글 제목(`기록 종료`·`게임 종료`)까지 키우면 카드를 넘친다.
+
+### 카드 바깥 오라
+
+⚠️ **`clip-path`가 걸린 카드는 바깥 `box-shadow`를 못 쓴다** — clip-path가 필터·그림자 결과까지 잘라내기 때문이다.
+그래서 오라는 카드가 아니라 **덮개(오버레이)의 배경**으로 낸다. 덮개가 카드를 가운데 정렬하므로 중앙 타원이 곧 카드 뒤가 된다.
+
+```css
+#ov{ --aura:rgba(92,214,255,.15);
+  background:radial-gradient(ellipse 300px 220px at 50% 50%,var(--aura),transparent 72%),
+             radial-gradient(circle at 50% 42%,…딤…) }
+#ov:has(.ovCard.win){--aura:rgba(255,210,74,.17)}
+#ov:has(.ovCard.lose){--aura:rgba(255,107,122,.16)}
+```
+
+알파는 **.12~.17**. 그 이상은 "은은하게"가 아니라 배경이 물든다.
+적용: `#ov` · `#exitConfirm` · `#settingsPop` · `#townPanel`.
 
 > 절전 모드(`body.lite`)는 `backdrop-filter`를 통째로 끈다. 스모크는 검사 동안만 `lite`를 벗겨 **CSS 자체**를 잰다 — 안 그러면 헛도는 검사가 된다(실제로 처음엔 "lite(blur 생략)"로 통과해 버렸다).
 

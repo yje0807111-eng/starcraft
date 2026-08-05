@@ -784,11 +784,19 @@ async function groupGame(){
     const base=acc(null), win=acc('win'), lose=acc('lose');
     assert(win!==base && lose!==base && win!==lose,
       '승/패 액센트가 안 갈림: 기본 '+base+' 승 '+win+' 패 '+lose);
+    // 카드 바깥 오라(덮개 배경) — 카드에 clip-path가 있어 box-shadow를 못 쓰므로 #ov가 낸다
+    const aura=(c)=>{ card.classList.remove('win','lose'); if(c) card.classList.add(c);
+      return getComputedStyle($('ov')).getPropertyValue('--aura').trim(); };
+    const aB=aura(null), aW=aura('win'), aL=aura('lose');
+    assert(aB,'결과 창에 오라 색(--aura)이 없음');
+    assert(aW!==aB && aL!==aB && aW!==aL,'오라가 승/패를 안 따라감: 기본 '+aB+' 승 '+aW+' 패 '+aL);
+    assert(getComputedStyle($('ov')).backgroundImage.split('radial-gradient').length>=3,
+      '오라 레이어가 배경에 없음');
     // 결과 제목은 화면의 주인공 — 설명보다 한참 커야 한다
     card.classList.add('win');
     const tSz=parseFloat(getComputedStyle($('ovTitle')).fontSize);
     const dSz=parseFloat(getComputedStyle($('ovDesc')).fontSize);
-    assert(tSz>=30,'승/패 제목이 작음: '+tSz+'px');
+    assert(tSz>=24,'승/패 제목이 작음: '+tSz+'px');
     assert(tSz>=dSz*2.5,'제목과 설명의 크기 차이가 작음: '+tSz+' vs '+dSz);
     assert(dSz<=10.5,'설명 글자가 큼: '+dSz+'px');
     card.classList.remove('win','lose');
