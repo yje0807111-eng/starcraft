@@ -795,6 +795,19 @@ async function groupGame(){
     const fc=getComputedStyle(card,'::before').borderTopColor;
     const fa=/rgba?\([^)]*?,\s*([\d.]+)\)/.exec(fc);
     assert(fa && parseFloat(fa[1])>=0.4,'안쪽 프레임이 흐림: '+fc);
+    // 팝업 액션 버튼 4종은 카드 액센트를 따라가지 않고 한 스타일이어야 한다
+    const btnStyle=(el)=>{ const c=getComputedStyle(el); return c.color+'|'+c.borderTopColor+'|'+c.backgroundColor; };
+    card.classList.add('win');
+    const bWin=[$('ovBtn'),$('ovBtn2')].filter(Boolean).map(btnStyle);
+    card.classList.remove('win'); card.classList.add('lose');
+    const bLose=[$('ovBtn'),$('ovBtn2')].filter(Boolean).map(btnStyle);
+    card.classList.remove('win','lose');
+    assert(bWin.length===2,'결과 창 버튼 2개를 못 찾음');
+    assert(bWin[0]===bLose[0] && bWin[1]===bLose[1],'승/패에 따라 버튼 색이 바뀜(통일 안 됨)');
+    assert(bWin[0]===bWin[1],'확인과 관전하기의 스타일이 다름');
+    const ecGo=document.querySelector('#exitConfirm .ecGo'), ecC=document.querySelector('#exitConfirm .ecCancel');
+    if(ecGo&&ecC){ assert(btnStyle(ecGo)===btnStyle(ecC),'취소와 나가기의 스타일이 다름');
+      assert(btnStyle(ecGo)===bWin[0],'확인창 버튼과 결과창 버튼의 스타일이 다름'); }
     // 카드 바깥 오라(덮개 배경) — 카드에 clip-path가 있어 box-shadow를 못 쓰므로 #ov가 낸다
     const aura=(c)=>{ card.classList.remove('win','lose'); if(c) card.classList.add(c);
       return getComputedStyle($('ov')).getPropertyValue('--aura').trim(); };

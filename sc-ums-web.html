@@ -675,9 +675,9 @@
   .ecCard .ecCancel,.ecCard .ecGo,#ovBtn,#ovBtn2.ghost,.setPause,.setExit,.setLogout,.twBtn{
     box-shadow:inset 0 0 0 1px rgba(0,0,0,.55),inset 0 0 0 2px var(--btnIn,rgba(255,255,255,.1))}
   .twBtn{--btnIn:rgba(92,214,255,.26)} .twBtn.del{--btnIn:rgba(255,120,120,.3)}
-  .ecCard .ecCancel{color:#dfe7f0;background:rgba(255,255,255,.07);border:1px solid var(--glass-edge)}
-  .ecCard .ecGo{--btnIn:rgba(255,120,120,.3);color:#ff9a9a;background:rgba(255,80,80,.08);border:1px solid rgba(255,80,80,.32)}
-  .ecCard .ecCancel:active{background:rgba(255,255,255,.1)} .ecCard .ecGo:active{background:rgba(255,80,80,.14)}
+  /* 팝업 액션 버튼은 카드 액센트를 따라가지 않고 한 스타일로 통일한다(기준 = 나가기 버튼) */
+  .ecCard .ecCancel,.ecCard .ecGo{--btnIn:rgba(255,120,120,.3);color:#ff9a9a;background:rgba(255,80,80,.08);border:1px solid rgba(255,80,80,.32)}
+  .ecCard .ecCancel:active,.ecCard .ecGo:active{background:rgba(255,80,80,.14)}
   
   
   
@@ -1613,9 +1613,11 @@
   #ovBtn,#ovBtn2.ghost{position:relative;overflow:hidden;flex:1 1 0;min-width:0;height:44px;padding:0 12px;border-radius:var(--r-md);
     font-family:inherit;font-size:var(--fs-lg);font-weight:800;letter-spacing:.3px;cursor:pointer;white-space:nowrap;
     display:flex;align-items:center;justify-content:center;transition:background .16s,border-color .16s}
-  #ovBtn2.ghost{order:-1;color:#dfe7f0;background:rgba(255,255,255,.07);border:1px solid var(--glass-edge)}   /* 보조 = 중립 글래스 */
-  #ovBtn{--btnIn:color-mix(in srgb,var(--ovAcc,#5cd6ff) 34%,transparent);color:var(--ovAcc,#5cd6ff);background:rgba(92,214,255,.1);border:1px solid var(--ovAccG,rgba(92,214,255,.5))}   /* 주 액션 = 강조색 테두리·글자(채움 없이) */
-  #ovBtn:active{background:rgba(92,214,255,.17)} #ovBtn2.ghost:active{background:rgba(255,255,255,.1)}
+  #ovBtn2.ghost{order:-1}
+  /* 확인·관전하기도 같은 한 스타일 — 카드가 금색이든 붉은빛이든 버튼은 안 바뀐다 */
+  #ovBtn,#ovBtn2.ghost{--btnIn:rgba(255,120,120,.3);color:#ff9a9a;background:rgba(255,80,80,.08);border:1px solid rgba(255,80,80,.32)}
+  #ovBtn:active,#ovBtn2.ghost:active{background:rgba(255,80,80,.14)}
+  #ovBtn .autoBar{--abC:#ff8f8f}   /* 자동 진행 표시도 버튼 색을 따른다(카드 액센트 아님) */
   #ovBtn,#ovBtn2.ghost{transform:none}
   #ovBtn:active,#ovBtn2.ghost:active{transform:translateY(1px)}
   /* 멀티플레이 대기실(로비) */
