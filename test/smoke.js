@@ -810,8 +810,8 @@ async function groupGame(){
         const cs=getComputedStyle(e), bf=cs.backdropFilter||cs.webkitBackdropFilter||'';
         const m=/blur\((\d+(?:\.\d+)?)px\)/.exec(bf);
         const v=m?parseFloat(m[1]):0;
-        assert(v>=4, '#'+id+' 배경 흐림이 약함: '+bf);
-        assert(v<=6, '#'+id+' 배경 흐림이 과함(게임 배경이 묻힘): '+bf); got.push(m[1]); }
+        assert(v>=1.5, '#'+id+' 배경 흐림이 없음: '+bf);
+        assert(v<=3.5, '#'+id+' 배경 흐림이 과함(게임이 안 보임): '+bf); got.push(m[1]); }
     } finally { if(wasLite) document.body.classList.add('lite'); }
     const blurTxt='blur '+got.join('/')+'px'
     return '승 '+win+' / 패 '+lose+' · 제목 '+tSz+'/설명 '+dSz+'px · '+blurTxt; });
