@@ -791,8 +791,10 @@ async function groupGame(){
     assert(alphas.length,'카드 배경에서 알파를 못 읽음: '+cbg);
     assert(Math.max.apply(null,alphas)<=0.95,'카드 면이 불투명해 뒤가 안 비침: 최대 알파 '+Math.max.apply(null,alphas));
     assert(Math.min.apply(null,alphas)>=0.8,'카드 면이 너무 투명해 글자가 묻힘: 최소 알파 '+Math.min.apply(null,alphas));
-    const bc=getComputedStyle(card).borderTopColor, rgb=(bc.match(/\d+/g)||[]).slice(0,3).map(Number);
-    assert(rgb.length===3 && rgb[0]+rgb[1]+rgb[2]>=250,'카드 테두리가 흐림: '+bc);
+    // 강조는 바깥이 아니라 안쪽 프레임(::before)이 맡는다 — 바깥은 금속 엣지 그대로
+    const fc=getComputedStyle(card,'::before').borderTopColor;
+    const fa=/rgba?\([^)]*?,\s*([\d.]+)\)/.exec(fc);
+    assert(fa && parseFloat(fa[1])>=0.4,'안쪽 프레임이 흐림: '+fc);
     // 카드 바깥 오라(덮개 배경) — 카드에 clip-path가 있어 box-shadow를 못 쓰므로 #ov가 낸다
     const aura=(c)=>{ card.classList.remove('win','lose'); if(c) card.classList.add(c);
       return getComputedStyle($('ov')).getPropertyValue('--aura').trim(); };
