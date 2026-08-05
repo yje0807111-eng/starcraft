@@ -816,15 +816,26 @@ async function groupGame(){
     // ⚠️ body.lite가 box-shadow를 통째로 끄므로 검사 동안만 벗긴다(blur 검사와 같은 함정)
     const wasLite0=document.body.classList.contains('lite');
     if(wasLite0) document.body.classList.remove('lite');
+    // 가로 폭은 실제로 그려진 상태에서만 잰다 — #ov.hide면 rect가 0이라 검사가 헛돈다
+    const wasHid=$('ov').classList.contains('hide'), wasHidE=$('exitConfirm').classList.contains('hide');
+    if(wasHid) $('ov').classList.remove('hide');
+    if(wasHidE) $('exitConfirm').classList.remove('hide');
     try{
       const ob=getComputedStyle($('ovBtn'));
       assert(parseFloat(ob.height)<=34,'버튼이 큼: '+ob.height);
+      const wEls=[$('ovBtn'),document.querySelector('#exitConfirm .ecGo')].filter(Boolean);
+      if($('ovBtn2') && getComputedStyle($('ovBtn2')).display!=='none') wEls.push($('ovBtn2'));
+      assert(wEls.length>=2,'폭을 잴 버튼을 못 찾음');
+      for(const el of wEls){
+        const w=el.getBoundingClientRect().width;
+        assert(w>0,'버튼 폭을 못 잼(안 그려짐): '+(el.id||el.className));
+        assert(w<=124,'버튼 가로가 넓음('+(el.id||el.className)+'): '+Math.round(w)+'px'); }
       assert(ob.boxShadow.indexOf('0px 0px 0px 2px')<0,'버튼에 이중 테두리가 남아 있음');
       assert(/0px 1px 0px[^,]*inset/.test(ob.boxShadow),'볼록(윗변 하이라이트)이 없음: '+ob.boxShadow);
       assert(/0px -\d+px \d+px[^,]*inset/.test(ob.boxShadow),'볼록(아래 안쪽 그림자)이 없음: '+ob.boxShadow);
       const rTop=parseFloat(ob.borderTopLeftRadius), rBot=parseFloat(ob.borderBottomLeftRadius);
       assert(rTop<rBot,'윗변이 아랫변보다 평평하지 않음: 위 '+rTop+' / 아래 '+rBot);
-    } finally { if(wasLite0) document.body.classList.add('lite'); }
+    } finally { if(wasLite0) document.body.classList.add('lite'); if(wasHid) $('ov').classList.add('hide'); if(wasHidE) $('exitConfirm').classList.add('hide'); }
     // 자동 진행은 면이 차오르는 것만 — 앞머리 선(::after)을 두지 않는다
     const abAfter=getComputedStyle(document.querySelector('#ovBtn .autoBar'),'::after').content;
     assert(abAfter==='none' || abAfter==='normal','자동 진행 표시에 앞머리 선이 남아 있음: '+abAfter);
