@@ -834,6 +834,29 @@
   .btCol .btpRaceHead{grid-column:1/-1}
   .btCol .btpCard{width:auto;padding:4px 1px}
   .btCol .btpCard .btpPic{width:26px;height:26px}
+  /* 🧪 스프라이트 유닛 실험장 */
+  #sprLab{position:absolute;inset:0;z-index:38;display:none;pointer-events:none}
+  #sprLab.on{display:block}
+  .sprArena{position:absolute;inset:0;pointer-events:auto;overflow:hidden;
+    background:radial-gradient(120% 90% at 50% 42%, #1a2130 0%, #0c1018 62%, #070a10 100%)}
+  .sprArena::before{content:'';position:absolute;inset:0;pointer-events:none;
+    background-image:linear-gradient(rgba(120,150,190,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(120,150,190,.06) 1px,transparent 1px);
+    background-size:36px 36px}
+  .sprHint{position:absolute;left:0;right:0;top:10px;text-align:center;font-size:10.5px;color:#8593a4;padding:0 16px;line-height:1.5;pointer-events:none}
+  .sprUnit{position:absolute;left:50%;top:55%;background-repeat:no-repeat;transform:translate(-50%,-88%);
+    image-rendering:auto;filter:drop-shadow(0 4px 4px rgba(0,0,0,.5))}
+  .sprHud{position:absolute;left:12px;bottom:12px;font-family:'Rajdhani',monospace;font-size:12px;font-weight:800;color:#cfe0ec;
+    background:rgba(6,10,16,.72);border:1px solid var(--metal-edge);border-radius:8px;padding:4px 10px;pointer-events:none}
+  /* 하단 컨트롤 */
+  .sprCtl{display:flex;gap:6px;flex-wrap:wrap;padding:6px 2px 4px}
+  .sprBtn{flex:1;min-width:56px;padding:9px 6px;border-radius:9px;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;
+    color:#dfe7f0;background:rgba(255,255,255,.06);border:1px solid var(--metal-edge);transition:all .12s}
+  .sprBtn:hover{background:rgba(255,255,255,.12);border-color:var(--glass-edge)} .sprBtn:active{transform:translateY(1px)}
+  .sprBtn.atk{color:#ffd9d9;background:rgba(255,80,80,.12);border-color:rgba(255,80,80,.4)}
+  .sprCtl2{display:flex;align-items:center;gap:9px;padding:2px 4px 4px}
+  .sprCtl2 label{font-size:11px;font-weight:800;color:var(--txt-mute)}
+  .sprCtl2 input[type=range]{flex:1;accent-color:var(--neon)}
+  .sprMeta{font-size:10px;color:#7d8b98;white-space:nowrap}
   .btCol .btpCard .btpNm{font-size:8px}
   /* 🏗 건설 테스트(데이터 전용) */
   #vBuild{overflow:hidden}
@@ -2960,6 +2983,14 @@
       <button class="btCtlBtn" onclick="runBalanceSim('cost')">⚖ 검증</button>
       <span class="btCtlCnt" id="btCtlCount">적 0 · 아군 0</span>
     </div>
+    <!-- 🧪 스프라이트 유닛 실험장(관리자 Battle 탭 대체) — 3D 모델을 프리렌더한 8방향 스프라이트 프로토타입 -->
+    <div id="sprLab">
+      <div class="sprArena" id="sprArena" onpointerdown="sprLabTap(event)">
+        <div class="sprHint" id="sprHint">바닥을 탭하면 레인저가 그 방향을 보며 걸어갑니다 · 8방향 · 걷기 시 총 내림 / 공격 시 총 듦</div>
+        <div class="sprUnit" id="sprUnit"></div>
+      </div>
+      <div class="sprHud" id="sprHud">idle · dir 0</div>
+    </div>
     <!-- ⚖ 밸런스 자동검증 결과 패널 -->
     <div id="balPanel" class="hide">
       <div class="balBackdrop" onclick="closeBalPanel()"></div>
@@ -3277,10 +3308,17 @@
 
     <div class="bp" id="bpBuild"></div>
     <div class="bp" id="bpBattle">
-      <div class="btPickHead">⚔ 전투 실험 <span class="sbcSub">눌러 배치 · 드래그로 이동 · 화면 상단 버튼으로 전투 제어</span></div>
-      <div class="btSplit">
-        <div class="btCol ally"><div class="btColHead">◈ 아군 소환</div><div class="btPicker" id="btPicker"></div></div>
-        <div class="btCol foe"><div class="btColHead">◈ 적군 소환</div><div class="btPicker" id="btPickerFoe"></div></div>
+      <div class="btPickHead">🧪 유닛 실험 · 레인저 <span class="sbcSub">3D 모델 → 프리렌더 8방향 스프라이트(프로토타입)</span></div>
+      <div class="sprCtl">
+        <button class="sprBtn" onclick="sprLabSet('idle')">정지</button>
+        <button class="sprBtn" onclick="sprLabWalkDemo()">걷기</button>
+        <button class="sprBtn atk" onclick="sprLabAttack()">공격</button>
+        <button class="sprBtn" onclick="sprLabSpin()">8방향 순회</button>
+        <button class="sprBtn" onclick="sprLabReset()">리셋</button>
+      </div>
+      <div class="sprCtl2">
+        <label>크기</label><input type="range" id="sprScale" min="0.6" max="2.4" step="0.05" value="1.15" oninput="sprLabScale(this.value)">
+        <span class="sprMeta" id="sprMeta">96px · 8방향 · idle8/walk8/attack6</span>
       </div>
     </div>
 
@@ -7763,7 +7801,8 @@ function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 
     if(others.indexOf(G.curPlayer)<0) G.curPlayer=others[0]||mine;   // 입장한 다른 플레이어 기본
     if(typeof clearPlayerSel==='function') clearPlayerSel(); renderPlayers(); drawPlayer(); }
   if(id==='Main'){ drawMain(); renderUnits(); placeMergeZone(); }
-  if(id==='Battle'){ drawMain(); renderUnits(); if(typeof renderBtPicker==='function') renderBtPicker(); if(typeof sbCombatUiSync==='function') sbCombatUiSync(); }   // 전투실험: 별도 전장(아군 배치)
+  if(id==='Battle'){ if(typeof sprLabStart==='function') sprLabStart(); }   // 🧪 스프라이트 유닛 실험장(전투실험 대체)
+  else { if(typeof sprLabStop==='function') sprLabStop(); }
   if(id==='Boss'){ BOSS_VIEW.x=0; BOSS_VIEW.y=0; renderBossPanel(); drawBoss(); }
   if(typeof updateCoopBossBar==='function') updateCoopBossBar();
   updateSpecLabel();
@@ -8721,6 +8760,49 @@ function drawSkillFx(){ if(typeof G==='undefined') return; const hasFx=!!(G.skil
       const w=rr*2, hpR=Math.max(0,Math.min(1,e.hp/(e.maxHp||1))); ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillRect(p.x-w/2,p.y-rr-7,w,4); ctx.fillStyle=hpR>0.5?'#7fe07f':(hpR>0.25?'#e0c040':'#e05050'); ctx.fillRect(p.x-w/2,p.y-rr-7,w*hpR,4);
       if(e.slowT>0){ ctx.globalAlpha=0.5; ctx.strokeStyle='#e8c060'; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(p.x,p.y,rr+3,0,6.28); ctx.stroke(); } } }
   ctx.restore(); }
+// ════════════════════════════════════════════════════════════════
+// 🧪 스프라이트 유닛 실험장(관리자 Battle 탭) — 3D 모델을 프리렌더한 8방향 스프라이트 프로토타입(레인저)
+//   걷기=총 내림 / 정지=총 내림 / 공격=총 듦 (자세는 손 본에 부착된 총이 애니를 따라감 · 베이크 결과)
+// ════════════════════════════════════════════════════════════════
+const SPR_MARINE={ cell:96, dirs:8, dispBase:96,
+  states:{ idle:{frames:8,fps:8,loop:1}, walk:{frames:8,fps:12,loop:1}, attack:{frames:6,fps:14,loop:0} },
+  url:{ idle:'assets/sprites/marine/idle.png', walk:'assets/sprites/marine/walk.png', attack:'assets/sprites/marine/attack.png' } };
+let _spr=null, _sprRaf=0, _sprLast=0, _sprScale=1.15, _sprSpin=null;
+const SPR_SPEED=125;   // px/s
+function sprLabActive(){ return !!(typeof G!=='undefined' && G.sandbox && G.tab==='Battle'); }
+function _sprArenaRect(){ const a=document.getElementById('sprArena'); return a?a.getBoundingClientRect():{width:360,height:480}; }
+function sprLabStart(){ const lab=document.getElementById('sprLab'); if(!lab) return; lab.classList.add('on');
+  const btc=document.getElementById('btCtl'); if(btc) btc.style.display='none';   // 옛 전투 컨트롤 숨김(대체)
+  const r=_sprArenaRect(); if(!_spr) _spr={x:r.width/2,y:r.height*0.55,tx:r.width/2,ty:r.height*0.55,dir:0,state:'idle',frame:0,ft:0};
+  sprApply(); _sprLast=performance.now(); cancelAnimationFrame(_sprRaf); _sprRaf=requestAnimationFrame(sprLoop); }
+function sprLabStop(){ const lab=document.getElementById('sprLab'); if(lab) lab.classList.remove('on'); cancelAnimationFrame(_sprRaf); _sprRaf=0; if(_sprSpin){clearInterval(_sprSpin);_sprSpin=null;} }
+function sprLoop(now){ if(!sprLabActive()){ sprLabStop(); return; } const dt=Math.min(0.05,(now-_sprLast)/1000); _sprLast=now; sprTick(dt); _sprRaf=requestAnimationFrame(sprLoop); }
+function sprDir(nx,ny){ const a=Math.atan2(nx,-ny); let d=Math.round(a/(Math.PI/4)); return ((d%8)+8)%8; }   // 화면 이동벡터 → 8방향(북=0, 시계)
+function sprTick(dt){ const u=_spr; if(!u) return;
+  if(u.state==='attack'){ const st=SPR_MARINE.states.attack, spf=1/st.fps; u.ft+=dt; while(u.ft>=spf){ u.ft-=spf; u.frame++; if(u.frame>=st.frames){ u.state='idle'; u.frame=0; break; } } sprRender(); sprHud(); return; }
+  const dx=u.tx-u.x, dy=u.ty-u.y, d=Math.hypot(dx,dy);
+  if(d>3 && !_sprSpin){ u.state='walk'; const nx=dx/d, ny=dy/d; u.x+=nx*SPR_SPEED*dt; u.y+=ny*SPR_SPEED*dt; u.dir=sprDir(nx,ny); }
+  else if(!_sprSpin){ u.state='idle'; }
+  const st=SPR_MARINE.states[u.state], spf=1/st.fps; u.ft+=dt; while(u.ft>=spf){ u.ft-=spf; u.frame=(u.frame+1)%st.frames; }
+  sprRender(); sprHud(); }
+function sprRender(){ const el=document.getElementById('sprUnit'), u=_spr; if(!el||!u) return;
+  const DS=Math.round(SPR_MARINE.dispBase*_sprScale), st=SPR_MARINE.states[u.state];
+  el.style.width=DS+'px'; el.style.height=DS+'px';
+  el.style.backgroundImage="url('"+SPR_MARINE.url[u.state]+"')";
+  el.style.backgroundSize=(st.frames*DS)+'px '+(SPR_MARINE.dirs*DS)+'px';
+  el.style.backgroundPosition=(-u.frame*DS)+'px '+(-u.dir*DS)+'px';
+  el.style.left=u.x+'px'; el.style.top=u.y+'px'; }
+function sprHud(){ const h=document.getElementById('sprHud'); if(h&&_spr) h.textContent=_spr.state+' · dir '+_spr.dir; }
+function sprApply(){ sprRender(); sprHud(); }
+function _sprStopSpin(){ if(_sprSpin){ clearInterval(_sprSpin); _sprSpin=null; } }
+function sprLabTap(e){ if(!_spr) return; const r=_sprArenaRect(); _sprStopSpin(); _spr.tx=e.clientX-r.left; _spr.ty=e.clientY-r.top; }
+function sprLabSet(s){ if(!_spr) return; _sprStopSpin(); _spr.state=s; _spr.frame=0; _spr.ft=0; if(s==='idle'){ _spr.tx=_spr.x; _spr.ty=_spr.y; } sprApply(); }
+function sprLabWalkDemo(){ if(!_spr) return; _sprStopSpin(); const r=_sprArenaRect(); _spr.tx=Math.random()*r.width*0.7+r.width*0.15; _spr.ty=Math.random()*r.height*0.55+r.height*0.28; }
+function sprLabAttack(){ if(!_spr) return; _sprStopSpin(); _spr.state='attack'; _spr.frame=0; _spr.ft=0; sprApply(); }
+function sprLabSpin(){ if(!_spr) return; if(_sprSpin){ _sprStopSpin(); return; } _spr.state='idle'; _spr.tx=_spr.x; _spr.ty=_spr.y; _spr.frame=0;
+  _sprSpin=setInterval(()=>{ if(!_spr){return;} _spr.dir=(_spr.dir+1)%8; sprApply(); },420); }
+function sprLabReset(){ _sprStopSpin(); const r=_sprArenaRect(); _spr={x:r.width/2,y:r.height*0.55,tx:r.width/2,ty:r.height*0.55,dir:0,state:'idle',frame:0,ft:0}; sprApply(); }
+function sprLabScale(v){ _sprScale=parseFloat(v)||1.15; sprRender(); }
 // ════════════════════════════════════════════════════════════════
 // ⚔ 전투 실험(관리자 전용) — 자립형 더미 적(G.sbFoes, 정규 적/트랙과 분리). 스킬·치유·은신 실전 검증용.
 //   · 스킬 훅(_skFoes)이 sbFoes를 대상으로 → 스톰/인스네어/마인 등 즉시 작동
