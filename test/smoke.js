@@ -784,6 +784,15 @@ async function groupGame(){
     const base=acc(null), win=acc('win'), lose=acc('lose');
     assert(win!==base && lose!==base && win!==lose,
       '승/패 액센트가 안 갈림: 기본 '+base+' 승 '+win+' 패 '+lose);
+    // 카드 면은 살짝 투명해서 뒤가 비쳐야 하고, 테두리는 뚜렷해야 한다
+    card.classList.remove('win','lose');   // 앞 검사에서 붙은 상태 클래스가 --cardEdge를 덮는다
+    const cbg=getComputedStyle(card).backgroundImage;
+    const alphas=[...cbg.matchAll(/rgba\([^)]*?,\s*([\d.]+)\)/g)].map(m=>parseFloat(m[1]));
+    assert(alphas.length,'카드 배경에서 알파를 못 읽음: '+cbg);
+    assert(Math.max.apply(null,alphas)<=0.95,'카드 면이 불투명해 뒤가 안 비침: 최대 알파 '+Math.max.apply(null,alphas));
+    assert(Math.min.apply(null,alphas)>=0.8,'카드 면이 너무 투명해 글자가 묻힘: 최소 알파 '+Math.min.apply(null,alphas));
+    const bc=getComputedStyle(card).borderTopColor, rgb=(bc.match(/\d+/g)||[]).slice(0,3).map(Number);
+    assert(rgb.length===3 && rgb[0]+rgb[1]+rgb[2]>=250,'카드 테두리가 흐림: '+bc);
     // 카드 바깥 오라(덮개 배경) — 카드에 clip-path가 있어 box-shadow를 못 쓰므로 #ov가 낸다
     const aura=(c)=>{ card.classList.remove('win','lose'); if(c) card.classList.add(c);
       return getComputedStyle($('ov')).getPropertyValue('--aura').trim(); };
