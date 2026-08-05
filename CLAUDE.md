@@ -3,6 +3,7 @@
 ## Project Context (this repo)
 - Deliverable: a single self-contained file `sc-ums-web.html` — a mobile StarCraft-style usemap (vanilla JS + inline CSS/HTML, Three.js 3D, Supabase realtime). No build step and **no test framework**.
 - **Read `ARCHITECTURE.md` first** — section map (jump by banner search strings), global state, frame pipeline, M3D API, and a pitfall list. Update it when structure changes.
+- **Read `DESIGN.md` before any visual change** — 확정된 스타일 규칙(각진 SF · 볼륨 3단 · 라운드 0/3/6/9 · 역할별 액센트). 값은 고민하지 말고 표에서 꺼낼 것. **일괄 치환 금지** — 화면을 만지는 김에 그 화면만 체크리스트를 통과시킨다(touch-it-fix-it).
 - Behavioral verification = **`npm test`** (headless smoke suite: `test/smoke.js` + `test/run-smoke.mjs`, groups lobby/game/sandbox, ~10s) plus browser preview for visuals. Run it after every change; add a `step(...)` when you add a feature. Never claim "done" without it passing.
 - After editing inline JS, **syntax-check** the non-module `<script>` (extract it and `new vm.Script(...)`).
 - Edit with exact-string replacements; match the surrounding style and line endings.
