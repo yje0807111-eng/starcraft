@@ -567,7 +567,7 @@
   #settingsPop.appCtx .setCard{background:linear-gradient(180deg,rgba(20,24,33,.985),rgba(8,10,15,.99))}   /* 거의 불투명(겹침 방지) */
   #settingsPop.appCtx #si-mission,#settingsPop.appCtx #body-mission,#settingsPop.appCtx #si-spd,#settingsPop.appCtx #body-spd,#settingsPop.appCtx #setPauseBtn,#settingsPop.appCtx #setExit{display:none}
   #settingsPop:not(.appCtx) #setLogout{display:none}
-  .setLogout{margin-top:8px;width:100%;height:44px;padding:0;border-radius:11px;font-family:inherit;font-size:var(--fs-lg);font-weight:800;letter-spacing:.3px;cursor:pointer;
+  .setLogout{margin-top:8px;width:100%;height:44px;padding:0;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-lg);font-weight:800;letter-spacing:.3px;cursor:pointer;
     color:#dfe7f0;background:rgba(255,255,255,.07);border:1px solid var(--glass-edge);transition:background .16s,border-color .16s}
   .setLogout:active{transform:translateY(1px);background:rgba(255,255,255,.1)}
   /* 헤더 톱니바퀴(설정) 버튼 — 로비 */
@@ -600,20 +600,20 @@
   /* 일시정지(상단) / 나가기(하단) */
   .setPause{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin:10px 0 0;height:44px;padding:0;cursor:pointer;
     font-family:inherit;font-size:var(--fs-lg);font-weight:800;letter-spacing:.3px;color:#dfe7f0;
-    background:rgba(255,255,255,.07);border:1px solid var(--glass-edge);border-radius:11px;box-shadow:none;transition:background .16s,border-color .16s}
+    background:rgba(255,255,255,.07);border:1px solid var(--glass-edge);border-radius:var(--r-md);box-shadow:none;transition:background .16s,border-color .16s}
   .setPause .pIco{font-size:var(--fs-lg);color:var(--setAcc)}
   .setPause.paused{color:var(--setAcc);border-color:var(--setAccS);background:rgba(255,255,255,.1)}
   .setPause:active{transform:translateY(1px)}
   .setPause.disabled{opacity:.4;pointer-events:none}   /* 일시정지 횟수 소진 */
   /* 항목 = 박스 나열 대신 하나의 패널 + 구분선 행(방 만들기 폼·대기실과 같은 방식) */
-  .setMenu{display:flex;flex-direction:column;min-height:0;overflow-y:auto;padding:0 12px;border-radius:11px;
+  .setMenu{display:flex;flex-direction:column;min-height:0;overflow-y:auto;padding:0 12px;border-radius:var(--r-lg);
     background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.014));border:1px solid var(--metal-edge);
     scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}
   .setMenu::-webkit-scrollbar{width:5px} .setMenu::-webkit-scrollbar-thumb{background:rgba(120,140,170,.4);border-radius:3px}
   /* 배속 선택 — 세 칸 세그먼트(선택=강조색) + 아래 현재값 한 줄 */
   .spdNow{color:var(--setAcc,var(--neon));font-family:'Rajdhani',sans-serif;font-size:var(--fs-xl);margin-left:5px}
   .voteCols{display:flex;gap:5px}
-  .voteCol{flex:1;min-width:0;min-height:76px;border:1px solid var(--metal-edge);border-radius:10px;background:rgba(255,255,255,.04);cursor:pointer;
+  .voteCol{flex:1;min-width:0;min-height:76px;border:1px solid var(--metal-edge);border-radius:var(--r-lg);background:rgba(255,255,255,.04);cursor:pointer;
     padding:9px 3px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
     transition:border-color .16s,background .16s}
   .voteCol.active{border-color:var(--setAccS,var(--neon-soft));background:rgba(255,255,255,.09)}
@@ -622,7 +622,7 @@
   .voteCol.active .vcSpd{color:var(--setAcc,var(--neon))}
   /* 투표 칩 = 플레이어 색 타일 + 번호(8인 2줄 고정 높이 → 인원수와 무관하게 칸 크기 일정) */
   .vcPlayers{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;align-content:flex-start;height:35px;overflow:hidden}
-  .vChip{--pc:#888;flex:0 0 auto;width:16px;height:16px;border-radius:5px;display:flex;align-items:center;justify-content:center;box-sizing:border-box;
+  .vChip{--pc:#888;flex:0 0 auto;width:16px;height:16px;border-radius:var(--r-bar);display:flex;align-items:center;justify-content:center;box-sizing:border-box;
     font:800 9px/1 'Rajdhani',sans-serif;color:var(--pc);letter-spacing:0;
     background:color-mix(in srgb,var(--pc) 16%,transparent);border:1px solid color-mix(in srgb,var(--pc) 50%,transparent)}
   .vChip.me{color:#fff;background:color-mix(in srgb,var(--pc) 34%,transparent);border-color:var(--pc)}   /* 나=진하게 + 흰 숫자 */
@@ -633,7 +633,7 @@
   /* 위험 액션 = 채움 대신 붉은 글자·테두리만(차분하게) */
   .setExit{display:block;width:100%;margin:8px 0 0;height:44px;padding:0;cursor:pointer;
     font-family:inherit;font-size:var(--fs-lg);font-weight:800;letter-spacing:.3px;color:#ff9a9a;
-    background:rgba(255,80,80,.08);border:1px solid rgba(255,80,80,.32);border-radius:11px;box-shadow:none;transition:background .16s,border-color .16s}
+    background:rgba(255,80,80,.08);border:1px solid rgba(255,80,80,.32);border-radius:var(--r-md);box-shadow:none;transition:background .16s,border-color .16s}
   .setExit:active{transform:translateY(1px);background:rgba(255,80,80,.14)}
   /* 나가기 확인 창 */
   #exitConfirm{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:var(--ov-dim);backdrop-filter:blur(2px)}
@@ -642,14 +642,14 @@
   .ecCard{--ecAcc:#5cd6ff;width:86%;max-width:320px;padding:14px 14px 13px;box-sizing:border-box;text-align:center;
     background:linear-gradient(160deg,rgba(19,24,35,.96),rgba(6,9,14,.975));border:1px solid var(--glass);
     clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px);
-    box-shadow:0 16px 44px -12px #000}
+    box-shadow:0 16px 44px -12px #000,inset 0 1px 0 rgba(255,255,255,.05)}
   .ecTitle{position:relative;font-size:15px;font-weight:800;letter-spacing:.5px;color:#eaf1fb;text-shadow:0 1px 3px rgba(0,0,0,.65);
     margin-bottom:11px;padding-bottom:9px}
   .ecTitle::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;background:linear-gradient(90deg,var(--ecAcc),transparent 72%);opacity:.5}
   .ecMsg{font-size:var(--fs-md);line-height:1.55;color:#c2ccda;margin:0 0 12px;word-break:keep-all}
   .ecBtns{display:flex;gap:8px}
   /* 버튼 = 설정 규격(중립 글래스 / 위험은 붉은 글자·테두리만) — 방 만들기 버튼과 공유하지 않게 카드 안에서만 재정의 */
-  .ecCard .ecCancel,.ecCard .ecGo{flex:1 1 0;min-width:0;height:44px;padding:0 10px;border-radius:11px;
+  .ecCard .ecCancel,.ecCard .ecGo{flex:1 1 0;min-width:0;height:44px;padding:0 12px;border-radius:var(--r-md);
     font-family:inherit;font-size:var(--fs-lg);font-weight:800;letter-spacing:.3px;
     display:flex;align-items:center;justify-content:center;box-shadow:none;transition:background .16s,border-color .16s}
   .ecCard .ecCancel{color:#dfe7f0;background:rgba(255,255,255,.07);border:1px solid var(--glass-edge)}
@@ -682,7 +682,7 @@
   .setBody.on{background:rgba(255,255,255,.06);box-shadow:inset 2px 0 0 var(--setAcc,var(--neon));
     margin:0 -12px;padding:2px 12px 13px;border-radius:0 0 9px 9px}
   /* 효과음/배경음 — 버튼 행 + 볼륨 바를 하나의 박스로 묶음 */
-  .sndGroup{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08);border-radius:var(--r-sm);padding:3px 2px 5px;margin-bottom:7px}
+  .sndGroup{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08);border-radius:var(--r-md);padding:4px 2px;margin-bottom:7px}
   .setSub{display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-size:var(--fs-lg);font-weight:600;color:var(--txt);
     padding:8px 11px;border-radius:var(--r-bar);background:transparent;border:none}
   .setSub b{color:var(--setAcc,var(--neon));font-family:'Rajdhani',sans-serif}
@@ -1538,11 +1538,16 @@
   #ov:not(.hide) .ovCard{animation:ovPop .26s cubic-bezier(.2,.9,.3,1.2)}
   @keyframes ovPop{from{opacity:0;transform:translateY(8px) scale(.94)}to{opacity:1;transform:none}}
   /* ── 결과 카드 = 설정 창과 같은 규격: 제목+강조 언더라인 → 글래스 패널 → 44px 버튼 ── */
+  .ovCard.win{--ovAcc:var(--gold);--ovAccG:rgba(255,210,74,.5)}     /* 승리 = 보상 금색 */
+  .ovCard.lose{--ovAcc:#ff6b7a;--ovAccG:rgba(255,107,122,.5)}       /* 패배 = 위험 빨강 */
+  .ovCard.win .ovTop::after,.ovCard.lose .ovTop::after{opacity:.9;height:2px}
+  .ovCard.win #ovTitle{color:var(--gold-lt);text-shadow:0 0 12px rgba(255,210,74,.4)}
+  .ovCard.lose #ovTitle{color:#ffd0d6}
   .ovCard{width:86%;max-width:320px;padding:14px 14px 13px;text-align:center;--ovAcc:#5cd6ff;--ovAccG:rgba(92,214,255,.5);
     display:flex;flex-direction:column;box-sizing:border-box;
     background:linear-gradient(160deg,rgba(19,24,35,.96),rgba(6,9,14,.975));border:1px solid var(--glass);
     clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px);
-    box-shadow:0 16px 44px -12px #000}
+    box-shadow:0 16px 44px -12px #000,inset 0 1px 0 rgba(255,255,255,.05)}
   /* 제목 줄 = 설정 제목과 동일(흰 제목 + 강조 언더라인) · 아이콘 없음 */
   .ovTop{position:relative;margin-bottom:11px;padding-bottom:9px}
   .ovTop::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;background:linear-gradient(90deg,var(--ovAcc),transparent 72%);opacity:.5}
@@ -1554,7 +1559,7 @@
   #ovDesc{font-size:var(--fs-md);color:#c2ccda;line-height:1.5;margin:0;white-space:pre-line;word-break:keep-all}
   /* 결과 통계(플레이타임·도달 라운드·받은 포인트) */
   /* 결과 통계 = 하나의 글래스 패널 + 구분선(방 만들기 폼·대기실과 통일) */
-  .ovStats{display:flex;flex-direction:column;gap:0;margin:0 0 16px;text-align:left;padding:1px 13px;border-radius:12px;
+  .ovStats{display:flex;flex-direction:column;gap:0;margin:0 0 12px;text-align:left;padding:0 12px;border-radius:var(--r-lg);
     background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.016));border:1px solid var(--metal-edge)}
   .ovStat{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;
     background:none;border:none;border-bottom:1px solid rgba(255,255,255,.07)}
@@ -1567,13 +1572,14 @@
   /* 하단 액션 = 설정 버튼과 같은 규격(44px · 라운드 11 · 중립 글래스) — 왼쪽 관전하기 / 오른쪽 확인 */
   .ovBtns{display:flex;gap:8px;align-items:stretch;margin-top:10px}
   /* 자동 진행 표시 = 버튼을 왼→오른쪽으로 채우는 빛(시작 화면 진행 표시와 같은 언어) */
-  .autoBar{position:absolute;left:0;top:0;bottom:0;width:0;pointer-events:none;
-    background:linear-gradient(90deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.04) 42%,rgba(255,255,255,.1) 78%,rgba(255,255,255,.18) 100%)}
+  .autoBar{--abC:var(--ovAcc,#5cd6ff);position:absolute;left:0;top:0;bottom:0;width:0;pointer-events:none;
+    background:linear-gradient(90deg,transparent 0%,color-mix(in srgb,var(--abC) 8%,transparent) 42%,color-mix(in srgb,var(--abC) 18%,transparent) 100%)}
+  .autoBar:not(.run)::after{display:none}   /* width:0일 때 right:0 = 왼쪽 끝 → 세로줄이 버튼에 남던 버그 */
   .autoBar::after{content:'';position:absolute;right:0;top:0;bottom:0;width:2px;
-    background:linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,.75) 45%,rgba(255,255,255,0));box-shadow:0 0 10px 1px rgba(255,255,255,.3)}
+    background:linear-gradient(180deg,transparent,var(--abC) 45%,transparent);box-shadow:0 0 10px 1px color-mix(in srgb,var(--abC) 40%,transparent)}
   .autoBar.run{animation:opBarSweep var(--autoDur,5s) linear forwards}
   .ovBtnTx{position:relative;z-index:1}
-  #ovBtn,#ovBtn2.ghost{position:relative;overflow:hidden;flex:1 1 0;min-width:0;height:44px;padding:0 10px;border-radius:11px;
+  #ovBtn,#ovBtn2.ghost{position:relative;overflow:hidden;flex:1 1 0;min-width:0;height:44px;padding:0 12px;border-radius:var(--r-md);
     font-family:inherit;font-size:var(--fs-lg);font-weight:800;letter-spacing:.3px;cursor:pointer;white-space:nowrap;
     display:flex;align-items:center;justify-content:center;transition:background .16s,border-color .16s}
   #ovBtn2.ghost{order:-1;color:#dfe7f0;background:rgba(255,255,255,.07);border:1px solid var(--glass-edge)}   /* 보조 = 중립 글래스 */
@@ -9739,11 +9745,14 @@ function showOverlay(){ const ov=document.getElementById('ov'),tt=document.getEl
     tt.textContent=MAP.name; tt.style.color='';
     dd.style.display=''; dd.textContent=MAP.desc+'.\n유닛 구매 → 배치 → 합성으로 영웅을 키우고\n'+(mapCfg('infinite')?'끝없이 밀려오는 적을 최대한 오래 막아내세요!':(mapCfg('rounds',TOTAL_ROUNDS)+'라운드를 클리어!'));
     _ovBtnTx(bt,'멀티플레이'); bt2.style.display='none'; _ovClearAuto();   // 시작 안내엔 자동 진행 없음
+    const ovc0=ov.querySelector('.ovCard'); if(ovc0) ovc0.classList.remove('win','lose');
   } else {   // 승/패/종료 = 게임 화면 위 콘솔 카드(확인 → 통계 전체 화면)
     ov.classList.remove('spaceBg');   // 자체 배경 제거 → 뒤로 게임이 비침
     _runSummary();   // 기록 반영 + 이번 판 요약(1회)
     const won=(G.phase==='won'), quit=(G.phase==='quit'), inf=mapCfg('infinite');
     tt.textContent=inf?'기록 종료':(won?'CLEAR':(quit?'게임 종료':'DEFEAT')); tt.style.color='';   // 제목 = 흰색 통일
+    const ovc=ov.querySelector('.ovCard');   // 승/패에 따라 카드 액센트 교체(제목·언더라인·주 버튼이 함께 따라온다)
+    if(ovc){ ovc.classList.toggle('win', !!won && !quit); ovc.classList.toggle('lose', !won && !quit && !inf); }
     // 대사 = 맵 종류와 무관하게 통하는 한 줄(보상 유무·라운드 등 맵 고유 표현 없음)
     dd.style.display=''; dd.textContent=quit?'게임에서 나가셨습니다.':(won&&!inf?'게임에서 승리하셨습니다.':(inf?'게임을 마치셨습니다.':'게임에서 패배하셨습니다.'));
     _ovBtnTx(bt,'확인'); _ovStartAuto();                          // 확인 → 통계(또는 로비) · 5초 뒤 자동 진행

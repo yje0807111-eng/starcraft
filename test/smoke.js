@@ -752,6 +752,34 @@ async function groupGame(){
   await step('포인트 강화 팝업', ()=>{ skipIf(typeof openPointUpgrade!=='function','없음'); openPointUpgrade();
     assert(visible(document.querySelector('#pointPanel .ptTitle, #pointPanel .ppHead')),'공학소 팝업 헤더 안 보임'); closePointUpgrade(); return 'ok'; });
   await step('설정 팝업', ()=>{ openSettings(); assert(visible($('settingsPop')),'settingsPop 안 보임'); closeSettings(); return 'ok'; });
+  // DESIGN.md 규칙 — 게임 안 팝업(설정 · 나가기 확인 · 결과)만. 게임 밖(#settingsPop.appCtx)은 대상 아님
+  await step('게임 안 팝업: DESIGN.md 규칙(라운드 토큰 · 승패 액센트)', ()=>{
+    const OK=['3px','6px','9px'];
+    const scan=(root)=>{ const bad=[];
+      for(const e of root.querySelectorAll('*')){ const c=getComputedStyle(e);
+        if(c.display==='none') continue;
+        for(const v of c.borderRadius.split(/[\s\/]+/))
+          if(v && v!=='0px' && v!=='50%' && OK.indexOf(v)<0) bad.push((e.className||e.tagName)+'='+v);
+        if(parseFloat(c.borderTopWidth)>1.5) bad.push((e.className||e.tagName)+' 테두리 '+c.borderTopWidth); }
+      return bad; };
+    openSettings();
+    const sp=$('settingsPop');
+    assert(!sp.classList.contains('appCtx'),'게임 안인데 게임 밖(appCtx) 규격임');
+    let bad=scan(sp); assert(!bad.length,'설정 팝업 토큰 밖: '+bad.slice(0,4).join(', '));
+    // 나가기 확인
+    const ex=$('setExit'); assert(ex,'나가기 버튼이 없음'); ex.click();
+    const ec=$('exitConfirm'); assert(ec && !ec.classList.contains('hide'),'나가기 확인이 안 열림');
+    bad=scan(ec); assert(!bad.length,'나가기 확인 토큰 밖: '+bad.slice(0,4).join(', '));
+    closeExitConfirm(); closeSettings();
+    // 결과 카드 — 승/패에 따라 액센트가 갈려야 한다(둘 다 시안이면 구분이 안 된다)
+    const card=document.querySelector('#ov .ovCard'); assert(card,'결과 카드가 없음');
+    const acc=(c)=>{ card.classList.remove('win','lose'); if(c) card.classList.add(c);
+      return getComputedStyle(card).getPropertyValue('--ovAcc').trim(); };
+    const base=acc(null), win=acc('win'), lose=acc('lose');
+    assert(win!==base && lose!==base && win!==lose,
+      '승/패 액센트가 안 갈림: 기본 '+base+' 승 '+win+' 패 '+lose);
+    card.classList.remove('win','lose');
+    return '승 '+win+' / 패 '+lose; });
   await step('유닛 판매(홈 판매 API)', ()=>{ skipIf(typeof sellUnit!=='function','sellUnit 없음');
     const u=G.units.find(x=>!x.fixed && !x.hero && !x.atBoss); skipIf(!u,'판매할 유닛 없음'); const b=G.units.length;
     sellUnit(u);   // 유닛 객체를 받는다(uid 아님)
