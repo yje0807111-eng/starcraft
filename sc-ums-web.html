@@ -579,11 +579,17 @@
   .msGear:active{transform:rotate(40deg)}
   .msGear svg{width:17px;height:17px}
   /* 로그인 화면 우상단 설정 버튼 */
-  .authGear{position:absolute;top:16px;right:16px;z-index:2;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;cursor:pointer;
-    color:var(--txt-hud);background:rgba(10,8,12,.5);border:1px solid var(--metal-edge);border-radius:var(--r-lg);transition:all .16s}
-  .authGear:hover{color:var(--neon);border-color:var(--neon-soft)}
+  /* 육각형 배너 — 아이콘(17px)보다 살짝만 큰 26px. 테두리는 같은 육각형을 1px 키워 뒤에 깐다(clip-path는 border를 잘라낸다) */
+  .authGear{position:absolute;top:16px;right:16px;z-index:2;display:inline-flex;align-items:center;justify-content:center;
+    width:26px;height:26px;padding:1px;cursor:pointer;color:#cfe0ec;border:none;background:none;transition:color .16s}
+  .authGear::before{content:'';position:absolute;inset:0;z-index:-1;background:rgba(150,190,235,.5);
+    clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)}
+  .authGear::after{content:'';position:absolute;inset:1px;z-index:-1;background:linear-gradient(180deg,rgba(30,38,52,.95),rgba(8,11,17,.97));
+    clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)}
+  .authGear:hover{color:#fff}
+  .authGear:hover::before{background:var(--ac,#5cd6ff)}
   .authGear:active{transform:scale(.93)}
-  .authGear svg{width:18px;height:18px}
+  .authGear svg{width:14px;height:14px}
   /* 반투명 + 각진 박스. 세로로 시원하게(기본 닫힌 상태 ~1.5배 높이) */
   /* 설정 창 = 열린 곳에 맞춘 톤. 게임 내부(기본) = 각진 콘솔 패널 + 청록 포인트 */
   .setCard{--setAcc:#5cd6ff;--setAccS:rgba(92,214,255,.5);
@@ -658,7 +664,7 @@
     backdrop-filter:blur(2px) saturate(.95);-webkit-backdrop-filter:blur(2px) saturate(.95)}
   #exitConfirm.hide{display:none}
   /* 나가기 확인 = 설정 창과 같은 규격(각진 카드 · 제목+강조 언더라인 · 44px 버튼) */
-  .ecCard{--ecAcc:#5cd6ff;width:86%;max-width:320px;padding:14px 14px 13px;box-sizing:border-box;text-align:center;
+  .ecCard{--ecAcc:#5cd6ff;width:86%;max-width:320px;padding:18px 14px 17px;box-sizing:border-box;text-align:center;
     background:linear-gradient(160deg,rgba(19,24,35,.9),rgba(6,9,14,.93));border:1px solid var(--metal-edge);
     clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px);
     box-shadow:0 16px 44px -12px #000,inset 0 1px 0 rgba(255,255,255,.05)}
@@ -678,15 +684,15 @@
      윗변 안쪽 하이라이트 + 아래로 말려드는 안쪽 그림자 + 바깥 아래 그림자 = 솟아 있는 느낌.
      위는 완전히 평평(라운드 0), 아래만 --r-bar(3px) — 둥글면 볼록함이 물방울처럼 보인다.
      폭은 max-width 120px로 묶는다(flex:1 1 0라 안 묶으면 카드 폭까지 늘어난다). */
-  .ecCard .ecCancel,.ecCard .ecGo,#ovBtn,#ovBtn2.ghost{
-    height:32px;max-width:120px;
+  .ecCard .ecCancel,.ecCard .ecGo,#ovBtn,#ovBtn2.ghost,.authBtn,.authGuest{
+    height:36px;max-width:120px;
     border-radius:0 0 var(--r-bar) var(--r-bar);   /* 위는 완전히 평평, 아래만 살짝 — 둘 다 토큰 값 */
     background:linear-gradient(180deg,rgba(26,32,44,.72) 0%,rgba(12,16,23,.82) 52%,rgba(4,6,10,.9) 100%);
     border:1px solid var(--metal-edge);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.13),      /* 윗변 하이라이트 = 볼록 */
                inset 0 -4px 6px -3px rgba(0,0,0,.8),     /* 아래로 말려드는 그림자 */
                0 2px 4px -2px rgba(0,0,0,.7)}            /* 바깥 아래 그림자 = 솟아 있음 */
-  .ecCard .ecCancel:active,.ecCard .ecGo:active,#ovBtn:active,#ovBtn2.ghost:active{
+  .ecCard .ecCancel:active,.ecCard .ecGo:active,#ovBtn:active,#ovBtn2.ghost:active,.authBtn:active,.authGuest:active{
     background:linear-gradient(180deg,rgba(16,20,29,.8),rgba(4,6,10,.92));
     box-shadow:inset 0 2px 4px -1px rgba(0,0,0,.85),0 0 0 rgba(0,0,0,0)}   /* 누르면 눌려 들어간다 */
   .twBtn{--btnIn:rgba(92,214,255,.26)} .twBtn.del{--btnIn:rgba(255,120,120,.3)}
@@ -1611,7 +1617,7 @@
   .ovCard.win .ovTop,.ovCard.lose .ovTop{padding-bottom:10px;margin-bottom:10px}
   .ovCard.win #ovTitle{color:var(--gold-lt);text-shadow:0 0 4px rgba(255,210,74,.5),0 0 18px rgba(255,210,74,.4),0 2px 4px #000}
   .ovCard.lose #ovTitle{color:#ffd0d6;text-shadow:0 0 4px rgba(255,107,122,.5),0 0 18px rgba(255,107,122,.35),0 2px 4px #000}
-  .ovCard{width:86%;max-width:320px;padding:14px 14px 13px;text-align:center;--ovAcc:#5cd6ff;--ovAccG:rgba(92,214,255,.5);
+  .ovCard{width:86%;max-width:320px;padding:18px 14px 17px;text-align:center;--ovAcc:#5cd6ff;--ovAccG:rgba(92,214,255,.5);
     display:flex;flex-direction:column;box-sizing:border-box;
     background:linear-gradient(160deg,rgba(19,24,35,.9),rgba(6,9,14,.93));border:1px solid var(--metal-edge);
     clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px);
@@ -2090,35 +2096,91 @@
   /* 카드 = 각진 HUD 창(clip-path) + 마스크 그라데 테두리. 내부는 청록 콘솔 톤 */
   .authCard{--ac:#5cd6ff;position:relative;width:90%;max-width:326px;padding:22px 18px 18px;box-sizing:border-box;
     clip-path:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px);
-    background:linear-gradient(168deg,rgba(16,26,38,.93),rgba(9,13,20,.96));
-    box-shadow:0 22px 52px -26px #000,inset 0 0 60px -34px color-mix(in srgb,var(--ac) 80%,transparent)}
+    background:linear-gradient(160deg,rgba(19,24,35,.9),rgba(6,9,14,.93));   /* = .ovCard/.ecCard와 동일한 면 */
+    box-shadow:0 22px 52px -26px #000}
   .authCard::before{content:'';position:absolute;inset:0;padding:1.4px;pointer-events:none;z-index:0;
     background:linear-gradient(155deg,var(--ac),rgba(255,255,255,.06) 46%,color-mix(in srgb,var(--ac) 70%,transparent));
     clip-path:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px);
-    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.8}
-  .authCard::after{content:'';position:absolute;left:18px;right:18px;top:82px;height:1px;z-index:1;
-    background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--ac) 55%,transparent),transparent)}
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.45}
+  /* 안쪽 프레임 1px — 굵히는 대신 겹을 늘려 테두리를 강조한다(DESIGN.md §2 이중 테두리) */
+  .authCard::after{content:'';position:absolute;inset:5px;pointer-events:none;z-index:0;
+    border:1px solid color-mix(in srgb,var(--ac) 34%,transparent);
+    clip-path:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px)}
   .authCard>*{position:relative;z-index:1}
-  .authTabs{margin-bottom:12px}
-  .authLogo{font-size:20px;font-weight:900;letter-spacing:1.6px;text-align:center;margin-bottom:3px}
-  .authLogo .alg1{color:#f3f6fb;text-shadow:0 0 8px rgba(255,255,255,.22)}   /* STAR(흰) — 로딩 타이틀과 동일 2톤 */
-  .authLogo .alg2{color:var(--ac,#5cd6ff);text-shadow:0 0 14px rgba(92,214,255,.55)}
-  .authSub{font-size:var(--fs-xs);color:#7f8b99;text-align:center;letter-spacing:.6px;margin-bottom:26px}
-  .authField{width:100%;box-sizing:border-box;padding:10px 12px;margin-bottom:8px;border-radius:9px;background:rgba(26,34,46,.78);
-    border:1px solid rgba(255,255,255,.09);color:var(--txt);font-family:inherit;font-size:var(--fs-lg);outline:none;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.08),inset 0 0 18px -12px rgba(150,205,255,.85);transition:border-color .13s,box-shadow .16s}
-  .authField:focus{border-color:rgba(92,214,255,.55);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.12),inset 0 0 22px -10px rgba(150,205,255,1),0 0 0 3px rgba(92,214,255,.12)}
+  /* ══ 로그인/회원가입 탭 바 ══ 공용 .msTabs2/.msTab2를 그대로 쓰고 로그인 화면에서만 겉모습을 바꾼다.
+     둥근 상자 + 아래쪽이 진한 테두리(모서리 라운드 때문에 끝이 자연히 올라간다) + 선택 칸은 은은한 색 채움 + 위아래 글로우. */
+  .authCard{min-height:var(--authH,0px)}   /* 두 탭의 높이를 같게 — 값은 authLockHeight()가 실측해 넣는다 */
+  .msTabs2.authTabs{margin-bottom:14px;padding:3px;border-radius:var(--r-lg);background:rgba(10,14,22,.6);flex:none;
+    border:1px solid rgba(150,190,235,.16);border-bottom-color:rgba(120,165,220,.55);   /* 하단만 진하게 */
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 3px 10px -7px #000}
+  .msTabs2.authTabs .msTab2{min-height:36px;padding:9px 4px;font-size:var(--fs-lg);font-weight:800;letter-spacing:.3px;gap:7px;
+    border-radius:var(--r-md);border-bottom:none;transition:color .14s,background .14s,box-shadow .18s,border-color .14s}
+  .msTabs2.authTabs .msTab2 svg{width:15px;height:15px}
+  /* 선택 = 액센트로 은은히 채우고 위·아래로만 발광(면을 강하게 칠하지 않는다) */
+  .msTabs2.authTabs .msTab2.on{color:#dff2ff;
+    background:linear-gradient(180deg,color-mix(in srgb,var(--ac) 20%,transparent),color-mix(in srgb,var(--ac) 9%,transparent));
+    border:1px solid color-mix(in srgb,var(--ac) 45%,transparent);
+    box-shadow:inset 0 1px 0 color-mix(in srgb,var(--ac) 40%,transparent),
+               inset 0 -1px 0 color-mix(in srgb,var(--ac) 30%,transparent),
+               0 -5px 12px -8px color-mix(in srgb,var(--ac) 85%,transparent),
+               0 5px 12px -8px color-mix(in srgb,var(--ac) 85%,transparent)}
+  .authDia{display:block;width:9px;height:9px;margin:0 auto 9px;transform:rotate(45deg);
+    background:linear-gradient(135deg,#bfeaff,var(--ac))}
+  .authLogo{font-size:30px;font-weight:900;letter-spacing:2.5px;line-height:1.05;text-align:center;margin-bottom:7px}
+  .authLogo .alg1{color:#f3f6fb;text-shadow:0 2px 4px #000}   /* STAR(흰) — 로딩 타이틀과 동일 2톤 · 글로우 없음 */
+  .authLogo .alg2{color:var(--ac,#5cd6ff);text-shadow:0 2px 4px #000}
+  /* 부제 = 좌우 선 + 화살촉으로 감싼 형태(카드 전폭 구분선 대체) */
+  .authSub{display:flex;align-items:center;justify-content:center;gap:8px;
+    font-size:var(--fs-xs);color:#8b97a6;text-align:center;letter-spacing:.6px;margin-bottom:22px}
+  .authSub::before,.authSub::after{content:'';flex:0 0 34px;height:1px;
+    background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--ac) 60%,transparent))}
+  .authSub::after{background:linear-gradient(270deg,transparent,color-mix(in srgb,var(--ac) 60%,transparent))}
+  .authField{width:100%;box-sizing:border-box;padding:10px 12px;margin-bottom:8px;border-radius:9px;
+    background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.016));
+    border:1px solid var(--metal-edge);color:var(--txt);font-family:inherit;font-size:var(--fs-lg);outline:none;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08);transition:border-color .13s,box-shadow .16s}
+  .authField:focus{border-color:rgba(160,185,215,.6);box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
   .authField::placeholder{color:#6f757d}
   .authField.hide{display:none}
   .authErr{min-height:14px;font-size:var(--fs-sm);color:#ff6b6b;margin:1px 1px 7px;line-height:1.4}
-  .authBtn{width:100%;padding:11px;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-xl);font-weight:800;letter-spacing:.5px;cursor:pointer;
-    color:#04121b;background:linear-gradient(180deg,#7fe0ff,#39b6ec 58%,#1f8ec2);border:1px solid rgba(150,235,255,.9);
-    box-shadow:0 0 18px -4px rgba(92,214,255,.75),inset 0 1px 0 rgba(255,255,255,.45)}
-  .authBtn:active{transform:translateY(1px)}
-  .authGuest{display:block;width:100%;margin-top:9px;padding:8px;background:none;border:none;cursor:pointer;
-    font-family:inherit;font-size:var(--fs-md);color:var(--txt-hud);text-decoration:underline;text-underline-offset:3px}
-  .authNote{font-size:8.5px;color:#5f6772;text-align:center;margin-top:11px;line-height:1.5}
+  /* 재질·라운드·입체는 팝업 버튼 규칙(위)에서 상속 — 여기서는 폭과 글자만 */
+  /* 주 동작이라 색은 예전 파랑 유지 — 높이·라운드·입체는 팝업 버튼 규칙에서 상속 */
+  .authBtn{width:100%;max-width:none;padding:0;font-family:inherit;font-size:var(--fs-xl);font-weight:800;letter-spacing:.5px;
+    cursor:pointer;color:#04121b;
+    background:linear-gradient(180deg,#7fe0ff,#39b6ec 58%,#1f8ec2) padding-box;padding:1px;box-sizing:border-box;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.45),inset 0 -4px 6px -3px rgba(0,0,0,.35)}
+  .authBtn:active{background:linear-gradient(180deg,#5cc4e8,#2e9ccd 58%,#17739f)}
+  /* '또는' 구분선 — 주 버튼과 게스트 버튼을 가른다 */
+  .authOr{display:flex;align-items:center;gap:10px;margin:12px 0 10px;font-size:var(--fs-xs);color:#6f7a88;letter-spacing:.4px}
+  .authOr::before,.authOr::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.09)}
+  /* 네 모서리를 6px씩 깎는다. ⚠ clip-path는 border를 잘라내므로 테두리는 뒤에 깐 한 겹(::before)이 그린다.
+     재질(그라데·입체)은 팝업 버튼 규칙에서 그대로 상속받고, 여기서는 윤곽만 바꾼다. */
+  .authBtn,.authGuest{--ch:6px;position:relative;border:none;border-radius:0;
+    clip-path:polygon(var(--ch) 0,calc(100% - var(--ch)) 0,100% var(--ch),100% calc(100% - var(--ch)),
+      calc(100% - var(--ch)) 100%,var(--ch) 100%,0 calc(100% - var(--ch)),0 var(--ch))}
+  /* ⚠ 겹을 통째로 깔면 반투명 재질 뒤로 비쳐서 버튼이 밝아진다 → 마스크로 1px 테두리만 남긴다 */
+  .authBtn::before,.authGuest::before{content:'';position:absolute;inset:0;z-index:-1;padding:1px;
+    background:var(--btnLine,var(--metal-edge));
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;mask-composite:exclude;
+    clip-path:polygon(var(--ch) 0,calc(100% - var(--ch)) 0,100% var(--ch),100% calc(100% - var(--ch)),
+      calc(100% - var(--ch)) 100%,var(--ch) 100%,0 calc(100% - var(--ch)),0 var(--ch))}
+  .authBtn{--btnLine:rgba(150,235,255,.75)}
+  /* ⚠ 공용 .hide{display:none}보다 뒤에 오는 display:flex가 이겨서 숨김이 먹지 않았다 → 명시적으로 되돌린다 */
+  .authOr.hide,.authGuest.hide{display:none}
+  .authGuest{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;max-width:none;
+    padding:1px;background-clip:padding-box;box-sizing:border-box;cursor:pointer;
+    font-family:inherit;font-size:var(--fs-lg);font-weight:700;letter-spacing:.3px;color:#dfe7f0}
+  .authBtn:hover{color:#001019}
+  .authGuest:hover{color:#fff}
+  .authGuest .ic{width:15px;height:15px}
+  .authNote{display:flex;align-items:center;justify-content:center;gap:9px;
+    font-size:var(--fs-xs);color:#69737f;text-align:center;margin-top:14px;line-height:1.5}
+  .authNote i{font-style:normal;color:#39414c}   /* 구분자 | */
+  .authFind{background:none;border:none;padding:0;cursor:pointer;font-family:inherit;font-size:var(--fs-xs);font-weight:700;
+    color:#9dc6e8;transition:color .13s}
+  .authFind:hover{color:var(--ac)}
+  .authErr.info{color:#8fb6cf}   /* 오류가 아닌 안내문 */
   /* 유즈맵 선택 */
   #mapSelect{z-index:47;padding:12px 13px}
   /* 유즈맵 선택 로비 배경(전체 cover, 9:16 기준, UI는 위 레이어) */
@@ -2331,11 +2393,11 @@
   /* 배경 = 유즈맵 선택·방찾기와 같은 로비 배경(lobby_bg). 위 선택자에 #hubScreen을 합류시켜 규칙을 공유한다 — 전용 배경을 따로 만들면 통일이 깨진다 */
   #hubScreen{flex-direction:column}
   /* 상단 유저 프로필 바 */
-  .hubTop{flex:none;width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 15px 9px;box-sizing:border-box;
+  .hubTop{flex:none;width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;box-sizing:border-box;
     border-bottom:1px solid rgba(255,255,255,.06)}
   /* 우상단 = 심플·세련: 아바타(레벨 배지)+닉 / 코인 / 설정 */
-  .hubTopR{display:flex;align-items:center;gap:9px;flex:none}
-  .hubProf{display:flex;align-items:center;gap:7px;min-width:0;cursor:default}
+  .hubTopR{display:flex;align-items:center;gap:8px;flex:none}
+  .hubProf{display:flex;align-items:center;gap:8px;min-width:0;cursor:default}
   .hubAv{position:relative;width:26px;height:26px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:50%;
     background:radial-gradient(circle at 50% 32%,rgba(120,140,175,.28),rgba(10,12,18,.92));border:1px solid var(--metal-edge)}
   .hubLvBadge{position:absolute;right:-3px;bottom:-3px;min-width:13px;height:13px;padding:0 2.5px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;
@@ -2346,39 +2408,42 @@
   .hubGear:hover{color:#fff}
   /* 좌상단 로고(엠블럼 + 게임명 축소) */
   /* 선택 영역 = 상단 컴팩트 블록(하단 소셜에 공간 양보) */
-  .hubCenter{flex:1 1 auto;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:10px 0 4px}
+  .hubCenter{flex:1 1 auto;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:8px 0 4px}
   /* 게임명 아래 나머지 공간 중앙에 선택 영역 */
-  .hubBody{flex:1 1 auto;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:0;padding:0 15px}
+  .hubBody{flex:1 1 auto;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:0;padding:0 12px}
   /* 게임 선택 = 좌측 정렬 + 네온 액센트 바(중앙 디바이더 대체) */
-  .hubSel{width:100%;max-width:360px;display:flex;align-items:center;gap:9px;font-size:15px;font-weight:800;letter-spacing:.5px;color:#eef3fa;text-shadow:0 1px 3px #000}
+  .hubSel{width:100%;max-width:360px;display:flex;align-items:center;gap:8px;font-size:15px;font-weight:800;letter-spacing:.5px;color:#eef3fa;text-shadow:0 1px 3px #000}
   .hubSel::before{content:'';flex:none;width:3.5px;height:16px;border-radius:2px;background:linear-gradient(180deg,var(--neon),var(--neon-d1));box-shadow:0 0 8px var(--neon-glow)}
   /* ── 허브 팔레트: 짙은 남색 패널 + 파랑 액센트 ── */
   #hubScreen{--hbPanel:rgba(11,16,29,.93);--hbEdge:rgba(88,118,188,.22);--hbCard:rgba(20,29,50,.78);--hbRow:rgba(28,40,66,.85)}
-  .hubTitles{display:flex;flex-direction:column;gap:1px;min-width:0}
+  .hubTitles{display:flex;flex-direction:column;gap:0;min-width:0}
   .hubSubTx{font-size:9.5px;font-style:normal;color:#7d8ba0;letter-spacing:.2px;white-space:nowrap}
-  .hubMe{display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:0}
+  .hubMe{display:flex;flex-direction:column;align-items:flex-end;gap:0;min-width:0}
   .hubLv{font-style:normal;font-size:7.5px;font-weight:800;letter-spacing:.3px;color:#9ec6ff;
-    padding:1px 5px;border-radius:4px;background:rgba(79,157,255,.15);border:1px solid rgba(79,157,255,.3)}
+    padding:0 4px;border-radius:var(--r-bar);background:rgba(79,157,255,.15);border:1px solid rgba(79,157,255,.3)}
   .hubLv b{font-family:'Rajdhani',sans-serif;color:#cfe4ff}
   /* 섹션 선택 + 카드 = 하나의 패널 */
   .hubPanel{flex:0 1 auto;min-height:0;width:100%;max-width:360px;display:flex;flex-direction:column;
-    border-radius:16px;background:var(--hbPanel);border:1px solid var(--hbEdge);overflow:hidden;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 14px 34px -20px #000}
+    border-radius:0;background:var(--hbPanel);border:1px solid var(--hbEdge);overflow:hidden;
+    clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
   .hubGameTabs{flex:none;width:100%;border-bottom:1px solid var(--hbEdge);background:rgba(9,14,26,.55)}
   #hubFriendTabs{background-color:rgba(16,24,42,.92);
     background-image:linear-gradient(180deg,rgba(70,110,180,.10),rgba(70,110,180,0));
-    border-bottom:1px solid var(--hbEdge);margin:0 0 9px}
-  #hubFriendTabs .msTab2{padding:14px 4px;font-size:11.5px;gap:6px;letter-spacing:.3px}
+    border-bottom:1px solid var(--hbEdge);margin:0 0 8px}
+  #hubFriendTabs .msTab2{padding:12px 4px;min-height:44px;box-sizing:border-box;font-size:11.5px;gap:4px;letter-spacing:.3px}
   #hubFriendTabs .msTab2 svg{width:14px;height:14px}
-  #hubFriendTabs .msTab2.on{background:rgba(79,157,255,.13);box-shadow:inset 0 1px 0 rgba(140,185,255,.16)}
-  .hubGameTabs .msTab2{padding:11px 4px;font-size:12.5px;font-weight:900;letter-spacing:.6px;border-bottom:none}
+  #hubFriendTabs .msTab2{border-bottom-width:0}
+  #hubFriendTabs .msTab2.on{color:var(--acc-sel);background:rgba(79,157,255,.13);
+    box-shadow:inset 0 1px 0 rgba(140,185,255,.16),inset 0 -2px 0 var(--acc-sel)}
+  .hubGameTabs .msTab2{padding:12px 4px;gap:4px;font-size:12.5px;font-weight:900;letter-spacing:.6px;border-bottom:none}
   .hubGameTabs .msTab2 svg{width:15px;height:15px}
   .hubGameTabs .msTab2[data-g="use"].on{color:#a9cdff;background:rgba(79,157,255,.14);
     box-shadow:inset 0 -2.5px 0 #4f9dff,inset 0 0 26px -12px rgba(79,157,255,.9)}
   .hubGameTabs .msTab2[data-g="rpg"].on{color:#c7b4ff;background:rgba(150,120,255,.15);
     box-shadow:inset 0 -2.5px 0 #8b6bff,inset 0 0 26px -12px rgba(150,120,255,.9)}
   .hubCard.hide{display:none}
-  .hubCards{flex:0 0 auto;min-height:0;display:flex;flex-direction:column;width:100%;padding:11px;box-sizing:border-box}
+  .hubCards{flex:0 0 auto;min-height:0;display:flex;flex-direction:column;width:100%;padding:12px;box-sizing:border-box}
   .hubCards>.hubCard{flex:0 0 auto;min-height:0}
   .hubCards>.hubCard>.hubcQuick{flex:0 0 auto;min-height:0}
   .hubcQuick>.hqRow{flex:none;min-height:0}   /* 세로 스택 · 카드는 내용 높이(조밀) · 남는 높이는 소셜이 가져간다 */
@@ -2390,48 +2455,48 @@
     text-align:left;font-family:inherit;color:#dbe3ec;background:none;border:none;padding:0}
   /* 블록 공통 껍데기 — 헤더 블록과 개별 맵 블록이 같은 재질을 쓴다(단일 소스) */
   .hubcTopRow,.hqRow{background:var(--cbg,rgba(20,24,32,.62));
-    border:1px solid color-mix(in srgb,var(--ca) 40%,var(--glass-edge));border-radius:13px;
+    border:1px solid color-mix(in srgb,var(--ca) 40%,var(--glass-edge));border-radius:var(--r-lg);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 8px 20px -16px color-mix(in srgb,var(--ca) 70%,#000);
     transition:background .13s,border-color .13s,transform .13s,box-shadow .13s}
   .hubcTopRow:hover,.hqRow:hover{border-color:color-mix(in srgb,var(--ca) 62%,var(--glass-edge));transform:translateY(-1px)}
   .hubcTopRow:active{transform:translateY(0)}
   .hubUse{--ca:#4f9dff;--cbg:var(--hbCard)}
   .hubRpg{--ca:#8b6bff;--cbg:rgba(30,24,54,.78)}
-  .hubcThumb{position:relative;flex:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:14px;
+  .hubcThumb{position:relative;flex:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:var(--r-lg);
     background:radial-gradient(circle at 50% 36%,color-mix(in srgb,var(--ca) 26%,transparent),rgba(9,12,18,.85) 76%);
     border:1px solid color-mix(in srgb,var(--ca) 32%,var(--glass-edge));box-shadow:inset 0 0 16px -6px var(--ca)}
   .hubcThumb .ic{width:18px;height:18px;color:color-mix(in srgb,var(--ca) 80%,#fff)}
-  .hubcTopRow{display:flex;align-items:center;gap:9px;cursor:pointer;min-width:0;padding:8px 11px}
+  .hubcTopRow{display:flex;align-items:center;gap:8px;cursor:pointer;min-width:0;padding:8px 12px}
   /* 카드 하단 바로가기 — 인기맵 / 내 캐릭터. 세로 리스트 + 오른쪽 즉시 플레이. 재질은 친구 행과 같은 유리 계열 */
   .hubcQuick{display:flex;flex-direction:column;gap:8px}
-  .hqRow{display:flex;align-items:center;gap:8px;padding:7px 9px}
+  .hqRow{display:flex;align-items:center;gap:8px;padding:8px}
   .hqRow:hover{background:rgba(40,56,92,.95);border-color:color-mix(in srgb,var(--ca) 45%,var(--glass-edge))}
-  .hqChip{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:7px;cursor:pointer;
+  .hqChip{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:8px;cursor:pointer;
     background:none;border:none;padding:0;font-family:inherit;text-align:left;color:inherit}
   .hqIco{flex:none;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:15px;
     color:color-mix(in srgb,var(--ca) 80%,#fff)}
   .hqIco .ic{width:20px;height:20px}
   /* 인기맵 썸네일 = 유즈맵 선택과 같은 .mapThumb, 행 크기에 맞춰 축소만 */
-  .hqRow .mapThumb{flex:none;width:29px;height:29px;border-radius:8px}
+  .hqRow .mapThumb{flex:none;width:29px;height:29px;border-radius:var(--r-lg)}
   .hqRow .mapThumb .mmIco .ic{width:15px;height:15px}
-  .hqTag{display:inline-block;margin-right:5px;padding:1px 5px;border-radius:5px;font-size:8px;font-weight:800;letter-spacing:.2px;
+  .hqTag{display:inline-block;margin-right:4px;padding:0 4px;border-radius:var(--r-bar);font-size:8px;font-weight:800;letter-spacing:.2px;
     color:color-mix(in srgb,var(--ca) 88%,#fff);background:color-mix(in srgb,var(--ca) 16%,transparent);
     border:1px solid color-mix(in srgb,var(--ca) 40%,transparent);vertical-align:middle}
-  .hsEmptySub{display:inline-block;margin-top:5px;font-size:10px;color:#5f6a77;line-height:1.6}
-  .hqTx{min-width:0;display:flex;flex-direction:column;line-height:1.3;gap:2px}
+  .hsEmptySub{display:inline-block;margin-top:4px;font-size:10px;color:#5f6a77;line-height:1.6}
+  .hqTx{min-width:0;display:flex;flex-direction:column;line-height:1.3;gap:0}
   .hqName{font-size:11.5px;font-weight:800;color:#e3ebf5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   /* 설명은 두 줄까지 — 한 줄이면 문장이 잘린다 */
   .hqSub{font-size:9px;font-style:normal;color:#8b96a3;display:-webkit-box;-webkit-box-orient:vertical;
     -webkit-line-clamp:2;overflow:hidden;white-space:normal;word-break:keep-all}
   /* 즉시 플레이 — 액센트색 실행 버튼 */
-  .hqPlay{flex:none;display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border-radius:8px;cursor:pointer;
+  .hqPlay{flex:none;display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:var(--r-md);cursor:pointer;
     font-family:inherit;font-size:9.5px;font-weight:800;letter-spacing:.2px;white-space:nowrap;
     color:color-mix(in srgb,var(--ca) 88%,#fff);background:color-mix(in srgb,var(--ca) 14%,transparent);
     border:1px solid color-mix(in srgb,var(--ca) 42%,transparent);transition:background .12s,color .12s}
   .hqPlay:hover{background:color-mix(in srgb,var(--ca) 26%,transparent);color:#fff}
   .hqPlay svg{width:11px;height:11px}
-  .hubcMain{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
-  .hubcHead{display:flex;align-items:center;gap:6px;min-width:0;flex-wrap:wrap}
+  .hubcMain{flex:1;min-width:0;display:flex;flex-direction:column;gap:0}
+  .hubcHead{display:flex;align-items:center;gap:4px;min-width:0;flex-wrap:wrap}
   .hubcName{font-size:13.5px;font-weight:900;letter-spacing:.5px;white-space:nowrap;
     color:color-mix(in srgb,var(--ca) 82%,#fff);text-shadow:0 0 12px color-mix(in srgb,var(--ca) 45%,transparent),0 2px 4px #000}
   .hubcSubRow{display:flex;align-items:center;gap:8px;min-width:0}
@@ -2440,35 +2505,36 @@
   .hubcLive i{width:5px;height:5px;border-radius:50%;background:#5dff8f;box-shadow:0 0 6px rgba(93,255,143,.8)}
   .hubcLive b{font-family:'Rajdhani',sans-serif;font-variant-numeric:tabular-nums;color:#d8f0df}
   /* 카드 메타 행 = 라이브/레벨 스탯 + 태그칩 */
-  .hubcTags{display:flex;flex-wrap:wrap;gap:5px;margin-top:1px}
-  .hubTag{font-size:9px;font-weight:800;letter-spacing:.3px;color:#cfe0ec;padding:3.5px 8px;border-radius:var(--r-lg);
+  .hubcTags{display:flex;flex-wrap:wrap;gap:4px;margin-top:0}
+  .hubTag{font-size:9px;font-weight:800;letter-spacing:.3px;color:#cfe0ec;padding:4px 8px;border-radius:var(--r-lg);
     background:color-mix(in srgb,var(--ca) 12%,rgba(255,255,255,.03));border:1px solid color-mix(in srgb,var(--ca) 34%,var(--metal-edge))}
   .hubcGo{flex:none;display:flex;align-items:center;justify-content:center;color:color-mix(in srgb,var(--ca) 82%,#fff)}
   .hubcGo svg{width:16px;height:16px;filter:drop-shadow(0 0 5px color-mix(in srgb,var(--ca) 60%,transparent))}
   /* ── 하단 소셜 구역(친구 · 디스코드 느낌) ── */
   /* 부수적 소셜 구역 = 컴팩트·상단 구분선 */
   .hubSocial{flex:none;   /* 고정 — 친구 수와 무관하게 구역 높이 유지 */
-    min-height:0;width:100%;max-width:396px;margin:0 auto;display:flex;flex-direction:column;padding:9px 15px 10px;box-sizing:border-box;position:relative}   /* 화면의 40% 고정 — 카드와 소셜의 균형점 */
-  .hubSocial{border:1px solid var(--hbEdge);border-radius:16px;margin:11px auto 0;padding:0;background:var(--hbPanel);overflow:hidden;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 14px 34px -20px #000}
-  .hubSocial>.hsList{margin:0 11px 11px}
+    min-height:0;width:100%;max-width:396px;margin:0 auto;display:flex;flex-direction:column;padding:8px 12px;box-sizing:border-box;position:relative}   /* 화면의 40% 고정 — 카드와 소셜의 균형점 */
+  .hubSocial{border:1px solid var(--hbEdge);border-radius:0;margin:12px auto 0;padding:0;background:var(--hbPanel);overflow:hidden;
+    clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+  .hubSocial>.hsList{margin:0 12px 12px}
   .hubSocial::before{content:'';position:absolute;left:0;right:0;top:-1px;height:2px;   /* 구역 경계선(가운데가 밝은 띠) */
     background:linear-gradient(90deg,transparent,rgba(127,208,255,.5),transparent)}
-  .hsHead{flex:none;display:flex;align-items:center;justify-content:space-between;padding:2px 2px 7px}
-  .hsHTitle{display:inline-flex;align-items:center;gap:7px;font-size:15px;font-weight:800;letter-spacing:.2px;color:#e6ecf3}
+  .hsHead{flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 0 8px}
+  .hsHTitle{display:inline-flex;align-items:center;gap:8px;font-size:15px;font-weight:800;letter-spacing:.2px;color:#e6ecf3}
   .hsHTitle svg{width:17px;height:17px;color:#7fd0ff}
   .hsOnDot{width:6px;height:6px;border-radius:50%;background:#5dff8f;box-shadow:0 0 6px rgba(93,255,143,.85);animation:mcPulse 1.8s ease-in-out infinite}
   /* 친구 분류 탭(전체/유즈맵/RPG/친한친구) */
-  .hsTabs{flex:none;display:flex;gap:5px;padding:0 1px 7px}
-  .hsTabBtn{flex:1;padding:5.5px 4px;border-radius:8px;font-family:inherit;font-size:10.5px;font-weight:800;letter-spacing:.2px;cursor:pointer;
+  .hsTabs{flex:none;display:flex;gap:4px;padding:0 0 8px}
+  .hsTabBtn{flex:1;padding:4px;border-radius:var(--r-lg);font-family:inherit;font-size:10.5px;font-weight:800;letter-spacing:.2px;cursor:pointer;
     color:var(--txt-mute);background:var(--glass);border:1px solid var(--metal-edge);transition:all .12s}
   .hsTabBtn:hover{color:#dfe7f0;border-color:var(--glass-edge)}
   .hsTabBtn.on{color:#fff;background:rgba(255,255,255,.13);border-color:var(--glass-edge);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
   /* 친구 목록 = 3.5행 노출(더 있다는 걸 반쯤 보여줘 스크롤을 유도). --frRow만 고치면 따라온다 */
   .hsList{--frRow:43px;--frGap:4px;flex:none;height:calc(var(--frRow)*4.2 + var(--frGap)*4);
-    overflow-y:auto;display:flex;flex-direction:column;gap:var(--frGap);padding:1px}   /* 스크롤바 = .uiScroll(공용) */
+    overflow-y:auto;display:flex;flex-direction:column;gap:var(--frGap);padding:0}   /* 스크롤바 = .uiScroll(공용) */
   /* 회색 판 + 미세 글로우 질감: 상단 하이라이트 · 내부 은은한 광 · 바깥 소프트 섀도 */
-  .frRow{flex:none;display:flex;align-items:center;gap:7px;padding:4px 8px;border-radius:9px;cursor:pointer;
+  .frRow{flex:none;display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:var(--r-lg);cursor:pointer;
     background:var(--hbRow,rgba(28,40,66,.85));border:1px solid rgba(120,160,225,.16);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.10),inset 0 0 22px -12px rgba(150,200,255,.8),0 2px 9px -6px rgba(0,0,0,.75);
     transition:border-color .13s,background .13s,box-shadow .16s,transform .1s}
@@ -2479,16 +2545,16 @@
   .frAv{position:relative;width:26px;height:26px;flex:none;display:flex;align-items:center;justify-content:center;font-size:13px;border-radius:50%;
     background:radial-gradient(circle at 50% 35%,rgba(120,140,175,.22),rgba(10,12,18,.9));border:1px solid rgba(255,255,255,.13);
     box-shadow:0 0 9px -3px rgba(140,190,255,.55),inset 0 1px 0 rgba(255,255,255,.12)}
-  .frDot{position:absolute;right:-1px;bottom:-1px;width:10px;height:10px;border-radius:50%;border:2.5px solid #0c0f16}
+  .frDot{position:absolute;right:-1px;bottom:-1px;width:10px;height:10px;border-radius:50%;border:1.5px solid #0c0f16}
   .frDot.active{background:#5dff8f;box-shadow:0 0 5px rgba(93,255,143,.7)}
   .frDot.away{background:#ff5c5c;box-shadow:0 0 5px rgba(255,92,92,.7)}   /* 자리비움 = 빨강 */
   .frDot.offline{background:#5b6675}
-  .frMain{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .frMain{flex:1;min-width:0;display:flex;flex-direction:column;gap:0}
   .frName{font-size:11.5px;font-weight:800;color:#eaf1fb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .frFav{color:var(--gold);font-size:9.5px;margin-left:4px;vertical-align:1px}
-  .frAct{font-size:9.5px;color:#93a0af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:5px;min-width:0}
-  .frBadge{flex:none;font-weight:800;padding:1px 5px;border-radius:5px;font-size:8px;letter-spacing:.2px}
-  .frBadge.usemap{color:#bfe9ff;background:rgba(92,214,255,.14);border:1px solid rgba(92,214,255,.3)}
+  .frAct{font-size:9.5px;color:#93a0af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:4px;min-width:0}
+  .frBadge{flex:none;font-weight:800;padding:0 4px;border-radius:var(--r-bar);font-size:8px;letter-spacing:.2px}
+  .frBadge.usemap{color:#bcd8ff;background:rgba(79,157,255,.14);border:1px solid rgba(79,157,255,.32)}
   .frBadge.rpg{color:#ffe0a3;background:rgba(255,200,90,.13);border:1px solid rgba(255,200,90,.3)}
   .frActTx{min-width:0;overflow:hidden;text-overflow:ellipsis}
   .frPt{color:#78828f;font-weight:700}   /* 플레이타임(부드럽게) */
@@ -2496,7 +2562,7 @@
   .frChat{flex:none;color:#7c8a99;display:flex;align-items:center;transition:color .13s}
   .frChat svg{width:15px;height:15px}
   .frRow:hover .frChat{color:#cfe0ec}
-  .hsEmpty{flex:none;text-align:center;color:#7a8390;font-size:11.5px;padding:18px 0;line-height:1.7}
+  .hsEmpty{flex:none;text-align:center;color:#7a8390;font-size:11.5px;padding:20px 0;line-height:1.7}
   /* ── 친구 DM 채팅 오버레이 ── */
   .dmChat{position:absolute;inset:0;z-index:120;display:flex;flex-direction:column;background:linear-gradient(180deg,#0e1219,#070a10)}
   .dmChat.hide{display:none}
@@ -2525,7 +2591,7 @@
   /* ── 🏘 마을 ── */
   #townScreen{position:absolute;inset:0;z-index:60;display:flex;flex-direction:column}
   .twBar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:10px 12px;background:linear-gradient(180deg,rgba(13,18,28,.96),rgba(8,11,17,.9));border-bottom:1px solid var(--glass-edge)}
-  .twBack{flex:0 0 auto;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;color:#cdd6e2;background:rgba(255,255,255,.06);border:1px solid var(--metal-edge)}
+  .twBack{flex:0 0 auto;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:var(--r-lg);cursor:pointer;color:#cdd6e2;background:rgba(255,255,255,.06);border:1px solid var(--metal-edge)}
   .twBack .mIco{width:18px;height:18px;color:inherit}
   .twName{font-size:14px;font-weight:800;color:#eaf1fb}
   .twLv{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:800;color:var(--gold-lt)}
@@ -2654,9 +2720,6 @@
     border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .16s,border-color .16s}
   .msTab2 .ic{position:relative;top:-.75px}
   /* 얇은 변형 — 같은 컴포넌트의 크기 변형(복제 금지). 유즈맵 하단은 기본 두께 유지 */
-  .msTabs2.slim{background:rgba(9,14,26,.55);border-bottom:1px solid var(--hbEdge,rgba(90,120,190,.26));margin:0 0 9px}
-  .msTabs2.slim .msTab2{padding:7px 4px;font-size:10.5px;gap:5px}
-  .msTabs2.slim .msTab2 svg{width:12px;height:12px}
   .msTab2:hover{color:#cdd7e1}
   .msTab2.on{color:#5fd0ff;border-bottom-color:#00e5ff}   /* 채팅=청록 포인트(빨강 제거) */
   .msTab2[data-bt="party"].on{color:#b98cff;border-bottom-color:#8a56ff}   /* 파티=진한 보라 포인트 */
@@ -3307,9 +3370,10 @@
     <div id="auth" class="appScreen spaceBg hide">
       <button class="authGear" data-sfx="ui_open" onclick="openAppSettings()" title="설정" aria-label="설정"><svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg></button>
       <div class="authCard">
+        <i class="authDia"></i>
         <div class="authLogo"><span class="alg1">STAR </span><span class="alg2">WAR</span></div>
         <div class="authSub" id="authSub">로그인하고 시작하세요</div>
-        <div class="msTabs2 slim authTabs">
+        <div class="msTabs2 authTabs">
           <button class="msTab2 on" id="segLogin" onclick="authMode('login')"><span data-ico="user"></span>로그인</button>
           <button class="msTab2" id="segSignup" onclick="authMode('signup')"><span data-ico="new"></span>회원가입</button>
         </div>
@@ -3319,7 +3383,9 @@
         <input id="authPw2" class="authField hide" type="password" placeholder="비밀번호 확인" autocomplete="new-password" autocapitalize="off" spellcheck="false" lang="en" oninput="this.value=this.value.replace(/[^\x21-\x7E]/g,'')" onkeydown="if(event.key==='Enter')authSubmit()">
         <div class="authErr" id="authErr"></div>
         <button class="authBtn" id="authBtn" onclick="authSubmit()">로그인</button>
-        <div class="authNote" id="authNote">빈 칸으로 로그인하면 바로 시작합니다 · 포인트·강화는 계정에 저장됩니다</div>
+        <div class="authOr">또는</div>
+        <button class="authGuest" id="authGuest" onclick="authGuest()"><span data-ico="user"></span>게스트로 시작하기</button>
+        <div class="authNote" id="authNote">ID/PW를 잊으셨나요?<i>|</i><button class="authFind" onclick="authFindPw()">비밀번호 찾기</button></div>
       </div>
     </div>
 
@@ -10172,6 +10238,7 @@ function openAuth(){
   document.getElementById('authNick').value=''; document.getElementById('authPw2').value='';
   authMode('login'); showAppScreen('auth');
   if(typeof paintIcons==='function') paintIcons(document.getElementById('auth'));   // data-ico → 아이콘(부팅 시점에만 의존하지 않게)
+  authLockHeight();   // 화면이 보이는 상태에서 실측해야 한다(display:none이면 높이가 0)
   if(typeof bgmStart==='function') bgmStart('lobby'); }   // 로그인 화면부터 로비 BGM
 function authMode(m){ _authTab=m;
   document.getElementById('segLogin').classList.toggle('on', m==='login');
@@ -10180,13 +10247,21 @@ function authMode(m){ _authTab=m;
   document.getElementById('authPw2').classList.toggle('hide', m!=='signup');
   document.getElementById('authBtn').textContent = m==='login'?'로그인':'가입하기';
   document.getElementById('authSub').textContent = m==='login'?'아이디로 로그인하세요':'아이디로 즉시 가입';
+  const hideGuest = (m==='signup');   // 가입 화면엔 게스트 진입을 두지 않는다(높이도 여기서 맞춰진다)
+  document.querySelector('.authOr').classList.toggle('hide', hideGuest);
+  document.getElementById('authGuest').classList.toggle('hide', hideGuest);
   document.getElementById('authErr').textContent=''; }
+// 두 탭의 카드 높이를 같게 — 긴 쪽을 실측해 min-height로 고정한다.
+// (탭마다 줄 수가 달라 그냥 두면 카드가 늘었다 줄었다 한다. 고정값을 적어두면 폰트·문구가 바뀔 때 어긋나므로 실측한다.)
+function authLockHeight(){ const card=document.querySelector('.authCard'); if(!card) return;
+  const keep=_authTab; card.style.setProperty('--authH','0px');
+  let max=0; for(const m of ['login','signup']){ authMode(m); max=Math.max(max, card.getBoundingClientRect().height); }
+  authMode(keep); card.style.setProperty('--authH', Math.ceil(max)+'px'); }
 async function authSubmit(){
   const id=(document.getElementById('authId').value||'').trim(), pw=document.getElementById('authPw').value||'';
   const err=document.getElementById('authErr');
-  // ⚡ 로그인 탭에서 아이디를 비우고 누르면 바로 입장(체험용).
-  //   저장된 세션이 있으면 그대로 이어가고(진행도 보존), 없으면 게스트를 만든다.
-  if(_authTab==='login' && !id){ if(!AUTH.user) authGuestUser(); openHub(); return; }
+  err.classList.remove('info');   // 안내문 뒤에 진짜 오류가 오면 빨강으로 되돌린다
+  // 빈 칸 바로 입장은 없앴다 — 체험 입장은 '게스트로 시작하기' 버튼이 맡는다.
   if(!/^[A-Za-z0-9._-]{3,16}$/.test(id)){ err.textContent='아이디는 영문·숫자 3~16자입니다.'; return; }
   if(pw.length<6){ err.textContent='비밀번호는 6자 이상이어야 합니다.'; return; }
   try{
@@ -10201,6 +10276,11 @@ async function authSubmit(){
 function authGuestUser(){ AUTH.user={email:'', nick:'게스트'+(1000+Math.floor(Math.random()*9000)), guest:true};
   _lsSet('nm_session',AUTH.user); return AUTH.user; }   // 게스트 계정 생성만(화면 이동은 호출부가)
 function authGuest(){ authGuestUser(); openHub(); }
+// ⚠ 계정 아이디는 idToEmail()로 만든 가짜 주소라 실제 메일함이 없다 → 복구 메일을 보낼 수 없다.
+//    연락 가능한 주소를 계정에 받기 전까지는 안내만 한다(동작하는 척하지 않는다).
+function authFindPw(){ const err=document.getElementById('authErr'); if(!err) return;
+  err.classList.add('info');
+  err.textContent='아직 비밀번호 재발급을 지원하지 않습니다. 게스트로 시작하거나 새 아이디로 가입해 주세요.'; }
 function doLogout(){ if(typeof bgmStop==='function') bgmStop(); if(typeof rtStop==='function') rtStop(); authSignOut().then(openAuth); }
 // ── 유즈맵 데이터 ──
 const MAPS=Object.values(USEMAPS);   // 맵 선택 화면 목록(레지스트리에서 파생)

@@ -146,7 +146,7 @@ background:rgba(255,255,255,.07); border:1px solid var(--glass-edge);
 **모양은 "살짝 볼록한 각진 판"이다** — 이중 테두리를 쓰지 않는다(창에만 쓴다).
 
 ```css
-height:32px; max-width:120px; font-size:var(--fs-md);
+height:36px; max-width:120px; font-size:var(--fs-md);
 border-radius:0 0 var(--r-bar) var(--r-bar);   /* 위는 완전히 평평 */
 background:linear-gradient(180deg,rgba(26,32,44,.72),rgba(12,16,23,.82) 52%,rgba(4,6,10,.9));
 box-shadow:inset 0 1px 0 rgba(255,255,255,.13),      /* 윗변 하이라이트 = 볼록 */
@@ -165,7 +165,7 @@ box-shadow:inset 0 1px 0 rgba(255,255,255,.13),      /* 윗변 하이라이트 =
 | 누를 때 | 더 깊게 판다 | **오목으로 뒤집는다** |
 
 - 라운드를 키우면 입체가 물방울처럼 보인다. **위 0 / 아래 3px**가 "각지면서 위가 평평"의 답.
-- 높이 32px는 §0의 터치 타겟 44px 권고보다 작다 — **의도된 예외**(팝업 버튼은 두 개뿐이고 좌우로 넓다).
+- 높이 **36px**(2026-08-06, 32 → 36)는 §0의 터치 타겟 44px 권고보다 작다 — **의도된 예외**(팝업 버튼은 두 개뿐이고 좌우로 넓다).
 - **폭은 `max-width:120px`로 묶고 줄은 `justify-content:center`.** 버튼이 `flex:1 1 0`이라 안 묶으면 카드 폭(≈245px)까지 늘어나 판이 커 보인다.
   ⚠️ 폭 검사는 **`#ov.hide`(display:none)를 벗기고** 재야 한다 — 안 그러면 rect가 0이라 어떤 상한도 통과한다(실제로 한 번 헛돌았다).
 - 글자는 `--fs-md`(11px). ⚠️ 공용 규칙에 `font-size`를 두면 **뒤에 오는 `#ovBtn` 규칙(ID 특정성)에 져서** 확인 버튼만 12px로 남는다 — 각 원본 규칙에서 지정할 것(실제로 그렇게 어긋났다).

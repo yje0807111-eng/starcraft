@@ -277,8 +277,13 @@ async function groupLobby(){
     const pad=e=>parseFloat(getComputedStyle(e).paddingTop);
     assert(pad(hb[1])>pad(mb[1]),'허브 소셜 바가 유즈맵 하단보다 두껍지 않음: '+pad(hb[1])+' vs '+pad(mb[1]));
     assert(pad(mb[1])<=10,'유즈맵 하단까지 두꺼워짐(변형이 새어나감): '+pad(mb[1]));
+    // ⚠ 밑줄 두께는 뺀다 — 허브는 DESIGN.md(테두리 1px)로 전환돼 2px 테두리 대신 inset 밑줄을 쓴다.
+    //    유즈맵 하단은 아직 미전환이라 2px 테두리 그대로다(touch-it-fix-it).
     const key=b=>{ const c=getComputedStyle(b);
-      return [c.flex,c.fontWeight,c.borderBottomWidth,c.justifyContent,c.alignItems].join('|'); };
+      return [c.flex,c.fontWeight,c.justifyContent,c.alignItems].join('|'); };
+    const onTab=hub.querySelector('.msTab2.on'), oc=getComputedStyle(onTab);
+    assert(/0px -2px 0px 0px inset/.test(oc.boxShadow),'허브 선택 탭에 밑줄 표시가 없음: '+oc.boxShadow.slice(0,60));
+    assert(parseFloat(oc.borderBottomWidth)<=1,'허브 탭이 아직 2px 테두리를 씀: '+oc.borderBottomWidth);
     assert(key(hb[1])===key(mb[1]), '크기 외 형태가 다름\n허브: '+key(hb[1])+'\n유즈맵: '+key(mb[1]));
     assert(hub.querySelectorAll('svg').length===hb.length, '탭 아이콘이 안 그려짐(paintIcons 누락)');
     // 선택 표시가 새 클래스에서도 동작하는지
@@ -304,10 +309,44 @@ async function groupLobby(){
     const c=getComputedStyle(ms);
     assert(c.scrollbarWidth==='thin', '공용 스크롤바가 thin이 아님: '+c.scrollbarWidth);
     return a.length+'개 규칙 공유'; });
-  await step('인증: 빈 아이디로 로그인 = 바로 게임 선택', async()=>{ skipIf(typeof authSubmit!=='function','인증 없음');
+  // DESIGN.md 규칙 — 허브(볼륨 3)만. 다른 볼륨 3 화면(타이틀·로그인·대기실)은 각자 전환될 때 스텝을 추가할 것.
+  await step('허브: DESIGN.md 규칙(라운드 · 간격 · 1px 테두리 · 시안 1곳)', ()=>{
+    const sc=$('hubScreen'); skipIf(!sc||!visible(sc),'허브 없음');
+    const R_OK=['0px','3px','6px','9px','50%'], SP_OK=[4,8,12,20];
+    const nm=e=>(e.id?'#'+e.id:'')+(typeof e.className==='string'&&e.className?'.'+e.className.trim().split(/[ ]+/)[0]:e.tagName.toLowerCase());
+    const bad=[], sp=[], cyan=[];
+    for(const e of sc.querySelectorAll('*')){ if(!e.getClientRects().length) continue;
+      const c=getComputedStyle(e);
+      for(const k of ['borderTopLeftRadius','borderTopRightRadius','borderBottomLeftRadius','borderBottomRightRadius'])
+        if(R_OK.indexOf(c[k])<0) bad.push(nm(e)+' r='+c[k]);
+      for(const k of ['borderTopWidth','borderRightWidth','borderBottomWidth','borderLeftWidth'])
+        if(parseFloat(c[k])>1.5) bad.push(nm(e)+' 테두리 '+c[k]);
+      for(const k of ['gap','paddingTop','paddingRight','paddingBottom','paddingLeft']){
+        const v=parseFloat(c[k]); if(v>0 && SP_OK.indexOf(v)<0) sp.push(nm(e)+':'+k+'='+v); }
+      // 면·테두리·링을 시안으로 채운 것만 센다.
+      // ⚠ border-color의 초기값은 currentColor라 두께 0이어도 글자색이 그대로 나온다 → 실제로 그린 테두리만 본다.
+      const hasBd=['borderTopWidth','borderRightWidth','borderBottomWidth','borderLeftWidth'].some(k=>parseFloat(c[k])>0);
+      if(/92, ?214, ?255|0, ?229, ?255/.test([c.backgroundColor,c.boxShadow,hasBd?c.borderColor:''].join(' '))) cyan.push(nm(e));
+    }
+    assert(!bad.length,'토큰 밖 라운드/두꺼운 테두리 '+bad.length+'건: '+bad.slice(0,4).join(', '));
+    assert(!sp.length,'4/8/12/20 밖 간격 '+sp.length+'건: '+sp.slice(0,5).join(', '));
+    // 시안 = '지금 선택된 것' 하나뿐(선택된 소셜 탭의 밑줄)
+    const cyanU=cyan.filter((v,i)=>cyan.indexOf(v)===i);
+    assert(cyan.length<=1,'시안이 '+cyan.length+'곳: '+cyanU.join(', '));
+    // 큰 패널은 라운드가 아니라 모서리 컷
+    for(const s2 of ['.hubPanel','.hubSocial']){ const el=sc.querySelector(s2);
+      assert(el && /polygon/.test(getComputedStyle(el).clipPath), s2+'에 모서리 컷(clip-path)이 없음'); }
+    return '요소 '+sc.querySelectorAll('*').length+'개 · 시안 '+cyan.length+'곳'; });
+  // 빈 칸 바로 입장은 없앴다(2026-08-06). 체험 입장은 '게스트로 시작하기' 버튼 전용.
+  await step('인증: 빈 칸은 막고, 게스트 버튼으로 입장', async()=>{ skipIf(typeof authSubmit!=='function','인증 없음');
     openAuth(); $('authId').value=''; $('authPw').value='';
     await authSubmit(); await sleep(120);
-    assert(visible($('hubScreen')),'빈 칸 로그인인데 게임 선택 화면으로 안 감');
+    assert(visible($('auth')),'빈 칸인데 로그인 화면을 벗어남(자동 입장이 남아 있음)');
+    assert(!visible($('hubScreen')),'빈 칸인데 게임 선택으로 넘어감');
+    assert(($('authErr').textContent||'').length>0,'빈 칸인데 안내가 없음');
+    const gb=$('authGuest'); assert(gb && visible(gb),'게스트로 시작하기 버튼이 없음');
+    gb.click(); await sleep(120);
+    assert(visible($('hubScreen')),'게스트 버튼을 눌렀는데 게임 선택으로 안 감');
     assert(!visible($('auth')),'로그인 화면이 안 닫힘');
     assert(AUTH.user,'입장했는데 유저가 비어 있음');
     return AUTH.user.nick||AUTH.user.id; });
@@ -822,7 +861,7 @@ async function groupGame(){
     if(wasHidE) $('exitConfirm').classList.remove('hide');
     try{
       const ob=getComputedStyle($('ovBtn'));
-      assert(parseFloat(ob.height)<=34,'버튼이 큼: '+ob.height);
+      assert(parseFloat(ob.height)<=38,'버튼이 큼: '+ob.height);   // 2026-08-06: 36px로 상향(DESIGN.md §2 팝업 버튼)
       const wEls=[$('ovBtn'),document.querySelector('#exitConfirm .ecGo')].filter(Boolean);
       if($('ovBtn2') && getComputedStyle($('ovBtn2')).display!=='none') wEls.push($('ovBtn2'));
       assert(wEls.length>=2,'폭을 잴 버튼을 못 찾음');
