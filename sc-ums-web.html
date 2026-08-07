@@ -68,7 +68,7 @@
     font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;overflow:hidden}
   /* 모바일 고정 비율 — 세로로 긴 요즘 폰(963:1997 ≈ 1:2.074). 비율은 아래 두 변수 한 곳에서만 정한다.
      화면이 작으면 비율을 유지하며 축소. 패널 폭이 변해도 폰 모양은 불변. */
-  :root{--phW:963;--phH:1997;--navH:54px}
+  :root{--phW:963;--phH:1997;--navH:54px;--curH:34px}
   #phone{width:390px;height:calc(390px * var(--phH) / var(--phW));aspect-ratio:var(--phW)/var(--phH);position:relative;
     /* 게임 배경 우주 타일(space_bg)을 캔버스와 같은 380px 스케일로 프레임 전체에 이어지게 — 어둡게 덮어 콘솔 가독성 유지 */
     background:linear-gradient(rgba(3,4,12,.5),rgba(3,4,12,.66)),url('assets/tiles/space_bg.webp') center/380px repeat #05060d;
@@ -2592,6 +2592,17 @@
   .navBar{position:absolute;left:0;right:0;bottom:0;z-index:62;height:var(--navH);display:flex;align-items:stretch;
     background:linear-gradient(180deg,rgba(12,17,28,.96),rgba(6,9,15,.98));border-top:1px solid rgba(88,118,188,.22)}
   .navBar.hide{display:none}
+  /* 💠 공용 재화 바(단일 소스) — 모든 RPG/허브 + 유즈맵 선택 상단 상시. 볼륨1: 1px 테두리+그라데+하단 헤어라인, 재화=금색.
+     미네랄=pcoin · 가스 · 젬. 인게임(#hudR)과 별개다(계정 영구 재화). */
+  .curBar{position:absolute;left:0;right:0;top:0;z-index:62;height:var(--curH);display:flex;align-items:center;justify-content:flex-end;gap:12px;
+    padding:0 12px;background:linear-gradient(180deg,rgba(12,17,28,.96),rgba(6,9,15,.98));border-bottom:1px solid rgba(88,118,188,.22)}
+  .curBar::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.1),transparent)}
+  .curBar.hide{display:none}
+  .curBar .res{display:flex;align-items:center;gap:5px;font-family:'Rajdhani',sans-serif;font-variant-numeric:tabular-nums;font-weight:800;font-size:14px;color:#e7edf5;white-space:nowrap}
+  .curBar .ri{width:16px;height:16px;flex:none}
+  #phone.curOn .appScreen{padding-top:var(--curH)}
+  #phone.curOn #mapSelect{padding-top:calc(var(--curH) + 12px)}
+  #phone.inGame #curBar{display:none}   /* 실경기(인게임)에선 자체 HUD(#hudR) 사용 — 공용 바 숨김 */
   .navIt{position:relative;flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
     cursor:pointer;font-family:inherit;font-size:8.5px;font-weight:800;letter-spacing:.2px;color:#6f7a88;
     background:none;border:none;transition:color .13s}
@@ -3610,6 +3621,21 @@
     <button class="navIt" data-nav="friend" onclick="navGo('friend')"><span data-ico="friend"></span>친구</button>
     <button class="navIt" data-nav="shop" onclick="navGo('shop')"><span data-ico="gift"></span>상점</button>
   </div>
+  <!-- 💠 공용 재화 바 — 미네랄/가스/젬 (계정 영구). curShow()가 화면 전환 시 표시/숨김 -->
+  <div id="curBar" class="curBar hide">
+    <span class="res"><svg class="ri" viewBox="0 0 24 24"><!-- 미네랄 -->
+      <circle cx="12" cy="12" r="9" fill="#ffd24a" stroke="#ffe6a0" stroke-width="1.2"/>
+      <circle cx="12" cy="12" r="6.6" fill="none" stroke="#b88a1e" stroke-width="1"/>
+      <path d="M14.8 8.8A4.4 4.4 0 1 0 14.8 15.2" fill="none" stroke="#7a5a12" stroke-width="2.2" stroke-linecap="round"/>
+    </svg><b id="curMin">0</b></span>
+    <span class="res"><svg class="ri" viewBox="0 0 24 24"><!-- 가스 -->
+      <path d="M13.6 2L5.4 13H10l-1.6 9L18.6 10.5H13z" fill="#6ff0a0" stroke="#d6ffe6" stroke-width="1" stroke-linejoin="round"/>
+    </svg><b id="curGas">0</b></span>
+    <span class="res"><svg class="ri" viewBox="0 0 24 24"><!-- 젬 -->
+      <path d="M6 3h12l3.4 5.4L12 22 2.6 8.4z" fill="#7ad0ff" stroke="#d6f2ff" stroke-width="1" stroke-linejoin="round"/>
+      <path d="M6 3l6 5.4L18 3M2.6 8.4h18.8M12 8.4V22" fill="none" stroke="#bfe9ff" stroke-width="1" stroke-linejoin="round"/>
+    </svg><b id="curGem">0</b></span>
+  </div>
   <!-- 💬 친구 DM 채팅(허브 소셜) -->
   <div id="dmChat" class="dmChat hide">
     <div class="dmHead">
@@ -3629,11 +3655,9 @@
           실제 데이터에 붙은 것은 상단 자원 바(P·수입)와 POWER UPGRADES(스탯 4종)뿐이다. -->
   <div id="homeScreen" class="appScreen spaceBg hide">
     <div class="hmScroll uiScroll" id="hmScroll">
-      <!-- ① 자원 바 -->
+      <!-- ① 자원 바 — 미네랄/젬은 공용 재화 바(#curBar)로 이관. 여기엔 방치 수입(INCOME)만 남는다 -->
       <div class="hmRes">
-        <div class="hmResBox"><span class="hmResIco">💵</span><b id="hmMoney">0</b><button class="hmPlus" onclick="hmGoto('gacha')" aria-label="더 얻기">+</button></div>
         <div class="hmIncome"><b id="hmRate">$0/s</b><span>INCOME <i class="hmInfo" onclick="hmInfoIncome()">i</i></span></div>
-        <div class="hmResBox"><span class="hmResIco">💎</span><b id="hmGem">0</b><button class="hmPlus" onclick="hmSoon('젬 상점')" aria-label="더 얻기">+</button></div>
       </div>
       <!-- ② 바로가기 줄 -->
       <div class="hmQuick">
@@ -3673,7 +3697,7 @@
     <div class="twBar">
       <button class="twBack" onclick="askLogout()" aria-label="로그아웃" title="로그아웃"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4.6h3.7A1.8 1.8 0 0 1 20 6.4v11.2a1.8 1.8 0 0 1-1.8 1.8h-3.7"/><path d="M10.6 8.2L14.4 12l-3.8 3.8"/><path d="M14.4 12H4"/></svg></button>
       <span class="twName" id="twName">캐릭터</span><span class="twLv" id="twLv">Lv.1</span><span class="twPow" id="twPow">⚔ 0</span>
-      <span class="twCoin"><b id="twCoin">0</b> P</span>
+      <span class="twCoinSpacer" style="margin-left:auto"></span>
       <button class="twGear" data-sfx="ui_open" onclick="openAppSettings()" title="설정" aria-label="설정"><svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg></button>
     </div>
     <div class="twMap" id="twMap" onpointerdown="twPtrDown(event)" onpointermove="twPtrMove(event)" onpointerup="twPtrUp(event)" onpointercancel="twPtrUp(event)">
@@ -4453,9 +4477,13 @@ function metaEffLv(id){ return _metaEffFromRaw(META_BUILDS[id], buildLevel(id));
 // 플레이어 메타(계정별 영구 데이터)
 // 🧍 개인 프로필 RPG(1단계) 기본값 — 유즈맵 경제와 완전 분리(재화명 pcoin, coins 아님). 자세한 규칙은 PROF_* 블록 참조.
 // 계정 공용(재화·펫·해금·방치) + 캐릭터별(chars[]: 레벨·경험치·스탯·장비·진화)로 나뉜다.
-function defaultProfile(){ return { ver:5, pcoin:0, chars:[], curId:'', items:[],
+function defaultProfile(){ return { ver:5, pcoin:0, gas:0, gem:0, chars:[], curId:'', items:[],
   idle:{ sourceId:'drill', lastClaimTs:0 }, unlocks:{}, lastSeenTs:0,
   pets:{}, equip:[], petSlots:2 }; }   // 🐾 펫(중복=별)·장착 슬롯 — 캐릭터를 새로 만들어도 그대로 쓴다
+// 계정 영구 재화(공용 재화 바) — 미네랄=pcoin(기존 이름 유지)·가스·젬. 없던 프로필도 0으로 살려 읽는다.
+function profMineral(){ const p=PROF(); return Math.floor(p&&p.pcoin||0); }
+function profGas(){ const p=PROF(); return Math.floor(p&&p.gas||0); }
+function profGem(){ const p=PROF(); return Math.floor(p&&p.gem||0); }
 function defaultChar(cls, name){ const C=PROF_CLASSES[cls]||PROF_CLASSES.ranger, id=(PROF_CLASSES[cls]?cls:'ranger');
   return { id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), cls:id, name:(name||C.name),
     xp:0, level:1, statPoints:0, dgFloor:0,
@@ -4788,9 +4816,8 @@ function openHome(){ loadMeta();
 function renderHome(){ try{
   const p=PROF(), c=CHAR(); if(!p) return;
   const set=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
-  set('hmMoney', Math.floor(p.pcoin||0).toLocaleString('en-US'));
   set('hmRate', '$'+(profIdleRate()/60).toFixed(2)+'/s');   // profIdleRate()는 분당 — 초당으로 환산
-  set('hmGem', HOME_DUMMY.gem);
+  if(typeof updateCurBar==='function') updateCurBar();       // 💠 미네랄/가스/젬은 공용 재화 바로 이관
   set('hmTier', HOME_DUMMY.tier); set('hmRounds', HOME_DUMMY.rounds);
   if(c) set('hmMeName', c.name);
   const tb=document.getElementById('hmStand');
@@ -5034,7 +5061,7 @@ function renderTownBar(){ const p=PROF(), c=CHAR();
   const nm=document.getElementById('twName'); if(nm) nm.textContent=c?c.name:'캐릭터';
   const lv=document.getElementById('twLv'); if(lv) lv.textContent='Lv.'+(c?c.level:1);
   const pw=document.getElementById('twPow'); if(pw) pw.textContent='⚔ '+profPower();
-  const cn=document.getElementById('twCoin'); if(cn) cn.textContent=Math.floor(p.pcoin); }
+  if(typeof updateCurBar==='function') updateCurBar(); }   // 💠 미네랄/가스/젬은 공용 재화 바
 function showTownToast(msg){ const t=document.getElementById('twToast'); if(!t) return; t.textContent=msg; t.classList.remove('hide');
   clearTimeout(t._t); t._t=setTimeout(()=>t.classList.add('hide'), 2600); }
 // 구역 아이콘(또는 가장자리 방향 표시) 탭 = 그 구역을 지정. 이미 그 위에 서 있으면 바로 연다.
@@ -5762,7 +5789,7 @@ function sellUnit(u){ if(!u||u.fixed) return false;
   if(window.M3D && M3D.dropModels) M3D.dropModels([u.uid]);
   G.sel=(G.sel||[]).filter(id=>id!==u.uid);
   if(typeof playSfx==='function') playSfx('ui_confirm');
-  toast('💰 판매 +'+val+' C'); renderUnits(); updateHud(); return true; }
+  toast('💰 판매 +'+val+' M'); renderUnits(); updateHud(); return true; }
 let _sellTier=null, _sellSig='';
 // ── 유닛 조합(전 범위 — 합체존/버튼 제거): 하단 [판매|조합] 토글 패널 ──
 let _homeMode='select', _combTier=null, _combSig=''; let _selTierH=null, _selSig='', _selViaTab=false;
@@ -7339,7 +7366,7 @@ function step(dt){
     if(e.pboss && e.hp>0 && e.life!=null && e.life<=0){ toast('☠ '+e.name+' 도주 (미처치)'); deathBurst(e); G.enemies.splice(i,1); if(G.selEnemy===e.eid){G.selEnemy=null;refreshSelCard();} continue; }   // 2분 경과 소멸(보상·불이익 없음)
     if(e.hp<=0){ G.kills++;
     if(e._killer!=null){ const _k=G.units.find(x=>x.uid===e._killer); if(_k) _k.kills=(_k.kills||0)+1; }   // 개별 유닛 킬 카운트
-    if(e.pboss){ const bn=e.bonus||0, be=e.bonusE||0; gainMineral(bn); if(be>0) gainGas(be); toast('☠ '+e.name+' 처치 (+'+bn+' C'+(be>0?' / +'+be+' E':'')+')'); if(typeof playSfx==='function') playSfx('hero_merge'); }
+    if(e.pboss){ const bn=e.bonus||0, be=e.bonusE||0; gainMineral(bn); if(be>0) gainGas(be); toast('☠ '+e.name+' 처치 (+'+bn+' M'+(be>0?' / +'+be+' G':'')+')'); if(typeof playSfx==='function') playSfx('hero_merge'); }
     else if(e.boss) toast('☠ 라운드 보스 처치!');
     if(e.special){ const _im=infIncomeMul(), sc=mapCfg('specialCredit',SPECIAL_MIN); gainMineral(Math.round(sc*_im)); gainGas(Math.round(2*_im)); }   // 스페셜=크레딧+에너지(무한=수입배율)
     if(e.boss && !e.pboss){ gainGas(5+Math.floor(G.round/4)); }   // 라운드 보스 처치=에너지 보너스(개인 보스는 크레딧만)
@@ -10118,13 +10145,23 @@ function fxPop(card){ if(!card) return; card.classList.remove('fxPop'); void car
   clearTimeout(card._fxT); card._fxT=setTimeout(()=>card.classList.remove('fxPop'),470); }
 // ── 앱 화면 전환 ──
 const APP_SCREENS=['opening','auth','mapSelect','modeSheet','homeScreen','charScreen','townScreen','dgScreen'];
+// 💠 공용 재화 바를 띄우는 화면(RPG/허브 + 유즈맵 선택). 로그인·타이틀·캐릭터생성·인게임은 제외.
+const CUR_SCREENS=['homeScreen','townScreen','mapSelect','modeSheet','dgScreen'];
+function curShow(on){ const b=document.getElementById('curBar'), p=document.getElementById('phone');
+  if(b) b.classList.toggle('hide', !on); if(p) p.classList.toggle('curOn', !!on); }
+function updateCurBar(){ if(!PLAYER_META||!PLAYER_META.profile) return;
+  const set=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
+  set('curMin', profMineral().toLocaleString('en-US'));
+  set('curGas', profGas().toLocaleString('en-US'));
+  set('curGem', profGem().toLocaleString('en-US')); }
 function showAppScreen(id){ setInGame(false);
   if(typeof navShow==='function') navShow(null);   // 하단 네비는 기본 숨김 — openHome/openTown이 다시 켠다
   if(id!=='mapSelect' && id!=='modeSheet' && typeof stopMapLive==='function') stopMapLive();   // 유즈맵 화면 떠나면 실시간 갱신 정지
   ['ov','lobby','rooms','createPanel','pwPanel'].forEach(x=>{const e=document.getElementById(x); if(e)e.classList.add('hide');});
   APP_SCREENS.forEach(s=>{ const e=document.getElementById(s); if(e) e.classList.toggle('hide', s!==id); });
+  const _cur=CUR_SCREENS.indexOf(id)>=0; curShow(_cur); if(_cur) updateCurBar();   // 💠 공용 재화 바
   const tgt=document.getElementById(id); if(tgt && id!=='opening') playScreenFx(tgt); }   // 전환 FX(부팅 로딩 제외)
-function hideAppScreens(){ if(typeof stopMapLive==='function') stopMapLive(); APP_SCREENS.forEach(s=>{ const e=document.getElementById(s); if(e) e.classList.add('hide'); }); }
+function hideAppScreens(){ if(typeof stopMapLive==='function') stopMapLive(); curShow(false); APP_SCREENS.forEach(s=>{ const e=document.getElementById(s); if(e) e.classList.add('hide'); }); }
 // ── 유즈맵 크롬 초기화(단일 소스) ──────────────────────────────────────────────
 // 맵마다 자기 화면만 켜다 보면 이전 맵의 잔재가 다음 맵에 그대로 남는다(관리자 탭·직스 패널·숨겨진 안내 등).
 // 게임 진입(startGameNow)과 로비 복귀 경로가 전부 이 함수 하나를 거쳐 nemo 기본 크롬으로 되돌린다. 새 맵을 추가할 때도 여기만 보면 된다.
@@ -11405,7 +11442,7 @@ function onCoopState(p){ if(!p||p.uid===myUid()) return; const num=G.coopUidToNu
       G.metaB=metaBonus();
       const diff=G.metaB.startCredit-before;
       if(diff>0){ G.mineral+=diff; if(typeof updateHud==='function') updateHud();
-        addChat('', '🤝 전체 강화 공유 적용 — 시작 크레딧 +'+diff+' C', '#ffd24a', true); } } }
+        addChat('', '🤝 전체 강화 공유 적용 — 시작 미네랄 +'+diff+' M', '#ffd24a', true); } } }
   // 상대 토벌장 파견 유닛 스냅(보간용 직전/현재) — 토벌장 화면에 함께 표시
   { const prevB=(G.coopBossU=G.coopBossU||{})[num];
     G.coopBossU[num]={ t:Date.now(), prev:prevB&&prevB.cur,
@@ -11772,8 +11809,8 @@ function updateLobbyStart(){ const players=_lobbySlots.filter(Boolean), cnt=play
 function fmt(s){ const m=Math.floor(s/60),x=Math.floor(s%60); return String(m).padStart(2,'0')+':'+String(x).padStart(2,'0'); }
 // 상단 HUD 표기(단일 소스) — 자원 3종 + 좌상단 시계. nemo·오토배틀 등 모든 맵이 이 두 함수만 호출한다(형식이 갈라지지 않게).
 function hudSetRes(cr, en, pop, popMax){ const set=(id,html)=>{ const e=document.getElementById(id); if(e) e.innerHTML=html; };
-  set('hMin', cr+'<i class="ru">C</i>');                    // 크레딧
-  set('hGas', en+'<i class="ru">E</i>');                    // 에너지
+  set('hMin', cr+'<i class="ru">M</i>');                    // 미네랄
+  set('hGas', en+'<i class="ru">G</i>');                    // 가스
   set('hPop', pop+'/'+popMax+'<i class="ru">CP</i>'); }     // 커맨드 포인트
 function hudSetTime(sec){ const e=document.getElementById('hTime'); if(e) e.textContent=fmt(Math.max(0,Math.ceil(sec||0))); }
 function updateHud(){
@@ -14171,7 +14208,7 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
   let res='';   // 🔁 메인 #hudR DOM을 그대로 클론(복사본 마크업 유지 X) — 메인 HUD 디자인 변경 시 자동 반영. 숫자만 이 탭 값으로 치환
   { const _h=document.getElementById('hudR'); if(_h){ const c=_h.cloneNode(true);
     const set=(id,v)=>{ const el=c.querySelector('#'+id); if(el){ el.innerHTML=v; el.removeAttribute('id'); } };   // id 제거(중복 방지)
-    set('hMin',(G.tech.inf?'∞':G.tech.credit)+'<i class="ru">C</i>'); set('hGas',(G.tech.inf?'∞':G.tech.energy)+'<i class="ru">E</i>'); set('hPop',G.tech.sup+'/'+G.tech.supCap+'<i class="ru">CP</i>');
+    set('hMin',(G.tech.inf?'∞':G.tech.credit)+'<i class="ru">M</i>'); set('hGas',(G.tech.inf?'∞':G.tech.energy)+'<i class="ru">G</i>'); set('hPop',G.tech.sup+'/'+G.tech.supCap+'<i class="ru">CP</i>');
     if(techWallet()){ const gs=c.querySelector('.res.gas'); if(gs) gs.remove(); }   // 오토배틀 = 크레딧 단일 자원(에너지 칸 생략)
     res=c.innerHTML; } }
   const btns=(canDemo?'<span class="cbtn dz" onclick="techDemolish(event)">'+pIco('🗑','sm')+' 철거</span>':'')+'<span class="cbtn'+(G.tech.inf?' on':'')+'" onclick="techInf(event)" title="무제한 자원">∞</span><span class="cbtn'+(G.tech.nocool?' on':'')+'" onclick="techNocool(event)" title="즉시 건설·생산">⏱</span><span class="cbtn'+(techFogEnabled()?' on':'')+'" onclick="techFog(event)" title="전장의 안개">🌫️</span><span class="cbtn'+(G.tech.pcheck?' on':'')+'" onclick="techPCheck(event)" title="플레이어 색 확인">🎨</span><span class="cbtn" onclick="techReset(event)" title="리셋">↺</span>';

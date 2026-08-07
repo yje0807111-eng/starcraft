@@ -171,6 +171,20 @@ async function groupLobby(){
     assert(visible($('twSocial')) && document.querySelectorAll('#hubFriends .frRow').length>0,'친구 시트가 안 열림');
     twCloseSocial(); openHome(); await sleep(60);
     return 'HOME 7구역 + 네비 6칸 ok'; });
+  // 💠 공용 재화 바 — 미네랄=pcoin · 가스 · 젬. 모든 RPG/허브 + 유즈맵 선택 상단 상시(인게임 제외).
+  await step('공용 재화 바: RPG/유즈맵 상단 상시 · 미네랄/가스/젬', async()=>{ skipIf(typeof curShow!=='function','재화 바 없음');
+    // curShow()는 showAppScreen 안에서 동기 실행 → 화면 연 직후 동기 검사(전환 FX/타이머 레이스 회피)
+    const shown=()=>{ const b=$('curBar'); return !!b && !b.classList.contains('hide'); };
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','재화'); saveMeta(); }
+    const p=PROF(); p.pcoin=12345; p.gas=67; p.gem=8; saveMeta();
+    openHome(); assert(shown(),'HOME에 재화 바가 없음');
+    assert($('curMin').textContent.replace(/,/g,'')==='12345','미네랄이 pcoin과 다름: '+$('curMin').textContent);
+    assert($('curGas').textContent==='67' && $('curGem').textContent==='8','가스/젬 표시 불일치');
+    navGo('map'); assert(shown(),'유즈맵 선택에 재화 바가 없음');
+    mapToHub(); navGo('town'); assert(shown(),'마을에 재화 바가 없음');
+    if(typeof dgEnter==='function'){ dgEnter(1); assert(shown(),'던전에 재화 바가 없음'); openTown(); }
+    openHome(); await sleep(40);
+    return '미네랄=pcoin(12,345) · 가스/젬 · 홈/유즈맵/마을/던전 상시'; });
   await step('유즈맵 선택 → 네모네모 모드 팝업', ()=>{ openMapSelect(); openModeSheet(USEMAPS.nemo_inf||USEMAPS.nemo);
     const mo=document.querySelector('#modeSheet .moCard'); assert(visible(mo),'moCard 안 보임');
     const w=mo.getBoundingClientRect().width; assert(w>200&&w<400,'moCard 폭 이상: '+w); closeModeSheet(); return 'w='+w; });
