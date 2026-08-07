@@ -2499,49 +2499,32 @@
   .twCoin{margin-left:auto;font-family:'Rajdhani',sans-serif;font-size:13px;color:var(--txt-mute)}
   .twCoin b{font-size:16px;font-weight:800;color:#ffd24a}
   .twPow{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:800;color:#ff8a9a}
-  /* ══ 🏠 HOME 대시보드 ══ 참고 이미지 레이아웃. 값은 DESIGN.md 토큰(라운드 0/3/6/9 · 간격 4/8/12/20). */
+  /* ══ 🏠 HOME 대시보드 ══ 톤은 하단 네비(.navBar)와 같은 순수 회색 · 라운드는 --r-bar(3px)로 거의 직각.
+     푸른기(구 --hbEdge rgba(88,118,188,…) / --hmPanel rgba(13,19,32,…))는 전부 걷어냈다 — 다시 넣지 말 것. */
   #homeScreen{position:absolute;inset:0;z-index:60;display:flex;flex-direction:column;
-    --hbEdge:rgba(88,118,188,.22);--hmPanel:rgba(13,19,32,.92)}
+    --hbEdge:rgba(255,255,255,.07);--hmPanel:linear-gradient(180deg,#191919,#0e0e0e)}
   #homeScreen.hide{display:none}
   .hmScroll{flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:8px 8px calc(var(--navH) + 8px)}
-  /* ① 자원 바 */
-  .hmRes{flex:none;display:flex;align-items:stretch;gap:8px}
-  .hmResBox{flex:1 1 0;min-width:0;display:flex;align-items:center;gap:4px;padding:4px 4px 4px 8px;
-    background:var(--hmPanel);border:1px solid var(--hbEdge);border-radius:var(--r-md)}
-  .hmResIco{font-size:15px;flex:none}
-  .hmResBox b{flex:1 1 auto;min-width:0;text-align:center;font-family:'Rajdhani',sans-serif;font-variant-numeric:tabular-nums;
-    font-size:15px;font-weight:800;color:#eaf1fb;overflow:hidden;text-overflow:ellipsis}
-  .hmPlus{flex:none;width:22px;height:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;
-    font-family:inherit;font-size:14px;font-weight:800;line-height:1;color:#cfe0ec;
-    background:rgba(255,255,255,.07);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
-  .hmIncome{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 4px}
-  .hmIncome b{font-family:'Rajdhani',sans-serif;font-variant-numeric:tabular-nums;font-size:17px;font-weight:800;color:#5dff8f;line-height:1.1}
-  .hmIncome span{font-size:var(--fs-xs);font-weight:800;letter-spacing:.6px;color:#c3ccd8;display:flex;align-items:center;gap:4px}
-  .hmInfo{width:12px;height:12px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;
-    font-style:normal;font-size:9px;font-weight:800;color:#0b1018;background:#c3ccd8;border-radius:50%}
-  /* 공통 패널 */
-  .hmCard{flex:none;background:var(--hmPanel);border:1px solid var(--hbEdge);border-radius:var(--r-lg);overflow:hidden}
-  /* ② 매치 화면 자리 — 고정 비율이 아니라 업그레이드 위 남는 높이를 전부 먹는다(min-height:0으로 작은 화면에선 양보) */
-  .hmStage{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;
-    background:linear-gradient(180deg,rgba(24,32,46,.9),rgba(8,11,17,.95));border:1px solid var(--hbEdge);border-radius:var(--r-md)}
-  .hmStageTx{font-size:var(--fs-md);color:#5f6a77;letter-spacing:.4px}
-  /* ③ POWER UPGRADES */
-  .hmUpgHead{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:var(--fs-xl);font-weight:900;letter-spacing:.6px;color:#eaf1fb;
+  /* 공통 패널 — 네비바와 같은 회색 그라데 · 모서리는 아주 살짝만 깎는다 */
+  .hmCard{flex:none;background:var(--hmPanel);border:1px solid var(--hbEdge);border-radius:var(--r-bar);overflow:hidden}
+  /* POWER UPGRADES — 위쪽은 배경이 보이도록 비우고 카드는 네비 바로 위에 붙인다 */
+  .hmUpg{margin-top:auto}   /* 위쪽 빈 자리는 배경 — 카드만 아래로 붙인다 */
+  .hmUpgHead{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:var(--fs-xl);font-weight:900;letter-spacing:.6px;color:#ececec;
     border-bottom:1px solid rgba(255,255,255,.06)}
   .hmUpgGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px}
-  .hmUp{display:flex;flex-direction:column;gap:4px;padding:8px;background:rgba(20,29,50,.78);
-    border:1px solid var(--metal-edge);border-radius:var(--r-md)}
+  .hmUp{display:flex;flex-direction:column;gap:4px;padding:8px;background:rgba(255,255,255,.045);
+    border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
   .hmUpTop{display:flex;align-items:center;gap:8px;min-width:0}
   .hmUpIco{flex:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:18px;
-    background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);border-radius:var(--r-md)}
+    background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
   .hmUpTx{min-width:0;display:flex;flex-direction:column}
-  .hmUpName{font-size:var(--fs-lg);font-weight:800;color:#eaf1fb}
-  .hmUpLv{font-size:var(--fs-sm);color:#8b96a3}
+  .hmUpName{font-size:var(--fs-lg);font-weight:800;color:#ececec}
+  .hmUpLv{font-size:var(--fs-sm);color:#9a9a9a}
   .hmUpLv b{font-family:'Rajdhani',sans-serif;font-variant-numeric:tabular-nums;color:#5dff8f}
   .hmUpBtn{height:32px;cursor:pointer;font-family:inherit;font-size:var(--fs-md);font-weight:900;letter-spacing:.3px;
     color:#2b1d00;background:linear-gradient(180deg,#ffd97a,#e8a92b 58%,#b8801a);
     border:1px solid rgba(255,220,140,.8);border-radius:var(--r-bar)}
-  .hmUpBtn:disabled{cursor:default;color:#6d7684;background:rgba(255,255,255,.05);border-color:var(--metal-edge)}
+  .hmUpBtn:disabled{cursor:default;color:#7a7a7a;background:rgba(255,255,255,.05);border-color:var(--metal-edge)}
   /* ══ 하단 6칸 네비게이션(전역) ══ 화면이 아니라 #phone 위에 뜬다 · navShow(tab)이 표시/활성을 정한다 */
   .navBar{position:absolute;left:0;right:0;bottom:0;z-index:62;height:var(--navH);display:flex;align-items:stretch;
     background:linear-gradient(180deg,#191919,#0e0e0e);border-top:1px solid rgba(255,255,255,.07)}   /* 짙고 어두운 순수 회색 배경 */
@@ -2552,6 +2535,10 @@
     padding:0 12px;background:linear-gradient(180deg,rgba(12,17,28,.96),rgba(6,9,15,.98));border-bottom:1px solid rgba(88,118,188,.22)}
   .curBar::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.1),transparent)}
   .curBar.hide{display:none}
+  /* HOME 전용 — 바를 판이 아니라 배경 위 숫자로 둔다(면·아래 테두리·헤어라인 전부 없앰).
+     그래야 우주 배경이 상단까지 끊기지 않고 이어져 보인다. showAppScreen()이 화면별로 .bare를 붙인다. */
+  .curBar.bare{background:none;border-bottom:0}
+  .curBar.bare::after{display:none}
   .curBar .res{display:flex;align-items:center;gap:5px;font-family:'Rajdhani',sans-serif;font-variant-numeric:tabular-nums;font-weight:800;font-size:14px;color:#e7edf5;white-space:nowrap}
   .curBar .ri{width:16px;height:16px;flex:none}
   #phone.curOn .appScreen{padding-top:var(--curH)}
@@ -3604,18 +3591,11 @@
     </div>
   </div>
 
-  <!-- 🏠 HOME — 메인 대시보드. 수입 줄 · 매치 화면 · POWER UPGRADES 세 덩어리뿐이다.
-       ⚠ 매치 화면은 아직 시스템이 없어 자리만 잡아 둔 빈 판이다(업그레이드 위 남는 높이를 전부 먹는다).
-          실제 데이터에 붙은 것은 수입(profIdleRate)과 POWER UPGRADES(스탯 4종)뿐. -->
+  <!-- 🏠 HOME — 메인 대시보드. 카드는 POWER UPGRADES 하나뿐이고 나머지는 전부 배경이다.
+       위쪽 빈 자리는 채우지 않는다 — 우주 배경(.spaceBg)이 상단 재화 바 뒤까지 이어져 보이는 게 의도다. -->
   <div id="homeScreen" class="appScreen spaceBg hide">
     <div class="hmScroll uiScroll" id="hmScroll">
-      <!-- ① 자원 바 — 미네랄/젬은 공용 재화 바(#curBar)로 이관. 여기엔 방치 수입(INCOME)만 남는다 -->
-      <div class="hmRes">
-        <div class="hmIncome"><b id="hmRate">$0/s</b><span>INCOME <i class="hmInfo" onclick="hmInfoIncome()">i</i></span></div>
-      </div>
-      <!-- ② 매치 화면(자리) — 업그레이드 위 남는 세로 공간을 전부 차지한다 -->
-      <div class="hmStage"><span class="hmStageTx">경기 화면 준비 중</span></div>
-      <!-- ③ POWER UPGRADES — 실제 스탯 4종 -->
+      <!-- POWER UPGRADES — 화면에 남은 유일한 카드. 위쪽은 비워서 우주 배경(.spaceBg)이 그대로 보인다 -->
       <div class="hmCard hmUpg">
         <div class="hmUpgHead"><span>⚡</span>POWER UPGRADES</div>
         <div class="hmUpgGrid" id="hmUpgGrid"></div>
@@ -4739,9 +4719,7 @@ function openHome(){ loadMeta();
 
 function renderHome(){ try{
   const p=PROF(), c=CHAR(); if(!p) return;
-  const set=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
-  set('hmRate', '$'+(profIdleRate()/60).toFixed(2)+'/s');   // profIdleRate()는 분당 — 초당으로 환산
-  if(typeof updateCurBar==='function') updateCurBar();       // 💠 미네랄/가스/젬은 공용 재화 바로 이관
+  if(typeof updateCurBar==='function') updateCurBar();       // 💠 재화는 전부 공용 재화 바(#curBar)로 이관 — HOME이 직접 그리는 수치는 없다
   const gr=document.getElementById('hmUpgGrid');
   if(gr && c) gr.innerHTML=HOME_UPG.map(u=>{ const lv=profStat(u.k), can=c.statPoints>0;
     return '<div class="hmUp"><div class="hmUpTop"><span class="hmUpIco">'+u.ico+'</span>'
@@ -4754,7 +4732,6 @@ function renderHome(){ try{
 function hmUpgrade(k){ if(typeof profAllocStat!=='function') return;
   if(!profAllocStat(k)){ hmToast('스탯 포인트가 없습니다 — 레벨을 올리세요'); return; }
   if(typeof playSfx==='function') playSfx('ui_open'); renderHome(); }
-function hmInfoIncome(){ hmToast('수입 = 훈련장 배율 × (1 + 파워×1%) · 펫 보너스 포함'); }
 function hmToast(msg){ if(typeof showTownToast==='function') showTownToast(msg);
   else if(typeof lobbyToast==='function') lobbyToast(msg); }
 
@@ -10062,6 +10039,8 @@ function fxPop(card){ if(!card) return; card.classList.remove('fxPop'); void car
 const APP_SCREENS=['opening','auth','mapSelect','modeSheet','homeScreen','charScreen','townScreen','dgScreen'];
 // 💠 공용 재화 바를 띄우는 화면(RPG/허브 + 유즈맵 선택). 로그인·타이틀·캐릭터생성·인게임은 제외.
 const CUR_SCREENS=['homeScreen','townScreen','mapSelect','modeSheet','dgScreen'];
+// 그중 바를 '판'이 아니라 배경 위 숫자로 두는 화면(.curBar.bare) — 배경이 상단까지 이어져 보여야 하는 곳
+const BARE_CUR_SCREENS=['homeScreen'];
 function curShow(on){ const b=document.getElementById('curBar'), p=document.getElementById('phone');
   if(b) b.classList.toggle('hide', !on); if(p) p.classList.toggle('curOn', !!on); }
 function updateCurBar(){ if(!PLAYER_META||!PLAYER_META.profile) return;
@@ -10075,6 +10054,8 @@ function showAppScreen(id){ setInGame(false);
   ['ov','lobby','rooms','createPanel','pwPanel'].forEach(x=>{const e=document.getElementById(x); if(e)e.classList.add('hide');});
   APP_SCREENS.forEach(s=>{ const e=document.getElementById(s); if(e) e.classList.toggle('hide', s!==id); });
   const _cur=CUR_SCREENS.indexOf(id)>=0; curShow(_cur); if(_cur) updateCurBar();   // 💠 공용 재화 바
+  { const cb=document.getElementById('curBar');                                    // HOME만 배경 위 숫자(.bare) — 다른 화면은 판 그대로
+    if(cb) cb.classList.toggle('bare', BARE_CUR_SCREENS.indexOf(id)>=0); }
   const tgt=document.getElementById(id); if(tgt && id!=='opening') playScreenFx(tgt); }   // 전환 FX(부팅 로딩 제외)
 function hideAppScreens(){ if(typeof stopMapLive==='function') stopMapLive(); curShow(false); APP_SCREENS.forEach(s=>{ const e=document.getElementById(s); if(e) e.classList.add('hide'); }); }
 // ── 유즈맵 크롬 초기화(단일 소스) ──────────────────────────────────────────────

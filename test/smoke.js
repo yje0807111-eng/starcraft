@@ -144,31 +144,43 @@ async function groupLobby(){
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(60);
     assert(visible($('homeScreen')),'HOME이 안 열림');
-    // HOME은 세 덩어리뿐이다 — 수입 줄 · 매치 화면 · POWER UPGRADES (+ 전역 네비)
-    for(const [sel,name] of [['.hmRes','수입 줄'],['.hmStage','매치 화면'],
-        ['.hmUpg','POWER UPGRADES'],['#navBar','하단 네비']])
+    // HOME에 남은 것은 POWER UPGRADES 카드 하나뿐이다 (+ 전역 재화 바·네비)
+    for(const [sel,name] of [['.hmUpg','POWER UPGRADES'],['#navBar','하단 네비'],['#curBar','재화 바']])
       assert(visible(document.querySelector(sel)), name+'이(가) 없음: '+sel);
-    for(const [sel,name] of [['.hmQuick','바로가기 줄'],['.hmLeague','리그 순위표'],['.hmVs','라이브 매치 바']])
+    for(const [sel,name] of [['.hmQuick','바로가기 줄'],['.hmLeague','리그 순위표'],['.hmVs','라이브 매치 바'],
+        ['.hmRes','수입 줄'],['.hmStage','매치 화면']])
       assert(!document.querySelector(sel), '지운 구역이 남아 있음: '+name+' ('+sel+')');
-    // 매치 화면은 업그레이드 위 남는 높이를 전부 먹는다 — 빈 여백도, 세로 스크롤도 없어야 한다
-    { const sc=$('hmScroll'), st=document.querySelector('.hmStage'),
-          rs=document.querySelector('.hmRes'), up=document.querySelector('.hmUpg');
-      const r=st.getBoundingClientRect();
-      assert(r.top-rs.getBoundingClientRect().bottom<=12,
-        '매치 화면 위에 여백이 남음: '+Math.round(r.top-rs.getBoundingClientRect().bottom)+'px');
-      assert(up.getBoundingClientRect().top-r.bottom<=12,
-        '매치 화면과 업그레이드 사이가 벌어짐: '+Math.round(up.getBoundingClientRect().top-r.bottom)+'px');
-      assert(r.height>=sc.clientHeight*0.4,
-        '매치 화면이 남는 높이를 못 채움: '+Math.round(r.height)+'/'+sc.clientHeight+'px');
+    { const sc=$('hmScroll'), up=document.querySelector('.hmUpg');
+      // 카드는 네비 바로 위에 붙고, 위쪽은 배경이 보이도록 비어 있어야 한다
+      // ⚠ .hmScroll의 아래 padding이 네비 높이(--navH)만큼이라 스크롤 박스 하단이 아니라 네비 상단을 기준으로 잰다
+      { const gap=$('navBar').getBoundingClientRect().top-up.getBoundingClientRect().bottom;
+        assert(gap>=0 && gap<=12,'업그레이드 카드가 네비 바로 위에 안 붙음: '+Math.round(gap)+'px'); }
+      assert(up.getBoundingClientRect().top-sc.getBoundingClientRect().top>=60,
+        '카드 위가 안 비어 있음(배경이 안 보임): '+Math.round(up.getBoundingClientRect().top-sc.getBoundingClientRect().top)+'px');
       assert(sc.scrollHeight-sc.clientHeight<=2,
         'HOME이 세로로 넘침(스크롤 생김): '+(sc.scrollHeight-sc.clientHeight)+'px'); }
+    // 상단 재화 바는 HOME에서만 '판'이 아니라 배경 위 숫자 — 면·아래 테두리가 없어야 배경이 이어져 보인다
+    { const cb=getComputedStyle($('curBar'));
+      assert(cb.backgroundImage==='none' && /rgba\(0, 0, 0, 0\)|transparent/.test(cb.backgroundColor),
+        'HOME 재화 바에 면이 남아 배경이 끊김: '+cb.backgroundImage+' / '+cb.backgroundColor);
+      assert(parseFloat(cb.borderBottomWidth)===0,'HOME 재화 바에 상단 구분선이 남음: '+cb.borderBottomWidth);
+      assert(getComputedStyle($('curBar'),'::after').display==='none','재화 바 헤어라인(::after)이 남음'); }
+    // 톤 검사 — 네비바와 같은 회색이어야 한다(푸른기가 있으면 B가 R보다 크게 뜬다) · 모서리는 거의 직각
+    { const rgb=s=>(s.match(/\d+(\.\d+)?/g)||[]).slice(0,3).map(Number);
+      for(const el of [...document.querySelectorAll('#homeScreen .hmCard, #homeScreen .hmUp, #homeScreen .hmUpIco')]){
+        const c=getComputedStyle(el);
+        for(const src of [c.backgroundColor, c.backgroundImage, c.borderTopColor]){
+          for(const m of (src.match(/rgba?\([^)]*\)/g)||[])){ const [r,g,b]=rgb(m);
+            if(r===undefined) continue;
+            assert(Math.max(r,g,b)-Math.min(r,g,b)<=12,
+              'HOME에 푸른기가 남음('+(el.className||el.tagName)+'): '+m); } }
+        for(const v of c.borderRadius.split(/[\s\/]+/))
+          assert(!v || v==='0px' || v==='3px', 'HOME 모서리가 너무 둥금('+(el.className||el.tagName)+'): '+v); } }
     assert(document.querySelectorAll('#navBar .navIt').length===5,'하단 네비가 5칸이 아님(HOME·던전·마을·유즈맵·상점)');
     { const navs=[...document.querySelectorAll('#navBar .navIt')].map(x=>x.dataset.nav).join(',');
       assert(navs==='home,dungeon,town,map,shop','네비 구성이 다름: '+navs); }
     assert(document.querySelector('#navBar .navIt.on').dataset.nav==='home','HOME 탭이 활성이 아님');
-    // 실데이터에 붙은 두 곳 — 수입은 profIdleRate 환산, 업그레이드는 스탯 4종
-    const rate=$('hmRate').textContent;   // 예: $0.02/s (정규식 대신 문자 검사 — heredoc이 역슬래시를 먹는 사고를 피한다)
-    assert(rate[0]==='$' && rate.slice(-2)==='/s' && parseFloat(rate.slice(1))>=0,'수입 표기가 이상함: '+rate);
+    // 실데이터에 붙은 곳 = POWER UPGRADES(스탯 4종)뿐 — 수입 줄은 삭제됐다
     assert(document.querySelectorAll('.hmUp').length===4,'POWER UPGRADES가 4칸이 아님');
     const c=CHAR(); c.statPoints=1; renderHome();
     const btn=document.querySelector('.hmUp .hmUpBtn'); assert(!btn.disabled,'포인트가 있는데 버튼이 잠김');
