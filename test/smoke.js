@@ -498,6 +498,29 @@ async function groupLobby(){
     dgEnter(9);                                                // 레벨보다 높은 층은 못 들어간다
     assert(DG===before,'레벨 상한을 넘겼는데 던전이 시작됨');
     return 'Lv당 '+DG_LV_PER_FLOOR+'레벨에 1층'; });
+  // ⚔ 던전 허브 — 목록 카드 · 팝업(이전 스테이지 소탕/입장) · 열쇠(매일 09:00·던전별) 게이트 · 뽑기권
+  await step('던전 허브: 목록 카드·팝업(소탕/입장)·열쇠·뽑기권', ()=>{ skipIf(typeof openDungeonHub!=='function','던전 허브 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','던전'); saveMeta(); }
+    const cc=CHAR(); cc.level=6; cc.dgFloor=2;                  // Lv6 → 3단계 개방, 2단계까지 클리어
+    const p=PROF(); p.dgKeys={}; p.tickets={gear:0,pet:0,ally:0}; saveMeta();
+    openDungeonHub();
+    assert(visible($('dgHubScreen')),'던전 허브가 안 열림');
+    assert(document.querySelectorAll('#dgHubBody .dgCard').length===3,'던전 카드가 3개가 아님');
+    assert(document.querySelectorAll('#dgHubBody .dgCard.lock').length===2,'장비·룬 던전이 Lv6에서 잠겨 있어야 함');
+    assert(dgKeyN('normal')===DG_KEY_DAILY,'일반 던전 열쇠 초기값 불일치: '+dgKeyN('normal'));
+    // 팝업 열기 → 소탕 = 열쇠 1 소모 + 미네랄 증가
+    dgOpenSheet('normal'); assert(!$('dgSheet').classList.contains('hide'),'던전 팝업이 안 열림');
+    const k0=dgKeyN('normal'), m0=Math.floor(PROF().pcoin); dgSheetSweep();
+    assert(dgKeyN('normal')===k0-1,'소탕이 열쇠를 안 씀');
+    assert(Math.floor(PROF().pcoin)>m0,'소탕이 미네랄을 안 줌');
+    // 열쇠 0이면 입장이 전투로 진입하지 않는다
+    PROF().dgKeys.normal.n=0; dgOpenSheet('normal'); dgSheetEnter();
+    assert(!visible($('dgScreen')),'열쇠 0인데 입장이 진행됨');
+    // 뽑기권 = 새 단계 클리어 시 적립
+    const t0=(PROF().tickets||{}).gear||0; dgAwardTickets(3);
+    assert(((PROF().tickets||{}).gear||0)===t0+1,'뽑기권이 안 쌓임');
+    dgCloseSheet(); openHome();
+    return '카드3·팝업·소탕·열쇠게이트·뽑기권 ok'; });
   await step('장비 마이그레이션: 구버전 정수 티어 → 아이템 + 12칸 재편', ()=>{ skipIf(typeof migrateProfile!=='function','마이그레이션 없음');
     const keep=JSON.parse(JSON.stringify(PLAYER_META));
     PLAYER_META.profile={ ver:3, pcoin:0, curId:'cX', items:[], chars:[{ id:'cX', cls:'ranger', name:'구버전',
