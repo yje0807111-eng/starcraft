@@ -3759,9 +3759,8 @@
     </div>
     <div id="twToast" class="twToast hide"></div>
     </div>
-  </div>
 
-  <!-- 캐릭터 선택/생성 입장 화면 — 내용은 마을 구역과 같은 렌더러를 쓴다 -->
+  <!-- 캐릭터 선택/생성 입장 화면 — 내용은 마을 구역과 같은 렌더러를 쓴다. (#phone 안으로 통합) -->
   <div id="charScreen" class="appScreen spaceBg hide">
     <div class="setCard twCard csCard">
       <div class="setTitle"><span id="csTitle">캐릭터 선택</span><div class="setX" onclick="charBackToHub()"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></div></div>
@@ -3783,6 +3782,7 @@
     </div>
     <div id="dgResult" class="dgResult hide"></div>
   </div>
+  </div><!-- /#phone — charScreen·dgScreen까지 프레임 안(비율 통합) -->
 
   <!-- 마을 시설 팝업(구역 도착 시) -->
   <div id="townPanel" class="hide" onclick="if(event.target===this)closeTownPanel()">
