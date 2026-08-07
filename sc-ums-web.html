@@ -13861,7 +13861,7 @@ function strikeTechLayout(){ if(!G.tech) return; const race=G.tech.race, cw=_tec
     const _vy=cy+STK_TECH_LIFT/STK_TECH_ZOOM;   // 하단 프로필 시트를 피해 건설 구역을 화면 위쪽으로(초기 뷰만)
     G.tech.view={x:cx, y:_vy, zoom:STK_TECH_ZOOM}; G.tech.viewT={x:cx, y:_vy, zoom:STK_TECH_ZOOM};
     _techClampView(G.tech.view); _techClampView(G.tech.viewT); } }
-function strikeNewState(){ const W=mapCfg('world',4800), hp=mapCfg('baseHp',7500), inc=mapCfg('incomeBase',150), mc=mapCfg('mineCost',300), mi=mapCfg('mineIncome',120);   // 메인신전 체력 3000→7500(전투 지속력↑)
+function strikeNewState(){ const W=mapCfg('world',4800), hp=mapCfg('baseHp',10000), inc=mapCfg('incomeBase',150), mc=mapCfg('mineCost',300), mi=mapCfg('mineIncome',120);   // 메인신전 체력 7500→10000(눈덩이 완화 — 한 교전이 즉시 게임을 끝내지 않게, 패자에 재정비 시간)
   const sHp=mapCfg('secHp',Math.round(hp*0.5)), cHp=mapCfg('centralHp',Math.round(hp*0.35));   // 2차=메인×0.5(3750) · 중앙=메인×0.35(2625) — 메인 비례 상승
   // 레인: me 메인 → me 2차 → 중앙 중립 → ai 2차 → ai 메인 (대각선 한 줄). t=0.27/0.5/0.73 지점
   return { t:0, over:null, round:1,
@@ -14822,6 +14822,19 @@ function strikeTerritory(){ const S=STK; let blue=0.25, red=0.75;   // 초기: �
   if(meSecDead) red=0.22;
   if(meSecDead&&aiSecDead){ blue=0.25; red=0.75; }   // 양쪽 2차 다 파괴 → 각자 2차까지, 중앙 흰색
   return {blue:Math.max(0.05,Math.min(0.95,blue)), red:Math.max(0.05,Math.min(0.95,red))}; }
+// 레인 진행도 t: me.base=0 … ai.base=1 (중앙≈0.5). 유닛 위치를 레인축에 투영.
+function strikeLaneT(x,y){ const S=STK, a=S.me.base, b=S.ai.base, dx=b.x-a.x, dy=b.y-a.y, L=(dx*dx+dy*dy)||1;
+  return ((x-a.x)*dx+(y-a.y)*dy)/L; }
+// 💥 2차 신전 붕괴 반격 — 방어측 2차가 부서지면, 그 진영 절반(본진↔중앙)에 침투해 있던 적을 순차 폭발로 일소.
+//   눈덩이 완화: 2차 상실이 곧바로 메인 함락으로 이어지지 않게, 돌파한 적 본대를 청소해 수비측에 재정비 시간을 준다. 양 진영 공통(각 팀의 방어 반격).
+function strikeSecCollapse(victim){ const S=STK; const atkSide=(victim==='me')?'ai':'me', atk=S[atkSide]; if(!atk) return;
+  const inHalf=(t)=> (victim==='me') ? (t<0.5) : (t>0.5);   // 방어측 절반(자기 본진~중앙)
+  const doomed=atk.units.filter(u=>!u.dead && u._collapseT==null && inHalf(strikeLaneT(u.x,u.y)));
+  doomed.sort((p,q)=>{ const tp=strikeLaneT(p.x,p.y), tq=strikeLaneT(q.x,q.y); return (victim==='me')?(tp-tq):(tq-tp); });   // 깊이 침투(본진 쪽)부터 → 중앙 방향으로 파도
+  for(let i=0;i<doomed.length;i++){ const u=doomed[i]; u._collapseT=0.05+i*0.035; u.moving=false; u.tgtUid=null; }   // 유닛 간 0.035초 간격 = 빠른 순차 폭발
+  if(doomed.length && typeof toast==='function'){
+    toast(victim==='me' ? ('💥 2차 신전 붕괴 반격 — 침투한 적 '+doomed.length+'기 소멸')
+                        : ('💥 적 2차 붕괴 반격 — 돌파한 아군 '+doomed.length+'기 소멸')); } }
 const STK_CULL=0.12;   // 화면 밖 여유(정규화) — 이 밖의 유닛은 3D를 만들지 않는다
 const STK_GRID=160;   // 격자 셀(월드) — 최대 상호작용 반경보다 크게
 let _stkG=null;
@@ -14868,6 +14881,11 @@ function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
     const _load=new Map();   // 표적별 현재 배정 인원 — 한 표적에 전군이 몰리는 것을 막는다
     for(const x of me.units){ if(x.tgtUid) _load.set(x.tgtUid,(_load.get(x.tgtUid)||0)+1); }
     for(const u of me.units){ if(u.dead) continue;
+      if(u._collapseT!=null){ u._collapseT-=dt; u.moving=false; u._vx=0; u._vy=0;   // 💥 2차 붕괴 반격 대상 — 순차 폭발 대기
+        if(u._collapseT<=0){ u.dead=true;
+          if(!S.fx||!S.fx.shots){ S.fx=FX.store(); S.fx.hitK=STK_HIT_K; }
+          FX.death(S.fx, u.x, u.y, {unitSize:(u.size||14)*1.7, color:'#ffca4a', parts:STK_DEATH_PARTS+8}); }   // 큰 폭발 이펙트
+        continue; }
       if(u.wait>0){ u.wait-=dt; u.moving=false; continue; }   // 스폰 후 0.5초 대기(중앙 응시 상태로 정지)
       if(u._btT>0){ u._btT-=dt; if(u._btT<=0) u._btgt=null; }   // 포기했던 표적의 재선정 금지 시간
       if(!u._atk) u._atk=(typeof _sbAtkMode==='function')?_sbAtkMode({id:u.id, gmodel:u.gm}):{air:true,gnd:true};   // 공격 가능 레이어(관리자 전투실험과 동일 규칙)
@@ -14952,7 +14970,9 @@ function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
         const _cd=Math.hypot(u.x-front.x, u.y-front.y);   // 중심 거리
         const d=(!u._atk.gnd)?1e9:strikeTempleGap(front,u.x,u.y);   // 사각형 표면까지의 실거리(모서리에서 과도하게 파고드는 문제 제거)
         if(d<=u.rng+(u.size||14)*1.05){ u.moving=false; u._blk=0; u._swp=0; u.face=Math.atan2(front.x-u.x, front.y-u.y); u.cd-=dt;
-          if(u.cd<=0){ u.cd=u.cdMax; u.fireSeq=(u.fireSeq||0)+1; front.hp-=u.dmg*strikeSkillAtkMul(u)*strikeAtkMul(me)*_sbTypeMulSize({id:u.id,gmodel:u.gm},'l'); strikeFx(u,front.x,front.y,col); if(front.hp<=0){ front.dead=true; front.deadBy=side; strikeCheckOver(); } } }   // fireSeq++ = 3D 공격 모션 · 건물=대형('l') 상성 적용
+          if(u.cd<=0){ u.cd=u.cdMax; u.fireSeq=(u.fireSeq||0)+1; front.hp-=u.dmg*strikeSkillAtkMul(u)*strikeAtkMul(me)*_sbTypeMulSize({id:u.id,gmodel:u.gm},'l'); strikeFx(u,front.x,front.y,col); if(front.hp<=0){ front.dead=true; front.deadBy=side;
+            if(front===S.me.sec) strikeSecCollapse('me'); else if(front===S.ai.sec) strikeSecCollapse('ai');   // 💥 2차 파괴 = 방어측 반격(침투 적 일소)
+            strikeCheckOver(); } } }   // fireSeq++ = 3D 공격 모션 · 건물=대형('l') 상성 적용
         else { const _sr=strikeTempleR(front, Math.atan2(u.y-front.y, u.x-front.x))+u.rng*0.75;   // 그 방향의 사각형 표면 + 사거리 여유
           if(!u._atk.gnd && _cd<=_sr*1.15){ u.moving=false; u._vx=0; u._vy=0; if(u._mvp){ u._mvp.vx=0; u._mvp.vy=0; } u._blk=0; u._swp=0; }
           // ↑ 신전을 때릴 수 없는 유닛(공대공 전용·비전투)은 링에 닿으면 그대로 대기.
