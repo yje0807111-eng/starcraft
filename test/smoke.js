@@ -144,10 +144,24 @@ async function groupLobby(){
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(60);
     assert(visible($('homeScreen')),'HOME이 안 열림');
-    // 참고 이미지의 7개 구역이 모두 있어야 한다
-    for(const [sel,name] of [['.hmRes','자원 바'],['.hmQuick','바로가기 줄'],['.hmLeague','리그 순위표'],
-        ['.hmVs','라이브 매치 바'],['.hmStage','매치 화면'],['.hmUpg','POWER UPGRADES'],['#navBar','하단 네비']])
+    // HOME은 세 덩어리뿐이다 — 수입 줄 · 매치 화면 · POWER UPGRADES (+ 전역 네비)
+    for(const [sel,name] of [['.hmRes','수입 줄'],['.hmStage','매치 화면'],
+        ['.hmUpg','POWER UPGRADES'],['#navBar','하단 네비']])
       assert(visible(document.querySelector(sel)), name+'이(가) 없음: '+sel);
+    for(const [sel,name] of [['.hmQuick','바로가기 줄'],['.hmLeague','리그 순위표'],['.hmVs','라이브 매치 바']])
+      assert(!document.querySelector(sel), '지운 구역이 남아 있음: '+name+' ('+sel+')');
+    // 매치 화면은 업그레이드 위 남는 높이를 전부 먹는다 — 빈 여백도, 세로 스크롤도 없어야 한다
+    { const sc=$('hmScroll'), st=document.querySelector('.hmStage'),
+          rs=document.querySelector('.hmRes'), up=document.querySelector('.hmUpg');
+      const r=st.getBoundingClientRect();
+      assert(r.top-rs.getBoundingClientRect().bottom<=12,
+        '매치 화면 위에 여백이 남음: '+Math.round(r.top-rs.getBoundingClientRect().bottom)+'px');
+      assert(up.getBoundingClientRect().top-r.bottom<=12,
+        '매치 화면과 업그레이드 사이가 벌어짐: '+Math.round(up.getBoundingClientRect().top-r.bottom)+'px');
+      assert(r.height>=sc.clientHeight*0.4,
+        '매치 화면이 남는 높이를 못 채움: '+Math.round(r.height)+'/'+sc.clientHeight+'px');
+      assert(sc.scrollHeight-sc.clientHeight<=2,
+        'HOME이 세로로 넘침(스크롤 생김): '+(sc.scrollHeight-sc.clientHeight)+'px'); }
     assert(document.querySelectorAll('#navBar .navIt').length===5,'하단 네비가 5칸이 아님(HOME·던전·마을·유즈맵·상점)');
     { const navs=[...document.querySelectorAll('#navBar .navIt')].map(x=>x.dataset.nav).join(',');
       assert(navs==='home,dungeon,town,map,shop','네비 구성이 다름: '+navs); }
@@ -165,9 +179,13 @@ async function groupLobby(){
     assert(visible($('mapSelect')),'네비 유즈맵이 목록을 안 엶');
     assert(!visible($('navBar')),'유즈맵 화면에서 네비가 남아 있음');
     mapToHub(); await sleep(80);
-    assert(visible($('homeScreen')),'유즈맵에서 뒤로 갔는데 HOME으로 안 옴');
+    assert(visible($('homeScreen')),'유즈맵에서 뒤로 갔는데 HOME으로 안 옴 [DBG 보이는화면='+
+      [...document.querySelectorAll('.appScreen')].filter(e=>visible(e)).map(e=>e.id).join(',')+
+      ' CHAR='+(!!CHAR())+' AUTH='+(AUTH.user?(AUTH.user.uid||AUTH.user.id||AUTH.user.nick):'null')+']');
     navGo('town'); await sleep(80);
-    assert(visible($('townScreen')) && visible($('navBar')),'네비 마을이 안 열림');
+    assert(visible($('townScreen')) && visible($('navBar')),'네비 마을이 안 열림 [DBG 보이는화면='+
+      [...document.querySelectorAll('.appScreen')].filter(e=>visible(e)).map(e=>e.id).join(',')+
+      ' nav='+visible($('navBar'))+' CHAR='+(!!CHAR())+']');
     assert(document.querySelector('#navBar .navIt.on').dataset.nav==='town','마을 탭이 활성이 아님');
     // 던전 탭 = 관문(던전 선택) 패널 · 상점 탭 = 뽑기집 (전용 화면은 이후 단계)
     navGo('dungeon'); await sleep(60);

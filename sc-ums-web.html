@@ -2519,59 +2519,13 @@
   .hmIncome span{font-size:var(--fs-xs);font-weight:800;letter-spacing:.6px;color:#c3ccd8;display:flex;align-items:center;gap:4px}
   .hmInfo{width:12px;height:12px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;
     font-style:normal;font-size:9px;font-weight:800;color:#0b1018;background:#c3ccd8;border-radius:50%}
-  /* ② 바로가기 줄 */
-  .hmQuick{flex:none;display:flex;align-items:stretch;gap:4px}
-  .hmTile,.hmPass{position:relative;flex:1 1 0;min-width:0;display:flex;align-items:flex-end;justify-content:center;
-    height:52px;padding:4px;cursor:pointer;font-family:inherit;
-    background:linear-gradient(180deg,rgba(40,52,72,.75),rgba(10,14,22,.92));
-    border:1px solid var(--metal-edge);border-radius:var(--r-md)}
-  .hmTileTx,.hmPass span{font-size:8.5px;font-weight:800;letter-spacing:.2px;color:#dbe6f2;text-align:center;line-height:1.15}
-  .hmPass{flex:1.5 1 0;align-items:center;background:linear-gradient(180deg,rgba(58,40,26,.85),rgba(20,12,8,.94));border-color:rgba(210,160,90,.35)}
-  .hmPass b{color:#ffd24a;font-size:9.5px}
-  .hmBonus{flex:1.2 1 0;min-width:0;cursor:pointer;font-family:inherit;font-size:var(--fs-md);font-weight:900;letter-spacing:.4px;
-    color:#062b12;background:linear-gradient(180deg,#5cf08a,#22c25c 60%,#149a45);border:1px solid rgba(140,255,180,.7);border-radius:var(--r-md)}
-  .hmDot{position:absolute;right:3px;top:3px;width:7px;height:7px;border-radius:50%;background:#ff9a2a;box-shadow:0 0 6px rgba(255,154,42,.8)}
   /* 공통 패널 */
   .hmCard{flex:none;background:var(--hmPanel);border:1px solid var(--hbEdge);border-radius:var(--r-lg);overflow:hidden}
-  /* ③ 리그 순위표 */
-  .hmLgHead{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.06)}
-  .hmLgIco{font-size:17px}
-  .hmLgHead b{font-size:var(--fs-xl);font-weight:800;color:#eaf1fb}
-  .hmLgRnd{margin-left:auto;font-size:var(--fs-sm);font-weight:800;letter-spacing:.5px;color:#93a0af}
-  .hmLgRnd b{font-family:'Rajdhani',sans-serif;font-variant-numeric:tabular-nums;color:#eaf1fb}
-  .hmTable{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}
-  .hmTable th{padding:4px;font-size:8.5px;font-weight:800;letter-spacing:.4px;color:#78828f;text-align:center}
-  .hmTable th.l{text-align:left;padding-left:8px}
-  .hmTable td{padding:4px;text-align:center;color:#c3ccd8;
-    font-family:'Rajdhani',sans-serif;font-variant-numeric:tabular-nums;font-size:var(--fs-lg);font-weight:700}
-  .hmTable td.tm{text-align:left;padding-left:8px;font-family:inherit;font-weight:800;color:#eaf1fb}
-  .hmTable td.rk{width:26px}
-  .hmTable td.rk i{display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;
-    font-style:normal;border:1px solid rgba(255,180,60,.55);border-radius:var(--r-bar)}
-  .hmTable tr.me td{background:rgba(255,180,60,.07);color:#ffd24a}
-  .hmTable tr.me td.tm{color:#ffd24a}
-  .hmTable td.gd{color:#5dff8f}
-  .hmPromo{display:flex;align-items:center;gap:8px;padding:8px 12px;border-top:1px solid rgba(255,255,255,.06);
-    font-size:var(--fs-sm);font-weight:800;color:#93a0af}
-  .hmPromoBox{width:16px;height:16px;border:1px solid rgba(255,180,60,.55);border-radius:var(--r-bar)}
-  /* ④ 라이브 매치 바 */
-  .hmVs{flex:none;display:flex;align-items:center;gap:4px;padding:8px;
-    background:rgba(9,14,26,.92);border:1px solid var(--hbEdge);border-radius:var(--r-md)}
-  .hmVsMe,.hmVsOp{flex:1 1 0;min-width:0;display:flex;flex-direction:column}
-  .hmVsOp{align-items:flex-end;text-align:right}
-  .hmVsMe b{font-size:var(--fs-lg);font-weight:800;color:#7fc4ff}
-  .hmVsOp b{font-size:var(--fs-lg);font-weight:800;color:#ff7f8f}
-  .hmVsMe em,.hmVsOp em{font-style:normal;font-size:8.5px;font-weight:700;color:#78828f}
-  .hmVsScore{flex:none;font-family:'Rajdhani',sans-serif;font-variant-numeric:tabular-nums;font-size:24px;font-weight:800}
-  .hmVsScore.blue{color:#7fc4ff}
-  .hmVsScore.red{color:#ff7f8f}
-  .hmVsMid{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;font-size:8.5px;font-weight:800;color:#93a0af}
-  .hmVsMid em{font-style:normal;font-family:'Rajdhani',sans-serif;font-variant-numeric:tabular-nums;font-size:var(--fs-xl);color:#eaf1fb}
-  /* ⑤ 매치 화면 자리 */
-  .hmStage{flex:none;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;
+  /* ② 매치 화면 자리 — 고정 비율이 아니라 업그레이드 위 남는 높이를 전부 먹는다(min-height:0으로 작은 화면에선 양보) */
+  .hmStage{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;
     background:linear-gradient(180deg,rgba(24,32,46,.9),rgba(8,11,17,.95));border:1px solid var(--hbEdge);border-radius:var(--r-md)}
   .hmStageTx{font-size:var(--fs-md);color:#5f6a77;letter-spacing:.4px}
-  /* ⑥ POWER UPGRADES */
+  /* ③ POWER UPGRADES */
   .hmUpgHead{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:var(--fs-xl);font-weight:900;letter-spacing:.6px;color:#eaf1fb;
     border-bottom:1px solid rgba(255,255,255,.06)}
   .hmUpgGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px}
@@ -3650,41 +3604,18 @@
     </div>
   </div>
 
-  <!-- 🏠 HOME — 메인 대시보드. 레이아웃은 참고 이미지 기준.
-       ⚠ 리그 순위표·라이브 매치·매치 화면·시즌패스·젬은 아직 시스템이 없다 → 자리만 만든 더미(HOME_DUMMY).
-          실제 데이터에 붙은 것은 상단 자원 바(P·수입)와 POWER UPGRADES(스탯 4종)뿐이다. -->
+  <!-- 🏠 HOME — 메인 대시보드. 수입 줄 · 매치 화면 · POWER UPGRADES 세 덩어리뿐이다.
+       ⚠ 매치 화면은 아직 시스템이 없어 자리만 잡아 둔 빈 판이다(업그레이드 위 남는 높이를 전부 먹는다).
+          실제 데이터에 붙은 것은 수입(profIdleRate)과 POWER UPGRADES(스탯 4종)뿐. -->
   <div id="homeScreen" class="appScreen spaceBg hide">
     <div class="hmScroll uiScroll" id="hmScroll">
       <!-- ① 자원 바 — 미네랄/젬은 공용 재화 바(#curBar)로 이관. 여기엔 방치 수입(INCOME)만 남는다 -->
       <div class="hmRes">
         <div class="hmIncome"><b id="hmRate">$0/s</b><span>INCOME <i class="hmInfo" onclick="hmInfoIncome()">i</i></span></div>
       </div>
-      <!-- ② 바로가기 줄 -->
-      <div class="hmQuick">
-        <button class="hmTile" onclick="hmGoto('gym')"><span class="hmTileTx">훈련장</span><i class="hmDot"></i></button>
-        <button class="hmTile" onclick="hmGoto('gate')"><span class="hmTileTx">관문</span></button>
-        <button class="hmTile" onclick="hmSoon('일일 보상')"><span class="hmTileTx">일일 보상</span><i class="hmDot"></i></button>
-        <button class="hmBonus" onclick="hmSoon('보너스 X2')">BONUS X2</button>
-        <button class="hmPass" onclick="hmSoon('시즌 패스')"><span>SEASON<br><b>PASS</b></span><i class="hmDot"></i></button>
-      </div>
-      <!-- ③ 리그 순위표(더미) -->
-      <div class="hmCard hmLeague">
-        <div class="hmLgHead"><span class="hmLgIco">🎖</span><b id="hmTier">Silver</b><span class="hmLgRnd">ROUNDS: <b id="hmRounds">1/9</b></span></div>
-        <table class="hmTable"><thead><tr><th>#</th><th class="l">TEAM</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>PTS</th></tr></thead>
-          <tbody id="hmStand"></tbody></table>
-        <div class="hmPromo"><i class="hmPromoBox"></i>Promotion – Gold Nova</div>
-      </div>
-      <!-- ④ 라이브 매치 바(더미) -->
-      <div class="hmVs">
-        <span class="hmVsMe"><b id="hmMeName">My Squad</b><em>WIN CHANCE: <b>49%</b></em></span>
-        <b class="hmVsScore blue">0</b>
-        <span class="hmVsMid">ROUND <b>2/9</b><em id="hmClock">01:19</em></span>
-        <b class="hmVsScore red">0</b>
-        <span class="hmVsOp"><b>Fluxa</b><em>WIN CHANCE: <b>51%</b></em></span>
-      </div>
-      <!-- ⑤ 매치 화면(자리) -->
+      <!-- ② 매치 화면(자리) — 업그레이드 위 남는 세로 공간을 전부 차지한다 -->
       <div class="hmStage"><span class="hmStageTx">경기 화면 준비 중</span></div>
-      <!-- ⑥ POWER UPGRADES — 실제 스탯 4종 -->
+      <!-- ③ POWER UPGRADES — 실제 스탯 4종 -->
       <div class="hmCard hmUpg">
         <div class="hmUpgHead"><span>⚡</span>POWER UPGRADES</div>
         <div class="hmUpgGrid" id="hmUpgGrid"></div>
@@ -4794,15 +4725,8 @@ function profIdleTick(){ if(!PLAYER_META||!PLAYER_META.profile) return; const p=
 function profStampSeen(){ if(PLAYER_META&&PLAYER_META.profile){ PLAYER_META.profile.lastSeenTs=Date.now(); try{ localStorage.setItem(metaKey(), JSON.stringify(PLAYER_META)); }catch(e){} } }
 
 // ── 🏠 HOME 대시보드 ──
-// ⚠ 실제 데이터에 붙은 것은 ①자원 바(P·수입)와 ⑥POWER UPGRADES(스탯 4종)뿐이다.
-//    리그 순위표·라이브 매치·매치 화면·시즌패스·젬은 아직 시스템이 없어 아래 HOME_DUMMY 고정값을 쓴다.
-//    시스템을 붙일 땐 이 상수를 지우고 실데이터로 갈아끼울 것 — 화면 쪽은 손댈 필요가 없다.
-const HOME_DUMMY={
-  tier:'Silver', rounds:'1/9', gem:20,
-  stand:[ {rk:1,name:'B3STIA',   w:1,d:0,l:0,gd:'+3',pts:3},
-          {rk:2,name:'Lyn Vision',w:1,d:0,l:0,gd:'+2',pts:3},
-          {rk:5,name:'My Squad', w:1,d:0,l:0,gd:'+1',pts:3, me:true} ],
-};
+// ⚠ 화면은 세 덩어리뿐이다 — ①수입 줄 · ②매치 화면(빈 자리) · ③POWER UPGRADES(스탯 4종).
+//    실제 데이터에 붙은 것은 ①과 ③. ②는 시스템이 없어 문구만 있는 빈 판이다.
 // POWER UPGRADES = 캐릭터 스탯 4종(실제). 아이콘·표기만 참고 이미지 문법을 따른다.
 const HOME_UPG=[ {k:'pow',ico:'🎯',name:'공격'}, {k:'foc',ico:'🧠',name:'집중'},
                  {k:'vit',ico:'🛡',name:'체력'}, {k:'agi',ico:'👟',name:'민첩'} ];
@@ -4818,12 +4742,6 @@ function renderHome(){ try{
   const set=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
   set('hmRate', '$'+(profIdleRate()/60).toFixed(2)+'/s');   // profIdleRate()는 분당 — 초당으로 환산
   if(typeof updateCurBar==='function') updateCurBar();       // 💠 미네랄/가스/젬은 공용 재화 바로 이관
-  set('hmTier', HOME_DUMMY.tier); set('hmRounds', HOME_DUMMY.rounds);
-  if(c) set('hmMeName', c.name);
-  const tb=document.getElementById('hmStand');
-  if(tb) tb.innerHTML=HOME_DUMMY.stand.map(r=>'<tr'+(r.me?' class="me"':'')+'>'
-    +'<td class="rk"><i>'+r.rk+'</i></td><td class="tm">'+escHtml(r.me&&c?c.name:r.name)+'</td>'
-    +'<td>'+r.w+'</td><td>'+r.d+'</td><td>'+r.l+'</td><td class="gd">'+r.gd+'</td><td>'+r.pts+'</td></tr>').join('');
   const gr=document.getElementById('hmUpgGrid');
   if(gr && c) gr.innerHTML=HOME_UPG.map(u=>{ const lv=profStat(u.k), can=c.statPoints>0;
     return '<div class="hmUp"><div class="hmUpTop"><span class="hmUpIco">'+u.ico+'</span>'
@@ -4837,8 +4755,6 @@ function hmUpgrade(k){ if(typeof profAllocStat!=='function') return;
   if(!profAllocStat(k)){ hmToast('스탯 포인트가 없습니다 — 레벨을 올리세요'); return; }
   if(typeof playSfx==='function') playSfx('ui_open'); renderHome(); }
 function hmInfoIncome(){ hmToast('수입 = 훈련장 배율 × (1 + 파워×1%) · 펫 보너스 포함'); }
-function hmSoon(what){ hmToast(what+' — 준비 중입니다'); }
-function hmGoto(zone){ openTown(); if(typeof townGo==='function') townGo(zone); }
 function hmToast(msg){ if(typeof showTownToast==='function') showTownToast(msg);
   else if(typeof lobbyToast==='function') lobbyToast(msg); }
 
