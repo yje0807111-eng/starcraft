@@ -66,8 +66,10 @@
   .uiScroll::-webkit-scrollbar-track{background:transparent}
   html,body{height:100%;background:#010305;display:flex;align-items:center;justify-content:center;
     font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;overflow:hidden}
-  /* 모바일 고정 비율(9:16, 390x693). 화면이 작으면 비율 유지하며 축소. 패널 폭 변해도 폰 모양 불변 */
-  #phone{width:390px;height:693px;aspect-ratio:9/16;position:relative;
+  /* 모바일 고정 비율 — 세로로 긴 요즘 폰(963:1997 ≈ 1:2.074). 비율은 아래 두 변수 한 곳에서만 정한다.
+     화면이 작으면 비율을 유지하며 축소. 패널 폭이 변해도 폰 모양은 불변. */
+  :root{--phW:963;--phH:1997;--navH:54px}
+  #phone{width:390px;height:calc(390px * var(--phH) / var(--phW));aspect-ratio:var(--phW)/var(--phH);position:relative;
     /* 게임 배경 우주 타일(space_bg)을 캔버스와 같은 380px 스케일로 프레임 전체에 이어지게 — 어둡게 덮어 콘솔 가독성 유지 */
     background:linear-gradient(rgba(3,4,12,.5),rgba(3,4,12,.66)),url('assets/tiles/space_bg.webp') center/380px repeat #05060d;
     overflow:hidden;display:flex;flex-direction:column;flex:none;
@@ -76,8 +78,8 @@
     /* 뷰포트보다 크면 비율 유지하며 축소 */
     max-width:100vw;max-height:100vh}
   /* 높이가 모자라면 높이 기준으로, 폭이 모자라면 폭 기준으로 축소 */
-  @media(max-height:713px){#phone{height:96vh;width:calc(96vh*9/16)}}
-  @media(max-width:410px){#phone{width:100vw;height:calc(100vw*16/9);border-radius:0;border:none}}
+  @media(max-height:829px){#phone{height:96vh;width:calc(96vh * var(--phW) / var(--phH))}}
+  @media(max-width:410px){#phone{width:100vw;height:calc(100vw * var(--phH) / var(--phW));border-radius:0;border:none}}
 
   /* GAME AREA */
   #gameArea{flex:1;position:relative;overflow:hidden;background:#060e0a;min-height:0;transition:filter .35s}
@@ -2184,11 +2186,11 @@
   /* 유즈맵 선택 */
   #mapSelect{z-index:47;padding:12px 13px}
   /* 유즈맵 선택 로비 배경(전체 cover, 9:16 기준, UI는 위 레이어) */
-  #mapSelect::before,#rooms::before,#createPanel::before,#hubScreen::before{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;transform-origin:center center;
+  #mapSelect::before,#rooms::before,#createPanel::before{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;transform-origin:center center;
     background:url('assets/backgrounds/lobby_bg.webp') center center / cover no-repeat #04050b;
     animation:lobbyBreath 12s ease-in-out infinite}   /* 미세한 호흡(위아래 + 약한 확대) */
   @keyframes lobbyBreath{ 0%,100%{transform:scale(1.01) translateY(0)} 50%{transform:scale(1.05) translateY(-1%)} }
-  #mapSelect::after,#rooms::after,#createPanel::after,#hubScreen::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg, rgba(2,3,8,.96) 0%, rgba(2,3,8,.66) 16%, rgba(2,3,8,.2) 38%, rgba(2,3,8,.2) 62%, rgba(2,3,8,.66) 84%, rgba(2,3,8,.97) 100%)}   /* 위·아래 빨강 더 톤다운(중앙 이미지 유지) */
+  #mapSelect::after,#rooms::after,#createPanel::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg, rgba(2,3,8,.96) 0%, rgba(2,3,8,.66) 16%, rgba(2,3,8,.2) 38%, rgba(2,3,8,.2) 62%, rgba(2,3,8,.66) 84%, rgba(2,3,8,.97) 100%)}   /* 위·아래 빨강 더 톤다운(중앙 이미지 유지) */
   .msHead{display:flex;align-items:center;justify-content:space-between;padding-bottom:7px;margin-bottom:8px;border-bottom:1px solid rgba(255,255,255,.06)}
   .msHeadL{display:flex;align-items:center;gap:8px;min-width:0}
   .msTitle{font-size:15px;font-weight:800;color:#eef1f6;text-shadow:0 1px 3px rgba(0,0,0,.65);letter-spacing:.3px}   /* 제목 = 화이트 통일 */
@@ -2297,7 +2299,7 @@
   .ptHelpBody .phItem{padding:6px 0;border-top:1px solid rgba(255,255,255,.06)}
   .ptHelpBody .phItem b{color:#dbe3ec;font-weight:700}
   /* ── 🎯 시작 선택 허브 ── */
-  #hubScreen.hide,#townScreen.hide,#charScreen.hide{display:none}
+  #townScreen.hide,#charScreen.hide{display:none}
   /* 장비 페이퍼돌 — 캐릭터 초상 + 신체 위치 슬롯 */
   /* ── 장비창 — 위: 아바타 + 부위별 슬롯 / 아래: 가방(늘 열림) ── */
   .twCard.gearFull{width:372px;max-width:94vw;height:90%;max-height:90%}   /* 장비창만 화면을 넓게 쓴다 */
@@ -2389,45 +2391,14 @@
   .twInput{flex:0 0 auto;width:118px;padding:7px 9px;border-radius:8px;font-family:inherit;font-size:13px;color:#eaf1fb;
     background:rgba(255,255,255,.05);border:1px solid var(--metal-edge)}
   .twInput:focus{outline:none;border-color:rgba(92,214,255,.6)}   /* id 특정성으로 .hide 우선(아래 #id{display:flex}가 .hide를 이기지 않게) */
-  #hubScreen{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center}
-  /* 배경 = 유즈맵 선택·방찾기와 같은 로비 배경(lobby_bg). 위 선택자에 #hubScreen을 합류시켜 규칙을 공유한다 — 전용 배경을 따로 만들면 통일이 깨진다 */
-  #hubScreen{flex-direction:column}
   /* 상단 유저 프로필 바 */
-  .hubTop{flex:none;width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;box-sizing:border-box;
-    border-bottom:1px solid rgba(255,255,255,.06)}
   /* 우상단 = 심플·세련: 아바타(레벨 배지)+닉 / 코인 / 설정 */
-  .hubTopR{display:flex;align-items:center;gap:8px;flex:none}
-  .hubProf{display:flex;align-items:center;gap:8px;min-width:0;cursor:default}
-  .hubAv{position:relative;width:26px;height:26px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:50%;
-    background:radial-gradient(circle at 50% 32%,rgba(120,140,175,.28),rgba(10,12,18,.92));border:1px solid var(--metal-edge)}
-  .hubLvBadge{position:absolute;right:-3px;bottom:-3px;min-width:13px;height:13px;padding:0 2.5px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;
-    font-size:9px;font-weight:800;font-style:normal;color:#1a1204;background:var(--gold);border:1.5px solid #0c0f16;border-radius:8px;line-height:1}
-  .hubNick{font-size:10.5px;font-weight:800;color:#eaf1fb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:22vw}
-  .hubGear{width:24px;height:24px;flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#8b98a8;background:none;border:none;transition:color .16s}
-  .hubGear svg{width:16px;height:16px}
-  .hubGear:hover{color:#fff}
   /* 좌상단 로고(엠블럼 + 게임명 축소) */
   /* 선택 영역 = 상단 컴팩트 블록(하단 소셜에 공간 양보) */
-  .hubCenter{flex:1 1 auto;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:8px 0 4px}
   /* 게임명 아래 나머지 공간 중앙에 선택 영역 */
-  .hubBody{flex:1 1 auto;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:0;padding:0 12px}
   /* 게임 선택 = 좌측 정렬 + 네온 액센트 바(중앙 디바이더 대체) */
-  .hubSel{width:100%;max-width:360px;display:flex;align-items:center;gap:8px;font-size:15px;font-weight:800;letter-spacing:.5px;color:#eef3fa;text-shadow:0 1px 3px #000}
-  .hubSel::before{content:'';flex:none;width:3.5px;height:16px;border-radius:2px;background:linear-gradient(180deg,var(--neon),var(--neon-d1));box-shadow:0 0 8px var(--neon-glow)}
   /* ── 허브 팔레트: 짙은 남색 패널 + 파랑 액센트 ── */
-  #hubScreen{--hbPanel:rgba(11,16,29,.93);--hbEdge:rgba(88,118,188,.22);--hbCard:rgba(20,29,50,.78);--hbRow:rgba(28,40,66,.85)}
-  .hubTitles{display:flex;flex-direction:column;gap:0;min-width:0}
-  .hubSubTx{font-size:9.5px;font-style:normal;color:#7d8ba0;letter-spacing:.2px;white-space:nowrap}
-  .hubMe{display:flex;flex-direction:column;align-items:flex-end;gap:0;min-width:0}
-  .hubLv{font-style:normal;font-size:7.5px;font-weight:800;letter-spacing:.3px;color:#9ec6ff;
-    padding:0 4px;border-radius:var(--r-bar);background:rgba(79,157,255,.15);border:1px solid rgba(79,157,255,.3)}
-  .hubLv b{font-family:'Rajdhani',sans-serif;color:#cfe4ff}
   /* 섹션 선택 + 카드 = 하나의 패널 */
-  .hubPanel{flex:0 1 auto;min-height:0;width:100%;max-width:360px;display:flex;flex-direction:column;
-    border-radius:0;background:var(--hbPanel);border:1px solid var(--hbEdge);overflow:hidden;
-    clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
-  .hubGameTabs{flex:none;width:100%;border-bottom:1px solid var(--hbEdge);background:rgba(9,14,26,.55)}
   #hubFriendTabs{background-color:rgba(16,24,42,.92);
     background-image:linear-gradient(180deg,rgba(70,110,180,.10),rgba(70,110,180,0));
     border-bottom:1px solid var(--hbEdge);margin:0 0 8px}
@@ -2436,90 +2407,19 @@
   #hubFriendTabs .msTab2{border-bottom-width:0}
   #hubFriendTabs .msTab2.on{color:var(--acc-sel);background:rgba(79,157,255,.13);
     box-shadow:inset 0 1px 0 rgba(140,185,255,.16),inset 0 -2px 0 var(--acc-sel)}
-  .hubGameTabs .msTab2{padding:12px 4px;gap:4px;font-size:12.5px;font-weight:900;letter-spacing:.6px;border-bottom:none}
-  .hubGameTabs .msTab2 svg{width:15px;height:15px}
-  .hubGameTabs .msTab2[data-g="use"].on{color:#a9cdff;background:rgba(79,157,255,.14);
-    box-shadow:inset 0 -2.5px 0 #4f9dff,inset 0 0 26px -12px rgba(79,157,255,.9)}
-  .hubGameTabs .msTab2[data-g="rpg"].on{color:#c7b4ff;background:rgba(150,120,255,.15);
-    box-shadow:inset 0 -2.5px 0 #8b6bff,inset 0 0 26px -12px rgba(150,120,255,.9)}
-  .hubCard.hide{display:none}
-  .hubCards{flex:0 0 auto;min-height:0;display:flex;flex-direction:column;width:100%;padding:12px;box-sizing:border-box}
-  .hubCards>.hubCard{flex:0 0 auto;min-height:0}
-  .hubCards>.hubCard>.hubcQuick{flex:0 0 auto;min-height:0}
-  .hubcQuick>.hqRow{flex:none;min-height:0}   /* 세로 스택 · 카드는 내용 높이(조밀) · 남는 높이는 소셜이 가져간다 */
   /* 허브 카드 = 유즈맵 목록 카드(.mapItem)와 같은 디자인의 '큰 변형' — 목록용은 그대로 두고 여기서만 키운다 */
   /* ── 허브 카드 = 하단 소셜(친구 행)과 같은 디자인 언어 ──
      재질(유리+--glass-edge)·호버·배지(.frBadge)·타이포를 하단에 맞춘다.
      ⚠ 목록용 .mapItem을 늘려 쓰면 '큰 빈 상자'가 된다 — 그건 10개가 반복되는 리스트 행 디자인이라 존재감이 없다. */
-  .hubCard{--ca:#5cd6ff;position:relative;display:flex;flex-direction:column;align-items:stretch;gap:8px;width:100%;
-    text-align:left;font-family:inherit;color:#dbe3ec;background:none;border:none;padding:0}
   /* 블록 공통 껍데기 — 헤더 블록과 개별 맵 블록이 같은 재질을 쓴다(단일 소스) */
-  .hubcTopRow,.hqRow{background:var(--cbg,rgba(20,24,32,.62));
-    border:1px solid color-mix(in srgb,var(--ca) 40%,var(--glass-edge));border-radius:var(--r-lg);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 8px 20px -16px color-mix(in srgb,var(--ca) 70%,#000);
-    transition:background .13s,border-color .13s,transform .13s,box-shadow .13s}
-  .hubcTopRow:hover,.hqRow:hover{border-color:color-mix(in srgb,var(--ca) 62%,var(--glass-edge));transform:translateY(-1px)}
-  .hubcTopRow:active{transform:translateY(0)}
-  .hubUse{--ca:#4f9dff;--cbg:var(--hbCard)}
-  .hubRpg{--ca:#8b6bff;--cbg:rgba(30,24,54,.78)}
-  .hubcThumb{position:relative;flex:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:var(--r-lg);
-    background:radial-gradient(circle at 50% 36%,color-mix(in srgb,var(--ca) 26%,transparent),rgba(9,12,18,.85) 76%);
-    border:1px solid color-mix(in srgb,var(--ca) 32%,var(--glass-edge));box-shadow:inset 0 0 16px -6px var(--ca)}
-  .hubcThumb .ic{width:18px;height:18px;color:color-mix(in srgb,var(--ca) 80%,#fff)}
-  .hubcTopRow{display:flex;align-items:center;gap:8px;cursor:pointer;min-width:0;padding:8px 12px}
   /* 카드 하단 바로가기 — 인기맵 / 내 캐릭터. 세로 리스트 + 오른쪽 즉시 플레이. 재질은 친구 행과 같은 유리 계열 */
-  .hubcQuick{display:flex;flex-direction:column;gap:8px}
-  .hqRow{display:flex;align-items:center;gap:8px;padding:8px}
-  .hqRow:hover{background:rgba(40,56,92,.95);border-color:color-mix(in srgb,var(--ca) 45%,var(--glass-edge))}
-  .hqChip{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:8px;cursor:pointer;
-    background:none;border:none;padding:0;font-family:inherit;text-align:left;color:inherit}
-  .hqIco{flex:none;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:15px;
-    color:color-mix(in srgb,var(--ca) 80%,#fff)}
-  .hqIco .ic{width:20px;height:20px}
   /* 인기맵 썸네일 = 유즈맵 선택과 같은 .mapThumb, 행 크기에 맞춰 축소만 */
-  .hqRow .mapThumb{flex:none;width:29px;height:29px;border-radius:var(--r-lg)}
-  .hqRow .mapThumb .mmIco .ic{width:15px;height:15px}
-  .hqTag{display:inline-block;margin-right:4px;padding:0 4px;border-radius:var(--r-bar);font-size:8px;font-weight:800;letter-spacing:.2px;
-    color:color-mix(in srgb,var(--ca) 88%,#fff);background:color-mix(in srgb,var(--ca) 16%,transparent);
-    border:1px solid color-mix(in srgb,var(--ca) 40%,transparent);vertical-align:middle}
   .hsEmptySub{display:inline-block;margin-top:4px;font-size:10px;color:#5f6a77;line-height:1.6}
-  .hqTx{min-width:0;display:flex;flex-direction:column;line-height:1.3;gap:0}
-  .hqName{font-size:11.5px;font-weight:800;color:#e3ebf5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   /* 설명은 두 줄까지 — 한 줄이면 문장이 잘린다 */
-  .hqSub{font-size:9px;font-style:normal;color:#8b96a3;display:-webkit-box;-webkit-box-orient:vertical;
-    -webkit-line-clamp:2;overflow:hidden;white-space:normal;word-break:keep-all}
   /* 즉시 플레이 — 액센트색 실행 버튼 */
-  .hqPlay{flex:none;display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:var(--r-md);cursor:pointer;
-    font-family:inherit;font-size:9.5px;font-weight:800;letter-spacing:.2px;white-space:nowrap;
-    color:color-mix(in srgb,var(--ca) 88%,#fff);background:color-mix(in srgb,var(--ca) 14%,transparent);
-    border:1px solid color-mix(in srgb,var(--ca) 42%,transparent);transition:background .12s,color .12s}
-  .hqPlay:hover{background:color-mix(in srgb,var(--ca) 26%,transparent);color:#fff}
-  .hqPlay svg{width:11px;height:11px}
-  .hubcMain{flex:1;min-width:0;display:flex;flex-direction:column;gap:0}
-  .hubcHead{display:flex;align-items:center;gap:4px;min-width:0;flex-wrap:wrap}
-  .hubcName{font-size:13.5px;font-weight:900;letter-spacing:.5px;white-space:nowrap;
-    color:color-mix(in srgb,var(--ca) 82%,#fff);text-shadow:0 0 12px color-mix(in srgb,var(--ca) 45%,transparent),0 2px 4px #000}
-  .hubcSubRow{display:flex;align-items:center;gap:8px;min-width:0}
-  .hubcSub{flex:1 1 auto;font-size:10.5px;color:#93a0af;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .hubcLive{flex:none;display:inline-flex;align-items:center;gap:4px;font-size:9.5px;font-weight:800;color:#a9cdb4}
-  .hubcLive i{width:5px;height:5px;border-radius:50%;background:#5dff8f;box-shadow:0 0 6px rgba(93,255,143,.8)}
-  .hubcLive b{font-family:'Rajdhani',sans-serif;font-variant-numeric:tabular-nums;color:#d8f0df}
   /* 카드 메타 행 = 라이브/레벨 스탯 + 태그칩 */
-  .hubcTags{display:flex;flex-wrap:wrap;gap:4px;margin-top:0}
-  .hubTag{font-size:9px;font-weight:800;letter-spacing:.3px;color:#cfe0ec;padding:4px 8px;border-radius:var(--r-lg);
-    background:color-mix(in srgb,var(--ca) 12%,rgba(255,255,255,.03));border:1px solid color-mix(in srgb,var(--ca) 34%,var(--metal-edge))}
-  .hubcGo{flex:none;display:flex;align-items:center;justify-content:center;color:color-mix(in srgb,var(--ca) 82%,#fff)}
-  .hubcGo svg{width:16px;height:16px;filter:drop-shadow(0 0 5px color-mix(in srgb,var(--ca) 60%,transparent))}
   /* ── 하단 소셜 구역(친구 · 디스코드 느낌) ── */
   /* 부수적 소셜 구역 = 컴팩트·상단 구분선 */
-  .hubSocial{flex:none;   /* 고정 — 친구 수와 무관하게 구역 높이 유지 */
-    min-height:0;width:100%;max-width:396px;margin:0 auto;display:flex;flex-direction:column;padding:8px 12px;box-sizing:border-box;position:relative}   /* 화면의 40% 고정 — 카드와 소셜의 균형점 */
-  .hubSocial{border:1px solid var(--hbEdge);border-radius:0;margin:12px auto 0;padding:0;background:var(--hbPanel);overflow:hidden;
-    clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
-  .hubSocial>.hsList{margin:0 12px 12px}
-  .hubSocial::before{content:'';position:absolute;left:0;right:0;top:-1px;height:2px;   /* 구역 경계선(가운데가 밝은 띠) */
-    background:linear-gradient(90deg,transparent,rgba(127,208,255,.5),transparent)}
   .hsHead{flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 0 8px}
   .hsHTitle{display:inline-flex;align-items:center;gap:8px;font-size:15px;font-weight:800;letter-spacing:.2px;color:#e6ecf3}
   .hsHTitle svg{width:17px;height:17px;color:#7fd0ff}
@@ -2589,7 +2489,8 @@
   .dmSend{width:44px;flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;background:linear-gradient(180deg,#2f74b6,#1f5891);border:none;border-radius:11px}
   .dmSend svg{width:18px;height:18px}
   /* ── 🏘 마을 ── */
-  #townScreen{position:absolute;inset:0;z-index:60;display:flex;flex-direction:column}
+  #townScreen{position:absolute;inset:0;z-index:60;display:flex;flex-direction:column;padding-bottom:var(--navH);box-sizing:border-box;
+    --hbPanel:rgba(11,16,29,.93);--hbEdge:rgba(88,118,188,.22);--hbCard:rgba(20,29,50,.78);--hbRow:rgba(28,40,66,.85)}
   .twBar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:10px 12px;background:linear-gradient(180deg,rgba(13,18,28,.96),rgba(8,11,17,.9));border-bottom:1px solid var(--glass-edge)}
   .twBack{flex:0 0 auto;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:var(--r-lg);cursor:pointer;color:#cdd6e2;background:rgba(255,255,255,.06);border:1px solid var(--metal-edge)}
   .twBack .mIco{width:18px;height:18px;color:inherit}
@@ -2598,6 +2499,124 @@
   .twCoin{margin-left:auto;font-family:'Rajdhani',sans-serif;font-size:13px;color:var(--txt-mute)}
   .twCoin b{font-size:16px;font-weight:800;color:#ffd24a}
   .twPow{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:800;color:#ff8a9a}
+  /* ══ 🏠 HOME 대시보드 ══ 참고 이미지 레이아웃. 값은 DESIGN.md 토큰(라운드 0/3/6/9 · 간격 4/8/12/20). */
+  #homeScreen{position:absolute;inset:0;z-index:60;display:flex;flex-direction:column;
+    --hbEdge:rgba(88,118,188,.22);--hmPanel:rgba(13,19,32,.92)}
+  #homeScreen.hide{display:none}
+  .hmScroll{flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:8px 8px calc(var(--navH) + 8px)}
+  /* ① 자원 바 */
+  .hmRes{flex:none;display:flex;align-items:stretch;gap:8px}
+  .hmResBox{flex:1 1 0;min-width:0;display:flex;align-items:center;gap:4px;padding:4px 4px 4px 8px;
+    background:var(--hmPanel);border:1px solid var(--hbEdge);border-radius:var(--r-md)}
+  .hmResIco{font-size:15px;flex:none}
+  .hmResBox b{flex:1 1 auto;min-width:0;text-align:center;font-family:'Rajdhani',sans-serif;font-variant-numeric:tabular-nums;
+    font-size:15px;font-weight:800;color:#eaf1fb;overflow:hidden;text-overflow:ellipsis}
+  .hmPlus{flex:none;width:22px;height:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;
+    font-family:inherit;font-size:14px;font-weight:800;line-height:1;color:#cfe0ec;
+    background:rgba(255,255,255,.07);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+  .hmIncome{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 4px}
+  .hmIncome b{font-family:'Rajdhani',sans-serif;font-variant-numeric:tabular-nums;font-size:17px;font-weight:800;color:#5dff8f;line-height:1.1}
+  .hmIncome span{font-size:var(--fs-xs);font-weight:800;letter-spacing:.6px;color:#c3ccd8;display:flex;align-items:center;gap:4px}
+  .hmInfo{width:12px;height:12px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;
+    font-style:normal;font-size:9px;font-weight:800;color:#0b1018;background:#c3ccd8;border-radius:50%}
+  /* ② 바로가기 줄 */
+  .hmQuick{flex:none;display:flex;align-items:stretch;gap:4px}
+  .hmTile,.hmPass{position:relative;flex:1 1 0;min-width:0;display:flex;align-items:flex-end;justify-content:center;
+    height:52px;padding:4px;cursor:pointer;font-family:inherit;
+    background:linear-gradient(180deg,rgba(40,52,72,.75),rgba(10,14,22,.92));
+    border:1px solid var(--metal-edge);border-radius:var(--r-md)}
+  .hmTileTx,.hmPass span{font-size:8.5px;font-weight:800;letter-spacing:.2px;color:#dbe6f2;text-align:center;line-height:1.15}
+  .hmPass{flex:1.5 1 0;align-items:center;background:linear-gradient(180deg,rgba(58,40,26,.85),rgba(20,12,8,.94));border-color:rgba(210,160,90,.35)}
+  .hmPass b{color:#ffd24a;font-size:9.5px}
+  .hmBonus{flex:1.2 1 0;min-width:0;cursor:pointer;font-family:inherit;font-size:var(--fs-md);font-weight:900;letter-spacing:.4px;
+    color:#062b12;background:linear-gradient(180deg,#5cf08a,#22c25c 60%,#149a45);border:1px solid rgba(140,255,180,.7);border-radius:var(--r-md)}
+  .hmDot{position:absolute;right:3px;top:3px;width:7px;height:7px;border-radius:50%;background:#ff9a2a;box-shadow:0 0 6px rgba(255,154,42,.8)}
+  /* 공통 패널 */
+  .hmCard{flex:none;background:var(--hmPanel);border:1px solid var(--hbEdge);border-radius:var(--r-lg);overflow:hidden}
+  /* ③ 리그 순위표 */
+  .hmLgHead{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.06)}
+  .hmLgIco{font-size:17px}
+  .hmLgHead b{font-size:var(--fs-xl);font-weight:800;color:#eaf1fb}
+  .hmLgRnd{margin-left:auto;font-size:var(--fs-sm);font-weight:800;letter-spacing:.5px;color:#93a0af}
+  .hmLgRnd b{font-family:'Rajdhani',sans-serif;font-variant-numeric:tabular-nums;color:#eaf1fb}
+  .hmTable{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}
+  .hmTable th{padding:4px;font-size:8.5px;font-weight:800;letter-spacing:.4px;color:#78828f;text-align:center}
+  .hmTable th.l{text-align:left;padding-left:8px}
+  .hmTable td{padding:4px;text-align:center;color:#c3ccd8;
+    font-family:'Rajdhani',sans-serif;font-variant-numeric:tabular-nums;font-size:var(--fs-lg);font-weight:700}
+  .hmTable td.tm{text-align:left;padding-left:8px;font-family:inherit;font-weight:800;color:#eaf1fb}
+  .hmTable td.rk{width:26px}
+  .hmTable td.rk i{display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;
+    font-style:normal;border:1px solid rgba(255,180,60,.55);border-radius:var(--r-bar)}
+  .hmTable tr.me td{background:rgba(255,180,60,.07);color:#ffd24a}
+  .hmTable tr.me td.tm{color:#ffd24a}
+  .hmTable td.gd{color:#5dff8f}
+  .hmPromo{display:flex;align-items:center;gap:8px;padding:8px 12px;border-top:1px solid rgba(255,255,255,.06);
+    font-size:var(--fs-sm);font-weight:800;color:#93a0af}
+  .hmPromoBox{width:16px;height:16px;border:1px solid rgba(255,180,60,.55);border-radius:var(--r-bar)}
+  /* ④ 라이브 매치 바 */
+  .hmVs{flex:none;display:flex;align-items:center;gap:4px;padding:8px;
+    background:rgba(9,14,26,.92);border:1px solid var(--hbEdge);border-radius:var(--r-md)}
+  .hmVsMe,.hmVsOp{flex:1 1 0;min-width:0;display:flex;flex-direction:column}
+  .hmVsOp{align-items:flex-end;text-align:right}
+  .hmVsMe b{font-size:var(--fs-lg);font-weight:800;color:#7fc4ff}
+  .hmVsOp b{font-size:var(--fs-lg);font-weight:800;color:#ff7f8f}
+  .hmVsMe em,.hmVsOp em{font-style:normal;font-size:8.5px;font-weight:700;color:#78828f}
+  .hmVsScore{flex:none;font-family:'Rajdhani',sans-serif;font-variant-numeric:tabular-nums;font-size:24px;font-weight:800}
+  .hmVsScore.blue{color:#7fc4ff}
+  .hmVsScore.red{color:#ff7f8f}
+  .hmVsMid{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;font-size:8.5px;font-weight:800;color:#93a0af}
+  .hmVsMid em{font-style:normal;font-family:'Rajdhani',sans-serif;font-variant-numeric:tabular-nums;font-size:var(--fs-xl);color:#eaf1fb}
+  /* ⑤ 매치 화면 자리 */
+  .hmStage{flex:none;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(180deg,rgba(24,32,46,.9),rgba(8,11,17,.95));border:1px solid var(--hbEdge);border-radius:var(--r-md)}
+  .hmStageTx{font-size:var(--fs-md);color:#5f6a77;letter-spacing:.4px}
+  /* ⑥ POWER UPGRADES */
+  .hmUpgHead{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:var(--fs-xl);font-weight:900;letter-spacing:.6px;color:#eaf1fb;
+    border-bottom:1px solid rgba(255,255,255,.06)}
+  .hmUpgGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px}
+  .hmUp{display:flex;flex-direction:column;gap:4px;padding:8px;background:rgba(20,29,50,.78);
+    border:1px solid var(--metal-edge);border-radius:var(--r-md)}
+  .hmUpTop{display:flex;align-items:center;gap:8px;min-width:0}
+  .hmUpIco{flex:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:18px;
+    background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);border-radius:var(--r-md)}
+  .hmUpTx{min-width:0;display:flex;flex-direction:column}
+  .hmUpName{font-size:var(--fs-lg);font-weight:800;color:#eaf1fb}
+  .hmUpLv{font-size:var(--fs-sm);color:#8b96a3}
+  .hmUpLv b{font-family:'Rajdhani',sans-serif;font-variant-numeric:tabular-nums;color:#5dff8f}
+  .hmUpBtn{height:32px;cursor:pointer;font-family:inherit;font-size:var(--fs-md);font-weight:900;letter-spacing:.3px;
+    color:#2b1d00;background:linear-gradient(180deg,#ffd97a,#e8a92b 58%,#b8801a);
+    border:1px solid rgba(255,220,140,.8);border-radius:var(--r-bar)}
+  .hmUpBtn:disabled{cursor:default;color:#6d7684;background:rgba(255,255,255,.05);border-color:var(--metal-edge)}
+  /* ══ 하단 6칸 네비게이션(전역) ══ 화면이 아니라 #phone 위에 뜬다 · navShow(tab)이 표시/활성을 정한다 */
+  .navBar{position:absolute;left:0;right:0;bottom:0;z-index:62;height:var(--navH);display:flex;align-items:stretch;
+    background:linear-gradient(180deg,rgba(12,17,28,.96),rgba(6,9,15,.98));border-top:1px solid rgba(88,118,188,.22)}
+  .navBar.hide{display:none}
+  .navIt{position:relative;flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+    cursor:pointer;font-family:inherit;font-size:8.5px;font-weight:800;letter-spacing:.2px;color:#6f7a88;
+    background:none;border:none;transition:color .13s}
+  .navIt .ic{width:19px;height:19px}
+  .navIt.on{color:var(--acc-sel)}
+  .navIt.on::after{content:'';position:absolute;left:22%;right:22%;top:0;height:2px;background:var(--acc-sel);
+    box-shadow:0 0 8px -1px var(--acc-sel)}
+  .navIt:active{opacity:.8}
+  /* 마을 상단 설정 — 좌측 로그아웃과 짝 */
+  .twGear{flex:0 0 auto;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;
+    color:#8b98a8;background:none;border:none;transition:color .16s}
+  .twGear svg{width:17px;height:17px}
+  .twGear:hover{color:#fff}
+  /* ── 마을 하단 고정 바 = 유즈맵 입구(주 동작) + 친구 ── */
+  /* ── 하단 시트(친구) — 마을 위로 올라온다 ── */
+  .twSheet{position:absolute;left:0;right:0;bottom:var(--navH);z-index:63;display:flex;flex-direction:column;
+    max-height:64%;padding:0 0 8px;background:rgba(11,16,29,.96);border-top:1px solid var(--hbEdge,rgba(90,120,190,.26));
+    box-shadow:0 -14px 34px -20px #000}
+  .twSheet.hide{display:none}
+  .twSheetHead{flex:none;display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px;
+    font-size:var(--fs-xl);font-weight:800;color:#eaf1fb}
+  .twSheetX{width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;
+    color:#8b98a8;background:none;border:none}
+  .twSheetX svg{width:15px;height:15px}
+  .twSheet .hsList{margin:8px 12px 0}
   .twMap{position:relative;flex:1;min-height:0;overflow:hidden;touch-action:none;background:radial-gradient(circle at 50% 40%,#28324a 0%,#141b28 55%,#0a0e16 100%)}
   /* 월드 레이어 — 화면보다 큰 마을 전체. 카메라 = 이 요소의 transform 한 줄만 매 프레임 갱신(구역이 늘어도 비용 불변) */
   .twWorld{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
@@ -3347,8 +3366,8 @@
         <div class="cpTitle"><span data-ico="user"></span>로그아웃</div>
         <div class="cpHint" style="text-align:center;margin:2px 0 10px">로그아웃하시겠습니까?</div>
         <div class="cpBtns">
-          <button class="cpCancel" onclick="hubCloseLogout()">취소</button>
-          <button class="cpMake" onclick="hubDoLogout()">로그아웃</button>
+          <button class="cpCancel" onclick="closeLogout()">취소</button>
+          <button class="cpMake" onclick="doLogoutNow()">로그아웃</button>
         </div>
       </div>
     </div>
@@ -3569,56 +3588,11 @@
     <div class="opBtns"><button class="opQuit" id="rsQuit" onclick="resultToLobby()"><i class="autoBar" id="rsAutoBar"></i><span class="ovBtnTx">나가기</span></button></div>
   </div>
 
-  <!-- 🎯 시작 선택 화면: 유즈맵 / 내 캐릭터(RPG) -->
-  <div id="hubScreen" class="appScreen spaceBg hide">
-    <!-- 상단 바: 좌=로고 / 우=프로필·코인·설정 -->
-    <div class="hubTop">
-      <div class="msHeadL">
-        <button class="twBack" onclick="hubAskLogout()" aria-label="로그아웃" title="로그아웃"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4.6h3.7A1.8 1.8 0 0 1 20 6.4v11.2a1.8 1.8 0 0 1-1.8 1.8h-3.7"/><path d="M10.6 8.2L14.4 12l-3.8 3.8"/><path d="M14.4 12H4"/></svg></button>
-        <span class="hubTitles"><b class="msTitle">게임 선택</b><em class="hubSubTx">원하는 게임을 선택하고 플레이하세요!</em></span>
+    <!-- 친구 시트 — 허브 소셜을 그대로 옮겨온 것(id 유지 → renderFriends/setFriendFilter 그대로 동작) -->
+    <div class="twSheet hide" id="twSocial">
+      <div class="twSheetHead"><b>친구</b>
+        <button class="twSheetX" onclick="twCloseSocial()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
       </div>
-      <div class="hubTopR">
-        <div class="hubProf"><span class="hubAv" data-ico="user"></span><span class="hubMe"><b class="hubNick" id="hubNick">게스트</b><i class="hubLv">LV. <b id="hubLevel">1</b></i></span></div>
-        <button class="hubGear" data-sfx="ui_open" onclick="openAppSettings()" title="설정" aria-label="설정"><svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg></button>
-      </div>
-    </div>
-    <div class="hubCenter">
-    <div class="hubBody">
-      <div class="hubPanel">
-      <div class="msTabs2 hubGameTabs" id="hubGameTabs">
-        <button class="msTab2 on" data-g="use" onclick="hubPickGame('use',this)"><span data-ico="map"></span>USEMAP</button>
-        <button class="msTab2" data-g="rpg" onclick="hubPickGame('rpg',this)"><span data-ico="hero"></span>RPG</button>
-      </div>
-      <div class="hubCards">
-        <div class="hubCard hubUse">
-          <div class="hubcTopRow" onclick="hubGoMap()">
-            <span class="hubcThumb"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.4 6.6l5.4-2.2 6.4 2.4 5.4-2.2v12.8l-5.4 2.2-6.4-2.4-5.4 2.2z"/><path d="M8.8 4.4v14.8M15.2 6.8v14"/><circle cx="12" cy="10.6" r="1.9"/><path d="M12 12.5v2.4"/></svg></span>   <!-- 유즈맵 전용 엠블럼(고정) -->
-            <span class="hubcMain">
-              <span class="hubcHead"><b class="hubcName">USEMAP</b><span class="frBadge usemap">아케이드</span><span class="frBadge usemap">멀티</span></span>
-              <span class="hubcSubRow"><span class="hubcSub">골라서 즐기는 아케이드 대전</span><span class="hubcLive"><i></i><b id="hubUseLive">0</b>명</span></span>
-            </span>
-            <span class="hubcGo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
-          </div>
-          <div class="hubcQuick" id="hubQuickMaps"></div>
-        </div>
-        <div class="hubCard hubRpg">
-          <div class="hubcTopRow" onclick="hubGoTown()">
-            <span class="hubcThumb"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.1l6.7 2.3v6.1c0 4.2-2.8 7.2-6.7 8.6-3.9-1.4-6.7-4.4-6.7-8.6V5.4z"/><path d="M12 7.4v7.8M9.3 10.1h5.4"/></svg></span>   <!-- RPG 전용 엠블럼(고정) -->
-            <span class="hubcMain">
-              <span class="hubcHead"><b class="hubcName">RPG</b><span class="frBadge rpg">성장</span><span class="frBadge rpg">모험</span></span>
-              <span class="hubcSubRow"><span class="hubcSub">캐릭터를 키우는 나만의 모험</span><span class="hubcLive"><i></i><b id="hubRpgLive">0</b>명</span></span>
-            </span>
-            <span class="hubcGo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
-          </div>
-          <div class="hubcQuick" id="hubQuickChars"></div>
-        </div>
-      </div>
-      </div>
-    </div>
-    </div>
-    <!-- 하단 소셜 구역(친구 · 디스코드 느낌) -->
-    <div class="hubSocial">
-      <!-- 탭 바 = 유즈맵 하단(채팅·파티·친구)과 같은 단일 소스 .msTabs2/.msTab2 · 접속 수는 오른쪽 끝에 작게 -->
       <div class="msTabs2" id="hubFriendTabs">
         <button class="msTab2 on" data-fil="all" onclick="setFriendFilter('all',this)"><span data-ico="friend"></span>전체</button>
         <button class="msTab2" data-fil="usemap" onclick="setFriendFilter('usemap',this)"><span data-ico="map"></span>유즈맵</button>
@@ -3627,8 +3601,15 @@
       </div>
       <div class="hsList uiScroll" id="hubFriends"></div>
     </div>
+  <!-- 하단 6칸 네비게이션 — 화면이 아니라 #phone 위에 떠 있는 전역 바. navShow(tab)로 표시/활성 탭을 정한다 -->
+  <div id="navBar" class="navBar hide">
+    <button class="navIt" data-nav="home" onclick="navGo('home')"><span data-ico="home"></span>HOME</button>
+    <button class="navIt" data-nav="map" onclick="navGo('map')"><span data-ico="map"></span>유즈맵</button>
+    <button class="navIt" data-nav="town" onclick="navGo('town')"><span data-ico="hero"></span>마을</button>
+    <button class="navIt" data-nav="gear" onclick="navGo('gear')"><span data-ico="bag"></span>장비</button>
+    <button class="navIt" data-nav="friend" onclick="navGo('friend')"><span data-ico="friend"></span>친구</button>
+    <button class="navIt" data-nav="shop" onclick="navGo('shop')"><span data-ico="gift"></span>상점</button>
   </div>
-
   <!-- 💬 친구 DM 채팅(허브 소셜) -->
   <div id="dmChat" class="dmChat hide">
     <div class="dmHead">
@@ -3643,12 +3624,57 @@
     </div>
   </div>
 
+  <!-- 🏠 HOME — 메인 대시보드. 레이아웃은 참고 이미지 기준.
+       ⚠ 리그 순위표·라이브 매치·매치 화면·시즌패스·젬은 아직 시스템이 없다 → 자리만 만든 더미(HOME_DUMMY).
+          실제 데이터에 붙은 것은 상단 자원 바(P·수입)와 POWER UPGRADES(스탯 4종)뿐이다. -->
+  <div id="homeScreen" class="appScreen spaceBg hide">
+    <div class="hmScroll uiScroll" id="hmScroll">
+      <!-- ① 자원 바 -->
+      <div class="hmRes">
+        <div class="hmResBox"><span class="hmResIco">💵</span><b id="hmMoney">0</b><button class="hmPlus" onclick="hmGoto('gacha')" aria-label="더 얻기">+</button></div>
+        <div class="hmIncome"><b id="hmRate">$0/s</b><span>INCOME <i class="hmInfo" onclick="hmInfoIncome()">i</i></span></div>
+        <div class="hmResBox"><span class="hmResIco">💎</span><b id="hmGem">0</b><button class="hmPlus" onclick="hmSoon('젬 상점')" aria-label="더 얻기">+</button></div>
+      </div>
+      <!-- ② 바로가기 줄 -->
+      <div class="hmQuick">
+        <button class="hmTile" onclick="hmGoto('gym')"><span class="hmTileTx">훈련장</span><i class="hmDot"></i></button>
+        <button class="hmTile" onclick="hmGoto('gate')"><span class="hmTileTx">관문</span></button>
+        <button class="hmTile" onclick="hmSoon('일일 보상')"><span class="hmTileTx">일일 보상</span><i class="hmDot"></i></button>
+        <button class="hmBonus" onclick="hmSoon('보너스 X2')">BONUS X2</button>
+        <button class="hmPass" onclick="hmSoon('시즌 패스')"><span>SEASON<br><b>PASS</b></span><i class="hmDot"></i></button>
+      </div>
+      <!-- ③ 리그 순위표(더미) -->
+      <div class="hmCard hmLeague">
+        <div class="hmLgHead"><span class="hmLgIco">🎖</span><b id="hmTier">Silver</b><span class="hmLgRnd">ROUNDS: <b id="hmRounds">1/9</b></span></div>
+        <table class="hmTable"><thead><tr><th>#</th><th class="l">TEAM</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>PTS</th></tr></thead>
+          <tbody id="hmStand"></tbody></table>
+        <div class="hmPromo"><i class="hmPromoBox"></i>Promotion – Gold Nova</div>
+      </div>
+      <!-- ④ 라이브 매치 바(더미) -->
+      <div class="hmVs">
+        <span class="hmVsMe"><b id="hmMeName">My Squad</b><em>WIN CHANCE: <b>49%</b></em></span>
+        <b class="hmVsScore blue">0</b>
+        <span class="hmVsMid">ROUND <b>2/9</b><em id="hmClock">01:19</em></span>
+        <b class="hmVsScore red">0</b>
+        <span class="hmVsOp"><b>Fluxa</b><em>WIN CHANCE: <b>51%</b></em></span>
+      </div>
+      <!-- ⑤ 매치 화면(자리) -->
+      <div class="hmStage"><span class="hmStageTx">경기 화면 준비 중</span></div>
+      <!-- ⑥ POWER UPGRADES — 실제 스탯 4종 -->
+      <div class="hmCard hmUpg">
+        <div class="hmUpgHead"><span>⚡</span>POWER UPGRADES</div>
+        <div class="hmUpgGrid" id="hmUpgGrid"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- 🏘 RPG 마을 -->
   <div id="townScreen" class="appScreen spaceBg hide">
     <div class="twBar">
-      <button class="twBack" onclick="townToHub()" aria-label="뒤로"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <button class="twBack" onclick="askLogout()" aria-label="로그아웃" title="로그아웃"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4.6h3.7A1.8 1.8 0 0 1 20 6.4v11.2a1.8 1.8 0 0 1-1.8 1.8h-3.7"/><path d="M10.6 8.2L14.4 12l-3.8 3.8"/><path d="M14.4 12H4"/></svg></button>
       <span class="twName" id="twName">캐릭터</span><span class="twLv" id="twLv">Lv.1</span><span class="twPow" id="twPow">⚔ 0</span>
       <span class="twCoin"><b id="twCoin">0</b> P</span>
+      <button class="twGear" data-sfx="ui_open" onclick="openAppSettings()" title="설정" aria-label="설정"><svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg></button>
     </div>
     <div class="twMap" id="twMap" onpointerdown="twPtrDown(event)" onpointermove="twPtrMove(event)" onpointerup="twPtrUp(event)" onpointercancel="twPtrUp(event)">
       <!-- 월드(화면보다 큼) — 구역 아이콘은 TOWN_ZONES에서 생성한다(twBuildZones). 좌표·아이콘·라벨·패널이 한 곳 -->
@@ -3656,6 +3682,7 @@
       <div class="twAvatar" id="twAvatar"><span class="twAvShadow"></span><span class="twAvFlip" id="twAvFlip"><span class="twAvBody">🧍</span></span></div>
     </div>
     <div id="twToast" class="twToast hide"></div>
+    </div>
   </div>
 
   <!-- 캐릭터 선택/생성 입장 화면 — 내용은 마을 구역과 같은 렌더러를 쓴다 -->
@@ -4738,91 +4765,76 @@ function profIdleTick(){ if(!PLAYER_META||!PLAYER_META.profile) return; const p=
   if(typeof _townOpen!=='undefined' && _townOpen && typeof renderTownIdle==='function') renderTownIdle(); }
 function profStampSeen(){ if(PLAYER_META&&PLAYER_META.profile){ PLAYER_META.profile.lastSeenTs=Date.now(); try{ localStorage.setItem(metaKey(), JSON.stringify(PLAYER_META)); }catch(e){} } }
 
-// ── 🎯 시작 허브 + 🏘 마을 UI ──
-function openHub(){ loadMeta(); if(typeof bgmStart==='function') bgmStart('lobby'); showAppScreen('hubScreen'); renderHub();
-  if(typeof paintIcons==='function') paintIcons(document.getElementById('hubScreen')); }   // data-ico → 라인아트 아이콘(맵 선택과 동일 규약)
-function renderHub(){ try{
+// ── 🏠 HOME 대시보드 ──
+// ⚠ 실제 데이터에 붙은 것은 ①자원 바(P·수입)와 ⑥POWER UPGRADES(스탯 4종)뿐이다.
+//    리그 순위표·라이브 매치·매치 화면·시즌패스·젬은 아직 시스템이 없어 아래 HOME_DUMMY 고정값을 쓴다.
+//    시스템을 붙일 땐 이 상수를 지우고 실데이터로 갈아끼울 것 — 화면 쪽은 손댈 필요가 없다.
+const HOME_DUMMY={
+  tier:'Silver', rounds:'1/9', gem:20,
+  stand:[ {rk:1,name:'B3STIA',   w:1,d:0,l:0,gd:'+3',pts:3},
+          {rk:2,name:'Lyn Vision',w:1,d:0,l:0,gd:'+2',pts:3},
+          {rk:5,name:'My Squad', w:1,d:0,l:0,gd:'+1',pts:3, me:true} ],
+};
+// POWER UPGRADES = 캐릭터 스탯 4종(실제). 아이콘·표기만 참고 이미지 문법을 따른다.
+const HOME_UPG=[ {k:'pow',ico:'🎯',name:'공격'}, {k:'foc',ico:'🧠',name:'집중'},
+                 {k:'vit',ico:'🛡',name:'체력'}, {k:'agi',ico:'👟',name:'민첩'} ];
+
+function openHome(){ loadMeta();
+  if(typeof CHAR==='function' && !CHAR()){ openCharScreen('create'); return; }   // 캐릭터가 없으면 생성부터
+  if(typeof bgmStart==='function') bgmStart('lobby');
+  showAppScreen('homeScreen'); navShow('home'); renderHome();
+  if(typeof paintIcons==='function') paintIcons(document.getElementById('homeScreen')); }
+
+function renderHome(){ try{
+  const p=PROF(), c=CHAR(); if(!p) return;
   const set=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
-  const p=(typeof PROF==='function'?PROF():(PLAYER_META&&PLAYER_META.profile))||{};
-  set('hubNick', (typeof myNick==='function'?myNick():'게스트'));
-  set('hubLevel', String(p.level||1));
-  if(typeof initMapLive==='function') initMapLive();   // 접속수 시드(허브에서 첫 진입 시)
-  let live=0; for(const id in _mapLive){ if(id==='__rpg') continue; const o=_mapLive[id]; live+=(o.wait||0)+(o.play||0); }
-  set('hubUseLive', live.toLocaleString('en-US'));
-  set('hubRpgLive', ((_mapLive.__rpg&&_mapLive.__rpg.play)||0).toLocaleString('en-US'));
-  renderHubQuick();
-  hubPickGame(_hubGame);   // 선택된 게임 카드만 표시
-  set('hubLevel', String((p&&p.level)||1));
-  if(typeof renderFriends==='function') renderFriends();
+  set('hmMoney', Math.floor(p.pcoin||0).toLocaleString('en-US'));
+  set('hmRate', '$'+(profIdleRate()/60).toFixed(2)+'/s');   // profIdleRate()는 분당 — 초당으로 환산
+  set('hmGem', HOME_DUMMY.gem);
+  set('hmTier', HOME_DUMMY.tier); set('hmRounds', HOME_DUMMY.rounds);
+  if(c) set('hmMeName', c.name);
+  const tb=document.getElementById('hmStand');
+  if(tb) tb.innerHTML=HOME_DUMMY.stand.map(r=>'<tr'+(r.me?' class="me"':'')+'>'
+    +'<td class="rk"><i>'+r.rk+'</i></td><td class="tm">'+escHtml(r.me&&c?c.name:r.name)+'</td>'
+    +'<td>'+r.w+'</td><td>'+r.d+'</td><td>'+r.l+'</td><td class="gd">'+r.gd+'</td><td>'+r.pts+'</td></tr>').join('');
+  const gr=document.getElementById('hmUpgGrid');
+  if(gr && c) gr.innerHTML=HOME_UPG.map(u=>{ const lv=profStat(u.k), can=c.statPoints>0;
+    return '<div class="hmUp"><div class="hmUpTop"><span class="hmUpIco">'+u.ico+'</span>'
+      +'<span class="hmUpTx"><b class="hmUpName">'+u.name+'</b>'
+      +'<span class="hmUpLv">LV. '+lv+' ➜ <b>'+(lv+1)+'</b></span></span></div>'
+      +'<button class="hmUpBtn" onclick="hmUpgrade(&#39;'+u.k+'&#39;)"'+(can?'':' disabled')+'>'
+      +(can?('포인트 1 (보유 '+c.statPoints+')'):'포인트 없음')+'</button></div>'; }).join('');
 }catch(e){} }
-// 🚪 허브 뒤로가기 = 로그아웃 확인(허브가 첫 화면이라 되돌아갈 곳이 로그인뿐)
-function hubAskLogout(){ const p=document.getElementById('logoutPanel'); if(!p) return;
+
+function hmUpgrade(k){ if(typeof profAllocStat!=='function') return;
+  if(!profAllocStat(k)){ hmToast('스탯 포인트가 없습니다 — 레벨을 올리세요'); return; }
+  if(typeof playSfx==='function') playSfx('ui_open'); renderHome(); }
+function hmInfoIncome(){ hmToast('수입 = 훈련장 배율 × (1 + 파워×1%) · 펫 보너스 포함'); }
+function hmSoon(what){ hmToast(what+' — 준비 중입니다'); }
+function hmGoto(zone){ openTown(); if(typeof townGo==='function') townGo(zone); }
+function hmToast(msg){ if(typeof showTownToast==='function') showTownToast(msg);
+  else if(typeof lobbyToast==='function') lobbyToast(msg); }
+
+// ── 하단 6칸 네비게이션 ──
+// 화면마다 바를 새로 만들지 않는다 — #phone 위에 하나만 두고 여기서 표시·활성 탭을 정한다.
+function navShow(tab){ const b=document.getElementById('navBar'); if(!b) return;
+  b.classList.toggle('hide', !tab);
+  if(tab) b.querySelectorAll('.navIt').forEach(x=>x.classList.toggle('on', x.dataset.nav===tab)); }
+function navGo(tab){ if(typeof playSfx==='function') playSfx('ui_tab');
+  if(tab==='home')   return openHome();
+  if(tab==='map')    return twGoMap();
+  if(tab==='town')   { openTown(); return navShow('town'); }
+  if(tab==='gear')   { openTown(); navShow('town'); return openTownPanel('gear'); }
+  if(tab==='shop')   { openTown(); navShow('town'); return openTownPanel('gacha'); }
+  if(tab==='friend') { twOpenSocial(); return; } }
+// ── 🏘 마을(메인 화면) UI ──
+// 🚪 메인(마을) 뒤로가기 = 로그아웃 확인 — 되돌아갈 곳이 로그인뿐이다
+function askLogout(){ const p=document.getElementById('logoutPanel'); if(!p) return;
   p.classList.remove('hide'); if(typeof fxPop==='function') fxPop(p.querySelector('.cpCard'));
   if(typeof paintIcons==='function') paintIcons(p); if(typeof playSfx==='function') playSfx('ui_open'); }
-function hubCloseLogout(){ const p=document.getElementById('logoutPanel'); if(p) p.classList.add('hide'); }
-function hubDoLogout(){ hubCloseLogout(); if(typeof doLogout==='function') doLogout(); else openAuth(); }
-// 🎮 게임 선택 탭 — 고른 게임의 카드만 남긴다
-let _hubGame='use';
-function hubPickGame(g, btn){ _hubGame=g;
-  const tabs=document.getElementById('hubGameTabs');
-  if(tabs) tabs.querySelectorAll('button').forEach(b=>b.classList.toggle('on', btn?b===btn:b.dataset.g===g));
-  const use=document.querySelector('.hubCard.hubUse'), rpg=document.querySelector('.hubCard.hubRpg');
-  if(use) use.classList.toggle('hide', g!=='use');
-  if(rpg) rpg.classList.toggle('hide', g!=='rpg');
-  if(btn && typeof playSfx==='function') playSfx('ui_tab'); }
-// 🎯 카드 하단 바로가기 — 인기 유즈맵 / 내 캐릭터. 행 탭=상세(모드 선택·캐릭터 화면), 오른쪽 버튼=즉시 플레이
-function renderHubQuick(){
-  const mb=document.getElementById('hubQuickMaps');
-  if(mb && typeof MAPS!=='undefined'){
-    const ok=MAPS.filter(m=>!m.hidden && m.playable!==false && (m.pop||0)>0);
-    const hot=ok.slice().sort((a,b)=>(typeof liveTotal==='function'?liveTotal(b)-liveTotal(a):0))[0]||null;
-    const recId=(typeof _lsGet==='function')?_lsGet('nm_recentMap',null):null;
-    let rec=recId?ok.find(m=>m.id===recId):null;
-    if(rec && hot && rec.id===hot.id) rec=null;                 // 같은 맵이면 중복 표시하지 않는다
-    const rows=[]; if(hot) rows.push({m:hot, tag:'인기'});
-    if(rec) rows.push({m:rec, tag:'최근'});
-    else if(!rec && hot){ const alt=ok.filter(m=>m.id!==hot.id)[0]; if(alt) rows.push({m:alt, tag:'추천'}); }
-    mb.innerHTML=rows.map(r=>{ const m=r.m;
-      return '<div class="hqRow">'
-        +'<button class="hqChip" onclick="hubQuickMap(event,&#39;'+m.id+'&#39;)" title="'+escHtml(m.name)+'">'
-        +((typeof mapThumbHTML==='function')?mapThumbHTML(m):'')
-        +'<span class="hqTx"><b class="hqName"><span class="hqTag">'+r.tag+'</span>'+escHtml(m.name)+'</b>'
-        +'<em class="hqSub">'+escHtml(m.desc||'')+'</em></span></button>'
-        +'<button class="hqPlay" onclick="hubPlayMap(event,&#39;'+m.id+'&#39;)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5l11 7-11 7z"/></svg>즉시 플레이</button>'
-        +'</div>'; }).join('');
-  }
-  const cb=document.getElementById('hubQuickChars');
-  if(cb){ const p=(typeof PROF==='function')?PROF():null, list=(p&&p.chars)||[];
-    if(!list.length){ cb.innerHTML='<div class="hqRow"><button class="hqChip" onclick="hubGoTown()">'
-      +'<span class="hqIco">＋</span><span class="hqTx"><b class="hqName">캐릭터 만들기</b>'
-      +'<em class="hqSub">아직 캐릭터가 없습니다</em></span></button></div>'; }
-    else { const cur=p.curId;
-      const ord=list.slice().sort((a,b)=>(b.id===cur?1:0)-(a.id===cur?1:0));   // 최근(현재) 캐릭터 먼저
-      cb.innerHTML=ord.slice(0,3).map(c=>{
-        const C=(typeof PROF_CLASSES!=='undefined'&&PROF_CLASSES[c.cls])||{ico:'🙂',name:''};
-        const J=(typeof PROF_JOBS!=='undefined'&&PROF_JOBS[c.unit&&c.unit.jobId])||null;
-        const sub=(J?escHtml(J.name):escHtml(C.name))+' · Lv.'+(c.level||(p.level||1));
-        return '<div class="hqRow">'
-          +'<button class="hqChip" onclick="hubQuickChar(event,&#39;'+c.id+'&#39;)" title="'+escHtml(c.name)+'">'
-          +'<span class="hqIco">'+C.ico+'</span>'
-          +'<span class="hqTx"><b class="hqName">'+escHtml(c.name)+(c.id===cur?' ★':'')+'</b>'
-          +'<em class="hqSub">'+sub+'</em></span></button>'
-          +'<button class="hqPlay" onclick="hubPlayChar(event,&#39;'+c.id+'&#39;)">'+"<svg viewBox=\"0 0 24 24\" fill=\"currentColor\"><path d=\"M8 5l11 7-11 7z\"/></svg>"+'즉시 플레이</button>'
-          +'</div>'; }).join('');
-    } }
-}
-function hubQuickMap(e,id){ if(e&&e.stopPropagation) e.stopPropagation();
-  const m=(typeof MAPS!=='undefined')?MAPS.find(x=>x.id===id):null; if(m && typeof openModeSheet==='function') openModeSheet(m); }
+function closeLogout(){ const p=document.getElementById('logoutPanel'); if(p) p.classList.add('hide'); }
+function doLogoutNow(){ closeLogout(); if(typeof doLogout==='function') doLogout(); else openAuth(); }
 // ▶ 즉시 플레이 — 모드/난이도 선택 없이 기본값으로 바로 시작(멀티 전용 맵은 모드 선택으로 넘긴다)
-function hubPlayMap(e,id){ if(e&&e.stopPropagation) e.stopPropagation();
-  const m=(typeof MAPS!=='undefined')?MAPS.find(x=>x.id===id):null; if(!m) return;
-  if(m.playable===false){ if(typeof lobbyToast==='function') lobbyToast('아직 준비 중인 유즈맵입니다'); return; }
-  if(m.soloOff){ if(typeof openModeSheet==='function') openModeSheet(m); return; }   // 개인 플레이가 없는 맵
-  _selMap=m; if(typeof _startSoloNow==='function') _startSoloNow(); }
-function hubQuickChar(e,id){ if(e&&e.stopPropagation) e.stopPropagation();
-  if(typeof openCharScreen==='function') openCharScreen('select'); }
-function hubPlayChar(e,id){ if(e&&e.stopPropagation) e.stopPropagation();
-  if(typeof charPick==='function') charPick(id); }
 // ── 하단 소셜: 친구 목록 + DM(현재 데모 데이터 — 실제 친구/프레즌스 연동은 별도 백엔드) ──
 //   status: active(초록) / away(빨강=게임 내 5분+ 무터치 자리비움) / offline(회색) · close=친한친구 · act.type=usemap|rpg|off
 const HUB_FRIENDS=[
@@ -4914,18 +4926,28 @@ let _twW=0,_twH=0, _twVW=0,_twVH=0, _twVL=0,_twVT=0;   // 월드 크기 / 화면
 let _twChar={x:0,y:0,tx:0,ty:0,dx:0,dy:0,mode:null,face:1};   // mode: null=정지 | 'to'=목적지 이동 | 'dir'=방향 이동
 let _twPtr=null, _twGoZone=null, _twRaf=0, _twLast=0;   // _twGoZone = 지금 향하고 있는 '지정한' 구역(도착하면 그것만 열린다)
 let _twEdgeEl={};   // 구역 id → 화면 가장자리 방향 표시 엘리먼트
-function hubGoMap(){ if(typeof playSfx==='function') playSfx('ui_open'); openMapSelect(); }
-function mapToHub(){ if(typeof stopRoomsTick==='function') stopRoomsTick(); if(typeof playSfx==='function') playSfx('ui_close'); openHub(); }   // 유즈맵 선택 → 시작 선택(허브)로 복귀
-function hubGoTown(){ if(typeof playSfx==='function') playSfx('ui_open'); openCharScreen(); }   // 마을 입장 = 캐릭터 선택부터
+function mapToHub(){ if(typeof stopRoomsTick==='function') stopRoomsTick(); if(typeof playSfx==='function') playSfx('ui_close'); openHome(); }   // 유즈맵 선택 → 메인(HOME)으로 복귀
 function openTown(){ loadMeta(); if(!CHAR()){ openCharScreen('create'); return; }   // 캐릭터가 없으면 생성 화면으로
-  _townOpen=true; showAppScreen('townScreen');
+  _townOpen=true; showAppScreen('townScreen'); navShow('town');
   twBuildZones(); twLayout(); twApplyChar();
   const p=twZonePx('plaza')||[_twW/2,_twH/2];   // 광장 앞에서 시작(아이콘과 겹치지 않게 살짝 아래)
   _twChar.x=_twChar.tx=p[0]; _twChar.y=_twChar.ty=Math.min(_twH, p[1]+TW_ZONE_R*1.2); _twChar.mode=null; _twChar.face=1;
   _twGoZone=null;   // 지정한 구역 없음 — 들어가자마자 팝업이 뜨지 않는다
   twCamApply(); twStartLoop();
+  twCloseSocial();
+  if(typeof paintIcons==='function') paintIcons(document.getElementById('townScreen'));
+  if(typeof renderFriends==='function') renderFriends();
+  if(typeof initMapLive==='function') initMapLive();
   const g=profClaimOffline(); renderTownBar(); if(g>0) showTownToast('오프라인 보상 +'+g+' P'); }
-function townToHub(){ _townOpen=false; twStopLoop(); closeTownPanel(); profStampSeen(); if(typeof playSfx==='function') playSfx('ui_close'); openHub(); }
+// 마을을 떠날 때의 공통 정리 — 루프·패널·시트를 한 번에 닫는다(그대로 두면 배경에서 계속 돈다)
+function twLeave(){ _townOpen=false; twStopLoop(); closeTownPanel(); twCloseSocial(); profStampSeen(); }
+// 🗺 마을 → 유즈맵 선택
+function twGoMap(){ twLeave(); if(typeof playSfx==='function') playSfx('ui_open'); openMapSelect(); }
+// 👥 친구 시트 — 허브에서 옮겨온 목록을 그대로 쓴다
+function twOpenSocial(){ const el=document.getElementById('twSocial'); if(!el) return;
+  el.classList.remove('hide'); if(typeof renderFriends==='function') renderFriends();
+  if(typeof paintIcons==='function') paintIcons(el); if(typeof playSfx==='function') playSfx('ui_open'); }
+function twCloseSocial(){ const el=document.getElementById('twSocial'); if(el) el.classList.add('hide'); }
 
 // ── 월드/카메라 ──
 function twBuildZones(){ const w=document.getElementById('twWorld'), map=document.getElementById('twMap'); if(!w||!map||w._zonesBuilt) return;
@@ -5094,7 +5116,9 @@ function openCharScreen(mode){ loadMeta();
   const t=document.getElementById('csTitle'); if(t) t.textContent=(_csMode==='create')?'캐릭터 만들기':'캐릭터 선택';
   const b=document.getElementById('csBody'); if(b) b.innerHTML=(_csMode==='create')?renderCharCreate():renderCharSelect();
   showAppScreen('charScreen'); }
-function charBackToHub(){ if(typeof playSfx==='function') playSfx('ui_close'); openHub(); }
+function charBackToHub(){ if(typeof playSfx==='function') playSfx('ui_close');
+  if(typeof CHAR==='function' && !CHAR()){ askLogout(); return; }   // 캐릭터가 없으면 마을이 다시 이 화면으로 돌려보낸다
+  openTown(); }
 function twApplyChar(){ const c=CHAR(), b=document.querySelector('#twAvatar .twAvBody');   // 아바타 겉모습 = 현재 캐릭터 종류
   if(b) b.textContent=(c && PROF_CLASSES[c.cls] && PROF_CLASSES[c.cls].ico) || '🧍'; }
 function renderTownIdle(){ renderTownBar(); const tp=document.getElementById('townPanel'); if(_twZone==='gym' && tp && !tp.classList.contains('hide')) refreshTownPanel(); }
@@ -10093,8 +10117,9 @@ function playScreenFx(el){
 function fxPop(card){ if(!card) return; card.classList.remove('fxPop'); void card.offsetWidth; card.classList.add('fxPop');
   clearTimeout(card._fxT); card._fxT=setTimeout(()=>card.classList.remove('fxPop'),470); }
 // ── 앱 화면 전환 ──
-const APP_SCREENS=['opening','auth','mapSelect','modeSheet','hubScreen','charScreen','townScreen','dgScreen'];
+const APP_SCREENS=['opening','auth','mapSelect','modeSheet','homeScreen','charScreen','townScreen','dgScreen'];
 function showAppScreen(id){ setInGame(false);
+  if(typeof navShow==='function') navShow(null);   // 하단 네비는 기본 숨김 — openHome/openTown이 다시 켠다
   if(id!=='mapSelect' && id!=='modeSheet' && typeof stopMapLive==='function') stopMapLive();   // 유즈맵 화면 떠나면 실시간 갱신 정지
   ['ov','lobby','rooms','createPanel','pwPanel'].forEach(x=>{const e=document.getElementById(x); if(e)e.classList.add('hide');});
   APP_SCREENS.forEach(s=>{ const e=document.getElementById(s); if(e) e.classList.toggle('hide', s!==id); });
@@ -10270,12 +10295,12 @@ async function authSubmit(){
       if(pw!==pw2){ err.textContent='비밀번호가 일치하지 않습니다.'; return; }
       await authSignUp(id,pw,nick);
     } else { await authSignIn(id,pw); }
-    openHub();   // 로그인·가입 성공 → 게임 선택(허브). 부팅 흐름과 도착지를 통일한다.
+    openHome();   // 로그인·가입 성공 → 메인 화면(HOME 대시보드). 부팅 흐름과 도착지를 통일한다.
   }catch(e){ err.textContent = (e&&e.message)||'인증에 실패했습니다.'; }
 }
 function authGuestUser(){ AUTH.user={email:'', nick:'게스트'+(1000+Math.floor(Math.random()*9000)), guest:true};
   _lsSet('nm_session',AUTH.user); return AUTH.user; }   // 게스트 계정 생성만(화면 이동은 호출부가)
-function authGuest(){ authGuestUser(); openHub(); }
+function authGuest(){ authGuestUser(); openHome(); }
 // ⚠ 계정 아이디는 idToEmail()로 만든 가짜 주소라 실제 메일함이 없다 → 복구 메일을 보낼 수 없다.
 //    연락 가능한 주소를 계정에 받기 전까지는 안내만 한다(동작하는 척하지 않는다).
 function authFindPw(){ const err=document.getElementById('authErr'); if(!err) return;
@@ -10314,7 +10339,10 @@ const ICO={
   flag:_svg('<path d="M6 4v16"/><path d="M6 5h10.5l-2.2 3.2 2.2 3.2H6"/>'),
   solo:_svg('<rect x="2.5" y="7.5" width="19" height="10" rx="5"/><path d="M6.6 11.2v3M5.1 12.7h3"/><circle cx="15.6" cy="11.6" r="1.05" fill="currentColor" stroke="none"/><circle cx="17.9" cy="13.6" r="1.05" fill="currentColor" stroke="none"/>'),
   globe:_svg('<circle cx="12" cy="12" r="8.3"/><path d="M3.7 12h16.6"/><path d="M12 3.7c2.5 2.3 2.5 14.3 0 16.6c-2.5-2.3-2.5-14.3 0-16.6z"/>'),
-  lock:_svg('<rect x="5.2" y="10.5" width="13.6" height="9.3" rx="2"/><path d="M8.2 10.5V8.2a3.8 3.8 0 0 1 7.6 0v2.3"/><circle cx="12" cy="14.6" r="1.25" fill="currentColor" stroke="none"/><path d="M12 15.5v2.1"/>')
+  lock:_svg('<rect x="5.2" y="10.5" width="13.6" height="9.3" rx="2"/><path d="M8.2 10.5V8.2a3.8 3.8 0 0 1 7.6 0v2.3"/><circle cx="12" cy="14.6" r="1.25" fill="currentColor" stroke="none"/><path d="M12 15.5v2.1"/>'),
+  home:_svg('<path d="M4 10.6 12 4l8 6.6"/><path d="M6.4 9.6V19h11.2V9.6"/><path d="M10 19v-5h4v5"/>'),
+  bag:_svg('<path d="M4.6 8.4h14.8L18.6 20H5.4z"/><path d="M9 8.4V6.6a3 3 0 0 1 6 0v1.8"/>'),
+  gift:_svg('<rect x="4" y="9.4" width="16" height="10.6" rx="1.6"/><path d="M3.2 9.4h17.6M12 9.4V20"/><path d="M12 9.4C10.6 6 9.4 5 8.2 5a2 2 0 0 0 0 4.4M12 9.4C13.4 6 14.6 5 15.8 5a2 2 0 0 1 0 4.4"/>')
 };
 function mapIco(m){ return ICO[m.id] || ICO.map; }
 // 카드 썸네일: 메인화면 미니맵(보드) — 용암 테두리 보드 + 지면 + 합체존
