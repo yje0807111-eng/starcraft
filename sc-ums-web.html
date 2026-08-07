@@ -3590,7 +3590,7 @@ const USEMAPS={
            feats:[ {ic:'build',kw:'배정',tx:'건물에 유닛 → 자동 출격'}, {ic:'coin',kw:'경제',tx:'라운드마다 자원 굴려 병력↑'}, {ic:'target',kw:'승리',tx:'적 본진 먼저 파괴'}, {ic:'sword',kw:'대전',tx:'최대 8인 실시간 전투'} ],
            players:'1-8', pop:5180, icon:'⚔️', rec:true, isNew:true,  playable:true, soloOff:true, noDiff:true,   // 오토배틀 = 멀티 전용(개인 플레이 잠금) · 대인전이라 난이도 없음
           cfg:{ mode:'strike', stats:true, teams:true,   // 종료 후 통계 화면 · 대기실 2팀 분할
-                cycleTime:20, heroAt:10, baseHp:9000, secHp:4500, centralHp:3000, startGold:450, incomeBase:50, mineIncome:15, mineCost:200, world:4800 } },
+                cycleTime:20, heroAt:10, baseHp:13500, secHp:6750, centralHp:4500, startGold:450, incomeBase:50, mineIncome:15, mineCost:200, world:4800 } },   // 신전 체력 ×1.5(눈덩이 완화 — 한 교전이 즉시 게임을 끝내지 않게. 측정: 매치 +5%·결착률 0.96 유지·밸런스 불변)
   photon:{ id:'photon', name:'포탑 겹치기',      desc:'방어 포탑을 겹쳐 쌓아 버티기',       players:'1-4', pop:4090, icon:'🔵', rec:false, isNew:false, playable:false, cfg:{} },
   tmp1:  { id:'tmp1',   name:'랜덤 디펜스 (임시)', desc:'임시 등록 유즈맵',               players:'1-8', pop:2600, icon:'🎲', rec:false, isNew:true,  playable:false, cfg:{} },
   tmp2:  { id:'tmp2',   name:'영웅 아레나 (임시)', desc:'임시 등록 유즈맵',               players:'2-8', pop:1900, icon:'⚔️', rec:false, isNew:false, playable:false, cfg:{} },
@@ -13861,7 +13861,7 @@ function strikeTechLayout(){ if(!G.tech) return; const race=G.tech.race, cw=_tec
     const _vy=cy+STK_TECH_LIFT/STK_TECH_ZOOM;   // 하단 프로필 시트를 피해 건설 구역을 화면 위쪽으로(초기 뷰만)
     G.tech.view={x:cx, y:_vy, zoom:STK_TECH_ZOOM}; G.tech.viewT={x:cx, y:_vy, zoom:STK_TECH_ZOOM};
     _techClampView(G.tech.view); _techClampView(G.tech.viewT); } }
-function strikeNewState(){ const W=mapCfg('world',4800), hp=mapCfg('baseHp',10000), inc=mapCfg('incomeBase',150), mc=mapCfg('mineCost',300), mi=mapCfg('mineIncome',120);   // 메인신전 체력 7500→10000(눈덩이 완화 — 한 교전이 즉시 게임을 끝내지 않게, 패자에 재정비 시간)
+function strikeNewState(){ const W=mapCfg('world',4800), hp=mapCfg('baseHp',7500), inc=mapCfg('incomeBase',150), mc=mapCfg('mineCost',300), mi=mapCfg('mineIncome',120);   // ⚠ 이건 cfg 미지정 맵용 기본값 — 오토배틀은 USEMAPS.cpu.cfg.baseHp가 이깁니다(신전 체력은 거기서 조정할 것)
   const sHp=mapCfg('secHp',Math.round(hp*0.5)), cHp=mapCfg('centralHp',Math.round(hp*0.35));   // 2차=메인×0.5(3750) · 중앙=메인×0.35(2625) — 메인 비례 상승
   // 레인: me 메인 → me 2차 → 중앙 중립 → ai 2차 → ai 메인 (대각선 한 줄). t=0.27/0.5/0.73 지점
   return { t:0, over:null, round:1,
