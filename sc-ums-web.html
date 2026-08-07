@@ -14781,35 +14781,60 @@ function strikeStress(n){ const S=STK; if(!S) return '오토배틀이 아닙니�
 function strikeSpawnStress(){ const S=STK, n=S.stress|0;
   for(const side of ['me','ai']){ const list=_stkTierList(side);
     for(let i=0;i<n;i++) strikeSpawnUnit(side, list[(Math.random()*list.length)|0]); } }
-function strikeSpawnWave(){ const S=STK; if(!S) return;   // 출격 주기(30초): ME=건설지에서 생산해 둔 유닛이 출격 / AI=컴퓨터 자동 소환
+// ── 🔄 팀 순환 출격 ─────────────────────────────────────────────────────────
+// 사이클마다 각 팀에서 "한 명"씩 차례로 출격한다. 8인 예: 1팀 1,2,3,4 / 2팀 5,6,7,8 →
+//   1주기 1·5 → 2주기 2·6 → 3주기 3·7 … 팀 인원이 다르면 각 팀이 독립적으로 랩어라운드(2:3이면 1·5 → 2·6 → 1·7).
+//   이탈(탈락)한 플레이어는 건너뛰고 다음 사람이 채운다(G.activePlayers 기준).
+const STK_TEAM_HALF=4;   // 로비 slotTeam과 동일 기준(8인 맵: 앞 절반 1~4=1팀 · 뒤 절반 5~8=2팀)
+function strikeTeamOf(num){ return (num<=STK_TEAM_HALF)?1:2; }
+function strikeSplitTeams(active){ const t1=active.filter(n=>strikeTeamOf(n)===1), t2=active.filter(n=>strikeTeamOf(n)===2);
+  if(t1.length && t2.length) return [t1,t2];
+  const h=Math.ceil(active.length/2); return [active.slice(0,h), active.slice(h)]; }   // 폴백: 팀 배정이 없는 경우(솔로·테스트)는 번호 앞뒤 절반
+// 진영별 플레이어 로스터 — 내 팀=me · 상대 팀=ai. 로컬 플레이어만 실제 건설지(G.tech)로 생산하고 나머지는 시뮬.
+function strikeBuildRosters(){ const S=STK; if(!S) return;
+  const active=(G.activePlayers&&G.activePlayers.length)?G.activePlayers.slice():[G.myPlayer||1];
+  const my=G.myPlayer||1, tt=strikeSplitTeams(active), t1=tt[0], t2=tt[1];
+  const mine=(t1.indexOf(my)>=0)?t1:((t2.indexOf(my)>=0)?t2:t1), foe=(mine===t1)?t2:t1;
+  const mk=(nums,race)=>nums.map(n=>({num:n, race:race, local:(n===my)}));   // 종족은 진영 대표 종족(팀=세력) — 플레이어별로 나누려면 이 필드만 바꾸면 됨
+  S.me.roster=mk(mine, S.me.race); S.ai.roster=mk(foe, S.ai.race);
+  if(!S.me.roster.length) S.me.roster=[{num:my, race:S.me.race, local:true}];
+  if(!S.ai.roster.length) S.ai.roster=[{num:0, race:S.ai.race, local:false}];   // 솔로·테스트: 가상 상대 1명
+  S.me.turnIdx=-1; S.ai.turnIdx=-1; }
+// 다음 차례(활성 플레이어만 · 랩어라운드 · 이탈자 건너뜀)
+function strikeNextTurn(side){ const S=STK, me=S[side], r=me.roster||[]; if(!r.length) return null;
+  const act=G.activePlayers;
+  for(let k=1;k<=r.length;k++){ const i=(((me.turnIdx|0)+k)%r.length+r.length)%r.length, e=r[i];
+    if(e.num && act && act.length && act.indexOf(e.num)<0) continue;   // 나간 플레이어 건너뜀
+    me.turnIdx=i; return e; }
+  return null; }
+// 한 플레이어 몫 출격 — 로컬=내 건설지의 완성 건물이 한번에 생산(미완성·파괴 건물 제외) · 원격/AI=그 종족 건물 구성으로 시뮬
+function strikeSpawnForPlayer(side, e){ const S=STK; let n=0;
+  const _emit=(race,bk)=>{ const uid=techBldgUnit(race,bk); if(!uid) return;
+    const cnt=techBldgCount(race,bk);
+    for(let k=0;k<cnt;k++){ const b4=S[side].units.length; strikeSpawnUnit(side, uid); if(S[side].units.length<=b4) break; n++; } };   // 진영 상한 도달 → 중단
+  if(e.local && G.tech && G.tech.ents){
+    const race=G.tech.race;
+    for(const b of G.tech.ents){ if(b.type!=='bldg' || (b.bt||0)>0 || b._dead) continue; _emit(race, b.bk); }   // 🏭 미완성(bt>0)·파괴(_dead) 건물은 생산에서 제외
+    const out=G.tech.ents.filter(x=>x.type==='unit' && STK_UNITS[x.uid]);   // 🏗 건설지에서 완성해 둔 유닛도 함께 출격(일꾼·라바·알은 남김)
+    for(const x of out){ const i=G.tech.ents.indexOf(x); if(i>=0) G.tech.ents.splice(i,1);
+      G.tech.sup=Math.max(0,(G.tech.sup||0)-(x.pop||0));   // 전장으로 나가면 건설지 인구 반환
+      G.tech.units[x.uid]=Math.max(0,(G.tech.units[x.uid]||0)-1);
+      strikeSpawnUnit(side, x.uid); n++; }
+    if(out.length && G.tab==='Build' && typeof techUIRender==='function') techUIRender();
+    return n; }
+  // 🤖 원격/AI 플레이어 = 그 종족 건물 구성으로 배출. 규모는 로컬 플레이어의 완성 생산건물 수에 연동(난이도 균형 유지).
+  const keys=Object.keys(TECH_BLDG_UNIT[e.race]||{}); if(!keys.length) return 0;
+  let pb=0; if(G.tech && G.tech.ents){ const mr=G.tech.race; for(const b of G.tech.ents){ if(b.type==='bldg' && (b.bt||0)<=0 && !b._dead && techBldgUnit(mr,b.bk)) pb++; } }
+  pb=Math.max(2, pb);   // 최소 2
+  for(let i=0;i<pb;i++) _emit(e.race, keys[i%keys.length]);
+  return n; }
+function strikeSpawnWave(){ const S=STK; if(!S) return;   // 출격 주기: 각 팀에서 이번 차례인 플레이어 1명씩만 출격
   if(S.stress){ strikeSpawnStress(); return; }   // 🧪 관측 모드 = 건물 무시, 양 진영 대칭 소환
-  let myCount=0;
-  if(G.tech && G.tech.ents){   // 🏭 완성된 건물마다 담당 유닛 1기를 무료 배출(건물 수 = 생산력) — 여러 종을 담당하면 주기마다 순환
-    const _race=G.tech.race;
-    for(const e of G.tech.ents){ if(e.type!=='bldg' || (e.bt||0)>0) continue;
-      const uid=techBldgUnit(_race, e.bk); if(!uid) continue;
-      const _n=techBldgCount(_race, e.bk);   // 건물별 마릿수(싼 건물일수록 여러 기)
-      for(let _k=0;_k<_n;_k++){ const _before=S.me.units.length; strikeSpawnUnit('me', uid);
-        if(S.me.units.length<=_before) break;   // 진영 상한 도달 → 중단
-        myCount++; } } }
-  if(G.tech && G.tech.ents){   // 🏗 건설 화면의 완성 유닛을 전장으로 내보냄(일꾼·라바·알은 남김)
-    const out=G.tech.ents.filter(e=>e.type==='unit' && STK_UNITS[e.uid]);
-    for(const e of out){ const i=G.tech.ents.indexOf(e); if(i>=0) G.tech.ents.splice(i,1);
-      G.tech.sup=Math.max(0,(G.tech.sup||0)-(e.pop||0));   // 전장으로 나가면 건설지 인구 반환
-      G.tech.units[e.uid]=Math.max(0,(G.tech.units[e.uid]||0)-1);
-      strikeSpawnUnit('me', e.uid); myCount++; }
-    if(out.length && G.tab==='Build' && typeof techUIRender==='function') techUIRender(); }
-  if(!myCount){ strikeSpawnUnit('me'); strikeSpawnUnit('me'); myCount=2; }   // 생산이 없으면 기본 소량(전멸 방지)
-  // 🤖 AI = 자기 종족 건물로 직접 배출(미러링 제거). 플레이어의 완성 생산건물 수만큼 자기 종족 건물을 갖춘 것으로 보고,
-  //    그 종족의 배출 수(techBldgCount)로 소환 → 종족 조합·배출 배수가 싱글에서도 진짜 종족 대결로 반영. 난이도는 내 건물 수에 연동.
-  { const _ar=S.ai.race, _keys=Object.keys(TECH_BLDG_UNIT[_ar]||{});
-    let _pb=0; if(G.tech && G.tech.ents){ const _mr=G.tech.race; for(const e of G.tech.ents){ if(e.type==='bldg' && (e.bt||0)<=0 && techBldgUnit(_mr, e.bk)) _pb++; } }
-    _pb=Math.max(2, _pb);   // 플레이어 생산건물 수(난이도 기준) · 최소 2
-    let _aiN=0;
-    if(_keys.length){ for(let i=0;i<_pb;i++){ const bk=_keys[i % _keys.length], uid=techBldgUnit(_ar, bk); if(!uid) continue;
-      const _cnt=techBldgCount(_ar, bk);
-      for(let k=0;k<_cnt;k++){ const _b4=S.ai.units.length; strikeSpawnUnit('ai', uid); if(S.ai.units.length<=_b4) break; _aiN++; } } }
-    if(!_aiN){ strikeSpawnUnit('ai'); strikeSpawnUnit('ai'); } } }   // 폴백(전멸 방지)
+  if(!S.me.roster || !S.ai.roster) strikeBuildRosters();   // 최초 1회 구성(이후 이탈은 strikeNextTurn이 건너뜀)
+  for(const side of ['me','ai']){ const e=strikeNextTurn(side); if(!e) continue;
+    const n=strikeSpawnForPlayer(side, e);
+    if(!n){ strikeSpawnUnit(side); strikeSpawnUnit(side); }   // 폴백(전멸 방지)
+    if(side==='me' && e.local && (S.me.roster.length>1) && typeof toast==='function') toast('⚔️ 내 차례 — 병력 출격!'); } }
 function strikeFrontStruct(side){ const S=STK, foe=S[side==='me'?'ai':'me'];   // 가장 앞 신전: 중립 살아있으면 중립(그 뒤 신전은 못 때림) → 적 2차 → 적 메인
   if(S.central && !S.central.dead) return S.central;
   if(foe.sec && !foe.sec.dead) return foe.sec;
