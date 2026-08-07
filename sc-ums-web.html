@@ -68,7 +68,7 @@
     font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;overflow:hidden}
   /* 모바일 고정 비율 — 세로로 긴 요즘 폰(963:1997 ≈ 1:2.074). 비율은 아래 두 변수 한 곳에서만 정한다.
      화면이 작으면 비율을 유지하며 축소. 패널 폭이 변해도 폰 모양은 불변. */
-  :root{--phW:963;--phH:1997;--navH:54px;--curH:34px}
+  :root{--phW:963;--phH:1997;--navH:61px;--curH:34px}   /* 하단 바 높이 61px = 963기준 ≈150px (네비·유즈맵 탭바 공용) */
   #phone{width:390px;height:calc(390px * var(--phH) / var(--phW));aspect-ratio:var(--phW)/var(--phH);position:relative;
     /* 게임 배경 우주 타일(space_bg)을 캔버스와 같은 380px 스케일로 프레임 전체에 이어지게 — 어둡게 덮어 콘솔 가독성 유지 */
     background:linear-gradient(rgba(3,4,12,.5),rgba(3,4,12,.66)),url('assets/tiles/space_bg.webp') center/380px repeat #05060d;
@@ -537,7 +537,7 @@
   #bot::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;z-index:2;   /* 상단 경계 = 중립 저채도 하이라이트(빨강 제거) */
     background:linear-gradient(90deg,transparent,rgba(150,170,200,.28) 50%,transparent);opacity:.7;box-shadow:none}
   /* 최상위 네비 = 하나의 통(단일 바) — 섹션은 얇은 세로줄로만 구분, 활성=청록 포인트 인디케이터 */
-  #tabs{display:flex;gap:0;flex-shrink:0;position:relative;margin:0;padding:0;z-index:45;
+  #tabs{display:flex;gap:0;flex-shrink:0;height:var(--navH);position:relative;margin:0;padding:0;z-index:45;   /* 유즈맵 인게임 탭바 = 하단 네비와 같은 높이(공용 --navH) */
     --tabAcc:#5cd6ff;--tabAccG:rgba(92,214,255,.6);
     background:linear-gradient(180deg,#151a24,#0a0d13);   /* 불투명 단일 바 — 뒤로 내려간 시트가 비쳐 보이지 않게 */
     border-top:1px solid var(--glass-edge);box-shadow:inset 0 1px 0 rgba(255,255,255,.045),inset 0 -10px 14px -12px rgba(0,0,0,.6)}
