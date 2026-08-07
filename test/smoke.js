@@ -148,7 +148,9 @@ async function groupLobby(){
     for(const [sel,name] of [['.hmRes','자원 바'],['.hmQuick','바로가기 줄'],['.hmLeague','리그 순위표'],
         ['.hmVs','라이브 매치 바'],['.hmStage','매치 화면'],['.hmUpg','POWER UPGRADES'],['#navBar','하단 네비']])
       assert(visible(document.querySelector(sel)), name+'이(가) 없음: '+sel);
-    assert(document.querySelectorAll('#navBar .navIt').length===6,'하단 네비가 6칸이 아님');
+    assert(document.querySelectorAll('#navBar .navIt').length===5,'하단 네비가 5칸이 아님(HOME·던전·마을·유즈맵·상점)');
+    { const navs=[...document.querySelectorAll('#navBar .navIt')].map(x=>x.dataset.nav).join(',');
+      assert(navs==='home,dungeon,town,map,shop','네비 구성이 다름: '+navs); }
     assert(document.querySelector('#navBar .navIt.on').dataset.nav==='home','HOME 탭이 활성이 아님');
     // 실데이터에 붙은 두 곳 — 수입은 profIdleRate 환산, 업그레이드는 스탯 4종
     const rate=$('hmRate').textContent;   // 예: $0.02/s (정규식 대신 문자 검사 — heredoc이 역슬래시를 먹는 사고를 피한다)
@@ -167,10 +169,13 @@ async function groupLobby(){
     navGo('town'); await sleep(80);
     assert(visible($('townScreen')) && visible($('navBar')),'네비 마을이 안 열림');
     assert(document.querySelector('#navBar .navIt.on').dataset.nav==='town','마을 탭이 활성이 아님');
-    navGo('friend'); await sleep(60);
-    assert(visible($('twSocial')) && document.querySelectorAll('#hubFriends .frRow').length>0,'친구 시트가 안 열림');
-    twCloseSocial(); openHome(); await sleep(60);
-    return 'HOME 7구역 + 네비 6칸 ok'; });
+    // 던전 탭 = 관문(던전 선택) 패널 · 상점 탭 = 뽑기집 (전용 화면은 이후 단계)
+    navGo('dungeon'); await sleep(60);
+    assert(document.querySelector('#navBar .navIt.on').dataset.nav==='dungeon','던전 탭이 활성이 아님');
+    navGo('shop'); await sleep(60);
+    assert(document.querySelector('#navBar .navIt.on').dataset.nav==='shop','상점 탭이 활성이 아님');
+    openHome(); await sleep(60);
+    return 'HOME 7구역 + 네비 5칸(home·던전·마을·유즈맵·상점) ok'; });
   // 💠 공용 재화 바 — 미네랄=pcoin · 가스 · 젬. 모든 RPG/허브 + 유즈맵 선택 상단 상시(인게임 제외).
   await step('공용 재화 바: RPG/유즈맵 상단 상시 · 미네랄/가스/젬', async()=>{ skipIf(typeof curShow!=='function','재화 바 없음');
     // curShow()는 showAppScreen 안에서 동기 실행 → 화면 연 직후 동기 검사(전환 FX/타이머 레이스 회피)

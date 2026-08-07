@@ -73,7 +73,7 @@
     /* 게임 배경 우주 타일(space_bg)을 캔버스와 같은 380px 스케일로 프레임 전체에 이어지게 — 어둡게 덮어 콘솔 가독성 유지 */
     background:linear-gradient(rgba(3,4,12,.5),rgba(3,4,12,.66)),url('assets/tiles/space_bg.webp') center/380px repeat #05060d;
     overflow:hidden;display:flex;flex-direction:column;flex:none;
-    border:none;border-radius:28px;
+    border:none;border-radius:0;   /* 모서리 직각 — 폰 프레임 라운드 제거(상단바·네비·모든 화면 각짐) */
     box-shadow:0 0 0 1px rgba(0,0,0,.6),0 0 60px rgba(0,0,0,.9);
     /* 뷰포트보다 크면 비율 유지하며 축소 */
     max-width:100vw;max-height:100vh}
@@ -2590,7 +2590,7 @@
   .hmUpBtn:disabled{cursor:default;color:#6d7684;background:rgba(255,255,255,.05);border-color:var(--metal-edge)}
   /* ══ 하단 6칸 네비게이션(전역) ══ 화면이 아니라 #phone 위에 뜬다 · navShow(tab)이 표시/활성을 정한다 */
   .navBar{position:absolute;left:0;right:0;bottom:0;z-index:62;height:var(--navH);display:flex;align-items:stretch;
-    background:linear-gradient(180deg,rgba(12,17,28,.96),rgba(6,9,15,.98));border-top:1px solid rgba(88,118,188,.22)}
+    background:linear-gradient(180deg,#191919,#0e0e0e);border-top:1px solid rgba(255,255,255,.07)}   /* 짙고 어두운 순수 회색 배경 */
   .navBar.hide{display:none}
   /* 💠 공용 재화 바(단일 소스) — 모든 RPG/허브 + 유즈맵 선택 상단 상시. 볼륨1: 1px 테두리+그라데+하단 헤어라인, 재화=금색.
      미네랄=pcoin · 가스 · 젬. 인게임(#hudR)과 별개다(계정 영구 재화). */
@@ -2604,12 +2604,13 @@
   #phone.curOn #mapSelect{padding-top:calc(var(--curH) + 12px)}
   #phone.inGame #curBar{display:none}   /* 실경기(인게임)에선 자체 HUD(#hudR) 사용 — 공용 바 숨김 */
   .navIt{position:relative;flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-    cursor:pointer;font-family:inherit;font-size:8.5px;font-weight:800;letter-spacing:.2px;color:#6f7a88;
+    cursor:pointer;font-family:inherit;font-size:8.5px;font-weight:800;letter-spacing:.2px;color:#c6ccd4;
     background:none;border:none;transition:color .13s}
   .navIt .ic{width:19px;height:19px}
-  .navIt.on{color:var(--acc-sel)}
-  .navIt.on::after{content:'';position:absolute;left:22%;right:22%;top:0;height:2px;background:var(--acc-sel);
-    box-shadow:0 0 8px -1px var(--acc-sel)}
+  .navIt.on{color:#7ee0ff;text-shadow:0 0 7px rgba(92,214,255,.5)}   /* 선택 텍스트·아이콘 = 하단 선과 같은 푸른색 */
+  .navIt.on::after{content:'';position:absolute;left:10%;right:10%;bottom:0;height:2px;   /* 표시선 하단 */
+    background:linear-gradient(90deg,transparent,rgba(124,224,255,.15) 20%,#7ee0ff 50%,rgba(124,224,255,.15) 80%,transparent);   /* 가운데서 양옆으로 퍼지는 푸른 빛 */
+    box-shadow:0 0 7px -1px rgba(92,214,255,.6)}
   .navIt:active{opacity:.8}
   /* 마을 상단 설정 — 좌측 로그아웃과 짝 */
   .twGear{flex:0 0 auto;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;
@@ -3615,10 +3616,9 @@
   <!-- 하단 6칸 네비게이션 — 화면이 아니라 #phone 위에 떠 있는 전역 바. navShow(tab)로 표시/활성 탭을 정한다 -->
   <div id="navBar" class="navBar hide">
     <button class="navIt" data-nav="home" onclick="navGo('home')"><span data-ico="home"></span>HOME</button>
-    <button class="navIt" data-nav="map" onclick="navGo('map')"><span data-ico="map"></span>유즈맵</button>
+    <button class="navIt" data-nav="dungeon" onclick="navGo('dungeon')"><span data-ico="dungeon"></span>던전</button>
     <button class="navIt" data-nav="town" onclick="navGo('town')"><span data-ico="hero"></span>마을</button>
-    <button class="navIt" data-nav="gear" onclick="navGo('gear')"><span data-ico="bag"></span>장비</button>
-    <button class="navIt" data-nav="friend" onclick="navGo('friend')"><span data-ico="friend"></span>친구</button>
+    <button class="navIt" data-nav="map" onclick="navGo('map')"><span data-ico="map"></span>유즈맵</button>
     <button class="navIt" data-nav="shop" onclick="navGo('shop')"><span data-ico="gift"></span>상점</button>
   </div>
   <!-- 💠 공용 재화 바 — 미네랄/가스/젬 (계정 영구). curShow()가 화면 전환 시 표시/숨김 -->
@@ -4848,12 +4848,11 @@ function navShow(tab){ const b=document.getElementById('navBar'); if(!b) return;
   b.classList.toggle('hide', !tab);
   if(tab) b.querySelectorAll('.navIt').forEach(x=>x.classList.toggle('on', x.dataset.nav===tab)); }
 function navGo(tab){ if(typeof playSfx==='function') playSfx('ui_tab');
-  if(tab==='home')   return openHome();
-  if(tab==='map')    return twGoMap();
-  if(tab==='town')   { openTown(); return navShow('town'); }
-  if(tab==='gear')   { openTown(); navShow('town'); return openTownPanel('gear'); }
-  if(tab==='shop')   { openTown(); navShow('town'); return openTownPanel('gacha'); }
-  if(tab==='friend') { twOpenSocial(); return; } }
+  if(tab==='home')    return openHome();
+  if(tab==='dungeon') { openTown(); navShow('dungeon'); return openTownPanel('gate'); }   // 던전 선택 = 관문 패널(전용 던전 페이지는 이후 단계)
+  if(tab==='town')    { openTown(); return navShow('town'); }
+  if(tab==='map')     return twGoMap();                                                    // 유즈맵(친구·소셜은 유즈맵 하단)
+  if(tab==='shop')    { openTown(); navShow('shop'); return openTownPanel('gacha'); } }    // 상점 = 뽑기집(전용 상점 화면은 이후 단계)
 // ── 🏘 마을(메인 화면) UI ──
 // 🚪 메인(마을) 뒤로가기 = 로그아웃 확인 — 되돌아갈 곳이 로그인뿐이다
 function askLogout(){ const p=document.getElementById('logoutPanel'); if(!p) return;
@@ -10379,6 +10378,7 @@ const ICO={
   lock:_svg('<rect x="5.2" y="10.5" width="13.6" height="9.3" rx="2"/><path d="M8.2 10.5V8.2a3.8 3.8 0 0 1 7.6 0v2.3"/><circle cx="12" cy="14.6" r="1.25" fill="currentColor" stroke="none"/><path d="M12 15.5v2.1"/>'),
   home:_svg('<path d="M4 10.6 12 4l8 6.6"/><path d="M6.4 9.6V19h11.2V9.6"/><path d="M10 19v-5h4v5"/>'),
   bag:_svg('<path d="M4.6 8.4h14.8L18.6 20H5.4z"/><path d="M9 8.4V6.6a3 3 0 0 1 6 0v1.8"/>'),
+  dungeon:_svg('<path d="M4.5 4.5 15 15"/><path d="M19.5 4.5 9 15"/><path d="M9 15 6 18l-1.5-.5"/><path d="M15 15 18 18l1.5-.5"/><path d="M3.5 6.5 6.5 3.5"/><path d="M20.5 6.5 17.5 3.5"/>'),   // ⚔ 던전(크로스드 소드)
   gift:_svg('<rect x="4" y="9.4" width="16" height="10.6" rx="1.6"/><path d="M3.2 9.4h17.6M12 9.4V20"/><path d="M12 9.4C10.6 6 9.4 5 8.2 5a2 2 0 0 0 0 4.4M12 9.4C13.4 6 14.6 5 15.8 5a2 2 0 0 1 0 4.4"/>')
 };
 function mapIco(m){ return ICO[m.id] || ICO.map; }
