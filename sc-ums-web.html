@@ -10,10 +10,11 @@
   엑셀 데이터: 유닛 공격력/가격/영웅, 몬스터 18라운드(체력/쉴드/방어), 합성=같은유닛3개→영웅.
 -->
 <style>
-  /* 폰트 3종 — 제목 Do Hyeon · 본문 IBM Plex Sans KR · 숫자 Rajdhani.
+  /* 폰트 — 한글은 IBM Plex Sans KR 한 가족(제목=700 / 본문=400), 숫자만 Rajdhani.
+     제목과 본문을 다른 가족으로 두면 글자 폭 비율이 달라 따로 논다(Do Hyeon으로 겪었다) → 굵기로 가른다.
      ⚠ 한글도 웹폰트로 받는다(예전엔 시스템 폰트라 기기마다 글씨체가 달랐다).
         못 받으면 아래 --font-* 폴백(Apple SD Gothic Neo → Noto Sans KR → sans-serif)으로 떨어진다. */
-  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Do+Hyeon&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap');
   /* 전자시계(7세그먼트) 폰트 — 타이머용. 못 불러오면 monospace로 폴백 */
   @font-face{ font-family:'DSEG7'; font-weight:700; font-display:swap;
     src:url('https://cdn.jsdelivr.net/npm/dseg@0.46.0/fonts/DSEG7-Classic/DSEG7Classic-Bold.woff2') format('woff2'),
@@ -23,7 +24,7 @@
   :root{
     /* 폰트 — 이 세 줄이 단일 소스다. 폰트를 바꿀 땐 여기만 고친다(개별 규칙에 이름을 박지 말 것) */
     --font-ko:'IBM Plex Sans KR','Apple SD Gothic Neo','Noto Sans KR',sans-serif;   /* 본문·버튼·라벨 */
-    --font-ti:'Do Hyeon','IBM Plex Sans KR','Apple SD Gothic Neo',sans-serif;       /* 제목 전용 */
+    --font-ti:'IBM Plex Sans KR','Apple SD Gothic Neo','Noto Sans KR',sans-serif;   /* 제목 — 본문과 같은 가족, 굵기 700으로 가른다 */
     --font-num:'Rajdhani','IBM Plex Sans KR','Apple SD Gothic Neo',sans-serif;      /* 숫자·수치 */
     --neon:#ff3b3b;                       /* 단일 네온 포인트(빨강) */
     --neon-soft:rgba(255,59,59,.55);
@@ -3093,14 +3094,13 @@
   .moBtn:disabled:active,.moBtn.locked:active{transform:none}
   .moLockNote{font-size:var(--fs-xs);font-weight:700;color:#ff9a6b;padding:2px 6px;border-radius:var(--r-lg);background:rgba(255,154,107,.14);border:1px solid rgba(255,154,107,.35)}
 
-  /* ══ 제목 폰트(Do Hyeon) 적용 지점 — 이 목록이 단일 소스다 ══
+  /* ══ 제목 폰트(--font-ti · 굵기 700) 적용 지점 — 이 목록이 단일 소스다 ══
      ⚠ 반드시 스타일시트 '맨 끝'에 둔다. 앞쪽에 두면 뒤에 오는 .ecTitle·#ovTitle 같은 개별 규칙의
         font-weight에 져서 일부 제목만 가짜 볼드로 남는다(전에 font-size로 똑같이 당했다).
-     ⚠ Do Hyeon은 굵기가 400 하나뿐 — 800/900을 주면 브라우저가 가짜 볼드를 그려 획이 뭉갠다.
-        그래서 400으로 되돌린다. 제목 위계는 굵기가 아니라 '크기'로 준다.
-     ⚠ 15px 미만에는 쓰지 않는다(압축된 굵은 한글이라 작은 자소가 뭉갠다). 작은 라벨은 --font-ko. */
+     ⚠ IBM Plex Sans KR은 700이 최대다 — 800/900을 남기면 브라우저가 가짜 볼드를 그려 획이 뭉갠다.
+        그래서 700으로 되돌린다. 제목은 '같은 가족 + 굵기 700 + 큰 크기'로 선다. */
   #ovTitle,.ovTtl,.ecTitle,.setTitle,.hmUpgHead,.twName,.cpTitle,.opTitle,.msTitle,.lbTitle,.ptTitle{
-    font-family:var(--font-ti);font-weight:400}
+    font-family:var(--font-ti);font-weight:700}
 </style>
 </head>
 <body>

@@ -208,34 +208,40 @@ async function groupLobby(){
     return 'HOME 카드 1개 + 네비 5칸(home·던전·마을·유즈맵·상점) ok'; });
   // 폰트 3종 — 제목 Do Hyeon · 본문 IBM Plex Sans KR · 숫자 Rajdhani.
   // ⚠ 실제 렌더가 아니라 CSS만 잰다(헤드리스에선 웹폰트를 못 받을 수 있어 렌더 비교는 못 믿는다).
-  await step('폰트: 제목/본문/숫자 3종이 토큰으로 갈린다', async()=>{
+  await step('폰트: 제목/본문/숫자가 토큰으로 갈린다', async()=>{
     const root=getComputedStyle(document.documentElement);
     const ti=root.getPropertyValue('--font-ti'), ko=root.getPropertyValue('--font-ko'), num=root.getPropertyValue('--font-num');
-    assert(/Do Hyeon/.test(ti),'제목 토큰에 Do Hyeon이 없음: '+ti);
-    assert(/IBM Plex Sans KR/.test(ko),'본문 토큰에 IBM Plex Sans KR이 없음: '+ko);
+    // 한글은 제목·본문이 '같은 가족'이다(다른 가족을 섞으면 글자 폭 비율이 달라 따로 논다) → 굵기로 가른다
+    assert(/IBM Plex Sans KR/.test(ti),'제목 토큰이 IBM Plex Sans KR이 아님: '+ti);
+    assert(/IBM Plex Sans KR/.test(ko),'본문 토큰이 IBM Plex Sans KR이 아님: '+ko);
     assert(/Rajdhani/.test(num),'숫자 토큰에 Rajdhani가 없음: '+num);
-    // 셋은 서로 달라야 한다(하나로 뭉치면 위계가 사라진다)
-    assert(ti!==ko && ko!==num && ti!==num,'폰트 토큰 3종이 서로 안 갈림');
-    // 웹폰트를 실제로 불러오는가 — @import 한 줄에 셋 다 있어야 한다
+    assert(ti!==num && ko!==num,'숫자 폰트가 한글과 안 갈림');
+    // 웹폰트를 실제로 불러오는가 — @import 한 줄에 둘 다 있어야 한다
     const imp=[...document.styleSheets].flatMap(s=>{try{return [...s.cssRules]}catch(e){return []}})
       .filter(r=>r.type===CSSRule.IMPORT_RULE).map(r=>r.href).join(' ');
-    for(const f of ['Rajdhani','Do+Hyeon','IBM+Plex+Sans+KR'])
+    for(const f of ['Rajdhani','IBM+Plex+Sans+KR'])
       assert(imp.indexOf(f)>=0, f+'를 웹폰트로 안 불러옴: '+imp);
+    // 본문 굵기(400~600)까지 받아와야 제목 700과 대비가 생긴다
+    assert(/IBM\+Plex\+Sans\+KR:wght@[^&]*400/.test(imp),'본문 굵기를 안 받아옴: '+imp);
     // 개별 규칙에 폰트 이름을 박아두면 토큰이 무의미해진다
     let hard=0, sample='';
     for(const sh of document.styleSheets){ let rules; try{rules=sh.cssRules}catch(e){continue}
       for(const r of rules||[]){ const ff=r.style&&r.style.fontFamily;
         if(ff && /Rajdhani|Do Hyeon|IBM Plex|Apple SD Gothic/.test(ff)){ hard++; if(!sample) sample=r.selectorText+' → '+ff; } } }
     assert(hard===0,'개별 규칙에 폰트 이름이 박혀 있음('+hard+'곳): '+sample);
-    // 제목은 Do Hyeon(400)으로 — 굵기가 하나뿐이라 800/900이 남으면 가짜 볼드가 된다
+    // 제목 위계 = 굵기. IBM Plex Sans KR은 700이 최대라 800/900이 남으면 가짜 볼드가 된다
     openHome(); await sleep(60);
     const head=document.querySelector('.hmUpgHead'), hs=getComputedStyle(head);
-    assert(/Do Hyeon/.test(hs.fontFamily),'제목에 Do Hyeon이 안 걸림: '+hs.fontFamily);
-    assert(parseInt(hs.fontWeight,10)<=400,'제목이 가짜 볼드가 됨(Do Hyeon은 400뿐): '+hs.fontWeight);
-    // 본문은 제목 폰트를 쓰면 안 된다(작은 크기에서 뭉갠다)
-    const body=document.querySelector('.hmUpBtn');
-    assert(!/Do Hyeon/.test(getComputedStyle(body).fontFamily),'본문/버튼까지 제목 폰트가 번짐');
-    return '제목 Do Hyeon(400) · 본문 IBM Plex Sans KR · 숫자 Rajdhani'; });
+    assert(/IBM Plex Sans KR/.test(hs.fontFamily),'제목에 제목 폰트가 안 걸림: '+hs.fontFamily);
+    const hw=parseInt(hs.fontWeight,10);
+    assert(hw===700,'제목 굵기가 700이 아님(800↑이면 가짜 볼드): '+hw);
+    // 본문은 제목보다 가벼워야 위계가 산다
+    const body=document.querySelector('.hmUpLv'), bw=parseInt(getComputedStyle(body).fontWeight,10);
+    assert(bw<hw,'본문이 제목만큼 굵어 위계가 없음: 본문 '+bw+' / 제목 '+hw);
+    // 제목은 본문보다 확실히 커야 한다(같은 가족이라 크기까지 같으면 구분이 안 된다)
+    const hsz=parseFloat(hs.fontSize), bsz=parseFloat(getComputedStyle(body).fontSize);
+    assert(hsz-bsz>=3,'제목이 본문보다 충분히 크지 않음: 제목 '+hsz+' / 본문 '+bsz);
+    return '제목 IBM Plex Sans KR 700/'+hsz+'px · 본문 400/'+bsz+'px · 숫자 Rajdhani'; });
   // 💠 공용 재화 바 — 미네랄=pcoin · 가스 · 젬. 모든 RPG/허브 + 유즈맵 선택 상단 상시(인게임 제외).
   await step('공용 재화 바: RPG/유즈맵 상단 상시 · 미네랄/가스/젬', async()=>{ skipIf(typeof curShow!=='function','재화 바 없음');
     // curShow()는 showAppScreen 안에서 동기 실행 → 화면 연 직후 동기 검사(전환 FX/타이머 레이스 회피)
