@@ -10,8 +10,10 @@
   엑셀 데이터: 유닛 공격력/가격/영웅, 몬스터 18라운드(체력/쉴드/방어), 합성=같은유닛3개→영웅.
 -->
 <style>
-  /* 모던 테크 HUD 폰트(영문/숫자) — 가시성↑. Korean은 시스템 한글 폰트로 폴백 */
-  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap');
+  /* 폰트 3종 — 제목 Do Hyeon · 본문 IBM Plex Sans KR · 숫자 Rajdhani.
+     ⚠ 한글도 웹폰트로 받는다(예전엔 시스템 폰트라 기기마다 글씨체가 달랐다).
+        못 받으면 아래 --font-* 폴백(Apple SD Gothic Neo → Noto Sans KR → sans-serif)으로 떨어진다. */
+  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Do+Hyeon&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap');
   /* 전자시계(7세그먼트) 폰트 — 타이머용. 못 불러오면 monospace로 폴백 */
   @font-face{ font-family:'DSEG7'; font-weight:700; font-display:swap;
     src:url('https://cdn.jsdelivr.net/npm/dseg@0.46.0/fonts/DSEG7-Classic/DSEG7Classic-Bold.woff2') format('woff2'),
@@ -19,6 +21,10 @@
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none}
   /* ── 디자인 토큰: 어두운 회색 메탈 + 단색 빨강 네온 ── */
   :root{
+    /* 폰트 — 이 세 줄이 단일 소스다. 폰트를 바꿀 땐 여기만 고친다(개별 규칙에 이름을 박지 말 것) */
+    --font-ko:'IBM Plex Sans KR','Apple SD Gothic Neo','Noto Sans KR',sans-serif;   /* 본문·버튼·라벨 */
+    --font-ti:'Do Hyeon','IBM Plex Sans KR','Apple SD Gothic Neo',sans-serif;       /* 제목 전용 */
+    --font-num:'Rajdhani','IBM Plex Sans KR','Apple SD Gothic Neo',sans-serif;      /* 숫자·수치 */
     --neon:#ff3b3b;                       /* 단일 네온 포인트(빨강) */
     --neon-soft:rgba(255,59,59,.55);
     --neon-glow:rgba(255,59,59,.45);
@@ -65,7 +71,7 @@
   .uiScroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
   .uiScroll::-webkit-scrollbar-track{background:transparent}
   html,body{height:100%;background:#010305;display:flex;align-items:center;justify-content:center;
-    font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;overflow:hidden}
+    font-family:var(--font-ko);overflow:hidden}
   /* 모바일 고정 비율 — 세로로 긴 요즘 폰(963:1997 ≈ 1:2.074). 비율은 아래 두 변수 한 곳에서만 정한다.
      화면이 작으면 비율을 유지하며 축소. 패널 폭이 변해도 폰 모양은 불변. */
   :root{--phW:963;--phH:1997;--navH:54px;--curH:34px}
@@ -93,7 +99,7 @@
   /* HUD — 좌(킬·맵·라운드 세로) / 중앙(제한시간 박스) / 우(자원 가로) */
   #hud{position:absolute;top:0;left:0;right:0;z-index:20;padding:calc(env(safe-area-inset-top,0px) + 18px) 9px 0;
     display:flex;align-items:flex-start;justify-content:space-between;pointer-events:none;
-    font-family:'Rajdhani','Apple SD Gothic Neo','Noto Sans KR',sans-serif;   /* 모던 테크 폰트(가시성↑) */
+    font-family:var(--font-num);   /* 모던 테크 폰트(가시성↑) */
     background:linear-gradient(180deg,rgba(8,12,20,.85),rgba(8,12,20,.42) 60%,transparent);opacity:.82}   /* 상단 HUD 구역 구분용 반투명 배경(아래로 자연스레 페이드) — 전 영역 공통 */
   #hudL{display:flex;flex-direction:column;gap:3px;white-space:nowrap;line-height:1.15;
     text-shadow:0 2px 4px #000,0 0 8px #000,0 1px 2px #000}   /* 진한 드롭쉐도우(배경 없이 가독) */
@@ -104,7 +110,7 @@
   #hudL .kill{font-size:var(--fs-lg);color:#fff;font-weight:800;letter-spacing:.5px}#hudL .kill b{color:var(--hud)}  /* Kill 텍스트=흰 / 숫자=청록 */
   /* 미션 타이머 — 좌상단 ROUND/Kill과 동일한 텍스트 스타일(박스 없음). #hudL 드롭쉐도우 상속 */
   #hudC{align-self:flex-start;pointer-events:none}
-  #hudC .time{font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif;font-size:18px;font-weight:800;line-height:1.1;
+  #hudC .time{font-family:var(--font-num);font-size:18px;font-weight:800;line-height:1.1;
     letter-spacing:1px;color:var(--hud);font-variant-numeric:tabular-nums;
     text-shadow:0 0 9px var(--hud-glow),0 2px 4px #000,0 0 8px #000}   /* 제한시간 = 좌상단에서 가장 크게(가독 우선) */
   #hudRwrap{display:flex;flex-direction:column;align-items:flex-end;gap:4px;margin-top:2px}
@@ -112,7 +118,7 @@
   .res{display:flex;align-items:center;gap:1.5px}   /* 아이콘-숫자 간격 축소(그룹 구분 ↑) */
   .res .ri{width:16.5px;height:16.5px;display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.85))}
   /* 자원 숫자: 밝은 흰색 + 진한 드롭쉐도우(배경 없는 HUD) */
-  .res b{color:#eaf4ff;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:var(--fs-xl);letter-spacing:.3px;text-shadow:0 2px 4px #000,0 0 8px #000}
+  .res b{color:#eaf4ff;font-family:var(--font-num);font-weight:700;font-size:var(--fs-xl);letter-spacing:.3px;text-shadow:0 2px 4px #000,0 0 8px #000}
   .res b .ru{font-style:normal;font-size:.6em;font-weight:700;color:var(--hud);opacity:.85;margin-left:1.5px;letter-spacing:0}  /* 자원 단위 C/E/CP — 청록 */
 
   #zoneLabel{display:none}   /* 구역 설명 텍스트 제거(사용자 요청) */
@@ -173,7 +179,7 @@
   #skillFab .sfIco svg{width:23px;height:23px;filter:drop-shadow(0 0 4px rgba(0,200,255,.6))}
   #skillFab .sfName{font-size:var(--fs-xs);font-weight:800;letter-spacing:.2px;white-space:nowrap;position:relative;z-index:3}
   #skillFab .sfOver{position:absolute;left:0;right:0;bottom:0;height:0;background:rgba(2,8,14,.7);z-index:4;pointer-events:none;transition:height .12s linear}
-  #skillFab .sfCd{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:5;font-family:'Rajdhani',sans-serif;font-size:19px;font-weight:800;color:#fff;text-shadow:0 1px 2px #000;pointer-events:none}
+  #skillFab .sfCd{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:5;font-family:var(--font-num);font-size:19px;font-weight:800;color:#fff;text-shadow:0 1px 2px #000;pointer-events:none}
   #skillFab.active{border-color:#7fffd4;box-shadow:0 0 16px -2px rgba(90,255,200,.65),0 4px 9px var(--shade),inset 0 0 12px rgba(90,255,200,.22)}  /* 버프 활성 */
   #skillFab:active{transform:translateY(1px)}
   /* 🎆 이펙트 테스트베드(관리자 Unit 탭) — 빈 땅 + 유닛 배너 → 3D 소환 무한 반복 */
@@ -297,7 +303,7 @@
   #coopBossBar .cbBarOuter{position:relative;height:13px;border-radius:var(--r-md);background:rgba(0,0,0,.42);overflow:hidden;border:1px solid rgba(255,255,255,.1)}
   #coopBossBar .cbBarFill{height:100%;border-radius:var(--r-md);width:100%;background:linear-gradient(90deg,#c4203a,#ff5c6e);
     box-shadow:0 0 6px rgba(255,80,100,.5);transition:width .25s ease-out}
-  #coopBossBar .cbHpTxt{position:absolute;top:0;left:0;right:0;text-align:center;font-family:'Rajdhani',sans-serif;
+  #coopBossBar .cbHpTxt{position:absolute;top:0;left:0;right:0;text-align:center;font-family:var(--font-num);
     font-size:var(--fs-sm);font-weight:800;color:#fff;line-height:13px;letter-spacing:.3px;text-shadow:0 1px 2px #000,0 0 3px rgba(0,0,0,.9)}
   /* 보스 토벌장 진입 시 — 화면 중앙 상단 보스 체력바 */
   #coopBossBar.bossMode{left:50%;right:auto;transform:translateX(-50%);top:84px;width:64%;max-width:250px;z-index:24}
@@ -357,11 +363,11 @@
   .hsThumb{position:relative;width:100%;height:42px;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:3px;
     background:radial-gradient(circle at 50% 34%,rgba(60,70,90,.42),#070910 90%)}
   .hsThumb img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))}.hsThumb svg{width:32px;height:32px}
-  .hsCnt{position:absolute;top:3px;left:4px;z-index:5;font-family:'Rajdhani',sans-serif;font-size:var(--fs-sm);font-weight:800;color:#fff;
+  .hsCnt{position:absolute;top:3px;left:4px;z-index:5;font-family:var(--font-num);font-size:var(--fs-sm);font-weight:800;color:#fff;
     padding:0 4px;border-radius:var(--r-bar);background:rgba(6,8,12,.78);border:1px solid rgba(255,255,255,.18);line-height:1.45;text-shadow:0 1px 2px #000}
   .hsMeta{display:flex;align-items:baseline;gap:3px;padding:2px 5px 3px;background:rgba(6,8,12,.66);border-top:1px solid rgba(255,255,255,.07)}   /* 이름(좌) · 회수가(우) 한 줄 */
   .hsName{flex:1 1 auto;min-width:0;font-size:9px;font-weight:700;color:#dbe3ee;text-align:left;line-height:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .hsVal{flex:0 0 auto;font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:800;color:var(--gold);line-height:12px;letter-spacing:.2px;text-shadow:0 1px 2px #000}
+  .hsVal{flex:0 0 auto;font-family:var(--font-num);font-size:11px;font-weight:800;color:var(--gold);line-height:12px;letter-spacing:.2px;text-shadow:0 1px 2px #000}
   .hsEmpty{font-size:var(--fs-xs);color:#7d8590;padding:8px 2px}
   
   
@@ -475,7 +481,7 @@
   
   
   .sn{font-size:var(--fs-xs);color:#eaf2ff;font-weight:700;letter-spacing:.2px;text-shadow:0 1px 2px #000,0 0 5px #000}
-  .sc{font-size:var(--fs-xs);color:#ffd766;font-weight:800;font-family:'Rajdhani',sans-serif;letter-spacing:.2px;text-shadow:0 1px 2px #000,0 0 5px #000;display:flex;align-items:center;justify-content:center;gap:2px}
+  .sc{font-size:var(--fs-xs);color:#ffd766;font-weight:800;font-family:var(--font-num);letter-spacing:.2px;text-shadow:0 1px 2px #000,0 0 5px #000;display:flex;align-items:center;justify-content:center;gap:2px}
   .citizen{position:absolute;transform:translate(-50%,-50%);text-align:center;z-index:11;pointer-events:none}
   .cframe{position:relative;width:40px;height:40px;box-sizing:border-box;padding:7px;border-radius:50%;border:2px solid var(--gold);
     background:radial-gradient(circle at 50% 28%,rgba(255,236,170,.28),rgba(38,30,7,.95) 72%);
@@ -551,7 +557,7 @@
   .tab .ti{display:block;margin-bottom:2px;line-height:0;transition:color .16s}
   .tab .ti svg{width:18px;height:18px;display:block;margin:0 auto}   /* 모던 라인 아이콘(currentColor=탭색) */
   /* 탭 우상단 알림 배지(보스 탭 = 소환 가능 보스 수) — FAB의 .pbDot을 탭 규격으로 이식 */
-  .tab .tabDot{display:none;position:absolute;top:2px;left:calc(50% + 9px);color:#ff9a9a;font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:800;line-height:1;text-shadow:0 0 6px rgba(255,90,90,.85),0 1px 2px #000;pointer-events:none}
+  .tab .tabDot{display:none;position:absolute;top:2px;left:calc(50% + 9px);color:#ff9a9a;font-family:var(--font-num);font-size:12px;font-weight:800;line-height:1;text-shadow:0 0 6px rgba(255,90,90,.85),0 1px 2px #000;pointer-events:none}
   .tab .tabDot.show{display:block}
   .tab:hover{color:#cdd6e2}
   .tab.on{color:#e6f6ff}
@@ -635,25 +641,25 @@
     scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}
   .setMenu::-webkit-scrollbar{width:5px} .setMenu::-webkit-scrollbar-thumb{background:rgba(120,140,170,.4);border-radius:3px}
   /* 배속 선택 — 세 칸 세그먼트(선택=강조색) + 아래 현재값 한 줄 */
-  .spdNow{color:var(--setAcc,var(--neon));font-family:'Rajdhani',sans-serif;font-size:var(--fs-xl);margin-left:5px}
+  .spdNow{color:var(--setAcc,var(--neon));font-family:var(--font-num);font-size:var(--fs-xl);margin-left:5px}
   .voteCols{display:flex;gap:5px}
   .voteCol{flex:1;min-width:0;min-height:76px;border:1px solid var(--metal-edge);border-radius:var(--r-lg);background:rgba(255,255,255,.04);cursor:pointer;
     padding:9px 3px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
     transition:border-color .16s,background .16s}
   .voteCol.active{border-color:var(--setAccS,var(--neon-soft));background:rgba(255,255,255,.09)}
   .voteCol:active{transform:translateY(1px)}
-  .vcSpd{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:17px;line-height:1;color:#9aa6b4;letter-spacing:.5px}
+  .vcSpd{font-family:var(--font-num);font-weight:800;font-size:17px;line-height:1;color:#9aa6b4;letter-spacing:.5px}
   .voteCol.active .vcSpd{color:var(--setAcc,var(--neon))}
   /* 투표 칩 = 플레이어 색 타일 + 번호(8인 2줄 고정 높이 → 인원수와 무관하게 칸 크기 일정) */
   .vcPlayers{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;align-content:flex-start;height:35px;overflow:hidden}
   .vChip{--pc:#888;flex:0 0 auto;width:16px;height:16px;border-radius:var(--r-bar);display:flex;align-items:center;justify-content:center;box-sizing:border-box;
-    font:800 9px/1 'Rajdhani',sans-serif;color:var(--pc);letter-spacing:0;
+    font:800 9px/1 var(--font-num);color:var(--pc);letter-spacing:0;
     background:color-mix(in srgb,var(--pc) 16%,transparent);border:1px solid color-mix(in srgb,var(--pc) 50%,transparent)}
   .vChip.me{color:#fff;background:color-mix(in srgb,var(--pc) 34%,transparent);border-color:var(--pc)}   /* 나=진하게 + 흰 숫자 */
   /* 현재 배속 = 구분선 위 한 줄(라벨 좌 / 값 우) */
   .voteResult{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding-top:9px;
     font-size:var(--fs-sm);font-weight:700;letter-spacing:.3px;color:var(--txt-mute);border-top:1px solid rgba(255,255,255,.07)}
-  .voteResult b{color:var(--setAcc,var(--neon));font-family:'Rajdhani',sans-serif;font-size:15px;margin-left:0}
+  .voteResult b{color:var(--setAcc,var(--neon));font-family:var(--font-num);font-size:15px;margin-left:0}
   /* 위험 액션 = 채움 대신 붉은 글자·테두리만(차분하게) */
   .setExit{display:block;width:100%;margin:8px 0 0;height:44px;padding:0;cursor:pointer;
     font-family:inherit;font-size:var(--fs-lg);font-weight:800;letter-spacing:.3px;color:#ff9a9a;
@@ -714,7 +720,7 @@
     padding:12px 0;margin:0;border-radius:0;background:none;border:none;box-shadow:none}
   .setItem+.setItem,.setBody+.setItem{border-top:1px solid rgba(255,255,255,.07)}   /* 행 사이 구분선만 */
   .setItem:active{background:rgba(255,255,255,.03)}
-  .setItem b{font-size:13px;color:var(--setAcc);font-family:'Rajdhani',sans-serif}
+  .setItem b{font-size:13px;color:var(--setAcc);font-family:var(--font-num)}
   .setItem .setArr{font-size:10px;color:var(--txt-mute);transition:transform .18s,color .18s}
   /* 아코디언 본문 */
   .setBody{display:none;margin:0;padding:2px 0 12px}   /* 펼친 구역 여백(가시성) */
@@ -730,7 +736,7 @@
   .sndGroup{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08);border-radius:var(--r-md);padding:4px 2px;margin-bottom:7px}
   .setSub{display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-size:var(--fs-lg);font-weight:600;color:var(--txt);
     padding:8px 11px;border-radius:var(--r-bar);background:transparent;border:none}
-  .setSub b{color:var(--setAcc,var(--neon));font-family:'Rajdhani',sans-serif}
+  .setSub b{color:var(--setAcc,var(--neon));font-family:var(--font-num)}
   .setVolRow{display:flex;align-items:center;gap:10px;padding:0 11px 3px;margin-top:-3px}
   .setRange{-webkit-appearance:none;appearance:none;flex:1;height:4px;border-radius:var(--r-bar);outline:none;cursor:pointer;
     background:rgba(255,255,255,.15)}
@@ -738,7 +744,7 @@
     background:var(--setAcc,var(--neon));box-shadow:0 0 0 1px rgba(0,0,0,.45);cursor:pointer}
   .setRange::-moz-range-thumb{width:13px;height:13px;border:none;border-radius:50%;
     background:var(--setAcc,var(--neon));cursor:pointer}
-  .setVolRow b{font-size:var(--fs-lg);color:var(--setAcc,var(--neon));font-family:'Rajdhani',sans-serif;min-width:26px;text-align:right}
+  .setVolRow b{font-size:var(--fs-lg);color:var(--setAcc,var(--neon));font-family:var(--font-num);min-width:26px;text-align:right}
   .setRowLbl{font-size:var(--fs-md);color:var(--txt);font-weight:700;padding:2px 4px 6px}
   .setSeg{display:flex;gap:5px;margin-bottom:7px}
   .segBtn{flex:1;padding:5px 0;font-size:var(--fs-md);font-weight:700;color:var(--txt-dim);cursor:pointer;font-family:inherit;
@@ -854,7 +860,7 @@
   #btCtl .btCtlBtn{pointer-events:auto;padding:5px 8px;font-size:11px;font-weight:800;color:#e6d2d2;cursor:pointer;font-family:inherit;white-space:nowrap;border-radius:7px;background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.015));border:1px solid var(--metal-edge);transition:all .12s}
   #btCtl .btCtlBtn:active{transform:translateY(1px)}
   #btCtl .btCtlBtn.on{color:#fff;background:linear-gradient(180deg,#bb3636,#5e1616);border-color:#ff5b5b;box-shadow:0 0 10px -2px rgba(255,80,80,.55)}
-  #btCtl .btCtlCnt{pointer-events:none;font:800 11px 'Rajdhani',sans-serif;color:#ffb0b0;padding:0 4px;white-space:nowrap}
+  #btCtl .btCtlCnt{pointer-events:none;font:800 11px var(--font-num);color:#ffb0b0;padding:0 4px;white-space:nowrap}
   /* ⚖ 밸런스 자동검증 패널 */
   #balPanel{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center}
   #balPanel.hide{display:none}
@@ -866,12 +872,12 @@
   #balPanel .balBody{overflow-y:auto;padding:10px 12px 14px}
   #balPanel .balRaceRow{display:flex;gap:8px;margin-bottom:8px}
   #balPanel .balRaceRow .rc{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;padding:7px 4px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid var(--metal-edge)}
-  #balPanel .balRaceRow .rc b{font-size:17px;font-family:'Rajdhani',sans-serif;line-height:1}
+  #balPanel .balRaceRow .rc b{font-size:17px;font-family:var(--font-num);line-height:1}
   #balPanel .balRow{display:flex;align-items:center;gap:7px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)}
   #balPanel .balRow .bn{flex:0 0 80px;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #balPanel .balRow .bbar{position:relative;flex:1;height:10px;border-radius:5px;background:rgba(255,255,255,.06);overflow:hidden}
   #balPanel .balRow .bbar i{position:absolute;top:0;bottom:0}
-  #balPanel .balRow .bsc{flex:0 0 62px;text-align:right;font:700 12px 'Rajdhani',sans-serif}
+  #balPanel .balRow .bsc{flex:0 0 62px;text-align:right;font:700 12px var(--font-num)}
   /* ⚔ 전투실험 — 하단 좌우 분할(적군|아군 소환) */
   .btSplit{display:flex;gap:7px}
   .btCol{flex:1 1 0;min-width:0;display:flex;flex-direction:column;border-radius:9px;padding:6px 6px 4px;background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(0,0,0,.14));border:1px solid var(--metal-edge)}
@@ -898,7 +904,7 @@
   .sprHint{position:absolute;left:0;right:0;top:10px;text-align:center;font-size:10.5px;color:#8593a4;padding:0 16px;line-height:1.5;pointer-events:none}
   .sprUnit{position:absolute;left:50%;top:55%;background-repeat:no-repeat;transform:translate(-50%,-88%);
     image-rendering:auto;filter:drop-shadow(0 4px 4px rgba(0,0,0,.5))}
-  .sprHud{position:absolute;left:12px;bottom:12px;font-family:'Rajdhani',monospace;font-size:12px;font-weight:800;color:#cfe0ec;
+  .sprHud{position:absolute;left:12px;bottom:12px;font-family:var(--font-num),monospace;font-size:12px;font-weight:800;color:#cfe0ec;
     background:rgba(6,10,16,.72);border:1px solid var(--metal-edge);border-radius:8px;padding:4px 10px;pointer-events:none}
   /* 하단 컨트롤 */
   .sprCtl{display:flex;gap:6px;flex-wrap:wrap;padding:6px 2px 4px}
@@ -970,7 +976,7 @@
   .bmap .pcHead{font-size:11.5px;font-weight:800;color:#dbe3ee;letter-spacing:.3px}
   .bmap .pcChips{display:flex;gap:5px}
   .bmap .pcChip{width:24px;height:24px;border-radius:5px;cursor:pointer;display:flex;align-items:center;
-    justify-content:center;font:800 11px/1 'Rajdhani',sans-serif;color:#0b0e13;background:var(--pcc);
+    justify-content:center;font:800 11px/1 var(--font-num);color:#0b0e13;background:var(--pcc);
     border:2px solid transparent;box-shadow:inset 0 0 0 1px rgba(0,0,0,.35)}
   .bmap .pcChip.on{border-color:#fff;box-shadow:0 0 9px -1px var(--pcc),inset 0 0 0 1px rgba(0,0,0,.35)}
   .bmap .pcActs{display:flex;gap:5px}
@@ -990,7 +996,7 @@
   #pcMain .pcHead{font-size:11.5px;font-weight:800;color:#dbe3ee;letter-spacing:.3px}
   #pcMain .pcChips{display:flex;gap:5px}
   #pcMain .pcChip{width:24px;height:24px;border-radius:5px;cursor:pointer;display:flex;align-items:center;
-    justify-content:center;font:800 11px/1 'Rajdhani',sans-serif;color:#0b0e13;background:var(--pcc);
+    justify-content:center;font:800 11px/1 var(--font-num);color:#0b0e13;background:var(--pcc);
     border:2px solid transparent;box-shadow:inset 0 0 0 1px rgba(0,0,0,.35)}
   #pcMain .pcChip.on{border-color:#fff;box-shadow:0 0 9px -1px var(--pcc),inset 0 0 0 1px rgba(0,0,0,.35)}
   #pcMain .pcActs{display:flex;gap:5px}
@@ -1105,7 +1111,7 @@
   .bldHp{position:absolute;z-index:11;transform:translate(-50%,3px);height:5px;min-width:22px;border-radius:3px;background:rgba(0,0,0,.62);border:1px solid rgba(120,150,190,.4);overflow:hidden;pointer-events:none}   /* 각 건물 하단 체력/진행 바 — 발판 바로 아래 */
   .bldHp i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#2f7d4a,#5adf8a);box-shadow:0 0 5px rgba(90,223,138,.5);transition:width .12s linear}
   .bldHp.bld i{background:linear-gradient(90deg,#2f6fbf,#5cc8ff);box-shadow:0 0 5px rgba(92,200,255,.5)}   /* 건설 중 = 파란 진행 바 */
-  .bldTime{position:absolute;z-index:12;transform:translate(-50%,15px);font:800 11px 'Rajdhani',sans-serif;color:#dff0ff;white-space:nowrap;pointer-events:none;text-shadow:0 1px 3px #000,0 0 5px #000,0 0 3px #000}   /* 건설 남은시간 — HP 바 아래 */
+  .bldTime{position:absolute;z-index:12;transform:translate(-50%,15px);font:800 11px var(--font-num);color:#dff0ff;white-space:nowrap;pointer-events:none;text-shadow:0 1px 3px #000,0 0 5px #000,0 0 3px #000}   /* 건설 남은시간 — HP 바 아래 */
   .bldSpin{display:inline-block;width:14px;height:14px;border:2px solid rgba(210,230,255,.28);border-top-color:#dff0ff;border-radius:50%;animation:bldSpin .7s linear infinite;vertical-align:middle}   /* 일꾼 오는 중 = 로딩 스피너 */
   @keyframes bldSpin{to{transform:rotate(360deg)}}
   #cstLabels{position:absolute;inset:0;pointer-events:none;z-index:8}   /* 건설 남은시간 라벨 전용 오버레이 — 3D 캔버스(cvMarine z6·cvFx z7)보다 위 → 유닛에 안 가림 */
@@ -1146,7 +1152,7 @@
   #techSkTip.hide{display:none}
   #techSkTip .tskH{display:flex;align-items:center;gap:5px;margin-bottom:4px}
   #techSkTip .tskH b{font-size:11px;color:#fff;font-weight:800}
-  #techSkTip .tskC{margin-left:auto;display:inline-flex;gap:4px;font:800 9px/1 'Rajdhani',sans-serif}
+  #techSkTip .tskC{margin-left:auto;display:inline-flex;gap:4px;font:800 9px/1 var(--font-num)}
   #techSkTip .tskC .cc.en{color:var(--cgEn)} #techSkTip .tskC .cc.cr{color:var(--cgCr)} #techSkTip .tskC .cc.hp{color:#ff8a8a} 
   #techSkTip .tskC .tskT{color:#9fd0ff}   /* 우상단 소요 시간 */
   #techSkTip .tskD{font-size:9.5px;line-height:1.4;color:var(--cgMuted)}
@@ -1192,9 +1198,9 @@
   .scType{font-size:var(--fs-md);color:var(--neon);text-shadow:0 0 6px var(--neon-glow);margin-top:1px;white-space:nowrap}
   /* 등급 라벨(정보창) — 등급색 작은 칩. 서열은 색으로, 별은 강화형 구분용 */
   .tierTag{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.8px;padding:1px 6px;border-radius:2px;border:1px solid;line-height:1.5;vertical-align:middle}
-  .scHp{margin-top:7px;display:flex;flex-direction:column;gap:3px;font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif}
+  .scHp{margin-top:7px;display:flex;flex-direction:column;gap:3px;font-family:var(--font-num)}
   .scHp .hpline{font-size:var(--fs-md);font-weight:700;line-height:1;display:flex;align-items:center;gap:4px;white-space:nowrap;letter-spacing:.3px}
-  .scHp .hpline .lab{flex:none;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;font-size:8px;font-weight:700;letter-spacing:0;
+  .scHp .hpline .lab{flex:none;font-family:var(--font-ko);font-size:8px;font-weight:700;letter-spacing:0;
     opacity:.92;align-self:center}   /* 라벨이 글자에 딱 붙음(값이 바로 옆에) */
   .scHp .hp{color:var(--ok);text-shadow:0 0 6px rgba(60,255,120,.45)}
   .scHp .shd{color:#7fd0ff;text-shadow:0 0 6px rgba(120,200,255,.45)}
@@ -1211,11 +1217,11 @@
   .scBox::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.13),transparent);pointer-events:none}
   .scBox.atkBox{overflow:visible;cursor:pointer}
   .scBox.atkBox .atkPeek{position:absolute;right:calc(100% + 6px);top:50%;transform:translateY(-50%);display:none;white-space:nowrap;z-index:40;   /* 박스 왼쪽(카드 안쪽)으로 — 패널 밖 삐짐 방지 */
-    font-size:var(--fs-lg);font-weight:700;font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif;color:#ffe0b8;letter-spacing:.2px;
+    font-size:var(--fs-lg);font-weight:700;font-family:var(--font-num);color:#ffe0b8;letter-spacing:.2px;
     background:rgba(14,9,6,.96);border:1px solid rgba(255,154,106,.5);border-radius:var(--r-md);padding:4px 10px;box-shadow:0 3px 8px rgba(0,0,0,.55)}
   .scBox.atkBox .atkPeek::after{content:'';position:absolute;left:100%;top:50%;transform:translateY(-50%);border:4px solid transparent;border-left-color:rgba(255,154,106,.5)}
   .scBox.atkBox.peek .atkPeek{display:block}
-  .scBox .sv{font-size:18px;color:var(--neon-lt);font-weight:800;font-family:'Rajdhani','Courier New',monospace;text-shadow:0 0 9px var(--neon-glow);line-height:1;white-space:nowrap}
+  .scBox .sv{font-size:18px;color:var(--neon-lt);font-weight:800;font-family:var(--font-num),'Courier New',monospace;text-shadow:0 0 9px var(--neon-glow);line-height:1;white-space:nowrap}
   .scBox .sv .up{color:#e0f9ff;font-size:.7em;margin-left:1px;text-shadow:0 0 8px var(--neon)}
   .scBox .sl{font-size:8.5px;font-weight:700;letter-spacing:0;white-space:nowrap;line-height:1.2}
   .scBox .sl.def{color:#9ec2ff}.scBox .sl.shd{color:#8fd8ff}.scBox .sl.atk{color:#ffb088}  /* 칩 없이 방어=파랑·쉴드=청록·공격=주황 텍스트 */
@@ -1261,7 +1267,7 @@
   .opsManual .omTx b{font-size:10.5px;font-weight:800;color:#eaf0f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .opsManual .omTx i{font-size:8.5px;font-style:normal;color:var(--txt-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   
-  .opsManual .omLv{font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:800;color:var(--c);flex:0 0 auto;text-shadow:0 0 5px var(--c)}
+  .opsManual .omLv{font-family:var(--font-num);font-size:10px;font-weight:800;color:var(--c);flex:0 0 auto;text-shadow:0 0 5px var(--c)}
   
   
   .opsManual.hide{display:none}
@@ -1289,7 +1295,7 @@
     background:linear-gradient(180deg,rgba(26,20,22,.78),rgba(8,7,9,.84));
     clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
     box-shadow:0 0 0 1px var(--neon-faint),0 4px 14px -6px #000;backdrop-filter:blur(1px);
-    font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif;min-width:112px}
+    font-family:var(--font-num);min-width:112px}
   .rateMini .rmTitle{font-size:8.5px;font-weight:800;color:#cfd6de;margin-bottom:2px;letter-spacing:.3px;opacity:.85;text-align:right}
   .rateMini .rmRow{display:flex;justify-content:space-between;gap:10px;font-size:8.5px;font-weight:700;line-height:1.5}
   .rateMini .rmRow span:last-child{color:#d8dee6}
@@ -1339,12 +1345,12 @@
   /* 아이콘 = 비콘 꼭대기 위 공중 부유(살짝 둥실) */
   .drawZone .dzGlyph{position:absolute;left:0;top:-26px;transform:translateX(-50%);width:19px;height:19px;color:var(--neon);
     filter:drop-shadow(0 0 3px var(--neon-glow));animation:dzBob 2.6s ease-in-out infinite}
-  .drawZone .dzBadge{position:absolute;left:10px;top:-33px;font-family:'Rajdhani',sans-serif;font-size:var(--fs-xs);font-weight:800;color:#f0eaea;
+  .drawZone .dzBadge{position:absolute;left:10px;top:-33px;font-family:var(--font-num);font-size:var(--fs-xs);font-weight:800;color:#f0eaea;
     background:rgba(8,6,8,.82);border:1px solid var(--neon-soft);border-radius:var(--r-md);padding:0 3px;line-height:1.35}
   .drawZone .dzLabel{position:absolute;left:0;top:26px;transform:translateX(-50%);display:flex;align-items:center;gap:3px;
     padding:2px 6px;border-radius:var(--r-md);background:rgba(6,5,8,.72);border:1px solid var(--metal-edge)}
   .drawZone .dzName{font-size:8.5px;font-weight:800;color:#e6e0e0;letter-spacing:.2px;white-space:nowrap}
-  .drawZone .dzCost{display:flex;align-items:center;gap:2px;font-family:'Rajdhani',sans-serif;font-size:var(--fs-xs);font-weight:700;color:#e0c98a}
+  .drawZone .dzCost{display:flex;align-items:center;gap:2px;font-family:var(--font-num);font-size:var(--fs-xs);font-weight:700;color:#e0c98a}
   .drawZone .dzCost .dzMax{color:#9ad6a0;font-weight:800;letter-spacing:.5px}
   .drawZone .dzCost .dzCd{color:#ff8a8a;font-weight:800;letter-spacing:.3px}   /* 개인 보스 쿨다운 */
   .drawZone .dzCost .dzGo{color:#ff5b5b;font-weight:800;letter-spacing:.5px;text-shadow:0 0 6px rgba(255,59,59,.6)}   /* 소환 가능 */
@@ -1433,7 +1439,7 @@
   .cmdG .cgN .nsub{font-size:10px;font-weight:700;color:#9fb0c2;text-shadow:none;margin-left:3px}   /* 이름 옆 작은 괄호 수치(라바 수 등) */
   .cmdG .cgPort:empty{display:none}   /* 아이콘 없는 프로필(라바) = 빈 초상 틀 숨김 */
   .cmdG .cgS{margin-top:1px;font-size:var(--fs-xs);color:var(--cgDim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .cmdG .cgS b{color:#cfe0f5;font-weight:700}
-  .cmdG .cgHpsh{margin-top:2px;display:flex;gap:9px;font-family:'Rajdhani',sans-serif;font-weight:800;font-size:12.5px;line-height:1}
+  .cmdG .cgHpsh{margin-top:2px;display:flex;gap:9px;font-family:var(--font-num);font-weight:800;font-size:12.5px;line-height:1}
   .cmdG .cgHpsh .hpv{color:#7ee081} .cmdG .cgHpsh .shv{color:#8fd8ff} .cmdG .cgHpsh .env{color:#b06bff}
   .cmdG .cgHpsh .stAb{font-style:normal;font-size:8.5px;font-weight:700;opacity:.7;margin-right:2px;vertical-align:1px;letter-spacing:.3px}   /* S/H/E 약자 프리픽스(아이콘 대체) */
   .cmdG .cgPill{flex:none;align-self:flex-start;font:800 9px/1 sans-serif;letter-spacing:.5px;padding:4px 6px;border-radius:5px;color:var(--caL);background:rgba(255,255,255,.04);border:1px solid var(--caS)}
@@ -1454,10 +1460,10 @@
   .cmdG .cgTrash{display:flex;align-items:center;justify-content:center;width:100%;margin-top:auto;color:#6d7787;cursor:pointer;padding:0}   /* 🗑 종류 지정 해제 — 파괴 동작이라도 평소엔 초상보다 약해야 한다 */
   .cmdG .cgTrash svg{width:13px;height:13px;display:block}
   .cmdG .cgTrash:active{color:var(--neon);transform:scale(.88)}
-  .cmdG .cgProg .pl .pt{color:var(--caL);font:800 9px/1 'Rajdhani',sans-serif;margin-left:4px;letter-spacing:.2px}   /* 생산 중 옆 남은시간(작게) */
+  .cmdG .cgProg .pl .pt{color:var(--caL);font:800 9px/1 var(--font-num);margin-left:4px;letter-spacing:.2px}   /* 생산 중 옆 남은시간(작게) */
   .cmdG .cgGasAuto .gaBtn{width:23px;height:24px;flex:none;border-radius:6px;border:1px solid rgba(120,232,150,.4);background:rgba(120,232,150,.14);color:#c7f5d6;font:800 16px/1 sans-serif;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
   .cmdG .cgGasAuto .gaBtn:active{background:rgba(70,240,106,.32)}
-  .cmdG .cgGasAuto .gaN{min-width:32px;padding:0 5px;text-align:center;font:800 15px/1 'Rajdhani',sans-serif;color:#eafff0}   /* 숫자 구역 가로로 여유 */
+  .cmdG .cgGasAuto .gaN{min-width:32px;padding:0 5px;text-align:center;font:800 15px/1 var(--font-num);color:#eafff0}   /* 숫자 구역 가로로 여유 */
   .cmdG .cgBody{display:flex;gap:8px;align-items:stretch;flex:1;min-height:0}
   /* 좌측 보조 정보 */
   .cmdG .cgInfo{flex:0 0 35%;max-width:176px;min-width:120px;display:flex;flex-direction:column;gap:4px;padding:7px 8px;overflow:hidden;
@@ -1465,21 +1471,21 @@
   .cmdG .cgInfo:has(.cgUnits){padding-top:2px;padding-bottom:3px}   /* 👥 유닛 HP 칩 프로필: 세로 패딩 축소 → 칩 영역 넓혀 칩/텍스트 1.2× · 8기 4줄 무스크롤 유지 */
   .cmdG .cgEb{font:800 8px/1 sans-serif;letter-spacing:1px;color:var(--cgMuted)} .cmdG .cgDn{font-size:var(--fs-md);font-weight:800;color:#eaf1fb;line-height:1.15;word-break:keep-all}
   .cmdG .cgDd{font-size:9.5px;color:var(--cgDim);line-height:1.4;word-break:keep-all;overflow-wrap:break-word}   /* 한글 단어 안 끊기고 줄바꿈(잘림 방지) */
-  .cmdG .cgVal{display:flex;align-items:baseline;gap:4px;font-family:'Rajdhani',sans-serif;font-weight:700}
+  .cmdG .cgVal{display:flex;align-items:baseline;gap:4px;font-family:var(--font-num);font-weight:700}
   .cmdG .cgVal .cur{font-size:13px;color:#c2ccda;font-variant-numeric:tabular-nums} .cmdG .cgVal .arw{color:var(--cgMuted);font-size:10px}
   .cmdG .cgVal .nxt{font-size:16px;color:var(--ca);text-shadow:0 0 7px var(--caG);font-variant-numeric:tabular-nums} .cmdG .cgVal .u{font-size:8.5px;color:var(--cgMuted);font-weight:600}
   .cmdG .cgVal.sm{margin-top:3px;gap:3px}   /* 진행 바 아래 작은 단계 표시(0Lv ▸ 1Lv) */
   .cmdG .cgVal.sm .cur{font-size:9.5px;color:#93a1b4} .cmdG .cgVal.sm .arw{font-size:8px} .cmdG .cgVal.sm .nxt{font-size:10.5px;text-shadow:none}
   .cmdG .cgStats{display:flex;flex-direction:column;gap:2px} .cmdG .cgStat{display:flex;justify-content:space-between;font-size:9.5px}
   .cmdG .cgStat span{color:#9aa6b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .cmdG .cgStat b{color:#e6eefc;font-family:'Rajdhani',sans-serif;font-size:11.5px;font-variant-numeric:tabular-nums}
+  .cmdG .cgStat b{color:#e6eefc;font-family:var(--font-num);font-size:11.5px;font-variant-numeric:tabular-nums}
   .cmdG .cgStats.cgScr .cgStat+.cgStat{border-top:1px solid rgba(255,255,255,.045)}   /* 행 구분 — 5줄이 한 덩어리로 뭉치지 않게 */
   /* 👥 다중 지정: 유닛별 HP 칩 그리드 — 칩 탭=개별 지정 */
   .cmdG .cgUnits{display:grid;grid-template-columns:repeat(2,1fr);gap:2px;overflow-y:auto;align-content:start;grid-auto-rows:calc((100% - 6px)/4);flex:1 1 auto;min-height:0;max-height:none;margin-top:0;scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}   /* 👥 유닛별 HP 칩 그리드 — 2열 고정 · 행 높이=구역의 1/4(gap 3칸 제외) → 8기=4줄이 구역을 정확히 꽉 채움 / 소수 선택 시엔 늘어나지 않고 정상 높이 유지 / 8기 초과=스크롤 */
   .cmdG .cgUChip{position:relative;min-height:11px;border-radius:3px;background:rgba(0,0,0,.5);border:1px solid var(--glass);overflow:hidden;cursor:pointer;box-shadow:inset 0 0 3px rgba(0,0,0,.6)}   /* 높이=그리드 행 stretch로 채움(min 11px) */
   .cmdG .cgUChip:active{border-color:var(--ca)}
   .cmdG .cgUFill{position:absolute;left:0;top:50%;transform:translateY(-50%);height:7px;border-radius:2px;transition:width .15s linear,background .2s}   /* HP 선 — 세로 중앙 · 비율↓=빨강(hpBarColor) · 칩 커짐에 맞춰 두께 6→7px */
-  .cmdG .cgUHp{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:800 8.5px/1 'Rajdhani',sans-serif;color:#fff;text-shadow:0 1px 1px #000,0 0 2px #000;font-variant-numeric:tabular-nums;letter-spacing:-.3px;pointer-events:none}   /* 칩 중앙 HP 수치 40/40(바 위 오버레이) · 가독성 7→8.5px */
+  .cmdG .cgUHp{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:800 8.5px/1 var(--font-num);color:#fff;text-shadow:0 1px 1px #000,0 0 2px #000;font-variant-numeric:tabular-nums;letter-spacing:-.3px;pointer-events:none}   /* 칩 중앙 HP 수치 40/40(바 위 오버레이) · 가독성 7→8.5px */
   .cmdG .cgUMore{align-self:stretch;height:10px;display:flex;align-items:center;justify-content:center;color:var(--cgMuted);font:800 8px/1 sans-serif;border:1px dashed var(--glass);border-radius:3px}
   .cmdG .cgStats.cgScr{flex:1 1 auto;min-height:0;max-height:none;gap:1px;justify-content:flex-start;overflow-y:auto;padding-right:3px;scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}   /* 혼합 다중지정 좌측 종류 목록 = 왼쪽 구역 전체를 써서 4종류가 스크롤 없이 딱 맞음(행이 늘어나 채움), 초과 시 스크롤 */
   .cmdG .cgStats.cgScr .cgStat{flex:1 1 0;min-height:11px;align-items:center}   /* 행이 남는 높이를 나눠 가짐(min 11px) → 4줄 꽉 참 · 초과분은 min 유지하며 스크롤 */
@@ -1488,12 +1494,12 @@
   .cmdG .cgUnits::-webkit-scrollbar-track,.cmdG .cgStats.cgScr::-webkit-scrollbar-track{background:transparent}
   .cmdG .cgBack{width:30px;height:30px;border-radius:8px}   /* ↩ 전체(소프트선택 복귀) — cgLift 변형(왼쪽 유턴 아이콘) */
   .cmdG .cgBack svg{width:18px;height:18px}
-  .cmdG .cgProg{margin-top:1px} .cmdG .cgProg .pl{display:flex;justify-content:space-between;font-size:8.5px;color:var(--cgMuted);margin-bottom:2px} .cmdG .cgProg .pl b{color:var(--caL);font-family:'Rajdhani',sans-serif;font-size:10px}
+  .cmdG .cgProg{margin-top:1px} .cmdG .cgProg .pl{display:flex;justify-content:space-between;font-size:8.5px;color:var(--cgMuted);margin-bottom:2px} .cmdG .cgProg .pl b{color:var(--caL);font-family:var(--font-num);font-size:10px}
   .cmdG .cgBar{height:6px;border-radius:3px;background:rgba(0,0,0,.55);overflow:hidden;box-shadow:inset 0 0 4px rgba(0,0,0,.7)}
   .cmdG .cgBar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,color-mix(in srgb,var(--ca) 55%,#000),var(--ca));box-shadow:0 0 7px var(--caG);transition:width .12s linear}
   .cmdG .cgQBar{height:3px;border-radius:2px;background:rgba(0,0,0,.5);overflow:hidden;margin-top:3px}   /* 🔢 진행 바 아래 얇은 대기열 구분선 */
   .cmdG .cgQBar i{display:block;height:100%;border-radius:2px;background:#fff;box-shadow:0 0 5px rgba(255,255,255,.45);transition:width .15s linear,background .2s linear}
-  .cmdG .cgDcost{display:flex;align-items:center;gap:5px;margin-top:auto;padding-top:2px;font-family:'Rajdhani',sans-serif;font-weight:800;font-size:11.5px;flex-wrap:wrap}
+  .cmdG .cgDcost{display:flex;align-items:center;gap:5px;margin-top:auto;padding-top:2px;font-family:var(--font-num);font-weight:800;font-size:11.5px;flex-wrap:wrap}
   .cmdG .cgDcost .time{color:var(--cgMuted);font-size:9.5px;width:100%}
   /* 🔢 생산 대기열(최대 5) — 왼쪽 정보 영역. 앞 칸=진행바, 탭=취소(100% 환불) */
   .cmdG .cgQ{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:1fr;gap:4px;margin-top:3px;flex:1;min-height:0} .cmdG .cgQlbl{font:800 8px/1 sans-serif;letter-spacing:.5px;color:var(--cgMuted);margin-top:2px}
@@ -1526,7 +1532,7 @@
   .cmdG .cgSlot.cgBunk{justify-content:flex-start;gap:3px;padding:5px 4px}
   .cmdG .cgSlot.cgBunk .cgPro{width:100%;height:auto;aspect-ratio:1.35;border-radius:6px}
   .cmdG .cgSlot.cgBunk .cgPro svg{width:62%;height:62%} .cmdG .cgSlot.cgBunk .cgPro img{width:100%;height:100%}
-  .cmdG .cgBunkHp{font:800 10px/1 'Rajdhani',sans-serif;color:#ff9a9a;text-align:center;margin-top:auto;text-shadow:0 1px 2px #000}
+  .cmdG .cgBunkHp{font:800 10px/1 var(--font-num);color:#ff9a9a;text-align:center;margin-top:auto;text-shadow:0 1px 2px #000}
   .cmdG .cgCost{display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap;line-height:1;margin-top:auto}
   .cmdG[data-build="1"] .cgName{text-overflow:clip;max-width:none}   /* 생략(...) 없이 — JS가 폰트 축소로 한 줄 */
   .cmdG[data-build="1"] .cgCost{flex-direction:column;flex-wrap:nowrap;gap:1px;margin-top:auto}   /* 크레딧(위)/에너지(아래) 각 한 줄 */
@@ -1534,9 +1540,9 @@
   .cmdG .cgCost.cgRwd{flex-direction:row;flex-wrap:nowrap;gap:4px;font-size:9px;font-weight:800;color:var(--cgGood);white-space:nowrap}   /* 보스 셀: 소환 무료 → 코스트 대신 처치 보상(+초록=획득 신호, 한 줄) */
   .cmdG .cgCost.cgRwd span{display:inline-flex;align-items:center;gap:2px}
   
-  .cmdG .cc{display:inline-flex;align-items:center;gap:1px;font:800 10px/1 'Rajdhani',sans-serif;font-variant-numeric:tabular-nums}
+  .cmdG .cc{display:inline-flex;align-items:center;gap:1px;font:800 10px/1 var(--font-num);font-variant-numeric:tabular-nums}
   .cmdG .cc.cr{color:var(--cgCr)} .cmdG .cc.en{color:var(--cgEn)} .cmdG .cc.hp{color:#ff8a8a}   /* 스킬 HP 코스트(아드레날린) */
-  .cmdG .cgMeta{position:absolute;top:5px;right:5px;display:inline-flex;align-items:center;gap:1px;font:800 8.5px/1 'Rajdhani',sans-serif;
+  .cmdG .cgMeta{position:absolute;top:5px;right:5px;display:inline-flex;align-items:center;gap:1px;font:800 8.5px/1 var(--font-num);
     color:var(--cgPop);background:rgba(10,12,20,.72);border:1px solid rgba(200,182,255,.3);border-radius:4px;padding:2px 3px;font-variant-numeric:tabular-nums;z-index:1}
   .cmdG .cgMeta.lv{color:var(--caL);border-color:var(--caS)}
   .cmdG .cgSlot.sel{border-color:var(--ca);box-shadow:0 0 13px -2px var(--caG),inset 0 0 10px rgba(0,0,0,.35)}
@@ -1555,7 +1561,7 @@
   .cmdG .cgPage button{width:24px;height:19px;border-radius:5px;border:1px solid var(--metal-edge);background:rgba(255,255,255,.04);color:var(--caL);cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center}
   .cmdG .cgPage button:disabled{opacity:.3;cursor:default} .cmdG .cgPage .dots{display:flex;gap:5px}
   .cmdG .cgPage .dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.18)} .cmdG .cgPage .dot.on{background:var(--ca);box-shadow:0 0 6px var(--caG)}
-  .cmdG .cgPage .pn{font:800 10px/1 'Rajdhani',sans-serif;color:var(--cgDim);letter-spacing:.5px}
+  .cmdG .cgPage .pn{font:800 10px/1 var(--font-num);color:var(--cgDim);letter-spacing:.5px}
   /* 플레이어 선택: 8인 그리드(4×2) — 깔끔한 다크 카드 + 컬러 액센트 */
   #plGridWrap{display:flex;flex-direction:column;flex:none;height:min(26vh,126px);max-height:min(26vh,126px);min-height:0}   /* 다른 하단 섹션(유닛지정/뽑기/업그레이드)과 동일한 126px 고정 높이 */
   /* 플레이어 관전 슬롯 = 통일된 SC 카드(메탈+사선 모서리+플레이어색 좌측 액센트+스캔라인) */
@@ -1580,9 +1586,9 @@
   .plbtn.mine::after{opacity:.7}
   .plbtn.gone{cursor:default;pointer-events:none;filter:saturate(.55) brightness(.58)}   /* 탈락: 그 플레이어 색 유지 + 어두운 필터 · 관전 불가 */
   .plbtn.gone::after{opacity:.5}
-  .plnum{font-size:18px;font-weight:800;font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif;color:var(--pc);line-height:1;text-shadow:0 1px 2px #000}
+  .plnum{font-size:18px;font-weight:800;font-family:var(--font-num);color:var(--pc);line-height:1;text-shadow:0 1px 2px #000}
   .plst{font-size:var(--fs-xs);font-weight:700;letter-spacing:.3px;color:#9aa6b4;max-width:96%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .plcnt{font-size:8.5px;font-weight:700;color:var(--txt-hud);margin-top:2px;font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif}
+  .plcnt{font-size:8.5px;font-weight:700;color:var(--txt-hud);margin-top:2px;font-family:var(--font-num)}
 
   /* ===== 공유 우주 로딩방 배경 (멀티플레이/방 찾기/방 생성/로비 공통) =====
      게임과 동일한 space_bg 타일을 어둡게 깔고 빨강 비네트로 기존 분위기 유지.
@@ -1641,8 +1647,8 @@
     background:none;border:none;border-bottom:1px solid rgba(255,255,255,.07)}
   .ovStat:last-child{border-bottom:none}
   .ovStat .osL{font-size:var(--fs-sm);font-weight:700;color:var(--txt-mute);letter-spacing:.3px}
-  .ovStat .osV{font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:800;color:#eaf0f8;text-shadow:0 1px 2px #000;white-space:nowrap}
-  .ovStat .osCoin{font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:800;color:#ffd24a;text-shadow:0 0 10px rgba(255,210,74,.35)}   /* 핵심 보상 강조 */
+  .ovStat .osV{font-family:var(--font-num);font-size:15px;font-weight:800;color:#eaf0f8;text-shadow:0 1px 2px #000;white-space:nowrap}
+  .ovStat .osCoin{font-family:var(--font-num);font-size:18px;font-weight:800;color:#ffd24a;text-shadow:0 0 10px rgba(255,210,74,.35)}   /* 핵심 보상 강조 */
   .ovStat .osNew{font-size:11px;font-weight:800;color:#7ee081;background:rgba(126,224,129,.13);border:1px solid rgba(126,224,129,.34);border-radius:6px;padding:2px 7px}
   
   /* 하단 액션 = 설정 버튼과 같은 규격(44px · 라운드 11 · 중립 글래스) — 왼쪽 관전하기 / 오른쪽 확인 */
@@ -1693,7 +1699,7 @@
   .lbHead{flex:0 0 auto;display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:8px}
   .lbTitleWrap{display:flex;align-items:baseline;gap:7px;min-width:0}
   .lbTitle{font-size:16px;font-weight:800;color:#eef1f6;text-shadow:0 1px 3px rgba(0,0,0,.65);letter-spacing:.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}   /* 방 이름 = 무난한 화이트(붉은 네온 제거) */
-  .lbCount{flex:0 0 auto;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:800;color:var(--hud)}
+  .lbCount{flex:0 0 auto;font-family:var(--font-num);font-size:14px;font-weight:800;color:var(--hud)}
   .lbRoom{font-size:var(--fs-md);color:var(--hud);text-shadow:0 0 6px var(--hud-glow);white-space:nowrap}
   /* 슬롯 = 하나의 글래스 패널에 구분선 행(방찾기·방만들기 언어와 통일) · 8자리 넘치면 패널 내부 스크롤(채팅·버튼은 고정) */
   .lbGrid{flex:0 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:0;margin-bottom:9px;padding:1px 11px;border-radius:13px;   /* 슬롯 수만큼만 차지(8번 아래 빈 구역 없음) · 넘치면 내부 스크롤 */
@@ -1751,7 +1757,7 @@
   .lbMenuOpt .lmTx{flex:1;min-width:0}
   .lbMenuOpt.danger .lmTx{color:#ff9a9a}
   .lbMenuOpt:active{background:rgba(255,255,255,.06)}   /* 탭 피드백만 */
-  .lbNum{font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:800;color:var(--pc,var(--info));filter:saturate(.4);min-width:14px;text-align:center;text-shadow:0 1px 2px #000}   /* 채도↓ → 미세한 진영색 차이만 */
+  .lbNum{font-family:var(--font-num);font-size:15px;font-weight:800;color:var(--pc,var(--info));filter:saturate(.4);min-width:14px;text-align:center;text-shadow:0 1px 2px #000}   /* 채도↓ → 미세한 진영색 차이만 */
   .lbInfo{min-width:0;flex:1;text-align:left;display:flex;align-items:baseline;gap:8px}   /* 1열 넓은 카드: 이름+상태 한 줄 */
   .lbName{flex:0 1 auto;font-size:var(--fs-lg);font-weight:700;color:#e6e2e2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.15}
   .lbStat{flex:0 0 auto;font-size:var(--fs-xs);color:#9aa6b4;letter-spacing:.2px;white-space:nowrap}
@@ -1767,7 +1773,7 @@
     box-shadow:inset 0 1px 0 rgba(255,255,255,.055),0 1px 3px rgba(0,0,0,.5);cursor:default;transition:border-color .12s,transform .08s}
   .lbRace .lrDot{flex:none;width:6px;height:6px;border-radius:50%;background:var(--rc,#8a93a0);
     box-shadow:0 0 0 1.5px rgba(0,0,0,.5),0 0 4px -1px var(--rc65,transparent)}   /* 상태등: 다크 링 + 아주 옅은 발광 */
-  .lbRace .lrNm{font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif;font-size:9.5px;font-weight:800;color:#c9d2dd;letter-spacing:.35px;white-space:nowrap;text-shadow:0 1px 1px rgba(0,0,0,.6)}
+  .lbRace .lrNm{font-family:var(--font-num);font-size:9.5px;font-weight:800;color:#c9d2dd;letter-spacing:.35px;white-space:nowrap;text-shadow:0 1px 1px rgba(0,0,0,.6)}
   .lbRace:not(.me){opacity:.66}   /* 남의 종족 = 살짝 흐리게(내 프로필과 미세 구분) */
   .lbRace.me{cursor:pointer;border-color:var(--glass-edge)}
   .lbRace.me:active{transform:translateY(1px)}
@@ -1821,7 +1827,7 @@
   .rmNum button{flex:0 0 auto;padding:0 16px;border-radius:10px;font-family:inherit;font-size:var(--fs-lg);font-weight:800;cursor:pointer;color:#dfe7f0;background:rgba(255,255,255,.06);border:1px solid var(--metal-edge);transition:background .14s,border-color .14s}
   .rmNum button:hover{background:rgba(255,255,255,.1);border-color:var(--glass-edge)}
   .rmNum button:active{transform:translateY(1px)}
-  .riNum{font-family:'Rajdhani',sans-serif;font-weight:800;color:var(--hud);margin-right:5px}
+  .riNum{font-family:var(--font-num);font-weight:800;color:var(--hud);margin-right:5px}
   .riLock{font-size:var(--fs-sm);color:var(--warn);margin-right:3px}
   /* 방 만들기 모달 */
   #createPanel{position:absolute;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:20px}   /* 방찾기(#rooms)와 동일 패딩 → 카드 폭 일치 */
@@ -1870,7 +1876,7 @@
     box-shadow:0 3px 10px -5px rgba(0,0,0,.6),inset 9px 0 22px -12px var(--rc),inset 0 1px 0 rgba(255,255,255,.06);transition:transform .1s}
   .raceOpt::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--rc,#8a93a0);box-shadow:0 0 14px 0 var(--rc65,transparent)}   /* 좌측 종족색 바(항상) */
   .raceOpt:active{transform:scale(.99) translateY(1px)}
-  .raceOpt .roNm{flex:1;min-width:0;font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif;font-size:14px;font-weight:800;letter-spacing:.6px;color:#f2f6fb;text-shadow:0 1px 2px rgba(0,0,0,.45)}
+  .raceOpt .roNm{flex:1;min-width:0;font-family:var(--font-num);font-size:14px;font-weight:800;letter-spacing:.6px;color:#f2f6fb;text-shadow:0 1px 2px rgba(0,0,0,.45)}
   .raceOpt .roDesc{flex:none;font-size:10.5px;font-weight:700;color:#98a4b2;letter-spacing:.2px}
   .raceOpt .roGo{flex:none;width:15px;height:15px;color:#7a8593}
   .raceOpt.on .roNm{color:#fff}
@@ -1896,7 +1902,7 @@
   #raceMenu .rmOpt .rmDot{flex:none;width:6px;height:6px;border-radius:50%;background:var(--rc,#8a93a0);opacity:.45}
   #raceMenu .rmOpt.on .rmDot{opacity:1;box-shadow:0 0 4px var(--rc65,transparent)}
   #raceMenu .rmOpt:active{background:rgba(255,255,255,.05)}
-  #raceMenu .rmOpt .rmNm{position:relative;font-family:'Rajdhani','Apple SD Gothic Neo',sans-serif;font-size:10px;font-weight:800;letter-spacing:.3px;color:#94a1b0;white-space:nowrap}   /* 미선택=흐리게 */
+  #raceMenu .rmOpt .rmNm{position:relative;font-family:var(--font-num);font-size:10px;font-weight:800;letter-spacing:.3px;color:#94a1b0;white-space:nowrap}   /* 미선택=흐리게 */
   #raceMenu .rmOpt.on .rmNm{color:#fff}
   /* 솔로 난이도 팝업 안 종족 드롭다운 트리거 */
   .raceTrig{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 13px;margin:6px 0 4px;border-radius:7px;cursor:pointer;
@@ -1934,7 +1940,7 @@
   .riSub{font-size:var(--fs-xs);color:var(--txt-mute);margin-top:2px}
   .riSub .riOver{color:#ff8a6b;font-weight:700}
   .riRight{text-align:right;flex:none}
-  .riCnt{font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:800;color:#cfe0ec;line-height:1}
+  .riCnt{font-family:var(--font-num);font-size:15px;font-weight:800;color:#cfe0ec;line-height:1}
   .riCnt.full{color:#ff7676}
   .riStat{font-size:var(--fs-xs);font-weight:700;margin-top:2px}
   .riStat.wait{color:var(--ok)}.riStat.play{color:var(--txt-mute)}
@@ -2079,7 +2085,7 @@
     color:#9aa6b4;background:rgba(255,255,255,.04);border:1px solid var(--metal-edge);transition:all .18s}
   .opPl .opPlNm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .opPl.ready{color:#eaf1fb;border-color:color-mix(in srgb,var(--mapAccent,#4aa8ff) 45%,transparent);background:color-mix(in srgb,var(--mapAccent,#4aa8ff) 14%,transparent)}
-  .opNum{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:31px;line-height:1;color:#eaf1fb;letter-spacing:.5px;
+  .opNum{font-family:var(--font-num);font-weight:800;font-size:31px;line-height:1;color:#eaf1fb;letter-spacing:.5px;
     display:flex;align-items:baseline;gap:8px;text-shadow:0 0 12px var(--mapAccent,#4aa8ff),0 3px 8px rgba(0,0,0,.6)}
   .opNumLb{font-family:inherit;font-size:var(--fs-md);font-weight:800;font-style:normal;letter-spacing:.5px;color:var(--txt-mute);text-shadow:none}
   /* ── 게임 전환: 화면이 서서히 흐려지며 안으로 들어가는 디졸브(길이 = JS의 GS_WARP_MS) ── */
@@ -2234,7 +2240,7 @@
   .ptHelp{flex:0 0 auto;width:15px;height:15px;display:flex;align-items:center;justify-content:center;border-radius:50%;cursor:pointer;
     font-size:9.5px;font-weight:800;font-family:inherit;color:var(--setAcc);background:rgba(92,214,255,.12);border:1px solid var(--setAccS);align-self:center}
   .ptHelp:active{background:rgba(92,214,255,.24)}
-  .ptBal{margin-left:auto;flex:0 0 auto;font-family:'Rajdhani',sans-serif;font-size:var(--fs-md);color:var(--txt-mute);white-space:nowrap;display:flex;align-items:baseline;gap:3px}
+  .ptBal{margin-left:auto;flex:0 0 auto;font-family:var(--font-num);font-size:var(--fs-md);color:var(--txt-mute);white-space:nowrap;display:flex;align-items:baseline;gap:3px}
   .setTitle .ptBal b{font-size:16px;font-weight:800;color:#5cd6ff}   /* .ptTitle b(파티 패널 빨강)와 클래스명 충돌 → 우선순위로 시안 고정 */
   #pointPanel .setX .mIco,#ptHelpPop .setX .mIco{color:inherit}   /* 닫기 X = 은은한 회색(빨강 mIco 기본색 차단) */
   /* 카테고리 = 게임 하단 네비 바처럼: 하나의 바(가로 꽉 참) + 탭 사이 세로줄 + 아이콘 + 활성=하단 시안 라인 */
@@ -2262,9 +2268,9 @@
   .ptInfo{flex:1;min-width:0}
   .ptNameRow{display:flex;align-items:baseline;gap:5px;margin-bottom:5px}
   .ptName{flex:0 0 auto;font-size:var(--fs-lg);font-weight:700;color:#dbe3ec;white-space:nowrap}   /* 항목명은 항상 한 줄 */
-  .ptVal{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;display:inline-flex;align-items:center;gap:2px;font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;color:#8a94a3;white-space:nowrap}   /* 수치 힌트: 제목 옆에 붙임·작게·회색(잘 안 보여도 무방) */
+  .ptVal{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;display:inline-flex;align-items:center;gap:2px;font-family:var(--font-num);font-size:10px;font-weight:700;color:#8a94a3;white-space:nowrap}   /* 수치 힌트: 제목 옆에 붙임·작게·회색(잘 안 보여도 무방) */
   .ptArw{font-style:normal;font-size:10px;line-height:1;color:#767f8c}   /* 상승 화살표 = 수치 사이 중앙 높이 */
-  .ptLv{flex:0 0 auto;margin-left:auto;padding-left:8px;font-size:var(--fs-sm);font-weight:700;color:var(--txt-mute);font-family:'Rajdhani',sans-serif}
+  .ptLv{flex:0 0 auto;margin-left:auto;padding-left:8px;font-size:var(--fs-sm);font-weight:700;color:var(--txt-mute);font-family:var(--font-num)}
   .ptPips{display:flex;gap:3px}
   .ptPips i{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.08);max-width:26px}
   .ptPips i.on{background:var(--setAcc)}
@@ -2275,8 +2281,8 @@
     font-family:inherit;color:#ffdede;background:linear-gradient(180deg,rgba(255,59,59,.32),rgba(255,59,59,.1));
     border:1px solid rgba(255,59,59,.6);box-shadow:inset 0 1px 0 rgba(255,255,255,.08);transition:all .12s}   /* 글로우 없음 */
   .ptBtn:not(:disabled):not(.poor):active{transform:translateY(1px)}
-  .ptBtn b{font-family:'Rajdhani',sans-serif;font-size:var(--fs-lg);font-weight:800;line-height:1.1;color:#ffefef}
-  .ptBtnLv{font-family:'Rajdhani',sans-serif;font-style:normal;font-size:9px;font-weight:700;line-height:1;color:var(--txt-mute);letter-spacing:.2px}   /* 레벨 = 비용 아래(이름줄 폭 확보) */
+  .ptBtn b{font-family:var(--font-num);font-size:var(--fs-lg);font-weight:800;line-height:1.1;color:#ffefef}
+  .ptBtnLv{font-family:var(--font-num);font-style:normal;font-size:9px;font-weight:700;line-height:1;color:var(--txt-mute);letter-spacing:.2px}   /* 레벨 = 비용 아래(이름줄 폭 확보) */
   .ptBtnLv.trans{color:#c6a3ee}   /* 초월 단계 */
   .ptBtn span{font-size:var(--fs-xs);font-weight:700;opacity:.8}
   /* 강화 불가(포인트 부족) = 색·발광 거의 없음 */
@@ -2334,10 +2340,10 @@
   .pdSlot.lock{opacity:.62}
   .pdSlot.pick{border-color:#7d8b9c;color:#dbe3ec;background:linear-gradient(180deg,rgba(44,54,70,.95),rgba(20,26,36,.95))}   /* 가방 필터 중 = 중립 강조(시안 아님) */
   .pdSlot:active{transform:translate(-50%,-50%) translateY(1px)}
-  .pdSlot .pdLv{position:absolute;top:-7px;right:-5px;font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:800;font-style:normal;
+  .pdSlot .pdLv{position:absolute;top:-7px;right:-5px;font-family:var(--font-num);font-size:10px;font-weight:800;font-style:normal;
     font-variant-numeric:tabular-nums;padding:0 4px;border-radius:var(--r-bar);color:inherit;background:#0b0e16;border:1px solid currentColor}
   .gearSum{flex:0 0 auto;text-align:center;font-size:12px;color:var(--txt-mute);padding:4px 0}
-  .gearSum b{color:#eaf1fb;font-family:'Rajdhani',sans-serif;font-size:13px;font-variant-numeric:tabular-nums}
+  .gearSum b{color:#eaf1fb;font-family:var(--font-num);font-size:13px;font-variant-numeric:tabular-nums}
   /* 아래 구역: 가방 */
   /* 가방은 높이 고정(2줄) — 짐이 아무리 많아도 위 구역을 밀어내지 않는다. 상세 팝업의 기준 상자이기도 하다 */
   .bagSec{position:relative;flex:0 0 auto;display:flex;flex-direction:column;border-top:1px solid rgba(255,255,255,.09);padding-top:8px}
@@ -2350,7 +2356,7 @@
   .bagCnt{flex:0 0 auto}
   .bagHead{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
   .bagTtl{font-size:12px;font-weight:800;color:#aeb8c6}
-  .gsSub{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--txt-mute)}
+  .gsSub{font-family:var(--font-num);font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--txt-mute)}
   .igBack{min-width:0;padding:4px 8px;font-size:11px}
   /* 스크롤은 .bagBody 안에서만 — 카드는 늘어나지 않는다. 겉면(.bagScroll)은 "더 있음" 그림자 담당 */
   .bagScroll{position:relative;flex:0 0 auto;height:172px;display:flex}   /* 6열 × 3줄 + 다음 줄 살짝 */
@@ -2367,7 +2373,7 @@
   .igCell.sel{border-color:var(--acc-sel);box-shadow:0 0 0 1px rgba(92,214,255,.45),0 0 10px -3px rgba(92,214,255,.5)}   /* 선택 = 시안(--acc-sel) */
   .igCell.busy{opacity:.4}
   .igCell:active{transform:translateY(1px)}
-  .igCell .igLv{position:absolute;right:2px;bottom:0;font-family:'Rajdhani',sans-serif;font-size:9px;font-weight:800;font-style:normal;font-variant-numeric:tabular-nums;color:#dbe3ec}
+  .igCell .igLv{position:absolute;right:2px;bottom:0;font-family:var(--font-num);font-size:9px;font-weight:800;font-style:normal;font-variant-numeric:tabular-nums;color:#dbe3ec}
   .igCell .igOn{position:absolute;left:3px;top:3px;width:4px;height:4px;border-radius:50%;background:#6ff0a0}
   .igEmpty{padding:16px 4px;font-size:12px;color:var(--txt-mute);text-align:center}
   /* 상세 = 가방을 밀어내지 않고 가방 위로 올라오는 팝업(.bagSec 기준) */
@@ -2495,10 +2501,10 @@
   .twBack{flex:0 0 auto;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:var(--r-lg);cursor:pointer;color:#cdd6e2;background:rgba(255,255,255,.06);border:1px solid var(--metal-edge)}
   .twBack .mIco{width:18px;height:18px;color:inherit}
   .twName{font-size:14px;font-weight:800;color:#eaf1fb}
-  .twLv{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:800;color:var(--gold-lt)}
-  .twCoin{margin-left:auto;font-family:'Rajdhani',sans-serif;font-size:13px;color:var(--txt-mute)}
+  .twLv{font-family:var(--font-num);font-size:12px;font-weight:800;color:var(--gold-lt)}
+  .twCoin{margin-left:auto;font-family:var(--font-num);font-size:13px;color:var(--txt-mute)}
   .twCoin b{font-size:16px;font-weight:800;color:#ffd24a}
-  .twPow{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:800;color:#ff8a9a}
+  .twPow{font-family:var(--font-num);font-size:12px;font-weight:800;color:#ff8a9a}
   /* ══ 🏠 HOME 대시보드 ══ 톤은 하단 네비(.navBar)와 같은 순수 회색 · 라운드는 --r-bar(3px)로 거의 직각.
      푸른기(구 --hbEdge rgba(88,118,188,…) / --hmPanel rgba(13,19,32,…))는 전부 걷어냈다 — 다시 넣지 말 것. */
   #homeScreen{position:absolute;inset:0;z-index:60;display:flex;flex-direction:column;
@@ -2520,7 +2526,7 @@
   .hmUpTx{min-width:0;display:flex;flex-direction:column}
   .hmUpName{font-size:var(--fs-lg);font-weight:800;color:#ececec}
   .hmUpLv{font-size:var(--fs-sm);color:#9a9a9a}
-  .hmUpLv b{font-family:'Rajdhani',sans-serif;font-variant-numeric:tabular-nums;color:#5dff8f}
+  .hmUpLv b{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:#5dff8f}
   .hmUpBtn{height:32px;cursor:pointer;font-family:inherit;font-size:var(--fs-md);font-weight:900;letter-spacing:.3px;
     color:#2b1d00;background:linear-gradient(180deg,#ffd97a,#e8a92b 58%,#b8801a);
     border:1px solid rgba(255,220,140,.8);border-radius:var(--r-bar)}
@@ -2539,7 +2545,7 @@
      그래야 우주 배경이 상단까지 끊기지 않고 이어져 보인다. showAppScreen()이 화면별로 .bare를 붙인다. */
   .curBar.bare{background:none;border-bottom:0}
   .curBar.bare::after{display:none}
-  .curBar .res{display:flex;align-items:center;gap:5px;font-family:'Rajdhani',sans-serif;font-variant-numeric:tabular-nums;font-weight:800;font-size:14px;color:#e7edf5;white-space:nowrap}
+  .curBar .res{display:flex;align-items:center;gap:5px;font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:800;font-size:14px;color:#e7edf5;white-space:nowrap}
   .curBar .ri{width:16px;height:16px;flex:none}
   #phone.curOn .appScreen{padding-top:var(--curH)}
   #phone.curOn #mapSelect{padding-top:calc(var(--curH) + 12px)}
@@ -2616,7 +2622,7 @@
   .twStatGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px}
   .twStat{display:flex;align-items:center;gap:6px;padding:7px 9px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--metal-edge)}
   .twStat .tsL{font-size:12px;color:var(--txt-mute);flex:1}
-  .twStat .tsV{font-family:'Rajdhani',sans-serif;font-weight:800;color:#dbe3ec;min-width:20px;text-align:right}
+  .twStat .tsV{font-family:var(--font-num);font-weight:800;color:#dbe3ec;min-width:20px;text-align:right}
   .twStat button{flex:0 0 auto;width:22px;height:22px;border-radius:6px;cursor:pointer;font-weight:800;line-height:1;color:#dff4ff;background:rgba(92,214,255,.2);border:1px solid rgba(92,214,255,.5)}
   .twStat button:disabled{opacity:.3;cursor:default}
   .twRow{display:flex;align-items:center;gap:10px;padding:9px 3px;border-top:1px solid rgba(255,255,255,.07)}
@@ -2668,13 +2674,13 @@
   .msBanner{flex:1;display:flex;align-items:center;gap:14px;padding:0 1px}
   .msBanner .bnStat{display:inline-flex;align-items:center;gap:4px}
   .msBanner .bnStat .ic{width:10px;height:10px}
-  .msBanner .bnStat b{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:var(--fs-lg);color:#e3ebf3}
+  .msBanner .bnStat b{font-family:var(--font-num);font-weight:800;font-size:var(--fs-lg);color:#e3ebf3}
   .msBanner .bnStat em{font-style:normal;font-size:var(--fs-xs);color:#79838f}
   .msBanner .bnAll .ic{color:var(--neon)}
   .mapLive{display:flex;align-items:center;gap:11px;margin-top:6px;white-space:nowrap;overflow:hidden}
   .mapLive .mlStat{display:inline-flex;align-items:center;gap:3px}
   .mapLive .mlStat .ic{width:9px;height:9px;margin:0}
-  .mapLive .mlStat b{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:var(--fs-md);color:#d6dee7}
+  .mapLive .mlStat b{font-family:var(--font-num);font-weight:800;font-size:var(--fs-md);color:#d6dee7}
   .mapLive .mlStat em{font-style:normal;font-size:var(--fs-xs);color:#8b949f}
   .msList{flex:0 0 auto;height:333px;overflow-y:auto;display:flex;flex-direction:column;gap:7px;padding-right:2px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}   /* 4개 고정(78px×4 + 7px×3) */
   /* .msList 스크롤바 = .uiScroll(공용) — 이 모양이 기준이 됐다 */
@@ -2993,7 +2999,7 @@
     color:#dfe7f0;background:rgba(255,255,255,.06);border:1px solid var(--metal-edge);transition:background .12s,border-color .12s}
   .cpStepBtn:hover{background:rgba(255,255,255,.1);border-color:var(--glass-edge)} .cpStepBtn:active{transform:translateY(1px)}
   .cpStepBtn:disabled{opacity:.32;cursor:default;background:rgba(255,255,255,.03);border-color:var(--metal-edge);color:var(--txt-mute)}
-  .cpStepVal{flex:0 0 auto;width:48px;text-align:center;font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:800;color:#fff;
+  .cpStepVal{flex:0 0 auto;width:48px;text-align:center;font-family:var(--font-num);font-size:17px;font-weight:800;color:#fff;
     padding:5px 0;border-radius:8px;background:rgba(0,0,0,.3);border:1px solid var(--metal-edge);font-variant-numeric:tabular-nums}
   /* 방 만들기 창 = 방찾기 창 크기로 확대·고정(폭 350) + 하단 버튼 고정 */
   #createPanel .cpCard{width:92%;max-width:350px;height:min(555px,92%);padding:15px 16px 16px;display:flex;flex-direction:column;box-sizing:border-box}   /* 방찾기 카드 높이(555)에 맞춤 */
@@ -3035,8 +3041,8 @@
   .cpDiffBtns .moDiffBtn.on{color:#fff;border-color:var(--dc);background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.02));box-shadow:0 0 12px -5px var(--dc),inset 0 0 13px -7px var(--dc)}
   .cpDiffBtns .moDiffBtn.on .ddN{color:var(--dc);text-shadow:0 0 8px var(--dc)}
   .cpDiffInfo{display:flex;justify-content:center;gap:14px;margin:0 0 20px;font-size:9px;font-weight:700}
-  .cpDiffInfo .cpdE{color:#b58585} .cpDiffInfo .cpdE b{color:#ff9e9e;font-weight:800;font-family:'Rajdhani',sans-serif}
-  .cpDiffInfo .cpdC{color:#b59d63} .cpDiffInfo .cpdC b{color:#ffd485;font-weight:800;font-family:'Rajdhani',sans-serif}
+  .cpDiffInfo .cpdE{color:#b58585} .cpDiffInfo .cpdE b{color:#ff9e9e;font-weight:800;font-family:var(--font-num)}
+  .cpDiffInfo .cpdC{color:#b59d63} .cpDiffInfo .cpdC b{color:#ffd485;font-weight:800;font-family:var(--font-num)}
   /* 개인 플레이 난이도: 2×2 그리드, 난이도별 색으로 구분, 여유로운 버튼 */
   /* 난이도 = 입체 글래스 카드 + 좌측 색 바/항상 켜진 색 글로우 + 우측 화살표. 모바일 = 호버 미사용(정지 상태로 포인트). */
   .soloDiffBtns{display:flex;flex-direction:column;gap:8px;margin:6px 0 12px}
@@ -3050,7 +3056,7 @@
   .soloDiffBtns .ddStats{display:flex;flex-direction:column;justify-content:center;align-items:flex-end;gap:3px}
   .soloDiffBtns .ddStat{display:flex;align-items:baseline;gap:6px;line-height:1.15}
   .soloDiffBtns .ddLbl{font-size:9px;font-weight:700;letter-spacing:.2px}   /* 색은 스탯별로(라벨=흐린 같은 색) */
-  .soloDiffBtns .ddStat em{font-family:'Rajdhani',sans-serif;font-style:normal;font-size:11.5px;font-weight:700;font-variant-numeric:tabular-nums}   /* 값 크기·굵기 다운 */
+  .soloDiffBtns .ddStat em{font-family:var(--font-num);font-style:normal;font-size:11.5px;font-weight:700;font-variant-numeric:tabular-nums}   /* 값 크기·굵기 다운 */
   .soloDiffBtns .ddEnemy .ddLbl{color:#b58585} .soloDiffBtns .ddEnemy em{color:#ff9e9e}   /* 적 HP = 붉은 한 쌍(라벨 흐림·값 진함) */
   .soloDiffBtns .ddCoin .ddLbl{color:#b59d63} .soloDiffBtns .ddCoin em{color:#ffd485}      /* 포인트 획득량 = 금색 한 쌍 */
   .soloDiffBtns .moDiffBtn .ddGo{flex:none;width:15px;height:15px;color:#7a8593}
@@ -3086,9 +3092,15 @@
   .moBtn:disabled:hover,.moBtn.locked:hover{filter:grayscale(.5);box-shadow:none}
   .moBtn:disabled:active,.moBtn.locked:active{transform:none}
   .moLockNote{font-size:var(--fs-xs);font-weight:700;color:#ff9a6b;padding:2px 6px;border-radius:var(--r-lg);background:rgba(255,154,107,.14);border:1px solid rgba(255,154,107,.35)}
-  
-  
-  
+
+  /* ══ 제목 폰트(Do Hyeon) 적용 지점 — 이 목록이 단일 소스다 ══
+     ⚠ 반드시 스타일시트 '맨 끝'에 둔다. 앞쪽에 두면 뒤에 오는 .ecTitle·#ovTitle 같은 개별 규칙의
+        font-weight에 져서 일부 제목만 가짜 볼드로 남는다(전에 font-size로 똑같이 당했다).
+     ⚠ Do Hyeon은 굵기가 400 하나뿐 — 800/900을 주면 브라우저가 가짜 볼드를 그려 획이 뭉갠다.
+        그래서 400으로 되돌린다. 제목 위계는 굵기가 아니라 '크기'로 준다.
+     ⚠ 15px 미만에는 쓰지 않는다(압축된 굵은 한글이라 작은 자소가 뭉갠다). 작은 라벨은 --font-ko. */
+  #ovTitle,.ovTtl,.ecTitle,.setTitle,.hmUpgHead,.twName,.cpTitle,.opTitle,.msTitle,.lbTitle,.ptTitle{
+    font-family:var(--font-ti);font-weight:400}
 </style>
 </head>
 <body>
@@ -3765,6 +3777,9 @@
 // ============================================================================
 // 데이터 — 엑셀(스타 유즈맥.xlsx) 실값
 // ============================================================================
+// 캔버스(2D ctx.font)용 숫자 폰트 — CSS의 --font-num과 같은 값이지만 캔버스는 var()를 못 읽어 여기 따로 둔다.
+// 폰트를 바꿀 땐 :root의 --font-num과 이 상수를 같이 고칠 것.
+const FONT_NUM='Rajdhani,"IBM Plex Sans KR","Apple SD Gothic Neo",sans-serif';
 // ── 시스템 메시지 아이콘 ── 이모지 대신 라인 아이콘(24/1.7/currentColor) 한 벌.
 // 색은 빨강(--neon) 통일, 상태색만 예외: 성공=초록 · 자원=금색
 const _MI=(p,c)=>({d:'<svg class="mIco'+(c?' '+c:'')+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg>'});
@@ -5840,7 +5855,7 @@ function drawBoss(dt){ const {ctx,W,H}=setup('cvBoss'); BAW=W;BAH=H; dt=dt||0;
           ctx.fillText((G.playerNames&&G.playerNames[pn])||('P'+pn), ux, uy+14); } }
     }
   } else {
-    ctx.fillStyle='rgba(220,210,210,.82)'; ctx.font='700 14px Rajdhani, sans-serif'; ctx.textAlign='center';
+    ctx.fillStyle='rgba(220,210,210,.82)'; ctx.font='700 14px '+FONT_NUM; ctx.textAlign='center';
     ctx.fillText('보스 처치! 곧 더 강한 보스가 등장합니다…', cx, fy);
   }
   ctx.textAlign='left';
@@ -9244,7 +9259,7 @@ function _balOpenPanel(){ const p=document.getElementById('balPanel'); if(p) p.c
 function closeBalPanel(){ const p=document.getElementById('balPanel'); if(p) p.classList.add('hide'); }
 function _balShowProgress(done,total){ const b=document.getElementById('balBody'), s=document.getElementById('balSub'); if(!b) return;
   const pct=total?Math.round(done/total*100):0; if(s) s.textContent='검증 중 '+done+'/'+total;
-  b.innerHTML='<div style="padding:26px 4px;text-align:center;color:#bcd">실제 전투코드로 동수 대결 시뮬 중…<div style="margin-top:12px;height:12px;border-radius:6px;background:rgba(255,255,255,.08);overflow:hidden"><div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#5aa8ff,#9fd356);transition:width .1s"></div></div><div style="margin-top:8px;font:700 13px Rajdhani,sans-serif">'+pct+'%</div></div>'; }
+  b.innerHTML='<div style="padding:26px 4px;text-align:center;color:#bcd">실제 전투코드로 동수 대결 시뮬 중…<div style="margin-top:12px;height:12px;border-radius:6px;background:rgba(255,255,255,.08);overflow:hidden"><div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#5aa8ff,#9fd356);transition:width .1s"></div></div><div style="margin-top:8px;font:700 13px var(--font-num)">'+pct+'%</div></div>'; }
 function _balModeBtns(mode){ function bt(m,lb){ const on=(mode===m); return '<button onclick="runBalanceSim(\''+m+'\')" style="flex:1;padding:7px 4px;border-radius:7px;cursor:pointer;font-weight:800;font-size:11px;border:1px solid '+(on?'#5aa8ff':'var(--metal-edge)')+';'+(on?'background:linear-gradient(180deg,#2a6cbb,#163a6e);color:#fff':'background:rgba(255,255,255,.05);color:#9aabbc')+'">'+lb+'</button>'; }
   return '<div style="display:flex;gap:6px;margin-bottom:8px">'+bt('cost','💰 동일비용 1000')+bt('count','⚔ 동수 5v5')+'</div>'; }
 function _balRenderResults(rec, units, opts){ const b=document.getElementById('balBody'), s=document.getElementById('balSub'); if(!b) return; const mode=opts.mode;
@@ -12430,7 +12445,7 @@ function drawBattleGround(ctx,W,H){   // ⚔ 전용 전장: 어두운 격전지 
   let rg=ctx.createRadialGradient(W*0.88,H*0.5,0,W*0.88,H*0.5,W*0.42); rg.addColorStop(0,'rgba(210,60,60,.10)'); rg.addColorStop(1,'rgba(210,60,60,0)'); ctx.fillStyle=rg; ctx.fillRect(0,0,W,H); ctx.restore();
   ctx.save(); ctx.globalAlpha=0.12; ctx.strokeStyle='#cfe0ff'; ctx.setLineDash([6,8]); ctx.lineWidth=1.4; ctx.beginPath(); ctx.moveTo(W*0.52,H*0.06); ctx.lineTo(W*0.52,H*0.94); ctx.stroke(); ctx.restore();
   const v=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*0.3,W/2,H/2,Math.max(W,H)*0.75); v.addColorStop(0,'rgba(0,0,0,0)'); v.addColorStop(1,'rgba(0,0,0,.5)'); ctx.fillStyle=v; ctx.fillRect(0,0,W,H);
-  ctx.save(); ctx.globalAlpha=0.55; ctx.font='bold 10px Rajdhani,sans-serif'; ctx.textBaseline='top';
+  ctx.save(); ctx.globalAlpha=0.55; ctx.font='bold 10px '+FONT_NUM; ctx.textBaseline='top';
   ctx.fillStyle='#7fb0ff'; ctx.textAlign='left'; ctx.fillText('◈ 아군 배치', 8, 8);
   ctx.fillStyle='#ff8a8a'; ctx.textAlign='right'; ctx.fillText('적 더미 ▶', W-8, 8); ctx.restore(); }
 // ⚔ 아군 배치 피커(전투실험 탭) — 종족별 유닛 버튼. 누르면 전장 좌측 진형에 추가
@@ -15479,7 +15494,7 @@ function strikeDrawBuildMap(spec){ const S=STK; if(!S) return; const cvEl=docume
       ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font=Math.max(9,wr*1.15)+'px sans-serif'; ctx.fillText(_wico,wx,wy);   // 종족 일꾼 이모지
       ctx.restore(); } }
   // 상단 텍스트 전부 제거(골드는 우상단 크레딧 표시로 충분) — 관전 시에만 대상 라벨
-  if(spec){ ctx.textBaseline='alphabetic'; ctx.font='700 13px Rajdhani, sans-serif'; ctx.textAlign='center';
+  if(spec){ ctx.textBaseline='alphabetic'; ctx.font='700 13px '+FONT_NUM; ctx.textAlign='center';
     ctx.fillStyle=spec.col; ctx.fillText('👁 '+spec.label, W/2, Math.max(54, oy-12)); ctx.textAlign='left'; }
 }
 // 건설 보드 카메라 클램프 — 보드가 화면보다 작으면 중앙, 크면 가장자리 넘어 못 가게
@@ -16583,7 +16598,7 @@ function strikeDrawMain(){ const S=STK; if(!S) return; const cvEl=document.getEl
   strikeDrawFx(ctx,w2s,scale,S);   // 공격 트레이서/임팩트
   strikeDrawSelection(ctx,w2s,scale,S);   // 선택 표시 + 정보
   // 크기 비교 샘플 유닛 라벨(3D 모델은 cvMarine에 strikeSyncCmpUnits가 렌더)
-  if(S.sizeCmp && S.cmpUnits){ ctx.save(); ctx.font='800 10px Rajdhani,"Apple SD Gothic Neo",sans-serif'; ctx.textAlign='center';
+  if(S.sizeCmp && S.cmpUnits){ ctx.save(); ctx.font='800 10px '+FONT_NUM; ctx.textAlign='center';
     for(const u of S.cmpUnits){ const p=w2s(u.x,u.y), nm=u.nm||((typeof U!=='undefined'&&U[u.id]&&U[u.id].name)||u.id);
       ctx.lineWidth=3; ctx.strokeStyle='rgba(0,0,0,.78)'; ctx.strokeText(nm,p.x,p.y+22);
       ctx.fillStyle='#eef3fa'; ctx.fillText(nm,p.x,p.y+22); }
@@ -16674,7 +16689,7 @@ function strikeDrawTemple(ctx,w2s,scale,wx,wy,col,glow,worldR,opt){ opt=opt||{};
   ctx.strokeStyle='rgba(255,255,255,.45)'; ctx.lineWidth=2;
   ctx.beginPath(); ctx.moveTo(p.x,p.y-rr); ctx.lineTo(p.x+rr,p.y); ctx.lineTo(p.x,p.y+rr*0.85); ctx.lineTo(p.x-rr,p.y); ctx.closePath(); ctx.stroke();
   ctx.restore();
-  if(opt.label){ ctx.save(); ctx.font='800 11px Rajdhani, "Apple SD Gothic Neo", sans-serif'; ctx.textAlign='center';
+  if(opt.label){ ctx.save(); ctx.font='800 11px '+FONT_NUM; ctx.textAlign='center';
     ctx.lineWidth=3; ctx.strokeStyle='rgba(0,0,0,.72)'; ctx.strokeText(opt.label,p.x,p.y+rr+14);
     ctx.fillStyle=opt.labelCol||glow; ctx.fillText(opt.label,p.x,p.y+rr+14); ctx.restore(); }
   return p; }

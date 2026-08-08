@@ -205,7 +205,37 @@ async function groupLobby(){
     navGo('shop'); await sleep(60);
     assert(document.querySelector('#navBar .navIt.on').dataset.nav==='shop','상점 탭이 활성이 아님');
     openHome(); await sleep(60);
-    return 'HOME 7구역 + 네비 5칸(home·던전·마을·유즈맵·상점) ok'; });
+    return 'HOME 카드 1개 + 네비 5칸(home·던전·마을·유즈맵·상점) ok'; });
+  // 폰트 3종 — 제목 Do Hyeon · 본문 IBM Plex Sans KR · 숫자 Rajdhani.
+  // ⚠ 실제 렌더가 아니라 CSS만 잰다(헤드리스에선 웹폰트를 못 받을 수 있어 렌더 비교는 못 믿는다).
+  await step('폰트: 제목/본문/숫자 3종이 토큰으로 갈린다', async()=>{
+    const root=getComputedStyle(document.documentElement);
+    const ti=root.getPropertyValue('--font-ti'), ko=root.getPropertyValue('--font-ko'), num=root.getPropertyValue('--font-num');
+    assert(/Do Hyeon/.test(ti),'제목 토큰에 Do Hyeon이 없음: '+ti);
+    assert(/IBM Plex Sans KR/.test(ko),'본문 토큰에 IBM Plex Sans KR이 없음: '+ko);
+    assert(/Rajdhani/.test(num),'숫자 토큰에 Rajdhani가 없음: '+num);
+    // 셋은 서로 달라야 한다(하나로 뭉치면 위계가 사라진다)
+    assert(ti!==ko && ko!==num && ti!==num,'폰트 토큰 3종이 서로 안 갈림');
+    // 웹폰트를 실제로 불러오는가 — @import 한 줄에 셋 다 있어야 한다
+    const imp=[...document.styleSheets].flatMap(s=>{try{return [...s.cssRules]}catch(e){return []}})
+      .filter(r=>r.type===CSSRule.IMPORT_RULE).map(r=>r.href).join(' ');
+    for(const f of ['Rajdhani','Do+Hyeon','IBM+Plex+Sans+KR'])
+      assert(imp.indexOf(f)>=0, f+'를 웹폰트로 안 불러옴: '+imp);
+    // 개별 규칙에 폰트 이름을 박아두면 토큰이 무의미해진다
+    let hard=0, sample='';
+    for(const sh of document.styleSheets){ let rules; try{rules=sh.cssRules}catch(e){continue}
+      for(const r of rules||[]){ const ff=r.style&&r.style.fontFamily;
+        if(ff && /Rajdhani|Do Hyeon|IBM Plex|Apple SD Gothic/.test(ff)){ hard++; if(!sample) sample=r.selectorText+' → '+ff; } } }
+    assert(hard===0,'개별 규칙에 폰트 이름이 박혀 있음('+hard+'곳): '+sample);
+    // 제목은 Do Hyeon(400)으로 — 굵기가 하나뿐이라 800/900이 남으면 가짜 볼드가 된다
+    openHome(); await sleep(60);
+    const head=document.querySelector('.hmUpgHead'), hs=getComputedStyle(head);
+    assert(/Do Hyeon/.test(hs.fontFamily),'제목에 Do Hyeon이 안 걸림: '+hs.fontFamily);
+    assert(parseInt(hs.fontWeight,10)<=400,'제목이 가짜 볼드가 됨(Do Hyeon은 400뿐): '+hs.fontWeight);
+    // 본문은 제목 폰트를 쓰면 안 된다(작은 크기에서 뭉갠다)
+    const body=document.querySelector('.hmUpBtn');
+    assert(!/Do Hyeon/.test(getComputedStyle(body).fontFamily),'본문/버튼까지 제목 폰트가 번짐');
+    return '제목 Do Hyeon(400) · 본문 IBM Plex Sans KR · 숫자 Rajdhani'; });
   // 💠 공용 재화 바 — 미네랄=pcoin · 가스 · 젬. 모든 RPG/허브 + 유즈맵 선택 상단 상시(인게임 제외).
   await step('공용 재화 바: RPG/유즈맵 상단 상시 · 미네랄/가스/젬', async()=>{ skipIf(typeof curShow!=='function','재화 바 없음');
     // curShow()는 showAppScreen 안에서 동기 실행 → 화면 연 직후 동기 검사(전환 FX/타이머 레이스 회피)

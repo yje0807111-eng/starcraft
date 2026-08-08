@@ -14,7 +14,7 @@
 - 테두리 = **1px 고정**. 강조한다고 두껍게 하지 않는다. 화려함이 필요하면 **선을 굵히지 말고 한 겹 더 긋는다**(아래 이중 테두리).
 - 강조 = `box-shadow` 발광 + 얇은 라인. **색을 채우지 않는다.**
 - 모서리 = 거의 각짐. 큰 패널은 라운드 대신 **모서리를 잘라낸다**(`clip-path`).
-- 숫자는 `Rajdhani`, 한글은 `Apple SD Gothic Neo`/`Noto Sans KR`.
+- 폰트는 **3종**(2026-08-07 확정) — 제목 `Do Hyeon` · 본문 `IBM Plex Sans KR` · 숫자 `Rajdhani`. 아래 §2 폰트 표 참조.
 
 ### 이건 컨셉 문제가 아니다
 
@@ -81,7 +81,24 @@ background:linear-gradient(160deg,rgba(30,36,48,.62),rgba(8,10,14,.72));
 | 캡션·배지 | `--fs-xs` 9.5 / `--fs-sm` 10 | |
 | 본문·라벨 | `--fs-md` 11 / `--fs-lg` 12 | |
 | 제목 | `--fs-xl` 13 · 17 | |
-| **숫자 전부** | — | `font-family:'Rajdhani'` + `font-variant-numeric:tabular-nums` |
+| **숫자 전부** | — | `var(--font-num)` + `font-variant-numeric:tabular-nums` |
+
+### 폰트 3종 (2026-08-07 확정)
+
+**토큰 세 개가 단일 소스다.** 개별 규칙에 폰트 이름을 박지 말 것 — 스모크가 잡는다.
+
+| 토큰 | 폰트 | 어디에 |
+|---|---|---|
+| `--font-ti` | **Do Hyeon** | 제목만. 스타일시트 **맨 끝**의 제목 셀렉터 목록에서 한 번에 지정 |
+| `--font-ko` | **IBM Plex Sans KR** | 본문·버튼·라벨 전부. `html,body`에 걸고 나머지는 `font-family:inherit` |
+| `--font-num` | **Rajdhani** | 숫자·수치(자원·HP·타이머·레벨) |
+
+- **Do Hyeon은 굵기가 400 하나뿐이다.** `font-weight:800/900`을 남기면 브라우저가 가짜 볼드를 그려 획이 뭉갠다 → 제목 규칙에서 `font-weight:400`으로 되돌린다. 제목 위계는 **굵기가 아니라 크기**로 준다.
+- **15px 미만에 Do Hyeon을 쓰지 않는다.** 압축된 굵은 한글이라 작은 자소가 뭉갠다. 작은 라벨·네비는 `--font-ko`.
+- ⚠ 제목 규칙은 **반드시 스타일시트 맨 끝**에 둔다. 앞에 두면 뒤에 오는 `.ecTitle`·`#ovTitle` 개별 규칙의 `font-weight`에 져서 일부만 가짜 볼드로 남는다(전에 `font-size`로 똑같이 당했다).
+- ⚠ `font:` **단축 속성**에도 폰트 이름이 숨어 있다(`font:800 9px/1 'Rajdhani',sans-serif`). `font-family:`만 바꾸면 14곳이 남는다 — 실제로 그랬고 스모크가 잡았다.
+- ⚠ **캔버스(`ctx.font`)는 `var()`를 못 읽는다.** JS 상수 `FONT_NUM`을 따로 두었으니 폰트를 바꿀 때 `--font-num`과 같이 고칠 것.
+- 한글도 이제 웹폰트다. 못 받으면 `Apple SD Gothic Neo → Noto Sans KR → sans-serif`로 떨어진다(예전엔 이 폴백이 기본이라 **기기마다 글씨체가 달랐다**).
 
 ### 액센트 — **화면별이 아니라 역할별**
 

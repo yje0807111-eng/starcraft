@@ -7,6 +7,7 @@
 - 산출물은 **단일 자립 파일** `sc-ums-web.html` — 빌드 없음, 번들러 없음.
 - 테스트 프레임워크 없음 → 행동 검증 = **`npm test`** (스모크 스위트, §9) + 브라우저 프리뷰.
 - UI는 단일 소스 원칙(CLAUDE.md 레지스트리) — 같은 UI 재구현 금지, cloneNode/기존 함수 재사용.
+- **폰트 3종은 `:root`의 `--font-ti`(제목 Do Hyeon) / `--font-ko`(본문 IBM Plex Sans KR) / `--font-num`(숫자 Rajdhani) 토큰이 단일 소스다.** 개별 규칙에 폰트 이름을 박지 말 것(스모크가 잡는다). 숨은 곳 둘: `font:` 단축 속성, 그리고 `var()`를 못 읽는 캔버스 `ctx.font`(JS 상수 `FONT_NUM`). 자세한 규칙은 DESIGN.md §2 「폰트 3종」.
 
 ## 1. 파일 최상위 구조
 | 블록 | 시작 앵커 | 내용 |
