@@ -75,7 +75,7 @@
     font-family:var(--font-ko);overflow:hidden}
   /* 모바일 고정 비율 — 세로로 긴 요즘 폰(963:1997 ≈ 1:2.074). 비율은 아래 두 변수 한 곳에서만 정한다.
      화면이 작으면 비율을 유지하며 축소. 패널 폭이 변해도 폰 모양은 불변. */
-  :root{--phW:963;--phH:1997;--navH:54px;--curH:34px}
+  :root{--phW:963;--phH:1997;--navH:61px;--curH:34px}   /* 하단 바 높이 61px = 963기준 ≈150px (네비·유즈맵 탭바 공용) */
   #phone{width:390px;height:calc(390px * var(--phH) / var(--phW));aspect-ratio:var(--phW)/var(--phH);position:relative;
     /* 게임 배경 우주 타일(space_bg)을 캔버스와 같은 380px 스케일로 프레임 전체에 이어지게 — 어둡게 덮어 콘솔 가독성 유지 */
     background:linear-gradient(rgba(3,4,12,.5),rgba(3,4,12,.66)),url('assets/tiles/space_bg.webp') center/380px repeat #05060d;
@@ -544,7 +544,7 @@
   #bot::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;z-index:2;   /* 상단 경계 = 중립 저채도 하이라이트(빨강 제거) */
     background:linear-gradient(90deg,transparent,rgba(150,170,200,.28) 50%,transparent);opacity:.7;box-shadow:none}
   /* 최상위 네비 = 하나의 통(단일 바) — 섹션은 얇은 세로줄로만 구분, 활성=청록 포인트 인디케이터 */
-  #tabs{display:flex;gap:0;flex-shrink:0;position:relative;margin:0;padding:0;z-index:45;
+  #tabs{display:flex;gap:0;flex-shrink:0;height:var(--navH);position:relative;margin:0;padding:0;z-index:45;   /* 유즈맵 인게임 탭바 = 하단 네비와 같은 높이(공용 --navH) */
     --tabAcc:#5cd6ff;--tabAccG:rgba(92,214,255,.6);
     background:linear-gradient(180deg,#151a24,#0a0d13);   /* 불투명 단일 바 — 뒤로 내려간 시트가 비쳐 보이지 않게 */
     border-top:1px solid var(--glass-edge);box-shadow:inset 0 1px 0 rgba(255,255,255,.045),inset 0 -10px 14px -12px rgba(0,0,0,.6)}
@@ -2551,6 +2551,37 @@
   #phone.curOn .appScreen{padding-top:var(--curH)}
   #phone.curOn #mapSelect{padding-top:calc(var(--curH) + 12px)}
   #phone.inGame #curBar{display:none}   /* 실경기(인게임)에선 자체 HUD(#hudR) 사용 — 공용 바 숨김 */
+  /* ⚔ 던전 허브 — 던전 목록 카드(배너) + 팝업(소탕/입장) */
+  .dgHubHead{font-size:12px;color:var(--txt-mute);margin:2px 4px 12px;line-height:1.5;text-align:center}
+  .dgHubHead b{color:#ffd24a}
+  .dgCard{position:relative;display:flex;align-items:stretch;height:74px;margin:0 2px 10px;border:1px solid var(--metal-edge);border-radius:var(--r-lg);overflow:hidden;cursor:pointer;
+    background:linear-gradient(115deg,var(--dgTint,#2f4a72) 0%,rgba(10,13,18,.72) 60%)}
+  .dgCard.lock{opacity:.5;cursor:default}
+  .dgCardArt{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:9px;padding:0 12px}
+  .dgCardIco{font-size:24px;flex:none}
+  .dgCardName{font-size:15px;font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dgCardR{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:6px;padding:0 12px}
+  .dgCardKey{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:800;color:#ffd24a;font-size:13px;white-space:nowrap}
+  .dgOpenBtn{padding:5px 15px;border:none;border-radius:var(--r-md);background:#3aa0ff;color:#06121f;font-family:inherit;font-weight:800;font-size:12px;cursor:pointer}
+  .dgTix{display:flex;gap:14px;justify-content:center;padding:8px 4px 2px;color:#c6ccd4;font-size:var(--fs-md);font-weight:700}
+  .dgTix b{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:#fff;margin-left:3px}
+  .dgSheet{position:absolute;inset:0;z-index:64;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(ellipse 300px 220px at 50% 46%,rgba(92,214,255,.12),transparent 72%),rgba(2,4,9,.62)}
+  .dgSheet.hide{display:none}
+  .dgSheetCard{position:relative;width:82%;max-width:320px;border:1px solid var(--metal-edge);border-radius:var(--r-lg);overflow:hidden;
+    background:linear-gradient(160deg,rgba(19,24,35,.96),rgba(6,9,14,.97))}
+  .dgSheetArt{height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+    background:linear-gradient(160deg,var(--dgTint,#2f4a72),rgba(6,9,14,.55))}
+  .dgSheetIco{font-size:34px}
+  .dgSheetArt b{font-size:15px;color:#fff;font-weight:800}
+  .dgSheetBody{padding:14px 14px 16px;display:flex;flex-direction:column;gap:10px;align-items:center}
+  .dgSheetStage{font-size:13px;color:#c6ccd4}.dgSheetStage b{font-family:var(--font-num);font-size:18px;color:#fff}
+  .dgSheetReward{font-size:12px;color:#c6ccd4}.dgSheetReward b{color:#ffd24a;font-family:var(--font-num)}
+  .dgSheetKey{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:800;color:#ffd24a}
+  .dgSheetBtns{display:flex;gap:8px;width:100%;margin-top:2px}
+  .dgSheetBtns .twBtn{flex:1 1 0}
+  .dgSheetBtns .twBtn:disabled{opacity:.45}
+  .dgSheetX{position:absolute;top:6px;right:6px;width:26px;height:26px;border:none;border-radius:var(--r-md);background:rgba(0,0,0,.42);color:#fff;cursor:pointer;font-size:12px}
   .navIt{position:relative;flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
     cursor:pointer;font-family:inherit;font-size:8.5px;font-weight:800;letter-spacing:.2px;color:#c6ccd4;
     background:none;border:none;transition:color .13s}
@@ -3615,6 +3646,27 @@
     </div>
   </div>
 
+  <!-- ⚔ 던전 허브 — 네비 '던전' 진입. 던전 목록 카드 → 팝업. 전투는 #dgScreen 재사용. (#phone 안이라 재화 바 패딩 적용) -->
+  <div id="dgHubScreen" class="appScreen spaceBg hide">
+    <div class="hmScroll uiScroll" id="dgHubBody"></div>
+  </div>
+  <!-- 던전 팝업(열기) — 이전 스테이지 소탕 + 입장 -->
+  <div id="dgSheet" class="dgSheet hide">
+    <div class="dgSheetCard">
+      <div class="dgSheetArt" id="dgSheetArt"><span class="dgSheetIco" id="dgSheetIco">⚔️</span><b id="dgSheetName">던전</b></div>
+      <div class="dgSheetBody">
+        <div class="dgSheetStage" id="dgSheetStage">난이도 <b>1단계</b></div>
+        <div class="dgSheetReward" id="dgSheetReward"></div>
+        <div class="dgSheetKey" id="dgSheetKey">🗝 2/2</div>
+        <div class="dgSheetBtns">
+          <button class="twBtn" id="dgSheetSweep" onclick="dgSheetSweep()">이전 스테이지 소탕</button>
+          <button class="twBtn" id="dgSheetEnter" onclick="dgSheetEnter()">입장</button>
+        </div>
+      </div>
+      <button class="dgSheetX" onclick="dgCloseSheet()" aria-label="닫기">✕</button>
+    </div>
+  </div>
+
   <!-- 🏘 RPG 마을 -->
   <div id="townScreen" class="appScreen spaceBg hide">
     <div class="twBar">
@@ -3630,9 +3682,8 @@
     </div>
     <div id="twToast" class="twToast hide"></div>
     </div>
-  </div>
 
-  <!-- 캐릭터 선택/생성 입장 화면 — 내용은 마을 구역과 같은 렌더러를 쓴다 -->
+  <!-- 캐릭터 선택/생성 입장 화면 — 내용은 마을 구역과 같은 렌더러를 쓴다. (#phone 안으로 통합) -->
   <div id="charScreen" class="appScreen spaceBg hide">
     <div class="setCard twCard csCard">
       <div class="setTitle"><span id="csTitle">캐릭터 선택</span><div class="setX" onclick="charBackToHub()"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></div></div>
@@ -3654,6 +3705,7 @@
     </div>
     <div id="dgResult" class="dgResult hide"></div>
   </div>
+  </div><!-- /#phone — charScreen·dgScreen까지 프레임 안(비율 통합) -->
 
   <!-- 마을 시설 팝업(구역 도착 시) -->
   <div id="townPanel" class="hide" onclick="if(event.target===this)closeTownPanel()">
@@ -4405,6 +4457,7 @@ function metaEffLv(id){ return _metaEffFromRaw(META_BUILDS[id], buildLevel(id));
 // 계정 공용(재화·펫·해금·방치) + 캐릭터별(chars[]: 레벨·경험치·스탯·장비·진화)로 나뉜다.
 function defaultProfile(){ return { ver:5, pcoin:0, gas:0, gem:0, chars:[], curId:'', items:[],
   idle:{ sourceId:'drill', lastClaimTs:0 }, unlocks:{}, lastSeenTs:0,
+  dgKeys:{}, tickets:{gear:0,pet:0,ally:0},   // 🗝 던전별 열쇠(매일 09:00 보충) · 🎟 뽑기권(장비/펫/동료)
   pets:{}, equip:[], petSlots:2 }; }   // 🐾 펫(중복=별)·장착 슬롯 — 캐릭터를 새로 만들어도 그대로 쓴다
 // 계정 영구 재화(공용 재화 바) — 미네랄=pcoin(기존 이름 유지)·가스·젬. 없던 프로필도 0으로 살려 읽는다.
 function profMineral(){ const p=PROF(); return Math.floor(p&&p.pcoin||0); }
@@ -4757,7 +4810,7 @@ function navShow(tab){ const b=document.getElementById('navBar'); if(!b) return;
   if(tab) b.querySelectorAll('.navIt').forEach(x=>x.classList.toggle('on', x.dataset.nav===tab)); }
 function navGo(tab){ if(typeof playSfx==='function') playSfx('ui_tab');
   if(tab==='home')    return openHome();
-  if(tab==='dungeon') { openTown(); navShow('dungeon'); return openTownPanel('gate'); }   // 던전 선택 = 관문 패널(전용 던전 페이지는 이후 단계)
+  if(tab==='dungeon') return openDungeonHub();                                              // 던전 허브(전용 화면)
   if(tab==='town')    { openTown(); return navShow('town'); }
   if(tab==='map')     return twGoMap();                                                    // 유즈맵(친구·소셜은 유즈맵 하단)
   if(tab==='shop')    { openTown(); navShow('shop'); return openTownPanel('gacha'); } }    // 상점 = 뽑기집(전용 상점 화면은 이후 단계)
@@ -5237,16 +5290,10 @@ function renderProfIdle(){ const p=PROF();
     h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+s.name+'</div><div class="twRowSub'+(locked?' lock':'')+'">'+(locked?('🔒 파워 '+reqP+' 필요'):('배율 '+s.rate+'× · '+(s.tip||'')))+'</div></div><button class="twBtn'+(on?' on':'')+'" onclick="profDoIdle(\''+id+'\')"'+(locked?' disabled':'')+'>'+(on?'선택됨':'선택')+'</button></div>'; }
   return h; }
 function profDoIdle(id){ if(profSetIdleSource(id)){ if(typeof playSfx==='function') playSfx('ui_open'); refreshTownPanel(); } }
-// 관문(해금 사다리)
-function renderProfGate(){ const mx=dgMaxFloor(), nx=mx+1;
-  const c0=CHAR();
-  let h='<div class="twHead">던전에 들어가 직접 싸웁니다. 보상은 <b>P</b>와 경험치.<br>최고 기록 <b>'+(mx?mx+'층':'없음')+'</b> · Lv.<b>'+(c0?c0.level:1)+'</b> 기준 <b>'+dgFloorCap()+'층</b>까지 개방</div>';
-  const rN=dgFloorReward(nx), cap=dgFloorCap(), okLv=nx<=cap;
-  h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+nx+'층 도전</div>'
-    +'<div class="twRowSub'+(okLv?' ok':' lock')+'">'+(okLv?('새 기록 · '+rN.pc+' P · '+rN.xp+' XP'):('🔒 Lv.'+dgFloorReqLv(nx)+' 필요 — 레벨이 오르면 열립니다'))+'</div></div>'
-    +'<button class="twBtn" onclick="dgEnter('+nx+')"'+(okLv?'':' disabled')+'>입장</button></div>';
-  if(mx>0){ const rM=dgFloorReward(mx);
-    h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+mx+'층 반복</div><div class="twRowSub">클리어한 층 · '+rM.pc+' P · '+rM.xp+' XP</div></div><button class="twBtn" onclick="dgEnter('+mx+')">입장</button></div>'; }
+// 관문(던전 입구 + 파워 해금 사다리) — 던전은 허브(전용 화면)로 통합
+function renderProfGate(){ const mx=dgMaxFloor();
+  let h='<div class="twHead">던전은 하단 네비 <b>던전</b> 또는 아래 버튼으로 들어갑니다.<br>최고 기록 <b>'+(mx?mx+'단계':'없음')+'</b> · 개방 <b>'+dgFloorCap()+'단계</b></div>';
+  h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">던전 허브</div><div class="twRowSub">종류 선택 · 단계 도전 · 즉시 보상</div></div><button class="twBtn" onclick="openDungeonHub()">이동</button></div>';
   h+='<div class="twSectLbl">파워 해금</div>';
   for(const u of PROF_UNLOCKS){ const open=profHasUnlock(u.id);
     h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+u.label+'</div><div class="twRowSub '+(open?'ok':'lock')+'">'+(open?'✓ 열림':('🔒 파워 '+u.power+' 필요'))+'</div></div></div>'; }
@@ -5352,14 +5399,81 @@ function dgWin(){ const c=CHAR(), p=PROF(), r=dgFloorReward(DG.floor);
   const sl=profSlots();   // 층이 깊을수록 고등급·고레벨(profMakeItem이 층을 레벨로 받는다)
   r.item=(sl.length && Math.random()<DG_DROP_P) ? profAddItem(profMakeItem(sl[Math.floor(Math.random()*sl.length)], DG.floor)) : null;
   p.pcoin+=r.pc;
-  if(c){ c.xp+=r.xp; profApplyLevelUps(c); if((c.dgFloor||0)<DG.floor) c.dgFloor=DG.floor; }
+  const prevMax=c?(c.dgFloor||0):0, isNew=!!(c && DG.floor>prevMax);
+  if(c){ c.xp+=r.xp; profApplyLevelUps(c); if(DG.floor>prevMax) c.dgFloor=DG.floor; }
+  if(DG.needKey && DG.dgId && typeof dgSpendKey==='function') dgSpendKey(DG.dgId);   // 완료 시 열쇠 1 소모(실패 시 미소모)
+  r.tix=isNew ? dgAwardTickets(DG.floor) : null;                    // 새 단계 클리어 = 뽑기권
   profSyncUnlocks(); saveMeta(); dgStopLoop(); dgRender(); }
 function dgLose(){ DG.over=-1; dgStopLoop(); dgRender(); }
 function dgSkill(){ if(!DG || DG.over || DG.skill.cd>0) return;
   const S=DG_SKILLS[(CHAR()||{}).cls] || DG_SKILLS.ranger;
   DG.skill.cd=S.cd; DG.skill.left=S.dur;
   if(typeof playSfx==='function') playSfx('ui_open'); dgRender(); }
-function dgFlee(){ dgStopLoop(); DG=null; openTown(); }
+function dgToHub(){ dgStopLoop(); DG=null; openDungeonHub(); }   // 전투 종료 → 던전 허브 복귀
+function dgFlee(){ dgToHub(); }
+// ── 🗝 던전 열쇠(매일 09:00 보충 · 던전별 2개 · 완료 시에만 소모) · 🎟 뽑기권 · 던전 허브 ──
+const DG_KEY_DAILY=2;   // 던전마다 하루 열쇠 수(09:00 리셋)
+const DG_DUNGEONS=[
+  {id:'normal', name:'일반 던전', ico:'⚔️', reqLv:1,  tint:'#2f4a72'},
+  {id:'gear',   name:'장비 던전', ico:'🛡️', reqLv:10, tint:'#6a4a24'},
+  {id:'rune',   name:'룬 던전',   ico:'🔮', reqLv:20, tint:'#54366a'} ];
+function _dgDayKey(){ const d=new Date(); const day=new Date(d.getFullYear(),d.getMonth(),d.getDate()); if(d.getHours()<9) day.setDate(day.getDate()-1); return day.getTime(); }
+function dgKeyN(id){ const p=PROF(); if(!p) return 0; if(!p.dgKeys) p.dgKeys={};
+  const dk=_dgDayKey(); let e=p.dgKeys[id]; if(!e || e.day!==dk){ e={n:DG_KEY_DAILY, day:dk}; p.dgKeys[id]=e; } return e.n; }
+function dgSpendKey(id){ if(dgKeyN(id)<=0) return false; PROF().dgKeys[id].n--; saveMeta(); return true; }
+function dgAddTicket(kind,n){ const p=PROF(); if(!p.tickets) p.tickets={gear:0,pet:0,ally:0}; p.tickets[kind]=(p.tickets[kind]||0)+(n||1); }
+function dgAwardTickets(floor){ const g={gear:1}; if(floor%5===0) g.pet=1; if(floor%10===0) g.ally=1;   // 새 단계 클리어 보상
+  for(const k in g) dgAddTicket(k,g[k]); return g; }
+function openDungeonHub(){ if(typeof loadMeta==='function') loadMeta();
+  if(typeof CHAR==='function' && !CHAR()){ openCharScreen('create'); return; }   // 캐릭터 없으면 생성부터
+  dgCloseSheet(); showAppScreen('dgHubScreen'); navShow('dungeon'); renderDungeonHub();
+  if(typeof paintIcons==='function') paintIcons(document.getElementById('dgHubScreen')); }
+function renderDungeonHub(){ const body=document.getElementById('dgHubBody'); if(!body) return;
+  const c=CHAR(); if(!c) return;
+  let h='<div class="dgHubHead">던전 열쇠는 <b>매일 09:00</b>에 보충됩니다. 열쇠는 던전을 완료할 때만 소모됩니다.</div>';
+  for(const d of DG_DUNGEONS){ const lock=c.level<d.reqLv, k=lock?0:dgKeyN(d.id);
+    h+='<div class="dgCard'+(lock?' lock':'')+'" style="--dgTint:'+d.tint+'"'+(lock?'':' onclick="dgOpenSheet(\''+d.id+'\')"')+'>'
+      +'<div class="dgCardArt"><span class="dgCardIco">'+d.ico+'</span><span class="dgCardName">'+d.name+'</span></div>'
+      +'<div class="dgCardR"><span class="dgCardKey">🗝 '+(lock?('🔒 Lv.'+d.reqLv):(k+'/'+DG_KEY_DAILY))+'</span>'
+      +(lock?'':'<button class="dgOpenBtn" onclick="event.stopPropagation();dgOpenSheet(\''+d.id+'\')">열기</button>')+'</div></div>'; }
+  const tx=(PROF()&&PROF().tickets)||{}; h+='<div class="dgTix">🎟 장비<b>'+(tx.gear||0)+'</b> · 펫<b>'+(tx.pet||0)+'</b> · 동료<b>'+(tx.ally||0)+'</b></div>';
+  body.innerHTML=h; }
+// 던전 팝업 — 이전 스테이지 소탕 + 입장
+let _dgSheetId=null;
+function dgOpenSheet(id){ const d=DG_DUNGEONS.find(x=>x.id===id), c=CHAR(); if(!d||!c) return;
+  if(c.level<d.reqLv){ if(typeof toast==='function') toast('Lv.'+d.reqLv+'부터 열립니다'); return; }
+  if(id!=='normal'){ if(typeof toast==='function') toast('준비 중입니다'); return; }
+  _dgSheetId=id; renderDgSheet(); const s=document.getElementById('dgSheet');
+  if(s){ s.classList.remove('hide'); if(typeof fxPop==='function') fxPop(s.querySelector('.dgSheetCard')); }
+  if(typeof playSfx==='function') playSfx('ui_open'); }
+function dgCloseSheet(){ const s=document.getElementById('dgSheet'); if(s) s.classList.add('hide'); _dgSheetId=null; }
+function renderDgSheet(){ const d=DG_DUNGEONS.find(x=>x.id===_dgSheetId), c=CHAR(); if(!d||!c) return;
+  const mx=dgMaxFloor(), cap=dgFloorCap(), nx=mx+1, k=dgKeyN(d.id), okLv=nx<=cap;
+  const set=(id,html)=>{const e=document.getElementById(id); if(e) e.innerHTML=html;};
+  set('dgSheetName', d.name); const ico=document.getElementById('dgSheetIco'); if(ico) ico.textContent=d.ico;
+  const art=document.getElementById('dgSheetArt'); if(art) art.style.setProperty('--dgTint', d.tint);
+  set('dgSheetStage', '난이도 <b>'+nx+'단계</b>');
+  const rN=dgFloorReward(nx);
+  set('dgSheetReward', '보상: 🎟 장비권'+(nx%5===0?'·펫권':'')+(nx%10===0?'·동료권':'')+' · <b>'+rN.pc+'</b> M');
+  set('dgSheetKey', '🗝 '+k+'/'+DG_KEY_DAILY);
+  const bSweep=document.getElementById('dgSheetSweep'), bEnter=document.getElementById('dgSheetEnter');
+  if(bSweep) bSweep.disabled=!(mx>0 && k>0);
+  if(bEnter){ bEnter.disabled=!(okLv && k>0); bEnter.textContent = okLv?'입장':('🔒 Lv.'+dgFloorReqLv(nx)); } }
+function dgSheetEnter(){ const d=DG_DUNGEONS.find(x=>x.id===_dgSheetId); if(!d) return; const nx=dgMaxFloor()+1;
+  if(nx>dgFloorCap()){ if(typeof toast==='function') toast('Lv.'+dgFloorReqLv(nx)+'부터 도전할 수 있습니다'); return; }
+  if(dgKeyN(d.id)<1){ if(typeof toast==='function') toast('🗝 열쇠가 없습니다(매일 09:00 보충)'); return; }
+  const did=d.id; dgCloseSheet(); if(typeof playSfx==='function') playSfx('ui_open');
+  if(dgStart(nx) && DG){ DG.dgId=did; DG.needKey=true; } }
+function dgSheetSweep(){ const d=DG_DUNGEONS.find(x=>x.id===_dgSheetId), c=CHAR(), p=PROF(); if(!d||!c||!p) return;
+  const mx=dgMaxFloor(); if(mx<1){ if(typeof toast==='function') toast('클리어한 단계가 없습니다'); return; }
+  if(dgKeyN(d.id)<1){ if(typeof toast==='function') toast('🗝 열쇠가 없습니다(매일 09:00 보충)'); return; }
+  dgSpendKey(d.id); const r=dgFloorReward(mx); p.pcoin+=r.pc; c.xp+=r.xp; profApplyLevelUps(c); profSyncUnlocks(); saveMeta();
+  if(typeof playSfx==='function') playSfx('hero_merge'); if(typeof toast==='function') toast('🗝 소탕 +'+r.pc+' M · +'+r.xp+' XP');
+  renderDgSheet(); renderDungeonHub(); }
+function dgAgain(next){ const did=(DG&&DG.dgId)||'normal', floor=(DG?DG.floor:dgMaxFloor())+(next?1:0);
+  if(floor>dgFloorCap()){ if(typeof toast==='function') toast('Lv.'+dgFloorReqLv(floor)+'부터 도전할 수 있습니다'); return; }
+  if(dgKeyN(did)<1){ if(typeof toast==='function') toast('🗝 열쇠가 없습니다(매일 09:00 보충)'); return; }
+  if(typeof playSfx==='function') playSfx('ui_open'); if(dgStart(floor) && DG){ DG.dgId=did; DG.needKey=true; } }
 function dgTick(ts){ if(!DG){ _dgRaf=0; return; }
   const dt=_dgLast? Math.min(0.05,(ts-_dgLast)/1000) : 0.016; _dgLast=ts;
   dgStep(dt); if(DG && !DG.over) _dgRaf=requestAnimationFrame(dgTick); else _dgRaf=0; }
@@ -5406,9 +5520,9 @@ function dgRender(){ if(!DG) return;
       rs.innerHTML = (DG.over>0)
         ? '<div class="dgRCard"><div class="dgRT ok">'+DG.floor+'층 클리어!</div><div class="dgRS">+'+DG.reward.pc+' P · +'+DG.reward.xp+' XP'
           +(DG.reward.item? ('<br><b style="color:'+(TIER_COLOR[DG.reward.item.tier]||'#fff')+'">'+profItemName(DG.reward.item)+'</b> 획득') : '')+'</div>'
-          +'<div class="dgRBtns"><button class="twBtn" onclick="dgEnter('+(DG.floor+1)+')">다음 층</button><button class="twBtn" onclick="dgFlee()">마을로</button></div></div>'
+          +'<div class="dgRBtns"><button class="twBtn" onclick="dgAgain(true)">다음 단계 🗝1</button><button class="twBtn" onclick="dgToHub()">던전으로</button></div></div>'
         : '<div class="dgRCard"><div class="dgRT bad">패배</div><div class="dgRS">'+DG.floor+'층 '+DG.wave+'웨이브에서 쓰러졌습니다</div>'
-          +'<div class="dgRBtns"><button class="twBtn" onclick="dgEnter('+DG.floor+')">재도전</button><button class="twBtn" onclick="dgFlee()">마을로</button></div></div>'; } } }
+          +'<div class="dgRBtns"><button class="twBtn" onclick="dgAgain(false)">재도전 🗝1</button><button class="twBtn" onclick="dgToHub()">던전으로</button></div></div>'; } } }
 // 현재 빌드 레벨 → 게임 효과(개인 적용). 게임 시작 시 G.metaB에 캐시.
 //  team_* = 전체 강화: 협동에선 파티 중 '최고 레벨'이 모두에게 적용(인원수 인플레 방지). 솔로면 내 레벨.
 const _TEAM_IDS=['team_atk','team_aspd','team_enemy_hp','team_enemy_def','team_credit','team_luck'];
@@ -10051,9 +10165,9 @@ function playScreenFx(el){
 function fxPop(card){ if(!card) return; card.classList.remove('fxPop'); void card.offsetWidth; card.classList.add('fxPop');
   clearTimeout(card._fxT); card._fxT=setTimeout(()=>card.classList.remove('fxPop'),470); }
 // ── 앱 화면 전환 ──
-const APP_SCREENS=['opening','auth','mapSelect','modeSheet','homeScreen','charScreen','townScreen','dgScreen'];
+const APP_SCREENS=['opening','auth','mapSelect','modeSheet','homeScreen','charScreen','townScreen','dgHubScreen','dgScreen'];
 // 💠 공용 재화 바를 띄우는 화면(RPG/허브 + 유즈맵 선택). 로그인·타이틀·캐릭터생성·인게임은 제외.
-const CUR_SCREENS=['homeScreen','townScreen','mapSelect','modeSheet','dgScreen'];
+const CUR_SCREENS=['homeScreen','townScreen','mapSelect','modeSheet','dgHubScreen','dgScreen'];
 // 그중 바를 '판'이 아니라 배경 위 숫자로 두는 화면(.curBar.bare) — 배경이 상단까지 이어져 보여야 하는 곳
 const BARE_CUR_SCREENS=['homeScreen'];
 function curShow(on){ const b=document.getElementById('curBar'), p=document.getElementById('phone');
@@ -10200,7 +10314,11 @@ function _gsFinish(){ const op=document.getElementById('opening'); if(!op||op._f
 //   저장된 세션이 있어도 화면은 반드시 거친다(자동 로그인 안 함). 빈 칸으로 로그인 = 그 세션 그대로 입장.
 async function bootApp(){ await initAuth();
   if(typeof paintIcons==='function') paintIcons(document);   // data-ico → 라인아트 아이콘을 문서 전체에 1회(화면별 호출 누락에 의존하지 않게)
-  setTimeout(openAuth, 1700); }   // 오프닝 최소 노출 → 로그인/회원가입
+  // 오프닝 최소 노출 → 로그인/회원가입.
+  // ⚠ 이 타이머는 '오프닝을 걷어내는' 용도다. 그 사이 다른 화면으로 이미 넘어갔다면 건드리지 않는다 —
+  //    무조건 openAuth()를 부르면 1.7초 뒤에 사용자가 보고 있던 화면을 로그인 화면이 덮어버린다(스모크가 간헐 실패했다).
+  setTimeout(()=>{ const op=document.getElementById('opening');
+    if(!op || !op.classList.contains('hide')) openAuth(); }, 1700); }
 // 🧍 방치 하트비트: 앱 켜져 있으면 60초마다 100% 자동 적립(유즈맵과 무관)
 try{ setInterval(profIdleTick, 60000); }catch(e){}
 window.addEventListener('beforeunload', function(){ try{ profStampSeen(); }catch(e){} });   // 종료 시 시각 스탬프(다음 접속 오프라인 정산 기준)

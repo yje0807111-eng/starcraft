@@ -137,6 +137,23 @@ async function groupLobby(){
     assert(!visible($('auth')),'로그인 화면이 안 닫힘');
     assert(AUTH.user,'입장했는데 유저가 비어 있음');
     return AUTH.user.nick||AUTH.user.id; });
+  // 부팅 타이머는 '오프닝을 걷어내는' 용도지 화면을 되돌리는 용도가 아니다.
+  // 가드가 없으면 1.7초 뒤 openAuth()가 그때 보고 있던 화면을 로그인으로 덮는다 —
+  // 스모크가 간헐적으로 "유즈맵에서 뒤로 갔는데 HOME으로 안 옴"으로 터지던 진짜 원인이었다.
+  await step('부팅 타이머가 이미 넘어간 화면을 덮지 않는다', async()=>{
+    skipIf(typeof bootApp!=='function','bootApp 없음');
+    const src=bootApp.toString();
+    assert(/openAuth/.test(src),'부팅 타이머에서 openAuth를 안 부름');
+    assert(/opening/.test(src),'부팅 타이머에 오프닝 가드가 없음 — 뒤늦게 로그인 화면이 덮친다: '+src.slice(-160));
+    // 가드가 '있으나 마나'가 아님을 확인 — openAuth()는 실제로 현재 화면을 덮는 함수다
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','부팅'); saveMeta(); }   // 캐릭터가 없으면 openHome이 생성 화면으로 샌다
+    openHome(); assert(visible($('homeScreen')),'HOME이 안 열림');
+    openAuth();
+    assert(visible($('auth')) && !visible($('homeScreen')),
+      'openAuth()가 화면을 안 덮음 — 가드 검사가 무의미해졌으니 이 스텝을 다시 볼 것');
+    assert($('opening').classList.contains('hide'),'부팅 후에도 오프닝이 안 감춰짐');
+    openHome(); await sleep(40);
+    return '가드 있음 · openAuth는 화면을 덮는다(=가드가 필요하다)'; });
   // 메인 화면 = RPG 마을. 허브(게임 선택)는 삭제됐고, 유즈맵은 마을 하단 버튼으로만 들어간다.
   // 메인 화면 = HOME 대시보드. 허브는 삭제됐고, 화면 이동은 전역 하단 네비(#navBar) 하나로만 한다.
   await step('메인 = HOME 대시보드 · 하단 네비로 화면 이동', async()=>{ skipIf(typeof openHome!=='function','HOME 없음');
@@ -564,6 +581,29 @@ async function groupLobby(){
     dgEnter(9);                                                // 레벨보다 높은 층은 못 들어간다
     assert(DG===before,'레벨 상한을 넘겼는데 던전이 시작됨');
     return 'Lv당 '+DG_LV_PER_FLOOR+'레벨에 1층'; });
+  // ⚔ 던전 허브 — 목록 카드 · 팝업(이전 스테이지 소탕/입장) · 열쇠(매일 09:00·던전별) 게이트 · 뽑기권
+  await step('던전 허브: 목록 카드·팝업(소탕/입장)·열쇠·뽑기권', ()=>{ skipIf(typeof openDungeonHub!=='function','던전 허브 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','던전'); saveMeta(); }
+    const cc=CHAR(); cc.level=6; cc.dgFloor=2;                  // Lv6 → 3단계 개방, 2단계까지 클리어
+    const p=PROF(); p.dgKeys={}; p.tickets={gear:0,pet:0,ally:0}; saveMeta();
+    openDungeonHub();
+    assert(visible($('dgHubScreen')),'던전 허브가 안 열림');
+    assert(document.querySelectorAll('#dgHubBody .dgCard').length===3,'던전 카드가 3개가 아님');
+    assert(document.querySelectorAll('#dgHubBody .dgCard.lock').length===2,'장비·룬 던전이 Lv6에서 잠겨 있어야 함');
+    assert(dgKeyN('normal')===DG_KEY_DAILY,'일반 던전 열쇠 초기값 불일치: '+dgKeyN('normal'));
+    // 팝업 열기 → 소탕 = 열쇠 1 소모 + 미네랄 증가
+    dgOpenSheet('normal'); assert(!$('dgSheet').classList.contains('hide'),'던전 팝업이 안 열림');
+    const k0=dgKeyN('normal'), m0=Math.floor(PROF().pcoin); dgSheetSweep();
+    assert(dgKeyN('normal')===k0-1,'소탕이 열쇠를 안 씀');
+    assert(Math.floor(PROF().pcoin)>m0,'소탕이 미네랄을 안 줌');
+    // 열쇠 0이면 입장이 전투로 진입하지 않는다
+    PROF().dgKeys.normal.n=0; dgOpenSheet('normal'); dgSheetEnter();
+    assert(!visible($('dgScreen')),'열쇠 0인데 입장이 진행됨');
+    // 뽑기권 = 새 단계 클리어 시 적립
+    const t0=(PROF().tickets||{}).gear||0; dgAwardTickets(3);
+    assert(((PROF().tickets||{}).gear||0)===t0+1,'뽑기권이 안 쌓임');
+    dgCloseSheet(); openHome();
+    return '카드3·팝업·소탕·열쇠게이트·뽑기권 ok'; });
   await step('장비 마이그레이션: 구버전 정수 티어 → 아이템 + 12칸 재편', ()=>{ skipIf(typeof migrateProfile!=='function','마이그레이션 없음');
     const keep=JSON.parse(JSON.stringify(PLAYER_META));
     PLAYER_META.profile={ ver:3, pcoin:0, curId:'cX', items:[], chars:[{ id:'cX', cls:'ranger', name:'구버전',
