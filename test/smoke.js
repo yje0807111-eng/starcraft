@@ -197,12 +197,34 @@ async function groupLobby(){
     { const navs=[...document.querySelectorAll('#navBar .navIt')].map(x=>x.dataset.nav).join(',');
       assert(navs==='home,dungeon,town,map,shop','네비 구성이 다름: '+navs); }
     assert(document.querySelector('#navBar .navIt.on').dataset.nav==='home','HOME 탭이 활성이 아님');
-    // 실데이터에 붙은 곳 = POWER UPGRADES(스탯 4종)뿐 — 수입 줄은 삭제됐다
-    assert(document.querySelectorAll('.hmUp').length===4,'POWER UPGRADES가 4칸이 아님');
-    const c=CHAR(); c.statPoints=1; renderHome();
-    const btn=document.querySelector('.hmUp .hmUpBtn'); assert(!btn.disabled,'포인트가 있는데 버튼이 잠김');
-    const lv0=profStat('pow'); btn.click();
-    assert(profStat('pow')===lv0+1,'업그레이드가 실제 스탯에 반영되지 않음');
+    // 실데이터에 붙은 곳 = POWER UPGRADES(영구 업그레이드 6종 — 미네랄 구매·스탯 포인트 흡수)
+    assert(document.querySelectorAll('.hmUp').length===6,'업그레이드가 6칸이 아님');
+    // 4칸(2행)만 보이고 나머지는 스크롤 — 카드가 화면을 다 먹지 않게
+    { const gr=$('hmUpgGrid'), cell=gr.querySelector('.hmUp');
+      const ch=cell.getBoundingClientRect().height, rows=Math.round((gr.clientHeight-16+8)/(ch+8));
+      assert(rows===2,'업그레이드가 2행(4칸)이 아님: '+rows+'행');
+      assert(gr.scrollHeight-gr.clientHeight>10,'나머지 칸이 스크롤되지 않음'); }
+    // 접으면 헤더만 남고 전장이 그만큼 넓어진다(캐릭터가 내려온다)
+    // ⚠ 접힘은 max-height 전환(.28s)이라 토글 직후엔 아직 높다 — 전환이 끝난 뒤 재야 한다.
+    //   캐릭터 y도 매 프레임 목표를 좇는 형태라 hbResize를 여러 번 돌려 수렴시킨다.
+    { const settle=async()=>{ await sleep(400); for(let i=0;i<40;i++) hbResize(); };
+      const yOpen=_hb.cy, botOpen=_hb.vBot, kOpen=_hb.k;
+      hmToggleUpg(); await settle();
+      assert(document.querySelector('.hmUpg').classList.contains('down'),'접힘 상태가 안 됨');
+      assert(getComputedStyle($('hmUpgGrid')).transitionDuration!=='0s','접힘에 애니메이션이 없음');
+      assert(_hb.vBot>botOpen+40,'접었는데 전장이 안 넓어짐: '+Math.round(botOpen)+' → '+Math.round(_hb.vBot));
+      assert(_hb.cy>yOpen+20,'접었는데 전장 중심이 안 내려옴');
+      // 위치만이 아니라 배율까지 바뀌어야 한다 — 적·글자·링이 캐릭터와 같은 비율로 커진다
+      assert(_hb.k>kOpen*1.15,'접었는데 전장 배율이 안 커짐: '+kOpen.toFixed(2)+' → '+_hb.k.toFixed(2));
+      hmToggleUpg(); await settle();
+      assert(!document.querySelector('.hmUpg').classList.contains('down'),'다시 펴지지 않음');
+      assert(Math.abs(_hb.vBot-botOpen)<8,'다시 폈는데 전장이 원래대로 안 돌아옴');
+      assert(Math.abs(_hb.k-kOpen)<0.03,'다시 폈는데 배율이 원래대로 안 돌아옴: '+_hb.k.toFixed(2)); }
+    PROF().pcoin=99999; renderHome();
+    const btn=document.querySelector('.hmUp .hmUpBtn'); assert(!btn.disabled,'미네랄이 있는데 버튼이 잠김');
+    const lv0=PROF().hunt.upg.atk||0, pc0=PROF().pcoin; btn.click();
+    assert((PROF().hunt.upg.atk||0)===lv0+1,'구매가 업그레이드 레벨에 반영되지 않음');
+    assert(PROF().pcoin<pc0,'미네랄이 차감되지 않음');
     // 네비 이동: 유즈맵 → HOME → 마을
     navGo('map'); await sleep(80);
     assert(visible($('mapSelect')),'네비 유즈맵이 목록을 안 엶');
@@ -273,6 +295,109 @@ async function groupLobby(){
     if(typeof dgEnter==='function'){ dgEnter(1); assert(shown(),'던전에 재화 바가 없음'); openTown(); }
     openHome(); await sleep(40);
     return '미네랄=pcoin(12,345) · 가스/젬 · 홈/유즈맵/마을/던전 상시'; });
+  // 자동사냥(라운드 머신) — 던전과 같은 격리 규칙. hbStep을 직접 돌린다(rAF 비의존).
+  await step('자동사냥: 라운드 정산·적 누적·사망 하강·격리', async()=>{ skipIf(typeof hbStart!=='function','자동사냥 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    openHome(); await sleep(80);
+    assert(_hb && _hb.on,'전투가 시작 안 됨');
+    _hb.manual=true;   // 인터벌 시계를 멈추고 hbStep만으로 결정적으로 돌린다
+    const snap=JSON.stringify({credits:G.credits, wave:G.wave, units:(G.units||[]).length});
+    // ① 처치 = 즉시 지급(재화 바가 바로 오른다) · 라운드 클리어 = 보너스 추가
+    const p0=PROF().pcoin, g0=PROF().gas, x0=CHAR().level*1000000+CHAR().xp;
+    _hb.char.atk=1e9; _hb.char.range=1e9; _hb.char.cd=.05; _hb.char.hpMax=1e9; _hb.char.hp=1e9;
+    for(let i=0;i<40 && !_hb.kills;i++) hbStep(0.05);
+    assert(_hb.kills>0,'처치가 없음');
+    assert(PROF().pcoin>p0 && PROF().gas>g0,'처치 보상이 즉시 지급되지 않음');
+    assert(CHAR().level*1000000+CHAR().xp>x0,'경험치가 안 들어옴');
+    assert($('curMin').textContent!=='0','재화 바에 처치 보상이 반영되지 않음');
+    const w0=_hb.round, pk=PROF().pcoin;
+    let cleared=false;
+    for(let i=0;i<5000;i++){ hbStep(0.05); if(_hb.round!==w0 || _hb.phase==='clearWait'){ cleared=true; break; } }
+    assert(cleared,'라운드 클리어가 일어나지 않음');
+    assert(PROF().pcoin>pk,'클리어 보너스가 없음');
+    assert(_hb.wave===1,'클리어 후 웨이브가 리셋되지 않음');
+    // ② 적 누적: 화력 0으로 20초를 흘리면 다음 웨이브와 합쳐진다
+    _hb.char.atk=0; _hb.char.hp=1e9; _hb.char.hpMax=1e9; _hb.char.regen=0;
+    _hb.phase='fight'; _hb.wave=1; _hb.foes.length=0; _hb.pend.length=0; hbSpawnWave();
+    const n1=_hb.foes.length+_hb.pend.length;
+    for(let i=0;i<560;i++) hbStep(0.05);   // 28초 = 웨이브1(20s)+간격(3s)+웨이브2 스폰 후
+    assert(_hb.wave===2,'20초 뒤 다음 웨이브로 안 넘어감: wave '+_hb.wave);
+    assert(_hb.foes.length+_hb.pend.length>n1,'미처치 적이 누적되지 않음: '+(_hb.foes.length+_hb.pend.length)+' ≤ '+n1);
+    // ③ 사망 = 라운드 하강 + 클리어 보너스 몫 소실(이미 받은 처치 보상은 그대로) + 부활
+    _hb.round=3; hbHunt().round=3; const pD=PROF().pcoin;
+    _hb.char.atk=0; _hb.char.hpMax=10; _hb.char.hp=1;
+    for(let i=0;i<200 && _hb.phase!=='down';i++) hbStep(0.05);
+    assert(_hb.phase==='down','맞아도 안 쓰러짐');
+    assert(_hb.round===2,'라운드 하강이 없음: '+_hb.round);
+    assert(PROF().pcoin===pD,'사망 순간에 보상이 지급됨(클리어 보너스가 새어나감)');
+    for(let i=0;i<80 && _hb.phase==='down';i++) hbStep(0.05);
+    assert(_hb.phase==='fight' && _hb.char.hp===_hb.char.hpMax,'부활이 안 됨');
+    // ④ 격리 + 화면 이탈 정지 + 재진입 재개
+    assert(JSON.stringify({credits:G.credits, wave:G.wave, units:(G.units||[]).length})===snap,'유즈맵 상태를 건드림');
+    const rep='round '+_hb.round+' · kills '+_hb.kills;
+    openMapSelect(); await sleep(60); assert(!_hb.on,'홈을 떠났는데 루프가 살아 있음');
+    openHome(); await sleep(60); assert(_hb.on,'재진입 시 재개 안 됨');
+    return rep; });
+  // 라운드 선택 — 최고 도달까지만 고를 수 있고, 반복/등반이 클리어 후 행동을 가른다.
+  await step('자동사냥: 라운드 선택 · 반복/등반', async()=>{ skipIf(typeof hbOpenRounds!=='function','라운드 선택 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    openHome(); await sleep(60); _hb.manual=true;
+    hbHunt().best={}; hbGoRound(1);
+    _hb.char.atk=1e9; _hb.char.range=1e9; _hb.char.cd=.05; _hb.char.hpMax=1e9; _hb.char.hp=1e9;
+    const clearOnce=()=>{ for(let i=0;i<20000;i++){ const ph=_hb.phase; hbStep(0.05);
+      if(ph!=='clearWait' && _hb.phase==='clearWait') return true; } return false; };
+    // ① 반복 모드 = 클리어해도 같은 라운드
+    hbSetClimb(false); assert(!hbHunt().climb,'반복 모드가 안 됨');
+    const r0=_hb.round;
+    assert(clearOnce(),'반복 모드에서 클리어가 안 됨');
+    assert(clearOnce(),'반복 모드에서 두 번째 클리어가 안 됨');
+    assert(_hb.round===r0,'반복 모드인데 라운드가 올랐음: '+r0+' → '+_hb.round);
+    // ② 등반 모드 = 클리어하면 다음 라운드 + 최고 기록 갱신
+    hbSetClimb(true); assert(hbHunt().climb,'등반 모드가 안 됨');
+    assert(clearOnce(),'등반 모드에서 클리어가 안 됨');
+    assert(_hb.round===r0+1,'등반인데 라운드가 안 올랐음: '+_hb.round);
+    assert(hbBest(1)>=r0+1,'최고 도달 라운드가 갱신되지 않음: '+hbBest(1));
+    // ③ 시트 = 최고 도달까지만, 현재 라운드 강조
+    hbOpenRounds(); await sleep(40);
+    assert(visible($('hbRoundSheet')),'라운드 팝업이 안 열림');
+    // 하단 시트가 아니라 전장 한가운데 떠야 한다
+    { const card=document.querySelector('#hbRoundSheet .hbmCard'), ph=$('phone');
+      assert(card,'팝업 카드(.hbmCard)가 없음');
+      const cr=card.getBoundingClientRect(), pr=ph.getBoundingClientRect();
+      assert(Math.abs((cr.top+cr.bottom)/2-(pr.top+pr.bottom)/2)<60,'팝업이 화면 중앙이 아님');
+      assert(Math.abs((cr.left+cr.right)/2-(pr.left+pr.right)/2)<4,'팝업이 가로 중앙이 아님'); }
+    // ⛔ 푸른기 금지 — 팝업 안 어떤 요소도 파랑이 빨강보다 크면 안 된다(금색·초록은 역할 액센트라 허용)
+    { const rgb=x=>(x.match(/\d+(\.\d+)?/g)||[]).slice(0,3).map(Number);
+      for(const el of document.querySelectorAll('#hbRoundSheet, #hbRoundSheet *')){ const c=getComputedStyle(el);
+        for(const src of [c.backgroundColor,c.backgroundImage,c.borderTopColor,c.color,c.boxShadow]){
+          for(const m of (src.match(/rgba?\([^)]*\)/g)||[])){ const [r,g,b]=rgb(m);
+            if(r===undefined) continue;
+            // 허용폭 12 = HOME 톤 검사와 같은 기준(공용 --metal-edge rgb(60,62,70)이 B-R=10이라 그 아래로 잡으면 오검출)
+            assert(b<=r+12,'라운드 팝업에 푸른기가 남음('+(el.className||el.tagName)+'): '+m); } } } }
+    const cells=document.querySelectorAll('#hbRoundGrid .hbRd');
+    assert(cells.length===hbBest(1),'선택지가 최고 도달과 다름: '+cells.length+' vs '+hbBest(1));
+    assert(document.querySelector('#hbRoundGrid .hbRd.on').textContent===String(_hb.round),'현재 라운드가 강조되지 않음');
+    // ④ 라운드 이동 = 진행 초기화 + 시트 닫힘 · 상한 넘는 값은 잘린다
+    hbGoRound(1); await sleep(40);
+    assert(_hb.round===1 && _hb.wave===1,'라운드 이동이 반영되지 않음');
+    assert(!visible($('hbRoundSheet')),'이동 후 시트가 안 닫힘');
+    hbGoRound(999);
+    assert(_hb.round===hbBest(1),'최고 도달을 넘겨 이동됨: '+_hb.round);
+    hbSetClimb(false);
+    return '최고 '+hbBest(1)+'라운드 · 반복/등반 ok'; });
+  // 친구 목록은 네비 밖(마을 상단 바)에서 연다 — 네비 칸 수가 바뀌어도 진입점이 사라지지 않게 지킨다.
+  await step('친구: 마을 상단 바에서 열림', async()=>{ skipIf(typeof twOpenSocial!=='function','친구 시트 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    openTown(); await sleep(60);
+    const fb=document.querySelector('#townScreen .twBar [aria-label="친구"]');
+    assert(fb && visible(fb),'마을 상단 바에 친구 진입점이 없음');
+    assert(fb.querySelector('svg'),'친구 버튼 아이콘이 안 그려짐(data-ico 미치환)');
+    fb.click(); await sleep(60);
+    assert(visible($('twSocial')),'친구 시트가 안 열림');
+    const n=document.querySelectorAll('#hubFriends .frRow').length;
+    assert(n>0,'친구 목록이 비어 있음');
+    twCloseSocial(); assert(!visible($('twSocial')),'친구 시트가 안 닫힘');
+    return n+'명'; });
   await step('유즈맵 선택 → 네모네모 모드 팝업', ()=>{ openMapSelect(); openModeSheet(USEMAPS.nemo_inf||USEMAPS.nemo);
     const mo=document.querySelector('#modeSheet .moCard'); assert(visible(mo),'moCard 안 보임');
     const w=mo.getBoundingClientRect().width; assert(w>200&&w<400,'moCard 폭 이상: '+w); closeModeSheet(); return 'w='+w; });
