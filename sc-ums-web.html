@@ -5493,18 +5493,22 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char; S.t+=dt;
     if(bk) tg=bk;
     const dx=tg.x-f.x, dy=tg.y-f.y, d=Math.hypot(dx,dy)||1;
     if(d>HB_STOP){ f.x+=dx/d*f.spd*spdMul*dt; f.y+=dy/d*f.spd*spdMul*dt;
-      f.face=Math.atan2(dx/d, -(dy/d)); f.mv=1; }      // 가는 쪽(연속 각도) — 메인 게임과 같은 회전 방식
+      f.face=Math.atan2(dx, dy); f.mv=1; }            // ⚠ 게임과 같은 식: atan2(dx,dy). -dy로 쓰면 모델이 정반대를 본다
     else{ f.mv=0; f.cdT-=dt; if(f.cdT<=0){ f.cdT=1.1;
       if(bk){ bk.hp-=f.atk; S.floats.push({x:bk.x,y:bk.y-20,tx:'-'+Math.round(f.atk),cl:'#c9a24a',t:0}); }
       else { c.hp-=f.atk; c.hitT=0; S.floats.push({x:c.x,y:c.y-26,tx:'-'+Math.round(f.atk),cl:'#ff8a9a',t:0}); } } } }
+  // 캐릭터는 늘 가장 가까운 적을 본다 — 게임의 '정지 + 대상 바라봄'(atan2(dx,dy))과 같은 규칙.
+  // 쏠 때만 돌리면 쏘기 직전까지 엉뚱한 곳을 보고 있어 총알이 등 뒤에서 나가는 것처럼 보인다.
+  { let n=null,nd=1e18;
+    for(const f of S.foes){ const d=Math.hypot(f.x-c.x,f.y-c.y); if(d<nd){ nd=d; n=f; } }
+    if(n){ const _d=Math.hypot(n.x-c.x,n.y-c.y)||1; if(_d>1e-4) S.charFace=Math.atan2(n.x-c.x, n.y-c.y); } }
   c.cdT-=dt;
   if(c.cdT<=0){ let best=null,bd=1e18;
     for(const f of S.foes){ const d=Math.hypot(f.x-c.x,f.y-c.y); if(d<bd){ bd=d; best=f; } }
     if(best && bd<=c.range){ c.cdT=c.cd;
       const crit=Math.random()<c.crit, dmg=c.atk*(crit?2:1)*(hbBoostOn('atk')?2:1);
       best.hp-=dmg; S.shots.push({x1:c.x,y1:c.y-10,x2:best.x,y2:best.y,t:0});
-      { const ddx=best.x-c.x, ddy=best.y-c.y, dd=Math.hypot(ddx,ddy)||1;
-        S.charFace=Math.atan2(ddx/dd, -(ddy/dd)); S.charDir=sprDir(ddx/dd, ddy/dd); S.atkT=HB_ATK_SHOW; }
+      S.atkT=HB_ATK_SHOW;
       S.floats.push({x:best.x,y:best.y-20,tx:(crit?'✦':'')+Math.round(dmg),cl:crit?'#ffd24a':'#ececec',t:0});
       if(best.hp<=0) hbKill(best); } }
   // 아군 — 동료는 캐릭터 주위를 천천히 돌고, 터렛은 고정, 펫은 가깝게 붙어 돈다
@@ -5658,7 +5662,7 @@ function hb3dReady(){ return !!(window.M3D && M3D.ready && M3D.ready() && M3D.sy
 // ⚠ 크기: syncBuild의 mul 기본값은 0.5다 → 인자를 안 주면 절반 크기로 나온다.
 //    여기서는 scaleMul=1로 두고, 유닛마다 '화면 픽셀 지름'을 정해 scl을 역산한다.
 //    footprintOf(id) = mul 1일 때의 표시 반지름(px) → scl = 원하는지름 / (2*footprint)
-const HB_PX_CHAR=46, HB_PX_FOE=36, HB_PX_ELITE=50;   // 전장에서 보이길 원하는 화면 지름(px, 배율 k 적용 전)
+const HB_PX_CHAR=34, HB_PX_FOE=26, HB_PX_ELITE=38;   // 화면 지름(px, 배율 k 적용 전) = 2D로 그리던 크기와 동일
 function _hb3dScl(id, px){ const fp=(window.M3D&&M3D.footprintOf)?M3D.footprintOf(id):0;
   if(!fp||!isFinite(fp)||fp<=0) return 1;            // 모델 로드 전 → 다음 프레임에 다시 잰다
   return px/(2*fp); }

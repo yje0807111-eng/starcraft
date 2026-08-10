@@ -645,16 +645,22 @@ async function groupLobby(){
       assert(g && Math.hypot(g.x,g.y)<d0, '적이 캐릭터 쪽으로 안 움직임: '+d0+' → '+(g?Math.round(Math.hypot(g.x,g.y)):'없어짐'));
       assert(g.mv===1,'걸어오는 중인데 걷기 상태가 안 켜짐(모션이 안 돈다): mv='+g.mv);
       return g.face; };
-    // face = atan2(nx,-ny) 라디안(북=0). 8칸이 아니라 메인 게임과 같은 연속 각도라 어느 각도든 정확히 본다
+    // ⚠ 각도 규약은 게임과 '같은 식'이어야 한다: face = atan2(대상x-내x, 대상y-내y).
+    //    -dy로 쓰면 y가 뒤집혀 모델이 정반대를 보고, 총알이 등 뒤에서 나가는 것처럼 보인다(실제로 그랬다).
     const near=(a,b)=>Math.abs(Math.atan2(Math.sin(a-b),Math.cos(a-b)))<0.02;
-    assert(near(walk(400,0),-Math.PI/2),'오른쪽에서 오는 적이 왼쪽을 안 봄');
-    assert(near(walk(0,-400), Math.PI),'위에서 오는 적이 아래를 안 봄');
-    assert(near(walk(-400,0), Math.PI/2),'왼쪽에서 오는 적이 오른쪽을 안 봄');
-    assert(near(walk(0,400), 0),'아래에서 오는 적이 위를 안 봄');
-    // 45도 같은 사선도 그대로 나와야 한다(8칸이면 여기서 어긋난다)
-    { const fd=walk(300,-300);   // 오른쪽 위에서 오면 왼쪽 아래로 걷는다 = -3π/4
-      assert(near(fd, -Math.PI*0.75),'사선(45°)에서 오는 적의 각도가 어긋남: '+fd); }
-    // 이동 중에만 걷기 모션이 돌아야 한다(멈춘 적이 계속 뛰면 어색하다)
+    const want=(fx,fy)=>Math.atan2(0-fx, 0-fy);   // 적은 원점(캐릭터)을 향해 걷는다
+    for(const [x,y] of [[400,0],[0,-400],[-400,0],[0,400],[300,-300],[-250,180]]){
+      const got=walk(x,y);
+      assert(near(got, want(x,y)),
+        '적 각도가 게임 식(atan2(dx,dy))과 다름 @('+x+','+y+'): '+got.toFixed(3)+' ≠ '+want(x,y).toFixed(3)); }
+    // 캐릭터도 같은 식으로 가장 가까운 적을 봐야 한다(쏠 때만 돌면 총알이 등 뒤에서 나간다)
+    _hb.phase='fight'; _hb.waveT=99; _hb.foes.length=0;
+    _hb.foes.push({ico:'🟢',mdl:'snapper',x:0,y:-300,hp:1e9,hpMax:1e9,atk:1,spd:0,cdT:9,elite:false});
+    hbStep(0.05);
+    assert(near(_hb.charFace, Math.atan2(0, -300)),'캐릭터가 위쪽 적을 안 봄: '+_hb.charFace);
+    _hb.foes.length=0; _hb.foes.push({ico:'🟢',mdl:'snapper',x:250,y:0,hp:1e9,hpMax:1e9,atk:1,spd:0,cdT:9,elite:false});
+    hbStep(0.05);
+    assert(near(_hb.charFace, Math.atan2(250, 0)),'캐릭터가 오른쪽 적을 안 봄: '+_hb.charFace);
     _hb.phase='fight'; _hb.waveT=99; _hb.foes.length=0;
     _hb.foes.push({ico:'🟢',mdl:'snapper',x:5,y:0,hp:1e9,hpMax:1e9,atk:1,spd:60,cdT:9,elite:false});
     for(let i=0;i<3;i++){ _hb.phase='fight'; hbStep(0.1); }
