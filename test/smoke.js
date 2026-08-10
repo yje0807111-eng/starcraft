@@ -195,11 +195,11 @@ async function groupLobby(){
               'HOME에 푸른기가 남음('+(el.className||el.tagName)+'): '+m); } }
         for(const v of c.borderRadius.split(/[\s\/]+/))
           assert(!v || v==='0px' || v==='3px', 'HOME 모서리가 너무 둥금('+(el.className||el.tagName)+'): '+v); } }
-    assert(document.querySelectorAll('#navBar .navIt').length===5,'하단 네비가 5칸이 아님(HOME·던전·마을·유즈맵·상점)');
+    assert(document.querySelectorAll('#navBar .navIt').length===5,'하단 네비가 5칸이 아님(HOME·정비·마을·유즈맵·상점)');
     { const navs=[...document.querySelectorAll('#navBar .navIt')].map(x=>x.dataset.nav).join(',');
-      assert(navs==='home,dungeon,town,map,shop','네비 구성이 다름: '+navs);
-      // data-nav는 옛 이름(dungeon) 그대로 두고 표기만 '토벌' — 코드 식별자를 바꾸면 다른 채팅 작업과 충돌한다
-      assert(document.querySelector('#navBar .navIt[data-nav=dungeon]').textContent.indexOf('토벌')>=0,'던전 탭 표기가 토벌이 아님'); }
+      assert(navs==='home,gear,town,map,shop','네비 구성이 다름: '+navs);
+      // 토벌은 네비에서 빠지고 HOME 팝업이 됐다 — 2번 칸은 정비(장비·펫·동료)
+      assert(document.querySelector('#navBar .navIt[data-nav=gear]').textContent.indexOf('정비')>=0,'2번 탭 표기가 정비가 아님'); }
     assert(document.querySelector('#navBar .navIt.on').dataset.nav==='home','HOME 탭이 활성이 아님');
     // 실데이터에 붙은 곳 = POWER UPGRADES(영구 업그레이드 6종 — 미네랄 구매·스탯 포인트 흡수)
     assert(document.querySelectorAll('.hmUp').length===6,'업그레이드가 6칸이 아님');
@@ -245,13 +245,14 @@ async function groupLobby(){
       [...document.querySelectorAll('.appScreen')].filter(e=>visible(e)).map(e=>e.id).join(',')+
       ' nav='+visible($('navBar'))+' CHAR='+(!!CHAR())+']');
     assert(document.querySelector('#navBar .navIt.on').dataset.nav==='town','마을 탭이 활성이 아님');
-    // 던전 탭 = 관문(던전 선택) 패널 · 상점 탭 = 뽑기집 (전용 화면은 이후 단계)
-    navGo('dungeon'); await sleep(60);
-    assert(document.querySelector('#navBar .navIt.on').dataset.nav==='dungeon','던전 탭이 활성이 아님');
+    // 정비 탭 = 장비·펫·동료 전용 화면 · 상점 탭 = 상점 전용 화면
+    navGo('gear'); await sleep(60);
+    assert(document.querySelector('#navBar .navIt.on').dataset.nav==='gear','정비 탭이 활성이 아님');
+    assert(visible($('gearScreen')),'네비 정비가 화면을 안 엶');
     navGo('shop'); await sleep(60);
     assert(document.querySelector('#navBar .navIt.on').dataset.nav==='shop','상점 탭이 활성이 아님');
     openHome(); await sleep(60);
-    return 'HOME 카드 1개 + 네비 5칸(home·던전·마을·유즈맵·상점) ok'; });
+    return 'HOME 카드 1개 + 네비 5칸(home·정비·마을·유즈맵·상점) ok'; });
   // 폰트 3종 — 제목 Do Hyeon · 본문 IBM Plex Sans KR · 숫자 Rajdhani.
   // ⚠ 실제 렌더가 아니라 CSS만 잰다(헤드리스에선 웹폰트를 못 받을 수 있어 렌더 비교는 못 믿는다).
   await step('폰트: 제목/본문/숫자가 토큰으로 갈린다', async()=>{
@@ -549,7 +550,9 @@ async function groupLobby(){
     assert(hbBoostLeft('inc')>l1+HB_BOOSTS.inc.sec-5,'연장이 안 됨: '+l1+' → '+hbBoostLeft('inc'));
     // ⑤ 스킬 바 UI
     renderHbBar();
-    assert(document.querySelectorAll('#hbBar .hbSk').length===Object.keys(HB_SKILLS).length+2,'스킬 바 버튼 수가 다름');
+    assert(document.querySelectorAll('#hbBar .hbSk').length===Object.keys(HB_SKILLS).length+3,'스킬 바 버튼 수가 다름(스킬 + 건설·토벌·부스트)');
+    // 버튼이 늘어도 한 줄에 들어가야 한다 — 넘치면 토벌·부스트가 화면 밖으로 밀린다
+    { const bar=$('hbBar'); assert(bar.scrollWidth<=bar.clientWidth+1,'스킬 바가 가로로 넘침: '+bar.scrollWidth+'>'+bar.clientWidth); }
     // ⑥ 전장 아래 경계 = 스킬 바 위. 카드 기준으로 잡으면 적이 버튼 뒤로 지나가 섞인다.
     { hbResize();
       const cv=$('hbCv').getBoundingClientRect(), bar=$('hbBar').getBoundingClientRect();
@@ -748,20 +751,98 @@ async function groupLobby(){
       leave();
       assert(cv.parentNode===home, name+' 뒤에 3D 캔버스가 안 돌아옴 — 유즈맵 3D가 사라진다');
       assert(!cv.style.zIndex, name+' 뒤에 z-index가 남음: '+cv.style.zIndex); }
+    // 공용 캔버스를 빌릴 때, sync()가 관리하지 않는 풀(뽑기 비콘·미건설 터렛 고스트)도 같이 숨겨야 한다.
+    // 안 그러면 '미사일 포탑' 고스트 같은 게 HOME 위에 은은하게 남는다(실제로 그랬다).
+    // ⚠ '숨기기'가 아니라 '삭제'여야 한다 — 숨긴 것은 어딘가에서 다시 켜지면 도로 나타난다.
+    assert(/clearIdlePools/.test(hb3dAttach.toString()),
+      '캔버스를 빌릴 때 유휴 풀을 안 지움 — 비콘·고스트 잔상이 HOME에 남는다');
+    assert(/clearIdlePools/.test(hb3dDetach.toString()),
+      '캔버스를 돌려줄 때 유휴 풀을 안 지움 — 잔상이 다음 화면으로 넘어간다');
+    assert(!/hideIdlePools/.test(hb3dAttach.toString()),'숨기기(hideIdlePools)로 되돌아감 — 삭제여야 한다');
+    if(window.M3D){
+      assert(typeof M3D.clearIdlePools==='function','M3D.clearIdlePools가 없음');
+      M3D.clearIdlePools();   // 없는 풀을 참조하면 여기서 ReferenceError로 터진다(실제로 한 번 그랬다)
+      M3D.clearIdlePools();   // 두 번 불러도 안전해야 한다(이미 빈 풀)
+    }
     openHome(); await sleep(60);
-    return '전환·게임진입·정지 3경로 원복 ok'; });
+    return '전환·게임진입·정지 3경로 원복 ok'+(window.M3D?' · 유휴 풀 삭제 실행 ok':' · 유휴 풀은 M3D 없어 미검증'); });
   await step('용어 분리: 자동사냥=던전 / 옛 콘텐츠=토벌', async()=>{ skipIf(typeof openDungeonHub!=='function','토벌 허브 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
-    const nav=document.querySelector('#navBar .navIt[data-nav=dungeon]');
-    assert(nav && nav.textContent.indexOf('토벌')>=0,'네비 탭이 토벌이 아님: '+(nav&&nav.textContent));
-    openDungeonHub(); await sleep(80);
+    // 토벌 입구는 네비가 아니라 HOME 스킬 바의 버튼 하나뿐 — 없어지면 들어갈 길이 사라진다
+    openHome(); await sleep(80);
+    const ent=[...document.querySelectorAll('#hbBar .hbSk')].filter(b=>b.textContent.indexOf('토벌')>=0);
+    assert(ent.length===1,'HOME 토벌 버튼이 1개가 아님: '+ent.length);
+    ent[0].click(); await sleep(80);
     const hub=document.getElementById('dgHubBody');
     assert(visible(hub),'토벌 허브가 안 열림');
     assert(hub.textContent.indexOf('던전')<0,'토벌 화면에 던전 표기가 남음: '+hub.textContent.slice(0,60));
     assert(hub.textContent.indexOf('토벌')>=0,'토벌 표기가 없음');
+    // 허브는 '화면'이 아니라 HOME 위 팝업이라 화면 전환으로 안 닫힌다 — HOME으로 돌아오면 걷어내야 한다
     openHome(); await sleep(80);
+    assert(!visible($('dgHubScreen')),'HOME으로 돌아왔는데 토벌 허브 팝업이 HOME을 덮은 채 남음');
     assert(document.getElementById('hbRound').textContent.indexOf('던전')>=0,'자동사냥은 던전 표기를 유지해야 함');
     return '네비 토벌 · HOME 던전'; });
+  // HOME 좌상단 HUD — 프로필은 상세하게 맨 위 왼쪽에 고정 · 킬수는 없음 · 라운드 조절은 전용 아이콘 버튼.
+  await step('HOME HUD: 좌상단 프로필 상세 · 킬수 없음 · 라운드는 아이콘 버튼', async()=>{
+    skipIf(typeof openHome!=='function','HOME 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    openHome(); await sleep(80); _hb.manual=true;
+    const ph=$('phone').getBoundingClientRect();
+    // ① 킬수 표시는 사라졌다(요청) — 요소 자체가 없어야 한다
+    assert(!$('hbKill'),'킬수 표시가 아직 남아 있음');
+    // ② 프로필 묶음이 화면 맨 위 왼쪽에 고정 — 재화 바(우측 정렬)보다 위에서 시작한다
+    const top=document.querySelector('.hbHudTop');
+    assert(top,'좌상단 묶음(.hbHudTop)이 없음');
+    const tr=top.getBoundingClientRect();
+    assert(tr.left-ph.left<=12,'프로필이 왼쪽 끝에 붙어 있지 않음: '+Math.round(tr.left-ph.left)+'px');
+    assert(tr.top-ph.top<=8,'프로필이 맨 위가 아님: '+Math.round(tr.top-ph.top)+'px');
+    { const res=document.querySelectorAll('#curBar .res');
+      assert($('curBar').classList.contains('bare'),'HOME 재화 바가 배경 위 숫자(.bare)가 아님');
+      assert(res.length,'홈 재화 바가 없음');
+      for(const r of res){ const rr=r.getBoundingClientRect();
+        assert(rr.left>=tr.right-1,'재화 숫자가 프로필과 겹침'); } }
+    // 재화 바는 화면 전체 폭을 덮는 판이라, 투명(.bare)일 때 왼쪽 빈 자리가 프로필 클릭을 삼키면 안 된다
+    { const hit=(el)=>{ const r=el.getBoundingClientRect();
+        return document.elementFromPoint((r.left+r.right)/2,(r.top+r.bottom)/2); };
+      for(const id of ['hbHud','hbRoundBtn']){ const el=$(id), got=hit(el);
+        assert(got && el.contains(got),'#'+id+' 클릭이 다른 요소에 가로채임: '+
+          (got?(got.id||got.className||got.tagName):'none')); } }
+    // ③ 프로필 내용이 '상세' — 이름/직업/레벨/공격/체력 + 경험치 바가 실제 값으로 채워진다
+    const c=CHAR(); c.name='스모크'; c.xp=Math.round(profXpForLevel(c.level)*0.5); hbHud();
+    for(const id of ['hbName','hbJob','hbLv','hbAtk','hbHp']){
+      const e=$(id); assert(e && e.textContent.trim(),'프로필 항목이 비어 있음: #'+id); }
+    assert($('hbName').textContent==='스모크','이름이 캐릭터와 다름: '+$('hbName').textContent);
+    assert($('hbLv').textContent==='Lv.'+c.level,'레벨 표기가 다름: '+$('hbLv').textContent);
+    { const bar=$('hbXpBar'), box=document.querySelector('.hbXp');
+      assert(bar && box,'경험치 바가 없음');
+      const w=bar.getBoundingClientRect().width, bw=box.getBoundingClientRect().width;
+      assert(Math.abs(w/bw-0.5)<0.06,'경험치 바가 xp 비율(50%)을 따르지 않음: '+Math.round(w/bw*100)+'%');
+      c.xp=0; hbHud();
+      assert(bar.getBoundingClientRect().width<2,'xp=0인데 바가 비지 않음'); }
+    // ④ 라운드 조절 = 전용 아이콘 버튼(텍스트 구역을 누르는 방식은 폐지)
+    const rb=$('hbRoundBtn');
+    assert(rb && rb.tagName==='BUTTON','라운드 선택 아이콘 버튼(#hbRoundBtn)이 없음');
+    assert(rb.querySelector('svg'),'아이콘 버튼에 SVG 아이콘이 없음(이모지 금지)');
+    assert(top.contains(rb),'라운드 아이콘이 좌상단 묶음 안에 없음');
+    assert(visible(rb),'라운드 아이콘 버튼이 안 보임');
+    const mid=$('hbMid');
+    // 프로필이 4줄로 커졌으므로 중앙 라운드 표시는 그 아래로 내려가야 한다(겹치면 글자가 포개진다)
+    { const mr=mid.getBoundingClientRect();
+      assert(!(mr.left<tr.right && mr.right>tr.left && mr.top<tr.bottom && mr.bottom>tr.top),
+        '중앙 라운드 표시가 좌상단 프로필과 겹침: mid.top='+Math.round(mr.top-ph.top)+' vs 프로필 bottom='+Math.round(tr.bottom-ph.top));
+      assert(mid.querySelector('b').getBoundingClientRect().height<26,'라운드 이름이 두 줄로 접힘(nowrap 필요)'); }
+    assert(mid.tagName!=='BUTTON','중앙 라운드 표시가 아직 버튼임(아이콘으로 옮겨야 함)');
+    assert(getComputedStyle(mid).pointerEvents==='none','중앙 표시가 아직 클릭을 먹음');
+    hbCloseRounds(); await sleep(20);
+    rb.click(); await sleep(60);
+    assert(visible($('hbRoundSheet')),'아이콘을 눌렀는데 라운드 팝업이 안 열림');
+    hbCloseRounds();
+    // ⑤ 이름 충돌 금지 — 인게임 홈 하단 탭 줄(.hbTop)이 좌상단 규칙에 먹히면 세로로 무너진다
+    { const tabs=document.querySelector('.hbTop.hsTabs'); assert(tabs,'인게임 홈 탭 줄(.hbTop.hsTabs)이 없음');
+      const cs=getComputedStyle(tabs);
+      assert(cs.position!=='absolute','인게임 탭 줄이 좌상단 규칙에 오염됨(position)');
+      assert(cs.flexDirection==='row','인게임 탭 줄이 좌상단 규칙에 오염됨(flex-direction='+cs.flexDirection+')'); }
+    return '좌상단 고정(+'+Math.round(tr.left-ph.left)+','+Math.round(tr.top-ph.top)+') · 킬수 없음 · 아이콘 팝업 ok'; });
   // 라운드 선택 — 최고 도달까지만 고를 수 있고, 반복/등반이 클리어 후 행동을 가른다.
   await step('자동사냥: 라운드 선택 · 반복/등반', async()=>{ skipIf(typeof hbOpenRounds!=='function','라운드 선택 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
@@ -895,6 +976,36 @@ async function groupLobby(){
     assert(visible($('shopScreen')) && !visible($('townPanel')),'마을 구역이 아직 팝업으로 열림');
     openHome(); await sleep(40);
     return '전용 화면 · 두 경로 ok'; });
+  // 🧰 정비 = 장비·펫·동료 전용 화면. 내용은 전부 기존 렌더러 재사용(단일 소스) — 복제본이 생기면 여기서 걸린다.
+  await step('정비: 전용 화면 · 장비/펫/동료 탭 · 렌더러 재사용', async()=>{ skipIf(typeof openGear!=='function','정비 화면 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','정비'); saveMeta(); }
+    navGo('gear'); await sleep(60);
+    assert(visible($('gearScreen')),'네비 정비가 전용 화면을 안 엶');
+    assert(!visible($('townPanel')) && !visible($('townScreen')),'정비인데 마을이 남아 있음');
+    assert(document.querySelectorAll('#gearTabs .msSortTab').length===3,'정비 탭이 3개가 아님');
+    assert(document.querySelector('#gearTabs .msSortTab.on').dataset.v==='gear','기본 탭이 장비가 아님');
+    // ① 장비 = 마을 장비창과 같은 renderProfGear() — 아바타(페이퍼돌) + 가방이 그대로 나와야 한다
+    assert(document.querySelector('#gearBody .gearWrap'),'장비 탭에 장비창이 없음');
+    assert(document.querySelector('#gearBody .bagBody'),'장비 탭에 가방이 없음');
+    { const ref=renderProfGear().replace(/\s+/g,'');
+      assert(ref.indexOf('gearWrap')>=0 && document.getElementById('gearBody').innerHTML.replace(/\s+/g,'').slice(0,40)===ref.slice(0,40),
+        '정비 장비 탭이 renderProfGear()와 다름(복제 의심)'); }
+    // ② 펫 = 상점 '보유 펫'과 같은 _shopPetPanel()
+    setGearTab('pet'); await sleep(40);
+    assert(document.querySelector('#gearTabs .msSortTab.on').dataset.v==='pet','펫 탭이 활성이 아님');
+    { const ref=_shopPetPanel().replace(/\s+/g,'');
+      assert(document.getElementById('gearBody').innerHTML.replace(/\s+/g,'').slice(0,60)===ref.slice(0,60),
+        '정비 펫 탭이 _shopPetPanel()과 다름(복제 의심)'); }
+    // ③ 동료 = 아직 시스템 없음 → HOME 건설로 보내는 자리
+    setGearTab('ally'); await sleep(40);
+    assert(document.querySelectorAll('#gearBody .shopPanel').length>=1,'동료 탭이 비어 있음');
+    assert(document.querySelector('#gearBody').textContent.indexOf('동료')>=0,'동료 탭에 동료 표기가 없음');
+    setGearTab('gear');
+    // 굵기 700 상한(DESIGN.md §2)
+    for(const sel of ['#gearScreen .shopTitle','#gearTabs .msSortTab']){ const e=document.querySelector(sel);
+      if(e) assert(+getComputedStyle(e).fontWeight<=700, sel+' 굵기가 700 초과(가짜 볼드): '+getComputedStyle(e).fontWeight); }
+    openHome(); await sleep(40);
+    return '3탭 · renderProfGear/_shopPetPanel 재사용 ok'; });
   await step('마을: 지정하지 않으면 안 열림(스쳐 지남·겹쳐 섬)', ()=>{ skipIf(typeof twSetTarget!=='function','마을 없음');
     openTown(); closeTownPanel();
     const c=twZonePx('charmake');

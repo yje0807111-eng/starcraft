@@ -2153,11 +2153,11 @@
   /* 유즈맵 선택 */
   #mapSelect{z-index:47;padding:12px 13px}
   /* 유즈맵 선택 로비 배경(전체 cover, 9:16 기준, UI는 위 레이어) */
-  #mapSelect::before,#rooms::before,#createPanel::before,#shopScreen::before{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;transform-origin:center center;
+  #mapSelect::before,#rooms::before,#createPanel::before,#shopScreen::before,#gearScreen::before{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;transform-origin:center center;
     background:url('assets/backgrounds/lobby_bg.webp') center center / cover no-repeat #04050b;
     animation:lobbyBreath 12s ease-in-out infinite}   /* 미세한 호흡(위아래 + 약한 확대) */
   @keyframes lobbyBreath{ 0%,100%{transform:scale(1.01) translateY(0)} 50%{transform:scale(1.05) translateY(-1%)} }
-  #mapSelect::after,#rooms::after,#createPanel::after,#shopScreen::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg, rgba(2,3,8,.96) 0%, rgba(2,3,8,.66) 16%, rgba(2,3,8,.2) 38%, rgba(2,3,8,.2) 62%, rgba(2,3,8,.66) 84%, rgba(2,3,8,.97) 100%)}   /* 위·아래 빨강 더 톤다운(중앙 이미지 유지) */
+  #mapSelect::after,#rooms::after,#createPanel::after,#shopScreen::after,#gearScreen::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg, rgba(2,3,8,.96) 0%, rgba(2,3,8,.66) 16%, rgba(2,3,8,.2) 38%, rgba(2,3,8,.2) 62%, rgba(2,3,8,.66) 84%, rgba(2,3,8,.97) 100%)}   /* 위·아래 빨강 더 톤다운(중앙 이미지 유지) */
   .msHead{display:flex;align-items:center;justify-content:space-between;padding-bottom:7px;margin-bottom:8px;border-bottom:1px solid rgba(255,255,255,.06)}
   .msHeadL{display:flex;align-items:center;gap:8px;min-width:0}
   
@@ -2478,15 +2478,33 @@
   .hmScroll{position:relative;z-index:1}   /* 전투 캔버스 위로 */
   /* 배경 전투 — 패널 없이 배경 위 그림·글자만(DESIGN §6: 배경이 주인공) */
   #hbCv{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-  .hbHud{position:absolute;left:12px;top:calc(var(--curH) + 8px);z-index:2;display:flex;flex-direction:column;gap:0;
-    align-items:flex-start;cursor:pointer;background:none;border:none;padding:2px 6px 2px 0;text-align:left}
+  /* 좌상단 고정 묶음 — 재화 바와 같은 줄에서 시작한다(바는 우측 정렬이라 왼쪽이 비어 있다)
+     ⚠ 이름 주의: `.hbTop`은 인게임 홈 하단 탭 줄(#bpMain)이 이미 쓰고 있다. 겹치면 그쪽이 세로로 무너진다. */
+  .hbHudTop{position:absolute;left:8px;top:3px;z-index:2;display:flex;flex-direction:column;align-items:flex-start;gap:5px}
+  /* 좌상단 묶음의 실제 높이(프로필 48 + gap 5 + 아이콘 30). 중앙 표시가 이 아래로 내려가는 기준 — 스모크가 겹침을 검사한다 */
+  :root{--hbHudH:83px}
+  .hbHud{display:flex;align-items:center;gap:7px;cursor:pointer;background:none;border:none;padding:0;text-align:left}
   .hbHud:active{opacity:.75}
-  .hbHud b{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:15px;font-weight:800;color:#e7edf5;letter-spacing:.8px}
-  .hbHud span{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:10px;font-weight:700;color:#9a9a9a;letter-spacing:.6px}
-  /* 중앙 표시 = 라운드 선택 버튼(누를 수 있어야 하므로 pointer-events를 살린다) */
-  .hbMid{position:absolute;left:50%;top:calc(var(--curH) + 8px);transform:translateX(-50%);z-index:2;text-align:center;
-    display:flex;flex-direction:column;cursor:pointer;background:none;border:none;padding:2px 8px}
-  .hbMid:active{opacity:.75}
+  .hbAv{flex:none;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:17px;
+    background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+  .hbCol{display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0}
+  .hbHud b{font-size:12px;font-weight:700;color:#ececec;letter-spacing:.2px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .hbSub{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:10px;font-weight:700;color:#9a9a9a;letter-spacing:.4px}
+  .hbSub i,.hbSt i{font-style:normal}
+  .hbXp{width:92px;height:3px;border-radius:var(--r-bar);background:rgba(255,255,255,.10);overflow:hidden}
+  .hbXp i{display:block;height:100%;width:0;background:#5dff8f}
+  .hbSt{display:flex;gap:7px;font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:10px;font-weight:700;color:#c6ccd4}
+  /* 라운드 선택 = 전용 아이콘 버튼(텍스트를 누르는 방식은 폐지) */
+  .hbRoundBtn{width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;
+    color:#c6ccd4;background:linear-gradient(180deg,#191919,#0e0e0e);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+  .hbRoundBtn:active{opacity:.75}
+  .hbRoundBtn svg,.hbRoundBtn .mIco{width:16px;height:16px}
+  /* HOME에선 재화 바가 '판'이 아니라 배경 위 숫자라 왼쪽 빈 자리가 프로필 클릭을 먹지 않게 한다 */
+  .curBar.bare{pointer-events:none}
+  .curBar.bare .res{pointer-events:auto}
+  /* 중앙 = 표시 전용(라운드 조절은 좌상단 .hbRoundBtn 담당) → 클릭을 통과시켜 전장을 가리지 않는다 */
+  .hbMid{position:absolute;left:50%;top:calc(3px + var(--hbHudH) + 8px);transform:translateX(-50%);z-index:2;text-align:center;
+    display:flex;flex-direction:column;pointer-events:none;background:none;border:none;padding:2px 8px;white-space:nowrap}
   .hbMid b{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:13px;font-weight:800;color:#ececec;letter-spacing:.5px}
   .hbMid span{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:10px;font-weight:700;color:#9a9a9a;letter-spacing:.4px}
   .hbMid i{font-style:normal}
@@ -2607,8 +2625,16 @@
   .dgHubHead b{color:#ffd24a}
   /* 🎁 상점 전용 화면 — HOME .hmCard 구조를 그대로 따른다: 바깥 패널 + 머리줄 + 안쪽 칸
      ⚠ 굵기는 700까지만(IBM Plex Sans KR 최대). 800/900은 가짜 볼드가 된다 — DESIGN.md §2 */
-  #shopScreen{overflow:hidden}   /* 배경 ::before가 확대 애니메이션을 하므로 넘침 차단(.spaceBg가 하던 역할) */
-  #shopScreen .twToast{position:absolute;left:50%;bottom:calc(var(--navH) + 16px);transform:translateX(-50%)}
+  #shopScreen,#gearScreen{overflow:hidden}   /* 배경 ::before가 확대 애니메이션을 하므로 넘침 차단(.spaceBg가 하던 역할) */
+  #shopScreen .twToast,#gearScreen .twToast{position:absolute;left:50%;bottom:calc(var(--navH) + 16px);transform:translateX(-50%)}
+  /* 🧰 정비 — 유즈맵 목록 상자(.msPanel)와 같은 규격. 여백·배경 규칙은 #mapSelect와 공유한다 */
+  #gearScreen{padding:12px 13px calc(var(--navH) + 12px)}
+  #phone.curOn #gearScreen{padding-top:calc(var(--curH) + 12px)}
+  #gearScreen .shopTitle{flex:none}
+  #gearScreen .shopTitle .ic{width:15px;height:15px;vertical-align:-2px;margin-right:5px}   /* 제목 아이콘 = 네비 '정비'와 같은 bag SVG(이모지 금지) */
+  .gearBody{flex:1 1 auto;min-height:0;padding:8px;overflow-y:auto;overflow-x:hidden}
+  .gearBody .shopPanel:last-child{margin-bottom:0}
+  .gearBody .gearWrap{height:100%}
   .shopTitle{text-align:center;font-size:15px;font-weight:700;letter-spacing:.6px;color:#ececec;padding:6px 0 12px}
   /* 구역 패널 = HOME .hmCard */
   .shopPanel{flex:none;background:var(--hmPanel);border:1px solid var(--hbEdge);border-radius:var(--r-bar);overflow:hidden;margin:0 2px 12px}   /* flex:none — 부모가 flex 컬럼이라 없으면 내용이 눌려 잘린다(HOME .hmCard와 같은 이유) */
@@ -2657,7 +2683,7 @@
   .gi{width:15px;height:15px;flex:none;object-fit:contain;vertical-align:middle}
   .giT{font-style:normal;font-size:13px;width:15px;flex:none;text-align:center}
   .shopGem button{width:100%}
-  .dgCard{position:relative;display:flex;align-items:stretch;height:74px;margin:0 2px 10px;border:1px solid var(--metal-edge);border-radius:var(--r-lg);overflow:hidden;cursor:pointer;
+  .dgCard{position:relative;display:flex;align-items:stretch;height:74px;margin:0 2px 10px;border:1px solid var(--metal-edge);border-radius:var(--r-bar);overflow:hidden;cursor:pointer;
     background:linear-gradient(115deg,var(--dgTint,#2f4a72) 0%,rgba(10,13,18,.72) 60%)}
   .dgCard.lock{opacity:.5;cursor:default}
   .dgCardArt{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:9px;padding:0 12px}
@@ -2665,13 +2691,13 @@
   .dgCardName{font-size:15px;font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .dgCardR{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:6px;padding:0 12px}
   .dgCardKey{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:800;color:#ffd24a;font-size:13px;white-space:nowrap}
-  .dgOpenBtn{padding:5px 15px;border:none;border-radius:var(--r-md);background:#3aa0ff;color:#06121f;font-family:inherit;font-weight:800;font-size:12px;cursor:pointer}
+  .dgOpenBtn{padding:5px 15px;border:none;border-radius:var(--r-bar);background:#3aa0ff;color:#06121f;font-family:inherit;font-weight:800;font-size:12px;cursor:pointer}
   .dgTix{display:flex;gap:14px;justify-content:center;padding:8px 4px 2px;color:#c6ccd4;font-size:var(--fs-md);font-weight:700}
   .dgTix b{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:#fff;margin-left:3px}
   .dgSheet{position:absolute;inset:0;z-index:64;display:flex;align-items:center;justify-content:center;
     background:radial-gradient(ellipse 300px 220px at 50% 46%,rgba(92,214,255,.12),transparent 72%),rgba(2,4,9,.62)}
   .dgSheet.hide{display:none}
-  .dgSheetCard{position:relative;width:82%;max-width:320px;border:1px solid var(--metal-edge);border-radius:var(--r-lg);overflow:hidden;
+  .dgSheetCard{position:relative;width:82%;max-width:320px;border:1px solid var(--metal-edge);border-radius:var(--r-bar);overflow:hidden;
     background:linear-gradient(160deg,rgba(19,24,35,.96),rgba(6,9,14,.97))}
   .dgSheetArt{height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
     background:linear-gradient(160deg,var(--dgTint,#2f4a72),rgba(6,9,14,.55))}
@@ -2684,7 +2710,7 @@
   .dgSheetBtns{display:flex;gap:8px;width:100%;margin-top:2px}
   .dgSheetBtns .twBtn{flex:1 1 0}
   .dgSheetBtns .twBtn:disabled{opacity:.45}
-  .dgSheetX{position:absolute;top:6px;right:6px;width:26px;height:26px;border:none;border-radius:var(--r-md);background:rgba(0,0,0,.42);color:#fff;cursor:pointer;font-size:12px}
+  .dgSheetX{position:absolute;top:6px;right:6px;width:26px;height:26px;border:none;border-radius:var(--r-bar);background:rgba(0,0,0,.42);color:#fff;cursor:pointer;font-size:12px}
   .navIt,#tabs .tab{position:relative;flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
     cursor:pointer;font-family:inherit;font-size:8.5px;font-weight:800;letter-spacing:.2px;color:#c6ccd4;
     margin:4px 3px;border-radius:var(--r-md);                      /* 선택 상자가 바 안에 놓이도록 살짝 띄움 */
@@ -2724,7 +2750,9 @@
     background:linear-gradient(180deg,#191919,#0e0e0e);border:1px solid rgba(255,255,255,.07);border-radius:var(--r-bar);
     box-shadow:0 16px 44px -12px #000}
   .hbmHead{flex:none;display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px;
-    font-size:15px;font-weight:900;letter-spacing:.6px;color:#ececec}
+    font-size:15px;font-weight:700;letter-spacing:.6px;color:#ececec}   /* 700 초과 = 가짜 볼드(IBM Plex Sans KR 최대 700) — DESIGN.md §2 */
+  /* ⚔ 토벌 팝업 본문 — 카드 목록이 길어지므로 남은 높이 안에서만 스크롤 */
+  .dgHubBody{flex:1 1 auto;min-height:0;padding:0 12px;overflow-y:auto;overflow-x:hidden}
   .hbmX{width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;
     color:#9a9a9a;background:none;border:none}
   .hbmX svg{width:15px;height:15px}
@@ -2835,7 +2863,8 @@
     color:#ececec;background:linear-gradient(180deg,rgba(46,46,50,.9),rgba(20,20,23,.95));border:1px solid var(--metal-edge);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
   .twBtn:not(:disabled):hover{border-color:rgba(255,255,255,.24)}
-  .twBtn.on{color:#0b1016;background:var(--setAcc);border-color:var(--setAcc)}
+  /* --setAcc는 .setCard 안에서만 정의된다 — 대체값이 없으면 배경이 사라져 검은 글씨만 남는다(마을·상점·정비에서 '장착중'이 안 보이던 원인) */
+  .twBtn.on{color:#0b1016;background:var(--setAcc,#5cd6ff);border-color:var(--setAcc,#5cd6ff)}
   .twBtn:disabled{cursor:default;color:#7d8590;background:rgba(255,255,255,.03);border-color:var(--metal-edge)}
   .twBtn:not(:disabled):active{transform:translateY(1px)}
   .twBtn.del{color:#ffd7dd;background:linear-gradient(180deg,rgba(255,77,109,.3),rgba(255,77,109,.12));border-color:rgba(255,77,109,.6)}
@@ -3318,7 +3347,7 @@
      ⚠ IBM Plex Sans KR은 700이 최대다 — 800/900을 남기면 브라우저가 가짜 볼드를 그려 획이 뭉갠다.
         그래서 700으로 되돌린다. 제목은 '같은 가족 + 굵기 700 + 큰 크기'로 선다. */
   #ovTitle,.ovTtl,.ecTitle,.setTitle,.hmUpgHead,.twName,.cpTitle,.opTitle,.lbTitle,.ptTitle,.shopTitle,.shopHead,
-  .curTitle,.mapName,#mapSelect .msTab2,#msSortLbl{
+  .curTitle,.mapName,#mapSelect .msTab2,#msSortLbl,.hbmHead{
     font-family:var(--font-ti);font-weight:700}
 </style>
 </head>
@@ -3826,7 +3855,7 @@
   <!-- 하단 6칸 네비게이션 — 화면이 아니라 #phone 위에 떠 있는 전역 바. navShow(tab)로 표시/활성 탭을 정한다 -->
   <div id="navBar" class="navBar hide">
     <button class="navIt" data-nav="home" onclick="navGo('home')"><span data-ico="home"></span>HOME</button>
-    <button class="navIt" data-nav="dungeon" onclick="navGo('dungeon')"><span data-ico="dungeon"></span>토벌</button>
+    <button class="navIt" data-nav="gear" onclick="navGo('gear')"><span data-ico="bag"></span>정비</button>
     <button class="navIt" data-nav="town" onclick="navGo('town')"><span data-ico="hero"></span>마을</button>
     <button class="navIt" data-nav="map" onclick="navGo('map')"><span data-ico="map"></span>유즈맵</button>
     <button class="navIt" data-nav="shop" onclick="navGo('shop')"><span data-ico="gift"></span>상점</button>
@@ -3858,9 +3887,20 @@
        위쪽 빈 자리는 채우지 않는다 — 우주 배경(.spaceBg)이 상단 재화 바 뒤까지 이어져 보이는 게 의도다. -->
   <div id="homeScreen" class="appScreen spaceBg hide">
     <canvas id="hbCv"></canvas>   <!-- 배경 전투 — UI 아래 레이어(클릭 통과) -->
-    <button class="hbHud" id="hbHud" onclick="hbOpenInfo()" aria-label="캐릭터 정보"><b id="hbLv">Lv.1</b><span id="hbAtk">⚔ 0</span><span id="hbKill">0 KILL</span></button>
-    <button class="hbMid" id="hbMid" onclick="hbOpenRounds()" aria-label="라운드 선택">
-      <b id="hbRound">던전 1 · 라운드 1</b><span><i id="hbWaveTx">웨이브 1/5</i> · <i id="hbTimer">20s</i> · <i id="hbMode">반복</i></span></button>
+    <!-- 좌상단 고정 — 프로필(상세) + 라운드 선택 아이콘. 재화 바(우측 정렬)와 같은 줄을 나눠 쓴다 -->
+    <div class="hbHudTop">
+      <button class="hbHud" id="hbHud" onclick="hbOpenInfo()" aria-label="캐릭터 정보">
+        <span class="hbAv" id="hbAv">🪖</span>
+        <span class="hbCol">
+          <b id="hbName">캐릭터</b>
+          <span class="hbSub"><i id="hbJob">레인저</i> · <i id="hbLv">Lv.1</i></span>
+          <span class="hbXp"><i id="hbXpBar"></i></span>
+          <span class="hbSt"><i id="hbAtk">⚔ 0</i><i id="hbHp">❤ 0</i></span>
+        </span></button>
+      <button class="hbRoundBtn" id="hbRoundBtn" onclick="hbOpenRounds()" aria-label="던전·라운드 선택"><span data-ico="flag"></span></button>
+    </div>
+    <div class="hbMid" id="hbMid">   <!-- 표시 전용 — 라운드 조절은 위 아이콘이 담당한다 -->
+      <b id="hbRound">던전 1 · 라운드 1</b><span><i id="hbWaveTx">웨이브 1/5</i> · <i id="hbTimer">20s</i> · <i id="hbMode">반복</i></span></div>
     <div class="hbBar" id="hbBar"></div>   <!-- 스킬·건설·부스트 (전장 위, 업그레이드 카드 바로 위) -->
     <div class="hmScroll uiScroll" id="hmScroll">
       <!-- POWER UPGRADES — 화면에 남은 유일한 카드. 위쪽은 비워서 우주 배경(.spaceBg)이 그대로 보인다 -->
@@ -3875,14 +3915,35 @@
 
   <!-- ⚔ 토벌 허브 — 네비 '토벌' 진입. 목록 카드 → 팝업. 전투는 #dgScreen 재사용. (#phone 안이라 재화 바 패딩 적용)
        ⚠ 표기는 '토벌'(열쇠·소탕·단계 등반), '던전'은 자동사냥(HOME) 전용어다. 코드 식별자 dg*/DG_*는 옛 이름 그대로 둔다. -->
-  <div id="dgHubScreen" class="appScreen spaceBg hide">
-    <div class="hmScroll uiScroll" id="dgHubBody"></div>
+  <!-- ⚔ 토벌 — HOME 위 팝업(.hbModal 규격). 내용 렌더러는 renderDungeonHub() 그대로 -->
+  <div class="hbModal hide" id="dgHubScreen" onclick="if(event.target===this)closeDungeonHub()">
+    <div class="hbmCard">
+      <div class="hbmHead"><b>토벌</b>
+        <button class="hbmX" onclick="closeDungeonHub()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+      </div>
+      <div class="dgHubBody uiScroll" id="dgHubBody"></div>
+    </div>
   </div>
   <!-- 🎁 상점 — 네비 '상점' 진입. 팝업이 아닌 전용 화면(렌더러는 renderProfGacha 단일 소스 재사용) -->
   <!-- 배경 = 유즈맵 선택과 같은 lobby_bg (규칙 공유: #mapSelect::before/::after 셀렉터에 #shopScreen 포함) -->
   <div id="shopScreen" class="appScreen hide">
     <div class="hmScroll uiScroll" id="shopBody"></div>
     <div id="shopToast" class="twToast hide"></div>
+  </div>
+  <!-- 🧰 정비 — 네비 2번. 장비·펫·동료를 한 곳에서 관리한다.
+       ⛔ 내용을 새로 만들지 않는다: 장비 = renderProfGear() · 펫 = _shopPetPanel() (상점과 같은 함수) — 단일 소스.
+       탭 띠 = 유즈맵 목록 상자와 같은 .msPanel/.msSortTabs 규격(복제 금지, 클래스만 재사용). -->
+  <div id="gearScreen" class="appScreen hide">
+    <div class="shopTitle"><span data-ico="bag"></span><b>정비</b></div>
+    <div class="msPanel">
+      <div class="msSortTabs" id="gearTabs">
+        <button class="msSortTab on" data-v="gear" onclick="setGearTab('gear')">장비</button>
+        <button class="msSortTab" data-v="pet" onclick="setGearTab('pet')">펫</button>
+        <button class="msSortTab" data-v="ally" onclick="setGearTab('ally')">동료</button>
+      </div>
+      <div class="gearBody uiScroll" id="gearBody"></div>
+    </div>
+    <div id="gearToast" class="twToast hide"></div>
   </div>
   <!-- 토벌 팝업(열기) — 이전 단계 소탕 + 입장 -->
   <div id="dgSheet" class="dgSheet hide">
@@ -5028,6 +5089,9 @@ function profStampSeen(){ if(PLAYER_META&&PLAYER_META.profile){ PLAYER_META.prof
 // POWER UPGRADES = 캐릭터 스탯 4종(실제). 아이콘·표기만 참고 이미지 문법을 따른다.
 
 function openHome(){ loadMeta();
+  // 토벌 허브는 '화면'이 아니라 HOME 위에 덮는 팝업(.hbModal)이라 화면 전환으로는 안 닫힌다 —
+  // 열어 둔 채 네비 HOME을 누르면 그대로 HOME을 가린다. 여기서 걷어낸다.
+  if(typeof closeDungeonHub==='function') closeDungeonHub();
   if(typeof CHAR==='function' && !CHAR()){ openCharScreen('create'); return; }   // 캐릭터가 없으면 생성부터
   if(typeof bgmStart==='function') bgmStart('lobby');
   showAppScreen('homeScreen'); navShow('home'); renderHome();
@@ -5128,6 +5192,7 @@ function renderHbBar(){ const bar=document.getElementById('hbBar'); if(!bar||!_h
       +'<span class="hbSkIco">'+SK.ico+'</span>'
       +'<span class="hbSkTx">'+(rd?SK.name:Math.ceil(cd)+'s')+'</span></button>'; }
   h+='<button class="hbSk wide" onclick="hbOpenBuild()" title="동료·터렛·벙커"><span class="hbSkIco">🏗</span><span class="hbSkTx">건설</span></button>';
+  h+='<button class="hbSk wide" onclick="openDungeonHub()" title="토벌 — 열쇠로 단계 도전"><span class="hbSkIco">⚔️</span><span class="hbSkTx">토벌</span></button>';   // 네비에서 빠진 토벌의 유일한 입구
   const bon=hbBoostOn('inc')||hbBoostOn('atk');
   h+='<button class="hbSk wide'+(bon?' on':'')+'" onclick="hbOpenBoost()" title="일시 강화"><span class="hbSkIco">⚡</span><span class="hbSkTx">'+(bon?'적용중':'부스트')+'</span></button>';
   bar.innerHTML=h; }
@@ -5287,7 +5352,7 @@ function navShow(tab){ const b=document.getElementById('navBar'); if(!b) return;
   if(tab) b.querySelectorAll('.navIt').forEach(x=>x.classList.toggle('on', x.dataset.nav===tab)); }
 function navGo(tab){ if(typeof playSfx==='function') playSfx('ui_tab');
   if(tab==='home')    return openHome();
-  if(tab==='dungeon') return openDungeonHub();                                              // 던전 허브(전용 화면)
+  if(tab==='gear')    return openGear();                                                   // 정비(장비·펫·동료)
   if(tab==='town')    { openTown(); return navShow('town'); }
   if(tab==='map')     return twGoMap();                                                    // 유즈맵(친구·소셜은 유즈맵 하단)
   if(tab==='shop')    return openShop(); }                                                 // 상점(전용 화면)
@@ -5528,13 +5593,21 @@ function hbPlaceFoe(proto){ const S=_hb;
     spd:proto.spd*(elite?0.85:1), cdT:Math.random()*0.6 }); }
 function hbHud(){ const S=_hb; if(!S) return; const c=(typeof CHAR==='function')?CHAR():null;
   const put=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
-  put('hbLv','Lv.'+(c?c.level:1)); put('hbAtk','⚔ '+Math.round(S.char.atk));
+  put('hbName', c? (c.name||'캐릭터') : '캐릭터');
+  { const K=(c&&PROF_CLASSES[c.cls])||null;
+    put('hbJob', K?K.name:'-');
+    const av=document.getElementById('hbAv'); if(av) av.textContent=(K&&K.ico)||'🧍'; }
+  put('hbLv','Lv.'+(c?c.level:1));
+  put('hbAtk','⚔ '+Math.round(S.char.atk));
+  put('hbHp','❤ '+Math.max(0,Math.round(S.char.hp))+'/'+Math.round(S.char.hpMax));
+  { const bar=document.getElementById('hbXpBar');                       // 다음 레벨까지
+    if(bar && c && typeof profXpForLevel==='function'){ const need=profXpForLevel(c.level)||1;
+      bar.style.width=Math.max(0,Math.min(100,(c.xp/need)*100))+'%'; } }
   // ⚔ 번호만으로는 이동한 느낌이 없다 → 던전 고유 이름을 같이 보여준다.
   //    '던전' 표기는 유지한다(자동사냥=던전 / 옛 콘텐츠=토벌 용어 분리 · 스모크가 검사)
   put('hbRound','던전 '+S.dg+' · '+hbDun(S.dg).name+' · 라운드 '+S.round);
   put('hbWaveTx','웨이브 '+Math.min(S.wave,HB_WAVES)+'/'+HB_WAVES);
-  put('hbMode', hbHunt().climb?'등반':'반복');
-  put('hbKill',S.kills+' KILL'); }
+  put('hbMode', hbHunt().climb?'등반':'반복'); }   // 킬수 표시는 제거(요청)
 function hbSettle(){ const S=_hb, p=PROF();
   hbNoteRate((S.buf.paid||0)+hbClearBonus(S.dg,S.round).min, Math.max(1,S.t-(S.rt0||0)));   // 방치 수입 기준 = 실제로 번 속도
   S.rt0=S.t;
@@ -5744,10 +5817,12 @@ function hb3dAttach(){ const cv=document.getElementById('cvMarine'), host=docume
   _hb3dHome=cv.parentNode;                                  // 돌려놓을 자리 기억
   cv.style.zIndex='1';                                      // 바닥(#hbCv) 위 · HOME UI(z2+) 아래
   host.insertBefore(cv, host.firstChild.nextSibling||null);
-  if(window.M3D && M3D.clearGameModels){ try{ M3D.clearGameModels(); }catch(e){} } }   // 랩과 같이 유닛 모델 풀을 비우고 시작
+  if(window.M3D && M3D.clearGameModels){ try{ M3D.clearGameModels(); }catch(e){} }   // 랩과 같이 유닛 모델 풀을 비우고 시작
+  if(window.M3D && M3D.clearIdlePools){ try{ M3D.clearIdlePools(); }catch(e){} } }    // 잔상이 될 수 있는 풀은 아예 삭제(숨기기 아님)
 function hb3dDetach(){ const cv=document.getElementById('cvMarine');
   if(cv&&_hb3dHome){ cv.style.zIndex=''; cv.style.display='none'; _hb3dHome.appendChild(cv);
-    if(window.M3D && M3D.clearGameModels){ try{ M3D.clearGameModels(); }catch(e){} } }   // 던전 유닛 모델을 게임에 남기지 않는다
+    if(window.M3D && M3D.clearGameModels){ try{ M3D.clearGameModels(); }catch(e){} }
+    if(window.M3D && M3D.clearIdlePools){ try{ M3D.clearIdlePools(); }catch(e){} } }   // 빌린 것도 돌려줄 때 깨끗이 — 양쪽 다 잔상을 남기지 않는다
   _hb3dHome=null; }
 function hb3dReady(){ return !!(window.M3D && M3D.ready && M3D.ready() && M3D.syncBuild
   && !(typeof G!=='undefined' && G.opt && G.opt.model3d===false)); }
@@ -6028,7 +6103,7 @@ function renderTownBar(){ const p=PROF(), c=CHAR();
   const lv=document.getElementById('twLv'); if(lv) lv.textContent='Lv.'+(c?c.level:1);
   const pw=document.getElementById('twPow'); if(pw) pw.textContent='⚔ '+profPower();
   if(typeof updateCurBar==='function') updateCurBar(); }   // 💠 미네랄/가스/젬은 공용 재화 바
-function showTownToast(msg){ const t=document.getElementById(shopOpen()?'shopToast':'twToast'); if(!t) return; t.textContent=msg; t.classList.remove('hide');
+function showTownToast(msg){ const t=document.getElementById(gearOpen()?'gearToast':shopOpen()?'shopToast':'twToast'); if(!t) return; t.textContent=msg; t.classList.remove('hide');
   clearTimeout(t._t); t._t=setTimeout(()=>t.classList.add('hide'), 2600); }
 // 구역 아이콘(또는 가장자리 방향 표시) 탭 = 그 구역을 지정. 이미 그 위에 서 있으면 바로 연다.
 function townGo(zone){ const p=twZonePx(zone); if(!p) return; if(typeof playSfx==='function') playSfx('ui_open');
@@ -6054,14 +6129,51 @@ function renderShop(){ const body=document.getElementById('shopBody'); if(!body)
   const old=body.querySelector('.bagBody'), keep=old?old.scrollTop:0;
   body.innerHTML='<div class="shopTitle"><span>🎁</span><b>상점</b></div>'+renderProfGacha();
   const nb=body.querySelector('.bagBody'); if(nb&&keep) nb.scrollTop=keep; }
-function refreshTownPanel(){ if(shopOpen()){ renderShop(); return; }   // 상점 전용 화면이 열려 있으면 그쪽을 갱신
+// ── 🧰 정비(전용 화면) — 장비·펫·동료 ────────────────────────────────────
+// ⛔ 내용을 새로 만들지 않는다. 장비 = renderProfGear() (마을 장비창과 같은 함수),
+//    펫 = _shopPetPanel() (상점과 같은 함수). 여기서는 탭 전환과 껍데기만 담당한다.
+//    동료는 아직 시스템이 없다 — HOME '건설'의 동료가 유일한 실체라 그쪽으로 보낸다.
+let _gearTab='gear';
+function gearOpen(){ const e=document.getElementById('gearScreen'); return !!(e && !e.classList.contains('hide')); }
+function openGear(){ if(typeof loadMeta==='function') loadMeta();
+  if(typeof CHAR==='function' && !CHAR()){ openCharScreen('create'); return; }   // 캐릭터 없으면 생성부터
+  if(typeof twLeave==='function') twLeave();                                     // 마을에서 들어왔으면 루프·팝업 정리
+  _gearPick=null; _gearSel=null; _gearCat='';
+  showAppScreen('gearScreen'); navShow('gear'); renderGear();
+  if(typeof paintIcons==='function') paintIcons(document.getElementById('gearScreen')); }
+function setGearTab(v){ if(_gearTab===v) return; _gearTab=v; _gearPick=null; _gearSel=null; _gearCat='';
+  if(typeof playSfx==='function') playSfx('ui_tab');
+  document.querySelectorAll('#gearTabs .msSortTab').forEach(b=>b.classList.toggle('on', b.dataset.v===v));
+  renderGear(); }
+function renderGear(){ const body=document.getElementById('gearBody'); if(!body) return;
+  const old=body.querySelector('.bagBody'), keep=old?old.scrollTop:0;   // 다시 그려도 가방을 보던 위치를 유지
+  body.innerHTML = (_gearTab==='pet') ? _shopPetPanel('펫을 장착하면 <b>코인·공격·체력 %</b>가 오릅니다')
+                 : (_gearTab==='ally') ? _gearAllyPanel()
+                 : renderProfGear();
+  const nb=body.querySelector('.bagBody'); if(nb&&keep) nb.scrollTop=keep;
+  bagScrollHint(); }
+// 동료 — 전용 편성 시스템은 아직 없다. 실제로 동작하는 건 HOME 건설의 동료뿐이라 현황만 보여주고 그리로 보낸다.
+function _gearAllyPanel(){ const n=hbBuildN('ally'), mx=hbBuildMax('ally'), B=HB_BUILD.ally;
+  let h='<div class="shopPanel"><div class="shopHead">동료<em>'+n+'/'+mx+'</em></div><div class="shopBody">';
+  h+='<div class="shopNote">동료는 <b>자동사냥(HOME)</b>에서 고용해 함께 싸웁니다 · '+B.tip+'</div>';
+  h+='<div class="shopRow"><span class="twPet">'+B.ico+'</span><div class="twRowInfo">'
+    +'<div class="twRowName">고용한 동료</div><div class="twRowSub">'+n+'명 배치 중 · 최대 '+mx+'명</div></div>'
+    +'<button class="twBtn" onclick="gearGoHire()">고용하러 가기</button></div>';
+  h+='</div></div>';
+  h+='<div class="shopPanel"><div class="shopHead">편성<em>준비 중</em></div><div class="shopBody">'
+    +'<div class="shopNote">동료를 개별로 고르고 배치하는 편성 시스템은 아직 없습니다</div></div></div>';
+  return h; }
+function gearGoHire(){ openHome(); hbOpenBuild(); }
+function refreshTownPanel(){ if(gearOpen()){ renderGear(); return; }              // 정비 전용 화면이 열려 있으면 그쪽을 갱신
+  if(shopOpen()){ renderShop(); return; }   // 상점 전용 화면이 열려 있으면 그쪽을 갱신
   const body=document.getElementById('tpBody'), z=TOWN_ZONES[_twZone]; if(!body||!z) return;
   const old=body.querySelector('.bagBody'), keep=old?old.scrollTop:0;   // 다시 그려도 가방을 보던 위치를 유지
   body.innerHTML = z.render();
   const nb=body.querySelector('.bagBody'); if(nb&&keep) nb.scrollTop=keep;
   bagScrollHint(); }
 // 가방에 더 볼 게 남았는지(스크롤 가능 여부)를 아래 그림자로 알린다
-function bagScrollHint(){ const s=document.querySelector('#tpBody .bagScroll'); if(!s) return;
+function bagScrollHint(){   // 장비창은 마을 팝업·정비 화면 두 곳에 뜬다 — 숨은 쪽을 재면 높이가 0이라 항상 어긋난다
+  const s=document.querySelector((typeof gearOpen==='function'&&gearOpen()?'#gearBody':'#tpBody')+' .bagScroll'); if(!s) return;
   const b=s.querySelector('.bagBody'); if(!b) return;
   s.classList.toggle('more', b.scrollHeight-b.scrollTop-b.clientHeight>4); }
 function closeTownPanel(){ popHide('townPanel'); _twZone=null; _charDelId=null; _gearPick=null; _gearSel=null; _gearCat=''; }
@@ -6223,16 +6335,20 @@ function renderProfGacha(){ const p=PROF(), poor=p.pcoin<PROF_PET_GACHA_COST, eq
       +'<button class="shopBuy" onclick="shopGemSoon()">'+g.won+'</button></div>';
   h+='</div></div></div>';
   // ④ 보유 펫
+  h+=_shopPetPanel();
+  return h; }
+// 보유 펫 패널 — 상점(뽑기 아래)과 정비 '펫' 탭이 함께 쓴다. ⛔ 복제 금지: 펫 목록은 여기 하나뿐.
+function _shopPetPanel(note){ const p=PROF(), eq=p.equip||[];
   const owned=Object.keys(p.pets||{}).filter(id=>PROF_PETS[id]).sort((a,b)=>GACHA_TIER_ORDER.indexOf(PROF_PETS[b].tier)-GACHA_TIER_ORDER.indexOf(PROF_PETS[a].tier));
-  h+='<div class="shopPanel"><div class="shopHead">보유 펫<em>'+owned.length+'마리</em></div><div class="shopBody">';
-  if(!owned.length) h+='<div class="shopNote">아직 없음 — 위에서 뽑아보세요!</div>';
+  let h='<div class="shopPanel"><div class="shopHead">보유 펫<em>장착 '+eq.length+'/'+profPetSlots()+' · '+owned.length+'마리</em></div><div class="shopBody">';
+  if(note) h+='<div class="shopNote">'+note+'</div>';
+  if(!owned.length) h+='<div class="shopNote">아직 없음 — 상점에서 뽑아보세요!</div>';
   for(const id of owned){ const P=PROF_PETS[id], col=TIER_COLOR[P.tier], star=profPetStar(id), on=eq.indexOf(id)>=0, full=eq.length>=profPetSlots();
     h+='<div class="shopRow"><span class="twPet" style="color:'+col+';border-color:'+col+'55">'+P.emoji+'</span>'
       +'<div class="twRowInfo"><div class="twRowName">'+P.name+' <span class="twStars">'+'★'.repeat(star)+'</span></div>'
       +'<div class="twRowSub" style="color:'+col+'">'+GACHA_TIERS[P.tier].name+' · '+PROF_BONUS_NAME[P.bonus.type]+' +'+Math.round(profPetVal(id)*100)+'%</div></div>'
       +'<button class="twBtn'+(on?' on':'')+'" onclick="profDoPetEquip(\''+id+'\')"'+((!on&&full)?' disabled':'')+'>'+(on?'장착중':'장착')+'</button></div>'; }
-  h+='</div></div>';
-  return h; }
+  return h+'</div></div>'; }
 // 장비 뽑기권 1장 = 무작위 장비 1개(등급은 최고 토벌 단계에 따라 좋아진다)
 function profUseGearTicket(){ const p=PROF();
   if(!p.tickets || (p.tickets.gear||0)<=0) return;
@@ -6399,7 +6515,7 @@ function renderProfIdle(){ const p=PROF();
 function profDoIdle(id){ if(profSetIdleSource(id)){ if(typeof playSfx==='function') playSfx('ui_open'); refreshTownPanel(); } }
 // 관문(던전 입구 + 파워 해금 사다리) — 던전은 허브(전용 화면)로 통합
 function renderProfGate(){ const mx=dgMaxFloor();
-  let h='<div class="twHead">토벌은 하단 네비 <b>토벌</b> 또는 아래 버튼으로 들어갑니다.<br>최고 기록 <b>'+(mx?mx+'단계':'없음')+'</b> · 개방 <b>'+dgFloorCap()+'단계</b></div>';
+  let h='<div class="twHead">토벌은 HOME 하단 <b>토벌</b> 버튼 또는 아래 버튼으로 들어갑니다.<br>최고 기록 <b>'+(mx?mx+'단계':'없음')+'</b> · 개방 <b>'+dgFloorCap()+'단계</b></div>';
   h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">토벌 허브</div><div class="twRowSub">종류 선택 · 단계 도전 · 즉시 보상</div></div><button class="twBtn" onclick="openDungeonHub()">이동</button></div>';
   h+='<div class="twSectLbl">파워 해금</div>';
   for(const u of PROF_UNLOCKS){ const open=profHasUnlock(u.id);
@@ -6516,7 +6632,7 @@ function dgSkill(){ if(!DG || DG.over || DG.skill.cd>0) return;
   const S=DG_SKILLS[(CHAR()||{}).cls] || DG_SKILLS.ranger;
   DG.skill.cd=S.cd; DG.skill.left=S.dur;
   if(typeof playSfx==='function') playSfx('ui_open'); dgRender(); }
-function dgToHub(){ dgStopLoop(); DG=null; openDungeonHub(); }   // 전투 종료 → 던전 허브 복귀
+function dgToHub(){ dgStopLoop(); DG=null; openHome(); openDungeonHub(); }   // 전투 종료 → HOME 복귀 후 토벌 팝업
 function dgFlee(){ dgToHub(); }
 // ── 🗝 던전 열쇠(매일 09:00 보충 · 던전별 2개 · 완료 시에만 소모) · 🎟 뽑기권 · 던전 허브 ──
 const DG_KEY_DAILY=2;   // 던전마다 하루 열쇠 수(09:00 리셋)
@@ -6533,8 +6649,14 @@ function dgAwardTickets(floor){ const g={gear:1}; if(floor%5===0) g.pet=1; if(fl
   for(const k in g) dgAddTicket(k,g[k]); return g; }
 function openDungeonHub(){ if(typeof loadMeta==='function') loadMeta();
   if(typeof CHAR==='function' && !CHAR()){ openCharScreen('create'); return; }   // 캐릭터 없으면 생성부터
-  dgCloseSheet(); showAppScreen('dgHubScreen'); navShow('dungeon'); renderDungeonHub();
+  const home=document.getElementById('homeScreen');
+  if(home && home.classList.contains('hide')) openHome();                        // 토벌은 HOME 위 팝업 — 다른 화면에서 부르면 먼저 HOME으로
+  dgCloseSheet(); popShow('dgHubScreen'); renderDungeonHub();
+
+  if(typeof playSfx==='function') playSfx('ui_open');
   if(typeof paintIcons==='function') paintIcons(document.getElementById('dgHubScreen')); }
+function closeDungeonHub(){ dgCloseSheet(); popHide('dgHubScreen');
+  if(typeof playSfx==='function') playSfx('ui_close'); }
 function renderDungeonHub(){ const body=document.getElementById('dgHubBody'); if(!body) return;
   const c=CHAR(); if(!c) return;
   let h='<div class="dgHubHead">토벌 열쇠는 <b>매일 09:00</b>에 보충됩니다. 열쇠는 토벌을 완료할 때만 소모됩니다.</div>';
@@ -11197,11 +11319,11 @@ function playScreenFx(el){
 function fxPop(card){ if(!card) return; card.classList.remove('fxPop'); void card.offsetWidth; card.classList.add('fxPop');
   clearTimeout(card._fxT); card._fxT=setTimeout(()=>card.classList.remove('fxPop'),470); }
 // ── 앱 화면 전환 ──
-const APP_SCREENS=['opening','auth','mapSelect','modeSheet','homeScreen','charScreen','townScreen','dgHubScreen','dgScreen','shopScreen'];
+const APP_SCREENS=['opening','auth','mapSelect','modeSheet','homeScreen','charScreen','townScreen','dgScreen','shopScreen','gearScreen'];
 // 💠 공용 재화 바를 띄우는 화면(RPG/허브 + 유즈맵 선택). 로그인·타이틀·캐릭터생성·인게임은 제외.
-const CUR_SCREENS=['homeScreen','townScreen','mapSelect','modeSheet','dgHubScreen','dgScreen','shopScreen'];
+const CUR_SCREENS=['homeScreen','townScreen','mapSelect','modeSheet','dgScreen','shopScreen','gearScreen'];
 // 그중 바를 '판'이 아니라 배경 위 숫자로 두는 화면(.curBar.bare) — 배경이 상단까지 이어져 보여야 하는 곳
-const BARE_CUR_SCREENS=['homeScreen','townScreen','mapSelect','shopScreen'];   // 재화 바를 '판'이 아니라 배경 위 숫자로 — 상단 줄이 겹쳐 답답해진다(구분선 없이 배경이 이어진다)
+const BARE_CUR_SCREENS=['homeScreen','townScreen','mapSelect','shopScreen','gearScreen'];   // 재화 바를 '판'이 아니라 배경 위 숫자로 — 상단 줄이 겹쳐 답답해진다(구분선 없이 배경이 이어진다)
 function curSetTitle(t){ const e=document.getElementById('curTitle'); if(e) e.textContent=t||''; }   // 재화 바 왼쪽 제목(화면별)
 function curShow(on){ const b=document.getElementById('curBar'), p=document.getElementById('phone');
   if(b) b.classList.toggle('hide', !on); if(p) p.classList.toggle('curOn', !!on); }
@@ -19372,6 +19494,15 @@ window.M3D={
   cstEnsureRes:(cb)=>{ const tgt={res_cn:18, res_en:50, res_cc:8, res_ec:8}; const ks=Object.keys(tgt).filter(k=>MODELS[k]);   // 자원 3D(미네랄·가스 노드 + 운반) 로드 → 목표 화면크기로 SCALE
     ensureModels(ks, function(n){ for(const k of ks){ const b=bases[k]; if(b) SCALE[k]=tgt[k]/Math.max(b.h||1,b.w||1); } if(cb) cb(n); }); return true; },
   hasModel:(id)=>!!bases[id],   // 실제 로드 완료 여부(로드 전엔 false → 2D/SVG 폴백 표시). MODELS 카탈로그가 아니라 bases(로드분) 기준
+  // ⚠ 공용 캔버스를 빌려 쓰는 화면은 반드시 이걸 먼저 부른다.
+  // sync()가 관리하지 않는 풀(뽑기 비콘·미건설 고스트·배치 고스트·건설 전시)은 그냥 두면
+  // '미사일 포탑 고스트' 같은 잔상이 남는다. **숨기지 말고 지운다** — 숨기기는 어딘가에서 다시 켜지면
+  // 도로 나타나지만, 지우면 나타날 수가 없다. 각 풀은 전부 '없으면 만든다'라서 원래 화면으로 돌아가면 재생성된다.
+  clearIdlePools:()=>{
+    const wipe=(pool)=>{ for(const [k,m] of [...pool]){ const h=m&&(m.holder||m);
+      if(h&&h.parent) h.parent.remove(h); else if(h) scene.remove(h);
+      try{ _disposeObj3D(h); }catch(e){} pool.delete(k); } };
+    wipe(beaconInsts); wipe(ghostModels); wipe(buildGhostModels); wipe(buildModels); },
   modelKeys:()=>Object.keys(MODELS),   // 카탈로그(로드 여부 무관) — 던전 표 같은 '모델 키 오타' 검사가 실제로 걸리게 하려면 이게 필요하다
   modelCatalog:(id)=>!!MODELS[id],   // 카탈로그 존재 여부(필요 시)
   // ── 유즈맵별 에셋 지연 로드/해제(확장 토대) ──
