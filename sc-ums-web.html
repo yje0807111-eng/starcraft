@@ -5812,9 +5812,15 @@ function hbDraw(){ const S=_hb, x=S.ctx, c=S.char; if(!x) return;
 // 달리기 모션(it.moving)까지 다 한다. 공용 캔버스(#cvMarine)만 전장 위로 옮겨 쓴다.
 // ⚠ 캔버스는 하나뿐이라 쓰고 나면 반드시 제자리로 돌려놓는다(안 그러면 유즈맵 3D가 사라진다).
 let _hb3dHome=null;
+// 공용 3D 캔버스(#cvMarine)는 유즈맵(#gameArea) 소유다 — HOME·마을이 잠깐 빌려 쓴다.
+// ⚠ '원래 자리'는 여기 한 곳에서만 기억한다. 남이 빌린 상태에서 또 빌리면 그 임시 위치를
+//    원래 자리로 착각해, 반납해도 캔버스가 남의 화면에 갇힌다(실제로 그랬다 — 유즈맵 3D가 사라짐).
+let _cv3dHome=null;
+function cv3dHome(cv){ if(!_cv3dHome && cv) _cv3dHome=cv.parentNode; return _cv3dHome; }
 function hb3dAttach(){ const cv=document.getElementById('cvMarine'), host=document.getElementById('homeScreen');
   if(!cv||!host||_hb3dHome) return;
-  _hb3dHome=cv.parentNode;                                  // 돌려놓을 자리 기억
+  if(_tw3dHome && typeof tw3dDetach==='function') tw3dDetach();   // 남이 쓰고 있으면 먼저 돌려받는다
+  _hb3dHome=cv3dHome(cv);                                   // 돌려놓을 자리(공용 기억)
   cv.style.zIndex='1';                                      // 바닥(#hbCv) 위 · HOME UI(z2+) 아래
   host.insertBefore(cv, host.firstChild.nextSibling||null);
   if(window.M3D && M3D.clearGameModels){ try{ M3D.clearGameModels(); }catch(e){} }   // 랩과 같이 유닛 모델 풀을 비우고 시작
@@ -5862,7 +5868,8 @@ function tw3dReady(){ return !!(window.M3D && M3D.ready && M3D.ready()
   && !(typeof G!=='undefined' && G.opt && G.opt.model3d===false)); }
 function tw3dAttach(){ const cv=document.getElementById('cvMarine'), host=document.getElementById('twMap');
   if(!cv||!host||_tw3dHome) return;
-  _tw3dHome=cv.parentNode;                                   // 돌려놓을 자리 기억
+  if(_hb3dHome && typeof hb3dDetach==='function') hb3dDetach();   // 남이 쓰고 있으면 먼저 돌려받는다
+  _tw3dHome=cv3dHome(cv);                                    // 돌려놓을 자리(공용 기억)
   cv.style.zIndex='3';                                       // 바닥·구역 위 · 상단 바 아래
   host.appendChild(cv);
   if(window.M3D && M3D.clearGameModels){ try{ M3D.clearGameModels(); }catch(e){} } }
@@ -11335,6 +11342,7 @@ function updateCurBar(){ if(!PLAYER_META||!PLAYER_META.profile) return;
 function showAppScreen(id){ setInGame(false);
   if(typeof navShow==='function') navShow(null);   // 하단 네비는 기본 숨김 — openHome/openTown이 다시 켠다
   if(typeof hbStop==='function') hbStop();         // 홈 배경 전투도 기본 정지 — openHome이 다시 켠다
+  if(typeof tw3dDetach==='function') tw3dDetach();  // ⚠ 마을 쪽도 반납 — 한쪽만 부르면 다음 빌림이 '원래 자리'를 오염시킨다
   for(const id of ['hbRoundSheet','hbBuildModal','hbBoostModal','hbGrowModal','hbInfoModal']){ const el=document.getElementById(id); if(el) el.classList.add('hide'); }
   if(id!=='mapSelect' && id!=='modeSheet' && typeof stopMapLive==='function') stopMapLive();   // 유즈맵 화면 떠나면 실시간 갱신 정지
   ['ov','lobby','rooms','createPanel','pwPanel'].forEach(x=>{const e=document.getElementById(x); if(e)e.classList.add('hide');});

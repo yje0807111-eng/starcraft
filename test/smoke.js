@@ -741,7 +741,11 @@ async function groupLobby(){
   await step('던전: 빌려 쓴 공용 3D 캔버스를 반드시 돌려놓는다', async()=>{
     skipIf(typeof hb3dAttach!=='function','3D 오버레이 없음');
     const cv=$('cvMarine'); assert(cv,'#cvMarine이 없음');
+    // 전제: 아무도 안 빌린 상태에서 시작한다. 앞 스텝이 HOME을 열어둔 채 빌리고 있으면
+    // hb3dAttach()가 '이미 내가 씀'으로 그냥 반환해 '빌려오기가 안 됨'으로 잘못 보인다.
+    hb3dDetach(); if(typeof tw3dDetach==='function') tw3dDetach();
     const home=cv.parentNode;
+    assert(home && home.id==='gameArea','원래 자리가 유즈맵(#gameArea)이 아님: '+(home&&(home.id||home.className)));
     for(const [name, leave] of [
         ['showAppScreen(화면 전환)', ()=>showAppScreen('townScreen')],
         ['hideAppScreens(게임 진입)', ()=>hideAppScreens()],
@@ -751,6 +755,17 @@ async function groupLobby(){
       leave();
       assert(cv.parentNode===home, name+' 뒤에 3D 캔버스가 안 돌아옴 — 유즈맵 3D가 사라진다');
       assert(!cv.style.zIndex, name+' 뒤에 z-index가 남음: '+cv.style.zIndex); }
+    // 마을 → HOME 순서로 이어 빌리는 경로. 남이 빌린 상태에서 또 빌리면 그 임시 위치를
+    // '원래 자리'로 기억해, 반납해도 캔버스가 마을에 갇힌다(유즈맵 3D가 통째로 사라진다).
+    if(typeof tw3dAttach==='function'){
+      tw3dAttach();
+      assert(cv.parentNode!==home,'마을이 캔버스를 못 빌림');
+      hb3dAttach();                       // 마을이 쥔 채로 HOME이 이어받는다
+      assert(cv.parentNode!==home,'HOME이 이어받지 못함');
+      hbStop();                           // HOME 이탈 = hb3dDetach만 타는 경로
+      assert(cv.parentNode===home,
+        '마을→HOME 순서로 빌린 뒤 반납했는데 원래 자리가 아님(현재: '+(cv.parentNode.id||cv.parentNode.className)+') — 유즈맵 3D가 사라진다');
+      if(typeof tw3dDetach==='function') tw3dDetach(); }
     // 공용 캔버스를 빌릴 때, sync()가 관리하지 않는 풀(뽑기 비콘·미건설 터렛 고스트)도 같이 숨겨야 한다.
     // 안 그러면 '미사일 포탑' 고스트 같은 게 HOME 위에 은은하게 남는다(실제로 그랬다).
     // ⚠ '숨기기'가 아니라 '삭제'여야 한다 — 숨긴 것은 어딘가에서 다시 켜지면 도로 나타난다.
