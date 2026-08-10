@@ -516,9 +516,10 @@
   .tab .tabDot{display:none;position:absolute;top:2px;left:calc(50% + 9px);color:#ff9a9a;font-family:var(--font-num);font-size:12px;font-weight:800;line-height:1;text-shadow:0 0 6px rgba(255,90,90,.85),0 1px 2px #000;pointer-events:none}
   .tab .tabDot.show{display:block}
 
-  .tabSet{flex:0 0 44px;padding:4px 0}   /* 우측 고정폭 설정 칸 */
+  .tabSet{flex:0 0 30px;padding:0;margin-left:0;margin-right:2px;opacity:.72}   /* 우측 고정폭 설정 칸 — 주 탭보다 작고 조용하게 */
   .tabSet .ti{margin:0;line-height:0}
-  .tabSet .ti svg{width:20px;height:20px}
+  .tabSet .ti svg{width:15px;height:15px}
+  .tabSet.on{opacity:1}
   /* 설정 팝업 */
   #settingsPop{position:absolute;inset:0;z-index:72;   /* 허브(60)·마을(60)·캐릭터(61)보다 위 */display:flex;align-items:center;justify-content:center;
     background-color:rgba(2,3,6,.62);
@@ -2682,10 +2683,12 @@
     background:none;border:1px solid transparent;transition:color .13s,background .13s,border-color .13s}   /* 테두리는 항상 1px(투명) — 선택 시 색만 바뀌어 칸이 밀리지 않는다 */
   .navIt .ic,#tabs .tab .ti svg{width:19px;height:19px;display:block;margin:0 auto}
   /* 선택 표시 = 안쪽이 더 어두운 직사각 상자 + 약간 밝은 회색 테두리. 색을 채우지 않고 명암으로만 구분한다(DESIGN.md 볼륨1) */
-  .navIt.on,#tabs .tab.on{color:#eef2f7;
+  .navIt.on,#tabs .tab.on{color:#a7d9ef;                                   /* 상자 안 글자·아이콘만 은은한 푸른빛 */
     background:linear-gradient(180deg,rgba(0,0,0,.46),rgba(0,0,0,.62));
     border-color:rgba(255,255,255,.17);
+    text-shadow:0 0 7px rgba(92,214,255,.32);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+  .navIt.on .ic,#tabs .tab.on .ti svg{filter:drop-shadow(0 0 5px rgba(92,214,255,.35))}   /* 아이콘도 같은 세기로 비침 */
   .navIt:active,#tabs .tab:active{opacity:.8}
   /* 마을 상단 설정 — 좌측 로그아웃과 짝 */
   .twGear{flex:0 0 auto;font-family:inherit;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;
