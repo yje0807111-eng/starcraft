@@ -5380,7 +5380,7 @@ function hbStart(){ const cv=document.getElementById('hbCv'); if(!cv || (_hb&&_h
   const H=hbHunt(), st=hbCharStats();
   _hb={ on:true, cv, ctx:cv.getContext('2d'), w:0,h:0,d:1, vTop:0, vBot:0, cx:0, cy:0, k:1, t:0,
     dg:H.dg||1, round:H.round||1, wave:1, phase:'fight', waveT:HB_WAVE_S, gapT:0, downT:0,
-    pend:[], pendT:0, foes:[], shots:[], floats:[], kills:0, rt0:0, charDir:4, atkT:0,
+    pend:[], pendT:0, foes:[], shots:[], floats:[], kills:0, rt0:0, charDir:4, charFace:0, atkT:0,
     allies:[], turrets:[], bunkers:[], pets:[], skT:{nova:0,heal:0,slow:0}, slowT:0, skDirty:false,
     buf:{min:0,gas:0,xp:0,kills:0},
     char:{ x:0,y:0, hp:st.hpMax, hpMax:st.hpMax, atk:st.atk, cd:st.cd, crit:st.crit,
@@ -5391,7 +5391,8 @@ function hbStart(){ const cv=document.getElementById('hbCv'); if(!cv || (_hb&&_h
   _hbRaf=requestAnimationFrame(hbFrame);            // 그리기
   _hbTick=setInterval(hbPump,50); }                 // 진행 보장
 function hbStop(){ if(_hbRaf) cancelAnimationFrame(_hbRaf); _hbRaf=0;
-  if(_hbTick) clearInterval(_hbTick); _hbTick=0; if(_hb) _hb.on=false; }
+  if(_hbTick) clearInterval(_hbTick); _hbTick=0; if(_hb) _hb.on=false;
+  hb3dDetach(); }                                    // 공용 3D 캔버스를 유즈맵 자리로 원복(안 하면 게임 3D가 사라진다)
 // 전장은 화면 전체가 아니라 '보이는 영역'이다 — 위는 재화 바 아래, 아래는 업그레이드 카드 위.
 // 카드를 접으면 그만큼 전장이 넓어지고 캐릭터도 내려온다(매 프레임 다시 재므로 토글이 바로 반영된다).
 function hbResize(){ const S=_hb, cv=S.cv, w=cv.clientWidth||1, h=cv.clientHeight||1, d=Math.min(2,window.devicePixelRatio||1);
@@ -5492,8 +5493,8 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char; S.t+=dt;
     if(bk) tg=bk;
     const dx=tg.x-f.x, dy=tg.y-f.y, d=Math.hypot(dx,dy)||1;
     if(d>HB_STOP){ f.x+=dx/d*f.spd*spdMul*dt; f.y+=dy/d*f.spd*spdMul*dt;
-      f.dir=sprDir(dx/d, dy/d); }                      // 가는 쪽을 보게(정지 그림 하나면 미끄러져 보인다)
-    else{ f.cdT-=dt; if(f.cdT<=0){ f.cdT=1.1;
+      f.face=Math.atan2(dx/d, -(dy/d)); f.mv=1; }      // 가는 쪽(연속 각도) — 메인 게임과 같은 회전 방식
+    else{ f.mv=0; f.cdT-=dt; if(f.cdT<=0){ f.cdT=1.1;
       if(bk){ bk.hp-=f.atk; S.floats.push({x:bk.x,y:bk.y-20,tx:'-'+Math.round(f.atk),cl:'#c9a24a',t:0}); }
       else { c.hp-=f.atk; c.hitT=0; S.floats.push({x:c.x,y:c.y-26,tx:'-'+Math.round(f.atk),cl:'#ff8a9a',t:0}); } } } }
   c.cdT-=dt;
@@ -5503,7 +5504,7 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char; S.t+=dt;
       const crit=Math.random()<c.crit, dmg=c.atk*(crit?2:1)*(hbBoostOn('atk')?2:1);
       best.hp-=dmg; S.shots.push({x1:c.x,y1:c.y-10,x2:best.x,y2:best.y,t:0});
       { const ddx=best.x-c.x, ddy=best.y-c.y, dd=Math.hypot(ddx,ddy)||1;
-        S.charDir=sprDir(ddx/dd, ddy/dd); S.atkT=HB_ATK_SHOW; }   // 노리는 쪽을 보고 공격 모션 재생
+        S.charFace=Math.atan2(ddx/dd, -(ddy/dd)); S.charDir=sprDir(ddx/dd, ddy/dd); S.atkT=HB_ATK_SHOW; }
       S.floats.push({x:best.x,y:best.y-20,tx:(crit?'✦':'')+Math.round(dmg),cl:crit?'#ffd24a':'#ececec',t:0});
       if(best.hp<=0) hbKill(best); } }
   // 아군 — 동료는 캐릭터 주위를 천천히 돌고, 터렛은 고정, 펫은 가깝게 붙어 돈다
@@ -5620,12 +5621,13 @@ function hbDraw(){ const S=_hb, x=S.ctx, c=S.char; if(!x) return;
   for(const f of S.foes){ const el=!!f.elite;
     if(el){ x.save(); x.globalAlpha=.5; x.strokeStyle='#ffd24a'; x.lineWidth=1.5;
       x.beginPath(); x.arc(f.x,f.y,17,0,Math.PI*2); x.stroke(); x.restore(); }
-    hbUnitArt(x, f.mdl, f.ico, f.x, f.y, el?38:26, f.dir);          // 3D 모델 8방향 스프라이트(없으면 이모지)
+    if(!hb3dReady()) hbUnitArt(x, f.mdl, f.ico, f.x, f.y, el?38:26, f.dir);   // 3D가 없을 때만 2D 폴백
     if(f.hp<f.hpMax){ const w2=el?30:22, yy=f.y-(el?22:16);
       x.fillStyle='rgba(0,0,0,.55)'; x.fillRect(f.x-w2/2,yy,w2,3);
       x.fillStyle=el?'#ffd24a':'#ff6b7a'; x.fillRect(f.x-w2/2,yy,w2*Math.max(0,f.hp/f.hpMax),3); } }
   x.save(); if(S.phase==='down') x.globalAlpha=.35+.25*Math.sin(S.t*6);   // 쓰러짐 = 깜빡임
-  hbCharArt(x, c.x, c.y, 34); x.restore();                          // 내 캐릭터도 3D(실험장 시트 그대로)
+  if(!hb3dReady()) hbCharArt(x, c.x, c.y, 34);                      // 3D가 없을 때만 2D 폴백
+  x.restore();
   if(c.hp<c.hpMax && S.phase!=='down'){ x.fillStyle='rgba(0,0,0,.55)'; x.fillRect(c.x-15,c.y-22,30,3.5);
     x.fillStyle='#5dff8f'; x.fillRect(c.x-15,c.y-22,30*Math.max(0,c.hp/c.hpMax),3.5); }
   x.font='700 10px '+(getComputedStyle(document.documentElement).getPropertyValue('--font-num')||'sans-serif');
@@ -5635,8 +5637,40 @@ function hbDraw(){ const S=_hb, x=S.ctx, c=S.char; if(!x) return;
   if(tm){ const v=S.phase==='fight' ? Math.ceil(S.waveT)+'s'
                  : S.phase==='mop' ? '소탕' : S.phase==='down' ? '…' : Math.ceil(S.gapT)+'s';
     if(tm._v!==v){ tm._v=v; tm.textContent=v; } } }
+// ── 3D 유닛 렌더 — 메인 게임과 '같은 경로'를 쓴다 ──
+// 새로 만들지 않는다: M3D.syncBuild(list,W,H,dt)가 이미 정규화 좌표·face 회전 보간·
+// 달리기 모션(it.moving)까지 다 한다. 공용 캔버스(#cvMarine)만 전장 위로 옮겨 쓴다.
+// ⚠ 캔버스는 하나뿐이라 쓰고 나면 반드시 제자리로 돌려놓는다(안 그러면 유즈맵 3D가 사라진다).
+let _hb3dHome=null;
+function hb3dAttach(){ const cv=document.getElementById('cvMarine'), host=document.getElementById('homeScreen');
+  if(!cv||!host||_hb3dHome) return;
+  _hb3dHome=cv.parentNode;                                  // 돌려놓을 자리 기억
+  cv.style.zIndex='1';                                      // 바닥(#hbCv) 위 · HOME UI(z2+) 아래
+  host.insertBefore(cv, host.firstChild.nextSibling||null); }
+function hb3dDetach(){ const cv=document.getElementById('cvMarine');
+  if(cv&&_hb3dHome){ cv.style.zIndex=''; cv.style.display='none'; _hb3dHome.appendChild(cv); }
+  _hb3dHome=null; }
+function hb3dReady(){ return !!(window.M3D && M3D.ready && M3D.ready() && M3D.syncBuild
+  && !(typeof G!=='undefined' && G.opt && G.opt.model3d===false)); }
+// 월드 좌표 → 화면 정규화(0..1). hbDraw의 카메라(cx,cy,k)와 같은 식이라 2D 바닥과 정확히 겹친다.
+function hb3dList(){ const S=_hb, W=S.w||1, H=S.h||1, k=S.k||1, out=[];
+  const nx=(wx)=>((S.cx||W/2)+wx*k)/W, ny=(wy)=>((S.cy||H/2)+wy*k)/H;
+  const c=S.char, ch=(typeof CHAR==='function')?CHAR():null;
+  const mdl=(ch && PROF_CLASSES[ch.cls] && PROF_CLASSES[ch.cls].unit) || 'marine';
+  out.push({ key:'me', id:mdl, x:nx(c.x), y:ny(c.y), face:S.charFace||0, yawFix:1,
+             moving:false, scl:0.9 });
+  for(const f of S.foes){ if(!f.mdl) continue;
+    out.push({ key:'f'+(f.uid||(f.uid=++_hbUid)), id:f.mdl, x:nx(f.x), y:ny(f.y),
+               face:f.face||0, yawFix:1, moving:!!f.mv, scl:(f.elite?1.15:0.85) }); }
+  return out; }
+let _hbUid=0;
 function hbFrame(){ if(!_hb||!_hb.on){ _hbRaf=0; return; }
-  hbPump(); hbResize(); hbDraw(); _hbRaf=requestAnimationFrame(hbFrame); }
+  hbPump(); hbResize(); hbDraw();
+  if(hb3dReady()){ const cv=document.getElementById('cvMarine');
+    if(cv){ hb3dAttach(); cv.style.display='block';
+      try{ M3D.syncBuild(hb3dList(), _hb.w, _hb.h, Math.min(.05,(performance.now()-(_hb._l3||performance.now()))/1000)); }catch(e){}
+      _hb._l3=performance.now(); } }
+  _hbRaf=requestAnimationFrame(hbFrame); }
 // ── 🏘 마을(메인 화면) UI ──
 // 🚪 메인(마을) 뒤로가기 = 로그아웃 확인 — 되돌아갈 곳이 로그인뿐이다
 function askLogout(){ const p=document.getElementById('logoutPanel'); if(!p) return;
@@ -10980,7 +11014,9 @@ function showAppScreen(id){ setInGame(false);
   { const cb=document.getElementById('curBar');                                    // HOME만 배경 위 숫자(.bare) — 다른 화면은 판 그대로
     if(cb) cb.classList.toggle('bare', BARE_CUR_SCREENS.indexOf(id)>=0); }
   const tgt=document.getElementById(id); if(tgt && id!=='opening') playScreenFx(tgt); }   // 전환 FX(부팅 로딩 제외)
-function hideAppScreens(){ if(typeof stopMapLive==='function') stopMapLive(); curShow(false); APP_SCREENS.forEach(s=>{ const e=document.getElementById(s); if(e) e.classList.add('hide'); }); }
+function hideAppScreens(){ if(typeof stopMapLive==='function') stopMapLive(); curShow(false);
+  if(typeof hbStop==='function') hbStop();   // ⚠ 게임 진입 경로 — 여기서 안 멈추면 공용 3D 캔버스(#cvMarine)가 HOME에 남아 유즈맵 3D가 사라진다
+  APP_SCREENS.forEach(s=>{ const e=document.getElementById(s); if(e) e.classList.add('hide'); }); }
 // ── 유즈맵 크롬 초기화(단일 소스) ──────────────────────────────────────────────
 // 맵마다 자기 화면만 켜다 보면 이전 맵의 잔재가 다음 맵에 그대로 남는다(관리자 탭·직스 패널·숨겨진 안내 등).
 // 게임 진입(startGameNow)과 로비 복귀 경로가 전부 이 함수 하나를 거쳐 nemo 기본 크롬으로 되돌린다. 새 맵을 추가할 때도 여기만 보면 된다.

@@ -630,7 +630,7 @@ async function groupLobby(){
       assert(ok,'시트 이미지가 없음: '+sh.url[st]); }
     return 'marine 시트 공유 · 공격 '+a.frames+'f/'+a.fps+'fps'; });
   // 이동이 '미끄러지지' 않으려면 적이 가는 쪽을 봐야 한다 — 실제로 dir이 갱신되는지
-  await step('던전: 적이 가는 방향을 본다(8방향 갱신)', async()=>{
+  await step('던전: 적이 가는 방향을 본다(메인 게임과 같은 연속 각도)', async()=>{
     skipIf(typeof hbStart!=='function' || typeof _hb==='undefined','자동사냥 없음');
     openHome(); await sleep(200);
     skipIf(!_hb || !_hb.on,'전장이 안 돌고 있음');
@@ -643,13 +643,41 @@ async function groupLobby(){
       for(let i=0;i<6;i++){ _hb.phase='fight'; _hb.waveT=99; hbStep(0.1); }
       const g=_hb.foes[0];
       assert(g && Math.hypot(g.x,g.y)<d0, '적이 캐릭터 쪽으로 안 움직임: '+d0+' → '+(g?Math.round(Math.hypot(g.x,g.y)):'없어짐'));
-      return g.dir; };
-    assert(walk(400,0)===6,'오른쪽에서 오는 적이 왼쪽(6)을 안 봄');
-    assert(walk(0,-400)===4,'위에서 오는 적이 아래(4)를 안 봄');
-    assert(walk(-400,0)===2,'왼쪽에서 오는 적이 오른쪽(2)을 안 봄');
-    assert(walk(0,400)===0,'아래에서 오는 적이 위(0)를 안 봄');
+      assert(g.mv===1,'걸어오는 중인데 걷기 상태가 안 켜짐(모션이 안 돈다): mv='+g.mv);
+      return g.face; };
+    // face = atan2(nx,-ny) 라디안(북=0). 8칸이 아니라 메인 게임과 같은 연속 각도라 어느 각도든 정확히 본다
+    const near=(a,b)=>Math.abs(Math.atan2(Math.sin(a-b),Math.cos(a-b)))<0.02;
+    assert(near(walk(400,0),-Math.PI/2),'오른쪽에서 오는 적이 왼쪽을 안 봄');
+    assert(near(walk(0,-400), Math.PI),'위에서 오는 적이 아래를 안 봄');
+    assert(near(walk(-400,0), Math.PI/2),'왼쪽에서 오는 적이 오른쪽을 안 봄');
+    assert(near(walk(0,400), 0),'아래에서 오는 적이 위를 안 봄');
+    // 45도 같은 사선도 그대로 나와야 한다(8칸이면 여기서 어긋난다)
+    { const fd=walk(300,-300);   // 오른쪽 위에서 오면 왼쪽 아래로 걷는다 = -3π/4
+      assert(near(fd, -Math.PI*0.75),'사선(45°)에서 오는 적의 각도가 어긋남: '+fd); }
+    // 이동 중에만 걷기 모션이 돌아야 한다(멈춘 적이 계속 뛰면 어색하다)
+    _hb.phase='fight'; _hb.waveT=99; _hb.foes.length=0;
+    _hb.foes.push({ico:'🟢',mdl:'snapper',x:5,y:0,hp:1e9,hpMax:1e9,atk:1,spd:60,cdT:9,elite:false});
+    for(let i=0;i<3;i++){ _hb.phase='fight'; hbStep(0.1); }
+    assert(_hb.foes[0].mv===0,'사거리 안에 붙었는데 걷기 상태가 유지됨: mv='+_hb.foes[0].mv);
     _hb.foes.length=0; _hb.manual=false;
-    return '적 8방향 갱신 ok'; });
+    return '연속 각도 · 걷기 상태 ok'; });
+  // ⚠ 3D 캔버스(#cvMarine)는 게임과 '공용'이다 — 던전이 빌려 쓰고 반드시 돌려놔야 유즈맵 3D가 산다.
+  //    돌려놓는 경로가 하나라도 빠지면 게임에 들어갔을 때 유닛이 통째로 안 보인다.
+  await step('던전: 빌려 쓴 공용 3D 캔버스를 반드시 돌려놓는다', async()=>{
+    skipIf(typeof hb3dAttach!=='function','3D 오버레이 없음');
+    const cv=$('cvMarine'); assert(cv,'#cvMarine이 없음');
+    const home=cv.parentNode;
+    for(const [name, leave] of [
+        ['showAppScreen(화면 전환)', ()=>showAppScreen('townScreen')],
+        ['hideAppScreens(게임 진입)', ()=>hideAppScreens()],
+        ['hbStop(직접 정지)',        ()=>hbStop()] ]){
+      hb3dAttach();
+      assert(cv.parentNode!==home, name+': 빌려오기 자체가 안 됨');
+      leave();
+      assert(cv.parentNode===home, name+' 뒤에 3D 캔버스가 안 돌아옴 — 유즈맵 3D가 사라진다');
+      assert(!cv.style.zIndex, name+' 뒤에 z-index가 남음: '+cv.style.zIndex); }
+    openHome(); await sleep(60);
+    return '전환·게임진입·정지 3경로 원복 ok'; });
   await step('용어 분리: 자동사냥=던전 / 옛 콘텐츠=토벌', async()=>{ skipIf(typeof openDungeonHub!=='function','토벌 허브 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     const nav=document.querySelector('#navBar .navIt[data-nav=dungeon]');

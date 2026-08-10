@@ -32,7 +32,7 @@
 | `🧍 캐릭터 선택/생성` | `renderCharSelect`/`renderCharCreate` — 입장 화면 `#charScreen`과 마을 구역이 **같은 렌더러**를 쓴다 |
 | `마을(월드 + 카메라)` | `TOWN_ZONES`(구역 단일 출처) · `twStep`/`twCamApply` · 입력 `twPtrDown→Move→Up` |
 | `⚔ 던전` | 캐릭터 직접 전투 — `DG` 상태 · `dgStep`/`dgTick` 자체 루프 · `DG_FOES` 자체 적 표 · `dgRender`(DOM 유일 접점). **유즈맵과 완전 분리** |
-| `⚔ 던전 1~10` | **자동사냥 던전 정체성** — `HB_DUNGEONS`(10곳 단일 소스: 종족·이름·바닥타일·틴트·적3종) · `hbDun(dg)` · `hbFloor`(타일+틴트) · `hbSprite`/`hbUnitArt`(적 8방향 스프라이트) · `hbCharArt`(내 캐릭터 = 실험장 시트 그대로) · `hbEnsureModels`(던전 진입 시 그 3종만 지연 로드) |
+| `⚔ 던전 1~10` | **자동사냥 던전 정체성 + 3D 유닛** — `HB_DUNGEONS`(10곳 단일 소스) · `hbDun` · `hbFloor`(타일+틴트) · `hb3dAttach/Detach`(공용 `#cvMarine`을 빌려 씀) · `hb3dList`(월드→정규화 좌표) · `hbFrame`이 **`M3D.syncBuild`** 호출 = 메인 게임과 같은 이동/회전/걷기 모션 · 3D가 없으면 `hbUnitArt`/`hbCharArt` 2D 폴백 |
 | `게임 상태` | `G` 전역 + `newGame()` |
 | `캔버스 + 트랙` | 2D 캔버스(#cvMain) 트랙/적 그리기, `DPR`(2D쪽) |
 | `유닛/적 로직` | `spawnEnemy`(→`G.pendSpawn` 대기열!), `summonPersonalBoss`, `sellUnit(유닛객체)` , 전투 판정 |
@@ -104,6 +104,8 @@ node test/bench-strike.mjs 400 80 4   # 대규모 전투 렌더 벤치(유닛수
 - 수정 후 `npm test` 통과 없이 "완료" 선언 금지. 구문 검사는 vm.Script(classic)+`node --check`(module).
 
 ## 10. 함정 목록 (실제로 밟았던 것)
+- **던전 3D는 공용 캔버스(`#cvMarine`)를 빌려 쓴다 — 반드시 돌려놔야 한다.** 렌더러가 그 캔버스 하나에 묶여 있어, HOME에 붙인 채로 게임에 들어가면 **유즈맵 3D가 통째로 사라진다.** 원복 경로는 `showAppScreen`·`hideAppScreens`·`hbStop` 셋 다 걸려 있어야 한다(`hideAppScreens`가 실제로 빠져 있었고 스모크가 잡는다). 새 화면 전환 경로를 만들면 여기도 확인할 것.
+- **던전 유닛 렌더는 새로 만들지 않는다.** `M3D.syncBuild(list,W,H,dt)`가 이미 정규화 좌표·`face`+`yawFix` 회전 보간·`moving` 걷기 모션(run GLB 또는 절차적 bob)을 전부 한다 — 메인 게임과 같은 경로다. 각도는 8칸이 아니라 **연속 라디안**(`atan2(nx,-ny)`, 북=0).
 - **스프라이트 시트 표는 `SPR_UNITS` 하나다.** 관리자 실험장(`SPR_MARINE`)과 던전 전장이 **같은 객체**를 본다 — 복사본을 만들면 곧 어긋난다(스모크가 `SPR_MARINE===SPR_UNITS.marine`을 검사). 시트를 새로 구우면 `SPR_UNITS`에 한 줄만 추가하면 두 곳에 동시에 반영된다.
 - **8방향 규약은 `sprDir(nx,ny)` 하나다**(북=0, 시계). 적은 이동할 때 `f.dir`을 여기서 갱신하고, `M3D.unitSprite(id,dir)`가 같은 규약으로 8장을 구워 캐시한다. 정지 그림 한 장을 8방향에 돌려쓰면 어느 쪽으로 걸어도 같은 그림이라 **미끄러져 보인다**.
 - **`hbPump()`는 실제 경과시간으로 돈다** — 스모크에서 촘촘히 부르면 `dt≈0`이라 아무것도 안 움직인다. `_hb.manual=true`로 두고 `hbStep(고정dt)`를 직접 돌릴 것. phase도 `fight`로 고정해야 이동 루프가 돈다(웨이브 타이머가 넘어가면 멎는다).
