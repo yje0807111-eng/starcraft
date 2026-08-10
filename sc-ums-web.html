@@ -2460,7 +2460,11 @@
   .twBar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:8px 12px;background:linear-gradient(180deg,rgba(13,18,28,.96),rgba(8,11,17,.9));border-bottom:1px solid var(--glass-edge)}
   .twBack{flex:0 0 auto;font-family:inherit;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:var(--r-lg);cursor:pointer;color:#cdd6e2;background:rgba(255,255,255,.06);border:1px solid var(--metal-edge)}
   .twBack .mIco{width:18px;height:18px;color:inherit}
-  .twName{font-size:16px;font-weight:800;color:#eaf1fb}
+  /* 이름·레벨·전투력 묶음 = 내 캐릭터(스탯) 패널 입구. 광장은 장식이 되었으므로 이 버튼이 유일한 통로다 */
+  .twWho{flex:0 1 auto;min-width:0;display:flex;align-items:center;gap:8px;padding:4px 8px;font-family:inherit;text-align:left;cursor:pointer;
+    color:inherit;background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+  .twWho:active{background:rgba(255,255,255,.1)}
+  .twName{font-size:16px;font-weight:800;color:#eaf1fb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .twLv{font-family:var(--font-num);font-size:12px;font-weight:800;color:var(--gold-lt)}
   .twCoin{margin-left:auto;font-family:var(--font-num);font-size:13px;color:var(--txt-mute)}
   .twCoin b{font-size:16px;font-weight:800;color:#ffd24a}
@@ -3901,7 +3905,7 @@
   <div id="townScreen" class="appScreen spaceBg hide">
     <div class="twBar">
       <button class="twBack" onclick="askLogout()" aria-label="로그아웃" title="로그아웃"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4.6h3.7A1.8 1.8 0 0 1 20 6.4v11.2a1.8 1.8 0 0 1-1.8 1.8h-3.7"/><path d="M10.6 8.2L14.4 12l-3.8 3.8"/><path d="M14.4 12H4"/></svg></button>
-      <span class="twName" id="twName">캐릭터</span><span class="twLv" id="twLv">Lv.1</span><span class="twPow" id="twPow">⚔ 0</span>
+      <button class="twWho" data-sfx="ui_open" onclick="openTownPanel('plaza')" title="내 캐릭터" aria-label="내 캐릭터"><span class="twName" id="twName">캐릭터</span><span class="twLv" id="twLv">Lv.1</span><span class="twPow" id="twPow">⚔ 0</span></button>
       <span class="twCoinSpacer" style="margin-left:auto"></span>
       <button class="twGear" data-sfx="ui_open" onclick="twOpenChat()" title="채팅" aria-label="채팅"><span data-ico="chat"></span></button>
       <button class="twGear" data-sfx="ui_open" onclick="twOpenSocial()" title="친구" aria-label="친구"><span data-ico="friend"></span></button>
@@ -5889,7 +5893,7 @@ function sendDM(){ const inp=document.getElementById('dmInput'); if(!inp||_dmFri
 // 광장을 가운데 두고 6구역이 그 둘레를 감싼다(육각 배치). 반지름은 한 화면 안에 다 들어오는 거리라
 // 어느 구역이든 화면을 옮기지 않고 한 번의 터치로 갈 수 있다. deco=상호작용 없는 지형지물.
 const TOWN_ZONES={
-  plaza:{ x:50, y:50, ico:'⛲',   label:'광장',      deco:true },   // 맵의 일부(장식) — 누를 수 없고 패널도 없다
+  plaza:{ x:50, y:50, ico:'⛲',   label:'광장',      title:'내 캐릭터', render:()=>renderProfStats(), deco:true },   // deco = 맵 장식(지도에서 누를 수 없다) · 스탯 패널은 상단 이름(.twWho)에서 연다
   gacha:   { x:50.0, y:33.3, ico:'🎁',   label:'상점',    title:'상점',          screen:'shop', render:()=>renderProfGacha() },   // 위 · screen 지정 = 팝업 대신 전용 화면으로 이동
   gate:    { x:70.8, y:41.7, ico:'🔒',   label:'관문',    title:'관문',          render:()=>renderProfGate()  },   // 우상
   gym:     { x:70.8, y:58.3, ico:'🏋️',  label:'훈련장',  title:'훈련장',        render:()=>renderProfIdle()  },   // 우하

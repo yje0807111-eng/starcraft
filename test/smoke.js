@@ -846,11 +846,16 @@ async function groupLobby(){
     const map=$('twMap'), w=$('twWorld'); assert(w,'#twWorld 없음');
     const mr=map.getBoundingClientRect();
     assert(Math.abs(parseFloat(w.style.width)-mr.width*TW_WORLD_W_MUL)<2,'월드 폭이 화면×'+TW_WORLD_W_MUL+'가 아님: '+w.style.width);
-    assert(parseFloat(w.style.width)>parseFloat(w.style.height),'가로로 긴 월드가 아님');
     assert(w.querySelectorAll('.twZone').length===Object.keys(TOWN_ZONES).length,'구역 아이콘 수 불일치');
-    const shown=Object.keys(TOWN_ZONES).filter(id=>!_twEdgeEl[id].classList.contains('hide'));
-    assert(['plaza','charmake','charsel'].every(id=>shown.indexOf(id)<0),'화면 안에 보이는 구역인데 가장자리 표시가 뜸: '+shown.join(','));
-    assert(['gacha','gate','gear','gym'].every(id=>shown.indexOf(id)>=0),'화면 밖 모서리 구역의 가장자리 표시가 없음: '+shown.join(','));
+    // 광장은 맵 장식 — 클릭도 가장자리 표시도 없다
+    const pz=w.querySelector('.twZone[data-zone="plaza"]');
+    assert(pz.classList.contains('deco') && !pz.onclick && !_twEdgeEl.plaza,'광장이 아직 상호작용 구역임');
+    // 나머지 구역은 광장을 둘러싸고 전부 한 화면 안 — 어디든 한 번의 터치로 간다
+    const off=Object.keys(TOWN_ZONES).filter(id=>{ const p=twZonePx(id);
+      const sx=p[0]-_twChar.x+mr.width/2, sy=p[1]-_twChar.y+mr.height/2;
+      return !(sx>0 && sx<mr.width && sy>0 && sy<mr.height); });
+    assert(!off.length,'광장에 섰는데 화면 밖인 구역: '+off.join(','));
+    assert(!Object.keys(_twEdgeEl).some(id=>!_twEdgeEl[id].classList.contains('hide')),'전부 화면 안인데 가장자리 표시가 뜸');
     const t0=w.style.transform, g=twZonePx('gacha'); twSetTarget(g[0],g[1]);
     for(let i=0;i<60;i++) twStep(0.016);
     assert(w.style.transform!==t0,'월드(배경)가 안 움직임');
