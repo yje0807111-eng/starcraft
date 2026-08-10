@@ -1061,7 +1061,7 @@
   #btCardCtl:active{transform:translateY(1px)}
   #btCardCtl svg{width:17px;height:17px;display:block;transition:transform .22s cubic-bezier(.2,.8,.25,1)}
   #btCardCtl.up svg{transform:rotate(180deg)}
-  #btSheet.simple #btSheetBody,#unitCmd.simple,#playerProfile.simple{height:min(26vh,126px);max-height:min(26vh,126px)}   /* 간소화 = 1줄 그리드 · 높이 고정(건물 프로필 기준 ≈120px · 개인·다중·혼합 모두 동일) · 메인 프로필(#unitCmd)도 동일 규격 */
+  #btSheet.simple #btSheetBody,#unitCmd.simple,#playerProfile.simple{height:min(32vh,152px);max-height:min(32vh,152px)}   /* 간소화 = 1줄 그리드 · 높이 고정(아이콘 칸을 관리자 타일 크기로 키우며 126→152px) · 하단 전 구역 동일 규격 */
   #btSheet.simple .cmdG .cgGrid,#unitCmd.simple .cmdG .cgGrid{grid-template-rows:1fr}
   #btSheet.mini #btSheetBody{display:none}   /* 최소화 = 본문 숨김(버튼 바만) */
   #btSheetBody,#unitCmd,#playerProfile{height:min(40vh,204px);max-height:min(40vh,204px);min-height:0;flex-direction:column}   /* 일꾼 지정 패널 크기로 고정(건물·유닛 모두 동일 높이) · #unitCmd는 display만 .on에서 제어 */
@@ -1433,7 +1433,7 @@
   .cmdG .cgSlot{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:2px;cursor:pointer;padding:5px 3px 4px;touch-action:none;
     border:1px solid var(--metal-edge);border-radius:8px;background:linear-gradient(160deg,rgba(30,36,48,.62),rgba(8,10,14,.72));transition:.12s}
   .cmdG .cgSlot::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent)}
-  .cmdG .cgPro{width:clamp(28px,42%,40px);aspect-ratio:1;flex:none;position:relative;overflow:hidden;color:var(--ca);border:1px solid var(--caS);border-radius:6px;
+  .cmdG .cgPro{width:100%;max-width:64px;aspect-ratio:1;flex:none;position:relative;overflow:hidden;color:var(--ca);border:1px solid var(--caS);border-radius:6px;   /* 아이콘 칸 = 슬롯 폭을 채우되 관리자 타일(.bframe 64px)을 상한으로 — 하단 전 구역 공통 */
     background:radial-gradient(circle at 50% 34%,rgba(74,86,110,.45),#0a0d14 80%);display:flex;align-items:center;justify-content:center;font-size:22px}
   .cmdG .cgPro::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.22) 2px 3px)}
   .cmdG .cgPro svg{width:76%;height:76%} .cmdG .cgPro img{width:100%;height:100%;object-fit:cover} .cmdG .cgPro .pemoji{font-size:20px}
