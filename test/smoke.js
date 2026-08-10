@@ -300,8 +300,12 @@ async function groupLobby(){
   // 자동사냥(라운드 머신) — 던전과 같은 격리 규칙. hbStep을 직접 돌린다(rAF 비의존).
   await step('자동사냥: 라운드 정산·적 누적·사망 하강·격리', async()=>{ skipIf(typeof hbStart!=='function','자동사냥 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    // ⚠ HOME은 이제 화면을 떠나도 전투를 '이어받는다'(배경 진행). 이 스텝은 갓 시작한 판을 전제하므로
+    //    hbEnd()로 완전히 끝내고 새로 연다 — 안 그러면 앞 스텝의 kills가 남아 아래 루프가 한 번도 안 돈다
+    if(typeof hbEnd==='function') hbEnd();
     openHome(); await sleep(80);
     assert(_hb && _hb.on,'전투가 시작 안 됨');
+    assert(!_hb.kills,'새 판인데 처치 수가 남아 있음: '+_hb.kills);
     _hb.manual=true;   // 인터벌 시계를 멈추고 hbStep만으로 결정적으로 돌린다
     const snap=JSON.stringify({credits:G.credits, wave:G.wave, units:(G.units||[]).length});
     // ① 처치 = 즉시 지급(재화 바가 바로 오른다) · 라운드 클리어 = 보너스 추가
@@ -337,8 +341,35 @@ async function groupLobby(){
     // ④ 격리 + 화면 이탈 정지 + 재진입 재개
     assert(JSON.stringify({credits:G.credits, wave:G.wave, units:(G.units||[]).length})===snap,'유즈맵 상태를 건드림');
     const rep='round '+_hb.round+' · kills '+_hb.kills;
-    openMapSelect(); await sleep(60); assert(!_hb.on,'홈을 떠났는데 루프가 살아 있음');
-    openHome(); await sleep(60); assert(_hb.on,'재진입 시 재개 안 됨');
+    // ④-2 화면을 떠나도 '전투는 계속' — 그리기만 멈추고 라운드는 이어진다(2026-08-10 사용자 요청으로 규칙 변경).
+    //     예전 규칙은 '떠나면 정지'였고, 그때 미저장 처치 보상이 다음 화면의 loadMeta()에 덮여 사라졌다.
+    // ⚠ 검사가 헛돌지 않게: '마지막 저장 이후에 번 돈'을 만들어 둔다.
+    //    라운드 클리어는 이미 saveMeta를 하므로, 클리어 없이 처치만 일으켜야 저장 누락이 드러난다.
+    saveMeta();                                   // 기준점 — 여기까지는 저장돼 있다
+    _hb.saveT=0; _hb.foes.length=0; _hb.phase='fight'; _hb.waveT=99;
+    _hb.char.atk=1e9; _hb.char.range=1e9; _hb.char.cd=.05; _hb.char.cdT=0;   // 확실히 잡도록(사망 부활로 스탯이 돌아와 있다)
+    const pcBase=PROF().pcoin;
+    _hb.foes.push({ico:'🟢',mdl:'snapper',x:5,y:0,hp:1,hpMax:1,atk:0,spd:0,cdT:9,elite:false});
+    for(let i=0;i<60 && PROF().pcoin<=pcBase;i++) hbStep(0.05);
+    assert(PROF().pcoin>pcBase,'검사 준비 실패: 처치 보상이 안 들어옴');
+    { const sv=JSON.parse(localStorage.getItem(metaKey())||'{}');
+      assert(((sv.profile&&sv.profile.pcoin)||0)<PROF().pcoin-1e-9,
+        '검사 준비 실패: 이미 저장돼 있어 저장 누락을 잡을 수 없다'); }
+    const rd0=_hb.round, kl0=_hb.kills, pc0=PROF().pcoin;
+    openMapSelect(); await sleep(60);
+    assert(_hb && _hb.on,'홈을 떠났다고 전투가 끝나버림 — 배경 진행이 안 된다');
+    assert(_hb.bg===true,'떠났는데 배경 모드가 아님(계속 그리면 낭비다)');
+    assert(_hb.round===rd0 && _hb.kills===kl0,'화면을 옮겼더니 라운드/처치가 초기화됨: '
+      +rd0+'/'+kl0+' → '+_hb.round+'/'+_hb.kills);
+    // 떠날 때 저장돼야 다음 화면의 loadMeta()가 재화를 되돌리지 않는다
+    { const saved=JSON.parse(localStorage.getItem(metaKey())||'{}');
+      const sp=(saved.profile&&saved.profile.pcoin)||0;
+      assert(sp>=pc0-1e-6,'떠날 때 저장이 안 됨 — loadMeta가 재화를 되돌린다: 저장 '+sp+' < 보유 '+pc0); }
+    loadMeta();   // 실제로 다른 화면들이 하는 일
+    assert(PROF().pcoin>=pc0-1e-6,'화면 전환 후 재화가 사라짐: '+pc0+' → '+PROF().pcoin);
+    openHome(); await sleep(60);
+    assert(_hb.on && !_hb.bg,'재진입 시 재개 안 됨');
+    assert(_hb.round===rd0,'재진입에서 라운드가 초기화됨: '+rd0+' → '+_hb.round);
     return rep; });
   // 레벨업 보상(스탯 포인트)은 메인 화면에서 바로 찍혀야 한다 — 마을까지 걸어가야 하면 성장 축의 절반이 숨는다.
   await step('자동사냥: 레벨업 스탯을 HOME에서 배분', async()=>{ skipIf(typeof hmAllocStat!=='function','HOME 스탯 없음');
