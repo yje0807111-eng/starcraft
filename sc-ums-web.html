@@ -1437,7 +1437,8 @@
   .cmdG .cgPro::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.22) 2px 3px)}
   .cmdG .cgPro svg{width:76%;height:76%} .cmdG .cgPro img{width:100%;height:100%;object-fit:cover} .cmdG .cgPro .pemoji{font-size:20px}
   /* 업그레이드 아이콘 = 네모 초상 틀은 유지하고, 안쪽 배지 원만 없앤 뒤 아이콘을 크게 */
-  .cmdG .cgPro .wpnIco{width:84%;height:84%}
+  .cmdG .cgPro svg.wpnIco{width:84%;height:84%}            /* SVG 폴백만 84% */
+  .cmdG .cgPro img.wpnIco{width:100%;height:100%;object-fit:cover}   /* 실제 아이콘 이미지 = 초상처럼 칸을 꽉 채움 */
   .cmdG .cgSlot.iconFill{justify-content:center;padding:6px} .cmdG .cgSlot.iconFill .cgPro{width:72%;height:auto;aspect-ratio:1;border:none;background:none;box-shadow:none} .cmdG .cgSlot.iconFill .cgPro svg{width:100%;height:100%} .cmdG .cgSlot.iconFill .cgName,.cmdG .cgSlot.iconFill .cgCost{display:none}   /* 아이콘만 채우는 칸(일시정지 등): 빈 이름/비용 줄 숨겨 아이콘이 칸 정중앙에 크게 */
   .cmdG .cgName{font:800 10px/1.05 sans-serif;color:#e6eefc;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* 🧱 벙커 탑승 슬롯: 가로 꽉 찬 초상 → 이름 → HP 세로 스택 */
@@ -7090,7 +7091,7 @@ function bossDeployOne(gid){ if(!(G.coopBoss&&!G.coopBoss.dead)){ toast('ℹ️ 
 const UPG_CATS=[ {wpn:'inf',name:'보병'}, {wpn:'mech',name:'메카닉'}, {wpn:'zrg',name:'스웜'}, {wpn:'pro',name:'에테리얼'} ];
 function _upgradeSheetModel(){
   const items=UPG_CATS.map(c=>{ const lv=(G.atkLv&&G.atkLv[c.wpn])||0, isMax=lv>=UPG_MAX, cost=upgCost(c.wpn), afford=((G.gas||0)>=cost);
-    return { pro:wpnBadgeSVG(c.wpn,'#ff3b3b'), sn:c.name, en:cost, cr:0, tr:isMax?'MAX':('Lv.'+lv), metaCls:'lv',
+    return { pro:wpnBadgeHTML(c.wpn,'#ff3b3b'), sn:c.name, en:cost, cr:0, tr:isMax?'MAX':('Lv.'+lv), metaCls:'lv',
       state:isMax?'max':(afford?'ok':'dim'), act:isMax?'':('onpointerdown="upgHoldStart(\''+c.wpn+'\',event)"') }; });
   const gLv=(G.gachaLuckLv||0), gMax=gLv>=GACHA_UP_MAX, gC=gachaUpCost();
   items.push({ pro:'<svg viewBox="0 0 24 24">'+beaconIcon('gachaUp')+'</svg>', sn:'뽑기 확률', cr:gC, en:0, tr:gMax?'MAX':('Lv.'+gLv), metaCls:'lv',
@@ -8090,14 +8091,24 @@ function stepCitizen(dt){ const c=G.citizen; if(G.tab!=='Unit') return;
   renderClock(); drawProd();
 }
 // 계열(wpn)별 무기 형태 글리프(금색 원형 배지 안에 들어감) — 취소 아이콘 같은 느낌
-// 무기 계열 업그레이드 아이콘 — 라인 스타일 24뷰박스(currentColor). 테두리 원 없이 칸을 바로 채움
+// 무기 계열 업그레이드 아이콘 — 실제 업그레이드 아이콘 이미지(assets/icons/upgrades) 우선, 없으면 아래 라인 SVG 폴백
+const UPG_ICON_DIR='assets/icons/upgrades/';
+const WPN_ICON_IMG={   // 계열 → 실제 공격력 업그레이드 아이콘
+  inf:  'up_inf_atk.webp',    // 보병 = 돌격소총
+  mech: 'up_veh_atk.webp',    // 메카닉 = 포신(캐논)
+  zrg:  'up_melee_atk.webp',  // 스웜 = 갈고리 발톱
+  pro:  'up_gnd_wpn.webp',    // 에테리얼 = 사이오닉 블레이드
+};
+// 폴백용 라인 스타일 24뷰박스(currentColor). 이미지가 없는 계열에만 쓰인다.
 const WPN_ICON={
   inf:  '<path d="M3.6 11.8h11.6v2.8H3.6z"/><path d="M15.2 12.6h5"/><path d="M7.2 11.8V9.4h2.6v2.4"/><path d="M11.2 14.6 9.4 18.4"/><path d="M4.6 14.6v2.4"/>',   // 보병 = 소총
   mech: '<path d="M12 2.6c1.7 1.9 2.6 3.9 2.6 6v6.6H9.4V8.6c0-2.1.9-4.1 2.6-6z"/><path d="M9.4 10.6 6.2 13.8v3.6l3.2-2.4M14.6 10.6l3.2 3.2v3.6l-3.2-2.4"/><path d="M10.4 15.2v2.2M13.6 15.2v2.2"/><path d="M12 18.4c.9 1 1.4 2 1.4 3-.5-.5-.9-.8-1.4-.8s-.9.3-1.4.8c0-1 .5-2 1.4-3z"/>',   // 메카닉 = 미사일 탄두
   pro:  '<path d="M9.6 20.2 7 17.6l1.8-1.8 2.6 2.6z"/><path d="M11 14.4 8.6 16.8"/><path d="M11.4 18.4 20 9.8"/><path d="M10.2 17.2 18.8 8.6"/><path d="M17.4 7.2 21.4 11.2"/>',   // 에테리얼 = 광선검(빔 세이버)
   zrg:  '<path d="M12 2.8c1.9 4.4 2.9 8.1 2.9 11.2 0 2.4-1 4.4-2.9 6.2-1.9-1.8-2.9-3.8-2.9-6.2 0-3.1 1-6.8 2.9-11.2z"/><path d="M9.3 10.4 5.8 8.2M14.7 10.4l3.5-2.2M9.2 14.6 5.6 16.6M14.8 14.6l3.6 2"/>',   // 스웜 = 가시
 };
-function wpnBadgeSVG(wpn,col){ const g=WPN_ICON[wpn]||WPN_ICON.inf;
+function wpnBadgeHTML(wpn,col){ const f=WPN_ICON_IMG[wpn];   // 초상(unitPortraitHTML)과 동일 패턴 — 이미지 우선, 없으면 SVG
+  if(f) return '<img class="wpnIco" src="'+UPG_ICON_DIR+f+'" alt="" draggable="false">';
+  const g=WPN_ICON[wpn]||WPN_ICON.inf;
   return '<svg class="wpnIco" viewBox="0 0 24 24" width="100%" height="100%" '+'style="color:'+(col||'currentColor')+'" '+'fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+g+'</svg>'; }
 // ── 업그레이드 설정(유즈맵별로 바꿔 끼움) ──
 const UPG_MAX=299;   // 업그레이드 최대 레벨 (이 유즈맵=299, 일반 맵은 3 등으로 설정)
@@ -8107,7 +8118,7 @@ function upgCost(wpn){ return UPG_COST; }   // 정액 5 에너지(에너지 수�
 function bldgUpgs(b){
   const items=[];
   // 공격력(무기 계열)
-  items.push({ wpn:b.wpn, name:b.wname, icon:wpnBadgeSVG(b.wpn,'#ff3b3b'),
+  items.push({ wpn:b.wpn, name:b.wname, icon:wpnBadgeHTML(b.wpn,'#ff3b3b'),
     lv:(G.atkLv[b.wpn]||0), cost:upgCost(b.wpn), action:"research('"+b.wpn+"')" });
   // ── 예시(추후 활성화): 방어력 등 — 슬롯 하나 더 생김 ──
   // items.push({ wpn:b.wpn+'_arm', name:b.aname, icon:armorBadgeSVG('#ff3b3b'),
