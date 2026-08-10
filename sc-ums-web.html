@@ -2544,6 +2544,34 @@
   .hmUpg.down .hmUpgChev{transform:rotate(-135deg) translate(-2px,-2px)}
   /* ⚠ display:none은 전환이 안 된다 — 높이를 0으로 좁혀 접는다(그래야 배경도 같은 속도로 따라온다) */
   .hmUpg.down .hmUpgGrid{max-height:0 !important;padding-top:0;padding-bottom:0;opacity:0}
+  /* 스킬 바 — 전장 위에 떠 있다(업그레이드 카드 바로 위). 판을 만들지 않고 버튼만 얹는다 */
+  .hbBar{position:absolute;left:0;right:0;z-index:2;display:flex;justify-content:center;gap:6px;padding:0 8px;pointer-events:none}
+  .hbBar>*{pointer-events:auto}
+  .hbSk{flex:0 0 auto;width:52px;height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+    cursor:pointer;font-family:inherit;color:#ececec;
+    background:linear-gradient(180deg,rgba(38,38,38,.92),rgba(16,16,16,.94));
+    border:1px solid rgba(255,255,255,.10);border-radius:var(--r-bar);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 2px 6px -3px #000}
+  .hbSk.wide{width:58px}
+  .hbSk.cool{color:#7a7a7a;background:rgba(20,20,20,.9)}
+  .hbSk.on{border-color:rgba(255,210,74,.55);color:#ffd24a}
+  .hbSkIco{font-size:16px;line-height:1}
+  .hbSkTx{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:9px;font-weight:800;letter-spacing:.2px}
+  .hbSk:active{transform:translateY(1px)}
+  /* 건설·부스트 팝업 행 */
+  .hbRows{flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:0 12px}
+  .hbRow{display:flex;align-items:center;gap:8px;padding:8px;background:rgba(255,255,255,.045);
+    border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+  .hbRowIco{flex:none;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:17px;
+    background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+  .hbRowTx{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
+  .hbRowTx b{font-size:var(--fs-lg);font-weight:800;color:#ececec}
+  .hbRowTx b i{font-style:normal;font-family:var(--font-num);font-variant-numeric:tabular-nums;color:#9a9a9a}
+  .hbRowTx em{font-style:normal;font-size:var(--fs-sm);color:#7a7a7a}
+  .hbRowBtn{flex:none;height:30px;padding:0 10px;cursor:pointer;font-family:inherit;font-size:var(--fs-sm);font-weight:900;
+    color:#2b1d00;background:linear-gradient(180deg,#ffd97a,#e8a92b 58%,#b8801a);
+    border:1px solid rgba(255,220,140,.8);border-radius:var(--r-bar)}
+  .hbRowBtn:disabled{cursor:default;color:#7a7a7a;background:rgba(255,255,255,.05);border-color:var(--metal-edge)}
   /* 레벨업 스탯 — 포인트가 있을 때만 보이는 한 줄(계정 업그레이드와 다른 축이라 격자와 분리) */
   .hmStatRow{flex:none;display:flex;align-items:center;gap:4px;padding:8px 8px 0;overflow-x:auto;scrollbar-width:none}
   .hmStatRow.hide{display:none}
@@ -3653,6 +3681,26 @@
   </div>
 
     <!-- 친구 시트 — 허브 소셜을 그대로 옮겨온 것(id 유지 → renderFriends/setFriendFilter 그대로 동작) -->
+    <!-- 건설 — 동료·터렛·벙커. 껍데기는 라운드 팝업과 같은 .hbModal -->
+    <div class="hbModal hide" id="hbBuildModal" onclick="if(event.target===this)hbCloseBuild()">
+      <div class="hbmCard">
+        <div class="hbmHead"><b>건설</b>
+          <button class="hbmX" onclick="hbCloseBuild()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+        </div>
+        <div class="hbRows uiScroll" id="hbBuildBody"></div>
+        <div class="hbRoundNote">사면 바로 전장에 배치됩니다. 라운드가 바뀌어도 남습니다.</div>
+      </div>
+    </div>
+    <!-- 부스트 — 시간제 강화 -->
+    <div class="hbModal hide" id="hbBoostModal" onclick="if(event.target===this)hbCloseBoost()">
+      <div class="hbmCard">
+        <div class="hbmHead"><b>부스트</b>
+          <button class="hbmX" onclick="hbCloseBoost()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+        </div>
+        <div class="hbRows uiScroll" id="hbBoostBody"></div>
+        <div class="hbRoundNote">이미 걸려 있으면 남은 시간에 더해집니다.</div>
+      </div>
+    </div>
     <!-- 라운드 선택 — 전장 한가운데 뜨는 팝업(회색톤 · 푸른기 금지) -->
     <div class="hbModal hide" id="hbRoundSheet" onclick="if(event.target===this)hbCloseRounds()">
       <div class="hbmCard">
@@ -3724,6 +3772,7 @@
     <div class="hbHud"><b id="hbLv">Lv.1</b><span id="hbAtk">⚔ 0</span><span id="hbKill">0 KILL</span></div>
     <button class="hbMid" id="hbMid" onclick="hbOpenRounds()" aria-label="라운드 선택">
       <b id="hbRound">던전 1 · 라운드 1</b><span><i id="hbWaveTx">웨이브 1/5</i> · <i id="hbTimer">20s</i> · <i id="hbMode">반복</i></span></button>
+    <div class="hbBar" id="hbBar"></div>   <!-- 스킬·건설·부스트 (전장 위, 업그레이드 카드 바로 위) -->
     <div class="hmScroll uiScroll" id="hmScroll">
       <!-- POWER UPGRADES — 화면에 남은 유일한 카드. 위쪽은 비워서 우주 배경(.spaceBg)이 그대로 보인다 -->
       <div class="hmCard hmUpg">
@@ -4970,6 +5019,59 @@ function hbGoRound(n){ const H=hbHunt(), best=hbBest(H.dg);
     _hb.foes.length=0; _hb.pend.length=0; _hb.char.hp=_hb.char.hpMax; hbSpawnWave(); }
   if(typeof playSfx==='function') playSfx('ui_open');
   renderRoundSheet(); hbHud(); hbCloseRounds(); }
+// ── Phase 4 UI — 스킬 바(전장 하단) + 건설·부스트 팝업(라운드 팝업과 같은 .hbModal 재사용) ──
+function renderHbBar(){ const bar=document.getElementById('hbBar'); if(!bar||!_hb) return;
+  const S=_hb;
+  let h='';
+  for(const k in HB_SKILLS){ const SK=HB_SKILLS[k], cd=Math.max(0,S.skT[k]||0), rd=cd<=0;
+    h+='<button class="hbSk'+(rd?'':' cool')+'" onclick="hbUseSkill(&#39;'+k+'&#39;)" title="'+SK.tip+'">'
+      +'<span class="hbSkIco">'+SK.ico+'</span>'
+      +'<span class="hbSkTx">'+(rd?SK.name:Math.ceil(cd)+'s')+'</span></button>'; }
+  h+='<button class="hbSk wide" onclick="hbOpenBuild()" title="동료·터렛·벙커"><span class="hbSkIco">🏗</span><span class="hbSkTx">건설</span></button>';
+  const bon=hbBoostOn('inc')||hbBoostOn('atk');
+  h+='<button class="hbSk wide'+(bon?' on':'')+'" onclick="hbOpenBoost()" title="일시 강화"><span class="hbSkIco">⚡</span><span class="hbSkTx">'+(bon?'적용중':'부스트')+'</span></button>';
+  bar.innerHTML=h; }
+// 건설 — 보유 수를 늘리면 즉시 전장에 배치된다
+function hbOpenBuild(){ const el=document.getElementById('hbBuildModal'); if(!el) return;
+  el.classList.remove('hide'); renderBuildModal(); if(typeof playSfx==='function') playSfx('ui_open'); }
+function hbCloseBuild(){ const el=document.getElementById('hbBuildModal'); if(el) el.classList.add('hide'); }
+function renderBuildModal(){ const box=document.getElementById('hbBuildBody'); if(!box) return;
+  const coin=Math.floor(PROF().pcoin||0);
+  box.innerHTML=Object.keys(HB_BUILD).map(function(k){ const B=HB_BUILD[k], n=hbBuildN(k), full=n>=B.max, cost=hbBuildCost(k);
+    return '<div class="hbRow"><span class="hbRowIco">'+B.ico+'</span>'
+      +'<span class="hbRowTx"><b>'+B.name+' <i>'+n+'/'+B.max+'</i></b><em>'+B.tip+'</em></span>'
+      +'<button class="hbRowBtn" onclick="hbBuy(&#39;'+k+'&#39;)"'+((full||coin<cost)?' disabled':'')+'>'
+      +(full?'최대':cost.toLocaleString('en-US')+' 미네랄')+'</button></div>'; }).join(''); }
+function hbBuy(k){ const B=HB_BUILD[k], p=PROF(); if(!B) return;
+  if(hbBuildN(k)>=B.max) return;
+  const cost=hbBuildCost(k);
+  if(Math.floor(p.pcoin||0)<cost){ hmToast('미네랄이 부족합니다'); return; }
+  const H=hbHunt(); if(!H.build) H.build={};
+  p.pcoin-=cost; H.build[k]=(H.build[k]||0)+1; saveMeta();
+  hbLayoutAllies();                                  // 즉시 전장에 세운다
+  if(typeof playSfx==='function') playSfx('ui_open');
+  if(typeof updateCurBar==='function') updateCurBar();
+  renderBuildModal(); renderHome(); }
+// 부스트 — 시간제. 남은 시간은 초 단위로 보여준다.
+function hbOpenBoost(){ const el=document.getElementById('hbBoostModal'); if(!el) return;
+  el.classList.remove('hide'); renderBoostModal(); if(typeof playSfx==='function') playSfx('ui_open'); }
+function hbCloseBoost(){ const el=document.getElementById('hbBoostModal'); if(el) el.classList.add('hide'); }
+function renderBoostModal(){ const box=document.getElementById('hbBoostBody'); if(!box) return;
+  const coin=Math.floor(PROF().pcoin||0);
+  box.innerHTML=Object.keys(HB_BOOSTS).map(function(k){ const B=HB_BOOSTS[k], on=hbBoostOn(k);
+    return '<div class="hbRow"><span class="hbRowIco">'+B.ico+'</span>'
+      +'<span class="hbRowTx"><b>'+B.name+(on?' <i>'+hbBoostLeft(k)+'s</i>':'')+'</b><em>'+B.tip+'</em></span>'
+      +'<button class="hbRowBtn" onclick="hbBuyBoost(&#39;'+k+'&#39;)"'+((coin<B.cost)?' disabled':'')+'>'
+      +(on?'연장 ':'')+B.cost.toLocaleString('en-US')+' 미네랄</button></div>'; }).join(''); }
+function hbBuyBoost(k){ const B=HB_BOOSTS[k], p=PROF(); if(!B) return;
+  if(Math.floor(p.pcoin||0)<B.cost){ hmToast('미네랄이 부족합니다'); return; }
+  const H=hbHunt(); if(!H.boostT) H.boostT={};
+  p.pcoin-=B.cost;
+  H.boostT[k]=Math.max(Date.now(), H.boostT[k]||0) + B.sec*1000;    // 이미 걸려 있으면 연장
+  saveMeta();
+  if(typeof playSfx==='function') playSfx('ui_open');
+  if(typeof updateCurBar==='function') updateCurBar();
+  renderBoostModal(); renderHbBar(); }
 function hmToggleUpg(){ const H=hbHunt(); H.upgDown=!H.upgDown;
   const card=document.querySelector('#homeScreen .hmUpg'); if(card) card.classList.toggle('down', !!H.upgDown);
   if(typeof playSfx==='function') playSfx('ui_tab');
@@ -5059,6 +5161,69 @@ function hbFoeAtk(dg,round){ return (1.6+round*0.5)*HB_DG_ATK(dg); }
 function hbKillReward(dg,round){ const m=HB_DG_REW(dg);
   return { min:(0.6+round*0.25)*m, gas:(0.06+round*0.03)*m, xp:(3+round*1.5)*(dg||1) }; }
 function hbClearBonus(dg,round){ const m=HB_DG_REW(dg); return { min:(8+round*4)*m, gas:(1.2+round*0.5)*m }; }
+// ── ⚔ Phase 4: 전장 확장 — 스킬 · 부스트 · 동료/펫 · 건설(터렛·벙커) ──
+// 수치는 전부 아래 표에 모여 있다(밸런스는 나중에 표만 고친다).
+// 아군(동료·펫·터렛·벙커)은 hbStep 안에서 적과 같은 월드 좌표로 돈다.
+const HB_SKILLS={
+  nova: {name:'폭발', ico:'💥', cd:20, tip:'화면의 적 전체에 공격력 300% 피해'},
+  heal: {name:'응급', ico:'💚', cd:30, tip:'최대 체력의 40% 즉시 회복'},
+  slow: {name:'감속', ico:'🕸', cd:45, tip:'8초간 적 이동속도 50%'},
+};
+const HB_SLOW_S=8, HB_SLOW_MUL=.5;
+const HB_BOOSTS={
+  inc: {name:'수입 ×2', ico:'💰', sec:300, cost:400, tip:'5분간 처치 보상 2배'},
+  atk: {name:'공격 ×2', ico:'🗡', sec:180, cost:600, tip:'3분간 공격력 2배'},
+};
+// 건설·고용 — 영구 보유(미네랄). 라운드가 바뀌어도 남는다.
+const HB_BUILD={
+  ally:   {name:'동료',   ico:'🤝', max:4, base:150, mul:1.9, tip:'주위를 돌며 함께 사격'},
+  turret: {name:'터렛',   ico:'🔫', max:4, base:120, mul:1.8, tip:'고정 포탑 — 사거리가 길다'},
+  bunker: {name:'벙커',   ico:'🧱', max:2, base:300, mul:2.4, tip:'적을 끌어당겨 대신 맞는다'},
+};
+const HB_ALLY_DPS=.35, HB_TURRET_DPS=.55, HB_TURRET_RANGE=1.45;   // 캐릭터 대비 비율
+const HB_PET_DPS=.18;                                             // 장착 펫 1마리당
+const HB_BUNKER_HP=6, HB_BUNKER_R=150;                            // 캐릭터 최대체력 대비 배수 · 도발 반경
+function hbBuildN(k){ return (hbHunt().build&&hbHunt().build[k])||0; }
+function hbBuildCost(k){ const B=HB_BUILD[k]; return Math.ceil(B.base*Math.pow(B.mul, hbBuildN(k))); }
+function hbBoostOn(k){ return (hbHunt().boostT&&hbHunt().boostT[k]||0) > Date.now(); }
+function hbBoostLeft(k){ return Math.max(0, Math.ceil((((hbHunt().boostT&&hbHunt().boostT[k])||0)-Date.now())/1000)); }
+// 아군 배치 — 보유 수가 바뀌거나 라운드가 시작될 때 다시 세운다(월드 좌표, 캐릭터가 원점)
+function hbLayoutAllies(){ const S=_hb; if(!S) return; const st=hbCharStats();
+  S.allies=[]; S.turrets=[]; S.bunkers=[];
+  const n1=hbBuildN('ally');
+  for(let i=0;i<n1;i++){ const a=i/Math.max(1,n1)*Math.PI*2;
+    S.allies.push({x:Math.cos(a)*52, y:Math.sin(a)*52, ph:a, cdT:Math.random()*.5, ico:'🤝'}); }
+  const n2=hbBuildN('turret');
+  for(let i=0;i<n2;i++){ const a=(i+.5)/Math.max(1,n2)*Math.PI*2;
+    S.turrets.push({x:Math.cos(a)*92, y:Math.sin(a)*92, cdT:Math.random()*.5, ico:'🔫'}); }
+  const n3=hbBuildN('bunker');
+  for(let i=0;i<n3;i++){ const a=Math.PI*(i?1.5:.5);
+    S.bunkers.push({x:Math.cos(a)*70, y:Math.sin(a)*70, hp:st.hpMax*HB_BUNKER_HP, hpMax:st.hpMax*HB_BUNKER_HP, ico:'🧱'}); }
+  const eq=((typeof PROF==='function'&&PROF().equip)||[]).slice(0,(PROF().petSlots||2));
+  S.pets=eq.map((id,i)=>({ id, ico:(PROF_PETS[id]&&PROF_PETS[id].emoji)||'🐾',
+    ph:i/Math.max(1,eq.length)*Math.PI*2, x:0, y:0, cdT:Math.random()*.5 })); }
+// 아군 한 명의 사격 — 가장 가까운 적을 친다(공용: 동료·펫·터렛)
+function hbUnitFire(u, dps, rangeMul, dt){ const S=_hb, c=S.char;
+  u.cdT-=dt; if(u.cdT>0) return;
+  const rng=c.range*(rangeMul||1); let best=null,bd=1e18;
+  for(const f of S.foes){ const d=Math.hypot(f.x-u.x,f.y-u.y); if(d<bd){ bd=d; best=f; } }
+  if(!best || bd>rng) return;
+  u.cdT=c.cd; const dmg=c.atk*dps*(hbBoostOn('atk')?2:1);
+  best.hp-=dmg; S.shots.push({x1:u.x,y1:u.y,x2:best.x,y2:best.y,t:0,ally:1});
+  if(best.hp<=0) hbKill(best); }
+// 스킬
+function hbSkillReady(k){ const S=_hb; return !!S && (S.skT&&S.skT[k]||0)<=0; }
+function hbUseSkill(k){ const S=_hb, SK=HB_SKILLS[k]; if(!S||!SK) return;
+  if(!hbSkillReady(k)){ return; }
+  const c=S.char;
+  if(k==='nova'){ const dmg=c.atk*3*(hbBoostOn('atk')?2:1);
+    for(const f of S.foes.slice()){ f.hp-=dmg; if(f.hp<=0) hbKill(f); }
+    S.floats.push({x:0,y:-40,tx:'💥 폭발!',cl:'#ffd24a',t:0}); }
+  else if(k==='heal'){ c.hp=Math.min(c.hpMax, c.hp+c.hpMax*.4); c.hitT=0;
+    S.floats.push({x:0,y:-40,tx:'💚 회복',cl:'#5dff8f',t:0}); }
+  else if(k==='slow'){ S.slowT=HB_SLOW_S;
+    S.floats.push({x:0,y:-40,tx:'🕸 감속',cl:'#9ad0ff',t:0}); }
+  S.skT[k]=SK.cd; if(typeof playSfx==='function') playSfx('ui_open'); renderHbBar(); }
 let _hb=null,_hbRaf=0,_hbTick=0,_hbLastSim=0;
 // 시뮬 시계 — rAF와 분리(50ms 인터벌이 진행을 보장한다. 이 환경·백그라운드 탭에서 rAF가 멎어도 전투는 돈다)
 function hbPump(){ const S=_hb; if(!S||!S.on||S.manual) return;   // manual = 스모크가 hbStep을 직접 돌릴 때
@@ -5069,10 +5234,11 @@ function hbStart(){ const cv=document.getElementById('hbCv'); if(!cv || (_hb&&_h
   _hb={ on:true, cv, ctx:cv.getContext('2d'), w:0,h:0,d:1, vTop:0, vBot:0, cx:0, cy:0, k:1, t:0,
     dg:H.dg||1, round:H.round||1, wave:1, phase:'fight', waveT:HB_WAVE_S, gapT:0, downT:0,
     pend:[], pendT:0, foes:[], shots:[], floats:[], kills:0,
+    allies:[], turrets:[], bunkers:[], pets:[], skT:{nova:0,heal:0,slow:0}, slowT:0, skDirty:false,
     buf:{min:0,gas:0,xp:0,kills:0},
     char:{ x:0,y:0, hp:st.hpMax, hpMax:st.hpMax, atk:st.atk, cd:st.cd, crit:st.crit,
            range:st.range, regen:st.regen, cdT:0, hitT:9 } };
-  hbResize(); hbSpawnWave(); hbHud();
+  hbResize(); hbLayoutAllies(); hbSpawnWave(); hbHud(); renderHbBar();
   _hbLastSim=performance.now();
   _hbRaf=requestAnimationFrame(hbFrame);            // 그리기
   _hbTick=setInterval(hbPump,50); }                 // 진행 보장
@@ -5083,6 +5249,9 @@ function hbStop(){ if(_hbRaf) cancelAnimationFrame(_hbRaf); _hbRaf=0;
 function hbResize(){ const S=_hb, cv=S.cv, w=cv.clientWidth||1, h=cv.clientHeight||1, d=Math.min(2,window.devicePixelRatio||1);
   if(cv.width!==Math.round(w*d) || cv.height!==Math.round(h*d)){ cv.width=Math.round(w*d); cv.height=Math.round(h*d); }
   S.w=w; S.h=h; S.d=d;
+  { const bar=document.getElementById('hbBar'), up=document.querySelector('#homeScreen .hmUpg');
+    if(bar&&up){ const r=up.getBoundingClientRect(), pr=cv.getBoundingClientRect();
+      bar.style.bottom=Math.round(pr.bottom-r.top+6)+'px'; } }
   const box=cv.getBoundingClientRect();
   const cur=document.getElementById('curBar'), up=document.querySelector('#homeScreen .hmUpg');
   const curB=(cur && !cur.classList.contains('hide')) ? cur.getBoundingClientRect().bottom-box.top : 0;
@@ -5096,6 +5265,7 @@ function hbResize(){ const S=_hb, cv=S.cv, w=cv.clientWidth||1, h=cv.clientHeigh
   S.cx=w/2; S.cy=(S.vTop+S.vBot)/2; S.k=(S.vBot-S.vTop)/HB_WORLD_H;   // 카메라
   S.char.x=0; S.char.y=0; }                          // 캐릭터는 언제나 월드 원점
 function hbSpawnWave(){ const S=_hb, n=hbFoeCount(S.round,S.wave);
+  if(S.wave===1) for(const b of S.bunkers) b.hp=b.hpMax;          // 라운드 시작 = 벙커 수리
   S.waveT=HB_WAVE_S; S.pend.length=0;
   const mk=()=>{ const f=HB_FOES[(Math.random()*HB_FOES.length)|0];
     return { ico:f.ico, hpMul:f.hp, atkMul:f.atk, spd:f.spd*(1+S.round*0.01) }; };
@@ -5153,37 +5323,53 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char; S.t+=dt;
   else if(S.phase==='clearWait'){ S.gapT-=dt; if(S.gapT<=0){ S.phase='fight'; hbSpawnWave(); } }
   else if(S.phase==='mop'){ if(!S.foes.length) hbSettle(); }
   // ── 전투(쓰러진 동안만 정지 — 웨이브 간격에도 잔존 적은 계속 싸운다) ──
-  for(const f of S.foes){ const dx=c.x-f.x, dy=c.y-f.y, d=Math.hypot(dx,dy)||1;
-    if(d>HB_STOP){ f.x+=dx/d*f.spd*dt; f.y+=dy/d*f.spd*dt; }
-    else{ f.cdT-=dt; if(f.cdT<=0){ f.cdT=1.1; c.hp-=f.atk; c.hitT=0;
-      S.floats.push({x:c.x,y:c.y-26,tx:'-'+Math.round(f.atk),cl:'#ff8a9a',t:0}); } } }
+  const spdMul=(S.slowT>0)?HB_SLOW_MUL:1;
+  for(const f of S.foes){
+    // 벙커가 반경 안에 있으면 그쪽을 때린다(캐릭터 대신 맞아준다)
+    let tg=c, bk=null, bd2=HB_BUNKER_R;
+    for(const b of S.bunkers){ if(b.hp<=0) continue; const d2=Math.hypot(b.x-f.x,b.y-f.y); if(d2<bd2){ bd2=d2; bk=b; } }
+    if(bk) tg=bk;
+    const dx=tg.x-f.x, dy=tg.y-f.y, d=Math.hypot(dx,dy)||1;
+    if(d>HB_STOP){ f.x+=dx/d*f.spd*spdMul*dt; f.y+=dy/d*f.spd*spdMul*dt; }
+    else{ f.cdT-=dt; if(f.cdT<=0){ f.cdT=1.1;
+      if(bk){ bk.hp-=f.atk; S.floats.push({x:bk.x,y:bk.y-20,tx:'-'+Math.round(f.atk),cl:'#c9a24a',t:0}); }
+      else { c.hp-=f.atk; c.hitT=0; S.floats.push({x:c.x,y:c.y-26,tx:'-'+Math.round(f.atk),cl:'#ff8a9a',t:0}); } } } }
   c.cdT-=dt;
   if(c.cdT<=0){ let best=null,bd=1e18;
     for(const f of S.foes){ const d=Math.hypot(f.x-c.x,f.y-c.y); if(d<bd){ bd=d; best=f; } }
     if(best && bd<=c.range){ c.cdT=c.cd;
-      const crit=Math.random()<c.crit, dmg=c.atk*(crit?2:1);
+      const crit=Math.random()<c.crit, dmg=c.atk*(crit?2:1)*(hbBoostOn('atk')?2:1);
       best.hp-=dmg; S.shots.push({x1:c.x,y1:c.y-10,x2:best.x,y2:best.y,t:0});
       S.floats.push({x:best.x,y:best.y-20,tx:(crit?'✦':'')+Math.round(dmg),cl:crit?'#ffd24a':'#ececec',t:0});
-      if(best.hp<=0){ S.foes.splice(S.foes.indexOf(best),1); S.kills++;
-        // 처치 보상은 즉시 지급 — 재화 바가 바로 오른다. 사망 시 잃는 것은 '라운드 클리어 보너스'뿐.
-        const rm=best.elite?HB_ELITE_REW:1;
-        const r0=hbKillReward(S.dg,S.round), r={min:r0.min*rm, gas:r0.gas*rm, xp:r0.xp*rm};
-        const p=PROF(), c=(typeof CHAR==='function')?CHAR():null;
-        p.pcoin=(p.pcoin||0)+r.min; p.gas=(p.gas||0)+r.gas;
-        if(Math.random() < (best.elite?HB_TICKET_ELITE:HB_TICKET_NORMAL)){   // 🎟 장비 뽑기권
-          if(typeof dgAddTicket==='function') dgAddTicket('gear',1);
-          S.floats.push({x:best.x,y:best.y-48,tx:'🎟 장비 뽑기권!',cl:'#ffd24a',t:0}); }
-        if(c){ c.xp+=r.xp;
-          if(profApplyLevelUps(c)){ S.floats.push({x:S.char.x,y:S.char.y-46,tx:'LEVEL UP!',cl:'#5dff8f',t:0});
-            if(typeof renderHomeStats==='function') renderHomeStats(); } }
-        S.buf.kills++; S.curDirty=true;                           // 재화 바 갱신은 아래에서 묶어서(처치마다 DOM 금지)
-        S.floats.push({x:best.x,y:best.y-34,tx:'+'+r.min.toFixed(1),cl:'#ffd24a',t:0}); hbHud(); } } }
+      if(best.hp<=0) hbKill(best); } }
+  // 아군 — 동료는 캐릭터 주위를 천천히 돌고, 터렛은 고정, 펫은 가깝게 붙어 돈다
+  for(const a of S.allies){ a.ph+=dt*0.5; a.x=Math.cos(a.ph)*52; a.y=Math.sin(a.ph)*52; hbUnitFire(a,HB_ALLY_DPS,1,dt); }
+  for(const t of S.turrets) hbUnitFire(t,HB_TURRET_DPS,HB_TURRET_RANGE,dt);
+  for(const q of S.pets){ q.ph+=dt*1.1; q.x=Math.cos(q.ph)*30; q.y=Math.sin(q.ph)*30; hbUnitFire(q,HB_PET_DPS,1,dt); }
+  if(S.slowT>0) S.slowT-=dt;
+  for(const k in S.skT) if(S.skT[k]>0){ S.skT[k]-=dt; if(S.skT[k]<=0) S.skDirty=true; }
+  if(S.skDirty && typeof renderHbBar==='function'){ S.skDirty=false; renderHbBar(); }
   c.hitT+=dt;                                                     // 3초 무피격이면 서서히 회복(+회복 업그레이드)
   if(c.hitT>3 && c.hp<c.hpMax) c.hp=Math.min(c.hpMax, c.hp+(c.hpMax*.02+c.regen)*dt);
   if(c.hp<=0){ hbDie(); }
   if(S.curDirty && S.t-(S.curT||0)>.2){ S.curT=S.t; S.curDirty=false;
     if(typeof updateCurBar==='function') updateCurBar(); }
   hbFx(dt); }
+// 처치 1건 — 캐릭터·동료·펫·터렛·스킬이 전부 이 한 곳을 지난다(보상 규칙을 여러 벌 두지 않는다)
+function hbKill(f){ const S=_hb, i=S.foes.indexOf(f); if(i<0) return; S.foes.splice(i,1); S.kills++;
+  // 처치 보상은 즉시 지급 — 재화 바가 바로 오른다. 사망 시 잃는 것은 '라운드 클리어 보너스'뿐.
+  const rm=(f.elite?HB_ELITE_REW:1)*(hbBoostOn('inc')?2:1);
+  const r0=hbKillReward(S.dg,S.round), r={min:r0.min*rm, gas:r0.gas*rm, xp:r0.xp*rm};
+  const p=PROF(), c=(typeof CHAR==='function')?CHAR():null;
+  p.pcoin=(p.pcoin||0)+r.min; p.gas=(p.gas||0)+r.gas;
+  if(Math.random() < (f.elite?HB_TICKET_ELITE:HB_TICKET_NORMAL)){   // 🎟 장비 뽑기권
+    if(typeof dgAddTicket==='function') dgAddTicket('gear',1);
+    S.floats.push({x:f.x,y:f.y-48,tx:'🎟 장비 뽑기권!',cl:'#ffd24a',t:0}); }
+  if(c){ c.xp+=r.xp;
+    if(profApplyLevelUps(c)){ S.floats.push({x:S.char.x,y:S.char.y-46,tx:'LEVEL UP!',cl:'#5dff8f',t:0});
+      if(typeof renderHomeStats==='function') renderHomeStats(); } }
+  S.buf.kills++; S.curDirty=true;                                  // 재화 바 갱신은 묶어서(처치마다 DOM 금지)
+  S.floats.push({x:f.x,y:f.y-34,tx:'+'+r.min.toFixed(1),cl:'#ffd24a',t:0}); hbHud(); }
 function hbFx(dt){ const S=_hb;
   for(const s of S.shots) s.t+=dt;  S.shots=S.shots.filter(s=>s.t<.12);
   for(const f of S.floats) f.t+=dt; S.floats=S.floats.filter(f=>f.t<.9); }
@@ -5192,11 +5378,20 @@ function hbDraw(){ const S=_hb, x=S.ctx, c=S.char; if(!x) return;
   // 카메라 = 월드 원점을 보이는 영역 중심으로 옮기고 배율 k를 건다.
   // 이 뒤의 좌표·글꼴 크기는 전부 월드 단위 → 접었다 펴면 적·글자·링이 캐릭터와 같은 비율로 커지고 작아진다.
   const K=S.d*(S.k||1); x.setTransform(K,0,0,K,S.d*(S.cx||S.w/2),S.d*(S.cy||S.h/2));
+  if(S.slowT>0){ x.save(); x.globalAlpha=.10; x.fillStyle='#9ad0ff';
+    x.fillRect(-S.w,-S.h,S.w*2,S.h*2); x.restore(); }               // 감속 중 화면 틴트
   x.save(); x.globalAlpha=.25; x.strokeStyle='#7fa8ff'; x.lineWidth=1;   // 바닥 링(수비 반경 암시)
   x.beginPath(); x.ellipse(c.x,c.y+8,c.range*.62,c.range*.24,0,0,Math.PI*2); x.stroke(); x.restore();
-  for(const s of S.shots){ x.save(); x.globalAlpha=1-s.t/.12; x.strokeStyle='#ffd24a'; x.lineWidth=1.5;
+  for(const s of S.shots){ x.save(); x.globalAlpha=1-s.t/.12; x.strokeStyle=s.ally?'#8fe0a0':'#ffd24a'; x.lineWidth=1.5;
     x.beginPath(); x.moveTo(s.x1,s.y1); x.lineTo(s.x2,s.y2); x.stroke(); x.restore(); }
   x.textAlign='center'; x.textBaseline='middle';
+  for(const b of S.bunkers){ if(b.hp<=0) continue;                 // 벙커
+    x.font='22px sans-serif'; x.fillText(b.ico,b.x,b.y);
+    x.fillStyle='rgba(0,0,0,.55)'; x.fillRect(b.x-13,b.y-18,26,3);
+    x.fillStyle='#c9a24a'; x.fillRect(b.x-13,b.y-18,26*Math.max(0,b.hp/b.hpMax),3); }
+  for(const t of S.turrets){ x.font='19px sans-serif'; x.fillText(t.ico,t.x,t.y); }
+  for(const a of S.allies){ x.font='17px sans-serif'; x.fillText(a.ico,a.x,a.y); }
+  for(const q of S.pets){ x.font='14px sans-serif'; x.fillText(q.ico,q.x,q.y); }
   for(const f of S.foes){ const el=!!f.elite;
     if(el){ x.save(); x.globalAlpha=.5; x.strokeStyle='#ffd24a'; x.lineWidth=1.5;
       x.beginPath(); x.arc(f.x,f.y,17,0,Math.PI*2); x.stroke(); x.restore(); }
@@ -10599,7 +10794,7 @@ function updateCurBar(){ if(!PLAYER_META||!PLAYER_META.profile) return;
 function showAppScreen(id){ setInGame(false);
   if(typeof navShow==='function') navShow(null);   // 하단 네비는 기본 숨김 — openHome/openTown이 다시 켠다
   if(typeof hbStop==='function') hbStop();         // 홈 배경 전투도 기본 정지 — openHome이 다시 켠다
-  if(typeof hbCloseRounds==='function'){ const rs=document.getElementById('hbRoundSheet'); if(rs) rs.classList.add('hide'); }
+  for(const id of ['hbRoundSheet','hbBuildModal','hbBoostModal']){ const el=document.getElementById(id); if(el) el.classList.add('hide'); }
   if(id!=='mapSelect' && id!=='modeSheet' && typeof stopMapLive==='function') stopMapLive();   // 유즈맵 화면 떠나면 실시간 갱신 정지
   ['ov','lobby','rooms','createPanel','pwPanel'].forEach(x=>{const e=document.getElementById(x); if(e)e.classList.add('hide');});
   APP_SCREENS.forEach(s=>{ const e=document.getElementById(s); if(e) e.classList.toggle('hide', s!==id); });

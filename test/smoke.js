@@ -360,6 +360,58 @@ async function groupLobby(){
     assert(c.statPoints===PROF_PT_PER_LV-1,'포인트가 안 깎임');
     assert(_hb.char.atk>atk0,'전투 중 공격력에 반영되지 않음: '+atk0+' → '+_hb.char.atk);
     return 'Lv'+c.level+' · 포인트 '+c.statPoints; });
+  // Phase 4 — 스킬 · 부스트 · 동료/펫 · 건설(터렛·벙커)
+  await step('자동사냥: 스킬·부스트·동료·건설', async()=>{ skipIf(typeof hbUseSkill!=='function','Phase4 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    openHome(); await sleep(60); _hb.manual=true;
+    const p=PROF(); p.pcoin=999999; hbHunt().build={}; hbHunt().boostT={};
+    p.pets={slime:1}; p.equip=['slime']; hbLayoutAllies();
+    // ① 건설 — 사면 즉시 전장에 선다 · 최대치를 넘지 않는다 · 값이 오른다
+    const c0=hbBuildCost('ally'); hbBuy('ally');
+    assert(hbBuildN('ally')===1 && _hb.allies.length===1,'동료가 배치되지 않음');
+    assert(hbBuildCost('ally')>c0,'다음 구매 비용이 안 오름');
+    hbBuy('turret'); hbBuy('bunker');
+    assert(_hb.turrets.length===1 && _hb.bunkers.length===1,'터렛/벙커가 배치되지 않음');
+    for(let i=0;i<HB_BUILD.bunker.max+3;i++) hbBuy('bunker');
+    assert(hbBuildN('bunker')===HB_BUILD.bunker.max,'최대치를 넘겨 지어짐: '+hbBuildN('bunker'));
+    assert(_hb.pets.length===1,'장착 펫이 전장에 안 나옴');
+    // ② 아군 화력 — 같은 상황을 아군 없이/있이 돌려 처치 수를 비교한다
+    //    ⚠ 아군 발사 주기는 캐릭터 쿨다운(c.cd)을 공유한다 — 캐릭터를 막으면 아군도 멈춰서 그 방식으론 못 잰다
+    const runWave=()=>{ _hb.round=1; _hb.wave=1; _hb.phase='fight';
+      _hb.foes.length=0; _hb.pend.length=0; hbSpawnWave();
+      const k=_hb.kills; for(let i=0;i<120;i++) hbStep(0.05); return _hb.kills-k; };
+    hbHunt().build={}; PROF().equip=[]; hbLayoutAllies();
+    const solo=runWave();
+    hbHunt().build={ally:HB_BUILD.ally.max, turret:HB_BUILD.turret.max}; hbLayoutAllies();
+    const withAllies=runWave();
+    assert(withAllies>solo,'아군을 세워도 화력이 안 늘어남: '+solo+' → '+withAllies);
+    PROF().equip=['slime']; hbLayoutAllies();
+    // ③ 스킬 — 효과 + 쿨다운(쿨 중 재사용 불가)
+    _hb.skT={nova:0,heal:0,slow:0}; _hb.foes.length=0;
+    for(let i=0;i<5;i++) hbPlaceFoe({ico:'🟢',hpMul:1,atkMul:1,spd:0});
+    const n0=_hb.foes.length, hp0=_hb.foes[0].hp;
+    hbUseSkill('nova');
+    assert(_hb.foes.length<n0 || _hb.foes[0].hp<hp0,'폭발이 피해를 안 줌');
+    assert(_hb.skT.nova===HB_SKILLS.nova.cd,'폭발 쿨다운이 안 걸림');
+    const cn=_hb.foes.length; hbUseSkill('nova');
+    assert(_hb.foes.length===cn,'쿨 중인데 다시 발동됨');
+    _hb.char.hp=1; hbUseSkill('heal');
+    assert(_hb.char.hp>1,'회복이 안 됨');
+    hbUseSkill('slow');
+    assert(_hb.slowT>0 && _hb.skT.slow===HB_SKILLS.slow.cd,'감속이 안 걸림');
+    for(let i=0;i<40;i++) hbStep(0.05);
+    assert(_hb.skT.nova<HB_SKILLS.nova.cd,'쿨다운이 안 줄어듦');
+    // ④ 부스트 — 시간제 · 이미 걸려 있으면 연장 · 수입 배수 적용
+    const pc0=p.pcoin; hbBuyBoost('inc');
+    assert(hbBoostOn('inc'),'부스트가 안 걸림');
+    assert(p.pcoin<pc0,'부스트 비용이 안 깎임');
+    const l1=hbBoostLeft('inc'); hbBuyBoost('inc');
+    assert(hbBoostLeft('inc')>l1+HB_BOOSTS.inc.sec-5,'연장이 안 됨: '+l1+' → '+hbBoostLeft('inc'));
+    // ⑤ 스킬 바 UI
+    renderHbBar();
+    assert(document.querySelectorAll('#hbBar .hbSk').length===Object.keys(HB_SKILLS).length+2,'스킬 바 버튼 수가 다름');
+    hbHunt().boostT={}; hbHunt().build={}; hbLayoutAllies();
+    return '동료·터렛·벙커·펫 배치 ok · 스킬 3종 · 부스트 연장 ok'; });
   // Phase 2 — 던전 1~10 해금 · 엘리트 · 장비 뽑기권(드랍 + 소비처)
   await step('자동사냥: 던전 해금 · 엘리트 · 뽑기권', async()=>{ skipIf(typeof hbGoDungeon!=='function','던전 선택 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
