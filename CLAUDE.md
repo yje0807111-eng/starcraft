@@ -33,6 +33,10 @@
 | 세로 스크롤바 | `.uiScroll` (CSS 공용) | 스크롤 영역에 클래스만 추가 · `::-webkit-scrollbar`를 새로 정의하지 말 것 (Chrome 최신은 웹킷 의사요소를 무시하고 표준 `scrollbar-width`/`scrollbar-color`만 적용 → 화면마다 굵기가 달라지는 원인이었음) |
 | **재화 아이콘**(미네랄·가스·젬·인구) | **`resIco(key, cls)`** → `assets/icons/res_*.webp` | ⛔ **이모지를 임의로 넣지 말 것.** 한글 이름으로도 찾는다(`resIco('미네랄')`=`resIco('mineral')`) · 새 UI에서 재화를 표시할 땐 무조건 이 함수 · 상단 재화 바(`#curBar`)·인게임 HUD와 같은 그림이 나온다 |
 | 상점 | `#shopScreen` + `renderProfGacha()` | 전용 화면(팝업 아님) · 마을 '상점' 구역도 같은 화면으로 이동(`TOWN_ZONES.gacha.screen='shop'`) · 젬 = 유일한 현질 재화 |
+| 정비(장비·펫·동료) | `#gearScreen` + `renderGear()` | 전용 화면 · 내용은 **전부 기존 렌더러 호출**: 장비=`renderProfGear()`(마을 장비창과 같은 함수) · 펫=`_shopPetPanel()`(상점 '보유 펫'과 같은 함수) · 동료=아직 시스템 없음(HOME 건설로 안내) |
+| 보유 펫 목록 | `_shopPetPanel(note)` | 상점 ④ 구역 = 정비 '펫' 탭 — 한 함수 |
+| 토벌 입구 | HOME 스킬 바(`renderHbBar()`)의 **토벌** 버튼 → `openDungeonHub()` 팝업 | 네비에서 뺐다(2번 칸은 정비) · 다른 화면에서 부르면 먼저 `openHome()` |
+| 탭 띠(상자 머리) | `.msPanel` + `.msSortTabs`/`.msSortTab` | 유즈맵 정렬 = 정비 3탭 공용 — 새 탭 띠를 만들지 말고 이 클래스를 쓸 것 |
 
 > **아이콘 일반 원칙:** 새 UI를 만들 때 **기존 에셋을 먼저 찾아 쓴다**(`assets/icons/` — 재화 4종 · `buildings/` 52 · `skills/` 28 · `upgrades/` 24). 같은 뜻의 아이콘이 이미 있으면 그것을 쓰고, 없을 때만 대체 표기를 쓴다.
 

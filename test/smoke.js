@@ -195,11 +195,11 @@ async function groupLobby(){
               'HOME에 푸른기가 남음('+(el.className||el.tagName)+'): '+m); } }
         for(const v of c.borderRadius.split(/[\s\/]+/))
           assert(!v || v==='0px' || v==='3px', 'HOME 모서리가 너무 둥금('+(el.className||el.tagName)+'): '+v); } }
-    assert(document.querySelectorAll('#navBar .navIt').length===5,'하단 네비가 5칸이 아님(HOME·던전·마을·유즈맵·상점)');
+    assert(document.querySelectorAll('#navBar .navIt').length===5,'하단 네비가 5칸이 아님(HOME·정비·마을·유즈맵·상점)');
     { const navs=[...document.querySelectorAll('#navBar .navIt')].map(x=>x.dataset.nav).join(',');
-      assert(navs==='home,dungeon,town,map,shop','네비 구성이 다름: '+navs);
-      // data-nav는 옛 이름(dungeon) 그대로 두고 표기만 '토벌' — 코드 식별자를 바꾸면 다른 채팅 작업과 충돌한다
-      assert(document.querySelector('#navBar .navIt[data-nav=dungeon]').textContent.indexOf('토벌')>=0,'던전 탭 표기가 토벌이 아님'); }
+      assert(navs==='home,gear,town,map,shop','네비 구성이 다름: '+navs);
+      // 토벌은 네비에서 빠지고 HOME 팝업이 됐다 — 2번 칸은 정비(장비·펫·동료)
+      assert(document.querySelector('#navBar .navIt[data-nav=gear]').textContent.indexOf('정비')>=0,'2번 탭 표기가 정비가 아님'); }
     assert(document.querySelector('#navBar .navIt.on').dataset.nav==='home','HOME 탭이 활성이 아님');
     // 실데이터에 붙은 곳 = POWER UPGRADES(영구 업그레이드 6종 — 미네랄 구매·스탯 포인트 흡수)
     assert(document.querySelectorAll('.hmUp').length===6,'업그레이드가 6칸이 아님');
@@ -245,13 +245,14 @@ async function groupLobby(){
       [...document.querySelectorAll('.appScreen')].filter(e=>visible(e)).map(e=>e.id).join(',')+
       ' nav='+visible($('navBar'))+' CHAR='+(!!CHAR())+']');
     assert(document.querySelector('#navBar .navIt.on').dataset.nav==='town','마을 탭이 활성이 아님');
-    // 던전 탭 = 관문(던전 선택) 패널 · 상점 탭 = 뽑기집 (전용 화면은 이후 단계)
-    navGo('dungeon'); await sleep(60);
-    assert(document.querySelector('#navBar .navIt.on').dataset.nav==='dungeon','던전 탭이 활성이 아님');
+    // 정비 탭 = 장비·펫·동료 전용 화면 · 상점 탭 = 상점 전용 화면
+    navGo('gear'); await sleep(60);
+    assert(document.querySelector('#navBar .navIt.on').dataset.nav==='gear','정비 탭이 활성이 아님');
+    assert(visible($('gearScreen')),'네비 정비가 화면을 안 엶');
     navGo('shop'); await sleep(60);
     assert(document.querySelector('#navBar .navIt.on').dataset.nav==='shop','상점 탭이 활성이 아님');
     openHome(); await sleep(60);
-    return 'HOME 카드 1개 + 네비 5칸(home·던전·마을·유즈맵·상점) ok'; });
+    return 'HOME 카드 1개 + 네비 5칸(home·정비·마을·유즈맵·상점) ok'; });
   // 폰트 3종 — 제목 Do Hyeon · 본문 IBM Plex Sans KR · 숫자 Rajdhani.
   // ⚠ 실제 렌더가 아니라 CSS만 잰다(헤드리스에선 웹폰트를 못 받을 수 있어 렌더 비교는 못 믿는다).
   await step('폰트: 제목/본문/숫자가 토큰으로 갈린다', async()=>{
@@ -549,7 +550,9 @@ async function groupLobby(){
     assert(hbBoostLeft('inc')>l1+HB_BOOSTS.inc.sec-5,'연장이 안 됨: '+l1+' → '+hbBoostLeft('inc'));
     // ⑤ 스킬 바 UI
     renderHbBar();
-    assert(document.querySelectorAll('#hbBar .hbSk').length===Object.keys(HB_SKILLS).length+2,'스킬 바 버튼 수가 다름');
+    assert(document.querySelectorAll('#hbBar .hbSk').length===Object.keys(HB_SKILLS).length+3,'스킬 바 버튼 수가 다름(스킬 + 건설·토벌·부스트)');
+    // 버튼이 늘어도 한 줄에 들어가야 한다 — 넘치면 토벌·부스트가 화면 밖으로 밀린다
+    { const bar=$('hbBar'); assert(bar.scrollWidth<=bar.clientWidth+1,'스킬 바가 가로로 넘침: '+bar.scrollWidth+'>'+bar.clientWidth); }
     // ⑥ 전장 아래 경계 = 스킬 바 위. 카드 기준으로 잡으면 적이 버튼 뒤로 지나가 섞인다.
     { hbResize();
       const cv=$('hbCv').getBoundingClientRect(), bar=$('hbBar').getBoundingClientRect();
@@ -752,9 +755,11 @@ async function groupLobby(){
     return '전환·게임진입·정지 3경로 원복 ok'; });
   await step('용어 분리: 자동사냥=던전 / 옛 콘텐츠=토벌', async()=>{ skipIf(typeof openDungeonHub!=='function','토벌 허브 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
-    const nav=document.querySelector('#navBar .navIt[data-nav=dungeon]');
-    assert(nav && nav.textContent.indexOf('토벌')>=0,'네비 탭이 토벌이 아님: '+(nav&&nav.textContent));
-    openDungeonHub(); await sleep(80);
+    // 토벌 입구는 네비가 아니라 HOME 스킬 바의 버튼 하나뿐 — 없어지면 들어갈 길이 사라진다
+    openHome(); await sleep(80);
+    const ent=[...document.querySelectorAll('#hbBar .hbSk')].filter(b=>b.textContent.indexOf('토벌')>=0);
+    assert(ent.length===1,'HOME 토벌 버튼이 1개가 아님: '+ent.length);
+    ent[0].click(); await sleep(80);
     const hub=document.getElementById('dgHubBody');
     assert(visible(hub),'토벌 허브가 안 열림');
     assert(hub.textContent.indexOf('던전')<0,'토벌 화면에 던전 표기가 남음: '+hub.textContent.slice(0,60));
@@ -890,6 +895,36 @@ async function groupLobby(){
     assert(visible($('shopScreen')) && !visible($('townPanel')),'마을 구역이 아직 팝업으로 열림');
     openHome(); await sleep(40);
     return '전용 화면 · 두 경로 ok'; });
+  // 🧰 정비 = 장비·펫·동료 전용 화면. 내용은 전부 기존 렌더러 재사용(단일 소스) — 복제본이 생기면 여기서 걸린다.
+  await step('정비: 전용 화면 · 장비/펫/동료 탭 · 렌더러 재사용', async()=>{ skipIf(typeof openGear!=='function','정비 화면 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','정비'); saveMeta(); }
+    navGo('gear'); await sleep(60);
+    assert(visible($('gearScreen')),'네비 정비가 전용 화면을 안 엶');
+    assert(!visible($('townPanel')) && !visible($('townScreen')),'정비인데 마을이 남아 있음');
+    assert(document.querySelectorAll('#gearTabs .msSortTab').length===3,'정비 탭이 3개가 아님');
+    assert(document.querySelector('#gearTabs .msSortTab.on').dataset.v==='gear','기본 탭이 장비가 아님');
+    // ① 장비 = 마을 장비창과 같은 renderProfGear() — 아바타(페이퍼돌) + 가방이 그대로 나와야 한다
+    assert(document.querySelector('#gearBody .gearWrap'),'장비 탭에 장비창이 없음');
+    assert(document.querySelector('#gearBody .bagBody'),'장비 탭에 가방이 없음');
+    { const ref=renderProfGear().replace(/\s+/g,'');
+      assert(ref.indexOf('gearWrap')>=0 && document.getElementById('gearBody').innerHTML.replace(/\s+/g,'').slice(0,40)===ref.slice(0,40),
+        '정비 장비 탭이 renderProfGear()와 다름(복제 의심)'); }
+    // ② 펫 = 상점 '보유 펫'과 같은 _shopPetPanel()
+    setGearTab('pet'); await sleep(40);
+    assert(document.querySelector('#gearTabs .msSortTab.on').dataset.v==='pet','펫 탭이 활성이 아님');
+    { const ref=_shopPetPanel().replace(/\s+/g,'');
+      assert(document.getElementById('gearBody').innerHTML.replace(/\s+/g,'').slice(0,60)===ref.slice(0,60),
+        '정비 펫 탭이 _shopPetPanel()과 다름(복제 의심)'); }
+    // ③ 동료 = 아직 시스템 없음 → HOME 건설로 보내는 자리
+    setGearTab('ally'); await sleep(40);
+    assert(document.querySelectorAll('#gearBody .shopPanel').length>=1,'동료 탭이 비어 있음');
+    assert(document.querySelector('#gearBody').textContent.indexOf('동료')>=0,'동료 탭에 동료 표기가 없음');
+    setGearTab('gear');
+    // 굵기 700 상한(DESIGN.md §2)
+    for(const sel of ['#gearScreen .shopTitle','#gearTabs .msSortTab']){ const e=document.querySelector(sel);
+      if(e) assert(+getComputedStyle(e).fontWeight<=700, sel+' 굵기가 700 초과(가짜 볼드): '+getComputedStyle(e).fontWeight); }
+    openHome(); await sleep(40);
+    return '3탭 · renderProfGear/_shopPetPanel 재사용 ok'; });
   await step('마을: 지정하지 않으면 안 열림(스쳐 지남·겹쳐 섬)', ()=>{ skipIf(typeof twSetTarget!=='function','마을 없음');
     openTown(); closeTownPanel();
     const c=twZonePx('charmake');
