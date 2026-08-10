@@ -2504,8 +2504,8 @@
   /* ── 🏘 마을 ── */
   #townScreen{position:absolute;inset:0;z-index:60;display:flex;flex-direction:column;padding-bottom:var(--navH);box-sizing:border-box;
     --hbPanel:rgba(11,16,29,.93);--hbEdge:rgba(88,118,188,.22);--hbCard:rgba(20,29,50,.78);--hbRow:rgba(28,40,66,.85)}
-  .twBar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:10px 12px;background:linear-gradient(180deg,rgba(13,18,28,.96),rgba(8,11,17,.9));border-bottom:1px solid var(--glass-edge)}
-  .twBack{flex:0 0 auto;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:var(--r-lg);cursor:pointer;color:#cdd6e2;background:rgba(255,255,255,.06);border:1px solid var(--metal-edge)}
+  .twBar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:8px 12px;background:linear-gradient(180deg,rgba(13,18,28,.96),rgba(8,11,17,.9));border-bottom:1px solid var(--glass-edge)}
+  .twBack{flex:0 0 auto;font-family:inherit;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:var(--r-lg);cursor:pointer;color:#cdd6e2;background:rgba(255,255,255,.06);border:1px solid var(--metal-edge)}
   .twBack .mIco{width:18px;height:18px;color:inherit}
   .twName{font-size:16px;font-weight:800;color:#eaf1fb}
   .twLv{font-family:var(--font-num);font-size:12px;font-weight:800;color:var(--gold-lt)}
@@ -2679,7 +2679,7 @@
     box-shadow:0 0 7px -1px rgba(92,214,255,.6)}
   .navIt:active{opacity:.8}
   /* 마을 상단 설정 — 좌측 로그아웃과 짝 */
-  .twGear{flex:0 0 auto;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;
+  .twGear{flex:0 0 auto;font-family:inherit;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;
     color:#8b98a8;background:none;border:none;transition:color .16s}
   .twGear svg,.twGear .ic{width:17px;height:17px}
   .twGear:hover{color:#fff}
@@ -2731,25 +2731,40 @@
   .hbRd.on{color:#fff;background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.4)}
   .hbRd.best{color:#ffd24a;border-color:rgba(255,210,74,.45)}   /* 금색 = 재화·보상 역할(§2) — 푸른기가 아니다 */
   .hbRoundNote{flex:none;padding:8px 12px 0;font-size:var(--fs-sm);color:#7a7a7a;line-height:1.5}
-  .twMap{position:relative;flex:1;min-height:0;overflow:hidden;touch-action:none;background:radial-gradient(circle at 50% 40%,#28324a 0%,#141b28 55%,#0a0e16 100%)}
+  /* 지도 바닥 — 중립 회색 + 미세 격자. 격자는 월드가 아니라 화면에 고정되지만
+     아바타가 중앙 고정이라 '땅이 흐르는' 이동감을 준다(전체를 다시 그리지 않는 값싼 방법). */
+  .twMap{position:relative;flex:1;min-height:0;overflow:hidden;touch-action:none;
+    background-color:#0c0c0e;
+    background-image:
+      linear-gradient(rgba(255,255,255,.022) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(255,255,255,.022) 1px,transparent 1px),
+      radial-gradient(ellipse at 50% 42%,rgba(90,90,96,.16),transparent 72%);
+    background-size:40px 40px,40px 40px,auto}
   /* 월드 레이어 — 화면보다 큰 마을 전체. 카메라 = 이 요소의 transform 한 줄만 매 프레임 갱신(구역이 늘어도 비용 불변) */
   .twWorld{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
-  /* 화면 밖 구역 방향 표시(임시 최소 UI — 디자인 단계에서 교체 예정) */
-  .twEdge{position:absolute;transform:translate(-50%,-50%);z-index:2;display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;font-size:17px;cursor:pointer;
-    background:rgba(10,14,20,.82);border:1px solid rgba(92,214,255,.45);box-shadow:0 4px 12px -4px #000}
+  /* 화면 밖 구역 방향 표시 — 중립(시안은 '지금 선택된 것' 전용, DESIGN §2) */
+  .twEdge{position:absolute;transform:translate(-50%,-50%);z-index:2;display:flex;align-items:center;justify-content:center;
+    width:34px;height:34px;border-radius:50%;font-size:17px;cursor:pointer;opacity:.72;
+    background:rgba(14,14,16,.88);border:1px solid rgba(255,255,255,.14);box-shadow:0 4px 12px -4px #000}
+  .twEdge:hover{opacity:1}
   .twEdge.hide{display:none}
   .twEdge:active{transform:translate(-50%,-50%) scale(.92)}
-  .twTapFx{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;border:2px solid rgba(92,214,255,.85);pointer-events:none;z-index:1;animation:twTap .5s ease-out forwards}
+  .twTapFx{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;border:1px solid rgba(255,255,255,.7);pointer-events:none;z-index:1;animation:twTap .5s ease-out forwards}
   @keyframes twTap{from{transform:scale(.4);opacity:.9}to{transform:scale(1.6);opacity:0}}
-  .twGround{position:absolute;left:9%;right:9%;top:12%;bottom:12%;border-radius:64px;pointer-events:none;
-    background:radial-gradient(ellipse at 50% 42%,rgba(74,96,74,.22),rgba(40,54,74,.06) 72%);border:1px solid rgba(255,255,255,.05);box-shadow:inset 0 0 40px -10px rgba(0,0,0,.5)}
-  .twZone{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;z-index:2}
-  .twZone::before{content:'';position:absolute;left:50%;top:16px;transform:translate(-50%,-50%);width:50px;height:50px;border-radius:50%;z-index:-1;pointer-events:none;
-    background:radial-gradient(circle,rgba(92,214,255,.16),transparent 68%)}
+  .twGround{position:absolute;left:9%;right:9%;top:12%;bottom:12%;border-radius:var(--r-lg);pointer-events:none;
+    background:radial-gradient(ellipse at 50% 42%,rgba(120,120,126,.10),transparent 72%);
+    border:1px solid rgba(255,255,255,.05);box-shadow:inset 0 0 40px -10px rgba(0,0,0,.5)}
+  .twZone{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;z-index:2}
+  /* 구역 발판 — 시안 글로우 대신 중립 원판(어디를 밟을 수 있는지만 알려준다) */
+  .twZone::before{content:'';position:absolute;left:50%;top:18px;transform:translate(-50%,-50%);width:54px;height:54px;border-radius:50%;z-index:-1;pointer-events:none;
+    background:radial-gradient(circle,rgba(255,255,255,.07),transparent 66%);border:1px solid rgba(255,255,255,.07)}
+  .twZone:hover::before{background:radial-gradient(circle,rgba(255,255,255,.12),transparent 66%);border-color:rgba(255,255,255,.16)}
+  /* 이모지는 폰트 토큰 밖이다 — 시스템 이모지 폰트를 명시해 Arial 폴백을 막는다 */
+  .tzIco,.twAvBody,.twEdge,.twPet{font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif}
   .tzIco{font-size:30px;line-height:1;filter:drop-shadow(0 3px 5px rgba(0,0,0,.6))}
-  .twStars{color:#ffd24a;font-size:11px;letter-spacing:1px}
-  .twPet{flex:0 0 auto;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:20px;border-radius:9px;background:rgba(255,255,255,.05);border:1px solid var(--metal-edge)}
-  .tzLbl{font-size:11px;font-weight:800;color:#dbe3ec;background:rgba(6,8,12,.7);padding:2px 7px;border-radius:10px;border:1px solid var(--metal-edge);white-space:nowrap}
+  .twStars{color:#ffd24a;font-size:var(--fs-md);letter-spacing:1px}
+  .twPet{flex:0 0 auto;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:20px;border-radius:var(--r-lg);background:rgba(255,255,255,.05);border:1px solid var(--metal-edge)}
+  .tzLbl{font-size:var(--fs-md);font-weight:800;color:#ececec;background:rgba(10,10,12,.82);padding:4px 8px;border-radius:var(--r-bar);border:1px solid var(--metal-edge);white-space:nowrap}
   .twZone:active{transform:translate(-50%,-50%) scale(.94)}
   /* 아바타 — 화면 정중앙에 고정. 움직이는 것은 월드 쪽이다(카메라가 항상 캐릭터를 따라간다) */
   .twAvatar{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:3;pointer-events:none}
@@ -2759,39 +2774,44 @@
   .twAvatar.walk .twAvBody{animation:twStep .36s linear infinite}
   @keyframes twStep{0%,100%{transform:translateY(0) rotate(0)}25%{transform:translateY(-3px) rotate(-5deg)}75%{transform:translateY(-3px) rotate(5deg)}}
   .twAvShadow{position:absolute;left:50%;bottom:-5px;transform:translateX(-50%);width:20px;height:6px;border-radius:50%;background:rgba(0,0,0,.45);filter:blur(1px)}
-  .twToast{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:5;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:700;color:#fff;
+  .twToast{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:5;padding:8px 12px;border-radius:var(--r-md);font-size:var(--fs-lg);font-weight:700;color:#fff;
     background:rgba(10,14,20,.92);border:1px solid rgba(255,210,74,.5);box-shadow:0 6px 18px -6px #000;white-space:nowrap;transition:opacity .3s}
   .twToast.hide{opacity:0;pointer-events:none}
   /* 마을 시설 팝업 */
   #townPanel{position:absolute;inset:0;z-index:62;display:flex;align-items:center;justify-content:center;
     background-color:rgba(2,3,6,.58);
-    background-image:radial-gradient(ellipse 300px 320px at 50% 50%,rgba(92,214,255,.13),transparent 72%);
+    background-image:radial-gradient(ellipse 300px 320px at 50% 50%,rgba(190,190,200,.10),transparent 72%);
     backdrop-filter:blur(2px) saturate(.95);-webkit-backdrop-filter:blur(2px) saturate(.95)}
   #townPanel.hide{display:none}
   #townPanel .setX .mIco{color:inherit}
   .twCard{width:320px;max-width:88vw;max-height:82%;display:flex;flex-direction:column}
-  .twBody{overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:2px}
-  .twHead{font-size:12px;color:var(--txt-mute);margin:2px 2px 10px;line-height:1.5}
+  .twBody{overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:4px}
+  .twHead{font-size:var(--fs-lg);color:var(--txt-mute);margin:0 0 12px;line-height:1.5}
   .twHead b{color:var(--gold-lt)}
-  .twSectLbl{font-size:12px;font-weight:800;color:#aeb8c6;margin:12px 2px 5px;padding-bottom:3px;border-bottom:1px solid rgba(255,255,255,.08)}
+  .twSectLbl{font-size:var(--fs-lg);font-weight:800;color:#c8c8c8;margin:12px 0 4px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,.08)}
   .twStatGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px}
-  .twStat{display:flex;align-items:center;gap:6px;padding:7px 9px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--metal-edge)}
-  .twStat .tsL{font-size:12px;color:var(--txt-mute);flex:1}
-  .twStat .tsV{font-family:var(--font-num);font-weight:800;color:#dbe3ec;min-width:20px;text-align:right}
-  .twStat button{flex:0 0 auto;width:22px;height:22px;border-radius:6px;cursor:pointer;font-weight:800;line-height:1;color:#dff4ff;background:rgba(92,214,255,.2);border:1px solid rgba(92,214,255,.5)}
+  .twStat{display:flex;align-items:center;gap:8px;padding:8px;border-radius:var(--r-lg);background:rgba(255,255,255,.045);border:1px solid var(--metal-edge)}
+  .twStat .tsL{font-size:var(--fs-lg);color:var(--txt-mute);flex:1}
+  .twStat .tsV{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:800;color:#ececec;min-width:20px;text-align:right}
+  .twStat button{flex:0 0 auto;width:22px;height:22px;border-radius:var(--r-md);cursor:pointer;font-family:inherit;font-weight:800;line-height:1;
+    color:#ececec;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.28)}
   .twStat button:disabled{opacity:.3;cursor:default}
-  .twRow{display:flex;align-items:center;gap:10px;padding:9px 3px;border-top:1px solid rgba(255,255,255,.07)}
+  .twRow{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid rgba(255,255,255,.07)}
   .twRowInfo{flex:1;min-width:0}
-  .twRowName{font-size:13px;font-weight:700;color:#dbe3ec}
-  .twRowSub{font-size:11px;color:var(--txt-mute);margin-top:2px}
+  .twRowName{font-size:var(--fs-xl);font-weight:700;color:#ececec}
+  .twRowSub{font-size:var(--fs-md);color:var(--txt-mute);margin-top:0}
   .twRowSub.ok{color:#6ff0a0}.twRowSub.lock{color:#e0a04a}
-  .twBtn{flex:0 0 auto;min-width:56px;padding:7px 10px;border-radius:var(--r-lg);cursor:pointer;font-family:inherit;font-weight:800;font-size:12px;text-align:center;
-    color:#dff4ff;background:linear-gradient(180deg,rgba(92,214,255,.28),rgba(92,214,255,.1));border:1px solid rgba(92,214,255,.55)}
+  /* 마을 공용 버튼 — 시안 채움을 걷고 중립 판으로(§2 미결이던 CTA 색을 여기서 정리).
+     '선택됨'만 시안(.on)이라 한 화면에 시안이 하나만 남는다. */
+  .twBtn{flex:0 0 auto;min-width:56px;padding:8px;border-radius:var(--r-md);cursor:pointer;font-family:inherit;font-weight:800;font-size:var(--fs-lg);text-align:center;
+    color:#ececec;background:linear-gradient(180deg,rgba(46,46,50,.9),rgba(20,20,23,.95));border:1px solid var(--metal-edge);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+  .twBtn:not(:disabled):hover{border-color:rgba(255,255,255,.24)}
   .twBtn.on{color:#0b1016;background:var(--setAcc);border-color:var(--setAcc)}
   .twBtn:disabled{cursor:default;color:#7d8590;background:rgba(255,255,255,.03);border-color:var(--metal-edge)}
   .twBtn:not(:disabled):active{transform:translateY(1px)}
   .twBtn.del{color:#ffd7dd;background:linear-gradient(180deg,rgba(255,77,109,.3),rgba(255,77,109,.12));border-color:rgba(255,77,109,.6)}
-  .twDel{flex:0 0 auto;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:7px;cursor:pointer;font-size:12px;line-height:1;
+  .twDel{flex:0 0 auto;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:var(--r-md);cursor:pointer;font-size:var(--fs-lg);line-height:1;
     color:#8d97a4;background:rgba(255,255,255,.04);border:1px solid var(--metal-edge)}
   .twDel:active{transform:translateY(1px)}
   .msUser{display:flex;align-items:center;gap:5px;font-size:var(--fs-sm);color:var(--txt-hud)}
@@ -14961,7 +14981,19 @@ function techBldgUpgModel(b, e){ const race=G.tech.race; const rj=e&&e._rj;
   return { mode:'upg', title:b.name, icon:_techBldgPortrait(b.k, b.ico), hpsh:_cgHpShStr(bs.hp,bs.sh), sub:'연구/업그레이드 — 탭', items, topRight:_techBldgTR(b),
     info:{ eb:'업그레이드', hideName:true, val, progLabel, progVal, prog, progTime, cr:0, en:0, time:'' } }; }
 // 렌더
-function techUIRender(){ if(!G.tech) return; techMapRender(); techPanelRender(); techHidePreview(); }   // 3D 건물은 메인 렌더러(syncBuild)가 렌더
+// 🖱 버튼을 누르고 있는 동안에는 재렌더를 미룬다.
+//   맵은 innerHTML로 통째로 다시 그려지므로, pointerdown과 pointerup 사이에 재렌더가 끼면
+//   누르고 있던 요소가 DOM에서 사라져 브라우저가 click을 발생시키지 않는다.
+//   (스웜은 라바 생성 주기로 재렌더가 돌아 좌측 버튼이 안 눌리는 증상이 있었다)
+let _techHold=0, _techDirty=false;
+window.addEventListener('pointerdown', ()=>{ _techHold++; }, true);
+window.addEventListener('pointerup', ()=>{ _techHold=Math.max(0,_techHold-1);
+  if(!_techHold && _techDirty){ _techDirty=false; setTimeout(techUIRender, 0); } }, true);
+window.addEventListener('pointercancel', ()=>{ _techHold=Math.max(0,_techHold-1);
+  if(!_techHold && _techDirty){ _techDirty=false; setTimeout(techUIRender, 0); } }, true);
+function techUIRender(){ if(!G.tech) return;
+  if(_techHold){ _techDirty=true; return; }   // 누르는 중 → 뗄 때 한 번만 다시 그린다
+  techMapRender(); techPanelRender(); techHidePreview(); }   // 3D 건물은 메인 렌더러(syncBuild)가 렌더
 function techMapRender(){ const map=document.getElementById('cstMain'); if(!map) return; const race=G.tech.race;
   const _res3d=!!(window.M3D&&M3D.hasModel&&M3D.hasModel('res_cn')&&!(G.opt&&G.opt.model3d===false));   // 자원 3D 로드됨 → 2D 이모지(💎💨🎒) 숨김(라벨·구역은 유지)
   let ents='', labels=''; for(const e of G.tech.ents){ let inner,cls;

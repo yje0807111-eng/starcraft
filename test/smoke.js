@@ -360,6 +360,41 @@ async function groupLobby(){
     assert(c.statPoints===PROF_PT_PER_LV-1,'포인트가 안 깎임');
     assert(_hb.char.atk>atk0,'전투 중 공격력에 반영되지 않음: '+atk0+' → '+_hb.char.atk);
     return 'Lv'+c.level+' · 포인트 '+c.statPoints; });
+  // DESIGN.md 규칙 — 마을(지도 + 시설 팝업)만. 전환을 마쳤으므로 되돌아갈 수 없다(§5).
+  await step('마을: DESIGN.md 규칙(라운드 · 간격 · 시안 1곳 · 폰트 토큰)', async()=>{
+    skipIf(typeof openTown!=='function','마을 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    openTown(); await sleep(80);
+    const sc=$('townScreen'); assert(visible(sc),'마을이 안 열림');
+    const R_OK=['0px','3px','6px','9px','50%'], SP_OK=[4,8,12,20];
+    const nm=e=>(e.id?'#'+e.id:'')+(typeof e.className==='string'&&e.className?'.'+e.className.trim().split(/[ ]+/)[0]:e.tagName.toLowerCase());
+    const scan=()=>{ const bad=[], sp=[], cyan=[], arial=[];
+      for(const e of sc.querySelectorAll('*')){ if(!e.getClientRects().length) continue;
+        const c=getComputedStyle(e);
+        for(const k of ['borderTopLeftRadius','borderTopRightRadius','borderBottomLeftRadius','borderBottomRightRadius'])
+          if(R_OK.indexOf(c[k])<0) bad.push(nm(e)+' r='+c[k]);
+        for(const k of ['borderTopWidth','borderRightWidth','borderBottomWidth','borderLeftWidth'])
+          if(parseFloat(c[k])>1.5) bad.push(nm(e)+' 테두리 '+c[k]);
+        for(const k of ['gap','paddingTop','paddingRight','paddingBottom','paddingLeft']){
+          const v=parseFloat(c[k]); if(v>0 && SP_OK.indexOf(v)<0) sp.push(nm(e)+':'+k+'='+v); }
+        const hasBd=['borderTopWidth','borderRightWidth','borderBottomWidth','borderLeftWidth'].some(k=>parseFloat(c[k])>0);
+        if(/92, ?214, ?255|0, ?229, ?255/.test([c.backgroundColor,c.boxShadow,hasBd?c.borderColor:''].join(' '))) cyan.push(nm(e));
+        if(/Arial/.test(c.fontFamily||'')) arial.push(nm(e));
+      }
+      return {bad:bad, sp:sp, cyan:cyan.filter((v,i)=>cyan.indexOf(v)===i), arial:arial.filter((v,i)=>arial.indexOf(v)===i)}; };
+    let r=scan();
+    assert(!r.bad.length,'토큰 밖 라운드/두꺼운 테두리 '+r.bad.length+'건: '+r.bad.slice(0,4).join(', '));
+    assert(!r.sp.length,'4/8/12/20 밖 간격 '+r.sp.length+'건: '+r.sp.slice(0,5).join(', '));
+    assert(!r.arial.length,'폰트 토큰 밖(Arial 폴백) '+r.arial.length+'건: '+r.arial.slice(0,4).join(', '));
+    assert(r.cyan.length<=1,'지도에 시안이 '+r.cyan.length+'곳: '+r.cyan.join(', '));
+    // 시설 팝업을 열어도 같은 규칙을 지켜야 한다
+    openTownPanel('plaza'); await sleep(80);
+    r=scan();
+    assert(!r.bad.length,'팝업: 토큰 밖 라운드/테두리 '+r.bad.length+'건: '+r.bad.slice(0,4).join(', '));
+    assert(!r.sp.length,'팝업: 간격 위반 '+r.sp.length+'건: '+r.sp.slice(0,5).join(', '));
+    assert(r.cyan.length<=1,'팝업에 시안이 '+r.cyan.length+'곳: '+r.cyan.join(', '));
+    closeTownPanel();
+    return '지도·팝업 모두 통과'; });
   // 스탯 출처 내역 · 파워 해금이 실제로 상한을 연다
   await step('RPG: 스탯 출처 내역 · 파워 해금 배선', async()=>{ skipIf(typeof profStatParts!=='function','미적용');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
