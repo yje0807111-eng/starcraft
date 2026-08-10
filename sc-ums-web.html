@@ -5077,6 +5077,9 @@ function profStampSeen(){ if(PLAYER_META&&PLAYER_META.profile){ PLAYER_META.prof
 // POWER UPGRADES = 캐릭터 스탯 4종(실제). 아이콘·표기만 참고 이미지 문법을 따른다.
 
 function openHome(){ loadMeta();
+  // 토벌 허브는 '화면'이 아니라 HOME 위에 덮는 팝업(.hbModal)이라 화면 전환으로는 안 닫힌다 —
+  // 열어 둔 채 네비 HOME을 누르면 그대로 HOME을 가린다. 여기서 걷어낸다.
+  if(typeof closeDungeonHub==='function') closeDungeonHub();
   if(typeof CHAR==='function' && !CHAR()){ openCharScreen('create'); return; }   // 캐릭터가 없으면 생성부터
   if(typeof bgmStart==='function') bgmStart('lobby');
   showAppScreen('homeScreen'); navShow('home'); renderHome();
