@@ -1652,7 +1652,7 @@
       linear-gradient(180deg, rgba(2,3,8,.9) 0%, rgba(2,3,8,.35) 22%, rgba(2,3,8,.35) 78%, rgba(2,3,8,.92) 100%)}
   .lbCard{width:92%;max-width:350px;height:555px;max-height:90%;overflow:hidden;padding:18px;display:flex;flex-direction:column}   /* 방찾기 카드와 폭·높이 통일(92%/350/555) · 작은 화면은 max-height 90%가 캡, 남는 높이는 플레이어 그리드(flex)가 흡수 */
   /* 대기실 채팅 = 보기영역 + 입력줄 일체형(로비 전체채팅과 동일 구조) · 4~5줄 */
-  .lbChatWrap{flex:1 1 0;min-height:0;display:flex;flex-direction:column;overflow:hidden;margin-bottom:10px;border-radius:10px;   /* 남는 높이만 흡수(basis 0) — 메시지가 쌓여도 플레이어 슬롯을 밀지 않음 */
+  .lbChatWrap{flex:1 1 0;min-height:0;display:flex;flex-direction:column;overflow:hidden;margin-bottom:10px;border-radius:var(--r-bar);   /* 남는 높이만 흡수(basis 0) — 메시지가 쌓여도 플레이어 슬롯을 밀지 않음 */
     background:rgba(0,0,0,.3);border:1px solid var(--metal-edge)}
   .lbChat{flex:1 1 auto;min-height:77px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;padding:7px 9px;   /* 최소 4줄 보장 + 남는 높이만큼 확장 */
     background:transparent;border:none;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
@@ -2163,14 +2163,13 @@
   /* 유즈맵 선택 */
   #mapSelect{z-index:47;padding:12px 13px}
   /* 유즈맵 선택 로비 배경(전체 cover, 9:16 기준, UI는 위 레이어) */
-  #mapSelect::before,#rooms::before,#createPanel::before{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;transform-origin:center center;
+  #mapSelect::before,#rooms::before,#createPanel::before,#shopScreen::before{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;transform-origin:center center;
     background:url('assets/backgrounds/lobby_bg.webp') center center / cover no-repeat #04050b;
     animation:lobbyBreath 12s ease-in-out infinite}   /* 미세한 호흡(위아래 + 약한 확대) */
   @keyframes lobbyBreath{ 0%,100%{transform:scale(1.01) translateY(0)} 50%{transform:scale(1.05) translateY(-1%)} }
-  #mapSelect::after,#rooms::after,#createPanel::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg, rgba(2,3,8,.96) 0%, rgba(2,3,8,.66) 16%, rgba(2,3,8,.2) 38%, rgba(2,3,8,.2) 62%, rgba(2,3,8,.66) 84%, rgba(2,3,8,.97) 100%)}   /* 위·아래 빨강 더 톤다운(중앙 이미지 유지) */
+  #mapSelect::after,#rooms::after,#createPanel::after,#shopScreen::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg, rgba(2,3,8,.96) 0%, rgba(2,3,8,.66) 16%, rgba(2,3,8,.2) 38%, rgba(2,3,8,.2) 62%, rgba(2,3,8,.66) 84%, rgba(2,3,8,.97) 100%)}   /* 위·아래 빨강 더 톤다운(중앙 이미지 유지) */
   .msHead{display:flex;align-items:center;justify-content:space-between;padding-bottom:7px;margin-bottom:8px;border-bottom:1px solid rgba(255,255,255,.06)}
   .msHeadL{display:flex;align-items:center;gap:8px;min-width:0}
-  .msTitle{font-size:17px;font-weight:800;color:#eef1f6;text-shadow:0 1px 3px rgba(0,0,0,.65);letter-spacing:.3px}   /* 제목 = 화이트 통일 */
   
   
   /* 메타 성장(빌드) 화면 */
@@ -2589,7 +2588,7 @@
   .navBar.hide{display:none}
   /* 💠 공용 재화 바(단일 소스) — 모든 RPG/허브 + 유즈맵 선택 상단 상시. 볼륨1: 1px 테두리+그라데+하단 헤어라인, 재화=금색.
      미네랄=pcoin · 가스 · 젬. 인게임(#hudR)과 별개다(계정 영구 재화). */
-  .curBar{position:absolute;left:0;right:0;top:0;z-index:62;height:var(--curH);display:flex;align-items:center;justify-content:flex-end;gap:12px;
+  .curBar{position:absolute;left:0;right:0;top:0;z-index:62;height:var(--curH);display:flex;align-items:center;justify-content:space-between;gap:12px;
     padding:0 12px;background:linear-gradient(180deg,rgba(12,17,28,.96),rgba(6,9,15,.98));border-bottom:1px solid rgba(88,118,188,.22)}
   .curBar::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.1),transparent)}
   .curBar.hide{display:none}
@@ -2597,16 +2596,21 @@
      그래야 우주 배경이 상단까지 끊기지 않고 이어져 보인다. showAppScreen()이 화면별로 .bare를 붙인다. */
   .curBar.bare{background:none;border-bottom:0}
   .curBar.bare::after{display:none}
+  .curBar .curRes{display:flex;align-items:center;gap:12px;margin-left:auto}
+  .curTitle{font-size:17px;color:#eef1f6;letter-spacing:.3px;text-shadow:0 1px 3px rgba(0,0,0,.65);white-space:nowrap}
+  .curTitle:empty{display:none}
   .curBar .res{display:flex;align-items:center;gap:5px;font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:800;font-size:14px;color:#e7edf5;white-space:nowrap}
   .curBar .ri{width:16px;height:16px;flex:none}
   #phone.curOn .appScreen{padding-top:var(--curH)}
   #phone.curOn #mapSelect{padding-top:calc(var(--curH) + 12px)}
+  #mapSelect{padding-bottom:calc(var(--navH) + 12px)}   /* 하단 네비에 내용이 가리지 않게 */
   #phone.inGame #curBar{display:none}   /* 실경기(인게임)에선 자체 HUD(#hudR) 사용 — 공용 바 숨김 */
   /* ⚔ 던전 허브 — 던전 목록 카드(배너) + 팝업(소탕/입장) */
   .dgHubHead{font-size:12px;color:var(--txt-mute);margin:2px 4px 12px;line-height:1.5;text-align:center}
   .dgHubHead b{color:#ffd24a}
   /* 🎁 상점 전용 화면 — HOME .hmCard 구조를 그대로 따른다: 바깥 패널 + 머리줄 + 안쪽 칸
      ⚠ 굵기는 700까지만(IBM Plex Sans KR 최대). 800/900은 가짜 볼드가 된다 — DESIGN.md §2 */
+  #shopScreen{overflow:hidden}   /* 배경 ::before가 확대 애니메이션을 하므로 넘침 차단(.spaceBg가 하던 역할) */
   #shopScreen .twToast{position:absolute;left:50%;bottom:calc(var(--navH) + 16px);transform:translateX(-50%)}
   .shopTitle{text-align:center;font-size:15px;font-weight:700;letter-spacing:.6px;color:#ececec;padding:6px 0 12px}
   /* 구역 패널 = HOME .hmCard */
@@ -2836,18 +2840,34 @@
   
   /* 상단: 접속현황(좌) + 정렬 드롭다운(우) 한 줄 */
   .msTopBar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+  /* 유즈맵 목록 상자 — 머리(정렬 탭 띠) + 본문(나열). HOME .hmCard와 같은 규격 */
+  .msPanel{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden;
+    background:var(--hmPanel);border:1px solid var(--hbEdge);border-radius:var(--r-bar)}
+  .msSortTabs{flex:0 0 auto;display:flex;align-items:stretch;border-bottom:1px solid rgba(255,255,255,.07)}
+  .msSortTab{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;gap:5px;
+    padding:9px 4px;cursor:pointer;font-family:inherit;font-size:var(--fs-md);font-weight:700;letter-spacing:.3px;
+    color:#9a9a9a;background:none;border:none;position:relative;transition:color .13s}
+  .msSortTab .ic{width:13px;height:13px}
+  .msSortTab+.msSortTab::before{content:'';position:absolute;left:0;top:26%;bottom:26%;width:1px;background:rgba(255,255,255,.07)}
+  .msSortTab.on{color:#7ee0ff}
+  .msSortTab.on::after{content:'';position:absolute;left:14%;right:14%;bottom:0;height:2px;
+    background:linear-gradient(90deg,transparent,rgba(124,224,255,.15) 20%,#7ee0ff 50%,rgba(124,224,255,.15) 80%,transparent);
+    box-shadow:0 0 7px -1px rgba(92,214,255,.6)}
+  #mapSelect .msList{flex:1 1 auto;min-height:0;padding:8px}
+  /* 마을 채팅 시트 — 소셜 블록을 그대로 담는다(유즈맵에서 옮겨옴) */
+  #twChat .msSocial.inTown{flex:1;min-height:0;margin-top:0;border:0;border-radius:0;background:none}
   /* 정렬 드롭다운(커스텀 HUD 메뉴) */
   .msSortDD{flex:0 0 auto;position:relative}
   /* 정렬 드롭다운 = 중립 글래스 + 구분선(방찾기 난이도 필터·슬롯 메뉴와 통일. 빨간 네온 제거) */
   .msSortCur{display:flex;align-items:center;gap:6px;padding:6px 10px;cursor:pointer;font-family:inherit;font-size:var(--fs-sm);font-weight:700;color:#cfd8e3;
-    background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);border-radius:9px;transition:border-color .14s,background .14s}
+    background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);border-radius:var(--r-bar);transition:border-color .14s,background .14s}
   .msSortCur:active{transform:translateY(1px)}
   .msSortDD.open .msSortCur{border-color:rgba(255,90,90,.42);background:rgba(255,255,255,.09)}
   .msSortCur .msSortDDi{display:inline-flex}.msSortCur .msSortDDi .ic{width:12px;height:12px;color:var(--neon)}   /* 현재 정렬 아이콘 = 포인트 색 */
   .msSortCar{color:#8a939e;font-size:var(--fs-sm);line-height:1;transition:transform .2s,color .2s}
   .msSortDD.open .msSortCar{transform:rotate(180deg);color:var(--neon)}
   .msSortMenu{position:absolute;top:calc(100% + 6px);right:0;z-index:30;min-width:122px;display:flex;flex-direction:column;gap:0;padding:5px 8px;
-    background:linear-gradient(180deg,rgba(20,24,33,.99),rgba(11,14,20,.995));border:1px solid var(--glass-edge);border-radius:11px;
+    background:linear-gradient(180deg,rgba(20,24,33,.99),rgba(11,14,20,.995));border:1px solid var(--glass-edge);border-radius:var(--r-bar);
     box-shadow:0 12px 30px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05);transform-origin:top right;animation:sortMenuIn .14s ease-out}
   .msSortMenu.hide{display:none}
   @keyframes sortMenuIn{from{opacity:0;transform:translateY(-5px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
@@ -2879,7 +2899,7 @@
   
   /* 하단 소셜 박스: 탭(헤더) + 콘텐츠를 하나의 외곽 안에 포함 */
   .msSocial{flex:1;min-height:80px;display:flex;flex-direction:column;margin-top:9px;overflow:hidden;
-    background:linear-gradient(180deg,rgba(6,7,11,.42),rgba(4,5,8,.5));border:1px solid var(--metal-edge);border-radius:var(--r-lg);
+    background:linear-gradient(180deg,rgba(6,7,11,.42),rgba(4,5,8,.5));border:1px solid var(--metal-edge);border-radius:var(--r-bar);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}   /* 테두리 중립(빨강 글로우 제거) */
   /* 탭(채팅/파티/친구) — 박스 안 헤더, 밑줄 인디케이터로 자연스럽게 전환 */
   .msTabs2{flex:0 0 auto;display:flex;border-bottom:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.015)}
@@ -2913,7 +2933,7 @@
   .msScopeChev{width:9px;height:9px;flex:0 0 auto;color:#78828e;transition:transform .18s,color .18s}
   .msScopeDD.open .msScopeChev{transform:rotate(180deg);color:var(--scc)}
   .msScopeMenu{position:absolute;bottom:calc(100% + 8px);left:0;z-index:30;min-width:96px;display:flex;flex-direction:column;gap:0;padding:5px 8px;
-    background:linear-gradient(180deg,rgba(20,24,33,.99),rgba(11,14,20,.995));border:1px solid var(--glass-edge);border-radius:11px;
+    background:linear-gradient(180deg,rgba(20,24,33,.99),rgba(11,14,20,.995));border:1px solid var(--glass-edge);border-radius:var(--r-bar);
     box-shadow:0 12px 30px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05)}
   .msScopeMenu.hide{display:none}
   /* 모바일: 호버 대신 구분선으로 항목 분리 · 선택은 좌측 악센트 바 */
@@ -3074,7 +3094,7 @@
     padding:8px 14px;border-radius:var(--r-lg);background:rgba(10,10,14,.96);border:1px solid var(--neon-soft);color:var(--txt);
     font-size:var(--fs-md);font-weight:600;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;box-shadow:0 6px 20px var(--shade)}
   .lobbyToast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-  .mapItem{flex:0 0 auto;position:relative;display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:11px;cursor:pointer;overflow:hidden;
+  .mapItem{flex:0 0 auto;position:relative;display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:var(--r-bar);cursor:pointer;overflow:hidden;
     background:linear-gradient(135deg,rgba(36,38,47,.84),rgba(13,14,19,.9));border:1px solid var(--metal-edge);   /* 쉬는 상태=중립(빨강 남발 제거). 강조는 호버에만 */
     box-shadow:0 5px 15px -11px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05);transition:transform .15s,border-color .15s,box-shadow .15s}
   button.mapItem{width:100%;font-family:inherit;text-align:left;-webkit-appearance:none}   /* 버튼으로 쓸 때도 카드 모양 유지(허브 게임 선택) */
@@ -3084,7 +3104,7 @@
   .mapItem:hover::before{background:linear-gradient(180deg,var(--neon),rgba(255,59,59,.2));opacity:.95}   /* 호버 시 좌측바 빨강 강조(상호작용 액센트) */
   .mapItem:active{transform:translateY(0)}
   
-  .mapThumb{position:relative;width:48px;height:48px;flex:none;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;
+  .mapThumb{position:relative;width:48px;height:48px;flex:none;border-radius:var(--r-bar);overflow:hidden;display:flex;align-items:center;justify-content:center;
     background:radial-gradient(circle at 50% 30%,rgba(120,140,175,.14),rgba(7,7,11,.85));border:1px solid rgba(255,255,255,.1);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 0 14px -4px var(--mapAccent,#6d86b8)}   /* 썸네일 은은한 글로우 = 맵별 색(음수 스프레드로 페이드) */
   .mapThumb.mm{background:#0d0c10;box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}   /* 미니맵 변형(빨강 글로우 X) */
@@ -3095,7 +3115,7 @@
   .mapName{font-size:14px;font-weight:700;color:#f7f3f3;letter-spacing:-.2px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .mapDesc{font-size:var(--fs-sm);font-weight:400;color:#929ba6;margin-top:3.5px;line-height:1.35;letter-spacing:.1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   
-  .mapTag{font-size:8px;font-weight:800;letter-spacing:.3px;padding:1.5px 7px;border-radius:10px;color:#cfe0ec;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14)}
+  .mapTag{font-size:8px;font-weight:700;letter-spacing:.3px;padding:1.5px 7px;border-radius:var(--r-bar);color:#cfe0ec;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14)}
   .mapTag.rec{color:var(--gold);background:rgba(255,210,74,.1);border-color:rgba(255,210,74,.4)}
   .mapTag.new{color:var(--ok);background:rgba(93,255,143,.1);border-color:rgba(93,255,143,.4)}
   
@@ -3288,7 +3308,8 @@
         font-weight에 져서 일부 제목만 가짜 볼드로 남는다(전에 font-size로 똑같이 당했다).
      ⚠ IBM Plex Sans KR은 700이 최대다 — 800/900을 남기면 브라우저가 가짜 볼드를 그려 획이 뭉갠다.
         그래서 700으로 되돌린다. 제목은 '같은 가족 + 굵기 700 + 큰 크기'로 선다. */
-  #ovTitle,.ovTtl,.ecTitle,.setTitle,.hmUpgHead,.twName,.cpTitle,.opTitle,.msTitle,.lbTitle,.ptTitle,.shopTitle,.shopHead{
+  #ovTitle,.ovTtl,.ecTitle,.setTitle,.hmUpgHead,.twName,.cpTitle,.opTitle,.lbTitle,.ptTitle,.shopTitle,.shopHead,
+  .curTitle,.mapName,#mapSelect .msTab2,#msSortLbl{
     font-family:var(--font-ti);font-weight:700}
 </style>
 </head>
@@ -3554,52 +3575,20 @@
 
     <!-- ===== 신규: 유즈맵 선택 ===== -->
     <div id="mapSelect" class="appScreen spaceBg hide">
-      <div class="msHead">
-        <div class="msHeadL">
-          <button class="twBack" onclick="mapToHub()" aria-label="뒤로" title="시작 선택으로"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
-          <span class="msTitle">유즈맵 선택</span>
-        </div>
-        <span class="msUser"><span data-ico="user"></span> <b id="msNick">게스트</b><button class="msGear" data-sfx="ui_open" onclick="openAppSettings()" title="설정" aria-label="설정"><svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg></button></span>
-      </div>
+      <!-- 제목은 상단 재화 바에 합쳐졌다(curSetTitle) · 프로필/설정 버튼 제거(설정은 마을 상단) -->
       <div class="msTopBar">
         <div class="msBanner" id="msBanner"></div>
-        <div class="msSortDD" id="msSortDD">
-          <button class="msSortCur" id="msSortCur" onclick="toggleSortMenu(event)" aria-haspopup="listbox">
-            <span class="msSortDDi" data-ico="pop" id="msSortDDi"></span>
-            <span id="msSortLbl">인기순</span>
-            <span class="msSortCar">▾</span>
-          </button>
-          <div class="msSortMenu hide" id="msSortMenu" role="listbox">
-            <button class="msSortOpt on" data-v="pop" onclick="setMapSort('pop')"><span data-ico="pop"></span>인기순</button>
-            <button class="msSortOpt" data-v="new" onclick="setMapSort('new')"><span data-ico="new"></span>신규</button>
-            <button class="msSortOpt" data-v="rec" onclick="setMapSort('rec')"><span data-ico="rec"></span>추천</button>
-            <button class="msSortOpt" data-v="fav" onclick="setMapSort('fav')"><span data-ico="fav"></span>즐겨찾기</button>
-          </div>
-        </div>
+
       </div>
-      <div class="msList uiScroll" id="msList"></div>
-      <div class="msSocial">
-        <div class="msTabs2">
-          <button class="msTab2 on" data-bt="chat" onclick="setBottomTab('chat')"><span data-ico="chat"></span>채팅</button>
-          <button class="msTab2" data-bt="party" onclick="setBottomTab('party')"><span data-ico="party"></span>파티</button>
-          <button class="msTab2" data-bt="friend" onclick="setBottomTab('friend')"><span data-ico="friend"></span>친구<span class="msFriendBadge hide" id="msFriendBadge">0</span></button>
+      <!-- 목록 상자 — 머리 = 정렬 탭 띠(네비바 형태) · 본문 = 유즈맵 나열 -->
+      <div class="msPanel">
+        <div class="msSortTabs" id="msSortTabs">
+          <button class="msSortTab on" data-v="pop" onclick="setMapSort('pop')"><span data-ico="pop"></span>인기순</button>
+          <button class="msSortTab" data-v="new" onclick="setMapSort('new')"><span data-ico="new"></span>신규</button>
+          <button class="msSortTab" data-v="rec" onclick="setMapSort('rec')"><span data-ico="rec"></span>추천</button>
+          <button class="msSortTab" data-v="fav" onclick="setMapSort('fav')"><span data-ico="fav"></span>즐겨찾기</button>
         </div>
-        <div class="msChatWrap" id="msChatWrap">
-          <div class="msChat" id="msChat" data-scope="all"></div>
-          <div class="msChatBar" id="msChatBar">
-            <div class="msScopeDD" id="msScopeDD" data-sc="all">   <!-- 범위 배지 = 입력창 내부 왼쪽(누구에게 보내는지 입력 직전에 읽힘) -->
-              <button class="msScopeTrig" type="button" onclick="toggleMsScope(event)" title="채팅 범위"><span class="msScopeLbl" id="msScopeLbl">전체</span><svg class="msScopeChev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button>
-              <div class="msScopeMenu hide" id="msScopeMenu">
-                <button class="msScopeOpt on" data-sc="all" onclick="pickMsScope('all')">전체</button>
-                <button class="msScopeOpt" data-sc="party" onclick="pickMsScope('party')">파티</button>
-                <button class="msScopeOpt" data-sc="friend" onclick="pickMsScope('friend')">친구</button>
-              </div>
-            </div>
-            <input id="msChatInput" type="text" placeholder="메시지 입력…" maxlength="120" autocomplete="off" onkeydown="if(event.key==='Enter')sendGlobalChat()">
-            <button class="msChatSend" onclick="sendGlobalChat()">전송</button>
-          </div>
-        </div>
-        <div class="msPanelBody" id="msPanelBody" style="display:none"></div>
+        <div class="msList uiScroll" id="msList"></div>
       </div>
     </div>
 
@@ -3786,6 +3775,35 @@
         <div class="hbRoundNote" id="hbRoundNote"></div>
       </div>
     </div>
+    <!-- 💬 채팅 — 유즈맵에서 마을로 옮겨왔다(유즈맵은 목록만). 내용·기능은 그대로 -->
+    <div class="twSheet hide" id="twChat">
+      <div class="twSheetHead"><b>채팅</b>
+        <button class="twSheetX" onclick="twCloseChat()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+      </div>
+      <div class="msSocial inTown">
+        <div class="msTabs2">
+          <button class="msTab2 on" data-bt="chat" onclick="setBottomTab('chat')"><span data-ico="chat"></span>채팅</button>
+          <button class="msTab2" data-bt="party" onclick="setBottomTab('party')"><span data-ico="party"></span>파티</button>
+          <button class="msTab2" data-bt="friend" onclick="setBottomTab('friend')"><span data-ico="friend"></span>친구<span class="msFriendBadge hide" id="msFriendBadge">0</span></button>
+        </div>
+        <div class="msChatWrap" id="msChatWrap">
+          <div class="msChat" id="msChat" data-scope="all"></div>
+          <div class="msChatBar" id="msChatBar">
+            <div class="msScopeDD" id="msScopeDD" data-sc="all">   <!-- 범위 배지 = 입력창 내부 왼쪽(누구에게 보내는지 입력 직전에 읽힘) -->
+              <button class="msScopeTrig" type="button" onclick="toggleMsScope(event)" title="채팅 범위"><span class="msScopeLbl" id="msScopeLbl">전체</span><svg class="msScopeChev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button>
+              <div class="msScopeMenu hide" id="msScopeMenu">
+                <button class="msScopeOpt on" data-sc="all" onclick="pickMsScope('all')">전체</button>
+                <button class="msScopeOpt" data-sc="party" onclick="pickMsScope('party')">파티</button>
+                <button class="msScopeOpt" data-sc="friend" onclick="pickMsScope('friend')">친구</button>
+              </div>
+            </div>
+            <input id="msChatInput" type="text" placeholder="메시지 입력…" maxlength="120" autocomplete="off" onkeydown="if(event.key==='Enter')sendGlobalChat()">
+            <button class="msChatSend" onclick="sendGlobalChat()">전송</button>
+          </div>
+        </div>
+        <div class="msPanelBody" id="msPanelBody" style="display:none"></div>
+      </div>
+    </div>
     <div class="twSheet hide" id="twSocial">
       <div class="twSheetHead"><b>친구</b>
         <button class="twSheetX" onclick="twCloseSocial()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
@@ -3808,9 +3826,12 @@
   </div>
   <!-- 💠 공용 재화 바 — 미네랄/가스/젬 (계정 영구). curShow()가 화면 전환 시 표시/숨김 -->
   <div id="curBar" class="curBar hide">
-    <span class="res"><img class="ri" src="assets/icons/res_mineral.webp" alt=""><b id="curMin">0</b></span>
-    <span class="res"><img class="ri" src="assets/icons/res_gas.webp" alt=""><b id="curGas">0</b></span>
-    <span class="res"><img class="ri" src="assets/icons/res_gem.webp" alt=""><b id="curGem">0</b></span>
+    <span class="curTitle" id="curTitle"></span><!-- 화면 제목 슬롯(curSetTitle) — 비어 있으면 재화만 오른쪽 정렬 -->
+    <span class="curRes">
+      <span class="res"><img class="ri" src="assets/icons/res_mineral.webp" alt=""><b id="curMin">0</b></span>
+      <span class="res"><img class="ri" src="assets/icons/res_gas.webp" alt=""><b id="curGas">0</b></span>
+      <span class="res"><img class="ri" src="assets/icons/res_gem.webp" alt=""><b id="curGem">0</b></span>
+    </span>
   </div>
   <!-- 💬 친구 DM 채팅(허브 소셜) -->
   <div id="dmChat" class="dmChat hide">
@@ -3851,7 +3872,8 @@
     <div class="hmScroll uiScroll" id="dgHubBody"></div>
   </div>
   <!-- 🎁 상점 — 네비 '상점' 진입. 팝업이 아닌 전용 화면(렌더러는 renderProfGacha 단일 소스 재사용) -->
-  <div id="shopScreen" class="appScreen spaceBg hide">
+  <!-- 배경 = 유즈맵 선택과 같은 lobby_bg (규칙 공유: #mapSelect::before/::after 셀렉터에 #shopScreen 포함) -->
+  <div id="shopScreen" class="appScreen hide">
     <div class="hmScroll uiScroll" id="shopBody"></div>
     <div id="shopToast" class="twToast hide"></div>
   </div>
@@ -3878,6 +3900,7 @@
       <button class="twBack" onclick="askLogout()" aria-label="로그아웃" title="로그아웃"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4.6h3.7A1.8 1.8 0 0 1 20 6.4v11.2a1.8 1.8 0 0 1-1.8 1.8h-3.7"/><path d="M10.6 8.2L14.4 12l-3.8 3.8"/><path d="M14.4 12H4"/></svg></button>
       <span class="twName" id="twName">캐릭터</span><span class="twLv" id="twLv">Lv.1</span><span class="twPow" id="twPow">⚔ 0</span>
       <span class="twCoinSpacer" style="margin-left:auto"></span>
+      <button class="twGear" data-sfx="ui_open" onclick="twOpenChat()" title="채팅" aria-label="채팅"><span data-ico="chat"></span></button>
       <button class="twGear" data-sfx="ui_open" onclick="twOpenSocial()" title="친구" aria-label="친구"><span data-ico="friend"></span></button>
       <button class="twGear" data-sfx="ui_open" onclick="openAppSettings()" title="설정" aria-label="설정"><svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg></button>
     </div>
@@ -5714,11 +5737,16 @@ function openTown(){ loadMeta(); if(!CHAR()){ openCharScreen('create'); return; 
   if(typeof initMapLive==='function') initMapLive();
   const g=profClaimOffline(); renderTownBar(); if(g>0) showTownToast('오프라인 보상 +'+g+' P'); }
 // 마을을 떠날 때의 공통 정리 — 루프·패널·시트를 한 번에 닫는다(그대로 두면 배경에서 계속 돈다)
-function twLeave(){ _townOpen=false; twStopLoop(); closeTownPanel(); twCloseSocial(); profStampSeen(); }
+function twLeave(){ _townOpen=false; twStopLoop(); closeTownPanel(); twCloseSocial(); twCloseChat(); profStampSeen(); }
 // 🗺 마을 → 유즈맵 선택
 function twGoMap(){ twLeave(); if(typeof playSfx==='function') playSfx('ui_open'); openMapSelect(); }
 // 👥 친구 시트 — 허브에서 옮겨온 목록을 그대로 쓴다
-function twOpenSocial(){ const el=document.getElementById('twSocial'); if(!el) return;
+function twOpenChat(){ const el=document.getElementById('twChat'); if(!el) return;   // 💬 채팅 시트(유즈맵에서 옮겨옴)
+  twCloseSocial(); el.classList.remove('hide');
+  if(typeof paintIcons==='function') paintIcons(el); if(typeof playSfx==='function') playSfx('ui_open');
+  const c=document.getElementById('msChat'); if(c) c.scrollTop=c.scrollHeight; }
+function twCloseChat(){ const el=document.getElementById('twChat'); if(el) el.classList.add('hide'); }
+function twOpenSocial(){ twCloseChat(); const el=document.getElementById('twSocial'); if(!el) return;
   el.classList.remove('hide'); if(typeof renderFriends==='function') renderFriends();
   if(typeof paintIcons==='function') paintIcons(el); if(typeof playSfx==='function') playSfx('ui_open'); }
 function twCloseSocial(){ const el=document.getElementById('twSocial'); if(el) el.classList.add('hide'); }
@@ -11002,7 +11030,8 @@ const APP_SCREENS=['opening','auth','mapSelect','modeSheet','homeScreen','charSc
 // 💠 공용 재화 바를 띄우는 화면(RPG/허브 + 유즈맵 선택). 로그인·타이틀·캐릭터생성·인게임은 제외.
 const CUR_SCREENS=['homeScreen','townScreen','mapSelect','modeSheet','dgHubScreen','dgScreen','shopScreen'];
 // 그중 바를 '판'이 아니라 배경 위 숫자로 두는 화면(.curBar.bare) — 배경이 상단까지 이어져 보여야 하는 곳
-const BARE_CUR_SCREENS=['homeScreen','townScreen'];   // 재화 바를 '판'이 아니라 배경 위 숫자로 — 상단 줄이 겹쳐 답답해진다
+const BARE_CUR_SCREENS=['homeScreen','townScreen','mapSelect','shopScreen'];   // 재화 바를 '판'이 아니라 배경 위 숫자로 — 상단 줄이 겹쳐 답답해진다(구분선 없이 배경이 이어진다)
+function curSetTitle(t){ const e=document.getElementById('curTitle'); if(e) e.textContent=t||''; }   // 재화 바 왼쪽 제목(화면별)
 function curShow(on){ const b=document.getElementById('curBar'), p=document.getElementById('phone');
   if(b) b.classList.toggle('hide', !on); if(p) p.classList.toggle('curOn', !!on); }
 function updateCurBar(){ if(!PLAYER_META||!PLAYER_META.profile) return;
@@ -11017,7 +11046,7 @@ function showAppScreen(id){ setInGame(false);
   if(id!=='mapSelect' && id!=='modeSheet' && typeof stopMapLive==='function') stopMapLive();   // 유즈맵 화면 떠나면 실시간 갱신 정지
   ['ov','lobby','rooms','createPanel','pwPanel'].forEach(x=>{const e=document.getElementById(x); if(e)e.classList.add('hide');});
   APP_SCREENS.forEach(s=>{ const e=document.getElementById(s); if(e) e.classList.toggle('hide', s!==id); });
-  const _cur=CUR_SCREENS.indexOf(id)>=0; curShow(_cur); if(_cur) updateCurBar();   // 💠 공용 재화 바
+  const _cur=CUR_SCREENS.indexOf(id)>=0; curShow(_cur); curSetTitle(''); if(_cur) updateCurBar();   // 💠 공용 재화 바
   { const cb=document.getElementById('curBar');                                    // HOME만 배경 위 숫자(.bare) — 다른 화면은 판 그대로
     if(cb) cb.classList.toggle('bare', BARE_CUR_SCREENS.indexOf(id)>=0); }
   const tgt=document.getElementById(id); if(tgt && id!=='opening') playScreenFx(tgt); }   // 전환 FX(부팅 로딩 제외)
@@ -11842,11 +11871,12 @@ document.addEventListener('pointerdown', function(e){
 function openMapSelect(){ updateMyNameTag(); bgmStart('lobby'); loadMeta();
   if(TEMP_COIN_TEST){ PLAYER_META.buildLevels={}; PLAYER_META.coins=9999999; saveMeta(); }   // [임시] 로비 진입(게임 나갔다 오면) 시 포인트 상점 업그레이드 초기화(저장까지 → 상점 재오픈 loadMeta가 덮어쓰지 않게)   // 계정별 메타 성장 데이터 로드(메인/로비 진입 시 로비 BGM)
   if(sbReady()){ rtStart(); rtSetStatus('online',''); }   // 실시간 소셜 연결 + 로비 상태
-  initMapLive(); showAppScreen('mapSelect'); paintIcons(document.getElementById('mapSelect')); renderMaps(); startMapLive();
+  initMapLive(); showAppScreen('mapSelect'); navShow('map'); curSetTitle('유즈맵 선택'); paintIcons(document.getElementById('mapSelect')); renderMaps(); startMapLive();   // 하단 네비로 이동(좌상단 뒤로가기 없음)
   if(typeof setBottomTab==='function') setBottomTab('chat'); if(typeof refreshFriendBadge==='function') refreshFriendBadge(); }
 const _SORT_LBL={pop:'인기순',new:'신규',rec:'추천',fav:'즐겨찾기'};
 function setMapSort(s){ _mapSort=s;
-  const di=document.getElementById('msSortDDi'); if(di && ICO[s]) di.innerHTML=ICO[s];
+  document.querySelectorAll('#msSortTabs .msSortTab').forEach(b=>b.classList.toggle('on', b.dataset.v===s));   // 상단 탭 띠(드롭다운 대체)
+  const di=document.getElementById('msSortDDi'); if(di && ICO[s]) di.innerHTML=ICO[s];                          // 옛 드롭다운 흔적(있으면 갱신)
   const lb=document.getElementById('msSortLbl'); if(lb) lb.textContent=_SORT_LBL[s]||s;
   document.querySelectorAll('#msSortMenu .msSortOpt').forEach(b=>b.classList.toggle('on', b.dataset.v===s));
   closeSortMenu(); renderMaps(); }
