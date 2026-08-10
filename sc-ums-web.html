@@ -3325,8 +3325,8 @@ const U = {
   goliath: {name:'기갑병', icon:'⚙️', cost:9,  dmg:30, up:30, hdmg:80, hup:80, range:.26, cd:30, splash:false, color:'#5ad1ff', size:21, wpn:'mech', atk:'missile', hp:125, armor:1, shield:0,   energy:0,   moveSpd:.08, airDmg:25, airUp:25, hairDmg:70, hairUp:70, model3d:'goliath'},
   archon:  {name:'보이드',   icon:'🔮', cost:10, dmg:30, up:20, hdmg:45, hup:55, range:.16, cd:28, splash:true,  color:'#ffc040', size:23, wpn:'pro',  atk:'psi',     hp:10,  armor:0, shield:350, shArmor:1, energy:0,   moveSpd:.10, model3d:'archon'},
   // 방어 구조물(디텍터) — 엑셀: 터렛 공격75 / 포토캐논 공격321. moveSpd:0(고정)
-  turret:  {name:'가드 타워',     icon:'🗼', cost:200, dmg:192,  up:20, hdmg:384, hup:40, range:.26, cd:34, splash:false, color:'#9fd6ff', size:11, wpn:'mech', atk:'missile', hp:200, armor:2, shield:0,   energy:0, moveSpd:0, detector:true, airDmg:192, airUp:20, hairDmg:384, hairUp:40, model3d:'turret'},
-  photon:  {name:'플라즈마 타워', icon:'🔵', cost:400, dmg:346, up:40, hdmg:540, hup:80, range:.24, cd:40, splash:false, color:'#62d0ff', size:12, wpn:'pro',  atk:'plasma',  hp:100, armor:0, shield:100, shArmor:1, energy:0, moveSpd:0, detector:true, model3d:'photon'},
+  turret:  {name:'미사일 포탑',     icon:'🗼', cost:200, dmg:192,  up:20, hdmg:384, hup:40, range:.26, cd:34, splash:false, color:'#9fd6ff', size:11, wpn:'mech', atk:'missile', hp:200, armor:2, shield:0,   energy:0, moveSpd:0, detector:true, airDmg:192, airUp:20, hairDmg:384, hairUp:40, model3d:'turret'},
+  photon:  {name:'에너지 타워', icon:'🔵', cost:400, dmg:346, up:40, hdmg:540, hup:80, range:.24, cd:40, splash:false, color:'#62d0ff', size:12, wpn:'pro',  atk:'plasma',  hp:100, armor:0, shield:100, shArmor:1, energy:0, moveSpd:0, detector:true, model3d:'photon'},
   // ───── 관리자 샌드박스 전용 유닛 스탯(보직별) — 추가형, 네모 게임플레이 무영향 ─────
   racer: {name:'레이서', icon:'🔧', cost:0, dmg:21, up:8, hdmg:42, hup:17, range:0.15, cd:24, splash:false, color:'#4aa8ff', size:18, wpn:'mech', atk:'bullet', hp:76, armor:1, shield:0, energy:0, moveSpd:0.19, model3d:'racer'},   // 샌드박스 전용 · 종족밸런스 ×0.80
   machinegun: {name:'화력병', icon:'🔥', cost:55, dmg:12, up:5, hdmg:0, hup:0, range:0.09, cd:16, splash:true, color:'#ff7a3c', size:18, wpn:'mech', atk:'bullet', hp:55, armor:1, shield:0, energy:0, moveSpd:0.16, model3d:'machinegun'},   // 파이어뱃(배럭스 바이오닉·근접 화염 스플래시)
@@ -3439,9 +3439,9 @@ const CITIZEN_HOME={x:.5,y:.5}; // 시민 기본 위치(보드 중앙)
     // 하위호환 유지
 // 유닛뽑기 비콘 — 좌측 줄(유닛 뽑기) / 우측 줄(에너지 뽑기). 시민이 올라서면 해당 뽑기 실행.
 const DRAW_BEACONS=[
-  // 좌측 줄(4줄): 가드 타워 / 스파이어 / 유닛 1회 / 에너지 1회 (간격 약간 띄움)
-  {id:'buyTurret', x:.20, y:.18, name:'가드 타워', core:'🗼'},
-  {id:'buyPhoton', x:.20, y:.37, name:'플라즈마 타워', core:'◉'},
+  // 좌측 줄(4줄): 미사일 포탑 / 스파이어 / 유닛 1회 / 에너지 1회 (간격 약간 띄움)
+  {id:'buyTurret', x:.20, y:.18, name:'미사일 포탑', core:'🗼'},
+  {id:'buyPhoton', x:.20, y:.37, name:'에너지 타워', core:'◉'},
   {id:'draw',      x:.20, y:.55, name:'유닛 1회', core:'?'},
   {id:'energy',    x:.20, y:.71, name:'에너지 1회', core:'⚡'},
   // 우측 줄: 뽑기 확률↑ / 크레딧 획득↑ (확률표는 우상단 → 아래쪽에 배치해 겹침 방지)
@@ -3791,7 +3791,7 @@ const META_BUILDS = {   // 탭(group) → 섹션(sect) 2단 분류. 같은 sect�
   // ── 경제 (시작 자원 → 자원 획득) ──
   start_credit:  { name:'시작 크레딧', desc:'시작 시 크레딧 지급 (+25/Lv)',   start:15, nMax:10, max:10, group:'eco', sect:'시작 자원' },
   start_energy:  { name:'시작 에너지', desc:'시작 시 에너지 지급 (+10/Lv)',   start:15, nMax:10, max:10, group:'eco', sect:'시작 자원' },
-  start_turret:  { name:'시작 포탑',   desc:'시작 시 가드 타워 배치 (+1기/Lv, 최대 3기)', start:100, costs:[100,250,500], nMax:3, max:3, group:'eco', sect:'시작 자원' },
+  start_turret:  { name:'시작 포탑',   desc:'시작 시 미사일 포탑 배치 (+1기/Lv, 최대 3기)', start:100, costs:[100,250,500], nMax:3, max:3, group:'eco', sect:'시작 자원' },
   credit_gain:   { name:'크레딧 획득', desc:'인게임 크레딧 획득 증가 (+5%/Lv)', start:25, nMax:10, max:10, group:'eco', sect:'자원 획득' },
   energy_gain:   { name:'에너지 획득', desc:'인게임 에너지 획득 증가 (+5%/Lv)', start:25, nMax:10, max:10, group:'eco', sect:'자원 획득' },
   interest_cap:  { name:'이자 상한',   desc:'라운드 정산 이자 +10/Lv (보유 인정 한도 +100/Lv)', start:30, nMax:10, max:10, group:'eco', sect:'자원 획득' },
@@ -7027,10 +7027,10 @@ function mainProfileRender(){ const host=document.getElementById('unitCmd'); if(
   const sig=_mainCmdSig(m);
   if(host._cgSig!==sig){ host._cgSig=sig; m.page=host._cgPage||0; renderCmdGrid(host,m); }
   _mainCmdLive(); }
-// 🎰 유닛뽑기 시트 — 하단 프로필 자리(#unitCmd)에 4그리드(유닛1회·에너지·가드타워·플라즈마). 캔버스 이동 대신 시트 슬라이드업. 셀=runBeacon 직접 실행.
+// 🎰 유닛뽑기 시트 — 하단 프로필 자리(#unitCmd)에 4그리드(유닛1회·에너지·미사일 포탑·에너지 타워). 캔버스 이동 대신 시트 슬라이드업. 셀=runBeacon 직접 실행.
 const GACHA_SHEET_CELLS=['draw','energy','buyTurret','buyPhoton'];
 const BLDG_ICON_DIR='assets/icons/buildings/';
-const BEACON_ICON_IMG={ buyTurret:'bld_turret.webp', buyPhoton:'bld_cannon.webp' };   // 구매 타워 = 실제 건물 아이콘(가드 타워=미사일 터렛 · 플라즈마 타워=포톤 캐논)
+const BEACON_ICON_IMG={ buyTurret:'bld_turret.webp', buyPhoton:'bld_cannon.webp' };   // 구매 타워 = 실제 건물 아이콘(미사일 포탑=미사일 터렛 · 에너지 타워=포톤 캐논)
 function beaconProHTML(id){ const f=BEACON_ICON_IMG[id];   // 업그레이드 아이콘(wpnBadgeHTML)과 동일 패턴 — 이미지 우선, 없으면 기존 SVG
   if(f) return '<img class="cgIco" src="'+BLDG_ICON_DIR+f+'" alt="" draggable="false">';
   return '<svg viewBox="0 0 24 24">'+beaconIcon(id)+'</svg>'; }
@@ -7249,7 +7249,7 @@ const _PI_RAW={
   hydra:   PORTRAIT_DIR+'reaper_portrait.webp',     // 리퍼
   dragoon: PORTRAIT_DIR+'sentinel_portrait.webp',   // 센티넬
   archon:  PORTRAIT_DIR+'void_portrait.webp',       // 보이드
-  turret:  PORTRAIT_DIR+'guardtower_portrait.webp', // 가드 타워(건물)
+  turret:  PORTRAIT_DIR+'guardtower_portrait.webp', // 미사일 포탑(건물)
   photon:  PORTRAIT_DIR+'energyspire_portrait.webp',// 에너지 스파이어(건물)
   citizen: PORTRAIT_DIR+'civilian_portrait.webp',   // 시민
   beholder:PORTRAIT_DIR+'beholder_portrait.webp',   // 비홀더
@@ -7972,7 +7972,7 @@ function updateCmdRow(){ const row=document.getElementById('cmdRow'); if(!row) r
 function selectOne(uid){ _selViaTab=false; G.sel=[uid]; G.selEnemy=null; refreshSelCard(); }
 const MAX_SEL_TYPES=8;   // 다중 선택은 최대 8종류(초상화 4칸×2줄)
 const MAX_PER_TYPE=30;   // 종류당 최대 30마리 (4종류 × 30 = 최대 120마리)
-function isBuilding(id){ return !!(U[id] && U[id].moveSpd===0); }   // 건물(가드타워·스파이어)=이동속도0 → 드래그 다중선택 제외(개별선택만)
+function isBuilding(id){ return !!(U[id] && U[id].moveSpd===0); }   // 건물(미사일 포탑·스파이어)=이동속도0 → 드래그 다중선택 제외(개별선택만)
 // 선택 유닛을 종류(id+영웅+레벨)별로 묶어 최대 4종류 + 종류당 30마리로 제한. 건물 제외.
 // 종류 우선순위: 유닛 수 많은 순 → 같으면 더 비싼(cost↑) 순. (5종류면 가장 적은 종류 탈락)
 function capSelTypes(uids, noPerCap){   // noPerCap=true → 종류당 30 제한 해제(지정 패널 '전부 선택'용. 드래그 박스는 30 유지)
@@ -8027,16 +8027,16 @@ function renderGachaActions(){ const el=document.getElementById('gachaActions');
 function gachaActionCmd(id){ if(G.tab!=='Unit') return; const b=(typeof DRAW_BEACONS!=='undefined')&&DRAW_BEACONS.find(x=>x.id===id); if(!b) return;
   if(typeof moveCitizenTo==='function') moveCitizenTo(b.x, b.y, b.id);   // 시민을 그 비콘으로 → 도착 시 자동 실행
   if(typeof playSfx==='function') playSfx('ui_tab'); }
-// 생산고 운용 안내(현황) — 뽑기 확률 / 크레딧 확률 / 가드타워 수 / 스파이어 수 (SC 콘솔 카드)
+// 생산고 운용 안내(현황) — 뽑기 확률 / 크레딧 확률 / 미사일 포탑 수 / 스파이어 수 (SC 콘솔 카드)
 function renderOpsManual(){ const el=document.getElementById('opsManual'); if(!el) return;
-  const gN=(typeof G!=='undefined'&&G.units)?G.units.filter(u=>u.id==='turret').length:0;   // 보유 가드 타워 수
+  const gN=(typeof G!=='undefined'&&G.units)?G.units.filter(u=>u.id==='turret').length:0;   // 보유 미사일 포탑 수
   const sN=(typeof G!=='undefined'&&G.units)?G.units.filter(u=>u.id==='photon').length:0;   // 보유 스파이어 수
   const cell=function(c,ico,name,right){ return '<div class="omCell" style="--c:'+c+'"><svg class="omIco" viewBox="0 0 24 24">'+ico+'</svg>'
     +'<div class="omTx"><b>'+name+'</b></div><span class="omLv" style="color:'+c+'">'+right+'</span></div>'; };
   const rows=cell(BEACON_THEME.gachaUp['--neon'], beaconIcon('gachaUp'), '뽑기 확률', 'Lv'+(G.gachaLuckLv||0))
     +cell(BEACON_THEME.creditUp['--neon'], beaconIcon('creditUp'), '크레딧 확률', 'Lv'+(G.creditLv||0))
-    +cell(BEACON_THEME.buyTurret['--neon'], beaconIcon('buyTurret'), '가드 타워', gN+'개')
-    +cell(BEACON_THEME.buyPhoton['--neon'], beaconIcon('buyPhoton'), '플라즈마 타워', sN+'개');
+    +cell(BEACON_THEME.buyTurret['--neon'], beaconIcon('buyTurret'), '미사일 포탑', gN+'개')
+    +cell(BEACON_THEME.buyPhoton['--neon'], beaconIcon('buyPhoton'), '에너지 타워', sN+'개');
   el.innerHTML='<div class="omHead"><span class="omBar"></span>생산고 운용 안내</div><div class="omGrid">'+rows+'</div>'; }
 function buildClock(){ const v=document.getElementById('vUnit');
   v.querySelectorAll('.shopUnit,.citizen,.drawZone,.rateMini').forEach(n=>n.remove());
