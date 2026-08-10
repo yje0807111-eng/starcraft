@@ -360,6 +360,44 @@ async function groupLobby(){
     assert(c.statPoints===PROF_PT_PER_LV-1,'포인트가 안 깎임');
     assert(_hb.char.atk>atk0,'전투 중 공격력에 반영되지 않음: '+atk0+' → '+_hb.char.atk);
     return 'Lv'+c.level+' · 포인트 '+c.statPoints; });
+  // Phase 2 — 던전 1~10 해금 · 엘리트 · 장비 뽑기권(드랍 + 소비처)
+  await step('자동사냥: 던전 해금 · 엘리트 · 뽑기권', async()=>{ skipIf(typeof hbGoDungeon!=='function','던전 선택 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    openHome(); await sleep(60); _hb.manual=true;
+    // ① 해금 — 던전1만 열려 있고, 10라운드 도달해야 던전2가 열린다
+    hbHunt().best={}; hbHunt().dg=1;
+    assert(hbDgOpen(1) && !hbDgOpen(2),'초기 해금 상태가 틀림');
+    hbGoDungeon(2); assert(hbHunt().dg===1,'잠긴 던전으로 이동됨');
+    hbHunt().best[1]=HB_DG_UNLOCK;
+    assert(hbDgOpen(2),HB_DG_UNLOCK+'라운드 도달했는데 던전2가 안 열림');
+    hbOpenRounds(); await sleep(40);
+    const chips=document.querySelectorAll('#hbDgRow .hbDg');
+    assert(chips.length===HB_DG_MAX,'던전 칩이 '+HB_DG_MAX+'개가 아님: '+chips.length);
+    assert(chips[2].classList.contains('lock'),'던전3이 잠금 표시가 아님');
+    hbGoDungeon(2);
+    assert(hbHunt().dg===2 && _hb.dg===2,'던전 이동이 반영되지 않음');
+    assert(_hb.round===HB_DG_UNLOCK||_hb.round===1,'이동 후 라운드가 이상함: '+_hb.round);
+    hbCloseRounds(); hbGoDungeon(1); hbGoRound(1);
+    // ② 엘리트 — 확률이 라운드·던전에 따라 오르고, 체력·보상 배수가 붙는다
+    assert(hbEliteChance(1,1)<hbEliteChance(1,20),'엘리트 확률이 라운드로 안 오름');
+    assert(hbEliteChance(1,10)<hbEliteChance(3,10),'엘리트 확률이 던전으로 안 오름');
+    _hb.foes.length=0; _hb.pend.length=0; _hb.round=30;
+    for(let i=0;i<80;i++) hbPlaceFoe({ico:'🟢',hpMul:1,atkMul:1,spd:10});
+    const el=_hb.foes.filter(f=>f.elite), no=_hb.foes.filter(f=>!f.elite);
+    assert(el.length>0 && no.length>0,'엘리트/일반이 섞여 나오지 않음: elite '+el.length);
+    assert(el[0].hpMax > no[0].hpMax*2,'엘리트 체력 배수가 없음: '+Math.round(el[0].hpMax)+' vs '+Math.round(no[0].hpMax));
+    // ③ 뽑기권 — 엘리트를 잡으면 쌓이고(확률), 뽑기집에서 쓸 수 있다
+    const p=PROF(); if(!p.tickets) p.tickets={gear:0,pet:0,ally:0};
+    const t0=p.tickets.gear||0;
+    _hb.char.atk=1e9; _hb.char.range=1e9; _hb.char.cd=.05;
+    for(let i=0;i<3000 && (p.tickets.gear||0)<=t0;i++){ if(!_hb.foes.length && !_hb.pend.length) hbSpawnWave(); hbStep(0.05); }
+    assert((p.tickets.gear||0)>t0,'엘리트를 계속 잡아도 뽑기권이 안 나옴');
+    // 소비처 — 지금까지 주기만 하고 쓸 데가 없었다
+    const n0=profItems().length, k0=p.tickets.gear;
+    profUseGearTicket();
+    assert(p.tickets.gear===k0-1,'뽑기권이 안 깎임');
+    assert(profItems().length===n0+1,'장비가 안 들어옴');
+    return '해금 ok · 엘리트 '+el.length+'/'+_hb.foes.length+' · 뽑기권 '+p.tickets.gear; });
   // '던전'은 자동사냥 전용어, 옛 층 등반 콘텐츠는 '토벌'이다. 두 시스템이 같은 이름을 쓰면 화면마다 뜻이 달라진다.
   await step('용어 분리: 자동사냥=던전 / 옛 콘텐츠=토벌', async()=>{ skipIf(typeof openDungeonHub!=='function','토벌 허브 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }

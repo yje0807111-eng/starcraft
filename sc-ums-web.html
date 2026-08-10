@@ -2662,6 +2662,14 @@
   .hbmX{width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;
     color:#9a9a9a;background:none;border:none}
   .hbmX svg{width:15px;height:15px}
+  /* 던전 1~10 — 잠긴 것도 보여준다(다음 목표가 보여야 한다) */
+  .hbDgRow{flex:none;display:flex;gap:4px;padding:0 12px 8px;overflow-x:auto;scrollbar-width:none}
+  .hbDgRow::-webkit-scrollbar{display:none}
+  .hbDg{flex:none;min-width:38px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;
+    font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:var(--fs-md);font-weight:800;
+    color:#9a9a9a;background:rgba(255,255,255,.045);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+  .hbDg.on{color:#fff;background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.4)}
+  .hbDg.lock{color:#5a5a5a;cursor:default}
   .hbModeRow{flex:none;display:flex;gap:8px;padding:0 12px 8px}
   .hbModeBtn{flex:1 1 0;display:flex;flex-direction:column;padding:8px;cursor:pointer;text-align:left;
     font-family:inherit;color:#7a7a7a;background:rgba(255,255,255,.045);
@@ -3651,6 +3659,7 @@
         <div class="hbmHead"><b>라운드 선택</b>
           <button class="hbmX" onclick="hbCloseRounds()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
         </div>
+        <div class="hbDgRow uiScroll" id="hbDgRow"></div>
         <div class="hbModeRow">
           <button class="hbModeBtn" id="hbModeRep"  onclick="hbSetClimb(false)"><b>반복</b><em>같은 라운드 무한 파밍</em></button>
           <button class="hbModeBtn" id="hbModeClm" onclick="hbSetClimb(true)"><b>등반</b><em>클리어하면 다음 라운드</em></button>
@@ -4920,6 +4929,9 @@ function hmFitUpgGrid(){ const gr=document.getElementById('hmUpgGrid'); if(!gr) 
 // ── 라운드 선택 · 반복/등반 ──
 // 최고 도달 라운드(hunt.best[dg])까지만 고를 수 있다. 라운드를 바꾸면 진행 중인 판은 버리고 새로 시작한다.
 function hbBest(dg){ const H=hbHunt(); return Math.max(1, H.best[dg||H.dg]||1); }
+// 던전 N 해금 = 던전 N-1에서 HB_DG_UNLOCK 라운드 도달. 던전 1은 항상 열려 있다.
+function hbDgOpen(dg){ return dg<=1 || (hbHunt().best[dg-1]||0)>=HB_DG_UNLOCK; }
+function hbEliteChance(dg,round){ return Math.min(HB_ELITE_MAX, round*0.012+(dg-1)*0.02); }
 function hbOpenRounds(){ const el=document.getElementById('hbRoundSheet'); if(!el) return;
   el.classList.remove('hide'); renderRoundSheet();
   if(typeof playSfx==='function') playSfx('ui_open');
@@ -4927,14 +4939,29 @@ function hbOpenRounds(){ const el=document.getElementById('hbRoundSheet'); if(!e
 function hbCloseRounds(){ const el=document.getElementById('hbRoundSheet'); if(el) el.classList.add('hide');
   if(typeof playSfx==='function') playSfx('ui_close'); }
 function renderRoundSheet(){ const H=hbHunt(), gr=document.getElementById('hbRoundGrid'); if(!gr) return;
+  const dr=document.getElementById('hbDgRow');
+  if(dr){ let dh='';
+    for(let d=1; d<=HB_DG_MAX; d++){ const open=hbDgOpen(d);
+      dh+='<button class="hbDg'+(d===H.dg?' on':'')+(open?'':' lock')+'"'
+        +(open?(' onclick="hbGoDungeon('+d+')"'):' disabled')+'>'+(open?d:'🔒')+'</button>'; }
+    dr.innerHTML=dh; }
   const best=hbBest(H.dg), cur=_hb? _hb.round : (H.round||1);
   let h=''; for(let i=1;i<=best;i++)
     h+='<button class="hbRd'+(i===cur?' on':'')+(i===best&&best>1?' best':'')+'" onclick="hbGoRound('+i+')">'+i+'</button>';
   gr.innerHTML=h;
   const nt=document.getElementById('hbRoundNote');
-  if(nt) nt.textContent='던전 '+H.dg+' · 최고 도달 라운드 '+best+' — 여기까지 고를 수 있습니다. 죽으면 한 라운드씩 내려갑니다.';
+  if(nt){ const nx=H.dg<HB_DG_MAX ? (hbDgOpen(H.dg+1) ? '던전 '+(H.dg+1)+' 개방됨' : '던전 '+(H.dg+1)+'은 이 던전 '+HB_DG_UNLOCK+'라운드 도달 시 개방') : '마지막 던전';
+    nt.textContent='던전 '+H.dg+' · 최고 도달 라운드 '+best+' — 여기까지 고를 수 있습니다. 죽으면 한 라운드씩 내려갑니다. · '+nx; }
   const r=document.getElementById('hbModeRep'), c=document.getElementById('hbModeClm');
   if(r) r.classList.toggle('on', !H.climb); if(c) c.classList.toggle('on', !!H.climb); }
+// 던전 이동 — 그 던전에서 도달했던 라운드부터 다시 시작한다
+function hbGoDungeon(d){ const H=hbHunt();
+  d=Math.max(1,Math.min(HB_DG_MAX,d|0)); if(!hbDgOpen(d)) return;
+  H.dg=d; H.round=Math.max(1,H.best[d]||1); saveMeta();
+  if(_hb){ _hb.dg=d; _hb.round=H.round; _hb.wave=1; _hb.phase='fight'; _hb.buf={min:0,gas:0,xp:0,kills:0};
+    _hb.foes.length=0; _hb.pend.length=0; _hb.char.hp=_hb.char.hpMax; hbSpawnWave(); }
+  if(typeof playSfx==='function') playSfx('ui_open');
+  renderRoundSheet(); hbHud(); }
 function hbSetClimb(v){ hbHunt().climb=!!v; saveMeta(); renderRoundSheet(); hbHud();
   if(typeof playSfx==='function') playSfx('ui_tab'); }
 function hbGoRound(n){ const H=hbHunt(), best=hbBest(H.dg);
@@ -4984,6 +5011,11 @@ const HB_FOES=[
   {ico:'🦇', hp:0.7, atk:0.8, spd:82},
   {ico:'👾', hp:1.6, atk:1.3, spd:38},
 ];
+const HB_DG_MAX=10;                 // 던전 1~10
+const HB_DG_UNLOCK=10;              // 다음 던전 해금 = 지금 던전 최고 라운드 이만큼
+// 엘리트 — 라운드·던전이 오를수록 자주 나온다. 체력·공격이 크고 보상도 크다.
+const HB_ELITE_HP=4, HB_ELITE_ATK=1.6, HB_ELITE_REW=5, HB_ELITE_MAX=.35;
+const HB_TICKET_ELITE=.08, HB_TICKET_NORMAL=.003;   // 장비 뽑기권 드랍 확률
 const HB_WAVES=5, HB_WAVE_S=20, HB_GAP_S=3;      // 라운드 구성(확정 스펙 — 바꾸려면 사용자와 합의)
 const HB_SPREAD_N=12, HB_SPREAD_S=5;             // 웨이브 유닛이 이보다 많으면 5초에 걸쳐 분산 출현
 const HB_STOP=30, HB_DOWN_S=3;
@@ -5075,9 +5107,11 @@ function hbPlaceFoe(proto){ const S=_hb;
   const k=S.k||1;                                                        // 화면 경계를 월드 단위로 환산
   const hx=(S.w/2+24)/k, hy=Math.max(60,((S.vBot-S.vTop)/2+24)/k);
   const R=1/Math.max(Math.abs(ca)/hx, Math.abs(sa)/hy);                  // 보이는 경계 바로 바깥
-  const hp=hbFoeHp(S.dg,S.round,S.wave)*proto.hpMul;
-  S.foes.push({ ico:proto.ico, x:ca*R, y:sa*R, hp:hp, hpMax:hp,
-    atk:hbFoeAtk(S.dg,S.round)*proto.atkMul, spd:proto.spd, cdT:Math.random()*0.6 }); }
+  const elite=Math.random()<hbEliteChance(S.dg,S.round);
+  const hp=hbFoeHp(S.dg,S.round,S.wave)*proto.hpMul*(elite?HB_ELITE_HP:1);
+  S.foes.push({ ico:proto.ico, x:ca*R, y:sa*R, hp:hp, hpMax:hp, elite:elite,
+    atk:hbFoeAtk(S.dg,S.round)*proto.atkMul*(elite?HB_ELITE_ATK:1),
+    spd:proto.spd*(elite?0.85:1), cdT:Math.random()*0.6 }); }
 function hbHud(){ const S=_hb; if(!S) return; const c=(typeof CHAR==='function')?CHAR():null;
   const put=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
   put('hbLv','Lv.'+(c?c.level:1)); put('hbAtk','⚔ '+Math.round(S.char.atk));
@@ -5132,8 +5166,13 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char; S.t+=dt;
       S.floats.push({x:best.x,y:best.y-20,tx:(crit?'✦':'')+Math.round(dmg),cl:crit?'#ffd24a':'#ececec',t:0});
       if(best.hp<=0){ S.foes.splice(S.foes.indexOf(best),1); S.kills++;
         // 처치 보상은 즉시 지급 — 재화 바가 바로 오른다. 사망 시 잃는 것은 '라운드 클리어 보너스'뿐.
-        const r=hbKillReward(S.dg,S.round), p=PROF(), c=(typeof CHAR==='function')?CHAR():null;
+        const rm=best.elite?HB_ELITE_REW:1;
+        const r0=hbKillReward(S.dg,S.round), r={min:r0.min*rm, gas:r0.gas*rm, xp:r0.xp*rm};
+        const p=PROF(), c=(typeof CHAR==='function')?CHAR():null;
         p.pcoin=(p.pcoin||0)+r.min; p.gas=(p.gas||0)+r.gas;
+        if(Math.random() < (best.elite?HB_TICKET_ELITE:HB_TICKET_NORMAL)){   // 🎟 장비 뽑기권
+          if(typeof dgAddTicket==='function') dgAddTicket('gear',1);
+          S.floats.push({x:best.x,y:best.y-48,tx:'🎟 장비 뽑기권!',cl:'#ffd24a',t:0}); }
         if(c){ c.xp+=r.xp;
           if(profApplyLevelUps(c)){ S.floats.push({x:S.char.x,y:S.char.y-46,tx:'LEVEL UP!',cl:'#5dff8f',t:0});
             if(typeof renderHomeStats==='function') renderHomeStats(); } }
@@ -5158,9 +5197,13 @@ function hbDraw(){ const S=_hb, x=S.ctx, c=S.char; if(!x) return;
   for(const s of S.shots){ x.save(); x.globalAlpha=1-s.t/.12; x.strokeStyle='#ffd24a'; x.lineWidth=1.5;
     x.beginPath(); x.moveTo(s.x1,s.y1); x.lineTo(s.x2,s.y2); x.stroke(); x.restore(); }
   x.textAlign='center'; x.textBaseline='middle';
-  for(const f of S.foes){ x.font='20px sans-serif'; x.fillText(f.ico,f.x,f.y);
-    if(f.hp<f.hpMax){ x.fillStyle='rgba(0,0,0,.55)'; x.fillRect(f.x-11,f.y-16,22,3);
-      x.fillStyle='#ff6b7a'; x.fillRect(f.x-11,f.y-16,22*Math.max(0,f.hp/f.hpMax),3); } }
+  for(const f of S.foes){ const el=!!f.elite;
+    if(el){ x.save(); x.globalAlpha=.5; x.strokeStyle='#ffd24a'; x.lineWidth=1.5;
+      x.beginPath(); x.arc(f.x,f.y,17,0,Math.PI*2); x.stroke(); x.restore(); }
+    x.font=(el?'30px':'20px')+' sans-serif'; x.fillText(f.ico,f.x,f.y);
+    if(f.hp<f.hpMax){ const w2=el?30:22, yy=f.y-(el?22:16);
+      x.fillStyle='rgba(0,0,0,.55)'; x.fillRect(f.x-w2/2,yy,w2,3);
+      x.fillStyle=el?'#ffd24a':'#ff6b7a'; x.fillRect(f.x-w2/2,yy,w2*Math.max(0,f.hp/f.hpMax),3); } }
   x.save(); if(S.phase==='down') x.globalAlpha=.35+.25*Math.sin(S.t*6);   // 쓰러짐 = 깜빡임
   const ico=(typeof CHAR==='function'&&CHAR()&&PROF_CLASSES[CHAR().cls]&&PROF_CLASSES[CHAR().cls].ico)||'🧍';
   x.font='26px sans-serif'; x.fillText(ico,c.x,c.y); x.restore();
@@ -5491,6 +5534,11 @@ function profDoEvolve(){ if(profEvolve()){ if(typeof playSfx==='function') playS
 function renderProfGacha(){ const p=PROF(), poor=p.pcoin<PROF_PET_GACHA_COST, eq=p.equip||[];
   let h='<div class="twHead">펫을 뽑아 장착하면 <b>코인·공격·체력 %</b>가 오릅니다.<br>보유 <b>'+Math.floor(p.pcoin)+' P</b> · 장착 '+eq.length+'/'+(p.petSlots||2)+'</div>';
   h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">펫 1회 뽑기</div><div class="twRowSub">중복 펫은 별(★)로 강화</div></div><button class="twBtn" onclick="profDoGacha()"'+(poor?' disabled':'')+'>'+PROF_PET_GACHA_COST+' P</button></div>';
+  // 🎟 장비 뽑기권 — 자동사냥 엘리트 처치·토벌 클리어로 얻는다. 여기가 유일한 소비처.
+  { const tk=((p.tickets&&p.tickets.gear)||0), full=profItems().length>=PROF_INV_MAX;
+    h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">장비 뽑기권 사용</div>'
+      +'<div class="twRowSub'+(tk?'':' lock')+'">'+(full?'가방이 가득 찼습니다':('보유 🎟 '+tk+' · 엘리트 처치·토벌에서 획득'))+'</div></div>'
+      +'<button class="twBtn" onclick="profUseGearTicket()"'+((tk&&!full)?'':' disabled')+'>뽑기</button></div>'; }
   const owned=Object.keys(p.pets||{}).filter(id=>PROF_PETS[id]).sort((a,b)=>GACHA_TIER_ORDER.indexOf(PROF_PETS[b].tier)-GACHA_TIER_ORDER.indexOf(PROF_PETS[a].tier));
   h+='<div class="twSectLbl">보유 펫 ('+owned.length+')</div>';
   if(!owned.length) h+='<div class="twRow"><div class="twRowInfo"><div class="twRowSub">아직 없음 — 뽑아보세요!</div></div></div>';
@@ -5500,6 +5548,16 @@ function renderProfGacha(){ const p=PROF(), poor=p.pcoin<PROF_PET_GACHA_COST, eq
       +'<div class="twRowSub" style="color:'+col+'">'+GACHA_TIERS[P.tier].name+' · '+PROF_BONUS_NAME[P.bonus.type]+' +'+Math.round(profPetVal(id)*100)+'%</div></div>'
       +'<button class="twBtn'+(on?' on':'')+'" onclick="profDoPetEquip(\''+id+'\')"'+((!on&&full)?' disabled':'')+'>'+(on?'장착중':'장착')+'</button></div>'; }
   return h; }
+// 장비 뽑기권 1장 = 무작위 장비 1개(등급은 최고 토벌 단계에 따라 좋아진다)
+function profUseGearTicket(){ const p=PROF();
+  if(!p.tickets || (p.tickets.gear||0)<=0) return;
+  if(profItems().length>=PROF_INV_MAX){ showTownToast('가방이 가득 찼습니다'); return; }
+  const sl=profSlots(); if(!sl.length) return;
+  const it=profMakeItem(sl[Math.floor(Math.random()*sl.length)], Math.max(1, dgMaxFloor()));
+  if(!it) return;
+  p.tickets.gear--; profAddItem(it); saveMeta();
+  if(typeof playSfx==='function') playSfx('ui_open');
+  renderTownBar(); refreshTownPanel(); showTownToast('🎟 '+profItemName(it)+' 획득'); }
 function profDoGacha(){ const res=profPetRoll(); if(!res) return; if(typeof playSfx==='function') playSfx('ui_open');
   const P=PROF_PETS[res.id]; renderTownBar(); refreshTownPanel();
   showTownToast((res.isNew?'🎉 ':'⭐ ')+GACHA_TIERS[res.tier].name+' '+P.name+(res.isNew?' 획득!':' ★'+res.star)); }
