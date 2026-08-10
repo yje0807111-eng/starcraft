@@ -5496,7 +5496,8 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char; S.t+=dt;
       f.face=Math.atan2(dx, dy); f.mv=1; }            // ⚠ 게임과 같은 식: atan2(dx,dy). -dy로 쓰면 모델이 정반대를 본다
     else{ f.mv=0; f.cdT-=dt; if(f.cdT<=0){ f.cdT=1.1;
       if(bk){ bk.hp-=f.atk; S.floats.push({x:bk.x,y:bk.y-20,tx:'-'+Math.round(f.atk),cl:'#c9a24a',t:0}); }
-      else { c.hp-=f.atk; c.hitT=0; S.floats.push({x:c.x,y:c.y-26,tx:'-'+Math.round(f.atk),cl:'#ff8a9a',t:0}); } } } }
+      else { c.hp-=f.atk; c.hitT=0; S.floats.push({x:c.x,y:c.y-26,tx:'-'+Math.round(f.atk),cl:'#ff8a9a',t:0}); }
+      if(f._u) f._u.fireSeq=(f._u.fireSeq||0)+1; } } }   // 적도 같은 방식으로 공격 모션
   // 캐릭터는 늘 가장 가까운 적을 본다 — 게임의 '정지 + 대상 바라봄'(atan2(dx,dy))과 같은 규칙.
   // 쏠 때만 돌리면 쏘기 직전까지 엉뚱한 곳을 보고 있어 총알이 등 뒤에서 나가는 것처럼 보인다.
   { let n=null,nd=1e18;
@@ -5509,6 +5510,7 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char; S.t+=dt;
       const crit=Math.random()<c.crit, dmg=c.atk*(crit?2:1)*(hbBoostOn('atk')?2:1);
       best.hp-=dmg; S.shots.push({x1:c.x,y1:c.y-10,x2:best.x,y2:best.y,t:0});
       S.atkT=HB_ATK_SHOW;
+      if(S._u) S._u.fireSeq=(S._u.fireSeq||0)+1;      // 공격 모션 트리거(랩·게임과 같은 방식)
       S.floats.push({x:best.x,y:best.y-20,tx:(crit?'✦':'')+Math.round(dmg),cl:crit?'#ffd24a':'#ececec',t:0});
       if(best.hp<=0) hbKill(best); } }
   // 아군 — 동료는 캐릭터 주위를 천천히 돌고, 터렛은 고정, 펫은 가깝게 붙어 돈다
@@ -5650,41 +5652,41 @@ function hb3dAttach(){ const cv=document.getElementById('cvMarine'), host=docume
   if(!cv||!host||_hb3dHome) return;
   _hb3dHome=cv.parentNode;                                  // 돌려놓을 자리 기억
   cv.style.zIndex='1';                                      // 바닥(#hbCv) 위 · HOME UI(z2+) 아래
-  host.insertBefore(cv, host.firstChild.nextSibling||null); }
+  host.insertBefore(cv, host.firstChild.nextSibling||null);
+  if(window.M3D && M3D.clearGameModels){ try{ M3D.clearGameModels(); }catch(e){} } }   // 랩과 같이 유닛 모델 풀을 비우고 시작
 function hb3dDetach(){ const cv=document.getElementById('cvMarine');
-  if(cv&&_hb3dHome){ cv.style.zIndex=''; cv.style.display='none'; _hb3dHome.appendChild(cv); }
+  if(cv&&_hb3dHome){ cv.style.zIndex=''; cv.style.display='none'; _hb3dHome.appendChild(cv);
+    if(window.M3D && M3D.clearGameModels){ try{ M3D.clearGameModels(); }catch(e){} } }   // 던전 유닛 모델을 게임에 남기지 않는다
   _hb3dHome=null; }
 function hb3dReady(){ return !!(window.M3D && M3D.ready && M3D.ready() && M3D.syncBuild
   && !(typeof G!=='undefined' && G.opt && G.opt.model3d===false)); }
 // 월드 좌표 → 화면 정규화(0..1). hbDraw의 카메라(cx,cy,k)와 같은 식이라 2D 바닥과 정확히 겹친다.
-// ⚠ syncBuild는 모델 풀을 **it.uid**로 찾는다(it.key가 아니다). uid를 안 주면 전부 undefined로
-//    충돌해 모델 하나를 돌려쓰고, 유닛이 사라지거나 깜빡인다.
-// ⚠ 크기: syncBuild의 mul 기본값은 0.5다 → 인자를 안 주면 절반 크기로 나온다.
-//    여기서는 scaleMul=1로 두고, 유닛마다 '화면 픽셀 지름'을 정해 scl을 역산한다.
-//    footprintOf(id) = mul 1일 때의 표시 반지름(px) → scl = 원하는지름 / (2*footprint)
-const HB_PX_CHAR=34, HB_PX_FOE=26, HB_PX_ELITE=38;   // 화면 지름(px, 배율 k 적용 전) = 2D로 그리던 크기와 동일
-function _hb3dScl(id, px){ const fp=(window.M3D&&M3D.footprintOf)?M3D.footprintOf(id):0;
-  if(!fp||!isFinite(fp)||fp<=0) return 1;            // 모델 로드 전 → 다음 프레임에 다시 잰다
-  return px/(2*fp); }
+// 유닛 객체는 관리자 이펙트 랩(FXLAB)이 만드는 것과 '같은 모양'이다:
+//   { uid, id, x, y(0..1), face, moving, fireSeq, size, hidden }
+// 이 객체를 M3D.sync에 넘기면 이동·회전·걷기·공격 모션·이펙트가 전부 자동으로 나온다.
+// ⚠ syncBuild(건설 뷰)로 그리면 안 된다 — 거긴 공격 모션(fireSeq) 처리가 아예 없다(그래서 조준이 이상했다).
+// 객체는 적/캐릭터에 붙여 두고 재사용한다 — fireSeq는 '누적'이라 매 프레임 새로 만들면 공격 모션이 안 뜬다.
+function _hbU(host, id, x, y, face, moving){
+  let u=host._u;
+  if(!u || u.id!==id){ u=host._u={ uid:'hb'+(++_hbUid), id:id, x:0, y:0, face:0, moving:false, fireSeq:0, size:13, hidden:false }; }
+  u.x=x; u.y=y; u.face=face; u.moving=moving; return u; }
 function hb3dList(){ const S=_hb, W=S.w||1, H=S.h||1, k=S.k||1, out=[];
   const nx=(wx)=>((S.cx||W/2)+wx*k)/W, ny=(wy)=>((S.cy||H/2)+wy*k)/H;
   const c=S.char, ch=(typeof CHAR==='function')?CHAR():null;
   const mdl=(ch && PROF_CLASSES[ch.cls] && PROF_CLASSES[ch.cls].unit) || 'marine';
-  out.push({ uid:'hbMe', id:mdl, x:nx(c.x), y:ny(c.y), face:S.charFace||0, yawFix:1,
-             moving:false, scl:_hb3dScl(mdl, HB_PX_CHAR*k) });
+  out.push(_hbU(S, mdl, nx(c.x), ny(c.y), S.charFace||0, false));
   for(const f of S.foes){ if(!f.mdl) continue;
-    if(!f.uid) f.uid='hbF'+(++_hbUid);
-    out.push({ uid:f.uid, id:f.mdl, x:nx(f.x), y:ny(f.y),
-               face:f.face||0, yawFix:1, moving:!!f.mv,
-               scl:_hb3dScl(f.mdl, (f.elite?HB_PX_ELITE:HB_PX_FOE)*k) }); }
+    out.push(_hbU(f, f.mdl, nx(f.x), ny(f.y), f.face||0, !!f.mv)); }
   return out; }
 let _hbUid=0;
 function hbFrame(){ if(!_hb||!_hb.on){ _hbRaf=0; return; }
   hbPump(); hbResize(); hbDraw();
   if(hb3dReady()){ const cv=document.getElementById('cvMarine');
     if(cv){ hb3dAttach(); cv.style.display='block';
-      try{ M3D.syncBuild(hb3dList(), _hb.w, _hb.h,
-             Math.min(.05,(performance.now()-(_hb._l3||performance.now()))/1000), 1); }catch(e){}   // 5번째=scaleMul(기본 0.5라 반드시 넘긴다)
+      // 관리자 랩과 같은 호출: M3D.sync(list, W, H, dt, [], [], null, k)
+      try{ const dt3=Math.min(.05,(performance.now()-(_hb._l3||performance.now()))/1000);
+        const k3=Math.max(0.12, Math.min(1.7, (_hb.k||1)*0.72));   // 랩과 같은 식(줌 → 모델 크기)
+        M3D.sync(hb3dList(), _hb.w, _hb.h, dt3, [], [], null, k3); }catch(e){}
       _hb._l3=performance.now(); } }
   _hbRaf=requestAnimationFrame(hbFrame); }
 // ── 🏘 마을(메인 화면) UI ──

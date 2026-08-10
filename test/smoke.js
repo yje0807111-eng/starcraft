@@ -667,39 +667,36 @@ async function groupLobby(){
     assert(_hb.foes[0].mv===0,'사거리 안에 붙었는데 걷기 상태가 유지됨: mv='+_hb.foes[0].mv);
     _hb.foes.length=0; _hb.manual=false;
     return '연속 각도 · 걷기 상태 ok'; });
-  // syncBuild가 요구하는 모양대로 목록을 넘기는지 — 여기가 어긋나면 유닛이 사라지거나 깨알만 해진다
-  await step('던전: 3D 목록이 syncBuild 규약을 지킨다(uid·크기)', async()=>{
+  // 관리자 이펙트 랩과 '같은 모양'의 유닛 객체를 M3D.sync에 넘겨야 이동·회전·공격 모션이 전부 나온다.
+  // syncBuild(건설 뷰)에는 공격 모션(fireSeq) 처리가 아예 없다 — 그래서 조준이 이상했다.
+  await step('던전: 랩과 같은 유닛 객체를 sync에 넘긴다(fireSeq 포함)', async()=>{
     skipIf(typeof hb3dList!=='function','3D 목록 없음');
     openHome(); await sleep(150);
     skipIf(!_hb||!_hb.on,'전장이 안 돌고 있음');
     _hb.manual=true; _hb.phase='fight'; _hb.waveT=99; _hb.foes.length=0;
     for(let i=0;i<3;i++) _hb.foes.push({ico:'🟢',mdl:'snapper',x:100+i*40,y:i*30,
       hp:9,hpMax:9,atk:1,spd:60,cdT:9,elite:(i===2)});
-    const L=hb3dList();
-    assert(L.length===4,'목록 개수가 다름(나+적3): '+L.length);
-    // ⚠ syncBuild는 it.uid로 모델 풀을 찾는다 — key로 주면 전부 undefined로 충돌해 하나를 돌려쓴다
-    for(const it of L){
-      assert(it.uid,'목록 항목에 uid가 없음 — 모델이 충돌한다: '+JSON.stringify(it).slice(0,80));
-      assert(it.id,'목록 항목에 모델 id가 없음'); }
-    const uids=L.map(it=>it.uid);
+    const L1=hb3dList();
+    assert(L1.length===4,'목록 개수가 다름(나+적3): '+L1.length);
+    // FXLAB.att과 같은 필드 구성이어야 한다
+    for(const u of L1){
+      for(const f of ['uid','id','x','y','face','moving','fireSeq'])
+        assert(u[f]!==undefined, '유닛 객체에 '+f+'가 없음(랩 규격과 다름): '+JSON.stringify(u).slice(0,70)); }
+    const uids=L1.map(u=>u.uid);
     assert(new Set(uids).size===uids.length,'uid가 겹침 — 유닛이 서로를 덮어쓴다: '+uids.join(','));
-    // 적이 죽고 새로 나와도 uid는 유지·재사용되지 않아야 한다
-    const before=L[1].uid; hb3dList();
-    assert(hb3dList()[1].uid===before,'같은 적인데 프레임마다 uid가 바뀜(모델이 매번 새로 만들어진다)');
-    // 좌표는 0..1 정규화(syncBuild가 x*W로 곱한다) — 픽셀을 그대로 주면 화면 밖으로 날아간다
-    for(const it of L){
-      assert(it.x>-2 && it.x<3 && it.y>-2 && it.y<3,
-        '좌표가 정규화 범위를 크게 벗어남(픽셀을 넘긴 듯): '+it.x+','+it.y); }
-    // 크기: scl은 유한한 양수여야 한다. NaN/0이면 모델이 안 보이거나 점이 된다
-    for(const it of L){
-      assert(typeof it.scl==='number' && isFinite(it.scl) && it.scl>0,
-        'scl이 유효하지 않음('+it.id+'): '+it.scl); }
-    // 엘리트가 일반보다 커야 한다(같으면 크기 계산이 안 먹은 것)
-    const norm=L[1].scl, elite=L[3].scl;
-    if(window.M3D && M3D.footprintOf && M3D.footprintOf('snapper'))
-      assert(elite>norm,'엘리트가 일반보다 안 큼: '+elite+' ≤ '+norm);
+    for(const u of L1) assert(u.x>-2&&u.x<3&&u.y>-2&&u.y<3,'좌표가 정규화 범위 밖: '+u.x+','+u.y);
+    // ⚠ 객체를 매 프레임 새로 만들면 fireSeq가 0으로 돌아가 공격 모션이 영원히 안 뜬다
+    const L2=hb3dList();
+    assert(L2[0]===L1[0],'프레임마다 유닛 객체가 새로 만들어짐 — fireSeq가 누적되지 않는다');
+    assert(L2[1].uid===L1[1].uid,'적 uid가 프레임마다 바뀜');
+    // 공격하면 fireSeq가 올라야 모션이 나간다
+    const before=L1[0].fireSeq;
+    _hb.foes.length=0;
+    _hb.foes.push({ico:'🟢',mdl:'snapper',x:5,y:0,hp:1e9,hpMax:1e9,atk:1,spd:0,cdT:9,elite:false});
+    _hb.char.cdT=0; hbStep(0.05);
+    assert(hb3dList()[0].fireSeq>before,'공격했는데 fireSeq가 안 오름 — 공격 모션이 안 나간다');
     _hb.foes.length=0; _hb.manual=false;
-    return L.length+'항목 · uid 고유 · scl 유효'; });
+    return '랩 규격 유닛 '+L1.length+'기 · fireSeq 누적 ok'; });
   // ⚠ 3D 캔버스(#cvMarine)는 게임과 '공용'이다 — 던전이 빌려 쓰고 반드시 돌려놔야 유즈맵 3D가 산다.
   //    돌려놓는 경로가 하나라도 빠지면 게임에 들어갔을 때 유닛이 통째로 안 보인다.
   await step('던전: 빌려 쓴 공용 3D 캔버스를 반드시 돌려놓는다', async()=>{

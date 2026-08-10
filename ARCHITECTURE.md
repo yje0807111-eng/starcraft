@@ -32,7 +32,7 @@
 | `🧍 캐릭터 선택/생성` | `renderCharSelect`/`renderCharCreate` — 입장 화면 `#charScreen`과 마을 구역이 **같은 렌더러**를 쓴다 |
 | `마을(월드 + 카메라)` | `TOWN_ZONES`(구역 단일 출처) · `twStep`/`twCamApply` · 입력 `twPtrDown→Move→Up` |
 | `⚔ 던전` | 캐릭터 직접 전투 — `DG` 상태 · `dgStep`/`dgTick` 자체 루프 · `DG_FOES` 자체 적 표 · `dgRender`(DOM 유일 접점). **유즈맵과 완전 분리** |
-| `⚔ 던전 1~10` | **자동사냥 던전 정체성 + 3D 유닛** — `HB_DUNGEONS`(10곳 단일 소스) · `hbDun` · `hbFloor`(타일+틴트) · `hb3dAttach/Detach`(공용 `#cvMarine`을 빌려 씀) · `hb3dList`(월드→정규화 좌표) · `hbFrame`이 **`M3D.syncBuild`** 호출 = 메인 게임과 같은 이동/회전/걷기 모션 · 3D가 없으면 `hbUnitArt`/`hbCharArt` 2D 폴백 |
+| `⚔ 던전 1~10` | **자동사냥 던전 정체성 + 3D 유닛** — `HB_DUNGEONS`(10곳 단일 소스) · `hbFloor`(타일+틴트) · `hb3dAttach/Detach`(공용 `#cvMarine`) · `_hbU`/`hb3dList`(**관리자 랩과 같은 표준 유닛 객체**) · `hbFrame`이 **`M3D.sync(list,W,H,dt,[],[],null,k)`** 호출 — 랩(`fxLabRender`)과 같은 방식 |
 | `게임 상태` | `G` 전역 + `newGame()` |
 | `캔버스 + 트랙` | 2D 캔버스(#cvMain) 트랙/적 그리기, `DPR`(2D쪽) |
 | `유닛/적 로직` | `spawnEnemy`(→`G.pendSpawn` 대기열!), `summonPersonalBoss`, `sellUnit(유닛객체)` , 전투 판정 |
@@ -104,6 +104,8 @@ node test/bench-strike.mjs 400 80 4   # 대규모 전투 렌더 벤치(유닛수
 - 수정 후 `npm test` 통과 없이 "완료" 선언 금지. 구문 검사는 vm.Script(classic)+`node --check`(module).
 
 ## 10. 함정 목록 (실제로 밟았던 것)
+- **3D 유닛을 그릴 땐 `M3D.sync`에 '표준 유닛 객체'를 넘긴다** — `{uid,id,x,y(0..1),face,moving,fireSeq,size,hidden}`. 관리자 이펙트 랩이 정확히 이 모양을 만들어 `M3D.sync(list, W, H, dt, [], [], null, k)`로 넘긴다(`k=clamp(zoom*0.72,.12,1.7)`). **`syncBuild`(건설 뷰)로 그리지 말 것 — 거긴 `fireSeq`(공격 모션) 처리가 아예 없고 `scaleMul` 기본값도 0.5다.** 던전을 처음에 syncBuild로 붙였다가 공격 모션이 안 나오고 크기가 어긋나 되돌렸다.
+- **`fireSeq`는 누적 카운터다.** 공격할 때 `u.fireSeq++` 하면 `sync`가 공격 애니를 재생한다. 유닛 객체를 **매 프레임 새로 만들면 0으로 리셋**되어 공격 모션이 영원히 안 나온다 — 객체를 적/캐릭터에 붙여 두고 재사용할 것.
 - **유닛이 바라보는 각도는 게임 전체가 `Math.atan2(dx, dy)` 하나로 통일돼 있다**(`dx=대상x-내x`, `dy=대상y-내y` · 예: `u.face=Math.atan2(tgt.x-u.x, tgt.y-u.y)`). 스프라이트 실험장의 `sprDir`은 `atan2(nx,-ny)`로 **y가 뒤집힌 별개 규약**이다 — 이걸 3D `face`에 넘기면 모델이 정반대를 보고 **총알이 등 뒤에서 나가는 것처럼** 보인다(실제로 그랬다). 3D 회전에는 반드시 게임 식을 쓸 것.
 - **조준은 쏠 때만 돌리면 안 된다.** 게임은 정지 상태에서도 매 프레임 대상을 바라본다(`정지 + 대상 바라봄`). 발사 순간에만 각도를 갱신하면 쏘기 직전까지 엉뚱한 곳을 보고 있어 같은 증상이 난다.
 - **`M3D.syncBuild`의 목록 규약 두 가지를 틀리면 조용히 망가진다.** ① 모델 풀은 **`it.uid`**로 찾는다 — `key` 등 다른 이름으로 주면 전부 `undefined`로 충돌해 **모델 하나를 돌려쓰고** 유닛이 사라지거나 깜빡인다. uid는 프레임마다 바뀌면 안 된다(매번 모델 재생성). ② `scaleMul`(5번째 인자)의 기본값은 **0.5**다 — 안 넘기면 절반 크기로 나온다. 던전은 `scaleMul=1`로 두고 유닛별 `scl = 원하는화면지름 / (2*M3D.footprintOf(id))`로 역산한다(`HB_PX_CHAR/FOE/ELITE`).
