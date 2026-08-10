@@ -1062,9 +1062,8 @@
   #btCardCtl svg{width:17px;height:17px;display:block;transition:transform .22s cubic-bezier(.2,.8,.25,1)}
   #btCardCtl.up svg{transform:rotate(180deg)}
   #btSheet.simple #btSheetBody,#unitCmd.simple,#playerProfile.simple{height:min(32vh,152px);max-height:min(32vh,152px)}   /* 간소화 = 1줄 그리드 · 높이 고정(아이콘 칸을 관리자 타일 크기로 키우며 126→152px) · 하단 전 구역 동일 규격 */
-  #btSheet.simple .cmdG .cgGrid,#unitCmd.simple .cmdG .cgGrid{grid-template-rows:1fr}
   #btSheet.mini #btSheetBody{display:none}   /* 최소화 = 본문 숨김(버튼 바만) */
-  #btSheetBody,#unitCmd,#playerProfile{height:min(40vh,204px);max-height:min(40vh,204px);min-height:0;flex-direction:column}   /* 일꾼 지정 패널 크기로 고정(건물·유닛 모두 동일 높이) · #unitCmd는 display만 .on에서 제어 */
+  #btSheetBody,#unitCmd,#playerProfile{height:min(32vh,152px);max-height:min(32vh,152px);min-height:0;flex-direction:column}   /* 하단 시트 단일 높이 규격 — 폐지된 2줄(cm0) 시절의 204px 기본값 제거(.simple과 같은 값) · #unitCmd는 display만 .on에서 제어 */
   #btSheetBody{display:flex}
   #techSkTip{position:fixed;z-index:60;max-width:210px;padding:7px 9px;border-radius:10px;pointer-events:none;   /* 🔮 스킬 롱프레스 설명 팝업 — 프로필 시트와 동일 글래스 톤 */
     background:linear-gradient(180deg,rgba(16,22,34,.98),rgba(9,13,21,.99));border:1px solid rgba(90,140,210,.35);box-shadow:0 6px 20px rgba(0,0,0,.6);color:#dfe7f2}
@@ -1429,7 +1428,7 @@
   .cmdG .cgQ .qs .qb{position:absolute;left:0;bottom:0;height:3px;background:var(--ca);box-shadow:0 0 5px var(--caG);transition:width .12s linear}
   /* 그리드(주역) + 페이저 */
   .cmdG .cgCol{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
-  .cmdG .cgGrid{flex:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(2,1fr);gap:5px;min-height:0}
+  .cmdG .cgGrid{flex:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:1fr;gap:5px;min-height:0}   /* 4그리드 1줄 고정 — 2줄(cm0)은 폐지, 5칸↑은 페이지네이션 */
   .cmdG .cgSlot{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:2px;cursor:pointer;padding:5px 3px 4px;touch-action:none;
     border:1px solid var(--metal-edge);border-radius:8px;background:linear-gradient(160deg,rgba(30,36,48,.62),rgba(8,10,14,.72));transition:.12s}
   .cmdG .cgSlot::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent)}
@@ -10785,6 +10784,7 @@ function _specUnitModel(u){ const def=U[u.id]||{};
     sub:pIco('👁','sm')+' '+((typeof playerName==='function')?playerName(G.curPlayer):('P'+G.curPlayer))+' 관전', items:cards,
     info:{ eb:'', hideName:true, stats:_mainUnitStatList(u) } }; }
 function renderSpecProfile(u){ const host=document.getElementById('playerProfile'); if(!host||!host.classList.contains('on')) return;
+  host.classList.add('simple');   // 다른 하단 시트와 동일 규격(간소화 4그리드 1줄) — 빠져 있어 폐지된 2줄 기본값으로 떨어지고 있었다
   const rb=(typeof specRemoteBoard==='function')&&specRemoteBoard();   // 관전=상대 공격 업글 레벨로 스탯 계산
   const _sv=(rb && G.coopUpg && G.coopUpg[rb]) ? G.atkLv : undefined; if(_sv!==undefined) G.atkLv=G.coopUpg[rb];
   try{ const sig='spec|'+u.uid+'|'+Math.round(u.hp||0)+'|'+Math.round(u.sh||0)+'|'+(host._cgPage||0);   // HP/실드 변하면만 재빌드(라이브 갱신)
