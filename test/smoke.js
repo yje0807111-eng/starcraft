@@ -432,6 +432,21 @@ async function groupLobby(){
     assert(r.cyan.length<=1,'팝업에 시안이 '+r.cyan.length+'곳: '+r.cyan.join(', '));
     closeTownPanel();
     return '지도·팝업 모두 통과'; });
+  // 던전 배경 그림 — 파일을 넣기만 하면 뜨고, 없으면 타일로 떨어져야 한다(코드 수정 없이).
+  await step('던전 배경: 이미지 cover 맞춤 · 없으면 타일 폴백', async()=>{
+    skipIf(typeof hbBgFit!=='function','배경 배선 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    openHome(); await sleep(300);
+    // 어떤 비율의 그림을 넣어도 보이는 영역을 남김없이 덮어야 한다(빈 곳=검은 띠가 생기면 실패)
+    const box=[[194,241],[109,241],[300,200]];   // 펼침 · 접음 · 가로 넓은 경우(월드 반폭/반높이)
+    for(const ar of [0.5,0.667,1,1.5,2.4]) for(const [wx,wy] of box){
+      const f=hbBgFit(ar,wx,wy);
+      assert(f.dw>=wx*2-0.01 && f.dh>=wy*2-0.01, 'ar='+ar+' 영역 '+wx*2+'x'+wy*2+'을 못 덮음 → '+Math.round(f.dw)+'x'+Math.round(f.dh));
+      assert(Math.abs(f.dw/f.dh-ar)<0.001, 'ar='+ar+' 비율이 찌그러짐 → '+(f.dw/f.dh).toFixed(3)); }
+    // 파일이 없는 던전 = null(재시도 루프에 빠지지 않고 타일로 떨어진다)
+    const miss=hbBgImg(99); assert(miss===null,'없는 배경이 null이 아님');
+    hbFloor();   // 폴백 경로가 예외 없이 그려져야 한다
+    return '5비율 x 3영역 cover ok · 폴백 ok'; });
   // 스탯 출처 내역 · 파워 해금이 실제로 상한을 연다
   await step('RPG: 스탯 출처 내역 · 파워 해금 배선', async()=>{ skipIf(typeof profStatParts!=='function','미적용');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
