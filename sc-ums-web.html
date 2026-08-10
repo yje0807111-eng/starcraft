@@ -2767,9 +2767,12 @@
   .twEdge:active{transform:translate(-50%,-50%) scale(.92)}
   .twTapFx{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;border:1px solid rgba(255,255,255,.7);pointer-events:none;z-index:1;animation:twTap .5s ease-out forwards}
   @keyframes twTap{from{transform:scale(.4);opacity:.9}to{transform:scale(1.6);opacity:0}}
-  .twGround{position:absolute;left:9%;right:9%;top:12%;bottom:12%;border-radius:var(--r-lg);pointer-events:none;
-    background:radial-gradient(ellipse at 50% 42%,rgba(120,120,126,.10),transparent 72%);
-    border:1px solid rgba(255,255,255,.05);box-shadow:inset 0 0 40px -10px rgba(0,0,0,.5)}
+  /* 마을 바닥 = 실제 포장 타일(공용 타일 에셋). 월드 전체에 반복해 걸어다니는 땅처럼 보이게 하고,
+     위에 어두운 막을 덮어 구역 아이콘·라벨 가독성을 지킨다(볼륨1: 배경은 조용히). */
+  .twGround{position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(rgba(6,8,12,.62),rgba(6,8,12,.72)),url('assets/tiles/terran_tile_light.webp') 0 0/128px repeat}
+  .twGround::after{content:'';position:absolute;inset:0;pointer-events:none;   /* 가장자리 비네트 — 월드 끝이 자연스럽게 어두워짐 */
+    background:radial-gradient(ellipse at 50% 50%,transparent 52%,rgba(0,0,0,.55) 100%)}
   .twZone{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;z-index:2}
   /* 구역 발판 — 시안 글로우 대신 중립 원판(어디를 밟을 수 있는지만 알려준다) */
   .twZone::before{content:'';position:absolute;left:50%;top:18px;transform:translate(-50%,-50%);width:54px;height:54px;border-radius:50%;z-index:-1;pointer-events:none;
@@ -5768,6 +5771,36 @@ function hbFrame(){ if(!_hb||!_hb.on||_hb.bg){ _hbRaf=0; return; }   // 배경 �
         M3D.sync(hb3dList(), _hb.w, _hb.h, dt3, [], [], null, k3); }catch(e){}
       _hb._l3=performance.now(); } }
   _hbRaf=requestAnimationFrame(hbFrame); }
+// ── 🧍 마을 3D 캐릭터 — 던전(hb3dAttach/hb3dList)과 같은 방식. 공용 #cvMarine을 마을로 옮겨 M3D.sync로 그린다.
+//    캐릭터는 항상 화면 정중앙(twCamApply가 월드를 움직인다)이라 정규화 좌표는 (0.5, 0.5) 고정.
+let _tw3dHome=null, _tw3dU=null, _tw3dLast=0;
+function tw3dReady(){ return !!(window.M3D && M3D.ready && M3D.ready()
+  && !(typeof G!=='undefined' && G.opt && G.opt.model3d===false)); }
+function tw3dAttach(){ const cv=document.getElementById('cvMarine'), host=document.getElementById('twMap');
+  if(!cv||!host||_tw3dHome) return;
+  _tw3dHome=cv.parentNode;                                   // 돌려놓을 자리 기억
+  cv.style.zIndex='3';                                       // 바닥·구역 위 · 상단 바 아래
+  host.appendChild(cv);
+  if(window.M3D && M3D.clearGameModels){ try{ M3D.clearGameModels(); }catch(e){} } }
+function tw3dDetach(){ const cv=document.getElementById('cvMarine');
+  if(cv&&_tw3dHome){ cv.style.zIndex=''; cv.style.display='none'; _tw3dHome.appendChild(cv);
+    if(window.M3D && M3D.clearGameModels){ try{ M3D.clearGameModels(); }catch(e){} } }
+  _tw3dHome=null; _tw3dU=null; }
+function tw3dList(){ const ch=(typeof CHAR==='function')?CHAR():null;
+  const mdl=(ch && PROF_CLASSES[ch.cls] && PROF_CLASSES[ch.cls].unit) || 'marine';   // 내가 고른 캐릭터의 유닛(던전과 같은 출처)
+  if(!_tw3dU || _tw3dU.id!==mdl) _tw3dU={ uid:'tw1', id:mdl, x:.5, y:.5, face:0, moving:false, fireSeq:0, size:13, hidden:false };
+  _tw3dU.x=.5; _tw3dU.y=.5;                                  // 화면 정중앙 고정
+  _tw3dU.face=(_twChar.face<0)? -Math.PI/2 : Math.PI/2;      // 좌우 바라보기
+  _tw3dU.moving=(_twChar.mode!==null);                        // 걷는 중이면 달리기 모션
+  return [_tw3dU]; }
+function tw3dFrame(dt){
+  const cv=document.getElementById('cvMarine'), body=document.querySelector('#twAvatar .twAvBody');
+  if(!tw3dReady()){ if(body) body.style.display=''; return; }   // 3D 끄면 이모지 아바타로 폴백
+  if(!cv) return;
+  tw3dAttach(); cv.style.display='block';
+  if(body) body.style.display='none';                        // 3D가 나오면 이모지는 숨긴다(둘이 겹치지 않게)
+  try{ M3D.sync(tw3dList(), _twVW, _twVH, dt, [], [], null, 1.15); }catch(e){}   // 던전과 같은 호출 규약
+}
 // ── 🏘 마을(메인 화면) UI ──
 // 🚪 메인(마을) 뒤로가기 = 로그아웃 확인 — 되돌아갈 곳이 로그인뿐이다
 function askLogout(){ const p=document.getElementById('logoutPanel'); if(!p) return;
@@ -5948,7 +5981,7 @@ function twStep(dt){ if(!_twW) return;
     if(c.mode==='to') s=Math.min(s, Math.hypot(c.tx-c.x,c.ty-c.y));
     c.x=Math.max(0,Math.min(_twW,c.x+mx*s)); c.y=Math.max(0,Math.min(_twH,c.y+my*s));
     if(mx>0.05) c.face=1; else if(mx<-0.05) c.face=-1; }
-  twCamApply(); twCheckZones(); }
+  twCamApply(); twCheckZones(); tw3dFrame(dt); }
 // 시설은 '내가 지정한 구역'에 도착했을 때만 열린다.
 // 옆을 스쳐 지나가는 것도, 땅을 눌러 걸어가 그 위에 겹쳐 서는 것도 열지 않는다 — 구역을 직접 눌러야 한다.
 function twCheckZones(){
@@ -5961,7 +5994,8 @@ function twTick(ts){ if(!_townOpen){ _twRaf=0; return; }
   const dt=_twLast? Math.min(0.05,(ts-_twLast)/1000) : 0.016; _twLast=ts;
   twStep(dt); _twRaf=requestAnimationFrame(twTick); }
 function twStartLoop(){ if(_twRaf) return; _twLast=0; _twRaf=requestAnimationFrame(twTick); }
-function twStopLoop(){ if(_twRaf){ cancelAnimationFrame(_twRaf); _twRaf=0; } _twPtr=null; _twChar.mode=null; _twGoZone=null; }
+function twStopLoop(){ if(_twRaf){ cancelAnimationFrame(_twRaf); _twRaf=0; } _twPtr=null; _twChar.mode=null; _twGoZone=null;
+  tw3dDetach(); const _b=document.querySelector('#twAvatar .twAvBody'); if(_b) _b.style.display=''; }   // 마을을 떠나면 3D 캔버스를 원래 자리로
 
 // ── 입력: 탭 = 그 지점으로 이동 / 꾹 누르기 = 손가락 방향으로 계속 이동 ──
 function twPtrDown(e){ if(!_townOpen) return;
