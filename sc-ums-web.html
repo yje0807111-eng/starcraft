@@ -2774,6 +2774,11 @@
   .twGround::after{content:'';position:absolute;inset:0;pointer-events:none;   /* 가장자리 비네트 — 월드 끝이 자연스럽게 어두워짐 */
     background:radial-gradient(ellipse at 50% 50%,transparent 52%,rgba(0,0,0,.55) 100%)}
   .twZone{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;z-index:2}
+  /* 광장 = 상호작용 없는 지형지물. 눌리지 않고, 발판을 크게 깔아 '가운데 마당'으로 읽히게 한다 */
+  .twZone.deco{pointer-events:none;z-index:1}
+  .twZone.deco::before{width:150px;height:150px;top:22px;
+    background:radial-gradient(circle,rgba(255,255,255,.055),rgba(255,255,255,.02) 58%,transparent 72%);border-color:rgba(255,255,255,.06)}
+  .twZone.deco .tzLbl{opacity:.75}
   /* 구역 발판 — 시안 글로우 대신 중립 원판(어디를 밟을 수 있는지만 알려준다) */
   .twZone::before{content:'';position:absolute;left:50%;top:18px;transform:translate(-50%,-50%);width:54px;height:54px;border-radius:50%;z-index:-1;pointer-events:none;
     background:radial-gradient(circle,rgba(255,255,255,.07),transparent 66%);border:1px solid rgba(255,255,255,.07)}
@@ -5881,16 +5886,18 @@ function sendDM(){ const inp=document.getElementById('dmInput'); if(!inp||_dmFri
 // 좌표계: 월드 픽셀. 캐릭터는 화면 정중앙에 CSS로 고정되고, 매 프레임 #twWorld의 transform만 바뀐다.
 // 구역 추가는 TOWN_ZONES에 한 줄 추가로 끝난다(아이콘 DOM·좌표·패널 제목·렌더러가 전부 여기 모여 있음).
 // 배치: 가로로 긴 직사각형의 네 모서리 + 정중앙 광장(주 이동 방향이 가로라 좌우로 넓게 잡는다)
+// 광장을 가운데 두고 6구역이 그 둘레를 감싼다(육각 배치). 반지름은 한 화면 안에 다 들어오는 거리라
+// 어느 구역이든 화면을 옮기지 않고 한 번의 터치로 갈 수 있다. deco=상호작용 없는 지형지물.
 const TOWN_ZONES={
-  plaza:{ x:50, y:50, ico:'🏠',   label:'광장',      title:'광장 · 내 캐릭터', render:()=>renderProfStats() },
-  gacha:{ x:22, y:24, ico:'🎁',   label:'상점',      title:'상점',             screen:'shop', render:()=>renderProfGacha() },   // 좌상 · screen 지정 = 팝업 대신 전용 화면으로 이동
-  gate: { x:78, y:24, ico:'🔒',   label:'관문',      title:'관문',             render:()=>renderProfGate()  },   // 우상
-  gear: { x:22, y:76, ico:'🎒',   label:'장비',      title:'장비',             render:()=>renderProfGear()  },   // 좌하
-  gym:  { x:78, y:76, ico:'🏋️',  label:'훈련장',    title:'훈련장',           render:()=>renderProfIdle()  },   // 우하
-  charmake:{ x:37, y:50, ico:'🧬', label:'생성소',   title:'캐릭터 생성소',    render:()=>renderCharCreate() },   // 광장 왼쪽(화면 안에 들어오는 거리)
-  charsel: { x:63, y:50, ico:'🧳', label:'보관소',   title:'캐릭터 보관소',    render:()=>renderCharSelect() },   // 광장 오른쪽
+  plaza:{ x:50, y:50, ico:'⛲',   label:'광장',      deco:true },   // 맵의 일부(장식) — 누를 수 없고 패널도 없다
+  gacha:   { x:50.0, y:33.3, ico:'🎁',   label:'상점',    title:'상점',          screen:'shop', render:()=>renderProfGacha() },   // 위 · screen 지정 = 팝업 대신 전용 화면으로 이동
+  gate:    { x:70.8, y:41.7, ico:'🔒',   label:'관문',    title:'관문',          render:()=>renderProfGate()  },   // 우상
+  gym:     { x:70.8, y:58.3, ico:'🏋️',  label:'훈련장',  title:'훈련장',        render:()=>renderProfIdle()  },   // 우하
+  gear:    { x:50.0, y:66.7, ico:'🎒',   label:'장비',    title:'장비',          render:()=>renderProfGear()  },   // 아래
+  charsel: { x:29.2, y:58.3, ico:'🧳',   label:'보관소',  title:'캐릭터 보관소', render:()=>renderCharSelect() },   // 좌하
+  charmake:{ x:29.2, y:41.7, ico:'🧬',   label:'생성소',  title:'캐릭터 생성소', render:()=>renderCharCreate() },   // 좌상
 };
-const TW_WORLD_W_MUL=3, TW_WORLD_H_MUL=1.35;   // 월드 = 화면의 가로 N배 × 세로 M배. 마을을 넓히려면 이 값만 올린다
+const TW_WORLD_W_MUL=1.6, TW_WORLD_H_MUL=1.35;   // 월드 = 화면의 가로 N배 × 세로 M배(3배→1.6배: 구역을 한 화면에 모으며 여백만 남김)
 const TW_SPEED=190;          // 캐릭터 이동 속도(월드 px/초)
 const TW_ARRIVE=4;           // 목적지 도착 판정(px)
 const TW_ZONE_R=52;          // 구역 도착 판정 반경(px)
@@ -5932,8 +5939,10 @@ function twCloseSocial(){ const el=document.getElementById('twSocial'); if(el) e
 function twBuildZones(){ const w=document.getElementById('twWorld'), map=document.getElementById('twMap'); if(!w||!map||w._zonesBuilt) return;
   for(const id in TOWN_ZONES){ const z=TOWN_ZONES[id];
     const d=document.createElement('div');       // 월드 안의 구역 아이콘
-    d.className='twZone'; d.dataset.zone=id; d.onclick=function(){ townGo(id); };
+    d.className='twZone'+(z.deco?' deco':''); d.dataset.zone=id;
+    if(!z.deco) d.onclick=function(){ townGo(id); };   // 장식(광장)은 누를 수 없다
     d.innerHTML='<span class="tzIco">'+z.ico+'</span><span class="tzLbl">'+z.label+'</span>'; w.appendChild(d);
+    if(z.deco) continue;                          // 장식은 가장자리 방향표시도 만들지 않는다
     const e=document.createElement('div');       // 화면 밖일 때 가장자리에 뜨는 방향 표시
     e.className='twEdge hide'; e.textContent=z.ico; e.title=z.label; e.onclick=function(){ townGo(id); };
     map.appendChild(e); _twEdgeEl[id]=e; }
