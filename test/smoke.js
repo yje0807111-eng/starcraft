@@ -305,8 +305,12 @@ async function groupLobby(){
   // 자동사냥(라운드 머신) — 던전과 같은 격리 규칙. hbStep을 직접 돌린다(rAF 비의존).
   await step('자동사냥: 라운드 정산·적 누적·사망 하강·격리', async()=>{ skipIf(typeof hbStart!=='function','자동사냥 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    // ⚠ HOME은 이제 화면을 떠나도 전투를 '이어받는다'(배경 진행). 이 스텝은 갓 시작한 판을 전제하므로
+    //    hbEnd()로 완전히 끝내고 새로 연다 — 안 그러면 앞 스텝의 kills가 남아 아래 루프가 한 번도 안 돈다
+    if(typeof hbEnd==='function') hbEnd();
     openHome(); await sleep(80);
     assert(_hb && _hb.on,'전투가 시작 안 됨');
+    assert(!_hb.kills,'새 판인데 처치 수가 남아 있음: '+_hb.kills);
     _hb.manual=true;   // 인터벌 시계를 멈추고 hbStep만으로 결정적으로 돌린다
     const snap=JSON.stringify({credits:G.credits, wave:G.wave, units:(G.units||[]).length});
     // ① 처치 = 즉시 지급(재화 바가 바로 오른다) · 라운드 클리어 = 보너스 추가
@@ -342,8 +346,35 @@ async function groupLobby(){
     // ④ 격리 + 화면 이탈 정지 + 재진입 재개
     assert(JSON.stringify({credits:G.credits, wave:G.wave, units:(G.units||[]).length})===snap,'유즈맵 상태를 건드림');
     const rep='round '+_hb.round+' · kills '+_hb.kills;
-    openMapSelect(); await sleep(60); assert(!_hb.on,'홈을 떠났는데 루프가 살아 있음');
-    openHome(); await sleep(60); assert(_hb.on,'재진입 시 재개 안 됨');
+    // ④-2 화면을 떠나도 '전투는 계속' — 그리기만 멈추고 라운드는 이어진다(2026-08-10 사용자 요청으로 규칙 변경).
+    //     예전 규칙은 '떠나면 정지'였고, 그때 미저장 처치 보상이 다음 화면의 loadMeta()에 덮여 사라졌다.
+    // ⚠ 검사가 헛돌지 않게: '마지막 저장 이후에 번 돈'을 만들어 둔다.
+    //    라운드 클리어는 이미 saveMeta를 하므로, 클리어 없이 처치만 일으켜야 저장 누락이 드러난다.
+    saveMeta();                                   // 기준점 — 여기까지는 저장돼 있다
+    _hb.saveT=0; _hb.foes.length=0; _hb.phase='fight'; _hb.waveT=99;
+    _hb.char.atk=1e9; _hb.char.range=1e9; _hb.char.cd=.05; _hb.char.cdT=0;   // 확실히 잡도록(사망 부활로 스탯이 돌아와 있다)
+    const pcBase=PROF().pcoin;
+    _hb.foes.push({ico:'🟢',mdl:'snapper',x:5,y:0,hp:1,hpMax:1,atk:0,spd:0,cdT:9,elite:false});
+    for(let i=0;i<60 && PROF().pcoin<=pcBase;i++) hbStep(0.05);
+    assert(PROF().pcoin>pcBase,'검사 준비 실패: 처치 보상이 안 들어옴');
+    { const sv=JSON.parse(localStorage.getItem(metaKey())||'{}');
+      assert(((sv.profile&&sv.profile.pcoin)||0)<PROF().pcoin-1e-9,
+        '검사 준비 실패: 이미 저장돼 있어 저장 누락을 잡을 수 없다'); }
+    const rd0=_hb.round, kl0=_hb.kills, pc0=PROF().pcoin;
+    openMapSelect(); await sleep(60);
+    assert(_hb && _hb.on,'홈을 떠났다고 전투가 끝나버림 — 배경 진행이 안 된다');
+    assert(_hb.bg===true,'떠났는데 배경 모드가 아님(계속 그리면 낭비다)');
+    assert(_hb.round===rd0 && _hb.kills===kl0,'화면을 옮겼더니 라운드/처치가 초기화됨: '
+      +rd0+'/'+kl0+' → '+_hb.round+'/'+_hb.kills);
+    // 떠날 때 저장돼야 다음 화면의 loadMeta()가 재화를 되돌리지 않는다
+    { const saved=JSON.parse(localStorage.getItem(metaKey())||'{}');
+      const sp=(saved.profile&&saved.profile.pcoin)||0;
+      assert(sp>=pc0-1e-6,'떠날 때 저장이 안 됨 — loadMeta가 재화를 되돌린다: 저장 '+sp+' < 보유 '+pc0); }
+    loadMeta();   // 실제로 다른 화면들이 하는 일
+    assert(PROF().pcoin>=pc0-1e-6,'화면 전환 후 재화가 사라짐: '+pc0+' → '+PROF().pcoin);
+    openHome(); await sleep(60);
+    assert(_hb.on && !_hb.bg,'재진입 시 재개 안 됨');
+    assert(_hb.round===rd0,'재진입에서 라운드가 초기화됨: '+rd0+' → '+_hb.round);
     return rep; });
   // 레벨업 보상(스탯 포인트)은 메인 화면에서 바로 찍혀야 한다 — 마을까지 걸어가야 하면 성장 축의 절반이 숨는다.
   await step('자동사냥: 레벨업 스탯을 HOME에서 배분', async()=>{ skipIf(typeof hmAllocStat!=='function','HOME 스탯 없음');
@@ -572,6 +603,153 @@ async function groupLobby(){
     assert(profItems().length===n0+1,'장비가 안 들어옴');
     return '해금 ok · 엘리트 '+el.length+'/'+_hb.foes.length+' · 뽑기권 '+p.tickets.gear; });
   // '던전'은 자동사냥 전용어, 옛 층 등반 콘텐츠는 '토벌'이다. 두 시스템이 같은 이름을 쓰면 화면마다 뜻이 달라진다.
+  // ⚔ 던전 정체성 — 10곳이 서로 다른 장소로 느껴져야 한다(적 종족·바닥·틴트가 표 하나에서 나온다)
+  await step('던전 10곳: 종족 순환 · 바닥 · 갈수록 어두워지는 틴트', async()=>{
+    skipIf(typeof HB_DUNGEONS==='undefined','던전 표 없음');
+    assert(HB_DUNGEONS.length===HB_DG_MAX,'던전 수가 '+HB_DG_MAX+'이 아님: '+HB_DUNGEONS.length);
+    const alpha=t=>{ const m=/rgba?\([^)]*?,\s*([\d.]+)\)/.exec(t||''); return m?parseFloat(m[1]):-1; };
+    let prevA=-1, names={};
+    for(let i=0;i<HB_DUNGEONS.length;i++){ const D=HB_DUNGEONS[i], at='던전'+(i+1)+'('+D.name+')';
+      assert(D.dg===i+1, at+' 번호가 어긋남: '+D.dg);
+      assert(D.name && !names[D.name], at+' 이름이 없거나 중복');  names[D.name]=1;
+      assert(D.foes && D.foes.length===3, at+' 적이 3종이 아님');
+      for(const f of D.foes){
+        assert(f.mdl, at+' 모델 키가 비어 있음');
+        assert(f.ico, at+' 폴백 이모지가 없음: '+f.mdl); }
+      // 갈수록 어두워야 '무서워지는' 느낌이 난다
+      const a=alpha(D.tint);
+      assert(a>0, at+' 틴트 알파를 못 읽음: '+D.tint);
+      assert(a>=prevA, at+' 틴트가 앞 던전보다 밝아짐: '+a+' < '+prevA);  prevA=a; }
+    // 종족은 스웜 → 유니온 → 에테리얼 순환
+    const cyc=['swarm','union','aetherial'];
+    for(let i=0;i<9;i++) assert(HB_DUNGEONS[i].race===cyc[i%3],
+      '던전'+(i+1)+' 종족이 순환과 다름: '+HB_DUNGEONS[i].race+' ≠ '+cyc[i%3]);
+    // 바닥 타일 파일이 실제로 받아지는지(경로 오타면 배경이 조용히 사라진다)
+    const tiles=[...new Set(HB_DUNGEONS.map(d=>d.tile))];
+    for(const t of tiles){ const ok=await new Promise(res=>{ const im=new Image();
+        im.onload=()=>res(true); im.onerror=()=>res(false); im.src='assets/tiles/'+t+'.webp'; });
+      assert(ok,'바닥 타일 파일이 없음: assets/tiles/'+t+'.webp'); }
+    // 던전을 옮기면 적 구성이 실제로 바뀌어야 한다
+    const f1=HB_DUNGEONS[0].foes.map(f=>f.mdl).join(), f2=HB_DUNGEONS[1].foes.map(f=>f.mdl).join();
+    assert(f1!==f2,'던전 1과 2의 적이 같음 — 옮겨도 같은 곳으로 느껴진다');
+    // 모델 키 오타 검사. MODELS는 모듈 스코프라 전역에서 못 본다 → M3D.modelKeys()로 카탈로그를 받아 대조한다.
+    // ⚠ M3D가 없으면(three.js를 못 받는 환경) 검사를 '통과'시키지 말고 그렇게 밝힌다 — 헛도는 검사가 제일 위험하다
+    let keyChk='M3D 없음(모델 키 미검증)';
+    if(window.M3D && M3D.modelKeys){ const cat=new Set(M3D.modelKeys());
+      for(const D of HB_DUNGEONS) for(const f of D.foes)
+        assert(cat.has(f.mdl),'던전'+D.dg+'('+D.name+') 모델 키가 카탈로그에 없음: '+f.mdl);
+      keyChk='모델 키 '+new Set(HB_DUNGEONS.flatMap(d=>d.foes.map(f=>f.mdl))).size+'종 확인'; }
+    return HB_DUNGEONS.length+'곳 · 타일 '+tiles.length+'종 · 틴트 '+alpha(HB_DUNGEONS[0].tint)+'→'+prevA+' · '+keyChk; });
+  // 관리자 실험장의 8방향 시트를 던전 전장이 '그대로' 쓴다(새로 만들지 않는다)
+  await step('던전: 내 캐릭터가 실험장 8방향 시트를 그대로 쓴다', async()=>{
+    skipIf(typeof SPR_UNITS==='undefined','스프라이트 시트 표 없음');
+    // 단일 소스 — 실험장이 쓰던 SPR_MARINE과 같은 객체여야 한다(복사본이면 곧 어긋난다)
+    assert(SPR_MARINE===SPR_UNITS.marine,'실험장 시트와 던전 시트가 다른 객체 — 단일 소스가 깨졌다');
+    assert(typeof sprSheet==='function' && sprSheet('marine')===SPR_UNITS.marine,'sprSheet가 시트를 못 찾음');
+    const sh=sprSheet('marine');
+    for(const st of ['idle','walk','attack']){
+      assert(sh.states[st] && sh.states[st].frames>0, '시트에 '+st+' 상태가 없음');
+      assert(sh.url[st], '시트에 '+st+' 이미지 경로가 없음'); }
+    // 공격 모션 길이가 시트 규격(프레임/fps)과 맞아야 마지막 프레임에서 잘리지 않는다
+    const a=sh.states.attack;
+    assert(Math.abs(HB_ATK_SHOW-(a.frames/a.fps))<1e-6,
+      '공격 모션 길이가 시트와 어긋남: '+HB_ATK_SHOW+' ≠ '+(a.frames/a.fps));
+    // 8방향 규약 — 실험장 sprDir을 그대로 쓴다(북=0, 시계)
+    assert(sprDir(0,-1)===0,'위로 이동이 0방향이 아님: '+sprDir(0,-1));
+    assert(sprDir(1,0)===2,'오른쪽이 2방향이 아님: '+sprDir(1,0));
+    assert(sprDir(0,1)===4,'아래가 4방향이 아님: '+sprDir(0,1));
+    assert(sprDir(-1,0)===6,'왼쪽이 6방향이 아님: '+sprDir(-1,0));
+    // 시트 이미지가 실제로 받아지는지
+    for(const st of ['idle','walk','attack']){
+      const ok=await new Promise(res=>{ const im=new Image();
+        im.onload=()=>res(true); im.onerror=()=>res(false); im.src=sh.url[st]; });
+      assert(ok,'시트 이미지가 없음: '+sh.url[st]); }
+    return 'marine 시트 공유 · 공격 '+a.frames+'f/'+a.fps+'fps'; });
+  // 이동이 '미끄러지지' 않으려면 적이 가는 쪽을 봐야 한다 — 실제로 dir이 갱신되는지
+  await step('던전: 적이 가는 방향을 본다(메인 게임과 같은 연속 각도)', async()=>{
+    skipIf(typeof hbStart!=='function' || typeof _hb==='undefined','자동사냥 없음');
+    openHome(); await sleep(200);
+    skipIf(!_hb || !_hb.on,'전장이 안 돌고 있음');
+    // ⚠ hbPump는 실제 경과시간으로 돈다 — 촘촘히 부르면 dt≈0이라 아무것도 안 움직인다.
+    //    스모크용 manual 훅으로 hbStep에 고정 dt를 준다. phase도 fight로 고정(타이머가 돌면 이동 루프가 멎는다)
+    _hb.manual=true;
+    const walk=(x,y)=>{ _hb.phase='fight'; _hb.waveT=99; _hb.foes.length=0;
+      _hb.foes.push({ico:'🟢',mdl:'snapper',x:x,y:y,hp:1e9,hpMax:1e9,atk:1,spd:60,cdT:9,elite:false});
+      const d0=Math.hypot(x,y);
+      for(let i=0;i<6;i++){ _hb.phase='fight'; _hb.waveT=99; hbStep(0.1); }
+      const g=_hb.foes[0];
+      assert(g && Math.hypot(g.x,g.y)<d0, '적이 캐릭터 쪽으로 안 움직임: '+d0+' → '+(g?Math.round(Math.hypot(g.x,g.y)):'없어짐'));
+      assert(g.mv===1,'걸어오는 중인데 걷기 상태가 안 켜짐(모션이 안 돈다): mv='+g.mv);
+      return g.face; };
+    // ⚠ 각도 규약은 게임과 '같은 식'이어야 한다: face = atan2(대상x-내x, 대상y-내y).
+    //    -dy로 쓰면 y가 뒤집혀 모델이 정반대를 보고, 총알이 등 뒤에서 나가는 것처럼 보인다(실제로 그랬다).
+    const near=(a,b)=>Math.abs(Math.atan2(Math.sin(a-b),Math.cos(a-b)))<0.02;
+    const want=(fx,fy)=>Math.atan2(0-fx, 0-fy);   // 적은 원점(캐릭터)을 향해 걷는다
+    for(const [x,y] of [[400,0],[0,-400],[-400,0],[0,400],[300,-300],[-250,180]]){
+      const got=walk(x,y);
+      assert(near(got, want(x,y)),
+        '적 각도가 게임 식(atan2(dx,dy))과 다름 @('+x+','+y+'): '+got.toFixed(3)+' ≠ '+want(x,y).toFixed(3)); }
+    // 캐릭터도 같은 식으로 가장 가까운 적을 봐야 한다(쏠 때만 돌면 총알이 등 뒤에서 나간다)
+    _hb.phase='fight'; _hb.waveT=99; _hb.foes.length=0;
+    _hb.foes.push({ico:'🟢',mdl:'snapper',x:0,y:-300,hp:1e9,hpMax:1e9,atk:1,spd:0,cdT:9,elite:false});
+    hbStep(0.05);
+    assert(near(_hb.charFace, Math.atan2(0, -300)),'캐릭터가 위쪽 적을 안 봄: '+_hb.charFace);
+    _hb.foes.length=0; _hb.foes.push({ico:'🟢',mdl:'snapper',x:250,y:0,hp:1e9,hpMax:1e9,atk:1,spd:0,cdT:9,elite:false});
+    hbStep(0.05);
+    assert(near(_hb.charFace, Math.atan2(250, 0)),'캐릭터가 오른쪽 적을 안 봄: '+_hb.charFace);
+    _hb.phase='fight'; _hb.waveT=99; _hb.foes.length=0;
+    _hb.foes.push({ico:'🟢',mdl:'snapper',x:5,y:0,hp:1e9,hpMax:1e9,atk:1,spd:60,cdT:9,elite:false});
+    for(let i=0;i<3;i++){ _hb.phase='fight'; hbStep(0.1); }
+    assert(_hb.foes[0].mv===0,'사거리 안에 붙었는데 걷기 상태가 유지됨: mv='+_hb.foes[0].mv);
+    _hb.foes.length=0; _hb.manual=false;
+    return '연속 각도 · 걷기 상태 ok'; });
+  // 관리자 이펙트 랩과 '같은 모양'의 유닛 객체를 M3D.sync에 넘겨야 이동·회전·공격 모션이 전부 나온다.
+  // syncBuild(건설 뷰)에는 공격 모션(fireSeq) 처리가 아예 없다 — 그래서 조준이 이상했다.
+  await step('던전: 랩과 같은 유닛 객체를 sync에 넘긴다(fireSeq 포함)', async()=>{
+    skipIf(typeof hb3dList!=='function','3D 목록 없음');
+    openHome(); await sleep(150);
+    skipIf(!_hb||!_hb.on,'전장이 안 돌고 있음');
+    _hb.manual=true; _hb.phase='fight'; _hb.waveT=99; _hb.foes.length=0;
+    for(let i=0;i<3;i++) _hb.foes.push({ico:'🟢',mdl:'snapper',x:100+i*40,y:i*30,
+      hp:9,hpMax:9,atk:1,spd:60,cdT:9,elite:(i===2)});
+    const L1=hb3dList();
+    assert(L1.length===4,'목록 개수가 다름(나+적3): '+L1.length);
+    // FXLAB.att과 같은 필드 구성이어야 한다
+    for(const u of L1){
+      for(const f of ['uid','id','x','y','face','moving','fireSeq'])
+        assert(u[f]!==undefined, '유닛 객체에 '+f+'가 없음(랩 규격과 다름): '+JSON.stringify(u).slice(0,70)); }
+    const uids=L1.map(u=>u.uid);
+    assert(new Set(uids).size===uids.length,'uid가 겹침 — 유닛이 서로를 덮어쓴다: '+uids.join(','));
+    for(const u of L1) assert(u.x>-2&&u.x<3&&u.y>-2&&u.y<3,'좌표가 정규화 범위 밖: '+u.x+','+u.y);
+    // ⚠ 객체를 매 프레임 새로 만들면 fireSeq가 0으로 돌아가 공격 모션이 영원히 안 뜬다
+    const L2=hb3dList();
+    assert(L2[0]===L1[0],'프레임마다 유닛 객체가 새로 만들어짐 — fireSeq가 누적되지 않는다');
+    assert(L2[1].uid===L1[1].uid,'적 uid가 프레임마다 바뀜');
+    // 공격하면 fireSeq가 올라야 모션이 나간다
+    const before=L1[0].fireSeq;
+    _hb.foes.length=0;
+    _hb.foes.push({ico:'🟢',mdl:'snapper',x:5,y:0,hp:1e9,hpMax:1e9,atk:1,spd:0,cdT:9,elite:false});
+    _hb.char.cdT=0; hbStep(0.05);
+    assert(hb3dList()[0].fireSeq>before,'공격했는데 fireSeq가 안 오름 — 공격 모션이 안 나간다');
+    _hb.foes.length=0; _hb.manual=false;
+    return '랩 규격 유닛 '+L1.length+'기 · fireSeq 누적 ok'; });
+  // ⚠ 3D 캔버스(#cvMarine)는 게임과 '공용'이다 — 던전이 빌려 쓰고 반드시 돌려놔야 유즈맵 3D가 산다.
+  //    돌려놓는 경로가 하나라도 빠지면 게임에 들어갔을 때 유닛이 통째로 안 보인다.
+  await step('던전: 빌려 쓴 공용 3D 캔버스를 반드시 돌려놓는다', async()=>{
+    skipIf(typeof hb3dAttach!=='function','3D 오버레이 없음');
+    const cv=$('cvMarine'); assert(cv,'#cvMarine이 없음');
+    const home=cv.parentNode;
+    for(const [name, leave] of [
+        ['showAppScreen(화면 전환)', ()=>showAppScreen('townScreen')],
+        ['hideAppScreens(게임 진입)', ()=>hideAppScreens()],
+        ['hbStop(직접 정지)',        ()=>hbStop()] ]){
+      hb3dAttach();
+      assert(cv.parentNode!==home, name+': 빌려오기 자체가 안 됨');
+      leave();
+      assert(cv.parentNode===home, name+' 뒤에 3D 캔버스가 안 돌아옴 — 유즈맵 3D가 사라진다');
+      assert(!cv.style.zIndex, name+' 뒤에 z-index가 남음: '+cv.style.zIndex); }
+    openHome(); await sleep(60);
+    return '전환·게임진입·정지 3경로 원복 ok'; });
   await step('용어 분리: 자동사냥=던전 / 옛 콘텐츠=토벌', async()=>{ skipIf(typeof openDungeonHub!=='function','토벌 허브 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     const nav=document.querySelector('#navBar .navIt[data-nav=dungeon]');
