@@ -2544,6 +2544,19 @@
   .hmUpg.down .hmUpgChev{transform:rotate(-135deg) translate(-2px,-2px)}
   /* ⚠ display:none은 전환이 안 된다 — 높이를 0으로 좁혀 접는다(그래야 배경도 같은 속도로 따라온다) */
   .hmUpg.down .hmUpgGrid{max-height:0 !important;padding-top:0;padding-bottom:0;opacity:0}
+  /* 레벨업 스탯 — 포인트가 있을 때만 보이는 한 줄(계정 업그레이드와 다른 축이라 격자와 분리) */
+  .hmStatRow{flex:none;display:flex;align-items:center;gap:4px;padding:8px 8px 0;overflow-x:auto;scrollbar-width:none}
+  .hmStatRow.hide{display:none}
+  .hmStatRow::-webkit-scrollbar{display:none}
+  .hmStatPt{flex:none;padding:4px 8px;font-family:var(--font-num);font-variant-numeric:tabular-nums;
+    font-size:var(--fs-sm);font-weight:800;color:#2b1d00;background:#e8a92b;border-radius:var(--r-bar)}
+  .hmStat{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;gap:4px;height:28px;cursor:pointer;
+    font-family:inherit;font-size:var(--fs-sm);font-weight:800;color:#ececec;
+    background:rgba(255,255,255,.045);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+  .hmStat b{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:#9a9a9a}
+  .hmStat i{font-style:normal;color:#5dff8f}
+  .hmStat:disabled{cursor:default;opacity:.5}
+  .hmUpg.down .hmStatRow{display:none}
   /* 4칸(2×2)만 보이고 나머지는 스크롤 — 최대 높이는 renderHome이 실제 한 칸 높이로 계산해 넣는다 */
   .hmUpgGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px;overflow-y:auto;
     transition:max-height .28s cubic-bezier(.4,0,.2,1),padding .28s cubic-bezier(.4,0,.2,1),opacity .2s}
@@ -3661,7 +3674,7 @@
   <!-- 하단 6칸 네비게이션 — 화면이 아니라 #phone 위에 떠 있는 전역 바. navShow(tab)로 표시/활성 탭을 정한다 -->
   <div id="navBar" class="navBar hide">
     <button class="navIt" data-nav="home" onclick="navGo('home')"><span data-ico="home"></span>HOME</button>
-    <button class="navIt" data-nav="dungeon" onclick="navGo('dungeon')"><span data-ico="dungeon"></span>던전</button>
+    <button class="navIt" data-nav="dungeon" onclick="navGo('dungeon')"><span data-ico="dungeon"></span>토벌</button>
     <button class="navIt" data-nav="town" onclick="navGo('town')"><span data-ico="hero"></span>마을</button>
     <button class="navIt" data-nav="map" onclick="navGo('map')"><span data-ico="map"></span>유즈맵</button>
     <button class="navIt" data-nav="shop" onclick="navGo('shop')"><span data-ico="gift"></span>상점</button>
@@ -3707,19 +3720,21 @@
       <div class="hmCard hmUpg">
         <button class="hmUpgHead" id="hmUpgHead" onclick="hmToggleUpg()" aria-label="업그레이드 접기/펴기">
           <span>⚡</span>POWER UPGRADES<i class="hmUpgChev"></i></button>
+        <div class="hmStatRow hide" id="hmStatRow"></div>
         <div class="hmUpgGrid uiScroll" id="hmUpgGrid"></div>
       </div>
     </div>
   </div>
 
-  <!-- ⚔ 던전 허브 — 네비 '던전' 진입. 던전 목록 카드 → 팝업. 전투는 #dgScreen 재사용. (#phone 안이라 재화 바 패딩 적용) -->
+  <!-- ⚔ 토벌 허브 — 네비 '토벌' 진입. 목록 카드 → 팝업. 전투는 #dgScreen 재사용. (#phone 안이라 재화 바 패딩 적용)
+       ⚠ 표기는 '토벌'(열쇠·소탕·단계 등반), '던전'은 자동사냥(HOME) 전용어다. 코드 식별자 dg*/DG_*는 옛 이름 그대로 둔다. -->
   <div id="dgHubScreen" class="appScreen spaceBg hide">
     <div class="hmScroll uiScroll" id="dgHubBody"></div>
   </div>
-  <!-- 던전 팝업(열기) — 이전 스테이지 소탕 + 입장 -->
+  <!-- 토벌 팝업(열기) — 이전 단계 소탕 + 입장 -->
   <div id="dgSheet" class="dgSheet hide">
     <div class="dgSheetCard">
-      <div class="dgSheetArt" id="dgSheetArt"><span class="dgSheetIco" id="dgSheetIco">⚔️</span><b id="dgSheetName">던전</b></div>
+      <div class="dgSheetArt" id="dgSheetArt"><span class="dgSheetIco" id="dgSheetIco">⚔️</span><b id="dgSheetName">토벌</b></div>
       <div class="dgSheetBody">
         <div class="dgSheetStage" id="dgSheetStage">난이도 <b>1단계</b></div>
         <div class="dgSheetReward" id="dgSheetReward"></div>
@@ -3758,11 +3773,11 @@
     </div>
   </div>
 
-  <!-- ⚔ 던전 — 캐릭터가 직접 싸우는 전용 화면(유즈맵과 완전 분리) -->
+  <!-- ⚔ 토벌 전투 — 캐릭터가 직접 싸우는 전용 화면(유즈맵과 완전 분리) -->
   <div id="dgScreen" class="appScreen spaceBg hide">
     <div class="twBar">
       <button class="twBack" onclick="dgFlee()" aria-label="나가기"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
-      <span class="twName">던전</span><span class="twLv" id="dgWave">1층 · 1/3</span>
+      <span class="twName">토벌</span><span class="twLv" id="dgWave">1층 · 1/3</span>
       <span class="twCoin"><b id="dgHpTxt">0</b> HP</span>
     </div>
     <div class="dgWrap">
@@ -4878,9 +4893,24 @@ function renderHome(){ try{
         +'<span class="hmUpLv">LV. '+lv+' ➜ <b>'+(lv+1)+'</b></span></span></div>'
         +'<button class="hmUpBtn" onclick="hmBuyUpg(&#39;'+k+'&#39;)"'+(can?'':' disabled')+'>'+cost.toLocaleString('en-US')+' 미네랄</button></div>'; }).join('');
     hmFitUpgGrid(); }
+  renderHomeStats();
   const card=document.querySelector('#homeScreen .hmUpg');
   if(card) card.classList.toggle('down', !!hbHunt().upgDown);
 }catch(e){} }
+// 레벨업으로 받은 스탯 포인트 — 남았을 때만 줄이 뜬다. 배분은 공용 profAllocStat()(마을 광장과 같은 함수).
+function renderHomeStats(){ const row=document.getElementById('hmStatRow'); if(!row) return;
+  const c=(typeof CHAR==='function')?CHAR():null, pt=(c&&c.statPoints)||0;
+  row.classList.toggle('hide', !pt);
+  if(!pt) return;
+  row.innerHTML='<span class="hmStatPt">스탯 '+pt+'</span>'
+    +PROF_STATS.map(function(k){ return '<button class="hmStat" onclick="hmAllocStat(&#39;'+k+'&#39;)">'
+      +PROF_STAT_NAME[k]+' <b>'+profStat(k)+'</b> <i>+</i></button>'; }).join(''); }
+function hmAllocStat(k){ if(typeof profAllocStat!=='function' || !profAllocStat(k)) return;
+  if(_hb){ const st=hbCharStats(), c=_hb.char;                 // 전투 중 즉시 반영(hmBuyUpg와 같은 규칙)
+    c.atk=st.atk; c.cd=st.cd; c.crit=st.crit; c.range=st.range; c.regen=st.regen;
+    c.hpMax=st.hpMax; c.hp=Math.min(st.hpMax, c.hp+(k==='vit'?10:0)); }
+  if(typeof playSfx==='function') playSfx('ui_open');
+  renderHome(); if(typeof hbHud==='function') hbHud(); }
 // 4칸(2행)까지만 보이게 — 칸 높이는 글꼴·문구에 따라 변하므로 실측해서 넣는다(값을 박으면 어긋난다)
 function hmFitUpgGrid(){ const gr=document.getElementById('hmUpgGrid'); if(!gr) return;
   const cell=gr.querySelector('.hmUp'); if(!cell) return;
@@ -5104,7 +5134,9 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char; S.t+=dt;
         // 처치 보상은 즉시 지급 — 재화 바가 바로 오른다. 사망 시 잃는 것은 '라운드 클리어 보너스'뿐.
         const r=hbKillReward(S.dg,S.round), p=PROF(), c=(typeof CHAR==='function')?CHAR():null;
         p.pcoin=(p.pcoin||0)+r.min; p.gas=(p.gas||0)+r.gas;
-        if(c){ c.xp+=r.xp; if(profApplyLevelUps(c)) S.floats.push({x:S.char.x,y:S.char.y-46,tx:'LEVEL UP!',cl:'#5dff8f',t:0}); }
+        if(c){ c.xp+=r.xp;
+          if(profApplyLevelUps(c)){ S.floats.push({x:S.char.x,y:S.char.y-46,tx:'LEVEL UP!',cl:'#5dff8f',t:0});
+            if(typeof renderHomeStats==='function') renderHomeStats(); } }
         S.buf.kills++; S.curDirty=true;                           // 재화 바 갱신은 아래에서 묶어서(처치마다 DOM 금지)
         S.floats.push({x:best.x,y:best.y-34,tx:'+'+r.min.toFixed(1),cl:'#ffd24a',t:0}); hbHud(); } } }
   c.hitT+=dt;                                                     // 3초 무피격이면 서서히 회복(+회복 업그레이드)
@@ -5541,7 +5573,7 @@ function _profPaperdoll(c){
       +'</div>'; }
   return h+'</div>'+_profPageNav(); }   // 섹션 바는 아바타 아래
 function _profGearGrid(c, list){
-  if(!list.length) return '<div class="igEmpty">비어 있음 — 던전에서 장비를 구해 오세요.</div>';
+  if(!list.length) return '<div class="igEmpty">비어 있음 — 토벌에서 장비를 구해 오세요.</div>';
   let h='<div class="igGrid">';
   for(const it of list){ const col=TIER_COLOR[it.tier]||'#b8c0cc';
     const holder=profItemHolder(it.iid), mine=(holder===c), busy=holder&&!mine;
@@ -5621,8 +5653,8 @@ function renderProfIdle(){ const p=PROF();
 function profDoIdle(id){ if(profSetIdleSource(id)){ if(typeof playSfx==='function') playSfx('ui_open'); refreshTownPanel(); } }
 // 관문(던전 입구 + 파워 해금 사다리) — 던전은 허브(전용 화면)로 통합
 function renderProfGate(){ const mx=dgMaxFloor();
-  let h='<div class="twHead">던전은 하단 네비 <b>던전</b> 또는 아래 버튼으로 들어갑니다.<br>최고 기록 <b>'+(mx?mx+'단계':'없음')+'</b> · 개방 <b>'+dgFloorCap()+'단계</b></div>';
-  h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">던전 허브</div><div class="twRowSub">종류 선택 · 단계 도전 · 즉시 보상</div></div><button class="twBtn" onclick="openDungeonHub()">이동</button></div>';
+  let h='<div class="twHead">토벌은 하단 네비 <b>토벌</b> 또는 아래 버튼으로 들어갑니다.<br>최고 기록 <b>'+(mx?mx+'단계':'없음')+'</b> · 개방 <b>'+dgFloorCap()+'단계</b></div>';
+  h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">토벌 허브</div><div class="twRowSub">종류 선택 · 단계 도전 · 즉시 보상</div></div><button class="twBtn" onclick="openDungeonHub()">이동</button></div>';
   h+='<div class="twSectLbl">파워 해금</div>';
   for(const u of PROF_UNLOCKS){ const open=profHasUnlock(u.id);
     h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+u.label+'</div><div class="twRowSub '+(open?'ok':'lock')+'">'+(open?'✓ 열림':('🔒 파워 '+u.power+' 필요'))+'</div></div></div>'; }
@@ -5743,9 +5775,9 @@ function dgFlee(){ dgToHub(); }
 // ── 🗝 던전 열쇠(매일 09:00 보충 · 던전별 2개 · 완료 시에만 소모) · 🎟 뽑기권 · 던전 허브 ──
 const DG_KEY_DAILY=2;   // 던전마다 하루 열쇠 수(09:00 리셋)
 const DG_DUNGEONS=[
-  {id:'normal', name:'일반 던전', ico:'⚔️', reqLv:1,  tint:'#2f4a72'},
-  {id:'gear',   name:'장비 던전', ico:'🛡️', reqLv:10, tint:'#6a4a24'},
-  {id:'rune',   name:'룬 던전',   ico:'🔮', reqLv:20, tint:'#54366a'} ];
+  {id:'normal', name:'일반 토벌', ico:'⚔️', reqLv:1,  tint:'#2f4a72'},
+  {id:'gear',   name:'장비 토벌', ico:'🛡️', reqLv:10, tint:'#6a4a24'},
+  {id:'rune',   name:'룬 토벌',   ico:'🔮', reqLv:20, tint:'#54366a'} ];
 function _dgDayKey(){ const d=new Date(); const day=new Date(d.getFullYear(),d.getMonth(),d.getDate()); if(d.getHours()<9) day.setDate(day.getDate()-1); return day.getTime(); }
 function dgKeyN(id){ const p=PROF(); if(!p) return 0; if(!p.dgKeys) p.dgKeys={};
   const dk=_dgDayKey(); let e=p.dgKeys[id]; if(!e || e.day!==dk){ e={n:DG_KEY_DAILY, day:dk}; p.dgKeys[id]=e; } return e.n; }
@@ -5759,7 +5791,7 @@ function openDungeonHub(){ if(typeof loadMeta==='function') loadMeta();
   if(typeof paintIcons==='function') paintIcons(document.getElementById('dgHubScreen')); }
 function renderDungeonHub(){ const body=document.getElementById('dgHubBody'); if(!body) return;
   const c=CHAR(); if(!c) return;
-  let h='<div class="dgHubHead">던전 열쇠는 <b>매일 09:00</b>에 보충됩니다. 열쇠는 던전을 완료할 때만 소모됩니다.</div>';
+  let h='<div class="dgHubHead">토벌 열쇠는 <b>매일 09:00</b>에 보충됩니다. 열쇠는 토벌을 완료할 때만 소모됩니다.</div>';
   for(const d of DG_DUNGEONS){ const lock=c.level<d.reqLv, k=lock?0:dgKeyN(d.id);
     h+='<div class="dgCard'+(lock?' lock':'')+'" style="--dgTint:'+d.tint+'"'+(lock?'':' onclick="dgOpenSheet(\''+d.id+'\')"')+'>'
       +'<div class="dgCardArt"><span class="dgCardIco">'+d.ico+'</span><span class="dgCardName">'+d.name+'</span></div>'

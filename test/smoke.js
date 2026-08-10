@@ -195,7 +195,9 @@ async function groupLobby(){
           assert(!v || v==='0px' || v==='3px', 'HOME 모서리가 너무 둥금('+(el.className||el.tagName)+'): '+v); } }
     assert(document.querySelectorAll('#navBar .navIt').length===5,'하단 네비가 5칸이 아님(HOME·던전·마을·유즈맵·상점)');
     { const navs=[...document.querySelectorAll('#navBar .navIt')].map(x=>x.dataset.nav).join(',');
-      assert(navs==='home,dungeon,town,map,shop','네비 구성이 다름: '+navs); }
+      assert(navs==='home,dungeon,town,map,shop','네비 구성이 다름: '+navs);
+      // data-nav는 옛 이름(dungeon) 그대로 두고 표기만 '토벌' — 코드 식별자를 바꾸면 다른 채팅 작업과 충돌한다
+      assert(document.querySelector('#navBar .navIt[data-nav=dungeon]').textContent.indexOf('토벌')>=0,'던전 탭 표기가 토벌이 아님'); }
     assert(document.querySelector('#navBar .navIt.on').dataset.nav==='home','HOME 탭이 활성이 아님');
     // 실데이터에 붙은 곳 = POWER UPGRADES(영구 업그레이드 6종 — 미네랄 구매·스탯 포인트 흡수)
     assert(document.querySelectorAll('.hmUp').length===6,'업그레이드가 6칸이 아님');
@@ -338,6 +340,39 @@ async function groupLobby(){
     openMapSelect(); await sleep(60); assert(!_hb.on,'홈을 떠났는데 루프가 살아 있음');
     openHome(); await sleep(60); assert(_hb.on,'재진입 시 재개 안 됨');
     return rep; });
+  // 레벨업 보상(스탯 포인트)은 메인 화면에서 바로 찍혀야 한다 — 마을까지 걸어가야 하면 성장 축의 절반이 숨는다.
+  await step('자동사냥: 레벨업 스탯을 HOME에서 배분', async()=>{ skipIf(typeof hmAllocStat!=='function','HOME 스탯 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    openHome(); await sleep(60);
+    const c=CHAR(); c.statPoints=0; renderHome();
+    assert(!visible($('hmStatRow')),'포인트가 없는데 스탯 줄이 보임');
+    // 레벨업 = 포인트 지급
+    const lv0=c.level; c.xp=profXpForLevel(c.level)+1;
+    assert(profApplyLevelUps(c)>0,'레벨업이 안 됨');
+    assert(c.level===lv0+1 && c.statPoints===PROF_PT_PER_LV,'레벨업 보상이 스탯 포인트가 아님: '+c.statPoints);
+    renderHome();
+    assert(visible($('hmStatRow')),'포인트가 있는데 스탯 줄이 안 보임');
+    assert(document.querySelectorAll('#hmStatRow .hmStat').length===PROF_STATS.length,'스탯 칸 수가 다름');
+    // 찍으면 스탯·전투 수치에 즉시 반영
+    const pow0=profStat('pow'), atk0=_hb.char.atk;
+    document.querySelector('#hmStatRow .hmStat').click();
+    assert(profStat('pow')===pow0+1,'스탯이 안 올랐음');
+    assert(c.statPoints===PROF_PT_PER_LV-1,'포인트가 안 깎임');
+    assert(_hb.char.atk>atk0,'전투 중 공격력에 반영되지 않음: '+atk0+' → '+_hb.char.atk);
+    return 'Lv'+c.level+' · 포인트 '+c.statPoints; });
+  // '던전'은 자동사냥 전용어, 옛 층 등반 콘텐츠는 '토벌'이다. 두 시스템이 같은 이름을 쓰면 화면마다 뜻이 달라진다.
+  await step('용어 분리: 자동사냥=던전 / 옛 콘텐츠=토벌', async()=>{ skipIf(typeof openDungeonHub!=='function','토벌 허브 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    const nav=document.querySelector('#navBar .navIt[data-nav=dungeon]');
+    assert(nav && nav.textContent.indexOf('토벌')>=0,'네비 탭이 토벌이 아님: '+(nav&&nav.textContent));
+    openDungeonHub(); await sleep(80);
+    const hub=document.getElementById('dgHubBody');
+    assert(visible(hub),'토벌 허브가 안 열림');
+    assert(hub.textContent.indexOf('던전')<0,'토벌 화면에 던전 표기가 남음: '+hub.textContent.slice(0,60));
+    assert(hub.textContent.indexOf('토벌')>=0,'토벌 표기가 없음');
+    openHome(); await sleep(80);
+    assert(document.getElementById('hbRound').textContent.indexOf('던전')>=0,'자동사냥은 던전 표기를 유지해야 함');
+    return '네비 토벌 · HOME 던전'; });
   // 라운드 선택 — 최고 도달까지만 고를 수 있고, 반복/등반이 클리어 후 행동을 가른다.
   await step('자동사냥: 라운드 선택 · 반복/등반', async()=>{ skipIf(typeof hbOpenRounds!=='function','라운드 선택 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
