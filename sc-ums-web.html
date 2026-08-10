@@ -5380,7 +5380,7 @@ function hbStart(){ const cv=document.getElementById('hbCv'); if(!cv || (_hb&&_h
   const H=hbHunt(), st=hbCharStats();
   _hb={ on:true, cv, ctx:cv.getContext('2d'), w:0,h:0,d:1, vTop:0, vBot:0, cx:0, cy:0, k:1, t:0,
     dg:H.dg||1, round:H.round||1, wave:1, phase:'fight', waveT:HB_WAVE_S, gapT:0, downT:0,
-    pend:[], pendT:0, foes:[], shots:[], floats:[], kills:0, rt0:0,
+    pend:[], pendT:0, foes:[], shots:[], floats:[], kills:0, rt0:0, charDir:4, atkT:0,
     allies:[], turrets:[], bunkers:[], pets:[], skT:{nova:0,heal:0,slow:0}, slowT:0, skDirty:false,
     buf:{min:0,gas:0,xp:0,kills:0},
     char:{ x:0,y:0, hp:st.hpMax, hpMax:st.hpMax, atk:st.atk, cd:st.cd, crit:st.crit,
@@ -5491,7 +5491,8 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char; S.t+=dt;
     for(const b of S.bunkers){ if(b.hp<=0) continue; const d2=Math.hypot(b.x-f.x,b.y-f.y); if(d2<bd2){ bd2=d2; bk=b; } }
     if(bk) tg=bk;
     const dx=tg.x-f.x, dy=tg.y-f.y, d=Math.hypot(dx,dy)||1;
-    if(d>HB_STOP){ f.x+=dx/d*f.spd*spdMul*dt; f.y+=dy/d*f.spd*spdMul*dt; }
+    if(d>HB_STOP){ f.x+=dx/d*f.spd*spdMul*dt; f.y+=dy/d*f.spd*spdMul*dt;
+      f.dir=sprDir(dx/d, dy/d); }                      // 가는 쪽을 보게(정지 그림 하나면 미끄러져 보인다)
     else{ f.cdT-=dt; if(f.cdT<=0){ f.cdT=1.1;
       if(bk){ bk.hp-=f.atk; S.floats.push({x:bk.x,y:bk.y-20,tx:'-'+Math.round(f.atk),cl:'#c9a24a',t:0}); }
       else { c.hp-=f.atk; c.hitT=0; S.floats.push({x:c.x,y:c.y-26,tx:'-'+Math.round(f.atk),cl:'#ff8a9a',t:0}); } } } }
@@ -5501,12 +5502,15 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char; S.t+=dt;
     if(best && bd<=c.range){ c.cdT=c.cd;
       const crit=Math.random()<c.crit, dmg=c.atk*(crit?2:1)*(hbBoostOn('atk')?2:1);
       best.hp-=dmg; S.shots.push({x1:c.x,y1:c.y-10,x2:best.x,y2:best.y,t:0});
+      { const ddx=best.x-c.x, ddy=best.y-c.y, dd=Math.hypot(ddx,ddy)||1;
+        S.charDir=sprDir(ddx/dd, ddy/dd); S.atkT=HB_ATK_SHOW; }   // 노리는 쪽을 보고 공격 모션 재생
       S.floats.push({x:best.x,y:best.y-20,tx:(crit?'✦':'')+Math.round(dmg),cl:crit?'#ffd24a':'#ececec',t:0});
       if(best.hp<=0) hbKill(best); } }
   // 아군 — 동료는 캐릭터 주위를 천천히 돌고, 터렛은 고정, 펫은 가깝게 붙어 돈다
   for(const a of S.allies){ a.ph+=dt*0.5; a.x=Math.cos(a.ph)*52; a.y=Math.sin(a.ph)*52; hbUnitFire(a,HB_ALLY_DPS,1,dt); }
   for(const t of S.turrets) hbUnitFire(t,HB_TURRET_DPS,HB_TURRET_RANGE,dt);
   for(const q of S.pets){ q.ph+=dt*1.1; q.x=Math.cos(q.ph)*30; q.y=Math.sin(q.ph)*30; hbUnitFire(q,HB_PET_DPS,1,dt); }
+  if(S.atkT>0) S.atkT-=dt;                            // 공격 모션 남은 시간(끝나면 idle로)
   if(S.slowT>0) S.slowT-=dt;
   for(const k in S.skT) if(S.skT[k]>0){ S.skT[k]-=dt; if(S.skT[k]<=0) S.skDirty=true; }
   if(S.skDirty && typeof renderHbBar==='function'){ S.skDirty=false; renderHbBar(); }
@@ -5538,11 +5542,12 @@ function hbFx(dt){ const S=_hb;
 // 3D 모델은 로드·굽기가 비동기라 준비되기 전엔 null을 준다 → 그리는 쪽이 이모지로 폴백한다.
 // 즉 모델이 없어도 게임은 그대로 돌아가고, 준비되면 조용히 그림이 바뀐다.
 const _hbSpr={};
-function hbSprite(mdl){ if(!mdl) return null;
-  const c=_hbSpr[mdl]; if(c!==undefined) return (c&&c.complete&&c.naturalWidth)?c:null;
-  const url=(window.M3D && M3D.unitSprite) ? M3D.unitSprite(mdl) : null;
-  if(!url){ _hbSpr[mdl]=null; setTimeout(()=>{ delete _hbSpr[mdl]; }, 1200); return null; }   // 아직 모델 전 → 잠시 뒤 재시도
-  const im=new Image(); im.src=url; _hbSpr[mdl]=im; return null; }
+function hbSprite(mdl, dir){ if(!mdl) return null;
+  const d=((dir|0)%8+8)%8, k=mdl+'#'+d;
+  const c=_hbSpr[k]; if(c!==undefined) return (c&&c.complete&&c.naturalWidth)?c:null;
+  const url=(window.M3D && M3D.unitSprite) ? M3D.unitSprite(mdl,d) : null;
+  if(!url){ _hbSpr[k]=null; setTimeout(()=>{ delete _hbSpr[k]; }, 1200); return null; }   // 아직 모델 전 → 잠시 뒤 재시도
+  const im=new Image(); im.src=url; _hbSpr[k]=im; return null; }
 const _hbTile={};
 function hbTile(name){ if(!name) return null;
   const t=_hbTile[name]; if(t!==undefined) return (t&&t.complete&&t.naturalWidth)?t:null;
@@ -5551,9 +5556,10 @@ function hbTile(name){ if(!name) return null;
 function hbEnsureModels(dg){ const D=hbDun(dg);
   if(!(window.M3D && M3D.ensureUnits)) return;
   const keys=D.foes.map(f=>f.mdl).filter(Boolean);
-  try{ M3D.ensureUnits(keys, ()=>{ for(const k of keys) delete _hbSpr[k]; }); }catch(e){}
+  try{ M3D.ensureUnits(keys, ()=>{ for(const k in _hbSpr) if(keys.indexOf(k.split('#')[0])>=0) delete _hbSpr[k]; }); }catch(e){}
 }
 // 바닥 = 던전 타일을 월드 좌표로 깔고, 그 위에 던전 틴트를 덮는다(dg가 오를수록 진해져 어두워진다)
+const HB_ATK_SHOW=6/14;     // 공격 모션 길이(초) = 실험장 시트 규격(6프레임 · 14fps)과 같다
 const HB_TILE_SCALE=0.34;   // 타일 원본은 크다 — 월드 좌표에 1:1로 깔면 흙 한 덩이가 화면을 덮는다
 function hbFloor(){ const S=_hb, x=S.ctx, D=hbDun(S.dg);
   const half=(S.vBot-S.vTop)/2, k=S.k||1, wx=(S.w/2+40)/k, wy=(half+40)/k;
@@ -5565,11 +5571,32 @@ function hbFloor(){ const S=_hb, x=S.ctx, D=hbDun(S.dg);
       S._pat=p; S._patName=D.tile; }
     if(S._pat){ x.save(); x.globalAlpha=.9; x.fillStyle=S._pat; x.fillRect(-wx,-wy,wx*2,wy*2); x.restore(); } }
   x.save(); x.fillStyle=D.tint; x.fillRect(-wx,-wy,wx*2,wy*2); x.restore(); }
-// 적/캐릭터 한 마리 — 스프라이트가 준비됐으면 그림, 아니면 이모지
-function hbUnitArt(x, mdl, ico, cx, cy, px){
-  const sp=hbSprite(mdl);
+// 적 한 마리 — 이동 방향(8방향) 스프라이트가 준비됐으면 그림, 아니면 이모지
+function hbUnitArt(x, mdl, ico, cx, cy, px, dir){
+  const sp=hbSprite(mdl, dir||0);
   if(sp){ x.drawImage(sp, cx-px/2, cy-px*0.62, px, px); return; }
   x.font=Math.round(px*0.72)+'px sans-serif'; x.fillText(ico, cx, cy); }
+// 내 캐릭터 — 관리자 실험장의 8방향 시트를 그대로 쓴다(idle/attack). 시트가 없는 직업은 구운 스프라이트로 폴백.
+// 캐릭터는 월드 원점에 고정이라 walk는 쓰지 않는다(적이 다가온다). 방향은 지금 노리는 적 쪽.
+function hbCharArt(x, cx, cy, px){
+  const S=_hb, c=(typeof CHAR==='function')?CHAR():null;
+  const mdl=(c && PROF_CLASSES[c.cls] && PROF_CLASSES[c.cls].unit) || 'marine';
+  const sh=(typeof sprSheet==='function') ? sprSheet(mdl) : null;
+  const ico=(c && PROF_CLASSES[c.cls] && PROF_CLASSES[c.cls].ico)||'🧍';
+  if(sh){ const st=(S.atkT>0)?'attack':'idle', spec=sh.states[st];
+    const img=hbSheetImg(sh.url[st]);
+    if(img){ const n=spec.frames, fr=(st==='attack')
+        ? Math.min(n-1, Math.floor((HB_ATK_SHOW-S.atkT)*spec.fps))
+        : (Math.floor(S.t*spec.fps)%n);
+      const cell=sh.cell;
+      x.drawImage(img, fr*cell, (S.charDir||0)*cell, cell, cell, cx-px/2, cy-px*0.66, px, px); return; } }
+  const sp=hbSprite(mdl, S.charDir||0);
+  if(sp){ x.drawImage(sp, cx-px/2, cy-px*0.62, px, px); return; }
+  x.font=Math.round(px*0.72)+'px sans-serif'; x.fillText(ico, cx, cy); }
+const _hbSheet={};
+function hbSheetImg(url){ const c=_hbSheet[url];
+  if(c!==undefined) return (c&&c.complete&&c.naturalWidth)?c:null;
+  const im=new Image(); im.src=url; _hbSheet[url]=im; return null; }
 function hbDraw(){ const S=_hb, x=S.ctx, c=S.char; if(!x) return;
   x.setTransform(S.d,0,0,S.d,0,0); x.clearRect(0,0,S.w,S.h);
   // 카메라 = 월드 원점을 보이는 영역 중심으로 옮기고 배율 k를 건다.
@@ -5593,13 +5620,12 @@ function hbDraw(){ const S=_hb, x=S.ctx, c=S.char; if(!x) return;
   for(const f of S.foes){ const el=!!f.elite;
     if(el){ x.save(); x.globalAlpha=.5; x.strokeStyle='#ffd24a'; x.lineWidth=1.5;
       x.beginPath(); x.arc(f.x,f.y,17,0,Math.PI*2); x.stroke(); x.restore(); }
-    hbUnitArt(x, f.mdl, f.ico, f.x, f.y, el?38:26);                 // 3D 모델 스프라이트(없으면 이모지)
+    hbUnitArt(x, f.mdl, f.ico, f.x, f.y, el?38:26, f.dir);          // 3D 모델 8방향 스프라이트(없으면 이모지)
     if(f.hp<f.hpMax){ const w2=el?30:22, yy=f.y-(el?22:16);
       x.fillStyle='rgba(0,0,0,.55)'; x.fillRect(f.x-w2/2,yy,w2,3);
       x.fillStyle=el?'#ffd24a':'#ff6b7a'; x.fillRect(f.x-w2/2,yy,w2*Math.max(0,f.hp/f.hpMax),3); } }
   x.save(); if(S.phase==='down') x.globalAlpha=.35+.25*Math.sin(S.t*6);   // 쓰러짐 = 깜빡임
-  const ico=(typeof CHAR==='function'&&CHAR()&&PROF_CLASSES[CHAR().cls]&&PROF_CLASSES[CHAR().cls].ico)||'🧍';
-  x.font='26px sans-serif'; x.fillText(ico,c.x,c.y); x.restore();
+  hbCharArt(x, c.x, c.y, 34); x.restore();                          // 내 캐릭터도 3D(실험장 시트 그대로)
   if(c.hp<c.hpMax && S.phase!=='down'){ x.fillStyle='rgba(0,0,0,.55)'; x.fillRect(c.x-15,c.y-22,30,3.5);
     x.fillStyle='#5dff8f'; x.fillRect(c.x-15,c.y-22,30*Math.max(0,c.hp/c.hpMax),3.5); }
   x.font='700 10px '+(getComputedStyle(document.documentElement).getPropertyValue('--font-num')||'sans-serif');
@@ -9904,9 +9930,15 @@ function drawSkillFx(){ if(typeof G==='undefined') return; const hasFx=!!(G.skil
 // 🧪 스프라이트 유닛 실험장(관리자 Battle 탭) — 3D 모델을 프리렌더한 8방향 스프라이트 프로토타입(레인저)
 //   걷기=총 내림 / 정지=총 내림 / 공격=총 듦 (자세는 손 본에 부착된 총이 애니를 따라감 · 베이크 결과)
 // ════════════════════════════════════════════════════════════════
-const SPR_MARINE={ cell:96, dirs:8, dispBase:96,
-  states:{ idle:{frames:8,fps:8,loop:1}, walk:{frames:8,fps:12,loop:1}, attack:{frames:6,fps:14,loop:0} },
-  url:{ idle:'assets/sprites/marine/idle.png', walk:'assets/sprites/marine/walk.png', attack:'assets/sprites/marine/attack.png' } };
+// 시트 규격은 유닛 모델 키로 찾는다 — 관리자 실험장과 던전 전장이 '같은 표'를 본다(단일 소스).
+// 시트를 새로 구우면 여기 한 줄만 추가하면 두 곳에 동시에 반영된다.
+const SPR_UNITS={
+  marine:{ cell:96, dirs:8, dispBase:96,
+    states:{ idle:{frames:8,fps:8,loop:1}, walk:{frames:8,fps:12,loop:1}, attack:{frames:6,fps:14,loop:0} },
+    url:{ idle:'assets/sprites/marine/idle.png', walk:'assets/sprites/marine/walk.png', attack:'assets/sprites/marine/attack.png' } },
+};
+function sprSheet(key){ return SPR_UNITS[key]||null; }
+const SPR_MARINE=SPR_UNITS.marine;   // 실험장이 쓰던 이름(그대로 유지 — 같은 객체다)
 let _spr=null, _sprRaf=0, _sprLast=0, _sprScale=1.15, _sprSpin=null;
 const SPR_SPEED=125;   // px/s
 function sprLabActive(){ return !!(typeof G!=='undefined' && G.sandbox && G.tab==='Battle'); }
@@ -18843,9 +18875,13 @@ let _pRend=null,_pScene=null,_pCam=null; const _pCache={};
 // ⚔ 던전 적 스프라이트 — 같은 GLB를 '원래 재질 그대로' 투명 PNG로 굽는다.
 // unitPortrait()는 흰 실루엣+검은 선(UI 칩용)이라 전장에 그대로 쓰면 적이 전부 흰 종이처럼 보인다.
 // 자동사냥 전장은 2D 캔버스라 3D를 직접 못 얹는다 → 한 번 구워서 drawImage로 쓴다(모델당 1회).
+// dir = 관리자 실험장(sprDir)과 같은 8방향 규약(북=0, 시계). 방향별로 한 장씩 구워 캐시한다.
+// 정지 이미지 하나로 8방향을 다 쓰면 어느 쪽으로 걸어도 같은 그림이라 '미끄러지는' 느낌이 난다.
 const _sCache={}; let _sRend=null,_sScene=null,_sCam=null;
-function unitSprite(id){
-  if(_sCache[id]!==undefined) return _sCache[id];
+const SPRITE_DIRS=8, SPRITE_TILT=0.65, SPRITE_YAW0=Math.PI;   // 시트 프로토타입과 같은 부감 각도
+function unitSprite(id, dir){
+  const d=((dir|0)%SPRITE_DIRS+SPRITE_DIRS)%SPRITE_DIRS, ck=id+'#'+d;
+  if(_sCache[ck]!==undefined) return _sCache[ck];
   const base=bases[id]; if(!base) return null;        // 아직 로드 전 → 호출부가 이모지로 폴백
   try{
     if(!_sRend){
@@ -18862,14 +18898,15 @@ function unitSprite(id){
     const box=new THREE.Box3().setFromObject(anim), c=box.getCenter(new THREE.Vector3()), sz=box.getSize(new THREE.Vector3());
     anim.position.set(-c.x,-c.y,-c.z); grp.add(anim);
     grp.scale.setScalar(1.5/(Math.max(sz.x,sz.y,sz.z)||1));
-    grp.rotation.y=0.5;                                // 3/4 뷰(정면은 실루엣이 납작하다)
+    grp.rotation.y=SPRITE_YAW0 + d*(Math.PI*2/SPRITE_DIRS);   // 8방향
     _sScene.add(grp);
-    _sCam.position.set(0,0.9,3.1); _sCam.lookAt(0,0,0);   // 살짝 위에서 — 전장 부감과 결이 맞는다
+    const ty=Math.tan(SPRITE_TILT)*3.1;                       // 부감 = 실험장 시트와 같은 기울기
+    _sCam.position.set(0,ty,3.1); _sCam.lookAt(0,0,0);
     _sRend.render(_sScene,_sCam);
     const url=_sRend.domElement.toDataURL('image/png');
     _sScene.remove(grp); _disposeObj3D(grp);
-    _sCache[id]=url; return url;
-  }catch(e){ console.warn('sprite fail',id,e); _sCache[id]=null; return null; }
+    _sCache[ck]=url; return url;
+  }catch(e){ console.warn('sprite fail',id,e); _sCache[ck]=null; return null; }
 }
 function unitPortrait(id){
   if(_pCache[id]!==undefined) return _pCache[id];     // 캐시(실패=null 도 캐시)
@@ -19049,7 +19086,7 @@ window.M3D={
   loadedKeys:()=>Object.keys(bases),
   mapModelKeys:(mapId)=>mapModelKeys(mapId),
   portrait:(id)=>unitPortrait(id),   // 3D 모델 → 2D 흑백 포트레잇 dataURL(없으면 null)
-  unitSprite:(id)=>unitSprite(id),   // 3D 모델 → 원래 재질 그대로 구운 전장 스프라이트 dataURL(없으면 null · 던전 적)
+  unitSprite:(id,dir)=>unitSprite(id,dir),   // 3D 모델 → 원래 재질 그대로 구운 8방향 전장 스프라이트 dataURL(없으면 null · 던전 적)
   muzzleAt:(uid)=>{ const m=models.get(uid); return (m&&m.muzzleN)?m.muzzleN:null; },   // 총구(3D 총 위치) 2D 정규화 좌표 — 각도 무관 머즐 FX
   airFloat:(id)=>!!AIR_FLOAT[id],   // 이 모델이 공중(고정 부양) 유닛인지 — 랩 att.y 판정용(모듈 스코프 AIR_FLOAT 노출)
   airLiftPx:()=>((typeof AIR_LIFT_PX!=='undefined'?AIR_LIFT_PX:0)*Math.cos(typeof VIEW_TILT!=='undefined'?VIEW_TILT:0)),   // 공중유닛 부양 화면 px(잡기 히트박스 보정)

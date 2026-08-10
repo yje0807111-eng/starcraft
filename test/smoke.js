@@ -604,6 +604,52 @@ async function groupLobby(){
         assert(cat.has(f.mdl),'던전'+D.dg+'('+D.name+') 모델 키가 카탈로그에 없음: '+f.mdl);
       keyChk='모델 키 '+new Set(HB_DUNGEONS.flatMap(d=>d.foes.map(f=>f.mdl))).size+'종 확인'; }
     return HB_DUNGEONS.length+'곳 · 타일 '+tiles.length+'종 · 틴트 '+alpha(HB_DUNGEONS[0].tint)+'→'+prevA+' · '+keyChk; });
+  // 관리자 실험장의 8방향 시트를 던전 전장이 '그대로' 쓴다(새로 만들지 않는다)
+  await step('던전: 내 캐릭터가 실험장 8방향 시트를 그대로 쓴다', async()=>{
+    skipIf(typeof SPR_UNITS==='undefined','스프라이트 시트 표 없음');
+    // 단일 소스 — 실험장이 쓰던 SPR_MARINE과 같은 객체여야 한다(복사본이면 곧 어긋난다)
+    assert(SPR_MARINE===SPR_UNITS.marine,'실험장 시트와 던전 시트가 다른 객체 — 단일 소스가 깨졌다');
+    assert(typeof sprSheet==='function' && sprSheet('marine')===SPR_UNITS.marine,'sprSheet가 시트를 못 찾음');
+    const sh=sprSheet('marine');
+    for(const st of ['idle','walk','attack']){
+      assert(sh.states[st] && sh.states[st].frames>0, '시트에 '+st+' 상태가 없음');
+      assert(sh.url[st], '시트에 '+st+' 이미지 경로가 없음'); }
+    // 공격 모션 길이가 시트 규격(프레임/fps)과 맞아야 마지막 프레임에서 잘리지 않는다
+    const a=sh.states.attack;
+    assert(Math.abs(HB_ATK_SHOW-(a.frames/a.fps))<1e-6,
+      '공격 모션 길이가 시트와 어긋남: '+HB_ATK_SHOW+' ≠ '+(a.frames/a.fps));
+    // 8방향 규약 — 실험장 sprDir을 그대로 쓴다(북=0, 시계)
+    assert(sprDir(0,-1)===0,'위로 이동이 0방향이 아님: '+sprDir(0,-1));
+    assert(sprDir(1,0)===2,'오른쪽이 2방향이 아님: '+sprDir(1,0));
+    assert(sprDir(0,1)===4,'아래가 4방향이 아님: '+sprDir(0,1));
+    assert(sprDir(-1,0)===6,'왼쪽이 6방향이 아님: '+sprDir(-1,0));
+    // 시트 이미지가 실제로 받아지는지
+    for(const st of ['idle','walk','attack']){
+      const ok=await new Promise(res=>{ const im=new Image();
+        im.onload=()=>res(true); im.onerror=()=>res(false); im.src=sh.url[st]; });
+      assert(ok,'시트 이미지가 없음: '+sh.url[st]); }
+    return 'marine 시트 공유 · 공격 '+a.frames+'f/'+a.fps+'fps'; });
+  // 이동이 '미끄러지지' 않으려면 적이 가는 쪽을 봐야 한다 — 실제로 dir이 갱신되는지
+  await step('던전: 적이 가는 방향을 본다(8방향 갱신)', async()=>{
+    skipIf(typeof hbStart!=='function' || typeof _hb==='undefined','자동사냥 없음');
+    openHome(); await sleep(200);
+    skipIf(!_hb || !_hb.on,'전장이 안 돌고 있음');
+    // ⚠ hbPump는 실제 경과시간으로 돈다 — 촘촘히 부르면 dt≈0이라 아무것도 안 움직인다.
+    //    스모크용 manual 훅으로 hbStep에 고정 dt를 준다. phase도 fight로 고정(타이머가 돌면 이동 루프가 멎는다)
+    _hb.manual=true;
+    const walk=(x,y)=>{ _hb.phase='fight'; _hb.waveT=99; _hb.foes.length=0;
+      _hb.foes.push({ico:'🟢',mdl:'snapper',x:x,y:y,hp:1e9,hpMax:1e9,atk:1,spd:60,cdT:9,elite:false});
+      const d0=Math.hypot(x,y);
+      for(let i=0;i<6;i++){ _hb.phase='fight'; _hb.waveT=99; hbStep(0.1); }
+      const g=_hb.foes[0];
+      assert(g && Math.hypot(g.x,g.y)<d0, '적이 캐릭터 쪽으로 안 움직임: '+d0+' → '+(g?Math.round(Math.hypot(g.x,g.y)):'없어짐'));
+      return g.dir; };
+    assert(walk(400,0)===6,'오른쪽에서 오는 적이 왼쪽(6)을 안 봄');
+    assert(walk(0,-400)===4,'위에서 오는 적이 아래(4)를 안 봄');
+    assert(walk(-400,0)===2,'왼쪽에서 오는 적이 오른쪽(2)을 안 봄');
+    assert(walk(0,400)===0,'아래에서 오는 적이 위(0)를 안 봄');
+    _hb.foes.length=0; _hb.manual=false;
+    return '적 8방향 갱신 ok'; });
   await step('용어 분리: 자동사냥=던전 / 옛 콘텐츠=토벌', async()=>{ skipIf(typeof openDungeonHub!=='function','토벌 허브 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     const nav=document.querySelector('#navBar .navIt[data-nav=dungeon]');
