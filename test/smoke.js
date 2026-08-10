@@ -514,6 +514,18 @@ async function groupLobby(){
     // ⑤ 스킬 바 UI
     renderHbBar();
     assert(document.querySelectorAll('#hbBar .hbSk').length===Object.keys(HB_SKILLS).length+2,'스킬 바 버튼 수가 다름');
+    // ⑥ 전장 아래 경계 = 스킬 바 위. 카드 기준으로 잡으면 적이 버튼 뒤로 지나가 섞인다.
+    { hbResize();
+      const cv=$('hbCv').getBoundingClientRect(), bar=$('hbBar').getBoundingClientRect();
+      const bT=bar.top-cv.top, bB=bar.bottom-cv.top, bL=bar.left-cv.left, bR=bar.right-cv.left;
+      assert(Math.abs(_hb.vBot-bT)<2,'전장 아래 경계가 스킬 바 위가 아님: vBot '+Math.round(_hb.vBot)+' vs 바 '+Math.round(bT));
+      _hb.foes.length=0; _hb.pend.length=0;
+      for(let i=0;i<300;i++) hbPlaceFoe({ico:'x',hpMul:1,atkMul:1,spd:0});
+      let hit=0;
+      for(const f of _hb.foes){ const x=_hb.cx+f.x*_hb.k, y=_hb.cy+f.y*_hb.k;
+        if(x>bL-14 && x<bR+14 && y>bT-14 && y<bB+14) hit++; }
+      assert(hit===0,'스킬 바 위에 겹쳐 스폰된 적 '+hit+'기');
+      _hb.foes.length=0; }
     hbHunt().boostT={}; hbHunt().build={}; hbLayoutAllies();
     return '동료·터렛·벙커·펫 배치 ok · 스킬 3종 · 부스트 연장 ok'; });
   // Phase 2 — 던전 1~10 해금 · 엘리트 · 장비 뽑기권(드랍 + 소비처)
