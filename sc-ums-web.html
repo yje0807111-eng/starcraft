@@ -5733,10 +5733,11 @@ function hb3dAttach(){ const cv=document.getElementById('cvMarine'), host=docume
   cv.style.zIndex='1';                                      // 바닥(#hbCv) 위 · HOME UI(z2+) 아래
   host.insertBefore(cv, host.firstChild.nextSibling||null);
   if(window.M3D && M3D.clearGameModels){ try{ M3D.clearGameModels(); }catch(e){} }   // 랩과 같이 유닛 모델 풀을 비우고 시작
-  if(window.M3D && M3D.hideIdlePools){ try{ M3D.hideIdlePools(); }catch(e){} } }      // 비콘·미건설 고스트 잔상 제거
+  if(window.M3D && M3D.clearIdlePools){ try{ M3D.clearIdlePools(); }catch(e){} } }    // 잔상이 될 수 있는 풀은 아예 삭제(숨기기 아님)
 function hb3dDetach(){ const cv=document.getElementById('cvMarine');
   if(cv&&_hb3dHome){ cv.style.zIndex=''; cv.style.display='none'; _hb3dHome.appendChild(cv);
-    if(window.M3D && M3D.clearGameModels){ try{ M3D.clearGameModels(); }catch(e){} } }   // 던전 유닛 모델을 게임에 남기지 않는다
+    if(window.M3D && M3D.clearGameModels){ try{ M3D.clearGameModels(); }catch(e){} }
+    if(window.M3D && M3D.clearIdlePools){ try{ M3D.clearIdlePools(); }catch(e){} } }   // 빌린 것도 돌려줄 때 깨끗이 — 양쪽 다 잔상을 남기지 않는다
   _hb3dHome=null; }
 function hb3dReady(){ return !!(window.M3D && M3D.ready && M3D.ready() && M3D.syncBuild
   && !(typeof G!=='undefined' && G.opt && G.opt.model3d===false)); }
@@ -19326,13 +19327,15 @@ window.M3D={
   cstEnsureRes:(cb)=>{ const tgt={res_cn:18, res_en:50, res_cc:8, res_ec:8}; const ks=Object.keys(tgt).filter(k=>MODELS[k]);   // 자원 3D(미네랄·가스 노드 + 운반) 로드 → 목표 화면크기로 SCALE
     ensureModels(ks, function(n){ for(const k of ks){ const b=bases[k]; if(b) SCALE[k]=tgt[k]/Math.max(b.h||1,b.w||1); } if(cb) cb(n); }); return true; },
   hasModel:(id)=>!!bases[id],   // 실제 로드 완료 여부(로드 전엔 false → 2D/SVG 폴백 표시). MODELS 카탈로그가 아니라 bases(로드분) 기준
-  // sync()가 관리하지 않는 풀(비콘·미건설 고스트·건물)을 한 번에 숨긴다.
-  // 던전이 공용 캔버스를 빌릴 때 호출 — 안 하면 유즈맵/상점에서 만든 '미사일 포탑 고스트' 같은 것이
-  // HOME 위에 은은하게 남는다(실제로 그랬다). 상점/건설 탭은 매 프레임 다시 켜므로 부작용 없다.
-  hideIdlePools:()=>{ for(const [,b] of beaconInsts) if(b&&b.holder) b.holder.visible=false;
-    for(const [,m] of ghostModels) if(m&&m.holder) m.holder.visible=false;
-    for(const [,m] of buildGhostModels) if(m&&m.holder) m.holder.visible=false;
-    for(const [,m] of buildModels) if(m&&m.holder) m.holder.visible=false; },
+  // ⚠ 공용 캔버스를 빌려 쓰는 화면은 반드시 이걸 먼저 부른다.
+  // sync()가 관리하지 않는 풀(뽑기 비콘·미건설 고스트·배치 고스트·건설 전시)은 그냥 두면
+  // '미사일 포탑 고스트' 같은 잔상이 남는다. **숨기지 말고 지운다** — 숨기기는 어딘가에서 다시 켜지면
+  // 도로 나타나지만, 지우면 나타날 수가 없다. 각 풀은 전부 '없으면 만든다'라서 원래 화면으로 돌아가면 재생성된다.
+  clearIdlePools:()=>{
+    const wipe=(pool)=>{ for(const [k,m] of [...pool]){ const h=m&&(m.holder||m);
+      if(h&&h.parent) h.parent.remove(h); else if(h) scene.remove(h);
+      try{ _disposeObj3D(h); }catch(e){} pool.delete(k); } };
+    wipe(beaconInsts); wipe(ghostModels); wipe(buildGhostModels); wipe(buildModels); },
   modelKeys:()=>Object.keys(MODELS),   // 카탈로그(로드 여부 무관) — 던전 표 같은 '모델 키 오타' 검사가 실제로 걸리게 하려면 이게 필요하다
   modelCatalog:(id)=>!!MODELS[id],   // 카탈로그 존재 여부(필요 시)
   // ── 유즈맵별 에셋 지연 로드/해제(확장 토대) ──

@@ -750,14 +750,19 @@ async function groupLobby(){
       assert(!cv.style.zIndex, name+' 뒤에 z-index가 남음: '+cv.style.zIndex); }
     // 공용 캔버스를 빌릴 때, sync()가 관리하지 않는 풀(뽑기 비콘·미건설 터렛 고스트)도 같이 숨겨야 한다.
     // 안 그러면 '미사일 포탑' 고스트 같은 게 HOME 위에 은은하게 남는다(실제로 그랬다).
-    assert(/hideIdlePools/.test(hb3dAttach.toString()),
-      '캔버스를 빌릴 때 유휴 풀을 안 숨김 — 비콘·고스트 잔상이 HOME에 남는다');
+    // ⚠ '숨기기'가 아니라 '삭제'여야 한다 — 숨긴 것은 어딘가에서 다시 켜지면 도로 나타난다.
+    assert(/clearIdlePools/.test(hb3dAttach.toString()),
+      '캔버스를 빌릴 때 유휴 풀을 안 지움 — 비콘·고스트 잔상이 HOME에 남는다');
+    assert(/clearIdlePools/.test(hb3dDetach.toString()),
+      '캔버스를 돌려줄 때 유휴 풀을 안 지움 — 잔상이 다음 화면으로 넘어간다');
+    assert(!/hideIdlePools/.test(hb3dAttach.toString()),'숨기기(hideIdlePools)로 되돌아감 — 삭제여야 한다');
     if(window.M3D){
-      assert(typeof M3D.hideIdlePools==='function','M3D.hideIdlePools가 없음');
-      M3D.hideIdlePools();   // 없는 풀을 참조하면 여기서 ReferenceError로 터진다(실제로 한 번 그랬다)
+      assert(typeof M3D.clearIdlePools==='function','M3D.clearIdlePools가 없음');
+      M3D.clearIdlePools();   // 없는 풀을 참조하면 여기서 ReferenceError로 터진다(실제로 한 번 그랬다)
+      M3D.clearIdlePools();   // 두 번 불러도 안전해야 한다(이미 빈 풀)
     }
     openHome(); await sleep(60);
-    return '전환·게임진입·정지 3경로 원복 ok'+(window.M3D?' · 유휴 풀 숨김 실행 ok':' · 유휴 풀은 M3D 없어 미검증'); });
+    return '전환·게임진입·정지 3경로 원복 ok'+(window.M3D?' · 유휴 풀 삭제 실행 ok':' · 유휴 풀은 M3D 없어 미검증'); });
   await step('용어 분리: 자동사냥=던전 / 옛 콘텐츠=토벌', async()=>{ skipIf(typeof openDungeonHub!=='function','토벌 허브 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     const nav=document.querySelector('#navBar .navIt[data-nav=dungeon]');
