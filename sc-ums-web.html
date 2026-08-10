@@ -2678,12 +2678,14 @@
   .dgSheetX{position:absolute;top:6px;right:6px;width:26px;height:26px;border:none;border-radius:var(--r-md);background:rgba(0,0,0,.42);color:#fff;cursor:pointer;font-size:12px}
   .navIt,#tabs .tab{position:relative;flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
     cursor:pointer;font-family:inherit;font-size:8.5px;font-weight:800;letter-spacing:.2px;color:#c6ccd4;
-    background:none;border:none;transition:color .13s}
+    margin:4px 3px;border-radius:var(--r-md);                      /* 선택 상자가 바 안에 놓이도록 살짝 띄움 */
+    background:none;border:1px solid transparent;transition:color .13s,background .13s,border-color .13s}   /* 테두리는 항상 1px(투명) — 선택 시 색만 바뀌어 칸이 밀리지 않는다 */
   .navIt .ic,#tabs .tab .ti svg{width:19px;height:19px;display:block;margin:0 auto}
-  .navIt.on,#tabs .tab.on{color:#7ee0ff;text-shadow:0 0 7px rgba(92,214,255,.5)}   /* 선택 텍스트·아이콘 = 하단 선과 같은 푸른색 */
-  .navIt.on::after,#tabs .tab.on::after{content:'';position:absolute;left:10%;right:10%;bottom:0;height:2px;   /* 표시선 하단 */
-    background:linear-gradient(90deg,transparent,rgba(124,224,255,.15) 20%,#7ee0ff 50%,rgba(124,224,255,.15) 80%,transparent);   /* 가운데서 양옆으로 퍼지는 푸른 빛 */
-    box-shadow:0 0 7px -1px rgba(92,214,255,.6)}
+  /* 선택 표시 = 안쪽이 더 어두운 직사각 상자 + 약간 밝은 회색 테두리. 색을 채우지 않고 명암으로만 구분한다(DESIGN.md 볼륨1) */
+  .navIt.on,#tabs .tab.on{color:#eef2f7;
+    background:linear-gradient(180deg,rgba(0,0,0,.46),rgba(0,0,0,.62));
+    border-color:rgba(255,255,255,.17);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
   .navIt:active,#tabs .tab:active{opacity:.8}
   /* 마을 상단 설정 — 좌측 로그아웃과 짝 */
   .twGear{flex:0 0 auto;font-family:inherit;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;
