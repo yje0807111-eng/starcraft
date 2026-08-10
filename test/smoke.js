@@ -79,18 +79,20 @@ async function groupLobby(){
   // 카드 하단 바로가기(인기맵 / 내 캐릭터)와 소셜 고정 높이.
   // 허브 소셜: 상단(게임 선택)과 시각적으로 분리되고, '친구'가 한눈에 읽혀야 한다.
   // 허브 소셜 탭 = 유즈맵 하단 탭(채팅·파티·친구)과 같은 .msTabs2/.msTab2 단일 소스.
-  await step('탭 바 단일 소스: 친구 시트 = 유즈맵 하단', ()=>{
+  await step('탭 바 단일 소스: 친구 시트 = 마을 채팅 시트', ()=>{
     const hub=$('hubFriendTabs'); skipIf(!hub,'친구 시트 탭 없음');
     assert(hub.classList.contains('msTabs2'),'친구 시트가 공용 탭 바(.msTabs2)를 안 씀');
-    const map=document.querySelector('#mapSelect .msTabs2');   // 유즈맵 하단 바를 정확히 지정(로그인 화면도 같은 컴포넌트를 쓴다)
-    assert(map,'유즈맵 하단 탭 바를 못 찾음');
+    // 채팅 블록은 유즈맵 → 마을(#twChat)로 옮겼다. 유즈맵은 목록만 남는다.
+    assert(!document.querySelector('#mapSelect .msSocial'),'유즈맵에 채팅 블록이 남아 있음');
+    const map=document.querySelector('#twChat .msTabs2');
+    assert(map,'마을 채팅 시트 탭 바를 못 찾음');
     const hb=hub.querySelectorAll('button'), mb=map.querySelectorAll('button');
     assert(hb.length && mb.length,'탭 버튼이 없음');
     hb.forEach(b=>assert(b.classList.contains('msTab2'), '허브 탭 버튼에 .msTab2 없음: '+b.textContent.trim()));
     // 허브는 두꺼운 변형 — 복제가 아니라 같은 컴포넌트의 크기 변형이어야 한다(크기 override가 유즈맵 하단으로 새면 안 됨).
     const pad=e=>parseFloat(getComputedStyle(e).paddingTop);
-    assert(pad(hb[1])>pad(mb[1]),'허브 소셜 바가 유즈맵 하단보다 두껍지 않음: '+pad(hb[1])+' vs '+pad(mb[1]));
-    assert(pad(mb[1])<=10,'유즈맵 하단까지 두꺼워짐(변형이 새어나감): '+pad(mb[1]));
+    assert(pad(hb[1])>pad(mb[1]),'허브 소셜 바가 채팅 시트보다 두껍지 않음: '+pad(hb[1])+' vs '+pad(mb[1]));
+    assert(pad(mb[1])<=10,'채팅 시트까지 두꺼워짐(변형이 새어나감): '+pad(mb[1]));
     // ⚠ 밑줄 두께는 뺀다 — 허브는 DESIGN.md(테두리 1px)로 전환돼 2px 테두리 대신 inset 밑줄을 쓴다.
     //    유즈맵 하단은 아직 미전환이라 2px 테두리 그대로다(touch-it-fix-it).
     const key=b=>{ const c=getComputedStyle(b);
@@ -230,7 +232,10 @@ async function groupLobby(){
     // 네비 이동: 유즈맵 → HOME → 마을
     navGo('map'); await sleep(80);
     assert(visible($('mapSelect')),'네비 유즈맵이 목록을 안 엶');
-    assert(!visible($('navBar')),'유즈맵 화면에서 네비가 남아 있음');
+    // 유즈맵도 하단 네비로 이동한다(좌상단 뒤로가기 버튼은 없앴다)
+    assert(visible($('navBar')),'유즈맵 화면에 네비가 없음');
+    assert(document.querySelector('#navBar .navIt.on').dataset.nav==='map','유즈맵 탭이 활성이 아님');
+    assert(!document.querySelector('#mapSelect .msHeadL .twBack'),'유즈맵 좌상단 뒤로가기 버튼이 아직 있음');
     mapToHub(); await sleep(80);
     assert(visible($('homeScreen')),'유즈맵에서 뒤로 갔는데 HOME으로 안 옴 [DBG 보이는화면='+
       [...document.querySelectorAll('.appScreen')].filter(e=>visible(e)).map(e=>e.id).join(',')+
