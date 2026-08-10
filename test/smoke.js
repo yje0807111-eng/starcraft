@@ -678,13 +678,35 @@ async function groupLobby(){
     return '월드 '+w.style.width+'×'+w.style.height; });
   await step('마을: 멀리서 구역을 지정하면 걸어가서 열림', ()=>{ skipIf(typeof openTown!=='function','마을 없음');
     closeTownPanel();
-    townGo('gacha');   // 화면 밖 구역 지정 — 아이콘/가장자리 표시 탭과 같은 경로
-    assert(_twGoZone==='gacha','구역 지정이 안 됨');
+    townGo('gym');   // 화면 밖 구역 지정 — 아이콘/가장자리 표시 탭과 같은 경로 (상점은 전용 화면이라 팝업 검사에서 제외)
+    assert(_twGoZone==='gym','구역 지정이 안 됨');
     let n=0; while(_twChar.mode!==null && n<4000){ twStep(0.016); n++; }
     assert(n<4000,'목적지에 도착하지 못함');
     assert(visible($('townPanel')),'지정한 구역에 도착했는데 시설 팝업이 안 열림');
-    assert($('tpTitle').textContent.indexOf('뽑기집')>=0,'팝업 제목 불일치: '+$('tpTitle').textContent);
+    assert($('tpTitle').textContent.indexOf('훈련장')>=0,'팝업 제목 불일치: '+$('tpTitle').textContent);
     twLeave(); return n+'프레임 이동'; });
+  // 🎁 상점 = 팝업이 아니라 전용 화면. 네비·마을 구역 두 경로 모두 같은 화면으로 간다.
+  await step('상점: 전용 화면(팝업 아님) · 네비/마을 구역 두 경로', async()=>{ skipIf(typeof openShop!=='function','상점 화면 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','상점'); saveMeta(); }
+    navGo('shop'); await sleep(60);
+    assert(visible($('shopScreen')),'네비 상점이 전용 화면을 안 엶');
+    assert(!visible($('townPanel')),'상점이 아직 팝업으로 열림');
+    assert(!visible($('townScreen')),'상점인데 마을 화면이 남아 있음');
+    assert(document.querySelector('#shopBody .shopTitle'),'상점 제목줄이 없음');
+    assert(document.querySelectorAll('#shopBody .shopPanel').length>=3,'상점 구역 패널이 3개 미만');
+    assert(document.querySelectorAll('#shopBody .shopDeal').length===3,'오늘의 특가가 3개가 아님');
+    assert(document.querySelectorAll('#shopBody .shopRow').length>0,'상점 내용(뽑기 행)이 비어 있음');
+    // 재화 아이콘은 resIco 공용(이모지 임의 사용 금지) — 카드 안에 실제 아이콘이 들어갔는지
+    assert(document.querySelectorAll('#shopBody img.gi[src*="res_"]').length>0,'상점에 공용 재화 아이콘이 없음');
+    // IBM Plex Sans KR은 700이 최대 — 800/900은 가짜 볼드가 된다(DESIGN.md §2)
+    for(const sel of ['.shopTitle','.shopHead','.shopTag','.shopBuy']){ const e=document.querySelector('#shopBody '+sel)||document.querySelector(sel);
+      if(e) assert(+getComputedStyle(e).fontWeight<=700, sel+' 굵기가 700 초과(가짜 볼드): '+getComputedStyle(e).fontWeight); }
+    assert(document.querySelector('#navBar .navIt.on').dataset.nav==='shop','상점 탭이 활성이 아님');
+    // 마을 구역(뽑기집)도 팝업이 아니라 같은 화면으로
+    openTown(); await sleep(40); openTownPanel('gacha'); await sleep(60);
+    assert(visible($('shopScreen')) && !visible($('townPanel')),'마을 구역이 아직 팝업으로 열림');
+    openHome(); await sleep(40);
+    return '전용 화면 · 두 경로 ok'; });
   await step('마을: 지정하지 않으면 안 열림(스쳐 지남·겹쳐 섬)', ()=>{ skipIf(typeof twSetTarget!=='function','마을 없음');
     openTown(); closeTownPanel();
     const c=twZonePx('charmake');

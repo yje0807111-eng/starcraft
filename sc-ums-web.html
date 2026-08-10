@@ -2502,7 +2502,7 @@
   /* POWER UPGRADES — 위쪽은 배경이 보이도록 비우고 카드는 네비 바로 위에 붙인다 */
   .hmUpg{margin-top:auto}   /* 위쪽 빈 자리는 배경 — 카드만 아래로 붙인다 */
   /* 헤더 = 접기/펴기 손잡이. 접으면 이 줄만 남고 뒤 배경이 화면 전체로 보인다 */
-  .hmUpgHead{width:100%;display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:15px;font-weight:900;letter-spacing:.6px;
+  .hmUpgHead{width:100%;display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:15px;font-weight:700;letter-spacing:.6px;
     color:#ececec;cursor:pointer;background:none;border:none;border-bottom:1px solid rgba(255,255,255,.06);text-align:left}
   .hmUpgChev{margin-left:auto;width:9px;height:9px;border-right:2px solid #9a9a9a;border-bottom:2px solid #9a9a9a;
     transform:rotate(45deg) translate(-2px,-2px);transition:transform .16s}
@@ -2576,10 +2576,10 @@
   .hmUpIco{flex:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:18px;
     background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
   .hmUpTx{min-width:0;display:flex;flex-direction:column}
-  .hmUpName{font-size:var(--fs-lg);font-weight:800;color:#ececec}
+  .hmUpName{font-size:var(--fs-lg);font-weight:700;color:#ececec}
   .hmUpLv{font-size:var(--fs-sm);color:#9a9a9a}
   .hmUpLv b{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:#5dff8f}
-  .hmUpBtn{height:32px;cursor:pointer;font-family:inherit;font-size:var(--fs-md);font-weight:900;letter-spacing:.3px;
+  .hmUpBtn{height:32px;cursor:pointer;font-family:inherit;font-size:var(--fs-md);font-weight:700;letter-spacing:.3px;
     color:#2b1d00;background:linear-gradient(180deg,#ffd97a,#e8a92b 58%,#b8801a);
     border:1px solid rgba(255,220,140,.8);border-radius:var(--r-bar)}
   .hmUpBtn:disabled{cursor:default;color:#7a7a7a;background:rgba(255,255,255,.05);border-color:var(--metal-edge)}
@@ -2605,6 +2605,57 @@
   /* ⚔ 던전 허브 — 던전 목록 카드(배너) + 팝업(소탕/입장) */
   .dgHubHead{font-size:12px;color:var(--txt-mute);margin:2px 4px 12px;line-height:1.5;text-align:center}
   .dgHubHead b{color:#ffd24a}
+  /* 🎁 상점 전용 화면 — HOME .hmCard 구조를 그대로 따른다: 바깥 패널 + 머리줄 + 안쪽 칸
+     ⚠ 굵기는 700까지만(IBM Plex Sans KR 최대). 800/900은 가짜 볼드가 된다 — DESIGN.md §2 */
+  #shopScreen .twToast{position:absolute;left:50%;bottom:calc(var(--navH) + 16px);transform:translateX(-50%)}
+  .shopTitle{text-align:center;font-size:15px;font-weight:700;letter-spacing:.6px;color:#ececec;padding:6px 0 12px}
+  /* 구역 패널 = HOME .hmCard */
+  .shopPanel{flex:none;background:var(--hmPanel);border:1px solid var(--hbEdge);border-radius:var(--r-bar);overflow:hidden;margin:0 2px 12px}   /* flex:none — 부모가 flex 컬럼이라 없으면 내용이 눌려 잘린다(HOME .hmCard와 같은 이유) */
+  /* 구역 머리줄 = HOME .hmUpgHead */
+  .shopHead{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:13px;font-weight:700;letter-spacing:.6px;
+    color:#ececec;border-bottom:1px solid rgba(255,255,255,.06)}
+  .shopHead em{margin-left:auto;font-style:normal;font-size:var(--fs-sm);font-weight:400;color:#9a9a9a}
+  .shopBody{padding:8px;display:flex;flex-direction:column;gap:8px}
+  .shopNote{font-size:var(--fs-md);color:#9a9a9a;line-height:1.5;padding:0 2px}
+  .shopNote b{color:#ececec;font-weight:700}
+  /* 꾸러미 칸 = HOME .hmUp (안쪽 밝은 면 + metal-edge) */
+  .shopDeal{display:flex;align-items:stretch;gap:8px;padding:8px;
+    background:rgba(255,255,255,.045);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+  .shopDeal.sold{opacity:.42}
+  .shopDealL{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:6px}
+  /* 칸 머리 — 이름 + 아래 구분선으로 내용물과 분리 */
+  .shopTag{display:block;font-size:var(--fs-lg);font-weight:700;color:#ececec;
+    padding-bottom:5px;border-bottom:1px solid rgba(255,255,255,.08)}
+  .shopGive{display:flex;flex-direction:column;gap:4px}
+  .shopGive span{display:flex;align-items:center;gap:6px;font-size:var(--fs-md);color:#c9c9c9;
+    background:rgba(0,0,0,.28);border-radius:var(--r-bar);padding:4px 8px}
+  .shopGive b{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:#ececec;font-size:13px;margin-left:auto}
+  .shopDealR{flex:0 0 92px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:6px;
+    padding-left:8px;border-left:1px solid rgba(255,255,255,.06)}
+  .shopArt{flex:1 1 auto;display:flex;align-items:center;justify-content:center;font-size:28px;line-height:1}
+  /* 가격 버튼 — HOME .hmUpBtn 규격(구매=금색 액션) */
+  .shopBuy{width:100%;height:32px;cursor:pointer;font-family:inherit;font-size:var(--fs-md);font-weight:700;letter-spacing:.3px;
+    display:flex;align-items:center;justify-content:center;gap:4px;
+    color:#2b1d00;background:linear-gradient(180deg,#ffd97a,#e8a92b 58%,#b8801a);
+    border:1px solid rgba(255,220,140,.8);border-radius:var(--r-bar)}
+  .shopBuy b{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:13px}
+  .shopBuy:disabled{cursor:default;color:#7a7a7a;background:rgba(255,255,255,.05);border-color:var(--metal-edge)}
+  /* 일반 행(뽑기·펫) — 칸 규격 통일 */
+  .shopRow{display:flex;align-items:center;gap:8px;padding:8px;
+    background:rgba(255,255,255,.045);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+  .shopRow .twRowInfo{flex:1 1 auto;min-width:0}
+  .shopRow .twBtn{flex:0 0 auto}
+  /* 젬 팩 — 3열 */
+  .shopGems{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .shopGem{display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 6px;
+    background:rgba(255,255,255,.045);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+  .shopGem em{display:flex;align-items:center;gap:4px;font-style:normal;font-family:var(--font-num);
+    font-variant-numeric:tabular-nums;font-size:15px;color:#ececec;font-weight:700}
+  .shopGem em .gi{width:17px;height:17px}
+  /* 재화 아이콘(resIco 공용) — 상점 인라인 크기 */
+  .gi{width:15px;height:15px;flex:none;object-fit:contain;vertical-align:middle}
+  .giT{font-style:normal;font-size:13px;width:15px;flex:none;text-align:center}
+  .shopGem button{width:100%}
   .dgCard{position:relative;display:flex;align-items:stretch;height:74px;margin:0 2px 10px;border:1px solid var(--metal-edge);border-radius:var(--r-lg);overflow:hidden;cursor:pointer;
     background:linear-gradient(115deg,var(--dgTint,#2f4a72) 0%,rgba(10,13,18,.72) 60%)}
   .dgCard.lock{opacity:.5;cursor:default}
@@ -3237,7 +3288,7 @@
         font-weight에 져서 일부 제목만 가짜 볼드로 남는다(전에 font-size로 똑같이 당했다).
      ⚠ IBM Plex Sans KR은 700이 최대다 — 800/900을 남기면 브라우저가 가짜 볼드를 그려 획이 뭉갠다.
         그래서 700으로 되돌린다. 제목은 '같은 가족 + 굵기 700 + 큰 크기'로 선다. */
-  #ovTitle,.ovTtl,.ecTitle,.setTitle,.hmUpgHead,.twName,.cpTitle,.opTitle,.msTitle,.lbTitle,.ptTitle{
+  #ovTitle,.ovTtl,.ecTitle,.setTitle,.hmUpgHead,.twName,.cpTitle,.opTitle,.msTitle,.lbTitle,.ptTitle,.shopTitle,.shopHead{
     font-family:var(--font-ti);font-weight:700}
 </style>
 </head>
@@ -3798,6 +3849,11 @@
        ⚠ 표기는 '토벌'(열쇠·소탕·단계 등반), '던전'은 자동사냥(HOME) 전용어다. 코드 식별자 dg*/DG_*는 옛 이름 그대로 둔다. -->
   <div id="dgHubScreen" class="appScreen spaceBg hide">
     <div class="hmScroll uiScroll" id="dgHubBody"></div>
+  </div>
+  <!-- 🎁 상점 — 네비 '상점' 진입. 팝업이 아닌 전용 화면(렌더러는 renderProfGacha 단일 소스 재사용) -->
+  <div id="shopScreen" class="appScreen spaceBg hide">
+    <div class="hmScroll uiScroll" id="shopBody"></div>
+    <div id="shopToast" class="twToast hide"></div>
   </div>
   <!-- 토벌 팝업(열기) — 이전 단계 소탕 + 입장 -->
   <div id="dgSheet" class="dgSheet hide">
@@ -5221,7 +5277,7 @@ function navGo(tab){ if(typeof playSfx==='function') playSfx('ui_tab');
   if(tab==='dungeon') return openDungeonHub();                                              // 던전 허브(전용 화면)
   if(tab==='town')    { openTown(); return navShow('town'); }
   if(tab==='map')     return twGoMap();                                                    // 유즈맵(친구·소셜은 유즈맵 하단)
-  if(tab==='shop')    { openTown(); navShow('shop'); return openTownPanel('gacha'); } }    // 상점 = 뽑기집(전용 상점 화면은 이후 단계)
+  if(tab==='shop')    return openShop(); }                                                 // 상점(전용 화면)
 // ── ⚔ 자동사냥(HOME 메인 전투) — 마린키우기식 웨이브 방어 ──
 // ⛔ 유즈맵(G / U / M3D / GACHA_*)과 완전 분리 — 던전과 같은 격리 규칙. 표·상태·루프·렌더 전부 자체 보유.
 // 확정 규칙(2026-08-07):
@@ -5627,7 +5683,7 @@ function sendDM(){ const inp=document.getElementById('dmInput'); if(!inp||_dmFri
 // 배치: 가로로 긴 직사각형의 네 모서리 + 정중앙 광장(주 이동 방향이 가로라 좌우로 넓게 잡는다)
 const TOWN_ZONES={
   plaza:{ x:50, y:50, ico:'🏠',   label:'광장',      title:'광장 · 내 캐릭터', render:()=>renderProfStats() },
-  gacha:{ x:22, y:24, ico:'🎁',   label:'뽑기집',    title:'뽑기집 · 펫',      render:()=>renderProfGacha() },   // 좌상
+  gacha:{ x:22, y:24, ico:'🎁',   label:'상점',      title:'상점',             screen:'shop', render:()=>renderProfGacha() },   // 좌상 · screen 지정 = 팝업 대신 전용 화면으로 이동
   gate: { x:78, y:24, ico:'🔒',   label:'관문',      title:'관문',             render:()=>renderProfGate()  },   // 우상
   gear: { x:22, y:76, ico:'🎒',   label:'장비',      title:'장비',             render:()=>renderProfGear()  },   // 좌하
   gym:  { x:78, y:76, ico:'🏋️',  label:'훈련장',    title:'훈련장',           render:()=>renderProfIdle()  },   // 우하
@@ -5753,18 +5809,34 @@ function renderTownBar(){ const p=PROF(), c=CHAR();
   const lv=document.getElementById('twLv'); if(lv) lv.textContent='Lv.'+(c?c.level:1);
   const pw=document.getElementById('twPow'); if(pw) pw.textContent='⚔ '+profPower();
   if(typeof updateCurBar==='function') updateCurBar(); }   // 💠 미네랄/가스/젬은 공용 재화 바
-function showTownToast(msg){ const t=document.getElementById('twToast'); if(!t) return; t.textContent=msg; t.classList.remove('hide');
+function showTownToast(msg){ const t=document.getElementById(shopOpen()?'shopToast':'twToast'); if(!t) return; t.textContent=msg; t.classList.remove('hide');
   clearTimeout(t._t); t._t=setTimeout(()=>t.classList.add('hide'), 2600); }
 // 구역 아이콘(또는 가장자리 방향 표시) 탭 = 그 구역을 지정. 이미 그 위에 서 있으면 바로 연다.
 function townGo(zone){ const p=twZonePx(zone); if(!p) return; if(typeof playSfx==='function') playSfx('ui_open');
   if(Math.hypot(p[0]-_twChar.x,p[1]-_twChar.y)<=TW_ZONE_R){ _twChar.mode=null; _twGoZone=null; openTownPanel(zone); return; }
   twSetTarget(p[0],p[1]); _twGoZone=zone; }   // twSetTarget이 지정을 지우므로 그 뒤에 세운다
-function openTownPanel(zone){ _twZone=zone; _twChar.mode=null; _twPtr=null;   // 시설에 들어가면 걸음을 멈춘다
+const TOWN_ZONE_SCREEN={ shop:()=>openShop() };   // 구역 → 전용 화면 매핑(팝업 대신 화면 전환)
+function openTownPanel(zone){ const _z=TOWN_ZONES[zone];
+  if(_z && _z.screen && TOWN_ZONE_SCREEN[_z.screen]){ _twChar.mode=null; _twPtr=null; return TOWN_ZONE_SCREEN[_z.screen](); }   // 전용 화면 구역
+  _twZone=zone; _twChar.mode=null; _twPtr=null;   // 시설에 들어가면 걸음을 멈춘다
   const card=document.querySelector('#townPanel .twCard');
   if(card) card.classList.toggle('gearFull', zone==='gear');   // 장비창만 카드 높이를 고정해 위/아래 구역을 나눈다
   const t=document.getElementById('tpTitle'), z=TOWN_ZONES[zone]; if(t) t.textContent=(z&&z.title)||'시설';
   refreshTownPanel(); popShow('townPanel'); bagScrollHint(); }   // 숨은 동안은 높이가 0이라 표시 후 한 번 더 재본다
-function refreshTownPanel(){ const body=document.getElementById('tpBody'), z=TOWN_ZONES[_twZone]; if(!body||!z) return;
+// ── 🎁 상점(전용 화면) ─────────────────────────────────────────────────────
+// 팝업이 아니라 독립 화면이다. 내용 렌더러는 renderProfGacha() 하나뿐(단일 소스) — 마크업을 복제하지 말 것.
+function shopOpen(){ const e=document.getElementById('shopScreen'); return !!(e && !e.classList.contains('hide')); }
+function openShop(){ if(typeof loadMeta==='function') loadMeta();
+  if(typeof CHAR==='function' && !CHAR()){ openCharScreen('create'); return; }   // 캐릭터 없으면 생성부터
+  if(typeof twLeave==='function') twLeave();                                     // 마을에서 들어왔으면 루프·팝업 정리
+  showAppScreen('shopScreen'); navShow('shop'); renderShop();
+  if(typeof paintIcons==='function') paintIcons(document.getElementById('shopScreen')); }
+function renderShop(){ const body=document.getElementById('shopBody'); if(!body) return;
+  const old=body.querySelector('.bagBody'), keep=old?old.scrollTop:0;
+  body.innerHTML='<div class="shopTitle"><span>🎁</span><b>상점</b></div>'+renderProfGacha();
+  const nb=body.querySelector('.bagBody'); if(nb&&keep) nb.scrollTop=keep; }
+function refreshTownPanel(){ if(shopOpen()){ renderShop(); return; }   // 상점 전용 화면이 열려 있으면 그쪽을 갱신
+  const body=document.getElementById('tpBody'), z=TOWN_ZONES[_twZone]; if(!body||!z) return;
   const old=body.querySelector('.bagBody'), keep=old?old.scrollTop:0;   // 다시 그려도 가방을 보던 위치를 유지
   body.innerHTML = z.render();
   const nb=body.querySelector('.bagBody'); if(nb&&keep) nb.scrollTop=keep;
@@ -5858,22 +5930,89 @@ function renderProfStats(){ const p=PROF(), c=CHAR(); if(!c) return '<div class=
   return h; }
 function profDoEvolve(){ if(profEvolve()){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); showTownToast('⭐ 진화 성공!'); } }
 // 뽑기집: 펫 뽑기 + 보유 펫 장착
+// ── 💠 재화 아이콘 단일 소스 ────────────────────────────────────────────────
+// ⛔ 새 UI에서 미네랄·가스·젬·인구를 표시할 땐 **반드시 resIco()**를 쓴다. 이모지를 임의로 넣지 말 것.
+//    한글 이름으로도 찾는다 — resIco('미네랄') === resIco('mineral').
+const RES_ICON={ mineral:'res_mineral', gas:'res_gas', gem:'res_gem', pop:'res_pop' };
+const RES_ICON_KO={ '미네랄':'mineral', '가스':'gas', '젬':'gem', '인구':'pop' };
+function resIco(k, cls){ const id=RES_ICON[k]||RES_ICON[RES_ICON_KO[k]];
+  return id ? '<img class="'+(cls||'ri')+'" src="assets/icons/'+id+'.webp" alt="">' : ''; }
+// ── 🎁 상점 내용(단일 소스) — 모바일 재화상점 형태: 오늘의 특가 → 뽑기 → 젬(현질) → 보유 펫 ──
+// 특가는 매일 09:00 갱신(던전 열쇠와 같은 축). 3개를 다 사면 그 자리에서 새 3개가 나온다.
+const SHOP_DEAL_POOL=[
+  {id:'pet',   tag:'펫 꾸러미',   art:'🐾', gem:20,  give:{pcoin:660,  ticket_pet:1}},
+  {id:'gear',  tag:'장비 꾸러미', art:'🎒', gem:35,  give:{pcoin:1200, ticket_gear:2}},
+  {id:'res',   tag:'자원 꾸러미', art:'💠', gem:15,  give:{pcoin:2000, gas:120}},
+  {id:'ally',  tag:'동료 꾸러미', art:'🤝', gem:60,  give:{pcoin:2500, ticket_ally:1}},
+  {id:'gas',   tag:'가스 꾸러미', art:'⚡', gem:25,  give:{gas:300}},
+  {id:'mega',  tag:'특급 꾸러미', art:'📦', gem:90,  give:{pcoin:6000, gas:400, ticket_gear:3}},
+];
+// 💎 젬 = 현질 재화(실제 결제로만 얻는다). 특가는 이 젬으로 산다.
+const SHOP_GEM_PACKS=[ {n:60,won:'₩1,500'}, {n:220,won:'₩5,500'}, {n:800,won:'₩19,000'} ];
+// 지급 내용 라벨 — 아이콘은 resIco()가 이름으로 자동 매칭(임의 이모지 금지)
+const SHOP_GIVE_LABEL={ pcoin:'미네랄', gas:'가스', gem:'젬',
+  ticket_gear:'장비 뽑기권', ticket_pet:'펫 뽑기권', ticket_ally:'동료 뽑기권' };
+function shopState(){ const p=PROF(); if(!p.shop) p.shop={day:0,bought:[],cycle:0};
+  const dk=_dgDayKey(); if(p.shop.day!==dk){ p.shop={day:dk,bought:[],cycle:0}; } return p.shop; }
+function shopDeals(){ const st=shopState(), n=SHOP_DEAL_POOL.length, out=[];
+  const base=(Math.floor(st.day/86400000)*3 + st.cycle*3) % n;          // 날짜+주기로 3개 선정(무작위 아님 = 재현 가능)
+  for(let i=0;i<3;i++) out.push(SHOP_DEAL_POOL[(base+i)%n]);
+  return out; }
+function shopBuyDeal(id){ const p=PROF(), st=shopState(), d=SHOP_DEAL_POOL.find(x=>x.id===id); if(!d) return;
+  if(st.bought.indexOf(id)>=0) return;
+  if(profGem()<d.gem){ showTownToast('💎 젬이 부족합니다'); return; }
+  p.gem=(p.gem||0)-d.gem;
+  for(const k in d.give){ const v=d.give[k];
+    if(k==='pcoin') p.pcoin=(p.pcoin||0)+v;
+    else if(k==='gas') p.gas=(p.gas||0)+v;
+    else if(k==='gem') p.gem=(p.gem||0)+v;
+    else { const t=k.replace('ticket_',''); if(!p.tickets) p.tickets={gear:0,pet:0,ally:0}; p.tickets[t]=(p.tickets[t]||0)+v; } }
+  st.bought.push(id);
+  if(shopDeals().every(x=>st.bought.indexOf(x.id)>=0)){ st.cycle++; st.bought=[]; }   // 3개 다 사면 새 3개
+  saveMeta(); if(typeof playSfx==='function') playSfx('hero_merge');
+  renderTownBar(); refreshTownPanel(); showTownToast('🎁 '+d.tag+' 구매 완료'); }
+function shopGemSoon(){ showTownToast('💎 젬 충전은 준비 중입니다'); }
 function renderProfGacha(){ const p=PROF(), poor=p.pcoin<PROF_PET_GACHA_COST, eq=p.equip||[];
-  let h='<div class="twHead">펫을 뽑아 장착하면 <b>코인·공격·체력 %</b>가 오릅니다.<br>보유 <b>'+Math.floor(p.pcoin)+' P</b> · 장착 '+eq.length+'/'+profPetSlots()+'</div>';
-  h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">펫 1회 뽑기</div><div class="twRowSub">중복 펫은 별(★)로 강화</div></div><button class="twBtn" onclick="profDoGacha()"'+(poor?' disabled':'')+'>'+PROF_PET_GACHA_COST+' P</button></div>';
+  const st=shopState(); let h='';
+  // ① 오늘의 특가 — 패널(구역) 안에 꾸러미 칸을 담는다(HOME .hmCard 구조)
+  h+='<div class="shopPanel"><div class="shopHead">오늘의 특가<em>매일 09:00 갱신</em></div><div class="shopBody">';
+  h+='<div class="shopNote">특가 <b>3개</b>를 모두 구매하면 새로운 3개가 나옵니다</div>';
+  for(const d of shopDeals()){ const sold=st.bought.indexOf(d.id)>=0, can=profGem()>=d.gem;
+    h+='<div class="shopDeal'+(sold?' sold':'')+'"><div class="shopDealL"><span class="shopTag">'+d.tag+'</span><div class="shopGive">';
+    for(const k in d.give){ const nm=SHOP_GIVE_LABEL[k]||k, ico=resIco(nm,'gi');   // 이름으로 아이콘 자동 매칭
+      h+='<span>'+(ico||'<i class="giT">🎟</i>')+' '+nm+' <b>'+d.give[k].toLocaleString('en-US')+'</b></span>'; }
+    h+='</div></div><div class="shopDealR"><span class="shopArt">'+d.art+'</span>'
+      +'<button class="shopBuy" onclick="shopBuyDeal(\''+d.id+'\')"'+((sold||!can)?' disabled':'')+'>'
+      +(sold?'구매완료':(resIco('gem','gi')+'<b>'+d.gem+'</b>'))+'</button></div></div>'; }
+  h+='</div></div>';
+  // ② 뽑기(실제 기능)
+  h+='<div class="shopPanel"><div class="shopHead">뽑기<em>장착 '+eq.length+'/'+profPetSlots()+'</em></div><div class="shopBody">';
+  h+='<div class="shopNote">펫을 장착하면 <b>코인·공격·체력 %</b>가 오릅니다</div>';
+  h+='<div class="shopRow"><div class="twRowInfo"><div class="twRowName">펫 1회 뽑기</div><div class="twRowSub">중복 펫은 별(★)로 강화</div></div><button class="twBtn" onclick="profDoGacha()"'+(poor?' disabled':'')+'>'+PROF_PET_GACHA_COST+' P</button></div>';
   // 🎟 장비 뽑기권 — 자동사냥 엘리트 처치·토벌 클리어로 얻는다. 여기가 유일한 소비처.
   { const tk=((p.tickets&&p.tickets.gear)||0), full=profItems().length>=PROF_INV_MAX;
-    h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">장비 뽑기권 사용</div>'
+    h+='<div class="shopRow"><div class="twRowInfo"><div class="twRowName">장비 뽑기권 사용</div>'
       +'<div class="twRowSub'+(tk?'':' lock')+'">'+(full?'가방이 가득 찼습니다':('보유 🎟 '+tk+' · 엘리트 처치·토벌에서 획득'))+'</div></div>'
       +'<button class="twBtn" onclick="profUseGearTicket()"'+((tk&&!full)?'':' disabled')+'>뽑기</button></div>'; }
+  h+='</div></div>';
+  // ③ 젬 — 유일한 현질 상품(실제 결제로만 얻는 재화)
+  h+='<div class="shopPanel"><div class="shopHead">젬 충전<em>현금 결제</em></div><div class="shopBody">';
+  h+='<div class="shopNote">젬은 <b>현금 결제</b>로만 얻습니다 · 특가 구매에 사용</div>';
+  h+='<div class="shopGems">';
+  for(const g of SHOP_GEM_PACKS)
+    h+='<div class="shopGem"><em>'+resIco('gem','gi')+' '+g.n+'</em>'
+      +'<button class="shopBuy" onclick="shopGemSoon()">'+g.won+'</button></div>';
+  h+='</div></div></div>';
+  // ④ 보유 펫
   const owned=Object.keys(p.pets||{}).filter(id=>PROF_PETS[id]).sort((a,b)=>GACHA_TIER_ORDER.indexOf(PROF_PETS[b].tier)-GACHA_TIER_ORDER.indexOf(PROF_PETS[a].tier));
-  h+='<div class="twSectLbl">보유 펫 ('+owned.length+')</div>';
-  if(!owned.length) h+='<div class="twRow"><div class="twRowInfo"><div class="twRowSub">아직 없음 — 뽑아보세요!</div></div></div>';
+  h+='<div class="shopPanel"><div class="shopHead">보유 펫<em>'+owned.length+'마리</em></div><div class="shopBody">';
+  if(!owned.length) h+='<div class="shopNote">아직 없음 — 위에서 뽑아보세요!</div>';
   for(const id of owned){ const P=PROF_PETS[id], col=TIER_COLOR[P.tier], star=profPetStar(id), on=eq.indexOf(id)>=0, full=eq.length>=profPetSlots();
-    h+='<div class="twRow"><span class="twPet" style="color:'+col+';border-color:'+col+'55">'+P.emoji+'</span>'
+    h+='<div class="shopRow"><span class="twPet" style="color:'+col+';border-color:'+col+'55">'+P.emoji+'</span>'
       +'<div class="twRowInfo"><div class="twRowName">'+P.name+' <span class="twStars">'+'★'.repeat(star)+'</span></div>'
       +'<div class="twRowSub" style="color:'+col+'">'+GACHA_TIERS[P.tier].name+' · '+PROF_BONUS_NAME[P.bonus.type]+' +'+Math.round(profPetVal(id)*100)+'%</div></div>'
       +'<button class="twBtn'+(on?' on':'')+'" onclick="profDoPetEquip(\''+id+'\')"'+((!on&&full)?' disabled':'')+'>'+(on?'장착중':'장착')+'</button></div>'; }
+  h+='</div></div>';
   return h; }
 // 장비 뽑기권 1장 = 무작위 장비 1개(등급은 최고 토벌 단계에 따라 좋아진다)
 function profUseGearTicket(){ const p=PROF();
@@ -10859,9 +10998,9 @@ function playScreenFx(el){
 function fxPop(card){ if(!card) return; card.classList.remove('fxPop'); void card.offsetWidth; card.classList.add('fxPop');
   clearTimeout(card._fxT); card._fxT=setTimeout(()=>card.classList.remove('fxPop'),470); }
 // ── 앱 화면 전환 ──
-const APP_SCREENS=['opening','auth','mapSelect','modeSheet','homeScreen','charScreen','townScreen','dgHubScreen','dgScreen'];
+const APP_SCREENS=['opening','auth','mapSelect','modeSheet','homeScreen','charScreen','townScreen','dgHubScreen','dgScreen','shopScreen'];
 // 💠 공용 재화 바를 띄우는 화면(RPG/허브 + 유즈맵 선택). 로그인·타이틀·캐릭터생성·인게임은 제외.
-const CUR_SCREENS=['homeScreen','townScreen','mapSelect','modeSheet','dgHubScreen','dgScreen'];
+const CUR_SCREENS=['homeScreen','townScreen','mapSelect','modeSheet','dgHubScreen','dgScreen','shopScreen'];
 // 그중 바를 '판'이 아니라 배경 위 숫자로 두는 화면(.curBar.bare) — 배경이 상단까지 이어져 보여야 하는 곳
 const BARE_CUR_SCREENS=['homeScreen','townScreen'];   // 재화 바를 '판'이 아니라 배경 위 숫자로 — 상단 줄이 겹쳐 답답해진다
 function curShow(on){ const b=document.getElementById('curBar'), p=document.getElementById('phone');
