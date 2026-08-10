@@ -2474,15 +2474,33 @@
   .hmScroll{position:relative;z-index:1}   /* 전투 캔버스 위로 */
   /* 배경 전투 — 패널 없이 배경 위 그림·글자만(DESIGN §6: 배경이 주인공) */
   #hbCv{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-  .hbHud{position:absolute;left:12px;top:calc(var(--curH) + 8px);z-index:2;display:flex;flex-direction:column;gap:0;
-    align-items:flex-start;cursor:pointer;background:none;border:none;padding:2px 6px 2px 0;text-align:left}
+  /* 좌상단 고정 묶음 — 재화 바와 같은 줄에서 시작한다(바는 우측 정렬이라 왼쪽이 비어 있다)
+     ⚠ 이름 주의: `.hbTop`은 인게임 홈 하단 탭 줄(#bpMain)이 이미 쓰고 있다. 겹치면 그쪽이 세로로 무너진다. */
+  .hbHudTop{position:absolute;left:8px;top:3px;z-index:2;display:flex;flex-direction:column;align-items:flex-start;gap:5px}
+  /* 좌상단 묶음의 실제 높이(프로필 48 + gap 5 + 아이콘 30). 중앙 표시가 이 아래로 내려가는 기준 — 스모크가 겹침을 검사한다 */
+  :root{--hbHudH:83px}
+  .hbHud{display:flex;align-items:center;gap:7px;cursor:pointer;background:none;border:none;padding:0;text-align:left}
   .hbHud:active{opacity:.75}
-  .hbHud b{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:15px;font-weight:800;color:#e7edf5;letter-spacing:.8px}
-  .hbHud span{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:10px;font-weight:700;color:#9a9a9a;letter-spacing:.6px}
-  /* 중앙 표시 = 라운드 선택 버튼(누를 수 있어야 하므로 pointer-events를 살린다) */
-  .hbMid{position:absolute;left:50%;top:calc(var(--curH) + 8px);transform:translateX(-50%);z-index:2;text-align:center;
-    display:flex;flex-direction:column;cursor:pointer;background:none;border:none;padding:2px 8px}
-  .hbMid:active{opacity:.75}
+  .hbAv{flex:none;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:17px;
+    background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+  .hbCol{display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0}
+  .hbHud b{font-size:12px;font-weight:700;color:#ececec;letter-spacing:.2px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .hbSub{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:10px;font-weight:700;color:#9a9a9a;letter-spacing:.4px}
+  .hbSub i,.hbSt i{font-style:normal}
+  .hbXp{width:92px;height:3px;border-radius:var(--r-bar);background:rgba(255,255,255,.10);overflow:hidden}
+  .hbXp i{display:block;height:100%;width:0;background:#5dff8f}
+  .hbSt{display:flex;gap:7px;font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:10px;font-weight:700;color:#c6ccd4}
+  /* 라운드 선택 = 전용 아이콘 버튼(텍스트를 누르는 방식은 폐지) */
+  .hbRoundBtn{width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;
+    color:#c6ccd4;background:linear-gradient(180deg,#191919,#0e0e0e);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+  .hbRoundBtn:active{opacity:.75}
+  .hbRoundBtn svg,.hbRoundBtn .mIco{width:16px;height:16px}
+  /* HOME에선 재화 바가 '판'이 아니라 배경 위 숫자라 왼쪽 빈 자리가 프로필 클릭을 먹지 않게 한다 */
+  .curBar.bare{pointer-events:none}
+  .curBar.bare .res{pointer-events:auto}
+  /* 중앙 = 표시 전용(라운드 조절은 좌상단 .hbRoundBtn 담당) → 클릭을 통과시켜 전장을 가리지 않는다 */
+  .hbMid{position:absolute;left:50%;top:calc(3px + var(--hbHudH) + 8px);transform:translateX(-50%);z-index:2;text-align:center;
+    display:flex;flex-direction:column;pointer-events:none;background:none;border:none;padding:2px 8px;white-space:nowrap}
   .hbMid b{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:13px;font-weight:800;color:#ececec;letter-spacing:.5px}
   .hbMid span{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:10px;font-weight:700;color:#9a9a9a;letter-spacing:.4px}
   .hbMid i{font-style:normal}
@@ -3846,9 +3864,20 @@
        위쪽 빈 자리는 채우지 않는다 — 우주 배경(.spaceBg)이 상단 재화 바 뒤까지 이어져 보이는 게 의도다. -->
   <div id="homeScreen" class="appScreen spaceBg hide">
     <canvas id="hbCv"></canvas>   <!-- 배경 전투 — UI 아래 레이어(클릭 통과) -->
-    <button class="hbHud" id="hbHud" onclick="hbOpenInfo()" aria-label="캐릭터 정보"><b id="hbLv">Lv.1</b><span id="hbAtk">⚔ 0</span><span id="hbKill">0 KILL</span></button>
-    <button class="hbMid" id="hbMid" onclick="hbOpenRounds()" aria-label="라운드 선택">
-      <b id="hbRound">던전 1 · 라운드 1</b><span><i id="hbWaveTx">웨이브 1/5</i> · <i id="hbTimer">20s</i> · <i id="hbMode">반복</i></span></button>
+    <!-- 좌상단 고정 — 프로필(상세) + 라운드 선택 아이콘. 재화 바(우측 정렬)와 같은 줄을 나눠 쓴다 -->
+    <div class="hbHudTop">
+      <button class="hbHud" id="hbHud" onclick="hbOpenInfo()" aria-label="캐릭터 정보">
+        <span class="hbAv" id="hbAv">🪖</span>
+        <span class="hbCol">
+          <b id="hbName">캐릭터</b>
+          <span class="hbSub"><i id="hbJob">레인저</i> · <i id="hbLv">Lv.1</i></span>
+          <span class="hbXp"><i id="hbXpBar"></i></span>
+          <span class="hbSt"><i id="hbAtk">⚔ 0</i><i id="hbHp">❤ 0</i></span>
+        </span></button>
+      <button class="hbRoundBtn" id="hbRoundBtn" onclick="hbOpenRounds()" aria-label="던전·라운드 선택"><span data-ico="flag"></span></button>
+    </div>
+    <div class="hbMid" id="hbMid">   <!-- 표시 전용 — 라운드 조절은 위 아이콘이 담당한다 -->
+      <b id="hbRound">던전 1 · 라운드 1</b><span><i id="hbWaveTx">웨이브 1/5</i> · <i id="hbTimer">20s</i> · <i id="hbMode">반복</i></span></div>
     <div class="hbBar" id="hbBar"></div>   <!-- 스킬·건설·부스트 (전장 위, 업그레이드 카드 바로 위) -->
     <div class="hmScroll uiScroll" id="hmScroll">
       <!-- POWER UPGRADES — 화면에 남은 유일한 카드. 위쪽은 비워서 우주 배경(.spaceBg)이 그대로 보인다 -->
@@ -5516,13 +5545,21 @@ function hbPlaceFoe(proto){ const S=_hb;
     spd:proto.spd*(elite?0.85:1), cdT:Math.random()*0.6 }); }
 function hbHud(){ const S=_hb; if(!S) return; const c=(typeof CHAR==='function')?CHAR():null;
   const put=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
-  put('hbLv','Lv.'+(c?c.level:1)); put('hbAtk','⚔ '+Math.round(S.char.atk));
+  put('hbName', c? (c.name||'캐릭터') : '캐릭터');
+  { const K=(c&&PROF_CLASSES[c.cls])||null;
+    put('hbJob', K?K.name:'-');
+    const av=document.getElementById('hbAv'); if(av) av.textContent=(K&&K.ico)||'🧍'; }
+  put('hbLv','Lv.'+(c?c.level:1));
+  put('hbAtk','⚔ '+Math.round(S.char.atk));
+  put('hbHp','❤ '+Math.max(0,Math.round(S.char.hp))+'/'+Math.round(S.char.hpMax));
+  { const bar=document.getElementById('hbXpBar');                       // 다음 레벨까지
+    if(bar && c && typeof profXpForLevel==='function'){ const need=profXpForLevel(c.level)||1;
+      bar.style.width=Math.max(0,Math.min(100,(c.xp/need)*100))+'%'; } }
   // ⚔ 번호만으로는 이동한 느낌이 없다 → 던전 고유 이름을 같이 보여준다.
   //    '던전' 표기는 유지한다(자동사냥=던전 / 옛 콘텐츠=토벌 용어 분리 · 스모크가 검사)
   put('hbRound','던전 '+S.dg+' · '+hbDun(S.dg).name+' · 라운드 '+S.round);
   put('hbWaveTx','웨이브 '+Math.min(S.wave,HB_WAVES)+'/'+HB_WAVES);
-  put('hbMode', hbHunt().climb?'등반':'반복');
-  put('hbKill',S.kills+' KILL'); }
+  put('hbMode', hbHunt().climb?'등반':'반복'); }   // 킬수 표시는 제거(요청)
 function hbSettle(){ const S=_hb, p=PROF();
   hbNoteRate((S.buf.paid||0)+hbClearBonus(S.dg,S.round).min, Math.max(1,S.t-(S.rt0||0)));   // 방치 수입 기준 = 실제로 번 속도
   S.rt0=S.t;

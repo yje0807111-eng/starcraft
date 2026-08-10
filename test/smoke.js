@@ -775,6 +775,67 @@ async function groupLobby(){
     openHome(); await sleep(80);
     assert(document.getElementById('hbRound').textContent.indexOf('던전')>=0,'자동사냥은 던전 표기를 유지해야 함');
     return '네비 토벌 · HOME 던전'; });
+  // HOME 좌상단 HUD — 프로필은 상세하게 맨 위 왼쪽에 고정 · 킬수는 없음 · 라운드 조절은 전용 아이콘 버튼.
+  await step('HOME HUD: 좌상단 프로필 상세 · 킬수 없음 · 라운드는 아이콘 버튼', async()=>{
+    skipIf(typeof openHome!=='function','HOME 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    openHome(); await sleep(80); _hb.manual=true;
+    const ph=$('phone').getBoundingClientRect();
+    // ① 킬수 표시는 사라졌다(요청) — 요소 자체가 없어야 한다
+    assert(!$('hbKill'),'킬수 표시가 아직 남아 있음');
+    // ② 프로필 묶음이 화면 맨 위 왼쪽에 고정 — 재화 바(우측 정렬)보다 위에서 시작한다
+    const top=document.querySelector('.hbHudTop');
+    assert(top,'좌상단 묶음(.hbHudTop)이 없음');
+    const tr=top.getBoundingClientRect();
+    assert(tr.left-ph.left<=12,'프로필이 왼쪽 끝에 붙어 있지 않음: '+Math.round(tr.left-ph.left)+'px');
+    assert(tr.top-ph.top<=8,'프로필이 맨 위가 아님: '+Math.round(tr.top-ph.top)+'px');
+    { const res=document.querySelectorAll('#curBar .res');
+      assert($('curBar').classList.contains('bare'),'HOME 재화 바가 배경 위 숫자(.bare)가 아님');
+      assert(res.length,'홈 재화 바가 없음');
+      for(const r of res){ const rr=r.getBoundingClientRect();
+        assert(rr.left>=tr.right-1,'재화 숫자가 프로필과 겹침'); } }
+    // 재화 바는 화면 전체 폭을 덮는 판이라, 투명(.bare)일 때 왼쪽 빈 자리가 프로필 클릭을 삼키면 안 된다
+    { const hit=(el)=>{ const r=el.getBoundingClientRect();
+        return document.elementFromPoint((r.left+r.right)/2,(r.top+r.bottom)/2); };
+      for(const id of ['hbHud','hbRoundBtn']){ const el=$(id), got=hit(el);
+        assert(got && el.contains(got),'#'+id+' 클릭이 다른 요소에 가로채임: '+
+          (got?(got.id||got.className||got.tagName):'none')); } }
+    // ③ 프로필 내용이 '상세' — 이름/직업/레벨/공격/체력 + 경험치 바가 실제 값으로 채워진다
+    const c=CHAR(); c.name='스모크'; c.xp=Math.round(profXpForLevel(c.level)*0.5); hbHud();
+    for(const id of ['hbName','hbJob','hbLv','hbAtk','hbHp']){
+      const e=$(id); assert(e && e.textContent.trim(),'프로필 항목이 비어 있음: #'+id); }
+    assert($('hbName').textContent==='스모크','이름이 캐릭터와 다름: '+$('hbName').textContent);
+    assert($('hbLv').textContent==='Lv.'+c.level,'레벨 표기가 다름: '+$('hbLv').textContent);
+    { const bar=$('hbXpBar'), box=document.querySelector('.hbXp');
+      assert(bar && box,'경험치 바가 없음');
+      const w=bar.getBoundingClientRect().width, bw=box.getBoundingClientRect().width;
+      assert(Math.abs(w/bw-0.5)<0.06,'경험치 바가 xp 비율(50%)을 따르지 않음: '+Math.round(w/bw*100)+'%');
+      c.xp=0; hbHud();
+      assert(bar.getBoundingClientRect().width<2,'xp=0인데 바가 비지 않음'); }
+    // ④ 라운드 조절 = 전용 아이콘 버튼(텍스트 구역을 누르는 방식은 폐지)
+    const rb=$('hbRoundBtn');
+    assert(rb && rb.tagName==='BUTTON','라운드 선택 아이콘 버튼(#hbRoundBtn)이 없음');
+    assert(rb.querySelector('svg'),'아이콘 버튼에 SVG 아이콘이 없음(이모지 금지)');
+    assert(top.contains(rb),'라운드 아이콘이 좌상단 묶음 안에 없음');
+    assert(visible(rb),'라운드 아이콘 버튼이 안 보임');
+    const mid=$('hbMid');
+    // 프로필이 4줄로 커졌으므로 중앙 라운드 표시는 그 아래로 내려가야 한다(겹치면 글자가 포개진다)
+    { const mr=mid.getBoundingClientRect();
+      assert(!(mr.left<tr.right && mr.right>tr.left && mr.top<tr.bottom && mr.bottom>tr.top),
+        '중앙 라운드 표시가 좌상단 프로필과 겹침: mid.top='+Math.round(mr.top-ph.top)+' vs 프로필 bottom='+Math.round(tr.bottom-ph.top));
+      assert(mid.querySelector('b').getBoundingClientRect().height<26,'라운드 이름이 두 줄로 접힘(nowrap 필요)'); }
+    assert(mid.tagName!=='BUTTON','중앙 라운드 표시가 아직 버튼임(아이콘으로 옮겨야 함)');
+    assert(getComputedStyle(mid).pointerEvents==='none','중앙 표시가 아직 클릭을 먹음');
+    hbCloseRounds(); await sleep(20);
+    rb.click(); await sleep(60);
+    assert(visible($('hbRoundSheet')),'아이콘을 눌렀는데 라운드 팝업이 안 열림');
+    hbCloseRounds();
+    // ⑤ 이름 충돌 금지 — 인게임 홈 하단 탭 줄(.hbTop)이 좌상단 규칙에 먹히면 세로로 무너진다
+    { const tabs=document.querySelector('.hbTop.hsTabs'); assert(tabs,'인게임 홈 탭 줄(.hbTop.hsTabs)이 없음');
+      const cs=getComputedStyle(tabs);
+      assert(cs.position!=='absolute','인게임 탭 줄이 좌상단 규칙에 오염됨(position)');
+      assert(cs.flexDirection==='row','인게임 탭 줄이 좌상단 규칙에 오염됨(flex-direction='+cs.flexDirection+')'); }
+    return '좌상단 고정(+'+Math.round(tr.left-ph.left)+','+Math.round(tr.top-ph.top)+') · 킬수 없음 · 아이콘 팝업 ok'; });
   // 라운드 선택 — 최고 도달까지만 고를 수 있고, 반복/등반이 클리어 후 행동을 가른다.
   await step('자동사냥: 라운드 선택 · 반복/등반', async()=>{ skipIf(typeof hbOpenRounds!=='function','라운드 선택 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
