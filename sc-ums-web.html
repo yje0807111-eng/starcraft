@@ -86,7 +86,8 @@
     max-width:100vw;max-height:100vh}
   /* 높이가 모자라면 높이 기준으로, 폭이 모자라면 폭 기준으로 축소 */
   @media(max-height:829px){#phone{height:96vh;width:calc(96vh * var(--phW) / var(--phH))}}
-  @media(max-width:410px){#phone{width:100vw;height:calc(100vw * var(--phH) / var(--phW));border-radius:0;border:none}}
+  /* 좁은 화면(폰)에서도 프레임 유지 — 폭·높이 중 모자란 쪽에 맞춰 비율을 지키고 가장자리 여백을 남긴다(전체화면으로 퍼지지 않게) */
+  @media(max-width:410px){#phone{width:min(calc(100vw - 10px),calc((100vh - 10px) * var(--phW) / var(--phH)));height:min(calc((100vw - 10px) * var(--phH) / var(--phW)),calc(100vh - 10px))}}
 
   /* GAME AREA */
   #gameArea{flex:1;position:relative;overflow:hidden;background:#060e0a;min-height:0;transition:filter .35s}
@@ -509,29 +510,16 @@
   #bot::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;z-index:2;   /* 상단 경계 = 중립 저채도 하이라이트(빨강 제거) */
     background:linear-gradient(90deg,transparent,rgba(150,170,200,.28) 50%,transparent);opacity:.7;box-shadow:none}
   /* 최상위 네비 = 하나의 통(단일 바) — 섹션은 얇은 세로줄로만 구분, 활성=청록 포인트 인디케이터 */
-  #tabs{display:flex;gap:0;flex-shrink:0;height:var(--navH);position:relative;margin:0;padding:0;z-index:45;   /* 유즈맵 인게임 탭바 = 하단 네비와 같은 높이(공용 --navH) */
-    --tabAcc:#5cd6ff;--tabAccG:rgba(92,214,255,.6);
-    background:linear-gradient(180deg,#151a24,#0a0d13);   /* 불투명 단일 바 — 뒤로 내려간 시트가 비쳐 보이지 않게 */
-    border-top:1px solid var(--glass-edge);box-shadow:inset 0 1px 0 rgba(255,255,255,.045),inset 0 -10px 14px -12px rgba(0,0,0,.6)}
-  .tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0;position:relative;
-    padding:6px 2px 7px;text-align:center;font-size:var(--fs-xs);color:#7c8ba0;cursor:pointer;font-weight:800;line-height:1.15;text-shadow:0 1px 1px #000;
-    background:none;border:none;transition:color .16s}
-  /* 섹션 구분 = 탭 사이 얇은 세로줄 하나만 */
-  .tab+.tab::before{content:'';position:absolute;left:0;top:24%;bottom:24%;width:1px;background:linear-gradient(180deg,transparent,rgba(255,255,255,.10),transparent);pointer-events:none}
-  /* 활성 인디케이터 = 상단 청록 라인(카드 아님 · 포인트 색만) */
-  .tab::after{content:'';position:absolute;left:16%;right:16%;top:0;height:2px;border-radius:0 0 3px 3px;background:linear-gradient(90deg,transparent,var(--tabAcc),transparent);box-shadow:0 0 8px var(--tabAccG);opacity:0;transition:opacity .18s;pointer-events:none}
-  .tab .ti{display:block;margin-bottom:2px;line-height:0;transition:color .16s}
-  .tab .ti svg{width:18px;height:18px;display:block;margin:0 auto}   /* 모던 라인 아이콘(currentColor=탭색) */
+  #tabs{flex-shrink:0;position:relative;margin:0;padding:0;z-index:45}   /* 유즈맵 인게임 탭바 — 배치만. 색·타이포·선택표시는 하단 바 공용 룩(.navBar와 동일 규칙) */
+  .tab .ti{display:block;line-height:0;transition:color .16s}
   /* 탭 우상단 알림 배지(보스 탭 = 소환 가능 보스 수) — FAB의 .pbDot을 탭 규격으로 이식 */
   .tab .tabDot{display:none;position:absolute;top:2px;left:calc(50% + 9px);color:#ff9a9a;font-family:var(--font-num);font-size:12px;font-weight:800;line-height:1;text-shadow:0 0 6px rgba(255,90,90,.85),0 1px 2px #000;pointer-events:none}
   .tab .tabDot.show{display:block}
-  .tab:hover{color:#cdd6e2}
-  .tab.on{color:#e6f6ff}
-  .tab.on::after{opacity:1}
-  .tab.on .ti{color:var(--tabAcc);filter:drop-shadow(0 0 5px var(--tabAccG))}
-  .tabSet{flex:0 0 44px;padding:4px 0}   /* 우측 고정폭 설정 칸 */
+
+  .tabSet{flex:0 0 30px;padding:0;margin-left:0;margin-right:2px;opacity:.72}   /* 우측 고정폭 설정 칸 — 주 탭보다 작고 조용하게 */
   .tabSet .ti{margin:0;line-height:0}
-  .tabSet .ti svg{width:20px;height:20px}
+  .tabSet .ti svg{width:15px;height:15px}
+  .tabSet.on{opacity:1}
   /* 설정 팝업 */
   #settingsPop{position:absolute;inset:0;z-index:72;   /* 허브(60)·마을(60)·캐릭터(61)보다 위 */display:flex;align-items:center;justify-content:center;
     background-color:rgba(2,3,6,.62);
@@ -1496,7 +1484,9 @@
   .cmdG .cgPro:has(.icoImg){aspect-ratio:1}
   .cmdG .cgPro img.icoImg{object-fit:contain;transform:none}
   /* 업그레이드 아이콘 = 네모 초상 틀은 유지하고, 안쪽 배지 원만 없앤 뒤 아이콘을 크게 */
-  .cmdG .cgPro .wpnIco{width:84%;height:84%}
+  .cmdG .cgPro svg.cgIco{width:84%;height:84%}            /* SVG 폴백만 84% */
+  .cmdG .cgPro img.cgIco{width:100%;height:100%;object-fit:cover}   /* 실제 아이콘 이미지 = 초상처럼 칸을 꽉 채움 */
+  .cmdG .cgPro:has(img.cgIco)::after{display:none}        /* 실제 아이콘 위에는 가로 스캔라인을 덮지 않는다(아이콘 자체 질감이 있음) */
   .cmdG .cgSlot.iconFill{justify-content:center;padding:6px} .cmdG .cgSlot.iconFill .cgPro{width:72%;height:auto;aspect-ratio:1;border:none;background:none;box-shadow:none} .cmdG .cgSlot.iconFill .cgPro svg{width:100%;height:100%} .cmdG .cgSlot.iconFill .cgName,.cmdG .cgSlot.iconFill .cgCost{display:none}   /* 아이콘만 채우는 칸(일시정지 등): 빈 이름/비용 줄 숨겨 아이콘이 칸 정중앙에 크게 */
   .cmdG .cgName{font:800 10px/1.05 sans-serif;letter-spacing:-.2px;color:#e6eefc;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* 🧱 벙커 탑승 슬롯: 가로 꽉 찬 초상 → 이름 → HP 세로 스택 */
@@ -1652,7 +1642,7 @@
       linear-gradient(180deg, rgba(2,3,8,.9) 0%, rgba(2,3,8,.35) 22%, rgba(2,3,8,.35) 78%, rgba(2,3,8,.92) 100%)}
   .lbCard{width:92%;max-width:350px;height:555px;max-height:90%;overflow:hidden;padding:18px;display:flex;flex-direction:column}   /* 방찾기 카드와 폭·높이 통일(92%/350/555) · 작은 화면은 max-height 90%가 캡, 남는 높이는 플레이어 그리드(flex)가 흡수 */
   /* 대기실 채팅 = 보기영역 + 입력줄 일체형(로비 전체채팅과 동일 구조) · 4~5줄 */
-  .lbChatWrap{flex:1 1 0;min-height:0;display:flex;flex-direction:column;overflow:hidden;margin-bottom:10px;border-radius:10px;   /* 남는 높이만 흡수(basis 0) — 메시지가 쌓여도 플레이어 슬롯을 밀지 않음 */
+  .lbChatWrap{flex:1 1 0;min-height:0;display:flex;flex-direction:column;overflow:hidden;margin-bottom:10px;border-radius:var(--r-bar);   /* 남는 높이만 흡수(basis 0) — 메시지가 쌓여도 플레이어 슬롯을 밀지 않음 */
     background:rgba(0,0,0,.3);border:1px solid var(--metal-edge)}
   .lbChat{flex:1 1 auto;min-height:77px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;padding:7px 9px;   /* 최소 4줄 보장 + 남는 높이만큼 확장 */
     background:transparent;border:none;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
@@ -2163,14 +2153,13 @@
   /* 유즈맵 선택 */
   #mapSelect{z-index:47;padding:12px 13px}
   /* 유즈맵 선택 로비 배경(전체 cover, 9:16 기준, UI는 위 레이어) */
-  #mapSelect::before,#rooms::before,#createPanel::before{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;transform-origin:center center;
+  #mapSelect::before,#rooms::before,#createPanel::before,#shopScreen::before{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;transform-origin:center center;
     background:url('assets/backgrounds/lobby_bg.webp') center center / cover no-repeat #04050b;
     animation:lobbyBreath 12s ease-in-out infinite}   /* 미세한 호흡(위아래 + 약한 확대) */
   @keyframes lobbyBreath{ 0%,100%{transform:scale(1.01) translateY(0)} 50%{transform:scale(1.05) translateY(-1%)} }
-  #mapSelect::after,#rooms::after,#createPanel::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg, rgba(2,3,8,.96) 0%, rgba(2,3,8,.66) 16%, rgba(2,3,8,.2) 38%, rgba(2,3,8,.2) 62%, rgba(2,3,8,.66) 84%, rgba(2,3,8,.97) 100%)}   /* 위·아래 빨강 더 톤다운(중앙 이미지 유지) */
+  #mapSelect::after,#rooms::after,#createPanel::after,#shopScreen::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg, rgba(2,3,8,.96) 0%, rgba(2,3,8,.66) 16%, rgba(2,3,8,.2) 38%, rgba(2,3,8,.2) 62%, rgba(2,3,8,.66) 84%, rgba(2,3,8,.97) 100%)}   /* 위·아래 빨강 더 톤다운(중앙 이미지 유지) */
   .msHead{display:flex;align-items:center;justify-content:space-between;padding-bottom:7px;margin-bottom:8px;border-bottom:1px solid rgba(255,255,255,.06)}
   .msHeadL{display:flex;align-items:center;gap:8px;min-width:0}
-  .msTitle{font-size:17px;font-weight:800;color:#eef1f6;text-shadow:0 1px 3px rgba(0,0,0,.65);letter-spacing:.3px}   /* 제목 = 화이트 통일 */
   
   
   /* 메타 성장(빌드) 화면 */
@@ -2502,7 +2491,7 @@
   /* POWER UPGRADES — 위쪽은 배경이 보이도록 비우고 카드는 네비 바로 위에 붙인다 */
   .hmUpg{margin-top:auto}   /* 위쪽 빈 자리는 배경 — 카드만 아래로 붙인다 */
   /* 헤더 = 접기/펴기 손잡이. 접으면 이 줄만 남고 뒤 배경이 화면 전체로 보인다 */
-  .hmUpgHead{width:100%;display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:15px;font-weight:900;letter-spacing:.6px;
+  .hmUpgHead{width:100%;display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:15px;font-weight:700;letter-spacing:.6px;
     color:#ececec;cursor:pointer;background:none;border:none;border-bottom:1px solid rgba(255,255,255,.06);text-align:left}
   .hmUpgChev{margin-left:auto;width:9px;height:9px;border-right:2px solid #9a9a9a;border-bottom:2px solid #9a9a9a;
     transform:rotate(45deg) translate(-2px,-2px);transition:transform .16s}
@@ -2576,20 +2565,23 @@
   .hmUpIco{flex:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:18px;
     background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
   .hmUpTx{min-width:0;display:flex;flex-direction:column}
-  .hmUpName{font-size:var(--fs-lg);font-weight:800;color:#ececec}
+  .hmUpName{font-size:var(--fs-lg);font-weight:700;color:#ececec}
   .hmUpLv{font-size:var(--fs-sm);color:#9a9a9a}
   .hmUpLv b{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:#5dff8f}
-  .hmUpBtn{height:32px;cursor:pointer;font-family:inherit;font-size:var(--fs-md);font-weight:900;letter-spacing:.3px;
+  .hmUpBtn{height:32px;cursor:pointer;font-family:inherit;font-size:var(--fs-md);font-weight:700;letter-spacing:.3px;
     color:#2b1d00;background:linear-gradient(180deg,#ffd97a,#e8a92b 58%,#b8801a);
     border:1px solid rgba(255,220,140,.8);border-radius:var(--r-bar)}
   .hmUpBtn:disabled{cursor:default;color:#7a7a7a;background:rgba(255,255,255,.05);border-color:var(--metal-edge)}
   /* ══ 하단 6칸 네비게이션(전역) ══ 화면이 아니라 #phone 위에 뜬다 · navShow(tab)이 표시/활성을 정한다 */
-  .navBar{position:absolute;left:0;right:0;bottom:0;z-index:62;height:var(--navH);display:flex;align-items:stretch;
+  .navBar{position:absolute;left:0;right:0;bottom:0;z-index:62}
+  /* 하단 바 공용 룩(단일 소스) — 전역 네비(.navBar)와 유즈맵 인게임 탭바(#tabs)가 같은 규칙을 쓴다.
+     관리자·네모네모·오토배틀 전부 #tabs를 쓰므로 여기 한 곳만 고치면 모두 반영된다. */
+  .navBar,#tabs{height:var(--navH);display:flex;align-items:stretch;
     background:linear-gradient(180deg,#191919,#0e0e0e);border-top:1px solid rgba(255,255,255,.07)}   /* 짙고 어두운 순수 회색 배경 */
   .navBar.hide{display:none}
   /* 💠 공용 재화 바(단일 소스) — 모든 RPG/허브 + 유즈맵 선택 상단 상시. 볼륨1: 1px 테두리+그라데+하단 헤어라인, 재화=금색.
      미네랄=pcoin · 가스 · 젬. 인게임(#hudR)과 별개다(계정 영구 재화). */
-  .curBar{position:absolute;left:0;right:0;top:0;z-index:62;height:var(--curH);display:flex;align-items:center;justify-content:flex-end;gap:12px;
+  .curBar{position:absolute;left:0;right:0;top:0;z-index:62;height:var(--curH);display:flex;align-items:center;justify-content:space-between;gap:12px;
     padding:0 12px;background:linear-gradient(180deg,rgba(12,17,28,.96),rgba(6,9,15,.98));border-bottom:1px solid rgba(88,118,188,.22)}
   .curBar::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.1),transparent)}
   .curBar.hide{display:none}
@@ -2597,14 +2589,70 @@
      그래야 우주 배경이 상단까지 끊기지 않고 이어져 보인다. showAppScreen()이 화면별로 .bare를 붙인다. */
   .curBar.bare{background:none;border-bottom:0}
   .curBar.bare::after{display:none}
+  .curBar .curRes{display:flex;align-items:center;gap:12px;margin-left:auto}
+  .curTitle{font-size:17px;color:#eef1f6;letter-spacing:.3px;text-shadow:0 1px 3px rgba(0,0,0,.65);white-space:nowrap}
+  .curTitle:empty{display:none}
   .curBar .res{display:flex;align-items:center;gap:5px;font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:800;font-size:14px;color:#e7edf5;white-space:nowrap}
   .curBar .ri{width:16px;height:16px;flex:none}
   #phone.curOn .appScreen{padding-top:var(--curH)}
   #phone.curOn #mapSelect{padding-top:calc(var(--curH) + 12px)}
+  #mapSelect{padding-bottom:calc(var(--navH) + 12px)}   /* 하단 네비에 내용이 가리지 않게 */
   #phone.inGame #curBar{display:none}   /* 실경기(인게임)에선 자체 HUD(#hudR) 사용 — 공용 바 숨김 */
   /* ⚔ 던전 허브 — 던전 목록 카드(배너) + 팝업(소탕/입장) */
   .dgHubHead{font-size:12px;color:var(--txt-mute);margin:2px 4px 12px;line-height:1.5;text-align:center}
   .dgHubHead b{color:#ffd24a}
+  /* 🎁 상점 전용 화면 — HOME .hmCard 구조를 그대로 따른다: 바깥 패널 + 머리줄 + 안쪽 칸
+     ⚠ 굵기는 700까지만(IBM Plex Sans KR 최대). 800/900은 가짜 볼드가 된다 — DESIGN.md §2 */
+  #shopScreen{overflow:hidden}   /* 배경 ::before가 확대 애니메이션을 하므로 넘침 차단(.spaceBg가 하던 역할) */
+  #shopScreen .twToast{position:absolute;left:50%;bottom:calc(var(--navH) + 16px);transform:translateX(-50%)}
+  .shopTitle{text-align:center;font-size:15px;font-weight:700;letter-spacing:.6px;color:#ececec;padding:6px 0 12px}
+  /* 구역 패널 = HOME .hmCard */
+  .shopPanel{flex:none;background:var(--hmPanel);border:1px solid var(--hbEdge);border-radius:var(--r-bar);overflow:hidden;margin:0 2px 12px}   /* flex:none — 부모가 flex 컬럼이라 없으면 내용이 눌려 잘린다(HOME .hmCard와 같은 이유) */
+  /* 구역 머리줄 = HOME .hmUpgHead */
+  .shopHead{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:13px;font-weight:700;letter-spacing:.6px;
+    color:#ececec;border-bottom:1px solid rgba(255,255,255,.06)}
+  .shopHead em{margin-left:auto;font-style:normal;font-size:var(--fs-sm);font-weight:400;color:#9a9a9a}
+  .shopBody{padding:8px;display:flex;flex-direction:column;gap:8px}
+  .shopNote{font-size:var(--fs-md);color:#9a9a9a;line-height:1.5;padding:0 2px}
+  .shopNote b{color:#ececec;font-weight:700}
+  /* 꾸러미 칸 = HOME .hmUp (안쪽 밝은 면 + metal-edge) */
+  .shopDeal{display:flex;align-items:stretch;gap:8px;padding:8px;
+    background:rgba(255,255,255,.045);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+  .shopDeal.sold{opacity:.42}
+  .shopDealL{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:6px}
+  /* 칸 머리 — 이름 + 아래 구분선으로 내용물과 분리 */
+  .shopTag{display:block;font-size:var(--fs-lg);font-weight:700;color:#ececec;
+    padding-bottom:5px;border-bottom:1px solid rgba(255,255,255,.08)}
+  .shopGive{display:flex;flex-direction:column;gap:4px}
+  .shopGive span{display:flex;align-items:center;gap:6px;font-size:var(--fs-md);color:#c9c9c9;
+    background:rgba(0,0,0,.28);border-radius:var(--r-bar);padding:4px 8px}
+  .shopGive b{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:#ececec;font-size:13px;margin-left:auto}
+  .shopDealR{flex:0 0 92px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:6px;
+    padding-left:8px;border-left:1px solid rgba(255,255,255,.06)}
+  .shopArt{flex:1 1 auto;display:flex;align-items:center;justify-content:center;font-size:28px;line-height:1}
+  /* 가격 버튼 — HOME .hmUpBtn 규격(구매=금색 액션) */
+  .shopBuy{width:100%;height:32px;cursor:pointer;font-family:inherit;font-size:var(--fs-md);font-weight:700;letter-spacing:.3px;
+    display:flex;align-items:center;justify-content:center;gap:4px;
+    color:#2b1d00;background:linear-gradient(180deg,#ffd97a,#e8a92b 58%,#b8801a);
+    border:1px solid rgba(255,220,140,.8);border-radius:var(--r-bar)}
+  .shopBuy b{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:13px}
+  .shopBuy:disabled{cursor:default;color:#7a7a7a;background:rgba(255,255,255,.05);border-color:var(--metal-edge)}
+  /* 일반 행(뽑기·펫) — 칸 규격 통일 */
+  .shopRow{display:flex;align-items:center;gap:8px;padding:8px;
+    background:rgba(255,255,255,.045);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+  .shopRow .twRowInfo{flex:1 1 auto;min-width:0}
+  .shopRow .twBtn{flex:0 0 auto}
+  /* 젬 팩 — 3열 */
+  .shopGems{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .shopGem{display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 6px;
+    background:rgba(255,255,255,.045);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+  .shopGem em{display:flex;align-items:center;gap:4px;font-style:normal;font-family:var(--font-num);
+    font-variant-numeric:tabular-nums;font-size:15px;color:#ececec;font-weight:700}
+  .shopGem em .gi{width:17px;height:17px}
+  /* 재화 아이콘(resIco 공용) — 상점 인라인 크기 */
+  .gi{width:15px;height:15px;flex:none;object-fit:contain;vertical-align:middle}
+  .giT{font-style:normal;font-size:13px;width:15px;flex:none;text-align:center}
+  .shopGem button{width:100%}
   .dgCard{position:relative;display:flex;align-items:stretch;height:74px;margin:0 2px 10px;border:1px solid var(--metal-edge);border-radius:var(--r-lg);overflow:hidden;cursor:pointer;
     background:linear-gradient(115deg,var(--dgTint,#2f4a72) 0%,rgba(10,13,18,.72) 60%)}
   .dgCard.lock{opacity:.5;cursor:default}
@@ -2633,15 +2681,19 @@
   .dgSheetBtns .twBtn{flex:1 1 0}
   .dgSheetBtns .twBtn:disabled{opacity:.45}
   .dgSheetX{position:absolute;top:6px;right:6px;width:26px;height:26px;border:none;border-radius:var(--r-md);background:rgba(0,0,0,.42);color:#fff;cursor:pointer;font-size:12px}
-  .navIt{position:relative;flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  .navIt,#tabs .tab{position:relative;flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
     cursor:pointer;font-family:inherit;font-size:8.5px;font-weight:800;letter-spacing:.2px;color:#c6ccd4;
-    background:none;border:none;transition:color .13s}
-  .navIt .ic{width:19px;height:19px}
-  .navIt.on{color:#7ee0ff;text-shadow:0 0 7px rgba(92,214,255,.5)}   /* 선택 텍스트·아이콘 = 하단 선과 같은 푸른색 */
-  .navIt.on::after{content:'';position:absolute;left:10%;right:10%;bottom:0;height:2px;   /* 표시선 하단 */
-    background:linear-gradient(90deg,transparent,rgba(124,224,255,.15) 20%,#7ee0ff 50%,rgba(124,224,255,.15) 80%,transparent);   /* 가운데서 양옆으로 퍼지는 푸른 빛 */
-    box-shadow:0 0 7px -1px rgba(92,214,255,.6)}
-  .navIt:active{opacity:.8}
+    margin:4px 3px;border-radius:var(--r-md);                      /* 선택 상자가 바 안에 놓이도록 살짝 띄움 */
+    background:none;border:1px solid transparent;transition:color .13s,background .13s,border-color .13s}   /* 테두리는 항상 1px(투명) — 선택 시 색만 바뀌어 칸이 밀리지 않는다 */
+  .navIt .ic,#tabs .tab .ti svg{width:19px;height:19px;display:block;margin:0 auto}
+  /* 선택 표시 = 안쪽이 더 어두운 직사각 상자 + 약간 밝은 회색 테두리. 색을 채우지 않고 명암으로만 구분한다(DESIGN.md 볼륨1) */
+  .navIt.on,#tabs .tab.on{color:#a7d9ef;                                   /* 상자 안 글자·아이콘만 은은한 푸른빛 */
+    background:linear-gradient(180deg,rgba(0,0,0,.46),rgba(0,0,0,.62));
+    border-color:rgba(255,255,255,.17);
+    text-shadow:0 0 7px rgba(92,214,255,.32);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+  .navIt.on .ic,#tabs .tab.on .ti svg{filter:drop-shadow(0 0 5px rgba(92,214,255,.35))}   /* 아이콘도 같은 세기로 비침 */
+  .navIt:active,#tabs .tab:active{opacity:.8}
   /* 마을 상단 설정 — 좌측 로그아웃과 짝 */
   .twGear{flex:0 0 auto;font-family:inherit;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;
     color:#8b98a8;background:none;border:none;transition:color .16s}
@@ -2785,18 +2837,34 @@
   
   /* 상단: 접속현황(좌) + 정렬 드롭다운(우) 한 줄 */
   .msTopBar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+  /* 유즈맵 목록 상자 — 머리(정렬 탭 띠) + 본문(나열). HOME .hmCard와 같은 규격 */
+  .msPanel{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden;
+    background:var(--hmPanel);border:1px solid var(--hbEdge);border-radius:var(--r-bar)}
+  .msSortTabs{flex:0 0 auto;display:flex;align-items:stretch;border-bottom:1px solid rgba(255,255,255,.07)}
+  .msSortTab{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;gap:5px;
+    padding:9px 4px;cursor:pointer;font-family:inherit;font-size:var(--fs-md);font-weight:700;letter-spacing:.3px;
+    color:#9a9a9a;background:none;border:none;position:relative;transition:color .13s}
+  .msSortTab .ic{width:13px;height:13px}
+  .msSortTab+.msSortTab::before{content:'';position:absolute;left:0;top:26%;bottom:26%;width:1px;background:rgba(255,255,255,.07)}
+  .msSortTab.on{color:#7ee0ff}
+  .msSortTab.on::after{content:'';position:absolute;left:14%;right:14%;bottom:0;height:2px;
+    background:linear-gradient(90deg,transparent,rgba(124,224,255,.15) 20%,#7ee0ff 50%,rgba(124,224,255,.15) 80%,transparent);
+    box-shadow:0 0 7px -1px rgba(92,214,255,.6)}
+  #mapSelect .msList{flex:1 1 auto;min-height:0;padding:8px}
+  /* 마을 채팅 시트 — 소셜 블록을 그대로 담는다(유즈맵에서 옮겨옴) */
+  #twChat .msSocial.inTown{flex:1;min-height:0;margin-top:0;border:0;border-radius:0;background:none}
   /* 정렬 드롭다운(커스텀 HUD 메뉴) */
   .msSortDD{flex:0 0 auto;position:relative}
   /* 정렬 드롭다운 = 중립 글래스 + 구분선(방찾기 난이도 필터·슬롯 메뉴와 통일. 빨간 네온 제거) */
   .msSortCur{display:flex;align-items:center;gap:6px;padding:6px 10px;cursor:pointer;font-family:inherit;font-size:var(--fs-sm);font-weight:700;color:#cfd8e3;
-    background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);border-radius:9px;transition:border-color .14s,background .14s}
+    background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);border-radius:var(--r-bar);transition:border-color .14s,background .14s}
   .msSortCur:active{transform:translateY(1px)}
   .msSortDD.open .msSortCur{border-color:rgba(255,90,90,.42);background:rgba(255,255,255,.09)}
   .msSortCur .msSortDDi{display:inline-flex}.msSortCur .msSortDDi .ic{width:12px;height:12px;color:var(--neon)}   /* 현재 정렬 아이콘 = 포인트 색 */
   .msSortCar{color:#8a939e;font-size:var(--fs-sm);line-height:1;transition:transform .2s,color .2s}
   .msSortDD.open .msSortCar{transform:rotate(180deg);color:var(--neon)}
   .msSortMenu{position:absolute;top:calc(100% + 6px);right:0;z-index:30;min-width:122px;display:flex;flex-direction:column;gap:0;padding:5px 8px;
-    background:linear-gradient(180deg,rgba(20,24,33,.99),rgba(11,14,20,.995));border:1px solid var(--glass-edge);border-radius:11px;
+    background:linear-gradient(180deg,rgba(20,24,33,.99),rgba(11,14,20,.995));border:1px solid var(--glass-edge);border-radius:var(--r-bar);
     box-shadow:0 12px 30px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05);transform-origin:top right;animation:sortMenuIn .14s ease-out}
   .msSortMenu.hide{display:none}
   @keyframes sortMenuIn{from{opacity:0;transform:translateY(-5px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
@@ -2828,7 +2896,7 @@
   
   /* 하단 소셜 박스: 탭(헤더) + 콘텐츠를 하나의 외곽 안에 포함 */
   .msSocial{flex:1;min-height:80px;display:flex;flex-direction:column;margin-top:9px;overflow:hidden;
-    background:linear-gradient(180deg,rgba(6,7,11,.42),rgba(4,5,8,.5));border:1px solid var(--metal-edge);border-radius:var(--r-lg);
+    background:linear-gradient(180deg,rgba(6,7,11,.42),rgba(4,5,8,.5));border:1px solid var(--metal-edge);border-radius:var(--r-bar);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}   /* 테두리 중립(빨강 글로우 제거) */
   /* 탭(채팅/파티/친구) — 박스 안 헤더, 밑줄 인디케이터로 자연스럽게 전환 */
   .msTabs2{flex:0 0 auto;display:flex;border-bottom:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.015)}
@@ -2862,7 +2930,7 @@
   .msScopeChev{width:9px;height:9px;flex:0 0 auto;color:#78828e;transition:transform .18s,color .18s}
   .msScopeDD.open .msScopeChev{transform:rotate(180deg);color:var(--scc)}
   .msScopeMenu{position:absolute;bottom:calc(100% + 8px);left:0;z-index:30;min-width:96px;display:flex;flex-direction:column;gap:0;padding:5px 8px;
-    background:linear-gradient(180deg,rgba(20,24,33,.99),rgba(11,14,20,.995));border:1px solid var(--glass-edge);border-radius:11px;
+    background:linear-gradient(180deg,rgba(20,24,33,.99),rgba(11,14,20,.995));border:1px solid var(--glass-edge);border-radius:var(--r-bar);
     box-shadow:0 12px 30px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05)}
   .msScopeMenu.hide{display:none}
   /* 모바일: 호버 대신 구분선으로 항목 분리 · 선택은 좌측 악센트 바 */
@@ -3023,7 +3091,7 @@
     padding:8px 14px;border-radius:var(--r-lg);background:rgba(10,10,14,.96);border:1px solid var(--neon-soft);color:var(--txt);
     font-size:var(--fs-md);font-weight:600;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;box-shadow:0 6px 20px var(--shade)}
   .lobbyToast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-  .mapItem{flex:0 0 auto;position:relative;display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:11px;cursor:pointer;overflow:hidden;
+  .mapItem{flex:0 0 auto;position:relative;display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:var(--r-bar);cursor:pointer;overflow:hidden;
     background:linear-gradient(135deg,rgba(36,38,47,.84),rgba(13,14,19,.9));border:1px solid var(--metal-edge);   /* 쉬는 상태=중립(빨강 남발 제거). 강조는 호버에만 */
     box-shadow:0 5px 15px -11px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05);transition:transform .15s,border-color .15s,box-shadow .15s}
   button.mapItem{width:100%;font-family:inherit;text-align:left;-webkit-appearance:none}   /* 버튼으로 쓸 때도 카드 모양 유지(허브 게임 선택) */
@@ -3033,7 +3101,7 @@
   .mapItem:hover::before{background:linear-gradient(180deg,var(--neon),rgba(255,59,59,.2));opacity:.95}   /* 호버 시 좌측바 빨강 강조(상호작용 액센트) */
   .mapItem:active{transform:translateY(0)}
   
-  .mapThumb{position:relative;width:48px;height:48px;flex:none;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;
+  .mapThumb{position:relative;width:48px;height:48px;flex:none;border-radius:var(--r-bar);overflow:hidden;display:flex;align-items:center;justify-content:center;
     background:radial-gradient(circle at 50% 30%,rgba(120,140,175,.14),rgba(7,7,11,.85));border:1px solid rgba(255,255,255,.1);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 0 14px -4px var(--mapAccent,#6d86b8)}   /* 썸네일 은은한 글로우 = 맵별 색(음수 스프레드로 페이드) */
   .mapThumb.mm{background:#0d0c10;box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}   /* 미니맵 변형(빨강 글로우 X) */
@@ -3044,7 +3112,7 @@
   .mapName{font-size:14px;font-weight:700;color:#f7f3f3;letter-spacing:-.2px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .mapDesc{font-size:var(--fs-sm);font-weight:400;color:#929ba6;margin-top:3.5px;line-height:1.35;letter-spacing:.1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   
-  .mapTag{font-size:8px;font-weight:800;letter-spacing:.3px;padding:1.5px 7px;border-radius:10px;color:#cfe0ec;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14)}
+  .mapTag{font-size:8px;font-weight:700;letter-spacing:.3px;padding:1.5px 7px;border-radius:var(--r-bar);color:#cfe0ec;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14)}
   .mapTag.rec{color:var(--gold);background:rgba(255,210,74,.1);border-color:rgba(255,210,74,.4)}
   .mapTag.new{color:var(--ok);background:rgba(93,255,143,.1);border-color:rgba(93,255,143,.4)}
   
@@ -3237,7 +3305,8 @@
         font-weight에 져서 일부 제목만 가짜 볼드로 남는다(전에 font-size로 똑같이 당했다).
      ⚠ IBM Plex Sans KR은 700이 최대다 — 800/900을 남기면 브라우저가 가짜 볼드를 그려 획이 뭉갠다.
         그래서 700으로 되돌린다. 제목은 '같은 가족 + 굵기 700 + 큰 크기'로 선다. */
-  #ovTitle,.ovTtl,.ecTitle,.setTitle,.hmUpgHead,.twName,.cpTitle,.opTitle,.msTitle,.lbTitle,.ptTitle{
+  #ovTitle,.ovTtl,.ecTitle,.setTitle,.hmUpgHead,.twName,.cpTitle,.opTitle,.lbTitle,.ptTitle,.shopTitle,.shopHead,
+  .curTitle,.mapName,#mapSelect .msTab2,#msSortLbl{
     font-family:var(--font-ti);font-weight:700}
 </style>
 </head>
@@ -3503,52 +3572,20 @@
 
     <!-- ===== 신규: 유즈맵 선택 ===== -->
     <div id="mapSelect" class="appScreen spaceBg hide">
-      <div class="msHead">
-        <div class="msHeadL">
-          <button class="twBack" onclick="mapToHub()" aria-label="뒤로" title="시작 선택으로"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
-          <span class="msTitle">유즈맵 선택</span>
-        </div>
-        <span class="msUser"><span data-ico="user"></span> <b id="msNick">게스트</b><button class="msGear" data-sfx="ui_open" onclick="openAppSettings()" title="설정" aria-label="설정"><svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg></button></span>
-      </div>
+      <!-- 제목은 상단 재화 바에 합쳐졌다(curSetTitle) · 프로필/설정 버튼 제거(설정은 마을 상단) -->
       <div class="msTopBar">
         <div class="msBanner" id="msBanner"></div>
-        <div class="msSortDD" id="msSortDD">
-          <button class="msSortCur" id="msSortCur" onclick="toggleSortMenu(event)" aria-haspopup="listbox">
-            <span class="msSortDDi" data-ico="pop" id="msSortDDi"></span>
-            <span id="msSortLbl">인기순</span>
-            <span class="msSortCar">▾</span>
-          </button>
-          <div class="msSortMenu hide" id="msSortMenu" role="listbox">
-            <button class="msSortOpt on" data-v="pop" onclick="setMapSort('pop')"><span data-ico="pop"></span>인기순</button>
-            <button class="msSortOpt" data-v="new" onclick="setMapSort('new')"><span data-ico="new"></span>신규</button>
-            <button class="msSortOpt" data-v="rec" onclick="setMapSort('rec')"><span data-ico="rec"></span>추천</button>
-            <button class="msSortOpt" data-v="fav" onclick="setMapSort('fav')"><span data-ico="fav"></span>즐겨찾기</button>
-          </div>
-        </div>
+
       </div>
-      <div class="msList uiScroll" id="msList"></div>
-      <div class="msSocial">
-        <div class="msTabs2">
-          <button class="msTab2 on" data-bt="chat" onclick="setBottomTab('chat')"><span data-ico="chat"></span>채팅</button>
-          <button class="msTab2" data-bt="party" onclick="setBottomTab('party')"><span data-ico="party"></span>파티</button>
-          <button class="msTab2" data-bt="friend" onclick="setBottomTab('friend')"><span data-ico="friend"></span>친구<span class="msFriendBadge hide" id="msFriendBadge">0</span></button>
+      <!-- 목록 상자 — 머리 = 정렬 탭 띠(네비바 형태) · 본문 = 유즈맵 나열 -->
+      <div class="msPanel">
+        <div class="msSortTabs" id="msSortTabs">
+          <button class="msSortTab on" data-v="pop" onclick="setMapSort('pop')"><span data-ico="pop"></span>인기순</button>
+          <button class="msSortTab" data-v="new" onclick="setMapSort('new')"><span data-ico="new"></span>신규</button>
+          <button class="msSortTab" data-v="rec" onclick="setMapSort('rec')"><span data-ico="rec"></span>추천</button>
+          <button class="msSortTab" data-v="fav" onclick="setMapSort('fav')"><span data-ico="fav"></span>즐겨찾기</button>
         </div>
-        <div class="msChatWrap" id="msChatWrap">
-          <div class="msChat" id="msChat" data-scope="all"></div>
-          <div class="msChatBar" id="msChatBar">
-            <div class="msScopeDD" id="msScopeDD" data-sc="all">   <!-- 범위 배지 = 입력창 내부 왼쪽(누구에게 보내는지 입력 직전에 읽힘) -->
-              <button class="msScopeTrig" type="button" onclick="toggleMsScope(event)" title="채팅 범위"><span class="msScopeLbl" id="msScopeLbl">전체</span><svg class="msScopeChev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button>
-              <div class="msScopeMenu hide" id="msScopeMenu">
-                <button class="msScopeOpt on" data-sc="all" onclick="pickMsScope('all')">전체</button>
-                <button class="msScopeOpt" data-sc="party" onclick="pickMsScope('party')">파티</button>
-                <button class="msScopeOpt" data-sc="friend" onclick="pickMsScope('friend')">친구</button>
-              </div>
-            </div>
-            <input id="msChatInput" type="text" placeholder="메시지 입력…" maxlength="120" autocomplete="off" onkeydown="if(event.key==='Enter')sendGlobalChat()">
-            <button class="msChatSend" onclick="sendGlobalChat()">전송</button>
-          </div>
-        </div>
-        <div class="msPanelBody" id="msPanelBody" style="display:none"></div>
+        <div class="msList uiScroll" id="msList"></div>
       </div>
     </div>
 
@@ -3624,8 +3661,6 @@
     </div>
 
     <div class="bp" id="bpUpgrade">
-      <div class="hint" id="upgHint">건물을 <b>터치</b>하면<br>업그레이드 목록이 표시됩니다</div>
-      <div class="upgList" id="upgList" style="display:none"></div>
     </div>
 
     <div class="bp" id="bpPlayers">
@@ -3735,6 +3770,35 @@
         <div class="hbRoundNote" id="hbRoundNote"></div>
       </div>
     </div>
+    <!-- 💬 채팅 — 유즈맵에서 마을로 옮겨왔다(유즈맵은 목록만). 내용·기능은 그대로 -->
+    <div class="twSheet hide" id="twChat">
+      <div class="twSheetHead"><b>채팅</b>
+        <button class="twSheetX" onclick="twCloseChat()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+      </div>
+      <div class="msSocial inTown">
+        <div class="msTabs2">
+          <button class="msTab2 on" data-bt="chat" onclick="setBottomTab('chat')"><span data-ico="chat"></span>채팅</button>
+          <button class="msTab2" data-bt="party" onclick="setBottomTab('party')"><span data-ico="party"></span>파티</button>
+          <button class="msTab2" data-bt="friend" onclick="setBottomTab('friend')"><span data-ico="friend"></span>친구<span class="msFriendBadge hide" id="msFriendBadge">0</span></button>
+        </div>
+        <div class="msChatWrap" id="msChatWrap">
+          <div class="msChat" id="msChat" data-scope="all"></div>
+          <div class="msChatBar" id="msChatBar">
+            <div class="msScopeDD" id="msScopeDD" data-sc="all">   <!-- 범위 배지 = 입력창 내부 왼쪽(누구에게 보내는지 입력 직전에 읽힘) -->
+              <button class="msScopeTrig" type="button" onclick="toggleMsScope(event)" title="채팅 범위"><span class="msScopeLbl" id="msScopeLbl">전체</span><svg class="msScopeChev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button>
+              <div class="msScopeMenu hide" id="msScopeMenu">
+                <button class="msScopeOpt on" data-sc="all" onclick="pickMsScope('all')">전체</button>
+                <button class="msScopeOpt" data-sc="party" onclick="pickMsScope('party')">파티</button>
+                <button class="msScopeOpt" data-sc="friend" onclick="pickMsScope('friend')">친구</button>
+              </div>
+            </div>
+            <input id="msChatInput" type="text" placeholder="메시지 입력…" maxlength="120" autocomplete="off" onkeydown="if(event.key==='Enter')sendGlobalChat()">
+            <button class="msChatSend" onclick="sendGlobalChat()">전송</button>
+          </div>
+        </div>
+        <div class="msPanelBody" id="msPanelBody" style="display:none"></div>
+      </div>
+    </div>
     <div class="twSheet hide" id="twSocial">
       <div class="twSheetHead"><b>친구</b>
         <button class="twSheetX" onclick="twCloseSocial()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
@@ -3757,9 +3821,12 @@
   </div>
   <!-- 💠 공용 재화 바 — 미네랄/가스/젬 (계정 영구). curShow()가 화면 전환 시 표시/숨김 -->
   <div id="curBar" class="curBar hide">
-    <span class="res"><img class="ri" src="assets/icons/res_mineral.webp" alt=""><b id="curMin">0</b></span>
-    <span class="res"><img class="ri" src="assets/icons/res_gas.webp" alt=""><b id="curGas">0</b></span>
-    <span class="res"><img class="ri" src="assets/icons/res_gem.webp" alt=""><b id="curGem">0</b></span>
+    <span class="curTitle" id="curTitle"></span><!-- 화면 제목 슬롯(curSetTitle) — 비어 있으면 재화만 오른쪽 정렬 -->
+    <span class="curRes">
+      <span class="res"><img class="ri" src="assets/icons/res_mineral.webp" alt=""><b id="curMin">0</b></span>
+      <span class="res"><img class="ri" src="assets/icons/res_gas.webp" alt=""><b id="curGas">0</b></span>
+      <span class="res"><img class="ri" src="assets/icons/res_gem.webp" alt=""><b id="curGem">0</b></span>
+    </span>
   </div>
   <!-- 💬 친구 DM 채팅(허브 소셜) -->
   <div id="dmChat" class="dmChat hide">
@@ -3799,6 +3866,12 @@
   <div id="dgHubScreen" class="appScreen spaceBg hide">
     <div class="hmScroll uiScroll" id="dgHubBody"></div>
   </div>
+  <!-- 🎁 상점 — 네비 '상점' 진입. 팝업이 아닌 전용 화면(렌더러는 renderProfGacha 단일 소스 재사용) -->
+  <!-- 배경 = 유즈맵 선택과 같은 lobby_bg (규칙 공유: #mapSelect::before/::after 셀렉터에 #shopScreen 포함) -->
+  <div id="shopScreen" class="appScreen hide">
+    <div class="hmScroll uiScroll" id="shopBody"></div>
+    <div id="shopToast" class="twToast hide"></div>
+  </div>
   <!-- 토벌 팝업(열기) — 이전 단계 소탕 + 입장 -->
   <div id="dgSheet" class="dgSheet hide">
     <div class="dgSheetCard">
@@ -3822,6 +3895,7 @@
       <button class="twBack" onclick="askLogout()" aria-label="로그아웃" title="로그아웃"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4.6h3.7A1.8 1.8 0 0 1 20 6.4v11.2a1.8 1.8 0 0 1-1.8 1.8h-3.7"/><path d="M10.6 8.2L14.4 12l-3.8 3.8"/><path d="M14.4 12H4"/></svg></button>
       <span class="twName" id="twName">캐릭터</span><span class="twLv" id="twLv">Lv.1</span><span class="twPow" id="twPow">⚔ 0</span>
       <span class="twCoinSpacer" style="margin-left:auto"></span>
+      <button class="twGear" data-sfx="ui_open" onclick="twOpenChat()" title="채팅" aria-label="채팅"><span data-ico="chat"></span></button>
       <button class="twGear" data-sfx="ui_open" onclick="twOpenSocial()" title="친구" aria-label="친구"><span data-ico="friend"></span></button>
       <button class="twGear" data-sfx="ui_open" onclick="openAppSettings()" title="설정" aria-label="설정"><svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg></button>
     </div>
@@ -4083,8 +4157,8 @@ const U = {
   goliath: {name:'기갑병', icon:'⚙️', cost:9,  dmg:30, up:30, hdmg:80, hup:80, range:.26, cd:30, splash:false, color:'#5ad1ff', size:21, wpn:'mech', atk:'missile', hp:125, armor:1, shield:0,   energy:0,   moveSpd:.08, airDmg:25, airUp:25, hairDmg:70, hairUp:70, model3d:'goliath'},
   archon:  {name:'보이드',   icon:'🔮', cost:10, dmg:30, up:20, hdmg:45, hup:55, range:.16, cd:28, splash:true,  color:'#ffc040', size:23, wpn:'pro',  atk:'psi',     hp:10,  armor:0, shield:350, shArmor:1, energy:0,   moveSpd:.10, model3d:'archon'},
   // 방어 구조물(디텍터) — 엑셀: 터렛 공격75 / 포토캐논 공격321. moveSpd:0(고정)
-  turret:  {name:'가드 타워',     icon:'🗼', cost:200, dmg:192,  up:20, hdmg:384, hup:40, range:.26, cd:34, splash:false, color:'#9fd6ff', size:11, wpn:'mech', atk:'missile', hp:200, armor:2, shield:0,   energy:0, moveSpd:0, detector:true, airDmg:192, airUp:20, hairDmg:384, hairUp:40, model3d:'turret'},
-  photon:  {name:'플라즈마 타워', icon:'🔵', cost:400, dmg:346, up:40, hdmg:540, hup:80, range:.24, cd:40, splash:false, color:'#62d0ff', size:12, wpn:'pro',  atk:'plasma',  hp:100, armor:0, shield:100, shArmor:1, energy:0, moveSpd:0, detector:true, model3d:'photon'},
+  turret:  {name:'미사일 포탑',     icon:'🗼', cost:200, dmg:192,  up:20, hdmg:384, hup:40, range:.26, cd:34, splash:false, color:'#9fd6ff', size:11, wpn:'mech', atk:'missile', hp:200, armor:2, shield:0,   energy:0, moveSpd:0, detector:true, airDmg:192, airUp:20, hairDmg:384, hairUp:40, model3d:'turret'},
+  photon:  {name:'에너지 타워', icon:'🔵', cost:400, dmg:346, up:40, hdmg:540, hup:80, range:.24, cd:40, splash:false, color:'#62d0ff', size:12, wpn:'pro',  atk:'plasma',  hp:100, armor:0, shield:100, shArmor:1, energy:0, moveSpd:0, detector:true, model3d:'photon'},
   // ───── 관리자 샌드박스 전용 유닛 스탯(보직별) — 추가형, 네모 게임플레이 무영향 ─────
   racer: {name:'레이서', icon:'🔧', cost:0, dmg:21, up:8, hdmg:42, hup:17, range:0.15, cd:24, splash:false, color:'#4aa8ff', size:18, wpn:'mech', atk:'bullet', hp:76, armor:1, shield:0, energy:0, moveSpd:0.19, model3d:'racer'},   // 샌드박스 전용 · 종족밸런스 ×0.80
   machinegun: {name:'화력병', icon:'🔥', cost:55, dmg:12, up:5, hdmg:0, hup:0, range:0.09, cd:16, splash:true, color:'#ff7a3c', size:18, wpn:'mech', atk:'bullet', hp:55, armor:1, shield:0, energy:0, moveSpd:0.16, model3d:'machinegun'},   // 파이어뱃(배럭스 바이오닉·근접 화염 스플래시)
@@ -4197,9 +4271,9 @@ const CITIZEN_HOME={x:.5,y:.5}; // 시민 기본 위치(보드 중앙)
     // 하위호환 유지
 // 유닛뽑기 비콘 — 좌측 줄(유닛 뽑기) / 우측 줄(에너지 뽑기). 시민이 올라서면 해당 뽑기 실행.
 const DRAW_BEACONS=[
-  // 좌측 줄(4줄): 가드 타워 / 스파이어 / 유닛 1회 / 에너지 1회 (간격 약간 띄움)
-  {id:'buyTurret', x:.20, y:.18, name:'가드 타워', core:'🗼'},
-  {id:'buyPhoton', x:.20, y:.37, name:'플라즈마 타워', core:'◉'},
+  // 좌측 줄(4줄): 미사일 포탑 / 스파이어 / 유닛 1회 / 에너지 1회 (간격 약간 띄움)
+  {id:'buyTurret', x:.20, y:.18, name:'미사일 포탑', core:'🗼'},
+  {id:'buyPhoton', x:.20, y:.37, name:'에너지 타워', core:'◉'},
   {id:'draw',      x:.20, y:.55, name:'유닛 1회', core:'?'},
   {id:'energy',    x:.20, y:.71, name:'에너지 1회', core:'⚡'},
   // 우측 줄: 뽑기 확률↑ / 크레딧 획득↑ (확률표는 우상단 → 아래쪽에 배치해 겹침 방지)
@@ -4258,25 +4332,8 @@ const isFixed=id=>FIXED_IDS.indexOf(id)>=0;
 
 // 업그레이드 건물 — 무기/종족 계열별 공격력 업글(스타크래프트식). 가스 3가스 고정(엑셀).
 //  wpn = 담당 계열. 그 계열 유닛 전체의 공격력이 함께 오름.
-const TECH=[
-  {id:'acad', name:'전술 본부', icon:'🎓', wpn:'inf',  wname:'보병 무기',    units:'레인저·팬텀'},
-  {id:'arm',  name:'아스널',   icon:'🛡️', wpn:'mech', wname:'기계 무기',    units:'스트라이더'},
-  {id:'forge',name:'크리스탈 워크스', icon:'🔱', wpn:'pro',  wname:'루멘 무기', units:'센티넬·보이드'},
-  {id:'evo',  name:'바이오 코어', icon:'🧬', wpn:'zrg',  wname:'스웜 근접 무기', units:'리퍼'},
-  {id:'pointlab', name:'공학소', icon:'⬆️', wpn:'meta', wname:'영구 강화', units:'즉시 적용', meta:true},  // 포인트로 영구 강화(판 종료 시 정산, 강화 즉시 적용)
-];
-// 상단 2×2(무기 계열) + 하단 중앙 1(공학소)
-// 계열별 색 (meta=골드)
-const WPN_COL={inf:'#4aa8ff',mech:'#5ad1ff',pro:'#ffc040',zrg:'#9fd356',meta:'#ffd24a'};
-   // 건물 계열 → 종족(작동음 분리용)
-// 건물 벡터 실루엣(자체 제작 네온, currentColor=계열색)
-const BLDG_SVG={
-  acad:'<path d="M3 13l9-5 9 5z" fill="currentColor" opacity=".18"/><path d="M5 20v-7h14v7M3 13l9-5 9 5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M8 20v-5M12 20v-5M16 20v-5M4 20h16" stroke="currentColor" stroke-width="1.2"/>',
-  arm:'<path d="M4 20V11l5 3V11l5 3V8h6v12z" fill="currentColor" opacity=".18"/><path d="M4 20V11l5 3V11l5 3V8h6v12H4z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><rect x="16.3" y="3.5" width="2.6" height="4" fill="currentColor"/>',
-  forge:'<path d="M12 3l4.5 6.5L12 17 7.5 9.5z" fill="currentColor" opacity=".22"/><path d="M12 3l4.5 6.5L12 17 7.5 9.5z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M5 20h14M8.5 20l1-3h5l1 3" fill="none" stroke="currentColor" stroke-width="1.2"/>',
-  evo:'<path d="M12 4c4 0 6 4 6 8 0 4-3 7-6 7s-6-3-6-7c0-4 2-8 6-8z" fill="currentColor" opacity=".18"/><path d="M12 4c4 0 6 4 6 8 0 4-3 7-6 7s-6-3-6-7c0-4 2-8 6-8z" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M9 4l1 3M15 4l-1 3M6 10l2.2 1M18 10l-2.2 1" stroke="currentColor" stroke-width="1"/><circle cx="12" cy="12.5" r="2" fill="currentColor"/>',
-  pointlab:'<path d="M5 20h14l-7-16z" fill="currentColor" opacity=".16"/><path d="M5 20h14l-7-16z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M12 16.5V9M9 12l3-3 3 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
-};
+// (삭제) TECH / TECH_POS / WPN_COL / BLDG_SVG — 업그레이드 탭 건물 화면 전용 데이터. 화면 폐지로 참조처가 사라져 함께 제거.
+// 무기 계열 강화는 UPG_CATS(보병·메카닉·스웜·에테리얼) + 하단 업그레이드 시트가 단일 소스.
 const UPG_COST=5; // 계열당 1레벨 = 가스 5(점증, upgCost) — 초기 비용
 
 // 몬스터 18라운드(엑셀): 이름 / 체력 / 쉴드 / 방어력. 보스=10라운드. 커세어(5)는 엑셀 빈칸→임시.
@@ -4349,7 +4406,7 @@ const USEMAPS={
            feats:[ {ic:'build',kw:'배정',tx:'건물에 유닛 → 자동 출격'}, {ic:'coin',kw:'경제',tx:'라운드마다 자원 굴려 병력↑'}, {ic:'target',kw:'승리',tx:'적 본진 먼저 파괴'}, {ic:'sword',kw:'대전',tx:'최대 8인 실시간 전투'} ],
            players:'1-8', pop:5180, icon:'⚔️', rec:true, isNew:true,  playable:true, soloOff:true, noDiff:true,   // 오토배틀 = 멀티 전용(개인 플레이 잠금) · 대인전이라 난이도 없음
           cfg:{ mode:'strike', stats:true, teams:true,   // 종료 후 통계 화면 · 대기실 2팀 분할
-                cycleTime:20, heroAt:10, baseHp:9000, secHp:4500, centralHp:3000, startGold:450, incomeBase:50, mineIncome:15, mineCost:200, world:4800 } },
+                cycleTime:20, heroAt:10, baseHp:13500, secHp:6750, centralHp:4500, startGold:450, incomeBase:50, mineIncome:15, mineCost:200, world:4800 } },   // 신전 체력 ×1.5(눈덩이 완화 — 한 교전이 즉시 게임을 끝내지 않게. 측정: 매치 +5%·결착률 0.96 유지·밸런스 불변)
   photon:{ id:'photon', name:'포탑 겹치기',      desc:'방어 포탑을 겹쳐 쌓아 버티기',       players:'1-4', pop:4090, icon:'🔵', rec:false, isNew:false, playable:false, cfg:{} },
   tmp1:  { id:'tmp1',   name:'랜덤 디펜스 (임시)', desc:'임시 등록 유즈맵',               players:'1-8', pop:2600, icon:'🎲', rec:false, isNew:true,  playable:false, cfg:{} },
   tmp2:  { id:'tmp2',   name:'영웅 아레나 (임시)', desc:'임시 등록 유즈맵',               players:'2-8', pop:1900, icon:'⚔️', rec:false, isNew:false, playable:false, cfg:{} },
@@ -4417,7 +4474,7 @@ const GACHA_TIERS = {   // 확률 합 = 1.000 (0.547+0.25+0.12+0.055+0.02+0.006+
   epic:      { name:'에픽',   prob:0.120, combine:true,     serverNotify:false },
   unique:    { name:'유니크', prob:0.055, combine:true,     serverNotify:false },
   legend:    { name:'레전드', prob:0.020, combine:true,     serverNotify:true  },
-  transcend: { name:'초월',   prob:0.006, combine:'recipe', serverNotify:true  },
+  transcend: { name:'초월',   prob:0.006, combine:true,     serverNotify:true  },
   god:       { name:'갓',     prob:0.002, combine:false,    serverNotify:true  },
 };
 const GACHA_TIER_ORDER = ['common','rare','epic','unique','legend','transcend','god'];
@@ -4463,14 +4520,8 @@ const GACHA_UNITS = {   // 4종 × 7등급 = 28 (이름 확정)
   sentinel_god: _gUnit('sentinel_god','센티넬','god','aetherial','single_rapid', {traits:['atkspd_buff','atk_buff']}),
   reaper_god:   _gUnit('reaper_god','스파이크','god','swarm','dot', {traits:['poison','slow']}),
 };
-// 초월 레시피(특수 조합 전용) — 합체존에 재료 유닛을 모으면 해당 초월 생성. 형식: 결과ID: [재료 gid 3개]
-// (기본: 특정 레전드 3개 → 특정 초월. 추후 혼합 레시피로 조정 가능)
-const TRANSCEND_RECIPE = {
-  phantom_t:   ['machinegun_l','machinegun_l','machinegun_l'],   // 화력병(레전드)×3 → 저격수(초월)
-  skyguard_t:  ['tank_l','tank_l','tank_l'],                     // 공성전차(레전드)×3 → 전투기(초월)
-  skydancer_t: ['blade_l','blade_l','blade_l'],                  // 광전사(레전드)×3 → 요격기(초월)
-  matron_t:    ['thornqueen_l','thornqueen_l','thornqueen_l'],   // 가시여왕(레전드)×3 → 여제(초월)
-};
+// 초월 레시피 폐지 — 레전드 3개도 단순 조합으로 초월(랜덤)이 된다. (빈 맵 유지: 참조 안전)
+const TRANSCEND_RECIPE = {};
 // 2단계 임시 매핑: 가챠 유닛 → 기존 유닛 ID(모델·성능). 실제 전용 모델·수치는 4단계에서 교체.
 const GACHA_PROXY = {
   ranger_c:'marine',  strider_c:'goliath', sentinel_c:'dragoon', reaper_c:'hydra',
@@ -4505,8 +4556,8 @@ const TIER_COLOR = { common:'#b8c0cc', rare:'#4aa8ff', epic:'#b06bff', unique:'#
 /* TIER_MUL → NEMO_BAL.tierMul */   // 레어=높은 기본뎀(초반 체감↑) / 초월·갓 기본 배율 소폭 하향(105→92, 270→235: 확률 상향 보상)
 /* UP_TIER_MUL → NEMO_BAL.upTierMul */   // 레어 업글배율=일반과 근접(중반엔 일반과 수렴) / 유니크는 에픽보다 확실히 높음 / 초월·갓 집중   // 레전드 13→9: 풀업 레전드가 20라운드를 깨지 않게(초월=클리어 라인 유지, 봇 시뮬 검증)   // 업그레이드 1회당 증가폭 등급 배율(기본딜 배율의 절반 강도)   // 등급당 ×2.2 — 등급 업=급격한 성장(설계: 초월 조합=클리어 라인, 갓=초반 캐리)
 function gachaTierMul(u){ return (u && u.gtier && TIER_MUL[u.gtier]) || 1; }
-// 단순 조합 사다리: 같은 유닛 3개 → 다음 등급 랜덤 1종. (legend↑는 단순조합 없음 — 초월=레시피, 갓=뽑기전용)
-const SIMPLE_COMBINE_TIERS = { common:'rare', rare:'epic', epic:'unique', unique:'legend', transcend:'god' };   // 초월 3개 → 갓 랜덤(조합으로 갓 획득 가능). 초월 모으기 자체가 어려워 갓은 자연히 희소
+// 단순 조합 사다리: 같은 유닛 3개 → 다음 등급 랜덤 1종. 갓까지 전부 단순 조합으로 도달(갓=최종).
+const SIMPLE_COMBINE_TIERS = { common:'rare', rare:'epic', epic:'unique', unique:'legend', legend:'transcend', transcend:'god' };   // 단순 조합으로 끝까지: 레전드 3개 → 초월 랜덤 / 초월 3개 → 갓 랜덤 (레시피 폐지)
 // 별은 등급별로 늘어나지 않음 — 같은 이름이 두 등급에 걸쳐 있어(일반·레어=레인저, 에픽·유니크=팬텀)
 // 강화형(레어·유니크)만 ★ 하나로 구분하는 단순 장치. 나머지(이름이 겹치지 않는 등급)는 별 없음.
 const UPGRADED_TIER = { rare:true, unique:true };
@@ -4554,7 +4605,7 @@ const META_BUILDS = {   // 탭(group) → 섹션(sect) 2단 분류. 같은 sect�
   // ── 경제 (시작 자원 → 자원 획득) ──
   start_credit:  { name:'시작 크레딧', desc:'시작 시 크레딧 지급 (+25/Lv)',   start:15, nMax:10, max:10, group:'eco', sect:'시작 자원' },
   start_energy:  { name:'시작 에너지', desc:'시작 시 에너지 지급 (+10/Lv)',   start:15, nMax:10, max:10, group:'eco', sect:'시작 자원' },
-  start_turret:  { name:'시작 포탑',   desc:'시작 시 가드 타워 배치 (+1기/Lv, 최대 3기)', start:100, costs:[100,250,500], nMax:3, max:3, group:'eco', sect:'시작 자원' },
+  start_turret:  { name:'시작 포탑',   desc:'시작 시 미사일 포탑 배치 (+1기/Lv, 최대 3기)', start:100, costs:[100,250,500], nMax:3, max:3, group:'eco', sect:'시작 자원' },
   credit_gain:   { name:'크레딧 획득', desc:'인게임 크레딧 획득 증가 (+5%/Lv)', start:25, nMax:10, max:10, group:'eco', sect:'자원 획득' },
   energy_gain:   { name:'에너지 획득', desc:'인게임 에너지 획득 증가 (+5%/Lv)', start:25, nMax:10, max:10, group:'eco', sect:'자원 획득' },
   interest_cap:  { name:'이자 상한',   desc:'라운드 정산 이자 +10/Lv (보유 인정 한도 +100/Lv)', start:30, nMax:10, max:10, group:'eco', sect:'자원 획득' },
@@ -5227,7 +5278,7 @@ function navGo(tab){ if(typeof playSfx==='function') playSfx('ui_tab');
   if(tab==='dungeon') return openDungeonHub();                                              // 던전 허브(전용 화면)
   if(tab==='town')    { openTown(); return navShow('town'); }
   if(tab==='map')     return twGoMap();                                                    // 유즈맵(친구·소셜은 유즈맵 하단)
-  if(tab==='shop')    { openTown(); navShow('shop'); return openTownPanel('gacha'); } }    // 상점 = 뽑기집(전용 상점 화면은 이후 단계)
+  if(tab==='shop')    return openShop(); }                                                 // 상점(전용 화면)
 // ── ⚔ 자동사냥(HOME 메인 전투) — 마린키우기식 웨이브 방어 ──
 // ⛔ 유즈맵(G / U / M3D / GACHA_*)과 완전 분리 — 던전과 같은 격리 규칙. 표·상태·루프·렌더 전부 자체 보유.
 // 확정 규칙(2026-08-07):
@@ -5799,7 +5850,7 @@ function sendDM(){ const inp=document.getElementById('dmInput'); if(!inp||_dmFri
 // 배치: 가로로 긴 직사각형의 네 모서리 + 정중앙 광장(주 이동 방향이 가로라 좌우로 넓게 잡는다)
 const TOWN_ZONES={
   plaza:{ x:50, y:50, ico:'🏠',   label:'광장',      title:'광장 · 내 캐릭터', render:()=>renderProfStats() },
-  gacha:{ x:22, y:24, ico:'🎁',   label:'뽑기집',    title:'뽑기집 · 펫',      render:()=>renderProfGacha() },   // 좌상
+  gacha:{ x:22, y:24, ico:'🎁',   label:'상점',      title:'상점',             screen:'shop', render:()=>renderProfGacha() },   // 좌상 · screen 지정 = 팝업 대신 전용 화면으로 이동
   gate: { x:78, y:24, ico:'🔒',   label:'관문',      title:'관문',             render:()=>renderProfGate()  },   // 우상
   gear: { x:22, y:76, ico:'🎒',   label:'장비',      title:'장비',             render:()=>renderProfGear()  },   // 좌하
   gym:  { x:78, y:76, ico:'🏋️',  label:'훈련장',    title:'훈련장',           render:()=>renderProfIdle()  },   // 우하
@@ -5830,11 +5881,16 @@ function openTown(){ loadMeta(); if(!CHAR()){ openCharScreen('create'); return; 
   if(typeof initMapLive==='function') initMapLive();
   const g=profClaimOffline(); renderTownBar(); if(g>0) showTownToast('오프라인 보상 +'+g+' P'); }
 // 마을을 떠날 때의 공통 정리 — 루프·패널·시트를 한 번에 닫는다(그대로 두면 배경에서 계속 돈다)
-function twLeave(){ _townOpen=false; twStopLoop(); closeTownPanel(); twCloseSocial(); profStampSeen(); }
+function twLeave(){ _townOpen=false; twStopLoop(); closeTownPanel(); twCloseSocial(); twCloseChat(); profStampSeen(); }
 // 🗺 마을 → 유즈맵 선택
 function twGoMap(){ twLeave(); if(typeof playSfx==='function') playSfx('ui_open'); openMapSelect(); }
 // 👥 친구 시트 — 허브에서 옮겨온 목록을 그대로 쓴다
-function twOpenSocial(){ const el=document.getElementById('twSocial'); if(!el) return;
+function twOpenChat(){ const el=document.getElementById('twChat'); if(!el) return;   // 💬 채팅 시트(유즈맵에서 옮겨옴)
+  twCloseSocial(); el.classList.remove('hide');
+  if(typeof paintIcons==='function') paintIcons(el); if(typeof playSfx==='function') playSfx('ui_open');
+  const c=document.getElementById('msChat'); if(c) c.scrollTop=c.scrollHeight; }
+function twCloseChat(){ const el=document.getElementById('twChat'); if(el) el.classList.add('hide'); }
+function twOpenSocial(){ twCloseChat(); const el=document.getElementById('twSocial'); if(!el) return;
   el.classList.remove('hide'); if(typeof renderFriends==='function') renderFriends();
   if(typeof paintIcons==='function') paintIcons(el); if(typeof playSfx==='function') playSfx('ui_open'); }
 function twCloseSocial(){ const el=document.getElementById('twSocial'); if(el) el.classList.add('hide'); }
@@ -5925,18 +5981,34 @@ function renderTownBar(){ const p=PROF(), c=CHAR();
   const lv=document.getElementById('twLv'); if(lv) lv.textContent='Lv.'+(c?c.level:1);
   const pw=document.getElementById('twPow'); if(pw) pw.textContent='⚔ '+profPower();
   if(typeof updateCurBar==='function') updateCurBar(); }   // 💠 미네랄/가스/젬은 공용 재화 바
-function showTownToast(msg){ const t=document.getElementById('twToast'); if(!t) return; t.textContent=msg; t.classList.remove('hide');
+function showTownToast(msg){ const t=document.getElementById(shopOpen()?'shopToast':'twToast'); if(!t) return; t.textContent=msg; t.classList.remove('hide');
   clearTimeout(t._t); t._t=setTimeout(()=>t.classList.add('hide'), 2600); }
 // 구역 아이콘(또는 가장자리 방향 표시) 탭 = 그 구역을 지정. 이미 그 위에 서 있으면 바로 연다.
 function townGo(zone){ const p=twZonePx(zone); if(!p) return; if(typeof playSfx==='function') playSfx('ui_open');
   if(Math.hypot(p[0]-_twChar.x,p[1]-_twChar.y)<=TW_ZONE_R){ _twChar.mode=null; _twGoZone=null; openTownPanel(zone); return; }
   twSetTarget(p[0],p[1]); _twGoZone=zone; }   // twSetTarget이 지정을 지우므로 그 뒤에 세운다
-function openTownPanel(zone){ _twZone=zone; _twChar.mode=null; _twPtr=null;   // 시설에 들어가면 걸음을 멈춘다
+const TOWN_ZONE_SCREEN={ shop:()=>openShop() };   // 구역 → 전용 화면 매핑(팝업 대신 화면 전환)
+function openTownPanel(zone){ const _z=TOWN_ZONES[zone];
+  if(_z && _z.screen && TOWN_ZONE_SCREEN[_z.screen]){ _twChar.mode=null; _twPtr=null; return TOWN_ZONE_SCREEN[_z.screen](); }   // 전용 화면 구역
+  _twZone=zone; _twChar.mode=null; _twPtr=null;   // 시설에 들어가면 걸음을 멈춘다
   const card=document.querySelector('#townPanel .twCard');
   if(card) card.classList.toggle('gearFull', zone==='gear');   // 장비창만 카드 높이를 고정해 위/아래 구역을 나눈다
   const t=document.getElementById('tpTitle'), z=TOWN_ZONES[zone]; if(t) t.textContent=(z&&z.title)||'시설';
   refreshTownPanel(); popShow('townPanel'); bagScrollHint(); }   // 숨은 동안은 높이가 0이라 표시 후 한 번 더 재본다
-function refreshTownPanel(){ const body=document.getElementById('tpBody'), z=TOWN_ZONES[_twZone]; if(!body||!z) return;
+// ── 🎁 상점(전용 화면) ─────────────────────────────────────────────────────
+// 팝업이 아니라 독립 화면이다. 내용 렌더러는 renderProfGacha() 하나뿐(단일 소스) — 마크업을 복제하지 말 것.
+function shopOpen(){ const e=document.getElementById('shopScreen'); return !!(e && !e.classList.contains('hide')); }
+function openShop(){ if(typeof loadMeta==='function') loadMeta();
+  if(typeof CHAR==='function' && !CHAR()){ openCharScreen('create'); return; }   // 캐릭터 없으면 생성부터
+  if(typeof twLeave==='function') twLeave();                                     // 마을에서 들어왔으면 루프·팝업 정리
+  showAppScreen('shopScreen'); navShow('shop'); renderShop();
+  if(typeof paintIcons==='function') paintIcons(document.getElementById('shopScreen')); }
+function renderShop(){ const body=document.getElementById('shopBody'); if(!body) return;
+  const old=body.querySelector('.bagBody'), keep=old?old.scrollTop:0;
+  body.innerHTML='<div class="shopTitle"><span>🎁</span><b>상점</b></div>'+renderProfGacha();
+  const nb=body.querySelector('.bagBody'); if(nb&&keep) nb.scrollTop=keep; }
+function refreshTownPanel(){ if(shopOpen()){ renderShop(); return; }   // 상점 전용 화면이 열려 있으면 그쪽을 갱신
+  const body=document.getElementById('tpBody'), z=TOWN_ZONES[_twZone]; if(!body||!z) return;
   const old=body.querySelector('.bagBody'), keep=old?old.scrollTop:0;   // 다시 그려도 가방을 보던 위치를 유지
   body.innerHTML = z.render();
   const nb=body.querySelector('.bagBody'); if(nb&&keep) nb.scrollTop=keep;
@@ -6030,22 +6102,89 @@ function renderProfStats(){ const p=PROF(), c=CHAR(); if(!c) return '<div class=
   return h; }
 function profDoEvolve(){ if(profEvolve()){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); showTownToast('⭐ 진화 성공!'); } }
 // 뽑기집: 펫 뽑기 + 보유 펫 장착
+// ── 💠 재화 아이콘 단일 소스 ────────────────────────────────────────────────
+// ⛔ 새 UI에서 미네랄·가스·젬·인구를 표시할 땐 **반드시 resIco()**를 쓴다. 이모지를 임의로 넣지 말 것.
+//    한글 이름으로도 찾는다 — resIco('미네랄') === resIco('mineral').
+const RES_ICON={ mineral:'res_mineral', gas:'res_gas', gem:'res_gem', pop:'res_pop' };
+const RES_ICON_KO={ '미네랄':'mineral', '가스':'gas', '젬':'gem', '인구':'pop' };
+function resIco(k, cls){ const id=RES_ICON[k]||RES_ICON[RES_ICON_KO[k]];
+  return id ? '<img class="'+(cls||'ri')+'" src="assets/icons/'+id+'.webp" alt="">' : ''; }
+// ── 🎁 상점 내용(단일 소스) — 모바일 재화상점 형태: 오늘의 특가 → 뽑기 → 젬(현질) → 보유 펫 ──
+// 특가는 매일 09:00 갱신(던전 열쇠와 같은 축). 3개를 다 사면 그 자리에서 새 3개가 나온다.
+const SHOP_DEAL_POOL=[
+  {id:'pet',   tag:'펫 꾸러미',   art:'🐾', gem:20,  give:{pcoin:660,  ticket_pet:1}},
+  {id:'gear',  tag:'장비 꾸러미', art:'🎒', gem:35,  give:{pcoin:1200, ticket_gear:2}},
+  {id:'res',   tag:'자원 꾸러미', art:'💠', gem:15,  give:{pcoin:2000, gas:120}},
+  {id:'ally',  tag:'동료 꾸러미', art:'🤝', gem:60,  give:{pcoin:2500, ticket_ally:1}},
+  {id:'gas',   tag:'가스 꾸러미', art:'⚡', gem:25,  give:{gas:300}},
+  {id:'mega',  tag:'특급 꾸러미', art:'📦', gem:90,  give:{pcoin:6000, gas:400, ticket_gear:3}},
+];
+// 💎 젬 = 현질 재화(실제 결제로만 얻는다). 특가는 이 젬으로 산다.
+const SHOP_GEM_PACKS=[ {n:60,won:'₩1,500'}, {n:220,won:'₩5,500'}, {n:800,won:'₩19,000'} ];
+// 지급 내용 라벨 — 아이콘은 resIco()가 이름으로 자동 매칭(임의 이모지 금지)
+const SHOP_GIVE_LABEL={ pcoin:'미네랄', gas:'가스', gem:'젬',
+  ticket_gear:'장비 뽑기권', ticket_pet:'펫 뽑기권', ticket_ally:'동료 뽑기권' };
+function shopState(){ const p=PROF(); if(!p.shop) p.shop={day:0,bought:[],cycle:0};
+  const dk=_dgDayKey(); if(p.shop.day!==dk){ p.shop={day:dk,bought:[],cycle:0}; } return p.shop; }
+function shopDeals(){ const st=shopState(), n=SHOP_DEAL_POOL.length, out=[];
+  const base=(Math.floor(st.day/86400000)*3 + st.cycle*3) % n;          // 날짜+주기로 3개 선정(무작위 아님 = 재현 가능)
+  for(let i=0;i<3;i++) out.push(SHOP_DEAL_POOL[(base+i)%n]);
+  return out; }
+function shopBuyDeal(id){ const p=PROF(), st=shopState(), d=SHOP_DEAL_POOL.find(x=>x.id===id); if(!d) return;
+  if(st.bought.indexOf(id)>=0) return;
+  if(profGem()<d.gem){ showTownToast('💎 젬이 부족합니다'); return; }
+  p.gem=(p.gem||0)-d.gem;
+  for(const k in d.give){ const v=d.give[k];
+    if(k==='pcoin') p.pcoin=(p.pcoin||0)+v;
+    else if(k==='gas') p.gas=(p.gas||0)+v;
+    else if(k==='gem') p.gem=(p.gem||0)+v;
+    else { const t=k.replace('ticket_',''); if(!p.tickets) p.tickets={gear:0,pet:0,ally:0}; p.tickets[t]=(p.tickets[t]||0)+v; } }
+  st.bought.push(id);
+  if(shopDeals().every(x=>st.bought.indexOf(x.id)>=0)){ st.cycle++; st.bought=[]; }   // 3개 다 사면 새 3개
+  saveMeta(); if(typeof playSfx==='function') playSfx('hero_merge');
+  renderTownBar(); refreshTownPanel(); showTownToast('🎁 '+d.tag+' 구매 완료'); }
+function shopGemSoon(){ showTownToast('💎 젬 충전은 준비 중입니다'); }
 function renderProfGacha(){ const p=PROF(), poor=p.pcoin<PROF_PET_GACHA_COST, eq=p.equip||[];
-  let h='<div class="twHead">펫을 뽑아 장착하면 <b>코인·공격·체력 %</b>가 오릅니다.<br>보유 <b>'+Math.floor(p.pcoin)+' P</b> · 장착 '+eq.length+'/'+profPetSlots()+'</div>';
-  h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">펫 1회 뽑기</div><div class="twRowSub">중복 펫은 별(★)로 강화</div></div><button class="twBtn" onclick="profDoGacha()"'+(poor?' disabled':'')+'>'+PROF_PET_GACHA_COST+' P</button></div>';
+  const st=shopState(); let h='';
+  // ① 오늘의 특가 — 패널(구역) 안에 꾸러미 칸을 담는다(HOME .hmCard 구조)
+  h+='<div class="shopPanel"><div class="shopHead">오늘의 특가<em>매일 09:00 갱신</em></div><div class="shopBody">';
+  h+='<div class="shopNote">특가 <b>3개</b>를 모두 구매하면 새로운 3개가 나옵니다</div>';
+  for(const d of shopDeals()){ const sold=st.bought.indexOf(d.id)>=0, can=profGem()>=d.gem;
+    h+='<div class="shopDeal'+(sold?' sold':'')+'"><div class="shopDealL"><span class="shopTag">'+d.tag+'</span><div class="shopGive">';
+    for(const k in d.give){ const nm=SHOP_GIVE_LABEL[k]||k, ico=resIco(nm,'gi');   // 이름으로 아이콘 자동 매칭
+      h+='<span>'+(ico||'<i class="giT">🎟</i>')+' '+nm+' <b>'+d.give[k].toLocaleString('en-US')+'</b></span>'; }
+    h+='</div></div><div class="shopDealR"><span class="shopArt">'+d.art+'</span>'
+      +'<button class="shopBuy" onclick="shopBuyDeal(\''+d.id+'\')"'+((sold||!can)?' disabled':'')+'>'
+      +(sold?'구매완료':(resIco('gem','gi')+'<b>'+d.gem+'</b>'))+'</button></div></div>'; }
+  h+='</div></div>';
+  // ② 뽑기(실제 기능)
+  h+='<div class="shopPanel"><div class="shopHead">뽑기<em>장착 '+eq.length+'/'+profPetSlots()+'</em></div><div class="shopBody">';
+  h+='<div class="shopNote">펫을 장착하면 <b>코인·공격·체력 %</b>가 오릅니다</div>';
+  h+='<div class="shopRow"><div class="twRowInfo"><div class="twRowName">펫 1회 뽑기</div><div class="twRowSub">중복 펫은 별(★)로 강화</div></div><button class="twBtn" onclick="profDoGacha()"'+(poor?' disabled':'')+'>'+PROF_PET_GACHA_COST+' P</button></div>';
   // 🎟 장비 뽑기권 — 자동사냥 엘리트 처치·토벌 클리어로 얻는다. 여기가 유일한 소비처.
   { const tk=((p.tickets&&p.tickets.gear)||0), full=profItems().length>=PROF_INV_MAX;
-    h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">장비 뽑기권 사용</div>'
+    h+='<div class="shopRow"><div class="twRowInfo"><div class="twRowName">장비 뽑기권 사용</div>'
       +'<div class="twRowSub'+(tk?'':' lock')+'">'+(full?'가방이 가득 찼습니다':('보유 🎟 '+tk+' · 엘리트 처치·토벌에서 획득'))+'</div></div>'
       +'<button class="twBtn" onclick="profUseGearTicket()"'+((tk&&!full)?'':' disabled')+'>뽑기</button></div>'; }
+  h+='</div></div>';
+  // ③ 젬 — 유일한 현질 상품(실제 결제로만 얻는 재화)
+  h+='<div class="shopPanel"><div class="shopHead">젬 충전<em>현금 결제</em></div><div class="shopBody">';
+  h+='<div class="shopNote">젬은 <b>현금 결제</b>로만 얻습니다 · 특가 구매에 사용</div>';
+  h+='<div class="shopGems">';
+  for(const g of SHOP_GEM_PACKS)
+    h+='<div class="shopGem"><em>'+resIco('gem','gi')+' '+g.n+'</em>'
+      +'<button class="shopBuy" onclick="shopGemSoon()">'+g.won+'</button></div>';
+  h+='</div></div></div>';
+  // ④ 보유 펫
   const owned=Object.keys(p.pets||{}).filter(id=>PROF_PETS[id]).sort((a,b)=>GACHA_TIER_ORDER.indexOf(PROF_PETS[b].tier)-GACHA_TIER_ORDER.indexOf(PROF_PETS[a].tier));
-  h+='<div class="twSectLbl">보유 펫 ('+owned.length+')</div>';
-  if(!owned.length) h+='<div class="twRow"><div class="twRowInfo"><div class="twRowSub">아직 없음 — 뽑아보세요!</div></div></div>';
+  h+='<div class="shopPanel"><div class="shopHead">보유 펫<em>'+owned.length+'마리</em></div><div class="shopBody">';
+  if(!owned.length) h+='<div class="shopNote">아직 없음 — 위에서 뽑아보세요!</div>';
   for(const id of owned){ const P=PROF_PETS[id], col=TIER_COLOR[P.tier], star=profPetStar(id), on=eq.indexOf(id)>=0, full=eq.length>=profPetSlots();
-    h+='<div class="twRow"><span class="twPet" style="color:'+col+';border-color:'+col+'55">'+P.emoji+'</span>'
+    h+='<div class="shopRow"><span class="twPet" style="color:'+col+';border-color:'+col+'55">'+P.emoji+'</span>'
       +'<div class="twRowInfo"><div class="twRowName">'+P.name+' <span class="twStars">'+'★'.repeat(star)+'</span></div>'
       +'<div class="twRowSub" style="color:'+col+'">'+GACHA_TIERS[P.tier].name+' · '+PROF_BONUS_NAME[P.bonus.type]+' +'+Math.round(profPetVal(id)*100)+'%</div></div>'
       +'<button class="twBtn'+(on?' on':'')+'" onclick="profDoPetEquip(\''+id+'\')"'+((!on&&full)?' disabled':'')+'>'+(on?'장착중':'장착')+'</button></div>'; }
+  h+='</div></div>';
   return h; }
 // 장비 뽑기권 1장 = 무작위 장비 1개(등급은 최고 토벌 단계에 따라 좋아진다)
 function profUseGearTicket(){ const p=PROF();
@@ -6530,8 +6669,7 @@ const _PT_NOTE={
 function openPointUpgrade(){ loadMeta(); _ptGroup='eco';
   renderPtTabs(); renderPt();
   popShow('pointPanel'); }
-function closePointUpgrade(){ popHide('pointPanel');
-  }
+function closePointUpgrade(){ popHide('pointPanel'); }
 function setPtGroup(g){ _ptGroup=g; renderPtTabs(); renderPt(); }
 // 카테고리 아이콘(메인 하단 네비와 톤 통일 · 24/1.7/currentColor 라인)
 const _PT_ICO={
@@ -6738,7 +6876,7 @@ let _homeMode='select', _combTier=null, _combSig=''; let _selTierH=null, _selSig
 const LEGEND_TO_TRANSCEND={};   // 3-같은 레시피 역매핑(machinegun_l→phantom_t 등)
 for(const _res in TRANSCEND_RECIPE){ const _m=TRANSCEND_RECIPE[_res]; if(_m.length===3 && _m[0]===_m[1] && _m[1]===_m[2]) LEGEND_TO_TRANSCEND[_m[0]]=_res; }
 function combineResultFor(gid,gtier){ const nt=SIMPLE_COMBINE_TIERS[gtier]; if(nt) return {type:'simple', nextTier:nt};
-  if(LEGEND_TO_TRANSCEND[gid]) return {type:'transcend', id:LEGEND_TO_TRANSCEND[gid]}; return null; }   // 단순 3개 / 레전드→초월 레시피 / 그 외 조합 불가
+  if(LEGEND_TO_TRANSCEND[gid]) return {type:'transcend', id:LEGEND_TO_TRANSCEND[gid]}; return null; }   // 전부 단순 3개 조합(갓=최종=null) · 레시피 폐지(LEGEND_TO_TRANSCEND 빈 맵)
 function ownedCombineGroups(){ const grp={};   // gid별 묶음(고정·파견 제외) — 3개 이상 & 조합 결과 있는 것만
   for(const u of G.units){ if(u.fixed||u.atBoss||!u.gid) continue; (grp[u.gid]=grp[u.gid]||[]).push(u); }
   const out={}; for(const gid in grp){ if(grp[gid].length>=3 && combineResultFor(gid, grp[gid][0].gtier)) out[gid]=grp[gid]; } return out; }
@@ -7405,17 +7543,7 @@ function drawProd(){ const {ctx,W,H}=setup('cvUnit'); drawShopBg(ctx,W,H);
   if(!b3d) DRAW_BEACONS.forEach(b=>drawPad(ctx, b.x*W, b.y*H, rx, G.citizen.onPad===b.id));   // 3D 미준비 시 2D 패드
 }
 // 업그레이드 플랫폼 — 통일 타일(우주 정거장 금속) 라운드 사각, 우주에 떠 있는 느낌
-// 업그레이드 가동 효과(파티클) — 건물 고정, 건물별 위치/방식 다르게(은은하게)
-// acad=왼쪽 위 돔에서 연기 / arm=증기 / forge=동그란 부분에 에너지 모임 / evo=여러 부위 포자
-let _upgP=[], _upgTmr={};
-const UPG_EMIT={
-  acad: {type:'smoke', col:'180,190,205', rate:0.42, pts:[{dx:-0.052,dy:-0.072}]},          // 왼쪽 위 돔
-  arm:  {type:'smoke', col:'180,190,205', rate:0.45, pts:[{dx:0,dy:-0.06}]},                 // 가운데 동그란 배출구 위로 연기
-  forge:{type:'gather',col:'130,205,255', rate:0.07, pts:[{dx:0,dy:-0.082}]},                // 위쪽 동그란 포탈로 모임
-  evo:  {type:'spore', col:'150,255,130', rate:0.22, pts:[{dx:-0.045,dy:-0.04},{dx:0.045,dy:-0.055},{dx:0,dy:-0.085},{dx:0.05,dy:-0.02},{dx:-0.03,dy:-0.07}]},  // 여러 부위
-};
-// 플레이어 구역: 선택한 플레이어의 전장을 실제 게임과 동일하게 렌더(맵·적·유닛). 유닛 림 색만 플레이어별로 다름(loop의 setPlayerRim).
-// (현재 임시: 모든 플레이어가 내 실제 전장을 공유 표시. 향후 멀티 연동 시 플레이어별 실제 상태로 교체.)
+// (삭제) 업그레이드 가동 파티클(UPG_EMIT/drawUpgFx) — 건물 화면 폐지로 제거.
 function drawPlayer(){ drawMain('cvPlayer'); }   // 실제 전장 렌더(관전 라벨은 좌상단 DOM #specLabel)
 // 관전 라벨 갱신(좌상단 킬 아래) — 플레이어 탭에서만, 플레이어색으로
 function updateSpecLabel(){ const el=document.getElementById('specLabel'); if(!el) return;
@@ -7719,7 +7847,7 @@ function renderRallyArrows(){ const host=document.getElementById('vMain'); if(!h
       el.style.setProperty('--rc', TIER_COLOR[t]||'#fff'); attachRallyDrag(el, t); host.appendChild(el); }
     el.style.display='flex'; const r=G.rally[t]; el.style.left=(r.x*100)+'%'; el.style.top=(r.y*100)+'%'; });
 }
-// 자동 조합: 가장 낮은 등급부터 1건. 'simple'(레전드 이하 생성)만 → 레전드→초월(레시피)은 자동 제외
+// 자동 조합: 가장 낮은 등급부터 1건. 전 등급 단순 조합(갓=최종은 대상 없음 → 자연 제외)
 function autoCombineStep(){
   const groups=ownedCombineGroups(); let bestGid=null, bestRank=99;
   for(const gid in groups){ const list=groups[gid]; const res=combineResultFor(gid, list[0].gtier);
@@ -7804,7 +7932,7 @@ function _consumeUnits(con){ G.units=G.units.filter(x=>!con.has(x.uid)); G.sel=G
   if(window.M3D&&M3D.dropModels) M3D.dropModels([...con]); }   // 합성 소비: 유닛/선택/3D모델 제거
 function combine(){
   const inz=G.units.filter(u=>inZone(u)&&!u.hero&&!u.fixed);
-  // 1) 초월 레시피 우선 — 합체존에 재료가 다 모이면 해당 초월 생성
+  // 1) (레시피 폐지 — TRANSCEND_RECIPE 빈 맵이라 이 루프는 건너뜀. 참조 안전용으로 유지)
   const cnt={}; for(const u of inz){ if(u.gid) cnt[u.gid]=(cnt[u.gid]||0)+1; }
   for(const res in TRANSCEND_RECIPE){ const need={}; TRANSCEND_RECIPE[res].forEach(id=>need[id]=(need[id]||0)+1);
     if(Object.keys(need).every(id=>(cnt[id]||0)>=need[id])){
@@ -7815,10 +7943,10 @@ function combine(){
       refreshSelCard(); renderUnits(); updateHud(); return true;
     }
   }
-  // 2) 단순 조합 — 같은 유닛 3개 → 다음 등급 랜덤(legend↑ 제외) / 레거시=영웅
+  // 2) 단순 조합 — 같은 유닛 3개 → 다음 등급 랜덤(갓=최종 제외) / 레거시=영웅
   const grp={}; for(const u of inz){ const key=u.gid||('@'+u.id); (grp[key]=grp[key]||[]).push(u); }
   for(const k in grp){ const g=grp[k]; if(g.length<3) continue; const pick=g.slice(0,3), base=pick[0], con=new Set(pick.map(x=>x.uid));
-    if(base.gid){ const nt=SIMPLE_COMBINE_TIERS[base.gtier]; if(!nt) continue;   // 단순조합 대상 아님(legend↑) → 다른 그룹 시도
+    if(base.gid){ const nt=SIMPLE_COMBINE_TIERS[base.gtier]; if(!nt) continue;   // 단순조합 대상 아님(갓=최종) → 다른 그룹 시도
       const pool=gachaUnitsOfTier(nt), tgt=pool[Math.floor(Math.random()*pool.length)];   // 다음 등급 랜덤 1종
       _consumeUnits(con); const c=zoneCenter(); spawnGachaUnit(tgt.id, c.x, c.y);
       toast('⭐ '+tgt.displayName+' '+GACHA_TIERS[nt].name+' 진화!');
@@ -7831,7 +7959,7 @@ function combine(){
   }
   // 3) 안내
   const stuck=Object.values(grp).some(g=>g.length>=3 && g[0].gid && !SIMPLE_COMBINE_TIERS[g[0].gtier]);
-  toast(stuck ? 'ℹ️ 레전드↑는 단순 조합이 안 됩니다 (초월=특수 레시피 / 갓=뽑기 전용)' : 'ℹ️ 합체존에 같은 유닛 3개를 모으세요');
+  toast(stuck ? 'ℹ️ 갓은 최종 등급이라 더 조합되지 않습니다' : 'ℹ️ 합체존에 같은 유닛 3개를 모으세요');
   return false;
 }
 
@@ -7845,7 +7973,7 @@ try{ window.ENEMY_MODEL=ENEMY_MODEL; }catch(e){}   // M3D 모듈(별도 스코�
 // 적/보스 표시 이름 — 모델 id → 한글 이름(스타크래프트명 대신 새 기함 이름). 매핑 없으면 적 한글명 그대로.
 const MODEL_NAME_KR={ hellfire:'헬파이어', pelican:'펠리컨', dreadnought:'드레드노트', kronos:'크로노스', seraph:'세라프', archangel:'아크엔젤', falcon:'팔콘', stinger:'스팅어', venom:'베놈', medusa:'메두사',
   observer:'와처', overlord:'제플린', skyguard:'템페스트', skydancer:'스카이댄서', racer:'레이서', machinegun:'발칸', snapper:'스내퍼' };   // 옵저버→와처, 오버로드→제플린, 레이스→템페스트, 커세어→스카이댄서
-function enemyName(n){ const mdl=ENEMY_MODEL[n]; return (mdl&&MODEL_NAME_KR[mdl])||n; }   // 스타크래프트명 → 새 기함 이름(없으면 그대로)
+function enemyName(n){ const mdl=ENEMY_MODEL[n]; return (mdl&&((U[mdl]&&U[mdl].name)||MODEL_NAME_KR[mdl]))||n; }   // 관리자 유닛 이름(U) 우선 → MODEL_NAME_KR 폴백
 // 라운드 보스 3D 모델 풀(공중유닛 순환) — 보스 라운드마다 다른 기함. 모델 미로드 맵에선 null→2D capital 폴백.
 const BOSS_AIR=['archangel','kronos','dreadnought','pelican','venom','medusa','seraph','hellfire','falcon','stinger'];
 const BOSS_SCALE_E=2.0;   // 라운드 보스 모델 확대 배율(일반 적 대비)
@@ -7874,6 +8002,7 @@ function pbossUnlocked(pt){ if(!G.pbUnlockedOnce) G.pbUnlockedOnce={};
   if(live) G.pbUnlockedOnce[pt.id]=true;
   return live; }
 function spawnEnemy(opts){ opts=opts||{}; const pt=opts.pbType||null; const pboss=!!opts.pboss||!!pt, boss=!!opts.boss||pboss, special=!!opts.special; const m=roundDef(G.round);
+  const idn=(!boss&&!special&&!pboss&&G.round>20)?MON[((G.round-21)%9+9)%9]:m;   // R21~29: 겉모습(이름·모델·도형·종족)만 R1~9 순환 · 스탯(hp/sh/ar)은 m 유지
   const mb=G.metaB||{};   // 메타 강화: 적 체력/방어/이속 감소(개인)
   const _D=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal);
   const _inf=mapCfg('infinite'); const _effR=_inf?Math.min(G.round,30):G.round;   // 무한모드: 라운드 램프는 R30에서 고정, 이후 루프 배수로 연속 성장
@@ -7893,16 +8022,16 @@ function spawnEnemy(opts){ opts=opts||{}; const pt=opts.pbType||null; const pbos
   let ar = pt ? pt.ar : Math.max(0, (boss?Math.round(m.ar*0.5):m.ar) - (mb.enemyArmor||0));   // 보스 방어=그 라운드의 절반(등급 관문은 일반 라운드가 담당)
   let spd = (0.018+(boss?0:0.004))*(mb.enemySlowMul||1);
   if(mod){ if(mod.spd) spd*=mod.spd; if(mod.ar) ar=Math.round(ar*mod.ar); }
-  if(!boss && m && m.n==='스커지') spd*=1.5;   // 스커지: 고속 비행(자폭형) — 이동속도 ↑
+  if(!boss && idn && idn.n==='스커지') spd*=1.5;   // 스커지: 고속 비행(자폭형) — 이동속도 ↑
   const _rbm = (boss && !pboss) ? roundBossModel() : null;   // 라운드 보스 전용 3D 모델(공중유닛, 로드된 경우만)
   const _ptm = (pt && pt.model && window.M3D && M3D.hasModel && M3D.hasModel(pt.model)) ? pt.model : null;   // 개인보스 3D 모델(공중유닛, 로드된 경우만)
   const e={eid:G.eSeq++, d:0, hp:hp, maxHp:hp, sh:sh, maxSh:sh, ar:ar,   // 개인 보스도 일반 적처럼 시작지점(d=0)에서 등장 후 트랙 따라 이동
     regen:(mod&&mod.regen)||0, split:(mod&&mod.split&&Math.random()<0.6)?1:0,   // 재생/분열 모디파이어
     speed:spd, boss:boss, special:special, pboss:pboss, pbId:pt?pt.id:null, life:pboss?120:null, pbCol:pt?pt.col:null,
     bonus:pt?Math.round(pt.bonus*coinMult*((mb.pbossRewardMul)||1)):0, bonusE:pt?Math.round((pt.egy||0)*((mb.pbossRewardMul)||1)):0,   // 처치 보상(coinMult×메타 개인보스 보상)
-    flash:0, name:pt?pt.name:((boss&&!pboss)?(MODEL_NAME_KR[_rbm]||'보스'):(special?'스페셜':enemyName(m.n))),   // 라운드 보스=기함 이름, 일반=새 적 이름
-    shape:boss?'capital':enemyShape(m.n), race:enemyRace(m.n), ph:(G.eSeq*0.7)%6.283, hit:0,
-    model3d: pt ? _ptm : ((boss&&!pboss)?_rbm:(boss?null:(ENEMY_MODEL[m.n]||null))), bossScale:(_ptm||_rbm)?BOSS_SCALE_E:undefined};   // 개인보스=전용 모델 / 라운드보스=공중 기함 / 일반=기존
+    flash:0, name:pt?pt.name:((boss&&!pboss)?((U[_rbm]&&U[_rbm].name)||MODEL_NAME_KR[_rbm]||'보스'):(special?'스페셜':enemyName(idn.n))),   // 라운드 보스=관리자 유닛명, 일반=관리자 유닛명(R21~29=R1~9 겉모습)
+    shape:boss?'capital':enemyShape(idn.n), race:enemyRace(idn.n), ph:(G.eSeq*0.7)%6.283, hit:0,
+    model3d: pt ? _ptm : ((boss&&!pboss)?_rbm:(boss?null:(ENEMY_MODEL[idn.n]||null))), bossScale:(_ptm||_rbm)?BOSS_SCALE_E:undefined};   // 개인보스=전용 모델 / 라운드보스=공중 기함 / 일반=기존(R21~29=R1~9 모델)
   G.recalls.push({life:1, boss:boss, special:special});   // ① 출현 이펙트(에너지 모임) 먼저 시작
   G.pendSpawn.push({t:SPAWN_LEAD, e:e});                   // ② 모임 완료(플래시) 시점에 실제 등장(효과음도 이때)
 }
@@ -9002,7 +9131,7 @@ function separateUnits(){ if(!GW||!GH) return; const us=G.units; if(us.length<2)
     for(const it of items){ if(it.fixed) continue; const cl=clampInner(it.ref.x,it.ref.y); it.ref.x=cl.x; it.ref.y=cl.y; } }
   if(settling && !stillOverlap) settling=null;
 }
-
+// (삭제) renderBldgs — 업그레이드 탭 건물 타일 렌더. 건물 화면 폐지로 호출처가 사라져 함께 제거.
 // ============================================================================
 // 탭 / 선택 / 커맨드카드
 // ============================================================================
@@ -9037,12 +9166,11 @@ function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 
   deselectUnit(); G.prodB=null; G.techB=null; G.mergeMode=false; { const mb=document.getElementById('mergeBtn'); if(mb) mb.classList.remove('on'); }
   if(typeof clearShopProfile==='function') clearShopProfile();   // 유닛뽑기 중립 선택 해제
   document.getElementById('prodHint').style.display='';
-  document.getElementById('upgHint').style.display=''; document.getElementById('upgList').style.display='none';
   if(id!=='Unit' && typeof fxLabDeactivate==='function') fxLabDeactivate();   // Unit 떠나면 이펙트 랩 비활성
   if(id==='Unit'){ if(G.sandbox){ fxLabActivate(); }   // 관리자: Unit 탭 = 이펙트 테스트베드
     else { G.citizen={x:CITIZEN_HOME.x,y:CITIZEN_HOME.y,gx:null,gy:null,buyId:null,mode:'idle',targetPad:null}; uHold=null; G.shopSel=null; buildClock(); drawProd(); buildGachaDex(); if(typeof renderGachaActions==='function') renderGachaActions(); } }   // 일반: 유닛뽑기
   updateDeselTop();
-
+  if(id==='Upgrade'){ drawUpg(); }   // 업그레이드 = 배경만(건물 화면 폐지) · 실제 강화는 하단 업그레이드 시트
   if(id==='Players'){ const mine=G.myPlayer||1; const others=(G.activePlayers||[1,2,3,4,5,6,7,8]).filter(n=>n!==mine);
     if(others.indexOf(G.curPlayer)<0) G.curPlayer=others[0]||mine;   // 입장한 다른 플레이어 기본
     if(typeof clearPlayerSel==='function') clearPlayerSel(); renderPlayers(); drawPlayer(); }
@@ -9371,11 +9499,16 @@ function mainProfileRender(){ const host=document.getElementById('unitCmd'); if(
   const sig=_mainCmdSig(m);
   if(host._cgSig!==sig){ host._cgSig=sig; m.page=host._cgPage||0; renderCmdGrid(host,m); }
   _mainCmdLive(); }
-// 🎰 유닛뽑기 시트 — 하단 프로필 자리(#unitCmd)에 4그리드(유닛1회·에너지·가드타워·플라즈마). 캔버스 이동 대신 시트 슬라이드업. 셀=runBeacon 직접 실행.
+// 🎰 유닛뽑기 시트 — 하단 프로필 자리(#unitCmd)에 4그리드(유닛1회·에너지·미사일 포탑·에너지 타워). 캔버스 이동 대신 시트 슬라이드업. 셀=runBeacon 직접 실행.
 const GACHA_SHEET_CELLS=['draw','energy','buyTurret','buyPhoton'];
+const BLDG_ICON_DIR='assets/icons/buildings/';
+const BEACON_ICON_IMG={ buyTurret:'bld_turret.webp', buyPhoton:'bld_cannon.webp' };   // 구매 타워 = 실제 건물 아이콘(미사일 포탑=미사일 터렛 · 에너지 타워=포톤 캐논)
+function beaconProHTML(id){ const f=BEACON_ICON_IMG[id];   // 업그레이드 아이콘(wpnBadgeHTML)과 동일 패턴 — 이미지 우선, 없으면 기존 SVG
+  if(f) return '<img class="cgIco" src="'+BLDG_ICON_DIR+f+'" alt="" draggable="false">';
+  return '<svg viewBox="0 0 24 24">'+beaconIcon(id)+'</svg>'; }
 function _gachaSheetModel(){
   const items=GACHA_SHEET_CELLS.map(id=>{ const b=(DRAW_BEACONS.find(x=>x.id===id))||{id:id,name:id}, cost=beaconCost(id), afford=((G.mineral||0)>=cost);
-    return { pro:'<svg viewBox="0 0 24 24">'+beaconIcon(id)+'</svg>', sn:b.name, cr:cost, en:0, state:afford?'ok':'dim', act:'onpointerdown="gachaHoldStart(\''+id+'\',event)"' }; });
+    return { pro:beaconProHTML(id), sn:b.name, cr:cost, en:0, state:afford?'ok':'dim', act:'onpointerdown="gachaHoldStart(\''+id+'\',event)"' }; });
   return { mode:'gacha', title:'유닛 뽑기', icon:'<svg viewBox="0 0 24 24">'+BEACON_ICON.unit+'</svg>', sub:'', compact:true, build:true,
     info:{ eb:'', name:'유닛 및 타워 구매', desc:'길게 누르면 연속 구매' }, items:items }; }
 function renderGachaSheet(){ const host=document.getElementById('unitCmd'); if(!host) return; host.classList.add('simple');
@@ -9438,7 +9571,7 @@ function bossDeployOne(gid){ if(!(G.coopBoss&&!G.coopBoss.dead)){ toast('ℹ️ 
 const UPG_CATS=[ {wpn:'inf',name:'보병'}, {wpn:'mech',name:'메카닉'}, {wpn:'zrg',name:'스웜'}, {wpn:'pro',name:'에테리얼'} ];
 function _upgradeSheetModel(){
   const items=UPG_CATS.map(c=>{ const lv=(G.atkLv&&G.atkLv[c.wpn])||0, isMax=lv>=UPG_MAX, cost=upgCost(c.wpn), afford=((G.gas||0)>=cost);
-    return { pro:wpnBadgeSVG(c.wpn,'#ff3b3b'), sn:c.name, en:cost, cr:0, tr:isMax?'MAX':('Lv.'+lv), metaCls:'lv',
+    return { pro:wpnBadgeHTML(c.wpn,'#ff3b3b'), sn:c.name, en:cost, cr:0, tr:isMax?'MAX':('Lv.'+lv), metaCls:'lv',
       state:isMax?'max':(afford?'ok':'dim'), act:isMax?'':('onpointerdown="upgHoldStart(\''+c.wpn+'\',event)"') }; });
   const gLv=(G.gachaLuckLv||0), gMax=gLv>=GACHA_UP_MAX, gC=gachaUpCost();
   items.push({ pro:'<svg viewBox="0 0 24 24">'+beaconIcon('gachaUp')+'</svg>', sn:'뽑기 확률', cr:gC, en:0, tr:gMax?'MAX':('Lv.'+gLv), metaCls:'lv',
@@ -9588,7 +9721,7 @@ const _PI_RAW={
   hydra:   PORTRAIT_DIR+'reaper_portrait.webp',     // 리퍼
   dragoon: PORTRAIT_DIR+'sentinel_portrait.webp',   // 센티넬
   archon:  PORTRAIT_DIR+'void_portrait.webp',       // 보이드
-  turret:  PORTRAIT_DIR+'guardtower_portrait.webp', // 가드 타워(건물)
+  turret:  PORTRAIT_DIR+'guardtower_portrait.webp', // 미사일 포탑(건물)
   photon:  PORTRAIT_DIR+'energyspire_portrait.webp',// 에너지 스파이어(건물)
   citizen: PORTRAIT_DIR+'civilian_portrait.webp',   // 시민
   beholder:PORTRAIT_DIR+'beholder_portrait.webp',   // 비홀더
@@ -10165,6 +10298,7 @@ function _uClass(u){ return u&&(UNIT_COMBAT_CLASS[u.id]||UNIT_COMBAT_CLASS[u.gmo
 function _sbTypeMul(atk, tgt){ const A=_uClass(atk); if(!A||A.dt==='normal') return 1;   // 무분류·일반형=100%
   const B=_uClass(tgt); const sz=(B&&B.sz)||'m'; const row=TYPE_VS_SIZE[A.dt];   // 대상 크기(미분류=중형 취급)
   return (row&&row[sz]!=null)?row[sz]:1; }
+function _sbTypeMulSize(atk, sz){ const A=_uClass(atk); if(!A||A.dt==='normal') return 1; const row=TYPE_VS_SIZE[A.dt]; return (row&&row[sz]!=null)?row[sz]:1; }   // 크기 지정 상성 배수(건물=대형 'l' 판정 등)
 function stepSbCombat(dt){ if(typeof G==='undefined'||!G.sandbox||G.tab!=='Battle'||!G.sbCombat||!G.units||!G.units.length) return;   // ⚔ 양방향 실전 전투(적팀=team:'foe')
   const units=G.units; if(!G.btFx) G.btFx=FX.store(); if(!G.btPend) G.btPend=[]; const _dmgAcc={};   // 동시 데미지(처리순서 편향 제거)
   const _alive=u=>!(u.maxHp&&(u.hp!=null?u.hp:u.maxHp)<=0), _MM=(typeof MOVE_MUL!=='undefined'?MOVE_MUL:1);
@@ -10190,7 +10324,7 @@ function stepSbCombat(dt){ if(typeof G==='undefined'||!G.sandbox||G.tab!=='Battl
       const _ad=Ueff(u), _atk=(_ad.dmg||1)+_upgAtk(u), _rate=60/Math.max(0.2,(_ad.cd||22));   // 유효 공격력 + 무기티어 · 초당공격횟수
       // 대상별 실효 DPS = max(0.5, (공격력 × 타입상성) − 방어력) × 공속. 쉴드 있으면 상성 무시(100%)·shArmor 사용
       const _eff=(o)=>{ const _od=Ueff(o), _oarm=((o.sh>0)?(_od.shArmor||0):(_od.armor||0))+_upgDef(o), _mul=(o.sh>0)?1:_sbTypeMul(u,o);
-        return Math.max(0.5, _atk*_mul - _oarm)*_rate; };
+        return Math.max(0.5, _atk - _oarm)*_mul*_rate; };   // 스타식: (공격−방어) 먼저, 상성은 그 뒤에 곱함
       if(_ad.splash){ const _SR=0.05; for(const o of units){ if(o.fixed||_sbTeam(o)===myTeam||!_alive(o)) continue; const _sx=o.x-tgt.x,_sy=o.y-tgt.y; if(_sx*_sx+_sy*_sy<=_SR*_SR){ _dmgAcc[o.uid]=(_dmgAcc[o.uid]||0)+_eff(o)*dt; o.flash=0.12; } } }   // 스플래시(광역): 주변 적 각자 크기 상성으로 동시 타격
       else { _dmgAcc[tgt.uid]=(_dmgAcc[tgt.uid]||0)+_eff(tgt)*dt; tgt.flash=0.12; }   // 단일 대상
       // ── 시각 발사 케이던스 = base_stats 공속(실제 DPS와 동일 리듬) ──
@@ -10362,7 +10496,7 @@ function updateCmdRow(){ const row=document.getElementById('cmdRow'); if(!row) r
 function selectOne(uid){ _selViaTab=false; G.sel=[uid]; G.selEnemy=null; refreshSelCard(); }
 const MAX_SEL_TYPES=8;   // 다중 선택은 최대 8종류(초상화 4칸×2줄)
 const MAX_PER_TYPE=30;   // 종류당 최대 30마리 (4종류 × 30 = 최대 120마리)
-function isBuilding(id){ return !!(U[id] && U[id].moveSpd===0); }   // 건물(가드타워·스파이어)=이동속도0 → 드래그 다중선택 제외(개별선택만)
+function isBuilding(id){ return !!(U[id] && U[id].moveSpd===0); }   // 건물(미사일 포탑·스파이어)=이동속도0 → 드래그 다중선택 제외(개별선택만)
 // 선택 유닛을 종류(id+영웅+레벨)별로 묶어 최대 4종류 + 종류당 30마리로 제한. 건물 제외.
 // 종류 우선순위: 유닛 수 많은 순 → 같으면 더 비싼(cost↑) 순. (5종류면 가장 적은 종류 탈락)
 function capSelTypes(uids, noPerCap){   // noPerCap=true → 종류당 30 제한 해제(지정 패널 '전부 선택'용. 드래그 박스는 30 유지)
@@ -10417,16 +10551,16 @@ function renderGachaActions(){ const el=document.getElementById('gachaActions');
 function gachaActionCmd(id){ if(G.tab!=='Unit') return; const b=(typeof DRAW_BEACONS!=='undefined')&&DRAW_BEACONS.find(x=>x.id===id); if(!b) return;
   if(typeof moveCitizenTo==='function') moveCitizenTo(b.x, b.y, b.id);   // 시민을 그 비콘으로 → 도착 시 자동 실행
   if(typeof playSfx==='function') playSfx('ui_tab'); }
-// 생산고 운용 안내(현황) — 뽑기 확률 / 크레딧 확률 / 가드타워 수 / 스파이어 수 (SC 콘솔 카드)
+// 생산고 운용 안내(현황) — 뽑기 확률 / 크레딧 확률 / 미사일 포탑 수 / 스파이어 수 (SC 콘솔 카드)
 function renderOpsManual(){ const el=document.getElementById('opsManual'); if(!el) return;
-  const gN=(typeof G!=='undefined'&&G.units)?G.units.filter(u=>u.id==='turret').length:0;   // 보유 가드 타워 수
+  const gN=(typeof G!=='undefined'&&G.units)?G.units.filter(u=>u.id==='turret').length:0;   // 보유 미사일 포탑 수
   const sN=(typeof G!=='undefined'&&G.units)?G.units.filter(u=>u.id==='photon').length:0;   // 보유 스파이어 수
   const cell=function(c,ico,name,right){ return '<div class="omCell" style="--c:'+c+'"><svg class="omIco" viewBox="0 0 24 24">'+ico+'</svg>'
     +'<div class="omTx"><b>'+name+'</b></div><span class="omLv" style="color:'+c+'">'+right+'</span></div>'; };
   const rows=cell(BEACON_THEME.gachaUp['--neon'], beaconIcon('gachaUp'), '뽑기 확률', 'Lv'+(G.gachaLuckLv||0))
     +cell(BEACON_THEME.creditUp['--neon'], beaconIcon('creditUp'), '크레딧 확률', 'Lv'+(G.creditLv||0))
-    +cell(BEACON_THEME.buyTurret['--neon'], beaconIcon('buyTurret'), '가드 타워', gN+'개')
-    +cell(BEACON_THEME.buyPhoton['--neon'], beaconIcon('buyPhoton'), '플라즈마 타워', sN+'개');
+    +cell(BEACON_THEME.buyTurret['--neon'], beaconIcon('buyTurret'), '미사일 포탑', gN+'개')
+    +cell(BEACON_THEME.buyPhoton['--neon'], beaconIcon('buyPhoton'), '에너지 타워', sN+'개');
   el.innerHTML='<div class="omHead"><span class="omBar"></span>생산고 운용 안내</div><div class="omGrid">'+rows+'</div>'; }
 function buildClock(){ const v=document.getElementById('vUnit');
   v.querySelectorAll('.shopUnit,.citizen,.drawZone,.rateMini').forEach(n=>n.remove());
@@ -10489,36 +10623,30 @@ function stepCitizen(dt){ const c=G.citizen; if(G.tab!=='Unit') return;
   renderClock(); drawProd();
 }
 // 계열(wpn)별 무기 형태 글리프(금색 원형 배지 안에 들어감) — 취소 아이콘 같은 느낌
-// 무기 계열 업그레이드 아이콘 — 라인 스타일 24뷰박스(currentColor). 테두리 원 없이 칸을 바로 채움
+// 무기 계열 업그레이드 아이콘 — 실제 업그레이드 아이콘 이미지(assets/icons/upgrades) 우선, 없으면 아래 라인 SVG 폴백
+const UPG_ICON_DIR='assets/icons/upgrades/';
+const WPN_ICON_IMG={   // 계열 → 실제 공격력 업그레이드 아이콘
+  inf:  'up_inf_atk.webp',    // 보병 = 돌격소총
+  mech: 'up_veh_atk.webp',    // 메카닉 = 포신(캐논)
+  zrg:  'up_melee_atk.webp',  // 스웜 = 갈고리 발톱
+  pro:  'up_gnd_wpn.webp',    // 에테리얼 = 사이오닉 블레이드
+};
+// 폴백용 라인 스타일 24뷰박스(currentColor). 이미지가 없는 계열에만 쓰인다.
 const WPN_ICON={
   inf:  '<path d="M3.6 11.8h11.6v2.8H3.6z"/><path d="M15.2 12.6h5"/><path d="M7.2 11.8V9.4h2.6v2.4"/><path d="M11.2 14.6 9.4 18.4"/><path d="M4.6 14.6v2.4"/>',   // 보병 = 소총
   mech: '<path d="M12 2.6c1.7 1.9 2.6 3.9 2.6 6v6.6H9.4V8.6c0-2.1.9-4.1 2.6-6z"/><path d="M9.4 10.6 6.2 13.8v3.6l3.2-2.4M14.6 10.6l3.2 3.2v3.6l-3.2-2.4"/><path d="M10.4 15.2v2.2M13.6 15.2v2.2"/><path d="M12 18.4c.9 1 1.4 2 1.4 3-.5-.5-.9-.8-1.4-.8s-.9.3-1.4.8c0-1 .5-2 1.4-3z"/>',   // 메카닉 = 미사일 탄두
   pro:  '<path d="M9.6 20.2 7 17.6l1.8-1.8 2.6 2.6z"/><path d="M11 14.4 8.6 16.8"/><path d="M11.4 18.4 20 9.8"/><path d="M10.2 17.2 18.8 8.6"/><path d="M17.4 7.2 21.4 11.2"/>',   // 에테리얼 = 광선검(빔 세이버)
   zrg:  '<path d="M12 2.8c1.9 4.4 2.9 8.1 2.9 11.2 0 2.4-1 4.4-2.9 6.2-1.9-1.8-2.9-3.8-2.9-6.2 0-3.1 1-6.8 2.9-11.2z"/><path d="M9.3 10.4 5.8 8.2M14.7 10.4l3.5-2.2M9.2 14.6 5.6 16.6M14.8 14.6l3.6 2"/>',   // 스웜 = 가시
 };
-function wpnBadgeSVG(wpn,col){ const g=WPN_ICON[wpn]||WPN_ICON.inf;
-  return '<svg class="wpnIco" viewBox="0 0 24 24" width="100%" height="100%" '+'style="color:'+(col||'currentColor')+'" '+'fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+g+'</svg>'; }
+function wpnBadgeHTML(wpn,col){ const f=WPN_ICON_IMG[wpn];   // 초상(unitPortraitHTML)과 동일 패턴 — 이미지 우선, 없으면 SVG
+  if(f) return '<img class="cgIco" src="'+UPG_ICON_DIR+f+'" alt="" draggable="false">';
+  const g=WPN_ICON[wpn]||WPN_ICON.inf;
+  return '<svg class="cgIco" viewBox="0 0 24 24" width="100%" height="100%" '+'style="color:'+(col||'currentColor')+'" '+'fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+g+'</svg>'; }
 // ── 업그레이드 설정(유즈맵별로 바꿔 끼움) ──
 const UPG_MAX=299;   // 업그레이드 최대 레벨 (이 유즈맵=299, 일반 맵은 3 등으로 설정)
 const UPG_TIME=0;    // 업그레이드 1회 완료까지 걸리는 시간(초). 0=즉시 완료(네모네모 디펜스: 로딩 없음)
 function upgCost(wpn){ return UPG_COST; }   // 정액 5 에너지(에너지 수급 하향으로 밸런스)
 // 건물별 업그레이드 항목 목록 — 추후 방어력 등 추가 시 배열에 push만 하면 슬롯이 자동 추가됨
-function bldgUpgs(b){
-  const items=[];
-  // 공격력(무기 계열)
-  items.push({ wpn:b.wpn, name:b.wname, icon:wpnBadgeSVG(b.wpn,'#ff3b3b'),
-    lv:(G.atkLv[b.wpn]||0), cost:upgCost(b.wpn), action:"research('"+b.wpn+"')" });
-  // ── 예시(추후 활성화): 방어력 등 — 슬롯 하나 더 생김 ──
-  // items.push({ wpn:b.wpn+'_arm', name:b.aname, icon:armorBadgeSVG('#ff3b3b'),
-  //   lv:(G.armLv&&G.armLv[b.wpn]||0), cost:UPG_COST, action:"research('"+b.wpn+"_arm')" });
-  return items;
-}
-// 건물 초상화(BLDG_SVG 와이어프레임, 없으면 이모지)
-function bldgPortraitInner(b){
-  return BLDG_SVG[b.id] ? '<svg viewBox="0 0 24 24">'+BLDG_SVG[b.id]+'</svg>' : pIco(b.icon);
-}
-// 커맨드 그리드 슬롯 1개 HTML (업그레이드 종류 1개 = 슬롯 1개)
-// 건물 선택 → 좌(초상화+설명/진행) | 우(정사각 커맨드 그리드)
 // ══ 재사용 커맨드 그리드 컴포넌트(업그레이드·생산·건설 공용) — model 객체만 만들어 renderCmdGrid로 넘기면 됨 ══
 //   model = { mode:'upg'|'prod'|'build', title, icon(초상화 HTML), sub, status, statusIdle,
 //     items:[{ pro(초상화 HTML), sn(이름), cr(크레딧), en(에너지), meta(우상단 배지), metaCls:'lv'?, state:'ok'|'dim'|'busy'|'max'|'empty', sel, act(이벤트 속성 문자열) }],
@@ -10565,20 +10693,6 @@ function renderCmdGrid(host, m){ const el=(typeof host==='string')?document.getE
   if(m.build){ const nms=el.querySelectorAll('.cgName'); for(const nm of nms){ let fs=10; nm.style.fontSize=fs+'px'; let g=0; while(nm.scrollWidth>nm.clientWidth+0.5 && fs>6 && g++<12){ fs-=0.5; nm.style.fontSize=fs+'px'; } } } }   // 이름 생략(...) 대신 폰트 축소로 한 줄에 전부
 function _cgTurn(btn,delta){ let h=btn; while(h && !h._cgModel) h=h.parentElement; if(!h||!h._cgModel) return; h._cgModel.page=(h._cgPage||0)+delta; renderCmdGrid(h,h._cgModel); }
 // 업그레이드 모델 빌더(현재 무기 강화 데이터 → 커맨드 그리드)
-function cmdGridModelForUpg(b){ const its=bldgUpgs(b), R=G.research;
-  const items=its.map(it=>{ const lv=it.lv, isMax=lv>=UPG_MAX, rThis=R&&R.wpn===it.wpn, other=R&&!rThis;
-    let state='ok', act='', meta='Lv.'+lv;
-    if(rThis){ state='busy'; act='onclick="cancelResearch()"'; }
-    else if(isMax){ state='max'; meta='MAX'; }
-    else if(other){ state='dim'; }
-    else { act='onpointerdown="upgHoldStart(\''+it.wpn+'\',event)"'; if(G.gas<it.cost) state='dim'; }
-    return { pro:it.icon, sn:it.name, en:it.cost, cr:0, meta, metaCls:'lv', state, sel:!!rThis, act }; });
-  const rThis=R&&its.find(it=>it.wpn===R.wpn); let info;
-  if(rThis){ const p=Math.round((1-R.t/R.dur)*100);
-    info={ eb:'연구 진행', name:rThis.name, desc:'업그레이드 진행 중', progLabel:'연구', progVal:p+'%', prog:p, en:rThis.cost, time:R.t.toFixed(1)+'s 남음' }; }
-  else { const f=its[0];
-    info={ eb:'선택 · 정보', name:b.name, desc:'적용 '+(b.units||''), stats:[['현재','Lv.'+(f?f.lv:0)],['최대','Lv.'+UPG_MAX]], progLabel:'상태', progVal:R?'🔒 연구 중':'대기', prog:R?100:0, en:f?f.cost:0, time:R?'다른 연구 중':'탭하여 연구' }; }
-  return { mode:'upg', title:b.name, icon:bldgPortraitInner(b), sub:'적용 '+(b.units||b.wname||''), status:R?'연구 중':'대기', statusIdle:!R, items, info }; }
 // 생산 모델 빌더(STK 건물 → 유닛 그리드). actFn(unitId)→이벤트 속성 문자열(미지정 시 미리보기만)
 // 건설 모델 빌더(STK 건물 목록 → 건물 그리드·페이지 자동). actFn(bldgKey)→이벤트 속성 문자열
 // 연구 시작 — 에너지 차감 후 타이머 가동(완료까지 다른 업그레이드 잠금). UPG_TIME=0이면 즉시
@@ -10591,7 +10705,6 @@ function research(wpn){
   G.gas-=_uc; updateHud();
   if(UPG_TIME<=0){ finishResearch(wpn); return; }              // 즉시 완료 모드
   G.research={ wpn:wpn, t:UPG_TIME, dur:UPG_TIME, cost:_uc };            // 타이머 가동
-
 }
 // 연구 취소 — 에너지 환불 후 중단
 function cancelResearch(){ if(!G.research) return;
@@ -11037,11 +11150,12 @@ function playScreenFx(el){
 function fxPop(card){ if(!card) return; card.classList.remove('fxPop'); void card.offsetWidth; card.classList.add('fxPop');
   clearTimeout(card._fxT); card._fxT=setTimeout(()=>card.classList.remove('fxPop'),470); }
 // ── 앱 화면 전환 ──
-const APP_SCREENS=['opening','auth','mapSelect','modeSheet','homeScreen','charScreen','townScreen','dgHubScreen','dgScreen'];
+const APP_SCREENS=['opening','auth','mapSelect','modeSheet','homeScreen','charScreen','townScreen','dgHubScreen','dgScreen','shopScreen'];
 // 💠 공용 재화 바를 띄우는 화면(RPG/허브 + 유즈맵 선택). 로그인·타이틀·캐릭터생성·인게임은 제외.
-const CUR_SCREENS=['homeScreen','townScreen','mapSelect','modeSheet','dgHubScreen','dgScreen'];
+const CUR_SCREENS=['homeScreen','townScreen','mapSelect','modeSheet','dgHubScreen','dgScreen','shopScreen'];
 // 그중 바를 '판'이 아니라 배경 위 숫자로 두는 화면(.curBar.bare) — 배경이 상단까지 이어져 보여야 하는 곳
-const BARE_CUR_SCREENS=['homeScreen','townScreen'];   // 재화 바를 '판'이 아니라 배경 위 숫자로 — 상단 줄이 겹쳐 답답해진다
+const BARE_CUR_SCREENS=['homeScreen','townScreen','mapSelect','shopScreen'];   // 재화 바를 '판'이 아니라 배경 위 숫자로 — 상단 줄이 겹쳐 답답해진다(구분선 없이 배경이 이어진다)
+function curSetTitle(t){ const e=document.getElementById('curTitle'); if(e) e.textContent=t||''; }   // 재화 바 왼쪽 제목(화면별)
 function curShow(on){ const b=document.getElementById('curBar'), p=document.getElementById('phone');
   if(b) b.classList.toggle('hide', !on); if(p) p.classList.toggle('curOn', !!on); }
 function updateCurBar(){ if(!PLAYER_META||!PLAYER_META.profile) return;
@@ -11056,7 +11170,7 @@ function showAppScreen(id){ setInGame(false);
   if(id!=='mapSelect' && id!=='modeSheet' && typeof stopMapLive==='function') stopMapLive();   // 유즈맵 화면 떠나면 실시간 갱신 정지
   ['ov','lobby','rooms','createPanel','pwPanel'].forEach(x=>{const e=document.getElementById(x); if(e)e.classList.add('hide');});
   APP_SCREENS.forEach(s=>{ const e=document.getElementById(s); if(e) e.classList.toggle('hide', s!==id); });
-  const _cur=CUR_SCREENS.indexOf(id)>=0; curShow(_cur); if(_cur) updateCurBar();   // 💠 공용 재화 바
+  const _cur=CUR_SCREENS.indexOf(id)>=0; curShow(_cur); curSetTitle(''); if(_cur) updateCurBar();   // 💠 공용 재화 바
   { const cb=document.getElementById('curBar');                                    // HOME만 배경 위 숫자(.bare) — 다른 화면은 판 그대로
     if(cb) cb.classList.toggle('bare', BARE_CUR_SCREENS.indexOf(id)>=0); }
   const tgt=document.getElementById(id); if(tgt && id!=='opening') playScreenFx(tgt); }   // 전환 FX(부팅 로딩 제외)
@@ -11066,7 +11180,7 @@ function hideAppScreens(){ if(typeof stopMapLive==='function') stopMapLive(); cu
 // ── 유즈맵 크롬 초기화(단일 소스) ──────────────────────────────────────────────
 // 맵마다 자기 화면만 켜다 보면 이전 맵의 잔재가 다음 맵에 그대로 남는다(관리자 탭·직스 패널·숨겨진 안내 등).
 // 게임 진입(startGameNow)과 로비 복귀 경로가 전부 이 함수 하나를 거쳐 nemo 기본 크롬으로 되돌린다. 새 맵을 추가할 때도 여기만 보면 된다.
-const _CHROME_SHOW=['shopProfile','prodHint','gachaActions','opsManual','upgHint'];   // 맵별 코드가 '숨기기만' 하는 것들 → 기본은 보임
+const _CHROME_SHOW=['shopProfile','prodHint','gachaActions','opsManual'];   // 맵별 코드가 '숨기기만' 하는 것들 → 기본은 보임
 const _CHROME_ADMIN=['battleTab','buildTab'];                                         // 관리자 샌드박스 전용 탭 → 기본은 숨김
 function resetGameChrome(){
   if(typeof strikeSetTabLabels==='function' && typeof STK_NEMOLABEL!=='undefined'){ strikeSetTabLabels(STK_NEMOLABEL); strikeSetTabOrder(null); }   // 탭 라벨·순서 원복
@@ -11074,7 +11188,6 @@ function resetGameChrome(){
   if(typeof fxLabDeactivate==='function') fxLabDeactivate();                  // 관리자 이펙트 랩 해제
   _CHROME_SHOW.forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display=''; });
   _CHROME_ADMIN.forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display='none'; });
-  { const ul=document.getElementById('upgList'); if(ul) ul.style.display='none'; }   // 업그레이드 목록은 무선택이 기본
   { const sl=document.getElementById('specLabel'); if(sl) sl.innerHTML=''; }         // 직스 리더보드(#stLead) 잔존 제거
   { const si=document.getElementById('stSelInfo'); if(si){ si.classList.add('hide'); si.innerHTML=''; } }
   { const r=document.getElementById('stResult'); if(r){ try{ r.remove(); }catch(_){ } } }
@@ -11884,11 +11997,12 @@ document.addEventListener('pointerdown', function(e){
 function openMapSelect(){ updateMyNameTag(); bgmStart('lobby'); loadMeta();
   if(TEMP_COIN_TEST){ PLAYER_META.buildLevels={}; PLAYER_META.coins=9999999; saveMeta(); }   // [임시] 로비 진입(게임 나갔다 오면) 시 포인트 상점 업그레이드 초기화(저장까지 → 상점 재오픈 loadMeta가 덮어쓰지 않게)   // 계정별 메타 성장 데이터 로드(메인/로비 진입 시 로비 BGM)
   if(sbReady()){ rtStart(); rtSetStatus('online',''); }   // 실시간 소셜 연결 + 로비 상태
-  initMapLive(); showAppScreen('mapSelect'); paintIcons(document.getElementById('mapSelect')); renderMaps(); startMapLive();
+  initMapLive(); showAppScreen('mapSelect'); navShow('map'); curSetTitle('유즈맵 선택'); paintIcons(document.getElementById('mapSelect')); renderMaps(); startMapLive();   // 하단 네비로 이동(좌상단 뒤로가기 없음)
   if(typeof setBottomTab==='function') setBottomTab('chat'); if(typeof refreshFriendBadge==='function') refreshFriendBadge(); }
 const _SORT_LBL={pop:'인기순',new:'신규',rec:'추천',fav:'즐겨찾기'};
 function setMapSort(s){ _mapSort=s;
-  const di=document.getElementById('msSortDDi'); if(di && ICO[s]) di.innerHTML=ICO[s];
+  document.querySelectorAll('#msSortTabs .msSortTab').forEach(b=>b.classList.toggle('on', b.dataset.v===s));   // 상단 탭 띠(드롭다운 대체)
+  const di=document.getElementById('msSortDDi'); if(di && ICO[s]) di.innerHTML=ICO[s];                          // 옛 드롭다운 흔적(있으면 갱신)
   const lb=document.getElementById('msSortLbl'); if(lb) lb.textContent=_SORT_LBL[s]||s;
   document.querySelectorAll('#msSortMenu .msSortOpt').forEach(b=>b.classList.toggle('on', b.dataset.v===s));
   closeSortMenu(); renderMaps(); }
@@ -13210,6 +13324,7 @@ function _specUnitModel(u){ const def=U[u.id]||{};
     sub:pIco('👁','sm')+' '+((typeof playerName==='function')?playerName(G.curPlayer):('P'+G.curPlayer))+' 관전', items:cards,
     info:{ eb:'', hideName:true, stats:_mainUnitStatList(u) } }; }
 function renderSpecProfile(u){ const host=document.getElementById('playerProfile'); if(!host||!host.classList.contains('on')) return;
+  host.classList.add('simple');   // 다른 하단 시트와 동일 규격(간소화 4그리드 1줄) — 빠져 있어 폐지된 2줄 기본값으로 떨어지고 있었다
   const rb=(typeof specRemoteBoard==='function')&&specRemoteBoard();   // 관전=상대 공격 업글 레벨로 스탯 계산
   const _sv=(rb && G.coopUpg && G.coopUpg[rb]) ? G.atkLv : undefined; if(_sv!==undefined) G.atkLv=G.coopUpg[rb];
   try{ const sig='spec|'+u.uid+'|'+Math.round(u.hp||0)+'|'+Math.round(u.sh||0)+'|'+(host._cgPage||0);   // HP/실드 변하면만 재빌드(라이브 갱신)
@@ -13253,8 +13368,7 @@ const vp=document.getElementById('vPlayers');
 vp.addEventListener('mousedown',onPlayerDown); vp.addEventListener('mousemove',onPlayerMove); window.addEventListener('mouseup',onPlayerUp);
 vp.addEventListener('touchstart',onPlayerDown,{passive:false}); vp.addEventListener('touchmove',onPlayerMove,{passive:false}); vp.addEventListener('touchend',onPlayerUp);
 
-// ── 업그레이드 탭: 메인 체계 — 건물 클릭=선택(업글 패널) / 빈곳 드래그=박스로 건물 선택 / 빈곳 탭=해제 / 취소키 ──
-// 관리자 업그레이드: 메인 규약 정합 — 무선택=시트 내려감/힌트 숨김, 건물 지정=목록 시트 슬라이드업. 일반 게임은 미적용(if G.sandbox)
+// (삭제) 업그레이드 탭 건물 화면 — 건물 타일·선택 박스·업그레이드 목록 패널. 하단 업그레이드 시트(renderUpgradeSheet)와 완전 중복이라 폐지.
 
 // 투사체 오버레이(#cvFx, 3D 모델 위) — 미사일/탄이 유닛 몸에 가려지지 않도록 최상단에 그림
 // ── 이동 트레일: 모델별 테마 레시피(전 공중유닛 + 레이서/브레이커) — 랩·메인 공용(완전 동일) ──
@@ -13564,7 +13678,7 @@ function loop(now){
     else if(G.tab==='Players') drawPlayer();
     else drawMiniMap();
     const mcv=document.getElementById('cvMarine');
-    if(window.M3D && window.M3D.ready()){ const show=(G.tab==='Main'||G.tab==='Battle'||G.tab==='Unit'||G.tab==='Upgrade'||G.tab==='Players') && !(G.opt&&G.opt.model3d===false); mcv.style.display=show?'block':'none';
+    if(window.M3D && window.M3D.ready()){ const show=(G.tab==='Main'||G.tab==='Battle'||G.tab==='Unit'||G.tab==='Players') && !(G.opt&&G.opt.model3d===false); mcv.style.display=show?'block':'none';
       if(G.tab==='Main'||G.tab==='Battle'||G.tab==='Players') window.M3D.sync(G.units, GW, GH, dt, G.sel, G.enemies, G.selEnemy, ((G.sandbox&&G.pcheck)?(G.pcScale||1):null), G.view);   // 🎨 색 확인(관리자 샌드박스 전용)만 유닛 확대 · 네모네모 게임은 항상 null=원본 동작
       else if(G.tab==='Unit') window.M3D.syncShop(GW, GH, dt);
       }
@@ -13675,7 +13789,7 @@ const STK_UNITS={
   venom:     {name:'산성충',      ico:'🐛', cost:130, hp:200, dmg:29, rng:230, cd:1.00, spd:260, size:18},   // 공중 산성 포자 · 개별튜닝: 과약(0.42) → dmg22→29
   medusa:    {name:'군단여왕',    ico:'🐍', cost:240, hp:400, dmg:34, rng:240, cd:1.30, spd:180, size:20, splash:120},   // 밸런스: 33% → hp340→400   // 공중 사이오닉 광역
   wyvern:    {name:'비행충',    ico:'🐲', cost:420, hp:720, dmg:70, sdmg:95, rng:250, cd:1.30, spd:240, size:22},   // 공중 준보스(모프 유닛·희소) · 강한 프리미엄 유지: hp720·실효공격95(sdmg)
-  behemoth:  {name:'포격충',  ico:'🦣', cost:620, hp:900, dmg:95, sdmg:150, rng:300, cd:2.40, spd:120, size:26, splash:180},   // 밸런스: 83% → hp1100→900·실효공격190→150(sdmg)   // 공중 대형 보스(광역)
+  behemoth:  {name:'포격충',  ico:'🦣', cost:620, hp:650, dmg:95, sdmg:105, rng:300, cd:2.40, spd:120, size:26, splash:180},   // 밸런스: 최종테크 곡선폭증 완화 hp900→650·실효공격150→105(sdmg)   // 공중 대형 보스(광역)
   // 🔮 에테리얼 확장
   skydancer: {name:'요격기',ico:'💃', cost:180, hp:240, dmg:24, rng:250, cd:1.00, spd:320, size:18},   // 공중 고속 기동
   archangel: {name:'모함',  ico:'👼', cost:420, hp:460, dmg:32, sdmg:28, scd:1.4, rng:280, cd:1.60, spd:140, size:24, splash:150},   // 공중 성채(광역) · 개별튜닝: 종족내 과약(0.48) → sdmg18→28
@@ -16299,7 +16413,7 @@ function strikeTechLayout(){ if(!G.tech) return; const race=G.tech.race, cw=_tec
     const _vy=cy+STK_TECH_LIFT/STK_TECH_ZOOM;   // 하단 프로필 시트를 피해 건설 구역을 화면 위쪽으로(초기 뷰만)
     G.tech.view={x:cx, y:_vy, zoom:STK_TECH_ZOOM}; G.tech.viewT={x:cx, y:_vy, zoom:STK_TECH_ZOOM};
     _techClampView(G.tech.view); _techClampView(G.tech.viewT); } }
-function strikeNewState(){ const W=mapCfg('world',4800), hp=mapCfg('baseHp',7500), inc=mapCfg('incomeBase',150), mc=mapCfg('mineCost',300), mi=mapCfg('mineIncome',120);   // 메인신전 체력 3000→7500(전투 지속력↑)
+function strikeNewState(){ const W=mapCfg('world',4800), hp=mapCfg('baseHp',7500), inc=mapCfg('incomeBase',150), mc=mapCfg('mineCost',300), mi=mapCfg('mineIncome',120);   // ⚠ 이건 cfg 미지정 맵용 기본값 — 오토배틀은 USEMAPS.cpu.cfg.baseHp가 이깁니다(신전 체력은 거기서 조정할 것)
   const sHp=mapCfg('secHp',Math.round(hp*0.5)), cHp=mapCfg('centralHp',Math.round(hp*0.35));   // 2차=메인×0.5(3750) · 중앙=메인×0.35(2625) — 메인 비례 상승
   // 레인: me 메인 → me 2차 → 중앙 중립 → ai 2차 → ai 메인 (대각선 한 줄). t=0.27/0.5/0.73 지점
   return { t:0, over:null, round:1,
@@ -16334,7 +16448,8 @@ function strikeHpMul(side){ return (1 + (side.hpLv||0)*0.16) * _racePow(side); }
 function strikeApplyHpUpg(side){ const S=STK; if(!S||!side) return;   // 글로벌 체력 업그레이드 — 이미 소환된 유닛의 최대 체력도 즉시 상향(비율 유지)
   const m=strikeHpMul(side), prev=side._hpMulApplied||1; if(m===prev) return; side._hpMulApplied=m;
   const k=m/prev; for(const u of side.units){ if(u.dead) continue; const r=u.maxHp?u.hp/u.maxHp:1;
-    u.maxHp=Math.round(u.maxHp*k); u.hp=Math.round(u.maxHp*r); } }
+    u.maxHp=Math.round(u.maxHp*k); u.hp=Math.round(u.maxHp*r);
+    if(u.maxSh){ const sr=u.sh/u.maxSh; u.maxSh=Math.round(u.maxSh*k); u.sh=Math.round(u.maxSh*sr); } } }   // 실드도 함께 상향(비율 유지)
 // 진영 리더보드(광산 수 → 돈 순). leadIdx로 5초마다 회전 표시
 function strikeRanked(){ const S=STK; return [S.me,S.ai].slice().sort((a,b)=> (b.mines-a.mines) || (b.gold-a.gold)); }
 
@@ -16361,7 +16476,6 @@ function strikeHideNemoChrome(on){ ['coopBossBar','mergeFab','skillFab','autoFab
   const stage=document.querySelector('#hudL .stage'); if(stage) stage.style.display=on?'none':'';   // 좌상단 ROUND 숨김
   // nemo 하단 패널의 비-직스 자식 숨김(직스 패널만 보이게)
   ['shopProfile','prodHint','opsManual'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display=on?'none':''; });   // 켜기/끄기 대칭 — 안 그러면 직스를 한 번 하고 나온 뒤 nemo 안내가 계속 숨겨진다
-  const uh=document.getElementById('upgHint'), ul=document.getElementById('upgList'); if(uh) uh.style.display=on?'none':''; if(ul) ul.style.display='none';
   { const ut=document.querySelector('.tab[data-tab="Unit"]'), bt=document.getElementById('buildTab');   // 건설지 = 관리자 건설 탭(Build)을 그대로 노출, nemo 유닛뽑기 탭은 숨김
     if(ut) ut.style.display=on?'none':''; if(bt) bt.style.display=on?'':'none'; }
   if(!on) document.body.classList.remove('cstMode');
@@ -16620,10 +16734,17 @@ function strikeUnitStats(id){ const s=STK_UNITS[id], d=U[id]||{};
   const dmg=((s&&s.sdmg!=null)?s.sdmg:(d.dmg!=null?d.dmg:15))*rs;          // 공격력 — strike 오버라이드(sdmg) 우선 × 종족배율
   const cd=Math.max(0.45,(s&&s.scd!=null)?s.scd:((d.cd!=null?d.cd:22)/STK_CD_DIV));   // 공격속도(쿨) — strike 전용 오버라이드(scd, 초) 우선(nemo 무영향)
   const spd=(STK_SPD_OVR[id]!=null?STK_SPD_OVR[id]:(d.moveSpd!=null?d.moveSpd:0.19))*STK_SPD_MUL;   // 이동속도(직스 오버라이드 우선)
-  if(s){ return { hp:Math.round(s.hp*rs), dmg:dmg, rng:rng, cdMax:cd, spd:spd,   // 체력·공격 × 종족배율
+  const armor=((s&&s.sarmor!=null)?s.sarmor:(d.armor||0));        // 방어 — strike 오버라이드(sarmor) 우선, 없으면 U
+  const shield=((s&&s.sshield!=null)?s.sshield:(d.shield||0));    // 실드 — strike 오버라이드(sshield) 우선, 없으면 U
+  const sharmor=((s&&s.sharmor!=null)?s.sharmor:(d.shArmor||0));  // 실드 전용 방어(방어와 별도)
+  if(s){ return { hp:Math.round(s.hp*rs), dmg:dmg, rng:rng, cdMax:cd, spd:spd, armor:armor, shield:shield, sharmor:sharmor,   // 체력·공격 × 종족배율
       color:d.color||'#cfd6e2', size:strikeBodyR(id), splash:s.splash||0, melee:!!s.melee, acq:strikeAcq(rng) }; }
-  return { hp:Math.round((d.hp||40)*3*rs), dmg:dmg, rng:rng, cdMax:cd, spd:spd,   // 폴백(오토배틀 전용값 없는 유닛) — 체력만 U에서 환산 × 종족배율
+  return { hp:Math.round((d.hp||40)*3*rs), dmg:dmg, rng:rng, cdMax:cd, spd:spd, armor:armor, shield:shield, sharmor:sharmor,   // 폴백(오토배틀 전용값 없는 유닛) — 체력만 U에서 환산 × 종족배율
     color:d.color||'#cfd6e2', size:d.size||13, splash:0, melee:false, acq:strikeAcq(rng) }; }
+function strikeHit(tgt, rawAtk, atk){   // 표준 데미지 적용: 실드 먼저(상성 무시) → 체력((공격−방어)×상성)
+  if(tgt.sh>0){ const d=Math.max(0.5, rawAtk-(tgt.shArmor||0));   // 실드 상태: 상성 무시 · 실드 전용 방어
+    if(d<=tgt.sh){ tgt.sh-=d; return; } tgt.hp-=(d-tgt.sh); tgt.sh=0; return; }   // 실드 초과분만 체력으로
+  tgt.hp -= Math.max(0.5, rawAtk-(tgt.armor||0)) * _sbTypeMul(atk, tgt); }   // (공격−방어) 먼저, 상성은 그 뒤
 function strikeSpawnPads(side){ const S=STK, b=S[side].base, D=360, CS=180;   // 메인신전 양 옆 네모 스폰존(strikeDrawSpawnPad와 동일 위치)
   return side==='me' ? [{x:b.x-D+CS,y:b.y-D-CS},{x:b.x+D+CS,y:b.y+D-CS}] : [{x:b.x-D-CS,y:b.y-D+CS},{x:b.x+D-CS,y:b.y+D+CS}]; }
 function strikeSpawnUnit(side, forceId){ const S=STK, me=S[side]; if(!me||me.units.length>=STK_UNIT_CAP && STK_UNIT_CAP>0) return;   // 진영당 상한(3D 성능 고려)
@@ -16632,10 +16753,10 @@ function strikeSpawnUnit(side, forceId){ const S=STK, me=S[side]; if(!me||me.uni
   const pads=strikeSpawnPads(side), pad=pads[(Math.random()*pads.length)|0], c=S.world/2;
   const x=pad.x+(Math.random()-.5)*260, y=pad.y+(Math.random()-.5)*260;   // 네모 스폰존 안에서 출현
   const pcol=me.compCol||((typeof PLAYER_VIEW_COLORS!=='undefined')?PLAYER_VIEW_COLORS[(side==='me')?0:1]:'#cfd6e2');   // 본체색=팀 대표 컴퓨터(생산자) 색 1개(개별 플레이어색 X — 그건 관전 화면에서)
-  const _hpM=strikeHpMul(me), _hp=Math.round(st.hp*_hpM), _dmg=st.dmg;   // 체력만 소환 시 반영 · 공격력은 사용 시점(글로벌 업그레이드)
+  const _hpM=strikeHpMul(me), _hp=Math.round(st.hp*_hpM), _dmg=st.dmg, _sh=Math.round((st.shield||0)*_hpM);   // 체력·실드 소환 시 반영(파워/체력강화) · 공격력은 사용 시점 · 방어는 뺄셈이라 flat
   me.units.push({uid:'su'+(S.uidSeq=(S.uidSeq||0)+1), id:id, side:side, x:x, y:y, pcol:pcol,
     maxEn:((U[id]||{}).energy||0), en:((U[id]||{}).energy||0), skillCd:{}, skillOn:{}, buff:{},
-    hp:_hp, maxHp:_hp, dmg:_dmg, rng:st.rng, acq:st.acq, splash:st.splash||0, melee:!!st.melee, tgtUid:null, cd:Math.random()*st.cdMax, cdMax:st.cdMax, spd:st.spd, color:st.color, size:st.size,
+    hp:_hp, maxHp:_hp, armor:st.armor||0, sh:_sh, maxSh:_sh, shArmor:st.sharmor||0, dmg:_dmg, rng:st.rng, acq:st.acq, splash:st.splash||0, melee:!!st.melee, tgtUid:null, cd:Math.random()*st.cdMax, cdMax:st.cdMax, spd:st.spd, color:st.color, size:st.size,
     _flank:(Math.random()<0.5?1:-1),   // 좌우 전개 선호(대칭 혼잡 시 분산 방향)
     wait:0.5, face:Math.atan2(c-x, c-y), dead:false}); }   // 인지범위/광역/근접 스탯 반영 / 0.5초 대기 후 진격
 const STK_RALLY_D=560, STK_RALLY_R=150;   // 소환 후 집결 지점(본진 앞 대각선 거리) · 집결 완료 판정 반경
@@ -17215,35 +17336,60 @@ function strikeStress(n){ const S=STK; if(!S) return '오토배틀이 아닙니�
 function strikeSpawnStress(){ const S=STK, n=S.stress|0;
   for(const side of ['me','ai']){ const list=_stkTierList(side);
     for(let i=0;i<n;i++) strikeSpawnUnit(side, list[(Math.random()*list.length)|0]); } }
-function strikeSpawnWave(){ const S=STK; if(!S) return;   // 출격 주기(30초): ME=건설지에서 생산해 둔 유닛이 출격 / AI=컴퓨터 자동 소환
+// ── 🔄 팀 순환 출격 ─────────────────────────────────────────────────────────
+// 사이클마다 각 팀에서 "한 명"씩 차례로 출격한다. 8인 예: 1팀 1,2,3,4 / 2팀 5,6,7,8 →
+//   1주기 1·5 → 2주기 2·6 → 3주기 3·7 … 팀 인원이 다르면 각 팀이 독립적으로 랩어라운드(2:3이면 1·5 → 2·6 → 1·7).
+//   이탈(탈락)한 플레이어는 건너뛰고 다음 사람이 채운다(G.activePlayers 기준).
+const STK_TEAM_HALF=4;   // 로비 slotTeam과 동일 기준(8인 맵: 앞 절반 1~4=1팀 · 뒤 절반 5~8=2팀)
+function strikeTeamOf(num){ return (num<=STK_TEAM_HALF)?1:2; }
+function strikeSplitTeams(active){ const t1=active.filter(n=>strikeTeamOf(n)===1), t2=active.filter(n=>strikeTeamOf(n)===2);
+  if(t1.length && t2.length) return [t1,t2];
+  const h=Math.ceil(active.length/2); return [active.slice(0,h), active.slice(h)]; }   // 폴백: 팀 배정이 없는 경우(솔로·테스트)는 번호 앞뒤 절반
+// 진영별 플레이어 로스터 — 내 팀=me · 상대 팀=ai. 로컬 플레이어만 실제 건설지(G.tech)로 생산하고 나머지는 시뮬.
+function strikeBuildRosters(){ const S=STK; if(!S) return;
+  const active=(G.activePlayers&&G.activePlayers.length)?G.activePlayers.slice():[G.myPlayer||1];
+  const my=G.myPlayer||1, tt=strikeSplitTeams(active), t1=tt[0], t2=tt[1];
+  const mine=(t1.indexOf(my)>=0)?t1:((t2.indexOf(my)>=0)?t2:t1), foe=(mine===t1)?t2:t1;
+  const mk=(nums,race)=>nums.map(n=>({num:n, race:race, local:(n===my)}));   // 종족은 진영 대표 종족(팀=세력) — 플레이어별로 나누려면 이 필드만 바꾸면 됨
+  S.me.roster=mk(mine, S.me.race); S.ai.roster=mk(foe, S.ai.race);
+  if(!S.me.roster.length) S.me.roster=[{num:my, race:S.me.race, local:true}];
+  if(!S.ai.roster.length) S.ai.roster=[{num:0, race:S.ai.race, local:false}];   // 솔로·테스트: 가상 상대 1명
+  S.me.turnIdx=-1; S.ai.turnIdx=-1; }
+// 다음 차례(활성 플레이어만 · 랩어라운드 · 이탈자 건너뜀)
+function strikeNextTurn(side){ const S=STK, me=S[side], r=me.roster||[]; if(!r.length) return null;
+  const act=G.activePlayers;
+  for(let k=1;k<=r.length;k++){ const i=(((me.turnIdx|0)+k)%r.length+r.length)%r.length, e=r[i];
+    if(e.num && act && act.length && act.indexOf(e.num)<0) continue;   // 나간 플레이어 건너뜀
+    me.turnIdx=i; return e; }
+  return null; }
+// 한 플레이어 몫 출격 — 로컬=내 건설지의 완성 건물이 한번에 생산(미완성·파괴 건물 제외) · 원격/AI=그 종족 건물 구성으로 시뮬
+function strikeSpawnForPlayer(side, e){ const S=STK; let n=0;
+  const _emit=(race,bk)=>{ const uid=techBldgUnit(race,bk); if(!uid) return;
+    const cnt=techBldgCount(race,bk);
+    for(let k=0;k<cnt;k++){ const b4=S[side].units.length; strikeSpawnUnit(side, uid); if(S[side].units.length<=b4) break; n++; } };   // 진영 상한 도달 → 중단
+  if(e.local && G.tech && G.tech.ents){
+    const race=G.tech.race;
+    for(const b of G.tech.ents){ if(b.type!=='bldg' || (b.bt||0)>0 || b._dead) continue; _emit(race, b.bk); }   // 🏭 미완성(bt>0)·파괴(_dead) 건물은 생산에서 제외
+    const out=G.tech.ents.filter(x=>x.type==='unit' && STK_UNITS[x.uid]);   // 🏗 건설지에서 완성해 둔 유닛도 함께 출격(일꾼·라바·알은 남김)
+    for(const x of out){ const i=G.tech.ents.indexOf(x); if(i>=0) G.tech.ents.splice(i,1);
+      G.tech.sup=Math.max(0,(G.tech.sup||0)-(x.pop||0));   // 전장으로 나가면 건설지 인구 반환
+      G.tech.units[x.uid]=Math.max(0,(G.tech.units[x.uid]||0)-1);
+      strikeSpawnUnit(side, x.uid); n++; }
+    if(out.length && G.tab==='Build' && typeof techUIRender==='function') techUIRender();
+    return n; }
+  // 🤖 원격/AI 플레이어 = 그 종족 건물 구성으로 배출. 규모는 로컬 플레이어의 완성 생산건물 수에 연동(난이도 균형 유지).
+  const keys=Object.keys(TECH_BLDG_UNIT[e.race]||{}); if(!keys.length) return 0;
+  let pb=0; if(G.tech && G.tech.ents){ const mr=G.tech.race; for(const b of G.tech.ents){ if(b.type==='bldg' && (b.bt||0)<=0 && !b._dead && techBldgUnit(mr,b.bk)) pb++; } }
+  pb=Math.max(2, pb);   // 최소 2
+  for(let i=0;i<pb;i++) _emit(e.race, keys[i%keys.length]);
+  return n; }
+function strikeSpawnWave(){ const S=STK; if(!S) return;   // 출격 주기: 각 팀에서 이번 차례인 플레이어 1명씩만 출격
   if(S.stress){ strikeSpawnStress(); return; }   // 🧪 관측 모드 = 건물 무시, 양 진영 대칭 소환
-  let myCount=0;
-  if(G.tech && G.tech.ents){   // 🏭 완성된 건물마다 담당 유닛 1기를 무료 배출(건물 수 = 생산력) — 여러 종을 담당하면 주기마다 순환
-    const _race=G.tech.race;
-    for(const e of G.tech.ents){ if(e.type!=='bldg' || (e.bt||0)>0) continue;
-      const uid=techBldgUnit(_race, e.bk); if(!uid) continue;
-      const _n=techBldgCount(_race, e.bk);   // 건물별 마릿수(싼 건물일수록 여러 기)
-      for(let _k=0;_k<_n;_k++){ const _before=S.me.units.length; strikeSpawnUnit('me', uid);
-        if(S.me.units.length<=_before) break;   // 진영 상한 도달 → 중단
-        myCount++; } } }
-  if(G.tech && G.tech.ents){   // 🏗 건설 화면의 완성 유닛을 전장으로 내보냄(일꾼·라바·알은 남김)
-    const out=G.tech.ents.filter(e=>e.type==='unit' && STK_UNITS[e.uid]);
-    for(const e of out){ const i=G.tech.ents.indexOf(e); if(i>=0) G.tech.ents.splice(i,1);
-      G.tech.sup=Math.max(0,(G.tech.sup||0)-(e.pop||0));   // 전장으로 나가면 건설지 인구 반환
-      G.tech.units[e.uid]=Math.max(0,(G.tech.units[e.uid]||0)-1);
-      strikeSpawnUnit('me', e.uid); myCount++; }
-    if(out.length && G.tab==='Build' && typeof techUIRender==='function') techUIRender(); }
-  if(!myCount){ strikeSpawnUnit('me'); strikeSpawnUnit('me'); myCount=2; }   // 생산이 없으면 기본 소량(전멸 방지)
-  // 🤖 AI = 자기 종족 건물로 직접 배출(미러링 제거). 플레이어의 완성 생산건물 수만큼 자기 종족 건물을 갖춘 것으로 보고,
-  //    그 종족의 배출 수(techBldgCount)로 소환 → 종족 조합·배출 배수가 싱글에서도 진짜 종족 대결로 반영. 난이도는 내 건물 수에 연동.
-  { const _ar=S.ai.race, _keys=Object.keys(TECH_BLDG_UNIT[_ar]||{});
-    let _pb=0; if(G.tech && G.tech.ents){ const _mr=G.tech.race; for(const e of G.tech.ents){ if(e.type==='bldg' && (e.bt||0)<=0 && techBldgUnit(_mr, e.bk)) _pb++; } }
-    _pb=Math.max(2, _pb);   // 플레이어 생산건물 수(난이도 기준) · 최소 2
-    let _aiN=0;
-    if(_keys.length){ for(let i=0;i<_pb;i++){ const bk=_keys[i % _keys.length], uid=techBldgUnit(_ar, bk); if(!uid) continue;
-      const _cnt=techBldgCount(_ar, bk);
-      for(let k=0;k<_cnt;k++){ const _b4=S.ai.units.length; strikeSpawnUnit('ai', uid); if(S.ai.units.length<=_b4) break; _aiN++; } } }
-    if(!_aiN){ strikeSpawnUnit('ai'); strikeSpawnUnit('ai'); } } }   // 폴백(전멸 방지)
+  if(!S.me.roster || !S.ai.roster) strikeBuildRosters();   // 최초 1회 구성(이후 이탈은 strikeNextTurn이 건너뜀)
+  for(const side of ['me','ai']){ const e=strikeNextTurn(side); if(!e) continue;
+    const n=strikeSpawnForPlayer(side, e);
+    if(!n){ strikeSpawnUnit(side); strikeSpawnUnit(side); }   // 폴백(전멸 방지)
+    if(side==='me' && e.local && (S.me.roster.length>1) && typeof toast==='function') toast('⚔️ 내 차례 — 병력 출격!'); } }
 function strikeFrontStruct(side){ const S=STK, foe=S[side==='me'?'ai':'me'];   // 가장 앞 신전: 중립 살아있으면 중립(그 뒤 신전은 못 때림) → 적 2차 → 적 메인
   if(S.central && !S.central.dead) return S.central;
   if(foe.sec && !foe.sec.dead) return foe.sec;
@@ -17256,6 +17402,19 @@ function strikeTerritory(){ const S=STK; let blue=0.25, red=0.75;   // 초기: �
   if(meSecDead) red=0.22;
   if(meSecDead&&aiSecDead){ blue=0.25; red=0.75; }   // 양쪽 2차 다 파괴 → 각자 2차까지, 중앙 흰색
   return {blue:Math.max(0.05,Math.min(0.95,blue)), red:Math.max(0.05,Math.min(0.95,red))}; }
+// 레인 진행도 t: me.base=0 … ai.base=1 (중앙≈0.5). 유닛 위치를 레인축에 투영.
+function strikeLaneT(x,y){ const S=STK, a=S.me.base, b=S.ai.base, dx=b.x-a.x, dy=b.y-a.y, L=(dx*dx+dy*dy)||1;
+  return ((x-a.x)*dx+(y-a.y)*dy)/L; }
+// 💥 2차 신전 붕괴 반격 — 방어측 2차가 부서지면, 그 진영 절반(본진↔중앙)에 침투해 있던 적을 순차 폭발로 일소.
+//   눈덩이 완화: 2차 상실이 곧바로 메인 함락으로 이어지지 않게, 돌파한 적 본대를 청소해 수비측에 재정비 시간을 준다. 양 진영 공통(각 팀의 방어 반격).
+function strikeSecCollapse(victim){ const S=STK; const atkSide=(victim==='me')?'ai':'me', atk=S[atkSide]; if(!atk) return;
+  const inHalf=(t)=> (victim==='me') ? (t<0.5) : (t>0.5);   // 방어측 절반(자기 본진~중앙)
+  const doomed=atk.units.filter(u=>!u.dead && u._collapseT==null && inHalf(strikeLaneT(u.x,u.y)));
+  doomed.sort((p,q)=>{ const tp=strikeLaneT(p.x,p.y), tq=strikeLaneT(q.x,q.y); return (victim==='me')?(tp-tq):(tq-tp); });   // 깊이 침투(본진 쪽)부터 → 중앙 방향으로 파도
+  for(let i=0;i<doomed.length;i++){ const u=doomed[i]; u._collapseT=0.05+i*0.035; u.moving=false; u.tgtUid=null; }   // 유닛 간 0.035초 간격 = 빠른 순차 폭발
+  if(doomed.length && typeof toast==='function'){
+    toast(victim==='me' ? ('💥 2차 신전 붕괴 반격 — 침투한 적 '+doomed.length+'기 소멸')
+                        : ('💥 적 2차 붕괴 반격 — 돌파한 아군 '+doomed.length+'기 소멸')); } }
 const STK_CULL=0.12;   // 화면 밖 여유(정규화) — 이 밖의 유닛은 3D를 만들지 않는다
 const STK_GRID=160;   // 격자 셀(월드) — 최대 상호작용 반경보다 크게
 let _stkG=null;
@@ -17302,6 +17461,11 @@ function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
     const _load=new Map();   // 표적별 현재 배정 인원 — 한 표적에 전군이 몰리는 것을 막는다
     for(const x of me.units){ if(x.tgtUid) _load.set(x.tgtUid,(_load.get(x.tgtUid)||0)+1); }
     for(const u of me.units){ if(u.dead) continue;
+      if(u._collapseT!=null){ u._collapseT-=dt; u.moving=false; u._vx=0; u._vy=0;   // 💥 2차 붕괴 반격 대상 — 순차 폭발 대기
+        if(u._collapseT<=0){ u.dead=true;
+          if(!S.fx||!S.fx.shots){ S.fx=FX.store(); S.fx.hitK=STK_HIT_K; }
+          FX.death(S.fx, u.x, u.y, {unitSize:(u.size||14)*1.7, color:'#ffca4a', parts:STK_DEATH_PARTS+8}); }   // 큰 폭발 이펙트
+        continue; }
       if(u.wait>0){ u.wait-=dt; u.moving=false; continue; }   // 스폰 후 0.5초 대기(중앙 응시 상태로 정지)
       if(u._btT>0){ u._btT-=dt; if(u._btT<=0) u._btgt=null; }   // 포기했던 표적의 재선정 금지 시간
       if(!u._atk) u._atk=(typeof _sbAtkMode==='function')?_sbAtkMode({id:u.id, gmodel:u.gm}):{air:true,gnd:true};   // 공격 가능 레이어(관리자 전투실험과 동일 규칙)
@@ -17355,13 +17519,13 @@ function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
       let _toTemple=!tgt, _fireT=false;   // _toTemple=신전 분기로 처리 · _fireT=표적에 못 닿는 동안 사거리 안 신전을 대신 사격
       if(tgt){ const d=Math.hypot(tgt.x-u.x,tgt.y-u.y);   // 유닛 우선 교전
         if(d<=strikeReach(u,tgt)){ u.moving=false; u._blk=0; u._swp=0; u.face=Math.atan2(tgt.x-u.x, tgt.y-u.y); u.cd-=dt;
-          if(u.cd<=0){ u.cd=u.cdMax; u.fireSeq=(u.fireSeq||0)+1; tgt.hp-=u.dmg*strikeSkillAtkMul(u)*strikeAtkMul(me)*_sbTypeMul(u,tgt); strikeFx(u,tgt.x,tgt.y,col);   // fireSeq++ = 3D 공격 모션 · ×상성(타입×크기)
+          if(u.cd<=0){ u.cd=u.cdMax; u.fireSeq=(u.fireSeq||0)+1; strikeHit(tgt, u.dmg*strikeSkillAtkMul(u)*strikeAtkMul(me), u); strikeFx(u,tgt.x,tgt.y,col);   // fireSeq++ = 3D 공격 모션 · 실드/방어/상성 표준 적용
             { const _uAir=strikeIsAir(u);
               if(!tgt.tgtUid && (!tgt._atk || (_uAir? tgt._atk.air : tgt._atk.gnd))) tgt.tgtUid=u.uid;   // 반격은 때릴 수 있을 때만
               tgt._acqT=0; tgt._inrT=0;                           // 맞으면 즉시 재판단(사거리 안 스캔 주기도 리셋)
               strikeAlert(foe.units, u.uid, tgt.x, tgt.y, 420, _uAir); }   // 주변 아군 가담(때릴 수 있는 아군만)
             if(u.splash>0){ const sr2=u.splash*u.splash, sd=u.dmg*0.6;   // 광역: 타겟 주변 적에게 60% 추가타
-              for(const e of foe.units){ if(e===tgt||e.dead) continue; const ex=e.x-tgt.x, ey=e.y-tgt.y; if(ex*ex+ey*ey<=sr2){ e.hp-=sd*_sbTypeMul(u,e); if(e.hp<=0){ e.dead=true; me.kills=(me.kills||0)+1; me.gold+=strikeKillGold(e); } } } }   // ×대상별 상성
+              for(const e of foe.units){ if(e===tgt||e.dead) continue; const ex=e.x-tgt.x, ey=e.y-tgt.y; if(ex*ex+ey*ey<=sr2){ strikeHit(e, sd, u); if(e.hp<=0){ e.dead=true; me.kills=(me.kills||0)+1; me.gold+=strikeKillGold(e); } } } }   // 실드/방어/대상별 상성
             if(tgt.hp<=0){ tgt.dead=true; me.kills=(me.kills||0)+1; me.gold+=strikeKillGold(tgt); } } }   // 처치 집계 + 킬 보상
         else { const _gq=(front&&!front.dead)?strikeTempleGap(front,u.x,u.y):1e9;
           // ⚠ 적 표적이 있으면 **접근이 실제로 막혔을 때만** 신전을 때린다.
@@ -17386,7 +17550,9 @@ function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
         const _cd=Math.hypot(u.x-front.x, u.y-front.y);   // 중심 거리
         const d=(!u._atk.gnd)?1e9:strikeTempleGap(front,u.x,u.y);   // 사각형 표면까지의 실거리(모서리에서 과도하게 파고드는 문제 제거)
         if(d<=u.rng+(u.size||14)*1.05){ u.moving=false; u._blk=0; u._swp=0; u.face=Math.atan2(front.x-u.x, front.y-u.y); u.cd-=dt;
-          if(u.cd<=0){ u.cd=u.cdMax; u.fireSeq=(u.fireSeq||0)+1; front.hp-=u.dmg*strikeSkillAtkMul(u)*strikeAtkMul(me); strikeFx(u,front.x,front.y,col); if(front.hp<=0){ front.dead=true; front.deadBy=side; strikeCheckOver(); } } }   // fireSeq++ = 3D 공격 모션
+          if(u.cd<=0){ u.cd=u.cdMax; u.fireSeq=(u.fireSeq||0)+1; front.hp-=u.dmg*strikeSkillAtkMul(u)*strikeAtkMul(me)*_sbTypeMulSize({id:u.id,gmodel:u.gm},'l'); strikeFx(u,front.x,front.y,col); if(front.hp<=0){ front.dead=true; front.deadBy=side;
+            if(front===S.me.sec) strikeSecCollapse('me'); else if(front===S.ai.sec) strikeSecCollapse('ai');   // 💥 2차 파괴 = 방어측 반격(침투 적 일소)
+            strikeCheckOver(); } } }   // fireSeq++ = 3D 공격 모션 · 건물=대형('l') 상성 적용
         else { const _sr=strikeTempleR(front, Math.atan2(u.y-front.y, u.x-front.x))+u.rng*0.75;   // 그 방향의 사각형 표면 + 사거리 여유
           if(!u._atk.gnd && _cd<=_sr*1.15){ u.moving=false; u._vx=0; u._vy=0; if(u._mvp){ u._mvp.vx=0; u._mvp.vy=0; } u._blk=0; u._swp=0; }
           // ↑ 신전을 때릴 수 없는 유닛(공대공 전용·비전투)은 링에 닿으면 그대로 대기.
@@ -18376,7 +18542,6 @@ function poseShow(m, which){   // 총은 정지·대기 자세에서만(달리�
 
 const bossRemoteModels=new Map();   // 토벌장 원격(다른 플레이어) 유닛 모델 — 게임 모델 사망 스윕과 분리
 const shopModels=new Map();   // 유닛뽑기 슬롯 전시용 모델(uid -> model). 게임 모델과 분리(사망 스윕 영향 없음)
-const bldgModels=new Map();   // 업그레이드 탭 건물 전시 모델(TECH id -> model)
 const ghostModels=new Map();  // 비활성 고정 슬롯(미건설 터렛/포토) 고스트 — 무채색·축소(아직 비활성 느낌)
 const buildModels=new Map();  // 직스 건설지 전용 전시 모델(일꾼·건물) — 게임/전시 풀과 분리(사망 스윕 무관)
 const buildGhostModels=new Map();  // 건설 배치 예비 건물(반투명 회색 3D 고스트) — 모델 id별 캐시
@@ -19189,7 +19354,6 @@ window.M3D={
       const cxw=vx*W, cyw=H-vy*H, hw=(W/2)/vz, hh=(H/2)/vz;
       camera.left=cxw-hw; camera.right=cxw+hw; camera.top=cyw+hh; camera.bottom=cyw-hh; camera.updateProjectionMatrix(); }
     for(const [,m] of shopModels) m.holder.visible=false;            // 메인 탭: 전시 모델 숨김
-    for(const [,m] of bldgModels) m.holder.visible=false;
     for(const [,m] of buildModels) m.holder.visible=false;           // 건설지 전시 모델 숨김
     if(bossModel) bossModel.holder.visible=false;
     for(const [,m] of bossRemoteModels) m.holder.visible=false;                    // 보스 모델 숨김
@@ -19384,7 +19548,6 @@ window.M3D={
     for(const [,m] of models) m.holder.visible=false;   // 게임 모델 숨김
     if(ringInst) ringInst.count=0;   // 인스턴스 선택링도 함께 숨김
     if(shInstA){ shInstA.count=0; shInstB.count=0; }   // 인스턴스 그림자도 숨김
-    for(const [,m] of bldgModels) m.holder.visible=false;
     for(const [,m] of buildModels) m.holder.visible=false;
     for(const [,m] of ghostModels) m.holder.visible=false;
     // 전시 유닛 모델 전부 숨김(가챠로 전환 — 8유닛 시계 제거)
@@ -19424,7 +19587,6 @@ window.M3D={
     if(ringInst) ringInst.count=0;   // 인스턴스 선택링도 함께 숨김
     if(shInstA){ shInstA.count=0; shInstB.count=0; }   // 인스턴스 그림자도 숨김
     for(const [,m] of shopModels) m.holder.visible=false;
-    for(const [,m] of bldgModels) m.holder.visible=false;
     for(const [,m] of ghostModels) m.holder.visible=false;
     for(const [,m] of buildGhostModels) m.holder.visible=false;
     for(const [,b] of beaconInsts) b.holder.visible=false;
@@ -19487,7 +19649,6 @@ window.M3D={
       camera.left=0;camera.right=W;camera.top=H;camera.bottom=0;camera.updateProjectionMatrix(); renderer._w=W;renderer._h=H; }
     if(ringInst) ringInst.count=0;   // 인스턴스 선택링 숨김(게임 화면 전용)
     for(const [,m] of shopModels) m.holder.visible=false;
-    for(const [,m] of bldgModels) m.holder.visible=false;
     for(const [,m] of ghostModels) m.holder.visible=false;
     for(const [,b] of beaconInsts) b.holder.visible=false;
     const px=BOSS_VIEW.x||0, py=BOSS_VIEW.y||0;

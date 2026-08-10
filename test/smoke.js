@@ -79,18 +79,20 @@ async function groupLobby(){
   // 카드 하단 바로가기(인기맵 / 내 캐릭터)와 소셜 고정 높이.
   // 허브 소셜: 상단(게임 선택)과 시각적으로 분리되고, '친구'가 한눈에 읽혀야 한다.
   // 허브 소셜 탭 = 유즈맵 하단 탭(채팅·파티·친구)과 같은 .msTabs2/.msTab2 단일 소스.
-  await step('탭 바 단일 소스: 친구 시트 = 유즈맵 하단', ()=>{
+  await step('탭 바 단일 소스: 친구 시트 = 마을 채팅 시트', ()=>{
     const hub=$('hubFriendTabs'); skipIf(!hub,'친구 시트 탭 없음');
     assert(hub.classList.contains('msTabs2'),'친구 시트가 공용 탭 바(.msTabs2)를 안 씀');
-    const map=document.querySelector('#mapSelect .msTabs2');   // 유즈맵 하단 바를 정확히 지정(로그인 화면도 같은 컴포넌트를 쓴다)
-    assert(map,'유즈맵 하단 탭 바를 못 찾음');
+    // 채팅 블록은 유즈맵 → 마을(#twChat)로 옮겼다. 유즈맵은 목록만 남는다.
+    assert(!document.querySelector('#mapSelect .msSocial'),'유즈맵에 채팅 블록이 남아 있음');
+    const map=document.querySelector('#twChat .msTabs2');
+    assert(map,'마을 채팅 시트 탭 바를 못 찾음');
     const hb=hub.querySelectorAll('button'), mb=map.querySelectorAll('button');
     assert(hb.length && mb.length,'탭 버튼이 없음');
     hb.forEach(b=>assert(b.classList.contains('msTab2'), '허브 탭 버튼에 .msTab2 없음: '+b.textContent.trim()));
     // 허브는 두꺼운 변형 — 복제가 아니라 같은 컴포넌트의 크기 변형이어야 한다(크기 override가 유즈맵 하단으로 새면 안 됨).
     const pad=e=>parseFloat(getComputedStyle(e).paddingTop);
-    assert(pad(hb[1])>pad(mb[1]),'허브 소셜 바가 유즈맵 하단보다 두껍지 않음: '+pad(hb[1])+' vs '+pad(mb[1]));
-    assert(pad(mb[1])<=10,'유즈맵 하단까지 두꺼워짐(변형이 새어나감): '+pad(mb[1]));
+    assert(pad(hb[1])>pad(mb[1]),'허브 소셜 바가 채팅 시트보다 두껍지 않음: '+pad(hb[1])+' vs '+pad(mb[1]));
+    assert(pad(mb[1])<=10,'채팅 시트까지 두꺼워짐(변형이 새어나감): '+pad(mb[1]));
     // ⚠ 밑줄 두께는 뺀다 — 허브는 DESIGN.md(테두리 1px)로 전환돼 2px 테두리 대신 inset 밑줄을 쓴다.
     //    유즈맵 하단은 아직 미전환이라 2px 테두리 그대로다(touch-it-fix-it).
     const key=b=>{ const c=getComputedStyle(b);
@@ -230,7 +232,10 @@ async function groupLobby(){
     // 네비 이동: 유즈맵 → HOME → 마을
     navGo('map'); await sleep(80);
     assert(visible($('mapSelect')),'네비 유즈맵이 목록을 안 엶');
-    assert(!visible($('navBar')),'유즈맵 화면에서 네비가 남아 있음');
+    // 유즈맵도 하단 네비로 이동한다(좌상단 뒤로가기 버튼은 없앴다)
+    assert(visible($('navBar')),'유즈맵 화면에 네비가 없음');
+    assert(document.querySelector('#navBar .navIt.on').dataset.nav==='map','유즈맵 탭이 활성이 아님');
+    assert(!document.querySelector('#mapSelect .msHeadL .twBack'),'유즈맵 좌상단 뒤로가기 버튼이 아직 있음');
     mapToHub(); await sleep(80);
     assert(visible($('homeScreen')),'유즈맵에서 뒤로 갔는데 HOME으로 안 옴 [DBG 보이는화면='+
       [...document.querySelectorAll('.appScreen')].filter(e=>visible(e)).map(e=>e.id).join(',')+
@@ -856,13 +861,35 @@ async function groupLobby(){
     return '월드 '+w.style.width+'×'+w.style.height; });
   await step('마을: 멀리서 구역을 지정하면 걸어가서 열림', ()=>{ skipIf(typeof openTown!=='function','마을 없음');
     closeTownPanel();
-    townGo('gacha');   // 화면 밖 구역 지정 — 아이콘/가장자리 표시 탭과 같은 경로
-    assert(_twGoZone==='gacha','구역 지정이 안 됨');
+    townGo('gym');   // 화면 밖 구역 지정 — 아이콘/가장자리 표시 탭과 같은 경로 (상점은 전용 화면이라 팝업 검사에서 제외)
+    assert(_twGoZone==='gym','구역 지정이 안 됨');
     let n=0; while(_twChar.mode!==null && n<4000){ twStep(0.016); n++; }
     assert(n<4000,'목적지에 도착하지 못함');
     assert(visible($('townPanel')),'지정한 구역에 도착했는데 시설 팝업이 안 열림');
-    assert($('tpTitle').textContent.indexOf('뽑기집')>=0,'팝업 제목 불일치: '+$('tpTitle').textContent);
+    assert($('tpTitle').textContent.indexOf('훈련장')>=0,'팝업 제목 불일치: '+$('tpTitle').textContent);
     twLeave(); return n+'프레임 이동'; });
+  // 🎁 상점 = 팝업이 아니라 전용 화면. 네비·마을 구역 두 경로 모두 같은 화면으로 간다.
+  await step('상점: 전용 화면(팝업 아님) · 네비/마을 구역 두 경로', async()=>{ skipIf(typeof openShop!=='function','상점 화면 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','상점'); saveMeta(); }
+    navGo('shop'); await sleep(60);
+    assert(visible($('shopScreen')),'네비 상점이 전용 화면을 안 엶');
+    assert(!visible($('townPanel')),'상점이 아직 팝업으로 열림');
+    assert(!visible($('townScreen')),'상점인데 마을 화면이 남아 있음');
+    assert(document.querySelector('#shopBody .shopTitle'),'상점 제목줄이 없음');
+    assert(document.querySelectorAll('#shopBody .shopPanel').length>=3,'상점 구역 패널이 3개 미만');
+    assert(document.querySelectorAll('#shopBody .shopDeal').length===3,'오늘의 특가가 3개가 아님');
+    assert(document.querySelectorAll('#shopBody .shopRow').length>0,'상점 내용(뽑기 행)이 비어 있음');
+    // 재화 아이콘은 resIco 공용(이모지 임의 사용 금지) — 카드 안에 실제 아이콘이 들어갔는지
+    assert(document.querySelectorAll('#shopBody img.gi[src*="res_"]').length>0,'상점에 공용 재화 아이콘이 없음');
+    // IBM Plex Sans KR은 700이 최대 — 800/900은 가짜 볼드가 된다(DESIGN.md §2)
+    for(const sel of ['.shopTitle','.shopHead','.shopTag','.shopBuy']){ const e=document.querySelector('#shopBody '+sel)||document.querySelector(sel);
+      if(e) assert(+getComputedStyle(e).fontWeight<=700, sel+' 굵기가 700 초과(가짜 볼드): '+getComputedStyle(e).fontWeight); }
+    assert(document.querySelector('#navBar .navIt.on').dataset.nav==='shop','상점 탭이 활성이 아님');
+    // 마을 구역(뽑기집)도 팝업이 아니라 같은 화면으로
+    openTown(); await sleep(40); openTownPanel('gacha'); await sleep(60);
+    assert(visible($('shopScreen')) && !visible($('townPanel')),'마을 구역이 아직 팝업으로 열림');
+    openHome(); await sleep(40);
+    return '전용 화면 · 두 경로 ok'; });
   await step('마을: 지정하지 않으면 안 열림(스쳐 지남·겹쳐 섬)', ()=>{ skipIf(typeof twSetTarget!=='function','마을 없음');
     openTown(); closeTownPanel();
     const c=twZonePx('charmake');

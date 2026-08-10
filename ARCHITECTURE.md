@@ -53,6 +53,7 @@
 | (tech 계열 `techPtrDown` 등) | 건설/테크 맵 — `G.tech`, `techMapRender`, 입력 흐름 `techPtrDown→Move→Up` |
 | `공용 FX 코어` | 유닛별 공격 이펙트(전 유즈맵 공유) |
 | `컴퓨터가 싸운다(직스)` | strike 모드 — `loop()` 최상단 `if(G.strike)` 분기로 nemo 우회 |
+| `🔄 팀 순환 출격` | 사이클마다 각 팀에서 1명씩 차례로 출격 — `strikeBuildRosters`/`strikeNextTurn`/`strikeSpawnForPlayer`/`strikeSpawnWave` |
 | `🎆 이펙트 테스트베드` | 관리자 Unit 탭 FX 랩 |
 
 ## 3. 전역 상태 핵심
@@ -90,6 +91,8 @@
 
 ## 8. 멀티/소셜
 Supabase Realtime presence 기반(방 목록·로비·파티·귓말). 방 목록엔 시뮬 봇 방 혼재(`buildRoomList`). 게임플레이 자체는 로컬.
+- 팀 분할은 **로비 규칙이 단일 소스**: `slotTeam(i)` = 앞 절반 1팀 / 뒤 절반 2팀(8인 → 1~4 vs 5~8), 입장은 `lobbyFillOrder()`로 두 팀 번갈아(1,5,2,6…). 직스 인게임도 같은 기준(`strikeTeamOf`, 상수 `STK_TEAM_HALF=4`).
+- 직스 **팀 순환 출격**: 사이클마다 각 팀에서 **한 명씩만** 출격한다(8인 → 1주기 1·5, 2주기 2·6 …). 팀 인원이 다르면 팀별로 독립 랩어라운드(2:3 → 1·5, 2·6, 1·7). 이탈자는 `G.activePlayers`에 없으면 `strikeNextTurn`이 건너뛴다. 로컬 플레이어만 실제 건설지(`G.tech`)로 생산하고(미완성 `bt>0`·파괴 `_dead` 건물 제외), 나머지는 그 종족 건물 구성으로 시뮬(규모는 로컬 건물 수에 연동). 인게임 유닛 동기화는 없으므로 **다른 플레이어는 로컬 시뮬**이다.
 
 ## 9. 검증 (필수 워크플로)
 ```bash
