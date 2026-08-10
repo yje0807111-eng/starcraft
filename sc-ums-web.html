@@ -5653,22 +5653,34 @@ function hb3dDetach(){ const cv=document.getElementById('cvMarine');
 function hb3dReady(){ return !!(window.M3D && M3D.ready && M3D.ready() && M3D.syncBuild
   && !(typeof G!=='undefined' && G.opt && G.opt.model3d===false)); }
 // 월드 좌표 → 화면 정규화(0..1). hbDraw의 카메라(cx,cy,k)와 같은 식이라 2D 바닥과 정확히 겹친다.
+// ⚠ syncBuild는 모델 풀을 **it.uid**로 찾는다(it.key가 아니다). uid를 안 주면 전부 undefined로
+//    충돌해 모델 하나를 돌려쓰고, 유닛이 사라지거나 깜빡인다.
+// ⚠ 크기: syncBuild의 mul 기본값은 0.5다 → 인자를 안 주면 절반 크기로 나온다.
+//    여기서는 scaleMul=1로 두고, 유닛마다 '화면 픽셀 지름'을 정해 scl을 역산한다.
+//    footprintOf(id) = mul 1일 때의 표시 반지름(px) → scl = 원하는지름 / (2*footprint)
+const HB_PX_CHAR=46, HB_PX_FOE=36, HB_PX_ELITE=50;   // 전장에서 보이길 원하는 화면 지름(px, 배율 k 적용 전)
+function _hb3dScl(id, px){ const fp=(window.M3D&&M3D.footprintOf)?M3D.footprintOf(id):0;
+  if(!fp||!isFinite(fp)||fp<=0) return 1;            // 모델 로드 전 → 다음 프레임에 다시 잰다
+  return px/(2*fp); }
 function hb3dList(){ const S=_hb, W=S.w||1, H=S.h||1, k=S.k||1, out=[];
   const nx=(wx)=>((S.cx||W/2)+wx*k)/W, ny=(wy)=>((S.cy||H/2)+wy*k)/H;
   const c=S.char, ch=(typeof CHAR==='function')?CHAR():null;
   const mdl=(ch && PROF_CLASSES[ch.cls] && PROF_CLASSES[ch.cls].unit) || 'marine';
-  out.push({ key:'me', id:mdl, x:nx(c.x), y:ny(c.y), face:S.charFace||0, yawFix:1,
-             moving:false, scl:0.9 });
+  out.push({ uid:'hbMe', id:mdl, x:nx(c.x), y:ny(c.y), face:S.charFace||0, yawFix:1,
+             moving:false, scl:_hb3dScl(mdl, HB_PX_CHAR*k) });
   for(const f of S.foes){ if(!f.mdl) continue;
-    out.push({ key:'f'+(f.uid||(f.uid=++_hbUid)), id:f.mdl, x:nx(f.x), y:ny(f.y),
-               face:f.face||0, yawFix:1, moving:!!f.mv, scl:(f.elite?1.15:0.85) }); }
+    if(!f.uid) f.uid='hbF'+(++_hbUid);
+    out.push({ uid:f.uid, id:f.mdl, x:nx(f.x), y:ny(f.y),
+               face:f.face||0, yawFix:1, moving:!!f.mv,
+               scl:_hb3dScl(f.mdl, (f.elite?HB_PX_ELITE:HB_PX_FOE)*k) }); }
   return out; }
 let _hbUid=0;
 function hbFrame(){ if(!_hb||!_hb.on){ _hbRaf=0; return; }
   hbPump(); hbResize(); hbDraw();
   if(hb3dReady()){ const cv=document.getElementById('cvMarine');
     if(cv){ hb3dAttach(); cv.style.display='block';
-      try{ M3D.syncBuild(hb3dList(), _hb.w, _hb.h, Math.min(.05,(performance.now()-(_hb._l3||performance.now()))/1000)); }catch(e){}
+      try{ M3D.syncBuild(hb3dList(), _hb.w, _hb.h,
+             Math.min(.05,(performance.now()-(_hb._l3||performance.now()))/1000), 1); }catch(e){}   // 5번째=scaleMul(기본 0.5라 반드시 넘긴다)
       _hb._l3=performance.now(); } }
   _hbRaf=requestAnimationFrame(hbFrame); }
 // ── 🏘 마을(메인 화면) UI ──

@@ -104,6 +104,7 @@ node test/bench-strike.mjs 400 80 4   # 대규모 전투 렌더 벤치(유닛수
 - 수정 후 `npm test` 통과 없이 "완료" 선언 금지. 구문 검사는 vm.Script(classic)+`node --check`(module).
 
 ## 10. 함정 목록 (실제로 밟았던 것)
+- **`M3D.syncBuild`의 목록 규약 두 가지를 틀리면 조용히 망가진다.** ① 모델 풀은 **`it.uid`**로 찾는다 — `key` 등 다른 이름으로 주면 전부 `undefined`로 충돌해 **모델 하나를 돌려쓰고** 유닛이 사라지거나 깜빡인다. uid는 프레임마다 바뀌면 안 된다(매번 모델 재생성). ② `scaleMul`(5번째 인자)의 기본값은 **0.5**다 — 안 넘기면 절반 크기로 나온다. 던전은 `scaleMul=1`로 두고 유닛별 `scl = 원하는화면지름 / (2*M3D.footprintOf(id))`로 역산한다(`HB_PX_CHAR/FOE/ELITE`).
 - **던전 3D는 공용 캔버스(`#cvMarine`)를 빌려 쓴다 — 반드시 돌려놔야 한다.** 렌더러가 그 캔버스 하나에 묶여 있어, HOME에 붙인 채로 게임에 들어가면 **유즈맵 3D가 통째로 사라진다.** 원복 경로는 `showAppScreen`·`hideAppScreens`·`hbStop` 셋 다 걸려 있어야 한다(`hideAppScreens`가 실제로 빠져 있었고 스모크가 잡는다). 새 화면 전환 경로를 만들면 여기도 확인할 것.
 - **던전 유닛 렌더는 새로 만들지 않는다.** `M3D.syncBuild(list,W,H,dt)`가 이미 정규화 좌표·`face`+`yawFix` 회전 보간·`moving` 걷기 모션(run GLB 또는 절차적 bob)을 전부 한다 — 메인 게임과 같은 경로다. 각도는 8칸이 아니라 **연속 라디안**(`atan2(nx,-ny)`, 북=0).
 - **스프라이트 시트 표는 `SPR_UNITS` 하나다.** 관리자 실험장(`SPR_MARINE`)과 던전 전장이 **같은 객체**를 본다 — 복사본을 만들면 곧 어긋난다(스모크가 `SPR_MARINE===SPR_UNITS.marine`을 검사). 시트를 새로 구우면 `SPR_UNITS`에 한 줄만 추가하면 두 곳에 동시에 반영된다.
