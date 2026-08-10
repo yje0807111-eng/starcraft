@@ -567,6 +567,43 @@ async function groupLobby(){
     assert(profItems().length===n0+1,'장비가 안 들어옴');
     return '해금 ok · 엘리트 '+el.length+'/'+_hb.foes.length+' · 뽑기권 '+p.tickets.gear; });
   // '던전'은 자동사냥 전용어, 옛 층 등반 콘텐츠는 '토벌'이다. 두 시스템이 같은 이름을 쓰면 화면마다 뜻이 달라진다.
+  // ⚔ 던전 정체성 — 10곳이 서로 다른 장소로 느껴져야 한다(적 종족·바닥·틴트가 표 하나에서 나온다)
+  await step('던전 10곳: 종족 순환 · 바닥 · 갈수록 어두워지는 틴트', async()=>{
+    skipIf(typeof HB_DUNGEONS==='undefined','던전 표 없음');
+    assert(HB_DUNGEONS.length===HB_DG_MAX,'던전 수가 '+HB_DG_MAX+'이 아님: '+HB_DUNGEONS.length);
+    const alpha=t=>{ const m=/rgba?\([^)]*?,\s*([\d.]+)\)/.exec(t||''); return m?parseFloat(m[1]):-1; };
+    let prevA=-1, names={};
+    for(let i=0;i<HB_DUNGEONS.length;i++){ const D=HB_DUNGEONS[i], at='던전'+(i+1)+'('+D.name+')';
+      assert(D.dg===i+1, at+' 번호가 어긋남: '+D.dg);
+      assert(D.name && !names[D.name], at+' 이름이 없거나 중복');  names[D.name]=1;
+      assert(D.foes && D.foes.length===3, at+' 적이 3종이 아님');
+      for(const f of D.foes){
+        assert(f.mdl, at+' 모델 키가 비어 있음');
+        assert(f.ico, at+' 폴백 이모지가 없음: '+f.mdl); }
+      // 갈수록 어두워야 '무서워지는' 느낌이 난다
+      const a=alpha(D.tint);
+      assert(a>0, at+' 틴트 알파를 못 읽음: '+D.tint);
+      assert(a>=prevA, at+' 틴트가 앞 던전보다 밝아짐: '+a+' < '+prevA);  prevA=a; }
+    // 종족은 스웜 → 유니온 → 에테리얼 순환
+    const cyc=['swarm','union','aetherial'];
+    for(let i=0;i<9;i++) assert(HB_DUNGEONS[i].race===cyc[i%3],
+      '던전'+(i+1)+' 종족이 순환과 다름: '+HB_DUNGEONS[i].race+' ≠ '+cyc[i%3]);
+    // 바닥 타일 파일이 실제로 받아지는지(경로 오타면 배경이 조용히 사라진다)
+    const tiles=[...new Set(HB_DUNGEONS.map(d=>d.tile))];
+    for(const t of tiles){ const ok=await new Promise(res=>{ const im=new Image();
+        im.onload=()=>res(true); im.onerror=()=>res(false); im.src='assets/tiles/'+t+'.webp'; });
+      assert(ok,'바닥 타일 파일이 없음: assets/tiles/'+t+'.webp'); }
+    // 던전을 옮기면 적 구성이 실제로 바뀌어야 한다
+    const f1=HB_DUNGEONS[0].foes.map(f=>f.mdl).join(), f2=HB_DUNGEONS[1].foes.map(f=>f.mdl).join();
+    assert(f1!==f2,'던전 1과 2의 적이 같음 — 옮겨도 같은 곳으로 느껴진다');
+    // 모델 키 오타 검사. MODELS는 모듈 스코프라 전역에서 못 본다 → M3D.modelKeys()로 카탈로그를 받아 대조한다.
+    // ⚠ M3D가 없으면(three.js를 못 받는 환경) 검사를 '통과'시키지 말고 그렇게 밝힌다 — 헛도는 검사가 제일 위험하다
+    let keyChk='M3D 없음(모델 키 미검증)';
+    if(window.M3D && M3D.modelKeys){ const cat=new Set(M3D.modelKeys());
+      for(const D of HB_DUNGEONS) for(const f of D.foes)
+        assert(cat.has(f.mdl),'던전'+D.dg+'('+D.name+') 모델 키가 카탈로그에 없음: '+f.mdl);
+      keyChk='모델 키 '+new Set(HB_DUNGEONS.flatMap(d=>d.foes.map(f=>f.mdl))).size+'종 확인'; }
+    return HB_DUNGEONS.length+'곳 · 타일 '+tiles.length+'종 · 틴트 '+alpha(HB_DUNGEONS[0].tint)+'→'+prevA+' · '+keyChk; });
   await step('용어 분리: 자동사냥=던전 / 옛 콘텐츠=토벌', async()=>{ skipIf(typeof openDungeonHub!=='function','토벌 허브 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     const nav=document.querySelector('#navBar .navIt[data-nav=dungeon]');

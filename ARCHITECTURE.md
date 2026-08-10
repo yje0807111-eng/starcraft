@@ -32,6 +32,7 @@
 | `🧍 캐릭터 선택/생성` | `renderCharSelect`/`renderCharCreate` — 입장 화면 `#charScreen`과 마을 구역이 **같은 렌더러**를 쓴다 |
 | `마을(월드 + 카메라)` | `TOWN_ZONES`(구역 단일 출처) · `twStep`/`twCamApply` · 입력 `twPtrDown→Move→Up` |
 | `⚔ 던전` | 캐릭터 직접 전투 — `DG` 상태 · `dgStep`/`dgTick` 자체 루프 · `DG_FOES` 자체 적 표 · `dgRender`(DOM 유일 접점). **유즈맵과 완전 분리** |
+| `⚔ 던전 1~10` | **자동사냥 던전 정체성** — `HB_DUNGEONS`(10곳 단일 소스: 종족·이름·바닥타일·틴트·적3종) · `hbDun(dg)` · `hbFloor`(타일+틴트) · `hbSprite`/`hbUnitArt`(3D 스프라이트, 없으면 이모지 폴백) · `hbEnsureModels`(던전 진입 시 그 3종만 지연 로드) |
 | `게임 상태` | `G` 전역 + `newGame()` |
 | `캔버스 + 트랙` | 2D 캔버스(#cvMain) 트랙/적 그리기, `DPR`(2D쪽) |
 | `유닛/적 로직` | `spawnEnemy`(→`G.pendSpawn` 대기열!), `summonPersonalBoss`, `sellUnit(유닛객체)` , 전투 판정 |
@@ -103,6 +104,9 @@ node test/bench-strike.mjs 400 80 4   # 대규모 전투 렌더 벤치(유닛수
 - 수정 후 `npm test` 통과 없이 "완료" 선언 금지. 구문 검사는 vm.Script(classic)+`node --check`(module).
 
 ## 10. 함정 목록 (실제로 밟았던 것)
+- **`MODELS`는 모듈 스코프다.** 클래식 스크립트·스모크에서 `typeof MODELS==='undefined'`로 감싸면 검사가 **항상 통과**한다(실제로 던전 표 모델 키 검사가 그렇게 헛돌았다). 카탈로그가 필요하면 `M3D.modelKeys()`를 쓰고, M3D가 없는 환경에선 통과시키지 말고 "미검증"이라고 밝힐 것.
+- **자동사냥 전장은 2D 캔버스라 3D를 직접 못 얹는다.** `M3D.unitSprite(id)`가 GLB를 원래 재질 그대로 PNG로 한 번 구워 주고, 캔버스는 그걸 `drawImage`한다. `M3D.portrait()`는 흰 실루엣(UI 칩용)이라 전장에 쓰면 적이 전부 흰 종이가 된다 — 용도가 다르다.
+- **캔버스 패턴은 카메라 변환을 같이 받는다.** 타일을 월드 좌표에 1:1로 깔면 흙 한 덩이가 화면을 덮는다 → `pattern.setTransform(scale)`으로 줄여야 '바닥 질감'으로 읽힌다(`HB_TILE_SCALE`).
 - **부팅 타이머가 화면을 덮는다.** `bootApp()`의 `setTimeout(openAuth, 1700)`은 오프닝을 걷어내는 용도인데, 무조건 부르면 1.7초 사이에 이미 다른 화면으로 넘어가 있어도 로그인 화면이 그 위를 덮는다. 스모크가 "유즈맵에서 뒤로 갔는데 HOME으로 안 옴"으로 **간헐 실패**하던 진짜 원인이었다(그룹 실행 시간이 1.3~1.5초라 경계에 걸렸다). `#opening`이 아직 안 감춰졌을 때만 열도록 가드가 들어가 있다 — 빼지 말 것.
 - **동적 id/클래스**: `'bp'+탭`, `'body-'+id`, `'arr-'+id`, `'fDot-'+status` 등 — "미참조" 판정 전 접두사 조합 검색 필수.
 - **`sellUnit(u)`는 유닛 객체**를 받는다(uid 아님). 적 소환은 `G.pendSpawn` 대기열 경유(즉시 `G.enemies` 증가 아님).

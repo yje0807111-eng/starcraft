@@ -5038,7 +5038,9 @@ function renderRoundSheet(){ const H=hbHunt(), gr=document.getElementById('hbRou
 function hbGoDungeon(d){ const H=hbHunt();
   d=Math.max(1,Math.min(HB_DG_MAX,d|0)); if(!hbDgOpen(d)) return;
   H.dg=d; H.round=Math.max(1,H.best[d]||1); saveMeta();
+  hbEnsureModels(d);                                 // ⚔ 그 던전 적 3종 3D 모델만 지연 로드
   if(_hb){ _hb.dg=d; _hb.round=H.round; _hb.wave=1; _hb.phase='fight'; _hb.buf={min:0,gas:0,xp:0,kills:0};
+    _hb._pat=null;                                   // 바닥 타일 패턴 캐시 무효화(던전이 바뀌었다)
     _hb.foes.length=0; _hb.pend.length=0; _hb.char.hp=_hb.char.hpMax; hbSpawnWave(); }
   if(typeof playSfx==='function') playSfx('ui_open');
   renderRoundSheet(); hbHud(); }
@@ -5230,11 +5232,34 @@ function navGo(tab){ if(typeof playSfx==='function') playSfx('ui_tab');
 //   보상(미네랄·가스·XP)은 라운드 버퍼(_hb.buf)에 쌓였다가 클리어 때만 지급 — 사망 = 버퍼 소실 + 라운드 하강
 //   등반 모드(hunt.climb) ON = 클리어 시 다음 라운드 · OFF = 같은 라운드 무한 반복
 //   던전 1~10(레벨 밴드·큰 격차)은 HB_DG_MUL 하나로 — 선택 UI는 Phase 2
-const HB_FOES=[
-  {ico:'🟢', hp:1.0, atk:1.0, spd:50},
-  {ico:'🦇', hp:0.7, atk:0.8, spd:82},
-  {ico:'👾', hp:1.6, atk:1.3, spd:38},
+// ⚔ 던전 1~10 — 스웜 → 유니온 → 에테리얼을 순환하며 갈수록 강한 유닛이 나온다.
+// 이 표가 던전 정체성의 단일 소스다. 적 유닛(mdl)은 RACE_ROSTER/MODELS의 실제 3D 모델 키,
+// 바닥(tile)은 assets/tiles의 실제 파일, tint는 그 위에 덮는 색(a가 클수록 어둡고 무섭게).
+// ⚠ 새 던전을 넣거나 적을 바꿀 땐 여기만 고친다. 스모크가 모델 키·타일 파일 실재를 검사한다.
+const HB_FOE_ROLE=[{hp:1.0, atk:1.0, spd:50},{hp:0.7, atk:0.8, spd:82},{hp:1.6, atk:1.3, spd:38}];   // 3자리 역할(표준·빠름·둔중)
+const HB_DUNGEONS=[
+  {dg:1,  race:'swarm',     name:'감염된 둥지',   tile:'badlands',          tint:'rgba(38,54,26,.30)',
+   foes:[{mdl:'swarm_larva', ico:'🥚'},{mdl:'broodling', ico:'🐛'},{mdl:'snapper', ico:'🦗'}]},
+  {dg:2,  race:'union',     name:'버려진 전초기지', tile:'terran_tile_light', tint:'rgba(30,38,52,.32)',
+   foes:[{mdl:'worker_human', ico:'🔧'},{mdl:'marine', ico:'🪖'},{mdl:'machinegun', ico:'🔫'}]},
+  {dg:3,  race:'aetherial', name:'잊혀진 회랑',   tile:'protoss_floor',     tint:'rgba(34,30,58,.34)',
+   foes:[{mdl:'worker_light', ico:'🔹'},{mdl:'blade', ico:'⚔️'},{mdl:'observer', ico:'👁'}]},
+  {dg:4,  race:'swarm',     name:'산란장',       tile:'badlands',          tint:'rgba(40,44,20,.42)',
+   foes:[{mdl:'snapper', ico:'🦗'},{mdl:'hydra', ico:'🐍'},{mdl:'stinger', ico:'💥'}]},
+  {dg:5,  race:'union',     name:'폐쇄된 시설',   tile:'installation',      tint:'rgba(26,32,44,.46)',
+   foes:[{mdl:'machinegun', ico:'🔫'},{mdl:'medic', ico:'💉'},{mdl:'goliath', ico:'🤖'}]},
+  {dg:6,  race:'aetherial', name:'봉인된 성소',   tile:'protoss_floor',     tint:'rgba(30,24,58,.50)',
+   foes:[{mdl:'blade', ico:'⚔️'},{mdl:'dragoon', ico:'🔷'},{mdl:'falcon', ico:'🦅'}]},
+  {dg:7,  race:'swarm',     name:'군단의 심장',   tile:'ashworld',          tint:'rgba(52,20,16,.54)',
+   foes:[{mdl:'hydra', ico:'🐍'},{mdl:'thornqueen', ico:'👑'},{mdl:'ultralisk', ico:'🦏'}]},
+  {dg:8,  race:'union',     name:'함대 정박지',   tile:'space_platform',    tint:'rgba(20,26,40,.58)',
+   foes:[{mdl:'goliath', ico:'🤖'},{mdl:'tank', ico:'🛡'},{mdl:'dreadnought', ico:'🚀'}]},
+  {dg:9,  race:'aetherial', name:'공허의 문',     tile:'protoss_floor',     tint:'rgba(26,14,46,.62)',
+   foes:[{mdl:'dragoon', ico:'🔷'},{mdl:'archon', ico:'⚡'},{mdl:'dark_templar', ico:'🌑'}]},
+  {dg:10, race:'abyss',     name:'심연',         tile:'space_bg',          tint:'rgba(30,8,14,.66)',
+   foes:[{mdl:'ultralisk', ico:'🦏'},{mdl:'dreadnought', ico:'🚀'},{mdl:'archon', ico:'⚡'}]},
 ];
+function hbDun(dg){ return HB_DUNGEONS[Math.min(HB_DUNGEONS.length, Math.max(1, dg||1))-1]; }
 const HB_DG_MAX=10;                 // 던전 1~10
 const HB_DG_UNLOCK=10;              // 다음 던전 해금 = 지금 던전 최고 라운드 이만큼
 // 엘리트 — 라운드·던전이 오를수록 자주 나온다. 체력·공격이 크고 보상도 크다.
@@ -5360,6 +5385,7 @@ function hbStart(){ const cv=document.getElementById('hbCv'); if(!cv || (_hb&&_h
     buf:{min:0,gas:0,xp:0,kills:0},
     char:{ x:0,y:0, hp:st.hpMax, hpMax:st.hpMax, atk:st.atk, cd:st.cd, crit:st.crit,
            range:st.range, regen:st.regen, cdT:0, hitT:9 } };
+  hbEnsureModels(_hb.dg);                            // ⚔ 현재 던전 적 모델 준비(없으면 이모지로 시작)
   hbResize(); hbLayoutAllies(); hbSpawnWave(); hbHud(); renderHbBar();
   _hbLastSim=performance.now();
   _hbRaf=requestAnimationFrame(hbFrame);            // 그리기
@@ -5395,8 +5421,9 @@ function hbResize(){ const S=_hb, cv=S.cv, w=cv.clientWidth||1, h=cv.clientHeigh
 function hbSpawnWave(){ const S=_hb, n=hbFoeCount(S.round,S.wave);
   if(S.wave===1) for(const b of S.bunkers) b.hp=b.hpMax;          // 라운드 시작 = 벙커 수리
   S.waveT=HB_WAVE_S; S.pend.length=0;
-  const mk=()=>{ const f=HB_FOES[(Math.random()*HB_FOES.length)|0];
-    return { ico:f.ico, hpMul:f.hp, atkMul:f.atk, spd:f.spd*(1+S.round*0.01) }; };
+  const D=hbDun(S.dg);
+  const mk=()=>{ const i=(Math.random()*3)|0, r=HB_FOE_ROLE[i], f=D.foes[i];
+    return { ico:f.ico, mdl:f.mdl, hpMul:r.hp, atkMul:r.atk, spd:r.spd*(1+S.round*0.01) }; };
   if(n<=HB_SPREAD_N){ for(let i=0;i<n;i++) hbPlaceFoe(mk()); }
   else{ for(let i=0;i<n;i++) S.pend.push(mk()); S.pendT=0; }
   hbHud(); }
@@ -5409,13 +5436,15 @@ function hbPlaceFoe(proto){ const S=_hb;
   const R=1/Math.max(Math.abs(ca)/hx, Math.abs(sa)/hy);                  // 보이는 경계 바로 바깥
   const elite=Math.random()<hbEliteChance(S.dg,S.round);
   const hp=hbFoeHp(S.dg,S.round,S.wave)*proto.hpMul*(elite?HB_ELITE_HP:1);
-  S.foes.push({ ico:proto.ico, x:ca*R, y:sa*R, hp:hp, hpMax:hp, elite:elite,
+  S.foes.push({ ico:proto.ico, mdl:proto.mdl, x:ca*R, y:sa*R, hp:hp, hpMax:hp, elite:elite,
     atk:hbFoeAtk(S.dg,S.round)*proto.atkMul*(elite?HB_ELITE_ATK:1),
     spd:proto.spd*(elite?0.85:1), cdT:Math.random()*0.6 }); }
 function hbHud(){ const S=_hb; if(!S) return; const c=(typeof CHAR==='function')?CHAR():null;
   const put=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
   put('hbLv','Lv.'+(c?c.level:1)); put('hbAtk','⚔ '+Math.round(S.char.atk));
-  put('hbRound','던전 '+S.dg+' · 라운드 '+S.round);
+  // ⚔ 번호만으로는 이동한 느낌이 없다 → 던전 고유 이름을 같이 보여준다.
+  //    '던전' 표기는 유지한다(자동사냥=던전 / 옛 콘텐츠=토벌 용어 분리 · 스모크가 검사)
+  put('hbRound','던전 '+S.dg+' · '+hbDun(S.dg).name+' · 라운드 '+S.round);
   put('hbWaveTx','웨이브 '+Math.min(S.wave,HB_WAVES)+'/'+HB_WAVES);
   put('hbMode', hbHunt().climb?'등반':'반복');
   put('hbKill',S.kills+' KILL'); }
@@ -5505,11 +5534,48 @@ function hbKill(f){ const S=_hb, i=S.foes.indexOf(f); if(i<0) return; S.foes.spl
 function hbFx(dt){ const S=_hb;
   for(const s of S.shots) s.t+=dt;  S.shots=S.shots.filter(s=>s.t<.12);
   for(const f of S.floats) f.t+=dt; S.floats=S.floats.filter(f=>f.t<.9); }
+// ── 던전 겉모습: 적 스프라이트 · 바닥 타일 ──
+// 3D 모델은 로드·굽기가 비동기라 준비되기 전엔 null을 준다 → 그리는 쪽이 이모지로 폴백한다.
+// 즉 모델이 없어도 게임은 그대로 돌아가고, 준비되면 조용히 그림이 바뀐다.
+const _hbSpr={};
+function hbSprite(mdl){ if(!mdl) return null;
+  const c=_hbSpr[mdl]; if(c!==undefined) return (c&&c.complete&&c.naturalWidth)?c:null;
+  const url=(window.M3D && M3D.unitSprite) ? M3D.unitSprite(mdl) : null;
+  if(!url){ _hbSpr[mdl]=null; setTimeout(()=>{ delete _hbSpr[mdl]; }, 1200); return null; }   // 아직 모델 전 → 잠시 뒤 재시도
+  const im=new Image(); im.src=url; _hbSpr[mdl]=im; return null; }
+const _hbTile={};
+function hbTile(name){ if(!name) return null;
+  const t=_hbTile[name]; if(t!==undefined) return (t&&t.complete&&t.naturalWidth)?t:null;
+  const im=new Image(); im.src='assets/tiles/'+name+'.webp'; _hbTile[name]=im; return null; }
+// 던전에 들어가면 그 던전 적 3종의 3D 모델만 지연 로드한다(전부 미리 받으면 HOME 진입이 느려진다)
+function hbEnsureModels(dg){ const D=hbDun(dg);
+  if(!(window.M3D && M3D.ensureUnits)) return;
+  const keys=D.foes.map(f=>f.mdl).filter(Boolean);
+  try{ M3D.ensureUnits(keys, ()=>{ for(const k of keys) delete _hbSpr[k]; }); }catch(e){}
+}
+// 바닥 = 던전 타일을 월드 좌표로 깔고, 그 위에 던전 틴트를 덮는다(dg가 오를수록 진해져 어두워진다)
+const HB_TILE_SCALE=0.34;   // 타일 원본은 크다 — 월드 좌표에 1:1로 깔면 흙 한 덩이가 화면을 덮는다
+function hbFloor(){ const S=_hb, x=S.ctx, D=hbDun(S.dg);
+  const half=(S.vBot-S.vTop)/2, k=S.k||1, wx=(S.w/2+40)/k, wy=(half+40)/k;
+  x.save(); x.fillStyle='#05070c'; x.fillRect(-wx,-wy,wx*2,wy*2); x.restore();   // 어두운 바탕(타일이 늦게 와도 배경이 비지 않게)
+  const img=hbTile(D.tile);
+  if(img){ if(!S._pat || S._patName!==D.tile){ const p=x.createPattern(img,'repeat');
+      // 패턴은 캔버스 변환을 같이 받는다 → 타일 자체를 줄여 '바닥 질감'으로 읽히게 한다
+      if(p && p.setTransform && typeof DOMMatrix!=='undefined'){ try{ p.setTransform(new DOMMatrix().scale(HB_TILE_SCALE)); }catch(e){} }
+      S._pat=p; S._patName=D.tile; }
+    if(S._pat){ x.save(); x.globalAlpha=.9; x.fillStyle=S._pat; x.fillRect(-wx,-wy,wx*2,wy*2); x.restore(); } }
+  x.save(); x.fillStyle=D.tint; x.fillRect(-wx,-wy,wx*2,wy*2); x.restore(); }
+// 적/캐릭터 한 마리 — 스프라이트가 준비됐으면 그림, 아니면 이모지
+function hbUnitArt(x, mdl, ico, cx, cy, px){
+  const sp=hbSprite(mdl);
+  if(sp){ x.drawImage(sp, cx-px/2, cy-px*0.62, px, px); return; }
+  x.font=Math.round(px*0.72)+'px sans-serif'; x.fillText(ico, cx, cy); }
 function hbDraw(){ const S=_hb, x=S.ctx, c=S.char; if(!x) return;
   x.setTransform(S.d,0,0,S.d,0,0); x.clearRect(0,0,S.w,S.h);
   // 카메라 = 월드 원점을 보이는 영역 중심으로 옮기고 배율 k를 건다.
   // 이 뒤의 좌표·글꼴 크기는 전부 월드 단위 → 접었다 펴면 적·글자·링이 캐릭터와 같은 비율로 커지고 작아진다.
   const K=S.d*(S.k||1); x.setTransform(K,0,0,K,S.d*(S.cx||S.w/2),S.d*(S.cy||S.h/2));
+  hbFloor();                                                        // ⚔ 던전마다 다른 바닥(모든 것보다 먼저)
   if(S.slowT>0){ x.save(); x.globalAlpha=.10; x.fillStyle='#9ad0ff';
     x.fillRect(-S.w,-S.h,S.w*2,S.h*2); x.restore(); }               // 감속 중 화면 틴트
   x.save(); x.globalAlpha=.25; x.strokeStyle='#7fa8ff'; x.lineWidth=1;   // 바닥 링(수비 반경 암시)
@@ -5527,7 +5593,7 @@ function hbDraw(){ const S=_hb, x=S.ctx, c=S.char; if(!x) return;
   for(const f of S.foes){ const el=!!f.elite;
     if(el){ x.save(); x.globalAlpha=.5; x.strokeStyle='#ffd24a'; x.lineWidth=1.5;
       x.beginPath(); x.arc(f.x,f.y,17,0,Math.PI*2); x.stroke(); x.restore(); }
-    x.font=(el?'30px':'20px')+' sans-serif'; x.fillText(f.ico,f.x,f.y);
+    hbUnitArt(x, f.mdl, f.ico, f.x, f.y, el?38:26);                 // 3D 모델 스프라이트(없으면 이모지)
     if(f.hp<f.hpMax){ const w2=el?30:22, yy=f.y-(el?22:16);
       x.fillStyle='rgba(0,0,0,.55)'; x.fillRect(f.x-w2/2,yy,w2,3);
       x.fillStyle=el?'#ffd24a':'#ff6b7a'; x.fillRect(f.x-w2/2,yy,w2*Math.max(0,f.hp/f.hpMax),3); } }
@@ -18774,6 +18840,37 @@ function makeBuildGhost(id){
 }
 // ── 유닛 3D 모델 → 2D 흑백 포트레잇(오프스크린 렌더, id별 1회 캐시) ──
 let _pRend=null,_pScene=null,_pCam=null; const _pCache={};
+// ⚔ 던전 적 스프라이트 — 같은 GLB를 '원래 재질 그대로' 투명 PNG로 굽는다.
+// unitPortrait()는 흰 실루엣+검은 선(UI 칩용)이라 전장에 그대로 쓰면 적이 전부 흰 종이처럼 보인다.
+// 자동사냥 전장은 2D 캔버스라 3D를 직접 못 얹는다 → 한 번 구워서 drawImage로 쓴다(모델당 1회).
+const _sCache={}; let _sRend=null,_sScene=null,_sCam=null;
+function unitSprite(id){
+  if(_sCache[id]!==undefined) return _sCache[id];
+  const base=bases[id]; if(!base) return null;        // 아직 로드 전 → 호출부가 이모지로 폴백
+  try{
+    if(!_sRend){
+      _sRend=new THREE.WebGLRenderer({alpha:true, antialias:true, preserveDrawingBuffer:true});
+      _sRend.setPixelRatio(1); _sRend.setSize(128,128); _sRend.setClearColor(0x000000,0);
+      _sScene=new THREE.Scene();
+      _sScene.add(new THREE.HemisphereLight(0xdfe8ff, 0x2a2f3a, 2.1));
+      const dl=new THREE.DirectionalLight(0xffffff, 1.5); dl.position.set(2,3,2); _sScene.add(dl);
+      _sCam=new THREE.PerspectiveCamera(30,1,0.05,100);
+    }
+    const grp=new THREE.Group(), body=cloneSkinned(base.scene);
+    body.position.set(-base.off.x,-base.off.y,-base.off.z);
+    const anim=new THREE.Group(); anim.add(body);
+    const box=new THREE.Box3().setFromObject(anim), c=box.getCenter(new THREE.Vector3()), sz=box.getSize(new THREE.Vector3());
+    anim.position.set(-c.x,-c.y,-c.z); grp.add(anim);
+    grp.scale.setScalar(1.5/(Math.max(sz.x,sz.y,sz.z)||1));
+    grp.rotation.y=0.5;                                // 3/4 뷰(정면은 실루엣이 납작하다)
+    _sScene.add(grp);
+    _sCam.position.set(0,0.9,3.1); _sCam.lookAt(0,0,0);   // 살짝 위에서 — 전장 부감과 결이 맞는다
+    _sRend.render(_sScene,_sCam);
+    const url=_sRend.domElement.toDataURL('image/png');
+    _sScene.remove(grp); _disposeObj3D(grp);
+    _sCache[id]=url; return url;
+  }catch(e){ console.warn('sprite fail',id,e); _sCache[id]=null; return null; }
+}
 function unitPortrait(id){
   if(_pCache[id]!==undefined) return _pCache[id];     // 캐시(실패=null 도 캐시)
   const base=bases[id]; if(!base) return null;         // 아직 로드 전 → 폴백(SVG)
@@ -18943,6 +19040,7 @@ window.M3D={
   cstEnsureRes:(cb)=>{ const tgt={res_cn:18, res_en:50, res_cc:8, res_ec:8}; const ks=Object.keys(tgt).filter(k=>MODELS[k]);   // 자원 3D(미네랄·가스 노드 + 운반) 로드 → 목표 화면크기로 SCALE
     ensureModels(ks, function(n){ for(const k of ks){ const b=bases[k]; if(b) SCALE[k]=tgt[k]/Math.max(b.h||1,b.w||1); } if(cb) cb(n); }); return true; },
   hasModel:(id)=>!!bases[id],   // 실제 로드 완료 여부(로드 전엔 false → 2D/SVG 폴백 표시). MODELS 카탈로그가 아니라 bases(로드분) 기준
+  modelKeys:()=>Object.keys(MODELS),   // 카탈로그(로드 여부 무관) — 던전 표 같은 '모델 키 오타' 검사가 실제로 걸리게 하려면 이게 필요하다
   modelCatalog:(id)=>!!MODELS[id],   // 카탈로그 존재 여부(필요 시)
   // ── 유즈맵별 에셋 지연 로드/해제(확장 토대) ──
   loadMapModels:(mapId,cb)=>ensureModels(mapModelKeys(mapId), cb),   // 그 맵 모델만 로드(이미 있으면 스킵)
@@ -18951,6 +19049,7 @@ window.M3D={
   loadedKeys:()=>Object.keys(bases),
   mapModelKeys:(mapId)=>mapModelKeys(mapId),
   portrait:(id)=>unitPortrait(id),   // 3D 모델 → 2D 흑백 포트레잇 dataURL(없으면 null)
+  unitSprite:(id)=>unitSprite(id),   // 3D 모델 → 원래 재질 그대로 구운 전장 스프라이트 dataURL(없으면 null · 던전 적)
   muzzleAt:(uid)=>{ const m=models.get(uid); return (m&&m.muzzleN)?m.muzzleN:null; },   // 총구(3D 총 위치) 2D 정규화 좌표 — 각도 무관 머즐 FX
   airFloat:(id)=>!!AIR_FLOAT[id],   // 이 모델이 공중(고정 부양) 유닛인지 — 랩 att.y 판정용(모듈 스코프 AIR_FLOAT 노출)
   airLiftPx:()=>((typeof AIR_LIFT_PX!=='undefined'?AIR_LIFT_PX:0)*Math.cos(typeof VIEW_TILT!=='undefined'?VIEW_TILT:0)),   // 공중유닛 부양 화면 px(잡기 히트박스 보정)
