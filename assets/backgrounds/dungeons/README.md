@@ -84,17 +84,59 @@ frame, border, blur, depth of field
 | dg9  | 공허의 문 | void gate platform | fractured obsidian slab | purple rift cracks, drifting weightless debris | violet and black with cyan sparks |
 | dg10 | 심연 | abyssal depths floor | black rippling liquid | submerged eyes, tendrils, faint bioluminescence | near-black with pale teal glow |
 
-### 예시 (dg1 완성본)
+---
+
+## 완성 프롬프트
+
+아래는 그대로 붙여 넣어 쓰면 되는 완성본. **네거티브 프롬프트는 위 공통 것을 같이 넣을 것.**
+비율 `1:1`, 크기 1024×1024. (dg4~dg10은 위 슬롯 표를 기본틀에 끼워서 같은 방식으로)
+
+### dg1 — 감염된 둥지 (저그계 · 첫 던전)
+> 첫 화면이라 **가장 읽기 쉬워야 한다.** 디테일을 욕심내지 말고 바닥 질감 위주로.
+
 ```
 Top-down orthographic view of an infested alien hive floor, seen straight from
 directly overhead, camera pointing straight down at the ground. Organic creep
-membrane surface with pulsing veins, spore sacs, chitin ridges. Composition: a
-wide open uncluttered clearing in the very center, all structures and debris
-arranged in a ring toward the outer edges, nothing crossing the middle. Sickly
-green and violet palette, dark to mid values, evenly lit flat ambient light, no
+membrane surface with pulsing veins, dormant spore sacs, and low chitin ridges.
+Composition: a wide open uncluttered clearing of bare creep in the very center,
+all growths and debris arranged in a ring toward the outer edges, nothing
+crossing the middle. Sickly green and dull violet palette, dark to mid values,
+evenly lit flat ambient light, no vignette, no dark corners, no cast shadows, no
+light beams, no bright white hotspots. Soft low-contrast surface texture,
+painterly stylized game art, mobile game background plate, square 1:1
+composition.
+```
+
+### dg2 — 버려진 전초기지 (인간계)
+> 직선 패널이라 **격자가 너무 규칙적이면 타일처럼 보인다.** 녹·얼룩으로 불규칙하게.
+
+```
+Top-down orthographic view of an abandoned military outpost yard, seen straight
+from directly overhead, camera pointing straight down at the ground. Rusted metal
+deck plating surface with cracked panels, irregular rust stains, spilled supply
+crates, and faded yellow hazard stripes. Composition: a wide open uncluttered
+clearing of bare deck in the very center, all crates and wreckage arranged in a
+ring toward the outer edges, nothing crossing the middle. Cold steel blue and
+rust orange palette, dark to mid values, evenly lit flat ambient light, no
 vignette, no dark corners, no cast shadows, no light beams, no bright white
 hotspots. Soft low-contrast surface texture, painterly stylized game art, mobile
 game background plate, square 1:1 composition.
+```
+
+### dg3 — 잊혀진 회랑 (초월계)
+> 발광 문양이 밝게 나오기 쉽다. `dim`·`faint`를 넣어 눌러 놓았다.
+
+```
+Top-down orthographic view of a forgotten alien corridor floor, seen straight
+from directly overhead, camera pointing straight down at the ground. Polished
+dark stone surface with inlaid faintly glowing glyph lines, fine gold seams, and
+worn hairline cracks. Composition: a wide open uncluttered clearing of plain
+stone in the very center, all glyph patterns and broken pillars arranged in a
+ring toward the outer edges, nothing crossing the middle. Deep indigo and dim
+cyan palette, dark to mid values, evenly lit flat ambient light, no vignette, no
+dark corners, no cast shadows, no light beams, no bright white hotspots. Soft
+low-contrast surface texture, painterly stylized game art, mobile game background
+plate, square 1:1 composition.
 ```
 
 ## 넣은 뒤 확인
