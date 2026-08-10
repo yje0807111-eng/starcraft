@@ -748,8 +748,16 @@ async function groupLobby(){
       leave();
       assert(cv.parentNode===home, name+' 뒤에 3D 캔버스가 안 돌아옴 — 유즈맵 3D가 사라진다');
       assert(!cv.style.zIndex, name+' 뒤에 z-index가 남음: '+cv.style.zIndex); }
+    // 공용 캔버스를 빌릴 때, sync()가 관리하지 않는 풀(뽑기 비콘·미건설 터렛 고스트)도 같이 숨겨야 한다.
+    // 안 그러면 '미사일 포탑' 고스트 같은 게 HOME 위에 은은하게 남는다(실제로 그랬다).
+    assert(/hideIdlePools/.test(hb3dAttach.toString()),
+      '캔버스를 빌릴 때 유휴 풀을 안 숨김 — 비콘·고스트 잔상이 HOME에 남는다');
+    if(window.M3D){
+      assert(typeof M3D.hideIdlePools==='function','M3D.hideIdlePools가 없음');
+      M3D.hideIdlePools();   // 없는 풀을 참조하면 여기서 ReferenceError로 터진다(실제로 한 번 그랬다)
+    }
     openHome(); await sleep(60);
-    return '전환·게임진입·정지 3경로 원복 ok'; });
+    return '전환·게임진입·정지 3경로 원복 ok'+(window.M3D?' · 유휴 풀 숨김 실행 ok':' · 유휴 풀은 M3D 없어 미검증'); });
   await step('용어 분리: 자동사냥=던전 / 옛 콘텐츠=토벌', async()=>{ skipIf(typeof openDungeonHub!=='function','토벌 허브 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     const nav=document.querySelector('#navBar .navIt[data-nav=dungeon]');
