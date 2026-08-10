@@ -489,6 +489,7 @@
     background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,0));pointer-events:none}
   .bframe::after{content:'';position:absolute;inset:4px;border-radius:11px;border:1px solid var(--bc);opacity:.4;pointer-events:none}
   .bframe svg{position:relative;z-index:1;filter:drop-shadow(0 0 3px var(--bc)) drop-shadow(0 1px 1px rgba(0,0,0,.6))}
+  .bframe .bicon{position:relative;z-index:1;width:100%;height:100%;object-fit:cover}   /* 실제 업그레이드 아이콘 = 타일(.bframe 64px)을 그대로 채움 */
   .bldg.sel .bframe{box-shadow:0 0 16px -1px var(--bc),0 0 7px var(--bc),inset 0 0 13px var(--shade),inset 0 1px 0 rgba(255,255,255,.16)}
   .bldg:active .bframe{transform:translateY(1px)}
   .bldg.sel .bframe{border-color:#fff;box-shadow:0 0 18px var(--bc,#ff3b3b),inset 0 0 14px rgba(0,0,0,.45)}
@@ -1439,6 +1440,7 @@
   /* 업그레이드 아이콘 = 네모 초상 틀은 유지하고, 안쪽 배지 원만 없앤 뒤 아이콘을 크게 */
   .cmdG .cgPro svg.wpnIco{width:84%;height:84%}            /* SVG 폴백만 84% */
   .cmdG .cgPro img.wpnIco{width:100%;height:100%;object-fit:cover}   /* 실제 아이콘 이미지 = 초상처럼 칸을 꽉 채움 */
+  .cmdG .cgPro:has(img.wpnIco)::after{display:none}        /* 실제 아이콘 위에는 가로 스캔라인을 덮지 않는다(아이콘 자체 질감이 있음) */
   .cmdG .cgSlot.iconFill{justify-content:center;padding:6px} .cmdG .cgSlot.iconFill .cgPro{width:72%;height:auto;aspect-ratio:1;border:none;background:none;box-shadow:none} .cmdG .cgSlot.iconFill .cgPro svg{width:100%;height:100%} .cmdG .cgSlot.iconFill .cgName,.cmdG .cgSlot.iconFill .cgCost{display:none}   /* 아이콘만 채우는 칸(일시정지 등): 빈 이름/비용 줄 숨겨 아이콘이 칸 정중앙에 크게 */
   .cmdG .cgName{font:800 10px/1.05 sans-serif;color:#e6eefc;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* 🧱 벙커 탑승 슬롯: 가로 꽉 찬 초상 → 이름 → HP 세로 스택 */
@@ -6646,7 +6648,9 @@ function renderBldgs(viewId,list,posArr,selId,onSel){ const v=document.getElemen
   list.forEach((b,i)=>{ const p=posArr[i%posArr.length];
     const col=WPN_COL[b.wpn]||'#4aa8ff'; const lv=(G.atkLv&&G.atkLv[b.wpn])||0;
     const has3d=!!(window.M3D && window.M3D.hasModel && window.M3D.hasModel(b.id)) && !(typeof G!=='undefined'&&G.opt&&G.opt.model3d===false);  // 3D 건물 모델 보유 시 프레임/아이콘 숨김(모델이 대신 섬). 단 3D 끄면 2D 아이콘 표시
-    const svg=has3d?'':(BLDG_SVG[b.id]?('<svg viewBox="0 0 24 24" width="34" height="34">'+BLDG_SVG[b.id]+'</svg>'):b.icon);
+    const _upi=(!has3d && b.wpn && typeof WPN_ICON_IMG!=='undefined' && WPN_ICON_IMG[b.wpn]) ? WPN_ICON_IMG[b.wpn] : null;   // 계열 공격력 업그레이드 = 실제 아이콘(하단 시트와 동일 출처)
+    const svg=has3d?'':(_upi ? '<img class="bicon" src="'+UPG_ICON_DIR+_upi+'" alt="" draggable="false">'
+                             : (BLDG_SVG[b.id]?('<svg viewBox="0 0 24 24" width="34" height="34">'+BLDG_SVG[b.id]+'</svg>'):b.icon));
     const el=document.createElement('div'); el.className='bldg'+(b.id===selId?' sel':'')+(b.meta?' metaBeacon':'');
     el.style.left=(p.x*100)+'%'; el.style.top=(p.y*100)+'%'; el.style.setProperty('--bc',col);
     const visual = (b.meta && !has3d)
