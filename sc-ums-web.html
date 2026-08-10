@@ -2584,6 +2584,10 @@
   .hmStat b{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:#9a9a9a}
   .hmStat i{font-style:normal;color:#5dff8f}
   .hmStat:disabled{cursor:default;opacity:.5}
+  .hmStat.grow{flex:0 0 auto;padding:0 10px;color:#ffd24a;border-color:rgba(255,210,74,.45);background:rgba(255,210,74,.10)}
+  .hmStat.grow i{color:#ffd24a}
+  .hbGrowLbl{padding:4px 0 0;font-size:var(--fs-sm);font-weight:800;letter-spacing:.4px;color:#9a9a9a}
+  .hbStars{color:#ffd24a;letter-spacing:1px}
   .hmUpg.down .hmStatRow{display:none}
   /* 4칸(2×2)만 보이고 나머지는 스크롤 — 최대 높이는 renderHome이 실제 한 칸 높이로 계산해 넣는다 */
   .hmUpgGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px;overflow-y:auto;
@@ -3681,6 +3685,15 @@
   </div>
 
     <!-- 친구 시트 — 허브 소셜을 그대로 옮겨온 것(id 유지 → renderFriends/setFriendFilter 그대로 동작) -->
+    <!-- 성장 — 전직·진화. 마을 광장까지 안 가고 여기서(판정·실행은 공용 함수 재사용) -->
+    <div class="hbModal hide" id="hbGrowModal" onclick="if(event.target===this)hbCloseGrow()">
+      <div class="hbmCard">
+        <div class="hbmHead"><b>성장</b>
+          <button class="hbmX" onclick="hbCloseGrow()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+        </div>
+        <div class="hbRows uiScroll" id="hbGrowBody"></div>
+      </div>
+    </div>
     <!-- 건설 — 동료·터렛·벙커. 껍데기는 라운드 팝업과 같은 .hbModal -->
     <div class="hbModal hide" id="hbBuildModal" onclick="if(event.target===this)hbCloseBuild()">
       <div class="hbmCard">
@@ -4852,7 +4865,12 @@ function profApplyLevelUps(c){ c=c||CHAR(); if(!c) return 0; let ups=0;
     c.statPoints=(c.statPoints||0)+PROF_PT_PER_LV; ups++; }
   return ups; }
 // 방치 수익(분당 pcoin) = 파워 기반 × 소스 배율
-function profIdleRate(){ const p=PROF(), src=PROF_IDLE_SOURCES[p.idle.sourceId]||PROF_IDLE_SOURCES.drill; return (1 + profPower()*0.01) * (src.rate||0.6) * (1+profPetBonus('coin')); }
+// 방치·오프라인 수입(분당) = 자동사냥에서 실제로 벌던 속도 × 훈련 장소 배율 × 펫 코인%.
+// ⚠ 옛 공식(파워 기반 고정치)은 자동사냥 수입의 1/8 수준이라 잠수 보상이 제일 약한 역전이 있었다.
+//   아직 한 라운드도 못 깬 신규 유저만 옛 공식으로 떨어진다.
+function profIdleRate(){ const p=PROF(), src=PROF_IDLE_SOURCES[p.idle.sourceId]||PROF_IDLE_SOURCES.drill;
+  const H=p.hunt, base=(H&&H.rate>0) ? H.rate*60 : (1 + profPower()*0.01);
+  return base * (src.rate||0.6) * (1+profPetBonus('coin')); }
 // 🐾 펫 (프로필 전용 % 보너스 — 유즈맵과 무관). 중복 = 별(★). 티어 색은 TIER_COLOR 재사용.
 const PROF_PETS={
   slime:  {name:'슬라임',   emoji:'🟢', tier:'common', bonus:{type:'coin',val:0.03}},
@@ -4958,11 +4976,15 @@ function renderHome(){ try{
 // 레벨업으로 받은 스탯 포인트 — 남았을 때만 줄이 뜬다. 배분은 공용 profAllocStat()(마을 광장과 같은 함수).
 function renderHomeStats(){ const row=document.getElementById('hmStatRow'); if(!row) return;
   const c=(typeof CHAR==='function')?CHAR():null, pt=(c&&c.statPoints)||0;
-  row.classList.toggle('hide', !pt);
-  if(!pt) return;
-  row.innerHTML='<span class="hmStatPt">스탯 '+pt+'</span>'
+  const grow=(typeof hbGrowHas==='function') && hbGrowHas();
+  row.classList.toggle('hide', !pt && !grow);
+  if(!pt && !grow) return;
+  let h='';
+  if(pt) h+='<span class="hmStatPt">스탯 '+pt+'</span>'
     +PROF_STATS.map(function(k){ return '<button class="hmStat" onclick="hmAllocStat(&#39;'+k+'&#39;)">'
-      +PROF_STAT_NAME[k]+' <b>'+profStat(k)+'</b> <i>+</i></button>'; }).join(''); }
+      +PROF_STAT_NAME[k]+' <b>'+profStat(k)+'</b> <i>+</i></button>'; }).join('');
+  if(grow) h+='<button class="hmStat grow" onclick="hbOpenGrow()">🎖 전직 · 진화 <i>!</i></button>';
+  row.innerHTML=h; }
 function hmAllocStat(k){ if(typeof profAllocStat!=='function' || !profAllocStat(k)) return;
   if(_hb){ const st=hbCharStats(), c=_hb.char;                 // 전투 중 즉시 반영(hmBuyUpg와 같은 규칙)
     c.atk=st.atk; c.cd=st.cd; c.crit=st.crit; c.range=st.range; c.regen=st.regen;
@@ -5072,6 +5094,54 @@ function hbBuyBoost(k){ const B=HB_BOOSTS[k], p=PROF(); if(!B) return;
   if(typeof playSfx==='function') playSfx('ui_open');
   if(typeof updateCurBar==='function') updateCurBar();
   renderBoostModal(); renderHbBar(); }
+// ── A. 방치·오프라인 수입 = 자동사냥 실적 기준 ──
+// 훈련장 고정 배율(0.6~1.0 × 파워)은 자동사냥 수입의 1/8 수준이라 사실상 죽어 있었다.
+// 이제 '라운드를 깰 때 실제로 번 속도'를 지수이동평균으로 기록하고 그것으로 정산한다.
+const HB_RATE_EMA=.3;                       // 새 기록을 얼마나 반영할지(0=고정, 1=마지막 판만)
+function hbNoteRate(min, sec){ if(!(sec>0)) return;
+  const H=hbHunt(), v=min/sec;
+  H.rate = H.rate ? H.rate*(1-HB_RATE_EMA)+v*HB_RATE_EMA : v; }
+// ── B. 전직·진화 — 마을 광장까지 안 가고 HOME에서 ──
+// 판정·실행은 공용 profClassChange()/profEvolve()를 그대로 쓴다(마을과 같은 단일 소스).
+function hbGrowJobs(){ const c=(typeof CHAR==='function')?CHAR():null; if(!c) return [];
+  const J=PROF_JOBS[c.unit.jobId]; if(!J) return [];
+  return (J.next||[]).map(id=>{ const N=PROF_JOBS[id], cost=profClassCost(id);
+    return { id, name:N.name, reqLv:N.reqLv, cost, okLv:c.unit.level>=N.reqLv, ok:c.unit.level>=N.reqLv && PROF().pcoin>=cost }; }); }
+function hbGrowHas(){ const c=(typeof CHAR==='function')?CHAR():null; if(!c) return false;
+  if(hbGrowJobs().some(j=>j.ok)) return true;
+  const r=profEvolveReq(); return !!(r.unlock && !r.maxed && c.unit.level>=r.lvReq && PROF().pcoin>=r.cost); }
+function hbOpenGrow(){ const el=document.getElementById('hbGrowModal'); if(!el) return;
+  el.classList.remove('hide'); renderGrowModal(); if(typeof playSfx==='function') playSfx('ui_open'); }
+function hbCloseGrow(){ const el=document.getElementById('hbGrowModal'); if(el) el.classList.add('hide'); }
+function renderGrowModal(){ const box=document.getElementById('hbGrowBody'); if(!box) return;
+  const c=CHAR(); if(!c) return;
+  const J=PROF_JOBS[c.unit.jobId], r=profEvolveReq(), coin=Math.floor(PROF().pcoin||0);
+  let h='<div class="hbRoundNote" style="padding:0 0 8px">현재 <b>'+J.name+'</b> · Lv.'+c.unit.level+' · 보유 '+coin.toLocaleString('en-US')+' 미네랄</div>';
+  const js=hbGrowJobs();
+  h+='<div class="hbGrowLbl">전직</div>';
+  if(!js.length) h+='<div class="hbRow"><span class="hbRowTx"><em>더 이상 전직할 수 없습니다(최종 단계)</em></span></div>';
+  for(const j of js)
+    h+='<div class="hbRow"><span class="hbRowIco">🎖</span>'
+      +'<span class="hbRowTx"><b>'+j.name+'</b><em>'+(j.okLv?('비용 '+j.cost.toLocaleString('en-US')+' 미네랄'):('🔒 Lv.'+j.reqLv+' 필요'))+'</em></span>'
+      +'<button class="hbRowBtn" onclick="hbDoClass(&#39;'+j.id+'&#39;)"'+(j.ok?'':' disabled')+'>전직</button></div>';
+  h+='<div class="hbGrowLbl">진화 <span class="hbStars">'+('★'.repeat(r.stars)+'☆'.repeat(5-r.stars))+'</span></div>';
+  if(!r.unlock) h+='<div class="hbRow"><span class="hbRowTx"><em>🔒 파워 350 달성 시 개방</em></span></div>';
+  else if(r.maxed) h+='<div class="hbRow"><span class="hbRowTx"><em>✓ 최대 진화(★5)</em></span></div>';
+  else { const ok=c.unit.level>=r.lvReq && coin>=r.cost;
+    h+='<div class="hbRow"><span class="hbRowIco">✦</span>'
+      +'<span class="hbRowTx"><b>별 +1 (전 스탯 +2)</b><em>'+(c.unit.level>=r.lvReq?('비용 '+r.cost.toLocaleString('en-US')+' 미네랄'):('🔒 Lv.'+r.lvReq+' 필요'))+'</em></span>'
+      +'<button class="hbRowBtn" onclick="hbDoEvolve()"'+(ok?'':' disabled')+'>진화</button></div>'; }
+  box.innerHTML=h; }
+// 실행 — 마을 렌더러를 부르지 않는다(HOME에서는 마을 DOM이 숨어 있어 토스트가 안 보인다)
+function hbAfterGrow(msg){ if(_hb){ const st=hbCharStats(), ch=_hb.char;
+    ch.atk=st.atk; ch.cd=st.cd; ch.crit=st.crit; ch.range=st.range; ch.regen=st.regen;
+    ch.hpMax=st.hpMax; ch.hp=Math.min(st.hpMax, ch.hp);
+    _hb.floats.push({x:0,y:-40,tx:msg,cl:'#5dff8f',t:0}); }
+  if(typeof playSfx==='function') playSfx('ui_open');
+  if(typeof updateCurBar==='function') updateCurBar();
+  renderGrowModal(); renderHome(); if(typeof hbHud==='function') hbHud(); }
+function hbDoClass(id){ if(typeof profClassChange==='function' && profClassChange(id)) hbAfterGrow('전직 완료!'); }
+function hbDoEvolve(){ if(typeof profEvolve==='function' && profEvolve()) hbAfterGrow('★ 진화!'); }
 function hmToggleUpg(){ const H=hbHunt(); H.upgDown=!H.upgDown;
   const card=document.querySelector('#homeScreen .hmUpg'); if(card) card.classList.toggle('down', !!H.upgDown);
   if(typeof playSfx==='function') playSfx('ui_tab');
@@ -5233,7 +5303,7 @@ function hbStart(){ const cv=document.getElementById('hbCv'); if(!cv || (_hb&&_h
   const H=hbHunt(), st=hbCharStats();
   _hb={ on:true, cv, ctx:cv.getContext('2d'), w:0,h:0,d:1, vTop:0, vBot:0, cx:0, cy:0, k:1, t:0,
     dg:H.dg||1, round:H.round||1, wave:1, phase:'fight', waveT:HB_WAVE_S, gapT:0, downT:0,
-    pend:[], pendT:0, foes:[], shots:[], floats:[], kills:0,
+    pend:[], pendT:0, foes:[], shots:[], floats:[], kills:0, rt0:0,
     allies:[], turrets:[], bunkers:[], pets:[], skT:{nova:0,heal:0,slow:0}, slowT:0, skDirty:false,
     buf:{min:0,gas:0,xp:0,kills:0},
     char:{ x:0,y:0, hp:st.hpMax, hpMax:st.hpMax, atk:st.atk, cd:st.cd, crit:st.crit,
@@ -5290,10 +5360,12 @@ function hbHud(){ const S=_hb; if(!S) return; const c=(typeof CHAR==='function')
   put('hbMode', hbHunt().climb?'등반':'반복');
   put('hbKill',S.kills+' KILL'); }
 function hbSettle(){ const S=_hb, p=PROF();
+  hbNoteRate((S.buf.paid||0)+hbClearBonus(S.dg,S.round).min, Math.max(1,S.t-(S.rt0||0)));   // 방치 수입 기준 = 실제로 번 속도
+  S.rt0=S.t;
   const bo=hbClearBonus(S.dg,S.round);        // 처치 보상은 이미 지급됨 — 여기서 주는 건 클리어 보너스뿐(사망 시 소실되는 몫)
   p.pcoin=(p.pcoin||0)+bo.min; p.gas=(p.gas||0)+bo.gas;
   S.floats.push({x:S.char.x,y:S.char.y-32,tx:'ROUND CLEAR +'+Math.round(bo.min)+'M',cl:'#ffd24a',t:0});
-  S.buf={min:0,gas:0,xp:0,kills:0};
+  S.buf={min:0,gas:0,xp:0,kills:0,paid:0};
   const H=hbHunt();
   if(H.climb){ S.round++; H.round=S.round; }                      // 등반 모드 = 클리어 시 다음 라운드
   H.best[S.dg]=Math.max(H.best[S.dg]||1, S.round);                // 최고 도달(라운드 선택 상한 — UI는 Phase 2)
@@ -5368,7 +5440,7 @@ function hbKill(f){ const S=_hb, i=S.foes.indexOf(f); if(i<0) return; S.foes.spl
   if(c){ c.xp+=r.xp;
     if(profApplyLevelUps(c)){ S.floats.push({x:S.char.x,y:S.char.y-46,tx:'LEVEL UP!',cl:'#5dff8f',t:0});
       if(typeof renderHomeStats==='function') renderHomeStats(); } }
-  S.buf.kills++; S.curDirty=true;                                  // 재화 바 갱신은 묶어서(처치마다 DOM 금지)
+  S.buf.kills++; S.buf.paid=(S.buf.paid||0)+r.min; S.curDirty=true;   // 재화 바 갱신은 묶어서(처치마다 DOM 금지)
   S.floats.push({x:f.x,y:f.y-34,tx:'+'+r.min.toFixed(1),cl:'#ffd24a',t:0}); hbHud(); }
 function hbFx(dt){ const S=_hb;
   for(const s of S.shots) s.t+=dt;  S.shots=S.shots.filter(s=>s.t<.12);
@@ -5898,7 +5970,10 @@ function profDoBuyItem(tierId){ const it=profBuyItem(tierId); if(!it) return;
   showTownToast(profItemName(it)+' 획득'); }
 // 훈련장(방치)
 function renderProfIdle(){ const p=PROF();
-  let h='<div class="twHead">켜두면 분당 <b>'+profIdleRate().toFixed(1)+' P</b> 자동 적립.<br>껐다 켜면 최대 '+(profOfflineCapMin()/60)+'시간 · '+(profOfflineRate()*100)+'% 정산.</div><div class="twSectLbl">일하는 곳 고르기</div>';
+  const H=PROF().hunt;
+  let h='<div class="twHead">켜두면 분당 <b>'+profIdleRate().toFixed(1)+' P</b> 자동 적립.<br>'
+    +((H&&H.rate>0)?('기준 = 자동사냥 실적(초당 '+H.rate.toFixed(2)+')'):'기준 = 파워(자동사냥 첫 클리어 전)')
+    +'<br>껐다 켜면 최대 '+(profOfflineCapMin()/60)+'시간 · '+(profOfflineRate()*100)+'% 정산.</div><div class="twSectLbl">일하는 곳 고르기</div>';
   for(const id in PROF_IDLE_SOURCES){ const s=PROF_IDLE_SOURCES[id], locked=s.reqUnlock&&!profHasUnlock(s.reqUnlock), on=p.idle.sourceId===id;
     const reqP=(PROF_UNLOCKS.find(u=>u.id===s.reqUnlock)||{}).power;
     h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+s.name+'</div><div class="twRowSub'+(locked?' lock':'')+'">'+(locked?('🔒 파워 '+reqP+' 필요'):('배율 '+s.rate+'× · '+(s.tip||'')))+'</div></div><button class="twBtn'+(on?' on':'')+'" onclick="profDoIdle(\''+id+'\')"'+(locked?' disabled':'')+'>'+(on?'선택됨':'선택')+'</button></div>'; }
@@ -10794,7 +10869,7 @@ function updateCurBar(){ if(!PLAYER_META||!PLAYER_META.profile) return;
 function showAppScreen(id){ setInGame(false);
   if(typeof navShow==='function') navShow(null);   // 하단 네비는 기본 숨김 — openHome/openTown이 다시 켠다
   if(typeof hbStop==='function') hbStop();         // 홈 배경 전투도 기본 정지 — openHome이 다시 켠다
-  for(const id of ['hbRoundSheet','hbBuildModal','hbBoostModal']){ const el=document.getElementById(id); if(el) el.classList.add('hide'); }
+  for(const id of ['hbRoundSheet','hbBuildModal','hbBoostModal','hbGrowModal']){ const el=document.getElementById(id); if(el) el.classList.add('hide'); }
   if(id!=='mapSelect' && id!=='modeSheet' && typeof stopMapLive==='function') stopMapLive();   // 유즈맵 화면 떠나면 실시간 갱신 정지
   ['ov','lobby','rooms','createPanel','pwPanel'].forEach(x=>{const e=document.getElementById(x); if(e)e.classList.add('hide');});
   APP_SCREENS.forEach(s=>{ const e=document.getElementById(s); if(e) e.classList.toggle('hide', s!==id); });

@@ -360,6 +360,42 @@ async function groupLobby(){
     assert(c.statPoints===PROF_PT_PER_LV-1,'포인트가 안 깎임');
     assert(_hb.char.atk>atk0,'전투 중 공격력에 반영되지 않음: '+atk0+' → '+_hb.char.atk);
     return 'Lv'+c.level+' · 포인트 '+c.statPoints; });
+  // 방치 수입 기준을 자동사냥 실적으로 · 전직/진화를 HOME에서
+  await step('자동사냥: 방치 수입 기준 · HOME 전직/진화', async()=>{ skipIf(typeof hbNoteRate!=='function','미적용');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    openHome(); await sleep(60); _hb.manual=true;
+    // ① 방치 수입 = 자동사냥 실적. 클리어 전에는 옛 공식으로 떨어진다.
+    const p=PROF(), c=CHAR();
+    delete p.hunt.rate;
+    const before=profIdleRate();
+    assert(before>0,'첫 클리어 전 수입이 0');
+    _hb.char.atk=1e9; _hb.char.range=1e9; _hb.char.cd=.05; _hb.char.hpMax=1e9; _hb.char.hp=1e9;
+    let clears=0;
+    for(let i=0;i<20000 && clears<2;i++){ const ph=_hb.phase; hbStep(0.05); if(ph!=='clearWait'&&_hb.phase==='clearWait') clears++; }
+    assert(clears>0,'라운드 클리어가 안 됨');
+    assert(p.hunt.rate>0,'실측 시급이 기록되지 않음');
+    assert(profIdleRate()>before,'방치 수입이 자동사냥 실적을 안 따라감: '+before.toFixed(2)+' → '+profIdleRate().toFixed(2));
+    // ② 전직 — 조건을 채우면 HOME 성장 줄에 배지가 뜨고, 팝업에서 바로 된다
+    c.level=25; c.unit.level=25; c.statPoints=0; p.pcoin=50000;
+    renderHome();
+    assert(visible($('hmStatRow')),'전직 가능한데 성장 줄이 안 보임');
+    assert(document.querySelector('.hmStat.grow'),'성장 배지가 없음');
+    hbOpenGrow(); await sleep(40);
+    assert(visible($('hbGrowModal')),'성장 팝업이 안 열림');
+    const j0=CHAR().unit.jobId;
+    const btn=[].slice.call(document.querySelectorAll('#hbGrowBody .hbRowBtn')).filter(function(x){ return !x.disabled && x.textContent==='전직'; })[0];
+    assert(btn,'전직 버튼이 활성화되지 않음');
+    btn.click();
+    assert(CHAR().unit.jobId!==j0,'전직이 반영되지 않음');
+    assert(_hb.char.atk>0,'전투 수치가 갱신되지 않음');
+    // ③ 진화 — 조건 미달이면 잠금 안내가 뜬다(파워 350)
+    const r=profEvolveReq();
+    if(!r.unlock) assert($('hbGrowBody').textContent.indexOf('파워 350')>=0,'진화 잠금 안내가 없음');
+    hbCloseGrow();
+    // ④ 할 게 없으면 성장 줄은 숨는다
+    p.pcoin=0; CHAR().statPoints=0; renderHome();
+    assert(!visible($('hmStatRow')),'할 게 없는데 성장 줄이 남아 있음');
+    return '실측 '+p.hunt.rate.toFixed(2)+'/s · 전직 '+PROF_JOBS[CHAR().unit.jobId].name; });
   // Phase 4 — 스킬 · 부스트 · 동료/펫 · 건설(터렛·벙커)
   await step('자동사냥: 스킬·부스트·동료·건설', async()=>{ skipIf(typeof hbUseSkill!=='function','Phase4 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
