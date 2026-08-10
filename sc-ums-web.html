@@ -69,7 +69,8 @@
     max-width:100vw;max-height:100vh}
   /* 높이가 모자라면 높이 기준으로, 폭이 모자라면 폭 기준으로 축소 */
   @media(max-height:713px){#phone{height:96vh;width:calc(96vh*9/16)}}
-  @media(max-width:410px){#phone{width:100vw;height:calc(100vw*16/9);border-radius:0;border:none}}
+  /* 좁은 화면(폰)에서도 프레임 유지 — 폭·높이 중 모자란 쪽에 맞춰 9:16을 지키고 가장자리 여백을 남긴다(전체화면으로 퍼지지 않게) */
+  @media(max-width:410px){#phone{width:min(calc(100vw - 10px),calc((100vh - 10px)*9/16));height:min(calc((100vw - 10px)*16/9),calc(100vh - 10px))}}
 
   /* GAME AREA */
   #gameArea{flex:1;position:relative;overflow:hidden;background:#060e0a;min-height:0;transition:filter .35s}
@@ -1429,7 +1430,7 @@
   /* 그리드(주역) + 페이저 */
   .cmdG .cgCol{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
   .cmdG .cgGrid{flex:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:1fr;gap:5px;min-height:0}   /* 4그리드 1줄 고정 — 2줄(cm0)은 폐지, 5칸↑은 페이지네이션 */
-  .cmdG .cgSlot{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:2px;cursor:pointer;padding:5px 3px 4px;touch-action:none;
+  .cmdG .cgSlot{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:3px;cursor:pointer;padding:5px 3px 4px;touch-action:none;   /* gap 2→3: 아이콘과 이름이 붙어 보이던 간격 확보 */
     border:1px solid var(--metal-edge);border-radius:8px;background:linear-gradient(160deg,rgba(30,36,48,.62),rgba(8,10,14,.72));transition:.12s}
   .cmdG .cgSlot::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent)}
   .cmdG .cgPro{width:100%;max-width:64px;aspect-ratio:1;flex:none;position:relative;overflow:hidden;color:var(--ca);border:1px solid var(--caS);border-radius:6px;   /* 아이콘 칸 = 슬롯 폭을 채우되 관리자 타일(.bframe 64px)을 상한으로 — 하단 전 구역 공통 */
@@ -1441,7 +1442,7 @@
   .cmdG .cgPro img.cgIco{width:100%;height:100%;object-fit:cover}   /* 실제 아이콘 이미지 = 초상처럼 칸을 꽉 채움 */
   .cmdG .cgPro:has(img.cgIco)::after{display:none}        /* 실제 아이콘 위에는 가로 스캔라인을 덮지 않는다(아이콘 자체 질감이 있음) */
   .cmdG .cgSlot.iconFill{justify-content:center;padding:6px} .cmdG .cgSlot.iconFill .cgPro{width:72%;height:auto;aspect-ratio:1;border:none;background:none;box-shadow:none} .cmdG .cgSlot.iconFill .cgPro svg{width:100%;height:100%} .cmdG .cgSlot.iconFill .cgName,.cmdG .cgSlot.iconFill .cgCost{display:none}   /* 아이콘만 채우는 칸(일시정지 등): 빈 이름/비용 줄 숨겨 아이콘이 칸 정중앙에 크게 */
-  .cmdG .cgName{font:800 10px/1.05 sans-serif;color:#e6eefc;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cmdG .cgName{font:800 10px/1.35 sans-serif;color:#e6eefc;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}   /* 줄높이 1.05는 한글 윗획이 잘렸다(overflow:hidden) — 1.35로 여유 확보 */
   /* 🧱 벙커 탑승 슬롯: 가로 꽉 찬 초상 → 이름 → HP 세로 스택 */
   .cmdG .cgSlot.cgBunk{justify-content:flex-start;gap:3px;padding:5px 4px}
   .cmdG .cgSlot.cgBunk .cgPro{width:100%;height:auto;aspect-ratio:1.35;border-radius:6px}
