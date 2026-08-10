@@ -360,6 +360,39 @@ async function groupLobby(){
     assert(c.statPoints===PROF_PT_PER_LV-1,'포인트가 안 깎임');
     assert(_hb.char.atk>atk0,'전투 중 공격력에 반영되지 않음: '+atk0+' → '+_hb.char.atk);
     return 'Lv'+c.level+' · 포인트 '+c.statPoints; });
+  // 스탯 출처 내역 · 파워 해금이 실제로 상한을 연다
+  await step('RPG: 스탯 출처 내역 · 파워 해금 배선', async()=>{ skipIf(typeof profStatParts!=='function','미적용');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    openHome(); await sleep(60);
+    const c=CHAR(), p=PROF();
+    c.level=30; c.unit.level=30; c.unit.stats={pow:20,vit:15,foc:10,agi:8};
+    p.pets={wolf:1}; p.equip=['wolf'];
+    // ① 분해값의 합이 실제 profStat과 일치해야 한다(식이 갈라지면 여기서 잡힌다)
+    for(const k of PROF_STATS){ const P=profStatParts(k);
+      const sum=Math.round((P.job+P.alloc+P.level+P.evo+P.gear)*(1+P.petPct/100));
+      assert(sum===P.total,PROF_STAT_NAME[k]+' 분해합이 profStat과 다름: '+sum+' vs '+P.total);
+      assert(P.level===c.unit.level,'레벨 기여가 안 맞음'); }
+    assert(profStatParts('pow').petPct>0,'펫 보너스가 내역에 안 잡힘');
+    // ② 정보 팝업 — 좌상단 HUD로 연다
+    const hud=$('hbHud'); assert(hud && hud.tagName==='BUTTON','HUD가 누를 수 있는 버튼이 아님');
+    hbOpenInfo(); await sleep(40);
+    assert(visible($('hbInfoModal')),'캐릭터 정보 팝업이 안 열림');
+    assert(document.querySelectorAll('#hbInfoBody .hbTbl').length>=2,'스탯/전투 수치 표가 없음');
+    assert($('hbInfoBody').textContent.indexOf('파워')>=0,'파워 표기가 없음');
+    hbCloseInfo();
+    // ③ 파워 해금 — 표시만 하는 항목이 없어야 한다(전부 실제 상한을 바꾼다)
+    p.unlocks={};
+    const b4={pet:profPetSlots(), ally:hbBuildMax('ally'), tur:hbBuildMax('turret'), off:profOfflineCapMin()};
+    p.unlocks={pet_slot3:1, ally_plus:1, turret_plus:1, pet_slot4:1, idle_12h:1};
+    assert(profPetSlots()>b4.pet,'펫 슬롯 해금이 반영 안 됨: '+b4.pet+' → '+profPetSlots());
+    assert(hbBuildMax('ally')>b4.ally,'동료 최대 해금이 반영 안 됨');
+    assert(hbBuildMax('turret')>b4.tur,'터렛 최대 해금이 반영 안 됨');
+    assert(profOfflineCapMin()>b4.off,'오프라인 상한 해금이 반영 안 됨');
+    // 해금 표의 모든 항목이 실제로 쓰이는지(코드에 배선된 id인지)
+    const wired=['idle_arena','evolve','idle_8h','pet_slot3','ally_plus','turret_plus','pet_slot4','idle_12h'];
+    for(const u of PROF_UNLOCKS) assert(wired.indexOf(u.id)>=0,'배선 안 된 해금 항목: '+u.id);
+    p.unlocks={}; profSyncUnlocks();
+    return '해금 '+PROF_UNLOCKS.length+'단계 · 파워 '+profPower(); });
   // 방치 수입 기준을 자동사냥 실적으로 · 전직/진화를 HOME에서
   await step('자동사냥: 방치 수입 기준 · HOME 전직/진화', async()=>{ skipIf(typeof hbNoteRate!=='function','미적용');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }

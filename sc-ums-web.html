@@ -2521,7 +2521,9 @@
   .hmScroll{position:relative;z-index:1}   /* 전투 캔버스 위로 */
   /* 배경 전투 — 패널 없이 배경 위 그림·글자만(DESIGN §6: 배경이 주인공) */
   #hbCv{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-  .hbHud{position:absolute;left:12px;top:calc(var(--curH) + 8px);z-index:1;display:flex;flex-direction:column;gap:0;pointer-events:none}
+  .hbHud{position:absolute;left:12px;top:calc(var(--curH) + 8px);z-index:2;display:flex;flex-direction:column;gap:0;
+    align-items:flex-start;cursor:pointer;background:none;border:none;padding:2px 6px 2px 0;text-align:left}
+  .hbHud:active{opacity:.75}
   .hbHud b{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:15px;font-weight:800;color:#e7edf5;letter-spacing:.8px}
   .hbHud span{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:10px;font-weight:700;color:#9a9a9a;letter-spacing:.6px}
   /* 중앙 표시 = 라운드 선택 버튼(누를 수 있어야 하므로 pointer-events를 살린다) */
@@ -2588,6 +2590,18 @@
   .hmStat.grow i{color:#ffd24a}
   .hbGrowLbl{padding:4px 0 0;font-size:var(--fs-sm);font-weight:800;letter-spacing:.4px;color:#9a9a9a}
   .hbStars{color:#ffd24a;letter-spacing:1px}
+  /* 캐릭터 정보 표 — 숫자는 Rajdhani(§2 글자 규칙) */
+  .hbTbl{width:100%;border-collapse:collapse;font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:var(--fs-sm)}
+  .hbTbl th{padding:3px 2px;font-size:8.5px;font-weight:800;color:#7a7a7a;text-align:center}
+  .hbTbl td{padding:4px 2px;text-align:center;color:#9a9a9a}
+  .hbTbl td.l{text-align:left;font-family:inherit;font-weight:800;color:#ececec}
+  .hbTbl td.s{font-weight:800;color:#ffd24a}
+  .hbTbl tbody tr+tr td{border-top:1px solid rgba(255,255,255,.05)}
+  .hbTblSub{font-size:8.5px;font-weight:700;color:#6a6a6a;letter-spacing:0}
+  .hbChips{display:flex;flex-wrap:wrap;gap:4px}
+  .hbChip{padding:3px 7px;font-size:var(--fs-sm);color:#9a9a9a;background:rgba(255,255,255,.045);
+    border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+  .hbChip b{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:#ececec}
   .hmUpg.down .hmStatRow{display:none}
   /* 4칸(2×2)만 보이고 나머지는 스크롤 — 최대 높이는 renderHome이 실제 한 칸 높이로 계산해 넣는다 */
   .hmUpgGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px;overflow-y:auto;
@@ -3685,6 +3699,15 @@
   </div>
 
     <!-- 친구 시트 — 허브 소셜을 그대로 옮겨온 것(id 유지 → renderFriends/setFriendFilter 그대로 동작) -->
+    <!-- 캐릭터 정보 — 스탯이 어디서 오는지(직업/배분/레벨/진화/장비/펫) 한눈에 -->
+    <div class="hbModal hide" id="hbInfoModal" onclick="if(event.target===this)hbCloseInfo()">
+      <div class="hbmCard">
+        <div class="hbmHead"><b>캐릭터 정보</b>
+          <button class="hbmX" onclick="hbCloseInfo()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+        </div>
+        <div class="hbRows uiScroll" id="hbInfoBody"></div>
+      </div>
+    </div>
     <!-- 성장 — 전직·진화. 마을 광장까지 안 가고 여기서(판정·실행은 공용 함수 재사용) -->
     <div class="hbModal hide" id="hbGrowModal" onclick="if(event.target===this)hbCloseGrow()">
       <div class="hbmCard">
@@ -3782,7 +3805,7 @@
        위쪽 빈 자리는 채우지 않는다 — 우주 배경(.spaceBg)이 상단 재화 바 뒤까지 이어져 보이는 게 의도다. -->
   <div id="homeScreen" class="appScreen spaceBg hide">
     <canvas id="hbCv"></canvas>   <!-- 배경 전투 — UI 아래 레이어(클릭 통과) -->
-    <div class="hbHud"><b id="hbLv">Lv.1</b><span id="hbAtk">⚔ 0</span><span id="hbKill">0 KILL</span></div>
+    <button class="hbHud" id="hbHud" onclick="hbOpenInfo()" aria-label="캐릭터 정보"><b id="hbLv">Lv.1</b><span id="hbAtk">⚔ 0</span><span id="hbKill">0 KILL</span></button>
     <button class="hbMid" id="hbMid" onclick="hbOpenRounds()" aria-label="라운드 선택">
       <b id="hbRound">던전 1 · 라운드 1</b><span><i id="hbWaveTx">웨이브 1/5</i> · <i id="hbTimer">20s</i> · <i id="hbMode">반복</i></span></button>
     <div class="hbBar" id="hbBar"></div>   <!-- 스킬·건설·부스트 (전장 위, 업그레이드 카드 바로 위) -->
@@ -4838,8 +4861,20 @@ function profBuyItem(tierId){ const p=PROF(), T=profItemTier(tierId);
   if(!profAddItem(it)) return null;
   p.pcoin-=T.cost; saveMeta(); return it; }
 const PROF_IDLE_SOURCES={ drill:{name:'훈련장',rate:0.6,tip:'공격 위주'}, library:{name:'수련관',rate:0.6,tip:'집중 위주'}, arena:{name:'투기장',rate:1.0,reqUnlock:'idle_arena',tip:'고수익'} };
-const PROF_UNLOCKS=[ {id:'idle_arena',power:200,label:'투기장 자동수익'}, {id:'evolve',power:350,label:'유닛 진화(★)'}, {id:'idle_8h',power:600,label:'오프라인 8시간·100%'} ];
-const PROF_OFF_CAP_MIN=4*60, PROF_OFF_RATE=0.5, PROF_OFF_CAP8_MIN=8*60, PROF_OFF_RATE8=1.0;   // 오프라인 상한/비율(idle_8h 해금 시 8h/100%)
+// 파워 해금 — 전부 실제로 무언가를 연다(표시만 하는 항목을 두지 않는다).
+// idle_arena→훈련장 장소 / evolve→진화 / idle_8h·idle_12h→오프라인 상한
+// pet_slot3·4→profPetSlots() / ally_plus·turret_plus→hbBuildMax()
+const PROF_UNLOCKS=[
+  {id:'idle_arena', power:200,  label:'투기장 자동수익'},
+  {id:'evolve',     power:350,  label:'유닛 진화(★)'},
+  {id:'idle_8h',    power:600,  label:'오프라인 8시간·100%'},
+  {id:'pet_slot3',  power:900,  label:'펫 슬롯 3'},
+  {id:'ally_plus',  power:1400, label:'동료 최대 +2'},
+  {id:'turret_plus',power:2200, label:'터렛 최대 +2'},
+  {id:'pet_slot4',  power:3000, label:'펫 슬롯 4'},
+  {id:'idle_12h',   power:4200, label:'오프라인 12시간'},
+];
+const PROF_OFF_CAP_MIN=4*60, PROF_OFF_RATE=0.5, PROF_OFF_CAP8_MIN=8*60, PROF_OFF_RATE8=1.0, PROF_OFF_CAP12_MIN=12*60;   // 오프라인 상한/비율(idle_8h 해금 시 8h/100%)
 // 곡선(순수함수)
 function profXpForLevel(lv){ return Math.round(50*Math.pow(lv,1.5)); }
 function profClassCost(jobId){ const J=PROF_JOBS[jobId]; return J? J.tier*400 : 0; }
@@ -4893,11 +4928,11 @@ function profPetRoll(){ const p=PROF(); if(p.pcoin<PROF_PET_GACHA_COST) return n
   let r=Math.random()*tot, tier=tw[0][0]; for(const e of tw){ if(r<e[1]){ tier=e[0]; break; } r-=e[1]; }
   const pool=avail[tier], id=pool[Math.floor(Math.random()*pool.length)];
   p.pets[id]=p.pets[id]||{count:0}; p.pets[id].count++; const isNew=(p.pets[id].count===1);
-  if(isNew && (p.equip||[]).length<(p.petSlots||2)) p.equip.push(id);   // 신규 + 빈 슬롯 = 자동 장착
+  if(isNew && (p.equip||[]).length<profPetSlots()) p.equip.push(id);   // 신규 + 빈 슬롯 = 자동 장착
   saveMeta(); return { id:id, tier:tier, star:profPetStar(id), isNew:isNew }; }
 function profPetEquip(id){ const p=PROF(); if(!p.pets[id]) return false; const i=p.equip.indexOf(id);
   if(i>=0){ p.equip.splice(i,1); saveMeta(); return true; }                                // 토글 해제
-  if(p.equip.length>=(p.petSlots||2)) return false; p.equip.push(id); saveMeta(); return true; }
+  if(p.equip.length>=profPetSlots()) return false; p.equip.push(id); saveMeta(); return true; }
 // 🌟 유닛 진화(별) — evolve 해금(파워 350) 필요. 별마다 레벨 문턱·pcoin 비용↑. profStat에서 evoStars*2 반영.
 function profEvolveCost(stars){ return (stars+1)*500; }   // 별 stars → stars+1 로 올리는 비용(환급 계산과 공용)
 function profEvolveReq(){ const c=CHAR(), s=c?c.unit.evoStars:0; return { unlock:profHasUnlock('evolve'), stars:s, maxed:s>=5, lvReq:(s+1)*10, cost:profEvolveCost(s) }; }
@@ -4936,7 +4971,8 @@ function profRunReward(){ const p=PROF();
   const c=CHAR(); if(c) c.xp+=xp; const ups=profApplyLevelUps(c); p.pcoin+=pc; profSyncUnlocks(); saveMeta();
   return { xp:xp, pc:pc, ups:ups, level:c?c.level:1 }; }
 // 방치 정산(오프라인/켜둠) — Date.now 기준(1단계 클라이언트 신뢰). 유즈맵과 무관.
-function profOfflineCapMin(){ return profHasUnlock('idle_8h')?PROF_OFF_CAP8_MIN:PROF_OFF_CAP_MIN; }
+function profOfflineCapMin(){ return profHasUnlock('idle_12h')?PROF_OFF_CAP12_MIN
+  : profHasUnlock('idle_8h')?PROF_OFF_CAP8_MIN : PROF_OFF_CAP_MIN; }
 function profOfflineRate(){ return profHasUnlock('idle_8h')?PROF_OFF_RATE8:PROF_OFF_RATE; }
 function profClaimOffline(){ const p=PROF(), now=Date.now(), last=p.idle.lastClaimTs||p.lastSeenTs||now;
   const mins=Math.max(0, Math.min((now-last)/60000, profOfflineCapMin())), gained=Math.round(profIdleRate()*mins*profOfflineRate());
@@ -5059,13 +5095,13 @@ function hbOpenBuild(){ const el=document.getElementById('hbBuildModal'); if(!el
 function hbCloseBuild(){ const el=document.getElementById('hbBuildModal'); if(el) el.classList.add('hide'); }
 function renderBuildModal(){ const box=document.getElementById('hbBuildBody'); if(!box) return;
   const coin=Math.floor(PROF().pcoin||0);
-  box.innerHTML=Object.keys(HB_BUILD).map(function(k){ const B=HB_BUILD[k], n=hbBuildN(k), full=n>=B.max, cost=hbBuildCost(k);
+  box.innerHTML=Object.keys(HB_BUILD).map(function(k){ const B=HB_BUILD[k], n=hbBuildN(k), mx=hbBuildMax(k), full=n>=mx, cost=hbBuildCost(k);
     return '<div class="hbRow"><span class="hbRowIco">'+B.ico+'</span>'
-      +'<span class="hbRowTx"><b>'+B.name+' <i>'+n+'/'+B.max+'</i></b><em>'+B.tip+'</em></span>'
+      +'<span class="hbRowTx"><b>'+B.name+' <i>'+n+'/'+mx+'</i></b><em>'+B.tip+'</em></span>'
       +'<button class="hbRowBtn" onclick="hbBuy(&#39;'+k+'&#39;)"'+((full||coin<cost)?' disabled':'')+'>'
       +(full?'최대':cost.toLocaleString('en-US')+' 미네랄')+'</button></div>'; }).join(''); }
 function hbBuy(k){ const B=HB_BUILD[k], p=PROF(); if(!B) return;
-  if(hbBuildN(k)>=B.max) return;
+  if(hbBuildN(k)>=hbBuildMax(k)) return;
   const cost=hbBuildCost(k);
   if(Math.floor(p.pcoin||0)<cost){ hmToast('미네랄이 부족합니다'); return; }
   const H=hbHunt(); if(!H.build) H.build={};
@@ -5142,6 +5178,49 @@ function hbAfterGrow(msg){ if(_hb){ const st=hbCharStats(), ch=_hb.char;
   renderGrowModal(); renderHome(); if(typeof hbHud==='function') hbHud(); }
 function hbDoClass(id){ if(typeof profClassChange==='function' && profClassChange(id)) hbAfterGrow('전직 완료!'); }
 function hbDoEvolve(){ if(typeof profEvolve==='function' && profEvolve()) hbAfterGrow('★ 진화!'); }
+// ── C. 스탯 출처 내역 — "어디를 올려야 이득인가"를 화면에서 알 수 있게 ──
+// profStat()의 계산식을 그대로 분해한다(식이 바뀌면 여기도 같이 고칠 것 — 값을 두 번 계산하지 않도록 합계는 profStat로 검산).
+function profStatParts(k){ const c=CHAR(); if(!c) return null;
+  const J=PROF_JOBS[c.unit.jobId]||PROF_JOBS[c.cls]||PROF_JOBS.ranger;
+  let gear=0;
+  for(const slot in c.unit.gear){ const it=profFindItem(c.unit.gear[slot]); if(!it) continue;
+    const g=PROF_GEAR[slot]; if(g && g.stat===k) gear+=it.main;
+    for(const o of it.opts) if(o.k===k) gear+=o.v; }
+  const petMul = (k==='pow') ? profPetBonus('atk') : (k==='vit') ? profPetBonus('vit') : 0;
+  return { job:J.base[k]||0, alloc:c.unit.stats[k]||0, level:c.unit.level,
+           evo:c.unit.evoStars*2, gear:gear, petPct:Math.round(petMul*100), total:profStat(k) }; }
+function hbOpenInfo(){ const el=document.getElementById('hbInfoModal'); if(!el) return;
+  el.classList.remove('hide'); renderInfoModal(); if(typeof playSfx==='function') playSfx('ui_open'); }
+function hbCloseInfo(){ const el=document.getElementById('hbInfoModal'); if(el) el.classList.add('hide'); }
+function renderInfoModal(){ const box=document.getElementById('hbInfoBody'); if(!box) return;
+  const c=CHAR(); if(!c) return;
+  const J=PROF_JOBS[c.unit.jobId], st=hbCharStats(), u=hbHunt().upg;
+  let h='<div class="hbRoundNote" style="padding:0 0 8px">'+escHtml(c.name)+' · <b>'+J.name+'</b> · Lv.'+c.unit.level
+    +' · 파워 <b>'+profPower()+'</b> · 진화 '+('★'.repeat(c.unit.evoStars)||'없음')+'</div>';
+  h+='<div class="hbGrowLbl">스탯 출처</div><table class="hbTbl"><thead><tr><th>스탯</th><th>직업</th><th>배분</th><th>레벨</th><th>진화</th><th>장비</th><th>펫</th><th>합</th></tr></thead><tbody>';
+  for(const k of PROF_STATS){ const P=profStatParts(k);
+    h+='<tr><td class="l">'+PROF_STAT_NAME[k]+'</td><td>'+P.job+'</td><td>'+P.alloc+'</td><td>'+P.level+'</td>'
+      +'<td>'+(P.evo||'-')+'</td><td>'+(P.gear||'-')+'</td><td>'+(P.petPct?('+'+P.petPct+'%'):'-')+'</td>'
+      +'<td class="s">'+P.total+'</td></tr>'; }
+  h+='</tbody></table>';
+  h+='<div class="hbGrowLbl">전투 수치 <span class="hbTblSub">스탯 + 계정 업그레이드</span></div><table class="hbTbl"><tbody>'
+    +'<tr><td class="l">공격력</td><td class="s">'+Math.round(st.atk)+'</td><td class="l">체력</td><td class="s">'+Math.round(st.hpMax)+'</td></tr>'
+    +'<tr><td class="l">공격속도</td><td class="s">'+st.cd.toFixed(2)+'초</td><td class="l">치명타</td><td class="s">'+Math.round(st.crit*100)+'%</td></tr>'
+    +'<tr><td class="l">사거리</td><td class="s">'+Math.round(st.range)+'</td><td class="l">체력회복</td><td class="s">'+st.regen.toFixed(1)+'/s</td></tr>'
+    +'</tbody></table>';
+  h+='<div class="hbGrowLbl">업그레이드 레벨</div><div class="hbChips">'
+    +Object.keys(HB_UPG).map(k=>'<span class="hbChip">'+HB_UPG[k].ico+' '+HB_UPG[k].name+' <b>'+(u[k]||0)+'</b></span>').join('')+'</div>';
+  box.innerHTML=h; }
+// ── D. 파워 해금 확장 — 해금이 실제로 무언가를 열도록 배선 ──
+function profPetSlots(){ const p=PROF(); let n=2;
+  if(profHasUnlock('pet_slot3')) n=3;
+  if(profHasUnlock('pet_slot4')) n=4;
+  return Math.max(n, p.petSlots||2); }
+function hbBuildMax(k){ const B=HB_BUILD[k]; if(!B) return 0;
+  let m=B.max;
+  if(k==='ally'  && profHasUnlock('ally_plus'))   m+=2;
+  if(k==='turret'&& profHasUnlock('turret_plus')) m+=2;
+  return m; }
 function hmToggleUpg(){ const H=hbHunt(); H.upgDown=!H.upgDown;
   const card=document.querySelector('#homeScreen .hmUpg'); if(card) card.classList.toggle('down', !!H.upgDown);
   if(typeof playSfx==='function') playSfx('ui_tab');
@@ -5269,7 +5348,7 @@ function hbLayoutAllies(){ const S=_hb; if(!S) return; const st=hbCharStats();
   const n3=hbBuildN('bunker');
   for(let i=0;i<n3;i++){ const a=Math.PI*(i?1.5:.5);
     S.bunkers.push({x:Math.cos(a)*70, y:Math.sin(a)*70, hp:st.hpMax*HB_BUNKER_HP, hpMax:st.hpMax*HB_BUNKER_HP, ico:'🧱'}); }
-  const eq=((typeof PROF==='function'&&PROF().equip)||[]).slice(0,(PROF().petSlots||2));
+  const eq=((typeof PROF==='function'&&PROF().equip)||[]).slice(0,profPetSlots());
   S.pets=eq.map((id,i)=>({ id, ico:(PROF_PETS[id]&&PROF_PETS[id].emoji)||'🐾',
     ph:i/Math.max(1,eq.length)*Math.PI*2, x:0, y:0, cdT:Math.random()*.5 })); }
 // 아군 한 명의 사격 — 가장 가까운 적을 친다(공용: 동료·펫·터렛)
@@ -5799,7 +5878,7 @@ function renderProfStats(){ const p=PROF(), c=CHAR(); if(!c) return '<div class=
 function profDoEvolve(){ if(profEvolve()){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); showTownToast('⭐ 진화 성공!'); } }
 // 뽑기집: 펫 뽑기 + 보유 펫 장착
 function renderProfGacha(){ const p=PROF(), poor=p.pcoin<PROF_PET_GACHA_COST, eq=p.equip||[];
-  let h='<div class="twHead">펫을 뽑아 장착하면 <b>코인·공격·체력 %</b>가 오릅니다.<br>보유 <b>'+Math.floor(p.pcoin)+' P</b> · 장착 '+eq.length+'/'+(p.petSlots||2)+'</div>';
+  let h='<div class="twHead">펫을 뽑아 장착하면 <b>코인·공격·체력 %</b>가 오릅니다.<br>보유 <b>'+Math.floor(p.pcoin)+' P</b> · 장착 '+eq.length+'/'+profPetSlots()+'</div>';
   h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">펫 1회 뽑기</div><div class="twRowSub">중복 펫은 별(★)로 강화</div></div><button class="twBtn" onclick="profDoGacha()"'+(poor?' disabled':'')+'>'+PROF_PET_GACHA_COST+' P</button></div>';
   // 🎟 장비 뽑기권 — 자동사냥 엘리트 처치·토벌 클리어로 얻는다. 여기가 유일한 소비처.
   { const tk=((p.tickets&&p.tickets.gear)||0), full=profItems().length>=PROF_INV_MAX;
@@ -5809,7 +5888,7 @@ function renderProfGacha(){ const p=PROF(), poor=p.pcoin<PROF_PET_GACHA_COST, eq
   const owned=Object.keys(p.pets||{}).filter(id=>PROF_PETS[id]).sort((a,b)=>GACHA_TIER_ORDER.indexOf(PROF_PETS[b].tier)-GACHA_TIER_ORDER.indexOf(PROF_PETS[a].tier));
   h+='<div class="twSectLbl">보유 펫 ('+owned.length+')</div>';
   if(!owned.length) h+='<div class="twRow"><div class="twRowInfo"><div class="twRowSub">아직 없음 — 뽑아보세요!</div></div></div>';
-  for(const id of owned){ const P=PROF_PETS[id], col=TIER_COLOR[P.tier], star=profPetStar(id), on=eq.indexOf(id)>=0, full=eq.length>=(p.petSlots||2);
+  for(const id of owned){ const P=PROF_PETS[id], col=TIER_COLOR[P.tier], star=profPetStar(id), on=eq.indexOf(id)>=0, full=eq.length>=profPetSlots();
     h+='<div class="twRow"><span class="twPet" style="color:'+col+';border-color:'+col+'55">'+P.emoji+'</span>'
       +'<div class="twRowInfo"><div class="twRowName">'+P.name+' <span class="twStars">'+'★'.repeat(star)+'</span></div>'
       +'<div class="twRowSub" style="color:'+col+'">'+GACHA_TIERS[P.tier].name+' · '+PROF_BONUS_NAME[P.bonus.type]+' +'+Math.round(profPetVal(id)*100)+'%</div></div>'
@@ -10869,7 +10948,7 @@ function updateCurBar(){ if(!PLAYER_META||!PLAYER_META.profile) return;
 function showAppScreen(id){ setInGame(false);
   if(typeof navShow==='function') navShow(null);   // 하단 네비는 기본 숨김 — openHome/openTown이 다시 켠다
   if(typeof hbStop==='function') hbStop();         // 홈 배경 전투도 기본 정지 — openHome이 다시 켠다
-  for(const id of ['hbRoundSheet','hbBuildModal','hbBoostModal','hbGrowModal']){ const el=document.getElementById(id); if(el) el.classList.add('hide'); }
+  for(const id of ['hbRoundSheet','hbBuildModal','hbBoostModal','hbGrowModal','hbInfoModal']){ const el=document.getElementById(id); if(el) el.classList.add('hide'); }
   if(id!=='mapSelect' && id!=='modeSheet' && typeof stopMapLive==='function') stopMapLive();   // 유즈맵 화면 떠나면 실시간 갱신 정지
   ['ov','lobby','rooms','createPanel','pwPanel'].forEach(x=>{const e=document.getElementById(x); if(e)e.classList.add('hide');});
   APP_SCREENS.forEach(s=>{ const e=document.getElementById(s); if(e) e.classList.toggle('hide', s!==id); });
