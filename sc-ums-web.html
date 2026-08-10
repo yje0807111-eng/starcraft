@@ -1291,7 +1291,6 @@
   
   
   
-  .upgList{display:flex;flex-direction:column;overflow:hidden;flex:1}
   /* ── 업그레이드 패널: 좌(초상화+설명/진행) | 우(정사각 커맨드 그리드) ── */
   
   @keyframes upgPulse{0%,100%{opacity:.5}50%{opacity:1}}
@@ -3026,8 +3025,6 @@
     </div>
 
     <div class="bp" id="bpUpgrade">
-      <div class="hint" id="upgHint">건물을 <b>터치</b>하면<br>업그레이드 목록이 표시됩니다</div>
-      <div class="upgList" id="upgList" style="display:none"></div>
     </div>
 
     <div class="bp" id="bpPlayers">
@@ -3501,26 +3498,8 @@ const isFixed=id=>FIXED_IDS.indexOf(id)>=0;
 
 // 업그레이드 건물 — 무기/종족 계열별 공격력 업글(스타크래프트식). 가스 3가스 고정(엑셀).
 //  wpn = 담당 계열. 그 계열 유닛 전체의 공격력이 함께 오름.
-const TECH=[
-  {id:'acad', name:'전술 본부', icon:'🎓', wpn:'inf',  wname:'보병 무기',    units:'레인저·팬텀'},
-  {id:'arm',  name:'아스널',   icon:'🛡️', wpn:'mech', wname:'기계 무기',    units:'스트라이더'},
-  {id:'forge',name:'크리스탈 워크스', icon:'🔱', wpn:'pro',  wname:'루멘 무기', units:'센티넬·보이드'},
-  {id:'evo',  name:'바이오 코어', icon:'🧬', wpn:'zrg',  wname:'스웜 근접 무기', units:'리퍼'},
-  {id:'pointlab', name:'공학소', icon:'⬆️', wpn:'meta', wname:'영구 강화', units:'즉시 적용', meta:true},  // 포인트로 영구 강화(판 종료 시 정산, 강화 즉시 적용)
-];
-// 상단 2×2(무기 계열) + 하단 중앙 1(공학소)
-const TECH_POS=[{x:.28,y:.26},{x:.72,y:.26},{x:.28,y:.47},{x:.72,y:.47},{x:.5,y:.74}];   // 상단 2×2(무기) + 하단중앙 포인트연구소(채팅 위로 올림)
-// 계열별 색 (meta=골드)
-const WPN_COL={inf:'#4aa8ff',mech:'#5ad1ff',pro:'#ffc040',zrg:'#9fd356',meta:'#ffd24a'};
-   // 건물 계열 → 종족(작동음 분리용)
-// 건물 벡터 실루엣(자체 제작 네온, currentColor=계열색)
-const BLDG_SVG={
-  acad:'<path d="M3 13l9-5 9 5z" fill="currentColor" opacity=".18"/><path d="M5 20v-7h14v7M3 13l9-5 9 5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M8 20v-5M12 20v-5M16 20v-5M4 20h16" stroke="currentColor" stroke-width="1.2"/>',
-  arm:'<path d="M4 20V11l5 3V11l5 3V8h6v12z" fill="currentColor" opacity=".18"/><path d="M4 20V11l5 3V11l5 3V8h6v12H4z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><rect x="16.3" y="3.5" width="2.6" height="4" fill="currentColor"/>',
-  forge:'<path d="M12 3l4.5 6.5L12 17 7.5 9.5z" fill="currentColor" opacity=".22"/><path d="M12 3l4.5 6.5L12 17 7.5 9.5z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M5 20h14M8.5 20l1-3h5l1 3" fill="none" stroke="currentColor" stroke-width="1.2"/>',
-  evo:'<path d="M12 4c4 0 6 4 6 8 0 4-3 7-6 7s-6-3-6-7c0-4 2-8 6-8z" fill="currentColor" opacity=".18"/><path d="M12 4c4 0 6 4 6 8 0 4-3 7-6 7s-6-3-6-7c0-4 2-8 6-8z" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M9 4l1 3M15 4l-1 3M6 10l2.2 1M18 10l-2.2 1" stroke="currentColor" stroke-width="1"/><circle cx="12" cy="12.5" r="2" fill="currentColor"/>',
-  pointlab:'<path d="M5 20h14l-7-16z" fill="currentColor" opacity=".16"/><path d="M5 20h14l-7-16z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M12 16.5V9M9 12l3-3 3 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
-};
+// (삭제) TECH / TECH_POS / WPN_COL / BLDG_SVG — 업그레이드 탭 건물 화면 전용 데이터. 화면 폐지로 참조처가 사라져 함께 제거.
+// 무기 계열 강화는 UPG_CATS(보병·메카닉·스웜·에테리얼) + 하단 업그레이드 시트가 단일 소스.
 const UPG_COST=5; // 계열당 1레벨 = 가스 5(점증, upgCost) — 초기 비용
 
 // 몬스터 18라운드(엑셀): 이름 / 체력 / 쉴드 / 방어력. 보스=10라운드. 커세어(5)는 엑셀 빈칸→임시.
@@ -4141,8 +4120,7 @@ const _PT_NOTE={
 function openPointUpgrade(){ loadMeta(); _ptGroup='eco';
   renderPtTabs(); renderPt();
   popShow('pointPanel'); }
-function closePointUpgrade(){ popHide('pointPanel');
-  if(typeof G!=='undefined' && G.tab==='Upgrade' && typeof clearUpgSel==='function') clearUpgSel(); }
+function closePointUpgrade(){ popHide('pointPanel'); }
 function setPtGroup(g){ _ptGroup=g; renderPtTabs(); renderPt(); }
 // 카테고리 아이콘(메인 하단 네비와 톤 통일 · 24/1.7/currentColor 라인)
 const _PT_ICO={
@@ -5022,36 +5000,7 @@ function drawUpg(){ const {ctx,W,H}=setup('cvUpgrade'); GW=W;GH=H;
   drawFacilityFloor(ctx,W,H,'rgba(6,12,22,.5)','rgba(90,160,220,.07)',TILE_PLATFORM);
 }
 // 업그레이드 플랫폼 — 통일 타일(우주 정거장 금속) 라운드 사각, 우주에 떠 있는 느낌
-// 업그레이드 가동 효과(파티클) — 건물 고정, 건물별 위치/방식 다르게(은은하게)
-// acad=왼쪽 위 돔에서 연기 / arm=증기 / forge=동그란 부분에 에너지 모임 / evo=여러 부위 포자
-let _upgP=[], _upgTmr={};
-const UPG_EMIT={
-  acad: {type:'smoke', col:'180,190,205', rate:0.42, pts:[{dx:-0.052,dy:-0.072}]},          // 왼쪽 위 돔
-  arm:  {type:'smoke', col:'180,190,205', rate:0.45, pts:[{dx:0,dy:-0.06}]},                 // 가운데 동그란 배출구 위로 연기
-  forge:{type:'gather',col:'130,205,255', rate:0.07, pts:[{dx:0,dy:-0.082}]},                // 위쪽 동그란 포탈로 모임
-  evo:  {type:'spore', col:'150,255,130', rate:0.22, pts:[{dx:-0.045,dy:-0.04},{dx:0.045,dy:-0.055},{dx:0,dy:-0.085},{dx:0.05,dy:-0.02},{dx:-0.03,dy:-0.07}]},  // 여러 부위
-};
-function drawUpgFx(dt){ const {ctx,W,H}=setup('cvFx'); const M=Math.min(W,H);
-  if(!fxLite()) TECH.forEach((b,i)=>{ const cfg=UPG_EMIT[b.id]; if(!cfg) return; const p=TECH_POS[i];   // 저화질/절전: 가동 파티클 생성 중단(기존 파티클은 자연 소멸)
-    _upgTmr[b.id]=(_upgTmr[b.id]||0)-dt; if(_upgTmr[b.id]>0) return; _upgTmr[b.id]=cfg.rate;
-    const gw=(typeof G!=='undefined'&&G._bldgGrow&&G._bldgGrow[b.id])||1;   // 선택 시 건물 확대 배율 → 위치·크기 같이 변함
-    const pt=cfg.pts[Math.floor(Math.random()*cfg.pts.length)], ox=p.x*W+pt.dx*M*gw, oy=p.y*H+pt.dy*M*gw;
-    if(cfg.type==='gather'){ const a=Math.random()*6.28, sr=M*(0.045+Math.random()*0.025)*gw;
-      _upgP.push({type:'gather',x:ox+Math.cos(a)*sr,y:oy+Math.sin(a)*sr,cx:ox,cy:oy,life:1,r:(1.6+Math.random()*1.4)*gw,c:cfg.col}); }
-    else if(cfg.type==='spore'){ _upgP.push({type:'rise',x:ox+(Math.random()-0.5)*M*0.02*gw,y:oy,vx:(Math.random()-0.5)*4,vy:-(7+Math.random()*7)*gw,life:1,r:(1.8+Math.random()*1.8)*gw,c:cfg.col,add:true,gr:5*gw,fade:0.7}); }
-    else { _upgP.push({type:'rise',x:ox+(Math.random()-0.5)*M*0.02*gw,y:oy,vx:(Math.random()-0.5)*4,vy:-(9+Math.random()*8)*gw,life:1,r:(4+Math.random()*4)*gw,c:cfg.col,add:false,gr:13*gw,fade:0.5}); }
-  });
-  for(let i=_upgP.length-1;i>=0;i--){ const s=_upgP[i];
-    if(s.type==='gather'){ const dx=s.cx-s.x,dy=s.cy-s.y,d=Math.hypot(dx,dy)||1,sp=Math.min(d,70*dt); s.x+=dx/d*sp; s.y+=dy/d*sp; s.life-=dt*1.0; if(d<4)s.life=0; }
-    else { s.x+=s.vx*dt; s.y+=s.vy*dt; s.vx*=0.97; s.r+=dt*s.gr; s.life-=dt*s.fade; }
-    if(s.life<=0){ _upgP.splice(i,1); continue; }
-    ctx.save(); if(s.type==='gather'||s.add) ctx.globalCompositeOperation='lighter';
-    const base=s.type==='gather'?0.6:(s.add?0.45:0.24), a=base*Math.max(0,s.life), g=ctx.createRadialGradient(s.x,s.y,0,s.x,s.y,Math.max(0.6,s.r));
-    g.addColorStop(0,'rgba('+s.c+','+a+')'); g.addColorStop(1,'rgba('+s.c+',0)');
-    ctx.fillStyle=g; ctx.beginPath();ctx.arc(s.x,s.y,Math.max(0.6,s.r),0,6.28);ctx.fill(); ctx.restore(); }
-}
-// 플레이어 구역: 선택한 플레이어의 전장을 실제 게임과 동일하게 렌더(맵·적·유닛). 유닛 림 색만 플레이어별로 다름(loop의 setPlayerRim).
-// (현재 임시: 모든 플레이어가 내 실제 전장을 공유 표시. 향후 멀티 연동 시 플레이어별 실제 상태로 교체.)
+// (삭제) 업그레이드 가동 파티클(UPG_EMIT/drawUpgFx) — 건물 화면 폐지로 제거.
 function drawPlayer(){ drawMain('cvPlayer'); }   // 실제 전장 렌더(관전 라벨은 좌상단 DOM #specLabel)
 // 관전 라벨 갱신(좌상단 킬 아래) — 플레이어 탭에서만, 플레이어색으로
 function updateSpecLabel(){ const el=document.getElementById('specLabel'); if(!el) return;
@@ -6639,28 +6588,7 @@ function separateUnits(){ if(!GW||!GH) return; const us=G.units; if(us.length<2)
     for(const it of items){ if(it.fixed) continue; const cl=clampInner(it.ref.x,it.ref.y); it.ref.x=cl.x; it.ref.y=cl.y; } }
   if(settling && !stillOverlap) settling=null;
 }
-function renderBldgs(viewId,list,posArr,selId,onSel){ const v=document.getElementById(viewId);
-  v.querySelectorAll('.bldg,.upgSect,.upgDivider').forEach(n=>n.remove());
-  if(viewId==='vUpgrade'){   // 두 그룹 시각 구분: 무기(상단) ↔ 영구 강화(하단)
-    const sec=document.createElement('div'); sec.className='upgSect'; sec.style.top='15%'; sec.innerHTML='<span>종족 무기 강화</span>'; v.appendChild(sec);
-    const div=document.createElement('div'); div.className='upgDivider'; div.style.top='60%'; div.innerHTML='<span>◆ 영구 강화</span>'; v.appendChild(div);
-  }
-  list.forEach((b,i)=>{ const p=posArr[i%posArr.length];
-    const col=WPN_COL[b.wpn]||'#4aa8ff'; const lv=(G.atkLv&&G.atkLv[b.wpn])||0;
-    const has3d=!!(window.M3D && window.M3D.hasModel && window.M3D.hasModel(b.id)) && !(typeof G!=='undefined'&&G.opt&&G.opt.model3d===false);  // 3D 건물 모델 보유 시 프레임/아이콘 숨김(모델이 대신 섬). 단 3D 끄면 2D 아이콘 표시
-    const _upi=(!has3d && b.wpn && typeof WPN_ICON_IMG!=='undefined' && WPN_ICON_IMG[b.wpn]) ? WPN_ICON_IMG[b.wpn] : null;   // 계열 공격력 업그레이드 = 실제 아이콘(하단 시트와 동일 출처)
-    const svg=has3d?'':(_upi ? '<img class="bicon" src="'+UPG_ICON_DIR+_upi+'" alt="" draggable="false">'
-                             : (BLDG_SVG[b.id]?('<svg viewBox="0 0 24 24" width="34" height="34">'+BLDG_SVG[b.id]+'</svg>'):b.icon));
-    const el=document.createElement('div'); el.className='bldg'+(b.id===selId?' sel':'')+(b.meta?' metaBeacon':'');
-    el.style.left=(p.x*100)+'%'; el.style.top=(p.y*100)+'%'; el.style.setProperty('--bc',col);
-    const visual = (b.meta && !has3d)
-      ? '<div class="bbeacon"><div class="bbRing"></div><div class="bbCore"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5l5.3 5.3h-3.1v5h-4.4v-5H6.7z"/><path d="M7 18.5h10"/></svg></div></div>'   // 공학소 = 비콘 패드(3D 모델 미로드 시 폴백)
-      : '<div class="bframe'+(has3d?' nofig':'')+'" style="color:'+col+'">'+svg+'</div>';   // 3D 모델(command_center) 로드 시 모델 표시
-    el.innerHTML=visual+'<div class="bname" style="color:'+col+'">'+b.name+'</div><div class="bsub">'+b.wname+'</div>';
-    el.onclick=()=>onSel(b.id); v.appendChild(el);
-  });
-}
-
+// (삭제) renderBldgs — 업그레이드 탭 건물 타일 렌더. 건물 화면 폐지로 호출처가 사라져 함께 제거.
 // ============================================================================
 // 탭 / 선택 / 커맨드카드
 // ============================================================================
@@ -6695,12 +6623,11 @@ function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 
   deselectUnit(); G.prodB=null; G.techB=null; G.mergeMode=false; { const mb=document.getElementById('mergeBtn'); if(mb) mb.classList.remove('on'); }
   if(typeof clearShopProfile==='function') clearShopProfile();   // 유닛뽑기 중립 선택 해제
   document.getElementById('prodHint').style.display='';
-  document.getElementById('upgHint').style.display=''; document.getElementById('upgList').style.display='none';
   if(id!=='Unit' && typeof fxLabDeactivate==='function') fxLabDeactivate();   // Unit 떠나면 이펙트 랩 비활성
   if(id==='Unit'){ if(G.sandbox){ fxLabActivate(); }   // 관리자: Unit 탭 = 이펙트 테스트베드
     else { G.citizen={x:CITIZEN_HOME.x,y:CITIZEN_HOME.y,gx:null,gy:null,buyId:null,mode:'idle',targetPad:null}; uHold=null; G.shopSel=null; buildClock(); drawProd(); buildGachaDex(); if(typeof renderGachaActions==='function') renderGachaActions(); } }   // 일반: 유닛뽑기
   updateDeselTop();
-  if(id==='Upgrade'){ renderBldgs('vUpgrade',TECH,TECH_POS,null,selectUpg); drawUpg(); _upgSheetSync(); }   // 관리자: 진입 시 무선택=시트 내려감(메인 규약)
+  if(id==='Upgrade'){ drawUpg(); }   // 업그레이드 = 배경만(건물 화면 폐지) · 실제 강화는 하단 업그레이드 시트
   if(id==='Players'){ const mine=G.myPlayer||1; const others=(G.activePlayers||[1,2,3,4,5,6,7,8]).filter(n=>n!==mine);
     if(others.indexOf(G.curPlayer)<0) G.curPlayer=others[0]||mine;   // 입장한 다른 플레이어 기본
     if(typeof clearPlayerSel==='function') clearPlayerSel(); renderPlayers(); drawPlayer(); }
@@ -8124,22 +8051,6 @@ const UPG_MAX=299;   // 업그레이드 최대 레벨 (이 유즈맵=299, 일반
 const UPG_TIME=0;    // 업그레이드 1회 완료까지 걸리는 시간(초). 0=즉시 완료(네모네모 디펜스: 로딩 없음)
 function upgCost(wpn){ return UPG_COST; }   // 정액 5 에너지(에너지 수급 하향으로 밸런스)
 // 건물별 업그레이드 항목 목록 — 추후 방어력 등 추가 시 배열에 push만 하면 슬롯이 자동 추가됨
-function bldgUpgs(b){
-  const items=[];
-  // 공격력(무기 계열)
-  items.push({ wpn:b.wpn, name:b.wname, icon:wpnBadgeHTML(b.wpn,'#ff3b3b'),
-    lv:(G.atkLv[b.wpn]||0), cost:upgCost(b.wpn), action:"research('"+b.wpn+"')" });
-  // ── 예시(추후 활성화): 방어력 등 — 슬롯 하나 더 생김 ──
-  // items.push({ wpn:b.wpn+'_arm', name:b.aname, icon:armorBadgeSVG('#ff3b3b'),
-  //   lv:(G.armLv&&G.armLv[b.wpn]||0), cost:UPG_COST, action:"research('"+b.wpn+"_arm')" });
-  return items;
-}
-// 건물 초상화(BLDG_SVG 와이어프레임, 없으면 이모지)
-function bldgPortraitInner(b){
-  return BLDG_SVG[b.id] ? '<svg viewBox="0 0 24 24">'+BLDG_SVG[b.id]+'</svg>' : pIco(b.icon);
-}
-// 커맨드 그리드 슬롯 1개 HTML (업그레이드 종류 1개 = 슬롯 1개)
-// 건물 선택 → 좌(초상화+설명/진행) | 우(정사각 커맨드 그리드)
 // ══ 재사용 커맨드 그리드 컴포넌트(업그레이드·생산·건설 공용) — model 객체만 만들어 renderCmdGrid로 넘기면 됨 ══
 //   model = { mode:'upg'|'prod'|'build', title, icon(초상화 HTML), sub, status, statusIdle,
 //     items:[{ pro(초상화 HTML), sn(이름), cr(크레딧), en(에너지), meta(우상단 배지), metaCls:'lv'?, state:'ok'|'dim'|'busy'|'max'|'empty', sel, act(이벤트 속성 문자열) }],
@@ -8186,33 +8097,8 @@ function renderCmdGrid(host, m){ const el=(typeof host==='string')?document.getE
   if(m.build){ const nms=el.querySelectorAll('.cgName'); for(const nm of nms){ let fs=10; nm.style.fontSize=fs+'px'; let g=0; while(nm.scrollWidth>nm.clientWidth+0.5 && fs>6 && g++<12){ fs-=0.5; nm.style.fontSize=fs+'px'; } } } }   // 이름 생략(...) 대신 폰트 축소로 한 줄에 전부
 function _cgTurn(btn,delta){ let h=btn; while(h && !h._cgModel) h=h.parentElement; if(!h||!h._cgModel) return; h._cgModel.page=(h._cgPage||0)+delta; renderCmdGrid(h,h._cgModel); }
 // 업그레이드 모델 빌더(현재 무기 강화 데이터 → 커맨드 그리드)
-function cmdGridModelForUpg(b){ const its=bldgUpgs(b), R=G.research;
-  const items=its.map(it=>{ const lv=it.lv, isMax=lv>=UPG_MAX, rThis=R&&R.wpn===it.wpn, other=R&&!rThis;
-    let state='ok', act='', meta='Lv.'+lv;
-    if(rThis){ state='busy'; act='onclick="cancelResearch()"'; }
-    else if(isMax){ state='max'; meta='MAX'; }
-    else if(other){ state='dim'; }
-    else { act='onpointerdown="upgHoldStart(\''+it.wpn+'\',event)"'; if(G.gas<it.cost) state='dim'; }
-    return { pro:it.icon, sn:it.name, en:it.cost, cr:0, meta, metaCls:'lv', state, sel:!!rThis, act }; });
-  const rThis=R&&its.find(it=>it.wpn===R.wpn); let info;
-  if(rThis){ const p=Math.round((1-R.t/R.dur)*100);
-    info={ eb:'연구 진행', name:rThis.name, desc:'업그레이드 진행 중', progLabel:'연구', progVal:p+'%', prog:p, en:rThis.cost, time:R.t.toFixed(1)+'s 남음' }; }
-  else { const f=its[0];
-    info={ eb:'선택 · 정보', name:b.name, desc:'적용 '+(b.units||''), stats:[['현재','Lv.'+(f?f.lv:0)],['최대','Lv.'+UPG_MAX]], progLabel:'상태', progVal:R?'🔒 연구 중':'대기', prog:R?100:0, en:f?f.cost:0, time:R?'다른 연구 중':'탭하여 연구' }; }
-  return { mode:'upg', title:b.name, icon:bldgPortraitInner(b), sub:'적용 '+(b.units||b.wname||''), status:R?'연구 중':'대기', statusIdle:!R, items, info }; }
 // 생산 모델 빌더(STK 건물 → 유닛 그리드). actFn(unitId)→이벤트 속성 문자열(미지정 시 미리보기만)
 // 건설 모델 빌더(STK 건물 목록 → 건물 그리드·페이지 자동). actFn(bldgKey)→이벤트 속성 문자열
-function selectUpg(id){ const _b0=TECH.find(x=>x.id===id);
-  if(_b0&&_b0.meta){ if(typeof playSfx==='function') playSfx('ui_open'); openPointUpgrade(); return; }   // 공학소 → 영구 강화 팝업
-  const _bchg=(G.techB!==id); G.techB=id;
-  if(_bchg && typeof playSfx==='function'){ playSfx('bldg_protoss'); }   // 모든 건물 작동음을 크리스탈 워크스(프로토스) 소리로 통일
-  renderBldgs('vUpgrade',TECH,TECH_POS,id,selectUpg);
-  if(typeof updateDeselTop==='function') updateDeselTop();   // 우상단 취소키 표시
-  const b=TECH.find(x=>x.id===id); document.getElementById('upgHint').style.display='none';
-  const list=document.getElementById('upgList'); list.style.display='flex';
-  renderCmdGrid(list, cmdGridModelForUpg(b));   // 🆕 재사용 커맨드 그리드
-  _upgSheetSync();   // 관리자: 건물 지정 = 목록 시트 슬라이드업(메인 규약)
-}
 // 연구 시작 — 에너지 차감 후 타이머 가동(완료까지 다른 업그레이드 잠금). UPG_TIME=0이면 즉시
 function research(wpn){
   if(G.research) return;                                       // 동시 1개만(즉시모드라 사실상 미발생)
@@ -8223,16 +8109,15 @@ function research(wpn){
   G.gas-=_uc; updateHud();
   if(UPG_TIME<=0){ finishResearch(wpn); return; }              // 즉시 완료 모드
   G.research={ wpn:wpn, t:UPG_TIME, dur:UPG_TIME, cost:_uc };            // 타이머 가동
-  if(G.techB) selectUpg(G.techB);
 }
 // 연구 취소 — 에너지 환불 후 중단
 function cancelResearch(){ if(!G.research) return;
   G.gas+=(G.research.cost||UPG_COST); updateHud(); toast('ℹ️ 연구 취소');
-  G.research=null; if(G.tab==='Upgrade'&&G.techB) selectUpg(G.techB);
+  G.research=null;
 }
 function finishResearch(wpn){ G.atkLv[wpn]=(G.atkLv[wpn]||0)+1;   // 업그레이드 완료 — 채팅 알림 없이 슬롯 레벨로만 표시
   if(typeof playSfxT==='function') playSfxT('upgrade',80);   // 완료음(길게 누르기 연사 시 쓰로틀)
-  G.research=null; if(G.tab==='Upgrade'&&G.techB) selectUpg(G.techB); }
+  G.research=null; }
 // 길게 누르기 연속 업그레이드: 즉시 1회 → 0.5초 유지 시 0.05초마다 반복. 슬롯이 재렌더돼도 전역 타이머라 안 끊김
 let _upgHold=null;
 function upgHoldStart(wpn, ev){ if(ev){ ev.preventDefault(); ev.stopPropagation(); }
@@ -8405,7 +8290,7 @@ function setExpand(id){ const b=document.getElementById('body-'+id), menu=docume
   if(menu) menu.classList.toggle('expanded', willOpen); }
 function refreshModelViews(){  /* 3D on/off 시 유닛뽑기·업그레이드 DOM 아이콘 폴백 갱신 */
   try{ if(typeof buildClock==='function') buildClock(); }catch(e){}
-  try{ if(typeof renderBldgs==='function') renderBldgs('vUpgrade',TECH,TECH_POS,(typeof G!=='undefined'?G.techB:null),selectUpg); }catch(e){} }
+}
 function setModel3d(on){ G.opt=G.opt||{sfx:true,bgm:true}; G.opt.model3d=on;
   const fb=document.getElementById('flag-m3d'); if(fb) fb.textContent=on?'ON':'OFF';
   const cv=document.getElementById('cvMarine'); if(cv && !on) cv.style.display='none';   /* 켜기는 렌더 루프가 탭에 맞춰 처리 */
@@ -8676,7 +8561,7 @@ function hideAppScreens(){ if(typeof stopMapLive==='function') stopMapLive(); AP
 // ── 유즈맵 크롬 초기화(단일 소스) ──────────────────────────────────────────────
 // 맵마다 자기 화면만 켜다 보면 이전 맵의 잔재가 다음 맵에 그대로 남는다(관리자 탭·직스 패널·숨겨진 안내 등).
 // 게임 진입(startGameNow)과 로비 복귀 경로가 전부 이 함수 하나를 거쳐 nemo 기본 크롬으로 되돌린다. 새 맵을 추가할 때도 여기만 보면 된다.
-const _CHROME_SHOW=['shopProfile','prodHint','gachaActions','opsManual','upgHint'];   // 맵별 코드가 '숨기기만' 하는 것들 → 기본은 보임
+const _CHROME_SHOW=['shopProfile','prodHint','gachaActions','opsManual'];   // 맵별 코드가 '숨기기만' 하는 것들 → 기본은 보임
 const _CHROME_ADMIN=['battleTab','buildTab'];                                         // 관리자 샌드박스 전용 탭 → 기본은 숨김
 function resetGameChrome(){
   if(typeof strikeSetTabLabels==='function' && typeof STK_NEMOLABEL!=='undefined'){ strikeSetTabLabels(STK_NEMOLABEL); strikeSetTabOrder(null); }   // 탭 라벨·순서 원복
@@ -8684,7 +8569,6 @@ function resetGameChrome(){
   if(typeof fxLabDeactivate==='function') fxLabDeactivate();                  // 관리자 이펙트 랩 해제
   _CHROME_SHOW.forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display=''; });
   _CHROME_ADMIN.forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display='none'; });
-  { const ul=document.getElementById('upgList'); if(ul) ul.style.display='none'; }   // 업그레이드 목록은 무선택이 기본
   { const sl=document.getElementById('specLabel'); if(sl) sl.innerHTML=''; }         // 직스 리더보드(#stLead) 잔존 제거
   { const si=document.getElementById('stSelInfo'); if(si){ si.classList.add('hide'); si.innerHTML=''; } }
   { const r=document.getElementById('stResult'); if(r){ try{ r.remove(); }catch(_){ } } }
@@ -10723,7 +10607,6 @@ function clearShopSel(){ G.shopSel=null; uHold=null;
 // 취소키 클릭 → 탭별 선택 해제
 function cancelSelect(){ if(G.bossOpen){ if(G.bossDeployPick){ bossDeployCancel(); return; } if(typeof bossDeselect==='function') bossDeselect(); return; }   // 토벌장: 파견 선택 모드=취소 / 그 외=아레나 유닛 선택 해제
   if(G.tab==='Unit'){ clearShopSel(); return; }
-  if(G.tab==='Upgrade'){ if(typeof clearUpgSel==='function') clearUpgSel(); return; }
   if(G.tab==='Players'){ if(typeof clearPlayerSel==='function') clearPlayerSel(); return; }
   deselectUnit(); }
 // 시민 이동 명령(빈 곳 클릭/드래그 → 그 지점으로, 유닛 위 지나가면 구매). 손 떼도 목표 유지(메인 이동명령식)
@@ -10834,41 +10717,7 @@ const vp=document.getElementById('vPlayers');
 vp.addEventListener('mousedown',onPlayerDown); vp.addEventListener('mousemove',onPlayerMove); window.addEventListener('mouseup',onPlayerUp);
 vp.addEventListener('touchstart',onPlayerDown,{passive:false}); vp.addEventListener('touchmove',onPlayerMove,{passive:false}); vp.addEventListener('touchend',onPlayerUp);
 
-// ── 업그레이드 탭: 메인 체계 — 건물 클릭=선택(업글 패널) / 빈곳 드래그=박스로 건물 선택 / 빈곳 탭=해제 / 취소키 ──
-// 관리자 업그레이드: 메인 규약 정합 — 무선택=시트 내려감/힌트 숨김, 건물 지정=목록 시트 슬라이드업. 일반 게임은 미적용(if G.sandbox)
-function _upgSheetSync(){ if(!G.sandbox || G.tab!=='Upgrade') return;
-  const hasSel=(G.techB!=null);
-  document.body.classList.toggle('sheetOpen', !!hasSel); if(typeof _syncSheetLift==='function') requestAnimationFrame(_syncSheetLift);
-  const uh=document.getElementById('upgHint'); if(uh) uh.style.display='none'; }   // 관리자: "건물을 터치하면…" 힌트 미표시(무선택=빈 시트)
-function clearUpgSel(){ G.techB=null; renderBldgs('vUpgrade',TECH,TECH_POS,null,selectUpg);
-  document.getElementById('upgList').style.display='none'; document.getElementById('upgHint').style.display=''; updateDeselTop(); _upgSheetSync(); }
-function bldgUnder(nx,ny){ for(let i=0;i<TECH_POS.length;i++){ const p=TECH_POS[i]; if(Math.hypot((p.x-nx)*GW,(p.y-ny)*GH)<Math.min(GW,GH)*0.10) return i; } return -1; }
-let _upgStart=null, _upgBox=null, _upgMoved=false;
-function onUpgDown(e){ if(G.tab!=='Upgrade') return; e.preventDefault();
-  const p=evPosIn('vUpgrade',e); _upgStart=p; _upgMoved=false; _upgBox=null;
-  const bi=bldgUnder(p.x,p.y);
-  if(bi>=0){ selectUpg(TECH[bi].id); }                       // 건물 클릭 → 선택(업글 패널)
-  else { _upgBox={x0:p.x,y0:p.y,x1:p.x,y1:p.y}; drawUpgBox(_upgBox); }  // 빈 곳 → 박스 시작
-}
-function onUpgMove(e){ if(G.tab!=='Upgrade'||!_upgBox) return; e.preventDefault();
-  const p=evPosIn('vUpgrade',e); _upgMoved=true; _upgBox.x1=p.x; _upgBox.y1=p.y; drawUpgBox(_upgBox); }
-function onUpgUp(){ if(!_upgBox){ _upgStart=null; return; }
-  const b=_upgBox; clearUpgBox(); _upgBox=null;
-  if(_upgMoved){ const x0=Math.min(b.x0,b.x1),x1=Math.max(b.x0,b.x1),y0=Math.min(b.y0,b.y1),y1=Math.max(b.y0,b.y1);
-    let best=Infinity,pick=-1; for(let i=0;i<TECH_POS.length;i++){ const p=TECH_POS[i];
-      if(p.x>=x0&&p.x<=x1&&p.y>=y0&&p.y<=y1){ const d=Math.hypot((p.x-b.x0)*GW,(p.y-b.y0)*GH); if(d<best){best=d;pick=i;} } }
-    if(pick>=0) selectUpg(TECH[pick].id); else clearUpgSel(); }   // 박스 안 최근접 건물 1개
-  else clearUpgSel();   // 빈 곳 탭 = 해제
-  _upgStart=null; }
-function drawUpgBox(b){ let el=document.getElementById('upgBox');
-  if(!el){ el=document.createElement('div'); el.id='upgBox'; document.getElementById('vUpgrade').appendChild(el); }
-  const x=Math.min(b.x0,b.x1),y=Math.min(b.y0,b.y1),w=Math.abs(b.x1-b.x0),h=Math.abs(b.y1-b.y0);
-  el.style.cssText='position:absolute;border:1px solid #46f06a;background:rgba(70,240,106,.14);pointer-events:none;z-index:15;'
-    +'left:'+(x*100)+'%;top:'+(y*100)+'%;width:'+(w*100)+'%;height:'+(h*100)+'%'; }
-function clearUpgBox(){ const el=document.getElementById('upgBox'); if(el) el.remove(); }
-const vUpg=document.getElementById('vUpgrade');
-vUpg.addEventListener('mousedown',onUpgDown); vUpg.addEventListener('mousemove',onUpgMove); window.addEventListener('mouseup',onUpgUp);
-vUpg.addEventListener('touchstart',onUpgDown,{passive:false}); vUpg.addEventListener('touchmove',onUpgMove,{passive:false}); vUpg.addEventListener('touchend',onUpgUp);
+// (삭제) 업그레이드 탭 건물 화면 — 건물 타일·선택 박스·업그레이드 목록 패널. 하단 업그레이드 시트(renderUpgradeSheet)와 완전 중복이라 폐지.
 
 // 투사체 오버레이(#cvFx, 3D 모델 위) — 미사일/탄이 유닛 몸에 가려지지 않도록 최상단에 그림
 // ── 이동 트레일: 모델별 테마 레시피(전 공중유닛 + 레이서/브레이커) — 랩·메인 공용(완전 동일) ──
@@ -11178,13 +11027,12 @@ function loop(now){
     else if(G.tab==='Players') drawPlayer();
     else drawMiniMap();
     const mcv=document.getElementById('cvMarine');
-    if(window.M3D && window.M3D.ready()){ const show=(G.tab==='Main'||G.tab==='Battle'||G.tab==='Unit'||G.tab==='Upgrade'||G.tab==='Players') && !(G.opt&&G.opt.model3d===false); mcv.style.display=show?'block':'none';
+    if(window.M3D && window.M3D.ready()){ const show=(G.tab==='Main'||G.tab==='Battle'||G.tab==='Unit'||G.tab==='Players') && !(G.opt&&G.opt.model3d===false); mcv.style.display=show?'block':'none';
       if(G.tab==='Main'||G.tab==='Battle'||G.tab==='Players') window.M3D.sync(G.units, GW, GH, dt, G.sel, G.enemies, G.selEnemy, ((G.sandbox&&G.pcheck)?(G.pcScale||1):null), G.view);   // 🎨 색 확인(관리자 샌드박스 전용)만 유닛 확대 · 네모네모 게임은 항상 null=원본 동작
       else if(G.tab==='Unit') window.M3D.syncShop(GW, GH, dt);
-      else if(G.tab==='Upgrade') window.M3D.syncBldg(GW, GH, dt); }
+      }
     const fcv=document.getElementById('cvFx');  // 투사체 오버레이(메인·관전) / 업그레이드 가동 파티클
     if(G.tab==='Main'||G.tab==='Battle'||G.tab==='Players'){ fcv.style.display='block'; drawFx(); if(typeof drawSkillFx==='function') drawSkillFx(); stepMoveTrails(dt); if(G.tab==='Battle'&&typeof drawBattleFx==='function') drawBattleFx(dt); }   // 이동 트레일 + 스킬 + ⚔ 전장 발사 이펙트
-    else if(G.tab==='Upgrade'){ fcv.style.display='block'; drawUpgFx(dt); }
     else fcv.style.display='none';
   }
   requestAnimationFrame(loop);
@@ -13945,7 +13793,6 @@ function strikeHideNemoChrome(on){ ['coopBossBar','mergeFab','skillFab','autoFab
   const stage=document.querySelector('#hudL .stage'); if(stage) stage.style.display=on?'none':'';   // 좌상단 ROUND 숨김
   // nemo 하단 패널의 비-직스 자식 숨김(직스 패널만 보이게)
   ['shopProfile','prodHint','opsManual'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display=on?'none':''; });   // 켜기/끄기 대칭 — 안 그러면 직스를 한 번 하고 나온 뒤 nemo 안내가 계속 숨겨진다
-  const uh=document.getElementById('upgHint'), ul=document.getElementById('upgList'); if(uh) uh.style.display=on?'none':''; if(ul) ul.style.display='none';
   { const ut=document.querySelector('.tab[data-tab="Unit"]'), bt=document.getElementById('buildTab');   // 건설지 = 관리자 건설 탭(Build)을 그대로 노출, nemo 유닛뽑기 탭은 숨김
     if(ut) ut.style.display=on?'none':''; if(bt) bt.style.display=on?'':'none'; }
   if(!on) document.body.classList.remove('cstMode');
@@ -16008,7 +15855,6 @@ function poseShow(m, which){   // 총은 정지·대기 자세에서만(달리�
 
 const bossRemoteModels=new Map();   // 토벌장 원격(다른 플레이어) 유닛 모델 — 게임 모델 사망 스윕과 분리
 const shopModels=new Map();   // 유닛뽑기 슬롯 전시용 모델(uid -> model). 게임 모델과 분리(사망 스윕 영향 없음)
-const bldgModels=new Map();   // 업그레이드 탭 건물 전시 모델(TECH id -> model)
 const ghostModels=new Map();  // 비활성 고정 슬롯(미건설 터렛/포토) 고스트 — 무채색·축소(아직 비활성 느낌)
 const buildModels=new Map();  // 직스 건설지 전용 전시 모델(일꾼·건물) — 게임/전시 풀과 분리(사망 스윕 무관)
 const buildGhostModels=new Map();  // 건설 배치 예비 건물(반투명 회색 3D 고스트) — 모델 id별 캐시
@@ -16056,7 +15902,7 @@ function init(){
   const L=new GLTFLoader();
   let pending=Object.keys(MODELS).length+Object.keys(GUN_FOR).length+Object.keys(RUN_FOR).length+Object.keys(ATTACK_FOR).length+Object.keys(STAY_FOR).length+Object.keys(WORK_FOR).length+2;  // +1=비콘 +1=워든 검
   const done=()=>{ if(--pending<=0){ ready=true;   // 전체 로드 완료 → 2D 폴백 쓰던 화면(건물/시민) 1회 재렌더로 3D 전환
-    try{ if(typeof G!=='undefined'){ if(G.tab==='Upgrade'&&typeof renderBldgs==='function') renderBldgs('vUpgrade',TECH,TECH_POS,G.techB,selectUpg); if(G.tab==='Unit'&&typeof buildClock==='function') buildClock(); } }catch(e){} } };
+    try{ if(typeof G!=='undefined'){ if(G.tab==='Unit'&&typeof buildClock==='function') buildClock(); } }catch(e){} } };
   // 합성 비콘 3D 모델(합체 베이·유닛 슬롯 발판) — 유닛과 같은 씬에 렌더
   L.load('/assets/beacons/beacon_synthesis.glb', g=>{ const s=g.scene; const box=new THREE.Box3().setFromObject(s);
     beaconBase={ scene:s, off:{x:(box.max.x+box.min.x)/2, y:box.min.y, z:(box.max.z+box.min.z)/2}, h:Math.max(.001,box.max.y-box.min.y), w:Math.max(.001,Math.max(box.max.x-box.min.x, box.max.z-box.min.z)) };
@@ -16783,7 +16629,6 @@ window.M3D={
       const cxw=vx*W, cyw=H-vy*H, hw=(W/2)/vz, hh=(H/2)/vz;
       camera.left=cxw-hw; camera.right=cxw+hw; camera.top=cyw+hh; camera.bottom=cyw-hh; camera.updateProjectionMatrix(); }
     for(const [,m] of shopModels) m.holder.visible=false;            // 메인 탭: 전시 모델 숨김
-    for(const [,m] of bldgModels) m.holder.visible=false;
     for(const [,m] of buildModels) m.holder.visible=false;           // 건설지 전시 모델 숨김
     if(bossModel) bossModel.holder.visible=false;
     for(const [,m] of bossRemoteModels) m.holder.visible=false;                    // 보스 모델 숨김
@@ -16978,7 +16823,6 @@ window.M3D={
     for(const [,m] of models) m.holder.visible=false;   // 게임 모델 숨김
     if(ringInst) ringInst.count=0;   // 인스턴스 선택링도 함께 숨김
     if(shInstA){ shInstA.count=0; shInstB.count=0; }   // 인스턴스 그림자도 숨김
-    for(const [,m] of bldgModels) m.holder.visible=false;
     for(const [,m] of buildModels) m.holder.visible=false;
     for(const [,m] of ghostModels) m.holder.visible=false;
     // 전시 유닛 모델 전부 숨김(가챠로 전환 — 8유닛 시계 제거)
@@ -17018,7 +16862,6 @@ window.M3D={
     if(ringInst) ringInst.count=0;   // 인스턴스 선택링도 함께 숨김
     if(shInstA){ shInstA.count=0; shInstB.count=0; }   // 인스턴스 그림자도 숨김
     for(const [,m] of shopModels) m.holder.visible=false;
-    for(const [,m] of bldgModels) m.holder.visible=false;
     for(const [,m] of ghostModels) m.holder.visible=false;
     for(const [,m] of buildGhostModels) m.holder.visible=false;
     for(const [,b] of beaconInsts) b.holder.visible=false;
@@ -17074,47 +16917,13 @@ window.M3D={
     for(const [k,g] of buildGhostModels){ if(!seenGhost.has(k)) g.holder.visible=false; }
     renderer.render(scene,camera);
   },
-  // 업그레이드 탭: 각 건물 슬롯(TECH_POS) 위에 실제 건물 3D 모델을 세움(천천히 회전).
-  syncBldg(W, H, dt){
-    if(!ready||!W||!H) return;
-    if(renderer._w!==W||renderer._h!==H){ renderer.setSize(W,H,false);
-      camera.left=0;camera.right=W;camera.top=H;camera.bottom=0;camera.updateProjectionMatrix(); renderer._w=W;renderer._h=H; }
-    for(const [,m] of models) m.holder.visible=false;
-    if(ringInst) ringInst.count=0;   // 인스턴스 선택링도 함께 숨김
-    if(shInstA){ shInstA.count=0; shInstB.count=0; }   // 인스턴스 그림자도 숨김
-    for(const [,m] of shopModels) m.holder.visible=false;
-    for(const [,m] of buildModels) m.holder.visible=false;
-    for(const [,m] of ghostModels) m.holder.visible=false;
-    for(const [,b] of beaconInsts) b.holder.visible=false;
-    if(bossModel) bossModel.holder.visible=false;
-    for(const [,m] of bossRemoteModels) m.holder.visible=false;
-    const selB=(typeof G!=='undefined')?G.techB:null;
-    TECH.forEach((b,i)=>{ if(!MODELS[b.id]) return;
-      let m=bldgModels.get(b.id); if(!m){ m=makeModel(b.id); if(!m) return; m.kind='bldg'; bldgModels.set(b.id,m); }
-      const sel=(selB===b.id);
-      m.holder.visible=true;
-      if(m.inner) m.inner.visible=true; if(m.runInner) m.runInner.visible=false; if(m.gun) m.gun.visible=true;
-      m.rim.visible = sel; m.rim.scale.setScalar(1.05);  // 선택 시 링(건물에 딱 맞게)
-      if(!m._thinRim){ m._thinRim=true; const ro=(m.rim.geometry.parameters&&m.rim.geometry.parameters.outerRadius)||1;
-        m.rim.geometry.dispose(); m.rim.geometry=new THREE.RingGeometry(ro*0.93, ro, 48); }  // 링 더 얇게
-      const base=(SCALE[b.id]||MODEL_SCALE)*BLDG_SCALE_MUL;
-      const grow = m._g = (m._g||1) + ((sel?1.4:1)-(m._g||1))*Math.min(1,dt*8);  // 선택 시 크게 확대
-      if(typeof G!=='undefined'){ (G._bldgGrow=G._bldgGrow||{})[b.id]=grow; }   // 가동 파티클이 확대 배율 따라가도록 공유
-      m.holder.scale.setScalar(base*grow);
-      m.yaw.rotation.y = upgBldgYaw(b.id);  // 건설 구역과 각도 통일((swarm?0:CST_YAW)+건설 f)
-      m.anim.position.set(0,0,0); m.anim.rotation.set(0,0,0);  // 바닥에 완전 고정(움직임 없음 — 가동 효과는 파티클로)
-      const p=TECH_POS[i]; m.holder.position.set(p.x*W, (H-p.y*H) - Y_DROP, 0);
-    });
-    renderer.render(scene,camera);
-  },
-  // 공용 보스 토벌장: 보스 1종 + 파견 유닛(실제 3D 모델)이 무대에 서서 교전
+  // (삭제) syncBldg — 업그레이드 탭 건물 3D 전시. 건물 화면 폐지로 제거.
   syncBoss(W, H, dt){
     if(!ready||!W||!H) return;
     if(renderer._w!==W||renderer._h!==H){ renderer.setSize(W,H,false);
       camera.left=0;camera.right=W;camera.top=H;camera.bottom=0;camera.updateProjectionMatrix(); renderer._w=W;renderer._h=H; }
     if(ringInst) ringInst.count=0;   // 인스턴스 선택링 숨김(게임 화면 전용)
     for(const [,m] of shopModels) m.holder.visible=false;
-    for(const [,m] of bldgModels) m.holder.visible=false;
     for(const [,m] of ghostModels) m.holder.visible=false;
     for(const [,b] of beaconInsts) b.holder.visible=false;
     const px=BOSS_VIEW.x||0, py=BOSS_VIEW.y||0;
