@@ -766,6 +766,17 @@ async function groupLobby(){
       assert(cv.parentNode===home,
         '마을→HOME 순서로 빌린 뒤 반납했는데 원래 자리가 아님(현재: '+(cv.parentNode.id||cv.parentNode.className)+') — 유즈맵 3D가 사라진다');
       if(typeof tw3dDetach==='function') tw3dDetach(); }
+    // 네모네모 전용 장식(고정 슬롯 터렛 고스트)은 sync가 매 프레임 다시 만든다 — 캔버스를 빌린 화면은
+    // __unitView로 표시해 꺼야 한다. 안 끄면 지워도 되살아나고, 스킨드 메시 6개가 계속 렌더돼
+    // 프레임이 3배 넘게 느려진다(실측: 18fps → 60fps).
+    { hb3dDetach(); if(typeof tw3dDetach==='function') tw3dDetach();
+      assert(!window.__unitView,'아무도 안 빌렸는데 유닛뷰 표시가 남음');
+      hb3dAttach();
+      assert(window.__unitView===true,'HOME이 빌렸는데 유닛뷰 표시가 안 켜짐 — 터렛 고스트가 그대로 렌더된다');
+      if(typeof tw3dAttach==='function'){ tw3dAttach();
+        assert(window.__unitView===true,'마을이 빌렸는데 유닛뷰 표시가 꺼짐'); tw3dDetach(); }
+      hb3dDetach();
+      assert(!window.__unitView,'반납했는데 유닛뷰 표시가 안 꺼짐 — 유즈맵에서 터렛 고스트가 사라진다'); }
     // 공용 캔버스를 빌릴 때, sync()가 관리하지 않는 풀(뽑기 비콘·미건설 터렛 고스트)도 같이 숨겨야 한다.
     // 안 그러면 '미사일 포탑' 고스트 같은 게 HOME 위에 은은하게 남는다(실제로 그랬다).
     // ⚠ '숨기기'가 아니라 '삭제'여야 한다 — 숨긴 것은 어딘가에서 다시 켜지면 도로 나타난다.

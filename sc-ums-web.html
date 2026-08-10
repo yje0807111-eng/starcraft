@@ -5820,12 +5820,14 @@ function cv3dHome(cv){ if(!_cv3dHome && cv) _cv3dHome=cv.parentNode; return _cv3
 function hb3dAttach(){ const cv=document.getElementById('cvMarine'), host=document.getElementById('homeScreen');
   if(!cv||!host||_hb3dHome) return;
   if(_tw3dHome && typeof tw3dDetach==='function') tw3dDetach();   // 남이 쓰고 있으면 먼저 돌려받는다
+  try{ window.__unitView=true; }catch(e){}                  // 네모네모 전용 장식(터렛 고스트) 끄기
   _hb3dHome=cv3dHome(cv);                                   // 돌려놓을 자리(공용 기억)
   cv.style.zIndex='1';                                      // 바닥(#hbCv) 위 · HOME UI(z2+) 아래
   host.insertBefore(cv, host.firstChild.nextSibling||null);
   if(window.M3D && M3D.clearGameModels){ try{ M3D.clearGameModels(); }catch(e){} }   // 랩과 같이 유닛 모델 풀을 비우고 시작
   if(window.M3D && M3D.clearIdlePools){ try{ M3D.clearIdlePools(); }catch(e){} } }    // 잔상이 될 수 있는 풀은 아예 삭제(숨기기 아님)
 function hb3dDetach(){ const cv=document.getElementById('cvMarine');
+  if(!_tw3dHome){ try{ window.__unitView=false; }catch(e){} }   // 둘 다 안 쓸 때만 해제
   if(cv&&_hb3dHome){ cv.style.zIndex=''; cv.style.display='none'; _hb3dHome.appendChild(cv);
     if(window.M3D && M3D.clearGameModels){ try{ M3D.clearGameModels(); }catch(e){} }
     if(window.M3D && M3D.clearIdlePools){ try{ M3D.clearIdlePools(); }catch(e){} } }   // 빌린 것도 돌려줄 때 깨끗이 — 양쪽 다 잔상을 남기지 않는다
@@ -5869,11 +5871,14 @@ function tw3dReady(){ return !!(window.M3D && M3D.ready && M3D.ready()
 function tw3dAttach(){ const cv=document.getElementById('cvMarine'), host=document.getElementById('twMap');
   if(!cv||!host||_tw3dHome) return;
   if(_hb3dHome && typeof hb3dDetach==='function') hb3dDetach();   // 남이 쓰고 있으면 먼저 돌려받는다
+  try{ window.__unitView=true; }catch(e){}                   // 네모네모 전용 장식(터렛 고스트) 끄기
   _tw3dHome=cv3dHome(cv);                                    // 돌려놓을 자리(공용 기억)
   cv.style.zIndex='3';                                       // 바닥·구역 위 · 상단 바 아래
   host.appendChild(cv);
-  if(window.M3D && M3D.clearGameModels){ try{ M3D.clearGameModels(); }catch(e){} } }
+  if(window.M3D && M3D.clearGameModels){ try{ M3D.clearGameModels(); }catch(e){} }
+  if(window.M3D && M3D.clearIdlePools){ try{ M3D.clearIdlePools(); }catch(e){} } }   // HOME과 같이 잔상 풀도 삭제
 function tw3dDetach(){ const cv=document.getElementById('cvMarine');
+  if(!_hb3dHome){ try{ window.__unitView=false; }catch(e){} }   // 둘 다 안 쓸 때만 해제
   if(cv&&_tw3dHome){ cv.style.zIndex=''; cv.style.display='none'; _tw3dHome.appendChild(cv);
     if(window.M3D && M3D.clearGameModels){ try{ M3D.clearGameModels(); }catch(e){} } }
   _tw3dHome=null; _tw3dU=null; }
@@ -19693,7 +19698,9 @@ window.M3D={
         if(m.deadT>=DEAD_HOLD){ scene.remove(m.holder); models.delete(key); } }
     }
     // ── 비활성 고정 슬롯 고스트(무채색·축소) — 아직 안 지어진 터렛/포토캐논 자리 ──
-    if(typeof window!=='undefined' && (window.__sandbox||window.__strike)){ for(const [,g] of ghostModels) g.holder.visible=false; }   // 샌드박스·직스: 고정 슬롯 고스트 숨김
+    // ⚠ 고정 슬롯 고스트(미건설 터렛/포토)는 네모네모 전용 장식이다. sync를 빌려 쓰는 화면(HOME 자동사냥·마을)은
+    //    __unitView로 표시해 끈다 — 안 끄면 매 프레임 다시 만들어져 clearIdlePools로 지워도 되살아난다(실제로 그랬다).
+    if(typeof window!=='undefined' && (window.__sandbox||window.__strike||window.__unitView)){ for(const [,g] of ghostModels) g.holder.visible=false; }   // 샌드박스·직스·유닛뷰: 고정 슬롯 고스트 숨김
     else if(typeof FIXED_IDS!=='undefined'){ const gLive=new Set();
       for(const id of FIXED_IDS){ if(!MODELS[id]) continue;
         const slots=FIXED_SLOTS[id], used=units.filter(u=>u.id===id).length;
