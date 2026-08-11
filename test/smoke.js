@@ -134,8 +134,10 @@ async function groupLobby(){
     assert(!visible($('hubScreen')),'빈 칸인데 게임 선택으로 넘어감');
     assert(($('authErr').textContent||'').length>0,'빈 칸인데 안내가 없음');
     const gb=$('authGuest'); assert(gb && visible(gb),'게스트로 시작하기 버튼이 없음');
-    gb.click(); await sleep(120);
-    assert(visible($('townScreen'))||visible($('charScreen')),'게스트 버튼을 눌렀는데 메인(마을/캐릭터 생성)으로 안 감');
+    gb.click();
+    // 게스트 입장도 로딩(#opening에서 3D 데우기)을 거친다 — 끝날 때까지 기다린다
+    for(let i=0;i<80 && !(visible($('townScreen'))||visible($('charScreen'))||visible($('homeScreen'))); i++) await sleep(50);
+    assert(visible($('townScreen'))||visible($('charScreen'))||visible($('homeScreen')),'게스트 버튼을 눌렀는데 메인으로 안 감');
     assert(!visible($('auth')),'로그인 화면이 안 닫힘');
     assert(AUTH.user,'입장했는데 유저가 비어 있음');
     return AUTH.user.nick||AUTH.user.id; });
@@ -432,6 +434,26 @@ async function groupLobby(){
     assert(r.cyan.length<=1,'팝업에 시안이 '+r.cyan.length+'곳: '+r.cyan.join(', '));
     closeTownPanel();
     return '지도·팝업 모두 통과'; });
+  // 첫 진입 멈춤(모델 최초 생성 = 텍스처 업로드 + 셰이더 컴파일, 실측 538ms)을 로그인 화면·로딩으로 옮긴다.
+  await step('워밍업: 로딩에서 미리 데우고 HOME은 멈춤 없이', async()=>{
+    skipIf(typeof warmAll!=='function' || typeof enterAfterWarm!=='function','워밍업 없음');
+    skipIf(!(window.M3D && M3D.ready && M3D.ready()),'3D 미준비');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    const ids=warmIds();
+    assert(ids.length>0,'데울 모델 목록이 비었다 — 직업/던전 적 모델을 못 찾음');
+    for(const id of ids) assert(M3D.modelKeys().indexOf(id)>=0,'없는 모델을 데우려 함: '+id);
+    _warmDone=false; _warmRun=null;   // 로그인 화면에서 이미 돌았을 수 있다 → 기계 자체를 다시 본다
+    const n=await warmAll();
+    assert(n===ids.length,'데운 개수가 목록과 다름: '+n+' != '+ids.length);
+    assert(M3D.dbg().n===0,'데운 흔적이 남음('+M3D.dbg().n+'개) — clearGameModels 누락');
+    assert((await warmAll())===0,'두 번째 호출이 다시 데움 — 로그인마다 반복된다');
+    // 로딩 게이트는 반드시 HOME에서 끝나야 한다
+    await enterAfterWarm();
+    assert(visible($('homeScreen')),'로딩 뒤 HOME이 안 열림');
+    assert(!visible($('opening')),'로딩 화면이 안 닫힘');
+    const bar=$('opening').querySelector('.opBar');
+    assert(!bar || !bar.style.width,'로딩 막대 인라인 폭이 남음 — 다음 로딩이 100%에서 시작한다');
+    return ids.length+'종 · 잔여 0'; });
   // 유즈맵 루프는 전역 rAF라 화면을 떠나도 계속 돈다. 그대로 두면 HOME/마을이 빌려 간 공용 3D
   // 캔버스에 자기 유닛 목록을 계속 밀어넣어, 한쪽이 dying으로 지운 모델을 다른 쪽이 매 프레임 다시
   // 만든다(실측: 샌드박스 유닛 38개 재생성 반복 · HOME 60 → 47fps).
