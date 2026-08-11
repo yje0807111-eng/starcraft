@@ -442,10 +442,25 @@ async function groupLobby(){
       const f=hbBgFit(ar,wx,wy);
       assert(f.dw>=wx*2-0.01 && f.dh>=wy*2-0.01, 'ar='+ar+' 영역 '+wx*2+'x'+wy*2+'을 못 덮음 → '+Math.round(f.dw)+'x'+Math.round(f.dh));
       assert(Math.abs(f.dw/f.dh-ar)<0.001, 'ar='+ar+' 비율이 찌그러짐 → '+(f.dw/f.dh).toFixed(3)); }
+    // 움직임 프레임 핑퐁 — 영상의 마지막↔첫 프레임이 달라도 이음새가 없어야 한다.
+    if(typeof hbBgPhase==='function'){
+      const N=HB_BG_FRAMES, seg=(N-1)*2;
+      for(const t of [0, HB_BG_CYCLE, HB_BG_CYCLE*3]){   // 왕복 경계에서 처음으로 정확히 돌아와야 한다
+        const p=hbBgPhase(t,N); assert(p.a===0 && p.f<0.001,'t='+t+'에서 1번 프레임으로 안 돌아옴: '+JSON.stringify(p)); }
+      // 어떤 시각에도 인덱스가 범위 안이고, 이웃 프레임끼리만 섞여야 한다(2칸 점프=툭 튄다)
+      let prev=null, maxJump=0;
+      for(let k=0;k<=240;k++){ const p=hbBgPhase(HB_BG_CYCLE*k/120, N);
+        assert(p.a>=0 && p.a<N && p.b>=0 && p.b<N,'프레임 인덱스가 범위 밖: '+JSON.stringify(p));
+        assert(Math.abs(p.a-p.b)===1,'이웃이 아닌 두 프레임을 섞음: '+p.a+'↔'+p.b);
+        const cur=p.a+(p.b-p.a)*p.f;   // 지금 보이는 '실효 프레임 위치'
+        if(prev!==null) maxJump=Math.max(maxJump, Math.abs(cur-prev));
+        prev=cur; }
+      assert(maxJump<0.2,'프레임 위치가 한 번에 '+maxJump.toFixed(2)+'칸 튐 — 화면이 깜빡인다');
+      assert(hbBgFrames(98)===null,'없는 던전인데 프레임이 있다고 함'); }
     // 파일이 없는 던전 = null(재시도 루프에 빠지지 않고 타일로 떨어진다)
     const miss=hbBgImg(99); assert(miss===null,'없는 배경이 null이 아님');
     hbFloor();   // 폴백 경로가 예외 없이 그려져야 한다
-    return '5비율 x 3영역 cover ok · 폴백 ok'; });
+    return '5비율 x 3영역 cover ok · 핑퐁 이음새 ok · 폴백 ok'; });
   // 스탯 출처 내역 · 파워 해금이 실제로 상한을 연다
   await step('RPG: 스탯 출처 내역 · 파워 해금 배선', async()=>{ skipIf(typeof profStatParts!=='function','미적용');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }

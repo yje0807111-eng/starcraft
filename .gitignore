@@ -4,6 +4,11 @@ node_modules/
 .DS_Store
 Thumbs.db
 *.log
+# 던전 배경 작업용 원본(변환 후 .webp만 커밋)
+assets/backgrounds/dungeons/*.png
+assets/backgrounds/dungeons/*.mp4
+assets/backgrounds/dungeons/*.webm
+
 # 로컬 에셋 최적화 도구(배포 제외 — 정적 사이트 빌드 동작 변경 방지)
 /package.json
 /package-lock.json

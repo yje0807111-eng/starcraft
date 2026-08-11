@@ -238,6 +238,50 @@ shadows, long shadows, strong directional light, high contrast, busy center,
 centered focal object, frame, border, blur, depth of field
 ```
 
+---
+
+# 움직이는 배경 (선택)
+
+정지 그림 위에 **4프레임 크로스페이드**를 얹으면 살아 숨쉬는 화면이 된다.
+`dgN_f1.webp` … `dgN_f4.webp` 를 넣으면 자동으로 켜지고, 없으면 정지 그림 그대로다.
+
+```
+1 → 2 → 3 → 4 → 3 → 2 → (반복)      HB_BG_CYCLE = 8초에 한 왕복
+```
+
+**핑퐁으로 도는 이유:** 영상의 마지막 프레임과 첫 프레임은 보통 다르다. 순환(4→1)하면
+그 지점에서 툭 튄다. 왕복하면 어떤 영상을 넣어도 이음새가 없다.
+
+| | 값 |
+|---|---|
+| 파일 | `dgN_f1.webp` ~ `dgN_f4.webp` (1024², q80) |
+| 던전당 용량 | 약 500KB |
+| 프레임 비용 | 측정 노이즈 이하 (60fps 유지, A/B 확인) |
+| 넷 중 하나라도 없으면 | 정지 그림으로 폴백 (깜빡임 없음) |
+
+> ⚠ **전체 화면을 초당 여러 장으로 자르지 말 것.** 1024² 한 장이 디코딩되면 4MB라,
+> 32장이면 134MB다(모바일에서 죽는다). 4장 = 16MB가 상한선이라고 보면 된다.
+
+## 영상에서 프레임 뽑기
+AI 영상 도구에 정지 그림(`dgN.webp`)을 넣어 **미세하게 움직이는 3~6초** 클립을 만든 뒤:
+
+```bash
+node scripts/video-frames.mjs C:/Users/Home/Downloads/dg1.mp4 1
+```
+
+- ffmpeg 없이 크롬 디코더로 뽑는다. mp4 / webm / mov 지원
+- 전 구간을 균등하게 4등분해서 샘플링하고, 1:1이 아니면 가운데를 잘라 정사각으로
+- 시크를 안 쓰고 재생하면서 잡는다 — 색인이 없는 영상(녹화본 등)도 된다
+- `scripts/`는 저장소에서 제외돼 있다(로컬 전용 도구)
+
+**영상 프롬프트:** 정지 그림을 그대로 두고 움직임만 요청한다.
+
+```
+Keep the camera locked and the composition identical, no camera movement, no zoom,
+no pan. Only subtle ambient motion: slow drifting haze, faint pulsing glow, gentle
+surface shimmer. Nothing enters or leaves the frame. Seamless subtle loop.
+```
+
 ## 넣은 뒤 확인
 1. 파일을 이 폴더에 두고 앱에서 해당 던전 진입
 2. **유닛이 바닥에서 떠 보이면** → 그림이 너무 탑다운. 공통 블록을 앞으로 옮겨 다시 뽑는다

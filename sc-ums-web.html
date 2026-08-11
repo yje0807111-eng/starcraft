@@ -1141,6 +1141,8 @@
   .portImg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:1;transform:scale(1.14);transform-origin:center 44%}
   /* 생성 아이콘(건물·스킬·업그레이드) = 정사각 원본 그대로. 유닛 초상과 달리 크롭·확대하지 않는다 */
   .icoImg{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;z-index:1;transform:none}
+  .icoFb{position:absolute;inset:0;z-index:1}   /* 아이콘 파일이 없을 때의 라인SVG 폴백 — .icoImg와 같은 자리 */
+  .pIco.icoFb .mIco{width:62%;height:62%}
   .scPortrait::after{content:'';position:absolute;inset:0;pointer-events:none;
     background:repeating-linear-gradient(0deg,rgba(0,0,0,.0) 0 2px,rgba(0,0,0,.22) 2px 3px)}
   /* 직업 배지: 초상화 내부 하단 띠 */
@@ -5407,6 +5409,8 @@ const HB_STOP=30, HB_DOWN_S=3;
 // 그리기 직전에 카메라 한 번(translate+scale)으로 화면에 맞춘다 → 보이는 영역이 커지면 배율 k가 커져
 // 캐릭터만 내려가는 게 아니라 장면 전체가 같은 비율로 확대된다.
 const HB_BG_VIG_IN=0.42, HB_BG_VIG_A=0.62;   // 배경 그림 비네트: 시작 반경 비율 · 가장자리 불투명도
+const HB_BG_FRAMES=4;      // 던전당 움직임 프레임 수(dgN_f1..f4.webp) — 있으면 크로스페이드, 없으면 정지 1장
+const HB_BG_CYCLE=8;       // 한 왕복(1→2→3→4→3→2)에 걸리는 초. 느릴수록 '숨쉬는' 느낌
 const HB_WORLD_H=400;                 // 보이는 영역 높이를 이 값으로 나눈 것이 배율 k
 const HB_CAM_SNAP=24;                 // 이만큼 넘게 벌어지면 보간하지 않고 즉시 맞춘다(화면 복귀·회전 등)
 const HB_CAM_EASE=0.25;               // 접힘/펼침 애니메이션을 좇는 속도(0=정지, 1=즉시)
@@ -5742,6 +5746,20 @@ const _hbBg={};
 function hbBgImg(dg){ const key='dg'+(dg||1), t=_hbBg[key];
   if(t!==undefined) return (t&&t.complete&&t.naturalWidth)?t:null;   // 404면 naturalWidth=0 → 영원히 null(재시도 안 함)
   const im=new Image(); im.src='assets/backgrounds/dungeons/'+key+'.webp'; _hbBg[key]=im; return null; }
+// 움직임 프레임 — dgN_f1.webp … dgN_f4.webp. 넷이 다 오기 전엔 정지 그림으로 버틴다.
+const _hbBgF={};
+function hbBgFrames(dg){ const key='dg'+(dg||1), have=_hbBgF[key];
+  if(!have){ const a=[]; for(let i=1;i<=HB_BG_FRAMES;i++){ const im=new Image();
+      im.src='assets/backgrounds/dungeons/'+key+'_f'+i+'.webp'; a.push(im); } _hbBgF[key]=a; return null; }
+  for(const im of have) if(!(im.complete && im.naturalWidth)) return null;   // 하나라도 없으면 안 씀(깜빡임 방지)
+  return have; }
+// 핑퐁 위상 — 1→2→3→4→3→2로 돌아 이음새가 없다(영상의 마지막↔첫 프레임이 달라도 안 튄다).
+// 반환: 겹칠 두 프레임 인덱스 a,b와 섞는 비율 f(0..1).
+function hbBgPhase(t, n){ if(!(n>1)) return {a:0,b:0,f:0};
+  const seg=(n-1)*2, u=(((t/HB_BG_CYCLE)*seg)%seg+seg)%seg, i=Math.floor(u);
+  let f=u-i; f=f*f*(3-2*f);                      // 등속이면 교차 순간이 티난다 → 부드럽게
+  const pp=k=>{ k=((k%seg)+seg)%seg; return k<n?k:seg-k; };
+  return {a:pp(i), b:pp(i+1), f:f}; }
 // 보이는 영역을 'cover'로 채운다 — 비율 유지, 남는 쪽은 잘림. 어떤 비율의 그림을 넣어도 빈 곳이 안 생긴다.
 // 그리는 위치는 월드 원점 고정 → 업그레이드를 접었다 펴면 적·캐릭터와 같은 비율로 커지고 작아진다.
 function hbBgFit(ar, wx, wy){ ar=ar||1; let dw=wx*2, dh=dw/ar; if(dh<wy*2){ dh=wy*2; dw=dh*ar; } return {dw:dw,dh:dh}; }
@@ -5753,9 +5771,14 @@ function hbVignette(wx,wy){ const x=_hb.ctx, r=Math.hypot(wx,wy);
 function hbFloor(){ const S=_hb, x=S.ctx, D=hbDun(S.dg);
   const half=(S.vBot-S.vTop)/2, k=S.k||1, wx=(S.w/2+40)/k, wy=(half+40)/k;
   x.save(); x.fillStyle='#05070c'; x.fillRect(-wx,-wy,wx*2,wy*2); x.restore();   // 어두운 바탕(그림·타일이 늦게 와도 배경이 비지 않게)
-  const bg=hbBgImg(S.dg);
-  if(bg){ const f=hbBgFit(bg.naturalWidth/bg.naturalHeight, wx, wy);
-    x.save(); x.drawImage(bg, -f.dw/2, -f.dh/2, f.dw, f.dh); x.restore();
+  const fr=hbBgFrames(S.dg), bg=fr?fr[0]:hbBgImg(S.dg);
+  if(bg){ const f=hbBgFit(bg.naturalWidth/bg.naturalHeight, wx, wy), X=-f.dw/2, Y=-f.dh/2;
+    x.save();
+    if(fr){ const p=hbBgPhase(S.t||0, fr.length);   // 두 장을 겹쳐 크로스페이드 = 영상처럼 보인다
+      x.drawImage(fr[p.a], X, Y, f.dw, f.dh);
+      if(p.f>0.002){ x.globalAlpha=p.f; x.drawImage(fr[p.b], X, Y, f.dw, f.dh); x.globalAlpha=1; } }
+    else x.drawImage(bg, X, Y, f.dw, f.dh);
+    x.restore();
     hbVignette(wx,wy); return; }                                     // 그림이 있으면 타일·틴트는 건너뛴다(그림에 이미 색이 있다)
   const img=hbTile(D.tile);
   if(img){ if(!S._pat || S._patName!==D.tile){ const p=x.createPattern(img,'repeat');
@@ -5999,12 +6022,12 @@ function sendDM(){ const inp=document.getElementById('dmInput'); if(!inp||_dmFri
 // 어느 구역이든 화면을 옮기지 않고 한 번의 터치로 갈 수 있다. deco=상호작용 없는 지형지물.
 const TOWN_ZONES={
   plaza:{ x:50, y:50, ico:'⛲',   label:'광장',      title:'내 캐릭터', render:()=>renderProfStats(), deco:true },   // deco = 맵 장식(지도에서 누를 수 없다) · 스탯 패널은 상단 이름(.twWho)에서 연다
-  gacha:   { x:50.0, y:33.3, ico:'🎁',   label:'상점',    title:'상점',          screen:'shop', render:()=>renderProfGacha() },   // 위 · screen 지정 = 팝업 대신 전용 화면으로 이동
-  gate:    { x:70.8, y:41.7, ico:'🔒',   label:'관문',    title:'관문',          render:()=>renderProfGate()  },   // 우상
-  gym:     { x:70.8, y:58.3, ico:'🏋️',  label:'훈련장',  title:'훈련장',        render:()=>renderProfIdle()  },   // 우하
-  gear:    { x:50.0, y:66.7, ico:'🎒',   label:'장비',    title:'장비',          render:()=>renderProfGear()  },   // 아래
-  charsel: { x:29.2, y:58.3, ico:'🧳',   label:'보관소',  title:'캐릭터 보관소', render:()=>renderCharSelect() },   // 좌하
-  charmake:{ x:29.2, y:41.7, ico:'🧬',   label:'생성소',  title:'캐릭터 생성소', render:()=>renderCharCreate() },   // 좌상
+  gacha:   { x:50.0, y:26.0, ico:'🎁',   label:'상점',    title:'상점',          screen:'shop', render:()=>renderProfGacha() },   // 위 · screen 지정 = 팝업 대신 전용 화면으로 이동
+  gate:    { x:74.0, y:38.0, ico:'🔒',   label:'관문',    title:'관문',          render:()=>renderProfGate()  },   // 우상
+  gym:     { x:74.0, y:62.0, ico:'🏋️',  label:'훈련장',  title:'훈련장',        render:()=>renderProfIdle()  },   // 우하
+  gear:    { x:50.0, y:74.0, ico:'🎒',   label:'장비',    title:'장비',          render:()=>renderProfGear()  },   // 아래
+  charsel: { x:26.0, y:62.0, ico:'🧳',   label:'보관소',  title:'캐릭터 보관소', render:()=>renderCharSelect() },   // 좌하
+  charmake:{ x:26.0, y:38.0, ico:'🧬',   label:'생성소',  title:'캐릭터 생성소', render:()=>renderCharCreate() },   // 좌상
 };
 const TW_WORLD_W_MUL=1.6, TW_WORLD_H_MUL=1.35;   // 월드 = 화면의 가로 N배 × 세로 M배(3배→1.6배: 구역을 한 화면에 모으며 여백만 남김)
 const TW_SPEED=190;          // 캐릭터 이동 속도(월드 px/초)
@@ -14426,7 +14449,9 @@ function _techUnitPortrait(id){ return (typeof unitPortraitHTML==='function'&&un
 // 유닛 초상(_techUnitPortrait)과 동일한 portImg 규격 · 모델 없음/미로드/3D 끔 = 기존 이모지 폴백
 // 🎨 생성 아이콘 연결 — 파일명이 키와 1:1이라 경로만 만들면 된다. 없는 키는 기존 표시로 자동 폴백.
 const ICO_DIR='assets/icons/';
-function _icoImg(sub, key){ return '<img class="icoImg" src="'+ICO_DIR+sub+'/'+key+'.webp" alt="" draggable="false" onerror="this.remove()">'; }
+function _icoImg(sub, key, fb){ return '<img class="icoImg" src="'+ICO_DIR+sub+'/'+key+'.webp" alt="" draggable="false" data-fb="'+(fb||'\u{1F527}')+'" onerror="_icoFail(this)">'; }
+// 아이콘 파일이 없으면(404) 빈칸이 남던 것 → 공용 라인SVG로 교체. 새 아이콘을 넣기 전에도 자리가 비지 않는다(단일 소스: pIco 재사용)
+function _icoFail(im){ try{ im.outerHTML=pIco(im.getAttribute('data-fb')||'\u{1F527}','icoFb'); }catch(_e){ try{ im.remove(); }catch(_e2){} } }
 // 연구 73종 → 아이콘 23종. 효과가 같은 것끼리 하나를 공유한다.
 const UPG_ICO={
   inf_atk:'inf_atk', veh_atk:'veh_atk', air_atk:'air_atk',
@@ -14442,12 +14467,12 @@ const UPG_ICO={
   u238:'range', grooved:'range', singularity:'range', charon:'range',
   burrow:'burrow', lurker:'morph', ventral:'transport', carrier_cap:'transport', reaver_cap:'transport',
   chitinous:'carapace' };
-function upgIcoHTML(k, fallback){ const f=UPG_ICO[k]; return f? _icoImg('upgrades','up_'+f) : (fallback||pIco('🔬')); }
-function skillIcoHTML(k, fallback){ return (typeof SKILLS!=='undefined'&&SKILLS[k])? _icoImg('skills','sk_'+k) : (fallback||pIco('✨')); }
+function upgIcoHTML(k, fallback){ const f=UPG_ICO[k]; return f? _icoImg('upgrades','up_'+f,'🔬') : (fallback||pIco('🔬')); }
+function skillIcoHTML(k, fallback){ return (typeof SKILLS!=='undefined'&&SKILLS[k])? _icoImg('skills','sk_'+k,'✨') : (fallback||pIco('✨')); }
 function bldgPortraitOf(mk, ico){   // 건물 초상 단일 소스: 3D 모델 이미지 → 없으면 아이콘(관리자 건물·직스 신전 공용)
   const img=(mk&&window.M3D&&M3D.bldgImage&&!(G.opt&&G.opt.model3d===false))?M3D.bldgImage(mk):null;
   return img?('<img class="portImg" src="'+img+'" alt="" draggable="false">'):(pIco(ico||'🏢')); }
-function _techBldgPortrait(bk, ico){ if(bk) return _icoImg('buildings','bld_'+bk);   // 생성 아이콘 우선
+function _techBldgPortrait(bk, ico){ if(bk) return _icoImg('buildings','bld_'+bk,ico||'🏢');   // 생성 아이콘 우선
   const race=G.tech.race, mk=(typeof TECH_MODEL!=='undefined'&&TECH_MODEL[race])?TECH_MODEL[race][bk]:null;
   return bldgPortraitOf(mk, ico); }
 // ══ 건설 탭 — RTS식 배치 맵(종족→일꾼→건물 배치) + 선택 건물 생산/연구 카드 ══
