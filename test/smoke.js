@@ -254,42 +254,41 @@ async function groupLobby(){
     assert(document.querySelector('#navBar .navIt.on').dataset.nav==='shop','상점 탭이 활성이 아님');
     openHome(); await sleep(60);
     return 'HOME 카드 1개 + 네비 5칸(home·정비·마을·유즈맵·상점) ok'; });
-  // 폰트 3종 — 제목 Do Hyeon · 본문 IBM Plex Sans KR · 숫자 Rajdhani.
+  // 폰트 3종 — 제목 Jua(내장) · 본문 Noto Sans KR Bold(내장) · 숫자 Rajdhani(웹폰트).
   // ⚠ 실제 렌더가 아니라 CSS만 잰다(헤드리스에선 웹폰트를 못 받을 수 있어 렌더 비교는 못 믿는다).
   await step('폰트: 제목/본문/숫자가 토큰으로 갈린다', async()=>{
     const root=getComputedStyle(document.documentElement);
     const ti=root.getPropertyValue('--font-ti'), ko=root.getPropertyValue('--font-ko'), num=root.getPropertyValue('--font-num');
-    // 한글은 제목·본문이 '같은 가족'이다(다른 가족을 섞으면 글자 폭 비율이 달라 따로 논다) → 굵기로 가른다
-    assert(/IBM Plex Sans KR/.test(ti),'제목 토큰이 IBM Plex Sans KR이 아님: '+ti);
-    assert(/IBM Plex Sans KR/.test(ko),'본문 토큰이 IBM Plex Sans KR이 아님: '+ko);
+    // 제목=디스플레이(Jua) · 본문=고가독(Noto Bold) — 두 가족을 역할로 가른다
+    assert(/JuaKR/.test(ti),'제목 토큰이 JuaKR이 아님: '+ti);
+    assert(/NotoKR/.test(ko),'본문 토큰이 NotoKR이 아님: '+ko);
+    assert(ti!==ko,'제목·본문이 같은 토큰 — 역할이 안 갈림');
     assert(/Rajdhani/.test(num),'숫자 토큰에 Rajdhani가 없음: '+num);
     assert(ti!==num && ko!==num,'숫자 폰트가 한글과 안 갈림');
-    // 웹폰트를 실제로 불러오는가 — @import 한 줄에 둘 다 있어야 한다
+    // 한글 2종은 내장(woff2)이라 네트워크 없이도 뜬다 — @font-face 실재 확인
+    const faces=[...document.fonts].map(f=>f.family);
+    for(const f of ['JuaKR','NotoKR'])
+      assert(faces.indexOf(f)>=0, f+' @font-face가 없음: '+[...new Set(faces)].join(','));
+    // 숫자는 여전히 구글 웹폰트(Rajdhani)
     const imp=[...document.styleSheets].flatMap(s=>{try{return [...s.cssRules]}catch(e){return []}})
       .filter(r=>r.type===CSSRule.IMPORT_RULE).map(r=>r.href).join(' ');
-    for(const f of ['Rajdhani','IBM+Plex+Sans+KR'])
-      assert(imp.indexOf(f)>=0, f+'를 웹폰트로 안 불러옴: '+imp);
-    // 본문 굵기(400~600)까지 받아와야 제목 700과 대비가 생긴다
-    assert(/IBM\+Plex\+Sans\+KR:wght@[^&]*400/.test(imp),'본문 굵기를 안 받아옴: '+imp);
+    assert(imp.indexOf('Rajdhani')>=0,'Rajdhani를 웹폰트로 안 불러옴: '+imp);
     // 개별 규칙에 폰트 이름을 박아두면 토큰이 무의미해진다
     let hard=0, sample='';
     for(const sh of document.styleSheets){ let rules; try{rules=sh.cssRules}catch(e){continue}
-      for(const r of rules||[]){ const ff=r.style&&r.style.fontFamily;
-        if(ff && /Rajdhani|Do Hyeon|IBM Plex|Apple SD Gothic/.test(ff)){ hard++; if(!sample) sample=r.selectorText+' → '+ff; } } }
+      for(const r of rules||[]){ if(!r.selectorText) continue;   // @font-face는 폰트를 '정의'하는 곳이라 이름이 있는 게 정상
+        const ff=r.style&&r.style.fontFamily;
+        if(ff && /Rajdhani|Do Hyeon|IBM Plex|Apple SD Gothic|JuaKR|NotoKR/.test(ff)){ hard++; if(!sample) sample=r.selectorText+' → '+ff; } } }
     assert(hard===0,'개별 규칙에 폰트 이름이 박혀 있음('+hard+'곳): '+sample);
-    // 제목 위계 = 굵기. IBM Plex Sans KR은 700이 최대라 800/900이 남으면 가짜 볼드가 된다
+    // 위계 = 가족 + 크기. Jua는 400 단일 굵기라 굵기로는 가를 수 없다.
     openHome(); await sleep(60);
     const head=document.querySelector('.hmUpgHead'), hs=getComputedStyle(head);
-    assert(/IBM Plex Sans KR/.test(hs.fontFamily),'제목에 제목 폰트가 안 걸림: '+hs.fontFamily);
-    const hw=parseInt(hs.fontWeight,10);
-    assert(hw===700,'제목 굵기가 700이 아님(800↑이면 가짜 볼드): '+hw);
-    // 본문은 제목보다 가벼워야 위계가 산다
-    const body=document.querySelector('.hmUpLv'), bw=parseInt(getComputedStyle(body).fontWeight,10);
-    assert(bw<hw,'본문이 제목만큼 굵어 위계가 없음: 본문 '+bw+' / 제목 '+hw);
-    // 제목은 본문보다 확실히 커야 한다(같은 가족이라 크기까지 같으면 구분이 안 된다)
-    const hsz=parseFloat(hs.fontSize), bsz=parseFloat(getComputedStyle(body).fontSize);
+    assert(/JuaKR/.test(hs.fontFamily),'제목에 제목 폰트(JuaKR)가 안 걸림: '+hs.fontFamily);
+    const body=document.querySelector('.hmUpLv'), bs=getComputedStyle(body);
+    assert(!/JuaKR/.test(bs.fontFamily),'본문까지 제목 폰트라 위계가 없음: '+bs.fontFamily);
+    const hsz=parseFloat(hs.fontSize), bsz=parseFloat(bs.fontSize);
     assert(hsz-bsz>=3,'제목이 본문보다 충분히 크지 않음: 제목 '+hsz+' / 본문 '+bsz);
-    return '제목 IBM Plex Sans KR 700/'+hsz+'px · 본문 400/'+bsz+'px · 숫자 Rajdhani'; });
+    return '제목 Jua '+hsz+'px · 본문 Noto '+bsz+'px · 숫자 Rajdhani'; });
   // 💠 공용 재화 바 — 미네랄=pcoin · 가스 · 젬. 모든 RPG/허브 + 유즈맵 선택 상단 상시(인게임 제외).
   await step('공용 재화 바: RPG/유즈맵 상단 상시 · 미네랄/가스/젬', async()=>{ skipIf(typeof curShow!=='function','재화 바 없음');
     // curShow()는 showAppScreen 안에서 동기 실행 → 화면 연 직후 동기 검사(전환 FX/타이머 레이스 회피)
@@ -574,7 +573,8 @@ async function groupLobby(){
     //    ⚠ 아군 발사 주기는 캐릭터 쿨다운(c.cd)을 공유한다 — 캐릭터를 막으면 아군도 멈춰서 그 방식으론 못 잰다
     const runWave=()=>{ _hb.round=1; _hb.wave=1; _hb.phase='fight';
       _hb.foes.length=0; _hb.pend.length=0; hbSpawnWave();
-      const k=_hb.kills; for(let i=0;i<120;i++) hbStep(0.05); return _hb.kills-k; };
+      // 사거리가 근접(34)이라 적이 화면 밖에서 걸어 들어올 시간이 필요하다 — 6초로는 도착 전에 끝난다
+      const k=_hb.kills; for(let i=0;i<300;i++) hbStep(0.05); return _hb.kills-k; };
     hbHunt().build={}; PROF().equip=[]; hbLayoutAllies();
     const solo=runWave();
     hbHunt().build={ally:HB_BUILD.ally.max, turret:HB_BUILD.turret.max}; hbLayoutAllies();
