@@ -135,6 +135,9 @@ center, rune circles and low broken pillar stumps only around the outer ring.
 Deep indigo and dim cyan palette.
 ```
 
+> **dg1~dg3 완료** — 2048² 원본을 1024 · WebP q80으로 넣었다(177/124/99KB).
+>  중앙 40% 평균 밝기 24 / 25 / 18% 로 셋 다 유닛이 잘 읽힌다.
+
 ### dg4~dg10 (아직 안 씀)
 아래 표를 위 던전 블록과 같은 형식(한 문단: 장소 → 바닥 재질 → 디테일 → 가운데
 비움 → 색)으로 풀어 쓰면 된다.
