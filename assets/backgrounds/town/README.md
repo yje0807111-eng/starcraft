@@ -131,17 +131,47 @@ sky, vignette, dark corners.
 각 블록은 **그 요소만** 말하고, 끝에 공통 블록을 붙인다.
 프레이밍 문장은 벌마다 다르므로 요소 블록 안에 넣는다.
 
-### 바닥 — 프레이밍 문장
-바닥 블록에는 반드시 아래를 포함시킨다.
+### 바닥 — `town_ground` (확정)
 
 ```
-Portrait 2:3 composition. The ground plane fills the entire frame edge to edge.
-Seven flat empty landing pads arranged around a central plaza, connected by
-worn paths; every pad left completely bare and unoccupied, no buildings, no
-structures, no props standing on them.
+A frontier colony settlement, a small walled outpost sitting alone in the middle
+of a vast wilderness that surrounds it completely.
+
+The walled settlement is small and occupies only the middle of the frame: its
+outer wall spans roughly the central sixty percent of the width and the central
+fifty-seven percent of the height, and never comes near the edges of the picture.
+
+At its very center a wide circular plaza of fitted metal deck plates ringed by a
+low kerb, swept clean and completely bare. From this plaza six worn paths radiate
+outward: one straight up, one straight down, and two to each side, upper left,
+upper right, lower left, lower right. The paths are packed dust and scuffed
+walkway plating, frayed at the edges, ending in open bare clearings with nothing
+built on them. Between the paths, dry compacted ground with cable conduits half
+buried in the dust, faded painted markings, drainage grating and shallow tyre
+ruts.
+
+Every clearing is left completely empty: no buildings, no structures, no tents,
+no crates, no machinery, no props of any kind standing anywhere on the settled
+ground.
+
+Beyond the wall, on all four sides equally, a deep unbroken belt of wilderness
+about one fifth of the frame across on every side, just as thick on the left and
+right as it is at the top and bottom. The ground breaks away into a rocky
+escarpment and drops into dense dark evergreen forest and broken boulder fields.
+This forest fills every corner and runs right off all four edges of the picture,
+never thinning out, never revealing an end, so the land looks as if it keeps
+going past the frame.
+
+Portrait composition, taller than wide. The ground plane fills the entire frame
+edge to edge.
 ```
 
-> 발판을 **비워 두는 것**이 핵심이다. 건물은 별도 스프라이트로 얹는다.
+뒤에 **공통 블록**을 붙여서 쓴다. 1024 × 1536(2:3)로 뽑으면 된다.
+
+> **성벽 크기가 이 그림의 전부다.** 걸어다니는 범위는 그림 가운데
+> **61.5% × 57.4%로 고정**이라, 성벽이 그보다 크면 성벽에 닿기 전에
+> 보이지 않는 벽에 막힌다. 1차 시도에서 정착지가 92.6% × 80.5%로 나와
+> 좌우 숲이 3.5%밖에 안 남았다 → `just as thick on the left and right` 추가.
 
 ### 건물 — 프레이밍 문장
 건물 블록에는 반드시 아래를 포함시킨다.
