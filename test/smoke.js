@@ -1015,8 +1015,9 @@ async function groupLobby(){
     assert(shown.every(id=>off.includes(id)),'화면 안인데 가장자리 표시가 뜸: '+shown.filter(id=>!off.includes(id)).join(','));
     // 성벽 밖으로는 못 나간다 — 모서리 방향으로 멀리 찍어도 팔각형 안에 갇힌다
     twSetTarget(_twW*2, _twH*2);
-    { const nx=_twChar.tx/_twW*2-1, ny=_twChar.ty/_twH*2-1;
-      assert(Math.abs(nx)+Math.abs(ny) <= 2-TW_WALL_CUT*2+0.001,'성벽 모서리 밖으로 목적지가 나감: '+nx.toFixed(2)+','+ny.toFixed(2)); }
+    { const u=(_twChar.tx/_twW*2-1)/TW_WALL_X, v=(_twChar.ty/_twH*2-1)/TW_WALL_Y;
+      assert(Math.abs(u)<=1.001&&Math.abs(v)<=1.001,'성벽 좌우/상하 밖으로 나감: '+u.toFixed(2)+','+v.toFixed(2));
+      assert(Math.abs(u)+Math.abs(v) <= 2-TW_WALL_CUT*2+0.001,'성벽 모서리 밖으로 목적지가 나감: '+u.toFixed(2)+','+v.toFixed(2)); }
     const t0=w.style.transform, g=twZonePx('gacha'); twSetTarget(g[0],g[1]);
     for(let i=0;i<60;i++) twStep(0.016);
     assert(w.style.transform!==t0,'월드(배경)가 안 움직임');

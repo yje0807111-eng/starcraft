@@ -2805,7 +2805,7 @@
      위에 어두운 막을 덮어 구역 아이콘·라벨 가독성을 지킨다(볼륨1: 배경은 조용히). */
   /* 바닥 그림은 월드보다 크다 — 카메라가 월드 끝에 닿아도 화면 절반이 비지 않게 반 화면씩 더 깐다.
      여유분(가로 31.25% · 세로 37.04%) = 절벽·숲 띠. 걸어다니는 범위는 월드 그대로다. */
-  .twGround{position:absolute;inset:-30.6% -36.2%;pointer-events:none;
+  .twGround{position:absolute;inset:-34.4% -26.8%;pointer-events:none;
     background:linear-gradient(rgba(6,8,12,.42),rgba(6,8,12,.52)),url('assets/backgrounds/town/town_ground.webp') 50% 50%/cover no-repeat,url('assets/tiles/terran_tile_light.webp') 0 0/128px repeat}   /* 마을 바닥 그림(없으면 아래 타일이 그대로 보인다) */
   .twGround::after{content:'';position:absolute;inset:0;pointer-events:none;   /* 가장자리 비네트 — 월드 끝이 자연스럽게 어두워짐 */
     background:radial-gradient(ellipse at 50% 50%,transparent 52%,rgba(0,0,0,.55) 100%)}
@@ -6046,10 +6046,10 @@ const TOWN_ZONES={
   charsel: { x:26.0, y:62.0, ico:'🧳',   label:'보관소',  title:'캐릭터 보관소', render:()=>renderCharSelect() },   // 좌하
   charmake:{ x:26.0, y:38.0, ico:'🧬',   label:'생성소',  title:'캐릭터 생성소', render:()=>renderCharCreate() },   // 좌상
 };
-const TW_WORLD_W_MUL=3.2, TW_WORLD_H_MUL=2.7;   // 월드 = 화면의 가로 N배 × 세로 M배(3배→1.6배: 구역을 한 화면에 모으며 여백만 남김)
-const TW_SPEED=380;          // 캐릭터 이동 속도(월드 px/초)
+const TW_WORLD_W_MUL=2.4, TW_WORLD_H_MUL=2.025;   // 월드 = 화면의 가로 N배 × 세로 M배(3배→1.6배: 구역을 한 화면에 모으며 여백만 남김)
+const TW_SPEED=285;          // 캐릭터 이동 속도(월드 px/초)
 const TW_ARRIVE=4;           // 목적지 도착 판정(px)
-const TW_ZONE_R=104;          // 구역 도착 판정 반경(px)
+const TW_ZONE_R=78;          // 구역 도착 판정 반경(px)
 const TW_TAP_MS=260, TW_TAP_PX=10;   // 이보다 길게 누르거나 많이 움직이면 '탭'이 아니라 '꾹 누르기'
 let _townOpen=false, _twZone=null;
 let _twW=0,_twH=0, _twVW=0,_twVH=0, _twVL=0,_twVT=0;   // 월드 크기 / 화면(뷰포트) 크기·위치
@@ -6113,13 +6113,15 @@ function twLayout(){ const map=document.getElementById('twMap'), w=document.getE
     _twChar.x*=sx; _twChar.y*=sy; _twChar.tx*=sx; _twChar.ty*=sy; }
   _twW=nw; _twH=nh; w.style.width=nw+'px'; w.style.height=nh+'px';
   for(const el of w.querySelectorAll('.twZone')){ const z=TOWN_ZONES[el.dataset.zone]; if(z){ el.style.left=z.x+'%'; el.style.top=z.y+'%'; } } }
-const TW_WALL_CUT=0.22;   // 그림 속 성벽의 모서리 컷 비율(팔각형)
-// 성벽 안으로 가두기 — 월드 정규좌표(-1~1)에서 사각 클램프 + 마름모 컷
+// 성벽 경계 — town_ground.webp의 성벽을 방사 측정(3도 간격)해 역산한 값. 그림을 바꾸면 다시 재야 한다.
+const TW_WALL_X=0.925, TW_WALL_Y=0.94, TW_WALL_DY=-0.055;   // 월드 정규좌표(-1~1) 기준 좌우/상하 한계 + 세로 치우침 보정
+const TW_WALL_CUT=0.344;                 // 모서리 컷(팔각형) — 기기별 1.285~1.338의 평균
+// 성벽 안으로 가두기 — 축별 클램프 + 그 좌표계에서의 마름모 컷. 팔각형은 볼록이라 목적지만 가두면 경로도 안 샌다.
 function twClampWall(wx,wy){
-  let nx=Math.max(-1,Math.min(1, wx/_twW*2-1)), ny=Math.max(-1,Math.min(1, wy/_twH*2-1));
-  const lim=2-TW_WALL_CUT*2, s=Math.abs(nx)+Math.abs(ny);
-  if(s>lim){ const k=lim/s; nx*=k; ny*=k; }   // 모서리 밖이면 중심 쪽으로 당겨 벽면에 붙인다
-  return [ (nx+1)/2*_twW, (ny+1)/2*_twH ]; }
+  let u=Math.max(-1,Math.min(1, (wx/_twW*2-1)/TW_WALL_X)), v=Math.max(-1,Math.min(1, (wy/_twH*2-1-TW_WALL_DY)/TW_WALL_Y));
+  const lim=2-TW_WALL_CUT*2, s=Math.abs(u)+Math.abs(v);
+  if(s>lim){ const k=lim/s; u*=k; v*=k; }   // 모서리 밖이면 중심 쪽으로 당겨 벽면에 붙인다
+  return [ (u*TW_WALL_X+1)/2*_twW, (v*TW_WALL_Y+TW_WALL_DY+1)/2*_twH ]; }
 function twZonePx(id){ const z=TOWN_ZONES[id]; return z? [_twW*z.x/100, _twH*z.y/100] : null; }
 function twScreenToWorld(cx,cy){ return [ _twChar.x+(cx-_twVL)-_twVW/2, _twChar.y+(cy-_twVT)-_twVH/2 ]; }   // 캐릭터가 화면 중앙이므로 = 캐릭터 + (터치점 - 화면중앙)
 function twSetTarget(wx,wy){ const _p=twClampWall(wx,wy); _twChar.tx=_p[0]; _twChar.ty=_p[1]; _twChar.mode='to'; _twGoZone=null; }
