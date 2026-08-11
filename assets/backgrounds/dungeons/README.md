@@ -312,16 +312,24 @@ node scripts/video-frames.mjs C:/Users/Home/Downloads/dg1.mp4 1
 Animate this image with the camera completely locked. Do not move, zoom, pan,
 rotate or shake the camera. The composition must stay identical.
 
-Only the surfaces already present may move, and only in place: veins and growths
-pulsing slowly, faint glow breathing brighter and dimmer, a gentle shimmer on wet
-surfaces. Nothing travels across the frame.
+The motion must be almost imperceptible. This should look like a still image that
+is barely alive — a viewer glancing at it should not be sure anything is moving
+at all. Nothing shifts position by more than a few pixels. Every shape keeps its
+exact outline and place.
+
+Allowed, and only very faintly: a slow breathing change in the brightness of the
+glowing parts, a tiny shimmer on wet surfaces, an extremely subtle pulse in the
+veins.
 
 No fog, no mist, no haze, no smoke, no clouds, no dust, no floating particles, no
 light rays, no god rays, no overlays, no colour washes, no vignette. Nothing may
 ever cover, obscure or pass in front of the floor — the entire floor stays fully
 visible in every frame.
 
-Nothing enters or leaves the frame. No new objects. Subtle, slow, seamless loop.
+Nothing enters or leaves the frame. No new objects. No growing, shrinking,
+swaying, waving, rippling, flowing or morphing. No wind.
+
+Extremely subtle, very slow, seamless loop.
 ```
 
 > ⛔ **`drifting haze`·`fog`·`mist` 같은 말을 절대 넣지 말 것.** 한 번 넣었다가
@@ -335,10 +343,30 @@ Nothing enters or leaves the frame. No new objects. Subtle, slow, seamless loop.
 
 | 값 | 뜻 |
 |---|---|
-| 3 이하 | ✔ 미세한 움직임만 — 바닥이 안 가려짐 |
-| 3 초과 | ⚠ 뭔가 화면을 가로질렀을 가능성 — 눈으로 확인 |
+| 1 이하 | ✔ 아주 미세 — 목표치 |
+| 1 ~ 3 | 움직임이 보이는 수준. 취향이면 OK |
+| 3 초과 | ⚠ 과함 · 뭔가 화면을 가로질렀을 가능성 — 눈으로 확인 |
 
 (안개가 낀 실패 사례의 실측값: `3.6 · 6.3 · 5.5`)
+
+## 움직임이 과할 때 — 다시 안 뽑고 줄이기
+
+`HB_BG_AMP`(`sc-ums-web.html`) 한 값이 움직임 **폭**을 정한다. 영상을 다시 렌더하지
+말고 이것부터 내려 볼 것.
+
+| 값 | 결과 |
+|---|---|
+| `1` (기본) | 영상 그대로 |
+| `0.5` | 움직임 폭 절반 |
+| `0.25` | 아주 미세 |
+| `0` | 정지(1번 프레임 고정) |
+
+원리: 1번 프레임을 기준으로 깔고 그 위에 지금 위상을 `amp`만큼만 섞는다. 결과가
+`amp*(A*(1-pf) + B*pf) + (1-amp)*F1` 이 되도록 알파를 푼 것이 `hbBgMix()`다 —
+캔버스는 순차 합성(`dst = src*α + dst*(1-α)`)이라 알파를 그대로 넣으면 틀린 값이 나온다.
+스모크가 25개 조합에서 각 프레임의 실제 기여도를 검산한다.
+
+> 속도가 문제면 `HB_BG_CYCLE`(기본 8초)을 늘린다. 폭과 속도는 다른 값이다.
 
 ## 넣은 뒤 확인
 1. 파일을 이 폴더에 두고 앱에서 해당 던전 진입

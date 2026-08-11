@@ -457,10 +457,22 @@ async function groupLobby(){
         prev=cur; }
       assert(maxJump<0.2,'프레임 위치가 한 번에 '+maxJump.toFixed(2)+'칸 튐 — 화면이 깜빡인다');
       assert(hbBgFrames(98)===null,'없는 던전인데 프레임이 있다고 함'); }
+    // 움직임 크기(HB_BG_AMP) — 캔버스 순차 합성이라 알파를 그대로 쓰면 안 된다.
+    // 실제로 합성했을 때의 '각 프레임 기여도'가 의도한 가중치와 같은지 본다.
+    if(typeof hbBgMix==='function'){
+      for(const amp of [0,0.25,0.5,0.75,1]) for(const pf of [0,0.25,0.5,0.75,1]){
+        const m=hbBgMix(amp,pf);
+        assert(m.a1>=-1e-9 && m.a1<=1+1e-9 && m.a2>=-1e-9 && m.a2<=1+1e-9,'알파가 0~1 밖: amp='+amp+' pf='+pf+' '+JSON.stringify(m));
+        // 순차 합성 결과의 가중치: F1=(1-a1)(1-a2), A=a1(1-a2), B=a2
+        const wF=(1-m.a1)*(1-m.a2), wA=m.a1*(1-m.a2), wB=m.a2;
+        assert(Math.abs(wF+wA+wB-1)<1e-6,'가중치 합이 1이 아님: '+(wF+wA+wB));
+        assert(Math.abs(wA-amp*(1-pf))<1e-6,'A 기여도가 틀림 amp='+amp+' pf='+pf+': '+wA.toFixed(4)+' != '+(amp*(1-pf)).toFixed(4));
+        assert(Math.abs(wB-amp*pf)<1e-6,'B 기여도가 틀림: '+wB.toFixed(4));
+        assert(Math.abs(wF-(1-amp))<1e-6,'기준 프레임 기여도가 틀림: '+wF.toFixed(4)+' != '+(1-amp).toFixed(4)); } }
     // 파일이 없는 던전 = null(재시도 루프에 빠지지 않고 타일로 떨어진다)
     const miss=hbBgImg(99); assert(miss===null,'없는 배경이 null이 아님');
     hbFloor();   // 폴백 경로가 예외 없이 그려져야 한다
-    return '5비율 x 3영역 cover ok · 핑퐁 이음새 ok · 폴백 ok'; });
+    return '5비율 x 3영역 cover ok · 핑퐁 이음새 ok · 움직임 크기 25조합 ok · 폴백 ok'; });
   // 스탯 출처 내역 · 파워 해금이 실제로 상한을 연다
   await step('RPG: 스탯 출처 내역 · 파워 해금 배선', async()=>{ skipIf(typeof profStatParts!=='function','미적용');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }

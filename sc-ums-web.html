@@ -2803,7 +2803,9 @@
   @keyframes twTap{from{transform:scale(.4);opacity:.9}to{transform:scale(1.6);opacity:0}}
   /* 마을 바닥 = 실제 포장 타일(공용 타일 에셋). 월드 전체에 반복해 걸어다니는 땅처럼 보이게 하고,
      위에 어두운 막을 덮어 구역 아이콘·라벨 가독성을 지킨다(볼륨1: 배경은 조용히). */
-  .twGround{position:absolute;inset:0;pointer-events:none;
+  /* 바닥 그림은 월드보다 크다 — 카메라가 월드 끝에 닿아도 화면 절반이 비지 않게 반 화면씩 더 깐다.
+     여유분(가로 31.25% · 세로 37.04%) = 절벽·숲 띠. 걸어다니는 범위는 월드 그대로다. */
+  .twGround{position:absolute;inset:-37.04% -31.25%;pointer-events:none;
     background:linear-gradient(rgba(6,8,12,.42),rgba(6,8,12,.52)),url('assets/backgrounds/town/town_ground.webp') 50% 50%/cover no-repeat,url('assets/tiles/terran_tile_light.webp') 0 0/128px repeat}   /* 마을 바닥 그림(없으면 아래 타일이 그대로 보인다) */
   .twGround::after{content:'';position:absolute;inset:0;pointer-events:none;   /* 가장자리 비네트 — 월드 끝이 자연스럽게 어두워짐 */
     background:radial-gradient(ellipse at 50% 50%,transparent 52%,rgba(0,0,0,.55) 100%)}
@@ -5411,6 +5413,9 @@ const HB_STOP=30, HB_DOWN_S=3;
 const HB_BG_VIG_IN=0.42, HB_BG_VIG_A=0.62;   // 배경 그림 비네트: 시작 반경 비율 · 가장자리 불투명도
 const HB_BG_FRAMES=4;      // 던전당 움직임 프레임 수(dgN_f1..f4.webp) — 있으면 크로스페이드, 없으면 정지 1장
 const HB_BG_CYCLE=8;       // 한 왕복(1→2→3→4→3→2)에 걸리는 초. 느릴수록 '숨쉬는' 느낌
+// 움직임 크기(0~1). 1=영상 그대로, 0.5=절반만 움직임, 0=정지.
+// AI 영상은 모션 강도를 정확히 맞추기 어렵다 — 과하게 나왔을 때 다시 뽑지 말고 이 값을 내린다.
+const HB_BG_AMP=1;
 const HB_WORLD_H=400;                 // 보이는 영역 높이를 이 값으로 나눈 것이 배율 k
 const HB_CAM_SNAP=24;                 // 이만큼 넘게 벌어지면 보간하지 않고 즉시 맞춘다(화면 복귀·회전 등)
 const HB_CAM_EASE=0.25;               // 접힘/펼침 애니메이션을 좇는 속도(0=정지, 1=즉시)
@@ -5759,6 +5764,11 @@ function hbBgFirst(dg){ const a=_hbBgF['dg'+(dg||1)];
   const im=a&&a[0]; return (im&&im.complete&&im.naturalWidth)?im:null; }
 // 핑퐁 위상 — 1→2→3→4→3→2로 돌아 이음새가 없다(영상의 마지막↔첫 프레임이 달라도 안 튄다).
 // 반환: 겹칠 두 프레임 인덱스 a,b와 섞는 비율 f(0..1).
+// 1번 프레임을 기준으로 깔고 그 위에 지금 위상을 HB_BG_AMP만큼만 섞는다 → 움직임 폭이 amp배가 된다.
+//   원하는 결과 = amp*(A*(1-pf) + B*pf) + (1-amp)*F1
+//   캔버스는 순차 합성(dst = src*α + dst*(1-α))이라 알파를 그대로 쓰면 안 되고 아래처럼 풀어야 한다.
+function hbBgMix(amp, pf){ const a2=amp*pf, den=1-a2;
+  return { a1: den>1e-6 ? amp*(1-pf)/den : 1, a2:a2 }; }
 function hbBgPhase(t, n){ if(!(n>1)) return {a:0,b:0,f:0};
   const seg=(n-1)*2, u=(((t/HB_BG_CYCLE)*seg)%seg+seg)%seg, i=Math.floor(u);
   let f=u-i; f=f*f*(3-2*f);                      // 등속이면 교차 순간이 티난다 → 부드럽게
@@ -5778,9 +5788,11 @@ function hbFloor(){ const S=_hb, x=S.ctx, D=hbDun(S.dg);
   const fr=hbBgFrames(S.dg), bg=fr?fr[0]:(hbBgFirst(S.dg)||hbBgImg(S.dg));
   if(bg){ const f=hbBgFit(bg.naturalWidth/bg.naturalHeight, wx, wy), X=-f.dw/2, Y=-f.dh/2;
     x.save();
-    if(fr){ const p=hbBgPhase(S.t||0, fr.length);   // 두 장을 겹쳐 크로스페이드 = 영상처럼 보인다
-      x.drawImage(fr[p.a], X, Y, f.dw, f.dh);
-      if(p.f>0.002){ x.globalAlpha=p.f; x.drawImage(fr[p.b], X, Y, f.dw, f.dh); x.globalAlpha=1; } }
+    if(fr){ const p=hbBgPhase(S.t||0, fr.length), m=hbBgMix(HB_BG_AMP, p.f);   // 겹쳐서 크로스페이드 = 영상처럼
+      if(HB_BG_AMP<1) x.drawImage(fr[0], X, Y, f.dw, f.dh);          // 기준 프레임(움직임 0의 자리)
+      if(m.a1>0.002){ x.globalAlpha=m.a1; x.drawImage(fr[p.a], X, Y, f.dw, f.dh); }
+      if(m.a2>0.002){ x.globalAlpha=m.a2; x.drawImage(fr[p.b], X, Y, f.dw, f.dh); }
+      x.globalAlpha=1; }
     else x.drawImage(bg, X, Y, f.dw, f.dh);
     x.restore();
     hbVignette(wx,wy); return; }                                     // 그림이 있으면 타일·틴트는 건너뛴다(그림에 이미 색이 있다)
@@ -9907,20 +9919,24 @@ function openGachaSheet(el){ if(G.strike){ switchTab('Unit', el||document.queryS
 function openUpgradeSheet(el){ if(G.strike){ switchTab('Upgrade', el||document.querySelector('.tab[data-tab="Upgrade"]')); return; } openMainSheet('upgrade', el, 'Upgrade'); }   // 직스: 보급 탭
 function openAutoSheet(el){ openMainSheet('auto', el, ''); }   // 전송 옆 자동설정 버튼 → 하단 자동화 그리드(전용 탭 없음)
 // ⚙ 자동화 설정 시트 — 팝업 대신 하단 그리드(on/off 셀). 켜두면 유지되는 것들이라 여기서 한 번 설정.
+const AUTO_ICON_DIR='assets/icons/auto/';
+// 자동화 아이콘 — 이미지 우선(auto_<kind>.webp), 없으면 기존 라인SVG 그대로(beaconProHTML·wpnBadgeHTML과 같은 패턴)
+// data-fbcls="" → 폴백을 예전 모양(pIco 기본 22px) 그대로 유지. 파일을 넣으면 자동으로 교체된다.
+function autoIcoHTML(kind, fb){ return '<img class="cgIco" src="'+AUTO_ICON_DIR+'auto_'+kind+'.webp" alt="" draggable="false" data-fb="'+(fb||'⚙️')+'" data-fbcls="" onerror="_icoFail(this)">'; }
 const AUTO_SHEET_DEFS=[
-  ['unit','유닛 소환',pIco('🎲')],
-  ['combine','유닛 조합',pIco('⚛️')],
-  ['energy','에너지 변환',pIco('⚡')],
-  ['bossdeploy','보스 파견',pIco('💀')],
-  ['place','유닛 배치',pIco('🎯')] ];
+  ['unit','유닛 소환','🎲'],
+  ['combine','유닛 조합','⚛️'],
+  ['energy','에너지 변환','⚡'],
+  ['bossdeploy','보스 파견','💀'],
+  ['place','유닛 배치','🎯'] ];
 function _autoSheetModel(){ const o=autoUtilOwned(); if(!G.auto) G.auto={unit:false,combine:false,energy:false,pboss:{}};
   const items=AUTO_SHEET_DEFS.map(function(d){ const kind=d[0], owned=!!o[kind], on=!!G.auto[kind];
-    return { pro:d[2], sn:d[1], state:owned?'ok':'dim', sel:owned&&on,   // 이름 아래 토글 스위치(.sel=켜짐) · 셀 전체 클릭으로 토글
+    return { pro:autoIcoHTML(kind,d[2]), sn:d[1], state:owned?'ok':'dim', sel:owned&&on,   // 이름 아래 토글 스위치(.sel=켜짐) · 셀 전체 클릭으로 토글
       bottom: owned ? '<div class="cgSwWrap"><span class="cgSw"></span></div>' : '<div class="cgSwWrap lk">'+pIco('🔒','sm')+'</div>',
       act:owned?('onclick="toggleAuto(\''+kind+'\')"'):'onclick="toast(\'🔒 포인트 연구소에서 해금\')"' }; });
   // 유닛 배치 ON일 때만: 오른쪽(2페이지 2번 슬롯)에 화살표(구역) 표시 토글 셀
   if(o.place && G.auto.place){ const shown=(G.rallyShow!==false);
-    items.push({ pro:pIco('🚩'), sn:'구역 표시', state:'ok', sel:shown,
+    items.push({ pro:autoIcoHTML('rally','🚩'), sn:'구역 표시', state:'ok', sel:shown,
       bottom:'<div class="cgSwWrap"><span class="cgSw"></span></div>', act:'onclick="toggleRallyShow(event)"' }); }
   return { mode:'auto', title:'자동화 설정', icon:pIco('⚙️'), sub:'', compact:true, build:true,
     info:{ hideName:true, desc:'버튼을 눌러 켜기/끄기' }, items:items }; }
@@ -14455,7 +14471,7 @@ function _techUnitPortrait(id){ return (typeof unitPortraitHTML==='function'&&un
 const ICO_DIR='assets/icons/';
 function _icoImg(sub, key, fb){ return '<img class="icoImg" src="'+ICO_DIR+sub+'/'+key+'.webp" alt="" draggable="false" data-fb="'+(fb||'\u{1F527}')+'" onerror="_icoFail(this)">'; }
 // 아이콘 파일이 없으면(404) 빈칸이 남던 것 → 공용 라인SVG로 교체. 새 아이콘을 넣기 전에도 자리가 비지 않는다(단일 소스: pIco 재사용)
-function _icoFail(im){ try{ im.outerHTML=pIco(im.getAttribute('data-fb')||'\u{1F527}','icoFb'); }catch(_e){ try{ im.remove(); }catch(_e2){} } }
+function _icoFail(im){ try{ const c=im.getAttribute('data-fbcls'); im.outerHTML=pIco(im.getAttribute('data-fb')||'\u{1F527}', c==null?'icoFb':c); }catch(_e){ try{ im.remove(); }catch(_e2){} } }
 // 연구 73종 → 아이콘 23종. 효과가 같은 것끼리 하나를 공유한다.
 const UPG_ICO={
   inf_atk:'inf_atk', veh_atk:'veh_atk', air_atk:'air_atk',
