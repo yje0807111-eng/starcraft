@@ -9783,15 +9783,22 @@ function _bossArenaSlot(i){ const dep=G.units.filter(u=>u.atBoss), u=dep[i], has
   if(u){ const id=u.gmodel||u.id, def=U[u.id]||{}, nm=u.gname||def.name||id;   // 채워짐 = 다중지정 카드 그대로(초상화+이름+휴지통). 파견N·탭=회수 텍스트 없음
     return { pro:unitPortraitHTML(id), sn:nm, metaCls:'lv', state:'ok',
       bottom:'<div class="cgTrash" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()" onclick="bossRecallSlot(event,'+i+')" title="회수">'+_SVG_TRASH+'</div>', act:'' }; }
-  return { pro:'<svg viewBox="0 0 24 24">'+_PIN_SVG+'</svg>', sn:'파견', state:hasBoss?'ok':'dim', act:'onclick="bossSlotTap('+i+')"' }; }
+  return { pro:bossIcoHTML('deploy'), sn:'파견', state:hasBoss?'ok':'dim', act:'onclick="bossSlotTap('+i+')"' }; }
 // 🏢 포인트방 건물 프로필 — 이름 + 체력 + 처치 포인트(간단). 관리자 건물 프로필과 동일한 build 카드.
 const _BLD_ICON_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M4 20h16M6 20V9l6-4 6 4v11M9.5 20v-5h5v5"/></svg>';
+// ⚔ 보스방 칸 아이콘 — 이미지 우선, 없으면 원래 쓰던 SVG로 되돌린다(beaconProHTML과 같은 규칙).
+// head는 새로 만들지 않고 자동화 해골을 공유한다.
+const BOSS_ICON_IMG={ deploy:'boss/boss_deploy.webp', recall:'boss/boss_recall.webp', back:'boss/boss_back.webp', bld:'boss/boss_bld.webp', head:'auto/auto_bossdeploy.webp' };
+function bossIcoSvg(k){ return k==='deploy'?('<svg viewBox="0 0 24 24">'+_PIN_SVG+'</svg>') : k==='recall'?_RECALL_SVG : k==='back'?_BACK_SVG : k==='bld'?_BLD_ICON_SVG : pIco('\u{1F480}'); }
+function bossIcoHTML(k){ const f=BOSS_ICON_IMG[k]; if(!f) return bossIcoSvg(k);
+  return '<img class="cgIco" src="assets/icons/'+f+'" alt="" draggable="false" data-fb="'+k+'" onerror="_bossIcoFail(this)">'; }
+function _bossIcoFail(im){ try{ im.outerHTML=bossIcoSvg(im.getAttribute('data-fb')); }catch(_e){ try{ im.remove(); }catch(_e2){} } }
 function _bossBldReward(){ const cb=G.coopBoss||{}; const mul=1+((typeof buildLevel==='function'?buildLevel('boss_reward_up'):0)*0.1);
   return Math.max(1, Math.round((cb.lv||1)*mul)); }
 function _bossBldProfileModel(){ const cb=G.coopBoss||{};
   const hp=Math.max(0,Math.round(cb.hp||0)), mx=cb.max||0, coins=_bossBldReward();
   const nm=((typeof coinBldgName==='function')?coinBldgName(cb.lv):null)||cb.name||'포인트 시설';
-  return { mode:'prod', title:nm, icon:_BLD_ICON_SVG, sub:'포인트 건물', items:[],
+  return { mode:'prod', title:nm, icon:bossIcoHTML('bld'), sub:'포인트 건물', items:[],
     hpsh:_cgHpShStr(hp.toLocaleString()+' / '+mx.toLocaleString(),0,0),
     info:{ eb:'', hideName:true, stats:[ ['단계', 'Lv.'+(cb.lv||1)], ['처치 포인트', '+'+coins+' (전원 동일)'] ], cr:0, en:0 } }; }
 function renderBossBldProfile(){ const host=document.getElementById('unitCmd'); if(!host) return; host.classList.add('simple');
@@ -9799,9 +9806,9 @@ function renderBossBldProfile(){ const host=document.getElementById('unitCmd'); 
   if(host._gSig!==sig){ host._gSig=sig; host._cgSig=undefined; renderCmdGrid(host, _bossBldProfileModel()); } }
 function _bossArenaSheetModel(){ const dep=G.units.filter(u=>u.atBoss);
   const items=[ _bossArenaSlot(0), _bossArenaSlot(1),
-    { pro:_RECALL_SVG, sn:'전체 회수', state:(dep.length>0?'ok':'dim'), act:'onclick="recallFromBoss(\'all\')"' },
-    { pro:_BACK_SVG, sn:'돌아가기', state:'ok', act:'onclick="closeBossArena()"' } ];
-  return { mode:'bossArena', title:'포인트방', icon:pIco('💀'), sub:'', compact:true, build:true,
+    { pro:bossIcoHTML('recall'), sn:'전체 회수', state:(dep.length>0?'ok':'dim'), act:'onclick="recallFromBoss(\'all\')"' },
+    { pro:bossIcoHTML('back'), sn:'돌아가기', state:'ok', act:'onclick="closeBossArena()"' } ];
+  return { mode:'bossArena', title:'포인트방', icon:bossIcoHTML('head'), sub:'', compact:true, build:true,
     info:{ eb:'', name:'포인트 획득 방', desc:'건물 파괴로 포인트 획득 · 모두 동일' }, items:items }; }
 function renderBossArenaSheet(){ const host=document.getElementById('unitCmd'); if(!host) return; host.classList.add('simple');
   const dep=G.units.filter(u=>u.atBoss);
@@ -9897,7 +9904,7 @@ function _bossSheetModel(){
       bottom:'<div class="cgCost cgRwd" title="처치 보상: 포인트 '+Math.round(pt.bonus*coinMult)+' · 에너지 '+(pt.egy||0)+'"><span>+'+COIN_SM+Math.round(pt.bonus*coinMult)+'</span></div>',
       act:'onpointerdown="bossHoldStart(\''+pt.id+'\',event)"' }; });
   const info={ eb:'', name:'개인보스 소환', desc:autoAvail?'길게 = 자동소환':'셀을 눌러 소환' };
-  return { mode:'boss', title:'개인보스', icon:pIco('💀'), sub:'', compact:true, build:true, info:info, items:items }; }
+  return { mode:'boss', title:'개인보스', icon:bossIcoHTML('head'), sub:'', compact:true, build:true, info:info, items:items }; }
 function renderBossSheet(){ const host=document.getElementById('unitCmd'); if(!host) return; host.classList.add('simple');
   const sig='b|'+PBOSS_TYPES.map(pt=>(pbossUnlocked(pt)?1:0)+''+(G.enemies.some(e=>e.pboss&&e.pbId===pt.id)?1:0)+Math.ceil((G.pbossCds&&G.pbossCds[pt.id])||0)+((G.auto&&G.auto.pboss&&G.auto.pboss[pt.id])?'a':'')).join('')+'|'+(host._cgPage||0);
   if(host._gSig!==sig){ host._gSig=sig; host._cgSig=undefined; renderCmdGrid(host, _bossSheetModel()); } }
