@@ -1005,12 +1005,18 @@ async function groupLobby(){
     // 광장은 맵 장식 — 클릭도 가장자리 표시도 없다
     const pz=w.querySelector('.twZone[data-zone="plaza"]');
     assert(pz.classList.contains('deco') && !pz.onclick && !_twEdgeEl.plaza,'광장이 아직 상호작용 구역임');
-    // 나머지 구역은 광장을 둘러싸고 전부 한 화면 안 — 어디든 한 번의 터치로 간다
+    // 마을은 화면보다 넓다(2배 확대) — 구역이 화면 밖일 수 있고, 그때는 가장자리 화살표가 길을 알려준다
     const off=Object.keys(TOWN_ZONES).filter(id=>{ const p=twZonePx(id);
       const sx=p[0]-_twChar.x+mr.width/2, sy=p[1]-_twChar.y+mr.height/2;
-      return !(sx>0 && sx<mr.width && sy>0 && sy<mr.height); });
-    assert(!off.length,'광장에 섰는데 화면 밖인 구역: '+off.join(','));
-    assert(!Object.keys(_twEdgeEl).some(id=>!_twEdgeEl[id].classList.contains('hide')),'전부 화면 안인데 가장자리 표시가 뜸');
+      return !(sx>24 && sx<mr.width-24 && sy>24 && sy<mr.height-24); });
+    for(const id of off){ if(id==='plaza') continue;   // 광장은 장식이라 화살표가 없다
+      assert(_twEdgeEl[id] && !_twEdgeEl[id].classList.contains('hide'),'화면 밖인데 가장자리 표시가 없음: '+id); }
+    const shown=Object.keys(_twEdgeEl).filter(id=>!_twEdgeEl[id].classList.contains('hide'));
+    assert(shown.every(id=>off.includes(id)),'화면 안인데 가장자리 표시가 뜸: '+shown.filter(id=>!off.includes(id)).join(','));
+    // 성벽 밖으로는 못 나간다 — 모서리 방향으로 멀리 찍어도 팔각형 안에 갇힌다
+    twSetTarget(_twW*2, _twH*2);
+    { const nx=_twChar.tx/_twW*2-1, ny=_twChar.ty/_twH*2-1;
+      assert(Math.abs(nx)+Math.abs(ny) <= 2-TW_WALL_CUT*2+0.001,'성벽 모서리 밖으로 목적지가 나감: '+nx.toFixed(2)+','+ny.toFixed(2)); }
     const t0=w.style.transform, g=twZonePx('gacha'); twSetTarget(g[0],g[1]);
     for(let i=0;i<60;i++) twStep(0.016);
     assert(w.style.transform!==t0,'월드(배경)가 안 움직임');

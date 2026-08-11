@@ -16,12 +16,20 @@ PNG/JPG로 뽑았다면 이 폴더에 `.png`로 넣고 `npm run img` — 1024px 
 
 ## 사방이 열려 있어야 한다 (가장 중요 · 1)
 적은 **완전 360° 랜덤 각도**로, 화면 경계 바로 바깥에서 걸어 들어온다(`hbPlaceFoe`).
-그래서 둘레에 벽·절벽·컨테이너·기둥이 늘어서 있으면 **적이 그것을 뚫고 들어오는 그림**이 된다.
+그래서 둘레가 벽·절벽으로 **닫혀** 있으면 적이 그것을 뚫고 들어오는 그림이 된다.
 
-- 지면은 **화면 밖으로 계속 이어지는 열린 평지**여야 한다
-- **세운 물체 금지** — 가장자리에 놓이는 순간 벽이 된다
-- 디테일은 전부 **바닥에 붙은 것**(얼룩·균열·자국·납작한 잔해)
-- 가운데를 비우는 건 여전히 필요하지만, 그건 **밀도의 기울기**로 만든다(고리가 아니라)
+이 방어선은 **공통 블록이 담당한다** — `no wall … no enclosure`,
+`walkable from every direction`, `everything lies flat, nothing stands up tall`.
+던전 블록은 그 안에서 자기 소재만 말하면 된다.
+
+> **두 블록이 서로 다른 말을 하는 것은 의도된 것이다.** 던전 블록에는 아직
+> `crates`·`pillar stumps`처럼 세운 물체와 `only around the outer ring`이 남아 있다.
+> 공통 블록의 금지 조항이 이것을 눌러서, 결과는 **벽이 아니라 적당히 흩어진 소품**이 된다.
+> 실제로 이 조합이 가장 깔끔하게 나왔다(2026-08-11 확인). 한쪽만 보고 "모순"이라며
+> 정리하지 말 것 — 던전 블록에서 소품을 다 빼면 바닥이 밋밋해진다.
+>
+> 혹시 다시 원형 벽이 나오면, 그 던전 블록에서 **`only around the outer ring` 절만**
+> 지운다(소재 목록은 그대로 둔다).
 
 ## 카메라 각도 (가장 중요 · 2)
 유즈맵 3D가 쓰는 각도와 **같아야** 유닛이 바닥에 붙어 보인다. 코드 값은
@@ -118,9 +126,11 @@ no signature, no logo, no blur, no depth of field. Square 1:1 composition.
 | `dark to mid values` | 밝으면 유닛·데미지 숫자가 안 읽힌다 |
 | `soft low-contrast texture` | 고주파 노이즈는 작은 스프라이트와 싸운다 |
 
-> ⛔ **`ring`·`arranged around the edges` 같은 말을 쓰지 말 것.** 처음 판본에 있었고,
-> 그 결과 dg1은 혹 덩어리, dg2는 컨테이너, dg3은 기둥이 **원형 벽**을 이뤘다.
-> 사방에서 적이 오는 게임에서 둘레가 막혀 보이면 게임과 그림이 서로 거짓말을 한다.
+> **이 블록의 금지 조항이 던전 블록의 `outer ring` 표현을 눌러 준다.**
+> 옛 공통 블록에는 `everything arranged in a ring toward the outer edges`가 **여기에도**
+> 있었고, 양쪽이 같은 말을 하니 dg1은 혹 덩어리, dg2는 컨테이너, dg3은 기둥이
+> **원형 벽**을 이뤘다. 공통 블록에서 그것을 빼고 금지로 바꾸자 같은 던전 블록으로도
+> 적당히 흩어진 소품이 나온다 — 그래서 **공통 블록은 손대지 말 것.**
 
 ---
 
@@ -132,10 +142,9 @@ no signature, no logo, no blur, no depth of field. Square 1:1 composition.
 > 첫 화면이라 **가장 읽기 쉬워야 한다.** 디테일을 욕심내지 말고 바닥 질감 위주로.
 
 ```
-An infested alien hive floor: a continuous sheet of organic creep membrane,
-flat and walkable everywhere. Surface detail only: veins running under the skin,
-dried spore stains, thin chitin scars, damp patches. Nothing bulges up. Plainest
-in the middle, more mottled toward the edges. Sickly green and dull violet.
+An infested alien hive floor: organic creep membrane ground with pulsing veins,
+dormant spore sacs and low chitin ridges. Bare open creep at the center, growths
+and debris only around the outer ring. Sickly green and dull violet palette.
 ```
 
 ### dg2 — 버려진 전초기지 (인간계)
@@ -143,37 +152,35 @@ in the middle, more mottled toward the edges. Sickly green and dull violet.
 > 부감이라 패널 이음새는 **가로로 눌린 마름모**로 나와야 정상.
 
 ```
-An abandoned military outpost yard: one continuous rusted metal deck, flat and
-walkable everywhere. Surface detail only: cracked plating, irregular rust stains,
-oil spills, faded yellow hazard stripes, track marks, loose bolts and torn panels
-lying flat. No crates, no containers, nothing standing. Plainest in the middle,
-more worn toward the edges. Cold steel blue and rust orange.
+An abandoned military outpost yard: rusted metal deck plating with cracked
+panels, irregular rust stains, spilled supply crates and faded yellow hazard
+stripes. Bare open deck at the center, crates and wreckage only around the outer
+ring. Cold steel blue and rust orange palette.
 ```
 
 ### dg3 — 잊혀진 회랑 (초월계)
 > 발광 문양이 밝게 튀기 쉬워 `faintly`·`dim`으로 눌러 놓았다.
-> 기둥·잔해는 **아예 없다** — 바닥에 새겨진 문양만으로 초월계 느낌을 낸다.
+> 부러진 기둥은 **밑동만** — 높으면 37° 부감에서 바닥을 다 가린다.
 
 ```
-A forgotten alien corridor floor: one continuous slab of polished dark stone,
-flat and walkable everywhere. Surface detail only: inlaid faintly glowing glyph
-lines flush with the stone, fine gold seams, worn hairline cracks, dust in the
-grooves. No pillars, no rubble, nothing standing. Plainest in the middle, denser
-inlay toward the edges. Deep indigo and dim cyan.
+A forgotten alien corridor floor: polished dark stone with inlaid faintly glowing
+glyph lines, fine gold seams and worn hairline cracks. Plain open stone at the
+center, rune circles and low broken pillar stumps only around the outer ring.
+Deep indigo and dim cyan palette.
 ```
 
-> ⚠ **지금 들어가 있는 dg1~dg3은 옛 프롬프트로 뽑은 것이라 둘레가 막혀 있다.**
-> (dg1 혹 덩어리 · dg2 컨테이너 · dg3 기둥이 원형 벽을 이룸)
-> 위 블록으로 다시 뽑아 교체할 것. 화질·밝기 자체는 문제없었다(중앙 밝기 24/25/18%).
+> ⚠ **지금 들어가 있는 dg1~dg3은 옛 공통 블록(둘레에 고리를 만들던 판본)으로 뽑은 것**이라
+> 둘레가 막혀 보인다. 새 공통 블록으로 다시 뽑아 교체할 것.
+> 화질·각도·밝기 자체는 문제없었다(1024 q80 · 177/124/99KB · 중앙 밝기 24/25/18%).
 
 ### dg4 — 산란장 (저그계)
 > dg1과 같은 저그계라 **구분되게** — dg1은 마른 크립, 여기는 젖은 살덩이.
 
 ```
-An alien spawning ground: one continuous sheet of living fleshy tissue, flat and
-walkable everywhere. Surface detail only: sunken egg sacs set into the floor,
-sinew strands lying across it, wet sheen, pale birth stains. Nothing rises up.
-Plainest in the middle, denser tissue toward the edges. Bile yellow and dark green.
+An alien spawning ground: living fleshy tissue floor with clustered eggs, taut
+sinew strands and a wet sheen across the surface. Bare open flesh at the center,
+egg clusters and membrane growths only around the outer ring. Bile yellow and
+dark green palette.
 ```
 
 ### dg5 — 폐쇄된 시설 (인간계)
@@ -181,60 +188,54 @@ Plainest in the middle, denser tissue toward the edges. Bile yellow and dark gre
 > 비상등은 바닥에 박힌 띠로 — 공중에 달면 광원이 생겨 공통 블록과 싸운다.
 
 ```
-A sealed underground facility floor: one continuous poured concrete slab with
-steel grating insets, flat and walkable everywhere. Surface detail only: drainage
-channels, painted lane markings, scuff marks, damp patches, dim red emergency
-light strips set flush into the floor. No machinery, no barrels, nothing standing.
-Plainest in the middle, more marked toward the edges. Gunmetal grey and amber.
+A sealed underground facility floor: poured concrete and steel grating with
+drainage channels, scuff marks and dim red emergency light strips set flush into
+the floor. Bare open concrete at the center, machinery and toppled barrels only
+around the outer ring. Gunmetal grey and amber palette.
 ```
 
 ### dg6 — 봉인된 성소 (초월계)
 > dg3과 같은 초월계 → dg3은 차가운 남색, 여기는 **따뜻한 금빛**으로 갈랐다.
-> 제단·부유석은 **넣지 않는다** — 금빛 상감의 밀도만으로 성소 느낌을 낸다.
+> 부유석은 **바닥에 낮게** — 높이 띄우면 부감에서 바닥을 가린다.
 
 ```
-A sealed alien sanctum floor: one continuous slab of carved luminous marble, flat
-and walkable everywhere. Surface detail only: rune circles inlaid flush, fine gold
-filigree, polished wear, faint cracks. No altars, no shards, nothing standing or
-floating. Plainest in the middle, richer filigree toward the edges. Royal purple
-and warm gold.
+A sealed alien sanctum floor: carved luminous marble with rune circles, fine gold
+filigree and small stone shards hovering low just above the ground. Plain open
+marble at the center, altars and shards only around the outer ring. Royal purple
+and warm gold palette.
 ```
 
 ### dg7 — 군단의 심장 (저그계 · 가장 화려)
-> **용암빛이 밝게 터지기 쉽다.** 균열을 `thin`·`kept dim`으로 눌러 놓았다.
-> 나온 게 눈부시면 `kept dim`을 `barely glowing`으로 바꿔 다시 뽑을 것.
+> **용암빛이 밝게 터지기 쉽다.** 발광을 바깥 고리에 가두는 문장을 넣어 뒀다.
+> 나온 게 눈부시면 `faint`를 `very faint`로 바꿔 다시 뽑을 것.
 
 ```
-The heart of a swarm chamber: one continuous floor of raw muscle over bone
-plating, flat and walkable everywhere. Surface detail only: arteries under the
-skin, thin magma fissures kept dim, scorch stains, bone showing through in
-patches. No ribs, no vents, nothing standing. Plainest in the middle, more
-fissured toward the edges. Blood red and ember orange.
+The heart of a swarm chamber: raw muscle and bone plating floor with pulsing
+arteries and faint magma fissures, the glow kept dim and confined to the outer
+ring. Bare open flesh at the center, bone ribs and vents only around the outer
+ring. Blood red and ember orange palette.
 ```
 
 ### dg8 — 함대 정박지 (인간계)
 > 정박지라 **우주·별하늘이 딸려 나오기 쉽다.** 공통 블록의 `no sky`가 막아 주지만,
 > 그래도 나오면 던전 블록 끝에 `the deck fills the whole frame`을 덧붙일 것.
-> 갠트리·크레인은 넣지 않는다 — 갑판 도색만으로 도크가 읽힌다.
 
 ```
-An orbital fleet dock deck: one continuous riveted hull plate surface, flat and
-walkable everywhere. Surface detail only: painted landing markings, recessed
-cable runs, hull seams and rivet lines, scorch marks from thrusters. No gantries,
-no crates, no clamps, nothing standing. Plainest in the middle, more painted
-markings toward the edges. Dark navy and white marking paint.
+An orbital fleet dock deck: riveted hull plating with painted landing markings,
+cable runs and hull seams. Bare open deck at the center, gantries, cargo crates
+and mooring clamps only around the outer ring. Dark navy and white marking paint
+palette.
 ```
 
 ### dg9 — 공허의 문 (초월계)
-> 균열은 이제 화면을 가로질러도 된다 — 바닥에 새겨진 것이라 길처럼 읽혀서 오히려 좋다.
-> 다만 **떠 있는 파편은 금지**(공중 물체는 벽과 같은 문제를 만든다).
+> 균열이 화면을 가로지르기 쉽다 → `not crossing the center`를 명시했다.
 
 ```
-A void gate platform: one continuous fractured obsidian slab, flat and walkable
-everywhere. Surface detail only: purple rift cracks running through the stone,
-glassy fracture patterns, fine dust. No floating shards, nothing standing above
-the surface. Plainest in the middle, more fractured toward the edges. Violet and
-black with faint cyan sparks.
+A void gate platform: fractured obsidian slab floor with purple rift cracks that
+stay near the edges and never cross the center, and small weightless shards
+drifting low above the surface. Plain open obsidian at the center, cracks and
+floating debris only around the outer ring. Violet and black palette with faint
+cyan sparks.
 ```
 
 ### dg10 — 심연 (최종)
@@ -242,11 +243,10 @@ black with faint cyan sparks.
 > 넣어 보고 어두우면 `HB_BG_VIG_A`(기본 0.62)를 내린다.
 
 ```
-An abyssal depths floor: one continuous sheet of black rippling liquid, flat and
-walkable everywhere. Surface detail only: shapes submerged just below the
-surface — eyes, tendrils, faint bioluminescence — never breaking through. Nothing
-rises above the water. Plainest in the middle, more shapes toward the edges.
-Near-black with pale teal glow.
+An abyssal depths floor: black rippling liquid with submerged eyes, slow tendrils
+and faint bioluminescence glowing under the surface. Bare open water at the
+center, tendrils and glowing shapes only around the outer ring. Near-black
+palette with pale teal glow.
 ```
 
 ### 던전끼리 안 겹치게 (뽑고 나서 확인)

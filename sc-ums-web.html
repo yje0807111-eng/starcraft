@@ -2805,7 +2805,7 @@
      위에 어두운 막을 덮어 구역 아이콘·라벨 가독성을 지킨다(볼륨1: 배경은 조용히). */
   /* 바닥 그림은 월드보다 크다 — 카메라가 월드 끝에 닿아도 화면 절반이 비지 않게 반 화면씩 더 깐다.
      여유분(가로 31.25% · 세로 37.04%) = 절벽·숲 띠. 걸어다니는 범위는 월드 그대로다. */
-  .twGround{position:absolute;inset:-37.04% -31.25%;pointer-events:none;
+  .twGround{position:absolute;inset:-30.6% -36.2%;pointer-events:none;
     background:linear-gradient(rgba(6,8,12,.42),rgba(6,8,12,.52)),url('assets/backgrounds/town/town_ground.webp') 50% 50%/cover no-repeat,url('assets/tiles/terran_tile_light.webp') 0 0/128px repeat}   /* 마을 바닥 그림(없으면 아래 타일이 그대로 보인다) */
   .twGround::after{content:'';position:absolute;inset:0;pointer-events:none;   /* 가장자리 비네트 — 월드 끝이 자연스럽게 어두워짐 */
     background:radial-gradient(ellipse at 50% 50%,transparent 52%,rgba(0,0,0,.55) 100%)}
@@ -4392,7 +4392,8 @@ tower:'<path d="M9 3h6v3l-1.5 1v6.5h2.5L18 21H6l2-7.5h2.5V7L9 6z" fill="currentC
 spire:'<path d="M12 2.6a4.4 4.4 0 1 1 0 8.8 4.4 4.4 0 0 1 0-8.8zM8.5 13h7L17 21H7z" fill="currentColor"/>',
 pboss:'<path d="M12 2.5c-4 0-6.5 2.8-6.5 6.4 0 2.3 1.1 3.7 2.2 4.7v2.2c0 .7.5 1.1 1.2 1.1.4 1.1 1.6 1.9 3.1 1.9s2.7-.8 3.1-1.9c.7 0 1.2-.4 1.2-1.1v-2.2c1.1-1 2.2-2.4 2.2-4.7 0-3.6-2.5-6.4-6.5-6.4z" fill="currentColor" opacity=".22"/><path d="M12 2.5c-4 0-6.5 2.8-6.5 6.4 0 2.3 1.1 3.7 2.2 4.7v2.2c0 .7.5 1.1 1.2 1.1.4 1.1 1.6 1.9 3.1 1.9s2.7-.8 3.1-1.9c.7 0 1.2-.4 1.2-1.1v-2.2c1.1-1 2.2-2.4 2.2-4.7 0-3.6-2.5-6.4-6.5-6.4z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="9.3" cy="9.2" r="1.5" fill="currentColor"/><circle cx="14.7" cy="9.2" r="1.5" fill="currentColor"/><path d="M10.4 16.5v2M12 16.7v2.1M13.6 16.5v2" stroke="currentColor" stroke-width="1"/>',
 };
-function beaconIcon(id){ if(id==='gachaUp') return BEACON_ICON.gachaUp; if(id==='creditUp') return BEACON_ICON.creditUp;
+function beaconIcon(id){ if(id==='perm') return '<path d="M12 2.8 19.6 6v6c0 4.6-3.1 8-7.6 9.2C7.5 20 4.4 16.6 4.4 12V6z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 8.2v7M9 11.2 12 8.2l3 3M8.6 17.4h6.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>';
+  if(id==='gachaUp') return BEACON_ICON.gachaUp; if(id==='creditUp') return BEACON_ICON.creditUp;
 if(id==='pboss') return BEACON_ICON.pboss;
 if(id==='energy') return BEACON_ICON.energy;
 if(id==='buyTurret') return BEACON_ICON.tower; if(id==='buyPhoton') return BEACON_ICON.spire; return BEACON_ICON.unit; }
@@ -6045,10 +6046,10 @@ const TOWN_ZONES={
   charsel: { x:26.0, y:62.0, ico:'🧳',   label:'보관소',  title:'캐릭터 보관소', render:()=>renderCharSelect() },   // 좌하
   charmake:{ x:26.0, y:38.0, ico:'🧬',   label:'생성소',  title:'캐릭터 생성소', render:()=>renderCharCreate() },   // 좌상
 };
-const TW_WORLD_W_MUL=1.6, TW_WORLD_H_MUL=1.35;   // 월드 = 화면의 가로 N배 × 세로 M배(3배→1.6배: 구역을 한 화면에 모으며 여백만 남김)
-const TW_SPEED=190;          // 캐릭터 이동 속도(월드 px/초)
+const TW_WORLD_W_MUL=3.2, TW_WORLD_H_MUL=2.7;   // 월드 = 화면의 가로 N배 × 세로 M배(3배→1.6배: 구역을 한 화면에 모으며 여백만 남김)
+const TW_SPEED=380;          // 캐릭터 이동 속도(월드 px/초)
 const TW_ARRIVE=4;           // 목적지 도착 판정(px)
-const TW_ZONE_R=52;          // 구역 도착 판정 반경(px)
+const TW_ZONE_R=104;          // 구역 도착 판정 반경(px)
 const TW_TAP_MS=260, TW_TAP_PX=10;   // 이보다 길게 누르거나 많이 움직이면 '탭'이 아니라 '꾹 누르기'
 let _townOpen=false, _twZone=null;
 let _twW=0,_twH=0, _twVW=0,_twVH=0, _twVL=0,_twVT=0;   // 월드 크기 / 화면(뷰포트) 크기·위치
@@ -6112,9 +6113,16 @@ function twLayout(){ const map=document.getElementById('twMap'), w=document.getE
     _twChar.x*=sx; _twChar.y*=sy; _twChar.tx*=sx; _twChar.ty*=sy; }
   _twW=nw; _twH=nh; w.style.width=nw+'px'; w.style.height=nh+'px';
   for(const el of w.querySelectorAll('.twZone')){ const z=TOWN_ZONES[el.dataset.zone]; if(z){ el.style.left=z.x+'%'; el.style.top=z.y+'%'; } } }
+const TW_WALL_CUT=0.22;   // 그림 속 성벽의 모서리 컷 비율(팔각형)
+// 성벽 안으로 가두기 — 월드 정규좌표(-1~1)에서 사각 클램프 + 마름모 컷
+function twClampWall(wx,wy){
+  let nx=Math.max(-1,Math.min(1, wx/_twW*2-1)), ny=Math.max(-1,Math.min(1, wy/_twH*2-1));
+  const lim=2-TW_WALL_CUT*2, s=Math.abs(nx)+Math.abs(ny);
+  if(s>lim){ const k=lim/s; nx*=k; ny*=k; }   // 모서리 밖이면 중심 쪽으로 당겨 벽면에 붙인다
+  return [ (nx+1)/2*_twW, (ny+1)/2*_twH ]; }
 function twZonePx(id){ const z=TOWN_ZONES[id]; return z? [_twW*z.x/100, _twH*z.y/100] : null; }
 function twScreenToWorld(cx,cy){ return [ _twChar.x+(cx-_twVL)-_twVW/2, _twChar.y+(cy-_twVT)-_twVH/2 ]; }   // 캐릭터가 화면 중앙이므로 = 캐릭터 + (터치점 - 화면중앙)
-function twSetTarget(wx,wy){ _twChar.tx=Math.max(0,Math.min(_twW,wx)); _twChar.ty=Math.max(0,Math.min(_twH,wy)); _twChar.mode='to'; _twGoZone=null; }
+function twSetTarget(wx,wy){ const _p=twClampWall(wx,wy); _twChar.tx=_p[0]; _twChar.ty=_p[1]; _twChar.mode='to'; _twGoZone=null; }
 function twTapFx(wx,wy){ const w=document.getElementById('twWorld'); if(!w) return;
   const d=document.createElement('div'); d.className='twTapFx'; d.style.left=wx+'px'; d.style.top=wy+'px';
   w.appendChild(d); setTimeout(()=>{ if(d.parentNode) d.parentNode.removeChild(d); }, 520); }
@@ -9740,10 +9748,17 @@ function mainProfileRender(){ const host=document.getElementById('unitCmd'); if(
 // 🎰 유닛뽑기 시트 — 하단 프로필 자리(#unitCmd)에 4그리드(유닛1회·에너지·미사일 포탑·에너지 타워). 캔버스 이동 대신 시트 슬라이드업. 셀=runBeacon 직접 실행.
 const GACHA_SHEET_CELLS=['draw','energy','buyTurret','buyPhoton'];
 const BLDG_ICON_DIR='assets/icons/buildings/';
-const BEACON_ICON_IMG={ buyTurret:'bld_turret.webp', buyPhoton:'bld_cannon.webp' };   // 구매 타워 = 실제 건물 아이콘(미사일 포탑=미사일 터렛 · 에너지 타워=포톤 캐논)
+const BEACON_ICON_IMG={
+  buyTurret:'buildings/bld_turret.webp', buyPhoton:'buildings/bld_cannon.webp',
+  draw:'auto/auto_unit.webp',      // 유닛 1회 = 자동 유닛 소환과 같은 뜻 — 한 장을 공유
+  energy:'auto/auto_energy.webp',  // 가스 1회 = 자동 가스 변환과 같은 뜻
+  gachaUp:'upgrades/up_gacha_up.webp', creditUp:'upgrades/up_mineral_up.webp', perm:'upgrades/up_perm.webp'
+};   // 값 = assets/icons/ 하위 경로. 같은 뜻은 새로 만들지 않고 공유한다(SKILL_ICO와 같은 규칙)   // 구매 타워 = 실제 건물 아이콘(미사일 포탑=미사일 터렛 · 에너지 타워=포톤 캐논)
 function beaconProHTML(id){ const f=BEACON_ICON_IMG[id];   // 업그레이드 아이콘(wpnBadgeHTML)과 동일 패턴 — 이미지 우선, 없으면 기존 SVG
-  if(f) return '<img class="cgIco" src="'+BLDG_ICON_DIR+f+'" alt="" draggable="false">';
+  if(f) return '<img class="cgIco" src="assets/icons/'+f+'" alt="" draggable="false" data-fb="'+id+'" onerror="_beaconFail(this)">';
   return '<svg viewBox="0 0 24 24">'+beaconIcon(id)+'</svg>'; }
+// 파일이 아직 없을 때: 원래 쓰던 비콘 SVG로 교체(빈칸 방지)
+function _beaconFail(im){ try{ im.outerHTML='<svg viewBox="0 0 24 24">'+beaconIcon(im.getAttribute('data-fb'))+'</svg>'; }catch(_e){ try{ im.remove(); }catch(_e2){} } }
 function _gachaSheetModel(){
   const items=GACHA_SHEET_CELLS.map(id=>{ const b=(DRAW_BEACONS.find(x=>x.id===id))||{id:id,name:id}, cost=beaconCost(id), afford=((G.mineral||0)>=cost);
     return { pro:beaconProHTML(id), sn:b.name, cr:cost, en:0, state:afford?'ok':'dim', act:'onpointerdown="gachaHoldStart(\''+id+'\',event)"' }; });
@@ -9812,13 +9827,13 @@ function _upgradeSheetModel(){
     return { pro:wpnBadgeHTML(c.wpn,'#ff3b3b'), sn:c.name, en:cost, cr:0, tr:isMax?'MAX':('Lv.'+lv), metaCls:'lv',
       state:isMax?'max':(afford?'ok':'dim'), act:isMax?'':('onpointerdown="upgHoldStart(\''+c.wpn+'\',event)"') }; });
   const gLv=(G.gachaLuckLv||0), gMax=gLv>=GACHA_UP_MAX, gC=gachaUpCost();
-  items.push({ pro:'<svg viewBox="0 0 24 24">'+beaconIcon('gachaUp')+'</svg>', sn:'뽑기 확률', cr:gC, en:0, tr:gMax?'MAX':('Lv.'+gLv), metaCls:'lv',
+  items.push({ pro:beaconProHTML('gachaUp'), sn:'뽑기 확률', cr:gC, en:0, tr:gMax?'MAX':('Lv.'+gLv), metaCls:'lv',
     state:gMax?'max':(((G.mineral||0)>=gC)?'ok':'dim'), act:gMax?'':'onclick="buyGachaUp()"' });
   const cLv=(G.creditLv||0), cMax=cLv>=CREDIT_UP_MAX, cC=creditUpCost();
-  items.push({ pro:'<svg viewBox="0 0 24 24">'+beaconIcon('creditUp')+'</svg>', sn:'미네랄 획득', cr:cC, en:0, tr:cMax?'MAX':('Lv.'+cLv), metaCls:'lv',
+  items.push({ pro:beaconProHTML('creditUp'), sn:'미네랄 획득', cr:cC, en:0, tr:cMax?'MAX':('Lv.'+cLv), metaCls:'lv',
     state:cMax?'max':(((G.mineral||0)>=cC)?'ok':'dim'), act:cMax?'':'onclick="buyCreditUp()"' });
   items.push(null);   // 2페이지 3번 = 빈칸
-  items.push({ pro:pIco('PERM'), sn:'영구 강화', cr:0, en:0, state:'ok', act:'onclick="openPointUpgrade()"' });
+  items.push({ pro:beaconProHTML('perm'), sn:'영구 강화', cr:0, en:0, state:'ok', act:'onclick="openPointUpgrade()"' });
   return { mode:'upg', title:'업그레이드', icon:pIco('PERM'), sub:'', compact:true, build:true,
     info:{ eb:'', name:'공격력 강화 및 업그레이드', desc:'길게 누르면 연속 구매' }, items:items }; }
 function renderUpgradeSheet(){ const host=document.getElementById('unitCmd'); if(!host) return; host.classList.add('simple');
