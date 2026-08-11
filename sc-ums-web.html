@@ -3869,7 +3869,6 @@
   <div id="navBar" class="navBar hide">
     <button class="navIt" data-nav="home" onclick="navGo('home')"><span data-ico="home"></span>HOME</button>
     <button class="navIt" data-nav="gear" onclick="navGo('gear')"><span data-ico="bag"></span>정비</button>
-    <button class="navIt" data-nav="town" onclick="navGo('town')"><span data-ico="hero"></span>마을</button>
     <button class="navIt" data-nav="map" onclick="navGo('map')"><span data-ico="map"></span>유즈맵</button>
     <button class="navIt" data-nav="shop" onclick="navGo('shop')"><span data-ico="gift"></span>상점</button>
   </div>
@@ -3986,7 +3985,7 @@
       <button class="twGear" data-sfx="ui_open" onclick="openAppSettings()" title="설정" aria-label="설정"><svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg></button>
     </div>
     <div class="twMap" id="twMap" onpointerdown="twPtrDown(event)" onpointermove="twPtrMove(event)" onpointerup="twPtrUp(event)" onpointercancel="twPtrUp(event)">
-      <!-- 월드(화면보다 큼) — 구역 아이콘은 TOWN_ZONES에서 생성한다(twBuildZones). 좌표·아이콘·라벨·패널이 한 곳 -->
+      <!-- 월드(화면보다 큼) — 카메라가 이 요소의 transform만 바꾼다. HOME 필드가 이 엔진을 쓴다. -->
       <div class="twWorld" id="twWorld"><div class="twGround"></div></div>
       <div class="twAvatar" id="twAvatar"><span class="twAvShadow"></span><span class="twAvFlip" id="twAvFlip"><span class="twAvBody">🧍</span></span></div>
     </div>
@@ -5367,7 +5366,7 @@ function navShow(tab){ const b=document.getElementById('navBar'); if(!b) return;
 function navGo(tab){ if(typeof playSfx==='function') playSfx('ui_tab');
   if(tab==='home')    return openHome();
   if(tab==='gear')    return openGear();                                                   // 정비(장비·펫·동료)
-  if(tab==='town')    { openTown(); return navShow('town'); }
+  if(tab==='town')    { openHome(); return navShow('home'); }   // 마을 폐지 — HOME으로
   if(tab==='map')     return twGoMap();                                                    // 유즈맵(친구·소셜은 유즈맵 하단)
   if(tab==='shop')    return openShop(); }                                                 // 상점(전용 화면)
 // ── ⚔ 자동사냥(HOME 메인 전투) — 마린키우기식 웨이브 방어 ──
@@ -5432,6 +5431,21 @@ const HB_BG_CYCLE=8;       // 한 왕복(1→2→3→4→3→2)에 걸리는 초
 // AI 영상은 모션 강도를 정확히 맞추기 어렵다 — 과하게 나왔을 때 다시 뽑지 말고 이 값을 내린다.
 const HB_BG_AMP=1;
 const HB_WORLD_H=400;                 // 보이는 영역 높이를 이 값으로 나눈 것이 배율 k
+// 🚶 필드 이동 — 캐릭터가 원점 고정이 아니라 걸어다닌다(탭한 곳으로).
+const HB_MOVE_SPD=118;                // 월드 단위/초
+const HB_FIELD_RX=900, HB_FIELD_RY=620;   // 필드 반폭·반높이(원점 기준). 사각형 — 카메라를 구석까지 가둘 수 있다
+// 💚 중앙 회복 구역 — 지형이다. 전투 중에도 회복되고, 적도 그 안까지 따라 들어온다.
+const HB_HEAL_R=64;                   // 회복 반경(월드 단위)
+const HB_HEAL_PCT=0.06;               // 초당 최대체력 비율
+// 🎯 사거리 — 스프라이트 반지름(약 14) 두 개분이 근접의 하한. 업그레이드로만 늘어난다.
+const HB_RNG_BASE=34, HB_RNG_MAX=190;
+// 🔍 줌 = 사거리에 종속. 사거리가 짧을 땐 바짝(반경 3배), 길어지면 멀리(1.2배)까지 선형.
+const HB_ZOOM_NEAR=4.4, HB_ZOOM_FAR=1.2;
+const HB_VIEW_MIN=280, HB_VIEW_MAX=620;   // 보이는 높이(월드 단위) 한계
+function hbViewH(rng){
+  const t=Math.max(0, Math.min(1, (rng-HB_RNG_BASE)/(HB_RNG_MAX-HB_RNG_BASE)));
+  const mul=HB_ZOOM_NEAR+(HB_ZOOM_FAR-HB_ZOOM_NEAR)*t;   // 선형
+  return Math.max(HB_VIEW_MIN, Math.min(HB_VIEW_MAX, rng*2*mul)); }
 const HB_CAM_SNAP=24;                 // 이만큼 넘게 벌어지면 보간하지 않고 즉시 맞춘다(화면 복귀·회전 등)
 const HB_CAM_EASE=0.25;               // 접힘/펼침 애니메이션을 좇는 속도(0=정지, 1=즉시)
 // ── 영구 업그레이드 6종(미네랄 구매) — 효과·비용 곡선은 밸런스 패스에서 조정 ──
@@ -5453,7 +5467,7 @@ function hbCharStats(){ const u=hbHunt().upg;
   return { hpMax:120+(u.hp||0)*18+vt*10, atk:12+(u.atk||0)*3+pw*2,
     cd:Math.max(.22, .70*Math.pow(.985,u.aspd||0)*Math.pow(.99,ag)),
     crit:Math.min(.6, .05+(u.crit||0)*.006+fc*.004),
-    range:Math.min(240, 130+(u.rng||0)*4), regen:(u.regen||0)*1.2 }; }
+    range:Math.min(HB_RNG_MAX, HB_RNG_BASE+(u.rng||0)*4), regen:(u.regen||0)*1.2 }; }
 // ── 던전 간 격차 = 배수 3종. 보상 배수(24)가 체력 배수(8)보다 크므로 상위 던전일수록 시급이 3배씩 오른다.
 //    (구 설계는 체력 6배 / 보상 3배라 올라갈수록 손해였다 — 파밍 동선이 거꾸로였음)
 function HB_DG_HP (dg){ return Math.pow( 8,(dg||1)-1); }   // 적 체력
@@ -5596,8 +5610,13 @@ function hbResize(){ const S=_hb, cv=S.cv, w=cv.clientWidth||1, h=cv.clientHeigh
   const snap=(cur,tgt)=>(!cur || near(cur,tgt) || Math.abs(tgt-cur)>HB_CAM_SNAP) ? tgt : cur+(tgt-cur)*HB_CAM_EASE;
   S.vTop=snap(S.vTop,tTop);
   S.vBot=snap(S.vBot,tBot);
-  S.cx=w/2; S.cy=(S.vTop+S.vBot)/2; S.k=(S.vBot-S.vTop)/HB_WORLD_H;   // 카메라
-  S.char.x=0; S.char.y=0; }                          // 캐릭터는 언제나 월드 원점
+  S.k=(S.vBot-S.vTop)/hbViewH(S.char.range||HB_RNG_BASE);   // 줌 = 사거리 종속
+  // 카메라는 캐릭터를 따라가되, 보이는 사각형이 필드를 벗어나지 않게 가둔다 → 맵 바깥이 화면에 안 들어온다
+  const hvw=(w/S.k)/2, hvh=((S.vBot-S.vTop)/S.k)/2;
+  const lim=(v,R,hv)=>(hv>=R)?0:Math.max(-(R-hv), Math.min(R-hv, v));   // 필드가 화면보다 작으면 가운데 고정
+  const camX=lim(S.char.x||0, HB_FIELD_RX, hvw), camY=lim(S.char.y||0, HB_FIELD_RY, hvh);
+  S.cx=w/2-camX*S.k; S.cy=(S.vTop+S.vBot)/2-camY*S.k;
+  if(S.char.px==null){ S.char.x=0; S.char.y=0; S.char.tx=0; S.char.ty=0; S.char.px=1; } }   // 최초 1회만 원점 — 그 뒤로는 걸어다닌 자리를 지킨다
 function hbSpawnWave(){ const S=_hb, n=hbFoeCount(S.round,S.wave);
   if(S.wave===1) for(const b of S.bunkers) b.hp=b.hpMax;          // 라운드 시작 = 벙커 수리
   S.waveT=HB_WAVE_S; S.pend.length=0;
@@ -5616,7 +5635,10 @@ function hbPlaceFoe(proto){ const S=_hb;
   const R=1/Math.max(Math.abs(ca)/hx, Math.abs(sa)/hy);                  // 보이는 경계 바로 바깥
   const elite=Math.random()<hbEliteChance(S.dg,S.round);
   const hp=hbFoeHp(S.dg,S.round,S.wave)*proto.hpMul*(elite?HB_ELITE_HP:1);
-  S.foes.push({ ico:proto.ico, mdl:proto.mdl, x:ca*R, y:sa*R, hp:hp, hpMax:hp, elite:elite,
+  // 필드가 넓어져 캐릭터가 원점을 떠난다 → 출현 위치도 캐릭터 기준(화면 경계 바깥)이어야 한다
+  const sx=Math.max(-HB_FIELD_RX,Math.min(HB_FIELD_RX,(S.char.x||0)+ca*R));
+  const sy=Math.max(-HB_FIELD_RY,Math.min(HB_FIELD_RY,(S.char.y||0)+sa*R));
+  S.foes.push({ ico:proto.ico, mdl:proto.mdl, x:sx, y:sy, hp:hp, hpMax:hp, elite:elite,
     atk:hbFoeAtk(S.dg,S.round)*proto.atkMul*(elite?HB_ELITE_ATK:1),
     spd:proto.spd*(elite?0.85:1), cdT:Math.random()*0.6 }); }
 function hbHud(){ const S=_hb; if(!S) return; const c=(typeof CHAR==='function')?CHAR():null;
@@ -5655,7 +5677,29 @@ function hbDie(){ const S=_hb;
   S.wave=1; S.phase='down'; S.downT=HB_DOWN_S;
   S.floats.push({x:S.char.x,y:S.char.y-32,tx:'쓰러짐… 라운드 '+S.round,cl:'#ff8a9a',t:0}); hbHud(); }
 // 순수 시뮬 한 스텝 — rAF와 분리(스모크가 직접 부른다). phase: fight/gap/mop/clearWait/down
+// 탭한 곳으로 걸어간다 + 중앙 회복 구역. 적은 이미 캐릭터를 쫓으므로 전투는 알아서 따라온다.
+function hbClampField(x,y){ return [ Math.max(-HB_FIELD_RX,Math.min(HB_FIELD_RX,x)),
+                                     Math.max(-HB_FIELD_RY,Math.min(HB_FIELD_RY,y)) ]; }
+function hbWalk(S,c,dt){
+  if(c.tx!=null){ const dx=c.tx-c.x, dy=c.ty-c.y, d=Math.hypot(dx,dy);
+    if(d>2){ const s=Math.min(d, HB_MOVE_SPD*dt); c.x+=dx/d*s; c.y+=dy/d*s;
+      c.mv=1; S.charFace=Math.atan2(dx,dy); } else c.mv=0; }
+  if(c.hp>0 && c.hp<c.hpMax && Math.hypot(c.x,c.y)<=HB_HEAL_R){   // 회복 구역 — 조건 없음
+    c.hp=Math.min(c.hpMax, c.hp + c.hpMax*HB_HEAL_PCT*dt); c.healFx=1; } else c.healFx=0; }
+function hbSetDest(sx,sy){ const S=_hb; if(!S||!S.on) return;
+  const p=hbClampField((sx-S.cx)/S.k, (sy-S.cy)/S.k);
+  S.char.tx=p[0]; S.char.ty=p[1]; }
+// 필드 탭 = 그 자리로 이동. 캔버스는 클릭 통과라 화면에 걸고, UI 위 터치는 걸러낸다.
+function hbFieldTap(e){
+  if(!_hb||!_hb.on||_hb.bg) return;
+  const hs=document.getElementById('homeScreen'); if(!hs||hs.classList.contains('hide')) return;
+  const t=e.target;
+  if(t&&t.closest&&t.closest('button,a,input,select,textarea,.hbHudTop,.hbCard,.hbBar,.sheet,.pop,[onclick]')) return;   // UI 위는 이동이 아니다
+  const r=document.getElementById('hbCv').getBoundingClientRect();
+  hbSetDest(e.clientX-r.left, e.clientY-r.top); }
+document.addEventListener('pointerdown', hbFieldTap, true);
 function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char; S.t+=dt;
+  if(S.phase!=='down') hbWalk(S,c,dt);
   if(S.phase==='down'){ S.downT-=dt;
     if(S.downT<=0){ c.hp=c.hpMax; c.hitT=9; S.phase='fight'; S.wave=1; hbSpawnWave(); }
     hbFx(dt); return; }
@@ -5846,11 +5890,24 @@ const _hbSheet={};
 function hbSheetImg(url){ const c=_hbSheet[url];
   if(c!==undefined) return (c&&c.complete&&c.naturalWidth)?c:null;
   const im=new Image(); im.src=url; _hbSheet[url]=im; return null; }
+// 중앙 회복 구역 — 지형이다(안전지대 아님). 부감이라 세로를 61%로 눌러 타원으로 그린다.
+function hbDrawHeal(x, S){
+  const R=HB_HEAL_R, pulse=0.5+0.5*Math.sin(S.t*2.2);
+  x.save(); x.translate(0,0); x.scale(1,0.61);
+  const g=x.createRadialGradient(0,0,R*0.15,0,0,R);
+  g.addColorStop(0,'rgba(93,255,143,'+(0.16+0.05*pulse).toFixed(3)+')');
+  g.addColorStop(0.72,'rgba(93,255,143,0.07)');
+  g.addColorStop(1,'rgba(93,255,143,0)');
+  x.fillStyle=g; x.beginPath(); x.arc(0,0,R,0,6.2832); x.fill();
+  x.strokeStyle='rgba(93,255,143,'+(0.38+0.22*pulse).toFixed(3)+')';
+  x.lineWidth=1.6/(S.k||1); x.beginPath(); x.arc(0,0,R,0,6.2832); x.stroke();
+  x.restore(); }
 function hbDraw(){ const S=_hb, x=S.ctx, c=S.char; if(!x) return;
   x.setTransform(S.d,0,0,S.d,0,0); x.clearRect(0,0,S.w,S.h);
   // 카메라 = 월드 원점을 보이는 영역 중심으로 옮기고 배율 k를 건다.
   // 이 뒤의 좌표·글꼴 크기는 전부 월드 단위 → 접었다 펴면 적·글자·링이 캐릭터와 같은 비율로 커지고 작아진다.
   const K=S.d*(S.k||1); x.setTransform(K,0,0,K,S.d*(S.cx||S.w/2),S.d*(S.cy||S.h/2));
+  hbDrawHeal(x, S);   // 바닥 회복 구역 — 유닛보다 먼저 그려 발밑에 깔린다
   hbFloor();                                                        // ⚔ 던전마다 다른 바닥(모든 것보다 먼저)
   if(S.slowT>0){ x.save(); x.globalAlpha=.10; x.fillStyle='#9ad0ff';
     x.fillRect(-S.w,-S.h,S.w*2,S.h*2); x.restore(); }               // 감속 중 화면 틴트
@@ -6090,34 +6147,33 @@ function sendDM(){ const inp=document.getElementById('dmInput'); if(!inp||_dmFri
   if(f && f.status!=='offline'){ setTimeout(()=>{ if(_dmFriend<0) return; msgs.push({me:0,t:_DM_REPLIES[(Math.random()*_DM_REPLIES.length)|0]}); renderDM(); }, 650+Math.random()*700); } }
 // ── 마을(월드 + 카메라) ──
 // 좌표계: 월드 픽셀. 캐릭터는 화면 정중앙에 CSS로 고정되고, 매 프레임 #twWorld의 transform만 바뀐다.
-// 구역 추가는 TOWN_ZONES에 한 줄 추가로 끝난다(아이콘 DOM·좌표·패널 제목·렌더러가 전부 여기 모여 있음).
+// 시설 팝업은 TOWN_PANELS 한 줄이면 늘어난다(제목 + 렌더러).
 // 배치: 가로로 긴 직사각형의 네 모서리 + 정중앙 광장(주 이동 방향이 가로라 좌우로 넓게 잡는다)
 // 광장을 가운데 두고 6구역이 그 둘레를 감싼다(육각 배치). 반지름은 한 화면 안에 다 들어오는 거리라
 // 어느 구역이든 화면을 옮기지 않고 한 번의 터치로 갈 수 있다. deco=상호작용 없는 지형지물.
-const TOWN_ZONES={
-  plaza:{ x:50, y:50, ico:'⛲',   label:'광장',      title:'내 캐릭터', render:()=>renderProfStats(), deco:true },   // deco = 맵 장식(지도에서 누를 수 없다) · 스탯 패널은 상단 이름(.twWho)에서 연다
-  gacha:   { x:50.0, y:18.0, ico:'🎁',   label:'상점',    title:'상점',          screen:'shop', render:()=>renderProfGacha() },   // 위 · screen 지정 = 팝업 대신 전용 화면으로 이동
-  gate:    { x:82.0, y:34.0, ico:'🔒',   label:'관문',    title:'관문',          render:()=>renderProfGate()  },   // 우상
-  gym:     { x:82.0, y:66.0, ico:'🏋️',  label:'훈련장',  title:'훈련장',        render:()=>renderProfIdle()  },   // 우하
-  gear:    { x:50.0, y:82.0, ico:'🎒',   label:'장비',    title:'장비',          render:()=>renderProfGear()  },   // 아래
-  charsel: { x:18.0, y:66.0, ico:'🧳',   label:'보관소',  title:'캐릭터 보관소', render:()=>renderCharSelect() },   // 좌하
-  charmake:{ x:18.0, y:34.0, ico:'🧬',   label:'생성소',  title:'캐릭터 생성소', render:()=>renderCharCreate() },   // 좌상
-};
 const TW_WORLD_W_MUL=2.4, TW_WORLD_H_MUL=1.66;   // 월드 = 화면의 가로 N배 × 세로 M배(3배→1.6배: 구역을 한 화면에 모으며 여백만 남김)
 const TW_SPEED=285;          // 캐릭터 이동 속도(월드 px/초)
 const TW_ARRIVE=4;           // 목적지 도착 판정(px)
 const TW_ZONE_R=78;          // 구역 도착 판정 반경(px)
 const TW_TAP_MS=260, TW_TAP_PX=10;   // 이보다 길게 누르거나 많이 움직이면 '탭'이 아니라 '꾹 누르기'
+// 시설 패널 — 옛 마을 지도는 폐지됐고 팝업만 남았다. 제목과 렌더러만 있으면 된다.
+const TOWN_PANELS={
+  plaza:   { title:'내 캐릭터',        render:()=>renderProfStats()  },
+  gacha:   { title:'상점',             render:()=>renderProfGacha(), screen:'shop' },   // 전용 화면으로(팝업 아님)
+  gate:    { title:'관문',             render:()=>renderProfGate()   },
+  gym:     { title:'훈련장',           render:()=>renderProfIdle()   },
+  gear:    { title:'장비',             render:()=>renderProfGear()   },
+  charsel: { title:'캐릭터 보관소',    render:()=>renderCharSelect() },
+  charmake:{ title:'캐릭터 생성소',    render:()=>renderCharCreate() } };
 let _townOpen=false, _twZone=null;
 let _twW=0,_twH=0, _twVW=0,_twVH=0, _twVL=0,_twVT=0;   // 월드 크기 / 화면(뷰포트) 크기·위치
 let _twChar={x:0,y:0,tx:0,ty:0,dx:0,dy:0,mode:null,face:1};   // mode: null=정지 | 'to'=목적지 이동 | 'dir'=방향 이동
 let _twPtr=null, _twGoZone=null, _twRaf=0, _twLast=0;   // _twGoZone = 지금 향하고 있는 '지정한' 구역(도착하면 그것만 열린다)
-let _twEdgeEl={};   // 구역 id → 화면 가장자리 방향 표시 엘리먼트
 function mapToHub(){ if(typeof stopRoomsTick==='function') stopRoomsTick(); if(typeof playSfx==='function') playSfx('ui_close'); openHome(); }   // 유즈맵 선택 → 메인(HOME)으로 복귀
 function openTown(){ loadMeta(); if(!CHAR()){ openCharScreen('create'); return; }   // 캐릭터가 없으면 생성 화면으로
   _townOpen=true; showAppScreen('townScreen'); navShow('town');
-  twBuildZones(); twLayout(); twApplyChar();
-  const p=twZonePx('plaza')||[_twW/2,_twH/2];   // 광장 앞에서 시작(아이콘과 겹치지 않게 살짝 아래)
+  twLayout(); twApplyChar();
+  const p=[_twW/2,_twH/2];   // 월드 중앙에서 시작
   _twChar.x=_twChar.tx=p[0]; _twChar.y=_twChar.ty=Math.min(_twH, p[1]+TW_ZONE_R*1.2); _twChar.mode=null; _twChar.face=1;
   _twGoZone=null;   // 지정한 구역 없음 — 들어가자마자 팝업이 뜨지 않는다
   twCamApply(); twStartLoop();
@@ -6142,50 +6198,15 @@ function twOpenSocial(){ twCloseChat(); const el=document.getElementById('twSoci
 function twCloseSocial(){ const el=document.getElementById('twSocial'); if(el) el.classList.add('hide'); }
 
 // ── 월드/카메라 ──
-const TW_ZONE_BLDG={   // 구역 → 관리자 건설이 쓰는 건물 3D 모델 키(CST_GLB)
-  plaza:'aetherial_pylon',            // 광장 = 가운데 기념비(발광 오벨리스크)
-  gacha:'union_supply_depot',         // 상점 = 보급창
-  gate:'aetherial_gateway',           // 관문 = 차원문
-  gym:'union_barracks',               // 훈련장 = 병영
-  gear:'union_armory',                // 장비 = 무기고
-  charsel:'union_bunker',             // 보관소 = 격납고
-  charmake:'union_science_facility' }; // 생성소 = 연구시설
 // 건물 그림 채우기 — 3D 로드 전에는 이모지가 그대로 보이고, 준비되면 교체된다
-function twPaintBldgs(){ const w=document.getElementById('twWorld'); if(!w) return;
-  if(!(window.M3D&&M3D.bldgImage)||(G.opt&&G.opt.model3d===false)) return;
-  let miss=false;
-  for(const id in TW_ZONE_BLDG){ const el=w.querySelector('.twZone[data-zone="'+id+'"] .tzIco'); if(!el||el._bld) continue;
-    const src=M3D.bldgImage(TW_ZONE_BLDG[id]); if(!src){ miss=true; continue; }
-    el.innerHTML='<img class="tzBld" src="'+src+'" alt="" draggable="false">'; el._bld=1; }
-  if(miss) setTimeout(twPaintBldgs, 400); }   // glb 로딩 중 — 준비될 때까지 다시 시도
-function twBuildZones(){ const w=document.getElementById('twWorld'), map=document.getElementById('twMap'); if(!w||!map||w._zonesBuilt) return;
-  for(const id in TOWN_ZONES){ const z=TOWN_ZONES[id];
-    const d=document.createElement('div');       // 월드 안의 구역 아이콘
-    d.className='twZone'+(z.deco?' deco':''); d.dataset.zone=id;
-    if(!z.deco) d.onclick=function(){ townGo(id); };   // 장식(광장)은 누를 수 없다
-    d.innerHTML='<span class="tzIco">'+z.ico+'</span><span class="tzLbl">'+z.label+'</span>'; w.appendChild(d);
-    if(z.deco) continue;                          // 장식은 가장자리 방향표시도 만들지 않는다
-    const e=document.createElement('div');       // 화면 밖일 때 가장자리에 뜨는 방향 표시
-    e.className='twEdge hide'; e.textContent=z.ico; e.title=z.label; e.onclick=function(){ townGo(id); };
-    map.appendChild(e); _twEdgeEl[id]=e; }
-  w._zonesBuilt=true; twPaintBldgs(); }
 // 화면 밖 구역을 화면 가장자리에 표시 — 월드가 넓어 구역이 안 보일 때 어디로 가야 할지 알려준다.
-function twEdgeApply(){ const M=24, cx=_twVW/2, cy=_twVH/2;
-  for(const id in TOWN_ZONES){ const el=_twEdgeEl[id]; if(!el) continue;
-    const p=twZonePx(id), sx=p[0]-_twChar.x+cx, sy=p[1]-_twChar.y+cy;
-    if(sx>M && sx<_twVW-M && sy>M && sy<_twVH-M){ el.classList.add('hide'); continue; }   // 화면 안이면 아이콘 자체가 보인다
-    el.classList.remove('hide');
-    const dx=sx-cx, dy=sy-cy, hw=cx-M, hh=cy-M;                                            // 중심→구역 방향을 화면 사각형 경계에 투영
-    const t=Math.min(hw/Math.max(Math.abs(dx),1e-6), hh/Math.max(Math.abs(dy),1e-6));
-    el.style.left=(cx+dx*t).toFixed(1)+'px'; el.style.top=(cy+dy*t).toFixed(1)+'px'; } }
 // 월드 픽셀 크기 산출 + 구역 배치. 화면 크기가 바뀌면 캐릭터 좌표도 비례로 옮겨 상대 위치를 지킨다.
 function twLayout(){ const map=document.getElementById('twMap'), w=document.getElementById('twWorld'); if(!map||!w) return;
   const r=map.getBoundingClientRect(); _twVW=r.width; _twVH=r.height; _twVL=r.left; _twVT=r.top;
   const nw=Math.round(r.width*TW_WORLD_W_MUL), nh=Math.round(r.height*TW_WORLD_H_MUL);
   if(_twW&&_twH&&(nw!==_twW||nh!==_twH)){ const sx=nw/_twW, sy=nh/_twH;
     _twChar.x*=sx; _twChar.y*=sy; _twChar.tx*=sx; _twChar.ty*=sy; }
-  _twW=nw; _twH=nh; w.style.width=nw+'px'; w.style.height=nh+'px';
-  for(const el of w.querySelectorAll('.twZone')){ const z=TOWN_ZONES[el.dataset.zone]; if(z){ el.style.left=z.x+'%'; el.style.top=z.y+'%'; } } }
+  _twW=nw; _twH=nh; w.style.width=nw+'px'; w.style.height=nh+'px'; }
 // 성벽 경계 — town_ground.webp의 성벽을 방사 측정(3도 간격)해 역산한 값. 그림을 바꾸면 다시 재야 한다.
 const TW_WALL_X=1.00, TW_WALL_Y=0.798, TW_WALL_DY=0;   // 월드 정규좌표(-1~1) 기준 좌우/상하 한계 + 세로 치우침 보정
 const TW_WALL_CUT=0.30;                 // 모서리 컷(팔각형) — 기기별 1.285~1.338의 평균
@@ -6195,7 +6216,6 @@ function twClampWall(wx,wy){
   const lim=2-TW_WALL_CUT*2, s=Math.abs(u)+Math.abs(v);
   if(s>lim){ const k=lim/s; u*=k; v*=k; }   // 모서리 밖이면 중심 쪽으로 당겨 벽면에 붙인다
   return [ (u*TW_WALL_X+1)/2*_twW, (v*TW_WALL_Y+TW_WALL_DY+1)/2*_twH ]; }
-function twZonePx(id){ const z=TOWN_ZONES[id]; return z? [_twW*z.x/100, _twH*z.y/100] : null; }
 function twScreenToWorld(cx,cy){ return [ _twChar.x+(cx-_twVL)-_twVW/2, _twChar.y+(cy-_twVT)-_twVH/2 ]; }   // 캐릭터가 화면 중앙이므로 = 캐릭터 + (터치점 - 화면중앙)
 function twSetTarget(wx,wy){ const _p=twClampWall(wx,wy); _twChar.tx=_p[0]; _twChar.ty=_p[1]; _twChar.mode='to'; _twGoZone=null; }
 function twTapFx(wx,wy){ const w=document.getElementById('twWorld'); if(!w) return;
@@ -6206,7 +6226,7 @@ function twCamApply(){ const w=document.getElementById('twWorld'); if(!w) return
   w.style.transform='translate3d('+(_twVW/2-_twChar.x).toFixed(1)+'px,'+(_twVH/2-_twChar.y).toFixed(1)+'px,0)';
   const av=document.getElementById('twAvatar'); if(av) av.classList.toggle('walk', _twChar.mode!==null);
   const f=document.getElementById('twAvFlip'); if(f) f.classList.toggle('l', _twChar.face<0);
-  twEdgeApply(); }
+  }
 // 한 프레임 전진. rAF(twTick)와 스모크가 같은 함수를 쓴다(헤드리스는 rAF가 멈춰 있어 수동 호출이 필요).
 function twStep(dt){ if(!_twW) return;
   const c=_twChar;
@@ -6221,15 +6241,9 @@ function twStep(dt){ if(!_twW) return;
     if(c.mode==='to') s=Math.min(s, Math.hypot(c.tx-c.x,c.ty-c.y));
     c.x=Math.max(0,Math.min(_twW,c.x+mx*s)); c.y=Math.max(0,Math.min(_twH,c.y+my*s));
     if(mx>0.05) c.face=1; else if(mx<-0.05) c.face=-1; }
-  twCamApply(); twCheckZones(); tw3dFrame(dt); }
+  twCamApply(); tw3dFrame(dt); }
 // 시설은 '내가 지정한 구역'에 도착했을 때만 열린다.
 // 옆을 스쳐 지나가는 것도, 땅을 눌러 걸어가 그 위에 겹쳐 서는 것도 열지 않는다 — 구역을 직접 눌러야 한다.
-function twCheckZones(){
-  if(!_twGoZone) return;
-  const tp=document.getElementById('townPanel'); if(tp && !tp.classList.contains('hide')) return;
-  const p=twZonePx(_twGoZone); if(!p){ _twGoZone=null; return; }
-  if(Math.hypot(p[0]-_twChar.x,p[1]-_twChar.y)>TW_ZONE_R) return;   // 아직 가는 중
-  const z=_twGoZone; _twGoZone=null; _twChar.mode=null; openTownPanel(z); }
 function twTick(ts){ if(!_townOpen){ _twRaf=0; return; }
   const dt=_twLast? Math.min(0.05,(ts-_twLast)/1000) : 0.016; _twLast=ts;
   twStep(dt); _twRaf=requestAnimationFrame(twTick); }
@@ -6257,17 +6271,13 @@ function renderTownBar(){ const p=PROF(), c=CHAR();
   if(typeof updateCurBar==='function') updateCurBar(); }   // 💠 미네랄/가스/젬은 공용 재화 바
 function showTownToast(msg){ const t=document.getElementById(gearOpen()?'gearToast':shopOpen()?'shopToast':'twToast'); if(!t) return; t.textContent=msg; t.classList.remove('hide');
   clearTimeout(t._t); t._t=setTimeout(()=>t.classList.add('hide'), 2600); }
-// 구역 아이콘(또는 가장자리 방향 표시) 탭 = 그 구역을 지정. 이미 그 위에 서 있으면 바로 연다.
-function townGo(zone){ const p=twZonePx(zone); if(!p) return; if(typeof playSfx==='function') playSfx('ui_open');
-  if(Math.hypot(p[0]-_twChar.x,p[1]-_twChar.y)<=TW_ZONE_R){ _twChar.mode=null; _twGoZone=null; openTownPanel(zone); return; }
-  twSetTarget(p[0],p[1]); _twGoZone=zone; }   // twSetTarget이 지정을 지우므로 그 뒤에 세운다
 const TOWN_ZONE_SCREEN={ shop:()=>openShop() };   // 구역 → 전용 화면 매핑(팝업 대신 화면 전환)
-function openTownPanel(zone){ const _z=TOWN_ZONES[zone];
+function openTownPanel(zone){ const _z=TOWN_PANELS[zone];
   if(_z && _z.screen && TOWN_ZONE_SCREEN[_z.screen]){ _twChar.mode=null; _twPtr=null; return TOWN_ZONE_SCREEN[_z.screen](); }   // 전용 화면 구역
   _twZone=zone; _twChar.mode=null; _twPtr=null;   // 시설에 들어가면 걸음을 멈춘다
   const card=document.querySelector('#townPanel .twCard');
   if(card) card.classList.toggle('gearFull', zone==='gear');   // 장비창만 카드 높이를 고정해 위/아래 구역을 나눈다
-  const t=document.getElementById('tpTitle'), z=TOWN_ZONES[zone]; if(t) t.textContent=(z&&z.title)||'시설';
+  const t=document.getElementById('tpTitle'), z=TOWN_PANELS[zone]; if(t) t.textContent=(z&&z.title)||'시설';
   refreshTownPanel(); popShow('townPanel'); bagScrollHint(); }   // 숨은 동안은 높이가 0이라 표시 후 한 번 더 재본다
 // ── 🎁 상점(전용 화면) ─────────────────────────────────────────────────────
 // 팝업이 아니라 독립 화면이다. 내용 렌더러는 renderProfGacha() 하나뿐(단일 소스) — 마크업을 복제하지 말 것.
@@ -6318,7 +6328,7 @@ function _gearAllyPanel(){ const n=hbBuildN('ally'), mx=hbBuildMax('ally'), B=HB
 function gearGoHire(){ openHome(); hbOpenBuild(); }
 function refreshTownPanel(){ if(gearOpen()){ renderGear(); return; }              // 정비 전용 화면이 열려 있으면 그쪽을 갱신
   if(shopOpen()){ renderShop(); return; }   // 상점 전용 화면이 열려 있으면 그쪽을 갱신
-  const body=document.getElementById('tpBody'), z=TOWN_ZONES[_twZone]; if(!body||!z) return;
+  const body=document.getElementById('tpBody'), z=TOWN_PANELS[_twZone]; if(!body||!z) return;
   const old=body.querySelector('.bagBody'), keep=old?old.scrollTop:0;   // 다시 그려도 가방을 보던 위치를 유지
   body.innerHTML = z.render();
   const nb=body.querySelector('.bagBody'); if(nb&&keep) nb.scrollTop=keep;

@@ -197,9 +197,9 @@ async function groupLobby(){
               'HOME에 푸른기가 남음('+(el.className||el.tagName)+'): '+m); } }
         for(const v of c.borderRadius.split(/[\s\/]+/))
           assert(!v || v==='0px' || v==='3px', 'HOME 모서리가 너무 둥금('+(el.className||el.tagName)+'): '+v); } }
-    assert(document.querySelectorAll('#navBar .navIt').length===5,'하단 네비가 5칸이 아님(HOME·정비·마을·유즈맵·상점)');
+    assert(document.querySelectorAll('#navBar .navIt').length===4,'하단 네비가 4칸이 아님(HOME·정비·유즈맵·상점) — 마을은 폐지됐다');
     { const navs=[...document.querySelectorAll('#navBar .navIt')].map(x=>x.dataset.nav).join(',');
-      assert(navs==='home,gear,town,map,shop','네비 구성이 다름: '+navs);
+      assert(navs==='home,gear,map,shop','네비 구성이 다름: '+navs);
       // 토벌은 네비에서 빠지고 HOME 팝업이 됐다 — 2번 칸은 정비(장비·펫·동료)
       assert(document.querySelector('#navBar .navIt[data-nav=gear]').textContent.indexOf('정비')>=0,'2번 탭 표기가 정비가 아님'); }
     assert(document.querySelector('#navBar .navIt.on').dataset.nav==='home','HOME 탭이 활성이 아님');
@@ -242,11 +242,10 @@ async function groupLobby(){
     assert(visible($('homeScreen')),'유즈맵에서 뒤로 갔는데 HOME으로 안 옴 [DBG 보이는화면='+
       [...document.querySelectorAll('.appScreen')].filter(e=>visible(e)).map(e=>e.id).join(',')+
       ' CHAR='+(!!CHAR())+' AUTH='+(AUTH.user?(AUTH.user.uid||AUTH.user.id||AUTH.user.nick):'null')+']');
-    navGo('town'); await sleep(80);
-    assert(visible($('townScreen')) && visible($('navBar')),'네비 마을이 안 열림 [DBG 보이는화면='+
-      [...document.querySelectorAll('.appScreen')].filter(e=>visible(e)).map(e=>e.id).join(',')+
-      ' nav='+visible($('navBar'))+' CHAR='+(!!CHAR())+']');
-    assert(document.querySelector('#navBar .navIt.on').dataset.nav==='town','마을 탭이 활성이 아님');
+    navGo('town'); await sleep(80);   // 마을 폐지 — 옛 진입점은 HOME으로 리다이렉트된다
+    assert(visible($('homeScreen')) && visible($('navBar')),'마을 진입이 HOME으로 안 감 [DBG 보이는화면='+
+      [...document.querySelectorAll('.appScreen')].filter(e=>visible(e)).map(e=>e.id).join(',')+']');
+    assert(document.querySelector('#navBar .navIt.on').dataset.nav==='home','HOME 탭이 활성이 아님');
     // 정비 탭 = 장비·펫·동료 전용 화면 · 상점 탭 = 상점 전용 화면
     navGo('gear'); await sleep(60);
     assert(document.querySelector('#navBar .navIt.on').dataset.nav==='gear','정비 탭이 활성이 아님');
@@ -400,41 +399,7 @@ async function groupLobby(){
     assert(_hb.char.atk>atk0,'전투 중 공격력에 반영되지 않음: '+atk0+' → '+_hb.char.atk);
     return 'Lv'+c.level+' · 포인트 '+c.statPoints; });
   // DESIGN.md 규칙 — 마을(지도 + 시설 팝업)만. 전환을 마쳤으므로 되돌아갈 수 없다(§5).
-  await step('마을: DESIGN.md 규칙(라운드 · 간격 · 시안 1곳 · 폰트 토큰)', async()=>{
-    skipIf(typeof openTown!=='function','마을 없음');
-    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
-    openTown(); await sleep(80);
-    const sc=$('townScreen'); assert(visible(sc),'마을이 안 열림');
-    const R_OK=['0px','3px','6px','9px','50%'], SP_OK=[4,8,12,20];
-    const nm=e=>(e.id?'#'+e.id:'')+(typeof e.className==='string'&&e.className?'.'+e.className.trim().split(/[ ]+/)[0]:e.tagName.toLowerCase());
-    const scan=()=>{ const bad=[], sp=[], cyan=[], arial=[];
-      for(const e of sc.querySelectorAll('*')){ if(!e.getClientRects().length) continue;
-        const c=getComputedStyle(e);
-        for(const k of ['borderTopLeftRadius','borderTopRightRadius','borderBottomLeftRadius','borderBottomRightRadius'])
-          if(R_OK.indexOf(c[k])<0) bad.push(nm(e)+' r='+c[k]);
-        for(const k of ['borderTopWidth','borderRightWidth','borderBottomWidth','borderLeftWidth'])
-          if(parseFloat(c[k])>1.5) bad.push(nm(e)+' 테두리 '+c[k]);
-        for(const k of ['gap','paddingTop','paddingRight','paddingBottom','paddingLeft']){
-          const v=parseFloat(c[k]); if(v>0 && SP_OK.indexOf(v)<0) sp.push(nm(e)+':'+k+'='+v); }
-        const hasBd=['borderTopWidth','borderRightWidth','borderBottomWidth','borderLeftWidth'].some(k=>parseFloat(c[k])>0);
-        if(/92, ?214, ?255|0, ?229, ?255/.test([c.backgroundColor,c.boxShadow,hasBd?c.borderColor:''].join(' '))) cyan.push(nm(e));
-        if(/Arial/.test(c.fontFamily||'')) arial.push(nm(e));
-      }
-      return {bad:bad, sp:sp, cyan:cyan.filter((v,i)=>cyan.indexOf(v)===i), arial:arial.filter((v,i)=>arial.indexOf(v)===i)}; };
-    let r=scan();
-    assert(!r.bad.length,'토큰 밖 라운드/두꺼운 테두리 '+r.bad.length+'건: '+r.bad.slice(0,4).join(', '));
-    assert(!r.sp.length,'4/8/12/20 밖 간격 '+r.sp.length+'건: '+r.sp.slice(0,5).join(', '));
-    assert(!r.arial.length,'폰트 토큰 밖(Arial 폴백) '+r.arial.length+'건: '+r.arial.slice(0,4).join(', '));
-    assert(r.cyan.length<=1,'지도에 시안이 '+r.cyan.length+'곳: '+r.cyan.join(', '));
-    // 시설 팝업을 열어도 같은 규칙을 지켜야 한다
-    openTownPanel('plaza'); await sleep(80);
-    r=scan();
-    assert(!r.bad.length,'팝업: 토큰 밖 라운드/테두리 '+r.bad.length+'건: '+r.bad.slice(0,4).join(', '));
-    assert(!r.sp.length,'팝업: 간격 위반 '+r.sp.length+'건: '+r.sp.slice(0,5).join(', '));
-    assert(r.cyan.length<=1,'팝업에 시안이 '+r.cyan.length+'곳: '+r.cyan.join(', '));
-    closeTownPanel();
-    return '지도·팝업 모두 통과'; });
-  // 첫 진입 멈춤(모델 최초 생성 = 텍스처 업로드 + 셰이더 컴파일, 실측 538ms)을 로그인 화면·로딩으로 옮긴다.
+    // 첫 진입 멈춤(모델 최초 생성 = 텍스처 업로드 + 셰이더 컴파일, 실측 538ms)을 로그인 화면·로딩으로 옮긴다.
   await step('워밍업: 로딩에서 미리 데우고 HOME은 멈춤 없이', async()=>{
     skipIf(typeof warmAll!=='function' || typeof enterAfterWarm!=='function','워밍업 없음');
     skipIf(!(window.M3D && M3D.ready && M3D.ready()),'3D 미준비');
@@ -1013,77 +978,13 @@ async function groupLobby(){
     hbSetClimb(false);
     return '최고 '+hbBest(1)+'라운드 · 반복/등반 ok'; });
   // 친구 목록은 네비 밖(마을 상단 바)에서 연다 — 네비 칸 수가 바뀌어도 진입점이 사라지지 않게 지킨다.
-  await step('친구: 마을 상단 바에서 열림', async()=>{ skipIf(typeof twOpenSocial!=='function','친구 시트 없음');
-    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
-    openTown(); await sleep(60);
-    const fb=document.querySelector('#townScreen .twBar [aria-label="친구"]');
-    assert(fb && visible(fb),'마을 상단 바에 친구 진입점이 없음');
-    assert(fb.querySelector('svg'),'친구 버튼 아이콘이 안 그려짐(data-ico 미치환)');
-    fb.click(); await sleep(60);
-    assert(visible($('twSocial')),'친구 시트가 안 열림');
-    const n=document.querySelectorAll('#hubFriends .frRow').length;
-    assert(n>0,'친구 목록이 비어 있음');
-    twCloseSocial(); assert(!visible($('twSocial')),'친구 시트가 안 닫힘');
-    return n+'명'; });
-  await step('유즈맵 선택 → 네모네모 모드 팝업', ()=>{ openMapSelect(); openModeSheet(USEMAPS.nemo_inf||USEMAPS.nemo);
+    await step('유즈맵 선택 → 네모네모 모드 팝업', ()=>{ openMapSelect(); openModeSheet(USEMAPS.nemo_inf||USEMAPS.nemo);
     const mo=document.querySelector('#modeSheet .moCard'); assert(visible(mo),'moCard 안 보임');
     const w=mo.getBoundingClientRect().width; assert(w>200&&w<400,'moCard 폭 이상: '+w); closeModeSheet(); return 'w='+w; });
   await step('방찾기 열림+목록', ()=>{ openRooms(); const rm=document.querySelector('#rooms .rmCard'); assert(visible(rm),'rmCard 안 보임');
     const n=$('roomList').children.length; assert(n>0,'방 목록 비어있음'); $('rooms').classList.add('hide'); return n+'개 방'; });
-  await step('마을 입장: 캐릭터 생성 → 그대로 입장', ()=>{ skipIf(typeof openCharScreen!=='function','캐릭터 시스템 없음');
-    PROF().chars.length=0; PROF().curId=''; saveMeta();   // 이전 실행이 남긴 캐릭터를 지우고 첫 진입 상태로
-    //   ⚠ saveMeta() 필수 — openCharScreen()이 loadMeta()로 저장소를 다시 읽어 되살린다
-    openCharScreen();   // 허브 삭제: 캐릭터 화면이 마을의 앞단
-    assert(visible($('charScreen')),'마을 입장 시 캐릭터 화면이 안 뜸');
-    assert($('csTitle').textContent.indexOf('만들기')>=0,'캐릭터가 없는데 생성 화면이 아님: '+$('csTitle').textContent);
-    const inp=$('ccName'); assert(inp,'이름 입력칸 없음'); inp.value='테스트';
-    charDoCreate('warden');
-    const c=CHAR(); assert(c,'캐릭터가 안 만들어짐');
-    assert(c.cls==='warden' && c.name==='테스트','생성 결과 불일치: '+c.cls+'/'+c.name);
-    assert(_townOpen,'생성 후 마을로 안 들어감');
-    assert(document.querySelector('#twAvatar .twAvBody').textContent===PROF_CLASSES.warden.ico,'아바타가 캐릭터 종류를 안 따라감');
-    return c.name+'('+PROF_JOBS[c.unit.jobId].name+')'; });
-  // 마을: 월드 좌표계 + 카메라. 헤드리스는 rAF가 멈춰 있어 twStep(dt)을 직접 pump한다.
-  await step('마을: 월드 카메라 + 캐릭터 중앙 고정', ()=>{ skipIf(typeof openTown!=='function','마을 없음');
-    openTown();
-    const map=$('twMap'), w=$('twWorld'); assert(w,'#twWorld 없음');
-    const mr=map.getBoundingClientRect();
-    assert(Math.abs(parseFloat(w.style.width)-mr.width*TW_WORLD_W_MUL)<2,'월드 폭이 화면×'+TW_WORLD_W_MUL+'가 아님: '+w.style.width);
-    assert(w.querySelectorAll('.twZone').length===Object.keys(TOWN_ZONES).length,'구역 아이콘 수 불일치');
-    // 광장은 맵 장식 — 클릭도 가장자리 표시도 없다
-    const pz=w.querySelector('.twZone[data-zone="plaza"]');
-    assert(pz.classList.contains('deco') && !pz.onclick && !_twEdgeEl.plaza,'광장이 아직 상호작용 구역임');
-    // 마을은 화면보다 넓다(2배 확대) — 구역이 화면 밖일 수 있고, 그때는 가장자리 화살표가 길을 알려준다
-    const off=Object.keys(TOWN_ZONES).filter(id=>{ const p=twZonePx(id);
-      const sx=p[0]-_twChar.x+mr.width/2, sy=p[1]-_twChar.y+mr.height/2;
-      return !(sx>24 && sx<mr.width-24 && sy>24 && sy<mr.height-24); });
-    for(const id of off){ if(id==='plaza') continue;   // 광장은 장식이라 화살표가 없다
-      assert(_twEdgeEl[id] && !_twEdgeEl[id].classList.contains('hide'),'화면 밖인데 가장자리 표시가 없음: '+id); }
-    const shown=Object.keys(_twEdgeEl).filter(id=>!_twEdgeEl[id].classList.contains('hide'));
-    assert(shown.every(id=>off.includes(id)),'화면 안인데 가장자리 표시가 뜸: '+shown.filter(id=>!off.includes(id)).join(','));
-    // 성벽 밖으로는 못 나간다 — 모서리 방향으로 멀리 찍어도 팔각형 안에 갇힌다
-    twSetTarget(_twW*2, _twH*2);
-    { const u=(_twChar.tx/_twW*2-1)/TW_WALL_X, v=(_twChar.ty/_twH*2-1)/TW_WALL_Y;
-      assert(Math.abs(u)<=1.001&&Math.abs(v)<=1.001,'성벽 좌우/상하 밖으로 나감: '+u.toFixed(2)+','+v.toFixed(2));
-      assert(Math.abs(u)+Math.abs(v) <= 2-TW_WALL_CUT*2+0.001,'성벽 모서리 밖으로 목적지가 나감: '+u.toFixed(2)+','+v.toFixed(2)); }
-    const t0=w.style.transform, g=twZonePx('gacha'); twSetTarget(g[0],g[1]);
-    for(let i=0;i<60;i++) twStep(0.016);
-    assert(w.style.transform!==t0,'월드(배경)가 안 움직임');
-    const av=$('twAvatar').getBoundingClientRect();
-    const dx=Math.abs((av.left+av.width/2)-(mr.left+mr.width/2)), dy=Math.abs((av.top+av.height/2)-(mr.top+mr.height/2));
-    assert(dx<3&&dy<3,'아바타가 화면 중앙에서 벗어남: '+dx.toFixed(1)+','+dy.toFixed(1));
-    assert($('twAvatar').classList.contains('walk'),'이동 중인데 걷기 모션 클래스 없음');
-    return '월드 '+w.style.width+'×'+w.style.height; });
-  await step('마을: 멀리서 구역을 지정하면 걸어가서 열림', ()=>{ skipIf(typeof openTown!=='function','마을 없음');
-    closeTownPanel();
-    townGo('gym');   // 화면 밖 구역 지정 — 아이콘/가장자리 표시 탭과 같은 경로 (상점은 전용 화면이라 팝업 검사에서 제외)
-    assert(_twGoZone==='gym','구역 지정이 안 됨');
-    let n=0; while(_twChar.mode!==null && n<4000){ twStep(0.016); n++; }
-    assert(n<4000,'목적지에 도착하지 못함');
-    assert(visible($('townPanel')),'지정한 구역에 도착했는데 시설 팝업이 안 열림');
-    assert($('tpTitle').textContent.indexOf('훈련장')>=0,'팝업 제목 불일치: '+$('tpTitle').textContent);
-    twLeave(); return n+'프레임 이동'; });
-  // 🎁 상점 = 팝업이 아니라 전용 화면. 네비·마을 구역 두 경로 모두 같은 화면으로 간다.
+    // 마을: 월드 좌표계 + 카메라. 헤드리스는 rAF가 멈춰 있어 twStep(dt)을 직접 pump한다.
+      // 🎁 상점 = 팝업이 아니라 전용 화면. 네비·마을 구역 두 경로 모두 같은 화면으로 간다.
   await step('상점: 전용 화면(팝업 아님) · 네비/마을 구역 두 경로', async()=>{ skipIf(typeof openShop!=='function','상점 화면 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','상점'); saveMeta(); }
     navGo('shop'); await sleep(60);
@@ -1135,28 +1036,7 @@ async function groupLobby(){
       if(e) assert(+getComputedStyle(e).fontWeight<=700, sel+' 굵기가 700 초과(가짜 볼드): '+getComputedStyle(e).fontWeight); }
     openHome(); await sleep(40);
     return '3탭 · renderProfGear/_shopPetPanel 재사용 ok'; });
-  await step('마을: 지정하지 않으면 안 열림(스쳐 지남·겹쳐 섬)', ()=>{ skipIf(typeof twSetTarget!=='function','마을 없음');
-    openTown(); closeTownPanel();
-    const c=twZonePx('charmake');
-    _twChar.x=c[0]+220; _twChar.y=c[1];                    // ① 생성소 정중앙을 관통해 지나가기
-    twSetTarget(c[0]-220, c[1]);
-    let through=false, n=0;
-    while(_twChar.mode!==null && n<4000){ twStep(0.016); n++;
-      if(Math.hypot(c[0]-_twChar.x,c[1]-_twChar.y)<=TW_ZONE_R) through=true;
-      assert(!visible($('townPanel')),'지나가는 중에 팝업이 열림'); }
-    assert(through,'경로가 생성소 반경을 통과하지 않음 — 테스트가 무의미');
-    twSetTarget(c[0], c[1]);                               // ② 땅을 눌러 구역 위에 정확히 겹쳐 서기
-    n=0; while(_twChar.mode!==null && n<4000){ twStep(0.016); n++; }
-    for(let i=0;i<30;i++) twStep(0.016);                   // 멈춘 뒤에도 계속 안 열려야 한다
-    assert(!visible($('townPanel')),'구역 위에 겹쳐 섰다고 팝업이 열림');
-    townGo('charmake');                                    // ③ 그 자리에서 구역을 누르면 열린다
-    assert(visible($('townPanel')) && _twZone==='charmake','겹쳐 선 채로 구역을 눌렀는데 안 열림');
-    closeTownPanel(); twLeave(); return '통과·겹침=무반응 / 지정=열림'; });
-  await step('캐릭터 UI 단일 소스: 입장 화면 = 마을 구역', ()=>{ skipIf(typeof renderCharSelect!=='function','캐릭터 시스템 없음');
-    assert(TOWN_ZONES.charsel.render()===renderCharSelect(),'보관소 구역이 입장 화면과 다른 마크업을 그림(복제 의심)');
-    assert(TOWN_ZONES.charmake.render()===renderCharCreate(),'생성소 구역이 입장 화면과 다른 마크업을 그림(복제 의심)');
-    return '동일'; });
-  await step('캐릭터: 성장은 따로 · 재화와 펫은 공용', ()=>{ skipIf(typeof profCreateChar!=='function','캐릭터 시스템 없음');
+      await step('캐릭터: 성장은 따로 · 재화와 펫은 공용', ()=>{ skipIf(typeof profCreateChar!=='function','캐릭터 시스템 없음');
     const p=PROF(); p.pcoin=1000; p.pets={wolf:{count:1}}; p.equip=['wolf'];
     const a=CHAR(); a.statPoints=3; assert(profAllocStat('pow'),'스탯 분배 실패');
     const powA=profStat('pow'), spA=a.statPoints;
