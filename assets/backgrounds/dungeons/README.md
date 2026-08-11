@@ -309,10 +309,36 @@ node scripts/video-frames.mjs C:/Users/Home/Downloads/dg1.mp4 1
 **영상 프롬프트:** 정지 그림을 그대로 두고 움직임만 요청한다.
 
 ```
-Keep the camera locked and the composition identical, no camera movement, no zoom,
-no pan. Only subtle ambient motion: slow drifting haze, faint pulsing glow, gentle
-surface shimmer. Nothing enters or leaves the frame. Seamless subtle loop.
+Animate this image with the camera completely locked. Do not move, zoom, pan,
+rotate or shake the camera. The composition must stay identical.
+
+Only the surfaces already present may move, and only in place: veins and growths
+pulsing slowly, faint glow breathing brighter and dimmer, a gentle shimmer on wet
+surfaces. Nothing travels across the frame.
+
+No fog, no mist, no haze, no smoke, no clouds, no dust, no floating particles, no
+light rays, no god rays, no overlays, no colour washes, no vignette. Nothing may
+ever cover, obscure or pass in front of the floor — the entire floor stays fully
+visible in every frame.
+
+Nothing enters or leaves the frame. No new objects. Subtle, slow, seamless loop.
 ```
+
+> ⛔ **`drifting haze`·`fog`·`mist` 같은 말을 절대 넣지 말 것.** 한 번 넣었다가
+> 회색 안개가 바닥을 쓸고 지나가 화면 일부를 가렸다. 이 판은 **바닥**이지 분위기 샷이 아니다.
+> 움직임은 "바닥 위에 뭘 덧씌우는 것"이 아니라 **바닥 자체가 제자리에서 변하는 것**이어야 한다.
+>
+> 도구에 **모션 강도(motion strength/amount)** 슬라이더가 있으면 낮게 둘 것 —
+> 강하면 모델이 움직일 거리를 만들려고 없던 안개·구름을 지어낸다.
+
+**뽑은 뒤 자동 점검:** 추출 스크립트가 프레임 간 변화량을 출력한다.
+
+| 값 | 뜻 |
+|---|---|
+| 3 이하 | ✔ 미세한 움직임만 — 바닥이 안 가려짐 |
+| 3 초과 | ⚠ 뭔가 화면을 가로질렀을 가능성 — 눈으로 확인 |
+
+(안개가 낀 실패 사례의 실측값: `3.6 · 6.3 · 5.5`)
 
 ## 넣은 뒤 확인
 1. 파일을 이 폴더에 두고 앱에서 해당 던전 진입

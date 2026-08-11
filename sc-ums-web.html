@@ -2804,7 +2804,7 @@
   /* 마을 바닥 = 실제 포장 타일(공용 타일 에셋). 월드 전체에 반복해 걸어다니는 땅처럼 보이게 하고,
      위에 어두운 막을 덮어 구역 아이콘·라벨 가독성을 지킨다(볼륨1: 배경은 조용히). */
   .twGround{position:absolute;inset:0;pointer-events:none;
-    background:linear-gradient(rgba(6,8,12,.62),rgba(6,8,12,.72)),url('assets/tiles/terran_tile_light.webp') 0 0/128px repeat}
+    background:linear-gradient(rgba(6,8,12,.42),rgba(6,8,12,.52)),url('assets/backgrounds/town/town_ground.webp') 50% 50%/cover no-repeat,url('assets/tiles/terran_tile_light.webp') 0 0/128px repeat}   /* 마을 바닥 그림(없으면 아래 타일이 그대로 보인다) */
   .twGround::after{content:'';position:absolute;inset:0;pointer-events:none;   /* 가장자리 비네트 — 월드 끝이 자연스럽게 어두워짐 */
     background:radial-gradient(ellipse at 50% 50%,transparent 52%,rgba(0,0,0,.55) 100%)}
   .twZone{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;z-index:2}
