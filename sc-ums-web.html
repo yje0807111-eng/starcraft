@@ -1096,7 +1096,7 @@
   #btCardCtl:active{transform:translateY(1px)}
   #btCardCtl svg{width:17px;height:17px;display:block;transition:transform .22s cubic-bezier(.2,.8,.25,1)}
   #btCardCtl.up svg{transform:rotate(180deg)}
-  #btSheet.simple #btSheetBody,#unitCmd.simple,#playerProfile.simple{height:min(32vh,160px);max-height:min(32vh,160px)}   /* 간소화 = 1줄 그리드 · 높이 고정(건물 프로필 기준 ≈120px · 개인·다중·혼합 모두 동일) · 메인 프로필(#unitCmd)도 동일 규격 */
+  #btSheet.simple #btSheetBody,#unitCmd.simple,#playerProfile.simple{height:min(34vh,176px);max-height:min(34vh,176px)}   /* 간소화 = 1줄 그리드 · 높이 고정(건물 프로필 기준 ≈120px · 개인·다중·혼합 모두 동일) · 메인 프로필(#unitCmd)도 동일 규격 */
   #btSheet.simple .cmdG .cgGrid,#unitCmd.simple .cmdG .cgGrid{grid-template-rows:1fr}
   #btSheet.mini #btSheetBody{display:none}   /* 최소화 = 본문 숨김(버튼 바만) */
   #btSheetBody,#unitCmd,#playerProfile{height:min(48vh,246px);max-height:min(48vh,246px);min-height:0;flex-direction:column}   /* 일꾼 지정 패널 크기로 고정(건물·유닛 모두 동일 높이) · #unitCmd는 display만 .on에서 제어 */
@@ -1487,10 +1487,15 @@
   .cmdG .cgPro img.icoImg{object-fit:contain;transform:none}
   /* 업그레이드 아이콘 = 네모 초상 틀은 유지하고, 안쪽 배지 원만 없앤 뒤 아이콘을 크게 */
   .cmdG .cgPro svg.cgIco{width:84%;height:84%}            /* SVG 폴백만 84% */
-  .cmdG .cgPro img.cgIco{width:100%;height:100%;object-fit:cover}   /* 실제 아이콘 이미지 = 초상처럼 칸을 꽉 채움 */
+  .cmdG .cgPro:has(img.cgIco){aspect-ratio:1}
+  .cmdG .cgPro img.cgIco{width:100%;height:100%;object-fit:contain}   /* 실제 아이콘 이미지 = 초상처럼 칸을 꽉 채움 */
   .cmdG .cgPro:has(img.cgIco)::after{display:none}        /* 실제 아이콘 위에는 가로 스캔라인을 덮지 않는다(아이콘 자체 질감이 있음) */
   .cmdG .cgSlot.iconFill{justify-content:center;padding:6px} .cmdG .cgSlot.iconFill .cgPro{width:72%;height:auto;aspect-ratio:1;border:none;background:none;box-shadow:none} .cmdG .cgSlot.iconFill .cgPro svg{width:100%;height:100%} .cmdG .cgSlot.iconFill .cgName,.cmdG .cgSlot.iconFill .cgCost{display:none}   /* 아이콘만 채우는 칸(일시정지 등): 빈 이름/비용 줄 숨겨 아이콘이 칸 정중앙에 크게 */
   .cmdG .cgName{font:800 10px/1.05 sans-serif;letter-spacing:-.2px;color:#e6eefc;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cmdG .cgSub{font:800 8.5px/1 var(--font-num);color:var(--caL);text-align:center;margin-top:2px;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .cmdG .cgSlot.max .cgSub{color:var(--cgGood)}
+  .cmdG .cgCost .ri{width:11px;height:11px;flex:none}
+  .cmdG .cgDcost .ri{width:12px;height:12px;flex:none}
   /* 🧱 벙커 탑승 슬롯: 가로 꽉 찬 초상 → 이름 → HP 세로 스택 */
   .cmdG .cgSlot.cgBunk{justify-content:flex-start;gap:3px;padding:5px 4px}
   .cmdG .cgSlot.cgBunk .cgPro{width:100%;height:auto;aspect-ratio:1.35;border-radius:6px}
@@ -1499,7 +1504,7 @@
   .cmdG .cgCost{display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap;line-height:1;margin-top:auto}
   .cmdG[data-build="1"] .cgName{text-overflow:clip;max-width:none}   /* 생략(...) 없이 — JS가 폰트 축소로 한 줄 */
   .cmdG[data-build="1"] .cgCost{flex-direction:column;flex-wrap:nowrap;gap:1px;margin-top:auto}   /* 크레딧(위)/에너지(아래) 각 한 줄 */
-  .cmdG[data-build="1"] .cgCost .cc{font-size:9px;min-height:10px;line-height:10px;display:block;text-align:center}   /* 빈 줄도 높이 유지(자리 예약) */
+  .cmdG[data-build="1"] .cgCost .cc{font-size:9px;min-height:11px;display:flex;align-items:center;justify-content:center;gap:2px}   /* 빈 줄도 높이 유지(자리 예약) */
   .cmdG .cgCost.cgRwd{flex-direction:row;flex-wrap:nowrap;gap:4px;font-size:9px;font-weight:800;color:var(--cgGood);white-space:nowrap}   /* 보스 셀: 소환 무료 → 코스트 대신 처치 보상(+초록=획득 신호, 한 줄) */
   .cmdG .cgCost.cgRwd span{display:inline-flex;align-items:center;gap:2px}
   
@@ -9839,13 +9844,16 @@ function bossDeployOne(gid){ if(!(G.coopBoss&&!G.coopBoss.dead)){ toast('ℹ️ 
 const UPG_CATS=[ {wpn:'inf',name:'보병'}, {wpn:'mech',name:'메카닉'}, {wpn:'zrg',name:'스웜'}, {wpn:'pro',name:'에테리얼'} ];
 function _upgradeSheetModel(){
   const items=UPG_CATS.map(c=>{ const lv=(G.atkLv&&G.atkLv[c.wpn])||0, isMax=lv>=UPG_MAX, cost=upgCost(c.wpn), afford=((G.gas||0)>=cost);
-    return { pro:wpnBadgeHTML(c.wpn,'#ff3b3b'), sn:c.name, en:cost, cr:0, tr:isMax?'MAX':('Lv.'+lv), metaCls:'lv',
+    return { pro:wpnBadgeHTML(c.wpn,'#ff3b3b'), sn:c.name, en:cost, cr:0, sub:isMax?'MAX':('Lv.'+lv),
+      bottom:'<div class="cgCost">'+(isMax?'':('<span class="cc en">'+resIco('gas')+_cgFmt(cost)+'</span>'))+'</div>',
       state:isMax?'max':(afford?'ok':'dim'), act:isMax?'':('onpointerdown="upgHoldStart(\''+c.wpn+'\',event)"') }; });
   const gLv=(G.gachaLuckLv||0), gMax=gLv>=GACHA_UP_MAX, gC=gachaUpCost();
-  items.push({ pro:beaconProHTML('gachaUp'), sn:'뽑기 확률', cr:gC, en:0, tr:gMax?'MAX':('Lv.'+gLv), metaCls:'lv',
+  items.push({ pro:beaconProHTML('gachaUp'), sn:'뽑기 확률', cr:gC, en:0, sub:gMax?'MAX':('Lv.'+gLv),
+    bottom:'<div class="cgCost">'+(gMax?'':('<span class="cc cr">'+resIco('mineral')+_cgFmt(gC)+'</span>'))+'</div>',
     state:gMax?'max':(((G.mineral||0)>=gC)?'ok':'dim'), act:gMax?'':'onclick="buyGachaUp()"' });
   const cLv=(G.creditLv||0), cMax=cLv>=CREDIT_UP_MAX, cC=creditUpCost();
-  items.push({ pro:beaconProHTML('creditUp'), sn:'미네랄 획득', cr:cC, en:0, tr:cMax?'MAX':('Lv.'+cLv), metaCls:'lv',
+  items.push({ pro:beaconProHTML('creditUp'), sn:'미네랄 획득', cr:cC, en:0, sub:cMax?'MAX':('Lv.'+cLv),
+    bottom:'<div class="cgCost">'+(cMax?'':('<span class="cc cr">'+resIco('mineral')+_cgFmt(cC)+'</span>'))+'</div>',
     state:cMax?'max':(((G.mineral||0)>=cC)?'ok':'dim'), act:cMax?'':'onclick="buyCreditUp()"' });
   items.push(null);   // 2페이지 3번 = 빈칸
   items.push({ pro:beaconProHTML('perm'), sn:'영구 강화', cr:0, en:0, state:'ok', act:'onclick="openPointUpgrade()"' });
@@ -10925,15 +10933,15 @@ function upgCost(wpn){ return UPG_COST; }   // 정액 5 에너지(에너지 수�
 //     info:{ eb, name, desc, stats:[[라벨,값]] | val:{cur,nxt,unit}, progLabel, progVal, prog, cr, en, time }, page }
 function _cgFmt(n){ n=n||0; return n>=10000?((n/1000).toFixed(n>=100000?0:1)+'K'):(''+n); }
 function _cgCost(cr,en,ce){ { const _p=(typeof techCostView==='function')?techCostView(cr,en):null; if(_p){ cr=_p.cr; en=_p.en; } }   // 오토배틀: 지갑이 하나(골드) → 에너지 비용을 크레딧으로 환산해 표기(단일 지점)
-  let h=''; if(ce){ h+='<span class="cc cr">'+(cr?(_cgFmt(cr)+'c'):'')+'</span>'+'<span class="cc en">'+(en?(_cgFmt(en)+'e'):'')+'</span>'; return h; }   // 건설 카드=아이콘 없이 c/e. 에너지 없어도 아래 줄 자리 항상 예약(크레딧 위 고정)
-  if(cr) h+='<span class="cc cr">◈'+_cgFmt(cr)+'</span>'; if(en) h+='<span class="cc en">'+pIco('⚡','sm')+_cgFmt(en)+'</span>'; return h; }   // 무료 표기 제거(빈칸)
+  let h=''; if(ce){ h+='<span class="cc cr">'+(cr?(resIco('mineral')+_cgFmt(cr)):'')+'</span>'+'<span class="cc en">'+(en?(resIco('gas')+_cgFmt(en)):'')+'</span>'; return h; }   // 건설 카드=아이콘 없이 c/e. 에너지 없어도 아래 줄 자리 항상 예약(크레딧 위 고정)
+  if(cr) h+='<span class="cc cr">'+resIco('mineral')+_cgFmt(cr)+'</span>'; if(en) h+='<span class="cc en">'+resIco('gas')+_cgFmt(en)+'</span>'; return h; }   // 무료 표기 제거(빈칸)
 function _cgHpShStr(hp,sh,en){ let s=''; if(sh) s+='<span class="shv"><i class="stAb">S</i>'+sh+'</span>'; if(hp!=null&&hp!=='') s+='<span class="hpv"><i class="stAb">H</i>'+hp+'</span>'; if(en) s+='<span class="env"><i class="stAb">E</i>'+en+'</span>'; return s; }   // 헤더: 쉴드(S)→HP(H)→마나(E) · 약자 프리픽스(아이콘 없음)
 function _cgHpShDual(hp,sh,en){ let s=''; if(sh) s+='<span class="shv"><i class="stAb">S</i>'+sh+'/'+sh+'</span>'; if(hp!=null&&hp!=='') s+='<span class="hpv"><i class="stAb">H</i>'+hp+'/'+hp+'</span>'; if(en) s+='<span class="env"><i class="stAb">E</i>'+en+'/'+en+'</span>'; return s; }   // 유닛 헤더: 쉴드→HP→마나(현재/기본)
 function _cgSlotHTML(it, build){ if(!it||it.state==='empty') return '<div class="cgSlot empty"></div>';
   const cls='cgSlot '+(it.state==='busy'?'busy':it.state==='dim'?'dim':it.state==='max'?'max':'')+(it.sel?' sel':'')+(it.cls?(' '+it.cls):'');
   const meta=(it.tr!=null&&it.tr!=='')?('<div class="cgMeta '+(it.metaCls||'')+'">'+it.tr+'</div>'):((!build&&it.meta)?('<div class="cgMeta '+(it.metaCls||'')+'">'+it.meta+'</div>'):'');   // tr=건설 카드에서도 보이는 우상단 배지(업그레이드 다음 단계 등) · 그 외 건설 카드=메타 제거
   const bot=(it.bottom!=null)?it.bottom:('<div class="cgCost">'+_cgCost(it.cr,it.en,build)+'</div>');   // 🧱 bottom = 커스텀 하단 줄(벙커 HP 등)
-  return '<div class="'+cls+'"'+(it.act?(' '+it.act):'')+'>'+meta+'<div class="cgPro">'+(it.pro||'')+'</div><div class="cgName">'+(it.sn||'')+'</div>'+bot+'</div>'; }
+  return '<div class="'+cls+'"'+(it.act?(' '+it.act):'')+'>'+meta+'<div class="cgPro">'+(it.pro||'')+'</div><div class="cgName">'+(it.sn||'')+'</div>'+((it.sub!=null&&it.sub!=='')?('<div class="cgSub">'+it.sub+'</div>'):'')+bot+'</div>'; }
 function _cgInfoHTML(d){ if(!d) return '<div class="cgEb">정보</div><div class="cgDd">항목을 선택하세요</div>';
   let val=''; if(d.stats) val='<div class="cgStats'+(d.statsScroll?' cgScr':'')+'">'+d.stats.map(s=>'<div class="cgStat"><span>'+s[0]+'</span><b>'+s[1]+'</b></div>').join('')+'</div>';
   else if(d.val&&!d.val.sm) val='<div class="cgVal"><span class="cur">'+d.val.cur+'</span><span class="arw">▸</span><span class="nxt">'+d.val.nxt+'</span><span class="u">'+(d.val.unit||'')+'</span></div>';
@@ -11235,7 +11243,7 @@ function checkEnemyWarn(n){
 
 // ── 오버레이 ──
 // 게임 플레이 중에만 하단 콘솔(#bot)을 노출. 타이틀/방찾기/로비 등 메뉴 화면에서는 숨김.
-function setInGame(on){ const p=document.getElementById('phone'); if(p) p.classList.toggle('inGame', !!on); document.body.classList.toggle('sheetOpen', !!on); if(typeof _syncSheetLift==='function') requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); }   // 게임 진입 = 하단 시트 기본 오픈(시작 탭 메인)
+function setInGame(on){ const p=document.getElementById('phone'); if(p) p.classList.toggle('inGame', !!on); if(on && typeof navShow==='function') navShow(null); document.body.classList.toggle('sheetOpen', !!on); if(typeof _syncSheetLift==='function') requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); }   // 게임 진입 = 하단 시트 기본 오픈(시작 탭 메인)
 function _syncSheetLift(){ const open=document.body.classList.contains('sheetOpen')&&!document.body.classList.contains('cstMode');
   if(open){ const p=document.querySelector('.bp.on'); const h=p?(p.offsetHeight||0):0; if(h<20) return;   // 리렌더 중 순간 높이 0/저값 무시(사이드 배너 깜빡임 방지) — 이전 값 유지
     document.documentElement.style.setProperty('--sheetH', h+'px'); }
@@ -11438,7 +11446,11 @@ function updateCurBar(){ if(!PLAYER_META||!PLAYER_META.profile) return;
 function showAppScreen(id){ setInGame(false);
   if(typeof navShow==='function') navShow(null);   // 하단 네비는 기본 숨김 — openHome/openTown이 다시 켠다
   if(typeof hbStop==='function') hbStop();         // 홈 배경 전투도 기본 정지 — openHome이 다시 켠다
-  if(typeof tw3dDetach==='function') tw3dDetach();  // ⚠ 마을 쪽도 반납 — 한쪽만 부르면 다음 빌림이 '원래 자리'를 오염시킨다
+  // ⚠ 마을은 '반납'만으로 부족하다 — twTick이 살아 있으면 매 프레임 캔버스를 다시 빌려 간다.
+  // 루프를 세운 뒤에 반납해야 실제로 돌아온다. 단 마을로 들어가는 중이면 끄면 안 된다
+  // (openTown이 _townOpen을 켜고 나서 이 함수를 부른다 — 끄면 마을 3D가 안 뜬다).
+  if(id!=='townScreen' && typeof _townOpen!=='undefined' && _townOpen && typeof twLeave==='function') twLeave();
+  if(typeof tw3dDetach==='function') tw3dDetach();
   for(const id of ['hbRoundSheet','hbBuildModal','hbBoostModal','hbGrowModal','hbInfoModal']){ const el=document.getElementById(id); if(el) el.classList.add('hide'); }
   if(id!=='mapSelect' && id!=='modeSheet' && typeof stopMapLive==='function') stopMapLive();   // 유즈맵 화면 떠나면 실시간 갱신 정지
   ['ov','lobby','rooms','createPanel','pwPanel'].forEach(x=>{const e=document.getElementById(x); if(e)e.classList.add('hide');});
@@ -11449,6 +11461,10 @@ function showAppScreen(id){ setInGame(false);
   const tgt=document.getElementById(id); if(tgt && id!=='opening') playScreenFx(tgt); }   // 전환 FX(부팅 로딩 제외)
 function hideAppScreens(){ if(typeof stopMapLive==='function') stopMapLive(); curShow(false);
   if(typeof hbStop==='function') hbStop();   // ⚠ 게임 진입 경로 — 여기서 안 멈추면 공용 3D 캔버스(#cvMarine)가 HOME에 남아 유즈맵 3D가 사라진다
+  // ⚠ 마을은 '반납'만으로 부족하다 — twTick이 살아 있으면 매 프레임 캔버스를 다시 빌려 간다.
+  // 루프를 세운 뒤에 반납해야 실제로 돌아온다(안 그러면 마을→유즈맵에서 3D가 통째로 사라진다).
+  if(typeof _townOpen!=='undefined' && _townOpen && typeof twLeave==='function') twLeave();
+  if(typeof tw3dDetach==='function') tw3dDetach();
   APP_SCREENS.forEach(s=>{ const e=document.getElementById(s); if(e) e.classList.add('hide'); }); }
 // ── 유즈맵 크롬 초기화(단일 소스) ──────────────────────────────────────────────
 // 맵마다 자기 화면만 켜다 보면 이전 맵의 잔재가 다음 맵에 그대로 남는다(관리자 탭·직스 패널·숨겨진 안내 등).
@@ -12781,7 +12797,7 @@ function renderSpectate(num, dt){ const board=buildInterpBoard(num);
   G.sel=[]; G.selEnemy=null; G.muzzles=[]; G.recalls=[]; G.impacts=[]; G.sparks=[]; G.debris=[];   // 내 공격 이펙트 leak 방지
   try{ drawPlayer();
     const mcv=document.getElementById('cvMarine');
-    if(window.M3D && window.M3D.ready() && !(G.opt&&G.opt.model3d===false)){ if(mcv) mcv.style.display='block';
+    if(window.M3D && window.M3D.ready() && !(G.opt&&G.opt.model3d===false) && nemoOwns3D()){ if(mcv) mcv.style.display='block';
       window.__nemoView=!(G.sandbox||G.strike);   // 고정 슬롯 고스트는 네모네모 본편에서만
       try{ window.M3D.sync(G.units, GW, GH, dt, G.specSel?[G.specSel]:[], G.enemies, null, null, G.view); } finally{ window.__nemoView=false; } }   // 선택한 상대 유닛 림 표시
     else if(mcv) mcv.style.display='none';
@@ -13872,6 +13888,10 @@ function placeSandboxUnits(){
 }
 function enterSandbox(){
   if(typeof bgmStop==='function') bgmStop();
+  // 게임에 들어가면 앱 화면(HOME·마을…)을 반드시 닫는다. 안 닫으면 두 화면이 겹친 상태가 되어
+  // 공용 3D 캔버스도 안 돌아오고(마을에 남는다), 유즈맵이 그리면 안 되는 화면으로 판정된다.
+  // 실제 게임 진입(startGameNow 경로)은 이미 hideAppScreens를 거치는데 샌드박스만 빠져 있었다.
+  if(typeof hideAppScreens==='function') hideAppScreens();
   G=newGame(); G.phase='playing'; G.sandbox=true; G.tab='Main'; G.loading=false; G.roundPhase='idle'; G.paused=false;
   G.enemies.length=0;
   if(window.M3D && window.M3D.clearGameModels) window.M3D.clearGameModels();
@@ -13884,6 +13904,30 @@ function enterSandbox(){
   if(typeof refreshSelCard==='function') refreshSelCard();   // 관리자 메인 초기 상태: 무선택 → 홈 패널 숨김 + 시트 내려감
 }
 let last=performance.now();
+// 공용 3D 캔버스(#cvMarine)를 HOME이나 마을이 빌려 갔으면 유즈맵은 그것을 그리면 안 된다.
+// 안 그러면 두 곳이 같은 씬에 서로 다른 유닛 목록을 밀어넣어, 한쪽 sync가 dying으로 지운 모델을
+// 다른 쪽 sync가 매 프레임 다시 만든다. 실측: HOME 복귀 후 샌드박스 유닛 38개가 계속 재생성되며
+// 프레임마다 55ms씩 먹었다(= "유즈맵에서 나와 RPG로 가면 랙" 의 정체).
+// loop는 화면과 무관하게 계속 도는 전역 rAF라, 소유권을 여기서 확인하는 수밖에 없다.
+// 유즈맵 화면이 지금 앞에 있는가.
+//  · #phone.inGame — 샌드박스 진입에서 안 켜질 때가 있어 못 믿는다
+//  · #gameArea 가시성 — HOME이 떠 있어도 계속 보인다(게임 크롬은 다른 방식으로 감춤)
+//  → 앱 화면(HOME·마을·로비…)이 하나라도 열려 있으면 유즈맵이 아니다. showAppScreen이 정확히
+//    하나만 열고 hideAppScreens가 전부 닫으므로 이게 유일하게 믿을 수 있는 신호다.
+function nemoScreenOn(){ if(typeof APP_SCREENS==='undefined') return true;
+  for(const id of APP_SCREENS){ const e=document.getElementById(id);
+    if(e && !e.classList.contains('hide')) return false; }
+  return true; }
+// 유즈맵이 공용 캔버스를 그려도 되는가. 보이는데 남이 들고 있으면 되찾아온다
+// (마을에서 곧장 게임으로 들어가면 캔버스가 twMap에 남아 유즈맵 3D가 통째로 사라지던 버그도 이걸로 막힌다).
+function nemoOwns3D(){
+  const borrowed=(typeof _hb3dHome!=='undefined' && _hb3dHome) || (typeof _tw3dHome!=='undefined' && _tw3dHome);
+  if(!nemoScreenOn()) return false;                       // 안 보이면 그리지 않는다
+  if(borrowed){                                            // 보이는데 남이 들고 있다 → 반납시킨다
+    if(typeof _hb3dHome!=='undefined' && _hb3dHome && typeof hb3dDetach==='function') hb3dDetach();
+    if(typeof _tw3dHome!=='undefined' && _tw3dHome && typeof tw3dDetach==='function') tw3dDetach();
+    const cv=document.getElementById('cvMarine'); if(cv) cv.style.display='block'; }
+  return true; }
 function loop(now){
   const cap=(G.opt&&G.opt.fps)|0;   // FPS 제한(0=무제한). 게임시간은 누적 dt로 유지
   if(cap>0 && (now-last) < (1000/cap - 1.5)){ requestAnimationFrame(loop); return; }
@@ -13897,6 +13941,10 @@ function loop(now){
   tickPresence(dt);   // 플레이어 이탈(관전 버튼 비활성화)
   tickVote(dt);       // 배속 투표(봇 성향 변화) — 일시정지와 무관하게 진행
   tickPauseSim(dt);   // 공유 일시정지: 다른 플레이어가 해제/일시정지(일시정지와 무관하게 진행)
+  // 유즈맵 화면이 아니면 여기서 끝 — 아래는 전장 시뮬과 렌더뿐이라 안 보이는 동안 돌릴 이유가 없다.
+  // 위의 채팅·이탈·투표·일시정지 틱은 로비/방에서도 필요해서 이 줄 앞에 둔다.
+  // 실측: HOME에서 이걸 안 막으면 60 → 47fps (숨은 전장 39유닛의 DOM·캔버스 갱신 비용).
+  if(!nemoScreenOn()){ requestAnimationFrame(loop); return; }
   if(!G.paused && !G.loading){      // 일시정지/로딩(카운트다운) 중: 게임 진행(전투/연구/시민/이동/물리) 정지, 렌더·UI는 유지
     tickResearch(dt);   // 업그레이드 연구 타이머(진행 중이면 카운트다운, 완료 시 레벨업)
     const _sm=(G.phase==='playing')?G.speedMul:1;   // 배속: 적/시간뿐 아니라 내 유닛·시민 이동도 동일 배속
@@ -13953,7 +14001,7 @@ function loop(now){
     else if(G.tab==='Players') drawPlayer();
     else drawMiniMap();
     const mcv=document.getElementById('cvMarine');
-    if(window.M3D && window.M3D.ready()){ const show=(G.tab==='Main'||G.tab==='Battle'||G.tab==='Unit'||G.tab==='Players') && !(G.opt&&G.opt.model3d===false); mcv.style.display=show?'block':'none';
+    if(window.M3D && window.M3D.ready() && nemoOwns3D()){ const show=(G.tab==='Main'||G.tab==='Battle'||G.tab==='Unit'||G.tab==='Players') && !(G.opt&&G.opt.model3d===false); mcv.style.display=show?'block':'none';
       if(G.tab==='Main'||G.tab==='Battle'||G.tab==='Players'){
         window.__nemoView=!(G.sandbox||G.strike);   // 고정 슬롯 고스트는 네모네모 본편에서만(샌드박스·직스 제외)
         try{ window.M3D.sync(G.units, GW, GH, dt, G.sel, G.enemies, G.selEnemy, ((G.sandbox&&G.pcheck)?(G.pcScale||1):null), G.view); } finally{ window.__nemoView=false; } }   // 🎨 색 확인(관리자 샌드박스 전용)만 유닛 확대

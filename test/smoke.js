@@ -432,6 +432,29 @@ async function groupLobby(){
     assert(r.cyan.length<=1,'팝업에 시안이 '+r.cyan.length+'곳: '+r.cyan.join(', '));
     closeTownPanel();
     return '지도·팝업 모두 통과'; });
+  // 유즈맵 루프는 전역 rAF라 화면을 떠나도 계속 돈다. 그대로 두면 HOME/마을이 빌려 간 공용 3D
+  // 캔버스에 자기 유닛 목록을 계속 밀어넣어, 한쪽이 dying으로 지운 모델을 다른 쪽이 매 프레임 다시
+  // 만든다(실측: 샌드박스 유닛 38개 재생성 반복 · HOME 60 → 47fps).
+  // 모델 개수가 아니라 '누가 sync를 부르는가'를 본다 — 앞 스텝의 상태에 안 흔들린다.
+  await step('HOME/마을에서는 유즈맵이 3D를 그리지 않는다', async()=>{
+    skipIf(typeof openHome!=='function' || typeof nemoScreenOn!=='function','HOME/가드 없음');
+    skipIf(!(window.M3D && M3D.ready && M3D.ready()),'3D 미준비');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    if(typeof G!=='undefined' && !G.units) G.units=[];
+    const spy=(ms)=>new Promise(res=>{ const f=M3D.sync; let nemo=0, total=0;
+      M3D.sync=function(list){ total++; if(list===G.units) nemo++; return f.apply(this,arguments); };
+      setTimeout(()=>{ M3D.sync=f; res({nemo:nemo, total:total}); }, ms); });
+    openHome(); await sleep(500);
+    assert(!nemoScreenOn(),'HOME인데 전장 화면이 아직 보인다고 판정됨');
+    const home=await spy(700);
+    assert(home.nemo===0,'HOME인데 유즈맵이 자기 유닛 목록으로 sync를 '+home.nemo+'번 부름 — 두 화면이 같은 씬을 민다');
+    assert(home.total>0,'HOME이 3D를 아예 안 그림(sync 0회) — 가드가 과하게 막았다');
+    if(typeof openTown==='function'){ openTown(); await sleep(500);
+      const town=await spy(700);
+      assert(town.nemo===0,'마을인데 유즈맵이 sync를 '+town.nemo+'번 부름');
+      if(typeof twLeave==='function') twLeave(); }
+    hbStop();
+    return 'HOME sync '+home.total+'회 · 유즈맵 침범 0회'; });
   await step('던전 배경: 이미지 cover 맞춤 · 없으면 타일 폴백', async()=>{
     skipIf(typeof hbBgFit!=='function','배경 배선 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
