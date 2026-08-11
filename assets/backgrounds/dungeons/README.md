@@ -138,19 +138,90 @@ Deep indigo and dim cyan palette.
 > **dg1~dg3 완료** — 2048² 원본을 1024 · WebP q80으로 넣었다(177/124/99KB).
 >  중앙 40% 평균 밝기 24 / 25 / 18% 로 셋 다 유닛이 잘 읽힌다.
 
-### dg4~dg10 (아직 안 씀)
-아래 표를 위 던전 블록과 같은 형식(한 문단: 장소 → 바닥 재질 → 디테일 → 가운데
-비움 → 색)으로 풀어 쓰면 된다.
+### dg4 — 산란장 (저그계)
+> dg1과 같은 저그계라 **구분되게** — dg1은 마른 크립, 여기는 젖은 살덩이.
 
-| 파일 | 던전 | 장소 | 바닥 재질 | 디테일 | 색 |
-|---|---|---|---|---|---|
-| dg4  | 산란장 | alien spawning ground | living fleshy tissue | egg clusters, sinew strands, wet sheen | bile yellow and dark green |
-| dg5  | 폐쇄된 시설 | sealed underground facility floor | poured concrete and grating | drainage channels, emergency light strips, scuff marks | gunmetal grey and amber |
-| dg6  | 봉인된 성소 | sealed alien sanctum floor | carved luminous marble | rune circles, floating stone shards, gold filigree | royal purple and warm gold |
-| dg7  | 군단의 심장 | heart of the swarm chamber | raw muscle and bone plating | glowing magma fissures, pulsing arteries | blood red and ember orange |
-| dg8  | 함대 정박지 | orbital fleet dock deck | riveted hull plating | landing markings, cable runs, hull seams | dark navy and white marking paint |
-| dg9  | 공허의 문 | void gate platform | fractured obsidian slab | purple rift cracks, drifting weightless debris | violet and black with cyan sparks |
-| dg10 | 심연 | abyssal depths floor | black rippling liquid | submerged eyes, tendrils, faint bioluminescence | near-black with pale teal glow |
+```
+An alien spawning ground: living fleshy tissue floor with clustered eggs, taut
+sinew strands and a wet sheen across the surface. Bare open flesh at the center,
+egg clusters and membrane growths only around the outer ring. Bile yellow and
+dark green palette.
+```
+
+### dg5 — 폐쇄된 시설 (인간계)
+> 실내라 **천장·벽이 딸려 나오기 쉽다.** 나오면 "floor only"를 한 번 더 붙일 것.
+> 비상등은 바닥에 박힌 띠로 — 공중에 달면 광원이 생겨 공통 블록과 싸운다.
+
+```
+A sealed underground facility floor: poured concrete and steel grating with
+drainage channels, scuff marks and dim red emergency light strips set flush into
+the floor. Bare open concrete at the center, machinery and toppled barrels only
+around the outer ring. Gunmetal grey and amber palette.
+```
+
+### dg6 — 봉인된 성소 (초월계)
+> dg3과 같은 초월계 → dg3은 차가운 남색, 여기는 **따뜻한 금빛**으로 갈랐다.
+> 부유석은 **바닥에 낮게** — 높이 띄우면 부감에서 바닥을 가린다.
+
+```
+A sealed alien sanctum floor: carved luminous marble with rune circles, fine gold
+filigree and small stone shards hovering low just above the ground. Plain open
+marble at the center, altars and shards only around the outer ring. Royal purple
+and warm gold palette.
+```
+
+### dg7 — 군단의 심장 (저그계 · 가장 화려)
+> **용암빛이 밝게 터지기 쉽다.** 발광을 바깥 고리에 가두는 문장을 넣어 뒀다.
+> 나온 게 눈부시면 `faint`를 `very faint`로 바꿔 다시 뽑을 것.
+
+```
+The heart of a swarm chamber: raw muscle and bone plating floor with pulsing
+arteries and faint magma fissures, the glow kept dim and confined to the outer
+ring. Bare open flesh at the center, bone ribs and vents only around the outer
+ring. Blood red and ember orange palette.
+```
+
+### dg8 — 함대 정박지 (인간계)
+> 정박지라 **우주·별하늘이 딸려 나오기 쉽다.** 공통 블록의 `no sky`가 막아 주지만,
+> 그래도 나오면 던전 블록 끝에 `the deck fills the whole frame`을 덧붙일 것.
+
+```
+An orbital fleet dock deck: riveted hull plating with painted landing markings,
+cable runs and hull seams. Bare open deck at the center, gantries, cargo crates
+and mooring clamps only around the outer ring. Dark navy and white marking paint
+palette.
+```
+
+### dg9 — 공허의 문 (초월계)
+> 균열이 화면을 가로지르기 쉽다 → `not crossing the center`를 명시했다.
+
+```
+A void gate platform: fractured obsidian slab floor with purple rift cracks that
+stay near the edges and never cross the center, and small weightless shards
+drifting low above the surface. Plain open obsidian at the center, cracks and
+floating debris only around the outer ring. Violet and black palette with faint
+cyan sparks.
+```
+
+### dg10 — 심연 (최종)
+> **가장 어둡다.** 코드 비네트가 겹치면 가장자리가 뭉갤 수 있다 —
+> 넣어 보고 어두우면 `HB_BG_VIG_A`(기본 0.62)를 내린다.
+
+```
+An abyssal depths floor: black rippling liquid with submerged eyes, slow tendrils
+and faint bioluminescence glowing under the surface. Bare open water at the
+center, tendrils and glowing shapes only around the outer ring. Near-black
+palette with pale teal glow.
+```
+
+### 던전끼리 안 겹치게 (뽑고 나서 확인)
+같은 종족이 3개씩 있어서 색이 겹치면 "같은 데"로 보인다. 이미 갈라 뒀다:
+
+| 종족 | 던전 | 색 |
+|---|---|---|
+| 저그계 | dg1 마른 크립 · dg4 젖은 살 · dg7 붉은 살+용암 | 초록 → 노랑 → 빨강 |
+| 인간계 | dg2 야외 갑판 · dg5 실내 콘크리트 · dg8 우주 도크 | 청회색 → 회색+호박 → 남색 |
+| 초월계 | dg3 차가운 남색 · dg6 따뜻한 금빛 · dg9 보랏빛 균열 | 남색 → 금색 → 보라 |
 
 ---
 

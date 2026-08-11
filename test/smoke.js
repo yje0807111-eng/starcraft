@@ -432,7 +432,6 @@ async function groupLobby(){
     assert(r.cyan.length<=1,'팝업에 시안이 '+r.cyan.length+'곳: '+r.cyan.join(', '));
     closeTownPanel();
     return '지도·팝업 모두 통과'; });
-  // 던전 배경 그림 — 파일을 넣기만 하면 뜨고, 없으면 타일로 떨어져야 한다(코드 수정 없이).
   await step('던전 배경: 이미지 cover 맞춤 · 없으면 타일 폴백', async()=>{
     skipIf(typeof hbBgFit!=='function','배경 배선 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
@@ -586,7 +585,10 @@ async function groupLobby(){
   await step('자동사냥: 던전 해금 · 엘리트 · 뽑기권', async()=>{ skipIf(typeof hbGoDungeon!=='function','던전 선택 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(60); _hb.manual=true;
-    // ① 해금 — 던전1만 열려 있고, 10라운드 도달해야 던전2가 열린다
+    // ① 해금 — 전체 개방 스위치를 껐다 켜며 양쪽을 다 본다(기본값이 어느 쪽이든 게이트는 옳아야 한다)
+    const _dgAll=HB_DG_ALL_OPEN; HB_DG_ALL_OPEN=true;
+    for(let d=1; d<=HB_DG_MAX; d++) assert(hbDgOpen(d),'전체 개방인데 던전 '+d+'이 잠김');
+    HB_DG_ALL_OPEN=false;   // 여기서부터 해금 조건 자체를 검사
     hbHunt().best={}; hbHunt().dg=1;
     assert(hbDgOpen(1) && !hbDgOpen(2),'초기 해금 상태가 틀림');
     hbGoDungeon(2); assert(hbHunt().dg===1,'잠긴 던전으로 이동됨');
@@ -600,6 +602,7 @@ async function groupLobby(){
     assert(hbHunt().dg===2 && _hb.dg===2,'던전 이동이 반영되지 않음');
     assert(_hb.round===HB_DG_UNLOCK||_hb.round===1,'이동 후 라운드가 이상함: '+_hb.round);
     hbCloseRounds(); hbGoDungeon(1); hbGoRound(1);
+    HB_DG_ALL_OPEN=_dgAll;   // 원래 값으로 복구 — 이후 스텝은 앱 기본 상태로 돈다
     // ② 엘리트 — 확률이 라운드·던전에 따라 오르고, 체력·보상 배수가 붙는다
     assert(hbEliteChance(1,1)<hbEliteChance(1,20),'엘리트 확률이 라운드로 안 오름');
     assert(hbEliteChance(1,10)<hbEliteChance(3,10),'엘리트 확률이 던전으로 안 오름');

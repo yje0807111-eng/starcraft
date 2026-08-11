@@ -5141,7 +5141,7 @@ function hmFitUpgGrid(){ const gr=document.getElementById('hmUpgGrid'); if(!gr) 
 // 최고 도달 라운드(hunt.best[dg])까지만 고를 수 있다. 라운드를 바꾸면 진행 중인 판은 버리고 새로 시작한다.
 function hbBest(dg){ const H=hbHunt(); return Math.max(1, H.best[dg||H.dg]||1); }
 // 던전 N 해금 = 던전 N-1에서 HB_DG_UNLOCK 라운드 도달. 던전 1은 항상 열려 있다.
-function hbDgOpen(dg){ return dg<=1 || (hbHunt().best[dg-1]||0)>=HB_DG_UNLOCK; }
+function hbDgOpen(dg){ return HB_DG_ALL_OPEN || dg<=1 || (hbHunt().best[dg-1]||0)>=HB_DG_UNLOCK; }
 function hbEliteChance(dg,round){ return Math.min(HB_ELITE_MAX, round*0.012+(dg-1)*0.02); }
 function hbOpenRounds(){ const el=document.getElementById('hbRoundSheet'); if(!el) return;
   el.classList.remove('hide'); renderRoundSheet();
@@ -5394,6 +5394,9 @@ const HB_DUNGEONS=[
 function hbDun(dg){ return HB_DUNGEONS[Math.min(HB_DUNGEONS.length, Math.max(1, dg||1))-1]; }
 const HB_DG_MAX=10;                 // 던전 1~10
 const HB_DG_UNLOCK=10;              // 다음 던전 해금 = 지금 던전 최고 라운드 이만큼
+// ⚠ 배경·밸런스 확인용 전체 개방. 해금 진행을 되살리려면 이 한 줄만 false로.
+//    (const이 아니라 let인 이유: 스모크가 양쪽 상태를 다 검사한다)
+let HB_DG_ALL_OPEN=true;
 // 엘리트 — 라운드·던전이 오를수록 자주 나온다. 체력·공격이 크고 보상도 크다.
 const HB_ELITE_HP=4, HB_ELITE_ATK=1.6, HB_ELITE_REW=5, HB_ELITE_MAX=.35;
 const HB_TICKET_ELITE=.08, HB_TICKET_NORMAL=.003;   // 장비 뽑기권 드랍 확률
