@@ -2667,6 +2667,7 @@
   .shopDealR{flex:0 0 92px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:6px;
     padding-left:8px;border-left:1px solid rgba(255,255,255,.06)}
   .shopArt{flex:1 1 auto;display:flex;align-items:center;justify-content:center;font-size:28px;line-height:1}
+  .shopArt img{width:46px;height:46px;object-fit:contain;display:block}
   /* 가격 버튼 — HOME .hmUpBtn 규격(구매=금색 액션) */
   .shopBuy{width:100%;height:32px;cursor:pointer;font-family:inherit;font-size:var(--fs-md);font-weight:700;letter-spacing:.3px;
     display:flex;align-items:center;justify-content:center;gap:4px;
@@ -2810,7 +2811,7 @@
      위에 어두운 막을 덮어 구역 아이콘·라벨 가독성을 지킨다(볼륨1: 배경은 조용히). */
   /* 바닥 그림은 월드보다 크다 — 카메라가 월드 끝에 닿아도 화면 절반이 비지 않게 반 화면씩 더 깐다.
      여유분(가로 31.25% · 세로 37.04%) = 절벽·숲 띠. 걸어다니는 범위는 월드 그대로다. */
-  .twGround{position:absolute;inset:-34.4% -26.8%;pointer-events:none;
+  .twGround{position:absolute;inset:-25.0% -21.0%;pointer-events:none;
     background:linear-gradient(rgba(6,8,12,.42),rgba(6,8,12,.52)),url('assets/backgrounds/town/town_ground.webp') 50% 50%/cover no-repeat,url('assets/tiles/terran_tile_light.webp') 0 0/128px repeat}   /* 마을 바닥 그림(없으면 아래 타일이 그대로 보인다) */
   .twGround::after{content:'';position:absolute;inset:0;pointer-events:none;   /* 가장자리 비네트 — 월드 끝이 자연스럽게 어두워짐 */
     background:radial-gradient(ellipse at 50% 50%,transparent 52%,rgba(0,0,0,.55) 100%)}
@@ -2827,6 +2828,9 @@
   /* 이모지는 폰트 토큰 밖이다 — 시스템 이모지 폰트를 명시해 Arial 폴백을 막는다 */
   .tzIco,.twAvBody,.twEdge,.twPet{font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif}
   .tzIco{font-size:30px;line-height:1;filter:drop-shadow(0 3px 5px rgba(0,0,0,.6))}
+  .tzIco .tzBld{display:block;width:118px;height:auto;max-height:104px;object-fit:contain;   /* 구역 건물 3D — 관리자 건설과 같은 모델 */
+    margin:-42px auto -6px;filter:drop-shadow(0 6px 8px rgba(0,0,0,.55))}
+  .twZone.deco .tzIco .tzBld{width:96px;max-height:120px;margin:-56px auto -6px}   /* 광장 기념비는 세로로 길다 */
   .twStars{color:#ffd24a;font-size:var(--fs-md);letter-spacing:1px}
   .twPet{flex:0 0 auto;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:20px;border-radius:var(--r-lg);background:rgba(255,255,255,.05);border:1px solid var(--metal-edge)}
   .tzLbl{font-size:var(--fs-md);font-weight:800;color:#ececec;background:rgba(10,10,12,.82);padding:4px 8px;border-radius:var(--r-bar);border:1px solid var(--metal-edge);white-space:nowrap}
@@ -6092,14 +6096,14 @@ function sendDM(){ const inp=document.getElementById('dmInput'); if(!inp||_dmFri
 // 어느 구역이든 화면을 옮기지 않고 한 번의 터치로 갈 수 있다. deco=상호작용 없는 지형지물.
 const TOWN_ZONES={
   plaza:{ x:50, y:50, ico:'⛲',   label:'광장',      title:'내 캐릭터', render:()=>renderProfStats(), deco:true },   // deco = 맵 장식(지도에서 누를 수 없다) · 스탯 패널은 상단 이름(.twWho)에서 연다
-  gacha:   { x:50.0, y:26.0, ico:'🎁',   label:'상점',    title:'상점',          screen:'shop', render:()=>renderProfGacha() },   // 위 · screen 지정 = 팝업 대신 전용 화면으로 이동
-  gate:    { x:74.0, y:38.0, ico:'🔒',   label:'관문',    title:'관문',          render:()=>renderProfGate()  },   // 우상
-  gym:     { x:74.0, y:62.0, ico:'🏋️',  label:'훈련장',  title:'훈련장',        render:()=>renderProfIdle()  },   // 우하
-  gear:    { x:50.0, y:74.0, ico:'🎒',   label:'장비',    title:'장비',          render:()=>renderProfGear()  },   // 아래
-  charsel: { x:26.0, y:62.0, ico:'🧳',   label:'보관소',  title:'캐릭터 보관소', render:()=>renderCharSelect() },   // 좌하
-  charmake:{ x:26.0, y:38.0, ico:'🧬',   label:'생성소',  title:'캐릭터 생성소', render:()=>renderCharCreate() },   // 좌상
+  gacha:   { x:50.0, y:18.0, ico:'🎁',   label:'상점',    title:'상점',          screen:'shop', render:()=>renderProfGacha() },   // 위 · screen 지정 = 팝업 대신 전용 화면으로 이동
+  gate:    { x:82.0, y:34.0, ico:'🔒',   label:'관문',    title:'관문',          render:()=>renderProfGate()  },   // 우상
+  gym:     { x:82.0, y:66.0, ico:'🏋️',  label:'훈련장',  title:'훈련장',        render:()=>renderProfIdle()  },   // 우하
+  gear:    { x:50.0, y:82.0, ico:'🎒',   label:'장비',    title:'장비',          render:()=>renderProfGear()  },   // 아래
+  charsel: { x:18.0, y:66.0, ico:'🧳',   label:'보관소',  title:'캐릭터 보관소', render:()=>renderCharSelect() },   // 좌하
+  charmake:{ x:18.0, y:34.0, ico:'🧬',   label:'생성소',  title:'캐릭터 생성소', render:()=>renderCharCreate() },   // 좌상
 };
-const TW_WORLD_W_MUL=2.4, TW_WORLD_H_MUL=2.025;   // 월드 = 화면의 가로 N배 × 세로 M배(3배→1.6배: 구역을 한 화면에 모으며 여백만 남김)
+const TW_WORLD_W_MUL=2.4, TW_WORLD_H_MUL=1.66;   // 월드 = 화면의 가로 N배 × 세로 M배(3배→1.6배: 구역을 한 화면에 모으며 여백만 남김)
 const TW_SPEED=285;          // 캐릭터 이동 속도(월드 px/초)
 const TW_ARRIVE=4;           // 목적지 도착 판정(px)
 const TW_ZONE_R=78;          // 구역 도착 판정 반경(px)
@@ -6138,6 +6142,22 @@ function twOpenSocial(){ twCloseChat(); const el=document.getElementById('twSoci
 function twCloseSocial(){ const el=document.getElementById('twSocial'); if(el) el.classList.add('hide'); }
 
 // ── 월드/카메라 ──
+const TW_ZONE_BLDG={   // 구역 → 관리자 건설이 쓰는 건물 3D 모델 키(CST_GLB)
+  plaza:'aetherial_pylon',            // 광장 = 가운데 기념비(발광 오벨리스크)
+  gacha:'union_supply_depot',         // 상점 = 보급창
+  gate:'aetherial_gateway',           // 관문 = 차원문
+  gym:'union_barracks',               // 훈련장 = 병영
+  gear:'union_armory',                // 장비 = 무기고
+  charsel:'union_bunker',             // 보관소 = 격납고
+  charmake:'union_science_facility' }; // 생성소 = 연구시설
+// 건물 그림 채우기 — 3D 로드 전에는 이모지가 그대로 보이고, 준비되면 교체된다
+function twPaintBldgs(){ const w=document.getElementById('twWorld'); if(!w) return;
+  if(!(window.M3D&&M3D.bldgImage)||(G.opt&&G.opt.model3d===false)) return;
+  let miss=false;
+  for(const id in TW_ZONE_BLDG){ const el=w.querySelector('.twZone[data-zone="'+id+'"] .tzIco'); if(!el||el._bld) continue;
+    const src=M3D.bldgImage(TW_ZONE_BLDG[id]); if(!src){ miss=true; continue; }
+    el.innerHTML='<img class="tzBld" src="'+src+'" alt="" draggable="false">'; el._bld=1; }
+  if(miss) setTimeout(twPaintBldgs, 400); }   // glb 로딩 중 — 준비될 때까지 다시 시도
 function twBuildZones(){ const w=document.getElementById('twWorld'), map=document.getElementById('twMap'); if(!w||!map||w._zonesBuilt) return;
   for(const id in TOWN_ZONES){ const z=TOWN_ZONES[id];
     const d=document.createElement('div');       // 월드 안의 구역 아이콘
@@ -6148,7 +6168,7 @@ function twBuildZones(){ const w=document.getElementById('twWorld'), map=documen
     const e=document.createElement('div');       // 화면 밖일 때 가장자리에 뜨는 방향 표시
     e.className='twEdge hide'; e.textContent=z.ico; e.title=z.label; e.onclick=function(){ townGo(id); };
     map.appendChild(e); _twEdgeEl[id]=e; }
-  w._zonesBuilt=true; }
+  w._zonesBuilt=true; twPaintBldgs(); }
 // 화면 밖 구역을 화면 가장자리에 표시 — 월드가 넓어 구역이 안 보일 때 어디로 가야 할지 알려준다.
 function twEdgeApply(){ const M=24, cx=_twVW/2, cy=_twVH/2;
   for(const id in TOWN_ZONES){ const el=_twEdgeEl[id]; if(!el) continue;
@@ -6167,8 +6187,8 @@ function twLayout(){ const map=document.getElementById('twMap'), w=document.getE
   _twW=nw; _twH=nh; w.style.width=nw+'px'; w.style.height=nh+'px';
   for(const el of w.querySelectorAll('.twZone')){ const z=TOWN_ZONES[el.dataset.zone]; if(z){ el.style.left=z.x+'%'; el.style.top=z.y+'%'; } } }
 // 성벽 경계 — town_ground.webp의 성벽을 방사 측정(3도 간격)해 역산한 값. 그림을 바꾸면 다시 재야 한다.
-const TW_WALL_X=0.925, TW_WALL_Y=0.94, TW_WALL_DY=-0.055;   // 월드 정규좌표(-1~1) 기준 좌우/상하 한계 + 세로 치우침 보정
-const TW_WALL_CUT=0.344;                 // 모서리 컷(팔각형) — 기기별 1.285~1.338의 평균
+const TW_WALL_X=1.00, TW_WALL_Y=0.798, TW_WALL_DY=0;   // 월드 정규좌표(-1~1) 기준 좌우/상하 한계 + 세로 치우침 보정
+const TW_WALL_CUT=0.30;                 // 모서리 컷(팔각형) — 기기별 1.285~1.338의 평균
 // 성벽 안으로 가두기 — 축별 클램프 + 그 좌표계에서의 마름모 컷. 팔각형은 볼록이라 목적지만 가두면 경로도 안 샌다.
 function twClampWall(wx,wy){
   let u=Math.max(-1,Math.min(1, (wx/_twW*2-1)/TW_WALL_X)), v=Math.max(-1,Math.min(1, (wy/_twH*2-1-TW_WALL_DY)/TW_WALL_Y));
@@ -6402,6 +6422,8 @@ function resIco(k, cls){ const id=RES_ICON[k]||RES_ICON[RES_ICON_KO[k]];
   return id ? '<img class="'+(cls||'ri')+'" src="assets/icons/'+id+'.webp" alt="">' : ''; }
 // ── 🎁 상점 내용(단일 소스) — 모바일 재화상점 형태: 오늘의 특가 → 뽑기 → 젬(현질) → 보유 펫 ──
 // 특가는 매일 09:00 갱신(던전 열쇠와 같은 축). 3개를 다 사면 그 자리에서 새 3개가 나온다.
+// 꼸러미 아이콘 파일이 없으면 원래 이모지로 복귀(빈칸 방지) — 파일을 넣으면 자동 교체
+function _shopArtFail(im){ try{ im.outerHTML=im.getAttribute('data-fb')||''; }catch(_e){ try{ im.remove(); }catch(_e2){} } }
 const SHOP_DEAL_POOL=[
   {id:'pet',   tag:'펫 꾸러미',   art:'🐾', gem:20,  give:{pcoin:660,  ticket_pet:1}},
   {id:'gear',  tag:'장비 꾸러미', art:'🎒', gem:35,  give:{pcoin:1200, ticket_gear:2}},
@@ -6444,7 +6466,7 @@ function renderProfGacha(){ const p=PROF(), poor=p.pcoin<PROF_PET_GACHA_COST, eq
     h+='<div class="shopDeal'+(sold?' sold':'')+'"><div class="shopDealL"><span class="shopTag">'+d.tag+'</span><div class="shopGive">';
     for(const k in d.give){ const nm=SHOP_GIVE_LABEL[k]||k, ico=resIco(nm,'gi');   // 이름으로 아이콘 자동 매칭
       h+='<span>'+(ico||'<i class="giT">🎟</i>')+' '+nm+' <b>'+d.give[k].toLocaleString('en-US')+'</b></span>'; }
-    h+='</div></div><div class="shopDealR"><span class="shopArt">'+d.art+'</span>'
+    h+='</div></div><div class="shopDealR"><span class="shopArt"><img src="assets/icons/shop/shop_'+d.id+'.webp" alt="" draggable="false" data-fb="'+d.art+'" onerror="_shopArtFail(this)"></span>'
       +'<button class="shopBuy" onclick="shopBuyDeal(\''+d.id+'\')"'+((sold||!can)?' disabled':'')+'>'
       +(sold?'구매완료':(resIco('gem','gi')+'<b>'+d.gem+'</b>'))+'</button></div></div>'; }
   h+='</div></div>';
