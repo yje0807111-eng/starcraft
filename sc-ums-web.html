@@ -5412,6 +5412,10 @@ const HB_STOP=30, HB_DOWN_S=3;
 // 그리기 직전에 카메라 한 번(translate+scale)으로 화면에 맞춘다 → 보이는 영역이 커지면 배율 k가 커져
 // 캐릭터만 내려가는 게 아니라 장면 전체가 같은 비율로 확대된다.
 const HB_BG_VIG_IN=0.42, HB_BG_VIG_A=0.62;   // 배경 그림 비네트: 시작 반경 비율 · 가장자리 불투명도
+// 움직이는 배경(dgN_f1..f4.webp)을 쓸지. 지금은 정지 그림만 쓰기로 해서 꺼 둔다.
+// 끄면 프레임 파일을 아예 요청하지 않는다 — 켜 두면 파일이 없는 던전마다 404가 4번씩 난다.
+// 프레임을 넣기로 하면 이 한 줄만 true로.
+const HB_BG_ANIM=false;
 const HB_BG_FRAMES=4;      // 던전당 움직임 프레임 수(dgN_f1..f4.webp) — 있으면 크로스페이드, 없으면 정지 1장
 const HB_BG_CYCLE=8;       // 한 왕복(1→2→3→4→3→2)에 걸리는 초. 느릴수록 '숨쉬는' 느낌
 // 움직임 크기(0~1). 1=영상 그대로, 0.5=절반만 움직임, 0=정지.
@@ -5754,14 +5758,16 @@ function hbBgImg(dg){ const key='dg'+(dg||1), t=_hbBg[key];
   const im=new Image(); im.src='assets/backgrounds/dungeons/'+key+'.webp'; _hbBg[key]=im; return null; }
 // 움직임 프레임 — dgN_f1.webp … dgN_f4.webp. 넷이 다 오기 전엔 정지 그림으로 버틴다.
 const _hbBgF={};
-function hbBgFrames(dg){ const key='dg'+(dg||1), have=_hbBgF[key];
+function hbBgFrames(dg){ if(!HB_BG_ANIM) return null;
+  const key='dg'+(dg||1), have=_hbBgF[key];
   if(!have){ const a=[]; for(let i=1;i<=HB_BG_FRAMES;i++){ const im=new Image();
       im.src='assets/backgrounds/dungeons/'+key+'_f'+i+'.webp'; a.push(im); } _hbBgF[key]=a; return null; }
   for(const im of have) if(!(im.complete && im.naturalWidth)) return null;   // 하나라도 없으면 안 씀(깜빡임 방지)
   return have; }
 // 첫 프레임만 와도 그것을 바탕으로 쓴다 — 넷을 다 기다리면 그동안 정지 그림을 또 받아야 해서
 // 던전당 한 장(약 180KB)이 헛돈다. 이 덕에 정지 그림 없이 프레임 4장만 넣어도 동작한다.
-function hbBgFirst(dg){ const a=_hbBgF['dg'+(dg||1)];
+function hbBgFirst(dg){ if(!HB_BG_ANIM) return null;
+  const a=_hbBgF['dg'+(dg||1)];
   const im=a&&a[0]; return (im&&im.complete&&im.naturalWidth)?im:null; }
 // 핑퐁 위상 — 1→2→3→4→3→2로 돌아 이음새가 없다(영상의 마지막↔첫 프레임이 달라도 안 튄다).
 // 반환: 겹칠 두 프레임 인덱스 a,b와 섞는 비율 f(0..1).

@@ -456,7 +456,10 @@ async function groupLobby(){
         if(prev!==null) maxJump=Math.max(maxJump, Math.abs(cur-prev));
         prev=cur; }
       assert(maxJump<0.2,'프레임 위치가 한 번에 '+maxJump.toFixed(2)+'칸 튐 — 화면이 깜빡인다');
-      assert(hbBgFrames(98)===null,'없는 던전인데 프레임이 있다고 함'); }
+      assert(hbBgFrames(98)===null,'없는 던전인데 프레임이 있다고 함');
+      // 스위치를 끄면 파일을 아예 요청하지 않아야 한다 — 안 그러면 던전마다 404가 4번씩 난다
+      if(!HB_BG_ANIM){ assert(hbBgFrames(1)===null && hbBgFirst(1)===null,'스위치를 껐는데 프레임을 쓰려고 함');
+        assert(Object.keys(_hbBgF).length===0,'스위치를 껐는데 프레임 파일을 요청함('+Object.keys(_hbBgF).length+'건)'); } }
     // 움직임 크기(HB_BG_AMP) — 캔버스 순차 합성이라 알파를 그대로 쓰면 안 된다.
     // 실제로 합성했을 때의 '각 프레임 기여도'가 의도한 가중치와 같은지 본다.
     if(typeof hbBgMix==='function'){
