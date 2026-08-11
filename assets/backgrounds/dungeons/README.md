@@ -45,60 +45,102 @@ PNG/JPG로 뽑았다면 이 폴더에 `.png`로 넣고 `npm run img` — 1024px 
 
 ---
 
-## 공통 프롬프트 (기본틀)
+# 프롬프트 쓰는 법
 
-`{}` 안만 던전별로 갈아 끼운다. 나머지는 건드리지 말 것 — 각도·구도·밝기 조건이
-전부 위 「카메라 각도」·「잘리는 범위」와 비네트 자동 처리에 맞춰져 있다.
-
-```
-Three-quarter overhead view of a {SETTING}, camera about 37 degrees above the
-ground plane — a shallow angled look-down like a classic isometric RTS, not a
-flat top-down. The ground plane fills the entire frame: no horizon, no sky, no
-distant background. Strong vertical foreshortening, the ground compressed to
-about 60% in depth, so circular shapes on the floor read as wide flat ellipses.
-{MATERIAL} surface with {DETAIL}. Any upright structure shows a little of its
-front face and all of them lean the same direction, with short shadows from one
-consistent light. Composition: a wide open uncluttered clearing in the very
-center, all structures and debris arranged in a ring toward the outer edges,
-nothing crossing the middle. {PALETTE} palette, dark to mid values, even ambient
-light, no vignette, no dark corners, no light beams, no bright white hotspots.
-Soft low-contrast surface texture, painterly stylized game art, mobile game
-background plate, square 1:1 composition.
-```
-
-**네거티브 프롬프트 (공통)**
+블록 **두 개를 이어 붙인다.** 공통 블록은 절대 고치지 않고, 던전 블록만 갈아 끼운다.
 
 ```
-characters, creatures, monsters, people, units, vehicles, UI, HUD, icons, text,
-letters, numbers, watermark, signature, logo, flat top-down view, straight
-overhead, birds eye map, floor plan, flat lay, side view, eye level, horizon,
-sky, distant background, walls closing the frame, vignette, dark corners, harsh
-shadows, long shadows, strong directional light, high contrast, busy center,
-centered focal object, frame, border, blur, depth of field
+[던전 블록]  +  [공통 블록]        ← 이 순서로 붙일 것
+```
+
+> **순서 이유:** 대부분의 이미지 모델은 앞쪽 문장을 더 세게 반영한다.
+> 공통 블록을 앞에 두면 각도는 잘 나오는데 던전 색깔이 밍밍해진다.
+> 던전을 먼저 말하고 카메라·구도를 뒤에서 규정하는 쪽이 둘 다 산다.
+
+네거티브는 공통 블록 안에 다 들어가 있다(`no ~` 형태). 쓰는 툴에 네거티브 칸이
+따로 있으면 맨 아래 「네거티브만 따로 쓸 때」를 참고해 떼어 쓰면 더 잘 먹는다.
+미드저니는 끝에 `--ar 1:1` 을 붙일 것.
+
+---
+
+## 공통 블록 (고정 · 절대 수정 금지)
+
+```
+Camera and framing: three-quarter overhead view, camera about 37 degrees above
+the ground plane, a shallow angled look-down like a classic isometric RTS, never
+a flat top-down, never a birds-eye floor plan, never a side or eye-level view.
+The ground plane fills the entire frame: no horizon, no sky, no distant
+background, no walls closing off the frame. Strong vertical foreshortening, the
+ground compressed to about 60 percent in depth, so circles on the floor read as
+wide flat ellipses and square panels read as flattened diamonds. Composition: a
+wide open uncluttered clearing in the very center, everything arranged in a ring
+toward the outer edges, nothing crossing the middle, no centered focal object, no
+frame, no border. Lighting: even ambient light with short shadows falling in one
+consistent direction, no vignette, no dark corners, no long shadows, no light
+beams, no bright white hotspots, no heavy contrast, dark to mid values overall.
+Style: soft low-contrast surface texture, painterly stylized game art, a clean
+background plate for a mobile game, no characters, no creatures, no people, no
+vehicles, no UI, no HUD, no icons, no text, no letters, no numbers, no watermark,
+no signature, no logo, no blur, no depth of field. Square 1:1 composition.
 ```
 
 ### 왜 이 문구들이 들어갔나
 | 문구 | 이유 |
 |---|---|
 | `about 37 degrees above the ground plane` | 유즈맵 `VIEW_TILT=0.65rad`과 같은 각. 안 맞으면 유닛이 바닥에서 뜬다 |
-| `like a classic isometric RTS, not a flat top-down` | 숫자만으로는 잘 안 먹혀서 익숙한 레퍼런스를 같이 준다 |
-| `compressed to about 60% in depth` · `wide flat ellipses` | 부감의 실제 결과(sin 0.605). 이게 없으면 원을 정원으로 그려 버린다 |
+| `like a classic isometric RTS, never a flat top-down` | 숫자만으로는 잘 안 먹혀서 익숙한 레퍼런스와 부정을 같이 준다 |
+| `compressed to about 60 percent in depth` · `wide flat ellipses` | 부감의 실제 결과(sin 0.65 = 0.605). 없으면 원을 정원으로 그려 버린다 |
 | `no horizon, no sky` | 사선인데 지평선까지 생기면 화면 밖 공간이 보여 버린다 |
-| `open uncluttered clearing in the very center` | 한가운데는 캐릭터·적·링이 덮는다 |
+| `open uncluttered clearing in the very center` | 한가운데는 캐릭터·적·수비 링이 덮는다 |
 | `ring toward the outer edges` | 그런데 바깥 22%는 접으면 잘린다 → 디테일은 그 사이 고리에 |
-| `short shadows from one consistent light` | 사선 뷰의 입체감은 그림자가 만든다. 단 길면 유닛 스프라이트와 싸운다 |
+| `short shadows in one consistent direction` | 사선 뷰의 입체감은 그림자가 만든다. 단 길면 유닛 스프라이트와 싸운다 |
 | `no vignette, no dark corners` | 코드가 비네트를 또 씌운다. 두 겹이면 가장자리가 뭉갠다 |
 | `dark to mid values` | 밝으면 유닛·데미지 숫자가 안 읽힌다 |
 | `soft low-contrast texture` | 고주파 노이즈는 작은 스프라이트와 싸운다 |
 
 ---
 
-## 던전별 슬롯
-| 파일 | 던전 | `{SETTING}` | `{MATERIAL}` | `{DETAIL}` | `{PALETTE}` |
+## 던전 블록
+
+각 블록은 **그 던전만** 말한다. 위 공통 블록을 뒤에 붙여서 쓴다.
+
+### dg1 — 감염된 둥지 (저그계 · 첫 던전)
+> 첫 화면이라 **가장 읽기 쉬워야 한다.** 디테일을 욕심내지 말고 바닥 질감 위주로.
+
+```
+An infested alien hive floor: organic creep membrane ground with pulsing veins,
+dormant spore sacs and low chitin ridges. Bare open creep at the center, growths
+and debris only around the outer ring. Sickly green and dull violet palette.
+```
+
+### dg2 — 버려진 전초기지 (인간계)
+> 직선 패널이라 격자가 규칙적이면 타일처럼 보인다 → 녹·얼룩으로 불규칙하게.
+> 부감이라 패널 이음새는 **가로로 눌린 마름모**로 나와야 정상.
+
+```
+An abandoned military outpost yard: rusted metal deck plating with cracked
+panels, irregular rust stains, spilled supply crates and faded yellow hazard
+stripes. Bare open deck at the center, crates and wreckage only around the outer
+ring. Cold steel blue and rust orange palette.
+```
+
+### dg3 — 잊혀진 회랑 (초월계)
+> 발광 문양이 밝게 튀기 쉬워 `faintly`·`dim`으로 눌러 놓았다.
+> 부러진 기둥은 **밑동만** — 높으면 37° 부감에서 바닥을 다 가린다.
+
+```
+A forgotten alien corridor floor: polished dark stone with inlaid faintly glowing
+glyph lines, fine gold seams and worn hairline cracks. Plain open stone at the
+center, rune circles and low broken pillar stumps only around the outer ring.
+Deep indigo and dim cyan palette.
+```
+
+### dg4~dg10 (아직 안 씀)
+아래 표를 위 던전 블록과 같은 형식(한 문단: 장소 → 바닥 재질 → 디테일 → 가운데
+비움 → 색)으로 풀어 쓰면 된다.
+
+| 파일 | 던전 | 장소 | 바닥 재질 | 디테일 | 색 |
 |---|---|---|---|---|---|
-| dg1  | 감염된 둥지 | infested alien hive floor | organic creep membrane | pulsing veins, spore sacs, chitin ridges | sickly green and violet |
-| dg2  | 버려진 전초기지 | abandoned military outpost yard | rusted metal deck plating | cracked panels, spilled crates, faded hazard stripes | cold steel blue and rust orange |
-| dg3  | 잊혀진 회랑 | forgotten alien corridor floor | polished dark stone | inlaid glowing glyph lines, fine gold seams | deep indigo and cyan |
 | dg4  | 산란장 | alien spawning ground | living fleshy tissue | egg clusters, sinew strands, wet sheen | bile yellow and dark green |
 | dg5  | 폐쇄된 시설 | sealed underground facility floor | poured concrete and grating | drainage channels, emergency light strips, scuff marks | gunmetal grey and amber |
 | dg6  | 봉인된 성소 | sealed alien sanctum floor | carved luminous marble | rune circles, floating stone shards, gold filigree | royal purple and warm gold |
@@ -109,77 +151,21 @@ centered focal object, frame, border, blur, depth of field
 
 ---
 
-## 완성 프롬프트
-
-그대로 붙여 넣어 쓰면 되는 완성본. **네거티브 프롬프트는 위 공통 것을 같이 넣을 것.**
-비율 `1:1`, 크기 1024×1024. (dg4~dg10은 위 슬롯 표를 기본틀에 끼워서 같은 방식으로)
-
-### dg1 — 감염된 둥지 (저그계 · 첫 던전)
-> 첫 화면이라 **가장 읽기 쉬워야 한다.** 디테일을 욕심내지 말고 바닥 질감 위주로.
+## 네거티브만 따로 쓸 때
+네거티브 칸이 따로 있는 툴(SD·Flux 계열)이면, 공통 블록에서 `no ~` 구절을 빼고
+아래를 네거티브 칸에 넣는 편이 더 잘 먹는다.
 
 ```
-Three-quarter overhead view of an infested alien hive floor, camera about 37
-degrees above the ground plane — a shallow angled look-down like a classic
-isometric RTS, not a flat top-down. The ground plane fills the entire frame: no
-horizon, no sky, no distant background. Strong vertical foreshortening, the
-ground compressed to about 60% in depth, so circular shapes on the floor read as
-wide flat ellipses. Organic creep membrane surface with pulsing veins, dormant
-spore sacs, and low chitin ridges. Any upright growth shows a little of its front
-face and all of them lean the same direction, with short shadows from one
-consistent light. Composition: a wide open uncluttered clearing of bare creep in
-the very center, all growths and debris arranged in a ring toward the outer
-edges, nothing crossing the middle. Sickly green and dull violet palette, dark to
-mid values, even ambient light, no vignette, no dark corners, no light beams, no
-bright white hotspots. Soft low-contrast surface texture, painterly stylized game
-art, mobile game background plate, square 1:1 composition.
-```
-
-### dg2 — 버려진 전초기지 (인간계)
-> 직선 패널이라 **격자가 너무 규칙적이면 타일처럼 보인다.** 녹·얼룩으로 불규칙하게.
-> 부감이라 패널 이음새는 **가로로 넓게 눌린 마름모**로 나와야 정상.
-
-```
-Three-quarter overhead view of an abandoned military outpost yard, camera about
-37 degrees above the ground plane — a shallow angled look-down like a classic
-isometric RTS, not a flat top-down. The ground plane fills the entire frame: no
-horizon, no sky, no distant background. Strong vertical foreshortening, the
-ground compressed to about 60% in depth, so panel seams and painted circles read
-as wide flattened shapes. Rusted metal deck plating surface with cracked panels,
-irregular rust stains, spilled supply crates, and faded yellow hazard stripes.
-The crates show a little of their front faces and all lean the same direction,
-with short shadows from one consistent light. Composition: a wide open
-uncluttered clearing of bare deck in the very center, all crates and wreckage
-arranged in a ring toward the outer edges, nothing crossing the middle. Cold
-steel blue and rust orange palette, dark to mid values, even ambient light, no
-vignette, no dark corners, no light beams, no bright white hotspots. Soft
-low-contrast surface texture, painterly stylized game art, mobile game background
-plate, square 1:1 composition.
-```
-
-### dg3 — 잊혀진 회랑 (초월계)
-> 발광 문양이 밝게 나오기 쉽다. `faintly`·`dim`으로 눌러 놓았다.
-> 부러진 기둥은 **밑동만** — 높으면 부감에서 바닥을 다 가린다.
-
-```
-Three-quarter overhead view of a forgotten alien corridor floor, camera about 37
-degrees above the ground plane — a shallow angled look-down like a classic
-isometric RTS, not a flat top-down. The ground plane fills the entire frame: no
-horizon, no sky, no distant background. Strong vertical foreshortening, the
-ground compressed to about 60% in depth, so the inlaid rune circles read as wide
-flat ellipses. Polished dark stone surface with inlaid faintly glowing glyph
-lines, fine gold seams, and worn hairline cracks. Low broken pillar stumps show a
-little of their front faces and all lean the same direction, with short shadows
-from one consistent light. Composition: a wide open uncluttered clearing of plain
-stone in the very center, all glyph patterns and pillar stumps arranged in a ring
-toward the outer edges, nothing crossing the middle. Deep indigo and dim cyan
-palette, dark to mid values, even ambient light, no vignette, no dark corners, no
-light beams, no bright white hotspots. Soft low-contrast surface texture,
-painterly stylized game art, mobile game background plate, square 1:1
-composition.
+characters, creatures, monsters, people, units, vehicles, UI, HUD, icons, text,
+letters, numbers, watermark, signature, logo, flat top-down view, straight
+overhead, birds eye map, floor plan, flat lay, side view, eye level, horizon,
+sky, distant background, walls closing the frame, vignette, dark corners, harsh
+shadows, long shadows, strong directional light, high contrast, busy center,
+centered focal object, frame, border, blur, depth of field
 ```
 
 ## 넣은 뒤 확인
 1. 파일을 이 폴더에 두고 앱에서 해당 던전 진입
-2. **유닛이 바닥에서 떠 보이면** → 그림이 너무 탑다운. 각도 문구를 강조해 다시 뽑는다
+2. **유닛이 바닥에서 떠 보이면** → 그림이 너무 탑다운. 공통 블록을 앞으로 옮겨 다시 뽑는다
 3. 유닛이 안 읽히면 → 그림이 밝은 것. 다시 뽑거나 `HB_BG_VIG_A`(기본 0.62)를 올린다
-4. 가운데가 복잡하면 → `{DETAIL}`을 줄이고 `ring toward the outer edges`를 강조
+4. 가운데가 복잡하면 → 던전 블록의 디테일을 줄이고 `only around the outer ring`을 강조
