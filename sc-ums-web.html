@@ -5753,6 +5753,10 @@ function hbBgFrames(dg){ const key='dg'+(dg||1), have=_hbBgF[key];
       im.src='assets/backgrounds/dungeons/'+key+'_f'+i+'.webp'; a.push(im); } _hbBgF[key]=a; return null; }
   for(const im of have) if(!(im.complete && im.naturalWidth)) return null;   // 하나라도 없으면 안 씀(깜빡임 방지)
   return have; }
+// 첫 프레임만 와도 그것을 바탕으로 쓴다 — 넷을 다 기다리면 그동안 정지 그림을 또 받아야 해서
+// 던전당 한 장(약 180KB)이 헛돈다. 이 덕에 정지 그림 없이 프레임 4장만 넣어도 동작한다.
+function hbBgFirst(dg){ const a=_hbBgF['dg'+(dg||1)];
+  const im=a&&a[0]; return (im&&im.complete&&im.naturalWidth)?im:null; }
 // 핑퐁 위상 — 1→2→3→4→3→2로 돌아 이음새가 없다(영상의 마지막↔첫 프레임이 달라도 안 튄다).
 // 반환: 겹칠 두 프레임 인덱스 a,b와 섞는 비율 f(0..1).
 function hbBgPhase(t, n){ if(!(n>1)) return {a:0,b:0,f:0};
@@ -5771,7 +5775,7 @@ function hbVignette(wx,wy){ const x=_hb.ctx, r=Math.hypot(wx,wy);
 function hbFloor(){ const S=_hb, x=S.ctx, D=hbDun(S.dg);
   const half=(S.vBot-S.vTop)/2, k=S.k||1, wx=(S.w/2+40)/k, wy=(half+40)/k;
   x.save(); x.fillStyle='#05070c'; x.fillRect(-wx,-wy,wx*2,wy*2); x.restore();   // 어두운 바탕(그림·타일이 늦게 와도 배경이 비지 않게)
-  const fr=hbBgFrames(S.dg), bg=fr?fr[0]:hbBgImg(S.dg);
+  const fr=hbBgFrames(S.dg), bg=fr?fr[0]:(hbBgFirst(S.dg)||hbBgImg(S.dg));
   if(bg){ const f=hbBgFit(bg.naturalWidth/bg.naturalHeight, wx, wy), X=-f.dw/2, Y=-f.dh/2;
     x.save();
     if(fr){ const p=hbBgPhase(S.t||0, fr.length);   // 두 장을 겹쳐 크로스페이드 = 영상처럼 보인다
@@ -14468,7 +14472,9 @@ const UPG_ICO={
   burrow:'burrow', lurker:'morph', ventral:'transport', carrier_cap:'transport', reaver_cap:'transport',
   chitinous:'carapace' };
 function upgIcoHTML(k, fallback){ const f=UPG_ICO[k]; return f? _icoImg('upgrades','up_'+f,'🔬') : (fallback||pIco('🔬')); }
-function skillIcoHTML(k, fallback){ return (typeof SKILLS!=='undefined'&&SKILLS[k])? _icoImg('skills','sk_'+k,'✨') : (fallback||pIco('✨')); }
+// 스킬 🠒 아이콘 별칭 — 뜻이 같은 스킬끼리 한 장을 공유한다(UPG_ICO와 같은 규칙). 파일을 복사하지 말고 여기에 한 줄 추가할 것.
+const SKILL_ICO={ nuke:'bomb' };   // 핵 폭격 = 폭탄 아이콘 공유
+function skillIcoHTML(k, fallback){ return (typeof SKILLS!=='undefined'&&SKILLS[k])? _icoImg('skills','sk_'+(SKILL_ICO[k]||k),'✨') : (fallback||pIco('✨')); }
 function bldgPortraitOf(mk, ico){   // 건물 초상 단일 소스: 3D 모델 이미지 → 없으면 아이콘(관리자 건물·직스 신전 공용)
   const img=(mk&&window.M3D&&M3D.bldgImage&&!(G.opt&&G.opt.model3d===false))?M3D.bldgImage(mk):null;
   return img?('<img class="portImg" src="'+img+'" alt="" draggable="false">'):(pIco(ico||'🏢')); }
