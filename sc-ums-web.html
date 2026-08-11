@@ -4352,10 +4352,10 @@ const DRAW_BEACONS=[
   {id:'buyTurret', x:.20, y:.18, name:'미사일 포탑', core:'🗼'},
   {id:'buyPhoton', x:.20, y:.37, name:'에너지 타워', core:'◉'},
   {id:'draw',      x:.20, y:.55, name:'유닛 1회', core:'?'},
-  {id:'energy',    x:.20, y:.71, name:'에너지 1회', core:'⚡'},
+  {id:'energy',    x:.20, y:.71, name:'가스 1회', core:'⚡'},
   // 우측 줄: 뽑기 확률↑ / 크레딧 획득↑ (확률표는 우상단 → 아래쪽에 배치해 겹침 방지)
   {id:'gachaUp',  x:.77, y:.55, name:'뽑기 확률↑', core:'%'},
-  {id:'creditUp', x:.77, y:.71, name:'크레딧 획득↑', core:'C'},
+  {id:'creditUp', x:.77, y:.71, name:'미네랄 획득↑', core:'C'},
 ];
 // 비콘별 색 테마(인라인 CSS 변수로 기존 .drawZone 스타일 재사용). 유닛 1·10회=기본 빨강.
 const BEACON_THEME={   // 디자인 토큰과 통일: 유닛=네온 레드(기본), 고급=골드(재화/희귀), 에너지=HUD 시안(E 재화색)
@@ -4680,11 +4680,11 @@ const DIFFICULTY_ORDER = ['easy','normal','hard','hell','nightmare'];
 // start=1레벨 비용 기준값, nMax=일반 레벨 수, max=일반+초월(초월 3레벨·효과 ×2/×4/×8). 비용은 metaNextCost(완만 감소배율) 참조.
 const META_BUILDS = {   // 탭(group) → 섹션(sect) 2단 분류. 같은 sect끼리 묶여 헤더로 구분됨
   // ── 경제 (시작 자원 → 자원 획득) ──
-  start_credit:  { name:'시작 크레딧', desc:'시작 시 크레딧 지급 (+25/Lv)',   start:15, nMax:10, max:10, group:'eco', sect:'시작 자원' },
-  start_energy:  { name:'시작 에너지', desc:'시작 시 에너지 지급 (+10/Lv)',   start:15, nMax:10, max:10, group:'eco', sect:'시작 자원' },
+  start_credit:  { name:'시작 미네랄', desc:'시작 시 미네랄 지급 (+25/Lv)',   start:15, nMax:10, max:10, group:'eco', sect:'시작 자원' },
+  start_energy:  { name:'시작 가스', desc:'시작 시 가스 지급 (+10/Lv)',   start:15, nMax:10, max:10, group:'eco', sect:'시작 자원' },
   start_turret:  { name:'시작 포탑',   desc:'시작 시 미사일 포탑 배치 (+1기/Lv, 최대 3기)', start:100, costs:[100,250,500], nMax:3, max:3, group:'eco', sect:'시작 자원' },
-  credit_gain:   { name:'크레딧 획득', desc:'인게임 크레딧 획득 증가 (+5%/Lv)', start:25, nMax:10, max:10, group:'eco', sect:'자원 획득' },
-  energy_gain:   { name:'에너지 획득', desc:'인게임 에너지 획득 증가 (+5%/Lv)', start:25, nMax:10, max:10, group:'eco', sect:'자원 획득' },
+  credit_gain:   { name:'미네랄 획득', desc:'인게임 미네랄 획득 증가 (+5%/Lv)', start:25, nMax:10, max:10, group:'eco', sect:'자원 획득' },
+  energy_gain:   { name:'가스 획득', desc:'인게임 가스 획득 증가 (+5%/Lv)', start:25, nMax:10, max:10, group:'eco', sect:'자원 획득' },
   interest_cap:  { name:'이자 상한',   desc:'라운드 정산 이자 +10/Lv (보유 인정 한도 +100/Lv)', start:30, nMax:10, max:10, group:'eco', sect:'자원 획득' },
   // ── 생산(뽑기·자동화) ──
   gacha_luck:    { name:'고등급 확률', desc:'레전드+ 뽑기 확률 가중 (+2%/Lv)', start:20, nMax:10, max:10, group:'prod', sect:'뽑기' },
@@ -4692,7 +4692,7 @@ const META_BUILDS = {   // 탭(group) → 섹션(sect) 2단 분류. 같은 sect�
   // 자동화 해금(생산 섹션 통합) — 1회 구매로 인게임 on/off 토글 해금
   auto_unit:    { name:'자동 유닛 소환',  desc:'유닛 자동 뽑기 토글 해금 (0.33초마다 1기)',          start:250, nMax:1, max:1, group:'prod', sect:'자동화' },
   auto_combine: { name:'자동 조합',       desc:'낮은 등급부터 자동 조합 토글 해금 (레전드까지·0.33초)', start:250, nMax:1, max:1, group:'prod', sect:'자동화' },
-  auto_energy:  { name:'자동 에너지 변환', desc:'크레딧→에너지 자동 변환 토글 해금 (0.33초마다)',      start:220, nMax:1, max:1, group:'prod', sect:'자동화' },
+  auto_energy:  { name:'자동 가스 변환', desc:'미네랄→가스 자동 변환 토글 해금 (0.33초마다)',      start:220, nMax:1, max:1, group:'prod', sect:'자동화' },
   auto_pboss:   { name:'자동 개인 보스',   desc:'개인 보스를 쿨마다 자동 소환 토글 해금 (보스별 on/off)', start:400, nMax:1, max:1, group:'prod', sect:'자동화' },
   auto_place:   { name:'자동 유닛 배치',   desc:'새 유닛을 트랙에 자동 정렬 토글 해금 (가운데 쌓임 방지)', start:200, nMax:1, max:1, group:'prod', sect:'자동화' },
   auto_bossdeploy:{ name:'자동 보스 파견', desc:'가장 강한 유닛을 포인트방 보스에 자동 파견 토글 해금 (빈 슬롯 채움)', start:300, nMax:1, max:1, group:'prod', sect:'자동화' },
@@ -4705,7 +4705,7 @@ const META_BUILDS = {   // 탭(group) → 섹션(sect) 2단 분류. 같은 sect�
   team_atk:      { name:'전체 공격력',   desc:'모든 유닛 공격력 증가 (+1%/Lv)',  start:8, nMax:20, max:20, group:'team', sect:'팀 강화' },
   team_aspd:     { name:'전체 공격속도', desc:'모든 유닛 공격 속도 증가 (+1%/Lv)', start:8, nMax:20, max:20, group:'team', sect:'팀 강화' },
   team_luck:     { name:'전체 고등급 확률', desc:'모든 플레이어 레전드+ 뽑기 가중 (+1%/Lv)', start:8, nMax:20, max:20, group:'team', sect:'팀 강화' },
-  team_credit:   { name:'전체 시작 크레딧',desc:'모든 플레이어 시작 크레딧 (+10/Lv)', start:8, nMax:20, max:20, group:'team', sect:'팀 강화' },
+  team_credit:   { name:'전체 시작 미네랄',desc:'모든 플레이어 시작 미네랄 (+10/Lv)', start:8, nMax:20, max:20, group:'team', sect:'팀 강화' },
   team_enemy_hp: { name:'전체 적 체력',  desc:'모든 적 체력 감소 (-1%/Lv)', start:8, nMax:20, max:20, group:'team', sect:'팀 적 약화' },
   team_enemy_def:{ name:'전체 적 방어', desc:'모든 적 방어력 감소 (-0.5/Lv)',  start:8, nMax:20, max:20, group:'team', sect:'팀 적 약화' },
   boss_hp_down:  { name:'포인트방 체력 감소', desc:'포인트방 보스 체력 감소 (-1.5%/Lv)', start:8, nMax:20, max:20, group:'team', sect:'포인트방' },
@@ -6897,7 +6897,7 @@ function buildUpgrade(id){ const b=META_BUILDS[id]; if(!b) return false;
 let _ptGroup='eco';
 const _PT_TABS=[['team','전체'],['eco','경제'],['prod','생산'],['combat','전투'],['coop','보스']];
 const _PT_NOTE={
-  eco:'크레딧·에너지 수급 강화 · 즉시 적용 (시작 자원은 다음 판)',
+  eco:'미네랄·가스 수급 강화 · 즉시 적용 (시작 자원은 다음 판)',
   prod:'뽑기·시작유닛 + 자동화 해금 · 즉시 적용 (시작 유닛은 다음 판)',
   combat:'아군 화력·공속·적 약화 (초월 단계 = 종결 강화) · 즉시 적용',
   team:'전체 강화 · 협동에서 파티 중 최고 레벨이 모두에게 적용',
@@ -9815,7 +9815,7 @@ function _upgradeSheetModel(){
   items.push({ pro:'<svg viewBox="0 0 24 24">'+beaconIcon('gachaUp')+'</svg>', sn:'뽑기 확률', cr:gC, en:0, tr:gMax?'MAX':('Lv.'+gLv), metaCls:'lv',
     state:gMax?'max':(((G.mineral||0)>=gC)?'ok':'dim'), act:gMax?'':'onclick="buyGachaUp()"' });
   const cLv=(G.creditLv||0), cMax=cLv>=CREDIT_UP_MAX, cC=creditUpCost();
-  items.push({ pro:'<svg viewBox="0 0 24 24">'+beaconIcon('creditUp')+'</svg>', sn:'크레딧 획득', cr:cC, en:0, tr:cMax?'MAX':('Lv.'+cLv), metaCls:'lv',
+  items.push({ pro:'<svg viewBox="0 0 24 24">'+beaconIcon('creditUp')+'</svg>', sn:'미네랄 획득', cr:cC, en:0, tr:cMax?'MAX':('Lv.'+cLv), metaCls:'lv',
     state:cMax?'max':(((G.mineral||0)>=cC)?'ok':'dim'), act:cMax?'':'onclick="buyCreditUp()"' });
   items.push(null);   // 2페이지 3번 = 빈칸
   items.push({ pro:pIco('PERM'), sn:'영구 강화', cr:0, en:0, state:'ok', act:'onclick="openPointUpgrade()"' });
@@ -9926,7 +9926,7 @@ function autoIcoHTML(kind, fb){ return '<img class="cgIco" src="'+AUTO_ICON_DIR+
 const AUTO_SHEET_DEFS=[
   ['unit','유닛 소환','🎲'],
   ['combine','유닛 조합','⚛️'],
-  ['energy','에너지 변환','⚡'],
+  ['energy','가스 변환','⚡'],
   ['bossdeploy','보스 파견','💀'],
   ['place','유닛 배치','🎯'] ];
 function _autoSheetModel(){ const o=autoUtilOwned(); if(!G.auto) G.auto={unit:false,combine:false,energy:false,pboss:{}};

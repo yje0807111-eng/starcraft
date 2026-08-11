@@ -201,8 +201,8 @@ and warm gold.
 ```
 
 ### dg7 — 군단의 심장 (저그계 · 가장 화려)
-> **용암빛이 밝게 터지기 쉽다.** 발광을 바깥 고리에 가두는 문장을 넣어 뒀다.
-> 나온 게 눈부시면 `faint`를 `very faint`로 바꿔 다시 뽑을 것.
+> **용암빛이 밝게 터지기 쉽다.** 균열을 `thin`·`kept dim`으로 눌러 놓았다.
+> 나온 게 눈부시면 `kept dim`을 `barely glowing`으로 바꿔 다시 뽑을 것.
 
 ```
 The heart of a swarm chamber: one continuous floor of raw muscle over bone
