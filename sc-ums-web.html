@@ -5019,6 +5019,8 @@ function migrateProfile(){ const d=defaultProfile();
     const M={pow:'atk',vit:'hp',foc:'crit',agi:'aspd'};
     for(const c of p.chars){ if(!c||!c.unit||!c.unit.stats) continue;
       for(const k in M) p.hunt.upg[M[k]]=Math.max(p.hunt.upg[M[k]]||0, c.unit.stats[k]||0);
+      for(const k in M) c.unit.stats[k]=0;      // ⚠ 옮겼으면 비운다 — 안 비우면 같은 스탯이 두 번 반영된다
+      if(c.unit.statAcc) delete c.unit.statAcc;   // 자동 상승 시절의 소수점 잔여도 정리
       if(c.statPoints>0){ p.pcoin=(p.pcoin||0)+c.statPoints*20; c.statPoints=0; } } }
   p.ver=d.ver; }
 // 캐릭터 1건 보정(신규 키 back-fill + 폐기된 직업 id 복구)
@@ -5217,10 +5219,11 @@ function profSyncUnlocks(){ const p=PROF(), pw=profPower(); for(const u of PROF_
 // 레벨업(xp→level, 스탯 포인트 지급). 유닛 레벨도 동반 상승.
 // 성장은 두 축이다 — 캐릭터(레벨→스탯 포인트, 마을 광장에서 배분) / 계정(미네랄→업그레이드 6종).
 // 둘 다 hbCharStats()에서 합산된다.
-const PROF_PT_PER_LV=3;
+const PROF_LV_MINERAL=10;   // 레벨업 보상 = 미네랄. 성장 축은 미네랄 업그레이드(HB_UPG) 하나로 통일했다.
 function profApplyLevelUps(c){ c=c||CHAR(); if(!c) return 0; let ups=0;
   while(c.xp>=profXpForLevel(c.level) && ups<9999){ c.xp-=profXpForLevel(c.level); c.level++; c.unit.level++;
-    profGainStats(c, PROF_PT_PER_LV); ups++; }
+    ups++; }
+  if(ups>0){ const p=PROF(); if(p) p.pcoin=(p.pcoin||0)+ups*PROF_LV_MINERAL; }   // 레벨업 = 미네랄
   return ups; }
 // 방치 수익(분당 pcoin) = 파워 기반 × 소스 배율
 // 방치·오프라인 수입(분당) = 자동사냥에서 실제로 벌던 속도 × 훈련 장소 배율 × 펫 코인%.
@@ -5263,20 +5266,9 @@ function profEvolve(){ const p=PROF(), c=CHAR(), r=profEvolveReq(); if(!c||!r.un
   if(c.unit.level<r.lvReq) return false; if(p.pcoin<r.cost) return false;
   p.pcoin-=r.cost; c.unit.evoStars++; profSyncUnlocks(); saveMeta(); return true; }
 // 액션(성공 true · saveMeta 포함 · 재렌더는 호출측)
-// 레벨업 = 직업 성장 프로필(PROF_JOBS[].base) 비율로 스탯이 '자동으로' 오른다.
-// 예전엔 레벨당 포인트를 줘서 직접 찍게 했는데, 미네랄 업그레이드(HB_UPG)가 같은 4스탯을
-// 올려 완전히 중복이었다(pow=atk · vit=hp · foc=crit · agi=aspd). 성장 축은 미네랄로 통일했다.
-// ⚠ 소수점은 statAcc에 쌓아 둔다 — 버리면 레벨이 오를수록 손해가 누적된다.
-function profGainStats(c, pts){ if(!c||!c.unit||!c.unit.stats||!(pts>0)) return;
-  const J=PROF_JOBS[c.unit.jobId]||PROF_JOBS[c.cls]||PROF_JOBS.ranger, B=(J&&J.base)||{};
-  const w={}; let sum=0;
-  for(const k of PROF_STATS){ w[k]=Math.max(0, B[k]||0); sum+=w[k]; }
-  if(sum<=0){ for(const k of PROF_STATS) w[k]=1; sum=PROF_STATS.length; }
-  const acc=(c.unit.statAcc=c.unit.statAcc||{});
-  for(const k of PROF_STATS){ acc[k]=(acc[k]||0)+pts*w[k]/sum;
-    const n=Math.floor(acc[k]); if(n>0){ c.unit.stats[k]=(c.unit.stats[k]||0)+n; acc[k]-=n; } } }
-// 예전 저장에 남은 포인트는 같은 비율로 자동 소진(가진 성장을 잃지 않게)
-function profDrainStatPoints(c){ if(c && c.statPoints>0){ profGainStats(c, c.statPoints); c.statPoints=0; return true; } return false; }
+// 성장 축은 미네랄 업그레이드(HB_UPG) 하나다. 레벨업은 미네랄을 주고(PROF_LV_MINERAL),
+// 캐릭터 스탯(unit.stats)에 직접 찍는 경로는 없다 — 레벨 포인트도, 자동 배분도 폐지했다.
+// unit.stats는 마이그레이션에서 비워지고, 이후로는 직업 기본치·레벨·장비만 profStat에 반영된다.
 function profClassChange(jobId){ const p=PROF(), c=CHAR(); if(!c) return false;
   const cur=PROF_JOBS[c.unit.jobId], J=PROF_JOBS[jobId]; if(!cur||!J) return false;
   if(cur.next.indexOf(jobId)<0) return false; if(c.unit.level<J.reqLv) return false; const cost=profClassCost(jobId); if(p.pcoin<cost) return false;
@@ -5398,7 +5390,6 @@ function renderHome(){ try{
 // 레벨업으로 받은 스탯 포인트 — 남았을 때만 줄이 뜬다. 배분은 공용 profAllocStat()(마을 광장과 같은 함수).
 function renderHomeStats(){ const row=document.getElementById('hmStatRow'); if(!row) return;
   const c=(typeof CHAR==='function')?CHAR():null;
-  if(c) profDrainStatPoints(c);                    // 예전 저장의 남은 포인트를 흡수
   const grow=(typeof hbGrowHas==='function') && hbGrowHas();
   row.classList.toggle('hide', !grow);
   row.innerHTML = grow ? '<button class="hmStat grow" onclick="hbOpenGrow()">🎖 전직 · 진화 <i>!</i></button>' : ''; }
