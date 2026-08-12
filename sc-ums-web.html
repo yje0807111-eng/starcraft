@@ -2610,6 +2610,11 @@
   .hbRowIco{flex:none;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:17px;
     background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
   .hbRowIco img{width:24px;height:24px;object-fit:contain;display:block}   /* 건물 아이콘(assets/icons/buildings) — 이모지 대신 실제 에셋 */
+  /* 🪖 벙커 주둔 슬롯 — 채워진 칸만 밝게 */
+  .hbSlots{display:flex;gap:6px;justify-content:center;padding:2px 0 10px}
+  .hbSlot{width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:17px;opacity:.28;
+    background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+  .hbSlot.on{opacity:1;border-color:rgba(124,224,255,.55);background:rgba(124,224,255,.10)}
   /* 🧱 배치 확정/취소 앵커 — 안에 공용 .bArmBtns를 담는다(스타일은 그쪽 것을 그대로 쓴다) */
   .hbArmBtns{position:absolute;left:0;top:0;z-index:3;pointer-events:none}
   .hbArmBtns.hide{display:none}
@@ -4005,7 +4010,17 @@
           <button class="hbmX" onclick="hbCloseBuild()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
         </div>
         <div class="hbRows uiScroll" id="hbBuildBody"></div>
-        <div class="hbRoundNote">사면 바로 전장에 배치됩니다. 라운드가 바뀌어도 남습니다.</div>
+        <div class="hbRoundNote">고르면 배치할 자리를 정합니다. 라운드가 바뀌어도 남습니다.</div>
+      </div>
+    </div>
+    <!-- 🪖 벙커 — 필드에서 벙커를 눌러 연다. 유닛을 넣으면 그만큼 함께 쏜다 -->
+    <div class="hbModal hide" id="hbBunkerModal" onclick="if(event.target===this)hbCloseBunker()">
+      <div class="hbmCard">
+        <div class="hbmHead"><b>벙커</b>
+          <button class="hbmX" onclick="hbCloseBunker()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+        </div>
+        <div class="hbRows uiScroll" id="hbBunkerBody"></div>
+        <div class="hbRoundNote">유닛 화력은 캐릭터 공격력을 따릅니다. 방어 탭의 <b>벙커 공격력</b>으로 더 올릴 수 있습니다.</div>
       </div>
     </div>
     <!-- 부스트 — 시간제 강화 -->
@@ -5828,6 +5843,7 @@ const HB_UPG={
   regen:   {name:'체력 재생', cat:'def',   u:400,   v0:1,    vs:0.3,   f:'/s', base:25,  mul:1.16,  ico:'skills/sk_heal'},
   shd:     {name:'쉰드량', cat:'def',   u:500,   v0:0,    vs:15,    f:'',   base:40,  mul:1.17,  ico:'upgrades/up_shield'},
   shdreg:  {name:'쉰드 재생', cat:'def',   u:800,   v0:0,    vs:0.2,   f:'/s', base:50,  mul:1.18,  ico:'skills/sk_recharge'},
+  bkatk:   {name:'벙커 공격력', cat:'def',   u:0,     v0:100,  vs:10,    f:'%',  base:40,  mul:1.17,  ico:'buildings/bld_bunker'},   // 벙커 안 유닛 화력 배수(100% = 기본)
   mk:      {name:'미네랄 (킬)', cat:'util',  u:300,   v0:1,    vs:0.5,   f:'',   base:30,  mul:1.17,  ico:'upgrades/up_mineral_up'},
   gk:      {name:'가스 (킬)', cat:'util',  u:500,   v0:0,    vs:0.2,   f:'',   base:55,  mul:1.19,  ico:'res_gas'},
   mw:      {name:'미네랄 (웨이브)', cat:'util',  u:400,   v0:10,   vs:4,     f:'',   base:45,  mul:1.18,  ico:'upgrades/up_mineral_up'},
@@ -5848,6 +5864,8 @@ function hbUpgCost(k,lv){ const l=(lv==null)?(hbHunt().upg[k]||0):lv;
 // u:0 은 처음부터 열려 있고, 나머지는 hunt.unl 에 표식이 있어야 쓴다
 function hbUpgOwned(k){ return (HB_UPG[k].u===0) || !!hbHunt().unl[k]; }
 // 표시값 — 소수는 필요할 때만(레벨당 증가가 0.1 미만이면 2자리)
+// 표시용 문자열은 hbUpgVal, 계산에 쓸 실수는 hbUpgNum — 섞어 쓰면 '100%'가 숫자로 들어간다
+function hbUpgNum(k){ const U=HB_UPG[k]; return U? (U.v0+U.vs*((hbHunt().upg[k]||0))) : 0; }
 function hbUpgVal(k,lv){ const U=HB_UPG[k], v=U.v0+U.vs*lv;
   const d=(U.vs<0.1)?2:1;
   const t=(Math.abs(v-Math.round(v))<0.001)? String(Math.round(v)) : v.toFixed(d);
@@ -5910,11 +5928,19 @@ const HB_FOOT_MAX=2;                                // 가장 큰 건물의 변 
 const HB_OPEN_STEP=3;                               // 해금 한 단계 = 코어 밖으로 몇 타일 더
 // 구조물 표 — 예전 HB_BUILD를 대체한다. ico = assets/icons/buildings/<ico>.webp
 const HB_STRUCT={
-  wall:   {name:'벽',        ico:'bld_supply',   w:1,h:1, max:400, base:20,  mul:1.012, slab:1, tip:'적이 돌아서 오게 만든다'},   // slab = 필드에선 아이콘 없이 판으로 그린다(반복되면 어수선하다)
-  post:   {name:'동료 초소',  ico:'bld_barracks', w:1,h:1, max:4,   base:150, mul:1.9,   tip:'동료가 주위를 돌며 함께 사격'},
-  turret: {name:'터렛',      ico:'bld_turret',   w:1,h:1, max:4,   base:120, mul:1.8,   tip:'고정 포탑 — 사거리가 길다'},
-  bunker: {name:'벙커',      ico:'bld_bunker',   w:2,h:2, max:2,   base:300, mul:2.4,   tip:'적을 끌어당겨 대신 맞는다'},
+  wall:   {name:'벽',        ico:'bld_supply',   m3d:'union_supply_depot',   w:1,h:1, max:400, base:20,  mul:1.012, slab:1, tip:'적이 돌아서 오게 만든다'},
+  post:   {name:'동료 초소',  ico:'bld_barracks', m3d:'union_barracks',       w:1,h:1, max:4,   base:150, mul:1.9,   tip:'동료가 주위를 돌며 함께 사격'},
+  turret: {name:'터렛',      ico:'bld_turret',   m3d:'union_missile_turret', w:1,h:1, max:4,   base:120, mul:1.8,   tip:'고정 포탑 — 사거리가 길다'},
+  bunker: {name:'벙커',      ico:'bld_bunker',   m3d:'union_bunker',         w:2,h:2, max:2,   base:300, mul:2.4,   tip:'유닛을 넣어 함께 쏜다 · 적을 끌어당긴다'},
 };
+// 🪖 벙커 주둔 유닛 — 캐릭터 공격력의 일정 비율로 함께 쏜다. 화력 배수는 방어 업그레이드 bkatk.
+const HB_BUNKER_SLOTS=4;                 // 벙커 한 채에 넣을 수 있는 유닛 수
+const HB_BUNKER_UNIT_DPS=0.45;           // 유닛 1기 = 캐릭터 공격력의 45%
+const HB_BUNKER_RNG=1.25;                // 벙커 사거리 = 캐릭터 사거리 배수
+const HB_BUNKER_UNIT_BASE=90, HB_BUNKER_UNIT_MUL=1.75;   // 유닛 추가 비용
+function hbBunkerN(t){ return Math.max(0, Math.min(HB_BUNKER_SLOTS, (t&&t.n)|0)); }
+function hbBunkerUnitCost(n){ return Math.ceil(HB_BUNKER_UNIT_BASE*Math.pow(HB_BUNKER_UNIT_MUL, n)); }
+function hbBunkerAtkMul(){ return hbUpgNum('bkatk')/100; }   // 방어 탭 '벙커 공격력'(%)
 const HB_BUILD_MIG={ ally:'post', turret:'turret', bunker:'bunker' };   // 옛 키 → 새 키
 function hbKey(gx,gy){ return gx+','+gy; }
 function hbTx(g){ return g*HB_TILE+HB_TILE/2; }              // 타일 인덱스 → 타일 중심 월드 좌표
@@ -6009,7 +6035,8 @@ function hbLayoutBase(){ const S=_hb; if(!S) return; const st=hbCharStats();
       S.allies.push({ px:x, py:y, x:x+Math.cos(a)*HB_ALLY_ORB, y:y+Math.sin(a)*HB_ALLY_ORB, ph:a, cdT:0, ico:'🤝' }); }
     else if(t.k==='turret') S.turrets.push({ x, y, cdT:0, ico:'🔫' });
     else if(t.k==='bunker'){ const mx=st.hpMax*HB_BUNKER_HP;
-      S.bunkers.push({ x, y, q, hp:(t.hp==null?mx:Math.min(t.hp,mx)), hpMax:mx, ico:'🧱' }); } }
+      if(t.n==null) t.n=1;                                              // 새 벙커는 유닛 1기로 시작 — 지어 두고 안 쏘면 이유를 알기 어렵다
+      S.bunkers.push({ x, y, q, hp:(t.hp==null?mx:Math.min(t.hp,mx)), hpMax:mx, n:hbBunkerN(t), cdT:0, ico:'🧱' }); } }
   const eq=((typeof PROF==='function'&&PROF().equip)||[]).slice(0,profPetSlots());
   S.pets=eq.map((id,i)=>({ id, ico:(PROF_PETS[id]&&PROF_PETS[id].emoji)||'🐾',
     ph:i/Math.max(1,eq.length)*Math.PI*2, x:0, y:0, cdT:Math.random()*.5 })); }
@@ -6207,7 +6234,43 @@ function hbFieldTap(e){
   if(t&&t.closest&&t.closest('button,a,input,select,textarea,.hbHudTop,.hbCard,.hbBar,.sheet,.pop,[onclick]')) return;   // UI 위는 이동이 아니다
   const r=document.getElementById('hbCv').getBoundingClientRect();
   if(_hb.arm){ hbArmTo(e.clientX-r.left, e.clientY-r.top); return; }   // 🧱 배치 중이면 이동이 아니라 고스트를 옮긴다
+  if(hbTapStruct(e.clientX-r.left, e.clientY-r.top)) return;           // 🪖 벙커를 눌렀으면 이동이 아니라 벙커 창
   hbSetDest(e.clientX-r.left, e.clientY-r.top); }
+// 구조물을 눌렀나 — 지금은 벙커만 창이 열린다(나머지는 그냥 통과시켜 이동으로 처리)
+function hbTapStruct(sx,sy){ const S=_hb; if(!S) return false;
+  const q=hbCellOwner(hbGx((sx-S.cx)/S.k), hbGx((sy-S.cy)/S.k));
+  if(!q) return false;
+  const t=hbBase().tiles[q]; if(!t||t.k!=='bunker') return false;
+  hbOpenBunker(q); return true; }
+// ── 🪖 벙커 창 ──────────────────────────────────────────────────────────────
+let _hbBunkerQ=null;
+function hbOpenBunker(q){ _hbBunkerQ=q; const el=document.getElementById('hbBunkerModal'); if(!el) return;
+  el.classList.remove('hide'); renderBunkerModal(); if(typeof playSfx==='function') playSfx('ui_open'); }
+function hbCloseBunker(){ _hbBunkerQ=null; const el=document.getElementById('hbBunkerModal'); if(el) el.classList.add('hide'); }
+function renderBunkerModal(){ const box=document.getElementById('hbBunkerBody'); if(!box) return;
+  const t=_hbBunkerQ && hbBase().tiles[_hbBunkerQ];
+  if(!t||t.k!=='bunker'){ box.innerHTML='<div class="hbRoundNote">벙커가 없습니다.</div>'; return; }
+  const n=hbBunkerN(t), full=n>=HB_BUNKER_SLOTS, cost=hbBunkerUnitCost(n);
+  const coin=Math.floor(PROF().pcoin||0), st=hbCharStats(), bm=hbBunkerAtkMul();
+  const per=st.atk*HB_BUNKER_UNIT_DPS*bm;
+  let slots=''; for(let i=0;i<HB_BUNKER_SLOTS;i++) slots+='<span class="hbSlot'+(i<n?' on':'')+'">🪖</span>';
+  box.innerHTML='<div class="hbSlots">'+slots+'</div>'
+    +'<div class="hbRow"><span class="hbRowIco"><img src="'+ICO_DIR+'buildings/bld_bunker.webp" alt="" draggable="false"></span>'
+    +'<span class="hbRowTx"><b>주둔 유닛 <i>'+n+'/'+HB_BUNKER_SLOTS+'</i></b>'
+    +'<em>1기당 '+Math.round(per)+' 피해 · 합계 '+Math.round(per*n)+'</em></span>'
+    +'<button class="hbRowBtn" onclick="hbBunkerAdd()"'+((full||coin<cost)?' disabled':'')+'>'
+    +(full?'가득':cost.toLocaleString('en-US')+' 미네랄')+'</button></div>'
+    +'<div class="hbRow"><span class="hbRowIco"><img src="'+ICO_DIR+'upgrades/up_shield.webp" alt="" draggable="false"></span>'
+    +'<span class="hbRowTx"><b>벙커 공격력 <i>'+Math.round(bm*100)+'%</i></b><em>방어 탭에서 올립니다</em></span>'
+    +'<button class="hbRowBtn" onclick="hbCloseBunker();hmUpgTab(&#39;def&#39;)">방어 탭</button></div>'; }
+function hbBunkerAdd(){ const t=_hbBunkerQ && hbBase().tiles[_hbBunkerQ]; if(!t||t.k!=='bunker') return;
+  const n=hbBunkerN(t); if(n>=HB_BUNKER_SLOTS) return;
+  const p=PROF(), cost=hbBunkerUnitCost(n);
+  if(Math.floor(p.pcoin||0)<cost){ hmToast('미네랄이 부족합니다'); return; }
+  p.pcoin-=cost; t.n=n+1; saveMeta(); hbLayoutBase();
+  if(typeof playSfx==='function') playSfx('ui_open');
+  if(typeof updateCurBar==='function') updateCurBar();
+  renderBunkerModal(); }
 document.addEventListener('pointerdown', hbFieldTap, true);
 // ═══ 🧱 배치 흐름 — 고스트를 옮기고 ▶로 확정한다 ═════════════════════════════
 // ⛔ 관리자 건설(techPtrDown/G.tech)을 부르지 않는다 — HOME은 유즈맵 전역 G를 참조하면 안 된다.
@@ -6327,6 +6390,9 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char; S.t+=dt;
   // 동료는 자기 초소 둘레를 돈다(원점이 아니라) · 펫은 캐릭터를 따라다닌다 — 둘 다 예전엔 원점 고정이라 걸어가면 뒤에 남았다
   for(const a of S.allies){ a.ph+=dt*0.5; a.x=a.px+Math.cos(a.ph)*HB_ALLY_ORB; a.y=a.py+Math.sin(a.ph)*HB_ALLY_ORB; hbUnitFire(a,HB_ALLY_DPS,1,dt); }
   for(const t of S.turrets) hbUnitFire(t,HB_TURRET_DPS,HB_TURRET_RANGE,dt);
+  // 🪖 벙커 = 안에 든 유닛 수만큼 화력. 유닛 1기 = 캐릭터 공격력의 HB_BUNKER_UNIT_DPS, 방어 업그레이드 bkatk가 배수.
+  { const bm=hbBunkerAtkMul();
+    for(const b of S.bunkers){ if(b.hp<=0||!b.n) continue; hbUnitFire(b, HB_BUNKER_UNIT_DPS*b.n*bm, HB_BUNKER_RNG, dt); } }
   for(const q of S.pets){ q.ph+=dt*1.1; q.x=c.x+Math.cos(q.ph)*30; q.y=c.y+Math.sin(q.ph)*30; hbUnitFire(q,HB_PET_DPS,1,dt); }
   if(S.atkT>0) S.atkT-=dt;                            // 공격 모션 남은 시간(끝나면 idle로)
   if(S.slowT>0) S.slowT-=dt;
@@ -6515,7 +6581,11 @@ function hbDrawStructs(x, S){ const T=hbBase().tiles;
     const p=q.split(','), gx=+p[0], gy=+p[1];
     const x0=hbTx(gx)-HB_TILE/2, y0=hbTx(gy)-HB_TILE/2, w=B.w*HB_TILE, h=B.h*HB_TILE;
     const lw=1/(S.k||1);
+    // 3D 모델이 올라와 있으면 본체는 그쪽이 그린다 — 여기선 발자국(바닥 판)만 남겨 자리를 알려준다
+    const has3d=hb3dReady() && B.m3d && window.M3D && M3D.hasModel && M3D.hasModel('cb_'+B.m3d);
     x.save();
+    if(has3d){ x.fillStyle='rgba(20,26,38,.42)'; x.fillRect(x0,y0,w,h);
+      x.strokeStyle='rgba(150,180,220,.30)'; x.lineWidth=lw; x.strokeRect(x0,y0,w,h); x.restore(); continue; }
     if(B.slab){                                                          // 벽 = 아이콘 없이 두꺼운 판(줄지어 서도 깔끔하다)
       x.fillStyle='rgba(58,66,82,.94)'; x.fillRect(x0,y0,w,h);
       x.fillStyle='rgba(255,255,255,.10)'; x.fillRect(x0,y0,w,h*0.3);    // 윗면 하이라이트
@@ -6661,12 +6731,37 @@ function hb3dList(){ const S=_hb, W=S.w||1, H=S.h||1, k=S.k||1, out=[];
   out.push(_hbU(S, mdl, nx(c.x), ny(c.y), S.charFace||0, false));
   for(const f of S.foes){ if(!f.mdl) continue;
     out.push(_hbU(f, f.mdl, nx(f.x), ny(f.y), f.face||0, !!f.mv)); }
+  hb3dStructs(out, S, nx, ny, k);
   return out; }
+const HB_M3D_FIT=1.15;   // 모델을 타일보다 조금 크게 — 발자국에 딱 맞추면 실제보다 작아 보인다
+// 🧱 기지 구조물을 '같은 sync 목록'에 얹는다.
+// ⛔ M3D.syncBuild를 따로 부르면 안 된다 — sync와 syncBuild는 서로의 모델 풀을 숨겨서
+//    같은 프레임에 둘 다 부르면 나중 것만 남고 앞의 것이 통째로 사라진다.
+// 화면 밖 구조물은 넣지 않는다 — 벽은 수백 칸까지 늘어나서 컬링이 없으면 드로우콜이 폭증한다.
+function hb3dStructs(out, S, nx, ny, k){
+  if(!(window.M3D && M3D.hasModel)) return;
+  const T=hbBase().tiles, hw=(S.w/k)/2+HB_TILE*2, hh=(((S.vBot||S.h)-(S.vTop||0))/k)/2+HB_TILE*3;
+  const k3=Math.max(0.12, Math.min(1.7, k*0.72));      // hbFrame이 sync에 넘기는 배율과 같아야 한다
+  for(const q in T){ const t=T[q], B=HB_STRUCT[t.k]; if(!B||!B.m3d) continue;
+    const id='cb_'+B.m3d; if(!M3D.hasModel(id)) continue;
+    const p=q.split(','), gx=+p[0], gy=+p[1];
+    const wx=hbTx(gx)+(B.w-1)*HB_TILE/2, wy=hbTx(gy)+(B.h-1)*HB_TILE/2;
+    if(Math.abs(wx-(S.camX||0))>hw || Math.abs(wy-(S.camY||0))>hh) continue;   // 화면 밖은 건너뛴다
+    const fp=M3D.footprintOf && M3D.footprintOf(id);   // 모델의 실제 표시 반경(px)
+    const want=(B.w*HB_TILE*k)/2*HB_M3D_FIT;           // 타일 발자국에 맞출 반경
+    out.push({ uid:'hbs_'+q, id:id, x:nx(wx), y:ny(wy), face:0, moving:false, fireSeq:0,
+      scl:(fp&&fp>0.5)? (want/(fp*k3)) : 1, size:B.w*HB_TILE*0.5 }); } }
+// 기지 건물 3D 모델 지연 로드 — 관리자 건설과 같은 에셋(cb_*). 한 번만 부른다.
+let _hbCstLoaded=false;
+function hbEnsureStructModels(){ if(_hbCstLoaded) return; if(!(window.M3D&&M3D.cstEnsure)) return;
+  _hbCstLoaded=true;
+  const keys=[]; for(const k in HB_STRUCT){ const m=HB_STRUCT[k].m3d; if(m) keys.push(m); }
+  try{ M3D.cstEnsure(keys); }catch(_e){ _hbCstLoaded=false; } }
 let _hbUid=0;
 function hbFrame(){ if(!_hb||!_hb.on||_hb.bg){ _hbRaf=0; return; }   // 배경 모드 = 시뮬만(setInterval), 그리기 없음
   hbPump(); hbResize(); hbDraw(); if(_hb.arm) hbArmBtns();   // 🧱 고스트 버튼은 카메라를 따라간다
   if(hb3dReady()){ const cv=document.getElementById('cvMarine');
-    if(cv){ hb3dAttach(); cv.style.display='block';
+    if(cv){ hb3dAttach(); hbEnsureStructModels(); cv.style.display='block';
       // 관리자 랩과 같은 호출: M3D.sync(list, W, H, dt, [], [], null, k)
       try{ const dt3=Math.min(.05,(performance.now()-(_hb._l3||performance.now()))/1000);
         const k3=Math.max(0.12, Math.min(1.7, (_hb.k||1)*0.72));   // 랩과 같은 식(줌 → 모델 크기)

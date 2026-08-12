@@ -828,6 +828,74 @@ async function groupLobby(){
     assert(!Object.keys(H.build).length,'이관 후에도 옛 개수형이 남음');
     hbHunt().base={tiles:{},open:1}; hbLayoutBase(); saveMeta();
     return '왕복·겹침·범위·저장·봉쇄차단·이관 ok'; });
+  // 🪖 벙커 = 주둔 유닛만큼 쏜다. 유닛 화력 = 캐릭터 공격력 × 비율 × 방어탭 bkatk.
+  await step('벙커: 주둔 유닛 추가·상한·화력·업그레이드 반영', async()=>{ skipIf(typeof hbBunkerAdd!=='function','벙커 주둔 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    openHome(); await sleep(60); _hb.manual=true;
+    const p=PROF(); p.pcoin=9e6;
+    const _cSave={..._hb.char};   // ⚠ 아래에서 위치·사거리를 바꾼다 — 뒤 스텝들은 원점·정상 스탯을 가정한다
+    hbHunt().base={tiles:{},open:99}; hbHunt().upg.bkatk=0; hbLayoutBase();
+    assert(hbPlaceStruct('bunker',6,6),'벙커 배치 실패');
+    const q=hbKey(6,6), t=hbBase().tiles[q];
+    assert(hbBunkerN(t)===1,'새 벙커는 유닛 1기로 시작해야 함: '+hbBunkerN(t));
+    assert(_hb.bunkers.length===1 && _hb.bunkers[0].n===1,'전장 벙커에 주둔 수가 안 실림');
+    // ① 유닛 추가 — 값이 깎이고 수가 는다
+    hbOpenBunker(q);
+    const c1=hbBunkerUnitCost(1), coin=p.pcoin; hbBunkerAdd();
+    assert(hbBunkerN(t)===2,'유닛이 안 늘어남');
+    assert(Math.round(coin-p.pcoin)===c1,'비용이 안 맞음: '+(coin-p.pcoin)+' vs '+c1);
+    assert(hbBunkerUnitCost(2)>c1,'다음 유닛 비용이 안 오름');
+    // ② 상한 — 넘겨서 눌러도 SLOTS를 안 넘는다
+    for(let i=0;i<HB_BUNKER_SLOTS+3;i++) hbBunkerAdd();
+    assert(hbBunkerN(t)===HB_BUNKER_SLOTS,'주둔 상한을 넘김: '+hbBunkerN(t));
+    hbCloseBunker();
+    // ③ 화력 — 킬 수는 웨이브 진행에 흔들린다. 죽지 않는 표적 하나를 세워 '깎인 체력'을 직접 잰다.
+    // ⚠ 벙커 사거리도 캐릭터 사거리를 따른다(hbUnitFire) — 캐릭터 사거리를 0으로 두면 벙커도 못 쏜다
+    const dmgOf=(n,bk)=>{ hbHunt().upg.bkatk=bk; t.n=n; hbLayoutBase();
+      const c=_hb.char; c.x=hbTx(6); c.y=hbTx(6)+200; c.tx=null; c.ty=null;   // 캐릭터는 멀리 — 제 화력이 안 섞이게
+      c.hpMax=1e9; c.hp=1e9; c.range=70; c.cd=0.5; c.atk=40; c.crit=0; c.regen=0;
+      _hb.round=1; _hb.wave=1; _hb.phase='fight'; _hb.foes.length=0; _hb.pend.length=0; _hb.allies.length=0; _hb.turrets.length=0; _hb.pets.length=0;
+      hbPlaceFoe({ico:'x',hpMul:1,atkMul:1,spd:0});
+      const f=_hb.foes[0]; f.x=hbTx(6)+30; f.y=hbTx(6); f.hp=f.hpMax=1e9; f.atk=0; f.spd=0;   // 안 죽고 안 움직이고 안 때린다
+      for(let i=0;i<100;i++){ f.x=hbTx(6)+30; f.y=hbTx(6); hbStep(0.05); }
+      return Math.round(f.hpMax-f.hp); };
+    const none=dmgOf(0,0), some=dmgOf(HB_BUNKER_SLOTS,0);
+    assert(none===0,'유닛이 없는데 벙커가 피해를 줌: '+none);
+    assert(some>0,'벙커에 유닛을 넣어도 피해가 없음');
+    // ④ 방어 탭 업그레이드가 실제 피해에 배수로 들어간다
+    assert(HB_UPG.bkatk && HB_UPG.bkatk.cat==='def','벙커 공격력 업그레이드가 방어 탭에 없음');
+    const up=dmgOf(HB_BUNKER_SLOTS,10);
+    assert(up>some*1.2,'bkatk를 올려도 피해가 안 늘어남: '+some+' → '+up);
+    hbHunt().upg.bkatk=0;
+    Object.assign(_hb.char,_cSave); _hb.foes.length=0; _hb.pend.length=0;   // 원복
+    hbHunt().base={tiles:{},open:1}; hbLayoutBase(); saveMeta();
+    return '주둔 1시작·추가·상한 '+HB_BUNKER_SLOTS+'·피해 0/'+some+'/'+up+'(bkatk+10) ok'; });
+  // 🧱 3D 건물 — 이 환경엔 three.js(CDN)가 없어 M3D가 아예 없다. 목록 생성 로직만 스텁으로 검사한다.
+  await step('기지 3D: sync 목록에 건물이 실린다(화면 밖 컬링)', async()=>{ skipIf(typeof hb3dStructs!=='function','3D 구조물 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    openHome(); await sleep(60); _hb.manual=true;
+    // ⛔ sync와 syncBuild는 서로의 풀을 숨긴다 — 건물은 반드시 같은 sync 목록에 실려야 한다
+    assert(!/M3D\.syncBuild\s*\(/.test(hb3dStructs.toString()+hb3dList.toString()+hbFrame.toString()),
+      'HOME이 syncBuild를 따로 호출한다(sync와 같은 프레임에 쓰면 한쪽이 통째로 사라진다)');
+    const keep=window.M3D;
+    window.M3D={ hasModel:(id)=>String(id).indexOf('cb_')===0, footprintOf:()=>20, cstEnsure:()=>true };
+    try{
+      hbHunt().base={tiles:{},open:99}; hbLayoutBase();
+      const c=_hb.char; c.x=0; c.y=0; c.tx=null; c.ty=null;
+      hbBase().tiles[hbKey(2,-5)]={k:'turret'};
+      hbBase().tiles[hbKey(HB_GRID_R-1,HB_GRID_R-1)]={k:'turret'};   // 맵 반대 끝 = 화면 밖
+      const out=[]; hb3dStructs(out,_hb,(w)=>w,(w)=>w,_hb.k||1);
+      const ids=out.map(o=>o.uid);
+      assert(ids.indexOf('hbs_'+hbKey(2,-5))>=0,'화면 안 건물이 목록에 없음');
+      assert(ids.indexOf('hbs_'+hbKey(HB_GRID_R-1,HB_GRID_R-1))<0,'화면 밖 건물이 컬링되지 않음');
+      for(const o of out){ assert(String(o.id).indexOf('cb_')===0,'관리자 건설 에셋(cb_) 키가 아님: '+o.id);
+        assert(o.scl>0 && isFinite(o.scl),'크기 배율이 이상함: '+o.scl);
+        assert(o.moving===false,'건물이 이동 상태로 들어감'); }
+      // 3D가 올라오면 2D 아이콘은 그리지 않는다(겹쳐 두 겹으로 보이면 안 된다)
+      assert(/has3d/.test(hbDrawStructs.toString()),'2D 그리기에 3D 유무 분기가 없음');
+    } finally { if(keep) window.M3D=keep; else { try{ delete window.M3D; }catch(_e){ window.M3D=undefined; } } }
+    hbHunt().base={tiles:{},open:1}; hbLayoutBase(); saveMeta();
+    return '컬링·cb_ 키·크기 배율 ok'; });
   // Phase 2 — 던전 1~10 해금 · 엘리트 · 장비 뽑기권(드랍 + 소비처)
   await step('자동사냥: 던전 해금 · 엘리트 · 뽑기권', async()=>{ skipIf(typeof hbGoDungeon!=='function','던전 선택 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
