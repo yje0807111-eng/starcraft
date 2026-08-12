@@ -2664,15 +2664,16 @@
      면의 번짐은 알파 .03~.20 뿐 — 진한 건 선 하나여야 한다(면까지 진해지면 글자를 먹는다).
      --segCol 은 HB_UPG_CAT 이 넣는다. */
   .hmUpg .pdSegInd{--segCol:255,59,59;border-radius:var(--r-bar);border:1px solid transparent;box-shadow:none;
-    background:linear-gradient(180deg,#0a0a0a 0%,#080808 70%,rgba(var(--segCol),.035) 80%,
-        rgba(var(--segCol),.09) 90%,rgba(var(--segCol),.2) 100%) padding-box,
+    background:linear-gradient(180deg,#0a0a0a,#000) padding-box,
       linear-gradient(180deg,rgba(255,255,255,.22) 0%,rgba(255,255,255,.07) 42%,
-        rgba(var(--segCol),.09) 84%,rgba(var(--segCol),.42) 100%) border-box}
-  /* 광원 — 1px. 색은 halo 가 내고 심지는 희다(전등이 그렇게 보인다) */
+        rgba(255,255,255,.04) 88%,rgba(var(--segCol),.38) 100%) border-box}
+  /* 광원 — 1px. 색은 halo 가 내고 심지는 희다(전등이 그렇게 보인다).
+     ⚠ 면은 완전 검정으로 둔다 — 면까지 물들이면 '빛'이 아니라 '칠한 색'이 된다.
+     halo 는 선 바로 옆까지만(2·5px). 반경을 키우면 다시 면이 물든 것처럼 보인다. */
   .hmUpg .pdSegInd::after{display:block;content:'';position:absolute;left:11%;right:11%;bottom:0;height:1px;border-radius:0;
     background:linear-gradient(90deg,transparent,rgba(255,255,255,.62) 50%,transparent 92%),
       linear-gradient(90deg,transparent,rgba(var(--segCol),.92),transparent);
-    box-shadow:0 0 5px rgba(var(--segCol),.42), 0 0 12px 2px rgba(var(--segCol),.16)}
+    box-shadow:0 0 2px rgba(var(--segCol),.6), 0 0 5px rgba(var(--segCol),.24)}
   /* 아이콘 없이 글자만 — 아이콘을 같이 넣으면 둘이 한 덩어리로 가운데 정렬돼 글자가 중앙에서 밀린다 */
   .hmUpg .pdSegBtn{padding:6px 4px;font-size:11.5px;font-weight:700;letter-spacing:.02em;color:#8a8a8a;text-align:center}
   .hmUpg .pdSegBtn.on{color:#ececec}
