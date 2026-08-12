@@ -5533,6 +5533,10 @@ function renderHbBar(){ const bar=document.getElementById('hbBar'); if(!bar||!_h
 function hbOpenMates(){ const el=document.getElementById('hbMateModal'); if(!el) return;
   el.classList.remove('hide'); renderMateModal(); if(typeof playSfx==='function') playSfx('ui_open'); }
 function hbCloseMates(){ _mateFeedT=null; const el=document.getElementById('hbMateModal'); if(el) el.classList.add('hide'); }
+// 확률 표기 — 갓은 1단계에서 0.0001% 라, 소수점 1자리로 찍으면 전부 '0.0%'로 뭉개진다.
+function fmtOdds(v){ const x=v*100;
+  const d = x>=10?0 : x>=1?1 : x>=0.1?2 : x>=0.01?3 : 4;
+  return x.toFixed(d)+'%'; }
 let _mateFeedT=null;      // 합성 재료를 고르는 중인 대상 동료 id(없으면 목록만 보여 준다)
 function renderMateModal(){ const box=document.getElementById('hbMateBody'); if(!box) return;
   const party=hbParty(), tk=hbMateTicket();
@@ -5548,7 +5552,7 @@ function renderMateModal(){ const box=document.getElementById('hbMateBody'); if(
     h+='<div class="mateOdds">';
     for(const t of GACHA_TIER_ORDER){ const v=pr[t]||0;
       h+='<span class="mateOdd'+(v>0?'':' off')+'" style="color:'+(v>0?TIER_COLOR[t]:'#5a5a5a')+'">'
-        +GACHA_TIERS[t].name+' <b>'+(v>0? (+(v*100).toFixed(1))+'%' : '—')+'</b></span>'; }
+        +GACHA_TIERS[t].name+' <b>'+(v>0? fmtOdds(v) : '—')+'</b></span>'; }
     h+='</div>'; }
   // ② 합성 — 중복 동료를 직접 골라 넣는다
   if(_mateFeedT){ const M=HB_MATES[_mateFeedT], mats=hbMateMats();
@@ -6085,18 +6089,27 @@ const HB_MATES={
   void:      {name:'보이드',    unit:'archon',       ico:'🔮', race:'aetherial', tier:'transcend', dps:1.45,rng:1.1, spd:1.0, tip:'파괴적 에너지'},
   highsage:  {name:'하이세이지',unit:'high_templar', ico:'✨', race:'aetherial', tier:'god',       dps:1.90,rng:1.6, spd:1.1, tip:'최상위 술사'},
 };
-// 🎰 동료 뽑기 — 뽑을수록 '뽑기 레벨'이 올라 상위 등급이 열린다.
-//   설계: 초반에는 상위 등급이 아예 0%다. 레벨이 오르며 새 등급이 열리고 기존 상위 확률도 커진다.
-//   ⚠ 각 단계의 확률 합은 정확히 1이어야 하고, 레벨이 오를 때 어떤 등급도 확률이 '줄면' 안 된다
-//     (일반 등급만 예외 — 자리를 상위에 내준다). 스모크가 두 가지를 다 검사한다.
-const HB_MATE_GACHA=[
-  {need:0,   p:{common:.900, rare:.090, epic:.010}},
-  {need:10,  p:{common:.820, rare:.140, epic:.035, unique:.005}},
-  {need:25,  p:{common:.720, rare:.190, epic:.070, unique:.018, legend:.002}},
-  {need:50,  p:{common:.600, rare:.240, epic:.110, unique:.040, legend:.009, transcend:.001}},
-  {need:90,  p:{common:.480, rare:.270, epic:.150, unique:.070, legend:.024, transcend:.005, god:.001}},
-  {need:150, p:{common:.360, rare:.280, epic:.190, unique:.110, legend:.045, transcend:.012, god:.003}},
-];
+// 🎰 동료 뽑기 — 뽑을수록 '뽑기 단계'가 올라 상위 등급 비중이 커진다(2026-08-12 2차 설계).
+//   설계 요구: ① 최대 30단계 ② 초반 단계는 금방 넘어가고, 위로 갈수록 넘어가기 훨씬 어렵다
+//             ③ 갓도 처음부터 나오긴 하지만 확률이 아주 낮다 ④ 단계가 오를수록 일반·레어·에픽 비중이 떨어진다
+//   ⚠ 30줄을 손으로 적지 않는다 — 아래 상수 두 벌에서 생성한다. 밸런스는 상수만 고칠 것.
+const HB_MATE_GACHA_MAX=30;
+// 다음 단계까지 필요한 '누적 뽑기 횟수' = A·(B^(k-1) − 1) → 2·5·8·12…에서 시작해 30단계는 5천 회대.
+const HB_MATE_NEED_A=8, HB_MATE_NEED_B=1.25;
+// 등급별 가중치 = 시작값 × 배수^(단계−1). 정규화 전 값이라 절대 크기가 아니라 '서로의 비'가 의미를 갖는다.
+//   시작값: 1단계를 일반 90 / 레어 9 / 에픽 1 (%) 근처로 맞춘 값.
+//   배수  : 1보다 작으면 단계가 오를수록 비중이 줄고(일반·레어·에픽), 크면 늘어난다(유니크 이상).
+//   ⚠ 갓의 시작값이 0이 아니라는 게 중요하다 — 1단계에서도 0.0001% 로 '나오긴 한다'.
+const HB_MATE_W0={common:900,  rare:90,   epic:10,   unique:1,    legend:0.1,  transcend:0.01, god:0.001};
+const HB_MATE_WG={common:0.83, rare:0.90, epic:0.95, unique:1.08, legend:1.16, transcend:1.20, god:1.20};
+const HB_MATE_GACHA=(function(){ const out=[];
+  for(let k=1;k<=HB_MATE_GACHA_MAX;k++){
+    const need=Math.round(HB_MATE_NEED_A*(Math.pow(HB_MATE_NEED_B,k-1)-1));
+    const w={}; let tot=0;
+    for(const t of GACHA_TIER_ORDER){ const v=HB_MATE_W0[t]*Math.pow(HB_MATE_WG[t],k-1); w[t]=v; tot+=v; }
+    const p={}; for(const t of GACHA_TIER_ORDER) p[t]=w[t]/tot;
+    out.push({need:need, p:p}); }
+  return out; })();
 // 중복 1장이 주는 재료 포인트 — 등급마다 3배씩(상위 중복은 그만큼 값어치가 있다)
 const HB_MATE_PT={common:1, rare:3, epic:9, unique:27, legend:81, transcend:243, god:729};
 const HB_MATE_STEP=0.22;     // 강화 1레벨당 위력 증가(비율)

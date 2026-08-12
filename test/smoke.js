@@ -1275,21 +1275,42 @@ async function groupLobby(){
     for(let i=0;i<HB_MATE_GACHA.length;i++){ const P=HB_MATE_GACHA[i].p;
       let sum=0; for(const t in P){ assert(GACHA_TIERS[t],'없는 등급: '+t); sum+=P[t]; }
       assert(Math.abs(sum-1)<1e-9,'단계 '+(i+1)+' 확률 합이 1이 아님: '+sum); }
-    // ② 초반에는 상위 등급이 '아예 0%'다 — 설계의 출발점
+    // ② 최대 30단계 · 1단계는 일반 90 / 레어 9 / 에픽 1 근처에서 시작한다
+    assert(HB_MATE_GACHA.length===30,'단계 수가 30이 아님: '+HB_MATE_GACHA.length);
     { const p0=HB_MATE_GACHA[0].p;
-      assert(Math.abs(p0.common-0.9)<1e-9 && Math.abs(p0.rare-0.09)<1e-9 && Math.abs(p0.epic-0.01)<1e-9,
-        '1단계가 90/9/1이 아님');
-      for(const t of ['unique','legend','transcend','god'])
-        assert(!(p0[t]>0),'1단계인데 '+t+'가 열려 있음'); }
-    // ③ 단계가 오르면 상위 등급은 절대 줄지 않는다(일반만 자리를 내준다) · 필요 횟수도 오름차순
+      assert(Math.abs(p0.common-0.90)<0.01,'1단계 일반이 90% 근처가 아님: '+(p0.common*100).toFixed(2));
+      assert(Math.abs(p0.rare-0.09)<0.01,'1단계 레어가 9% 근처가 아님: '+(p0.rare*100).toFixed(2));
+      assert(Math.abs(p0.epic-0.01)<0.005,'1단계 에픽이 1% 근처가 아님: '+(p0.epic*100).toFixed(2));
+      // 갓은 '금방 나오지만 아주 낮게' — 1단계에도 0이 아니되 0.001% 미만이어야 한다
+      assert(p0.god>0,'1단계에 갓이 0% — 금방 나와야 한다');
+      assert(p0.god<0.00001,'1단계 갓이 너무 높음: '+(p0.god*100).toFixed(5)+'%');
+      for(const t of GACHA_TIER_ORDER) assert(p0[t]>0,'1단계에 '+t+'가 0% — 모든 등급이 열려 있어야 한다'); }
+    // ③ 초반 단계는 금방 넘어가고, 위로 갈수록 점점 넘어가기 어렵다(간격이 계속 벌어진다)
     for(let i=1;i<HB_MATE_GACHA.length;i++){ const A=HB_MATE_GACHA[i-1], B=HB_MATE_GACHA[i];
-      assert(B.need>A.need,'단계 '+(i+1)+'의 필요 횟수가 안 오름');
+      assert(B.need>A.need,'단계 '+(i+1)+'의 필요 횟수가 안 오름'); }
+    for(let i=2;i<HB_MATE_GACHA.length;i++){
+      const g1=HB_MATE_GACHA[i-1].need-HB_MATE_GACHA[i-2].need;
+      const g2=HB_MATE_GACHA[i].need-HB_MATE_GACHA[i-1].need;
+      assert(g2>=g1,'단계 '+(i+1)+'에서 간격이 좁아짐(위로 갈수록 어려워야 한다): '+g1+' → '+g2); }
+    assert(HB_MATE_GACHA[4].need<=20,'5단계까지가 너무 오래 걸림(초반은 빨라야 한다): '+HB_MATE_GACHA[4].need);
+    assert(HB_MATE_GACHA[29].need>=1000,'30단계가 너무 쉬움: '+HB_MATE_GACHA[29].need);
+    // ④ 단계가 오르면 — 유니크 이상은 반드시 늘고, 일반은 반드시 준다
+    for(let i=1;i<HB_MATE_GACHA.length;i++){ const A=HB_MATE_GACHA[i-1], B=HB_MATE_GACHA[i];
       assert(B.p.common<A.p.common,'단계 '+(i+1)+'에서 일반 비중이 안 줄어듦');
-      for(const t of GACHA_TIER_ORDER){ if(t==='common') continue;
-        assert((B.p[t]||0)>=(A.p[t]||0),'단계 '+(i+1)+'에서 '+t+' 확률이 줄었음'); } }
-    // 최종 단계에서는 모든 등급이 열려 있어야 한다 — 안 열리면 그 동료는 영원히 못 얻는다
-    { const last=HB_MATE_GACHA[HB_MATE_GACHA.length-1].p;
-      for(const t of GACHA_TIER_ORDER) assert(last[t]>0,'최종 단계인데 '+t+'가 0%'); }
+      for(const t of ['unique','legend','transcend','god'])
+        assert(B.p[t]>A.p[t],'단계 '+(i+1)+'에서 '+t+' 확률이 안 늘어남'); }
+    // ⑤ 마지막 단계에서는 일반·레어·에픽이 모두 처음보다 훨씬 낮아진다(설계 요구)
+    { const f=HB_MATE_GACHA[0].p, l=HB_MATE_GACHA[HB_MATE_GACHA.length-1].p;
+      assert(l.common<f.common*0.3,'최종 단계에서 일반이 충분히 안 떨어짐: '+(f.common*100).toFixed(1)+'% → '+(l.common*100).toFixed(1)+'%');
+      // 레어·에픽은 처음엔 일반에 눌려 낮다가 중간에 올라간다 — 그래서 '시작보다 낮게'가 아니라
+      // '정점을 찍고 꺾인다'가 맞는 규칙이다(끝까지 오르기만 하면 낮게 떨어지는 게 아니다).
+      for(const t of ['rare','epic']){
+        let peak=0, pk=0;
+        for(let i=0;i<HB_MATE_GACHA.length;i++) if(HB_MATE_GACHA[i].p[t]>peak){ peak=HB_MATE_GACHA[i].p[t]; pk=i+1; }
+        assert(pk<HB_MATE_GACHA.length,t+'가 마지막 단계까지 계속 오름(꺾여야 한다)');
+        assert(l[t]<peak*0.85,t+'가 정점에서 충분히 안 꺾임: 최고 '+(peak*100).toFixed(1)+'%(단계 '+pk+') → 최종 '+(l[t]*100).toFixed(1)+'%'); }
+      const lowSum=l.common+l.rare+l.epic;
+      assert(lowSum<0.5,'최종 단계인데 일반+레어+에픽이 아직 절반 이상: '+(lowSum*100).toFixed(1)+'%'); }
     // ④ 표에 있는 모든 등급의 동료가 실제로 풀에 있어야 한다(확률만 있고 뽑을 게 없으면 안 된다)
     { const have={}; for(const id in HB_MATES) have[HB_MATES[id].tier]=1;
       const last=HB_MATE_GACHA[HB_MATE_GACHA.length-1].p;
@@ -1309,13 +1330,17 @@ async function groupLobby(){
     assert(hbMateTicket()===0,'뽑기권이 남음');
     assert(H.mateN===30,'누적 뽑기 횟수가 안 맞음: '+H.mateN);
     assert(hbGachaLv()>1,'30회를 뽑았는데 뽑기 레벨이 그대로');
-    // ⑦ 1단계 확률에서는 유니크 이상이 절대 안 나온다 — 0%가 진짜 0%인지 본다
-    { H.mates={}; H.party=[]; H.mateN=0; p.tickets.ally=400;
-      const seen={}; let n=0;
-      while(hbMateTicket()>0 && n<400){ const r=hbMateRoll(); if(!r) break; n++;
-        if(H.mateN<=HB_MATE_GACHA[1].need) seen[r.tier]=1; }   // 아직 1단계인 동안 나온 등급만
-      for(const t of ['unique','legend','transcend','god'])
-        assert(!seen[t],'1단계에서 '+t+'가 나왔음(0%여야 한다)'); }
+    // ⑦ 굴려 보면 초반에는 사실상 일반·레어만 나온다(상위는 열려 있어도 아주 낮다)
+    { H.mates={}; H.party=[]; H.mateN=0; p.tickets.ally=300;
+      const cnt={}; let n=0;
+      const rnd=Math.random; let seed=12345;                    // 결정적 난수 — 판정이 운에 흔들리면 안 된다
+      Math.random=()=>{ seed=(seed*1103515245+12345)&0x7fffffff; return seed/0x7fffffff; };
+      try{ while(hbMateTicket()>0 && n<300){ const r=hbMateRoll(); if(!r) break; n++; cnt[r.tier]=(cnt[r.tier]||0)+1; } }
+      finally { Math.random=rnd; }
+      assert(n===300,'뽑기가 중간에 멈춤: '+n);
+      const low=(cnt.common||0)+(cnt.rare||0);
+      assert(low/n>0.85,'초반 300회인데 일반+레어가 85%에 못 미침: '+(low/n*100).toFixed(1)+'%');
+      assert(!cnt.god,'초반 300회에 갓이 나옴(아주 낮아야 한다)'); }
     // ⑧ 중복은 레벨이 아니라 재료로 쌓인다 — 난수를 고정해 '같은 동료 두 번'을 결정적으로 만든다
     //    (확률에 기대면 이 규칙이 깨져도 통과해 버린다)
     { H.mates={}; H.party=[]; H.mateN=0; p.tickets.ally=2;
@@ -1334,7 +1359,9 @@ async function groupLobby(){
       assert(hbMateLv(a.id)>lv0,'재료를 다 넣었는데 레벨이 안 오름'); }
     // ⑨ 재료 값어치는 등급을 따른다 — 상위 중복이 더 크게 쳐진다
     { let prev=0; for(const t of GACHA_TIER_ORDER){ assert(HB_MATE_PT[t]>prev,'재료 포인트가 등급 오름차순이 아님: '+t); prev=HB_MATE_PT[t]; } }
-    return '단계 '+HB_MATE_GACHA.length+' · 1단계 90/9/1 · 최종 전 등급 개방'; });
+    { const l=HB_MATE_GACHA[HB_MATE_GACHA.length-1];
+      return '단계 '+HB_MATE_GACHA.length+'(최종 누적 '+l.need.toLocaleString()+'회) · 1단계 갓 '
+        +(HB_MATE_GACHA[0].p.god*100).toFixed(4)+'% → 최종 '+(l.p.god*100).toFixed(2)+'%'; } });
 
   // 옛 저장(전직해 둔 캐릭터)을 열었을 때 산 것을 잃지 않아야 한다
   await step('마이그레이션: 전직해 둔 캐릭터 → 뿌리 복귀 + 그 동료 지급', ()=>{ skipIf(typeof migrateProfile!=='function','마이그레이션 없음');
