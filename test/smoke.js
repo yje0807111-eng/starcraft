@@ -952,6 +952,20 @@ async function groupLobby(){
       assert(_hb.waveT===t0,'건설 중인데 웨이브 시계가 흐름: '+t0+' → '+_hb.waveT);
       assert(_hb.char.x===x0 && _hb.char.y===y0,'건설 중인데 캐릭터가 움직임'); }
     assert(!$('hbBuildStop').classList.contains('hide'),'건설 종료(⊘) 버튼이 안 보임');
+    // ①-2 고스트를 끌 때 확정 버튼이 '다시 만들어지면' 안 된다 —
+    //     이 함수는 드래그 중(hbArmTo)과 매 프레임(hbFrame) 둘 다에서 불려서, DOM을 새로 쓰면
+    //     ▶를 누르는 순간 눌린 요소가 사라져 클릭이 씹힌다.
+    { const host=$('hbArmBtns'), b0=host.querySelector('.bArmBtn.ok');
+      assert(b0,'확정 버튼이 없음');
+      hbArmTo(120,200); hbArmTo(160,240); hbArmBtns();
+      assert(host.querySelector('.bArmBtn.ok')===b0,'고스트를 옮길 때마다 확정 버튼이 새로 만들어진다'); }
+    // ①-3 건설 중에도 드래그로 고스트가 손가락을 따라온다(이동과 같은 방식)
+    { const hs=$('homeScreen'), cv=$('hbCv'), rr=cv.getBoundingClientRect();
+      const ev=(t,x,y)=>({ type:t, pointerId:21, target:hs, clientX:rr.left+x, clientY:rr.top+y, cancelable:true, preventDefault(){} });
+      hbFieldTap(ev('pointerdown',100,150));
+      const g=[]; for(const [x,y] of [[130,170],[170,210],[90,250]]){ hbFieldMove(ev('pointermove',x,y)); g.push(_hb.arm.gx+','+_hb.arm.gy); }
+      hbFieldUp(ev('pointerup',90,250));
+      assert(new Set(g).size===g.length,'건설 중 드래그로 고스트가 안 따라옴: '+g.join(' / ')); }
     // ② 연속 배치 — 확정해도 건설 모드가 유지되고 다음 자리는 오른쪽
     const A=_hb.arm; A.gx=0; A.gy=-6; hbArmBtns();
     const g0=A.gx;

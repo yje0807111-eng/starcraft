@@ -6472,21 +6472,27 @@ function hbArmConfirm(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation();
   else hbArmAdvance();
   hbArmBtns(); renderBuildModal(); renderHome(); }
 // ▶확정 / ✕취소 — 공용 .bArmBtns를 재사용한다(CLAUDE.md 레지스트리). 위치는 고스트 아래 중앙.
+// ▶확정 / ✕취소 — 공용 .bArmBtns 재사용.
+// ⚠ **한 번만 만들고 그 뒤엔 위치·상태만 바꾼다.** 예전엔 매 호출마다 innerHTML을 새로 썼는데,
+//   이 함수는 드래그하는 동안(hbArmTo)과 매 프레임(hbFrame) 둘 다에서 불린다 → 초당 수십 번 DOM이
+//   갈려서 ▶를 누르는 순간 눌린 요소가 사라지고 클릭이 씹혔다.
+const HB_ARM_HTML='<div class="bArmBtns" onpointerdown="event.stopPropagation()">'
+  +'<button class="bArmBtn ok" onclick="hbArmConfirm(event)" title="확정">'
+  +'<svg viewBox="0 0 24 24" width="15" height="15" style="display:block"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button>'
+  +'<button class="bArmBtn cancel" onclick="hbArmCancel(event)" title="취소">✕</button></div>';
 function hbArmBtns(){ const host=document.getElementById('hbArmBtns');
   { const st=document.getElementById('hbBuildStop');   // ⊘ 건설 종료 — 건설 중에만 보인다
     if(st) st.classList.toggle('hide', !(_hb&&_hb.build)); }
   if(!host) return;
   const S=_hb, A=S&&S.arm;
-  if(!A){ host.innerHTML=''; host.classList.add('hide'); return; }
+  if(!A){ host.classList.add('hide'); return; }        // 지우지 않는다 — 다시 켤 때 그대로 쓴다
+  if(!host.firstChild) host.innerHTML=HB_ARM_HTML;     // 최초 1회만 생성
   const B=HB_STRUCT[A.k]||{w:1,h:1};
   const wx=hbTx(A.gx)+(B.w-1)*HB_TILE/2, wy=hbTx(A.gy)+(B.h-1)*HB_TILE/2+B.h*HB_TILE/2;
   host.classList.remove('hide');
   host.style.left=(S.cx+wx*S.k)+'px'; host.style.top=(S.cy+wy*S.k)+'px';
-  const ok=hbArmOk();
-  host.innerHTML='<div class="bArmBtns" onpointerdown="event.stopPropagation()">'
-    +'<button class="bArmBtn ok'+(ok?'':' dis')+'" onclick="hbArmConfirm(event)" title="확정">'
-    +'<svg viewBox="0 0 24 24" width="15" height="15" style="display:block"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button>'
-    +'<button class="bArmBtn cancel" onclick="hbArmCancel(event)" title="취소">✕</button></div>'; }
+  const okBtn=host.querySelector('.bArmBtn.ok');
+  if(okBtn) okBtn.classList.toggle('dis', !hbArmOk()); }
 // ═══ 봉쇄 금지 — 이 배치가 어딘가를 가둬 버리는가? ═══════════════════════════
 // 맵 테두리에서 flood fill 해서, 막히지 않은 칸 중 도달 못 하는 칸이 하나라도 생기면 true.
 // 벽을 통과 불가로 둘 수 있는 근거가 이 검사다 — 적이 영원히 못 들어오는 상황이 만들어지지 않는다.
