@@ -2656,7 +2656,11 @@
      면은 흰 워시(rgba(255,255,255,.045))를 걷고 패널과 같은 색으로 — 뿌옇게 뜨지 않는다.
      선택된 판은 업그레이드 카드 속과 같은 완전 검정. 즉 '패널 위에 카드가 하나 놓인' 것과 같은 구조다. */
   .hmUpg .pdSeg{--pad:2px;max-width:none;margin:0;border-radius:var(--r-bar);background:var(--hmPanel)}
-  .hmUpg .pdSegInd{border-radius:var(--r-bar);background:linear-gradient(180deg,#0a0a0a,#000)}
+  /* 선택된 판 = 위는 카드 속과 같은 검정, 아래로 갈수록 그 구역의 색. --segCol 은 HB_UPG_CAT 이 넣는다 */
+  .hmUpg .pdSegInd{--segCol:255,59,59;border-radius:var(--r-bar);
+    background:linear-gradient(180deg,#0a0a0a 0%,#060606 34%,rgba(var(--segCol),.28) 74%,rgba(var(--segCol),.72) 100%);
+    box-shadow:inset 0 -1px 0 rgba(var(--segCol),.5)}
+  .hmUpg .pdSegInd::after{display:none}   /* 밑줄 대신 판 자체가 색을 낸다 */
   /* 아이콘 없이 글자만 — 아이콘을 같이 넣으면 둘이 한 덩어리로 가운데 정렬돼 글자가 중앙에서 밀린다 */
   .hmUpg .pdSegBtn{padding:6px 4px;font-size:11.5px;font-weight:700;letter-spacing:.02em;color:#8a8a8a;text-align:center}
   .hmUpg .pdSegBtn.on{color:#ececec}
@@ -2674,8 +2678,10 @@
     box-shadow:inset 0 0 0 1px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.10);
     text-shadow:0 1px 2px rgba(0,0,0,.85)}
   /* 그리드 — 2.7줄이 보이는 '고정' 높이. 0.7줄이 걸쳐 보이는 게 더 있다는 신호 */
+  /* ⚠ grid-auto-rows·align-content 필수 — 높이가 고정이라 칸이 적은 구역(펫 2칸)에서 한 줄이 통째로 늘어난다 */
   .hmUpgGrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;padding:8px;
     --rowH:54px;--gap:8px;height:calc(2.7*var(--rowH) + 1.7*var(--gap) + 16px);
+    grid-auto-rows:var(--rowH);align-content:start;
     overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;
     transition:height .28s cubic-bezier(.4,0,.2,1),padding .28s cubic-bezier(.4,0,.2,1),opacity .2s}
   /* ⚠ minmax(0,..) 필수 — 1fr 은 min-content 를 하한으로 삼아 긴 이름에서 트랙이 부풀고 가로로 넘친다 */
@@ -2701,6 +2707,7 @@
   .hmUpIco{position:relative;flex:none;width:27px;height:27px;display:flex;align-items:center;justify-content:center;
     background:#000;border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
   .hmUpIco .icoImg{padding:3px}   /* 공용 .icoImg 가 inset:0 로 타일을 채운다 — 여백만 주고 크기는 건드리지 않는다 */
+  .hmUpEmo{font-size:15px;line-height:1;font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif}   /* 건설 카드(동료·터렛·벙커)는 에셋 대신 이모지 */
   .hmUpTx{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:2px}
   .hmUpName{font-size:11.5px;font-weight:700;letter-spacing:-.02em;color:#ececec;
     text-shadow:0 1px 1px rgba(0,0,0,.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -4003,16 +4010,6 @@
           <button class="hbmX" onclick="hbCloseGrow()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
         </div>
         <div class="hbRows uiScroll" id="hbGrowBody"></div>
-      </div>
-    </div>
-    <!-- 건설 — 동료·터렛·벙커. 껍데기는 라운드 팝업과 같은 .hbModal -->
-    <div class="hbModal hide" id="hbBuildModal" onclick="if(event.target===this)hbCloseBuild()">
-      <div class="hbmCard">
-        <div class="hbmHead"><b>건설</b>
-          <button class="hbmX" onclick="hbCloseBuild()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
-        </div>
-        <div class="hbRows uiScroll" id="hbBuildBody"></div>
-        <div class="hbRoundNote">사면 바로 전장에 배치됩니다. 라운드가 바뀌어도 남습니다.</div>
       </div>
     </div>
     <!-- 부스트 — 시간제 강화 -->
@@ -5368,12 +5365,12 @@ function renderHome(){ try{
   const p=PROF(); if(!p) return;
   if(typeof updateCurBar==='function') updateCurBar();       // 💠 재화는 전부 공용 재화 바(#curBar)로 이관
   const gr=document.getElementById('hmUpgGrid');
-  if(gr){ const u=hbHunt().upg, coin=Math.floor(p.pcoin||0), cat=hbHunt().upgCat||'atk';
+  if(gr){ const u=hbHunt().upg, coin=Math.floor(p.pcoin||0), cat=hbHunt().upgCat||'char';
     // 탭 띠 — 장비창 섹션 바와 같은 컴포넌트(segNavHTML). 새 탭 띠를 만들지 말 것
     const tb=document.getElementById('hmUpgTabs');
     if(tb){ const ci=Math.max(0, HB_UPG_CAT.findIndex(function(c){ return c[0]===cat; }));
       // 글자만 — 아이콘을 같이 넣으면 아이콘+글자가 한 덩어리로 가운데 정렬돼 글자가 중앙에서 밀린다
-      tb.innerHTML=segNavHTML(HB_UPG_CAT.map(function(c){ return { label:c[1] }; }), ci,
+      tb.innerHTML=segNavHTML(HB_UPG_CAT.map(function(c){ return { label:c[1], col:c[2] }; }), ci,
         function(k){ return 'hmUpgTab(&#39;'+HB_UPG_CAT[k][0]+'&#39;)'; }); }
     // 수량 1 / 10 / MAX
     const qb=document.getElementById('hmUpgQty'), q=hbHunt().upgQty||1;
@@ -5382,7 +5379,18 @@ function renderHome(){ try{
     // 카드 — 해금한 것을 위로(쓸 수 있는 것이 먼저 보여야 한다)
     const keys=Object.keys(HB_UPG).filter(function(k){ return HB_UPG[k].cat===cat })
       .sort(function(a,b){ return (hbUpgOwned(b)?1:0)-(hbUpgOwned(a)?1:0); });
-    gr.innerHTML=keys.map(function(k){ const U=HB_UPG[k], lv=u[k]||0, own=hbUpgOwned(k);
+    // 건설(수량) 카드를 먼저 — 사는 곳과 키우는 곳을 나누지 않는다. 같은 hmUpCardHTML 로 낸다
+    gr.innerHTML=(HB_UPG_CAT_BUILD[cat]||[]).map(function(bk){
+      const B=HB_BUILD[bk], n=hbBuildN(bk), mx=hbBuildMax(bk), full=n>=mx, cost=hbBuildCost(bk), M=hbAllyMul();
+      // 값 = 지금 이 종류가 내는 총량(수량과 강화 업그레이드가 함께 반영돼야 '왜 사는지'가 보인다)
+      const tot=function(c){ return (bk==='bunker') ? Math.round(hbCharStats().hpMax*M.bunker.hp*c)
+                                                   : Math.round((bk==='ally'?M.ally.dps:M.turret.dps)*100*c)+'%'; };
+      return hmUpCardHTML({ key:'b_'+bk, ico:'<span class="hmUpEmo">'+B.ico+'</span>', name:B.name,
+        off:full||coin<cost, lock:full, lockTx:'최대 '+mx+'기',
+        val:tot(n), next:full?null:tot(n+1), lv:'LV.'+n, nextLv:full?null:(n+1),
+        cost:resIco('mineral')+cost.toLocaleString('en-US'),
+        act:full?null:('hbBuy(&#39;'+bk+'&#39;)') }); }).join('')
+    +keys.map(function(k){ const U=HB_UPG[k], lv=u[k]||0, own=hbUpgOwned(k);
       let off;
       let _hd;
       if(own){ const P=hbUpgPlan(k); off=coin<P.sum;
@@ -5461,22 +5469,12 @@ function renderHbBar(){ const bar=document.getElementById('hbBar'); if(!bar||!_h
     h+='<button class="hbSk'+(rd?'':' cool')+'" onclick="hbUseSkill(&#39;'+k+'&#39;)" title="'+SK.tip+'">'
       +'<span class="hbSkIco">'+SK.ico+'</span>'
       +'<span class="hbSkTx">'+(rd?SK.name:Math.ceil(cd)+'s')+'</span></button>'; }
-  h+='<button class="hbSk wide" onclick="hbOpenBuild()" title="동료·터렛·벙커"><span class="hbSkIco">🏗</span><span class="hbSkTx">건설</span></button>';
   h+='<button class="hbSk wide" onclick="openDungeonHub()" title="토벌 — 열쇠로 단계 도전"><span class="hbSkIco">⚔️</span><span class="hbSkTx">토벌</span></button>';   // 네비에서 빠진 토벌의 유일한 입구
   const bon=hbBoostOn('inc')||hbBoostOn('atk');
   h+='<button class="hbSk wide'+(bon?' on':'')+'" onclick="hbOpenBoost()" title="일시 강화"><span class="hbSkIco">⚡</span><span class="hbSkTx">'+(bon?'적용중':'부스트')+'</span></button>';
   bar.innerHTML=h; }
 // 건설 — 보유 수를 늘리면 즉시 전장에 배치된다
-function hbOpenBuild(){ const el=document.getElementById('hbBuildModal'); if(!el) return;
-  el.classList.remove('hide'); renderBuildModal(); if(typeof playSfx==='function') playSfx('ui_open'); }
-function hbCloseBuild(){ const el=document.getElementById('hbBuildModal'); if(el) el.classList.add('hide'); }
-function renderBuildModal(){ const box=document.getElementById('hbBuildBody'); if(!box) return;
-  const coin=Math.floor(PROF().pcoin||0);
-  box.innerHTML=Object.keys(HB_BUILD).map(function(k){ const B=HB_BUILD[k], n=hbBuildN(k), mx=hbBuildMax(k), full=n>=mx, cost=hbBuildCost(k);
-    return '<div class="hbRow"><span class="hbRowIco">'+B.ico+'</span>'
-      +'<span class="hbRowTx"><b>'+B.name+' <i>'+n+'/'+mx+'</i></b><em>'+B.tip+'</em></span>'
-      +'<button class="hbRowBtn" onclick="hbBuy(&#39;'+k+'&#39;)"'+((full||coin<cost)?' disabled':'')+'>'
-      +(full?'최대':cost.toLocaleString('en-US')+' 미네랄')+'</button></div>'; }).join(''); }
+// 건설(동료·터렛·벙커)은 사냥터 업그레이드 패널의 '동료'·'건물' 구역으로 흡수됐다 — 전용 팝업은 없앴다.
 function hbBuy(k){ const B=HB_BUILD[k], p=PROF(); if(!B) return;
   if(hbBuildN(k)>=hbBuildMax(k)) return;
   const cost=hbBuildCost(k);
@@ -5486,7 +5484,7 @@ function hbBuy(k){ const B=HB_BUILD[k], p=PROF(); if(!B) return;
   hbLayoutAllies();                                  // 즉시 전장에 세운다
   if(typeof playSfx==='function') playSfx('ui_open');
   if(typeof updateCurBar==='function') updateCurBar();
-  renderBuildModal(); renderHome(); }
+  renderHome(); }
 // 부스트 — 시간제. 남은 시간은 초 단위로 보여준다.
 function hbOpenBoost(){ const el=document.getElementById('hbBoostModal'); if(!el) return;
   el.classList.remove('hide'); renderBoostModal(); if(typeof playSfx==='function') playSfx('ui_open'); }
@@ -5676,7 +5674,7 @@ function hmBuyUpgQuiet(k){ const p=PROF(), U=HB_UPG[k]; if(!p||!U) return false;
 function hmUpgBindHold(){ const gr=document.getElementById('hmUpgGrid'); if(!gr||gr._holdBound) return;
   gr._holdBound=1;
   gr.addEventListener('pointerdown', function(e){ const b=e.target.closest('.hmUpBtn'); if(!b) return;
-    const k=b.dataset.k; if(!k) return;
+    const k=b.dataset.k; if(!k || !HB_UPG[k]) return;   // 건설(수량) 카드는 제 onclick 이 맡는다 — 연타 대상이 아니다
     _hmPt={x:e.clientX, y:e.clientY};
     const lv0=hbHunt().upg[k]||0, owned=hbUpgOwned(k);
     hmBuyUpg(k);                                  // 첫 번은 평소대로(해금 포함)
@@ -5810,42 +5808,60 @@ const HB_CAM_EASE=0.25;               // 접힘/펼침 애니메이션을 좇는
    ⚠ 전투에 실제로 반영되는 것은 hbCharStats() 가 읽는 6키(atk/aspd/crit/rng/hp/regen) 뿐.
    나머지 17종은 아직 표시·구매만 된다(전투 배선 미완). */
 const HB_UPG={
-  atk:     {name:'데미지', cat:'atk',   u:0,     v0:10,   vs:2,     f:'',   base:20,  mul:1.14,  ico:'upgrades/up_melee_atk'},
-  aspd:    {name:'공격속도', cat:'atk',   u:0,     v0:1,    vs:0.04,  f:'/s', base:30,  mul:1.16,  ico:'skills/sk_stim'},
-  crit:    {name:'치명타 확률', cat:'atk',   u:150,   v0:5,    vs:1,     f:'%',  base:30,  mul:1.16,  ico:'upgrades/up_gnd_wpn'},
-  critm:   {name:'치명타 계수', cat:'atk',   u:400,   v0:1.5,  vs:0.05,  f:'x',  base:45,  mul:1.18,  ico:'upgrades/up_inf_atk'},
-  lifest:  {name:'생명력 흡수', cat:'atk',   u:600,   v0:0,    vs:0.5,   f:'%',  base:60,  mul:1.19,  ico:'skills/sk_consume'},
-  knock:   {name:'넓백 확률', cat:'atk',   u:350,   v0:0,    vs:1.5,   f:'%',  base:35,  mul:1.16,  ico:'skills/sk_maelstrom'},
-  rng:     {name:'사거리', cat:'atk',   u:200,   v0:100,  vs:4,     f:'',   base:25,  mul:1.16,  ico:'upgrades/up_range'},
-  multic:  {name:'멀티샷 확률', cat:'atk',   u:900,   v0:0,    vs:1.2,   f:'%',  base:70,  mul:1.2,   ico:'upgrades/up_range_atk'},
-  multin:  {name:'멀티샷 수', cat:'atk',   u:1800,  v0:1,    vs:1,     f:'발',  base:140, mul:1.28,  ico:'upgrades/up_air_atk'},
-  bncc:    {name:'바운스샷 확률', cat:'atk',   u:900,   v0:0,    vs:1.2,   f:'%',  base:70,  mul:1.2,   ico:'skills/sk_disruption_web'},
-  bncn:    {name:'바운스샷 표적', cat:'atk',   u:1800,  v0:0,    vs:1,     f:'체',  base:140, mul:1.28,  ico:'upgrades/up_veh_atk'},
-  scritc:  {name:'슈퍼 치명 확률', cat:'atk',   u:1500,  v0:0,    vs:0.4,   f:'%',  base:110, mul:1.24,  ico:'skills/sk_yamato'},
-  scritm:  {name:'슈퍼 치명 배수', cat:'atk',   u:2500,  v0:3,    vs:0.2,   f:'x',  base:180, mul:1.3,   ico:'skills/sk_psi_storm'},
-  hp:      {name:'체력', cat:'def',   u:0,     v0:100,  vs:20,    f:'',   base:20,  mul:1.14,  ico:'upgrades/up_carapace'},
-  regen:   {name:'체력 재생', cat:'def',   u:400,   v0:1,    vs:0.3,   f:'/s', base:25,  mul:1.16,  ico:'skills/sk_heal'},
-  shd:     {name:'쉰드량', cat:'def',   u:500,   v0:0,    vs:15,    f:'',   base:40,  mul:1.17,  ico:'upgrades/up_shield'},
-  shdreg:  {name:'쉰드 재생', cat:'def',   u:800,   v0:0,    vs:0.2,   f:'/s', base:50,  mul:1.18,  ico:'skills/sk_recharge'},
-  mk:      {name:'미네랄 (킬)', cat:'util',  u:300,   v0:1,    vs:0.5,   f:'',   base:30,  mul:1.17,  ico:'upgrades/up_mineral_up'},
-  gk:      {name:'가스 (킬)', cat:'util',  u:500,   v0:0,    vs:0.2,   f:'',   base:55,  mul:1.19,  ico:'res_gas'},
-  mw:      {name:'미네랄 (웨이브)', cat:'util',  u:400,   v0:10,   vs:4,     f:'',   base:45,  mul:1.18,  ico:'upgrades/up_mineral_up'},
-  gw:      {name:'가스 (웨이브)', cat:'util',  u:900,   v0:0,    vs:2,     f:'',   base:80,  mul:1.2,   ico:'res_gas'},
-  mspd:    {name:'이동속도', cat:'util',  u:300,   v0:100,  vs:2,     f:'%',  base:35,  mul:1.16,  ico:'upgrades/up_speed'},
-  rrng:    {name:'재생 범위', cat:'util',  u:450,   v0:100,  vs:3,     f:'%',  base:45,  mul:1.17,  ico:'upgrades/up_sight'},
+  atk:     {name:'데미지', cat:'char',   u:0,     v0:10,   vs:2,     f:'',   base:20,  mul:1.14,  ico:'upgrades/up_melee_atk'},
+  aspd:    {name:'공격속도', cat:'char',   u:0,     v0:1,    vs:0.04,  f:'/s', base:30,  mul:1.16,  ico:'skills/sk_stim'},
+  crit:    {name:'치명타 확률', cat:'char',   u:150,   v0:5,    vs:1,     f:'%',  base:30,  mul:1.16,  ico:'upgrades/up_gnd_wpn'},
+  critm:   {name:'치명타 계수', cat:'char',   u:400,   v0:1.5,  vs:0.05,  f:'x',  base:45,  mul:1.18,  ico:'upgrades/up_inf_atk'},
+  lifest:  {name:'생명력 흡수', cat:'char',   u:600,   v0:0,    vs:0.5,   f:'%',  base:60,  mul:1.19,  ico:'skills/sk_consume'},
+  knock:   {name:'넓백 확률', cat:'char',   u:350,   v0:0,    vs:1.5,   f:'%',  base:35,  mul:1.16,  ico:'skills/sk_maelstrom'},
+  rng:     {name:'사거리', cat:'char',   u:200,   v0:100,  vs:4,     f:'',   base:25,  mul:1.16,  ico:'upgrades/up_range'},
+  multic:  {name:'멀티샷 확률', cat:'char',   u:900,   v0:0,    vs:1.2,   f:'%',  base:70,  mul:1.2,   ico:'upgrades/up_range_atk'},
+  multin:  {name:'멀티샷 수', cat:'char',   u:1800,  v0:1,    vs:1,     f:'발',  base:140, mul:1.28,  ico:'upgrades/up_air_atk'},
+  bncc:    {name:'바운스샷 확률', cat:'char',   u:900,   v0:0,    vs:1.2,   f:'%',  base:70,  mul:1.2,   ico:'skills/sk_disruption_web'},
+  bncn:    {name:'바운스샷 표적', cat:'char',   u:1800,  v0:0,    vs:1,     f:'체',  base:140, mul:1.28,  ico:'upgrades/up_veh_atk'},
+  scritc:  {name:'슈퍼 치명 확률', cat:'char',   u:1500,  v0:0,    vs:0.4,   f:'%',  base:110, mul:1.24,  ico:'skills/sk_yamato'},
+  scritm:  {name:'슈퍼 치명 배수', cat:'char',   u:2500,  v0:3,    vs:0.2,   f:'x',  base:180, mul:1.3,   ico:'skills/sk_psi_storm'},
+  hp:      {name:'체력', cat:'char',   u:0,     v0:100,  vs:20,    f:'',   base:20,  mul:1.14,  ico:'upgrades/up_carapace'},
+  regen:   {name:'체력 재생', cat:'char',   u:400,   v0:1,    vs:0.3,   f:'/s', base:25,  mul:1.16,  ico:'skills/sk_heal'},
+  shd:     {name:'쉰드량', cat:'char',   u:500,   v0:0,    vs:15,    f:'',   base:40,  mul:1.17,  ico:'upgrades/up_shield'},
+  shdreg:  {name:'쉰드 재생', cat:'char',   u:800,   v0:0,    vs:0.2,   f:'/s', base:50,  mul:1.18,  ico:'skills/sk_recharge'},
+  mk:      {name:'미네랄 (킬)', cat:'char',  u:300,   v0:1,    vs:0.5,   f:'',   base:30,  mul:1.17,  ico:'upgrades/up_mineral_up'},
+  gk:      {name:'가스 (킬)', cat:'char',  u:500,   v0:0,    vs:0.2,   f:'',   base:55,  mul:1.19,  ico:'res_gas'},
+  mw:      {name:'미네랄 (웨이브)', cat:'char',  u:400,   v0:10,   vs:4,     f:'',   base:45,  mul:1.18,  ico:'upgrades/up_mineral_up'},
+  gw:      {name:'가스 (웨이브)', cat:'char',  u:900,   v0:0,    vs:2,     f:'',   base:80,  mul:1.2,   ico:'res_gas'},
+  mspd:    {name:'이동속도', cat:'char',  u:300,   v0:100,  vs:2,     f:'%',  base:35,  mul:1.16,  ico:'upgrades/up_speed'},
+  rrng:    {name:'재생 범위', cat:'char',  u:450,   v0:100,  vs:3,     f:'%',  base:45,  mul:1.17,  ico:'upgrades/up_sight'},
+  // 아군 — 전부 '캐릭터 대비 비율'을 키우는 배수다. 실제 전투 반영은 hbAllyMul() 한 곳에서만 한다.
+  alatk:   {name:'동료 공격력', cat:'ally',  u:0,     v0:100,  vs:8,     f:'%',  base:40,  mul:1.17,  ico:'upgrades/up_inf_atk'},
+  alspd:   {name:'동료 공격속도', cat:'ally',  u:500,   v0:100,  vs:1.5,   f:'%',  base:60,  mul:1.18,  ico:'skills/sk_stim'},
+  tuatk:   {name:'터렛 공격력', cat:'bld',   u:0,     v0:100,  vs:8,     f:'%',  base:40,  mul:1.17,  ico:'upgrades/up_veh_atk'},
+  turng:   {name:'터렛 사거리', cat:'bld',   u:400,   v0:100,  vs:3,     f:'%',  base:50,  mul:1.17,  ico:'upgrades/up_range'},
+  bnhp:    {name:'벙커 체력', cat:'bld',   u:600,   v0:100,  vs:12,    f:'%',  base:70,  mul:1.19,  ico:'upgrades/up_carapace'},
+  peatk:   {name:'펫 공격력', cat:'pet',   u:0,     v0:100,  vs:8,     f:'%',  base:45,  mul:1.17,  ico:'skills/sk_consume'},
+  pespd:   {name:'펫 공격속도', cat:'pet',   u:700,   v0:100,  vs:1.5,   f:'%',  base:80,  mul:1.19,  ico:'skills/sk_stim'},
 };
-const HB_UPG_CAT=[['atk','공격'],['def','방어'],['util','유틸']];
-const HB_UPG_CAT_ICO={atk:'sword', def:'shield', util:'wrench'};   // 공용 ICO 레지스트리 키
+// 구역 — 대상별로 몰아 넣는다. 세 번째 값 = 선택된 탭 카드를 아래로 물들이는 색(§DESIGN 역할표 토큰)
+const HB_UPG_CAT=[['char','내 캐릭터','255,59,59'],['ally','동료','74,168,255'],
+                  ['bld','건물','255,210,74'],['pet','펫','93,255,143']];
+// 아군 구역은 '건설(수량)' 카드도 같은 격자에 함께 낸다 — 사는 곳과 키우는 곳을 나누지 않는다
+const HB_UPG_CAT_BUILD={ally:['ally'], bld:['turret','bunker']};
+// 업그레이드 레벨 → 실제 전투 수치. 아군 배수는 전부 여기서만 나온다(hbUnitFire 호출부가 이 값을 받는다)
+function hbAllyMul(){ const u=hbHunt().upg;
+  return { ally:  { dps:HB_ALLY_DPS  *(1+(u.alatk||0)*0.08), cdMul:Math.pow(0.985, u.alspd||0) },
+           turret:{ dps:HB_TURRET_DPS*(1+(u.tuatk||0)*0.08), rng:HB_TURRET_RANGE*(1+(u.turng||0)*0.03) },
+           bunker:{ hp:HB_BUNKER_HP  *(1+(u.bnhp ||0)*0.12) },
+           pet:   { dps:HB_PET_DPS   *(1+(u.peatk||0)*0.08), cdMul:Math.pow(0.985, u.pespd||0) } }; }
 function hbHunt(){ const p=PROF();
   if(!p.hunt) p.hunt={dg:1,round:1,climb:false,best:{},upg:{atk:0,rng:0,aspd:0,crit:0,hp:0,regen:0}};
   if(!p.hunt.unl) p.hunt.unl={};        // 해금한 업그레이드(key→1). u:0 은 여기 없어도 열린 것으로 친다
-  if(!p.hunt.upgCat) p.hunt.upgCat='atk';
+  // 옛 구역 키(atk/def/util)가 저장돼 있으면 '내 캐릭터'로 옮긴다 — 없는 구역이면 격자가 빈 채로 남는다
+  if(!p.hunt.upgCat || !HB_UPG_CAT.some(function(c){ return c[0]===p.hunt.upgCat; })) p.hunt.upgCat='char';
   if(!p.hunt.upgQty) p.hunt.upgQty=1;
   return p.hunt; }
 function hbUpgCost(k,lv){ const l=(lv==null)?(hbHunt().upg[k]||0):lv;
   return Math.ceil(HB_UPG[k].base*Math.pow(HB_UPG[k].mul, l)); }
 // u:0 은 처음부터 열려 있고, 나머지는 hunt.unl 에 표식이 있어야 쓴다
-function hbUpgOwned(k){ return (HB_UPG[k].u===0) || !!hbHunt().unl[k]; }
+function hbUpgOwned(k){ const U=HB_UPG[k]; return !!U && ((U.u===0) || !!hbHunt().unl[k]); }
 // 표시값 — 소수는 필요할 때만(레벨당 증가가 0.1 미만이면 2자리)
 function hbUpgVal(k,lv){ const U=HB_UPG[k], v=U.v0+U.vs*lv;
   const d=(U.vs<0.1)?2:1;
@@ -5953,17 +5969,18 @@ function hbLayoutAllies(){ const S=_hb; if(!S) return; const st=hbCharStats();
     S.turrets.push({x:Math.cos(a)*92, y:Math.sin(a)*92, cdT:Math.random()*.5, ico:'🔫'}); }
   const n3=hbBuildN('bunker');
   for(let i=0;i<n3;i++){ const a=Math.PI*(i?1.5:.5);
-    S.bunkers.push({x:Math.cos(a)*70, y:Math.sin(a)*70, hp:st.hpMax*HB_BUNKER_HP, hpMax:st.hpMax*HB_BUNKER_HP, ico:'🧱'}); }
+    const bh=st.hpMax*hbAllyMul().bunker.hp;   // 벙커 체력 업그레이드 반영
+    S.bunkers.push({x:Math.cos(a)*70, y:Math.sin(a)*70, hp:bh, hpMax:bh, ico:'🧱'}); }
   const eq=((typeof PROF==='function'&&PROF().equip)||[]).slice(0,profPetSlots());
   S.pets=eq.map((id,i)=>({ id, ico:(PROF_PETS[id]&&PROF_PETS[id].emoji)||'🐾',
     ph:i/Math.max(1,eq.length)*Math.PI*2, x:0, y:0, cdT:Math.random()*.5 })); }
 // 아군 한 명의 사격 — 가장 가까운 적을 친다(공용: 동료·펫·터렛)
-function hbUnitFire(u, dps, rangeMul, dt){ const S=_hb, c=S.char;
+function hbUnitFire(u, dps, rangeMul, dt, cdMul){ const S=_hb, c=S.char;
   u.cdT-=dt; if(u.cdT>0) return;
   const rng=c.range*(rangeMul||1); let best=null,bd=1e18;
   for(const f of S.foes){ const d=Math.hypot(f.x-u.x,f.y-u.y); if(d<bd){ bd=d; best=f; } }
   if(!best || bd>rng) return;
-  u.cdT=c.cd; const dmg=c.atk*dps*(hbBoostOn('atk')?2:1);
+  u.cdT=c.cd*(cdMul||1); const dmg=c.atk*dps*(hbBoostOn('atk')?2:1);
   best.hp-=dmg; S.shots.push({x1:u.x,y1:u.y,x2:best.x,y2:best.y,t:0,ally:1});
   if(best.hp<=0) hbKill(best); }
 // 스킬
@@ -6208,9 +6225,10 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char; S.t+=dt;
         S.atkT=HB_ATK_SHOW; if(S._u) S._u.fireSeq=(S._u.fireSeq||0)+1;
         if(cb.hp<=0) hbBreakChest(cb); } } }
   // 아군 — 동료는 캐릭터 주위를 천천히 돌고, 터렛은 고정, 펫은 가깝게 붙어 돈다
-  for(const a of S.allies){ a.ph+=dt*0.5; a.x=Math.cos(a.ph)*52; a.y=Math.sin(a.ph)*52; hbUnitFire(a,HB_ALLY_DPS,1,dt); }
-  for(const t of S.turrets) hbUnitFire(t,HB_TURRET_DPS,HB_TURRET_RANGE,dt);
-  for(const q of S.pets){ q.ph+=dt*1.1; q.x=Math.cos(q.ph)*30; q.y=Math.sin(q.ph)*30; hbUnitFire(q,HB_PET_DPS,1,dt); }
+  { const M=hbAllyMul();   // 아군 업그레이드는 전부 여기로 들어온다(상수를 직접 쓰지 말 것)
+    for(const a of S.allies){ a.ph+=dt*0.5; a.x=Math.cos(a.ph)*52; a.y=Math.sin(a.ph)*52; hbUnitFire(a,M.ally.dps,1,dt,M.ally.cdMul); }
+    for(const t of S.turrets) hbUnitFire(t,M.turret.dps,M.turret.rng,dt);
+    for(const q of S.pets){ q.ph+=dt*1.1; q.x=Math.cos(q.ph)*30; q.y=Math.sin(q.ph)*30; hbUnitFire(q,M.pet.dps,1,dt,M.pet.cdMul); } }
   if(S.atkT>0) S.atkT-=dt;                            // 공격 모션 남은 시간(끝나면 idle로)
   if(S.slowT>0) S.slowT-=dt;
   for(const k in S.skT) if(S.skT[k]>0){ S.skT[k]-=dt; if(S.skT[k]<=0) S.skDirty=true; }
@@ -6902,7 +6920,8 @@ function _gearAllyPanel(){ const n=hbBuildN('ally'), mx=hbBuildMax('ally'), B=HB
   h+='<div class="shopPanel"><div class="shopHead">편성<em>준비 중</em></div><div class="shopBody">'
     +'<div class="shopNote">동료를 개별로 고르고 배치하는 편성 시스템은 아직 없습니다</div></div></div>';
   return h; }
-function gearGoHire(){ openHome(); hbOpenBuild(); }
+// 고용·강화는 사냥터 업그레이드 패널의 '동료' 구역 한 곳에 있다 — 그 탭을 열어 준다
+function gearGoHire(){ openHome(); if(typeof hmUpgTab==='function') hmUpgTab('ally'); }
 function refreshTownPanel(){ if(gearOpen()){ renderGear(); return; }              // 정비 전용 화면이 열려 있으면 그쪽을 갱신
   if(shopOpen()){ renderShop(); return; }   // 상점 전용 화면이 열려 있으면 그쪽을 갱신
   const body=document.getElementById('tpBody'), z=TOWN_PANELS[_twZone]; if(!body||!z) return;
@@ -7162,7 +7181,9 @@ function _profItemStats(it){ const o={pow:0,vit:0,foc:0,agi:0}; if(!it) return o
 //   items: [{label, ico?}]  ·  i: 현재 index  ·  act(k): k번째 버튼의 onclick 문자열
 // 액센트(선택 표시 밑줄)는 화면이 정한다 — 기본 시안, 사냥터 패널(.hmUpg)은 자기 빨강으로 덮는다.
 function segNavHTML(items, i, act){ const n=items.length;
-  let h='<div class="pdSeg" style="--n:'+n+'"><i class="pdSegInd" style="left:calc(var(--pad) + '+i+'*(100% - 2*var(--pad))/'+n+')"></i>';
+  const col=(items[i]&&items[i].col)||'';   // 구역색(R,G,B) — 판을 아래로 물들이는 데 쓴다. 없으면 화면 기본값
+  let h='<div class="pdSeg" style="--n:'+n+'"><i class="pdSegInd" style="left:calc(var(--pad) + '+i+'*(100% - 2*var(--pad))/'+n+')'
+    +(col?';--segCol:'+col:'')+'"></i>';
   items.forEach(function(it,k){ h+='<button class="pdSegBtn'+(k===i?' on':'')+'" onclick="'+act(k)+'">'
     +(it.ico?'<span data-ico="'+it.ico+'"></span>':'')+it.label+'</button>'; });
   return h+'</div>'; }
@@ -12107,7 +12128,7 @@ function showAppScreen(id){ setInGame(false);
   // (openTown이 _townOpen을 켜고 나서 이 함수를 부른다 — 끄면 마을 3D가 안 뜬다).
   if(id!=='townScreen' && typeof _townOpen!=='undefined' && _townOpen && typeof twLeave==='function') twLeave();
   if(typeof tw3dDetach==='function') tw3dDetach();
-  for(const id of ['hbRoundSheet','hbBuildModal','hbBoostModal','hbGrowModal','hbInfoModal']){ const el=document.getElementById(id); if(el) el.classList.add('hide'); }
+  for(const id of ['hbRoundSheet','hbBoostModal','hbGrowModal','hbInfoModal']){ const el=document.getElementById(id); if(el) el.classList.add('hide'); }
   if(id!=='mapSelect' && id!=='modeSheet' && typeof stopMapLive==='function') stopMapLive();   // 유즈맵 화면 떠나면 실시간 갱신 정지
   ['ov','lobby','rooms','createPanel','pwPanel'].forEach(x=>{const e=document.getElementById(x); if(e)e.classList.add('hide');});
   APP_SCREENS.forEach(s=>{ const e=document.getElementById(s); if(e) e.classList.toggle('hide', s!==id); });

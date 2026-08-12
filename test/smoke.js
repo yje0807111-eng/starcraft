@@ -217,11 +217,18 @@ async function groupLobby(){
       // 토벌은 네비에서 빠지고 HOME 팝업이 됐다 — 2번 칸은 정비(장비·펫·동료)
       assert(document.querySelector('#navBar .navIt[data-nav=gear]').textContent.indexOf('정비')>=0,'2번 탭 표기가 정비가 아님'); }
     assert(document.querySelector('#navBar .navIt.on').dataset.nav==='home','HOME 탭이 활성이 아님');
-    // 실데이터에 붙은 곳 = 사냥터 업그레이드(공격/방어/유틸 3탭 · 해금제)
+    // 실데이터에 붙은 곳 = 사냥터 업그레이드(내 캐릭터·동료·건물·펫 4구역 · 해금제)
     // 탭 띠는 장비창 섹션 바와 같은 컴포넌트여야 한다(segNavHTML 단일 소스) — 새 탭 띠를 만들면 여기서 걸린다
     { const seg=document.querySelector('#hmUpgTabs .pdSeg');
       assert(seg,'업그레이드 탭이 공용 세그먼트 바(.pdSeg)를 안 씀');
-      assert(seg.querySelectorAll('.pdSegBtn').length===3,'업그레이드 탭이 3개가 아님');
+      assert(seg.querySelectorAll('.pdSegBtn').length===HB_UPG_CAT.length,'업그레이드 탭 수가 HB_UPG_CAT 과 다름');
+      // 구역마다 판을 물들이는 색이 다르다 — 선택된 구역의 색이 판에 실려야 한다
+      { const cur=hbHunt().upgCat, ent=HB_UPG_CAT.find(c=>c[0]===cur);
+        assert(ent && ent[2],'구역 '+cur+' 에 색이 없음');
+        assert(seg.querySelector('.pdSegInd').style.getPropertyValue('--segCol')===ent[2],
+          '판에 구역색이 안 실림: '+seg.querySelector('.pdSegInd').style.getPropertyValue('--segCol')+' vs '+ent[2]);
+        const cols=HB_UPG_CAT.map(c=>c[2]);
+        assert(new Set(cols).size===cols.length,'구역색이 겹침: '+cols.join(' / ')); }
       assert(seg.querySelectorAll('.pdSegInd').length===1,'현재 구역을 가리키는 판(.pdSegInd)이 없음');
       // 글자만 — 아이콘이 끼면 아이콘+글자가 한 덩어리로 가운데 정렬돼 글자가 중앙에서 밀린다
       assert(!seg.querySelector('[data-ico]'),'탭에 아이콘이 다시 들어옴(글자가 중앙에서 밀린다)');
@@ -231,6 +238,17 @@ async function groupLobby(){
         assert(pad<=2.5,'탭 띠 안쪽 틈이 너무 넓음: '+pad+'px');
         assert(Math.abs((ir.top-sr.top)-(pad+1))<1.5,'판 위쪽 틈이 --pad 와 안 맞음: '+(ir.top-sr.top).toFixed(1));
         assert(Math.abs((ir.left-sr.left)-(pad+1))<1.5,'판 왼쪽 틈이 --pad 와 안 맞음: '+(ir.left-sr.left).toFixed(1)); } }
+    // ⚠ hmUpgTab 은 탭 띠를 통째로 다시 그린다 — 위에서 잡아둔 .pdSeg 참조가 끊기므로 구역 전환은 그 뒤에.
+    // 아군 구역은 '사는 카드'와 '키우는 카드'가 같은 격자에 함께 있어야 한다(건설 팝업은 폐지됐다)
+    { const before=hbHunt().upgCat;
+      hmUpgTab('ally');
+      assert(document.querySelector('#hmUpgGrid .hmUp[data-k="b_ally"]'),'동료 구역에 고용 카드가 없음');
+      assert(document.querySelector('#hmUpgGrid .hmUp[data-k="alatk"]'),'동료 구역에 강화 카드가 없음');
+      hmUpgTab('bld');
+      assert(document.querySelector('#hmUpgGrid .hmUp[data-k="b_turret"]')
+          && document.querySelector('#hmUpgGrid .hmUp[data-k="b_bunker"]'),'건물 구역에 건설 카드가 없음');
+      assert(typeof hbOpenBuild!=='function','건설 팝업이 아직 남아 있음(패널로 흡수됐어야 한다)');
+      hmUpgTab(before); }
     // 수량은 한 칸을 눌러 돌린다 — 1 → 10 → MAX → 1. 폭은 라벨이 바뀌어도 고정
     { const qs=document.querySelectorAll('.hmUpQ');
       assert(qs.length===1,'수량은 한 칸이어야 함: '+qs.length+'개');
@@ -251,8 +269,8 @@ async function groupLobby(){
       const ch=cell.getBoundingClientRect().height, rows=(gr.clientHeight-16+8)/(ch+8);
       assert(Math.abs(rows-2.7)<0.15,'업그레이드 높이가 2.7행이 아님: '+rows.toFixed(2)+'행');
       const h0=gr.clientHeight;
-      hmUpgTab('def'); const h1=$('hmUpgGrid').clientHeight;
-      hmUpgTab('atk');
+      hmUpgTab('pet'); const h1=$('hmUpgGrid').clientHeight;   // 칸이 제일 적은 구역으로 바꿔도 안 흔들려야 한다
+      hmUpgTab('char');
       assert(h0===h1,'탭을 바꾸면 높이가 변함: '+h0+' → '+h1);
       assert(gr.scrollHeight-gr.clientHeight>10,'나머지 칸이 스크롤되지 않음'); }
     // 접으면 헤더만 남고 전장이 그만큼 넓어진다(캐릭터가 내려온다)
@@ -768,7 +786,8 @@ async function groupLobby(){
     assert(hbBoostLeft('inc')>l1+HB_BOOSTS.inc.sec-5,'연장이 안 됨: '+l1+' → '+hbBoostLeft('inc'));
     // ⑤ 스킬 바 UI
     renderHbBar();
-    assert(document.querySelectorAll('#hbBar .hbSk').length===Object.keys(HB_SKILLS).length+3,'스킬 바 버튼 수가 다름(스킬 + 건설·토벌·부스트)');
+    // 건설은 업그레이드 패널의 동료·건물 구역으로 흡수돼 스킬 바에서 빠졌다 — 남는 건 토벌·부스트 둘
+    assert(document.querySelectorAll('#hbBar .hbSk').length===Object.keys(HB_SKILLS).length+2,'스킬 바 버튼 수가 다름(스킬 + 토벌·부스트)');
     // 버튼이 늘어도 한 줄에 들어가야 한다 — 넘치면 토벌·부스트가 화면 밖으로 밀린다
     { const bar=$('hbBar'); assert(bar.scrollWidth<=bar.clientWidth+1,'스킬 바가 가로로 넘침: '+bar.scrollWidth+'>'+bar.clientWidth); }
     // ⑥ 전장 아래 경계 = 스킬 바 위. 카드 기준으로 잡으면 적이 버튼 뒤로 지나가 섞인다.
