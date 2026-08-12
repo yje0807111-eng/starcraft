@@ -2560,6 +2560,9 @@
   /* 임팩트 색 = 빨강(--neon 계열). 로비 `.btn.on`·방 설정·보스 시트와 같은 언어다.
      이 패널 안의 빨강은 전부 아래 세 토큰에서만 꺼낸다 — 개별 규칙에 색을 박지 말 것. */
   .hmUpg{--hmAcc:#ff3b3b;--hmAccLt:#ff9b9b;--hmAccDk:#a81f1f;
+    /* 화면에서 제일 큰 카드 — 뒤 전장이 살짝 비치는 반투명(§2 창 알파 .88~.93).
+       안쪽 칸(.hmUp)은 불투명 검정이라 비치는 건 머리줄·탭 띠·칸 사이 여백뿐이다. */
+    background:linear-gradient(180deg,rgba(25,25,25,.9),rgba(14,14,14,.92));
     margin-top:auto;position:relative;
     /* 하단 네비에 딱 붙이고 좌우도 꽉 채운다 — #hmScroll 의 padding:8px 을 음수 마진으로 되돌린다.
        (다른 HOME 요소는 그 여백이 필요하므로 컨테이너 패딩은 건드리지 않는다) */
@@ -2576,15 +2579,8 @@
   /* 머리줄 아래 스캔라인 — 팝업 .setTitle::after 와 같은 규칙 */
   .hmUpgHead::after{content:'';position:absolute;left:12px;right:12px;bottom:0;height:1px;
     background:linear-gradient(90deg,rgba(255,59,59,.5) 0%,rgba(255,59,59,.5) 62%,transparent)}
-  /* 볼트 타일 — 패널에서 색을 채우는 유일한 자리(무엇을 하는 판인지 말한다) */
-  .hmUpgBolt{flex:none;width:20px;height:20px;display:grid;place-items:center;border-radius:2px;
-    background:linear-gradient(180deg,var(--hmAccLt) 0%,var(--hmAcc) 40%,var(--hmAccDk) 64%,#ff5a5a 100%)}
-  .hmUpgBolt svg{display:block;width:12px;height:12px;fill:none;stroke:#2b0000;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
-  /* 제목 — 글자에만 그라데이션. 패널 면은 그대로 회색이다 */
-  .hmUpgTtl{flex:1;font-weight:400;
-    background:linear-gradient(180deg,#ffdede 0%,#ff6b6b 40%,#8f1616 72%,var(--hmAcc) 100%);
-    -webkit-background-clip:text;background-clip:text;color:transparent;
-    filter:drop-shadow(0 1px 0 rgba(0,0,0,.85))}
+  /* 제목 — 흰색 단색. 색은 스캔라인과 구매 버튼이 맡고 제목은 조용히 읽히기만 한다 */
+  .hmUpgTtl{flex:1;font-weight:400;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.85)}
   .hmUpgChev{flex:none;width:9px;height:9px;border-right:2px solid #9a9a9a;border-bottom:2px solid #9a9a9a;
     transform:rotate(45deg) translate(-2px,-2px);transition:transform .16s}
   .hmUpg.down .hmUpgHead{border-bottom-color:transparent}
@@ -2716,13 +2712,13 @@
   /* 버튼 — 오른쪽 정사각. 위 = 레벨 변화(잠김은 자물쇠) · 아래 = 비용 */
   /* 살 수 있는 버튼 = 이 화면의 임팩트. 테두리(패딩 1.5px가 드러내는 띠)가 빨갛고 발광한다.
      면을 빨갛게 채우지는 않는다 — 검정 카드 위에서 글자가 죽는다(DESIGN.md §0 "색을 채우지 않는다"). */
-  .hmUpBtn{position:relative;flex:none;width:54px;height:40px;padding:1.5px;cursor:pointer;font-family:inherit;
+  .hmUpBtn{position:relative;flex:none;width:54px;height:40px;padding:1px;cursor:pointer;font-family:inherit;
     display:flex;flex-direction:column;border:none;border-radius:var(--r-bar);
     background:linear-gradient(180deg,var(--hmAccLt) 0%,var(--hmAcc) 30%,var(--hmAccDk) 62%,#5e1414 100%);
     box-shadow:0 1px 2px rgba(0,0,0,.55),0 0 9px -2px rgba(255,59,59,.6);
     transition:transform .06s, box-shadow .06s, filter .12s}
   /* 살 수 있을 때만 윗면에 빛나는 선 — '올릴 수 있다'는 신호 */
-  .hmUpBtn::after{content:'';position:absolute;left:6px;right:6px;top:1.5px;height:1px;pointer-events:none;
+  .hmUpBtn::after{content:'';position:absolute;left:6px;right:6px;top:1px;height:1px;pointer-events:none;
     background:linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent)}
   .hmUpBtn:hover{filter:brightness(1.1)}
   /* 진짜로 들어간다 — 누르는 맛이 없으면 업그레이드가 재미없다 */
@@ -4133,7 +4129,6 @@
       <!-- POWER UPGRADES — 화면에 남은 유일한 카드. 위쪽은 비워서 우주 배경(.spaceBg)이 그대로 보인다 -->
       <div class="hmCard hmUpg">
         <button class="hmUpgHead" id="hmUpgHead" onclick="hmToggleUpg()" aria-label="업그레이드 접기/펴기">
-          <span class="hmUpgBolt"><svg viewBox="0 0 24 24"><path d="M5 13 12 6l7 7M5 19l7-7 7 7"/></svg></span>
           <b class="hmUpgTtl">사냥터 업그레이드</b><i class="hmUpgChev"></i></button>
         <div class="hmStatRow hide" id="hmStatRow"></div>
         <div class="hmUpgBar"><span class="hmUpgTabs" id="hmUpgTabs"></span><span class="hmUpQty" id="hmUpgQty"></span></div>
@@ -6716,7 +6711,6 @@ function _vgShop(){ let el=document.getElementById('vgShop');
       act:'townBuy(&#39;'+k+'&#39;)' }); }
   el.innerHTML='<div class="hmCard hmUpg">'
     +'<button class="hmUpgHead" onclick="townCollectAll()" aria-label="전부 수집">'
-    +'<span class="hmUpgBolt"><svg viewBox="0 0 24 24"><path d="M5 13 12 6l7 7M5 19l7-7 7 7"/></svg></span>'
     +'<b class="hmUpgTtl">마을 건설</b><i class="hmUpgChev"></i></button>'
     +'<div class="hmUpgBar"><span class="hmUpgTabs"></span>'
     +'<span class="hmUpQty">'+S.built.length+' / '+TOWN_SLOTS.length+' 터</span></div>'
