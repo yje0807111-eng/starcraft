@@ -2528,17 +2528,18 @@
   .hbIcoRow{display:flex;align-items:center;gap:6px}   /* 라운드·마을 아이콘 — 세로로 쌓이면 좌상단 묶음 높이가 늘어난다 */
   .hbHud{display:flex;align-items:center;gap:7px;cursor:pointer;background:none;border:none;padding:0;text-align:left}
   .hbHud:active{opacity:.75}
-  .hbAv{flex:none;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:17px;
+  .hbAv{flex:none;width:46px;height:46px;display:flex;align-items:center;justify-content:center;font-size:25px;
     background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
   .hbCol{display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0}
-  .hbHud b{font-size:12px;font-weight:700;color:#ececec;letter-spacing:.2px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .hbHud b{font-size:12px;font-weight:700;color:#ececec;letter-spacing:.2px;max-width:76px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}   /* 경험치 바와 같은 폭 — 이름이 길어도 기둥이 안 넓어진다(재화 바 침범 방지) */
   .hbSt i{font-style:normal;display:flex;align-items:baseline;gap:2px}
   /* ⚔는 같은 10px에서도 잉크 높이가 9px(숫자는 6px)이고 기준선 아래로 1px 내려간다 →
      숫자보다 크고 처져 보인다. 잉크 중심이 숫자와 같아지는 크기가 8.5px다(계산: 3/3.5×10). */
   .hbSt em{font-style:normal;font-size:8.5px;line-height:1}
-  .hbXp{width:92px;height:3px;border-radius:var(--r-bar);background:rgba(255,255,255,.10);overflow:hidden}
+  .hbXp{width:76px;height:3px;border-radius:var(--r-bar);background:rgba(255,255,255,.10);overflow:hidden}
   .hbXp i{display:block;height:100%;width:0;background:#5dff8f}
-  .hbSt{display:flex;gap:7px;font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:10px;font-weight:700;color:#c6ccd4}
+  /* 레벨(위) · 공격력(아래) 각각 한 줄 — 가로로 붙이면 어느 쪽 숫자인지 한눈에 안 들어온다 */
+  .hbSt{display:flex;flex-direction:column;align-items:flex-start;gap:1px;font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:10px;font-weight:700;color:#c6ccd4;line-height:1.15}
   /* 라운드 선택 = 전용 아이콘 버튼(텍스트를 누르는 방식은 폐지) */
   .hbRoundBtn{width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;
     color:#c6ccd4;background:linear-gradient(180deg,#191919,#0e0e0e);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
@@ -2885,7 +2886,9 @@
     font-size:var(--fs-xs);font-weight:800;color:var(--gold);white-space:nowrap;z-index:5}
   .vgBadge img{width:11px;height:11px;object-fit:contain}
   .vgBadge.full{border-color:#ff3b3b;color:#ff3b3b}
-  .vgShop{position:absolute;left:0;right:0;bottom:0;z-index:8;background:linear-gradient(180deg,rgba(8,11,16,.7),rgba(6,9,14,.96));
+  body.vgMode .twBar{display:none}   /* 마을은 사냥터와 같은 상단(공용 재화 바)만 쓴다 — 두 겹으로 보이던 것 */
+  body.vgMode #townScreen{padding-bottom:var(--navH)}   /* 하단 네비 자리 확보 */
+  .vgShop{position:absolute;left:0;right:0;bottom:var(--navH);z-index:8;background:linear-gradient(180deg,rgba(8,11,16,.7),rgba(6,9,14,.96));
     border-top:1px solid rgba(255,255,255,.12);padding:7px 8px 9px}
   .vgShopRow{display:flex;gap:7px;overflow-x:auto;overflow-y:hidden;padding-bottom:2px}
   .vgCard{flex:0 0 auto;width:82px;border:1px solid rgba(255,255,255,.14);border-radius:6px;padding:5px 4px;
@@ -6308,13 +6311,14 @@ function townCollectAll(){ const S=townState(); let n=0;
 
 // 마을 화면 — 배경 그림은 그대로 쓰고, 그 위에 슬롯과 하단 구매 바를 얹는다(걸어다니지 않는다)
 function openVillage(){ loadMeta(); if(!CHAR()){ openCharScreen('create'); return; }
-  _townOpen=true; showAppScreen('townScreen'); navShow(null);
+  _townOpen=true; showAppScreen('townScreen'); navShow('home');   // 사냥터에서 온 화면 — 네비는 그대로 두고 '사냥터' 탭 활성
+  document.body.classList.add('vgMode');   // 마을 전용 상단 바(.twBar)를 숨겨 재화 바 하나만 보이게
   const w=document.getElementById('twWorld'); if(w){ w.style.width='100%'; w.style.height='100%'; w.style.transform='none'; }
   const av=document.getElementById('twAvatar'); if(av) av.style.display='none';
   renderVillage(); renderTownBar();
   if(typeof paintIcons==='function') paintIcons(document.getElementById('townScreen'));
   clearInterval(_vgTick); _vgTick=setInterval(()=>{ if(_townOpen) renderVillage(); }, 1000); }
-function leaveVillage(){ _townOpen=false; clearInterval(_vgTick); _vgTick=0; }
+function leaveVillage(){ _townOpen=false; clearInterval(_vgTick); _vgTick=0; document.body.classList.remove('vgMode'); }
 let _vgTick=0;
 function _vgResIco(out){ return resIco(out==='min'?'mineral':'gas'); }
 function renderVillage(){ const w=document.getElementById('twWorld'); if(!w||!_townOpen) return;
@@ -6370,7 +6374,11 @@ let _twW=0,_twH=0, _twVW=0,_twVH=0, _twVL=0,_twVT=0;   // 월드 크기 / 화면
 let _twChar={x:0,y:0,tx:0,ty:0,dx:0,dy:0,mode:null,face:1};   // mode: null=정지 | 'to'=목적지 이동 | 'dir'=방향 이동
 let _twPtr=null, _twGoZone=null, _twRaf=0, _twLast=0;   // _twGoZone = 지금 향하고 있는 '지정한' 구역(도착하면 그것만 열린다)
 function mapToHub(){ if(typeof stopRoomsTick==='function') stopRoomsTick(); if(typeof playSfx==='function') playSfx('ui_close'); openHome(); }   // 유즈맵 선택 → 메인(HOME)으로 복귀
+// 걸어다니던 마을 화면은 폐지됐다. 옛 진입점은 전부 사냥터(HOME)로 보낸다.
+// ⚠ 이동 엔진(twStep/twCamApply/twClampWall)은 남아 있지만 아무도 켜지 않는다.
 function openTown(){ loadMeta(); if(!CHAR()){ openCharScreen('create'); return; }   // 캐릭터가 없으면 생성 화면으로
+  _townOpen=false; twStopLoop(); openHome(); return; }
+function _openTownOld_disabled(){
   _townOpen=true; showAppScreen('townScreen'); navShow('town');
   twLayout(); twApplyChar();
   const p=[_twW/2,_twH/2];   // 월드 중앙에서 시작
@@ -6591,8 +6599,8 @@ function charDoCreate(cls){ const el=document.getElementById('ccName'), c=profCr
   if(typeof playSfx==='function') playSfx('ui_open'); _charEnter(); }
 // 선택 직후 — 마을 안이면 그 자리에서 교체, 밖(입장 화면)이면 마을로 입장
 function _charEnter(){ const c=CHAR(); _charDelId=null;
-  if(_townOpen){ closeTownPanel(); twApplyChar(); renderTownBar(); if(c) showTownToast(c.name+' 선택'); }
-  else openTown(); }
+  if(_townOpen){ closeTownPanel(); renderTownBar(); if(c) showTownToast(c.name+' 선택'); }
+  else openHome(); }   // 캐릭터 만들면 사냥터로
 let _csMode='select';
 function openCharScreen(mode){ loadMeta();
   _csMode=(mode==='create' || !(PROF().chars||[]).length) ? 'create' : 'select';
@@ -6600,8 +6608,8 @@ function openCharScreen(mode){ loadMeta();
   const b=document.getElementById('csBody'); if(b) b.innerHTML=(_csMode==='create')?renderCharCreate():renderCharSelect();
   showAppScreen('charScreen'); }
 function charBackToHub(){ if(typeof playSfx==='function') playSfx('ui_close');
-  if(typeof CHAR==='function' && !CHAR()){ askLogout(); return; }   // 캐릭터가 없으면 마을이 다시 이 화면으로 돌려보낸다
-  openTown(); }
+  if(typeof CHAR==='function' && !CHAR()){ askLogout(); return; }   // 캐릭터가 없으면 사냥터가 다시 이 화면으로 돌려보낸다
+  openHome(); }
 function twApplyChar(){ const c=CHAR(), b=document.querySelector('#twAvatar .twAvBody');   // 아바타 겉모습 = 현재 캐릭터 종류
   if(b) b.textContent=(c && PROF_CLASSES[c.cls] && PROF_CLASSES[c.cls].ico) || '🧍'; }
 function renderTownIdle(){ renderTownBar(); const tp=document.getElementById('townPanel'); if(_twZone==='gym' && tp && !tp.classList.contains('hide')) refreshTownPanel(); }

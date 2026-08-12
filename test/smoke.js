@@ -969,6 +969,16 @@ async function groupLobby(){
     for(const id of ['hbName','hbLv','hbAtk']){
       const e=$(id); assert(e && e.textContent.trim(),'프로필 항목이 비어 있음: #'+id); }
     for(const id of ['hbJob','hbHp']) assert(!$(id),'뺀 항목이 아직 있음: #'+id);
+    // 레벨과 공격력은 각각 한 줄(위=레벨, 아래=공격력)
+    { const lv=$('hbLv').getBoundingClientRect(), at=$('hbAtk').getBoundingClientRect();
+      assert(at.top>=lv.bottom-1,'레벨과 공격력이 한 줄에 붙어 있음(세로로 쌓여야 한다)');
+      assert(Math.abs(at.left-lv.left)<=1,'두 줄의 왼쪽이 안 맞음: '+lv.left.toFixed(1)+' vs '+at.left.toFixed(1));
+      // 초상은 글자 기둥 높이에 맞춘다 — 어긋나면 좌상단이 비뚤어 보인다
+      const av=document.querySelector('.hbAv').getBoundingClientRect(), col=document.querySelector('.hbCol').getBoundingClientRect();
+      assert(Math.abs(av.height-col.height)<=3,'초상('+Math.round(av.height)+')과 글자 기둥('+Math.round(col.height)+') 높이가 다름');
+      // 좌상단 묶음이 예약 높이를 넘으면 중앙 라운드 표시와 겹친다
+      const top=document.querySelector('.hbHudTop').getBoundingClientRect(), mid=$('hbMid').getBoundingClientRect();
+      assert(mid.top>=top.bottom-1,'중앙 라운드 표시가 좌상단 묶음과 겹침: mid '+Math.round(mid.top)+' vs 묶음 bottom '+Math.round(top.bottom)); }
     // 레벨·검·숫자가 같은 높이로 보여야 한다. 요소 상자는 원래 같으니 글리프 '잉크 중심'을 본다
     // — ⚔는 같은 폰트 크기에서 잉크가 9px(숫자 6px)이라 그냥 두면 크고 처져 보인다.
     { const g=document.createElement('canvas').getContext('2d');
