@@ -441,6 +441,31 @@ async function groupLobby(){
       if(typeof twLeave==='function') twLeave(); }
     hbStop();
     return 'HOME sync '+home.total+'회 · 유즈맵 침범 0회'; });
+  // 사냥터 맵 — 그림이 덮는 범위와 걸어갈 수 있는 범위가 같아야 한다.
+  // 예전엔 필드(±900×±620)가 그림보다 훨씬 넓어서 걸어 나가면 검은 바닥이 나왔다.
+  await step('사냥터: 걸을 수 있는 범위 = 그림이 덮는 범위', async()=>{
+    skipIf(typeof HB_MAP_R==='undefined' || typeof hbClampField!=='function','맵 상수 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    assert(HB_FIELD_RX===HB_MAP_R && HB_FIELD_RY===HB_MAP_R,
+      '이동 범위와 맵이 다름: 필드 '+HB_FIELD_RX+'x'+HB_FIELD_RY+' vs 맵 '+HB_MAP_R);
+    for(const [x,y] of [[9999,9999],[-9999,9999],[0,-9999]]){
+      const p=hbClampField(x,y);
+      assert(Math.abs(p[0])<=HB_MAP_R+1e-6 && Math.abs(p[1])<=HB_MAP_R+1e-6,'클램프 밖: '+p); }
+    openHome(); await sleep(300); _hb.manual=true;
+    // 목적지만이 아니라 '위치'가 갇혀야 한다 — 다른 코드가 x/y를 건드려도 그림 밖으로 못 간다
+    const _sv={x:_hb.char.x, y:_hb.char.y, tx:_hb.char.tx, ty:_hb.char.ty};   // 뒤 스텝을 오염시키지 않게 되돌린다
+    _hb.char.x=9999; _hb.char.y=-9999; hbStep(0.05); hbResize();   // ⚠ hbStep(dt) — S를 넘기면 dt가 객체가 돼 전부 NaN이 된다
+    assert(Math.abs(_hb.char.x)<=HB_MAP_R+1 && Math.abs(_hb.char.y)<=HB_MAP_R+1,
+      '한 스텝 뒤에도 그림 밖: '+Math.round(_hb.char.x)+','+Math.round(_hb.char.y));
+    // 카메라도 맵 밖을 비추면 안 된다(가장자리에 검은 띠가 생긴다)
+    const hvw=(_hb.w/_hb.k)/2, hvh=((_hb.vBot-_hb.vTop)/_hb.k)/2;
+    assert(Math.abs(_hb.camX)+hvw<=HB_MAP_R+1 && Math.abs(_hb.camY)+hvh<=HB_MAP_R+1,
+      '카메라가 맵 밖을 비춤: cam '+Math.round(_hb.camX)+','+Math.round(_hb.camY)+' 반화면 '+Math.round(hvw)+','+Math.round(hvh));
+    // 배경 캐시는 지금 던전만 — 1536² 한 장이 9MB라 10개를 다 물면 90MB가 된다
+    hbBgImg(1); hbBgImg(2); hbBgImg(3);
+    assert(Object.keys(_hbBg).length===1,'배경 캐시가 '+Object.keys(_hbBg).length+'개 — 던전마다 쌓인다');
+    _hb.char.x=_sv.x; _hb.char.y=_sv.y; _hb.char.tx=_sv.tx; _hb.char.ty=_sv.ty; hbResize();
+    return '맵 '+(2*HB_MAP_R)+'² · 이동 ±'+HB_FIELD_RX+' · 캐시 1'; });
   await step('던전 배경: 이미지 cover 맞춤 · 없으면 타일 폴백', async()=>{
     skipIf(typeof hbBgFit!=='function','배경 배선 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
@@ -1560,14 +1585,19 @@ async function groupGame(){
     sellUnit(u);   // 유닛 객체를 받는다(uid 아님)
     assert(G.units.length===b-1,'판매 후 수 변화 없음 '+b+'→'+G.units.length); return 'ok'; });
   // 설정 버튼은 data-tab이 없어 탭 재배치 목록에서 빠진다 → 재배치 후 맨 왼쪽으로 밀렸던 적 있음(직스 진입/복귀 시)
-  await step('네비바: 설정은 항상 오른쪽 끝', ()=>{ skipIf(typeof strikeSetTabOrder!=='function','strikeSetTabOrder 없음');
-    const par=$('tabs'), set=$('settingsBtn'); skipIf(!par||!set,'네비바 없음');
-    const last=()=>par.lastElementChild===set;
-    strikeSetTabOrder(['Main','Build','Upgrade','Players']);   // 직스 진입 시 순서
-    assert(last(),'직스 순서 적용 후 설정이 끝이 아님');
-    strikeSetTabOrder(null);                                   // 네모 복귀(resetGameChrome 경로)
-    assert(last(),'원복 후 설정이 끝이 아님');
-    return '위치 ok'; });
+  await step('설정: 네비가 아니라 HUD 우상단', ()=>{
+    const set=$('settingsBtn'), tabs=$('tabs'); skipIf(!set,'설정 버튼 없음');
+    // 네비 칸이 아니라 HUD 우상단 상자다 — 탭 순서가 바뀌어도 영향받지 않는다
+    assert(!tabs || !tabs.contains(set), '설정이 아직 네비(#tabs) 안에 있음');
+    assert(set.classList.contains('hudSet'), '설정 상자 클래스(hudSet)가 아님: '+set.className);
+    const wrap=$('hudTopR');
+    assert(wrap && wrap.contains(set), '설정이 HUD 우상단(#hudTopR)에 없음');
+    if(typeof strikeSetTabOrder==='function'){   // 탭 순서를 바꿔도 설정은 그대로여야 한다
+      strikeSetTabOrder(['Main','Build','Upgrade','Players']);
+      assert(wrap.contains(set),'직스 순서 적용 후 설정이 HUD에서 이탈');
+      strikeSetTabOrder(null);
+      assert(wrap.contains(set),'원복 후 설정이 HUD에서 이탈'); }
+    return 'HUD 우상단 ok'; });
   // 목록에서 잠깐 빠졌다 돌아온 유닛(직스의 화면 밖 컬링 등)이 사망 모션에 갇히면
   // 멀쩡한 유닛이 누운 채로 이동하다가 모델 재생성 때 벌떡 일어난다 → 되살아나야 한다
   await step('사망 모션: 목록 복귀 시 해제', async()=>{
