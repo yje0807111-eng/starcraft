@@ -85,7 +85,7 @@
      ⚠ 값이 흩어지면 반드시 어긋난다(선례: 높이 555 vs 564 · 여백 18 vs 20 · 92%가 322 vs 326).
      크기·여백·딤을 바꾸려면 여기만 고칠 것. */
   :root{--popW:92%;--popMaxW:350px;--popH:min(564px,90%);--popPad:20px;--popDim:rgba(2,3,6,.84)}
-  :root{--phW:963;--phH:1997;--navH:61px;--curH:34px}   /* 하단 바 높이 61px = 963기준 ≈150px (네비·유즈맵 탭바 공용) */
+  :root{--phW:963;--phH:1997;--navH:56px;--curH:34px}   /* 하단 바 높이(네비·유즈맵 탭바 공용) — 61 → 56px 로 살짝 얇게 */
   #phone{width:390px;height:calc(390px * var(--phH) / var(--phW));aspect-ratio:var(--phW)/var(--phH);position:relative;
     /* 게임 배경 우주 타일(space_bg)을 캔버스와 같은 380px 스케일로 프레임 전체에 이어지게 — 어둡게 덮어 콘솔 가독성 유지 */
     background:linear-gradient(rgba(3,4,12,.5),rgba(3,4,12,.66)),url('assets/tiles/space_bg.webp') center/380px repeat #05060d;
@@ -2771,12 +2771,18 @@
   .navBar{position:absolute;left:0;right:0;bottom:0;z-index:62}
   /* 하단 바 공용 룩(단일 소스) — 전역 네비(.navBar)와 유즈맵 인게임 탭바(#tabs)가 같은 규칙을 쓴다.
      관리자·네모네모·오토배틀 전부 #tabs를 쓰므로 여기 한 곳만 고치면 모두 반영된다. */
-  /* 윗변의 붉은 선 = 유즈맵 선택 배경(lobby_bg)의 위·아래 끝을 긋는 그 선과 같은 색(실측 rgb(163,38,55)) */
-  .navBar,#tabs{height:var(--navH);display:flex;align-items:stretch;padding:7px 8px;
-    border-top:1px solid rgb(163,38,55);
-    background:linear-gradient(180deg,rgba(2,3,6,.55),#010204 46%)}   /* 순검정 바탕 — 그 위에 프레임 한 겹이 떠 있다 */
-  .navBar::before,#tabs::before{content:'';position:absolute;inset:7px 8px;pointer-events:none;
-    background:rgba(4,6,10,.34);border:1px solid rgba(255,255,255,.13)}   /* 상단 재화 바 설정 버튼과 같은 값(공용 프레임 언어) */
+  /* 통짜 바 — 안에 상자를 한 겹 더 두지 않는다. 칸이 바 끝까지 그대로 이어진다 */
+  .navBar,#tabs{height:var(--navH);display:flex;align-items:stretch;padding:0;
+    background:linear-gradient(180deg,rgba(2,3,6,.55),#010204 46%)}
+  /* 윗변의 선 — 실선이 아니라 '광선'이다: 양 끝은 사라지고 가운데만 밝다. 밝기는 천천히 숨을 쉰다.
+     ⚠ 굵기·색을 올리지 말 것. 이 선의 정체는 두께가 아니라 '가운데만 밝은 그라데'다. */
+  /* z-index 2 — 선택 칸 테두리(z:1)가 이 선을 덮으면 가운데 광이 끊겨 보인다 */
+  .navBar::before,#tabs::before{content:'';position:absolute;left:0;right:0;top:0;height:1px;pointer-events:none;z-index:2;
+    background:linear-gradient(90deg,transparent 26%,rgba(196,44,64,.55) 38%,rgb(232,72,92) 50%,
+      rgba(196,44,64,.55) 62%,transparent 74%);
+    animation:navEdgeBreath 5.2s ease-in-out infinite}
+  @keyframes navEdgeBreath{0%,100%{opacity:.6;filter:drop-shadow(0 0 2px rgba(232,72,92,.35))}
+    50%{opacity:1;filter:drop-shadow(0 0 5px rgba(232,72,92,.75))}}
   #tabs{position:relative}
   .navBar.hide{display:none}
   /* 💠 공용 재화 바(단일 소스) — 모든 RPG/허브 + 유즈맵 선택 상단 상시. 볼륨1: 1px 테두리+그라데+하단 헤어라인, 재화=금색.
