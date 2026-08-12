@@ -2558,10 +2558,13 @@
   .hmCard{flex:none;background:var(--hmPanel);border:1px solid var(--hbEdge);border-radius:var(--r-bar);overflow:hidden}
   /* POWER UPGRADES — 위쪽은 배경이 보이도록 비우고 카드는 네비 바로 위에 붙인다 */
   .hmUpg{margin-top:auto;position:relative;
-    /* 각진 SF — 왼쪽 윗모서리와 오른쪽 아랫모서리를 깎는다(디자인 시스템 cutA) */
-    clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}
+    /* 하단 네비에 딱 붙이고 좌우도 꽉 채운다 — #hmScroll 의 padding:8px 을 음수 마진으로 되돌린다.
+       (다른 HOME 요소는 그 여백이 필요하므로 컨테이너 패딩은 건드리지 않는다) */
+    margin-left:-8px;margin-right:-8px;margin-bottom:-8px;
+    /* 각진 SF — 화면에 붙었으니 위쪽 왼모서리만 깎는다(아래는 네비와 맞물린다) */
+    clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 10px,100% 100%,0 100%,0 10px)}
   /* 위가 밝아야 판으로 보인다 — 테두리가 챔퍼에 잘리므로 선을 따로 얹는다 */
-  .hmUpg::before{content:'';position:absolute;left:10px;right:0;top:0;height:1px;z-index:4;pointer-events:none;
+  .hmUpg::before{content:'';position:absolute;left:10px;right:10px;top:0;height:1px;z-index:4;pointer-events:none;
     background:linear-gradient(90deg,transparent,rgba(255,255,255,.18) 22%,rgba(255,255,255,.18) 78%,transparent)}
   /* 헤더 = 접기/펴기 손잡이. 접으면 이 줄만 남고 뒤 배경이 화면 전체로 보인다 */
   .hmUpgHead{position:relative;width:100%;display:flex;align-items:center;gap:9px;padding:9px 12px;
@@ -2646,30 +2649,33 @@
   /* ── 사냥터 업그레이드 ── */
   /* 탭 띄 — 공용 .msSortTabs 구조. 활성은 흰글자+밑줄(HOME은 시안 금지 — DESIGN.md) */
   .hmUpgBar{display:flex;align-items:stretch;gap:6px;padding:0 8px;border-bottom:1px solid rgba(255,255,255,.07)}
-  .hmUpgTabs{flex:1 1 0;display:flex;align-items:stretch;min-width:0}
+  .hmUpgTabs{flex:1 1 0;display:flex;align-items:stretch;gap:5px;min-width:0}
+  /* 칸마다 자기 테두리를 하나씩 갖는다 — 선택 여부와 무관한 '기본' 테두리 */
   .hmUpTab{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;position:relative;
     padding:8px 2px;cursor:pointer;font-family:inherit;font-size:11.5px;font-weight:700;letter-spacing:.02em;
-    color:#8a8a8a;background:none;border:none;transition:color .13s}
-  /* 구역 사이 세로 구분선 — 어두운 선 + 밝은 선 한 쌍(파인 자국)
-     :first-child 에는 안 붙인다 — 바깥쪽 가장자리까지 긋는 것처럼 보인다 */
-  .hmUpTab+.hmUpTab::before{content:'';position:absolute;left:0;top:7px;bottom:7px;width:2px;
-    background:linear-gradient(90deg,rgba(0,0,0,.55),rgba(255,255,255,.07))}
-  /* 선택한 구역 = 움퍽 들어간 짙은 네모. 밑줄 대신 테두리로 감싼다 */
-  .hmUpTab.on{color:#ececec;border-radius:3px;
-    background:linear-gradient(180deg,rgba(0,0,0,.46),rgba(0,0,0,.26));
-    box-shadow:inset 0 0 0 1px rgba(0,0,0,.62), inset 0 1px 0 rgba(255,255,255,.10),
-      inset 0 -1px 0 rgba(255,255,255,.05)}
-  .hmUpTab.on+.hmUpTab::before,.hmUpTab.on::before{opacity:0}
-  .hmUpTab .cnt{margin-left:4px;font-size:9.5px;color:#6f6f6f;font-variant-numeric:tabular-nums}
-  .hmUpTab.on .cnt{color:#9a9a9a}
+    color:#8a8a8a;border:none;border-radius:3px;
+    background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.018));
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.10), inset 0 1px 0 rgba(255,255,255,.08);
+    transition:color .13s,background .13s,box-shadow .13s}
+  .hmUpTab:hover{color:#c4c4c4}
+  /* 선택한 구역 = 그 위에 한 겹 더 — 움푹 들어간 짙은 네모 */
+  .hmUpTab.on{color:#ececec;
+    background:linear-gradient(180deg,rgba(0,0,0,.5),rgba(0,0,0,.3));
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.66), inset 0 0 0 2px rgba(255,255,255,.10),
+      inset 0 2px 0 rgba(0,0,0,.35)}
+  .hmUpTab [data-ico]{margin-right:4px}
+  .hmUpTab .ic{width:13px;height:13px;stroke-width:2}   /* 작게 쓰므로 획을 조금 굵게 */
   /* 수량 — 한 번에 몇 레벨씩 */
-  .hmUpQty{flex:none;display:flex;align-self:center;padding:1px;border-radius:var(--r-bar);
-    background:linear-gradient(180deg,rgba(120,120,120,.6),rgba(52,52,52,.6))}
-  .hmUpQ{min-width:27px;padding:0 5px;height:22px;display:flex;align-items:center;justify-content:center;
-    cursor:pointer;font-family:inherit;font-size:10.5px;font-weight:700;color:#8a8a8a;letter-spacing:.02em;
-    background:rgba(0,0,0,.34);border:none;border-right:1px solid rgba(0,0,0,.4);transition:color .13s,background .13s}
-  .hmUpQ:last-child{border-right:0}
-  .hmUpQ.on{color:#1c1c1c;background:linear-gradient(180deg,#d8d8d8,#a8a8a8);text-shadow:0 1px 0 rgba(255,255,255,.35)}
+  .hmUpQty{flex:none;display:flex;align-self:center;width:46px;padding:1px;border-radius:var(--r-bar);   /* 폭 고정 — 1→10→MAX 로 바꾰도 칸이 안 흔들리게 */
+    background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.02))}
+  .hmUpQ{flex:1;min-width:0;padding:0;height:22px;display:flex;align-items:center;justify-content:center;
+    cursor:pointer;font-family:inherit;font-size:10.5px;font-weight:700;color:#b8b8b8;letter-spacing:.02em;
+    text-shadow:0 1px 1px rgba(0,0,0,.7);
+    background:rgba(0,0,0,.5);border:none;border-right:1px solid rgba(255,255,255,.05);transition:color .13s,background .13s}
+  .hmUpQ{border-right:0}
+  .hmUpQ.on{color:#fff;background:rgba(0,0,0,.66);
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.10);
+    text-shadow:0 1px 2px rgba(0,0,0,.85)}
   /* 그리드 — 2.7줄이 보이는 '고정' 높이. 0.7줄이 걸쳐 보이는 게 더 있다는 신호 */
   .hmUpgGrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;padding:8px;
     --rowH:54px;--gap:8px;height:calc(2.7*var(--rowH) + 1.7*var(--gap) + 16px);
@@ -2998,19 +3004,16 @@
   body.vgMode .vgBack:active{transform:translateY(1px)}
   body.vgMode .twBar{display:none}   /* 마을은 사냥터와 같은 상단(공용 재화 바)만 쓴다 — 두 겹으로 보이던 것 */
   body.vgMode #townScreen{padding-bottom:var(--navH)}   /* 하단 네비 자리 확보 */
-  .vgShop{position:absolute;left:0;right:0;bottom:var(--navH);z-index:8;background:linear-gradient(180deg,rgba(8,11,16,.7),rgba(6,9,14,.96));
-    border-top:1px solid rgba(255,255,255,.12);padding:7px 8px 9px}
-  .vgShopRow{display:flex;gap:7px;overflow-x:auto;overflow-y:hidden;padding-bottom:2px}
-  .vgCard{flex:0 0 auto;width:82px;border:1px solid rgba(255,255,255,.14);border-radius:6px;padding:5px 4px;
-    background:linear-gradient(165deg,rgba(30,42,60,.85),rgba(8,12,20,.95));cursor:pointer;text-align:center}
-  .vgCard.no{opacity:.45}
-  .vgCard img{width:40px;height:40px;object-fit:contain;display:block;margin:0 auto 2px}
-  .vgCard .vcNm{font-size:var(--fs-xs);font-weight:800;color:#e6eefc}
-  .vgCard .vcCost{font-size:var(--fs-xs);color:var(--gold);display:flex;align-items:center;justify-content:center;gap:2px;margin-top:1px}
-  .vgCard .vcCost img{width:10px;height:10px;margin:0}
-  .vgCard .vcRate{font-size:var(--fs-xs);color:#8fb6dd;margin-top:1px}
-  .vgAll{position:absolute;right:9px;bottom:calc(100% + 8px);z-index:9;padding:5px 11px;border-radius:6px;
-    border:1px solid var(--ok);background:rgba(8,14,10,.92);color:var(--ok);font-weight:800;font-size:var(--fs-sm);cursor:pointer}
+  .vgShop{position:absolute;left:0;right:0;bottom:var(--navH);z-index:8;padding:0 8px 8px;max-height:52%;overflow-y:auto}
+
+
+
+
+
+
+
+
+
   .twGround{position:absolute;inset:-25.0% -21.0%;pointer-events:none;
     background:linear-gradient(rgba(6,8,12,.42),rgba(6,8,12,.52)),url('assets/backgrounds/town/town_ground.webp') 50% 50%/cover no-repeat,url('assets/tiles/terran_tile_light.webp') 0 0/128px repeat}   /* 마을 바닥 그림(없으면 아래 타일이 그대로 보인다) */
   .twGround::after{content:'';position:absolute;inset:0;pointer-events:none;   /* 가장자리 비네트 — 월드 끝이 자연스럽게 어두워짐 */
@@ -5337,6 +5340,23 @@ function hbUpgIco(k){ const p=HB_UPG[k].ico;
   return '<img class="icoImg" src="'+ICO_DIR+p+'.webp" alt="" draggable="false" data-fb="⚙" data-fbcls="" onerror="_icoFail(this)">'; }
 // 이름을 [본체 + 작은 보조어]로 쪼개다 — 폭도 벌고 훑어보기도 쉽다
 const HM_SUF=['확률','배수','계수','재생','표적','수','흡수'];
+// ═══ 업그레이드/건설 카드 한 장 — 단일 소스 ═══
+//  사냥터(renderHome)와 마을(_vgShop)이 둘 다 이 함수만 부른다.
+//  ⚠ 마크업을 베껴 두 번째 구현을 만들지 말 것. 새 화면이 필요하면 인자만 늘린다.
+//  o = { ico, name, val, next, lv, nextLv, cost, off, lock, key }
+//    val→next 가 있으면 '값 ▸ 다음값', lv→nextLv 가 있으면 'LV.n ▸ 다음'으로 화살표가 붙는다.
+function hmUpCardHTML(o){
+  const arw=(a,b)=>(b==null||b==='')?a:(a+HM_ARW+'<b class="nx">'+b+'</b>');
+  const head=o.lock ? '<span class="hmUpLk">'+HM_LOCK+(o.lockTx||'해금 필요')+'</span>'
+                    : '<span class="hmUpVl">'+arw(o.val,o.next)+'</span>';
+  const foot=(o.lock?'<span class="hmUpBl">'+HM_LOCK+'</span>'
+                    :'<span class="hmUpBl">'+arw(o.lv,o.nextLv)+'</span>')
+            +'<span class="hmUpBc">'+o.cost+'</span>';
+  return '<div class="hmUp'+(o.lock?' lk':'')+'" data-k="'+o.key+'">'
+    +'<span class="hmUpIco">'+o.ico+'</span>'
+    +'<span class="hmUpTx"><b class="hmUpName">'+o.name+'</b>'+head+'</span>'
+    +'<button class="hmUpBtn'+(o.off?' off':'')+'" data-k="'+o.key+'"'+(o.act?' onclick="'+o.act+'"':' data-sfx=""')+'>'+foot+'</button>'
+    +'</div>'; }
 function hmUpgName(n){ const i=n.indexOf(' (');
   if(i>=0) return n.slice(0,i)+'<span class="p"> '+n.slice(i+1)+'</span>';
   const j=n.lastIndexOf(' ');
@@ -5349,32 +5369,28 @@ function renderHome(){ try{
   if(gr){ const u=hbHunt().upg, coin=Math.floor(p.pcoin||0), cat=hbHunt().upgCat||'atk';
     // 탭 띄 — 구역별 개수까지 같이
     const tb=document.getElementById('hmUpgTabs');
-    if(tb) tb.innerHTML=HB_UPG_CAT.map(function(c){
-      const n=Object.keys(HB_UPG).filter(function(k){ return HB_UPG[k].cat===c[0] }).length;
-      return '<button class="hmUpTab'+(c[0]===cat?' on':'')+'" onclick="hmUpgTab(&#39;'+c[0]+'&#39;)">'+c[1]
-        +'<span class="cnt">'+n+'</span></button>'; }).join('');
+    if(tb){ tb.innerHTML=HB_UPG_CAT.map(function(c){
+      return '<button class="hmUpTab'+(c[0]===cat?' on':'')+'" onclick="hmUpgTab(&#39;'+c[0]+'&#39;)">'
+        +'<span data-ico="'+HB_UPG_CAT_ICO[c[0]]+'"></span>'+c[1]+'</button>'; }).join('');
+      if(typeof paintIcons==='function') paintIcons(tb); }   // [data-ico] 는 칠해 줘야 그려진다
     // 수량 1 / 10 / MAX
     const qb=document.getElementById('hmUpgQty'), q=hbHunt().upgQty||1;
-    if(qb) qb.innerHTML=[1,10,'max'].map(function(v){
-      return '<button class="hmUpQ'+(v===q?' on':'')+'" onclick="hmUpgQty(&#39;'+v+'&#39;)">'+(v==='max'?'MAX':v)+'</button>'; }).join('');
+    if(qb) qb.innerHTML='<button class="hmUpQ on" onclick="hmUpgQtyCycle()">'
+      +(q==='max'?'MAX':('×'+q))+'</button>';
     // 카드 — 해금한 것을 위로(쓸 수 있는 것이 먼저 보여야 한다)
     const keys=Object.keys(HB_UPG).filter(function(k){ return HB_UPG[k].cat===cat })
       .sort(function(a,b){ return (hbUpgOwned(b)?1:0)-(hbUpgOwned(a)?1:0); });
     gr.innerHTML=keys.map(function(k){ const U=HB_UPG[k], lv=u[k]||0, own=hbUpgOwned(k);
-      let head, foot, off;
+      let off;
+      let _hd;
       if(own){ const P=hbUpgPlan(k); off=coin<P.sum;
-        head='<span class="hmUpVl">'+hbUpgVal(k,lv)+HM_ARW+'<b class="nx">'+hbUpgVal(k,lv+P.n)+'</b></span>';
-        foot='<span class="hmUpBl">LV.'+lv+HM_ARW+'<b class="nx">'+(lv+P.n)+'</b></span>'
-            +'<span class="hmUpBc">'+resIco('mineral')+P.sum.toLocaleString('en-US')+'</span>'; }
+        _hd={ v:hbUpgVal(k,lv), n:hbUpgVal(k,lv+P.n), l:'LV.'+lv, ln:(lv+P.n),
+              c:resIco('mineral')+P.sum.toLocaleString('en-US') }; }
       else { off=coin<U.u;
-        head='<span class="hmUpLk">'+HM_LOCK+'해금 필요</span>';
-        foot='<span class="hmUpBl">'+HM_LOCK+'</span>'
-            +'<span class="hmUpBc">'+resIco('mineral')+U.u.toLocaleString('en-US')+'</span>'; }
-      return '<div class="hmUp'+(own?'':' lk')+'" data-k="'+k+'">'
-        +'<span class="hmUpIco">'+hbUpgIco(k)+'</span>'
-        +'<span class="hmUpTx"><b class="hmUpName">'+hmUpgName(U.name)+'</b>'+head+'</span>'
-        +'<button class="hmUpBtn'+(off?' off':'')+'" onclick="hmBuyUpg(&#39;'+k+'&#39;)">'+foot+'</button>'
-        +'</div>'; }).join(''); }
+        _hd={ c:resIco('mineral')+U.u.toLocaleString('en-US') }; }
+      return hmUpCardHTML({ key:k, ico:hbUpgIco(k), name:hmUpgName(U.name), off:off,
+        lock:!own, val:_hd.v, next:_hd.n, lv:_hd.l, nextLv:_hd.ln, cost:_hd.c }); }).join('');
+    hmUpgBindHold(); }
   renderHomeStats();
   const card=document.querySelector('#homeScreen .hmUpg');
   if(card) card.classList.toggle('down', !!hbHunt().upgDown);
@@ -5591,20 +5607,92 @@ function hmToggleUpg(){ const H=hbHunt(); H.upgDown=!H.upgDown;
 function hmUnlockUpg(k){ const p=PROF(), U=HB_UPG[k]; if(!U || hbUpgOwned(k)) return;
   if(Math.floor(p.pcoin||0)<U.u){ hmToast('미네랄이 부족합니다'); return; }
   p.pcoin-=U.u; hbHunt().unl[k]=1; saveMeta();
-  if(typeof playSfx==='function') playSfx('ui_open');
+  if(typeof playSfx==='function') playSfx('ui_confirm');   // 해금은 '확정' 음 — 강화음과 구분된다
   if(typeof updateCurBar==='function') updateCurBar(); renderHome(); hmUpgWon(k); }
 function hmUpgTab(c){ hbHunt().upgCat=c; if(typeof playSfx==='function') playSfx('ui_tab'); saveMeta(); renderHome(); }
-function hmUpgQty(q){ hbHunt().upgQty=(q==='max')?'max':(+q); if(typeof playSfx==='function') playSfx('ui_tab'); saveMeta(); renderHome(); }
+// 한 칸을 눌러 돌린다 — 1 → 10 → MAX → 1
+function hmUpgQtyCycle(){ const H=hbHunt(), q=H.upgQty||1;
+  H.upgQty=(q===1)?10:((q===10)?'max':1);
+  if(typeof playSfx==='function') playSfx('ui_tab'); saveMeta(); renderHome(); }
 function hmBuyUpg(k){ const p=PROF(); if(!HB_UPG[k]) return;
   if(!hbUpgOwned(k)) return hmUnlockUpg(k);        // 잠긴 칸은 같은 버튼이 해금을 맡는다
   const P=hbUpgPlan(k), cost=P.sum;
   if(Math.floor(p.pcoin||0)<cost){ hmToast('미네랄이 부족합니다'); return; }
   p.pcoin-=cost; hbHunt().upg[k]=(hbHunt().upg[k]||0)+P.n; saveMeta();
+  if(typeof playSfxT==='function') playSfxT('upgrade', 60);   // 연타해도 소리가 겹치지 않게
   if(_hb){ const st=hbCharStats(), c=_hb.char;                 // 전투 중 즉시 반영(현재 체력은 유지·상한만 확장)
     c.atk=st.atk; c.cd=st.cd; c.crit=st.crit; c.range=st.range; c.regen=st.regen;
     c.hpMax=st.hpMax; c.hp=Math.min(st.hpMax, c.hp+(k==='hp'?12:0)); }
-  if(typeof playSfx==='function') playSfx('ui_open');
-  if(typeof updateCurBar==='function') updateCurBar(); renderHome(); hmUpgWon(k); if(typeof hbHud==='function') hbHud(); }
+  if(typeof updateCurBar==='function') updateCurBar(); renderHome(); hmUpgWon(k);
+  { const el=document.querySelector('#hmUpgGrid .hmUp[data-k="'+k+'"] .hmUpVl');
+    if(el && el.firstChild && el.firstChild.nodeType===3)
+      hmUpCount(el.firstChild, k, (hbHunt().upg[k]||0)-P.n, hbHunt().upg[k]||0, 320); }
+  if(typeof hbHud==='function') hbHud(); }
+// ── 손맛 3종 ──
+// 숫자가 튀어오른다 — 값이 '바뀜었다'가 아니라 '올랐다'로 읽히게
+function hmUpCount(el, k, from, to, ms){ if(!el) return;
+  const t0=(typeof performance!=='undefined'?performance.now():Date.now()), dur=ms||320;
+  const step=function(){ const now=(typeof performance!=='undefined'?performance.now():Date.now());
+    const p=Math.min(1,(now-t0)/dur), e=1-Math.pow(1-p,3);        // easeOutCubic
+    el.textContent=hbUpgVal(k, from+(to-from)*e);
+    if(p<1) requestAnimationFrame(step); };
+  requestAnimationFrame(step); }
+// 누르는 동안엔 그 칸의 글자만 고친다(13칸 전체 + 이미지 재생성은 끊긴다)
+function hmUpgTouch(k){ const el=document.querySelector('#hmUpgGrid .hmUp[data-k="'+k+'"]'); if(!el) return;
+  const lv=hbHunt().upg[k]||0, P=hbUpgPlan(k), coin=Math.floor((PROF()||{}).pcoin||0);
+  const vl=el.querySelector('.hmUpVl'), bl=el.querySelector('.hmUpBl'), bc=el.querySelector('.hmUpBc'), bt=el.querySelector('.hmUpBtn');
+  if(vl) vl.innerHTML=hbUpgVal(k,lv)+HM_ARW+'<b class="nx">'+hbUpgVal(k,lv+P.n)+'</b>';
+  if(bl) bl.innerHTML='LV.'+lv+HM_ARW+'<b class="nx">'+(lv+P.n)+'</b>';
+  if(bc) bc.innerHTML=resIco('mineral')+P.sum.toLocaleString('en-US');
+  if(bt) bt.classList.toggle('off', coin<P.sum);
+  if(typeof updateCurBar==='function') updateCurBar(); }
+// 길게 누르면 연타 — 350ms 뒤부터 시작해 점점 빨라진다(200→60ms)
+let _hmHold=null, _hmPt=null;
+function hmHoldStop(){ if(!_hmHold) return; clearTimeout(_hmHold.t); const k=_hmHold.k, any=_hmHold.n>0;
+  _hmHold=null;
+  if(any){ if(typeof saveMeta==='function') saveMeta(); renderHome(); hmUpgWon(k); if(typeof hbHud==='function') hbHud(); } }
+function hmHoldStart(k){
+  hmHoldStop();
+  _hmHold={k:k, n:0, d:200};
+  const tick=function(){ if(!_hmHold||_hmHold.k!==k) return;
+    const lv0=hbHunt().upg[k]||0;
+    if(!hmBuyUpgQuiet(k)){ hmHoldStop(); return; }
+    _hmHold.n++;
+    const el=document.querySelector('#hmUpgGrid .hmUp[data-k="'+k+'"] .hmUpVl');
+    hmUpgTouch(k);
+    if(el) hmUpCount(el.firstChild&&el.firstChild.nodeType===3?el.firstChild:el, k, lv0, hbHunt().upg[k]||0, 180);
+    _hmHold.d=Math.max(60, _hmHold.d*0.82);
+    _hmHold.t=setTimeout(tick, _hmHold.d); };
+  _hmHold.t=setTimeout(tick, 350); }
+// 구매 1회 — 화면을 다시 그리지 않는다(연타용). 샀으면 true
+function hmBuyUpgQuiet(k){ const p=PROF(), U=HB_UPG[k]; if(!p||!U) return false;
+  if(!hbUpgOwned(k)) return false;
+  const P=hbUpgPlan(k); if(Math.floor(p.pcoin||0)<P.sum) return false;
+  p.pcoin-=P.sum; hbHunt().upg[k]=(hbHunt().upg[k]||0)+P.n;
+  if(typeof playSfxT==='function') playSfxT('upgrade', 60);
+  return true; }
+// 포인터 흐름: down 에서 1회 + 연타 시작 / up·cancel 에서 정지. click 은 안 쓴다.
+function hmUpgBindHold(){ const gr=document.getElementById('hmUpgGrid'); if(!gr||gr._holdBound) return;
+  gr._holdBound=1;
+  gr.addEventListener('pointerdown', function(e){ const b=e.target.closest('.hmUpBtn'); if(!b) return;
+    const k=b.dataset.k; if(!k) return;
+    _hmPt={x:e.clientX, y:e.clientY};
+    const lv0=hbHunt().upg[k]||0, owned=hbUpgOwned(k);
+    hmBuyUpg(k);                                  // 첫 번은 평소대로(해금 포함)
+    if(owned && (hbHunt().upg[k]||0)>lv0) hmHoldStart(k);   // 산 경우에만 연타
+  });
+  // 끌기 시작 = 스크롤 의도 → 연타 취소(구매가 새는 걸 막는다)
+  gr.addEventListener('pointermove', function(e){ if(!_hmHold||!_hmPt) return;
+    if(Math.abs(e.clientX-_hmPt.x)>8 || Math.abs(e.clientY-_hmPt.y)>8) hmHoldStop(); });
+  // 키보드 Enter · 프로그램 .click() 경로 — 진짜 포인터 클릭(detail≥1)은 위에서 이미 처리했다
+  gr.addEventListener('click', function(e){ if(e.detail!==0) return;
+    const b=e.target.closest('.hmUpBtn'); if(b&&b.dataset.k) hmBuyUpg(b.dataset.k); });
+  const stop=function(){ hmHoldStop(); };
+  gr.addEventListener('pointerup', stop);
+  gr.addEventListener('pointercancel', stop);
+  gr.addEventListener('pointerleave', stop);
+  window.addEventListener('pointerup', stop);
+  window.addEventListener('blur', stop); }
 // 방금 오른 칸만 한 번 번찍 — renderHome() 이 새로 그린 뒤에 붙여야 한다
 function hmUpgWon(k){ const el=document.querySelector('#hmUpgGrid .hmUp[data-k="'+k+'"]'); if(!el) return;
   el.classList.remove('won'); void el.offsetWidth; el.classList.add('won');
@@ -5673,6 +5761,7 @@ const HB_TICKET_ELITE=.08, HB_TICKET_NORMAL=.003;   // 장비 뽑기권 드랍 �
 const HB_WAVES=5, HB_WAVE_S=20, HB_GAP_S=3;      // 라운드 구성(확정 스펙 — 바꾸려면 사용자와 합의)
 const HB_SPREAD_N=12, HB_SPREAD_S=5;             // 웨이브 유닛이 이보다 많으면 5초에 걸쳐 분산 출현
 const HB_STOP=30, HB_DOWN_S=3;
+const HB_FAIL_S=3;   // 웨이브 시간 초과 → 이만큼 뒤에 1웨이브부터 다시(라운드는 유지)
 // 전장은 화면 픽셀이 아니라 '월드 좌표'다. 캐릭터가 원점(0,0)이고 적·사거리·글자가 전부 월드 단위.
 // 그리기 직전에 카메라 한 번(translate+scale)으로 화면에 맞춘다 → 보이는 영역이 커지면 배율 k가 커져
 // 캐릭터만 내려가는 게 아니라 장면 전체가 같은 비율로 확대된다.
@@ -5745,6 +5834,7 @@ const HB_UPG={
   rrng:    {name:'재생 범위', cat:'util',  u:450,   v0:100,  vs:3,     f:'%',  base:45,  mul:1.17,  ico:'upgrades/up_sight'},
 };
 const HB_UPG_CAT=[['atk','공격'],['def','방어'],['util','유틸']];
+const HB_UPG_CAT_ICO={atk:'sword', def:'shield', util:'wrench'};   // 공용 ICO 레지스트리 키
 function hbHunt(){ const p=PROF();
   if(!p.hunt) p.hunt={dg:1,round:1,climb:false,best:{},upg:{atk:0,rng:0,aspd:0,crit:0,hp:0,regen:0}};
   if(!p.hunt.unl) p.hunt.unl={};        // 해금한 업그레이드(key→1). u:0 은 여기 없어도 열린 것으로 친다
@@ -5967,7 +6057,8 @@ function hbSpawnWave(){ const S=_hb, n=hbFoeCount(S.round,S.wave);
   const mk=()=>{ const i=(Math.random()*3)|0, r=HB_FOE_ROLE[i], f=D.foes[i];
     return { ico:f.ico, mdl:f.mdl, hpMul:r.hp, atkMul:r.atk, spd:r.spd*(1+S.round*0.01) }; };
   const boss=(S.wave===HB_WAVES);   // 마지막 웨이브 = 보스가 함께 나온다
-  hbSpawnChest();                                        // 📦 웨이브마다 하나(가득 차 있으면 안 생긴다)
+  if(S.chests) S.chests.length=0;                        // 📦 지난 웨이브 상자는 사라진다(모아 두는 플레이 방지)
+  hbSpawnChest();                                        // 📦 웨이브마다 하나
   if(n<=HB_SPREAD_N){ for(let i=0;i<n;i++) hbPlaceFoe(mk()); if(boss) hbPlaceFoe(mkBoss(D,S)); }
   else{ for(let i=0;i<n;i++) S.pend.push(mk()); if(boss) S.pend.push(mkBoss(D,S)); S.pendT=0; }
   if(boss){ S.floats.push({x:S.char.x,y:S.char.y-46,tx:'⚠ 보스 출현',cl:'#ff3b3b',t:0});
@@ -6025,7 +6116,16 @@ function hbDie(){ const S=_hb;
   S.round=Math.max(1,S.round-1); hbHunt().round=S.round;          // 라운드 하강(연속 사망 시 계속 내려간다)
   S.wave=1; S.phase='down'; S.downT=HB_DOWN_S;
   S.floats.push({x:S.char.x,y:S.char.y-32,tx:'쓰러짐… 라운드 '+S.round,cl:'#ff8a9a',t:0}); hbHud(); }
-// 순수 시뮬 한 스텝 — rAF와 분리(스모크가 직접 부른다). phase: fight/gap/mop/clearWait/down
+// 웨이브 시간 초과 = 실패. 라운드는 그대로 두고 1웨이브부터 다시 — 죽는 것(hbDie)과 달리
+// 라운드가 내려가지 않는다. 3초 뒤 캐릭터가 가운데에서 최대 체력으로 다시 선다.
+function hbWaveFail(){ const S=_hb; if(!S) return;
+  S.buf={min:0,gas:0,xp:0,kills:0};                                // 클리어 보너스 몫 소실(처치 보상은 이미 받았다)
+  S.foes.length=0; S.shots.length=0; S.pend.length=0;
+  if(S.chests) S.chests.length=0;
+  S.phase='fail'; S.failT=HB_FAIL_S;
+  S.floats.push({x:S.char.x, y:S.char.y-32, tx:'시간 초과 — 1웨이브부터', cl:'#ff8a9a', t:0});
+  hbHud(); }
+// 순수 시뮬 한 스텝 — rAF와 분리(스모크가 직접 부른다). phase: fight/gap/fail/clearWait/down
 // 탭한 곳으로 걸어간다 + 중앙 회복 구역. 적은 이미 캐릭터를 쫓으므로 전투는 알아서 따라온다.
 function hbClampField(x,y){ return [ Math.max(-HB_FIELD_RX,Math.min(HB_FIELD_RX,x)),
                                      Math.max(-HB_FIELD_RY,Math.min(HB_FIELD_RY,y)) ]; }
@@ -6058,13 +6158,18 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char; S.t+=dt;
       if(S.pendT<=0){ hbPlaceFoe(S.pend.shift()); S.pendT=HB_SPREAD_S/Math.max(1,hbFoeCount(S.round,S.wave)); } }
     S.waveT-=dt;
     const emptied=(!S.foes.length && !S.pend.length);
-    if(emptied || S.waveT<=0){
-      if(S.wave<HB_WAVES){ S.phase='gap'; S.gapT=HB_GAP_S; }      // 다 잡았든 시간이 끝났든 3초 뒤 다음 웨이브
-      else if(emptied) hbSettle();                                 // 5웨이브 + 필드 0 = 라운드 클리어
-      else S.phase='mop'; } }                                      // 마지막 웨이브 시간 종료 — 잔존 적 소탕전
+    if(emptied){
+      if(S.wave<HB_WAVES){ S.phase='gap'; S.gapT=HB_GAP_S; }      // 다 잡으면 3초 뒤 다음 웨이브
+      else hbSettle(); }                                           // 5웨이브 + 필드 0 = 라운드 클리어
+    else if(S.waveT<=0) hbWaveFail(); }                            // 시간 안에 못 비우면 실패
   else if(S.phase==='gap'){ S.gapT-=dt; if(S.gapT<=0){ S.wave++; S.phase='fight'; hbSpawnWave(); } }
   else if(S.phase==='clearWait'){ S.gapT-=dt; if(S.gapT<=0){ S.phase='fight'; hbSpawnWave(); } }
-  else if(S.phase==='mop'){ if(!S.foes.length) hbSettle(); }
+  else if(S.phase==='fail'){ S.failT-=dt;
+    if(S.failT<=0){ const c2=S.char;
+      c2.x=0; c2.y=0; c2.tx=0; c2.ty=0; c2.mv=0;                   // 가운데(회복 구역)에서 다시
+      c2.hp=c2.hpMax; c2.hitT=9;
+      S.wave=1; S.phase='fight'; hbSpawnWave(); hbHud(); } }
+  else if(S.phase==='mop'){ if(!S.foes.length) hbSettle(); }       // (지금은 진입 경로 없음 — 옛 저장 호환)
   // ── 전투(쓰러진 동안만 정지 — 웨이브 간격에도 잔존 적은 계속 싸운다) ──
   const spdMul=(S.slowT>0)?HB_SLOW_MUL:1;
   for(const f of S.foes){
@@ -6313,7 +6418,8 @@ function hbDraw(){ const S=_hb, x=S.ctx, c=S.char; if(!x) return;
     x.fillText(f.tx,f.x,f.y-f.t*22); x.restore(); }
   const tm=document.getElementById('hbTimer');                    // 웨이브 시계(값이 바뀔 때만 DOM 갱신)
   if(tm){ const v=S.phase==='fight' ? Math.ceil(S.waveT)+'s'
-                 : S.phase==='mop' ? '소탕' : S.phase==='down' ? '…' : Math.ceil(S.gapT)+'s';
+                 : S.phase==='fail' ? '실패' : S.phase==='mop' ? '소탕' : S.phase==='down' ? '…'
+                 : Math.ceil(S.gapT)+'s';
     if(tm._v!==v){ tm._v=v; tm.textContent=v; } } }
 // ── 3D 유닛 렌더 — 메인 게임과 '같은 경로'를 쓴다 ──
 // 새로 만들지 않는다: M3D.syncBuild(list,W,H,dt)가 이미 정규화 좌표·face 회전 보간·
@@ -6593,22 +6699,27 @@ function renderVillage(){ const w=document.getElementById('twWorld'); if(!w||!_t
   const g=document.getElementById('twGround');
   w.innerHTML='<div class="twGround" id="twGround"></div>'+html;
   _vgShop(); }
+// 마을 하단 = 사냥터 업그레이드 패널과 같은 규격. 클래스를 새로 만들지 않고 .hmCard/.hmUpgHead/.hmUpgGrid/.hmUp을 그대로 쓴다.
 function _vgShop(){ let el=document.getElementById('vgShop');
   if(!el){ el=document.createElement('div'); el.id='vgShop'; el.className='vgShop';
     document.getElementById('townScreen').appendChild(el); }
   const S=townState(), full=S.built.length>=TOWN_SLOTS.length;
-  let row='';
-  for(const k in TOWN_BLDG){ const B=TOWN_BLDG[k], c=townCost(k), ok=townCanPay(c)&&!full;
-    let cost=''; if(c.min) cost+=resIco('mineral')+c.min.toLocaleString('en-US');
-    if(c.gas) cost+=' '+resIco('gas')+c.gas.toLocaleString('en-US');
-    row+='<div class="vgCard'+(ok?'':' no')+'" onclick="townBuy(&#39;'+k+'&#39;)">'
-      +'<img src="'+ICO_DIR+'buildings/'+B.ico+'.webp" alt="">'
-      +'<div class="vcNm">'+B.name+(townCountOf(k)?' <b>x'+townCountOf(k)+'</b>':'')+'</div>'
-      +'<div class="vcCost">'+cost+'</div>'
-      +'<div class="vcRate">'+B.rate.toFixed(2)+'/s</div></div>'; }
-  el.innerHTML='<button class="vgAll" onclick="townCollectAll()">전부 수집</button>'
-    +'<div class="vgShopRow uiScroll">'+row+'</div>'
-    +(full?'<div class="vcRate" style="text-align:center;margin-top:3px">빈 터가 없습니다</div>':''); }
+  let cards='';
+  for(const k in TOWN_BLDG){ const B=TOWN_BLDG[k], c=townCost(k), n=townCountOf(k), off=!townCanPay(c)||full;
+    let cost=resIco('mineral')+c.min.toLocaleString('en-US');
+    if(c.gas) cost=resIco('gas')+c.gas.toLocaleString('en-US');   // 가스 건물은 가스만(카드 한 줄 규격)
+    cards+=hmUpCardHTML({ key:k, off:off,
+      ico:'<img class="icoImg" src="'+ICO_DIR+'buildings/'+B.ico+'.webp" alt="" draggable="false">',
+      name:B.name, val:(B.rate*n).toFixed(2)+'/s', next:(B.rate*(n+1)).toFixed(2)+'/s',   // 지금 총 산출 → 하나 더 지었을 때
+      lv:'LV.'+n, nextLv:(n+1), cost:cost,
+      act:'townBuy(&#39;'+k+'&#39;)' }); }
+  el.innerHTML='<div class="hmCard hmUpg">'
+    +'<button class="hmUpgHead" onclick="townCollectAll()" aria-label="전부 수집">'
+    +'<span class="hmUpgBolt"><svg viewBox="0 0 24 24"><path d="M5 13 12 6l7 7M5 19l7-7 7 7"/></svg></span>'
+    +'<b class="hmUpgTtl">마을 건설</b><i class="hmUpgChev"></i></button>'
+    +'<div class="hmUpgBar"><span class="hmUpgTabs"></span>'
+    +'<span class="hmUpQty">'+S.built.length+' / '+TOWN_SLOTS.length+' 터</span></div>'
+    +'<div class="hmUpgGrid">'+cards+'</div></div>'; }
 // 시설 팝업은 TOWN_PANELS 한 줄이면 늘어난다(제목 + 렌더러).
 // 배치: 가로로 긴 직사각형의 네 모서리 + 정중앙 광장(주 이동 방향이 가로라 좌우로 넓게 잡는다)
 // 광장을 가운데 두고 6구역이 그 둘레를 감싼다(육각 배치). 반지름은 한 화면 안에 다 들어오는 거리라
@@ -12225,6 +12336,10 @@ const ICO={
   solo:_svg('<rect x="2.5" y="7.5" width="19" height="10" rx="5"/><path d="M6.6 11.2v3M5.1 12.7h3"/><circle cx="15.6" cy="11.6" r="1.05" fill="currentColor" stroke="none"/><circle cx="17.9" cy="13.6" r="1.05" fill="currentColor" stroke="none"/>'),
   globe:_svg('<circle cx="12" cy="12" r="8.3"/><path d="M3.7 12h16.6"/><path d="M12 3.7c2.5 2.3 2.5 14.3 0 16.6c-2.5-2.3-2.5-14.3 0-16.6z"/>'),
   lock:_svg('<rect x="5.2" y="10.5" width="13.6" height="9.3" rx="2"/><path d="M8.2 10.5V8.2a3.8 3.8 0 0 1 7.6 0v2.3"/><circle cx="12" cy="14.6" r="1.25" fill="currentColor" stroke="none"/><path d="M12 15.5v2.1"/>'),
+  // 사냥터 업그레이드 3구역 — 검(공격) · 방패(방어) · 스패너(유틸)
+  sword:_svg('<path d="M12 2.4 14.5 7.4v6.4h-5V7.4z" fill="currentColor" stroke="none"/><path d="M7.2 14.4h9.6"/><path d="M12 14.4v3.6"/><path d="M10.2 19.4h3.6"/>'),
+  shield:_svg('<path d="M12 3.6 5.4 6.2v5.3c0 4 2.7 7.4 6.6 8.9 3.9-1.5 6.6-4.9 6.6-8.9V6.2z"/>'),
+  wrench:_svg('<path d="M15.6 3.9a4.9 4.9 0 0 0-4.4 7.9L4 19v1.4h1.4l7.2-7.2a4.9 4.9 0 0 0 6.6-6.1l-2.6 2.6-2.3-.6-.6-2.3z"/>'),
   home:_svg('<path d="M4 10.6 12 4l8 6.6"/><path d="M6.4 9.6V19h11.2V9.6"/><path d="M10 19v-5h4v5"/>'),
   bag:_svg('<path d="M4.6 8.4h14.8L18.6 20H5.4z"/><path d="M9 8.4V6.6a3 3 0 0 1 6 0v1.8"/>'),
   dungeon:_svg('<path d="M4.5 4.5 15 15"/><path d="M19.5 4.5 9 15"/><path d="M9 15 6 18l-1.5-.5"/><path d="M15 15 18 18l1.5-.5"/><path d="M3.5 6.5 6.5 3.5"/><path d="M20.5 6.5 17.5 3.5"/>'),   // ⚔ 던전(크로스드 소드)

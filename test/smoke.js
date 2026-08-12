@@ -206,7 +206,16 @@ async function groupLobby(){
     assert(document.querySelector('#navBar .navIt.on').dataset.nav==='home','HOME 탭이 활성이 아님');
     // 실데이터에 붙은 곳 = 사냥터 업그레이드(공격/방어/유틸 3탭 · 해금제)
     assert(document.querySelectorAll('.hmUpTab').length===3,'업그레이드 탭이 3개가 아님');
-    assert(document.querySelectorAll('.hmUpQ').length===3,'수량 버튼(1/10/MAX)이 3개가 아님');
+    // 수량은 한 칸을 눌러 돌린다 — 1 → 10 → MAX → 1. 폭은 라벨이 바뀌어도 고정
+    { const qs=document.querySelectorAll('.hmUpQ');
+      assert(qs.length===1,'수량은 한 칸이어야 함: '+qs.length+'개');
+      const box=document.querySelector('.hmUpQty'), w0=Math.round(box.getBoundingClientRect().width);
+      const seen=[];
+      for(let i=0;i<4;i++){ seen.push(document.querySelector('.hmUpQ').textContent);
+        assert(Math.round(document.querySelector('.hmUpQty').getBoundingClientRect().width)===w0,'수량 칸 폭이 변함');
+        hmUpgQtyCycle(); }
+      assert(seen.join(',')==='×1,×10,MAX,×1','수량 순환이 1→10→MAX→1이 아님: '+seen.join(','));
+      hbHunt().upgQty=1; renderHome(); }   // 뒤 검사(1회 구매)가 오염되지 않게 되돌린다
     { const n=document.querySelectorAll('.hmUp').length, all=Object.keys(HB_UPG).length;
       assert(n>0 && n<all,'현재 탭만 그려야 하는데 '+n+'/'+all+'칸');
       // 잠긴 칸은 값·레벨 대신 자물쇠 — 해금 전에 사면 안 된다
@@ -343,13 +352,16 @@ async function groupLobby(){
     assert(cleared,'라운드 클리어가 일어나지 않음');
     assert(PROF().pcoin>pk,'클리어 보너스가 없음');
     assert(_hb.wave===1,'클리어 후 웨이브가 리셋되지 않음');
-    // ② 적 누적: 화력 0으로 20초를 흘리면 다음 웨이브와 합쳐진다
+    // ② 시간 초과 = 실패 → 1웨이브부터 다시(2026-08-12 규칙 변경: 예전엔 다음 웨이브와 합쳐졌다)
     _hb.char.atk=0; _hb.char.hp=1e9; _hb.char.hpMax=1e9; _hb.char.regen=0;
-    _hb.phase='fight'; _hb.wave=1; _hb.foes.length=0; _hb.pend.length=0; hbSpawnWave();
-    const n1=_hb.foes.length+_hb.pend.length;
-    for(let i=0;i<560;i++) hbStep(0.05);   // 28초 = 웨이브1(20s)+간격(3s)+웨이브2 스폰 후
-    assert(_hb.wave===2,'20초 뒤 다음 웨이브로 안 넘어감: wave '+_hb.wave);
-    assert(_hb.foes.length+_hb.pend.length>n1,'미처치 적이 누적되지 않음: '+(_hb.foes.length+_hb.pend.length)+' ≤ '+n1);
+    _hb.phase='fight'; _hb.wave=2; _hb.foes.length=0; _hb.pend.length=0; hbSpawnWave();
+    const rdKeep=_hb.round;
+    for(let i=0;i<440;i++) hbStep(0.05);   // 22초 — 웨이브 시간(20s)을 넘긴다
+    assert(_hb.phase==='fail'||_hb.wave===1,'시간을 넘겼는데 실패로 안 감: phase '+_hb.phase+' wave '+_hb.wave);
+    for(let i=0;i<80;i++) hbStep(0.05);    // 실패 대기(3s) 통과
+    assert(_hb.wave===1,'실패 뒤 1웨이브로 안 돌아감: wave '+_hb.wave);
+    assert(_hb.round===rdKeep,'실패로 라운드가 내려감(죽음과 달라야 한다)');
+    assert(_hb.char.hp===_hb.char.hpMax,'실패 재시작인데 체력이 안 찼음');
     // ③ 사망 = 라운드 하강 + 클리어 보너스 몫 소실(이미 받은 처치 보상은 그대로) + 부활
     _hb.round=3; hbHunt().round=3; const pD=PROF().pcoin;
     _hb.char.atk=0; _hb.char.hpMax=10; _hb.char.hp=1;
@@ -500,6 +512,37 @@ async function groupLobby(){
     const gap=plus.getBoundingClientRect().left-num.getBoundingClientRect().right;
     assert(gap>=0 && gap<=3,'숫자와 + 사이가 '+gap.toFixed(1)+'px — 0~3px여야 한다');
     return gap.toFixed(1)+'px'; });
+  // 웨이브 시간(20s) 안에 못 비우면 실패 → 3초 뒤 1웨이브부터. 라운드는 안 내려간다(죽음과 다르다).
+  await step('웨이브 실패: 시간 초과 → 3초 뒤 1웨이브 · 가운데 · 최대 체력', async()=>{
+    skipIf(typeof hbWaveFail!=='function','실패 처리 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    openHome(); await sleep(300); const S=_hb; S.manual=true;
+    S.round=5; hbHunt().round=5; S.wave=3; S.phase='fight';
+    S.foes.length=0; S.pend.length=0; S.chests.length=0;
+    // 안 죽는 적 하나를 남겨 시간만 흘린다
+    S.foes.push({ico:'x',mdl:'snapper',x:400,y:400,hp:1e9,hpMax:1e9,atk:0,spd:0,cdT:99,elite:false});
+    S.char.x=200; S.char.y=-150; S.char.hp=Math.max(1,Math.round(S.char.hpMax*0.3));
+    const round0=S.round;
+    S.waveT=0.1; hbStep(0.2);
+    assert(S.phase==='fail','시간이 다 됐는데 실패가 아님: '+S.phase);
+    assert(!S.foes.length && !S.chests.length,'실패했는데 적/상자가 남음');
+    assert(S.round===round0,'실패로 라운드가 내려감(죽음과 달라야 한다): '+S.round);
+    // 3초 전에는 아직 재시작하지 않는다
+    hbStep(HB_FAIL_S-0.5);
+    assert(S.phase==='fail','3초 전에 이미 재시작함');
+    hbStep(1.0);
+    assert(S.phase==='fight','3초 뒤에 재시작하지 않음: '+S.phase);
+    assert(S.wave===1,'1웨이브부터가 아님: '+S.wave);
+    assert(Math.abs(S.char.x)<1 && Math.abs(S.char.y)<1,'가운데에서 다시 시작하지 않음: '+Math.round(S.char.x)+','+Math.round(S.char.y));
+    assert(S.char.hp===S.char.hpMax,'최대 체력이 아님: '+Math.round(S.char.hp)+'/'+Math.round(S.char.hpMax));
+    assert(S.round===round0,'재시작에서 라운드가 바뀜');
+    // 상자는 웨이브가 바뀌면 사라진다
+    S.chests.length=0; S.chests.push({x:9,y:9,hp:5,hpMax:5});
+    hbSpawnWave();
+    assert(S.chests.length<=1,'지난 웨이브 상자가 남음: '+S.chests.length);
+    assert(!S.chests.some(ch=>ch.x===9&&ch.y===9),'지난 웨이브 상자가 그대로 있음');
+    S.foes.length=0; S.pend.length=0; S.chests.length=0; S.round=1; hbHunt().round=1;
+    return '실패→'+HB_FAIL_S+'초→1웨이브 · 가운데 · 최대 체력 ok'; });
   // 📦 상자 — 맵을 돌아다닐 이유. '공격 대상'이라 사거리 안에 있어야 부순다.
   await step('상자: 사거리 안일 때만 부수고 · 적이 우선 · 보상은 섞여 나온다', async()=>{
     skipIf(typeof hbSpawnChest!=='function','상자 없음');
