@@ -358,7 +358,8 @@ async function groupLobby(){
     _hb.char.atk=0; _hb.char.hp=1e9; _hb.char.hpMax=1e9; _hb.char.regen=0;
     _hb.phase='fight'; _hb.wave=2; _hb.foes.length=0; _hb.pend.length=0; hbSpawnWave();
     const rdKeep=_hb.round;
-    for(let i=0;i<440;i++) hbStep(0.05);   // 22초 — 웨이브 시간(20s)을 넘긴다
+    // 웨이브 시간을 넉넉히 넘긴다 — 상수를 바꿔도 따라가게 hbWaveTime에서 역산한다
+    { const n=Math.ceil((hbWaveTime(_hb.wave)+2)/0.05); for(let i=0;i<n;i++) hbStep(0.05); }
     assert(_hb.phase==='fail'||_hb.wave===1,'시간을 넘겼는데 실패로 안 감: phase '+_hb.phase+' wave '+_hb.wave);
     // ⚠ 재시작 '순간'을 잡아야 한다. 몇 초 더 돌리면 새로 난 적이 도착해 몇 대 때리므로
     //    체력이 가득이 아닌 게 정상이 된다(예전엔 이걸 나중에 재서 간헐적으로 실패했다).
@@ -497,7 +498,7 @@ async function groupLobby(){
     const gap=plus.getBoundingClientRect().left-num.getBoundingClientRect().right;
     assert(gap>=0 && gap<=3,'숫자와 + 사이가 '+gap.toFixed(1)+'px — 0~3px여야 한다');
     return gap.toFixed(1)+'px'; });
-  // 웨이브 시간(20s) 안에 못 비우면 실패 → 3초 뒤 1웨이브부터. 라운드는 안 내려간다(죽음과 다르다).
+  // 웨이브 시간 안에 못 비우면 실패 → 3초 뒤 1웨이브부터. 라운드는 안 내려간다(죽음과 다르다).
   await step('웨이브 실패: 시간 초과 → 3초 뒤 1웨이브 · 가운데 · 최대 체력', async()=>{
     skipIf(typeof hbWaveFail!=='function','실패 처리 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
