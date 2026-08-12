@@ -874,6 +874,80 @@ async function groupLobby(){
     Object.assign(_hb.char,_cSave); _hb.foes.length=0; _hb.pend.length=0;   // 원복
     hbHunt().base={tiles:{},open:1}; hbLayoutBase(); saveMeta();
     return '주둔 1시작·추가·상한 '+HB_BUNKER_SLOTS+'·피해 0/'+some+'/'+up+'(bkatk+10) ok'; });
+  // ⚙ 설정(☰) — .bare 재화 바가 click-through라 눌리지 않고 캐릭터만 걸어가던 회귀를 막는다
+  await step('설정 버튼: HOME에서 눌리고 · 캐릭터가 안 움직인다', async()=>{ skipIf(typeof openAppSettings!=='function','앱 설정 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    openHome(); await sleep(80); _hb.manual=true;
+    const btn=$('curSettingsBtn');
+    assert(btn,'재화 바 설정 버튼이 없음');
+    assert($('curBar').classList.contains('bare'),'HOME 재화 바가 .bare가 아님(전제가 바뀜)');
+    assert(getComputedStyle(btn).pointerEvents!=='none','설정 버튼이 click-through라 눌리지 않는다');
+    const r=btn.getBoundingClientRect(), px=r.left+r.width/2, py=r.top+r.height/2;
+    const hit=document.elementFromPoint(px,py);
+    assert(hit && btn.contains(hit),'설정 버튼 자리를 다른 요소가 가로챈다: '+(hit?(hit.id||hit.className||hit.tagName):'none'));
+    // 같은 지점을 눌렀을 때 캐릭터가 따라가면 안 된다(이번 버그의 핵심)
+    _hb.char.tx=null; _hb.char.ty=null;
+    hbFieldTap({ target:hit, clientX:px, clientY:py });
+    assert(_hb.char.tx==null,'설정 버튼을 눌렀는데 캐릭터가 이동함');
+    // 인게임용이 아니라 앱용 팝업이 열려야 한다(임무·배속·게임 나가기가 뜨면 안 된다)
+    assert(/openAppSettings/.test(btn.getAttribute('onclick')||''),'설정이 인게임용 openSettings를 부른다');
+    openAppSettings(); await sleep(60);
+    assert(visible($('settingsPop')),'설정 팝업이 안 열림');
+    assert($('settingsPop').classList.contains('appCtx'),'앱 문맥(.appCtx)이 아님');
+    closeSettings(); await sleep(40);
+    return 'pointer-events·히트·이동 안 함·appCtx ok'; });
+  // 🛠 건설 모드 — 라운드를 멈추고 초기화한다. 나갈 때까지 연속으로 짓는다.
+  await step('건설 모드: 라운드 정지·초기화 · 연속 배치 · 방향 이어가기', async()=>{ skipIf(typeof hbBuildEnter!=='function','건설 모드 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    openHome(); await sleep(80); _hb.manual=true;
+    const p=PROF(); p.pcoin=9e6;
+    hbHunt().base={tiles:{},open:99}; hbLayoutBase();
+    // ① 진입 = 라운드 초기화 + 시계 정지
+    _hb.round=3; _hb.wave=2; _hb.phase='fight'; _hb.foes.length=0; hbSpawnWave();
+    assert(_hb.foes.length||_hb.pend.length,'전제: 적이 있어야 한다');
+    _hb.char.tx=100; _hb.char.ty=100;
+    hbBuy('wall');
+    assert(_hb.build===true,'건설 모드로 안 들어감');
+    assert(_hb.foes.length===0 && _hb.pend.length===0,'건설 진입인데 적이 남음');
+    assert((_hb.chests||[]).length===0,'건설 진입인데 상자가 남음');
+    assert(_hb.wave===1,'웨이브가 1로 안 돌아감: '+_hb.wave);
+    assert(_hb.char.tx==null,'건설 중인데 캐릭터 목적지가 남음');
+    { const t0=_hb.waveT, x0=_hb.char.x, y0=_hb.char.y;
+      for(let i=0;i<40;i++) hbStep(0.05);
+      assert(_hb.waveT===t0,'건설 중인데 웨이브 시계가 흐름: '+t0+' → '+_hb.waveT);
+      assert(_hb.char.x===x0 && _hb.char.y===y0,'건설 중인데 캐릭터가 움직임'); }
+    assert(!$('hbBuildStop').classList.contains('hide'),'건설 종료(⊘) 버튼이 안 보임');
+    // ② 연속 배치 — 확정해도 건설 모드가 유지되고 다음 자리는 오른쪽
+    const A=_hb.arm; A.gx=0; A.gy=-6; hbArmBtns();
+    const g0=A.gx;
+    hbArmConfirm();
+    assert(_hb.build===true,'한 채 짓고 건설 모드가 끊김');
+    assert(_hb.arm && _hb.arm.gx===g0+1 && _hb.arm.gy===-6,'다음 자리가 오른쪽이 아님: '+_hb.arm.gx+','+_hb.arm.gy);
+    hbArmConfirm();
+    assert(_hb.arm.gx===g0+2,'오른쪽으로 이어지지 않음: '+_hb.arm.gx);
+    // ③ 방향 이어가기 — 고스트를 무시하고 왼쪽에 놓으면 그 다음부터 왼쪽
+    _hb.arm.gx=g0-1; _hb.arm.gy=-6; hbArmConfirm();
+    assert(_hb.arm.gx===g0-2,'왼쪽으로 이어지지 않음: '+_hb.arm.gx);
+    hbArmConfirm();
+    assert(_hb.arm.gx===g0-3,'왼쪽 방향이 유지되지 않음: '+_hb.arm.gx);
+    // ④ 막힌 칸은 그 방향으로 건너뛴다
+    hbBase().tiles[hbKey(g0-4,-6)]={k:'wall'}; hbLayoutBase();
+    hbArmConfirm();
+    assert(_hb.arm.gx===g0-5,'막힌 칸을 건너뛰지 않음: '+_hb.arm.gx);
+    // ⑤ 맵 끝에 닿으면 아래로
+    { _hb.arm.dir=[1,0]; _hb.arm.last=null; _hb.arm.gx=HB_GRID_R-1; _hb.arm.gy=-6;
+      hbArmConfirm();
+      assert(_hb.arm.gy>-6,'맵 끝인데 아래로 안 꺾임: '+_hb.arm.gx+','+_hb.arm.gy); }
+    // ⑥ ⊘로 나가면 라운드가 1웨이브부터 다시 돈다
+    hbBuildExit();
+    assert(_hb.build===false && !_hb.arm,'건설 모드가 안 끝남');
+    assert($('hbBuildStop').classList.contains('hide'),'나갔는데 ⊘ 버튼이 남음');
+    assert(_hb.wave===1,'나간 뒤 웨이브가 1이 아님: '+_hb.wave);
+    assert(_hb.foes.length||_hb.pend.length,'나갔는데 적이 안 나옴');
+    { const t0=_hb.waveT; hbStep(0.5); assert(_hb.waveT<t0,'나갔는데 시계가 안 흐름'); }
+    _hb.foes.length=0; _hb.pend.length=0;
+    hbHunt().base={tiles:{},open:1}; hbLayoutBase(); saveMeta();
+    return '정지·초기화·연속·방향·건너뛰기·복귀 ok'; });
   // 🧭 미로 — 벽은 통과 불가, 적은 반드시 돌아온다. 벽을 부수지는 않는다.
   await step('미로: 벽 통과 금지 · 적이 돌아서 온다 · 열린 곳은 직진', async()=>{ skipIf(typeof hbBakeField!=='function','경로탐색 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }

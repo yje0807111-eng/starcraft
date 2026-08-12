@@ -2525,7 +2525,11 @@
   .hbHudTop{position:absolute;left:8px;top:3px;z-index:2;display:flex;flex-direction:column;align-items:flex-start;gap:5px}
   /* 좌상단 묶음의 실제 높이(프로필 48 + gap 5 + 아이콘 30). 중앙 표시가 이 아래로 내려가는 기준 — 스모크가 겹침을 검사한다 */
   :root{--hbHudH:83px}
-  .hbIcoRow{display:flex;align-items:center;gap:6px}   /* 라운드·마을 아이콘 — 세로로 쌓이면 좌상단 묶음 높이가 늘어난다 */
+  .hbIcoRow{display:flex;align-items:center;gap:6px}
+  /* 오른쪽 위 세로 스택 — 설정(☰)이 있는 재화 바 줄 바로 아래에서 시작한다 */
+  .hbHudRight{position:absolute;right:8px;top:calc(var(--curH) + 4px);z-index:2;display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+  .hbHudRight .hide{display:none}
+  #hbBuildStop svg{width:18px;height:18px}   /* 라운드·마을 아이콘 — 세로로 쌓이면 좌상단 묶음 높이가 늘어난다 */
   .hbHud{display:flex;align-items:center;gap:7px;cursor:pointer;background:none;border:none;padding:0;text-align:left}
   .hbHud:active{opacity:.75}
   .hbAv{flex:none;width:46px;height:46px;display:flex;align-items:center;justify-content:center;font-size:25px;
@@ -2547,7 +2551,10 @@
   .hbRoundBtn svg,.hbRoundBtn .mIco{width:16px;height:16px}
   /* HOME에선 재화 바가 '판'이 아니라 배경 위 숫자라 왼쪽 빈 자리가 프로필 클릭을 먹지 않게 한다 */
   .curBar.bare{pointer-events:none}
-  .curBar.bare .res{pointer-events:auto}
+  /* ⚠ 되살릴 것을 빠뜨리면 그 요소는 '눌러도 아무 일 없고 뒤 화면이 대신 반응'한다.
+     설정(☰)이 .res의 형제라 빠져 있었고, 그래서 HOME·마을·유즈맵·상점·정비 다섯 화면에서
+     설정이 죽고 클릭이 #homeScreen까지 내려가 캐릭터가 그리로 걸어갔다. 새 자식을 넣으면 여기도 볼 것. */
+  .curBar.bare .res,.curBar.bare .hudSet{pointer-events:auto}
   /* 중앙 = 표시 전용(라운드 조절은 좌상단 .hbRoundBtn 담당) → 클릭을 통과시켜 전장을 가리지 않는다 */
   .hbMid{position:absolute;left:50%;top:calc(3px + var(--hbHudH) + 8px);transform:translateX(-50%);z-index:2;text-align:center;
     display:flex;flex-direction:column;pointer-events:none;background:none;border:none;padding:2px 8px;white-space:nowrap}
@@ -4103,7 +4110,7 @@
       <span class="res"><img class="ri" src="assets/icons/res_mineral.webp" alt=""><b id="curMin">0</b><i class="curPlus" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg></i></span>
       <span class="res"><img class="ri" src="assets/icons/res_gas.webp" alt=""><b id="curGas">0</b><i class="curPlus" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg></i></span>
       <span class="res"><img class="ri" src="assets/icons/res_gem.webp" alt=""><b id="curGem">0</b><i class="curPlus" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg></i></span>
-      <div class="hudSet" id="curSettingsBtn" data-sfx="ui_open" onclick="openSettings()" title="설정"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"><path d="M4.5 7h15M4.5 12h15M4.5 17h15"/></svg></div>
+      <div class="hudSet" id="curSettingsBtn" data-sfx="ui_open" onclick="openAppSettings()" title="설정"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"><path d="M4.5 7h15M4.5 12h15M4.5 17h15"/></svg></div>
     </span>
   </div>
   <!-- 💬 친구 DM 채팅(허브 소셜) -->
@@ -4137,6 +4144,13 @@
     </div>
     <div class="hbMid" id="hbMid">   <!-- 표시 전용 — 라운드 조절은 위 아이콘이 담당한다 -->
       <b id="hbRound">던전 1 · 라운드 1</b><span><i id="hbWaveTx">웨이브 1/5</i> · <i id="hbTimer">20s</i> · <i id="hbMode">반복</i></span></div>
+    <!-- 오른쪽 위 — 설정(☰, 재화 바 안) 바로 아래. 건설 중에만 ⊘가 뜬다.
+         ⚠ #curBar는 .bare에서 click-through라 그 안에 두면 안 눌린다 — #homeScreen의 자식으로 둔다. -->
+    <div class="hbHudRight">
+      <button class="hbRoundBtn hide" id="hbBuildStop" onclick="hbBuildExit(event)" aria-label="건설 종료" title="건설 종료">
+        <svg viewBox="0 0 24 24" width="26" height="26"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.4"/><line x1="6.2" y1="6.2" x2="17.8" y2="17.8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      </button>
+    </div>
     <div class="hbBar" id="hbBar"></div>   <!-- 스킬·건설·부스트 (전장 위, 업그레이드 카드 바로 위) -->
     <div id="hbArmBtns" class="hbArmBtns hide"></div>   <!-- 🧱 배치 확정/취소 — 공용 .bArmBtns를 담는 앵커 -->
     <div class="hmScroll uiScroll" id="hmScroll">
@@ -6167,7 +6181,8 @@ function hbStart(){ const cv=document.getElementById('hbCv'); if(!cv) return;
 // ⚠ 여기서 반드시 저장한다. 처치 보상은 메모리에만 있어서, 다음 화면의 loadMeta()가 그대로 덮어쓴다(재화가 사라지던 원인).
 // ⚠ 3D 캔버스는 공용이라 떠날 때 무조건 반납한다(안 하면 유즈맵 3D가 사라진다).
 function hbStop(){ if(_hbRaf) cancelAnimationFrame(_hbRaf); _hbRaf=0;
-  if(_hb){ _hb.bg=true; _hb.arm=null; _hbDirty=false; if(typeof saveMeta==='function') saveMeta(); }
+  if(_hb){ if(_hb.build && typeof hbBuildExit==='function') hbBuildExit();   // 🛠 건설 중이었으면 라운드를 되살리고 나간다
+    _hb.bg=true; _hb.arm=null; _hbDirty=false; if(typeof saveMeta==='function') saveMeta(); }
   if(typeof hbArmBtns==='function') hbArmBtns();   // 🧱 배치 중이었으면 확정 버튼도 걷는다(안 그러면 다른 화면 위에 남는다)
   hb3dDetach(); }
 // 전투를 진짜로 끝낼 때(로그아웃) — 진행 상태까지 버린다
@@ -6385,9 +6400,42 @@ document.addEventListener('pointerdown', hbFieldTap, true);   // 리스너 위�
 // ═══ 🧱 배치 흐름 — 고스트를 옮기고 ▶로 확정한다 ═════════════════════════════
 // ⛔ 관리자 건설(techPtrDown/G.tech)을 부르지 않는다 — HOME은 유즈맵 전역 G를 참조하면 안 된다.
 //    공용으로 쓰는 것은 확정/취소 버튼(.bArmBtns)뿐이고, 나머지는 여기 전용이다.
-function hbArmStart(k,gx,gy){ if(!_hb) return; _hb.arm={ k, gx, gy }; hbArmBtns(); }
-function hbArmCancel(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation();
-  if(_hb) _hb.arm=null; hbArmBtns(); if(typeof playSfx==='function') playSfx('ui_close'); }
+// ── 🛠 건설 모드 = 라운드 정지 ──────────────────────────────────────────────
+// 짓는 동안 적이 몰려오면 자리를 볼 수가 없다. 그래서 배치를 시작하면 라운드를 '시작 직전'으로
+// 되돌리고 시계를 멈춘다. 나가면(오른쪽 위 ⊘ 또는 ✕) 1웨이브부터 새로 시작한다.
+function hbBuildEnter(){ const S=_hb; if(!S||S.build) return;
+  S.build=true;
+  S.foes.length=0; S.pend.length=0; S.shots.length=0;
+  if(S.chests) S.chests.length=0;
+  S.wave=1; S.phase='fight'; S.waveT=hbWaveTime(1); S.buf={min:0,gas:0,xp:0,kills:0};
+  S.char.tx=null; S.char.ty=null; S.char.mv=0;      // 캐릭터도 멈춘다
+  hbHud(); }
+function hbBuildExit(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation();
+  const S=_hb; if(!S) return;                        // ⚠ _hb 없이 부르면 hbSpawnWave가 터진다
+  const was=S.build;
+  S.arm=null; S.build=false;                         // ⚠ 상태를 먼저 끄고 나서 버튼을 다시 그린다(순서를 바꾸면 ⊘가 남는다)
+  hbArmBtns();
+  if(was){ S.wave=1; S.phase='fight'; hbSpawnWave(); }
+  if(typeof playSfx==='function') playSfx('ui_close');
+  hbHud(); }
+function hbArmStart(k,gx,gy){ if(!_hb) return;
+  hbBuildEnter();
+  _hb.arm={ k:k, gx:gx, gy:gy, dir:[1,0], last:null };   // dir = 연속 배치가 나아가는 방향(기본 오른쪽)
+  hbArmBtns(); }
+function hbArmCancel(ev){ return hbBuildExit(ev); }      // ✕ = 건설 종료(오른쪽 위 ⊘와 같은 동작)
+// 다음 자리 — 직전 두 배치가 만든 방향으로 이어간다. 막힌 칸은 그 방향으로 계속 건너뛴다.
+function hbArmAdvance(){ const S=_hb, A=S&&S.arm; if(!A) return; const B=HB_STRUCT[A.k]||{w:1,h:1};
+  if(A.last){ const dx=Math.sign(A.gx-A.last.gx), dy=Math.sign(A.gy-A.last.gy);
+    if(dx||dy) A.dir=[dx,dy]; }                          // 고스트를 무시하고 다른 칸에 놓으면 그게 새 방향
+  A.last={gx:A.gx, gy:A.gy};
+  const step=(d)=>{ if(!d[0]&&!d[1]) return null; let x=A.gx, y=A.gy;
+    for(let i=0;i<HB_GRID_R*2;i++){ x+=d[0]*B.w; y+=d[1]*B.h;
+      if(!hbInGrid(x)||!hbInGrid(y)) return null;        // 맵 밖 = 이 방향은 끝
+      if(hbCanPlace(A.k,x,y) && !hbSealCheck(A.k,x,y)) return [x,y]; }
+    return null; };
+  const hit = step(A.dir) || step([0,1]) || step([1,0]) || step([0,-1]) || step([-1,0]);
+  if(hit){ A.gx=hit[0]; A.gy=hit[1]; }
+  else { const f=hbFreeCell(A.k); if(f){ A.gx=f[0]; A.gy=f[1]; A.last=null; } } }
 function hbArmTo(sx,sy){ const S=_hb, A=S&&S.arm; if(!A) return;
   const B=HB_STRUCT[A.k]||{w:1,h:1};
   A.gx=Math.max(-HB_GRID_R, Math.min(HB_GRID_R-B.w, hbGx((sx-S.cx)/S.k)-((B.w-1)>>1)));
@@ -6400,11 +6448,17 @@ function hbArmConfirm(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation();
   const A=_hb&&_hb.arm; if(!A) return;
   if(hbSealCheck(A.k,A.gx,A.gy)){ hmToast('길이 완전히 막힙니다'); return; }   // 자원은 깎지 않는다
   if(!hbPlaceStruct(A.k,A.gx,A.gy)){ hmToast('여기엔 지을 수 없습니다'); return; }
-  _hb.arm=null; hbArmBtns();
   if(typeof playSfx==='function') playSfx('ui_open');
-  renderBuildModal(); renderHome(); }
+  // 연속 배치 — 나갈 때까지 계속 짓는다. 더 못 사면 그때 건설을 끝낸다.
+  if(hbStructN(A.k)>=hbBuildMax(A.k)){ hmToast(HB_STRUCT[A.k].name+' 최대치'); hbBuildExit(); }
+  else if(Math.floor(PROF().pcoin||0)<hbBuildCost(A.k)){ hmToast('미네랄이 부족합니다'); hbBuildExit(); }
+  else hbArmAdvance();
+  hbArmBtns(); renderBuildModal(); renderHome(); }
 // ▶확정 / ✕취소 — 공용 .bArmBtns를 재사용한다(CLAUDE.md 레지스트리). 위치는 고스트 아래 중앙.
-function hbArmBtns(){ const host=document.getElementById('hbArmBtns'); if(!host) return;
+function hbArmBtns(){ const host=document.getElementById('hbArmBtns');
+  { const st=document.getElementById('hbBuildStop');   // ⊘ 건설 종료 — 건설 중에만 보인다
+    if(st) st.classList.toggle('hide', !(_hb&&_hb.build)); }
+  if(!host) return;
   const S=_hb, A=S&&S.arm;
   if(!A){ host.innerHTML=''; host.classList.add('hide'); return; }
   const B=HB_STRUCT[A.k]||{w:1,h:1};
@@ -6442,7 +6496,9 @@ function hbBunkerField(bk){ if(!bk) return null;
   const key=hbGx(bk.x)+','+hbGx(bk.y);
   if(bk._fKey!==key || bk._fDirty!==_hbBlkSeq){ bk._fKey=key; bk._fDirty=_hbBlkSeq; bk._f=hbBakeField(hbGx(bk.x),hbGx(bk.y)); }
   return bk._f; }
-function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char; S.t+=dt;
+function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char;
+  if(S.build){ hbFx(dt); return; }   // 🛠 건설 중 = 시계도 전투도 멈춘다(이펙트만 사그라들게 둔다)
+  S.t+=dt;
   // 적이 따라올 길 — 캐릭터가 다른 칸으로 넘어갔을 때만 다시 굽는다(900칸 BFS는 1ms 미만)
   { const key=hbGx(c.x)+','+hbGx(c.y);
     if(_hbFoeAt!==key || S._blkSeq!==_hbBlkSeq){ _hbFoeAt=key; S._blkSeq=_hbBlkSeq; S.foeF=hbBakeField(hbGx(c.x),hbGx(c.y)); } }
@@ -6775,7 +6831,8 @@ function hbDraw(){ const S=_hb, x=S.ctx, c=S.char; if(!x) return;
   for(const f of S.floats){ x.save(); x.globalAlpha=1-f.t/.9; x.fillStyle=f.cl;
     x.fillText(f.tx,f.x,f.y-f.t*22); x.restore(); }
   const tm=document.getElementById('hbTimer');                    // 웨이브 시계(값이 바뀔 때만 DOM 갱신)
-  if(tm){ const v=S.phase==='fight' ? Math.ceil(S.waveT)+'s'
+  if(tm){ const v=S.build ? '건설 중'
+                 : S.phase==='fight' ? Math.ceil(S.waveT)+'s'
                  : S.phase==='fail' ? '실패' : S.phase==='mop' ? '소탕' : S.phase==='down' ? '…'
                  : Math.ceil(S.gapT)+'s';
     if(tm._v!==v){ tm._v=v; tm.textContent=v; } } }
@@ -12213,7 +12270,10 @@ function applyVideo(){ G.opt=G.opt||{sfx:true,bgm:true};   // 그래픽 품질 =
     qh.textContent = q==='saver' ? '절전모드 — 오토배틀 전장만 해상도·이펙트를 낮춰 배터리 절약'
       : '고화질 — 오토배틀 전장을 더 선명하게(건설지·다른 화면엔 영향 없음)';
     qh.classList.toggle('save', q==='saver'); }
-  document.body.classList.toggle('lite', G.opt.fx!=='full'); }
+  // ⚠ 기본값 판정을 fxLevel()과 맞춰야 한다. 예전엔 여기서만 `G.opt.fx!=='full'`로 봐서
+  //    fx가 아직 없는 새 프로필이면 설정을 한 번 여는 것만으로 body.lite(그림자·블러 전부 제거)가
+  //    켜졌다 — 화면엔 '고화질'이라고 떠 있는데 이펙트만 사라지는 상태였다.
+  document.body.classList.toggle('lite', fxLevel()!=='full'); }
 function setQuality(q){ G.opt=G.opt||{sfx:true,bgm:true}; q=(q==='saver')?'saver':'high'; G.opt.quality=q;
   // 해상도(전장 렌더 배율)는 setup·M3D.sync가 quality로 직접 계산 — 여기선 이펙트/모델만 일괄 적용
   if(q==='saver'){ G.opt.model3d=true; G.opt.fx='min'; G.opt.fps=60; G.opt.lite3d=true; }
