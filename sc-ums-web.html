@@ -579,9 +579,16 @@
      안쪽 선은 ::before에 같은 모양의 모서리 컷을 줘서 카드 윤곽을 따라간다. */
   .setCard,.ecCard,.ovCard{position:relative}
   .setCard::before,.ecCard::before,.ovCard::before{content:'';position:absolute;inset:4px;pointer-events:none;z-index:0;
-    border:1px solid var(--frameAcc,rgba(160,190,220,.55));
+    border:1px solid var(--frameAcc,rgba(240,180,41,.55));
     /* 컷 길이는 카드와 동일한 11px — 짧게 주면 대각선이 평행하지 않아 모서리가 어긋난다 */
     clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px)}
+  /* 코너 브래킷 — 위 양쪽 L자. 패널·팝업 공통 장식(디자인 시스템) */
+  .setCard::after{content:'';position:absolute;left:7px;right:7px;top:7px;height:15px;pointer-events:none;z-index:2;
+    background:
+      linear-gradient(90deg,var(--frameAcc,rgba(240,180,41,.85)) 0 15px,transparent 15px) top left/100% 1.5px no-repeat,
+      linear-gradient(180deg,var(--frameAcc,rgba(240,180,41,.85)) 0 15px,transparent 15px) top left/1.5px 100% no-repeat,
+      linear-gradient(270deg,var(--frameAcc,rgba(240,180,41,.85)) 0 15px,transparent 15px) top right/100% 1.5px no-repeat,
+      linear-gradient(180deg,var(--frameAcc,rgba(240,180,41,.85)) 0 15px,transparent 15px) top right/1.5px 100% no-repeat}
   .setCard>*,.ecCard>*,.ovCard>*{position:relative;z-index:1}
   #settingsPop.appCtx .setCard::before{display:none}   /* 게임 밖은 별도 방향 — 프레임 미적용 */
   .ecCard{--frameAcc:rgba(92,214,255,.5)}
@@ -679,9 +686,11 @@
   
   
   /* 제목 = 흰색 + 강조색 언더라인(콘솔 프로필 헤더와 같은 언어) */
-  .setTitle{position:relative;display:flex;align-items:center;justify-content:space-between;font-size:17px;font-weight:800;letter-spacing:.5px;
-    color:#eaf1fb;text-shadow:0 1px 3px rgba(0,0,0,.65);margin-bottom:11px;padding-bottom:9px;border-bottom:none}
-  .setTitle::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;background:linear-gradient(90deg,var(--setAcc),transparent 72%);opacity:.5}
+  .setTitle{position:relative;display:flex;align-items:center;justify-content:space-between;
+    font-family:var(--font-ti);font-size:18px;font-weight:400;letter-spacing:.1em;
+    color:#eaf1fb;text-shadow:0 1px 3px rgba(0,0,0,.65);margin-bottom:13px;padding-bottom:11px;border-bottom:none}
+  .setTitle::after{content:'';position:absolute;left:2px;right:2px;bottom:0;height:1px;opacity:1;
+    background:linear-gradient(90deg,transparent,rgba(240,180,41,.5) 22%,rgba(240,180,41,.5) 78%,transparent)}   /* 양끝이 사라지는 골드 스캔라인 — 데모 헤더와 같은 규칙 */
   .setX{font-size:var(--fs-xl);color:var(--txt-mute);cursor:pointer;padding:2px 7px;border-radius:var(--r-bar);line-height:1}
   .setX:active{background:rgba(255,255,255,.08)}
   .setItem{display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;font-size:var(--fs-lg);font-weight:700;color:#dbe3ec;
@@ -1852,7 +1861,10 @@
      ⚠ .moCard 값을 바꾸면 여기도 같이 바꿀 것 — 같아야 하는 두 값이다. */
   #soloDiffPanel .cpCard{width:92%;max-width:350px;height:min(564px,90%);max-height:90%;
     display:flex;flex-direction:column;overflow:hidden}
-  #soloDiffPanel .moDiffBtns{flex:1 1 auto;min-height:0;overflow-y:auto}
+  /* 스크롤바가 안 생기게 여백을 줄여 내용을 카드 안에 넣는다(넘침 8px → 여백 24px 확보) */
+  #soloDiffPanel .moDiffBtns{flex:1 1 auto;min-height:0;overflow:hidden;gap:6px;margin-bottom:8px}
+  #soloDiffPanel .cpTitle{margin-bottom:10px}
+  #soloDiffPanel .pickHint{margin-bottom:8px}
   #raceSelPanel{position:absolute;inset:0;z-index:54;display:flex;align-items:center;justify-content:center;background:var(--ov-dim);backdrop-filter:blur(2px)}
   #raceSelPanel.hide{display:none}
   /* 종족 선택 — 아이콘 없는 깔끔한 드롭다운(세로 목록) */
@@ -2516,7 +2528,10 @@
     background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
   .hbCol{display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0}
   .hbHud b{font-size:12px;font-weight:700;color:#ececec;letter-spacing:.2px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .hbSt i{font-style:normal}
+  .hbSt i{font-style:normal;display:flex;align-items:baseline;gap:2px}
+  /* ⚔는 같은 10px에서도 잉크 높이가 9px(숫자는 6px)이고 기준선 아래로 1px 내려간다 →
+     숫자보다 크고 처져 보인다. 잉크 중심이 숫자와 같아지는 크기가 8.5px다(계산: 3/3.5×10). */
+  .hbSt em{font-style:normal;font-size:8.5px;line-height:1}
   .hbXp{width:92px;height:3px;border-radius:var(--r-bar);background:rgba(255,255,255,.10);overflow:hidden}
   .hbXp i{display:block;height:100%;width:0;background:#5dff8f}
   .hbSt{display:flex;gap:7px;font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:10px;font-weight:700;color:#c6ccd4}
@@ -2659,6 +2674,7 @@
   .curBar .res:hover .curPlus svg{stroke:#f8c453}   /* 숫자 높이에 맞춰 축소 */
   #phone.curOn .appScreen{padding-top:var(--curH)}
   #phone.curOn #mapSelect{padding-top:calc(var(--curH) + 12px)}
+  #phone.curOn #soloDiffPanel{padding-top:var(--curH)}   /* 난이도 팝업은 .appScreen이 아니라 위 규칙에서 빠진다 — 유즈맵 팝업과 위치를 맞추려면 같은 여백이 필요 */
   #mapSelect{padding-bottom:calc(var(--navH) + 12px)}   /* 하단 네비에 내용이 가리지 않게 */
   #phone.inGame #curBar{display:none}   /* 실경기(인게임)에선 자체 HUD(#hudR) 사용 — 공용 바 숨김 */
   /* ⚔ 던전 허브 — 던전 목록 카드(배너) + 팝업(소탕/입장) */
@@ -3973,7 +3989,7 @@
         <span class="hbCol">
           <b id="hbName">캐릭터</b>
           <span class="hbXp"><i id="hbXpBar"></i></span>
-          <span class="hbSt"><i id="hbLv">Lv.1</i><i id="hbAtk">⚔ 0</i></span>
+          <span class="hbSt"><i id="hbLv">Lv.1</i><i id="hbAtk"><em>⚔</em><span id="hbAtkN">0</span></i></span>
         </span></button>
       <div class="hbIcoRow"><button class="hbRoundBtn" id="hbRoundBtn" onclick="hbOpenRounds()" aria-label="던전·라운드 선택"><span data-ico="flag"></span></button><button class="hbRoundBtn" id="hbVillageBtn" onclick="openVillage()" aria-label="마을" title="마을"><span data-ico="hero"></span></button></div>
     </div>
@@ -5732,7 +5748,7 @@ function hbHud(){ const S=_hb; if(!S) return; const c=(typeof CHAR==='function')
   { const K=(c&&PROF_CLASSES[c.cls])||null;   // 직업 이름은 안 쓰지만 초상 아이콘은 여기서 온다
     const av=document.getElementById('hbAv'); if(av) av.textContent=(K&&K.ico)||'🧍'; }
   put('hbLv','Lv.'+(c?c.level:1));
-  put('hbAtk','⚔ '+Math.round(S.char.atk));
+  put('hbAtkN', String(Math.round(S.char.atk)));   // 검 글리프는 마크업에 고정 — 숫자만 갱신한다
   { const bar=document.getElementById('hbXpBar');                       // 다음 레벨까지
     if(bar && c && typeof profXpForLevel==='function'){ const need=profXpForLevel(c.level)||1;
       bar.style.width=Math.max(0,Math.min(100,(c.xp/need)*100))+'%'; } }

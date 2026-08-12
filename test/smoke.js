@@ -949,6 +949,16 @@ async function groupLobby(){
     for(const id of ['hbName','hbLv','hbAtk']){
       const e=$(id); assert(e && e.textContent.trim(),'프로필 항목이 비어 있음: #'+id); }
     for(const id of ['hbJob','hbHp']) assert(!$(id),'뺀 항목이 아직 있음: #'+id);
+    // 레벨·검·숫자가 같은 높이로 보여야 한다. 요소 상자는 원래 같으니 글리프 '잉크 중심'을 본다
+    // — ⚔는 같은 폰트 크기에서 잉크가 9px(숫자 6px)이라 그냥 두면 크고 처져 보인다.
+    { const g=document.createElement('canvas').getContext('2d');
+      const inkC=(el,txt)=>{ const cs=getComputedStyle(el); g.font=cs.fontWeight+' '+cs.fontSize+' '+cs.fontFamily;
+        const m=g.measureText(txt); return ((-m.actualBoundingBoxAscent)+m.actualBoundingBoxDescent)/2; };
+      const sw=document.querySelector('#hbAtk em'), num=$('hbAtkN');
+      assert(sw&&num,'공격력이 검·숫자로 나뉘어 있지 않음(크기 보정을 못 건다)');
+      const a=inkC($('hbLv'),'Lv.8'), b=inkC(sw,'⚔'), c2=inkC(num,'30');
+      assert(Math.abs(a-b)<=0.3 && Math.abs(a-c2)<=0.3,
+        '레벨·검·숫자 높이가 안 맞음: Lv '+a.toFixed(2)+' / ⚔ '+b.toFixed(2)+' / 숫자 '+c2.toFixed(2)); }
     assert($('hbName').textContent==='스모크','이름이 캐릭터와 다름: '+$('hbName').textContent);
     assert($('hbLv').textContent==='Lv.'+c.level,'레벨 표기가 다름: '+$('hbLv').textContent);
     { const bar=$('hbXpBar'), box=document.querySelector('.hbXp');
