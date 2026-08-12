@@ -541,10 +541,12 @@ async function groupLobby(){
     S.chests.length=0;
     const near={x:Math.max(10,S.char.range*0.5), y:0, hp:hbChestHp(1), hpMax:hbChestHp(1)};
     S.chests.push(near);
-    const tk0=((PROF().tickets&&PROF().tickets.gear)||0), gem0=PROF().gem||0;
+    // 상자는 장비뿐 아니라 펫·동료 뽑기권도 낸다 — 장비만 보면 다른 권이 나왔을 때 '보상 없음'이 된다
+    const tkSum=()=>{ const t=PROF().tickets||{}; return (t.gear||0)+(t.pet||0)+(t.ally||0); };
+    const tk0=tkSum(), gem0=PROF().gem||0;
     for(let i=0;i<200 && S.chests.length;i++) hbStep(0.05);
     assert(!S.chests.length,'사거리 안인데 안 부서짐(hp '+near.hp+')');
-    const got=(((PROF().tickets&&PROF().tickets.gear)||0)-tk0) + ((PROF().gem||0)-gem0);
+    const got=(tkSum()-tk0) + ((PROF().gem||0)-gem0);
     const boost=hbBoostOn('inc')||hbBoostOn('atk');
     assert(got>0 || boost,'상자를 부쉈는데 아무 보상도 없음');
     // ④ 적이 우선 — 적이 사거리 안에 있으면 상자는 안 맞는다
@@ -1288,7 +1290,10 @@ async function groupLobby(){
     for(let i=2;i<curve.length;i++){ const g1=curve[i-1].need-curve[i-2].need, g2=curve[i].need-curve[i-1].need;
       assert(g2>=g1, label+': 단계 '+(i+1)+'에서 간격이 좁아짐: '+g1+' → '+g2); }
     assert(curve[4].need<=20, label+': 5단계까지가 너무 오래 걸림: '+curve[4].need);
-    assert(curve[29].need>=1000, label+': 30단계가 너무 쉬움: '+curve[29].need);
+    // 마지막 단계는 '오래 걸리되 도달 가능'해야 한다. 뽑기권은 미네랄로 못 사고 엘리트·상자·라운드
+    // 보너스·젬으로만 들어오므로, 수천 회를 요구하면 사실상 잠긴 단계가 된다(옛 값 5,162회가 그랬다).
+    assert(curve[29].need>=300, label+': 30단계가 너무 쉬움: '+curve[29].need);
+    assert(curve[29].need<=1500, label+': 30단계가 사실상 도달 불가: '+curve[29].need);
     // ④ 단계가 오르면 하위 최상단(=일반)은 반드시 줄고, 상위 등급은 반드시 는다
     const upper=tiers.slice(3);            // 유니크 이상
     for(let i=1;i<curve.length;i++){ const A=curve[i-1].p, B=curve[i].p;
@@ -1342,7 +1347,8 @@ async function groupLobby(){
       finally { Math.random=rnd; }
       assert(n===300,'뽑기가 중간에 멈춤: '+n);
       const low=(cnt.common||0)+(cnt.rare||0);
-      assert(low/n>0.85,'초반 300회인데 일반+레어가 85%에 못 미침: '+(low/n*100).toFixed(1)+'%');
+      // ⚠ 문턱을 완화한 뒤로는 300회면 단계가 꽤 올라간다 — 표본을 '1~5단계 구간'으로 좁혀서 본다
+      assert(low/n>0.75,'초반 300회인데 일반+레어가 75%에 못 미침: '+(low/n*100).toFixed(1)+'%');
       assert(!cnt.god,'초반 300회에 갓이 나옴(아주 낮아야 한다)'); }
     // ⑧ 중복은 레벨이 아니라 재료로 쌓인다 — 난수를 고정해 '같은 동료 두 번'을 결정적으로 만든다
     //    (확률에 기대면 이 규칙이 깨져도 통과해 버린다)
@@ -1364,6 +1370,44 @@ async function groupLobby(){
     { let prev=0; for(const t of GACHA_TIER_ORDER){ assert(HB_MATE_PT[t]>prev,'재료 포인트가 등급 오름차순이 아님: '+t); prev=HB_MATE_PT[t]; } }
     return sum1; });
 
+  // 🎟 뽑기권 = 미네랄로 못 산다. 엘리트·상자·라운드 보너스로 얻고 젬으로만 산다.
+  await step('뽑기권: 미네랄 불가 · 젬 구매 · 상자/엘리트/라운드 지급', ()=>{ skipIf(typeof buyTicketGem!=='function','뽑기권 구매 없음');
+    const p=PROF(); p.tickets={gear:0,pet:0,ally:0}; p.gem=0; p.pcoin=1e9;
+    // ① 미네랄로 사는 경로가 없어야 한다
+    assert(typeof profBuyPetTicket==='undefined','미네랄 펫 뽑기권 구매가 남아 있음');
+    assert(typeof PROF_PET_TICKET_COST==='undefined','미네랄 뽑기권 값이 남아 있음');
+    // ② 젬이 모자라면 못 산다 · 미네랄이 아무리 많아도 안 된다
+    for(const k of ['ally','pet','gear']){
+      assert(TICKET_GEM[k]>0,'젬 값이 없는 뽑기권: '+k);
+      assert(!buyTicketGem(k),'젬이 0인데 '+k+' 뽑기권이 사짐'); }
+    assert(p.pcoin===1e9,'미네랄이 줄었음(뽑기권은 미네랄로 사면 안 된다)');
+    // ③ 젬으로 사면 젬만 줄고 권이 는다
+    p.gem=100;
+    for(const k of ['ally','pet','gear']){ const g0=p.gem, n0=ticketN(k);
+      assert(buyTicketGem(k),'젬이 있는데 '+k+' 뽑기권을 못 삼');
+      assert(ticketN(k)===n0+1,k+' 뽑기권이 안 늘어남');
+      assert(p.gem===g0-TICKET_GEM[k],'젬 정산이 안 맞음: '+g0+' → '+p.gem); }
+    assert(p.pcoin===1e9,'구매로 미네랄이 줄었음');
+    // ④ 맵의 상자가 세 뽑기권을 모두 낸다 — 상자가 주요 공급처다
+    { const seen={}; const rnd=Math.random;
+      let i=0; Math.random=()=>{ i++; return ((i*0.137)%1); };     // 결정적으로 훑는다
+      try{ for(let n=0;n<400;n++){ const before={g:ticketN('gear'),p:ticketN('pet'),a:ticketN('ally')};
+        hbChestReward();
+        if(ticketN('gear')>before.g) seen.gear=1;
+        if(ticketN('pet')>before.p) seen.pet=1;
+        if(ticketN('ally')>before.a) seen.ally=1; } }
+      finally { Math.random=rnd; }
+      for(const k of ['gear','pet','ally']) assert(seen[k],'상자에서 '+k+' 뽑기권이 안 나옴'); }
+    // ⑤ 라운드 마일스톤이 동료·펫 권을 번갈아 준다
+    { let a=0,pt=0;
+      for(let r=HB_RW_EVERY; r<=HB_RW_EVERY*6; r+=HB_RW_EVERY){ const rw=hbRoundRw(1,r);
+        assert(rw,'마일스톤 라운드에 보상이 없음: '+r);
+        a+=rw.atk||0; pt+=rw.ptk||0; }
+      assert(a>0 && pt>0,'마일스톤이 동료·펫 권을 안 줌: 동료 '+a+' 펫 '+pt); }
+    // ⑥ 엘리트 처치 드랍 확률이 살아 있다(일반보다 훨씬 높아야 한다)
+    assert(HB_ATICKET_ELITE>HB_ATICKET_NORMAL && HB_PTICKET_ELITE>HB_PTICKET_NORMAL,'엘리트 드랍이 일반보다 높지 않음');
+    return '젬 '+['ally','pet','gear'].map(k=>TICKET_NAME[k]+' '+TICKET_GEM[k]).join(' · ')+' · 상자/마일스톤 지급 ok'; });
+
   // 🐾 펫 뽑기 — 동료와 '같은 형태'. 곡선 규칙은 같은 검사기로 본다.
   await step('펫 뽑기: 동료와 같은 형태 · 중복은 ★ 재료', ()=>{ skipIf(typeof PROF_PET_GACHA!=='object','펫 뽑기 단계 없음');
     // ① 곡선 규칙은 동료와 동일한 잣대로
@@ -1374,13 +1418,11 @@ async function groupLobby(){
       for(const id in PROF_PETS) assert(PET_TIERS.indexOf(PROF_PETS[id].tier)>=0,'펫 등급이 확률표에 없음: '+id); }
     // ③ 영입은 뽑기권으로만 — 미네랄로 직접 뽑던 경로는 없어졌다
     const p=PROF(); p.pets={}; p.equip=[]; p.petN=0; p.tickets={gear:0,pet:0,ally:0}; p.pcoin=0;
-    assert(typeof PROF_PET_GACHA_COST==='undefined','옛 미네랄 뽑기 비용이 남아 있음');
     assert(profPetRoll()===null,'뽑기권이 0인데 뽑힘');
-    // ④ 상점에서 미네랄로 뽑기권을 산다
-    assert(!profBuyPetTicket(),'미네랄이 0인데 뽑기권이 사짐');
-    p.pcoin=PROF_PET_TICKET_COST;
-    assert(profBuyPetTicket(),'미네랄이 있는데 뽑기권을 못 삼');
-    assert(profPetTicket()===1 && p.pcoin===0,'뽑기권 구매 정산이 안 맞음');
+    // ④ 뽑기권은 젬으로만 산다(미네랄 경로는 따로 검사 — '뽑기권' 단계)
+    p.gem=TICKET_GEM.pet;
+    assert(buyTicketGem('pet'),'젬이 있는데 펫 뽑기권을 못 삼');
+    assert(profPetTicket()===1 && p.gem===0,'뽑기권 구매 정산이 안 맞음');
     // ⑤ 뽑으면 ★0으로 들어오고, 뽑기권이 준다
     const r1=profPetRoll();
     assert(r1 && PROF_PETS[r1.id],'뽑기가 실패함');

@@ -5342,14 +5342,23 @@ const PROF_PETS={
 //   ⚠ 확률을 줄 등급에 실제 펫이 있어야 한다 — PET_TIERS 는 PROF_PETS 에서 뽑아 만든다.
 const PET_TIERS=GACHA_TIER_ORDER.filter(t=>{ for(const id in PROF_PETS) if(PROF_PETS[id].tier===t) return true; return false; });
 const PROF_PET_GACHA_MAX=30;
-const PROF_PET_NEED_A=8, PROF_PET_NEED_B=1.25;
+const PROF_PET_NEED_A=12, PROF_PET_NEED_B=1.16;   // 동료와 같은 문턱(30단계 876회)
 // 등급이 5종이라 최상위(레전드)가 동료의 '갓' 자리를 맡는다 — 1단계 0.0001%에서 시작한다.
 const PROF_PET_W0={common:900,  rare:90,   epic:10,   unique:1,    legend:0.001};
 const PROF_PET_WG={common:0.78, rare:0.85, epic:0.94, unique:1.06, legend:1.22};
 const PROF_PET_GACHA=buildGachaCurve({max:PROF_PET_GACHA_MAX, needA:PROF_PET_NEED_A, needB:PROF_PET_NEED_B,
   tiers:PET_TIERS, w0:PROF_PET_W0, wg:PROF_PET_WG});
 const PROF_PET_START_TICKETS=5;      // 처음 열 때 쥐여 주는 펫 뽑기권
-const PROF_PET_TICKET_COST=300;      // 상점에서 미네랄로 펫 뽑기권을 산다(옛 1회 뽑기 가격을 그대로 승계)
+// 🎟 뽑기권은 미네랄로 살 수 없다 — 엘리트 처치 · 맵의 상자 · 라운드 보너스로 얻고, 💎 젬으로만 산다.
+//   (젬 = 유일한 현질 재화. 미네랄로 사면 방치 수입이 곧 뽑기가 되어 등급 설계가 무너진다.)
+//   ※ 퀘스트 보상은 아직 퀘스트 시스템 자체가 없다 — 생기면 여기 dgAddTicket 을 부르면 된다.
+const TICKET_GEM={ally:5, pet:4, gear:3};
+const TICKET_NAME={ally:'동료', pet:'펫', gear:'장비'};
+function ticketN(kind){ const p=PROF(); return (p.tickets&&p.tickets[kind])||0; }
+function buyTicketGem(kind){ const p=PROF(), c=TICKET_GEM[kind]; if(!c) return false;
+  if(profGem()<c) return false;
+  p.gem=(p.gem||0)-c; if(!p.tickets) p.tickets={gear:0,pet:0,ally:0};
+  p.tickets[kind]=(p.tickets[kind]||0)+1; saveMeta(); return true; }
 const PROF_PET_PT={common:1, rare:3, epic:9, unique:27, legend:81};   // 중복 1장이 주는 재료 포인트
 const PROF_PET_STAR_MAX=5;
 const PROF_BONUS_NAME={atk:'공격 %',vit:'체력 %',coin:'코인 %'};
@@ -5408,9 +5417,7 @@ function profPetMats(){ const p=PROF(), out=[];
     if(d>0) out.push({id:id, dup:d, pt:profPetPt(id)}); }
   return out.sort((a,b)=>b.pt-a.pt); }
 // 상점: 미네랄 → 펫 뽑기권
-function profBuyPetTicket(){ const p=PROF(); if(Math.floor(p.pcoin||0)<PROF_PET_TICKET_COST) return false;
-  p.pcoin-=PROF_PET_TICKET_COST; if(!p.tickets) p.tickets={gear:0,pet:0,ally:0};
-  p.tickets.pet=(p.tickets.pet||0)+1; saveMeta(); return true; }
+
 function profPetEquip(id){ const p=PROF(); if(!p.pets[id]) return false; const i=p.equip.indexOf(id);
   if(i>=0){ p.equip.splice(i,1); saveMeta(); return true; }                                // 토글 해제
   if(p.equip.length>=profPetSlots()) return false; p.equip.push(id); saveMeta(); return true; }
@@ -5578,7 +5585,7 @@ function renderRoundSheet(){ const H=hbHunt(), gr=document.getElementById('hbRou
   if(nt){ const nx=H.dg<HB_DG_MAX ? (hbDgOpen(H.dg+1) ? '던전 '+(H.dg+1)+' 개방됨' : '던전 '+(H.dg+1)+'은 이 던전 '+HB_DG_UNLOCK+'라운드 도달 시 개방') : '마지막 던전';
     let rwTx='';
     if(nextRw){ const r=hbRoundRw(H.dg,nextRw);
-      rwTx=' · 🎁 라운드 '+nextRw+' 최초 클리어 = 미네랄 '+Math.round(r.min).toLocaleString()+' · 가스 '+Math.round(r.gas).toLocaleString()+(r.tk?' · 장비 뽑기권 '+r.tk:'')+(r.atk?' · 동료 뽑기권 '+r.atk:''); }
+      rwTx=' · 🎁 라운드 '+nextRw+' 최초 클리어 = 미네랄 '+Math.round(r.min).toLocaleString()+' · 가스 '+Math.round(r.gas).toLocaleString()+(r.tk?' · 장비 뽑기권 '+r.tk:'')+(r.atk?' · 동료 뽑기권 '+r.atk:'')+(r.ptk?' · 펫 뽑기권 '+r.ptk:''); }
     nt.textContent='던전 '+H.dg+' · 최고 도달 라운드 '+best+' — 여기까지 고를 수 있습니다. 죽으면 한 라운드씩 내려갑니다. · '+nx+rwTx; }
   const r=document.getElementById('hbModeRep'), c=document.getElementById('hbModeClm');
   if(r) r.classList.toggle('on', !H.climb); if(c) c.classList.toggle('on', !!H.climb); }
@@ -5633,6 +5640,9 @@ function renderMateModal(){ const box=document.getElementById('hbMateBody'); if(
       +(nx? ('다음 단계까지 '+nx.left+'회 — Lv.'+nx.lv+'가 되면 상위 등급이 더 열립니다') : '최고 단계')
       +'</em></span>'
       +'<button class="hbRowBtn" onclick="hbDoMateRoll()"'+(tk>0?'':' disabled')+'>뽑기</button></div>';
+    h+='<div class="hbRow"><span class="hbRowIco">💎</span>'
+      +'<span class="hbRowTx"><b>뽑기권 구매</b><em>엘리트 처치 · 맵의 상자 · 라운드 보너스로도 얻습니다</em></span>'
+      +'<button class="hbRowBtn" onclick="doBuyTicket(&#39;ally&#39;)"'+(profGem()>=TICKET_GEM.ally?'':' disabled')+'>💎 '+TICKET_GEM.ally+'</button></div>';
     h+='<div class="mateOdds">';
     for(const t of GACHA_TIER_ORDER){ const v=pr[t]||0;
       h+='<span class="mateOdd'+(v>0?'':' off')+'" style="color:'+(v>0?TIER_COLOR[t]:'#5a5a5a')+'">'
@@ -5991,7 +6001,7 @@ const HB_TICKET_ELITE=.08, HB_TICKET_NORMAL=.003;   // 장비 뽑기권 드랍 �
 // 🎟 동료 뽑기권 — 동료를 얻는 유일한 길이라 장비보다 귀하게 준다(엘리트 위주).
 //   ⚠ 주는 곳이 없으면 동료 시스템 전체가 잠긴다 — 새 소비처를 만들 땐 여기도 같이 볼 것.
 const HB_ATICKET_ELITE=.03, HB_ATICKET_NORMAL=.0008;
-// 🎟 펫 뽑기권 — 상점에서 미네랄로도 살 수 있어(profBuyPetTicket) 동료보다 넉넉하게 준다
+// 🎟 펫 뽑기권 — 상자·젬으로도 들어와 동료보다 넉넉하게 준다
 const HB_PTICKET_ELITE=.05, HB_PTICKET_NORMAL=.0015;
 const HB_WAVES=5, HB_WAVE_S=20, HB_GAP_S=3;      // 라운드 구성(확정 스펙 — 바꾸려면 사용자와 합의)
 const HB_SPREAD_N=12, HB_SPREAD_S=5;             // 웨이브 유닛이 이보다 많으면 5초에 걸쳐 분산 출현
@@ -6121,8 +6131,9 @@ function hbClearBonus(dg,round){ const m=HB_DG_REW(dg); return { min:(8+round*4)
 const HB_RW_EVERY=5;
 function hbRoundRw(dg,round){ if(!round || round%HB_RW_EVERY) return null;
   const m=HB_DG_REW(dg), t=round/HB_RW_EVERY;
-  //  뽑기권: 장비는 4번째마다, 동료는 2번째마다 — 동료가 유일한 영입 경로라 꾸준히 들어와야 한다
-  return { min:Math.round(60*t*m), gas:Math.round(8*t*m), tk:(t%4===0)?1:0, atk:(t%2===0)?1:0 }; }
+  //  뽑기권: 장비는 4번째마다, 동료·펫은 번갈아 매 마일스톤마다 — 뽑기가 유일한 영입 경로라 꾸준히 들어와야 한다
+  return { min:Math.round(60*t*m), gas:Math.round(8*t*m), tk:(t%4===0)?1:0,
+           atk:(t%2===0)?1:0, ptk:(t%2===1)?1:0 }; }
 function hbRwGot(dg,round){ const H=hbHunt(); return !!(H.rw && H.rw[dg] && H.rw[dg][round]); }
 // 최초 클리어면 지급하고 true. 이미 받았거나 마일스톤이 아니면 false.
 function hbRwClaim(dg,round){ const r=hbRoundRw(dg,round); if(!r || hbRwGot(dg,round)) return false;
@@ -6132,6 +6143,7 @@ function hbRwClaim(dg,round){ const r=hbRoundRw(dg,round); if(!r || hbRwGot(dg,r
   if(!p.tickets) p.tickets={gear:0,pet:0,ally:0};
   if(r.tk)  p.tickets.gear=(p.tickets.gear||0)+r.tk;
   if(r.atk) p.tickets.ally=(p.tickets.ally||0)+r.atk;
+  if(r.ptk) p.tickets.pet=(p.tickets.pet||0)+r.ptk;
   return true; }
 // 다음으로 노릴 마일스톤(아직 안 받은 것 중 가장 가까운 것) — 팝업 안내 문구용
 function hbNextRw(dg,from){ const best=hbBest(dg);
@@ -6180,8 +6192,10 @@ const HB_MATES={
 //             ③ 갓도 처음부터 나오긴 하지만 확률이 아주 낮다 ④ 단계가 오를수록 일반·레어·에픽 비중이 떨어진다
 //   ⚠ 30줄을 손으로 적지 않는다 — 아래 상수 두 벌에서 생성한다. 밸런스는 상수만 고칠 것.
 const HB_MATE_GACHA_MAX=30;
-// 다음 단계까지 필요한 '누적 뽑기 횟수' = A·(B^(k-1) − 1) → 2·5·8·12…에서 시작해 30단계는 5천 회대.
-const HB_MATE_NEED_A=8, HB_MATE_NEED_B=1.25;
+// 다음 단계까지 필요한 '누적 뽑기 횟수' = A·(B^(k-1) − 1) → 2·4·10…에서 시작해 30단계는 876회.
+//   ⚠ 뽑기권은 미네랄로 살 수 없다(엘리트·상자·라운드 보너스·젬) — 그래서 문턱을 이 규모로 잡았다.
+//      예전 값(8/1.25)은 30단계에 5,162회가 필요해 사실상 도달 불가였다.
+const HB_MATE_NEED_A=12, HB_MATE_NEED_B=1.16;
 // 등급별 가중치 = 시작값 × 배수^(단계−1). 정규화 전 값이라 절대 크기가 아니라 '서로의 비'가 의미를 갖는다.
 //   시작값: 1단계를 일반 90 / 레어 9 / 에픽 1 (%) 근처로 맞춘 값.
 //   배수  : 1보다 작으면 단계가 오를수록 비중이 줄고(일반·레어·에픽), 크면 늘어난다(유니크 이상).
@@ -6298,7 +6312,11 @@ function hbChestReward(){ const p=(typeof PROF==='function')?PROF():null; if(!p)
     H.boostT=H.boostT||{};
     H.boostT[k]=Math.max(Date.now(), H.boostT[k]||0) + B.sec*1000;
     return B.ico+' '+B.name; }
-  p.tickets=p.tickets||{}; p.tickets.gear=(p.tickets.gear||0)+1; return '🎟 뽑기권 +1'; }
+  // 📦 상자는 뽑기권의 주요 공급처다 — 장비뿐 아니라 펫·동료 권도 여기서 나온다
+  p.tickets=p.tickets||{};
+  const kind = (r<0.52)?'gear' : (r<0.80)?'pet' : 'ally';
+  p.tickets[kind]=(p.tickets[kind]||0)+1;
+  return '🎟 '+TICKET_NAME[kind]+' 뽑기권 +1'; }
 function hbBreakChest(ch){ const S=_hb; if(!S) return; const i=S.chests.indexOf(ch); if(i<0) return;
   S.chests.splice(i,1);
   S.floats.push({x:ch.x, y:ch.y-22, tx:hbChestReward(), cl:'#ffd24a', t:0});
@@ -6476,7 +6494,7 @@ function hbSettle(){ const S=_hb, p=PROF();
   // 🎁 마일스톤 최초 클리어 보상 — 등반으로 라운드를 올리기 '전에' 지금 깬 라운드로 판정한다
   if(hbRwClaim(S.dg,S.round)){ const rw=hbRoundRw(S.dg,S.round);
     S.floats.push({x:S.char.x,y:S.char.y-52,tx:'🎁 라운드 '+S.round+' 보상 +'+Math.round(rw.min)+'M',cl:'#5dff8f',t:0});
-    if(typeof toast==='function') toast('🎁 던전 '+S.dg+' 라운드 '+S.round+' 최초 클리어 보상'+(rw.tk?' · 장비 뽑기권 +'+rw.tk:'')+(rw.atk?' · 동료 뽑기권 +'+rw.atk:'')); }
+    if(typeof toast==='function') toast('🎁 던전 '+S.dg+' 라운드 '+S.round+' 최초 클리어 보상'+(rw.tk?' · 장비 뽑기권 +'+rw.tk:'')+(rw.atk?' · 동료 뽑기권 +'+rw.atk:'')+(rw.ptk?' · 펫 뽑기권 +'+rw.ptk:'')); }
   const H=hbHunt();
   if(H.climb){ S.round++; H.round=S.round; }                      // 등반 모드 = 클리어 시 다음 라운드
   H.best[S.dg]=Math.max(H.best[S.dg]||1, S.round);                // 최고 도달(라운드 선택 상한 — UI는 Phase 2)
@@ -7432,7 +7450,7 @@ function shopBuyDeal(id){ const p=PROF(), st=shopState(), d=SHOP_DEAL_POOL.find(
   saveMeta(); if(typeof playSfx==='function') playSfx('hero_merge');
   renderTownBar(); refreshTownPanel(); showTownToast('🎁 '+d.tag+' 구매 완료'); }
 function shopGemSoon(){ showTownToast('💎 젬 충전은 준비 중입니다'); }
-function renderProfGacha(){ const p=PROF(), poor=p.pcoin<PROF_PET_TICKET_COST, eq=p.equip||[];
+function renderProfGacha(){ const p=PROF(), eq=p.equip||[];
   const st=shopState(); let h='';
   // ① 오늘의 특가 — 패널(구역) 안에 꾸러미 칸을 담는다(HOME .hmCard 구조)
   h+='<div class="shopPanel"><div class="shopHead">오늘의 특가<em>매일 09:00 갱신</em></div><div class="shopBody">';
@@ -7459,9 +7477,7 @@ function renderProfGacha(){ const p=PROF(), poor=p.pcoin<PROF_PET_TICKET_COST, e
       h+='<span class="mateOdd'+(v>0?'':' off')+'" style="color:'+(v>0?TIER_COLOR[t]:'#5a5a5a')+'">'
         +GACHA_TIERS[t].name+' <b>'+(v>0? fmtOdds(v) : '—')+'</b></span>'; }
     h+='</div>';
-    h+='<div class="shopRow"><div class="twRowInfo"><div class="twRowName">펫 뽑기권 구매</div>'
-      +'<div class="twRowSub">미네랄로 1장</div></div>'
-      +'<button class="twBtn" onclick="profDoBuyPetTicket()"'+(poor?' disabled':'')+'>'+PROF_PET_TICKET_COST+' P</button></div>'; }
+    h+=ticketBuyRow('pet'); }
   // 🎟 장비 뽑기권 — 자동사냥 엘리트 처치·토벌 클리어로 얻는다. 여기가 유일한 소비처.
   { const tk=((p.tickets&&p.tickets.gear)||0), full=profItems().length>=PROF_INV_MAX;
     h+='<div class="shopRow"><div class="twRowInfo"><div class="twRowName">장비 뽑기권 사용</div>'
@@ -7513,10 +7529,19 @@ function petDoFeed(matId){ const t=_petFeedT; if(!t) return;
   if(typeof playSfx==='function') playSfx('ui_tab');
   if(typeof r==='number') showTownToast('⭐ '+PROF_PETS[t].name+' ★'+profPetStar(t)+' 달성');
   refreshTownPanel(); }
-function profDoBuyPetTicket(){ if(!profBuyPetTicket()){ showTownToast('미네랄이 부족합니다'); return; }
+// 🎟 뽑기권 구매 줄 — 상점·동료 팝업이 함께 쓴다(값과 문구를 두 곳에 적지 말 것)
+function ticketBuyRow(kind){ const can=profGem()>=TICKET_GEM[kind];
+  return '<div class="shopRow"><div class="twRowInfo"><div class="twRowName">'+TICKET_NAME[kind]+' 뽑기권 구매</div>'
+    +'<div class="twRowSub">엘리트 처치 · 맵의 상자 · 라운드 보너스로도 얻습니다</div></div>'
+    +'<button class="twBtn" onclick="doBuyTicket(&#39;'+kind+'&#39;)"'+(can?'':' disabled')+'>'
+    +resIco('gem','gi')+' '+TICKET_GEM[kind]+'</button></div>'; }
+function doBuyTicket(kind){ if(!buyTicketGem(kind)){ showTownToast('💎 젬이 부족합니다'); return; }
   if(typeof playSfx==='function') playSfx('ui_open');
   if(typeof updateCurBar==='function') updateCurBar();
-  renderTownBar(); refreshTownPanel(); }
+  if(typeof renderTownBar==='function') renderTownBar();
+  if(shopOpen&&shopOpen()) refreshTownPanel();
+  const mm=document.getElementById('hbMateModal');
+  if(mm && !mm.classList.contains('hide')) renderMateModal(); }
 // 장비 뽑기권 1장 = 무작위 장비 1개(등급은 최고 토벌 단계에 따라 좋아진다)
 function profUseGearTicket(){ const p=PROF();
   if(!p.tickets || (p.tickets.gear||0)<=0) return;
