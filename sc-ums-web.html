@@ -2557,7 +2557,10 @@
   /* 공통 패널 — 네비바와 같은 회색 그라데 · 모서리는 아주 살짝만 깎는다 */
   .hmCard{flex:none;background:var(--hmPanel);border:1px solid var(--hbEdge);border-radius:var(--r-bar);overflow:hidden}
   /* POWER UPGRADES — 위쪽은 배경이 보이도록 비우고 카드는 네비 바로 위에 붙인다 */
-  .hmUpg{margin-top:auto;position:relative;
+  /* 임팩트 색 = 빨강(--neon 계열). 로비 `.btn.on`·방 설정·보스 시트와 같은 언어다.
+     이 패널 안의 빨강은 전부 아래 세 토큰에서만 꺼낸다 — 개별 규칙에 색을 박지 말 것. */
+  .hmUpg{--hmAcc:#ff3b3b;--hmAccLt:#ff9b9b;--hmAccDk:#a81f1f;
+    margin-top:auto;position:relative;
     /* 하단 네비에 딱 붙이고 좌우도 꽉 채운다 — #hmScroll 의 padding:8px 을 음수 마진으로 되돌린다.
        (다른 HOME 요소는 그 여백이 필요하므로 컨테이너 패딩은 건드리지 않는다) */
     margin-left:-8px;margin-right:-8px;margin-bottom:-8px;
@@ -2570,16 +2573,16 @@
   .hmUpgHead{position:relative;width:100%;display:flex;align-items:center;gap:9px;padding:9px 12px;
     font-size:15px;font-weight:400;letter-spacing:.11em;
     color:#ececec;cursor:pointer;background:none;border:none;border-bottom:none;text-align:left}
-  /* 머리줄 아래 골드 스캔라인 — 팝업 .setTitle::after 와 같은 규칙 */
+  /* 머리줄 아래 스캔라인 — 팝업 .setTitle::after 와 같은 규칙 */
   .hmUpgHead::after{content:'';position:absolute;left:12px;right:12px;bottom:0;height:1px;
-    background:linear-gradient(90deg,rgba(240,180,41,.5) 0%,rgba(240,180,41,.5) 62%,transparent)}
-  /* 볼트 타일 — 패널에 남긴 유일한 금색(무엇을 하는 판인지 말하는 자리) */
+    background:linear-gradient(90deg,rgba(255,59,59,.5) 0%,rgba(255,59,59,.5) 62%,transparent)}
+  /* 볼트 타일 — 패널에서 색을 채우는 유일한 자리(무엇을 하는 판인지 말한다) */
   .hmUpgBolt{flex:none;width:20px;height:20px;display:grid;place-items:center;border-radius:2px;
-    background:linear-gradient(180deg,#ffd97a 0%,#f0b429 40%,#dd9a19 64%,#f2b93e 100%)}
-  .hmUpgBolt svg{display:block;width:12px;height:12px;fill:none;stroke:#2b1d00;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
-  /* 제목 — 글자에만 금색 그라데이션. 패널 면은 그대로 회색이다 */
+    background:linear-gradient(180deg,var(--hmAccLt) 0%,var(--hmAcc) 40%,var(--hmAccDk) 64%,#ff5a5a 100%)}
+  .hmUpgBolt svg{display:block;width:12px;height:12px;fill:none;stroke:#2b0000;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+  /* 제목 — 글자에만 그라데이션. 패널 면은 그대로 회색이다 */
   .hmUpgTtl{flex:1;font-weight:400;
-    background:linear-gradient(180deg,#fff3c4 0%,#f8c453 40%,#c67f12 72%,#f0b429 100%);
+    background:linear-gradient(180deg,#ffdede 0%,#ff6b6b 40%,#8f1616 72%,var(--hmAcc) 100%);
     -webkit-background-clip:text;background-clip:text;color:transparent;
     filter:drop-shadow(0 1px 0 rgba(0,0,0,.85))}
   .hmUpgChev{flex:none;width:9px;height:9px;border-right:2px solid #9a9a9a;border-bottom:2px solid #9a9a9a;
@@ -2629,8 +2632,8 @@
   .hmStat b{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:#9a9a9a}
   .hmStat i{font-style:normal;color:#5dff8f}
   .hmStat:disabled{cursor:default;opacity:.5}
-  .hmStat.grow{flex:0 0 auto;padding:0 10px;color:#ffd24a;border-color:rgba(255,210,74,.45);background:rgba(255,210,74,.10)}
-  .hmStat.grow i{color:#ffd24a}
+  .hmStat.grow{flex:0 0 auto;padding:0 10px;color:#ff8f8f;border-color:rgba(255,59,59,.45);background:rgba(255,59,59,.10)}
+  .hmStat.grow i{color:#ff8f8f}
   .hbGrowLbl{padding:4px 0 0;font-size:var(--fs-sm);font-weight:800;letter-spacing:.4px;color:#9a9a9a}
   .hbStars{color:#ffd24a;letter-spacing:1px}
   /* 캐릭터 정보 표 — 숫자는 Rajdhani(§2 글자 규칙) */
@@ -2683,19 +2686,21 @@
     transition:height .28s cubic-bezier(.4,0,.2,1),padding .28s cubic-bezier(.4,0,.2,1),opacity .2s}
   /* ⚠ minmax(0,..) 필수 — 1fr 은 min-content 를 하한으로 삼아 긴 이름에서 트랙이 부풀고 가로로 넘친다 */
   /* 카드 — 한 줄: 아이콘 · 이름/수치 · 오른쪽 버튼 */
+  /* 면은 완전 검정 — 패널(#191919→#0e0e0e)보다 어두워 칸이 '파인 자리'로 읽힌다.
+     검정 위에서 카드를 세우는 건 면 밝기가 아니라 1px 금속 테두리 + 윗면 하이라이트다(DESIGN.md §0). */
   .hmUp{position:relative;display:flex;align-items:center;gap:6px;padding:6px;min-width:0;
-    background:linear-gradient(180deg,rgba(46,46,46,.96),rgba(26,26,26,.96));
+    background:linear-gradient(180deg,#0a0a0a,#000);
     border:1px solid var(--metal-edge);border-radius:var(--r-bar);
     clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
   /* 윗면 하이라이트 — 카드가 '판'으로 떠야 평평해 보이지 않는다 */
   .hmUp::before{content:'';position:absolute;left:7px;right:0;top:0;height:1px;pointer-events:none;
     background:linear-gradient(90deg,transparent,rgba(255,255,255,.13) 30%,rgba(255,255,255,.13) 70%,transparent)}
   /* 구매 직후 한 번 번찍 — 올랐다는 걸 몸으로 알게 한다 */
-  @keyframes hmUpWon{0%{box-shadow:inset 0 0 0 1px rgba(255,255,255,.55), 0 0 12px rgba(255,255,255,.28)}
-    100%{box-shadow:inset 0 0 0 1px rgba(255,255,255,0), 0 0 0 rgba(255,255,255,0)}}
+  @keyframes hmUpWon{0%{box-shadow:inset 0 0 0 1px rgba(255,59,59,.7), 0 0 12px rgba(255,59,59,.35)}
+    100%{box-shadow:inset 0 0 0 1px rgba(255,59,59,0), 0 0 0 rgba(255,59,59,0)}}
   .hmUp.won{animation:hmUpWon .5s ease-out}
   .hmUpIco{position:relative;flex:none;width:27px;height:27px;display:flex;align-items:center;justify-content:center;
-    background:linear-gradient(180deg,#2c2c2c,#171717);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+    background:#000;border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
   .hmUpIco .icoImg{padding:3px}   /* 공용 .icoImg 가 inset:0 로 타일을 채운다 — 여백만 주고 크기는 건드리지 않는다 */
   .hmUpTx{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:2px}
   .hmUpName{font-size:11.5px;font-weight:700;letter-spacing:-.02em;color:#ececec;
@@ -2709,10 +2714,13 @@
   .hmArw{display:block;width:7px;height:7px;flex:none;fill:none;stroke:#6f6f6f;stroke-width:3.2;stroke-linecap:round}
   .hmLk{display:block;width:8px;height:8px;flex:none;fill:none;stroke:#7a7a7a;stroke-width:2;stroke-linejoin:round}
   /* 버튼 — 오른쪽 정사각. 위 = 레벨 변화(잠김은 자물쇠) · 아래 = 비용 */
+  /* 살 수 있는 버튼 = 이 화면의 임팩트. 테두리(패딩 1.5px가 드러내는 띠)가 빨갛고 발광한다.
+     면을 빨갛게 채우지는 않는다 — 검정 카드 위에서 글자가 죽는다(DESIGN.md §0 "색을 채우지 않는다"). */
   .hmUpBtn{position:relative;flex:none;width:54px;height:40px;padding:1.5px;cursor:pointer;font-family:inherit;
     display:flex;flex-direction:column;border:none;border-radius:var(--r-bar);
-    background:linear-gradient(180deg,#c8c8c8 0%,#949494 30%,#3c3c3c 62%,#2a2a2a 100%);
-    box-shadow:0 1px 2px rgba(0,0,0,.55);transition:transform .06s, box-shadow .06s, filter .12s}
+    background:linear-gradient(180deg,var(--hmAccLt) 0%,var(--hmAcc) 30%,var(--hmAccDk) 62%,#5e1414 100%);
+    box-shadow:0 1px 2px rgba(0,0,0,.55),0 0 9px -2px rgba(255,59,59,.6);
+    transition:transform .06s, box-shadow .06s, filter .12s}
   /* 살 수 있을 때만 윗면에 빛나는 선 — '올릴 수 있다'는 신호 */
   .hmUpBtn::after{content:'';position:absolute;left:6px;right:6px;top:1.5px;height:1px;pointer-events:none;
     background:linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent)}
@@ -2722,24 +2730,26 @@
   .hmUpBtn:active .hmUpBl,.hmUpBtn:active .hmUpBc{filter:brightness(.92)}
   .hmUpBl,.hmUpBc{flex:1;display:flex;align-items:center;justify-content:center;gap:2px;width:100%;
     font-variant-numeric:tabular-nums;text-shadow:0 1px 1px rgba(0,0,0,.55);
-    background:linear-gradient(180deg,#4a4a4a,#3a3a3a 48%,#2e2e2e)}
+    background:linear-gradient(180deg,#161616,#0d0d0d 48%,#050505)}
   .hmUpBl{font-size:9.5px;font-weight:700;color:#a8a8a8;border-bottom:1px solid rgba(0,0,0,.42);
     border-radius:2px 2px 0 0}
   .hmUpBl .nx{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8),0 0 6px rgba(255,255,255,.28)}
   .hmUpBl .hmLk{width:11px;height:11px;stroke:#c8c8c8}
   .hmUpBc{gap:3px;font-size:9.5px;font-weight:700;color:#ececec;border-radius:0 0 2px 2px}
   .hmUpBc .ri{display:block;width:10px;height:10px;flex:none}
-  .hmUpBtn.off{background:linear-gradient(180deg,#5a5a5a,#3e3e3e 34%,#222);cursor:default;
+  /* 못 사는 버튼은 빨강도 발광도 없다 — 빨강이 곧 '지금 올릴 수 있다'는 신호가 되게 */
+  .hmUpBtn.off{background:linear-gradient(180deg,#3a3a3a,#282828 34%,#161616);cursor:default;
     box-shadow:none;transform:none;filter:none}
   .hmUpBtn.off::after{display:none}
   .hmUpBtn.off:hover{filter:none}
   .hmUpBtn.off:active{transform:none}
-  .hmUpBtn.off .hmUpBl,.hmUpBtn.off .hmUpBc{background:linear-gradient(180deg,#333,#282828 48%,#222);color:#7a7a7a;text-shadow:none}
+  .hmUpBtn.off .hmUpBl,.hmUpBtn.off .hmUpBc{background:linear-gradient(180deg,#111,#0a0a0a 48%,#050505);color:#7a7a7a;text-shadow:none}
   .hmUpBtn.off .hmUpBl .nx{color:#8f8f8f;text-shadow:none}
   .hmUpBtn.off .hmUpBc .ri{opacity:.35;filter:grayscale(1)}
   /* 잠긴 카드 — 해금 전엔 값도 레벨도 없다 */
-  .hmUp.lk{background:linear-gradient(180deg,rgba(32,32,32,.96),rgba(20,20,20,.96))}
-  .hmUp.lk .hmUpIco{background:linear-gradient(180deg,#212121,#131313)}
+  /* 잠긴 카드도 같은 검정 — 구분은 면이 아니라 테두리·글자 밝기가 한다 */
+  .hmUp.lk{background:#000;border-color:#26272c}
+  .hmUp.lk .hmUpIco{background:#000;border-color:#26272c}
   .hmUp.lk .hmUpIco .icoImg{filter:grayscale(1) brightness(.5);opacity:.85}
   .hmUp.lk .hmUpName{color:#9a9a9a}
   .hmUp.lk .hmUpName .p{color:#6f6f6f}
