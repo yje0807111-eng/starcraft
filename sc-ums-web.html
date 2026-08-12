@@ -4001,7 +4001,17 @@
         <div class="hbRows uiScroll" id="hbGrowBody"></div>
       </div>
     </div>
-    <!-- 건설 — 동료·터렛·벙커. 껍데기는 라운드 팝업과 같은 .hbModal -->
+    <!-- 🤝 동료 — 영입·강화·출전. 껍데기는 라운드 팝업과 같은 .hbModal -->
+    <div class="hbModal hide" id="hbMateModal" onclick="if(event.target===this)hbCloseMates()">
+      <div class="hbmCard">
+        <div class="hbmHead"><b>동료</b>
+          <button class="hbmX" onclick="hbCloseMates()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+        </div>
+        <div class="hbRows uiScroll" id="hbMateBody"></div>
+        <div class="hbRoundNote" id="hbMateNote"></div>
+      </div>
+    </div>
+    <!-- 건설 — 터렛·벙커. 껍데기는 라운드 팝업과 같은 .hbModal -->
     <div class="hbModal hide" id="hbBuildModal" onclick="if(event.target===this)hbCloseBuild()">
       <div class="hbmCard">
         <div class="hbmHead"><b>건설</b>
@@ -4121,7 +4131,7 @@
           <span class="hbXp"><i id="hbXpBar"></i></span>
           <span class="hbSt"><i id="hbLv">Lv.1</i><i id="hbAtk"><em>⚔</em><span id="hbAtkN">0</span></i></span>
         </span></button>
-      <div class="hbIcoRow"><button class="hbRoundBtn" id="hbRoundBtn" onclick="hbOpenRounds()" aria-label="던전·라운드 선택"><span data-ico="flag"></span></button><button class="hbRoundBtn" id="hbVillageBtn" onclick="openVillage()" aria-label="마을" title="마을"><span data-ico="hero"></span></button></div>
+      <div class="hbIcoRow"><button class="hbRoundBtn" id="hbRoundBtn" onclick="hbOpenRounds()" aria-label="던전·라운드 선택"><span data-ico="flag"></span></button><button class="hbRoundBtn" id="hbVillageBtn" onclick="openVillage()" aria-label="마을" title="마을"><span data-ico="hero"></span></button><button class="hbRoundBtn" id="hbMateBtn" onclick="hbOpenMates()" aria-label="동료" title="동료 영입·강화"><span data-ico="party"></span></button><button class="hbRoundBtn" id="hbGrowBtn" onclick="hbOpenGrow()" aria-label="성장" title="진화·환생"><span data-ico="fav"></span></button></div>
     </div>
     <div class="hbMid" id="hbMid">   <!-- 표시 전용 — 라운드 조절은 위 아이콘이 담당한다 -->
       <b id="hbRound">던전 1 · 라운드 1</b><span><i id="hbWaveTx">웨이브 1/5</i> · <i id="hbTimer">20s</i> · <i id="hbMode">반복</i></span></div>
@@ -4960,8 +4970,8 @@ function metaEffLv(id){ return _metaEffFromRaw(META_BUILDS[id], buildLevel(id));
 // 플레이어 메타(계정별 영구 데이터)
 // 🧍 개인 프로필 RPG(1단계) 기본값 — 유즈맵 경제와 완전 분리(재화명 pcoin, coins 아님). 자세한 규칙은 PROF_* 블록 참조.
 // 계정 공용(재화·펫·해금·방치) + 캐릭터별(chars[]: 레벨·경험치·스탯·장비·진화)로 나뉜다.
-function defaultProfile(){ return { ver:6, pcoin:0, gas:0, gem:0, chars:[], curId:'', items:[],
-  hunt:{ dg:1, round:1, climb:false, best:{}, rw:{}, upg:{atk:0,rng:0,aspd:0,crit:0,hp:0,regen:0} },   // ⚔ 자동사냥(HOME) 진행·마일스톤 수령(rw)·영구 업그레이드
+function defaultProfile(){ return { ver:7, pcoin:0, gas:0, gem:0, chars:[], curId:'', items:[],
+  hunt:{ dg:1, round:1, climb:false, best:{}, rw:{}, mates:{}, party:[], upg:{atk:0,rng:0,aspd:0,crit:0,hp:0,regen:0} },   // ⚔ 자동사냥(HOME) 진행·마일스톤 수령(rw)·영구 업그레이드
   idle:{ sourceId:'drill', lastClaimTs:0 }, unlocks:{}, lastSeenTs:0,
   dgKeys:{}, tickets:{gear:0,pet:0,ally:0},   // 🗝 던전별 열쇠(매일 09:00 보충) · 🎟 뽑기권(장비/펫/동료)
   pets:{}, equip:[], petSlots:2 }; }   // 🐾 펫(중복=별)·장착 슬롯 — 캐릭터를 새로 만들어도 그대로 쓴다
@@ -4998,6 +5008,19 @@ function migrateProfile(){ const d=defaultProfile();
     c.xp=p.xp||0; c.level=p.level||1; c.statPoints=p.statPoints||0; c.unit=p.unit;
     p.chars.push(c); p.curId=c.id; }
   delete p.unit; delete p.xp; delete p.level; delete p.statPoints;      // 캐릭터별로 옮겨간 필드
+  // ⚠ 순서 주의 — fixChar()가 '없어진 직업'을 조용히 뿌리로 되돌린다. 그 뒤에 두면 옛 직업을 볼 수 없어
+  //    동료를 못 준다(실제로 그렇게 짰다가 스모크가 잡았다). 반드시 fixChar 앞에서 변환할 것.
+  // v7 전직 폐지 — 상위 직업으로 전직해 둔 캐릭터는 뿌리로 되돌리고, 그 직업을 '동료'로 무료 지급한다.
+  //   (돈 주고 산 것을 그냥 없애지 않는다.) 옛 범용 동료(build.ally)는 이름 있는 동료로 대체됐으니 환급.
+  if((p.ver||0)<7){
+    const H=p.hunt||(p.hunt={}); if(!H.mates) H.mates={}; if(!Array.isArray(H.party)) H.party=[];
+    for(const c of p.chars){ const jid=c.unit&&c.unit.jobId;
+      if(jid && !PROF_JOBS[jid]){                       // 이제 없는 직업 = 옛 상위 직업
+        if(HB_MATES[jid]){ H.mates[jid]=Math.max(1, H.mates[jid]||0);
+          if(H.party.indexOf(jid)<0) H.party.push(jid); }
+        c.unit.jobId=PROF_CLASSES[c.cls]?c.cls:'ranger'; } }
+    if(H.build && H.build.ally){ p.pcoin=(p.pcoin||0)+150*H.build.ally*2; H.build.ally=0; }   // 옛 동료 구매액 대략 환급
+    H.party=H.party.slice(0,5); }
   for(const c of p.chars) fixChar(c);
   if(!Array.isArray(p.items)) p.items=[];
   if((p.ver||0)<4){                                                    // ver3 = 슬롯당 정수 티어 → 동등 성능 아이템으로 변환(스탯 손실 없음)
@@ -5059,26 +5082,15 @@ const PROF_CLASSES={
   warden:{ name:'워든',   unit:'blade',   race:'aetherial', ico:'🔮', tip:'중장갑 근접 · 방어' },
 };
 const PROF_MAX_CHARS=6;   // 캐릭터 슬롯(같은 종류 중복 허용)
-// 직업 트리 — 3종류가 뿌리(tier0), 각자 2갈래로 갈라져 한 단계 더. 이름·unit은 종족 로스터에서 가져왔다.
+// 직업 = 뿌리 3종뿐이다(2026-08-12 전직 폐지). 캐릭터는 만든 그대로 끝까지 간다.
+//   ⚠ 옛 상위 직업 12종은 삭제된 게 아니라 **동료(HB_MATES)로 옮겨 갔다** — 영입해서 함께 싸운다.
+//      전직 관련 함수(profClassChange·profClassCost·hbGrowJobs·PROF_JOB_PARENT)도 같이 없어졌다.
+//      옛 저장은 migrateProfile(v7)이 뿌리로 되돌리면서 그 동료를 무료로 넣어 준다.
 const PROF_JOBS={
-  ranger:    { name:'레인저',    cls:'ranger', unit:'marine',       tier:0, reqLv:1,  base:{pow:8, vit:6, foc:7, agi:5},  next:['sniper','gunner'] },
-  sniper:    { name:'저격수',    cls:'ranger', unit:'ghost',        tier:1, reqLv:10, base:{pow:12,vit:7, foc:13,agi:8},  next:['phantom'] },
-  gunner:    { name:'화력병',    cls:'ranger', unit:'machinegun',   tier:1, reqLv:10, base:{pow:14,vit:10,foc:6, agi:5},  next:['goliath'] },
-  phantom:   { name:'팬텀',      cls:'ranger', unit:'ghost',        tier:2, reqLv:25, base:{pow:17,vit:9, foc:19,agi:13}, next:[] },
-  goliath:   { name:'기갑병',    cls:'ranger', unit:'goliath',      tier:2, reqLv:25, base:{pow:20,vit:16,foc:8, agi:6},  next:[] },
-  scout:     { name:'척후병',    cls:'scout',  unit:'snapper',      tier:0, reqLv:1,  base:{pow:6, vit:5, foc:5, agi:10}, next:['spike','swarmling'] },
-  spike:     { name:'스파이크',  cls:'scout',  unit:'hydra',        tier:1, reqLv:10, base:{pow:10,vit:8, foc:9, agi:12}, next:['thornqueen'] },
-  swarmling: { name:'스웜링',    cls:'scout',  unit:'broodling',    tier:1, reqLv:10, base:{pow:9, vit:6, foc:6, agi:17}, next:['ultra'] },
-  thornqueen:{ name:'가시여왕',  cls:'scout',  unit:'thornqueen',   tier:2, reqLv:25, base:{pow:15,vit:12,foc:14,agi:16}, next:[] },
-  ultra:     { name:'돌격괴수',  cls:'scout',  unit:'ultralisk',    tier:2, reqLv:25, base:{pow:19,vit:18,foc:6, agi:20}, next:[] },
-  warden:    { name:'워든',      cls:'warden', unit:'blade',        tier:0, reqLv:1,  base:{pow:9, vit:9, foc:4, agi:4},  next:['sentinel','darksage'] },
-  sentinel:  { name:'센티넬',    cls:'warden', unit:'dragoon',      tier:1, reqLv:10, base:{pow:13,vit:13,foc:7, agi:5},  next:['void'] },
-  darksage:  { name:'다크세이지',cls:'warden', unit:'dark_templar', tier:1, reqLv:10, base:{pow:15,vit:9, foc:11,agi:9},  next:['highsage'] },
-  void:      { name:'보이드',    cls:'warden', unit:'archon',       tier:2, reqLv:25, base:{pow:18,vit:22,foc:10,agi:6},  next:[] },
-  highsage:  { name:'하이세이지',cls:'warden', unit:'high_templar', tier:2, reqLv:25, base:{pow:21,vit:13,foc:18,agi:12}, next:[] },
+  ranger:{ name:'레인저', cls:'ranger', unit:'marine',  reqLv:1, base:{pow:8, vit:6, foc:7, agi:5} },
+  scout: { name:'척후병', cls:'scout',  unit:'snapper', reqLv:1, base:{pow:6, vit:5, foc:5, agi:10} },
+  warden:{ name:'워든',   cls:'warden', unit:'blade',   reqLv:1, base:{pow:9, vit:9, foc:4, agi:4} },
 };
-// 자식→부모 역인덱스(전직 경로 되짚기용). PROF_JOBS의 next로부터 자동 생성 — 트리를 고쳐도 따라온다.
-const PROF_JOB_PARENT=(function(){ const m={}; for(const id in PROF_JOBS) for(const nx of PROF_JOBS[id].next) m[nx]=id; return m; })();
 const PROF_REFUND_RATE=1.0;   // 캐릭터 삭제 환급률(1.0=쓴 재화 전액). 경험치·레벨은 환급 없음
 // 장비 슬롯 — reqLv = 캐릭터 레벨(성장 축 하나로 통일).
 // 초반엔 기본 5칸(헬멧·상의·하의·신발·무기)만 열려 있고 레벨이 오르며 나머지가 열린다.
@@ -5245,7 +5257,6 @@ function profRebirth(c){ c=c||CHAR(); if(!profCanRebirth(c)) return 0;
   c.level=1; c.xp=0; if(c.unit) c.unit.level=1;      // 진화★·장비는 그대로 둔다
   try{ saveMeta(); }catch(e){}
   return step; }
-function profClassCost(jobId){ const J=PROF_JOBS[jobId]; return J? J.tier*400 : 0; }
 // 스탯/파워(전부 read-only)
 function profStat(k){ const c=CHAR(); if(!c) return 0; const J=PROF_JOBS[c.unit.jobId]||PROF_JOBS[c.cls]||PROF_JOBS.ranger;
   let gear=0;
@@ -5312,18 +5323,12 @@ function profEvolve(){ const p=PROF(), c=CHAR(), r=profEvolveReq(); if(!c||!r.un
 // 성장 축은 미네랄 업그레이드(HB_UPG) 하나다. 레벨업은 미네랄을 주고(PROF_LV_MINERAL),
 // 캐릭터 스탯(unit.stats)에 직접 찍는 경로는 없다 — 레벨 포인트도, 자동 배분도 폐지했다.
 // unit.stats는 마이그레이션에서 비워지고, 이후로는 직업 기본치·레벨·장비만 profStat에 반영된다.
-function profClassChange(jobId){ const p=PROF(), c=CHAR(); if(!c) return false;
-  const cur=PROF_JOBS[c.unit.jobId], J=PROF_JOBS[jobId]; if(!cur||!J) return false;
-  if(cur.next.indexOf(jobId)<0) return false; if(c.unit.level<J.reqLv) return false; const cost=profClassCost(jobId); if(p.pcoin<cost) return false;
-  p.pcoin-=cost; c.unit.jobId=jobId; profSyncUnlocks(); saveMeta(); return true; }
-// ── 캐릭터 슬롯(생성/선택) ──
 function profCreateChar(cls, name){ const p=PROF(); if(!PROF_CLASSES[cls] || p.chars.length>=PROF_MAX_CHARS) return null;
   const c=defaultChar(cls, (name||'').trim().slice(0,10)); p.chars.push(c); p.curId=c.id; profSyncUnlocks(); saveMeta(); return c; }
 function profSelectChar(id){ const p=PROF(); if(!p.chars.some(c=>c.id===id)) return false; p.curId=id; profSyncUnlocks(); saveMeta(); return true; }
 // 이 캐릭터에 '재화로' 넣은 것의 합 — 장비 강화 + 전직 + 진화. 경험치·레벨·스탯포인트는 대상이 아니다(삭제 시 소멸).
 // 장비 아이템은 계정 공용 자산이라 환급 대상이 아니다 — 캐릭터를 지우면 장착만 풀리고 가방에 남는다.
 function profSpentOn(c){ if(!c) return 0; let t=0;
-  for(let id=c.unit.jobId; PROF_JOB_PARENT[id]; id=PROF_JOB_PARENT[id]) t+=profClassCost(id);   // 뿌리까지 거슬러 전직 비용
   for(let i=0;i<(c.unit.evoStars||0);i++) t+=profEvolveCost(i);
   return t; }
 function profRefundOf(c){ return Math.floor(profSpentOn(c)*PROF_REFUND_RATE); }
@@ -5435,7 +5440,7 @@ function renderHomeStats(){ const row=document.getElementById('hmStatRow'); if(!
   const c=(typeof CHAR==='function')?CHAR():null;
   const grow=(typeof hbGrowHas==='function') && hbGrowHas();
   row.classList.toggle('hide', !grow);
-  row.innerHTML = grow ? '<button class="hmStat grow" onclick="hbOpenGrow()">🎖 전직 · 진화 <i>!</i></button>' : ''; }
+  row.innerHTML = grow ? '<button class="hmStat grow" onclick="hbOpenGrow()">✦ 진화 · 환생 <i>!</i></button>' : ''; }
 // 4칸(2행)까지만 보이게 — 칸 높이는 글꼴·문구에 따라 변하므로 실측해서 넣는다(값을 박으면 어긋난다)
 // 높이는 CSS 에서 2.7줄로 고정된다(탭마다 개수가 달라도 패널이 안 흔들리도록).
 // 예전 실측 방식은 폐기 — 호출하는 곳이 남아 있어 빈 함수로 둔다.
@@ -5502,11 +5507,39 @@ function renderHbBar(){ const bar=document.getElementById('hbBar'); if(!bar||!_h
     h+='<button class="hbSk'+(rd?'':' cool')+'" onclick="hbUseSkill(&#39;'+k+'&#39;)" title="'+SK.tip+'">'
       +'<span class="hbSkIco">'+SK.ico+'</span>'
       +'<span class="hbSkTx">'+(rd?SK.name:Math.ceil(cd)+'s')+'</span></button>'; }
-  h+='<button class="hbSk wide" onclick="hbOpenBuild()" title="동료·터렛·벙커"><span class="hbSkIco">🏗</span><span class="hbSkTx">건설</span></button>';
+  h+='<button class="hbSk wide" onclick="hbOpenBuild()" title="터렛·벙커"><span class="hbSkIco">🏗</span><span class="hbSkTx">건설</span></button>';
   h+='<button class="hbSk wide" onclick="openDungeonHub()" title="토벌 — 열쇠로 단계 도전"><span class="hbSkIco">⚔️</span><span class="hbSkTx">토벌</span></button>';   // 네비에서 빠진 토벌의 유일한 입구
   const bon=hbBoostOn('inc')||hbBoostOn('atk');
   h+='<button class="hbSk wide'+(bon?' on':'')+'" onclick="hbOpenBoost()" title="일시 강화"><span class="hbSkIco">⚡</span><span class="hbSkTx">'+(bon?'적용중':'부스트')+'</span></button>';
   bar.innerHTML=h; }
+// 🤝 동료 — 영입(첫 구매)·강화(같은 버튼)·출전 토글. 옛 전직 트리가 여기로 옮겨 왔다.
+function hbOpenMates(){ const el=document.getElementById('hbMateModal'); if(!el) return;
+  el.classList.remove('hide'); renderMateModal(); if(typeof playSfx==='function') playSfx('ui_open'); }
+function hbCloseMates(){ const el=document.getElementById('hbMateModal'); if(el) el.classList.add('hide'); }
+function renderMateModal(){ const box=document.getElementById('hbMateBody'); if(!box) return;
+  const coin=Math.floor(PROF().pcoin||0), party=hbParty(), lv=profUnlockLv();
+  let h='';
+  for(const id in HB_MATES){ const M=HB_MATES[id], open=hbMateOpen(id), own=hbMateOwned(id),
+        cost=hbMateCost(id), out=party.indexOf(id)>=0;
+    const sub = !open ? ('🔒 Lv.'+M.lv+' 필요')
+      : own ? ('Lv.'+hbMateLv(id)+' · 위력 '+Math.round(hbMateDps(id)*100)+'% · '+M.tip)
+            : (M.tip+' · 위력 '+Math.round(M.dps*100)+'%');
+    h+='<div class="hbRow'+(open?'':' lock')+'"><span class="hbRowIco">'+M.ico+'</span>'
+      +'<span class="hbRowTx"><b>'+M.name+(out?' <i>출전</i>':'')+'</b><em>'+sub+'</em></span>'
+      +(own?('<button class="hbRowBtn alt" onclick="hbDoMateToggle(&#39;'+id+'&#39;)">'+(out?'대기':'출전')+'</button>'):'')
+      +'<button class="hbRowBtn" onclick="hbDoMateBuy(&#39;'+id+'&#39;)"'+((!open||coin<cost)?' disabled':'')+'>'
+      +(own?'강화 ':'영입 ')+cost.toLocaleString('en-US')+'</button></div>'; }
+  box.innerHTML=h;
+  const nt=document.getElementById('hbMateNote');
+  if(nt) nt.textContent='출전 '+party.length+'/'+hbMateMax()+'명 — 함께 싸웁니다. 영입한 동료는 캐릭터를 환생해도 남습니다.'
+    +(profHasUnlock('ally_plus')?'':' · 해금 「동료 최대 +2」로 정원이 늘어납니다.'); }
+function hbDoMateBuy(id){ if(!hbMateBuy(id)){ hmToast('미네랄이 부족합니다'); return; }
+  if(typeof playSfx==='function') playSfx('ui_open');
+  if(typeof updateCurBar==='function') updateCurBar();
+  renderMateModal(); renderHome(); }
+function hbDoMateToggle(id){ if(!hbMateToggle(id)){ hmToast('출전 정원이 찼습니다'); return; }
+  if(typeof playSfx==='function') playSfx('ui_tab');
+  renderMateModal(); }
 // 건설 — 보유 수를 늘리면 즉시 전장에 배치된다
 function hbOpenBuild(){ const el=document.getElementById('hbBuildModal'); if(!el) return;
   el.classList.remove('hide'); renderBuildModal(); if(typeof playSfx==='function') playSfx('ui_open'); }
@@ -5555,14 +5588,11 @@ const HB_RATE_EMA=.3;                       // 새 기록을 얼마나 반영할
 function hbNoteRate(min, sec){ if(!(sec>0)) return;
   const H=hbHunt(), v=min/sec;
   H.rate = H.rate ? H.rate*(1-HB_RATE_EMA)+v*HB_RATE_EMA : v; }
-// ── B. 전직·진화 — 마을 광장까지 안 가고 HOME에서 ──
-// 판정·실행은 공용 profClassChange()/profEvolve()를 그대로 쓴다(마을과 같은 단일 소스).
-function hbGrowJobs(){ const c=(typeof CHAR==='function')?CHAR():null; if(!c) return [];
-  const J=PROF_JOBS[c.unit.jobId]; if(!J) return [];
-  return (J.next||[]).map(id=>{ const N=PROF_JOBS[id], cost=profClassCost(id);
-    return { id, name:N.name, reqLv:N.reqLv, cost, okLv:c.unit.level>=N.reqLv, ok:c.unit.level>=N.reqLv && PROF().pcoin>=cost }; }); }
+// ── B. 진화·환생 — 마을 광장까지 안 가고 HOME에서 ──
+//   전직은 폐지됐다(2026-08-12) — 그 자리는 동료 영입(HB_MATES)이 대신한다.
+// 성장 배지(!) — '지금 할 수 있는 게 있다'는 신호. 진입점 자체는 항상 열려 있다(좌상단 아이콘).
 function hbGrowHas(){ const c=(typeof CHAR==='function')?CHAR():null; if(!c) return false;
-  if(hbGrowJobs().some(j=>j.ok)) return true;
+  if(profCanRebirth(c)) return true;
   const r=profEvolveReq(); return !!(r.unlock && !r.maxed && c.unit.level>=r.lvReq && PROF().pcoin>=r.cost); }
 function hbOpenGrow(){ const el=document.getElementById('hbGrowModal'); if(!el) return;
   el.classList.remove('hide'); renderGrowModal(); if(typeof playSfx==='function') playSfx('ui_open'); }
@@ -5571,13 +5601,6 @@ function renderGrowModal(){ const box=document.getElementById('hbGrowBody'); if(
   const c=CHAR(); if(!c) return;
   const J=PROF_JOBS[c.unit.jobId], r=profEvolveReq(), coin=Math.floor(PROF().pcoin||0);
   let h='<div class="hbRoundNote" style="padding:0 0 8px">현재 <b>'+J.name+'</b> · Lv.'+c.unit.level+' · 보유 '+coin.toLocaleString('en-US')+' 미네랄</div>';
-  const js=hbGrowJobs();
-  h+='<div class="hbGrowLbl">전직</div>';
-  if(!js.length) h+='<div class="hbRow"><span class="hbRowTx"><em>더 이상 전직할 수 없습니다(최종 단계)</em></span></div>';
-  for(const j of js)
-    h+='<div class="hbRow"><span class="hbRowIco">🎖</span>'
-      +'<span class="hbRowTx"><b>'+j.name+'</b><em>'+(j.okLv?('비용 '+j.cost.toLocaleString('en-US')+' 미네랄'):('🔒 Lv.'+j.reqLv+' 필요'))+'</em></span>'
-      +'<button class="hbRowBtn" onclick="hbDoClass(&#39;'+j.id+'&#39;)"'+(j.ok?'':' disabled')+'>전직</button></div>';
   h+='<div class="hbGrowLbl">진화 <span class="hbStars">'+('★'.repeat(r.stars)+'☆'.repeat(5-r.stars))+'</span></div>';
   if(!r.unlock) h+='<div class="hbRow"><span class="hbRowTx"><em>🔒 Lv.'+profUnlockNeed('evolve')+' 달성 시 개방</em></span></div>';
   else if(r.maxed) h+='<div class="hbRow"><span class="hbRowTx"><em>✓ 최대 진화(★5)</em></span></div>';
@@ -5602,7 +5625,6 @@ function hbAfterGrow(msg){ if(_hb){ const st=hbCharStats(), ch=_hb.char;
   if(typeof playSfx==='function') playSfx('ui_open');
   if(typeof updateCurBar==='function') updateCurBar();
   renderGrowModal(); renderHome(); if(typeof hbHud==='function') hbHud(); }
-function hbDoClass(id){ if(typeof profClassChange==='function' && profClassChange(id)) hbAfterGrow('전직 완료!'); }
 // 🔁 환생 — 되돌릴 수 없으므로 반드시 확인을 받는다
 function hbDoRebirth(){ const c=CHAR(); if(!c || !profCanRebirth(c)) return;
   const step=profRebStep(c.level);
@@ -5653,7 +5675,7 @@ function profPetSlots(){ const p=PROF(); let n=2;
   return Math.max(n, p.petSlots||2); }
 function hbBuildMax(k){ const B=HB_BUILD[k]; if(!B) return 0;
   let m=B.max;
-  if(k==='ally'  && profHasUnlock('ally_plus'))   m+=2;
+  // ⚠ 'ally'는 없어졌다 — 동료 정원은 hbMateMax()가 ally_plus 해금을 받는다
   if(k==='turret'&& profHasUnlock('turret_plus')) m+=2;
   return m; }
 function hmToggleUpg(){ const H=hbHunt(); H.upgDown=!H.upgDown;
@@ -5973,11 +5995,60 @@ const HB_BOOSTS={
 };
 // 건설·고용 — 영구 보유(미네랄). 라운드가 바뀌어도 남는다.
 const HB_BUILD={
-  ally:   {name:'동료',   ico:'🤝', max:4, base:150, mul:1.9, tip:'주위를 돌며 함께 사격'},
   turret: {name:'터렛',   ico:'🔫', max:4, base:120, mul:1.8, tip:'고정 포탑 — 사거리가 길다'},
   bunker: {name:'벙커',   ico:'🧱', max:2, base:300, mul:2.4, tip:'적을 끌어당겨 대신 맞는다'},
 };
-const HB_ALLY_DPS=.35, HB_TURRET_DPS=.55, HB_TURRET_RANGE=1.45;   // 캐릭터 대비 비율
+// 🤝 동료 — 옛 상위 직업 12종이 그대로 넘어왔다(전직 폐지, 2026-08-12).
+//   이름·3D 모델(unit)은 옛 PROF_JOBS 값을 그대로 쓴다. 역할은 옛 base 스탯의 성격을 옮긴 것:
+//   pow 높으면 dps↑ / foc 높으면 사거리↑ / agi 높으면 연사↑.
+//   lv = 영입 해금 레벨. 캐릭터 해금(PROF_UNLOCKS)과 같은 규칙으로 '하나씩' 열리도록 간격을 벌려 뒀다.
+//   ⚠ 표만 고치면 밸런스가 바뀐다 — 전투·UI 어디에도 수치를 박지 말 것.
+const HB_MATES={
+  sniper:    {name:'저격수',    unit:'ghost',        ico:'🎯', race:'union',     lv:8,  cost:400,   dps:.30, rng:1.9, spd:1.0, tip:'긴 사거리 저격'},
+  gunner:    {name:'화력병',    unit:'machinegun',   ico:'🔥', race:'union',     lv:14, cost:900,   dps:.44, rng:1.0, spd:1.2, tip:'근거리 연사'},
+  spike:     {name:'스파이크',  unit:'hydra',        ico:'🦂', race:'swarm',     lv:18, cost:1600,  dps:.38, rng:1.4, spd:1.2, tip:'중거리 견제'},
+  swarmling: {name:'스웜링',    unit:'broodling',    ico:'🐛', race:'swarm',     lv:22, cost:2600,  dps:.34, rng:0.9, spd:1.5, tip:'빠른 연사'},
+  sentinel:  {name:'센티넬',    unit:'dragoon',      ico:'🛡', race:'aetherial', lv:26, cost:4200,  dps:.48, rng:1.3, spd:1.0, tip:'중장갑 사격'},
+  phantom:   {name:'팬텀',      unit:'ghost',        ico:'👻', race:'union',     lv:32, cost:7000,  dps:.56, rng:1.8, spd:1.1, tip:'고화력 저격'},
+  darksage:  {name:'다크세이지',unit:'dark_templar', ico:'🗡', race:'aetherial', lv:38, cost:11000, dps:.62, rng:0.8, spd:1.3, tip:'근접 순간 화력'},
+  goliath:   {name:'기갑병',    unit:'goliath',      ico:'🤖', race:'union',     lv:45, cost:18000, dps:.72, rng:1.2, spd:0.9, tip:'중장갑 화력'},
+  thornqueen:{name:'가시여왕',  unit:'thornqueen',   ico:'👑', race:'swarm',     lv:52, cost:30000, dps:.80, rng:1.5, spd:1.2, tip:'광역 견제'},
+  ultra:     {name:'돌격괴수',  unit:'ultralisk',    ico:'🦖', race:'swarm',     lv:60, cost:50000, dps:.95, rng:0.8, spd:1.1, tip:'최전선 돌격'},
+  void:      {name:'보이드',    unit:'archon',       ico:'🔮', race:'aetherial', lv:70, cost:85000, dps:1.10,rng:1.1, spd:1.0, tip:'파괴적 에너지'},
+  highsage:  {name:'하이세이지',unit:'high_templar', ico:'✨', race:'aetherial', lv:80, cost:140000,dps:1.30,rng:1.6, spd:1.1, tip:'최상위 술사'},
+};
+const HB_MATE_MUL=1.55;      // 강화 1레벨당 비용 배수
+const HB_MATE_STEP=0.22;     // 강화 1레벨당 위력 증가(비율)
+const HB_MATE_DEF_DPS=.35;   // 표가 비어 있을 때의 안전값(정상 경로에선 안 쓰인다)
+const HB_MATE_PARTY=3;       // 동시에 데리고 나가는 기본 인원 — ally_plus 해금으로 늘어난다
+function hbMates(){ const H=hbHunt(); if(!H.mates) H.mates={}; if(!Array.isArray(H.party)) H.party=[]; return H; }
+function hbMateLv(id){ return hbMates().mates[id]||0; }            // 0 = 미영입
+function hbMateOwned(id){ return hbMateLv(id)>0; }
+function hbMateOpen(id){ const M=HB_MATES[id]; return !!M && profUnlockLv()>=M.lv; }
+function hbMateCost(id){ const M=HB_MATES[id]; if(!M) return 0;
+  const lv=hbMateLv(id);
+  return lv? Math.ceil(M.cost*Math.pow(HB_MATE_MUL, lv)) : M.cost; }   // 미영입 = 영입가 · 보유 = 다음 강화가
+function hbMateDps(id){ const M=HB_MATES[id]; if(!M) return 0;
+  return M.dps*(1+HB_MATE_STEP*Math.max(0,hbMateLv(id)-1)); }
+function hbMateMax(){ return HB_MATE_PARTY + (profHasUnlock('ally_plus')?2:0); }
+// 영입/강화 = 같은 버튼. 처음 사면 1레벨(=출전 가능), 그 뒤로는 레벨이 오른다.
+function hbMateBuy(id){ const M=HB_MATES[id], p=PROF(); if(!M) return false;
+  if(!hbMateOpen(id)) return false;
+  const cost=hbMateCost(id); if(Math.floor(p.pcoin||0)<cost) return false;
+  const H=hbMates(); const first=!hbMateOwned(id);
+  p.pcoin-=cost; H.mates[id]=hbMateLv(id)+1;
+  if(first && H.party.length<hbMateMax()) H.party.push(id);        // 처음 영입하면 자리가 있는 만큼 바로 출전
+  saveMeta(); hbLayoutAllies(); return true; }
+// 출전 토글 — 정원을 넘기면 거절한다(자동으로 남을 빼지 않는다)
+function hbMateToggle(id){ const H=hbMates(); if(!hbMateOwned(id)) return false;
+  const i=H.party.indexOf(id);
+  if(i>=0) H.party.splice(i,1);
+  else { if(H.party.length>=hbMateMax()) return false; H.party.push(id); }
+  saveMeta(); hbLayoutAllies(); return true; }
+// 실제로 싸우러 나가는 동료 — 정원·보유 여부를 여기서 한 번에 거른다(전투·UI 공용)
+function hbParty(){ const H=hbMates();
+  return H.party.filter(id=>HB_MATES[id]&&hbMateOwned(id)).slice(0, hbMateMax()); }
+const HB_TURRET_DPS=.55, HB_TURRET_RANGE=1.45;   // 캐릭터 대비 비율
 const HB_PET_DPS=.18;                                             // 장착 펫 1마리당
 const HB_BUNKER_HP=6, HB_BUNKER_R=150;                            // 캐릭터 최대체력 대비 배수 · 도발 반경
 function hbBuildN(k){ return (hbHunt().build&&hbHunt().build[k])||0; }
@@ -6023,9 +6094,10 @@ function hbBoostLeft(k){ return Math.max(0, Math.ceil((((hbHunt().boostT&&hbHunt
 // 아군 배치 — 보유 수가 바뀌거나 라운드가 시작될 때 다시 세운다(월드 좌표, 캐릭터가 원점)
 function hbLayoutAllies(){ const S=_hb; if(!S) return; const st=hbCharStats();
   S.allies=[]; S.turrets=[]; S.bunkers=[];
-  const n1=hbBuildN('ally');
-  for(let i=0;i<n1;i++){ const a=i/Math.max(1,n1)*Math.PI*2;
-    S.allies.push({x:Math.cos(a)*52, y:Math.sin(a)*52, ph:a, cdT:Math.random()*.5, ico:'🤝'}); }
+  const party=(typeof hbParty==='function')?hbParty():[];      // 🤝 이름 있는 동료(옛 상위 직업)
+  for(let i=0;i<party.length;i++){ const id=party[i], M=HB_MATES[id], a=i/Math.max(1,party.length)*Math.PI*2;
+    S.allies.push({x:Math.cos(a)*52, y:Math.sin(a)*52, ph:a, cdT:Math.random()*.5,
+      mid:id, mdl:M.unit, ico:M.ico, dps:hbMateDps(id), rng:M.rng, spd:M.spd, face:0}); }
   const n2=hbBuildN('turret');
   for(let i=0;i<n2;i++){ const a=(i+.5)/Math.max(1,n2)*Math.PI*2;
     S.turrets.push({x:Math.cos(a)*92, y:Math.sin(a)*92, cdT:Math.random()*.5, ico:'🔫'}); }
@@ -6036,12 +6108,13 @@ function hbLayoutAllies(){ const S=_hb; if(!S) return; const st=hbCharStats();
   S.pets=eq.map((id,i)=>({ id, ico:(PROF_PETS[id]&&PROF_PETS[id].emoji)||'🐾',
     ph:i/Math.max(1,eq.length)*Math.PI*2, x:0, y:0, cdT:Math.random()*.5 })); }
 // 아군 한 명의 사격 — 가장 가까운 적을 친다(공용: 동료·펫·터렛)
-function hbUnitFire(u, dps, rangeMul, dt){ const S=_hb, c=S.char;
+function hbUnitFire(u, dps, rangeMul, dt, spd){ const S=_hb, c=S.char;
   u.cdT-=dt; if(u.cdT>0) return;
   const rng=c.range*(rangeMul||1); let best=null,bd=1e18;
   for(const f of S.foes){ const d=Math.hypot(f.x-u.x,f.y-u.y); if(d<bd){ bd=d; best=f; } }
   if(!best || bd>rng) return;
-  u.cdT=c.cd; const dmg=c.atk*dps*(hbBoostOn('atk')?2:1);
+  if(u.face!==undefined) u.face=Math.atan2(best.x-u.x, best.y-u.y);   // 쏠 땐 표적을 본다
+  u.cdT=c.cd/(spd||1); const dmg=c.atk*dps*(hbBoostOn('atk')?2:1);
   best.hp-=dmg; S.shots.push({x1:u.x,y1:u.y,x2:best.x,y2:best.y,t:0,ally:1});
   if(best.hp<=0) hbKill(best); }
 // 스킬
@@ -6290,7 +6363,10 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char; S.t+=dt;
         S.atkT=HB_ATK_SHOW; if(S._u) S._u.fireSeq=(S._u.fireSeq||0)+1;
         if(cb.hp<=0) hbBreakChest(cb); } } }
   // 아군 — 동료는 캐릭터 주위를 천천히 돌고, 터렛은 고정, 펫은 가깝게 붙어 돈다
-  for(const a of S.allies){ a.ph+=dt*0.5; a.x=Math.cos(a.ph)*52; a.y=Math.sin(a.ph)*52; hbUnitFire(a,HB_ALLY_DPS,1,dt); }
+  for(const a of S.allies){ const p0x=a.x, p0y=a.y;
+    a.ph+=dt*0.5*(a.spd||1); a.x=Math.cos(a.ph)*52; a.y=Math.sin(a.ph)*52;
+    a.face=Math.atan2(a.x-p0x, a.y-p0y);                            // 도는 방향을 본다(게임과 같은 atan2(dx,dy))
+    hbUnitFire(a, a.dps||HB_MATE_DEF_DPS, a.rng||1, dt, a.spd||1); }
   for(const t of S.turrets) hbUnitFire(t,HB_TURRET_DPS,HB_TURRET_RANGE,dt);
   for(const q of S.pets){ q.ph+=dt*1.1; q.x=Math.cos(q.ph)*30; q.y=Math.sin(q.ph)*30; hbUnitFire(q,HB_PET_DPS,1,dt); }
   if(S.atkT>0) S.atkT-=dt;                            // 공격 모션 남은 시간(끝나면 idle로)
@@ -6585,6 +6661,8 @@ function hb3dList(){ const S=_hb, W=S.w||1, H=S.h||1, k=S.k||1, out=[];
   const c=S.char, ch=(typeof CHAR==='function')?CHAR():null;
   const mdl=(ch && PROF_CLASSES[ch.cls] && PROF_CLASSES[ch.cls].unit) || 'marine';
   out.push(_hbU(S, mdl, nx(c.x), ny(c.y), S.charFace||0, false));
+  for(const a of S.allies){ if(!a.mdl) continue;                       // 🤝 동료도 캐릭터와 같은 경로로 그린다
+    out.push(_hbU(a, a.mdl, nx(a.x), ny(a.y), a.face||0, true)); }
   for(const f of S.foes){ if(!f.mdl) continue;
     out.push(_hbU(f, f.mdl, nx(f.x), ny(f.y), f.face||0, !!f.mv)); }
   return out; }
@@ -6975,17 +7053,25 @@ function renderGear(){ const body=document.getElementById('gearBody'); if(!body)
   const nb=body.querySelector('.bagBody'); if(nb&&keep) nb.scrollTop=keep;
   bagScrollHint(); }
 // 동료 — 전용 편성 시스템은 아직 없다. 실제로 동작하는 건 HOME 건설의 동료뿐이라 현황만 보여주고 그리로 보낸다.
-function _gearAllyPanel(){ const n=hbBuildN('ally'), mx=hbBuildMax('ally'), B=HB_BUILD.ally;
-  let h='<div class="shopPanel"><div class="shopHead">동료<em>'+n+'/'+mx+'</em></div><div class="shopBody">';
-  h+='<div class="shopNote">동료는 <b>사냥터</b>에서 고용해 함께 싸웁니다 · '+B.tip+'</div>';
-  h+='<div class="shopRow"><span class="twPet">'+B.ico+'</span><div class="twRowInfo">'
-    +'<div class="twRowName">고용한 동료</div><div class="twRowSub">'+n+'명 배치 중 · 최대 '+mx+'명</div></div>'
-    +'<button class="twBtn" onclick="gearGoHire()">고용하러 가기</button></div>';
+function _gearAllyPanel(){ const party=hbParty(), mx=hbMateMax();
+  const owned=Object.keys(HB_MATES).filter(hbMateOwned);
+  let h='<div class="shopPanel"><div class="shopHead">동료<em>'+party.length+'/'+mx+'</em></div><div class="shopBody">';
+  h+='<div class="shopNote">옛 상위 직업들이 <b>동료</b>가 됐습니다 — 영입해서 함께 싸우고, 미네랄로 강화합니다.</div>';
+  if(!owned.length) h+='<div class="shopNote">아직 영입한 동료가 없습니다</div>';
+  for(const id of owned){ const M=HB_MATES[id], out=party.indexOf(id)>=0;
+    h+='<div class="shopRow"><span class="twPet">'+M.ico+'</span><div class="twRowInfo">'
+      +'<div class="twRowName">'+M.name+(out?' · 출전':'')+'</div>'
+      +'<div class="twRowSub">Lv.'+hbMateLv(id)+' · 위력 '+Math.round(hbMateDps(id)*100)+'% · '+M.tip+'</div></div>'
+      +'<button class="twBtn'+(out?' on':'')+'" onclick="gearMateToggle(&#39;'+id+'&#39;)">'+(out?'대기':'출전')+'</button></div>'; }
+  h+='<div class="shopRow"><span class="twPet">🤝</span><div class="twRowInfo">'
+    +'<div class="twRowName">동료 영입·강화</div><div class="twRowSub">사냥터 좌상단 동료 아이콘에서</div></div>'
+    +'<button class="twBtn" onclick="gearGoHire()">영입하러 가기</button></div>';
   h+='</div></div>';
-  h+='<div class="shopPanel"><div class="shopHead">편성<em>준비 중</em></div><div class="shopBody">'
-    +'<div class="shopNote">동료를 개별로 고르고 배치하는 편성 시스템은 아직 없습니다</div></div></div>';
   return h; }
-function gearGoHire(){ openHome(); hbOpenBuild(); }
+// 편성 토글도 사냥터와 같은 함수를 쓴다(단일 소스) — 여기서는 화면만 다시 그린다
+function gearMateToggle(id){ if(!hbMateToggle(id)){ hmToast('출전 정원이 찼습니다'); return; }
+  if(typeof playSfx==='function') playSfx('ui_tab'); renderGear(); }
+function gearGoHire(){ openHome(); hbOpenMates(); }
 function refreshTownPanel(){ if(gearOpen()){ renderGear(); return; }              // 정비 전용 화면이 열려 있으면 그쪽을 갱신
   if(shopOpen()){ renderShop(); return; }   // 상점 전용 화면이 열려 있으면 그쪽을 갱신
   const body=document.getElementById('tpBody'), z=TOWN_PANELS[_twZone]; if(!body||!z) return;
@@ -7022,13 +7108,12 @@ function renderCharSelect(){ const p=PROF(), list=p.chars||[];
     h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">새 캐릭터 만들기</div><div class="twRowSub">레인저 · 척후병 · 워든</div></div><button class="twBtn" onclick="charGoCreate()">만들기</button></div>';
   return h; }
 function renderCharCreate(){ const p=PROF(), full=(p.chars||[]).length>=PROF_MAX_CHARS;
-  let h='<div class="twHead">종류를 고르면 그 자리에서 캐릭터가 만들어집니다.<br>종류마다 기본 스탯과 전직 트리가 다릅니다.</div>';
+  let h='<div class="twHead">종류를 고르면 그 자리에서 캐릭터가 만들어집니다.<br>종류마다 기본 스탯이 다릅니다 — 전직은 없고, 강해지는 축은 강화·동료·장비입니다.</div>';
   h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">이름</div><div class="twRowSub">비우면 종류 이름으로</div></div><input id="ccName" class="twInput" maxlength="10" placeholder="10자 이내"></div>';
   for(const id in PROF_CLASSES){ const C=PROF_CLASSES[id], J=PROF_JOBS[id];
     const bs=PROF_STATS.map(k=>PROF_STAT_NAME[k]+' '+J.base[k]).join(' · ');
-    const nx=J.next.map(n=>PROF_JOBS[n].name).join(' / ');
     h+='<div class="twRow"><span class="twPet">'+C.ico+'</span><div class="twRowInfo"><div class="twRowName">'+C.name+'</div>'
-      +'<div class="twRowSub">'+C.tip+'</div><div class="twRowSub">'+bs+'</div><div class="twRowSub">전직 → '+nx+'</div></div>'
+      +'<div class="twRowSub">'+C.tip+'</div><div class="twRowSub">'+bs+'</div></div>'
       +'<button class="twBtn" onclick="charDoCreate(\''+id+'\')"'+(full?' disabled':'')+'>'+(full?'슬롯 참':'만들기')+'</button></div>'; }
   if((p.chars||[]).length) h+='<div class="twRow"><div class="twRowInfo"><div class="twRowSub">이미 만든 캐릭터를 고르려면</div></div><button class="twBtn" onclick="charGoSelect()">보관소</button></div>';
   return h; }
@@ -7072,9 +7157,6 @@ function renderProfStats(){ const p=PROF(), c=CHAR(); if(!c) return '<div class=
   // 스탯은 레벨업 때 자동으로 오른다 — 배분 버튼은 없다(성장 축은 미네랄 업그레이드로 통일)
   for(const k of PROF_STATS){ h+='<div class="twStat"><span class="tsL">'+PROF_STAT_NAME[k]+'</span><span class="tsV">'+profStat(k)+'</span></div>'; }
   h+='</div>';
-  if(J.next && J.next.length){ h+='<div class="twSectLbl">전직</div>';
-    for(const nx of J.next){ const N=PROF_JOBS[nx], cost=profClassCost(nx), okLv=c.unit.level>=N.reqLv, ok=okLv&&p.pcoin>=cost;
-      h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+N.name+'</div><div class="twRowSub'+(okLv?'':' lock')+'">필요 Lv.'+N.reqLv+' · 비용 '+cost+' P</div></div><button class="twBtn" onclick="profDoClass(\''+nx+'\')"'+(ok?'':' disabled')+'>전직</button></div>'; } }
   const r=profEvolveReq();   // 🌟 진화(별)
   h+='<div class="twSectLbl">진화 <span class="twStars">'+('★'.repeat(r.stars)+'☆'.repeat(5-r.stars))+'</span></div>';
   if(!r.unlock) h+='<div class="twRow"><div class="twRowInfo"><div class="twRowSub lock">🔒 Lv.'+profUnlockNeed('evolve')+' 달성 시 진화 개방</div></div></div>';
@@ -7188,7 +7270,6 @@ function profDoGacha(){ const res=profPetRoll(); if(!res) return; if(typeof play
   const P=PROF_PETS[res.id]; renderTownBar(); refreshTownPanel();
   showTownToast((res.isNew?'🎉 ':'⭐ ')+GACHA_TIERS[res.tier].name+' '+P.name+(res.isNew?' 획득!':' ★'+res.star)); }
 function profDoPetEquip(id){ if(profPetEquip(id)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); } }
-function profDoClass(id){ if(profClassChange(id)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); showTownToast('전직 완료!'); } }
 // ── 장비창(위=아바타+슬롯 / 아래=가방) ──
 // 아바타 = SF 파워아머 실루엣(자체 제작). 얼굴은 그리지 않고 바이저로 대신한다.
 // 부위마다 닫힌 외곽선 + 배경색 채움으로 겹침을 가리고, 먼 것부터(다리 → 골반 → 몸통 → 팔 → 어깨판 → 투구) 쌓는다.
@@ -12169,11 +12250,20 @@ const BARE_CUR_SCREENS=['homeScreen','townScreen','mapSelect','shopScreen','gear
 function curSetTitle(t){ const e=document.getElementById('curTitle'); if(e) e.textContent=t||''; }   // 재화 바 왼쪽 제목(화면별)
 function curShow(on){ const b=document.getElementById('curBar'), p=document.getElementById('phone');
   if(b) b.classList.toggle('hide', !on); if(p) p.classList.toggle('curOn', !!on); }
+// 💠 재화 표기 — 던전 보상 배수가 24^(dg-1)라 상위 던전에서는 자릿수가 폭주한다.
+//   그대로 두면 우측 정렬된 숫자가 왼쪽으로 자라 좌상단 프로필을 덮는다(실제로 겹쳤다).
+//   10만부터 축약한다 — 5자리까지는 콤마 표기를 그대로 둬야 초반 수치를 정확히 읽을 수 있고,
+//   6자리부터 줄여야 좌상단 프로필(≈138px)과 부딪히지 않는다(실측: '646,228' 3개면 3px 겹쳤다).
+const CUR_ABBR=1e5, CUR_UNITS=[[1e12,'T'],[1e9,'B'],[1e6,'M'],[1e3,'K']];
+function fmtCur(n){ n=Math.floor(n||0);
+  if(n<CUR_ABBR) return n.toLocaleString('en-US');
+  for(const [v,u] of CUR_UNITS){ if(n>=v){ const x=n/v; return (x<10? x.toFixed(1) : Math.round(x))+u; } }
+  return n.toLocaleString('en-US'); }
 function updateCurBar(){ if(!PLAYER_META||!PLAYER_META.profile) return;
   const set=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
-  set('curMin', profMineral().toLocaleString('en-US'));
-  set('curGas', profGas().toLocaleString('en-US'));
-  set('curGem', profGem().toLocaleString('en-US')); }
+  set('curMin', fmtCur(profMineral()));
+  set('curGas', fmtCur(profGas()));
+  set('curGem', fmtCur(profGem())); }
 function showAppScreen(id){ setInGame(false);
   if(typeof navShow==='function') navShow(null);   // 하단 네비는 기본 숨김 — openHome/openTown이 다시 켠다
   if(typeof hbStop==='function') hbStop();         // 홈 배경 전투도 기본 정지 — openHome이 다시 켠다
