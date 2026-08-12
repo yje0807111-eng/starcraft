@@ -213,9 +213,9 @@ async function groupLobby(){
               'HOME '+(isBd?'테두리':'면')+'에 회색·빨강 밖의 색('+(el.className||el.tagName)+'): '+m); } }
         for(const v of c.borderRadius.split(/[\s\/]+/))
           assert(!v || v==='0px' || v==='3px', 'HOME 모서리가 너무 둥금('+(el.className||el.tagName)+'): '+v); } }
-    assert(document.querySelectorAll('#navBar .navIt').length===4,'하단 네비가 4칸이 아님(HOME·정비·유즈맵·상점) — 마을은 폐지됐다');
+    assert(document.querySelectorAll('#navBar .navIt').length===5,'하단 네비가 5칸이 아님(사냥터·정비·강화·유즈맵·상점)');
     { const navs=[...document.querySelectorAll('#navBar .navIt')].map(x=>x.dataset.nav).join(',');
-      assert(navs==='home,gear,map,shop','네비 구성이 다름: '+navs);
+      assert(navs==='home,gear,upg,map,shop','네비 구성이 다름: '+navs);
       // 토벌은 네비에서 빠지고 HOME 팝업이 됐다 — 2번 칸은 정비(장비·펫·동료)
       assert(document.querySelector('#navBar .navIt[data-nav=gear]').textContent.indexOf('정비')>=0,'2번 탭 표기가 정비가 아님'); }
     assert(document.querySelector('#navBar .navIt.on').dataset.nav==='home','HOME 탭이 활성이 아님');
@@ -249,8 +249,18 @@ async function groupLobby(){
       assert(document.querySelectorAll('#hmUpgGrid .hmUp').length>0,'동료 구역에 강화 카드가 하나도 없음');
       assert(document.querySelector('#hmUpgGrid .hmUp[data-k="alatk"]'),'동료 구역에 강화 카드가 없음');
       hmUpgTab('bld');
-      assert(document.querySelector('#hmUpgGrid .hmUp[data-k="b_turret"]')
-          && document.querySelector('#hmUpgGrid .hmUp[data-k="b_bunker"]'),'건물 구역에 건설 카드가 없음');
+      // 건설 카드는 격자에 없다 — 여긴 '지어진 것의 스탯을 올리는' 곳이고, 짓는 것은 전장 위 버튼이다
+      assert(!document.querySelector('#hmUpgGrid .hmUp[data-k^="b_"]'),'건물 구역에 건설 카드가 남아 있음');
+      assert(document.querySelector('#hmUpgGrid .hmUp[data-k="tuatk"]'),'건물 구역에 강화 카드가 없음');
+      // 짓는 입구는 전장 위 '건설' 한 칸 — 누르면 목록이 펴진다
+      { assert(document.querySelectorAll('#hbBar .hbBdBtn').length===1,'전장 건설 버튼이 한 칸이 아님');
+        assert(!document.querySelector('#hbBar .hbBdMenu'),'누르지도 않았는데 건설 목록이 열려 있음');
+        hbToggleBuild();
+        const it=[...document.querySelectorAll('#hbBar .hbBdMenu .hbBdIt')];
+        assert(it.length===HB_BUILD_KEYS.length,'건설 목록이 '+HB_BUILD_KEYS.length+'개가 아님: '+it.length);
+        assert(it.every(b=>b.querySelector('img')),'건설 목록에 건물 아이콘이 없음');
+        hbToggleBuild();
+        assert(!document.querySelector('#hbBar .hbBdMenu'),'다시 눌렀는데 목록이 안 닫힘'); }
       assert(typeof hbOpenBuild!=='function','건설 팝업이 아직 남아 있음(패널로 흡수됐어야 한다)');
       hmUpgTab(before); }
     // 수량은 한 칸을 눌러 돌린다 — 1 → 10 → MAX → 1. 폭은 라벨이 바뀌어도 고정
@@ -352,14 +362,21 @@ async function groupLobby(){
         if(ff && /Rajdhani|Do Hyeon|IBM Plex|Apple SD Gothic|JuaKR|NotoKR/.test(ff)){ hard++; if(!sample) sample=r.selectorText+' → '+ff; } } }
     assert(hard===0,'개별 규칙에 폰트 이름이 박혀 있음('+hard+'곳): '+sample);
     // 위계 = 가족 + 크기. Jua는 400 단일 굵기라 굵기로는 가를 수 없다.
+    // ⚠ 하단(네비·탭·카드 이름)과 사냥터 패널 제목은 Noto 로 통일했다 — Jua 는 큰 제목에만 남는다.
+    //   그래서 Jua 표본은 .hmUpgHead 가 아니라 상점 제목(.shopTitle)에서 잰다.
+    openShop(); await sleep(60);
+    const head=document.querySelector('#shopScreen .shopTitle'), hs=getComputedStyle(head);
+    assert(/JuaKR/.test(hs.fontFamily),'큰 제목에 제목 폰트(JuaKR)가 안 걸림: '+hs.fontFamily);
     openHome(); await sleep(60);
-    const head=document.querySelector('.hmUpgHead'), hs=getComputedStyle(head);
-    assert(/JuaKR/.test(hs.fontFamily),'제목에 제목 폰트(JuaKR)가 안 걸림: '+hs.fontFamily);
     const body=document.querySelector('.hmUpName'), bs=getComputedStyle(body);
     assert(!/JuaKR/.test(bs.fontFamily),'본문까지 제목 폰트라 위계가 없음: '+bs.fontFamily);
+    // 하단은 한 서체로 — 네비 라벨·패널 제목·카드 이름이 전부 Noto 여야 한다(서체가 섞이면 글자가 삐뚤빼뚤해 보인다)
+    for(const sel of ['#navBar .navIt','.hmUpgHead','.pdSegBtn']){
+      const el=document.querySelector(sel); if(!el) continue;
+      assert(/NotoKR/.test(getComputedStyle(el).fontFamily), sel+' 이 Noto 가 아님: '+getComputedStyle(el).fontFamily); }
     const hsz=parseFloat(hs.fontSize), bsz=parseFloat(bs.fontSize);
     assert(hsz-bsz>=3,'제목이 본문보다 충분히 크지 않음: 제목 '+hsz+' / 본문 '+bsz);
-    return '제목 Jua '+hsz+'px · 본문 Noto '+bsz+'px · 숫자 Rajdhani'; });
+    return '큰제목 Jua '+hsz+'px · 하단 전부 Noto '+bsz+'px · 숫자 Rajdhani'; });
   // 💠 공용 재화 바 — 미네랄=pcoin · 가스 · 젬. 모든 RPG/허브 + 유즈맵 선택 상단 상시(인게임 제외).
   await step('공용 재화 바: RPG/유즈맵 상단 상시 · 미네랄/가스/젬', async()=>{ skipIf(typeof curShow!=='function','재화 바 없음');
     // curShow()는 showAppScreen 안에서 동기 실행 → 화면 연 직후 동기 검사(전환 FX/타이머 레이스 회피)
@@ -820,8 +837,12 @@ async function groupLobby(){
     assert(hbBoostLeft('inc')>l1+HB_BOOSTS.inc.sec-5,'연장이 안 됨: '+l1+' → '+hbBoostLeft('inc'));
     // ⑤ 스킬 바 UI
     renderHbBar();
-    // 건설은 업그레이드 패널의 동료·건물 구역으로 흡수돼 스킬 바에서 빠졌다 — 남는 건 토벌·부스트 둘
-    assert(document.querySelectorAll('#hbBar .hbSk').length===Object.keys(HB_SKILLS).length+2,'스킬 바 버튼 수가 다름(스킬 + 토벌·부스트)');
+    // 바는 두 줄이다 — 위: 건설 3종 / 아래: 스킬 + 토벌·부스트
+    // 건설이 한 칸이 되어 바는 한 줄이다 — 줄이 늘면 전장이 그만큼 줄어든다
+    assert(document.querySelectorAll('#hbBar .hbGrp').length===1,'스킬 바가 한 줄이 아님');
+    assert(document.querySelectorAll('#hbBar .hbBdBtn').length===1,'건설 입구가 한 칸이 아님');
+    assert(document.querySelectorAll('#hbBar .hbSk').length===Object.keys(HB_SKILLS).length+3,
+      '스킬 바 버튼 수가 다름(건설1 + 스킬 + 토벌·부스트): '+document.querySelectorAll('#hbBar .hbSk').length);
     // 버튼이 늘어도 한 줄에 들어가야 한다 — 넘치면 토벌·부스트가 화면 밖으로 밀린다
     { const bar=$('hbBar'); assert(bar.scrollWidth<=bar.clientWidth+1,'스킬 바가 가로로 넘침: '+bar.scrollWidth+'>'+bar.clientWidth); }
     // ⑥ 전장 아래 경계 = 스킬 바 위. 카드 기준으로 잡으면 적이 버튼 뒤로 지나가 섞인다.

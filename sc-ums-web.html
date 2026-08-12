@@ -49,6 +49,18 @@
     --metal-hi:#34363d;                    /* 금속 상단 하이라이트 면 */
     --metal-lo:#141518;                    /* 금속 하단 음영 면 */
     --metal-edge:#3c3e46;                  /* 금속 테두리 */
+    /* 금속 링 4단(위가 밝고 중간이 어둡고 아래가 살짝 들린다) — .pdSeg 가 쓰던 값을 토큰으로 승격.
+       테두리를 그라데로 주려면 padding-box/border-box 2겹 배경이 필요하다. */
+    --metal-ring:linear-gradient(180deg,#585b66 0%,#3c3e46 38%,#2a2c33 72%,#45474f 100%);
+    /* HOME 용 중성판 — 명암 곡선은 같고 푸른기만 뺐다(HOME 은 채널 편차 12 이하가 규칙) */
+    --metal-ring-n:linear-gradient(180deg,#5c5c5c 0%,#404040 38%,#2d2d2d 72%,#494949 100%);
+    /* 하단 네비 판 — 참고 이미지 기준. 테두리가 또렷하고 판 안쪽이 바탕보다 밝다 */
+    --nav-plate:linear-gradient(180deg,#1b1d23 0%,#121319 55%,#0c0d11 100%);
+    --nav-ring-n:linear-gradient(180deg,#8c8c8c 0%,#606060 46%,#424242 100%);   /* HOME 용(푸른기 제거) — 잠긴 칸 버튼 */
+    --nav-plate-on:linear-gradient(180deg,#2a1a1e 0%,#1d1114 55%,#130c0e 100%);
+    --nav-ring-on:linear-gradient(180deg,#ffa8a8 0%,#ff3b3b 46%,#a32b2b 100%);
+    /* 업그레이드 버튼용 — 같은 붉은 계열이나 윗빛을 낮추고 채도를 깎아 탁하게(네비 선택 칸은 그대로 둔다) */
+    --nav-ring-on-d:linear-gradient(180deg,#cf9090 0%,#d64848 42%,#8c3232 100%);   /* 선택 = 붉은 링. 가운듰 #ff3b3b 는 팔레트 기본값(업그레이드 '내 캐릭터' 구역색과 같은 계련) */
     --tmC1:#5aa9ff; --tmC2:#ff7a6b;        /* 팀 색(1팀/2팀) — 대기실·시작 화면 공용 단일 소스 */
     --ink:#070506;                         /* 깊은 검정(인셋) */
     --txt:#e0dcdc; --txt-dim:#9a9092;
@@ -2323,7 +2335,7 @@
   .pdSeg{--pad:2px;position:relative;display:flex;width:100%;max-width:286px;margin:0 auto;padding:var(--pad);
     border-radius:var(--r-bar);border:1px solid transparent;
     background:linear-gradient(180deg,#191919,#0e0e0e) padding-box,
-      linear-gradient(180deg,#585b66 0%,#3c3e46 38%,#2a2c33 72%,#45474f 100%) border-box}
+      var(--metal-ring) border-box}
   /* 현재 섹션 = 완전 검정 판 + 밑변 1px 광원(전등).
      ⚠ 색을 갖는 것은 그 1px 선 하나뿐이다 — 면도 테두리도 중립으로 둔다.
      (테두리 아래끝을 액센트로 물들였다가 '면·링을 액센트로 채우지 말 것' 검사에 걸렸다. 빛과도 겹친다.)
@@ -2605,12 +2617,14 @@
   .hmUpg::before{content:'';position:absolute;left:10px;right:10px;top:0;height:1px;z-index:4;pointer-events:none;
     background:linear-gradient(90deg,transparent,rgba(255,255,255,.18) 22%,rgba(255,255,255,.18) 78%,transparent)}
   /* 헤더 = 접기/펴기 손잡이. 접으면 이 줄만 남고 뒤 배경이 화면 전체로 보인다 */
-  .hmUpgHead{position:relative;width:100%;display:flex;align-items:center;gap:9px;padding:9px 12px;
-    font-size:15px;font-weight:400;letter-spacing:.11em;
+  /* ⚠ 공용 제목 규칙(#ovTitle,…,.hmUpgHead,… → Jua 700)이 뒤에 오며 같은 명시도로 덮는다.
+     부모(.hmUpg)를 붙여 0,2,0 으로 올려 이 제목만 Noto 로 내린다 — 공용 규칙은 건드리지 않는다. */
+  .hmUpg .hmUpgHead{position:relative;width:100%;display:flex;align-items:center;gap:9px;padding:9px 12px;
+    font-family:var(--font-ko);font-size:15px;font-weight:700;letter-spacing:.11em;
     color:#ececec;cursor:pointer;background:none;border:none;border-bottom:none;text-align:left}
   /* 머리줄 아래 스캔라인은 뺐다(2026-08-12) — 바로 아래 탭 띠가 이미 상자라 선이 두 겹으로 보였다 */
   /* 제목 — 흰색 단색. 색은 구매 버튼과 선택 탭의 광원이 맡고 제목은 조용히 읽히기만 한다 */
-  .hmUpgTtl{flex:1;font-weight:400;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.85)}
+  .hmUpgTtl{flex:1;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.85)}
   .hmUpgChev{flex:none;width:9px;height:9px;border-right:2px solid #9a9a9a;border-bottom:2px solid #9a9a9a;
     transform:rotate(45deg) translate(-2px,-2px);transition:transform .16s}
   .hmUpg.down .hmUpgHead{border-bottom-color:transparent}
@@ -2619,8 +2633,32 @@
   .hmUpg.down .hmUpgGrid{height:0 !important;padding-top:0;padding-bottom:0;opacity:0}
   .hmUpg.down .hmUpgBar{display:none}
   /* 스킬 바 — 전장 위에 떠 있다(업그레이드 카드 바로 위). 판을 만들지 않고 버튼만 얹는다 */
-  .hbBar{position:absolute;left:0;right:0;z-index:2;display:flex;justify-content:center;gap:6px;padding:0 8px;pointer-events:none}
-  .hbBar>*{pointer-events:auto}
+  /* 줄이 늦어나면 hbResize 가 바 높이를 다시 재어 전장이 그만큼 줄어들다(자동) */
+  .hbBar{position:absolute;left:0;right:0;z-index:2;display:flex;flex-direction:column;align-items:center;gap:5px;padding:0 8px;pointer-events:none}
+  .hbGrp{display:flex;justify-content:center;gap:6px;pointer-events:none}
+  .hbBar button{pointer-events:auto}   /* 줄 랩포는 퇵과 — 버튼만 받는다(전장 탭이 사라지면 이게 범인) */
+  /* 건설 — 한 칸 + 드롭다운 */
+  .hbBdWrap{position:relative;display:inline-flex;pointer-events:auto}
+  .hbBdBtn .ic{width:17px;height:17px;stroke-width:2}
+  .hbBdBtn.on{border-color:rgba(255,255,255,.34);color:#fff}
+  /* 목록 — 버튼 바로 아래로 펴찌다. absolute 라 바 높이에 영향을 주지 않는다 */
+  .hbBdMenu{position:absolute;top:calc(100% + 5px);left:0;z-index:30;
+    width:186px;display:flex;flex-direction:column;gap:4px;padding:5px;pointer-events:auto;
+    border:1px solid transparent;border-radius:var(--r-bar);
+    background:linear-gradient(180deg,#191919,#0e0e0e) padding-box, var(--metal-ring) border-box;
+    box-shadow:0 10px 24px -10px #000}
+  .hbBdIt{display:flex;align-items:center;gap:7px;padding:5px 6px;cursor:pointer;font-family:inherit;
+    color:#ececec;border:1px solid transparent;border-radius:2px;
+    background:linear-gradient(180deg,#0a0a0a,#000) padding-box, var(--metal-ring-n) border-box}
+  .hbBdIt.off{color:#7a7a7a}
+  .hbBdIt:active{transform:translateY(1px)}
+  .hbBdIco{position:relative;width:22px;height:22px;flex:none}
+  .hbBdNm{flex:1;min-width:0;text-align:left;font-size:11.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hbBdCt{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:9.5px;color:#8a8a8a}
+  .hbBdCs{display:flex;align-items:center;gap:2px;font-family:var(--font-num);font-variant-numeric:tabular-nums;
+    font-size:10px;font-weight:800}
+  .hbBdCs .ri{width:10px;height:10px}
+  .hbSkTx .ri{width:9px;height:9px;vertical-align:-1px;margin-right:1px}
   .hbSk{flex:0 0 auto;width:52px;height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
     cursor:pointer;font-family:inherit;color:#ececec;
     background:linear-gradient(180deg,rgba(38,38,38,.92),rgba(16,16,16,.94));
@@ -2697,8 +2735,11 @@
   /* 아이콘 없이 글자만 — 아이콘을 같이 넣으면 둘이 한 덩어리로 가운데 정렬돼 글자가 중앙에서 밀린다 */
   .hmUpg .pdSegBtn{padding:6px 4px;font-size:11.5px;font-weight:700;letter-spacing:.02em;text-align:center}
   /* 수량 — 한 번에 몇 레벨씩 */
-  .hmUpQty{flex:none;display:flex;align-self:center;width:46px;padding:1px;border-radius:var(--r-bar);   /* 폭 고정 — 1→10→MAX 로 바꾰도 칸이 안 흔들리게 */
-    background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.02))}
+  /* 수량 상자 — 탭 띄(.pdSeg)와 같은 테두리·여박·면. 나란히 서 있으므로 같아야 한다 */
+  .hmUpQty{flex:none;display:flex;align-self:center;width:46px;padding:2px;   /* 폭 고정 — 1→10→MAX 로 바꾰도 칸이 안 흔들리게 */
+    border-radius:var(--r-bar);border:1px solid transparent;
+    background:linear-gradient(180deg,#191919,#0e0e0e) padding-box,
+      var(--metal-ring) border-box}
   .hmUpQ{flex:1;min-width:0;padding:0;height:22px;display:flex;align-items:center;justify-content:center;
     cursor:pointer;font-family:inherit;font-size:10.5px;font-weight:700;color:#b8b8b8;letter-spacing:.02em;
     text-shadow:0 1px 1px rgba(0,0,0,.7);
@@ -2722,10 +2763,11 @@
      ⚠ 색은 알파만 바꿔 만든다. 검정 위에서 알파가 곧 밝기라 토큰(--hmAccRGB) 하나로 명암이 전부 나온다. */
   .hmUp{position:relative;display:flex;align-items:center;gap:6px;padding:6px;min-width:0;
     background:linear-gradient(180deg,#0a0a0a,#000) padding-box,
-      linear-gradient(180deg,rgba(var(--hmAccRGB),1) 0%,rgba(var(--hmAccRGB),.72) 34%,
-        rgba(var(--hmAccRGB),.38) 68%,rgba(var(--hmAccRGB),.2) 100%) border-box;
+      linear-gradient(180deg,rgba(var(--hmAccRGB),.40) 0%,rgba(var(--hmAccRGB),.26) 34%,
+        rgba(var(--hmAccRGB),.15) 68%,rgba(var(--hmAccRGB),.09) 100%) border-box,
+      var(--metal-ring-n) border-box;   /* 아래에 금속을 깔아 구역색을 탁하게 — 순색 빨강은 너무 쌀해 보인다 */
     border:1px solid transparent;border-radius:var(--r-bar);
-    box-shadow:0 0 9px -3px rgba(var(--hmAccRGB),.55);
+    box-shadow:0 0 7px -5px rgba(var(--hmAccRGB),.35);
     clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
   /* 윗면 하이라이트 — 카드가 '판'으로 떠야 평평해 보이지 않는다 */
   .hmUp::before{content:'';position:absolute;left:7px;right:0;top:0;height:1px;pointer-events:none;
@@ -2735,8 +2777,8 @@
     100%{box-shadow:inset 0 0 0 1px rgba(var(--hmAccRGB),0), 0 0 0 rgba(var(--hmAccRGB),0)}}
   .hmUp.won{animation:hmUpWon .5s ease-out}
   .hmUpIco{position:relative;flex:none;width:27px;height:27px;display:flex;align-items:center;justify-content:center;
-    background:#000;border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
-  .hmUpIco .icoImg{padding:3px}   /* 공용 .icoImg 가 inset:0 로 타일을 채운다 — 여백만 주고 크기는 건드리지 않는다 */
+    background:#000;border:none;border-radius:var(--r-bar);overflow:hidden}
+  .hmUpIco .icoImg{padding:0}   /* 타일을 꽉 채운다 — 공용 .icoImg 가 inset:0 이라 여백만 빼면 끝까지 닿는다 */   /* 공용 .icoImg 가 inset:0 로 타일을 채운다 — 여백만 주고 크기는 건드리지 않는다 */
   .hmUpEmo{font-size:15px;line-height:1;font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif}   /* 건설 카드(동료·터렛·벙커)는 에셋 대신 이모지 */
   .hmUpTx{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:2px}
   .hmUpName{font-size:11.5px;font-weight:700;letter-spacing:-.02em;color:#ececec;
@@ -2753,7 +2795,7 @@
   /* 작은 버튼은 은색 메탈 그대로 — 빨강은 카드 테두리(.hmUp)가 맡는다 */
   .hmUpBtn{position:relative;flex:none;width:54px;height:40px;padding:1.5px;cursor:pointer;font-family:inherit;
     display:flex;flex-direction:column;border:none;border-radius:var(--r-bar);
-    background:linear-gradient(180deg,#a6a6a6 0%,#7a7a7a 30%,#333 62%,#222 100%);
+    background:var(--nav-ring-on-d);   /* 선택된 네비 칸과 같은 계열의 붉은 링(한 단 탁한 변형) */
     box-shadow:0 1px 2px rgba(0,0,0,.55);transition:transform .06s, box-shadow .06s, filter .12s}
   /* 살 수 있을 때만 윗면에 빛나는 선 — '올릴 수 있다'는 신호 */
   .hmUpBtn::after{content:'';position:absolute;left:6px;right:6px;top:1.5px;height:1px;pointer-events:none;
@@ -2765,8 +2807,15 @@
   /* ⚠ 단색이어야 한다 — 그라데를 주면 위칸·아래칸이 각자 처음부터 다시 그려서 가운데 이음매가 생긴다 */
   .hmUpBl,.hmUpBc{flex:1;display:flex;align-items:center;justify-content:center;gap:2px;width:100%;
     font-variant-numeric:tabular-nums;text-shadow:0 1px 1px rgba(0,0,0,.55);
-    background:#333}
-  .hmUpBl{font-size:9.5px;font-weight:700;color:#a8a8a8;border-bottom:1px solid rgba(0,0,0,.42);
+    position:relative;z-index:1;background:none}
+  /* 면은 버튼 전체에 한 장으로 — 위아래가 같은 색이고 아래로 가면서만 어두워진다 */
+  .hmUpBtn::before{content:'';position:absolute;inset:1.5px;z-index:0;border-radius:2px;
+    background:linear-gradient(180deg,rgba(var(--hmAccRGB),.34) 0%,rgba(var(--hmAccRGB),.27) 55%,rgba(var(--hmAccRGB),.11) 100%),
+      linear-gradient(180deg,#1c1c1c,#0e0e0e)}
+  /* 가운데 선 — 단일 선이 아니라 검정 1px 아래 흰 1px 이 맞대 있다(파인 자국)
+     ⚠ box-shadow 는 테두리 바깥에 그려져 흰 줄이 아래쪽 반쪽 윗면에 얹힌다 */
+  .hmUpBl{font-size:9.5px;font-weight:700;color:var(--hmAccLt);
+    border-bottom:1px solid rgba(0,0,0,.62);box-shadow:0 1px 0 rgba(255,255,255,.16);
     border-radius:2px 2px 0 0}
   .hmUpBl .nx{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8),0 0 6px rgba(255,255,255,.28)}
   .hmUpBl .hmLk{width:11px;height:11px;stroke:#c8c8c8}
@@ -2790,6 +2839,11 @@
   .hmUp.lk .hmUpIco{background:#000;border-color:#26272c}
   .hmUp.lk .hmUpIco .icoImg{filter:grayscale(1) brightness(.5);opacity:.85}
   .hmUp.lk .hmUpName{color:#9a9a9a}
+  /* 잠긴 칸은 붉은색을 쓰지 않는다 — 붉은 것 = 지금 살 수 있다는 신호 */
+  .hmUp.lk .hmUpBtn{background:var(--nav-ring-n)}
+  .hmUp.lk .hmUpBtn::before{background:linear-gradient(180deg,#2b2b2b 0%,#262626 55%,#161616 100%)}
+  .hmUp.lk .hmUpBl{box-shadow:0 1px 0 rgba(255,255,255,.09)}
+  .hmUp.lk .hmUpBl{color:#8f8f8f}
   .hmUp.lk .hmUpName .p{color:#6f6f6f}
   .hmUpLk{color:#7a7a7a}
   /* ══ 하단 6칸 네비게이션(전역) ══ 화면이 아니라 #phone 위에 뜬다 · navShow(tab)이 표시/활성을 정한다 */
@@ -2797,17 +2851,20 @@
   /* 하단 바 공용 룩(단일 소스) — 전역 네비(.navBar)와 유즈맵 인게임 탭바(#tabs)가 같은 규칙을 쓴다.
      관리자·네모네모·오토배틀 전부 #tabs를 쓰므로 여기 한 곳만 고치면 모두 반영된다. */
   /* 통짜 바 — 안에 상자를 한 겹 더 두지 않는다. 칸이 바 끝까지 그대로 이어진다 */
-  .navBar,#tabs{height:var(--navH);display:flex;align-items:stretch;padding:0;
-    background:linear-gradient(180deg,rgba(2,3,6,.55),#010204 46%)}
+  /* 바 자체는 윗변에만 선이 있다(아래·양에얼 없음) — 그 선이 바로 아래 ::before 광선이다.
+     안쪽에는 라운드 3px 판들이 간각을 두고 담긴다. */
+  .navBar,#tabs{height:var(--navH);display:flex;align-items:stretch;gap:4px;padding:4px 5px;
+    background:linear-gradient(180deg,#0a0b0e,#050608 60%)}
   /* 윗변의 선 — 실선이 아니라 '광선'이다: 양 끝은 사라지고 가운데만 밝다. 밝기는 천천히 숨을 쉰다.
      ⚠ 굵기·색을 올리지 말 것. 이 선의 정체는 두께가 아니라 '가운데만 밝은 그라데'다. */
   /* z-index 2 — 선택 칸 테두리(z:1)가 이 선을 덮으면 가운데 광이 끊겨 보인다 */
   .navBar::before,#tabs::before{content:'';position:absolute;left:0;right:0;top:0;height:1px;pointer-events:none;z-index:2;
-    background:linear-gradient(90deg,rgba(196,44,64,.12) 0%,rgba(196,44,64,.24) 13%,rgba(206,48,68,.52) 30%,
-      rgb(232,72,92) 50%,rgba(206,48,68,.52) 70%,rgba(196,44,64,.24) 87%,rgba(196,44,64,.12) 100%);
+    background:linear-gradient(90deg,rgba(150,158,172,.14) 0%,rgba(160,168,182,.26) 13%,rgba(186,194,208,.55) 30%,
+      rgb(232,236,244) 50%,rgba(186,194,208,.55) 70%,rgba(160,168,182,.26) 87%,rgba(150,158,172,.14) 100%);
     animation:navEdgeBreath 5.2s ease-in-out infinite}
-  @keyframes navEdgeBreath{0%,100%{opacity:.6;filter:drop-shadow(0 0 2px rgba(232,72,92,.35))}
-    50%{opacity:1;filter:drop-shadow(0 0 5px rgba(232,72,92,.75))}}
+  /* 은색은 붉은색보다 번짐이 눈에 세다 — halo 를 한 단 낮춘다(2/4px, 알파 .28/.55) */
+  @keyframes navEdgeBreath{0%,100%{opacity:.62;filter:drop-shadow(0 0 2px rgba(206,214,228,.28))}
+    50%{opacity:1;filter:drop-shadow(0 0 4px rgba(214,222,236,.55))}}
   #tabs{position:relative}
   .navBar.hide{display:none}
   /* 💠 공용 재화 바(단일 소스) — 모든 RPG/허브 + 유즈맵 선택 상단 상시. 볼륨1: 1px 테두리+그라데+하단 헤어라인, 재화=금색.
@@ -2860,6 +2917,9 @@
   .gearBody{flex:1 1 auto;min-height:0;padding:8px;overflow-y:auto;overflow-x:hidden}
   .gearBody .shopPanel:last-child{margin-bottom:0}
   .gearBody .gearWrap{height:100%}
+  .upgEmpty{flex:1 1 auto;display:grid;place-items:center;font-size:12px;color:#6f6f6f}
+  #upgScreen{display:flex;flex-direction:column;padding:12px 13px calc(var(--navH) + 12px)}
+  #phone.curOn #upgScreen{padding-top:calc(var(--curH) + 12px)}
   .shopTitle{text-align:center;font-size:15px;font-weight:700;letter-spacing:.6px;color:#ececec;padding:6px 0 12px}
   /* 구역 패널 = HOME .hmCard */
   .shopPanel{flex:none;background:var(--hmPanel);border:1px solid var(--hbEdge);border-radius:var(--r-bar);overflow:hidden;margin:0 2px 12px}   /* flex:none — 부모가 flex 컬럼이라 없으면 내용이 눌려 잘린다(HOME .hmCard와 같은 이유) */
@@ -2937,17 +2997,22 @@
   .dgSheetBtns .twBtn{flex:1 1 0}
   .dgSheetBtns .twBtn:disabled{opacity:.45}
   .dgSheetX{position:absolute;top:6px;right:6px;width:26px;height:26px;border:none;border-radius:var(--r-bar);background:rgba(0,0,0,.42);color:#fff;cursor:pointer;font-size:12px}
-  .navIt,#tabs .tab{position:relative;z-index:1;flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
-    cursor:pointer;font-family:var(--font-ti);font-size:11px;font-weight:400;letter-spacing:.1em;color:rgba(234,238,245,.5);
+  .navIt,#tabs .tab{position:relative;z-index:1;flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    cursor:pointer;font-family:var(--font-ko);font-size:11px;font-weight:700;letter-spacing:.1em;color:#b6bac2;
     text-shadow:0 1px 3px rgba(0,0,0,.95);
-    background:none;border:1px solid transparent;transition:color .13s,border-color .13s}
-  .navIt+.navIt::before,#tabs .tab+.tab::before{content:'';position:absolute;left:0;top:13px;bottom:13px;width:1px;
-    background:rgba(255,255,255,.07)}   /* 칸 구분 헤어라인 — 한 덩어리 패널을 나눈 것으로 읽히게 */
+    border-radius:var(--r-bar);border:1px solid transparent;
+    background:var(--nav-plate) padding-box, var(--metal-ring) border-box;   /* 상단 탭 띄(.pdSeg)·수량 상자와 같은 링 — 선택 전엔 덜 빛나는 금속 */
+    transition:flex-grow .2s cubic-bezier(.3,.8,.3,1),color .13s,border-color .13s,background .13s}
+  /* 칸 구분 헤어라인은 폐기 — 판 사이 간각(gap 5px)이 그 역할을 한다 */
   .navIt .ic,#tabs .tab .ti svg{width:23px;height:23px;display:block;margin:0 auto;stroke-width:1.9;
     filter:drop-shadow(0 1px 3px rgba(0,0,0,.9))}
   /* 선택 표시 = 테두리 하나뿐. 글로우도 라인도 두지 않는다(DESIGN.md 볼륨1 — 색을 채우지 않는다).
      ⚠ 테두리는 모든 칸이 늘 갖고 있고 색만 바뀐다 — flex:1 1 0 이라 선택된 칸에만 주면 그 칸이 2px 넓어져 글자가 흔들린다. */
-  .navIt.on,#tabs .tab.on{color:#f8c453;background:none;border-color:rgba(255,255,255,.28)}
+  /* 선택 — flex-grow 로 양옆 자리를 가져오며 넓어진다(폭을 박지 않으므로 칸 수가 바뀜도 동작).
+     글자는 완전한 흰색. ⚠ 전에는 금색(#f8c453)이었고 DESIGN.md 에 '거드리지 않는다'로 있었다 — 이번 지시로 바꾸고 문서도 고침. */
+  /* 선택도 같은 금속 — 한 단 밝은 링(--metal-ring-on)만 다르다. 계열이 갈리면 두 컨트롤이 따로 놀아 보인다 */
+  .navIt.on,#tabs .tab.on{flex-grow:1.42;color:#fff;
+    background:var(--nav-plate-on) padding-box, var(--nav-ring-on) border-box}
   .navIt:active,#tabs .tab:active{opacity:.8}
   /* 마을 상단 설정 — 좌측 로그아웃과 짝 */
   .twGear{flex:0 0 auto;font-family:inherit;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;
@@ -4144,6 +4209,7 @@
   <div id="navBar" class="navBar hide">
     <button class="navIt" data-nav="home" onclick="navGo('home')"><span data-ico="home"></span>사냥터</button>
     <button class="navIt" data-nav="gear" onclick="navGo('gear')"><span data-ico="bag"></span>정비</button>
+    <button class="navIt" data-nav="upg" onclick="navGo('upg')"><span data-ico="upg"></span>강화</button>
     <button class="navIt" data-nav="map" onclick="navGo('map')"><span data-ico="map"></span>유즈맵</button>
     <button class="navIt" data-nav="shop" onclick="navGo('shop')"><span data-ico="gift"></span>상점</button>
   </div>
@@ -4229,6 +4295,11 @@
   <!-- 🧰 정비 — 네비 2번. 장비·펫·동료를 한 곳에서 관리한다.
        ⛔ 내용을 새로 만들지 않는다: 장비 = renderProfGear() · 펫 = _shopPetPanel() (상점과 같은 함수) — 단일 소스.
        탭 띠 = 유즈맵 목록 상자와 같은 .msPanel/.msSortTabs 규격(복제 금지, 클래스만 재사용). -->
+  <!-- ⬆ 강화 — 자리만 잡아 뇐다(내용 미정). 화면 구조는 다른 화면과 같은 .appScreen 규격 -->
+  <div id="upgScreen" class="appScreen hide">
+    <div class="shopTitle"><span data-ico="upg"></span><b>강화</b></div>
+    <div class="upgEmpty">아직 비어 있습니다</div>
+  </div>
   <div id="gearScreen" class="appScreen hide">
     <div class="shopTitle"><span data-ico="bag"></span><b>정비</b></div>
     <div class="msPanel">
@@ -5583,21 +5654,9 @@ function renderHome(){ try{
     // 카드 — 해금한 것을 위로(쓸 수 있는 것이 먼저 보여야 한다)
     const keys=Object.keys(HB_UPG).filter(function(k){ return HB_UPG[k].cat===cat })
       .sort(function(a,b){ return (hbUpgOwned(b)?1:0)-(hbUpgOwned(a)?1:0); });
-    // 건설(수량) 카드를 먼저 — 사는 곳과 키우는 곳을 나누지 않는다. 같은 hmUpCardHTML 로 낸다
-    gr.innerHTML=(HB_UPG_CAT_BUILD[cat]||[]).map(function(bk){
-      const B=HB_STRUCT[bk], n=hbStructN(bk), mx=hbBuildMax(bk), full=n>=mx, cost=hbBuildCost(bk), M=hbAllyMul();
-      // 값 = 지금 이 종류가 내는 총량(수량과 강화 업그레이드가 함께 반영돼야 '왜 사는지'가 보인다).
-      // ⚠ 벽은 화력이 없다 — 화력 수치를 붙이면 거짓말이 된다. 막아 세운 칸 수로 보여 준다.
-      const tot=function(c){ return (bk==='wall')   ? (c+'칸')
-                                 : (bk==='bunker') ? Math.round(hbCharStats().hpMax*M.bunker.hp*c)
-                                                   : Math.round(M.turret.dps*100*c)+'%'; };
-      // 아이콘은 실제 건물 에셋(HB_STRUCT.ico = assets/icons/buildings/<ico>.webp) — 이모지가 아니다
-      return hmUpCardHTML({ key:'b_'+bk, ico:'<img class="icoImg" src="'+ICO_DIR+'buildings/'+B.ico+'.webp" alt="" draggable="false">', name:B.name,
-        off:full||coin<cost, lock:full, lockTx:'최대 '+mx+(bk==='wall'?'칸':'기'),
-        val:tot(n), next:full?null:tot(n+1), lv:'LV.'+n, nextLv:full?null:(n+1),
-        cost:resIco('mineral')+cost.toLocaleString('en-US'),
-        act:full?null:('hbBuy(&#39;'+bk+'&#39;)') }); }).join('')
-    +keys.map(function(k){ const U=HB_UPG[k], lv=u[k]||0, own=hbUpgOwned(k);
+    // ⚠ 건설 카드는 여기 없다 — 여긴 '지어진 것의 스활을 올리는' 곳이다.
+    //   짓는 것은 전장 위 버튼(renderHbBar → hbBuy)에서 한다 — 어떤 자리에 놓을지 고라야 하므로 필드 옆에 있어야 한다.
+    gr.innerHTML=keys.map(function(k){ const U=HB_UPG[k], lv=u[k]||0, own=hbUpgOwned(k);
       let off;
       let _hd;
       if(own){ const P=hbUpgPlan(k); off=coin<P.sum;
@@ -5677,9 +5736,34 @@ function hbGoRound(n){ const H=hbHunt(), best=hbBest(H.dg);
   if(typeof playSfx==='function') playSfx('ui_open');
   renderRoundSheet(); hbHud(); hbCloseRounds(); }
 // ── Phase 4 UI — 스킬 바(전장 하단) + 건설·부스트 팝업(라운드 팝업과 같은 .hbModal 재사용) ──
+// 건설 목록 열림 여부 — 화면을 나갔다 오면 닫힐 상태가 기본
+let _hbBdOpen=false;
+function hbToggleBuild(){ _hbBdOpen=!_hbBdOpen;
+  if(typeof playSfx==='function') playSfx('ui_tab'); renderHbBar(); }
+function hbCloseBuild(){ if(!_hbBdOpen) return; _hbBdOpen=false; renderHbBar(); }
+// 골랐으면 목록을 닫고 배치 모드로 — 목록이 뜨 채로 필드를 가리면 둘 숬 없다
+function hbPickBuild(bk){ _hbBdOpen=false; renderHbBar(); hbBuy(bk); }
 function renderHbBar(){ const bar=document.getElementById('hbBar'); if(!bar||!_hb) return;
-  const S=_hb;
-  let h='';
+  const S=_hb, coin=Math.floor(((typeof PROF==='function'&&PROF())||{}).pcoin||0);
+  // ① 짓기 — '건설' 한 칸을 눌러 목록을 펴고, 골러야 배치 모드로 들어간다.
+  //   목록은 absolute — 흔름에서 빠지며 바 높이가 안 변하고 전장도 안 흔들린다.
+  const bdOpen=!!_hbBdOpen;
+  let h='<div class="hbGrp"><span class="hbBdWrap">'
+    +'<button class="hbSk hbBdBtn'+(bdOpen?' on':'')+'" onclick="hbToggleBuild()" title="건설">'
+    +'<span class="hbSkIco">'+ICO.build+'</span>'
+    +'<span class="hbSkTx">건설</span></button>';
+  if(bdOpen){
+    h+='<div class="hbBdMenu">';
+    for(const bk of HB_BUILD_KEYS){ const B=HB_STRUCT[bk], n=hbStructN(bk), mx=hbBuildMax(bk),
+        full=n>=mx, cost=hbBuildCost(bk), off=full||coin<cost;
+      h+='<button class="hbBdIt'+(off?' off':'')+'" onclick="hbPickBuild(&#39;'+bk+'&#39;)">'
+        +'<span class="hbBdIco"><img class="icoImg" src="'+ICO_DIR+'buildings/'+B.ico+'.webp" alt="" draggable="false"></span>'
+        +'<b class="hbBdNm">'+B.name+'</b>'
+        +'<span class="hbBdCt">'+n+'/'+mx+'</span>'
+        +'<span class="hbBdCs">'+(full?'MAX':(resIco('mineral')+cost.toLocaleString('en-US')))+'</span>'
+        +'</button>'; }
+    h+='</div>'; }
+  h+='</span>';   /* 건설은 같은 줄에 남는다 — 한 칸이라 줄을 나눌 이유가 없다(줄이 늘면 전장이 줄어든다) */
   for(const k in HB_SKILLS){ const SK=HB_SKILLS[k], cd=Math.max(0,S.skT[k]||0), rd=cd<=0;
     h+='<button class="hbSk'+(rd?'':' cool')+'" onclick="hbUseSkill(&#39;'+k+'&#39;)" title="'+SK.tip+'">'
       +'<span class="hbSkIco">'+SK.ico+'</span>'
@@ -5687,7 +5771,7 @@ function renderHbBar(){ const bar=document.getElementById('hbBar'); if(!bar||!_h
   h+='<button class="hbSk wide" onclick="openDungeonHub()" title="토벌 — 열쇠로 단계 도전"><span class="hbSkIco">⚔️</span><span class="hbSkTx">토벌</span></button>';   // 네비에서 빠진 토벌의 유일한 입구
   const bon=hbBoostOn('inc')||hbBoostOn('atk');
   h+='<button class="hbSk wide'+(bon?' on':'')+'" onclick="hbOpenBoost()" title="일시 강화"><span class="hbSkIco">⚡</span><span class="hbSkTx">'+(bon?'적용중':'부스트')+'</span></button>';
-  bar.innerHTML=h; }
+  bar.innerHTML=h+'</div>'; }
 // 🤝 동료 — 영입(첫 구매)·강화(같은 버튼)·출전 토글. 옛 전직 트리가 여기로 옮겨 왔다.
 function hbOpenMates(){ const el=document.getElementById('hbMateModal'); if(!el) return;
   el.classList.remove('hide'); renderMateModal(); if(typeof playSfx==='function') playSfx('ui_open'); }
@@ -6013,6 +6097,7 @@ function navShow(tab){ const b=document.getElementById('navBar'); if(!b) return;
 function navGo(tab){ if(typeof playSfx==='function') playSfx('ui_tab');
   if(tab==='home')    return openHome();
   if(tab==='gear')    return openGear();                                                   // 정비(장비·펫·동료)
+  if(tab==='upg')     return openUpgScreen();                                              // 강화(빈 화면 — 내용 미정)
   if(tab==='town')    { openHome(); return navShow('home'); }   // 마을 폐지 — HOME으로
   if(tab==='map')     return twGoMap();                                                    // 유즈맵(친구·소셜은 유즈맵 하단)
   if(tab==='shop')    return openShop(); }                                                 // 상점(전용 화면)
@@ -6164,7 +6249,8 @@ const HB_UPG_CAT=[['char','내 캐릭터','255,59,59'],['ally','동료','74,168,
 // 구역별 '수량을 사는' 카드. ⚠ 동료는 여기 없다 — 영입은 미네랄이 아니라 동료 뽑기권이라
 //   이 격자에 살 수 있는 카드를 두면 설계가 어긋난다(동료 구역은 강화 업그레이드만 보여 준다).
 // ⚠ 이 카드들은 '수량을 사는' 것이 아니라 **누르면 배치 모드로 들어간다**(hbBuy → hbArmStart).
-const HB_UPG_CAT_BUILD={bld:['wall','turret','bunker']};
+// 전장 위 건설 버튼에 나오는 건물 순서(업그레이드 격자에는 들어가지 않는다)
+const HB_BUILD_KEYS=['wall','turret','bunker'];
 // 업그레이드 레벨 → 실제 전투 수치. 아군 배수는 전부 여기서만 나온다(hbUnitFire 호출부가 이 값을 받는다)
 function hbAllyMul(){ const u=hbHunt().upg;
   const aMul=1+(u.alatk||0)*0.08;
@@ -7876,6 +7962,12 @@ function renderShop(){ const body=document.getElementById('shopBody'); if(!body)
 //    동료는 아직 시스템이 없다 — HOME '건설'의 동료가 유일한 실체라 그쪽으로 보낸다.
 let _gearTab='gear';
 function gearOpen(){ const e=document.getElementById('gearScreen'); return !!(e && !e.classList.contains('hide')); }
+// ⬆ 강화 — 아직 내용이 없다. 들어오는 길과 내비게이션만 먼저 열어 둔다.
+function openUpgScreen(){ if(typeof loadMeta==='function') loadMeta();
+  if(typeof CHAR==='function' && !CHAR()){ openCharScreen('create'); return; }
+  if(typeof twLeave==='function') twLeave();
+  showAppScreen('upgScreen'); navShow('upg');
+  if(typeof paintIcons==='function') paintIcons(document.getElementById('upgScreen')); }
 function openGear(){ if(typeof loadMeta==='function') loadMeta();
   if(typeof CHAR==='function' && !CHAR()){ openCharScreen('create'); return; }   // 캐릭터 없으면 생성부터
   if(typeof twLeave==='function') twLeave();                                     // 마을에서 들어왔으면 루프·팝업 정리
@@ -13147,7 +13239,7 @@ const APP_SCREENS=['opening','auth','mapSelect','modeSheet','homeScreen','charSc
 // 💠 공용 재화 바를 띄우는 화면(RPG/허브 + 유즈맵 선택). 로그인·타이틀·캐릭터생성·인게임은 제외.
 const CUR_SCREENS=['homeScreen','townScreen','mapSelect','modeSheet','dgScreen','shopScreen','gearScreen'];
 // 그중 바를 '판'이 아니라 배경 위 숫자로 두는 화면(.curBar.bare) — 배경이 상단까지 이어져 보여야 하는 곳
-const BARE_CUR_SCREENS=['homeScreen','townScreen','mapSelect','shopScreen','gearScreen'];   // 재화 바를 '판'이 아니라 배경 위 숫자로 — 상단 줄이 겹쳐 답답해진다(구분선 없이 배경이 이어진다)
+const BARE_CUR_SCREENS=['homeScreen','townScreen','mapSelect','shopScreen','gearScreen','upgScreen'];   // 재화 바를 '판'이 아니라 배경 위 숫자로 — 상단 줄이 겹쳐 답답해진다(구분선 없이 배경이 이어진다)
 function curSetTitle(t){ const e=document.getElementById('curTitle'); if(e) e.textContent=t||''; }   // 재화 바 왼쪽 제목(화면별)
 function curShow(on){ const b=document.getElementById('curBar'), p=document.getElementById('phone');
   if(b) b.classList.toggle('hide', !on); if(p) p.classList.toggle('curOn', !!on); }
@@ -13410,10 +13502,10 @@ const ICO={
   solo:_svg('<rect x="2.5" y="7.5" width="19" height="10" rx="5"/><path d="M6.6 11.2v3M5.1 12.7h3"/><circle cx="15.6" cy="11.6" r="1.05" fill="currentColor" stroke="none"/><circle cx="17.9" cy="13.6" r="1.05" fill="currentColor" stroke="none"/>'),
   globe:_svg('<circle cx="12" cy="12" r="8.3"/><path d="M3.7 12h16.6"/><path d="M12 3.7c2.5 2.3 2.5 14.3 0 16.6c-2.5-2.3-2.5-14.3 0-16.6z"/>'),
   lock:_svg('<rect x="5.2" y="10.5" width="13.6" height="9.3" rx="2"/><path d="M8.2 10.5V8.2a3.8 3.8 0 0 1 7.6 0v2.3"/><circle cx="12" cy="14.6" r="1.25" fill="currentColor" stroke="none"/><path d="M12 15.5v2.1"/>'),
-  // 사냥터 업그레이드 3구역 — 검(공격) · 방패(방어) · 스패너(유틸)
-  sword:_svg('<path d="M12 2.4 14.5 7.4v6.4h-5V7.4z" fill="currentColor" stroke="none"/><path d="M7.2 14.4h9.6"/><path d="M12 14.4v3.6"/><path d="M10.2 19.4h3.6"/>'),
-  shield:_svg('<path d="M12 3.6 5.4 6.2v5.3c0 4 2.7 7.4 6.6 8.9 3.9-1.5 6.6-4.9 6.6-8.9V6.2z"/>'),
-  wrench:_svg('<path d="M15.6 3.9a4.9 4.9 0 0 0-4.4 7.9L4 19v1.4h1.4l7.2-7.2a4.9 4.9 0 0 0 6.6-6.1l-2.6 2.6-2.3-.6-.6-2.3z"/>'),
+  // 건설 — 쌓아 올린 블록. 전장 바의 '건설' 버튼에 쓴다
+  build:_svg('<path d="M3.8 20.2h16.4"/><path d="M6.2 20.2v-6.4h5v6.4"/><path d="M13 20.2V9.4h5v10.8"/>'),
+  // 강화 — 네비 3번 칸. 위로 올라가는 화살표 하나(24그리드 공용 규칙)
+  upg:_svg('<path d="M12 19.2V6.4"/><path d="M6.4 12 12 6.4l5.6 5.6"/>'),
   home:_svg('<path d="M4 10.6 12 4l8 6.6"/><path d="M6.4 9.6V19h11.2V9.6"/><path d="M10 19v-5h4v5"/>'),
   bag:_svg('<path d="M4.6 8.4h14.8L18.6 20H5.4z"/><path d="M9 8.4V6.6a3 3 0 0 1 6 0v1.8"/>'),
   dungeon:_svg('<path d="M4.5 4.5 15 15"/><path d="M19.5 4.5 9 15"/><path d="M9 15 6 18l-1.5-.5"/><path d="M15 15 18 18l1.5-.5"/><path d="M3.5 6.5 6.5 3.5"/><path d="M20.5 6.5 17.5 3.5"/>'),   // ⚔ 던전(크로스드 소드)
