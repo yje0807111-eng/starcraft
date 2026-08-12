@@ -2316,17 +2316,33 @@
   /* 섹션 이동 바(방어구 ↔ 무기·장신구) — 아바타 아래에 놓인다 */
   .pdNav{flex:0 0 auto;padding:4px 0 8px}
   /* --pad = 바깥 테두리와 안쪽 판 사이의 틈. 판의 left(인라인)·width·top/bottom이 전부 이 값에서 나오므로
-     화면별로 이 변수 하나만 덮으면 틈이 통째로 따라온다(따로 계산식을 복사하지 말 것). */
-  .pdSeg{--pad:4px;position:relative;display:flex;width:100%;max-width:286px;margin:0 auto;padding:var(--pad);border-radius:var(--r-lg);
-    background:rgba(255,255,255,.045);border:1px solid var(--metal-edge)}
-  /* 현재 섹션 = 중립 판 + 아래 2px 시안 라인(네비바 .tab::after와 같은 문법). 시안 면을 채우지 않는다 */
-  .pdSegInd{position:absolute;top:var(--pad);bottom:var(--pad);width:calc((100% - 2*var(--pad))/var(--n));border-radius:var(--r-md);transition:left .2s cubic-bezier(.3,.8,.3,1);
-    background:linear-gradient(160deg,rgba(30,36,48,.62),rgba(8,10,14,.72));border:1px solid var(--metal-edge)}
-  .pdSegInd::after{content:'';position:absolute;left:24%;right:24%;bottom:2px;height:2px;border-radius:var(--r-bar);
-    background:linear-gradient(90deg,transparent,var(--acc-sel),transparent);box-shadow:0 0 6px rgba(92,214,255,.45)}
+     화면별로 이 변수 하나만 덮으면 틈이 통째로 따라온다(따로 계산식을 복사하지 말 것).
+     테두리는 단색이 아니라 위가 밝고 가운데가 가라앉았다 아래에서 다시 드는 금속 띠 —
+     두 겹 배경(면=padding-box / 테두리=border-box)으로 낸다(border-color는 그라데를 못 받는다).
+     ⚠ 면 색을 var(--hmPanel)로 쓰지 말 것 — 그 토큰은 #homeScreen 안에서만 정의돼 장비창에선 비어 버린다. */
+  .pdSeg{--pad:2px;position:relative;display:flex;width:100%;max-width:286px;margin:0 auto;padding:var(--pad);
+    border-radius:var(--r-bar);border:1px solid transparent;
+    background:linear-gradient(180deg,#191919,#0e0e0e) padding-box,
+      linear-gradient(180deg,#585b66 0%,#3c3e46 38%,#2a2c33 72%,#45474f 100%) border-box}
+  /* 현재 섹션 = 완전 검정 판 + 밑변 1px 광원(전등).
+     ⚠ 색을 갖는 것은 그 1px 선 하나뿐이다 — 면도 테두리도 중립으로 둔다.
+     (테두리 아래끝을 액센트로 물들였다가 '면·링을 액센트로 채우지 말 것' 검사에 걸렸다. 빛과도 겹친다.)
+     --segCol 은 화면이 덮는다(기본 = 선택 액센트 시안). */
+  .pdSegInd{--segCol:92,214,255;position:absolute;top:var(--pad);bottom:var(--pad);
+    width:calc((100% - 2*var(--pad))/var(--n));border-radius:var(--r-bar);border:1px solid transparent;
+    transition:left .2s cubic-bezier(.3,.8,.3,1);
+    background:linear-gradient(180deg,#0a0a0a,#000) padding-box,
+      linear-gradient(180deg,rgba(255,255,255,.22) 0%,rgba(255,255,255,.07) 42%,
+        rgba(255,255,255,.04) 84%,rgba(255,255,255,.16) 100%) border-box}
+  /* 광원 — 1px. 색은 halo 가 내고 심지는 희다(전등이 그렇게 보인다).
+     ⚠ halo 는 선 바로 옆까지만(2·5px). 반경을 키우면 면이 물든 것처럼 보인다. */
+  .pdSegInd::after{content:'';position:absolute;left:11%;right:11%;bottom:0;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.62) 50%,transparent 92%),
+      linear-gradient(90deg,transparent,rgba(var(--segCol),.92),transparent);
+    box-shadow:0 0 2px rgba(var(--segCol),.6), 0 0 5px rgba(var(--segCol),.24)}
   .pdSegBtn{position:relative;z-index:1;flex:1;min-width:0;padding:8px 4px;border:none;background:none;cursor:pointer;
-    font-family:inherit;font-size:12px;font-weight:800;color:#8e9bab;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .pdSegBtn.on{color:#eaf1fb}
+    font-family:inherit;font-size:12px;font-weight:800;color:#8a8a8a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pdSegBtn.on{color:#ececec}
   /* 아바타 구역이 남는 높이를 전부 먹는다(가방은 아래에서 고정) */
   .pdWrap{position:relative;flex:1 1 auto;min-height:186px;margin:4px 0}
   .pdFig{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);height:100%;width:auto;color:#5f7183;opacity:.34}
@@ -2649,36 +2665,14 @@
   .hmUpg.down .hmStatRow{display:none}
   /* ── 사냥터 업그레이드 ── */
   /* 탭 띠 = 장비창 섹션 바와 같은 컴포넌트(.pdSeg/.pdSegInd/.pdSegBtn · segNavHTML).
-     한 구역으로 묶고 그 안에서 미끄러지는 판이 현재 구역을 가리킨다. 여기서는 크기와 액센트만 덮는다. */
+     생김새는 전부 공용 규칙이 갖는다 — 여기 오버라이드는 폭·글자뿐이다. */
   .hmUpgBar{display:flex;align-items:stretch;gap:6px;padding:4px 8px;border-bottom:1px solid rgba(255,255,255,.07)}
   .hmUpgTabs{flex:1 1 0;display:flex;align-items:stretch;min-width:0}
-  /* 수량 칩 옆에서 남는 폭을 다 쓰고, HOME 톤에 맞춰 더 각지게(9/6 → 3px) · 틈도 4 → 2px.
-     면은 흰 워시(rgba(255,255,255,.045))를 걷고 패널과 같은 색으로 — 뿌옇게 뜨지 않는다.
-     선택된 판은 업그레이드 카드 속과 같은 완전 검정. 즉 '패널 위에 카드가 하나 놓인' 것과 같은 구조다. */
-  /* 테두리는 단색이 아니라 위가 밝고 가운데가 가라앉았다 아래에서 다시 드는 금속 띠 —
-     두 겹 배경(면=padding-box / 테두리=border-box)으로 낸다(border-color는 그라데를 못 받는다). */
-  .hmUpg .pdSeg{--pad:2px;max-width:none;margin:0;border-radius:var(--r-bar);border:1px solid transparent;
-    background:var(--hmPanel) padding-box,
-      linear-gradient(180deg,#585b66 0%,#3c3e46 38%,#2a2c33 72%,#45474f 100%) border-box}
-  /* 선택된 판 = 전등. 밑변의 '아주 얇고 진한 선'이 광원이고, 면에는 그 빛이 은은하게 번져 오른다.
-     면의 번짐은 알파 .03~.20 뿐 — 진한 건 선 하나여야 한다(면까지 진해지면 글자를 먹는다).
-     --segCol 은 HB_UPG_CAT 이 넣는다. */
-  .hmUpg .pdSegInd{--segCol:255,59,59;border-radius:var(--r-bar);border:1px solid transparent;box-shadow:none;
-    background:linear-gradient(180deg,#0a0a0a,#000) padding-box,
-      linear-gradient(180deg,rgba(255,255,255,.22) 0%,rgba(255,255,255,.07) 42%,
-        rgba(255,255,255,.04) 88%,rgba(var(--segCol),.38) 100%) border-box}
-  /* 광원 — 1px. 색은 halo 가 내고 심지는 희다(전등이 그렇게 보인다).
-     ⚠ 면은 완전 검정으로 둔다 — 면까지 물들이면 '빛'이 아니라 '칠한 색'이 된다.
-     halo 는 선 바로 옆까지만(2·5px). 반경을 키우면 다시 면이 물든 것처럼 보인다. */
-  .hmUpg .pdSegInd::after{display:block;content:'';position:absolute;left:11%;right:11%;bottom:0;height:1px;border-radius:0;
-    background:linear-gradient(90deg,transparent,rgba(255,255,255,.62) 50%,transparent 92%),
-      linear-gradient(90deg,transparent,rgba(var(--segCol),.92),transparent);
-    box-shadow:0 0 2px rgba(var(--segCol),.6), 0 0 5px rgba(var(--segCol),.24)}
+  /* 탭 띠의 생김새는 전부 공용 .pdSeg 가 갖는다(장비창 섹션 바와 같은 것). 여기서 덮는 건 아래 둘뿐:
+     ① 수량 칩 옆에서 남는 폭을 다 쓴다  ② 글자 크기. 구역색은 segNavHTML 이 --segCol 로 인라인에 실어 준다. */
+  .hmUpg .pdSeg{max-width:none;margin:0}
   /* 아이콘 없이 글자만 — 아이콘을 같이 넣으면 둘이 한 덩어리로 가운데 정렬돼 글자가 중앙에서 밀린다 */
-  .hmUpg .pdSegBtn{padding:6px 4px;font-size:11.5px;font-weight:700;letter-spacing:.02em;color:#8a8a8a;text-align:center}
-  .hmUpg .pdSegBtn.on{color:#ececec}
-  /* 선택 밑줄은 장비창과 같은 시안(--acc-sel) 그대로 둔다 — '지금 선택된 것'의 역할색(DESIGN.md §2).
-     HOME 계열 시안 금지의 예외이자 이 화면에서 시안을 쓰는 유일한 한 곳이다(2026-08-12 결정). */
+  .hmUpg .pdSegBtn{padding:6px 4px;font-size:11.5px;font-weight:700;letter-spacing:.02em;text-align:center}
   /* 수량 — 한 번에 몇 레벨씩 */
   .hmUpQty{flex:none;display:flex;align-self:center;width:46px;padding:1px;border-radius:var(--r-bar);   /* 폭 고정 — 1→10→MAX 로 바꾰도 칸이 안 흔들리게 */
     background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.02))}
