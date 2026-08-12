@@ -2652,15 +2652,16 @@
      한 구역으로 묶고 그 안에서 미끄러지는 판이 현재 구역을 가리킨다. 여기서는 크기와 액센트만 덮는다. */
   .hmUpgBar{display:flex;align-items:stretch;gap:6px;padding:4px 8px;border-bottom:1px solid rgba(255,255,255,.07)}
   .hmUpgTabs{flex:1 1 0;display:flex;align-items:stretch;min-width:0}
-  /* 수량 칩 옆에서 남는 폭을 다 쓰고, HOME 톤에 맞춰 더 각지게(9/6 → 3px) · 틈도 4 → 2px */
-  .hmUpg .pdSeg{--pad:2px;max-width:none;margin:0;border-radius:var(--r-bar)}
-  .hmUpg .pdSegInd{border-radius:var(--r-bar)}
+  /* 수량 칩 옆에서 남는 폭을 다 쓰고, HOME 톤에 맞춰 더 각지게(9/6 → 3px) · 틈도 4 → 2px.
+     면은 흰 워시(rgba(255,255,255,.045))를 걷고 패널과 같은 색으로 — 뿌옇게 뜨지 않는다.
+     선택된 판은 업그레이드 카드 속과 같은 완전 검정. 즉 '패널 위에 카드가 하나 놓인' 것과 같은 구조다. */
+  .hmUpg .pdSeg{--pad:2px;max-width:none;margin:0;border-radius:var(--r-bar);background:var(--hmPanel)}
+  .hmUpg .pdSegInd{border-radius:var(--r-bar);background:linear-gradient(180deg,#0a0a0a,#000)}
   /* 아이콘 없이 글자만 — 아이콘을 같이 넣으면 둘이 한 덩어리로 가운데 정렬돼 글자가 중앙에서 밀린다 */
   .hmUpg .pdSegBtn{padding:6px 4px;font-size:11.5px;font-weight:700;letter-spacing:.02em;color:#8a8a8a;text-align:center}
   .hmUpg .pdSegBtn.on{color:#ececec}
-  /* 선택 밑줄만 이 화면의 액센트로 — HOME 계열은 시안 금지(DESIGN.md) */
-  .hmUpg .pdSegInd::after{background:linear-gradient(90deg,transparent,rgba(var(--hmAccRGB),1),transparent);
-    box-shadow:0 0 6px rgba(var(--hmAccRGB),.45)}
+  /* 선택 밑줄은 장비창과 같은 시안(--acc-sel) 그대로 둔다 — '지금 선택된 것'의 역할색(DESIGN.md §2).
+     HOME 계열 시안 금지의 예외이자 이 화면에서 시안을 쓰는 유일한 한 곳이다(2026-08-12 결정). */
   /* 수량 — 한 번에 몇 레벨씩 */
   .hmUpQty{flex:none;display:flex;align-self:center;width:46px;padding:1px;border-radius:var(--r-bar);   /* 폭 고정 — 1→10→MAX 로 바꾰도 칸이 안 흔들리게 */
     background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.02))}
