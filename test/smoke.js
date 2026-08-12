@@ -706,20 +706,25 @@ async function groupLobby(){
     openHome(); await sleep(60); _hb.manual=true;
     const p=PROF(); p.pcoin=999999; hbHunt().build={}; hbHunt().boostT={};
     p.pets={slime:1}; p.equip=['slime']; hbLayoutAllies();
-    // ① 동료 — 영입하면 즉시 출전한다 · 강화하면 값과 위력이 오른다 (전직 폐지로 옛 상위 직업이 여기로 왔다)
-    hbHunt().mates={}; hbHunt().party=[];
-    CHAR().level=99;                                    // 해금 레벨을 전부 넘긴다
-    const mid=Object.keys(HB_MATES)[0], mc0=hbMateCost(mid), md0=hbMateDps(mid);
-    assert(hbMateBuy(mid),'동료 영입 실패');
-    assert(hbMateLv(mid)===1 && hbParty().indexOf(mid)>=0,'영입한 동료가 출전하지 않음');
+    // ① 동료 — 뽑기로 얻고, 중복을 재료로 넣어 강화한다(미네랄 강화는 없어졌다)
+    const H0=hbHunt(); H0.mates={}; H0.party=[]; H0.mateN=0;
+    const mid=Object.keys(HB_MATES)[0], md0=HB_MATES[mid].dps;
+    H0.mates[mid]={lv:1,dup:0}; H0.party=[mid]; hbLayoutAllies();
+    assert(hbMateLv(mid)===1 && hbParty().indexOf(mid)>=0,'보유 동료가 출전하지 않음');
     assert(_hb.allies.length===1,'동료가 전장에 배치되지 않음');
-    assert(hbMateCost(mid)>mc0,'다음 강화 비용이 안 오름');
-    assert(hbMateBuy(mid) && hbMateLv(mid)===2,'강화가 안 됨');
-    assert(hbMateDps(mid)>md0,'강화해도 위력이 안 오름: '+md0+' → '+hbMateDps(mid));
+    // 재료를 채우면 레벨이 오른다 — 필요량은 hbMateNeed 가 유일한 근거다
+    { const need=hbMateNeed(mid), pt=hbMatePt(mid), n=Math.ceil(need/pt);
+      H0.mates[mid].dup=n;
+      for(let i=0;i<n;i++) hbMateFeed(mid, mid);
+      assert(hbMateLv(mid)===2,'재료를 다 넣었는데 레벨이 안 오름: Lv'+hbMateLv(mid));
+      assert(hbMateDps(mid)>md0,'강화해도 위력이 안 오름: '+md0+' → '+hbMateDps(mid));
+      assert(hbMateNeed(mid)>need,'다음 레벨 요구량이 안 오름'); }
+    // 재료가 없으면 못 넣는다
+    assert(hbMateDup(mid)===0 && !hbMateFeed(mid,mid),'재료가 없는데 합성이 됨');
     // 출전 토글 · 정원 상한
     assert(hbMateToggle(mid) && hbParty().indexOf(mid)<0,'출전 해제가 안 됨');
     assert(hbMateToggle(mid) && hbParty().indexOf(mid)>=0,'다시 출전이 안 됨');
-    { const ids=Object.keys(HB_MATES); for(const id of ids) hbMateBuy(id);
+    { const ids=Object.keys(HB_MATES); for(const id of ids) hbHunt().mates[id]={lv:1,dup:0};
       let refused=0;
       for(const id of ids) if(hbHunt().party.indexOf(id)<0){ if(!hbMateToggle(id)) refused++; }
       // 정원이 차면 '거절'해야 한다 — 몰래 넘겨 놓고 표시할 때만 자르면 편성이 마음대로 바뀐다
@@ -734,19 +739,6 @@ async function groupLobby(){
     for(let i=0;i<HB_BUILD.bunker.max+3;i++) hbBuy('bunker');
     assert(hbBuildN('bunker')===HB_BUILD.bunker.max,'최대치를 넘겨 지어짐: '+hbBuildN('bunker'));
     assert(_hb.pets.length===1,'장착 펫이 전장에 안 나옴');
-    // ③ 아군 화력 — 같은 상황을 아군 없이/있이 돌려 처치 수를 비교한다
-    //    ⚠ 아군 발사 주기는 캐릭터 쿨다운(c.cd)을 공유한다 — 캐릭터를 막으면 아군도 멈춰서 그 방식으론 못 잰다
-    const runWave=()=>{ _hb.round=1; _hb.wave=1; _hb.phase='fight';
-      _hb.foes.length=0; _hb.pend.length=0; hbSpawnWave();
-      // 사거리가 근접(34)이라 적이 화면 밖에서 걸어 들어올 시간이 필요하다 — 6초로는 도착 전에 끝난다
-      const k=_hb.kills; for(let i=0;i<300;i++) hbStep(0.05); return _hb.kills-k; };
-    hbHunt().build={}; hbHunt().mates={}; hbHunt().party=[]; PROF().equip=[]; hbLayoutAllies();
-    const solo=runWave();
-    hbHunt().build={turret:HB_BUILD.turret.max};
-    for(const id of Object.keys(HB_MATES).slice(0,hbMateMax())){ hbHunt().mates[id]=1; hbHunt().party.push(id); }
-    hbLayoutAllies();
-    const withAllies=runWave();
-    assert(withAllies>solo,'아군을 세워도 화력이 안 늘어남: '+solo+' → '+withAllies);
     PROF().equip=['slime']; hbLayoutAllies();
     // ③ 스킬 — 효과 + 쿨다운(쿨 중 재사용 불가)
     _hb.skT={nova:0,heal:0,slow:0}; _hb.foes.length=0;
@@ -787,6 +779,31 @@ async function groupLobby(){
       assert(hit===0,'스킬 바 위에 겹쳐 스폰된 적 '+hit+'기');
       _hb.foes.length=0; }
     hbHunt().boostT={}; hbHunt().build={}; hbLayoutAllies();
+    // ③ 아군 화력 — 같은 상황을 아군 없이/있이 돌려 처치 수를 비교한다
+    //    ⚠ 아군 발사 주기는 캐릭터 쿨다운(c.cd)을 공유한다 — 캐릭터를 막으면 아군도 멈춰서 그 방식으론 못 잰다
+    // ⚠ 이 측정은 두 방향으로 포화된다 — 약한 라운드면 캐릭터 혼자 전멸시켜 양쪽이 같고(9→9),
+    //    너무 센 라운드면 아무도 못 잡아 역시 같다(0→0). 그래서 캐릭터 스펙을 '고정'하고
+    //    혼자서는 절반쯤만 잡는 라운드에서 잰다. 스펙을 고정하지 않으면 앞 단계의 누적 성장에 흔들린다.
+    const setSpec=()=>{ const c=_hb.char;
+      c.atk=60; c.cd=.30; c.range=140; c.crit=0; c.regen=0; c.hpMax=1e9; c.hp=1e9; };
+    const runWave=()=>{ _hb.round=40; _hb.wave=1; _hb.phase='fight'; setSpec();
+      _hb.foes.length=0; _hb.pend.length=0; hbSpawnWave();
+      // 사거리가 근접(34)이라 적이 화면 밖에서 걸어 들어올 시간이 필요하다 — 6초로는 도착 전에 끝난다
+      const k=_hb.kills; for(let i=0;i<300;i++) hbStep(0.05); return _hb.kills-k; };
+    hbHunt().build={}; hbHunt().mates={}; hbHunt().party=[]; PROF().equip=[]; hbLayoutAllies();
+    const solo=runWave();
+    hbHunt().build={turret:HB_BUILD.turret.max};
+    for(const id of Object.keys(HB_MATES).slice(0,hbMateMax())){ hbHunt().mates[id]={lv:1,dup:0}; hbHunt().party.push(id); }
+    hbLayoutAllies();
+    const withAllies=runWave();
+    assert(solo>0,'측정 불가 — 캐릭터 혼자 하나도 못 잡음(라운드가 너무 셈)');
+    assert(withAllies>solo,'아군을 세워도 화력이 안 늘어남: '+solo+' → '+withAllies);
+    // 측정 뒤 원복 — 잔적뿐 아니라 '캐릭터 위치'도 되돌린다.
+    // 적 출현 위치는 캐릭터 기준이라(hbPlaceFoe), 캐릭터가 구석에 서 있으면 스폰이 화면 경계에 몰려
+    // 뒤따르는 '스킬 바 위 스폰 금지' 검사가 엉뚱하게 실패한다.
+    _hb.round=1; _hb.wave=1; _hb.phase='fight'; _hb.foes.length=0; _hb.pend.length=0;
+    { const c=_hb.char; c.x=0; c.y=0; c.tx=0; c.ty=0; c.mv=0; }
+    hbHunt().mates={}; hbHunt().party=[]; hbLayoutAllies();
     return '동료·터렛·벙커·펫 배치 ok · 스킬 3종 · 부스트 연장 ok'; });
   // Phase 2 — 던전 1~10 해금 · 엘리트 · 장비 뽑기권(드랍 + 소비처)
   await step('자동사냥: 던전 해금 · 엘리트 · 뽑기권', async()=>{ skipIf(typeof hbGoDungeon!=='function','던전 선택 없음');
@@ -945,7 +962,7 @@ async function groupLobby(){
     assert(L1.length===4,'목록 개수가 다름(나+적3): '+L1.length);
     // 🤝 동료도 같은 경로로 그린다 — 영입하면 목록이 그만큼 늘어야 한다(이모지로만 그리면 여기서 걸린다)
     { CHAR().level=99; const mid=Object.keys(HB_MATES)[0];
-      hbHunt().mates[mid]=1; hbHunt().party=[mid]; hbLayoutAllies();
+      hbHunt().mates[mid]={lv:1,dup:0}; hbHunt().party=[mid]; hbLayoutAllies();
       const L2=hb3dList();
       assert(L2.length===5,'동료가 3D 목록에 안 들어감: '+L2.length);
       assert(L2.some(u=>u.id===HB_MATES[mid].unit),'동료가 자기 유닛 모델로 안 나감: '+HB_MATES[mid].unit);
@@ -1188,7 +1205,7 @@ async function groupLobby(){
     hbSetClimb(false);
     return '최고 '+hbBest(1)+'라운드 · 반복/등반 ok'; });
   // 🤝 전직 폐지 → 동료 영입(2026-08-12 설계 전환). 옛 상위 직업이 그대로 동료가 됐다.
-  await step('동료: 전직 폐지 · 옛 상위 직업이 동료로 · 레벨 해금', async()=>{ skipIf(typeof HB_MATES!=='object','동료 없음');
+  await step('동료: 전직 폐지 · 옛 상위 직업이 동료로 · 뽑기 영입', async()=>{ skipIf(typeof HB_MATES!=='object','동료 없음');
     // ① 전직의 흔적이 남아 있으면 안 된다
     assert(typeof profClassChange==='undefined','profClassChange 가 남아 있음');
     assert(typeof profClassCost==='undefined','profClassCost 가 남아 있음');
@@ -1204,36 +1221,120 @@ async function groupLobby(){
     for(const id in HB_MATES){ const M=HB_MATES[id];
       assert(M.name && M.unit && M.ico,'동료 항목이 비어 있음: '+id);
       assert(M.dps>0 && M.rng>0,'동료 전투 수치가 없음: '+id); }
-    // ③ 해금은 레벨 게이트이고 오름차순 — 한꺼번에 열리지 않는다
-    { let prev=0; for(const id in HB_MATES){ const M=HB_MATES[id];
-        assert(M.lv>prev,'동료 해금 레벨이 오름차순이 아님: '+id+' '+prev+'→'+M.lv); prev=M.lv; } }
-    // ④ 영입 = 레벨 해금 + 미네랄. 잠긴 동료는 돈이 있어도 못 산다.
+    // ③ 등급이 해금을 대체했다 — 레벨 게이트도 미네랄 영입도 없어야 한다
+    assert(typeof hbMateBuy==='undefined','미네랄 영입(hbMateBuy)이 남아 있음');
+    assert(typeof hbMateCost==='undefined','미네랄 영입가(hbMateCost)가 남아 있음');
+    for(const id in HB_MATES){ const M=HB_MATES[id];
+      assert(M.lv===undefined && M.cost===undefined,'옛 해금 레벨/영입가가 남음: '+id);
+      assert(GACHA_TIERS[M.tier],'등급이 없거나 공용 등급표에 없음: '+id+' '+M.tier); }
+    // 등급이 높을수록 세다 — 등급이 성능을 대변하지 못하면 뽑을 이유가 없다
+    { let prevRank=-1, prevDps=0;
+      for(const id in HB_MATES){ const M=HB_MATES[id], rank=GACHA_TIER_ORDER.indexOf(M.tier);
+        assert(rank>=prevRank,'동료 표가 등급 오름차순이 아님: '+id);
+        if(rank>prevRank) assert(M.dps>prevDps,'상위 등급인데 더 약함: '+id);
+        prevRank=rank; prevDps=Math.max(prevDps,M.dps); } }
+    // ④ 영입 = 뽑기권. 권이 없으면 못 뽑는다.
     const p=PROF(); p.chars.length=0; p.curId=''; const c=profCreateChar('ranger','동료');
-    const H=hbHunt(); H.mates={}; H.party=[]; p.pcoin=1e9;
-    const last=Object.keys(HB_MATES).slice(-1)[0];
-    c.level=1;
-    assert(!hbMateOpen(last),'Lv.1인데 최상위 동료가 열림');
-    assert(!hbMateBuy(last),'잠긴 동료를 영입할 수 있음');
-    assert(!hbMateOwned(last),'잠긴 동료가 영입됨');
-    c.level=HB_MATES[last].lv;
-    assert(hbMateOpen(last) && hbMateBuy(last),'해금 레벨인데 영입이 안 됨');
-    // ⑤ 미네랄이 모자라면 못 산다
-    p.pcoin=0;
-    const first=Object.keys(HB_MATES)[0];
-    assert(!hbMateBuy(first),'미네랄이 0인데 영입됨');
+    const H=hbHunt(); H.mates={}; H.party=[]; H.mateN=0; p.tickets={gear:0,pet:0,ally:0};
+    assert(hbMateRoll()===null,'뽑기권이 0인데 뽑힘');
+    p.tickets.ally=1;
+    const r1=hbMateRoll();
+    assert(r1 && HB_MATES[r1.id],'뽑기가 실패함');
+    assert(hbMateTicket()===0,'뽑기권이 소모되지 않음');
+    assert(hbMateOwned(r1.id) && hbMateLv(r1.id)===1,'뽑은 동료가 Lv.1로 안 들어옴');
+    assert(hbParty().indexOf(r1.id)>=0,'처음 얻은 동료가 출전하지 않음');
+    // ⑤ 중복 = 재료. 같은 동료가 또 나오면 레벨이 아니라 dup 이 는다.
+    { const id=r1.id, H2=hbHunt(); const lv0=hbMateLv(id), d0=hbMateDup(id);
+      H2.mates[id].dup=d0;  p.tickets.ally=1;
+      // 같은 것이 나올 때까지 굴리지 않고, 중복 경로를 직접 확인한다(확률에 기대면 불안정하다)
+      const before=JSON.stringify(H2.mates[id]);
+      p.tickets.ally=0;
+      assert(before===JSON.stringify(H2.mates[id]),'뽑기권 없이 상태가 바뀜');
+      assert(hbMateLv(id)===lv0,'중복이 레벨을 직접 올림'); }
     // ⑥ 환생해도 동료는 남는다(계정 축)
-    p.pcoin=1e9; c.level=PROF_REB_EVERY*2; const before=hbMateLv(last);
+    c.level=PROF_REB_EVERY*2; const before=hbMateLv(r1.id);
     profRebirth(c);
-    assert(hbMateLv(last)===before,'환생이 동료를 지움');
+    assert(hbMateLv(r1.id)===before,'환생이 동료를 지움');
+    const last=Object.keys(HB_MATES).slice(-1)[0];
     // ⑦ 진입점 — 좌상단 아이콘에서 열린다
     openHome(); await sleep(60);
     const btn=$('hbMateBtn');
     assert(btn && visible(btn),'동료 진입 아이콘(#hbMateBtn)이 없음');
     hbCloseMates(); btn.click(); await sleep(50);
     assert(visible($('hbMateModal')),'아이콘을 눌렀는데 동료 팝업이 안 열림');
-    assert(document.querySelectorAll('#hbMateBody .hbRow').length===Object.keys(HB_MATES).length,'동료 목록이 표와 다름');
+    { const names=$('hbMateBody').textContent;
+      for(const id in HB_MATES) assert(names.indexOf(HB_MATES[id].name)>=0,'동료 목록에 빠짐: '+HB_MATES[id].name);
+      assert(names.indexOf('동료 뽑기권')>=0,'뽑기 줄이 없음');
+      assert(document.querySelectorAll('#hbMateBody .mateOdds .mateOdd').length===GACHA_TIER_ORDER.length,'등급별 확률 표시가 없음'); }
     hbCloseMates();
-    return '동료 '+Object.keys(HB_MATES).length+'종 · Lv.'+HB_MATES[Object.keys(HB_MATES)[0]].lv+'~'+HB_MATES[last].lv; });
+    return '동료 '+Object.keys(HB_MATES).length+'종 · '+GACHA_TIERS[HB_MATES[Object.keys(HB_MATES)[0]].tier].name+'~'+GACHA_TIERS[HB_MATES[last].tier].name; });
+
+  // 🎰 동료 뽑기 확률 — 설계의 핵심. 초반엔 상위 등급이 0%고, 뽑을수록 열리고 커진다.
+  await step('동료 뽑기: 단계별 확률 · 상위 등급 개방 · 중복은 재료', ()=>{ skipIf(typeof HB_MATE_GACHA!=='object','동료 뽑기 없음');
+    // ① 각 단계의 확률 합은 정확히 1이어야 한다(잔차가 있으면 최상위가 조용히 안 나온다)
+    for(let i=0;i<HB_MATE_GACHA.length;i++){ const P=HB_MATE_GACHA[i].p;
+      let sum=0; for(const t in P){ assert(GACHA_TIERS[t],'없는 등급: '+t); sum+=P[t]; }
+      assert(Math.abs(sum-1)<1e-9,'단계 '+(i+1)+' 확률 합이 1이 아님: '+sum); }
+    // ② 초반에는 상위 등급이 '아예 0%'다 — 설계의 출발점
+    { const p0=HB_MATE_GACHA[0].p;
+      assert(Math.abs(p0.common-0.9)<1e-9 && Math.abs(p0.rare-0.09)<1e-9 && Math.abs(p0.epic-0.01)<1e-9,
+        '1단계가 90/9/1이 아님');
+      for(const t of ['unique','legend','transcend','god'])
+        assert(!(p0[t]>0),'1단계인데 '+t+'가 열려 있음'); }
+    // ③ 단계가 오르면 상위 등급은 절대 줄지 않는다(일반만 자리를 내준다) · 필요 횟수도 오름차순
+    for(let i=1;i<HB_MATE_GACHA.length;i++){ const A=HB_MATE_GACHA[i-1], B=HB_MATE_GACHA[i];
+      assert(B.need>A.need,'단계 '+(i+1)+'의 필요 횟수가 안 오름');
+      assert(B.p.common<A.p.common,'단계 '+(i+1)+'에서 일반 비중이 안 줄어듦');
+      for(const t of GACHA_TIER_ORDER){ if(t==='common') continue;
+        assert((B.p[t]||0)>=(A.p[t]||0),'단계 '+(i+1)+'에서 '+t+' 확률이 줄었음'); } }
+    // 최종 단계에서는 모든 등급이 열려 있어야 한다 — 안 열리면 그 동료는 영원히 못 얻는다
+    { const last=HB_MATE_GACHA[HB_MATE_GACHA.length-1].p;
+      for(const t of GACHA_TIER_ORDER) assert(last[t]>0,'최종 단계인데 '+t+'가 0%'); }
+    // ④ 표에 있는 모든 등급의 동료가 실제로 풀에 있어야 한다(확률만 있고 뽑을 게 없으면 안 된다)
+    { const have={}; for(const id in HB_MATES) have[HB_MATES[id].tier]=1;
+      const last=HB_MATE_GACHA[HB_MATE_GACHA.length-1].p;
+      for(const t in last) if(last[t]>0) assert(have[t],'확률은 있는데 그 등급 동료가 없음: '+t); }
+    // ⑤ 뽑기 레벨은 누적 횟수로 오른다
+    const p=PROF(); p.chars.length=0; p.curId=''; profCreateChar('ranger','뽑기');
+    const H=hbHunt(); H.mates={}; H.party=[]; H.mateN=0;
+    assert(hbGachaLv(0)===1,'0회인데 Lv.1이 아님');
+    for(let i=0;i<HB_MATE_GACHA.length;i++)
+      assert(hbGachaLv(HB_MATE_GACHA[i].need)===i+1,'누적 '+HB_MATE_GACHA[i].need+'회에서 단계가 다름');
+    assert(hbGachaLv(1e9)===HB_MATE_GACHA.length,'상한을 넘어도 단계가 계속 오름');
+    // ⑥ 실제로 굴려 본다 — 권만큼만 뽑히고, 뽑은 만큼 레벨이 오른다
+    p.tickets={gear:0,pet:0,ally:30};
+    // ⚠ 상한 없이 돌리면 '뽑기권을 안 쓰는' 회귀에서 스모크가 멈춰 버린다 — 반드시 끊고 실패시킨다
+    let rolled=0; while(hbMateRoll() && rolled<200) rolled++;
+    assert(rolled===30,'뽑기권 수와 뽑은 횟수가 다름(권을 소모하지 않는지 확인): '+rolled);
+    assert(hbMateTicket()===0,'뽑기권이 남음');
+    assert(H.mateN===30,'누적 뽑기 횟수가 안 맞음: '+H.mateN);
+    assert(hbGachaLv()>1,'30회를 뽑았는데 뽑기 레벨이 그대로');
+    // ⑦ 1단계 확률에서는 유니크 이상이 절대 안 나온다 — 0%가 진짜 0%인지 본다
+    { H.mates={}; H.party=[]; H.mateN=0; p.tickets.ally=400;
+      const seen={}; let n=0;
+      while(hbMateTicket()>0 && n<400){ const r=hbMateRoll(); if(!r) break; n++;
+        if(H.mateN<=HB_MATE_GACHA[1].need) seen[r.tier]=1; }   // 아직 1단계인 동안 나온 등급만
+      for(const t of ['unique','legend','transcend','god'])
+        assert(!seen[t],'1단계에서 '+t+'가 나왔음(0%여야 한다)'); }
+    // ⑧ 중복은 레벨이 아니라 재료로 쌓인다 — 난수를 고정해 '같은 동료 두 번'을 결정적으로 만든다
+    //    (확률에 기대면 이 규칙이 깨져도 통과해 버린다)
+    { H.mates={}; H.party=[]; H.mateN=0; p.tickets.ally=2;
+      const rnd=Math.random; Math.random=()=>0;      // 항상 1순위 등급의 1순위 동료
+      let a,b; try{ a=hbMateRoll(); b=hbMateRoll(); } finally { Math.random=rnd; }
+      assert(a&&b&&a.id===b.id,'난수 고정인데 다른 동료가 나옴: '+(a&&a.id)+'/'+(b&&b.id));
+      assert(a.isNew===true && b.isNew===false,'두 번째가 중복으로 처리되지 않음');
+      assert(hbMateLv(a.id)===1,'중복이 레벨을 올림: Lv'+hbMateLv(a.id));
+      assert(hbMateDup(a.id)===1,'중복이 재료로 안 쌓임: '+hbMateDup(a.id));
+      assert(hbMateMats().some(m=>m.id===a.id && m.dup===1),'중복이 재료 목록에 안 잡힘');
+      // 재료는 실제로 레벨을 올리는 데 쓰인다
+      const need=hbMateNeed(a.id), pt=hbMatePt(a.id);
+      H.mates[a.id].dup=Math.ceil(need/pt);
+      const lv0=hbMateLv(a.id);
+      while(hbMateDup(a.id)>0) hbMateFeed(a.id, a.id);
+      assert(hbMateLv(a.id)>lv0,'재료를 다 넣었는데 레벨이 안 오름'); }
+    // ⑨ 재료 값어치는 등급을 따른다 — 상위 중복이 더 크게 쳐진다
+    { let prev=0; for(const t of GACHA_TIER_ORDER){ assert(HB_MATE_PT[t]>prev,'재료 포인트가 등급 오름차순이 아님: '+t); prev=HB_MATE_PT[t]; } }
+    return '단계 '+HB_MATE_GACHA.length+' · 1단계 90/9/1 · 최종 전 등급 개방'; });
 
   // 옛 저장(전직해 둔 캐릭터)을 열었을 때 산 것을 잃지 않아야 한다
   await step('마이그레이션: 전직해 둔 캐릭터 → 뿌리 복귀 + 그 동료 지급', ()=>{ skipIf(typeof migrateProfile!=='function','마이그레이션 없음');
@@ -1247,12 +1348,12 @@ async function groupLobby(){
     const p=PLAYER_META.profile, c=p.chars[0];
     assert(PROF_JOBS[c.unit.jobId],'없어진 직업이 그대로 남음: '+c.unit.jobId);
     assert(c.unit.jobId==='ranger','뿌리로 안 돌아감: '+c.unit.jobId);
-    assert((p.hunt.mates||{}).sniper>=1,'전직해 뒀던 직업이 동료로 안 들어옴');
+    assert(((p.hunt.mates||{}).sniper||{}).lv>=1,'전직해 뒀던 직업이 동료로 안 들어옴');
     assert((p.hunt.party||[]).indexOf('sniper')>=0,'받은 동료가 출전 목록에 없음');
     assert(c.unit.evoStars===1,'진화★가 사라짐');
     assert(p.pcoin>0,'옛 범용 동료(build.ally) 환급이 없음: '+p.pcoin);
     assert(!p.hunt.build.ally,'옛 동료 수가 남아 있음');
-    assert(p.ver===7,'버전이 안 올라감: '+p.ver);
+    assert(p.ver===8,'버전이 안 올라감: '+p.ver);
     PLAYER_META=keep;
     return '뿌리 복귀 + 동료 지급 + 환급 ok'; });
 

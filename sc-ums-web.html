@@ -2525,6 +2525,11 @@
   .hbHudTop{position:absolute;left:8px;top:3px;z-index:2;display:flex;flex-direction:column;align-items:flex-start;gap:5px}
   /* 좌상단 묶음의 실제 높이(프로필 48 + gap 5 + 아이콘 30). 중앙 표시가 이 아래로 내려가는 기준 — 스모크가 겹침을 검사한다 */
   :root{--hbHudH:83px}
+  /* 🎰 동료 뽑기 확률 — 등급 색은 공용 TIER_COLOR를 인라인으로 받는다(등급 색 규칙을 두 벌 만들지 않는다) */
+  .mateOdds{display:flex;flex-wrap:wrap;gap:4px 10px;padding:2px 12px 8px}
+  .mateOdd{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:10px;font-weight:700;letter-spacing:.3px}
+  .mateOdd.off{opacity:.5}
+  .hbRow.lock{opacity:.5}
   .hbIcoRow{display:flex;align-items:center;gap:6px}   /* 라운드·마을 아이콘 — 세로로 쌓이면 좌상단 묶음 높이가 늘어난다 */
   .hbHud{display:flex;align-items:center;gap:7px;cursor:pointer;background:none;border:none;padding:0;text-align:left}
   .hbHud:active{opacity:.75}
@@ -4970,8 +4975,8 @@ function metaEffLv(id){ return _metaEffFromRaw(META_BUILDS[id], buildLevel(id));
 // 플레이어 메타(계정별 영구 데이터)
 // 🧍 개인 프로필 RPG(1단계) 기본값 — 유즈맵 경제와 완전 분리(재화명 pcoin, coins 아님). 자세한 규칙은 PROF_* 블록 참조.
 // 계정 공용(재화·펫·해금·방치) + 캐릭터별(chars[]: 레벨·경험치·스탯·장비·진화)로 나뉜다.
-function defaultProfile(){ return { ver:7, pcoin:0, gas:0, gem:0, chars:[], curId:'', items:[],
-  hunt:{ dg:1, round:1, climb:false, best:{}, rw:{}, mates:{}, party:[], upg:{atk:0,rng:0,aspd:0,crit:0,hp:0,regen:0} },   // ⚔ 자동사냥(HOME) 진행·마일스톤 수령(rw)·영구 업그레이드
+function defaultProfile(){ return { ver:8, pcoin:0, gas:0, gem:0, chars:[], curId:'', items:[],
+  hunt:{ dg:1, round:1, climb:false, best:{}, rw:{}, mates:{}, party:[], mateN:0, upg:{atk:0,rng:0,aspd:0,crit:0,hp:0,regen:0} },   // ⚔ 자동사냥(HOME) 진행·마일스톤 수령(rw)·영구 업그레이드
   idle:{ sourceId:'drill', lastClaimTs:0 }, unlocks:{}, lastSeenTs:0,
   dgKeys:{}, tickets:{gear:0,pet:0,ally:0},   // 🗝 던전별 열쇠(매일 09:00 보충) · 🎟 뽑기권(장비/펫/동료)
   pets:{}, equip:[], petSlots:2 }; }   // 🐾 펫(중복=별)·장착 슬롯 — 캐릭터를 새로 만들어도 그대로 쓴다
@@ -5016,7 +5021,9 @@ function migrateProfile(){ const d=defaultProfile();
     const H=p.hunt||(p.hunt={}); if(!H.mates) H.mates={}; if(!Array.isArray(H.party)) H.party=[];
     for(const c of p.chars){ const jid=c.unit&&c.unit.jobId;
       if(jid && !PROF_JOBS[jid]){                       // 이제 없는 직업 = 옛 상위 직업
-        if(HB_MATES[jid]){ H.mates[jid]=Math.max(1, H.mates[jid]||0);
+        if(HB_MATES[jid]){ const ex=H.mates[jid];                    // 보유 표기는 v8 형식({lv,dup})으로 바로 쓴다
+          H.mates[jid]=(ex&&typeof ex==='object')? ex : {lv:Math.max(1, (typeof ex==='number'?ex:0)), dup:0};
+          if(!(H.mates[jid].lv>0)) H.mates[jid].lv=1;
           if(H.party.indexOf(jid)<0) H.party.push(jid); }
         c.unit.jobId=PROF_CLASSES[c.cls]?c.cls:'ranger'; } }
     if(H.build && H.build.ally){ p.pcoin=(p.pcoin||0)+150*H.build.ally*2; H.build.ally=0; }   // 옛 동료 구매액 대략 환급
@@ -5052,6 +5059,16 @@ function migrateProfile(){ const d=defaultProfile();
       for(const k in M) c.unit.stats[k]=0;      // ⚠ 옮겼으면 비운다 — 안 비우면 같은 스탯이 두 번 반영된다
       if(c.unit.statAcc) delete c.unit.statAcc;   // 자동 상승 시절의 소수점 잔여도 정리
       if(c.statPoints>0){ p.pcoin=(p.pcoin||0)+c.statPoints*20; c.statPoints=0; } } }
+  // v8 동료를 뽑기 방식으로 — 보유 표기를 {lv,dup}로 바꾸고, 미네랄로 사 뒀던 레벨은 그대로 인정한다.
+  //   뽑기권 소비처가 생겼으므로 처음 열 때 몇 장 쥐여 준다(안 그러면 뽑기 화면이 비어 보인다).
+  if((p.ver||0)<8){ const H=p.hunt||(p.hunt={});
+    if(H.mates) for(const id in H.mates){ const v=H.mates[id];
+      if(typeof v==='number') H.mates[id]={lv:Math.max(1,v), dup:0};
+      else if(!v || typeof v!=='object') delete H.mates[id];
+      else { v.lv=Math.max(1,v.lv||1); v.dup=v.dup||0; } }
+    if(typeof H.mateN!=='number') H.mateN=0;
+    if(!p.tickets) p.tickets={gear:0,pet:0,ally:0};
+    p.tickets.ally=(p.tickets.ally||0)+HB_MATE_START_TICKETS; }
   p.ver=d.ver; }
 // 캐릭터 1건 보정(신규 키 back-fill + 폐기된 직업 id 복구)
 function fixChar(c){ const d=defaultChar(c&&c.cls, c&&c.name);
@@ -5477,7 +5494,7 @@ function renderRoundSheet(){ const H=hbHunt(), gr=document.getElementById('hbRou
   if(nt){ const nx=H.dg<HB_DG_MAX ? (hbDgOpen(H.dg+1) ? '던전 '+(H.dg+1)+' 개방됨' : '던전 '+(H.dg+1)+'은 이 던전 '+HB_DG_UNLOCK+'라운드 도달 시 개방') : '마지막 던전';
     let rwTx='';
     if(nextRw){ const r=hbRoundRw(H.dg,nextRw);
-      rwTx=' · 🎁 라운드 '+nextRw+' 최초 클리어 = 미네랄 '+Math.round(r.min).toLocaleString()+' · 가스 '+Math.round(r.gas).toLocaleString()+(r.tk?' · 장비 뽑기권 '+r.tk:''); }
+      rwTx=' · 🎁 라운드 '+nextRw+' 최초 클리어 = 미네랄 '+Math.round(r.min).toLocaleString()+' · 가스 '+Math.round(r.gas).toLocaleString()+(r.tk?' · 장비 뽑기권 '+r.tk:'')+(r.atk?' · 동료 뽑기권 '+r.atk:''); }
     nt.textContent='던전 '+H.dg+' · 최고 도달 라운드 '+best+' — 여기까지 고를 수 있습니다. 죽으면 한 라운드씩 내려갑니다. · '+nx+rwTx; }
   const r=document.getElementById('hbModeRep'), c=document.getElementById('hbModeClm');
   if(r) r.classList.toggle('on', !H.climb); if(c) c.classList.toggle('on', !!H.climb); }
@@ -5515,27 +5532,72 @@ function renderHbBar(){ const bar=document.getElementById('hbBar'); if(!bar||!_h
 // 🤝 동료 — 영입(첫 구매)·강화(같은 버튼)·출전 토글. 옛 전직 트리가 여기로 옮겨 왔다.
 function hbOpenMates(){ const el=document.getElementById('hbMateModal'); if(!el) return;
   el.classList.remove('hide'); renderMateModal(); if(typeof playSfx==='function') playSfx('ui_open'); }
-function hbCloseMates(){ const el=document.getElementById('hbMateModal'); if(el) el.classList.add('hide'); }
+function hbCloseMates(){ _mateFeedT=null; const el=document.getElementById('hbMateModal'); if(el) el.classList.add('hide'); }
+let _mateFeedT=null;      // 합성 재료를 고르는 중인 대상 동료 id(없으면 목록만 보여 준다)
 function renderMateModal(){ const box=document.getElementById('hbMateBody'); if(!box) return;
-  const coin=Math.floor(PROF().pcoin||0), party=hbParty(), lv=profUnlockLv();
+  const party=hbParty(), tk=hbMateTicket();
   let h='';
-  for(const id in HB_MATES){ const M=HB_MATES[id], open=hbMateOpen(id), own=hbMateOwned(id),
-        cost=hbMateCost(id), out=party.indexOf(id)>=0;
-    const sub = !open ? ('🔒 Lv.'+M.lv+' 필요')
-      : own ? ('Lv.'+hbMateLv(id)+' · 위력 '+Math.round(hbMateDps(id)*100)+'% · '+M.tip)
-            : (M.tip+' · 위력 '+Math.round(M.dps*100)+'%');
-    h+='<div class="hbRow'+(open?'':' lock')+'"><span class="hbRowIco">'+M.ico+'</span>'
-      +'<span class="hbRowTx"><b>'+M.name+(out?' <i>출전</i>':'')+'</b><em>'+sub+'</em></span>'
-      +(own?('<button class="hbRowBtn alt" onclick="hbDoMateToggle(&#39;'+id+'&#39;)">'+(out?'대기':'출전')+'</button>'):'')
-      +'<button class="hbRowBtn" onclick="hbDoMateBuy(&#39;'+id+'&#39;)"'+((!open||coin<cost)?' disabled':'')+'>'
-      +(own?'강화 ':'영입 ')+cost.toLocaleString('en-US')+'</button></div>'; }
-  box.innerHTML=h;
-  const nt=document.getElementById('hbMateNote');
-  if(nt) nt.textContent='출전 '+party.length+'/'+hbMateMax()+'명 — 함께 싸웁니다. 영입한 동료는 캐릭터를 환생해도 남습니다.'
+  // ① 뽑기 — 뽑기권으로만 영입한다. 지금 확률과 다음 단계까지 남은 횟수를 같이 보여 준다.
+  { const pr=hbGachaProbs(), nx=hbGachaNext();
+    h+='<div class="hbGrowLbl">동료 뽑기 <span class="hbStars">Lv.'+hbGachaLv()+'</span></div>';
+    h+='<div class="hbRow"><span class="hbRowIco">🎟</span>'
+      +'<span class="hbRowTx"><b>동료 뽑기권 <i>'+tk+'</i></b><em>'
+      +(nx? ('다음 단계까지 '+nx.left+'회 — Lv.'+nx.lv+'가 되면 상위 등급이 더 열립니다') : '최고 단계')
+      +'</em></span>'
+      +'<button class="hbRowBtn" onclick="hbDoMateRoll()"'+(tk>0?'':' disabled')+'>뽑기</button></div>';
+    h+='<div class="mateOdds">';
+    for(const t of GACHA_TIER_ORDER){ const v=pr[t]||0;
+      h+='<span class="mateOdd'+(v>0?'':' off')+'" style="color:'+(v>0?TIER_COLOR[t]:'#5a5a5a')+'">'
+        +GACHA_TIERS[t].name+' <b>'+(v>0? (+(v*100).toFixed(1))+'%' : '—')+'</b></span>'; }
+    h+='</div>'; }
+  // ② 합성 — 중복 동료를 직접 골라 넣는다
+  if(_mateFeedT){ const M=HB_MATES[_mateFeedT], mats=hbMateMats();
+    h+='<div class="hbGrowLbl">'+M.name+' 강화 — 재료 고르기</div>';
+    h+='<div class="hbRow"><span class="hbRowIco">'+M.ico+'</span><span class="hbRowTx">'
+      +'<b>Lv.'+hbMateLv(_mateFeedT)+' → '+(hbMateLv(_mateFeedT)+1)+'</b>'
+      +'<em>재료 '+hbMateFed(_mateFeedT)+' / '+hbMateNeed(_mateFeedT)+'</em></span>'
+      +'<button class="hbRowBtn alt" onclick="hbMateFeedEnd()">닫기</button></div>';
+    if(!mats.length) h+='<div class="hbRow"><span class="hbRowTx"><em>중복으로 얻은 동료가 없습니다 — 뽑기에서 겹치면 재료가 됩니다</em></span></div>';
+    for(const m of mats){ const MM=HB_MATES[m.id];
+      h+='<div class="hbRow"><span class="hbRowIco">'+MM.ico+'</span>'
+        +'<span class="hbRowTx"><b style="color:'+TIER_COLOR[MM.tier]+'">'+MM.name+' <i>×'+m.dup+'</i></b>'
+        +'<em>'+GACHA_TIERS[MM.tier].name+' · 재료 '+m.pt+'</em></span>'
+        +'<button class="hbRowBtn" onclick="hbDoMateFeed(&#39;'+m.id+'&#39;)">넣기</button></div>'; }
+    box.innerHTML=h; _mateNote(party); return; }
+  // ③ 보유 목록
+  h+='<div class="hbGrowLbl">보유 동료</div>';
+  let own=0;
+  for(const id in HB_MATES){ if(!hbMateOwned(id)) continue; own++;
+    const M=HB_MATES[id], out=party.indexOf(id)>=0, dup=hbMateDup(id);
+    h+='<div class="hbRow"><span class="hbRowIco">'+M.ico+'</span>'
+      +'<span class="hbRowTx"><b style="color:'+TIER_COLOR[M.tier]+'">'+M.name+(out?' <i>출전</i>':'')+(dup?' <i>중복 '+dup+'</i>':'')+'</b>'
+      +'<em>'+GACHA_TIERS[M.tier].name+' · Lv.'+hbMateLv(id)+' · 위력 '+Math.round(hbMateDps(id)*100)+'% · '+M.tip+'</em></span>'
+      +'<button class="hbRowBtn alt" onclick="hbDoMateToggle(&#39;'+id+'&#39;)">'+(out?'대기':'출전')+'</button>'
+      +'<button class="hbRowBtn" onclick="hbMateFeedStart(&#39;'+id+'&#39;)">강화</button></div>'; }
+  if(!own) h+='<div class="hbRow"><span class="hbRowTx"><em>아직 없습니다 — 뽑기권으로 영입하세요</em></span></div>';
+  // ④ 아직 못 얻은 동료(도감) — 무엇을 노리는지 보여야 뽑을 맛이 난다
+  h+='<div class="hbGrowLbl">미보유</div>';
+  for(const id in HB_MATES){ if(hbMateOwned(id)) continue; const M=HB_MATES[id];
+    h+='<div class="hbRow lock"><span class="hbRowIco">'+M.ico+'</span>'
+      +'<span class="hbRowTx"><b style="color:'+TIER_COLOR[M.tier]+'">'+M.name+'</b>'
+      +'<em>'+GACHA_TIERS[M.tier].name+' · '+M.tip+'</em></span></div>'; }
+  box.innerHTML=h; _mateNote(party); }
+function _mateNote(party){ const nt=document.getElementById('hbMateNote'); if(!nt) return;
+  nt.textContent='출전 '+party.length+'/'+hbMateMax()+'명 — 함께 싸웁니다. 중복으로 얻은 동료는 다른 동료의 강화 재료가 됩니다.'
     +(profHasUnlock('ally_plus')?'':' · 해금 「동료 최대 +2」로 정원이 늘어납니다.'); }
-function hbDoMateBuy(id){ if(!hbMateBuy(id)){ hmToast('미네랄이 부족합니다'); return; }
+function hbDoMateRoll(){ const r=hbMateRoll();
+  if(!r){ hmToast('동료 뽑기권이 없습니다'); return; }
+  const M=HB_MATES[r.id];
+  hmToast((r.isNew?'🎉 ':'♻ ')+GACHA_TIERS[M.tier].name+' '+M.name+(r.isNew?' 영입!':' — 중복 → 강화 재료'));
   if(typeof playSfx==='function') playSfx('ui_open');
-  if(typeof updateCurBar==='function') updateCurBar();
+  renderMateModal(); renderHome(); }
+function hbMateFeedStart(id){ _mateFeedT=id; renderMateModal(); }
+function hbMateFeedEnd(){ _mateFeedT=null; renderMateModal(); }
+function hbDoMateFeed(matId){ const t=_mateFeedT; if(!t) return;
+  const r=hbMateFeed(t, matId);
+  if(!r){ hmToast('재료가 없습니다'); return; }
+  if(typeof r==='number') hmToast('✦ '+HB_MATES[t].name+' Lv.'+hbMateLv(t)+' 달성');
+  if(typeof playSfx==='function') playSfx('ui_tab');
   renderMateModal(); renderHome(); }
 function hbDoMateToggle(id){ if(!hbMateToggle(id)){ hmToast('출전 정원이 찼습니다'); return; }
   if(typeof playSfx==='function') playSfx('ui_tab');
@@ -5838,6 +5900,9 @@ const HB_ELITE_HP=4, HB_ELITE_ATK=1.6, HB_ELITE_REW=5, HB_ELITE_MAX=.35;
 //    라운드 클리어 조건이 '잔적 0'이라, 보스를 눕혀야 웨이브가 비고 곧 클리어가 된다.
 const HB_BOSS_HP=14, HB_BOSS_ATK=2.4, HB_BOSS_REW=18, HB_BOSS_SPD=0.72, HB_BOSS_SCALE=1.85;
 const HB_TICKET_ELITE=.08, HB_TICKET_NORMAL=.003;   // 장비 뽑기권 드랍 확률
+// 🎟 동료 뽑기권 — 동료를 얻는 유일한 길이라 장비보다 귀하게 준다(엘리트 위주).
+//   ⚠ 주는 곳이 없으면 동료 시스템 전체가 잠긴다 — 새 소비처를 만들 땐 여기도 같이 볼 것.
+const HB_ATICKET_ELITE=.03, HB_ATICKET_NORMAL=.0008;
 const HB_WAVES=5, HB_WAVE_S=20, HB_GAP_S=3;      // 라운드 구성(확정 스펙 — 바꾸려면 사용자와 합의)
 const HB_SPREAD_N=12, HB_SPREAD_S=5;             // 웨이브 유닛이 이보다 많으면 5초에 걸쳐 분산 출현
 const HB_STOP=30, HB_DOWN_S=3;
@@ -5966,14 +6031,17 @@ function hbClearBonus(dg,round){ const m=HB_DG_REW(dg); return { min:(8+round*4)
 const HB_RW_EVERY=5;
 function hbRoundRw(dg,round){ if(!round || round%HB_RW_EVERY) return null;
   const m=HB_DG_REW(dg), t=round/HB_RW_EVERY;
-  return { min:Math.round(60*t*m), gas:Math.round(8*t*m), tk:(t%4===0)?1:0 }; }   // 4번째 마일스톤마다 장비 뽑기권
+  //  뽑기권: 장비는 4번째마다, 동료는 2번째마다 — 동료가 유일한 영입 경로라 꾸준히 들어와야 한다
+  return { min:Math.round(60*t*m), gas:Math.round(8*t*m), tk:(t%4===0)?1:0, atk:(t%2===0)?1:0 }; }
 function hbRwGot(dg,round){ const H=hbHunt(); return !!(H.rw && H.rw[dg] && H.rw[dg][round]); }
 // 최초 클리어면 지급하고 true. 이미 받았거나 마일스톤이 아니면 false.
 function hbRwClaim(dg,round){ const r=hbRoundRw(dg,round); if(!r || hbRwGot(dg,round)) return false;
   const H=hbHunt(), p=PROF();
   if(!H.rw) H.rw={}; if(!H.rw[dg]) H.rw[dg]={}; H.rw[dg][round]=1;
   p.pcoin=(p.pcoin||0)+r.min; p.gas=(p.gas||0)+r.gas;
-  if(r.tk){ if(!p.tickets) p.tickets={gear:0,pet:0,ally:0}; p.tickets.gear=(p.tickets.gear||0)+r.tk; }
+  if(!p.tickets) p.tickets={gear:0,pet:0,ally:0};
+  if(r.tk)  p.tickets.gear=(p.tickets.gear||0)+r.tk;
+  if(r.atk) p.tickets.ally=(p.tickets.ally||0)+r.atk;
   return true; }
 // 다음으로 노릴 마일스톤(아직 안 받은 것 중 가장 가까운 것) — 팝업 안내 문구용
 function hbNextRw(dg,from){ const best=hbBest(dg);
@@ -5999,46 +6067,101 @@ const HB_BUILD={
   bunker: {name:'벙커',   ico:'🧱', max:2, base:300, mul:2.4, tip:'적을 끌어당겨 대신 맞는다'},
 };
 // 🤝 동료 — 옛 상위 직업 12종이 그대로 넘어왔다(전직 폐지, 2026-08-12).
-//   이름·3D 모델(unit)은 옛 PROF_JOBS 값을 그대로 쓴다. 역할은 옛 base 스탯의 성격을 옮긴 것:
-//   pow 높으면 dps↑ / foc 높으면 사거리↑ / agi 높으면 연사↑.
-//   lv = 영입 해금 레벨. 캐릭터 해금(PROF_UNLOCKS)과 같은 규칙으로 '하나씩' 열리도록 간격을 벌려 뒀다.
-//   ⚠ 표만 고치면 밸런스가 바뀐다 — 전투·UI 어디에도 수치를 박지 말 것.
+//   이름·3D 모델(unit)은 옛 PROF_JOBS 값을 그대로 쓴다.
+//   ⚠ 영입은 '구매'가 아니라 '뽑기'다(2026-08-12 2차 전환) — 등급(tier)이 해금 레벨을 대체했고,
+//      강화는 미네랄이 아니라 '중복 동료 합성'으로만 한다. hbMateBuy/hbMateCost/hbMateOpen은 없어졌다.
+//   등급은 공용 GACHA_TIERS/TIER_COLOR를 그대로 쓴다 — 새 등급 체계를 만들지 말 것.
 const HB_MATES={
-  sniper:    {name:'저격수',    unit:'ghost',        ico:'🎯', race:'union',     lv:8,  cost:400,   dps:.30, rng:1.9, spd:1.0, tip:'긴 사거리 저격'},
-  gunner:    {name:'화력병',    unit:'machinegun',   ico:'🔥', race:'union',     lv:14, cost:900,   dps:.44, rng:1.0, spd:1.2, tip:'근거리 연사'},
-  spike:     {name:'스파이크',  unit:'hydra',        ico:'🦂', race:'swarm',     lv:18, cost:1600,  dps:.38, rng:1.4, spd:1.2, tip:'중거리 견제'},
-  swarmling: {name:'스웜링',    unit:'broodling',    ico:'🐛', race:'swarm',     lv:22, cost:2600,  dps:.34, rng:0.9, spd:1.5, tip:'빠른 연사'},
-  sentinel:  {name:'센티넬',    unit:'dragoon',      ico:'🛡', race:'aetherial', lv:26, cost:4200,  dps:.48, rng:1.3, spd:1.0, tip:'중장갑 사격'},
-  phantom:   {name:'팬텀',      unit:'ghost',        ico:'👻', race:'union',     lv:32, cost:7000,  dps:.56, rng:1.8, spd:1.1, tip:'고화력 저격'},
-  darksage:  {name:'다크세이지',unit:'dark_templar', ico:'🗡', race:'aetherial', lv:38, cost:11000, dps:.62, rng:0.8, spd:1.3, tip:'근접 순간 화력'},
-  goliath:   {name:'기갑병',    unit:'goliath',      ico:'🤖', race:'union',     lv:45, cost:18000, dps:.72, rng:1.2, spd:0.9, tip:'중장갑 화력'},
-  thornqueen:{name:'가시여왕',  unit:'thornqueen',   ico:'👑', race:'swarm',     lv:52, cost:30000, dps:.80, rng:1.5, spd:1.2, tip:'광역 견제'},
-  ultra:     {name:'돌격괴수',  unit:'ultralisk',    ico:'🦖', race:'swarm',     lv:60, cost:50000, dps:.95, rng:0.8, spd:1.1, tip:'최전선 돌격'},
-  void:      {name:'보이드',    unit:'archon',       ico:'🔮', race:'aetherial', lv:70, cost:85000, dps:1.10,rng:1.1, spd:1.0, tip:'파괴적 에너지'},
-  highsage:  {name:'하이세이지',unit:'high_templar', ico:'✨', race:'aetherial', lv:80, cost:140000,dps:1.30,rng:1.6, spd:1.1, tip:'최상위 술사'},
+  sniper:    {name:'저격수',    unit:'ghost',        ico:'🎯', race:'union',     tier:'common',    dps:.30, rng:1.9, spd:1.0, tip:'긴 사거리 저격'},
+  gunner:    {name:'화력병',    unit:'machinegun',   ico:'🔥', race:'union',     tier:'common',    dps:.34, rng:1.0, spd:1.2, tip:'근거리 연사'},
+  spike:     {name:'스파이크',  unit:'hydra',        ico:'🦂', race:'swarm',     tier:'rare',      dps:.44, rng:1.4, spd:1.2, tip:'중거리 견제'},
+  swarmling: {name:'스웜링',    unit:'broodling',    ico:'🐛', race:'swarm',     tier:'rare',      dps:.40, rng:0.9, spd:1.5, tip:'빠른 연사'},
+  sentinel:  {name:'센티넬',    unit:'dragoon',      ico:'🛡', race:'aetherial', tier:'epic',      dps:.55, rng:1.3, spd:1.0, tip:'중장갑 사격'},
+  phantom:   {name:'팬텀',      unit:'ghost',        ico:'👻', race:'union',     tier:'epic',      dps:.60, rng:1.8, spd:1.1, tip:'고화력 저격'},
+  darksage:  {name:'다크세이지',unit:'dark_templar', ico:'🗡', race:'aetherial', tier:'unique',    dps:.74, rng:0.8, spd:1.3, tip:'근접 순간 화력'},
+  goliath:   {name:'기갑병',    unit:'goliath',      ico:'🤖', race:'union',     tier:'unique',    dps:.80, rng:1.2, spd:0.9, tip:'중장갑 화력'},
+  thornqueen:{name:'가시여왕',  unit:'thornqueen',   ico:'👑', race:'swarm',     tier:'legend',    dps:1.00,rng:1.5, spd:1.2, tip:'광역 견제'},
+  ultra:     {name:'돌격괴수',  unit:'ultralisk',    ico:'🦖', race:'swarm',     tier:'legend',    dps:1.10,rng:0.8, spd:1.1, tip:'최전선 돌격'},
+  void:      {name:'보이드',    unit:'archon',       ico:'🔮', race:'aetherial', tier:'transcend', dps:1.45,rng:1.1, spd:1.0, tip:'파괴적 에너지'},
+  highsage:  {name:'하이세이지',unit:'high_templar', ico:'✨', race:'aetherial', tier:'god',       dps:1.90,rng:1.6, spd:1.1, tip:'최상위 술사'},
 };
-const HB_MATE_MUL=1.55;      // 강화 1레벨당 비용 배수
+// 🎰 동료 뽑기 — 뽑을수록 '뽑기 레벨'이 올라 상위 등급이 열린다.
+//   설계: 초반에는 상위 등급이 아예 0%다. 레벨이 오르며 새 등급이 열리고 기존 상위 확률도 커진다.
+//   ⚠ 각 단계의 확률 합은 정확히 1이어야 하고, 레벨이 오를 때 어떤 등급도 확률이 '줄면' 안 된다
+//     (일반 등급만 예외 — 자리를 상위에 내준다). 스모크가 두 가지를 다 검사한다.
+const HB_MATE_GACHA=[
+  {need:0,   p:{common:.900, rare:.090, epic:.010}},
+  {need:10,  p:{common:.820, rare:.140, epic:.035, unique:.005}},
+  {need:25,  p:{common:.720, rare:.190, epic:.070, unique:.018, legend:.002}},
+  {need:50,  p:{common:.600, rare:.240, epic:.110, unique:.040, legend:.009, transcend:.001}},
+  {need:90,  p:{common:.480, rare:.270, epic:.150, unique:.070, legend:.024, transcend:.005, god:.001}},
+  {need:150, p:{common:.360, rare:.280, epic:.190, unique:.110, legend:.045, transcend:.012, god:.003}},
+];
+// 중복 1장이 주는 재료 포인트 — 등급마다 3배씩(상위 중복은 그만큼 값어치가 있다)
+const HB_MATE_PT={common:1, rare:3, epic:9, unique:27, legend:81, transcend:243, god:729};
 const HB_MATE_STEP=0.22;     // 강화 1레벨당 위력 증가(비율)
-const HB_MATE_DEF_DPS=.35;   // 표가 비어 있을 때의 안전값(정상 경로에선 안 쓰인다)
+const HB_MATE_NEED_MUL=1.5;  // 다음 레벨에 드는 재료 배수
+const HB_MATE_START_TICKETS=5;   // 처음 열 때 쥐여 주는 동료 뽑기권
 const HB_MATE_PARTY=3;       // 동시에 데리고 나가는 기본 인원 — ally_plus 해금으로 늘어난다
-function hbMates(){ const H=hbHunt(); if(!H.mates) H.mates={}; if(!Array.isArray(H.party)) H.party=[]; return H; }
-function hbMateLv(id){ return hbMates().mates[id]||0; }            // 0 = 미영입
+// 보유 상태 = { lv:강화 레벨(1↑), dup:합성 재료로 쓸 수 있는 중복 수 }
+function hbMates(){ const H=hbHunt(); if(!H.mates) H.mates={}; if(!Array.isArray(H.party)) H.party=[];
+  if(typeof H.mateN!=='number') H.mateN=0;    // 누적 뽑기 횟수 → 뽑기 레벨
+  return H; }
+function hbMateRec(id){ const H=hbMates(); return H.mates[id]||null; }
+function hbMateLv(id){ const r=hbMateRec(id); return r? (r.lv||0) : 0; }
+function hbMateDup(id){ const r=hbMateRec(id); return r? (r.dup||0) : 0; }
 function hbMateOwned(id){ return hbMateLv(id)>0; }
-function hbMateOpen(id){ const M=HB_MATES[id]; return !!M && profUnlockLv()>=M.lv; }
-function hbMateCost(id){ const M=HB_MATES[id]; if(!M) return 0;
-  const lv=hbMateLv(id);
-  return lv? Math.ceil(M.cost*Math.pow(HB_MATE_MUL, lv)) : M.cost; }   // 미영입 = 영입가 · 보유 = 다음 강화가
 function hbMateDps(id){ const M=HB_MATES[id]; if(!M) return 0;
   return M.dps*(1+HB_MATE_STEP*Math.max(0,hbMateLv(id)-1)); }
 function hbMateMax(){ return HB_MATE_PARTY + (profHasUnlock('ally_plus')?2:0); }
-// 영입/강화 = 같은 버튼. 처음 사면 1레벨(=출전 가능), 그 뒤로는 레벨이 오른다.
-function hbMateBuy(id){ const M=HB_MATES[id], p=PROF(); if(!M) return false;
-  if(!hbMateOpen(id)) return false;
-  const cost=hbMateCost(id); if(Math.floor(p.pcoin||0)<cost) return false;
-  const H=hbMates(); const first=!hbMateOwned(id);
-  p.pcoin-=cost; H.mates[id]=hbMateLv(id)+1;
-  if(first && H.party.length<hbMateMax()) H.party.push(id);        // 처음 영입하면 자리가 있는 만큼 바로 출전
-  saveMeta(); hbLayoutAllies(); return true; }
+// ── 뽑기 레벨 · 확률 ──
+function hbGachaStage(n){ n=(n==null)?hbMates().mateN:n;
+  let i=0; for(let k=0;k<HB_MATE_GACHA.length;k++) if(n>=HB_MATE_GACHA[k].need) i=k;
+  return i; }                                            // 0-based 단계
+function hbGachaLv(n){ return hbGachaStage(n)+1; }       // 표시용(1-based)
+function hbGachaProbs(n){ return HB_MATE_GACHA[hbGachaStage(n)].p; }
+function hbGachaNext(){ const st=hbGachaStage(); const nx=HB_MATE_GACHA[st+1];
+  return nx? {lv:st+2, left:Math.max(0, nx.need-hbMates().mateN)} : null; }
+function hbMateTicket(){ const p=PROF(); return (p.tickets&&p.tickets.ally)||0; }
+// 뽑기 1회 — 뽑기권 1장. 신규면 Lv.1로 영입, 중복이면 합성 재료(dup)로 쌓인다.
+function hbMateRoll(){ const p=PROF(); if(hbMateTicket()<=0) return null;
+  const H=hbMates(); p.tickets.ally--; H.mateN=(H.mateN||0)+1;
+  const probs=hbGachaProbs(H.mateN-1);                   // ⚠ 이번 판은 '뽑기 전' 확률로 굴린다
+  const pool={}; for(const id in HB_MATES){ const t=HB_MATES[id].tier; (pool[t]=pool[t]||[]).push(id); }
+  let r=Math.random(), tier=null;
+  for(const t of GACHA_TIER_ORDER){ const w=(probs[t]||0)*(pool[t]?1:0); if(w<=0) continue;
+    if(r<w){ tier=t; break; } r-=w; }
+  if(!tier){ for(let i=GACHA_TIER_ORDER.length-1;i>=0;i--){ const t=GACHA_TIER_ORDER[i];
+    if((probs[t]||0)>0 && pool[t]){ tier=t; break; } } }      // 반올림 잔차 — 열려 있는 최상위로
+  const list=pool[tier], id=list[Math.floor(Math.random()*list.length)];
+  const isNew=!hbMateOwned(id);
+  if(isNew){ H.mates[id]={lv:1,dup:0};
+    if(H.party.length<hbMateMax()) H.party.push(id); }        // 처음 얻으면 자리가 있는 만큼 바로 출전
+  else H.mates[id].dup=(H.mates[id].dup||0)+1;
+  saveMeta(); hbLayoutAllies();
+  return { id:id, tier:tier, isNew:isNew, lv:hbGachaLv() }; }
+// ── 합성 — 중복 동료를 '직접 골라' 재료로 넣는다 ──
+function hbMatePt(id){ return HB_MATE_PT[(HB_MATES[id]||{}).tier]||1; }
+// 다음 레벨에 필요한 재료 포인트 — 대상 등급이 높을수록·레벨이 높을수록 많이 든다
+function hbMateNeed(id){ const M=HB_MATES[id]; if(!M) return 0;
+  return Math.ceil(HB_MATE_PT[M.tier]*2*Math.pow(HB_MATE_NEED_MUL, Math.max(0,hbMateLv(id)-1))); }
+function hbMateFed(id){ const r=hbMateRec(id); return r? (r.fed||0) : 0; }   // 이 레벨에 넣어 둔 재료
+// 재료 1장 투입. 자기 자신의 중복도 재료로 쓸 수 있다. 채워지면 레벨이 오른다.
+function hbMateFeed(targetId, matId){
+  if(!hbMateOwned(targetId) || !HB_MATES[matId]) return false;
+  if(hbMateDup(matId)<=0) return false;
+  const H=hbMates(), T=H.mates[targetId];
+  H.mates[matId].dup--;
+  T.fed=(T.fed||0)+hbMatePt(matId);
+  let up=0;
+  while(T.fed>=hbMateNeed(targetId)){ T.fed-=hbMateNeed(targetId); T.lv++; up++; }
+  saveMeta(); hbLayoutAllies();
+  return up? up : true; }
+// 재료로 쓸 수 있는 중복 목록(많은 것부터) — UI 공용
+function hbMateMats(){ const H=hbMates(), out=[];
+  for(const id in H.mates){ if(!HB_MATES[id]) continue; const d=H.mates[id].dup||0;
+    if(d>0) out.push({id:id, dup:d, pt:hbMatePt(id)}); }
+  return out.sort((a,b)=>b.pt-a.pt); }
 // 출전 토글 — 정원을 넘기면 거절한다(자동으로 남을 빼지 않는다)
 function hbMateToggle(id){ const H=hbMates(); if(!hbMateOwned(id)) return false;
   const i=H.party.indexOf(id);
@@ -6260,7 +6383,7 @@ function hbSettle(){ const S=_hb, p=PROF();
   // 🎁 마일스톤 최초 클리어 보상 — 등반으로 라운드를 올리기 '전에' 지금 깬 라운드로 판정한다
   if(hbRwClaim(S.dg,S.round)){ const rw=hbRoundRw(S.dg,S.round);
     S.floats.push({x:S.char.x,y:S.char.y-52,tx:'🎁 라운드 '+S.round+' 보상 +'+Math.round(rw.min)+'M',cl:'#5dff8f',t:0});
-    if(typeof toast==='function') toast('🎁 던전 '+S.dg+' 라운드 '+S.round+' 최초 클리어 보상'+(rw.tk?' · 장비 뽑기권 +'+rw.tk:'')); }
+    if(typeof toast==='function') toast('🎁 던전 '+S.dg+' 라운드 '+S.round+' 최초 클리어 보상'+(rw.tk?' · 장비 뽑기권 +'+rw.tk:'')+(rw.atk?' · 동료 뽑기권 +'+rw.atk:'')); }
   const H=hbHunt();
   if(H.climb){ S.round++; H.round=S.round; }                      // 등반 모드 = 클리어 시 다음 라운드
   H.best[S.dg]=Math.max(H.best[S.dg]||1, S.round);                // 최고 도달(라운드 선택 상한 — UI는 Phase 2)
@@ -6366,7 +6489,7 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char; S.t+=dt;
   for(const a of S.allies){ const p0x=a.x, p0y=a.y;
     a.ph+=dt*0.5*(a.spd||1); a.x=Math.cos(a.ph)*52; a.y=Math.sin(a.ph)*52;
     a.face=Math.atan2(a.x-p0x, a.y-p0y);                            // 도는 방향을 본다(게임과 같은 atan2(dx,dy))
-    hbUnitFire(a, a.dps||HB_MATE_DEF_DPS, a.rng||1, dt, a.spd||1); }
+    hbUnitFire(a, a.dps||0.3, a.rng||1, dt, a.spd||1); }
   for(const t of S.turrets) hbUnitFire(t,HB_TURRET_DPS,HB_TURRET_RANGE,dt);
   for(const q of S.pets){ q.ph+=dt*1.1; q.x=Math.cos(q.ph)*30; q.y=Math.sin(q.ph)*30; hbUnitFire(q,HB_PET_DPS,1,dt); }
   if(S.atkT>0) S.atkT-=dt;                            // 공격 모션 남은 시간(끝나면 idle로)
@@ -6389,6 +6512,9 @@ function hbKill(f){ const S=_hb, i=S.foes.indexOf(f); if(i<0) return; S.foes.spl
   if(Math.random() < (f.elite?HB_TICKET_ELITE:HB_TICKET_NORMAL)){   // 🎟 장비 뽑기권
     if(typeof dgAddTicket==='function') dgAddTicket('gear',1);
     S.floats.push({x:f.x,y:f.y-48,tx:'🎟 장비 뽑기권!',cl:'#ffd24a',t:0}); }
+  if(Math.random() < (f.elite?HB_ATICKET_ELITE:HB_ATICKET_NORMAL)){  // 🎟 동료 뽑기권
+    if(typeof dgAddTicket==='function') dgAddTicket('ally',1);
+    S.floats.push({x:f.x,y:f.y-62,tx:'🎟 동료 뽑기권!',cl:'#5dff8f',t:0}); }
   if(c){ profGainXp(c, r.xp);
     if(profApplyLevelUps(c)){ S.floats.push({x:S.char.x,y:S.char.y-46,tx:'LEVEL UP!',cl:'#5dff8f',t:0});
       if(typeof renderHomeStats==='function') renderHomeStats(); } }
