@@ -917,8 +917,8 @@ async function groupLobby(){
     assert(!Object.keys(H.build).length,'이관 후에도 옛 개수형이 남음');
     hbHunt().base={tiles:{},open:1}; hbLayoutBase(); saveMeta();
     return '왕복·겹침·범위·저장·봉쇄차단·이관 ok'; });
-  // 🪖 벙커 = 출전 동료를 지정해 넣는다. 화력 = 동료 위력 합 × 동료 업그레이드 × 벙커 공격력(bkatk).
-  await step('벙커: 동료 지정·상한·한 벙커 규칙·화력·업그레이드', async()=>{ skipIf(typeof hbBunkerAssign!=='function','벙커 주둔 없음');
+  // 🪖 벙커 = 구매 유닛(벙커별 최대 4) + 동료 1. 화력 = (유닛 합 + 동료 위력) × 벙커 공격력(bkatk).
+  await step('벙커: 유닛 구매(벙커별)·동료 1·상한·화력·업그레이드', async()=>{ skipIf(typeof hbBunkerAssign!=='function','벙커 주둔 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(60); _hb.manual=true;
     const p=PROF(); p.pcoin=9e6;
@@ -932,18 +932,28 @@ async function groupLobby(){
     assert(hbPlaceStruct('bunker',10,10),'두 번째 벙커 배치 실패');
     const q=hbKey(6,6), q2=hbKey(10,10), t=hbBase().tiles[q], t2=hbBase().tiles[q2];
     assert(_hb.allies.length===ids.length,'출전 동료가 전장에 안 나옴: '+_hb.allies.length);
-    // ① 넣기 — 궤도에서 빠지고 벙커에 실린다
-    hbOpenBunker(q); hbBunkerAssign(ids[0]);
+    // ⓪ 유닛 구매 — 벙커마다 개별. 새 벙커는 1기, 비용은 그 벙커의 보유 수 기준으로 오른다
+    assert(hbBunkerN(t)===1 && hbBunkerN(t2)===1,'새 벙커는 유닛 1기로 시작해야 함');
+    hbOpenBunker(q);
+    { const c1=hbBunkerUnitCost(1), coin=p.pcoin; hbBunkerAdd();
+      assert(hbBunkerN(t)===2,'유닛이 안 늘어남');
+      assert(Math.round(coin-p.pcoin)===c1,'비용이 안 맞음: '+(coin-p.pcoin)+' vs '+c1);
+      assert(hbBunkerN(t2)===1,'다른 벙커의 유닛 수가 같이 변함(벙커별이어야 한다)');
+      assert(hbBunkerUnitCost(hbBunkerN(t2))===hbBunkerUnitCost(1),'비용이 벙커별 보유 수를 안 따름');
+      for(let i=0;i<HB_BUNKER_SLOTS+3;i++) hbBunkerAdd();
+      assert(hbBunkerN(t)===HB_BUNKER_SLOTS,'유닛 상한을 넘김: '+hbBunkerN(t)); }
+    // ① 동료 넣기 — 궤도에서 빠지고 벙커에 실린다
+    hbBunkerAssign(ids[0]);
     assert(hbBunkerMates(t).indexOf(ids[0])>=0,'지정이 타일에 안 실림');
     assert(_hb.allies.length===ids.length-1,'벙커에 넣었는데 궤도에도 남아 있음');
     assert(_hb.bunkers.find(b=>b.q===q).mates.length===1,'전장 벙커에 동료가 안 실림');
     // ② 한 동료 = 한 벙커 — 다른 벙커 창에서 누르면 옮겨 온다
     _hbBunkerQ=q2; hbBunkerAssign(ids[0]);
     assert(hbBunkerMates(t).length===0 && hbBunkerMates(t2).indexOf(ids[0])>=0,'벙커 이동이 안 됨(양쪽에 남음)');
-    _hbBunkerQ=q; 
-    // ③ 상한 — SLOTS를 넘겨 넣을 수 없다
-    for(const id of ids) hbBunkerAssign(id);                     // ids[0]은 다른 벙커에 있으니 안 옮겨졌다면 별개
-    assert(hbBunkerMates(t).length<=HB_BUNKER_SLOTS,'주둔 상한을 넘김: '+hbBunkerMates(t).length);
+    _hbBunkerQ=q;
+    // ③ 동료 자리는 1칸 — 더 넣으면 거부된다
+    for(const id of ids) if(id!==ids[0]) hbBunkerAssign(id);     // ids[0]은 다른 벙커에 주둔 중
+    assert(hbBunkerMates(t).length===HB_BUNKER_MATE_SLOTS,'동료 상한(1)을 넘김: '+hbBunkerMates(t).length);
     // ④ 빼기 — 다시 궤도로
     { const back=hbBunkerMates(t)[0], n0=_hb.allies.length;
       hbBunkerAssign(back);
@@ -953,16 +963,18 @@ async function groupLobby(){
     { const keep=hbBunkerMates(t2).slice(); saveMeta(); loadMeta();
       assert(JSON.stringify(hbBunkerMates(hbBase().tiles[q2]))===JSON.stringify(keep),'저장 왕복에서 지정이 사라짐'); }
     // ⑥ 파티에서 빠지면 벙커에서도 빠진다(유령 주둔 금지)
-    { const gone=hbBunkerMates(hbBase().tiles[q2])[0];
-      H.party=H.party.filter(x=>x!==gone); hbLayoutBase();
+    // ⚠ ⑤의 loadMeta()가 프로필 객체를 갈아끼운다 — 초입의 H로 파티를 고치면 낡은 객체에 쓴다. 새로 잡는다.
+    { const H6=hbHunt(), gone=hbBunkerMates(hbBase().tiles[q2])[0];
+      H6.party=H6.party.filter(x=>x!==gone); hbLayoutBase();
       assert(hbBunkerMates(hbBase().tiles[q2]).indexOf(gone)<0,'파티에서 뺐는데 벙커에 남음');
-      H.party.push(gone); hbLayoutBase(); }
+      H6.party.push(gone); hbLayoutBase(); }
     hbCloseBunker();
     // ⑦ 화력 — 죽지 않는 표적의 '깎인 체력'으로 잰다(킬 수는 웨이브 진행에 흔들린다)
     // ⚠ ⑤의 loadMeta()가 프로필 객체를 갈아끼울 수 있다 — 스텝 초입에 잡아 둔 H를 쓰면
     //    낡은 객체에 쓰게 되어 bkatk가 조용히 무시된다(실제로 그랬다). 항상 hbHunt()로 새로 잡는다.
-    const dmgOf=(mates,bk)=>{ hbHunt().upg.bkatk=bk;
-      hbBase().tiles[q].m=mates.slice(); hbBase().tiles[q2].m=[]; hbLayoutBase();
+    const dmgOf=(units,mates,bk)=>{ hbHunt().upg.bkatk=bk;
+      hbBase().tiles[q].n=units; hbBase().tiles[q].m=mates.slice();
+      hbBase().tiles[q2].n=0; hbBase().tiles[q2].m=[]; hbLayoutBase();
       for(const b of _hb.bunkers) b.cdT=0;                       // 발사 시차 난수 제거 — 측정을 결정적으로
       const c=_hb.char; c.x=hbTx(6); c.y=hbTx(6)+200; c.tx=null; c.ty=null;   // 캐릭터는 멀리 — 제 화력이 안 섞이게
       c.hpMax=1e9; c.hp=1e9; c.range=70; c.cd=0.5; c.atk=40; c.crit=0; c.regen=0;
@@ -971,18 +983,20 @@ async function groupLobby(){
       const f=_hb.foes[0]; f.x=hbTx(6)+30; f.y=hbTx(6); f.hp=f.hpMax=1e9; f.atk=0; f.spd=0;   // 안 죽고 안 움직이고 안 때린다
       for(let i=0;i<100;i++){ f.x=hbTx(6)+30; f.y=hbTx(6); hbStep(0.05); }
       return Math.round(f.hpMax-f.hp); };
-    const none=dmgOf([],0), one=dmgOf([ids[1]],0), four=dmgOf(ids.slice(0,4),0);
-    assert(none===0,'동료가 없는데 벙커가 피해를 줌: '+none);
-    assert(one>0,'동료를 넣어도 피해가 없음');
-    assert(four>one,'동료를 더 넣어도 화력이 안 늘어남: '+one+' → '+four);
-    // ⑧ '건물' 구역 벙커 공격력이 배수로 들어간다
+    const none=dmgOf(0,[],0), units2=dmgOf(2,[],0), units4=dmgOf(4,[],0);
+    assert(none===0,'비었는데 벙커가 피해를 줌: '+none);
+    assert(units2>0,'유닛을 넣어도 피해가 없음');
+    assert(units4>units2,'유닛을 더 사도 화력이 안 늘어남: '+units2+' → '+units4);
+    const mixed=dmgOf(4,[ids[1]],0);
+    assert(mixed>units4,'동료를 추가로 넣어도 화력이 안 늘어남: '+units4+' → '+mixed);
+    // ⑧ '건물' 구역 벙커 공격력이 배수로 들어간다(유닛+동료 전체에)
     assert(HB_UPG.bkatk && HB_UPG.bkatk.cat==='bld','벙커 공격력 업그레이드가 건물 구역에 없음');
-    const up=dmgOf(ids.slice(0,4),10);
-    assert(up>four*1.2,'bkatk를 올려도 피해가 안 늘어남: '+four+' → '+up);
+    const up=dmgOf(4,[ids[1]],10);
+    assert(up>mixed*1.2,'bkatk를 올려도 피해가 안 늘어남: '+mixed+' → '+up);
     { const H2=hbHunt(); H2.upg.bkatk=0; H2.mates={}; H2.party=[]; }
     Object.assign(_hb.char,_cSave); _hb.foes.length=0; _hb.pend.length=0;   // 원복
     hbHunt().base={tiles:{},open:1}; hbLayoutBase(); saveMeta();
-    return '지정·이동·상한 '+HB_BUNKER_SLOTS+'·왕복·유령금지·피해 0/'+one+'/'+four+'/'+up+'(bkatk+10) ok'; });
+    return '유닛(벙커별)+동료1·이동·왕복·유령금지·피해 0/'+units2+'/'+units4+'/'+mixed+'/'+up+'(bkatk+10) ok'; });
   // ⚙ 설정(☰) — .bare 재화 바가 click-through라 눌리지 않고 캐릭터만 걸어가던 회귀를 막는다
   await step('설정 버튼: HOME에서 눌리고 · 캐릭터가 안 움직인다', async()=>{ skipIf(typeof openAppSettings!=='function','앱 설정 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
