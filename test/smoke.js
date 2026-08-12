@@ -218,7 +218,12 @@ async function groupLobby(){
       assert(document.querySelector('#navBar .navIt[data-nav=gear]').textContent.indexOf('정비')>=0,'2번 탭 표기가 정비가 아님'); }
     assert(document.querySelector('#navBar .navIt.on').dataset.nav==='home','HOME 탭이 활성이 아님');
     // 실데이터에 붙은 곳 = 사냥터 업그레이드(공격/방어/유틸 3탭 · 해금제)
-    assert(document.querySelectorAll('.hmUpTab').length===3,'업그레이드 탭이 3개가 아님');
+    // 탭 띠는 장비창 섹션 바와 같은 컴포넌트여야 한다(segNavHTML 단일 소스) — 새 탭 띠를 만들면 여기서 걸린다
+    { const seg=document.querySelector('#hmUpgTabs .pdSeg');
+      assert(seg,'업그레이드 탭이 공용 세그먼트 바(.pdSeg)를 안 씀');
+      assert(seg.querySelectorAll('.pdSegBtn').length===3,'업그레이드 탭이 3개가 아님');
+      assert(seg.querySelectorAll('.pdSegInd').length===1,'현재 구역을 가리키는 판(.pdSegInd)이 없음');
+      assert(seg.querySelectorAll('.pdSegBtn .ic').length===3,'탭 아이콘이 안 그려짐(paintIcons 누락)'); }
     // 수량은 한 칸을 눌러 돌린다 — 1 → 10 → MAX → 1. 폭은 라벨이 바뀌어도 고정
     { const qs=document.querySelectorAll('.hmUpQ');
       assert(qs.length===1,'수량은 한 칸이어야 함: '+qs.length+'개');
