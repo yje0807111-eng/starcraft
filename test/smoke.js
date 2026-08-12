@@ -190,14 +190,27 @@ async function groupLobby(){
       assert(parseFloat(cb.borderBottomWidth)===0,'HOME 재화 바에 상단 구분선이 남음: '+cb.borderBottomWidth);
       assert(getComputedStyle($('curBar'),'::after').display==='none','재화 바 헤어라인(::after)이 남음'); }
     // 톤 검사 — 네비바와 같은 회색이어야 한다(푸른기가 있으면 B가 R보다 크게 뜬다) · 모서리는 거의 직각
+    // 면(background)은 회색뿐. 테두리만 패널 액센트(빨강)를 허용한다 — 파랑은 어느 쪽에서도 못 들어온다.
     { const rgb=s=>(s.match(/\d+(\.\d+)?/g)||[]).slice(0,3).map(Number);
+      const gray=(r,g,b)=>Math.max(r,g,b)-Math.min(r,g,b)<=12;
+      const red=(r,g,b)=>r>g+40 && r>b+40;   // 빨강 액센트(255,59,59). 푸른기는 b가 커서 여기도 못 든다
+      // ⚠ 테두리 그라데는 background 레이어(border-box 클립)로 그린다 — 속성 이름으로는 면/테두리를 못 가른다.
+      //    background-clip 을 레이어별로 보고 border-box 인 레이어만 '테두리'로 친다.
+      const layers=s=>{ const out=[]; let d=0,cur=''; for(const ch of s){
+          if(ch==='(') d++; else if(ch===')') d--;
+          if(ch===',' && d===0){ out.push(cur); cur=''; } else cur+=ch; }
+        if(cur.trim()) out.push(cur); return out; };
       for(const el of [...document.querySelectorAll('#homeScreen .hmCard, #homeScreen .hmUp, #homeScreen .hmUpIco')]){
         const c=getComputedStyle(el);
-        for(const src of [c.backgroundColor, c.backgroundImage, c.borderTopColor]){
+        const clips=c.backgroundClip.split(',').map(s=>s.trim());
+        const srcs=[[c.backgroundColor,0],[c.borderTopColor,1]];
+        layers(c.backgroundImage).forEach((L,i)=>
+          srcs.push([L, (clips[i]||clips[clips.length-1])==='border-box' ? 1 : 0]));
+        for(const [src,isBd] of srcs){
           for(const m of (src.match(/rgba?\([^)]*\)/g)||[])){ const [r,g,b]=rgb(m);
             if(r===undefined) continue;
-            assert(Math.max(r,g,b)-Math.min(r,g,b)<=12,
-              'HOME에 푸른기가 남음('+(el.className||el.tagName)+'): '+m); } }
+            assert(gray(r,g,b) || (isBd && red(r,g,b)),
+              'HOME '+(isBd?'테두리':'면')+'에 회색·빨강 밖의 색('+(el.className||el.tagName)+'): '+m); } }
         for(const v of c.borderRadius.split(/[\s\/]+/))
           assert(!v || v==='0px' || v==='3px', 'HOME 모서리가 너무 둥금('+(el.className||el.tagName)+'): '+v); } }
     assert(document.querySelectorAll('#navBar .navIt').length===4,'하단 네비가 4칸이 아님(HOME·정비·유즈맵·상점) — 마을은 폐지됐다');
@@ -206,8 +219,40 @@ async function groupLobby(){
       // 토벌은 네비에서 빠지고 HOME 팝업이 됐다 — 2번 칸은 정비(장비·펫·동료)
       assert(document.querySelector('#navBar .navIt[data-nav=gear]').textContent.indexOf('정비')>=0,'2번 탭 표기가 정비가 아님'); }
     assert(document.querySelector('#navBar .navIt.on').dataset.nav==='home','HOME 탭이 활성이 아님');
-    // 실데이터에 붙은 곳 = 사냥터 업그레이드(공격/방어/유틸 3탭 · 해금제)
-    assert(document.querySelectorAll('.hmUpTab').length===3,'업그레이드 탭이 3개가 아님');
+    // 실데이터에 붙은 곳 = 사냥터 업그레이드(내 캐릭터·동료·건물·펫 4구역 · 해금제)
+    // 탭 띠는 장비창 섹션 바와 같은 컴포넌트여야 한다(segNavHTML 단일 소스) — 새 탭 띠를 만들면 여기서 걸린다
+    { const seg=document.querySelector('#hmUpgTabs .pdSeg');
+      assert(seg,'업그레이드 탭이 공용 세그먼트 바(.pdSeg)를 안 씀');
+      assert(seg.querySelectorAll('.pdSegBtn').length===HB_UPG_CAT.length,'업그레이드 탭 수가 HB_UPG_CAT 과 다름');
+      // 구역마다 판을 물들이는 색이 다르다 — 선택된 구역의 색이 판에 실려야 한다
+      { const cur=hbHunt().upgCat, ent=HB_UPG_CAT.find(c=>c[0]===cur);
+        assert(ent && ent[2],'구역 '+cur+' 에 색이 없음');
+        assert(seg.querySelector('.pdSegInd').style.getPropertyValue('--segCol')===ent[2],
+          '판에 구역색이 안 실림: '+seg.querySelector('.pdSegInd').style.getPropertyValue('--segCol')+' vs '+ent[2]);
+        const cols=HB_UPG_CAT.map(c=>c[2]);
+        assert(new Set(cols).size===cols.length,'구역색이 겹침: '+cols.join(' / ')); }
+      assert(seg.querySelectorAll('.pdSegInd').length===1,'현재 구역을 가리키는 판(.pdSegInd)이 없음');
+      // 글자만 — 아이콘이 끼면 아이콘+글자가 한 덩어리로 가운데 정렬돼 글자가 중앙에서 밀린다
+      assert(!seg.querySelector('[data-ico]'),'탭에 아이콘이 다시 들어옴(글자가 중앙에서 밀린다)');
+      // 판이 바깥 테두리 안쪽 --pad 만큼만 띄워져 있어야 한다(양쪽 틈이 같아야 '맞닿는' 느낌이 난다)
+      { const pad=parseFloat(getComputedStyle(seg).paddingTop), sr=seg.getBoundingClientRect();
+        const ir=seg.querySelector('.pdSegInd').getBoundingClientRect();
+        assert(pad<=2.5,'탭 띠 안쪽 틈이 너무 넓음: '+pad+'px');
+        assert(Math.abs((ir.top-sr.top)-(pad+1))<1.5,'판 위쪽 틈이 --pad 와 안 맞음: '+(ir.top-sr.top).toFixed(1));
+        assert(Math.abs((ir.left-sr.left)-(pad+1))<1.5,'판 왼쪽 틈이 --pad 와 안 맞음: '+(ir.left-sr.left).toFixed(1)); } }
+    // ⚠ hmUpgTab 은 탭 띠를 통째로 다시 그린다 — 위에서 잡아둔 .pdSeg 참조가 끊기므로 구역 전환은 그 뒤에.
+    // 아군 구역은 '사는 카드'와 '키우는 카드'가 같은 격자에 함께 있어야 한다(건설 팝업은 폐지됐다)
+    { const before=hbHunt().upgCat;
+      hmUpgTab('ally');
+      // 동료 '고용' 카드는 없어야 한다 — 영입은 미네랄이 아니라 동료 뽑기권이다(뽑기로만 얻는다)
+      assert(!document.querySelector('#hmUpgGrid .hmUp[data-k="b_ally"]'),'동료 구역에 미네랄 고용 카드가 남아 있음');
+      assert(document.querySelectorAll('#hmUpgGrid .hmUp').length>0,'동료 구역에 강화 카드가 하나도 없음');
+      assert(document.querySelector('#hmUpgGrid .hmUp[data-k="alatk"]'),'동료 구역에 강화 카드가 없음');
+      hmUpgTab('bld');
+      assert(document.querySelector('#hmUpgGrid .hmUp[data-k="b_turret"]')
+          && document.querySelector('#hmUpgGrid .hmUp[data-k="b_bunker"]'),'건물 구역에 건설 카드가 없음');
+      assert(typeof hbOpenBuild!=='function','건설 팝업이 아직 남아 있음(패널로 흡수됐어야 한다)');
+      hmUpgTab(before); }
     // 수량은 한 칸을 눌러 돌린다 — 1 → 10 → MAX → 1. 폭은 라벨이 바뀌어도 고정
     { const qs=document.querySelectorAll('.hmUpQ');
       assert(qs.length===1,'수량은 한 칸이어야 함: '+qs.length+'개');
@@ -228,8 +273,8 @@ async function groupLobby(){
       const ch=cell.getBoundingClientRect().height, rows=(gr.clientHeight-16+8)/(ch+8);
       assert(Math.abs(rows-2.7)<0.15,'업그레이드 높이가 2.7행이 아님: '+rows.toFixed(2)+'행');
       const h0=gr.clientHeight;
-      hmUpgTab('def'); const h1=$('hmUpgGrid').clientHeight;
-      hmUpgTab('atk');
+      hmUpgTab('pet'); const h1=$('hmUpgGrid').clientHeight;   // 칸이 제일 적은 구역으로 바꿔도 안 흔들려야 한다
+      hmUpgTab('char');
       assert(h0===h1,'탭을 바꾸면 높이가 변함: '+h0+' → '+h1);
       assert(gr.scrollHeight-gr.clientHeight>10,'나머지 칸이 스크롤되지 않음'); }
     // 접으면 헤더만 남고 전장이 그만큼 넓어진다(캐릭터가 내려온다)
@@ -548,10 +593,12 @@ async function groupLobby(){
     S.chests.length=0;
     const near={x:Math.max(10,S.char.range*0.5), y:0, hp:hbChestHp(1), hpMax:hbChestHp(1)};
     S.chests.push(near);
-    const tk0=((PROF().tickets&&PROF().tickets.gear)||0), gem0=PROF().gem||0;
+    // 상자는 장비뿐 아니라 펫·동료 뽑기권도 낸다 — 장비만 보면 다른 권이 나왔을 때 '보상 없음'이 된다
+    const tkSum=()=>{ const t=PROF().tickets||{}; return (t.gear||0)+(t.pet||0)+(t.ally||0); };
+    const tk0=tkSum(), gem0=PROF().gem||0;
     for(let i=0;i<200 && S.chests.length;i++) hbStep(0.05);
     assert(!S.chests.length,'사거리 안인데 안 부서짐(hp '+near.hp+')');
-    const got=(((PROF().tickets&&PROF().tickets.gear)||0)-tk0) + ((PROF().gem||0)-gem0);
+    const got=(tkSum()-tk0) + ((PROF().gem||0)-gem0);
     const boost=hbBoostOn('inc')||hbBoostOn('atk');
     assert(got>0 || boost,'상자를 부쉈는데 아무 보상도 없음');
     // ④ 적이 우선 — 적이 사거리 안에 있으면 상자는 안 맞는다
@@ -653,10 +700,10 @@ async function groupLobby(){
     hbCloseInfo();
     // ③ 파워 해금 — 표시만 하는 항목이 없어야 한다(전부 실제 상한을 바꾼다)
     p.unlocks={};
-    const b4={pet:profPetSlots(), ally:hbBuildMax('post'), tur:hbBuildMax('turret'), off:profOfflineCapMin()};   // ally_plus 해금 = 동료 초소(post) 상한
+    const b4={pet:profPetSlots(), ally:hbMateMax(), tur:hbBuildMax('turret'), off:profOfflineCapMin()};
     p.unlocks={pet_slot3:1, ally_plus:1, turret_plus:1, pet_slot4:1, idle_12h:1};
     assert(profPetSlots()>b4.pet,'펫 슬롯 해금이 반영 안 됨: '+b4.pet+' → '+profPetSlots());
-    assert(hbBuildMax('post')>b4.ally,'동료 최대 해금이 반영 안 됨');
+    assert(hbMateMax()>b4.ally,'동료 정원 해금이 반영 안 됨: '+b4.ally+' → '+hbMateMax());
     assert(hbBuildMax('turret')>b4.tur,'터렛 최대 해금이 반영 안 됨');
     assert(profOfflineCapMin()>b4.off,'오프라인 상한 해금이 반영 안 됨');
     // 해금 표의 모든 항목이 실제로 쓰이는지(코드에 배선된 id인지)
@@ -664,8 +711,8 @@ async function groupLobby(){
     for(const u of PROF_UNLOCKS) assert(wired.indexOf(u.id)>=0,'배선 안 된 해금 항목: '+u.id);
     p.unlocks={}; profSyncUnlocks();
     return '해금 '+PROF_UNLOCKS.length+'단계 · 파워 '+profPower(); });
-  // 방치 수입 기준을 자동사냥 실적으로 · 전직/진화를 HOME에서
-  await step('자동사냥: 방치 수입 기준 · HOME 전직/진화', async()=>{ skipIf(typeof hbNoteRate!=='function','미적용');
+  // 방치 수입 기준을 자동사냥 실적으로 · 성장(진화·환생)을 HOME에서
+  await step('자동사냥: 방치 수입 기준 · HOME 성장(진화·환생)', async()=>{ skipIf(typeof hbNoteRate!=='function','미적용');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(60); _hb.manual=true;
     // ① 방치 수입 = 자동사냥 실적. 클리어 전에는 옛 공식으로 떨어진다.
@@ -679,66 +726,76 @@ async function groupLobby(){
     assert(clears>0,'라운드 클리어가 안 됨');
     assert(p.hunt.rate>0,'실측 시급이 기록되지 않음');
     assert(profIdleRate()>before,'방치 수입이 자동사냥 실적을 안 따라감: '+before.toFixed(2)+' → '+profIdleRate().toFixed(2));
-    // ② 전직 — 조건을 채우면 HOME 성장 줄에 배지가 뜨고, 팝업에서 바로 된다
-    c.level=25; c.unit.level=25; c.statPoints=0; p.pcoin=50000;
+    // ② 성장 팝업 — 진입점은 '조건이 찼을 때만'이 아니라 좌상단 아이콘으로 항상 열린다
+    //    (전직 폐지 후 조건부 줄만 남기면 초반에 성장 화면을 아예 못 여는 문제가 있었다)
+    { const btn=$('hbGrowBtn');
+      assert(btn && visible(btn),'성장 팝업 진입 아이콘(#hbGrowBtn)이 없음');
+      hbCloseGrow(); btn.click(); await sleep(40);
+      assert(visible($('hbGrowModal')),'아이콘을 눌렀는데 성장 팝업이 안 열림'); }
+    // ③ 전직은 사라졌다 — 흔적이 남아 있으면 안 된다
+    assert(typeof profClassChange==='undefined','전직 함수가 아직 남아 있음');
+    assert($('hbGrowBody').textContent.indexOf('전직')<0,'성장 팝업에 전직이 남음');
+    for(const id in PROF_JOBS) assert(!PROF_JOBS[id].next,'직업 트리(next)가 아직 남아 있음: '+id);
+    assert(Object.keys(PROF_JOBS).length===Object.keys(PROF_CLASSES).length,'직업이 뿌리 3종이 아님');
+    // ④ 환생 — 조건을 채우면 성장 줄 배지가 뜨고, 팝업에서 실행할 수 있다
+    c.level=PROF_REB_EVERY; c.unit.level=PROF_REB_EVERY; p.pcoin=50000;
     renderHome();
-    assert(visible($('hmStatRow')),'전직 가능한데 성장 줄이 안 보임');
+    assert(visible($('hmStatRow')),'환생 가능한데 성장 줄이 안 보임');
     assert(document.querySelector('.hmStat.grow'),'성장 배지가 없음');
-    hbOpenGrow(); await sleep(40);
-    assert(visible($('hbGrowModal')),'성장 팝업이 안 열림');
-    const j0=CHAR().unit.jobId;
-    const btn=[].slice.call(document.querySelectorAll('#hbGrowBody .hbRowBtn')).filter(function(x){ return !x.disabled && x.textContent==='전직'; })[0];
-    assert(btn,'전직 버튼이 활성화되지 않음');
-    btn.click();
-    assert(CHAR().unit.jobId!==j0,'전직이 반영되지 않음');
-    assert(_hb.char.atk>0,'전투 수치가 갱신되지 않음');
-    // ③ 진화 — 조건 미달이면 잠금 안내가 뜬다(파워 350)
+    renderGrowModal();
+    assert($('hbGrowBody').textContent.indexOf('환생')>=0,'성장 팝업에 환생이 없음');
+    // ⑤ 진화 잠금 안내는 레벨 기준(옛 '파워 350' 문구가 남아 있으면 안 된다)
     const r=profEvolveReq();
-    if(!r.unlock) assert($('hbGrowBody').textContent.indexOf('파워 350')>=0,'진화 잠금 안내가 없음');
+    if(!r.unlock) assert($('hbGrowBody').textContent.indexOf('Lv.'+profUnlockNeed('evolve'))>=0,'진화 잠금 안내가 레벨 기준이 아님');
+    assert($('hbGrowBody').textContent.indexOf('파워 350')<0,'옛 파워 문구가 남음');
     hbCloseGrow();
-    // ④ 할 게 없으면 성장 줄은 숨는다
-    p.pcoin=0; CHAR().statPoints=0; renderHome();
+    // ⑥ 할 게 없으면 '줄'은 숨는다 — 단 아이콘 진입점은 그대로 남아야 한다
+    c.level=1; c.unit.level=1; p.pcoin=0; renderHome();
     assert(!visible($('hmStatRow')),'할 게 없는데 성장 줄이 남아 있음');
-    return '실측 '+p.hunt.rate.toFixed(2)+'/s · 전직 '+PROF_JOBS[CHAR().unit.jobId].name; });
+    assert(visible($('hbGrowBtn')),'성장 아이콘까지 사라짐(항상 열려 있어야 한다)');
+    return '실측 '+p.hunt.rate.toFixed(2)+'/s · 직업 '+PROF_JOBS[CHAR().unit.jobId].name; });
   // Phase 4 — 스킬 · 부스트 · 동료/펫 · 건설(터렛·벙커)
   await step('자동사냥: 스킬·부스트·동료·건설', async()=>{ skipIf(typeof hbUseSkill!=='function','Phase4 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(60); _hb.manual=true;
-    const p=PROF(); p.pcoin=999999; hbHunt().boostT={};
-    // 🧱 기지는 타일이 단일 소스다. 테스트는 전 구역을 열고 시작한다(open을 크게 = 맵 전체 해금)
-    const wipe=()=>{ hbHunt().base={tiles:{},open:99}; hbLayoutBase(); };
-    const fill=(k,n)=>{ let c; for(let i=0;i<n && (c=hbFreeCell(k)); i++) hbPlaceStruct(k,c[0],c[1]); };
-    wipe(); p.pets={slime:1}; p.equip=['slime']; hbLayoutAllies();
-    // ① 건설 — 타일에 놓으면 즉시 전장에 선다 · 최대치를 넘지 않는다 · 값이 오른다
-    const c0=hbBuildCost('post'); fill('post',1);
-    assert(hbStructN('post')===1 && _hb.allies.length===1,'동료 초소가 배치되지 않음');
-    assert(hbBuildCost('post')>c0,'다음 구매 비용이 안 오름');
-    fill('turret',1); fill('bunker',1);
+    const p=PROF(); p.pcoin=999999; hbHunt().build={}; hbHunt().boostT={};
+    p.pets={slime:1}; p.equip=['slime']; hbLayoutAllies();
+    // ① 동료 — 뽑기로 얻고, 중복을 재료로 넣어 강화한다(미네랄 강화는 없어졌다)
+    const H0=hbHunt(); H0.mates={}; H0.party=[]; H0.mateN=0;
+    const mid=Object.keys(HB_MATES)[0], md0=HB_MATES[mid].dps;
+    H0.mates[mid]={lv:1,dup:0}; H0.party=[mid]; hbLayoutAllies();
+    assert(hbMateLv(mid)===1 && hbParty().indexOf(mid)>=0,'보유 동료가 출전하지 않음');
+    assert(_hb.allies.length===1,'동료가 전장에 배치되지 않음');
+    // 재료를 채우면 레벨이 오른다 — 필요량은 hbMateNeed 가 유일한 근거다
+    { const need=hbMateNeed(mid), pt=hbMatePt(mid), n=Math.ceil(need/pt);
+      H0.mates[mid].dup=n;
+      for(let i=0;i<n;i++) hbMateFeed(mid, mid);
+      assert(hbMateLv(mid)===2,'재료를 다 넣었는데 레벨이 안 오름: Lv'+hbMateLv(mid));
+      assert(hbMateDps(mid)>md0,'강화해도 위력이 안 오름: '+md0+' → '+hbMateDps(mid));
+      assert(hbMateNeed(mid)>need,'다음 레벨 요구량이 안 오름'); }
+    // 재료가 없으면 못 넣는다
+    assert(hbMateDup(mid)===0 && !hbMateFeed(mid,mid),'재료가 없는데 합성이 됨');
+    // 출전 토글 · 정원 상한
+    assert(hbMateToggle(mid) && hbParty().indexOf(mid)<0,'출전 해제가 안 됨');
+    assert(hbMateToggle(mid) && hbParty().indexOf(mid)>=0,'다시 출전이 안 됨');
+    { const ids=Object.keys(HB_MATES); for(const id of ids) hbHunt().mates[id]={lv:1,dup:0};
+      let refused=0;
+      for(const id of ids) if(hbHunt().party.indexOf(id)<0){ if(!hbMateToggle(id)) refused++; }
+      // 정원이 차면 '거절'해야 한다 — 몰래 넘겨 놓고 표시할 때만 자르면 편성이 마음대로 바뀐다
+      assert(refused>0,'정원이 찼는데도 출전 요청이 전부 받아들여짐');
+      assert(hbHunt().party.length===hbMateMax(),'저장된 편성이 정원과 다름: '+hbHunt().party.length+'/'+hbMateMax());
+      assert(hbParty().length===hbMateMax(),'출전 인원이 정원과 다름: '+hbParty().length+'/'+hbMateMax()); }
+    hbHunt().mates={}; hbHunt().party=[]; hbLayoutAllies();
+    // ② 건설 — 개수형 표는 없어지고 타일 배치(HB_STRUCT)로 통일됐다. 동료는 여기 없다.
+    assert(typeof HB_BUILD==='undefined','옛 개수형 건설 표(HB_BUILD)가 남아 있음 — 표가 두 벌이면 어긋난다');
+    assert(!HB_STRUCT.post && !HB_STRUCT.ally,'구조물 표에 옛 동료가 남아 있음');
+    hbHunt().base={tiles:{},open:99}; hbLayoutBase();
+    { let c; c=hbFreeCell('turret'); hbPlaceStruct('turret',c[0],c[1]);
+      c=hbFreeCell('bunker'); hbPlaceStruct('bunker',c[0],c[1]); }
     assert(_hb.turrets.length===1 && _hb.bunkers.length===1,'터렛/벙커가 배치되지 않음');
-    fill('bunker',HB_STRUCT.bunker.max+3);
+    { let c; for(let i=0;i<HB_STRUCT.bunker.max+3 && (c=hbFreeCell('bunker')); i++) hbPlaceStruct('bunker',c[0],c[1]); }
     assert(hbStructN('bunker')===HB_STRUCT.bunker.max,'최대치를 넘겨 지어짐: '+hbStructN('bunker'));
     assert(_hb.pets.length===1,'장착 펫이 전장에 안 나옴');
-    // ② 아군 화력 — 같은 상황을 아군 없이/있이 돌려 처치 수를 비교한다
-    //    ⚠ 아군 발사 주기는 캐릭터 쿨다운(c.cd)을 공유한다 — 캐릭터를 막으면 아군도 멈춰서 그 방식으론 못 잰다
-    const runWave=()=>{ _hb.round=1; _hb.wave=1; _hb.phase='fight';
-      _hb.foes.length=0; _hb.pend.length=0; hbSpawnWave();
-      // 사거리가 근접(34)이라 적이 화면 밖에서 걸어 들어올 시간이 필요하다 — 6초로는 도착 전에 끝난다
-      const k=_hb.kills; for(let i=0;i<300;i++) hbStep(0.05); return _hb.kills-k; };
-    // 구조물은 코어(회복 구역) 밖에만 지을 수 있으므로, 비교는 '기지 안에 서 있는' 상황에서 한다.
-    // 회복이 안 닿는 자리라 체력을 크게 잡아 사망으로 결과가 뒤집히지 않게 한다 — 재는 것은 화력뿐이다.
-    const HG=6, spot=[hbTx(HG),hbTx(HG)];
-    const _cSave={...(_hb.char)};   // ⚠ 뒤 스텝들은 캐릭터가 원점에 정상 체력으로 있다고 가정한다 — 반드시 되돌린다
-    // 스탯을 고정한다 — 앞 스텝이 남긴 값(사거리 1e9 등)에 맡기면 솔로가 혼자 다 잡아 차이가 안 난다
-    const runAt=()=>{ const c=_hb.char; c.x=spot[0]; c.y=spot[1]; c.tx=null; c.ty=null;
-      c.hpMax=1e9; c.hp=1e9; c.range=80; c.cd=0.6; c.atk=6; c.crit=0; c.regen=0; return runWave(); };
-    wipe(); PROF().equip=[]; hbLayoutAllies();
-    const solo=runAt();
-    for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]) hbPlaceStruct('post',HG+dx,HG+dy);
-    for(const [dx,dy] of [[1,1],[-1,-1],[1,-1],[-1,1]]) hbPlaceStruct('turret',HG+dx,HG+dy);
-    assert(_hb.allies.length&&_hb.turrets.length,'초소·터렛이 캐릭터 옆에 안 세워짐');
-    const withAllies=runAt();
-    Object.assign(_hb.char,_cSave); _hb.foes.length=0; _hb.pend.length=0;   // 원복(위치·체력·목적지)
-    assert(withAllies>solo,'아군을 세워도 화력이 안 늘어남: '+solo+' → '+withAllies);
     PROF().equip=['slime']; hbLayoutAllies();
     // ③ 스킬 — 효과 + 쿨다운(쿨 중 재사용 불가)
     _hb.skT={nova:0,heal:0,slow:0}; _hb.foes.length=0;
@@ -763,7 +820,8 @@ async function groupLobby(){
     assert(hbBoostLeft('inc')>l1+HB_BOOSTS.inc.sec-5,'연장이 안 됨: '+l1+' → '+hbBoostLeft('inc'));
     // ⑤ 스킬 바 UI
     renderHbBar();
-    assert(document.querySelectorAll('#hbBar .hbSk').length===Object.keys(HB_SKILLS).length+3,'스킬 바 버튼 수가 다름(스킬 + 건설·토벌·부스트)');
+    // 건설은 업그레이드 패널의 동료·건물 구역으로 흡수돼 스킬 바에서 빠졌다 — 남는 건 토벌·부스트 둘
+    assert(document.querySelectorAll('#hbBar .hbSk').length===Object.keys(HB_SKILLS).length+2,'스킬 바 버튼 수가 다름(스킬 + 토벌·부스트)');
     // 버튼이 늘어도 한 줄에 들어가야 한다 — 넘치면 토벌·부스트가 화면 밖으로 밀린다
     { const bar=$('hbBar'); assert(bar.scrollWidth<=bar.clientWidth+1,'스킬 바가 가로로 넘침: '+bar.scrollWidth+'>'+bar.clientWidth); }
     // ⑥ 전장 아래 경계 = 스킬 바 위. 카드 기준으로 잡으면 적이 버튼 뒤로 지나가 섞인다.
@@ -778,7 +836,33 @@ async function groupLobby(){
         if(x>bL-14 && x<bR+14 && y>bT-14 && y<bB+14) hit++; }
       assert(hit===0,'스킬 바 위에 겹쳐 스폰된 적 '+hit+'기');
       _hb.foes.length=0; }
-    hbHunt().boostT={}; hbHunt().base={tiles:{},open:99}; hbLayoutAllies();
+    hbHunt().boostT={}; hbHunt().build={}; hbHunt().base={tiles:{},open:1}; hbLayoutAllies();   // 기지도 비운다 — 남기면 뒤 스텝의 난수 소비가 달라진다
+    // ③ 아군 화력 — 같은 상황을 아군 없이/있이 돌려 처치 수를 비교한다
+    //    ⚠ 아군 발사 주기는 캐릭터 쿨다운(c.cd)을 공유한다 — 캐릭터를 막으면 아군도 멈춰서 그 방식으론 못 잰다
+    // ⚠ 이 측정은 두 방향으로 포화된다 — 약한 라운드면 캐릭터 혼자 전멸시켜 양쪽이 같고(9→9),
+    //    너무 센 라운드면 아무도 못 잡아 역시 같다(0→0). 그래서 캐릭터 스펙을 '고정'하고
+    //    혼자서는 절반쯤만 잡는 라운드에서 잰다. 스펙을 고정하지 않으면 앞 단계의 누적 성장에 흔들린다.
+    const setSpec=()=>{ const c=_hb.char;
+      c.atk=60; c.cd=.30; c.range=140; c.crit=0; c.regen=0; c.hpMax=1e9; c.hp=1e9; };
+    const runWave=()=>{ _hb.round=40; _hb.wave=1; _hb.phase='fight'; setSpec();
+      _hb.foes.length=0; _hb.pend.length=0; hbSpawnWave();
+      // 사거리가 근접(34)이라 적이 화면 밖에서 걸어 들어올 시간이 필요하다 — 6초로는 도착 전에 끝난다
+      const k=_hb.kills; for(let i=0;i<300;i++) hbStep(0.05); return _hb.kills-k; };
+    hbHunt().build={}; hbHunt().mates={}; hbHunt().party=[]; PROF().equip=[]; hbLayoutAllies();
+    const solo=runWave();
+    { hbHunt().base={tiles:{},open:99}; hbLayoutBase();
+      let c; for(let i=0;i<HB_STRUCT.turret.max && (c=hbFreeCell('turret')); i++) hbPlaceStruct('turret',c[0],c[1]); }
+    for(const id of Object.keys(HB_MATES).slice(0,hbMateMax())){ hbHunt().mates[id]={lv:1,dup:0}; hbHunt().party.push(id); }
+    hbLayoutAllies();
+    const withAllies=runWave();
+    assert(solo>0,'측정 불가 — 캐릭터 혼자 하나도 못 잡음(라운드가 너무 셈)');
+    assert(withAllies>solo,'아군을 세워도 화력이 안 늘어남: '+solo+' → '+withAllies);
+    // 측정 뒤 원복 — 잔적뿐 아니라 '캐릭터 위치'도 되돌린다.
+    // 적 출현 위치는 캐릭터 기준이라(hbPlaceFoe), 캐릭터가 구석에 서 있으면 스폰이 화면 경계에 몰려
+    // 뒤따르는 '스킬 바 위 스폰 금지' 검사가 엉뚱하게 실패한다.
+    _hb.round=1; _hb.wave=1; _hb.phase='fight'; _hb.foes.length=0; _hb.pend.length=0;
+    { const c=_hb.char; c.x=0; c.y=0; c.tx=0; c.ty=0; c.mv=0; }
+    hbHunt().mates={}; hbHunt().party=[]; hbLayoutAllies();
     return '동료·터렛·벙커·펫 배치 ok · 스킬 3종 · 부스트 연장 ok'; });
   // 🧱 기지 격자 — 타일이 단일 소스. 저장 왕복 · 겹침/범위 · 봉쇄 금지 · 옛 개수형 이관.
   await step('기지 격자: 배치·저장 왕복·겹침/범위·봉쇄 금지', async()=>{ skipIf(typeof hbPlaceStruct!=='function','기지 격자 없음');
@@ -826,9 +910,10 @@ async function groupLobby(){
     hbArmCancel();
     // ⑦ 옛 개수형(hunt.build) → 타일 이관
     const H=hbHunt(); delete H.base; H.build={ally:2,turret:1,bunker:1};
-    const B=hbBase();
-    assert(hbStructN('post')===2 && hbStructN('turret')===1 && hbStructN('bunker')===1,
-      '옛 보유분 이관 실패: post '+hbStructN('post')+' / turret '+hbStructN('turret')+' / bunker '+hbStructN('bunker'));
+    hbBase();
+    // 'ally'는 타일로 가지 않는다 — 동료는 뽑기 로스터(HB_MATES)로 옮겨졌다
+    assert(hbStructN('turret')===1 && hbStructN('bunker')===1,
+      '옛 보유분 이관 실패: turret '+hbStructN('turret')+' / bunker '+hbStructN('bunker'));
     assert(!Object.keys(H.build).length,'이관 후에도 옛 개수형이 남음');
     hbHunt().base={tiles:{},open:1}; hbLayoutBase(); saveMeta();
     return '왕복·겹침·범위·저장·봉쇄차단·이관 ok'; });
@@ -867,7 +952,7 @@ async function groupLobby(){
     assert(none===0,'유닛이 없는데 벙커가 피해를 줌: '+none);
     assert(some>0,'벙커에 유닛을 넣어도 피해가 없음');
     // ④ 방어 탭 업그레이드가 실제 피해에 배수로 들어간다
-    assert(HB_UPG.bkatk && HB_UPG.bkatk.cat==='def','벙커 공격력 업그레이드가 방어 탭에 없음');
+    assert(HB_UPG.bkatk && HB_UPG.bkatk.cat==='bld','벙커 공격력 업그레이드가 건물 구역에 없음');
     const up=dmgOf(HB_BUNKER_SLOTS,10);
     assert(up>some*1.2,'bkatk를 올려도 피해가 안 늘어남: '+some+' → '+up);
     hbHunt().upg.bkatk=0;
@@ -1234,10 +1319,18 @@ async function groupLobby(){
     openHome(); await sleep(150);
     skipIf(!_hb||!_hb.on,'전장이 안 돌고 있음');
     _hb.manual=true; _hb.phase='fight'; _hb.waveT=99; _hb.foes.length=0;
+    hbHunt().mates={}; hbHunt().party=[]; hbLayoutAllies();   // 동료도 목록에 들어가므로 먼저 비운다
     for(let i=0;i<3;i++) _hb.foes.push({ico:'🟢',mdl:'snapper',x:100+i*40,y:i*30,
       hp:9,hpMax:9,atk:1,spd:60,cdT:9,elite:(i===2)});
     const L1=hb3dList();
     assert(L1.length===4,'목록 개수가 다름(나+적3): '+L1.length);
+    // 🤝 동료도 같은 경로로 그린다 — 영입하면 목록이 그만큼 늘어야 한다(이모지로만 그리면 여기서 걸린다)
+    { CHAR().level=99; const mid=Object.keys(HB_MATES)[0];
+      hbHunt().mates[mid]={lv:1,dup:0}; hbHunt().party=[mid]; hbLayoutAllies();
+      const L2=hb3dList();
+      assert(L2.length===5,'동료가 3D 목록에 안 들어감: '+L2.length);
+      assert(L2.some(u=>u.id===HB_MATES[mid].unit),'동료가 자기 유닛 모델로 안 나감: '+HB_MATES[mid].unit);
+      hbHunt().mates={}; hbHunt().party=[]; hbLayoutAllies(); }
     // FXLAB.att과 같은 필드 구성이어야 한다
     for(const u of L1){
       for(const f of ['uid','id','x','y','face','moving','fireSeq'])
@@ -1349,11 +1442,21 @@ async function groupLobby(){
     const tr=top.getBoundingClientRect();
     assert(tr.left-ph.left<=12,'프로필이 왼쪽 끝에 붙어 있지 않음: '+Math.round(tr.left-ph.left)+'px');
     assert(tr.top-ph.top<=8,'프로필이 맨 위가 아님: '+Math.round(tr.top-ph.top)+'px');
+    // 재화가 커져도 프로필을 덮으면 안 된다 — 던전 보상 배수(24^dg) 때문에 자릿수가 폭주한다
+    { const p=PROF(), keep=p.pcoin; p.pcoin=987654321; updateCurBar();
+      const wide=$('curMin').textContent;
+      assert(wide.length<=6,'재화 표기가 축약되지 않음(숫자가 프로필을 덮는다): '+wide);
+      const rr=$('curMin').getBoundingClientRect();
+      assert(rr.left>=tr.right-1,'큰 재화 숫자가 프로필과 겹침: '+wide);
+      p.pcoin=12345; updateCurBar();
+      assert($('curMin').textContent==='12,345','작은 값까지 축약해 버림: '+$('curMin').textContent);
+      p.pcoin=keep; updateCurBar(); }
     { const res=document.querySelectorAll('#curBar .res');
       assert($('curBar').classList.contains('bare'),'HOME 재화 바가 배경 위 숫자(.bare)가 아님');
       assert(res.length,'홈 재화 바가 없음');
       for(const r of res){ const rr=r.getBoundingClientRect();
-        assert(rr.left>=tr.right-1,'재화 숫자가 프로필과 겹침'); } }
+        assert(rr.left>=tr.right-1,'재화 숫자가 프로필과 겹침: res.left='+Math.round(rr.left)
+          +' vs 프로필 right='+Math.round(tr.right)+' ("'+r.textContent.trim()+'") · 묶음 '+Math.round(tr.width)+'px'); } }
     // 재화 바는 화면 전체 폭을 덮는 판이라, 투명(.bare)일 때 왼쪽 빈 자리가 프로필 클릭을 삼키면 안 된다
     { const hit=(el)=>{ const r=el.getBoundingClientRect();
         return document.elementFromPoint((r.left+r.right)/2,(r.top+r.bottom)/2); };
@@ -1457,9 +1560,13 @@ async function groupLobby(){
             if(r===undefined) continue;
             // 허용폭 12 = HOME 톤 검사와 같은 기준(공용 --metal-edge rgb(60,62,70)이 B-R=10이라 그 아래로 잡으면 오검출)
             assert(b<=r+12,'라운드 팝업에 푸른기가 남음('+(el.className||el.tagName)+'): '+m); } } } }
+    // 칸 수 = 최고 도달 · 단 '다음 마일스톤'까지는 목표로 한 칸 더 보여 준다(도전정신 — 못 고르게 잠근다)
     const cells=document.querySelectorAll('#hbRoundGrid .hbRd');
-    assert(cells.length===hbBest(1),'선택지가 최고 도달과 다름: '+cells.length+' vs '+hbBest(1));
-    assert(document.querySelector('#hbRoundGrid .hbRd.on').textContent===String(_hb.round),'현재 라운드가 강조되지 않음');
+    const want=Math.max(hbBest(1), hbNextRw(1,_hb.round)||0);
+    assert(cells.length===want,'선택지 수가 규칙과 다름: '+cells.length+' vs '+want+'(최고 '+hbBest(1)+' · 다음 보상 '+hbNextRw(1,_hb.round)+')');
+    for(const cell of cells){ const n=parseInt(cell.textContent,10);
+      assert((n>hbBest(1))===cell.disabled,'라운드 '+n+' 잠금 상태가 최고 도달과 안 맞음(disabled='+cell.disabled+')'); }
+    assert(document.querySelector('#hbRoundGrid .hbRd.on').textContent.replace(/\D+$/,'')===String(_hb.round),'현재 라운드가 강조되지 않음');
     // ④ 라운드 이동 = 진행 초기화 + 시트 닫힘 · 상한 넘는 값은 잘린다
     hbGoRound(1); await sleep(40);
     assert(_hb.round===1 && _hb.wave===1,'라운드 이동이 반영되지 않음');
@@ -1468,6 +1575,398 @@ async function groupLobby(){
     assert(_hb.round===hbBest(1),'최고 도달을 넘겨 이동됨: '+_hb.round);
     hbSetClimb(false);
     return '최고 '+hbBest(1)+'라운드 · 반복/등반 ok'; });
+  // 🤝 전직 폐지 → 동료 영입(2026-08-12 설계 전환). 옛 상위 직업이 그대로 동료가 됐다.
+  await step('동료: 전직 폐지 · 옛 상위 직업이 동료로 · 뽑기 영입', async()=>{ skipIf(typeof HB_MATES!=='object','동료 없음');
+    // ① 전직의 흔적이 남아 있으면 안 된다
+    assert(typeof profClassChange==='undefined','profClassChange 가 남아 있음');
+    assert(typeof profClassCost==='undefined','profClassCost 가 남아 있음');
+    assert(typeof hbGrowJobs==='undefined','hbGrowJobs 가 남아 있음');
+    assert(Object.keys(PROF_JOBS).length===3,'직업이 뿌리 3종이 아님: '+Object.keys(PROF_JOBS).length);
+    for(const id in PROF_JOBS){ assert(PROF_CLASSES[id],'뿌리가 아닌 직업이 남음: '+id);
+      assert(!PROF_JOBS[id].next && !PROF_JOBS[id].tier,'직업 트리 잔재(next/tier): '+id); }
+    // ② 옛 상위 직업 12종이 '전부' 동료로 옮겨 왔다 — 하나라도 빠지면 그 유닛이 사라진 것이다
+    const moved=['sniper','gunner','phantom','goliath','spike','swarmling','thornqueen','ultra',
+                 'sentinel','darksage','void','highsage'];
+    for(const id of moved) assert(HB_MATES[id],'옛 직업이 동료로 안 옮겨짐: '+id);
+    assert(Object.keys(HB_MATES).length===moved.length,'동료 수가 옛 상위 직업 수와 다름');
+    for(const id in HB_MATES){ const M=HB_MATES[id];
+      assert(M.name && M.unit && M.ico,'동료 항목이 비어 있음: '+id);
+      assert(M.dps>0 && M.rng>0,'동료 전투 수치가 없음: '+id); }
+    // ③ 등급이 해금을 대체했다 — 레벨 게이트도 미네랄 영입도 없어야 한다
+    assert(typeof hbMateBuy==='undefined','미네랄 영입(hbMateBuy)이 남아 있음');
+    assert(typeof hbMateCost==='undefined','미네랄 영입가(hbMateCost)가 남아 있음');
+    for(const id in HB_MATES){ const M=HB_MATES[id];
+      assert(M.lv===undefined && M.cost===undefined,'옛 해금 레벨/영입가가 남음: '+id);
+      assert(GACHA_TIERS[M.tier],'등급이 없거나 공용 등급표에 없음: '+id+' '+M.tier); }
+    // 등급이 높을수록 세다 — 등급이 성능을 대변하지 못하면 뽑을 이유가 없다
+    { let prevRank=-1, prevDps=0;
+      for(const id in HB_MATES){ const M=HB_MATES[id], rank=GACHA_TIER_ORDER.indexOf(M.tier);
+        assert(rank>=prevRank,'동료 표가 등급 오름차순이 아님: '+id);
+        if(rank>prevRank) assert(M.dps>prevDps,'상위 등급인데 더 약함: '+id);
+        prevRank=rank; prevDps=Math.max(prevDps,M.dps); } }
+    // ④ 영입 = 뽑기권. 권이 없으면 못 뽑는다.
+    const p=PROF(); p.chars.length=0; p.curId=''; const c=profCreateChar('ranger','동료');
+    const H=hbHunt(); H.mates={}; H.party=[]; H.mateN=0; p.tickets={gear:0,pet:0,ally:0};
+    assert(hbMateRoll()===null,'뽑기권이 0인데 뽑힘');
+    p.tickets.ally=1;
+    const r1=hbMateRoll();
+    assert(r1 && HB_MATES[r1.id],'뽑기가 실패함');
+    assert(hbMateTicket()===0,'뽑기권이 소모되지 않음');
+    assert(hbMateOwned(r1.id) && hbMateLv(r1.id)===1,'뽑은 동료가 Lv.1로 안 들어옴');
+    assert(hbParty().indexOf(r1.id)>=0,'처음 얻은 동료가 출전하지 않음');
+    // ⑤ 중복 = 재료. 같은 동료가 또 나오면 레벨이 아니라 dup 이 는다.
+    { const id=r1.id, H2=hbHunt(); const lv0=hbMateLv(id), d0=hbMateDup(id);
+      H2.mates[id].dup=d0;  p.tickets.ally=1;
+      // 같은 것이 나올 때까지 굴리지 않고, 중복 경로를 직접 확인한다(확률에 기대면 불안정하다)
+      const before=JSON.stringify(H2.mates[id]);
+      p.tickets.ally=0;
+      assert(before===JSON.stringify(H2.mates[id]),'뽑기권 없이 상태가 바뀜');
+      assert(hbMateLv(id)===lv0,'중복이 레벨을 직접 올림'); }
+    // ⑥ 환생해도 동료는 남는다(계정 축)
+    c.level=PROF_REB_EVERY*2; const before=hbMateLv(r1.id);
+    profRebirth(c);
+    assert(hbMateLv(r1.id)===before,'환생이 동료를 지움');
+    const last=Object.keys(HB_MATES).slice(-1)[0];
+    // ⑦ 진입점 — 좌상단 아이콘에서 열린다
+    openHome(); await sleep(60);
+    const btn=$('hbMateBtn');
+    assert(btn && visible(btn),'동료 진입 아이콘(#hbMateBtn)이 없음');
+    hbCloseMates(); btn.click(); await sleep(50);
+    assert(visible($('hbMateModal')),'아이콘을 눌렀는데 동료 팝업이 안 열림');
+    { const names=$('hbMateBody').textContent;
+      for(const id in HB_MATES) assert(names.indexOf(HB_MATES[id].name)>=0,'동료 목록에 빠짐: '+HB_MATES[id].name);
+      assert(names.indexOf('동료 뽑기권')>=0,'뽑기 줄이 없음');
+      assert(document.querySelectorAll('#hbMateBody .mateOdds .mateOdd').length===GACHA_TIER_ORDER.length,'등급별 확률 표시가 없음'); }
+    hbCloseMates();
+    return '동료 '+Object.keys(HB_MATES).length+'종 · '+GACHA_TIERS[HB_MATES[Object.keys(HB_MATES)[0]].tier].name+'~'+GACHA_TIERS[HB_MATES[last].tier].name; });
+
+  // 🎰 단계형 뽑기 곡선의 '공통 규칙' — 동료와 펫이 같은 형태라, 검사도 한 벌로 한다.
+  //    새 뽑기를 추가하면 이 함수에 태우면 된다(규칙을 두 벌로 적지 말 것).
+  function checkGachaCurve(label, curve, tiers){
+    assert(curve.length===30, label+': 단계 수가 30이 아님: '+curve.length);
+    const first=curve[0].p, last=curve[curve.length-1].p;
+    // ① 각 단계 확률 합 = 정확히 1 · 모든 등급이 1단계부터 0이 아니다
+    for(let i=0;i<curve.length;i++){ let sum=0;
+      for(const t of tiers){ assert(GACHA_TIERS[t], label+': 없는 등급 '+t);
+        assert(curve[i].p[t]>0, label+': 단계 '+(i+1)+'에 '+t+'가 0%');
+        sum+=curve[i].p[t]; }
+      assert(Math.abs(sum-1)<1e-9, label+': 단계 '+(i+1)+' 확률 합이 1이 아님: '+sum); }
+    // ② 최상위 등급은 '금방 나오되 아주 낮게' — 1단계에 0이 아니지만 0.001% 미만
+    const top=tiers[tiers.length-1];
+    assert(first[top]>0 && first[top]<0.00001, label+': 1단계 최상위('+top+')가 0이거나 너무 높음: '+(first[top]*100).toFixed(5)+'%');
+    // ③ 초반은 금방 넘어가고, 위로 갈수록 간격이 계속 벌어진다
+    for(let i=1;i<curve.length;i++) assert(curve[i].need>curve[i-1].need, label+': 단계 '+(i+1)+' 필요 횟수가 안 오름');
+    for(let i=2;i<curve.length;i++){ const g1=curve[i-1].need-curve[i-2].need, g2=curve[i].need-curve[i-1].need;
+      assert(g2>=g1, label+': 단계 '+(i+1)+'에서 간격이 좁아짐: '+g1+' → '+g2); }
+    assert(curve[4].need<=20, label+': 5단계까지가 너무 오래 걸림: '+curve[4].need);
+    // 마지막 단계는 '오래 걸리되 도달 가능'해야 한다. 뽑기권은 미네랄로 못 사고 엘리트·상자·라운드
+    // 보너스·젬으로만 들어오므로, 수천 회를 요구하면 사실상 잠긴 단계가 된다(옛 값 5,162회가 그랬다).
+    assert(curve[29].need>=300, label+': 30단계가 너무 쉬움: '+curve[29].need);
+    assert(curve[29].need<=1500, label+': 30단계가 사실상 도달 불가: '+curve[29].need);
+    // ④ 단계가 오르면 하위 최상단(=일반)은 반드시 줄고, 상위 등급은 반드시 는다
+    const upper=tiers.slice(3);            // 유니크 이상
+    for(let i=1;i<curve.length;i++){ const A=curve[i-1].p, B=curve[i].p;
+      assert(B[tiers[0]]<A[tiers[0]], label+': 단계 '+(i+1)+'에서 '+tiers[0]+' 비중이 안 줄어듦');
+      for(const t of upper) assert(B[t]>A[t], label+': 단계 '+(i+1)+'에서 '+t+' 확률이 안 늘어남'); }
+    // ⑤ 하위 3등급은 끝에서 확실히 낮아진다 — 2·3번째는 '정점을 찍고 꺾이는' 모양이어야 한다
+    assert(last[tiers[0]]<first[tiers[0]]*0.3, label+': 최종 단계에서 '+tiers[0]+'가 충분히 안 떨어짐');
+    for(const t of [tiers[1],tiers[2]]){
+      let peak=0, pk=0;
+      for(let i=0;i<curve.length;i++) if(curve[i].p[t]>peak){ peak=curve[i].p[t]; pk=i+1; }
+      assert(pk<curve.length, label+': '+t+'가 마지막까지 계속 오름(꺾여야 한다)');
+      assert(last[t]<peak*0.90, label+': '+t+'가 정점에서 충분히 안 꺾임: 최고 '+(peak*100).toFixed(1)+'%(단계 '+pk+') → 최종 '+(last[t]*100).toFixed(1)+'%'); }
+    const lowSum=last[tiers[0]]+last[tiers[1]]+last[tiers[2]];
+    assert(lowSum<0.5, label+': 최종 단계인데 하위 3등급 합이 절반 이상: '+(lowSum*100).toFixed(1)+'%');
+    return '단계 '+curve.length+'(최종 누적 '+curve[curve.length-1].need.toLocaleString()+'회) · 1단계 '+top+' '
+      +(first[top]*100).toFixed(4)+'% → 최종 '+(last[top]*100).toFixed(2)+'%'; }
+
+  // 🎰 동료 뽑기 확률 — 설계의 핵심. 초반엔 상위 등급이 0%고, 뽑을수록 열리고 커진다.
+  await step('동료 뽑기: 단계별 확률 · 상위 등급 개방 · 중복은 재료', ()=>{ skipIf(typeof HB_MATE_GACHA!=='object','동료 뽑기 없음');
+    // 곡선 규칙은 펫과 공용 검사기로 본다(같은 형태이므로 잣대도 하나여야 한다)
+    const sum1=checkGachaCurve('동료', HB_MATE_GACHA, GACHA_TIER_ORDER);
+    // 1단계는 일반 90 / 레어 9 / 에픽 1 근처에서 시작한다
+    { const p0=HB_MATE_GACHA[0].p;
+      assert(Math.abs(p0.common-0.90)<0.01,'1단계 일반이 90% 근처가 아님: '+(p0.common*100).toFixed(2));
+      assert(Math.abs(p0.rare-0.09)<0.01,'1단계 레어가 9% 근처가 아님: '+(p0.rare*100).toFixed(2));
+      assert(Math.abs(p0.epic-0.01)<0.005,'1단계 에픽이 1% 근처가 아님: '+(p0.epic*100).toFixed(2)); }
+    // 확률을 준 등급에 실제 동료가 있어야 한다(확률만 있고 뽑을 게 없으면 안 된다)
+    { const have={}; for(const id in HB_MATES) have[HB_MATES[id].tier]=1;
+      for(const t of GACHA_TIER_ORDER) assert(have[t],'확률은 있는데 그 등급 동료가 없음: '+t); }
+    // 뽑기 단계는 누적 횟수로 오른다
+    const p=PROF(); p.chars.length=0; p.curId=''; profCreateChar('ranger','뽑기');
+    const H=hbHunt(); H.mates={}; H.party=[]; H.mateN=0;
+    assert(hbGachaLv(0)===1,'0회인데 Lv.1이 아님');
+    for(let i=0;i<HB_MATE_GACHA.length;i++)
+      assert(hbGachaLv(HB_MATE_GACHA[i].need)===i+1,'누적 '+HB_MATE_GACHA[i].need+'회에서 단계가 다름');
+    assert(hbGachaLv(1e9)===HB_MATE_GACHA.length,'상한을 넘어도 단계가 계속 오름');
+    // ⑥ 실제로 굴려 본다 — 권만큼만 뽑히고, 뽑은 만큼 레벨이 오른다
+    p.tickets={gear:0,pet:0,ally:30};
+    // ⚠ 상한 없이 돌리면 '뽑기권을 안 쓰는' 회귀에서 스모크가 멈춰 버린다 — 반드시 끊고 실패시킨다
+    let rolled=0; while(hbMateRoll() && rolled<200) rolled++;
+    assert(rolled===30,'뽑기권 수와 뽑은 횟수가 다름(권을 소모하지 않는지 확인): '+rolled);
+    assert(hbMateTicket()===0,'뽑기권이 남음');
+    assert(H.mateN===30,'누적 뽑기 횟수가 안 맞음: '+H.mateN);
+    assert(hbGachaLv()>1,'30회를 뽑았는데 뽑기 레벨이 그대로');
+    // ⑦ 굴려 보면 초반에는 사실상 일반·레어만 나온다(상위는 열려 있어도 아주 낮다)
+    { H.mates={}; H.party=[]; H.mateN=0; p.tickets.ally=300;
+      // ⚠ 씨앗은 고정이지만 '한 번 뽑을 때 난수를 몇 번 쓰는지'가 주변 상태에 따라 달라진다
+      //    (동료가 새로 들어오면 hbLayoutAllies가 돌고, 거기서 펫·구조물 수만큼 난수를 더 쓴다).
+      //    그래서 펫·기지를 비워 소비량을 고정한다 — 안 그러면 앞 스텝을 하나 추가하는 것만으로 결과가 바뀐다.
+      p.equip=[]; H.base={tiles:{},open:1}; hbLayoutAllies();
+      const cnt={}; let n=0;
+      const rnd=Math.random; let seed=12345;                    // 결정적 난수 — 판정이 운에 흔들리면 안 된다
+      Math.random=()=>{ seed=(seed*1103515245+12345)&0x7fffffff; return seed/0x7fffffff; };
+      try{ while(hbMateTicket()>0 && n<300){ const r=hbMateRoll(); if(!r) break; n++; cnt[r.tier]=(cnt[r.tier]||0)+1; } }
+      finally { Math.random=rnd; }
+      assert(n===300,'뽑기가 중간에 멈춤: '+n);
+      const low=(cnt.common||0)+(cnt.rare||0);
+      // ⚠ 문턱을 완화한 뒤로는 300회면 단계가 꽤 올라간다 — 표본을 '1~5단계 구간'으로 좁혀서 본다
+      assert(low/n>0.75,'초반 300회인데 일반+레어가 75%에 못 미침: '+(low/n*100).toFixed(1)+'%');
+      // ⚠ '한 번도 안 나온다'로 두면 안 된다 — 300회를 굴리는 동안 단계가 올라 갓 확률이 0.67%까지 간다.
+      //    깨끗한 상태에서 씨앗 12345면 실제로 1회 나온다(예전엔 앞 스텝이 남긴 상태 덕에 우연히 0이었다).
+      //    의도는 '아주 낮다'이므로 비율로 본다.
+      assert((cnt.god||0)/n<=0.01,'갓 비율이 너무 높음: '+(cnt.god||0)+'/'+n); }
+    // ⑧ 중복은 레벨이 아니라 재료로 쌓인다 — 난수를 고정해 '같은 동료 두 번'을 결정적으로 만든다
+    //    (확률에 기대면 이 규칙이 깨져도 통과해 버린다)
+    { H.mates={}; H.party=[]; H.mateN=0; p.tickets.ally=2;
+      const rnd=Math.random; Math.random=()=>0;      // 항상 1순위 등급의 1순위 동료
+      let a,b; try{ a=hbMateRoll(); b=hbMateRoll(); } finally { Math.random=rnd; }
+      assert(a&&b&&a.id===b.id,'난수 고정인데 다른 동료가 나옴: '+(a&&a.id)+'/'+(b&&b.id));
+      assert(a.isNew===true && b.isNew===false,'두 번째가 중복으로 처리되지 않음');
+      assert(hbMateLv(a.id)===1,'중복이 레벨을 올림: Lv'+hbMateLv(a.id));
+      assert(hbMateDup(a.id)===1,'중복이 재료로 안 쌓임: '+hbMateDup(a.id));
+      assert(hbMateMats().some(m=>m.id===a.id && m.dup===1),'중복이 재료 목록에 안 잡힘');
+      // 재료는 실제로 레벨을 올리는 데 쓰인다
+      const need=hbMateNeed(a.id), pt=hbMatePt(a.id);
+      H.mates[a.id].dup=Math.ceil(need/pt);
+      const lv0=hbMateLv(a.id);
+      while(hbMateDup(a.id)>0) hbMateFeed(a.id, a.id);
+      assert(hbMateLv(a.id)>lv0,'재료를 다 넣었는데 레벨이 안 오름'); }
+    // ⑨ 재료 값어치는 등급을 따른다 — 상위 중복이 더 크게 쳐진다
+    { let prev=0; for(const t of GACHA_TIER_ORDER){ assert(HB_MATE_PT[t]>prev,'재료 포인트가 등급 오름차순이 아님: '+t); prev=HB_MATE_PT[t]; } }
+    return sum1; });
+
+  // 🎟 뽑기권 = 미네랄로 못 산다. 엘리트·상자·라운드 보너스로 얻고 젬으로만 산다.
+  await step('뽑기권: 미네랄 불가 · 젬 구매 · 상자/엘리트/라운드 지급', ()=>{ skipIf(typeof buyTicketGem!=='function','뽑기권 구매 없음');
+    const p=PROF(); p.tickets={gear:0,pet:0,ally:0}; p.gem=0; p.pcoin=1e9;
+    // ① 미네랄로 사는 경로가 없어야 한다
+    assert(typeof profBuyPetTicket==='undefined','미네랄 펫 뽑기권 구매가 남아 있음');
+    assert(typeof PROF_PET_TICKET_COST==='undefined','미네랄 뽑기권 값이 남아 있음');
+    // ② 젬이 모자라면 못 산다 · 미네랄이 아무리 많아도 안 된다
+    for(const k of ['ally','pet','gear']){
+      assert(TICKET_GEM[k]>0,'젬 값이 없는 뽑기권: '+k);
+      assert(!buyTicketGem(k),'젬이 0인데 '+k+' 뽑기권이 사짐'); }
+    assert(p.pcoin===1e9,'미네랄이 줄었음(뽑기권은 미네랄로 사면 안 된다)');
+    // ③ 젬으로 사면 젬만 줄고 권이 는다
+    p.gem=100;
+    for(const k of ['ally','pet','gear']){ const g0=p.gem, n0=ticketN(k);
+      assert(buyTicketGem(k),'젬이 있는데 '+k+' 뽑기권을 못 삼');
+      assert(ticketN(k)===n0+1,k+' 뽑기권이 안 늘어남');
+      assert(p.gem===g0-TICKET_GEM[k],'젬 정산이 안 맞음: '+g0+' → '+p.gem); }
+    assert(p.pcoin===1e9,'구매로 미네랄이 줄었음');
+    // ④ 맵의 상자가 세 뽑기권을 모두 낸다 — 상자가 주요 공급처다
+    { const seen={}; const rnd=Math.random;
+      let i=0; Math.random=()=>{ i++; return ((i*0.137)%1); };     // 결정적으로 훑는다
+      try{ for(let n=0;n<400;n++){ const before={g:ticketN('gear'),p:ticketN('pet'),a:ticketN('ally')};
+        hbChestReward();
+        if(ticketN('gear')>before.g) seen.gear=1;
+        if(ticketN('pet')>before.p) seen.pet=1;
+        if(ticketN('ally')>before.a) seen.ally=1; } }
+      finally { Math.random=rnd; }
+      for(const k of ['gear','pet','ally']) assert(seen[k],'상자에서 '+k+' 뽑기권이 안 나옴'); }
+    // ⑤ 라운드 마일스톤이 동료·펫 권을 번갈아 준다
+    { let a=0,pt=0;
+      for(let r=HB_RW_EVERY; r<=HB_RW_EVERY*6; r+=HB_RW_EVERY){ const rw=hbRoundRw(1,r);
+        assert(rw,'마일스톤 라운드에 보상이 없음: '+r);
+        a+=rw.atk||0; pt+=rw.ptk||0; }
+      assert(a>0 && pt>0,'마일스톤이 동료·펫 권을 안 줌: 동료 '+a+' 펫 '+pt); }
+    // ⑥ 엘리트 처치 드랍 확률이 살아 있다(일반보다 훨씬 높아야 한다)
+    assert(HB_ATICKET_ELITE>HB_ATICKET_NORMAL && HB_PTICKET_ELITE>HB_PTICKET_NORMAL,'엘리트 드랍이 일반보다 높지 않음');
+    return '젬 '+['ally','pet','gear'].map(k=>TICKET_NAME[k]+' '+TICKET_GEM[k]).join(' · ')+' · 상자/마일스톤 지급 ok'; });
+
+  // 🐾 펫 뽑기 — 동료와 '같은 형태'. 곡선 규칙은 같은 검사기로 본다.
+  await step('펫 뽑기: 동료와 같은 형태 · 중복은 ★ 재료', ()=>{ skipIf(typeof PROF_PET_GACHA!=='object','펫 뽑기 단계 없음');
+    // ① 곡선 규칙은 동료와 동일한 잣대로
+    const sumP=checkGachaCurve('펫', PROF_PET_GACHA, PET_TIERS);
+    // ② 확률을 준 등급에 실제 펫이 있어야 한다(PET_TIERS 는 PROF_PETS 에서 나와야 한다)
+    { const have={}; for(const id in PROF_PETS) have[PROF_PETS[id].tier]=1;
+      for(const t of PET_TIERS) assert(have[t],'확률은 있는데 그 등급 펫이 없음: '+t);
+      for(const id in PROF_PETS) assert(PET_TIERS.indexOf(PROF_PETS[id].tier)>=0,'펫 등급이 확률표에 없음: '+id); }
+    // ③ 영입은 뽑기권으로만 — 미네랄로 직접 뽑던 경로는 없어졌다
+    const p=PROF(); p.pets={}; p.equip=[]; p.petN=0; p.tickets={gear:0,pet:0,ally:0}; p.pcoin=0;
+    assert(profPetRoll()===null,'뽑기권이 0인데 뽑힘');
+    // ④ 뽑기권은 젬으로만 산다(미네랄 경로는 따로 검사 — '뽑기권' 단계)
+    p.gem=TICKET_GEM.pet;
+    assert(buyTicketGem('pet'),'젬이 있는데 펫 뽑기권을 못 삼');
+    assert(profPetTicket()===1 && p.gem===0,'뽑기권 구매 정산이 안 맞음');
+    // ⑤ 뽑으면 ★0으로 들어오고, 뽑기권이 준다
+    const r1=profPetRoll();
+    assert(r1 && PROF_PETS[r1.id],'뽑기가 실패함');
+    assert(profPetTicket()===0,'뽑기권이 소모되지 않음');
+    assert(profPetOwned(r1.id) && profPetStar(r1.id)===0,'뽑은 펫이 ★0으로 안 들어옴');
+    assert((p.equip||[]).indexOf(r1.id)>=0,'처음 얻은 펫이 자동 장착되지 않음');
+    // ⑥ 중복은 ★가 아니라 재료로 쌓인다 — 난수를 고정해 결정적으로 본다
+    { p.pets={}; p.equip=[]; p.petN=0; p.tickets.pet=2;
+      const rnd=Math.random; Math.random=()=>0;
+      let a,b; try{ a=profPetRoll(); b=profPetRoll(); } finally { Math.random=rnd; }
+      assert(a&&b&&a.id===b.id,'난수 고정인데 다른 펫이 나옴');
+      assert(a.isNew===true && b.isNew===false,'두 번째가 중복으로 처리되지 않음');
+      assert(profPetStar(a.id)===0,'중복이 ★를 바로 올림(재료여야 한다)');
+      assert(profPetDup(a.id)===1,'중복이 재료로 안 쌓임');
+      // ⑦ 재료를 채우면 ★가 오르고 펫 성능(profPetVal)이 실제로 커진다
+      const v0=profPetVal(a.id), need=profPetNeed(a.id), pt=profPetPt(a.id);
+      p.pets[a.id].dup=Math.ceil(need/pt);
+      while(profPetDup(a.id)>0) profPetFeed(a.id, a.id);
+      assert(profPetStar(a.id)===1,'재료를 다 넣었는데 ★가 안 오름: ★'+profPetStar(a.id));
+      assert(profPetVal(a.id)>v0,'★가 올랐는데 보너스가 그대로: '+v0+' → '+profPetVal(a.id));
+      assert(profPetNeed(a.id)>need,'다음 ★ 요구량이 안 오름');
+      assert(!profPetFeed(a.id, a.id),'재료가 없는데 합성이 됨');
+      // ★ 상한을 넘지 않는다
+      p.pets[a.id].star=PROF_PET_STAR_MAX; p.pets[a.id].dup=99;
+      assert(!profPetFeed(a.id, a.id),'★ 최대인데 더 올라감');
+      assert(profPetStar(a.id)===PROF_PET_STAR_MAX,'★가 상한을 넘음'); }
+    // ⑧ 재료 값어치는 등급을 따른다
+    { let prev=0; for(const t of PET_TIERS){ assert(PROF_PET_PT[t]>prev,'펫 재료 포인트가 등급 오름차순이 아님: '+t); prev=PROF_PET_PT[t]; } }
+    return sumP; });
+
+  // 옛 펫 저장(중복 수 = 별)을 열었을 때 별을 잃지 않아야 한다
+  await step('마이그레이션: 옛 펫 {count} → {star,dup} 로 별 보존', ()=>{ skipIf(typeof migrateProfile!=='function','마이그레이션 없음');
+    const keep=PLAYER_META;
+    PLAYER_META={ coins:0, buildLevels:{}, profile:{ ver:8, pcoin:0, gas:0, gem:0, curId:'', items:[], chars:[],
+      hunt:{ dg:1, round:1, climb:false, best:{}, upg:{} },
+      idle:{sourceId:'drill',lastClaimTs:0}, unlocks:{},
+      pets:{ wolf:{count:4}, slime:{count:1} }, equip:['wolf'], petSlots:2 } };
+    migrateProfile();
+    const p=PLAYER_META.profile;
+    assert(profPetStar('wolf')===3,'옛 중복 4 → ★3 이 아님: ★'+profPetStar('wolf'));
+    assert(profPetStar('slime')===0,'옛 중복 1 → ★0 이 아님: ★'+profPetStar('slime'));
+    assert(p.pets.wolf.count===undefined,'옛 count 필드가 남음');
+    assert(p.pets.wolf.dup===0 && p.pets.wolf.fed===0,'재료 필드가 안 생김');
+    assert((p.tickets.pet||0)>0,'펫 뽑기권을 안 줌(뽑기 화면이 비어 보인다)');
+    PLAYER_META=keep;
+    return '★ 보존 ok'; });
+
+  // 옛 저장(전직해 둔 캐릭터)을 열었을 때 산 것을 잃지 않아야 한다
+  await step('마이그레이션: 전직해 둔 캐릭터 → 뿌리 복귀 + 그 동료 지급', ()=>{ skipIf(typeof migrateProfile!=='function','마이그레이션 없음');
+    const keep=PLAYER_META;
+    PLAYER_META={ coins:0, buildLevels:{}, profile:{ ver:6, pcoin:0, gas:0, gem:0, curId:'x1', items:[],
+      chars:[{ id:'x1', cls:'ranger', name:'옛전직', xp:0, level:20, statPoints:0, dgFloor:0,
+               unit:{ jobId:'sniper', level:20, evoStars:1, stats:{pow:0,vit:0,foc:0,agi:0}, gear:{} } }],
+      hunt:{ dg:1, round:1, climb:false, best:{}, upg:{}, build:{ally:2} },
+      idle:{sourceId:'drill',lastClaimTs:0}, unlocks:{}, pets:{}, equip:[], petSlots:2 } };
+    migrateProfile();
+    const p=PLAYER_META.profile, c=p.chars[0];
+    assert(PROF_JOBS[c.unit.jobId],'없어진 직업이 그대로 남음: '+c.unit.jobId);
+    assert(c.unit.jobId==='ranger','뿌리로 안 돌아감: '+c.unit.jobId);
+    assert(((p.hunt.mates||{}).sniper||{}).lv>=1,'전직해 뒀던 직업이 동료로 안 들어옴');
+    assert((p.hunt.party||[]).indexOf('sniper')>=0,'받은 동료가 출전 목록에 없음');
+    assert(c.unit.evoStars===1,'진화★가 사라짐');
+    assert(p.pcoin>0,'옛 범용 동료(build.ally) 환급이 없음: '+p.pcoin);
+    assert(!p.hunt.build.ally,'옛 동료 수가 남아 있음');
+    // 버전 숫자를 박지 않는다 — 마이그레이션이 늘 때마다 이 줄이 깨진다
+    assert(p.ver===defaultProfile().ver,'버전이 최신으로 안 올라감: '+p.ver+' vs '+defaultProfile().ver);
+    PLAYER_META=keep;
+    return '뿌리 복귀 + 동료 지급 + 환급 ok'; });
+
+  // 📈 성장 설계(2026-08-12) — 초반 빠르게 / 뒤로 갈수록 배로 / 25레벨마다 환생 / 해금은 레벨 게이트 / 라운드 보상
+  await step('성장 곡선: 초반 가속 · 후반 등비 · 환생 배수', ()=>{ skipIf(typeof profXpForLevel!=='function','곡선 없음');
+    // ① 초반은 옛 곡선(50·lv^1.5)보다 확실히 가볍다 — '30레벨까지 아주 빠르게'
+    const oldCum=(to)=>{ let t=0; for(let l=1;l<to;l++) t+=Math.round(50*Math.pow(l,1.5)); return t; };
+    const newCum=(to)=>{ let t=0; for(let l=1;l<to;l++) t+=profXpForLevel(l); return t; };
+    const c30o=oldCum(30), c30n=newCum(30);
+    assert(c30n < c30o*0.55,'30레벨까지가 옛 곡선보다 충분히 빠르지 않음: '+c30n+' vs '+c30o);
+    // ② PROF_LV_SOFT 이후는 등비 — 레벨당 같은 배수로 오르고, 결국 '배로' 든다
+    for(let l=PROF_LV_SOFT; l<PROF_LV_SOFT+40; l++){
+      const rt=profXpForLevel(l+1)/profXpForLevel(l);
+      assert(Math.abs(rt-PROF_XP_GEO)<0.02,'Lv'+l+'→'+(l+1)+' 증가율이 등비가 아님: '+rt.toFixed(3)); }
+    assert(profXpForLevel(PROF_LV_SOFT+30) > profXpForLevel(PROF_LV_SOFT)*8,'후반이 충분히 무거워지지 않음');
+    // ③ 경계에서 튀지 않는다(두 식이 이어져야 한다)
+    { const a=profXpForLevel(PROF_LV_SOFT-1), b=profXpForLevel(PROF_LV_SOFT);
+      assert(b>a && b<a*1.3,'구간 경계에서 필요 경험치가 튐: '+a+' → '+b); }
+    // ④ 곡선은 단조 증가 — 어느 지점에서도 쉬워지면 안 된다
+    for(let l=1;l<200;l++) assert(profXpForLevel(l+1)>=profXpForLevel(l),'Lv'+l+'에서 곡선이 내려감');
+    return '30레벨 누적 '+c30n.toLocaleString()+'(옛 '+c30o.toLocaleString()+') · 이후 레벨당 ×'+PROF_XP_GEO; });
+
+  await step('환생: 25레벨마다 · 깊이 밀수록 배수↑ · 계정 축은 유지', ()=>{ skipIf(typeof profRebirth!=='function','환생 없음');
+    const p=PROF(); p.chars.length=0; p.curId=''; const c=profCreateChar('ranger','환생');
+    // ① 문턱 미만이면 못 한다
+    c.level=PROF_REB_EVERY-1;
+    assert(!profCanRebirth(c),'문턱 미만인데 환생이 가능함');
+    assert(profRebirth(c)===0,'문턱 미만인데 환생이 실행됨');
+    assert(c.level===PROF_REB_EVERY-1,'실패한 환생이 레벨을 건드림');
+    // ② 문턱에서 1단계 · 계정 축(미네랄 업그레이드)과 장비·진화는 그대로
+    const H=hbHunt(); H.upg.atk=7; c.unit.evoStars=2;
+    c.level=PROF_REB_EVERY; c.xp=123;
+    assert(profCanRebirth(c),'문턱인데 환생이 안 됨');
+    assert(profRebirth(c)===1,'문턱에서 1단계가 아님');
+    assert(c.level===1 && c.xp===0,'환생 뒤 레벨·경험치가 1/0이 아님: Lv'+c.level+' xp'+c.xp);
+    assert(c.unit.level===1,'환생 뒤 유닛 레벨이 안 돌아감');
+    assert(hbHunt().upg.atk===7,'환생이 계정 축(미네랄 업그레이드)을 지움');
+    assert(c.unit.evoStars===2,'환생이 진화★를 지움');
+    const mul1=profXpMul(c);
+    assert(Math.abs(mul1-(1+PROF_REB_GAIN))<1e-9,'1단계 배수가 다름: '+mul1);
+    // ③ 깊이 밀고 환생할수록 많이 받는다 — 2배 레벨 = 2단계
+    c.level=PROF_REB_EVERY*2;
+    assert(profRebirth(c)===2,'2배 레벨인데 2단계가 아님');
+    assert(Math.abs(profXpMul(c)-(1+PROF_REB_GAIN*3))<1e-9,'누적 배수가 다름: '+profXpMul(c));
+    // ④ 배수가 '실제 지급'에 붙는다 — 지급 경로가 profGainXp 한 곳인지까지 본다
+    c.xp=0; const got=profGainXp(c,100);
+    assert(Math.abs(got-100*profXpMul(c))<1e-6,'지급에 배수가 안 붙음: '+got);
+    assert(Math.abs(c.xp-got)<1e-6,'지급값과 누적값이 다름');
+    return '1단계 ×'+mul1.toFixed(2)+' → 3단계 누적 ×'+profXpMul(c).toFixed(2); });
+
+  await step('해금: 레벨 게이트 · 한 번에 몰려 열리지 않는다', ()=>{ skipIf(typeof profUnlockLv!=='function','레벨 해금 없음');
+    // ① 표가 레벨 기준이고 오름차순 · 간격이 벌어져 있어야 '하나씩' 열린다
+    let prev=0;
+    for(const u of PROF_UNLOCKS){
+      assert(typeof u.lv==='number' && u.lv>0,'레벨 게이트가 없는 항목: '+u.id);
+      assert(u.power===undefined,'옛 파워 게이트가 남음: '+u.id);
+      assert(u.lv>prev,'레벨 순서가 뒤집힘: '+u.id);
+      assert(u.lv-prev>=3 || prev===0,'해금이 너무 붙어 있음(한 번에 열린다): '+u.id+' '+prev+'→'+u.lv);
+      prev=u.lv; }
+    // ② 실제 판정 — 레벨을 올리면 그 시점의 것만 열린다
+    const p=PROF(); p.chars.length=0; p.curId=''; const c=profCreateChar('ranger','해금');
+    p.unlocks={}; c.level=1; profSyncUnlocks();
+    assert(Object.keys(p.unlocks).length===0,'Lv.1인데 해금이 있음');
+    const first=PROF_UNLOCKS[0];
+    c.level=first.lv; profSyncUnlocks();
+    assert(p.unlocks[first.id],'문턱 레벨인데 첫 해금이 안 열림');
+    assert(Object.keys(p.unlocks).length===1,'첫 해금에서 여러 개가 한꺼번에 열림');
+    // ③ 환생해도 이미 연 것은 닫히지 않는다(영구 기록)
+    c.level=1; profSyncUnlocks();
+    assert(profHasUnlock(first.id),'레벨이 내려가자 해금이 닫힘(영구여야 한다)');
+    return PROF_UNLOCKS.length+'단계 · Lv.'+PROF_UNLOCKS[0].lv+'~'+prev; });
+
+  await step('라운드 보상: 마일스톤 최초 1회 · 팝업에서 미리 확인', async()=>{ skipIf(typeof hbRoundRw!=='function','라운드 보상 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','보상'); saveMeta(); }
+    openHome(); await sleep(60); _hb.manual=true;
+    const H=hbHunt(); H.rw={};
+    // ① 마일스톤 간격에만 보상이 붙고, 라운드가 오를수록 커진다
+    assert(!hbRoundRw(1,1) && !hbRoundRw(1,HB_RW_EVERY-1),'마일스톤이 아닌 라운드에 보상이 붙음');
+    assert(hbRoundRw(1,HB_RW_EVERY),'마일스톤 라운드에 보상이 없음');
+    assert(hbRoundRw(1,HB_RW_EVERY*2).min>hbRoundRw(1,HB_RW_EVERY).min,'뒤 마일스톤이 더 크지 않음');
+    // ② 최초 1회만 — 같은 라운드를 반복 파밍해도 다시 안 준다
+    const p=PROF(), c0=p.pcoin, tk0=(p.tickets&&p.tickets.gear)||0;
+    assert(hbRwClaim(1,HB_RW_EVERY),'최초 클리어 보상이 지급되지 않음');
+    const r=hbRoundRw(1,HB_RW_EVERY);
+    assert(p.pcoin===c0+r.min,'보상 미네랄이 안 맞음: '+(p.pcoin-c0)+' vs '+r.min);
+    assert(((p.tickets&&p.tickets.gear)||0)===tk0+(r.tk||0),'뽑기권 지급이 안 맞음');
+    const c1=p.pcoin;
+    assert(!hbRwClaim(1,HB_RW_EVERY),'같은 마일스톤이 두 번 지급됨(반복 파밍으로 무한 수령)');
+    assert(p.pcoin===c1,'두 번째 수령 시도에 재화가 늘어남');
+    assert(hbRwGot(1,HB_RW_EVERY),'수령 기록이 남지 않음');
+    // ③ 던전마다 따로 — 던전 1에서 받았다고 던전 2가 닫히면 안 된다
+    assert(!hbRwGot(2,HB_RW_EVERY),'다른 던전의 마일스톤까지 수령 처리됨');
+    // ④ 팝업에서 '다음 목표'를 미리 볼 수 있다(도전정신)
+    H.rw={}; H.best={1:2}; H.dg=1; _hb.round=1;
+    hbOpenRounds(); await sleep(40);
+    const nx=hbNextRw(1,1);
+    assert(nx===HB_RW_EVERY,'다음 마일스톤 안내가 틀림: '+nx);
+    assert(document.querySelectorAll('#hbRoundGrid .hbRd.rw').length>=1,'팝업에 마일스톤 표시가 없음');
+    assert(($('hbRoundNote').textContent||'').indexOf('라운드 '+nx)>=0,'팝업 안내에 다음 보상이 안 적힘');
+    hbCloseRounds();
+    return '간격 '+HB_RW_EVERY+' · 최초 1회 · 던전별 분리 ok'; });
+
   // 친구 목록은 네비 밖(마을 상단 바)에서 연다 — 네비 칸 수가 바뀌어도 진입점이 사라지지 않게 지킨다.
     await step('유즈맵 선택 → 네모네모 모드 팝업', ()=>{ openMapSelect(); openModeSheet(USEMAPS.nemo_inf||USEMAPS.nemo);
     const mo=document.querySelector('#modeSheet .moCard'); assert(visible(mo),'moCard 안 보임');
@@ -1543,8 +2042,7 @@ async function groupLobby(){
     const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0; p.pcoin=100000; p.unlocks={evolve:true};
     const c=profCreateChar('ranger','환급'); assert(c,'캐릭터 생성 실패');
     const before=p.pcoin;
-    c.unit.level=30;                                     // 전직·진화 레벨 요건 충족
-    assert(profClassChange('sniper'),'전직 실패');
+    c.unit.level=30; c.level=30;                         // 진화 레벨 요건 충족(전직은 폐지됨)
     assert(profEvolve(),'진화 실패');
     const spent=before-p.pcoin; assert(spent>0,'지출이 0');
     const it=profAddItem(profMakeItem('weapon',3,'rare')); assert(profEquipItem(it.iid),'장비 장착 실패');
@@ -1816,13 +2314,16 @@ async function groupLobby(){
     const before=snap();
     const p=PROF(); p.chars.length=0; p.curId=''; const c=profCreateChar('warden','던전');
     c.unit.stats={pow:40,vit:40,foc:0,agi:10};                 // 1층은 확실히 이기는 스펙
-    const coin=p.pcoin;
+    const coin=p.pcoin, lv0=c.level;
     assert(dgStart(1),'던전 진입 실패'); dgStopLoop();
     let n=0; while(DG && !DG.over && n<20000){ dgStep(0.016); n++; }
     assert(DG && DG.over>0,'1층 클리어 실패(over='+(DG&&DG.over)+', '+n+'프레임)');
     const r=DG.reward; DG=null;
     assert(snap()===before,'던전이 유즈맵 상태 G를 바꿈');
-    assert(p.pcoin===coin+r.pc,'보상 P가 안 들어옴');
+    // 레벨업도 미네랄을 준다(PROF_LV_MINERAL) — 보상만 더해 놓고 같기를 바라면 곡선이 바뀔 때마다 깨진다
+    const lvUp=c.level-lv0;
+    assert(p.pcoin===coin+r.pc+lvUp*PROF_LV_MINERAL,
+      '보상 P가 안 들어옴: '+coin+'+'+r.pc+'+레벨업'+lvUp+'×'+PROF_LV_MINERAL+' ≠ '+p.pcoin);
     assert(CHAR().dgFloor===1,'최고 층이 기록되지 않음');
     return n+'프레임 · +'+r.pc+'P/+'+r.xp+'XP'; });
   await step('던전: 스펙이 오르면 같은 층이 빨리 끝남', ()=>{ skipIf(typeof dgStart!=='function','던전 없음');
