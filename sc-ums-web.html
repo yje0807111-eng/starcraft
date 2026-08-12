@@ -6220,7 +6220,9 @@ function hbResize(){ const S=_hb, cv=S.cv, w=cv.clientWidth||1, h=cv.clientHeigh
   // 카메라는 캐릭터를 따라가되, 보이는 사각형이 필드를 벗어나지 않게 가둔다 → 맵 바깥이 화면에 안 들어온다
   const hvw=(w/S.k)/2, hvh=((S.vBot-S.vTop)/S.k)/2;
   const lim=(v,R,hv)=>(hv>=R)?0:Math.max(-(R-hv), Math.min(R-hv, v));   // 필드가 화면보다 작으면 가운데 고정
-  const camX=lim(S.char.x||0, HB_FIELD_RX, hvw), camY=lim(S.char.y||0, HB_FIELD_RY, hvh);
+  // 건설 중에는 캐릭터가 아니라 '건설 카메라'(S.bcam)를 따라간다 — 고스트를 화면 끝으로 끌면 여기가 움직인다
+  const _fx=(S.build&&S.bcam)?S.bcam.x:(S.char.x||0), _fy=(S.build&&S.bcam)?S.bcam.y:(S.char.y||0);
+  const camX=lim(_fx, HB_FIELD_RX, hvw), camY=lim(_fy, HB_FIELD_RY, hvh);
   S.camX=camX; S.camY=camY;                          // 보이는 영역의 월드 중심 — hbFloor가 여기를 덮는다
   S.cx=w/2-camX*S.k; S.cy=(S.vTop+S.vBot)/2-camY*S.k;
   if(S.char.px==null){ S.char.x=0; S.char.y=0; S.char.tx=0; S.char.ty=0; S.char.px=1; } }   // 최초 1회만 원점 — 그 뒤로는 걸어다닌 자리를 지킨다
@@ -6327,6 +6329,14 @@ function hbWaveFail(){ const S=_hb; if(!S) return;
   hbHud(); }
 // 순수 시뮬 한 스텝 — rAF와 분리(스모크가 직접 부른다). phase: fight/gap/fail/clearWait/down
 // 탭한 곳으로 걸어간다 + 중앙 회복 구역. 적은 이미 캐릭터를 쫓으므로 전투는 알아서 따라온다.
+// ═══ 🎥 가장자리 끌기 — 건물 고스트를 화면 끝으로 끌면 카메라가 그쪽으로 따라간다 ═══
+// 한 손가락만으로 맵을 넓게 쓰게 해 준다. HOME 사냥터와 관리자 건설 화면이 **같은 함수**를 쓴다.
+// 반환 = -1..1 방향 세기(가장자리에 가까울수록 ±1, 안쪽이면 0).
+const EDGE_PAD=0.16, EDGE_SPD=0.9;   // 감지 폭(화면 비율) · 초당 이동(보이는 화면의 배수)
+function edgePush(fx,fy){
+  const f=(v)=>{ if(v<EDGE_PAD) return -(1-Math.max(0,v)/EDGE_PAD);
+                 if(v>1-EDGE_PAD) return (1-Math.max(0,1-v)/EDGE_PAD); return 0; };
+  return { x:f(fx), y:f(fy) }; }
 function hbClampField(x,y){ return [ Math.max(-HB_FIELD_RX,Math.min(HB_FIELD_RX,x)),
                                      Math.max(-HB_FIELD_RY,Math.min(HB_FIELD_RY,y)) ]; }
 function hbWalk(S,c,dt){
@@ -6364,7 +6374,7 @@ function hbFieldEl(e){
 function hbFieldTap(e){ const cv=hbFieldEl(e); if(!cv) return;
   if(e.cancelable && e.preventDefault) e.preventDefault();      // 브라우저가 화면을 끌고 가지 않게
   const r=cv.getBoundingClientRect(), px=e.clientX-r.left, py=e.clientY-r.top;
-  if(_hb.arm){ _hbPtr={id:e.pointerId, arm:true}; hbArmTo(px,py); return; }   // 🧱 배치 중이면 고스트가 손가락을 따라온다
+  if(_hb.arm){ _hbPtr={id:e.pointerId, arm:true, px:px, py:py}; hbArmTo(px,py); return; }   // 🧱 배치 중이면 고스트가 손가락을 따라온다
   if(hbTapStruct(px,py)) return;                                // 🪖 벙커를 눌렀으면 이동이 아니라 벙커 창
   _hbPtr={id:e.pointerId, arm:false}; hbSetDest(px,py); }
 function hbFieldMove(e){ const P=_hbPtr; if(!P || e.pointerId!==P.id) return;
@@ -6372,9 +6382,24 @@ function hbFieldMove(e){ const P=_hbPtr; if(!P || e.pointerId!==P.id) return;
   const cv=document.getElementById('hbCv'); if(!cv) return;
   if(e.cancelable && e.preventDefault) e.preventDefault();
   const r=cv.getBoundingClientRect(), px=e.clientX-r.left, py=e.clientY-r.top;
-  if(P.arm){ if(_hb.arm) hbArmTo(px,py); else _hbPtr=null; return; }
+  if(P.arm){ if(_hb.arm){ P.px=px; P.py=py; hbArmTo(px,py); } else _hbPtr=null; return; }
   hbSetDest(px,py); }                                            // 지정 유닛이 손가락을 따라 이동
 function hbFieldUp(e){ if(_hbPtr && e.pointerId===_hbPtr.id) _hbPtr=null; }
+// 고스트를 화면 가장자리로 끌고 있으면 건설 카메라를 그쪽으로 민다(매 프레임)
+let _hbEdgeT=0;
+function hbEdgePan(){ const S=_hb, P=_hbPtr;
+  const now=performance.now(), dt=Math.min(0.05,(now-(_hbEdgeT||now))/1000); _hbEdgeT=now;
+  if(!S||!S.build||!S.bcam||!P||!P.arm||!S.arm) return;
+  const cv=document.getElementById('hbCv'); if(!cv) return;
+  const r=cv.getBoundingClientRect(); if(!r.width||!r.height) return;
+  // 세로는 '보이는 전장'(재화 바 아래 ~ 스킬 바 위)을 기준으로 본다 — 캔버스 전체로 재면 위아래가 안 먹는다
+  const vy0=S.vTop||0, vy1=S.vBot||r.height, vh=Math.max(1,vy1-vy0);
+  const e=edgePush(P.px/r.width, (P.py-vy0)/vh);
+  if(!e.x && !e.y) return;
+  const k=S.k||1, spanX=(r.width/k), spanY=(vh/k);
+  S.bcam.x=Math.max(-HB_MAP_R, Math.min(HB_MAP_R, S.bcam.x + e.x*EDGE_SPD*spanX*dt));
+  S.bcam.y=Math.max(-HB_MAP_R, Math.min(HB_MAP_R, S.bcam.y + e.y*EDGE_SPD*spanY*dt));
+  hbResize(); hbArmTo(P.px, P.py); }                 // 카메라를 옮긴 뒤 고스트를 손가락 자리에 다시 맞춘다
 // 구조물을 눌렀나 — 지금은 벙커만 창이 열린다(나머지는 그냥 통과시켜 이동으로 처리)
 function hbTapStruct(sx,sy){ const S=_hb; if(!S) return false;
   const q=hbCellOwner(hbGx((sx-S.cx)/S.k), hbGx((sy-S.cy)/S.k));
@@ -6426,11 +6451,12 @@ function hbBuildEnter(){ const S=_hb; if(!S||S.build) return;
   if(S.chests) S.chests.length=0;
   S.wave=1; S.phase='fight'; S.waveT=hbWaveTime(1); S.buf={min:0,gas:0,xp:0,kills:0};
   S.char.tx=null; S.char.ty=null; S.char.mv=0;      // 캐릭터도 멈춘다
+  S.bcam={ x:S.char.x, y:S.char.y };                // 건설 카메라는 캐릭터 자리에서 시작
   hbHud(); }
 function hbBuildExit(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation();
   const S=_hb; if(!S) return;                        // ⚠ _hb 없이 부르면 hbSpawnWave가 터진다
   const was=S.build;
-  S.arm=null; S.build=false;                         // ⚠ 상태를 먼저 끄고 나서 버튼을 다시 그린다(순서를 바꾸면 ⊘가 남는다)
+  S.arm=null; S.build=false; S.bcam=null;                         // ⚠ 상태를 먼저 끄고 나서 버튼을 다시 그린다(순서를 바꾸면 ⊘가 남는다)
   hbArmBtns();
   if(was){ S.wave=1; S.phase='fight'; hbSpawnWave(); }
   if(typeof playSfx==='function') playSfx('ui_close');
@@ -6970,7 +6996,7 @@ function hbEnsureStructModels(){ if(_hbCstLoaded) return; if(!(window.M3D&&M3D.c
   try{ M3D.cstEnsure(keys); }catch(_e){ _hbCstLoaded=false; } }
 let _hbUid=0;
 function hbFrame(){ if(!_hb||!_hb.on||_hb.bg){ _hbRaf=0; return; }   // 배경 모드 = 시뮬만(setInterval), 그리기 없음
-  hbPump(); hbResize(); hbDraw(); if(_hb.arm) hbArmBtns();   // 🧱 고스트 버튼은 카메라를 따라간다
+  hbPump(); hbEdgePan(); hbResize(); hbDraw(); if(_hb.arm) hbArmBtns();   // 🧱 고스트 버튼은 카메라를 따라간다
   if(hb3dReady()){ const cv=document.getElementById('cvMarine');
     if(cv){ hb3dAttach(); hbEnsureStructModels(); cv.style.display='block';
       // 관리자 랩과 같은 호출: M3D.sync(list, W, H, dt, [], [], null, k)
@@ -16284,7 +16310,8 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
       if(G.tech.selU) G.tech.selU=G.tech.selU.filter(id=>id!==u.eid); G.tech.ents.splice(i,1); bunk._entryCd=0.12; done=true; }
     else active=true; }
   for(const e of G.tech.ents){ if(e.type!=='bldg'||!e._evo) continue; e._evo.t=Math.max(0,e._evo.t-dt); active=true; if(e._evo.t<=0){ _techEvolveDone(e, e._evo.to); done=true; } }   // 🧬 건물 진화 진행
-  const _vmoving=techViewTick(dt);   // 🎥 부드러운 줌/팬 보간(메인맵과 동일) — 애니메이션 중이면 매 프레임 재렌더
+  const _edge=techEdgePan(dt);       // 🎥 배치 고스트를 화면 끝으로 끌면 뷰가 따라간다
+  const _vmoving=techViewTick(dt)||_edge;   // 🎥 부드러운 줌/팬 보간(메인맵과 동일) — 애니메이션 중이면 매 프레임 재렌더
   if(G.tech.fog && G.tech.fog.on){ G.tech.fog.t=(G.tech.fog.t||0)+dt; if(G.tech.fog.t>=0.1){ G.tech.fog.t=0; techFogCompute(); } techFogDraw(); }   // 🌫️ 시야 계산은 ~10/s, 그리기는 매 프레임(어두워짐 페이드 부드럽게)
   for(const e of G.tech.ents){ if(e.type==='bldg'&&e.bt>0){ const _frozen=e._bpause||(_techNeedsPower(e.bk)&&!_techPowered(e.x,e.y));   // 일시정지·블랙아웃 = 완전 정지(카운트다운·재렌더 불필요)
     if(!e.waiting&&!_frozen){ e.bt=Math.max(0,e.bt-dt*(1+(e._repairN||0))); if(e.bt<=0){ techFinishBuild(e); done=true; } }   // 🔧 수리 일꾼 수만큼 완성 가속
@@ -17371,6 +17398,15 @@ function _techBuildBldg(e){ return (e&&e.type==='worker'&&e.build!=null)?G.tech.
 function _techBuildLocked(e){ const bd=_techBuildBldg(e); return !!(bd&&bd.bt>0&&!bd._bpause); }   // 건설 중(미일시정지) 일꾼 = 이동 잠금
 function _techAirOf(e){ return (typeof FXLAB_AIR!=='undefined')&&FXLAB_AIR.has(_techEntKey(e)); }
 const _btPtrs=new Map(); let _btPan=null, _btPinch=null, _btBox=null, _btCmd=null, _btMoved=false, _btDown=null, _btArm=false, _btArmOff={x:0,y:0}, _btLongT=null, _btHold=null;
+let _btArmPt=null;   // 🎥 배치 고스트를 끄는 동안의 손가락 화면 위치(0..1) — 가장자리 끌기용
+// 고스트를 화면 가장자리로 끌고 있으면 뷰를 그쪽으로 민다. HOME 사냥터와 **같은 edgePush()** 를 쓴다.
+function techEdgePan(dt){ if(!_btArm||!_btArmPt||!G.tech||!G.tech.arm) return false;
+  const e=edgePush(_btArmPt.sx, _btArmPt.sy); if(!e.x && !e.y) return false;
+  const t=techViewT(), v=techView();
+  const dx=e.x*EDGE_SPD*dt/Math.max(0.001,v.zoom), dy=e.y*EDGE_SPD*dt/Math.max(0.001,v.zoom);
+  t.x+=dx; t.y+=dy; _techClampView(t);
+  v.x=t.x; v.y=t.y; _techClampView(v);          // 끌고 있는 동안은 즉시 반영(보간을 기다리면 고스트가 손을 놓친다)
+  _techArmTo(_btArmPt.sx, _btArmPt.sy); return true; }
 function _btRect(){ const m=document.getElementById('cstMain'); return m?m.getBoundingClientRect():null; }
 // 충돌 반경 기반 동심원 대형 슬롯(메인 assignFormation과 동일 공식)
 function _techRingSlots(list){ const slots=[{dx:0,dy:0}]; if(list.length<=1) return slots;
@@ -17464,7 +17500,9 @@ function techPtrMove(ev){ if(!G.tech||G.tab!=='Build'||!_btPtrs.has(ev.pointerId
   if(_btLongT && _btDown){ const r=_btRect(); if(r){ const mx=(ev.clientX-r.left)/(r.width||1), my=(ev.clientY-r.top)/(r.height||1); if(Math.hypot(mx-_btDown.sx,my-_btDown.sy)>0.05){ clearTimeout(_btLongT); _btLongT=null; } } }   // 🧱 크게 드래그 = 롱프레스 취소(손가락 미세 흔들림은 허용)
   if(_btPinch && _btPtrs.size>=2){ const p=[..._btPtrs.values()], d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y), z=Math.max(techMinZoom(),Math.min(techMaxZoom(),_btPinch.zoom*d/_btPinch.d)), t=techViewT(); t.zoom=z;   // 목표 뷰만 갱신 → techViewTick이 부드럽게 따라감
     const cx=(p[0].x+p[1].x)/2, cy=(p[0].y+p[1].y)/2; t.x=_btPinch.vx-(cx-_btPinch.cx)/(_btPinch.rw||1)/z; t.y=_btPinch.vy-(cy-_btPinch.cy)/(_btPinch.rh||1)/z; _techClampView(t); _btMoved=true; return; }
-  if(_btArm){ const r=_btRect(); if(!r) return; _techArmTo((ev.clientX-r.left)/(r.width||1),(ev.clientY-r.top)/(r.height||1)); _btMoved=true; return; }   // 배치 고스트가 손가락을 따라 이동
+  if(_btArm){ const r=_btRect(); if(!r) return;
+    _btArmPt={ sx:(ev.clientX-r.left)/(r.width||1), sy:(ev.clientY-r.top)/(r.height||1) };   // 🎥 가장자리 끌기가 쓸 마지막 손가락 위치
+    _techArmTo(_btArmPt.sx, _btArmPt.sy); _btMoved=true; return; }   // 배치 고스트가 손가락을 따라 이동
   if(_btCmd){ const r=_btRect(); if(!r) return; const w=_techS2W((ev.clientX-r.left)/(r.width||1),(ev.clientY-r.top)/(r.height||1));
     if(_btCmd.lift){ _btCmd.lift.tx=Math.max(techBX0(),Math.min(techBX1(),w.x)); _btCmd.lift.ty=Math.max(techBY0(),Math.min(techBY1(),w.y)); _btMoved=true; techMapRender(); return; }   // 🛫 부양 건물이 손가락 따라 이동
     _techAssignMove(w.x,w.y); _btMoved=true; return; }   // 지정 유닛이 손가락을 따라 이동
@@ -17474,7 +17512,7 @@ function techPtrMove(ev){ if(!G.tech||G.tab!=='Build'||!_btPtrs.has(ev.pointerId
 function techPtrUp(ev){ if(!G.tech) return; clearTimeout(_btLongT); _btLongT=null;
   if(_btPan){ _btPan=null; _btPtrs.delete(ev.pointerId); return; }   // 🧱 손 떼면 롱프레스 취소(짧게=이동만)
   const had=_btPtrs.has(ev.pointerId); _btPtrs.delete(ev.pointerId); if(_btPtrs.size<2) _btPinch=null;
-  if(_btPtrs.size>0) return; const box=_btBox, cmd=_btCmd, down=_btDown, moved=_btMoved, armDrag=_btArm, hold=_btHold; _btBox=null; _btCmd=null; _btDown=null; _btMoved=false; _btArm=false; _btHold=null;
+  if(_btPtrs.size>0) return; const box=_btBox, cmd=_btCmd, down=_btDown, moved=_btMoved, armDrag=_btArm, hold=_btHold; _btBox=null; _btCmd=null; _btDown=null; _btMoved=false; _btArm=false; _btArmPt=null; _btHold=null;
   const body=document.getElementById('btSheetBody'), sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null});
   if(hold){ if(hold.board) for(const id of (G.tech.selU||[])){ const u=G.tech.ents.find(e=>e.eid===id); if(u){ if(u._boardTgt!=null){ u._boardTgt=null; u.tx=null; u.ty=null; u._wp=null; } if(u._nydusTgt!=null){ u._nydusTgt=null; u.tx=null; u.ty=null; u._wp=null; } } }   // 손 뗌 = 아직 안 들어간 유닛 입장 중단(수리는 계속)
     techMapRender(); return; }

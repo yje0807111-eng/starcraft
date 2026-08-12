@@ -193,6 +193,11 @@ node test/bench-strike.mjs 400 80 4   # 대규모 전투 렌더 벤치(유닛수
 - **연속 배치는 방향을 기억한다.** `_hb.arm={k,gx,gy,dir,last}`. 확정하면 `hbArmAdvance()`가 `dir`(기본 오른쪽)로 다음 자리를 잡고, **막힌 칸은 그 방향으로 계속 건너뛴다**. 맵 끝에 닿으면 아래→오른쪽→위→왼쪽 순으로 꺾고, 그래도 없으면 `hbFreeCell`. 사용자가 고스트를 무시하고 다른 칸에 놓으면 `직전 → 이번` 이동이 곧 새 `dir`이 된다(왼쪽에 놓으면 그 뒤로 계속 왼쪽). 후보는 `hbCanPlace` + `hbSealCheck`를 **둘 다** 통과해야 한다 — 봉쇄 검사를 빠뜨리면 고스트가 못 놓는 칸에 서서 ▶가 계속 비활성으로 보인다.
 - ⚠ **`.curBar.bare`는 click-through다**(`pointer-events:none`, `.res`·`.hudSet`만 되살림). 되살릴 자식을 빠뜨리면 그 UI는 '눌러도 아무 일 없고 뒤 화면이 대신 반응'한다 — 설정(☰ `#curSettingsBtn`)이 이 때문에 HOME·마을·유즈맵·상점·정비 다섯 화면에서 죽어 있었고, 클릭이 `#homeScreen`까지 내려가 캐릭터가 그리로 걸어갔다. **필드 탭 화이트리스트의 전제('UI는 자식이라 자동 제외')가 click-through 레이어에서는 깨진다** — `pointer-events:none`을 새로 줄 때마다 여기를 볼 것. 또 `#curBar`의 설정은 `openAppSettings()`(앱용)를 불러야 한다. `openSettings()`는 인게임용이라 HOME에서도 임무 목표·배속·게임 나가기가 뜬다.
 - ⚠ **`applyVideo()`와 `fxLevel()`의 기본값을 맞출 것.** `fxLevel()`은 `G.opt.fx` 미설정을 `'full'`로 보는데 `applyVideo()`만 `G.opt.fx!=='full'`로 봐서, fx가 아직 없는 새 프로필은 **설정을 한 번 여는 것만으로** `body.lite`(`box-shadow`·`backdrop-filter` 전부 `none!important`)가 켜졌다 — 화면엔 '고화질'이라 떠 있는데 이펙트만 사라졌다. 지금은 둘 다 `fxLevel()`을 쓴다.
+- **🎥 가장자리 끌기 = 배치 고스트를 화면 끝으로 끌면 카메라가 따라간다**(2026-08-12). 방향 판정은 **`edgePush(fx,fy)` 하나**를 HOME 사냥터(`hbEdgePan`)와 관리자 건설 화면(`techEdgePan`)이 함께 쓴다 — 상수도 `EDGE_PAD`/`EDGE_SPD` 공용.
+  HOME은 건설 중에만 쓰는 별도 카메라 `_hb.bcam`을 두고(`hbResize`가 `S.build&&S.bcam`이면 캐릭터 대신 이걸 따라간다) `hbBuildExit`에서 `null`로 돌려 캐릭터 추적으로 복귀한다.
+  ⚠ 카메라를 옮긴 뒤에는 **고스트를 손가락 자리에 다시 맞춰야 한다**(`hbArmTo`/`_techArmTo` 재호출) — 안 하면 화면만 흐르고 고스트가 뒤에 남는다.
+  ⚠ 관리자 쪽은 `techView()`와 `techViewT()`를 **둘 다** 갱신한다. 목표(`viewT`)만 바꾸면 `techViewTick` 보간을 기다리는 동안 고스트가 손가락을 놓친다.
+  ⚠ **최소 줌에선 팬할 여지가 없다** — `_techClampView`가 화면을 가운데로 고정하므로 스모크도 확대한 뒤에 잰다.
 - **필드 이동은 관리자 건설 화면과 같은 방식**(2026-08-12): 누른 즉시 그 자리로 이동하고 **뗄 때까지 손가락을 따라온다**
   (`hbFieldTap`/`hbFieldMove`/`hbFieldUp` ↔ 관리자 `techPtrDown`/`techPtrMove`의 `_btCmd` → `_techAssignMove`). 포인터 id를 물고 있어 멀티터치가 명령을 훔치지 못한다.
   ⚠ **`touch-action:none` + `preventDefault()`가 둘 다 있어야 한다** — 없으면 드래그가 브라우저 스크롤로 새어 화면 자체가 끌려간다.

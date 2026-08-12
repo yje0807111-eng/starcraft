@@ -987,9 +987,29 @@ async function groupLobby(){
     { _hb.arm.dir=[1,0]; _hb.arm.last=null; _hb.arm.gx=HB_GRID_R-1; _hb.arm.gy=-6;
       hbArmConfirm();
       assert(_hb.arm.gy>-6,'맵 끝인데 아래로 안 꺾임: '+_hb.arm.gx+','+_hb.arm.gy); }
+    // ⑤-2 고스트를 화면 가장자리로 끌면 건설 카메라가 그쪽으로 따라간다(한 손가락으로 맵 전체 사용)
+    { const hs=$('homeScreen'), cv=$('hbCv'), rr=cv.getBoundingClientRect();
+      const ev=(t,x,y)=>({ type:t, pointerId:31, target:hs, clientX:rr.left+x, clientY:rr.top+y, cancelable:true, preventDefault(){} });
+      _hb.bcam={x:0,y:0}; _hb.char.x=0; _hb.char.y=0; hbResize();
+      hbFieldTap(ev('pointerdown', rr.width*0.5, (_hb.vTop+_hb.vBot)/2));
+      hbFieldMove(ev('pointermove', rr.width*0.97, (_hb.vTop+_hb.vBot)/2));   // 오른쪽 끝을 잡고 유지
+      const cx0=_hb.bcam.x, g0=_hb.arm.gx;
+      for(let i=0;i<12;i++) hbEdgePan();
+      assert(_hb.bcam.x>cx0,'오른쪽 끝을 잡고 있는데 건설 카메라가 안 따라감: '+cx0+' → '+_hb.bcam.x);
+      assert(_hb.arm.gx>=g0,'화면은 갔는데 고스트가 안 따라옴');
+      // 안쪽으로 옮기면 멈춘다
+      hbFieldMove(ev('pointermove', rr.width*0.5, (_hb.vTop+_hb.vBot)/2));
+      const cx1=_hb.bcam.x; for(let i=0;i<6;i++) hbEdgePan();
+      assert(_hb.bcam.x===cx1,'화면 안쪽인데도 카메라가 밀림');
+      // 손을 떼면 멈춘다
+      hbFieldMove(ev('pointermove', rr.width*0.97, (_hb.vTop+_hb.vBot)/2));
+      hbFieldUp(ev('pointerup', rr.width*0.97, (_hb.vTop+_hb.vBot)/2));
+      const cx2=_hb.bcam.x; for(let i=0;i<6;i++) hbEdgePan();
+      assert(_hb.bcam.x===cx2,'손을 뗐는데 카메라가 계속 밀림'); }
     // ⑥ ⊘로 나가면 라운드가 1웨이브부터 다시 돈다
     hbBuildExit();
     assert(_hb.build===false && !_hb.arm,'건설 모드가 안 끝남');
+    assert(!_hb.bcam,'건설 카메라가 안 치워짐(캐릭터를 다시 따라가야 한다)');
     assert($('hbBuildStop').classList.contains('hide'),'나갔는데 ⊘ 버튼이 남음');
     assert(_hb.wave===1,'나간 뒤 웨이브가 1이 아님: '+_hb.wave);
     assert(_hb.foes.length||_hb.pend.length,'나갔는데 적이 안 나옴');
@@ -2151,6 +2171,38 @@ async function groupSandbox(){
     assert(names.length>=bar.produces.length, '카드 '+names.length+'개 < produces '+bar.produces.length+'개');
     switchTab('Main', document.querySelector('.tab[data-tab="Main"]'));
     return names.join('·'); });
+  // 🎥 배치 고스트를 화면 가장자리로 끌면 뷰가 따라간다 — HOME 사냥터와 같은 edgePush()를 쓴다
+  await step('관리자 건설: 고스트를 가장자리로 끌면 화면이 따라간다', async()=>{
+    switchTab('Build', document.querySelector('.tab[data-tab="Build"]')); await sleep(300);
+    skipIf(!G.tech || typeof techEdgePan!=='function','가장자리 끌기 없음');
+    // 공용 방향 함수 — 안쪽은 0, 가장자리로 갈수록 ±1
+    { const c=edgePush(0.5,0.5), l=edgePush(0.02,0.5), rb=edgePush(0.98,0.98);
+      assert(c.x===0 && c.y===0,'화면 중앙인데 밀림');
+      assert(l.x<-0.5 && rb.x>0.5 && rb.y>0.5,'가장자리 방향이 안 잡힘'); }
+    G.tech.arm=null; techArm('barracks'); skipIf(!G.tech.arm,'병영 배치를 못 켬');
+    // ⚠ 최소 줌에선 맵 전체가 화면에 들어와 팬할 여지가 없다(_techClampView가 가운데로 고정) — 확대하고 잰다
+    { const z=Math.min(techMaxZoom(), Math.max(techMinZoom()*1.6, 2));
+      techView().zoom=z; techViewT().zoom=z; _techClampView(techView()); _techClampView(techViewT()); }
+    skipIf(techView().zoom<=techMinZoom()+0.01,'확대가 안 됨(팬 여지 없음)');
+    _techArmTo(0.5,0.5);
+    const v0=techView().x, g0=G.tech.armXY.x;
+    _btArm=true; _btArmPt={sx:0.97, sy:0.5};
+    for(let i=0;i<10;i++) techEdgePan(0.05);              // 0.5초 유지
+    const v1=techView().x, g1=G.tech.armXY.x;
+    assert(v1>v0,'오른쪽 끝을 잡고 있는데 화면이 안 따라감: '+v0.toFixed(3)+' → '+v1.toFixed(3));
+    assert(g1>=g0,'화면은 갔는데 고스트가 안 따라옴: '+g0.toFixed(3)+' → '+g1.toFixed(3));
+    // 안쪽이면 안 움직인다
+    _btArmPt={sx:0.5, sy:0.5}; const v2=techView().x;
+    for(let i=0;i<5;i++) techEdgePan(0.05);
+    assert(techView().x===v2,'화면 안쪽인데도 뷰가 움직임');
+    // 손을 떼면(=_btArm false) 더는 안 움직인다
+    _btArm=false; const v3=techView().x; _btArmPt={sx:0.97,sy:0.5};
+    for(let i=0;i<5;i++) techEdgePan(0.05);
+    assert(techView().x===v3,'손을 뗐는데 화면이 계속 밀림');
+    _btArmPt=null; G.tech.arm=null; G.tech.armXY=null;
+    { const z0=techMinZoom(); techView().zoom=z0; techViewT().zoom=z0; _techClampView(techView()); _techClampView(techViewT()); }   // 줌 원복
+    switchTab('Main', document.querySelector('.tab[data-tab="Main"]'));
+    return '뷰 '+v0.toFixed(2)+'→'+v1.toFixed(2)+' · 고스트 추종 ok'; });
   await step('전투실험 탭 전환', ()=>{ switchTab('Battle', document.querySelector('.tab[data-tab="Battle"]'));
     assert(G.tab==='Battle','tab='+G.tab); switchTab('Main', document.querySelector('.tab[data-tab="Main"]')); return 'ok'; });
 }
