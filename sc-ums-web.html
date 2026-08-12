@@ -4069,7 +4069,7 @@
           <button class="hbmX" onclick="hbCloseBunker()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
         </div>
         <div class="hbRows uiScroll" id="hbBunkerBody"></div>
-        <div class="hbRoundNote">유닛 화력은 캐릭터 공격력을 따릅니다. <b>건물</b> 구역의 벙커 공격력으로 더 올릴 수 있습니다.</div>
+        <div class="hbRoundNote">출전 동료를 넣으면 그 자리에서 함께 쏩니다. 화력은 동료 위력 × <b>건물</b> 구역의 벙커 공격력.</div>
       </div>
     </div>
     <!-- 부스트 — 시간제 강화 -->
@@ -6390,14 +6390,22 @@ const HB_STRUCT={
   turret: {name:'터렛',      ico:'bld_turret',   m3d:'union_missile_turret', w:1,h:1, max:4,   base:120, mul:1.8,   tip:'고정 포탑 — 사거리가 길다'},
   bunker: {name:'벙커',      ico:'bld_bunker',   m3d:'union_bunker',         w:2,h:2, max:2,   base:300, mul:2.4,   tip:'유닛을 넣어 함께 쏜다 · 적을 끌어당긴다'},
 };
-// 🪖 벙커 주둔 유닛 — 캐릭터 공격력의 일정 비율로 함께 쏜다. 화력 배수는 방어 업그레이드 bkatk.
-const HB_BUNKER_SLOTS=4;                 // 벙커 한 채에 넣을 수 있는 유닛 수
-const HB_BUNKER_UNIT_DPS=0.45;           // 유닛 1기 = 캐릭터 공격력의 45%
+// 🪖 벙커 주둔 = **출전 동료를 지정해서 넣는다**(2026-08-12 확정 설계). 익명 유닛 구매는 폐지.
+//   밖에 있으면 캐릭터 주위를 돌며 자기 사거리로 쏘고, 벙커에 넣으면 그 자리에 고정되어
+//   벙커 사거리(HB_BUNKER_RNG)로 쏘면서 '벙커 공격력'(bkatk) 배수를 추가로 받는다.
+//   지정은 타일에 저장한다(t.m=[동료id]) — 편성·기지 저장과 같은 수명을 가진다.
+const HB_BUNKER_SLOTS=4;                 // 벙커 한 채에 넣을 수 있는 동료 수
 const HB_BUNKER_RNG=1.25;                // 벙커 사거리 = 캐릭터 사거리 배수
-const HB_BUNKER_UNIT_BASE=90, HB_BUNKER_UNIT_MUL=1.75;   // 유닛 추가 비용
-function hbBunkerN(t){ return Math.max(0, Math.min(HB_BUNKER_SLOTS, (t&&t.n)|0)); }
-function hbBunkerUnitCost(n){ return Math.ceil(HB_BUNKER_UNIT_BASE*Math.pow(HB_BUNKER_UNIT_MUL, n)); }
-function hbBunkerAtkMul(){ return hbUpgNum('bkatk')/100; }   // '건물' 구역 업그레이드 '벙커 공격력'(%)
+// 이 벙커에 실제로 들어 있는 동료 — 파티에서 빠졌거나 팔린 동료는 여기서 걸러진다(타일도 정리)
+function hbBunkerMates(t){ if(!t||t.k!=='bunker') return [];
+  const party=hbParty(), m=(t.m||[]).filter(id=>party.indexOf(id)>=0);
+  if(m.length!==(t.m||[]).length) t.m=m;               // 죽은 지정은 그 자리에서 지운다
+  return m.slice(0, HB_BUNKER_SLOTS); }
+// 이 동료가 들어가 있는 벙커의 타일 키(없으면 null) — 한 동료는 한 벙커에만 들어간다
+function hbMateBunkerQ(id){ const T=hbBase().tiles;
+  for(const q in T){ const t=T[q]; if(t.k==='bunker' && (t.m||[]).indexOf(id)>=0) return q; }
+  return null; }
+function hbBunkerAtkMul(){ return hbUpgNum('bkatk')/100; }   // '건물' 구역 업그레이드 '벙커 공격력'(%) → 배수(기본 100%=1)
 // 옛 개수형 보유분 → 타일. 'ally'는 없다 — 동료는 뽑기 로스터(HB_MATES)로 옮겨졌다.
 const HB_BUILD_MIG={ turret:'turret', bunker:'bunker' };
 function hbKey(gx,gy){ return gx+','+gy; }
@@ -6555,9 +6563,12 @@ function hbBoostLeft(k){ return Math.max(0, Math.ceil((((hbHunt().boostT&&hbHunt
 function hbLayoutBase(){ hbGridDirty();   // 구조물이 바뀌었을 수 있다 — 길을 다시 굽게 한다
   const S=_hb; if(!S) return; const st=hbCharStats();
   S.allies=[]; S.turrets=[]; S.bunkers=[];
-  // 🤝 동료는 '내 주위'를 돈다(이름 있는 로스터 = main의 뽑기). 터렛·벙커는 타일에서 읽는다.
+  // 🤝 동료 — 벙커에 지정된 동료는 궤도에서 빠져 그 벙커에 들어간다. 나머지가 '내 주위'를 돈다.
   const party=(typeof hbParty==='function')?hbParty():[];
-  for(let i=0;i<party.length;i++){ const id=party[i], M=HB_MATES[id], a=i/Math.max(1,party.length)*Math.PI*2;
+  const inBunker={}; { const T0=hbBase().tiles;
+    for(const q in T0){ const t0=T0[q]; if(t0.k==='bunker') for(const id of hbBunkerMates(t0)) inBunker[id]=q; } }
+  const orbit=party.filter(id=>!inBunker[id]);
+  for(let i=0;i<orbit.length;i++){ const id=orbit[i], M=HB_MATES[id], a=i/Math.max(1,orbit.length)*Math.PI*2;
     S.allies.push({x:S.char.x+Math.cos(a)*52, y:S.char.y+Math.sin(a)*52, ph:a, cdT:Math.random()*.5,
       mid:id, mdl:M.unit, ico:M.ico, dps:hbMateDps(id), rng:M.rng, spd:M.spd, face:0}); }
   const T=hbBase().tiles;
@@ -6566,8 +6577,9 @@ function hbLayoutBase(){ hbGridDirty();   // 구조물이 바뀌었을 수 있�
     const x=hbTx(gx)+(B.w-1)*HB_TILE/2, y=hbTx(gy)+(B.h-1)*HB_TILE/2;   // 점유 영역의 중심
     if(t.k==='turret') S.turrets.push({ x, y, cdT:Math.random()*.5, ico:'🔫' });   // 발사 시차(main 동작 유지)
     else if(t.k==='bunker'){ const mx=st.hpMax*hbAllyMul().bunker.hp;   // 벙커 체력 업그레이드(main) 반영
-      if(t.n==null) t.n=1;                                              // 새 벙커는 유닛 1기로 시작
-      S.bunkers.push({ x, y, q, hp:(t.hp==null?mx:Math.min(t.hp,mx)), hpMax:mx, n:hbBunkerN(t), cdT:Math.random()*.5, ico:'🧱' }); } }
+      delete t.n;                                                       // (구) 익명 주둔 수 — 동료 지정으로 대체됐다
+      S.bunkers.push({ x, y, q, hp:(t.hp==null?mx:Math.min(t.hp,mx)), hpMax:mx,
+        mates:hbBunkerMates(t), cdT:Math.random()*.5, ico:'🧱' }); } }
   const eq=((typeof PROF==='function'&&PROF().equip)||[]).slice(0,profPetSlots());
   S.pets=eq.map((id,i)=>({ id, ico:(PROF_PETS[id]&&PROF_PETS[id].emoji)||'🐾',
     ph:i/Math.max(1,eq.length)*Math.PI*2, x:0, y:0, cdT:Math.random()*.5 })); }
@@ -6863,26 +6875,35 @@ function hbCloseBunker(){ _hbBunkerQ=null; const el=document.getElementById('hbB
 function renderBunkerModal(){ const box=document.getElementById('hbBunkerBody'); if(!box) return;
   const t=_hbBunkerQ && hbBase().tiles[_hbBunkerQ];
   if(!t||t.k!=='bunker'){ box.innerHTML='<div class="hbRoundNote">벙커가 없습니다.</div>'; return; }
-  const n=hbBunkerN(t), full=n>=HB_BUNKER_SLOTS, cost=hbBunkerUnitCost(n);
-  const coin=Math.floor(PROF().pcoin||0), st=hbCharStats(), bm=hbBunkerAtkMul();
-  const per=st.atk*HB_BUNKER_UNIT_DPS*bm;
-  let slots=''; for(let i=0;i<HB_BUNKER_SLOTS;i++) slots+='<span class="hbSlot'+(i<n?' on':'')+'">🪖</span>';
-  box.innerHTML='<div class="hbSlots">'+slots+'</div>'
-    +'<div class="hbRow"><span class="hbRowIco"><img src="'+ICO_DIR+'buildings/bld_bunker.webp" alt="" draggable="false"></span>'
-    +'<span class="hbRowTx"><b>주둔 유닛 <i>'+n+'/'+HB_BUNKER_SLOTS+'</i></b>'
-    +'<em>1기당 '+Math.round(per)+' 피해 · 합계 '+Math.round(per*n)+'</em></span>'
-    +'<button class="hbRowBtn" onclick="hbBunkerAdd()"'+((full||coin<cost)?' disabled':'')+'>'
-    +(full?'가득':cost.toLocaleString('en-US')+' 미네랄')+'</button></div>'
-    +'<div class="hbRow"><span class="hbRowIco"><img src="'+ICO_DIR+'upgrades/up_shield.webp" alt="" draggable="false"></span>'
-    +'<span class="hbRowTx"><b>벙커 공격력 <i>'+Math.round(bm*100)+'%</i></b><em>방어 탭에서 올립니다</em></span>'
-    +'<button class="hbRowBtn" onclick="hbCloseBunker();hmUpgTab(&#39;def&#39;)">방어 탭</button></div>'; }
-function hbBunkerAdd(){ const t=_hbBunkerQ && hbBase().tiles[_hbBunkerQ]; if(!t||t.k!=='bunker') return;
-  const n=hbBunkerN(t); if(n>=HB_BUNKER_SLOTS) return;
-  const p=PROF(), cost=hbBunkerUnitCost(n);
-  if(Math.floor(p.pcoin||0)<cost){ hmToast('미네랄이 부족합니다'); return; }
-  p.pcoin-=cost; t.n=n+1; saveMeta(); hbLayoutBase();
+  const inb=hbBunkerMates(t), party=hbParty(), st=hbCharStats(), bm=hbBunkerAtkMul(), M=hbAllyMul();
+  const dmg=(id)=>Math.round(st.atk*hbMateDps(id)*M.ally.mul*bm);      // 이 벙커에서 이 동료가 내는 한 발 피해
+  let slots=''; for(let i=0;i<HB_BUNKER_SLOTS;i++){ const id=inb[i], MT=id&&HB_MATES[id];
+    slots+='<span class="hbSlot'+(MT?' on':'')+'"'+(MT?' title="'+MT.name+'"':'')+'>'+(MT?MT.ico:'·')+'</span>'; }
+  let h='<div class="hbSlots">'+slots+'</div>';
+  let tot=0; for(const id of inb) tot+=dmg(id);
+  h+='<div class="hbRoundNote">주둔 <b>'+inb.length+'/'+HB_BUNKER_SLOTS+'</b> · 합계 <b>'+tot+'</b> 피해 · 벙커 공격력 <b>'+Math.round(bm*100)+'%</b>'
+    +' <button class="hbRowBtn" style="margin-left:6px" onclick="hbCloseBunker();hmUpgTab(&#39;bld&#39;)">건물 업그레이드</button></div>';
+  if(!party.length) h+='<div class="hbRoundNote">출전한 동료가 없습니다 — <b>정비 · 동료</b>에서 출전시키면 여기 넣을 수 있습니다.</div>';
+  // 출전 동료 전원 — 이 벙커에 넣기/빼기, 다른 벙커에 있으면 이리로 옮기기
+  for(const id of party){ const MT=HB_MATES[id], q2=hbMateBunkerQ(id);
+    const here=(q2===_hbBunkerQ), elsewhere=(q2 && !here), full=inb.length>=HB_BUNKER_SLOTS;
+    h+='<div class="hbRow"><span class="hbRowIco">'+MT.ico+'</span>'
+      +'<span class="hbRowTx"><b>'+MT.name+' <i>Lv.'+hbMateLv(id)+'</i></b>'
+      +'<em>'+(here?('주둔 중 · '+dmg(id)+' 피해'):elsewhere?'다른 벙커에 주둔 중':('내 주위 · 넣으면 '+dmg(id)+' 피해'))+'</em></span>'
+      +'<button class="hbRowBtn" onclick="hbBunkerAssign(&#39;'+id+'&#39;)"'+((!here&&full)?' disabled':'')+'>'
+      +(here?'빼기':elsewhere?'이리로':full?'가득':'넣기')+'</button></div>'; }
+  box.innerHTML=h; }
+// 지정 토글 — 여기 있으면 빼고, 다른 벙커에 있으면 옮겨 오고, 밖에 있으면 넣는다. 저장은 타일에.
+function hbBunkerAssign(id){ const t=_hbBunkerQ && hbBase().tiles[_hbBunkerQ]; if(!t||t.k!=='bunker') return;
+  if(hbParty().indexOf(id)<0) return;
+  const q2=hbMateBunkerQ(id);
+  if(q2===_hbBunkerQ){ t.m=(t.m||[]).filter(x=>x!==id); }              // 빼기 → 다시 내 주위를 돈다
+  else {
+    if(hbBunkerMates(t).length>=HB_BUNKER_SLOTS) return;               // 가득
+    if(q2){ const o=hbBase().tiles[q2]; if(o) o.m=(o.m||[]).filter(x=>x!==id); }   // 다른 벙커에서 빼서
+    (t.m||(t.m=[])).push(id); }                                        // 이 벙커로
+  saveMeta(); hbLayoutBase();
   if(typeof playSfx==='function') playSfx('ui_open');
-  if(typeof updateCurBar==='function') updateCurBar();
   renderBunkerModal(); }
 document.addEventListener('pointerdown', hbFieldTap, true);   // 리스너 위치는 document 그대로(로드 순서 무관) — 거르는 것은 위의 대상 검사다
 document.addEventListener('pointermove', hbFieldMove, true);
@@ -7072,9 +7093,12 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char;
       a.face=Math.atan2(a.x-p0x, a.y-p0y);                          // 도는 방향을 본다(게임과 같은 atan2(dx,dy))
       hbUnitFire(a, (a.dps||0.3)*M.ally.mul, a.rng||1, dt, (M.ally.cdMul||1)/(a.spd||1)); }
     for(const t of S.turrets) hbUnitFire(t,M.turret.dps,M.turret.rng,dt);
-    // 🪖 벙커 = 안에 든 유닛 수만큼 화력. 유닛 1기 = 캐릭터 공격력의 HB_BUNKER_UNIT_DPS × 건물 업그레이드 bkatk.
+    // 🪖 벙커 = 안에 든 동료들의 화력 합. 각자 자기 위력(hbMateDps × 동료 업그레이드)을 유지하고,
+    //    벙커 보너스(bkatk)와 벙커 사거리(HB_BUNKER_RNG)를 추가로 받는다.
     { const bm=hbBunkerAtkMul();
-      for(const b of S.bunkers){ if(b.hp<=0||!b.n) continue; hbUnitFire(b, HB_BUNKER_UNIT_DPS*b.n*bm, HB_BUNKER_RNG, dt); } }
+      for(const b of S.bunkers){ if(b.hp<=0||!(b.mates&&b.mates.length)) continue;
+        let dps=0; for(const id of b.mates) dps+=hbMateDps(id);
+        hbUnitFire(b, dps*M.ally.mul*bm, HB_BUNKER_RNG, dt, M.ally.cdMul); } }
     for(const q of S.pets){ q.ph+=dt*1.1; q.x=c.x+Math.cos(q.ph)*30; q.y=c.y+Math.sin(q.ph)*30; hbUnitFire(q,M.pet.dps,1,dt,M.pet.cdMul); } }
   if(S.atkT>0) S.atkT-=dt;                            // 공격 모션 남은 시간(끝나면 idle로)
   if(S.slowT>0) S.slowT-=dt;
