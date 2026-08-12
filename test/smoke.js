@@ -204,17 +204,31 @@ async function groupLobby(){
       // 토벌은 네비에서 빠지고 HOME 팝업이 됐다 — 2번 칸은 정비(장비·펫·동료)
       assert(document.querySelector('#navBar .navIt[data-nav=gear]').textContent.indexOf('정비')>=0,'2번 탭 표기가 정비가 아님'); }
     assert(document.querySelector('#navBar .navIt.on').dataset.nav==='home','HOME 탭이 활성이 아님');
-    // 실데이터에 붙은 곳 = POWER UPGRADES(영구 업그레이드 6종 — 미네랄 구매·스탯 포인트 흡수)
-    assert(document.querySelectorAll('.hmUp').length===6,'업그레이드가 6칸이 아님');
-    // 4칸(2행)만 보이고 나머지는 스크롤 — 카드가 화면을 다 먹지 않게
+    // 실데이터에 붙은 곳 = 사냥터 업그레이드(공격/방어/유틸 3탭 · 해금제)
+    assert(document.querySelectorAll('.hmUpTab').length===3,'업그레이드 탭이 3개가 아님');
+    assert(document.querySelectorAll('.hmUpQ').length===3,'수량 버튼(1/10/MAX)이 3개가 아님');
+    { const n=document.querySelectorAll('.hmUp').length, all=Object.keys(HB_UPG).length;
+      assert(n>0 && n<all,'현재 탭만 그려야 하는데 '+n+'/'+all+'칸');
+      // 잠긴 칸은 값·레벨 대신 자물쇠 — 해금 전에 사면 안 된다
+      assert(document.querySelectorAll('.hmUp.lk').length>0,'잠긴 업그레이드가 하나도 없음(해금제가 안 걸림)');
+      assert(hbUpgOwned('atk') && hbUpgOwned('aspd'),'데미지·공격속도는 처음부터 열려 있어야 함'); }
+    // 2.7행이 보이는 '고정' 높이 — 0.7행이 걸쳐 보이는 게 '더 있다'는 신호. 탭마다 개수가 달라도 안 흔들린다
     { const gr=$('hmUpgGrid'), cell=gr.querySelector('.hmUp');
-      const ch=cell.getBoundingClientRect().height, rows=Math.round((gr.clientHeight-16+8)/(ch+8));
-      assert(rows===2,'업그레이드가 2행(4칸)이 아님: '+rows+'행');
+      const ch=cell.getBoundingClientRect().height, rows=(gr.clientHeight-16+8)/(ch+8);
+      assert(Math.abs(rows-2.7)<0.15,'업그레이드 높이가 2.7행이 아님: '+rows.toFixed(2)+'행');
+      const h0=gr.clientHeight;
+      hmUpgTab('def'); const h1=$('hmUpgGrid').clientHeight;
+      hmUpgTab('atk');
+      assert(h0===h1,'탭을 바꾸면 높이가 변함: '+h0+' → '+h1);
       assert(gr.scrollHeight-gr.clientHeight>10,'나머지 칸이 스크롤되지 않음'); }
     // 접으면 헤더만 남고 전장이 그만큼 넓어진다(캐릭터가 내려온다)
     // ⚠ 접힘은 max-height 전환(.28s)이라 토글 직후엔 아직 높다 — 전환이 끝난 뒤 재야 한다.
     //   캐릭터 y도 매 프레임 목표를 좇는 형태라 hbResize를 여러 번 돌려 수렴시킨다.
-    { const settle=async()=>{ await sleep(400); for(let i=0;i<40;i++) hbResize(); };
+    // ⚠ 헤드리스에선 CSS 전환이 프레임 없이는 진행되지 않아 시작값에 멈춘다(실브라우저는 정상).
+    //   시간에 기대지 말고 대기 중인 애니메이션을 확정시킨 뒤 잰다 — '접으면 넓어지는가'만 검사하면 된다.
+    { const settle=async()=>{ await sleep(320);
+        if(document.getAnimations) for(const a of document.getAnimations()){ try{ a.finish(); }catch(e){} }
+        for(let i=0;i<40;i++) hbResize(); };
       const yOpen=_hb.cy, botOpen=_hb.vBot, kOpen=_hb.k;
       hmToggleUpg(); await settle();
       assert(document.querySelector('.hmUpg').classList.contains('down'),'접힘 상태가 안 됨');
@@ -285,7 +299,7 @@ async function groupLobby(){
     openHome(); await sleep(60);
     const head=document.querySelector('.hmUpgHead'), hs=getComputedStyle(head);
     assert(/JuaKR/.test(hs.fontFamily),'제목에 제목 폰트(JuaKR)가 안 걸림: '+hs.fontFamily);
-    const body=document.querySelector('.hmUpLv'), bs=getComputedStyle(body);
+    const body=document.querySelector('.hmUpName'), bs=getComputedStyle(body);
     assert(!/JuaKR/.test(bs.fontFamily),'본문까지 제목 폰트라 위계가 없음: '+bs.fontFamily);
     const hsz=parseFloat(hs.fontSize), bsz=parseFloat(bs.fontSize);
     assert(hsz-bsz>=3,'제목이 본문보다 충분히 크지 않음: 제목 '+hsz+' / 본문 '+bsz);
@@ -486,6 +500,39 @@ async function groupLobby(){
     const gap=plus.getBoundingClientRect().left-num.getBoundingClientRect().right;
     assert(gap>=0 && gap<=3,'숫자와 + 사이가 '+gap.toFixed(1)+'px — 0~3px여야 한다');
     return gap.toFixed(1)+'px'; });
+  // 📦 상자 — 맵을 돌아다닐 이유. '공격 대상'이라 사거리 안에 있어야 부순다.
+  await step('상자: 사거리 안일 때만 부수고 · 적이 우선 · 보상은 섞여 나온다', async()=>{
+    skipIf(typeof hbSpawnChest!=='function','상자 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    openHome(); await sleep(300); _hb.manual=true;
+    const S=_hb; S.foes.length=0; S.pend.length=0; S.chests.length=0;
+    S.char.x=0; S.char.y=0; S.char.hp=S.char.hpMax; hbResize();
+    // ① 캐릭터에 붙여 두지 않는다 — 가만히 있어도 먹히면 이동할 이유가 없다
+    for(let i=0;i<5;i++){ S.chests.length=0; const c1=hbSpawnChest();
+      if(c1) assert(Math.hypot(c1.x-S.char.x,c1.y-S.char.y)>=HB_CHEST_MIN_D-0.01,'상자가 너무 가까이 생김'); }
+    // ② 사거리 밖이면 안 맞는다
+    S.chests.length=0;
+    const far={x:S.char.range+120, y:0, hp:99, hpMax:99}; S.chests.push(far);
+    S.char.cdT=0; for(let i=0;i<40;i++) hbStep(0.05);
+    assert(far.hp===99,'사거리 밖 상자가 깎였다: '+far.hp);
+    // ③ 사거리 안이면 자동으로 부순다
+    S.chests.length=0;
+    const near={x:Math.max(10,S.char.range*0.5), y:0, hp:hbChestHp(1), hpMax:hbChestHp(1)};
+    S.chests.push(near);
+    const tk0=((PROF().tickets&&PROF().tickets.gear)||0), gem0=PROF().gem||0;
+    for(let i=0;i<200 && S.chests.length;i++) hbStep(0.05);
+    assert(!S.chests.length,'사거리 안인데 안 부서짐(hp '+near.hp+')');
+    const got=(((PROF().tickets&&PROF().tickets.gear)||0)-tk0) + ((PROF().gem||0)-gem0);
+    const boost=hbBoostOn('inc')||hbBoostOn('atk');
+    assert(got>0 || boost,'상자를 부쉈는데 아무 보상도 없음');
+    // ④ 적이 우선 — 적이 사거리 안에 있으면 상자는 안 맞는다
+    S.chests.length=0;
+    const ch2={x:Math.max(10,S.char.range*0.4), y:0, hp:999, hpMax:999}; S.chests.push(ch2);
+    S.foes.push({ico:'x',mdl:'snapper',x:0,y:20,hp:1e9,hpMax:1e9,atk:0,spd:0,cdT:99,elite:false});
+    S.char.cdT=0; for(let i=0;i<40;i++) hbStep(0.05);
+    assert(ch2.hp===999,'적이 사거리에 있는데 상자를 때림 — 딜을 흘린다');
+    S.foes.length=0; S.chests.length=0;
+    return '최소거리 '+HB_CHEST_MIN_D+' · 사거리 밖 무시 · 적 우선 ok'; });
   // 사냥터 맵 — 그림이 덮는 범위와 걸어갈 수 있는 범위가 같아야 한다.
   // 예전엔 필드(±900×±620)가 그림보다 훨씬 넓어서 걸어 나가면 검은 바닥이 나왔다.
   await step('사냥터: 걸을 수 있는 범위 = 그림이 덮는 범위', async()=>{

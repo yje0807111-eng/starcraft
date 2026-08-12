@@ -132,7 +132,7 @@
     color:rgba(234,238,245,.92);background:rgba(4,6,10,.34);border:1px solid rgba(255,255,255,.26);
     filter:drop-shadow(0 1px 3px rgba(0,0,0,.8));transition:color .15s,border-color .15s}
   .hudSet:hover{color:#fff;border-color:rgba(255,255,255,.45)}
-  .hudSet svg{display:block;width:15px;height:15px}   /* block — inline이면 라인박스 하단 여백이 생겨 아이콘이 위로 뜬다 */ */
+  .hudSet svg{display:block;width:15px;height:15px}   /* block — inline이면 라인박스 하단 여백이 생겨 아이콘이 위로 뜬다 */
   #hudR{display:flex;align-items:center;gap:10px;font-size:var(--fs-md);font-weight:800;white-space:nowrap;text-shadow:0 2px 4px #000,0 0 8px #000}
   .res{display:flex;align-items:center;gap:4px}   /* 상단 재화 바(.curBar)와 같은 간격 */
   .res .ri{width:14px;height:14px;display:block;flex:none;filter:drop-shadow(0 1px 3px rgba(0,0,0,.95))}   /* 숫자 높이에 맞춤 — .curBar와 동일 */
@@ -2557,16 +2557,35 @@
   /* 공통 패널 — 네비바와 같은 회색 그라데 · 모서리는 아주 살짝만 깎는다 */
   .hmCard{flex:none;background:var(--hmPanel);border:1px solid var(--hbEdge);border-radius:var(--r-bar);overflow:hidden}
   /* POWER UPGRADES — 위쪽은 배경이 보이도록 비우고 카드는 네비 바로 위에 붙인다 */
-  .hmUpg{margin-top:auto}   /* 위쪽 빈 자리는 배경 — 카드만 아래로 붙인다 */
+  .hmUpg{margin-top:auto;position:relative;
+    /* 각진 SF — 왼쪽 윗모서리와 오른쪽 아랫모서리를 깎는다(디자인 시스템 cutA) */
+    clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}
+  /* 위가 밝아야 판으로 보인다 — 테두리가 챔퍼에 잘리므로 선을 따로 얹는다 */
+  .hmUpg::before{content:'';position:absolute;left:10px;right:0;top:0;height:1px;z-index:4;pointer-events:none;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.18) 22%,rgba(255,255,255,.18) 78%,transparent)}
   /* 헤더 = 접기/펴기 손잡이. 접으면 이 줄만 남고 뒤 배경이 화면 전체로 보인다 */
-  .hmUpgHead{width:100%;display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:15px;font-weight:700;letter-spacing:.6px;
-    color:#ececec;cursor:pointer;background:none;border:none;border-bottom:1px solid rgba(255,255,255,.06);text-align:left}
-  .hmUpgChev{margin-left:auto;width:9px;height:9px;border-right:2px solid #9a9a9a;border-bottom:2px solid #9a9a9a;
+  .hmUpgHead{position:relative;width:100%;display:flex;align-items:center;gap:9px;padding:9px 12px;
+    font-size:15px;font-weight:400;letter-spacing:.11em;
+    color:#ececec;cursor:pointer;background:none;border:none;border-bottom:none;text-align:left}
+  /* 머리줄 아래 골드 스캔라인 — 팝업 .setTitle::after 와 같은 규칙 */
+  .hmUpgHead::after{content:'';position:absolute;left:12px;right:12px;bottom:0;height:1px;
+    background:linear-gradient(90deg,rgba(240,180,41,.5) 0%,rgba(240,180,41,.5) 62%,transparent)}
+  /* 볼트 타일 — 패널에 남긴 유일한 금색(무엇을 하는 판인지 말하는 자리) */
+  .hmUpgBolt{flex:none;width:20px;height:20px;display:grid;place-items:center;border-radius:2px;
+    background:linear-gradient(180deg,#ffd97a 0%,#f0b429 40%,#dd9a19 64%,#f2b93e 100%)}
+  .hmUpgBolt svg{display:block;width:12px;height:12px;fill:none;stroke:#2b1d00;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+  /* 제목 — 글자에만 금색 그라데이션. 패널 면은 그대로 회색이다 */
+  .hmUpgTtl{flex:1;font-weight:400;
+    background:linear-gradient(180deg,#fff3c4 0%,#f8c453 40%,#c67f12 72%,#f0b429 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 1px 0 rgba(0,0,0,.85))}
+  .hmUpgChev{flex:none;width:9px;height:9px;border-right:2px solid #9a9a9a;border-bottom:2px solid #9a9a9a;
     transform:rotate(45deg) translate(-2px,-2px);transition:transform .16s}
   .hmUpg.down .hmUpgHead{border-bottom-color:transparent}
   .hmUpg.down .hmUpgChev{transform:rotate(-135deg) translate(-2px,-2px)}
   /* ⚠ display:none은 전환이 안 된다 — 높이를 0으로 좁혀 접는다(그래야 배경도 같은 속도로 따라온다) */
-  .hmUpg.down .hmUpgGrid{max-height:0 !important;padding-top:0;padding-bottom:0;opacity:0}
+  .hmUpg.down .hmUpgGrid{height:0 !important;padding-top:0;padding-bottom:0;opacity:0}
+  .hmUpg.down .hmUpgBar{display:none}
   /* 스킬 바 — 전장 위에 떠 있다(업그레이드 카드 바로 위). 판을 만들지 않고 버튼만 얹는다 */
   .hbBar{position:absolute;left:0;right:0;z-index:2;display:flex;justify-content:center;gap:6px;padding:0 8px;pointer-events:none}
   .hbBar>*{pointer-events:auto}
@@ -2624,22 +2643,101 @@
     border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
   .hbChip b{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:#ececec}
   .hmUpg.down .hmStatRow{display:none}
-  /* 4칸(2×2)만 보이고 나머지는 스크롤 — 최대 높이는 renderHome이 실제 한 칸 높이로 계산해 넣는다 */
-  .hmUpgGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px;overflow-y:auto;
-    transition:max-height .28s cubic-bezier(.4,0,.2,1),padding .28s cubic-bezier(.4,0,.2,1),opacity .2s}
-  .hmUp{display:flex;flex-direction:column;gap:4px;padding:8px;background:rgba(255,255,255,.045);
-    border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
-  .hmUpTop{display:flex;align-items:center;gap:8px;min-width:0}
-  .hmUpIco{flex:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:18px;
-    background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
-  .hmUpTx{min-width:0;display:flex;flex-direction:column}
-  .hmUpName{font-size:var(--fs-lg);font-weight:700;color:#ececec}
-  .hmUpLv{font-size:var(--fs-sm);color:#9a9a9a}
-  .hmUpLv b{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:#5dff8f}
-  .hmUpBtn{height:32px;cursor:pointer;font-family:inherit;font-size:var(--fs-md);font-weight:700;letter-spacing:.3px;
-    color:#2b1d00;background:linear-gradient(180deg,#ffd97a,#e8a92b 58%,#b8801a);
-    border:1px solid rgba(255,220,140,.8);border-radius:var(--r-bar)}
-  .hmUpBtn:disabled{cursor:default;color:#7a7a7a;background:rgba(255,255,255,.05);border-color:var(--metal-edge)}
+  /* ── 사냥터 업그레이드 ── */
+  /* 탭 띄 — 공용 .msSortTabs 구조. 활성은 흰글자+밑줄(HOME은 시안 금지 — DESIGN.md) */
+  .hmUpgBar{display:flex;align-items:stretch;gap:6px;padding:0 8px;border-bottom:1px solid rgba(255,255,255,.07)}
+  .hmUpgTabs{flex:1 1 0;display:flex;align-items:stretch;min-width:0}
+  .hmUpTab{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;position:relative;
+    padding:8px 2px;cursor:pointer;font-family:inherit;font-size:11.5px;font-weight:700;letter-spacing:.02em;
+    color:#8a8a8a;background:none;border:none;transition:color .13s}
+  /* 구역 사이 세로 구분선 — 어두운 선 + 밝은 선 한 쌍(파인 자국)
+     :first-child 에는 안 붙인다 — 바깥쪽 가장자리까지 긋는 것처럼 보인다 */
+  .hmUpTab+.hmUpTab::before{content:'';position:absolute;left:0;top:7px;bottom:7px;width:2px;
+    background:linear-gradient(90deg,rgba(0,0,0,.55),rgba(255,255,255,.07))}
+  /* 선택한 구역 = 움퍽 들어간 짙은 네모. 밑줄 대신 테두리로 감싼다 */
+  .hmUpTab.on{color:#ececec;border-radius:3px;
+    background:linear-gradient(180deg,rgba(0,0,0,.46),rgba(0,0,0,.26));
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.62), inset 0 1px 0 rgba(255,255,255,.10),
+      inset 0 -1px 0 rgba(255,255,255,.05)}
+  .hmUpTab.on+.hmUpTab::before,.hmUpTab.on::before{opacity:0}
+  .hmUpTab .cnt{margin-left:4px;font-size:9.5px;color:#6f6f6f;font-variant-numeric:tabular-nums}
+  .hmUpTab.on .cnt{color:#9a9a9a}
+  /* 수량 — 한 번에 몇 레벨씩 */
+  .hmUpQty{flex:none;display:flex;align-self:center;padding:1px;border-radius:var(--r-bar);
+    background:linear-gradient(180deg,rgba(120,120,120,.6),rgba(52,52,52,.6))}
+  .hmUpQ{min-width:27px;padding:0 5px;height:22px;display:flex;align-items:center;justify-content:center;
+    cursor:pointer;font-family:inherit;font-size:10.5px;font-weight:700;color:#8a8a8a;letter-spacing:.02em;
+    background:rgba(0,0,0,.34);border:none;border-right:1px solid rgba(0,0,0,.4);transition:color .13s,background .13s}
+  .hmUpQ:last-child{border-right:0}
+  .hmUpQ.on{color:#1c1c1c;background:linear-gradient(180deg,#d8d8d8,#a8a8a8);text-shadow:0 1px 0 rgba(255,255,255,.35)}
+  /* 그리드 — 2.7줄이 보이는 '고정' 높이. 0.7줄이 걸쳐 보이는 게 더 있다는 신호 */
+  .hmUpgGrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;padding:8px;
+    --rowH:54px;--gap:8px;height:calc(2.7*var(--rowH) + 1.7*var(--gap) + 16px);
+    overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;
+    transition:height .28s cubic-bezier(.4,0,.2,1),padding .28s cubic-bezier(.4,0,.2,1),opacity .2s}
+  /* ⚠ minmax(0,..) 필수 — 1fr 은 min-content 를 하한으로 삼아 긴 이름에서 트랙이 부풀고 가로로 넘친다 */
+  /* 카드 — 한 줄: 아이콘 · 이름/수치 · 오른쪽 버튼 */
+  .hmUp{position:relative;display:flex;align-items:center;gap:6px;padding:6px;min-width:0;
+    background:linear-gradient(180deg,rgba(46,46,46,.96),rgba(26,26,26,.96));
+    border:1px solid var(--metal-edge);border-radius:var(--r-bar);
+    clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
+  /* 윗면 하이라이트 — 카드가 '판'으로 떠야 평평해 보이지 않는다 */
+  .hmUp::before{content:'';position:absolute;left:7px;right:0;top:0;height:1px;pointer-events:none;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.13) 30%,rgba(255,255,255,.13) 70%,transparent)}
+  /* 구매 직후 한 번 번찍 — 올랐다는 걸 몸으로 알게 한다 */
+  @keyframes hmUpWon{0%{box-shadow:inset 0 0 0 1px rgba(255,255,255,.55), 0 0 12px rgba(255,255,255,.28)}
+    100%{box-shadow:inset 0 0 0 1px rgba(255,255,255,0), 0 0 0 rgba(255,255,255,0)}}
+  .hmUp.won{animation:hmUpWon .5s ease-out}
+  .hmUpIco{position:relative;flex:none;width:27px;height:27px;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(180deg,#2c2c2c,#171717);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+  .hmUpIco .icoImg{padding:3px}   /* 공용 .icoImg 가 inset:0 로 타일을 채운다 — 여백만 주고 크기는 건드리지 않는다 */
+  .hmUpTx{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:2px}
+  .hmUpName{font-size:11.5px;font-weight:700;letter-spacing:-.02em;color:#ececec;
+    text-shadow:0 1px 1px rgba(0,0,0,.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hmUpName .p{font-size:9px;color:#8a8a8a;letter-spacing:-.01em}
+  /* 수치 변화 — 다음 값만 흰색(회색 면에선 색상보다 밝기가 잘 읽힌다) */
+  .hmUpVl,.hmUpLk{display:flex;align-items:center;gap:2px;min-width:0;font-size:9px;font-weight:700;
+    color:#8a8a8a;font-variant-numeric:tabular-nums;text-shadow:0 1px 1px rgba(0,0,0,.5);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hmUpVl .nx{color:#fff}
+  .hmArw{display:block;width:7px;height:7px;flex:none;fill:none;stroke:#6f6f6f;stroke-width:3.2;stroke-linecap:round}
+  .hmLk{display:block;width:8px;height:8px;flex:none;fill:none;stroke:#7a7a7a;stroke-width:2;stroke-linejoin:round}
+  /* 버튼 — 오른쪽 정사각. 위 = 레벨 변화(잠김은 자물쇠) · 아래 = 비용 */
+  .hmUpBtn{position:relative;flex:none;width:54px;height:40px;padding:1.5px;cursor:pointer;font-family:inherit;
+    display:flex;flex-direction:column;border:none;border-radius:var(--r-bar);
+    background:linear-gradient(180deg,#c8c8c8 0%,#949494 30%,#3c3c3c 62%,#2a2a2a 100%);
+    box-shadow:0 1px 2px rgba(0,0,0,.55);transition:transform .06s, box-shadow .06s, filter .12s}
+  /* 살 수 있을 때만 윗면에 빛나는 선 — '올릴 수 있다'는 신호 */
+  .hmUpBtn::after{content:'';position:absolute;left:6px;right:6px;top:1.5px;height:1px;pointer-events:none;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent)}
+  .hmUpBtn:hover{filter:brightness(1.1)}
+  /* 진짜로 들어간다 — 누르는 맛이 없으면 업그레이드가 재미없다 */
+  .hmUpBtn:active{transform:translateY(1.5px);box-shadow:0 0 0 rgba(0,0,0,0)}
+  .hmUpBtn:active .hmUpBl,.hmUpBtn:active .hmUpBc{filter:brightness(.92)}
+  .hmUpBl,.hmUpBc{flex:1;display:flex;align-items:center;justify-content:center;gap:2px;width:100%;
+    font-variant-numeric:tabular-nums;text-shadow:0 1px 1px rgba(0,0,0,.55);
+    background:linear-gradient(180deg,#4a4a4a,#3a3a3a 48%,#2e2e2e)}
+  .hmUpBl{font-size:9.5px;font-weight:700;color:#a8a8a8;border-bottom:1px solid rgba(0,0,0,.42);
+    border-radius:2px 2px 0 0}
+  .hmUpBl .nx{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8),0 0 6px rgba(255,255,255,.28)}
+  .hmUpBl .hmLk{width:11px;height:11px;stroke:#c8c8c8}
+  .hmUpBc{gap:3px;font-size:9.5px;font-weight:700;color:#ececec;border-radius:0 0 2px 2px}
+  .hmUpBc .ri{display:block;width:10px;height:10px;flex:none}
+  .hmUpBtn.off{background:linear-gradient(180deg,#5a5a5a,#3e3e3e 34%,#222);cursor:default;
+    box-shadow:none;transform:none;filter:none}
+  .hmUpBtn.off::after{display:none}
+  .hmUpBtn.off:hover{filter:none}
+  .hmUpBtn.off:active{transform:none}
+  .hmUpBtn.off .hmUpBl,.hmUpBtn.off .hmUpBc{background:linear-gradient(180deg,#333,#282828 48%,#222);color:#7a7a7a;text-shadow:none}
+  .hmUpBtn.off .hmUpBl .nx{color:#8f8f8f;text-shadow:none}
+  .hmUpBtn.off .hmUpBc .ri{opacity:.35;filter:grayscale(1)}
+  /* 잠긴 카드 — 해금 전엔 값도 레벨도 없다 */
+  .hmUp.lk{background:linear-gradient(180deg,rgba(32,32,32,.96),rgba(20,20,20,.96))}
+  .hmUp.lk .hmUpIco{background:linear-gradient(180deg,#212121,#131313)}
+  .hmUp.lk .hmUpIco .icoImg{filter:grayscale(1) brightness(.5);opacity:.85}
+  .hmUp.lk .hmUpName{color:#9a9a9a}
+  .hmUp.lk .hmUpName .p{color:#6f6f6f}
+  .hmUpLk{color:#7a7a7a}
   /* ══ 하단 6칸 네비게이션(전역) ══ 화면이 아니라 #phone 위에 뜬다 · navShow(tab)이 표시/활성을 정한다 */
   .navBar{position:absolute;left:0;right:0;bottom:0;z-index:62}
   /* 하단 바 공용 룩(단일 소스) — 전역 네비(.navBar)와 유즈맵 인게임 탭바(#tabs)가 같은 규칙을 쓴다.
@@ -2886,6 +2984,18 @@
     font-size:var(--fs-xs);font-weight:800;color:var(--gold);white-space:nowrap;z-index:5}
   .vgBadge img{width:11px;height:11px;object-fit:contain}
   .vgBadge.full{border-color:#ff3b3b;color:#ff3b3b}
+  /* 배경이 재화 바 뒤까지 이어져 한 섹션으로 보이게 — 화면 여백과 .twMap 위 요소 자리를 모두 없앤다.
+     ⚠ .twMap이 화면 맨 위(0)에서 시작해야 한다. 그 위에 무엇이 남아 있으면 그만큼 배경이 밀린다. */
+  body.vgMode #townScreen{padding-top:0;padding-bottom:var(--navH)}
+  body.vgMode .twMap{position:absolute;left:0;right:0;top:0;bottom:var(--navH);flex:none}
+  /* 프로필 위치는 사냥터와 같다 — 재화 바는 우측 정렬이라 같은 줄을 나눠 쓴다(내리면 어긋나 보인다) */
+  body.vgMode .hbHudTop{position:absolute;left:8px;top:3px;z-index:63}
+  .vgBack{display:none}
+  body.vgMode .vgBack{display:flex;position:absolute;right:9px;top:calc(var(--curH) + 6px);z-index:64;
+    width:32px;height:32px;align-items:center;justify-content:center;cursor:pointer;
+    color:#cfe0f5;background:rgba(10,14,20,.82);border:1px solid var(--metal-edge);border-radius:var(--r-lg)}
+  body.vgMode .vgBack svg{width:17px;height:17px}
+  body.vgMode .vgBack:active{transform:translateY(1px)}
   body.vgMode .twBar{display:none}   /* 마을은 사냥터와 같은 상단(공용 재화 바)만 쓴다 — 두 겹으로 보이던 것 */
   body.vgMode #townScreen{padding-bottom:var(--navH)}   /* 하단 네비 자리 확보 */
   .vgShop{position:absolute;left:0;right:0;bottom:var(--navH);z-index:8;background:linear-gradient(180deg,rgba(8,11,16,.7),rgba(6,9,14,.96));
@@ -4010,9 +4120,11 @@
       <!-- POWER UPGRADES — 화면에 남은 유일한 카드. 위쪽은 비워서 우주 배경(.spaceBg)이 그대로 보인다 -->
       <div class="hmCard hmUpg">
         <button class="hmUpgHead" id="hmUpgHead" onclick="hmToggleUpg()" aria-label="업그레이드 접기/펴기">
-          <span>⚡</span>POWER UPGRADES<i class="hmUpgChev"></i></button>
+          <span class="hmUpgBolt"><svg viewBox="0 0 24 24"><path d="M5 13 12 6l7 7M5 19l7-7 7 7"/></svg></span>
+          <b class="hmUpgTtl">사냥터 업그레이드</b><i class="hmUpgChev"></i></button>
         <div class="hmStatRow hide" id="hmStatRow"></div>
-        <div class="hmUpgGrid uiScroll" id="hmUpgGrid"></div>
+        <div class="hmUpgBar"><span class="hmUpgTabs" id="hmUpgTabs"></span><span class="hmUpQty" id="hmUpgQty"></span></div>
+      <div class="hmUpgGrid" id="hmUpgGrid"></div>
       </div>
     </div>
   </div>
@@ -4068,6 +4180,9 @@
 
   <!-- 🏘 RPG 마을 -->
   <div id="townScreen" class="appScreen spaceBg hide">
+    <button class="vgBack" onclick="vgBack()" aria-label="사냥터로" title="사냥터로">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18 3 12l6-6"/><path d="M3 12h13a5 5 0 0 1 0 10h-1"/></svg>
+    </button>
     <div class="twBar">
       <button class="twBack" onclick="askLogout()" aria-label="로그아웃" title="로그아웃"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4.6h3.7A1.8 1.8 0 0 1 20 6.4v11.2a1.8 1.8 0 0 1-1.8 1.8h-3.7"/><path d="M10.6 8.2L14.4 12l-3.8 3.8"/><path d="M14.4 12H4"/></svg></button>
       <button class="twWho" data-sfx="ui_open" onclick="openTownPanel('plaza')" title="내 캐릭터" aria-label="내 캐릭터"><span class="twName" id="twName">캐릭터</span><span class="twLv" id="twLv">Lv.1</span><span class="twPow" id="twPow">⚔ 0</span></button>
@@ -5214,17 +5329,52 @@ function openHome(){ loadMeta();
   hbStart();   // 배경 전투(웨이브 방어) 시작
   if(typeof paintIcons==='function') paintIcons(document.getElementById('homeScreen')); }
 
+// 사냥터 업그레이드 표시 보조물
+const HM_ARW='<svg class="hmArw" viewBox="0 0 24 24"><path d="M6 12h11M13 7.5 17.5 12 13 16.5"/></svg>';
+const HM_LOCK='<svg class="hmLk" viewBox="0 0 24 24"><path d="M7.5 10.5V7.6a4.5 4.5 0 0 1 9 0v2.9M5.6 10.5h12.8v9.4H5.6z"/></svg>';
+// 아이콘은 전부 기존 에셋 재사용 — 'upgrades/up_x' 처럼 폴더까지 담겨 있다
+function hbUpgIco(k){ const p=HB_UPG[k].ico;
+  return '<img class="icoImg" src="'+ICO_DIR+p+'.webp" alt="" draggable="false" data-fb="⚙" data-fbcls="" onerror="_icoFail(this)">'; }
+// 이름을 [본체 + 작은 보조어]로 쪼개다 — 폭도 벌고 훑어보기도 쉽다
+const HM_SUF=['확률','배수','계수','재생','표적','수','흡수'];
+function hmUpgName(n){ const i=n.indexOf(' (');
+  if(i>=0) return n.slice(0,i)+'<span class="p"> '+n.slice(i+1)+'</span>';
+  const j=n.lastIndexOf(' ');
+  if(j>0 && HM_SUF.indexOf(n.slice(j+1))>=0) return n.slice(0,j)+'<span class="p"> '+n.slice(j+1)+'</span>';
+  return n; }
 function renderHome(){ try{
   const p=PROF(); if(!p) return;
   if(typeof updateCurBar==='function') updateCurBar();       // 💠 재화는 전부 공용 재화 바(#curBar)로 이관
   const gr=document.getElementById('hmUpgGrid');
-  if(gr){ const u=hbHunt().upg, coin=Math.floor(p.pcoin||0);   // ⚔ 영구 업그레이드 6종 — 미네랄 구매(스탯 포인트 흡수)
-    gr.innerHTML=Object.keys(HB_UPG).map(function(k){ const U=HB_UPG[k], lv=u[k]||0, cost=hbUpgCost(k), can=coin>=cost;
-      return '<div class="hmUp"><div class="hmUpTop"><span class="hmUpIco">'+U.ico+'</span>'
-        +'<span class="hmUpTx"><b class="hmUpName">'+U.name+'</b>'
-        +'<span class="hmUpLv">LV. '+lv+' ➜ <b>'+(lv+1)+'</b></span></span></div>'
-        +'<button class="hmUpBtn" onclick="hmBuyUpg(&#39;'+k+'&#39;)"'+(can?'':' disabled')+'>'+cost.toLocaleString('en-US')+' 미네랄</button></div>'; }).join('');
-    hmFitUpgGrid(); }
+  if(gr){ const u=hbHunt().upg, coin=Math.floor(p.pcoin||0), cat=hbHunt().upgCat||'atk';
+    // 탭 띄 — 구역별 개수까지 같이
+    const tb=document.getElementById('hmUpgTabs');
+    if(tb) tb.innerHTML=HB_UPG_CAT.map(function(c){
+      const n=Object.keys(HB_UPG).filter(function(k){ return HB_UPG[k].cat===c[0] }).length;
+      return '<button class="hmUpTab'+(c[0]===cat?' on':'')+'" onclick="hmUpgTab(&#39;'+c[0]+'&#39;)">'+c[1]
+        +'<span class="cnt">'+n+'</span></button>'; }).join('');
+    // 수량 1 / 10 / MAX
+    const qb=document.getElementById('hmUpgQty'), q=hbHunt().upgQty||1;
+    if(qb) qb.innerHTML=[1,10,'max'].map(function(v){
+      return '<button class="hmUpQ'+(v===q?' on':'')+'" onclick="hmUpgQty(&#39;'+v+'&#39;)">'+(v==='max'?'MAX':v)+'</button>'; }).join('');
+    // 카드 — 해금한 것을 위로(쓸 수 있는 것이 먼저 보여야 한다)
+    const keys=Object.keys(HB_UPG).filter(function(k){ return HB_UPG[k].cat===cat })
+      .sort(function(a,b){ return (hbUpgOwned(b)?1:0)-(hbUpgOwned(a)?1:0); });
+    gr.innerHTML=keys.map(function(k){ const U=HB_UPG[k], lv=u[k]||0, own=hbUpgOwned(k);
+      let head, foot, off;
+      if(own){ const P=hbUpgPlan(k); off=coin<P.sum;
+        head='<span class="hmUpVl">'+hbUpgVal(k,lv)+HM_ARW+'<b class="nx">'+hbUpgVal(k,lv+P.n)+'</b></span>';
+        foot='<span class="hmUpBl">LV.'+lv+HM_ARW+'<b class="nx">'+(lv+P.n)+'</b></span>'
+            +'<span class="hmUpBc">'+resIco('mineral')+P.sum.toLocaleString('en-US')+'</span>'; }
+      else { off=coin<U.u;
+        head='<span class="hmUpLk">'+HM_LOCK+'해금 필요</span>';
+        foot='<span class="hmUpBl">'+HM_LOCK+'</span>'
+            +'<span class="hmUpBc">'+resIco('mineral')+U.u.toLocaleString('en-US')+'</span>'; }
+      return '<div class="hmUp'+(own?'':' lk')+'" data-k="'+k+'">'
+        +'<span class="hmUpIco">'+hbUpgIco(k)+'</span>'
+        +'<span class="hmUpTx"><b class="hmUpName">'+hmUpgName(U.name)+'</b>'+head+'</span>'
+        +'<button class="hmUpBtn'+(off?' off':'')+'" onclick="hmBuyUpg(&#39;'+k+'&#39;)">'+foot+'</button>'
+        +'</div>'; }).join(''); }
   renderHomeStats();
   const card=document.querySelector('#homeScreen .hmUpg');
   if(card) card.classList.toggle('down', !!hbHunt().upgDown);
@@ -5237,11 +5387,9 @@ function renderHomeStats(){ const row=document.getElementById('hmStatRow'); if(!
   row.classList.toggle('hide', !grow);
   row.innerHTML = grow ? '<button class="hmStat grow" onclick="hbOpenGrow()">🎖 전직 · 진화 <i>!</i></button>' : ''; }
 // 4칸(2행)까지만 보이게 — 칸 높이는 글꼴·문구에 따라 변하므로 실측해서 넣는다(값을 박으면 어긋난다)
-function hmFitUpgGrid(){ const gr=document.getElementById('hmUpgGrid'); if(!gr) return;
-  const cell=gr.querySelector('.hmUp'); if(!cell) return;
-  const h=cell.getBoundingClientRect().height; if(h<=0) return;
-  const pad=parseFloat(getComputedStyle(gr).paddingTop)||0, gap=parseFloat(getComputedStyle(gr).rowGap)||8;
-  gr.style.maxHeight=Math.round(h*2+gap+pad*2)+'px'; }
+// 높이는 CSS 에서 2.7줄로 고정된다(탭마다 개수가 달라도 패널이 안 흔들리도록).
+// 예전 실측 방식은 폐기 — 호출하는 곳이 남아 있어 빈 함수로 둔다.
+function hmFitUpgGrid(){}
 // ── 라운드 선택 · 반복/등반 ──
 // 최고 도달 라운드(hunt.best[dg])까지만 고를 수 있다. 라운드를 바꾸면 진행 중인 판은 버리고 새로 시작한다.
 function hbBest(dg){ const H=hbHunt(); return Math.max(1, H.best[dg||H.dg]||1); }
@@ -5421,7 +5569,8 @@ function renderInfoModal(){ const box=document.getElementById('hbInfoBody'); if(
     +'<tr><td class="l">사거리</td><td class="s">'+Math.round(st.range)+'</td><td class="l">체력회복</td><td class="s">'+st.regen.toFixed(1)+'/s</td></tr>'
     +'</tbody></table>';
   h+='<div class="hbGrowLbl">업그레이드 레벨</div><div class="hbChips">'
-    +Object.keys(HB_UPG).map(k=>'<span class="hbChip">'+HB_UPG[k].ico+' '+HB_UPG[k].name+' <b>'+(u[k]||0)+'</b></span>').join('')+'</div>';
+    +Object.keys(HB_UPG).filter(k=>hbUpgOwned(k))
+      .map(k=>'<span class="hbChip">'+HB_UPG[k].name+' <b>'+(u[k]||0)+'</b></span>').join('')+'</div>';
   box.innerHTML=h; }
 // ── D. 파워 해금 확장 — 해금이 실제로 무언가를 열도록 배선 ──
 function profPetSlots(){ const p=PROF(); let n=2;
@@ -5438,15 +5587,28 @@ function hmToggleUpg(){ const H=hbHunt(); H.upgDown=!H.upgDown;
   if(typeof playSfx==='function') playSfx('ui_tab');
   if(typeof saveMeta==='function') saveMeta(); }
 
+// 해금 — 한 번 지불하면 그 업그레이드가 열린다(레벨은 0부터)
+function hmUnlockUpg(k){ const p=PROF(), U=HB_UPG[k]; if(!U || hbUpgOwned(k)) return;
+  if(Math.floor(p.pcoin||0)<U.u){ hmToast('미네랄이 부족합니다'); return; }
+  p.pcoin-=U.u; hbHunt().unl[k]=1; saveMeta();
+  if(typeof playSfx==='function') playSfx('ui_open');
+  if(typeof updateCurBar==='function') updateCurBar(); renderHome(); hmUpgWon(k); }
+function hmUpgTab(c){ hbHunt().upgCat=c; if(typeof playSfx==='function') playSfx('ui_tab'); saveMeta(); renderHome(); }
+function hmUpgQty(q){ hbHunt().upgQty=(q==='max')?'max':(+q); if(typeof playSfx==='function') playSfx('ui_tab'); saveMeta(); renderHome(); }
 function hmBuyUpg(k){ const p=PROF(); if(!HB_UPG[k]) return;
-  const cost=hbUpgCost(k);
+  if(!hbUpgOwned(k)) return hmUnlockUpg(k);        // 잠긴 칸은 같은 버튼이 해금을 맡는다
+  const P=hbUpgPlan(k), cost=P.sum;
   if(Math.floor(p.pcoin||0)<cost){ hmToast('미네랄이 부족합니다'); return; }
-  p.pcoin-=cost; hbHunt().upg[k]=(hbHunt().upg[k]||0)+1; saveMeta();
+  p.pcoin-=cost; hbHunt().upg[k]=(hbHunt().upg[k]||0)+P.n; saveMeta();
   if(_hb){ const st=hbCharStats(), c=_hb.char;                 // 전투 중 즉시 반영(현재 체력은 유지·상한만 확장)
     c.atk=st.atk; c.cd=st.cd; c.crit=st.crit; c.range=st.range; c.regen=st.regen;
     c.hpMax=st.hpMax; c.hp=Math.min(st.hpMax, c.hp+(k==='hp'?12:0)); }
   if(typeof playSfx==='function') playSfx('ui_open');
-  if(typeof updateCurBar==='function') updateCurBar(); renderHome(); if(typeof hbHud==='function') hbHud(); }
+  if(typeof updateCurBar==='function') updateCurBar(); renderHome(); hmUpgWon(k); if(typeof hbHud==='function') hbHud(); }
+// 방금 오른 칸만 한 번 번찍 — renderHome() 이 새로 그린 뒤에 붙여야 한다
+function hmUpgWon(k){ const el=document.querySelector('#hmUpgGrid .hmUp[data-k="'+k+'"]'); if(!el) return;
+  el.classList.remove('won'); void el.offsetWidth; el.classList.add('won');
+  setTimeout(function(){ el.classList.remove('won'); }, 560); }
 function hmToast(msg){ if(typeof showTownToast==='function') showTownToast(msg);
   else if(typeof lobbyToast==='function') lobbyToast(msg); }
 
@@ -5553,18 +5715,58 @@ function hbViewH(rng){
 const HB_CAM_SNAP=24;                 // 이만큼 넘게 벌어지면 보간하지 않고 즉시 맞춘다(화면 복귀·회전 등)
 const HB_CAM_EASE=0.25;               // 접힘/펼침 애니메이션을 좇는 속도(0=정지, 1=즉시)
 // ── 영구 업그레이드 6종(미네랄 구매) — 효과·비용 곡선은 밸런스 패스에서 조정 ──
+/* 사냥터 업그레이드 — 공격/방어/유틸 3구역.
+   u = 해금 비용(0 = 처음부터 열림) · v0/vs/f = 표시값(0레벨값/레벨당/단위) · base/mul = 강화 비용.
+   ⚠ 전투에 실제로 반영되는 것은 hbCharStats() 가 읽는 6키(atk/aspd/crit/rng/hp/regen) 뿐.
+   나머지 17종은 아직 표시·구매만 된다(전투 배선 미완). */
 const HB_UPG={
-  atk:  {name:'공격력',   ico:'🗡️', base:20, mul:1.14},
-  rng:  {name:'사거리',   ico:'🎯', base:25, mul:1.16},
-  aspd: {name:'공격속도', ico:'⚡', base:30, mul:1.16},
-  crit: {name:'치명타',   ico:'✦',  base:30, mul:1.16},
-  hp:   {name:'체력',     ico:'🛡️', base:20, mul:1.14},
-  regen:{name:'체력회복', ico:'💚', base:25, mul:1.16},
+  atk:     {name:'데미지', cat:'atk',   u:0,     v0:10,   vs:2,     f:'',   base:20,  mul:1.14,  ico:'upgrades/up_melee_atk'},
+  aspd:    {name:'공격속도', cat:'atk',   u:0,     v0:1,    vs:0.04,  f:'/s', base:30,  mul:1.16,  ico:'skills/sk_stim'},
+  crit:    {name:'치명타 확률', cat:'atk',   u:150,   v0:5,    vs:1,     f:'%',  base:30,  mul:1.16,  ico:'upgrades/up_gnd_wpn'},
+  critm:   {name:'치명타 계수', cat:'atk',   u:400,   v0:1.5,  vs:0.05,  f:'x',  base:45,  mul:1.18,  ico:'upgrades/up_inf_atk'},
+  lifest:  {name:'생명력 흡수', cat:'atk',   u:600,   v0:0,    vs:0.5,   f:'%',  base:60,  mul:1.19,  ico:'skills/sk_consume'},
+  knock:   {name:'넓백 확률', cat:'atk',   u:350,   v0:0,    vs:1.5,   f:'%',  base:35,  mul:1.16,  ico:'skills/sk_maelstrom'},
+  rng:     {name:'사거리', cat:'atk',   u:200,   v0:100,  vs:4,     f:'',   base:25,  mul:1.16,  ico:'upgrades/up_range'},
+  multic:  {name:'멀티샷 확률', cat:'atk',   u:900,   v0:0,    vs:1.2,   f:'%',  base:70,  mul:1.2,   ico:'upgrades/up_range_atk'},
+  multin:  {name:'멀티샷 수', cat:'atk',   u:1800,  v0:1,    vs:1,     f:'발',  base:140, mul:1.28,  ico:'upgrades/up_air_atk'},
+  bncc:    {name:'바운스샷 확률', cat:'atk',   u:900,   v0:0,    vs:1.2,   f:'%',  base:70,  mul:1.2,   ico:'skills/sk_disruption_web'},
+  bncn:    {name:'바운스샷 표적', cat:'atk',   u:1800,  v0:0,    vs:1,     f:'체',  base:140, mul:1.28,  ico:'upgrades/up_veh_atk'},
+  scritc:  {name:'슈퍼 치명 확률', cat:'atk',   u:1500,  v0:0,    vs:0.4,   f:'%',  base:110, mul:1.24,  ico:'skills/sk_yamato'},
+  scritm:  {name:'슈퍼 치명 배수', cat:'atk',   u:2500,  v0:3,    vs:0.2,   f:'x',  base:180, mul:1.3,   ico:'skills/sk_psi_storm'},
+  hp:      {name:'체력', cat:'def',   u:0,     v0:100,  vs:20,    f:'',   base:20,  mul:1.14,  ico:'upgrades/up_carapace'},
+  regen:   {name:'체력 재생', cat:'def',   u:400,   v0:1,    vs:0.3,   f:'/s', base:25,  mul:1.16,  ico:'skills/sk_heal'},
+  shd:     {name:'쉰드량', cat:'def',   u:500,   v0:0,    vs:15,    f:'',   base:40,  mul:1.17,  ico:'upgrades/up_shield'},
+  shdreg:  {name:'쉰드 재생', cat:'def',   u:800,   v0:0,    vs:0.2,   f:'/s', base:50,  mul:1.18,  ico:'skills/sk_recharge'},
+  mk:      {name:'미네랄 (킬)', cat:'util',  u:300,   v0:1,    vs:0.5,   f:'',   base:30,  mul:1.17,  ico:'upgrades/up_mineral_up'},
+  gk:      {name:'가스 (킬)', cat:'util',  u:500,   v0:0,    vs:0.2,   f:'',   base:55,  mul:1.19,  ico:'res_gas'},
+  mw:      {name:'미네랄 (웨이브)', cat:'util',  u:400,   v0:10,   vs:4,     f:'',   base:45,  mul:1.18,  ico:'upgrades/up_mineral_up'},
+  gw:      {name:'가스 (웨이브)', cat:'util',  u:900,   v0:0,    vs:2,     f:'',   base:80,  mul:1.2,   ico:'res_gas'},
+  mspd:    {name:'이동속도', cat:'util',  u:300,   v0:100,  vs:2,     f:'%',  base:35,  mul:1.16,  ico:'upgrades/up_speed'},
+  rrng:    {name:'재생 범위', cat:'util',  u:450,   v0:100,  vs:3,     f:'%',  base:45,  mul:1.17,  ico:'upgrades/up_sight'},
 };
+const HB_UPG_CAT=[['atk','공격'],['def','방어'],['util','유틸']];
 function hbHunt(){ const p=PROF();
   if(!p.hunt) p.hunt={dg:1,round:1,climb:false,best:{},upg:{atk:0,rng:0,aspd:0,crit:0,hp:0,regen:0}};
+  if(!p.hunt.unl) p.hunt.unl={};        // 해금한 업그레이드(key→1). u:0 은 여기 없어도 열린 것으로 친다
+  if(!p.hunt.upgCat) p.hunt.upgCat='atk';
+  if(!p.hunt.upgQty) p.hunt.upgQty=1;
   return p.hunt; }
-function hbUpgCost(k){ return Math.ceil(HB_UPG[k].base*Math.pow(HB_UPG[k].mul, hbHunt().upg[k]||0)); }
+function hbUpgCost(k,lv){ const l=(lv==null)?(hbHunt().upg[k]||0):lv;
+  return Math.ceil(HB_UPG[k].base*Math.pow(HB_UPG[k].mul, l)); }
+// u:0 은 처음부터 열려 있고, 나머지는 hunt.unl 에 표식이 있어야 쓴다
+function hbUpgOwned(k){ return (HB_UPG[k].u===0) || !!hbHunt().unl[k]; }
+// 표시값 — 소수는 필요할 때만(레벨당 증가가 0.1 미만이면 2자리)
+function hbUpgVal(k,lv){ const U=HB_UPG[k], v=U.v0+U.vs*lv;
+  const d=(U.vs<0.1)?2:1;
+  const t=(Math.abs(v-Math.round(v))<0.001)? String(Math.round(v)) : v.toFixed(d);
+  return (U.f==='x') ? ('x'+t) : (t+U.f); }
+// 1 / 10 = 그 수만큼 · max = 보유 미네랄로 살 수 있는 만큼
+function hbUpgPlan(k){ const lv=hbHunt().upg[k]||0, q=hbHunt().upgQty||1;
+  const have=Math.floor((PROF()||{}).pcoin||0);
+  if(q!=='max'){ let sum=0; for(let i=0;i<q;i++) sum+=hbUpgCost(k,lv+i); return {n:q,sum:sum}; }
+  let t=0,got=0;
+  for(let j=0;j<999;j++){ const c=hbUpgCost(k,lv+j); if(t+c>have) break; t+=c; got++; }
+  return got? {n:got,sum:t} : {n:1,sum:hbUpgCost(k,lv)}; }
 // 전투 수치 = 계정 업그레이드(hunt.upg) + 캐릭터 스탯(profStat). 한 곳에서만 합친다.
 function hbCharStats(){ const u=hbHunt().upg;
   const pw=profStat('pow'), vt=profStat('vit'), fc=profStat('foc'), ag=profStat('agi');
@@ -5611,6 +5813,42 @@ const HB_PET_DPS=.18;                                             // 장착 펫 
 const HB_BUNKER_HP=6, HB_BUNKER_R=150;                            // 캐릭터 최대체력 대비 배수 · 도발 반경
 function hbBuildN(k){ return (hbHunt().build&&hbHunt().build[k])||0; }
 function hbBuildCost(k){ const B=HB_BUILD[k]; return Math.ceil(B.base*Math.pow(B.mul, hbBuildN(k))); }
+// ── 📦 상자 — 맵을 돌아다닐 이유 ─────────────────────────────────────────────
+// 사냥터는 회복 구역이 중앙이고 적이 알아서 찾아오니, 그냥 두면 가운데를 뜰 이유가 없다.
+// 상자는 '공격 대상'이다 — 사거리 안에 들어와야 때린다. 초반엔 걸어가야 하고,
+// 사거리를 올릴수록 앉은 자리에서 더 많이 부순다(방치 보상이 사거리 업그레이드에 붙는다).
+// ⚠ 적이 항상 우선이다. 상자 때문에 딜을 흘리면 웨이브를 못 버틴다.
+const HB_CHEST_MAX=5;        // 필드 동시 존재 수
+const HB_CHEST_HP0=14;       // 기본 체력(라운드로 조금 오른다 — 늘 몇 대는 때리게)
+const HB_CHEST_MIN_D=90;     // 캐릭터에서 이 거리 밖에만 — 가만히 있어도 먹히면 이동 동기가 없다
+function hbChestHp(round){ return Math.round(HB_CHEST_HP0*(1+Math.max(0,(round||1)-1)*0.35)); }
+// 보이는 영역 안에 둔다 — 화면 밖에 두면 있는 줄도 모른다(가장자리 화살표는 아직 없다)
+function hbSpawnChest(){ const S=_hb; if(!S || !S.chests || S.chests.length>=HB_CHEST_MAX) return null;
+  const k=S.k||1, hw=Math.max(60,(S.w/k)/2-30), hh=Math.max(60,((S.vBot-S.vTop)/k)/2-30);
+  const cx=S.camX||0, cy=S.camY||0, R=HB_MAP_R-30;
+  for(let i=0;i<30;i++){
+    const x=Math.max(-R,Math.min(R, cx+(Math.random()*2-1)*hw));
+    const y=Math.max(-R,Math.min(R, cy+(Math.random()*2-1)*hh));
+    if(Math.hypot(x-S.char.x, y-S.char.y) < HB_CHEST_MIN_D) continue;
+    if(Math.hypot(x,y) < HB_HEAL_R+30) continue;              // 회복 구역 위에는 두지 않는다
+    const hp=hbChestHp(S.round); const ch={x:x,y:y,hp:hp,hpMax:hp};
+    S.chests.push(ch); return ch; }
+  return null; }
+// 섞어서 굴린다 — 대부분 장비 뽑기권, 드물게 젬, 가끔 일시 버프
+function hbChestReward(){ const p=(typeof PROF==='function')?PROF():null; if(!p) return '';
+  const r=Math.random();
+  if(r<0.06){ p.gem=(p.gem||0)+1; return '💎 젬 +1'; }
+  if(r<0.26){ const k=(Math.random()<0.5)?'inc':'atk', B=HB_BOOSTS[k], H=hbHunt();
+    H.boostT=H.boostT||{};
+    H.boostT[k]=Math.max(Date.now(), H.boostT[k]||0) + B.sec*1000;
+    return B.ico+' '+B.name; }
+  p.tickets=p.tickets||{}; p.tickets.gear=(p.tickets.gear||0)+1; return '🎟 뽑기권 +1'; }
+function hbBreakChest(ch){ const S=_hb; if(!S) return; const i=S.chests.indexOf(ch); if(i<0) return;
+  S.chests.splice(i,1);
+  S.floats.push({x:ch.x, y:ch.y-22, tx:hbChestReward(), cl:'#ffd24a', t:0});
+  if(typeof playSfx==='function') playSfx('ui_confirm');
+  if(typeof saveMeta==='function') saveMeta();
+  if(typeof updateCurBar==='function') updateCurBar(); }
 function hbBoostOn(k){ return (hbHunt().boostT&&hbHunt().boostT[k]||0) > Date.now(); }
 function hbBoostLeft(k){ return Math.max(0, Math.ceil((((hbHunt().boostT&&hbHunt().boostT[k])||0)-Date.now())/1000)); }
 // 아군 배치 — 보유 수가 바뀌거나 라운드가 시작될 때 다시 세운다(월드 좌표, 캐릭터가 원점)
@@ -5669,7 +5907,7 @@ function hbStart(){ const cv=document.getElementById('hbCv'); if(!cv) return;
   const H=hbHunt(), st=hbCharStats();
   _hb={ on:true, cv, ctx:cv.getContext('2d'), w:0,h:0,d:1, vTop:0, vBot:0, cx:0, cy:0, k:1, t:0,
     dg:H.dg||1, round:H.round||1, wave:1, phase:'fight', waveT:HB_WAVE_S, gapT:0, downT:0,
-    pend:[], pendT:0, foes:[], shots:[], floats:[], kills:0, rt0:0, charDir:4, charFace:0, atkT:0,
+    pend:[], pendT:0, foes:[], chests:[], shots:[], floats:[], kills:0, rt0:0, charDir:4, charFace:0, atkT:0,
     allies:[], turrets:[], bunkers:[], pets:[], skT:{nova:0,heal:0,slow:0}, slowT:0, skDirty:false,
     buf:{min:0,gas:0,xp:0,kills:0},
     char:{ x:0,y:0, hp:st.hpMax, hpMax:st.hpMax, atk:st.atk, cd:st.cd, crit:st.crit,
@@ -5729,6 +5967,7 @@ function hbSpawnWave(){ const S=_hb, n=hbFoeCount(S.round,S.wave);
   const mk=()=>{ const i=(Math.random()*3)|0, r=HB_FOE_ROLE[i], f=D.foes[i];
     return { ico:f.ico, mdl:f.mdl, hpMul:r.hp, atkMul:r.atk, spd:r.spd*(1+S.round*0.01) }; };
   const boss=(S.wave===HB_WAVES);   // 마지막 웨이브 = 보스가 함께 나온다
+  hbSpawnChest();                                        // 📦 웨이브마다 하나(가득 차 있으면 안 생긴다)
   if(n<=HB_SPREAD_N){ for(let i=0;i<n;i++) hbPlaceFoe(mk()); if(boss) hbPlaceFoe(mkBoss(D,S)); }
   else{ for(let i=0;i<n;i++) S.pend.push(mk()); if(boss) S.pend.push(mkBoss(D,S)); S.pendT=0; }
   if(boss){ S.floats.push({x:S.char.x,y:S.char.y-46,tx:'⚠ 보스 출현',cl:'#ff3b3b',t:0});
@@ -5854,7 +6093,14 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char; S.t+=dt;
       S.atkT=HB_ATK_SHOW;
       if(S._u) S._u.fireSeq=(S._u.fireSeq||0)+1;      // 공격 모션 트리거(랩·게임과 같은 방식)
       S.floats.push({x:best.x,y:best.y-20,tx:(crit?'✦':'')+Math.round(dmg),cl:crit?'#ffd24a':'#ececec',t:0});
-      if(best.hp<=0) hbKill(best); } }
+      if(best.hp<=0) hbKill(best); }
+    else { let cb=null, cd2=1e18;                        // 📦 적이 사거리에 없을 때만 상자
+      for(const ch of S.chests){ const d=Math.hypot(ch.x-c.x, ch.y-c.y); if(d<cd2){ cd2=d; cb=ch; } }
+      if(cb && cd2<=c.range){ c.cdT=c.cd;
+        const dmg=c.atk*(hbBoostOn('atk')?2:1);
+        cb.hp-=dmg; S.shots.push({x1:c.x,y1:c.y-10,x2:cb.x,y2:cb.y,t:0});
+        S.atkT=HB_ATK_SHOW; if(S._u) S._u.fireSeq=(S._u.fireSeq||0)+1;
+        if(cb.hp<=0) hbBreakChest(cb); } } }
   // 아군 — 동료는 캐릭터 주위를 천천히 돌고, 터렛은 고정, 펫은 가깝게 붙어 돈다
   for(const a of S.allies){ a.ph+=dt*0.5; a.x=Math.cos(a.ph)*52; a.y=Math.sin(a.ph)*52; hbUnitFire(a,HB_ALLY_DPS,1,dt); }
   for(const t of S.turrets) hbUnitFire(t,HB_TURRET_DPS,HB_TURRET_RANGE,dt);
@@ -6033,6 +6279,11 @@ function hbDraw(){ const S=_hb, x=S.ctx, c=S.char; if(!x) return;
   for(const s of S.shots){ x.save(); x.globalAlpha=1-s.t/.12; x.strokeStyle=s.ally?'#8fe0a0':'#ffd24a'; x.lineWidth=1.5;
     x.beginPath(); x.moveTo(s.x1,s.y1); x.lineTo(s.x2,s.y2); x.stroke(); x.restore(); }
   x.textAlign='center'; x.textBaseline='middle';
+  for(const ch of S.chests){                                       // 📦 상자 — 유닛보다 먼저(발밑에 깔린다)
+    x.font='17px sans-serif'; x.fillText('📦', ch.x, ch.y);
+    if(ch.hp<ch.hpMax){ x.fillStyle='rgba(0,0,0,.55)'; x.fillRect(ch.x-11,ch.y-16,22,3);
+      x.fillStyle='#ffd24a'; x.fillRect(ch.x-11,ch.y-16,22*Math.max(0,ch.hp/ch.hpMax),3);
+      x.fillStyle='#ececec'; } }
   for(const b of S.bunkers){ if(b.hp<=0) continue;                 // 벙커
     x.font='22px sans-serif'; x.fillText(b.ico,b.x,b.y);
     x.fillStyle='rgba(0,0,0,.55)'; x.fillRect(b.x-13,b.y-18,26,3);
@@ -6313,12 +6564,19 @@ function townCollectAll(){ const S=townState(); let n=0;
 function openVillage(){ loadMeta(); if(!CHAR()){ openCharScreen('create'); return; }
   _townOpen=true; showAppScreen('townScreen'); navShow('home');   // 사냥터에서 온 화면 — 네비는 그대로 두고 '사냥터' 탭 활성
   document.body.classList.add('vgMode');   // 마을 전용 상단 바(.twBar)를 숨겨 재화 바 하나만 보이게
+  vgMoveHud(true);
   const w=document.getElementById('twWorld'); if(w){ w.style.width='100%'; w.style.height='100%'; w.style.transform='none'; }
   const av=document.getElementById('twAvatar'); if(av) av.style.display='none';
   renderVillage(); renderTownBar();
   if(typeof paintIcons==='function') paintIcons(document.getElementById('townScreen'));
   clearInterval(_vgTick); _vgTick=setInterval(()=>{ if(_townOpen) renderVillage(); }, 1000); }
-function leaveVillage(){ _townOpen=false; clearInterval(_vgTick); _vgTick=0; document.body.classList.remove('vgMode'); }
+function leaveVillage(){ _townOpen=false; clearInterval(_vgTick); _vgTick=0;
+  document.body.classList.remove('vgMode'); vgMoveHud(false); }
+// 좌상단 프로필은 사냥터의 것을 그대로 빌려 온다 — 복제하면 값이 어긋난다(단일 소스 원칙).
+function vgMoveHud(into){ const hud=document.querySelector('.hbHudTop'); if(!hud) return;
+  const dst=document.getElementById(into?'townScreen':'homeScreen'); if(!dst) return;
+  dst.insertBefore(hud, dst.firstChild); }
+function vgBack(){ leaveVillage(); openHome(); }   // 우상단 돌아가기
 let _vgTick=0;
 function _vgResIco(out){ return resIco(out==='min'?'mineral':'gas'); }
 function renderVillage(){ const w=document.getElementById('twWorld'); if(!w||!_townOpen) return;
