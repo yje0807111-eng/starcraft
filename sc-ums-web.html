@@ -81,6 +81,10 @@
     font-family:var(--font-ko);overflow:hidden}
   /* 모바일 고정 비율 — 세로로 긴 요즘 폰(963:1997 ≈ 1:2.074). 비율은 아래 두 변수 한 곳에서만 정한다.
      화면이 작으면 비율을 유지하며 축소. 패널 폭이 변해도 폰 모양은 불변. */
+  /* 🪟 팝업 카드 공통 규격 — 유즈맵·난이도·방찾기·방만들기·대기실이 전부 이 값을 쓴다.
+     ⚠ 값이 흩어지면 반드시 어긋난다(선례: 높이 555 vs 564 · 여백 18 vs 20 · 92%가 322 vs 326).
+     크기·여백·딤을 바꾸려면 여기만 고칠 것. */
+  :root{--popW:92%;--popMaxW:350px;--popH:min(564px,90%);--popPad:20px;--popDim:rgba(2,3,6,.84)}
   :root{--phW:963;--phH:1997;--navH:61px;--curH:34px}   /* 하단 바 높이 61px = 963기준 ≈150px (네비·유즈맵 탭바 공용) */
   #phone{width:390px;height:calc(390px * var(--phH) / var(--phW));aspect-ratio:var(--phW)/var(--phH);position:relative;
     /* 게임 배경 우주 타일(space_bg)을 캔버스와 같은 380px 스케일로 프레임 전체에 이어지게 — 어둡게 덮어 콘솔 가독성 유지 */
@@ -1660,7 +1664,7 @@
   #ovBtn,#ovBtn2.ghost{transform:none}
   #ovBtn:active,#ovBtn2.ghost:active{transform:translateY(1px)}
   /* 멀티플레이 대기실(로비) */
-  #lobby{position:absolute;inset:0;z-index:46;display:flex;align-items:center;justify-content:center;padding:18px;background:transparent}   /* 대기실 배경 사용(::before) */
+  #lobby{position:absolute;inset:0;z-index:46;display:flex;align-items:center;justify-content:center;padding:var(--popPad);background:var(--popDim);backdrop-filter:blur(3px)}   /* 대기실 배경 사용(::before) */
   #lobby.hide{display:none}
   /* 대기실 배경: waiting_room_bg.png 전체 cover(9:16), 중앙은 어둡게(UI 패널용) */
   #lobby::before{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;transform-origin:center center;
@@ -1670,7 +1674,7 @@
     background:
       radial-gradient(ellipse 78% 60% at 50% 50%, rgba(2,3,8,.72), rgba(2,3,8,.3) 70%),
       linear-gradient(180deg, rgba(2,3,8,.9) 0%, rgba(2,3,8,.35) 22%, rgba(2,3,8,.35) 78%, rgba(2,3,8,.92) 100%)}
-  .lbCard{width:92%;max-width:350px;height:555px;max-height:90%;overflow:hidden;padding:18px;display:flex;flex-direction:column}   /* 방찾기 카드와 폭·높이 통일(92%/350/555) · 작은 화면은 max-height 90%가 캡, 남는 높이는 플레이어 그리드(flex)가 흡수 */
+  .lbCard{width:var(--popW);max-width:var(--popMaxW);height:var(--popH);max-height:90%;overflow:hidden;padding:var(--popPad);display:flex;flex-direction:column}   /* 방찾기 카드와 폭·높이 통일(92%/350/555) · 작은 화면은 max-height 90%가 캡, 남는 높이는 플레이어 그리드(flex)가 흡수 */
   /* 대기실 채팅 = 보기영역 + 입력줄 일체형(로비 전체채팅과 동일 구조) · 4~5줄 */
   .lbChatWrap{flex:1 1 0;min-height:0;display:flex;flex-direction:column;overflow:hidden;margin-bottom:10px;border-radius:var(--r-bar);   /* 남는 높이만 흡수(basis 0) — 메시지가 쌓여도 플레이어 슬롯을 밀지 않음 */
     background:rgba(0,0,0,.3);border:1px solid var(--metal-edge)}
@@ -1776,9 +1780,9 @@
   .lbStart:disabled{cursor:default;opacity:.7}
   .lbLeave:active,.lbStart:active{transform:translateY(1px)}
   /* 방 찾기(룸 리스트) */
-  #rooms{position:absolute;inset:0;z-index:46;display:flex;align-items:center;justify-content:center;padding:20px;background:transparent}   /* 로비 배경 사용(::before) */
+  #rooms{position:absolute;inset:0;z-index:46;display:flex;align-items:center;justify-content:center;padding:var(--popPad);background:var(--popDim);backdrop-filter:blur(3px)}   /* 로비 배경 사용(::before) */
   #rooms.hide{display:none}
-  .rmCard{width:92%;max-width:350px;max-height:90%;display:flex;flex-direction:column;padding:18px 18px 22px}
+  .rmCard{width:var(--popW);max-width:var(--popMaxW);height:var(--popH);max-height:90%;display:flex;flex-direction:column;padding:var(--popPad)}
   .rmHead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
   .rmTitle{font-size:17px;font-weight:800;color:#eef1f6;text-shadow:0 1px 3px rgba(0,0,0,.65);letter-spacing:.5px}   /* 제목 = 화이트 통일 */
   .rmHeadR{display:flex;align-items:center;gap:8px;flex:0 0 auto}
@@ -1821,7 +1825,7 @@
   .riNum{font-family:var(--font-num);font-weight:800;color:var(--hud);margin-right:5px}
   .riLock{font-size:var(--fs-sm);color:var(--warn);margin-right:3px}
   /* 방 만들기 모달 */
-  #createPanel{position:absolute;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:20px}   /* 방찾기(#rooms)와 동일 패딩 → 카드 폭 일치 */
+  #createPanel{position:absolute;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:var(--popPad);background:var(--popDim);backdrop-filter:blur(3px)}   /* 방찾기(#rooms)와 동일 패딩 → 카드 폭 일치 */
   #createPanel.hide{display:none}
   /* ===== 공통 HUD 카드(방 만들기 스타일로 통일): 반투명 + 각진 외형 + 네온 그라데이션 테두리 ===== */
   .cpCard,.rmCard,.lbCard,.authCard,.moCard,.foCtxCard,.ptInviteCard{position:relative;
@@ -1859,7 +1863,7 @@
   #soloDiffPanel.hide{display:none}
   /* 난이도 선택 = 유즈맵 팝업(.moCard)과 같은 크기. 두 팝업이 이어서 뜨므로 크기가 다르면 화면이 튄다.
      ⚠ .moCard 값을 바꾸면 여기도 같이 바꿀 것 — 같아야 하는 두 값이다. */
-  #soloDiffPanel .cpCard{width:92%;max-width:350px;height:min(564px,90%);max-height:90%;
+  #soloDiffPanel .cpCard{width:var(--popW);max-width:var(--popMaxW);height:var(--popH);max-height:90%;
     display:flex;flex-direction:column;overflow:hidden}
   /* 스크롤바가 안 생기게 여백을 줄여 내용을 카드 안에 넣는다(넘침 8px → 여백 24px 확보) */
   #soloDiffPanel .moDiffBtns{flex:1 1 auto;min-height:0;overflow:hidden;gap:6px;margin-bottom:8px}
@@ -2554,8 +2558,14 @@
   /* POWER UPGRADES — 위쪽은 배경이 보이도록 비우고 카드는 네비 바로 위에 붙인다 */
   .hmUpg{margin-top:auto}   /* 위쪽 빈 자리는 배경 — 카드만 아래로 붙인다 */
   /* 헤더 = 접기/펴기 손잡이. 접으면 이 줄만 남고 뒤 배경이 화면 전체로 보인다 */
-  .hmUpgHead{width:100%;display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:15px;font-weight:700;letter-spacing:.6px;
+  .hmUpgHead{position:relative;width:100%;display:flex;align-items:center;gap:8px;padding:8px 12px;
+    font-family:var(--font-ti);font-size:15px;font-weight:400;letter-spacing:.08em;
     color:#ececec;cursor:pointer;background:none;border:none;border-bottom:1px solid rgba(255,255,255,.06);text-align:left}
+  .hmUpgBolt{flex:none;width:20px;height:20px;display:grid;place-items:center;
+    background:linear-gradient(180deg,#ffd97a,#f0b429 40%,#dd9a19 64%,#f2b93e);
+    clip-path:polygon(4px 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%,0 4px);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.5)}
+  .hmUpgBolt svg{display:block;width:12px;height:12px;fill:#2a1c05}
   .hmUpgChev{margin-left:auto;width:9px;height:9px;border-right:2px solid #9a9a9a;border-bottom:2px solid #9a9a9a;
     transform:rotate(45deg) translate(-2px,-2px);transition:transform .16s}
   .hmUpg.down .hmUpgHead{border-bottom-color:transparent}
@@ -2622,18 +2632,36 @@
   /* 4칸(2×2)만 보이고 나머지는 스크롤 — 최대 높이는 renderHome이 실제 한 칸 높이로 계산해 넣는다 */
   .hmUpgGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px;overflow-y:auto;
     transition:max-height .28s cubic-bezier(.4,0,.2,1),padding .28s cubic-bezier(.4,0,.2,1),opacity .2s}
-  .hmUp{display:flex;flex-direction:column;gap:4px;padding:8px;background:rgba(255,255,255,.045);
-    border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+  .hmUp{position:relative;display:flex;flex-direction:column;gap:4px;padding:8px;border:0;border-radius:0;
+    background:linear-gradient(180deg,#5c5c5c 0%,#343434 44%,#242424 100%);
+    clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)}
+  .hmUp::before{content:'';position:absolute;inset:1px;z-index:0;background:#1c1c1c;
+    clip-path:polygon(7.4px 0,100% 0,100% calc(100% - 7.4px),calc(100% - 7.4px) 100%,0 100%,0 7.4px)}
+  .hmUp>*{position:relative;z-index:1}
   .hmUpTop{display:flex;align-items:center;gap:8px;min-width:0}
-  .hmUpIco{flex:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:18px;
-    background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
-  .hmUpTx{min-width:0;display:flex;flex-direction:column}
+  .hmUpIco{position:relative;flex:none;width:34px;height:34px;display:grid;place-items:center;padding:1px;border:0;border-radius:0;
+    background:linear-gradient(180deg,#585858,#2a2a2a);
+    clip-path:polygon(0 0,calc(100% - 6px) 0,100% 6px,100% 100%,6px 100%,0 calc(100% - 6px))}
+  .hmUpIco::after{content:'';position:absolute;inset:1px;background:linear-gradient(180deg,#2a2a2a,#1e1e1e);
+    clip-path:polygon(0 0,calc(100% - 5.4px) 0,100% 5.4px,100% 100%,5.4px 100%,0 calc(100% - 5.4px))}
+  .hmUpIco svg{position:relative;z-index:1;display:block;width:19px;height:19px;filter:drop-shadow(0 0 5px var(--gl,transparent))}
+  .hmUpTx{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
   .hmUpName{font-size:var(--fs-lg);font-weight:700;color:#ececec}
   .hmUpLv{font-size:var(--fs-sm);color:#9a9a9a}
   .hmUpLv b{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:#5dff8f}
-  .hmUpBtn{height:32px;cursor:pointer;font-family:inherit;font-size:var(--fs-md);font-weight:700;letter-spacing:.3px;
-    color:#2b1d00;background:linear-gradient(180deg,#ffd97a,#e8a92b 58%,#b8801a);
-    border:1px solid rgba(255,220,140,.8);border-radius:var(--r-bar)}
+  .hmUpBtn{height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;
+    font-family:var(--font-ti);font-size:13px;font-weight:400;letter-spacing:.04em;color:#2a1c05;
+    font-variant-numeric:tabular-nums;border:0;border-radius:0;
+    background:linear-gradient(180deg,#ffd97a 0%,#f0b429 40%,#dd9a19 64%,#f2b93e 100%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.5),inset 0 -2px 0 rgba(0,0,0,.2),0 0 0 1px rgba(124,85,16,.9);
+    clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
+    transition:filter .12s,transform .05s}
+  .hmUpBtn .ri{width:14px;height:14px;flex:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.35))}
+  .hmUpBtn:hover:not([disabled]){filter:brightness(1.06)}
+  .hmUpBtn:active:not([disabled]){transform:translateY(1px);filter:brightness(.9)}
+  .hmUpBtn[disabled]{cursor:default;color:#6a6a6a;background:linear-gradient(180deg,#2a2a2a,#1e1e1e);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 0 0 1px #3a3a3a}
+  .hmUpBtn[disabled] .ri{filter:grayscale(1) opacity(.5)}
   .hmUpBtn:disabled{cursor:default;color:#7a7a7a;background:rgba(255,255,255,.05);border-color:var(--metal-edge)}
   /* ══ 하단 6칸 네비게이션(전역) ══ 화면이 아니라 #phone 위에 뜬다 · navShow(tab)이 표시/활성을 정한다 */
   .navBar{position:absolute;left:0;right:0;bottom:0;z-index:62}
@@ -3270,8 +3298,8 @@
   /* ── 사이버펑크 HUD 모달 ── */
   
   /* 방 만들기/찾기/대기실 카드와 통일: 반투명 + 각진 외형 + 네온 그라데이션 테두리 */
-  .moCard{width:92%;max-width:350px;height:min(564px,90%);max-height:90%}   /* 전 유즈맵 공통 높이(오토배틀 기준) — 항목이 많으면 카드를 늘리지 말고 리스트를 축소 */
-  .moInner{position:relative;z-index:1;width:100%;height:100%;text-align:center;display:flex;flex-direction:column;justify-content:center;padding:26px 22px 22px}
+  .moCard{width:var(--popW);max-width:var(--popMaxW);height:var(--popH);max-height:90%}   /* 전 유즈맵 공통 높이(오토배틀 기준) — 항목이 많으면 카드를 늘리지 말고 리스트를 축소 */
+  .moInner{position:relative;z-index:1;width:100%;height:100%;text-align:center;display:flex;flex-direction:column;justify-content:center;padding:var(--popPad) 22px}
   .moClose{position:absolute;top:11px;right:12px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;z-index:2;
     color:#9fb0c2;background:rgba(255,255,255,.04);border:1px solid var(--metal-edge);border-radius:var(--r-lg);cursor:pointer;
     transition:all .18s}
@@ -3343,7 +3371,7 @@
   .cpStepVal{flex:0 0 auto;width:48px;text-align:center;font-family:var(--font-num);font-size:17px;font-weight:800;color:#fff;
     padding:5px 0;border-radius:8px;background:rgba(0,0,0,.3);border:1px solid var(--metal-edge);font-variant-numeric:tabular-nums}
   /* 방 만들기 창 = 방찾기 창 크기로 확대·고정(폭 350) + 하단 버튼 고정 */
-  #createPanel .cpCard{width:92%;max-width:350px;height:min(555px,92%);padding:15px 16px 16px;display:flex;flex-direction:column;box-sizing:border-box}   /* 방찾기 카드 높이(555)에 맞춤 */
+  #createPanel .cpCard{width:var(--popW);max-width:var(--popMaxW);height:var(--popH);max-height:90%;padding:var(--popPad);display:flex;flex-direction:column;box-sizing:border-box}   /* 방찾기 카드 높이(555)에 맞춤 */
   #createPanel .cpCard.noDiff{height:auto;max-height:92%}   /* 난이도 없는 유즈맵 = 빈 공간 없이 내용만큼 */
   #createPanel .cpTitle{margin-bottom:11px}
   #createPanel .cpBtns{margin-top:auto;flex:0 0 auto;padding-top:11px}   /* 버튼은 항상 하단 고정(화면 밖으로 안 나감) */
@@ -4000,7 +4028,7 @@
       <!-- POWER UPGRADES — 화면에 남은 유일한 카드. 위쪽은 비워서 우주 배경(.spaceBg)이 그대로 보인다 -->
       <div class="hmCard hmUpg">
         <button class="hmUpgHead" id="hmUpgHead" onclick="hmToggleUpg()" aria-label="업그레이드 접기/펴기">
-          <span>⚡</span>POWER UPGRADES<i class="hmUpgChev"></i></button>
+          <span class="hmUpgBolt"><svg viewBox="0 0 24 24"><path d="M13.2 2 5.6 13.4h4.6l-1.4 8.6 7.6-11.4h-4.8z"/></svg></span>POWER UPGRADES<i class="hmUpgChev"></i></button>
         <div class="hmStatRow hide" id="hmStatRow"></div>
         <div class="hmUpgGrid uiScroll" id="hmUpgGrid"></div>
       </div>
@@ -5198,7 +5226,7 @@ function renderHome(){ try{
   const gr=document.getElementById('hmUpgGrid');
   if(gr){ const u=hbHunt().upg, coin=Math.floor(p.pcoin||0);   // ⚔ 영구 업그레이드 6종 — 미네랄 구매(스탯 포인트 흡수)
     gr.innerHTML=Object.keys(HB_UPG).map(function(k){ const U=HB_UPG[k], lv=u[k]||0, cost=hbUpgCost(k), can=coin>=cost;
-      return '<div class="hmUp"><div class="hmUpTop"><span class="hmUpIco">'+U.ico+'</span>'
+      return '<div class="hmUp"><div class="hmUpTop"><span class="hmUpIco">'+hbUpgIcoHTML(k)+'</span>'
         +'<span class="hmUpTx"><b class="hmUpName">'+U.name+'</b>'
         +'<span class="hmUpLv">LV. '+lv+' ➜ <b>'+(lv+1)+'</b></span></span></div>'
         +'<button class="hmUpBtn" onclick="hmBuyUpg(&#39;'+k+'&#39;)"'+(can?'':' disabled')+'>'+cost.toLocaleString('en-US')+' 미네랄</button></div>'; }).join('');
@@ -5542,6 +5570,17 @@ function hbViewH(rng){
 const HB_CAM_SNAP=24;                 // 이만큼 넘게 벌어지면 보간하지 않고 즉시 맞춘다(화면 복귀·회전 등)
 const HB_CAM_EASE=0.25;               // 접힘/펼침 애니메이션을 좇는 속도(0=정지, 1=즉시)
 // ── 영구 업그레이드 6종(미네랄 구매) — 효과·비용 곡선은 밸런스 패스에서 조정 ──
+// 강화 아이콘 — 이모지 대신 라인 SVG(스탯별 색). c=선·글로우 색, d=패스
+const HB_UPG_ICO={
+  atk:  {c:'#ff6b4a', d:'<path d="M14.5 3.5 20.5 9.5 9 21 3.5 21 3.5 15.5z"/><path d="M13 5 19 11"/>'},
+  rng:  {c:'#ffd24a', d:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.4"/><path d="M12 1.8v3.4M12 18.8v3.4M1.8 12h3.4M18.8 12h3.4"/>'},
+  aspd: {c:'#5cd6ff', d:'<path d="M13.2 2.4 5.8 13.4h4.4l-1.2 8.2 7.2-11h-4.4z"/>'},
+  crit: {c:'#eef2f8', d:'<path d="M12 2.4 14.2 9.8 21.6 12 14.2 14.2 12 21.6 9.8 14.2 2.4 12 9.8 9.8z"/>'},
+  hp:   {c:'#4a9dff', d:'<path d="M12 2.8 19.6 6v6c0 4.6-3.1 8-7.6 9.2C7.5 20 4.4 16.6 4.4 12V6z"/>'},
+  regen:{c:'#3ddc84', d:'<path d="M12 20.6S4.6 16 4.6 10.4A4.3 4.3 0 0 1 12 7.5a4.3 4.3 0 0 1 7.4 2.9c0 5.6-7.4 10.2-7.4 10.2z"/>'},
+};
+function hbUpgIcoHTML(k){ const g=HB_UPG_ICO[k]; if(!g) return (HB_UPG[k]&&HB_UPG[k].ico)||'';
+  return '<svg viewBox="0 0 24 24" style="--gl:'+g.c+'" fill="none" stroke="'+g.c+'" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+g.d+'</svg>'; }
 const HB_UPG={
   atk:  {name:'공격력',   ico:'🗡️', base:20, mul:1.14},
   rng:  {name:'사거리',   ico:'🎯', base:25, mul:1.16},
