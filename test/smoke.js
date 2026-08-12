@@ -188,14 +188,17 @@ async function groupLobby(){
       assert(parseFloat(cb.borderBottomWidth)===0,'HOME 재화 바에 상단 구분선이 남음: '+cb.borderBottomWidth);
       assert(getComputedStyle($('curBar'),'::after').display==='none','재화 바 헤어라인(::after)이 남음'); }
     // 톤 검사 — 네비바와 같은 회색이어야 한다(푸른기가 있으면 B가 R보다 크게 뜬다) · 모서리는 거의 직각
+    // 면(background)은 회색뿐. 테두리만 패널 액센트(빨강)를 허용한다 — 파랑은 어느 쪽에서도 못 들어온다.
     { const rgb=s=>(s.match(/\d+(\.\d+)?/g)||[]).slice(0,3).map(Number);
+      const gray=(r,g,b)=>Math.max(r,g,b)-Math.min(r,g,b)<=12;
+      const red=(r,g,b)=>r>g+40 && r>b+40;   // 빨강 액센트(255,59,59). 푸른기는 b가 커서 여기도 못 든다
       for(const el of [...document.querySelectorAll('#homeScreen .hmCard, #homeScreen .hmUp, #homeScreen .hmUpIco')]){
         const c=getComputedStyle(el);
-        for(const src of [c.backgroundColor, c.backgroundImage, c.borderTopColor]){
+        for(const [src,isBd] of [[c.backgroundColor,0],[c.backgroundImage,0],[c.borderTopColor,1]]){
           for(const m of (src.match(/rgba?\([^)]*\)/g)||[])){ const [r,g,b]=rgb(m);
             if(r===undefined) continue;
-            assert(Math.max(r,g,b)-Math.min(r,g,b)<=12,
-              'HOME에 푸른기가 남음('+(el.className||el.tagName)+'): '+m); } }
+            assert(gray(r,g,b) || (isBd && red(r,g,b)),
+              'HOME '+(isBd?'테두리':'면')+'에 회색·빨강 밖의 색('+(el.className||el.tagName)+'): '+m); } }
         for(const v of c.borderRadius.split(/[\s\/]+/))
           assert(!v || v==='0px' || v==='3px', 'HOME 모서리가 너무 둥금('+(el.className||el.tagName)+'): '+v); } }
     assert(document.querySelectorAll('#navBar .navIt').length===4,'하단 네비가 4칸이 아님(HOME·정비·유즈맵·상점) — 마을은 폐지됐다');
