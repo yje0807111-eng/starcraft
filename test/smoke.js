@@ -944,10 +944,11 @@ async function groupLobby(){
       for(const id of ['hbHud','hbRoundBtn']){ const el=$(id), got=hit(el);
         assert(got && el.contains(got),'#'+id+' 클릭이 다른 요소에 가로채임: '+
           (got?(got.id||got.className||got.tagName):'none')); } }
-    // ③ 프로필 내용이 '상세' — 이름/직업/레벨/공격/체력 + 경험치 바가 실제 값으로 채워진다
+    // ③ 프로필은 '간소' — 이름 / 경험치 바 / 레벨·공격력만. 직업 이름과 체력은 뺐다(2026-08-12).
     const c=CHAR(); c.name='스모크'; c.xp=Math.round(profXpForLevel(c.level)*0.5); hbHud();
-    for(const id of ['hbName','hbJob','hbLv','hbAtk','hbHp']){
+    for(const id of ['hbName','hbLv','hbAtk']){
       const e=$(id); assert(e && e.textContent.trim(),'프로필 항목이 비어 있음: #'+id); }
+    for(const id of ['hbJob','hbHp']) assert(!$(id),'뺀 항목이 아직 있음: #'+id);
     assert($('hbName').textContent==='스모크','이름이 캐릭터와 다름: '+$('hbName').textContent);
     assert($('hbLv').textContent==='Lv.'+c.level,'레벨 표기가 다름: '+$('hbLv').textContent);
     { const bar=$('hbXpBar'), box=document.querySelector('.hbXp');

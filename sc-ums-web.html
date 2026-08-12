@@ -1846,8 +1846,13 @@
   /* 로그아웃 확인 — 허브(60) 위에 떠야 한다. 규칙이 없으면 문서 흐름에 그려져 보이지 않는다 */
   #logoutPanel{position:absolute;inset:0;z-index:73;display:flex;align-items:center;justify-content:center;background:var(--ov-dim);backdrop-filter:blur(2px)}
   #logoutPanel.hide{display:none}
-  #soloDiffPanel{position:absolute;inset:0;z-index:54;display:flex;align-items:center;justify-content:center;background:rgba(2,3,6,.84);backdrop-filter:blur(3px)}   /* 뒤 화면과 확실히 구분 = 진한 딤 */
+  #soloDiffPanel{position:absolute;inset:0;z-index:54;display:flex;align-items:center;justify-content:center;background:rgba(2,3,6,.84);backdrop-filter:blur(3px);padding:20px}   /* 뒤 화면과 확실히 구분 = 진한 딤 */
   #soloDiffPanel.hide{display:none}
+  /* 난이도 선택 = 유즈맵 팝업(.moCard)과 같은 크기. 두 팝업이 이어서 뜨므로 크기가 다르면 화면이 튄다.
+     ⚠ .moCard 값을 바꾸면 여기도 같이 바꿀 것 — 같아야 하는 두 값이다. */
+  #soloDiffPanel .cpCard{width:92%;max-width:350px;height:min(564px,90%);max-height:90%;
+    display:flex;flex-direction:column;overflow:hidden}
+  #soloDiffPanel .moDiffBtns{flex:1 1 auto;min-height:0;overflow-y:auto}
   #raceSelPanel{position:absolute;inset:0;z-index:54;display:flex;align-items:center;justify-content:center;background:var(--ov-dim);backdrop-filter:blur(2px)}
   #raceSelPanel.hide{display:none}
   /* 종족 선택 — 아이콘 없는 깔끔한 드롭다운(세로 목록) */
@@ -1962,8 +1967,20 @@
   /* ===== 전환/팝업 FX (우주전쟁 HUD) ===== */
   /* 화면 전환: 홀로그램 디졸브(블러+밝기에서 또렷해짐) — opacity는 건드리지 않음(뒤 게임 보드 비침 방지, 로비 배경 유지) */
   /* 팝업 등장: 페이드 + 살짝 위로 슬라이드 + 스케일 스프링(소폭 오버슈트) — 등장하며 '올라와 자리잡는' 느낌 */
-  .fxPop{animation:fxPopOn .26s cubic-bezier(.22,.9,.28,1)}
-  @keyframes fxPopOn{0%{opacity:0;transform:translateY(11px) scale(.93)}55%{opacity:1}72%{transform:translateY(-2px) scale(1.012)}100%{opacity:1;transform:translateY(0) scale(1)}}
+  .fxPop{animation:fxPopOn var(--fxPopT) cubic-bezier(.22,.9,.28,1)}
+  /* 팝업 등장 = 모든 팝업에 자동 적용. fxPop()을 손으로 부르지 않아도 카드가 뜨는 순간 애니메이션이 붙는다.
+     ⚠ 새 팝업을 만들면 카드 클래스를 이 목록에 한 줄 추가할 것 — 그래야 다른 팝업과 같은 느낌이 난다. */
+  :root{--fxPopT:.13s}
+  .hbModal:not(.hide) .hbmCard,
+  #settingsPop:not(.hide) .setCard,
+  #townPanel:not(.hide) .tpCard,
+  #exitConfirm:not(.hide) .setCard,
+  .cpPop:not(.hide) .cpCard,
+  #dgSheet:not(.hide) .dgSheetCard,
+  #modeSheet:not(.hide) .msPanel{animation:fxPopOn var(--fxPopT) cubic-bezier(.22,.9,.28,1)}
+  /* ⛔ 제외 — 방 만들기(#createPanel)·난이도 선택(#soloDiffPanel)은 즉시 뜬다(요청) */
+  #createPanel .cpCard, #soloDiffPanel .cpCard, #soloDiffPanel .msPanel{animation:none!important}
+  @keyframes fxPopOn{0%{opacity:0;transform:translateY(7px) scale(.965)}100%{opacity:1;transform:translateY(0) scale(1)}}
   /* 배경 딤 페이드인(맵 선택·개인 플레이 팝업) — 카드 스프링과 함께 부드럽게 덮음 */
   #modeSheet:not(.hide),#soloDiffPanel:not(.hide){animation:ovDimIn .22s ease-out}
   @keyframes ovDimIn{from{opacity:0}to{opacity:1}}
@@ -2499,8 +2516,7 @@
     background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
   .hbCol{display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0}
   .hbHud b{font-size:12px;font-weight:700;color:#ececec;letter-spacing:.2px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .hbSub{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:10px;font-weight:700;color:#9a9a9a;letter-spacing:.4px}
-  .hbSub i,.hbSt i{font-style:normal}
+  .hbSt i{font-style:normal}
   .hbXp{width:92px;height:3px;border-radius:var(--r-bar);background:rgba(255,255,255,.10);overflow:hidden}
   .hbXp i{display:block;height:100%;width:0;background:#5dff8f}
   .hbSt{display:flex;gap:7px;font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:10px;font-weight:700;color:#c6ccd4}
@@ -3956,9 +3972,8 @@
         <span class="hbAv" id="hbAv">🪖</span>
         <span class="hbCol">
           <b id="hbName">캐릭터</b>
-          <span class="hbSub"><i id="hbJob">레인저</i> · <i id="hbLv">Lv.1</i></span>
           <span class="hbXp"><i id="hbXpBar"></i></span>
-          <span class="hbSt"><i id="hbAtk">⚔ 0</i><i id="hbHp">❤ 0</i></span>
+          <span class="hbSt"><i id="hbLv">Lv.1</i><i id="hbAtk">⚔ 0</i></span>
         </span></button>
       <div class="hbIcoRow"><button class="hbRoundBtn" id="hbRoundBtn" onclick="hbOpenRounds()" aria-label="던전·라운드 선택"><span data-ico="flag"></span></button><button class="hbRoundBtn" id="hbVillageBtn" onclick="openVillage()" aria-label="마을" title="마을"><span data-ico="hero"></span></button></div>
     </div>
@@ -5714,12 +5729,10 @@ function hbPlaceFoe(proto){ const S=_hb;
 function hbHud(){ const S=_hb; if(!S) return; const c=(typeof CHAR==='function')?CHAR():null;
   const put=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
   put('hbName', c? (c.name||'캐릭터') : '캐릭터');
-  { const K=(c&&PROF_CLASSES[c.cls])||null;
-    put('hbJob', K?K.name:'-');
+  { const K=(c&&PROF_CLASSES[c.cls])||null;   // 직업 이름은 안 쓰지만 초상 아이콘은 여기서 온다
     const av=document.getElementById('hbAv'); if(av) av.textContent=(K&&K.ico)||'🧍'; }
   put('hbLv','Lv.'+(c?c.level:1));
   put('hbAtk','⚔ '+Math.round(S.char.atk));
-  put('hbHp','❤ '+Math.max(0,Math.round(S.char.hp))+'/'+Math.round(S.char.hpMax));
   { const bar=document.getElementById('hbXpBar');                       // 다음 레벨까지
     if(bar && c && typeof profXpForLevel==='function'){ const need=profXpForLevel(c.level)||1;
       bar.style.width=Math.max(0,Math.min(100,(c.xp/need)*100))+'%'; } }
@@ -11662,7 +11675,7 @@ function playerName(n){ if(typeof G!=='undefined' && n===(G.myPlayer||1)) return
 function playScreenFx(){ }
 // 팝업/모달 등장: 홀로그램 파워온 + 테두리 점화
 function fxPop(card){ if(!card) return; card.classList.remove('fxPop'); void card.offsetWidth; card.classList.add('fxPop');
-  clearTimeout(card._fxT); card._fxT=setTimeout(()=>card.classList.remove('fxPop'),470); }
+  clearTimeout(card._fxT); card._fxT=setTimeout(()=>card.classList.remove('fxPop'),200); }
 // ── 앱 화면 전환 ──
 const APP_SCREENS=['opening','auth','mapSelect','modeSheet','homeScreen','charScreen','townScreen','dgScreen','shopScreen','gearScreen'];
 // 💠 공용 재화 바를 띄우는 화면(RPG/허브 + 유즈맵 선택). 로그인·타이틀·캐릭터생성·인게임은 제외.
@@ -12706,7 +12719,7 @@ function openSoloDiff(){ const box=document.getElementById('soloDiffBtns'); if(b
       box.appendChild(inf); } }
   const trig=document.getElementById('soloRaceTrig'); if(trig) trig.classList.add('hide');   // 종족은 난이도 선택 후 별도 팝업으로(트리거 미사용)
   const p=document.getElementById('soloDiffPanel'); if(p){ p.classList.add('noDim'); p.classList.remove('hide');   // 화면전환: 배경 딤 유지(페이드 생략) + 카드 슬라이드 인
-    const card=p.querySelector('.cpCard'); if(card){ card.classList.remove('fxPop','fxPush'); void card.offsetWidth; card.classList.add('fxPush'); } }
+    const card=p.querySelector('.cpCard'); if(card) card.classList.remove('fxPop','fxPush'); }   // 난이도 선택 = 효과 없이 즉시(요청)
   if(typeof playSfx==='function') playSfx('ui_open'); }
 function closeSoloDiff(){ popHide('soloDiffPanel'); }
 function startSoloInfinite(){ if(!USEMAPS.nemo_inf) return; _selMap=USEMAPS.nemo_inf; closeSoloDiff(); _startSoloNow(); }   // 무한 모드 시작(테스트 단계: 해금 게이트 미적용)
@@ -12803,7 +12816,8 @@ function mapHasDiff(){ return !(typeof _selMap!=='undefined' && _selMap && _selM
 function createRoom(){ const nm=document.getElementById('cpName'); if(nm) nm.value=''; const pw=document.getElementById('cpPw'); if(pw) pw.value=''; setRoomVis('public'); _createDiff='easy'; _createInf=false; renderCpDiff(); setCpMax(8);
   { const hd=mapHasDiff(), ds=document.getElementById('cpDiffSec'), cd=document.querySelector('#createPanel .cpCard');
     if(ds) ds.style.display=hd?'':'none'; if(cd) cd.classList.toggle('noDiff', !hd); }   // 난이도 구역 표시 여부(숨기면 카드도 그만큼 축소)
-  const cp=document.getElementById('createPanel'); cp.classList.remove('hide'); if(typeof fxPop==='function') fxPop(cp.querySelector('.cpCard')); if(typeof paintIcons==='function') paintIcons(cp); if(nm) nm.focus(); }
+  const cp=document.getElementById('createPanel'); cp.classList.remove('hide');   // 방 찾기 → 방 만들기는 즉시 전환(팝업 효과 없음)
+  if(typeof paintIcons==='function') paintIcons(cp); if(nm) nm.focus(); }
 function closeCreate(){ popHide('createPanel'); }
 function setRoomVis(v){ _createVis=v;
   document.querySelectorAll('#cpVis .cpSegBtn').forEach(b=>b.classList.toggle('on', b.dataset.v===v));
