@@ -2519,6 +2519,8 @@
   .hmScroll{flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:8px 8px calc(var(--navH) + 8px)}
   .hmScroll{position:relative;z-index:1}   /* 전투 캔버스 위로 */
   /* 배경 전투 — 패널 없이 배경 위 그림·글자만(DESIGN §6: 배경이 주인공) */
+  #homeScreen,#hmScroll{touch-action:none}   /* 드래그를 브라우저 스크롤에 뺏기지 않게(관리자 맵 .bmap·마을 .twMap과 같은 규칙) */
+  #hmScroll .uiScroll,#hmScroll .hmUpgGrid{touch-action:pan-y}   /* 업그레이드 목록은 세로 스크롤 유지 */
   #hbCv{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
   /* 좌상단 고정 묶음 — 재화 바와 같은 줄에서 시작한다(바는 우측 정렬이라 왼쪽이 비어 있다)
      ⚠ 이름 주의: `.hbTop`은 인게임 홈 하단 탭 줄(#bpMain)이 이미 쓰고 있다. 겹치면 그쪽이 세로로 무너진다. */
@@ -6344,23 +6346,35 @@ function hbWalk(S,c,dt){
 function hbSetDest(sx,sy){ const S=_hb; if(!S||!S.on) return;
   const p=hbClampField((sx-S.cx)/S.k, (sy-S.cy)/S.k);
   S.char.tx=p[0]; S.char.ty=p[1]; }
-// 필드 탭 = 그 자리로 이동.
-// ⛔ 예전엔 document에 캡처로 걸고 '셀렉터 블랙리스트'로 UI를 걸렀다 — 목록에 없는 것(재화 바·네비·
-//    업그레이드 카드의 빈 공간·#phone 바깥 검은 영역)은 전부 이동으로 샜고, 새 UI를 만들 때마다 조용히 재발했다.
-//    지금은 반대로 **화이트리스트**다: #homeScreen에만 걸고, 이벤트 대상이 화면 자신일 때만 이동한다.
-//    모든 UI는 자식 요소라 자기 자신이 대상이 되므로 자동으로 제외된다 — 새 UI를 추가해도 여기 손댈 일이 없다.
-function hbFieldTap(e){
-  if(!_hb||!_hb.on||_hb.bg) return;
-  const hs=document.getElementById('homeScreen'); if(!hs||hs.classList.contains('hide')) return;
+// ── 필드 포인터 — 관리자 건설 화면과 같은 방식 ──────────────────────────────
+// 누른 즉시 그 자리로 이동하고, **손가락을 떼기 전까지 계속 따라온다**(techPtrDown/Move의 _btCmd와 동일).
+// 탭만 받으면 연속으로 찍을 때 명령이 씹히는 느낌이 나고, preventDefault가 없으면 드래그가
+// 브라우저 스크롤로 새어 화면 자체가 끌려간다 — 관리자 맵(.bmap)은 touch-action:none + preventDefault로 막는다.
+// ⛔ 대상 판정은 화이트리스트다(블랙리스트로 두면 새 UI마다 이동으로 샌다).
+//   ⚠ 단, click-through 레이어(.curBar.bare 등)가 위에 있으면 대상이 #homeScreen이 되어 통과한다 — 그쪽 CSS를 볼 것.
+let _hbPtr=null;
+function hbFieldEl(e){
+  if(!_hb||!_hb.on||_hb.bg) return null;
+  const hs=document.getElementById('homeScreen'); if(!hs||hs.classList.contains('hide')) return null;
   const cv=document.getElementById('hbCv');
   // ⚠ #hmScroll이 남은 세로 공간을 전부 차지하므로 '보이는 전장'의 대부분은 그 위다 — 여기도 필드로 친다.
-  //   그 안의 업그레이드 카드는 자식이라 자기 자신이 대상이 되어 자동으로 제외된다.
   const sc=document.getElementById('hmScroll');
-  if(e.target!==hs && e.target!==cv && e.target!==sc) return;   // 필드(빈 바닥)를 직접 눌렀을 때만
-  const r=cv.getBoundingClientRect();
-  if(_hb.arm){ hbArmTo(e.clientX-r.left, e.clientY-r.top); return; }   // 🧱 배치 중이면 이동이 아니라 고스트를 옮긴다
-  if(hbTapStruct(e.clientX-r.left, e.clientY-r.top)) return;           // 🪖 벙커를 눌렀으면 이동이 아니라 벙커 창
-  hbSetDest(e.clientX-r.left, e.clientY-r.top); }
+  if(e.target!==hs && e.target!==cv && e.target!==sc) return null;
+  return cv; }
+function hbFieldTap(e){ const cv=hbFieldEl(e); if(!cv) return;
+  if(e.cancelable && e.preventDefault) e.preventDefault();      // 브라우저가 화면을 끌고 가지 않게
+  const r=cv.getBoundingClientRect(), px=e.clientX-r.left, py=e.clientY-r.top;
+  if(_hb.arm){ _hbPtr={id:e.pointerId, arm:true}; hbArmTo(px,py); return; }   // 🧱 배치 중이면 고스트가 손가락을 따라온다
+  if(hbTapStruct(px,py)) return;                                // 🪖 벙커를 눌렀으면 이동이 아니라 벙커 창
+  _hbPtr={id:e.pointerId, arm:false}; hbSetDest(px,py); }
+function hbFieldMove(e){ const P=_hbPtr; if(!P || e.pointerId!==P.id) return;
+  if(!_hb||!_hb.on||_hb.bg){ _hbPtr=null; return; }
+  const cv=document.getElementById('hbCv'); if(!cv) return;
+  if(e.cancelable && e.preventDefault) e.preventDefault();
+  const r=cv.getBoundingClientRect(), px=e.clientX-r.left, py=e.clientY-r.top;
+  if(P.arm){ if(_hb.arm) hbArmTo(px,py); else _hbPtr=null; return; }
+  hbSetDest(px,py); }                                            // 지정 유닛이 손가락을 따라 이동
+function hbFieldUp(e){ if(_hbPtr && e.pointerId===_hbPtr.id) _hbPtr=null; }
 // 구조물을 눌렀나 — 지금은 벙커만 창이 열린다(나머지는 그냥 통과시켜 이동으로 처리)
 function hbTapStruct(sx,sy){ const S=_hb; if(!S) return false;
   const q=hbCellOwner(hbGx((sx-S.cx)/S.k), hbGx((sy-S.cy)/S.k));
@@ -6397,6 +6411,9 @@ function hbBunkerAdd(){ const t=_hbBunkerQ && hbBase().tiles[_hbBunkerQ]; if(!t|
   if(typeof updateCurBar==='function') updateCurBar();
   renderBunkerModal(); }
 document.addEventListener('pointerdown', hbFieldTap, true);   // 리스너 위치는 document 그대로(로드 순서 무관) — 거르는 것은 위의 대상 검사다
+document.addEventListener('pointermove', hbFieldMove, true);
+document.addEventListener('pointerup', hbFieldUp, true);
+document.addEventListener('pointercancel', hbFieldUp, true);
 // ═══ 🧱 배치 흐름 — 고스트를 옮기고 ▶로 확정한다 ═════════════════════════════
 // ⛔ 관리자 건설(techPtrDown/G.tech)을 부르지 않는다 — HOME은 유즈맵 전역 G를 참조하면 안 된다.
 //    공용으로 쓰는 것은 확정/취소 버튼(.bArmBtns)뿐이고, 나머지는 여기 전용이다.

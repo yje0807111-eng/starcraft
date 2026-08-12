@@ -896,6 +896,41 @@ async function groupLobby(){
     assert($('settingsPop').classList.contains('appCtx'),'앱 문맥(.appCtx)이 아님');
     closeSettings(); await sleep(40);
     return 'pointer-events·히트·이동 안 함·appCtx ok'; });
+  // 🖐 필드 이동 = 관리자 건설 화면과 같은 방식: 누른 즉시 이동 + 뗄 때까지 손가락 추종
+  await step('필드 이동: 드래그 추종 · 손 떼면 정지 · 스크롤 안 뺏김', async()=>{ skipIf(typeof hbFieldMove!=='function','필드 포인터 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    openHome(); await sleep(80); _hb.manual=true;
+    hbHunt().base={tiles:{},open:1}; hbLayoutBase();
+    // ① 브라우저가 드래그를 스크롤로 가로채면 안 된다(관리자 맵 .bmap·마을 .twMap과 같은 규칙)
+    for(const id of ['homeScreen','hmScroll'])
+      assert(getComputedStyle($(id)).touchAction==='none','#'+id+' touch-action이 none이 아님 — 드래그가 스크롤로 샌다');
+    const hs=$('homeScreen'), cv=$('hbCv'), r=cv.getBoundingClientRect();
+    const ev=(t,id,x,y)=>({ type:t, pointerId:id, target:hs, clientX:r.left+x, clientY:r.top+y, cancelable:true, preventDefault(){ this._pd=true; } });
+    // ② 누르면 즉시 목적지 · 드래그하면 계속 따라온다
+    _hb.char.tx=null; _hb.char.ty=null;
+    const d0=ev('pointerdown',7,120,120); hbFieldTap(d0);
+    assert(d0._pd,'pointerdown에서 preventDefault를 안 했다(화면이 끌려간다)');
+    assert(_hb.char.tx!=null,'누른 자리로 목적지가 안 잡힘');
+    const seen=[];
+    for(const [x,y] of [[140,130],[180,160],[90,200],[60,90]]){ hbFieldMove(ev('pointermove',7,x,y));
+      seen.push(Math.round(_hb.char.tx)+','+Math.round(_hb.char.ty)); }
+    assert(new Set(seen).size===seen.length,'드래그해도 목적지가 안 따라옴: '+seen.join(' / '));
+    // ③ 손을 떼면 더는 안 따라온다
+    hbFieldUp(ev('pointerup',7,60,90));
+    const keep=_hb.char.tx; hbFieldMove(ev('pointermove',7,300,300));
+    assert(_hb.char.tx===keep,'손을 뗐는데 목적지가 계속 바뀜');
+    // ④ 다른 포인터 id의 move는 무시한다(멀티터치가 명령을 훔치지 않게)
+    hbFieldTap(ev('pointerdown',8,100,100)); const k2=_hb.char.tx;
+    hbFieldMove(ev('pointermove',9,250,250));
+    assert(_hb.char.tx===k2,'다른 손가락이 이동 명령을 가로챔');
+    hbFieldUp(ev('pointerup',8,100,100));
+    // ⑤ 실제로 그쪽으로 걸어간다
+    { const c=_hb.char; c.x=0; c.y=0; c.tx=150; c.ty=0;
+      const before=Math.hypot(c.tx-c.x, c.ty-c.y);
+      for(let i=0;i<20;i++) hbStep(0.05);
+      assert(Math.hypot(c.tx-c.x, c.ty-c.y)<before,'목적지가 있는데 안 걸어감'); }
+    _hb.char.tx=null; _hb.char.ty=null;
+    return 'touch-action·추종 '+seen.length+'회·정지·멀티터치 무시 ok'; });
   // 🛠 건설 모드 — 라운드를 멈추고 초기화한다. 나갈 때까지 연속으로 짓는다.
   await step('건설 모드: 라운드 정지·초기화 · 연속 배치 · 방향 이어가기', async()=>{ skipIf(typeof hbBuildEnter!=='function','건설 모드 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }

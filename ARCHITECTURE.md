@@ -193,6 +193,11 @@ node test/bench-strike.mjs 400 80 4   # 대규모 전투 렌더 벤치(유닛수
 - **연속 배치는 방향을 기억한다.** `_hb.arm={k,gx,gy,dir,last}`. 확정하면 `hbArmAdvance()`가 `dir`(기본 오른쪽)로 다음 자리를 잡고, **막힌 칸은 그 방향으로 계속 건너뛴다**. 맵 끝에 닿으면 아래→오른쪽→위→왼쪽 순으로 꺾고, 그래도 없으면 `hbFreeCell`. 사용자가 고스트를 무시하고 다른 칸에 놓으면 `직전 → 이번` 이동이 곧 새 `dir`이 된다(왼쪽에 놓으면 그 뒤로 계속 왼쪽). 후보는 `hbCanPlace` + `hbSealCheck`를 **둘 다** 통과해야 한다 — 봉쇄 검사를 빠뜨리면 고스트가 못 놓는 칸에 서서 ▶가 계속 비활성으로 보인다.
 - ⚠ **`.curBar.bare`는 click-through다**(`pointer-events:none`, `.res`·`.hudSet`만 되살림). 되살릴 자식을 빠뜨리면 그 UI는 '눌러도 아무 일 없고 뒤 화면이 대신 반응'한다 — 설정(☰ `#curSettingsBtn`)이 이 때문에 HOME·마을·유즈맵·상점·정비 다섯 화면에서 죽어 있었고, 클릭이 `#homeScreen`까지 내려가 캐릭터가 그리로 걸어갔다. **필드 탭 화이트리스트의 전제('UI는 자식이라 자동 제외')가 click-through 레이어에서는 깨진다** — `pointer-events:none`을 새로 줄 때마다 여기를 볼 것. 또 `#curBar`의 설정은 `openAppSettings()`(앱용)를 불러야 한다. `openSettings()`는 인게임용이라 HOME에서도 임무 목표·배속·게임 나가기가 뜬다.
 - ⚠ **`applyVideo()`와 `fxLevel()`의 기본값을 맞출 것.** `fxLevel()`은 `G.opt.fx` 미설정을 `'full'`로 보는데 `applyVideo()`만 `G.opt.fx!=='full'`로 봐서, fx가 아직 없는 새 프로필은 **설정을 한 번 여는 것만으로** `body.lite`(`box-shadow`·`backdrop-filter` 전부 `none!important`)가 켜졌다 — 화면엔 '고화질'이라 떠 있는데 이펙트만 사라졌다. 지금은 둘 다 `fxLevel()`을 쓴다.
+- **필드 이동은 관리자 건설 화면과 같은 방식**(2026-08-12): 누른 즉시 그 자리로 이동하고 **뗄 때까지 손가락을 따라온다**
+  (`hbFieldTap`/`hbFieldMove`/`hbFieldUp` ↔ 관리자 `techPtrDown`/`techPtrMove`의 `_btCmd` → `_techAssignMove`). 포인터 id를 물고 있어 멀티터치가 명령을 훔치지 못한다.
+  ⚠ **`touch-action:none` + `preventDefault()`가 둘 다 있어야 한다** — 없으면 드래그가 브라우저 스크롤로 새어 화면 자체가 끌려간다.
+  `#homeScreen`·`#hmScroll`에 `none`, 그 안의 `.uiScroll`/`.hmUpgGrid`만 `pan-y`로 되살린다(관리자 `.bmap`·마을 `.twMap`이 쓰는 것과 같은 규칙).
+  탭만 받던 예전 방식은 연속으로 찍을 때 명령이 씹히는 느낌이 났다.
 - **필드 탭은 화이트리스트다.** 예전엔 `document`에 캡처로 걸고 셀렉터 **블랙리스트**로 UI를 걸렀는데, 목록에 없는 것(재화 바·네비·업그레이드 카드 빈 공간·`#phone` 바깥)은 전부 이동으로 샜다. 지금은 `e.target`이 **`#homeScreen` / `#hbCv` / `#hmScroll`** 셋 중 하나일 때만 이동한다 — 모든 UI는 자식이라 자기 자신이 대상이 되어 자동 제외되고, 새 UI를 추가해도 여기 손댈 일이 없다. ⚠ `#hmScroll`이 남은 세로 공간을 전부 차지하므로 '보이는 전장'의 대부분이 그 위다 — 빼면 필드 탭이 통째로 죽는다.
 - **격자는 맵 전체이고 건설 중일 때만 보인다**(2026-08-12). 해금 구역·코어 제한은 없앴다(`hbCellBuildable`은 맵 안인지만 본다, `hunt.base.open`은 옛 세이브 호환으로만 남음). `hbDrawGrid`는 `S.arm`이 없으면 아무것도 안 그리고, 있을 때도 **보이는 범위만** 긋는다.
 - **봉쇄 금지 = `hbSealCheck(k,gx,gy)`.** 맵 테두리에서 4방향 flood fill 해서 도달 못 하는 빈칸이 생기면 배치를 거절한다(자원 미차감). ⚠ **대각 통과가 없으므로 사각 테두리는 '모서리'를 비워도 여전히 갇힌다** — 열어 둘 칸은 변의 중간이어야 한다(스모크가 이 전제를 검사한다). 벽을 통과 불가로 둘 수 있는 근거가 이 검사다.
