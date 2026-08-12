@@ -1126,9 +1126,13 @@ async function groupLobby(){
             if(r===undefined) continue;
             // 허용폭 12 = HOME 톤 검사와 같은 기준(공용 --metal-edge rgb(60,62,70)이 B-R=10이라 그 아래로 잡으면 오검출)
             assert(b<=r+12,'라운드 팝업에 푸른기가 남음('+(el.className||el.tagName)+'): '+m); } } } }
+    // 칸 수 = 최고 도달 · 단 '다음 마일스톤'까지는 목표로 한 칸 더 보여 준다(도전정신 — 못 고르게 잠근다)
     const cells=document.querySelectorAll('#hbRoundGrid .hbRd');
-    assert(cells.length===hbBest(1),'선택지가 최고 도달과 다름: '+cells.length+' vs '+hbBest(1));
-    assert(document.querySelector('#hbRoundGrid .hbRd.on').textContent===String(_hb.round),'현재 라운드가 강조되지 않음');
+    const want=Math.max(hbBest(1), hbNextRw(1,_hb.round)||0);
+    assert(cells.length===want,'선택지 수가 규칙과 다름: '+cells.length+' vs '+want+'(최고 '+hbBest(1)+' · 다음 보상 '+hbNextRw(1,_hb.round)+')');
+    for(const cell of cells){ const n=parseInt(cell.textContent,10);
+      assert((n>hbBest(1))===cell.disabled,'라운드 '+n+' 잠금 상태가 최고 도달과 안 맞음(disabled='+cell.disabled+')'); }
+    assert(document.querySelector('#hbRoundGrid .hbRd.on').textContent.replace(/\D+$/,'')===String(_hb.round),'현재 라운드가 강조되지 않음');
     // ④ 라운드 이동 = 진행 초기화 + 시트 닫힘 · 상한 넘는 값은 잘린다
     hbGoRound(1); await sleep(40);
     assert(_hb.round===1 && _hb.wave===1,'라운드 이동이 반영되지 않음');
@@ -1137,6 +1141,105 @@ async function groupLobby(){
     assert(_hb.round===hbBest(1),'최고 도달을 넘겨 이동됨: '+_hb.round);
     hbSetClimb(false);
     return '최고 '+hbBest(1)+'라운드 · 반복/등반 ok'; });
+  // 📈 성장 설계(2026-08-12) — 초반 빠르게 / 뒤로 갈수록 배로 / 25레벨마다 환생 / 해금은 레벨 게이트 / 라운드 보상
+  await step('성장 곡선: 초반 가속 · 후반 등비 · 환생 배수', ()=>{ skipIf(typeof profXpForLevel!=='function','곡선 없음');
+    // ① 초반은 옛 곡선(50·lv^1.5)보다 확실히 가볍다 — '30레벨까지 아주 빠르게'
+    const oldCum=(to)=>{ let t=0; for(let l=1;l<to;l++) t+=Math.round(50*Math.pow(l,1.5)); return t; };
+    const newCum=(to)=>{ let t=0; for(let l=1;l<to;l++) t+=profXpForLevel(l); return t; };
+    const c30o=oldCum(30), c30n=newCum(30);
+    assert(c30n < c30o*0.55,'30레벨까지가 옛 곡선보다 충분히 빠르지 않음: '+c30n+' vs '+c30o);
+    // ② PROF_LV_SOFT 이후는 등비 — 레벨당 같은 배수로 오르고, 결국 '배로' 든다
+    for(let l=PROF_LV_SOFT; l<PROF_LV_SOFT+40; l++){
+      const rt=profXpForLevel(l+1)/profXpForLevel(l);
+      assert(Math.abs(rt-PROF_XP_GEO)<0.02,'Lv'+l+'→'+(l+1)+' 증가율이 등비가 아님: '+rt.toFixed(3)); }
+    assert(profXpForLevel(PROF_LV_SOFT+30) > profXpForLevel(PROF_LV_SOFT)*8,'후반이 충분히 무거워지지 않음');
+    // ③ 경계에서 튀지 않는다(두 식이 이어져야 한다)
+    { const a=profXpForLevel(PROF_LV_SOFT-1), b=profXpForLevel(PROF_LV_SOFT);
+      assert(b>a && b<a*1.3,'구간 경계에서 필요 경험치가 튐: '+a+' → '+b); }
+    // ④ 곡선은 단조 증가 — 어느 지점에서도 쉬워지면 안 된다
+    for(let l=1;l<200;l++) assert(profXpForLevel(l+1)>=profXpForLevel(l),'Lv'+l+'에서 곡선이 내려감');
+    return '30레벨 누적 '+c30n.toLocaleString()+'(옛 '+c30o.toLocaleString()+') · 이후 레벨당 ×'+PROF_XP_GEO; });
+
+  await step('환생: 25레벨마다 · 깊이 밀수록 배수↑ · 계정 축은 유지', ()=>{ skipIf(typeof profRebirth!=='function','환생 없음');
+    const p=PROF(); p.chars.length=0; p.curId=''; const c=profCreateChar('ranger','환생');
+    // ① 문턱 미만이면 못 한다
+    c.level=PROF_REB_EVERY-1;
+    assert(!profCanRebirth(c),'문턱 미만인데 환생이 가능함');
+    assert(profRebirth(c)===0,'문턱 미만인데 환생이 실행됨');
+    assert(c.level===PROF_REB_EVERY-1,'실패한 환생이 레벨을 건드림');
+    // ② 문턱에서 1단계 · 계정 축(미네랄 업그레이드)과 장비·진화는 그대로
+    const H=hbHunt(); H.upg.atk=7; c.unit.evoStars=2;
+    c.level=PROF_REB_EVERY; c.xp=123;
+    assert(profCanRebirth(c),'문턱인데 환생이 안 됨');
+    assert(profRebirth(c)===1,'문턱에서 1단계가 아님');
+    assert(c.level===1 && c.xp===0,'환생 뒤 레벨·경험치가 1/0이 아님: Lv'+c.level+' xp'+c.xp);
+    assert(c.unit.level===1,'환생 뒤 유닛 레벨이 안 돌아감');
+    assert(hbHunt().upg.atk===7,'환생이 계정 축(미네랄 업그레이드)을 지움');
+    assert(c.unit.evoStars===2,'환생이 진화★를 지움');
+    const mul1=profXpMul(c);
+    assert(Math.abs(mul1-(1+PROF_REB_GAIN))<1e-9,'1단계 배수가 다름: '+mul1);
+    // ③ 깊이 밀고 환생할수록 많이 받는다 — 2배 레벨 = 2단계
+    c.level=PROF_REB_EVERY*2;
+    assert(profRebirth(c)===2,'2배 레벨인데 2단계가 아님');
+    assert(Math.abs(profXpMul(c)-(1+PROF_REB_GAIN*3))<1e-9,'누적 배수가 다름: '+profXpMul(c));
+    // ④ 배수가 '실제 지급'에 붙는다 — 지급 경로가 profGainXp 한 곳인지까지 본다
+    c.xp=0; const got=profGainXp(c,100);
+    assert(Math.abs(got-100*profXpMul(c))<1e-6,'지급에 배수가 안 붙음: '+got);
+    assert(Math.abs(c.xp-got)<1e-6,'지급값과 누적값이 다름');
+    return '1단계 ×'+mul1.toFixed(2)+' → 3단계 누적 ×'+profXpMul(c).toFixed(2); });
+
+  await step('해금: 레벨 게이트 · 한 번에 몰려 열리지 않는다', ()=>{ skipIf(typeof profUnlockLv!=='function','레벨 해금 없음');
+    // ① 표가 레벨 기준이고 오름차순 · 간격이 벌어져 있어야 '하나씩' 열린다
+    let prev=0;
+    for(const u of PROF_UNLOCKS){
+      assert(typeof u.lv==='number' && u.lv>0,'레벨 게이트가 없는 항목: '+u.id);
+      assert(u.power===undefined,'옛 파워 게이트가 남음: '+u.id);
+      assert(u.lv>prev,'레벨 순서가 뒤집힘: '+u.id);
+      assert(u.lv-prev>=3 || prev===0,'해금이 너무 붙어 있음(한 번에 열린다): '+u.id+' '+prev+'→'+u.lv);
+      prev=u.lv; }
+    // ② 실제 판정 — 레벨을 올리면 그 시점의 것만 열린다
+    const p=PROF(); p.chars.length=0; p.curId=''; const c=profCreateChar('ranger','해금');
+    p.unlocks={}; c.level=1; profSyncUnlocks();
+    assert(Object.keys(p.unlocks).length===0,'Lv.1인데 해금이 있음');
+    const first=PROF_UNLOCKS[0];
+    c.level=first.lv; profSyncUnlocks();
+    assert(p.unlocks[first.id],'문턱 레벨인데 첫 해금이 안 열림');
+    assert(Object.keys(p.unlocks).length===1,'첫 해금에서 여러 개가 한꺼번에 열림');
+    // ③ 환생해도 이미 연 것은 닫히지 않는다(영구 기록)
+    c.level=1; profSyncUnlocks();
+    assert(profHasUnlock(first.id),'레벨이 내려가자 해금이 닫힘(영구여야 한다)');
+    return PROF_UNLOCKS.length+'단계 · Lv.'+PROF_UNLOCKS[0].lv+'~'+prev; });
+
+  await step('라운드 보상: 마일스톤 최초 1회 · 팝업에서 미리 확인', async()=>{ skipIf(typeof hbRoundRw!=='function','라운드 보상 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','보상'); saveMeta(); }
+    openHome(); await sleep(60); _hb.manual=true;
+    const H=hbHunt(); H.rw={};
+    // ① 마일스톤 간격에만 보상이 붙고, 라운드가 오를수록 커진다
+    assert(!hbRoundRw(1,1) && !hbRoundRw(1,HB_RW_EVERY-1),'마일스톤이 아닌 라운드에 보상이 붙음');
+    assert(hbRoundRw(1,HB_RW_EVERY),'마일스톤 라운드에 보상이 없음');
+    assert(hbRoundRw(1,HB_RW_EVERY*2).min>hbRoundRw(1,HB_RW_EVERY).min,'뒤 마일스톤이 더 크지 않음');
+    // ② 최초 1회만 — 같은 라운드를 반복 파밍해도 다시 안 준다
+    const p=PROF(), c0=p.pcoin, tk0=(p.tickets&&p.tickets.gear)||0;
+    assert(hbRwClaim(1,HB_RW_EVERY),'최초 클리어 보상이 지급되지 않음');
+    const r=hbRoundRw(1,HB_RW_EVERY);
+    assert(p.pcoin===c0+r.min,'보상 미네랄이 안 맞음: '+(p.pcoin-c0)+' vs '+r.min);
+    assert(((p.tickets&&p.tickets.gear)||0)===tk0+(r.tk||0),'뽑기권 지급이 안 맞음');
+    const c1=p.pcoin;
+    assert(!hbRwClaim(1,HB_RW_EVERY),'같은 마일스톤이 두 번 지급됨(반복 파밍으로 무한 수령)');
+    assert(p.pcoin===c1,'두 번째 수령 시도에 재화가 늘어남');
+    assert(hbRwGot(1,HB_RW_EVERY),'수령 기록이 남지 않음');
+    // ③ 던전마다 따로 — 던전 1에서 받았다고 던전 2가 닫히면 안 된다
+    assert(!hbRwGot(2,HB_RW_EVERY),'다른 던전의 마일스톤까지 수령 처리됨');
+    // ④ 팝업에서 '다음 목표'를 미리 볼 수 있다(도전정신)
+    H.rw={}; H.best={1:2}; H.dg=1; _hb.round=1;
+    hbOpenRounds(); await sleep(40);
+    const nx=hbNextRw(1,1);
+    assert(nx===HB_RW_EVERY,'다음 마일스톤 안내가 틀림: '+nx);
+    assert(document.querySelectorAll('#hbRoundGrid .hbRd.rw').length>=1,'팝업에 마일스톤 표시가 없음');
+    assert(($('hbRoundNote').textContent||'').indexOf('라운드 '+nx)>=0,'팝업 안내에 다음 보상이 안 적힘');
+    hbCloseRounds();
+    return '간격 '+HB_RW_EVERY+' · 최초 1회 · 던전별 분리 ok'; });
+
   // 친구 목록은 네비 밖(마을 상단 바)에서 연다 — 네비 칸 수가 바뀌어도 진입점이 사라지지 않게 지킨다.
     await step('유즈맵 선택 → 네모네모 모드 팝업', ()=>{ openMapSelect(); openModeSheet(USEMAPS.nemo_inf||USEMAPS.nemo);
     const mo=document.querySelector('#modeSheet .moCard'); assert(visible(mo),'moCard 안 보임');
@@ -1485,13 +1588,16 @@ async function groupLobby(){
     const before=snap();
     const p=PROF(); p.chars.length=0; p.curId=''; const c=profCreateChar('warden','던전');
     c.unit.stats={pow:40,vit:40,foc:0,agi:10};                 // 1층은 확실히 이기는 스펙
-    const coin=p.pcoin;
+    const coin=p.pcoin, lv0=c.level;
     assert(dgStart(1),'던전 진입 실패'); dgStopLoop();
     let n=0; while(DG && !DG.over && n<20000){ dgStep(0.016); n++; }
     assert(DG && DG.over>0,'1층 클리어 실패(over='+(DG&&DG.over)+', '+n+'프레임)');
     const r=DG.reward; DG=null;
     assert(snap()===before,'던전이 유즈맵 상태 G를 바꿈');
-    assert(p.pcoin===coin+r.pc,'보상 P가 안 들어옴');
+    // 레벨업도 미네랄을 준다(PROF_LV_MINERAL) — 보상만 더해 놓고 같기를 바라면 곡선이 바뀔 때마다 깨진다
+    const lvUp=c.level-lv0;
+    assert(p.pcoin===coin+r.pc+lvUp*PROF_LV_MINERAL,
+      '보상 P가 안 들어옴: '+coin+'+'+r.pc+'+레벨업'+lvUp+'×'+PROF_LV_MINERAL+' ≠ '+p.pcoin);
     assert(CHAR().dgFloor===1,'최고 층이 기록되지 않음');
     return n+'프레임 · +'+r.pc+'P/+'+r.xp+'XP'; });
   await step('던전: 스펙이 오르면 같은 층이 빨리 끝남', ()=>{ skipIf(typeof dgStart!=='function','던전 없음');

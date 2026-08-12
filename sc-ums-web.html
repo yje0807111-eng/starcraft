@@ -2950,6 +2950,13 @@
     color:#9a9a9a;background:rgba(255,255,255,.045);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
   .hbRd.on{color:#fff;background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.4)}
   .hbRd.best{color:#ffd24a;border-color:rgba(255,210,74,.45)}   /* 금색 = 재화·보상 역할(§2) — 푸른기가 아니다 */
+  /* 🎁 마일스톤 라운드 — 보상이므로 금색(§2 재화·보상 역할). 받은 것은 가라앉힌다.
+     ⛔ 초록(#5dff8f)을 쓰면 안 된다 — 이 팝업의 '푸른기 금지' 검사에 걸린다(B가 R보다 크다). */
+  .hbRd{position:relative}
+  .hbRd.rw{color:#ffd24a;border-color:rgba(255,210,74,.45);background:rgba(255,210,74,.07)}
+  .hbRd.rwGot{color:#7a7a7a;border-color:var(--metal-edge)}
+  .hbRd.far{opacity:.45;cursor:default}          /* 아직 못 간 라운드 = 목표만 보여 주고 못 고른다 */
+  .hbRdRw{position:absolute;right:3px;top:2px;font-style:normal;font-size:9px;line-height:1}
   .hbRoundNote{flex:none;padding:8px 12px 0;font-size:var(--fs-sm);color:#7a7a7a;line-height:1.5}
   /* 지도 바닥 — 중립 회색 + 미세 격자. 격자는 월드가 아니라 화면에 고정되지만
      아바타가 중앙 고정이라 '땅이 흐르는' 이동감을 준다(전체를 다시 그리지 않는 값싼 방법). */
@@ -4953,8 +4960,8 @@ function metaEffLv(id){ return _metaEffFromRaw(META_BUILDS[id], buildLevel(id));
 // 플레이어 메타(계정별 영구 데이터)
 // 🧍 개인 프로필 RPG(1단계) 기본값 — 유즈맵 경제와 완전 분리(재화명 pcoin, coins 아님). 자세한 규칙은 PROF_* 블록 참조.
 // 계정 공용(재화·펫·해금·방치) + 캐릭터별(chars[]: 레벨·경험치·스탯·장비·진화)로 나뉜다.
-function defaultProfile(){ return { ver:5, pcoin:0, gas:0, gem:0, chars:[], curId:'', items:[],
-  hunt:{ dg:1, round:1, climb:false, best:{}, upg:{atk:0,rng:0,aspd:0,crit:0,hp:0,regen:0} },   // ⚔ 자동사냥(HOME) 진행·영구 업그레이드
+function defaultProfile(){ return { ver:6, pcoin:0, gas:0, gem:0, chars:[], curId:'', items:[],
+  hunt:{ dg:1, round:1, climb:false, best:{}, rw:{}, upg:{atk:0,rng:0,aspd:0,crit:0,hp:0,regen:0} },   // ⚔ 자동사냥(HOME) 진행·마일스톤 수령(rw)·영구 업그레이드
   idle:{ sourceId:'drill', lastClaimTs:0 }, unlocks:{}, lastSeenTs:0,
   dgKeys:{}, tickets:{gear:0,pet:0,ally:0},   // 🗝 던전별 열쇠(매일 09:00 보충) · 🎟 뽑기권(장비/펫/동료)
   pets:{}, equip:[], petSlots:2 }; }   // 🐾 펫(중복=별)·장착 슬롯 — 캐릭터를 새로 만들어도 그대로 쓴다
@@ -4964,7 +4971,7 @@ function profGas(){ const p=PROF(); return Math.floor(p&&p.gas||0); }
 function profGem(){ const p=PROF(); return Math.floor(p&&p.gem||0); }
 function defaultChar(cls, name){ const C=PROF_CLASSES[cls]||PROF_CLASSES.ranger, id=(PROF_CLASSES[cls]?cls:'ranger');
   return { id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), cls:id, name:(name||C.name),
-    xp:0, level:1, statPoints:0, dgFloor:0,
+    xp:0, level:1, statPoints:0, dgFloor:0, reb:0, rebMul:0,   // 🔁 환생 횟수 · 누적 경험치 배수(profGainXp)
     unit:{ jobId:id, level:1, evoStars:0, stats:{pow:0,vit:0,foc:0,agi:0}, gear:_emptyGear() } }; }
 function defaultMeta(){ return { coins:0, buildLevels:{}, highestRound:0, clearedDifficulty:'', profile:defaultProfile() }; }   // clearedDifficulty:''=아무것도 클리어 안 함(이지만 개방)
 let PLAYER_META = defaultMeta();
@@ -5186,22 +5193,58 @@ function profBuyItem(tierId){ const p=PROF(), T=profItemTier(tierId);
   if(!profAddItem(it)) return null;
   p.pcoin-=T.cost; saveMeta(); return it; }
 const PROF_IDLE_SOURCES={ drill:{name:'훈련장',rate:0.6,tip:'공격 위주'}, library:{name:'수련관',rate:0.6,tip:'집중 위주'}, arena:{name:'투기장',rate:1.0,reqUnlock:'idle_arena',tip:'고수익'} };
-// 파워 해금 — 전부 실제로 무언가를 연다(표시만 하는 항목을 두지 않는다).
+// 레벨 해금 — 전부 실제로 무언가를 연다(표시만 하는 항목을 두지 않는다).
 // idle_arena→훈련장 장소 / evolve→진화 / idle_8h·idle_12h→오프라인 상한
 // pet_slot3·4→profPetSlots() / ally_plus·turret_plus→hbBuildMax()
+// ⚠ 게이트는 '레벨'이다(2026-08-12 설계 전환 — 옛 기준은 파워였다).
+//   설계 의도: 혼자 라운드 미는 게 막힐 때쯤 새 요소가 '하나씩' 열려야 한다 → 한꺼번에 열리면 안 된다.
+//   그래서 간격을 레벨 곡선이 무거워지는 속도에 맞춰 벌려 둔다(초반 촘촘 → 후반 성김).
+//   ⚠ 표를 고칠 땐 lv가 오름차순이고 서로 3레벨 이상 떨어져 있어야 한다 — 스모크가 검사한다.
 const PROF_UNLOCKS=[
-  {id:'idle_arena', power:200,  label:'투기장 자동수익'},
-  {id:'evolve',     power:350,  label:'유닛 진화(★)'},
-  {id:'idle_8h',    power:600,  label:'오프라인 8시간·100%'},
-  {id:'pet_slot3',  power:900,  label:'펫 슬롯 3'},
-  {id:'ally_plus',  power:1400, label:'동료 최대 +2'},
-  {id:'turret_plus',power:2200, label:'터렛 최대 +2'},
-  {id:'pet_slot4',  power:3000, label:'펫 슬롯 4'},
-  {id:'idle_12h',   power:4200, label:'오프라인 12시간'},
+  {id:'idle_arena', lv:5,   label:'투기장 자동수익'},
+  {id:'evolve',     lv:12,  label:'유닛 진화(★)'},
+  {id:'idle_8h',    lv:20,  label:'오프라인 8시간·100%'},
+  {id:'pet_slot3',  lv:28,  label:'펫 슬롯 3'},
+  {id:'ally_plus',  lv:38,  label:'동료 최대 +2'},
+  {id:'turret_plus',lv:50,  label:'터렛 최대 +2'},
+  {id:'pet_slot4',  lv:65,  label:'펫 슬롯 4'},
+  {id:'idle_12h',   lv:80,  label:'오프라인 12시간'},
 ];
+// 해금 판정에 쓰는 레벨 — 환생해도 이미 연 것은 유지되고(unlocks에 영구 기록),
+// 새로 여는 기준은 '지금 캐릭터 레벨'이다.
+function profUnlockLv(){ const c=CHAR(); return c? (c.level||1) : 1; }
+// 표시용 — 해금에 필요한 레벨(문구에 숫자를 손으로 박지 말 것)
+function profUnlockNeed(id){ const u=PROF_UNLOCKS.find(x=>x.id===id); return u? u.lv : 0; }
 const PROF_OFF_CAP_MIN=4*60, PROF_OFF_RATE=0.5, PROF_OFF_CAP8_MIN=8*60, PROF_OFF_RATE8=1.0, PROF_OFF_CAP12_MIN=12*60;   // 오프라인 상한/비율(idle_8h 해금 시 8h/100%)
 // 곡선(순수함수)
-function profXpForLevel(lv){ return Math.round(50*Math.pow(lv,1.5)); }
+// 📈 레벨 곡선 — 설계: "초반은 아주 빠르게, 뒤로 갈수록 배로" (2026-08-12 확정)
+//   PROF_LV_SOFT 미만 = 다항식(옛 50·lv^1.5보다 가벼워 30레벨까지 약 2.6배 빨리 도달)
+//   그 이상       = 등비수열 — 레벨당 ×PROF_XP_GEO 라 약 7.3레벨마다 필요량이 2배가 된다.
+//   두 식은 lv=PROF_LV_SOFT 에서 값이 같아 이어진다(경계에서 튀지 않는다).
+//   ⚠ 벽에 부딪히는 지점이 곧 '환생할 때'다 — 아래 PROF_REB_* 와 한 세트로 움직인다.
+const PROF_LV_SOFT=30;                       // 여기까지는 빠르게
+const PROF_XP_A=30, PROF_XP_P=1.35;          // 초반 곡선 계수
+const PROF_XP_GEO=1.10;                      // 이후 레벨당 배수
+function profXpForLevel(lv){ lv=Math.max(1, lv|0);
+  if(lv<PROF_LV_SOFT) return Math.round(PROF_XP_A*Math.pow(lv,PROF_XP_P));
+  const b=PROF_XP_A*Math.pow(PROF_LV_SOFT,PROF_XP_P);
+  return Math.round(b*Math.pow(PROF_XP_GEO, lv-PROF_LV_SOFT)); }
+// 🔁 환생 — PROF_REB_EVERY 레벨마다 한 단계. 깊이 밀고 환생할수록 단계가 커져 배수를 많이 받는다.
+//   되돌리는 것: 캐릭터 레벨·경험치(유닛 레벨 포함).  그대로 두는 것: 계정 축(미네랄 업그레이드)·장비·펫·진화★.
+const PROF_REB_EVERY=25;                     // 이 레벨 간격마다 환생 1단계
+const PROF_REB_GAIN=0.2;                     // 1단계당 경험치 획득 배수 증가(설계: '적은 배수')
+function profRebStep(lv){ return Math.floor((lv||0)/PROF_REB_EVERY); }        // 지금 환생하면 몇 단계인가
+function profCanRebirth(c){ c=c||CHAR(); return !!c && profRebStep(c.level)>=1; }
+function profXpMul(c){ c=c||CHAR(); return 1+((c&&c.rebMul)||0); }
+// ⚠ 경험치 지급은 반드시 이 함수를 지난다 — 지급 지점이 4곳이라 배수를 각자 곱하면 언젠가 어긋난다.
+function profGainXp(c, xp){ c=c||CHAR(); if(!c || !(xp>0)) return 0;
+  const got=xp*profXpMul(c); c.xp+=got; return got; }
+function profRebirth(c){ c=c||CHAR(); if(!profCanRebirth(c)) return 0;
+  const step=profRebStep(c.level);
+  c.reb=(c.reb||0)+1; c.rebMul=(c.rebMul||0)+PROF_REB_GAIN*step;
+  c.level=1; c.xp=0; if(c.unit) c.unit.level=1;      // 진화★·장비는 그대로 둔다
+  try{ saveMeta(); }catch(e){}
+  return step; }
 function profClassCost(jobId){ const J=PROF_JOBS[jobId]; return J? J.tier*400 : 0; }
 // 스탯/파워(전부 read-only)
 function profStat(k){ const c=CHAR(); if(!c) return 0; const J=PROF_JOBS[c.unit.jobId]||PROF_JOBS[c.cls]||PROF_JOBS.ranger;
@@ -5214,8 +5257,8 @@ function profStat(k){ const c=CHAR(); if(!c) return 0; const J=PROF_JOBS[c.unit.
   else if(k==='vit') v*=(1+profPetBonus('vit'));
   return Math.round(v); }
 function profPower(){ return Math.round(profStat('pow')*3 + profStat('vit')*2 + profStat('foc')*2 + profStat('agi')*1.5); }
-function profHasUnlock(id){ const p=PROF(); if(p.unlocks[id]) return true; const u=PROF_UNLOCKS.find(x=>x.id===id); return !!u && profPower()>=u.power; }
-function profSyncUnlocks(){ const p=PROF(), pw=profPower(); for(const u of PROF_UNLOCKS){ if(!p.unlocks[u.id] && pw>=u.power) p.unlocks[u.id]=true; } }   // 한 번 넘으면 영구
+function profHasUnlock(id){ const p=PROF(); if(p.unlocks[id]) return true; const u=PROF_UNLOCKS.find(x=>x.id===id); return !!u && profUnlockLv()>=u.lv; }
+function profSyncUnlocks(){ const p=PROF(), lv=profUnlockLv(); for(const u of PROF_UNLOCKS){ if(!p.unlocks[u.id] && lv>=u.lv) p.unlocks[u.id]=true; } }   // 한 번 넘으면 영구(환생해도 안 닫힌다)
 // 레벨업(xp→level, 스탯 포인트 지급). 유닛 레벨도 동반 상승.
 // 성장은 두 축이다 — 캐릭터(레벨→스탯 포인트, 마을 광장에서 배분) / 계정(미네랄→업그레이드 6종).
 // 둘 다 hbCharStats()에서 합산된다.
@@ -5259,7 +5302,7 @@ function profPetRoll(){ const p=PROF(); if(p.pcoin<PROF_PET_GACHA_COST) return n
 function profPetEquip(id){ const p=PROF(); if(!p.pets[id]) return false; const i=p.equip.indexOf(id);
   if(i>=0){ p.equip.splice(i,1); saveMeta(); return true; }                                // 토글 해제
   if(p.equip.length>=profPetSlots()) return false; p.equip.push(id); saveMeta(); return true; }
-// 🌟 유닛 진화(별) — evolve 해금(파워 350) 필요. 별마다 레벨 문턱·pcoin 비용↑. profStat에서 evoStars*2 반영.
+// 🌟 유닛 진화(별) — evolve 해금(PROF_UNLOCKS의 레벨 게이트) 필요. 별마다 레벨 문턱·pcoin 비용↑. profStat에서 evoStars*2 반영.
 function profEvolveCost(stars){ return (stars+1)*500; }   // 별 stars → stars+1 로 올리는 비용(환급 계산과 공용)
 function profEvolveReq(){ const c=CHAR(), s=c?c.unit.evoStars:0; return { unlock:profHasUnlock('evolve'), stars:s, maxed:s>=5, lvReq:(s+1)*10, cost:profEvolveCost(s) }; }
 function profEvolve(){ const p=PROF(), c=CHAR(), r=profEvolveReq(); if(!c||!r.unlock||r.maxed) return false;
@@ -5295,7 +5338,7 @@ function profRunReward(){ const p=PROF();
   const dMul={easy:0.8,normal:1,hard:1.4,hell:1.8,nightmare:2.4}[G.difficulty||'normal']||1;
   const k=G.kills||0, rd=G.round||0;
   const xp=Math.round((10 + k*0.5 + rd*8)*dMul), pc=Math.round((5 + k*0.2 + rd*4)*dMul*(1+profPetBonus('coin')));   // 🐾 펫 코인% 반영
-  const c=CHAR(); if(c) c.xp+=xp; const ups=profApplyLevelUps(c); p.pcoin+=pc; profSyncUnlocks(); saveMeta();
+  const c=CHAR(); profGainXp(c, xp); const ups=profApplyLevelUps(c); p.pcoin+=pc; profSyncUnlocks(); saveMeta();
   return { xp:xp, pc:pc, ups:ups, level:c?c.level:1 }; }
 // 방치 정산(오프라인/켜둠) — Date.now 기준(1단계 클라이언트 신뢰). 유즈맵과 무관.
 function profOfflineCapMin(){ return profHasUnlock('idle_12h')?PROF_OFF_CAP12_MIN
@@ -5417,12 +5460,20 @@ function renderRoundSheet(){ const H=hbHunt(), gr=document.getElementById('hbRou
         +(open?(' onclick="hbGoDungeon('+d+')"'):' disabled')+'>'+(open?d:'🔒')+'</button>'; }
     dr.innerHTML=dh; }
   const best=hbBest(H.dg), cur=_hb? _hb.round : (H.round||1);
-  let h=''; for(let i=1;i<=best;i++)
-    h+='<button class="hbRd'+(i===cur?' on':'')+(i===best&&best>1?' best':'')+'" onclick="hbGoRound('+i+')">'+i+'</button>';
+  // 🎁 마일스톤은 아직 못 간 라운드도 한 칸 더 보여 준다 — '다음 목표'가 보여야 민다(도전정신).
+  const nextRw=hbNextRw(H.dg,cur), top=Math.max(best, nextRw||0);
+  let h=''; for(let i=1;i<=top;i++){ const rw=hbRoundRw(H.dg,i), got=rw&&hbRwGot(H.dg,i), far=i>best;
+    h+='<button class="hbRd'+(i===cur?' on':'')+(i===best&&best>1?' best':'')
+      +(rw?(got?' rwGot':' rw'):'')+(far?' far':'')+'"'
+      +(far?' disabled':(' onclick="hbGoRound('+i+')"'))+'>'+i
+      +(rw?('<i class="hbRdRw">'+(got?'✓':'🎁')+'</i>'):'')+'</button>'; }
   gr.innerHTML=h;
   const nt=document.getElementById('hbRoundNote');
   if(nt){ const nx=H.dg<HB_DG_MAX ? (hbDgOpen(H.dg+1) ? '던전 '+(H.dg+1)+' 개방됨' : '던전 '+(H.dg+1)+'은 이 던전 '+HB_DG_UNLOCK+'라운드 도달 시 개방') : '마지막 던전';
-    nt.textContent='던전 '+H.dg+' · 최고 도달 라운드 '+best+' — 여기까지 고를 수 있습니다. 죽으면 한 라운드씩 내려갑니다. · '+nx; }
+    let rwTx='';
+    if(nextRw){ const r=hbRoundRw(H.dg,nextRw);
+      rwTx=' · 🎁 라운드 '+nextRw+' 최초 클리어 = 미네랄 '+Math.round(r.min).toLocaleString()+' · 가스 '+Math.round(r.gas).toLocaleString()+(r.tk?' · 장비 뽑기권 '+r.tk:''); }
+    nt.textContent='던전 '+H.dg+' · 최고 도달 라운드 '+best+' — 여기까지 고를 수 있습니다. 죽으면 한 라운드씩 내려갑니다. · '+nx+rwTx; }
   const r=document.getElementById('hbModeRep'), c=document.getElementById('hbModeClm');
   if(r) r.classList.toggle('on', !H.climb); if(c) c.classList.toggle('on', !!H.climb); }
 // 던전 이동 — 그 던전에서 도달했던 라운드부터 다시 시작한다
@@ -5528,12 +5579,20 @@ function renderGrowModal(){ const box=document.getElementById('hbGrowBody'); if(
       +'<span class="hbRowTx"><b>'+j.name+'</b><em>'+(j.okLv?('비용 '+j.cost.toLocaleString('en-US')+' 미네랄'):('🔒 Lv.'+j.reqLv+' 필요'))+'</em></span>'
       +'<button class="hbRowBtn" onclick="hbDoClass(&#39;'+j.id+'&#39;)"'+(j.ok?'':' disabled')+'>전직</button></div>';
   h+='<div class="hbGrowLbl">진화 <span class="hbStars">'+('★'.repeat(r.stars)+'☆'.repeat(5-r.stars))+'</span></div>';
-  if(!r.unlock) h+='<div class="hbRow"><span class="hbRowTx"><em>🔒 파워 350 달성 시 개방</em></span></div>';
+  if(!r.unlock) h+='<div class="hbRow"><span class="hbRowTx"><em>🔒 Lv.'+profUnlockNeed('evolve')+' 달성 시 개방</em></span></div>';
   else if(r.maxed) h+='<div class="hbRow"><span class="hbRowTx"><em>✓ 최대 진화(★5)</em></span></div>';
   else { const ok=c.unit.level>=r.lvReq && coin>=r.cost;
     h+='<div class="hbRow"><span class="hbRowIco">✦</span>'
       +'<span class="hbRowTx"><b>별 +1 (전 스탯 +2)</b><em>'+(c.unit.level>=r.lvReq?('비용 '+r.cost.toLocaleString('en-US')+' 미네랄'):('🔒 Lv.'+r.lvReq+' 필요'))+'</em></span>'
       +'<button class="hbRowBtn" onclick="hbDoEvolve()"'+(ok?'':' disabled')+'>진화</button></div>'; }
+  // 🔁 환생 — 레벨 곡선이 무거워지는 지점에서 '되감고 배수를 얻는' 축. 성장 팝업에 함께 둔다.
+  h+='<div class="hbGrowLbl">환생 <span class="hbStars">'+(c.reb?('×'+profXpMul(c).toFixed(2)+' 경험치'):'—')+'</span></div>';
+  { const step=profRebStep(c.level), can=step>=1, next=(step+1)*PROF_REB_EVERY;
+    h+='<div class="hbRow"><span class="hbRowIco">🔁</span>'
+      +'<span class="hbRowTx"><b>'+(can?('환생 '+step+'단계 — 경험치 ×'+(profXpMul(c)+PROF_REB_GAIN*step).toFixed(2)+'로'):'환생')+'</b>'
+      +'<em>'+(can?('레벨·경험치가 1로 돌아갑니다. 미네랄 업그레이드·장비·펫·진화★는 그대로. Lv.'+next+'까지 밀면 '+(step+1)+'단계')
+                 :('🔒 Lv.'+PROF_REB_EVERY+' 필요 — '+PROF_REB_EVERY+'레벨마다 1단계씩 커집니다'))+'</em></span>'
+      +'<button class="hbRowBtn" onclick="hbDoRebirth()"'+(can?'':' disabled')+'>환생</button></div>'; }
   box.innerHTML=h; }
 // 실행 — 마을 렌더러를 부르지 않는다(HOME에서는 마을 DOM이 숨어 있어 토스트가 안 보인다)
 function hbAfterGrow(msg){ if(_hb){ const st=hbCharStats(), ch=_hb.char;
@@ -5544,6 +5603,14 @@ function hbAfterGrow(msg){ if(_hb){ const st=hbCharStats(), ch=_hb.char;
   if(typeof updateCurBar==='function') updateCurBar();
   renderGrowModal(); renderHome(); if(typeof hbHud==='function') hbHud(); }
 function hbDoClass(id){ if(typeof profClassChange==='function' && profClassChange(id)) hbAfterGrow('전직 완료!'); }
+// 🔁 환생 — 되돌릴 수 없으므로 반드시 확인을 받는다
+function hbDoRebirth(){ const c=CHAR(); if(!c || !profCanRebirth(c)) return;
+  const step=profRebStep(c.level);
+  if(typeof confirm==='function' && !confirm('Lv.'+c.level+' 에서 환생합니다.\n레벨·경험치가 1로 돌아가고, 경험치 획득이 ×'+(profXpMul(c)+PROF_REB_GAIN*step).toFixed(2)+' 가 됩니다.\n계속할까요?')) return;
+  if(!profRebirth(c)) return;
+  if(_hb){ _hb.round=1; hbHunt().round=1; _hb.wave=1; _hb.phase='fight';
+    _hb.foes.length=0; _hb.pend.length=0; hbSpawnWave(); }
+  hbAfterGrow('환생! 경험치 ×'+profXpMul(c).toFixed(2)); }
 function hbDoEvolve(){ if(typeof profEvolve==='function' && profEvolve()) hbAfterGrow('★ 진화!'); }
 // ── C. 스탯 출처 내역 — "어디를 올려야 이득인가"를 화면에서 알 수 있게 ──
 // profStat()의 계산식을 그대로 분해한다(식이 바뀌면 여기도 같이 고칠 것 — 값을 두 번 계산하지 않도록 합계는 profStat로 검산).
@@ -5579,7 +5646,7 @@ function renderInfoModal(){ const box=document.getElementById('hbInfoBody'); if(
     +Object.keys(HB_UPG).filter(k=>hbUpgOwned(k))
       .map(k=>'<span class="hbChip">'+HB_UPG[k].name+' <b>'+(u[k]||0)+'</b></span>').join('')+'</div>';
   box.innerHTML=h; }
-// ── D. 파워 해금 확장 — 해금이 실제로 무언가를 열도록 배선 ──
+// ── D. 레벨 해금 확장 — 해금이 실제로 무언가를 열도록 배선 ──
 function profPetSlots(){ const p=PROF(); let n=2;
   if(profHasUnlock('pet_slot3')) n=3;
   if(profHasUnlock('pet_slot4')) n=4;
@@ -5829,6 +5896,7 @@ const HB_UPG_CAT_ICO={atk:'sword', def:'shield', util:'wrench'};   // 공용 ICO
 function hbHunt(){ const p=PROF();
   if(!p.hunt) p.hunt={dg:1,round:1,climb:false,best:{},upg:{atk:0,rng:0,aspd:0,crit:0,hp:0,regen:0}};
   if(!p.hunt.unl) p.hunt.unl={};        // 해금한 업그레이드(key→1). u:0 은 여기 없어도 열린 것으로 친다
+  if(!p.hunt.rw || typeof p.hunt.rw!=='object') p.hunt.rw={};   // 🎁 마일스톤 수령 기록(던전→라운드)
   if(!p.hunt.upgCat) p.hunt.upgCat='atk';
   if(!p.hunt.upgQty) p.hunt.upgQty=1;
   return p.hunt; }
@@ -5870,6 +5938,26 @@ function hbFoeAtk(dg,round){ return (1.6+round*0.5)*HB_DG_ATK(dg); }
 function hbKillReward(dg,round){ const m=HB_DG_REW(dg);
   return { min:(0.6+round*0.25)*m, gas:(0.06+round*0.03)*m, xp:(3+round*1.5)*(dg||1) }; }
 function hbClearBonus(dg,round){ const m=HB_DG_REW(dg); return { min:(8+round*4)*m, gas:(1.2+round*0.5)*m }; }
+// 🎁 라운드 마일스톤 보상 — HB_RW_EVERY 간격 라운드에 '최초 클리어 1회' 보상이 붙는다.
+//   설계 의도: 다음 목표가 눈에 보여야 라운드를 민다(도전정신). 그래서 라운드 팝업에서 미리 확인할 수 있다.
+//   ⚠ 반복 파밍으로 재수령되면 안 된다 → 던전별로 받은 라운드를 hunt.rw[dg][round] 에 기록한다.
+const HB_RW_EVERY=5;
+function hbRoundRw(dg,round){ if(!round || round%HB_RW_EVERY) return null;
+  const m=HB_DG_REW(dg), t=round/HB_RW_EVERY;
+  return { min:Math.round(60*t*m), gas:Math.round(8*t*m), tk:(t%4===0)?1:0 }; }   // 4번째 마일스톤마다 장비 뽑기권
+function hbRwGot(dg,round){ const H=hbHunt(); return !!(H.rw && H.rw[dg] && H.rw[dg][round]); }
+// 최초 클리어면 지급하고 true. 이미 받았거나 마일스톤이 아니면 false.
+function hbRwClaim(dg,round){ const r=hbRoundRw(dg,round); if(!r || hbRwGot(dg,round)) return false;
+  const H=hbHunt(), p=PROF();
+  if(!H.rw) H.rw={}; if(!H.rw[dg]) H.rw[dg]={}; H.rw[dg][round]=1;
+  p.pcoin=(p.pcoin||0)+r.min; p.gas=(p.gas||0)+r.gas;
+  if(r.tk){ if(!p.tickets) p.tickets={gear:0,pet:0,ally:0}; p.tickets.gear=(p.tickets.gear||0)+r.tk; }
+  return true; }
+// 다음으로 노릴 마일스톤(아직 안 받은 것 중 가장 가까운 것) — 팝업 안내 문구용
+function hbNextRw(dg,from){ const best=hbBest(dg);
+  for(let r=HB_RW_EVERY; r<=Math.max(best,from||1)+HB_RW_EVERY*4; r+=HB_RW_EVERY)
+    if(!hbRwGot(dg,r)) return r;
+  return 0; }
 // ── ⚔ Phase 4: 전장 확장 — 스킬 · 부스트 · 동료/펫 · 건설(터렛·벙커) ──
 // 수치는 전부 아래 표에 모여 있다(밸런스는 나중에 표만 고친다).
 // 아군(동료·펫·터렛·벙커)은 hbStep 안에서 적과 같은 월드 좌표로 돈다.
@@ -6096,6 +6184,10 @@ function hbSettle(){ const S=_hb, p=PROF();
   p.pcoin=(p.pcoin||0)+bo.min; p.gas=(p.gas||0)+bo.gas;
   S.floats.push({x:S.char.x,y:S.char.y-32,tx:'ROUND CLEAR +'+Math.round(bo.min)+'M',cl:'#ffd24a',t:0});
   S.buf={min:0,gas:0,xp:0,kills:0,paid:0};
+  // 🎁 마일스톤 최초 클리어 보상 — 등반으로 라운드를 올리기 '전에' 지금 깬 라운드로 판정한다
+  if(hbRwClaim(S.dg,S.round)){ const rw=hbRoundRw(S.dg,S.round);
+    S.floats.push({x:S.char.x,y:S.char.y-52,tx:'🎁 라운드 '+S.round+' 보상 +'+Math.round(rw.min)+'M',cl:'#5dff8f',t:0});
+    if(typeof toast==='function') toast('🎁 던전 '+S.dg+' 라운드 '+S.round+' 최초 클리어 보상'+(rw.tk?' · 장비 뽑기권 +'+rw.tk:'')); }
   const H=hbHunt();
   if(H.climb){ S.round++; H.round=S.round; }                      // 등반 모드 = 클리어 시 다음 라운드
   H.best[S.dg]=Math.max(H.best[S.dg]||1, S.round);                // 최고 도달(라운드 선택 상한 — UI는 Phase 2)
@@ -6221,7 +6313,7 @@ function hbKill(f){ const S=_hb, i=S.foes.indexOf(f); if(i<0) return; S.foes.spl
   if(Math.random() < (f.elite?HB_TICKET_ELITE:HB_TICKET_NORMAL)){   // 🎟 장비 뽑기권
     if(typeof dgAddTicket==='function') dgAddTicket('gear',1);
     S.floats.push({x:f.x,y:f.y-48,tx:'🎟 장비 뽑기권!',cl:'#ffd24a',t:0}); }
-  if(c){ c.xp+=r.xp;
+  if(c){ profGainXp(c, r.xp);
     if(profApplyLevelUps(c)){ S.floats.push({x:S.char.x,y:S.char.y-46,tx:'LEVEL UP!',cl:'#5dff8f',t:0});
       if(typeof renderHomeStats==='function') renderHomeStats(); } }
   S.buf.kills++; S.buf.paid=(S.buf.paid||0)+r.min; S.curDirty=true;   // 재화 바 갱신은 묶어서(처치마다 DOM 금지)
@@ -6985,7 +7077,7 @@ function renderProfStats(){ const p=PROF(), c=CHAR(); if(!c) return '<div class=
       h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+N.name+'</div><div class="twRowSub'+(okLv?'':' lock')+'">필요 Lv.'+N.reqLv+' · 비용 '+cost+' P</div></div><button class="twBtn" onclick="profDoClass(\''+nx+'\')"'+(ok?'':' disabled')+'>전직</button></div>'; } }
   const r=profEvolveReq();   // 🌟 진화(별)
   h+='<div class="twSectLbl">진화 <span class="twStars">'+('★'.repeat(r.stars)+'☆'.repeat(5-r.stars))+'</span></div>';
-  if(!r.unlock) h+='<div class="twRow"><div class="twRowInfo"><div class="twRowSub lock">🔒 파워 350 달성 시 진화 개방</div></div></div>';
+  if(!r.unlock) h+='<div class="twRow"><div class="twRowInfo"><div class="twRowSub lock">🔒 Lv.'+profUnlockNeed('evolve')+' 달성 시 진화 개방</div></div></div>';
   else if(r.maxed) h+='<div class="twRow"><div class="twRowInfo"><div class="twRowSub ok">✓ 최대 진화(★5)</div></div></div>';
   else { const ok=c.unit.level>=r.lvReq && p.pcoin>=r.cost;
     h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">별 +1 (스탯 강화)</div><div class="twRowSub'+(c.unit.level>=r.lvReq?'':' lock')+'">필요 Lv.'+r.lvReq+' · 비용 '+r.cost+' P</div></div><button class="twBtn" onclick="profDoEvolve()"'+(ok?'':' disabled')+'>진화</button></div>'; }
@@ -7241,17 +7333,17 @@ function renderProfIdle(){ const p=PROF();
     +((H&&H.rate>0)?('기준 = 자동사냥 실적(초당 '+H.rate.toFixed(2)+')'):'기준 = 파워(자동사냥 첫 클리어 전)')
     +'<br>껐다 켜면 최대 '+(profOfflineCapMin()/60)+'시간 · '+(profOfflineRate()*100)+'% 정산.</div><div class="twSectLbl">일하는 곳 고르기</div>';
   for(const id in PROF_IDLE_SOURCES){ const s=PROF_IDLE_SOURCES[id], locked=s.reqUnlock&&!profHasUnlock(s.reqUnlock), on=p.idle.sourceId===id;
-    const reqP=(PROF_UNLOCKS.find(u=>u.id===s.reqUnlock)||{}).power;
-    h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+s.name+'</div><div class="twRowSub'+(locked?' lock':'')+'">'+(locked?('🔒 파워 '+reqP+' 필요'):('배율 '+s.rate+'× · '+(s.tip||'')))+'</div></div><button class="twBtn'+(on?' on':'')+'" onclick="profDoIdle(\''+id+'\')"'+(locked?' disabled':'')+'>'+(on?'선택됨':'선택')+'</button></div>'; }
+    const reqP=(PROF_UNLOCKS.find(u=>u.id===s.reqUnlock)||{}).lv;
+    h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+s.name+'</div><div class="twRowSub'+(locked?' lock':'')+'">'+(locked?('🔒 Lv.'+reqP+' 필요'):('배율 '+s.rate+'× · '+(s.tip||'')))+'</div></div><button class="twBtn'+(on?' on':'')+'" onclick="profDoIdle(\''+id+'\')"'+(locked?' disabled':'')+'>'+(on?'선택됨':'선택')+'</button></div>'; }
   return h; }
 function profDoIdle(id){ if(profSetIdleSource(id)){ if(typeof playSfx==='function') playSfx('ui_open'); refreshTownPanel(); } }
-// 관문(던전 입구 + 파워 해금 사다리) — 던전은 허브(전용 화면)로 통합
+// 관문(던전 입구 + 레벨 해금 사다리) — 던전은 허브(전용 화면)로 통합
 function renderProfGate(){ const mx=dgMaxFloor();
   let h='<div class="twHead">토벌은 사냥터 하단 <b>토벌</b> 버튼 또는 아래 버튼으로 들어갑니다.<br>최고 기록 <b>'+(mx?mx+'단계':'없음')+'</b> · 개방 <b>'+dgFloorCap()+'단계</b></div>';
   h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">토벌 허브</div><div class="twRowSub">종류 선택 · 단계 도전 · 즉시 보상</div></div><button class="twBtn" onclick="openDungeonHub()">이동</button></div>';
-  h+='<div class="twSectLbl">파워 해금</div>';
+  h+='<div class="twSectLbl">레벨 해금</div>';
   for(const u of PROF_UNLOCKS){ const open=profHasUnlock(u.id);
-    h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+u.label+'</div><div class="twRowSub '+(open?'ok':'lock')+'">'+(open?'✓ 열림':('🔒 파워 '+u.power+' 필요'))+'</div></div></div>'; }
+    h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">'+u.label+'</div><div class="twRowSub '+(open?'ok':'lock')+'">'+(open?'✓ 열림':('🔒 Lv.'+u.lv+' 필요'))+'</div></div></div>'; }
   return h; }
 
 // ============================================================================
@@ -7355,7 +7447,7 @@ function dgWin(){ const c=CHAR(), p=PROF(), r=dgFloorReward(DG.floor);
   r.item=(sl.length && Math.random()<DG_DROP_P) ? profAddItem(profMakeItem(sl[Math.floor(Math.random()*sl.length)], DG.floor)) : null;
   p.pcoin+=r.pc;
   const prevMax=c?(c.dgFloor||0):0, isNew=!!(c && DG.floor>prevMax);
-  if(c){ c.xp+=r.xp; profApplyLevelUps(c); if(DG.floor>prevMax) c.dgFloor=DG.floor; }
+  if(c){ profGainXp(c, r.xp); profApplyLevelUps(c); if(DG.floor>prevMax) c.dgFloor=DG.floor; }
   if(DG.needKey && DG.dgId && typeof dgSpendKey==='function') dgSpendKey(DG.dgId);   // 완료 시 열쇠 1 소모(실패 시 미소모)
   r.tix=isNew ? dgAwardTickets(DG.floor) : null;                    // 새 단계 클리어 = 뽑기권
   profSyncUnlocks(); saveMeta(); dgStopLoop(); dgRender(); }
@@ -7428,7 +7520,7 @@ function dgSheetEnter(){ const d=DG_DUNGEONS.find(x=>x.id===_dgSheetId); if(!d) 
 function dgSheetSweep(){ const d=DG_DUNGEONS.find(x=>x.id===_dgSheetId), c=CHAR(), p=PROF(); if(!d||!c||!p) return;
   const mx=dgMaxFloor(); if(mx<1){ if(typeof toast==='function') toast('클리어한 단계가 없습니다'); return; }
   if(dgKeyN(d.id)<1){ if(typeof toast==='function') toast('🗝 열쇠가 없습니다(매일 09:00 보충)'); return; }
-  dgSpendKey(d.id); const r=dgFloorReward(mx); p.pcoin+=r.pc; c.xp+=r.xp; profApplyLevelUps(c); profSyncUnlocks(); saveMeta();
+  dgSpendKey(d.id); const r=dgFloorReward(mx); p.pcoin+=r.pc; profGainXp(c, r.xp); profApplyLevelUps(c); profSyncUnlocks(); saveMeta();
   if(typeof playSfx==='function') playSfx('hero_merge'); if(typeof toast==='function') toast('🗝 소탕 +'+r.pc+' M · +'+r.xp+' XP');
   renderDgSheet(); renderDungeonHub(); }
 function dgAgain(next){ const did=(DG&&DG.dgId)||'normal', floor=(DG?DG.floor:dgMaxFloor())+(next?1:0);
