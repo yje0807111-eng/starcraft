@@ -1269,53 +1269,56 @@ async function groupLobby(){
     hbCloseMates();
     return '동료 '+Object.keys(HB_MATES).length+'종 · '+GACHA_TIERS[HB_MATES[Object.keys(HB_MATES)[0]].tier].name+'~'+GACHA_TIERS[HB_MATES[last].tier].name; });
 
+  // 🎰 단계형 뽑기 곡선의 '공통 규칙' — 동료와 펫이 같은 형태라, 검사도 한 벌로 한다.
+  //    새 뽑기를 추가하면 이 함수에 태우면 된다(규칙을 두 벌로 적지 말 것).
+  function checkGachaCurve(label, curve, tiers){
+    assert(curve.length===30, label+': 단계 수가 30이 아님: '+curve.length);
+    const first=curve[0].p, last=curve[curve.length-1].p;
+    // ① 각 단계 확률 합 = 정확히 1 · 모든 등급이 1단계부터 0이 아니다
+    for(let i=0;i<curve.length;i++){ let sum=0;
+      for(const t of tiers){ assert(GACHA_TIERS[t], label+': 없는 등급 '+t);
+        assert(curve[i].p[t]>0, label+': 단계 '+(i+1)+'에 '+t+'가 0%');
+        sum+=curve[i].p[t]; }
+      assert(Math.abs(sum-1)<1e-9, label+': 단계 '+(i+1)+' 확률 합이 1이 아님: '+sum); }
+    // ② 최상위 등급은 '금방 나오되 아주 낮게' — 1단계에 0이 아니지만 0.001% 미만
+    const top=tiers[tiers.length-1];
+    assert(first[top]>0 && first[top]<0.00001, label+': 1단계 최상위('+top+')가 0이거나 너무 높음: '+(first[top]*100).toFixed(5)+'%');
+    // ③ 초반은 금방 넘어가고, 위로 갈수록 간격이 계속 벌어진다
+    for(let i=1;i<curve.length;i++) assert(curve[i].need>curve[i-1].need, label+': 단계 '+(i+1)+' 필요 횟수가 안 오름');
+    for(let i=2;i<curve.length;i++){ const g1=curve[i-1].need-curve[i-2].need, g2=curve[i].need-curve[i-1].need;
+      assert(g2>=g1, label+': 단계 '+(i+1)+'에서 간격이 좁아짐: '+g1+' → '+g2); }
+    assert(curve[4].need<=20, label+': 5단계까지가 너무 오래 걸림: '+curve[4].need);
+    assert(curve[29].need>=1000, label+': 30단계가 너무 쉬움: '+curve[29].need);
+    // ④ 단계가 오르면 하위 최상단(=일반)은 반드시 줄고, 상위 등급은 반드시 는다
+    const upper=tiers.slice(3);            // 유니크 이상
+    for(let i=1;i<curve.length;i++){ const A=curve[i-1].p, B=curve[i].p;
+      assert(B[tiers[0]]<A[tiers[0]], label+': 단계 '+(i+1)+'에서 '+tiers[0]+' 비중이 안 줄어듦');
+      for(const t of upper) assert(B[t]>A[t], label+': 단계 '+(i+1)+'에서 '+t+' 확률이 안 늘어남'); }
+    // ⑤ 하위 3등급은 끝에서 확실히 낮아진다 — 2·3번째는 '정점을 찍고 꺾이는' 모양이어야 한다
+    assert(last[tiers[0]]<first[tiers[0]]*0.3, label+': 최종 단계에서 '+tiers[0]+'가 충분히 안 떨어짐');
+    for(const t of [tiers[1],tiers[2]]){
+      let peak=0, pk=0;
+      for(let i=0;i<curve.length;i++) if(curve[i].p[t]>peak){ peak=curve[i].p[t]; pk=i+1; }
+      assert(pk<curve.length, label+': '+t+'가 마지막까지 계속 오름(꺾여야 한다)');
+      assert(last[t]<peak*0.90, label+': '+t+'가 정점에서 충분히 안 꺾임: 최고 '+(peak*100).toFixed(1)+'%(단계 '+pk+') → 최종 '+(last[t]*100).toFixed(1)+'%'); }
+    const lowSum=last[tiers[0]]+last[tiers[1]]+last[tiers[2]];
+    assert(lowSum<0.5, label+': 최종 단계인데 하위 3등급 합이 절반 이상: '+(lowSum*100).toFixed(1)+'%');
+    return '단계 '+curve.length+'(최종 누적 '+curve[curve.length-1].need.toLocaleString()+'회) · 1단계 '+top+' '
+      +(first[top]*100).toFixed(4)+'% → 최종 '+(last[top]*100).toFixed(2)+'%'; }
+
   // 🎰 동료 뽑기 확률 — 설계의 핵심. 초반엔 상위 등급이 0%고, 뽑을수록 열리고 커진다.
   await step('동료 뽑기: 단계별 확률 · 상위 등급 개방 · 중복은 재료', ()=>{ skipIf(typeof HB_MATE_GACHA!=='object','동료 뽑기 없음');
-    // ① 각 단계의 확률 합은 정확히 1이어야 한다(잔차가 있으면 최상위가 조용히 안 나온다)
-    for(let i=0;i<HB_MATE_GACHA.length;i++){ const P=HB_MATE_GACHA[i].p;
-      let sum=0; for(const t in P){ assert(GACHA_TIERS[t],'없는 등급: '+t); sum+=P[t]; }
-      assert(Math.abs(sum-1)<1e-9,'단계 '+(i+1)+' 확률 합이 1이 아님: '+sum); }
-    // ② 최대 30단계 · 1단계는 일반 90 / 레어 9 / 에픽 1 근처에서 시작한다
-    assert(HB_MATE_GACHA.length===30,'단계 수가 30이 아님: '+HB_MATE_GACHA.length);
+    // 곡선 규칙은 펫과 공용 검사기로 본다(같은 형태이므로 잣대도 하나여야 한다)
+    const sum1=checkGachaCurve('동료', HB_MATE_GACHA, GACHA_TIER_ORDER);
+    // 1단계는 일반 90 / 레어 9 / 에픽 1 근처에서 시작한다
     { const p0=HB_MATE_GACHA[0].p;
       assert(Math.abs(p0.common-0.90)<0.01,'1단계 일반이 90% 근처가 아님: '+(p0.common*100).toFixed(2));
       assert(Math.abs(p0.rare-0.09)<0.01,'1단계 레어가 9% 근처가 아님: '+(p0.rare*100).toFixed(2));
-      assert(Math.abs(p0.epic-0.01)<0.005,'1단계 에픽이 1% 근처가 아님: '+(p0.epic*100).toFixed(2));
-      // 갓은 '금방 나오지만 아주 낮게' — 1단계에도 0이 아니되 0.001% 미만이어야 한다
-      assert(p0.god>0,'1단계에 갓이 0% — 금방 나와야 한다');
-      assert(p0.god<0.00001,'1단계 갓이 너무 높음: '+(p0.god*100).toFixed(5)+'%');
-      for(const t of GACHA_TIER_ORDER) assert(p0[t]>0,'1단계에 '+t+'가 0% — 모든 등급이 열려 있어야 한다'); }
-    // ③ 초반 단계는 금방 넘어가고, 위로 갈수록 점점 넘어가기 어렵다(간격이 계속 벌어진다)
-    for(let i=1;i<HB_MATE_GACHA.length;i++){ const A=HB_MATE_GACHA[i-1], B=HB_MATE_GACHA[i];
-      assert(B.need>A.need,'단계 '+(i+1)+'의 필요 횟수가 안 오름'); }
-    for(let i=2;i<HB_MATE_GACHA.length;i++){
-      const g1=HB_MATE_GACHA[i-1].need-HB_MATE_GACHA[i-2].need;
-      const g2=HB_MATE_GACHA[i].need-HB_MATE_GACHA[i-1].need;
-      assert(g2>=g1,'단계 '+(i+1)+'에서 간격이 좁아짐(위로 갈수록 어려워야 한다): '+g1+' → '+g2); }
-    assert(HB_MATE_GACHA[4].need<=20,'5단계까지가 너무 오래 걸림(초반은 빨라야 한다): '+HB_MATE_GACHA[4].need);
-    assert(HB_MATE_GACHA[29].need>=1000,'30단계가 너무 쉬움: '+HB_MATE_GACHA[29].need);
-    // ④ 단계가 오르면 — 유니크 이상은 반드시 늘고, 일반은 반드시 준다
-    for(let i=1;i<HB_MATE_GACHA.length;i++){ const A=HB_MATE_GACHA[i-1], B=HB_MATE_GACHA[i];
-      assert(B.p.common<A.p.common,'단계 '+(i+1)+'에서 일반 비중이 안 줄어듦');
-      for(const t of ['unique','legend','transcend','god'])
-        assert(B.p[t]>A.p[t],'단계 '+(i+1)+'에서 '+t+' 확률이 안 늘어남'); }
-    // ⑤ 마지막 단계에서는 일반·레어·에픽이 모두 처음보다 훨씬 낮아진다(설계 요구)
-    { const f=HB_MATE_GACHA[0].p, l=HB_MATE_GACHA[HB_MATE_GACHA.length-1].p;
-      assert(l.common<f.common*0.3,'최종 단계에서 일반이 충분히 안 떨어짐: '+(f.common*100).toFixed(1)+'% → '+(l.common*100).toFixed(1)+'%');
-      // 레어·에픽은 처음엔 일반에 눌려 낮다가 중간에 올라간다 — 그래서 '시작보다 낮게'가 아니라
-      // '정점을 찍고 꺾인다'가 맞는 규칙이다(끝까지 오르기만 하면 낮게 떨어지는 게 아니다).
-      for(const t of ['rare','epic']){
-        let peak=0, pk=0;
-        for(let i=0;i<HB_MATE_GACHA.length;i++) if(HB_MATE_GACHA[i].p[t]>peak){ peak=HB_MATE_GACHA[i].p[t]; pk=i+1; }
-        assert(pk<HB_MATE_GACHA.length,t+'가 마지막 단계까지 계속 오름(꺾여야 한다)');
-        assert(l[t]<peak*0.85,t+'가 정점에서 충분히 안 꺾임: 최고 '+(peak*100).toFixed(1)+'%(단계 '+pk+') → 최종 '+(l[t]*100).toFixed(1)+'%'); }
-      const lowSum=l.common+l.rare+l.epic;
-      assert(lowSum<0.5,'최종 단계인데 일반+레어+에픽이 아직 절반 이상: '+(lowSum*100).toFixed(1)+'%'); }
-    // ④ 표에 있는 모든 등급의 동료가 실제로 풀에 있어야 한다(확률만 있고 뽑을 게 없으면 안 된다)
+      assert(Math.abs(p0.epic-0.01)<0.005,'1단계 에픽이 1% 근처가 아님: '+(p0.epic*100).toFixed(2)); }
+    // 확률을 준 등급에 실제 동료가 있어야 한다(확률만 있고 뽑을 게 없으면 안 된다)
     { const have={}; for(const id in HB_MATES) have[HB_MATES[id].tier]=1;
-      const last=HB_MATE_GACHA[HB_MATE_GACHA.length-1].p;
-      for(const t in last) if(last[t]>0) assert(have[t],'확률은 있는데 그 등급 동료가 없음: '+t); }
-    // ⑤ 뽑기 레벨은 누적 횟수로 오른다
+      for(const t of GACHA_TIER_ORDER) assert(have[t],'확률은 있는데 그 등급 동료가 없음: '+t); }
+    // 뽑기 단계는 누적 횟수로 오른다
     const p=PROF(); p.chars.length=0; p.curId=''; profCreateChar('ranger','뽑기');
     const H=hbHunt(); H.mates={}; H.party=[]; H.mateN=0;
     assert(hbGachaLv(0)===1,'0회인데 Lv.1이 아님');
@@ -1359,9 +1362,71 @@ async function groupLobby(){
       assert(hbMateLv(a.id)>lv0,'재료를 다 넣었는데 레벨이 안 오름'); }
     // ⑨ 재료 값어치는 등급을 따른다 — 상위 중복이 더 크게 쳐진다
     { let prev=0; for(const t of GACHA_TIER_ORDER){ assert(HB_MATE_PT[t]>prev,'재료 포인트가 등급 오름차순이 아님: '+t); prev=HB_MATE_PT[t]; } }
-    { const l=HB_MATE_GACHA[HB_MATE_GACHA.length-1];
-      return '단계 '+HB_MATE_GACHA.length+'(최종 누적 '+l.need.toLocaleString()+'회) · 1단계 갓 '
-        +(HB_MATE_GACHA[0].p.god*100).toFixed(4)+'% → 최종 '+(l.p.god*100).toFixed(2)+'%'; } });
+    return sum1; });
+
+  // 🐾 펫 뽑기 — 동료와 '같은 형태'. 곡선 규칙은 같은 검사기로 본다.
+  await step('펫 뽑기: 동료와 같은 형태 · 중복은 ★ 재료', ()=>{ skipIf(typeof PROF_PET_GACHA!=='object','펫 뽑기 단계 없음');
+    // ① 곡선 규칙은 동료와 동일한 잣대로
+    const sumP=checkGachaCurve('펫', PROF_PET_GACHA, PET_TIERS);
+    // ② 확률을 준 등급에 실제 펫이 있어야 한다(PET_TIERS 는 PROF_PETS 에서 나와야 한다)
+    { const have={}; for(const id in PROF_PETS) have[PROF_PETS[id].tier]=1;
+      for(const t of PET_TIERS) assert(have[t],'확률은 있는데 그 등급 펫이 없음: '+t);
+      for(const id in PROF_PETS) assert(PET_TIERS.indexOf(PROF_PETS[id].tier)>=0,'펫 등급이 확률표에 없음: '+id); }
+    // ③ 영입은 뽑기권으로만 — 미네랄로 직접 뽑던 경로는 없어졌다
+    const p=PROF(); p.pets={}; p.equip=[]; p.petN=0; p.tickets={gear:0,pet:0,ally:0}; p.pcoin=0;
+    assert(typeof PROF_PET_GACHA_COST==='undefined','옛 미네랄 뽑기 비용이 남아 있음');
+    assert(profPetRoll()===null,'뽑기권이 0인데 뽑힘');
+    // ④ 상점에서 미네랄로 뽑기권을 산다
+    assert(!profBuyPetTicket(),'미네랄이 0인데 뽑기권이 사짐');
+    p.pcoin=PROF_PET_TICKET_COST;
+    assert(profBuyPetTicket(),'미네랄이 있는데 뽑기권을 못 삼');
+    assert(profPetTicket()===1 && p.pcoin===0,'뽑기권 구매 정산이 안 맞음');
+    // ⑤ 뽑으면 ★0으로 들어오고, 뽑기권이 준다
+    const r1=profPetRoll();
+    assert(r1 && PROF_PETS[r1.id],'뽑기가 실패함');
+    assert(profPetTicket()===0,'뽑기권이 소모되지 않음');
+    assert(profPetOwned(r1.id) && profPetStar(r1.id)===0,'뽑은 펫이 ★0으로 안 들어옴');
+    assert((p.equip||[]).indexOf(r1.id)>=0,'처음 얻은 펫이 자동 장착되지 않음');
+    // ⑥ 중복은 ★가 아니라 재료로 쌓인다 — 난수를 고정해 결정적으로 본다
+    { p.pets={}; p.equip=[]; p.petN=0; p.tickets.pet=2;
+      const rnd=Math.random; Math.random=()=>0;
+      let a,b; try{ a=profPetRoll(); b=profPetRoll(); } finally { Math.random=rnd; }
+      assert(a&&b&&a.id===b.id,'난수 고정인데 다른 펫이 나옴');
+      assert(a.isNew===true && b.isNew===false,'두 번째가 중복으로 처리되지 않음');
+      assert(profPetStar(a.id)===0,'중복이 ★를 바로 올림(재료여야 한다)');
+      assert(profPetDup(a.id)===1,'중복이 재료로 안 쌓임');
+      // ⑦ 재료를 채우면 ★가 오르고 펫 성능(profPetVal)이 실제로 커진다
+      const v0=profPetVal(a.id), need=profPetNeed(a.id), pt=profPetPt(a.id);
+      p.pets[a.id].dup=Math.ceil(need/pt);
+      while(profPetDup(a.id)>0) profPetFeed(a.id, a.id);
+      assert(profPetStar(a.id)===1,'재료를 다 넣었는데 ★가 안 오름: ★'+profPetStar(a.id));
+      assert(profPetVal(a.id)>v0,'★가 올랐는데 보너스가 그대로: '+v0+' → '+profPetVal(a.id));
+      assert(profPetNeed(a.id)>need,'다음 ★ 요구량이 안 오름');
+      assert(!profPetFeed(a.id, a.id),'재료가 없는데 합성이 됨');
+      // ★ 상한을 넘지 않는다
+      p.pets[a.id].star=PROF_PET_STAR_MAX; p.pets[a.id].dup=99;
+      assert(!profPetFeed(a.id, a.id),'★ 최대인데 더 올라감');
+      assert(profPetStar(a.id)===PROF_PET_STAR_MAX,'★가 상한을 넘음'); }
+    // ⑧ 재료 값어치는 등급을 따른다
+    { let prev=0; for(const t of PET_TIERS){ assert(PROF_PET_PT[t]>prev,'펫 재료 포인트가 등급 오름차순이 아님: '+t); prev=PROF_PET_PT[t]; } }
+    return sumP; });
+
+  // 옛 펫 저장(중복 수 = 별)을 열었을 때 별을 잃지 않아야 한다
+  await step('마이그레이션: 옛 펫 {count} → {star,dup} 로 별 보존', ()=>{ skipIf(typeof migrateProfile!=='function','마이그레이션 없음');
+    const keep=PLAYER_META;
+    PLAYER_META={ coins:0, buildLevels:{}, profile:{ ver:8, pcoin:0, gas:0, gem:0, curId:'', items:[], chars:[],
+      hunt:{ dg:1, round:1, climb:false, best:{}, upg:{} },
+      idle:{sourceId:'drill',lastClaimTs:0}, unlocks:{},
+      pets:{ wolf:{count:4}, slime:{count:1} }, equip:['wolf'], petSlots:2 } };
+    migrateProfile();
+    const p=PLAYER_META.profile;
+    assert(profPetStar('wolf')===3,'옛 중복 4 → ★3 이 아님: ★'+profPetStar('wolf'));
+    assert(profPetStar('slime')===0,'옛 중복 1 → ★0 이 아님: ★'+profPetStar('slime'));
+    assert(p.pets.wolf.count===undefined,'옛 count 필드가 남음');
+    assert(p.pets.wolf.dup===0 && p.pets.wolf.fed===0,'재료 필드가 안 생김');
+    assert((p.tickets.pet||0)>0,'펫 뽑기권을 안 줌(뽑기 화면이 비어 보인다)');
+    PLAYER_META=keep;
+    return '★ 보존 ok'; });
 
   // 옛 저장(전직해 둔 캐릭터)을 열었을 때 산 것을 잃지 않아야 한다
   await step('마이그레이션: 전직해 둔 캐릭터 → 뿌리 복귀 + 그 동료 지급', ()=>{ skipIf(typeof migrateProfile!=='function','마이그레이션 없음');
@@ -1380,7 +1445,8 @@ async function groupLobby(){
     assert(c.unit.evoStars===1,'진화★가 사라짐');
     assert(p.pcoin>0,'옛 범용 동료(build.ally) 환급이 없음: '+p.pcoin);
     assert(!p.hunt.build.ally,'옛 동료 수가 남아 있음');
-    assert(p.ver===8,'버전이 안 올라감: '+p.ver);
+    // 버전 숫자를 박지 않는다 — 마이그레이션이 늘 때마다 이 줄이 깨진다
+    assert(p.ver===defaultProfile().ver,'버전이 최신으로 안 올라감: '+p.ver+' vs '+defaultProfile().ver);
     PLAYER_META=keep;
     return '뿌리 복귀 + 동료 지급 + 환급 ok'; });
 
