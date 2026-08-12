@@ -2315,10 +2315,12 @@
   .gearWrap{flex:1;min-height:0;display:flex;flex-direction:column}
   /* 섹션 이동 바(방어구 ↔ 무기·장신구) — 아바타 아래에 놓인다 */
   .pdNav{flex:0 0 auto;padding:4px 0 8px}
-  .pdSeg{position:relative;display:flex;width:100%;max-width:286px;margin:0 auto;padding:4px;border-radius:var(--r-lg);
+  /* --pad = 바깥 테두리와 안쪽 판 사이의 틈. 판의 left(인라인)·width·top/bottom이 전부 이 값에서 나오므로
+     화면별로 이 변수 하나만 덮으면 틈이 통째로 따라온다(따로 계산식을 복사하지 말 것). */
+  .pdSeg{--pad:4px;position:relative;display:flex;width:100%;max-width:286px;margin:0 auto;padding:var(--pad);border-radius:var(--r-lg);
     background:rgba(255,255,255,.045);border:1px solid var(--metal-edge)}
   /* 현재 섹션 = 중립 판 + 아래 2px 시안 라인(네비바 .tab::after와 같은 문법). 시안 면을 채우지 않는다 */
-  .pdSegInd{position:absolute;top:4px;bottom:4px;width:calc((100% - 8px)/var(--n));border-radius:var(--r-md);transition:left .2s cubic-bezier(.3,.8,.3,1);
+  .pdSegInd{position:absolute;top:var(--pad);bottom:var(--pad);width:calc((100% - 2*var(--pad))/var(--n));border-radius:var(--r-md);transition:left .2s cubic-bezier(.3,.8,.3,1);
     background:linear-gradient(160deg,rgba(30,36,48,.62),rgba(8,10,14,.72));border:1px solid var(--metal-edge)}
   .pdSegInd::after{content:'';position:absolute;left:24%;right:24%;bottom:2px;height:2px;border-radius:var(--r-bar);
     background:linear-gradient(90deg,transparent,var(--acc-sel),transparent);box-shadow:0 0 6px rgba(92,214,255,.45)}
@@ -2650,11 +2652,12 @@
      한 구역으로 묶고 그 안에서 미끄러지는 판이 현재 구역을 가리킨다. 여기서는 크기와 액센트만 덮는다. */
   .hmUpgBar{display:flex;align-items:stretch;gap:6px;padding:4px 8px;border-bottom:1px solid rgba(255,255,255,.07)}
   .hmUpgTabs{flex:1 1 0;display:flex;align-items:stretch;min-width:0}
-  .hmUpg .pdSeg{max-width:none;margin:0}                 /* 수량 칩 옆에서 남는 폭을 다 쓴다 */
-  .hmUpg .pdSegBtn{display:flex;align-items:center;justify-content:center;gap:4px;
-    padding:6px 4px;font-size:11.5px;font-weight:700;letter-spacing:.02em;color:#8a8a8a}
+  /* 수량 칩 옆에서 남는 폭을 다 쓰고, HOME 톤에 맞춰 더 각지게(9/6 → 3px) · 틈도 4 → 2px */
+  .hmUpg .pdSeg{--pad:2px;max-width:none;margin:0;border-radius:var(--r-bar)}
+  .hmUpg .pdSegInd{border-radius:var(--r-bar)}
+  /* 아이콘 없이 글자만 — 아이콘을 같이 넣으면 둘이 한 덩어리로 가운데 정렬돼 글자가 중앙에서 밀린다 */
+  .hmUpg .pdSegBtn{padding:6px 4px;font-size:11.5px;font-weight:700;letter-spacing:.02em;color:#8a8a8a;text-align:center}
   .hmUpg .pdSegBtn.on{color:#ececec}
-  .hmUpg .pdSegBtn .ic{width:13px;height:13px;stroke-width:2}   /* 작게 쓰므로 획을 조금 굵게 */
   /* 선택 밑줄만 이 화면의 액센트로 — HOME 계열은 시안 금지(DESIGN.md) */
   .hmUpg .pdSegInd::after{background:linear-gradient(90deg,transparent,rgba(var(--hmAccRGB),1),transparent);
     box-shadow:0 0 6px rgba(var(--hmAccRGB),.45)}
@@ -5368,9 +5371,9 @@ function renderHome(){ try{
     // 탭 띠 — 장비창 섹션 바와 같은 컴포넌트(segNavHTML). 새 탭 띠를 만들지 말 것
     const tb=document.getElementById('hmUpgTabs');
     if(tb){ const ci=Math.max(0, HB_UPG_CAT.findIndex(function(c){ return c[0]===cat; }));
-      tb.innerHTML=segNavHTML(HB_UPG_CAT.map(function(c){ return { label:c[1], ico:HB_UPG_CAT_ICO[c[0]] }; }), ci,
-        function(k){ return 'hmUpgTab(&#39;'+HB_UPG_CAT[k][0]+'&#39;)'; });
-      if(typeof paintIcons==='function') paintIcons(tb); }   // [data-ico] 는 칠해 줘야 그려진다
+      // 글자만 — 아이콘을 같이 넣으면 아이콘+글자가 한 덩어리로 가운데 정렬돼 글자가 중앙에서 밀린다
+      tb.innerHTML=segNavHTML(HB_UPG_CAT.map(function(c){ return { label:c[1] }; }), ci,
+        function(k){ return 'hmUpgTab(&#39;'+HB_UPG_CAT[k][0]+'&#39;)'; }); }
     // 수량 1 / 10 / MAX
     const qb=document.getElementById('hmUpgQty'), q=hbHunt().upgQty||1;
     if(qb) qb.innerHTML='<button class="hmUpQ on" onclick="hmUpgQtyCycle()">'
@@ -7158,7 +7161,7 @@ function _profItemStats(it){ const o={pow:0,vit:0,foc:0,agi:0}; if(!it) return o
 //   items: [{label, ico?}]  ·  i: 현재 index  ·  act(k): k번째 버튼의 onclick 문자열
 // 액센트(선택 표시 밑줄)는 화면이 정한다 — 기본 시안, 사냥터 패널(.hmUpg)은 자기 빨강으로 덮는다.
 function segNavHTML(items, i, act){ const n=items.length;
-  let h='<div class="pdSeg" style="--n:'+n+'"><i class="pdSegInd" style="left:calc(4px + '+i+'*(100% - 8px)/'+n+')"></i>';
+  let h='<div class="pdSeg" style="--n:'+n+'"><i class="pdSegInd" style="left:calc(var(--pad) + '+i+'*(100% - 2*var(--pad))/'+n+')"></i>';
   items.forEach(function(it,k){ h+='<button class="pdSegBtn'+(k===i?' on':'')+'" onclick="'+act(k)+'">'
     +(it.ico?'<span data-ico="'+it.ico+'"></span>':'')+it.label+'</button>'; });
   return h+'</div>'; }

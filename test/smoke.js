@@ -223,7 +223,14 @@ async function groupLobby(){
       assert(seg,'업그레이드 탭이 공용 세그먼트 바(.pdSeg)를 안 씀');
       assert(seg.querySelectorAll('.pdSegBtn').length===3,'업그레이드 탭이 3개가 아님');
       assert(seg.querySelectorAll('.pdSegInd').length===1,'현재 구역을 가리키는 판(.pdSegInd)이 없음');
-      assert(seg.querySelectorAll('.pdSegBtn .ic').length===3,'탭 아이콘이 안 그려짐(paintIcons 누락)'); }
+      // 글자만 — 아이콘이 끼면 아이콘+글자가 한 덩어리로 가운데 정렬돼 글자가 중앙에서 밀린다
+      assert(!seg.querySelector('[data-ico]'),'탭에 아이콘이 다시 들어옴(글자가 중앙에서 밀린다)');
+      // 판이 바깥 테두리 안쪽 --pad 만큼만 띄워져 있어야 한다(양쪽 틈이 같아야 '맞닿는' 느낌이 난다)
+      { const pad=parseFloat(getComputedStyle(seg).paddingTop), sr=seg.getBoundingClientRect();
+        const ir=seg.querySelector('.pdSegInd').getBoundingClientRect();
+        assert(pad<=2.5,'탭 띠 안쪽 틈이 너무 넓음: '+pad+'px');
+        assert(Math.abs((ir.top-sr.top)-(pad+1))<1.5,'판 위쪽 틈이 --pad 와 안 맞음: '+(ir.top-sr.top).toFixed(1));
+        assert(Math.abs((ir.left-sr.left)-(pad+1))<1.5,'판 왼쪽 틈이 --pad 와 안 맞음: '+(ir.left-sr.left).toFixed(1)); } }
     // 수량은 한 칸을 눌러 돌린다 — 1 → 10 → MAX → 1. 폭은 라벨이 바뀌어도 고정
     { const qs=document.querySelectorAll('.hmUpQ');
       assert(qs.length===1,'수량은 한 칸이어야 함: '+qs.length+'개');
