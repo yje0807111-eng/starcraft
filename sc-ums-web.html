@@ -81,10 +81,6 @@
     font-family:var(--font-ko);overflow:hidden}
   /* 모바일 고정 비율 — 세로로 긴 요즘 폰(963:1997 ≈ 1:2.074). 비율은 아래 두 변수 한 곳에서만 정한다.
      화면이 작으면 비율을 유지하며 축소. 패널 폭이 변해도 폰 모양은 불변. */
-  /* 🪟 팝업 카드 공통 규격 — 유즈맵·난이도·방찾기·방만들기·대기실이 전부 이 값을 쓴다.
-     ⚠ 값이 흩어지면 반드시 어긋난다(선례: 높이 555 vs 564 · 여백 18 vs 20 · 92%가 322 vs 326).
-     크기·여백·딤을 바꾸려면 여기만 고칠 것. */
-  :root{--popW:92%;--popMaxW:350px;--popH:min(564px,90%);--popPad:20px;--popDim:rgba(2,3,6,.84)}
   :root{--phW:963;--phH:1997;--navH:61px;--curH:34px}   /* 하단 바 높이 61px = 963기준 ≈150px (네비·유즈맵 탭바 공용) */
   #phone{width:390px;height:calc(390px * var(--phH) / var(--phW));aspect-ratio:var(--phW)/var(--phH);position:relative;
     /* 게임 배경 우주 타일(space_bg)을 캔버스와 같은 380px 스케일로 프레임 전체에 이어지게 — 어둡게 덮어 콘솔 가독성 유지 */
@@ -1664,7 +1660,7 @@
   #ovBtn,#ovBtn2.ghost{transform:none}
   #ovBtn:active,#ovBtn2.ghost:active{transform:translateY(1px)}
   /* 멀티플레이 대기실(로비) */
-  #lobby{position:absolute;inset:0;z-index:46;display:flex;align-items:center;justify-content:center;padding:var(--popPad);background:var(--popDim);backdrop-filter:blur(3px)}   /* 대기실 배경 사용(::before) */
+  #lobby{position:absolute;inset:0;z-index:46;display:flex;align-items:center;justify-content:center;padding:18px;background:transparent}   /* 대기실 배경 사용(::before) */
   #lobby.hide{display:none}
   /* 대기실 배경: waiting_room_bg.png 전체 cover(9:16), 중앙은 어둡게(UI 패널용) */
   #lobby::before{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;transform-origin:center center;
@@ -1674,7 +1670,7 @@
     background:
       radial-gradient(ellipse 78% 60% at 50% 50%, rgba(2,3,8,.72), rgba(2,3,8,.3) 70%),
       linear-gradient(180deg, rgba(2,3,8,.9) 0%, rgba(2,3,8,.35) 22%, rgba(2,3,8,.35) 78%, rgba(2,3,8,.92) 100%)}
-  .lbCard{width:var(--popW);max-width:var(--popMaxW);height:var(--popH);max-height:90%;overflow:hidden;padding:var(--popPad);display:flex;flex-direction:column}   /* 방찾기 카드와 폭·높이 통일(92%/350/555) · 작은 화면은 max-height 90%가 캡, 남는 높이는 플레이어 그리드(flex)가 흡수 */
+  .lbCard{width:92%;max-width:350px;height:555px;max-height:90%;overflow:hidden;padding:18px;display:flex;flex-direction:column}   /* 방찾기 카드와 폭·높이 통일(92%/350/555) · 작은 화면은 max-height 90%가 캡, 남는 높이는 플레이어 그리드(flex)가 흡수 */
   /* 대기실 채팅 = 보기영역 + 입력줄 일체형(로비 전체채팅과 동일 구조) · 4~5줄 */
   .lbChatWrap{flex:1 1 0;min-height:0;display:flex;flex-direction:column;overflow:hidden;margin-bottom:10px;border-radius:var(--r-bar);   /* 남는 높이만 흡수(basis 0) — 메시지가 쌓여도 플레이어 슬롯을 밀지 않음 */
     background:rgba(0,0,0,.3);border:1px solid var(--metal-edge)}
@@ -1780,9 +1776,9 @@
   .lbStart:disabled{cursor:default;opacity:.7}
   .lbLeave:active,.lbStart:active{transform:translateY(1px)}
   /* 방 찾기(룸 리스트) */
-  #rooms{position:absolute;inset:0;z-index:46;display:flex;align-items:center;justify-content:center;padding:var(--popPad);background:var(--popDim);backdrop-filter:blur(3px)}   /* 로비 배경 사용(::before) */
+  #rooms{position:absolute;inset:0;z-index:46;display:flex;align-items:center;justify-content:center;padding:20px;background:transparent}   /* 로비 배경 사용(::before) */
   #rooms.hide{display:none}
-  .rmCard{width:var(--popW);max-width:var(--popMaxW);height:var(--popH);max-height:90%;display:flex;flex-direction:column;padding:var(--popPad)}
+  .rmCard{width:92%;max-width:350px;max-height:90%;display:flex;flex-direction:column;padding:18px 18px 22px}
   .rmHead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
   .rmTitle{font-size:17px;font-weight:800;color:#eef1f6;text-shadow:0 1px 3px rgba(0,0,0,.65);letter-spacing:.5px}   /* 제목 = 화이트 통일 */
   .rmHeadR{display:flex;align-items:center;gap:8px;flex:0 0 auto}
@@ -1825,7 +1821,7 @@
   .riNum{font-family:var(--font-num);font-weight:800;color:var(--hud);margin-right:5px}
   .riLock{font-size:var(--fs-sm);color:var(--warn);margin-right:3px}
   /* 방 만들기 모달 */
-  #createPanel{position:absolute;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:var(--popPad);background:var(--popDim);backdrop-filter:blur(3px)}   /* 방찾기(#rooms)와 동일 패딩 → 카드 폭 일치 */
+  #createPanel{position:absolute;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:20px}   /* 방찾기(#rooms)와 동일 패딩 → 카드 폭 일치 */
   #createPanel.hide{display:none}
   /* ===== 공통 HUD 카드(방 만들기 스타일로 통일): 반투명 + 각진 외형 + 네온 그라데이션 테두리 ===== */
   .cpCard,.rmCard,.lbCard,.authCard,.moCard,.foCtxCard,.ptInviteCard{position:relative;
@@ -1863,7 +1859,7 @@
   #soloDiffPanel.hide{display:none}
   /* 난이도 선택 = 유즈맵 팝업(.moCard)과 같은 크기. 두 팝업이 이어서 뜨므로 크기가 다르면 화면이 튄다.
      ⚠ .moCard 값을 바꾸면 여기도 같이 바꿀 것 — 같아야 하는 두 값이다. */
-  #soloDiffPanel .cpCard{width:var(--popW);max-width:var(--popMaxW);height:var(--popH);max-height:90%;
+  #soloDiffPanel .cpCard{width:92%;max-width:350px;height:min(564px,90%);max-height:90%;
     display:flex;flex-direction:column;overflow:hidden}
   /* 스크롤바가 안 생기게 여백을 줄여 내용을 카드 안에 넣는다(넘침 8px → 여백 24px 확보) */
   #soloDiffPanel .moDiffBtns{flex:1 1 auto;min-height:0;overflow:hidden;gap:6px;margin-bottom:8px}
@@ -2558,14 +2554,8 @@
   /* POWER UPGRADES — 위쪽은 배경이 보이도록 비우고 카드는 네비 바로 위에 붙인다 */
   .hmUpg{margin-top:auto}   /* 위쪽 빈 자리는 배경 — 카드만 아래로 붙인다 */
   /* 헤더 = 접기/펴기 손잡이. 접으면 이 줄만 남고 뒤 배경이 화면 전체로 보인다 */
-  .hmUpgHead{position:relative;width:100%;display:flex;align-items:center;gap:8px;padding:8px 12px;
-    font-family:var(--font-ti);font-size:15px;font-weight:400;letter-spacing:.08em;
+  .hmUpgHead{width:100%;display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:15px;font-weight:700;letter-spacing:.6px;
     color:#ececec;cursor:pointer;background:none;border:none;border-bottom:1px solid rgba(255,255,255,.06);text-align:left}
-  .hmUpgBolt{flex:none;width:20px;height:20px;display:grid;place-items:center;
-    background:linear-gradient(180deg,#ffd97a,#f0b429 40%,#dd9a19 64%,#f2b93e);
-    clip-path:polygon(4px 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%,0 4px);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.5)}
-  .hmUpgBolt svg{display:block;width:12px;height:12px;fill:#2a1c05}
   .hmUpgChev{margin-left:auto;width:9px;height:9px;border-right:2px solid #9a9a9a;border-bottom:2px solid #9a9a9a;
     transform:rotate(45deg) translate(-2px,-2px);transition:transform .16s}
   .hmUpg.down .hmUpgHead{border-bottom-color:transparent}
@@ -2632,36 +2622,18 @@
   /* 4칸(2×2)만 보이고 나머지는 스크롤 — 최대 높이는 renderHome이 실제 한 칸 높이로 계산해 넣는다 */
   .hmUpgGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px;overflow-y:auto;
     transition:max-height .28s cubic-bezier(.4,0,.2,1),padding .28s cubic-bezier(.4,0,.2,1),opacity .2s}
-  .hmUp{position:relative;display:flex;flex-direction:column;gap:4px;padding:8px;border:0;border-radius:0;
-    background:linear-gradient(180deg,#5c5c5c 0%,#343434 44%,#242424 100%);
-    clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)}
-  .hmUp::before{content:'';position:absolute;inset:1px;z-index:0;background:#1c1c1c;
-    clip-path:polygon(7.4px 0,100% 0,100% calc(100% - 7.4px),calc(100% - 7.4px) 100%,0 100%,0 7.4px)}
-  .hmUp>*{position:relative;z-index:1}
+  .hmUp{display:flex;flex-direction:column;gap:4px;padding:8px;background:rgba(255,255,255,.045);
+    border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
   .hmUpTop{display:flex;align-items:center;gap:8px;min-width:0}
-  .hmUpIco{position:relative;flex:none;width:34px;height:34px;display:grid;place-items:center;padding:1px;border:0;border-radius:0;
-    background:linear-gradient(180deg,#585858,#2a2a2a);
-    clip-path:polygon(0 0,calc(100% - 6px) 0,100% 6px,100% 100%,6px 100%,0 calc(100% - 6px))}
-  .hmUpIco::after{content:'';position:absolute;inset:1px;background:linear-gradient(180deg,#2a2a2a,#1e1e1e);
-    clip-path:polygon(0 0,calc(100% - 5.4px) 0,100% 5.4px,100% 100%,5.4px 100%,0 calc(100% - 5.4px))}
-  .hmUpIco svg{position:relative;z-index:1;display:block;width:19px;height:19px;filter:drop-shadow(0 0 5px var(--gl,transparent))}
-  .hmUpTx{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
+  .hmUpIco{flex:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:18px;
+    background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+  .hmUpTx{min-width:0;display:flex;flex-direction:column}
   .hmUpName{font-size:var(--fs-lg);font-weight:700;color:#ececec}
   .hmUpLv{font-size:var(--fs-sm);color:#9a9a9a}
   .hmUpLv b{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:#5dff8f}
-  .hmUpBtn{height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;
-    font-family:var(--font-ti);font-size:13px;font-weight:400;letter-spacing:.04em;color:#2a1c05;
-    font-variant-numeric:tabular-nums;border:0;border-radius:0;
-    background:linear-gradient(180deg,#ffd97a 0%,#f0b429 40%,#dd9a19 64%,#f2b93e 100%);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.5),inset 0 -2px 0 rgba(0,0,0,.2),0 0 0 1px rgba(124,85,16,.9);
-    clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
-    transition:filter .12s,transform .05s}
-  .hmUpBtn .ri{width:14px;height:14px;flex:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.35))}
-  .hmUpBtn:hover:not([disabled]){filter:brightness(1.06)}
-  .hmUpBtn:active:not([disabled]){transform:translateY(1px);filter:brightness(.9)}
-  .hmUpBtn[disabled]{cursor:default;color:#6a6a6a;background:linear-gradient(180deg,#2a2a2a,#1e1e1e);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 0 0 1px #3a3a3a}
-  .hmUpBtn[disabled] .ri{filter:grayscale(1) opacity(.5)}
+  .hmUpBtn{height:32px;cursor:pointer;font-family:inherit;font-size:var(--fs-md);font-weight:700;letter-spacing:.3px;
+    color:#2b1d00;background:linear-gradient(180deg,#ffd97a,#e8a92b 58%,#b8801a);
+    border:1px solid rgba(255,220,140,.8);border-radius:var(--r-bar)}
   .hmUpBtn:disabled{cursor:default;color:#7a7a7a;background:rgba(255,255,255,.05);border-color:var(--metal-edge)}
   /* ══ 하단 6칸 네비게이션(전역) ══ 화면이 아니라 #phone 위에 뜬다 · navShow(tab)이 표시/활성을 정한다 */
   .navBar{position:absolute;left:0;right:0;bottom:0;z-index:62}
@@ -3298,8 +3270,8 @@
   /* ── 사이버펑크 HUD 모달 ── */
   
   /* 방 만들기/찾기/대기실 카드와 통일: 반투명 + 각진 외형 + 네온 그라데이션 테두리 */
-  .moCard{width:var(--popW);max-width:var(--popMaxW);height:var(--popH);max-height:90%}   /* 전 유즈맵 공통 높이(오토배틀 기준) — 항목이 많으면 카드를 늘리지 말고 리스트를 축소 */
-  .moInner{position:relative;z-index:1;width:100%;height:100%;text-align:center;display:flex;flex-direction:column;justify-content:center;padding:var(--popPad) 22px}
+  .moCard{width:92%;max-width:350px;height:min(564px,90%);max-height:90%}   /* 전 유즈맵 공통 높이(오토배틀 기준) — 항목이 많으면 카드를 늘리지 말고 리스트를 축소 */
+  .moInner{position:relative;z-index:1;width:100%;height:100%;text-align:center;display:flex;flex-direction:column;justify-content:center;padding:26px 22px 22px}
   .moClose{position:absolute;top:11px;right:12px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;z-index:2;
     color:#9fb0c2;background:rgba(255,255,255,.04);border:1px solid var(--metal-edge);border-radius:var(--r-lg);cursor:pointer;
     transition:all .18s}
@@ -3371,7 +3343,7 @@
   .cpStepVal{flex:0 0 auto;width:48px;text-align:center;font-family:var(--font-num);font-size:17px;font-weight:800;color:#fff;
     padding:5px 0;border-radius:8px;background:rgba(0,0,0,.3);border:1px solid var(--metal-edge);font-variant-numeric:tabular-nums}
   /* 방 만들기 창 = 방찾기 창 크기로 확대·고정(폭 350) + 하단 버튼 고정 */
-  #createPanel .cpCard{width:var(--popW);max-width:var(--popMaxW);height:var(--popH);max-height:90%;padding:var(--popPad);display:flex;flex-direction:column;box-sizing:border-box}   /* 방찾기 카드 높이(555)에 맞춤 */
+  #createPanel .cpCard{width:92%;max-width:350px;height:min(555px,92%);padding:15px 16px 16px;display:flex;flex-direction:column;box-sizing:border-box}   /* 방찾기 카드 높이(555)에 맞춤 */
   #createPanel .cpCard.noDiff{height:auto;max-height:92%}   /* 난이도 없는 유즈맵 = 빈 공간 없이 내용만큼 */
   #createPanel .cpTitle{margin-bottom:11px}
   #createPanel .cpBtns{margin-top:auto;flex:0 0 auto;padding-top:11px}   /* 버튼은 항상 하단 고정(화면 밖으로 안 나감) */
@@ -4028,7 +4000,7 @@
       <!-- POWER UPGRADES — 화면에 남은 유일한 카드. 위쪽은 비워서 우주 배경(.spaceBg)이 그대로 보인다 -->
       <div class="hmCard hmUpg">
         <button class="hmUpgHead" id="hmUpgHead" onclick="hmToggleUpg()" aria-label="업그레이드 접기/펴기">
-          <span class="hmUpgBolt"><svg viewBox="0 0 24 24"><path d="M13.2 2 5.6 13.4h4.6l-1.4 8.6 7.6-11.4h-4.8z"/></svg></span>POWER UPGRADES<i class="hmUpgChev"></i></button>
+          <span>⚡</span>POWER UPGRADES<i class="hmUpgChev"></i></button>
         <div class="hmStatRow hide" id="hmStatRow"></div>
         <div class="hmUpgGrid uiScroll" id="hmUpgGrid"></div>
       </div>
@@ -5120,7 +5092,7 @@ function profSyncUnlocks(){ const p=PROF(), pw=profPower(); for(const u of PROF_
 const PROF_PT_PER_LV=3;
 function profApplyLevelUps(c){ c=c||CHAR(); if(!c) return 0; let ups=0;
   while(c.xp>=profXpForLevel(c.level) && ups<9999){ c.xp-=profXpForLevel(c.level); c.level++; c.unit.level++;
-    c.statPoints=(c.statPoints||0)+PROF_PT_PER_LV; ups++; }
+    profGainStats(c, PROF_PT_PER_LV); ups++; }
   return ups; }
 // 방치 수익(분당 pcoin) = 파워 기반 × 소스 배율
 // 방치·오프라인 수입(분당) = 자동사냥에서 실제로 벌던 속도 × 훈련 장소 배율 × 펫 코인%.
@@ -5163,8 +5135,20 @@ function profEvolve(){ const p=PROF(), c=CHAR(), r=profEvolveReq(); if(!c||!r.un
   if(c.unit.level<r.lvReq) return false; if(p.pcoin<r.cost) return false;
   p.pcoin-=r.cost; c.unit.evoStars++; profSyncUnlocks(); saveMeta(); return true; }
 // 액션(성공 true · saveMeta 포함 · 재렌더는 호출측)
-function profAllocStat(k){ const c=CHAR(); if(!c || c.statPoints<=0 || PROF_STATS.indexOf(k)<0) return false;
-  c.unit.stats[k]=(c.unit.stats[k]||0)+1; c.statPoints--; profSyncUnlocks(); saveMeta(); return true; }
+// 레벨업 = 직업 성장 프로필(PROF_JOBS[].base) 비율로 스탯이 '자동으로' 오른다.
+// 예전엔 레벨당 포인트를 줘서 직접 찍게 했는데, 미네랄 업그레이드(HB_UPG)가 같은 4스탯을
+// 올려 완전히 중복이었다(pow=atk · vit=hp · foc=crit · agi=aspd). 성장 축은 미네랄로 통일했다.
+// ⚠ 소수점은 statAcc에 쌓아 둔다 — 버리면 레벨이 오를수록 손해가 누적된다.
+function profGainStats(c, pts){ if(!c||!c.unit||!c.unit.stats||!(pts>0)) return;
+  const J=PROF_JOBS[c.unit.jobId]||PROF_JOBS[c.cls]||PROF_JOBS.ranger, B=(J&&J.base)||{};
+  const w={}; let sum=0;
+  for(const k of PROF_STATS){ w[k]=Math.max(0, B[k]||0); sum+=w[k]; }
+  if(sum<=0){ for(const k of PROF_STATS) w[k]=1; sum=PROF_STATS.length; }
+  const acc=(c.unit.statAcc=c.unit.statAcc||{});
+  for(const k of PROF_STATS){ acc[k]=(acc[k]||0)+pts*w[k]/sum;
+    const n=Math.floor(acc[k]); if(n>0){ c.unit.stats[k]=(c.unit.stats[k]||0)+n; acc[k]-=n; } } }
+// 예전 저장에 남은 포인트는 같은 비율로 자동 소진(가진 성장을 잃지 않게)
+function profDrainStatPoints(c){ if(c && c.statPoints>0){ profGainStats(c, c.statPoints); c.statPoints=0; return true; } return false; }
 function profClassChange(jobId){ const p=PROF(), c=CHAR(); if(!c) return false;
   const cur=PROF_JOBS[c.unit.jobId], J=PROF_JOBS[jobId]; if(!cur||!J) return false;
   if(cur.next.indexOf(jobId)<0) return false; if(c.unit.level<J.reqLv) return false; const cost=profClassCost(jobId); if(p.pcoin<cost) return false;
@@ -5226,7 +5210,7 @@ function renderHome(){ try{
   const gr=document.getElementById('hmUpgGrid');
   if(gr){ const u=hbHunt().upg, coin=Math.floor(p.pcoin||0);   // ⚔ 영구 업그레이드 6종 — 미네랄 구매(스탯 포인트 흡수)
     gr.innerHTML=Object.keys(HB_UPG).map(function(k){ const U=HB_UPG[k], lv=u[k]||0, cost=hbUpgCost(k), can=coin>=cost;
-      return '<div class="hmUp"><div class="hmUpTop"><span class="hmUpIco">'+hbUpgIcoHTML(k)+'</span>'
+      return '<div class="hmUp"><div class="hmUpTop"><span class="hmUpIco">'+U.ico+'</span>'
         +'<span class="hmUpTx"><b class="hmUpName">'+U.name+'</b>'
         +'<span class="hmUpLv">LV. '+lv+' ➜ <b>'+(lv+1)+'</b></span></span></div>'
         +'<button class="hmUpBtn" onclick="hmBuyUpg(&#39;'+k+'&#39;)"'+(can?'':' disabled')+'>'+cost.toLocaleString('en-US')+' 미네랄</button></div>'; }).join('');
@@ -5237,22 +5221,11 @@ function renderHome(){ try{
 }catch(e){} }
 // 레벨업으로 받은 스탯 포인트 — 남았을 때만 줄이 뜬다. 배분은 공용 profAllocStat()(마을 광장과 같은 함수).
 function renderHomeStats(){ const row=document.getElementById('hmStatRow'); if(!row) return;
-  const c=(typeof CHAR==='function')?CHAR():null, pt=(c&&c.statPoints)||0;
+  const c=(typeof CHAR==='function')?CHAR():null;
+  if(c) profDrainStatPoints(c);                    // 예전 저장의 남은 포인트를 흡수
   const grow=(typeof hbGrowHas==='function') && hbGrowHas();
-  row.classList.toggle('hide', !pt && !grow);
-  if(!pt && !grow) return;
-  let h='';
-  if(pt) h+='<span class="hmStatPt">스탯 '+pt+'</span>'
-    +PROF_STATS.map(function(k){ return '<button class="hmStat" onclick="hmAllocStat(&#39;'+k+'&#39;)">'
-      +PROF_STAT_NAME[k]+' <b>'+profStat(k)+'</b> <i>+</i></button>'; }).join('');
-  if(grow) h+='<button class="hmStat grow" onclick="hbOpenGrow()">🎖 전직 · 진화 <i>!</i></button>';
-  row.innerHTML=h; }
-function hmAllocStat(k){ if(typeof profAllocStat!=='function' || !profAllocStat(k)) return;
-  if(_hb){ const st=hbCharStats(), c=_hb.char;                 // 전투 중 즉시 반영(hmBuyUpg와 같은 규칙)
-    c.atk=st.atk; c.cd=st.cd; c.crit=st.crit; c.range=st.range; c.regen=st.regen;
-    c.hpMax=st.hpMax; c.hp=Math.min(st.hpMax, c.hp+(k==='vit'?10:0)); }
-  if(typeof playSfx==='function') playSfx('ui_open');
-  renderHome(); if(typeof hbHud==='function') hbHud(); }
+  row.classList.toggle('hide', !grow);
+  row.innerHTML = grow ? '<button class="hmStat grow" onclick="hbOpenGrow()">🎖 전직 · 진화 <i>!</i></button>' : ''; }
 // 4칸(2행)까지만 보이게 — 칸 높이는 글꼴·문구에 따라 변하므로 실측해서 넣는다(값을 박으면 어긋난다)
 function hmFitUpgGrid(){ const gr=document.getElementById('hmUpgGrid'); if(!gr) return;
   const cell=gr.querySelector('.hmUp'); if(!cell) return;
@@ -5570,17 +5543,6 @@ function hbViewH(rng){
 const HB_CAM_SNAP=24;                 // 이만큼 넘게 벌어지면 보간하지 않고 즉시 맞춘다(화면 복귀·회전 등)
 const HB_CAM_EASE=0.25;               // 접힘/펼침 애니메이션을 좇는 속도(0=정지, 1=즉시)
 // ── 영구 업그레이드 6종(미네랄 구매) — 효과·비용 곡선은 밸런스 패스에서 조정 ──
-// 강화 아이콘 — 이모지 대신 라인 SVG(스탯별 색). c=선·글로우 색, d=패스
-const HB_UPG_ICO={
-  atk:  {c:'#ff6b4a', d:'<path d="M14.5 3.5 20.5 9.5 9 21 3.5 21 3.5 15.5z"/><path d="M13 5 19 11"/>'},
-  rng:  {c:'#ffd24a', d:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.4"/><path d="M12 1.8v3.4M12 18.8v3.4M1.8 12h3.4M18.8 12h3.4"/>'},
-  aspd: {c:'#5cd6ff', d:'<path d="M13.2 2.4 5.8 13.4h4.4l-1.2 8.2 7.2-11h-4.4z"/>'},
-  crit: {c:'#eef2f8', d:'<path d="M12 2.4 14.2 9.8 21.6 12 14.2 14.2 12 21.6 9.8 14.2 2.4 12 9.8 9.8z"/>'},
-  hp:   {c:'#4a9dff', d:'<path d="M12 2.8 19.6 6v6c0 4.6-3.1 8-7.6 9.2C7.5 20 4.4 16.6 4.4 12V6z"/>'},
-  regen:{c:'#3ddc84', d:'<path d="M12 20.6S4.6 16 4.6 10.4A4.3 4.3 0 0 1 12 7.5a4.3 4.3 0 0 1 7.4 2.9c0 5.6-7.4 10.2-7.4 10.2z"/>'},
-};
-function hbUpgIcoHTML(k){ const g=HB_UPG_ICO[k]; if(!g) return (HB_UPG[k]&&HB_UPG[k].ico)||'';
-  return '<svg viewBox="0 0 24 24" style="--gl:'+g.c+'" fill="none" stroke="'+g.c+'" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+g.d+'</svg>'; }
 const HB_UPG={
   atk:  {name:'공격력',   ico:'🗡️', base:20, mul:1.14},
   rng:  {name:'사거리',   ico:'🎯', base:25, mul:1.16},
@@ -6639,8 +6601,9 @@ function renderTownIdle(){ renderTownBar(); const tp=document.getElementById('to
 // 광장: 스탯 + 전직
 function renderProfStats(){ const p=PROF(), c=CHAR(); if(!c) return '<div class="twHead">캐릭터가 없습니다.</div>';
   const C=PROF_CLASSES[c.cls], J=PROF_JOBS[c.unit.jobId]||PROF_JOBS[c.cls];
-  let h='<div class="twHead">'+C.ico+' <b>'+escHtml(c.name)+'</b> · '+C.name+' 계열<br>현재 <b>'+J.name+'</b> · Lv.'+c.level+' · 파워 <b>'+profPower()+'</b><br>남은 스탯 포인트 <b>'+c.statPoints+'</b> · 다음 레벨까지 '+Math.max(0,profXpForLevel(c.level)-c.xp)+' XP</div><div class="twStatGrid">';
-  for(const k of PROF_STATS){ h+='<div class="twStat"><span class="tsL">'+PROF_STAT_NAME[k]+'</span><span class="tsV">'+profStat(k)+'</span><button onclick="profDoAlloc(\''+k+'\')"'+(c.statPoints>0?'':' disabled')+'>+</button></div>'; }
+  let h='<div class="twHead">'+C.ico+' <b>'+escHtml(c.name)+'</b> · '+C.name+' 계열<br>현재 <b>'+J.name+'</b> · Lv.'+c.level+' · 파워 <b>'+profPower()+'</b><br>다음 레벨까지 '+Math.max(0,profXpForLevel(c.level)-c.xp)+' XP</div><div class="twStatGrid">';
+  // 스탯은 레벨업 때 자동으로 오른다 — 배분 버튼은 없다(성장 축은 미네랄 업그레이드로 통일)
+  for(const k of PROF_STATS){ h+='<div class="twStat"><span class="tsL">'+PROF_STAT_NAME[k]+'</span><span class="tsV">'+profStat(k)+'</span></div>'; }
   h+='</div>';
   if(J.next && J.next.length){ h+='<div class="twSectLbl">전직</div>';
     for(const nx of J.next){ const N=PROF_JOBS[nx], cost=profClassCost(nx), okLv=c.unit.level>=N.reqLv, ok=okLv&&p.pcoin>=cost;
@@ -6758,7 +6721,6 @@ function profDoGacha(){ const res=profPetRoll(); if(!res) return; if(typeof play
   const P=PROF_PETS[res.id]; renderTownBar(); refreshTownPanel();
   showTownToast((res.isNew?'🎉 ':'⭐ ')+GACHA_TIERS[res.tier].name+' '+P.name+(res.isNew?' 획득!':' ★'+res.star)); }
 function profDoPetEquip(id){ if(profPetEquip(id)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); } }
-function profDoAlloc(k){ if(profAllocStat(k)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); } }
 function profDoClass(id){ if(profClassChange(id)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); showTownToast('전직 완료!'); } }
 // ── 장비창(위=아바타+슬롯 / 아래=가방) ──
 // 아바타 = SF 파워아머 실루엣(자체 제작). 얼굴은 그리지 않고 바이저로 대신한다.

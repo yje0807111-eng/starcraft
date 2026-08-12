@@ -379,25 +379,45 @@ async function groupLobby(){
     assert(_hb.round===rd0,'재진입에서 라운드가 초기화됨: '+rd0+' → '+_hb.round);
     return rep; });
   // 레벨업 보상(스탯 포인트)은 메인 화면에서 바로 찍혀야 한다 — 마을까지 걸어가야 하면 성장 축의 절반이 숨는다.
-  await step('자동사냥: 레벨업 스탯을 HOME에서 배분', async()=>{ skipIf(typeof hmAllocStat!=='function','HOME 스탯 없음');
+  // 레벨업 = 스탯 자동 상승. 배분 UI는 없앴다 — 미네랄 업그레이드(HB_UPG)가 같은 4스탯을
+  // 올려 완전히 중복이었기 때문(pow=atk · vit=hp · foc=crit · agi=aspd).
+  await step('자동사냥: 레벨업 시 스탯이 직업 비율로 자동 상승', async()=>{
+    skipIf(typeof profGainStats!=='function','자동 상승 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(60);
-    const c=CHAR(); c.statPoints=0; renderHome();
-    assert(!visible($('hmStatRow')),'포인트가 없는데 스탯 줄이 보임');
-    // 레벨업 = 포인트 지급
-    const lv0=c.level; c.xp=profXpForLevel(c.level)+1;
+    const c=CHAR();
+    assert(typeof profAllocStat==='undefined' && typeof hmAllocStat==='undefined','배분 함수가 아직 남아 있음');
+    assert(!document.querySelector('#hmStatRow .hmStat:not(.grow)'),'HOME에 스탯 배분 버튼이 남아 있음');
+    const raw=()=>{ const o={}; for(const k of PROF_STATS) o[k]=c.unit.stats[k]||0; return o; };
+    // 정수 스탯 + 소수점 잔여(statAcc)의 총합 — 레벨당 정확히 PROF_PT_PER_LV씩 늘어야 한다
+    const tot=()=>{ let v=0; const a=c.unit.statAcc||{};
+      for(const k of PROF_STATS) v+=(c.unit.stats[k]||0)+(a[k]||0); return v; };
+    const before=raw(), tot0=tot();   // ⚠ profStat은 직업기본+장비+unit.level+진화★까지 더해 회계에 못 쓴다
+    const lv0=c.level, atk0=_hb?_hb.char.atk:0;
+    c.xp=profXpForLevel(c.level)+1;
     assert(profApplyLevelUps(c)>0,'레벨업이 안 됨');
-    assert(c.level===lv0+1 && c.statPoints===PROF_PT_PER_LV,'레벨업 보상이 스탯 포인트가 아님: '+c.statPoints);
-    renderHome();
-    assert(visible($('hmStatRow')),'포인트가 있는데 스탯 줄이 안 보임');
-    assert(document.querySelectorAll('#hmStatRow .hmStat').length===PROF_STATS.length,'스탯 칸 수가 다름');
-    // 찍으면 스탯·전투 수치에 즉시 반영
-    const pow0=profStat('pow'), atk0=_hb.char.atk;
-    document.querySelector('#hmStatRow .hmStat').click();
-    assert(profStat('pow')===pow0+1,'스탯이 안 올랐음');
-    assert(c.statPoints===PROF_PT_PER_LV-1,'포인트가 안 깎임');
-    assert(_hb.char.atk>atk0,'전투 중 공격력에 반영되지 않음: '+atk0+' → '+_hb.char.atk);
-    return 'Lv'+c.level+' · 포인트 '+c.statPoints; });
+    assert(c.level===lv0+1,'레벨이 안 올랐음');
+    assert(!c.statPoints,'아직 포인트를 주고 있음: '+c.statPoints);
+    // ⚠ 정수 스탯만 세면 안 된다 — 소수점이 statAcc에 남아 있어 한 레벨에 0점일 수도, 앞서 쌓인
+    //    잔여가 함께 넘어와 4점일 수도 있다. 정확한 불변식은 '정수 + 잔여'의 합이다.
+    assert(tot0!=null,'기준값 없음');
+    const tot1=tot();
+    assert(Math.abs((tot1-tot0)-PROF_PT_PER_LV)<1e-6,
+      '한 레벨에 '+(tot1-tot0).toFixed(3)+'점 — 정확히 PROF_PT_PER_LV('+PROF_PT_PER_LV+')여야 한다');
+    // 여러 레벨을 올리면 소수점 누적까지 포함해 정확히 레벨×PROF_PT_PER_LV가 되어야 한다
+    const b2=raw();
+    for(let i=0;i<10;i++){ c.xp=profXpForLevel(c.level)+1; profApplyLevelUps(c); }
+    const now2=raw(); let g2=0; for(const k of PROF_STATS) g2+=now2[k]-b2[k];
+    assert(Math.abs((tot()-tot1)-10*PROF_PT_PER_LV)<1e-6,
+      '10레벨 합이 '+(tot()-tot1).toFixed(3)+' — 정확히 '+(10*PROF_PT_PER_LV)+'여야 한다');
+    assert(g2>0,'10레벨을 올렸는데 정수 스탯이 하나도 안 올랐음');
+    // 직업 비율을 따르는가 — 레인저 base pow8/vit6/foc7/agi5 → pow가 agi보다 많이 올라야 한다
+    const J=PROF_JOBS[c.unit.jobId]||PROF_JOBS[c.cls];
+    if(J && J.base && J.base.pow>J.base.agi)
+      assert(now2.pow-b2.pow >= now2.agi-b2.agi,'직업 성장 비율을 안 따름');
+    renderHome(); if(typeof hbHud==='function') hbHud();
+    if(_hb) assert(_hb.char.atk>=atk0,'전투 수치가 되레 떨어짐');
+    return 'Lv'+c.level+' · 10레벨에 '+g2+'점 자동 상승'; });
   // DESIGN.md 규칙 — 마을(지도 + 시설 팝업)만. 전환을 마쳤으므로 되돌아갈 수 없다(§5).
     // 첫 진입 멈춤(모델 최초 생성 = 텍스처 업로드 + 셰이더 컴파일, 실측 538ms)을 로그인 화면·로딩으로 옮긴다.
   await step('워밍업: 로딩에서 미리 데우고 HOME은 멈춤 없이', async()=>{
@@ -1099,15 +1119,15 @@ async function groupLobby(){
     return '3탭 · renderProfGear/_shopPetPanel 재사용 ok'; });
       await step('캐릭터: 성장은 따로 · 재화와 펫은 공용', ()=>{ skipIf(typeof profCreateChar!=='function','캐릭터 시스템 없음');
     const p=PROF(); p.pcoin=1000; p.pets={wolf:{count:1}}; p.equip=['wolf'];
-    const a=CHAR(); a.statPoints=3; assert(profAllocStat('pow'),'스탯 분배 실패');
-    const powA=profStat('pow'), spA=a.statPoints;
+    const a=CHAR(); profGainStats(a, 12);   // 레벨업과 같은 경로로 성장시킨다(배분 함수는 없앴다)
+    const powA=profStat('pow'), spA=a.statPoints||0;
     const b=profCreateChar('scout','둘째'); assert(b,'두 번째 캐릭터 생성 실패');
     assert(CHAR().id===b.id,'새로 만든 캐릭터가 선택되지 않음');
     assert(PROF().pcoin===1000,'재화가 캐릭터를 따라감(공용이어야 함): '+PROF().pcoin);
     assert(PROF().equip.length===1,'펫 장착이 캐릭터를 따라감(공용이어야 함)');
-    assert(b.statPoints===0 && b.level===1,'새 캐릭터가 성장을 물려받음');
+    assert(!b.statPoints && b.level===1 && profStat('pow')!==powA,'새 캐릭터가 성장을 물려받음');
     assert(profSelectChar(a.id),'되돌아가기 실패');
-    assert(a.statPoints===spA && profStat('pow')===powA,'되돌아온 캐릭터의 성장이 바뀜');
+    assert((a.statPoints||0)===spA && profStat('pow')===powA,'되돌아온 캐릭터의 성장이 바뀜');
     return '슬롯 '+PROF().chars.length+'/'+PROF_MAX_CHARS; });
   await step('캐릭터 삭제: 재화는 환급 · 경험치는 소멸 · 장비는 가방에 남음', ()=>{ skipIf(typeof profDeleteChar!=='function','캐릭터 삭제 없음');
     const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0; p.pcoin=100000; p.unlocks={evolve:true};
