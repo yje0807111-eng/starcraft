@@ -139,6 +139,7 @@ async function groupLobby(){
     for(let i=0;i<80 && !(visible($('townScreen'))||visible($('charScreen'))||visible($('homeScreen'))); i++) await sleep(50);
     assert(visible($('townScreen'))||visible($('charScreen'))||visible($('homeScreen')),'게스트 버튼을 눌렀는데 메인으로 안 감');
     assert(!visible($('auth')),'로그인 화면이 안 닫힘');
+    for(let i=0;i<40 && !AUTH.user; i++) await sleep(50);   // 로딩 게이트를 거치면 몇 프레임 늦게 채워질 수 있다
     assert(AUTH.user,'입장했는데 유저가 비어 있음');
     return AUTH.user.nick||AUTH.user.id; });
   // 부팅 타이머는 '오프닝을 걷어내는' 용도지 화면을 되돌리는 용도가 아니다.
@@ -441,6 +442,30 @@ async function groupLobby(){
       if(typeof twLeave==='function') twLeave(); }
     hbStop();
     return 'HOME sync '+home.total+'회 · 유즈맵 침범 0회'; });
+  // 회복 구역 표시 — hbDrawHeal이 hbFloor '뒤'에 와야 한다. 앞에 두면 배경 그림이 그대로 덮어
+  // 아무것도 안 보인다(실제로 그랬다). 그리는 순서는 코드를 봐선 놓치기 쉬우니 픽셀로 본다.
+  await step('사냥터: 중앙 회복 구역이 배경 위에 보인다', async()=>{
+    skipIf(typeof hbDrawHeal!=='function' || typeof HB_HEAL_R==='undefined','회복 구역 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    openHome(); await sleep(400);
+    const sv={x:_hb.char.x, y:_hb.char.y}; _hb.char.x=0; _hb.char.y=0;
+    hbResize(); hbDraw();
+    const g=$('hbCv').getContext('2d', {willReadFrequently:true});
+    const px=(wx,wy)=>{ const sx=(_hb.cx+wx*_hb.k)*_hb.d, sy=(_hb.cy+wy*_hb.k*0.61)*_hb.d;
+      const d=g.getImageData(Math.round(sx),Math.round(sy),1,1).data; return d[1]-d[0]; };   // 초록 우세도
+    const inside=px(0,-HB_HEAL_R*0.45), outside=px(0,-(HB_HEAL_R+55));
+    _hb.char.x=sv.x; _hb.char.y=sv.y; hbResize();
+    assert(inside-outside>=6,'회복 구역이 배경에 덮여 안 보인다(초록 차 '+(inside-outside)+') — hbDrawHeal이 hbFloor보다 먼저 그려졌는지 확인');
+    return '초록 차 '+(inside-outside); });
+  // 재화 바 — + 버튼은 숫자에 붙어 있어야 한다(멀면 어느 재화의 +인지 헷갈린다)
+  await step('재화 바: + 버튼이 숫자에 붙어 있다', async()=>{
+    const res=document.querySelector('#curBar .res'); skipIf(!res,'재화 바 없음');
+    curShow(true);
+    const num=res.querySelector('b'), plus=res.querySelector('.curPlus');
+    skipIf(!num||!plus||!num.getClientRects().length,'표시 안 됨');
+    const gap=plus.getBoundingClientRect().left-num.getBoundingClientRect().right;
+    assert(gap>=0 && gap<=3,'숫자와 + 사이가 '+gap.toFixed(1)+'px — 0~3px여야 한다');
+    return gap.toFixed(1)+'px'; });
   // 사냥터 맵 — 그림이 덮는 범위와 걸어갈 수 있는 범위가 같아야 한다.
   // 예전엔 필드(±900×±620)가 그림보다 훨씬 넓어서 걸어 나가면 검은 바닥이 나왔다.
   await step('사냥터: 걸을 수 있는 범위 = 그림이 덮는 범위', async()=>{
@@ -1590,8 +1615,14 @@ async function groupGame(){
     // 네비 칸이 아니라 HUD 우상단 상자다 — 탭 순서가 바뀌어도 영향받지 않는다
     assert(!tabs || !tabs.contains(set), '설정이 아직 네비(#tabs) 안에 있음');
     assert(set.classList.contains('hudSet'), '설정 상자 클래스(hudSet)가 아님: '+set.className);
-    const wrap=$('hudTopR');
-    assert(wrap && wrap.contains(set), '설정이 HUD 우상단(#hudTopR)에 없음');
+    const wrap=$('hudTopRow');
+    assert(wrap && wrap.contains(set), '설정이 HUD 우상단 행(#hudTopRow)에 없음');
+    // 아이콘이 상자 정중앙인가 — <span class="ti"> 같은 라인박스 래퍼가 끼면 위로 뜬다
+    assert(!set.querySelector('.ti'), '설정 아이콘에 라인박스 래퍼(.ti)가 남아 있음');
+    { const bx=set.getBoundingClientRect(), sv=set.querySelector('svg').getBoundingClientRect();
+      const dy=Math.abs((sv.top+sv.bottom)/2-(bx.top+bx.bottom)/2);
+      const dx=Math.abs((sv.left+sv.right)/2-(bx.left+bx.right)/2);
+      assert(dx<=1 && dy<=1,'아이콘이 상자 중앙이 아님: dx '+dx.toFixed(1)+' / dy '+dy.toFixed(1)); }
     if(typeof strikeSetTabOrder==='function'){   // 탭 순서를 바꿔도 설정은 그대로여야 한다
       strikeSetTabOrder(['Main','Build','Upgrade','Players']);
       assert(wrap.contains(set),'직스 순서 적용 후 설정이 HUD에서 이탈');

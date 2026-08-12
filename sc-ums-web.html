@@ -123,13 +123,12 @@
     text-shadow:0 0 9px var(--hud-glow),0 2px 4px #000,0 0 8px #000}   /* 제한시간 = 좌상단에서 가장 크게(가독 우선) */
   #hudRwrap{display:flex;flex-direction:column;align-items:flex-end;gap:4px;margin-top:2px}
   /* ⚙ 인게임 설정 — 네비 칸에서 빼 HUD 우상단으로. 상자 규격은 디자인 시스템 공용. */
-  #hudTopR{position:absolute;top:calc(env(safe-area-inset-top,0px) + 18px);right:9px;z-index:22;pointer-events:auto}
+  #hudTopRow{display:flex;align-items:center;gap:8px;pointer-events:auto}   /* 재화 줄과 설정 상자를 한 행에 — 높이가 달라도 align-items가 중앙을 맞춘다 */
   .hudSet{width:25px;height:25px;display:grid;place-items:center;cursor:pointer;
     color:rgba(234,238,245,.92);background:rgba(4,6,10,.34);border:1px solid rgba(255,255,255,.26);
     filter:drop-shadow(0 1px 3px rgba(0,0,0,.8));transition:color .15s,border-color .15s}
   .hudSet:hover{color:#fff;border-color:rgba(255,255,255,.45)}
-  .hudSet svg{width:15px;height:15px}
-  #hudRwrap{margin-right:33px}   /* 설정 상자 자리 확보 */
+  .hudSet svg{display:block;width:15px;height:15px}   /* block — inline이면 라인박스 하단 여백이 생겨 아이콘이 위로 뜬다 */ */
   #hudR{display:flex;align-items:center;gap:10px;font-size:var(--fs-md);font-weight:800;white-space:nowrap;text-shadow:0 2px 4px #000,0 0 8px #000}
   .res{display:flex;align-items:center;gap:4px}   /* 상단 재화 바(.curBar)와 같은 간격 */
   .res .ri{width:14px;height:14px;display:block;flex:none;filter:drop-shadow(0 1px 3px rgba(0,0,0,.95))}   /* 숫자 높이에 맞춤 — .curBar와 동일 */
@@ -1962,18 +1961,6 @@
   #stLead .lp{color:#9fd0ff}#stLead .lm{color:#ffd24a}#stLead .lg{color:#8fe6a0}
   /* ===== 전환/팝업 FX (우주전쟁 HUD) ===== */
   /* 화면 전환: 홀로그램 디졸브(블러+밝기에서 또렷해짐) — opacity는 건드리지 않음(뒤 게임 보드 비침 방지, 로비 배경 유지) */
-  .scrIn{animation:scrIn .3s ease-out}
-  @keyframes scrIn{0%{filter:blur(7px) brightness(1.32)}60%{filter:blur(0) brightness(1.05)}100%{filter:blur(0) brightness(1)}}
-  /* 화면 전환: HUD 스캔 와이프(네온 가로선이 위→아래로 한 번) */
-  #fxScan{position:absolute;inset:0;z-index:82;pointer-events:none;overflow:hidden;display:none}
-  #fxScan.run{display:block}
-  #fxScan i{position:absolute;left:0;right:0;top:0;height:3px;
-    background:linear-gradient(90deg,transparent,rgba(255,90,90,.95) 35%,rgba(255,210,210,.95) 50%,rgba(255,90,90,.95) 65%,transparent);
-    box-shadow:0 0 16px 3px rgba(255,60,60,.6);animation:scanSweep .3s ease-out forwards}
-  #fxScan.run::before{content:'';position:absolute;inset:0;opacity:.16;
-    background:repeating-linear-gradient(0deg,rgba(255,90,90,.5) 0 1px,transparent 1px 3px);animation:scanFade .3s ease-out forwards}
-  @keyframes scanSweep{0%{top:-2%;opacity:0}12%{opacity:1}100%{top:102%;opacity:0}}
-  @keyframes scanFade{0%{opacity:.2}100%{opacity:0}}
   /* 팝업 등장: 페이드 + 살짝 위로 슬라이드 + 스케일 스프링(소폭 오버슈트) — 등장하며 '올라와 자리잡는' 느낌 */
   .fxPop{animation:fxPopOn .26s cubic-bezier(.22,.9,.28,1)}
   @keyframes fxPopOn{0%{opacity:0;transform:translateY(11px) scale(.93)}55%{opacity:1}72%{transform:translateY(-2px) scale(1.012)}100%{opacity:1;transform:translateY(0) scale(1)}}
@@ -2638,7 +2625,7 @@
      그래야 우주 배경이 상단까지 끊기지 않고 이어져 보인다. showAppScreen()이 화면별로 .bare를 붙인다. */
   .curBar.bare{background:none;border-bottom:0}
   .curBar.bare::after{display:none}
-  .curBar .curRes{display:flex;align-items:center;gap:12px;margin-left:auto}
+  .curBar .curRes{display:flex;align-items:center;gap:8px;margin-left:auto}   /* 설정 상자가 줄에 합류해 폭이 늘었다 — 간격을 좁혀 HOME 프로필과 겹치지 않게 */
   .curBar .hudSet{margin-left:1px}   /* 재화와 같은 줄에 — 인게임 HUD 설정과 같은 상자 */
   .curTitle{font-family:var(--font-ti);font-size:16px;color:#eef1f6;letter-spacing:.12em;
     text-shadow:0 1px 3px rgba(0,0,0,.9),0 0 12px rgba(0,0,0,.5);white-space:nowrap}
@@ -2647,7 +2634,7 @@
     text-shadow:0 1px 3px rgba(0,0,0,.95),0 0 10px rgba(0,0,0,.6)}
   .curBar .ri{width:14px;height:14px;flex:none;filter:drop-shadow(0 1px 3px rgba(0,0,0,.95))}
   /* [+] — 평소엔 거의 안 보이고 누를 수 있음만 알린다(인게임 HUD에는 없다 — 획득 전용 재화) */
-  .curBar .curPlus{width:14px;height:14px;flex:none;margin-left:2px;display:grid;place-items:center;
+  .curBar .curPlus{width:14px;height:14px;flex:none;margin-left:-2px;   /* .res의 gap 4px를 상쇄해 숫자에 붙인다(6px→2px) */display:grid;place-items:center;
     background:rgba(4,6,10,.14);border:1px solid rgba(255,255,255,.1);cursor:pointer;
     filter:drop-shadow(0 1px 2px rgba(0,0,0,.7));transition:border-color .15s}
   .curBar .curPlus svg{display:block;width:10.5px;height:10.5px;fill:none;stroke:rgba(255,255,255,.92);
@@ -3435,15 +3422,15 @@
         <span class="kill"><b id="hKill">0</b> Kill</span>
         <span id="specLabel"></span>
       </div>
-      <div id="hudTopR">
-<div class="hudSet" id="settingsBtn" data-sfx="ui_open" onclick="openSettings()" title="설정"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"><path d="M4.5 7h15M4.5 12h15M4.5 17h15"/></svg></span></div>
-      </div>
+      <div id="hudTopRow">
       <div id="hudRwrap">
         <div id="hudR">
           <span class="res min"><img class="ri" src="assets/icons/res_mineral.webp" alt=""><b id="hMin">0</b></span>
           <span class="res gas"><img class="ri" src="assets/icons/res_gas.webp" alt=""><b id="hGas">0</b></span>
           <span class="res pop"><img class="ri" src="assets/icons/res_pop.webp" alt=""><b id="hPop">0/16</b></span>
         </div>
+      </div>
+        <div class="hudSet" id="settingsBtn" data-sfx="ui_open" onclick="openSettings()" title="설정"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"><path d="M4.5 7h15M4.5 12h15M4.5 17h15"/></svg></div>
       </div>
     </div>
     <div id="zoneLabel">📍 내 디펜스 구역</div>
@@ -4192,7 +4179,6 @@
   </div>
 
   <!-- 화면 전환 HUD 스캔 와이프 오버레이 -->
-  <div id="fxScan" aria-hidden="true"><i></i></div>
 </div>
 <!-- 테스트 도감(폰 밖 우측 고정 패널): 28종 등급별 카드. 탭=즉시 소환 / 상단=랜덤 뽑기 -->
 <div class="gachaDex" id="gachaDex"></div>
@@ -5998,8 +5984,8 @@ function hbDraw(){ const S=_hb, x=S.ctx, c=S.char; if(!x) return;
   // 카메라 = 월드 원점을 보이는 영역 중심으로 옮기고 배율 k를 건다.
   // 이 뒤의 좌표·글꼴 크기는 전부 월드 단위 → 접었다 펴면 적·글자·링이 캐릭터와 같은 비율로 커지고 작아진다.
   const K=S.d*(S.k||1); x.setTransform(K,0,0,K,S.d*(S.cx||S.w/2),S.d*(S.cy||S.h/2));
-  hbDrawHeal(x, S);   // 바닥 회복 구역 — 유닛보다 먼저 그려 발밑에 깔린다
   hbFloor();                                                        // ⚔ 던전마다 다른 바닥(모든 것보다 먼저)
+  hbDrawHeal(x, S);   // 바닥 회복 구역 — ⚠ 반드시 hbFloor 뒤. 앞에 두면 배경 그림이 그대로 덮어 안 보인다
   if(S.slowT>0){ x.save(); x.globalAlpha=.10; x.fillStyle='#9ad0ff';
     x.fillRect(-S.w,-S.h,S.w*2,S.h*2); x.restore(); }               // 감속 중 화면 틴트
   x.save(); x.globalAlpha=.25; x.strokeStyle='#7fa8ff'; x.lineWidth=1;   // 바닥 링(수비 반경 암시)
@@ -11672,11 +11658,8 @@ function playerName(n){ if(typeof G!=='undefined' && n===(G.myPlayer||1)) return
   return (typeof G!=='undefined' && G.playerNames && G.playerNames[n]) || ('P'+n); }
 // ── 전환/팝업 FX ──
 // 화면 전환: HUD 스캔 와이프 + 홀로그램 디졸브
-function playScreenFx(el){
-  const fx=document.getElementById('fxScan');
-  if(fx){ fx.classList.remove('run'); void fx.offsetWidth; fx.classList.add('run'); clearTimeout(fx._t); fx._t=setTimeout(()=>fx.classList.remove('run'),340); }
-  if(el){ el.classList.remove('scrIn'); void el.offsetWidth; el.classList.add('scrIn'); clearTimeout(el._scrT); el._scrT=setTimeout(()=>el.classList.remove('scrIn'),340); }
-}
+// 화면 전환 = 즉시. 디졸브·스캔 와이프는 걷어냈다(요청) — 전환마다 화면이 흐려지고 붉은 선이 지나가던 것.
+function playScreenFx(){ }
 // 팝업/모달 등장: 홀로그램 파워온 + 테두리 점화
 function fxPop(card){ if(!card) return; card.classList.remove('fxPop'); void card.offsetWidth; card.classList.add('fxPop');
   clearTimeout(card._fxT); card._fxT=setTimeout(()=>card.classList.remove('fxPop'),470); }
@@ -15810,7 +15793,7 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
   let res='';   // 🔁 메인 #hudR DOM을 그대로 클론(복사본 마크업 유지 X) — 메인 HUD 디자인 변경 시 자동 반영. 숫자만 이 탭 값으로 치환
   { const _h=document.getElementById('hudR'); if(_h){ const c=_h.cloneNode(true);
     const set=(id,v)=>{ const el=c.querySelector('#'+id); if(el){ el.innerHTML=v; el.removeAttribute('id'); } };   // id 제거(중복 방지)
-    set('hMin',(G.tech.inf?'∞':G.tech.credit)+'<i class="ru">M</i>'); set('hGas',(G.tech.inf?'∞':G.tech.energy)+'<i class="ru">G</i>'); set('hPop',G.tech.sup+'/'+G.tech.supCap+'<i class="ru">CP</i>');
+    set('hMin',(G.tech.inf?'∞':G.tech.credit)); set('hGas',(G.tech.inf?'∞':G.tech.energy)); set('hPop',G.tech.sup+'/'+G.tech.supCap);
     if(techWallet()){ const gs=c.querySelector('.res.gas'); if(gs) gs.remove(); }   // 오토배틀 = 크레딧 단일 자원(에너지 칸 생략)
     res=c.innerHTML; } }
   const btns=(canDemo?'<span class="cbtn dz" onclick="techDemolish(event)">'+pIco('🗑','sm')+' 철거</span>':'')+'<span class="cbtn'+(G.tech.inf?' on':'')+'" onclick="techInf(event)" title="무제한 자원">∞</span><span class="cbtn'+(G.tech.nocool?' on':'')+'" onclick="techNocool(event)" title="즉시 건설·생산">⏱</span><span class="cbtn'+(techFogEnabled()?' on':'')+'" onclick="techFog(event)" title="전장의 안개">🌫️</span><span class="cbtn'+(G.tech.pcheck?' on':'')+'" onclick="techPCheck(event)" title="플레이어 색 확인">🎨</span><span class="cbtn" onclick="techReset(event)" title="리셋">↺</span>';
