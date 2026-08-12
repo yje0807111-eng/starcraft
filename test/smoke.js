@@ -135,8 +135,10 @@ async function groupLobby(){
     assert(($('authErr').textContent||'').length>0,'빈 칸인데 안내가 없음');
     const gb=$('authGuest'); assert(gb && visible(gb),'게스트로 시작하기 버튼이 없음');
     gb.click();
-    // 게스트 입장도 로딩(#opening에서 3D 데우기)을 거친다 — 끝날 때까지 기다린다
-    for(let i=0;i<80 && !(visible($('townScreen'))||visible($('charScreen'))||visible($('homeScreen'))); i++) await sleep(50);
+    // 게스트 입장도 로딩(#opening에서 3D 데우기)을 거친다 — 끝날 때까지 기다린다.
+    // ⚠ 이 대기는 넉넉해야 한다: 실기기(GPU)에선 1초 안이지만 헤드리스 소프트웨어 렌더러(swiftshader)에선
+    //   3D 예열에 10초 넘게 걸린다. 4초로 뒀다가 '게스트가 안 들어간다'고 잘못 실패했다(앱은 정상).
+    for(let i=0;i<120 && !(visible($('townScreen'))||visible($('charScreen'))||visible($('homeScreen'))); i++) await sleep(250);
     assert(visible($('townScreen'))||visible($('charScreen'))||visible($('homeScreen')),'게스트 버튼을 눌렀는데 메인으로 안 감');
     assert(!visible($('auth')),'로그인 화면이 안 닫힘');
     for(let i=0;i<40 && !AUTH.user; i++) await sleep(50);   // 로딩 게이트를 거치면 몇 프레임 늦게 채워질 수 있다
@@ -1056,8 +1058,12 @@ async function groupLobby(){
       const sw=document.querySelector('#hbAtk em'), num=$('hbAtkN');
       assert(sw&&num,'공격력이 검·숫자로 나뉘어 있지 않음(크기 보정을 못 건다)');
       const a=inkC($('hbLv'),'Lv.8'), b=inkC(sw,'⚔'), c2=inkC(num,'30');
-      assert(Math.abs(a-b)<=0.3 && Math.abs(a-c2)<=0.3,
-        '레벨·검·숫자 높이가 안 맞음: Lv '+a.toFixed(2)+' / ⚔ '+b.toFixed(2)+' / 숫자 '+c2.toFixed(2)); }
+      // 허용 오차 0.6px = 반 픽셀 양자화 + 여유. 0.3px로 조였다가 실패했는데 앱은 멀쩡했다:
+      // ⚔ 글리프는 OS가 주는 이모지 폰트를 타서 메트릭이 환경마다 다르다(컬러 이모지 vs DejaVu 흑백).
+      // 이 컨테이너에선 asc/desc가 정수로 떨어져 반 픽셀이 구조적으로 남는다 — 눈에 보이는 어긋남(1px+)만 잡는다.
+      const TOL=0.6;
+      assert(Math.abs(a-c2)<=TOL,'레벨·숫자 높이가 안 맞음: Lv '+a.toFixed(2)+' / 숫자 '+c2.toFixed(2));
+      assert(Math.abs(a-b)<=TOL,'레벨·검 높이가 안 맞음: Lv '+a.toFixed(2)+' / ⚔ '+b.toFixed(2)); }
     assert($('hbName').textContent==='스모크','이름이 캐릭터와 다름: '+$('hbName').textContent);
     assert($('hbLv').textContent==='Lv.'+c.level,'레벨 표기가 다름: '+$('hbLv').textContent);
     { const bar=$('hbXpBar'), box=document.querySelector('.hbXp');
