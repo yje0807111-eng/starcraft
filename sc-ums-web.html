@@ -5956,13 +5956,10 @@ function hbBase(){ const H=hbHunt();
     H.build={};   // 이관 완료 — 이후로는 타일이 단일 소스
   }
   return H.base; }
-function hbOpenR(){ return (HB_OPEN_STEP*(hbBase().open+1))*HB_TILE; }   // 해금 구역 = 원점 기준 정사각 반경(월드)
-// 이 칸에 지을 수 있는가 — 맵 안 · 코어(회복 구역) 밖 · 해금 구역 안
-function hbCellBuildable(gx,gy){
-  if(!hbInGrid(gx)||!hbInGrid(gy)) return false;
-  const cx=hbTx(gx), cy=hbTx(gy);
-  if(Math.hypot(cx,cy)<=HB_HEAL_R+HB_TILE*0.5) return false;             // 코어 = 회복 구역, 비워 둔다
-  return Math.max(Math.abs(cx),Math.abs(cy))<=hbOpenR(); }
+// 격자는 맵 전체다(2026-08-12 사용자 결정) — 해금 구역·코어 제한 없이 어디든 지을 수 있다.
+// hunt.base.open은 옛 세이브 호환으로 남겨 두되 판정에 쓰지 않는다.
+function hbOpenR(){ return HB_MAP_R; }
+function hbCellBuildable(gx,gy){ return hbInGrid(gx) && hbInGrid(gy); }
 // 이 칸을 점유한 구조물의 좌상단 키(없으면 null) — 좌상단에만 기록하므로 최대 변 길이만큼 역추적한다
 function hbCellOwner(gx,gy){ const T=hbBase().tiles;
   for(let dy=0;dy<HB_FOOT_MAX;dy++) for(let dx=0;dx<HB_FOOT_MAX;dx++){
@@ -5977,6 +5974,73 @@ function hbCanPlace(k,gx,gy){ const S=HB_STRUCT[k]; if(!S) return false;
     if(!hbCellBuildable(gx+dx,gy+dy)) return false;
     if(hbCellOwner(gx+dx,gy+dy)) return false; }
   return true; }
+// ═══ 🧭 경로 — 플로우 필드 한 장 ═════════════════════════════════════════════
+// 적 수십 기가 모두 같은 목표(캐릭터)로 향하므로 개체별 A*는 낭비다. 목표 타일에서 BFS를
+// 한 번 돌려 900칸짜리 거리장을 굽고, 각 유닛은 자기 칸에서 '가장 가까운 이웃'으로만 걸어간다.
+// 다시 굽는 조건: 목표가 다른 타일로 옮겼을 때 또는 구조물이 바뀌었을 때(_hbGridDirty)뿐.
+const HB_GRID_N=HB_GRID_R*2;
+let _hbBlk=null, _hbGridDirty=true, _hbBlkSeq=1;   // 막힌 칸(Uint8) 캐시 + 세대 번호(거리장 무효화용)
+let _hbChF=null,  _hbChAt='';                      // 캐릭터용 거리장(목표=탭한 자리)
+let _hbFoeAt='';                                   // 적용 거리장을 마지막으로 구운 캐릭터 칸(장 자체는 _hb.foeF)
+// 구조물이 바뀌면 반드시 부른다 — 안 부르면 옛 길로 걸어 벽을 통과한다.
+// 타일을 바꾸는 곳은 전부 hbLayoutBase()를 지나므로 그쪽에서 한 번 부르면 충분하다.
+function hbGridDirty(){ _hbGridDirty=true; _hbBlkSeq++; _hbChAt=''; }
+function hbFi(gx,gy){ return (gy+HB_GRID_R)*HB_GRID_N+(gx+HB_GRID_R); }
+function hbBlocked(){ if(_hbBlk && !_hbGridDirty) return _hbBlk;
+  const b=new Uint8Array(HB_GRID_N*HB_GRID_N), T=hbBase().tiles;
+  for(const q in T){ const B=HB_STRUCT[T[q].k]; if(!B) continue;
+    const p=q.split(','), gx=+p[0], gy=+p[1];
+    for(let dy=0;dy<B.h;dy++) for(let dx=0;dx<B.w;dx++){
+      const x=gx+dx, y=gy+dy; if(hbInGrid(x)&&hbInGrid(y)) b[hbFi(x,y)]=1; } }
+  _hbBlk=b; _hbGridDirty=false;
+  // 구조물이 하나도 없으면 경로 계산 자체를 건너뛴다 + 기지가 차지한 사각 범위를 함께 잡아 둔다
+  _hbAnyBlk=false; let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  for(let gy=-HB_GRID_R; gy<HB_GRID_R; gy++) for(let gx=-HB_GRID_R; gx<HB_GRID_R; gx++){
+    if(!b[hbFi(gx,gy)]) continue; _hbAnyBlk=true;
+    const cx=hbTx(gx), cy=hbTx(gy);
+    if(cx<x0)x0=cx; if(cx>x1)x1=cx; if(cy<y0)y0=cy; if(cy>y1)y1=cy; }
+  _hbBaseBox=_hbAnyBlk? {x0:x0-HB_TILE, y0:y0-HB_TILE, x1:x1+HB_TILE, y1:y1+HB_TILE} : null;
+  return b; }
+let _hbBaseBox=null;   // 기지가 차지한 사각 범위(+여유 1칸) — 적이 이 안에서 태어나면 벽이 무의미해진다
+// 목표 칸에서 BFS — 막힌 칸은 통과 불가. 도달 못 하는 칸은 0xffff로 남는다.
+function hbBakeField(tgx,tgy){ const blk=hbBlocked(), N=HB_GRID_N, n=N*N;
+  const d=new Uint16Array(n).fill(0xffff), q=new Int32Array(n); let h=0,t=0;
+  if(!hbInGrid(tgx)||!hbInGrid(tgy)) return d;
+  const s0=hbFi(tgx,tgy); d[s0]=0; q[t++]=s0;                 // 목표가 막혀 있어도 출발점으로 삼는다(안에 갇힌 경우 대비)
+  while(h<t){ const i=q[h++], x=(i%N)-HB_GRID_R, y=((i/N)|0)-HB_GRID_R, nd=d[i]+1;
+    for(let e=0;e<4;e++){ const nx=x+(e===0?1:e===1?-1:0), ny=y+(e===2?1:e===3?-1:0);
+      if(!hbInGrid(nx)||!hbInGrid(ny)) continue;
+      const j=hbFi(nx,ny); if(blk[j]||d[j]<=nd) continue;
+      d[j]=nd; q[t++]=j; } }
+  return d; }
+// 거리장을 따라 갈 방향(단위 벡터). 목표 칸에 이미 있거나 길이 없으면 null.
+function hbFieldDir(d, wx, wy){ if(!d) return null;
+  const gx=hbGx(wx), gy=hbGx(wy); if(!hbInGrid(gx)||!hbInGrid(gy)) return null;
+  const cur=d[hbFi(gx,gy)]; if(cur===0) return null;
+  let bx=0,by=0,bd=(cur===0xffff)?0xffff:cur;
+  for(let e=0;e<4;e++){ const nx=gx+(e===0?1:e===1?-1:0), ny=gy+(e===2?1:e===3?-1:0);
+    if(!hbInGrid(nx)||!hbInGrid(ny)) continue;
+    const v=d[hbFi(nx,ny)]; if(v<bd){ bd=v; bx=nx; by=ny; } }
+  if(!bx&&!by&&bd>=cur) return null;
+  const tx=hbTx(bx), ty=hbTx(by), dx=tx-wx, dy=ty-wy, m=Math.hypot(dx,dy)||1;
+  return [dx/m, dy/m]; }
+// 두 점 사이가 뚫려 있나 — 뚫려 있으면 거리장을 무시하고 곧장 간다.
+// 이게 없으면 열린 벌판에서도 타일 중심을 따라 계단처럼 걸어 부자연스럽다(각도도 4방향으로 뭉친다).
+let _hbAnyBlk=false;
+function hbLineClear(x0,y0,x1,y1){ if(!_hbAnyBlk) return true;
+  const dx=x1-x0, dy=y1-y0, d=Math.hypot(dx,dy); if(d<1) return true;
+  const n=Math.min(64, Math.ceil(d/(HB_TILE*0.5)));
+  for(let i=1;i<=n;i++){ const t=i/n; if(!hbWalkable(x0+dx*t, y0+dy*t)) return false; }
+  return true; }
+// 벽 통과 금지 — 축을 나눠 밀어 본다(모서리에서 걸려 멈추지 않게)
+function hbWalkable(wx,wy){ const gx=hbGx(wx), gy=hbGx(wy);
+  if(!hbInGrid(gx)||!hbInGrid(gy)) return true;              // 맵 밖은 별도 클램프가 담당
+  return !hbBlocked()[hbFi(gx,gy)]; }
+function hbSlide(o, dx, dy){
+  if(!hbWalkable(o.x,o.y)){ o.x+=dx; o.y+=dy; return; }   // 이미 벽 안이면 그냥 보낸다 — 안 그러면 영영 못 빠져나온다
+  if(hbWalkable(o.x+dx,o.y+dy)){ o.x+=dx; o.y+=dy; return; }
+  if(dx&&hbWalkable(o.x+dx,o.y)) o.x+=dx;
+  if(dy&&hbWalkable(o.x,o.y+dy)) o.y+=dy; }
 // 코어 바깥부터 나선형으로 첫 빈 자리 — 마이그레이션과 '자리 없음' 판정에 쓴다
 function hbFreeCell(k){ const S=HB_STRUCT[k]||{w:1,h:1};
   for(let r=1;r<=HB_GRID_R;r++)
@@ -6002,6 +6066,7 @@ function hbSpawnChest(){ const S=_hb; if(!S || !S.chests || S.chests.length>=HB_
     const y=Math.max(-R,Math.min(R, cy+(Math.random()*2-1)*hh));
     if(Math.hypot(x-S.char.x, y-S.char.y) < HB_CHEST_MIN_D) continue;
     if(Math.hypot(x,y) < HB_HEAL_R+30) continue;              // 회복 구역 위에는 두지 않는다
+    if(!hbWalkable(x,y)) continue;                            // 벽·건물 안에 박히면 때릴 수가 없다
     const hp=hbChestHp(S.round); const ch={x:x,y:y,hp:hp,hpMax:hp};
     S.chests.push(ch); return ch; }
   return null; }
@@ -6025,7 +6090,8 @@ function hbBoostLeft(k){ return Math.max(0, Math.ceil((((hbHunt().boostT&&hbHunt
 // 아군 배치 — 보유 수가 바뀌거나 라운드가 시작될 때 다시 세운다(월드 좌표, 캐릭터가 원점)
 // 기지 타일 → 전장 개체. 타일이 단일 소스이므로 좌표를 여기서 만들어내지 않는다(초소만 예외: 동료가 그 둘레를 돈다).
 // 벙커 체력은 재배치 때마다 되살아나면 안 되므로 타일에 남긴 hp를 이어받는다.
-function hbLayoutBase(){ const S=_hb; if(!S) return; const st=hbCharStats();
+function hbLayoutBase(){ hbGridDirty();   // 구조물이 바뀌었을 수 있다 — 길을 다시 굽게 한다
+  const S=_hb; if(!S) return; const st=hbCharStats();
   S.allies=[]; S.turrets=[]; S.bunkers=[];
   const T=hbBase().tiles;
   for(const q in T){ const t=T[q], B=HB_STRUCT[t.k]; if(!B) continue;
@@ -6155,6 +6221,15 @@ function hbSpawnWave(){ const S=_hb, n=hbFoeCount(S.round,S.wave);
 function mkBoss(D,S){ const f=D.foes[2]||D.foes[0];
   return { ico:f.ico, mdl:f.mdl, boss:true,
     hpMul:HB_BOSS_HP, atkMul:HB_BOSS_ATK, spd:HB_FOE_ROLE[2].spd*HB_BOSS_SPD*(1+S.round*0.01) }; }
+// 맵 테두리에서 뚫린 칸 찾기 — 같은 방향(ca,sa) 쪽 가장자리부터 시계방향으로 훑는다
+function hbEdgeSpawn(ca,sa){
+  const R=HB_GRID_R, ring=[];
+  for(let g=-R; g<R; g++){ ring.push([g,-R],[g,R-1],[-R,g],[R-1,g]); }
+  let best=null, bd=-1e9;
+  for(const c of ring){ if(!hbWalkable(hbTx(c[0]),hbTx(c[1]))) continue;
+    const sc=(hbTx(c[0])*ca+hbTx(c[1])*sa);        // 요청 방향과 가장 잘 맞는 테두리 칸
+    if(sc>bd){ bd=sc; best=c; } }
+  return best? [hbTx(best[0]),hbTx(best[1])] : [0,0]; }
 function hbPlaceFoe(proto){ const S=_hb;
   const a=Math.random()*Math.PI*2, ca=Math.cos(a), sa=Math.sin(a);
   const k=S.k||1;                                                        // 화면 경계를 월드 단위로 환산
@@ -6165,8 +6240,24 @@ function hbPlaceFoe(proto){ const S=_hb;
   const elite=!proto.boss && Math.random()<hbEliteChance(S.dg,S.round);   // 보스는 엘리트 굴림 제외
   const hp=hbFoeHp(S.dg,S.round,S.wave)*proto.hpMul*(elite?HB_ELITE_HP:1);
   // 필드가 넓어져 캐릭터가 원점을 떠난다 → 출현 위치도 캐릭터 기준(화면 경계 바깥)이어야 한다
-  const sx=Math.max(-HB_FIELD_RX,Math.min(HB_FIELD_RX,(S.char.x||0)+ca*R));
-  const sy=Math.max(-HB_FIELD_RY,Math.min(HB_FIELD_RY,(S.char.y||0)+sa*R));
+  let sx=Math.max(-HB_FIELD_RX,Math.min(HB_FIELD_RX,(S.char.x||0)+ca*R));
+  let sy=Math.max(-HB_FIELD_RY,Math.min(HB_FIELD_RY,(S.char.y||0)+sa*R));
+  // ⚠ 기지 안에서 태어나면 벽이 통째로 무의미해진다(적이 성벽 안쪽에 그대로 나온다).
+  //   기지가 차지한 사각 범위 안이면 같은 방향으로 그 바깥까지 밀어낸다.
+  //   기지가 작을 땐 거의 그대로 → 초반 진행 속도가 안 바뀐다. 커질수록 자연히 바깥에서 온다.
+  hbBlocked();
+  const BX=_hbBaseBox;
+  if(BX && sx>BX.x0 && sx<BX.x1 && sy>BX.y0 && sy<BX.y1){
+    for(let step=1; step<=HB_GRID_R*2; step++){ const nx=sx+ca*HB_TILE*step, ny=sy+sa*HB_TILE*step;
+      sx=Math.max(-HB_FIELD_RX,Math.min(HB_FIELD_RX,nx)); sy=Math.max(-HB_FIELD_RY,Math.min(HB_FIELD_RY,ny));
+      if(!(sx>BX.x0 && sx<BX.x1 && sy>BX.y0 && sy<BX.y1)) break;
+      if(Math.abs(nx)>HB_FIELD_RX && Math.abs(ny)>HB_FIELD_RY) break; } }
+  // 그래도 막힌 칸이면(건물 위) 뚫린 자리를 찾는다 — 마지막 수단은 맵 테두리
+  if(!hbWalkable(sx,sy)){ let ok=false;
+    for(let step=1; step<=HB_GRID_R; step++){ const nx=sx+ca*HB_TILE*step, ny=sy+sa*HB_TILE*step;
+      if(Math.abs(nx)>HB_FIELD_RX||Math.abs(ny)>HB_FIELD_RY) break;
+      if(hbWalkable(nx,ny)){ sx=nx; sy=ny; ok=true; break; } }
+    if(!ok){ const e=hbEdgeSpawn(ca,sa); sx=e[0]; sy=e[1]; } }
   S.foes.push({ ico:proto.ico, mdl:proto.mdl, x:sx, y:sy, hp:hp, hpMax:hp, elite:elite, boss:!!proto.boss,
     atk:hbFoeAtk(S.dg,S.round)*proto.atkMul*(elite?HB_ELITE_ATK:1),
     spd:proto.spd*(elite?0.85:1), cdT:Math.random()*0.6 }); }
@@ -6218,21 +6309,35 @@ function hbClampField(x,y){ return [ Math.max(-HB_FIELD_RX,Math.min(HB_FIELD_RX,
                                      Math.max(-HB_FIELD_RY,Math.min(HB_FIELD_RY,y)) ]; }
 function hbWalk(S,c,dt){
   if(c.tx!=null){ const dx=c.tx-c.x, dy=c.ty-c.y, d=Math.hypot(dx,dy);
-    if(d>2){ const s=Math.min(d, HB_MOVE_SPD*dt); c.x+=dx/d*s; c.y+=dy/d*s;
-      c.mv=1; S.charFace=Math.atan2(dx,dy); } else c.mv=0; }
+    if(d>2){ const sp=Math.min(d, HB_MOVE_SPD*dt);
+      // 목적지까지 벽을 돌아서 간다 — 거리장은 목적지 칸이 바뀔 때만 다시 굽는다
+      let ux=dx/d, uy=dy/d;
+      if(!hbLineClear(c.x,c.y,c.tx,c.ty)){                    // 가리는 게 있을 때만 길을 굽는다
+        const key=hbGx(c.tx)+','+hbGx(c.ty);
+        if(_hbChAt!==key || S._chSeq!==_hbBlkSeq){ _hbChAt=key; S._chSeq=_hbBlkSeq; _hbChF=hbBakeField(hbGx(c.tx),hbGx(c.ty)); }
+        const f=hbFieldDir(_hbChF, c.x, c.y); if(f){ ux=f[0]; uy=f[1]; } }
+      hbSlide(c, ux*sp, uy*sp);
+      c.mv=1; S.charFace=Math.atan2(ux,uy); } else c.mv=0; }
   { const p=hbClampField(c.x,c.y); c.x=p[0]; c.y=p[1]; }   // 위치 자체를 가둔다 — 목적지만 걸러서는 보장이 안 된다
   if(c.hp>0 && c.hp<c.hpMax && Math.hypot(c.x,c.y)<=HB_HEAL_R){   // 회복 구역 — 조건 없음
     c.hp=Math.min(c.hpMax, c.hp + c.hpMax*HB_HEAL_PCT*dt); c.healFx=1; } else c.healFx=0; }
 function hbSetDest(sx,sy){ const S=_hb; if(!S||!S.on) return;
   const p=hbClampField((sx-S.cx)/S.k, (sy-S.cy)/S.k);
   S.char.tx=p[0]; S.char.ty=p[1]; }
-// 필드 탭 = 그 자리로 이동. 캔버스는 클릭 통과라 화면에 걸고, UI 위 터치는 걸러낸다.
+// 필드 탭 = 그 자리로 이동.
+// ⛔ 예전엔 document에 캡처로 걸고 '셀렉터 블랙리스트'로 UI를 걸렀다 — 목록에 없는 것(재화 바·네비·
+//    업그레이드 카드의 빈 공간·#phone 바깥 검은 영역)은 전부 이동으로 샜고, 새 UI를 만들 때마다 조용히 재발했다.
+//    지금은 반대로 **화이트리스트**다: #homeScreen에만 걸고, 이벤트 대상이 화면 자신일 때만 이동한다.
+//    모든 UI는 자식 요소라 자기 자신이 대상이 되므로 자동으로 제외된다 — 새 UI를 추가해도 여기 손댈 일이 없다.
 function hbFieldTap(e){
   if(!_hb||!_hb.on||_hb.bg) return;
   const hs=document.getElementById('homeScreen'); if(!hs||hs.classList.contains('hide')) return;
-  const t=e.target;
-  if(t&&t.closest&&t.closest('button,a,input,select,textarea,.hbHudTop,.hbCard,.hbBar,.sheet,.pop,[onclick]')) return;   // UI 위는 이동이 아니다
-  const r=document.getElementById('hbCv').getBoundingClientRect();
+  const cv=document.getElementById('hbCv');
+  // ⚠ #hmScroll이 남은 세로 공간을 전부 차지하므로 '보이는 전장'의 대부분은 그 위다 — 여기도 필드로 친다.
+  //   그 안의 업그레이드 카드는 자식이라 자기 자신이 대상이 되어 자동으로 제외된다.
+  const sc=document.getElementById('hmScroll');
+  if(e.target!==hs && e.target!==cv && e.target!==sc) return;   // 필드(빈 바닥)를 직접 눌렀을 때만
+  const r=cv.getBoundingClientRect();
   if(_hb.arm){ hbArmTo(e.clientX-r.left, e.clientY-r.top); return; }   // 🧱 배치 중이면 이동이 아니라 고스트를 옮긴다
   if(hbTapStruct(e.clientX-r.left, e.clientY-r.top)) return;           // 🪖 벙커를 눌렀으면 이동이 아니라 벙커 창
   hbSetDest(e.clientX-r.left, e.clientY-r.top); }
@@ -6271,7 +6376,7 @@ function hbBunkerAdd(){ const t=_hbBunkerQ && hbBase().tiles[_hbBunkerQ]; if(!t|
   if(typeof playSfx==='function') playSfx('ui_open');
   if(typeof updateCurBar==='function') updateCurBar();
   renderBunkerModal(); }
-document.addEventListener('pointerdown', hbFieldTap, true);
+document.addEventListener('pointerdown', hbFieldTap, true);   // 리스너 위치는 document 그대로(로드 순서 무관) — 거르는 것은 위의 대상 검사다
 // ═══ 🧱 배치 흐름 — 고스트를 옮기고 ▶로 확정한다 ═════════════════════════════
 // ⛔ 관리자 건설(techPtrDown/G.tech)을 부르지 않는다 — HOME은 유즈맵 전역 G를 참조하면 안 된다.
 //    공용으로 쓰는 것은 확정/취소 버튼(.bArmBtns)뿐이고, 나머지는 여기 전용이다.
@@ -6327,7 +6432,15 @@ function hbSealCheck(k,gx,gy){
     push(x+1,y); push(x-1,y); push(x,y+1); push(x,y-1); }
   for(let i=0;i<N*N;i++) if(!blocked[i] && !seen[i]) return true;   // 갇힌 빈칸이 있다
   return false; }
+// 벙커로 향하는 거리장 — 도발된 적만 쓴다. 벙커는 안 움직이므로 격자가 바뀔 때만 다시 굽는다.
+function hbBunkerField(bk){ if(!bk) return null;
+  const key=hbGx(bk.x)+','+hbGx(bk.y);
+  if(bk._fKey!==key || bk._fDirty!==_hbBlkSeq){ bk._fKey=key; bk._fDirty=_hbBlkSeq; bk._f=hbBakeField(hbGx(bk.x),hbGx(bk.y)); }
+  return bk._f; }
 function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char; S.t+=dt;
+  // 적이 따라올 길 — 캐릭터가 다른 칸으로 넘어갔을 때만 다시 굽는다(900칸 BFS는 1ms 미만)
+  { const key=hbGx(c.x)+','+hbGx(c.y);
+    if(_hbFoeAt!==key || S._blkSeq!==_hbBlkSeq){ _hbFoeAt=key; S._blkSeq=_hbBlkSeq; S.foeF=hbBakeField(hbGx(c.x),hbGx(c.y)); } }
   if(S.phase!=='down') hbWalk(S,c,dt);
   if(S.phase==='down'){ S.downT-=dt;
     if(S.downT<=0){ c.hp=c.hpMax; c.hitT=9; S.phase='fight'; S.wave=1; hbSpawnWave(); }
@@ -6357,8 +6470,14 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char; S.t+=dt;
     for(const b of S.bunkers){ if(b.hp<=0) continue; const d2=Math.hypot(b.x-f.x,b.y-f.y); if(d2<bd2){ bd2=d2; bk=b; } }
     if(bk) tg=bk;
     const dx=tg.x-f.x, dy=tg.y-f.y, d=Math.hypot(dx,dy)||1;
-    if(d>HB_STOP){ f.x+=dx/d*f.spd*spdMul*dt; f.y+=dy/d*f.spd*spdMul*dt;
-      f.face=Math.atan2(dx, dy); f.mv=1; }            // ⚠ 게임과 같은 식: atan2(dx,dy). -dy로 쓰면 모델이 정반대를 본다
+    if(d>HB_STOP){ const sp=f.spd*spdMul*dt;
+      // 벽은 부수지 않고 반드시 돌아간다. 목표가 캐릭터면 공용 거리장을, 벙커면 그 벙커용을 쓴다.
+      let ux=dx/d, uy=dy/d;
+      if(!hbLineClear(f.x,f.y,tg.x,tg.y)){                    // 가리는 게 있을 때만 우회 — 열린 곳에선 직진(각도가 자연스럽다)
+        const fd=(tg===c) ? hbFieldDir(S.foeF, f.x, f.y) : hbFieldDir(hbBunkerField(bk), f.x, f.y);
+        if(fd){ ux=fd[0]; uy=fd[1]; } }
+      hbSlide(f, ux*sp, uy*sp);
+      f.face=Math.atan2(ux, uy); f.mv=1; }            // ⚠ 게임과 같은 식: atan2(dx,dy). -dy로 쓰면 모델이 정반대를 본다
     else{ f.mv=0; f.cdT-=dt; if(f.cdT<=0){ f.cdT=1.1;
       if(bk){ bk.hp-=f.atk; if(bk.q){ const _bt=hbBase().tiles[bk.q]; if(_bt) _bt.hp=Math.max(0,bk.hp); }   // 타일이 단일 소스 — 재배치해도 체력이 되살아나지 않는다
         S.floats.push({x:bk.x,y:bk.y-20,tx:'-'+Math.round(f.atk),cl:'#c9a24a',t:0}); }
@@ -6561,15 +6680,22 @@ const _hbIco={};                                            // 건물 아이콘 
 function hbIcoImg(k){ let im=_hbIco[k];
   if(im===undefined){ im=new Image(); im.src=ICO_DIR+'buildings/'+k+'.webp'; _hbIco[k]=im; }
   return (im&&im.complete&&im.naturalWidth)?im:null; }
-function hbDrawGrid(x, S){ const R=hbOpenR(), lw=1/(S.k||1);
+// 격자는 **건설 중일 때만** 보인다 — 평소엔 전장이 격자로 덮여 답답하다.
+// 화면에 보이는 범위만 그린다(맵 전체 30×30을 매 프레임 긋는 것은 낭비다).
+function hbDrawGrid(x, S){ if(!S.arm) return;
+  const R=HB_MAP_R, lw=1/(S.k||1);
+  const hw=(S.w/(S.k||1))/2+HB_TILE, hh=(((S.vBot||S.h)-(S.vTop||0))/(S.k||1))/2+HB_TILE;
+  const x0=Math.max(-R, (S.camX||0)-hw), x1=Math.min(R, (S.camX||0)+hw);
+  const y0=Math.max(-R, (S.camY||0)-hh), y1=Math.min(R, (S.camY||0)+hh);
   x.save();
-  x.fillStyle='rgba(120,180,255,.045)'; x.fillRect(-R,-R,R*2,R*2);        // 해금 구역 = 옅은 판
-  x.strokeStyle='rgba(140,190,255,.10)'; x.lineWidth=lw; x.beginPath();
-  for(let w=-R; w<=R; w+=HB_TILE){ x.moveTo(w,-R); x.lineTo(w,R); x.moveTo(-R,w); x.lineTo(R,w); }
+  x.fillStyle='rgba(120,180,255,.05)'; x.fillRect(x0,y0,x1-x0,y1-y0);
+  x.strokeStyle='rgba(140,190,255,.13)'; x.lineWidth=lw; x.beginPath();
+  for(let w=Math.ceil(x0/HB_TILE)*HB_TILE; w<=x1; w+=HB_TILE){ x.moveTo(w,y0); x.lineTo(w,y1); }
+  for(let w=Math.ceil(y0/HB_TILE)*HB_TILE; w<=y1; w+=HB_TILE){ x.moveTo(x0,w); x.lineTo(x1,w); }
   x.stroke();
-  x.strokeStyle='rgba(140,190,255,.34)'; x.lineWidth=lw*1.6;              // 해금 경계
+  x.strokeStyle='rgba(140,190,255,.30)'; x.lineWidth=lw*1.6;              // 맵 경계
   x.strokeRect(-R,-R,R*2,R*2);
-  if(S.arm){ const B=HB_STRUCT[S.arm.k]||{w:1,h:1}, ok=hbArmOk();         // 배치 고스트
+  { const B=HB_STRUCT[S.arm.k]||{w:1,h:1}, ok=hbArmOk();                  // 배치 고스트
     const gx=hbTx(S.arm.gx)-HB_TILE/2, gy=hbTx(S.arm.gy)-HB_TILE/2;
     x.fillStyle=ok?'rgba(124,224,255,.22)':'rgba(255,90,110,.26)';
     x.fillRect(gx,gy,B.w*HB_TILE,B.h*HB_TILE);

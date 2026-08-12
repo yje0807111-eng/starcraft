@@ -360,10 +360,14 @@ async function groupLobby(){
     const rdKeep=_hb.round;
     for(let i=0;i<440;i++) hbStep(0.05);   // 22초 — 웨이브 시간(20s)을 넘긴다
     assert(_hb.phase==='fail'||_hb.wave===1,'시간을 넘겼는데 실패로 안 감: phase '+_hb.phase+' wave '+_hb.wave);
-    for(let i=0;i<80;i++) hbStep(0.05);    // 실패 대기(3s) 통과
+    // ⚠ 재시작 '순간'을 잡아야 한다. 몇 초 더 돌리면 새로 난 적이 도착해 몇 대 때리므로
+    //    체력이 가득이 아닌 게 정상이 된다(예전엔 이걸 나중에 재서 간헐적으로 실패했다).
+    let healed=null;
+    for(let i=0;i<80;i++){ const wasFail=(_hb.phase==='fail'); hbStep(0.05);
+      if(wasFail && _hb.phase!=='fail'){ healed=(_hb.char.hp===_hb.char.hpMax); break; } }
     assert(_hb.wave===1,'실패 뒤 1웨이브로 안 돌아감: wave '+_hb.wave);
     assert(_hb.round===rdKeep,'실패로 라운드가 내려감(죽음과 달라야 한다)');
-    assert(_hb.char.hp===_hb.char.hpMax,'실패 재시작인데 체력이 안 찼음');
+    assert(healed!==false,'실패 재시작인데 체력이 안 찼음');
     // ③ 사망 = 라운드 하강 + 클리어 보너스 몫 소실(이미 받은 처치 보상은 그대로) + 부활
     _hb.round=3; hbHunt().round=3; const pD=PROF().pcoin;
     _hb.char.atk=0; _hb.char.hpMax=10; _hb.char.hp=1;
@@ -794,12 +798,11 @@ async function groupLobby(){
     assert(hbPlaceStruct('bunker',8,8),'벙커 배치 실패');
     for(const [gx,gy] of [[8,8],[9,8],[8,9],[9,9]]) assert(!hbCanPlace('wall',gx,gy),'2×2 점유 칸이 비어 보임: '+gx+','+gy);
     assert(hbCanPlace('wall',10,8),'2×2 바깥인데 막힘');
-    // ④ 범위 — 맵 밖 · 코어(회복 구역) · 잠긴 구역엔 못 놓는다
+    // ④ 범위 — 격자는 맵 전체다(2026-08-12). 맵 밖만 막히고 회복 구역·구석은 모두 열려 있다.
     assert(!hbCanPlace('wall',HB_GRID_R,0),'맵 밖에 놓임');
-    assert(!hbCanPlace('wall',0,0),'코어(회복 구역)에 놓임');
-    hbHunt().base.open=0;
-    assert(!hbCanPlace('wall',HB_GRID_R-1,HB_GRID_R-1),'잠긴 구역에 놓임');
-    hbHunt().base.open=99;
+    assert(!hbCanPlace('wall',-HB_GRID_R-1,0),'맵 밖(음수)에 놓임');
+    assert(hbCanPlace('wall',0,0),'회복 구역에 못 놓음(전 지역 건설 가능해야 함)');
+    assert(hbCanPlace('wall',HB_GRID_R-1,HB_GRID_R-1),'맵 구석에 못 놓음');
     // ⑤ 저장 왕복 — saveMeta/loadMeta를 지나도 그대로여야 한다
     saveMeta(); loadMeta();
     assert(hbBase().tiles[hbKey(5,5)] && hbBase().tiles[hbKey(5,5)].k==='turret','저장 왕복에서 타일이 사라짐');
@@ -870,6 +873,47 @@ async function groupLobby(){
     Object.assign(_hb.char,_cSave); _hb.foes.length=0; _hb.pend.length=0;   // 원복
     hbHunt().base={tiles:{},open:1}; hbLayoutBase(); saveMeta();
     return '주둔 1시작·추가·상한 '+HB_BUNKER_SLOTS+'·피해 0/'+some+'/'+up+'(bkatk+10) ok'; });
+  // 🧭 미로 — 벽은 통과 불가, 적은 반드시 돌아온다. 벽을 부수지는 않는다.
+  await step('미로: 벽 통과 금지 · 적이 돌아서 온다 · 열린 곳은 직진', async()=>{ skipIf(typeof hbBakeField!=='function','경로탐색 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    openHome(); await sleep(60); _hb.manual=true;
+    const _cSave={..._hb.char};
+    hbHunt().base={tiles:{},open:99}; hbLayoutBase();
+    const c=_hb.char; c.x=0; c.y=0; c.tx=null; c.ty=null; c.hpMax=1e9; c.hp=1e9; c.atk=0; c.range=1; c.regen=0;
+    // ① 벽이 없으면 직선으로 온다(각도가 4방향으로 뭉치면 안 된다)
+    const drop=(x,y)=>{ _hb.foes.length=0; _hb.pend.length=0;
+      _hb.foes.push({ico:'x',mdl:null,x:x,y:y,hp:1e9,hpMax:1e9,atk:0,spd:60,cdT:9e9,elite:false}); return _hb.foes[0]; };
+    { const f=drop(200,-200); for(let i=0;i<6;i++){ _hb.phase='fight'; _hb.waveT=99; hbStep(0.1); }
+      assert(Math.abs(f.face-Math.atan2(-f.x,-f.y))<0.05,'열린 벌판인데 직진이 아님(격자를 따라 계단으로 걷는다)'); }
+    // ② 벽을 세우면 통과하지 못한다 — 캐릭터 둘레를 한 칸만 열고 두른다
+    const T=hbBase().tiles;
+    for(let g=-3;g<=3;g++) for(const cell of [[g,-3],[g,3],[-3,g],[3,g]]){
+      if(cell[0]===3 && cell[1]===0) continue;                 // 입구는 오른쪽 변 한 칸
+      T[hbKey(cell[0],cell[1])]={k:'wall'}; }
+    hbLayoutBase();
+    assert(hbSealCheck(null,0,0)===false,'입구를 남겼는데 봉쇄로 판정됨');
+    { const f=drop(-160,0);                                    // 입구 반대편에서 출발 → 반드시 돌아와야 한다
+      let through=false;
+      for(let i=0;i<400;i++){ hbStep(0.05); if(!hbWalkable(f.x,f.y)){ through=true; break; } }
+      assert(!through,'적이 벽 칸을 통과했다 @('+Math.round(f.x)+','+Math.round(f.y)+')');
+      assert(Math.hypot(f.x,f.y)<Math.hypot(-160,0),'적이 캐릭터 쪽으로 전혀 못 옴');
+      // 벽은 부수지 않는다 — 타일이 그대로 남아 있어야 한다
+      assert(T[hbKey(-3,0)] && T[hbKey(-3,0)].k==='wall','적이 벽을 부쉈다'); }
+    // ③ 캐릭터도 벽을 통과하지 않는다 — 벽 너머를 찍어도 돌아간다
+    { c.x=0; c.y=0; c.tx=-160; c.ty=0;
+      let through=false;
+      for(let i=0;i<400;i++){ hbStep(0.05); if(!hbWalkable(c.x,c.y)){ through=true; break; } }
+      assert(!through,'캐릭터가 벽 칸을 통과했다 @('+Math.round(c.x)+','+Math.round(c.y)+')'); }
+    // ④ 적은 기지 안에서 태어나지 않는다 — 성벽 안쪽에 튀어나오면 벽이 통째로 무의미해진다
+    { _hb.foes.length=0; _hb.pend.length=0;
+      for(let i=0;i<40;i++) hbPlaceFoe({ico:'x',hpMul:1,atkMul:1,spd:10});
+      const inside=_hb.foes.filter(f=>Math.abs(f.x)<3*HB_TILE && Math.abs(f.y)<3*HB_TILE).length;
+      assert(inside===0,'성벽 안쪽에 소환된 적 '+inside+'기');
+      const onWall=_hb.foes.filter(f=>!hbWalkable(f.x,f.y)).length;
+      assert(onWall===0,'벽 칸 위에 소환된 적 '+onWall+'기'); }
+    Object.assign(_hb.char,_cSave); _hb.foes.length=0; _hb.pend.length=0;
+    hbHunt().base={tiles:{},open:1}; hbLayoutBase(); saveMeta();
+    return '직진·우회·벽 미파괴·캐릭터 충돌·기지 밖 소환 ok'; });
   // 🧱 3D 건물 — 이 환경엔 three.js(CDN)가 없어 M3D가 아예 없다. 목록 생성 로직만 스텁으로 검사한다.
   await step('기지 3D: sync 목록에 건물이 실린다(화면 밖 컬링)', async()=>{ skipIf(typeof hb3dStructs!=='function','3D 구조물 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
@@ -881,12 +925,12 @@ async function groupLobby(){
     window.M3D={ hasModel:(id)=>String(id).indexOf('cb_')===0, footprintOf:()=>20, cstEnsure:()=>true };
     try{
       hbHunt().base={tiles:{},open:99}; hbLayoutBase();
-      const c=_hb.char; c.x=0; c.y=0; c.tx=null; c.ty=null;
-      hbBase().tiles[hbKey(2,-5)]={k:'turret'};
-      hbBase().tiles[hbKey(HB_GRID_R-1,HB_GRID_R-1)]={k:'turret'};   // 맵 반대 끝 = 화면 밖
+      const c=_hb.char; c.x=0; c.y=0; c.tx=null; c.ty=null; hbResize();   // 뷰포트 값이 있어야 컬링 기준이 선다
+      hbBase().tiles[hbKey(0,-1)]={k:'turret'};                            // 캐릭터 바로 옆 = 화면 안
+      hbBase().tiles[hbKey(HB_GRID_R-1,HB_GRID_R-1)]={k:'turret'};         // 맵 반대 끝 = 화면 밖
       const out=[]; hb3dStructs(out,_hb,(w)=>w,(w)=>w,_hb.k||1);
       const ids=out.map(o=>o.uid);
-      assert(ids.indexOf('hbs_'+hbKey(2,-5))>=0,'화면 안 건물이 목록에 없음');
+      assert(ids.indexOf('hbs_'+hbKey(0,-1))>=0,'화면 안 건물이 목록에 없음');
       assert(ids.indexOf('hbs_'+hbKey(HB_GRID_R-1,HB_GRID_R-1))<0,'화면 밖 건물이 컬링되지 않음');
       for(const o of out){ assert(String(o.id).indexOf('cb_')===0,'관리자 건설 에셋(cb_) 키가 아님: '+o.id);
         assert(o.scl>0 && isFinite(o.scl),'크기 배율이 이상함: '+o.scl);
