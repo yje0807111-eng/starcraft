@@ -135,8 +135,10 @@ async function groupLobby(){
     assert(($('authErr').textContent||'').length>0,'빈 칸인데 안내가 없음');
     const gb=$('authGuest'); assert(gb && visible(gb),'게스트로 시작하기 버튼이 없음');
     gb.click();
-    // 게스트 입장도 로딩(#opening에서 3D 데우기)을 거친다 — 끝날 때까지 기다린다
-    for(let i=0;i<80 && !(visible($('townScreen'))||visible($('charScreen'))||visible($('homeScreen'))); i++) await sleep(50);
+    // 게스트 입장도 로딩(#opening에서 3D 데우기)을 거친다 — 끝날 때까지 기다린다.
+    // ⚠ 이 대기는 넉넉해야 한다: 실기기(GPU)에선 1초 안이지만 헤드리스 소프트웨어 렌더러(swiftshader)에선
+    //   3D 예열에 10초 넘게 걸린다. 4초로 뒀다가 '게스트가 안 들어간다'고 잘못 실패했다(앱은 정상).
+    for(let i=0;i<120 && !(visible($('townScreen'))||visible($('charScreen'))||visible($('homeScreen'))); i++) await sleep(250);
     assert(visible($('townScreen'))||visible($('charScreen'))||visible($('homeScreen')),'게스트 버튼을 눌렀는데 메인으로 안 감');
     assert(!visible($('auth')),'로그인 화면이 안 닫힘');
     for(let i=0;i<40 && !AUTH.user; i++) await sleep(50);   // 로딩 게이트를 거치면 몇 프레임 늦게 채워질 수 있다
@@ -401,12 +403,17 @@ async function groupLobby(){
     _hb.char.atk=0; _hb.char.hp=1e9; _hb.char.hpMax=1e9; _hb.char.regen=0;
     _hb.phase='fight'; _hb.wave=2; _hb.foes.length=0; _hb.pend.length=0; hbSpawnWave();
     const rdKeep=_hb.round;
-    for(let i=0;i<440;i++) hbStep(0.05);   // 22초 — 웨이브 시간(20s)을 넘긴다
+    // 웨이브 시간을 넉넉히 넘긴다 — 상수를 바꿔도 따라가게 hbWaveTime에서 역산한다
+    { const n=Math.ceil((hbWaveTime(_hb.wave)+2)/0.05); for(let i=0;i<n;i++) hbStep(0.05); }
     assert(_hb.phase==='fail'||_hb.wave===1,'시간을 넘겼는데 실패로 안 감: phase '+_hb.phase+' wave '+_hb.wave);
-    for(let i=0;i<80;i++) hbStep(0.05);    // 실패 대기(3s) 통과
+    // ⚠ 재시작 '순간'을 잡아야 한다. 몇 초 더 돌리면 새로 난 적이 도착해 몇 대 때리므로
+    //    체력이 가득이 아닌 게 정상이 된다(예전엔 이걸 나중에 재서 간헐적으로 실패했다).
+    let healed=null;
+    for(let i=0;i<80;i++){ const wasFail=(_hb.phase==='fail'); hbStep(0.05);
+      if(wasFail && _hb.phase!=='fail'){ healed=(_hb.char.hp===_hb.char.hpMax); break; } }
     assert(_hb.wave===1,'실패 뒤 1웨이브로 안 돌아감: wave '+_hb.wave);
     assert(_hb.round===rdKeep,'실패로 라운드가 내려감(죽음과 달라야 한다)');
-    assert(_hb.char.hp===_hb.char.hpMax,'실패 재시작인데 체력이 안 찼음');
+    assert(healed!==false,'실패 재시작인데 체력이 안 찼음');
     // ③ 사망 = 라운드 하강 + 클리어 보너스 몫 소실(이미 받은 처치 보상은 그대로) + 부활
     _hb.round=3; hbHunt().round=3; const pD=PROF().pcoin;
     _hb.char.atk=0; _hb.char.hpMax=10; _hb.char.hp=1;
@@ -536,7 +543,7 @@ async function groupLobby(){
     const gap=plus.getBoundingClientRect().left-num.getBoundingClientRect().right;
     assert(gap>=0 && gap<=3,'숫자와 + 사이가 '+gap.toFixed(1)+'px — 0~3px여야 한다');
     return gap.toFixed(1)+'px'; });
-  // 웨이브 시간(20s) 안에 못 비우면 실패 → 3초 뒤 1웨이브부터. 라운드는 안 내려간다(죽음과 다르다).
+  // 웨이브 시간 안에 못 비우면 실패 → 3초 뒤 1웨이브부터. 라운드는 안 내려간다(죽음과 다르다).
   await step('웨이브 실패: 시간 초과 → 3초 뒤 1웨이브 · 가운데 · 최대 체력', async()=>{
     skipIf(typeof hbWaveFail!=='function','실패 처리 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
@@ -779,12 +786,15 @@ async function groupLobby(){
       assert(hbHunt().party.length===hbMateMax(),'저장된 편성이 정원과 다름: '+hbHunt().party.length+'/'+hbMateMax());
       assert(hbParty().length===hbMateMax(),'출전 인원이 정원과 다름: '+hbParty().length+'/'+hbMateMax()); }
     hbHunt().mates={}; hbHunt().party=[]; hbLayoutAllies();
-    // ② 건설 — 터렛·벙커만 남았다(동료는 빠졌다)
-    assert(!HB_BUILD.ally,'건설 표에 옛 동료가 남아 있음');
-    hbBuy('turret'); hbBuy('bunker');
+    // ② 건설 — 개수형 표는 없어지고 타일 배치(HB_STRUCT)로 통일됐다. 동료는 여기 없다.
+    assert(typeof HB_BUILD==='undefined','옛 개수형 건설 표(HB_BUILD)가 남아 있음 — 표가 두 벌이면 어긋난다');
+    assert(!HB_STRUCT.post && !HB_STRUCT.ally,'구조물 표에 옛 동료가 남아 있음');
+    hbHunt().base={tiles:{},open:99}; hbLayoutBase();
+    { let c; c=hbFreeCell('turret'); hbPlaceStruct('turret',c[0],c[1]);
+      c=hbFreeCell('bunker'); hbPlaceStruct('bunker',c[0],c[1]); }
     assert(_hb.turrets.length===1 && _hb.bunkers.length===1,'터렛/벙커가 배치되지 않음');
-    for(let i=0;i<HB_BUILD.bunker.max+3;i++) hbBuy('bunker');
-    assert(hbBuildN('bunker')===HB_BUILD.bunker.max,'최대치를 넘겨 지어짐: '+hbBuildN('bunker'));
+    { let c; for(let i=0;i<HB_STRUCT.bunker.max+3 && (c=hbFreeCell('bunker')); i++) hbPlaceStruct('bunker',c[0],c[1]); }
+    assert(hbStructN('bunker')===HB_STRUCT.bunker.max,'최대치를 넘겨 지어짐: '+hbStructN('bunker'));
     assert(_hb.pets.length===1,'장착 펫이 전장에 안 나옴');
     PROF().equip=['slime']; hbLayoutAllies();
     // ③ 스킬 — 효과 + 쿨다운(쿨 중 재사용 불가)
@@ -826,7 +836,7 @@ async function groupLobby(){
         if(x>bL-14 && x<bR+14 && y>bT-14 && y<bB+14) hit++; }
       assert(hit===0,'스킬 바 위에 겹쳐 스폰된 적 '+hit+'기');
       _hb.foes.length=0; }
-    hbHunt().boostT={}; hbHunt().build={}; hbLayoutAllies();
+    hbHunt().boostT={}; hbHunt().build={}; hbHunt().base={tiles:{},open:1}; hbLayoutAllies();   // 기지도 비운다 — 남기면 뒤 스텝의 난수 소비가 달라진다
     // ③ 아군 화력 — 같은 상황을 아군 없이/있이 돌려 처치 수를 비교한다
     //    ⚠ 아군 발사 주기는 캐릭터 쿨다운(c.cd)을 공유한다 — 캐릭터를 막으면 아군도 멈춰서 그 방식으론 못 잰다
     // ⚠ 이 측정은 두 방향으로 포화된다 — 약한 라운드면 캐릭터 혼자 전멸시켜 양쪽이 같고(9→9),
@@ -840,7 +850,8 @@ async function groupLobby(){
       const k=_hb.kills; for(let i=0;i<300;i++) hbStep(0.05); return _hb.kills-k; };
     hbHunt().build={}; hbHunt().mates={}; hbHunt().party=[]; PROF().equip=[]; hbLayoutAllies();
     const solo=runWave();
-    hbHunt().build={turret:HB_BUILD.turret.max};
+    { hbHunt().base={tiles:{},open:99}; hbLayoutBase();
+      let c; for(let i=0;i<HB_STRUCT.turret.max && (c=hbFreeCell('turret')); i++) hbPlaceStruct('turret',c[0],c[1]); }
     for(const id of Object.keys(HB_MATES).slice(0,hbMateMax())){ hbHunt().mates[id]={lv:1,dup:0}; hbHunt().party.push(id); }
     hbLayoutAllies();
     const withAllies=runWave();
@@ -853,6 +864,311 @@ async function groupLobby(){
     { const c=_hb.char; c.x=0; c.y=0; c.tx=0; c.ty=0; c.mv=0; }
     hbHunt().mates={}; hbHunt().party=[]; hbLayoutAllies();
     return '동료·터렛·벙커·펫 배치 ok · 스킬 3종 · 부스트 연장 ok'; });
+  // 🧱 기지 격자 — 타일이 단일 소스. 저장 왕복 · 겹침/범위 · 봉쇄 금지 · 옛 개수형 이관.
+  await step('기지 격자: 배치·저장 왕복·겹침/범위·봉쇄 금지', async()=>{ skipIf(typeof hbPlaceStruct!=='function','기지 격자 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    openHome(); await sleep(60); _hb.manual=true;
+    const p=PROF(); p.pcoin=9e6;
+    hbHunt().base={tiles:{},open:99}; hbLayoutBase();
+    // ① 좌표 왕복 — 타일 인덱스 ↔ 월드 좌표가 서로의 역이어야 한다
+    for(const g of [-HB_GRID_R,-3,0,7,HB_GRID_R-1]) assert(hbGx(hbTx(g))===g,'타일 좌표 왕복 실패: '+g);
+    // ② 배치 — 놓이고, 값이 오르고, 전장에 선다
+    const c0=hbBuildCost('turret');
+    assert(hbPlaceStruct('turret',5,5),'터렛 배치 실패');
+    assert(hbBase().tiles[hbKey(5,5)].k==='turret','타일에 기록되지 않음');
+    assert(hbBuildCost('turret')>c0,'다음 비용이 안 오름');
+    assert(_hb.turrets.length===1,'전장에 안 섬');
+    // ③ 겹침 — 같은 칸, 그리고 2×2 건물이 걸치는 칸 모두 막힌다
+    assert(!hbCanPlace('wall',5,5),'점유 칸에 겹쳐 놓임');
+    assert(hbPlaceStruct('bunker',8,8),'벙커 배치 실패');
+    for(const [gx,gy] of [[8,8],[9,8],[8,9],[9,9]]) assert(!hbCanPlace('wall',gx,gy),'2×2 점유 칸이 비어 보임: '+gx+','+gy);
+    assert(hbCanPlace('wall',10,8),'2×2 바깥인데 막힘');
+    // ④ 범위 — 격자는 맵 전체다(2026-08-12). 맵 밖만 막히고 회복 구역·구석은 모두 열려 있다.
+    assert(!hbCanPlace('wall',HB_GRID_R,0),'맵 밖에 놓임');
+    assert(!hbCanPlace('wall',-HB_GRID_R-1,0),'맵 밖(음수)에 놓임');
+    assert(hbCanPlace('wall',0,0),'회복 구역에 못 놓음(전 지역 건설 가능해야 함)');
+    assert(hbCanPlace('wall',HB_GRID_R-1,HB_GRID_R-1),'맵 구석에 못 놓음');
+    // ⑤ 저장 왕복 — saveMeta/loadMeta를 지나도 그대로여야 한다
+    saveMeta(); loadMeta();
+    assert(hbBase().tiles[hbKey(5,5)] && hbBase().tiles[hbKey(5,5)].k==='turret','저장 왕복에서 타일이 사라짐');
+    // ⑥ 봉쇄 금지 — 코어를 벽으로 두르는 마지막 한 칸은 거절되고 자원도 안 깎인다
+    hbHunt().base={tiles:{},open:99}; hbLayoutBase();
+    // ⚠ 남길 한 칸은 '변의 중간'이어야 한다 — 모서리를 비워도 4방향 이동으로는 여전히 갇힌다(대각 통과 없음)
+    const last=[0,-4];
+    for(let g=-4;g<=4;g++) for(const c of [[g,-4],[g,4],[-4,g],[4,g]]){
+      if(c[0]===last[0]&&c[1]===last[1]) continue; hbBase().tiles[hbKey(c[0],c[1])]={k:'wall'}; }
+    assert(hbSealCheck(null,0,0)===false,'입구가 열려 있는데 이미 봉쇄로 판정됨');
+    assert(hbSealCheck('wall',last[0],last[1])===true,'마지막 한 칸이 봉쇄로 판정되지 않음');
+    const coin=p.pcoin;
+    hbArmStart('wall',last[0],last[1]);
+    assert(hbArmOk()===false,'봉쇄가 되는 자리인데 확정 가능으로 표시됨');
+    hbArmConfirm();
+    assert(!hbBase().tiles[hbKey(last[0],last[1])],'봉쇄되는데도 지어짐');
+    assert(p.pcoin===coin,'거절됐는데 자원이 깎임');
+    // 벽을 하나 비워 두면(입구) 통과해야 한다
+    assert(hbSealCheck('wall',10,10)===false,'막지 않는 자리인데 봉쇄로 판정됨');
+    hbArmCancel();
+    // ⑦ 옛 개수형(hunt.build) → 타일 이관
+    const H=hbHunt(); delete H.base; H.build={ally:2,turret:1,bunker:1};
+    hbBase();
+    // 'ally'는 타일로 가지 않는다 — 동료는 뽑기 로스터(HB_MATES)로 옮겨졌다
+    assert(hbStructN('turret')===1 && hbStructN('bunker')===1,
+      '옛 보유분 이관 실패: turret '+hbStructN('turret')+' / bunker '+hbStructN('bunker'));
+    assert(!Object.keys(H.build).length,'이관 후에도 옛 개수형이 남음');
+    hbHunt().base={tiles:{},open:1}; hbLayoutBase(); saveMeta();
+    return '왕복·겹침·범위·저장·봉쇄차단·이관 ok'; });
+  // 🪖 벙커 = 주둔 유닛만큼 쏜다. 유닛 화력 = 캐릭터 공격력 × 비율 × 방어탭 bkatk.
+  await step('벙커: 주둔 유닛 추가·상한·화력·업그레이드 반영', async()=>{ skipIf(typeof hbBunkerAdd!=='function','벙커 주둔 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    openHome(); await sleep(60); _hb.manual=true;
+    const p=PROF(); p.pcoin=9e6;
+    const _cSave={..._hb.char};   // ⚠ 아래에서 위치·사거리를 바꾼다 — 뒤 스텝들은 원점·정상 스탯을 가정한다
+    hbHunt().base={tiles:{},open:99}; hbHunt().upg.bkatk=0; hbLayoutBase();
+    assert(hbPlaceStruct('bunker',6,6),'벙커 배치 실패');
+    const q=hbKey(6,6), t=hbBase().tiles[q];
+    assert(hbBunkerN(t)===1,'새 벙커는 유닛 1기로 시작해야 함: '+hbBunkerN(t));
+    assert(_hb.bunkers.length===1 && _hb.bunkers[0].n===1,'전장 벙커에 주둔 수가 안 실림');
+    // ① 유닛 추가 — 값이 깎이고 수가 는다
+    hbOpenBunker(q);
+    const c1=hbBunkerUnitCost(1), coin=p.pcoin; hbBunkerAdd();
+    assert(hbBunkerN(t)===2,'유닛이 안 늘어남');
+    assert(Math.round(coin-p.pcoin)===c1,'비용이 안 맞음: '+(coin-p.pcoin)+' vs '+c1);
+    assert(hbBunkerUnitCost(2)>c1,'다음 유닛 비용이 안 오름');
+    // ② 상한 — 넘겨서 눌러도 SLOTS를 안 넘는다
+    for(let i=0;i<HB_BUNKER_SLOTS+3;i++) hbBunkerAdd();
+    assert(hbBunkerN(t)===HB_BUNKER_SLOTS,'주둔 상한을 넘김: '+hbBunkerN(t));
+    hbCloseBunker();
+    // ③ 화력 — 킬 수는 웨이브 진행에 흔들린다. 죽지 않는 표적 하나를 세워 '깎인 체력'을 직접 잰다.
+    // ⚠ 벙커 사거리도 캐릭터 사거리를 따른다(hbUnitFire) — 캐릭터 사거리를 0으로 두면 벙커도 못 쏜다
+    const dmgOf=(n,bk)=>{ hbHunt().upg.bkatk=bk; t.n=n; hbLayoutBase();
+      const c=_hb.char; c.x=hbTx(6); c.y=hbTx(6)+200; c.tx=null; c.ty=null;   // 캐릭터는 멀리 — 제 화력이 안 섞이게
+      c.hpMax=1e9; c.hp=1e9; c.range=70; c.cd=0.5; c.atk=40; c.crit=0; c.regen=0;
+      _hb.round=1; _hb.wave=1; _hb.phase='fight'; _hb.foes.length=0; _hb.pend.length=0; _hb.allies.length=0; _hb.turrets.length=0; _hb.pets.length=0;
+      hbPlaceFoe({ico:'x',hpMul:1,atkMul:1,spd:0});
+      const f=_hb.foes[0]; f.x=hbTx(6)+30; f.y=hbTx(6); f.hp=f.hpMax=1e9; f.atk=0; f.spd=0;   // 안 죽고 안 움직이고 안 때린다
+      for(let i=0;i<100;i++){ f.x=hbTx(6)+30; f.y=hbTx(6); hbStep(0.05); }
+      return Math.round(f.hpMax-f.hp); };
+    const none=dmgOf(0,0), some=dmgOf(HB_BUNKER_SLOTS,0);
+    assert(none===0,'유닛이 없는데 벙커가 피해를 줌: '+none);
+    assert(some>0,'벙커에 유닛을 넣어도 피해가 없음');
+    // ④ 방어 탭 업그레이드가 실제 피해에 배수로 들어간다
+    assert(HB_UPG.bkatk && HB_UPG.bkatk.cat==='bld','벙커 공격력 업그레이드가 건물 구역에 없음');
+    const up=dmgOf(HB_BUNKER_SLOTS,10);
+    assert(up>some*1.2,'bkatk를 올려도 피해가 안 늘어남: '+some+' → '+up);
+    hbHunt().upg.bkatk=0;
+    Object.assign(_hb.char,_cSave); _hb.foes.length=0; _hb.pend.length=0;   // 원복
+    hbHunt().base={tiles:{},open:1}; hbLayoutBase(); saveMeta();
+    return '주둔 1시작·추가·상한 '+HB_BUNKER_SLOTS+'·피해 0/'+some+'/'+up+'(bkatk+10) ok'; });
+  // ⚙ 설정(☰) — .bare 재화 바가 click-through라 눌리지 않고 캐릭터만 걸어가던 회귀를 막는다
+  await step('설정 버튼: HOME에서 눌리고 · 캐릭터가 안 움직인다', async()=>{ skipIf(typeof openAppSettings!=='function','앱 설정 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    openHome(); await sleep(80); _hb.manual=true;
+    const btn=$('curSettingsBtn');
+    assert(btn,'재화 바 설정 버튼이 없음');
+    assert($('curBar').classList.contains('bare'),'HOME 재화 바가 .bare가 아님(전제가 바뀜)');
+    assert(getComputedStyle(btn).pointerEvents!=='none','설정 버튼이 click-through라 눌리지 않는다');
+    const r=btn.getBoundingClientRect(), px=r.left+r.width/2, py=r.top+r.height/2;
+    const hit=document.elementFromPoint(px,py);
+    assert(hit && btn.contains(hit),'설정 버튼 자리를 다른 요소가 가로챈다: '+(hit?(hit.id||hit.className||hit.tagName):'none'));
+    // 같은 지점을 눌렀을 때 캐릭터가 따라가면 안 된다(이번 버그의 핵심)
+    _hb.char.tx=null; _hb.char.ty=null;
+    hbFieldTap({ target:hit, clientX:px, clientY:py });
+    assert(_hb.char.tx==null,'설정 버튼을 눌렀는데 캐릭터가 이동함');
+    // 인게임용이 아니라 앱용 팝업이 열려야 한다(임무·배속·게임 나가기가 뜨면 안 된다)
+    assert(/openAppSettings/.test(btn.getAttribute('onclick')||''),'설정이 인게임용 openSettings를 부른다');
+    openAppSettings(); await sleep(60);
+    assert(visible($('settingsPop')),'설정 팝업이 안 열림');
+    assert($('settingsPop').classList.contains('appCtx'),'앱 문맥(.appCtx)이 아님');
+    closeSettings(); await sleep(40);
+    return 'pointer-events·히트·이동 안 함·appCtx ok'; });
+  // 🖐 필드 이동 = 관리자 건설 화면과 같은 방식: 누른 즉시 이동 + 뗄 때까지 손가락 추종
+  await step('필드 이동: 드래그 추종 · 손 떼면 정지 · 스크롤 안 뺏김', async()=>{ skipIf(typeof hbFieldMove!=='function','필드 포인터 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    openHome(); await sleep(80); _hb.manual=true;
+    hbHunt().base={tiles:{},open:1}; hbLayoutBase();
+    // ① 브라우저가 드래그를 스크롤로 가로채면 안 된다(관리자 맵 .bmap·마을 .twMap과 같은 규칙)
+    for(const id of ['homeScreen','hmScroll'])
+      assert(getComputedStyle($(id)).touchAction==='none','#'+id+' touch-action이 none이 아님 — 드래그가 스크롤로 샌다');
+    const hs=$('homeScreen'), cv=$('hbCv'), r=cv.getBoundingClientRect();
+    const ev=(t,id,x,y)=>({ type:t, pointerId:id, target:hs, clientX:r.left+x, clientY:r.top+y, cancelable:true, preventDefault(){ this._pd=true; } });
+    // ② 누르면 즉시 목적지 · 드래그하면 계속 따라온다
+    _hb.char.tx=null; _hb.char.ty=null;
+    const d0=ev('pointerdown',7,120,120); hbFieldTap(d0);
+    assert(d0._pd,'pointerdown에서 preventDefault를 안 했다(화면이 끌려간다)');
+    assert(_hb.char.tx!=null,'누른 자리로 목적지가 안 잡힘');
+    const seen=[];
+    for(const [x,y] of [[140,130],[180,160],[90,200],[60,90]]){ hbFieldMove(ev('pointermove',7,x,y));
+      seen.push(Math.round(_hb.char.tx)+','+Math.round(_hb.char.ty)); }
+    assert(new Set(seen).size===seen.length,'드래그해도 목적지가 안 따라옴: '+seen.join(' / '));
+    // ③ 손을 떼면 더는 안 따라온다
+    hbFieldUp(ev('pointerup',7,60,90));
+    const keep=_hb.char.tx; hbFieldMove(ev('pointermove',7,300,300));
+    assert(_hb.char.tx===keep,'손을 뗐는데 목적지가 계속 바뀜');
+    // ④ 다른 포인터 id의 move는 무시한다(멀티터치가 명령을 훔치지 않게)
+    hbFieldTap(ev('pointerdown',8,100,100)); const k2=_hb.char.tx;
+    hbFieldMove(ev('pointermove',9,250,250));
+    assert(_hb.char.tx===k2,'다른 손가락이 이동 명령을 가로챔');
+    hbFieldUp(ev('pointerup',8,100,100));
+    // ⑤ 실제로 그쪽으로 걸어간다
+    { const c=_hb.char; c.x=0; c.y=0; c.tx=150; c.ty=0;
+      const before=Math.hypot(c.tx-c.x, c.ty-c.y);
+      for(let i=0;i<20;i++) hbStep(0.05);
+      assert(Math.hypot(c.tx-c.x, c.ty-c.y)<before,'목적지가 있는데 안 걸어감'); }
+    _hb.char.tx=null; _hb.char.ty=null;
+    return 'touch-action·추종 '+seen.length+'회·정지·멀티터치 무시 ok'; });
+  // 🛠 건설 모드 — 라운드를 멈추고 초기화한다. 나갈 때까지 연속으로 짓는다.
+  await step('건설 모드: 라운드 정지·초기화 · 연속 배치 · 방향 이어가기', async()=>{ skipIf(typeof hbBuildEnter!=='function','건설 모드 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    openHome(); await sleep(80); _hb.manual=true;
+    const p=PROF(); p.pcoin=9e6;
+    hbHunt().base={tiles:{},open:99}; hbLayoutBase();
+    // ① 진입 = 라운드 초기화 + 시계 정지
+    _hb.round=3; _hb.wave=2; _hb.phase='fight'; _hb.foes.length=0; hbSpawnWave();
+    assert(_hb.foes.length||_hb.pend.length,'전제: 적이 있어야 한다');
+    _hb.char.tx=100; _hb.char.ty=100;
+    hbBuy('wall');
+    assert(_hb.build===true,'건설 모드로 안 들어감');
+    assert(_hb.foes.length===0 && _hb.pend.length===0,'건설 진입인데 적이 남음');
+    assert((_hb.chests||[]).length===0,'건설 진입인데 상자가 남음');
+    assert(_hb.wave===1,'웨이브가 1로 안 돌아감: '+_hb.wave);
+    assert(_hb.char.tx==null,'건설 중인데 캐릭터 목적지가 남음');
+    { const t0=_hb.waveT, x0=_hb.char.x, y0=_hb.char.y;
+      for(let i=0;i<40;i++) hbStep(0.05);
+      assert(_hb.waveT===t0,'건설 중인데 웨이브 시계가 흐름: '+t0+' → '+_hb.waveT);
+      assert(_hb.char.x===x0 && _hb.char.y===y0,'건설 중인데 캐릭터가 움직임'); }
+    assert(!$('hbBuildStop').classList.contains('hide'),'건설 종료(⊘) 버튼이 안 보임');
+    // ①-2 고스트를 끌 때 확정 버튼이 '다시 만들어지면' 안 된다 —
+    //     이 함수는 드래그 중(hbArmTo)과 매 프레임(hbFrame) 둘 다에서 불려서, DOM을 새로 쓰면
+    //     ▶를 누르는 순간 눌린 요소가 사라져 클릭이 씹힌다.
+    { const host=$('hbArmBtns'), b0=host.querySelector('.bArmBtn.ok');
+      assert(b0,'확정 버튼이 없음');
+      hbArmTo(120,200); hbArmTo(160,240); hbArmBtns();
+      assert(host.querySelector('.bArmBtn.ok')===b0,'고스트를 옮길 때마다 확정 버튼이 새로 만들어진다'); }
+    // ①-3 건설 중에도 드래그로 고스트가 손가락을 따라온다(이동과 같은 방식)
+    { const hs=$('homeScreen'), cv=$('hbCv'), rr=cv.getBoundingClientRect();
+      const ev=(t,x,y)=>({ type:t, pointerId:21, target:hs, clientX:rr.left+x, clientY:rr.top+y, cancelable:true, preventDefault(){} });
+      hbFieldTap(ev('pointerdown',100,150));
+      const g=[]; for(const [x,y] of [[130,170],[170,210],[90,250]]){ hbFieldMove(ev('pointermove',x,y)); g.push(_hb.arm.gx+','+_hb.arm.gy); }
+      hbFieldUp(ev('pointerup',90,250));
+      assert(new Set(g).size===g.length,'건설 중 드래그로 고스트가 안 따라옴: '+g.join(' / ')); }
+    // ② 연속 배치 — 확정해도 건설 모드가 유지되고 다음 자리는 오른쪽
+    const A=_hb.arm; A.gx=0; A.gy=-6; hbArmBtns();
+    const g0=A.gx;
+    hbArmConfirm();
+    assert(_hb.build===true,'한 채 짓고 건설 모드가 끊김');
+    assert(_hb.arm && _hb.arm.gx===g0+1 && _hb.arm.gy===-6,'다음 자리가 오른쪽이 아님: '+_hb.arm.gx+','+_hb.arm.gy);
+    hbArmConfirm();
+    assert(_hb.arm.gx===g0+2,'오른쪽으로 이어지지 않음: '+_hb.arm.gx);
+    // ③ 방향 이어가기 — 고스트를 무시하고 왼쪽에 놓으면 그 다음부터 왼쪽
+    _hb.arm.gx=g0-1; _hb.arm.gy=-6; hbArmConfirm();
+    assert(_hb.arm.gx===g0-2,'왼쪽으로 이어지지 않음: '+_hb.arm.gx);
+    hbArmConfirm();
+    assert(_hb.arm.gx===g0-3,'왼쪽 방향이 유지되지 않음: '+_hb.arm.gx);
+    // ④ 막힌 칸은 그 방향으로 건너뛴다
+    hbBase().tiles[hbKey(g0-4,-6)]={k:'wall'}; hbLayoutBase();
+    hbArmConfirm();
+    assert(_hb.arm.gx===g0-5,'막힌 칸을 건너뛰지 않음: '+_hb.arm.gx);
+    // ⑤ 맵 끝에 닿으면 아래로
+    { _hb.arm.dir=[1,0]; _hb.arm.last=null; _hb.arm.gx=HB_GRID_R-1; _hb.arm.gy=-6;
+      hbArmConfirm();
+      assert(_hb.arm.gy>-6,'맵 끝인데 아래로 안 꺾임: '+_hb.arm.gx+','+_hb.arm.gy); }
+    // ⑤-2 고스트를 화면 가장자리로 끌면 건설 카메라가 그쪽으로 따라간다(한 손가락으로 맵 전체 사용)
+    { const hs=$('homeScreen'), cv=$('hbCv'), rr=cv.getBoundingClientRect();
+      const ev=(t,x,y)=>({ type:t, pointerId:31, target:hs, clientX:rr.left+x, clientY:rr.top+y, cancelable:true, preventDefault(){} });
+      _hb.bcam={x:0,y:0}; _hb.char.x=0; _hb.char.y=0; hbResize();
+      hbFieldTap(ev('pointerdown', rr.width*0.5, (_hb.vTop+_hb.vBot)/2));
+      hbFieldMove(ev('pointermove', rr.width*0.97, (_hb.vTop+_hb.vBot)/2));   // 오른쪽 끝을 잡고 유지
+      const cx0=_hb.bcam.x, g0=_hb.arm.gx;
+      for(let i=0;i<12;i++) hbEdgePan();
+      assert(_hb.bcam.x>cx0,'오른쪽 끝을 잡고 있는데 건설 카메라가 안 따라감: '+cx0+' → '+_hb.bcam.x);
+      assert(_hb.arm.gx>=g0,'화면은 갔는데 고스트가 안 따라옴');
+      // 안쪽으로 옮기면 멈춘다
+      hbFieldMove(ev('pointermove', rr.width*0.5, (_hb.vTop+_hb.vBot)/2));
+      const cx1=_hb.bcam.x; for(let i=0;i<6;i++) hbEdgePan();
+      assert(_hb.bcam.x===cx1,'화면 안쪽인데도 카메라가 밀림');
+      // 손을 떼면 멈춘다
+      hbFieldMove(ev('pointermove', rr.width*0.97, (_hb.vTop+_hb.vBot)/2));
+      hbFieldUp(ev('pointerup', rr.width*0.97, (_hb.vTop+_hb.vBot)/2));
+      const cx2=_hb.bcam.x; for(let i=0;i<6;i++) hbEdgePan();
+      assert(_hb.bcam.x===cx2,'손을 뗐는데 카메라가 계속 밀림'); }
+    // ⑥ ⊘로 나가면 라운드가 1웨이브부터 다시 돈다
+    hbBuildExit();
+    assert(_hb.build===false && !_hb.arm,'건설 모드가 안 끝남');
+    assert(!_hb.bcam,'건설 카메라가 안 치워짐(캐릭터를 다시 따라가야 한다)');
+    assert($('hbBuildStop').classList.contains('hide'),'나갔는데 ⊘ 버튼이 남음');
+    assert(_hb.wave===1,'나간 뒤 웨이브가 1이 아님: '+_hb.wave);
+    assert(_hb.foes.length||_hb.pend.length,'나갔는데 적이 안 나옴');
+    { const t0=_hb.waveT; hbStep(0.5); assert(_hb.waveT<t0,'나갔는데 시계가 안 흐름'); }
+    _hb.foes.length=0; _hb.pend.length=0;
+    hbHunt().base={tiles:{},open:1}; hbLayoutBase(); saveMeta();
+    return '정지·초기화·연속·방향·건너뛰기·복귀 ok'; });
+  // 🧭 미로 — 벽은 통과 불가, 적은 반드시 돌아온다. 벽을 부수지는 않는다.
+  await step('미로: 벽 통과 금지 · 적이 돌아서 온다 · 열린 곳은 직진', async()=>{ skipIf(typeof hbBakeField!=='function','경로탐색 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    openHome(); await sleep(60); _hb.manual=true;
+    const _cSave={..._hb.char};
+    hbHunt().base={tiles:{},open:99}; hbLayoutBase();
+    const c=_hb.char; c.x=0; c.y=0; c.tx=null; c.ty=null; c.hpMax=1e9; c.hp=1e9; c.atk=0; c.range=1; c.regen=0;
+    // ① 벽이 없으면 직선으로 온다(각도가 4방향으로 뭉치면 안 된다)
+    const drop=(x,y)=>{ _hb.foes.length=0; _hb.pend.length=0;
+      _hb.foes.push({ico:'x',mdl:null,x:x,y:y,hp:1e9,hpMax:1e9,atk:0,spd:60,cdT:9e9,elite:false}); return _hb.foes[0]; };
+    { const f=drop(200,-200); for(let i=0;i<6;i++){ _hb.phase='fight'; _hb.waveT=99; hbStep(0.1); }
+      assert(Math.abs(f.face-Math.atan2(-f.x,-f.y))<0.05,'열린 벌판인데 직진이 아님(격자를 따라 계단으로 걷는다)'); }
+    // ② 벽을 세우면 통과하지 못한다 — 캐릭터 둘레를 한 칸만 열고 두른다
+    const T=hbBase().tiles;
+    for(let g=-3;g<=3;g++) for(const cell of [[g,-3],[g,3],[-3,g],[3,g]]){
+      if(cell[0]===3 && cell[1]===0) continue;                 // 입구는 오른쪽 변 한 칸
+      T[hbKey(cell[0],cell[1])]={k:'wall'}; }
+    hbLayoutBase();
+    assert(hbSealCheck(null,0,0)===false,'입구를 남겼는데 봉쇄로 판정됨');
+    { const f=drop(-160,0);                                    // 입구 반대편에서 출발 → 반드시 돌아와야 한다
+      let through=false;
+      for(let i=0;i<400;i++){ hbStep(0.05); if(!hbWalkable(f.x,f.y)){ through=true; break; } }
+      assert(!through,'적이 벽 칸을 통과했다 @('+Math.round(f.x)+','+Math.round(f.y)+')');
+      assert(Math.hypot(f.x,f.y)<Math.hypot(-160,0),'적이 캐릭터 쪽으로 전혀 못 옴');
+      // 벽은 부수지 않는다 — 타일이 그대로 남아 있어야 한다
+      assert(T[hbKey(-3,0)] && T[hbKey(-3,0)].k==='wall','적이 벽을 부쉈다'); }
+    // ③ 캐릭터도 벽을 통과하지 않는다 — 벽 너머를 찍어도 돌아간다
+    { c.x=0; c.y=0; c.tx=-160; c.ty=0;
+      let through=false;
+      for(let i=0;i<400;i++){ hbStep(0.05); if(!hbWalkable(c.x,c.y)){ through=true; break; } }
+      assert(!through,'캐릭터가 벽 칸을 통과했다 @('+Math.round(c.x)+','+Math.round(c.y)+')'); }
+    // ④ 적은 기지 안에서 태어나지 않는다 — 성벽 안쪽에 튀어나오면 벽이 통째로 무의미해진다
+    { _hb.foes.length=0; _hb.pend.length=0;
+      for(let i=0;i<40;i++) hbPlaceFoe({ico:'x',hpMul:1,atkMul:1,spd:10});
+      const inside=_hb.foes.filter(f=>Math.abs(f.x)<3*HB_TILE && Math.abs(f.y)<3*HB_TILE).length;
+      assert(inside===0,'성벽 안쪽에 소환된 적 '+inside+'기');
+      const onWall=_hb.foes.filter(f=>!hbWalkable(f.x,f.y)).length;
+      assert(onWall===0,'벽 칸 위에 소환된 적 '+onWall+'기'); }
+    Object.assign(_hb.char,_cSave); _hb.foes.length=0; _hb.pend.length=0;
+    hbHunt().base={tiles:{},open:1}; hbLayoutBase(); saveMeta();
+    return '직진·우회·벽 미파괴·캐릭터 충돌·기지 밖 소환 ok'; });
+  // 🧱 3D 건물 — 이 환경엔 three.js(CDN)가 없어 M3D가 아예 없다. 목록 생성 로직만 스텁으로 검사한다.
+  await step('기지 3D: sync 목록에 건물이 실린다(화면 밖 컬링)', async()=>{ skipIf(typeof hb3dStructs!=='function','3D 구조물 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    openHome(); await sleep(60); _hb.manual=true;
+    // ⛔ sync와 syncBuild는 서로의 풀을 숨긴다 — 건물은 반드시 같은 sync 목록에 실려야 한다
+    assert(!/M3D\.syncBuild\s*\(/.test(hb3dStructs.toString()+hb3dList.toString()+hbFrame.toString()),
+      'HOME이 syncBuild를 따로 호출한다(sync와 같은 프레임에 쓰면 한쪽이 통째로 사라진다)');
+    const keep=window.M3D;
+    window.M3D={ hasModel:(id)=>String(id).indexOf('cb_')===0, footprintOf:()=>20, cstEnsure:()=>true };
+    try{
+      hbHunt().base={tiles:{},open:99}; hbLayoutBase();
+      const c=_hb.char; c.x=0; c.y=0; c.tx=null; c.ty=null; hbResize();   // 뷰포트 값이 있어야 컬링 기준이 선다
+      hbBase().tiles[hbKey(0,-1)]={k:'turret'};                            // 캐릭터 바로 옆 = 화면 안
+      hbBase().tiles[hbKey(HB_GRID_R-1,HB_GRID_R-1)]={k:'turret'};         // 맵 반대 끝 = 화면 밖
+      const out=[]; hb3dStructs(out,_hb,(w)=>w,(w)=>w,_hb.k||1);
+      const ids=out.map(o=>o.uid);
+      assert(ids.indexOf('hbs_'+hbKey(0,-1))>=0,'화면 안 건물이 목록에 없음');
+      assert(ids.indexOf('hbs_'+hbKey(HB_GRID_R-1,HB_GRID_R-1))<0,'화면 밖 건물이 컬링되지 않음');
+      for(const o of out){ assert(String(o.id).indexOf('cb_')===0,'관리자 건설 에셋(cb_) 키가 아님: '+o.id);
+        assert(o.scl>0 && isFinite(o.scl),'크기 배율이 이상함: '+o.scl);
+        assert(o.moving===false,'건물이 이동 상태로 들어감'); }
+      // 3D가 올라오면 2D 아이콘은 그리지 않는다(겹쳐 두 겹으로 보이면 안 된다)
+      assert(/has3d/.test(hbDrawStructs.toString()),'2D 그리기에 3D 유무 분기가 없음');
+    } finally { if(keep) window.M3D=keep; else { try{ delete window.M3D; }catch(_e){ window.M3D=undefined; } } }
+    hbHunt().base={tiles:{},open:1}; hbLayoutBase(); saveMeta();
+    return '컬링·cb_ 키·크기 배율 ok'; });
   // Phase 2 — 던전 1~10 해금 · 엘리트 · 장비 뽑기권(드랍 + 소비처)
   await step('자동사냥: 던전 해금 · 엘리트 · 뽑기권', async()=>{ skipIf(typeof hbGoDungeon!=='function','던전 선택 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
@@ -1114,6 +1430,9 @@ async function groupLobby(){
     skipIf(typeof openHome!=='function','HOME 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(80); _hb.manual=true;
+    // 재화 자릿수가 겹침 판정을 좌우한다 — 앞선 스텝이 남긴 잔액에 맡기면 간헐적으로 실패한다. 고정해 둔다.
+    PROF().pcoin=1234; PROF().gas=12; PROF().gem=3; if(typeof updateCurBar==='function') updateCurBar();
+    await sleep(20);
     const ph=$('phone').getBoundingClientRect();
     // ① 킬수 표시는 사라졌다(요청) — 요소 자체가 없어야 한다
     assert(!$('hbKill'),'킬수 표시가 아직 남아 있음');
@@ -1167,8 +1486,12 @@ async function groupLobby(){
       const sw=document.querySelector('#hbAtk em'), num=$('hbAtkN');
       assert(sw&&num,'공격력이 검·숫자로 나뉘어 있지 않음(크기 보정을 못 건다)');
       const a=inkC($('hbLv'),'Lv.8'), b=inkC(sw,'⚔'), c2=inkC(num,'30');
-      assert(Math.abs(a-b)<=0.3 && Math.abs(a-c2)<=0.3,
-        '레벨·검·숫자 높이가 안 맞음: Lv '+a.toFixed(2)+' / ⚔ '+b.toFixed(2)+' / 숫자 '+c2.toFixed(2)); }
+      // 허용 오차 0.6px = 반 픽셀 양자화 + 여유. 0.3px로 조였다가 실패했는데 앱은 멀쩡했다:
+      // ⚔ 글리프는 OS가 주는 이모지 폰트를 타서 메트릭이 환경마다 다르다(컬러 이모지 vs DejaVu 흑백).
+      // 이 컨테이너에선 asc/desc가 정수로 떨어져 반 픽셀이 구조적으로 남는다 — 눈에 보이는 어긋남(1px+)만 잡는다.
+      const TOL=0.6;
+      assert(Math.abs(a-c2)<=TOL,'레벨·숫자 높이가 안 맞음: Lv '+a.toFixed(2)+' / 숫자 '+c2.toFixed(2));
+      assert(Math.abs(a-b)<=TOL,'레벨·검 높이가 안 맞음: Lv '+a.toFixed(2)+' / ⚔ '+b.toFixed(2)); }
     assert($('hbName').textContent==='스모크','이름이 캐릭터와 다름: '+$('hbName').textContent);
     assert($('hbLv').textContent==='Lv.'+c.level,'레벨 표기가 다름: '+$('hbLv').textContent);
     { const bar=$('hbXpBar'), box=document.querySelector('.hbXp');
@@ -1386,6 +1709,10 @@ async function groupLobby(){
     assert(hbGachaLv()>1,'30회를 뽑았는데 뽑기 레벨이 그대로');
     // ⑦ 굴려 보면 초반에는 사실상 일반·레어만 나온다(상위는 열려 있어도 아주 낮다)
     { H.mates={}; H.party=[]; H.mateN=0; p.tickets.ally=300;
+      // ⚠ 씨앗은 고정이지만 '한 번 뽑을 때 난수를 몇 번 쓰는지'가 주변 상태에 따라 달라진다
+      //    (동료가 새로 들어오면 hbLayoutAllies가 돌고, 거기서 펫·구조물 수만큼 난수를 더 쓴다).
+      //    그래서 펫·기지를 비워 소비량을 고정한다 — 안 그러면 앞 스텝을 하나 추가하는 것만으로 결과가 바뀐다.
+      p.equip=[]; H.base={tiles:{},open:1}; hbLayoutAllies();
       const cnt={}; let n=0;
       const rnd=Math.random; let seed=12345;                    // 결정적 난수 — 판정이 운에 흔들리면 안 된다
       Math.random=()=>{ seed=(seed*1103515245+12345)&0x7fffffff; return seed/0x7fffffff; };
@@ -1395,7 +1722,10 @@ async function groupLobby(){
       const low=(cnt.common||0)+(cnt.rare||0);
       // ⚠ 문턱을 완화한 뒤로는 300회면 단계가 꽤 올라간다 — 표본을 '1~5단계 구간'으로 좁혀서 본다
       assert(low/n>0.75,'초반 300회인데 일반+레어가 75%에 못 미침: '+(low/n*100).toFixed(1)+'%');
-      assert(!cnt.god,'초반 300회에 갓이 나옴(아주 낮아야 한다)'); }
+      // ⚠ '한 번도 안 나온다'로 두면 안 된다 — 300회를 굴리는 동안 단계가 올라 갓 확률이 0.67%까지 간다.
+      //    깨끗한 상태에서 씨앗 12345면 실제로 1회 나온다(예전엔 앞 스텝이 남긴 상태 덕에 우연히 0이었다).
+      //    의도는 '아주 낮다'이므로 비율로 본다.
+      assert((cnt.god||0)/n<=0.01,'갓 비율이 너무 높음: '+(cnt.god||0)+'/'+n); }
     // ⑧ 중복은 레벨이 아니라 재료로 쌓인다 — 난수를 고정해 '같은 동료 두 번'을 결정적으로 만든다
     //    (확률에 기대면 이 규칙이 깨져도 통과해 버린다)
     { H.mates={}; H.party=[]; H.mateN=0; p.tickets.ally=2;
@@ -2342,6 +2672,38 @@ async function groupSandbox(){
     assert(names.length>=bar.produces.length, '카드 '+names.length+'개 < produces '+bar.produces.length+'개');
     switchTab('Main', document.querySelector('.tab[data-tab="Main"]'));
     return names.join('·'); });
+  // 🎥 배치 고스트를 화면 가장자리로 끌면 뷰가 따라간다 — HOME 사냥터와 같은 edgePush()를 쓴다
+  await step('관리자 건설: 고스트를 가장자리로 끌면 화면이 따라간다', async()=>{
+    switchTab('Build', document.querySelector('.tab[data-tab="Build"]')); await sleep(300);
+    skipIf(!G.tech || typeof techEdgePan!=='function','가장자리 끌기 없음');
+    // 공용 방향 함수 — 안쪽은 0, 가장자리로 갈수록 ±1
+    { const c=edgePush(0.5,0.5), l=edgePush(0.02,0.5), rb=edgePush(0.98,0.98);
+      assert(c.x===0 && c.y===0,'화면 중앙인데 밀림');
+      assert(l.x<-0.5 && rb.x>0.5 && rb.y>0.5,'가장자리 방향이 안 잡힘'); }
+    G.tech.arm=null; techArm('barracks'); skipIf(!G.tech.arm,'병영 배치를 못 켬');
+    // ⚠ 최소 줌에선 맵 전체가 화면에 들어와 팬할 여지가 없다(_techClampView가 가운데로 고정) — 확대하고 잰다
+    { const z=Math.min(techMaxZoom(), Math.max(techMinZoom()*1.6, 2));
+      techView().zoom=z; techViewT().zoom=z; _techClampView(techView()); _techClampView(techViewT()); }
+    skipIf(techView().zoom<=techMinZoom()+0.01,'확대가 안 됨(팬 여지 없음)');
+    _techArmTo(0.5,0.5);
+    const v0=techView().x, g0=G.tech.armXY.x;
+    _btArm=true; _btArmPt={sx:0.97, sy:0.5};
+    for(let i=0;i<10;i++) techEdgePan(0.05);              // 0.5초 유지
+    const v1=techView().x, g1=G.tech.armXY.x;
+    assert(v1>v0,'오른쪽 끝을 잡고 있는데 화면이 안 따라감: '+v0.toFixed(3)+' → '+v1.toFixed(3));
+    assert(g1>=g0,'화면은 갔는데 고스트가 안 따라옴: '+g0.toFixed(3)+' → '+g1.toFixed(3));
+    // 안쪽이면 안 움직인다
+    _btArmPt={sx:0.5, sy:0.5}; const v2=techView().x;
+    for(let i=0;i<5;i++) techEdgePan(0.05);
+    assert(techView().x===v2,'화면 안쪽인데도 뷰가 움직임');
+    // 손을 떼면(=_btArm false) 더는 안 움직인다
+    _btArm=false; const v3=techView().x; _btArmPt={sx:0.97,sy:0.5};
+    for(let i=0;i<5;i++) techEdgePan(0.05);
+    assert(techView().x===v3,'손을 뗐는데 화면이 계속 밀림');
+    _btArmPt=null; G.tech.arm=null; G.tech.armXY=null;
+    { const z0=techMinZoom(); techView().zoom=z0; techViewT().zoom=z0; _techClampView(techView()); _techClampView(techViewT()); }   // 줌 원복
+    switchTab('Main', document.querySelector('.tab[data-tab="Main"]'));
+    return '뷰 '+v0.toFixed(2)+'→'+v1.toFixed(2)+' · 고스트 추종 ok'; });
   await step('전투실험 탭 전환', ()=>{ switchTab('Battle', document.querySelector('.tab[data-tab="Battle"]'));
     assert(G.tab==='Battle','tab='+G.tab); switchTab('Main', document.querySelector('.tab[data-tab="Main"]')); return 'ok'; });
 }
