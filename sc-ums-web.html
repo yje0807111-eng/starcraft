@@ -2683,10 +2683,14 @@
   /* ⚠ minmax(0,..) 필수 — 1fr 은 min-content 를 하한으로 삼아 긴 이름에서 트랙이 부풀고 가로로 넘친다 */
   /* 카드 — 한 줄: 아이콘 · 이름/수치 · 오른쪽 버튼 */
   /* 면은 완전 검정 — 패널보다 어두워 칸이 '파인 자리'로 읽힌다.
-     빨강은 여기, 업그레이드를 감싸는 테두리가 맡는다(안쪽 작은 버튼은 은색 그대로). */
+     빨강은 여기, 업그레이드를 감싸는 테두리가 맡는다(안쪽 작은 버튼은 은색 그대로).
+     테두리는 단색이 아니라 '위에서 빛을 받은' 그라데다 — 두 겹 배경(면=padding-box / 테두리=border-box)으로 낸다.
+     ⚠ 색은 알파만 바꿔 만든다. 검정 위에서 알파가 곧 밝기라 토큰(--hmAccRGB) 하나로 명암이 전부 나온다. */
   .hmUp{position:relative;display:flex;align-items:center;gap:6px;padding:6px;min-width:0;
-    background:linear-gradient(180deg,#0a0a0a,#000);
-    border:1px solid rgba(var(--hmAccRGB),.62);border-radius:var(--r-bar);
+    background:linear-gradient(180deg,#0a0a0a,#000) padding-box,
+      linear-gradient(180deg,rgba(var(--hmAccRGB),1) 0%,rgba(var(--hmAccRGB),.72) 34%,
+        rgba(var(--hmAccRGB),.38) 68%,rgba(var(--hmAccRGB),.2) 100%) border-box;
+    border:1px solid transparent;border-radius:var(--r-bar);
     box-shadow:0 0 9px -3px rgba(var(--hmAccRGB),.55);
     clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
   /* 윗면 하이라이트 — 카드가 '판'으로 떠야 평평해 보이지 않는다 */
@@ -2714,18 +2718,19 @@
   /* 작은 버튼은 은색 메탈 그대로 — 빨강은 카드 테두리(.hmUp)가 맡는다 */
   .hmUpBtn{position:relative;flex:none;width:54px;height:40px;padding:1.5px;cursor:pointer;font-family:inherit;
     display:flex;flex-direction:column;border:none;border-radius:var(--r-bar);
-    background:linear-gradient(180deg,#c8c8c8 0%,#949494 30%,#3c3c3c 62%,#2a2a2a 100%);
+    background:linear-gradient(180deg,#a6a6a6 0%,#7a7a7a 30%,#333 62%,#222 100%);
     box-shadow:0 1px 2px rgba(0,0,0,.55);transition:transform .06s, box-shadow .06s, filter .12s}
   /* 살 수 있을 때만 윗면에 빛나는 선 — '올릴 수 있다'는 신호 */
   .hmUpBtn::after{content:'';position:absolute;left:6px;right:6px;top:1.5px;height:1px;pointer-events:none;
-    background:linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent)}
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.44),transparent)}
   .hmUpBtn:hover{filter:brightness(1.1)}
   /* 진짜로 들어간다 — 누르는 맛이 없으면 업그레이드가 재미없다 */
   .hmUpBtn:active{transform:translateY(1.5px);box-shadow:0 0 0 rgba(0,0,0,0)}
   .hmUpBtn:active .hmUpBl,.hmUpBtn:active .hmUpBc{filter:brightness(.92)}
+  /* ⚠ 단색이어야 한다 — 그라데를 주면 위칸·아래칸이 각자 처음부터 다시 그려서 가운데 이음매가 생긴다 */
   .hmUpBl,.hmUpBc{flex:1;display:flex;align-items:center;justify-content:center;gap:2px;width:100%;
     font-variant-numeric:tabular-nums;text-shadow:0 1px 1px rgba(0,0,0,.55);
-    background:linear-gradient(180deg,#4a4a4a,#3a3a3a 48%,#2e2e2e)}
+    background:#333}
   .hmUpBl{font-size:9.5px;font-weight:700;color:#a8a8a8;border-bottom:1px solid rgba(0,0,0,.42);
     border-radius:2px 2px 0 0}
   .hmUpBl .nx{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8),0 0 6px rgba(255,255,255,.28)}
@@ -2737,12 +2742,16 @@
   .hmUpBtn.off::after{display:none}
   .hmUpBtn.off:hover{filter:none}
   .hmUpBtn.off:active{transform:none}
-  .hmUpBtn.off .hmUpBl,.hmUpBtn.off .hmUpBc{background:linear-gradient(180deg,#333,#282828 48%,#222);color:#7a7a7a;text-shadow:none}
+  .hmUpBtn.off .hmUpBl,.hmUpBtn.off .hmUpBc{background:#262626;color:#7a7a7a;text-shadow:none}
   .hmUpBtn.off .hmUpBl .nx{color:#8f8f8f;text-shadow:none}
   .hmUpBtn.off .hmUpBc .ri{opacity:.35;filter:grayscale(1)}
   /* 잠긴 카드 — 해금 전엔 값도 레벨도 없다 */
   /* 잠긴 카드도 같은 검정 · 같은 빨강 — 구분은 테두리 세기와 글자 밝기가 한다 */
-  .hmUp.lk{background:#000;border-color:rgba(var(--hmAccRGB),.3);box-shadow:none}
+  /* ⚠ 여러 겹 background 에서 '색'은 마지막 겹에만 올 수 있다 — 단색도 gradient 로 적어야 선언이 안 버려진다 */
+  .hmUp.lk{background:linear-gradient(180deg,#000,#000) padding-box,
+      linear-gradient(180deg,rgba(var(--hmAccRGB),.62) 0%,rgba(var(--hmAccRGB),.44) 34%,
+        rgba(var(--hmAccRGB),.26) 68%,rgba(var(--hmAccRGB),.17) 100%) border-box;
+    box-shadow:none}
   .hmUp.lk .hmUpIco{background:#000;border-color:#26272c}
   .hmUp.lk .hmUpIco .icoImg{filter:grayscale(1) brightness(.5);opacity:.85}
   .hmUp.lk .hmUpName{color:#9a9a9a}

@@ -192,9 +192,19 @@ async function groupLobby(){
     { const rgb=s=>(s.match(/\d+(\.\d+)?/g)||[]).slice(0,3).map(Number);
       const gray=(r,g,b)=>Math.max(r,g,b)-Math.min(r,g,b)<=12;
       const red=(r,g,b)=>r>g+40 && r>b+40;   // 빨강 액센트(255,59,59). 푸른기는 b가 커서 여기도 못 든다
+      // ⚠ 테두리 그라데는 background 레이어(border-box 클립)로 그린다 — 속성 이름으로는 면/테두리를 못 가른다.
+      //    background-clip 을 레이어별로 보고 border-box 인 레이어만 '테두리'로 친다.
+      const layers=s=>{ const out=[]; let d=0,cur=''; for(const ch of s){
+          if(ch==='(') d++; else if(ch===')') d--;
+          if(ch===',' && d===0){ out.push(cur); cur=''; } else cur+=ch; }
+        if(cur.trim()) out.push(cur); return out; };
       for(const el of [...document.querySelectorAll('#homeScreen .hmCard, #homeScreen .hmUp, #homeScreen .hmUpIco')]){
         const c=getComputedStyle(el);
-        for(const [src,isBd] of [[c.backgroundColor,0],[c.backgroundImage,0],[c.borderTopColor,1]]){
+        const clips=c.backgroundClip.split(',').map(s=>s.trim());
+        const srcs=[[c.backgroundColor,0],[c.borderTopColor,1]];
+        layers(c.backgroundImage).forEach((L,i)=>
+          srcs.push([L, (clips[i]||clips[clips.length-1])==='border-box' ? 1 : 0]));
+        for(const [src,isBd] of srcs){
           for(const m of (src.match(/rgba?\([^)]*\)/g)||[])){ const [r,g,b]=rgb(m);
             if(r===undefined) continue;
             assert(gray(r,g,b) || (isBd && red(r,g,b)),
