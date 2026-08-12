@@ -2609,6 +2609,10 @@
     border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
   .hbRowIco{flex:none;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:17px;
     background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+  .hbRowIco img{width:24px;height:24px;object-fit:contain;display:block}   /* 건물 아이콘(assets/icons/buildings) — 이모지 대신 실제 에셋 */
+  /* 🧱 배치 확정/취소 앵커 — 안에 공용 .bArmBtns를 담는다(스타일은 그쪽 것을 그대로 쓴다) */
+  .hbArmBtns{position:absolute;left:0;top:0;z-index:3;pointer-events:none}
+  .hbArmBtns.hide{display:none}
   .hbRowTx{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
   .hbRowTx b{font-size:var(--fs-lg);font-weight:800;color:#ececec}
   .hbRowTx b i{font-style:normal;font-family:var(--font-num);font-variant-numeric:tabular-nums;color:#9a9a9a}
@@ -4119,6 +4123,7 @@
     <div class="hbMid" id="hbMid">   <!-- 표시 전용 — 라운드 조절은 위 아이콘이 담당한다 -->
       <b id="hbRound">던전 1 · 라운드 1</b><span><i id="hbWaveTx">웨이브 1/5</i> · <i id="hbTimer">20s</i> · <i id="hbMode">반복</i></span></div>
     <div class="hbBar" id="hbBar"></div>   <!-- 스킬·건설·부스트 (전장 위, 업그레이드 카드 바로 위) -->
+    <div id="hbArmBtns" class="hbArmBtns hide"></div>   <!-- 🧱 배치 확정/취소 — 공용 .bArmBtns를 담는 앵커 -->
     <div class="hmScroll uiScroll" id="hmScroll">
       <!-- POWER UPGRADES — 화면에 남은 유일한 카드. 위쪽은 비워서 우주 배경(.spaceBg)이 그대로 보인다 -->
       <div class="hmCard hmUpg">
@@ -5462,21 +5467,27 @@ function hbOpenBuild(){ const el=document.getElementById('hbBuildModal'); if(!el
 function hbCloseBuild(){ const el=document.getElementById('hbBuildModal'); if(el) el.classList.add('hide'); }
 function renderBuildModal(){ const box=document.getElementById('hbBuildBody'); if(!box) return;
   const coin=Math.floor(PROF().pcoin||0);
-  box.innerHTML=Object.keys(HB_BUILD).map(function(k){ const B=HB_BUILD[k], n=hbBuildN(k), mx=hbBuildMax(k), full=n>=mx, cost=hbBuildCost(k);
-    return '<div class="hbRow"><span class="hbRowIco">'+B.ico+'</span>'
+  box.innerHTML=Object.keys(HB_STRUCT).map(function(k){ const B=HB_STRUCT[k], n=hbStructN(k), mx=hbBuildMax(k), full=n>=mx, cost=hbBuildCost(k);
+    return '<div class="hbRow"><span class="hbRowIco"><img src="'+ICO_DIR+'buildings/'+B.ico+'.webp" alt="" draggable="false"></span>'
       +'<span class="hbRowTx"><b>'+B.name+' <i>'+n+'/'+mx+'</i></b><em>'+B.tip+'</em></span>'
       +'<button class="hbRowBtn" onclick="hbBuy(&#39;'+k+'&#39;)"'+((full||coin<cost)?' disabled':'')+'>'
       +(full?'최대':cost.toLocaleString('en-US')+' 미네랄')+'</button></div>'; }).join(''); }
-function hbBuy(k){ const B=HB_BUILD[k], p=PROF(); if(!B) return;
-  if(hbBuildN(k)>=hbBuildMax(k)) return;
+// 구매 = 즉시 짓기가 아니라 '배치 시작'. 실제 지출은 확정(hbArmConfirm) 때 일어난다.
+function hbBuy(k){ const B=HB_STRUCT[k], p=PROF(); if(!B||!_hb) return;
+  if(hbStructN(k)>=hbBuildMax(k)) return;
+  if(Math.floor(p.pcoin||0)<hbBuildCost(k)){ hmToast('미네랄이 부족합니다'); return; }
+  const c=hbFreeCell(k); if(!c){ hmToast('빈 자리가 없습니다'); return; }
+  hbCloseBuild(); hbArmStart(k, c[0], c[1]); }
+// 실제 설치 — 배치 확정·마이그레이션·스모크가 모두 이 하나를 지난다(단일 소스)
+function hbPlaceStruct(k,gx,gy){ const B=HB_STRUCT[k], p=PROF(); if(!B) return false;
+  if(hbStructN(k)>=hbBuildMax(k)) return false;
+  if(!hbCanPlace(k,gx,gy)) return false;
   const cost=hbBuildCost(k);
-  if(Math.floor(p.pcoin||0)<cost){ hmToast('미네랄이 부족합니다'); return; }
-  const H=hbHunt(); if(!H.build) H.build={};
-  p.pcoin-=cost; H.build[k]=(H.build[k]||0)+1; saveMeta();
-  hbLayoutAllies();                                  // 즉시 전장에 세운다
-  if(typeof playSfx==='function') playSfx('ui_open');
+  if(Math.floor(p.pcoin||0)<cost) return false;
+  p.pcoin-=cost; hbBase().tiles[hbKey(gx,gy)]={k:k}; saveMeta();
+  hbLayoutBase();
   if(typeof updateCurBar==='function') updateCurBar();
-  renderBuildModal(); renderHome(); }
+  return true; }
 // 부스트 — 시간제. 남은 시간은 초 단위로 보여준다.
 function hbOpenBoost(){ const el=document.getElementById('hbBoostModal'); if(!el) return;
   el.classList.remove('hide'); renderBoostModal(); if(typeof playSfx==='function') playSfx('ui_open'); }
@@ -5584,9 +5595,9 @@ function profPetSlots(){ const p=PROF(); let n=2;
   if(profHasUnlock('pet_slot3')) n=3;
   if(profHasUnlock('pet_slot4')) n=4;
   return Math.max(n, p.petSlots||2); }
-function hbBuildMax(k){ const B=HB_BUILD[k]; if(!B) return 0;
+function hbBuildMax(k){ const B=HB_STRUCT[k]; if(!B) return 0;
   let m=B.max;
-  if(k==='ally'  && profHasUnlock('ally_plus'))   m+=2;
+  if(k==='post'  && profHasUnlock('ally_plus'))   m+=2;   // 해금 키는 옛 이름 유지(ally_plus = 동료 초소)
   if(k==='turret'&& profHasUnlock('turret_plus')) m+=2;
   return m; }
 function hmToggleUpg(){ const H=hbHunt(); H.upgDown=!H.upgDown;
@@ -5883,17 +5894,70 @@ const HB_BOOSTS={
   inc: {name:'수입 ×2', ico:'💰', sec:300, cost:400, tip:'5분간 처치 보상 2배'},
   atk: {name:'공격 ×2', ico:'🗡', sec:180, cost:600, tip:'3분간 공격력 2배'},
 };
-// 건설·고용 — 영구 보유(미네랄). 라운드가 바뀌어도 남는다.
-const HB_BUILD={
-  ally:   {name:'동료',   ico:'🤝', max:4, base:150, mul:1.9, tip:'주위를 돌며 함께 사격'},
-  turret: {name:'터렛',   ico:'🔫', max:4, base:120, mul:1.8, tip:'고정 포탑 — 사거리가 길다'},
-  bunker: {name:'벙커',   ico:'🧱', max:2, base:300, mul:2.4, tip:'적을 끌어당겨 대신 맞는다'},
-};
 const HB_ALLY_DPS=.35, HB_TURRET_DPS=.55, HB_TURRET_RANGE=1.45;   // 캐릭터 대비 비율
 const HB_PET_DPS=.18;                                             // 장착 펫 1마리당
 const HB_BUNKER_HP=6, HB_BUNKER_R=150;                            // 캐릭터 최대체력 대비 배수 · 도발 반경
-function hbBuildN(k){ return (hbHunt().build&&hbHunt().build[k])||0; }
-function hbBuildCost(k){ const B=HB_BUILD[k]; return Math.ceil(B.base*Math.pow(B.mul, hbBuildN(k))); }
+const HB_ALLY_ORB=18;                                             // 동료가 초소 둘레를 도는 반경
+// ═══ 🧱 기지 격자 — 사냥터 타일에 직접 짓는다 ═══════════════════════════════
+// 좌표계: 타일 인덱스 (gx,gy). 타일 중심의 월드 좌표 = gx*HB_TILE + HB_TILE/2.
+//   맵이 ±HB_MAP_R(300)이고 타일이 20이므로 gx,gy ∈ [-15, 14] → 30×30 = 900칸.
+// ⚠ 다중 타일 건물은 **좌상단 타일 하나에만** 기록하고 w×h로 점유를 계산한다.
+//   점유 칸마다 따로 쓰면 철거·이동에서 반드시 어긋난다.
+// ⚠ 예전 구조(hunt.build = 종류별 '개수')는 hbBase()가 타일로 이관한다 — 아래 마이그레이션 참조.
+const HB_TILE=20;                                   // 월드 유닛/타일
+const HB_GRID_R=Math.round(HB_MAP_R/HB_TILE);       // 15 → gx,gy ∈ [-15, 14]
+const HB_FOOT_MAX=2;                                // 가장 큰 건물의 변 길이(점유 역추적 범위)
+const HB_OPEN_STEP=3;                               // 해금 한 단계 = 코어 밖으로 몇 타일 더
+// 구조물 표 — 예전 HB_BUILD를 대체한다. ico = assets/icons/buildings/<ico>.webp
+const HB_STRUCT={
+  wall:   {name:'벽',        ico:'bld_supply',   w:1,h:1, max:400, base:20,  mul:1.012, slab:1, tip:'적이 돌아서 오게 만든다'},   // slab = 필드에선 아이콘 없이 판으로 그린다(반복되면 어수선하다)
+  post:   {name:'동료 초소',  ico:'bld_barracks', w:1,h:1, max:4,   base:150, mul:1.9,   tip:'동료가 주위를 돌며 함께 사격'},
+  turret: {name:'터렛',      ico:'bld_turret',   w:1,h:1, max:4,   base:120, mul:1.8,   tip:'고정 포탑 — 사거리가 길다'},
+  bunker: {name:'벙커',      ico:'bld_bunker',   w:2,h:2, max:2,   base:300, mul:2.4,   tip:'적을 끌어당겨 대신 맞는다'},
+};
+const HB_BUILD_MIG={ ally:'post', turret:'turret', bunker:'bunker' };   // 옛 키 → 새 키
+function hbKey(gx,gy){ return gx+','+gy; }
+function hbTx(g){ return g*HB_TILE+HB_TILE/2; }              // 타일 인덱스 → 타일 중심 월드 좌표
+function hbGx(w){ return Math.floor(w/HB_TILE); }            // 월드 좌표 → 타일 인덱스
+function hbInGrid(g){ return g>=-HB_GRID_R && g<HB_GRID_R; }
+// 기지 상태 — hbHunt()와 같은 '없으면 그때 채운다' 방식이라 프로필 버전을 올릴 필요가 없다
+function hbBase(){ const H=hbHunt();
+  if(!H.base){ H.base={ tiles:{}, open:1 };
+    // 옛 개수형 보유분을 타일로 이관 — 데이터를 잃지 않는다(코어 바깥부터 나선형으로 채운다)
+    const old=H.build||{};
+    for(const ok in HB_BUILD_MIG){ const n=old[ok]|0, nk=HB_BUILD_MIG[ok];
+      for(let i=0;i<n;i++){ const c=hbFreeCell(nk); if(!c) break; H.base.tiles[hbKey(c[0],c[1])]={k:nk}; } }
+    H.build={};   // 이관 완료 — 이후로는 타일이 단일 소스
+  }
+  return H.base; }
+function hbOpenR(){ return (HB_OPEN_STEP*(hbBase().open+1))*HB_TILE; }   // 해금 구역 = 원점 기준 정사각 반경(월드)
+// 이 칸에 지을 수 있는가 — 맵 안 · 코어(회복 구역) 밖 · 해금 구역 안
+function hbCellBuildable(gx,gy){
+  if(!hbInGrid(gx)||!hbInGrid(gy)) return false;
+  const cx=hbTx(gx), cy=hbTx(gy);
+  if(Math.hypot(cx,cy)<=HB_HEAL_R+HB_TILE*0.5) return false;             // 코어 = 회복 구역, 비워 둔다
+  return Math.max(Math.abs(cx),Math.abs(cy))<=hbOpenR(); }
+// 이 칸을 점유한 구조물의 좌상단 키(없으면 null) — 좌상단에만 기록하므로 최대 변 길이만큼 역추적한다
+function hbCellOwner(gx,gy){ const T=hbBase().tiles;
+  for(let dy=0;dy<HB_FOOT_MAX;dy++) for(let dx=0;dx<HB_FOOT_MAX;dx++){
+    const q=hbKey(gx-dx,gy-dy), t=T[q]; if(!t) continue;
+    const S=HB_STRUCT[t.k]; if(!S) continue;
+    if(dx<S.w && dy<S.h) return q; }
+  return null; }
+function hbStructN(k){ const T=hbBase().tiles; let n=0; for(const q in T) if(T[q].k===k) n++; return n; }
+function hbBuildCost(k){ const B=HB_STRUCT[k]; return B?Math.ceil(B.base*Math.pow(B.mul, hbStructN(k))):0; }
+function hbCanPlace(k,gx,gy){ const S=HB_STRUCT[k]; if(!S) return false;
+  for(let dy=0;dy<S.h;dy++) for(let dx=0;dx<S.w;dx++){
+    if(!hbCellBuildable(gx+dx,gy+dy)) return false;
+    if(hbCellOwner(gx+dx,gy+dy)) return false; }
+  return true; }
+// 코어 바깥부터 나선형으로 첫 빈 자리 — 마이그레이션과 '자리 없음' 판정에 쓴다
+function hbFreeCell(k){ const S=HB_STRUCT[k]||{w:1,h:1};
+  for(let r=1;r<=HB_GRID_R;r++)
+    for(let gy=-r;gy<=r;gy++) for(let gx=-r;gx<=r;gx++){
+      if(Math.max(Math.abs(gx),Math.abs(gy))!==r) continue;             // 링 위만
+      if(hbCanPlace(k,gx,gy)) return [gx,gy]; }
+  return null; }
 // ── 📦 상자 — 맵을 돌아다닐 이유 ─────────────────────────────────────────────
 // 사냥터는 회복 구역이 중앙이고 적이 알아서 찾아오니, 그냥 두면 가운데를 뜰 이유가 없다.
 // 상자는 '공격 대상'이다 — 사거리 안에 들어와야 때린다. 초반엔 걸어가야 하고,
@@ -5933,20 +5997,23 @@ function hbBreakChest(ch){ const S=_hb; if(!S) return; const i=S.chests.indexOf(
 function hbBoostOn(k){ return (hbHunt().boostT&&hbHunt().boostT[k]||0) > Date.now(); }
 function hbBoostLeft(k){ return Math.max(0, Math.ceil((((hbHunt().boostT&&hbHunt().boostT[k])||0)-Date.now())/1000)); }
 // 아군 배치 — 보유 수가 바뀌거나 라운드가 시작될 때 다시 세운다(월드 좌표, 캐릭터가 원점)
-function hbLayoutAllies(){ const S=_hb; if(!S) return; const st=hbCharStats();
+// 기지 타일 → 전장 개체. 타일이 단일 소스이므로 좌표를 여기서 만들어내지 않는다(초소만 예외: 동료가 그 둘레를 돈다).
+// 벙커 체력은 재배치 때마다 되살아나면 안 되므로 타일에 남긴 hp를 이어받는다.
+function hbLayoutBase(){ const S=_hb; if(!S) return; const st=hbCharStats();
   S.allies=[]; S.turrets=[]; S.bunkers=[];
-  const n1=hbBuildN('ally');
-  for(let i=0;i<n1;i++){ const a=i/Math.max(1,n1)*Math.PI*2;
-    S.allies.push({x:Math.cos(a)*52, y:Math.sin(a)*52, ph:a, cdT:Math.random()*.5, ico:'🤝'}); }
-  const n2=hbBuildN('turret');
-  for(let i=0;i<n2;i++){ const a=(i+.5)/Math.max(1,n2)*Math.PI*2;
-    S.turrets.push({x:Math.cos(a)*92, y:Math.sin(a)*92, cdT:Math.random()*.5, ico:'🔫'}); }
-  const n3=hbBuildN('bunker');
-  for(let i=0;i<n3;i++){ const a=Math.PI*(i?1.5:.5);
-    S.bunkers.push({x:Math.cos(a)*70, y:Math.sin(a)*70, hp:st.hpMax*HB_BUNKER_HP, hpMax:st.hpMax*HB_BUNKER_HP, ico:'🧱'}); }
+  const T=hbBase().tiles;
+  for(const q in T){ const t=T[q], B=HB_STRUCT[t.k]; if(!B) continue;
+    const p=q.split(','), gx=+p[0], gy=+p[1];
+    const x=hbTx(gx)+(B.w-1)*HB_TILE/2, y=hbTx(gy)+(B.h-1)*HB_TILE/2;   // 점유 영역의 중심
+    if(t.k==='post'){ const a=((gx*7+gy*13)%12)/12*Math.PI*2;   // 위상은 타일에서 결정 — 난수로 두면 재배치마다 위치가 바뀐다
+      S.allies.push({ px:x, py:y, x:x+Math.cos(a)*HB_ALLY_ORB, y:y+Math.sin(a)*HB_ALLY_ORB, ph:a, cdT:0, ico:'🤝' }); }
+    else if(t.k==='turret') S.turrets.push({ x, y, cdT:0, ico:'🔫' });
+    else if(t.k==='bunker'){ const mx=st.hpMax*HB_BUNKER_HP;
+      S.bunkers.push({ x, y, q, hp:(t.hp==null?mx:Math.min(t.hp,mx)), hpMax:mx, ico:'🧱' }); } }
   const eq=((typeof PROF==='function'&&PROF().equip)||[]).slice(0,profPetSlots());
   S.pets=eq.map((id,i)=>({ id, ico:(PROF_PETS[id]&&PROF_PETS[id].emoji)||'🐾',
     ph:i/Math.max(1,eq.length)*Math.PI*2, x:0, y:0, cdT:Math.random()*.5 })); }
+function hbLayoutAllies(){ return hbLayoutBase(); }   // 옛 이름 유지(호출부·스모크가 쓴다)
 // 아군 한 명의 사격 — 가장 가까운 적을 친다(공용: 동료·펫·터렛)
 function hbUnitFire(u, dps, rangeMul, dt){ const S=_hb, c=S.char;
   u.cdT-=dt; if(u.cdT>0) return;
@@ -6002,7 +6069,8 @@ function hbStart(){ const cv=document.getElementById('hbCv'); if(!cv) return;
 // ⚠ 여기서 반드시 저장한다. 처치 보상은 메모리에만 있어서, 다음 화면의 loadMeta()가 그대로 덮어쓴다(재화가 사라지던 원인).
 // ⚠ 3D 캔버스는 공용이라 떠날 때 무조건 반납한다(안 하면 유즈맵 3D가 사라진다).
 function hbStop(){ if(_hbRaf) cancelAnimationFrame(_hbRaf); _hbRaf=0;
-  if(_hb){ _hb.bg=true; _hbDirty=false; if(typeof saveMeta==='function') saveMeta(); }
+  if(_hb){ _hb.bg=true; _hb.arm=null; _hbDirty=false; if(typeof saveMeta==='function') saveMeta(); }
+  if(typeof hbArmBtns==='function') hbArmBtns();   // 🧱 배치 중이었으면 확정 버튼도 걷는다(안 그러면 다른 화면 위에 남는다)
   hb3dDetach(); }
 // 전투를 진짜로 끝낼 때(로그아웃) — 진행 상태까지 버린다
 function hbEnd(){ hbStop(); if(_hbTick) clearInterval(_hbTick); _hbTick=0; if(_hb) _hb.on=false; _hb=null; }
@@ -6042,7 +6110,8 @@ function hbResize(){ const S=_hb, cv=S.cv, w=cv.clientWidth||1, h=cv.clientHeigh
   S.cx=w/2-camX*S.k; S.cy=(S.vTop+S.vBot)/2-camY*S.k;
   if(S.char.px==null){ S.char.x=0; S.char.y=0; S.char.tx=0; S.char.ty=0; S.char.px=1; } }   // 최초 1회만 원점 — 그 뒤로는 걸어다닌 자리를 지킨다
 function hbSpawnWave(){ const S=_hb, n=hbFoeCount(S.round,S.wave);
-  if(S.wave===1) for(const b of S.bunkers) b.hp=b.hpMax;          // 라운드 시작 = 벙커 수리
+  if(S.wave===1) for(const b of S.bunkers){ b.hp=b.hpMax;         // 라운드 시작 = 벙커 수리
+    if(b.q){ const _bt=hbBase().tiles[b.q]; if(_bt) _bt.hp=b.hp; } }
   S.waveT=HB_WAVE_S; S.pend.length=0;
   const D=hbDun(S.dg);
   const mk=()=>{ const i=(Math.random()*3)|0, r=HB_FOE_ROLE[i], f=D.foes[i];
@@ -6137,8 +6206,64 @@ function hbFieldTap(e){
   const t=e.target;
   if(t&&t.closest&&t.closest('button,a,input,select,textarea,.hbHudTop,.hbCard,.hbBar,.sheet,.pop,[onclick]')) return;   // UI 위는 이동이 아니다
   const r=document.getElementById('hbCv').getBoundingClientRect();
+  if(_hb.arm){ hbArmTo(e.clientX-r.left, e.clientY-r.top); return; }   // 🧱 배치 중이면 이동이 아니라 고스트를 옮긴다
   hbSetDest(e.clientX-r.left, e.clientY-r.top); }
 document.addEventListener('pointerdown', hbFieldTap, true);
+// ═══ 🧱 배치 흐름 — 고스트를 옮기고 ▶로 확정한다 ═════════════════════════════
+// ⛔ 관리자 건설(techPtrDown/G.tech)을 부르지 않는다 — HOME은 유즈맵 전역 G를 참조하면 안 된다.
+//    공용으로 쓰는 것은 확정/취소 버튼(.bArmBtns)뿐이고, 나머지는 여기 전용이다.
+function hbArmStart(k,gx,gy){ if(!_hb) return; _hb.arm={ k, gx, gy }; hbArmBtns(); }
+function hbArmCancel(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation();
+  if(_hb) _hb.arm=null; hbArmBtns(); if(typeof playSfx==='function') playSfx('ui_close'); }
+function hbArmTo(sx,sy){ const S=_hb, A=S&&S.arm; if(!A) return;
+  const B=HB_STRUCT[A.k]||{w:1,h:1};
+  A.gx=Math.max(-HB_GRID_R, Math.min(HB_GRID_R-B.w, hbGx((sx-S.cx)/S.k)-((B.w-1)>>1)));
+  A.gy=Math.max(-HB_GRID_R, Math.min(HB_GRID_R-B.h, hbGx((sy-S.cy)/S.k)-((B.h-1)>>1)));
+  hbArmBtns(); }
+// 배치 가능 판정 — 겹침·범위·해금(hbCanPlace) + 봉쇄 금지(hbSealCheck)
+function hbArmOk(){ const A=_hb&&_hb.arm; if(!A) return false;
+  return hbCanPlace(A.k,A.gx,A.gy) && !hbSealCheck(A.k,A.gx,A.gy); }
+function hbArmConfirm(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation();
+  const A=_hb&&_hb.arm; if(!A) return;
+  if(hbSealCheck(A.k,A.gx,A.gy)){ hmToast('길이 완전히 막힙니다'); return; }   // 자원은 깎지 않는다
+  if(!hbPlaceStruct(A.k,A.gx,A.gy)){ hmToast('여기엔 지을 수 없습니다'); return; }
+  _hb.arm=null; hbArmBtns();
+  if(typeof playSfx==='function') playSfx('ui_open');
+  renderBuildModal(); renderHome(); }
+// ▶확정 / ✕취소 — 공용 .bArmBtns를 재사용한다(CLAUDE.md 레지스트리). 위치는 고스트 아래 중앙.
+function hbArmBtns(){ const host=document.getElementById('hbArmBtns'); if(!host) return;
+  const S=_hb, A=S&&S.arm;
+  if(!A){ host.innerHTML=''; host.classList.add('hide'); return; }
+  const B=HB_STRUCT[A.k]||{w:1,h:1};
+  const wx=hbTx(A.gx)+(B.w-1)*HB_TILE/2, wy=hbTx(A.gy)+(B.h-1)*HB_TILE/2+B.h*HB_TILE/2;
+  host.classList.remove('hide');
+  host.style.left=(S.cx+wx*S.k)+'px'; host.style.top=(S.cy+wy*S.k)+'px';
+  const ok=hbArmOk();
+  host.innerHTML='<div class="bArmBtns" onpointerdown="event.stopPropagation()">'
+    +'<button class="bArmBtn ok'+(ok?'':' dis')+'" onclick="hbArmConfirm(event)" title="확정">'
+    +'<svg viewBox="0 0 24 24" width="15" height="15" style="display:block"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button>'
+    +'<button class="bArmBtn cancel" onclick="hbArmCancel(event)" title="취소">✕</button></div>'; }
+// ═══ 봉쇄 금지 — 이 배치가 어딘가를 가둬 버리는가? ═══════════════════════════
+// 맵 테두리에서 flood fill 해서, 막히지 않은 칸 중 도달 못 하는 칸이 하나라도 생기면 true.
+// 벽을 통과 불가로 둘 수 있는 근거가 이 검사다 — 적이 영원히 못 들어오는 상황이 만들어지지 않는다.
+function hbSealCheck(k,gx,gy){
+  const N=HB_GRID_R*2, blocked=new Uint8Array(N*N);
+  const at=(gx,gy)=>(gy+HB_GRID_R)*N+(gx+HB_GRID_R);
+  const T=hbBase().tiles;
+  const mark=(k2,bx,by)=>{ const B=HB_STRUCT[k2]; if(!B) return;
+    for(let dy=0;dy<B.h;dy++) for(let dx=0;dx<B.w;dx++){
+      const x=bx+dx, y=by+dy; if(hbInGrid(x)&&hbInGrid(y)) blocked[at(x,y)]=1; } };
+  for(const q in T){ const p=q.split(','); mark(T[q].k, +p[0], +p[1]); }
+  if(k) mark(k,gx,gy);                                   // 놓았다고 가정
+  // 테두리의 열린 칸에서 BFS
+  const seen=new Uint8Array(N*N), qq=new Int32Array(N*N); let h=0,t2=0;
+  const push=(x,y)=>{ if(!hbInGrid(x)||!hbInGrid(y)) return; const i=at(x,y);
+    if(seen[i]||blocked[i]) return; seen[i]=1; qq[t2++]=i; };
+  for(let g=-HB_GRID_R; g<HB_GRID_R; g++){ push(g,-HB_GRID_R); push(g,HB_GRID_R-1); push(-HB_GRID_R,g); push(HB_GRID_R-1,g); }
+  while(h<t2){ const i=qq[h++], x=(i%N)-HB_GRID_R, y=((i/N)|0)-HB_GRID_R;
+    push(x+1,y); push(x-1,y); push(x,y+1); push(x,y-1); }
+  for(let i=0;i<N*N;i++) if(!blocked[i] && !seen[i]) return true;   // 갇힌 빈칸이 있다
+  return false; }
 function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char; S.t+=dt;
   if(S.phase!=='down') hbWalk(S,c,dt);
   if(S.phase==='down'){ S.downT-=dt;
@@ -6172,7 +6297,8 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char; S.t+=dt;
     if(d>HB_STOP){ f.x+=dx/d*f.spd*spdMul*dt; f.y+=dy/d*f.spd*spdMul*dt;
       f.face=Math.atan2(dx, dy); f.mv=1; }            // ⚠ 게임과 같은 식: atan2(dx,dy). -dy로 쓰면 모델이 정반대를 본다
     else{ f.mv=0; f.cdT-=dt; if(f.cdT<=0){ f.cdT=1.1;
-      if(bk){ bk.hp-=f.atk; S.floats.push({x:bk.x,y:bk.y-20,tx:'-'+Math.round(f.atk),cl:'#c9a24a',t:0}); }
+      if(bk){ bk.hp-=f.atk; if(bk.q){ const _bt=hbBase().tiles[bk.q]; if(_bt) _bt.hp=Math.max(0,bk.hp); }   // 타일이 단일 소스 — 재배치해도 체력이 되살아나지 않는다
+        S.floats.push({x:bk.x,y:bk.y-20,tx:'-'+Math.round(f.atk),cl:'#c9a24a',t:0}); }
       else { c.hp-=f.atk; c.hitT=0; S.floats.push({x:c.x,y:c.y-26,tx:'-'+Math.round(f.atk),cl:'#ff8a9a',t:0}); }
       if(f._u) f._u.fireSeq=(f._u.fireSeq||0)+1; } } }   // 적도 같은 방식으로 공격 모션
   // 캐릭터는 늘 가장 가까운 적을 본다 — 게임의 '정지 + 대상 바라봄'(atan2(dx,dy))과 같은 규칙.
@@ -6198,9 +6324,10 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char; S.t+=dt;
         S.atkT=HB_ATK_SHOW; if(S._u) S._u.fireSeq=(S._u.fireSeq||0)+1;
         if(cb.hp<=0) hbBreakChest(cb); } } }
   // 아군 — 동료는 캐릭터 주위를 천천히 돌고, 터렛은 고정, 펫은 가깝게 붙어 돈다
-  for(const a of S.allies){ a.ph+=dt*0.5; a.x=Math.cos(a.ph)*52; a.y=Math.sin(a.ph)*52; hbUnitFire(a,HB_ALLY_DPS,1,dt); }
+  // 동료는 자기 초소 둘레를 돈다(원점이 아니라) · 펫은 캐릭터를 따라다닌다 — 둘 다 예전엔 원점 고정이라 걸어가면 뒤에 남았다
+  for(const a of S.allies){ a.ph+=dt*0.5; a.x=a.px+Math.cos(a.ph)*HB_ALLY_ORB; a.y=a.py+Math.sin(a.ph)*HB_ALLY_ORB; hbUnitFire(a,HB_ALLY_DPS,1,dt); }
   for(const t of S.turrets) hbUnitFire(t,HB_TURRET_DPS,HB_TURRET_RANGE,dt);
-  for(const q of S.pets){ q.ph+=dt*1.1; q.x=Math.cos(q.ph)*30; q.y=Math.sin(q.ph)*30; hbUnitFire(q,HB_PET_DPS,1,dt); }
+  for(const q of S.pets){ q.ph+=dt*1.1; q.x=c.x+Math.cos(q.ph)*30; q.y=c.y+Math.sin(q.ph)*30; hbUnitFire(q,HB_PET_DPS,1,dt); }
   if(S.atkT>0) S.atkT-=dt;                            // 공격 모션 남은 시간(끝나면 idle로)
   if(S.slowT>0) S.slowT-=dt;
   for(const k in S.skT) if(S.skT[k]>0){ S.skT[k]-=dt; if(S.skT[k]<=0) S.skDirty=true; }
@@ -6361,12 +6488,55 @@ function hbDrawHeal(x, S){
   x.strokeStyle='rgba(93,255,143,'+(0.38+0.22*pulse).toFixed(3)+')';
   x.lineWidth=1.6/(S.k||1); x.beginPath(); x.arc(0,0,R,0,6.2832); x.stroke();
   x.restore(); }
+// ═══ 🧱 기지 격자 그리기 ═════════════════════════════════════════════════════
+// ⚠ 캔버스 transform이 이미 걸려 있어 여기의 좌표·선 두께는 전부 월드 단위다.
+//    선은 줌이 바뀌어도 굵기가 일정해야 하므로 1/k로 나눈다(회복 구역 테두리와 같은 규칙).
+const _hbIco={};                                            // 건물 아이콘 이미지 캐시(키 = bld_*)
+function hbIcoImg(k){ let im=_hbIco[k];
+  if(im===undefined){ im=new Image(); im.src=ICO_DIR+'buildings/'+k+'.webp'; _hbIco[k]=im; }
+  return (im&&im.complete&&im.naturalWidth)?im:null; }
+function hbDrawGrid(x, S){ const R=hbOpenR(), lw=1/(S.k||1);
+  x.save();
+  x.fillStyle='rgba(120,180,255,.045)'; x.fillRect(-R,-R,R*2,R*2);        // 해금 구역 = 옅은 판
+  x.strokeStyle='rgba(140,190,255,.10)'; x.lineWidth=lw; x.beginPath();
+  for(let w=-R; w<=R; w+=HB_TILE){ x.moveTo(w,-R); x.lineTo(w,R); x.moveTo(-R,w); x.lineTo(R,w); }
+  x.stroke();
+  x.strokeStyle='rgba(140,190,255,.34)'; x.lineWidth=lw*1.6;              // 해금 경계
+  x.strokeRect(-R,-R,R*2,R*2);
+  if(S.arm){ const B=HB_STRUCT[S.arm.k]||{w:1,h:1}, ok=hbArmOk();         // 배치 고스트
+    const gx=hbTx(S.arm.gx)-HB_TILE/2, gy=hbTx(S.arm.gy)-HB_TILE/2;
+    x.fillStyle=ok?'rgba(124,224,255,.22)':'rgba(255,90,110,.26)';
+    x.fillRect(gx,gy,B.w*HB_TILE,B.h*HB_TILE);
+    x.strokeStyle=ok?'#7ee0ff':'#ff5a6e'; x.lineWidth=lw*2;
+    x.strokeRect(gx,gy,B.w*HB_TILE,B.h*HB_TILE); }
+  x.restore(); }
+function hbDrawStructs(x, S){ const T=hbBase().tiles;
+  for(const q in T){ const t=T[q], B=HB_STRUCT[t.k]; if(!B) continue;
+    const p=q.split(','), gx=+p[0], gy=+p[1];
+    const x0=hbTx(gx)-HB_TILE/2, y0=hbTx(gy)-HB_TILE/2, w=B.w*HB_TILE, h=B.h*HB_TILE;
+    const lw=1/(S.k||1);
+    x.save();
+    if(B.slab){                                                          // 벽 = 아이콘 없이 두꺼운 판(줄지어 서도 깔끔하다)
+      x.fillStyle='rgba(58,66,82,.94)'; x.fillRect(x0,y0,w,h);
+      x.fillStyle='rgba(255,255,255,.10)'; x.fillRect(x0,y0,w,h*0.3);    // 윗면 하이라이트
+      x.strokeStyle='rgba(12,16,24,.85)'; x.lineWidth=lw*1.5; x.strokeRect(x0,y0,w,h);
+    } else {
+      x.fillStyle='rgba(24,30,42,.72)'; x.fillRect(x0,y0,w,h);
+      x.strokeStyle='rgba(150,180,220,.45)'; x.lineWidth=lw; x.strokeRect(x0,y0,w,h);
+      const im=hbIcoImg(B.ico), pad=w*0.12;
+      if(im) x.drawImage(im, x0+pad, y0+pad, w-pad*2, h-pad*2);
+      else { x.fillStyle='#cfe0f5'; x.font=(w*0.6)+'px sans-serif'; x.fillText('🏗', x0+w/2, y0+h/2); } }
+    x.restore(); }
+  for(const b of S.bunkers){ if(b.hp<=0||b.hp>=b.hpMax) continue;         // 벙커 체력 — 닳았을 때만
+    x.fillStyle='rgba(0,0,0,.55)'; x.fillRect(b.x-13,b.y-24,26,3);
+    x.fillStyle='#c9a24a'; x.fillRect(b.x-13,b.y-24,26*Math.max(0,b.hp/b.hpMax),3); } }
 function hbDraw(){ const S=_hb, x=S.ctx, c=S.char; if(!x) return;
   x.setTransform(S.d,0,0,S.d,0,0); x.clearRect(0,0,S.w,S.h);
   // 카메라 = 월드 원점을 보이는 영역 중심으로 옮기고 배율 k를 건다.
   // 이 뒤의 좌표·글꼴 크기는 전부 월드 단위 → 접었다 펴면 적·글자·링이 캐릭터와 같은 비율로 커지고 작아진다.
   const K=S.d*(S.k||1); x.setTransform(K,0,0,K,S.d*(S.cx||S.w/2),S.d*(S.cy||S.h/2));
   hbFloor();                                                        // ⚔ 던전마다 다른 바닥(모든 것보다 먼저)
+  hbDrawGrid(x, S);   // 🧱 기지 격자 — 바닥 그림 위, 회복 구역 아래
   hbDrawHeal(x, S);   // 바닥 회복 구역 — ⚠ 반드시 hbFloor 뒤. 앞에 두면 배경 그림이 그대로 덮어 안 보인다
   if(S.slowT>0){ x.save(); x.globalAlpha=.10; x.fillStyle='#9ad0ff';
     x.fillRect(-S.w,-S.h,S.w*2,S.h*2); x.restore(); }               // 감속 중 화면 틴트
@@ -6380,11 +6550,7 @@ function hbDraw(){ const S=_hb, x=S.ctx, c=S.char; if(!x) return;
     if(ch.hp<ch.hpMax){ x.fillStyle='rgba(0,0,0,.55)'; x.fillRect(ch.x-11,ch.y-16,22,3);
       x.fillStyle='#ffd24a'; x.fillRect(ch.x-11,ch.y-16,22*Math.max(0,ch.hp/ch.hpMax),3);
       x.fillStyle='#ececec'; } }
-  for(const b of S.bunkers){ if(b.hp<=0) continue;                 // 벙커
-    x.font='22px sans-serif'; x.fillText(b.ico,b.x,b.y);
-    x.fillStyle='rgba(0,0,0,.55)'; x.fillRect(b.x-13,b.y-18,26,3);
-    x.fillStyle='#c9a24a'; x.fillRect(b.x-13,b.y-18,26*Math.max(0,b.hp/b.hpMax),3); }
-  for(const t of S.turrets){ x.font='19px sans-serif'; x.fillText(t.ico,t.x,t.y); }
+  hbDrawStructs(x, S);                                             // 🧱 기지 구조물(벽·초소·터렛·벙커) — 타일에서 읽는다
   for(const a of S.allies){ x.font='17px sans-serif'; x.fillText(a.ico,a.x,a.y); }
   for(const q of S.pets){ x.font='14px sans-serif'; x.fillText(q.ico,q.x,q.y); }
   for(const f of S.foes){ const el=!!f.elite, bs=!!f.boss;
@@ -6498,7 +6664,7 @@ function hb3dList(){ const S=_hb, W=S.w||1, H=S.h||1, k=S.k||1, out=[];
   return out; }
 let _hbUid=0;
 function hbFrame(){ if(!_hb||!_hb.on||_hb.bg){ _hbRaf=0; return; }   // 배경 모드 = 시뮬만(setInterval), 그리기 없음
-  hbPump(); hbResize(); hbDraw();
+  hbPump(); hbResize(); hbDraw(); if(_hb.arm) hbArmBtns();   // 🧱 고스트 버튼은 카메라를 따라간다
   if(hb3dReady()){ const cv=document.getElementById('cvMarine');
     if(cv){ hb3dAttach(); cv.style.display='block';
       // 관리자 랩과 같은 호출: M3D.sync(list, W, H, dt, [], [], null, k)
@@ -6883,7 +7049,7 @@ function renderGear(){ const body=document.getElementById('gearBody'); if(!body)
   const nb=body.querySelector('.bagBody'); if(nb&&keep) nb.scrollTop=keep;
   bagScrollHint(); }
 // 동료 — 전용 편성 시스템은 아직 없다. 실제로 동작하는 건 HOME 건설의 동료뿐이라 현황만 보여주고 그리로 보낸다.
-function _gearAllyPanel(){ const n=hbBuildN('ally'), mx=hbBuildMax('ally'), B=HB_BUILD.ally;
+function _gearAllyPanel(){ const n=hbStructN('post'), mx=hbBuildMax('post'), B=HB_STRUCT.post;
   let h='<div class="shopPanel"><div class="shopHead">동료<em>'+n+'/'+mx+'</em></div><div class="shopBody">';
   h+='<div class="shopNote">동료는 <b>사냥터</b>에서 고용해 함께 싸웁니다 · '+B.tip+'</div>';
   h+='<div class="shopRow"><span class="twPet">'+B.ico+'</span><div class="twRowInfo">'

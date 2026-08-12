@@ -648,10 +648,10 @@ async function groupLobby(){
     hbCloseInfo();
     // ③ 파워 해금 — 표시만 하는 항목이 없어야 한다(전부 실제 상한을 바꾼다)
     p.unlocks={};
-    const b4={pet:profPetSlots(), ally:hbBuildMax('ally'), tur:hbBuildMax('turret'), off:profOfflineCapMin()};
+    const b4={pet:profPetSlots(), ally:hbBuildMax('post'), tur:hbBuildMax('turret'), off:profOfflineCapMin()};   // ally_plus 해금 = 동료 초소(post) 상한
     p.unlocks={pet_slot3:1, ally_plus:1, turret_plus:1, pet_slot4:1, idle_12h:1};
     assert(profPetSlots()>b4.pet,'펫 슬롯 해금이 반영 안 됨: '+b4.pet+' → '+profPetSlots());
-    assert(hbBuildMax('ally')>b4.ally,'동료 최대 해금이 반영 안 됨');
+    assert(hbBuildMax('post')>b4.ally,'동료 최대 해금이 반영 안 됨');
     assert(hbBuildMax('turret')>b4.tur,'터렛 최대 해금이 반영 안 됨');
     assert(profOfflineCapMin()>b4.off,'오프라인 상한 해금이 반영 안 됨');
     // 해금 표의 모든 항목이 실제로 쓰이는지(코드에 배선된 id인지)
@@ -699,16 +699,19 @@ async function groupLobby(){
   await step('자동사냥: 스킬·부스트·동료·건설', async()=>{ skipIf(typeof hbUseSkill!=='function','Phase4 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(60); _hb.manual=true;
-    const p=PROF(); p.pcoin=999999; hbHunt().build={}; hbHunt().boostT={};
-    p.pets={slime:1}; p.equip=['slime']; hbLayoutAllies();
-    // ① 건설 — 사면 즉시 전장에 선다 · 최대치를 넘지 않는다 · 값이 오른다
-    const c0=hbBuildCost('ally'); hbBuy('ally');
-    assert(hbBuildN('ally')===1 && _hb.allies.length===1,'동료가 배치되지 않음');
-    assert(hbBuildCost('ally')>c0,'다음 구매 비용이 안 오름');
-    hbBuy('turret'); hbBuy('bunker');
+    const p=PROF(); p.pcoin=999999; hbHunt().boostT={};
+    // 🧱 기지는 타일이 단일 소스다. 테스트는 전 구역을 열고 시작한다(open을 크게 = 맵 전체 해금)
+    const wipe=()=>{ hbHunt().base={tiles:{},open:99}; hbLayoutBase(); };
+    const fill=(k,n)=>{ let c; for(let i=0;i<n && (c=hbFreeCell(k)); i++) hbPlaceStruct(k,c[0],c[1]); };
+    wipe(); p.pets={slime:1}; p.equip=['slime']; hbLayoutAllies();
+    // ① 건설 — 타일에 놓으면 즉시 전장에 선다 · 최대치를 넘지 않는다 · 값이 오른다
+    const c0=hbBuildCost('post'); fill('post',1);
+    assert(hbStructN('post')===1 && _hb.allies.length===1,'동료 초소가 배치되지 않음');
+    assert(hbBuildCost('post')>c0,'다음 구매 비용이 안 오름');
+    fill('turret',1); fill('bunker',1);
     assert(_hb.turrets.length===1 && _hb.bunkers.length===1,'터렛/벙커가 배치되지 않음');
-    for(let i=0;i<HB_BUILD.bunker.max+3;i++) hbBuy('bunker');
-    assert(hbBuildN('bunker')===HB_BUILD.bunker.max,'최대치를 넘겨 지어짐: '+hbBuildN('bunker'));
+    fill('bunker',HB_STRUCT.bunker.max+3);
+    assert(hbStructN('bunker')===HB_STRUCT.bunker.max,'최대치를 넘겨 지어짐: '+hbStructN('bunker'));
     assert(_hb.pets.length===1,'장착 펫이 전장에 안 나옴');
     // ② 아군 화력 — 같은 상황을 아군 없이/있이 돌려 처치 수를 비교한다
     //    ⚠ 아군 발사 주기는 캐릭터 쿨다운(c.cd)을 공유한다 — 캐릭터를 막으면 아군도 멈춰서 그 방식으론 못 잰다
@@ -716,10 +719,20 @@ async function groupLobby(){
       _hb.foes.length=0; _hb.pend.length=0; hbSpawnWave();
       // 사거리가 근접(34)이라 적이 화면 밖에서 걸어 들어올 시간이 필요하다 — 6초로는 도착 전에 끝난다
       const k=_hb.kills; for(let i=0;i<300;i++) hbStep(0.05); return _hb.kills-k; };
-    hbHunt().build={}; PROF().equip=[]; hbLayoutAllies();
-    const solo=runWave();
-    hbHunt().build={ally:HB_BUILD.ally.max, turret:HB_BUILD.turret.max}; hbLayoutAllies();
-    const withAllies=runWave();
+    // 구조물은 코어(회복 구역) 밖에만 지을 수 있으므로, 비교는 '기지 안에 서 있는' 상황에서 한다.
+    // 회복이 안 닿는 자리라 체력을 크게 잡아 사망으로 결과가 뒤집히지 않게 한다 — 재는 것은 화력뿐이다.
+    const HG=6, spot=[hbTx(HG),hbTx(HG)];
+    const _cSave={...(_hb.char)};   // ⚠ 뒤 스텝들은 캐릭터가 원점에 정상 체력으로 있다고 가정한다 — 반드시 되돌린다
+    // 스탯을 고정한다 — 앞 스텝이 남긴 값(사거리 1e9 등)에 맡기면 솔로가 혼자 다 잡아 차이가 안 난다
+    const runAt=()=>{ const c=_hb.char; c.x=spot[0]; c.y=spot[1]; c.tx=null; c.ty=null;
+      c.hpMax=1e9; c.hp=1e9; c.range=80; c.cd=0.6; c.atk=6; c.crit=0; c.regen=0; return runWave(); };
+    wipe(); PROF().equip=[]; hbLayoutAllies();
+    const solo=runAt();
+    for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]) hbPlaceStruct('post',HG+dx,HG+dy);
+    for(const [dx,dy] of [[1,1],[-1,-1],[1,-1],[-1,1]]) hbPlaceStruct('turret',HG+dx,HG+dy);
+    assert(_hb.allies.length&&_hb.turrets.length,'초소·터렛이 캐릭터 옆에 안 세워짐');
+    const withAllies=runAt();
+    Object.assign(_hb.char,_cSave); _hb.foes.length=0; _hb.pend.length=0;   // 원복(위치·체력·목적지)
     assert(withAllies>solo,'아군을 세워도 화력이 안 늘어남: '+solo+' → '+withAllies);
     PROF().equip=['slime']; hbLayoutAllies();
     // ③ 스킬 — 효과 + 쿨다운(쿨 중 재사용 불가)
@@ -760,8 +773,61 @@ async function groupLobby(){
         if(x>bL-14 && x<bR+14 && y>bT-14 && y<bB+14) hit++; }
       assert(hit===0,'스킬 바 위에 겹쳐 스폰된 적 '+hit+'기');
       _hb.foes.length=0; }
-    hbHunt().boostT={}; hbHunt().build={}; hbLayoutAllies();
+    hbHunt().boostT={}; hbHunt().base={tiles:{},open:99}; hbLayoutAllies();
     return '동료·터렛·벙커·펫 배치 ok · 스킬 3종 · 부스트 연장 ok'; });
+  // 🧱 기지 격자 — 타일이 단일 소스. 저장 왕복 · 겹침/범위 · 봉쇄 금지 · 옛 개수형 이관.
+  await step('기지 격자: 배치·저장 왕복·겹침/범위·봉쇄 금지', async()=>{ skipIf(typeof hbPlaceStruct!=='function','기지 격자 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    openHome(); await sleep(60); _hb.manual=true;
+    const p=PROF(); p.pcoin=9e6;
+    hbHunt().base={tiles:{},open:99}; hbLayoutBase();
+    // ① 좌표 왕복 — 타일 인덱스 ↔ 월드 좌표가 서로의 역이어야 한다
+    for(const g of [-HB_GRID_R,-3,0,7,HB_GRID_R-1]) assert(hbGx(hbTx(g))===g,'타일 좌표 왕복 실패: '+g);
+    // ② 배치 — 놓이고, 값이 오르고, 전장에 선다
+    const c0=hbBuildCost('turret');
+    assert(hbPlaceStruct('turret',5,5),'터렛 배치 실패');
+    assert(hbBase().tiles[hbKey(5,5)].k==='turret','타일에 기록되지 않음');
+    assert(hbBuildCost('turret')>c0,'다음 비용이 안 오름');
+    assert(_hb.turrets.length===1,'전장에 안 섬');
+    // ③ 겹침 — 같은 칸, 그리고 2×2 건물이 걸치는 칸 모두 막힌다
+    assert(!hbCanPlace('wall',5,5),'점유 칸에 겹쳐 놓임');
+    assert(hbPlaceStruct('bunker',8,8),'벙커 배치 실패');
+    for(const [gx,gy] of [[8,8],[9,8],[8,9],[9,9]]) assert(!hbCanPlace('wall',gx,gy),'2×2 점유 칸이 비어 보임: '+gx+','+gy);
+    assert(hbCanPlace('wall',10,8),'2×2 바깥인데 막힘');
+    // ④ 범위 — 맵 밖 · 코어(회복 구역) · 잠긴 구역엔 못 놓는다
+    assert(!hbCanPlace('wall',HB_GRID_R,0),'맵 밖에 놓임');
+    assert(!hbCanPlace('wall',0,0),'코어(회복 구역)에 놓임');
+    hbHunt().base.open=0;
+    assert(!hbCanPlace('wall',HB_GRID_R-1,HB_GRID_R-1),'잠긴 구역에 놓임');
+    hbHunt().base.open=99;
+    // ⑤ 저장 왕복 — saveMeta/loadMeta를 지나도 그대로여야 한다
+    saveMeta(); loadMeta();
+    assert(hbBase().tiles[hbKey(5,5)] && hbBase().tiles[hbKey(5,5)].k==='turret','저장 왕복에서 타일이 사라짐');
+    // ⑥ 봉쇄 금지 — 코어를 벽으로 두르는 마지막 한 칸은 거절되고 자원도 안 깎인다
+    hbHunt().base={tiles:{},open:99}; hbLayoutBase();
+    // ⚠ 남길 한 칸은 '변의 중간'이어야 한다 — 모서리를 비워도 4방향 이동으로는 여전히 갇힌다(대각 통과 없음)
+    const last=[0,-4];
+    for(let g=-4;g<=4;g++) for(const c of [[g,-4],[g,4],[-4,g],[4,g]]){
+      if(c[0]===last[0]&&c[1]===last[1]) continue; hbBase().tiles[hbKey(c[0],c[1])]={k:'wall'}; }
+    assert(hbSealCheck(null,0,0)===false,'입구가 열려 있는데 이미 봉쇄로 판정됨');
+    assert(hbSealCheck('wall',last[0],last[1])===true,'마지막 한 칸이 봉쇄로 판정되지 않음');
+    const coin=p.pcoin;
+    hbArmStart('wall',last[0],last[1]);
+    assert(hbArmOk()===false,'봉쇄가 되는 자리인데 확정 가능으로 표시됨');
+    hbArmConfirm();
+    assert(!hbBase().tiles[hbKey(last[0],last[1])],'봉쇄되는데도 지어짐');
+    assert(p.pcoin===coin,'거절됐는데 자원이 깎임');
+    // 벽을 하나 비워 두면(입구) 통과해야 한다
+    assert(hbSealCheck('wall',10,10)===false,'막지 않는 자리인데 봉쇄로 판정됨');
+    hbArmCancel();
+    // ⑦ 옛 개수형(hunt.build) → 타일 이관
+    const H=hbHunt(); delete H.base; H.build={ally:2,turret:1,bunker:1};
+    const B=hbBase();
+    assert(hbStructN('post')===2 && hbStructN('turret')===1 && hbStructN('bunker')===1,
+      '옛 보유분 이관 실패: post '+hbStructN('post')+' / turret '+hbStructN('turret')+' / bunker '+hbStructN('bunker'));
+    assert(!Object.keys(H.build).length,'이관 후에도 옛 개수형이 남음');
+    hbHunt().base={tiles:{},open:1}; hbLayoutBase(); saveMeta();
+    return '왕복·겹침·범위·저장·봉쇄차단·이관 ok'; });
   // Phase 2 — 던전 1~10 해금 · 엘리트 · 장비 뽑기권(드랍 + 소비처)
   await step('자동사냥: 던전 해금 · 엘리트 · 뽑기권', async()=>{ skipIf(typeof hbGoDungeon!=='function','던전 선택 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
@@ -1015,6 +1081,9 @@ async function groupLobby(){
     skipIf(typeof openHome!=='function','HOME 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(80); _hb.manual=true;
+    // 재화 자릿수가 겹침 판정을 좌우한다 — 앞선 스텝이 남긴 잔액에 맡기면 간헐적으로 실패한다. 고정해 둔다.
+    PROF().pcoin=1234; PROF().gas=12; PROF().gem=3; if(typeof updateCurBar==='function') updateCurBar();
+    await sleep(20);
     const ph=$('phone').getBoundingClientRect();
     // ① 킬수 표시는 사라졌다(요청) — 요소 자체가 없어야 한다
     assert(!$('hbKill'),'킬수 표시가 아직 남아 있음');
