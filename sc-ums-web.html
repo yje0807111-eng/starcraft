@@ -81,6 +81,10 @@
     font-family:var(--font-ko);overflow:hidden}
   /* 모바일 고정 비율 — 세로로 긴 요즘 폰(963:1997 ≈ 1:2.074). 비율은 아래 두 변수 한 곳에서만 정한다.
      화면이 작으면 비율을 유지하며 축소. 패널 폭이 변해도 폰 모양은 불변. */
+  /* 🪟 팝업 카드 공통 규격 — 유즈맵·난이도·방찾기·방만들기·대기실이 전부 이 값을 쓴다.
+     ⚠ 값이 흩어지면 반드시 어긋난다(선례: 높이 555 vs 564 · 여백 18 vs 20 · 92%가 322 vs 326).
+     크기·여백·딤을 바꾸려면 여기만 고칠 것. */
+  :root{--popW:92%;--popMaxW:350px;--popH:min(564px,90%);--popPad:20px;--popDim:rgba(2,3,6,.84)}
   :root{--phW:963;--phH:1997;--navH:61px;--curH:34px}   /* 하단 바 높이 61px = 963기준 ≈150px (네비·유즈맵 탭바 공용) */
   #phone{width:390px;height:calc(390px * var(--phH) / var(--phW));aspect-ratio:var(--phW)/var(--phH);position:relative;
     /* 게임 배경 우주 타일(space_bg)을 캔버스와 같은 380px 스케일로 프레임 전체에 이어지게 — 어둡게 덮어 콘솔 가독성 유지 */
@@ -1660,7 +1664,7 @@
   #ovBtn,#ovBtn2.ghost{transform:none}
   #ovBtn:active,#ovBtn2.ghost:active{transform:translateY(1px)}
   /* 멀티플레이 대기실(로비) */
-  #lobby{position:absolute;inset:0;z-index:46;display:flex;align-items:center;justify-content:center;padding:18px;background:transparent}   /* 대기실 배경 사용(::before) */
+  #lobby{position:absolute;inset:0;z-index:46;display:flex;align-items:center;justify-content:center;padding:var(--popPad);background:var(--popDim);backdrop-filter:blur(3px)}   /* 대기실 배경 사용(::before) */
   #lobby.hide{display:none}
   /* 대기실 배경: waiting_room_bg.png 전체 cover(9:16), 중앙은 어둡게(UI 패널용) */
   #lobby::before{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;transform-origin:center center;
@@ -1670,7 +1674,7 @@
     background:
       radial-gradient(ellipse 78% 60% at 50% 50%, rgba(2,3,8,.72), rgba(2,3,8,.3) 70%),
       linear-gradient(180deg, rgba(2,3,8,.9) 0%, rgba(2,3,8,.35) 22%, rgba(2,3,8,.35) 78%, rgba(2,3,8,.92) 100%)}
-  .lbCard{width:92%;max-width:350px;height:555px;max-height:90%;overflow:hidden;padding:18px;display:flex;flex-direction:column}   /* 방찾기 카드와 폭·높이 통일(92%/350/555) · 작은 화면은 max-height 90%가 캡, 남는 높이는 플레이어 그리드(flex)가 흡수 */
+  .lbCard{width:var(--popW);max-width:var(--popMaxW);height:var(--popH);max-height:90%;overflow:hidden;padding:var(--popPad);display:flex;flex-direction:column}   /* 방찾기 카드와 폭·높이 통일(92%/350/555) · 작은 화면은 max-height 90%가 캡, 남는 높이는 플레이어 그리드(flex)가 흡수 */
   /* 대기실 채팅 = 보기영역 + 입력줄 일체형(로비 전체채팅과 동일 구조) · 4~5줄 */
   .lbChatWrap{flex:1 1 0;min-height:0;display:flex;flex-direction:column;overflow:hidden;margin-bottom:10px;border-radius:var(--r-bar);   /* 남는 높이만 흡수(basis 0) — 메시지가 쌓여도 플레이어 슬롯을 밀지 않음 */
     background:rgba(0,0,0,.3);border:1px solid var(--metal-edge)}
@@ -1776,9 +1780,9 @@
   .lbStart:disabled{cursor:default;opacity:.7}
   .lbLeave:active,.lbStart:active{transform:translateY(1px)}
   /* 방 찾기(룸 리스트) */
-  #rooms{position:absolute;inset:0;z-index:46;display:flex;align-items:center;justify-content:center;padding:20px;background:transparent}   /* 로비 배경 사용(::before) */
+  #rooms{position:absolute;inset:0;z-index:46;display:flex;align-items:center;justify-content:center;padding:var(--popPad);background:var(--popDim);backdrop-filter:blur(3px)}   /* 로비 배경 사용(::before) */
   #rooms.hide{display:none}
-  .rmCard{width:92%;max-width:350px;max-height:90%;display:flex;flex-direction:column;padding:18px 18px 22px}
+  .rmCard{width:var(--popW);max-width:var(--popMaxW);height:var(--popH);max-height:90%;display:flex;flex-direction:column;padding:var(--popPad)}
   .rmHead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
   .rmTitle{font-size:17px;font-weight:800;color:#eef1f6;text-shadow:0 1px 3px rgba(0,0,0,.65);letter-spacing:.5px}   /* 제목 = 화이트 통일 */
   .rmHeadR{display:flex;align-items:center;gap:8px;flex:0 0 auto}
@@ -1821,7 +1825,7 @@
   .riNum{font-family:var(--font-num);font-weight:800;color:var(--hud);margin-right:5px}
   .riLock{font-size:var(--fs-sm);color:var(--warn);margin-right:3px}
   /* 방 만들기 모달 */
-  #createPanel{position:absolute;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:20px}   /* 방찾기(#rooms)와 동일 패딩 → 카드 폭 일치 */
+  #createPanel{position:absolute;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:var(--popPad);background:var(--popDim);backdrop-filter:blur(3px)}   /* 방찾기(#rooms)와 동일 패딩 → 카드 폭 일치 */
   #createPanel.hide{display:none}
   /* ===== 공통 HUD 카드(방 만들기 스타일로 통일): 반투명 + 각진 외형 + 네온 그라데이션 테두리 ===== */
   .cpCard,.rmCard,.lbCard,.authCard,.moCard,.foCtxCard,.ptInviteCard{position:relative;
@@ -1859,7 +1863,7 @@
   #soloDiffPanel.hide{display:none}
   /* 난이도 선택 = 유즈맵 팝업(.moCard)과 같은 크기. 두 팝업이 이어서 뜨므로 크기가 다르면 화면이 튄다.
      ⚠ .moCard 값을 바꾸면 여기도 같이 바꿀 것 — 같아야 하는 두 값이다. */
-  #soloDiffPanel .cpCard{width:92%;max-width:350px;height:min(564px,90%);max-height:90%;
+  #soloDiffPanel .cpCard{width:var(--popW);max-width:var(--popMaxW);height:var(--popH);max-height:90%;
     display:flex;flex-direction:column;overflow:hidden}
   /* 스크롤바가 안 생기게 여백을 줄여 내용을 카드 안에 넣는다(넘침 8px → 여백 24px 확보) */
   #soloDiffPanel .moDiffBtns{flex:1 1 auto;min-height:0;overflow:hidden;gap:6px;margin-bottom:8px}
@@ -2674,7 +2678,10 @@
   .curBar .res:hover .curPlus svg{stroke:#f8c453}   /* 숫자 높이에 맞춰 축소 */
   #phone.curOn .appScreen{padding-top:var(--curH)}
   #phone.curOn #mapSelect{padding-top:calc(var(--curH) + 12px)}
-  #phone.curOn #soloDiffPanel{padding-top:var(--curH)}   /* 난이도 팝업은 .appScreen이 아니라 위 규칙에서 빠진다 — 유즈맵 팝업과 위치를 맞추려면 같은 여백이 필요 */
+  /* 팝업은 재화 바 여백을 받지 않는다 — 카드가 가운데 정렬이라 바와 겹치지 않고,
+     여백을 받으면 재화 바가 없는 화면(방찾기·대기실)의 팝업과 7px 어긋난다. */
+  #phone.curOn #modeSheet,#phone.curOn #soloDiffPanel,
+  #phone.curOn #rooms,#phone.curOn #createPanel,#phone.curOn #lobby{padding-top:var(--popPad)}
   #mapSelect{padding-bottom:calc(var(--navH) + 12px)}   /* 하단 네비에 내용이 가리지 않게 */
   #phone.inGame #curBar{display:none}   /* 실경기(인게임)에선 자체 HUD(#hudR) 사용 — 공용 바 숨김 */
   /* ⚔ 던전 허브 — 던전 목록 카드(배너) + 팝업(소탕/입장) */
@@ -3270,8 +3277,8 @@
   /* ── 사이버펑크 HUD 모달 ── */
   
   /* 방 만들기/찾기/대기실 카드와 통일: 반투명 + 각진 외형 + 네온 그라데이션 테두리 */
-  .moCard{width:92%;max-width:350px;height:min(564px,90%);max-height:90%}   /* 전 유즈맵 공통 높이(오토배틀 기준) — 항목이 많으면 카드를 늘리지 말고 리스트를 축소 */
-  .moInner{position:relative;z-index:1;width:100%;height:100%;text-align:center;display:flex;flex-direction:column;justify-content:center;padding:26px 22px 22px}
+  .moCard{width:var(--popW);max-width:var(--popMaxW);height:var(--popH);max-height:90%}   /* 전 유즈맵 공통 높이(오토배틀 기준) — 항목이 많으면 카드를 늘리지 말고 리스트를 축소 */
+  .moInner{position:relative;z-index:1;width:100%;height:100%;text-align:center;display:flex;flex-direction:column;justify-content:center;padding:var(--popPad) 22px}
   .moClose{position:absolute;top:11px;right:12px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;z-index:2;
     color:#9fb0c2;background:rgba(255,255,255,.04);border:1px solid var(--metal-edge);border-radius:var(--r-lg);cursor:pointer;
     transition:all .18s}
@@ -3343,7 +3350,7 @@
   .cpStepVal{flex:0 0 auto;width:48px;text-align:center;font-family:var(--font-num);font-size:17px;font-weight:800;color:#fff;
     padding:5px 0;border-radius:8px;background:rgba(0,0,0,.3);border:1px solid var(--metal-edge);font-variant-numeric:tabular-nums}
   /* 방 만들기 창 = 방찾기 창 크기로 확대·고정(폭 350) + 하단 버튼 고정 */
-  #createPanel .cpCard{width:92%;max-width:350px;height:min(555px,92%);padding:15px 16px 16px;display:flex;flex-direction:column;box-sizing:border-box}   /* 방찾기 카드 높이(555)에 맞춤 */
+  #createPanel .cpCard{width:var(--popW);max-width:var(--popMaxW);height:var(--popH);max-height:90%;padding:var(--popPad);display:flex;flex-direction:column;box-sizing:border-box}   /* 방찾기 카드 높이(555)에 맞춤 */
   #createPanel .cpCard.noDiff{height:auto;max-height:92%}   /* 난이도 없는 유즈맵 = 빈 공간 없이 내용만큼 */
   #createPanel .cpTitle{margin-bottom:11px}
   #createPanel .cpBtns{margin-top:auto;flex:0 0 auto;padding-top:11px}   /* 버튼은 항상 하단 고정(화면 밖으로 안 나감) */
