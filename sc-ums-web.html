@@ -2594,10 +2594,8 @@
   .hmUpgHead{position:relative;width:100%;display:flex;align-items:center;gap:9px;padding:9px 12px;
     font-size:15px;font-weight:400;letter-spacing:.11em;
     color:#ececec;cursor:pointer;background:none;border:none;border-bottom:none;text-align:left}
-  /* 머리줄 아래 스캔라인 — 팝업 .setTitle::after 와 같은 규칙 */
-  .hmUpgHead::after{content:'';position:absolute;left:12px;right:12px;bottom:0;height:1px;
-    background:linear-gradient(90deg,rgba(var(--hmAccRGB),.5) 0%,rgba(var(--hmAccRGB),.5) 62%,transparent)}
-  /* 제목 — 흰색 단색. 색은 스캔라인과 구매 버튼이 맡고 제목은 조용히 읽히기만 한다 */
+  /* 머리줄 아래 스캔라인은 뺐다(2026-08-12) — 바로 아래 탭 띠가 이미 상자라 선이 두 겹으로 보였다 */
+  /* 제목 — 흰색 단색. 색은 구매 버튼과 선택 탭의 광원이 맡고 제목은 조용히 읽히기만 한다 */
   .hmUpgTtl{flex:1;font-weight:400;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.85)}
   .hmUpgChev{flex:none;width:9px;height:9px;border-right:2px solid #9a9a9a;border-bottom:2px solid #9a9a9a;
     transform:rotate(45deg) translate(-2px,-2px);transition:transform .16s}
@@ -2666,7 +2664,7 @@
   /* ── 사냥터 업그레이드 ── */
   /* 탭 띠 = 장비창 섹션 바와 같은 컴포넌트(.pdSeg/.pdSegInd/.pdSegBtn · segNavHTML).
      생김새는 전부 공용 규칙이 갖는다 — 여기 오버라이드는 폭·글자뿐이다. */
-  .hmUpgBar{display:flex;align-items:stretch;gap:6px;padding:4px 8px;border-bottom:1px solid rgba(255,255,255,.07)}
+  .hmUpgBar{display:flex;align-items:stretch;gap:6px;padding:4px 8px}   /* 아래 실선 없음 — 탭 띠 자체가 상자라 선이 겹친다 */
   .hmUpgTabs{flex:1 1 0;display:flex;align-items:stretch;min-width:0}
   /* 탭 띠의 생김새는 전부 공용 .pdSeg 가 갖는다(장비창 섹션 바와 같은 것). 여기서 덮는 건 아래 둘뿐:
      ① 수량 칩 옆에서 남는 폭을 다 쓴다  ② 글자 크기. 구역색은 segNavHTML 이 --segCol 로 인라인에 실어 준다. */
@@ -2773,7 +2771,9 @@
   .navBar{position:absolute;left:0;right:0;bottom:0;z-index:62}
   /* 하단 바 공용 룩(단일 소스) — 전역 네비(.navBar)와 유즈맵 인게임 탭바(#tabs)가 같은 규칙을 쓴다.
      관리자·네모네모·오토배틀 전부 #tabs를 쓰므로 여기 한 곳만 고치면 모두 반영된다. */
+  /* 윗변의 붉은 선 = 유즈맵 선택 배경(lobby_bg)의 위·아래 끝을 긋는 그 선과 같은 색(실측 rgb(163,38,55)) */
   .navBar,#tabs{height:var(--navH);display:flex;align-items:stretch;padding:7px 8px;
+    border-top:1px solid rgb(163,38,55);
     background:linear-gradient(180deg,rgba(2,3,6,.55),#010204 46%)}   /* 순검정 바탕 — 그 위에 프레임 한 겹이 떠 있다 */
   .navBar::before,#tabs::before{content:'';position:absolute;inset:7px 8px;pointer-events:none;
     background:rgba(4,6,10,.34);border:1px solid rgba(255,255,255,.13)}   /* 상단 재화 바 설정 버튼과 같은 값(공용 프레임 언어) */
@@ -2909,17 +2909,14 @@
   .navIt,#tabs .tab{position:relative;z-index:1;flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
     cursor:pointer;font-family:var(--font-ti);font-size:11px;font-weight:400;letter-spacing:.1em;color:rgba(234,238,245,.5);
     text-shadow:0 1px 3px rgba(0,0,0,.95);
-    background:none;border:0;transition:color .13s,background .13s}
+    background:none;border:1px solid transparent;transition:color .13s,border-color .13s}
   .navIt+.navIt::before,#tabs .tab+.tab::before{content:'';position:absolute;left:0;top:13px;bottom:13px;width:1px;
     background:rgba(255,255,255,.07)}   /* 칸 구분 헤어라인 — 한 덩어리 패널을 나눈 것으로 읽히게 */
   .navIt .ic,#tabs .tab .ti svg{width:23px;height:23px;display:block;margin:0 auto;stroke-width:1.9;
     filter:drop-shadow(0 1px 3px rgba(0,0,0,.9))}
-  /* 선택 표시 = 안쪽이 더 어두운 직사각 상자 + 약간 밝은 회색 테두리. 색을 채우지 않고 명암으로만 구분한다(DESIGN.md 볼륨1) */
-  .navIt.on,#tabs .tab.on{color:#f8c453;background:rgba(240,180,41,.07)}   /* 활성 = 골드(재화 [+]·팝업 CTA와 같은 언어) */
-  .navIt.on::after,#tabs .tab.on::after{content:'';position:absolute;left:7px;right:7px;top:0;height:2px;
-    background:linear-gradient(90deg,transparent,#f0b429 20%,#ffe9ad 50%,#f0b429 80%,transparent);
-    box-shadow:0 1px 9px rgba(240,180,41,.55)}   /* 프레임 위를 타고 켜지는 골드 라인 */
-  .navIt.on .ic,#tabs .tab.on .ti svg{filter:drop-shadow(0 0 6px rgba(240,180,41,.45)) drop-shadow(0 1px 3px rgba(0,0,0,.9))}
+  /* 선택 표시 = 테두리 하나뿐. 글로우도 라인도 두지 않는다(DESIGN.md 볼륨1 — 색을 채우지 않는다).
+     ⚠ 테두리는 모든 칸이 늘 갖고 있고 색만 바뀐다 — flex:1 1 0 이라 선택된 칸에만 주면 그 칸이 2px 넓어져 글자가 흔들린다. */
+  .navIt.on,#tabs .tab.on{color:#f8c453;background:none;border-color:rgba(255,255,255,.28)}
   .navIt:active,#tabs .tab:active{opacity:.8}
   /* 마을 상단 설정 — 좌측 로그아웃과 짝 */
   .twGear{flex:0 0 auto;font-family:inherit;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;
