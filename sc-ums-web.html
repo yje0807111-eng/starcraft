@@ -176,12 +176,15 @@
   .pIco.ic-gold{color:var(--gold)}      /* 재화·보상·강화 */
   .pIco.ic-info{color:var(--info)}      /* 정보·일반 기능 */
   .pIco.ic-danger{color:var(--neon)}    /* 위험·파괴·나가기 */
-  .pIco.ic-ok{color:var(--ok)}          /* 완료·확정 */
-  .pIco.ic-warn{color:var(--warn)}      /* 조건 미충족 경고 */
+/* 완료·확정 */
+/* 조건 미충족 경고 */
   .pIco .mIco{width:22px;height:22px;margin:0;vertical-align:0;color:inherit}
   .cgPort .pIco .mIco,.qpro .pIco .mIco{width:24px;height:24px}
   .pIco.sm .mIco{width:12px;height:12px}   /* 배지·버튼 안 작은 아이콘 */
   .pIco.md .mIco{width:15px;height:15px}
+  /* 채팅 표시 끄기 — 플레이어 채팅·입력창·로비 채팅만 감춘다(시스템 알림 .cmsg.sys 는 남긴다) */
+  body.chatOff #chatLog .cmsg:not(.sys){display:none}
+  body.chatOff #chatBar,body.chatOff .msChatWrap{display:none}
   #chatBar{position:absolute;left:9px;right:74px;bottom:9px;z-index:18;display:flex;gap:6px}   /* 우하단 우측열 버튼(58px 정사각) 한 줄 자리만 비움 → 채팅 영역 확장 */
   /* 채팅창·전송 — 반투명 어두운 내부 + 테두리/텍스트 또렷하게(밝은 맵 위에서도 가독) */
   #chatField{flex:1;min-width:0;background:rgba(6,12,18,.55);border:1px solid rgba(0,229,255,.42);border-radius:var(--r-md);color:#e9f7ff;font-size:var(--fs-lg);padding:9px 13px;outline:none;text-shadow:0 1px 2px #000;transition:border-color .15s}
@@ -430,7 +433,6 @@
   .hsTabDot{min-width:14px;height:14px;line-height:14px;margin-left:1px;padding:0 3px;border-radius:7px;
     background:var(--gold);color:#1a1206;font-size:9px;font-weight:900;text-align:center;box-shadow:0 0 6px rgba(255,210,74,.7)}
   .hsTabDot.hide{display:none}
-  .hsResult{font-size:var(--fs-md)!important;letter-spacing:0!important}
   #mergeFab{display:none!important}
   #mergeZone{display:none!important}
   /* 메인 홈 하단 — 공용 보스 파견 패널(주변 명령 버튼 톤: metal-edge + 레드 네온, 위계 구분) */
@@ -546,10 +548,7 @@
   .tab .tabDot{display:none;position:absolute;top:2px;left:calc(50% + 9px);color:#ff9a9a;font-family:var(--font-num);font-size:12px;font-weight:800;line-height:1;text-shadow:0 0 6px rgba(255,90,90,.85),0 1px 2px #000;pointer-events:none}
   .tab .tabDot.show{display:block}
 
-  .tabSet{flex:0 0 30px;padding:0;margin-left:0;margin-right:2px;opacity:.72}   /* 우측 고정폭 설정 칸 — 주 탭보다 작고 조용하게 */
-  .tabSet .ti{margin:0;line-height:0}
-  .tabSet .ti svg{width:15px;height:15px}
-  .tabSet.on{opacity:1}
+/* 우측 고정폭 설정 칸 — 주 탭보다 작고 조용하게 */
   /* 설정 팝업 */
   #settingsPop{position:absolute;inset:0;z-index:72;   /* 허브(60)·마을(60)·캐릭터(61)보다 위 */display:flex;align-items:center;justify-content:center;
     background-color:rgba(2,3,6,.62);
@@ -558,18 +557,12 @@
   #settingsPop.hide{display:none}
   /* 컨텍스트: 앱(로비/로그인)에선 게임 전용 항목 숨기고 로그아웃 표시 */
   #settingsPop.appCtx{background:rgba(2,3,6,.82)}                                       /* 뒤 화면 강하게 가림 */
-  #settingsPop.appCtx .setCard{background:linear-gradient(180deg,rgba(20,24,33,.985),rgba(8,10,15,.99))}   /* 거의 불투명(겹침 방지) */
-  #settingsPop.appCtx #si-mission,#settingsPop.appCtx #body-mission,#settingsPop.appCtx #si-spd,#settingsPop.appCtx #body-spd,#settingsPop.appCtx #setPauseBtn,#settingsPop.appCtx #setExit{display:none}
+  #settingsPop.appCtx .setCard{background:linear-gradient(180deg,rgba(25,25,25,.985),rgba(14,14,14,.99))}   /* 거의 불투명(겹침 방지) */
+  #settingsPop.appCtx #si-mission,#settingsPop.appCtx #body-mission,#settingsPop.appCtx #qrow-spd,#settingsPop.appCtx #body-spd,#settingsPop.appCtx #setPauseBtn,#settingsPop.appCtx #setExit{display:none}
   #settingsPop:not(.appCtx) #setLogout{display:none}
   .setLogout{margin-top:8px;width:100%;height:44px;padding:0;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-lg);font-weight:800;letter-spacing:.3px;cursor:pointer;
     color:#dfe7f0;background:rgba(255,255,255,.07);border:1px solid var(--glass-edge);transition:background .16s,border-color .16s}
   .setLogout:active{transform:translateY(1px);background:rgba(255,255,255,.1)}
-  /* 헤더 톱니바퀴(설정) 버튼 — 로비 */
-  .msGear{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;margin-left:3px;padding:0;cursor:pointer;
-    color:var(--txt-hud);background:none;border:none;transition:color .14s,transform .2s}
-  .msGear:hover{color:var(--neon)}
-  .msGear:active{transform:rotate(40deg)}
-  .msGear svg{width:17px;height:17px}
   /* 로그인 화면 우상단 설정 버튼 */
   /* 육각형 배너 — 아이콘(17px)보다 살짝만 큰 26px. 테두리는 같은 육각형을 1px 키워 뒤에 깐다(clip-path는 border를 잘라낸다) */
   .authGear{position:absolute;top:16px;right:16px;z-index:2;display:inline-flex;align-items:center;justify-content:center;
@@ -584,27 +577,19 @@
   .authGear svg{width:14px;height:14px}
   /* 반투명 + 각진 박스. 세로로 시원하게(기본 닫힌 상태 ~1.5배 높이) */
   /* 설정 창 = 열린 곳에 맞춘 톤. 게임 내부(기본) = 각진 콘솔 패널 + 청록 포인트 */
-  .setCard{--setAcc:#5cd6ff;--setAccS:rgba(92,214,255,.5);
+  .setCard{--setAcc:#ececec;--setAccS:rgba(255,255,255,.34);   /* 시안 폐기 — 중립 강조(DESIGN.md §2) */
     position:relative;width:86%;max-width:320px;padding:14px 14px 13px;color:var(--txt);box-sizing:border-box;max-height:92%;overflow:hidden;
     display:flex;flex-direction:column;
-    background:linear-gradient(160deg,rgba(19,24,35,.9),rgba(6,9,14,.93));border:1px solid var(--metal-edge);
+    background:linear-gradient(180deg,rgba(25,25,25,.9),rgba(14,14,14,.92));border:1px solid var(--metal-edge);
     clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px);
     box-shadow:0 16px 44px -12px #000,inset 0 1px 0 rgba(255,255,255,.05)}
   /* ══ 게임 안 창 = 이중 테두리 프레임 ══
      바깥 1px(금속 엣지) + 안쪽 1px(액센트 헤어라인). 선을 굵히지 않고 "두 겹"으로 화려하게.
      안쪽 선은 ::before에 같은 모양의 모서리 컷을 줘서 카드 윤곽을 따라간다. */
   .setCard,.ecCard,.ovCard{position:relative}
-  .setCard::before,.ecCard::before,.ovCard::before{content:'';position:absolute;inset:4px;pointer-events:none;z-index:0;
-    border:1px solid var(--frameAcc,rgba(240,180,41,.55));
-    /* 컷 길이는 카드와 동일한 11px — 짧게 주면 대각선이 평행하지 않아 모서리가 어긋난다 */
-    clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px)}
+  /* 안쪽 시안 헤어라인(이중 테두리)은 못 박아 냈다 — 팝업은 바깥 1px 하나로 끝낸다 */
   /* 코너 브래킷 — 위 양쪽 L자. 패널·팝업 공통 장식(디자인 시스템) */
-  .setCard::after{content:'';position:absolute;left:7px;right:7px;top:7px;height:15px;pointer-events:none;z-index:2;
-    background:
-      linear-gradient(90deg,var(--frameAcc,rgba(240,180,41,.85)) 0 15px,transparent 15px) top left/100% 1.5px no-repeat,
-      linear-gradient(180deg,var(--frameAcc,rgba(240,180,41,.85)) 0 15px,transparent 15px) top left/1.5px 100% no-repeat,
-      linear-gradient(270deg,var(--frameAcc,rgba(240,180,41,.85)) 0 15px,transparent 15px) top right/100% 1.5px no-repeat,
-      linear-gradient(180deg,var(--frameAcc,rgba(240,180,41,.85)) 0 15px,transparent 15px) top right/1.5px 100% no-repeat}
+  /* 코너 브래킷(금색 ㄱ자)은 못 박아 냈다 — 팝업은 면·테두리만으로 읽히게 한다 */
   .setCard>*,.ecCard>*,.ovCard>*{position:relative;z-index:1}
   #settingsPop.appCtx .setCard::before{display:none}   /* 게임 밖은 별도 방향 — 프레임 미적용 */
   .ecCard{--frameAcc:rgba(92,214,255,.5)}
@@ -613,7 +598,7 @@
   .ovCard.lose{--frameAcc:rgba(255,107,122,.6)}
   /* 바깥 화면(유즈맵 선택 등) = 라운드 글래스 팝업 + 메인 강조색 */
   #settingsPop.appCtx .setCard{--setAcc:var(--neon);--setAccS:var(--neon-soft);
-    border-radius:16px;clip-path:none;border:1px solid var(--metal-edge);
+    border:1px solid var(--metal-edge);   /* 라운드 16px → 챔퍼 — 업그레이드 패널과 같은 각진 모서리 */
     box-shadow:0 18px 46px -12px #000,0 0 0 1px var(--shade)}
   .setCard::-webkit-scrollbar{width:5px}
   .setCard::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
@@ -621,14 +606,43 @@
   /* 일시정지(상단) / 나가기(하단) */
   .setPause{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin:10px 0 0;height:44px;padding:0;cursor:pointer;
     font-family:inherit;font-size:var(--fs-lg);font-weight:800;letter-spacing:.3px;color:#dfe7f0;
-    --btnIn:rgba(92,214,255,.26);background:rgba(255,255,255,.07);border:1px solid var(--glass-edge);border-radius:var(--r-md);transition:background .16s,border-color .16s}
+    /* 하단 네비 '선택 안 된 칸'과 같은 면·테두리 */
+    border:1px solid transparent;border-radius:var(--r-bar);
+    background:var(--nav-plate) padding-box, var(--metal-ring) border-box;
+    transition:background .16s}
   .setPause .pIco{font-size:var(--fs-lg);color:var(--setAcc)}
-  .setPause.paused{color:var(--setAcc);border-color:var(--setAccS);background:rgba(255,255,255,.1)}
+  .setPause.paused{color:#fff;filter:brightness(1.3)}   /* 면·테두리는 네비 물성 그대로 — 상태는 밝기·글자로만 */
   .setPause:active{transform:translateY(1px)}
   .setPause.disabled{opacity:.4;pointer-events:none}   /* 일시정지 횟수 소진 */
   /* 항목 = 박스 나열 대신 하나의 패널 + 구분선 행(방 만들기 폼·대기실과 같은 방식) */
-  .setMenu{display:flex;flex-direction:column;min-height:0;overflow-y:auto;padding:0 12px;border-radius:var(--r-lg);
-    background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.014));border:1px solid var(--metal-edge);
+  /* 상단 즉시조작 묶음 — 업그레이드 칸(.hmUp)과 같은 검정 면 + 깎인 모서리 */
+  .setQuick{padding:0 12px;margin-bottom:9px;border:1px solid transparent;border-radius:var(--r-bar);
+    background:linear-gradient(180deg,#0a0a0a,#000) padding-box, var(--metal-ring-n) border-box;
+    clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
+  .setQRow{display:flex;align-items:center;justify-content:space-between;gap:8px;
+    padding:9px 0;font-size:var(--fs-lg);font-weight:700;color:#dbe3ec}
+  .setQRow+.setQRow{border-top:1px solid rgba(255,255,255,.07)}   /* 리스트와 같은 구분선 */
+  /* 켜짐/꺼짐 스위치 — 꺼짐 = 선택 안 된 네비 칸, 켜짐 = 선택된 칸 */
+  .setSw{position:relative;flex:0 0 auto;width:46px;height:25px;padding:0;cursor:pointer;
+    border:1px solid transparent;border-radius:var(--r-bar);   /* 알약 금지 — 라운드 토큰(0/3/6/9) */
+    background:var(--nav-plate) padding-box, var(--metal-ring) border-box;
+    transition:background .16s}
+  .setSw>i{position:absolute;top:2px;left:2px;width:19px;height:19px;border-radius:var(--r-bar);
+    background:linear-gradient(180deg,#9aa0aa,#5e646e);transition:left .16s,background .16s}
+  .setSw.on{background:var(--nav-plate-on) padding-box, var(--nav-ring-on-d) border-box}
+  .setSw.on>i{left:22px;background:linear-gradient(180deg,#fff,#ffb0b0)}
+  .setSw:active{transform:translateY(1px)}
+  /* 리스트 화살표는 오른쪽을 가리킨다(펼침이 아니라 다음 화면) */
+  .setArr{font-size:13px;color:var(--txt-mute)}
+  .setSoon{padding:34px 0;text-align:center;color:var(--txt-mute);font-size:var(--fs-lg)}
+  #setSubPop{position:absolute;inset:0;z-index:73;   /* 설정(72) 위에 한 겹 더 */
+    display:flex;align-items:center;justify-content:center;background-color:rgba(2,3,6,.5)}
+  #setSubPop.hide{display:none}
+  .setSubBody{min-height:0;overflow-y:auto;padding:2px 0 2px;
+    scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}
+  .setSubBody>.setBody{display:block;background:none;box-shadow:none;padding:2px 0 0;margin:0}   /* 리스트 안에서 쓰던 장식 제거 */
+  .setMenu{display:flex;flex-direction:column;min-height:0;overflow-y:auto;padding:0 12px;border-radius:var(--r-bar);
+    background:linear-gradient(180deg,#0a0a0a,#000);border:1px solid var(--metal-edge);   /* 업그레이드 칸(.hmUp)과 같은 검정 면 */
     scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}
   .setMenu::-webkit-scrollbar{width:5px} .setMenu::-webkit-scrollbar-thumb{background:rgba(120,140,170,.4);border-radius:3px}
   /* 배속 선택 — 세 칸 세그먼트(선택=강조색) + 아래 현재값 한 줄 */
@@ -654,7 +668,10 @@
   /* 위험 액션 = 채움 대신 붉은 글자·테두리만(차분하게) */
   .setExit{display:block;width:100%;margin:8px 0 0;height:44px;padding:0;cursor:pointer;
     font-family:inherit;font-size:var(--fs-lg);font-weight:800;letter-spacing:.3px;color:#ff9a9a;
-    --btnIn:rgba(255,120,120,.3);background:rgba(255,80,80,.08);border:1px solid rgba(255,80,80,.32);border-radius:var(--r-md);transition:background .16s,border-color .16s}
+    /* 하단 네비 '선택된 칸'과 같은 면·테두리 — 주의를 끌어야 하는 동작 */
+    border:1px solid transparent;border-radius:var(--r-bar);
+    background:var(--nav-plate-on) padding-box, var(--nav-ring-on) border-box;
+    transition:background .16s}
   .setExit:active{transform:translateY(1px);background:rgba(255,80,80,.14)}
   /* 나가기 확인 창 */
   #exitConfirm{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
@@ -664,7 +681,7 @@
   #exitConfirm.hide{display:none}
   /* 나가기 확인 = 설정 창과 같은 규격(각진 카드 · 제목+강조 언더라인 · 44px 버튼) */
   .ecCard{--ecAcc:#5cd6ff;width:86%;max-width:320px;padding:18px 14px 17px;box-sizing:border-box;text-align:center;
-    background:linear-gradient(160deg,rgba(19,24,35,.9),rgba(6,9,14,.93));border:1px solid var(--metal-edge);
+    background:linear-gradient(180deg,rgba(25,25,25,.9),rgba(14,14,14,.92));border:1px solid var(--metal-edge);
     clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px);
     box-shadow:0 16px 44px -12px #000,inset 0 1px 0 rgba(255,255,255,.05)}
   .ecTitle{position:relative;font-size:17px;font-weight:800;letter-spacing:.5px;color:#eaf1fb;text-shadow:0 1px 3px rgba(0,0,0,.65);
@@ -679,6 +696,8 @@
   /* 이중 테두리 = 바깥 border 1px + inset 1px 어두운 틈 + inset 2px 안쪽 선. 선을 굵히지 않는다 */
   .setPause,.setExit,.setLogout,.twBtn{
     box-shadow:inset 0 0 0 1px rgba(0,0,0,.55),inset 0 0 0 2px var(--btnIn,rgba(255,255,255,.1))}
+  /* ⚠ 위 이중 인셋은 새 테두리 위에 옆 링을 한 겹 더 긋는다 — 네비 물성을 쓰는 둘만 끌다 */
+  .setPause,.setExit{box-shadow:none}
   /* ══ 팝업 액션 버튼(확인·관전하기·취소·나가기) = 살짝 볼록한 각진 판 ══
      윗변 안쪽 하이라이트 + 아래로 말려드는 안쪽 그림자 + 바깥 아래 그림자 = 솟아 있는 느낌.
      위는 완전히 평평(라운드 0), 아래만 --r-bar(3px) — 둥글면 볼록함이 물방울처럼 보인다.
@@ -721,15 +740,19 @@
   .setMenu.expanded .setItem:not(.open){opacity:.45}
   .setItem,.setBody{transition:opacity .18s,background .18s}
   .setItem.open{color:#fff;background:rgba(255,255,255,.06);box-shadow:inset 2px 0 0 var(--setAcc,var(--neon));
-    margin:0 -12px;padding:12px;border-radius:9px 9px 0 0}
+    margin:0 -12px;padding:12px;border-radius:var(--r-bar) var(--r-bar) 0 0}
   .setItem.open .setArr{transform:rotate(180deg);color:var(--setAcc,var(--neon))}
   .setBody.on{background:rgba(255,255,255,.06);box-shadow:inset 2px 0 0 var(--setAcc,var(--neon));
-    margin:0 -12px;padding:2px 12px 13px;border-radius:0 0 9px 9px}
+    margin:0 -12px;padding:2px 12px 13px;border-radius:0 0 var(--r-bar) var(--r-bar)}
   /* 효과음/배경음 — 버튼 행 + 볼륨 바를 하나의 박스로 묶음 */
-  .sndGroup{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08);border-radius:var(--r-md);padding:4px 2px;margin-bottom:7px}
-  .setSub{display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-size:var(--fs-lg);font-weight:600;color:var(--txt);
-    padding:8px 11px;border-radius:var(--r-bar);background:transparent;border:none}
-  .setSub b{color:var(--setAcc,var(--neon));font-family:var(--font-num)}
+  /* 업그레이드 그리드 칸(.hmUp)과 같은 테두리 — 검정 면 + 구역색을 금속 위에 얇게 얹는다 */
+  .sndGroup{--hmAccRGB:255,59,59;   /* ⚠ 이 변수는 .hmUpg 에만 있다 — 팝업 안에선 여기서 세운다 */
+    padding:4px 2px;margin-bottom:7px;border:1px solid transparent;border-radius:var(--r-bar);
+    background:linear-gradient(180deg,#0a0a0a,#000) padding-box,
+      linear-gradient(180deg,rgba(var(--hmAccRGB),.40) 0%,rgba(var(--hmAccRGB),.26) 34%,
+        rgba(var(--hmAccRGB),.15) 68%,rgba(var(--hmAccRGB),.09) 100%) border-box,
+      var(--metal-ring-n) border-box;
+    clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
   .setVolRow{display:flex;align-items:center;gap:10px;padding:0 11px 3px;margin-top:-3px}
   .setRange{-webkit-appearance:none;appearance:none;flex:1;height:4px;border-radius:var(--r-bar);outline:none;cursor:pointer;
     background:rgba(255,255,255,.15)}
@@ -745,8 +768,16 @@
   .segBtn.on{color:#0b1016;font-weight:800;background:var(--setAcc,var(--neon));border-color:var(--setAcc,var(--neon));box-shadow:none}
   .setHint{font-size:var(--fs-sm);line-height:1.4;color:var(--txt-dim);padding:5px 3px 3px;word-break:keep-all;white-space:normal}
   .setHint.save{color:var(--setAcc,var(--neon));font-weight:600}
-  .sndBtn{flex:0 0 auto;min-width:50px;padding:4px 11px;font-size:var(--fs-md)}
-  .sndBtn:active{transform:translateY(1px)}
+  /* 끄기 = 업그레이드 작은 버튼(.hmUpBtn) — 붉은 링 + 짙은 적갈 면 */
+  .sndBtn,.setQGo{flex:0 0 auto;min-width:50px;padding:4px 11px;font-size:var(--fs-md);
+    color:#ececec;border:1.5px solid transparent;border-radius:var(--r-bar);
+    background:linear-gradient(180deg,#2a1214,#261012 55%,#170a0c) padding-box,
+      var(--nav-ring-on-d) border-box}
+  /* 켜져 있을 때(소리 껌짐) — 면만 한 단 밝게, 링은 그대로 */
+  .segBtn.sndBtn.on{color:#fff;font-weight:800;box-shadow:none;
+    background:linear-gradient(180deg,rgba(255,59,59,.34),rgba(255,59,59,.2) 55%,rgba(120,20,20,.3)) padding-box,
+      var(--nav-ring-on-d) border-box}
+  .sndBtn:active,.setQGo:active{transform:translateY(1px)}
   
   
   body.lite *{backdrop-filter:none!important;box-shadow:none!important}
@@ -871,21 +902,6 @@
   #balPanel .balRow .bbar{position:relative;flex:1;height:10px;border-radius:5px;background:rgba(255,255,255,.06);overflow:hidden}
   #balPanel .balRow .bbar i{position:absolute;top:0;bottom:0}
   #balPanel .balRow .bsc{flex:0 0 62px;text-align:right;font:700 12px var(--font-num)}
-  /* ⚔ 전투실험 — 하단 좌우 분할(적군|아군 소환) */
-  .btSplit{display:flex;gap:7px}
-  .btCol{flex:1 1 0;min-width:0;display:flex;flex-direction:column;border-radius:9px;padding:6px 6px 4px;background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(0,0,0,.14));border:1px solid var(--metal-edge)}
-  .btCol.foe{border-left:2px solid rgba(255,90,90,.62)}
-  .btCol.ally{border-left:2px solid rgba(90,160,255,.62)}
-  .btColHead{display:flex;align-items:center;gap:5px;font-size:var(--fs-xs);font-weight:800;letter-spacing:.2px;margin:0 0 4px}
-  .btCol.foe .btColHead{color:#ff9a9a}
-  .btCol.ally .btColHead{color:#9fc4ff}
-  .btCol .btPicker{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;max-height:132px;overflow-y:auto;padding-right:3px;scrollbar-width:thin;scrollbar-color:rgba(150,170,200,.4) transparent}
-  .btCol .btPicker::-webkit-scrollbar{width:5px}
-  .btCol .btPicker::-webkit-scrollbar-track{background:transparent}
-  .btCol .btPicker::-webkit-scrollbar-thumb{background:rgba(150,170,200,.35);border-radius:3px}
-  .btCol .btpRaceHead{grid-column:1/-1}
-  .btCol .btpCard{width:auto;padding:4px 1px}
-  .btCol .btpCard .btpPic{width:26px;height:26px}
   /* 🧪 스프라이트 유닛 실험장 */
   #sprLab{position:absolute;inset:0;z-index:38;display:none;pointer-events:none}
   #sprLab.on{display:block}
@@ -909,7 +925,6 @@
   .sprCtl2 label{font-size:11px;font-weight:800;color:var(--txt-mute)}
   .sprCtl2 input[type=range]{flex:1;accent-color:var(--neon)}
   .sprMeta{font-size:10px;color:#7d8b98;white-space:nowrap}
-  .btCol .btpCard .btpNm{font-size:8px}
   /* 🏗 건설 테스트(데이터 전용) */
   #vBuild{overflow:hidden}
   #cstMain{position:absolute;inset:0;overflow-y:auto;padding:10px 11px 16px;font-size:13px;color:#d7dee9;background:linear-gradient(180deg,#0c1017,#090c12);z-index:6}
@@ -1000,10 +1015,8 @@
     font-size:var(--fs-md);font-weight:800;white-space:nowrap;text-shadow:0 2px 4px #000,0 0 8px #000}   /* 메인 #hudR과 완전 동일(전역 .res/.ri/b 규칙 그대로 사용, 박스 없음) */
   .bent{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;z-index:2}
   .bent .be-ico{font-size:26px;line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))}
-  .bent .be-nm{font-size:8.5px;font-weight:800;color:#dfeaff;text-shadow:0 1px 2px #000;white-space:nowrap;margin-top:1px}
   .bent.bldg{width:54px;height:54px;border-radius:9px;background:radial-gradient(circle at 50% 35%,rgba(70,90,120,.5),rgba(8,12,20,.72));border:1px solid var(--metal-edge)}
   .bent.bldg.live3d{background:none;border:none;width:auto;height:auto;justify-content:flex-end}
-  .bent.bldg.live3d .be-nm{margin-top:36px;background:rgba(6,10,16,.62);padding:1px 5px;border-radius:5px}
   #techMap3d{position:absolute;inset:0;pointer-events:none;z-index:7}
 #cstFog{position:absolute;inset:0;pointer-events:none;z-index:7;filter:blur(3px)}   /* 🌫️ 건설 안개 오버레이(DOM 엔티티 위) — blur=칸 경계 부드럽게 */
   .bent.worker .be-ico{font-size:23px}
@@ -1184,17 +1197,11 @@
   .pIco.icoFb .mIco{width:62%;height:62%}
   .scPortrait::after{content:'';position:absolute;inset:0;pointer-events:none;
     background:repeating-linear-gradient(0deg,rgba(0,0,0,.0) 0 2px,rgba(0,0,0,.22) 2px 3px)}
-  /* 직업 배지: 초상화 내부 하단 띠 */
-  .scPortrait .portJob{position:absolute;left:0;right:0;bottom:0;z-index:2;pointer-events:none;
-    font-size:var(--fs-xs);font-weight:800;letter-spacing:.5px;color:#ffd6d6;text-align:center;line-height:1;padding:3px 0 3.5px;
-    background:linear-gradient(180deg,rgba(20,6,8,0),rgba(18,5,7,.9) 55%);text-shadow:0 1px 2px #000,0 0 5px rgba(255,59,59,.5)}
   .scMid{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}
   .scName{font-size:13px;font-weight:800;color:var(--neon-lt);text-shadow:0 0 8px var(--neon-glow);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   
   
   .scType{font-size:var(--fs-md);color:var(--neon);text-shadow:0 0 6px var(--neon-glow);margin-top:1px;white-space:nowrap}
-  /* 등급 라벨(정보창) — 등급색 작은 칩. 서열은 색으로, 별은 강화형 구분용 */
-  .tierTag{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.8px;padding:1px 6px;border-radius:2px;border:1px solid;line-height:1.5;vertical-align:middle}
   .scHp{margin-top:7px;display:flex;flex-direction:column;gap:3px;font-family:var(--font-num)}
   .scHp .hpline{font-size:var(--fs-md);font-weight:700;line-height:1;display:flex;align-items:center;gap:4px;white-space:nowrap;letter-spacing:.3px}
   .scHp .hpline .lab{flex:none;font-family:var(--font-ko);font-size:8px;font-weight:700;letter-spacing:0;
@@ -1595,7 +1602,6 @@
   .plbtn.gone::after{opacity:.5}
   .plnum{font-size:18px;font-weight:800;font-family:var(--font-num);color:var(--pc);line-height:1;text-shadow:0 1px 2px #000}
   .plst{font-size:var(--fs-xs);font-weight:700;letter-spacing:.3px;color:#9aa6b4;max-width:96%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .plcnt{font-size:8.5px;font-weight:700;color:var(--txt-hud);margin-top:2px;font-family:var(--font-num)}
 
   /* ===== 공유 우주 로딩방 배경 (멀티플레이/방 찾기/방 생성/로비 공통) =====
      게임과 동일한 space_bg 타일을 어둡게 깔고 빨강 비네트로 기존 분위기 유지.
@@ -1634,7 +1640,7 @@
   .ovCard.lose #ovTitle{color:#ffd0d6;text-shadow:0 0 4px rgba(255,107,122,.5),0 0 18px rgba(255,107,122,.35),0 2px 4px #000}
   .ovCard{width:86%;max-width:320px;padding:18px 14px 17px;text-align:center;--ovAcc:#5cd6ff;--ovAccG:rgba(92,214,255,.5);
     display:flex;flex-direction:column;box-sizing:border-box;
-    background:linear-gradient(160deg,rgba(19,24,35,.9),rgba(6,9,14,.93));border:1px solid var(--metal-edge);
+    background:linear-gradient(180deg,rgba(25,25,25,.9),rgba(14,14,14,.92));border:1px solid var(--metal-edge);
     clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px);
     box-shadow:0 16px 44px -12px #000,inset 0 1px 0 rgba(255,255,255,.05)}
   /* 제목 줄 = 설정 제목과 동일(흰 제목 + 강조 언더라인) · 아이콘 없음 */
@@ -1727,8 +1733,6 @@
   .lbTeamSep b{background:transparent}
   .lbTeamSep::before{left:30px}
   .lbGrid.teamed .lbTeamSep:first-child{height:20px}
-  .lbSlot.tm1{--tmC:var(--tmC1)} .lbSlot.tm2{--tmC:var(--tmC2)}
-  .lbSlot.tm1,.lbSlot.tm2{box-shadow:inset 3px 0 0 var(--tmC);padding-left:9px}
   .lbSlot.swapWait{background:rgba(255,255,255,.06)}
   .lbSlot.swapWait .lbStat::after{content:' · 교체 요청 중';color:var(--txt-mute);font-weight:700}
   .lbGrid.teamed .lbSlot.empty{box-shadow:inset 3px 0 0 color-mix(in srgb,var(--tmC) 34%,transparent)}   /* 내 슬롯 = 은은한 하이라이트 */
@@ -1985,10 +1989,6 @@
   .gaBtn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 5px;border:1px solid rgba(120,180,230,.4);border-radius:9px;background:linear-gradient(160deg,rgba(20,32,48,.7),rgba(10,16,26,.8));color:#dfeaf6;font-weight:800;font-size:11px;cursor:pointer;transition:transform .1s,box-shadow .15s}
   .gaBtn:active{transform:scale(.95);box-shadow:0 0 10px -2px rgba(127,208,255,.6);border-color:#7fd0ff}
   .gaBtn .gaCost{font-size:10px;font-weight:700;color:#e0c98a}
-  .stUnitCard{padding:8px 6px;border-radius:9px;text-align:center;cursor:pointer;background:rgba(30,40,54,.8);border:1px solid rgba(255,255,255,.08);font-size:11px;font-weight:700;color:#cfe0f2}
-  .stUnitCard.sel{border-color:#7fe0ff;box-shadow:0 0 10px rgba(80,200,255,.4)}
-  .stUnitCard .uc{font-size:20px;line-height:1.2}.stUnitCard .ucCost{color:#ffd24a;font-size:10px}
-  .stUnitCard .ucProd{color:#9fd9ff;font-size:9px;font-weight:700;margin-top:2px;line-height:1.25;opacity:.92}
   /* 직스 좌상단 로테이션 리더보드(라운드 자리 대체) */
   #stLead{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:12px;color:#dbe6f5}
   #stLead .lp{color:#9fd0ff}#stLead .lm{color:#ffd24a}#stLead .lg{color:#8fe6a0}
@@ -1999,13 +1999,7 @@
   /* 팝업 등장 = 모든 팝업에 자동 적용. fxPop()을 손으로 부르지 않아도 카드가 뜨는 순간 애니메이션이 붙는다.
      ⚠ 새 팝업을 만들면 카드 클래스를 이 목록에 한 줄 추가할 것 — 그래야 다른 팝업과 같은 느낌이 난다. */
   :root{--fxPopT:.13s}
-  .hbModal:not(.hide) .hbmCard,
-  #settingsPop:not(.hide) .setCard,
-  #townPanel:not(.hide) .tpCard,
-  #exitConfirm:not(.hide) .setCard,
-  .cpPop:not(.hide) .cpCard,
-  #dgSheet:not(.hide) .dgSheetCard,
-  #modeSheet:not(.hide) .msPanel{animation:fxPopOn var(--fxPopT) cubic-bezier(.22,.9,.28,1)}
+  .hbModal:not(.hide) .hbmCard,#settingsPop:not(.hide) .setCard,#exitConfirm:not(.hide) .setCard,#dgSheet:not(.hide) .dgSheetCard,#modeSheet:not(.hide) .msPanel{animation:fxPopOn var(--fxPopT) cubic-bezier(.22,.9,.28,1)}
   /* ⛔ 제외 — 방 만들기(#createPanel)·난이도 선택(#soloDiffPanel)은 즉시 뜬다(요청) */
   #createPanel .cpCard, #soloDiffPanel .cpCard, #soloDiffPanel .msPanel{animation:none!important}
   @keyframes fxPopOn{0%{opacity:0;transform:translateY(7px) scale(.965)}100%{opacity:1;transform:translateY(0) scale(1)}}
@@ -2207,13 +2201,11 @@
   /* 유즈맵 선택 */
   #mapSelect{z-index:47;padding:12px 13px}
   /* 유즈맵 선택 로비 배경(전체 cover, 9:16 기준, UI는 위 레이어) */
-  #mapSelect::before,#rooms::before,#createPanel::before,#shopScreen::before,#gearScreen::before{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;transform-origin:center center;
+  #mapSelect::before,#rooms::before,#createPanel::before,#shopScreen::before,#gearScreen::before,#charScreen::before{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;transform-origin:center center;
     background:url('assets/backgrounds/lobby_bg.webp') center center / cover no-repeat #04050b;
     animation:lobbyBreath 12s ease-in-out infinite}   /* 미세한 호흡(위아래 + 약한 확대) */
   @keyframes lobbyBreath{ 0%,100%{transform:scale(1.01) translateY(0)} 50%{transform:scale(1.05) translateY(-1%)} }
-  #mapSelect::after,#rooms::after,#createPanel::after,#shopScreen::after,#gearScreen::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg, rgba(2,3,8,.96) 0%, rgba(2,3,8,.66) 16%, rgba(2,3,8,.2) 38%, rgba(2,3,8,.2) 62%, rgba(2,3,8,.66) 84%, rgba(2,3,8,.97) 100%)}   /* 위·아래 빨강 더 톤다운(중앙 이미지 유지) */
-  .msHead{display:flex;align-items:center;justify-content:space-between;padding-bottom:7px;margin-bottom:8px;border-bottom:1px solid rgba(255,255,255,.06)}
-  .msHeadL{display:flex;align-items:center;gap:8px;min-width:0}
+  #mapSelect::after,#rooms::after,#createPanel::after,#shopScreen::after,#gearScreen::after,#charScreen::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg, rgba(2,3,8,.96) 0%, rgba(2,3,8,.66) 16%, rgba(2,3,8,.2) 38%, rgba(2,3,8,.2) 62%, rgba(2,3,8,.66) 84%, rgba(2,3,8,.97) 100%)}   /* 위·아래 빨강 더 톤다운(중앙 이미지 유지) */
   
   
   /* 메타 성장(빌드) 화면 */
@@ -2284,7 +2276,6 @@
   .ptName{flex:0 0 auto;font-size:var(--fs-lg);font-weight:700;color:#dbe3ec;white-space:nowrap}   /* 항목명은 항상 한 줄 */
   .ptVal{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;display:inline-flex;align-items:center;gap:2px;font-family:var(--font-num);font-size:10px;font-weight:700;color:#8a94a3;white-space:nowrap}   /* 수치 힌트: 제목 옆에 붙임·작게·회색(잘 안 보여도 무방) */
   .ptArw{font-style:normal;font-size:10px;line-height:1;color:#767f8c}   /* 상승 화살표 = 수치 사이 중앙 높이 */
-  .ptLv{flex:0 0 auto;margin-left:auto;padding-left:8px;font-size:var(--fs-sm);font-weight:700;color:var(--txt-mute);font-family:var(--font-num)}
   .ptPips{display:flex;gap:3px}
   .ptPips i{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.08);max-width:26px}
   .ptPips i.on{background:var(--setAcc)}
@@ -2309,7 +2300,6 @@
   .ptBtn.trans b{color:#f4ecff;text-shadow:0 0 6px rgba(190,120,255,.7)}
   .ptBtn.trans.poor{color:#8a7ba3;background:rgba(255,255,255,.03);border-color:var(--metal-edge);box-shadow:none}
   .ptBtn.trans.poor b{color:#8a7ba3;text-shadow:none}
-  .ptT{display:inline-block;margin-left:4px;padding:0 5px;border-radius:6px;font-size:9px;font-weight:800;color:#e0c8ff;background:rgba(168,85,247,.2);border:1px solid rgba(190,120,255,.45)}
   .ptEmpty{text-align:center;color:#7d8590;font-size:var(--fs-md);padding:18px}
   /* ? 상세 정보 팝업 */
   .ptHelpCard{width:320px;max-width:88vw;max-height:80%}
@@ -2425,7 +2415,27 @@
   .igBtns .twBtn{min-width:52px;padding:8px}
   /* 캐릭터 선택/생성 입장 화면 */
   #charScreen{position:absolute;inset:0;z-index:61;display:flex;align-items:center;justify-content:center}
-  .csCard{width:330px;max-width:90vw;max-height:86%}
+  .csCard{width:330px;max-width:90vw;max-height:86%;
+    /* 푸른기 제거 — 사냥터 패널과 같은 중성 회색 */
+    background:linear-gradient(180deg,#191919,#0e0e0e)}
+  /* ↓ 여기부터는 전부 #charScreen 안으로 범위를 좀힌다 — .twRow/.twBtn/.twInput 은 마을·장비창 공용이라
+     전역으로 고치면 그쪽까지 함께 바뀐다(DESIGN.md — 마을 공용 전환은 나중에 한ꯈ에). */
+  /* 제목 — 하단과 같은 Noto */
+  #charScreen .setTitle{font-family:var(--font-ko);font-size:15px;font-weight:700;letter-spacing:.06em}
+  /* 종족 줄 — 사냥터 카드(.hmUp)와 같은 검정 면 + 금속 링 + 챔퍼 */
+  #charScreen .twRow{padding:8px;border-top:none;border:1px solid transparent;border-radius:var(--r-bar);
+    margin-bottom:6px;
+    background:linear-gradient(180deg,#0a0a0a,#000) padding-box, var(--metal-ring-n) border-box;
+    clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
+  #charScreen .twRow:last-child{margin-bottom:0}
+  /* 버튼·입력창 — 라운드 6/8px 을 토큰(3px)으로, 테두리는 금속 링 */
+  #charScreen .twBtn{border-radius:var(--r-bar);border:1px solid transparent;box-shadow:none;
+    background:linear-gradient(180deg,#2a2a2a,#141414) padding-box, var(--metal-ring-n) border-box}
+  #charScreen .twInput{border-radius:var(--r-bar);border:1px solid transparent;
+    background:linear-gradient(180deg,#141414,#0c0c0c) padding-box, var(--metal-ring-n) border-box}
+  /* 주 동작만 붉은 링 — 만들기(.csMake) */
+  #charScreen .twBtn.csMake{color:#fff;
+    background:linear-gradient(180deg,#2a1214,#170a0c) padding-box, var(--nav-ring-on-d) border-box}
   .twInput{flex:0 0 auto;width:118px;padding:7px 9px;border-radius:8px;font-family:inherit;font-size:13px;color:#eaf1fb;
     background:rgba(255,255,255,.05);border:1px solid var(--metal-edge)}
   .twInput:focus{outline:none;border-color:rgba(92,214,255,.6)}   /* id 특정성으로 .hide 우선(아래 #id{display:flex}가 .hide를 이기지 않게) */
@@ -2457,17 +2467,8 @@
   /* 즉시 플레이 — 액센트색 실행 버튼 */
   /* 카드 메타 행 = 라이브/레벨 스탯 + 태그칩 */
   /* ── 하단 소셜 구역(친구 · 디스코드 느낌) ── */
-  /* 부수적 소셜 구역 = 컴팩트·상단 구분선 */
-  .hsHead{flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 0 8px}
-  .hsHTitle{display:inline-flex;align-items:center;gap:8px;font-size:15px;font-weight:800;letter-spacing:.2px;color:#e6ecf3}
-  .hsHTitle svg{width:17px;height:17px;color:#7fd0ff}
-  .hsOnDot{width:6px;height:6px;border-radius:50%;background:#5dff8f;box-shadow:0 0 6px rgba(93,255,143,.85);animation:mcPulse 1.8s ease-in-out infinite}
   /* 친구 분류 탭(전체/유즈맵/RPG/친한친구) */
   .hsTabs{flex:none;display:flex;gap:4px;padding:0 0 8px}
-  .hsTabBtn{flex:1;padding:4px;border-radius:var(--r-lg);font-family:inherit;font-size:10.5px;font-weight:800;letter-spacing:.2px;cursor:pointer;
-    color:var(--txt-mute);background:var(--glass);border:1px solid var(--metal-edge);transition:all .12s}
-  .hsTabBtn:hover{color:#dfe7f0;border-color:var(--glass-edge)}
-  .hsTabBtn.on{color:#fff;background:rgba(255,255,255,.13);border-color:var(--glass-edge);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
   /* 친구 목록 = 3.5행 노출(더 있다는 걸 반쯤 보여줘 스크롤을 유도). --frRow만 고치면 따라온다 */
   .hsList{--frRow:43px;--frGap:4px;flex:none;height:calc(var(--frRow)*4.2 + var(--frGap)*4);
     overflow-y:auto;display:flex;flex-direction:column;gap:var(--frGap);padding:0}   /* 스크롤바 = .uiScroll(공용) */
@@ -2641,8 +2642,6 @@
   /* 건설 — 한 칸 + 드롭다운 */
   .hbBdWrap{position:relative;display:inline-flex}
   .hbRoundBtn.on{color:#fff;background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.34)}
-  .hbBdBtn .ic{width:17px;height:17px;stroke-width:2}
-  .hbBdBtn.on{border-color:rgba(255,255,255,.34);color:#fff}
   /* 목록 — 버튼 바로 아래로 펴찌다. absolute 라 바 높이에 영향을 주지 않는다 */
   .hbBdMenu{position:absolute;top:calc(100% + 5px);left:0;z-index:30;
     width:186px;display:flex;flex-direction:column;gap:4px;padding:5px;pointer-events:auto;
@@ -2660,7 +2659,6 @@
   .hbBdCs{display:flex;align-items:center;gap:2px;font-family:var(--font-num);font-variant-numeric:tabular-nums;
     font-size:10px;font-weight:800}
   .hbBdCs .ri{width:10px;height:10px}
-  .hbSkTx .ri{width:9px;height:9px;vertical-align:-1px;margin-right:1px}
   /* 스킬 = 원. 이름은 빼고 아이콘만 — 쌀 때는 남은 초가 그 자리에 들어간다 */
   /* 스킬 = 반투명 원 + 진한 은색 링. 면을 투명하게 두어 뒤 전장이 비친다 */
   .hbSk{position:relative;flex:0 0 auto;width:37px;height:37px;border-radius:50%;
@@ -2686,7 +2684,6 @@
     transition:color .13s,background .13s}
   .hbAuto.on{color:#fff;background:rgba(180,42,42,.36)}
   .hbAuto:active{transform:translateY(1px)}
-  .hbSkTx{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:9px;font-weight:800;letter-spacing:.2px}
   .hbSk:active{transform:translateY(1px)}
   /* 건설·부스트 팝업 행 */
   .hbRows{flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:0 12px}
@@ -2717,8 +2714,6 @@
   .hmStatRow{flex:none;display:flex;align-items:center;gap:4px;padding:8px 8px 0;overflow-x:auto;scrollbar-width:none}
   .hmStatRow.hide{display:none}
   .hmStatRow::-webkit-scrollbar{display:none}
-  .hmStatPt{flex:none;padding:4px 8px;font-family:var(--font-num);font-variant-numeric:tabular-nums;
-    font-size:var(--fs-sm);font-weight:800;color:#2b1d00;background:#e8a92b;border-radius:var(--r-bar)}
   .hmStat{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;gap:4px;height:28px;cursor:pointer;
     font-family:inherit;font-size:var(--fs-sm);font-weight:800;color:#ececec;
     background:rgba(255,255,255,.045);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
@@ -2797,7 +2792,7 @@
   .hmUpIco{position:relative;flex:none;width:27px;height:27px;display:flex;align-items:center;justify-content:center;
     background:#000;border:none;border-radius:var(--r-bar);overflow:hidden}
   .hmUpIco .icoImg{padding:0}   /* 타일을 꽉 채운다 — 공용 .icoImg 가 inset:0 이라 여백만 빼면 끝까지 닿는다 */   /* 공용 .icoImg 가 inset:0 로 타일을 채운다 — 여백만 주고 크기는 건드리지 않는다 */
-  .hmUpEmo{font-size:15px;line-height:1;font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif}   /* 건설 카드(동료·터렛·벙커)는 에셋 대신 이모지 */
+/* 건설 카드(동료·터렛·벙커)는 에셋 대신 이모지 */
   .hmUpTx{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:2px}
   .hmUpName{font-size:11.5px;font-weight:700;letter-spacing:-.02em;color:#ececec;
     text-shadow:0 1px 1px rgba(0,0,0,.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -2936,7 +2931,10 @@
   .gearBody .shopPanel:last-child{margin-bottom:0}
   .gearBody .gearWrap{height:100%}
   .upgEmpty{flex:1 1 auto;display:grid;place-items:center;font-size:12px;color:#6f6f6f}
-  #upgScreen{display:flex;flex-direction:column;padding:12px 13px calc(var(--navH) + 12px)}
+  /* ⚠ id 선택자에 display 를 주면 .appScreen.hide(클래스 2개)를 이겨 화면이 안 숨는다 —
+     숨김일 때는 안 걸리게 :not(.hide) 로 좁힌다. */
+  #upgScreen{padding:12px 13px calc(var(--navH) + 12px)}
+  #upgScreen:not(.hide){display:flex;flex-direction:column}
   #phone.curOn #upgScreen{padding-top:calc(var(--curH) + var(--topPad) + 12px)}
   .shopTitle{text-align:center;font-size:15px;font-weight:700;letter-spacing:.6px;color:#ececec;padding:6px 0 12px}
   /* 구역 패널 = HOME .hmCard */
@@ -3166,20 +3164,15 @@
   .twZone.deco{pointer-events:none;z-index:1}
   .twZone.deco::before{width:150px;height:150px;top:22px;
     background:radial-gradient(circle,rgba(255,255,255,.055),rgba(255,255,255,.02) 58%,transparent 72%);border-color:rgba(255,255,255,.06)}
-  .twZone.deco .tzLbl{opacity:.75}
   /* 구역 발판 — 시안 글로우 대신 중립 원판(어디를 밟을 수 있는지만 알려준다) */
   .twZone::before{content:'';position:absolute;left:50%;top:18px;transform:translate(-50%,-50%);width:54px;height:54px;border-radius:50%;z-index:-1;pointer-events:none;
     background:radial-gradient(circle,rgba(255,255,255,.07),transparent 66%);border:1px solid rgba(255,255,255,.07)}
   .twZone:hover::before{background:radial-gradient(circle,rgba(255,255,255,.12),transparent 66%);border-color:rgba(255,255,255,.16)}
   /* 이모지는 폰트 토큰 밖이다 — 시스템 이모지 폰트를 명시해 Arial 폴백을 막는다 */
-  .tzIco,.twAvBody,.twEdge,.twPet{font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif}
-  .tzIco{font-size:30px;line-height:1;filter:drop-shadow(0 3px 5px rgba(0,0,0,.6))}
-  .tzIco .tzBld{display:block;width:118px;height:auto;max-height:104px;object-fit:contain;   /* 구역 건물 3D — 관리자 건설과 같은 모델 */
-    margin:-42px auto -6px;filter:drop-shadow(0 6px 8px rgba(0,0,0,.55))}
-  .twZone.deco .tzIco .tzBld{width:96px;max-height:120px;margin:-56px auto -6px}   /* 광장 기념비는 세로로 길다 */
+  .twAvBody,.twEdge,.twPet{font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif}
+/* 광장 기념비는 세로로 길다 */
   .twStars{color:#ffd24a;font-size:var(--fs-md);letter-spacing:1px}
   .twPet{flex:0 0 auto;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:20px;border-radius:var(--r-lg);background:rgba(255,255,255,.05);border:1px solid var(--metal-edge)}
-  .tzLbl{font-size:var(--fs-md);font-weight:800;color:#ececec;background:rgba(10,10,12,.82);padding:4px 8px;border-radius:var(--r-bar);border:1px solid var(--metal-edge);white-space:nowrap}
   .twZone:active{transform:translate(-50%,-50%) scale(.94)}
   /* 아바타 — 화면 정중앙에 고정. 움직이는 것은 월드 쪽이다(카메라가 항상 캐릭터를 따라간다) */
   .twAvatar{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:3;pointer-events:none}
@@ -3230,10 +3223,6 @@
   .twDel{flex:0 0 auto;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:var(--r-md);cursor:pointer;font-size:var(--fs-lg);line-height:1;
     color:#8d97a4;background:rgba(255,255,255,.04);border:1px solid var(--metal-edge)}
   .twDel:active{transform:translateY(1px)}
-  .msUser{display:flex;align-items:center;gap:5px;font-size:var(--fs-sm);color:var(--txt-hud)}
-  .msUser .ic{color:#7e8896}
-  .msUser b{color:#e8eef5;font-weight:700;max-width:128px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .msUser .msUserTag{color:#7d8b98;font-weight:700;font-size:var(--fs-xs);margin-left:1px}
   
   /* 상단: 접속현황(좌) + 정렬 드롭다운(우) 한 줄 */
   .msTopBar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
@@ -3261,8 +3250,6 @@
   .msSortCur:active{transform:translateY(1px)}
   .msSortDD.open .msSortCur{border-color:rgba(255,90,90,.42);background:rgba(255,255,255,.09)}
   .msSortCur .msSortDDi{display:inline-flex}.msSortCur .msSortDDi .ic{width:12px;height:12px;color:var(--neon)}   /* 현재 정렬 아이콘 = 포인트 색 */
-  .msSortCar{color:#8a939e;font-size:var(--fs-sm);line-height:1;transition:transform .2s,color .2s}
-  .msSortDD.open .msSortCar{transform:rotate(180deg);color:var(--neon)}
   .msSortMenu{position:absolute;top:calc(100% + 6px);right:0;z-index:30;min-width:122px;display:flex;flex-direction:column;gap:0;padding:5px 8px;
     background:linear-gradient(180deg,rgba(20,24,33,.99),rgba(11,14,20,.995));border:1px solid var(--glass-edge);border-radius:var(--r-bar);
     box-shadow:0 12px 30px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05);transform-origin:top right;animation:sortMenuIn .14s ease-out}
@@ -3523,7 +3510,6 @@
   /* 라인아트 아이콘(인게임 스타일) */
   .ic{display:inline-block;flex:none;vertical-align:middle}
   [data-ico]{display:inline-flex;align-items:center;vertical-align:middle;line-height:1}
-  .msUser .ic{width:14px;height:14px}
   
   .msTab2 .ic{width:17px;height:17px}
   .msBanner .ic{width:11px;height:11px;margin-right:1px}
@@ -3573,7 +3559,6 @@
   .moMeta:empty{display:none}
   .moChip{display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-sm);font-weight:800;letter-spacing:.2px;line-height:1;
     padding:6px 11px;border-radius:var(--r-lg);color:#cfe0ec;background:rgba(255,255,255,.05);border:1px solid var(--metal-edge)}
-  .moChip .mcIco{width:12px;height:12px;flex:none;opacity:.85}
   .moChip .mcDot{width:7px;height:7px;flex:none;border-radius:50%;background:#5dff8f;box-shadow:0 0 6px rgba(93,255,143,.85);animation:mcPulse 1.8s ease-in-out infinite}
   .moChip.live{color:#c2eccd}
   .moChip.rec{color:var(--gold);background:rgba(255,210,74,.1);border-color:rgba(255,210,74,.38)}
@@ -3698,7 +3683,6 @@
   .moBtn:disabled,.moBtn.locked{opacity:.42;cursor:not-allowed;filter:grayscale(.5)}
   .moBtn:disabled:hover,.moBtn.locked:hover{filter:grayscale(.5);box-shadow:none}
   .moBtn:disabled:active,.moBtn.locked:active{transform:none}
-  .moLockNote{font-size:var(--fs-xs);font-weight:700;color:#ff9a6b;padding:2px 6px;border-radius:var(--r-lg);background:rgba(255,154,107,.14);border:1px solid rgba(255,154,107,.35)}
 
   /* ══ 제목 폰트(--font-ti · 굵기 700) 적용 지점 — 이 목록이 단일 소스다 ══
      ⚠ 반드시 스타일시트 '맨 끝'에 둔다. 앞쪽에 두면 뒤에 오는 .ecTitle·#ovTitle 같은 개별 규칙의
@@ -4425,22 +4409,25 @@
   <div id="settingsPop" class="hide" onclick="if(event.target===this)closeSettings()">
     <div class="setCard">
       <div class="setTitle"><span>설정</span><div class="setX" onclick="closeSettings()"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></div></div>
-      <div class="setMenu">
-      <div class="setItem" onclick="setExpand('snd')"><span>소리 설정</span><b class="setArr" id="arr-snd">▾</b></div>
-      <div class="setBody" id="body-snd">
-        <div class="sndGroup">
-          <div class="setSub"><span>효과음</span>
-            <button class="segBtn sndBtn on" id="flag-sfx" onclick="event.stopPropagation();toggleSnd('sfx',this)">켜기</button></div>
-          <div class="setVolRow"><input type="range" class="setRange" data-k="sfx" min="0" max="100" value="80" style="background:linear-gradient(90deg,var(--setAcc,#ff3b3b) 80%,rgba(255,255,255,.15) 80%)" oninput="setVol('sfx',this)" onclick="event.stopPropagation()"><b id="vol-sfx">80</b></div>
-        </div>
-        <div class="sndGroup">
-          <div class="setSub"><span>배경음</span>
-            <button class="segBtn sndBtn on" id="flag-bgm" onclick="event.stopPropagation();toggleSnd('bgm',this)">켜기</button></div>
-          <div class="setVolRow"><input type="range" class="setRange" data-k="bgm" min="0" max="100" value="60" style="background:linear-gradient(90deg,var(--setAcc,#ff3b3b) 60%,rgba(255,255,255,.15) 60%)" oninput="setVol('bgm',this)" onclick="event.stopPropagation()"><b id="vol-bgm">60</b></div>
-        </div>
+      <!-- 상단 = 바로 조작하는 것(소리 토글 · 배속). 나머지는 아래 리스트 → 하위 팝업 -->
+      <div class="setQuick">
+        <div class="setQRow"><span>효과음</span>
+          <button class="setSw on" id="flag-sfx" onclick="event.stopPropagation();toggleSnd('sfx')"><i></i></button></div>
+        <div class="setQRow"><span>배경음</span>
+          <button class="setSw on" id="flag-bgm" onclick="event.stopPropagation();toggleSnd('bgm')"><i></i></button></div>
+        <div class="setQRow"><span>채팅 표시</span>
+          <button class="setSw on" id="flag-chat" onclick="event.stopPropagation();toggleSnd('chat')"><i></i></button></div>
+        <div class="setQRow" id="qrow-spd"><span>게임 배속 <b class="spdNow" id="spdNow">1x</b></span>
+          <button class="setQGo" onclick="openSetSub('spd')">변경</button></div>
       </div>
-      <div class="setItem" onclick="setExpand('vid')"><span>비디오 설정</span><b class="setArr" id="arr-vid">▾</b></div>
-      <div class="setBody" id="body-vid">
+      <div class="setMenu">
+      <div class="setItem" onclick="openSetSub('vid')"><span>비디오 설정</span><b class="setArr">›</b></div>
+      <div class="setItem" id="si-mission" onclick="openSetSub('mission')"><span>임무 목표</span><b class="setArr">›</b></div>
+      <div class="setItem" onclick="openSetSub('disc')"><span>디스코드</span><b class="setArr">›</b></div>
+      </div>
+      <!-- 옮겨 쓰는 본문 보관함 — 하위 팝업이 열릴 때 여기서 꺼내 쓰고 닫힐 때 돌려놓는다 -->
+      <div id="setStash" style="display:none">
+        <div class="setBody" id="body-vid">
         <div class="setRowLbl">그래픽 품질</div>
         <div class="setSeg" id="seg-q">
           <button class="segBtn" data-q="saver" onclick="event.stopPropagation();setQuality('saver')">절전모드</button>
@@ -4448,11 +4435,9 @@
         </div>
         <div class="setHint" id="qHint"></div>
       </div>
-      <div class="setItem" id="si-mission" onclick="setExpand('mission')"><span>임무 목표</span><b class="setArr" id="arr-mission">▾</b></div>
-      <div class="setBody" id="body-mission">
-      </div>   <!-- 임무 목표 본문 = 현재 유즈맵의 MISSION 데이터로 채움(_renderMission) -->
-      <div class="setItem" id="si-spd" onclick="setExpand('spd');renderVote()"><span>게임 배속 <b class="spdNow" id="spdNow">1x</b></span><b class="setArr" id="arr-spd">▾</b></div>
-      <div class="setBody" id="body-spd">
+        <div class="setBody" id="body-mission">
+      </div>
+        <div class="setBody" id="body-spd">
         <div class="voteCols">
           <div class="voteCol" id="vcol-1" onclick="castVote(1)"><div class="vcSpd">1x</div><div class="vcPlayers" id="vc-1"></div></div>
           <div class="voteCol" id="vcol-2" onclick="castVote(2)"><div class="vcSpd">2x</div><div class="vcPlayers" id="vc-2"></div></div>
@@ -4464,6 +4449,13 @@
       <button class="setPause" id="setPauseBtn" onclick="togglePause()"><span class="pIco"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6.5v11M14.5 6.5v11"/></svg></span><span id="pauseLbl">일시정지</span></button>
       <button class="setExit" id="setExit" data-sfx="ui_open" onclick="exitGame()">게임에서 나가기</button>
       <button class="setLogout" id="setLogout" onclick="closeSettings();doLogout()">로그아웃</button>
+    </div>
+  </div>
+  <!-- 설정 하위 팝업 — 리스트 항목을 누르면 설정 위에 한 겹 더 열린다 -->
+  <div id="setSubPop" class="hide" onclick="if(event.target===this)closeSetSub()">
+    <div class="setCard setSubCard">
+      <div class="setTitle"><span id="setSubTitle"></span><div class="setX" onclick="closeSetSub()"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></div></div>
+      <div class="setSubBody" id="setSubBody"></div>
     </div>
   </div>
   <!-- 나가기 확인 창 -->
@@ -5697,8 +5689,6 @@ function renderHomeStats(){ const row=document.getElementById('hmStatRow'); if(!
   row.innerHTML = grow ? '<button class="hmStat grow" onclick="hbOpenGrow()">✦ 진화 · 환생 <i>!</i></button>' : ''; }
 // 4칸(2행)까지만 보이게 — 칸 높이는 글꼴·문구에 따라 변하므로 실측해서 넣는다(값을 박으면 어긋난다)
 // 높이는 CSS 에서 2.7줄로 고정된다(탭마다 개수가 달라도 패널이 안 흔들리도록).
-// 예전 실측 방식은 폐기 — 호출하는 곳이 남아 있어 빈 함수로 둔다.
-function hmFitUpgGrid(){}
 // ── 라운드 선택 · 반복/등반 ──
 // 최고 도달 라운드(hunt.best[dg])까지만 고를 수 있다. 라운드를 바꾸면 진행 중인 판은 버리고 새로 시작한다.
 function hbBest(dg){ const H=hbHunt(); return Math.max(1, H.best[dg||H.dg]||1); }
@@ -5758,7 +5748,6 @@ function hbGoRound(n){ const H=hbHunt(), best=hbBest(H.dg);
 let _hbBdOpen=false;
 function hbToggleBuild(){ _hbBdOpen=!_hbBdOpen;
   if(typeof playSfx==='function') playSfx('ui_tab'); renderHbBuild(); }
-function hbCloseBuild(){ if(!_hbBdOpen) return; _hbBdOpen=false; renderHbBuild(); }
 // 골랐으면 목록을 닫고 배치 모드로 — 목록이 뜨 채로 필드를 가리면 둘 숬 없다
 function hbPickBuild(bk){ _hbBdOpen=false; renderHbBuild(); hbBuy(bk); }
 // 건설 — 좌상단 줄의 한 칸 + 아래로 펴치는 목록
@@ -6536,7 +6525,6 @@ function hbBase(){ const H=hbHunt();
   return H.base; }
 // 격자는 맵 전체다(2026-08-12 사용자 결정) — 해금 구역·코어 제한 없이 어디든 지을 수 있다.
 // hunt.base.open은 옛 세이브 호환으로 남겨 두되 판정에 쓰지 않는다.
-function hbOpenR(){ return HB_MAP_R; }
 function hbCellBuildable(gx,gy){ return hbInGrid(gx) && hbInGrid(gy); }
 // 이 칸을 점유한 구조물의 좌상단 키(없으면 null) — 좌상단에만 기록하므로 최대 변 길이만큼 역추적한다
 function hbCellOwner(gx,gy){ const T=hbBase().tiles;
@@ -7876,18 +7864,6 @@ function mapToHub(){ if(typeof stopRoomsTick==='function') stopRoomsTick(); if(t
 // ⚠ 이동 엔진(twStep/twCamApply/twClampWall)은 남아 있지만 아무도 켜지 않는다.
 function openTown(){ loadMeta(); if(!CHAR()){ openCharScreen('create'); return; }   // 캐릭터가 없으면 생성 화면으로
   _townOpen=false; twStopLoop(); openHome(); return; }
-function _openTownOld_disabled(){
-  _townOpen=true; showAppScreen('townScreen'); navShow('town');
-  twLayout(); twApplyChar();
-  const p=[_twW/2,_twH/2];   // 월드 중앙에서 시작
-  _twChar.x=_twChar.tx=p[0]; _twChar.y=_twChar.ty=Math.min(_twH, p[1]+TW_ZONE_R*1.2); _twChar.mode=null; _twChar.face=1;
-  _twGoZone=null;   // 지정한 구역 없음 — 들어가자마자 팝업이 뜨지 않는다
-  twCamApply(); twStartLoop();
-  twCloseSocial();
-  if(typeof paintIcons==='function') paintIcons(document.getElementById('townScreen'));
-  if(typeof renderFriends==='function') renderFriends();
-  if(typeof initMapLive==='function') initMapLive();
-  const g=profClaimOffline(); renderTownBar(); if(g>0) showTownToast('오프라인 보상 +'+g+' P'); }
 // 마을을 떠날 때의 공통 정리 — 루프·패널·시트를 한 번에 닫는다(그대로 두면 배경에서 계속 돈다)
 function twLeave(){ _townOpen=false; twStopLoop(); closeTownPanel(); twCloseSocial(); twCloseChat(); profStampSeen(); }
 // 🗺 마을 → 유즈맵 선택
@@ -8089,7 +8065,7 @@ function renderCharCreate(){ const p=PROF(), full=(p.chars||[]).length>=PROF_MAX
     const bs=PROF_STATS.map(k=>PROF_STAT_NAME[k]+' '+J.base[k]).join(' · ');
     h+='<div class="twRow"><span class="twPet">'+C.ico+'</span><div class="twRowInfo"><div class="twRowName">'+C.name+'</div>'
       +'<div class="twRowSub">'+C.tip+'</div><div class="twRowSub">'+bs+'</div></div>'
-      +'<button class="twBtn" onclick="charDoCreate(\''+id+'\')"'+(full?' disabled':'')+'>'+(full?'슬롯 참':'만들기')+'</button></div>'; }
+      +'<button class="twBtn csMake" onclick="charDoCreate(\''+id+'\')"'+(full?' disabled':'')+'>'+(full?'슬롯 참':'만들기')+'</button></div>'; }
   if((p.chars||[]).length) h+='<div class="twRow"><div class="twRowInfo"><div class="twRowSub">이미 만든 캐릭터를 고르려면</div></div><button class="twBtn" onclick="charGoSelect()">보관소</button></div>';
   return h; }
 // 지금 떠 있는 호스트(마을 구역 / 입장 화면)를 그대로 두고 내용만 바꾼다
@@ -8435,9 +8411,6 @@ function profDoEquip(iid){ if(!profEquipItem(iid)) return; if(typeof playSfx==='
   renderTownBar(); refreshTownPanel(); }
 function profDoScrap(iid){ const v=profScrapItem(iid); if(v<0) return; if(_gearSel===iid) _gearSel=null;
   if(typeof playSfx==='function') playSfx('ui_close'); renderTownBar(); refreshTownPanel(); showTownToast('분해 · +'+v+' P'); }
-function profDoBuyItem(tierId){ const it=profBuyItem(tierId); if(!it) return;
-  if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel();
-  showTownToast(profItemName(it)+' 획득'); }
 // 훈련장(방치)
 function renderProfIdle(){ const p=PROF();
   const H=PROF().hunt;
@@ -8909,11 +8882,6 @@ function updateCoopBossBar(){ const bar=document.getElementById('coopBossBar'); 
 // ── 보스방 파견 (최대 2기, 지정 유닛만) ──
 const BOSS_DEPLOY_CAP=2;
 function bossDeployedCount(){ return G.units.filter(u=>u.atBoss).length; }
-// 유닛 지정 파견 모드 무장 → 메인에서 유닛 클릭 시 파견
-function armBossPick(){ if(G.phase!=='playing'){ toast('⚠️ 게임 중에만 가능합니다'); return; }
-  if(bossDeployedCount()>=BOSS_DEPLOY_CAP){ toast('⚠️ 보스방 파견은 최대 '+BOSS_DEPLOY_CAP+'기입니다'); return; }
-  G.bossPickArm=!G.bossPickArm; updateBossPickBtn();
-  if(G.bossPickArm){ if(typeof playSfx==='function') playSfx('ui_open'); toast('ℹ️ 파견할 유닛을 클릭하세요 (최대 '+BOSS_DEPLOY_CAP+'기)'); } }
 function updateBossPickBtn(){ const b=document.getElementById('bossPickBtn'); if(!b) return;
   const full=bossDeployedCount()>=BOSS_DEPLOY_CAP;
   b.classList.toggle('on', !!G.bossPickArm && !full);
@@ -9164,7 +9132,6 @@ function closeBossArena(){ G.bossOpen=false; G.bossDeployPick=false; G.bossBldSe
   const bar=document.getElementById('coopBossBar'); if(bar) bar.classList.remove('bossMode');
   if(typeof refreshSelCard==='function') refreshSelCard();   // 하단 = 트랙 홈(지정/판매/조합)으로 복원
   updateBossViewBtn(); if(typeof playSfx==='function') playSfx('ui_close'); }
-function toggleBossArena(){ if(G.bossOpen) closeBossArena(); else openBossArena(); }
 // ── 토벌장 유닛 컨트롤(메인 맵과 동일: 클릭 선택 / 드래그 박스 선택 / 이동 / 해제) ──
 let _baSel=[];                       // 선택된 파견 유닛 uid
 let _ba={box:null,cmd:null,dragU:null,moved:false};
@@ -12832,11 +12799,6 @@ function research(wpn){
   if(UPG_TIME<=0){ finishResearch(wpn); return; }              // 즉시 완료 모드
   G.research={ wpn:wpn, t:UPG_TIME, dur:UPG_TIME, cost:_uc };            // 타이머 가동
 }
-// 연구 취소 — 에너지 환불 후 중단
-function cancelResearch(){ if(!G.research) return;
-  G.gas+=(G.research.cost||UPG_COST); updateHud(); toast('ℹ️ 연구 취소');
-  G.research=null;
-}
 function finishResearch(wpn){ G.atkLv[wpn]=(G.atkLv[wpn]||0)+1;   // 업그레이드 완료 — 채팅 알림 없이 슬롯 레벨로만 표시
   if(typeof playSfxT==='function') playSfxT('upgrade',80);   // 완료음(길게 누르기 연사 시 쓰로틀)
   G.research=null; }
@@ -12945,9 +12907,34 @@ function openAppSettings(){ const p=document.getElementById('settingsPop'); if(!
   if(typeof fxPop==='function') fxPop(p.querySelector('.setCard'));
   const lo=document.getElementById('setLogout'); if(lo) lo.style.display=(typeof AUTH!=='undefined'&&AUTH.user)?'':'none';   // 로그인 상태에서만 로그아웃
   if(typeof syncSndUI==='function') syncSndUI();
-  if(typeof applyVideo==='function') applyVideo();
-  const b=document.getElementById('body-snd'); if(b&&getComputedStyle(b).display==='none'&&typeof setExpand==='function') setExpand('snd'); }   // 소리 설정 기본 펼침
-function closeSettings(){ popHide('settingsPop'); }
+  if(typeof applyVideo==='function') applyVideo(); }   // 소리는 상단 고정 스위치라 따로 펼칠 것이 없다
+// 설정 하위 팝업 — 리스트 항목 하나당 한 화면.
+// ⚠ 본문은 복사하지 않고 보관함(#setStash)에서 통째로 옮겨 쓴 뒤 닫을 때 돌려놓는다.
+// 껍데기 항목(계정·언어·패치노트·개인정보·문의)은 걷어냈다 — 뒤에 붙은 것이 없으면 리스트에 두지 않는다.
+//   채팅 표시는 '열어 보는 화면'이 아니라 껐다 켜는 것이라 상단 스위치로 올렸다.
+const SET_SUB={ vid:'비디오 설정', mission:'임무 목표', disc:'디스코드', spd:'게임 배속' };
+const SET_SUB_BODY={ vid:'body-vid', mission:'body-mission', spd:'body-spd' };   // 옮겨 쓰는 기존 본문
+let _setSubKey='';
+function openSetSub(k){ const bd=document.getElementById('setSubBody');
+  if(!bd||!SET_SUB[k]) return;
+  closeSetSub();                                   // 열려 있는 것을 먼저 돌려놓는다
+  _setSubKey=k;
+  document.getElementById('setSubTitle').textContent=SET_SUB[k];
+  const moveId=SET_SUB_BODY[k];
+  if(moveId){ const el=document.getElementById(moveId);
+    if(el){ el.style.display='block'; bd.appendChild(el); } }   // 통째로 옮긴다(복사 아님)
+  else bd.innerHTML='<div class="setSoon">준비 중입니다</div>';
+  if(k==='mission' && typeof _renderMission==='function') _renderMission();
+  if(k==='spd' && typeof renderVote==='function') renderVote();
+  popShow('setSubPop'); playSfx('ui_open'); }
+function closeSetSub(){ const bd=document.getElementById('setSubBody');
+  if(!bd) return;
+  const moveId=SET_SUB_BODY[_setSubKey];
+  if(moveId){ const el=document.getElementById(moveId), st=document.getElementById('setStash');
+    if(el&&st){ el.style.display=''; st.appendChild(el); } }   // 보관함으로 돌려놓는다
+  bd.innerHTML=''; _setSubKey='';
+  popHide('setSubPop'); }
+function closeSettings(){ closeSetSub(); popHide('settingsPop'); }
 const PAUSE_MAX=3;
 function togglePause(){
   if(!G.paused){   // 일시정지 시도 — 횟수 제한
@@ -13003,13 +12990,7 @@ function confirmExitGame(){ closeExitConfirm();
     if(typeof showOverlay==='function'){ showOverlay(); return; } return; }   // 폴백(통계 미사용 맵 등)
   location.reload(); }
 function closeExitConfirm(){ popHide('exitConfirm'); }
-function setExpand(id){ const b=document.getElementById('body-'+id), menu=document.querySelector('#settingsPop .setMenu');
-  if(!b) return; const willOpen=getComputedStyle(b).display==='none';
-  document.querySelectorAll('#settingsPop .setBody').forEach(x=>{ x.style.display='none'; x.classList.remove('on'); });   // 한 구역만 열기: 나머지 닫기
-  document.querySelectorAll('#settingsPop .setItem').forEach(x=>x.classList.remove('open'));
-  if(willOpen){ b.style.display='block'; b.classList.add('on');
-    const it=b.previousElementSibling; if(it&&it.classList.contains('setItem')) it.classList.add('open'); }   // 열린 항목만 강조(나머지는 흐리게)
-  if(menu) menu.classList.toggle('expanded', willOpen); }
+// (setExpand 삭제 — 항목을 제자리에서 펼치던 옛 방식. 지금은 openSetSub 가 하위 팝업으로 연다)
 function refreshModelViews(){  /* 3D on/off 시 유닛뽑기·업그레이드 DOM 아이콘 폴백 갱신 */
   try{ if(typeof buildClock==='function') buildClock(); }catch(e){}
   }
@@ -13037,24 +13018,20 @@ function setQuality(q){ G.opt=G.opt||{sfx:true,bgm:true}; q=(q==='saver')?'saver
 function _bgmApplyVol(){ if(_bgm.audio) _bgm.audio.volume=_bgmVol(); }   // 현재 재생 중 BGM에 즉시 반영
 function _sndDisp(k){ return SND[k+'On'] ? SND[k] : 0; }   // 표시값: 끄기=0, 켜기=저장값
 function _sndPaintBar(k){ const on=SND[k+'On']!==false, d=_sndDisp(k);
-  const fb=document.getElementById('flag-'+k); if(fb){ fb.classList.toggle('on',on); fb.textContent=on?'켜기':'끄기'; }
+  const fb=document.getElementById('flag-'+k); if(fb) fb.classList.toggle('on',on);   // 스위치 — 글자 없이 on 만
   const sl=document.querySelector('.setRange[data-k="'+k+'"]');
   if(sl){ sl.value=d; sl.style.opacity='1'; sl.style.background='linear-gradient(90deg,var(--setAcc,#ff3b3b) '+d+'%,rgba(255,255,255,.15) '+d+'%)'; }
   const lbl=document.getElementById('vol-'+k); if(lbl) lbl.textContent=d; }
 // 켜기/끄기 토글 — 끄면 바는 0으로(값은 기억), 켜면 이전 값으로 복원
 function toggleSnd(key){ SND[key+'On']=!SND[key+'On']; _sndSave();
-  if(key==='bgm') _bgmApplyVol(); _sndPaintBar(key); }
-// 슬라이더 이동 — 0보다 크게 움직이면 자동으로 켜기 + 해당 볼륨
-function setVol(key,el){ const v=Math.max(0,Math.min(100,+el.value));
-  if(v>0){ SND[key]=v; SND[key+'On']=true; }       // 움직여서 소리 키우면 켜기 + 값 갱신
-  else { SND[key+'On']=false; }                    // 0으로 내리면 끄기(직전 값 SND[key]는 유지)
-  _sndSave();
-  const fb=document.getElementById('flag-'+key); if(fb){ fb.classList.toggle('on',SND[key+'On']); fb.textContent=SND[key+'On']?'켜기':'끄기'; }
-  const lbl=document.getElementById('vol-'+key); if(lbl) lbl.textContent=v;
-  el.style.opacity='1'; el.style.background='linear-gradient(90deg,var(--setAcc,#ff3b3b) '+v+'%,rgba(255,255,255,.15) '+v+'%)';
-  if(key==='bgm') _bgmApplyVol(); }
+  if(key==='bgm') _bgmApplyVol();
+  if(key==='chat') _chatApplyShow();
+  _sndPaintBar(key); }
+// 채팅 끄기 = 플레이어 채팅·입력창·로비 채팅만 감춘다.
+//   시스템 알림(.cmsg.sys)은 뽑기 결과·패배 경고를 나르므로 끄지 않는다.
+function _chatApplyShow(){ if(document.body) document.body.classList.toggle('chatOff', SND.chatOn===false); }
 // 열 때 SND 값으로 컨트롤 동기화(끄기면 0 표시)
-function syncSndUI(){ ['sfx','bgm'].forEach(_sndPaintBar); }
+function syncSndUI(){ ['sfx','bgm','chat'].forEach(_sndPaintBar); }
 // ── 채팅(메인-하단 사이) — 로컬 입력 + 다른 플레이어 가짜 메시지(임시) ──
 function escHtml(s){ return String(s).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
 let _lastSysMsg='', _lastSysT=-1e9;   // 시스템 알림 중복 억제 상태(toast·addChat 공통)
@@ -14045,8 +14022,8 @@ const BGM_DIR = 'assets/audio/bgm/';
 const _bgm = { audio:null, set:null, pendingGesture:false };
 let _bgmLast = -1;
 // 전역 사운드 설정(로비/로그인/인게임 공통). 100 = 현재 기준 볼륨.
-const SND = { bgm:100, sfx:100, bgmOn:false, sfxOn:false };   // (임시) 기본 음소거 — 되돌리려면 bgmOn/sfxOn을 true로
-(function(){ try{ const s=JSON.parse(localStorage.getItem('nm_snd')); if(s&&typeof s==='object') Object.assign(SND,s); }catch(e){} SND.bgmOn=false; SND.sfxOn=false; })();   // (임시) 시작 시 강제 음소거 — 되돌릴 때 이 강제 두 줄만 제거
+const SND = { bgm:100, sfx:100, bgmOn:false, sfxOn:false, chatOn:true };   // chatOn = 플레이어 채팅 표시   // (임시) 기본 음소거 — 되돌리려면 bgmOn/sfxOn을 true로
+(function(){ try{ const s=JSON.parse(localStorage.getItem('nm_snd')); if(s&&typeof s==='object') Object.assign(SND,s); }catch(e){} SND.bgmOn=false; SND.sfxOn=false; _chatApplyShow(); })();   // (임시) 시작 시 강제 음소거 — 되돌릴 때 이 강제 두 줄만 제거
 function _sndSave(){ try{ localStorage.setItem('nm_snd', JSON.stringify(SND)); }catch(e){} }
 function _bgmTracks(){ return BGM_SETS[_bgm.set] || []; }
 function _bgmVol(){ const base=(_bgm.set==='ingame'?BGM_GAME_VOLUME:BGM_VOLUME);
@@ -14167,11 +14144,6 @@ function setMapSort(s){ _mapSort=s;
   const lb=document.getElementById('msSortLbl'); if(lb) lb.textContent=_SORT_LBL[s]||s;
   document.querySelectorAll('#msSortMenu .msSortOpt').forEach(b=>b.classList.toggle('on', b.dataset.v===s));
   closeSortMenu(); renderMaps(); }
-function toggleSortMenu(ev){ if(ev){ ev.preventDefault(); ev.stopPropagation(); }
-  const dd=document.getElementById('msSortDD'), menu=document.getElementById('msSortMenu'); if(!dd||!menu) return;
-  const willOpen=menu.classList.contains('hide');
-  if(willOpen){ menu.classList.remove('hide'); dd.classList.add('open'); setTimeout(()=>document.addEventListener('click', _sortMenuOutside), 0); }
-  else closeSortMenu(); }
 function closeSortMenu(){ const dd=document.getElementById('msSortDD'), menu=document.getElementById('msSortMenu');
   if(menu) menu.classList.add('hide'); if(dd) dd.classList.remove('open'); document.removeEventListener('click', _sortMenuOutside); }
 function _sortMenuOutside(e){ const dd=document.getElementById('msSortDD'); if(dd && !dd.contains(e.target)) closeSortMenu(); }
@@ -15006,13 +14978,6 @@ function updateHud(){
   if(G.tab==='Players') updatePlayerCounts();
   hudSetRes(G.mineral, G.gas, G.units.filter(u=>!u.fixed).length, maxUnits());
 }
-// 파견 = 파견 안 된 유닛 중 가장 강한 1기를 보스방으로(캡=2). 하단 4그리드 파견 슬롯에서 호출.
-function deployBestToBoss(){ if(!(G.coopBoss&&!G.coopBoss.dead)){ toast('ℹ️ 활성 보스가 없습니다'); return; }
-  if(bossDeployedCount()>=BOSS_DEPLOY_CAP){ toast('⚠️ 보스방 파견은 최대 '+BOSS_DEPLOY_CAP+'기입니다'); return; }
-  let best=null, bp=-1;
-  for(const u of G.units){ if(u.fixed||u.atBoss) continue; const p=(typeof unitDmg==='function'?unitDmg(u):0); if(p>bp){ bp=p; best=u; } }
-  if(!best){ toast('ℹ️ 파견할 유닛이 없습니다'); return; }
-  deployUnitToBoss(best); }
 
 // ── 입력: 유닛 드래그 (메인 탭) ──
 let drag=null;
@@ -15697,8 +15662,6 @@ function _btPickerHTML(addFn){ let html=''; if(typeof SANDBOX_ROSTER==='undefine
   return html; }
 function _btRosterFlat(){ const out=[]; if(typeof SANDBOX_ROSTER==='undefined') return out;
   (typeof SANDBOX_RACE_ORDER!=='undefined'?SANDBOX_RACE_ORDER:Object.keys(SANDBOX_ROSTER)).forEach(function(race){ (SANDBOX_ROSTER[race]||[]).forEach(function(it){ out.push(it); }); }); return out; }
-function renderBtPicker(){ const ea=document.getElementById('btPicker'), ef=document.getElementById('btPickerFoe');
-  if(ea) ea.innerHTML=_btPickerHTML('btAdd'); if(ef) ef.innerHTML=_btPickerHTML('btAddFoe'); }
 function _btModelStats(u, gm){ const d=Udef(gm); if(!d) return; const m=(u.hero?HERO_STAT_MUL:1)*gachaTierMul(u);   // 전투실험 전용: HP/실드/에너지도 gmodel 기준 → 공격 정의와 일치(프랑켄슈타인 방지)
   u.maxHp=Math.round((d.hp||0)*m); u.hp=u.maxHp; u.maxSh=Math.round((d.shield||0)*m); u.sh=u.maxSh; u.maxEn=d.energy||0; u.en=u.maxEn;
   if((d.shield||0)>0){ const _s=_upgShield(u); if(_s){ u.maxSh+=_s; u.sh=u.maxSh; } } }   // 🛡 에테리얼 실드 티어(생성 시 적용 · 무기/방어는 라이브)

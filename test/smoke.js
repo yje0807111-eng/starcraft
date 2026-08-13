@@ -218,6 +218,12 @@ async function groupLobby(){
       assert(navs==='home,gear,upg,map,shop','네비 구성이 다름: '+navs);
       // 토벌은 네비에서 빠지고 HOME 팝업이 됐다 — 2번 칸은 정비(장비·펫·동료)
       assert(document.querySelector('#navBar .navIt[data-nav=gear]').textContent.indexOf('정비')>=0,'2번 탭 표기가 정비가 아님'); }
+    // ⚠ .hide 가 실제로 숨기는지 — id 선택자에 display 를 주면 .appScreen.hide(클래스 2개)를 이겨
+    //   화면이 안 숨고 다른 화면 위를 덮어 클릭을 전부 먹는다(강화 화면이 실제로 그랬다).
+    { const shown=[];
+      for(const el of document.querySelectorAll('.appScreen.hide'))
+        if(getComputedStyle(el).display!=='none') shown.push(el.id||el.className);
+      assert(!shown.length,'.hide 인데 안 숨는 화면: '+shown.join(', ')); }
     assert(document.querySelector('#navBar .navIt.on').dataset.nav==='home','HOME 탭이 활성이 아님');
     // 실데이터에 붙은 곳 = 사냥터 업그레이드(내 캐릭터·동료·건물·펫 4구역 · 해금제)
     // 탭 띠는 장비창 섹션 바와 같은 컴포넌트여야 한다(segNavHTML 단일 소스) — 새 탭 띠를 만들면 여기서 걸린다
@@ -2504,6 +2510,54 @@ async function groupGame(){
     assert(visible(document.querySelector('#pointPanel .ptTitle, #pointPanel .ppHead')),'공학소 팝업 헤더 안 보임'); closePointUpgrade(); return 'ok'; });
   await step('설정 팝업', ()=>{ openSettings(); assert(visible($('settingsPop')),'settingsPop 안 보임'); closeSettings(); return 'ok'; });
   // DESIGN.md 규칙 — 게임 안 팝업(설정 · 나가기 확인 · 결과)만. 게임 밖(#settingsPop.appCtx)은 대상 아님
+  await step('설정: 상단 스위치 + 리스트 → 하위 팝업', ()=>{
+    openSettings();
+    // ① 소리는 리스트가 아니라 상단 고정 스위치 — 눌러서 상태가 뒤집혀야 한다
+    const sw=$('flag-sfx'); assert(sw && sw.classList.contains('setSw'),'효과음 스위치가 없음');
+    const was=SND.sfxOn!==false; sw.click();
+    assert((SND.sfxOn!==false)!==was,'스위치를 눌러도 효과음 상태가 안 바뀜');
+    assert(sw.classList.contains('on')===(SND.sfxOn!==false),'스위치 on 클래스가 상태와 어긋남');
+    sw.click(); assert((SND.sfxOn!==false)===was,'스위치가 원래대로 안 돌아옴');
+    // 채팅 표시도 같은 스위치 — 끄면 body.chatOff 로 플레이어 채팅만 감춘다(시스템 알림은 남는다)
+    const cw=$('flag-chat'); assert(cw,'채팅 표시 스위치가 없음');
+    const cOn=SND.chatOn!==false; if(cOn) cw.click();
+    assert(document.body.classList.contains('chatOff'),'채팅을 꺼도 body.chatOff 가 안 붙음');
+    addChat('테스터','안녕'); addChat('','시스템 알림 테스트');
+    { const ply=[...document.querySelectorAll('#chatLog .cmsg:not(.sys)')];
+      const sys=[...document.querySelectorAll('#chatLog .cmsg.sys')];
+      assert(ply.every(e=>getComputedStyle(e).display==='none'),'채팅 끔인데 플레이어 채팅이 보임');
+      assert(sys.every(e=>getComputedStyle(e).display!=='none'),'시스템 알림까지 같이 숨었다'); }
+    cw.click(); assert(!document.body.classList.contains('chatOff'),'채팅을 다시 켜도 chatOff 가 안 풀림');
+    if(!cOn) cw.click();   // 원래 상태로
+    // ② 옛 아코디언(제자리 펼침)은 폐기 — 항목은 하위 팝업으로 연다
+    assert(typeof setExpand==='undefined','옛 아코디언 setExpand 가 남아 있음');
+    // 리스트에는 '뒤에 실제 화면이 붙은 것'만 둔다 — 껍데기 항목은 걷어냈다(2026-08-14).
+    const items=[...document.querySelectorAll('#settingsPop .setMenu .setItem')];
+    const keys=items.map(e=>(e.getAttribute('onclick')||'').replace(/[^a-z]/g,''));
+    assert(items.length===3,'설정 리스트는 3개여야 한다(비디오·임무·디스코드): '+items.length);
+    for(const dead of ['acct','lang','patch','priv','ask'])
+      assert(!keys.some(k=>k.indexOf('openSetSub'+dead)===0),'걷어낸 껍데기 항목이 남음: '+dead);
+    // ③ 본문은 다시 만들지 않고 보관함(#setStash)에서 통째로 옮겨 온다 — 같은 노드여야 한다
+    const stash=$('setStash'), vid=$('body-vid');
+    assert(stash&&vid&&vid.parentNode===stash,'열기 전 본문이 보관함에 없음');
+    openSetSub('vid');
+    const sub=$('setSubPop'); assert(sub && !sub.classList.contains('hide'),'하위 팝업이 안 열림');
+    assert($('setSubTitle').textContent==='비디오 설정','하위 팝업 제목이 틀림: '+$('setSubTitle').textContent);
+    assert($('body-vid')===vid,'본문을 복사해 두 번 만들었다(단일 소스 위반)');
+    assert(vid.parentNode===$('setSubBody'),'본문이 하위 팝업으로 안 옮겨짐');
+    assert(document.querySelectorAll('#seg-q').length===1,'화질 세그먼트가 2개(복사됨)');
+    // ④ 닫으면 보관함으로 되돌아간다 — 안 그러면 다음 열기 때 사라진다
+    closeSetSub();
+    assert(sub.classList.contains('hide'),'하위 팝업이 안 닫힘');
+    assert(vid.parentNode===stash,'본문이 보관함으로 안 돌아옴');
+    // ⑤ 아직 내용이 없는 항목은 '준비 중' 한 줄
+    openSetSub('disc');   // 아직 링크가 없는 항목 = 준비 중 한 줄
+    assert($('setSubBody').querySelector('.setSoon'),'빈 항목에 준비 중 표시가 없음');
+    closeSettings();
+    assert($('setSubPop').classList.contains('hide'),'설정을 닫아도 하위 팝업이 남음');
+    return items.length+'항목 · 스위치 2';
+  });
+
   await step('게임 안 팝업: DESIGN.md 규칙(라운드 토큰 · 승패 액센트)', ()=>{
     const OK=['3px','6px','9px'];
     const scan=(root)=>{ const bad=[];
@@ -2542,10 +2596,21 @@ async function groupGame(){
     assert(alphas.length,'카드 배경에서 알파를 못 읽음: '+cbg);
     assert(Math.max.apply(null,alphas)<=0.95,'카드 면이 불투명해 뒤가 안 비침: 최대 알파 '+Math.max.apply(null,alphas));
     assert(Math.min.apply(null,alphas)>=0.8,'카드 면이 너무 투명해 글자가 묻힘: 최소 알파 '+Math.min.apply(null,alphas));
-    // 강조는 바깥이 아니라 안쪽 프레임(::before)이 맡는다 — 바깥은 금속 엣지 그대로
-    const fc=getComputedStyle(card,'::before').borderTopColor;
-    const fa=/rgba?\([^)]*?,\s*([\d.]+)\)/.exec(fc);
-    assert(fa && parseFloat(fa[1])>=0.4,'안쪽 프레임이 흐림: '+fc);
+    // 2026-08-14: 이중 테두리를 폐기했다 — 팝업은 바깥 1px 하나로 끝낸다.
+    //   안쪽 시안 헤어라인과 금색 코너 브래킷을 빼고, 면은 사냥터 업그레이드 패널과 같은 회색으로 맞추었다.
+    assert(getComputedStyle(card,'::before').content==='none','안쪽 프레임(::before)이 아직 남아 있음');
+    assert(getComputedStyle(card,'::after').content==='none','코너 브래킷(::after)이 아직 남아 있음');
+    // 팝업 안에는 시안을 쓰지 않는다 — '현재 위치'는 중립 강조(밝은 테두리 + 흰 글자)가 맡는다(DESIGN.md §2).
+    //   ⚠ --setAcc 토큰 하나가 12곳으로 퍼진다 — 값만 되돌려도 팝업 전체가 다시 시안이 된다.
+    { const acc=getComputedStyle(card).getPropertyValue('--setAcc').trim();
+      assert(!/5cd6ff/i.test(acc),'팝업 액센트가 시안으로 돌아감: '+acc);
+      const cy=[];
+      for(const el of card.querySelectorAll('*')){ const c=getComputedStyle(el);
+        const t=c.color+' '+c.borderTopColor+' '+c.backgroundColor+' '+c.backgroundImage+' '+c.boxShadow;
+        if(/92,\s*214,\s*255/.test(t)) cy.push(el.className||el.tagName); }
+      assert(!cy.length,'팝업 안에 시안을 쓴 요소: '+cy.slice(0,4).join(', ')); }
+    { const rgb=(cbg.match(/\d+/g)||[]).slice(0,3).map(Number);
+      assert(Math.max.apply(null,rgb)-Math.min.apply(null,rgb)<=12,'팝업 면에 푸른기가 남음: '+cbg.slice(0,50)); }
     // 팝업 액션 버튼 4종은 카드 액센트를 따라가지 않고 한 스타일이어야 한다
     const btnStyle=(el)=>{ const c=getComputedStyle(el);
       return c.color+'|'+c.borderTopColor+'|'+c.backgroundColor+'|'+c.fontSize+'|'+c.height+'|'+c.borderRadius; };
