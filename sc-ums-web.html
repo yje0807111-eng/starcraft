@@ -97,7 +97,7 @@
      ⚠ 값이 흩어지면 반드시 어긋난다(선례: 높이 555 vs 564 · 여백 18 vs 20 · 92%가 322 vs 326).
      크기·여백·딤을 바꾸려면 여기만 고칠 것. */
   :root{--popW:92%;--popMaxW:350px;--popH:min(564px,90%);--popPad:20px;--popDim:rgba(2,3,6,.84)}
-  :root{--phW:963;--phH:1997;--navH:56px;--curH:34px}   /* 하단 바 높이(네비·유즈맵 탭바 공용) — 61 → 56px 로 살짝 얇게 */
+  :root{--phW:963;--phH:1997;--navH:56px;--curH:34px;--topPad:10px}   /* --topPad: 모바일에서 화면 끝에 붙으면 잘 안 보인다 — 상단을 그만큼 내린다 */   /* 하단 바 높이(네비·유즈맵 탭바 공용) — 61 → 56px 로 살짝 얇게 */
   #phone{width:390px;height:calc(390px * var(--phH) / var(--phW));aspect-ratio:var(--phW)/var(--phH);position:relative;
     /* 게임 배경 우주 타일(space_bg)을 캔버스와 같은 380px 스케일로 프레임 전체에 이어지게 — 어둡게 덮어 콘솔 가독성 유지 */
     background:linear-gradient(rgba(3,4,12,.5),rgba(3,4,12,.66)),url('assets/tiles/space_bg.webp') center/380px repeat #05060d;
@@ -140,11 +140,11 @@
   #hudRwrap{display:flex;flex-direction:column;align-items:flex-end;gap:4px;margin-top:2px}
   /* ⚙ 인게임 설정 — 네비 칸에서 빼 HUD 우상단으로. 상자 규격은 디자인 시스템 공용. */
   #hudTopRow{display:flex;align-items:center;gap:8px;pointer-events:auto}   /* 재화 줄과 설정 상자를 한 행에 — 높이가 달라도 align-items가 중앙을 맞춘다 */
-  .hudSet{width:25px;height:25px;display:grid;place-items:center;cursor:pointer;
+  .hudSet{width:24px;height:24px;   /* 선 18px 에 딱 맞는 상자 — 여백 3px + 테두리 1px */display:grid;place-items:center;cursor:pointer;
     color:rgba(234,238,245,.92);background:rgba(4,6,10,.34);border:1px solid rgba(255,255,255,.26);
     filter:drop-shadow(0 1px 3px rgba(0,0,0,.8));transition:color .15s,border-color .15s}
   .hudSet:hover{color:#fff;border-color:rgba(255,255,255,.45)}
-  .hudSet svg{display:block;width:15px;height:15px}   /* block — inline이면 라인박스 하단 여백이 생겨 아이콘이 위로 뜬다 */
+  .hudSet svg{display:block;width:18px;height:18px}   /* block — inline이면 라인박스 하단 여백이 생겨 아이콘이 위로 뜬다 */
   #hudR{display:flex;align-items:center;gap:10px;font-size:var(--fs-md);font-weight:800;white-space:nowrap;text-shadow:0 2px 4px #000,0 0 8px #000}
   .res{display:flex;align-items:center;gap:4px}   /* 상단 재화 바(.curBar)와 같은 간격 */
   .res .ri{width:14px;height:14px;display:block;flex:none;filter:drop-shadow(0 1px 3px rgba(0,0,0,.95))}   /* 숫자 높이에 맞춤 — .curBar와 동일 */
@@ -2554,7 +2554,7 @@
   #hbCv{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
   /* 좌상단 고정 묶음 — 재화 바와 같은 줄에서 시작한다(바는 우측 정렬이라 왼쪽이 비어 있다)
      ⚠ 이름 주의: `.hbTop`은 인게임 홈 하단 탭 줄(#bpMain)이 이미 쓰고 있다. 겹치면 그쪽이 세로로 무너진다. */
-  .hbHudTop{position:absolute;left:8px;top:3px;z-index:2;display:flex;flex-direction:column;align-items:flex-start;gap:5px}
+  .hbHudTop{position:absolute;left:8px;top:calc(3px + var(--topPad));z-index:2;   /* 재화 바와 같은 --topPad 를 본다 — 따로 놀면 안 된다 */display:flex;flex-direction:column;align-items:flex-start;gap:5px}
   /* 좌상단 묶음의 실제 높이(프로필 48 + gap 5 + 아이콘 30). 중앙 표시가 이 아래로 내려가는 기준 — 스모크가 겹침을 검사한다 */
   :root{--hbHudH:83px}
   /* 🎰 동료 뽑기 확률 — 등급 색은 공용 TIER_COLOR를 인라인으로 받는다(등급 색 규칙을 두 벌 만들지 않는다) */
@@ -2619,7 +2619,7 @@
   /* 헤더 = 접기/펴기 손잡이. 접으면 이 줄만 남고 뒤 배경이 화면 전체로 보인다 */
   /* ⚠ 공용 제목 규칙(#ovTitle,…,.hmUpgHead,… → Jua 700)이 뒤에 오며 같은 명시도로 덮는다.
      부모(.hmUpg)를 붙여 0,2,0 으로 올려 이 제목만 Noto 로 내린다 — 공용 규칙은 건드리지 않는다. */
-  .hmUpg .hmUpgHead{position:relative;width:100%;display:flex;align-items:center;gap:9px;padding:9px 12px;
+  .hmUpg .hmUpgHead{position:relative;width:100%;display:flex;align-items:center;gap:9px;padding:7px 12px 4px;
     font-family:var(--font-ko);font-size:15px;font-weight:700;letter-spacing:.11em;
     color:#ececec;cursor:pointer;background:none;border:none;border-bottom:none;text-align:left}
   /* 머리줄 아래 스캔라인은 뺐다(2026-08-12) — 바로 아래 탭 띠가 이미 상자라 선이 두 겹으로 보였다 */
@@ -2634,11 +2634,13 @@
   .hmUpg.down .hmUpgBar{display:none}
   /* 스킬 바 — 전장 위에 떠 있다(업그레이드 카드 바로 위). 판을 만들지 않고 버튼만 얹는다 */
   /* 줄이 늦어나면 hbResize 가 바 높이를 다시 재어 전장이 그만큼 줄어들다(자동) */
-  .hbBar{position:absolute;left:0;right:0;z-index:2;display:flex;flex-direction:column;align-items:center;gap:5px;padding:0 8px;pointer-events:none}
-  .hbGrp{display:flex;justify-content:center;gap:6px;pointer-events:none}
+  .hbBar{position:absolute;left:0;right:0;z-index:2;display:flex;flex-direction:column;align-items:stretch;gap:5px;padding:0 8px;pointer-events:none}   /* stretch — 줄을 가로로 펴야 안에서 오른쪽 정렬이 먹힐다 */
+  .hbGrp{display:flex;justify-content:flex-end;align-items:center;gap:5px;pointer-events:none}   /* 스킬은 오른쪽 — 왼쪽은 전장을 비워 둔다 */
+  .hbAuto{margin-right:3px}
   .hbBar button{pointer-events:auto}   /* 줄 랩포는 퇵과 — 버튼만 받는다(전장 탭이 사라지면 이게 범인) */
   /* 건설 — 한 칸 + 드롭다운 */
-  .hbBdWrap{position:relative;display:inline-flex;pointer-events:auto}
+  .hbBdWrap{position:relative;display:inline-flex}
+  .hbRoundBtn.on{color:#fff;background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.34)}
   .hbBdBtn .ic{width:17px;height:17px;stroke-width:2}
   .hbBdBtn.on{border-color:rgba(255,255,255,.34);color:#fff}
   /* 목록 — 버튼 바로 아래로 펴찌다. absolute 라 바 높이에 영향을 주지 않는다 */
@@ -2659,15 +2661,31 @@
     font-size:10px;font-weight:800}
   .hbBdCs .ri{width:10px;height:10px}
   .hbSkTx .ri{width:9px;height:9px;vertical-align:-1px;margin-right:1px}
-  .hbSk{flex:0 0 auto;width:52px;height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+  /* 스킬 = 원. 이름은 빼고 아이콘만 — 쌀 때는 남은 초가 그 자리에 들어간다 */
+  /* 스킬 = 반투명 원 + 진한 은색 링. 면을 투명하게 두어 뒤 전장이 비친다 */
+  .hbSk{position:relative;flex:0 0 auto;width:37px;height:37px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;overflow:hidden;
     cursor:pointer;font-family:inherit;color:#ececec;
-    background:linear-gradient(180deg,rgba(38,38,38,.92),rgba(16,16,16,.94));
-    border:1px solid rgba(255,255,255,.10);border-radius:var(--r-bar);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 2px 6px -3px #000}
-  .hbSk.wide{width:58px}
+    background:rgba(20,20,20,.55);border:1.5px solid #a2a9b5;   /* 그라데 없음 — 면도 테두리도 단색 */
+    box-shadow:0 2px 8px -3px #000, inset 0 1px 0 rgba(255,255,255,.08)}
+
   .hbSk.cool{color:#7a7a7a;background:rgba(20,20,20,.9)}
   .hbSk.on{border-color:rgba(255,210,74,.55);color:#ffd24a}
-  .hbSkIco{font-size:16px;line-height:1}
+  /* 아이콘을 정확히 가운데로 — 이모지는 라인박스 때문에 그냥 두면 아래로 처진다 */
+  .hbSkIco{position:relative;z-index:1;width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+    font-size:17px;line-height:1}
+  /* 쇼타임 껍데기 — 남은 만큼 회색으로 덮고 시계방향으로 풀린다 */
+  .hbCd{position:absolute;inset:0;z-index:2;pointer-events:none;border-radius:50%;
+    background:conic-gradient(rgba(6,7,10,.74) calc(var(--cd,0) * 360deg), transparent 0)}
+  .hbSkIco .icoImg{padding:5px}   /* 37px 원 안에서 링에 닿지 않게 */
+  .hbSk.cool .hbSkIco{opacity:.5}
+  /* 자동 사용 — 스킬 왼쪽의 작은 원. 꺼지면 가라앉고 켜지면 테두리가 살아난다 */
+  .hbAuto{flex:0 0 auto;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    cursor:pointer;font-family:var(--font-num);font-size:12px;font-weight:800;letter-spacing:0;
+    color:#8a8a8a;background:rgba(20,20,20,.55);border:1.5px solid #a2a9b5;   /* 스킬 원과 같은 단색 은색 */
+    transition:color .13s,background .13s}
+  .hbAuto.on{color:#fff;background:rgba(180,42,42,.36)}
+  .hbAuto:active{transform:translateY(1px)}
   .hbSkTx{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:9px;font-weight:800;letter-spacing:.2px}
   .hbSk:active{transform:translateY(1px)}
   /* 건설·부스트 팝업 행 */
@@ -2727,7 +2745,7 @@
   /* ── 사냥터 업그레이드 ── */
   /* 탭 띠 = 장비창 섹션 바와 같은 컴포넌트(.pdSeg/.pdSegInd/.pdSegBtn · segNavHTML).
      생김새는 전부 공용 규칙이 갖는다 — 여기 오버라이드는 폭·글자뿐이다. */
-  .hmUpgBar{display:flex;align-items:stretch;gap:6px;padding:4px 8px}   /* 아래 실선 없음 — 탭 띠 자체가 상자라 선이 겹친다 */
+  .hmUpgBar{display:flex;align-items:stretch;gap:6px;padding:3px 8px 1px}   /* 아래 실선 없음 — 탭 띠 자체가 상자라 선이 겹친다 */
   .hmUpgTabs{flex:1 1 0;display:flex;align-items:stretch;min-width:0}
   /* 탭 띠의 생김새는 전부 공용 .pdSeg 가 갖는다(장비창 섹션 바와 같은 것). 여기서 덮는 건 아래 둘뿐:
      ① 수량 칩 옆에서 남는 폭을 다 쓴다  ② 글자 크기. 구역색은 segNavHTML 이 --segCol 로 인라인에 실어 준다. */
@@ -2750,8 +2768,8 @@
     text-shadow:0 1px 2px rgba(0,0,0,.85)}
   /* 그리드 — 2.7줄이 보이는 '고정' 높이. 0.7줄이 걸쳐 보이는 게 더 있다는 신호 */
   /* ⚠ grid-auto-rows·align-content 필수 — 높이가 고정이라 칸이 적은 구역(펫 2칸)에서 한 줄이 통째로 늘어난다 */
-  .hmUpgGrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;padding:8px;
-    --rowH:54px;--gap:8px;height:calc(2.7*var(--rowH) + 1.7*var(--gap) + 16px);
+  .hmUpgGrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--gap);padding:var(--pd);
+    --rowH:54px;--gap:5px;--pd:6px;padding-top:3px;height:calc(2.7*var(--rowH) + 1.7*var(--gap) + var(--pd) + 3px);
     grid-auto-rows:var(--rowH);align-content:start;
     overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;
     transition:height .28s cubic-bezier(.4,0,.2,1),padding .28s cubic-bezier(.4,0,.2,1),opacity .2s}
@@ -2869,7 +2887,7 @@
   .navBar.hide{display:none}
   /* 💠 공용 재화 바(단일 소스) — 모든 RPG/허브 + 유즈맵 선택 상단 상시. 볼륨1: 1px 테두리+그라데+하단 헤어라인, 재화=금색.
      미네랄=pcoin · 가스 · 젬. 인게임(#hudR)과 별개다(계정 영구 재화). */
-  .curBar{position:absolute;left:0;right:0;top:0;z-index:62;height:var(--curH);display:flex;align-items:center;justify-content:space-between;gap:12px;
+  .curBar{position:absolute;left:0;right:0;top:var(--topPad);z-index:62;height:var(--curH);display:flex;align-items:center;justify-content:space-between;gap:12px;
     padding:0 10px;background:none;border-bottom:0}   /* 일체형 HUD — 판을 없애고 화면 위에 그대로 얹는다 */
   .curBar::after{content:'';position:absolute;left:0;right:0;top:0;height:64px;z-index:-1;pointer-events:none;
     background:linear-gradient(180deg,rgba(3,4,8,.55),rgba(3,4,8,.22) 60%,transparent)}   /* 가독성은 테두리가 아니라 '장면의 그늘'로 확보 */
@@ -2894,8 +2912,8 @@
     stroke-width:2.8;stroke-linecap:round;transition:stroke .15s}
   .curBar .res:hover .curPlus{border-color:rgba(240,180,41,.6)}
   .curBar .res:hover .curPlus svg{stroke:#f8c453}   /* 숫자 높이에 맞춰 축소 */
-  #phone.curOn .appScreen{padding-top:var(--curH)}
-  #phone.curOn #mapSelect{padding-top:calc(var(--curH) + 12px)}
+  #phone.curOn .appScreen{padding-top:calc(var(--curH) + var(--topPad))}
+  #phone.curOn #mapSelect{padding-top:calc(var(--curH) + var(--topPad) + 12px)}
   /* 팝업은 재화 바 여백을 받지 않는다 — 카드가 가운데 정렬이라 바와 겹치지 않고,
      여백을 받으면 재화 바가 없는 화면(방찾기·대기실)의 팝업과 7px 어긋난다. */
   #phone.curOn #modeSheet,#phone.curOn #soloDiffPanel,
@@ -2911,7 +2929,7 @@
   #shopScreen .twToast,#gearScreen .twToast{position:absolute;left:50%;bottom:calc(var(--navH) + 16px);transform:translateX(-50%)}
   /* 🧰 정비 — 유즈맵 목록 상자(.msPanel)와 같은 규격. 여백·배경 규칙은 #mapSelect와 공유한다 */
   #gearScreen{padding:12px 13px calc(var(--navH) + 12px)}
-  #phone.curOn #gearScreen{padding-top:calc(var(--curH) + 12px)}
+  #phone.curOn #gearScreen{padding-top:calc(var(--curH) + var(--topPad) + 12px)}
   #gearScreen .shopTitle{flex:none}
   #gearScreen .shopTitle .ic{width:15px;height:15px;vertical-align:-2px;margin-right:5px}   /* 제목 아이콘 = 네비 '정비'와 같은 bag SVG(이모지 금지) */
   .gearBody{flex:1 1 auto;min-height:0;padding:8px;overflow-y:auto;overflow-x:hidden}
@@ -2919,7 +2937,7 @@
   .gearBody .gearWrap{height:100%}
   .upgEmpty{flex:1 1 auto;display:grid;place-items:center;font-size:12px;color:#6f6f6f}
   #upgScreen{display:flex;flex-direction:column;padding:12px 13px calc(var(--navH) + 12px)}
-  #phone.curOn #upgScreen{padding-top:calc(var(--curH) + 12px)}
+  #phone.curOn #upgScreen{padding-top:calc(var(--curH) + var(--topPad) + 12px)}
   .shopTitle{text-align:center;font-size:15px;font-weight:700;letter-spacing:.6px;color:#ececec;padding:6px 0 12px}
   /* 구역 패널 = HOME .hmCard */
   .shopPanel{flex:none;background:var(--hmPanel);border:1px solid var(--hbEdge);border-radius:var(--r-bar);overflow:hidden;margin:0 2px 12px}   /* flex:none — 부모가 flex 컬럼이라 없으면 내용이 눌려 잘린다(HOME .hmCard와 같은 이유) */
@@ -4250,7 +4268,7 @@
           <span class="hbXp"><i id="hbXpBar"></i></span>
           <span class="hbSt"><i id="hbLv">Lv.1</i><i id="hbAtk"><em>⚔</em><span id="hbAtkN">0</span></i></span>
         </span></button>
-      <div class="hbIcoRow"><button class="hbRoundBtn" id="hbRoundBtn" onclick="hbOpenRounds()" aria-label="던전·라운드 선택"><span data-ico="flag"></span></button><button class="hbRoundBtn" id="hbVillageBtn" onclick="openVillage()" aria-label="마을" title="마을"><span data-ico="hero"></span></button><button class="hbRoundBtn" id="hbMateBtn" onclick="hbOpenMates()" aria-label="동료" title="동료 영입·강화"><span data-ico="party"></span></button><button class="hbRoundBtn" id="hbGrowBtn" onclick="hbOpenGrow()" aria-label="성장" title="진화·환생"><span data-ico="fav"></span></button></div>
+      <div class="hbIcoRow"><button class="hbRoundBtn" id="hbRoundBtn" onclick="hbOpenRounds()" aria-label="던전·라운드 선택"><span data-ico="flag"></span></button><button class="hbRoundBtn" id="hbVillageBtn" onclick="openVillage()" aria-label="마을" title="마을"><span data-ico="hero"></span></button><button class="hbRoundBtn" id="hbMateBtn" onclick="hbOpenMates()" aria-label="동료" title="동료 영입·강화"><span data-ico="party"></span></button><button class="hbRoundBtn" id="hbGrowBtn" onclick="hbOpenGrow()" aria-label="성장" title="진화·환생"><span data-ico="fav"></span></button><span class="hbBdWrap" id="hbBuildWrap"></span><button class="hbRoundBtn" id="hbDgBtn" onclick="openDungeonHub()" aria-label="토벌" title="토벌 — 열쇠로 단계 도전"><span data-ico="dungeon"></span></button><button class="hbRoundBtn" id="hbBoostBtn" onclick="hbOpenBoost()" aria-label="부스트" title="일시 강화"><span data-ico="boost"></span></button></div>
     </div>
     <div class="hbMid" id="hbMid">   <!-- 표시 전용 — 라운드 조절은 위 아이콘이 담당한다 -->
       <b id="hbRound">던전 1 · 라운드 1</b><span><i id="hbWaveTx">웨이브 1/5</i> · <i id="hbTimer">20s</i> · <i id="hbMode">반복</i></span></div>
@@ -5739,20 +5757,15 @@ function hbGoRound(n){ const H=hbHunt(), best=hbBest(H.dg);
 // 건설 목록 열림 여부 — 화면을 나갔다 오면 닫힐 상태가 기본
 let _hbBdOpen=false;
 function hbToggleBuild(){ _hbBdOpen=!_hbBdOpen;
-  if(typeof playSfx==='function') playSfx('ui_tab'); renderHbBar(); }
-function hbCloseBuild(){ if(!_hbBdOpen) return; _hbBdOpen=false; renderHbBar(); }
+  if(typeof playSfx==='function') playSfx('ui_tab'); renderHbBuild(); }
+function hbCloseBuild(){ if(!_hbBdOpen) return; _hbBdOpen=false; renderHbBuild(); }
 // 골랐으면 목록을 닫고 배치 모드로 — 목록이 뜨 채로 필드를 가리면 둘 숬 없다
-function hbPickBuild(bk){ _hbBdOpen=false; renderHbBar(); hbBuy(bk); }
-function renderHbBar(){ const bar=document.getElementById('hbBar'); if(!bar||!_hb) return;
-  const S=_hb, coin=Math.floor(((typeof PROF==='function'&&PROF())||{}).pcoin||0);
-  // ① 짓기 — '건설' 한 칸을 눌러 목록을 펴고, 골러야 배치 모드로 들어간다.
-  //   목록은 absolute — 흔름에서 빠지며 바 높이가 안 변하고 전장도 안 흔들린다.
-  const bdOpen=!!_hbBdOpen;
-  let h='<div class="hbGrp"><span class="hbBdWrap">'
-    +'<button class="hbSk hbBdBtn'+(bdOpen?' on':'')+'" onclick="hbToggleBuild()" title="건설">'
-    +'<span class="hbSkIco">'+ICO.build+'</span>'
-    +'<span class="hbSkTx">건설</span></button>';
-  if(bdOpen){
+function hbPickBuild(bk){ _hbBdOpen=false; renderHbBuild(); hbBuy(bk); }
+// 건설 — 좌상단 줄의 한 칸 + 아래로 펴치는 목록
+function renderHbBuild(){ const w=document.getElementById('hbBuildWrap'); if(!w) return;
+  const coin=Math.floor(((typeof PROF==='function'&&PROF())||{}).pcoin||0), open=!!_hbBdOpen;
+  let h='<button class="hbRoundBtn'+(open?' on':'')+'" onclick="hbToggleBuild()" aria-label="건설" title="건설"><span data-ico="build"></span></button>';
+  if(open){
     h+='<div class="hbBdMenu">';
     for(const bk of HB_BUILD_KEYS){ const B=HB_STRUCT[bk], n=hbStructN(bk), mx=hbBuildMax(bk),
         full=n>=mx, cost=hbBuildCost(bk), off=full||coin<cost;
@@ -5763,15 +5776,20 @@ function renderHbBar(){ const bar=document.getElementById('hbBar'); if(!bar||!_h
         +'<span class="hbBdCs">'+(full?'MAX':(resIco('mineral')+cost.toLocaleString('en-US')))+'</span>'
         +'</button>'; }
     h+='</div>'; }
-  h+='</span>';   /* 건설은 같은 줄에 남는다 — 한 칸이라 줄을 나눌 이유가 없다(줄이 늘면 전장이 줄어든다) */
-  for(const k in HB_SKILLS){ const SK=HB_SKILLS[k], cd=Math.max(0,S.skT[k]||0), rd=cd<=0;
-    h+='<button class="hbSk'+(rd?'':' cool')+'" onclick="hbUseSkill(&#39;'+k+'&#39;)" title="'+SK.tip+'">'
-      +'<span class="hbSkIco">'+SK.ico+'</span>'
-      +'<span class="hbSkTx">'+(rd?SK.name:Math.ceil(cd)+'s')+'</span></button>'; }
-  h+='<button class="hbSk wide" onclick="openDungeonHub()" title="토벌 — 열쇠로 단계 도전"><span class="hbSkIco">⚔️</span><span class="hbSkTx">토벌</span></button>';   // 네비에서 빠진 토벌의 유일한 입구
-  const bon=hbBoostOn('inc')||hbBoostOn('atk');
-  h+='<button class="hbSk wide'+(bon?' on':'')+'" onclick="hbOpenBoost()" title="일시 강화"><span class="hbSkIco">⚡</span><span class="hbSkTx">'+(bon?'적용중':'부스트')+'</span></button>';
-  bar.innerHTML=h+'</div>'; }
+  w.innerHTML=h;
+  if(typeof paintIcons==='function') paintIcons(w); }
+function renderHbBar(){ const bar=document.getElementById('hbBar'); if(!bar||!_hb) return;
+  const S=_hb, coin=Math.floor(((typeof PROF==='function'&&PROF())||{}).pcoin||0);
+  // 하단 바는 '전투 중에 쓰는 것'만 — 스킬 3개. 판을 여는 것(건설·토벌·부스트)은 좌상단 줄로 갔다.
+  let h='<div class="hbGrp">';
+  const au=!!hbHunt().skAuto;
+  h+='<button class="hbAuto'+(au?' on':'')+'" onclick="hbToggleAuto()" title="스킬 자동 사용 '+(au?'켬':'꺼짐')+'">A</button>';
+  for(const k in HB_SKILLS){ const SK=HB_SKILLS[k];
+    h+='<button class="hbSk" data-k="'+k+'" onclick="hbUseSkill(&#39;'+k+'&#39;)" title="'+SK.name+' — '+SK.tip+'">'
+      +'<span class="hbSkIco">'+_icoImg('skills', SK.ico)+'</span>'
+      +'<i class="hbCd"></i></button>'; }   // 껍데기는 --cd 로만 움직인다(다시 그리지 않음)
+  bar.innerHTML=h+'</div>';
+  renderHbBuild(); }   // 건설 버튼·목록은 좌상단에 따로 그린다
 // 🤝 동료 — 영입(첫 구매)·강화(같은 버튼)·출전 토글. 옛 전직 트리가 여기로 옮겨 왔다.
 function hbOpenMates(){ const el=document.getElementById('hbMateModal'); if(!el) return;
   el.classList.remove('hide'); renderMateModal(); if(typeof playSfx==='function') playSfx('ui_open'); }
@@ -6260,6 +6278,7 @@ function hbAllyMul(){ const u=hbHunt().upg;
            pet:   { dps:HB_PET_DPS   *(1+(u.peatk||0)*0.08), cdMul:Math.pow(0.985, u.pespd||0) } }; }
 function hbHunt(){ const p=PROF();
   if(!p.hunt) p.hunt={dg:1,round:1,climb:false,best:{},upg:{atk:0,rng:0,aspd:0,crit:0,hp:0,regen:0}};
+  if(typeof p.hunt.skAuto!=='number') p.hunt.skAuto=0;   // 스킬 자동 사용 — 세 개를 한 번에(0/1)
   if(!p.hunt.unl) p.hunt.unl={};        // 해금한 업그레이드(key→1). u:0 은 여기 없어도 열린 것으로 친다
   if(!p.hunt.rw || typeof p.hunt.rw!=='object') p.hunt.rw={};   // 🎁 마일스톤 수령 기록(던전→라운드)
   // 옛 구역 키(atk/def/util)가 저장돼 있으면 '내 캐릭터'로 옮긴다 — 없는 구역이면 격자가 빈 채로 남는다
@@ -6335,9 +6354,9 @@ function hbNextRw(dg,from){ const best=hbBest(dg);
 // 수치는 전부 아래 표에 모여 있다(밸런스는 나중에 표만 고친다).
 // 아군(동료·펫·터렛·벙커)은 hbStep 안에서 적과 같은 월드 좌표로 돈다.
 const HB_SKILLS={
-  nova: {name:'폭발', ico:'💥', cd:20, tip:'화면의 적 전체에 공격력 300% 피해'},
-  heal: {name:'응급', ico:'💚', cd:30, tip:'최대 체력의 40% 즉시 회복'},
-  slow: {name:'감속', ico:'🕸', cd:45, tip:'8초간 적 이동속도 50%'},
+  nova: {name:'폭발', ico:'sk_nova', cd:20, tip:'화면의 적 전체에 공격력 300% 피해'},
+  heal: {name:'응급', ico:'sk_emrg', cd:30, tip:'최대 체력의 40% 즉시 회복'},
+  slow: {name:'감속', ico:'sk_slow', cd:45, tip:'8초간 적 이동속도 50%'},
 };
 const HB_SLOW_S=8, HB_SLOW_MUL=.5;
 const HB_BOOSTS={
@@ -6689,6 +6708,26 @@ function hbUnitFire(u, dps, rangeMul, dt, cdMul){ const S=_hb, c=S.char;
   if(best.hp<=0) hbKill(best); }
 // 스킬
 function hbSkillReady(k){ const S=_hb; return !!S && (S.skT&&S.skT[k]||0)<=0; }
+// 자동 사용 on/off — 작은 원을 누를 때마다 뒤집힌다
+// 쇼타임 껍데기 — 남은 비율만 CSS 변수로 넣는다(DOM 재생성 없음).
+// ⚠ HB_SKILLS[k].cd 가 총시간 — 남은 시간을 그걸로 나눠야 한 바퀴가 맞는다.
+function hbSkCdPaint(){ const S=_hb; if(!S) return;
+  const bar=document.getElementById('hbBar'); if(!bar) return;
+  for(const k in HB_SKILLS){ const el=bar.querySelector('.hbSk[data-k="'+k+'"]'); if(!el) continue;
+    const tot=HB_SKILLS[k].cd||1, left=Math.max(0, S.skT[k]||0);
+    const f=Math.max(0, Math.min(1, left/tot));
+    el.style.setProperty('--cd', f.toFixed(3));
+    el.classList.toggle('cool', f>0); } }
+function hbToggleAuto(){ const H=hbHunt(); H.skAuto=H.skAuto?0:1;
+  if(typeof playSfx==='function') playSfx('ui_toggle');
+  if(typeof saveMeta==='function') saveMeta(); renderHbBar(); }
+// 매 틱 — 켜 둔 스킬을 준비되는 대로 쓴다.
+// ⚠ 회복은 체력이 넓넓할 때 쓰면 그대로 버려진다 — 70% 아래일 때만 내보낸다.
+function hbAutoSkills(){ const S=_hb; if(!S||!S.char) return;
+  if(!hbHunt().skAuto) return;   // 한 번에 켜고 끕다
+  for(const k in HB_SKILLS){ if(!hbSkillReady(k)) continue;
+    if(k==='heal' && S.char.hp > S.char.hpMax*0.7) continue;
+    hbUseSkill(k); } }
 function hbUseSkill(k){ const S=_hb, SK=HB_SKILLS[k]; if(!S||!SK) return;
   if(!hbSkillReady(k)){ return; }
   const c=S.char;
@@ -7218,6 +7257,8 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char;
   if(S.atkT>0) S.atkT-=dt;                            // 공격 모션 남은 시간(끝나면 idle로)
   if(S.slowT>0) S.slowT-=dt;
   for(const k in S.skT) if(S.skT[k]>0){ S.skT[k]-=dt; if(S.skT[k]<=0) S.skDirty=true; }
+  hbAutoSkills();   // 자동 사용 — 켜 둔 것만, 준비됐을 때만
+  hbSkCdPaint();    // 쓰는 동안 돌아가는 껍데기
   if(S.skDirty && typeof renderHbBar==='function'){ S.skDirty=false; renderHbBar(); }
   c.hitT+=dt;                                                     // 3초 무피격이면 서서히 회복(+회복 업그레이드)
   if(c.hitT>3 && c.hp<c.hpMax) c.hp=Math.min(c.hpMax, c.hp+(c.hpMax*.02+c.regen)*dt);
@@ -13197,13 +13238,18 @@ async function initAuth(){
       const m=await import('https://esm.sh/@supabase/supabase-js@2');
       _sb=m.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey); AUTH.mode='supabase';
       const { data }=await _sb.auth.getSession();   // 자동 로그인: 저장된 세션 복원(같은 기기 재실행 — 정식 계정만)
-      const u=data&&data.session&&data.session.user; AUTH.user = u ? sbUser(u) : null;
+      // ⚠ 기다리는 동안 사용자가 게스트로 들어갔을 수 있다 — 세션이 없을 때 null 로 덮으면 방금 들어온 사람이 팅긴다.
+      const u=data&&data.session&&data.session.user;
+      if(u) AUTH.user=sbUser(u);   // 세션이 없으면 현재 값을 그대로 둔다
       if(AUTH.user){ await sbEnsureProfile(); await sbSyncMetaOnLogin(); }   // 프로필 보정 + 계정 메타(포인트) 로드
-      _sb.auth.onAuthStateChange((_e,sess)=>{ AUTH.user = (sess&&sess.user) ? sbUser(sess.user) : null; if(AUTH.user) sbEnsureProfile(); });
+      _sb.auth.onAuthStateChange((_e,sess)=>{
+        if(sess&&sess.user){ AUTH.user=sbUser(sess.user); sbEnsureProfile(); return; }
+        if(AUTH.user&&AUTH.user.guest) return;   // 게스트는 supabase 세션이 없다 — 이 이벤트로 지우면 안 된다
+        AUTH.user=null; });
       return;
     }catch(e){ console.warn('Supabase 초기화 실패 → 로컬 계정 모드', e); AUTH.mode='local'; }
   }
-  AUTH.user = _lsGet('nm_session', null);   // 로컬 모드: 저장된 세션 자동 복원(자동 로그인)
+  if(!AUTH.user) AUTH.user = _lsGet('nm_session', null);   // 로컬 모드: 저장된 세션 자동 복원(이미 들어왔으면 그대로)
 }
 const ID_DOMAIN='nemonemo.app';   // 아이디를 Supabase 이메일 인증으로 처리하기 위한 합성 도메인(실제 메일 아님)
 function idToEmail(id){ return String(id).toLowerCase().replace(/[^a-z0-9._-]/g,'') + '@' + ID_DOMAIN; }
@@ -13404,8 +13450,11 @@ function _gsFinish(){ const op=document.getElementById('opening'); if(!op||op._f
     if(typeof _gsDone==='function') _gsDone(); }, GS_WARP_MS); }
 // ── 부팅 흐름: 오프닝 → 로그인 화면 ──
 //   저장된 세션이 있어도 화면은 반드시 거친다(자동 로그인 안 함). 빈 칸으로 로그인 = 그 세션 그대로 입장.
-async function bootApp(){ await initAuth();
-  if(typeof paintIcons==='function') paintIcons(document);   // data-ico → 라인아트 아이콘을 문서 전체에 1회(화면별 호출 누락에 의존하지 않게)
+async function bootApp(){
+  // ⚠ initAuth 는 esm.sh 에서 supabase 를 받아오는 네트워크 대기다.
+  //   아이콘은 인증과 무관하므로 먼저 칠한다 — 뒤에 두면 회선이 느릴 때 한참 뒤에 나타난다.
+  if(typeof paintIcons==='function') paintIcons(document);   // data-ico → 라인아트 아이콘을 문서 전체에 1회
+  await initAuth();
   // 오프닝 최소 노출 → 로그인/회원가입.
   // ⚠ 이 타이머는 '오프닝을 걷어내는' 용도다. 그 사이 다른 화면으로 이미 넘어갔다면 건드리지 않는다 —
   //    무조건 openAuth()를 부르면 1.7초 뒤에 사용자가 보고 있던 화면을 로그인 화면이 덮어버린다(스모크가 간헐 실패했다).
@@ -13502,6 +13551,8 @@ const ICO={
   solo:_svg('<rect x="2.5" y="7.5" width="19" height="10" rx="5"/><path d="M6.6 11.2v3M5.1 12.7h3"/><circle cx="15.6" cy="11.6" r="1.05" fill="currentColor" stroke="none"/><circle cx="17.9" cy="13.6" r="1.05" fill="currentColor" stroke="none"/>'),
   globe:_svg('<circle cx="12" cy="12" r="8.3"/><path d="M3.7 12h16.6"/><path d="M12 3.7c2.5 2.3 2.5 14.3 0 16.6c-2.5-2.3-2.5-14.3 0-16.6z"/>'),
   lock:_svg('<rect x="5.2" y="10.5" width="13.6" height="9.3" rx="2"/><path d="M8.2 10.5V8.2a3.8 3.8 0 0 1 7.6 0v2.3"/><circle cx="12" cy="14.6" r="1.25" fill="currentColor" stroke="none"/><path d="M12 15.5v2.1"/>'),
+  // 부스트 — 번개. 좌상단 줄에 쓴다
+  boost:_svg('<path d="M13.4 2.6 5.2 13.4h5.3l-1 8 8.3-10.8h-5.3z"/>'),
   // 건설 — 쌓아 올린 블록. 전장 바의 '건설' 버튼에 쓴다
   build:_svg('<path d="M3.8 20.2h16.4"/><path d="M6.2 20.2v-6.4h5v6.4"/><path d="M13 20.2V9.4h5v10.8"/>'),
   // 강화 — 네비 3번 칸. 위로 올라가는 화살표 하나(24그리드 공용 규칙)

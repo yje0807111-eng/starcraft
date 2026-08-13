@@ -253,14 +253,16 @@ async function groupLobby(){
       assert(!document.querySelector('#hmUpgGrid .hmUp[data-k^="b_"]'),'건물 구역에 건설 카드가 남아 있음');
       assert(document.querySelector('#hmUpgGrid .hmUp[data-k="tuatk"]'),'건물 구역에 강화 카드가 없음');
       // 짓는 입구는 전장 위 '건설' 한 칸 — 누르면 목록이 펴진다
-      { assert(document.querySelectorAll('#hbBar .hbBdBtn').length===1,'전장 건설 버튼이 한 칸이 아님');
-        assert(!document.querySelector('#hbBar .hbBdMenu'),'누르지도 않았는데 건설 목록이 열려 있음');
+      { assert(document.querySelectorAll('#hbBuildWrap .hbRoundBtn').length===1,'좌상단 건설 버튼이 없음');
+        assert(!document.querySelector('#hbBuildWrap .hbBdMenu'),'누르지도 않았는데 건설 목록이 열려 있음');
         hbToggleBuild();
-        const it=[...document.querySelectorAll('#hbBar .hbBdMenu .hbBdIt')];
+        const it=[...document.querySelectorAll('#hbBuildWrap .hbBdMenu .hbBdIt')];
         assert(it.length===HB_BUILD_KEYS.length,'건설 목록이 '+HB_BUILD_KEYS.length+'개가 아님: '+it.length);
         assert(it.every(b=>b.querySelector('img')),'건설 목록에 건물 아이콘이 없음');
         hbToggleBuild();
-        assert(!document.querySelector('#hbBar .hbBdMenu'),'다시 눌렀는데 목록이 안 닫힘'); }
+        assert(!document.querySelector('#hbBuildWrap .hbBdMenu'),'다시 눌렀는데 목록이 안 닫힘');
+        // 토벌·부스트도 좌상단 줄로 갔다
+        assert(document.getElementById('hbDgBtn')&&document.getElementById('hbBoostBtn'),'토벌·부스트가 좌상단에 없음'); }
       assert(typeof hbOpenBuild!=='function','건설 팝업이 아직 남아 있음(패널로 흡수됐어야 한다)');
       hmUpgTab(before); }
     // 수량은 한 칸을 눌러 돌린다 — 1 → 10 → MAX → 1. 폭은 라벨이 바뀌어도 고정
@@ -280,7 +282,9 @@ async function groupLobby(){
       assert(hbUpgOwned('atk') && hbUpgOwned('aspd'),'데미지·공격속도는 처음부터 열려 있어야 함'); }
     // 2.7행이 보이는 '고정' 높이 — 0.7행이 걸쳐 보이는 게 '더 있다'는 신호. 탭마다 개수가 달라도 안 흔들린다
     { const gr=$('hmUpgGrid'), cell=gr.querySelector('.hmUp');
-      const ch=cell.getBoundingClientRect().height, rows=(gr.clientHeight-16+8)/(ch+8);
+      // ⚠ 간격·패딩을 박지 말 것 — CSS 에서 조정하면 검사가 헛걸린다. 실제 값을 읽어 계산한다
+      const gcs=getComputedStyle(gr), gp=parseFloat(gcs.paddingTop)||0, gg=parseFloat(gcs.rowGap)||0;
+      const ch=cell.getBoundingClientRect().height, rows=(gr.clientHeight-2*gp+gg)/(ch+gg);
       assert(Math.abs(rows-2.7)<0.15,'업그레이드 높이가 2.7행이 아님: '+rows.toFixed(2)+'행');
       const h0=gr.clientHeight;
       hmUpgTab('pet'); const h1=$('hmUpgGrid').clientHeight;   // 칸이 제일 적은 구역으로 바꿔도 안 흔들려야 한다
@@ -840,9 +844,10 @@ async function groupLobby(){
     // 바는 두 줄이다 — 위: 건설 3종 / 아래: 스킬 + 토벌·부스트
     // 건설이 한 칸이 되어 바는 한 줄이다 — 줄이 늘면 전장이 그만큼 줄어든다
     assert(document.querySelectorAll('#hbBar .hbGrp').length===1,'스킬 바가 한 줄이 아님');
-    assert(document.querySelectorAll('#hbBar .hbBdBtn').length===1,'건설 입구가 한 칸이 아님');
-    assert(document.querySelectorAll('#hbBar .hbSk').length===Object.keys(HB_SKILLS).length+3,
-      '스킬 바 버튼 수가 다름(건설1 + 스킬 + 토벌·부스트): '+document.querySelectorAll('#hbBar .hbSk').length);
+    // 하단 바는 스킬만 — 판을 여는 것(건설·토벌·부스트)은 좌상단 줄이다
+    assert(!document.querySelector('#hbBar .hbBdBtn'),'하단 바에 건설이 남아 있음');
+    assert(document.querySelectorAll('#hbBar .hbSk').length===Object.keys(HB_SKILLS).length,
+      '하단 바에 스킬 외 버튼이 있음: '+document.querySelectorAll('#hbBar .hbSk').length);
     // 버튼이 늘어도 한 줄에 들어가야 한다 — 넘치면 토벌·부스트가 화면 밖으로 밀린다
     { const bar=$('hbBar'); assert(bar.scrollWidth<=bar.clientWidth+1,'스킬 바가 가로로 넘침: '+bar.scrollWidth+'>'+bar.clientWidth); }
     // ⑥ 전장 아래 경계 = 스킬 바 위. 카드 기준으로 잡으면 적이 버튼 뒤로 지나가 섞인다.
@@ -1472,9 +1477,11 @@ async function groupLobby(){
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     // 토벌 입구는 네비가 아니라 HOME 스킬 바의 버튼 하나뿐 — 없어지면 들어갈 길이 사라진다
     openHome(); await sleep(80);
-    const ent=[...document.querySelectorAll('#hbBar .hbSk')].filter(b=>b.textContent.indexOf('토벌')>=0);
-    assert(ent.length===1,'HOME 토벌 버튼이 1개가 아님: '+ent.length);
-    ent[0].click(); await sleep(80);
+    // 토벌 입구는 좌상단 아이콘 줄(.hbIcoRow)의 버튼 하나 — 하단 바에는 스킬만 남았다
+    assert(document.getElementById('hbDgBtn'),'HOME 토벌 버튼이 없음');
+    assert(![...document.querySelectorAll('#hbBar .hbSk')].some(b=>b.textContent.indexOf('토벌')>=0),
+      '하단 바에 토벌이 남아 있음');
+    document.getElementById('hbDgBtn').click(); await sleep(80);
     const hub=document.getElementById('dgHubBody');
     assert(visible(hub),'토벌 허브가 안 열림');
     assert(hub.textContent.indexOf('던전')<0,'토벌 화면에 던전 표기가 남음: '+hub.textContent.slice(0,60));
@@ -1500,22 +1507,33 @@ async function groupLobby(){
     assert(top,'좌상단 묶음(.hbHudTop)이 없음');
     const tr=top.getBoundingClientRect();
     assert(tr.left-ph.left<=12,'프로필이 왼쪽 끝에 붙어 있지 않음: '+Math.round(tr.left-ph.left)+'px');
-    assert(tr.top-ph.top<=8,'프로필이 맨 위가 아님: '+Math.round(tr.top-ph.top)+'px');
+    // 상단은 --topPad 만큼 의도적으로 내려 있다(모바일에서 화면 끝에 붙으면 잘 안 보인다) → 토큰을 읽어 비교한다
+    { const tp=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--topPad'))||0;
+      assert(tr.top-ph.top<=8+tp,'프로필이 맨 위가 아님: '+Math.round(tr.top-ph.top)+'px (허용 '+(8+tp)+')');
+      // 재화 바와 프로필이 같은 --topPad 를 봐야 한다 — 따로 놀면 한쪽만 붙는다
+      const cb=$('curBar').getBoundingClientRect();
+      assert(Math.abs((cb.top-ph.top)-tp)<=1,'재화 바가 --topPad 를 안 따름: '+Math.round(cb.top-ph.top)); }
     // 재화가 커져도 프로필을 덮으면 안 된다 — 던전 보상 배수(24^dg) 때문에 자릿수가 폭주한다
     { const p=PROF(), keep=p.pcoin; p.pcoin=987654321; updateCurBar();
       const wide=$('curMin').textContent;
       assert(wide.length<=6,'재화 표기가 축약되지 않음(숫자가 프로필을 덮는다): '+wide);
+      // ⚠ x 만 비교하면 아이콘 줄이 넓어질 때 헛걸린다(세로로 떨어져 있어도 걸림) → 실제 사각형 교차로 본다
       const rr=$('curMin').getBoundingClientRect();
-      assert(rr.left>=tr.right-1,'큰 재화 숫자가 프로필과 겹침: '+wide);
+      const hit=(a,b)=>!(a.right<=b.left||b.right<=a.left||a.bottom<=b.top||b.bottom<=a.top);
+      for(const sel of ['.hbHud','.hbIcoRow']){ const el=document.querySelector(sel); if(!el) continue;
+        assert(!hit(rr, el.getBoundingClientRect()), '큰 재화 숫자가 '+sel+' 과 겹침: '+wide); }
       p.pcoin=12345; updateCurBar();
       assert($('curMin').textContent==='12,345','작은 값까지 축약해 버림: '+$('curMin').textContent);
       p.pcoin=keep; updateCurBar(); }
     { const res=document.querySelectorAll('#curBar .res');
       assert($('curBar').classList.contains('bare'),'HOME 재화 바가 배경 위 숫자(.bare)가 아님');
       assert(res.length,'홈 재화 바가 없음');
+      // ⚠ x 만 비교하면 아이콘 줄이 넓어질 때 헛걸린다 → 실제 사각형 교차로 본다
+      const hit2=(a,b)=>!(a.right<=b.left||b.right<=a.left||a.bottom<=b.top||b.bottom<=a.top);
       for(const r of res){ const rr=r.getBoundingClientRect();
-        assert(rr.left>=tr.right-1,'재화 숫자가 프로필과 겹침: res.left='+Math.round(rr.left)
-          +' vs 프로필 right='+Math.round(tr.right)+' ("'+r.textContent.trim()+'") · 묶음 '+Math.round(tr.width)+'px'); } }
+        for(const sel of ['.hbHud','.hbIcoRow']){ const el=document.querySelector(sel); if(!el) continue;
+          assert(!hit2(rr, el.getBoundingClientRect()),
+            '재화 숫자가 '+sel+' 과 겹침 ("'+r.textContent.trim()+'")'); } } }
     // 재화 바는 화면 전체 폭을 덮는 판이라, 투명(.bare)일 때 왼쪽 빈 자리가 프로필 클릭을 삼키면 안 된다
     { const hit=(el)=>{ const r=el.getBoundingClientRect();
         return document.elementFromPoint((r.left+r.right)/2,(r.top+r.bottom)/2); };
