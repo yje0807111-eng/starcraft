@@ -615,9 +615,16 @@ async function groupLobby(){
     for(const gone of ['토벌','부스트']) assert(row.indexOf(gone)<0,'좌상단에 '+gone+'이 남아 있음: '+row.join(','));
     assert(!visible(document.querySelector('#hbBuildWrap > .hbRoundBtn')),'좌상단에 건설 버튼이 남아 있음');
     // ☰ → 더보기(설정이 아니라)
-    $('settingsBtn').click(); await sleep(150);
+    // ⚠ id로 부르면 안 된다 — ☰ 는 #settingsBtn(게임 HUD)과 #curSettingsBtn(재화 바)이 겹쳐 있고
+    //    사용자가 누르는 건 위에 있는 쪽이다. 좌표로 집어서 실제 손가락과 같은 경로로 누른다.
+    { const a=$('settingsBtn').getBoundingClientRect();
+      const hit=document.elementFromPoint(a.left+a.width/2, a.top+a.height/2);
+      const btn=hit&&hit.closest?hit.closest('.hudSet'):null;
+      assert(btn,'☰ 자리에서 버튼이 안 잡힘: '+(hit?(hit.id||hit.className):'none'));
+      btn.click(); }
+    await sleep(200);
     assert(visible($('hbMoreSheet')),'사냥터 ☰ 가 더보기를 안 엶');
-    assert(!visible($('settingsPop')),'사냥터 ☰ 가 설정을 엶');
+    assert(!visible($('settingsPop')) && !visible($('appSettingsPop')||{classList:{contains:()=>true}}),'사냥터 ☰ 가 설정을 엶');
     const its=[...document.querySelectorAll('#hbMoreGrid .hbMoreIt')];
     assert(its.length===HB_MORE.length,'항목 수가 다름: '+its.length);
     const cols=getComputedStyle($('hbMoreGrid')).gridTemplateColumns.split(' ').length;
@@ -1082,9 +1089,13 @@ async function groupLobby(){
     _hb.char.tx=null; _hb.char.ty=null;
     hbFieldTap({ target:hit, clientX:px, clientY:py });
     assert(_hb.char.tx==null,'설정 버튼을 눌렀는데 캐릭터가 이동함');
-    // 인게임용이 아니라 앱용 팝업이 열려야 한다(임무·배속·게임 나가기가 뜨면 안 된다)
-    assert(/openAppSettings/.test(btn.getAttribute('onclick')||''),'설정이 인게임용 openSettings를 부른다');
-    openAppSettings(); await sleep(60);
+    // ☰ 는 더보기를 열고, 설정은 그 안의 항목이다(2026-08-12). 어느 쪽이든 '앱 문맥'이어야 한다 —
+    // 인게임 설정에는 임무·배속·게임 나가기가 있어 사냥터에 뜨면 안 된다.
+    assert(/hudTopMenu|openAppSettings/.test(btn.getAttribute('onclick')||''),'☰ 가 인게임 설정으로 직행한다');
+    if(typeof hbOpenMore==='function'){ hbOpenMore(); await sleep(120);
+      const si=document.querySelector('#hbMoreGrid [data-k="set"]');
+      assert(si,'더보기에 설정 항목이 없음'); si.click(); await sleep(250); }
+    else { openAppSettings(); await sleep(60); }
     assert(visible($('settingsPop')),'설정 팝업이 안 열림');
     assert($('settingsPop').classList.contains('appCtx'),'앱 문맥(.appCtx)이 아님');
     closeSettings(); await sleep(40);

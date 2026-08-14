@@ -4221,7 +4221,7 @@
       <span class="res"><img class="ri" src="assets/icons/res_mineral.webp" alt=""><b id="curMin">0</b><i class="curPlus" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg></i></span>
       <span class="res"><img class="ri" src="assets/icons/res_gas.webp" alt=""><b id="curGas">0</b><i class="curPlus" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg></i></span>
       <span class="res"><img class="ri" src="assets/icons/res_gem.webp" alt=""><b id="curGem">0</b><i class="curPlus" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg></i></span>
-      <div class="hudSet" id="curSettingsBtn" data-sfx="ui_open" onclick="openAppSettings()" title="설정"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"><path d="M4.5 7h15M4.5 12h15M4.5 17h15"/></svg></div>
+      <div class="hudSet" id="curSettingsBtn" data-sfx="ui_open" onclick="hudTopMenu('app')" title="설정"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"><path d="M4.5 7h15M4.5 12h15M4.5 17h15"/></svg></div>
     </span>
   </div>
   <!-- 💬 친구 DM 채팅(허브 소셜) -->
@@ -5743,9 +5743,14 @@ function hbToggleBuild(){ _hbBdOpen=!_hbBdOpen;
 // 골랐으면 목록을 닫고 배치 모드로 — 목록이 뜨 채로 필드를 가리면 둘 숬 없다
 function hbPickBuild(bk){ _hbBdOpen=false; renderHbBuild(); hbBuy(bk); }
 // 건설 — 좌상단 줄의 한 칸 + 아래로 펴치는 목록
-// ☰ 더보기 — 사냥터에서만. 유즈맵에서는 같은 버튼이 그대로 설정을 연다(공용 HUD라 동작만 갈라 준다).
-function hudTopMenu(){ const hs=document.getElementById('homeScreen');
+// ☰ 더보기 — 사냥터에서만. 다른 화면에서는 같은 버튼이 그대로 설정을 연다.
+// ⚠ ☰ 는 두 개가 겹쳐 있다 — 게임 HUD의 #settingsBtn(hudTopRow)과 재화 바의 #curSettingsBtn.
+//    사냥터에서는 재화 바 쪽이 위에 있어 그쪽이 눌린다. 그래서 둘 다 이 함수를 거치게 한다.
+//    (한쪽만 고치면 "눌러도 설정만 나온다"가 된다 — 실제로 그랬다)
+// fb: 사냥터가 아닐 때의 갈 곳 — 'app'이면 앱 화면 설정, 아니면 유즈맵 설정.
+function hudTopMenu(fb){ const hs=document.getElementById('homeScreen');
   if(hs && !hs.classList.contains('hide') && typeof hbOpenMore==='function') return hbOpenMore();
+  if(fb==='app' && typeof openAppSettings==='function') return openAppSettings();
   openSettings(); }
 function hbOpenMore(){ const el=document.getElementById('hbMoreSheet'); if(!el) return;
   renderHbMore(); el.classList.remove('hide'); if(typeof playSfx==='function') playSfx('ui_open'); }
@@ -5770,7 +5775,9 @@ function renderHbMore(){ const g=document.getElementById('hbMoreGrid'); if(!g) r
   if(typeof paintIcons==='function') paintIcons(g); }
 function hbMoreTap(k){
   if(k==='daily'){ if(typeof toast==='function') toast('일일 퀘스트는 아직 준비 중입니다'); return; }
-  if(k==='set')   return hbMoreGo(function(){ openSettings(); });
+  if(k==='set')   return hbMoreGo(function(){
+    if(typeof openAppSettings==='function') openAppSettings();   // 앱 문맥(.appCtx) — 인게임 설정에는 배속·게임 나가기가 있다
+    else openSettings(); });
   if(k==='build') return hbMoreGo(function(){ if(typeof hbToggleBuild==='function') hbToggleBuild(); });
   if(k==='dg')    return hbMoreGo(function(){ if(typeof openDungeonHub==='function') openDungeonHub(); });
   if(k==='boost') return hbMoreGo(function(){ if(typeof hbOpenBoost==='function') hbOpenBoost(); }); }
