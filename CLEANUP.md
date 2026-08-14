@@ -63,14 +63,20 @@
 
 ---
 
-## B. 설정 개편으로 죽은 잔재 (아직 남음)
+## B. 설정 개편으로 죽은 잔재 ✅ (2026-08-14 완료)
 
-| 대상 | 상태 | 주의 |
-|---|---|---|
-| `.setRange` `.setVolRow` `_sndDisp` | 볼륨 슬라이더 — 마크업 없음, CSS·JS만 남음 | `_sndPaintBar` 안 슬라이더 갱신 분기도 같이 |
-| `.sndGroup` | 옛 소리 묶음 상자 | |
-| `.sndBtn` | 마크업 없음. **`.setQGo`(배속 변경 버튼)가 이 선택자에 얹혀 있다** | 지우려면 `.setQGo` 로 이름을 옮길 것 |
-| `.setMenu.expanded` `.setItem.open` `.setBody.on` | 옛 아코디언(`setExpand`) 잔재 — 함수는 삭제됨 | |
+| 대상 | 처리 |
+|---|---|
+| `.setRange` `.setVolRow` `_sndDisp` | 삭제. `_sndPaintBar` 는 스위치 한 줄만 남았다 — 슬라이더·라벨 갱신 분기 제거 |
+| `.sndGroup` | 삭제 (옛 소리 묶음 상자) |
+| `.sndBtn` | **`.setQGo` 로 이름을 옮겼다** — 마크업은 배속 '변경' 버튼뿐이므로 선택자도 하나로. `data-sfx` 매칭도 `.sndBtn` → `.setSw`(실제로 누르는 스위치) |
+| `.setMenu.expanded` `.setItem.open` `.setBody.on` | 삭제 (옛 아코디언 `setExpand` 잔재) |
+
+> `SND.bgm`/`SND.sfx`(0~100 값)는 남긴다 — 슬라이더는 없어졌지만 `_bgmVol()`·효과음 기준 볼륨이 계속 쓴다.
+
+**여기서 한 번 어긋났다.** 화살표 규칙 두 개(`.setArr` 13px / `.setItem .setArr` 10px)를 하나로 합치면서
+`.setItem b{font-size:13px;color:var(--setAcc)}` 를 못 봤다 — 화살표도 `<b>` 라 특이도가 밀려 13px 액센트색으로 바뀌었다.
+`.setItem .setArr` 로 되돌렸다. **CSS 규칙을 합칠 때는 "누가 이기고 있었는지"를 먼저 볼 것.**
 
 ---
 

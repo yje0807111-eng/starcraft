@@ -2937,6 +2937,9 @@
      숨김일 때는 안 걸리게 :not(.hide) 로 좁힌다. */
   #upgScreen{padding:12px 13px calc(var(--navH) + 12px)}
   #upgScreen:not(.hide){display:flex;flex-direction:column}
+  /* 캐릭터 본문 — 빌려 온 팝업 본문(.hbRows)이 여기서는 패널 안 스크롤 영역이 된다 */
+  .chrBody{flex:1 1 auto;min-height:0;padding:8px;overflow-y:auto;overflow-x:hidden}
+  .chrBody>.hbRows{padding:0;overflow:visible;min-height:0}
   #phone.curOn #upgScreen{padding-top:calc(var(--curH) + var(--topPad) + 12px)}
   .shopTitle{text-align:center;font-size:15px;font-weight:700;letter-spacing:.6px;color:#ececec;padding:6px 0 12px}
   /* 구역 패널 = HOME .hmCard */
@@ -4310,7 +4313,8 @@
   <!-- ⬆ 강화 — 자리만 잡아 뇐다(내용 미정). 화면 구조는 다른 화면과 같은 .appScreen 규격 -->
   <div id="upgScreen" class="appScreen hide">
     <div class="shopTitle"><span data-ico="user"></span><b>캐릭터</b></div>
-    <div class="upgEmpty">아직 비어 있습니다</div>
+    <!-- 본문은 비어 있다 — 정보·성장은 팝업 본문을 빌려 오고, 스킬만 여기서 그린다(setChrSec) -->
+    <div class="msPanel"><div class="chrBody uiScroll" id="chrBody"></div></div>
   </div>
   <div id="gearScreen" class="appScreen hide">
     <div class="shopTitle"><span data-ico="bag"></span><b>정비</b></div>
@@ -5981,6 +5985,7 @@ function hbGrowHas(){ const c=(typeof CHAR==='function')?CHAR():null; if(!c) ret
   if(profCanRebirth(c)) return true;
   const r=profEvolveReq(); return !!(r.unlock && !r.maxed && c.unit.level>=r.lvReq && PROF().pcoin>=r.cost); }
 function hbOpenGrow(){ const el=document.getElementById('hbGrowModal'); if(!el) return;
+  if(typeof chrReturnBody==='function') chrReturnBody();   // 캐릭터 화면이 빌려 갔으면 되찾는다
   el.classList.remove('hide'); renderGrowModal(); if(typeof playSfx==='function') playSfx('ui_open'); }
 function hbCloseGrow(){ const el=document.getElementById('hbGrowModal'); if(el) el.classList.add('hide'); }
 function renderGrowModal(){ const box=document.getElementById('hbGrowBody'); if(!box) return;
@@ -6032,6 +6037,7 @@ function profStatParts(k){ const c=CHAR(); if(!c) return null;
   return { job:J.base[k]||0, alloc:c.unit.stats[k]||0, level:c.unit.level,
            evo:c.unit.evoStars*2, gear:gear, petPct:Math.round(petMul*100), total:profStat(k) }; }
 function hbOpenInfo(){ const el=document.getElementById('hbInfoModal'); if(!el) return;
+  if(typeof chrReturnBody==='function') chrReturnBody();   // 캐릭터 화면이 빌려 갔으면 되찾는다
   el.classList.remove('hide'); renderInfoModal(); if(typeof playSfx==='function') playSfx('ui_open'); }
 function hbCloseInfo(){ const el=document.getElementById('hbInfoModal'); if(el) el.classList.add('hide'); }
 function renderInfoModal(){ const box=document.getElementById('hbInfoBody'); if(!box) return;
@@ -6179,7 +6185,10 @@ const NAV_TREE=[
   // 사냥터 = 기본 화면이자 최상위 그 자체 — 눌러도 내려가지 않는다(하위는 화면 상단 버튼줄이 맡는다)
   { k:'home', label:'사냥터', ico:'home', go:()=>openHome(), subs:[] },
   // 캐릭터 — '나 자신'에 관한 것. 내용은 아직 비어 있다(옛 '강화' 자리).
-  { k:'upg',  label:'캐릭터', ico:'user', go:()=>openUpgScreen(), subs:[] },
+  { k:'upg',  label:'캐릭터', ico:'user', go:()=>openUpgScreen(), cur:()=>_chrSec, subs:[
+      { k:'info',  label:'정보', ico:'user',  act:()=>setChrSec('info') },
+      { k:'grow',  label:'성장', ico:'fav',   act:()=>setChrSec('grow') },
+      { k:'skill', label:'스킬', ico:'boost', act:()=>setChrSec('skill') } ] },
   { k:'gear', label:'정비', ico:'bag', go:()=>openGear(), cur:()=>_gearTab, subs:[
       { k:'gear', label:'장비', ico:'armor', act:()=>setGearTab('gear') },
       { k:'pet',  label:'펫',   ico:'paw',   act:()=>setGearTab('pet') },
@@ -8127,10 +8136,37 @@ function renderShop(){ const body=document.getElementById('shopBody'); if(!body)
 let _gearTab='gear';
 function gearOpen(){ const e=document.getElementById('gearScreen'); return !!(e && !e.classList.contains('hide')); }
 // ⬆ 강화 — 아직 내용이 없다. 들어오는 길과 내비게이션만 먼저 열어 둔다.
+// ── 🧍 캐릭터 구역 — 정보 · 성장 · 스킬 ────────────────────────────────
+// ⛔ 정보·성장 본문은 복제하지 않는다: 팝업의 #hbInfoBody/#hbGrowBody 를 통째로 빌려 오고
+//   팝업이 열릴 때(hbOpenInfo/hbOpenGrow) 제자리로 돌려준다. 렌더러는 그대로 같은 id 를 찾는다.
+const CHR_SECS={ info:{ body:'hbInfoBody', home:'hbInfoModal', render:()=>renderInfoModal() },
+                 grow:{ body:'hbGrowBody', home:'hbGrowModal', render:()=>renderGrowModal() },
+                 skill:{ html:()=>_chrSkillHTML() } };
+let _chrSec='info';
+// 빌린 본문을 원래 팝업으로 되돌린다(화면을 떠나거나 팝업이 열릴 때)
+function chrReturnBody(){ for(const k in CHR_SECS){ const S=CHR_SECS[k]; if(!S.body) continue;
+  const el=document.getElementById(S.body), home=document.getElementById(S.home);
+  if(el && home && el.parentNode!==home) home.appendChild(el); } }
+function renderChr(){ const host=document.getElementById('chrBody'); if(!host) return;
+  const S=CHR_SECS[_chrSec]||CHR_SECS.info;
+  chrReturnBody();
+  if(S.body){ const el=document.getElementById(S.body);
+    if(el){ host.innerHTML=''; host.appendChild(el); S.render(); } }
+  else { host.innerHTML=S.html(); }
+  if(typeof paintIcons==='function') paintIcons(host); }
+function setChrSec(k){ if(!CHR_SECS[k]) return; _chrSec=k; renderChr();
+  if(typeof navPaint==='function') navPaint(); }
+// 스킬 — 지금은 읽는 곳이다(레벨·강화는 아직 없다). 표는 HB_SKILLS 하나에서만 온다.
+function _chrSkillHTML(){ let h='<div class="hbGrowLbl">사냥터 스킬</div>';
+  for(const k in HB_SKILLS){ const SK=HB_SKILLS[k];
+    h+='<div class="hbRow"><span class="hbRowIco">'+_icoImg('skills', SK.ico)+'</span>'
+      +'<span class="hbRowTx"><b>'+SK.name+' <i>재사용 '+SK.cd+'초</i></b><em>'+SK.tip+'</em></span></div>'; }
+  h+='<div class="hbRoundNote" style="padding:8px 0 0">스킬 강화는 아직 없습니다 — 사냥터 하단 바에서 직접 쓰거나 자동(A)으로 켤 수 있습니다.</div>';
+  return h; }
 function openUpgScreen(){ if(typeof loadMeta==='function') loadMeta();
   if(typeof CHAR==='function' && !CHAR()){ openCharScreen('create'); return; }
   if(typeof twLeave==='function') twLeave();
-  showAppScreen('upgScreen'); navShow('upg');
+  showAppScreen('upgScreen'); navShow('upg'); renderChr();
   if(typeof paintIcons==='function') paintIcons(document.getElementById('upgScreen')); }
 function openGear(){ if(typeof loadMeta==='function') loadMeta();
   if(typeof CHAR==='function' && !CHAR()){ openCharScreen('create'); return; }   // 캐릭터 없으면 생성부터

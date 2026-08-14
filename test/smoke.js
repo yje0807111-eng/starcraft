@@ -2175,6 +2175,41 @@ async function groupLobby(){
     const n=$('roomList').children.length; assert(n>0,'방 목록 비어있음'); $('rooms').classList.add('hide'); return n+'개 방'; });
     // 마을: 월드 좌표계 + 카메라. 헤드리스는 rAF가 멈춰 있어 twStep(dt)을 직접 pump한다.
       // 🎁 상점 = 팝업이 아니라 전용 화면. 네비·마을 구역 두 경로 모두 같은 화면으로 간다.
+  // 🧍 캐릭터 = '나 자신'(정보·성장·스킬). 장착물(장비·펫·동료)은 정비에 남는다 — 두 곳에 두면 어긋난다.
+  await step('캐릭터: 정보·성장·스킬 · 본문은 빌려 쓴다', async()=>{
+    skipIf(typeof setChrSec!=='function','캐릭터 구역 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    navGo('upg'); await sleep(60);
+    assert(visible($('upgScreen')),'캐릭터 화면이 안 열림');   // APP_SCREENS 에 빠지면 영영 안 켜진다
+    assert(document.querySelector('#navBar .navIt[data-nav=upg]')===null,'내려간 상태인데 구역 칸이 남음');
+    const subs=[...document.querySelectorAll('#navBar .navIt[data-sub]')].map(e=>e.dataset.sub);
+    assert(subs.join(',')==='info,grow,skill','캐릭터 하위가 정보·성장·스킬이 아님: '+subs.join(','));
+    const host=()=>$('chrBody');
+    // ① 정보 = 팝업 본문(#hbInfoBody)을 빌려 온다 — 복제하면 두 벌이 된다
+    assert(host().querySelector('#hbInfoBody'),'정보 본문을 안 빌려옴');
+    assert(host().querySelectorAll('.hbTbl tr').length>1,'스탯 출처 표가 비어 있음');
+    // ② 성장 — 빌려 오면서 앞 구역 본문은 제자리로 돌아가야 한다
+    setChrSec('grow'); await sleep(40);
+    assert(host().querySelector('#hbGrowBody'),'성장 본문을 안 빌려옴');
+    assert($('hbInfoModal').querySelector('#hbInfoBody'),'정보 본문이 팝업으로 안 돌아감');
+    assert([...host().querySelectorAll('.hbRowBtn')].some(b=>b.textContent==='환생'),'성장에 환생 버튼이 없음');
+    // ③ 스킬 = HB_SKILLS 표 하나에서만 온다
+    setChrSec('skill'); await sleep(40);
+    assert($('hbGrowModal').querySelector('#hbGrowBody'),'성장 본문이 팝업으로 안 돌아감');
+    assert(host().querySelectorAll('.hbRow').length===Object.keys(HB_SKILLS).length,'스킬 줄 수가 HB_SKILLS 와 다름');
+    for(const k in HB_SKILLS) assert(host().textContent.indexOf(HB_SKILLS[k].name)>=0,'스킬 누락: '+HB_SKILLS[k].name);
+    // ④ 팝업(더보기) 경로가 열리면 본문을 되찾아 간다 — DOM 은 끝까지 한 벌
+    setChrSec('grow'); await sleep(40); hbOpenGrow(); await sleep(40);
+    assert($('hbGrowModal').querySelector('#hbGrowBody'),'팝업이 본문을 못 되찾음');
+    assert($('hbGrowBody').textContent.indexOf('환생')>=0,'되찾은 본문이 비어 있음');
+    hbCloseGrow(); navGo('upg'); await sleep(60);
+    assert(host().querySelector('#hbGrowBody'),'화면 복귀 시 본문을 다시 못 빌려옴');
+    for(const id of ['hbInfoBody','hbGrowBody'])
+      assert(document.querySelectorAll('#'+id).length===1,'본문이 복제됨: '+id);
+    setChrSec('info'); navBack(); await sleep(40);
+    return '정보·성장·스킬 3칸 · 본문 단일 DOM';
+  });
+
   await step('하단 네비 2층: 구역 → 전용 네비 → 돌아가기', async()=>{
     const read=()=>[...document.querySelectorAll('#navBar .navIt')].map(e=>e.dataset.nav||('~'+e.dataset.sub));
     openHome(); await sleep(40);
