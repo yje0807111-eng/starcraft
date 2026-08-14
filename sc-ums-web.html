@@ -2176,11 +2176,11 @@
   /* 유즈맵 선택 */
   #mapSelect{z-index:47;padding:12px 13px}
   /* 유즈맵 선택 로비 배경(전체 cover, 9:16 기준, UI는 위 레이어) */
-  #mapSelect::before,#rooms::before,#createPanel::before,#shopScreen::before,#gearScreen::before,#charScreen::before{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;transform-origin:center center;
+  #mapSelect::before,#rooms::before,#createPanel::before,#shopScreen::before,#gearScreen::before,#charScreen::before,#upgScreen::before{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;transform-origin:center center;
     background:url('assets/backgrounds/lobby_bg.webp') center center / cover no-repeat #04050b;
     animation:lobbyBreath 12s ease-in-out infinite}   /* 미세한 호흡(위아래 + 약한 확대) */
   @keyframes lobbyBreath{ 0%,100%{transform:scale(1.01) translateY(0)} 50%{transform:scale(1.05) translateY(-1%)} }
-  #mapSelect::after,#rooms::after,#createPanel::after,#shopScreen::after,#gearScreen::after,#charScreen::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg, rgba(2,3,8,.96) 0%, rgba(2,3,8,.66) 16%, rgba(2,3,8,.2) 38%, rgba(2,3,8,.2) 62%, rgba(2,3,8,.66) 84%, rgba(2,3,8,.97) 100%)}   /* 위·아래 빨강 더 톤다운(중앙 이미지 유지) */
+  #mapSelect::after,#rooms::after,#createPanel::after,#shopScreen::after,#gearScreen::after,#charScreen::after,#upgScreen::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg, rgba(2,3,8,.96) 0%, rgba(2,3,8,.66) 16%, rgba(2,3,8,.2) 38%, rgba(2,3,8,.2) 62%, rgba(2,3,8,.66) 84%, rgba(2,3,8,.97) 100%)}   /* 위·아래 빨강 더 톤다운(중앙 이미지 유지) */
   
   
   /* 메타 성장(빌드) 화면 */
@@ -4309,7 +4309,7 @@
        탭 띠 = 유즈맵 목록 상자와 같은 .msPanel/.msSortTabs 규격(복제 금지, 클래스만 재사용). -->
   <!-- ⬆ 강화 — 자리만 잡아 뇐다(내용 미정). 화면 구조는 다른 화면과 같은 .appScreen 규격 -->
   <div id="upgScreen" class="appScreen hide">
-    <div class="shopTitle"><span data-ico="upg"></span><b>강화</b></div>
+    <div class="shopTitle"><span data-ico="user"></span><b>캐릭터</b></div>
     <div class="upgEmpty">아직 비어 있습니다</div>
   </div>
   <div id="gearScreen" class="appScreen hide">
@@ -5777,7 +5777,8 @@ function hbOpenMore(){ const el=document.getElementById('hbMoreSheet'); if(!el) 
     const btns=['curSettingsBtn','settingsBtn'].map(function(id){ return document.getElementById(id); })
       .filter(function(b){ return b && b.getClientRects().length; });
     if(box && ph && btns.length){ const r=btns[0].getBoundingClientRect(), p=ph.getBoundingClientRect();
-      box.style.top=Math.round(r.bottom-p.top)+'px';   // 버튼 아래에 딱 붙인다(테두리가 이어져 한 덩어리로 보인다)
+      // 테두리 1px 만큼 끌어올려 두 선을 정확히 포갠다 — 그냥 붙이면 1px+1px 이 2줄로 보인다
+      box.style.top=(Math.round(r.bottom-p.top)-1)+'px';
       box.style.right=Math.round(p.right-r.right)+'px'; } }
   hbMoreBtns().forEach(function(b){ b.classList.add('on'); b.title='닫기'; });
   if(typeof playSfx==='function') playSfx('ui_open'); }
@@ -6177,11 +6178,12 @@ function hmToast(msg){ if(typeof showTownToast==='function') showTownToast(msg);
 const NAV_TREE=[
   // 사냥터 = 기본 화면이자 최상위 그 자체 — 눌러도 내려가지 않는다(하위는 화면 상단 버튼줄이 맡는다)
   { k:'home', label:'사냥터', ico:'home', go:()=>openHome(), subs:[] },
+  // 캐릭터 — '나 자신'에 관한 것. 내용은 아직 비어 있다(옛 '강화' 자리).
+  { k:'upg',  label:'캐릭터', ico:'user', go:()=>openUpgScreen(), subs:[] },
   { k:'gear', label:'정비', ico:'bag', go:()=>openGear(), cur:()=>_gearTab, subs:[
       { k:'gear', label:'장비', ico:'armor', act:()=>setGearTab('gear') },
       { k:'pet',  label:'펫',   ico:'paw',   act:()=>setGearTab('pet') },
       { k:'ally', label:'동료', ico:'party', act:()=>setGearTab('ally') } ] },
-  { k:'upg',  label:'강화',  ico:'upg',  go:()=>openUpgScreen(), subs:[] },
   // 유즈맵: 정렬(인기·신규·추천·즐겨찾기)은 화면 위 띠로 되돌렸고, 하단은 소셜이 맡는다.
   //   ⛔ 소셜 UI 를 새로 만들지 않는다 — 이미 있는 #twChat 시트(.msSocial 채팅·파티·친구)를 연다.
   { k:'map',  label:'유즈맵', ico:'map', go:()=>twGoMap(), cur:()=>_mapSocial, subs:[
@@ -13415,9 +13417,9 @@ function playScreenFx(){ }
 function fxPop(card){ if(!card) return; card.classList.remove('fxPop'); void card.offsetWidth; card.classList.add('fxPop');
   clearTimeout(card._fxT); card._fxT=setTimeout(()=>card.classList.remove('fxPop'),200); }
 // ── 앱 화면 전환 ──
-const APP_SCREENS=['opening','auth','mapSelect','modeSheet','homeScreen','charScreen','townScreen','dgScreen','shopScreen','gearScreen'];
+const APP_SCREENS=['opening','auth','mapSelect','modeSheet','homeScreen','charScreen','townScreen','dgScreen','shopScreen','gearScreen','upgScreen'];   // ⚠ 여기 없는 화면은 showAppScreen 이 영영 안 켠다(캐릭터 화면이 그랬다)
 // 💠 공용 재화 바를 띄우는 화면(RPG/허브 + 유즈맵 선택). 로그인·타이틀·캐릭터생성·인게임은 제외.
-const CUR_SCREENS=['homeScreen','townScreen','mapSelect','modeSheet','dgScreen','shopScreen','gearScreen'];
+const CUR_SCREENS=['homeScreen','townScreen','mapSelect','modeSheet','dgScreen','shopScreen','gearScreen','upgScreen'];   // 캐릭터 화면도 재화 바를 쓴다
 // 그중 바를 '판'이 아니라 배경 위 숫자로 두는 화면(.curBar.bare) — 배경이 상단까지 이어져 보여야 하는 곳
 const BARE_CUR_SCREENS=['homeScreen','townScreen','mapSelect','shopScreen','gearScreen','upgScreen'];   // 재화 바를 '판'이 아니라 배경 위 숫자로 — 상단 줄이 겹쳐 답답해진다(구분선 없이 배경이 이어진다)
 function curSetTitle(t){ const e=document.getElementById('curTitle'); if(e) e.textContent=t||''; }   // 재화 바 왼쪽 제목(화면별)
