@@ -54,8 +54,23 @@ async function groupLobby(){
     openAuth();
     assert(visible($('auth')),'로그인 화면이 안 뜸(자동 로그인으로 건너뛰는지 확인)');
     assert(!visible($('townScreen')),'로그인 전에 메인(마을)이 떠 있음');
+    // 첫 화면 = 방식 선택 허브. 아이디/비번은 방식을 고른 뒤에 나온다
+    assert(visible($('authHub')),'로그인 방식 허브가 안 보임');
+    assert(!visible($('authForm')),'허브인데 입력 폼이 이미 떠 있음');
+    assert(visible($('authGuest')),'허브에 게스트 시작 버튼이 없음');
+    assert($('wayGoogle').classList.contains('lock'),'Google 버튼이 잠김 표시가 아님(대시보드 설정 전까지는 잠겨 있어야 한다)');
+    authWayLocked(); assert(visible($('authHub')),'잠긴 방식을 눌렀는데 화면이 넘어감');
+    // 아이디를 고르면 폼으로
+    authOpenForm('id');
+    assert(!visible($('authHub')) && visible($('authForm')),'아이디를 골랐는데 폼이 안 열림');
     assert(visible($('authId')) && visible($('authPw')),'아이디/비밀번호 입력칸이 없음');
     assert($('authNick').classList.contains('hide'),'로그인 탭인데 닉네임 칸이 보임');
+    // 이메일은 같은 폼 한 벌을 쓰되 입력 타입만 바뀐다(폼을 두 벌 만들면 여기서 걸린다)
+    authOpenForm('email');
+    assert($('authId').type==='email','이메일 방식인데 첫 칸이 email 타입이 아님: '+$('authId').type);
+    assert(document.querySelectorAll('#auth input[type=password]').length===2,'비밀번호 칸이 폼마다 복제됨');
+    authBackToHub(); assert(visible($('authHub')),'뒤로가기가 허브로 안 돌아감');
+    authOpenForm('id');
     // 탭은 허브·유즈맵과 같은 공용 컴포넌트를 쓴다(로그인 화면만 별도 세그먼트 금지)
     var lt=$('segLogin');
     assert(lt.classList.contains('msTab2'),'로그인 탭이 공용 탭(.msTab2)이 아님: '+lt.className);
@@ -128,11 +143,13 @@ async function groupLobby(){
   // DESIGN.md 규칙 — 허브(볼륨 3)만. 다른 볼륨 3 화면(타이틀·로그인·대기실)은 각자 전환될 때 스텝을 추가할 것.
   // 빈 칸 바로 입장은 없앴다(2026-08-06). 체험 입장은 '게스트로 시작하기' 버튼 전용.
   await step('인증: 빈 칸은 막고, 게스트 버튼으로 입장', async()=>{ skipIf(typeof authSubmit!=='function','인증 없음');
-    openAuth(); $('authId').value=''; $('authPw').value='';
+    openAuth(); authOpenForm('id');   // 허브에서 아이디를 골라야 입력 폼이 나온다
+    $('authId').value=''; $('authPw').value='';
     await authSubmit(); await sleep(120);
     assert(visible($('auth')),'빈 칸인데 로그인 화면을 벗어남(자동 입장이 남아 있음)');
     assert(!visible($('hubScreen')),'빈 칸인데 게임 선택으로 넘어감');
     assert(($('authErr').textContent||'').length>0,'빈 칸인데 안내가 없음');
+    authBackToHub();   // 게스트 진입은 폼이 아니라 허브에 있다
     const gb=$('authGuest'); assert(gb && visible(gb),'게스트로 시작하기 버튼이 없음');
     gb.click();
     // 게스트 입장도 로딩(#opening에서 3D 데우기)을 거친다 — 끝날 때까지 기다린다.

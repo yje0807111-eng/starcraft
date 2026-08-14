@@ -2101,7 +2101,9 @@
   .authCard>*{position:relative;z-index:1}
   /* ══ 로그인/회원가입 탭 바 ══ 공용 .msTabs2/.msTab2를 그대로 쓰고 로그인 화면에서만 겉모습을 바꾼다.
      둥근 상자 + 아래쪽이 진한 테두리(모서리 라운드 때문에 끝이 자연히 올라간다) + 선택 칸은 은은한 색 채움 + 위아래 글로우. */
-  .authCard{min-height:var(--authH,0px)}   /* 두 탭의 높이를 같게 — 값은 authLockHeight()가 실측해 넣는다 */
+  /* 로그인↔회원가입 탭의 높이만 같게 — 값은 authLockHeight()가 실측해 넣는다.
+     ⚠ 카드가 아니라 '폼'에 건다. 카드에 걸면 칸 수가 적은 허브까지 늘어나 아래가 텅 빈다(실제로 그랬다). */
+  .authForm{min-height:var(--authH,0px)}
   .msTabs2.authTabs{margin-bottom:14px;padding:3px;border-radius:var(--r-lg);background:rgba(10,14,22,.6);flex:none;
     border:1px solid rgba(150,190,235,.16);border-bottom-color:rgba(120,165,220,.55);   /* 하단만 진하게 */
     box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 3px 10px -7px #000}
@@ -2127,6 +2129,45 @@
   .authSub::before,.authSub::after{content:'';flex:0 0 34px;height:1px;
     background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--ac) 60%,transparent))}
   .authSub::after{background:linear-gradient(270deg,transparent,color-mix(in srgb,var(--ac) 60%,transparent))}
+  /* ══ 방식 선택 허브 ══ 모바일 기준: 칸은 전폭 · 높이 46px(터치 타겟 44px 이상) · 세로로 쌓는다.
+     칸 재질은 게스트 버튼(.authGuest)과 같은 규칙을 그대로 상속받는다 — 새 버튼 스타일을 만들지 않는다. */
+  .authHub,.authForm{display:flex;flex-direction:column}
+  .authHub.hide,.authForm.hide{display:none}
+  .authWay{--ch:6px;position:relative;display:flex;align-items:center;gap:10px;width:100%;min-height:46px;
+    padding:0 13px;margin-bottom:8px;box-sizing:border-box;cursor:pointer;border:none;border-radius:0;
+    font-family:inherit;font-size:var(--fs-lg);font-weight:700;letter-spacing:.3px;color:#dfe7f0;text-align:left;
+    background:linear-gradient(180deg,rgba(26,32,44,.72),rgba(12,16,23,.82) 52%,rgba(4,6,10,.9));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.13),inset 0 -4px 6px -3px rgba(0,0,0,.8),0 2px 4px -2px rgba(0,0,0,.7);
+    clip-path:polygon(var(--ch) 0,calc(100% - var(--ch)) 0,100% var(--ch),100% calc(100% - var(--ch)),
+      calc(100% - var(--ch)) 100%,var(--ch) 100%,0 calc(100% - var(--ch)),0 var(--ch))}
+  /* clip-path 가 border 를 잘라내므로 테두리는 마스크로 1px 만 남긴다(.authBtn 과 같은 문법) */
+  .authWay::before{content:'';position:absolute;inset:0;z-index:-1;padding:1px;background:var(--btnLine,var(--metal-edge));
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;mask-composite:exclude;
+    clip-path:polygon(var(--ch) 0,calc(100% - var(--ch)) 0,100% var(--ch),100% calc(100% - var(--ch)),
+      calc(100% - var(--ch)) 100%,var(--ch) 100%,0 calc(100% - var(--ch)),0 var(--ch))}
+  .authWay .ic{width:16px;height:16px;flex:none;color:#9fb0c2}
+  .authWay:hover{color:#fff}
+  .authWay:active{transform:translateY(1px)}
+  /* 마지막에 쓴 방식 — 재방문이면 이것만 눌러 들어간다(액센트는 카드와 같은 --ac) */
+  .authWay.last{--btnLine:color-mix(in srgb,var(--ac) 70%,transparent);color:#dff2ff;
+    box-shadow:inset 0 1px 0 color-mix(in srgb,var(--ac) 34%,transparent),
+      inset 0 -4px 6px -3px rgba(0,0,0,.8),0 0 12px -6px color-mix(in srgb,var(--ac) 90%,transparent)}
+  .authWay.last .ic{color:var(--ac)}
+  .authWay.last.hide{display:none}
+  /* 아직 못 쓰는 방식 — 자리는 잡아 두되 눌러도 들어가지 않는다는 걸 색과 꼬리표로 말한다 */
+  .authWay.lock{color:#7b838e;cursor:default}
+  .authWay.lock .awG{color:#8e97a3}
+  .awG{flex:none;width:16px;font-style:normal;font-weight:900;font-size:15px;text-align:center;color:#e8eaed}
+  .awTag{margin-left:auto;font-style:normal;font-size:var(--fs-xs);font-weight:700;letter-spacing:.2px;
+    color:#6f7a88;padding:2px 6px;border:1px solid rgba(255,255,255,.1);border-radius:var(--r-bar)}
+  /* 폼 → 허브로 돌아가는 줄 */
+  .authBack{align-self:flex-start;display:flex;align-items:center;gap:6px;margin-bottom:10px;padding:2px 0;
+    background:none;border:none;cursor:pointer;font-family:inherit;font-size:var(--fs-xs);font-weight:700;
+    letter-spacing:.3px;color:#8b97a6;transition:color .13s}
+  .authBack:hover{color:#dfe7f0}
+  .authBack i{display:block;width:6px;height:6px;border-left:1.5px solid currentColor;border-bottom:1.5px solid currentColor;
+    transform:rotate(45deg);margin-right:1px}
   .authField{width:100%;box-sizing:border-box;padding:10px 12px;margin-bottom:8px;border-radius:9px;
     background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.016));
     border:1px solid var(--metal-edge);color:var(--txt);font-family:inherit;font-size:var(--fs-lg);outline:none;
@@ -2166,8 +2207,11 @@
   .authBtn:hover{color:#001019}
   .authGuest:hover{color:#fff}
   .authGuest .ic{width:15px;height:15px}
-  .authNote{display:flex;align-items:center;justify-content:center;gap:9px;
-    font-size:var(--fs-xs);color:#69737f;text-align:center;margin-top:14px;line-height:1.5}
+  /* 로그인 탭은 가입 탭보다 두 칸 짧다 — 높이를 고정했으니 남는 자리를 여기서 흡수해
+     안내가 카드 아래쪽에 붙게 한다(버튼 바로 밑에 두면 빈 공간이 꼬리처럼 남는다) */
+  .authNote{display:flex;align-items:center;justify-content:center;gap:9px;margin-top:auto;padding-top:14px;
+    font-size:var(--fs-xs);color:#69737f;text-align:center;line-height:1.5}
+  .authNote.hide{display:none}
   .authNote i{font-style:normal;color:#39414c}   /* 구분자 | */
   .authFind{background:none;border:none;padding:0;cursor:pointer;font-family:inherit;font-size:var(--fs-xs);font-weight:700;
     color:#9dc6e8;transition:color .13s}
@@ -3955,19 +3999,30 @@
         <i class="authDia"></i>
         <div class="authLogo"><span class="alg1">STAR </span><span class="alg2">WAR</span></div>
         <div class="authSub" id="authSub">로그인하고 시작하세요</div>
-        <div class="msTabs2 authTabs">
-          <button class="msTab2 on" id="segLogin" onclick="authMode('login')"><span data-ico="user"></span>로그인</button>
-          <button class="msTab2" id="segSignup" onclick="authMode('signup')"><span data-ico="new"></span>회원가입</button>
+        <!-- ① 방식 선택 허브 — 첫 화면. 아이디/이메일을 고르면 아래 ② 폼으로 바뀐다 -->
+        <div class="authHub" id="authHub">
+          <button class="authWay last hide" id="authLast" onclick="authUseLast()"></button>
+          <button class="authWay" id="wayId" onclick="authOpenForm('id')"><span data-ico="user"></span>아이디로 로그인</button>
+          <button class="authWay" id="wayEmail" onclick="authOpenForm('email')"><span data-ico="mail"></span>이메일로 로그인</button>
+          <button class="authWay lock" id="wayGoogle" onclick="authWayLocked()"><i class="awG">G</i>Google로 로그인<i class="awTag">준비 중</i></button>
+          <div class="authOr" id="authHubOr">또는</div>
+          <button class="authGuest" id="authGuest" onclick="authGuest()"><span data-ico="user"></span>게스트로 시작하기</button>
         </div>
-        <input id="authId" class="authField" type="text" placeholder="아이디 (로그인용 · 영문·숫자 3~16자)" maxlength="16" autocomplete="username" onkeydown="if(event.key==='Enter')authSubmit()">
-        <input id="authNick" class="authField hide" type="text" placeholder="닉네임 (게임 내 표시)" maxlength="12" autocomplete="off" onkeydown="if(event.key==='Enter')authSubmit()">
-        <input id="authPw" class="authField" type="password" placeholder="비밀번호 (영문·숫자 6자 이상)" autocomplete="current-password" autocapitalize="off" spellcheck="false" lang="en" oninput="this.value=this.value.replace(/[^\x21-\x7E]/g,'')" onkeydown="if(event.key==='Enter')authSubmit()">
-        <input id="authPw2" class="authField hide" type="password" placeholder="비밀번호 확인" autocomplete="new-password" autocapitalize="off" spellcheck="false" lang="en" oninput="this.value=this.value.replace(/[^\x21-\x7E]/g,'')" onkeydown="if(event.key==='Enter')authSubmit()">
+        <!-- ② 로그인/회원가입 폼 — 아이디·이메일이 같은 폼 한 벌을 쓴다(_authKind 로만 갈린다) -->
+        <div class="authForm hide" id="authForm">
+          <button class="authBack" id="authBack" onclick="authBackToHub()"><i></i>다른 방법으로</button>
+          <div class="msTabs2 authTabs">
+            <button class="msTab2 on" id="segLogin" onclick="authMode('login')"><span data-ico="user"></span>로그인</button>
+            <button class="msTab2" id="segSignup" onclick="authMode('signup')"><span data-ico="new"></span>회원가입</button>
+          </div>
+          <input id="authId" class="authField" type="text" placeholder="아이디 (로그인용 · 영문·숫자 3~16자)" maxlength="16" autocomplete="username" onkeydown="if(event.key==='Enter')authSubmit()">
+          <input id="authNick" class="authField hide" type="text" placeholder="닉네임 (게임 내 표시)" maxlength="12" autocomplete="off" onkeydown="if(event.key==='Enter')authSubmit()">
+          <input id="authPw" class="authField" type="password" placeholder="비밀번호 (영문·숫자 6자 이상)" autocomplete="current-password" autocapitalize="off" spellcheck="false" lang="en" oninput="this.value=this.value.replace(/[^\x21-\x7E]/g,'')" onkeydown="if(event.key==='Enter')authSubmit()">
+          <input id="authPw2" class="authField hide" type="password" placeholder="비밀번호 확인" autocomplete="new-password" autocapitalize="off" spellcheck="false" lang="en" oninput="this.value=this.value.replace(/[^\x21-\x7E]/g,'')" onkeydown="if(event.key==='Enter')authSubmit()">
+          <button class="authBtn" id="authBtn" onclick="authSubmit()">로그인</button>
+          <div class="authNote" id="authNote">비밀번호를 잊으셨나요?<i>|</i><button class="authFind" onclick="authFindPw()">비밀번호 찾기</button></div>
+        </div>
         <div class="authErr" id="authErr"></div>
-        <button class="authBtn" id="authBtn" onclick="authSubmit()">로그인</button>
-        <div class="authOr">또는</div>
-        <button class="authGuest" id="authGuest" onclick="authGuest()"><span data-ico="user"></span>게스트로 시작하기</button>
-        <div class="authNote" id="authNote">ID/PW를 잊으셨나요?<i>|</i><button class="authFind" onclick="authFindPw()">비밀번호 찾기</button></div>
       </div>
     </div>
 
@@ -13424,7 +13479,10 @@ async function initAuth(){
   if(!AUTH.user) AUTH.user = _lsGet('nm_session', null);   // 로컬 모드: 저장된 세션 자동 복원(이미 들어왔으면 그대로)
 }
 const ID_DOMAIN='nemonemo.app';   // 아이디를 Supabase 이메일 인증으로 처리하기 위한 합성 도메인(실제 메일 아님)
-function idToEmail(id){ return String(id).toLowerCase().replace(/[^a-z0-9._-]/g,'') + '@' + ID_DOMAIN; }
+// 이미 진짜 이메일이면 그대로 쓴다 — 이메일로 가입한 계정만 재설정 메일을 받을 수 있다.
+function idToEmail(id){ const v=String(id).trim();
+  if(v.indexOf('@')>=0) return v.toLowerCase();
+  return v.toLowerCase().replace(/[^a-z0-9._-]/g,'') + '@' + ID_DOMAIN; }
 async function authSignUp(id,pw,nick){ nick=(nick||id);   // 닉네임=게임 내 표시명(아이디는 로그인 전용)
   if(AUTH.mode==='supabase'){ const {data,error}=await _sb.auth.signUp({email:idToEmail(id),password:pw,options:{data:{nick}}});
     if(error) throw new Error(/registered|already|exists/i.test(error.message||'')?'이미 사용 중인 아이디입니다.':(error.message||'회원가입에 실패했습니다.'));
@@ -13636,11 +13694,45 @@ async function bootApp(){
 try{ setInterval(profIdleTick, 60000); }catch(e){}
 window.addEventListener('beforeunload', function(){ try{ profStampSeen(); }catch(e){} });   // 종료 시 시각 스탬프(다음 접속 오프라인 정산 기준)
 // ── 로그인 화면 ──
-let _authTab='login';
+// ── 로그인 화면 = 방식 선택 허브(①) + 로그인/회원가입 폼(②) 두 단계 ──
+// 폼은 한 벌뿐이다. 아이디냐 이메일이냐는 _authKind 하나로만 갈린다 — 폼을 두 벌 만들지 말 것.
+let _authTab='login', _authKind='id';
+const AUTH_WAYS={ id:{label:'아이디', ico:'user'}, email:{label:'이메일', ico:'mail'}, guest:{label:'게스트', ico:'user'} };
+function authRememberWay(k){ try{ _lsSet('nm_last_auth', k); }catch(e){} }   // 재방문 때 '이어서 하기'로 올려 준다
+function authLastWay(){ const k=_lsGet('nm_last_auth', null); return AUTH_WAYS[k]? k : null; }
+// 허브로 — 첫 진입과 '다른 방법으로'가 같은 상태로 수렴한다
+function authShowHub(){
+  document.getElementById('authHub').classList.remove('hide');
+  document.getElementById('authForm').classList.add('hide');
+  document.getElementById('authSub').textContent='로그인하고 시작하세요';
+  document.getElementById('authErr').textContent='';
+  const last=authLastWay(), el=document.getElementById('authLast');
+  if(el){ el.classList.toggle('hide', !last);
+    if(last){ el.innerHTML='<span data-ico="'+AUTH_WAYS[last].ico+'"></span>'+AUTH_WAYS[last].label+'로 이어서 하기';
+      if(typeof paintIcons==='function') paintIcons(el); } } }
+function authOpenForm(kind){
+  _authKind=(kind==='email')?'email':'id';
+  const f=document.getElementById('authId');
+  if(_authKind==='email'){ f.type='email'; f.removeAttribute('maxlength'); f.autocomplete='email';
+    f.placeholder='이메일 주소'; }
+  else { f.type='text'; f.setAttribute('maxlength','16'); f.autocomplete='username';
+    f.placeholder='아이디 (로그인용 · 영문·숫자 3~16자)'; }
+  f.value='';
+  document.getElementById('authHub').classList.add('hide');
+  document.getElementById('authForm').classList.remove('hide');
+  authMode('login');
+  if(typeof playSfx==='function') playSfx('ui_open'); }
+function authBackToHub(){ authShowHub(); if(typeof playSfx==='function') playSfx('ui_close'); }
+// 아직 못 붙인 방식 — 동작하는 척하지 않는다(Supabase 대시보드에 provider 설정이 있어야 켜진다)
+function authWayLocked(){ const err=document.getElementById('authErr'); if(!err) return;
+  err.classList.add('info'); err.textContent='Google 로그인은 아직 준비 중입니다. 아이디·이메일·게스트로 시작해 주세요.'; }
+function authUseLast(){ const k=authLastWay(); if(!k) return;
+  if(k==='guest') return authGuest();
+  authOpenForm(k); }
 function openAuth(){
   document.getElementById('authId').value=''; document.getElementById('authPw').value='';
   document.getElementById('authNick').value=''; document.getElementById('authPw2').value='';
-  authMode('login'); showAppScreen('auth');
+  _authKind='id'; authMode('login'); authShowHub(); showAppScreen('auth');
   // 로그인 화면에 머무는 동안 미리 데운다 — 여기서 끝나면 로그인 버튼을 눌렀을 때 로딩이 거의 없다.
   // 한 프레임에 모델 하나씩이라 입력·애니메이션을 막지 않는다.
   setTimeout(()=>{ try{ warmAll(); }catch(e){} }, 400);
@@ -13648,28 +13740,36 @@ function openAuth(){
   authLockHeight();   // 화면이 보이는 상태에서 실측해야 한다(display:none이면 높이가 0)
   if(typeof bgmStart==='function') bgmStart('lobby'); }   // 로그인 화면부터 로비 BGM
 function authMode(m){ _authTab=m;
+  const K=(_authKind==='email')?'이메일':'아이디';
   document.getElementById('segLogin').classList.toggle('on', m==='login');
   document.getElementById('segSignup').classList.toggle('on', m==='signup');
   document.getElementById('authNick').classList.toggle('hide', m!=='signup');
   document.getElementById('authPw2').classList.toggle('hide', m!=='signup');
   document.getElementById('authBtn').textContent = m==='login'?'로그인':'가입하기';
-  document.getElementById('authSub').textContent = m==='login'?'아이디로 로그인하세요':'아이디로 즉시 가입';
-  const hideGuest = (m==='signup');   // 가입 화면엔 게스트 진입을 두지 않는다(높이도 여기서 맞춰진다)
-  document.querySelector('.authOr').classList.toggle('hide', hideGuest);
-  document.getElementById('authGuest').classList.toggle('hide', hideGuest);
+  document.getElementById('authSub').textContent = m==='login'?(K+'로 로그인하세요'):(K+'로 가입하기');
+  // 비밀번호 재설정은 진짜 메일함이 있는 이메일 계정에서만 뜻이 있다(아이디는 가짜 주소라 메일이 안 간다)
+  const note=document.getElementById('authNote');
+  if(note) note.classList.toggle('hide', m!=='login');
   document.getElementById('authErr').textContent=''; }
-// 두 탭의 카드 높이를 같게 — 긴 쪽을 실측해 min-height로 고정한다.
-// (탭마다 줄 수가 달라 그냥 두면 카드가 늘었다 줄었다 한다. 고정값을 적어두면 폰트·문구가 바뀔 때 어긋나므로 실측한다.)
-function authLockHeight(){ const card=document.querySelector('.authCard'); if(!card) return;
-  const keep=_authTab; card.style.setProperty('--authH','0px');
-  let max=0; for(const m of ['login','signup']){ authMode(m); max=Math.max(max, card.getBoundingClientRect().height); }
-  authMode(keep); card.style.setProperty('--authH', Math.ceil(max)+'px'); }
+// 카드 높이를 상태와 무관하게 같게 — 가장 긴 화면을 실측해 min-height로 고정한다.
+// (허브·로그인·가입은 줄 수가 달라 그냥 두면 카드가 늘었다 줄었다 한다. 고정값을 적으면 문구가 바뀔 때 어긋나므로 실측한다.)
+function authLockHeight(){ const form=document.getElementById('authForm'), hub=document.getElementById('authHub');
+  if(!form||!hub) return;
+  const keepTab=_authTab, keepHub=!hub.classList.contains('hide');
+  form.style.setProperty('--authH','0px');
+  hub.classList.add('hide'); form.classList.remove('hide');   // 숨은 채로는 높이가 0이라 재려면 잠깐 보여야 한다
+  let max=0;
+  for(const m of ['login','signup']){ authMode(m); max=Math.max(max, form.getBoundingClientRect().height); }
+  authMode(keepTab);
+  if(keepHub) authShowHub();
+  form.style.setProperty('--authH', Math.ceil(max)+'px'); }
 async function authSubmit(){
   const id=(document.getElementById('authId').value||'').trim(), pw=document.getElementById('authPw').value||'';
   const err=document.getElementById('authErr');
   err.classList.remove('info');   // 안내문 뒤에 진짜 오류가 오면 빨강으로 되돌린다
   // 빈 칸 바로 입장은 없앴다 — 체험 입장은 '게스트로 시작하기' 버튼이 맡는다.
-  if(!/^[A-Za-z0-9._-]{3,16}$/.test(id)){ err.textContent='아이디는 영문·숫자 3~16자입니다.'; return; }
+  if(_authKind==='email'){ if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(id)){ err.textContent='이메일 주소 형식이 올바르지 않습니다.'; return; } }
+  else if(!/^[A-Za-z0-9._-]{3,16}$/.test(id)){ err.textContent='아이디는 영문·숫자 3~16자입니다.'; return; }
   if(pw.length<6){ err.textContent='비밀번호는 6자 이상이어야 합니다.'; return; }
   try{
     if(_authTab==='signup'){ const nick=(document.getElementById('authNick').value||'').trim(), pw2=document.getElementById('authPw2').value||'';
@@ -13677,17 +13777,26 @@ async function authSubmit(){
       if(pw!==pw2){ err.textContent='비밀번호가 일치하지 않습니다.'; return; }
       await authSignUp(id,pw,nick);
     } else { await authSignIn(id,pw); }
+    authRememberWay(_authKind);
     await enterAfterWarm();   // 로그인·가입 성공 → 로딩(데우기 완료)까지 마치고 HOME. 부팅 흐름과 도착지를 통일한다.
   }catch(e){ err.textContent = (e&&e.message)||'인증에 실패했습니다.'; }
 }
 function authGuestUser(){ AUTH.user={email:'', nick:'게스트'+(1000+Math.floor(Math.random()*9000)), guest:true};
   _lsSet('nm_session',AUTH.user); return AUTH.user; }   // 게스트 계정 생성만(화면 이동은 호출부가)
-function authGuest(){ authGuestUser(); enterAfterWarm(); }
-// ⚠ 계정 아이디는 idToEmail()로 만든 가짜 주소라 실제 메일함이 없다 → 복구 메일을 보낼 수 없다.
-//    연락 가능한 주소를 계정에 받기 전까지는 안내만 한다(동작하는 척하지 않는다).
-function authFindPw(){ const err=document.getElementById('authErr'); if(!err) return;
+function authGuest(){ authGuestUser(); authRememberWay('guest'); enterAfterWarm(); }
+// ⚠ 아이디 계정은 idToEmail()로 만든 가짜 주소라 실제 메일함이 없다 → 복구 메일을 보낼 수 없다.
+//    이메일로 가입한 계정에서만 진짜로 재설정 메일이 간다. 아이디 계정은 안내만 한다(동작하는 척하지 않는다).
+async function authFindPw(){ const err=document.getElementById('authErr'); if(!err) return;
   err.classList.add('info');
-  err.textContent='아직 비밀번호 재발급을 지원하지 않습니다. 게스트로 시작하거나 새 아이디로 가입해 주세요.'; }
+  if(_authKind!=='email'){
+    err.textContent='아이디 계정은 메일함이 없어 재발급을 보낼 수 없습니다. 이메일로 가입하면 재설정이 가능합니다.'; return; }
+  const to=(document.getElementById('authId').value||'').trim();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(to)){ err.textContent='재설정 메일을 받을 이메일 주소를 먼저 입력하세요.'; return; }
+  if(AUTH.mode!=='supabase' || !_sb){ err.textContent='지금은 오프라인 모드라 메일을 보낼 수 없습니다.'; return; }
+  try{ const {error}=await _sb.auth.resetPasswordForEmail(to);
+    if(error) throw error;
+    err.textContent=to+' 로 재설정 메일을 보냈습니다. 메일함을 확인해 주세요.';
+  }catch(e){ err.classList.remove('info'); err.textContent=(e&&e.message)||'재설정 메일을 보내지 못했습니다.'; } }
 function doLogout(){ if(typeof hbEnd==='function') hbEnd();   // 전투 완전 종료 — 배경 시뮬이 다음 계정까지 따라가지 않게
   if(typeof bgmStop==='function') bgmStop(); if(typeof rtStop==='function') rtStop(); authSignOut().then(openAuth); }
 // ── 유즈맵 데이터 ──
