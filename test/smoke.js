@@ -684,12 +684,13 @@ async function groupLobby(){
     for(const sel of ['#hbMoreBox','#hbMoreGrid .hbMoreIt']){
       const r=getComputedStyle(document.querySelector(sel)).borderTopLeftRadius;
       assert(r==='3px','더 각져야 한다 — '+sel+' r='+r); }
-    // 📅 일일은 더 이상 '준비 중'이 아니다 — 누르면 출석·퀘스트 시트가 열린다
-    { const b=document.querySelector('#hbMoreGrid [data-k="daily"]');
-      assert(b && !b.disabled,'일일 칸이 아직 잠겨 있음');
+    // 📅 출석과 일일 퀘스트는 **따로 있는 칸**이고 각자의 판을 연다(2026-08-14 분리)
+    for(const [k,sheet,close] of [['daily','hbDailySheet',closeDaily],['att','hbAttSheet',closeAtt]]){
+      const b=document.querySelector('#hbMoreGrid [data-k="'+k+'"]');
+      assert(b && !b.disabled,'더보기에 '+k+' 칸이 없음');
       b.click(); await sleep(250);
-      assert(visible($('hbDailySheet')),'더보기 > 일일이 안 열림');
-      closeDaily(); hbOpenMore(); await sleep(150); }
+      assert(visible($(sheet)),'더보기 > '+k+' 가 안 열림');
+      close(); hbOpenMore(); await sleep(150); }
     // 건설을 고르면 시트가 닫히고 '하단 패널'이 건설 구역이 된다(2026-08-14 · 좌상단 드롭다운 폐지)
     PROF().pcoin=99999;
     document.querySelector('#hbMoreGrid [data-k="build"]').click(); await sleep(250);
@@ -739,16 +740,17 @@ async function groupLobby(){
       const g0=p.gem; dqClaimFinal();
       assert(p.gem===g0+DQ_FINAL_RW.gem+bonusGem,'최종 보상(+남은 보너스)이 안 맞음: +'+(p.gem-g0));
       assert(dqState().att.n===0 && dqState().att.cyc===1,'캘린더가 새로 안 깔림'); }
-    // ④ 화면 = 4주 × (5+2)칸. '캘린더를 채우는' 그림이 실제로 그려져야 한다
-    openDaily(1); await sleep(150);
-    const cells=document.querySelectorAll('#hbDailySheet .dqC');
+    // ④ 화면 = 4주 × (5+2)칸. 출석은 퀘스트와 **다른 판**에 뜬다(2026-08-14 분리)
+    openAtt(); await sleep(150);
+    const cells=document.querySelectorAll('#hbAttSheet .dqC');
     assert(cells.length===DQ_WEEKS*(DQ_PER_WEEK+DQ_BONUS),'칸 수가 다름: '+cells.length);
-    assert(document.querySelectorAll('#hbDailyNav .pdSegBtn').length===2,'퀘스트/출석 세그먼트 탭이 없음');
-    assert(document.querySelectorAll('#hbDailySheet .dqC.got').length===0,'새 캘린더인데 채워진 칸이 있음');
-    closeDaily();
+    assert(!visible($('hbDailySheet')),'출석을 열었는데 퀘스트 판까지 뜸');
+    assert(document.querySelectorAll('#hbAttSheet .dqC.got').length===0,'새 캘린더인데 채워진 칸이 있음');
+    assert(!document.querySelector('#hbAttSheet .pdSegBtn'),'출석 판에 옛 탭 띠가 남아 있음');
+    closeAtt();
     reset(); p.pcoin=keep.pc; p.gas=keep.gas; p.gem=keep.gem;
     return DQ_WEEKS+'주 × '+DQ_PER_WEEK+'+'+DQ_BONUS+'칸 · 최종 후 재시작 ok'; });
-  await step('일일 퀘스트: 하루 5개(날짜 고정) · 계측 → 수령 → 완주 보너스', async()=>{
+  await step('일일 퀘스트: 하루 5개 + 주간 25개 · 계측 → 수령 → 완주/주간 보너스', async()=>{
     skipIf(typeof dqState!=='function','일일 없음');
     const p=PROF(), keep={pc:p.pcoin, gas:p.gas, gem:p.gem}, dk=_dgDayKey();
     // ① 같은 날이면 몇 번을 뽑아도 같은 5개(새로고침 리롤 방지)
@@ -759,6 +761,9 @@ async function groupLobby(){
     const D=dqState();
     assert(D.q.length===DQ_N,'퀘스트가 '+D.q.length+'개');
     assert(new Set(D.q.map(e=>e.id)).size===DQ_N,'같은 퀘스트가 중복으로 뽑힘');
+    // 같은 kind 가 두 개면 큰 쪽을 하는 순간 작은 쪽이 덤으로 끝난다 — 5개가 사실상 4개가 된다
+    assert(new Set(D.q.map(e=>DQ_BY[e.id].kind)).size===DQ_N,
+      '같은 종류가 두 번 뽑힘: '+D.q.map(e=>DQ_BY[e.id].kind).join(','));
     const outN=D.q.filter(e=>DQ_BY[e.id].cat==='out').length;
     assert(outN===DQ_OUT_N,'바깥 구역 퀘스트가 '+outN+'개(기대 '+DQ_OUT_N+')');
     // ③ 계측 — 종류별로 목표만큼 밀어 넣으면 5개가 다 찬다
@@ -775,7 +780,23 @@ async function groupLobby(){
     { const g0=p.gem; dqClaimAll();
       assert(p.gem===g0+DQ_ALL_RW.gem,'완주 보너스 젬이 안 들어옴: +'+(p.gem-g0));
       const g1=p.gem; dqClaimAll(); assert(p.gem===g1,'완주 보너스를 두 번 받음'); }
-    // ⑥ 계측 지점이 실제 게임 코드에 붙어 있는가 — 여기가 빠지면 퀘스트가 영원히 0이다
+    // ⑥ 주간 — '수령'이 아니라 '완료'로 센다. 25개면 보너스, 월요일에 0으로 돌아간다.
+    assert(dqWeekN()>=DQ_N,'주간 누적이 완료를 못 셈: '+dqWeekN());
+    assert(!dqWeekOpen(),DQ_N+'개인데 주간 보너스가 열림');
+    dqState().wk.n=DQ_WEEK_GOAL;
+    assert(dqWeekOpen(),DQ_WEEK_GOAL+'개인데 주간 보너스가 안 열림');
+    { const g0=p.gem; dqClaimWeek();
+      assert(p.gem===g0+DQ_WEEK_RW.gem,'주간 보너스 젬이 안 들어옴: +'+(p.gem-g0));
+      const g1=p.gem; dqClaimWeek(); assert(p.gem===g1,'주간 보너스를 두 번 받음'); }
+    dqState().wk.key=_dqWeekKey()-7*86400000;        // 지난주 것으로 위장 → 다음 호출에서 비워져야 한다
+    assert(dqWeekN()===0 && !dqWeekGot(),'주가 바뀌었는데 주간 누적이 안 비워짐: '+dqWeekN());
+    // ⑦ 퀘스트 판은 출석과 따로 뜨고, 맨 위에 주간 진행이 있다
+    openDaily(); await sleep(150);
+    assert(visible($('hbDailySheet')) && !visible($('hbAttSheet')),'퀘스트를 열었는데 출석 판까지 뜸');
+    assert(document.querySelector('#hbDailyBody .dqWeek'),'퀘스트 판에 주간 진행이 없음');
+    assert(document.querySelectorAll('#hbDailyBody .hbRow.dqQ').length===DQ_N+1,'퀘스트 줄 + 완주 보너스가 안 맞음');
+    closeDaily();
+    // ⑧ 계측 지점이 실제 게임 코드에 붙어 있는가 — 여기가 빠지면 퀘스트가 영원히 0이다
     const H=[[hbKill,'kill'],[hbBreakChest,'chest'],[hmBuyUpg,'upg'],[hmBuyUpgQuiet,'upg'],
              [hbSettle,'round'],[hbPlaceStruct,'build'],[hbStep,'play'],[_runSummary,'umRun'],
              [_runSummary,'umWin'],[dgWin,'dgWin'],[hbMateRoll,'gacha'],[hbBuyBoost,'boost']];
@@ -783,7 +804,7 @@ async function groupLobby(){
       assert(new RegExp("dqNote\\(\\s*'"+h[1]+"'").test(h[0].toString()), h[1]+' 계측이 안 붙어 있음: '+h[0].name);
     p.daily={day:dk, q:dqDraw(dk), allGot:0, att:{n:0,day:0,bn:{},fin:0,cyc:0}};
     p.pcoin=keep.pc; p.gas=keep.gas; p.gem=keep.gem;
-    return '5개(바깥 '+DQ_OUT_N+') · 계측 '+H.length+'곳 확인'; });
+    return '5개(바깥 '+DQ_OUT_N+') · 주간 '+DQ_WEEK_GOAL+' · 계측 '+H.length+'곳 확인'; });
   // 📦 상자 — 맵을 돌아다닐 이유. '공격 대상'이라 사거리 안에 있어야 부순다.
   await step('상자: 사거리 안일 때만 부수고 · 적이 우선 · 보상은 섞여 나온다', async()=>{
     skipIf(typeof hbSpawnChest!=='function','상자 없음');

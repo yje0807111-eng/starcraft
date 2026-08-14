@@ -48,7 +48,9 @@
 | 토벌 입구 | HOME 스킬 바(`renderHbBar()`)의 **토벌** 버튼 → `openDungeonHub()` 팝업 | 네비에서 뺐다(2번 칸은 정비) · 다른 화면에서 부르면 먼저 `openHome()` |
 | 탭 띠(상자 머리) | `.msPanel` + `.msSortTabs`/`.msSortTab` | 유즈맵 정렬 = 정비 3탭 공용 — 새 탭 띠를 만들지 말고 이 클래스를 쓸 것 |
 | **방향·증감 버튼(◀▶)** | **`.arwBtn` + `data-arw="l\|r"`** (`paintIcons`가 함께 채운다) | 기본 = **글리프만**(판·선 없음 · 그림자로 띄움 · 터치 영역 30px 유지) · 판이 필요한 자리에만 `.framed`(모서리 컷 테두리) · 새 화살표 SVG를 마크업에 직접 박지 말 것 |
-| **일일(출석·퀘스트)** | `openDaily(tab)` → `#hbDailySheet` + `renderDaily()` | 더보기 ☰ > 일일 · 진행 계측은 **`dqNote(kind, n)` 한 곳으로만** 넣는다(새 계측 지점이 생기면 여기에 한 줄) · 보상 지급은 `dqGive(rw)` |
+| **일일 퀘스트** | `openDaily()` → `#hbDailySheet` + `renderDaily()` | 더보기 ☰ > 일일 퀘스트 · 하루 5개 + 주간 25개 |
+| **출석** | `openAtt()` → `#hbAttSheet` + `renderAtt()` | 더보기 ☰ > 출석 · **퀘스트와 화면이 다르다**(같은 판에 탭으로 묶지 말 것 — 2026-08-14 분리) |
+| 일일 진행 계측·보상 | **`dqNote(kind, n)`** / `dqGive(rw)` | 출석·퀘스트가 함께 쓰는 뒷단 · 새 계측 지점이 생기면 `dqNote` 한 줄만 넣는다 |
 | HOME 팝업 껍데기·버튼 색 | `.hbModal` / `.hbmCard` / `.hbRow` · 버튼 면색 토큰은 `.hbModal{--btnA/B/C}` | 새 HOME 팝업을 만들 때 `#새시트 .ecGo` 같은 선택자를 **덧붙이지 말 것** — `.hbModal` 하위면 자동으로 같은 물성·회색톤이 된다 |
 | 세그먼트 이동 바(한 구역 안에서 나뉘는 네비) | **`segNavHTML(items, i, act)`** → `.pdSeg`/`.pdSegInd`/`.pdSegBtn` | 장비창 섹션 바(장비·장신구) = 사냥터 업그레이드 탭(내 캐릭터·동료·건물·펫) — 한 함수 · 생김새도 공용 규칙이 전부 갖는다(각진 3px · 검정 판 · 밑변 1px 광원) · 화면이 덮는 건 광원 색 `--segCol` 하나 · 안쪽 틈은 `--pad` 변수 하나가 단일 소스(계산식을 복사해 박지 말 것) |
 
