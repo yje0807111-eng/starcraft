@@ -2458,6 +2458,26 @@ async function groupLobby(){
       assert(stat.textContent.trim().length>0,t+' 탭 능력치 줄이 비어 있음');
       assert(MG_ADD_SLOTS>=1,'추가 능력치·스킬 확장 칸이 0개로 꺼져 있음');
       assert(add.length===MG_ADD_SLOTS,t+' 탭 + 확장 칸 수가 표와 다름: '+add.length+' vs '+MG_ADD_SLOTS);
+      // ⓐ 레벨/★ 은 초상 위 배지가 아니라 '이름 오른쪽 텍스트'다
+      { const lv=rows[0].querySelector('.mgLv'), card=rows[0].querySelector('.mgCard');
+        assert(lv,t+' 탭에 레벨 표기(.mgLv)가 없음');
+        assert(!rows[0].querySelector('.mgTag'),t+' 탭에 옛 카드 배지(.mgTag)가 남음');
+        const lr=lv.getBoundingClientRect(), nr=name.getBoundingClientRect(), cr=card.getBoundingClientRect();
+        assert(lr.left>=nr.right-1,t+': 레벨이 이름 오른쪽이 아님');
+        assert(lr.left>=cr.right-1,t+': 레벨이 아직 초상 위에 있음'); }
+      // ⓑ 등급 이름과 특징은 줄에서 뺀다 — 등급은 테두리 색이 말한다
+      { const sx=stat.textContent;
+        for(const t2 of GACHA_TIER_ORDER)
+          assert(sx.indexOf(GACHA_TIERS[t2].name)<0,t+': 능력치 줄에 등급 이름이 남음: '+sx);
+        if(t==='ally'){ const id=MG.ally.on()[0];
+          if(id) assert(sx.indexOf(HB_MATES[id].tip)<0,t+': 능력치 줄에 특징이 남음: '+sx); } }
+      // ⓒ + 확장 칸은 해제 '왼쪽'에 · 이전보다 크다
+      { const un=btns.find(b=>b.textContent.trim()==='해제');
+        assert(un,t+': 해제 버튼이 없음');
+        assert(add[0].getBoundingClientRect().right<=un.getBoundingClientRect().left+1,
+          t+': + 칸이 해제 왼쪽이 아님');
+        assert(add[0].getBoundingClientRect().height>=26,
+          t+': + 칸이 너무 작음: '+Math.round(add[0].getBoundingClientRect().height)+'px'); }
       // 줄에는 '해제'만 둔다 — 합성은 상태창으로 옮겼다(줄이 버튼으로 붐비지 않게)
       const tx=btns.map(b=>b.textContent.trim());
       assert(tx.indexOf('해제')>=0,t+' 탭에 해제 버튼이 없음: '+tx.join(','));
