@@ -664,8 +664,19 @@ async function groupLobby(){
       const ph=$('phone').getBoundingClientRect(), bx=$('hbMoreBox').getBoundingClientRect();
       assert(ph.right-btn.getBoundingClientRect().right<=4,'☰ 가 오른쪽 끝에 안 붙음');
       assert(ph.right-bx.right<=4,'드롭다운이 오른쪽 끝에 안 붙음'); }
-    // 설정 칸은 톱니바퀴 — ☰ 와 같은 삼선을 쓰면 '메뉴 안의 메뉴'로 보인다
-    assert(document.querySelector('#hbMoreGrid [data-k="set"] circle'),'설정 아이콘이 톱니바퀴가 아님');
+    // 설정 칸은 톱니바퀴 — ☰ 와 같은 삼선을 쓰면 '메뉴 안의 메뉴'로 보인다.
+    // 몸통 링 + 축 구멍(원 2개)이 있어야 톱니로 읽힌다. 허브 하나에 긴 광선만 있으면 태양이 된다.
+    { const cs=document.querySelectorAll('#hbMoreGrid [data-k="set"] circle');
+      assert(cs.length===2,'설정 아이콘에 원이 '+cs.length+'개 — 몸통 링과 축 구멍 둘이어야 톱니로 보인다');
+      const rs=[...cs].map(c=>parseFloat(c.getAttribute('r'))).sort((a,b)=>a-b);
+      assert(rs[1]>=2.4*rs[0],'몸통 링이 축 구멍에 비해 충분히 크지 않다: '+rs.join('/')); }
+    // 드롭다운은 ☰ 아래에 딱 붙는다
+    { const bt=$('curSettingsBtn').getBoundingClientRect(), bx=$('hbMoreBox').getBoundingClientRect();
+      assert(Math.abs(bx.top-bt.bottom)<=2,'☰ 아래에 안 붙음: '+Math.round(bx.top-bt.bottom)+'px'); }
+    // 각진 테두리 — DESIGN 라운드 토큰(0/3/6/9) 중 3px
+    for(const sel of ['#hbMoreBox','#hbMoreGrid .hbMoreIt']){
+      const r=getComputedStyle(document.querySelector(sel)).borderTopLeftRadius;
+      assert(r==='3px','더 각져야 한다 — '+sel+' r='+r); }
     // 건설을 고르면 시트가 닫히고 메뉴가 화면 안에 뜬다(필드를 눌러 배치해야 하므로)
     PROF().pcoin=99999;
     document.querySelector('#hbMoreGrid [data-k="build"]').click(); await sleep(250);

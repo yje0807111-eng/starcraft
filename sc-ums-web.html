@@ -2548,12 +2548,12 @@
   /* 칸 크기는 ☰(.hudSet 24px)와 같다 — 한 값에서 가져와 둘이 어긋나지 않게 한다 */
   .hbMoreWrap{--mi:24px}
   .hbMoreBox{position:absolute;right:8px;padding:6px;
-    background:rgba(12,13,16,.96);border:1px solid var(--metal-edge);border-radius:var(--r-md);
+    background:rgba(12,13,16,.96);border:1px solid var(--metal-edge);border-radius:var(--r-bar);
     box-shadow:0 10px 24px rgba(0,0,0,.55)}
   .hbMoreGrid{display:grid;grid-template-columns:repeat(2,var(--mi));gap:6px}
   .hbMoreIt{width:var(--mi);height:var(--mi);padding:0;display:grid;place-items:center;
     background:rgba(255,255,255,.045);border:1px solid var(--metal-edge);
-    border-radius:var(--r-md);color:#dfe4ea;cursor:pointer}
+    border-radius:var(--r-bar);color:#dfe4ea;cursor:pointer}
   .hbMoreIt:active{opacity:.75}
   .hbMoreIt[disabled]{opacity:.4;cursor:default}
   .hbMoreIt span[data-ico],.hbMoreIt .hbMoreSvg{width:18px;height:18px;display:block}   /* .hudSet svg와 같은 18px */
@@ -5777,7 +5777,7 @@ function hbOpenMore(){ const el=document.getElementById('hbMoreSheet'); if(!el) 
     const btns=['curSettingsBtn','settingsBtn'].map(function(id){ return document.getElementById(id); })
       .filter(function(b){ return b && b.getClientRects().length; });
     if(box && ph && btns.length){ const r=btns[0].getBoundingClientRect(), p=ph.getBoundingClientRect();
-      box.style.top=Math.round(r.bottom-p.top+6)+'px';
+      box.style.top=Math.round(r.bottom-p.top)+'px';   // 버튼 아래에 딱 붙인다(테두리가 이어져 한 덩어리로 보인다)
       box.style.right=Math.round(p.right-r.right)+'px'; } }
   hbMoreBtns().forEach(function(b){ b.classList.add('on'); b.title='닫기'; });
   if(typeof playSfx==='function') playSfx('ui_open'); }
@@ -5800,9 +5800,11 @@ function renderHbMore(){ const g=document.getElementById('hbMoreGrid'); if(!g) r
     const off=(it.k==='daily') ? ' disabled' : '';
     // 설정은 아이콘 세트에 톱니가 없어 직접 그린다. ☰ 와 같은 그림을 쓰면 '메뉴 안의 메뉴'로 보인다.
     const ico=it.ico ? '<span data-ico="'+it.ico+'"></span>'
-      : '<i class="hbMoreSvg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">'
-        +'<circle cx="12" cy="12" r="3.4"/>'
-        +'<path d="M12 2.6v3M12 18.4v3M2.6 12h3M18.4 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1"/>'
+      : '<i class="hbMoreSvg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="butt">'
+        +'<circle cx="12" cy="12" r="6.1"/>'      // 몸통 링 — 이게 없으면 태양이 된다
+        +'<circle cx="12" cy="12" r="2.1"/>'      // 축 구멍
+        +'<path d="M12 3.2v2.6M12 18.2v2.6M3.2 12h2.6M18.2 12h2.6'
+        +      'M5.9 5.9l1.9 1.9M16.2 16.2l1.9 1.9M18.1 5.9l-1.9 1.9M7.8 16.2l-1.9 1.9"/>'   // 이빨은 링 바깥으로만
         +'</svg></i>';
     const tip=it.name+(it.sub?' — '+it.sub:'');
     return '<button class="hbMoreIt" data-k="'+it.k+'" onclick="hbMoreTap(&#39;'+it.k+'&#39;)"'+off
