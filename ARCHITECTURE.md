@@ -33,6 +33,7 @@
 | `마을(월드 + 카메라)` | `TOWN_ZONES`(구역 단일 출처) · `twStep`/`twCamApply` · 입력 `twPtrDown→Move→Up` |
 | `⚔ 던전` | 캐릭터 직접 전투 — `DG` 상태 · `dgStep`/`dgTick` 자체 루프 · `DG_FOES` 자체 적 표 · `dgRender`(DOM 유일 접점). **유즈맵과 완전 분리** |
 | `⚔ 던전 1~10` | **자동사냥 던전 정체성 + 3D 유닛** — `HB_DUNGEONS`(10곳 단일 소스) · `hbFloor`(타일+틴트) · `hb3dAttach/Detach`(공용 `#cvMarine`) · `_hbU`/`hb3dList`(**관리자 랩과 같은 표준 유닛 객체**) · `hbFrame`이 **`M3D.sync(list,W,H,dt,[],[],null,k)`** 호출 — 랩(`fxLabRender`)과 같은 방식 |
+| `📅 일일` | 출석 캘린더(4주 × 5+2칸) + 일일 퀘스트(하루 5개) — `DQ_POOL`/`dqState`/`dqDraw`/**`dqNote(kind,n)`**(유일한 계측 입구)/`openDaily`. 저장은 `PROF().daily` 한 곳, 하루 경계는 `_dgDayKey()` |
 | `게임 상태` | `G` 전역 + `newGame()` |
 | `캔버스 + 트랙` | 2D 캔버스(#cvMain) 트랙/적 그리기, `DPR`(2D쪽) |
 | `유닛/적 로직` | `spawnEnemy`(→`G.pendSpawn` 대기열!), `summonPersonalBoss`, `sellUnit(유닛객체)` , 전투 판정 |
@@ -224,6 +225,12 @@ node test/bench-strike.mjs 400 80 4   # 대규모 전투 렌더 벤치(유닛수
   ⛔ 좌상단 건설 드롭다운(`#hbBuildWrap`/`renderHbBuild`/`.hbBdMenu`/`hbToggleBuild`)은 **폐지**했다 — 오른쪽 위에서 열었는데 왼쪽 위에 목록이 떠서 시선이 튀었다. 좌상단 아이콘 줄(`.hbIcoRow`)도 함께 비었다.
 - **🛠 건설 모드 = 라운드 정지**(2026-08-12). 배치를 시작하면(`hbArmStart` → `hbBuildEnter`) 라운드가 '시작 직전'으로 돌아간다 — 적·대기·상자·탄을 비우고 `wave=1`, `waveT=hbWaveTime(1)`, 캐릭터 목적지도 지운다. `hbStep`은 `if(S.build){ hbFx(dt); return; }`로 **시계까지 멈춘다**(이펙트만 사그라들게 둔다). 나가는 길은 하나: **`hbBuildExit()`** — 오른쪽 위 ⊘(`#hbBuildStop`)·고스트의 ✕(`hbArmCancel`)·화면 이탈(`hbStop`)이 전부 이걸 부르고, 나가면 1웨이브부터 새로 돈다. ⚠ `hbBuildExit`는 **`S.build=false`를 먼저 하고 `hbArmBtns()`를 불러야** 한다(순서를 바꾸면 ⊘가 화면에 남는다). ⚠ `_hb`가 없을 때 부르면 `hbSpawnWave`가 터지므로 맨 앞에서 막는다.
 - **연속 배치는 방향을 기억한다.** `_hb.arm={k,gx,gy,dir,last}`. 확정하면 `hbArmAdvance()`가 `dir`(기본 오른쪽)로 다음 자리를 잡고, **막힌 칸은 그 방향으로 계속 건너뛴다**. 맵 끝에 닿으면 아래→오른쪽→위→왼쪽 순으로 꺾고, 그래도 없으면 `hbFreeCell`. 사용자가 고스트를 무시하고 다른 칸에 놓으면 `직전 → 이번` 이동이 곧 새 `dir`이 된다(왼쪽에 놓으면 그 뒤로 계속 왼쪽). 후보는 `hbCanPlace` + `hbSealCheck`를 **둘 다** 통과해야 한다 — 봉쇄 검사를 빠뜨리면 고스트가 못 놓는 칸에 서서 ▶가 계속 비활성으로 보인다.
+- **📅 일일(출석 캘린더 + 일일 퀘스트)은 프로필 한 곳(`p.daily`)에 산다**(2026-08-14). 배너 검색어 `📅 일일`. 하루 경계는 던전 열쇠·상점 특가와 **같은 축**(`_dgDayKey()` · 09:00).
+  - **출석** `att={n,day,bn,fin,cyc}` — 한 주 = **출석 5칸 + 보너스 2칸**. 보너스는 '나머지 2일' 몫이라 그 주 5칸을 채우면 **추가 출석 없이** 열린다(`dqBonusOpen`). 4주 = **20도장**이면 `dqClaimFinal()`이 최종 보상 + **남아 있는 보너스까지 한꺼번에** 주고 캘린더를 새로 깐다(`cyc++`) — 안 그러면 안 받은 보너스가 사라진다.
+  - **퀘스트** `q=[{id,n,got}]` — 하루 5개. 뽑기는 **날짜 시드**(`dqDraw(dk)` + `_dqRand`)라 새로고침해도 같은 5개다. 5개 중 `DQ_OUT_N(2)`개는 반드시 `cat:'out'`(유즈맵·토벌·뽑기·부스트) — 다른 구역까지 자연스럽게 끌어내는 것이 이 기능의 목적이다.
+  - **계측은 `dqNote(kind,n)` 한 곳으로만** 들어온다. 지금 붙어 있는 곳: `hbKill`(kill) · `hbBreakChest`(chest) · `hmBuyUpg`/`hmBuyUpgQuiet`(upg) · `hbSettle`(round) · `hbPlaceStruct`(build) · `hbStep`(play, 1초 단위) · `_runSummary`(umRun/umWin) · `dgWin`(dgWin) · `hbMateRoll`/`profPetRoll`/`profUseGearTicket`(gacha) · `hbBuyBoost`(boost). 스모크가 **정적으로** 이 12곳을 검사한다(빠지면 퀘스트가 영원히 0이다).
+  - ⚠ **`dqNote`는 초당 여러 번 들어온다**(처치). 저장·배지·리렌더는 **완료된 순간과 시트가 열려 있을 때만** 한다 — 매번 하면 전투 중 프레임이 죽는다.
+  - ☰의 `!` 배지(`#hbGrowDot`)는 **성장과 일일이 함께 쓴다**(`renderHomeStats`). 더보기 격자 안의 점은 **글자 없는 점**이어야 한다 — 그 격자는 '아이콘만'이 규칙이고 스모크가 `textContent`를 검사한다.
 - ⚠ **`.curBar.bare`는 click-through다**(`pointer-events:none`, `.res`·`.hudSet`만 되살림). 되살릴 자식을 빠뜨리면 그 UI는 '눌러도 아무 일 없고 뒤 화면이 대신 반응'한다 — 설정(☰ `#curSettingsBtn`)이 이 때문에 HOME·마을·유즈맵·상점·정비 다섯 화면에서 죽어 있었고, 클릭이 `#homeScreen`까지 내려가 캐릭터가 그리로 걸어갔다. **필드 탭 화이트리스트의 전제('UI는 자식이라 자동 제외')가 click-through 레이어에서는 깨진다** — `pointer-events:none`을 새로 줄 때마다 여기를 볼 것. 또 `#curBar`의 설정은 `openAppSettings()`(앱용)를 불러야 한다. `openSettings()`는 인게임용이라 HOME에서도 임무 목표·배속·게임 나가기가 뜬다.
 - ⚠ **`applyVideo()`와 `fxLevel()`의 기본값을 맞출 것.** `fxLevel()`은 `G.opt.fx` 미설정을 `'full'`로 보는데 `applyVideo()`만 `G.opt.fx!=='full'`로 봐서, fx가 아직 없는 새 프로필은 **설정을 한 번 여는 것만으로** `body.lite`(`box-shadow`·`backdrop-filter` 전부 `none!important`)가 켜졌다 — 화면엔 '고화질'이라 떠 있는데 이펙트만 사라졌다. 지금은 둘 다 `fxLevel()`을 쓴다.
 - **🎥 가장자리 끌기 = 배치 고스트를 화면 끝으로 끌면 카메라가 따라간다**(2026-08-12). 방향 판정은 **`edgePush(fx,fy)` 하나**를 HOME 사냥터(`hbEdgePan`)와 관리자 건설 화면(`techEdgePan`)이 함께 쓴다 — 상수도 `EDGE_PAD`/`EDGE_SPD` 공용.

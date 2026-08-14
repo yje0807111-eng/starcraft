@@ -684,6 +684,12 @@ async function groupLobby(){
     for(const sel of ['#hbMoreBox','#hbMoreGrid .hbMoreIt']){
       const r=getComputedStyle(document.querySelector(sel)).borderTopLeftRadius;
       assert(r==='3px','더 각져야 한다 — '+sel+' r='+r); }
+    // 📅 일일은 더 이상 '준비 중'이 아니다 — 누르면 출석·퀘스트 시트가 열린다
+    { const b=document.querySelector('#hbMoreGrid [data-k="daily"]');
+      assert(b && !b.disabled,'일일 칸이 아직 잠겨 있음');
+      b.click(); await sleep(250);
+      assert(visible($('hbDailySheet')),'더보기 > 일일이 안 열림');
+      closeDaily(); hbOpenMore(); await sleep(150); }
     // 건설을 고르면 시트가 닫히고 '하단 패널'이 건설 구역이 된다(2026-08-14 · 좌상단 드롭다운 폐지)
     PROF().pcoin=99999;
     document.querySelector('#hbMoreGrid [data-k="build"]').click(); await sleep(250);
@@ -702,6 +708,82 @@ async function groupLobby(){
     assert(!visible($('hbMoreSheet')),'유즈맵에서 더보기가 열림');
     $('settingsPop').classList.add('hide');
     return '항목 '+its.length+'개 · ☰ 아래 2칸 드롭다운 · 유즈맵은 설정 유지'; });
+  // 📅 일일 — 출석 캘린더(4주) + 하루 5개 퀘스트. 하루 경계는 던전 열쇠와 같은 축(_dgDayKey · 09:00).
+  await step('일일 출석: 하루 1도장 · 주 5칸 + 보너스 2칸 · 20도장 = 최종', async()=>{
+    skipIf(typeof dqState!=='function','일일 없음');
+    const p=PROF(), keep={pc:p.pcoin, gas:p.gas, gem:p.gem};
+    const reset=()=>{ p.daily={day:_dgDayKey(), q:dqDraw(_dgDayKey()), allGot:0, att:{n:0,day:0,bn:{},fin:0,cyc:0}}; };
+    reset();
+    // ① 하루 한 번 — 두 번은 안 된다
+    assert(dqAttCan(),'첫 출석이 막힘');
+    p.pcoin=0; dqCheckIn();
+    assert(dqState().att.n===1,'도장이 안 찍힘: '+dqState().att.n);
+    assert(p.pcoin===dqAttRw(0,0).pcoin,'1일차 보상이 안 들어옴: '+p.pcoin);
+    assert(!dqAttCan(),'같은 날 두 번 출석이 됨');
+    dqCheckIn(); assert(dqState().att.n===1,'두 번째 출석이 먹힘: '+dqState().att.n);
+    // ② 한 주 = 출석 5칸. 그 5칸을 채워야 '나머지 2일' 몫인 보너스가 열린다
+    const nextDay=()=>{ dqState().att.day=0; dqCheckIn(); };
+    assert(!dqBonusOpen(0),'5칸을 안 채웠는데 보너스가 열림');
+    while(dqState().att.n<DQ_PER_WEEK) nextDay();
+    assert(dqBonusOpen(0),'5칸을 채웠는데 보너스가 안 열림');
+    assert(!dqBonusOpen(1),'다음 주 보너스까지 열림');
+    { const g0=p.gem; dqClaimBonus(0,1);
+      assert(p.gem===g0+dqAttBonusRw(0,1).gem,'보너스 젬이 안 들어옴: +'+(p.gem-g0));
+      const g1=p.gem; dqClaimBonus(0,1); assert(p.gem===g1,'같은 보너스를 두 번 받음'); }
+    // ③ 20도장 = 최종. 받으면 남은 보너스까지 주고 캘린더가 새로 깔린다
+    assert(!dqFinalOpen(),'20도장 전에 최종이 열림');
+    while(dqState().att.n<DQ_ATT_MAX) nextDay();
+    assert(dqFinalOpen(),'20도장인데 최종이 안 열림');
+    { let bonusGem=0;
+      for(let w=0;w<DQ_WEEKS;w++) for(let b=0;b<DQ_BONUS;b++) if(!dqBonusGot(w,b)) bonusGem+=(dqAttBonusRw(w,b).gem||0);
+      const g0=p.gem; dqClaimFinal();
+      assert(p.gem===g0+DQ_FINAL_RW.gem+bonusGem,'최종 보상(+남은 보너스)이 안 맞음: +'+(p.gem-g0));
+      assert(dqState().att.n===0 && dqState().att.cyc===1,'캘린더가 새로 안 깔림'); }
+    // ④ 화면 = 4주 × (5+2)칸. '캘린더를 채우는' 그림이 실제로 그려져야 한다
+    openDaily(1); await sleep(150);
+    const cells=document.querySelectorAll('#hbDailySheet .dqC');
+    assert(cells.length===DQ_WEEKS*(DQ_PER_WEEK+DQ_BONUS),'칸 수가 다름: '+cells.length);
+    assert(document.querySelectorAll('#hbDailyNav .pdSegBtn').length===2,'퀘스트/출석 세그먼트 탭이 없음');
+    assert(document.querySelectorAll('#hbDailySheet .dqC.got').length===0,'새 캘린더인데 채워진 칸이 있음');
+    closeDaily();
+    reset(); p.pcoin=keep.pc; p.gas=keep.gas; p.gem=keep.gem;
+    return DQ_WEEKS+'주 × '+DQ_PER_WEEK+'+'+DQ_BONUS+'칸 · 최종 후 재시작 ok'; });
+  await step('일일 퀘스트: 하루 5개(날짜 고정) · 계측 → 수령 → 완주 보너스', async()=>{
+    skipIf(typeof dqState!=='function','일일 없음');
+    const p=PROF(), keep={pc:p.pcoin, gas:p.gas, gem:p.gem}, dk=_dgDayKey();
+    // ① 같은 날이면 몇 번을 뽑아도 같은 5개(새로고침 리롤 방지)
+    const a=dqDraw(dk).map(e=>e.id).join(','), b=dqDraw(dk).map(e=>e.id).join(',');
+    assert(a===b,'같은 날인데 퀘스트가 달라짐: '+a+' / '+b);
+    // ② 구성 — 5개 중 DQ_OUT_N개는 사냥터 바깥(다른 구역까지 자연스럽게 끌어낸다)
+    p.daily={day:dk, q:dqDraw(dk), allGot:0, att:{n:0,day:dk,bn:{},fin:0,cyc:0}};
+    const D=dqState();
+    assert(D.q.length===DQ_N,'퀘스트가 '+D.q.length+'개');
+    assert(new Set(D.q.map(e=>e.id)).size===DQ_N,'같은 퀘스트가 중복으로 뽑힘');
+    const outN=D.q.filter(e=>DQ_BY[e.id].cat==='out').length;
+    assert(outN===DQ_OUT_N,'바깥 구역 퀘스트가 '+outN+'개(기대 '+DQ_OUT_N+')');
+    // ③ 계측 — 종류별로 목표만큼 밀어 넣으면 5개가 다 찬다
+    for(const e of D.q){ const Q=DQ_BY[e.id]; dqNote(Q.kind, Q.goal); }
+    assert(dqDoneN()===DQ_N,'계측이 안 들어감: '+dqDoneN()+'/'+DQ_N);
+    // ④ 수령은 1회 · 보상이 실제로 들어온다
+    { const Q=DQ_BY[D.q[0].id]; p.pcoin=0; dqClaim(0);
+      assert(p.pcoin===(Q.rw.pcoin||0),'보상이 안 들어옴: '+p.pcoin);
+      p.pcoin=0; dqClaim(0); assert(p.pcoin===0,'같은 퀘스트를 두 번 받음'); }
+    // ⑤ 5개를 다 받으면 완주 보너스
+    assert(!dqAllGot(),'아직 다 안 받았는데 완주로 침');
+    for(let i=1;i<DQ_N;i++) dqClaim(i);
+    assert(dqAllGot(),'다 받았는데 완주가 아님');
+    { const g0=p.gem; dqClaimAll();
+      assert(p.gem===g0+DQ_ALL_RW.gem,'완주 보너스 젬이 안 들어옴: +'+(p.gem-g0));
+      const g1=p.gem; dqClaimAll(); assert(p.gem===g1,'완주 보너스를 두 번 받음'); }
+    // ⑥ 계측 지점이 실제 게임 코드에 붙어 있는가 — 여기가 빠지면 퀘스트가 영원히 0이다
+    const H=[[hbKill,'kill'],[hbBreakChest,'chest'],[hmBuyUpg,'upg'],[hmBuyUpgQuiet,'upg'],
+             [hbSettle,'round'],[hbPlaceStruct,'build'],[hbStep,'play'],[_runSummary,'umRun'],
+             [_runSummary,'umWin'],[dgWin,'dgWin'],[hbMateRoll,'gacha'],[hbBuyBoost,'boost']];
+    for(const h of H)
+      assert(new RegExp("dqNote\\(\\s*'"+h[1]+"'").test(h[0].toString()), h[1]+' 계측이 안 붙어 있음: '+h[0].name);
+    p.daily={day:dk, q:dqDraw(dk), allGot:0, att:{n:0,day:0,bn:{},fin:0,cyc:0}};
+    p.pcoin=keep.pc; p.gas=keep.gas; p.gem=keep.gem;
+    return '5개(바깥 '+DQ_OUT_N+') · 계측 '+H.length+'곳 확인'; });
   // 📦 상자 — 맵을 돌아다닐 이유. '공격 대상'이라 사거리 안에 있어야 부순다.
   await step('상자: 사거리 안일 때만 부수고 · 적이 우선 · 보상은 섞여 나온다', async()=>{
     skipIf(typeof hbSpawnChest!=='function','상자 없음');
@@ -881,6 +963,9 @@ async function groupLobby(){
     assert($('hbGrowBody').textContent.indexOf('파워 350')<0,'옛 파워 문구가 남음');
     hbCloseGrow();
     // ⑥ 할 게 없으면 배지는 꺼진다 — 단 버튼 진입점은 그대로 남아야 한다
+    //    ☰ 의 !는 성장과 📅 일일이 함께 쓰는 신호라, 일일 쪽도 '받을 게 없는' 상태로 만들어야 성장만 본다
+    { const D=dqState(); D.att.day=_dgDayKey(); D.att.n=1; D.att.bn={}; D.att.fin=0;
+      D.allGot=1; D.q.forEach(e=>{ e.got=1; }); }
     c.level=1; c.unit.level=1; p.pcoin=0; renderHome();
     assert(!visible($('hbGrowDot')),'할 게 없는데 성장 배지가 남아 있음');
     { hbOpenMore(); await sleep(100);
