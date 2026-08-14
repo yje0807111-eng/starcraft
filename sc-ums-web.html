@@ -692,7 +692,7 @@
   .ecMsg{font-size:var(--fs-sm);font-weight:500;line-height:1.55;color:var(--txt-mute);letter-spacing:.2px;margin:0 0 12px;word-break:keep-all}
   .ecBtns{display:flex;gap:8px;justify-content:center}
   /* 버튼 = 설정 규격(중립 글래스 / 위험은 붉은 글자·테두리만) — 방 만들기 버튼과 공유하지 않게 카드 안에서만 재정의 */
-  .ecCard .ecCancel,.ecCard .ecGo{flex:1 1 0;min-width:0;padding:0 8px;
+  .ecCard .ecCancel,.ecCard .ecGo,#hbRoundSheet .ecCancel,#hbRoundSheet .ecGo{flex:1 1 0;min-width:0;padding:0 8px;
     font-family:inherit;font-size:var(--fs-md);font-weight:800;letter-spacing:.3px;
     display:flex;align-items:center;justify-content:center;box-shadow:none;transition:background .16s,border-color .16s}
   /* 이중 테두리 = 바깥 border 1px + inset 1px 어두운 틈 + inset 2px 안쪽 선. 선을 굵히지 않는다 */
@@ -704,20 +704,21 @@
      윗변 안쪽 하이라이트 + 아래로 말려드는 안쪽 그림자 + 바깥 아래 그림자 = 솟아 있는 느낌.
      위는 완전히 평평(라운드 0), 아래만 --r-bar(3px) — 둥글면 볼록함이 물방울처럼 보인다.
      폭은 max-width 120px로 묶는다(flex:1 1 0라 안 묶으면 카드 폭까지 늘어난다). */
-  .ecCard .ecCancel,.ecCard .ecGo,#ovBtn,#ovBtn2.ghost,.authBtn,.authGuest{
+  .ecCard .ecCancel,.ecCard .ecGo,#hbRoundSheet .ecCancel,#hbRoundSheet .ecGo,#ovBtn,#ovBtn2.ghost,.authBtn,.authGuest{
     height:36px;max-width:120px;
     border-radius:0 0 var(--r-bar) var(--r-bar);   /* 위는 완전히 평평, 아래만 살짝 — 둘 다 토큰 값 */
-    background:linear-gradient(180deg,rgba(26,32,44,.72) 0%,rgba(12,16,23,.82) 52%,rgba(4,6,10,.9) 100%);
+    /* 면 색은 토큰 3개로만 뺀다 — 화면이 덮는 것은 색뿐이고 모양·볼륨은 공유한다(§세그먼트 바와 같은 규칙) */
+    background:linear-gradient(180deg,var(--btnA,rgba(26,32,44,.72)) 0%,var(--btnB,rgba(12,16,23,.82)) 52%,var(--btnC,rgba(4,6,10,.9)) 100%);
     border:1px solid var(--metal-edge);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.13),      /* 윗변 하이라이트 = 볼록 */
                inset 0 -4px 6px -3px rgba(0,0,0,.8),     /* 아래로 말려드는 그림자 */
                0 2px 4px -2px rgba(0,0,0,.7)}            /* 바깥 아래 그림자 = 솟아 있음 */
-  .ecCard .ecCancel:active,.ecCard .ecGo:active,#ovBtn:active,#ovBtn2.ghost:active,.authBtn:active,.authGuest:active{
+  .ecCard .ecCancel:active,.ecCard .ecGo:active,#hbRoundSheet .ecCancel:active,#hbRoundSheet .ecGo:active,#ovBtn:active,#ovBtn2.ghost:active,.authBtn:active,.authGuest:active{
     background:linear-gradient(180deg,rgba(16,20,29,.8),rgba(4,6,10,.92));
     box-shadow:inset 0 2px 4px -1px rgba(0,0,0,.85),0 0 0 rgba(0,0,0,0)}   /* 누르면 눌려 들어간다 */
   .twBtn{--btnIn:rgba(92,214,255,.26)} .twBtn.del{--btnIn:rgba(255,120,120,.3)}
   /* 팝업 액션 버튼은 카드 액센트를 따라가지 않고 한 스타일로 통일한다(기준 = 나가기 버튼) */
-  .ecCard .ecCancel,.ecCard .ecGo{color:#dfe7f0}
+  .ecCard .ecCancel,.ecCard .ecGo,#hbRoundSheet .ecCancel,#hbRoundSheet .ecGo{color:#dfe7f0}
   
   
   
@@ -2601,8 +2602,9 @@
   .hbMid{position:absolute;left:50%;top:calc(3px + var(--hbHudH) + 8px);transform:translateX(-50%);z-index:2;text-align:center;
     display:flex;flex-direction:column;align-items:center;pointer-events:auto;white-space:nowrap}
   .hbMidRow{display:flex;align-items:center;gap:2px}
+  /* ⚠ 글자색도 푸른기가 있으면 안 된다 — HOME·라운드 팝업은 순수 회색 톤이고 스모크가 B-R 차이를 잡는다 */
   .hbMidArw{width:30px;height:30px;flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer;
-    color:#c6ccd4;background:linear-gradient(180deg,rgba(28,30,36,.82),rgba(12,13,16,.86));
+    color:#c9cbce;background:linear-gradient(180deg,rgba(28,30,36,.82),rgba(12,13,16,.86));
     border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
   .hbMidArw svg{width:13px;height:13px;display:block}
   .hbMidArw:active{opacity:.75}
@@ -3094,14 +3096,37 @@
   .hbmX{width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;
     color:#9a9a9a;background:none;border:none}
   .hbmX svg{width:15px;height:15px}
-  /* 던전 1~10 — 잠긴 것도 보여준다(다음 목표가 보여야 한다) */
-  .hbDgRow{flex:none;display:flex;gap:4px;padding:0 12px 8px;overflow-x:auto;scrollbar-width:none}
-  .hbDgRow::-webkit-scrollbar{display:none}
-  .hbDg{flex:none;min-width:38px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;
-    font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:var(--fs-md);font-weight:800;
-    color:#9a9a9a;background:rgba(255,255,255,.045);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
-  .hbDg.on{color:#fff;background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.4)}
-  .hbDg.lock{color:#5a5a5a;cursor:default}
+  /* 던전 = 좌우 화살표로 한 장씩. ⛔ 이 팝업엔 푸른기를 쓰지 않는다(스모크가 검사) — 강조는 흰색·금색 */
+  .hbPickDg{flex:none;display:flex;align-items:center;gap:8px;padding:0 12px 10px}
+  .hbDgc{flex:1 1 auto;min-width:0;position:relative;height:64px;overflow:hidden;
+    background:#101216;border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+  .hbDgcArt{position:absolute;inset:0;background-position:center;background-size:cover}
+  .hbDgcArt::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,5,9,.2),rgba(16,18,22,.94))}
+  .hbDgcTx{position:absolute;left:0;right:0;bottom:0;padding:5px 8px 6px;text-align:center}
+  .hbDgcTx b{display:block;font-family:var(--font-ti);font-size:var(--fs-lg);color:#fff;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 3px rgba(0,0,0,.9)}
+  .hbDgcTx em{font-style:normal;font-family:var(--font-num);font-variant-numeric:tabular-nums;
+    font-size:var(--fs-sm);font-weight:700;color:#9a9a9a;letter-spacing:.3px}
+  .hbDgc.lock .hbDgcArt{filter:grayscale(1) brightness(.5)}
+  .hbDgc.lock .hbDgcTx b{color:#7a7a7a}
+  /* 라운드 세로 피커 — 아래가 1라운드, 위로 갈수록 큰 수. 가운데 띠에 멈춘 것이 선택 */
+  .hbRdPick{position:relative;flex:none;height:190px;overflow:hidden;margin-bottom:2px}   /* 높이를 못 박는다 — flex:1 로 두면 부모가 내용 높이라 안쪽 스크롤이 카드 밖으로 샌다 */
+  .hbRdBand{position:absolute;left:12px;right:12px;top:50%;height:40px;transform:translateY(-50%);
+    pointer-events:none;z-index:2;border-top:1px solid rgba(255,255,255,.34);border-bottom:1px solid rgba(255,255,255,.34);
+    box-shadow:0 0 10px -4px rgba(255,255,255,.5)}
+  .hbRdScroll{height:100%;overflow-y:auto;overflow-x:hidden;padding:0 12px;
+    display:flex;flex-direction:column;gap:6px;scroll-snap-type:y mandatory;overscroll-behavior:contain}
+  .hbRd{flex:none;height:40px;scroll-snap-align:center;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;
+    font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:var(--fs-lg);font-weight:800;
+    color:#7a7a7a;background:rgba(255,255,255,.035);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+  .hbRd.on{color:#fff;background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.45)}
+  .hbRd u{text-decoration:none;font-family:var(--font-ko);font-size:var(--fs-xs);color:#8a8a8a}
+  .hbRd.on u{color:#cfcfcf}
+  /* ⛔ 이 팝업은 푸른기를 쓰지 않는다(HOME 톤 · 스모크가 검사) — 공용 버튼의 색 토큰만 회색으로 덮는다 */
+  #hbRoundSheet{--btnA:rgba(34,34,38,.72);--btnB:rgba(16,16,19,.82);--btnC:rgba(6,6,8,.9)}
+  .hbPickBtns{flex:none;display:flex;gap:8px;justify-content:center;padding:10px 12px 2px}
+  #hbRoundSheet .ecCancel{color:#d8dade}                                  /* 공용 버튼 글자색(#dfe7f0)은 살짝 푸르다 — 여기선 회색으로 */
+  #hbRoundSheet .ecGo{color:#ffd24a;border-color:rgba(255,210,74,.42)}   /* 이동 = 금색(역할 액센트 §2) */
   .hbModeRow{flex:none;display:flex;gap:8px;padding:0 12px 8px}
   .hbModeBtn{flex:1 1 0;display:flex;flex-direction:column;padding:8px;cursor:pointer;text-align:left;
     font-family:inherit;color:#7a7a7a;background:rgba(255,255,255,.045);
@@ -3110,11 +3135,6 @@
   .hbModeBtn em{font-style:normal;font-size:var(--fs-sm)}
   .hbModeBtn.on{color:#c8c8c8;background:rgba(255,255,255,.13);border-color:rgba(255,255,255,.34)}
   .hbModeBtn.on b{color:#fff}
-  .hbRoundGrid{flex:1 1 auto;min-height:0;overflow-y:auto;display:grid;grid-template-columns:repeat(5,1fr);gap:8px;padding:0 12px}
-  .hbRd{height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;
-    font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:var(--fs-lg);font-weight:800;
-    color:#9a9a9a;background:rgba(255,255,255,.045);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
-  .hbRd.on{color:#fff;background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.4)}
   .hbRd.best{color:#ffd24a;border-color:rgba(255,210,74,.45)}   /* 금색 = 재화·보상 역할(§2) — 푸른기가 아니다 */
   /* 🎁 마일스톤 라운드 — 보상이므로 금색(§2 재화·보상 역할). 받은 것은 가라앉힌다.
      ⛔ 초록(#5dff8f)을 쓰면 안 된다 — 이 팝업의 '푸른기 금지' 검사에 걸린다(B가 R보다 크다). */
@@ -4192,16 +4212,30 @@
     </div>
     <div class="hbModal hide" id="hbRoundSheet" onclick="if(event.target===this)hbCloseRounds()">
       <div class="hbmCard">
-        <div class="hbmHead"><b>라운드 선택</b>
+        <div class="hbmHead"><b>던전 · 라운드</b>
           <button class="hbmX" onclick="hbCloseRounds()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
         </div>
-        <div class="hbDgRow uiScroll" id="hbDgRow"></div>
+        <!-- 던전 = 좌우 화살표로 한 장씩 · 라운드 = 세로 스크롤 피커(아래가 1) -->
+        <div class="hbPickDg">
+          <button class="hbMidArw" id="hbPickPrev" onclick="hbPickDg(-1)" aria-label="이전 던전">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+          <div class="hbDgc" id="hbPickCard"></div>
+          <button class="hbMidArw" id="hbPickNext" onclick="hbPickDg(1)" aria-label="다음 던전">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg></button>
+        </div>
         <div class="hbModeRow">
           <button class="hbModeBtn" id="hbModeRep"  onclick="hbSetClimb(false)"><b>반복</b><em>같은 라운드 무한 파밍</em></button>
           <button class="hbModeBtn" id="hbModeClm" onclick="hbSetClimb(true)"><b>등반</b><em>클리어하면 다음 라운드</em></button>
         </div>
-        <div class="hbRoundGrid uiScroll" id="hbRoundGrid"></div>
+        <div class="hbRdPick">
+          <div class="hbRdBand"></div>
+          <div class="hbRdScroll uiScroll" id="hbRdScroll" onscroll="hbRdScrolled()"></div>
+        </div>
         <div class="hbRoundNote" id="hbRoundNote"></div>
+        <div class="hbPickBtns">
+          <button class="ecCancel" onclick="hbCloseRounds()">취소</button>
+          <button class="ecGo" id="hbPickGoBtn" onclick="hbPickGo()">이동</button>
+        </div>
       </div>
     </div>
     <!-- 💬 채팅 — 유즈맵에서 마을로 옮겨왔다(유즈맵은 목록만). 내용·기능은 그대로 -->
@@ -5735,36 +5769,89 @@ function hbBest(dg){ const H=hbHunt(); return Math.max(1, H.best[dg||H.dg]||1); 
 // 던전 N 해금 = 던전 N-1에서 HB_DG_UNLOCK 라운드 도달. 던전 1은 항상 열려 있다.
 function hbDgOpen(dg){ return HB_DG_ALL_OPEN || dg<=1 || (hbHunt().best[dg-1]||0)>=HB_DG_UNLOCK; }
 function hbEliteChance(dg,round){ return Math.min(HB_ELITE_MAX, round*0.012+(dg-1)*0.02); }
+// ── 던전·라운드 고르기 ────────────────────────────────────────────────────
+// ⚠ 고르는 즉시 이동하지 않는다 — _hbPick 에 '초안'을 담고 [이동]을 눌러야 적용된다.
+//   던전은 ◀▶ 로 한 장씩, 라운드는 세로 피커(아래가 1라운드)에서 가운데 띠에 멈춘 것이 선택된다.
+let _hbPick=null, _hbRdT=null;
+const HB_RD_H=40, HB_RD_GAP=6;                       // 피커 한 칸 높이 · 간격 → 이동 간격은 둘의 합
+function hbRdPitch(){ return HB_RD_H+HB_RD_GAP; }
 function hbOpenRounds(){ const el=document.getElementById('hbRoundSheet'); if(!el) return;
+  const H=hbHunt();
+  _hbPick={ dg:(_hb?_hb.dg:H.dg)||1, round:(_hb?_hb.round:H.round)||1 };
   el.classList.remove('hide'); renderRoundSheet();
   if(typeof playSfx==='function') playSfx('ui_open');
-  const on=el.querySelector('.hbRd.on'); if(on && on.scrollIntoView) on.scrollIntoView({block:'center'}); }
+  // 여백은 칸 높이·컨테이너 높이로 결정된다 → 보인 뒤에 재야 한다(숨은 동안은 높이가 0)
+  requestAnimationFrame(()=>{ if(!_hbPick) return; hbRdPad(); hbRdCenter(_hbPick.round,false); }); }
 function hbCloseRounds(){ const el=document.getElementById('hbRoundSheet'); if(el) el.classList.add('hide');
+  _hbPick=null; clearTimeout(_hbRdT); _hbRdT=null;
   if(typeof playSfx==='function') playSfx('ui_close'); }
-function renderRoundSheet(){ const H=hbHunt(), gr=document.getElementById('hbRoundGrid'); if(!gr) return;
-  const dr=document.getElementById('hbDgRow');
-  if(dr){ let dh='';
-    for(let d=1; d<=HB_DG_MAX; d++){ const open=hbDgOpen(d);
-      dh+='<button class="hbDg'+(d===H.dg?' on':'')+(open?'':' lock')+'"'
-        +(open?(' onclick="hbGoDungeon('+d+')"'):' disabled')+'>'+(open?d:'🔒')+'</button>'; }
-    dr.innerHTML=dh; }
-  const best=hbBest(H.dg), cur=_hb? _hb.round : (H.round||1);
-  // 🎁 마일스톤은 아직 못 간 라운드도 한 칸 더 보여 준다 — '다음 목표'가 보여야 민다(도전정신).
-  const nextRw=hbNextRw(H.dg,cur), top=Math.max(best, nextRw||0);
-  let h=''; for(let i=1;i<=top;i++){ const rw=hbRoundRw(H.dg,i), got=rw&&hbRwGot(H.dg,i), far=i>best;
-    h+='<button class="hbRd'+(i===cur?' on':'')+(i===best&&best>1?' best':'')
-      +(rw?(got?' rwGot':' rw'):'')+(far?' far':'')+'"'
-      +(far?' disabled':(' onclick="hbGoRound('+i+')"'))+'>'+i
-      +(rw?('<i class="hbRdRw">'+(got?'✓':'🎁')+'</i>'):'')+'</button>'; }
-  gr.innerHTML=h;
-  const nt=document.getElementById('hbRoundNote');
-  if(nt){ const nx=H.dg<HB_DG_MAX ? (hbDgOpen(H.dg+1) ? '던전 '+(H.dg+1)+' 개방됨' : '던전 '+(H.dg+1)+'은 이 던전 '+HB_DG_UNLOCK+'라운드 도달 시 개방') : '마지막 던전';
-    let rwTx='';
-    if(nextRw){ const r=hbRoundRw(H.dg,nextRw);
-      rwTx=' · 🎁 라운드 '+nextRw+' 최초 클리어 = 미네랄 '+Math.round(r.min).toLocaleString()+' · 가스 '+Math.round(r.gas).toLocaleString()+(r.tk?' · 장비 뽑기권 '+r.tk:'')+(r.atk?' · 동료 뽑기권 '+r.atk:'')+(r.ptk?' · 펫 뽑기권 '+r.ptk:''); }
-    nt.textContent='던전 '+H.dg+' · 최고 도달 라운드 '+best+' — 여기까지 고를 수 있습니다. 죽으면 한 라운드씩 내려갑니다. · '+nx+rwTx; }
+// 위아래 여백 = (보이는 높이 - 칸 높이)/2. 이게 있어야 첫·마지막 칸도 가운데에 설 수 있다.
+function hbRdPad(){ const sc=document.getElementById('hbRdScroll'); if(!sc) return;
+  const pad=Math.max(0,(sc.clientHeight-HB_RD_H)/2);
+  sc.style.paddingTop=pad+'px'; sc.style.paddingBottom=pad+'px'; }
+// 라운드 → 스크롤 위치. 목록은 큰 수가 위라 인덱스 = (최대 - 라운드).
+function hbRdCenter(round, smooth){ const sc=document.getElementById('hbRdScroll'); if(!sc||!_hbPick) return;
+  const top=hbBest(_hbPick.dg), i=Math.max(0,Math.min(top-1, top-round));
+  sc.scrollTo({ top:i*hbRdPitch(), behavior:smooth?'smooth':'auto' }); }
+// 스크롤이 멎으면 가운데 칸이 곧 선택이다(짧게 기다렸다가 한 번만 확정한다)
+function hbRdScrolled(){ clearTimeout(_hbRdT); _hbRdT=setTimeout(hbRdSettle, 110); }
+function hbRdSettle(){ const sc=document.getElementById('hbRdScroll'); if(!sc||!_hbPick) return;
+  const top=hbBest(_hbPick.dg);
+  const i=Math.max(0,Math.min(top-1, Math.round(sc.scrollTop/hbRdPitch())));
+  const r=top-i; if(r===_hbPick.round) return;
+  _hbPick.round=r; hbRdMark(); if(typeof playSfx==='function') playSfx('ui_tab'); }
+// 강조만 갈아 끼운다 — 목록을 다시 그리면 스크롤이 튄다
+function hbRdMark(){ const sc=document.getElementById('hbRdScroll'); if(!sc||!_hbPick) return;
+  for(const b of sc.querySelectorAll('.hbRd')) b.classList.toggle('on', +b.dataset.r===_hbPick.round);
+  hbPickNote(); }
+// 칸을 눌러 고르면 그 칸이 가운데로 미끄러져 온다
+function hbRdTap(r){ if(!_hbPick) return; _hbPick.round=r; hbRdMark(); hbRdCenter(r,true);
+  if(typeof playSfx==='function') playSfx('ui_tab'); }
+// 던전 넘기기 — 열려 있는 것만 건너뛴다. 라운드는 그 던전의 최고 도달로 맞춘다.
+function hbPickDg(d){ if(!_hbPick) return;
+  for(let n=_hbPick.dg+d; n>=1 && n<=HB_DG_MAX; n+=d){ if(!hbDgOpen(n)) continue;
+    _hbPick.dg=n; _hbPick.round=hbBest(n); renderRoundSheet();
+    requestAnimationFrame(()=>{ if(!_hbPick) return; hbRdPad(); hbRdCenter(_hbPick.round,false); });
+    if(typeof playSfx==='function') playSfx('ui_tab'); return; } }
+// [이동] — 여기서만 실제로 옮긴다
+function hbPickGo(){ if(!_hbPick) return; const H=hbHunt(), d=_hbPick.dg, r=_hbPick.round;
+  if(d!==H.dg){ H.dg=d; hbEnsureModels(d);
+    if(_hb){ _hb.dg=d; _hb._pat=null; } }                 // 바닥 타일 패턴 캐시 무효화(던전이 바뀌었다)
+  H.round=r; saveMeta();
+  if(_hb){ _hb.round=r; _hb.wave=1; _hb.phase='fight'; _hb.buf={min:0,gas:0,xp:0,kills:0};
+    _hb.foes.length=0; _hb.pend.length=0; _hb.char.hp=_hb.char.hpMax; hbSpawnWave(); }
+  if(typeof playSfx==='function') playSfx('ui_confirm');
+  hbHud(); hbCloseRounds(); }
+function renderRoundSheet(){ const H=hbHunt(), sc=document.getElementById('hbRdScroll'); if(!sc) return;
+  if(!_hbPick) _hbPick={ dg:(_hb?_hb.dg:H.dg)||1, round:(_hb?_hb.round:H.round)||1 };
+  const dg=_hbPick.dg, best=hbBest(dg);
+  _hbPick.round=Math.max(1,Math.min(best,_hbPick.round));
+  // 던전 카드 — 배경 그림은 전장이 쓰는 것과 같은 파일(새 에셋을 만들지 않는다)
+  { const card=document.getElementById('hbPickCard'), D=hbDun(dg);
+    if(card){ card.className='hbDgc';
+      card.innerHTML='<div class="hbDgcArt" style="background-image:url(\''+HB_BG_DIR+'dg'+dg+'.webp\')"></div>'
+        +'<div class="hbDgcTx"><b>던전 '+dg+' · '+D.name+'</b><em>최고 도달 '+best+' 라운드</em></div>'; } }
+  { const pv=document.getElementById('hbPickPrev'), nx=document.getElementById('hbPickNext');
+    const has=(d)=>{ for(let n=dg+d;n>=1&&n<=HB_DG_MAX;n+=d) if(hbDgOpen(n)) return true; return false; };
+    if(pv) pv.disabled=!has(-1); if(nx) nx.disabled=!has(1); }
+  // 라운드 — 큰 수가 위, 1이 맨 아래. 고를 수 있는 것(최고 도달까지)만 넣는다.
+  let h='';
+  for(let i=best;i>=1;i--){ const rw=hbRoundRw(dg,i), got=rw&&hbRwGot(dg,i);
+    h+='<button class="hbRd'+(i===_hbPick.round?' on':'')+'" data-r="'+i+'" onclick="hbRdTap('+i+')">'+i
+      +(i===best&&best>1?'<u>최고</u>':'')+(rw?('<u>'+(got?'✓':'🎁')+'</u>'):'')+'</button>'; }
+  sc.innerHTML=h;
+  hbPickNote();
   const r=document.getElementById('hbModeRep'), c=document.getElementById('hbModeClm');
   if(r) r.classList.toggle('on', !H.climb); if(c) c.classList.toggle('on', !!H.climb); }
+// 안내 줄 — 고른 값 기준(아직 이동 전이라는 것을 분명히 한다)
+function hbPickNote(){ const nt=document.getElementById('hbRoundNote'); if(!nt||!_hbPick) return;
+  const dg=_hbPick.dg, best=hbBest(dg);
+  const nx=dg<HB_DG_MAX ? (hbDgOpen(dg+1) ? '던전 '+(dg+1)+' 개방됨' : '던전 '+(dg+1)+'은 이 던전 '+HB_DG_UNLOCK+'라운드 도달 시 개방') : '마지막 던전';
+  const nextRw=hbNextRw(dg,_hbPick.round);
+  let rwTx='';
+  if(nextRw){ const r=hbRoundRw(dg,nextRw);
+    rwTx=' · 🎁 라운드 '+nextRw+' 최초 클리어 = 미네랄 '+Math.round(r.min).toLocaleString()+' · 가스 '+Math.round(r.gas).toLocaleString()+(r.tk?' · 장비 뽑기권 '+r.tk:'')+(r.atk?' · 동료 뽑기권 '+r.atk:'')+(r.ptk?' · 펫 뽑기권 '+r.ptk:''); }
+  nt.textContent='라운드 '+_hbPick.round+' 선택됨 — [이동]을 눌러야 옮겨갑니다. 최고 도달 '+best+'까지 고를 수 있고, 죽으면 한 라운드씩 내려갑니다. · '+nx+rwTx; }
 // 던전 이동 — 그 던전에서 도달했던 라운드부터 다시 시작한다
 function hbGoDungeon(d){ const H=hbHunt();
   d=Math.max(1,Math.min(HB_DG_MAX,d|0)); if(!hbDgOpen(d)) return;
@@ -6510,6 +6597,7 @@ function hbClearBonus(dg,round){ const m=HB_DG_REW(dg); return { min:(8+round*4)
 // 🎁 라운드 마일스톤 보상 — HB_RW_EVERY 간격 라운드에 '최초 클리어 1회' 보상이 붙는다.
 //   설계 의도: 다음 목표가 눈에 보여야 라운드를 민다(도전정신). 그래서 라운드 팝업에서 미리 확인할 수 있다.
 //   ⚠ 반복 파밍으로 재수령되면 안 된다 → 던전별로 받은 라운드를 hunt.rw[dg][round] 에 기록한다.
+const HB_BG_DIR='assets/backgrounds/dungeons/';   // 던전 배경 = 전장 바닥 + 라운드 시트 카드 공용
 const HB_RW_EVERY=5;
 function hbRoundRw(dg,round){ if(!round || round%HB_RW_EVERY) return null;
   const m=HB_DG_REW(dg), t=round/HB_RW_EVERY;
@@ -7504,7 +7592,7 @@ let _hbDirty=false;         // 전투 보상이 메모리에만 있는 상태(lo
 const HB_SAVE_KILLS=8;      // 처치 N건마다 저장(매 건 저장은 무겁고, 안 하면 화면 전환 때 재화가 날아간다)
 const HB_ATK_SHOW=6/14;     // 공격 모션 길이(초) = 실험장 시트 규격(6프레임 · 14fps)과 같다
 const HB_TILE_SCALE=0.34;   // 타일 원본은 크다 — 월드 좌표에 1:1로 깔면 흙 한 덩이가 화면을 덮는다
-// 던전 배경 그림 — assets/backgrounds/dungeons/dg1.webp … dg10.webp
+// 던전 배경 그림 — HB_BG_DIR/dg1.webp … dg10.webp (라운드 시트의 던전 카드도 같은 파일을 쓴다)
 // 파일을 넣기만 하면 그 던전에 뜬다(코드 수정 불필요). 없으면 아래 타일 바닥으로 떨어진다.
 const _hbBg={}; let _hbBgCur='';
 function hbBgImg(dg){ const key='dg'+(dg||1), t=_hbBg[key];
@@ -7512,13 +7600,13 @@ function hbBgImg(dg){ const key='dg'+(dg||1), t=_hbBg[key];
   // (지우면 다시 요청되지만 브라우저 캐시에서 오므로 재방문 비용은 사실상 없다)
   if(_hbBgCur!==key){ for(const k in _hbBg) if(k!==key) delete _hbBg[k]; _hbBgCur=key; }
   if(t!==undefined) return (t&&t.complete&&t.naturalWidth)?t:null;   // 404면 naturalWidth=0 → 영원히 null(재시도 안 함)
-  const im=new Image(); im.src='assets/backgrounds/dungeons/'+key+'.webp'; _hbBg[key]=im; return null; }
+  const im=new Image(); im.src=HB_BG_DIR+key+'.webp'; _hbBg[key]=im; return null; }
 // 움직임 프레임 — dgN_f1.webp … dgN_f4.webp. 넷이 다 오기 전엔 정지 그림으로 버틴다.
 const _hbBgF={};
 function hbBgFrames(dg){ if(!HB_BG_ANIM) return null;
   const key='dg'+(dg||1), have=_hbBgF[key];
   if(!have){ const a=[]; for(let i=1;i<=HB_BG_FRAMES;i++){ const im=new Image();
-      im.src='assets/backgrounds/dungeons/'+key+'_f'+i+'.webp'; a.push(im); } _hbBgF[key]=a; return null; }
+      im.src=HB_BG_DIR+key+'_f'+i+'.webp'; a.push(im); } _hbBgF[key]=a; return null; }
   for(const im of have) if(!(im.complete && im.naturalWidth)) return null;   // 하나라도 없으면 안 씀(깜빡임 방지)
   return have; }
 // 첫 프레임만 와도 그것을 바탕으로 쓴다 — 넷을 다 기다리면 그동안 정지 그림을 또 받아야 해서

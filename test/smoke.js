@@ -1355,14 +1355,20 @@ async function groupLobby(){
     hbGoDungeon(2); assert(hbHunt().dg===1,'잠긴 던전으로 이동됨');
     hbHunt().best[1]=HB_DG_UNLOCK;
     assert(hbDgOpen(2),HB_DG_UNLOCK+'라운드 도달했는데 던전2가 안 열림');
+    // 던전은 ◀▶ 로 한 장씩 넘긴다(칩 줄 폐지, 2026-08-14) — 넘기는 것만으로는 이동하지 않는다
     hbOpenRounds(); await sleep(40);
-    const chips=document.querySelectorAll('#hbDgRow .hbDg');
-    assert(chips.length===HB_DG_MAX,'던전 칩이 '+HB_DG_MAX+'개가 아님: '+chips.length);
-    assert(chips[2].classList.contains('lock'),'던전3이 잠금 표시가 아님');
-    hbGoDungeon(2);
-    assert(hbHunt().dg===2 && _hb.dg===2,'던전 이동이 반영되지 않음');
+    assert(document.getElementById('hbPickCard'),'던전 카드가 없음');
+    assert($('hbPickPrev').disabled===true,'던전 1인데 ◀ 가 살아 있음');
+    assert($('hbPickNext').disabled===false,'던전 2가 열렸는데 ▶ 가 잠김');
+    { const dg0=hbHunt().dg;
+      hbPickDg(1);
+      assert(_hbPick.dg===2,'▶ 로 던전이 안 넘어감: '+_hbPick.dg);
+      assert(hbHunt().dg===dg0 && (!_hb||_hb.dg===dg0),'넘기기만 했는데 이동돼 버림(이동 버튼 전이어야 한다)');
+      hbPickGo(); await sleep(20); }
+    assert(hbHunt().dg===2 && _hb.dg===2,'[이동]으로 던전이 안 옮겨짐');
     assert(_hb.round===HB_DG_UNLOCK||_hb.round===1,'이동 후 라운드가 이상함: '+_hb.round);
-    hbCloseRounds(); hbGoDungeon(1); hbGoRound(1);
+    assert(!visible($('hbRoundSheet')),'이동 후 시트가 안 닫힘');
+    hbGoDungeon(1); hbGoRound(1);
     HB_DG_ALL_OPEN=_dgAll;   // 원래 값으로 복구 — 이후 스텝은 앱 기본 상태로 돈다
     // ② 엘리트 — 확률이 라운드·던전에 따라 오르고, 체력·보상 배수가 붙는다
     assert(hbEliteChance(1,1)<hbEliteChance(1,20),'엘리트 확률이 라운드로 안 오름');
@@ -1775,13 +1781,21 @@ async function groupLobby(){
             if(r===undefined) continue;
             // 허용폭 12 = HOME 톤 검사와 같은 기준(공용 --metal-edge rgb(60,62,70)이 B-R=10이라 그 아래로 잡으면 오검출)
             assert(b<=r+12,'라운드 팝업에 푸른기가 남음('+(el.className||el.tagName)+'): '+m); } } } }
-    // 칸 수 = 최고 도달 · 단 '다음 마일스톤'까지는 목표로 한 칸 더 보여 준다(도전정신 — 못 고르게 잠근다)
-    const cells=document.querySelectorAll('#hbRoundGrid .hbRd');
-    const want=Math.max(hbBest(1), hbNextRw(1,_hb.round)||0);
-    assert(cells.length===want,'선택지 수가 규칙과 다름: '+cells.length+' vs '+want+'(최고 '+hbBest(1)+' · 다음 보상 '+hbNextRw(1,_hb.round)+')');
-    for(const cell of cells){ const n=parseInt(cell.textContent,10);
-      assert((n>hbBest(1))===cell.disabled,'라운드 '+n+' 잠금 상태가 최고 도달과 안 맞음(disabled='+cell.disabled+')'); }
-    assert(document.querySelector('#hbRoundGrid .hbRd.on').textContent.replace(/\D+$/,'')===String(_hb.round),'현재 라운드가 강조되지 않음');
+    // 라운드 = 세로 피커. 고를 수 있는 것(최고 도달까지)만 넣고, 아래가 1라운드다.
+    const cells=[...document.querySelectorAll('#hbRdScroll .hbRd')];
+    assert(cells.length===hbBest(1),'선택지 수가 최고 도달과 다름: '+cells.length+' vs '+hbBest(1));
+    assert(+cells[0].dataset.r===hbBest(1),'맨 위가 최고 라운드가 아님: '+cells[0].dataset.r);
+    assert(+cells[cells.length-1].dataset.r===1,'맨 아래가 1라운드가 아님: '+cells[cells.length-1].dataset.r);
+    assert(document.querySelector('#hbRdScroll .hbRd.on').dataset.r===String(_hb.round),'현재 라운드가 강조되지 않음');
+    // 칸을 누르면 '선택'만 바뀐다 — 이동은 [이동] 버튼에서만
+    { const r0=_hb.round, pick=Math.max(1,hbBest(1)-1);
+      hbRdTap(pick);
+      assert(_hbPick.round===pick,'탭으로 선택이 안 바뀜');
+      assert(_hb.round===r0,'탭만 했는데 이동돼 버림');
+      assert(document.querySelector('#hbRdScroll .hbRd.on').dataset.r===String(pick),'선택 강조가 안 옮겨감');
+      hbPickGo(); await sleep(20);
+      assert(_hb.round===pick,'[이동]으로 라운드가 안 옮겨짐: '+_hb.round); }
+    hbOpenRounds(); await sleep(40);
     // ④ 라운드 이동 = 진행 초기화 + 시트 닫힘 · 상한 넘는 값은 잘린다
     hbGoRound(1); await sleep(40);
     assert(_hb.round===1 && _hb.wave===1,'라운드 이동이 반영되지 않음');
@@ -2176,7 +2190,7 @@ async function groupLobby(){
     hbOpenRounds(); await sleep(40);
     const nx=hbNextRw(1,1);
     assert(nx===HB_RW_EVERY,'다음 마일스톤 안내가 틀림: '+nx);
-    assert(document.querySelectorAll('#hbRoundGrid .hbRd.rw').length>=1,'팝업에 마일스톤 표시가 없음');
+    assert($('hbRoundNote').textContent.indexOf('🎁')>=0,'팝업 안내에 다음 마일스톤이 없음');
     assert(($('hbRoundNote').textContent||'').indexOf('라운드 '+nx)>=0,'팝업 안내에 다음 보상이 안 적힘');
     hbCloseRounds();
     return '간격 '+HB_RW_EVERY+' · 최초 1회 · 던전별 분리 ok'; });
