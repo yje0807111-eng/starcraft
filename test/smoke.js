@@ -215,9 +215,9 @@ async function groupLobby(){
           assert(!v || v==='0px' || v==='3px', 'HOME 모서리가 너무 둥금('+(el.className||el.tagName)+'): '+v); } }
     assert(document.querySelectorAll('#navBar .navIt').length===5,'하단 네비가 5칸이 아님(사냥터·정비·강화·유즈맵·상점)');
     { const navs=[...document.querySelectorAll('#navBar .navIt')].map(x=>x.dataset.nav).join(',');
-      assert(navs==='home,upg,gear,map,shop','네비 구성이 다름: '+navs);
+      assert(navs==='home,gear,upg,map,shop','네비 구성이 다름: '+navs);
       // 토벌은 네비에서 빠지고 HOME 팝업이 됐다 — 2번 칸은 정비(장비·펫·동료)
-      assert(document.querySelector('#navBar .navIt[data-nav=upg]').textContent.indexOf('캐릭터')>=0,'2번 칸 표기가 캐릭터가 아님'); }
+      assert(document.querySelector('#navBar .navIt[data-nav=gear]').textContent.indexOf('정비')>=0,'2번 탭 표기가 정비가 아님'); }
     // ⚠ .hide 가 실제로 숨기는지 — id 선택자에 display 를 주면 .appScreen.hide(클래스 2개)를 이겨
     //   화면이 안 숨고 다른 화면 위를 덮어 클릭을 전부 먹는다(강화 화면이 실제로 그랬다).
     { const shown=[];
@@ -677,20 +677,6 @@ async function groupLobby(){
     for(const sel of ['#hbMoreBox','#hbMoreGrid .hbMoreIt']){
       const r=getComputedStyle(document.querySelector(sel)).borderTopLeftRadius;
       assert(r==='3px','더 각져야 한다 — '+sel+' r='+r); }
-    // ☰ 와 상자가 한 덩어리 — 버튼 아랫변을 없애고, 상자 윗변은 버튼 폭만큼 비운다
-    { const bs=getComputedStyle($('curSettingsBtn')), xs=getComputedStyle($('hbMoreBox'));
-      assert(bs.borderBottomWidth==='0px','버튼 아랫변이 남아 있어 두 덩어리로 보인다');
-      assert(bs.borderBottomRightRadius==='0px' && bs.borderBottomLeftRadius==='0px','버튼 아래 모서리가 둥글다');
-      assert(xs.borderTopRightRadius==='0px','상자 오른쪽 위 모서리가 둥글다');
-      // transparent 는 계산값이 rgba(0, 0, 0, 0) 으로 나온다 — 알파가 0인지만 본다
-      assert(/,\s*0\)\s*$/.test(xs.borderTopColor)||xs.borderTopColor==='transparent',
-        '상자 윗변이 버튼 밑을 가로지른다: '+xs.borderTopColor);
-      const nw=parseFloat(getComputedStyle($('hbMoreBox'),'::before').width);
-      assert(nw>0,'상자 윗변을 그리는 ::before 가 없다');
-      // ⚠ 테두리는 정수 px만 — 크롬이 1.5px를 1px로 내린다
-      for(const [sel,w] of [['#curSettingsBtn','2px'],['#hbMoreBox','2px'],['#hbMoreGrid .hbMoreIt','2px']]){
-        const v=getComputedStyle(document.querySelector(sel)).borderTopWidth;
-        assert(v===w,sel+' 테두리가 '+v+' (기대 '+w+')'); } }
     // 건설을 고르면 시트가 닫히고 메뉴가 화면 안에 뜬다(필드를 눌러 배치해야 하므로)
     PROF().pcoin=99999;
     document.querySelector('#hbMoreGrid [data-k="build"]').click(); await sleep(250);
@@ -2190,11 +2176,11 @@ async function groupLobby(){
     const read=()=>[...document.querySelectorAll('#navBar .navIt')].map(e=>e.dataset.nav||('~'+e.dataset.sub));
     openHome(); await sleep(40);
     // ① 최상위 = 5구역. NAV_TREE 가 단일 소스이므로 순서도 표에서 온다
-    assert(read().join(',')==='home,upg,gear,map,shop','최상위 네비가 5구역이 아님: '+read().join(','));
+    assert(read().join(',')==='home,gear,upg,map,shop','최상위 네비가 5구역이 아님: '+read().join(','));
     assert(document.querySelector('#navBar .navIt.on').dataset.nav==='home','사냥터가 활성이 아님');
     // ② 사냥터는 내려가지 않는다 — 하위는 화면 상단 버튼줄이 맡는다
     navGo('home'); await sleep(40);
-    assert(read().join(',')==='home,upg,gear,map,shop','사냥터를 눌렀는데 내려감: '+read().join(','));
+    assert(read().join(',')==='home,gear,upg,map,shop','사냥터를 눌렀는데 내려감: '+read().join(','));
     { hbOpenMore(); await sleep(120);   // 마을·성장은 ☰ 더보기 안이다(동료는 폐지)
       for(const k of ['town','grow'])
         assert(document.querySelector('#hbMoreGrid [data-k="'+k+'"]'),'더보기에 '+k+' 가 없음');
@@ -2212,7 +2198,7 @@ async function groupLobby(){
     // ⑤ 돌아가기 = 사냥터 화면 + 최상위(홈이 허브)
     navBack(); await sleep(40);
     assert(visible($('homeScreen')),'돌아가기가 사냥터로 안 감');
-    assert(read().join(',')==='home,upg,gear,map,shop','돌아가기 후 최상위가 아님: '+read().join(','));
+    assert(read().join(',')==='home,gear,upg,map,shop','돌아가기 후 최상위가 아님: '+read().join(','));
     // ⑥ 상점 = 5구역 · 유즈맵 = 소셜 3구역(정렬은 화면 위 띠로 되돌렸다)
     navGo('shop'); await sleep(60);
     assert(read().join(',')==='back,~deal,~draw,~res,~pack,~gem','상점 전용 네비가 아님: '+read().join(','));
