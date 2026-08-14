@@ -146,6 +146,11 @@
   .hudSet:hover{color:#fff;border-color:rgba(255,255,255,.45)}
   .hudSet svg{display:block;width:18px;height:18px}
   .hudSet .icoX{display:none}                      /* 열려 있으면 ☰ 가 X 로 바뀐다 */
+  /* 열림 = 드롭다운과 한 덩어리. 아랫변을 없애고 아래 모서리를 각지게 만든 뒤,
+     상자 위로 1px 겹쳐 올려(z-index) 상자의 윗변을 가린다 → 둘 사이에 선이 안 남는다. */
+  .hudSet.on{border-width:2px;border-bottom-width:0;
+    border-bottom-left-radius:0;border-bottom-right-radius:0;
+    background:rgba(12,13,16,.96);border-color:var(--metal-edge)}
   .hudSet.on .icoBars{display:none}
   .hudSet.on .icoX{display:block}   /* block — inline이면 라인박스 하단 여백이 생겨 아이콘이 위로 뜬다 */
   #hudR{display:flex;align-items:center;gap:10px;font-size:var(--fs-md);font-weight:800;white-space:nowrap;text-shadow:0 2px 4px #000,0 0 8px #000}
@@ -2176,11 +2181,11 @@
   /* 유즈맵 선택 */
   #mapSelect{z-index:47;padding:12px 13px}
   /* 유즈맵 선택 로비 배경(전체 cover, 9:16 기준, UI는 위 레이어) */
-  #mapSelect::before,#rooms::before,#createPanel::before,#shopScreen::before,#gearScreen::before,#charScreen::before{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;transform-origin:center center;
+  #mapSelect::before,#rooms::before,#createPanel::before,#shopScreen::before,#gearScreen::before,#charScreen::before,#upgScreen::before{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;transform-origin:center center;
     background:url('assets/backgrounds/lobby_bg.webp') center center / cover no-repeat #04050b;
     animation:lobbyBreath 12s ease-in-out infinite}   /* 미세한 호흡(위아래 + 약한 확대) */
   @keyframes lobbyBreath{ 0%,100%{transform:scale(1.01) translateY(0)} 50%{transform:scale(1.05) translateY(-1%)} }
-  #mapSelect::after,#rooms::after,#createPanel::after,#shopScreen::after,#gearScreen::after,#charScreen::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg, rgba(2,3,8,.96) 0%, rgba(2,3,8,.66) 16%, rgba(2,3,8,.2) 38%, rgba(2,3,8,.2) 62%, rgba(2,3,8,.66) 84%, rgba(2,3,8,.97) 100%)}   /* 위·아래 빨강 더 톤다운(중앙 이미지 유지) */
+  #mapSelect::after,#rooms::after,#createPanel::after,#shopScreen::after,#gearScreen::after,#charScreen::after,#upgScreen::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg, rgba(2,3,8,.96) 0%, rgba(2,3,8,.66) 16%, rgba(2,3,8,.2) 38%, rgba(2,3,8,.2) 62%, rgba(2,3,8,.66) 84%, rgba(2,3,8,.97) 100%)}   /* 위·아래 빨강 더 톤다운(중앙 이미지 유지) */
   
   
   /* 메타 성장(빌드) 화면 */
@@ -2548,12 +2553,19 @@
   /* 칸 크기는 ☰(.hudSet 24px)와 같다 — 한 값에서 가져와 둘이 어긋나지 않게 한다 */
   .hbMoreWrap{--mi:24px}
   .hbMoreBox{position:absolute;right:8px;padding:6px;
-    background:rgba(12,13,16,.96);border:1px solid var(--metal-edge);border-radius:var(--r-bar);
+    background:rgba(12,13,16,.96);border:2px solid var(--metal-edge);border-radius:var(--r-bar);
+    border-top-right-radius:0;                     /* ☰ 와 만나는 모서리 — 각져야 이어져 보인다 */
+    border-top-color:transparent;                  /* 윗변은 아래 ::before 가 '버튼 폭만큼 빼고' 그린다 */
     box-shadow:0 10px 24px rgba(0,0,0,.55)}
+  /* 상자 윗변 — 오른쪽 끝 --mi(버튼 폭)만큼 비운다. 그 자리는 ☰ 의 열린 아랫변과 이어진다. */
+  .hbMoreBox::before{content:'';position:absolute;left:-2px;right:calc(var(--mi) - 2px);top:-2px;height:2px;
+    background:var(--metal-edge)}
   .hbMoreGrid{display:grid;grid-template-columns:repeat(2,var(--mi));gap:6px}
   .hbMoreIt{width:var(--mi);height:var(--mi);padding:0;display:grid;place-items:center;
-    background:rgba(255,255,255,.045);border:1px solid var(--metal-edge);
+    background:rgba(255,255,255,.045);border:2px solid rgba(255,255,255,.16);
     border-radius:var(--r-bar);color:#dfe4ea;cursor:pointer}
+  /* ⚠ 테두리는 정수 px만 쓸 것 — 크롬이 1.5px를 1px로 내려 버린다(dpr 2·3 모두 실측 확인).
+     바깥 틀(2px · --metal-edge)보다 칸은 색을 옅게 해서 같은 두께여도 틀이 앞에 온다. */
   .hbMoreIt:active{opacity:.75}
   .hbMoreIt[disabled]{opacity:.4;cursor:default}
   .hbMoreIt span[data-ico],.hbMoreIt .hbMoreSvg{width:18px;height:18px;display:block}   /* .hudSet svg와 같은 18px */
@@ -4309,7 +4321,7 @@
        탭 띠 = 유즈맵 목록 상자와 같은 .msPanel/.msSortTabs 규격(복제 금지, 클래스만 재사용). -->
   <!-- ⬆ 강화 — 자리만 잡아 뇐다(내용 미정). 화면 구조는 다른 화면과 같은 .appScreen 규격 -->
   <div id="upgScreen" class="appScreen hide">
-    <div class="shopTitle"><span data-ico="upg"></span><b>강화</b></div>
+    <div class="shopTitle"><span data-ico="user"></span><b>캐릭터</b></div>
     <div class="upgEmpty">아직 비어 있습니다</div>
   </div>
   <div id="gearScreen" class="appScreen hide">
@@ -5777,7 +5789,7 @@ function hbOpenMore(){ const el=document.getElementById('hbMoreSheet'); if(!el) 
     const btns=['curSettingsBtn','settingsBtn'].map(function(id){ return document.getElementById(id); })
       .filter(function(b){ return b && b.getClientRects().length; });
     if(box && ph && btns.length){ const r=btns[0].getBoundingClientRect(), p=ph.getBoundingClientRect();
-      box.style.top=Math.round(r.bottom-p.top)+'px';   // 버튼 아래에 딱 붙인다(테두리가 이어져 한 덩어리로 보인다)
+      box.style.top=Math.round(r.bottom-p.top)+'px';   // 버튼 아랫변에 정확히 이어 붙인다
       box.style.right=Math.round(p.right-r.right)+'px'; } }
   hbMoreBtns().forEach(function(b){ b.classList.add('on'); b.title='닫기'; });
   if(typeof playSfx==='function') playSfx('ui_open'); }
@@ -6177,11 +6189,12 @@ function hmToast(msg){ if(typeof showTownToast==='function') showTownToast(msg);
 const NAV_TREE=[
   // 사냥터 = 기본 화면이자 최상위 그 자체 — 눌러도 내려가지 않는다(하위는 화면 상단 버튼줄이 맡는다)
   { k:'home', label:'사냥터', ico:'home', go:()=>openHome(), subs:[] },
+  // 캐릭터 — '나 자신'에 관한 것. 내용은 아직 비어 있다(옛 '강화' 자리).
+  { k:'upg',  label:'캐릭터', ico:'user', go:()=>openUpgScreen(), subs:[] },
   { k:'gear', label:'정비', ico:'bag', go:()=>openGear(), cur:()=>_gearTab, subs:[
       { k:'gear', label:'장비', ico:'armor', act:()=>setGearTab('gear') },
       { k:'pet',  label:'펫',   ico:'paw',   act:()=>setGearTab('pet') },
       { k:'ally', label:'동료', ico:'party', act:()=>setGearTab('ally') } ] },
-  { k:'upg',  label:'강화',  ico:'upg',  go:()=>openUpgScreen(), subs:[] },
   // 유즈맵: 정렬(인기·신규·추천·즐겨찾기)은 화면 위 띠로 되돌렸고, 하단은 소셜이 맡는다.
   //   ⛔ 소셜 UI 를 새로 만들지 않는다 — 이미 있는 #twChat 시트(.msSocial 채팅·파티·친구)를 연다.
   { k:'map',  label:'유즈맵', ico:'map', go:()=>twGoMap(), cur:()=>_mapSocial, subs:[
