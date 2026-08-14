@@ -2374,6 +2374,8 @@
   .mgSlot{position:relative;flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:7px 9px;cursor:pointer;
     border-radius:var(--r-md);border:1px solid var(--metal-edge);background:rgba(255,255,255,.045);color:var(--txt-mute)}
   .mgSlot.empty{border-style:dashed;opacity:.55}
+  .mgSlot.lock{border-style:dashed;opacity:.8;background:rgba(255,255,255,.025)}
+  .mgSlot.lock .mgIco{font-size:19px}
   .mgSlot.pick{background:rgba(255,255,255,.11)}
   .mgCard{position:relative;flex:0 0 auto;width:44px;height:44px;display:flex;align-items:center;justify-content:center;
     border-radius:var(--r-md);border:1px solid var(--metal-edge);background:rgba(0,0,0,.32)}
@@ -5222,11 +5224,11 @@ function metaEffLv(id){ return _metaEffFromRaw(META_BUILDS[id], buildLevel(id));
 // 플레이어 메타(계정별 영구 데이터)
 // 🧍 개인 프로필 RPG(1단계) 기본값 — 유즈맵 경제와 완전 분리(재화명 pcoin, coins 아님). 자세한 규칙은 PROF_* 블록 참조.
 // 계정 공용(재화·펫·해금·방치) + 캐릭터별(chars[]: 레벨·경험치·스탯·장비·진화)로 나뉜다.
-function defaultProfile(){ return { ver:9, pcoin:0, gas:0, gem:0, chars:[], curId:'', items:[],
-  hunt:{ dg:1, round:1, climb:true, best:{}, rw:{}, mates:{}, party:[], mateN:0, upg:{atk:0,rng:0,aspd:0,crit:0,hp:0,regen:0} },   // ⚔ 자동사냥(HOME) 진행·마일스톤 수령 · 기본 = 등반(rw)·영구 업그레이드
+function defaultProfile(){ return { ver:10, pcoin:0, gas:0, gem:0, chars:[], curId:'', items:[],
+  hunt:{ dg:1, round:1, climb:true, best:{}, rw:{}, mates:{}, party:[], mateN:0, allySlots:0, upg:{atk:0,rng:0,aspd:0,crit:0,hp:0,regen:0} },   // ⚔ 자동사냥(HOME) 진행·마일스톤 수령 · 기본 = 등반(rw)·영구 업그레이드
   idle:{ sourceId:'drill', lastClaimTs:0 }, unlocks:{}, lastSeenTs:0,
   dgKeys:{}, tickets:{gear:0,pet:0,ally:0},   // 🗝 던전별 열쇠(매일 09:00 보충) · 🎟 뽑기권(장비/펫/동료)
-  pets:{}, equip:[], petSlots:2, petN:0 }; }   // 🐾 펫(중복=별)·장착 슬롯 — 캐릭터를 새로 만들어도 그대로 쓴다
+  pets:{}, equip:[], petSlots:0, petN:0 }; }   // 🐾 펫(중복=별)·장착 칸(0에서 시작해 미네랄로 연다)
 // 계정 영구 재화(공용 재화 바) — 미네랄=pcoin(기존 이름 유지)·가스·젬. 없던 프로필도 0으로 살려 읽는다.
 function profMineral(){ const p=PROF(); return Math.floor(p&&p.pcoin||0); }
 function profGas(){ const p=PROF(); return Math.floor(p&&p.gas||0); }
@@ -5296,7 +5298,7 @@ function migrateProfile(){ const d=defaultProfile();
   if(!p.idle) p.idle=d.idle; else for(const k in d.idle) if(p.idle[k]===undefined) p.idle[k]=d.idle[k];
   if(!p.unlocks) p.unlocks={};
   if(!p.pets||typeof p.pets!=='object') p.pets={};                 // 🐾 펫
-  if(!Array.isArray(p.equip)) p.equip=[]; if(typeof p.petSlots!=='number') p.petSlots=2;
+  if(!Array.isArray(p.equip)) p.equip=[]; if(typeof p.petSlots!=='number') p.petSlots=0;
   // v6 자동사냥: 스탯 포인트 체계 흡수 — 배분 스탯 → 대응 업그레이드 레벨(캐릭터 중 최대),
   //   남은 포인트 → 미네랄 환급(1pt=20). migrated 표식으로 1회만(부팅 저장 이후엔 재실행 안 됨).
   if(p.hunt && !p.hunt.migrated){ p.hunt.migrated=1;
@@ -5327,6 +5329,13 @@ function migrateProfile(){ const d=defaultProfile();
     if(typeof p.petN!=='number') p.petN=0;
     if(!p.tickets) p.tickets={gear:0,pet:0,ally:0};
     p.tickets.pet=(p.tickets.pet||0)+PROF_PET_START_TICKETS; }
+  // v10 장착 칸을 '미네랄로 사는 것'으로 — 이미 쓰고 있던 칸은 뺏지 않는다(산 것을 잃지 않는다).
+  //   옛 기본값은 펫 2칸이었고 동료는 정원 3이 그냥 열려 있었다.
+  if((p.ver||0)<10){
+    const H=p.hunt||(p.hunt={});
+    p.petSlots=Math.max(0, Math.min(MG_SLOT_MAX, (typeof p.petSlots==='number')?p.petSlots:2));
+    if(typeof H.allySlots!=='number') H.allySlots=Math.min(MG_SLOT_MAX, Math.max(3,(H.party||[]).length));
+    if(p.unlocks){ delete p.unlocks.pet_slot3; delete p.unlocks.pet_slot4; delete p.unlocks.ally_plus; } }
   p.ver=d.ver; }
 // 캐릭터 1건 보정(신규 키 back-fill + 폐기된 직업 id 복구)
 function fixChar(c){ const d=defaultChar(c&&c.cls, c&&c.name);
@@ -5482,7 +5491,8 @@ function profBuyItem(tierId){ const p=PROF(), T=profItemTier(tierId);
 const PROF_IDLE_SOURCES={ drill:{name:'훈련장',rate:0.6,tip:'공격 위주'}, library:{name:'수련관',rate:0.6,tip:'집중 위주'}, arena:{name:'투기장',rate:1.0,reqUnlock:'idle_arena',tip:'고수익'} };
 // 레벨 해금 — 전부 실제로 무언가를 연다(표시만 하는 항목을 두지 않는다).
 // idle_arena→훈련장 장소 / evolve→진화 / idle_8h·idle_12h→오프라인 상한
-// pet_slot3·4→profPetSlots() / turret_plus→hbBuildMax()
+// turret_plus→hbBuildMax()
+// ⚠ 장착 칸(펫·동료)은 여기 없다 — 레벨이 아니라 미네랄로 여는 것이다(mgBuySlot).
 // ⚠ 게이트는 '레벨'이다(2026-08-12 설계 전환 — 옛 기준은 파워였다).
 //   설계 의도: 혼자 라운드 미는 게 막힐 때쯤 새 요소가 '하나씩' 열려야 한다 → 한꺼번에 열리면 안 된다.
 //   그래서 간격을 레벨 곡선이 무거워지는 속도에 맞춰 벌려 둔다(초반 촘촘 → 후반 성김).
@@ -5491,9 +5501,7 @@ const PROF_UNLOCKS=[
   {id:'idle_arena', lv:5,   label:'투기장 자동수익'},
   {id:'evolve',     lv:12,  label:'유닛 진화(★)'},
   {id:'idle_8h',    lv:20,  label:'오프라인 8시간·100%'},
-  {id:'pet_slot3',  lv:28,  label:'펫 슬롯 3'},
   {id:'turret_plus',lv:50,  label:'터렛 최대 +2'},
-  {id:'pet_slot4',  lv:65,  label:'펫 슬롯 4'},
   {id:'idle_12h',   lv:80,  label:'오프라인 12시간'},
 ];
 // 해금 판정에 쓰는 레벨 — 환생해도 이미 연 것은 유지되고(unlocks에 영구 기록),
@@ -6150,10 +6158,13 @@ function renderInfoModal(){ const box=document.getElementById('hbInfoBody'); if(
       .map(k=>'<span class="hbChip">'+HB_UPG[k].name+' <b>'+(u[k]||0)+'</b></span>').join('')+'</div>';
   box.innerHTML=h; }
 // ── D. 레벨 해금 확장 — 해금이 실제로 무언가를 열도록 배선 ──
-function profPetSlots(){ const p=PROF(); let n=2;
-  if(profHasUnlock('pet_slot3')) n=3;
-  if(profHasUnlock('pet_slot4')) n=4;
-  return Math.max(n, p.petSlots||2); }
+// 🔓 장착/출전 칸 — 펫·동료 모두 **0칸에서 시작해 미네랄로 하나씩 연다**(2026-08-14 확정).
+//   최대 3칸이고 레벨 해금이 아니다 — 그래서 PROF_UNLOCKS 의 pet_slot3·4, ally_plus 는 전부 삭제됐다.
+//   ⚠ 여는 값을 두 곳에 적지 말 것. MG_SLOT_COST 한 줄이 전부다.
+const MG_SLOT_MAX=3;
+const MG_SLOT_COST=[500, 6000, 60000];   // 1·2·3번째 칸을 여는 미네랄
+function mgSlotCost(n){ return MG_SLOT_COST[n]||0; }
+function profPetSlots(){ const p=PROF(); return Math.max(0, Math.min(MG_SLOT_MAX, p.petSlots||0)); }
 function hbBuildMax(k){ const B=HB_STRUCT[k]; if(!B) return 0;
   let m=B.max;
   // ⚠ 'ally'는 없어졌다 — 동료 정원은 hbMateMax()가 따로 정한다(3칸 고정)
@@ -6646,6 +6657,7 @@ const HB_MATE_PARTY=3;
 // 보유 상태 = { lv:강화 레벨(1↑), dup:합성 재료로 쓸 수 있는 중복 수 }
 function hbMates(){ const H=hbHunt(); if(!H.mates) H.mates={}; if(!Array.isArray(H.party)) H.party=[];
   if(typeof H.mateN!=='number') H.mateN=0;    // 누적 뽑기 횟수 → 뽑기 레벨
+  if(typeof H.allySlots!=='number') H.allySlots=0;   // 출전 칸(미네랄로 연다)
   return H; }
 function hbMateRec(id){ const H=hbMates(); return H.mates[id]||null; }
 function hbMateLv(id){ const r=hbMateRec(id); return r? (r.lv||0) : 0; }
@@ -6653,7 +6665,7 @@ function hbMateDup(id){ const r=hbMateRec(id); return r? (r.dup||0) : 0; }
 function hbMateOwned(id){ return hbMateLv(id)>0; }
 function hbMateDps(id){ const M=HB_MATES[id]; if(!M) return 0;
   return M.dps*(1+HB_MATE_STEP*Math.max(0,hbMateLv(id)-1)); }
-function hbMateMax(){ return HB_MATE_PARTY; }
+function hbMateMax(){ return Math.max(0, Math.min(MG_SLOT_MAX, hbHunt().allySlots||0)); }
 // ── 뽑기 레벨 · 확률 ──
 function hbGachaStage(n){ n=(n==null)?hbMates().mateN:n;
   let i=0; for(let k=0;k<HB_MATE_GACHA.length;k++) if(n>=HB_MATE_GACHA[k].need) i=k;
@@ -8310,6 +8322,7 @@ const MG={
     // 자동 선택 기준 — '강함' 한 줄. 등급과 ★를 함께 보므로 같은 등급이면 ★ 높은 쪽이 이긴다.
     power:id=>GACHA_TIER_ORDER.indexOf(PROF_PETS[id].tier)*1000 + Math.round(profPetVal(id)*1000),
     statOnly:id=>PROF_BONUS_NAME[PROF_PETS[id].bonus.type]+' +'+Math.round(profPetVal(id)*100)+'%',
+    addSlot:()=>{ const p=PROF(); p.petSlots=Math.min(MG_SLOT_MAX,(p.petSlots||0)+1); },
     toggle:id=>profPetEquip(id), feed:(t,m)=>profPetFeed(t,m),
     sum:()=>{ const eq=PROF().equip||[];
       return '장착 <b>'+eq.length+'</b>/'+profPetSlots()+' · '
@@ -8328,6 +8341,7 @@ const MG={
     dup:id=>hbMateDup(id), pt:id=>hbMatePt(id),
     power:id=>Math.round(hbMateDps(id)*1000),
     statOnly:id=>'위력 '+Math.round(hbMateDps(id)*100)+'% · '+HB_MATES[id].tip,
+    addSlot:()=>{ const H=hbMates(); H.allySlots=Math.min(MG_SLOT_MAX,(H.allySlots||0)+1); },
     toggle:id=>hbMateToggle(id), feed:(t,m)=>hbMateFeed(t,m),
     sum:()=>{ const party=hbParty(); let d=0; for(const id of party) d+=hbMateDps(id);
       return '출전 <b>'+party.length+'</b>/'+hbMateMax()+' · 합계 위력 <b>'+Math.round(d*100)+'%</b>'; },
@@ -8341,6 +8355,13 @@ function _mgReset(){ _mgPick=null; _mgSwap=null; _mgMix=null; }
 function _mgK(){ return _gearTab==='pet' ? 'pet' : 'ally'; }
 
 // ── 상단 한 줄 ──
+// 아직 안 산 칸 — 무엇을 내면 열리는지 그 줄에서 바로 보여 준다
+function _mgLockRow(k, i){ const cost=mgSlotCost(i), can=Math.floor((PROF().pcoin||0))>=cost;
+  return '<div class="mgSlot lock">'
+    +'<span class="mgCard"><span class="mgIco">🔒</span></span>'
+    +'<span class="mgBody"><b class="mgName">'+(i+1)+'번째 칸</b>'
+    +'<em class="mgStat">'+resIco('mineral','gi')+' '+cost.toLocaleString('en-US')+' 로 열립니다</em></span>'
+    +'<span class="mgBtns"><button class="mgBtn'+(can?' on':'')+'" onclick="mgBuySlot(\''+k+'\')"'+(can?'':' disabled')+'>열기</button></span></div>'; }
 function _mgRow(k, id){ const M=MG[k], swapping=_mgSwap&&_mgSwap.kind===k;
   if(!id) return '<div class="mgSlot empty'+(swapping?' swapT':'')+'"'
     +(swapping?(' onclick="mgSwapTo(\'\')"'):' onclick="mgAddTap(\''+k+'\')"')+'>'
@@ -8363,6 +8384,15 @@ function _mgRow(k, id){ const M=MG[k], swapping=_mgSwap&&_mgSwap.kind===k;
              :'<span class="mgBtns"><button class="mgBtn" onclick="mgUnequip(\''+k+'\',\''+id+'\')">해제</button></span>')
     +'</div>'; }
 function mgAddTap(k){ showTownToast('아래 목록에서 '+MG[k].label+'을 눌러 상태창을 여세요'); }
+// 🔓 칸 열기 — 미네랄로 산다(레벨 해금이 아니다)
+function mgBuySlot(k){ const M=MG[k], n=M.max(), p=PROF();
+  if(n>=MG_SLOT_MAX) return;
+  const cost=mgSlotCost(n);
+  if(Math.floor(p.pcoin||0)<cost){ showTownToast('미네랄이 부족합니다'); return; }
+  p.pcoin-=cost; M.addSlot(); saveMeta();
+  if(typeof playSfx==='function') playSfx('ui_confirm');
+  if(typeof updateCurBar==='function') updateCurBar();
+  showTownToast(M.label+' 칸 '+(n+1)+'/'+MG_SLOT_MAX+' 열림'); refreshTownPanel(); }
 function mgExtTap(){ showTownToast('추가 능력치·스킬 칸 — 준비 중입니다'); }
 function mgUnequip(k,id){ if(!MG[k].toggle(id)) return; _mgReset();
   if(typeof playSfx==='function') playSfx('ui_close'); refreshTownPanel(); }
@@ -8470,11 +8500,12 @@ function _mgGrid(k){ const M=MG[k], owned=M.owned(), on=M.on();
 // ── 패널 — 펫·동료가 같은 함수를 쓴다 ──
 function _mgPanel(k, note){ const M=MG[k], on=M.on(), mx=M.max();
   let top='<div class="mgSlots">';
-  for(let i=0;i<mx;i++) top+=_mgRow(k, on[i]||null);
-  top+='<div class="mgAutoRow">'
+  for(let i=0;i<MG_SLOT_MAX;i++) top += (i<mx) ? _mgRow(k, on[i]||null) : _mgLockRow(k, i);
+  if(mx>0) top+='<div class="mgAutoRow">'
     +(_mgSwap? '<button class="twBtn" onclick="mgSwapCancel()">교체 취소</button>'
              : '<button class="twBtn" onclick="mgAuto(\''+k+'\')">⚡ 자동 선택 — 가장 강한 '+mx+'</button>')
-    +'</div></div>';
+    +'</div>';
+  top+='</div>';
   const hint=_mgSwap&&_mgSwap.kind===k
     ? '<div class="igEmpty sm feed">🔁 <b>'+M.name(_mgSwap.id)+'</b> 을 넣을 자리를 <b>위에서</b> 고르세요</div>'
     : (note?'<div class="igEmpty sm">'+note+'</div>':'');

@@ -821,15 +821,23 @@ async function groupLobby(){
     hbCloseInfo();
     // ③ 파워 해금 — 표시만 하는 항목이 없어야 한다(전부 실제 상한을 바꾼다)
     p.unlocks={};
-    const b4={pet:profPetSlots(), tur:hbBuildMax('turret'), off:profOfflineCapMin()};
-    p.unlocks={pet_slot3:1, turret_plus:1, pet_slot4:1, idle_12h:1};
-    assert(profPetSlots()>b4.pet,'펫 슬롯 해금이 반영 안 됨: '+b4.pet+' → '+profPetSlots());
-    // 동료 정원은 해금과 무관하게 3칸 고정이다 — 늘리는 해금을 두지 않기로 했다
-    assert(hbMateMax()===HB_MATE_PARTY,'동료 정원이 해금으로 늘어남(3칸 고정이어야 한다): '+hbMateMax());
+    const b4={tur:hbBuildMax('turret'), off:profOfflineCapMin()};
+    p.unlocks={turret_plus:1, idle_12h:1};
+    // 장착 칸은 레벨 해금이 아니라 '미네랄로 사는 것'이다 — 해금으로 늘어나면 안 된다
+    { const before=profPetSlots(); p.unlocks.pet_slot3=1; p.unlocks.pet_slot4=1;
+      assert(profPetSlots()===before,'펫 칸이 레벨 해금으로 늘어남(미네랄 구매여야 한다)');
+      delete p.unlocks.pet_slot3; delete p.unlocks.pet_slot4; }
+    // 동료 정원도 레벨 해금이 아니라 '미네랄로 사는 칸'이다 — 최대 3칸
+    { const before=hbMateMax(); p.unlocks.ally_plus=1;
+      assert(hbMateMax()===before,'동료 칸이 레벨 해금으로 늘어남(미네랄 구매여야 한다)');
+      delete p.unlocks.ally_plus;
+      hbHunt().allySlots=99;
+      assert(hbMateMax()===MG_SLOT_MAX,'동료 칸 상한이 '+MG_SLOT_MAX+'이 아님: '+hbMateMax());
+      hbHunt().allySlots=0; }
     assert(hbBuildMax('turret')>b4.tur,'터렛 최대 해금이 반영 안 됨');
     assert(profOfflineCapMin()>b4.off,'오프라인 상한 해금이 반영 안 됨');
     // 해금 표의 모든 항목이 실제로 쓰이는지(코드에 배선된 id인지)
-    const wired=['idle_arena','evolve','idle_8h','pet_slot3','turret_plus','pet_slot4','idle_12h'];
+    const wired=['idle_arena','evolve','idle_8h','turret_plus','idle_12h'];
     for(const u of PROF_UNLOCKS) assert(wired.indexOf(u.id)>=0,'배선 안 된 해금 항목: '+u.id);
     p.unlocks={}; profSyncUnlocks();
     return '해금 '+PROF_UNLOCKS.length+'단계 · 파워 '+profPower(); });
@@ -886,9 +894,9 @@ async function groupLobby(){
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(60); _hb.manual=true;
     const p=PROF(); p.pcoin=999999; hbHunt().build={}; hbHunt().boostT={};
-    p.pets={slime:1}; p.equip=['slime']; hbLayoutAllies();
+    p.petSlots=MG_SLOT_MAX; p.pets={slime:{star:0,dup:0,fed:0}}; p.equip=['slime']; hbLayoutAllies();
     // ① 동료 — 뽑기로 얻고, 중복을 재료로 넣어 강화한다(미네랄 강화는 없어졌다)
-    const H0=hbHunt(); H0.mates={}; H0.party=[]; H0.mateN=0;
+    const H0=hbHunt(); H0.mates={}; H0.party=[]; H0.mateN=0; H0.allySlots=MG_SLOT_MAX;
     const mid=Object.keys(HB_MATES)[0], md0=HB_MATES[mid].dps;
     H0.mates[mid]={lv:1,dup:0}; H0.party=[mid]; hbLayoutAllies();
     assert(hbMateLv(mid)===1 && hbParty().indexOf(mid)>=0,'보유 동료가 출전하지 않음');
@@ -980,7 +988,7 @@ async function groupLobby(){
       _hb.foes.length=0; _hb.pend.length=0; hbSpawnWave();
       // 사거리가 근접(34)이라 적이 화면 밖에서 걸어 들어올 시간이 필요하다 — 6초로는 도착 전에 끝난다
       const k=_hb.kills; for(let i=0;i<300;i++) hbStep(0.05); return _hb.kills-k; };
-    hbHunt().build={}; hbHunt().mates={}; hbHunt().party=[]; PROF().equip=[]; hbLayoutAllies();
+    hbHunt().build={}; hbHunt().mates={}; hbHunt().party=[]; hbHunt().allySlots=MG_SLOT_MAX; PROF().equip=[]; hbLayoutAllies();
     const solo=runWave();
     { hbHunt().base={tiles:{},open:99}; hbLayoutBase();
       let c; for(let i=0;i<HB_STRUCT.turret.max && (c=hbFreeCell('turret')); i++) hbPlaceStruct('turret',c[0],c[1]); }
@@ -1056,7 +1064,7 @@ async function groupLobby(){
     const p=PROF(); p.pcoin=9e6;
     const _cSave={..._hb.char};   // ⚠ 아래에서 위치·사거리를 바꾼다 — 뒤 스텝들은 원점·정상 스탯을 가정한다
     // 동료 5명 출전(로스터 앞에서부터) · 기지 초기화
-    const H=hbHunt(); H.upg.bkatk=0; H.mates={}; H.party=[];
+    const H=hbHunt(); H.upg.bkatk=0; H.mates={}; H.party=[]; H.allySlots=MG_SLOT_MAX;
     const ids=Object.keys(HB_MATES).slice(0, Math.min(5, hbMateMax()));
     for(const id of ids){ H.mates[id]={lv:1,dup:0}; H.party.push(id); }
     hbHunt().base={tiles:{},open:99}; hbLayoutBase();
@@ -1500,7 +1508,7 @@ async function groupLobby(){
     assert(L1.length===4,'목록 개수가 다름(나+적3): '+L1.length);
     // 🤝 동료도 같은 경로로 그린다 — 영입하면 목록이 그만큼 늘어야 한다(이모지로만 그리면 여기서 걸린다)
     { CHAR().level=99; const mid=Object.keys(HB_MATES)[0];
-      hbHunt().mates[mid]={lv:1,dup:0}; hbHunt().party=[mid]; hbLayoutAllies();
+      hbHunt().allySlots=MG_SLOT_MAX; hbHunt().mates[mid]={lv:1,dup:0}; hbHunt().party=[mid]; hbLayoutAllies();
       const L2=hb3dList();
       assert(L2.length===5,'동료가 3D 목록에 안 들어감: '+L2.length);
       assert(L2.some(u=>u.id===HB_MATES[mid].unit),'동료가 자기 유닛 모델로 안 나감: '+HB_MATES[mid].unit);
@@ -1808,7 +1816,8 @@ async function groupLobby(){
         prevRank=rank; prevDps=Math.max(prevDps,M.dps); } }
     // ④ 영입 = 뽑기권. 권이 없으면 못 뽑는다.
     const p=PROF(); p.chars.length=0; p.curId=''; const c=profCreateChar('ranger','동료');
-    const H=hbHunt(); H.mates={}; H.party=[]; H.mateN=0; p.tickets={gear:0,pet:0,ally:0};
+    const H=hbHunt(); H.mates={}; H.party=[]; H.mateN=0; H.allySlots=MG_SLOT_MAX;
+    p.tickets={gear:0,pet:0,ally:0};
     assert(hbMateRoll()===null,'뽑기권이 0인데 뽑힘');
     p.tickets.ally=1;
     const r1=hbMateRoll();
@@ -1947,6 +1956,47 @@ async function groupLobby(){
     { let prev=0; for(const t of GACHA_TIER_ORDER){ assert(HB_MATE_PT[t]>prev,'재료 포인트가 등급 오름차순이 아님: '+t); prev=HB_MATE_PT[t]; } }
     return sum1; });
 
+  // 🔓 장착/출전 칸 — 0칸에서 시작해 미네랄로 하나씩 산다(레벨 해금이 아니다)
+  await step('장착 칸: 0에서 시작 · 미네랄로 구매 · 최대 3', async()=>{ skipIf(typeof mgBuySlot!=='function','칸 구매 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','칸'); saveMeta(); }
+    // ① 새 프로필은 펫·동료 모두 0칸이다
+    { const d=defaultProfile();
+      assert((d.petSlots||0)===0,'새 프로필 펫 칸이 0이 아님: '+d.petSlots);
+      assert((d.hunt.allySlots||0)===0,'새 프로필 동료 칸이 0이 아님: '+d.hunt.allySlots); }
+    // ⚠ openGear()는 loadMeta()로 저장본을 다시 읽어 PROF() 객체 자체를 갈아 끼운다.
+    //    먼저 저장하고, 그 뒤로는 지역 변수에 담아 두지 말고 매번 PROF()를 다시 읽어야 한다.
+    { const p0=PROF(); p0.petSlots=0; p0.hunt.allySlots=0; p0.pcoin=0; p0.unlocks={}; saveMeta(); }
+    openGear(); await sleep(60);
+    for(const k of ['pet','ally']){ setGearTab(k); await sleep(40);
+      const M=MG[k];
+      assert(M.max()===0,k+': 시작이 0칸이 아님: '+M.max());
+      // 0칸이면 잠긴 줄만 3개 · 자동 선택 줄은 안 나온다
+      assert(document.querySelectorAll('#gearBody .mgSlot.lock').length===MG_SLOT_MAX,
+        k+': 잠긴 칸 줄이 '+MG_SLOT_MAX+'개가 아님: '+document.querySelectorAll('#gearBody .mgSlot.lock').length);
+      // ⚠ resIco 는 크기 클래스를 안 주면 원본 크기로 나온다 — 줄이 통째로 무너진다(실제로 그랬다)
+      { const row=document.querySelector('#gearBody .mgSlot.lock'), ic=row.querySelector('img');
+        assert(ic,k+': 잠긴 줄에 재화 아이콘이 없음');
+        assert(ic.getBoundingClientRect().height<=20,k+': 재화 아이콘이 너무 큼(크기 클래스 누락): '+Math.round(ic.getBoundingClientRect().height)+'px');
+        assert(row.getBoundingClientRect().height<=90,k+': 잠긴 줄 높이가 비정상: '+Math.round(row.getBoundingClientRect().height)+'px'); }
+      assert(!document.querySelector('#gearBody .mgAutoRow'),k+': 0칸인데 자동 선택 줄이 나옴');
+      // ② 미네랄이 모자라면 못 산다
+      PROF().pcoin=0; mgBuySlot(k); await sleep(20);
+      assert(M.max()===0,k+': 미네랄 0인데 칸이 열림');
+      // ③ 값을 치르면 하나씩 열리고, 값은 점점 비싸진다
+      for(let i=0;i<MG_SLOT_MAX;i++){
+        const cost=mgSlotCost(i);
+        assert(cost>0,k+': '+(i+1)+'번째 칸 값이 0');
+        if(i>0) assert(cost>mgSlotCost(i-1),k+': 칸 값이 점점 비싸지지 않음');
+        PROF().pcoin=cost; mgBuySlot(k); await sleep(20);
+        assert(M.max()===i+1,k+': '+(i+1)+'번째 칸이 안 열림: '+M.max());
+        assert(Math.floor(PROF().pcoin)===0,k+': 칸 값이 정확히 빠지지 않음: '+PROF().pcoin); }
+      // ④ 최대 3칸 — 더 사지지 않는다
+      PROF().pcoin=1e9; mgBuySlot(k); await sleep(20);
+      assert(M.max()===MG_SLOT_MAX,k+': 상한을 넘겨 열림: '+M.max());
+      assert(Math.floor(PROF().pcoin)===1e9,k+': 상한인데 미네랄이 빠짐');
+      assert(!document.querySelector('#gearBody .mgSlot.lock'),k+': 다 열었는데 잠긴 줄이 남음'); }
+    return '0칸 시작 · '+MG_SLOT_COST.join('/')+' 미네랄 · 최대 '+MG_SLOT_MAX; });
+
   // 🎟 뽑기권 = 미네랄로 못 산다. 엘리트·상자·라운드 보너스로 얻고 젬으로만 산다.
   await step('뽑기권: 미네랄 불가 · 젬 구매 · 상자/엘리트/라운드 지급', ()=>{ skipIf(typeof buyTicketGem!=='function','뽑기권 구매 없음');
     const p=PROF(); p.tickets={gear:0,pet:0,ally:0}; p.gem=0; p.pcoin=1e9;
@@ -1994,7 +2044,8 @@ async function groupLobby(){
       for(const t of PET_TIERS) assert(have[t],'확률은 있는데 그 등급 펫이 없음: '+t);
       for(const id in PROF_PETS) assert(PET_TIERS.indexOf(PROF_PETS[id].tier)>=0,'펫 등급이 확률표에 없음: '+id); }
     // ③ 영입은 뽑기권으로만 — 미네랄로 직접 뽑던 경로는 없어졌다
-    const p=PROF(); p.pets={}; p.equip=[]; p.petN=0; p.tickets={gear:0,pet:0,ally:0}; p.pcoin=0;
+    const p=PROF(); p.pets={}; p.equip=[]; p.petN=0; p.petSlots=MG_SLOT_MAX;
+    p.tickets={gear:0,pet:0,ally:0}; p.pcoin=0;
     assert(profPetRoll()===null,'뽑기권이 0인데 뽑힘');
     // ④ 뽑기권은 젬으로만 산다(미네랄 경로는 따로 검사 — '뽑기권' 단계)
     p.gem=TICKET_GEM.pet;
@@ -2039,6 +2090,11 @@ async function groupLobby(){
       pets:{ wolf:{count:4}, slime:{count:1} }, equip:['wolf'], petSlots:2 } };
     migrateProfile();
     const p=PLAYER_META.profile;
+    // 쓰던 칸은 뺏지 않는다 — 칸이 '사는 것'으로 바뀌었다고 이미 열린 것을 0으로 되돌리면 안 된다
+    assert(p.petSlots===2,'옛 펫 칸 2가 보존되지 않음: '+p.petSlots);
+    assert((p.hunt.allySlots||0)>0,'옛 저장에 동료 칸이 하나도 안 열림: '+p.hunt.allySlots);
+    assert(p.petSlots<=MG_SLOT_MAX && p.hunt.allySlots<=MG_SLOT_MAX,'마이그레이션이 칸 상한을 넘김');
+    assert(!(p.unlocks||{}).pet_slot3 && !(p.unlocks||{}).ally_plus,'없어진 칸 해금이 남아 있음');
     assert(profPetStar('wolf')===3,'옛 중복 4 → ★3 이 아님: ★'+profPetStar('wolf'));
     assert(profPetStar('slime')===0,'옛 중복 1 → ★0 이 아님: ★'+profPetStar('slime'));
     assert(p.pets.wolf.count===undefined,'옛 count 필드가 남음');
@@ -2330,7 +2386,7 @@ async function groupLobby(){
     // ⚠ 정원을 '채울 수 있을 만큼' 넣어야 교체 경로가 실제로 돌아간다
     //    (예전엔 보유가 정원보다 적어 교체 검사가 통째로 건너뛰어져 red-test가 안 걸렸다)
     { const p=PROF();
-      p.unlocks=Object.assign({}, p.unlocks, {pet_slot3:1});
+      p.petSlots=MG_SLOT_MAX; hbHunt().allySlots=MG_SLOT_MAX;
       p.pets={ wolf:{star:1,dup:2,fed:0}, slime:{star:0,dup:0,fed:0}, tiger:{star:0,dup:3,fed:0},
                owl:{star:0,dup:0,fed:0}, golem:{star:0,dup:0,fed:0} };
       p.equip=['wolf','slime','tiger'].slice(0, profPetSlots());
