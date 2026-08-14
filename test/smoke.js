@@ -2358,6 +2358,27 @@ async function groupLobby(){
       assert(document.querySelector('#gearBody .gearWrap'),t+' 탭이 공용 뼈대(.gearWrap)를 안 씀');
       assert(document.querySelector('#gearBody .gearSum'),t+' 탭에 상단 요약이 없음');
       assert(document.querySelector('#gearBody .bagBody'),t+' 탭에 보유 격자가 없음'); }
+    // 하단 격자 높이는 세 탭이 같아야 한다 — 탭을 옮길 때 아래 구역이 들썩이면 안 된다
+    { const h={}; for(const t of ['gear','pet','ally']){ setGearTab(t); await sleep(40);
+        h[t]=Math.round(document.querySelector('#gearBody .bagScroll').getBoundingClientRect().height); }
+      assert(h.gear===h.pet && h.gear===h.ally,'탭마다 하단 격자 높이가 다름: '+JSON.stringify(h)); }
+    // 펫·동료 상단은 '세로로 길게' — 남는 세로 공간을 상단이 먹어야 아래가 비지 않는다
+    for(const t of ['pet','ally']){ setGearTab(t); await sleep(40);
+      const rows=document.querySelectorAll('#gearBody .mgSlot');
+      assert(rows.length>=2, t+' 탭 상단 슬롯이 2줄 미만');
+      const a=rows[0].getBoundingClientRect(), b2=rows[1].getBoundingClientRect();
+      assert(b2.top>=a.bottom-1, t+' 탭 상단이 아직 가로 배치임(세로로 쌓여야 한다)');
+      assert(a.width>200, t+' 탭 슬롯이 한 줄 폭을 안 씀: '+Math.round(a.width));
+      // 카드 오른쪽 = 이름·능력치, 그 옆 = + 확장 칸
+      const card=rows[0].querySelector('.mgCard'), name=rows[0].querySelector('.mgName');
+      const stat=rows[0].querySelector('.mgStat'), add=rows[0].querySelectorAll('.mgAddBtn');
+      assert(card&&name&&stat,t+' 탭 줄 구성이 [카드][이름·능력치]가 아님');
+      assert(name.getBoundingClientRect().left>=card.getBoundingClientRect().right-1,t+' 탭 이름이 카드 오른쪽이 아님');
+      assert(stat.textContent.trim().length>0,t+' 탭 능력치 줄이 비어 있음');
+      // 확장 칸은 '있어야' 한다 — 표와 일치만 보면 0개로 줄여도 통과해 버린다
+      assert(MG_ADD_SLOTS>=1,'추가 능력치·스킬 확장 칸이 0개로 꺼져 있음');
+      assert(add.length===MG_ADD_SLOTS,t+' 탭 + 확장 칸 수가 표와 다름: '+add.length+' vs '+MG_ADD_SLOTS);
+      assert(add[0].getBoundingClientRect().left>=name.getBoundingClientRect().right-1,t+' 탭 + 칸이 이름 오른쪽이 아님'); }
     // ⑤ 등급 표현은 세 탭 모두 '테두리 색' 하나로 통일한다 — 글자색·배지로 갈라 쓰지 않는다
     { const tierCols=Object.keys(TIER_COLOR).map(k=>TIER_COLOR[k].toLowerCase());
       const hex=rgb=>{ const m=(rgb.match(/\d+/g)||[]).slice(0,3).map(Number);

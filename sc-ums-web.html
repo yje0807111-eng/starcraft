@@ -2365,14 +2365,30 @@
   .bagBody::-webkit-scrollbar-thumb{border-radius:3px;background:rgba(255,255,255,.18)}
   /* 🧰 정비 상단 슬롯(펫·동료) — 장비의 페이퍼돌 자리를 대신한다. 등급은 '테두리 색' 하나로만 표현(3탭 공용 규칙).
      빈 자리도 같은 크기로 남겨 상단이 허전해 보이지 않게 한다. */
-  .mgSlots{flex:0 0 auto;display:flex;justify-content:center;gap:10px;padding:10px 12px 14px}
-  .mgSlot{position:relative;flex:1 1 0;max-width:96px;aspect-ratio:.86;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;gap:4px;cursor:pointer;border-radius:var(--r-md);
-    border:1px solid var(--metal-edge);background:rgba(255,255,255,.045);color:var(--txt-mute)}
-  .mgSlot.empty{border-style:dashed;opacity:.6}
+  /* 세로로 길게 쌓는다 — 남는 세로 공간은 상단이 먹고, 하단 격자는 장비와 같은 172px 고정이다.
+     한 줄 = [등급 테두리 카드] [이름·능력치] [+ 확장 칸] */
+  .mgSlots{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+    display:flex;flex-direction:column;gap:7px;padding:8px 12px 12px}
+  .mgSlots::-webkit-scrollbar{width:4px}
+  .mgSlots::-webkit-scrollbar-thumb{border-radius:3px;background:rgba(255,255,255,.18)}
+  .mgSlot{position:relative;flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:7px 9px;cursor:pointer;
+    border-radius:var(--r-md);border:1px solid var(--metal-edge);background:rgba(255,255,255,.045);color:var(--txt-mute)}
+  .mgSlot.empty{border-style:dashed;opacity:.55}
   .mgSlot.pick{background:rgba(255,255,255,.11)}
-  .mgSlot .mgIco{font-size:26px;line-height:1}
-  .mgSlot .mgName{font-size:10px;font-weight:700;color:#c6ccd4;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mgCard{position:relative;flex:0 0 auto;width:44px;height:44px;display:flex;align-items:center;justify-content:center;
+    border-radius:var(--r-md);border:1px solid var(--metal-edge);background:rgba(0,0,0,.32)}
+  .mgSlot .mgIco{font-size:24px;line-height:1}
+  .mgTag{position:absolute;right:-3px;bottom:-3px;font-style:normal;font-size:9px;font-weight:800;
+    padding:0 3px;border-radius:var(--r-bar);background:#0e0e0e;border:1px solid var(--metal-edge);color:inherit}
+  .mgBody{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .mgSlot .mgName{font-size:12px;font-weight:700;color:#ececec;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mgStat{font-style:normal;font-size:10px;color:var(--txt-mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* + 확장 칸 — 추가 능력치·스킬이 들어갈 자리(내용은 미정). 자리를 미리 잡아 둔다 */
+  .mgAdd{flex:0 0 auto;display:flex;gap:5px}
+  .mgAddBtn{width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;
+    font-size:13px;font-weight:700;line-height:1;color:#7a7a7a;
+    border:1px dashed var(--metal-edge);border-radius:var(--r-bar);background:rgba(255,255,255,.03)}
+  .mgAddBtn:disabled{opacity:.35;cursor:default}
   .mgEmo{font-size:21px;line-height:1}
   /* 보유 격자 배지 — 중복 수는 오른쪽 위(레벨/★은 오른쪽 아래에 이미 있다) */
   .igDup{position:absolute;left:2px;top:2px;font-style:normal;font-size:9px;font-weight:800;
@@ -8225,15 +8241,26 @@ function _gearFrame(sum, top, headL, headR, grid, info){
     +'<div class="bagScroll"><div class="bagBody" onscroll="bagScrollHint()">'+grid+'</div></div>'
     +(info||'')
     +'</div></div>'; }
-// 상단 슬롯 한 칸 — 비어 있어도 자리를 지켜 상단이 허전하지 않게 한다
+// 상단 슬롯 한 줄 — [등급 테두리 카드] [이름·능력치] [+ 확장 칸].
+//   세로로 길게 쌓아 남는 세로 공간을 상단이 먹는다(하단 격자는 장비와 같은 172px 고정).
+//   비어 있어도 같은 크기로 자리를 지킨다 — 상단이 비면 화면이 반쪽으로 보인다.
+//   ⚠ mgAdd = '추가 능력치·스킬' 확장 칸. 무엇을 넣을지는 아직 미정이라 자리만 잡아 둔 것이다.
+const MG_ADD_SLOTS=2;
 function _gearSlotCell(opt){
-  const col=opt.col||null;
-  return '<div class="mgSlot'+(opt.on?' on':' empty')+(opt.sel?' pick':'')+'"'
-    +(col?(' style="border-color:'+col+'aa;color:'+col+'"'):'')
-    +' onclick="'+opt.act+'">'
-    +'<span class="mgIco">'+(opt.ico||'<i class="pdPlus">＋</i>')+'</span>'
-    +(opt.tag?('<i class="pdLv">'+opt.tag+'</i>'):'')
-    +'<span class="mgName">'+(opt.name||'비어 있음')+'</span></div>'; }
+  const col=opt.col||null, on=!!opt.on;
+  let add='<span class="mgAdd">';
+  for(let i=0;i<MG_ADD_SLOTS;i++)
+    add+='<button class="mgAddBtn" onclick="event.stopPropagation();mgAddTap()"'+(on?'':' disabled')+'>＋</button>';
+  add+='</span>';
+  return '<div class="mgSlot'+(on?' on':' empty')+(opt.sel?' pick':'')+'" onclick="'+opt.act+'">'
+    +'<span class="mgCard"'+(col?(' style="border-color:'+col+'aa;color:'+col+'"'):'')+'>'
+      +'<span class="mgIco">'+(opt.ico||'<i class="pdPlus">＋</i>')+'</span>'
+      +(opt.tag?('<i class="mgTag">'+opt.tag+'</i>'):'')+'</span>'
+    +'<span class="mgBody">'
+      +'<b class="mgName"'+(col?(' style="color:'+col+'"'):'')+'>'+(opt.name||'비어 있음')+'</b>'
+      +'<em class="mgStat">'+(opt.stat||'아래에서 골라 넣으세요')+'</em></span>'
+    +add+'</div>'; }
+function mgAddTap(){ showTownToast('추가 능력치·스킬 칸 — 준비 중입니다'); }
 
 // ── 🐾 펫 — 상단: 장착 슬롯 + 보너스 합계 / 하단: 보유 전부 ──
 let _petSel=null;
@@ -8247,6 +8274,7 @@ function _shopPetPanel(note){ const p=PROF(), eq=p.equip||[], slots=profPetSlots
   for(let i=0;i<slots;i++){ const id=eq[i], P=id?PROF_PETS[id]:null;
     top+=_gearSlotCell({ on:!!P, sel:_petSel===id, col:P?TIER_COLOR[P.tier]:null,
       ico:P?P.emoji:null, tag:P?('★'+profPetStar(id)):null, name:P?P.name:'빈 슬롯',
+      stat:P?(GACHA_TIERS[P.tier].name+' · '+PROF_BONUS_NAME[P.bonus.type]+' +'+Math.round(profPetVal(id)*100)+'%'):null,
       act:P?("petSel('"+id+"')"):"showTownToast('아래에서 펫을 골라 장착하세요')" }); }
   top+='</div>';
   const grid=_petGrid(owned, eq);
@@ -8307,6 +8335,7 @@ function _gearAllyPanel(){ const party=hbParty(), mx=hbMateMax();
   for(let i=0;i<mx;i++){ const id=party[i], M=id?HB_MATES[id]:null;
     top+=_gearSlotCell({ on:!!M, sel:_mateSel===id, col:M?TIER_COLOR[M.tier]:null,
       ico:M?M.ico:null, tag:M?('L'+hbMateLv(id)):null, name:M?M.name:'빈 자리',
+      stat:M?(GACHA_TIERS[M.tier].name+' · 위력 '+Math.round(hbMateDps(id)*100)+'% · '+M.tip):null,
       act:M?("mateSel('"+id+"')"):"showTownToast('아래에서 동료를 골라 출전시키세요')" }); }
   top+='</div>';
   const grid=_mateGrid(owned, party);
