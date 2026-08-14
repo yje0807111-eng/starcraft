@@ -144,7 +144,10 @@
     color:rgba(234,238,245,.92);background:rgba(4,6,10,.34);border:1px solid rgba(255,255,255,.26);
     filter:drop-shadow(0 1px 3px rgba(0,0,0,.8));transition:color .15s,border-color .15s}
   .hudSet:hover{color:#fff;border-color:rgba(255,255,255,.45)}
-  .hudSet svg{display:block;width:18px;height:18px}   /* block — inline이면 라인박스 하단 여백이 생겨 아이콘이 위로 뜬다 */
+  .hudSet svg{display:block;width:18px;height:18px}
+  .hudSet .icoX{display:none}                      /* 열려 있으면 ☰ 가 X 로 바뀐다 */
+  .hudSet.on .icoBars{display:none}
+  .hudSet.on .icoX{display:block}   /* block — inline이면 라인박스 하단 여백이 생겨 아이콘이 위로 뜬다 */
   #hudR{display:flex;align-items:center;gap:10px;font-size:var(--fs-md);font-weight:800;white-space:nowrap;text-shadow:0 2px 4px #000,0 0 8px #000}
   .res{display:flex;align-items:center;gap:4px}   /* 상단 재화 바(.curBar)와 같은 간격 */
   .res .ri{width:14px;height:14px;display:block;flex:none;filter:drop-shadow(0 1px 3px rgba(0,0,0,.95))}   /* 숫자 높이에 맞춤 — .curBar와 동일 */
@@ -2537,7 +2540,10 @@
   .hbRow.lock{opacity:.5}
   /* ☰ 더보기 — 화면 가운데 팝업이 아니라 버튼 바로 아래로 떨어지는 드롭다운.
      바깥 판은 '바깥을 눌러 닫기'용 투명 판이라 어둡게 덮지 않는다(전장이 계속 보여야 한다). */
-  .hbMoreWrap{position:absolute;inset:0;z-index:70}
+  /* 바깥 판은 터치를 통과시킨다 — 메뉴를 열어 둔 채로 전장을 만질 수 있어야 하고,
+     닫는 것은 오직 ☰ 자리의 X 뿐이다(바깥 탭으로는 안 닫힌다). */
+  .hbMoreWrap{position:absolute;inset:0;z-index:70;pointer-events:none}
+  .hbMoreBox{pointer-events:auto}
   .hbMoreWrap.hide{display:none}   /* ⚠ 전역 .hide 규칙이 없는 파일이다 — 컴포넌트마다 직접 선언해야 숨는다 */
   /* 칸 크기는 ☰(.hudSet 24px)와 같다 — 한 값에서 가져와 둘이 어긋나지 않게 한다 */
   .hbMoreWrap{--mi:24px}
@@ -2888,7 +2894,7 @@
   .curBar.bare{background:none;border-bottom:0}
   .curBar.bare::after{display:none}
   .curBar .curRes{display:flex;align-items:center;gap:8px;margin-left:auto}   /* 설정 상자가 줄에 합류해 폭이 늘었다 — 간격을 좁혀 HOME 프로필과 겹치지 않게 */
-  .curBar .hudSet{margin-left:1px}   /* 재화와 같은 줄에 — 인게임 HUD 설정과 같은 상자 */
+  .curBar .hudSet{margin-left:1px;margin-right:-8px}   /* 오른쪽 끝에 거의 붙인다(.curBar padding 10px 상쇄) */
   .curTitle{font-family:var(--font-ti);font-size:16px;color:#eef1f6;letter-spacing:.12em;
     text-shadow:0 1px 3px rgba(0,0,0,.9),0 0 12px rgba(0,0,0,.5);white-space:nowrap}
   .curTitle:empty{display:none}
@@ -4160,7 +4166,7 @@
     </div>
     <!-- 라운드 선택 — 전장 한가운데 뜨는 팝업(회색톤 · 푸른기 금지) -->
     <!-- ☰ 더보기 — 전투 중에 안 쓰는 판을 한곳에 모은다(좌상단 아이콘 줄이 7개까지 늘어났었다) -->
-    <div class="hbMoreWrap hide" id="hbMoreSheet" onclick="if(event.target===this)hbCloseMore()">
+    <div class="hbMoreWrap hide" id="hbMoreSheet">
       <div class="hbMoreBox" id="hbMoreBox"><div class="hbMoreGrid" id="hbMoreGrid"></div></div>
     </div>
     <div class="hbModal hide" id="hbRoundSheet" onclick="if(event.target===this)hbCloseRounds()">
@@ -4227,7 +4233,7 @@
       <span class="res"><img class="ri" src="assets/icons/res_mineral.webp" alt=""><b id="curMin">0</b><i class="curPlus" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg></i></span>
       <span class="res"><img class="ri" src="assets/icons/res_gas.webp" alt=""><b id="curGas">0</b><i class="curPlus" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg></i></span>
       <span class="res"><img class="ri" src="assets/icons/res_gem.webp" alt=""><b id="curGem">0</b><i class="curPlus" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg></i></span>
-      <div class="hudSet" id="curSettingsBtn" data-sfx="ui_open" onclick="hudTopMenu('app')" title="더보기"><i class="hbGrowDot" id="hbGrowDot">!</i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"><path d="M4.5 7h15M4.5 12h15M4.5 17h15"/></svg></div>
+      <div class="hudSet" id="curSettingsBtn" data-sfx="ui_open" onclick="hudTopMenu('app')" title="더보기"><i class="hbGrowDot" id="hbGrowDot">!</i><svg class="icoBars" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"><path d="M4.5 7h15M4.5 12h15M4.5 17h15"/></svg><svg class="icoX" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"><path d="M6.2 6.2 17.8 17.8M17.8 6.2 6.2 17.8"/></svg></div>
     </span>
   </div>
   <!-- 💬 친구 DM 채팅(허브 소셜) -->
@@ -5754,7 +5760,13 @@ function hbPickBuild(bk){ _hbBdOpen=false; renderHbBuild(); hbBuy(bk); }
 //    사냥터에서는 재화 바 쪽이 위에 있어 그쪽이 눌린다. 그래서 둘 다 이 함수를 거치게 한다.
 //    (한쪽만 고치면 "눌러도 설정만 나온다"가 된다 — 실제로 그랬다)
 // fb: 사냥터가 아닐 때의 갈 곳 — 'app'이면 앱 화면 설정, 아니면 유즈맵 설정.
+// 열려 있으면 같은 자리가 X 다 — 그 X 만이 닫는 유일한 방법이다
+function hbMoreOn(){ const el=document.getElementById('hbMoreSheet');
+  return !!(el && !el.classList.contains('hide')); }
+function hbMoreBtns(){ return ['curSettingsBtn','settingsBtn']
+  .map(function(id){ return document.getElementById(id); }).filter(Boolean); }
 function hudTopMenu(fb){ const hs=document.getElementById('homeScreen');
+  if(hbMoreOn()) return hbCloseMore();
   if(hs && !hs.classList.contains('hide') && typeof hbOpenMore==='function') return hbOpenMore();
   if(fb==='app' && typeof openAppSettings==='function') return openAppSettings();
   openSettings(); }
@@ -5767,8 +5779,10 @@ function hbOpenMore(){ const el=document.getElementById('hbMoreSheet'); if(!el) 
     if(box && ph && btns.length){ const r=btns[0].getBoundingClientRect(), p=ph.getBoundingClientRect();
       box.style.top=Math.round(r.bottom-p.top+6)+'px';
       box.style.right=Math.round(p.right-r.right)+'px'; } }
+  hbMoreBtns().forEach(function(b){ b.classList.add('on'); b.title='닫기'; });
   if(typeof playSfx==='function') playSfx('ui_open'); }
 function hbCloseMore(){ const el=document.getElementById('hbMoreSheet'); if(el) el.classList.add('hide');
+  hbMoreBtns().forEach(function(b){ b.classList.remove('on'); b.title='더보기'; });
   if(typeof playSfx==='function') playSfx('ui_close'); }
 // 시트를 닫고 나서 연다 — 배치(건설)처럼 필드를 눌러야 하는 것이 시트에 가리면 안 된다
 function hbMoreGo(fn){ hbCloseMore(); setTimeout(function(){ try{ fn(); }catch(e){} }, 60); }
@@ -5784,8 +5798,12 @@ const HB_MORE=[
 function renderHbMore(){ const g=document.getElementById('hbMoreGrid'); if(!g) return;
   g.innerHTML=HB_MORE.map(function(it){
     const off=(it.k==='daily') ? ' disabled' : '';
+    // 설정은 아이콘 세트에 톱니가 없어 직접 그린다. ☰ 와 같은 그림을 쓰면 '메뉴 안의 메뉴'로 보인다.
     const ico=it.ico ? '<span data-ico="'+it.ico+'"></span>'
-      : '<i class="hbMoreSvg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"><path d="M4.5 7h15M4.5 12h15M4.5 17h15"/></svg></i>';
+      : '<i class="hbMoreSvg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">'
+        +'<circle cx="12" cy="12" r="3.4"/>'
+        +'<path d="M12 2.6v3M12 18.4v3M2.6 12h3M18.4 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1"/>'
+        +'</svg></i>';
     const tip=it.name+(it.sub?' — '+it.sub:'');
     return '<button class="hbMoreIt" data-k="'+it.k+'" onclick="hbMoreTap(&#39;'+it.k+'&#39;)"'+off
       +' title="'+tip+'" aria-label="'+tip+'">'+ico+'</button>'; }).join('');
@@ -14068,7 +14086,7 @@ async function partyDisband(){ closePartyInvite();
   if(RT.active && RT.partyId){ try{ await _sb.from('parties').delete().eq('id',RT.partyId); }catch(e){ console.warn(e); } RT.partyId=null; }
   _party=null; renderPartyTab(); }
 async function renderPartyTab(){ const body=document.getElementById('msPanelBody'); if(!body) return;
-  if(!sbReady()){ body.innerHTML='<div class="foSoon">로그인 후 사용할 수 있어요</div>'; return; }
+  // 게스트도 본다 — 로컬 파티 + 임시 친구 초대는 sb 없이 동작한다(실연동 초대만 rtEnsurePartyDB 쪽에서 갈린다)
   ensureParty();
   let cells='';
   for(let i=0;i<PARTY_MAX;i++){ const m=_party.members[i];
@@ -14111,14 +14129,14 @@ function filterInviteRows(q){ _inviteQuery=q; const ov=document.getElementById('
   rows.forEach(function(r){ const m=!qq || (r.getAttribute('data-nm')||'').indexOf(qq)>=0; r.style.display=m?'':'none'; if(m) vis++; });
   const nm=ov.querySelector('.ptNoMatch'); if(nm) nm.style.display=(rows.length && vis===0)?'':'none'; }
 async function renderFriendList(){ const body=document.getElementById('msPanelBody'); if(!body) return;
-  if(!sbReady()){ body.innerHTML='<div class="foSoon">로그인 후 사용할 수 있어요</div>'; return; }
+  // 게스트도 본다 — 임시 친구(_tempFriends)로 전체 레이아웃이 그려진다. 실계정 목록·요청만 로그인 시 합류.
   body.innerHTML =
     '<div class="foSecLbl foSecAdd"><span data-ico="invite"></span> 친구 추가</div>'
     +'<div class="foAdd"><input id="foSearch" placeholder="추가할 친구의 닉네임 또는 닉#코드" maxlength="30" onkeydown="if(event.key===\'Enter\')friendSearch()"><button class="foSearchBtn" onclick="friendSearch()">친구 검색</button></div>'
     +'<div id="foSearchResult"></div><div id="foReqSec"></div>'
     +'<div id="foFriends" class="foList"><div class="foEmpty">불러오는 중…</div></div>';
   paintIcons(body);
-  try{ const {friends,incoming}=await sbLoadFriends();
+  try{ const {friends,incoming}=sbReady()? await sbLoadFriends() : {friends:[],incoming:[]};
     const reqEl=document.getElementById('foReqSec');
     reqEl.innerHTML = incoming.length ? '<div class="foSecLbl">받은 친구 요청 <b>'+incoming.length+'</b></div><div class="foList">'+incoming.map(r=>
       '<div class="foRow">'+tagHTML(r.nick,r.tag)+'<span class="foBtns"><button class="foAccept" onclick="friendRespond(\''+r.fid+'\',true)">수락</button><button class="foDecline" onclick="friendRespond(\''+r.fid+'\',false)">거절</button></span></div>').join('')+'</div>' : '';
@@ -14136,6 +14154,7 @@ async function renderFriendList(){ const body=document.getElementById('msPanelBo
   }catch(e){ const f=document.getElementById('foFriends'); if(f) f.innerHTML='<div class="foEmpty">불러오기 실패</div>'; console.warn(e.message||e); } }
 async function friendSearch(){ const inp=document.getElementById('foSearch'), res=document.getElementById('foSearchResult'); if(!inp||!res) return;
   const q=(inp.value||'').trim(); if(!q){ res.innerHTML=''; return; }
+  if(!sbReady()){ res.innerHTML='<div class="foEmpty">친구 검색은 로그인 후 사용할 수 있어요</div>'; return; }
   res.innerHTML='<div class="foEmpty">검색 중…</div>';
   try{ const list=await sbSearchUser(q);
     res.innerHTML = list.length ? '<div class="foList">'+list.map(u=>'<div class="foRow found">'+tagHTML(u.nick,u.tag)+'<button class="foAdd2" onclick="friendAdd(\''+u.id+'\')">친구 요청</button></div>').join('')+'</div>'

@@ -646,6 +646,26 @@ async function groupLobby(){
     { const hb=document.getElementById('curSettingsBtn').getBoundingClientRect(), t0=its[0].getBoundingClientRect();
       assert(Math.abs(t0.width-t0.height)<=1,'정사각형이 아님: '+Math.round(t0.width)+'x'+Math.round(t0.height));
       assert(Math.abs(t0.width-hb.width)<=1,'☰('+Math.round(hb.width)+')와 칸('+Math.round(t0.width)+') 크기가 다름'); }
+    // ☰ 는 열리면 X 로 바뀌고, 그 X 만이 닫는 방법이다 — 바깥을 눌러도 안 닫힌다
+    { const btn=$('curSettingsBtn');
+      assert(btn.classList.contains('on'),'열렸는데 버튼이 X 상태가 아님');
+      const disp=sel=>getComputedStyle(btn.querySelector(sel)).display;   // ⚠ visible()은 SVG에 못 쓴다(offsetParent 없음)
+      assert(disp('.icoX')!=='none' && disp('.icoBars')==='none','아이콘이 X 로 안 바뀜: X='+disp('.icoX')+' ☰='+disp('.icoBars'));
+      // 전장을 눌러도 열려 있고, 캐릭터는 정상적으로 움직인다(바깥 판이 터치를 막으면 안 된다)
+      const cv=$('hbCv').getBoundingClientRect(), fx=cv.left+40, fy=cv.top+cv.height*0.6;
+      const ft=document.elementFromPoint(fx,fy);
+      assert(ft && !$('hbMoreSheet').contains(ft),'열린 메뉴의 바깥 판이 전장 터치를 가로챈다: '+(ft?(ft.id||ft.className):'none'));
+      _hb.char.tx=null; hbFieldTap({target:ft, clientX:fx, clientY:fy});
+      assert(visible($('hbMoreSheet')),'전장을 눌렀더니 메뉴가 닫힘(X 로만 닫혀야 한다)');
+      assert(_hb.char.tx!=null,'메뉴가 열려 있다고 전장 조작이 막힘');
+      // ⚠ 목적지를 남기면 뒤 스텝에서 캐릭터가 걸어가 버린다(상자·스폰 검사가 줄줄이 깨졌다)
+      _hb.char.tx=null; _hb.char.ty=null; _hb.char.x=0; _hb.char.y=0; hbResize();
+      // 오른쪽 끝에 붙는다
+      const ph=$('phone').getBoundingClientRect(), bx=$('hbMoreBox').getBoundingClientRect();
+      assert(ph.right-btn.getBoundingClientRect().right<=4,'☰ 가 오른쪽 끝에 안 붙음');
+      assert(ph.right-bx.right<=4,'드롭다운이 오른쪽 끝에 안 붙음'); }
+    // 설정 칸은 톱니바퀴 — ☰ 와 같은 삼선을 쓰면 '메뉴 안의 메뉴'로 보인다
+    assert(document.querySelector('#hbMoreGrid [data-k="set"] circle'),'설정 아이콘이 톱니바퀴가 아님');
     // 건설을 고르면 시트가 닫히고 메뉴가 화면 안에 뜬다(필드를 눌러 배치해야 하므로)
     PROF().pcoin=99999;
     document.querySelector('#hbMoreGrid [data-k="build"]').click(); await sleep(250);
