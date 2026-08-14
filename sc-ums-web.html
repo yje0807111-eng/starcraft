@@ -3141,32 +3141,38 @@
   .hbRdRw{position:absolute;right:3px;top:2px;font-style:normal;font-size:9px;line-height:1}
   .hbRoundNote{flex:none;padding:8px 12px 0;font-size:var(--fs-sm);color:#7a7a7a;line-height:1.5}
   /* ══ 📅 일일 — 출석 캘린더 + 일일 퀘스트. 껍데기는 .hbModal/.hbmCard, 줄은 .hbRow 그대로 ══ */
-  /* 주간 진행(퀘스트 판 맨 위) — '매일 들어와야 채워진다'를 먼저 보여 준다 */
-  .dqWeek{padding:9px 10px;background:rgba(255,255,255,.03);
-    border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
-  .dqWeekHd{display:flex;align-items:center;justify-content:space-between;gap:8px}
-  .dqWeekHd b{font-size:var(--fs-lg);font-weight:800;color:#c8c8c8}
-  .dqWeekHd b em{font-style:normal;font-family:var(--font-num);font-variant-numeric:tabular-nums;
-    font-size:var(--fs-xl);color:#fff}
-  .dqWeek .dqBar{margin:7px 0 6px;height:4px}
-  .dqWeekRw{font-size:var(--fs-sm);line-height:1.5}
-  .dqWeekNo{margin-top:2px;font-size:var(--fs-xs);color:#6a6a6a}
-  .dqWeek.on{background:rgba(255,210,74,.09);border-color:rgba(255,210,74,.5);
-    box-shadow:0 0 16px -6px rgba(255,210,74,.8)}
-  .dqWeek.on .dqWeekHd b em{color:#ffd24a}
-  .dqWeek.on .dqBar u{background:#ffd24a}
-  .dqWeek.got{opacity:.5}
+  /* 주간 진행(퀘스트 판 맨 위) — 줄 생김새는 퀘스트와 같은 .hbRow.dqQ 를 그대로 쓴다(단일 소스).
+     이 껍데기는 '월요일 초기화' 한 줄을 아래에 붙이는 일만 한다. */
+  .dqWeek{display:flex;flex-direction:column}
+  .dqWeek.on>.hbRow{box-shadow:0 0 16px -6px rgba(255,210,74,.8)}
+  .dqWeekNo{padding:3px 4px 0;text-align:right;font-size:var(--fs-xs);color:#5a5a5a}
   /* .hbRowIco 는 원래 이모지·img 자리였다 — 선 아이콘(ICO)을 넣을 때의 크기를 여기서 준다 */
   .hbRowIco span[data-ico]{display:block;width:21px;height:21px;color:#c8c8c8}
   .hbRowIco span[data-ico] svg{width:100%;height:100%;display:block}
   .dqRi{width:12px;height:12px;object-fit:contain;vertical-align:-2px;margin-right:2px}   /* 보상 표기용 재화 아이콘(resIco) */
   .dqRw{color:#ffd24a}                                    /* 보상 = 금색(역할 액센트 §2) */
   .dqRw+.dqRw::before{content:' · ';color:#5a5a5a}
-  .dqBar{display:block;margin-top:4px;height:3px;border-radius:var(--r-bar);background:rgba(255,255,255,.08);overflow:hidden}
+  .dqBar{display:block;margin-top:5px;height:3px;border-radius:var(--r-bar);background:rgba(255,255,255,.08);overflow:hidden}
   .dqBar u{display:block;height:100%;text-decoration:none;background:#c8c8c8;transition:width .25s}
   .hbRow.dqQ.done .dqBar u{background:#ffd24a}
   .hbRow.dqQ.got{opacity:.5}
   .hbRow.dqQ.done{border-color:rgba(255,210,74,.4)}
+  /* 제목 = 무엇에 대한 것인지 · 그 아래 = 무엇을 얼마나(+진행). 보상은 줄에 없다 — 수령 버튼 안으로 갔다. */
+  .hbRow.dqQ .hbRowTx em{color:#8a8a8a;line-height:1.35}
+  .hbRow.dqQ .hbRowTx em i{font-style:normal;font-family:var(--font-num);font-variant-numeric:tabular-nums;
+    font-weight:800;color:#c8c8c8}
+  .hbRow.dqQ.done .hbRowTx em i{color:#ffd24a}
+  /* 수령 버튼 = 보상 + 받기. '무엇을 받는지'가 누르는 자리에 있어야 한다 */
+  .hbRow.dqQ .dqBtn{width:92px;height:auto;min-height:50px;padding:5px 5px 4px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+  .dqRwB{display:flex;flex-direction:column;align-items:center;gap:1px}
+  .dqRwB i{display:flex;align-items:center;gap:2px;font-style:normal;
+    font-family:var(--font-num);font-variant-numeric:tabular-nums;
+    font-size:var(--fs-xs);font-weight:800;color:#a68f4e;white-space:nowrap;line-height:1.15}
+  /* ⚠ 눌리는 상태의 버튼 면은 금색이다 — 그 위에 금색 글자를 얹으면 보상이 안 보인다(어두운 글자로) */
+  .dqBtn:not(:disabled) .dqRwB i{color:#4a3400}
+  .dqRwB img{width:11px;height:11px;object-fit:contain;display:block}
+  .dqBtn>b{font-size:var(--fs-sm);font-weight:900;line-height:1}
   /* 캘린더 — 4주 × (출석 5칸 + 보너스 2칸). 채워 넣는 맛이 나게 칸을 크게 잡지 않고 촘촘히 */
   .dqTop{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:2px 0 8px}
   .dqTop span{font-size:var(--fs-sm);color:#9a9a9a}
@@ -6071,22 +6077,23 @@ const DQ_WEEK_MAX=DQ_N*7;                              // 한 주에 나올 수 
 const DQ_WEEK_GOAL=25;                                 // 주간 목표 = 5일치. 이틀을 빠져도 채울 수 있다(출석 5/7과 같은 결)
 const DQ_TK={gear:'장비', pet:'펫', ally:'동료'};
 // 퀘스트 표 — kind 가 dqNote()의 계측 종류. cat:'hunt'=사냥터 / 'out'=바깥 구역
+//   name = 줄의 **제목**(무엇에 대한 것인지 한눈에) · desc = 그 아래 **내용**(무엇을 얼마나)
 const DQ_POOL=[
-  {id:'kill60',  cat:'hunt', ico:'marine',  kind:'kill',  goal:60,  name:'적 처치',        rw:{pcoin:900}},
-  {id:'kill150', cat:'hunt', ico:'marine',  kind:'kill',  goal:150, name:'적 처치',        rw:{pcoin:1800, gas:40}},
-  {id:'chest3',  cat:'hunt', ico:'box',     kind:'chest', goal:3,   name:'보급 상자 열기', rw:{pcoin:1200}},
-  {id:'chest6',  cat:'hunt', ico:'box',     kind:'chest', goal:6,   name:'보급 상자 열기', rw:{pcoin:2200, gear:1}},
-  {id:'upg5',    cat:'hunt', ico:'upg',     kind:'upg',   goal:5,   name:'업그레이드 구매', rw:{pcoin:1000}},
-  {id:'upg15',   cat:'hunt', ico:'upg',     kind:'upg',   goal:15,  name:'업그레이드 구매', rw:{pcoin:2400, gas:50}},
-  {id:'round3',  cat:'hunt', ico:'flag',    kind:'round', goal:3,   name:'라운드 클리어',  rw:{pcoin:1500}},
-  {id:'play300', cat:'hunt', ico:'rec',     kind:'play',  goal:300, name:'사냥터 플레이', lbl:'사냥터 5분 플레이', rw:{pcoin:1400, gas:30}},
-  {id:'build2',  cat:'hunt', ico:'build',   kind:'build', goal:2,   name:'기지에 건물 짓기', rw:{pcoin:1600}},
-  {id:'um1',     cat:'out',  ico:'map',     kind:'umRun', goal:1,   name:'유즈맵 플레이',  rw:{pcoin:2000, gas:60}},
-  {id:'um2',     cat:'out',  ico:'map',     kind:'umRun', goal:2,   name:'유즈맵 플레이',  rw:{pcoin:3600, gear:1}},
-  {id:'umWin1',  cat:'out',  ico:'globe',   kind:'umWin', goal:1,   name:'유즈맵 승리',    rw:{pcoin:3000, gem:3}},
-  {id:'dg1',     cat:'out',  ico:'dungeon', kind:'dgWin', goal:1,   name:'토벌 단계 클리어', rw:{pcoin:2200, gear:1}},
-  {id:'gacha1',  cat:'out',  ico:'gift',    kind:'gacha', goal:1,   name:'뽑기',           rw:{pcoin:1500}},
-  {id:'boost1',  cat:'out',  ico:'boost',   kind:'boost', goal:1,   name:'부스트 사용',    rw:{pcoin:1200}},
+  {id:'kill60',  cat:'hunt', ico:'marine',  kind:'kill',  goal:60,  name:'적 처치',      desc:'사냥터에서 적 60기 처치',     rw:{pcoin:900}},
+  {id:'kill150', cat:'hunt', ico:'marine',  kind:'kill',  goal:150, name:'적 처치',      desc:'사냥터에서 적 150기 처치',    rw:{pcoin:1800, gas:40}},
+  {id:'chest3',  cat:'hunt', ico:'box',     kind:'chest', goal:3,   name:'보급 상자',    desc:'필드의 보급 상자 3개 열기',   rw:{pcoin:1200}},
+  {id:'chest6',  cat:'hunt', ico:'box',     kind:'chest', goal:6,   name:'보급 상자',    desc:'필드의 보급 상자 6개 열기',   rw:{pcoin:2200, gear:1}},
+  {id:'upg5',    cat:'hunt', ico:'upg',     kind:'upg',   goal:5,   name:'업그레이드',   desc:'사냥터 업그레이드 5회 구매',  rw:{pcoin:1000}},
+  {id:'upg15',   cat:'hunt', ico:'upg',     kind:'upg',   goal:15,  name:'업그레이드',   desc:'사냥터 업그레이드 15회 구매', rw:{pcoin:2400, gas:50}},
+  {id:'round3',  cat:'hunt', ico:'flag',    kind:'round', goal:3,   name:'라운드',       desc:'라운드 3회 클리어',           rw:{pcoin:1500}},
+  {id:'play300', cat:'hunt', ico:'rec',     kind:'play',  goal:300, name:'플레이타임',   desc:'사냥터에서 5분 플레이',       rw:{pcoin:1400, gas:30}},
+  {id:'build2',  cat:'hunt', ico:'build',   kind:'build', goal:2,   name:'기지 건설',    desc:'기지에 건물 2채 짓기',        rw:{pcoin:1600}},
+  {id:'um1',     cat:'out',  ico:'map',     kind:'umRun', goal:1,   name:'유즈맵',       desc:'유즈맵에서 1판 플레이',       rw:{pcoin:2000, gas:60}},
+  {id:'um2',     cat:'out',  ico:'map',     kind:'umRun', goal:2,   name:'유즈맵',       desc:'유즈맵에서 2판 플레이',       rw:{pcoin:3600, gear:1}},
+  {id:'umWin1',  cat:'out',  ico:'globe',   kind:'umWin', goal:1,   name:'유즈맵 승리',  desc:'유즈맵에서 1승 거두기',       rw:{pcoin:3000, gem:3}},
+  {id:'dg1',     cat:'out',  ico:'dungeon', kind:'dgWin', goal:1,   name:'토벌',         desc:'토벌 단계 1회 클리어',        rw:{pcoin:2200, gear:1}},
+  {id:'gacha1',  cat:'out',  ico:'gift',    kind:'gacha', goal:1,   name:'뽑기',         desc:'아무 뽑기 1회',               rw:{pcoin:1500}},
+  {id:'boost1',  cat:'out',  ico:'boost',   kind:'boost', goal:1,   name:'부스트',       desc:'부스트 1회 사용',             rw:{pcoin:1200}},
 ];
 const DQ_BY={}; for(const _q of DQ_POOL) DQ_BY[_q.id]=_q;
 const DQ_ALL_RW={pcoin:5000, gas:200, gem:5};                                  // 하루 5개 완주 보너스
@@ -6209,8 +6216,8 @@ function dqClaimWeek(){ const D=dqState(); if(!D || D.wk.got || !dqWeekOpen()) r
   if(typeof playSfx==='function') playSfx('ui_confirm');
   if(typeof toast==='function') toast('🏆 주간 퀘스트 '+DQ_WEEK_GOAL+'개 달성 — '+tx);
   dqRefresh(); dqDot(); }
-// 이름은 '무엇을 몇 번'이 기본. 초 단위처럼 숫자를 뒤에 붙이면 이상한 것만 lbl 로 덮는다.
-function dqQName(Q){ return Q.lbl || (Q.name+' '+Q.goal); }
+// 토스트·로그처럼 한 줄로 말해야 하는 자리는 '내용'을 그대로 쓴다(제목만으론 무엇을 했는지 모른다)
+function dqQName(Q){ return Q.desc || (Q.name+' '+Q.goal); }
 // ── 출석 ──
 function dqAttCan(){ const D=dqState(); return !!(D && D.att.n<DQ_ATT_MAX && D.att.day!==_dgDayKey()); }
 function dqCheckIn(){ const D=dqState(); if(!D || !dqAttCan()) return;
@@ -6269,31 +6276,38 @@ function renderDaily(){ const box=document.getElementById('hbDailyBody'); if(!bo
   box.innerHTML=dqQuestHTML(); if(typeof paintIcons==='function') paintIcons(box); }
 function renderAtt(){ const box=document.getElementById('hbAttBody'); if(!box) return;
   box.innerHTML=dqAttHTML(); if(typeof paintIcons==='function') paintIcons(box); }
+// 수령 버튼 — '무엇을 받는지'가 버튼 안에 들어간다(보상 줄 + 받기). 줄 밖에 따로 적지 않는다.
+function dqClaimBtn(rw, act, done, got){
+  let r=''; { const t=[]; const ri=function(k,v){ return '<i>'+resIco(k,'dqRi')+v.toLocaleString('en-US')+'</i>'; };
+    if(rw.pcoin) t.push(ri('mineral',rw.pcoin));
+    if(rw.gas)   t.push(ri('gas',rw.gas));
+    if(rw.gem)   t.push(ri('gem',rw.gem));
+    for(const k in DQ_TK) if(rw[k]) t.push('<i>🎟 '+DQ_TK[k]+' ×'+rw[k]+'</i>');
+    r='<span class="dqRwB">'+t.join('')+'</span>'; }
+  return '<button class="hbRowBtn dqBtn" onclick="'+act+'"'+((done&&!got)?'':' disabled')+'>'
+    +r+'<b>'+(got?'완료':'받기')+'</b></button>'; }
+// 한 줄 = [아이콘] 제목 / 내용 · 진행 바 / [보상 + 받기]
+function dqRowHTML(o){
+  const pct=Math.min(100, Math.round((o.n||0)/o.goal*100));
+  return '<div class="hbRow dqQ'+(o.got?' got':(o.done?' done':''))+'">'
+    +'<span class="hbRowIco"><span data-ico="'+o.ico+'"></span></span>'
+    +'<span class="hbRowTx"><b>'+o.title+'</b>'
+    +'<em>'+o.desc+' <i>'+Math.min(o.n||0,o.goal)+'/'+o.goal+'</i></em>'
+    +'<i class="dqBar"><u style="width:'+pct+'%"></u></i></span>'
+    +dqClaimBtn(o.rw, o.act, o.done, o.got)+'</div>'; }
 function dqQuestHTML(){ const D=dqState(); if(!D) return '';
   // 맨 위 = 주간 진행. '오늘 5개'만 보이면 매일 들어올 이유가 약해져서, 주간 목표를 먼저 보여 준다.
   let h=''; { const n=dqWeekN(), open=dqWeekOpen(), got=dqWeekGot();
-    const pct=Math.min(100, Math.round(n/DQ_WEEK_GOAL*100));
     h+='<div class="dqWeek'+(got?' got':(open?' on':''))+'">'
-      +'<div class="dqWeekHd"><b>이번 주 <em>'+Math.min(n,DQ_WEEK_GOAL)+'</em> / '+DQ_WEEK_GOAL+'</b>'
-      +'<button class="hbRowBtn" onclick="dqClaimWeek()"'+((open&&!got)?'':' disabled')+'>'+(got?'완료':'받기')+'</button></div>'
-      +'<i class="dqBar"><u style="width:'+pct+'%"></u></i>'
-      +'<div class="dqWeekRw">'+dqRwTx(DQ_WEEK_RW)+'</div>'
+      +dqRowHTML({ico:'flag', title:'이번 주 퀘스트', desc:'퀘스트 '+DQ_WEEK_GOAL+'개 완료', n:n, goal:DQ_WEEK_GOAL,
+                  rw:DQ_WEEK_RW, act:'dqClaimWeek()', done:open, got:got})
       +'<div class="dqWeekNo">월요일에 0으로 돌아갑니다</div></div>'; }
   D.q.forEach(function(e,i){ const Q=DQ_BY[e.id]; if(!Q) return;
-    const done=e.n>=Q.goal, got=!!e.got, pct=Math.min(100, Math.round(e.n/Q.goal*100));
-    h+='<div class="hbRow dqQ'+(got?' got':(done?' done':''))+'">'
-      +'<span class="hbRowIco"><span data-ico="'+Q.ico+'"></span></span>'
-      +'<span class="hbRowTx"><b>'+dqQName(Q)+' <i>'+Math.min(e.n,Q.goal)+'/'+Q.goal+'</i></b>'
-      +'<em>'+dqRwTx(Q.rw)+'</em><i class="dqBar"><u style="width:'+pct+'%"></u></i></span>'
-      +'<button class="hbRowBtn" onclick="dqClaim('+i+')"'+((done&&!got)?'':' disabled')+'>'+(got?'완료':'받기')+'</button>'
-      +'</div>'; });
-  { const all=dqAllGot(), got=!!D.allGot;
-    h+='<div class="hbRow dqQ'+(got?' got':(all?' done':''))+'">'
-      +'<span class="hbRowIco"><span data-ico="gift"></span></span>'
-      +'<span class="hbRowTx"><b>오늘 5개 완주 <i>'+dqDoneN()+'/'+DQ_N+'</i></b>'
-      +'<em>'+dqRwTx(DQ_ALL_RW)+'</em></span>'
-      +'<button class="hbRowBtn" onclick="dqClaimAll()"'+((all&&!got)?'':' disabled')+'>'+(got?'완료':'받기')+'</button>'
-      +'</div>'; }
+    h+=dqRowHTML({ico:Q.ico, title:Q.name, desc:Q.desc, n:e.n, goal:Q.goal, rw:Q.rw,
+                  act:'dqClaim('+i+')', done:e.n>=Q.goal, got:!!e.got}); });
+  { const got=D.q.filter(function(e){ return e.got; }).length;   // '수령까지' 끝난 개수 — 조건(dqAllGot)과 같은 잣대로 센다
+    h+=dqRowHTML({ico:'gift', title:'오늘 완주', desc:'오늘의 퀘스트 '+DQ_N+'개 모두 수령', n:got, goal:DQ_N,
+                  rw:DQ_ALL_RW, act:'dqClaimAll()', done:dqAllGot(), got:!!D.allGot}); }
   return h; }
 function dqAttHTML(){ const D=dqState(); if(!D) return ''; const A=D.att;
   const can=dqAttCan();

@@ -794,7 +794,24 @@ async function groupLobby(){
     openDaily(); await sleep(150);
     assert(visible($('hbDailySheet')) && !visible($('hbAttSheet')),'퀘스트를 열었는데 출석 판까지 뜸');
     assert(document.querySelector('#hbDailyBody .dqWeek'),'퀘스트 판에 주간 진행이 없음');
-    assert(document.querySelectorAll('#hbDailyBody .hbRow.dqQ').length===DQ_N+1,'퀘스트 줄 + 완주 보너스가 안 맞음');
+    assert(document.querySelectorAll('#hbDailyBody .hbRow.dqQ').length===DQ_N+2,'주간 + 퀘스트 + 완주 줄이 안 맞음');
+    // 보상은 '줄'이 아니라 '수령 버튼 안'에 있어야 한다 — 무엇을 받는지가 누르는 자리에 있어야 한다
+    { const row=document.querySelectorAll('#hbDailyBody .hbRow.dqQ')[1];   // 첫 퀘스트 줄(0=주간)
+      assert(row.querySelector('.dqBtn .dqRwB'),'수령 버튼 안에 보상 표기가 없음');
+      assert(!row.querySelector('.hbRowTx .dqRw'),'보상이 아직 줄 본문에 남아 있음');
+      assert(row.querySelector('.hbRowTx b') && row.querySelector('.hbRowTx em'),'제목/내용 두 줄 구성이 아님');
+      const bw=row.querySelector('.dqBtn').getBoundingClientRect();
+      assert(bw.width>=80 && bw.height>=44,'수령 버튼이 안 커짐: '+Math.round(bw.width)+'x'+Math.round(bw.height));
+      const rr=row.getBoundingClientRect(), card=$('hbDailySheet').querySelector('.hbmCard').getBoundingClientRect();
+      assert(rr.right<=card.right+1,'줄이 카드 밖으로 넘침'); }
+    // 받을 수 있는 버튼은 면이 금색이다 — 그 위 보상 글자가 금색이면 안 보인다(대비 검사)
+    { const D=dqState(); D.q[0].n=DQ_BY[D.q[0].id].goal; D.q[0].got=0; renderDaily();
+      const b=document.querySelectorAll('#hbDailyBody .hbRow.dqQ')[1].querySelector('.dqBtn');
+      assert(!b.disabled,'완료했는데 수령 버튼이 잠겨 있음');
+      const lum=s=>{ const m=(s||'').match(/\d+/g)||[0,0,0]; return (+m[0]*0.3 + +m[1]*0.59 + +m[2]*0.11); };
+      const face=lum(getComputedStyle(b).backgroundColor)||lum('rgb(232,169,43)');
+      const tx=lum(getComputedStyle(b.querySelector('.dqRwB i')).color);
+      assert(Math.abs(face-tx)>60 || tx<90,'금색 면 위에 금색 보상 글자 — 안 보인다: 면'+Math.round(face)+' 글자'+Math.round(tx)); }
     closeDaily();
     // ⑧ 계측 지점이 실제 게임 코드에 붙어 있는가 — 여기가 빠지면 퀘스트가 영원히 0이다
     const H=[[hbKill,'kill'],[hbBreakChest,'chest'],[hmBuyUpg,'upg'],[hmBuyUpgQuiet,'upg'],
