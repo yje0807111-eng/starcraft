@@ -821,14 +821,15 @@ async function groupLobby(){
     hbCloseInfo();
     // ③ 파워 해금 — 표시만 하는 항목이 없어야 한다(전부 실제 상한을 바꾼다)
     p.unlocks={};
-    const b4={pet:profPetSlots(), ally:hbMateMax(), tur:hbBuildMax('turret'), off:profOfflineCapMin()};
-    p.unlocks={pet_slot3:1, ally_plus:1, turret_plus:1, pet_slot4:1, idle_12h:1};
+    const b4={pet:profPetSlots(), tur:hbBuildMax('turret'), off:profOfflineCapMin()};
+    p.unlocks={pet_slot3:1, turret_plus:1, pet_slot4:1, idle_12h:1};
     assert(profPetSlots()>b4.pet,'펫 슬롯 해금이 반영 안 됨: '+b4.pet+' → '+profPetSlots());
-    assert(hbMateMax()>b4.ally,'동료 정원 해금이 반영 안 됨: '+b4.ally+' → '+hbMateMax());
+    // 동료 정원은 해금과 무관하게 3칸 고정이다 — 늘리는 해금을 두지 않기로 했다
+    assert(hbMateMax()===HB_MATE_PARTY,'동료 정원이 해금으로 늘어남(3칸 고정이어야 한다): '+hbMateMax());
     assert(hbBuildMax('turret')>b4.tur,'터렛 최대 해금이 반영 안 됨');
     assert(profOfflineCapMin()>b4.off,'오프라인 상한 해금이 반영 안 됨');
     // 해금 표의 모든 항목이 실제로 쓰이는지(코드에 배선된 id인지)
-    const wired=['idle_arena','evolve','idle_8h','pet_slot3','ally_plus','turret_plus','pet_slot4','idle_12h'];
+    const wired=['idle_arena','evolve','idle_8h','pet_slot3','turret_plus','pet_slot4','idle_12h'];
     for(const u of PROF_UNLOCKS) assert(wired.indexOf(u.id)>=0,'배선 안 된 해금 항목: '+u.id);
     p.unlocks={}; profSyncUnlocks();
     return '해금 '+PROF_UNLOCKS.length+'단계 · 파워 '+profPower(); });
@@ -2329,7 +2330,7 @@ async function groupLobby(){
     // ⚠ 정원을 '채울 수 있을 만큼' 넣어야 교체 경로가 실제로 돌아간다
     //    (예전엔 보유가 정원보다 적어 교체 검사가 통째로 건너뛰어져 red-test가 안 걸렸다)
     { const p=PROF();
-      p.unlocks=Object.assign({}, p.unlocks, {pet_slot3:1, ally_plus:1});
+      p.unlocks=Object.assign({}, p.unlocks, {pet_slot3:1});
       p.pets={ wolf:{star:1,dup:2,fed:0}, slime:{star:0,dup:0,fed:0}, tiger:{star:0,dup:3,fed:0},
                owl:{star:0,dup:0,fed:0}, golem:{star:0,dup:0,fed:0} };
       p.equip=['wolf','slime','tiger'].slice(0, profPetSlots());
@@ -2407,7 +2408,9 @@ async function groupLobby(){
     // ⑥ 조작(2026-08-14 개편) — 자동선택 / 해제 / 상태창 / 교체 유도 / 등급 일괄 합성
     for(const k of ['pet','ally']){ setGearTab(k); await sleep(40);
       const M=MG[k];
-      assert(M.max()===3 || M.max()===4, k+': 정원이 3(해금 시 4)이 아님: '+M.max());
+      // 동료는 3칸 고정 · 펫은 슬롯 해금으로 늘 수 있다
+      if(k==='ally') assert(M.max()===3, k+': 정원이 3칸 고정이 아님: '+M.max());
+      else assert(M.max()>=2 && M.max()<=4, k+': 펫 슬롯 수가 범위를 벗어남: '+M.max());
       // ⚡ 자동 선택 — 가장 강한 순서대로 정원만큼 들어간다
       for(const id of M.on().slice()) M.toggle(id);
       assert(M.on().length===0,k+': 비우지 못함');
