@@ -2326,9 +2326,17 @@ async function groupLobby(){
   await step('정비: 전용 화면 · 장비/펫/동료 탭 · 렌더러 재사용', async()=>{ skipIf(typeof openGear!=='function','정비 화면 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','정비'); saveMeta(); }
     // 등급 표기를 보려면 실제 보유가 있어야 한다 — 비어 있으면 검사가 헛돈다
+    // ⚠ 정원을 '채울 수 있을 만큼' 넣어야 교체 경로가 실제로 돌아간다
+    //    (예전엔 보유가 정원보다 적어 교체 검사가 통째로 건너뛰어져 red-test가 안 걸렸다)
     { const p=PROF();
-      p.pets={ wolf:{star:1,dup:2,fed:0}, slime:{star:0,dup:0,fed:0} }; p.equip=['wolf'];
-      const H=hbHunt(); H.mates={ sniper:{lv:2,dup:1}, sentinel:{lv:1,dup:0} }; H.party=['sniper'];
+      p.unlocks=Object.assign({}, p.unlocks, {pet_slot3:1, ally_plus:1});
+      p.pets={ wolf:{star:1,dup:2,fed:0}, slime:{star:0,dup:0,fed:0}, tiger:{star:0,dup:3,fed:0},
+               owl:{star:0,dup:0,fed:0}, golem:{star:0,dup:0,fed:0} };
+      p.equip=['wolf','slime','tiger'].slice(0, profPetSlots());
+      const H=hbHunt();
+      H.mates={ sniper:{lv:2,dup:1}, sentinel:{lv:1,dup:0}, spike:{lv:1,dup:2},
+                phantom:{lv:1,dup:0}, gunner:{lv:1,dup:0}, goliath:{lv:1,dup:0} };
+      H.party=['sniper','sentinel','spike','phantom','gunner'].slice(0, hbMateMax());
       saveMeta(); }
     navGo('gear'); await sleep(60);
     assert(visible($('gearScreen')),'네비 정비가 전용 화면을 안 엶');
@@ -2369,16 +2377,21 @@ async function groupLobby(){
       const a=rows[0].getBoundingClientRect(), b2=rows[1].getBoundingClientRect();
       assert(b2.top>=a.bottom-1, t+' 탭 상단이 아직 가로 배치임(세로로 쌓여야 한다)');
       assert(a.width>200, t+' 탭 슬롯이 한 줄 폭을 안 씀: '+Math.round(a.width));
-      // 카드 오른쪽 = 이름·능력치, 그 옆 = + 확장 칸
+      // 줄 구성 = [카드][이름·능력치·확장칸][합성][해제]
       const card=rows[0].querySelector('.mgCard'), name=rows[0].querySelector('.mgName');
       const stat=rows[0].querySelector('.mgStat'), add=rows[0].querySelectorAll('.mgAddBtn');
+      const btns=[].slice.call(rows[0].querySelectorAll('.mgBtn'));
       assert(card&&name&&stat,t+' 탭 줄 구성이 [카드][이름·능력치]가 아님');
       assert(name.getBoundingClientRect().left>=card.getBoundingClientRect().right-1,t+' 탭 이름이 카드 오른쪽이 아님');
       assert(stat.textContent.trim().length>0,t+' 탭 능력치 줄이 비어 있음');
-      // 확장 칸은 '있어야' 한다 — 표와 일치만 보면 0개로 줄여도 통과해 버린다
       assert(MG_ADD_SLOTS>=1,'추가 능력치·스킬 확장 칸이 0개로 꺼져 있음');
       assert(add.length===MG_ADD_SLOTS,t+' 탭 + 확장 칸 수가 표와 다름: '+add.length+' vs '+MG_ADD_SLOTS);
-      assert(add[0].getBoundingClientRect().left>=name.getBoundingClientRect().right-1,t+' 탭 + 칸이 이름 오른쪽이 아님'); }
+      // 합성·해제는 줄 오른쪽 끝
+      const tx=btns.map(b=>b.textContent.trim());
+      assert(tx.indexOf('합성')>=0 && tx.indexOf('해제')>=0,t+' 탭에 합성·해제 버튼이 없음: '+tx.join(','));
+      assert(btns[0].getBoundingClientRect().left>=name.getBoundingClientRect().right-1,t+' 탭 버튼이 이름 오른쪽이 아님');
+      // 경험치 막대가 있어야 '합성으로 오른다'가 보인다
+      assert(rows[0].querySelector('.mgExp'),t+' 탭에 경험치 막대가 없음'); }
     // ⑤ 등급 표현은 세 탭 모두 '테두리 색' 하나로 통일한다 — 글자색·배지로 갈라 쓰지 않는다
     { const tierCols=Object.keys(TIER_COLOR).map(k=>TIER_COLOR[k].toLowerCase());
       const hex=rgb=>{ const m=(rgb.match(/\d+/g)||[]).slice(0,3).map(Number);
@@ -2390,6 +2403,59 @@ async function groupLobby(){
         for(const el of cells){ const c=getComputedStyle(el);
           if(tierCols.indexOf(hex(c.borderTopColor))>=0) tinted++; }
         assert(tinted===cells.length, t+' 탭에서 등급이 테두리 색으로 안 나옴: '+tinted+'/'+cells.length); } }
+    // ⑥ 조작 — 해제 → 빈 자리(＋) · 하단 탭 → 추가/교체 팝업 · 합성 → 경험치가 오른다
+    for(const k of ['pet','ally']){ setGearTab(k); await sleep(40);
+      const M=MG[k];
+      // 해제하면 그 자리가 빈 슬롯이 된다
+      const before=M.on().slice(), victim=before[0];
+      assert(victim,k+': 올라가 있는 것이 없어 검사 불가');
+      mgUnequip(k, victim); await sleep(30);
+      assert(M.on().indexOf(victim)<0,k+': 해제해도 안 내려감');
+      assert(document.querySelector('#gearBody .mgSlot.empty'),k+': 해제한 자리가 빈 슬롯(＋)이 안 됨');
+      // 하단 카드를 누르면 팝업이 뜨고, 거기서 빈 자리에 추가된다
+      mgCellTap(k, victim); await sleep(30);
+      assert(document.querySelector('#gearBody .mgSheet'),k+': 하단 카드를 눌러도 팝업이 안 뜸');
+      mgPickAdd(); await sleep(30);
+      assert(M.on().indexOf(victim)>=0,k+': 팝업 추가가 반영되지 않음');
+      assert(!document.querySelector('#gearBody .mgSheet'),k+': 추가 뒤 팝업이 안 닫힘');
+      // 자리가 찼을 때는 '교체'로 갈아 끼운다
+      { const spare=M.owned().find(id=>M.on().indexOf(id)<0);
+        assert(spare,k+': 교체 검사 불가 — 보유가 정원보다 많아야 한다');
+        while(M.on().length<M.max()){ const f=M.owned().find(id=>M.on().indexOf(id)<0 && id!==spare); if(!f) break; M.toggle(f); }
+        assert(M.on().length>=M.max(),k+': 교체 검사 불가 — 정원을 채우지 못함 '+M.on().length+'/'+M.max());
+        { const old=M.on()[0];
+            mgCellTap(k, spare); await sleep(30);
+            assert(document.querySelector('#gearBody .mgSheet'),k+': 꽉 찼을 때 팝업이 안 뜸');
+            // 교체 후보가 정원만큼 늘어나도 팝업이 화면 밖으로 잘리면 안 된다(여기가 가장 긴 경우다)
+            { const card=document.querySelector('.mgSheetCard'), ph=$('phone').getBoundingClientRect();
+              const r=card.getBoundingClientRect(), nav=$('navBar').getBoundingClientRect();
+              assert(document.querySelectorAll('.twBtn.swap').length===M.max(),
+                k+': 교체 후보 수가 정원과 다름 '+document.querySelectorAll('.twBtn.swap').length+'/'+M.max());
+              // ⚠ '화면 안에 있나'로는 부족하다 — 팝업이 가방 구역 안에 갇히면 rect 는 멀쩡한데
+              //    내용이 그 좁은 상자 안에서 스크롤돼 잘려 보인다(실측: 상자 236px / 내용 296px).
+              //    그래서 '덮개가 화면 전체를 덮는가'를 본다.
+              const sheet=document.querySelector('.mgSheet').getBoundingClientRect();
+              assert(sheet.height>=ph.height*0.9,
+                k+': 팝업 덮개가 화면 전체를 안 덮음(구역 안에 갇힘) — '+Math.round(sheet.height)+' vs 화면 '+Math.round(ph.height));
+              assert(r.top>=ph.top-1 && r.bottom<=ph.bottom+1,
+                k+': 교체 팝업이 화면 밖으로 넘침 '+Math.round(r.top)+'~'+Math.round(r.bottom));
+              assert(r.bottom<=nav.top+1,
+                k+': 교체 팝업이 하단 네비에 가림 — 카드 bottom '+Math.round(r.bottom)+' vs 네비 top '+Math.round(nav.top)); }
+            mgPickSwap(old); await sleep(30);
+            assert(M.on().indexOf(spare)>=0 && M.on().indexOf(old)<0,k+': 교체가 반영되지 않음');
+            assert(M.on().length<=M.max(),k+': 교체로 정원을 넘김'); } }
+      // 합성 — 재료(중복)를 넣으면 경험치가 오른다
+      { const tgt=M.on()[0], mat=M.owned().find(id=>M.dup(id)>0);
+        if(tgt && mat){ const e0=M.exp(tgt).cur, lv0=M.lvTx(tgt);
+          mgFeedStart(k, tgt); await sleep(30);
+          assert(document.querySelector('#gearBody .mgSlot.feeding'),k+': 합성 모드 표시가 없음');
+          const dup0=M.dup(mat);
+          mgCellTap(k, mat); await sleep(30);
+          assert(M.dup(mat)===dup0-1,k+': 재료가 소모되지 않음');
+          const e1=M.exp(tgt).cur;
+          assert(e1>e0 || M.lvTx(tgt)!==lv0,k+': 합성해도 경험치·레벨이 그대로: '+e0+'→'+e1);
+          mgFeedStart(k, tgt); } }
+    }
     setGearTab('ally'); await sleep(40);
     assert($('gearBody').textContent.indexOf('동료')>=0,'동료 탭에 동료 표기가 없음');
     setGearTab('gear'); await sleep(40);
