@@ -267,8 +267,9 @@ async function groupLobby(){
         assert(it.every(b=>b.querySelector('img')),'건설 목록에 건물 아이콘이 없음');
         hbToggleBuild();
         assert(!document.querySelector('#hbBuildWrap .hbBdMenu'),'다시 눌렀는데 목록이 안 닫힘');
-        // 토벌·부스트도 좌상단 줄로 갔다
-        assert(document.getElementById('hbDgBtn')&&document.getElementById('hbBoostBtn'),'토벌·부스트가 좌상단에 없음'); }
+        // 토벌·부스트·건설은 ☰ 더보기 시트로 갔다(2026-08-12) — 좌상단에는 없다
+        assert(!document.getElementById('hbDgBtn')&&!document.getElementById('hbBoostBtn'),'토벌·부스트가 아직 좌상단에 있음');
+        assert(typeof hbOpenMore==='function','더보기가 없는데 좌상단에서도 빠졌다 — 들어갈 길이 사라진다'); }
       assert(typeof hbOpenBuild!=='function','건설 팝업이 아직 남아 있음(패널로 흡수됐어야 한다)');
       hmUpgTab(before); }
     // 수량은 한 칸을 눌러 돌린다 — 1 → 10 → MAX → 1. 폭은 라벨이 바뀌어도 고정
@@ -327,7 +328,8 @@ async function groupLobby(){
     assert(visible($('mapSelect')),'네비 유즈맵이 목록을 안 엶');
     // 유즈맵도 하단 네비로 이동한다(좌상단 뒤로가기 버튼은 없앴다)
     assert(visible($('navBar')),'유즈맵 화면에 네비가 없음');
-    assert(document.querySelector('#navBar .navIt.on').dataset.nav==='map','유즈맵 탭이 활성이 아님');
+    assert(document.querySelectorAll('#navBar .navIt[data-sub]').length===3,'유즈맵 하위(소셜)가 3칸이 아님');
+    assert(document.getElementById('msSortTabs'),'유즈맵 정렬 띠가 화면 위에 없음');
     assert(!document.querySelector('#mapSelect .msHeadL .twBack'),'유즈맵 좌상단 뒤로가기 버튼이 아직 있음');
     mapToHub(); await sleep(80);
     assert(visible($('homeScreen')),'유즈맵에서 뒤로 갔는데 HOME으로 안 옴 [DBG 보이는화면='+
@@ -339,10 +341,11 @@ async function groupLobby(){
     assert(document.querySelector('#navBar .navIt.on').dataset.nav==='home','HOME 탭이 활성이 아님');
     // 정비 탭 = 장비·펫·동료 전용 화면 · 상점 탭 = 상점 전용 화면
     navGo('gear'); await sleep(60);
-    assert(document.querySelector('#navBar .navIt.on').dataset.nav==='gear','정비 탭이 활성이 아님');
+    // 정비·유즈맵·상점은 내려가므로 구역 칸(.on)이 없다 — 화면과 하위 칸으로 확인한다
     assert(visible($('gearScreen')),'네비 정비가 화면을 안 엶');
+    assert(document.querySelectorAll('#navBar .navIt[data-sub]').length===3,'정비 하위가 3칸이 아님');
     navGo('shop'); await sleep(60);
-    assert(document.querySelector('#navBar .navIt.on').dataset.nav==='shop','상점 탭이 활성이 아님');
+    assert(document.querySelectorAll('#navBar .navIt[data-sub]').length===5,'상점 하위가 5칸이 아님');
     openHome(); await sleep(60);
     return 'HOME 카드 1개 + 네비 5칸(home·정비·마을·유즈맵·상점) ok'; });
   // 폰트 3종 — 제목 Jua(내장) · 본문 Noto Sans KR Bold(내장) · 숫자 Rajdhani(웹폰트).
@@ -492,7 +495,7 @@ async function groupLobby(){
     openHome(); await sleep(60);
     for(const fn of ['profAllocStat','hmAllocStat','profDoAlloc','profGainStats'])
       assert(typeof window[fn]==='undefined','스탯 배분 경로가 남아 있음: '+fn);
-    assert(!document.querySelector('#hmStatRow .hmStat:not(.grow)'),'HOME에 스탯 배분 버튼이 남아 있음');
+    assert(!document.querySelector('.hmStat'),'HOME에 스탯 배분/성장 줄이 남아 있음');
     const c=CHAR(), p=PROF();
     const raw=()=>{ let v=0; for(const k of PROF_STATS) v+=c.unit.stats[k]||0; return v; };
     const st0=raw(), pc0=p.pcoin||0, lv0=c.level;
@@ -601,6 +604,40 @@ async function groupLobby(){
     assert(!S.chests.some(ch=>ch.x===9&&ch.y===9),'지난 웨이브 상자가 그대로 있음');
     S.foes.length=0; S.pend.length=0; S.chests.length=0; S.round=1; hbHunt().round=1;
     return '실패→'+HB_FAIL_S+'초→1웨이브 · 가운데 · 최대 체력 ok'; });
+  // ☰ 는 공용 HUD 버튼이다 — 사냥터에서는 더보기, 유즈맵에서는 그대로 설정.
+  await step('더보기: 사냥터 ☰ = 판 모음 · 유즈맵 ☰ = 설정', async()=>{
+    skipIf(typeof hbOpenMore!=='function','더보기 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    openHome(); await sleep(600);
+    // 좌상단 줄에서 빠졌는지 — 판 여는 것이 두 곳에 있으면 어디를 눌러야 할지 모른다
+    const row=[...document.querySelector('.hbIcoRow').children].filter(visible)
+      .map(e=>e.getAttribute('aria-label')||e.id);
+    for(const gone of ['토벌','부스트']) assert(row.indexOf(gone)<0,'좌상단에 '+gone+'이 남아 있음: '+row.join(','));
+    assert(!visible(document.querySelector('#hbBuildWrap > .hbRoundBtn')),'좌상단에 건설 버튼이 남아 있음');
+    // ☰ → 더보기(설정이 아니라)
+    $('settingsBtn').click(); await sleep(150);
+    assert(visible($('hbMoreSheet')),'사냥터 ☰ 가 더보기를 안 엶');
+    assert(!visible($('settingsPop')),'사냥터 ☰ 가 설정을 엶');
+    const its=[...document.querySelectorAll('#hbMoreGrid .hbMoreIt')];
+    assert(its.length===HB_MORE.length,'항목 수가 다름: '+its.length);
+    const cols=getComputedStyle($('hbMoreGrid')).gridTemplateColumns.split(' ').length;
+    assert(cols===3,'3칸 격자가 아님: '+cols);   // 5항목 → 2줄
+    for(const it of its) assert(it.querySelector('svg'),'아이콘이 안 그려진 항목: '+it.textContent);
+    // 건설을 고르면 시트가 닫히고 메뉴가 화면 안에 뜬다(필드를 눌러 배치해야 하므로)
+    PROF().pcoin=99999;
+    document.querySelector('#hbMoreGrid [data-k="build"]').click(); await sleep(250);
+    assert(!visible($('hbMoreSheet')),'건설을 골랐는데 시트가 안 닫힘');
+    const menu=document.querySelector('.hbBdMenu'); assert(visible(menu),'건설 메뉴가 안 열림');
+    { const m=menu.getBoundingClientRect(), ph=$('phone').getBoundingClientRect();
+      assert(m.left>=ph.left-1 && m.right<=ph.right+1 && m.bottom<=ph.bottom+1,'건설 메뉴가 화면 밖으로 나감'); }
+    if(typeof hbToggleBuild==='function') hbToggleBuild();
+    // 유즈맵에서는 같은 버튼이 설정이어야 한다
+    hbStop(); enterSandbox(); await sleep(700);
+    $('settingsBtn').click(); await sleep(200);
+    assert(visible($('settingsPop')),'유즈맵 ☰ 가 설정을 안 엶');
+    assert(!visible($('hbMoreSheet')),'유즈맵에서 더보기가 열림');
+    $('settingsPop').classList.add('hide');
+    return '항목 '+its.length+'개 · 3칸 2줄 · 유즈맵은 설정 유지'; });
   // 📦 상자 — 맵을 돌아다닐 이유. '공격 대상'이라 사거리 안에 있어야 부순다.
   await step('상자: 사거리 안일 때만 부수고 · 적이 우선 · 보상은 섞여 나온다', async()=>{
     skipIf(typeof hbSpawnChest!=='function','상자 없음');
@@ -743,7 +780,7 @@ async function groupLobby(){
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(60); _hb.manual=true;
     // ① 방치 수입 = 자동사냥 실적. 클리어 전에는 옛 공식으로 떨어진다.
-    const p=PROF(), c=CHAR();
+    let p=PROF(), c=CHAR();
     delete p.hunt.rate;
     const before=profIdleRate();
     assert(before>0,'첫 클리어 전 수입이 0');
@@ -753,22 +790,23 @@ async function groupLobby(){
     assert(clears>0,'라운드 클리어가 안 됨');
     assert(p.hunt.rate>0,'실측 시급이 기록되지 않음');
     assert(profIdleRate()>before,'방치 수입이 자동사냥 실적을 안 따라감: '+before.toFixed(2)+' → '+profIdleRate().toFixed(2));
-    // ② 성장 팝업 — 진입점은 '조건이 찼을 때만'이 아니라 좌상단 아이콘으로 항상 열린다
+    // ② 성장 팝업 — 진입점은 '조건이 찼을 때만'이 아니라 항상 열려 있어야 한다.
     //    (전직 폐지 후 조건부 줄만 남기면 초반에 성장 화면을 아예 못 여는 문제가 있었다)
-    { const btn=$('hbGrowBtn');
+    //    2026-08-14: 좌상단 아이콘 → 사냥터 전용 네비의 '성장' 칸으로 옮겼다.
+    { const btn=$('hbGrowBtn');   // 사냥터 하위는 네비가 아니라 화면 상단 버튼줄이 맡는다(2026-08-14 되돌림)
       assert(btn && visible(btn),'성장 팝업 진입 아이콘(#hbGrowBtn)이 없음');
       hbCloseGrow(); btn.click(); await sleep(40);
-      assert(visible($('hbGrowModal')),'아이콘을 눌렀는데 성장 팝업이 안 열림'); }
+      assert(visible($('hbGrowModal')),'아이콘을 눌렀는데 성장 팝업이 안 열림'); hbCloseGrow(); }
     // ③ 전직은 사라졌다 — 흔적이 남아 있으면 안 된다
     assert(typeof profClassChange==='undefined','전직 함수가 아직 남아 있음');
     assert($('hbGrowBody').textContent.indexOf('전직')<0,'성장 팝업에 전직이 남음');
     for(const id in PROF_JOBS) assert(!PROF_JOBS[id].next,'직업 트리(next)가 아직 남아 있음: '+id);
     assert(Object.keys(PROF_JOBS).length===Object.keys(PROF_CLASSES).length,'직업이 뿌리 3종이 아님');
-    // ④ 환생 — 조건을 채우면 성장 줄 배지가 뜨고, 팝업에서 실행할 수 있다
+    // ④ 환생 — 조건이 차면 상단 성장 버튼에 ! 배지(패널 안 줄은 폐기 — 높이가 흔들렸다 · 2026-08-14)
     c.level=PROF_REB_EVERY; c.unit.level=PROF_REB_EVERY; p.pcoin=50000;
     renderHome();
-    assert(visible($('hmStatRow')),'환생 가능한데 성장 줄이 안 보임');
-    assert(document.querySelector('.hmStat.grow'),'성장 배지가 없음');
+    assert(visible($('hbGrowDot')),'환생 가능한데 성장 배지(!)가 안 보임');
+    assert(!document.getElementById('hmStatRow'),'옛 성장 줄이 아직 패널에 있음');
     renderGrowModal();
     assert($('hbGrowBody').textContent.indexOf('환생')>=0,'성장 팝업에 환생이 없음');
     // ⑤ 진화 잠금 안내는 레벨 기준(옛 '파워 350' 문구가 남아 있으면 안 된다)
@@ -776,9 +814,9 @@ async function groupLobby(){
     if(!r.unlock) assert($('hbGrowBody').textContent.indexOf('Lv.'+profUnlockNeed('evolve'))>=0,'진화 잠금 안내가 레벨 기준이 아님');
     assert($('hbGrowBody').textContent.indexOf('파워 350')<0,'옛 파워 문구가 남음');
     hbCloseGrow();
-    // ⑥ 할 게 없으면 '줄'은 숨는다 — 단 아이콘 진입점은 그대로 남아야 한다
+    // ⑥ 할 게 없으면 배지는 꺼진다 — 단 버튼 진입점은 그대로 남아야 한다
     c.level=1; c.unit.level=1; p.pcoin=0; renderHome();
-    assert(!visible($('hmStatRow')),'할 게 없는데 성장 줄이 남아 있음');
+    assert(!visible($('hbGrowDot')),'할 게 없는데 성장 배지가 남아 있음');
     assert(visible($('hbGrowBtn')),'성장 아이콘까지 사라짐(항상 열려 있어야 한다)');
     return '실측 '+p.hunt.rate.toFixed(2)+'/s · 직업 '+PROF_JOBS[CHAR().unit.jobId].name; });
   // Phase 4 — 스킬 · 부스트 · 동료/펫 · 건설(터렛·벙커)
@@ -1483,11 +1521,15 @@ async function groupLobby(){
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     // 토벌 입구는 네비가 아니라 HOME 스킬 바의 버튼 하나뿐 — 없어지면 들어갈 길이 사라진다
     openHome(); await sleep(80);
-    // 토벌 입구는 좌상단 아이콘 줄(.hbIcoRow)의 버튼 하나 — 하단 바에는 스킬만 남았다
-    assert(document.getElementById('hbDgBtn'),'HOME 토벌 버튼이 없음');
+    // 토벌 입구는 ☰ 더보기 시트 안의 항목 하나 — 하단 바에는 스킬만 남았다(2026-08-12)
+    assert(typeof hbOpenMore==='function','더보기가 없음');
+    hbOpenMore(); await sleep(120);
+    assert(document.querySelector('#hbMoreGrid [data-k="dg"]'),'더보기에 토벌 항목이 없음 — 들어갈 길이 사라진다');
+    hbCloseMore();
     assert(![...document.querySelectorAll('#hbBar .hbSk')].some(b=>b.textContent.indexOf('토벌')>=0),
       '하단 바에 토벌이 남아 있음');
-    document.getElementById('hbDgBtn').click(); await sleep(80);
+    hbOpenMore(); await sleep(100);
+    document.querySelector('#hbMoreGrid [data-k="dg"]').click(); await sleep(250);   // 시트가 닫히고 허브가 열린다
     const hub=document.getElementById('dgHubBody');
     assert(visible(hub),'토벌 허브가 안 열림');
     assert(hub.textContent.indexOf('던전')<0,'토벌 화면에 던전 표기가 남음: '+hub.textContent.slice(0,60));
@@ -2058,6 +2100,85 @@ async function groupLobby(){
     const n=$('roomList').children.length; assert(n>0,'방 목록 비어있음'); $('rooms').classList.add('hide'); return n+'개 방'; });
     // 마을: 월드 좌표계 + 카메라. 헤드리스는 rAF가 멈춰 있어 twStep(dt)을 직접 pump한다.
       // 🎁 상점 = 팝업이 아니라 전용 화면. 네비·마을 구역 두 경로 모두 같은 화면으로 간다.
+  await step('하단 네비 2층: 구역 → 전용 네비 → 돌아가기', async()=>{
+    const read=()=>[...document.querySelectorAll('#navBar .navIt')].map(e=>e.dataset.nav||('~'+e.dataset.sub));
+    openHome(); await sleep(40);
+    // ① 최상위 = 5구역. NAV_TREE 가 단일 소스이므로 순서도 표에서 온다
+    assert(read().join(',')==='home,gear,upg,map,shop','최상위 네비가 5구역이 아님: '+read().join(','));
+    assert(document.querySelector('#navBar .navIt.on').dataset.nav==='home','사냥터가 활성이 아님');
+    // ② 사냥터는 내려가지 않는다 — 하위는 화면 상단 버튼줄이 맡는다
+    navGo('home'); await sleep(40);
+    assert(read().join(',')==='home,gear,upg,map,shop','사냥터를 눌렀는데 내려감: '+read().join(','));
+    for(const id of ['hbVillageBtn','hbMateBtn','hbGrowBtn'])
+      assert($(id),'사냥터 상단 버튼줄에 '+id+' 가 없음(네비에서 되돌아와야 한다)');
+    // ③ 내려가면 구역 칸도 사라지고 [‹] + 하위만 남는다
+    navGo('gear'); await sleep(60);
+    assert(read().join(',')==='back,~gear,~pet,~ally','정비 전용 네비가 아님: '+read().join(','));
+    for(const k of ['home','upg','map','shop'])
+      assert(!document.querySelector('#navBar .navIt[data-nav='+k+']'),'내려간 상태인데 '+k+' 칸이 남음');
+    // ④ 하위를 누르면 상태가 바뀌고 표시(.cur)가 따라온다
+    navSub('ally'); await sleep(40);
+    assert(_gearTab==='ally','하위를 눌러도 정비 탭이 안 바뀜: '+_gearTab);
+    assert(document.querySelector('#navBar .navIt.cur').dataset.sub==='ally','하위 선택 표시가 안 따라옴');
+    navSub('gear');   // 다음 스텝이 '기본 = 장비' 를 보므로 되돌린다
+    // ⑤ 돌아가기 = 사냥터 화면 + 최상위(홈이 허브)
+    navBack(); await sleep(40);
+    assert(visible($('homeScreen')),'돌아가기가 사냥터로 안 감');
+    assert(read().join(',')==='home,gear,upg,map,shop','돌아가기 후 최상위가 아님: '+read().join(','));
+    // ⑥ 상점 = 5구역 · 유즈맵 = 소셜 3구역(정렬은 화면 위 띠로 되돌렸다)
+    navGo('shop'); await sleep(60);
+    assert(read().join(',')==='back,~deal,~draw,~res,~pack,~gem','상점 전용 네비가 아님: '+read().join(','));
+    navGo('map'); await sleep(60);
+    assert(read().join(',')==='back,~chat,~friend,~party','유즈맵 전용 네비가 아님: '+read().join(','));
+    assert(document.querySelector('#navBar .navIt.cur').dataset.sub==='chat','유즈맵 기본 하위가 채팅이 아님');
+    assert(document.querySelectorAll('#msSortTabs .msSortTab').length===4,'유즈맵 정렬 띠가 화면 위로 안 돌아옴');
+    // ⑦ 소셜 = 유즈맵 하단 상주 구역(#msSocialDock). 시트가 아니라 항상 화면 몫을 차지한다.
+    //    ⛔ DOM(.msSocial)은 하나뿐 — 도크에 '옮겨' 온 것이어야 한다(복제 검사)
+    { const dock=$('msSocialDock');
+      assert(dock && visible(dock),'소셜 도크가 유즈맵 화면에 없음');
+      assert(dock.getBoundingClientRect().height>=150,'소셜 도크가 화면 몫을 못 받음');
+      assert(document.querySelectorAll('.msSocial').length===1,'소셜 DOM 이 복제됨');
+      assert(dock.querySelector('.msSocial'),'소셜이 도크로 안 옮겨짐');
+      assert(!visible(dock.querySelector('.msTabs2')),'도크 안 탭 띠가 네비와 중복 노출됨');
+      assert(visible(dock.querySelector('#msChatWrap')),'기본(채팅)인데 채팅 창이 안 보임'); }
+    navSub('party'); await sleep(40);
+    assert(document.querySelector('#twChat.hide'),'파티를 눌렀는데 마을 시트가 열림(도크가 맡아야 한다)');
+    assert(getComputedStyle($('msPanelBody')).display!=='none','파티 패널이 안 보임');
+    assert(document.querySelector('#navBar .navIt.cur').dataset.sub==='party','소셜 선택 표시가 안 따라옴');
+    // 마을 채팅 시트가 열리면 소셜을 되찾아 가고, 유즈맵에 다시 오면 도크로 돌아온다
+    openTown(); await sleep(40); twOpenChat(); await sleep(40);
+    assert(document.querySelector('#twChat .msSocial'),'마을 시트가 소셜을 못 되찾음');
+    assert(visible(document.querySelector('#twChat .msTabs2')),'마을 시트에선 탭 띠가 보여야 함(네비에 소셜 칸이 없다)');
+    twCloseChat(); navGo('map'); await sleep(60);
+    assert($('msSocialDock').querySelector('.msSocial'),'유즈맵 복귀 시 소셜이 도크로 안 돌아옴');
+    navSub('chat');   // 상태 정리(기본 채팅)
+    // ⑧ 판형: 최상위 등폭 · 뒤로 = 정사각 · 하위 선택(.cur) = 최상위 선택(.on)과 같은 판·링
+    navBack(); await sleep(40);
+    { const ws=[...document.querySelectorAll('#navBar .navIt')].map(e=>e.getBoundingClientRect().width);
+      assert(Math.max(...ws)-Math.min(...ws)<1.5,'최상위 칸이 등폭이 아님: '+ws.map(w=>w|0).join(','));
+      const on=getComputedStyle(document.querySelector('#navBar .navIt.on'));
+      navGo('gear'); }
+    await sleep(60);
+    { const bk=document.querySelector('#navBar .navIt.navBk').getBoundingClientRect();
+      assert(Math.abs(bk.width-bk.height)<1.5,'뒤로 칸이 정사각이 아님: '+(bk.width|0)+'×'+(bk.height|0));
+      const subs=[...document.querySelectorAll('#navBar .navIt[data-sub]')].map(e=>e.getBoundingClientRect().width);
+      assert(Math.max(...subs)-Math.min(...subs)<1.5,'하위 칸이 등폭이 아님: '+subs.map(w=>w|0).join(','));
+      const cur=getComputedStyle(document.querySelector('#navBar .navIt.cur'));
+      // .on 과 같은 물성인지 — 판(배경 그라데이션)과 글자색으로 잰다
+      const probe=document.createElement('button'); probe.className='navIt on'; $('navBar').appendChild(probe);
+      const on=getComputedStyle(probe);
+      assert(cur.backgroundImage===on.backgroundImage && cur.color===on.color,'하위 선택이 최상위 선택과 물성이 다름');
+      probe.remove(); }
+    navBack(); await sleep(40);
+    // ⑨ 칸이 라벨을 담을 수 있는가 — 가장 빡빡한 상점 6칸으로 잰다
+    navGo('shop'); await sleep(60);
+    { const cells=[...document.querySelectorAll('#navBar .navIt:not(.navBk)')];
+      const tight=cells.filter(e=>e.scrollWidth>e.clientWidth+1).map(e=>e.textContent.trim());
+      assert(!tight.length,'네비 칸에 라벨이 안 들어감: '+tight.join(', ')); }
+    navBack(); await sleep(40);
+    return '등폭 5칸 · 뒤로 48² · 소셜 도크 상주';
+  });
+
   await step('상점: 전용 화면(팝업 아님) · 네비/마을 구역 두 경로', async()=>{ skipIf(typeof openShop!=='function','상점 화면 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','상점'); saveMeta(); }
     navGo('shop'); await sleep(60);
@@ -2065,15 +2186,25 @@ async function groupLobby(){
     assert(!visible($('townPanel')),'상점이 아직 팝업으로 열림');
     assert(!visible($('townScreen')),'상점인데 마을 화면이 남아 있음');
     assert(document.querySelector('#shopBody .shopTitle'),'상점 제목줄이 없음');
-    assert(document.querySelectorAll('#shopBody .shopPanel').length>=3,'상점 구역 패널이 3개 미만');
+    // 구역 5개를 하단 네비로 나눴다(2026-08-14) — 화면에는 고른 구역 하나만 그린다
+    assert(document.querySelectorAll('#shopBody .shopPanel').length>=1,'상점 구역이 안 그려짐');
+    { const seen=[];
+      for(const k of ['deal','draw','res','pack','gem']){ setShopSec(k);
+        const hd=document.querySelector('#shopBody .shopHead');
+        assert(hd,'상점 구역 '+k+' 이 안 그려짐'); seen.push(hd.textContent.slice(0,4)); }
+      setShopSec('deal');
+      assert(new Set(seen).size===5,'상점 구역이 서로 다르지 않음: '+seen.join(',')); }
     assert(document.querySelectorAll('#shopBody .shopDeal').length===3,'오늘의 특가가 3개가 아님');
+    setShopSec('draw');   // 뽑기 행은 '뽑기' 구역에 있다(구역별로 나뉜 뒤)
     assert(document.querySelectorAll('#shopBody .shopRow').length>0,'상점 내용(뽑기 행)이 비어 있음');
+    assert(document.querySelector('#shopBody .petRow, #shopBody .shopPanel'),'뽑기 구역에 보유 펫이 안 붙음');
+    setShopSec('deal');
     // 재화 아이콘은 resIco 공용(이모지 임의 사용 금지) — 카드 안에 실제 아이콘이 들어갔는지
     assert(document.querySelectorAll('#shopBody img.gi[src*="res_"]').length>0,'상점에 공용 재화 아이콘이 없음');
     // IBM Plex Sans KR은 700이 최대 — 800/900은 가짜 볼드가 된다(DESIGN.md §2)
     for(const sel of ['.shopTitle','.shopHead','.shopTag','.shopBuy']){ const e=document.querySelector('#shopBody '+sel)||document.querySelector(sel);
       if(e) assert(+getComputedStyle(e).fontWeight<=700, sel+' 굵기가 700 초과(가짜 볼드): '+getComputedStyle(e).fontWeight); }
-    assert(document.querySelector('#navBar .navIt.on').dataset.nav==='shop','상점 탭이 활성이 아님');
+    assert(document.querySelectorAll('#navBar .navIt[data-sub]').length===5,'상점 하위가 5칸이 아님');
     // 마을 구역(뽑기집)도 팝업이 아니라 같은 화면으로
     openTown(); await sleep(40); openTownPanel('gacha'); await sleep(60);
     assert(visible($('shopScreen')) && !visible($('townPanel')),'마을 구역이 아직 팝업으로 열림');
@@ -2085,8 +2216,10 @@ async function groupLobby(){
     navGo('gear'); await sleep(60);
     assert(visible($('gearScreen')),'네비 정비가 전용 화면을 안 엶');
     assert(!visible($('townPanel')) && !visible($('townScreen')),'정비인데 마을이 남아 있음');
-    assert(document.querySelectorAll('#gearTabs .msSortTab').length===3,'정비 탭이 3개가 아님');
-    assert(document.querySelector('#gearTabs .msSortTab.on').dataset.v==='gear','기본 탭이 장비가 아님');
+    // 탭 띠는 화면에서 걷어내고 하단 네비로 올렸다(2026-08-14) — 같은 UI 를 두 군데 두지 않는다
+    assert(!document.getElementById('gearTabs'),'정비 화면에 옛 탭 띠가 남아 있음');
+    assert(document.querySelectorAll('#navBar .navIt[data-sub]').length===3,'정비 하위가 네비에 3칸이 아님');
+    assert(document.querySelector('#navBar .navIt.cur').dataset.sub==='gear','기본 하위가 장비가 아님');
     // ① 장비 = 마을 장비창과 같은 renderProfGear() — 아바타(페이퍼돌) + 가방이 그대로 나와야 한다
     assert(document.querySelector('#gearBody .gearWrap'),'장비 탭에 장비창이 없음');
     assert(document.querySelector('#gearBody .bagBody'),'장비 탭에 가방이 없음');
@@ -2095,7 +2228,7 @@ async function groupLobby(){
         '정비 장비 탭이 renderProfGear()와 다름(복제 의심)'); }
     // ② 펫 = 상점 '보유 펫'과 같은 _shopPetPanel()
     setGearTab('pet'); await sleep(40);
-    assert(document.querySelector('#gearTabs .msSortTab.on').dataset.v==='pet','펫 탭이 활성이 아님');
+    assert(document.querySelector('#navBar .navIt.cur').dataset.sub==='pet','펫 하위가 활성이 아님');
     { const ref=_shopPetPanel().replace(/\s+/g,'');
       assert(document.getElementById('gearBody').innerHTML.replace(/\s+/g,'').slice(0,60)===ref.slice(0,60),
         '정비 펫 탭이 _shopPetPanel()과 다름(복제 의심)'); }
@@ -2105,10 +2238,10 @@ async function groupLobby(){
     assert(document.querySelector('#gearBody').textContent.indexOf('동료')>=0,'동료 탭에 동료 표기가 없음');
     setGearTab('gear');
     // 굵기 700 상한(DESIGN.md §2)
-    for(const sel of ['#gearScreen .shopTitle','#gearTabs .msSortTab']){ const e=document.querySelector(sel);
+    for(const sel of ['#gearScreen .shopTitle','#navBar .navIt']){ const e=document.querySelector(sel);
       if(e) assert(+getComputedStyle(e).fontWeight<=700, sel+' 굵기가 700 초과(가짜 볼드): '+getComputedStyle(e).fontWeight); }
     openHome(); await sleep(40);
-    return '3탭 · renderProfGear/_shopPetPanel 재사용 ok'; });
+    return '하위 3칸 · renderProfGear/_shopPetPanel 재사용 ok'; });
       await step('캐릭터: 성장은 따로 · 재화와 펫은 공용', ()=>{ skipIf(typeof profCreateChar!=='function','캐릭터 시스템 없음');
     const p=PROF(); p.pcoin=1000; p.pets={wolf:{count:1}}; p.equip=['wolf'];
     const a=CHAR(); a.unit.stats.pow=(a.unit.stats.pow||0)+12;   // 성장 흔적을 직접 넣는다(찍는 경로는 없앴다)
@@ -2510,6 +2643,7 @@ async function groupGame(){
     assert(visible(document.querySelector('#pointPanel .ptTitle, #pointPanel .ppHead')),'공학소 팝업 헤더 안 보임'); closePointUpgrade(); return 'ok'; });
   await step('설정 팝업', ()=>{ openSettings(); assert(visible($('settingsPop')),'settingsPop 안 보임'); closeSettings(); return 'ok'; });
   // DESIGN.md 규칙 — 게임 안 팝업(설정 · 나가기 확인 · 결과)만. 게임 밖(#settingsPop.appCtx)은 대상 아님
+
   await step('설정: 상단 스위치 + 리스트 → 하위 팝업', ()=>{
     openSettings();
     // ① 소리는 리스트가 아니라 상단 고정 스위치 — 눌러서 상태가 뒤집혀야 한다
