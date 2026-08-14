@@ -609,6 +609,8 @@ async function groupLobby(){
     skipIf(typeof hbOpenMore!=='function','더보기 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(600);
+    // ⚠ 이 파일에는 전역 .hide 규칙이 없다(요소마다 선언). 안 만들면 '항상 떠 있는' 상태가 된다.
+    assert(!visible($('hbMoreSheet')),'더보기가 처음부터 떠 있음 — .hbMoreWrap.hide 규칙 누락');
     // 좌상단 줄에서 빠졌는지 — 판 여는 것이 두 곳에 있으면 어디를 눌러야 할지 모른다
     const row=[...document.querySelector('.hbIcoRow').children].filter(visible)
       .map(e=>e.getAttribute('aria-label')||e.id);
@@ -628,7 +630,13 @@ async function groupLobby(){
     const its=[...document.querySelectorAll('#hbMoreGrid .hbMoreIt')];
     assert(its.length===HB_MORE.length,'항목 수가 다름: '+its.length);
     const cols=getComputedStyle($('hbMoreGrid')).gridTemplateColumns.split(' ').length;
-    assert(cols===3,'3칸 격자가 아님: '+cols);   // 5항목 → 2줄
+    assert(cols===2,'2칸 격자가 아님: '+cols);   // ☰ 아래로 떨어지는 드롭다운(가운데 팝업이 아니다)
+    // ☰ 바로 아래에 붙어야 한다 — 화면 가운데 팝업이면 레퍼런스와 다르다
+    { const btn=document.getElementById('curSettingsBtn').getBoundingClientRect();
+      const box=$('hbMoreBox').getBoundingClientRect(), ph=$('phone').getBoundingClientRect();
+      assert(box.top>=btn.bottom-1 && box.top-btn.bottom<=16,'☰ 바로 아래가 아님: '+Math.round(box.top-btn.bottom)+'px');
+      assert(Math.abs(box.right-btn.right)<=4,'☰ 와 오른쪽이 안 맞음: '+Math.round(box.right-btn.right));
+      assert(box.right<=ph.right+1 && box.bottom<=ph.bottom+1,'드롭다운이 화면 밖으로 나감'); }
     for(const it of its) assert(it.querySelector('svg'),'아이콘이 안 그려진 항목: '+it.textContent);
     // 건설을 고르면 시트가 닫히고 메뉴가 화면 안에 뜬다(필드를 눌러 배치해야 하므로)
     PROF().pcoin=99999;
@@ -644,7 +652,7 @@ async function groupLobby(){
     assert(visible($('settingsPop')),'유즈맵 ☰ 가 설정을 안 엶');
     assert(!visible($('hbMoreSheet')),'유즈맵에서 더보기가 열림');
     $('settingsPop').classList.add('hide');
-    return '항목 '+its.length+'개 · 3칸 2줄 · 유즈맵은 설정 유지'; });
+    return '항목 '+its.length+'개 · ☰ 아래 2칸 드롭다운 · 유즈맵은 설정 유지'; });
   // 📦 상자 — 맵을 돌아다닐 이유. '공격 대상'이라 사거리 안에 있어야 부순다.
   await step('상자: 사거리 안일 때만 부수고 · 적이 우선 · 보상은 섞여 나온다', async()=>{
     skipIf(typeof hbSpawnChest!=='function','상자 없음');
@@ -1668,6 +1676,11 @@ async function groupLobby(){
     _hb.char.atk=1e9; _hb.char.range=1e9; _hb.char.cd=.05; _hb.char.hpMax=1e9; _hb.char.hp=1e9;
     const clearOnce=()=>{ for(let i=0;i<20000;i++){ const ph=_hb.phase; hbStep(0.05);
       if(ph!=='clearWait' && _hb.phase==='clearWait') return true; } return false; };
+    // ⓪ 기본 = 등반(2026-08-14). 옛 저장의 climb:false 도 직접 고른 흔적이 없으면 등반으로 올라온다.
+    { const H=hbHunt(); delete H.climbChosen; H.climb=false;
+      assert(hbHunt().climb===true,'옛 기본값(반복)이 등반으로 이행되지 않음');
+      hbSetClimb(false);   // 직접 고르면 흔적이 남아
+      assert(hbHunt().climb===false && hbHunt().climbChosen,'직접 고른 반복이 유지되지 않음'); }
     // ① 반복 모드 = 클리어해도 같은 라운드
     hbSetClimb(false); assert(!hbHunt().climb,'반복 모드가 안 됨');
     const r0=_hb.round;

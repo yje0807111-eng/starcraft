@@ -2535,16 +2535,22 @@
   .mateOdd{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:10px;font-weight:700;letter-spacing:.3px}
   .mateOdd.off{opacity:.5}
   .hbRow.lock{opacity:.5}
-  /* ☰ 더보기 격자 — 3칸 × 2줄. 판을 여는 것만 모은다(전투 중 쓰는 스킬은 하단 바) */
-  .hbMoreGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:8px 0 4px}
-  .hbMoreIt{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-    padding:12px 4px;background:rgba(255,255,255,.045);border:1px solid var(--metal-edge);
-    border-radius:var(--r-md);color:#dfe4ea;cursor:pointer;font-family:inherit;font-size:11px;font-weight:700}
+  /* ☰ 더보기 — 화면 가운데 팝업이 아니라 버튼 바로 아래로 떨어지는 드롭다운.
+     바깥 판은 '바깥을 눌러 닫기'용 투명 판이라 어둡게 덮지 않는다(전장이 계속 보여야 한다). */
+  .hbMoreWrap{position:absolute;inset:0;z-index:70}
+  .hbMoreWrap.hide{display:none}   /* ⚠ 전역 .hide 규칙이 없는 파일이다 — 컴포넌트마다 직접 선언해야 숨는다 */
+  .hbMoreBox{position:absolute;right:8px;width:152px;padding:8px;
+    background:rgba(12,13,16,.96);border:1px solid var(--metal-edge);border-radius:var(--r-md);
+    box-shadow:0 10px 24px rgba(0,0,0,.55)}
+  .hbMoreGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+  .hbMoreIt{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    padding:9px 3px;background:rgba(255,255,255,.045);border:1px solid var(--metal-edge);
+    border-radius:var(--r-md);color:#dfe4ea;cursor:pointer;font-family:inherit;font-size:10px;font-weight:700}
   .hbMoreIt:active{opacity:.75}
   .hbMoreIt[disabled]{opacity:.4;cursor:default}
-  .hbMoreIt span[data-ico],.hbMoreIt .hbMoreSvg{width:22px;height:22px;display:block}
+  .hbMoreIt span[data-ico],.hbMoreIt .hbMoreSvg{width:19px;height:19px;display:block}
   .hbMoreIt span[data-ico] svg,.hbMoreIt .hbMoreSvg svg{width:100%;height:100%;display:block}
-  .hbMoreIt em{font-style:normal;font-size:9px;font-weight:600;color:#8c939c}
+  .hbMoreIt em{font-style:normal;font-size:8.5px;font-weight:600;color:#8c939c;line-height:1.1}
   #hbBuildWrap > .hbRoundBtn{display:none}   /* 건설은 ☰ 더보기에서 연다 — 랩은 드롭다운 앵커로 남긴다 */
   .hbIcoRow{display:flex;align-items:center;gap:6px}   /* 라운드·마을 아이콘 — 세로로 쌓이면 좌상단 묶음 높이가 늘어난다 */
   /* 오른쪽 위 세로 스택 — 설정(☰)이 있는 재화 바 줄 바로 아래에서 시작한다 */
@@ -4149,13 +4155,8 @@
     </div>
     <!-- 라운드 선택 — 전장 한가운데 뜨는 팝업(회색톤 · 푸른기 금지) -->
     <!-- ☰ 더보기 — 전투 중에 안 쓰는 판을 한곳에 모은다(좌상단 아이콘 줄이 7개까지 늘어났었다) -->
-    <div class="hbModal hide" id="hbMoreSheet" onclick="if(event.target===this)hbCloseMore()">
-      <div class="hbmCard">
-        <div class="hbmHead"><b>더보기</b>
-          <button class="hbmX" onclick="hbCloseMore()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
-        </div>
-        <div class="hbMoreGrid" id="hbMoreGrid"></div>
-      </div>
+    <div class="hbMoreWrap hide" id="hbMoreSheet" onclick="if(event.target===this)hbCloseMore()">
+      <div class="hbMoreBox" id="hbMoreBox"><div class="hbMoreGrid" id="hbMoreGrid"></div></div>
     </div>
     <div class="hbModal hide" id="hbRoundSheet" onclick="if(event.target===this)hbCloseRounds()">
       <div class="hbmCard">
@@ -5117,7 +5118,7 @@ function metaEffLv(id){ return _metaEffFromRaw(META_BUILDS[id], buildLevel(id));
 // 🧍 개인 프로필 RPG(1단계) 기본값 — 유즈맵 경제와 완전 분리(재화명 pcoin, coins 아님). 자세한 규칙은 PROF_* 블록 참조.
 // 계정 공용(재화·펫·해금·방치) + 캐릭터별(chars[]: 레벨·경험치·스탯·장비·진화)로 나뉜다.
 function defaultProfile(){ return { ver:9, pcoin:0, gas:0, gem:0, chars:[], curId:'', items:[],
-  hunt:{ dg:1, round:1, climb:false, best:{}, rw:{}, mates:{}, party:[], mateN:0, upg:{atk:0,rng:0,aspd:0,crit:0,hp:0,regen:0} },   // ⚔ 자동사냥(HOME) 진행·마일스톤 수령(rw)·영구 업그레이드
+  hunt:{ dg:1, round:1, climb:true, best:{}, rw:{}, mates:{}, party:[], mateN:0, upg:{atk:0,rng:0,aspd:0,crit:0,hp:0,regen:0} },   // ⚔ 자동사냥(HOME) 진행·마일스톤 수령 · 기본 = 등반(rw)·영구 업그레이드
   idle:{ sourceId:'drill', lastClaimTs:0 }, unlocks:{}, lastSeenTs:0,
   dgKeys:{}, tickets:{gear:0,pet:0,ally:0},   // 🗝 던전별 열쇠(매일 09:00 보충) · 🎟 뽑기권(장비/펫/동료)
   pets:{}, equip:[], petSlots:2, petN:0 }; }   // 🐾 펫(중복=별)·장착 슬롯 — 캐릭터를 새로 만들어도 그대로 쓴다
@@ -5727,7 +5728,7 @@ function hbGoDungeon(d){ const H=hbHunt();
     _hb.foes.length=0; _hb.pend.length=0; _hb.char.hp=_hb.char.hpMax; hbSpawnWave(); }
   if(typeof playSfx==='function') playSfx('ui_open');
   renderRoundSheet(); hbHud(); }
-function hbSetClimb(v){ hbHunt().climb=!!v; saveMeta(); renderRoundSheet(); hbHud();
+function hbSetClimb(v){ const H=hbHunt(); H.climb=!!v; H.climbChosen=1; saveMeta(); renderRoundSheet(); hbHud();
   if(typeof playSfx==='function') playSfx('ui_tab'); }
 function hbGoRound(n){ const H=hbHunt(), best=hbBest(H.dg);
   n=Math.max(1,Math.min(best,n|0)); H.round=n; saveMeta();
@@ -5753,7 +5754,15 @@ function hudTopMenu(fb){ const hs=document.getElementById('homeScreen');
   if(fb==='app' && typeof openAppSettings==='function') return openAppSettings();
   openSettings(); }
 function hbOpenMore(){ const el=document.getElementById('hbMoreSheet'); if(!el) return;
-  renderHbMore(); el.classList.remove('hide'); if(typeof playSfx==='function') playSfx('ui_open'); }
+  renderHbMore(); el.classList.remove('hide');
+  { const box=document.getElementById('hbMoreBox'), ph=document.getElementById('phone');
+    // 실제로 눌린 ☰ 아래에 붙인다 — 두 개가 겹쳐 있으므로 보이는 쪽을 고른다
+    const btns=['curSettingsBtn','settingsBtn'].map(function(id){ return document.getElementById(id); })
+      .filter(function(b){ return b && b.getClientRects().length; });
+    if(box && ph && btns.length){ const r=btns[0].getBoundingClientRect(), p=ph.getBoundingClientRect();
+      box.style.top=Math.round(r.bottom-p.top+6)+'px';
+      box.style.right=Math.round(p.right-r.right)+'px'; } }
+  if(typeof playSfx==='function') playSfx('ui_open'); }
 function hbCloseMore(){ const el=document.getElementById('hbMoreSheet'); if(el) el.classList.add('hide');
   if(typeof playSfx==='function') playSfx('ui_close'); }
 // 시트를 닫고 나서 연다 — 배치(건설)처럼 필드를 눌러야 하는 것이 시트에 가리면 안 된다
@@ -6367,8 +6376,11 @@ function hbAllyMul(){ const u=hbHunt().upg;
            bunker:{ hp:HB_BUNKER_HP  *(1+(u.bnhp ||0)*0.12) },
            pet:   { dps:HB_PET_DPS   *(1+(u.peatk||0)*0.08), cdMul:Math.pow(0.985, u.pespd||0) } }; }
 function hbHunt(){ const p=PROF();
-  if(!p.hunt) p.hunt={dg:1,round:1,climb:false,best:{},upg:{atk:0,rng:0,aspd:0,crit:0,hp:0,regen:0}};
+  if(!p.hunt) p.hunt={dg:1,round:1,climb:true,best:{},upg:{atk:0,rng:0,aspd:0,crit:0,hp:0,regen:0}};   // 기본 = 등반
   if(typeof p.hunt.skAuto!=='number') p.hunt.skAuto=0;   // 스킬 자동 사용 — 세 개를 한 번에(0/1)
+  // 기본 모드가 반복→등반으로 바뀌었다(2026-08-14). 옛 저장의 climb:false 는 '옛 기본값'일 뿐이므로
+  // 직접 고른 흔적(climbChosen)이 없으면 등반으로 올린다. 버튼으로 고르면 흔적이 남아 다시 안 건드린다.
+  if(!p.hunt.climbChosen && !p.hunt.climb) p.hunt.climb=true;
   if(!p.hunt.unl) p.hunt.unl={};        // 해금한 업그레이드(key→1). u:0 은 여기 없어도 열린 것으로 친다
   if(!p.hunt.rw || typeof p.hunt.rw!=='object') p.hunt.rw={};   // 🎁 마일스톤 수령 기록(던전→라운드)
   // 옛 구역 키(atk/def/util)가 저장돼 있으면 '내 캐릭터'로 옮긴다 — 없는 구역이면 격자가 빈 채로 남는다
