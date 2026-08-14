@@ -167,6 +167,32 @@ async function groupLobby(){
     for(let i=0;i<40 && !AUTH.user; i++) await sleep(50);   // 로딩 게이트를 거치면 몇 프레임 늦게 채워질 수 있다
     assert(AUTH.user,'입장했는데 유저가 비어 있음');
     return AUTH.user.nick||AUTH.user.id; });
+  // 캐릭터 생성 = 종류 카드 + 스탯 막대. 렌더러 한 벌을 입장 화면과 마을 '생성소'가 같이 쓴다.
+  await step('캐릭터 생성: 종류 카드 · 스탯 막대 · 만들기', ()=>{ skipIf(typeof renderCharCreate!=='function','캐릭터 생성 없음');
+    const p=PROF(); p.chars=[]; p.curId=''; saveMeta();
+    openCharScreen('create');
+    const cards=[...document.querySelectorAll('#csBody .ccCard')];
+    assert(cards.length===Object.keys(PROF_CLASSES).length,'종류 카드 수가 PROF_CLASSES 와 다름: '+cards.length);
+    assert(cards[0].querySelectorAll('.ccStat u').length===PROF_STATS.length,'스탯 막대가 4개가 아님');
+    // 막대는 실제 기본 스탯을 반영해야 한다(장식이 아니다)
+    { const id=Object.keys(PROF_CLASSES)[0], base=PROF_JOBS[id].base;
+      const w=parseFloat(cards[0].querySelector('.ccStat u').style.width);
+      assert(Math.abs(w-base[PROF_STATS[0]]/CC_STAT_MAX*100)<1.5,'막대 길이가 스탯과 안 맞음: '+w+'%'); }
+    // ⚠ 공용 .portImg 는 position:absolute 다 — 초상 칸이 기준(positioned)이 아니면 카드 전체로 퍼진다
+    { const port=cards[0].querySelector('.ccPort'), c=getComputedStyle(port);
+      assert(c.position!=='static','초상 칸이 positioned 가 아님 — 초상이 카드 전체로 퍼진다');
+      assert(c.overflow==='hidden','초상 칸이 넘침을 안 자름'); }
+    // 이름을 넣고 만들면 그 이름으로 생성된다
+    $('ccName').value='스모크닉';
+    cards[1].querySelector('.ccMake').click();
+    assert(CHAR() && CHAR().name==='스모크닉','만들기로 캐릭터가 안 생김: '+JSON.stringify(CHAR()&&CHAR().name));
+    // 슬롯이 차면 잠긴다
+    while(PROF().chars.length<PROF_MAX_CHARS) profCreateChar('ranger','채우기');
+    openCharScreen('create');
+    const b0=document.querySelector('#csBody .ccMake');
+    assert(b0.disabled,'슬롯이 찼는데 만들기 버튼이 살아 있음');
+    PROF().chars=[PROF().chars[0]]; PROF().curId=PROF().chars[0].id; saveMeta();   // 뒤 검사용으로 하나만 남긴다
+    return Object.keys(PROF_CLASSES).length+'종 · 막대 '+PROF_STATS.length+'개'; });
   // 부팅 타이머는 '오프닝을 걷어내는' 용도지 화면을 되돌리는 용도가 아니다.
   // 가드가 없으면 1.7초 뒤 openAuth()가 그때 보고 있던 화면을 로그인으로 덮는다 —
   // 스모크가 간헐적으로 "유즈맵에서 뒤로 갔는데 HOME으로 안 옴"으로 터지던 진짜 원인이었다.

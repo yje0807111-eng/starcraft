@@ -2437,6 +2437,60 @@
   .csCard{width:330px;max-width:90vw;max-height:86%;
     /* 푸른기 제거 — 사냥터 패널과 같은 중성 회색 · 뒤 배경이 살짝 비친다 */
     background:var(--panelBig)}
+  /* ══ 캐릭터 생성 카드 ══ 렌더러가 입장 화면·마을 '생성소' 양쪽에서 쓰이므로 클래스는 전역이다(#charScreen 안으로 좁히지 말 것).
+     톤은 사냥터 카드 그대로: 완전 검정 면 + 위가 밝고 아래로 스러지는 붉은 테두리 + 7px 모서리 컷.
+     종족색(--rc)은 '정보'라서 스탯 막대와 꼬리표에만 쓴다 — 테두리·버튼까지 물들이면 화면마다 색이 달라진다. */
+  .ccName{display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:8px 10px;
+    background:linear-gradient(180deg,#0d0d0d,#000);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+  .ccName label{flex:1;min-width:0;font-size:12px;font-weight:700;color:#ececec}
+  .ccName label em{display:block;font-style:normal;font-size:9.5px;font-weight:400;color:#8a8a8a;margin-top:2px}
+  .ccName input{flex:0 0 128px;min-width:0;height:34px;padding:0 10px;box-sizing:border-box;
+    font-family:inherit;font-size:12px;color:var(--txt);outline:none;
+    background:rgba(255,255,255,.04);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+  .ccName input:focus{border-color:rgba(255,59,59,.5)}
+  .ccName input::placeholder{color:#6f757d}
+  .ccCard{--ch:7px;position:relative;margin-bottom:8px;padding:9px 10px 10px;
+    background:linear-gradient(180deg,#0a0a0a,#000);
+    clip-path:polygon(var(--ch) 0,100% 0,100% calc(100% - var(--ch)),calc(100% - var(--ch)) 100%,0 100%,0 var(--ch))}
+  .ccCard::before{content:'';position:absolute;inset:0;z-index:0;padding:1px;pointer-events:none;
+    background:linear-gradient(180deg,rgba(255,59,59,.9) 0%,rgba(255,59,59,.5) 34%,
+      rgba(255,59,59,.32) 68%,rgba(255,59,59,.24) 100%);
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;mask-composite:exclude;
+    clip-path:polygon(var(--ch) 0,100% 0,100% calc(100% - var(--ch)),calc(100% - var(--ch)) 100%,0 100%,0 var(--ch))}
+  .ccCard>*{position:relative;z-index:1}
+  .ccHead{display:flex;align-items:center;gap:9px;margin-bottom:8px}
+  /* ⚠ position:relative 필수 — 공용 .portImg 는 position:absolute;inset:0 이라
+     기준이 없으면 카드 전체(.ccCard)로 퍼져 초상이 배경처럼 깔린다(실제로 그랬다) */
+  .ccPort{position:relative;flex:none;width:38px;height:38px;display:flex;align-items:center;justify-content:center;overflow:hidden;
+    font-size:19px;background:#000;border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+  .ccPort svg{width:26px;height:26px}
+  .ccWho{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .ccWho b{font-size:13px;font-weight:700;color:#ececec;letter-spacing:-.01em}
+  .ccWho i{font-style:normal;font-size:9.5px;color:#8a8a8a}
+  .ccRace{flex:none;font-size:9px;font-weight:700;letter-spacing:.02em;color:var(--rc);
+    padding:2px 6px;border:1px solid color-mix(in srgb,var(--rc) 40%,transparent);border-radius:var(--r-bar)}
+  /* 스탯 = 숫자 나열이 아니라 막대 — 종류끼리의 차이가 한눈에 보인다 */
+  .ccStats{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;margin-bottom:9px}
+  .ccStat{display:flex;align-items:center;gap:6px;min-width:0}
+  .ccStat i{flex:none;width:26px;font-style:normal;font-size:9.5px;color:#8a8a8a}
+  .ccStat b{flex:1;min-width:0;height:4px;background:rgba(255,255,255,.07);border-radius:var(--r-bar);overflow:hidden}
+  .ccStat u{display:block;height:100%;text-decoration:none;background:var(--rc);
+    box-shadow:0 0 6px -2px var(--rc)}
+  .ccStat em{flex:none;width:14px;text-align:right;font-style:normal;font-family:var(--font-num);
+    font-variant-numeric:tabular-nums;font-size:10.5px;font-weight:700;color:#ececec}
+  /* 만들기 = 이 카드의 주 동작. 로그인 주 버튼과 같은 언어(검정 판 + 붉은 테두리 + 밑변 광원) */
+  .ccMake{position:relative;width:100%;min-height:36px;cursor:pointer;font-family:inherit;
+    font-size:12px;font-weight:700;letter-spacing:.02em;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8);
+    background:linear-gradient(180deg,#131313,#050505);border:1px solid rgba(255,59,59,.5);border-radius:var(--r-bar);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+  .ccMake::after{content:'';position:absolute;left:12%;right:12%;bottom:0;height:1px;pointer-events:none;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.55) 50%,transparent 92%),
+      linear-gradient(90deg,transparent,rgba(255,59,59,.9),transparent);
+    box-shadow:0 0 2px rgba(255,59,59,.55),0 0 5px rgba(255,59,59,.22)}
+  .ccMake:active{transform:translateY(1px)}
+  .ccMake:disabled{cursor:default;color:#7a7a7a;border-color:var(--metal-edge)}
+  .ccMake:disabled::after{display:none}
   /* ↓ 여기부터는 전부 #charScreen 안으로 범위를 좀힌다 — .twRow/.twBtn/.twInput 은 마을·장비창 공용이라
      전역으로 고치면 그쪽까지 함께 바뀐다(DESIGN.md — 마을 공용 전환은 나중에 한ꯈ에). */
   /* 제목 — 하단과 같은 Noto */
@@ -8295,14 +8349,27 @@ function renderCharSelect(){ const p=PROF(), list=p.chars||[];
   if(list.length<PROF_MAX_CHARS)
     h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">새 캐릭터 만들기</div><div class="twRowSub">레인저 · 척후병 · 워든</div></div><button class="twBtn" onclick="charGoCreate()">만들기</button></div>';
   return h; }
+const CC_STAT_MAX=12;   // 막대 100% 기준. 실제 기본 스탯은 4~10이라 가득 차는 칸이 없다(비교가 눈에 들어온다)
+const CC_RACE_KO={ union:'유니온', swarm:'스웜', aetherial:'에테리얼' };
 function renderCharCreate(){ const p=PROF(), full=(p.chars||[]).length>=PROF_MAX_CHARS;
   let h='<div class="twHead">종류를 고르면 그 자리에서 캐릭터가 만들어집니다.<br>종류마다 기본 스탯이 다릅니다 — 전직은 없고, 강해지는 축은 강화·동료·장비입니다.</div>';
-  h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">이름</div><div class="twRowSub">비우면 종류 이름으로</div></div><input id="ccName" class="twInput" maxlength="10" placeholder="10자 이내"></div>';
+  h+='<div class="ccName"><label for="ccName">이름<em>비우면 종류 이름으로</em></label>'
+    +'<input id="ccName" maxlength="10" placeholder="10자 이내"></div>';
   for(const id in PROF_CLASSES){ const C=PROF_CLASSES[id], J=PROF_JOBS[id];
-    const bs=PROF_STATS.map(k=>PROF_STAT_NAME[k]+' '+J.base[k]).join(' · ');
-    h+='<div class="twRow"><span class="twPet">'+C.ico+'</span><div class="twRowInfo"><div class="twRowName">'+C.name+'</div>'
-      +'<div class="twRowSub">'+C.tip+'</div><div class="twRowSub">'+bs+'</div></div>'
-      +'<button class="twBtn csMake" onclick="charDoCreate(\''+id+'\')"'+(full?' disabled':'')+'>'+(full?'슬롯 참':'만들기')+'</button></div>'; }
+    const rc=(typeof RACE_BAR!=='undefined' && RACE_BAR[C.race]) || '#9a9a9a';
+    // 초상은 유닛 초상 공용 함수를 쓴다 — 없으면 지금 쓰던 이모지로 자동 폴백
+    const port=(typeof _techUnitPortrait==='function' && _techUnitPortrait(C.unit)) || C.ico;
+    let bars='';
+    for(const k of PROF_STATS){ const v=J.base[k]||0;
+      bars+='<span class="ccStat"><i>'+PROF_STAT_NAME[k]+'</i>'
+        +'<b><u style="width:'+Math.round(Math.min(1,v/CC_STAT_MAX)*100)+'%"></u></b><em>'+v+'</em></span>'; }
+    h+='<div class="ccCard" style="--rc:'+rc+'">'
+      +'<div class="ccHead"><span class="ccPort">'+port+'</span>'
+      +'<span class="ccWho"><b>'+C.name+'</b><i>'+C.tip+'</i></span>'
+      +'<span class="ccRace">'+(CC_RACE_KO[C.race]||C.race)+'</span></div>'
+      +'<div class="ccStats">'+bars+'</div>'
+      +'<button class="ccMake" onclick="charDoCreate(\''+id+'\')"'+(full?' disabled':'')+'>'+(full?'슬롯 참':'만들기')+'</button>'
+      +'</div>'; }
   if((p.chars||[]).length) h+='<div class="twRow"><div class="twRowInfo"><div class="twRowSub">이미 만든 캐릭터를 고르려면</div></div><button class="twBtn" onclick="charGoSelect()">보관소</button></div>';
   return h; }
 // 지금 떠 있는 호스트(마을 구역 / 입장 화면)를 그대로 두고 내용만 바꾼다
