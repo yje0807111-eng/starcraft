@@ -1755,11 +1755,9 @@ async function groupLobby(){
     rb.click(); await sleep(60);
     assert(visible($('hbRoundSheet')),'아이콘을 눌렀는데 라운드 팝업이 안 열림');
     hbCloseRounds();
-    // ⑤ 이름 충돌 금지 — 인게임 홈 하단 탭 줄(.hbTop)이 좌상단 규칙에 먹히면 세로로 무너진다
-    { const tabs=document.querySelector('.hbTop.hsTabs'); assert(tabs,'인게임 홈 탭 줄(.hbTop.hsTabs)이 없음');
-      const cs=getComputedStyle(tabs);
-      assert(cs.position!=='absolute','인게임 탭 줄이 좌상단 규칙에 오염됨(position)');
-      assert(cs.flexDirection==='row','인게임 탭 줄이 좌상단 규칙에 오염됨(flex-direction='+cs.flexDirection+')'); }
+    // ⑤ 이름 충돌 금지 — 예전엔 인게임 홈 탭 줄이 `.hbTop`을 같이 써서 좌상단 규칙에 먹히면 세로로 무너졌다.
+    //    그 탭 줄은 하단 네비로 옮겨가며 사라졌다(2026-08-14). 이름이 다시 겹치지 않는지만 지킨다.
+    assert(!document.querySelector('.hbTop'),'`.hbTop`이 다시 쓰이고 있음 — 좌상단(.hbHudTop) 규칙과 이름이 겹친다');
     return '좌상단 고정(+'+Math.round(tr.left-ph.left)+','+Math.round(tr.top-ph.top)+') · 킬수 없음 · 아이콘 팝업 ok'; });
   // 라운드 선택 — 최고 도달까지만 고를 수 있고, 반복/등반이 클리어 후 행동을 가른다.
   await step('자동사냥: 라운드 선택 · 반복/등반', async()=>{ skipIf(typeof hbOpenRounds!=='function','라운드 선택 없음');
@@ -2737,6 +2735,61 @@ async function groupGame(){
       assert(hi>0,'하단 패널 높이를 못 쟀다(숨은 상태로 측정): '+JSON.stringify(hs));
       assert(hi-lo<=1,'섹션마다 하단 높이가 다름: '+JSON.stringify(hs));
       return Object.keys(hs).length+'섹션 모두 '+hi+'px';
+    } finally { if(faked) ph.classList.remove('inGame'); openMainHome(); }
+  });
+  // 하단 탭바 = 2층(최상위 5칸 → [‹][하위…]). HOME 네비와 같은 칸(.navIt)을 쓰고, 칸 폭은 전부 같다.
+  await step('하단 탭바: 등폭 · 구역을 누르면 [‹]+하위로 내려간다', async()=>{
+    const ph=$('phone'), faked=ph && !ph.classList.contains('inGame'); if(faked) ph.classList.add('inGame');
+    document.body.classList.add('sheetOpen');
+    if(typeof updatePbossFab==='function') updatePbossFab();   // 보스 탭은 게임 중에만 뜬다 — 5칸을 세려면 먼저 켠다
+    const cells=()=>[...document.querySelectorAll('#tabs > *')].filter(e=>getComputedStyle(e).display!=='none');
+    const widths=els=>els.map(e=>Math.round(e.getBoundingClientRect().width));
+    try{
+      // ① 최상위 = 5칸 등폭. 선택 칸만 넓어지던 flex-grow:1.42 를 없앤 것을 지킨다.
+      gtabBack(); await sleep(80);
+      const top=cells(); assert(top.length===5,'최상위 칸이 5개가 아님: '+top.length);
+      { const w=widths(top), lo=Math.min(...w), hi=Math.max(...w);
+        assert(hi-lo<=1,'최상위 칸 폭이 다름: '+JSON.stringify(w));
+        // 선택 칸도 같은 폭이어야 한다
+        openGachaSheet(); await sleep(80); gtabBack(); await sleep(80);
+        const w2=widths(cells()); assert(Math.max(...w2)-Math.min(...w2)<=1,'선택 칸만 넓어짐: '+JSON.stringify(w2)); }
+      // ② 구역별 하위 — 왼쪽 첫 칸은 항상 뒤로가기, 하위 칸끼리는 등폭
+      const want={ Main:['유닛 지정','유닛 판매'], Unit:['뽑기','타워구매'], Upgrade:['공격력','확률','영구강화'], Boss:['개인보스'] };
+      const go={ Main:openMainHome, Unit:openGachaSheet, Upgrade:openUpgradeSheet, Boss:openBossSheet };
+      for(const k in want){
+        go[k](); await sleep(90);
+        const cs=cells();
+        assert(cs[0] && cs[0].classList.contains('navBk'),k+' 구역에 뒤로가기 칸이 없음');
+        const labels=cs.slice(1).map(e=>e.textContent.trim());
+        for(const lb of want[k]) assert(labels.indexOf(lb)>=0, k+' 하위에 "'+lb+'"이 없음: '+JSON.stringify(labels));
+        const w=widths(cs.slice(1));
+        assert(Math.max(...w)-Math.min(...w)<=1, k+' 하위 칸 폭이 다름: '+JSON.stringify(w));
+        assert(cs.filter(e=>e.classList.contains('cur')).length<=1, k+' 하위에 선택 표시가 둘 이상');
+      }
+      // ③ 하위를 누르면 그 구역 내용이 바뀐다(칸 이름으로 확인)
+      openGachaSheet(); await sleep(90); gtabSub('draw'); await sleep(90);
+      { const names=[...document.querySelectorAll('#unitCmd .cgSlot .cgName')].map(e=>e.textContent.trim());
+        for(const nm of ['유닛 1회','유닛 5회','가스 1회','가스 5회']) assert(names.indexOf(nm)>=0,'뽑기 칸에 "'+nm+'"이 없음: '+JSON.stringify(names)); }
+      gtabSub('tower'); await sleep(90);
+      { const names=[...document.querySelectorAll('#unitCmd .cgSlot .cgName')].map(e=>e.textContent.trim());
+        assert(names.length && names.every(n=>n.indexOf('회')<0),'타워구매인데 뽑기 칸이 남아 있음: '+JSON.stringify(names)); }
+      // ×5 는 1회의 5배 가격이어야 한다(별도 가격표를 만들지 않았다는 뜻)
+      assert(beaconCost('draw5')===beaconCost('draw')*5,'유닛 5회 가격이 5배가 아님');
+      assert(beaconCost('energy5')===beaconCost('energy')*5,'가스 5회 가격이 5배가 아님');
+      // ×5 는 맵 위 비콘 표에 들어가면 안 된다(좌표가 없어 패드·라벨이 NaN 자리에 생긴다)
+      assert(!DRAW_BEACONS.some(b=>b.id==='draw5'||b.id==='energy5'),'×5 가 맵 비콘 표(DRAW_BEACONS)에 섞였음');
+      // ④ 개인전/협동은 아군·적군이 없다 → 플레이어는 내려가지 않는다
+      switchTab('Players', document.querySelector('.tab[data-tab="Players"]')); await sleep(90);
+      assert(!gameHasVersus(),'네모는 대전 판이 아님(팀이 갈리면 안 됨)');
+      assert(cells().length===5,'개인전인데 플레이어가 하위로 내려감');
+      // ⑤ ‹ = 한 층 위(보고 있는 화면은 그대로)
+      openUpgradeSheet(); await sleep(90); assert(cells()[0].classList.contains('navBk'),'업그레이드가 안 내려감');
+      gtabBack(); await sleep(90);
+      assert(cells().length===5 && !document.getElementById('tabs').classList.contains('drill'),'뒤로가기로 최상위 복귀 실패');
+      assert(G.mainSheet==='upgrade','뒤로가기가 보고 있던 섹션까지 바꿨음: '+G.mainSheet);
+      // ⑥ 판 안에 같은 조작을 두 번 두지 않는다(옛 .hsTabs 탭 줄)
+      assert(!document.querySelector('#defaultCmd .hsTab'),'판 안에 옛 모드 탭 줄이 남아 있음(하단 네비와 중복)');
+      return '최상위 5칸 등폭 · 4구역 드릴다운 ok';
     } finally { if(faked) ph.classList.remove('inGame'); openMainHome(); }
   });
   await step('무기 업그레이드 구매', ()=>{ skipIf(typeof upgCost!=='function'||typeof buyGachaUp!=='function','업그레이드 API 없음');

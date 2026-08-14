@@ -89,7 +89,12 @@
   - **유즈맵 정렬**(인기순·신규·추천·즐겨찾기)은 화면 위 `#msSortTabs` 띠 그대로다(한 번 네비로 올렸다가 되돌렸다).
   - **상점 5구역**: `SHOP_SECS` 표 + `setShopSec(k)`. 옛 `renderProfGacha()` 가 4구역을 이어 붙이던 것을 `_shopDealHTML/_shopDrawHTML/_shopGemHTML` 로 쪼갠 것이고, `renderProfGacha()` 는 '전부 이어 붙이기'로 남아 옛 호출부를 지킨다. 재화·패키지는 아직 내용이 없어 `_shopSoonHTML` 자리표시.
 - 하단 탭 `#tabs`: 메인/유닛뽑기/업그레이드/**보스**(게임 전용, `updatePbossFab`이 표시 제어)/플레이어 + 샌드박스 전용 전투실험/건설.
+  **2층이다**(2026-08-14): 구역을 누르면 `[‹][하위…]` 로 내려간다 — 표 `GTAB_TREE` + `gtabPaint/gtabDrill/gtabSub/gtabBack`.
+  칸은 HOME 네비와 같은 `_navCell()`(`.navIt`)로 만들고, **최상위 `.tab` 마크업은 그대로 두고 CSS(`#tabs.drill .tab`)로만 숨긴다**
+  — `switchTab`/`_setBottomTab`/`updatePbossFab` 이 `style.display`·`.on` 을 직접 만지므로 지웠다 다시 만들면 그 상태가 날아간다.
+  구역 상태는 `_homeMode`/`_gachaSec`/`_upgSec`/`_plSec`(+ 보스는 `G.bossOpen`). 샌드박스·직스에선 내려가지 않는다.
 - 하단 패널 `.bp` — **id는 `'bp'+탭명` 동적 참조**(`bpMain/bpUnit/bpUpgrade/bpPlayers/bpBattle/bpBuild`). ⚠️ 미참조로 보여도 살아있음.
+- 유닛뽑기·업그레이드 시트는 **구역별로 칸이 갈린다**: `GACHA_SEC_CELLS`(뽑기/타워구매) · `_upgAtkItems/_upgLuckItems/_upgPermItems`(공격력/확률/영구강화). ×5 뽑기는 `BEACON_BULK`(1회 값 × 배수) — ⚠ 좌표가 없으므로 `DRAW_BEACONS`(맵 위 비콘 표)에 넣지 말 것.
 - 시트 모드: `G.mainSheet` + `renderMainSheet()` 디스패처. 유닛 지정 중엔 프로필 우선, 해제 시 시트 복원(`refreshSelCard` 분기).
 - 프로필/그리드는 전부 `renderCmdGrid(host, model)` — 모델 객체로만 내용 제어(레지스트리 참조).
 - **하단 구역의 톤·높이는 토큰 셋 하나가 정한다**(2026-08-14): `--panelBig`(판) · `--bpFace`(속살 검정) ·
