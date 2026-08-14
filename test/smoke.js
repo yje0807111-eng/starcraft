@@ -2325,6 +2325,11 @@ async function groupLobby(){
   // 🧰 정비 = 장비·펫·동료 전용 화면. 내용은 전부 기존 렌더러 재사용(단일 소스) — 복제본이 생기면 여기서 걸린다.
   await step('정비: 전용 화면 · 장비/펫/동료 탭 · 렌더러 재사용', async()=>{ skipIf(typeof openGear!=='function','정비 화면 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','정비'); saveMeta(); }
+    // 등급 표기를 보려면 실제 보유가 있어야 한다 — 비어 있으면 검사가 헛돈다
+    { const p=PROF();
+      p.pets={ wolf:{star:1,dup:2,fed:0}, slime:{star:0,dup:0,fed:0} }; p.equip=['wolf'];
+      const H=hbHunt(); H.mates={ sniper:{lv:2,dup:1}, sentinel:{lv:1,dup:0} }; H.party=['sniper'];
+      saveMeta(); }
     navGo('gear'); await sleep(60);
     assert(visible($('gearScreen')),'네비 정비가 전용 화면을 안 엶');
     assert(!visible($('townPanel')) && !visible($('townScreen')),'정비인데 마을이 남아 있음');
@@ -2344,10 +2349,29 @@ async function groupLobby(){
     { const ref=_shopPetPanel().replace(/\s+/g,'');
       assert(document.getElementById('gearBody').innerHTML.replace(/\s+/g,'').slice(0,60)===ref.slice(0,60),
         '정비 펫 탭이 _shopPetPanel()과 다름(복제 의심)'); }
-    // ③ 동료 = 아직 시스템 없음 → HOME 건설로 보내는 자리
+    // ③ 동료도 같은 뼈대
     setGearTab('ally'); await sleep(40);
-    assert(document.querySelectorAll('#gearBody .shopPanel').length>=1,'동료 탭이 비어 있음');
-    assert(document.querySelector('#gearBody').textContent.indexOf('동료')>=0,'동료 탭에 동료 표기가 없음');
+    assert(document.querySelector('#gearBody .gearWrap'),'동료 탭이 비어 있음');
+    // ④ 세 탭이 '같은 뼈대'를 쓴다(2026-08-14) — 상단(쓰는 것) + 하단(가진 것 격자)
+    //    탭마다 다른 레이아웃 언어를 쓰면 같은 화면 안에서 다른 앱처럼 보인다.
+    for(const t of ['gear','pet','ally']){ setGearTab(t); await sleep(40);
+      assert(document.querySelector('#gearBody .gearWrap'),t+' 탭이 공용 뼈대(.gearWrap)를 안 씀');
+      assert(document.querySelector('#gearBody .gearSum'),t+' 탭에 상단 요약이 없음');
+      assert(document.querySelector('#gearBody .bagBody'),t+' 탭에 보유 격자가 없음'); }
+    // ⑤ 등급 표현은 세 탭 모두 '테두리 색' 하나로 통일한다 — 글자색·배지로 갈라 쓰지 않는다
+    { const tierCols=Object.keys(TIER_COLOR).map(k=>TIER_COLOR[k].toLowerCase());
+      const hex=rgb=>{ const m=(rgb.match(/\d+/g)||[]).slice(0,3).map(Number);
+        return m.length===3? ('#'+m.map(v=>v.toString(16).padStart(2,'0')).join('')) : ''; };
+      for(const t of ['pet','ally']){ setGearTab(t); await sleep(40);
+        const cells=document.querySelectorAll('#gearBody .igCell');
+        assert(cells.length>0, t+' 탭 보유 격자가 비어 있음(검사 불가)');
+        let tinted=0;
+        for(const el of cells){ const c=getComputedStyle(el);
+          if(tierCols.indexOf(hex(c.borderTopColor))>=0) tinted++; }
+        assert(tinted===cells.length, t+' 탭에서 등급이 테두리 색으로 안 나옴: '+tinted+'/'+cells.length); } }
+    setGearTab('ally'); await sleep(40);
+    assert($('gearBody').textContent.indexOf('동료')>=0,'동료 탭에 동료 표기가 없음');
+    setGearTab('gear'); await sleep(40);
     setGearTab('gear');
     // 굵기 700 상한(DESIGN.md §2)
     for(const sel of ['#gearScreen .shopTitle','#navBar .navIt']){ const e=document.querySelector(sel);
