@@ -1782,10 +1782,13 @@ async function groupLobby(){
             // 허용폭 12 = HOME 톤 검사와 같은 기준(공용 --metal-edge rgb(60,62,70)이 B-R=10이라 그 아래로 잡으면 오검출)
             assert(b<=r+12,'라운드 팝업에 푸른기가 남음('+(el.className||el.tagName)+'): '+m); } } } }
     // 라운드 = 세로 피커. 고를 수 있는 것(최고 도달까지)만 넣고, 아래가 1라운드다.
+    // 칸 수 = 최고 도달 · 단 '다음 마일스톤'까지는 목표로 더 보여 준다(못 고르게 잠근다)
     const cells=[...document.querySelectorAll('#hbRdScroll .hbRd')];
-    assert(cells.length===hbBest(1),'선택지 수가 최고 도달과 다름: '+cells.length+' vs '+hbBest(1));
-    assert(+cells[0].dataset.r===hbBest(1),'맨 위가 최고 라운드가 아님: '+cells[0].dataset.r);
+    const want=Math.max(hbBest(1), hbNextRw(1,_hbPick.round)||0);
+    assert(cells.length===want,'선택지 수가 규칙과 다름: '+cells.length+' vs '+want);
+    assert(+cells[0].dataset.r===want,'맨 위가 목표 라운드가 아님: '+cells[0].dataset.r);
     assert(+cells[cells.length-1].dataset.r===1,'맨 아래가 1라운드가 아님: '+cells[cells.length-1].dataset.r);
+    for(const c of cells) assert((+c.dataset.r>hbBest(1))===c.disabled,'라운드 '+c.dataset.r+' 잠금이 최고 도달과 안 맞음');
     assert(document.querySelector('#hbRdScroll .hbRd.on').dataset.r===String(_hb.round),'현재 라운드가 강조되지 않음');
     // 칸을 누르면 '선택'만 바뀐다 — 이동은 [이동] 버튼에서만
     { const r0=_hb.round, pick=Math.max(1,hbBest(1)-1);
@@ -2190,8 +2193,12 @@ async function groupLobby(){
     hbOpenRounds(); await sleep(40);
     const nx=hbNextRw(1,1);
     assert(nx===HB_RW_EVERY,'다음 마일스톤 안내가 틀림: '+nx);
-    assert($('hbRoundNote').textContent.indexOf('🎁')>=0,'팝업 안내에 다음 마일스톤이 없음');
-    assert(($('hbRoundNote').textContent||'').indexOf('라운드 '+nx)>=0,'팝업 안내에 다음 보상이 안 적힘');
+    // 안내 줄은 없앴다(2026-08-14) — '다음 목표'는 피커 맨 위의 잠긴 🎁 칸이 대신한다
+    assert(!$('hbRoundNote'),'안내 줄이 아직 남아 있음');
+    { const cs=[...document.querySelectorAll('#hbRdScroll .hbRd')];
+      assert(+cs[0].dataset.r===nx,'피커 맨 위가 다음 마일스톤이 아님: '+cs[0].dataset.r+' vs '+nx);
+      assert(cs[0].disabled && cs[0].textContent.indexOf('🎁')>=0,'다음 목표 칸이 잠긴 🎁 가 아님'); }
+    assert(hbRoundRw(1,nx),'다음 마일스톤 보상표가 비어 있음');   // 문구가 아니라 표로 확인(안내 줄 폐지)
     hbCloseRounds();
     return '간격 '+HB_RW_EVERY+' · 최초 1회 · 던전별 분리 ok'; });
 
