@@ -107,7 +107,8 @@
      갈라져 있어서, 값을 흩뿌리면 섹션을 옮길 때마다 톤이 바뀐다(실제로 그랬다). */
   :root{--bpFace:linear-gradient(180deg,#0a0a0a,#000);
         --bpTile:radial-gradient(circle at 50% 34%,rgba(96,96,104,.32),#050505 82%);
-        --bpBodyH:min(34vh,176px)}   /* 본문 높이 단일 소스 — 시트·메인 홈·플레이어 그리드가 같은 높이여야 섹션 전환에서 안 튄다 */
+        --bpBodyH:min(29vh,148px)}   /* 본문 높이 단일 소스 — 시트·메인 홈·플레이어 그리드가 같은 높이여야 섹션 전환에서 안 튄다.
+                                       176→148: 머리줄 초상(48px)을 지운 만큼 낮췄다(등급 띠가 커진 21px 은 상쇄) */
   :root{--phW:963;--phH:1997;--navH:56px;--curH:34px;--topPad:10px}   /* --topPad: 모바일에서 화면 끝에 붙으면 잘 안 보인다 — 상단을 그만큼 내린다 */   /* 하단 바 높이(네비·유즈맵 탭바 공용) — 61 → 56px 로 살짝 얇게 */
   #phone{width:390px;height:calc(390px * var(--phH) / var(--phW));aspect-ratio:var(--phW)/var(--phH);position:relative;
     /* 게임 배경 우주 타일(space_bg)을 캔버스와 같은 380px 스케일로 프레임 전체에 이어지게 — 어둡게 덮어 콘솔 가독성 유지 */
@@ -385,14 +386,11 @@
   /* 판매: 등급 칩 + 초상화 그리드 */
   /* 등급 배너 = SC 콘솔식(등급색 네온 액센트 + 사선 모서리, 모바일 탭 영역 확보) */
   /* 등급 필터 = 작은 알약 칩(3차 — 가장 가볍게, 선택된 등급만 채워짐) */
-  .hsTiers{display:flex;flex-wrap:nowrap;gap:3px;padding:3px 0 1px;overflow:hidden}
-  .hsTier{flex:1 1 0;min-width:0;display:inline-flex;align-items:center;justify-content:center;
-    font-family:inherit;font-size:10px;font-weight:800;letter-spacing:0;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-    color:var(--tc,#aeb6c2);background:rgba(255,255,255,.035);border:1px solid var(--metal-edge);border-radius:var(--r-lg);
-    padding:3px 4px;transition:all .12s}
-  .hsTier:hover{background:rgba(255,255,255,.08);border-color:var(--tc,#888)}
-  .hsTier:active{transform:translateY(1px)}
-  .hsTier.on{color:#0c0a08;background:var(--tc,var(--gold));border-color:var(--tc,var(--gold));box-shadow:0 0 9px -3px var(--tc,var(--gold));text-shadow:0 1px 0 rgba(255,255,255,.25)}
+  /* 등급 띠 = 공용 세그먼트 바(.pdSeg — 장비창 섹션 바·사냥터 탭과 한 함수).
+     여기서 덮는 건 두 가지뿐: 전폭으로 펴기(공용 기본은 286px 가운데 정렬)와 칸 높이. */
+  .hsTiers{flex:none;padding:1px 0 5px}
+  .hsTiers .pdSeg{max-width:none;margin:0}
+  .hsTiers .pdSegBtn{padding:10px 4px;font-size:11px}   /* 세로를 조금 늘려 손가락이 닿는 띠로 */
   .hsGrid{display:flex;flex-wrap:nowrap;justify-content:flex-start;gap:6px;align-items:stretch;overflow-x:auto;overflow-y:hidden;padding-bottom:1px;flex:1;min-height:0}   /* 고정 4열(각 셀 1/4폭) · 왼쪽부터 채움 · stretch = 카드가 칸 높이를 채운다(아래가 비지 않게) */
   .hsGrid::-webkit-scrollbar{height:4px}.hsGrid::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
   /* 유닛 셀 = 통일된 SC 카드(메탈+네온 엣지+사선 모서리+스캔라인) */
@@ -754,10 +752,16 @@
   /* 하단 섹션 = 위로 올라오는 슬라이드 시트(탭 바 바로 위, 게임 위로 오버레이). 활성 탭 패널만 존재(.on), body.sheetOpen일 때 올라옴 */
   .bp{position:absolute;left:0;right:0;bottom:100%;z-index:22;box-sizing:border-box;
     display:none;flex-direction:column;gap:5px;padding:10px 12px 12px;max-height:min(46vh,342px);overflow-y:auto;
-    /* 사냥터 패널과 같은 회색 판 · 각진 윗변(둥근 모서리 없음) */
-    background:var(--panelBig);border-top:1px solid var(--panelBigEdge);
-    border-radius:0;box-shadow:0 -9px 26px rgba(0,0,0,.6);
+    background:none;border:none;border-radius:0;box-shadow:0 -9px 26px rgba(0,0,0,.6);
     transform:translateY(112%);transition:transform .26s cubic-bezier(.2,.8,.25,1);pointer-events:none}
+  /* 판의 '면'은 여기(::before)다 — 요소 자체에 clip-path 를 걸면 시트 밖으로 나가 있는
+     #btCardCtl(top:-28px)까지 잘려 사라진다. z-index:-1 은 .bp/#btSheet 가 z-index 를 가져
+     쌓임 맥락을 만들기 때문에 판 안에만 머문다(자식 위로 새지 않는다).
+     모서리 컷은 사냥터 카드(.hmUp)와 같은 7px — 위 두 귀퉁이만 자른다(아래는 화면 끝에 붙는다). */
+  .bp::before,#btSheet::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;--ch:7px;
+    background:var(--panelBig);
+    border-top:1px solid var(--panelBigEdge);box-sizing:border-box;
+    clip-path:polygon(var(--ch) 0,calc(100% - var(--ch)) 0,100% var(--ch),100% 100%,0 100%,0 var(--ch))}
   .bp.on{display:flex}   /* 활성 탭 패널만 렌더(내려간 상태로 대기) */
   body.sheetOpen .bp.on{transform:translateY(0);pointer-events:auto}   /* 시트 올라옴 */
   /* 시트 올라오면 하단 사이드 배너(채팅·자동·개인보스)도 시트 위로 함께 상승 */
@@ -1091,7 +1095,7 @@
      ※ display/위치는 각자 유지(건설=맵 위 슬라이드 시트 / 메인=하단 패널) */
   #playerProfile{display:none}#playerProfile.on{display:flex}   /* 관전 프로필 = 메인 프로필과 동일 커맨드 그리드 호스트 */
   #btSheet,#bpMain:has(#unitCmd.on),#bpMain:has(#defaultCmd:not(.hide)),#bpPlayers:has(#playerProfile.on){
-    background:var(--panelBig);border-top:1px solid var(--panelBigEdge);border-radius:0;
+    background:none;border:none;border-radius:0;
     box-shadow:0 -8px 24px rgba(0,0,0,.55);padding:9px 8px 12px;gap:0}
   #bpPlayers{padding-top:9px}   /* 관전 탭 기본(플레이어 그리드) 하단 높이 = 메인/유닛뽑기/업그레이드(#bpMain 9px)와 통일 — .bp 기본 10px에서 1px 보정 */
   #btSheet.open{transform:translateY(0)}
@@ -1391,14 +1395,10 @@
   .cmdG[data-mode="boss"]{--ca:#ff5c6e;--caG:rgba(255,92,110,.45);--caS:rgba(255,92,110,.5);--caL:#ffd6db}   /* 보스 시트 = 붉은 강조 */
   .cmdG .cgHead{display:flex;align-items:center;gap:9px;padding:5px 2px 9px;position:relative;flex:none}
   .cmdG .cgHead::after{content:'';position:absolute;left:2px;right:6px;bottom:0;height:1px;background:linear-gradient(90deg,var(--caS),transparent 72%)}
-  .cmdG .cgPort{width:48px;height:48px;flex:none;position:relative;overflow:hidden;color:var(--ca);border:1.5px solid var(--caS);
-    clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
-    background:var(--bpTile);display:flex;align-items:center;justify-content:center;font-size:20px}
-  .cmdG .cgPort svg{width:33px;height:33px;filter:drop-shadow(0 0 4px var(--caG))} .cmdG .cgPort .pemoji{font-size:27px}
-  .cmdG .cgPort img{width:100%;height:100%;object-fit:contain}   /* 타이틀 아이콘도 정사각 원본 그대로 */
-  .cmdG .cgTtl{flex:1;min-width:0} .cmdG .cgN{font-size:var(--fs-xl);font-weight:800;color:var(--caL);text-shadow:0 0 8px var(--caG);line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* 머리줄 초상(.cgPort)은 폐지했다(2026-08-14) — 제목은 글자 하나로 읽는다. 모델의 icon 은 그대로 두되 그리지 않는다.
+     ⚠ 되살릴 거면 renderCmdGrid 의 머리줄 마크업도 같이 되돌릴 것(여기 CSS만 넣으면 아무 데도 안 붙는다). */
+  .cmdG .cgTtl{flex:1;min-width:0} .cmdG .cgN{font-size:var(--fs-xl);font-weight:800;color:#fff;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .cmdG .cgN .nsub{font-size:10px;font-weight:700;color:#9fb0c2;text-shadow:none;margin-left:3px}   /* 이름 옆 작은 괄호 수치(라바 수 등) */
-  .cmdG .cgPort:empty{display:none}   /* 아이콘 없는 프로필(라바) = 빈 초상 틀 숨김 */
   .cmdG .cgS{margin-top:1px;font-size:var(--fs-xs);color:var(--cgDim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .cmdG .cgS b{color:#cfe0f5;font-weight:700}
   .cmdG .cgHpsh{margin-top:2px;display:flex;gap:9px;font-family:var(--font-num);font-weight:800;font-size:12.5px;line-height:1}
   .cmdG .cgHpsh .hpv{color:#7ee081} .cmdG .cgHpsh .shv{color:#8fd8ff} .cmdG .cgHpsh .env{color:#b06bff}
@@ -5033,6 +5033,14 @@ function _barsHTML(o){   // 🛡 쉴드+HP(한 칸) + ⚡마나(아래 별도 �
 function popShow(id){ const e=document.getElementById(id); if(e) e.classList.remove('hide'); return e; }   // 팝업 표시(공통)
 function popHide(id){ const e=document.getElementById(id); if(e) e.classList.add('hide'); return e; }    // 팝업 숨김(공통)
 const TIER_COLOR = { common:'#b8c0cc', rare:'#4aa8ff', epic:'#b06bff', unique:'#ffd23b', legend:'#ff8a3b', transcend:'#ff4d6d', god:'#ff2bd6' };
+// #rrggbb → "r,g,b" — 세그먼트 바의 --segCol 은 알파를 얹어 쓰므로 색이 아니라 채널 셋이어야 한다
+function hexChannels(h){ const m=/^#?([0-9a-f]{6})$/i.exec(h||''); if(!m) return '255,255,255';
+  const v=parseInt(m[1],16); return ((v>>16)&255)+','+((v>>8)&255)+','+(v&255); }
+// 등급 띠 = 장비창·사냥터와 같은 세그먼트 바(segNavHTML). 선택 색만 등급색으로 덮는다.
+function tierSegHTML(tierSet, cur, fnName){
+  const i=Math.max(0, tierSet.indexOf(cur));
+  return segNavHTML(tierSet.map(t=>({ label:GACHA_TIERS[t].name, col:hexChannels(TIER_COLOR[t]) })), i,
+    k=>fnName+"('"+tierSet[k]+"')"); }
 // 등급별 전투 능력치 배율(프록시 기준 데미지·체력에 곱함) — 상위 등급일수록 강함. 밸런스 추후 조정.
 /* TIER_MUL → NEMO_BAL.tierMul */   // 레어=높은 기본뎀(초반 체감↑) / 초월·갓 기본 배율 소폭 하향(105→92, 270→235: 확률 상향 보상)
 /* UP_TIER_MUL → NEMO_BAL.upTierMul */   // 레어 업글배율=일반과 근접(중반엔 일반과 수렴) / 유니크는 에픽보다 확실히 높음 / 초월·갓 집중   // 레전드 13→9: 풀업 레전드가 20라운드를 깨지 않게(초월=클리어 라인 유지, 봇 시뮬 검증)   // 업그레이드 1회당 증가폭 등급 배율(기본딜 배율의 절반 강도)   // 등급당 ×2.2 — 등급 업=급격한 성장(설계: 초월 조합=클리어 라인, 갓=초반 캐리)
@@ -9097,9 +9105,8 @@ function setHomeMode(m){ if(m==='boss') m='select'; _homeMode=m; _sellSig=''; _c
   renderHomeLeft(); }
 function renderHomeLeft(){ if(_homeMode==='select') renderSelectPanel(); else if(_homeMode==='combine') renderCombinePanel(); else renderSellPanel(); updateCombDot(); }
 // 조합 가능 여부가 바뀌면 하단 네비의 '유닛 조합' 칸이 생기거나 사라진다(GTAB_TREE.Main.subs[].show)
-function updateCombDot(){ const n=Object.keys(ownedCombineGroups()).length;
-  if(!n && _homeMode==='combine'){ setHomeMode('select'); return; }   // 조합 불가가 되면 지정으로 복귀(setHomeMode 가 네비를 다시 그린다)
-  if(typeof gtabPaint==='function' && _gtabDrill==='Main') gtabPaint(); }
+// 조합 칸은 늘 있으므로 여기서 쫓아내지 않는다 — 조합할 게 없으면 판이 '같은 유닛 3개 필요'라고 알린다.
+function updateCombDot(){}
 function setCombTier(t){ _combTier=t; _combSig=''; renderCombinePanel(); }
 function combineOneOfType(gid, quiet){
   const list=G.units.filter(u=>u.gid===gid && !u.fixed && !u.atBoss); if(list.length<3) return;
@@ -9120,7 +9127,7 @@ function renderCombinePanel(){ const tiersBox=document.getElementById('hsTiers')
   if(!_combTier || tierSet.indexOf(_combTier)<0) _combTier=tierSet[0];
   const sig=_combTier+'|'+gids.map(g=>groups[g][0].gtier+':'+g+':'+groups[g].length).sort().join(',');
   if(sig===_combSig) return; _combSig=sig;
-  tiersBox.innerHTML=tierSet.map(function(t){ return '<button class="hsTier'+(t===_combTier?' on':'')+'" style="--tc:'+(TIER_COLOR[t]||'#fff')+'" onclick="setCombTier(\''+t+'\')">'+GACHA_TIERS[t].name+'</button>'; }).join('');
+  tiersBox.innerHTML=tierSegHTML(tierSet, _combTier, 'setCombTier');
   let cells='';
   for(const gid of gids){ const list=groups[gid]; if(list[0].gtier!==_combTier) continue; const gu=GACHA_UNITS[gid]; if(!gu) continue;
     const res=combineResultFor(gid, list[0].gtier);
@@ -9146,7 +9153,7 @@ function renderSelectPanel(){ const tiersBox=document.getElementById('hsTiers'),
   const byGid={}; for(const u of byTier[_selTierH]){ (byGid[u.gid]=byGid[u.gid]||[]).push(u); }
   const sig=_selTierH+'|'+live.map(u=>u.gtier+':'+u.gid).sort().join(',');
   if(sig===_selSig) return; _selSig=sig;
-  tiersBox.innerHTML=tierSet.map(function(t){ return '<button class="hsTier'+(t===_selTierH?' on':'')+'" style="--tc:'+(TIER_COLOR[t]||'#fff')+'" onclick="setSelTier(\''+t+'\')">'+GACHA_TIERS[t].name+'</button>'; }).join('');
+  tiersBox.innerHTML=tierSegHTML(tierSet, _selTierH, 'setSelTier');
   let cells='';
   const _go=Object.keys(byGid).sort((a,b)=>byGid[b].length-byGid[a].length);   // 마릿수 많은 순(왼쪽부터)
   for(const gid of _go){ const list=byGid[gid], gu=GACHA_UNITS[gid]; if(!gu) continue;
@@ -9167,7 +9174,7 @@ function renderSellPanel(){ const tiersBox=document.getElementById('hsTiers'), g
   if(!_sellTier || tierSet.indexOf(_sellTier)<0) _sellTier=tierSet[0];
   const sig=_sellTier+'|'+owned.map(u=>u.gtier+':'+u.gid).sort().join(',');   // 구성 변화 시에만 재렌더(클릭 끊김 방지)
   if(sig===_sellSig) return; _sellSig=sig;
-  tiersBox.innerHTML=tierSet.map(function(t){ return '<button class="hsTier'+(t===_sellTier?' on':'')+'" style="--tc:'+(TIER_COLOR[t]||'#fff')+'" onclick="setSellTier(\''+t+'\')">'+GACHA_TIERS[t].name+'</button>'; }).join('');
+  tiersBox.innerHTML=tierSegHTML(tierSet, _sellTier, 'setSellTier');
   const byGid={}; for(const u of owned){ if(u.gtier!==_sellTier) continue; (byGid[u.gid]=byGid[u.gid]||[]).push(u); }
   let cells='';
   const _go=Object.keys(byGid).sort((a,b)=>byGid[b].length-byGid[a].length);   // 마릿수 많은 순(왼쪽부터)
@@ -11918,9 +11925,8 @@ const GTAB_TREE={
   Main:    { cur:()=>(G.mainSheet==='auto'?'auto':_homeMode), subs:[
       { k:'select',  label:'유닛 지정', ico:'marine', act:()=>mainGoMode('select') },
       { k:'sell',    label:'유닛 판매', ico:'coin',   act:()=>mainGoMode('sell') },
-      // 조합은 조합 가능한 묶음이 있을 때만 — 옛 .hsTabComb 의 표시 조건을 그대로 옮겼다
-      { k:'combine', label:'유닛 조합', ico:'photon', act:()=>mainGoMode('combine'),
-        show:()=>Object.keys(ownedCombineGroups()).length>0 },
+      // 조합은 늘 자리를 지킨다 — 조합할 게 없으면 칸이 사라지는 게 아니라 판이 '3개 필요'라고 알린다
+      { k:'combine', label:'유닛 조합', ico:'photon', act:()=>mainGoMode('combine') },
       // 자동화 = 옛 '전송 옆 AUTO 배너'. 표시 조건도 그 배너가 쓰던 것 그대로(하나라도 해금됐을 때)
       { k:'auto',    label:'자동화',   ico:'cpu',    act:()=>openAutoSheet(),
         show:()=>autoAnyOwned() } ] },
@@ -13019,7 +13025,7 @@ function renderCmdGrid(host, m){ const el=(typeof host==='string')?document.getE
   const pager=(pages>1)?('<div class="cgPage"><button onclick="_cgTurn(this,-1)">◀</button><span class="dots">'+dots+'</span><span class="pn">'+(pg+1)+' / '+pages+'</span><button onclick="_cgTurn(this,1)">▶</button></div>'):'';
   const pill=m.status?('<span class="cgPill'+(m.statusIdle?' idle':'')+'">'+m.status+'</span>'):'';
   el.innerHTML='<div class="cmdG" data-mode="'+(m.mode||'upg')+'" data-compact="'+(m.compact?1:0)+'" data-build="'+(m.build?1:0)+'">'
-    +'<div class="cgHead"><div class="cgPort">'+(m.icon||'')+'</div><div class="cgTtl"><div class="cgN">'+(m.title||'')+'</div>'+(m.hpsh?'<div class="cgHpsh">'+m.hpsh+'</div>':(m.sub?'<div class="cgS">'+m.sub+'</div>':''))+'</div>'+pill+pager+(m.topRight||'')+(m.back||'')+'</div>'   // 우상단 순서 = [상태칩][◀페이지▶][자원스텝퍼·랠리·부양 / 전체지정] → 페이지네이션이 왼쪽, 건물 조작 버튼이 오른쪽 끝(전 프로필 통일) · 🔙 돌아가기(유턴)는 그보다 뒤
+    +'<div class="cgHead"><div class="cgTtl"><div class="cgN">'+(m.title||'')+'</div>'+(m.hpsh?'<div class="cgHpsh">'+m.hpsh+'</div>':(m.sub?'<div class="cgS">'+m.sub+'</div>':''))+'</div>'+pill+pager+(m.topRight||'')+(m.back||'')+'</div>'   // 우상단 순서 = [상태칩][◀페이지▶][자원스텝퍼·랠리·부양 / 전체지정] → 페이지네이션이 왼쪽, 건물 조작 버튼이 오른쪽 끝(전 프로필 통일) · 🔙 돌아가기(유턴)는 그보다 뒤
     +'<div class="cgBody"><div class="cgInfo">'+_cgInfoHTML(m.info)+'</div><div class="cgCol"><div class="cgGrid">'+cells.join('')+'</div></div></div></div>';
   if(m.build){ const nms=el.querySelectorAll('.cgName'); for(const nm of nms){ let fs=10; nm.style.fontSize=fs+'px'; let g=0; while(nm.scrollWidth>nm.clientWidth+0.5 && fs>6 && g++<12){ fs-=0.5; nm.style.fontSize=fs+'px'; } } } }   // 이름 생략(...) 대신 폰트 축소로 한 줄에 전부
 function _cgTurn(btn,delta){ let h=btn; while(h && !h._cgModel) h=h.parentElement; if(!h||!h._cgModel) return; h._cgModel.page=(h._cgPage||0)+delta; renderCmdGrid(h,h._cgModel); }

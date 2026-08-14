@@ -2723,10 +2723,15 @@ async function groupGame(){
                            ['보스',openBossSheet],['플레이어',()=>switchTab('Players',document.querySelector('.tab[data-tab="Players"]'))]]){
         fn(); await sleep(120);
         const p=document.querySelector('.bp.on'); assert(p,n+' 섹션에 하단 패널이 없음');
-        const c=getComputedStyle(p);
+        // 판의 '면'은 ::before 다(요소에 clip-path 를 걸면 시트 밖 #btCardCtl 이 잘려 사라진다)
+        const c=getComputedStyle(p), face=getComputedStyle(p,'::before');
         hs[n]=Math.round(p.getBoundingClientRect().height);
         assert(c.borderTopLeftRadius==='0px' && c.borderTopRightRadius==='0px', n+' 판이 아직 둥금: '+c.borderTopLeftRadius);
-        assert(!bluish(c.backgroundImage), n+' 판이 아직 푸른 톤: '+c.backgroundImage);
+        assert(!bluish(face.backgroundImage), n+' 판이 아직 푸른 톤: '+face.backgroundImage);
+        assert(face.backgroundImage && face.backgroundImage!=='none', n+' 판에 면이 없음(::before 가 안 붙음)');
+        // 좌우 '위' 모서리는 사냥터 카드처럼 잘린다
+        assert(/polygon\(/.test(face.clipPath) && face.clipPath.indexOf('7px')>=0,
+          n+' 판 위 모서리가 안 잘림: '+face.clipPath);
         // 속살(좌측 설명·그리드 칸·유닛 카드·플레이어 슬롯)은 전부 검정이어야 한다
         for(const sel of ['.cgInfo','.cgSlot','.hsCell','.plbtn']){ const e=p.querySelector(sel); if(!e) continue;
           assert(!bluish(getComputedStyle(e).backgroundImage), n+' '+sel+' 이 아직 푸른 톤: '+getComputedStyle(e).backgroundImage); }
@@ -2787,7 +2792,20 @@ async function groupGame(){
       gtabBack(); await sleep(90);
       assert(cells().length===5 && !document.getElementById('tabs').classList.contains('drill'),'뒤로가기로 최상위 복귀 실패');
       assert(G.mainSheet==='upgrade','뒤로가기가 보고 있던 섹션까지 바꿨음: '+G.mainSheet);
-      // ⑥ 판 안에 같은 조작을 두 번 두지 않는다(옛 .hsTabs 탭 줄 · 전송 옆 AUTO 배너)
+      // ⑥ 머리줄에는 초상이 없고 제목은 흰 글자다
+      openGachaSheet(); await sleep(90);
+      assert(!document.querySelector('.cmdG .cgPort'),'머리줄 초상(.cgPort)이 남아 있음');
+      { const t=document.querySelector('.cmdG .cgN'); assert(t,'머리줄 제목이 없음');
+        const c=getComputedStyle(t);
+        assert(c.color==='rgb(255, 255, 255)','머리줄 제목이 흰색이 아님: '+c.color);
+        assert(c.textShadow==='none','머리줄 제목에 글로우가 남아 있음: '+c.textShadow); }
+      // ⑦ 등급 띠 = 공용 세그먼트 바(전용 칩을 새로 만들지 않는다)
+      openMainHome(); await sleep(90);
+      { const box=$('hsTiers');
+        if(box && box.children.length){
+          assert(box.querySelector('.pdSeg'),'등급 띠가 공용 세그먼트 바(.pdSeg)가 아님: '+box.innerHTML.slice(0,60));
+          assert(!box.querySelector('.hsTier'),'옛 등급 칩(.hsTier)이 남아 있음'); } }
+      // ⑧ 판 안에 같은 조작을 두 번 두지 않는다(옛 .hsTabs 탭 줄 · 전송 옆 AUTO 배너)
       assert(!document.querySelector('#defaultCmd .hsTab'),'판 안에 옛 모드 탭 줄이 남아 있음(하단 네비와 중복)');
       assert(!$('autoFab'),'전송 옆 AUTO 배너가 남아 있음 — 자동화는 메인 하위 칸으로 옮겼다');
       // ⑦ 자동화 = 메인 하위의 '마지막' 칸이고, 누르면 자동화 시트가 뜬다
