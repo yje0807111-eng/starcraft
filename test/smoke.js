@@ -1602,7 +1602,7 @@ async function groupLobby(){
     // 허브는 '화면'이 아니라 HOME 위 팝업이라 화면 전환으로 안 닫힌다 — HOME으로 돌아오면 걷어내야 한다
     openHome(); await sleep(80);
     assert(!visible($('dgHubScreen')),'HOME으로 돌아왔는데 토벌 허브 팝업이 HOME을 덮은 채 남음');
-    assert(document.getElementById('hbRound').textContent.indexOf('던전')>=0,'자동사냥은 던전 표기를 유지해야 함');
+    assert($('hbMid').textContent.indexOf('던전')>=0,'자동사냥은 던전 표기를 유지해야 함');
     return '네비 토벌 · HOME 던전'; });
   // HOME 좌상단 HUD — 프로필은 상세하게 맨 위 왼쪽에 고정 · 킬수는 없음 · 라운드 조절은 전용 아이콘 버튼.
   await step('HOME HUD: 좌상단 프로필 상세 · 킬수 없음 · 라운드는 아이콘 버튼', async()=>{
@@ -1690,11 +1690,25 @@ async function groupLobby(){
       assert(Math.abs(w/bw-0.5)<0.06,'경험치 바가 xp 비율(50%)을 따르지 않음: '+Math.round(w/bw*100)+'%');
       c.xp=0; hbHud();
       assert(bar.getBoundingClientRect().width<2,'xp=0인데 바가 비지 않음'); }
-    // ④ 라운드 조절 = 던전 제목 구역을 누른다(2026-08-14 · 깃발 아이콘은 폐지)
+    // ④ 라운드 조절 = ◀▶ 로 ±1, 가운데를 누르면 전체 목록(2026-08-14 · 깃발 아이콘은 폐지)
     const rb=$('hbMid');
     assert(rb && getComputedStyle(rb).pointerEvents!=='none','던전 제목이 눌리지 않음');
-    assert(/hbOpenRounds/.test(rb.getAttribute('onclick')||''),'던전 제목에 라운드 선택이 안 걸림');
+    assert(/hbOpenRounds/.test(($('hbMidTx').getAttribute('onclick')||'')),'가운데를 눌러도 라운드 목록이 안 열림');
+    assert($('hbRdPrev') && $('hbRdNext'),'라운드 ±1 화살표가 없음');
     assert(!$('hbRoundBtn'),'옛 깃발 버튼이 남아 있음');
+    // ±1 은 시트를 거치지 않고 바로 먹어야 한다 · 1~최고 도달 밖으로는 안 나간다
+    { const H=hbHunt(); H.best[H.dg]=3; hbSetRound(2); hbHud();
+      assert($('hbRdPrev').disabled===false && $('hbRdNext').disabled===false,'중간 라운드인데 화살표가 잠김');
+      hbRoundStep(1); assert(_hb.round===3,'▶ 로 라운드가 안 오름: '+_hb.round);
+      assert($('hbRdNext').disabled===true,'최고 도달인데 ▶ 가 안 잠김');
+      hbRoundStep(1); assert(_hb.round===3,'최고 도달을 넘어감: '+_hb.round);
+      hbRoundStep(-1); hbRoundStep(-1); assert(_hb.round===1,'◀ 로 1까지 안 내려감: '+_hb.round);
+      assert($('hbRdPrev').disabled===true,'라운드 1인데 ◀ 가 안 잠김');
+      hbRoundStep(-1); assert(_hb.round===1,'라운드 1 아래로 내려감: '+_hb.round);
+      assert(visible($('hbRoundSheet'))===false,'화살표를 눌렀는데 시트가 열림'); }
+    // 숫자와 이름은 따로 나온다(제목=던전 이름 · 숫자=라운드)
+    assert(/^\d+$/.test($('hbRound').textContent.trim()),'라운드 칸에 숫자만 있어야 함: '+$('hbRound').textContent);
+    assert($('hbDgName').textContent.indexOf(hbDun(_hb.dg).name)>=0,'제목에 던전 이름이 없음');
     // 제목을 눌러도 캐릭터가 따라가면 안 된다(필드 탭과 같은 자리다)
     { const r=rb.getBoundingClientRect(), cx=(r.left+r.right)/2, cy=(r.top+r.bottom)/2;
       _hb.char.tx=null; hbFieldTap({target:document.elementFromPoint(cx,cy), clientX:cx, clientY:cy});
@@ -1711,8 +1725,8 @@ async function groupLobby(){
     // 대신 필드 탭으로 새지 않는지는 위 ④에서 hbFieldTap으로 직접 확인한다.
     assert(getComputedStyle(mid).pointerEvents!=='none','던전 제목이 클릭을 못 받음');
     hbCloseRounds(); await sleep(20);
-    rb.click(); await sleep(60);
-    assert(visible($('hbRoundSheet')),'아이콘을 눌렀는데 라운드 팝업이 안 열림');
+    $('hbMidTx').click(); await sleep(60);   // 가운데(제목·라운드)를 눌러야 목록이 열린다 — 화살표는 ±1만
+    assert(visible($('hbRoundSheet')),'가운데를 눌렀는데 라운드 팝업이 안 열림');
     hbCloseRounds();
     // ⑤ 이름 충돌 금지 — 인게임 홈 하단 탭 줄(.hbTop)이 좌상단 규칙에 먹히면 세로로 무너진다
     { const tabs=document.querySelector('.hbTop.hsTabs'); assert(tabs,'인게임 홈 탭 줄(.hbTop.hsTabs)이 없음');
