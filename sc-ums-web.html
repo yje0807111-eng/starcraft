@@ -2559,7 +2559,6 @@
   .hbMoreIt[disabled]{opacity:.4;cursor:default}
   .hbMoreIt span[data-ico],.hbMoreIt .hbMoreSvg{width:18px;height:18px;display:block}   /* .hudSet svg와 같은 18px */
   .hbMoreIt span[data-ico] svg,.hbMoreIt .hbMoreSvg svg{width:100%;height:100%;display:block}
-  #hbBuildWrap > .hbRoundBtn{display:none}   /* 건설은 ☰ 더보기에서 연다 — 랩은 드롭다운 앵커로 남긴다 */
   .hbIcoRow{display:flex;align-items:center;gap:6px}   /* 라운드·마을 아이콘 — 세로로 쌓이면 좌상단 묶음 높이가 늘어난다 */
   /* 오른쪽 위 세로 스택 — 설정(☰)이 있는 재화 바 줄 바로 아래에서 시작한다 */
   .hbHudRight{position:absolute;right:8px;top:calc(var(--curH) + 4px);z-index:2;display:flex;flex-direction:column;align-items:flex-end;gap:5px}
@@ -2674,26 +2673,8 @@
   .hbGrp{display:flex;justify-content:flex-end;align-items:center;gap:5px;pointer-events:none}   /* 스킬은 오른쪽 — 왼쪽은 전장을 비워 둔다 */
   .hbAuto{margin-right:3px}
   .hbBar button{pointer-events:auto}   /* 줄 랩포는 퇵과 — 버튼만 받는다(전장 탭이 사라지면 이게 범인) */
-  /* 건설 — 한 칸 + 드롭다운 */
-  .hbBdWrap{position:relative;display:inline-flex}
+  /* ⛔ 좌상단 건설 드롭다운(.hbBdWrap/.hbBdMenu/.hbBdIt …)은 폐지했다 — 건설은 하단 패널이 담당한다 */
   .hbRoundBtn.on{color:#fff;background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.34)}
-  /* 목록 — 버튼 바로 아래로 펴찌다. absolute 라 바 높이에 영향을 주지 않는다 */
-  .hbBdMenu{position:absolute;top:calc(100% + 5px);left:0;z-index:30;
-    width:186px;display:flex;flex-direction:column;gap:4px;padding:5px;pointer-events:auto;
-    border:1px solid transparent;border-radius:var(--r-bar);
-    background:linear-gradient(180deg,#191919,#0e0e0e) padding-box, var(--metal-ring) border-box;
-    box-shadow:0 10px 24px -10px #000}
-  .hbBdIt{display:flex;align-items:center;gap:7px;padding:5px 6px;cursor:pointer;font-family:inherit;
-    color:#ececec;border:1px solid transparent;border-radius:2px;
-    background:linear-gradient(180deg,#0a0a0a,#000) padding-box, var(--metal-ring-n) border-box}
-  .hbBdIt.off{color:#7a7a7a}
-  .hbBdIt:active{transform:translateY(1px)}
-  .hbBdIco{position:relative;width:22px;height:22px;flex:none}
-  .hbBdNm{flex:1;min-width:0;text-align:left;font-size:11.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .hbBdCt{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:9.5px;color:#8a8a8a}
-  .hbBdCs{display:flex;align-items:center;gap:2px;font-family:var(--font-num);font-variant-numeric:tabular-nums;
-    font-size:10px;font-weight:800}
-  .hbBdCs .ri{width:10px;height:10px}
   /* 스킬 = 원. 이름은 빼고 아이콘만 — 쌀 때는 남은 초가 그 자리에 들어간다 */
   /* 스킬 = 반투명 원 + 진한 은색 링. 면을 투명하게 두어 뒤 전장이 비친다 */
   .hbSk{position:relative;flex:0 0 auto;width:37px;height:37px;border-radius:50%;
@@ -2772,6 +2753,7 @@
   /* ── 사냥터 업그레이드 ── */
   /* 탭 띠 = 장비창 섹션 바와 같은 컴포넌트(.pdSeg/.pdSegInd/.pdSegBtn · segNavHTML).
      생김새는 전부 공용 규칙이 갖는다 — 여기 오버라이드는 폭·글자뿐이다. */
+  .hmUpg.bd .hmUpgBar{display:none}   /* 건설 모드엔 탭 띠·수량이 없다 — 종류가 셋뿐이라 격자로 충분 */
   .hmUpgBar{display:flex;align-items:stretch;gap:6px;padding:3px 8px 1px}   /* 아래 실선 없음 — 탭 띠 자체가 상자라 선이 겹친다 */
   .hmUpgTabs{flex:1 1 0;display:flex;align-items:stretch;min-width:0}
   /* 탭 띠의 생김새는 전부 공용 .pdSeg 가 갖는다(장비창 섹션 바와 같은 것). 여기서 덮는 건 아래 둘뿐:
@@ -4325,7 +4307,6 @@
           <span class="hbXp"><i id="hbXpBar"></i></span>
           <span class="hbSt"><i id="hbLv">Lv.1</i><i id="hbAtk"><em>⚔</em><span id="hbAtkN">0</span></i></span>
         </span></button>
-      <div class="hbIcoRow"><span class="hbBdWrap" id="hbBuildWrap"></span></div>
     </div>
     <!-- 던전·라운드 — 판 없이 글자만. ◀▶ = ±1 미세조정(가장 잦은 동작), 가운데 = 전체 목록.
          모바일 스테이지 UI의 표준 배치다. 조절을 시트 안에만 두면 한 칸 내리는 데 4~5탭이 든다. -->
@@ -5730,6 +5711,14 @@ function renderHome(){ try{
   const p=PROF(); if(!p) return;
   if(typeof updateCurBar==='function') updateCurBar();       // 💠 재화는 전부 공용 재화 바(#curBar)로 이관
   const gr=document.getElementById('hmUpgGrid');
+  // 🧱 건설 모드 = 이 패널이 통째로 '건설' 구역이 된다. 탭 띠·수량은 숨기고 제목만 바꾼다.
+  { const bd=!!(_hb&&_hb.build), card=document.querySelector('#homeScreen .hmUpg'),
+      ttl=document.querySelector('#homeScreen .hmUpgTtl');
+    if(card) card.classList.toggle('bd', bd);
+    if(ttl) ttl.textContent = bd ? '건설' : '사냥터 업그레이드';
+    if(bd){ if(gr) gr.innerHTML=HB_BUILD_KEYS.map(hbBuildCardHTML).join('');
+      if(card) card.classList.remove('down');   // 접혀 있었으면 펴 준다 — 건설인데 안 보이면 막힌다
+      renderHomeStats(); return; } }
   if(gr){ const u=hbHunt().upg, coin=Math.floor(p.pcoin||0), cat=hbHunt().upgCat||'char';
     // 탭 띠 — 장비창 섹션 바와 같은 컴포넌트(segNavHTML). 새 탭 띠를 만들지 말 것
     const tb=document.getElementById('hmUpgTabs');
@@ -5881,14 +5870,27 @@ function hbGoRound(n){ hbSetRound(n); renderRoundSheet(); hbCloseRounds(); }
 // ◀▶ ±1 — 가장 잦은 동작이라 시트를 거치지 않는다. 1 ~ 최고 도달 사이로 가둔다.
 function hbRoundStep(d){ const H=hbHunt(), cur=(_hb?_hb.round:(H.round||1));
   if(hbSetRound(cur+(d|0)) && !document.getElementById('hbRoundSheet').classList.contains('hide')) renderRoundSheet(); }
-// ── Phase 4 UI — 스킬 바(전장 하단) + 건설·부스트 팝업(라운드 팝업과 같은 .hbModal 재사용) ──
-// 건설 목록 열림 여부 — 화면을 나갔다 오면 닫힐 상태가 기본
-let _hbBdOpen=false;
-function hbToggleBuild(){ _hbBdOpen=!_hbBdOpen;
-  if(typeof playSfx==='function') playSfx('ui_tab'); renderHbBuild(); }
-// 골랐으면 목록을 닫고 배치 모드로 — 목록이 뜨 채로 필드를 가리면 둘 숬 없다
-function hbPickBuild(bk){ _hbBdOpen=false; renderHbBuild(); hbBuy(bk); }
-// 건설 — 좌상단 줄의 한 칸 + 아래로 펴치는 목록
+// ── Phase 4 UI — 스킬 바(전장 하단) + 부스트 팝업(라운드 팝업과 같은 .hbModal 재사용) ──
+// 🧱 건설 카드 한 장 — 하단 패널이 건설 구역이 될 때 쓴다. 카드 규격은 업그레이드와 같은 hmUpCardHTML.
+//    누르면 그 자리에서 배치 모드로 들어간다(hbBuy → hbArmStart).
+function hbBuildCardHTML(bk){
+  const B=HB_STRUCT[bk], n=hbStructN(bk), mx=hbBuildMax(bk), full=n>=mx, cost=hbBuildCost(bk), M=hbAllyMul();
+  const coin=Math.floor(((typeof PROF==='function'&&PROF())||{}).pcoin||0);
+  // 값 = 지금 이 종류가 내는 총량. ⚠ 벽은 화력이 없다 — 화력 수치를 붙이면 거짓말이라 '칸 수'로 낸다.
+  const tot=function(c){ return (bk==='wall')   ? (c+'칸')
+                             : (bk==='bunker') ? Math.round(hbCharStats().hpMax*M.bunker.hp*c)
+                                               : Math.round(M.turret.dps*100*c)+'%'; };
+  return hmUpCardHTML({ key:'b_'+bk,
+    ico:'<img class="icoImg" src="'+ICO_DIR+'buildings/'+B.ico+'.webp" alt="" draggable="false">', name:B.name,
+    off:full||coin<cost, lock:full, lockTx:'최대 '+mx+(bk==='wall'?'칸':'기'),
+    val:tot(n), next:full?null:tot(n+1), lv:'LV.'+n, nextLv:full?null:(n+1),
+    cost:resIco('mineral')+cost.toLocaleString('en-US'),
+    act:full?null:('hbBuy(&#39;'+bk+'&#39;)') }); }
+// 더보기 > 건설 = 즉시 건설 모드. 하단 업그레이드 패널이 그대로 '건설' 구역이 된다(팝업·드롭다운 없음).
+// 나가는 길은 오른쪽 위 ⊘(#hbBuildStop) 하나 — hbBuildExit()가 모드도 끄고 하단도 되돌린다.
+function hbBuildStart(){ if(!_hb) return;
+  hbBuildEnter(); hbArmBtns(); renderHome();
+  if(typeof playSfx==='function') playSfx('ui_open'); }
 // ☰ 더보기 — 사냥터에서만. 다른 화면에서는 같은 버튼이 그대로 설정을 연다.
 // ⚠ ☰ 는 두 개가 겹쳐 있다 — 게임 HUD의 #settingsBtn(hudTopRow)과 재화 바의 #curSettingsBtn.
 //    사냥터에서는 재화 바 쪽이 위에 있어 그쪽이 눌린다. 그래서 둘 다 이 함수를 거치게 한다.
@@ -5950,27 +5952,14 @@ function hbMoreTap(k){
   if(k==='set')   return hbMoreGo(function(){
     if(typeof openAppSettings==='function') openAppSettings();   // 앱 문맥(.appCtx) — 인게임 설정에는 배속·게임 나가기가 있다
     else openSettings(); });
-  if(k==='build') return hbMoreGo(function(){ if(typeof hbToggleBuild==='function') hbToggleBuild(); });
+  if(k==='build') return hbMoreGo(function(){ if(typeof hbBuildStart==='function') hbBuildStart(); });
   if(k==='dg')    return hbMoreGo(function(){ if(typeof openDungeonHub==='function') openDungeonHub(); });
   if(k==='boost') return hbMoreGo(function(){ if(typeof hbOpenBoost==='function') hbOpenBoost(); });
   if(k==='town')  return hbMoreGo(function(){ if(typeof openVillage==='function') openVillage(); });
   if(k==='grow')  return hbMoreGo(function(){ if(typeof hbOpenGrow==='function') hbOpenGrow(); }); }
-function renderHbBuild(){ const w=document.getElementById('hbBuildWrap'); if(!w) return;
-  const coin=Math.floor(((typeof PROF==='function'&&PROF())||{}).pcoin||0), open=!!_hbBdOpen;
-  let h='<button class="hbRoundBtn'+(open?' on':'')+'" onclick="hbToggleBuild()" aria-label="건설" title="건설"><span data-ico="build"></span></button>';
-  if(open){
-    h+='<div class="hbBdMenu">';
-    for(const bk of HB_BUILD_KEYS){ const B=HB_STRUCT[bk], n=hbStructN(bk), mx=hbBuildMax(bk),
-        full=n>=mx, cost=hbBuildCost(bk), off=full||coin<cost;
-      h+='<button class="hbBdIt'+(off?' off':'')+'" onclick="hbPickBuild(&#39;'+bk+'&#39;)">'
-        +'<span class="hbBdIco"><img class="icoImg" src="'+ICO_DIR+'buildings/'+B.ico+'.webp" alt="" draggable="false"></span>'
-        +'<b class="hbBdNm">'+B.name+'</b>'
-        +'<span class="hbBdCt">'+n+'/'+mx+'</span>'
-        +'<span class="hbBdCs">'+(full?'MAX':(resIco('mineral')+cost.toLocaleString('en-US')))+'</span>'
-        +'</button>'; }
-    h+='</div>'; }
-  w.innerHTML=h;
-  if(typeof paintIcons==='function') paintIcons(w); }
+// ⛔ 좌상단 건설 드롭다운(renderHbBuild/#hbBuildWrap)은 폐지했다(2026-08-14).
+//    더보기 > 건설 = 즉시 건설 모드이고, 고르는 곳은 하단 패널이다(hbBuildCardHTML).
+//    오른쪽 위에서 열었는데 왼쪽 위에 목록이 뜨던 것이 문제였다.
 function renderHbBar(){ const bar=document.getElementById('hbBar'); if(!bar||!_hb) return;
   const S=_hb, coin=Math.floor(((typeof PROF==='function'&&PROF())||{}).pcoin||0);
   // 하단 바는 '전투 중에 쓰는 것'만 — 스킬 3개. 판을 여는 것(건설·토벌·부스트)은 좌상단 줄로 갔다.
@@ -5981,8 +5970,7 @@ function renderHbBar(){ const bar=document.getElementById('hbBar'); if(!bar||!_h
     h+='<button class="hbSk" data-k="'+k+'" onclick="hbUseSkill(&#39;'+k+'&#39;)" title="'+SK.name+' — '+SK.tip+'">'
       +'<span class="hbSkIco">'+_icoImg('skills', SK.ico)+'</span>'
       +'<i class="hbCd"></i></button>'; }   // 껍데기는 --cd 로만 움직인다(다시 그리지 않음)
-  bar.innerHTML=h+'</div>';
-  renderHbBuild(); }   // 건설 버튼·목록은 좌상단에 따로 그린다
+  bar.innerHTML=h+'</div>'; }
 // 🤝 동료 — 영입(첫 구매)·강화(같은 버튼)·출전 토글. 옛 전직 트리가 여기로 옮겨 왔다.
 function hbOpenMates(){ const el=document.getElementById('hbMateModal'); if(!el) return;
   el.classList.remove('hide'); renderMateModal(); if(typeof playSfx==='function') playSfx('ui_open'); }
@@ -7360,7 +7348,7 @@ function hbBuildExit(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation();
   hbArmBtns();
   if(was){ S.wave=1; S.phase='fight'; hbSpawnWave(); }
   if(typeof playSfx==='function') playSfx('ui_close');
-  hbHud(); }
+  hbHud(); renderHome(); }   // 하단 패널을 업그레이드로 되돌린다
 function hbArmStart(k,gx,gy){ if(!_hb) return;
   hbBuildEnter();
   _hb.arm={ k:k, gx:gx, gy:gy, dir:[1,0], last:null };   // dir = 연속 배치가 나아가는 방향(기본 오른쪽)

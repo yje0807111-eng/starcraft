@@ -258,18 +258,24 @@ async function groupLobby(){
       // 건설 카드는 격자에 없다 — 여긴 '지어진 것의 스탯을 올리는' 곳이고, 짓는 것은 전장 위 버튼이다
       assert(!document.querySelector('#hmUpgGrid .hmUp[data-k^="b_"]'),'건물 구역에 건설 카드가 남아 있음');
       assert(document.querySelector('#hmUpgGrid .hmUp[data-k="tuatk"]'),'건물 구역에 강화 카드가 없음');
-      // 짓는 입구는 전장 위 '건설' 한 칸 — 누르면 목록이 펴진다
-      { assert(document.querySelectorAll('#hbBuildWrap .hbRoundBtn').length===1,'좌상단 건설 버튼이 없음');
-        assert(!document.querySelector('#hbBuildWrap .hbBdMenu'),'누르지도 않았는데 건설 목록이 열려 있음');
-        hbToggleBuild();
-        const it=[...document.querySelectorAll('#hbBuildWrap .hbBdMenu .hbBdIt')];
-        assert(it.length===HB_BUILD_KEYS.length,'건설 목록이 '+HB_BUILD_KEYS.length+'개가 아님: '+it.length);
-        assert(it.every(b=>b.querySelector('img')),'건설 목록에 건물 아이콘이 없음');
-        hbToggleBuild();
-        assert(!document.querySelector('#hbBuildWrap .hbBdMenu'),'다시 눌렀는데 목록이 안 닫힘');
-        // 토벌·부스트·건설은 ☰ 더보기 시트로 갔다(2026-08-12) — 좌상단에는 없다
+      // 짓는 입구는 더보기 > 건설 — 누르면 '이 패널'이 건설 구역이 된다(2026-08-14 · 좌상단 드롭다운 폐지)
+      { assert(!document.getElementById('hbBuildWrap'),'좌상단 건설 랩이 아직 남아 있음');
+        assert(typeof hbToggleBuild!=='function' && typeof renderHbBuild!=='function','옛 좌상단 건설 드롭다운이 남아 있음');
         assert(!document.getElementById('hbDgBtn')&&!document.getElementById('hbBoostBtn'),'토벌·부스트가 아직 좌상단에 있음');
-        assert(typeof hbOpenMore==='function','더보기가 없는데 좌상단에서도 빠졌다 — 들어갈 길이 사라진다'); }
+        assert(typeof hbOpenMore==='function','더보기가 없는데 좌상단에서도 빠졌다 — 들어갈 길이 사라진다');
+        hbBuildStart();
+        const card=document.querySelector('#homeScreen .hmUpg');
+        assert(_hb.build===true,'건설 모드로 안 들어감');
+        assert(card.classList.contains('bd'),'하단 패널이 건설 구역으로 안 바뀜');
+        assert(document.querySelector('#homeScreen .hmUpgTtl').textContent==='건설','패널 제목이 건설이 아님');
+        assert(!visible(document.querySelector('#homeScreen .hmUpgBar')),'건설 모드인데 탭 띠·수량이 남아 있음');
+        const bc=[...document.querySelectorAll('#hmUpgGrid .hmUp[data-k^="b_"]')];
+        assert(bc.length===HB_BUILD_KEYS.length,'건설 카드가 '+HB_BUILD_KEYS.length+'장이 아님: '+bc.length);
+        assert(bc.every(b=>b.querySelector('img')),'건설 카드에 건물 아이콘이 없음');
+        assert(!$('hbBuildStop').classList.contains('hide'),'해제(⊘) 버튼이 안 보임');
+        hbBuildExit();
+        assert(_hb.build===false && !card.classList.contains('bd'),'⊘ 로 건설 모드가 안 풀림');
+        assert(document.querySelector('#homeScreen .hmUpgTtl').textContent!=='건설','나갔는데 제목이 건설로 남음'); }
       assert(typeof hbOpenBuild!=='function','건설 팝업이 아직 남아 있음(패널로 흡수됐어야 한다)');
       hmUpgTab(before); }
     // 수량은 한 칸을 눌러 돌린다 — 1 → 10 → MAX → 1. 폭은 라벨이 바뀌어도 고정
@@ -611,11 +617,9 @@ async function groupLobby(){
     openHome(); await sleep(600);
     // ⚠ 이 파일에는 전역 .hide 규칙이 없다(요소마다 선언). 안 만들면 '항상 떠 있는' 상태가 된다.
     assert(!visible($('hbMoreSheet')),'더보기가 처음부터 떠 있음 — .hbMoreWrap.hide 규칙 누락');
-    // 좌상단 줄에서 빠졌는지 — 판 여는 것이 두 곳에 있으면 어디를 눌러야 할지 모른다
-    const row=[...document.querySelector('.hbIcoRow').children].filter(visible)
-      .map(e=>e.getAttribute('aria-label')||e.id);
-    for(const gone of ['토벌','부스트']) assert(row.indexOf(gone)<0,'좌상단에 '+gone+'이 남아 있음: '+row.join(','));
-    assert(!visible(document.querySelector('#hbBuildWrap > .hbRoundBtn')),'좌상단에 건설 버튼이 남아 있음');
+    // 좌상단 아이콘 줄은 통째로 없앴다 — 판 여는 것이 두 곳에 있으면 어디를 눌러야 할지 모른다
+    assert(!document.querySelector('.hbIcoRow'),'좌상단 아이콘 줄이 아직 남아 있음');
+    assert(!document.getElementById('hbBuildWrap'),'좌상단에 건설 버튼이 남아 있음');
     // ☰ → 더보기(설정이 아니라)
     // ⚠ id로 부르면 안 된다 — ☰ 는 #settingsBtn(게임 HUD)과 #curSettingsBtn(재화 바)이 겹쳐 있고
     //    사용자가 누르는 건 위에 있는 쪽이다. 좌표로 집어서 실제 손가락과 같은 경로로 누른다.
@@ -680,14 +684,17 @@ async function groupLobby(){
     for(const sel of ['#hbMoreBox','#hbMoreGrid .hbMoreIt']){
       const r=getComputedStyle(document.querySelector(sel)).borderTopLeftRadius;
       assert(r==='3px','더 각져야 한다 — '+sel+' r='+r); }
-    // 건설을 고르면 시트가 닫히고 메뉴가 화면 안에 뜬다(필드를 눌러 배치해야 하므로)
+    // 건설을 고르면 시트가 닫히고 '하단 패널'이 건설 구역이 된다(2026-08-14 · 좌상단 드롭다운 폐지)
     PROF().pcoin=99999;
     document.querySelector('#hbMoreGrid [data-k="build"]').click(); await sleep(250);
     assert(!visible($('hbMoreSheet')),'건설을 골랐는데 시트가 안 닫힘');
-    const menu=document.querySelector('.hbBdMenu'); assert(visible(menu),'건설 메뉴가 안 열림');
-    { const m=menu.getBoundingClientRect(), ph=$('phone').getBoundingClientRect();
-      assert(m.left>=ph.left-1 && m.right<=ph.right+1 && m.bottom<=ph.bottom+1,'건설 메뉴가 화면 밖으로 나감'); }
-    if(typeof hbToggleBuild==='function') hbToggleBuild();
+    assert(_hb.build===true,'건설을 골랐는데 건설 모드로 안 들어감');
+    { const card=document.querySelector('#homeScreen .hmUpg');
+      assert(card.classList.contains('bd'),'하단 패널이 건설 구역으로 안 바뀜');
+      assert(document.querySelectorAll('#hmUpgGrid .hmUp[data-k^="b_"]').length===HB_BUILD_KEYS.length,'건설 카드가 안 뜸');
+      const c=card.getBoundingClientRect(), ph=$('phone').getBoundingClientRect();
+      assert(c.left>=ph.left-1 && c.right<=ph.right+1,'건설 구역이 화면 밖으로 나감'); }
+    hbBuildExit(); await sleep(60);
     // 유즈맵에서는 같은 버튼이 설정이어야 한다
     hbStop(); enterSandbox(); await sleep(700);
     $('settingsBtn').click(); await sleep(200);
