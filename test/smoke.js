@@ -71,11 +71,12 @@ async function groupLobby(){
     assert(document.querySelectorAll('#auth input[type=password]').length===2,'비밀번호 칸이 폼마다 복제됨');
     authBackToHub(); assert(visible($('authHub')),'뒤로가기가 허브로 안 돌아감');
     authOpenForm('id');
-    // 탭은 허브·유즈맵과 같은 공용 컴포넌트를 쓴다(로그인 화면만 별도 세그먼트 금지)
-    var lt=$('segLogin');
-    assert(lt.classList.contains('msTab2'),'로그인 탭이 공용 탭(.msTab2)이 아님: '+lt.className);
-    assert(document.querySelector('.authTabs').classList.contains('msTabs2'),'탭 바가 .msTabs2가 아님');
-    assert(lt.querySelector('svg'),'탭 아이콘이 없음(paintIcons 누락)');
+    // 탭은 사냥터·장비창과 같은 공용 세그먼트 바를 쓴다(로그인 화면만 별도 탭 금지)
+    var seg=document.querySelector('#authTabs .pdSeg');
+    assert(seg,'로그인/회원가입 탭이 공용 세그먼트 바(.pdSeg)를 안 씀');
+    assert(seg.querySelectorAll('.pdSegBtn').length===2,'탭이 2개가 아님');
+    assert(seg.querySelector('.pdSegInd'),'현재 탭을 가리키는 판(.pdSegInd)이 없음');
+    assert(seg.querySelector('.pdSegBtn.on').textContent.indexOf('로그인')>=0,'켜진 탭이 로그인이 아님');
     var ac=getComputedStyle(document.querySelector('.authCard'));
     // 배경이 단색이든 그라데든, 뒤 배경이 비치지 않을 만큼 불투명해야 한다
     var acAlpha=(ac.backgroundImage.indexOf('gradient')>=0)
@@ -84,6 +85,11 @@ async function groupLobby(){
     assert(acAlpha>0.6,'로그인 카드가 투명해 배경과 겹침(alpha '+acAlpha+')');
     assert(ac.boxShadow!=='none','로그인 카드에 질감(그림자)이 없음');
     assert(ac.clipPath && ac.clipPath!=='none','로그인 카드 외곽이 각진 HUD 형태가 아님');
+    // 액센트는 사냥터와 같은 빨강 — 푸른기로 되돌아가면 여기서 걸린다
+    { var rgb=ac.getPropertyValue('--acRGB').trim().split(',').map(Number);
+      assert(rgb.length===3 && rgb[0]>rgb[2]+80,'로그인 액센트가 붉은 계열이 아님: '+ac.getPropertyValue('--acRGB'));
+      var segCol=getComputedStyle(document.querySelector('#authTabs .pdSegInd')).getPropertyValue('--segCol').trim();
+      assert(segCol===ac.getPropertyValue('--acRGB').trim(),'탭 광원이 카드 액센트와 다름: '+segCol); }
     authMode('signup');
     assert(!$('authNick').classList.contains('hide'),'회원가입인데 닉네임 칸이 안 보임');
     assert(!$('authPw2').classList.contains('hide'),'회원가입인데 비밀번호 확인 칸이 안 보임');
