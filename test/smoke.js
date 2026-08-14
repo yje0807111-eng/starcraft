@@ -161,38 +161,30 @@ async function groupLobby(){
     // 게스트 입장도 로딩(#opening에서 3D 데우기)을 거친다 — 끝날 때까지 기다린다.
     // ⚠ 이 대기는 넉넉해야 한다: 실기기(GPU)에선 1초 안이지만 헤드리스 소프트웨어 렌더러(swiftshader)에선
     //   3D 예열에 10초 넘게 걸린다. 4초로 뒀다가 '게스트가 안 들어간다'고 잘못 실패했다(앱은 정상).
-    for(let i=0;i<120 && !(visible($('townScreen'))||visible($('charScreen'))||visible($('homeScreen'))); i++) await sleep(250);
-    assert(visible($('townScreen'))||visible($('charScreen'))||visible($('homeScreen')),'게스트 버튼을 눌렀는데 메인으로 안 감');
+    for(let i=0;i<120 && !(visible($('townScreen'))||visible($('homeScreen'))); i++) await sleep(250);
+    assert(visible($('townScreen'))||visible($('homeScreen')),'게스트 버튼을 눌렀는데 메인으로 안 감');
     assert(!visible($('auth')),'로그인 화면이 안 닫힘');
     for(let i=0;i<40 && !AUTH.user; i++) await sleep(50);   // 로딩 게이트를 거치면 몇 프레임 늦게 채워질 수 있다
     assert(AUTH.user,'입장했는데 유저가 비어 있음');
     return AUTH.user.nick||AUTH.user.id; });
-  // 캐릭터 생성 = 종류 카드 + 스탯 막대. 렌더러 한 벌을 입장 화면과 마을 '생성소'가 같이 쓴다.
-  await step('캐릭터 생성: 종류 카드 · 스탯 막대 · 만들기', ()=>{ skipIf(typeof renderCharCreate!=='function','캐릭터 생성 없음');
+  // 캐릭터를 '고르는' 화면은 없다 — 처음 들어오면 기본 유닛이 조용히 지급된다(2026-08-13 설계 변경).
+  // 종족 선택은 나중에 길드 가입 시점으로 옮겼다. 여기서 지키는 것은 '입구마다 캐릭터가 보장된다' 하나.
+  await step('캐릭터: 생성 화면 없이 기본 유닛이 자동 지급된다', ()=>{ skipIf(typeof profEnsureChar!=='function','캐릭터 시스템 없음');
+    assert(typeof openCharScreen==='undefined' && typeof renderCharCreate==='undefined'
+        && typeof renderCharSelect==='undefined' && !$('charScreen'),'캐릭터 선택/생성 화면이 아직 남아 있음');
+    assert(PROF_MAX_CHARS===1,'계정당 캐릭터는 하나여야 함: '+PROF_MAX_CHARS);
     const p=PROF(); p.chars=[]; p.curId=''; saveMeta();
-    openCharScreen('create');
-    const cards=[...document.querySelectorAll('#csBody .ccCard')];
-    assert(cards.length===Object.keys(PROF_CLASSES).length,'종류 카드 수가 PROF_CLASSES 와 다름: '+cards.length);
-    assert(cards[0].querySelectorAll('.ccStat u').length===PROF_STATS.length,'스탯 막대가 4개가 아님');
-    // 막대는 실제 기본 스탯을 반영해야 한다(장식이 아니다)
-    { const id=Object.keys(PROF_CLASSES)[0], base=PROF_JOBS[id].base;
-      const w=parseFloat(cards[0].querySelector('.ccStat u').style.width);
-      assert(Math.abs(w-base[PROF_STATS[0]]/CC_STAT_MAX*100)<1.5,'막대 길이가 스탯과 안 맞음: '+w+'%'); }
-    // ⚠ 공용 .portImg 는 position:absolute 다 — 초상 칸이 기준(positioned)이 아니면 카드 전체로 퍼진다
-    { const port=cards[0].querySelector('.ccPort'), c=getComputedStyle(port);
-      assert(c.position!=='static','초상 칸이 positioned 가 아님 — 초상이 카드 전체로 퍼진다');
-      assert(c.overflow==='hidden','초상 칸이 넘침을 안 자름'); }
-    // 이름을 넣고 만들면 그 이름으로 생성된다
-    $('ccName').value='스모크닉';
-    cards[1].querySelector('.ccMake').click();
-    assert(CHAR() && CHAR().name==='스모크닉','만들기로 캐릭터가 안 생김: '+JSON.stringify(CHAR()&&CHAR().name));
-    // 슬롯이 차면 잠긴다
-    while(PROF().chars.length<PROF_MAX_CHARS) profCreateChar('ranger','채우기');
-    openCharScreen('create');
-    const b0=document.querySelector('#csBody .ccMake');
-    assert(b0.disabled,'슬롯이 찼는데 만들기 버튼이 살아 있음');
-    PROF().chars=[PROF().chars[0]]; PROF().curId=PROF().chars[0].id; saveMeta();   // 뒤 검사용으로 하나만 남긴다
-    return Object.keys(PROF_CLASSES).length+'종 · 막대 '+PROF_STATS.length+'개'; });
+    const c=profEnsureChar();
+    assert(c && CHAR()===c,'기본 유닛이 지급되지 않음');
+    assert(c.cls===PROF_DEFAULT_CLASS,'기본 유닛 종류가 PROF_DEFAULT_CLASS 와 다름: '+c.cls);
+    assert(profEnsureChar()===c,'이미 있는데 또 만들었음(중복 지급)');
+    // 두 번째 캐릭터는 만들어지지 않는다 — 보관소도 함께 폐지했다
+    assert(!profCreateChar('scout','둘째'),'캐릭터가 하나를 넘어 생성됨');
+    // 모두 같은 스탯·같은 외형으로 시작한다
+    { const p2=PROF(); p2.chars=[]; p2.curId=''; const d=profEnsureChar();
+      for(const k of PROF_STATS) assert(profStat(k)>0,'기본 스탯이 0: '+k);
+      assert(d.cls===c.cls,'사람마다 시작 유닛이 다름'); }
+    return '기본 '+PROF_DEFAULT_CLASS+' · 슬롯 '+PROF().chars.length+'/'+PROF_MAX_CHARS; });
   // 부팅 타이머는 '오프닝을 걷어내는' 용도지 화면을 되돌리는 용도가 아니다.
   // 가드가 없으면 1.7초 뒤 openAuth()가 그때 보고 있던 화면을 로그인으로 덮는다 —
   // 스모크가 간헐적으로 "유즈맵에서 뒤로 갔는데 HOME으로 안 옴"으로 터지던 진짜 원인이었다.
@@ -2403,37 +2395,6 @@ async function groupLobby(){
       if(e) assert(+getComputedStyle(e).fontWeight<=700, sel+' 굵기가 700 초과(가짜 볼드): '+getComputedStyle(e).fontWeight); }
     openHome(); await sleep(40);
     return '하위 3칸 · renderProfGear/_shopPetPanel 재사용 ok'; });
-      await step('캐릭터: 성장은 따로 · 재화와 펫은 공용', ()=>{ skipIf(typeof profCreateChar!=='function','캐릭터 시스템 없음');
-    const p=PROF(); p.pcoin=1000; p.pets={wolf:{count:1}}; p.equip=['wolf'];
-    const a=CHAR(); a.unit.stats.pow=(a.unit.stats.pow||0)+12;   // 성장 흔적을 직접 넣는다(찍는 경로는 없앴다)
-    const powA=profStat('pow'), spA=a.statPoints||0;
-    const b=profCreateChar('scout','둘째'); assert(b,'두 번째 캐릭터 생성 실패');
-    assert(CHAR().id===b.id,'새로 만든 캐릭터가 선택되지 않음');
-    assert(PROF().pcoin===1000,'재화가 캐릭터를 따라감(공용이어야 함): '+PROF().pcoin);
-    assert(PROF().equip.length===1,'펫 장착이 캐릭터를 따라감(공용이어야 함)');
-    assert(!b.statPoints && b.level===1 && profStat('pow')!==powA,'새 캐릭터가 성장을 물려받음');
-    assert(profSelectChar(a.id),'되돌아가기 실패');
-    assert((a.statPoints||0)===spA && profStat('pow')===powA,'되돌아온 캐릭터의 성장이 바뀜');
-    return '슬롯 '+PROF().chars.length+'/'+PROF_MAX_CHARS; });
-  await step('캐릭터 삭제: 재화는 환급 · 경험치는 소멸 · 장비는 가방에 남음', ()=>{ skipIf(typeof profDeleteChar!=='function','캐릭터 삭제 없음');
-    const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0; p.pcoin=100000; p.unlocks={evolve:true};
-    const c=profCreateChar('ranger','환급'); assert(c,'캐릭터 생성 실패');
-    const before=p.pcoin;
-    c.unit.level=30; c.level=30;                         // 진화 레벨 요건 충족(전직은 폐지됨)
-    assert(profEvolve(),'진화 실패');
-    const spent=before-p.pcoin; assert(spent>0,'지출이 0');
-    const it=profAddItem(profMakeItem('weapon',3,'rare')); assert(profEquipItem(it.iid),'장비 장착 실패');
-    c.xp=999; c.level=12; c.statPoints=7;                 // 경험치로 얻은 것 — 환급 대상이 아니어야 한다
-    assert(profRefundOf(c)===spent,'환급액이 쓴 재화와 다름(장비가 섞였는지 확인): '+profRefundOf(c)+' vs '+spent);
-    _charDelId=c.id;                                      // 확인 UI(무엇을 잃고 얻는지)
-    const html=renderCharSelect(); _charDelId=null;
-    assert(html.indexOf('삭제할까요')>=0 && html.indexOf('P 반환')>=0 && html.indexOf('경험치 소멸')>=0,'삭제 확인 UI가 안 나옴');
-    const cash=p.pcoin, got=profDeleteChar(c.id);
-    assert(got===spent,'삭제 환급액 불일치: '+got);
-    assert(p.pcoin===cash+spent,'재화가 안 돌아옴: '+p.pcoin);
-    assert(p.chars.length===0 && CHAR()===null,'캐릭터가 안 지워짐');
-    assert(profItems().length===1 && !profItemHolder(it.iid),'장비가 사라졌거나 장착이 안 풀림');
-    return '지출 '+spent+'P → 전액 환급 · 장비는 가방에 남음'; });
   await step('장비: 던전 드랍 → 장착하면 스탯에 반영', ()=>{ skipIf(typeof profMakeItem!=='function','장비 아이템 없음');
     const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0; p.unlocks={};
     p.pets={}; p.equip=[];                                // 펫 %보너스가 곱해지면 장비 기여분만 떼어 볼 수 없다
@@ -2450,11 +2411,12 @@ async function groupLobby(){
     const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0; p.pcoin=0;
     const a=profCreateChar('ranger','A'), it=profAddItem(profMakeItem('weapon',2,'rare'));
     assert(profEquipItem(it.iid),'A 장착 실패');
-    profCreateChar('scout','B');                          // 새 캐릭터가 현재 선택된다
+    // 계정당 캐릭터는 하나라 UI로는 둘째를 못 만든다 — 소유권 판정만 보려고 저장소에 직접 꽂는다
+    const b=defaultChar('scout','B'); p.chars.push(b); p.curId=b.id;
     assert(profItems().length===1,'가방이 캐릭터를 따라감(계정 공용이어야 함)');
     assert(!profEquipItem(it.iid),'다른 캐릭터가 장착 중인데 장착됨');
     assert(profScrapItem(it.iid)===-1,'장착 중인데 분해됨');
-    assert(profSelectChar(a.id) && profEquipItem(it.iid),'A로 돌아가 해제 실패');
+    p.curId=a.id; assert(profEquipItem(it.iid),'A로 돌아가 해제 실패');
     const v=profScrapValue(it), got=profScrapItem(it.iid);
     assert(got===v && p.pcoin===v,'분해 환급 불일치: '+got+'/'+p.pcoin);
     assert(profItems().length===0,'가방에서 안 사라짐');
@@ -2716,8 +2678,6 @@ async function groupLobby(){
     const p=PROF(); p.chars.length=0; p.curId='';
     profCreateChar('scout','<b>x</b>');                 // 이름은 사용자 입력 — innerHTML에 그대로 들어가면 안 된다
     const host=document.createElement('div');
-    host.innerHTML=renderCharSelect();
-    assert(host.textContent.indexOf('<b>x</b>')>=0,'보관소에서 이름이 마크업으로 해석됨');
     host.innerHTML=renderProfStats();
     assert(host.textContent.indexOf('<b>x</b>')>=0,'광장에서 이름이 마크업으로 해석됨');
     return '이스케이프 확인'; });

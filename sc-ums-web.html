@@ -2220,11 +2220,11 @@
   /* 유즈맵 선택 */
   #mapSelect{z-index:47;padding:12px 13px}
   /* 유즈맵 선택 로비 배경(전체 cover, 9:16 기준, UI는 위 레이어) */
-  #mapSelect::before,#rooms::before,#createPanel::before,#shopScreen::before,#gearScreen::before,#charScreen::before,#upgScreen::before{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;transform-origin:center center;
+  #mapSelect::before,#rooms::before,#createPanel::before,#shopScreen::before,#gearScreen::before,#upgScreen::before{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;transform-origin:center center;
     background:url('assets/backgrounds/lobby_bg.webp') center center / cover no-repeat #04050b;
     animation:lobbyBreath 12s ease-in-out infinite}   /* 미세한 호흡(위아래 + 약한 확대) */
   @keyframes lobbyBreath{ 0%,100%{transform:scale(1.01) translateY(0)} 50%{transform:scale(1.05) translateY(-1%)} }
-  #mapSelect::after,#rooms::after,#createPanel::after,#shopScreen::after,#gearScreen::after,#charScreen::after,#upgScreen::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg, rgba(2,3,8,.96) 0%, rgba(2,3,8,.66) 16%, rgba(2,3,8,.2) 38%, rgba(2,3,8,.2) 62%, rgba(2,3,8,.66) 84%, rgba(2,3,8,.97) 100%)}   /* 위·아래 빨강 더 톤다운(중앙 이미지 유지) */
+  #mapSelect::after,#rooms::after,#createPanel::after,#shopScreen::after,#gearScreen::after,#upgScreen::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg, rgba(2,3,8,.96) 0%, rgba(2,3,8,.66) 16%, rgba(2,3,8,.2) 38%, rgba(2,3,8,.2) 62%, rgba(2,3,8,.66) 84%, rgba(2,3,8,.97) 100%)}   /* 위·아래 빨강 더 톤다운(중앙 이미지 유지) */
   
   
   /* 메타 성장(빌드) 화면 */
@@ -2328,7 +2328,7 @@
   .ptHelpBody .phItem{padding:6px 0;border-top:1px solid rgba(255,255,255,.06)}
   .ptHelpBody .phItem b{color:#dbe3ec;font-weight:700}
   /* ── 🎯 시작 선택 허브 ── */
-  #townScreen.hide,#charScreen.hide{display:none}
+  #townScreen.hide{display:none}
   /* 장비 페이퍼돌 — 캐릭터 초상 + 신체 위치 슬롯 */
   /* ── 장비창 — 위: 아바타 + 부위별 슬롯 / 아래: 가방(늘 열림) ── */
   .twCard.gearFull{width:372px;max-width:94vw;height:90%;max-height:90%}   /* 장비창만 화면을 넓게 쓴다 */
@@ -2432,83 +2432,6 @@
   .igStat .ok{color:#6ff0a0}.igStat .lock{color:#e0a04a}.igSep{opacity:.45}.igArrow{color:#7d8b98}
   .igBtns{flex:0 0 auto;display:flex;gap:8px}
   .igBtns .twBtn{min-width:52px;padding:8px}
-  /* 캐릭터 선택/생성 입장 화면 */
-  #charScreen{position:absolute;inset:0;z-index:61;display:flex;align-items:center;justify-content:center}
-  .csCard{width:330px;max-width:90vw;max-height:86%;
-    /* 푸른기 제거 — 사냥터 패널과 같은 중성 회색 · 뒤 배경이 살짝 비친다 */
-    background:var(--panelBig)}
-  /* ══ 캐릭터 생성 카드 ══ 렌더러가 입장 화면·마을 '생성소' 양쪽에서 쓰이므로 클래스는 전역이다(#charScreen 안으로 좁히지 말 것).
-     톤은 사냥터 카드 그대로: 완전 검정 면 + 위가 밝고 아래로 스러지는 붉은 테두리 + 7px 모서리 컷.
-     종족색(--rc)은 '정보'라서 스탯 막대와 꼬리표에만 쓴다 — 테두리·버튼까지 물들이면 화면마다 색이 달라진다. */
-  .ccName{display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:8px 10px;
-    background:linear-gradient(180deg,#0d0d0d,#000);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
-  .ccName label{flex:1;min-width:0;font-size:12px;font-weight:700;color:#ececec}
-  .ccName label em{display:block;font-style:normal;font-size:9.5px;font-weight:400;color:#8a8a8a;margin-top:2px}
-  .ccName input{flex:0 0 128px;min-width:0;height:34px;padding:0 10px;box-sizing:border-box;
-    font-family:inherit;font-size:12px;color:var(--txt);outline:none;
-    background:rgba(255,255,255,.04);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
-  .ccName input:focus{border-color:rgba(255,59,59,.5)}
-  .ccName input::placeholder{color:#6f757d}
-  .ccCard{--ch:7px;position:relative;margin-bottom:8px;padding:9px 10px 10px;
-    background:linear-gradient(180deg,#0a0a0a,#000);
-    clip-path:polygon(var(--ch) 0,100% 0,100% calc(100% - var(--ch)),calc(100% - var(--ch)) 100%,0 100%,0 var(--ch))}
-  .ccCard::before{content:'';position:absolute;inset:0;z-index:0;padding:1px;pointer-events:none;
-    background:linear-gradient(180deg,rgba(255,59,59,.9) 0%,rgba(255,59,59,.5) 34%,
-      rgba(255,59,59,.32) 68%,rgba(255,59,59,.24) 100%);
-    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
-    -webkit-mask-composite:xor;mask-composite:exclude;
-    clip-path:polygon(var(--ch) 0,100% 0,100% calc(100% - var(--ch)),calc(100% - var(--ch)) 100%,0 100%,0 var(--ch))}
-  .ccCard>*{position:relative;z-index:1}
-  .ccHead{display:flex;align-items:center;gap:9px;margin-bottom:8px}
-  /* ⚠ position:relative 필수 — 공용 .portImg 는 position:absolute;inset:0 이라
-     기준이 없으면 카드 전체(.ccCard)로 퍼져 초상이 배경처럼 깔린다(실제로 그랬다) */
-  .ccPort{position:relative;flex:none;width:38px;height:38px;display:flex;align-items:center;justify-content:center;overflow:hidden;
-    font-size:19px;background:#000;border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
-  .ccPort svg{width:26px;height:26px}
-  .ccWho{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
-  .ccWho b{font-size:13px;font-weight:700;color:#ececec;letter-spacing:-.01em}
-  .ccWho i{font-style:normal;font-size:9.5px;color:#8a8a8a}
-  .ccRace{flex:none;font-size:9px;font-weight:700;letter-spacing:.02em;color:var(--rc);
-    padding:2px 6px;border:1px solid color-mix(in srgb,var(--rc) 40%,transparent);border-radius:var(--r-bar)}
-  /* 스탯 = 숫자 나열이 아니라 막대 — 종류끼리의 차이가 한눈에 보인다 */
-  .ccStats{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;margin-bottom:9px}
-  .ccStat{display:flex;align-items:center;gap:6px;min-width:0}
-  .ccStat i{flex:none;width:26px;font-style:normal;font-size:9.5px;color:#8a8a8a}
-  .ccStat b{flex:1;min-width:0;height:4px;background:rgba(255,255,255,.07);border-radius:var(--r-bar);overflow:hidden}
-  .ccStat u{display:block;height:100%;text-decoration:none;background:var(--rc);
-    box-shadow:0 0 6px -2px var(--rc)}
-  .ccStat em{flex:none;width:14px;text-align:right;font-style:normal;font-family:var(--font-num);
-    font-variant-numeric:tabular-nums;font-size:10.5px;font-weight:700;color:#ececec}
-  /* 만들기 = 이 카드의 주 동작. 로그인 주 버튼과 같은 언어(검정 판 + 붉은 테두리 + 밑변 광원) */
-  .ccMake{position:relative;width:100%;min-height:36px;cursor:pointer;font-family:inherit;
-    font-size:12px;font-weight:700;letter-spacing:.02em;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8);
-    background:linear-gradient(180deg,#131313,#050505);border:1px solid rgba(255,59,59,.5);border-radius:var(--r-bar);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
-  .ccMake::after{content:'';position:absolute;left:12%;right:12%;bottom:0;height:1px;pointer-events:none;
-    background:linear-gradient(90deg,transparent,rgba(255,255,255,.55) 50%,transparent 92%),
-      linear-gradient(90deg,transparent,rgba(255,59,59,.9),transparent);
-    box-shadow:0 0 2px rgba(255,59,59,.55),0 0 5px rgba(255,59,59,.22)}
-  .ccMake:active{transform:translateY(1px)}
-  .ccMake:disabled{cursor:default;color:#7a7a7a;border-color:var(--metal-edge)}
-  .ccMake:disabled::after{display:none}
-  /* ↓ 여기부터는 전부 #charScreen 안으로 범위를 좀힌다 — .twRow/.twBtn/.twInput 은 마을·장비창 공용이라
-     전역으로 고치면 그쪽까지 함께 바뀐다(DESIGN.md — 마을 공용 전환은 나중에 한ꯈ에). */
-  /* 제목 — 하단과 같은 Noto */
-  #charScreen .setTitle{font-family:var(--font-ko);font-size:15px;font-weight:700;letter-spacing:.06em}
-  /* 종족 줄 — 사냥터 카드(.hmUp)와 같은 검정 면 + 금속 링 + 챔퍼 */
-  #charScreen .twRow{padding:8px;border-top:none;border:1px solid transparent;border-radius:var(--r-bar);
-    margin-bottom:6px;
-    background:linear-gradient(180deg,#0a0a0a,#000) padding-box, var(--metal-ring-n) border-box;
-    clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
-  #charScreen .twRow:last-child{margin-bottom:0}
-  /* 버튼·입력창 — 라운드 6/8px 을 토큰(3px)으로, 테두리는 금속 링 */
-  #charScreen .twBtn{border-radius:var(--r-bar);border:1px solid transparent;box-shadow:none;
-    background:linear-gradient(180deg,#2a2a2a,#141414) padding-box, var(--metal-ring-n) border-box}
-  #charScreen .twInput{border-radius:var(--r-bar);border:1px solid transparent;
-    background:linear-gradient(180deg,#141414,#0c0c0c) padding-box, var(--metal-ring-n) border-box}
-  /* 주 동작만 붉은 링 — 만들기(.csMake) */
-  #charScreen .twBtn.csMake{color:#fff;
-    background:linear-gradient(180deg,#2a1214,#170a0c) padding-box, var(--nav-ring-on-d) border-box}
   .twInput{flex:0 0 auto;width:118px;padding:7px 9px;border-radius:8px;font-family:inherit;font-size:13px;color:#eaf1fb;
     background:rgba(255,255,255,.05);border:1px solid var(--metal-edge)}
   .twInput:focus{outline:none;border-color:rgba(92,214,255,.6)}   /* id 특정성으로 .hide 우선(아래 #id{display:flex}가 .hide를 이기지 않게) */
@@ -4468,14 +4391,6 @@
     <div id="twToast" class="twToast hide"></div>
     </div>
 
-  <!-- 캐릭터 선택/생성 입장 화면 — 내용은 마을 구역과 같은 렌더러를 쓴다. (#phone 안으로 통합) -->
-  <div id="charScreen" class="appScreen spaceBg hide">
-    <div class="setCard twCard csCard">
-      <div class="setTitle"><span id="csTitle">캐릭터 선택</span><div class="setX" onclick="charBackToHub()"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></div></div>
-      <div class="twBody" id="csBody"></div>
-    </div>
-  </div>
-
   <!-- ⚔ 토벌 전투 — 캐릭터가 직접 싸우는 전용 화면(유즈맵과 완전 분리) -->
   <div id="dgScreen" class="appScreen spaceBg hide">
     <div class="twBar">
@@ -4490,7 +4405,7 @@
     </div>
     <div id="dgResult" class="dgResult hide"></div>
   </div>
-  </div><!-- /#phone — charScreen·dgScreen까지 프레임 안(비율 통합) -->
+  </div><!-- /#phone — dgScreen까지 프레임 안(비율 통합) -->
 
   <!-- 마을 시설 팝업(구역 도착 시) -->
   <div id="townPanel" class="hide" onclick="if(event.target===this)closeTownPanel()">
@@ -5374,7 +5289,7 @@ const PROF_CLASSES={
   scout: { name:'척후병', unit:'snapper', race:'swarm',     ico:'🐛', tip:'빠른 기동 · 근접' },
   warden:{ name:'워든',   unit:'blade',   race:'aetherial', ico:'🔮', tip:'중장갑 근접 · 방어' },
 };
-const PROF_MAX_CHARS=6;   // 캐릭터 슬롯(같은 종류 중복 허용)
+const PROF_MAX_CHARS=1;   // 계정당 캐릭터 하나(선택 화면 폐지 — profEnsureChar 가 기본 유닛을 지급한다)
 // 직업 = 뿌리 3종뿐이다(2026-08-12 전직 폐지). 캐릭터는 만든 그대로 끝까지 간다.
 //   ⚠ 옛 상위 직업 12종은 삭제된 게 아니라 **동료(HB_MATES)로 옮겨 갔다** — 영입해서 함께 싸운다.
 //      전직 관련 함수(profClassChange·profClassCost·hbGrowJobs·PROF_JOB_PARENT)도 같이 없어졌다.
@@ -5384,7 +5299,6 @@ const PROF_JOBS={
   scout: { name:'척후병', cls:'scout',  unit:'snapper', reqLv:1, base:{pow:6, vit:5, foc:5, agi:10} },
   warden:{ name:'워든',   cls:'warden', unit:'blade',   reqLv:1, base:{pow:9, vit:9, foc:4, agi:4} },
 };
-const PROF_REFUND_RATE=1.0;   // 캐릭터 삭제 환급률(1.0=쓴 재화 전액). 경험치·레벨은 환급 없음
 // 장비 슬롯 — reqLv = 캐릭터 레벨(성장 축 하나로 통일).
 // 초반엔 기본 5칸(헬멧·상의·하의·신발·무기)만 열려 있고 레벨이 오르며 나머지가 열린다.
 // part = 페이퍼돌 페이지(PROF_GEAR_PAGES). 한 페이지에 자기 part만 나오므로 칸이 널널하다.
@@ -5686,18 +5600,16 @@ function profEvolve(){ const p=PROF(), c=CHAR(), r=profEvolveReq(); if(!c||!r.un
 // unit.stats는 마이그레이션에서 비워지고, 이후로는 직업 기본치·레벨·장비만 profStat에 반영된다.
 function profCreateChar(cls, name){ const p=PROF(); if(!PROF_CLASSES[cls] || p.chars.length>=PROF_MAX_CHARS) return null;
   const c=defaultChar(cls, (name||'').trim().slice(0,10)); p.chars.push(c); p.curId=c.id; profSyncUnlocks(); saveMeta(); return c; }
-function profSelectChar(id){ const p=PROF(); if(!p.chars.some(c=>c.id===id)) return false; p.curId=id; profSyncUnlocks(); saveMeta(); return true; }
-// 이 캐릭터에 '재화로' 넣은 것의 합 — 장비 강화 + 전직 + 진화. 경험치·레벨·스탯포인트는 대상이 아니다(삭제 시 소멸).
-// 장비 아이템은 계정 공용 자산이라 환급 대상이 아니다 — 캐릭터를 지우면 장착만 풀리고 가방에 남는다.
-function profSpentOn(c){ if(!c) return 0; let t=0;
-  for(let i=0;i<(c.unit.evoStars||0);i++) t+=profEvolveCost(i);
-  return t; }
-function profRefundOf(c){ return Math.floor(profSpentOn(c)*PROF_REFUND_RATE); }
-function profDeleteChar(id){ const p=PROF(), i=(p.chars||[]).findIndex(c=>c.id===id); if(i<0) return -1;
-  const refund=profRefundOf(p.chars[i]);
-  p.chars.splice(i,1); p.pcoin+=refund;
-  if(p.curId===id) p.curId=p.chars.length? p.chars[0].id : '';
-  saveMeta(); return refund; }
+// ── 🧍 기본 지급 ─────────────────────────────────────────────────────────────
+// 계정당 캐릭터는 하나다. 고르는 화면도, 만드는 화면도 없다 —
+// 처음 들어오면 기본 유닛이 조용히 지급되고 바로 게임으로 간다(2026-08-13 설계 변경).
+// 모두 같은 스탯·같은 외형으로 시작해서 각자 키운다.
+// 종족은 나중에 '길드 가입' 시점에 고르고, 그때 그 종족 유닛을 추가로 받는다 —
+// ⚠ 그래서 PROF_CLASSES/PROF_JOBS 테이블은 지우지 않았다. 길드 종족 선택이 이 표를 그대로 쓴다.
+const PROF_DEFAULT_CLASS='ranger';
+// 캐릭터가 없으면 조용히 만들어 준다. 반환값 = 지금 캐릭터(항상 있다)
+function profEnsureChar(){ return CHAR() || profCreateChar(PROF_DEFAULT_CLASS, ''); }
+// 캐릭터 선택·삭제·환급은 폐지했다(계정당 하나) — 고를 것도, 지울 것도 없다.
 function profSetIdleSource(id){ const p=PROF(), src=PROF_IDLE_SOURCES[id]; if(!src) return false; if(src.reqUnlock && !profHasUnlock(src.reqUnlock)) return false; p.idle.sourceId=id; saveMeta(); return true; }
 // 판 종료 보상 — 순수 read G / write profile. 자체 난이도배율(유즈맵 coinMult와 무관). _runSummary에서 1회 호출.
 function profRunReward(){ const p=PROF();
@@ -5727,7 +5639,7 @@ function openHome(){ loadMeta();
   // 토벌 허브는 '화면'이 아니라 HOME 위에 덮는 팝업(.hbModal)이라 화면 전환으로는 안 닫힌다 —
   // 열어 둔 채 네비 HOME을 누르면 그대로 HOME을 가린다. 여기서 걷어낸다.
   if(typeof closeDungeonHub==='function') closeDungeonHub();
-  if(typeof CHAR==='function' && !CHAR()){ openCharScreen('create'); return; }   // 캐릭터가 없으면 생성부터
+  profEnsureChar();   // 캐릭터가 없으면 조용히 기본 유닛을 지급한다(선택 화면 없음)
   if(typeof bgmStart==='function') bgmStart('lobby');
   showAppScreen('homeScreen'); navShow('home'); renderHome();
   hbStart();   // 배경 전투(웨이브 방어) 시작
@@ -8047,7 +7959,7 @@ function townCollectAll(){ const S=townState(); let n=0;
   if(!n && typeof showTownToast==='function') showTownToast('아직 모인 것이 없습니다'); }
 
 // 마을 화면 — 배경 그림은 그대로 쓰고, 그 위에 슬롯과 하단 구매 바를 얹는다(걸어다니지 않는다)
-function openVillage(){ loadMeta(); if(!CHAR()){ openCharScreen('create'); return; }
+function openVillage(){ loadMeta(); profEnsureChar();
   _townOpen=true; showAppScreen('townScreen'); navShow('home');   // 사냥터에서 온 화면 — 네비는 그대로 두고 '사냥터' 탭 활성
   document.body.classList.add('vgMode');   // 마을 전용 상단 바(.twBar)를 숨겨 재화 바 하나만 보이게
   vgMoveHud(true);
@@ -8114,9 +8026,7 @@ const TOWN_PANELS={
   gacha:   { title:'상점',             render:()=>renderProfGacha(), screen:'shop' },   // 전용 화면으로(팝업 아님)
   gate:    { title:'관문',             render:()=>renderProfGate()   },
   gym:     { title:'훈련장',           render:()=>renderProfIdle()   },
-  gear:    { title:'장비',             render:()=>renderProfGear()   },
-  charsel: { title:'캐릭터 보관소',    render:()=>renderCharSelect() },
-  charmake:{ title:'캐릭터 생성소',    render:()=>renderCharCreate() } };
+  gear:    { title:'장비',             render:()=>renderProfGear()   } };
 let _townOpen=false, _twZone=null;
 let _twW=0,_twH=0, _twVW=0,_twVH=0, _twVL=0,_twVT=0;   // 월드 크기 / 화면(뷰포트) 크기·위치
 let _twChar={x:0,y:0,tx:0,ty:0,dx:0,dy:0,mode:null,face:1};   // mode: null=정지 | 'to'=목적지 이동 | 'dir'=방향 이동
@@ -8124,7 +8034,7 @@ let _twPtr=null, _twGoZone=null, _twRaf=0, _twLast=0;   // _twGoZone = 지금 �
 function mapToHub(){ if(typeof stopRoomsTick==='function') stopRoomsTick(); if(typeof playSfx==='function') playSfx('ui_close'); openHome(); }   // 유즈맵 선택 → 메인(HOME)으로 복귀
 // 걸어다니던 마을 화면은 폐지됐다. 옛 진입점은 전부 사냥터(HOME)로 보낸다.
 // ⚠ 이동 엔진(twStep/twCamApply/twClampWall)은 남아 있지만 아무도 켜지 않는다.
-function openTown(){ loadMeta(); if(!CHAR()){ openCharScreen('create'); return; }   // 캐릭터가 없으면 생성 화면으로
+function openTown(){ loadMeta(); profEnsureChar();   // 없으면 조용히 지급
   _townOpen=false; twStopLoop(); openHome(); return; }
 // 마을을 떠날 때의 공통 정리 — 루프·패널·시트를 한 번에 닫는다(그대로 두면 배경에서 계속 돈다)
 function twLeave(){ _townOpen=false; twStopLoop(); closeTownPanel(); twCloseSocial(); twCloseChat(); profStampSeen(); }
@@ -8229,7 +8139,7 @@ function openTownPanel(zone){ const _z=TOWN_PANELS[zone];
 // 팝업이 아니라 독립 화면이다. 내용 렌더러는 renderProfGacha() 하나뿐(단일 소스) — 마크업을 복제하지 말 것.
 function shopOpen(){ const e=document.getElementById('shopScreen'); return !!(e && !e.classList.contains('hide')); }
 function openShop(){ if(typeof loadMeta==='function') loadMeta();
-  if(typeof CHAR==='function' && !CHAR()){ openCharScreen('create'); return; }   // 캐릭터 없으면 생성부터
+  profEnsureChar();   // 캐릭터가 없으면 조용히 기본 유닛을 지급한다(선택 화면 없음)
   if(typeof twLeave==='function') twLeave();                                     // 마을에서 들어왔으면 루프·팝업 정리
   showAppScreen('shopScreen'); navShow('shop'); renderShop();
   if(typeof paintIcons==='function') paintIcons(document.getElementById('shopScreen')); }
@@ -8272,12 +8182,12 @@ function _chrSkillHTML(){ let h='<div class="hbGrowLbl">사냥터 스킬</div>';
   h+='<div class="hbRoundNote" style="padding:8px 0 0">스킬 강화는 아직 없습니다 — 사냥터 하단 바에서 직접 쓰거나 자동(A)으로 켤 수 있습니다.</div>';
   return h; }
 function openUpgScreen(){ if(typeof loadMeta==='function') loadMeta();
-  if(typeof CHAR==='function' && !CHAR()){ openCharScreen('create'); return; }
+  profEnsureChar();
   if(typeof twLeave==='function') twLeave();
   showAppScreen('upgScreen'); navShow('upg'); renderChr();
   if(typeof paintIcons==='function') paintIcons(document.getElementById('upgScreen')); }
 function openGear(){ if(typeof loadMeta==='function') loadMeta();
-  if(typeof CHAR==='function' && !CHAR()){ openCharScreen('create'); return; }   // 캐릭터 없으면 생성부터
+  profEnsureChar();   // 캐릭터가 없으면 조용히 기본 유닛을 지급한다(선택 화면 없음)
   if(typeof twLeave==='function') twLeave();                                     // 마을에서 들어왔으면 루프·팝업 정리
   _gearPick=null; _gearSel=null; _gearCat='';
   showAppScreen('gearScreen'); navShow('gear'); renderGear();
@@ -8326,82 +8236,8 @@ function bagScrollHint(){   // 장비창은 마을 팝업·정비 화면 두 곳
   const s=document.querySelector((typeof gearOpen==='function'&&gearOpen()?'#gearBody':'#tpBody')+' .bagScroll'); if(!s) return;
   const b=s.querySelector('.bagBody'); if(!b) return;
   s.classList.toggle('more', b.scrollHeight-b.scrollTop-b.clientHeight>4); }
-function closeTownPanel(){ popHide('townPanel'); _twZone=null; _charDelId=null; _gearPick=null; _gearSel=null; _gearCat=''; }
-// ── 🧍 캐릭터 선택/생성 ─────────────────────────────────────────────────────
-// 렌더러는 한 벌뿐이고 입장 화면(#charScreen)과 마을 구역(보관소·생성소)이 같은 것을 쓴다. 복제 금지.
-function renderCharSelect(){ const p=PROF(), list=p.chars||[];
-  let h='<div class="twHead">캐릭터를 골라 마을로 들어갑니다. 슬롯 <b>'+list.length+'/'+PROF_MAX_CHARS+'</b><br>재화(P)와 펫은 모든 캐릭터가 함께 씁니다.</div>';
-  if(!list.length) h+='<div class="twRow"><div class="twRowInfo"><div class="twRowSub">아직 캐릭터가 없습니다 — 먼저 만들어 주세요.</div></div></div>';
-  for(const c of list){ const C=PROF_CLASSES[c.cls], J=PROF_JOBS[c.unit.jobId]||PROF_JOBS[c.cls], on=(c.id===p.curId);
-    if(_charDelId===c.id){   // 삭제 확인 — 무엇을 잃고 무엇을 돌려받는지 그 자리에서 보여준다
-      h+='<div class="twRow"><span class="twPet">'+C.ico+'</span><div class="twRowInfo">'
-        +'<div class="twRowName">'+escHtml(c.name)+' 삭제할까요?</div>'
-        +'<div class="twRowSub ok">'+profRefundOf(c)+' P 반환</div>'
-        +'<div class="twRowSub lock">Lv.'+c.level+' · 경험치 소멸</div></div>'
-        +'<button class="twBtn" onclick="charCancelDelete()">취소</button>'
-        +'<button class="twBtn del" onclick="charDoDelete(\''+c.id+'\')">삭제</button></div>';
-      continue; }
-    h+='<div class="twRow"><span class="twPet">'+C.ico+'</span><div class="twRowInfo">'
-      +'<div class="twRowName">'+escHtml(c.name)+(on?' <span class="twStars">선택중</span>':'')+'</div>'
-      +'<div class="twRowSub">'+(J.name===C.name? C.name : C.name+' 계열 · '+J.name)+' · Lv.'+c.level+'</div></div>'
-      +'<button class="twBtn'+(on?' on':'')+'" onclick="charPick(\''+c.id+'\')">'+(on?'입장':'선택')+'</button>'
-      +'<button class="twDel" onclick="charAskDelete(\''+c.id+'\')" aria-label="삭제">✕</button></div>'; }
-  if(list.length<PROF_MAX_CHARS)
-    h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">새 캐릭터 만들기</div><div class="twRowSub">레인저 · 척후병 · 워든</div></div><button class="twBtn" onclick="charGoCreate()">만들기</button></div>';
-  return h; }
-const CC_STAT_MAX=12;   // 막대 100% 기준. 실제 기본 스탯은 4~10이라 가득 차는 칸이 없다(비교가 눈에 들어온다)
-const CC_RACE_KO={ union:'유니온', swarm:'스웜', aetherial:'에테리얼' };
-function renderCharCreate(){ const p=PROF(), full=(p.chars||[]).length>=PROF_MAX_CHARS;
-  let h='<div class="twHead">종류를 고르면 그 자리에서 캐릭터가 만들어집니다.<br>종류마다 기본 스탯이 다릅니다 — 전직은 없고, 강해지는 축은 강화·동료·장비입니다.</div>';
-  h+='<div class="ccName"><label for="ccName">이름<em>비우면 종류 이름으로</em></label>'
-    +'<input id="ccName" maxlength="10" placeholder="10자 이내"></div>';
-  for(const id in PROF_CLASSES){ const C=PROF_CLASSES[id], J=PROF_JOBS[id];
-    const rc=(typeof RACE_BAR!=='undefined' && RACE_BAR[C.race]) || '#9a9a9a';
-    // 초상은 유닛 초상 공용 함수를 쓴다 — 없으면 지금 쓰던 이모지로 자동 폴백
-    const port=(typeof _techUnitPortrait==='function' && _techUnitPortrait(C.unit)) || C.ico;
-    let bars='';
-    for(const k of PROF_STATS){ const v=J.base[k]||0;
-      bars+='<span class="ccStat"><i>'+PROF_STAT_NAME[k]+'</i>'
-        +'<b><u style="width:'+Math.round(Math.min(1,v/CC_STAT_MAX)*100)+'%"></u></b><em>'+v+'</em></span>'; }
-    h+='<div class="ccCard" style="--rc:'+rc+'">'
-      +'<div class="ccHead"><span class="ccPort">'+port+'</span>'
-      +'<span class="ccWho"><b>'+C.name+'</b><i>'+C.tip+'</i></span>'
-      +'<span class="ccRace">'+(CC_RACE_KO[C.race]||C.race)+'</span></div>'
-      +'<div class="ccStats">'+bars+'</div>'
-      +'<button class="ccMake" onclick="charDoCreate(\''+id+'\')"'+(full?' disabled':'')+'>'+(full?'슬롯 참':'만들기')+'</button>'
-      +'</div>'; }
-  if((p.chars||[]).length) h+='<div class="twRow"><div class="twRowInfo"><div class="twRowSub">이미 만든 캐릭터를 고르려면</div></div><button class="twBtn" onclick="charGoSelect()">보관소</button></div>';
-  return h; }
-// 지금 떠 있는 호스트(마을 구역 / 입장 화면)를 그대로 두고 내용만 바꾼다
-function _charHostRender(mode){ if(_townOpen && _twZone){ openTownPanel(mode==='create'?'charmake':'charsel'); return; } openCharScreen(mode); }
-let _charDelId=null;   // 삭제 확인 중인 캐릭터(한 번 더 눌러야 지워진다)
-function charAskDelete(id){ _charDelId=id; if(typeof playSfx==='function') playSfx('ui_open'); _charHostRender('select'); }
-function charCancelDelete(){ _charDelId=null; _charHostRender('select'); }
-function charDoDelete(id){ const c=(PROF().chars||[]).find(x=>x.id===id); if(!c) return;
-  const nm=c.name, rf=profDeleteChar(id); if(rf<0) return;
-  _charDelId=null; if(typeof playSfx==='function') playSfx('ui_close');
-  if(!CHAR()){ closeTownPanel(); _townOpen=false; twStopLoop(); openCharScreen('create'); return; }   // 마지막 한 명을 지웠으면 생성 화면으로
-  if(_townOpen){ twApplyChar(); renderTownBar(); showTownToast(nm+' 삭제 · '+rf+' P 반환'); }
-  _charHostRender('select'); }
-function charGoCreate(){ _charDelId=null; if(typeof playSfx==='function') playSfx('ui_open'); _charHostRender('create'); }
-function charGoSelect(){ if(typeof playSfx==='function') playSfx('ui_open'); _charHostRender('select'); }
-function charPick(id){ if(!profSelectChar(id)) return; if(typeof playSfx==='function') playSfx('ui_open'); _charEnter(); }
-function charDoCreate(cls){ const el=document.getElementById('ccName'), c=profCreateChar(cls, el?el.value:'');
-  if(!c){ if(_townOpen) showTownToast('슬롯이 가득 찼습니다'); return; }
-  if(typeof playSfx==='function') playSfx('ui_open'); _charEnter(); }
-// 선택 직후 — 마을 안이면 그 자리에서 교체, 밖(입장 화면)이면 마을로 입장
-function _charEnter(){ const c=CHAR(); _charDelId=null;
-  if(_townOpen){ closeTownPanel(); renderTownBar(); if(c) showTownToast(c.name+' 선택'); }
-  else openHome(); }   // 캐릭터 만들면 사냥터로
-let _csMode='select';
-function openCharScreen(mode){ loadMeta();
-  _csMode=(mode==='create' || !(PROF().chars||[]).length) ? 'create' : 'select';
-  const t=document.getElementById('csTitle'); if(t) t.textContent=(_csMode==='create')?'캐릭터 만들기':'캐릭터 선택';
-  const b=document.getElementById('csBody'); if(b) b.innerHTML=(_csMode==='create')?renderCharCreate():renderCharSelect();
-  showAppScreen('charScreen'); }
-function charBackToHub(){ if(typeof playSfx==='function') playSfx('ui_close');
-  if(typeof CHAR==='function' && !CHAR()){ askLogout(); return; }   // 캐릭터가 없으면 사냥터가 다시 이 화면으로 돌려보낸다
-  openHome(); }
+function closeTownPanel(){ popHide('townPanel'); _twZone=null; _gearPick=null; _gearSel=null; _gearCat=''; }
+
 function twApplyChar(){ const c=CHAR(), b=document.querySelector('#twAvatar .twAvBody');   // 아바타 겉모습 = 현재 캐릭터 종류
   if(b) b.textContent=(c && PROF_CLASSES[c.cls] && PROF_CLASSES[c.cls].ico) || '🧍'; }
 function renderTownIdle(){ renderTownBar(); const tp=document.getElementById('townPanel'); if(_twZone==='gym' && tp && !tp.classList.contains('hide')) refreshTownPanel(); }
@@ -8876,7 +8712,7 @@ function dgAddTicket(kind,n){ const p=PROF(); if(!p.tickets) p.tickets={gear:0,p
 function dgAwardTickets(floor){ const g={gear:1}; if(floor%5===0) g.pet=1; if(floor%10===0) g.ally=1;   // 새 단계 클리어 보상
   for(const k in g) dgAddTicket(k,g[k]); return g; }
 function openDungeonHub(){ if(typeof loadMeta==='function') loadMeta();
-  if(typeof CHAR==='function' && !CHAR()){ openCharScreen('create'); return; }   // 캐릭터 없으면 생성부터
+  profEnsureChar();   // 캐릭터가 없으면 조용히 기본 유닛을 지급한다(선택 화면 없음)
   const home=document.getElementById('homeScreen');
   if(home && home.classList.contains('hide')) openHome();                        // 토벌은 HOME 위 팝업 — 다른 화면에서 부르면 먼저 HOME으로
   dgCloseSheet(); popShow('dgHubScreen'); renderDungeonHub();
@@ -13580,9 +13416,9 @@ function playScreenFx(){ }
 function fxPop(card){ if(!card) return; card.classList.remove('fxPop'); void card.offsetWidth; card.classList.add('fxPop');
   clearTimeout(card._fxT); card._fxT=setTimeout(()=>card.classList.remove('fxPop'),200); }
 // ── 앱 화면 전환 ──
-const APP_SCREENS=['opening','auth','mapSelect','modeSheet','homeScreen','charScreen','townScreen','dgScreen','shopScreen','gearScreen','upgScreen'];   // ⚠ 여기 없는 화면은 showAppScreen 이 영영 안 켠다(캐릭터 화면이 그랬다)
+const APP_SCREENS=['opening','auth','mapSelect','modeSheet','homeScreen','townScreen','dgScreen','shopScreen','gearScreen','upgScreen'];   // ⚠ 여기 없는 화면은 showAppScreen 이 영영 안 켠다
 // 💠 공용 재화 바를 띄우는 화면(RPG/허브 + 유즈맵 선택). 로그인·타이틀·캐릭터생성·인게임은 제외.
-const CUR_SCREENS=['homeScreen','townScreen','mapSelect','modeSheet','dgScreen','shopScreen','gearScreen','upgScreen'];   // 캐릭터 화면도 재화 바를 쓴다
+const CUR_SCREENS=['homeScreen','townScreen','mapSelect','modeSheet','dgScreen','shopScreen','gearScreen','upgScreen'];   // 이 화면들은 공용 재화 바를 쓴다
 // 그중 바를 '판'이 아니라 배경 위 숫자로 두는 화면(.curBar.bare) — 배경이 상단까지 이어져 보여야 하는 곳
 const BARE_CUR_SCREENS=['homeScreen','townScreen','mapSelect','shopScreen','gearScreen','upgScreen'];   // 재화 바를 '판'이 아니라 배경 위 숫자로 — 상단 줄이 겹쳐 답답해진다(구분선 없이 배경이 이어진다)
 function curSetTitle(t){ const e=document.getElementById('curTitle'); if(e) e.textContent=t||''; }   // 재화 바 왼쪽 제목(화면별)
