@@ -2386,14 +2386,15 @@ async function groupLobby(){
     // ⚠ 정원을 '채울 수 있을 만큼' 넣어야 교체 경로가 실제로 돌아간다
     //    (예전엔 보유가 정원보다 적어 교체 검사가 통째로 건너뛰어져 red-test가 안 걸렸다)
     { const p=PROF();
-      p.petSlots=MG_SLOT_MAX; hbHunt().allySlots=MG_SLOT_MAX;
+      // 칸을 일부러 '일부만' 열고 '일부만' 채운다 — 채워짐·빈칸·잠김 세 종류가 다 나와야 높이를 비교할 수 있다
+      p.petSlots=MG_SLOT_MAX-1; hbHunt().allySlots=MG_SLOT_MAX-1;
       p.pets={ wolf:{star:1,dup:2,fed:0}, slime:{star:0,dup:0,fed:0}, tiger:{star:0,dup:3,fed:0},
                owl:{star:0,dup:0,fed:0}, golem:{star:0,dup:0,fed:0} };
-      p.equip=['wolf','slime','tiger'].slice(0, profPetSlots());
+      p.equip=['wolf'];                                  // 열린 칸(2) 중 하나만 채운다
       const H=hbHunt();
       H.mates={ sniper:{lv:2,dup:1}, sentinel:{lv:1,dup:0}, spike:{lv:1,dup:2},
                 phantom:{lv:1,dup:0}, gunner:{lv:1,dup:0}, goliath:{lv:1,dup:0} };
-      H.party=['sniper','sentinel','spike','phantom','gunner'].slice(0, hbMateMax());
+      H.party=['sniper'];                                // 열린 칸(2) 중 하나만 채운다
       saveMeta(); }
     navGo('gear'); await sleep(60);
     assert(visible($('gearScreen')),'네비 정비가 전용 화면을 안 엶');
@@ -2434,7 +2435,21 @@ async function groupLobby(){
       const a=rows[0].getBoundingClientRect(), b2=rows[1].getBoundingClientRect();
       assert(b2.top>=a.bottom-1, t+' 탭 상단이 아직 가로 배치임(세로로 쌓여야 한다)');
       assert(a.width>200, t+' 탭 슬롯이 한 줄 폭을 안 씀: '+Math.round(a.width));
-      // 줄 구성 = [카드][이름·능력치·확장칸][합성][해제]
+      // 빈칸·잠긴 칸·채워진 칸의 높이가 같아야 한다 — 다르면 칸을 열 때 화면이 들썩인다
+      { const hs={};
+        for(const r of document.querySelectorAll('#gearBody .mgSlot')){
+          const kind=r.classList.contains('on')?'filled':r.classList.contains('lock')?'locked':'empty';
+          const h=Math.round(r.getBoundingClientRect().height);
+          if(hs[kind]!==undefined) assert(hs[kind]===h,t+': 같은 종류 줄끼리 높이가 다름('+kind+') '+hs[kind]+' vs '+h);
+          hs[kind]=h;
+          // 고정 높이를 줬으니 내용이 그 안에 들어와야 한다(넘치면 잘려 보인다)
+          assert(r.scrollHeight<=r.clientHeight+1,t+': 줄 내용이 넘침('+kind+') '+r.scrollHeight+'>'+r.clientHeight); }
+        const kinds=Object.keys(hs);
+        assert(kinds.length>=2,t+': 비교할 줄 종류가 부족함 — '+kinds.join(','));
+        for(const a of kinds) for(const b2 of kinds)
+          assert(hs[a]===hs[b2],t+': 줄 종류마다 높이가 다름 '+JSON.stringify(hs));
+        assert(hs[kinds[0]]<=72,t+': 줄이 너무 높음(압축 규칙): '+hs[kinds[0]]+'px'); }
+      // 줄 구성 = [카드][이름·능력치][해제·확장칸]
       const card=rows[0].querySelector('.mgCard'), name=rows[0].querySelector('.mgName');
       const stat=rows[0].querySelector('.mgStat'), add=rows[0].querySelectorAll('.mgAddBtn');
       const btns=[].slice.call(rows[0].querySelectorAll('.mgBtn'));
@@ -2464,9 +2479,10 @@ async function groupLobby(){
     // ⑥ 조작(2026-08-14 개편) — 자동선택 / 해제 / 상태창 / 교체 유도 / 등급 일괄 합성
     for(const k of ['pet','ally']){ setGearTab(k); await sleep(40);
       const M=MG[k];
-      // 동료는 3칸 고정 · 펫은 슬롯 해금으로 늘 수 있다
-      if(k==='ally') assert(M.max()===3, k+': 정원이 3칸 고정이 아님: '+M.max());
-      else assert(M.max()>=2 && M.max()<=4, k+': 펫 슬롯 수가 범위를 벗어남: '+M.max());
+      // 칸은 산 만큼만 열린다 — 상한은 펫·동료 모두 MG_SLOT_MAX
+      assert(M.max()>=0 && M.max()<=MG_SLOT_MAX, k+': 칸 수가 0~'+MG_SLOT_MAX+' 범위를 벗어남: '+M.max());
+      // 이 단계는 '일부만 연' 상태를 전제로 한다(세 종류 줄을 다 보려면 잠긴 칸이 남아 있어야 한다)
+      assert(M.max()<MG_SLOT_MAX, k+': 시드가 칸을 다 열어 잠긴 줄 검사가 불가');
       // ⚡ 자동 선택 — 가장 강한 순서대로 정원만큼 들어간다
       for(const id of M.on().slice()) M.toggle(id);
       assert(M.on().length===0,k+': 비우지 못함');
