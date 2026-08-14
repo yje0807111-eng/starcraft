@@ -140,7 +140,7 @@
   #hudRwrap{display:flex;flex-direction:column;align-items:flex-end;gap:4px;margin-top:2px}
   /* ⚙ 인게임 설정 — 네비 칸에서 빼 HUD 우상단으로. 상자 규격은 디자인 시스템 공용. */
   #hudTopRow{display:flex;align-items:center;gap:8px;pointer-events:auto}   /* 재화 줄과 설정 상자를 한 행에 — 높이가 달라도 align-items가 중앙을 맞춘다 */
-  .hudSet{width:24px;height:24px;   /* 선 18px 에 딱 맞는 상자 — 여백 3px + 테두리 1px */display:grid;place-items:center;cursor:pointer;
+  .hudSet{position:relative;width:24px;height:24px;   /* 선 18px 에 딱 맞는 상자 — 여백 3px + 테두리 1px */display:grid;place-items:center;cursor:pointer;
     color:rgba(234,238,245,.92);background:rgba(4,6,10,.34);border:1px solid rgba(255,255,255,.26);
     filter:drop-shadow(0 1px 3px rgba(0,0,0,.8));transition:color .15s,border-color .15s}
   .hudSet:hover{color:#fff;border-color:rgba(255,255,255,.45)}
@@ -2529,7 +2529,7 @@
      ⚠ 이름 주의: `.hbTop`은 인게임 홈 하단 탭 줄(#bpMain)이 이미 쓰고 있다. 겹치면 그쪽이 세로로 무너진다. */
   .hbHudTop{position:absolute;left:8px;top:calc(3px + var(--topPad));z-index:2;   /* 재화 바와 같은 --topPad 를 본다 — 따로 놀면 안 된다 */display:flex;flex-direction:column;align-items:flex-start;gap:5px}
   /* 좌상단 묶음의 실제 높이(프로필 48 + gap 5 + 아이콘 30). 중앙 표시가 이 아래로 내려가는 기준 — 스모크가 겹침을 검사한다 */
-  :root{--hbHudH:83px}
+  :root{--hbHudH:61px}   /* 좌상단 묶음 높이 = 프로필만(아이콘 줄은 더보기로 옮겨 비었다). 제목은 이 값 아래에 붙는다 */
   /* 🎰 동료 뽑기 확률 — 등급 색은 공용 TIER_COLOR를 인라인으로 받는다(등급 색 규칙을 두 벌 만들지 않는다) */
   .mateOdds{display:flex;flex-wrap:wrap;gap:4px 10px;padding:2px 12px 8px}
   .mateOdd{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:10px;font-weight:700;letter-spacing:.3px}
@@ -2589,8 +2589,12 @@
      설정이 죽고 클릭이 #homeScreen까지 내려가 캐릭터가 그리로 걸어갔다. 새 자식을 넣으면 여기도 볼 것. */
   .curBar.bare .res,.curBar.bare .hudSet{pointer-events:auto}
   /* 중앙 = 표시 전용(라운드 조절은 좌상단 .hbRoundBtn 담당) → 클릭을 통과시켜 전장을 가리지 않는다 */
+  /* 던전·라운드 표시 = 그대로 버튼이다(옛 깃발 아이콘은 폐지). pointer-events를 켜도 캐릭터는
+     안 움직인다 — hbFieldEl이 필드 탭 대상을 homeScreen/hbCv/hmScroll로 한정하기 때문. */
   .hbMid{position:absolute;left:50%;top:calc(3px + var(--hbHudH) + 8px);transform:translateX(-50%);z-index:2;text-align:center;
-    display:flex;flex-direction:column;pointer-events:none;background:none;border:none;padding:2px 8px;white-space:nowrap}
+    display:flex;flex-direction:column;pointer-events:auto;cursor:pointer;white-space:nowrap;
+    padding:5px 14px;background:rgba(12,13,16,.55);border:1px solid var(--metal-edge);border-radius:var(--r-md)}
+  .hbMid:active{opacity:.75}
   .hbMid b{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:13px;font-weight:800;color:#ececec;letter-spacing:.5px}
   .hbMid span{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:10px;font-weight:700;color:#9a9a9a;letter-spacing:.4px}
   .hbMid i{font-style:normal}
@@ -4223,7 +4227,7 @@
       <span class="res"><img class="ri" src="assets/icons/res_mineral.webp" alt=""><b id="curMin">0</b><i class="curPlus" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg></i></span>
       <span class="res"><img class="ri" src="assets/icons/res_gas.webp" alt=""><b id="curGas">0</b><i class="curPlus" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg></i></span>
       <span class="res"><img class="ri" src="assets/icons/res_gem.webp" alt=""><b id="curGem">0</b><i class="curPlus" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg></i></span>
-      <div class="hudSet" id="curSettingsBtn" data-sfx="ui_open" onclick="hudTopMenu('app')" title="설정"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"><path d="M4.5 7h15M4.5 12h15M4.5 17h15"/></svg></div>
+      <div class="hudSet" id="curSettingsBtn" data-sfx="ui_open" onclick="hudTopMenu('app')" title="더보기"><i class="hbGrowDot" id="hbGrowDot">!</i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"><path d="M4.5 7h15M4.5 12h15M4.5 17h15"/></svg></div>
     </span>
   </div>
   <!-- 💬 친구 DM 채팅(허브 소셜) -->
@@ -4253,9 +4257,9 @@
           <span class="hbXp"><i id="hbXpBar"></i></span>
           <span class="hbSt"><i id="hbLv">Lv.1</i><i id="hbAtk"><em>⚔</em><span id="hbAtkN">0</span></i></span>
         </span></button>
-      <div class="hbIcoRow"><button class="hbRoundBtn" id="hbRoundBtn" onclick="hbOpenRounds()" aria-label="던전·라운드 선택"><span data-ico="flag"></span></button><button class="hbRoundBtn" id="hbVillageBtn" onclick="openVillage()" aria-label="마을" title="마을"><span data-ico="hero"></span></button><button class="hbRoundBtn" id="hbMateBtn" onclick="hbOpenMates()" aria-label="동료" title="동료 영입·강화"><span data-ico="party"></span></button><button class="hbRoundBtn" id="hbGrowBtn" onclick="hbOpenGrow()" aria-label="성장" title="진화·환생"><span data-ico="fav"></span><i class="hbGrowDot" id="hbGrowDot">!</i></button><span class="hbBdWrap" id="hbBuildWrap"></span></div>
+      <div class="hbIcoRow"><span class="hbBdWrap" id="hbBuildWrap"></span></div>
     </div>
-    <div class="hbMid" id="hbMid">   <!-- 표시 전용 — 라운드 조절은 위 아이콘이 담당한다 -->
+    <div class="hbMid" id="hbMid" role="button" tabindex="0" onclick="hbOpenRounds()" aria-label="던전·라운드 선택">   <!-- 표시 전용 — 라운드 조절은 위 아이콘이 담당한다 -->
       <b id="hbRound">던전 1 · 라운드 1</b><span><i id="hbWaveTx">웨이브 1/5</i> · <i id="hbTimer">20s</i> · <i id="hbMode">반복</i></span></div>
     <!-- 오른쪽 위 — 설정(☰, 재화 바 안) 바로 아래. 건설 중에만 ⊘가 뜬다.
          ⚠ #curBar는 .bare에서 click-through라 그 안에 두면 안 눌린다 — #homeScreen의 자식으로 둔다. -->
@@ -5414,7 +5418,7 @@ function profXpForLevel(lv){ lv=Math.max(1, lv|0);
   return Math.round(b*Math.pow(PROF_XP_GEO, lv-PROF_LV_SOFT)); }
 // 🔁 환생 — PROF_REB_EVERY 레벨마다 한 단계. 깊이 밀고 환생할수록 단계가 커져 배수를 많이 받는다.
 //   되돌리는 것: 캐릭터 레벨·경험치(유닛 레벨 포함).  그대로 두는 것: 계정 축(미네랄 업그레이드)·장비·펫·진화★.
-const PROF_REB_EVERY=25;                     // 이 레벨 간격마다 환생 1단계
+const PROF_REB_EVERY=20;                     // 이 레벨 간격마다 환생 1단계 — 초반부터 맛보게 20(2026-08-14, 25에서 하향)
 const PROF_REB_GAIN=0.2;                     // 1단계당 경험치 획득 배수 증가(설계: '적은 배수')
 function profRebStep(lv){ return Math.floor((lv||0)/PROF_REB_EVERY); }        // 지금 환생하면 몇 단계인가
 function profCanRebirth(c){ c=c||CHAR(); return !!c && profRebStep(c.level)>=1; }
@@ -5769,6 +5773,8 @@ function hbCloseMore(){ const el=document.getElementById('hbMoreSheet'); if(el) 
 // 시트를 닫고 나서 연다 — 배치(건설)처럼 필드를 눌러야 하는 것이 시트에 가리면 안 된다
 function hbMoreGo(fn){ hbCloseMore(); setTimeout(function(){ try{ fn(); }catch(e){} }, 60); }
 const HB_MORE=[
+  {k:'town',   ico:'hero',    name:'마을',        sub:''},
+  {k:'grow',   ico:'fav',     name:'성장',        sub:'진화·환생'},
   {k:'daily',  ico:'gift',    name:'일일 퀘스트', sub:'준비 중'},
   {k:'build',  ico:'build',   name:'건설',        sub:'터렛·벙커'},
   {k:'dg',     ico:'dungeon', name:'토벌',        sub:'열쇠·단계'},
@@ -5791,7 +5797,9 @@ function hbMoreTap(k){
     else openSettings(); });
   if(k==='build') return hbMoreGo(function(){ if(typeof hbToggleBuild==='function') hbToggleBuild(); });
   if(k==='dg')    return hbMoreGo(function(){ if(typeof openDungeonHub==='function') openDungeonHub(); });
-  if(k==='boost') return hbMoreGo(function(){ if(typeof hbOpenBoost==='function') hbOpenBoost(); }); }
+  if(k==='boost') return hbMoreGo(function(){ if(typeof hbOpenBoost==='function') hbOpenBoost(); });
+  if(k==='town')  return hbMoreGo(function(){ if(typeof openVillage==='function') openVillage(); });
+  if(k==='grow')  return hbMoreGo(function(){ if(typeof hbOpenGrow==='function') hbOpenGrow(); }); }
 function renderHbBuild(){ const w=document.getElementById('hbBuildWrap'); if(!w) return;
   const coin=Math.floor(((typeof PROF==='function'&&PROF())||{}).pcoin||0), open=!!_hbBdOpen;
   let h='<button class="hbRoundBtn'+(open?' on':'')+'" onclick="hbToggleBuild()" aria-label="건설" title="건설"><span data-ico="build"></span></button>';

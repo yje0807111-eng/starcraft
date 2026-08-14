@@ -816,10 +816,12 @@ async function groupLobby(){
     // ② 성장 팝업 — 진입점은 '조건이 찼을 때만'이 아니라 항상 열려 있어야 한다.
     //    (전직 폐지 후 조건부 줄만 남기면 초반에 성장 화면을 아예 못 여는 문제가 있었다)
     //    2026-08-14: 좌상단 아이콘 → 사냥터 전용 네비의 '성장' 칸으로 옮겼다.
-    { const btn=$('hbGrowBtn');   // 사냥터 하위는 네비가 아니라 화면 상단 버튼줄이 맡는다(2026-08-14 되돌림)
-      assert(btn && visible(btn),'성장 팝업 진입 아이콘(#hbGrowBtn)이 없음');
-      hbCloseGrow(); btn.click(); await sleep(40);
-      assert(visible($('hbGrowModal')),'아이콘을 눌렀는데 성장 팝업이 안 열림'); hbCloseGrow(); }
+    // 2026-08-14: 좌상단 아이콘 줄을 없애고 ☰ 더보기 안으로 옮겼다
+    { hbCloseGrow(); hbOpenMore(); await sleep(120);
+      const btn=document.querySelector('#hbMoreGrid [data-k="grow"]');
+      assert(btn,'더보기에 성장 항목이 없음');
+      btn.click(); await sleep(250);
+      assert(visible($('hbGrowModal')),'더보기에서 성장 팝업이 안 열림'); hbCloseGrow(); }
     // ③ 전직은 사라졌다 — 흔적이 남아 있으면 안 된다
     assert(typeof profClassChange==='undefined','전직 함수가 아직 남아 있음');
     assert($('hbGrowBody').textContent.indexOf('전직')<0,'성장 팝업에 전직이 남음');
@@ -840,7 +842,9 @@ async function groupLobby(){
     // ⑥ 할 게 없으면 배지는 꺼진다 — 단 버튼 진입점은 그대로 남아야 한다
     c.level=1; c.unit.level=1; p.pcoin=0; renderHome();
     assert(!visible($('hbGrowDot')),'할 게 없는데 성장 배지가 남아 있음');
-    assert(visible($('hbGrowBtn')),'성장 아이콘까지 사라짐(항상 열려 있어야 한다)');
+    { hbOpenMore(); await sleep(100);
+      assert(document.querySelector('#hbMoreGrid [data-k="grow"]'),'성장 항목까지 사라짐(항상 열려 있어야 한다)');
+      hbCloseMore(); }
     return '실측 '+p.hunt.rate.toFixed(2)+'/s · 직업 '+PROF_JOBS[CHAR().unit.jobId].name; });
   // Phase 4 — 스킬 · 부스트 · 동료/펫 · 건설(터렛·벙커)
   await step('자동사냥: 스킬·부스트·동료·건설', async()=>{ skipIf(typeof hbUseSkill!=='function','Phase4 없음');
@@ -1612,7 +1616,7 @@ async function groupLobby(){
     // 재화 바는 화면 전체 폭을 덮는 판이라, 투명(.bare)일 때 왼쪽 빈 자리가 프로필 클릭을 삼키면 안 된다
     { const hit=(el)=>{ const r=el.getBoundingClientRect();
         return document.elementFromPoint((r.left+r.right)/2,(r.top+r.bottom)/2); };
-      for(const id of ['hbHud','hbRoundBtn']){ const el=$(id), got=hit(el);
+      for(const id of ['hbHud','hbMid']){ const el=$(id), got=hit(el);
         assert(got && el.contains(got),'#'+id+' 클릭이 다른 요소에 가로채임: '+
           (got?(got.id||got.className||got.tagName):'none')); } }
     // ③ 프로필은 '간소' — 이름 / 경험치 바 / 레벨·공격력만. 직업 이름과 체력은 뺐다(2026-08-12).
@@ -1652,11 +1656,15 @@ async function groupLobby(){
       assert(Math.abs(w/bw-0.5)<0.06,'경험치 바가 xp 비율(50%)을 따르지 않음: '+Math.round(w/bw*100)+'%');
       c.xp=0; hbHud();
       assert(bar.getBoundingClientRect().width<2,'xp=0인데 바가 비지 않음'); }
-    // ④ 라운드 조절 = 전용 아이콘 버튼(텍스트 구역을 누르는 방식은 폐지)
-    const rb=$('hbRoundBtn');
-    assert(rb && rb.tagName==='BUTTON','라운드 선택 아이콘 버튼(#hbRoundBtn)이 없음');
-    assert(rb.querySelector('svg'),'아이콘 버튼에 SVG 아이콘이 없음(이모지 금지)');
-    assert(top.contains(rb),'라운드 아이콘이 좌상단 묶음 안에 없음');
+    // ④ 라운드 조절 = 던전 제목 구역을 누른다(2026-08-14 · 깃발 아이콘은 폐지)
+    const rb=$('hbMid');
+    assert(rb && getComputedStyle(rb).pointerEvents!=='none','던전 제목이 눌리지 않음');
+    assert(/hbOpenRounds/.test(rb.getAttribute('onclick')||''),'던전 제목에 라운드 선택이 안 걸림');
+    assert(!$('hbRoundBtn'),'옛 깃발 버튼이 남아 있음');
+    // 제목을 눌러도 캐릭터가 따라가면 안 된다(필드 탭과 같은 자리다)
+    { const r=rb.getBoundingClientRect(), cx=(r.left+r.right)/2, cy=(r.top+r.bottom)/2;
+      _hb.char.tx=null; hbFieldTap({target:document.elementFromPoint(cx,cy), clientX:cx, clientY:cy});
+      assert(_hb.char.tx==null,'제목을 눌렀는데 캐릭터가 이동함'); }
     assert(visible(rb),'라운드 아이콘 버튼이 안 보임');
     const mid=$('hbMid');
     // 프로필이 4줄로 커졌으므로 중앙 라운드 표시는 그 아래로 내려가야 한다(겹치면 글자가 포개진다)
@@ -1665,7 +1673,9 @@ async function groupLobby(){
         '중앙 라운드 표시가 좌상단 프로필과 겹침: mid.top='+Math.round(mr.top-ph.top)+' vs 프로필 bottom='+Math.round(tr.bottom-ph.top));
       assert(mid.querySelector('b').getBoundingClientRect().height<26,'라운드 이름이 두 줄로 접힘(nowrap 필요)'); }
     assert(mid.tagName!=='BUTTON','중앙 라운드 표시가 아직 버튼임(아이콘으로 옮겨야 함)');
-    assert(getComputedStyle(mid).pointerEvents==='none','중앙 표시가 아직 클릭을 먹음');
+    // 2026-08-14: 중앙 표시가 곧 라운드 선택 버튼이다 — 이제 클릭을 받아야 한다.
+    // 대신 필드 탭으로 새지 않는지는 위 ④에서 hbFieldTap으로 직접 확인한다.
+    assert(getComputedStyle(mid).pointerEvents!=='none','던전 제목이 클릭을 못 받음');
     hbCloseRounds(); await sleep(20);
     rb.click(); await sleep(60);
     assert(visible($('hbRoundSheet')),'아이콘을 눌렀는데 라운드 팝업이 안 열림');
@@ -1784,12 +1794,11 @@ async function groupLobby(){
     profRebirth(c);
     assert(hbMateLv(r1.id)===before,'환생이 동료를 지움');
     const last=Object.keys(HB_MATES).slice(-1)[0];
-    // ⑦ 진입점 — 좌상단 아이콘에서 열린다
+    // ⑦ 진입점 — 동료 버튼은 폐지했다(2026-08-14). 역할은 정비 구역과 상점이 맡는다.
     openHome(); await sleep(60);
-    const btn=$('hbMateBtn');
-    assert(btn && visible(btn),'동료 진입 아이콘(#hbMateBtn)이 없음');
-    hbCloseMates(); btn.click(); await sleep(50);
-    assert(visible($('hbMateModal')),'아이콘을 눌렀는데 동료 팝업이 안 열림');
+    assert(!$('hbMateBtn'),'동료 버튼이 아직 남아 있음');
+    hbCloseMates(); hbOpenMates(); await sleep(50);
+    assert(visible($('hbMateModal')),'동료 팝업 자체는 남아 있어야 한다(다른 화면에서 부른다)');
     { const names=$('hbMateBody').textContent;
       for(const id in HB_MATES) assert(names.indexOf(HB_MATES[id].name)>=0,'동료 목록에 빠짐: '+HB_MATES[id].name);
       assert(names.indexOf('동료 뽑기권')>=0,'뽑기 줄이 없음');
@@ -2141,8 +2150,10 @@ async function groupLobby(){
     // ② 사냥터는 내려가지 않는다 — 하위는 화면 상단 버튼줄이 맡는다
     navGo('home'); await sleep(40);
     assert(read().join(',')==='home,gear,upg,map,shop','사냥터를 눌렀는데 내려감: '+read().join(','));
-    for(const id of ['hbVillageBtn','hbMateBtn','hbGrowBtn'])
-      assert($(id),'사냥터 상단 버튼줄에 '+id+' 가 없음(네비에서 되돌아와야 한다)');
+    { hbOpenMore(); await sleep(120);   // 마을·성장은 ☰ 더보기 안이다(동료는 폐지)
+      for(const k of ['town','grow'])
+        assert(document.querySelector('#hbMoreGrid [data-k="'+k+'"]'),'더보기에 '+k+' 가 없음');
+      hbCloseMore(); }
     // ③ 내려가면 구역 칸도 사라지고 [‹] + 하위만 남는다
     navGo('gear'); await sleep(60);
     assert(read().join(',')==='back,~gear,~pet,~ally','정비 전용 네비가 아님: '+read().join(','));
