@@ -637,7 +637,15 @@ async function groupLobby(){
       assert(box.top>=btn.bottom-1 && box.top-btn.bottom<=16,'☰ 바로 아래가 아님: '+Math.round(box.top-btn.bottom)+'px');
       assert(Math.abs(box.right-btn.right)<=4,'☰ 와 오른쪽이 안 맞음: '+Math.round(box.right-btn.right));
       assert(box.right<=ph.right+1 && box.bottom<=ph.bottom+1,'드롭다운이 화면 밖으로 나감'); }
-    for(const it of its) assert(it.querySelector('svg'),'아이콘이 안 그려진 항목: '+it.textContent);
+    // 아이콘만 — 글자는 없다. 이름은 title/aria-label로만 남긴다(나중에 전용 아이콘으로 교체 예정).
+    assert(!$('hbMoreGrid').textContent.trim(),'더보기에 글자가 남아 있음: '+$('hbMoreGrid').textContent.trim());
+    for(const it of its){
+      assert(it.querySelector('svg'),'아이콘이 안 그려진 항목: '+it.getAttribute('aria-label'));
+      assert((it.getAttribute('aria-label')||'').trim(),'이름표가 없는 항목 — 글자를 뺐으면 aria-label은 있어야 한다'); }
+    // 칸은 ☰ 와 같은 정사각형
+    { const hb=document.getElementById('curSettingsBtn').getBoundingClientRect(), t0=its[0].getBoundingClientRect();
+      assert(Math.abs(t0.width-t0.height)<=1,'정사각형이 아님: '+Math.round(t0.width)+'x'+Math.round(t0.height));
+      assert(Math.abs(t0.width-hb.width)<=1,'☰('+Math.round(hb.width)+')와 칸('+Math.round(t0.width)+') 크기가 다름'); }
     // 건설을 고르면 시트가 닫히고 메뉴가 화면 안에 뜬다(필드를 눌러 배치해야 하므로)
     PROF().pcoin=99999;
     document.querySelector('#hbMoreGrid [data-k="build"]').click(); await sleep(250);
