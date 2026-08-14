@@ -132,7 +132,10 @@
   .gview canvas{touch-action:none}   /* 캔버스(터치 대상)에도 직접 부여 — 부모만으론 팬 제스처가 가로채질 수 있음 */
 
   /* HUD — 좌(킬·맵·라운드 세로) / 중앙(제한시간 박스) / 우(자원 가로) */
-  #hud{position:absolute;top:0;left:0;right:0;z-index:20;padding:calc(env(safe-area-inset-top,0px) + 18px) 9px 0;
+  /* z-index 24 = 포인트방 입력 차단막(#bossPanel z22) 위. 20 이던 시절엔 아레나에서 우상단 ☰ 가 통째로 먹혔다.
+     ⚠ #hud 는 z-index 를 가진 순간 쌓임 맥락을 만든다 — 자식(#settingsBtn)만 올려도 절대 못 빠져나온다. 바를 올려야 한다.
+     화면 맨 위에만 있고 pointer-events:none 이라 하단 시트(z22)·건설 시트(z30)를 가리지 않는다. */
+  #hud{position:absolute;top:0;left:0;right:0;z-index:24;padding:calc(env(safe-area-inset-top,0px) + 18px) 9px 0;
     display:flex;align-items:flex-start;justify-content:space-between;pointer-events:none;
     font-family:var(--font-num);   /* 모던 테크 폰트(가시성↑) */
     background:linear-gradient(180deg,rgba(8,12,20,.85),rgba(8,12,20,.42) 60%,transparent);opacity:.82}   /* 상단 HUD 구역 구분용 반투명 배경(아래로 자연스레 페이드) — 전 영역 공통 */
@@ -276,21 +279,6 @@
   
   
   /* 자동화 묶음 버튼 — 좌상단 킬 스코어 바로 아래, 작은 가로 칩 */
-  /* 자동 설정 버튼 — 우하단 개인보스 버튼 바로 위에 세로로(전송버튼과 같은 58x34). 녹색 액센트로 구분 */
-  /* 자동 버튼 = 하단 프로필 카드·네비바 톤(어두운 슬레이트)에 맞추되 조금 더 연하게. 켜짐=네비 액센트 시안 은은하게 */
-  #autoFab{position:absolute;right:8px;bottom:9px;z-index:20;width:58px;height:34px;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:4px;
-    padding:0 4px;cursor:pointer;pointer-events:auto;color:#c6d0dd;overflow:hidden;
-    background:linear-gradient(180deg,rgba(52,58,74,.58),rgba(20,24,32,.7));border:1px solid rgba(255,255,255,.14);
-    backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
-    clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 2px 8px -3px rgba(0,0,0,.5);transition:all .14s}
-  #autoFab::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent);pointer-events:none}
-  #autoFab .afTx{font-size:11px;font-weight:800;letter-spacing:.6px;text-shadow:0 1px 2px #000;white-space:nowrap}
-  #autoFab:active{transform:translateY(1px)}
-  #autoFab.hide{display:none}
-  #autoFab.act{border-color:rgba(92,214,255,.5);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 0 12px -3px rgba(92,214,255,.42)}
-  #autoFab.act .afTx{color:#dbeeff}
-  #autoFab:hover{border-color:rgba(120,240,160,.6)}#autoFab:active{transform:translateY(1px)}
   /* 자동화 설정 = 하단 그리드 시트로 이동(팝업 #autoPopup 제거) */
   
   
@@ -773,8 +761,8 @@
   .bp.on{display:flex}   /* 활성 탭 패널만 렌더(내려간 상태로 대기) */
   body.sheetOpen .bp.on{transform:translateY(0);pointer-events:auto}   /* 시트 올라옴 */
   /* 시트 올라오면 하단 사이드 배너(채팅·자동·개인보스)도 시트 위로 함께 상승 */
-  #chatBar,#chatLog,#autoFab,#fxLabActs{transition:transform .26s cubic-bezier(.2,.8,.25,1)}
-  body.sheetOpen:not(.cstMode) #chatBar,body.sheetOpen:not(.cstMode) #chatLog,body.sheetOpen:not(.cstMode) #autoFab,body.sheetOpen:not(.cstMode) #fxLabActs{transform:translateY(calc(-1 * var(--sheetH,0px)))}   /* 이펙트 랩 동작 배너(공격/이동/사망)도 시트 위로 함께 상승 */
+  #chatBar,#chatLog,#fxLabActs{transition:transform .26s cubic-bezier(.2,.8,.25,1)}
+  body.sheetOpen:not(.cstMode) #chatBar,body.sheetOpen:not(.cstMode) #chatLog,body.sheetOpen:not(.cstMode) #fxLabActs{transform:translateY(calc(-1 * var(--sheetH,0px)))}   /* 이펙트 랩 동작 배너(공격/이동/사망)도 시트 위로 함께 상승 */
 
   .row{display:flex;gap:7px;flex-shrink:0;flex-wrap:wrap}
   /* 버튼: 스타크래프트식 메탈 베벨 박스 */
@@ -1142,7 +1130,7 @@
   #btDesel.on{display:flex}
   #btDesel svg{filter:drop-shadow(0 0 5px var(--neon-glow))}
   #btDesel:active{transform:translateY(1px);border-color:var(--neon);box-shadow:0 0 12px var(--neon-glow)}
-  body.cstMode #chatBar,body.cstMode #chatLog,body.cstMode #miniWrap,body.cstMode #deselTop,body.cstMode #mergeFab,body.cstMode #skillFab,body.cstMode #autoFab,body.cstMode #btCtl,body.cstMode #hud{display:none !important}   /* 건설=자체 상단바(.bmapTop)만 사용 → HUD 이중 표시 방지 */
+  body.cstMode #chatBar,body.cstMode #chatLog,body.cstMode #miniWrap,body.cstMode #deselTop,body.cstMode #mergeFab,body.cstMode #skillFab,body.cstMode #btCtl,body.cstMode #hud{display:none !important}   /* 건설=자체 상단바(.bmapTop)만 사용 → HUD 이중 표시 방지 */
   /* 상단 HUD(크레딧·에너지·인구·라운드·킬·시계)는 모든 구역 공통 고정 — 건설 탭에서도 표시. 건설맵 상단바는 그 아래로 */
   body.cstMode .bmapTop{top:0}   /* #hud 숨김 → 건설 자체 상단바를 최상단으로 */
   /* 적군 유닛 구분(붉은 링) */
@@ -3806,7 +3794,6 @@
       <button id="chatSend" onclick="sendChat()">전송</button>
     </div>
     <!-- 자동화 묶음 버튼(메인 좌측): 자동 조합/유닛/에너지 토글 — 해금 업그레이드 보유 시 표시 -->
-    <div id="autoFab" class="hide" onclick="openAutoSheet(this)" title="자동 설정"><span class="afTx">AUTO</span></div>
     <!-- 🎨 플레이어 색 확인(메인) — 건설 구역과 같은 패널 컴포넌트, 유닛을 확대해 액센트 확인 -->
     <div id="pcFab" class="hide" onclick="pcMainToggle(event)" title="플레이어 색 확인">🎨</div>
     <!-- 🎆 이펙트 테스트베드 동작 선택(관리자 Unit 탭, 우하단) — 공격/이동/사망 반복 -->
@@ -11927,12 +11914,16 @@ function _setBottomTab(tab){ document.querySelectorAll('#tabs .tab').forEach(fun
 //   sub.cur 가 가리키는 키와 같은 칸이 .cur 로 표시된다. show() 가 false 인 하위는 아예 안 나온다.
 //   하위가 하나도 없는 구역(전투실험·건설 등 관리자 탭)은 내려가지 않는다.
 const GTAB_TREE={
-  Main:    { cur:()=>_homeMode, subs:[
-      { k:'select',  label:'유닛 지정', ico:'marine', act:()=>setHomeMode('select') },
-      { k:'sell',    label:'유닛 판매', ico:'coin',   act:()=>setHomeMode('sell') },
+  // 자동화는 _homeMode 가 아니라 시트 모드(G.mainSheet==='auto')다 — cur 에서 그것부터 본다
+  Main:    { cur:()=>(G.mainSheet==='auto'?'auto':_homeMode), subs:[
+      { k:'select',  label:'유닛 지정', ico:'marine', act:()=>mainGoMode('select') },
+      { k:'sell',    label:'유닛 판매', ico:'coin',   act:()=>mainGoMode('sell') },
       // 조합은 조합 가능한 묶음이 있을 때만 — 옛 .hsTabComb 의 표시 조건을 그대로 옮겼다
-      { k:'combine', label:'유닛 조합', ico:'photon', act:()=>setHomeMode('combine'),
-        show:()=>Object.keys(ownedCombineGroups()).length>0 } ] },
+      { k:'combine', label:'유닛 조합', ico:'photon', act:()=>mainGoMode('combine'),
+        show:()=>Object.keys(ownedCombineGroups()).length>0 },
+      // 자동화 = 옛 '전송 옆 AUTO 배너'. 표시 조건도 그 배너가 쓰던 것 그대로(하나라도 해금됐을 때)
+      { k:'auto',    label:'자동화',   ico:'cpu',    act:()=>openAutoSheet(),
+        show:()=>autoAnyOwned() } ] },
   Unit:    { cur:()=>_gachaSec, subs:[
       { k:'draw',  label:'뽑기',     ico:'gift',   act:()=>setGachaSec('draw') },
       { k:'tower', label:'타워구매', ico:'sunken', act:()=>setGachaSec('tower') } ] },
@@ -11981,6 +11972,12 @@ function gtabBack(){ if(typeof playSfx==='function') playSfx('ui_back');
 function gameHasVersus(){ if(typeof G==='undefined' || !G.teams) return false;
   const me=G.myPlayer||1, mine=G.teams[me];
   return (G.activePlayers||[]).some(n=>G.teams[n]!==undefined && G.teams[n]!==mine); }
+// 자동화 항목을 하나라도 해금했는가 — 옛 #autoFab 의 표시 조건과 같은 식이다
+function autoAnyOwned(){ if(typeof autoUtilOwned!=='function' || typeof G==='undefined' || G.phase!=='playing') return false;
+  const o=autoUtilOwned(); return !!(o.combine||o.unit||o.energy||o.place||o.bossdeploy); }
+// 지정/판매/조합으로 돌아가기 — 자동화 시트를 보고 있었다면 먼저 메인 홈으로 되돌린다
+function mainGoMode(m){ if(typeof G!=='undefined' && G.mainSheet!=null && typeof openMainHome==='function') openMainHome();
+  setHomeMode(m); }
 // 구역별 '지금 고른 하위'
 let _gachaSec='draw', _upgSec='atk', _plSec='ally';
 function setGachaSec(k){ _gachaSec=k; const h=document.getElementById('unitCmd'); if(h){ h._gSig=undefined; h._cgPage=0; } renderGachaSheet(); }
@@ -12009,7 +12006,7 @@ function openMainHome(el){
   G.mainSheet=null; G.sel=[]; G.selEnemy=null; G.selType=null; _selViaTab=false; G.sheetDown=false; _setBottomTab('Main'); gtabDrill('Main'); document.body.classList.add('sheetOpen'); if(typeof playSfx==='function') playSfx('ui_open'); refreshSelCard(); }
 function openGachaSheet(el){ if(G.strike){ switchTab('Unit', el||document.querySelector('.tab[data-tab="Unit"]')); return; } openMainSheet('gacha', el, 'Unit'); }   // 직스: 건설지 탭
 function openUpgradeSheet(el){ if(G.strike){ switchTab('Upgrade', el||document.querySelector('.tab[data-tab="Upgrade"]')); return; } openMainSheet('upgrade', el, 'Upgrade'); }   // 직스: 보급 탭
-function openAutoSheet(el){ openMainSheet('auto', el, ''); }   // 전송 옆 자동설정 버튼 → 하단 자동화 그리드(전용 탭 없음)
+function openAutoSheet(el){ openMainSheet('auto', el, 'Main'); }   // 메인 구역의 하위 '자동화' → 하단 자동화 그리드(최상위 탭은 메인 유지)
 // ⚙ 자동화 설정 시트 — 팝업 대신 하단 그리드(on/off 셀). 켜두면 유지되는 것들이라 여기서 한 번 설정.
 const AUTO_ICON_DIR='assets/icons/auto/';
 // 자동화 아이콘 — 이미지 우선(auto_<kind>.webp), 없으면 기존 라인SVG 그대로(beaconProHTML·wpnBadgeHTML과 같은 패턴)
@@ -12777,13 +12774,13 @@ function togglePbossAuto(ev, id){ if(ev){ ev.stopPropagation(); ev.preventDefaul
 // ── 메인 자동화 묶음 버튼/팝업(자동 조합·유닛·에너지) ──
 function autoUtilOwned(){ return {combine:autoUsable('combine'), unit:autoUsable('unit'), energy:autoUsable('energy'), place:autoUsable('place'), bossdeploy:autoUsable('bossdeploy')}; }
 function autoSig(){ const o=autoUtilOwned(); const a=G.auto||{}; return ''+(a.combine?1:0)+(a.unit?1:0)+(a.energy?1:0)+(a.place?1:0)+(a.bossdeploy?1:0)+(o.combine?1:0)+(o.unit?1:0)+(o.energy?1:0)+(o.place?1:0)+(o.bossdeploy?1:0)+(G.rallyShow!==false?1:0); }
-function updateAutoFab(){ const b=document.getElementById('autoFab'); if(!b) return;
-  if(!G.auto) G.auto={unit:false,combine:false,energy:false,pboss:{}};
-  const o=autoUtilOwned(), anyOwned=o.combine||o.unit||o.energy||o.place||o.bossdeploy;
-  const showFab=(G.tab==='Main' && G.phase==='playing' && anyOwned);   // 전송 옆 자동설정 버튼 → 선택과 무관하게 표시
-  b.classList.toggle('hide', !showFab);
-  if(!showFab) return;
-  b.classList.toggle('act', !!((o.combine&&G.auto.combine)||(o.unit&&G.auto.unit)||(o.energy&&G.auto.energy)||(o.place&&G.auto.place)||(o.bossdeploy&&G.auto.bossdeploy))); }   // 하나라도 ON이면 버튼 강조
+// 자동화는 전송 옆 배너(#autoFab)에서 메인 구역의 하위 칸으로 옮겼다(2026-08-14).
+// 매 프레임 도는 자리라 해금 여부가 '바뀐 순간'에만 네비를 다시 그린다 — 아니면 DOM을 매 프레임 갈아엎는다.
+let _autoOwnedSig=null;
+function updateAutoFab(){ if(!G.auto) G.auto={unit:false,combine:false,energy:false,pboss:{}};
+  const own=autoAnyOwned(); if(own===_autoOwnedSig) return;
+  _autoOwnedSig=own;
+  if(typeof gtabPaint==='function' && _gtabDrill==='Main') gtabPaint(); }
 function toggleAuto(kind){ const o=autoUtilOwned(); if(!o[kind]){ toast('🔒 업그레이드 필요'); return; }
   if(!G.auto) G.auto={unit:false,combine:false,energy:false,pboss:{}};
   G.auto[kind]=!G.auto[kind];
@@ -18995,7 +18992,7 @@ function strikeSetTabLabels(map){ for(const t in map){ const el=document.querySe
   if(span){ span.textContent=map[t]; continue; }
   let tn=null; el.childNodes.forEach(n=>{ if(n.nodeType===3 && n.textContent.trim()) tn=n; });
   if(tn) tn.textContent=map[t]; else el.appendChild(document.createTextNode(map[t])); } }
-function strikeHideNemoChrome(on){ ['coopBossBar','mergeFab','skillFab','autoFab','deselTop','cvMarine','cvFx','mergeZone','miniWrap','defaultCmd','zoneLabel','chatBar'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display=on?'none':''; });   // unitCmd 제외: 직스 선택 프로필(커맨드 그리드) 호스트로 사용 → .on 클래스로 표시 제어 · chatBar 숨김(전투화면 하단 비움)
+function strikeHideNemoChrome(on){ ['coopBossBar','mergeFab','skillFab','deselTop','cvMarine','cvFx','mergeZone','miniWrap','defaultCmd','zoneLabel','chatBar'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display=on?'none':''; });   // unitCmd 제외: 직스 선택 프로필(커맨드 그리드) 호스트로 사용 → .on 클래스로 표시 제어 · chatBar 숨김(전투화면 하단 비움)
   { const uc=document.getElementById('unitCmd'); if(uc){ uc.classList.remove('on','simple'); uc.innerHTML=''; uc._stkSig=null; uc.style.display=''; } }   // 진입/종료 시 초기화(인라인 display 잔존 제거)
   const kill=document.querySelector('#hudL .kill'); if(kill) kill.style.display=on?'none':'';
   const stage=document.querySelector('#hudL .stage'); if(stage) stage.style.display=on?'none':'';   // 좌상단 ROUND 숨김

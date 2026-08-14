@@ -92,7 +92,11 @@
   **2층이다**(2026-08-14): 구역을 누르면 `[‹][하위…]` 로 내려간다 — 표 `GTAB_TREE` + `gtabPaint/gtabDrill/gtabSub/gtabBack`.
   칸은 HOME 네비와 같은 `_navCell()`(`.navIt`)로 만들고, **최상위 `.tab` 마크업은 그대로 두고 CSS(`#tabs.drill .tab`)로만 숨긴다**
   — `switchTab`/`_setBottomTab`/`updatePbossFab` 이 `style.display`·`.on` 을 직접 만지므로 지웠다 다시 만들면 그 상태가 날아간다.
-  구역 상태는 `_homeMode`/`_gachaSec`/`_upgSec`/`_plSec`(+ 보스는 `G.bossOpen`). 샌드박스·직스에선 내려가지 않는다.
+  구역 상태는 `_homeMode`/`_gachaSec`/`_upgSec`/`_plSec`(+ 보스는 `G.bossOpen`, 자동화는 `G.mainSheet==='auto'`). 샌드박스·직스에선 내려가지 않는다.
+- **자동화는 메인 구역의 마지막 하위**다(2026-08-14, 옛 전송 옆 `#autoFab` 배너 폐지). `updateAutoFab()` 은 이제 배너를 만지지 않고
+  해금 여부가 **바뀐 순간에만** 네비를 다시 그린다 — 매 프레임 도는 자리라 무조건 `gtabPaint()` 하면 DOM 을 매 프레임 갈아엎는다.
+- ⚠ **`#hud` 는 `z-index:24`** (2026-08-14). 포인트방 입력 차단막 `#bossPanel`(z22) 위여야 우상단 ☰ 가 눌린다.
+  `#hud` 가 쌓임 맥락을 만들므로 자식만 올려서는 절대 못 빠져나온다 — 바 자체를 올릴 것.
 - 하단 패널 `.bp` — **id는 `'bp'+탭명` 동적 참조**(`bpMain/bpUnit/bpUpgrade/bpPlayers/bpBattle/bpBuild`). ⚠️ 미참조로 보여도 살아있음.
 - 유닛뽑기·업그레이드 시트는 **구역별로 칸이 갈린다**: `GACHA_SEC_CELLS`(뽑기/타워구매) · `_upgAtkItems/_upgLuckItems/_upgPermItems`(공격력/확률/영구강화). ×5 뽑기는 `BEACON_BULK`(1회 값 × 배수) — ⚠ 좌표가 없으므로 `DRAW_BEACONS`(맵 위 비콘 표)에 넣지 말 것.
 - 시트 모드: `G.mainSheet` + `renderMainSheet()` 디스패처. 유닛 지정 중엔 프로필 우선, 해제 시 시트 복원(`refreshSelCard` 분기).

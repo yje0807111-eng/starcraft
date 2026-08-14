@@ -2787,11 +2787,48 @@ async function groupGame(){
       gtabBack(); await sleep(90);
       assert(cells().length===5 && !document.getElementById('tabs').classList.contains('drill'),'뒤로가기로 최상위 복귀 실패');
       assert(G.mainSheet==='upgrade','뒤로가기가 보고 있던 섹션까지 바꿨음: '+G.mainSheet);
-      // ⑥ 판 안에 같은 조작을 두 번 두지 않는다(옛 .hsTabs 탭 줄)
+      // ⑥ 판 안에 같은 조작을 두 번 두지 않는다(옛 .hsTabs 탭 줄 · 전송 옆 AUTO 배너)
       assert(!document.querySelector('#defaultCmd .hsTab'),'판 안에 옛 모드 탭 줄이 남아 있음(하단 네비와 중복)');
-      return '최상위 5칸 등폭 · 4구역 드릴다운 ok';
+      assert(!$('autoFab'),'전송 옆 AUTO 배너가 남아 있음 — 자동화는 메인 하위 칸으로 옮겼다');
+      // ⑦ 자동화 = 메인 하위의 '마지막' 칸이고, 누르면 자동화 시트가 뜬다
+      openMainHome(); await sleep(90);
+      { const labels=cells().slice(1).map(e=>e.textContent.trim());
+        skipIf(!autoAnyOwned(),'자동화 미해금');
+        assert(labels[labels.length-1]==='자동화','자동화가 메인 하위 마지막 칸이 아님: '+JSON.stringify(labels)); }
+      gtabSub('auto'); await sleep(120);
+      assert(G.mainSheet==='auto','자동화 칸을 눌렀는데 시트가 안 바뀜: '+G.mainSheet);
+      { const cur=cells().find(e=>e.classList.contains('cur'));
+        assert(cur && cur.textContent.trim()==='자동화','자동화인데 선택 표시가 딴 칸: '+(cur&&cur.textContent.trim())); }
+      assert(cells()[0].classList.contains('navBk'),'자동화로 갔더니 최상위로 올라감');
+      // 지정으로 돌아오면 자동화 시트가 걷히고 메인 홈이 돌아온다
+      gtabSub('select'); await sleep(120);
+      assert(G.mainSheet==null && !$('defaultCmd').classList.contains('hide'),'자동화에서 유닛 지정으로 못 돌아옴');
+      return '최상위 5칸 등폭 · 4구역 드릴다운 · 자동화 하위 ok';
     } finally { if(faked) ph.classList.remove('inGame'); openMainHome(); }
   });
+  // 포인트방은 화면 전체를 덮는 입력 차단막(#bossPanel z22)을 깐다 — 우상단 ☰(#hud z20)이 통째로 먹혔었다.
+  await step('포인트방에서도 우상단 ☰ 가 눌린다', async()=>{
+    skipIf(typeof openBossArena!=='function','포인트방 없음');
+    const ph=$('phone'), faked=ph && !ph.classList.contains('inGame'); if(faked) ph.classList.add('inGame');
+    // ⚠ 헤드리스에선 three.js(esm.sh)가 막혀 로딩 게이트(#opening)가 안 걷힌다 — 히트 테스트를 그게 먼저 먹는다
+    const op=$('opening'), opUp=op && !op.classList.contains('hide'); if(opUp) op.classList.add('hide');
+    try{
+      if(!G.coopBoss && typeof spawnCoopBoss==='function') spawnCoopBoss(1);
+      skipIf(!G.coopBoss,'공용 보스 없음');
+      openBossArena(); await sleep(150);
+      assert(G.bossOpen,'포인트방이 안 열림');
+      const set=$('settingsBtn'), r=set.getBoundingClientRect();
+      assert(r.width>0,'설정 버튼이 안 보임');
+      const hit=document.elementFromPoint((r.left+r.right)/2,(r.top+r.bottom)/2);
+      assert(set.contains(hit)||hit===set,'포인트방에서 ☰ 가 다른 요소에 먹힘: '+((hit&&(hit.id||hit.className))||hit));
+      // 실제로 열리는지까지
+      set.click(); await sleep(150);
+      const pop=$('settingsPop');
+      assert(pop && !pop.classList.contains('hide'),'☰ 를 눌렀는데 설정이 안 열림');
+      if(typeof closeSettings==='function') closeSettings();
+      return 'z'+getComputedStyle($('hud')).zIndex+' — 차단막 위';
+    } finally { if(typeof closeBossArena==='function') closeBossArena();
+      if(opUp) op.classList.remove('hide'); if(faked) ph.classList.remove('inGame'); } });
   await step('무기 업그레이드 구매', ()=>{ skipIf(typeof upgCost!=='function'||typeof buyGachaUp!=='function','업그레이드 API 없음');
     hackCredits(); const b=G.gachaLuckLv||0; buyGachaUp(); assert((G.gachaLuckLv||0)===b+1,'gachaLuckLv 미증가'); return 'Lv'+G.gachaLuckLv; });
   await step('보스 탭 표시/배지 갱신', ()=>{ updatePbossFab(); const bt=$('bossTab');
