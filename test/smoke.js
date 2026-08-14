@@ -2711,6 +2711,34 @@ async function groupGame(){
   await step('시트 복원: 선택→해제 시 섹션 유지', ()=>{ openGachaSheet(); const u=G.units[0]; G.sel=[u.uid]; refreshSelCard();
     assert(G.mainSheet==='gacha','선택 중 시트 상태 소실'); G.sel=[]; refreshSelCard();
     assert(G.mainSheet==='gacha' && $('unitCmd').classList.contains('on'),'해제 후 시트 미복원'); openMainHome(); return 'ok'; });
+  // 하단 프로필 구역 = 사냥터 톤(회색 판 + 검정 속살 + 각진 윗변). 섹션마다 높이가 달라 튀던 것도 여기서 막는다.
+  await step('하단 프로필: 다섯 섹션 같은 높이 · 회색 판 · 검정 속살', async()=>{
+    // ⚠ 헤드리스에선 three.js(esm.sh)가 막혀 로딩 게이트가 안 걷히고 #phone.inGame 이 안 켜진다
+    //    → #bot 이 display:none 이라 하단 패널 높이가 전부 0으로 측정된다. 재는 동안만 켠다.
+    const ph=$('phone'), faked=ph && !ph.classList.contains('inGame'); if(faked) ph.classList.add('inGame');
+    document.body.classList.add('sheetOpen');
+    const bluish = t => { let m,bad=false; const re=/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/g;
+      while((m=re.exec(t))){ const r=+m[1],g=+m[2],b=+m[3]; if(b-r>=10 && b-g>=6 && b>=20) bad=true; } return bad; };
+    const hs={};
+    try{
+      for(const [n,fn] of [['메인',openMainHome],['유닛뽑기',openGachaSheet],['업그레이드',openUpgradeSheet],
+                           ['보스',openBossSheet],['플레이어',()=>switchTab('Players',document.querySelector('.tab[data-tab="Players"]'))]]){
+        fn(); await sleep(120);
+        const p=document.querySelector('.bp.on'); assert(p,n+' 섹션에 하단 패널이 없음');
+        const c=getComputedStyle(p);
+        hs[n]=Math.round(p.getBoundingClientRect().height);
+        assert(c.borderTopLeftRadius==='0px' && c.borderTopRightRadius==='0px', n+' 판이 아직 둥금: '+c.borderTopLeftRadius);
+        assert(!bluish(c.backgroundImage), n+' 판이 아직 푸른 톤: '+c.backgroundImage);
+        // 속살(좌측 설명·그리드 칸·유닛 카드·플레이어 슬롯)은 전부 검정이어야 한다
+        for(const sel of ['.cgInfo','.cgSlot','.hsCell','.plbtn']){ const e=p.querySelector(sel); if(!e) continue;
+          assert(!bluish(getComputedStyle(e).backgroundImage), n+' '+sel+' 이 아직 푸른 톤: '+getComputedStyle(e).backgroundImage); }
+      }
+      const vals=Object.values(hs), lo=Math.min(...vals), hi=Math.max(...vals);
+      assert(hi>0,'하단 패널 높이를 못 쟀다(숨은 상태로 측정): '+JSON.stringify(hs));
+      assert(hi-lo<=1,'섹션마다 하단 높이가 다름: '+JSON.stringify(hs));
+      return Object.keys(hs).length+'섹션 모두 '+hi+'px';
+    } finally { if(faked) ph.classList.remove('inGame'); openMainHome(); }
+  });
   await step('무기 업그레이드 구매', ()=>{ skipIf(typeof upgCost!=='function'||typeof buyGachaUp!=='function','업그레이드 API 없음');
     hackCredits(); const b=G.gachaLuckLv||0; buyGachaUp(); assert((G.gachaLuckLv||0)===b+1,'gachaLuckLv 미증가'); return 'Lv'+G.gachaLuckLv; });
   await step('보스 탭 표시/배지 갱신', ()=>{ updatePbossFab(); const bt=$('bossTab');

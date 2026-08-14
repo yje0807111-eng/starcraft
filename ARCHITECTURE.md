@@ -92,6 +92,10 @@
 - 하단 패널 `.bp` — **id는 `'bp'+탭명` 동적 참조**(`bpMain/bpUnit/bpUpgrade/bpPlayers/bpBattle/bpBuild`). ⚠️ 미참조로 보여도 살아있음.
 - 시트 모드: `G.mainSheet` + `renderMainSheet()` 디스패처. 유닛 지정 중엔 프로필 우선, 해제 시 시트 복원(`refreshSelCard` 분기).
 - 프로필/그리드는 전부 `renderCmdGrid(host, model)` — 모델 객체로만 내용 제어(레지스트리 참조).
+- **하단 구역의 톤·높이는 토큰 셋 하나가 정한다**(2026-08-14): `--panelBig`(판) · `--bpFace`(속살 검정) ·
+  `--bpTile`(초상 방사) · **`--bpBodyH`**(본문 높이). 다섯 섹션(메인 홈 `#defaultCmd` · 시트 `#unitCmd`/`#btSheetBody` ·
+  플레이어 `#plGridWrap`)이 같은 변수를 쓰므로 값을 개별 규칙에 다시 박지 말 것 — 예전엔 시트 176px / 메인·플레이어 126px 이라
+  탭을 옮길 때마다 판이 튀었다. 스모크 `하단 프로필: 다섯 섹션 같은 높이 …` 가 지킨다.
 
 ## 6. 3D 모듈 (window.M3D)
 - 진입: `M3D.sync(units, GW, GH, dt, sel, enemies, selEnemy, scaleMul, view)` — 유닛/적 모델 동기화+렌더. 그 외 `syncShop/syncBuild/syncBldg/syncBoss`(탭별), `portrait`, `hasModel`, `loadMapModels/keepOnlyMap`(맵별 VRAM), `dbg()/matDbg(uid)`(디버그).

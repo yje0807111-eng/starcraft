@@ -97,10 +97,17 @@
      ⚠ 값이 흩어지면 반드시 어긋난다(선례: 높이 555 vs 564 · 여백 18 vs 20 · 92%가 322 vs 326).
      크기·여백·딤을 바꾸려면 여기만 고칠 것. */
   :root{--popW:92%;--popMaxW:350px;--popH:min(564px,90%);--popPad:20px;--popDim:rgba(2,3,6,.84)}
-  /* 🪟 화면에서 제일 큰 카드(로그인 카드·사냥터 패널·캐릭터 생성·상점/정비 구역·유즈맵 목록)의 면.
+  /* 🪟 화면에서 제일 큰 카드(로그인 카드·사냥터 패널·상점/정비 구역·유즈맵 목록·유즈맵 하단 프로필)의 면.
      뒤 배경이 살짝 비치는 반투명이 기본이다 — 값이 흩어지면 화면마다 투명도가 달라진다.
      ⚠ --hmPanel/--hbEdge 를 쓰지 말 것: 그 둘은 #homeScreen 안에서만 정의돼 다른 화면에선 면이 통째로 사라진다. */
   :root{--panelBig:linear-gradient(180deg,rgba(25,25,25,.88),rgba(14,14,14,.9));--panelBigEdge:rgba(255,255,255,.07)}
+  /* 🎛 유즈맵 하단 프로필 구역(.bp · #btSheet)의 속살 — 사냥터 업그레이드 패널과 같은 문법이다.
+     판은 회색(--panelBig), 그 안의 칸(좌측 설명·그리드 카드)은 완전 검정. 푸른 톤을 되살리지 말 것.
+     ⚠ 색을 여기 세 토큰으로만 두는 이유: 같은 구역이 시트(뽑기·업그레이드·보스)·메인 홈·플레이어 셋으로
+     갈라져 있어서, 값을 흩뿌리면 섹션을 옮길 때마다 톤이 바뀐다(실제로 그랬다). */
+  :root{--bpFace:linear-gradient(180deg,#0a0a0a,#000);
+        --bpTile:radial-gradient(circle at 50% 34%,rgba(96,96,104,.32),#050505 82%);
+        --bpBodyH:min(34vh,176px)}   /* 본문 높이 단일 소스 — 시트·메인 홈·플레이어 그리드가 같은 높이여야 섹션 전환에서 안 튄다 */
   :root{--phW:963;--phH:1997;--navH:56px;--curH:34px;--topPad:10px}   /* --topPad: 모바일에서 화면 끝에 붙으면 잘 안 보인다 — 상단을 그만큼 내린다 */   /* 하단 바 높이(네비·유즈맵 탭바 공용) — 61 → 56px 로 살짝 얇게 */
   #phone{width:390px;height:calc(390px * var(--phH) / var(--phW));aspect-ratio:var(--phW)/var(--phH);position:relative;
     /* 게임 배경 우주 타일(space_bg)을 캔버스와 같은 380px 스케일로 프레임 전체에 이어지게 — 어둡게 덮어 콘솔 가독성 유지 */
@@ -393,28 +400,31 @@
   .hsTiers{display:flex;flex-wrap:nowrap;gap:3px;padding:3px 0 1px;overflow:hidden}
   .hsTier{flex:1 1 0;min-width:0;display:inline-flex;align-items:center;justify-content:center;
     font-family:inherit;font-size:10px;font-weight:800;letter-spacing:0;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-    color:var(--tc,#aeb6c2);background:rgba(255,255,255,.035);border:1px solid var(--metal-edge);border-radius:10px;
+    color:var(--tc,#aeb6c2);background:rgba(255,255,255,.035);border:1px solid var(--metal-edge);border-radius:var(--r-lg);
     padding:3px 4px;transition:all .12s}
   .hsTier:hover{background:rgba(255,255,255,.08);border-color:var(--tc,#888)}
   .hsTier:active{transform:translateY(1px)}
   .hsTier.on{color:#0c0a08;background:var(--tc,var(--gold));border-color:var(--tc,var(--gold));box-shadow:0 0 9px -3px var(--tc,var(--gold));text-shadow:0 1px 0 rgba(255,255,255,.25)}
-  .hsGrid{display:flex;flex-wrap:nowrap;justify-content:flex-start;gap:6px;align-items:flex-start;overflow-x:auto;overflow-y:hidden;padding-bottom:1px;flex:1;min-height:0}   /* 고정 4열(각 셀 1/4폭) · 왼쪽부터 채움 · padB 축소로 카드 하단(이름) 잘림 복구 */
+  .hsGrid{display:flex;flex-wrap:nowrap;justify-content:flex-start;gap:6px;align-items:stretch;overflow-x:auto;overflow-y:hidden;padding-bottom:1px;flex:1;min-height:0}   /* 고정 4열(각 셀 1/4폭) · 왼쪽부터 채움 · stretch = 카드가 칸 높이를 채운다(아래가 비지 않게) */
   .hsGrid::-webkit-scrollbar{height:4px}.hsGrid::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
   /* 유닛 셀 = 통일된 SC 카드(메탈+네온 엣지+사선 모서리+스캔라인) */
-  .hsCell{position:relative;flex:0 0 calc((100% - 18px)/4);min-width:0;padding:0;cursor:pointer;overflow:hidden;transition:all .12s;
-    background:linear-gradient(160deg,rgba(48,54,68,.5),rgba(10,12,17,.76));border:1px solid var(--metal-edge);
+  .hsCell{position:relative;flex:0 0 calc((100% - 18px)/4);min-width:0;padding:0;cursor:pointer;overflow:hidden;transition:all .12s;display:flex;flex-direction:column;
+    background:var(--bpFace);border:1px solid var(--metal-edge);
     clip-path:polygon(0 0,calc(100% - 7px) 0,100% 7px,100% 100%,7px 100%,0 calc(100% - 7px));
     box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
   .hsCell::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent);pointer-events:none;z-index:4}
   .hsCell:hover{border-color:var(--gold);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 0 10px -3px rgba(255,210,74,.6)}
   .hsCell:active{transform:translateY(1px)}
-  .hsThumb{position:relative;width:100%;height:42px;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:3px;
-    background:radial-gradient(circle at 50% 34%,rgba(60,70,90,.42),#070910 90%)}
+  .hsThumb{position:relative;width:100%;flex:1;min-height:42px;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:3px;
+    background:var(--bpTile)}
   .hsThumb img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))}.hsThumb svg{width:32px;height:32px}
   .hsCnt{position:absolute;top:3px;left:4px;z-index:5;font-family:var(--font-num);font-size:var(--fs-sm);font-weight:800;color:#fff;
     padding:0 4px;border-radius:var(--r-bar);background:rgba(6,8,12,.78);border:1px solid rgba(255,255,255,.18);line-height:1.45;text-shadow:0 1px 2px #000}
-  .hsMeta{display:flex;align-items:baseline;gap:3px;padding:2px 5px 3px;background:rgba(6,8,12,.66);border-top:1px solid rgba(255,255,255,.07)}   /* 이름(좌) · 회수가(우) 한 줄 */
+  .hsMeta{flex:none;display:flex;align-items:baseline;gap:3px;padding:2px 5px 3px;background:rgba(6,8,12,.66);border-top:1px solid rgba(255,255,255,.07)}   /* 이름(좌) · 회수가(우) 한 줄 */
   .hsName{flex:1 1 auto;min-width:0;font-size:9px;font-weight:700;color:#dbe3ee;text-align:left;line-height:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* 지정/조합 카드는 .hsMeta 없이 이름이 칸의 직계 자식이다 — 여기서 flex:1 을 물려받으면
+     남는 높이를 이름 상자가 통째로 먹어 카드 아래가 새까맣게 빈다(실제로 그랬다). */
+  .hsCell>.hsName{flex:none;padding:2px 5px 3px;text-align:center}
   .hsVal{flex:0 0 auto;font-family:var(--font-num);font-size:11px;font-weight:800;color:var(--gold);line-height:12px;letter-spacing:.2px;text-shadow:0 1px 2px #000}
   .hsEmpty{font-size:var(--fs-xs);color:#7d8590;padding:8px 2px}
   
@@ -777,8 +787,9 @@
   /* 하단 섹션 = 위로 올라오는 슬라이드 시트(탭 바 바로 위, 게임 위로 오버레이). 활성 탭 패널만 존재(.on), body.sheetOpen일 때 올라옴 */
   .bp{position:absolute;left:0;right:0;bottom:100%;z-index:22;box-sizing:border-box;
     display:none;flex-direction:column;gap:5px;padding:10px 12px 12px;max-height:min(46vh,342px);overflow-y:auto;
-    background:linear-gradient(180deg,rgba(13,18,28,.975),rgba(8,11,17,.99));border-top:1px solid rgba(90,140,210,.32);
-    border-radius:15px 15px 0 0;box-shadow:0 -9px 26px rgba(0,0,0,.6);
+    /* 사냥터 패널과 같은 회색 판 · 각진 윗변(둥근 모서리 없음) */
+    background:var(--panelBig);border-top:1px solid var(--panelBigEdge);
+    border-radius:0;box-shadow:0 -9px 26px rgba(0,0,0,.6);
     transform:translateY(112%);transition:transform .26s cubic-bezier(.2,.8,.25,1);pointer-events:none}
   .bp.on{display:flex}   /* 활성 탭 패널만 렌더(내려간 상태로 대기) */
   body.sheetOpen .bp.on{transform:translateY(0);pointer-events:auto}   /* 시트 올라옴 */
@@ -1113,21 +1124,21 @@
      ※ display/위치는 각자 유지(건설=맵 위 슬라이드 시트 / 메인=하단 패널) */
   #playerProfile{display:none}#playerProfile.on{display:flex}   /* 관전 프로필 = 메인 프로필과 동일 커맨드 그리드 호스트 */
   #btSheet,#bpMain:has(#unitCmd.on),#bpMain:has(#defaultCmd:not(.hide)),#bpPlayers:has(#playerProfile.on){
-    background:linear-gradient(180deg,rgba(13,18,28,.97),rgba(8,11,17,.985));border-top:1px solid rgba(90,140,210,.3);border-radius:14px 14px 0 0;
+    background:var(--panelBig);border-top:1px solid var(--panelBigEdge);border-radius:0;
     box-shadow:0 -8px 24px rgba(0,0,0,.55);padding:9px 8px 12px;gap:0}
   #bpPlayers{padding-top:9px}   /* 관전 탭 기본(플레이어 그리드) 하단 높이 = 메인/유닛뽑기/업그레이드(#bpMain 9px)와 통일 — .bp 기본 10px에서 1px 보정 */
   #btSheet.open{transform:translateY(0)}
   #btCardCtl{position:absolute;top:-28px;right:14px;z-index:31;width:46px;height:23px;padding:0;   /* 프로필 간소화/최소화 사이클 버튼(상단 우측 밖, 부양 버튼과 겹침 방지 위로) */
-    border:1px solid rgba(120,160,220,.32);border-bottom:none;border-radius:9px 9px 0 0;
-    background:linear-gradient(180deg,rgba(27,35,52,.98),rgba(15,20,30,.99));color:#9db8e0;
+    border:1px solid var(--panelBigEdge);border-bottom:none;border-radius:var(--r-bar) var(--r-bar) 0 0;
+    background:linear-gradient(180deg,rgba(30,30,30,.96),rgba(16,16,16,.98));color:#a6a6a6;
     display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 -4px 12px rgba(0,0,0,.35);
     transition:color .15s,background .15s,transform .1s}
   #btSheet.open #btCardCtl{display:flex}
-  #btCardCtl:hover{color:#dbe8ff;background:linear-gradient(180deg,rgba(36,48,70,.98),rgba(20,27,40,.99))}
+  #btCardCtl:hover{color:#e6e6e6;background:linear-gradient(180deg,rgba(44,44,44,.98),rgba(24,24,24,.99))}
   #btCardCtl:active{transform:translateY(1px)}
   #btCardCtl svg{width:17px;height:17px;display:block;transition:transform .22s cubic-bezier(.2,.8,.25,1)}
   #btCardCtl.up svg{transform:rotate(180deg)}
-  #btSheet.simple #btSheetBody,#unitCmd.simple,#playerProfile.simple{height:min(34vh,176px);max-height:min(34vh,176px)}   /* 간소화 = 1줄 그리드 · 높이 고정(건물 프로필 기준 ≈120px · 개인·다중·혼합 모두 동일) · 메인 프로필(#unitCmd)도 동일 규격 */
+  #btSheet.simple #btSheetBody,#unitCmd.simple,#playerProfile.simple{height:var(--bpBodyH);max-height:var(--bpBodyH)}   /* 간소화 = 1줄 그리드 · 높이 고정(건물 프로필 기준 ≈120px · 개인·다중·혼합 모두 동일) · 메인 프로필(#unitCmd)도 동일 규격 */
   #btSheet.simple .cmdG .cgGrid,#unitCmd.simple .cmdG .cgGrid{grid-template-rows:1fr}
   #btSheet.mini #btSheetBody{display:none}   /* 최소화 = 본문 숨김(버튼 바만) */
   #btSheetBody,#unitCmd,#playerProfile{height:min(48vh,246px);max-height:min(48vh,246px);min-height:0;flex-direction:column}   /* 일꾼 지정 패널 크기로 고정(건물·유닛 모두 동일 높이) · #unitCmd는 display만 .on에서 제어 */
@@ -1209,7 +1220,7 @@
   .scBox .sl{font-size:8.5px;font-weight:700;letter-spacing:0;white-space:nowrap;line-height:1.2}
   .scBox .sl.def{color:#9ec2ff}.scBox .sl.shd{color:#8fd8ff}.scBox .sl.atk{color:#ffb088}  /* 칩 없이 방어=파랑·쉴드=청록·공격=주황 텍스트 */
   /* (구 다중선택 칩 UI CSS 제거 — 프로필은 커맨드 그리드(.cmdG)가 담당) */
-  #defaultCmd{display:flex;flex-direction:column;gap:4px;height:min(26vh,126px);max-height:min(26vh,126px);min-height:0;overflow:hidden}#defaultCmd.hide{display:none}   /* 유닛지정/판매도 프로필 시트와 동일 고정 높이(무선택·유닛유무 무관) → 시트 교체 시 높이 안 튐 */
+  #defaultCmd{display:flex;flex-direction:column;gap:4px;height:var(--bpBodyH);max-height:var(--bpBodyH);min-height:0;overflow:hidden}#defaultCmd.hide{display:none}   /* 유닛지정/판매도 프로필 시트와 동일 고정 높이(무선택·유닛유무 무관) → 시트 교체 시 높이 안 튐 */
 
   /* 안내문: 검은 인셋 패널(SC 정보창 느낌) */
   .hint{font-size:var(--fs-md);color:var(--txt);text-align:center;margin:auto;line-height:1.7;padding:8px 12px;
@@ -1415,7 +1426,7 @@
   .cmdG .cgHead::after{content:'';position:absolute;left:2px;right:6px;bottom:0;height:1px;background:linear-gradient(90deg,var(--caS),transparent 72%)}
   .cmdG .cgPort{width:48px;height:48px;flex:none;position:relative;overflow:hidden;color:var(--ca);border:1.5px solid var(--caS);
     clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
-    background:radial-gradient(circle at 50% 36%,rgba(74,86,110,.4),#080a10 78%);display:flex;align-items:center;justify-content:center;font-size:20px}
+    background:var(--bpTile);display:flex;align-items:center;justify-content:center;font-size:20px}
   .cmdG .cgPort svg{width:33px;height:33px;filter:drop-shadow(0 0 4px var(--caG))} .cmdG .cgPort .pemoji{font-size:27px}
   .cmdG .cgPort img{width:100%;height:100%;object-fit:contain}   /* 타이틀 아이콘도 정사각 원본 그대로 */
   .cmdG .cgTtl{flex:1;min-width:0} .cmdG .cgN{font-size:var(--fs-xl);font-weight:800;color:var(--caL);text-shadow:0 0 8px var(--caG);line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1450,7 +1461,7 @@
   .cmdG .cgBody{display:flex;gap:8px;align-items:stretch;flex:1;min-height:0}
   /* 좌측 보조 정보 */
   .cmdG .cgInfo{flex:0 0 31%;max-width:158px;min-width:110px;display:flex;flex-direction:column;gap:4px;padding:7px 8px;overflow:hidden;
-    background:linear-gradient(160deg,rgba(18,23,34,.42),rgba(6,9,14,.5));border:1px solid var(--glass);border-radius:9px}
+    background:var(--bpFace);border:1px solid var(--metal-edge);border-radius:9px}
   .cmdG .cgInfo:has(.cgUnits){padding-top:2px;padding-bottom:3px}   /* 👥 유닛 HP 칩 프로필: 세로 패딩 축소 → 칩 영역 넓혀 칩/텍스트 1.2× · 8기 4줄 무스크롤 유지 */
   .cmdG .cgEb{font:800 8px/1 sans-serif;letter-spacing:1px;color:var(--cgMuted)} .cmdG .cgDn{font-size:var(--fs-md);font-weight:800;color:#eaf1fb;line-height:1.15;word-break:keep-all}
   .cmdG .cgDd{font-size:9.5px;color:var(--cgDim);line-height:1.4;word-break:keep-all;overflow-wrap:break-word}   /* 한글 단어 안 끊기고 줄바꿈(잘림 방지) */
@@ -1497,11 +1508,11 @@
   .cmdG .cgCol{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
   .cmdG .cgGrid{flex:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(2,1fr);gap:4px;min-height:0}
   .cmdG .cgSlot{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:3px;cursor:pointer;padding:7px 4px 6px;touch-action:none;
-    border:1px solid var(--metal-edge);border-radius:var(--r-lg);background:linear-gradient(160deg,rgba(30,36,48,.62),rgba(8,10,14,.72));
+    border:1px solid var(--metal-edge);border-radius:var(--r-lg);background:var(--bpFace);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.05);transition:.12s}
   .cmdG .cgSlot::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent)}
   .cmdG .cgPro{width:100%;aspect-ratio:1.2;flex:none;position:relative;overflow:hidden;color:var(--ca);border:1px solid var(--caS);border-radius:var(--r-md);
-    background:radial-gradient(circle at 50% 34%,rgba(74,86,110,.45),#0a0d14 80%);display:flex;align-items:center;justify-content:center;font-size:22px}
+    background:var(--bpTile);display:flex;align-items:center;justify-content:center;font-size:22px}
   /* 스캔라인 + 아래쪽 비네트 — 초상이 커진 만큼 재질을 주고 이름줄과 분리한다 */
   .cmdG .cgPro::after{content:'';position:absolute;inset:0;
     background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.26) 2px 3px),
@@ -1549,21 +1560,21 @@
   .cmdG .cgSlot.sel .cgSw{background:#46f06a}
   .cmdG .cgSlot.sel .cgSw::after{left:17px;background:#0c1410}
   .cmdG .cgSlot.max{cursor:default;opacity:.6} .cmdG .cgSlot.busy .cgPro{color:var(--cgBad);border-color:var(--cgBad)} .cmdG .cgSlot.busy .cgName{color:var(--cgBad)}
-  .cmdG .cgSlot.empty{border-style:dashed;border-color:var(--glass);background:linear-gradient(160deg,rgba(20,22,28,.3),rgba(8,9,12,.4));cursor:default;box-shadow:none} .cmdG .cgSlot.empty::after{display:none}
+  .cmdG .cgSlot.empty{border-style:dashed;border-color:var(--glass);background:linear-gradient(180deg,rgba(10,10,10,.5),rgba(0,0,0,.6));cursor:default;box-shadow:none} .cmdG .cgSlot.empty::after{display:none}
   .cmdG .cgPage{display:flex;align-items:center;justify-content:center;gap:7px;height:20px;flex:0 0 auto;margin-left:auto}   /* 헤더 우측 상단 */
   .cmdG .cgPage button{width:24px;height:19px;border-radius:5px;border:1px solid var(--metal-edge);background:rgba(255,255,255,.04);color:var(--caL);cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center}
   .cmdG .cgPage button:disabled{opacity:.3;cursor:default} .cmdG .cgPage .dots{display:flex;gap:5px}
   .cmdG .cgPage .dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.18)} .cmdG .cgPage .dot.on{background:var(--ca);box-shadow:0 0 6px var(--caG)}
   .cmdG .cgPage .pn{font:800 10px/1 var(--font-num);color:var(--cgDim);letter-spacing:.5px}
   /* 플레이어 선택: 8인 그리드(4×2) — 깔끔한 다크 카드 + 컬러 액센트 */
-  #plGridWrap{display:flex;flex-direction:column;flex:none;height:min(26vh,126px);max-height:min(26vh,126px);min-height:0}   /* 다른 하단 섹션(유닛지정/뽑기/업그레이드)과 동일한 126px 고정 높이 */
+  #plGridWrap{display:flex;flex-direction:column;flex:none;height:var(--bpBodyH);max-height:var(--bpBodyH);min-height:0}   /* 다른 하단 섹션(유닛지정/뽑기/업그레이드)과 동일 높이 — 값은 --bpBodyH 하나뿐 */
   /* 플레이어 관전 슬롯 = 통일된 SC 카드(메탈+사선 모서리+플레이어색 좌측 액센트+스캔라인) */
-  .plGrid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:58px;align-content:center;gap:6px;flex:1;min-height:0;padding:2px 0}
+  .plGrid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:minmax(58px,1fr);align-content:stretch;gap:6px;flex:1;min-height:0;padding:2px 0}
   /* 오토배틀 관전 시트 = 전용 .plbtn 그리드를 시트 호스트에 그대로(커맨드 그리드 아님) */
   #unitCmd.stkSpec,#btSheetBody.stkSpec{display:flex;flex-direction:column;min-height:0;padding:2px 6px 4px}
   #unitCmd.stkSpec .plGrid,#btSheetBody.stkSpec .plGrid{flex:1;min-height:0;grid-auto-rows:auto;grid-template-rows:repeat(2,1fr);padding:0}   /* 4×2=8칸이 시트 높이에 꽉 차게 */
   .plbtn{--pc:var(--info);position:relative;cursor:pointer;overflow:hidden;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;padding:7px 10px;
-    background:linear-gradient(160deg,rgba(42,48,60,.5),rgba(10,12,17,.7));border:1px solid var(--metal-edge);
+    background:var(--bpFace);border:1px solid var(--metal-edge);
     clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.04);transition:all .12s}
   .plbtn::after{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--pc);opacity:.6}  /* 좌측 컬러 액센트 */
