@@ -97,6 +97,18 @@
      ⚠ 값이 흩어지면 반드시 어긋난다(선례: 높이 555 vs 564 · 여백 18 vs 20 · 92%가 322 vs 326).
      크기·여백·딤을 바꾸려면 여기만 고칠 것. */
   :root{--popW:92%;--popMaxW:350px;--popH:min(564px,90%);--popPad:20px;--popDim:rgba(2,3,6,.84)}
+  /* 🪟 화면에서 제일 큰 카드(로그인 카드·사냥터 패널·상점/정비 구역·유즈맵 목록·유즈맵 하단 프로필)의 면.
+     뒤 배경이 살짝 비치는 반투명이 기본이다 — 값이 흩어지면 화면마다 투명도가 달라진다.
+     ⚠ --hmPanel/--hbEdge 를 쓰지 말 것: 그 둘은 #homeScreen 안에서만 정의돼 다른 화면에선 면이 통째로 사라진다. */
+  :root{--panelBig:linear-gradient(180deg,rgba(25,25,25,.88),rgba(14,14,14,.9));--panelBigEdge:rgba(255,255,255,.07)}
+  /* 🎛 유즈맵 하단 프로필 구역(.bp · #btSheet)의 속살 — 사냥터 업그레이드 패널과 같은 문법이다.
+     판은 회색(--panelBig), 그 안의 칸(좌측 설명·그리드 카드)은 완전 검정. 푸른 톤을 되살리지 말 것.
+     ⚠ 색을 여기 세 토큰으로만 두는 이유: 같은 구역이 시트(뽑기·업그레이드·보스)·메인 홈·플레이어 셋으로
+     갈라져 있어서, 값을 흩뿌리면 섹션을 옮길 때마다 톤이 바뀐다(실제로 그랬다). */
+  :root{--bpFace:linear-gradient(180deg,#0a0a0a,#000);
+        --bpTile:radial-gradient(circle at 50% 34%,rgba(96,96,104,.32),#050505 82%);
+        --bpBodyH:min(29vh,148px)}   /* 본문 높이 단일 소스 — 시트·메인 홈·플레이어 그리드가 같은 높이여야 섹션 전환에서 안 튄다.
+                                       176→148: 머리줄 초상(48px)을 지운 만큼 낮췄다(등급 띠가 커진 21px 은 상쇄) */
   :root{--phW:963;--phH:1997;--navH:56px;--curH:34px;--topPad:10px}   /* --topPad: 모바일에서 화면 끝에 붙으면 잘 안 보인다 — 상단을 그만큼 내린다 */   /* 하단 바 높이(네비·유즈맵 탭바 공용) — 61 → 56px 로 살짝 얇게 */
   #phone{width:390px;height:calc(390px * var(--phH) / var(--phW));aspect-ratio:var(--phW)/var(--phH);position:relative;
     /* 게임 배경 우주 타일(space_bg)을 캔버스와 같은 380px 스케일로 프레임 전체에 이어지게 — 어둡게 덮어 콘솔 가독성 유지 */
@@ -121,7 +133,10 @@
   .gview canvas{touch-action:none}   /* 캔버스(터치 대상)에도 직접 부여 — 부모만으론 팬 제스처가 가로채질 수 있음 */
 
   /* HUD — 좌(킬·맵·라운드 세로) / 중앙(제한시간 박스) / 우(자원 가로) */
-  #hud{position:absolute;top:0;left:0;right:0;z-index:20;padding:calc(env(safe-area-inset-top,0px) + 18px) 9px 0;
+  /* z-index 24 = 포인트방 입력 차단막(#bossPanel z22) 위. 20 이던 시절엔 아레나에서 우상단 ☰ 가 통째로 먹혔다.
+     ⚠ #hud 는 z-index 를 가진 순간 쌓임 맥락을 만든다 — 자식(#settingsBtn)만 올려도 절대 못 빠져나온다. 바를 올려야 한다.
+     화면 맨 위에만 있고 pointer-events:none 이라 하단 시트(z22)·건설 시트(z30)를 가리지 않는다. */
+  #hud{position:absolute;top:0;left:0;right:0;z-index:24;padding:calc(env(safe-area-inset-top,0px) + 18px) 9px 0;
     display:flex;align-items:flex-start;justify-content:space-between;pointer-events:none;
     font-family:var(--font-num);   /* 모던 테크 폰트(가시성↑) */
     background:linear-gradient(180deg,rgba(8,12,20,.85),rgba(8,12,20,.42) 60%,transparent);opacity:.82}   /* 상단 HUD 구역 구분용 반투명 배경(아래로 자연스레 페이드) — 전 영역 공통 */
@@ -265,21 +280,6 @@
   
   
   /* 자동화 묶음 버튼 — 좌상단 킬 스코어 바로 아래, 작은 가로 칩 */
-  /* 자동 설정 버튼 — 우하단 개인보스 버튼 바로 위에 세로로(전송버튼과 같은 58x34). 녹색 액센트로 구분 */
-  /* 자동 버튼 = 하단 프로필 카드·네비바 톤(어두운 슬레이트)에 맞추되 조금 더 연하게. 켜짐=네비 액센트 시안 은은하게 */
-  #autoFab{position:absolute;right:8px;bottom:9px;z-index:20;width:58px;height:34px;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:4px;
-    padding:0 4px;cursor:pointer;pointer-events:auto;color:#c6d0dd;overflow:hidden;
-    background:linear-gradient(180deg,rgba(52,58,74,.58),rgba(20,24,32,.7));border:1px solid rgba(255,255,255,.14);
-    backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
-    clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 2px 8px -3px rgba(0,0,0,.5);transition:all .14s}
-  #autoFab::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent);pointer-events:none}
-  #autoFab .afTx{font-size:11px;font-weight:800;letter-spacing:.6px;text-shadow:0 1px 2px #000;white-space:nowrap}
-  #autoFab:active{transform:translateY(1px)}
-  #autoFab.hide{display:none}
-  #autoFab.act{border-color:rgba(92,214,255,.5);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 0 12px -3px rgba(92,214,255,.42)}
-  #autoFab.act .afTx{color:#dbeeff}
-  #autoFab:hover{border-color:rgba(120,240,160,.6)}#autoFab:active{transform:translateY(1px)}
   /* 자동화 설정 = 하단 그리드 시트로 이동(팝업 #autoPopup 제거) */
   
   
@@ -386,31 +386,31 @@
   /* 판매: 등급 칩 + 초상화 그리드 */
   /* 등급 배너 = SC 콘솔식(등급색 네온 액센트 + 사선 모서리, 모바일 탭 영역 확보) */
   /* 등급 필터 = 작은 알약 칩(3차 — 가장 가볍게, 선택된 등급만 채워짐) */
-  .hsTiers{display:flex;flex-wrap:nowrap;gap:3px;padding:3px 0 1px;overflow:hidden}
-  .hsTier{flex:1 1 0;min-width:0;display:inline-flex;align-items:center;justify-content:center;
-    font-family:inherit;font-size:10px;font-weight:800;letter-spacing:0;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-    color:var(--tc,#aeb6c2);background:rgba(255,255,255,.035);border:1px solid var(--metal-edge);border-radius:10px;
-    padding:3px 4px;transition:all .12s}
-  .hsTier:hover{background:rgba(255,255,255,.08);border-color:var(--tc,#888)}
-  .hsTier:active{transform:translateY(1px)}
-  .hsTier.on{color:#0c0a08;background:var(--tc,var(--gold));border-color:var(--tc,var(--gold));box-shadow:0 0 9px -3px var(--tc,var(--gold));text-shadow:0 1px 0 rgba(255,255,255,.25)}
-  .hsGrid{display:flex;flex-wrap:nowrap;justify-content:flex-start;gap:6px;align-items:flex-start;overflow-x:auto;overflow-y:hidden;padding-bottom:1px;flex:1;min-height:0}   /* 고정 4열(각 셀 1/4폭) · 왼쪽부터 채움 · padB 축소로 카드 하단(이름) 잘림 복구 */
+  /* 등급 띠 = 공용 세그먼트 바(.pdSeg — 장비창 섹션 바·사냥터 탭과 한 함수).
+     여기서 덮는 건 두 가지뿐: 전폭으로 펴기(공용 기본은 286px 가운데 정렬)와 칸 높이. */
+  .hsTiers{flex:none;padding:1px 0 5px}
+  .hsTiers .pdSeg{max-width:none;margin:0}
+  .hsTiers .pdSegBtn{padding:10px 4px;font-size:11px}   /* 세로를 조금 늘려 손가락이 닿는 띠로 */
+  .hsGrid{display:flex;flex-wrap:nowrap;justify-content:flex-start;gap:6px;align-items:stretch;overflow-x:auto;overflow-y:hidden;padding-bottom:1px;flex:1;min-height:0}   /* 고정 4열(각 셀 1/4폭) · 왼쪽부터 채움 · stretch = 카드가 칸 높이를 채운다(아래가 비지 않게) */
   .hsGrid::-webkit-scrollbar{height:4px}.hsGrid::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
   /* 유닛 셀 = 통일된 SC 카드(메탈+네온 엣지+사선 모서리+스캔라인) */
-  .hsCell{position:relative;flex:0 0 calc((100% - 18px)/4);min-width:0;padding:0;cursor:pointer;overflow:hidden;transition:all .12s;
-    background:linear-gradient(160deg,rgba(48,54,68,.5),rgba(10,12,17,.76));border:1px solid var(--metal-edge);
+  .hsCell{position:relative;flex:0 0 calc((100% - 18px)/4);min-width:0;padding:0;cursor:pointer;overflow:hidden;transition:all .12s;display:flex;flex-direction:column;
+    background:var(--bpFace);border:1px solid var(--metal-edge);
     clip-path:polygon(0 0,calc(100% - 7px) 0,100% 7px,100% 100%,7px 100%,0 calc(100% - 7px));
     box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
   .hsCell::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent);pointer-events:none;z-index:4}
   .hsCell:hover{border-color:var(--gold);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 0 10px -3px rgba(255,210,74,.6)}
   .hsCell:active{transform:translateY(1px)}
-  .hsThumb{position:relative;width:100%;height:42px;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:3px;
-    background:radial-gradient(circle at 50% 34%,rgba(60,70,90,.42),#070910 90%)}
+  .hsThumb{position:relative;width:100%;flex:1;min-height:42px;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:3px;
+    background:var(--bpTile)}
   .hsThumb img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))}.hsThumb svg{width:32px;height:32px}
   .hsCnt{position:absolute;top:3px;left:4px;z-index:5;font-family:var(--font-num);font-size:var(--fs-sm);font-weight:800;color:#fff;
     padding:0 4px;border-radius:var(--r-bar);background:rgba(6,8,12,.78);border:1px solid rgba(255,255,255,.18);line-height:1.45;text-shadow:0 1px 2px #000}
-  .hsMeta{display:flex;align-items:baseline;gap:3px;padding:2px 5px 3px;background:rgba(6,8,12,.66);border-top:1px solid rgba(255,255,255,.07)}   /* 이름(좌) · 회수가(우) 한 줄 */
+  .hsMeta{flex:none;display:flex;align-items:baseline;gap:3px;padding:2px 5px 3px;background:rgba(6,8,12,.66);border-top:1px solid rgba(255,255,255,.07)}   /* 이름(좌) · 회수가(우) 한 줄 */
   .hsName{flex:1 1 auto;min-width:0;font-size:9px;font-weight:700;color:#dbe3ee;text-align:left;line-height:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* 지정/조합 카드는 .hsMeta 없이 이름이 칸의 직계 자식이다 — 여기서 flex:1 을 물려받으면
+     남는 높이를 이름 상자가 통째로 먹어 카드 아래가 새까맣게 빈다(실제로 그랬다). */
+  .hsCell>.hsName{flex:none;padding:2px 5px 3px;text-align:center}
   .hsVal{flex:0 0 auto;font-family:var(--font-num);font-size:11px;font-weight:800;color:var(--gold);line-height:12px;letter-spacing:.2px;text-shadow:0 1px 2px #000}
   .hsEmpty{font-size:var(--fs-xs);color:#7d8590;padding:8px 2px}
   
@@ -419,27 +419,6 @@
   
   
   
-  /* 모드 전환(지정/판매/조합) = 납작한 밑줄 탭(2차 — 최상위 카드 네비보다 가볍게) */
-  .hsTabs{gap:2px;padding:0 0 2px;margin-bottom:0;border-bottom:1px solid var(--glass-edge)}
-  .hsTab{flex:1 1 0;min-width:0;min-height:24px;display:flex;align-items:center;justify-content:center;gap:4px;
-    font-family:inherit;font-size:var(--fs-md);font-weight:800;letter-spacing:.2px;color:var(--txt-mute);cursor:pointer;white-space:nowrap;
-    background:none;border:none;border-bottom:2px solid transparent;border-radius:0;clip-path:none;box-shadow:none;padding:4px 2px;transition:color .14s,border-color .14s}
-  .hsTab .htIco{font-size:11px;opacity:.5;flex:0 0 auto}
-  .hsTab:hover{color:var(--txt-dim)}
-  .hsTab.on{color:var(--neon);border-bottom-color:var(--neon)}
-  .hsTab.on .htIco{opacity:1;color:var(--neon)}
-  /* 조합 탭: 조합 가능할 때만 표시(골드 텍스트, 밑줄) */
-  .hsTab.comb{color:var(--gold-lt)}
-  .hsTab.comb .htIco{color:var(--gold-lt);opacity:1}
-  .hsTab.comb.on{color:var(--gold);border-bottom-color:var(--gold)}
-  .hsTab.hide{display:none}
-  .hsTabDot{min-width:14px;height:14px;line-height:14px;margin-left:1px;padding:0 3px;border-radius:7px;
-    background:var(--gold);color:#1a1206;font-size:9px;font-weight:900;text-align:center;box-shadow:0 0 6px rgba(255,210,74,.7)}
-  .hsTabDot.hide{display:none}
-  #mergeFab{display:none!important}
-  #mergeZone{display:none!important}
-  /* 메인 홈 하단 — 공용 보스 파견 패널(주변 명령 버튼 톤: metal-edge + 레드 네온, 위계 구분) */
-  .hbTop{display:flex;align-items:center;gap:7px}
   
   
   
@@ -692,7 +671,7 @@
   .ecMsg{font-size:var(--fs-sm);font-weight:500;line-height:1.55;color:var(--txt-mute);letter-spacing:.2px;margin:0 0 12px;word-break:keep-all}
   .ecBtns{display:flex;gap:8px;justify-content:center}
   /* 버튼 = 설정 규격(중립 글래스 / 위험은 붉은 글자·테두리만) — 방 만들기 버튼과 공유하지 않게 카드 안에서만 재정의 */
-  .ecCard .ecCancel,.ecCard .ecGo{flex:1 1 0;min-width:0;padding:0 8px;
+  .ecCard .ecCancel,.ecCard .ecGo,.hbModal .ecCancel,.hbModal .ecGo{flex:1 1 0;min-width:0;padding:0 8px;
     font-family:inherit;font-size:var(--fs-md);font-weight:800;letter-spacing:.3px;
     display:flex;align-items:center;justify-content:center;box-shadow:none;transition:background .16s,border-color .16s}
   /* 이중 테두리 = 바깥 border 1px + inset 1px 어두운 틈 + inset 2px 안쪽 선. 선을 굵히지 않는다 */
@@ -704,20 +683,21 @@
      윗변 안쪽 하이라이트 + 아래로 말려드는 안쪽 그림자 + 바깥 아래 그림자 = 솟아 있는 느낌.
      위는 완전히 평평(라운드 0), 아래만 --r-bar(3px) — 둥글면 볼록함이 물방울처럼 보인다.
      폭은 max-width 120px로 묶는다(flex:1 1 0라 안 묶으면 카드 폭까지 늘어난다). */
-  .ecCard .ecCancel,.ecCard .ecGo,#ovBtn,#ovBtn2.ghost,.authBtn,.authGuest{
+  .ecCard .ecCancel,.ecCard .ecGo,.hbModal .ecCancel,.hbModal .ecGo,#ovBtn,#ovBtn2.ghost,.authBtn,.authGuest{
     height:36px;max-width:120px;
     border-radius:0 0 var(--r-bar) var(--r-bar);   /* 위는 완전히 평평, 아래만 살짝 — 둘 다 토큰 값 */
-    background:linear-gradient(180deg,rgba(26,32,44,.72) 0%,rgba(12,16,23,.82) 52%,rgba(4,6,10,.9) 100%);
+    /* 면 색은 토큰 3개로만 뺀다 — 화면이 덮는 것은 색뿐이고 모양·볼륨은 공유한다(§세그먼트 바와 같은 규칙) */
+    background:linear-gradient(180deg,var(--btnA,rgba(26,32,44,.72)) 0%,var(--btnB,rgba(12,16,23,.82)) 52%,var(--btnC,rgba(4,6,10,.9)) 100%);
     border:1px solid var(--metal-edge);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.13),      /* 윗변 하이라이트 = 볼록 */
                inset 0 -4px 6px -3px rgba(0,0,0,.8),     /* 아래로 말려드는 그림자 */
                0 2px 4px -2px rgba(0,0,0,.7)}            /* 바깥 아래 그림자 = 솟아 있음 */
-  .ecCard .ecCancel:active,.ecCard .ecGo:active,#ovBtn:active,#ovBtn2.ghost:active,.authBtn:active,.authGuest:active{
+  .ecCard .ecCancel:active,.ecCard .ecGo:active,.hbModal .ecCancel:active,.hbModal .ecGo:active,#ovBtn:active,#ovBtn2.ghost:active,.authBtn:active,.authGuest:active{
     background:linear-gradient(180deg,rgba(16,20,29,.8),rgba(4,6,10,.92));
     box-shadow:inset 0 2px 4px -1px rgba(0,0,0,.85),0 0 0 rgba(0,0,0,0)}   /* 누르면 눌려 들어간다 */
   .twBtn{--btnIn:rgba(92,214,255,.26)} .twBtn.del{--btnIn:rgba(255,120,120,.3)}
   /* 팝업 액션 버튼은 카드 액센트를 따라가지 않고 한 스타일로 통일한다(기준 = 나가기 버튼) */
-  .ecCard .ecCancel,.ecCard .ecGo{color:#dfe7f0}
+  .ecCard .ecCancel,.ecCard .ecGo,.hbModal .ecCancel,.hbModal .ecGo{color:#dfe7f0}
   
   
   
@@ -773,14 +753,21 @@
   /* 하단 섹션 = 위로 올라오는 슬라이드 시트(탭 바 바로 위, 게임 위로 오버레이). 활성 탭 패널만 존재(.on), body.sheetOpen일 때 올라옴 */
   .bp{position:absolute;left:0;right:0;bottom:100%;z-index:22;box-sizing:border-box;
     display:none;flex-direction:column;gap:5px;padding:10px 12px 12px;max-height:min(46vh,342px);overflow-y:auto;
-    background:linear-gradient(180deg,rgba(13,18,28,.975),rgba(8,11,17,.99));border-top:1px solid rgba(90,140,210,.32);
-    border-radius:15px 15px 0 0;box-shadow:0 -9px 26px rgba(0,0,0,.6);
+    background:none;border:none;border-radius:0;box-shadow:0 -9px 26px rgba(0,0,0,.6);
     transform:translateY(112%);transition:transform .26s cubic-bezier(.2,.8,.25,1);pointer-events:none}
+  /* 판의 '면'은 여기(::before)다 — 요소 자체에 clip-path 를 걸면 시트 밖으로 나가 있는
+     #btCardCtl(top:-28px)까지 잘려 사라진다. z-index:-1 은 .bp/#btSheet 가 z-index 를 가져
+     쌓임 맥락을 만들기 때문에 판 안에만 머문다(자식 위로 새지 않는다).
+     모서리 컷은 사냥터 카드(.hmUp)와 같은 7px — 위 두 귀퉁이만 자른다(아래는 화면 끝에 붙는다). */
+  .bp::before,#btSheet::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;--ch:7px;
+    background:var(--panelBig);
+    border-top:1px solid var(--panelBigEdge);box-sizing:border-box;
+    clip-path:polygon(var(--ch) 0,calc(100% - var(--ch)) 0,100% var(--ch),100% 100%,0 100%,0 var(--ch))}
   .bp.on{display:flex}   /* 활성 탭 패널만 렌더(내려간 상태로 대기) */
   body.sheetOpen .bp.on{transform:translateY(0);pointer-events:auto}   /* 시트 올라옴 */
   /* 시트 올라오면 하단 사이드 배너(채팅·자동·개인보스)도 시트 위로 함께 상승 */
-  #chatBar,#chatLog,#autoFab,#fxLabActs{transition:transform .26s cubic-bezier(.2,.8,.25,1)}
-  body.sheetOpen:not(.cstMode) #chatBar,body.sheetOpen:not(.cstMode) #chatLog,body.sheetOpen:not(.cstMode) #autoFab,body.sheetOpen:not(.cstMode) #fxLabActs{transform:translateY(calc(-1 * var(--sheetH,0px)))}   /* 이펙트 랩 동작 배너(공격/이동/사망)도 시트 위로 함께 상승 */
+  #chatBar,#chatLog,#fxLabActs{transition:transform .26s cubic-bezier(.2,.8,.25,1)}
+  body.sheetOpen:not(.cstMode) #chatBar,body.sheetOpen:not(.cstMode) #chatLog,body.sheetOpen:not(.cstMode) #fxLabActs{transform:translateY(calc(-1 * var(--sheetH,0px)))}   /* 이펙트 랩 동작 배너(공격/이동/사망)도 시트 위로 함께 상승 */
 
   .row{display:flex;gap:7px;flex-shrink:0;flex-wrap:wrap}
   /* 버튼: 스타크래프트식 메탈 베벨 박스 */
@@ -1109,21 +1096,21 @@
      ※ display/위치는 각자 유지(건설=맵 위 슬라이드 시트 / 메인=하단 패널) */
   #playerProfile{display:none}#playerProfile.on{display:flex}   /* 관전 프로필 = 메인 프로필과 동일 커맨드 그리드 호스트 */
   #btSheet,#bpMain:has(#unitCmd.on),#bpMain:has(#defaultCmd:not(.hide)),#bpPlayers:has(#playerProfile.on){
-    background:linear-gradient(180deg,rgba(13,18,28,.97),rgba(8,11,17,.985));border-top:1px solid rgba(90,140,210,.3);border-radius:14px 14px 0 0;
+    background:none;border:none;border-radius:0;
     box-shadow:0 -8px 24px rgba(0,0,0,.55);padding:9px 8px 12px;gap:0}
   #bpPlayers{padding-top:9px}   /* 관전 탭 기본(플레이어 그리드) 하단 높이 = 메인/유닛뽑기/업그레이드(#bpMain 9px)와 통일 — .bp 기본 10px에서 1px 보정 */
   #btSheet.open{transform:translateY(0)}
   #btCardCtl{position:absolute;top:-28px;right:14px;z-index:31;width:46px;height:23px;padding:0;   /* 프로필 간소화/최소화 사이클 버튼(상단 우측 밖, 부양 버튼과 겹침 방지 위로) */
-    border:1px solid rgba(120,160,220,.32);border-bottom:none;border-radius:9px 9px 0 0;
-    background:linear-gradient(180deg,rgba(27,35,52,.98),rgba(15,20,30,.99));color:#9db8e0;
+    border:1px solid var(--panelBigEdge);border-bottom:none;border-radius:var(--r-bar) var(--r-bar) 0 0;
+    background:linear-gradient(180deg,rgba(30,30,30,.96),rgba(16,16,16,.98));color:#a6a6a6;
     display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 -4px 12px rgba(0,0,0,.35);
     transition:color .15s,background .15s,transform .1s}
   #btSheet.open #btCardCtl{display:flex}
-  #btCardCtl:hover{color:#dbe8ff;background:linear-gradient(180deg,rgba(36,48,70,.98),rgba(20,27,40,.99))}
+  #btCardCtl:hover{color:#e6e6e6;background:linear-gradient(180deg,rgba(44,44,44,.98),rgba(24,24,24,.99))}
   #btCardCtl:active{transform:translateY(1px)}
   #btCardCtl svg{width:17px;height:17px;display:block;transition:transform .22s cubic-bezier(.2,.8,.25,1)}
   #btCardCtl.up svg{transform:rotate(180deg)}
-  #btSheet.simple #btSheetBody,#unitCmd.simple,#playerProfile.simple{height:min(34vh,176px);max-height:min(34vh,176px)}   /* 간소화 = 1줄 그리드 · 높이 고정(건물 프로필 기준 ≈120px · 개인·다중·혼합 모두 동일) · 메인 프로필(#unitCmd)도 동일 규격 */
+  #btSheet.simple #btSheetBody,#unitCmd.simple,#playerProfile.simple{height:var(--bpBodyH);max-height:var(--bpBodyH)}   /* 간소화 = 1줄 그리드 · 높이 고정(건물 프로필 기준 ≈120px · 개인·다중·혼합 모두 동일) · 메인 프로필(#unitCmd)도 동일 규격 */
   #btSheet.simple .cmdG .cgGrid,#unitCmd.simple .cmdG .cgGrid{grid-template-rows:1fr}
   #btSheet.mini #btSheetBody{display:none}   /* 최소화 = 본문 숨김(버튼 바만) */
   #btSheetBody,#unitCmd,#playerProfile{height:min(48vh,246px);max-height:min(48vh,246px);min-height:0;flex-direction:column}   /* 일꾼 지정 패널 크기로 고정(건물·유닛 모두 동일 높이) · #unitCmd는 display만 .on에서 제어 */
@@ -1148,7 +1135,7 @@
   #btDesel.on{display:flex}
   #btDesel svg{filter:drop-shadow(0 0 5px var(--neon-glow))}
   #btDesel:active{transform:translateY(1px);border-color:var(--neon);box-shadow:0 0 12px var(--neon-glow)}
-  body.cstMode #chatBar,body.cstMode #chatLog,body.cstMode #miniWrap,body.cstMode #deselTop,body.cstMode #mergeFab,body.cstMode #skillFab,body.cstMode #autoFab,body.cstMode #btCtl,body.cstMode #hud{display:none !important}   /* 건설=자체 상단바(.bmapTop)만 사용 → HUD 이중 표시 방지 */
+  body.cstMode #chatBar,body.cstMode #chatLog,body.cstMode #miniWrap,body.cstMode #deselTop,body.cstMode #mergeFab,body.cstMode #skillFab,body.cstMode #btCtl,body.cstMode #hud{display:none !important}   /* 건설=자체 상단바(.bmapTop)만 사용 → HUD 이중 표시 방지 */
   /* 상단 HUD(크레딧·에너지·인구·라운드·킬·시계)는 모든 구역 공통 고정 — 건설 탭에서도 표시. 건설맵 상단바는 그 아래로 */
   body.cstMode .bmapTop{top:0}   /* #hud 숨김 → 건설 자체 상단바를 최상단으로 */
   /* 적군 유닛 구분(붉은 링) */
@@ -1205,7 +1192,7 @@
   .scBox .sl{font-size:8.5px;font-weight:700;letter-spacing:0;white-space:nowrap;line-height:1.2}
   .scBox .sl.def{color:#9ec2ff}.scBox .sl.shd{color:#8fd8ff}.scBox .sl.atk{color:#ffb088}  /* 칩 없이 방어=파랑·쉴드=청록·공격=주황 텍스트 */
   /* (구 다중선택 칩 UI CSS 제거 — 프로필은 커맨드 그리드(.cmdG)가 담당) */
-  #defaultCmd{display:flex;flex-direction:column;gap:4px;height:min(26vh,126px);max-height:min(26vh,126px);min-height:0;overflow:hidden}#defaultCmd.hide{display:none}   /* 유닛지정/판매도 프로필 시트와 동일 고정 높이(무선택·유닛유무 무관) → 시트 교체 시 높이 안 튐 */
+  #defaultCmd{display:flex;flex-direction:column;gap:4px;height:var(--bpBodyH);max-height:var(--bpBodyH);min-height:0;overflow:hidden}#defaultCmd.hide{display:none}   /* 유닛지정/판매도 프로필 시트와 동일 고정 높이(무선택·유닛유무 무관) → 시트 교체 시 높이 안 튐 */
 
   /* 안내문: 검은 인셋 패널(SC 정보창 느낌) */
   .hint{font-size:var(--fs-md);color:var(--txt);text-align:center;margin:auto;line-height:1.7;padding:8px 12px;
@@ -1409,14 +1396,10 @@
   .cmdG[data-mode="boss"]{--ca:#ff5c6e;--caG:rgba(255,92,110,.45);--caS:rgba(255,92,110,.5);--caL:#ffd6db}   /* 보스 시트 = 붉은 강조 */
   .cmdG .cgHead{display:flex;align-items:center;gap:9px;padding:5px 2px 9px;position:relative;flex:none}
   .cmdG .cgHead::after{content:'';position:absolute;left:2px;right:6px;bottom:0;height:1px;background:linear-gradient(90deg,var(--caS),transparent 72%)}
-  .cmdG .cgPort{width:48px;height:48px;flex:none;position:relative;overflow:hidden;color:var(--ca);border:1.5px solid var(--caS);
-    clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
-    background:radial-gradient(circle at 50% 36%,rgba(74,86,110,.4),#080a10 78%);display:flex;align-items:center;justify-content:center;font-size:20px}
-  .cmdG .cgPort svg{width:33px;height:33px;filter:drop-shadow(0 0 4px var(--caG))} .cmdG .cgPort .pemoji{font-size:27px}
-  .cmdG .cgPort img{width:100%;height:100%;object-fit:contain}   /* 타이틀 아이콘도 정사각 원본 그대로 */
-  .cmdG .cgTtl{flex:1;min-width:0} .cmdG .cgN{font-size:var(--fs-xl);font-weight:800;color:var(--caL);text-shadow:0 0 8px var(--caG);line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* 머리줄 초상(.cgPort)은 폐지했다(2026-08-14) — 제목은 글자 하나로 읽는다. 모델의 icon 은 그대로 두되 그리지 않는다.
+     ⚠ 되살릴 거면 renderCmdGrid 의 머리줄 마크업도 같이 되돌릴 것(여기 CSS만 넣으면 아무 데도 안 붙는다). */
+  .cmdG .cgTtl{flex:1;min-width:0} .cmdG .cgN{font-size:var(--fs-xl);font-weight:800;color:#fff;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .cmdG .cgN .nsub{font-size:10px;font-weight:700;color:#9fb0c2;text-shadow:none;margin-left:3px}   /* 이름 옆 작은 괄호 수치(라바 수 등) */
-  .cmdG .cgPort:empty{display:none}   /* 아이콘 없는 프로필(라바) = 빈 초상 틀 숨김 */
   .cmdG .cgS{margin-top:1px;font-size:var(--fs-xs);color:var(--cgDim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .cmdG .cgS b{color:#cfe0f5;font-weight:700}
   .cmdG .cgHpsh{margin-top:2px;display:flex;gap:9px;font-family:var(--font-num);font-weight:800;font-size:12.5px;line-height:1}
   .cmdG .cgHpsh .hpv{color:#7ee081} .cmdG .cgHpsh .shv{color:#8fd8ff} .cmdG .cgHpsh .env{color:#b06bff}
@@ -1446,7 +1429,7 @@
   .cmdG .cgBody{display:flex;gap:8px;align-items:stretch;flex:1;min-height:0}
   /* 좌측 보조 정보 */
   .cmdG .cgInfo{flex:0 0 31%;max-width:158px;min-width:110px;display:flex;flex-direction:column;gap:4px;padding:7px 8px;overflow:hidden;
-    background:linear-gradient(160deg,rgba(18,23,34,.42),rgba(6,9,14,.5));border:1px solid var(--glass);border-radius:9px}
+    background:var(--bpFace);border:1px solid var(--metal-edge);border-radius:9px}
   .cmdG .cgInfo:has(.cgUnits){padding-top:2px;padding-bottom:3px}   /* 👥 유닛 HP 칩 프로필: 세로 패딩 축소 → 칩 영역 넓혀 칩/텍스트 1.2× · 8기 4줄 무스크롤 유지 */
   .cmdG .cgEb{font:800 8px/1 sans-serif;letter-spacing:1px;color:var(--cgMuted)} .cmdG .cgDn{font-size:var(--fs-md);font-weight:800;color:#eaf1fb;line-height:1.15;word-break:keep-all}
   .cmdG .cgDd{font-size:9.5px;color:var(--cgDim);line-height:1.4;word-break:keep-all;overflow-wrap:break-word}   /* 한글 단어 안 끊기고 줄바꿈(잘림 방지) */
@@ -1493,11 +1476,11 @@
   .cmdG .cgCol{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
   .cmdG .cgGrid{flex:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(2,1fr);gap:4px;min-height:0}
   .cmdG .cgSlot{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:3px;cursor:pointer;padding:7px 4px 6px;touch-action:none;
-    border:1px solid var(--metal-edge);border-radius:var(--r-lg);background:linear-gradient(160deg,rgba(30,36,48,.62),rgba(8,10,14,.72));
+    border:1px solid var(--metal-edge);border-radius:var(--r-lg);background:var(--bpFace);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.05);transition:.12s}
   .cmdG .cgSlot::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent)}
   .cmdG .cgPro{width:100%;aspect-ratio:1.2;flex:none;position:relative;overflow:hidden;color:var(--ca);border:1px solid var(--caS);border-radius:var(--r-md);
-    background:radial-gradient(circle at 50% 34%,rgba(74,86,110,.45),#0a0d14 80%);display:flex;align-items:center;justify-content:center;font-size:22px}
+    background:var(--bpTile);display:flex;align-items:center;justify-content:center;font-size:22px}
   /* 스캔라인 + 아래쪽 비네트 — 초상이 커진 만큼 재질을 주고 이름줄과 분리한다 */
   .cmdG .cgPro::after{content:'';position:absolute;inset:0;
     background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.26) 2px 3px),
@@ -1545,21 +1528,21 @@
   .cmdG .cgSlot.sel .cgSw{background:#46f06a}
   .cmdG .cgSlot.sel .cgSw::after{left:17px;background:#0c1410}
   .cmdG .cgSlot.max{cursor:default;opacity:.6} .cmdG .cgSlot.busy .cgPro{color:var(--cgBad);border-color:var(--cgBad)} .cmdG .cgSlot.busy .cgName{color:var(--cgBad)}
-  .cmdG .cgSlot.empty{border-style:dashed;border-color:var(--glass);background:linear-gradient(160deg,rgba(20,22,28,.3),rgba(8,9,12,.4));cursor:default;box-shadow:none} .cmdG .cgSlot.empty::after{display:none}
+  .cmdG .cgSlot.empty{border-style:dashed;border-color:var(--glass);background:linear-gradient(180deg,rgba(10,10,10,.5),rgba(0,0,0,.6));cursor:default;box-shadow:none} .cmdG .cgSlot.empty::after{display:none}
   .cmdG .cgPage{display:flex;align-items:center;justify-content:center;gap:7px;height:20px;flex:0 0 auto;margin-left:auto}   /* 헤더 우측 상단 */
   .cmdG .cgPage button{width:24px;height:19px;border-radius:5px;border:1px solid var(--metal-edge);background:rgba(255,255,255,.04);color:var(--caL);cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center}
   .cmdG .cgPage button:disabled{opacity:.3;cursor:default} .cmdG .cgPage .dots{display:flex;gap:5px}
   .cmdG .cgPage .dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.18)} .cmdG .cgPage .dot.on{background:var(--ca);box-shadow:0 0 6px var(--caG)}
   .cmdG .cgPage .pn{font:800 10px/1 var(--font-num);color:var(--cgDim);letter-spacing:.5px}
   /* 플레이어 선택: 8인 그리드(4×2) — 깔끔한 다크 카드 + 컬러 액센트 */
-  #plGridWrap{display:flex;flex-direction:column;flex:none;height:min(26vh,126px);max-height:min(26vh,126px);min-height:0}   /* 다른 하단 섹션(유닛지정/뽑기/업그레이드)과 동일한 126px 고정 높이 */
+  #plGridWrap{display:flex;flex-direction:column;flex:none;height:var(--bpBodyH);max-height:var(--bpBodyH);min-height:0}   /* 다른 하단 섹션(유닛지정/뽑기/업그레이드)과 동일 높이 — 값은 --bpBodyH 하나뿐 */
   /* 플레이어 관전 슬롯 = 통일된 SC 카드(메탈+사선 모서리+플레이어색 좌측 액센트+스캔라인) */
-  .plGrid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:58px;align-content:center;gap:6px;flex:1;min-height:0;padding:2px 0}
+  .plGrid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:minmax(58px,1fr);align-content:stretch;gap:6px;flex:1;min-height:0;padding:2px 0}
   /* 오토배틀 관전 시트 = 전용 .plbtn 그리드를 시트 호스트에 그대로(커맨드 그리드 아님) */
   #unitCmd.stkSpec,#btSheetBody.stkSpec{display:flex;flex-direction:column;min-height:0;padding:2px 6px 4px}
   #unitCmd.stkSpec .plGrid,#btSheetBody.stkSpec .plGrid{flex:1;min-height:0;grid-auto-rows:auto;grid-template-rows:repeat(2,1fr);padding:0}   /* 4×2=8칸이 시트 높이에 꽉 차게 */
   .plbtn{--pc:var(--info);position:relative;cursor:pointer;overflow:hidden;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;padding:7px 10px;
-    background:linear-gradient(160deg,rgba(42,48,60,.5),rgba(10,12,17,.7));border:1px solid var(--metal-edge);
+    background:var(--bpFace);border:1px solid var(--metal-edge);
     clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.04);transition:all .12s}
   .plbtn::after{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--pc);opacity:.6}  /* 좌측 컬러 액센트 */
@@ -2086,62 +2069,97 @@
   /* 로그인/회원가입 */
   #auth{z-index:48;align-items:center;justify-content:center;padding:22px}
   /* 카드 = 각진 HUD 창(clip-path) + 마스크 그라데 테두리. 내부는 청록 콘솔 톤 */
-  .authCard{--ac:#5cd6ff;position:relative;width:90%;max-width:326px;padding:22px 18px 18px;box-sizing:border-box;
+  /* 액센트는 사냥터와 같은 빨강(--neon 계열). 면은 푸른기를 걷은 중성 검정 — 사냥터 패널과 같은 톤이다. */
+  .authCard{--acRGB:255,59,59;--ac:rgb(255,59,59);position:relative;width:90%;max-width:326px;padding:22px 18px 18px;box-sizing:border-box;
     clip-path:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px);
-    background:linear-gradient(160deg,rgba(19,24,35,.9),rgba(6,9,14,.93));   /* = .ovCard/.ecCard와 동일한 면 */
+    background:var(--panelBig);
     box-shadow:0 22px 52px -26px #000}
-  .authCard::before{content:'';position:absolute;inset:0;padding:1.4px;pointer-events:none;z-index:0;
-    background:linear-gradient(155deg,var(--ac),rgba(255,255,255,.06) 46%,color-mix(in srgb,var(--ac) 70%,transparent));
+  /* 바깥 링 — 단색이 아니라 위가 밝고 아래로 스러지는 알파 그라데(사냥터 카드 테두리와 같은 문법) */
+  .authCard::before{content:'';position:absolute;inset:0;padding:1.2px;pointer-events:none;z-index:0;
+    background:linear-gradient(180deg,rgba(var(--acRGB),.95) 0%,rgba(var(--acRGB),.58) 34%,
+      rgba(var(--acRGB),.36) 68%,rgba(var(--acRGB),.28) 100%);
     clip-path:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px);
-    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.45}
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
   /* 안쪽 프레임 1px — 굵히는 대신 겹을 늘려 테두리를 강조한다(DESIGN.md §2 이중 테두리) */
   .authCard::after{content:'';position:absolute;inset:5px;pointer-events:none;z-index:0;
-    border:1px solid color-mix(in srgb,var(--ac) 34%,transparent);
+    border:1px solid rgba(255,255,255,.07);
     clip-path:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px)}
   .authCard>*{position:relative;z-index:1}
-  /* ══ 로그인/회원가입 탭 바 ══ 공용 .msTabs2/.msTab2를 그대로 쓰고 로그인 화면에서만 겉모습을 바꾼다.
-     둥근 상자 + 아래쪽이 진한 테두리(모서리 라운드 때문에 끝이 자연히 올라간다) + 선택 칸은 은은한 색 채움 + 위아래 글로우. */
-  .authCard{min-height:var(--authH,0px)}   /* 두 탭의 높이를 같게 — 값은 authLockHeight()가 실측해 넣는다 */
-  .msTabs2.authTabs{margin-bottom:14px;padding:3px;border-radius:var(--r-lg);background:rgba(10,14,22,.6);flex:none;
-    border:1px solid rgba(150,190,235,.16);border-bottom-color:rgba(120,165,220,.55);   /* 하단만 진하게 */
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 3px 10px -7px #000}
-  .msTabs2.authTabs .msTab2{min-height:36px;padding:9px 4px;font-size:var(--fs-lg);font-weight:800;letter-spacing:.3px;gap:7px;
-    border-radius:var(--r-md);border-bottom:none;transition:color .14s,background .14s,box-shadow .18s,border-color .14s}
-  .msTabs2.authTabs .msTab2 svg{width:15px;height:15px}
-  /* 선택 = 액센트로 은은히 채우고 위·아래로만 발광(면을 강하게 칠하지 않는다) */
-  .msTabs2.authTabs .msTab2.on{color:#dff2ff;
-    background:linear-gradient(180deg,color-mix(in srgb,var(--ac) 20%,transparent),color-mix(in srgb,var(--ac) 9%,transparent));
-    border:1px solid color-mix(in srgb,var(--ac) 45%,transparent);
-    box-shadow:inset 0 1px 0 color-mix(in srgb,var(--ac) 40%,transparent),
-               inset 0 -1px 0 color-mix(in srgb,var(--ac) 30%,transparent),
-               0 -5px 12px -8px color-mix(in srgb,var(--ac) 85%,transparent),
-               0 5px 12px -8px color-mix(in srgb,var(--ac) 85%,transparent)}
+  /* ══ 로그인/회원가입 탭 바 ══ 사냥터·장비창과 같은 세그먼트 바(.pdSeg)를 그대로 쓴다.
+     여기서 덮는 건 아래 여백과 광원 색뿐 — 새 탭 스타일을 만들지 않는다. */
+  /* ⚠ 이 파일엔 전역 `.hide{display:none}` 이 없다 — 컴포넌트마다 제 숨김 규칙을 갖는다. 빠뜨리면 안 숨는다. */
+  .authTabs{margin-bottom:12px}
+  .authTabs.hide{display:none}
+  .authTabs .pdSeg{max-width:none;margin:0}
+  .authTabs .pdSegInd{--segCol:var(--acRGB)}   /* ⚠ --segCol 은 판(.pdSegInd)에 정의돼 있다 — 바에 얹으면 덮이지 않는다 */
   .authDia{display:block;width:9px;height:9px;margin:0 auto 9px;transform:rotate(45deg);
-    background:linear-gradient(135deg,#bfeaff,var(--ac))}
+    background:linear-gradient(135deg,#ff9b9b,var(--ac))}
   .authLogo{font-size:30px;font-weight:900;letter-spacing:2.5px;line-height:1.05;text-align:center;margin-bottom:7px}
   .authLogo .alg1{color:#f3f6fb;text-shadow:0 2px 4px #000}   /* STAR(흰) — 로딩 타이틀과 동일 2톤 · 글로우 없음 */
-  .authLogo .alg2{color:var(--ac,#5cd6ff);text-shadow:0 2px 4px #000}
+  .authLogo .alg2{color:var(--ac);text-shadow:0 2px 4px #000}
   /* 부제 = 좌우 선 + 화살촉으로 감싼 형태(카드 전폭 구분선 대체) */
   .authSub{display:flex;align-items:center;justify-content:center;gap:8px;
     font-size:var(--fs-xs);color:#8b97a6;text-align:center;letter-spacing:.6px;margin-bottom:22px}
   .authSub::before,.authSub::after{content:'';flex:0 0 34px;height:1px;
     background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--ac) 60%,transparent))}
   .authSub::after{background:linear-gradient(270deg,transparent,color-mix(in srgb,var(--ac) 60%,transparent))}
-  .authField{width:100%;box-sizing:border-box;padding:10px 12px;margin-bottom:8px;border-radius:9px;
-    background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.016));
+  /* ══ 방식 선택 허브 ══ 모바일 기준: 칸은 전폭 · 높이 46px(터치 타겟 44px 이상) · 세로로 쌓는다.
+     칸 재질은 게스트 버튼(.authGuest)과 같은 규칙을 그대로 상속받는다 — 새 버튼 스타일을 만들지 않는다. */
+  .authHub,.authForm{display:flex;flex-direction:column}
+  .authHub.hide,.authForm.hide{display:none}
+  .authWay{--ch:6px;position:relative;display:flex;align-items:center;gap:10px;width:100%;min-height:46px;
+    padding:0 13px;margin-bottom:8px;box-sizing:border-box;cursor:pointer;border:none;border-radius:0;
+    font-family:inherit;font-size:var(--fs-lg);font-weight:700;letter-spacing:.3px;color:#dfe7f0;text-align:left;
+    background:linear-gradient(180deg,#0d0d0d,#000);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 2px 4px -2px rgba(0,0,0,.7);
+    clip-path:polygon(var(--ch) 0,calc(100% - var(--ch)) 0,100% var(--ch),100% calc(100% - var(--ch)),
+      calc(100% - var(--ch)) 100%,var(--ch) 100%,0 calc(100% - var(--ch)),0 var(--ch))}
+  /* clip-path 가 border 를 잘라내므로 테두리는 마스크로 1px 만 남긴다(.authBtn 과 같은 문법).
+     기본 테두리 = 위가 밝고 아래로 스러지는 빨강(사냥터 업그레이드 카드와 같은 리듬) */
+  .authWay{--btnLine:linear-gradient(180deg,rgba(var(--acRGB),.8) 0%,rgba(var(--acRGB),.5) 34%,
+    rgba(var(--acRGB),.34) 68%,rgba(var(--acRGB),.26) 100%)}
+  .authWay::before{content:'';position:absolute;inset:0;z-index:-1;padding:1px;background:var(--btnLine,var(--metal-edge));
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;mask-composite:exclude;
+    clip-path:polygon(var(--ch) 0,calc(100% - var(--ch)) 0,100% var(--ch),100% calc(100% - var(--ch)),
+      calc(100% - var(--ch)) 100%,var(--ch) 100%,0 calc(100% - var(--ch)),0 var(--ch))}
+  .authWay .ic{width:16px;height:16px;flex:none;color:#9fb0c2}
+  .authWay:hover{color:#fff}
+  .authWay:active{transform:translateY(1px)}
+  /* 아직 못 쓰는 방식 — 빨강도 빼고 중성 테두리로. 눌러도 들어가지 않는다는 걸 색과 꼬리표로 말한다 */
+  .authWay.lock{color:#7b838e;cursor:default;--btnLine:rgba(255,255,255,.1)}
+  .authWay.lock .awG{color:#8e97a3}
+  .awG{flex:none;width:16px;font-style:normal;font-weight:900;font-size:15px;text-align:center;color:#e8eaed}
+  .awTag{margin-left:auto;font-style:normal;font-size:var(--fs-xs);font-weight:700;letter-spacing:.2px;
+    color:#6f7a88;padding:2px 6px;border:1px solid rgba(255,255,255,.1);border-radius:var(--r-bar)}
+  /* 폼 → 허브로 돌아가는 줄 */
+  .authBack{align-self:flex-start;display:flex;align-items:center;gap:6px;margin-bottom:10px;padding:2px 0;
+    background:none;border:none;cursor:pointer;font-family:inherit;font-size:var(--fs-xs);font-weight:700;
+    letter-spacing:.3px;color:#8b97a6;transition:color .13s}
+  .authBack:hover{color:#dfe7f0}
+  .authBack i{display:block;width:6px;height:6px;border-left:1.5px solid currentColor;border-bottom:1.5px solid currentColor;
+    transform:rotate(45deg);margin-right:1px}
+  .authField{width:100%;box-sizing:border-box;min-height:46px;padding:10px 12px;margin-bottom:8px;border-radius:var(--r-md);
+    background:linear-gradient(180deg,#0d0d0d,#000);
     border:1px solid var(--metal-edge);color:var(--txt);font-family:inherit;font-size:var(--fs-lg);outline:none;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.08);transition:border-color .13s,box-shadow .16s}
-  .authField:focus{border-color:rgba(160,185,215,.6);box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06);transition:border-color .13s,box-shadow .16s}
+  .authField:focus{border-color:rgba(var(--acRGB),.55);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 0 8px -4px rgba(var(--acRGB),.7)}
   .authField::placeholder{color:#6f757d}
   .authField.hide{display:none}
   .authErr{min-height:14px;font-size:var(--fs-sm);color:#ff6b6b;margin:1px 1px 7px;line-height:1.4}
   /* 재질·라운드·입체는 팝업 버튼 규칙(위)에서 상속 — 여기서는 폭과 글자만 */
   /* 주 동작이라 색은 예전 파랑 유지 — 높이·라운드·입체는 팝업 버튼 규칙에서 상속 */
-  .authBtn{width:100%;max-width:none;padding:0;font-family:inherit;font-size:var(--fs-xl);font-weight:800;letter-spacing:.5px;
-    cursor:pointer;color:#04121b;
-    background:linear-gradient(180deg,#7fe0ff,#39b6ec 58%,#1f8ec2) padding-box;padding:1px;box-sizing:border-box;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.45),inset 0 -4px 6px -3px rgba(0,0,0,.35)}
-  .authBtn:active{background:linear-gradient(180deg,#5cc4e8,#2e9ccd 58%,#17739f)}
+  /* 주 동작 — 면을 채우지 않는다. 검정 판 위에 빨간 테두리와 밑변 광원만(사냥터 선택 탭과 같은 언어) */
+  .authBtn{width:100%;max-width:none;min-height:46px;font-family:inherit;font-size:var(--fs-xl);font-weight:800;letter-spacing:.5px;
+    cursor:pointer;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8);
+    background:linear-gradient(180deg,#0d0d0d,#000);padding:1px;box-sizing:border-box;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
+  /* 밑변 1px 광원 — 심지는 희고 색은 halo 가 낸다 */
+  .authBtn::after{content:'';position:absolute;left:11%;right:11%;bottom:0;height:1px;pointer-events:none;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.62) 50%,transparent 92%),
+      linear-gradient(90deg,transparent,rgba(var(--acRGB),.92),transparent);
+    box-shadow:0 0 2px rgba(var(--acRGB),.6),0 0 5px rgba(var(--acRGB),.24)}
+  .authBtn:active{background:linear-gradient(180deg,#000,#050505)}
   /* '또는' 구분선 — 주 버튼과 게스트 버튼을 가른다 */
   .authOr{display:flex;align-items:center;gap:10px;margin:12px 0 10px;font-size:var(--fs-xs);color:#6f7a88;letter-spacing:.4px}
   .authOr::before,.authOr::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.09)}
@@ -2157,30 +2175,35 @@
     -webkit-mask-composite:xor;mask-composite:exclude;
     clip-path:polygon(var(--ch) 0,calc(100% - var(--ch)) 0,100% var(--ch),100% calc(100% - var(--ch)),
       calc(100% - var(--ch)) 100%,var(--ch) 100%,0 calc(100% - var(--ch)),0 var(--ch))}
-  .authBtn{--btnLine:rgba(150,235,255,.75)}
+  .authBtn{--btnLine:linear-gradient(180deg,rgba(var(--acRGB),1) 0%,rgba(var(--acRGB),.55) 40%,
+    rgba(var(--acRGB),.3) 72%,rgba(var(--acRGB),.55) 100%)}
   /* ⚠ 공용 .hide{display:none}보다 뒤에 오는 display:flex가 이겨서 숨김이 먹지 않았다 → 명시적으로 되돌린다 */
   .authOr.hide,.authGuest.hide{display:none}
-  .authGuest{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;max-width:none;
-    padding:1px;background-clip:padding-box;box-sizing:border-box;cursor:pointer;
-    font-family:inherit;font-size:var(--fs-lg);font-weight:700;letter-spacing:.3px;color:#dfe7f0}
-  .authBtn:hover{color:#001019}
+  .authGuest{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;max-width:none;min-height:46px;
+    padding:1px;background:linear-gradient(180deg,#0d0d0d,#000);background-clip:padding-box;box-sizing:border-box;cursor:pointer;
+    font-family:inherit;font-size:var(--fs-lg);font-weight:700;letter-spacing:.3px;color:#dfe7f0;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+  .authBtn:hover{color:#fff}
   .authGuest:hover{color:#fff}
   .authGuest .ic{width:15px;height:15px}
-  .authNote{display:flex;align-items:center;justify-content:center;gap:9px;
-    font-size:var(--fs-xs);color:#69737f;text-align:center;margin-top:14px;line-height:1.5}
+  /* 로그인 탭은 가입 탭보다 두 칸 짧다 — 높이를 고정했으니 남는 자리를 여기서 흡수해
+     안내가 카드 아래쪽에 붙게 한다(버튼 바로 밑에 두면 빈 공간이 꼬리처럼 남는다) */
+  .authNote{display:flex;align-items:center;justify-content:center;gap:9px;margin-top:auto;padding-top:14px;
+    font-size:var(--fs-xs);color:#69737f;text-align:center;line-height:1.5}
+  .authNote.hide{display:none}
   .authNote i{font-style:normal;color:#39414c}   /* 구분자 | */
   .authFind{background:none;border:none;padding:0;cursor:pointer;font-family:inherit;font-size:var(--fs-xs);font-weight:700;
-    color:#9dc6e8;transition:color .13s}
+    color:#c9d2dc;transition:color .13s}
   .authFind:hover{color:var(--ac)}
-  .authErr.info{color:#8fb6cf}   /* 오류가 아닌 안내문 */
+  .authErr.info{color:#b9c2cc}   /* 오류가 아닌 안내문 */
   /* 유즈맵 선택 */
   #mapSelect{z-index:47;padding:12px 13px}
   /* 유즈맵 선택 로비 배경(전체 cover, 9:16 기준, UI는 위 레이어) */
-  #mapSelect::before,#rooms::before,#createPanel::before,#shopScreen::before,#gearScreen::before,#charScreen::before,#upgScreen::before{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;transform-origin:center center;
+  #mapSelect::before,#rooms::before,#createPanel::before,#shopScreen::before,#gearScreen::before,#upgScreen::before{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;transform-origin:center center;
     background:url('assets/backgrounds/lobby_bg.webp') center center / cover no-repeat #04050b;
     animation:lobbyBreath 12s ease-in-out infinite}   /* 미세한 호흡(위아래 + 약한 확대) */
   @keyframes lobbyBreath{ 0%,100%{transform:scale(1.01) translateY(0)} 50%{transform:scale(1.05) translateY(-1%)} }
-  #mapSelect::after,#rooms::after,#createPanel::after,#shopScreen::after,#gearScreen::after,#charScreen::after,#upgScreen::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg, rgba(2,3,8,.96) 0%, rgba(2,3,8,.66) 16%, rgba(2,3,8,.2) 38%, rgba(2,3,8,.2) 62%, rgba(2,3,8,.66) 84%, rgba(2,3,8,.97) 100%)}   /* 위·아래 빨강 더 톤다운(중앙 이미지 유지) */
+  #mapSelect::after,#rooms::after,#createPanel::after,#shopScreen::after,#gearScreen::after,#upgScreen::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg, rgba(2,3,8,.96) 0%, rgba(2,3,8,.66) 16%, rgba(2,3,8,.2) 38%, rgba(2,3,8,.2) 62%, rgba(2,3,8,.66) 84%, rgba(2,3,8,.97) 100%)}   /* 위·아래 빨강 더 톤다운(중앙 이미지 유지) */
   
   
   /* 메타 성장(빌드) 화면 */
@@ -2284,7 +2307,7 @@
   .ptHelpBody .phItem{padding:6px 0;border-top:1px solid rgba(255,255,255,.06)}
   .ptHelpBody .phItem b{color:#dbe3ec;font-weight:700}
   /* ── 🎯 시작 선택 허브 ── */
-  #townScreen.hide,#charScreen.hide{display:none}
+  #townScreen.hide{display:none}
   /* 장비 페이퍼돌 — 캐릭터 초상 + 신체 위치 슬롯 */
   /* ── 장비창 — 위: 아바타 + 부위별 슬롯 / 아래: 가방(늘 열림) ── */
   .twCard.gearFull{width:372px;max-width:94vw;height:90%;max-height:90%}   /* 장비창만 화면을 넓게 쓴다 */
@@ -2488,29 +2511,6 @@
   .igStat .ok{color:#6ff0a0}.igStat .lock{color:#e0a04a}.igSep{opacity:.45}.igArrow{color:#7d8b98}
   .igBtns{flex:0 0 auto;display:flex;gap:8px}
   .igBtns .twBtn{min-width:52px;padding:8px}
-  /* 캐릭터 선택/생성 입장 화면 */
-  #charScreen{position:absolute;inset:0;z-index:61;display:flex;align-items:center;justify-content:center}
-  .csCard{width:330px;max-width:90vw;max-height:86%;
-    /* 푸른기 제거 — 사냥터 패널과 같은 중성 회색 */
-    background:linear-gradient(180deg,#191919,#0e0e0e)}
-  /* ↓ 여기부터는 전부 #charScreen 안으로 범위를 좀힌다 — .twRow/.twBtn/.twInput 은 마을·장비창 공용이라
-     전역으로 고치면 그쪽까지 함께 바뀐다(DESIGN.md — 마을 공용 전환은 나중에 한ꯈ에). */
-  /* 제목 — 하단과 같은 Noto */
-  #charScreen .setTitle{font-family:var(--font-ko);font-size:15px;font-weight:700;letter-spacing:.06em}
-  /* 종족 줄 — 사냥터 카드(.hmUp)와 같은 검정 면 + 금속 링 + 챔퍼 */
-  #charScreen .twRow{padding:8px;border-top:none;border:1px solid transparent;border-radius:var(--r-bar);
-    margin-bottom:6px;
-    background:linear-gradient(180deg,#0a0a0a,#000) padding-box, var(--metal-ring-n) border-box;
-    clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
-  #charScreen .twRow:last-child{margin-bottom:0}
-  /* 버튼·입력창 — 라운드 6/8px 을 토큰(3px)으로, 테두리는 금속 링 */
-  #charScreen .twBtn{border-radius:var(--r-bar);border:1px solid transparent;box-shadow:none;
-    background:linear-gradient(180deg,#2a2a2a,#141414) padding-box, var(--metal-ring-n) border-box}
-  #charScreen .twInput{border-radius:var(--r-bar);border:1px solid transparent;
-    background:linear-gradient(180deg,#141414,#0c0c0c) padding-box, var(--metal-ring-n) border-box}
-  /* 주 동작만 붉은 링 — 만들기(.csMake) */
-  #charScreen .twBtn.csMake{color:#fff;
-    background:linear-gradient(180deg,#2a1214,#170a0c) padding-box, var(--nav-ring-on-d) border-box}
   .twInput{flex:0 0 auto;width:118px;padding:7px 9px;border-radius:8px;font-family:inherit;font-size:13px;color:#eaf1fb;
     background:rgba(255,255,255,.05);border:1px solid var(--metal-edge)}
   .twInput:focus{outline:none;border-color:rgba(92,214,255,.6)}   /* id 특정성으로 .hide 우선(아래 #id{display:flex}가 .hide를 이기지 않게) */
@@ -2629,7 +2629,7 @@
   #hmScroll .uiScroll,#hmScroll .hmUpgGrid{touch-action:pan-y}   /* 업그레이드 목록은 세로 스크롤 유지 */
   #hbCv{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
   /* 좌상단 고정 묶음 — 재화 바와 같은 줄에서 시작한다(바는 우측 정렬이라 왼쪽이 비어 있다)
-     ⚠ 이름 주의: `.hbTop`은 인게임 홈 하단 탭 줄(#bpMain)이 이미 쓰고 있다. 겹치면 그쪽이 세로로 무너진다. */
+     (옛 주의: `.hbTop` 이름이 인게임 홈 탭 줄과 겹쳤었다. 그 탭 줄은 하단 네비로 옮겨가며 사라졌다 — 2026-08-14) */
   .hbHudTop{position:absolute;left:8px;top:calc(3px + var(--topPad));z-index:2;   /* 재화 바와 같은 --topPad 를 본다 — 따로 놀면 안 된다 */display:flex;flex-direction:column;align-items:flex-start;gap:5px}
   /* 좌상단 묶음의 실제 높이(프로필 48 + gap 5 + 아이콘 30). 중앙 표시가 이 아래로 내려가는 기준 — 스모크가 겹침을 검사한다 */
   :root{--hbHudH:61px}   /* 좌상단 묶음 높이 = 프로필만(아이콘 줄은 더보기로 옮겨 비었다). 제목은 이 값 아래에 붙는다 */
@@ -2651,14 +2651,13 @@
     background:rgba(12,13,16,.96);border:1px solid var(--metal-edge);border-radius:var(--r-bar);
     box-shadow:0 10px 24px rgba(0,0,0,.55)}
   .hbMoreGrid{display:grid;grid-template-columns:repeat(2,var(--mi));gap:6px}
-  .hbMoreIt{width:var(--mi);height:var(--mi);padding:0;display:grid;place-items:center;
+  .hbMoreIt{position:relative;width:var(--mi);height:var(--mi);padding:0;display:grid;place-items:center;
     background:rgba(255,255,255,.045);border:1px solid var(--metal-edge);
     border-radius:var(--r-bar);color:#dfe4ea;cursor:pointer}
   .hbMoreIt:active{opacity:.75}
   .hbMoreIt[disabled]{opacity:.4;cursor:default}
   .hbMoreIt span[data-ico],.hbMoreIt .hbMoreSvg{width:18px;height:18px;display:block}   /* .hudSet svg와 같은 18px */
   .hbMoreIt span[data-ico] svg,.hbMoreIt .hbMoreSvg svg{width:100%;height:100%;display:block}
-  #hbBuildWrap > .hbRoundBtn{display:none}   /* 건설은 ☰ 더보기에서 연다 — 랩은 드롭다운 앵커로 남긴다 */
   .hbIcoRow{display:flex;align-items:center;gap:6px}   /* 라운드·마을 아이콘 — 세로로 쌓이면 좌상단 묶음 높이가 늘어난다 */
   /* 오른쪽 위 세로 스택 — 설정(☰)이 있는 재화 바 줄 바로 아래에서 시작한다 */
   .hbHudRight{position:absolute;right:8px;top:calc(var(--curH) + 4px);z-index:2;display:flex;flex-direction:column;align-items:flex-end;gap:5px}
@@ -2688,6 +2687,9 @@
   .hbGrowDot{display:none;position:absolute;top:-3px;right:-2px;font-style:normal;color:#ff9a9a;
     font-family:var(--font-num);font-size:12px;font-weight:800;line-height:1;text-shadow:0 0 6px rgba(255,80,80,.8)}
   .hbGrowDot.show{display:block}
+  /* 더보기 칸 안의 배지는 글자 없는 점 — 이 격자는 '아이콘만'이 규칙이라 !를 쓸 수 없다(스모크가 검사) */
+  .hbMoreIt .hbGrowDot{top:1px;right:1px;width:5px;height:5px;border-radius:50%;background:#ff9a9a;
+    box-shadow:0 0 5px rgba(255,80,80,.9)}
   /* HOME에선 재화 바가 '판'이 아니라 배경 위 숫자라 왼쪽 빈 자리가 프로필 클릭을 먹지 않게 한다 */
   .curBar.bare{pointer-events:none}
   /* ⚠ 되살릴 것을 빠뜨리면 그 요소는 '눌러도 아무 일 없고 뒤 화면이 대신 반응'한다.
@@ -2697,12 +2699,41 @@
   /* 중앙 = 표시 전용(라운드 조절은 좌상단 .hbRoundBtn 담당) → 클릭을 통과시켜 전장을 가리지 않는다 */
   /* 던전·라운드 표시 = 그대로 버튼이다(옛 깃발 아이콘은 폐지). pointer-events를 켜도 캐릭터는
      안 움직인다 — hbFieldEl이 필드 탭 대상을 homeScreen/hbCv/hmScroll로 한정하기 때문. */
+  /* 던전·라운드 — 볼륨 1(전장 위): 판을 깔지 않는다. 글자는 그림자로 띄우고 ◀▶ 버튼만 면을 갖는다 */
   .hbMid{position:absolute;left:50%;top:calc(3px + var(--hbHudH) + 8px);transform:translateX(-50%);z-index:2;text-align:center;
-    display:flex;flex-direction:column;pointer-events:auto;cursor:pointer;white-space:nowrap;
-    padding:5px 14px;background:rgba(12,13,16,.55);border:1px solid var(--metal-edge);border-radius:var(--r-md)}
-  .hbMid:active{opacity:.75}
-  .hbMid b{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:13px;font-weight:800;color:#ececec;letter-spacing:.5px}
-  .hbMid span{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:10px;font-weight:700;color:#9a9a9a;letter-spacing:.4px}
+    display:flex;flex-direction:column;align-items:center;pointer-events:auto;white-space:nowrap}
+  .hbMidRow{display:flex;align-items:center;gap:2px}
+  /* ══ ◀▶ 방향 버튼(공용) — 기본은 '글리프만'. 판도 선도 깔지 않아 배경을 하나도 가리지 않는다 ══
+     터치 영역은 눈에 안 보여도 30px 을 유지한다(모바일 규칙).
+     ⚠ 글자·선 색에 푸른기가 있으면 안 된다 — HOME·라운드 팝업은 순수 회색 톤이고 스모크가 B-R 차이를 잡는다 */
+  .arwBtn{position:relative;width:30px;height:30px;flex:none;display:flex;align-items:center;justify-content:center;
+    cursor:pointer;padding:0;color:#dfe1e4;background:none;border:none;-webkit-tap-highlight-color:transparent}
+  .arwBtn .arwIco{position:relative;width:17px;height:17px;display:block;fill:none;
+    stroke:currentColor;stroke-width:3;stroke-linecap:round;
+    filter:drop-shadow(0 1px 3px rgba(0,0,0,.95))}   /* 어떤 배경 위에서도 읽히게 — 판 대신 그림자로 띄운다 */
+  .arwBtn:active{opacity:.6}
+  .arwBtn:disabled{color:#4a4d55;cursor:default}
+  /* 모서리 컷 테두리 변형 — 판이 필요한 자리에서만 .framed 를 붙인다(기본은 안 그린다).
+     ⚠ clip-path 로 자르면 테두리까지 잘려 잘린 변에 선이 안 남는다 → 외곽선을 SVG 로 직접 그린다 */
+  .arwBtn .arwFrame{display:none;position:absolute;inset:0;width:30px;height:30px;fill:none;
+    stroke:rgba(255,255,255,.30);stroke-width:1;pointer-events:none}
+  .arwBtn.framed .arwFrame{display:block}
+  .arwBtn.framed .arwIco{width:13px;height:13px;stroke-width:2.8;filter:none}
+  .arwBtn.framed:disabled .arwFrame{stroke:rgba(255,255,255,.11)}
+  .hbMidTx{display:flex;flex-direction:column;align-items:center;gap:0;padding:0 12px;cursor:pointer;
+    background:none;border:none;font-family:inherit;color:inherit}
+  .hbMidTx:active{opacity:.75}
+  .hbMid b{font-family:var(--font-ti);font-size:13px;color:#ececec;letter-spacing:.3px;
+    text-shadow:0 1px 3px rgba(0,0,0,.9),0 0 12px rgba(0,0,0,.6)}
+  .hbMidRd{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:12px;font-weight:700;
+    color:var(--txt-mute);letter-spacing:.4px;text-shadow:0 1px 3px rgba(0,0,0,.9)}
+  .hbMidRd em{font-style:normal;font-size:17px;color:#fff;margin-left:3px}
+  /* 밑줄 = '여기 누르면 목록이 열린다' 신호. 색을 채우지 않고 얇은 광원 한 줄(DESIGN §0) */
+  .hbMidLine{display:block;width:72px;height:1px;margin-top:3px;
+    background:linear-gradient(90deg,transparent,rgba(124,224,255,.85),transparent);
+    box-shadow:0 0 6px -1px rgba(92,214,255,.7)}
+  .hbMidSub{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:10px;font-weight:700;
+    color:#9a9a9a;letter-spacing:.4px;margin-top:3px;text-shadow:0 1px 3px rgba(0,0,0,.9)}
   .hbMid i{font-style:normal}
   /* 공통 패널 — 네비바와 같은 회색 그라데 · 모서리는 아주 살짝만 깎는다 */
   .hmCard{flex:none;background:var(--hmPanel);border:1px solid var(--hbEdge);border-radius:var(--r-bar);overflow:hidden}
@@ -2712,7 +2743,7 @@
   .hmUpg{--hmAccRGB:255,59,59;--hmAccLt:#ff8f8f;   /* 알파를 얹어 쓰므로 색이 아니라 채널 셋으로 둔다 */
     /* 화면에서 제일 큰 카드 — 뒤 전장이 살짝 비치는 반투명(§2 창 알파 .88~.93).
        안쪽 칸(.hmUp)은 불투명 검정이라 비치는 건 머리줄·탭 띠·칸 사이 여백뿐이다. */
-    background:linear-gradient(180deg,rgba(25,25,25,.9),rgba(14,14,14,.92));
+    background:var(--panelBig);
     margin-top:auto;position:relative;
     /* 하단 네비에 딱 붙이고 좌우도 꽉 채운다 — #hmScroll 의 padding:8px 을 음수 마진으로 되돌린다.
        (다른 HOME 요소는 그 여백이 필요하므로 컨테이너 패딩은 건드리지 않는다) */
@@ -2744,26 +2775,8 @@
   .hbGrp{display:flex;justify-content:flex-end;align-items:center;gap:5px;pointer-events:none}   /* 스킬은 오른쪽 — 왼쪽은 전장을 비워 둔다 */
   .hbAuto{margin-right:3px}
   .hbBar button{pointer-events:auto}   /* 줄 랩포는 퇵과 — 버튼만 받는다(전장 탭이 사라지면 이게 범인) */
-  /* 건설 — 한 칸 + 드롭다운 */
-  .hbBdWrap{position:relative;display:inline-flex}
+  /* ⛔ 좌상단 건설 드롭다운(.hbBdWrap/.hbBdMenu/.hbBdIt …)은 폐지했다 — 건설은 하단 패널이 담당한다 */
   .hbRoundBtn.on{color:#fff;background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.34)}
-  /* 목록 — 버튼 바로 아래로 펴찌다. absolute 라 바 높이에 영향을 주지 않는다 */
-  .hbBdMenu{position:absolute;top:calc(100% + 5px);left:0;z-index:30;
-    width:186px;display:flex;flex-direction:column;gap:4px;padding:5px;pointer-events:auto;
-    border:1px solid transparent;border-radius:var(--r-bar);
-    background:linear-gradient(180deg,#191919,#0e0e0e) padding-box, var(--metal-ring) border-box;
-    box-shadow:0 10px 24px -10px #000}
-  .hbBdIt{display:flex;align-items:center;gap:7px;padding:5px 6px;cursor:pointer;font-family:inherit;
-    color:#ececec;border:1px solid transparent;border-radius:2px;
-    background:linear-gradient(180deg,#0a0a0a,#000) padding-box, var(--metal-ring-n) border-box}
-  .hbBdIt.off{color:#7a7a7a}
-  .hbBdIt:active{transform:translateY(1px)}
-  .hbBdIco{position:relative;width:22px;height:22px;flex:none}
-  .hbBdNm{flex:1;min-width:0;text-align:left;font-size:11.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .hbBdCt{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:9.5px;color:#8a8a8a}
-  .hbBdCs{display:flex;align-items:center;gap:2px;font-family:var(--font-num);font-variant-numeric:tabular-nums;
-    font-size:10px;font-weight:800}
-  .hbBdCs .ri{width:10px;height:10px}
   /* 스킬 = 원. 이름은 빼고 아이콘만 — 쌀 때는 남은 초가 그 자리에 들어간다 */
   /* 스킬 = 반투명 원 + 진한 은색 링. 면을 투명하게 두어 뒤 전장이 비친다 */
   .hbSk{position:relative;flex:0 0 auto;width:37px;height:37px;border-radius:50%;
@@ -2842,6 +2855,7 @@
   /* ── 사냥터 업그레이드 ── */
   /* 탭 띠 = 장비창 섹션 바와 같은 컴포넌트(.pdSeg/.pdSegInd/.pdSegBtn · segNavHTML).
      생김새는 전부 공용 규칙이 갖는다 — 여기 오버라이드는 폭·글자뿐이다. */
+  .hmUpg.bd .hmUpgBar{display:none}   /* 건설 모드엔 탭 띠·수량이 없다 — 종류가 셋뿐이라 격자로 충분 */
   .hmUpgBar{display:flex;align-items:stretch;gap:6px;padding:3px 8px 1px}   /* 아래 실선 없음 — 탭 띠 자체가 상자라 선이 겹친다 */
   .hmUpgTabs{flex:1 1 0;display:flex;align-items:stretch;min-width:0}
   /* 탭 띠의 생김새는 전부 공용 .pdSeg 가 갖는다(장비창 섹션 바와 같은 것). 여기서 덮는 건 아래 둘뿐:
@@ -3043,7 +3057,7 @@
   #phone.curOn #upgScreen{padding-top:calc(var(--curH) + var(--topPad) + 12px)}
   .shopTitle{text-align:center;font-size:15px;font-weight:700;letter-spacing:.6px;color:#ececec;padding:6px 0 12px}
   /* 구역 패널 = HOME .hmCard */
-  .shopPanel{flex:none;background:var(--hmPanel);border:1px solid var(--hbEdge);border-radius:var(--r-bar);overflow:hidden;margin:0 2px 12px}   /* flex:none — 부모가 flex 컬럼이라 없으면 내용이 눌려 잘린다(HOME .hmCard와 같은 이유) */
+  .shopPanel{flex:none;background:var(--panelBig);border:1px solid var(--panelBigEdge);border-radius:var(--r-bar);overflow:hidden;margin:0 2px 12px}   /* flex:none — 부모가 flex 컬럼이라 없으면 내용이 눌려 잘린다(HOME .hmCard와 같은 이유) */
   /* 구역 머리줄 = HOME .hmUpgHead */
   .shopHead{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:13px;font-weight:700;letter-spacing:.6px;
     color:#ececec;border-bottom:1px solid rgba(255,255,255,.06)}
@@ -3132,14 +3146,17 @@
   /* 선택 — flex-grow 로 양옆 자리를 가져오며 넓어진다(폭을 박지 않으므로 칸 수가 바뀜도 동작).
      글자는 완전한 흰색. ⚠ 전에는 금색(#f8c453)이었고 DESIGN.md 에 '거드리지 않는다'로 있었다 — 이번 지시로 바꾸고 문서도 고침. */
   /* 선택도 같은 금속 — 한 단 밝은 링(--metal-ring-on)만 다르다. 계열이 갈리면 두 컨트롤이 따로 놀아 보인다 */
-  /* 선택 = 붉은 링 + 짙은 판. 전역 네비는 칸이 넓어지지 않는다(등폭) — 인게임 탭바만 넓어진다 */
+  /* 선택 = 붉은 링 + 짙은 판. 두 바 모두 칸 폭이 같다(등폭) — 인게임 탭바만 1.42배로 넓어지던 것을 없앴다(2026-08-14) */
   .navIt.on,.navIt.cur,#tabs .tab.on{color:#fff;
     background:var(--nav-plate-on) padding-box, var(--nav-ring-on) border-box}
-  #tabs .tab.on{flex-grow:1.42}
   .navIt:active,#tabs .tab:active{opacity:.8}
   /* ‹ 돌아가기 = 아이콘만 · 정사각(칸 높이와 같은 48px). 이동이 아니라 '한 층 위로'라 조용하게 둔다 */
   .navIt.navBk{flex:0 0 48px;font-size:0;gap:0;color:var(--txt-mute)}
   .navIt.navBk .ic{width:20px;height:20px}
+  /* 인게임 탭바도 2층이다 — 내려가면 최상위 5칸을 숨기고 그 자리에 [‹][하위…]를 놓는다.
+     ⚠ 최상위 .tab 마크업은 그대로 둔다(switchTab/_setBottomTab/updatePbossFab 이 style.display 와 .on 을 직접 만진다).
+       숨기기만 하므로 올라오면 그 상태가 그대로 살아난다. !important = bossTab/battleTab 의 인라인 display 를 이긴다. */
+  #tabs.drill .tab{display:none!important}
   /* 마을 상단 설정 — 좌측 로그아웃과 짝 */
   .twGear{flex:0 0 auto;font-family:inherit;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;
     color:#8b98a8;background:none;border:none;transition:color .16s}
@@ -3176,27 +3193,46 @@
   .hbmX{width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;
     color:#9a9a9a;background:none;border:none}
   .hbmX svg{width:15px;height:15px}
-  /* 던전 1~10 — 잠긴 것도 보여준다(다음 목표가 보여야 한다) */
-  .hbDgRow{flex:none;display:flex;gap:4px;padding:0 12px 8px;overflow-x:auto;scrollbar-width:none}
-  .hbDgRow::-webkit-scrollbar{display:none}
-  .hbDg{flex:none;min-width:38px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;
-    font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:var(--fs-md);font-weight:800;
-    color:#9a9a9a;background:rgba(255,255,255,.045);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
-  .hbDg.on{color:#fff;background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.4)}
-  .hbDg.lock{color:#5a5a5a;cursor:default}
+  /* 던전 = 좌우 화살표로 한 장씩. ⛔ 이 팝업엔 푸른기를 쓰지 않는다(스모크가 검사) — 강조는 흰색·금색 */
+  .hbPickDg{flex:none;display:flex;align-items:center;gap:8px;padding:0 12px 10px}
+  .hbDgc{flex:1 1 auto;min-width:0;position:relative;height:64px;overflow:hidden;
+    background:#101216;border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+  .hbDgcArt{position:absolute;inset:0;background-position:center;background-size:cover}
+  .hbDgcArt::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,5,9,.2),rgba(16,18,22,.94))}
+  .hbDgcTx{position:absolute;left:0;right:0;bottom:0;padding:5px 8px 6px;text-align:center}
+  .hbDgcTx b{display:block;font-family:var(--font-ti);font-size:var(--fs-lg);color:#fff;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 3px rgba(0,0,0,.9)}
+  .hbDgcTx em{font-style:normal;font-family:var(--font-num);font-variant-numeric:tabular-nums;
+    font-size:var(--fs-sm);font-weight:700;color:#9a9a9a;letter-spacing:.3px}
+  .hbDgc.lock .hbDgcArt{filter:grayscale(1) brightness(.5)}
+  .hbDgc.lock .hbDgcTx b{color:#7a7a7a}
+  /* 라운드 세로 피커 — 아래가 1라운드, 위로 갈수록 큰 수. 가운데 띠에 멈춘 것이 선택 */
+  .hbRdPick{position:relative;flex:none;height:264px;overflow:hidden;margin-bottom:2px}   /* 높이를 못 박는다 — flex:1 로 두면 부모가 내용 높이라 안쪽 스크롤이 카드 밖으로 샌다 */
+  .hbRdBand{position:absolute;left:12px;right:12px;top:50%;height:40px;transform:translateY(-50%);
+    pointer-events:none;z-index:2;border-top:1px solid rgba(255,255,255,.34);border-bottom:1px solid rgba(255,255,255,.34);
+    box-shadow:0 0 10px -4px rgba(255,255,255,.5)}
+  .hbRdScroll{height:100%;overflow-y:auto;overflow-x:hidden;padding:0 12px;
+    display:flex;flex-direction:column;gap:6px;scroll-snap-type:y mandatory;overscroll-behavior:contain}
+  .hbRd{flex:none;height:40px;scroll-snap-align:center;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;
+    font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:var(--fs-lg);font-weight:800;
+    color:#7a7a7a;background:rgba(255,255,255,.035);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+  .hbRd.on{color:#fff;background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.45)}
+  .hbRd.far{color:#4a4d55;background:rgba(255,255,255,.015);cursor:default}   /* 아직 못 가는 '다음 목표' — 보이되 못 고른다 */
+  .hbRd u{text-decoration:none;font-family:var(--font-ko);font-size:var(--fs-xs);color:#8a8a8a}
+  .hbRd.on u{color:#cfcfcf}
+  /* ⛔ HOME 팝업은 푸른기를 쓰지 않는다(스모크가 라운드 시트를 검사) — 공용 버튼의 색 토큰만 회색으로 덮는다.
+     ⚠ 단일 소스: 토큰·글자색은 .hbModal 한 곳에서만 정한다. 새 HOME 팝업이 늘 때마다 선택자를 붙이지 말 것. */
+  .hbModal{--btnA:rgba(34,34,38,.72);--btnB:rgba(16,16,19,.82);--btnC:rgba(6,6,8,.9)}
+  .hbPickBtns{flex:none;display:flex;gap:8px;justify-content:center;padding:10px 12px 2px}
+  .hbModal .ecCancel{color:#d8dade}                                  /* 공용 버튼 글자색(#dfe7f0)은 살짝 푸르다 — 여기선 회색으로 */
+  .hbModal .ecGo{color:#ffd24a;border-color:rgba(255,210,74,.42)}   /* 확정 = 금색(역할 액센트 §2) */
   .hbModeRow{flex:none;display:flex;gap:8px;padding:0 12px 8px}
-  .hbModeBtn{flex:1 1 0;display:flex;flex-direction:column;padding:8px;cursor:pointer;text-align:left;
+  .hbModeBtn{flex:1 1 0;display:flex;align-items:center;justify-content:center;height:34px;cursor:pointer;
     font-family:inherit;color:#7a7a7a;background:rgba(255,255,255,.045);
     border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
-  .hbModeBtn b{font-size:var(--fs-lg);font-weight:800;color:#9a9a9a}
-  .hbModeBtn em{font-style:normal;font-size:var(--fs-sm)}
+  .hbModeBtn b{font-family:var(--font-ti);font-size:var(--fs-lg);color:#9a9a9a}
   .hbModeBtn.on{color:#c8c8c8;background:rgba(255,255,255,.13);border-color:rgba(255,255,255,.34)}
   .hbModeBtn.on b{color:#fff}
-  .hbRoundGrid{flex:1 1 auto;min-height:0;overflow-y:auto;display:grid;grid-template-columns:repeat(5,1fr);gap:8px;padding:0 12px}
-  .hbRd{height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;
-    font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:var(--fs-lg);font-weight:800;
-    color:#9a9a9a;background:rgba(255,255,255,.045);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
-  .hbRd.on{color:#fff;background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.4)}
   .hbRd.best{color:#ffd24a;border-color:rgba(255,210,74,.45)}   /* 금색 = 재화·보상 역할(§2) — 푸른기가 아니다 */
   /* 🎁 마일스톤 라운드 — 보상이므로 금색(§2 재화·보상 역할). 받은 것은 가라앉힌다.
      ⛔ 초록(#5dff8f)을 쓰면 안 된다 — 이 팝업의 '푸른기 금지' 검사에 걸린다(B가 R보다 크다). */
@@ -3206,6 +3242,74 @@
   .hbRd.far{opacity:.45;cursor:default}          /* 아직 못 간 라운드 = 목표만 보여 주고 못 고른다 */
   .hbRdRw{position:absolute;right:3px;top:2px;font-style:normal;font-size:9px;line-height:1}
   .hbRoundNote{flex:none;padding:8px 12px 0;font-size:var(--fs-sm);color:#7a7a7a;line-height:1.5}
+  /* ══ 📅 일일 — 출석 캘린더 + 일일 퀘스트. 껍데기는 .hbModal/.hbmCard, 줄은 .hbRow 그대로 ══ */
+  /* 주간 진행(퀘스트 판 맨 위) — 줄 생김새는 퀘스트와 같은 .hbRow.dqQ 를 그대로 쓴다(단일 소스).
+     이 껍데기는 '월요일 초기화' 한 줄을 아래에 붙이는 일만 한다. */
+  .dqWeek{display:flex;flex-direction:column}
+  .dqWeek.on>.hbRow{box-shadow:0 0 16px -6px rgba(255,210,74,.8)}
+  .dqWeekNo{padding:3px 4px 0;text-align:right;font-size:var(--fs-xs);color:#5a5a5a}
+  /* .hbRowIco 는 원래 이모지·img 자리였다 — 선 아이콘(ICO)을 넣을 때의 크기를 여기서 준다 */
+  .hbRowIco span[data-ico]{display:block;width:21px;height:21px;color:#c8c8c8}
+  .hbRowIco span[data-ico] svg{width:100%;height:100%;display:block}
+  .dqRi{width:12px;height:12px;object-fit:contain;vertical-align:-2px;margin-right:2px}   /* 보상 표기용 재화 아이콘(resIco) */
+  .dqRw{color:#ffd24a}                                    /* 보상 = 금색(역할 액센트 §2) */
+  .dqRw+.dqRw::before{content:' · ';color:#5a5a5a}
+  .dqBar{display:block;margin-top:5px;height:3px;border-radius:var(--r-bar);background:rgba(255,255,255,.08);overflow:hidden}
+  .dqBar u{display:block;height:100%;text-decoration:none;background:#c8c8c8;transition:width .25s}
+  .hbRow.dqQ.done .dqBar u{background:#ffd24a}
+  .hbRow.dqQ.got{opacity:.5}
+  .hbRow.dqQ.done{border-color:rgba(255,210,74,.4)}
+  /* 제목 = 무엇에 대한 것인지 · 그 아래 = 무엇을 얼마나(+진행). 보상은 줄에 없다 — 수령 버튼 안으로 갔다. */
+  .hbRow.dqQ .hbRowTx em{color:#8a8a8a;line-height:1.35}
+  .hbRow.dqQ .hbRowTx em i{font-style:normal;font-family:var(--font-num);font-variant-numeric:tabular-nums;
+    font-weight:800;color:#c8c8c8}
+  .hbRow.dqQ.done .hbRowTx em i{color:#ffd24a}
+  /* 수령 버튼 = 보상 + 받기. '무엇을 받는지'가 누르는 자리에 있어야 한다 */
+  .hbRow.dqQ .dqBtn{width:92px;height:auto;min-height:50px;padding:5px 5px 4px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+  .dqRwB{display:flex;flex-direction:column;align-items:center;gap:1px}
+  .dqRwB i{display:flex;align-items:center;gap:2px;font-style:normal;
+    font-family:var(--font-num);font-variant-numeric:tabular-nums;
+    font-size:var(--fs-xs);font-weight:800;color:#a68f4e;white-space:nowrap;line-height:1.15}
+  /* ⚠ 눌리는 상태의 버튼 면은 금색이다 — 그 위에 금색 글자를 얹으면 보상이 안 보인다(어두운 글자로) */
+  .dqBtn:not(:disabled) .dqRwB i{color:#4a3400}
+  .dqRwB img{width:11px;height:11px;object-fit:contain;display:block}
+  .dqBtn>b{font-size:var(--fs-sm);font-weight:900;line-height:1}
+  /* 캘린더 — 4주 × (출석 5칸 + 보너스 2칸). 채워 넣는 맛이 나게 칸을 크게 잡지 않고 촘촘히 */
+  .dqTop{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:2px 0 8px}
+  .dqTop span{font-size:var(--fs-sm);color:#9a9a9a}
+  .dqTop span b{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:var(--fs-lg);color:#fff}
+  .dqTop .ecGo{flex:0 0 auto;width:104px}
+  .dqWk{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+  .dqWkL{flex:none;width:24px;font-style:normal;font-size:var(--fs-xs);font-weight:800;color:#7a7a7a;text-align:center}
+  /* ⚠ minmax(0,1fr) 이어야 한다 — 그냥 1fr 이면 칸 안의 숫자 폭이 최소폭이 되어 7번째 칸이 카드 밖으로 밀린다 */
+  .dqWkG{flex:1 1 auto;min-width:0;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+  .dqC{position:relative;min-width:0;overflow:hidden;aspect-ratio:1;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+    background:rgba(255,255,255,.035);border:1px solid var(--metal-edge);border-radius:var(--r-bar);
+    font-family:inherit;color:#7a7a7a}
+  .dqC b{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:var(--fs-xs);font-weight:800;line-height:1}
+  .dqC img{width:13px;height:13px;object-fit:contain;display:block}
+  .dqC i{font-style:normal;font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:10px;line-height:1.1}
+  .dqC i.tk{font-size:13px}   /* 🎟 = 그림 자리 — 숫자보다 크게 */
+  .dqC.bn{background:rgba(255,210,74,.06);border-color:rgba(255,210,74,.24);color:#a89355;cursor:pointer}
+  .dqC.bn[disabled]{cursor:default}
+  .dqC.now{color:#fff;background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.5);
+    box-shadow:0 0 10px -3px rgba(255,255,255,.55)}
+  .dqC.bn.now{color:#ffd24a;background:rgba(255,210,74,.16);border-color:rgba(255,210,74,.6);
+    box-shadow:0 0 10px -3px rgba(255,210,74,.7)}
+  .dqC.got{color:#4a4a4a;background:rgba(255,255,255,.015);border-color:rgba(255,255,255,.05)}
+  .dqC.got img{opacity:.28}
+  .dqC.got::after{content:'';position:absolute;left:50%;top:50%;width:15px;height:9px;margin:-7px 0 0 -8px;
+    border-left:2px solid #ffd24a;border-bottom:2px solid #ffd24a;transform:rotate(-45deg);opacity:.85}
+  /* 최종 보상 — 캘린더를 다 채웠을 때만 살아난다 */
+  .dqFin{display:flex;align-items:center;gap:8px;margin-top:4px;padding:9px 10px;
+    background:rgba(255,255,255,.03);border:1px dashed var(--metal-edge);border-radius:var(--r-bar)}
+  .dqFin .dqFinTx{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
+  .dqFin .dqFinTx b{font-family:var(--font-ti);font-size:var(--fs-lg);color:#9a9a9a}
+  .dqFin .dqFinTx em{font-style:normal;font-size:var(--fs-sm);color:#7a7a7a}
+  .dqFin.on{background:rgba(255,210,74,.09);border-style:solid;border-color:rgba(255,210,74,.5);
+    box-shadow:0 0 16px -6px rgba(255,210,74,.8)}
+  .dqFin.on .dqFinTx b{color:#ffd24a}
   /* 지도 바닥 — 중립 회색 + 미세 격자. 격자는 월드가 아니라 화면에 고정되지만
      아바타가 중앙 고정이라 '땅이 흐르는' 이동감을 준다(전체를 다시 그리지 않는 값싼 방법). */
   .twMap{position:relative;flex:1;min-height:0;overflow:hidden;touch-action:none;
@@ -3342,7 +3446,7 @@
   .msTopBar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
   /* 유즈맵 목록 상자 — 머리(정렬 탭 띠) + 본문(나열). HOME .hmCard와 같은 규격 */
   .msPanel{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden;
-    background:var(--hmPanel);border:1px solid var(--hbEdge);border-radius:var(--r-bar)}
+    background:var(--panelBig);border:1px solid var(--panelBigEdge);border-radius:var(--r-bar)}
   .msSortTabs{flex:0 0 auto;display:flex;align-items:stretch;border-bottom:1px solid rgba(255,255,255,.07)}
   .msSortTab{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;gap:5px;
     padding:9px 4px;cursor:pointer;font-family:inherit;font-size:var(--fs-md);font-weight:700;letter-spacing:.3px;
@@ -3892,7 +3996,6 @@
       <button id="chatSend" onclick="sendChat()">전송</button>
     </div>
     <!-- 자동화 묶음 버튼(메인 좌측): 자동 조합/유닛/에너지 토글 — 해금 업그레이드 보유 시 표시 -->
-    <div id="autoFab" class="hide" onclick="openAutoSheet(this)" title="자동 설정"><span class="afTx">AUTO</span></div>
     <!-- 🎨 플레이어 색 확인(메인) — 건설 구역과 같은 패널 컴포넌트, 유닛을 확대해 액센트 확인 -->
     <div id="pcFab" class="hide" onclick="pcMainToggle(event)" title="플레이어 색 확인">🎨</div>
     <!-- 🎆 이펙트 테스트베드 동작 선택(관리자 Unit 탭, 우하단) — 공격/이동/사망 반복 -->
@@ -4055,19 +4158,28 @@
         <i class="authDia"></i>
         <div class="authLogo"><span class="alg1">STAR </span><span class="alg2">WAR</span></div>
         <div class="authSub" id="authSub">로그인하고 시작하세요</div>
-        <div class="msTabs2 authTabs">
-          <button class="msTab2 on" id="segLogin" onclick="authMode('login')"><span data-ico="user"></span>로그인</button>
-          <button class="msTab2" id="segSignup" onclick="authMode('signup')"><span data-ico="new"></span>회원가입</button>
+        <!-- ① 방식 선택 허브 — 첫 화면. 아이디/이메일을 고르면 아래 ② 폼으로 바뀐다 -->
+        <div class="authHub" id="authHub">
+          <button class="authWay" id="wayId" onclick="authOpenForm('id')"><span data-ico="user"></span>아이디로 로그인</button>
+          <button class="authWay" id="wayEmail" onclick="authOpenForm('email')"><span data-ico="mail"></span>이메일로 로그인</button>
+          <button class="authWay lock" id="wayGoogle" onclick="authWayLocked()"><i class="awG">G</i>Google로 로그인<i class="awTag">준비 중</i></button>
+          <div class="authOr" id="authHubOr">또는</div>
+          <button class="authGuest" id="authGuest" onclick="authGuest()"><span data-ico="user"></span>게스트로 시작하기</button>
         </div>
-        <input id="authId" class="authField" type="text" placeholder="아이디 (로그인용 · 영문·숫자 3~16자)" maxlength="16" autocomplete="username" onkeydown="if(event.key==='Enter')authSubmit()">
-        <input id="authNick" class="authField hide" type="text" placeholder="닉네임 (게임 내 표시)" maxlength="12" autocomplete="off" onkeydown="if(event.key==='Enter')authSubmit()">
-        <input id="authPw" class="authField" type="password" placeholder="비밀번호 (영문·숫자 6자 이상)" autocomplete="current-password" autocapitalize="off" spellcheck="false" lang="en" oninput="this.value=this.value.replace(/[^\x21-\x7E]/g,'')" onkeydown="if(event.key==='Enter')authSubmit()">
-        <input id="authPw2" class="authField hide" type="password" placeholder="비밀번호 확인" autocomplete="new-password" autocapitalize="off" spellcheck="false" lang="en" oninput="this.value=this.value.replace(/[^\x21-\x7E]/g,'')" onkeydown="if(event.key==='Enter')authSubmit()">
+        <!-- ② 로그인/회원가입 폼 — 아이디·이메일이 같은 폼 한 벌을 쓴다(_authKind 로만 갈린다) -->
+        <div class="authForm hide" id="authForm">
+          <button class="authBack" id="authBack" onclick="authBackToHub()"><i></i>다른 방법으로</button>
+          <!-- 로그인/회원가입 = 사냥터·장비창과 같은 세그먼트 바(segNavHTML). 내용은 authMode 가 그린다 -->
+          <div class="authTabs" id="authTabs"></div>
+          <input id="authId" class="authField" type="text" placeholder="아이디 (로그인용 · 영문·숫자 3~16자)" maxlength="16" autocomplete="username" onkeydown="if(event.key==='Enter')authSubmit()">
+          <input id="authNick" class="authField hide" type="text" placeholder="닉네임 (게임 내 표시)" maxlength="12" autocomplete="off" onkeydown="if(event.key==='Enter')authSubmit()">
+          <input id="authPw" class="authField" type="password" placeholder="비밀번호 (영문·숫자 6자 이상)" autocomplete="current-password" autocapitalize="off" spellcheck="false" lang="en" oninput="this.value=this.value.replace(/[^\x21-\x7E]/g,'')" onkeydown="if(event.key==='Enter')authSubmit()">
+          <input id="authPw2" class="authField hide" type="password" placeholder="비밀번호 확인" autocomplete="new-password" autocapitalize="off" spellcheck="false" lang="en" oninput="this.value=this.value.replace(/[^\x21-\x7E]/g,'')" onkeydown="if(event.key==='Enter')authSubmit()">
+          <button class="authBtn" id="authBtn" onclick="authSubmit()">로그인</button>
+          <div class="authNote" id="authNote">비밀번호를 잊으셨나요?<i>|</i><button class="authFind" onclick="authFindPw()">비밀번호 찾기</button></div>
+          <div class="authNote hide" id="authLater">지금 안 해도 됩니다<i>|</i><button class="authFind" onclick="authLinkCancel()">나중에 하기</button></div>
+        </div>
         <div class="authErr" id="authErr"></div>
-        <button class="authBtn" id="authBtn" onclick="authSubmit()">로그인</button>
-        <div class="authOr">또는</div>
-        <button class="authGuest" id="authGuest" onclick="authGuest()"><span data-ico="user"></span>게스트로 시작하기</button>
-        <div class="authNote" id="authNote">ID/PW를 잊으셨나요?<i>|</i><button class="authFind" onclick="authFindPw()">비밀번호 찾기</button></div>
       </div>
     </div>
 
@@ -4130,11 +4242,7 @@
         <!-- 메인 홈 하단(무선택 시): 좌=유닛 판매 / 우=공용 보스 파견 -->
         <div class="homeCols">
           <div class="homeSell">
-            <div class="hbTop hsTabs">
-              <button class="hsTab on" id="hsTabSel" onclick="setHomeMode('select')"><span class="htIco">◈</span>유닛 지정</button>
-              <button class="hsTab" id="hsTabSell" onclick="setHomeMode('sell')"><span class="htIco">▾</span>유닛 판매</button>
-              <button class="hsTab comb hide" id="hsTabComb" onclick="setHomeMode('combine')"><span class="htIco"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><ellipse cx="12" cy="12" rx="8.4" ry="3.4"/><ellipse cx="12" cy="12" rx="8.4" ry="3.4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="8.4" ry="3.4" transform="rotate(120 12 12)"/></svg></span>유닛 조합<span class="hsTabDot hide" id="combDot"></span></button>
-            </div>
+            <!-- 지정/판매/조합 전환은 하단 네비가 맡는다(GTAB_TREE.Main) — 판 안에 같은 탭 줄을 다시 두지 말 것 -->
             <div class="hsTiers" id="hsTiers"></div>
             <div class="hsGrid" id="hsGrid"></div>
           </div>
@@ -4274,16 +4382,45 @@
     </div>
     <div class="hbModal hide" id="hbRoundSheet" onclick="if(event.target===this)hbCloseRounds()">
       <div class="hbmCard">
-        <div class="hbmHead"><b>라운드 선택</b>
+        <div class="hbmHead"><b>던전 · 라운드</b>
           <button class="hbmX" onclick="hbCloseRounds()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
         </div>
-        <div class="hbDgRow uiScroll" id="hbDgRow"></div>
-        <div class="hbModeRow">
-          <button class="hbModeBtn" id="hbModeRep"  onclick="hbSetClimb(false)"><b>반복</b><em>같은 라운드 무한 파밍</em></button>
-          <button class="hbModeBtn" id="hbModeClm" onclick="hbSetClimb(true)"><b>등반</b><em>클리어하면 다음 라운드</em></button>
+        <!-- 던전 = 좌우 화살표로 한 장씩 · 라운드 = 세로 스크롤 피커(아래가 1) -->
+        <div class="hbPickDg">
+          <button class="arwBtn" data-arw="l" id="hbPickPrev" onclick="hbPickDg(-1)" aria-label="이전 던전"></button>
+          <div class="hbDgc" id="hbPickCard"></div>
+          <button class="arwBtn" data-arw="r" id="hbPickNext" onclick="hbPickDg(1)" aria-label="다음 던전"></button>
         </div>
-        <div class="hbRoundGrid uiScroll" id="hbRoundGrid"></div>
-        <div class="hbRoundNote" id="hbRoundNote"></div>
+        <div class="hbModeRow">
+          <button class="hbModeBtn" id="hbModeRep"  onclick="hbSetClimb(false)" title="같은 라운드 무한 파밍"><b>반복</b></button>
+          <button class="hbModeBtn" id="hbModeClm" onclick="hbSetClimb(true)" title="클리어하면 다음 라운드"><b>등반</b></button>
+        </div>
+        <div class="hbRdPick">
+          <div class="hbRdBand"></div>
+          <div class="hbRdScroll uiScroll" id="hbRdScroll" onscroll="hbRdScrolled()"></div>
+        </div>
+        <div class="hbPickBtns">
+          <button class="ecCancel" onclick="hbCloseRounds()">취소</button>
+          <button class="ecGo" id="hbPickGoBtn" onclick="hbPickGo()">이동</button>
+        </div>
+      </div>
+    </div>
+    <!-- 📅 일일 퀘스트 — 하루 5개 + 주간 25개. 껍데기는 라운드 팝업과 같은 .hbModal -->
+    <div class="hbModal hide" id="hbDailySheet" onclick="if(event.target===this)closeDaily()">
+      <div class="hbmCard">
+        <div class="hbmHead"><b>일일 퀘스트</b>
+          <button class="hbmX" onclick="closeDaily()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+        </div>
+        <div class="hbRows uiScroll" id="hbDailyBody"></div>
+      </div>
+    </div>
+    <!-- 📅 출석 — 4주 캘린더. 퀘스트와 같은 시스템이지만 화면은 따로 둔다(서로를 가리지 않게) -->
+    <div class="hbModal hide" id="hbAttSheet" onclick="if(event.target===this)closeAtt()">
+      <div class="hbmCard">
+        <div class="hbmHead"><b>출석</b>
+          <button class="hbmX" onclick="closeAtt()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+        </div>
+        <div class="hbRows uiScroll" id="hbAttBody"></div>
       </div>
     </div>
     <!-- 💬 채팅 — 유즈맵에서 마을로 옮겨왔다(유즈맵은 목록만). 내용·기능은 그대로 -->
@@ -4366,10 +4503,21 @@
           <span class="hbXp"><i id="hbXpBar"></i></span>
           <span class="hbSt"><i id="hbLv">Lv.1</i><i id="hbAtk"><em>⚔</em><span id="hbAtkN">0</span></i></span>
         </span></button>
-      <div class="hbIcoRow"><span class="hbBdWrap" id="hbBuildWrap"></span></div>
     </div>
-    <div class="hbMid" id="hbMid" role="button" tabindex="0" onclick="hbOpenRounds()" aria-label="던전·라운드 선택">   <!-- 표시 전용 — 라운드 조절은 위 아이콘이 담당한다 -->
-      <b id="hbRound">던전 1 · 라운드 1</b><span><i id="hbWaveTx">웨이브 1/5</i> · <i id="hbTimer">20s</i> · <i id="hbMode">반복</i></span></div>
+    <!-- 던전·라운드 — 판 없이 글자만. ◀▶ = ±1 미세조정(가장 잦은 동작), 가운데 = 전체 목록.
+         모바일 스테이지 UI의 표준 배치다. 조절을 시트 안에만 두면 한 칸 내리는 데 4~5탭이 든다. -->
+    <div class="hbMid" id="hbMid">
+      <div class="hbMidRow">
+        <button class="arwBtn" data-arw="l" id="hbRdPrev" onclick="hbRoundStep(-1)" aria-label="이전 라운드"></button>
+        <button class="hbMidTx" id="hbMidTx" onclick="hbOpenRounds()" aria-label="던전·라운드 선택">
+          <b id="hbDgName">던전 1 · 감염된 둥지</b>
+          <span class="hbMidRd">라운드 <em id="hbRound">1</em></span>
+          <i class="hbMidLine"></i>
+        </button>
+        <button class="arwBtn" data-arw="r" id="hbRdNext" onclick="hbRoundStep(1)" aria-label="다음 라운드"></button>
+      </div>
+      <span class="hbMidSub"><i id="hbWaveTx">웨이브 1/3</i> · <i id="hbTimer">50s</i> · <i id="hbMode">반복</i></span>
+    </div>
     <!-- 오른쪽 위 — 설정(☰, 재화 바 안) 바로 아래. 건설 중에만 ⊘가 뜬다.
          ⚠ #curBar는 .bare에서 click-through라 그 안에 두면 안 눌린다 — #homeScreen의 자식으로 둔다. -->
     <div class="hbHudRight">
@@ -4461,14 +4609,6 @@
     <div id="twToast" class="twToast hide"></div>
     </div>
 
-  <!-- 캐릭터 선택/생성 입장 화면 — 내용은 마을 구역과 같은 렌더러를 쓴다. (#phone 안으로 통합) -->
-  <div id="charScreen" class="appScreen spaceBg hide">
-    <div class="setCard twCard csCard">
-      <div class="setTitle"><span id="csTitle">캐릭터 선택</span><div class="setX" onclick="charBackToHub()"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></div></div>
-      <div class="twBody" id="csBody"></div>
-    </div>
-  </div>
-
   <!-- ⚔ 토벌 전투 — 캐릭터가 직접 싸우는 전용 화면(유즈맵과 완전 분리) -->
   <div id="dgScreen" class="appScreen spaceBg hide">
     <div class="twBar">
@@ -4483,7 +4623,7 @@
     </div>
     <div id="dgResult" class="dgResult hide"></div>
   </div>
-  </div><!-- /#phone — charScreen·dgScreen까지 프레임 안(비율 통합) -->
+  </div><!-- /#phone — dgScreen까지 프레임 안(비율 통합) -->
 
   <!-- 마을 시설 팝업(구역 도착 시) -->
   <div id="townPanel" class="hide" onclick="if(event.target===this)closeTownPanel()">
@@ -4557,6 +4697,7 @@
       </div>
       <button class="setPause" id="setPauseBtn" onclick="togglePause()"><span class="pIco"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6.5v11M14.5 6.5v11"/></svg></span><span id="pauseLbl">일시정지</span></button>
       <button class="setExit" id="setExit" data-sfx="ui_open" onclick="exitGame()">게임에서 나가기</button>
+      <button class="setLogout" id="setLink" onclick="closeSettings();openAuthLink()">계정 연결 (진행도 지키기)</button>
       <button class="setLogout" id="setLogout" onclick="closeSettings();doLogout()">로그아웃</button>
     </div>
   </div>
@@ -4852,12 +4993,20 @@ buyTurret:{'--neon':'#9fd6ff','--neon-soft':'rgba(159,214,255,.5)','--neon-glow'
 buyPhoton:{'--neon':'#62d0ff','--neon-soft':'rgba(98,208,255,.5)','--neon-glow':'rgba(98,208,255,.38)'},
 pboss:   {'--neon':'#ff3b3b','--neon-soft':'rgba(255,59,59,.6)','--neon-glow':'rgba(255,59,59,.45)'},   // 개인 보스=위협 레드
 };
-function beaconCost(id){ return id==='gachaUp'?gachaUpCost() : id==='creditUp'?creditUpCost() : id==='pboss'?0
+// ×5 = 하단 시트 전용 칸. **맵 위 비콘(DRAW_BEACONS)에는 넣지 않는다** — 그 표는 좌표가 필수라
+// 좌표 없는 항목을 넣으면 패드·라벨·툴팁이 전부 NaN 자리에 생긴다.
+// 가격표도 따로 만들지 않는다: 1회 값 × 배수. 이 표 하나가 ×5의 단일 소스다.
+const BEACON_BULK={ draw5:{base:'draw', n:5, name:'유닛 5회'}, energy5:{base:'energy', n:5, name:'가스 5회'} };
+function beaconCost(id){ const bulk=BEACON_BULK[id]; if(bulk) return beaconCost(bulk.base)*bulk.n;
+  return id==='gachaUp'?gachaUpCost() : id==='creditUp'?creditUpCost() : id==='pboss'?0
   : id==='energy'||id==='energyAll'?mapCfg('energyDrawCost',ENERGY_DRAW_COST)
   : id==='buyTurret'?U.turret.cost : id==='buyPhoton'?U.photon.cost : mapCfg('gachaCost',GACHA_COST); }
 function beaconName(b){ if(b.id==='gachaUp') return b.name+' Lv'+(G.gachaLuckLv||0); if(b.id==='creditUp') return b.name+' Lv'+(G.creditLv||0); return b.name; }
 function beaconMaxed(id){ return (id==='gachaUp' && (G.gachaLuckLv||0)>=GACHA_UP_MAX) || (id==='creditUp' && (G.creditLv||0)>=CREDIT_UP_MAX); }
-function runBeacon(id){ if(id==='gachaUp') return buyGachaUp(); if(id==='creditUp') return buyCreditUp();
+function runBeacon(id){ const bulk=BEACON_BULK[id];
+  // ×5 = 1회를 그대로 n번 — 확률·비용·인구 한도 판정을 전부 원래 경로가 한다(재구현 금지)
+  if(bulk){ let ok=false; for(let i=0;i<bulk.n;i++){ if((G.mineral||0)<beaconCost(bulk.base)) break; if(runBeacon(bulk.base)!==false) ok=true; } return ok; }
+  if(id==='gachaUp') return buyGachaUp(); if(id==='creditUp') return buyCreditUp();
   if(id==='pboss') return summonPersonalBoss();
   if(id==='energy') return energyDraw();
   if(id==='energyAll') return energyDrawAll();
@@ -5126,6 +5275,14 @@ function _barsHTML(o){   // 🛡 쉴드+HP(한 칸) + ⚡마나(아래 별도 �
 function popShow(id){ const e=document.getElementById(id); if(e) e.classList.remove('hide'); return e; }   // 팝업 표시(공통)
 function popHide(id){ const e=document.getElementById(id); if(e) e.classList.add('hide'); return e; }    // 팝업 숨김(공통)
 const TIER_COLOR = { common:'#b8c0cc', rare:'#4aa8ff', epic:'#b06bff', unique:'#ffd23b', legend:'#ff8a3b', transcend:'#ff4d6d', god:'#ff2bd6' };
+// #rrggbb → "r,g,b" — 세그먼트 바의 --segCol 은 알파를 얹어 쓰므로 색이 아니라 채널 셋이어야 한다
+function hexChannels(h){ const m=/^#?([0-9a-f]{6})$/i.exec(h||''); if(!m) return '255,255,255';
+  const v=parseInt(m[1],16); return ((v>>16)&255)+','+((v>>8)&255)+','+(v&255); }
+// 등급 띠 = 장비창·사냥터와 같은 세그먼트 바(segNavHTML). 선택 색만 등급색으로 덮는다.
+function tierSegHTML(tierSet, cur, fnName){
+  const i=Math.max(0, tierSet.indexOf(cur));
+  return segNavHTML(tierSet.map(t=>({ label:GACHA_TIERS[t].name, col:hexChannels(TIER_COLOR[t]) })), i,
+    k=>fnName+"('"+tierSet[k]+"')"); }
 // 등급별 전투 능력치 배율(프록시 기준 데미지·체력에 곱함) — 상위 등급일수록 강함. 밸런스 추후 조정.
 /* TIER_MUL → NEMO_BAL.tierMul */   // 레어=높은 기본뎀(초반 체감↑) / 초월·갓 기본 배율 소폭 하향(105→92, 270→235: 확률 상향 보상)
 /* UP_TIER_MUL → NEMO_BAL.upTierMul */   // 레어 업글배율=일반과 근접(중반엔 일반과 수렴) / 유니크는 에픽보다 확실히 높음 / 초월·갓 집중   // 레전드 13→9: 풀업 레전드가 20라운드를 깨지 않게(초월=클리어 라인 유지, 봇 시뮬 검증)   // 업그레이드 1회당 증가폭 등급 배율(기본딜 배율의 절반 강도)   // 등급당 ×2.2 — 등급 업=급격한 성장(설계: 초월 조합=클리어 라인, 갓=초반 캐리)
@@ -5236,6 +5393,7 @@ function defaultProfile(){ return { ver:10, pcoin:0, gas:0, gem:0, chars:[], cur
   hunt:{ dg:1, round:1, climb:true, best:{}, rw:{}, mates:{}, party:[], mateN:0, allySlots:0, upg:{atk:0,rng:0,aspd:0,crit:0,hp:0,regen:0} },   // ⚔ 자동사냥(HOME) 진행·마일스톤 수령 · 기본 = 등반(rw)·영구 업그레이드
   idle:{ sourceId:'drill', lastClaimTs:0 }, unlocks:{}, lastSeenTs:0,
   dgKeys:{}, tickets:{gear:0,pet:0,ally:0},   // 🗝 던전별 열쇠(매일 09:00 보충) · 🎟 뽑기권(장비/펫/동료)
+  daily:{ day:0, q:[], allGot:0, wk:{key:0,n:0,got:0}, att:{n:0, day:0, bn:{}, fin:0, cyc:0} },   // 📅 일일 — 출석 캘린더 + 오늘의 퀘스트 + 주간 누적(dqState가 스스로 보정한다)
   pets:{}, equip:[], petSlots:0, petN:0 }; }   // 🐾 펫(중복=별)·장착 칸(0에서 시작해 미네랄로 연다)
 // 계정 영구 재화(공용 재화 바) — 미네랄=pcoin(기존 이름 유지)·가스·젬. 없던 프로필도 0으로 살려 읽는다.
 function profMineral(){ const p=PROF(); return Math.floor(p&&p.pcoin||0); }
@@ -5373,7 +5531,7 @@ const PROF_CLASSES={
   scout: { name:'척후병', unit:'snapper', race:'swarm',     ico:'🐛', tip:'빠른 기동 · 근접' },
   warden:{ name:'워든',   unit:'blade',   race:'aetherial', ico:'🔮', tip:'중장갑 근접 · 방어' },
 };
-const PROF_MAX_CHARS=6;   // 캐릭터 슬롯(같은 종류 중복 허용)
+const PROF_MAX_CHARS=1;   // 계정당 캐릭터 하나(선택 화면 폐지 — profEnsureChar 가 기본 유닛을 지급한다)
 // 직업 = 뿌리 3종뿐이다(2026-08-12 전직 폐지). 캐릭터는 만든 그대로 끝까지 간다.
 //   ⚠ 옛 상위 직업 12종은 삭제된 게 아니라 **동료(HB_MATES)로 옮겨 갔다** — 영입해서 함께 싸운다.
 //      전직 관련 함수(profClassChange·profClassCost·hbGrowJobs·PROF_JOB_PARENT)도 같이 없어졌다.
@@ -5383,7 +5541,6 @@ const PROF_JOBS={
   scout: { name:'척후병', cls:'scout',  unit:'snapper', reqLv:1, base:{pow:6, vit:5, foc:5, agi:10} },
   warden:{ name:'워든',   cls:'warden', unit:'blade',   reqLv:1, base:{pow:9, vit:9, foc:4, agi:4} },
 };
-const PROF_REFUND_RATE=1.0;   // 캐릭터 삭제 환급률(1.0=쓴 재화 전액). 경험치·레벨은 환급 없음
 // 장비 슬롯 — reqLv = 캐릭터 레벨(성장 축 하나로 통일).
 // 초반엔 기본 5칸(헬멧·상의·하의·신발·무기)만 열려 있고 레벨이 오르며 나머지가 열린다.
 // part = 페이퍼돌 페이지(PROF_GEAR_PAGES). 한 페이지에 자기 part만 나오므로 칸이 널널하다.
@@ -5632,6 +5789,7 @@ function profPetTicket(){ const p=PROF(); return (p.tickets&&p.tickets.pet)||0; 
 // 뽑기 1회 — 펫 뽑기권 1장. 신규면 ★0으로 영입, 중복이면 합성 재료(dup)로 쌓인다.
 function profPetRoll(){ const p=PROF(); if(profPetTicket()<=0) return null;
   p.tickets.pet--; p.petN=profPetN()+1;
+  if(typeof dqNote==='function') dqNote('gacha',1);   // 📅 일일 — 뽑기(장비·펫·동료 공통)
   const probs=profPetProbs(p.petN-1);                    // ⚠ 이번 판은 '뽑기 전' 확률로 굴린다
   const pool={}; for(const id in PROF_PETS){ const t=PROF_PETS[id].tier; (pool[t]=pool[t]||[]).push(id); }
   let r=Math.random(), tier=null;
@@ -5683,18 +5841,16 @@ function profEvolve(){ const p=PROF(), c=CHAR(), r=profEvolveReq(); if(!c||!r.un
 // unit.stats는 마이그레이션에서 비워지고, 이후로는 직업 기본치·레벨·장비만 profStat에 반영된다.
 function profCreateChar(cls, name){ const p=PROF(); if(!PROF_CLASSES[cls] || p.chars.length>=PROF_MAX_CHARS) return null;
   const c=defaultChar(cls, (name||'').trim().slice(0,10)); p.chars.push(c); p.curId=c.id; profSyncUnlocks(); saveMeta(); return c; }
-function profSelectChar(id){ const p=PROF(); if(!p.chars.some(c=>c.id===id)) return false; p.curId=id; profSyncUnlocks(); saveMeta(); return true; }
-// 이 캐릭터에 '재화로' 넣은 것의 합 — 장비 강화 + 전직 + 진화. 경험치·레벨·스탯포인트는 대상이 아니다(삭제 시 소멸).
-// 장비 아이템은 계정 공용 자산이라 환급 대상이 아니다 — 캐릭터를 지우면 장착만 풀리고 가방에 남는다.
-function profSpentOn(c){ if(!c) return 0; let t=0;
-  for(let i=0;i<(c.unit.evoStars||0);i++) t+=profEvolveCost(i);
-  return t; }
-function profRefundOf(c){ return Math.floor(profSpentOn(c)*PROF_REFUND_RATE); }
-function profDeleteChar(id){ const p=PROF(), i=(p.chars||[]).findIndex(c=>c.id===id); if(i<0) return -1;
-  const refund=profRefundOf(p.chars[i]);
-  p.chars.splice(i,1); p.pcoin+=refund;
-  if(p.curId===id) p.curId=p.chars.length? p.chars[0].id : '';
-  saveMeta(); return refund; }
+// ── 🧍 기본 지급 ─────────────────────────────────────────────────────────────
+// 계정당 캐릭터는 하나다. 고르는 화면도, 만드는 화면도 없다 —
+// 처음 들어오면 기본 유닛이 조용히 지급되고 바로 게임으로 간다(2026-08-13 설계 변경).
+// 모두 같은 스탯·같은 외형으로 시작해서 각자 키운다.
+// 종족은 나중에 '길드 가입' 시점에 고르고, 그때 그 종족 유닛을 추가로 받는다 —
+// ⚠ 그래서 PROF_CLASSES/PROF_JOBS 테이블은 지우지 않았다. 길드 종족 선택이 이 표를 그대로 쓴다.
+const PROF_DEFAULT_CLASS='ranger';
+// 캐릭터가 없으면 조용히 만들어 준다. 반환값 = 지금 캐릭터(항상 있다)
+function profEnsureChar(){ return CHAR() || profCreateChar(PROF_DEFAULT_CLASS, ''); }
+// 캐릭터 선택·삭제·환급은 폐지했다(계정당 하나) — 고를 것도, 지울 것도 없다.
 function profSetIdleSource(id){ const p=PROF(), src=PROF_IDLE_SOURCES[id]; if(!src) return false; if(src.reqUnlock && !profHasUnlock(src.reqUnlock)) return false; p.idle.sourceId=id; saveMeta(); return true; }
 // 판 종료 보상 — 순수 read G / write profile. 자체 난이도배율(유즈맵 coinMult와 무관). _runSummary에서 1회 호출.
 function profRunReward(){ const p=PROF();
@@ -5724,7 +5880,7 @@ function openHome(){ loadMeta();
   // 토벌 허브는 '화면'이 아니라 HOME 위에 덮는 팝업(.hbModal)이라 화면 전환으로는 안 닫힌다 —
   // 열어 둔 채 네비 HOME을 누르면 그대로 HOME을 가린다. 여기서 걷어낸다.
   if(typeof closeDungeonHub==='function') closeDungeonHub();
-  if(typeof CHAR==='function' && !CHAR()){ openCharScreen('create'); return; }   // 캐릭터가 없으면 생성부터
+  profEnsureChar();   // 캐릭터가 없으면 조용히 기본 유닛을 지급한다(선택 화면 없음)
   if(typeof bgmStart==='function') bgmStart('lobby');
   showAppScreen('homeScreen'); navShow('home'); renderHome();
   hbStart();   // 배경 전투(웨이브 방어) 시작
@@ -5764,6 +5920,14 @@ function renderHome(){ try{
   const p=PROF(); if(!p) return;
   if(typeof updateCurBar==='function') updateCurBar();       // 💠 재화는 전부 공용 재화 바(#curBar)로 이관
   const gr=document.getElementById('hmUpgGrid');
+  // 🧱 건설 모드 = 이 패널이 통째로 '건설' 구역이 된다. 탭 띠·수량은 숨기고 제목만 바꾼다.
+  { const bd=!!(_hb&&_hb.build), card=document.querySelector('#homeScreen .hmUpg'),
+      ttl=document.querySelector('#homeScreen .hmUpgTtl');
+    if(card) card.classList.toggle('bd', bd);
+    if(ttl) ttl.textContent = bd ? '건설' : '사냥터 업그레이드';
+    if(bd){ if(gr) gr.innerHTML=HB_BUILD_KEYS.map(hbBuildCardHTML).join('');
+      if(card) card.classList.remove('down');   // 접혀 있었으면 펴 준다 — 건설인데 안 보이면 막힌다
+      renderHomeStats(); return; } }
   if(gr){ const u=hbHunt().upg, coin=Math.floor(p.pcoin||0), cat=hbHunt().upgCat||'char';
     // 탭 띠 — 장비창 섹션 바와 같은 컴포넌트(segNavHTML). 새 탭 띠를 만들지 말 것
     const tb=document.getElementById('hmUpgTabs');
@@ -5799,7 +5963,9 @@ function renderHome(){ try{
 // 진화·환생 신호 — 하단 패널의 줄이 아니라 상단 성장 버튼의 ! 배지.
 //   (줄로 두면 조건이 찰 때마다 패널 높이가 흔들렸다 — 2026-08-14 이동)
 function renderHomeStats(){ const dot=document.getElementById('hbGrowDot'); if(!dot) return;
-  dot.classList.toggle('show', (typeof hbGrowHas==='function') && hbGrowHas()); }
+  // ☰ 의 ! = 더보기 안에 '지금 할 수 있는 것'이 있다는 신호. 안을 열면 어느 칸인지 각자의 점이 알려 준다.
+  const has=((typeof hbGrowHas==='function') && hbGrowHas()) || ((typeof dqHas==='function') && dqHas());
+  dot.classList.toggle('show', !!has); }
 // 4칸(2행)까지만 보이게 — 칸 높이는 글꼴·문구에 따라 변하므로 실측해서 넣는다(값을 박으면 어긋난다)
 // 높이는 CSS 에서 2.7줄로 고정된다(탭마다 개수가 달라도 패널이 안 흔들리도록).
 // ── 라운드 선택 · 반복/등반 ──
@@ -5808,36 +5974,88 @@ function hbBest(dg){ const H=hbHunt(); return Math.max(1, H.best[dg||H.dg]||1); 
 // 던전 N 해금 = 던전 N-1에서 HB_DG_UNLOCK 라운드 도달. 던전 1은 항상 열려 있다.
 function hbDgOpen(dg){ return HB_DG_ALL_OPEN || dg<=1 || (hbHunt().best[dg-1]||0)>=HB_DG_UNLOCK; }
 function hbEliteChance(dg,round){ return Math.min(HB_ELITE_MAX, round*0.012+(dg-1)*0.02); }
+// ── 던전·라운드 고르기 ────────────────────────────────────────────────────
+// ⚠ 고르는 즉시 이동하지 않는다 — _hbPick 에 '초안'을 담고 [이동]을 눌러야 적용된다.
+//   던전은 ◀▶ 로 한 장씩, 라운드는 세로 피커(아래가 1라운드)에서 가운데 띠에 멈춘 것이 선택된다.
+let _hbPick=null, _hbRdT=null;
+const HB_RD_H=40, HB_RD_GAP=6;                       // 피커 한 칸 높이 · 간격 → 이동 간격은 둘의 합
+function hbRdPitch(){ return HB_RD_H+HB_RD_GAP; }
+// 피커 맨 윗 칸 = 최고 도달, 단 '다음 마일스톤'이 더 위면 거기까지 잠긴 칸으로 보여 준다(도전정신).
+function hbRdTop(dg,round){ const b=hbBest(dg); return Math.max(b, hbNextRw(dg,round||b)||0); }
 function hbOpenRounds(){ const el=document.getElementById('hbRoundSheet'); if(!el) return;
+  const H=hbHunt();
+  _hbPick={ dg:(_hb?_hb.dg:H.dg)||1, round:(_hb?_hb.round:H.round)||1 };
   el.classList.remove('hide'); renderRoundSheet();
+  if(typeof paintIcons==='function') paintIcons(el);
   if(typeof playSfx==='function') playSfx('ui_open');
-  const on=el.querySelector('.hbRd.on'); if(on && on.scrollIntoView) on.scrollIntoView({block:'center'}); }
+  // 여백은 칸 높이·컨테이너 높이로 결정된다 → 보인 뒤에 재야 한다(숨은 동안은 높이가 0)
+  requestAnimationFrame(()=>{ if(!_hbPick) return; hbRdPad(); hbRdCenter(_hbPick.round,false); }); }
 function hbCloseRounds(){ const el=document.getElementById('hbRoundSheet'); if(el) el.classList.add('hide');
+  _hbPick=null; clearTimeout(_hbRdT); _hbRdT=null;
   if(typeof playSfx==='function') playSfx('ui_close'); }
-function renderRoundSheet(){ const H=hbHunt(), gr=document.getElementById('hbRoundGrid'); if(!gr) return;
-  const dr=document.getElementById('hbDgRow');
-  if(dr){ let dh='';
-    for(let d=1; d<=HB_DG_MAX; d++){ const open=hbDgOpen(d);
-      dh+='<button class="hbDg'+(d===H.dg?' on':'')+(open?'':' lock')+'"'
-        +(open?(' onclick="hbGoDungeon('+d+')"'):' disabled')+'>'+(open?d:'🔒')+'</button>'; }
-    dr.innerHTML=dh; }
-  const best=hbBest(H.dg), cur=_hb? _hb.round : (H.round||1);
-  // 🎁 마일스톤은 아직 못 간 라운드도 한 칸 더 보여 준다 — '다음 목표'가 보여야 민다(도전정신).
-  const nextRw=hbNextRw(H.dg,cur), top=Math.max(best, nextRw||0);
-  let h=''; for(let i=1;i<=top;i++){ const rw=hbRoundRw(H.dg,i), got=rw&&hbRwGot(H.dg,i), far=i>best;
-    h+='<button class="hbRd'+(i===cur?' on':'')+(i===best&&best>1?' best':'')
-      +(rw?(got?' rwGot':' rw'):'')+(far?' far':'')+'"'
-      +(far?' disabled':(' onclick="hbGoRound('+i+')"'))+'>'+i
-      +(rw?('<i class="hbRdRw">'+(got?'✓':'🎁')+'</i>'):'')+'</button>'; }
-  gr.innerHTML=h;
-  const nt=document.getElementById('hbRoundNote');
-  if(nt){ const nx=H.dg<HB_DG_MAX ? (hbDgOpen(H.dg+1) ? '던전 '+(H.dg+1)+' 개방됨' : '던전 '+(H.dg+1)+'은 이 던전 '+HB_DG_UNLOCK+'라운드 도달 시 개방') : '마지막 던전';
-    let rwTx='';
-    if(nextRw){ const r=hbRoundRw(H.dg,nextRw);
-      rwTx=' · 🎁 라운드 '+nextRw+' 최초 클리어 = 미네랄 '+Math.round(r.min).toLocaleString()+' · 가스 '+Math.round(r.gas).toLocaleString()+(r.tk?' · 장비 뽑기권 '+r.tk:'')+(r.atk?' · 동료 뽑기권 '+r.atk:'')+(r.ptk?' · 펫 뽑기권 '+r.ptk:''); }
-    nt.textContent='던전 '+H.dg+' · 최고 도달 라운드 '+best+' — 여기까지 고를 수 있습니다. 죽으면 한 라운드씩 내려갑니다. · '+nx+rwTx; }
+// 위아래 여백 = (보이는 높이 - 칸 높이)/2. 이게 있어야 첫·마지막 칸도 가운데에 설 수 있다.
+function hbRdPad(){ const sc=document.getElementById('hbRdScroll'); if(!sc) return;
+  const pad=Math.max(0,(sc.clientHeight-HB_RD_H)/2);
+  sc.style.paddingTop=pad+'px'; sc.style.paddingBottom=pad+'px'; }
+// 라운드 → 스크롤 위치. 목록은 큰 수가 위라 인덱스 = (최대 - 라운드).
+function hbRdCenter(round, smooth){ const sc=document.getElementById('hbRdScroll'); if(!sc||!_hbPick) return;
+  const top=hbRdTop(_hbPick.dg,_hbPick.round), i=Math.max(0,Math.min(top-1, top-round));
+  sc.scrollTo({ top:i*hbRdPitch(), behavior:smooth?'smooth':'auto' }); }
+// 스크롤이 멎으면 가운데 칸이 곧 선택이다(짧게 기다렸다가 한 번만 확정한다)
+function hbRdScrolled(){ clearTimeout(_hbRdT); _hbRdT=setTimeout(hbRdSettle, 110); }
+function hbRdSettle(){ const sc=document.getElementById('hbRdScroll'); if(!sc||!_hbPick) return;
+  const top=hbRdTop(_hbPick.dg,_hbPick.round), best=hbBest(_hbPick.dg);
+  const i=Math.max(0,Math.min(top-1, Math.round(sc.scrollTop/hbRdPitch())));
+  let r=top-i;
+  if(r>best){ r=best; hbRdCenter(r,true); }        // 잠긴 목표 칸에 멈췄으면 고를 수 있는 데까지 되돌린다
+  if(r===_hbPick.round) return;
+  _hbPick.round=r; hbRdMark(); if(typeof playSfx==='function') playSfx('ui_tab'); }
+// 강조만 갈아 끼운다 — 목록을 다시 그리면 스크롤이 튄다
+function hbRdMark(){ const sc=document.getElementById('hbRdScroll'); if(!sc||!_hbPick) return;
+  for(const b of sc.querySelectorAll('.hbRd')) b.classList.toggle('on', +b.dataset.r===_hbPick.round);
+  hbPickNote(); }
+// 칸을 눌러 고르면 그 칸이 가운데로 미끄러져 온다
+function hbRdTap(r){ if(!_hbPick) return; _hbPick.round=r; hbRdMark(); hbRdCenter(r,true);
+  if(typeof playSfx==='function') playSfx('ui_tab'); }
+// 던전 넘기기 — 열려 있는 것만 건너뛴다. 라운드는 그 던전의 최고 도달로 맞춘다.
+function hbPickDg(d){ if(!_hbPick) return;
+  for(let n=_hbPick.dg+d; n>=1 && n<=HB_DG_MAX; n+=d){ if(!hbDgOpen(n)) continue;
+    _hbPick.dg=n; _hbPick.round=hbBest(n); renderRoundSheet();
+    requestAnimationFrame(()=>{ if(!_hbPick) return; hbRdPad(); hbRdCenter(_hbPick.round,false); });
+    if(typeof playSfx==='function') playSfx('ui_tab'); return; } }
+// [이동] — 여기서만 실제로 옮긴다
+function hbPickGo(){ if(!_hbPick) return; const H=hbHunt(), d=_hbPick.dg, r=_hbPick.round;
+  if(d!==H.dg){ H.dg=d; hbEnsureModels(d);
+    if(_hb){ _hb.dg=d; _hb._pat=null; } }                 // 바닥 타일 패턴 캐시 무효화(던전이 바뀌었다)
+  H.round=r; saveMeta();
+  if(_hb){ _hb.round=r; _hb.wave=1; _hb.phase='fight'; _hb.buf={min:0,gas:0,xp:0,kills:0};
+    _hb.foes.length=0; _hb.pend.length=0; _hb.char.hp=_hb.char.hpMax; hbSpawnWave(); }
+  if(typeof playSfx==='function') playSfx('ui_confirm');
+  hbHud(); hbCloseRounds(); }
+function renderRoundSheet(){ const H=hbHunt(), sc=document.getElementById('hbRdScroll'); if(!sc) return;
+  if(!_hbPick) _hbPick={ dg:(_hb?_hb.dg:H.dg)||1, round:(_hb?_hb.round:H.round)||1 };
+  const dg=_hbPick.dg, best=hbBest(dg);
+  _hbPick.round=Math.max(1,Math.min(best,_hbPick.round));
+  // 던전 카드 — 배경 그림은 전장이 쓰는 것과 같은 파일(새 에셋을 만들지 않는다)
+  { const card=document.getElementById('hbPickCard'), D=hbDun(dg);
+    if(card){ card.className='hbDgc';
+      card.innerHTML='<div class="hbDgcArt" style="background-image:url(\''+HB_BG_DIR+'dg'+dg+'.webp\')"></div>'
+        +'<div class="hbDgcTx"><b>던전 '+dg+' · '+D.name+'</b><em>최고 도달 '+best+' 라운드</em></div>'; } }
+  { const pv=document.getElementById('hbPickPrev'), nx=document.getElementById('hbPickNext');
+    const has=(d)=>{ for(let n=dg+d;n>=1&&n<=HB_DG_MAX;n+=d) if(hbDgOpen(n)) return true; return false; };
+    if(pv) pv.disabled=!has(-1); if(nx) nx.disabled=!has(1); }
+  // 라운드 — 큰 수가 위, 1이 맨 아래. 최고 도달까지 고를 수 있고, 그 위의 '다음 마일스톤'은 잠긴 목표로만 보인다.
+  let h='';
+  for(let i=hbRdTop(dg,_hbPick.round);i>=1;i--){ const rw=hbRoundRw(dg,i), got=rw&&hbRwGot(dg,i), far=i>best;
+    h+='<button class="hbRd'+(i===_hbPick.round?' on':'')+(far?' far':'')+'" data-r="'+i+'"'
+      +(far?' disabled':(' onclick="hbRdTap('+i+')"'))+'>'+i
+      +(i===best&&best>1?'<u>최고</u>':'')+(rw?('<u>'+(got?'✓':'🎁')+'</u>'):'')+'</button>'; }
+  sc.innerHTML=h;
+  hbPickNote();
   const r=document.getElementById('hbModeRep'), c=document.getElementById('hbModeClm');
   if(r) r.classList.toggle('on', !H.climb); if(c) c.classList.toggle('on', !!H.climb); }
+// 안내 줄은 없앴다(2026-08-14) — 칸 안의 🎁/✓·최고 표시로 충분하고, 세 줄짜리 설명이 피커를 눌렀다.
+function hbPickNote(){}
 // 던전 이동 — 그 던전에서 도달했던 라운드부터 다시 시작한다
 function hbGoDungeon(d){ const H=hbHunt();
   d=Math.max(1,Math.min(HB_DG_MAX,d|0)); if(!hbDgOpen(d)) return;
@@ -5850,20 +6068,40 @@ function hbGoDungeon(d){ const H=hbHunt();
   renderRoundSheet(); hbHud(); }
 function hbSetClimb(v){ const H=hbHunt(); H.climb=!!v; H.climbChosen=1; saveMeta(); renderRoundSheet(); hbHud();
   if(typeof playSfx==='function') playSfx('ui_tab'); }
-function hbGoRound(n){ const H=hbHunt(), best=hbBest(H.dg);
-  n=Math.max(1,Math.min(best,n|0)); H.round=n; saveMeta();
+// 라운드 이동의 실제 동작 — 시트를 여닫지 않는다(화살표 ±1과 목록 선택이 함께 쓴다)
+function hbSetRound(n){ const H=hbHunt(), best=hbBest(H.dg);
+  n=Math.max(1,Math.min(best,n|0)); if(n===H.round && _hb && _hb.round===n) return false;
+  H.round=n; saveMeta();
   if(_hb){ _hb.round=n; _hb.wave=1; _hb.phase='fight'; _hb.buf={min:0,gas:0,xp:0,kills:0};
     _hb.foes.length=0; _hb.pend.length=0; _hb.char.hp=_hb.char.hpMax; hbSpawnWave(); }
   if(typeof playSfx==='function') playSfx('ui_open');
-  renderRoundSheet(); hbHud(); hbCloseRounds(); }
-// ── Phase 4 UI — 스킬 바(전장 하단) + 건설·부스트 팝업(라운드 팝업과 같은 .hbModal 재사용) ──
-// 건설 목록 열림 여부 — 화면을 나갔다 오면 닫힐 상태가 기본
-let _hbBdOpen=false;
-function hbToggleBuild(){ _hbBdOpen=!_hbBdOpen;
-  if(typeof playSfx==='function') playSfx('ui_tab'); renderHbBuild(); }
-// 골랐으면 목록을 닫고 배치 모드로 — 목록이 뜨 채로 필드를 가리면 둘 숬 없다
-function hbPickBuild(bk){ _hbBdOpen=false; renderHbBuild(); hbBuy(bk); }
-// 건설 — 좌상단 줄의 한 칸 + 아래로 펴치는 목록
+  hbHud(); return true; }
+// 목록에서 고르기 = 이동 + 시트 닫기
+function hbGoRound(n){ hbSetRound(n); renderRoundSheet(); hbCloseRounds(); }
+// ◀▶ ±1 — 가장 잦은 동작이라 시트를 거치지 않는다. 1 ~ 최고 도달 사이로 가둔다.
+function hbRoundStep(d){ const H=hbHunt(), cur=(_hb?_hb.round:(H.round||1));
+  if(hbSetRound(cur+(d|0)) && !document.getElementById('hbRoundSheet').classList.contains('hide')) renderRoundSheet(); }
+// ── Phase 4 UI — 스킬 바(전장 하단) + 부스트 팝업(라운드 팝업과 같은 .hbModal 재사용) ──
+// 🧱 건설 카드 한 장 — 하단 패널이 건설 구역이 될 때 쓴다. 카드 규격은 업그레이드와 같은 hmUpCardHTML.
+//    누르면 그 자리에서 배치 모드로 들어간다(hbBuy → hbArmStart).
+function hbBuildCardHTML(bk){
+  const B=HB_STRUCT[bk], n=hbStructN(bk), mx=hbBuildMax(bk), full=n>=mx, cost=hbBuildCost(bk), M=hbAllyMul();
+  const coin=Math.floor(((typeof PROF==='function'&&PROF())||{}).pcoin||0);
+  // 값 = 지금 이 종류가 내는 총량. ⚠ 벽은 화력이 없다 — 화력 수치를 붙이면 거짓말이라 '칸 수'로 낸다.
+  const tot=function(c){ return (bk==='wall')   ? (c+'칸')
+                             : (bk==='bunker') ? Math.round(hbCharStats().hpMax*M.bunker.hp*c)
+                                               : Math.round(M.turret.dps*100*c)+'%'; };
+  return hmUpCardHTML({ key:'b_'+bk,
+    ico:'<img class="icoImg" src="'+ICO_DIR+'buildings/'+B.ico+'.webp" alt="" draggable="false">', name:B.name,
+    off:full||coin<cost, lock:full, lockTx:'최대 '+mx+(bk==='wall'?'칸':'기'),
+    val:tot(n), next:full?null:tot(n+1), lv:'LV.'+n, nextLv:full?null:(n+1),
+    cost:resIco('mineral')+cost.toLocaleString('en-US'),
+    act:full?null:('hbBuy(&#39;'+bk+'&#39;)') }); }
+// 더보기 > 건설 = 즉시 건설 모드. 하단 업그레이드 패널이 그대로 '건설' 구역이 된다(팝업·드롭다운 없음).
+// 나가는 길은 오른쪽 위 ⊘(#hbBuildStop) 하나 — hbBuildExit()가 모드도 끄고 하단도 되돌린다.
+function hbBuildStart(){ if(!_hb) return;
+  hbBuildEnter(); hbArmBtns(); renderHome();
+  if(typeof playSfx==='function') playSfx('ui_open'); }
 // ☰ 더보기 — 사냥터에서만. 다른 화면에서는 같은 버튼이 그대로 설정을 연다.
 // ⚠ ☰ 는 두 개가 겹쳐 있다 — 게임 HUD의 #settingsBtn(hudTopRow)과 재화 바의 #curSettingsBtn.
 //    사냥터에서는 재화 바 쪽이 위에 있어 그쪽이 눌린다. 그래서 둘 다 이 함수를 거치게 한다.
@@ -5899,7 +6137,8 @@ function hbMoreGo(fn){ hbCloseMore(); setTimeout(function(){ try{ fn(); }catch(e
 const HB_MORE=[
   {k:'town',   ico:'hero',    name:'마을',        sub:''},
   {k:'grow',   ico:'fav',     name:'성장',        sub:'진화·환생'},
-  {k:'daily',  ico:'gift',    name:'일일 퀘스트', sub:'준비 중'},
+  {k:'att',    ico:'cal',     name:'출석',        sub:'4주 캘린더'},
+  {k:'daily',  ico:'gift',    name:'일일 퀘스트', sub:'하루 5개 · 주간 25개'},
   {k:'build',  ico:'build',   name:'건설',        sub:'터렛·벙커'},
   {k:'dg',     ico:'dungeon', name:'토벌',        sub:'열쇠·단계'},
   {k:'boost',  ico:'boost',   name:'부스트',      sub:'일시 강화'},
@@ -5907,7 +6146,12 @@ const HB_MORE=[
 ];
 function renderHbMore(){ const g=document.getElementById('hbMoreGrid'); if(!g) return;
   g.innerHTML=HB_MORE.map(function(it){
-    const off=(it.k==='daily') ? ' disabled' : '';
+    const off='';
+    // 배지(!) — '지금 받을 게 있다'만 알린다. 판정은 각 시스템이 갖고 여기선 묻기만 한다.
+    // ⚠ 글자를 넣지 않는다 — 이 격자는 아이콘만(이름은 title/aria-label). 점은 CSS 로만 그린다.
+    const dot=((it.k==='daily' && typeof dqQHas==='function'   && dqQHas())
+            || (it.k==='att'   && typeof dqAttHas==='function' && dqAttHas())
+            || (it.k==='grow'  && typeof hbGrowHas==='function' && hbGrowHas())) ? '<i class="hbGrowDot show"></i>' : '';
     // 설정은 아이콘 세트에 톱니가 없어 직접 그린다. ☰ 와 같은 그림을 쓰면 '메뉴 안의 메뉴'로 보인다.
     const ico=it.ico ? '<span data-ico="'+it.ico+'"></span>'
       : '<i class="hbMoreSvg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="butt">'
@@ -5918,34 +6162,290 @@ function renderHbMore(){ const g=document.getElementById('hbMoreGrid'); if(!g) r
         +'</svg></i>';
     const tip=it.name+(it.sub?' — '+it.sub:'');
     return '<button class="hbMoreIt" data-k="'+it.k+'" onclick="hbMoreTap(&#39;'+it.k+'&#39;)"'+off
-      +' title="'+tip+'" aria-label="'+tip+'">'+ico+'</button>'; }).join('');
+      +' title="'+tip+'" aria-label="'+tip+'">'+dot+ico+'</button>'; }).join('');
   if(typeof paintIcons==='function') paintIcons(g); }
 function hbMoreTap(k){
-  if(k==='daily'){ if(typeof toast==='function') toast('일일 퀘스트는 아직 준비 중입니다'); return; }
+  if(k==='daily') return hbMoreGo(function(){ if(typeof openDaily==='function') openDaily(); });
+  if(k==='att')   return hbMoreGo(function(){ if(typeof openAtt==='function') openAtt(); });
   if(k==='set')   return hbMoreGo(function(){
     if(typeof openAppSettings==='function') openAppSettings();   // 앱 문맥(.appCtx) — 인게임 설정에는 배속·게임 나가기가 있다
     else openSettings(); });
-  if(k==='build') return hbMoreGo(function(){ if(typeof hbToggleBuild==='function') hbToggleBuild(); });
+  if(k==='build') return hbMoreGo(function(){ if(typeof hbBuildStart==='function') hbBuildStart(); });
   if(k==='dg')    return hbMoreGo(function(){ if(typeof openDungeonHub==='function') openDungeonHub(); });
   if(k==='boost') return hbMoreGo(function(){ if(typeof hbOpenBoost==='function') hbOpenBoost(); });
   if(k==='town')  return hbMoreGo(function(){ if(typeof openVillage==='function') openVillage(); });
   if(k==='grow')  return hbMoreGo(function(){ if(typeof hbOpenGrow==='function') hbOpenGrow(); }); }
-function renderHbBuild(){ const w=document.getElementById('hbBuildWrap'); if(!w) return;
-  const coin=Math.floor(((typeof PROF==='function'&&PROF())||{}).pcoin||0), open=!!_hbBdOpen;
-  let h='<button class="hbRoundBtn'+(open?' on':'')+'" onclick="hbToggleBuild()" aria-label="건설" title="건설"><span data-ico="build"></span></button>';
-  if(open){
-    h+='<div class="hbBdMenu">';
-    for(const bk of HB_BUILD_KEYS){ const B=HB_STRUCT[bk], n=hbStructN(bk), mx=hbBuildMax(bk),
-        full=n>=mx, cost=hbBuildCost(bk), off=full||coin<cost;
-      h+='<button class="hbBdIt'+(off?' off':'')+'" onclick="hbPickBuild(&#39;'+bk+'&#39;)">'
-        +'<span class="hbBdIco"><img class="icoImg" src="'+ICO_DIR+'buildings/'+B.ico+'.webp" alt="" draggable="false"></span>'
-        +'<b class="hbBdNm">'+B.name+'</b>'
-        +'<span class="hbBdCt">'+n+'/'+mx+'</span>'
-        +'<span class="hbBdCs">'+(full?'MAX':(resIco('mineral')+cost.toLocaleString('en-US')))+'</span>'
-        +'</button>'; }
-    h+='</div>'; }
-  w.innerHTML=h;
-  if(typeof paintIcons==='function') paintIcons(w); }
+// ══════════════════════════════════════════════════════════════════════════
+// 📅 일일 — 출석 캘린더(4주) · 일일 퀘스트(하루 5개 + 주간 25개)
+// ──────────────────────────────────────────────────────────────────────────
+//  · 두 기능은 **화면이 따로다** — 더보기 ☰ 에 '출석'(#hbAttSheet)과 '퀘스트'(#hbDailySheet)로 각각 들어간다.
+//    저장·계측·보상 지급은 여기 한 곳에서 공유한다(p.daily · dqNote · dqGive).
+//  · 하루 경계는 던전 열쇠·상점 특가와 같은 축(_dgDayKey · 09:00). 주 경계는 그 위에 얹은 월요일(_dqWeekKey).
+//  · 출석: 하루 1도장. 한 주 = 출석 5칸 + 보너스 2칸(그 주 5칸을 채우면 열린다).
+//         4주 = 20도장을 다 채우면 최종 보상 → 받으면 캘린더가 새로 시작된다.
+//  · 퀘스트: 날짜를 씨앗으로 뽑으므로 새로고침해도 같은 5개가 나온다.
+//         하루 5개 완주 = 완주 보너스 · 한 주 25개 = 주간 보너스(월요일에 0으로 돌아간다).
+//         진행은 dqNote(kind, n) 한 곳으로만 들어온다 — 새 계측 지점은 여기에 붙일 것.
+// ══════════════════════════════════════════════════════════════════════════
+const DQ_WEEKS=4, DQ_PER_WEEK=5, DQ_BONUS=2;          // 4주 × (출석 5칸 + 보너스 2칸)
+const DQ_ATT_MAX=DQ_WEEKS*DQ_PER_WEEK;                 // 20도장 = 최종 보상 조건
+const DQ_N=5, DQ_OUT_N=2;                              // 하루 5개 중 2개는 사냥터 바깥(다른 구역으로 끌어낸다)
+const DQ_WEEK_MAX=DQ_N*7;                              // 한 주에 나올 수 있는 최대(35개)
+const DQ_WEEK_GOAL=25;                                 // 주간 목표 = 5일치. 이틀을 빠져도 채울 수 있다(출석 5/7과 같은 결)
+const DQ_TK={gear:'장비', pet:'펫', ally:'동료'};
+// 퀘스트 표 — kind 가 dqNote()의 계측 종류. cat:'hunt'=사냥터 / 'out'=바깥 구역
+//   name = 줄의 **제목**(무엇에 대한 것인지 한눈에) · desc = 그 아래 **내용**(무엇을 얼마나)
+const DQ_POOL=[
+  {id:'kill60',  cat:'hunt', ico:'marine',  kind:'kill',  goal:60,  name:'적 처치',      desc:'사냥터에서 적 60기 처치',     rw:{pcoin:900}},
+  {id:'kill150', cat:'hunt', ico:'marine',  kind:'kill',  goal:150, name:'적 처치',      desc:'사냥터에서 적 150기 처치',    rw:{pcoin:1800, gas:40}},
+  {id:'chest3',  cat:'hunt', ico:'box',     kind:'chest', goal:3,   name:'보급 상자',    desc:'필드의 보급 상자 3개 열기',   rw:{pcoin:1200}},
+  {id:'chest6',  cat:'hunt', ico:'box',     kind:'chest', goal:6,   name:'보급 상자',    desc:'필드의 보급 상자 6개 열기',   rw:{pcoin:2200, gear:1}},
+  {id:'upg5',    cat:'hunt', ico:'upg',     kind:'upg',   goal:5,   name:'업그레이드',   desc:'사냥터 업그레이드 5회 구매',  rw:{pcoin:1000}},
+  {id:'upg15',   cat:'hunt', ico:'upg',     kind:'upg',   goal:15,  name:'업그레이드',   desc:'사냥터 업그레이드 15회 구매', rw:{pcoin:2400, gas:50}},
+  {id:'round3',  cat:'hunt', ico:'flag',    kind:'round', goal:3,   name:'라운드',       desc:'라운드 3회 클리어',           rw:{pcoin:1500}},
+  {id:'play300', cat:'hunt', ico:'rec',     kind:'play',  goal:300, name:'플레이타임',   desc:'사냥터에서 5분 플레이',       rw:{pcoin:1400, gas:30}},
+  {id:'build2',  cat:'hunt', ico:'build',   kind:'build', goal:2,   name:'기지 건설',    desc:'기지에 건물 2채 짓기',        rw:{pcoin:1600}},
+  {id:'um1',     cat:'out',  ico:'map',     kind:'umRun', goal:1,   name:'유즈맵',       desc:'유즈맵에서 1판 플레이',       rw:{pcoin:2000, gas:60}},
+  {id:'um2',     cat:'out',  ico:'map',     kind:'umRun', goal:2,   name:'유즈맵',       desc:'유즈맵에서 2판 플레이',       rw:{pcoin:3600, gear:1}},
+  {id:'umWin1',  cat:'out',  ico:'globe',   kind:'umWin', goal:1,   name:'유즈맵 승리',  desc:'유즈맵에서 1승 거두기',       rw:{pcoin:3000, gem:3}},
+  {id:'dg1',     cat:'out',  ico:'dungeon', kind:'dgWin', goal:1,   name:'토벌',         desc:'토벌 단계 1회 클리어',        rw:{pcoin:2200, gear:1}},
+  {id:'gacha1',  cat:'out',  ico:'gift',    kind:'gacha', goal:1,   name:'뽑기',         desc:'아무 뽑기 1회',               rw:{pcoin:1500}},
+  {id:'boost1',  cat:'out',  ico:'boost',   kind:'boost', goal:1,   name:'부스트',       desc:'부스트 1회 사용',             rw:{pcoin:1200}},
+];
+const DQ_BY={}; for(const _q of DQ_POOL) DQ_BY[_q.id]=_q;
+const DQ_ALL_RW={pcoin:5000, gas:200, gem:5};                                  // 하루 5개 완주 보너스
+const DQ_WEEK_RW={pcoin:15000, gas:600, gem:25, gear:2, ally:1};               // 한 주 25개 = 주간 보너스
+const DQ_FINAL_RW={pcoin:20000, gas:1500, gem:100, gear:5, pet:2, ally:3};     // 출석 4주 완성 = 아주 큰 보상
+// 출석 5칸 — 주가 올라갈수록 커진다(m=주 배수). 4번째 칸은 뽑기권으로 결을 바꾼다.
+function dqAttRw(w,i){ const m=w+1;
+  if(i===0) return {pcoin:500*m};
+  if(i===1) return {gas:40*m};
+  if(i===2) return {pcoin:900*m};
+  if(i===3) return {gear:1};
+  return {pcoin:1600*m, gas:60*m}; }
+// 보너스 2칸 — 그 주 출석 5칸을 다 채우면 '나머지 2일' 몫으로 열린다(추가 출석 불필요)
+function dqAttBonusRw(w,b){ return (b===0) ? {pet:1, gas:80*(w+1)} : {gem:10+5*w}; }
+// 주 경계 = 하루 경계(09:00) 위에 얹은 월요일. 하루 축을 새로 만들지 않는다 — 두 축이 어긋나면 하루가 새는 날이 생긴다.
+function _dqWeekKey(){ const d=new Date(_dgDayKey());
+  const dow=(d.getDay()+6)%7;                                                  // 월=0 … 일=6
+  d.setDate(d.getDate()-dow); d.setHours(0,0,0,0); return d.getTime(); }
+// ── 저장·상태 ──
+function dqState(){ const p=(typeof PROF==='function')?PROF():null; if(!p) return null;
+  if(!p.daily || typeof p.daily!=='object') p.daily={};
+  const D=p.daily, dk=_dgDayKey();
+  if(!D.att || typeof D.att!=='object') D.att={n:0, day:0, bn:{}, fin:0, cyc:0};
+  if(!D.att.bn || typeof D.att.bn!=='object') D.att.bn={};
+  if(D.day!==dk){ D.day=dk; D.q=dqDraw(dk); D.allGot=0; }                      // 날이 바뀌면 5개를 새로 뽑는다
+  if(!Array.isArray(D.q) || D.q.length!==DQ_N) D.q=dqDraw(D.day||dk);
+  { const wk=_dqWeekKey();                                                     // 주가 바뀌면 주간 누적은 0으로
+    if(!D.wk || typeof D.wk!=='object' || D.wk.key!==wk) D.wk={key:wk, n:0, got:0}; }
+  return D; }
+// 날짜 시드 난수 — 같은 날이면 몇 번을 켜도 같은 5개(새로고침 리롤 방지)
+function _dqRand(seed){ let s=(seed>>>0)||1;
+  return function(){ s=(s*1664525+1013904223)>>>0; return s/4294967296; }; }
+function dqDraw(dk){ const rnd=_dqRand(Math.floor((dk||0)/86400000)+7919);
+  // ⚠ 같은 kind 를 두 개 뽑지 않는다 — '적 처치 60'과 '적 처치 150'이 같은 날 나오면
+  //    큰 쪽을 하는 순간 작은 쪽이 덤으로 끝나서 5개가 사실상 4개가 된다.
+  const used={};
+  const take=function(arr,n){ const a=arr.slice(), o=[];
+    while(o.length<n && a.length){ const q=a.splice(Math.floor(rnd()*a.length),1)[0];
+      if(used[q.kind]) continue; used[q.kind]=1; o.push(q); }
+    return o; };
+  const hunt=DQ_POOL.filter(function(q){ return q.cat==='hunt'; });
+  const out =DQ_POOL.filter(function(q){ return q.cat!=='hunt'; });
+  const sel=take(hunt, DQ_N-DQ_OUT_N).concat(take(out, DQ_OUT_N));
+  while(sel.length<DQ_N && sel.length<DQ_POOL.length){                          // 표가 줄어도 5개를 채운다
+    let rest=DQ_POOL.filter(function(q){ return sel.indexOf(q)<0 && !used[q.kind]; });
+    if(!rest.length) rest=DQ_POOL.filter(function(q){ return sel.indexOf(q)<0; });   // 종류가 동나면 그때만 중복 허용
+    if(!rest.length) break;
+    const q=rest[Math.floor(rnd()*rest.length)]; used[q.kind]=1; sel.push(q); }
+  return sel.map(function(q){ return {id:q.id, n:0, got:0}; }); }
+// ── 보상 지급·표기(재화 아이콘은 resIco 단일 소스) ──
+function dqRwTx(rw){ if(!rw) return '';
+  const t=[]; const ri=function(k,v){ return '<span class="dqRw">'+resIco(k,'dqRi')+v.toLocaleString('en-US')+'</span>'; };
+  if(rw.pcoin) t.push(ri('mineral',rw.pcoin));
+  if(rw.gas)   t.push(ri('gas',rw.gas));
+  if(rw.gem)   t.push(ri('gem',rw.gem));
+  for(const k in DQ_TK) if(rw[k]) t.push('<span class="dqRw">🎟 '+DQ_TK[k]+' ×'+rw[k]+'</span>');   // '뽑기권'은 🎟 이 말한다
+  return t.join(''); }
+function dqRwPlain(rw){ if(!rw) return '';
+  const t=[];
+  if(rw.pcoin) t.push('미네랄 '+rw.pcoin.toLocaleString('en-US'));
+  if(rw.gas)   t.push('가스 '+rw.gas.toLocaleString('en-US'));
+  if(rw.gem)   t.push('젬 '+rw.gem.toLocaleString('en-US'));
+  for(const k in DQ_TK) if(rw[k]) t.push(DQ_TK[k]+' 뽑기권 ×'+rw[k]);
+  return t.join(' · '); }
+// 칸 안에 넣는 작은 표기 — 재화는 아이콘, 뽑기권은 🎟
+// 칸이 좁아 하나만 보여 준다 — 그 보상의 '얼굴'을 고른다(뽑기권 > 젬 > 미네랄 > 가스)
+function dqRwIco(rw){ if(!rw) return '';
+  for(const k in DQ_TK) if(rw[k]) return '<i class="tk">🎟</i>';
+  if(rw.gem)   return resIco('gem')+'<i>'+rw.gem+'</i>';
+  if(rw.pcoin) return resIco('mineral')+'<i>'+(rw.pcoin>=1000?Math.round(rw.pcoin/100)/10+'k':rw.pcoin)+'</i>';
+  if(rw.gas)   return resIco('gas')+'<i>'+rw.gas+'</i>';
+  return ''; }
+function dqGive(rw){ const p=(typeof PROF==='function')?PROF():null; if(!p||!rw) return '';
+  if(rw.pcoin) p.pcoin=(p.pcoin||0)+rw.pcoin;
+  if(rw.gas)   p.gas  =(p.gas||0)+rw.gas;
+  if(rw.gem)   p.gem  =(p.gem||0)+rw.gem;
+  for(const k in DQ_TK) if(rw[k] && typeof dgAddTicket==='function') dgAddTicket(k, rw[k]);
+  if(typeof saveMeta==='function') saveMeta();
+  if(typeof updateCurBar==='function') updateCurBar();
+  return dqRwPlain(rw); }
+function dqRwAdd(a,b){ for(const k in b) a[k]=(a[k]||0)+b[k]; return a; }
+// ── 계측 — 게임 곳곳에서 이 한 곳으로만 들어온다 ──
+function dqNote(kind, n){ try{
+  const D=dqState(); if(!D) return; const done=[]; let ch=0;
+  for(const e of D.q){ const Q=DQ_BY[e.id];
+    if(!Q || Q.kind!==kind || e.got || e.n>=Q.goal) continue;
+    e.n=Math.min(Q.goal, (e.n||0)+(n||1)); ch=1;
+    if(e.n>=Q.goal) done.push(dqQName(Q)); }
+  if(!ch) return;
+  // ⚠ 처치처럼 초당 여러 번 들어오는 계측이 있다 — 저장·배지·리렌더는 '완료된 순간'과 '보고 있을 때'만.
+  if(done.length){
+    // 주간 누적은 '수령'이 아니라 '완료'로 센다 — 안 받고 날이 바뀌어도 이번 주 몫은 남는다.
+    D.wk.n=Math.min(DQ_WEEK_MAX, (D.wk.n||0)+done.length);
+    if(typeof saveMeta==='function') saveMeta();
+    if(typeof toast==='function') toast('📅 일일 퀘스트 완료 — '+done.join(' · '));
+    dqDot(); }
+  dqRefresh();
+}catch(_e){} }
+// ── 퀘스트 수령 ──
+function dqDoneN(){ const D=dqState(); if(!D) return 0;
+  return D.q.filter(function(e){ const Q=DQ_BY[e.id]; return Q && e.n>=Q.goal; }).length; }
+function dqClaim(i){ const D=dqState(); if(!D) return; const e=D.q[i], Q=e&&DQ_BY[e.id];
+  if(!Q || e.got || e.n<Q.goal) return;
+  e.got=1; const tx=dqGive(Q.rw);
+  if(typeof playSfx==='function') playSfx('ui_confirm');
+  if(typeof toast==='function') toast('📅 '+dqQName(Q)+' — '+tx);
+  dqRefresh(); dqDot(); }
+function dqAllGot(){ const D=dqState(); return !!(D && D.q.every(function(e){ return e.got; })); }
+function dqClaimAll(){ const D=dqState(); if(!D || D.allGot || !dqAllGot()) return;
+  D.allGot=1; const tx=dqGive(DQ_ALL_RW);
+  if(typeof playSfx==='function') playSfx('ui_confirm');
+  if(typeof toast==='function') toast('📅 오늘의 퀘스트 완주 — '+tx);
+  dqRefresh(); dqDot(); }
+// 주간 — 월요일에 0으로 돌아간다. 매일 들어와야 25개가 찬다.
+function dqWeekN(){ const D=dqState(); return D ? (D.wk.n||0) : 0; }
+function dqWeekOpen(){ return dqWeekN()>=DQ_WEEK_GOAL; }
+function dqWeekGot(){ const D=dqState(); return !!(D && D.wk.got); }
+function dqClaimWeek(){ const D=dqState(); if(!D || D.wk.got || !dqWeekOpen()) return;
+  D.wk.got=1; const tx=dqGive(DQ_WEEK_RW);
+  if(typeof playSfx==='function') playSfx('ui_confirm');
+  if(typeof toast==='function') toast('🏆 주간 퀘스트 '+DQ_WEEK_GOAL+'개 달성 — '+tx);
+  dqRefresh(); dqDot(); }
+// 토스트·로그처럼 한 줄로 말해야 하는 자리는 '내용'을 그대로 쓴다(제목만으론 무엇을 했는지 모른다)
+function dqQName(Q){ return Q.desc || (Q.name+' '+Q.goal); }
+// ── 출석 ──
+function dqAttCan(){ const D=dqState(); return !!(D && D.att.n<DQ_ATT_MAX && D.att.day!==_dgDayKey()); }
+function dqCheckIn(){ const D=dqState(); if(!D || !dqAttCan()) return;
+  const A=D.att; A.day=_dgDayKey(); A.n++;
+  const w=Math.floor((A.n-1)/DQ_PER_WEEK), i=(A.n-1)%DQ_PER_WEEK;
+  const tx=dqGive(dqAttRw(w,i));
+  if(typeof playSfx==='function') playSfx('ui_confirm');
+  if(typeof toast==='function') toast('📅 출석 '+A.n+'일차 — '+tx);
+  dqRefresh(); dqDot(); }
+function dqBonusOpen(w){ const D=dqState(); return !!(D && D.att.n>=(w+1)*DQ_PER_WEEK); }
+function dqBonusGot(w,b){ const D=dqState(); return !!(D && D.att.bn[w+'-'+b]); }
+function dqClaimBonus(w,b){ const D=dqState(); if(!D || !dqBonusOpen(w) || dqBonusGot(w,b)) return;
+  D.att.bn[w+'-'+b]=1; const tx=dqGive(dqAttBonusRw(w,b));
+  if(typeof playSfx==='function') playSfx('ui_confirm');
+  if(typeof toast==='function') toast('📅 '+(w+1)+'주 추가 보상 — '+tx);
+  dqRefresh(); dqDot(); }
+function dqFinalOpen(){ const D=dqState(); return !!(D && D.att.n>=DQ_ATT_MAX); }
+// 최종 = 남아 있는 보너스까지 한꺼번에 준다(안 그러면 캘린더를 새로 깔 때 사라진다)
+function dqClaimFinal(){ const D=dqState(); if(!D || !dqFinalOpen()) return;
+  const A=D.att, rw=Object.assign({}, DQ_FINAL_RW);
+  for(let w=0;w<DQ_WEEKS;w++) for(let b=0;b<DQ_BONUS;b++) if(!A.bn[w+'-'+b]) dqRwAdd(rw, dqAttBonusRw(w,b));
+  const tx=dqGive(rw);
+  A.n=0; A.bn={}; A.fin=0; A.cyc=(A.cyc||0)+1;                                  // 캘린더를 새로 깐다(오늘 몫은 이미 찍혔다)
+  if(typeof saveMeta==='function') saveMeta();
+  if(typeof playSfx==='function') playSfx('ui_confirm');
+  if(typeof toast==='function') toast('🏆 4주 완성 보상 — '+tx);
+  dqRefresh(); dqDot(); }
+// ── 배지 — ☰ 의 ! 점과 더보기 칸 점. '지금 받을 게 있다'만 신호한다(칸마다 따로) ──
+function dqAttHas(){ const D=dqState(); if(!D) return false;
+  if(dqAttCan() || dqFinalOpen()) return true;
+  for(let w=0;w<DQ_WEEKS;w++) for(let b=0;b<DQ_BONUS;b++) if(dqBonusOpen(w) && !dqBonusGot(w,b)) return true;
+  return false; }
+function dqQHas(){ const D=dqState(); if(!D) return false;
+  if(!D.allGot && dqAllGot()) return true;
+  if(dqWeekOpen() && !dqWeekGot()) return true;
+  return D.q.some(function(e){ const Q=DQ_BY[e.id]; return Q && !e.got && e.n>=Q.goal; }); }
+function dqHas(){ return dqAttHas() || dqQHas(); }   // ☰ 의 ! = 둘 중 아무거나
+function dqDot(){ if(typeof renderHomeStats==='function') renderHomeStats();
+  if(hbMoreOn()) renderHbMore(); }
+// ── 화면 — 퀘스트(#hbDailySheet)와 출석(#hbAttSheet)은 **따로 뜬다** ──
+//   한 판에 탭으로 묶어 뒀더니 '오늘 뭘 해야 하나'와 '도장을 찍었나'가 서로를 가렸다(2026-08-14 분리).
+function dqOn(){ const el=document.getElementById('hbDailySheet'); return !!(el && !el.classList.contains('hide')); }
+function dqAttOn(){ const el=document.getElementById('hbAttSheet'); return !!(el && !el.classList.contains('hide')); }
+function dqRefresh(){ if(dqOn()) renderDaily(); if(dqAttOn()) renderAtt(); }   // 열려 있는 쪽만 다시 그린다
+function openDaily(){ const el=document.getElementById('hbDailySheet'); if(!el) return;
+  el.classList.remove('hide'); renderDaily();
+  if(typeof playSfx==='function') playSfx('ui_open'); }
+function closeDaily(){ const el=document.getElementById('hbDailySheet'); if(el) el.classList.add('hide');
+  if(typeof saveMeta==='function') saveMeta(); dqDot(); }
+function openAtt(){ const el=document.getElementById('hbAttSheet'); if(!el) return;
+  el.classList.remove('hide'); renderAtt();
+  if(typeof playSfx==='function') playSfx('ui_open'); }
+function closeAtt(){ const el=document.getElementById('hbAttSheet'); if(el) el.classList.add('hide');
+  if(typeof saveMeta==='function') saveMeta(); dqDot(); }
+function renderDaily(){ const box=document.getElementById('hbDailyBody'); if(!box) return;
+  box.innerHTML=dqQuestHTML(); if(typeof paintIcons==='function') paintIcons(box); }
+function renderAtt(){ const box=document.getElementById('hbAttBody'); if(!box) return;
+  box.innerHTML=dqAttHTML(); if(typeof paintIcons==='function') paintIcons(box); }
+// 수령 버튼 — '무엇을 받는지'가 버튼 안에 들어간다(보상 줄 + 받기). 줄 밖에 따로 적지 않는다.
+function dqClaimBtn(rw, act, done, got){
+  let r=''; { const t=[]; const ri=function(k,v){ return '<i>'+resIco(k,'dqRi')+v.toLocaleString('en-US')+'</i>'; };
+    if(rw.pcoin) t.push(ri('mineral',rw.pcoin));
+    if(rw.gas)   t.push(ri('gas',rw.gas));
+    if(rw.gem)   t.push(ri('gem',rw.gem));
+    for(const k in DQ_TK) if(rw[k]) t.push('<i>🎟 '+DQ_TK[k]+' ×'+rw[k]+'</i>');
+    r='<span class="dqRwB">'+t.join('')+'</span>'; }
+  return '<button class="hbRowBtn dqBtn" onclick="'+act+'"'+((done&&!got)?'':' disabled')+'>'
+    +r+'<b>'+(got?'완료':'받기')+'</b></button>'; }
+// 한 줄 = [아이콘] 제목 / 내용 · 진행 바 / [보상 + 받기]
+function dqRowHTML(o){
+  const pct=Math.min(100, Math.round((o.n||0)/o.goal*100));
+  return '<div class="hbRow dqQ'+(o.got?' got':(o.done?' done':''))+'">'
+    +'<span class="hbRowIco"><span data-ico="'+o.ico+'"></span></span>'
+    +'<span class="hbRowTx"><b>'+o.title+'</b>'
+    +'<em>'+o.desc+' <i>'+Math.min(o.n||0,o.goal)+'/'+o.goal+'</i></em>'
+    +'<i class="dqBar"><u style="width:'+pct+'%"></u></i></span>'
+    +dqClaimBtn(o.rw, o.act, o.done, o.got)+'</div>'; }
+function dqQuestHTML(){ const D=dqState(); if(!D) return '';
+  // 맨 위 = 주간 진행. '오늘 5개'만 보이면 매일 들어올 이유가 약해져서, 주간 목표를 먼저 보여 준다.
+  let h=''; { const n=dqWeekN(), open=dqWeekOpen(), got=dqWeekGot();
+    h+='<div class="dqWeek'+(got?' got':(open?' on':''))+'">'
+      +dqRowHTML({ico:'flag', title:'이번 주 퀘스트', desc:'퀘스트 '+DQ_WEEK_GOAL+'개 완료', n:n, goal:DQ_WEEK_GOAL,
+                  rw:DQ_WEEK_RW, act:'dqClaimWeek()', done:open, got:got})
+      +'<div class="dqWeekNo">월요일에 0으로 돌아갑니다</div></div>'; }
+  D.q.forEach(function(e,i){ const Q=DQ_BY[e.id]; if(!Q) return;
+    h+=dqRowHTML({ico:Q.ico, title:Q.name, desc:Q.desc, n:e.n, goal:Q.goal, rw:Q.rw,
+                  act:'dqClaim('+i+')', done:e.n>=Q.goal, got:!!e.got}); });
+  { const got=D.q.filter(function(e){ return e.got; }).length;   // '수령까지' 끝난 개수 — 조건(dqAllGot)과 같은 잣대로 센다
+    h+=dqRowHTML({ico:'gift', title:'오늘 완주', desc:'오늘의 퀘스트 '+DQ_N+'개 모두 수령', n:got, goal:DQ_N,
+                  rw:DQ_ALL_RW, act:'dqClaimAll()', done:dqAllGot(), got:!!D.allGot}); }
+  return h; }
+function dqAttHTML(){ const D=dqState(); if(!D) return ''; const A=D.att;
+  const can=dqAttCan();
+  let h='<div class="dqTop"><span>출석 <b>'+A.n+'</b> / '+DQ_ATT_MAX+'</span>'
+    +'<button class="ecGo" onclick="dqCheckIn()"'+(can?'':' disabled')+'>'+(can?'오늘 출석':'출석 완료')+'</button></div>';
+  for(let w=0;w<DQ_WEEKS;w++){
+    h+='<div class="dqWk"><i class="dqWkL">'+(w+1)+'주</i><div class="dqWkG">';
+    for(let i=0;i<DQ_PER_WEEK;i++){ const n=w*DQ_PER_WEEK+i+1, got=A.n>=n, now=(!got && n===A.n+1 && can);
+      h+='<div class="dqC'+(got?' got':'')+(now?' now':'')+'"><b>'+n+'</b>'+dqRwIco(dqAttRw(w,i))+'</div>'; }
+    for(let b=0;b<DQ_BONUS;b++){ const open=dqBonusOpen(w), got=dqBonusGot(w,b);
+      h+='<button class="dqC bn'+(got?' got':'')+((open&&!got)?' now':'')+'"'+((open&&!got)?'':' disabled')
+        +' onclick="dqClaimBonus('+w+','+b+')" title="'+(w+1)+'주 추가 보상"><b>+</b>'+dqRwIco(dqAttBonusRw(w,b))+'</button>'; }
+    h+='</div></div>'; }
+  { const fin=dqFinalOpen();
+    h+='<div class="dqFin'+(fin?' on':'')+'"><span class="hbRowIco"><span data-ico="gift"></span></span>'
+      +'<span class="dqFinTx"><b>4주 완성 보상</b><em>'+(fin?dqRwPlain(DQ_FINAL_RW)+' · 남은 추가 보상 포함':'20일을 다 채우면 열립니다')+'</em></span>'
+      +'<button class="hbRowBtn" onclick="dqClaimFinal()"'+(fin?'':' disabled')+'>받기</button></div>'; }
+  return h; }
+// ⛔ 좌상단 건설 드롭다운(renderHbBuild/#hbBuildWrap)은 폐지했다(2026-08-14).
+//    더보기 > 건설 = 즉시 건설 모드이고, 고르는 곳은 하단 패널이다(hbBuildCardHTML).
+//    오른쪽 위에서 열었는데 왼쪽 위에 목록이 뜨던 것이 문제였다.
 function renderHbBar(){ const bar=document.getElementById('hbBar'); if(!bar||!_hb) return;
   const S=_hb, coin=Math.floor(((typeof PROF==='function'&&PROF())||{}).pcoin||0);
   // 하단 바는 '전투 중에 쓰는 것'만 — 스킬 3개. 판을 여는 것(건설·토벌·부스트)은 좌상단 줄로 갔다.
@@ -5956,8 +6456,7 @@ function renderHbBar(){ const bar=document.getElementById('hbBar'); if(!bar||!_h
     h+='<button class="hbSk" data-k="'+k+'" onclick="hbUseSkill(&#39;'+k+'&#39;)" title="'+SK.name+' — '+SK.tip+'">'
       +'<span class="hbSkIco">'+_icoImg('skills', SK.ico)+'</span>'
       +'<i class="hbCd"></i></button>'; }   // 껍데기는 --cd 로만 움직인다(다시 그리지 않음)
-  bar.innerHTML=h+'</div>';
-  renderHbBuild(); }   // 건설 버튼·목록은 좌상단에 따로 그린다
+  bar.innerHTML=h+'</div>'; }
 // 🤝 동료 — 영입(첫 구매)·강화(같은 버튼)·출전 토글. 옛 전직 트리가 여기로 옮겨 왔다.
 function hbOpenMates(){ const el=document.getElementById('hbMateModal'); if(!el) return;
   el.classList.remove('hide'); renderMateModal(); if(typeof playSfx==='function') playSfx('ui_open'); }
@@ -6054,6 +6553,7 @@ function hbPlaceStruct(k,gx,gy){ const B=HB_STRUCT[k], p=PROF(); if(!B) return f
   if(Math.floor(p.pcoin||0)<cost) return false;
   p.pcoin-=cost; hbBase().tiles[hbKey(gx,gy)]={k:k}; saveMeta();
   hbLayoutBase();
+  if(typeof dqNote==='function') dqNote('build',1);   // 📅 일일 — 기지에 건물 짓기
   if(typeof updateCurBar==='function') updateCurBar();
   return true; }
 // 부스트 — 시간제. 남은 시간은 초 단위로 보여준다.
@@ -6073,6 +6573,7 @@ function hbBuyBoost(k){ const B=HB_BOOSTS[k], p=PROF(); if(!B) return;
   p.pcoin-=B.cost;
   H.boostT[k]=Math.max(Date.now(), H.boostT[k]||0) + B.sec*1000;    // 이미 걸려 있으면 연장
   saveMeta();
+  if(typeof dqNote==='function') dqNote('boost',1);   // 📅 일일 — 부스트 사용
   if(typeof playSfx==='function') playSfx('ui_open');
   if(typeof updateCurBar==='function') updateCurBar();
   renderBoostModal(); renderHbBar(); }
@@ -6199,6 +6700,7 @@ function hmBuyUpg(k){ const p=PROF(); if(!HB_UPG[k]) return;
   const P=hbUpgPlan(k), cost=P.sum;
   if(Math.floor(p.pcoin||0)<cost){ hmToast('미네랄이 부족합니다'); return; }
   p.pcoin-=cost; hbHunt().upg[k]=(hbHunt().upg[k]||0)+P.n; saveMeta();
+  if(typeof dqNote==='function') dqNote('upg',P.n);   // 📅 일일 — 업그레이드(한 번에 여러 레벨을 사면 그만큼)
   if(typeof playSfxT==='function') playSfxT('upgrade', 60);   // 연타해도 소리가 겹치지 않게
   if(_hb){ const st=hbCharStats(), c=_hb.char;                 // 전투 중 즉시 반영(현재 체력은 유지·상한만 확장)
     c.atk=st.atk; c.cd=st.cd; c.crit=st.crit; c.range=st.range; c.regen=st.regen;
@@ -6249,6 +6751,7 @@ function hmBuyUpgQuiet(k){ const p=PROF(), U=HB_UPG[k]; if(!p||!U) return false;
   if(!hbUpgOwned(k)) return false;
   const P=hbUpgPlan(k); if(Math.floor(p.pcoin||0)<P.sum) return false;
   p.pcoin-=P.sum; hbHunt().upg[k]=(hbHunt().upg[k]||0)+P.n;
+  if(typeof dqNote==='function') dqNote('upg',P.n);   // 📅 일일 — 길게 눌러 연타로 사는 쪽도 같은 계측
   if(typeof playSfxT==='function') playSfxT('upgrade', 60);
   return true; }
 // 포인터 흐름: down 에서 1회 + 연타 시작 / up·cancel 에서 정지. click 은 안 쓴다.
@@ -6579,6 +7082,7 @@ function hbClearBonus(dg,round){ const m=HB_DG_REW(dg); return { min:(8+round*4)
 // 🎁 라운드 마일스톤 보상 — HB_RW_EVERY 간격 라운드에 '최초 클리어 1회' 보상이 붙는다.
 //   설계 의도: 다음 목표가 눈에 보여야 라운드를 민다(도전정신). 그래서 라운드 팝업에서 미리 확인할 수 있다.
 //   ⚠ 반복 파밍으로 재수령되면 안 된다 → 던전별로 받은 라운드를 hunt.rw[dg][round] 에 기록한다.
+const HB_BG_DIR='assets/backgrounds/dungeons/';   // 던전 배경 = 전장 바닥 + 라운드 시트 카드 공용
 const HB_RW_EVERY=5;
 function hbRoundRw(dg,round){ if(!round || round%HB_RW_EVERY) return null;
   const m=HB_DG_REW(dg), t=round/HB_RW_EVERY;
@@ -6686,6 +7190,7 @@ function hbMateTicket(){ const p=PROF(); return (p.tickets&&p.tickets.ally)||0; 
 // 뽑기 1회 — 뽑기권 1장. 신규면 Lv.1로 영입, 중복이면 합성 재료(dup)로 쌓인다.
 function hbMateRoll(){ const p=PROF(); if(hbMateTicket()<=0) return null;
   const H=hbMates(); p.tickets.ally--; H.mateN=(H.mateN||0)+1;
+  if(typeof dqNote==='function') dqNote('gacha',1);   // 📅 일일 — 뽑기
   const probs=hbGachaProbs(H.mateN-1);                   // ⚠ 이번 판은 '뽑기 전' 확률로 굴린다
   const pool={}; for(const id in HB_MATES){ const t=HB_MATES[id].tier; (pool[t]=pool[t]||[]).push(id); }
   let r=Math.random(), tier=null;
@@ -6918,6 +7423,7 @@ function hbChestReward(){ const p=(typeof PROF==='function')?PROF():null; if(!p)
 function hbBreakChest(ch){ const S=_hb; if(!S) return; const i=S.chests.indexOf(ch); if(i<0) return;
   S.chests.splice(i,1);
   S.floats.push({x:ch.x, y:ch.y-22, tx:hbChestReward(), cl:'#ffd24a', t:0});
+  if(typeof dqNote==='function') dqNote('chest',1);   // 📅 일일 — 보급 상자
   if(typeof playSfx==='function') playSfx('ui_confirm');
   if(typeof saveMeta==='function') saveMeta();
   if(typeof updateCurBar==='function') updateCurBar(); }
@@ -7140,7 +7646,12 @@ function hbHud(){ const S=_hb; if(!S) return; const c=(typeof CHAR==='function')
       bar.style.width=Math.max(0,Math.min(100,(c.xp/need)*100))+'%'; } }
   // ⚔ 번호만으로는 이동한 느낌이 없다 → 던전 고유 이름을 같이 보여준다.
   //    '던전' 표기는 유지한다(자동사냥=던전 / 옛 콘텐츠=토벌 용어 분리 · 스모크가 검사)
-  put('hbRound','던전 '+S.dg+' · '+hbDun(S.dg).name+' · 라운드 '+S.round);
+  put('hbDgName','던전 '+S.dg+' · '+hbDun(S.dg).name);
+  put('hbRound', String(S.round));                  // 숫자만 — 라벨('라운드')은 마크업에 고정
+  { const best=hbBest(S.dg);                        // ◀▶ 는 갈 수 있는 쪽만 살린다
+    const pv=document.getElementById('hbRdPrev'), nx=document.getElementById('hbRdNext');
+    if(pv) pv.disabled=(S.round<=1);
+    if(nx) nx.disabled=(S.round>=best); }
   put('hbWaveTx','웨이브 '+Math.min(S.wave,HB_WAVES)+'/'+HB_WAVES);
   put('hbMode', hbHunt().climb?'등반':'반복'); }   // 킬수 표시는 제거(요청)
 function hbSettle(){ const S=_hb, p=PROF();
@@ -7149,6 +7660,7 @@ function hbSettle(){ const S=_hb, p=PROF();
   const bo=hbClearBonus(S.dg,S.round);        // 처치 보상은 이미 지급됨 — 여기서 주는 건 클리어 보너스뿐(사망 시 소실되는 몫)
   p.pcoin=(p.pcoin||0)+bo.min; p.gas=(p.gas||0)+bo.gas;
   S.floats.push({x:S.char.x,y:S.char.y-32,tx:'ROUND CLEAR +'+Math.round(bo.min)+'M',cl:'#ffd24a',t:0});
+  if(typeof dqNote==='function') dqNote('round',1);   // 📅 일일 — 라운드 클리어
   S.buf={min:0,gas:0,xp:0,kills:0,paid:0};
   // 🎁 마일스톤 최초 클리어 보상 — 등반으로 라운드를 올리기 '전에' 지금 깬 라운드로 판정한다
   if(hbRwClaim(S.dg,S.round)){ const rw=hbRoundRw(S.dg,S.round);
@@ -7336,7 +7848,7 @@ function hbBuildExit(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation();
   hbArmBtns();
   if(was){ S.wave=1; S.phase='fight'; hbSpawnWave(); }
   if(typeof playSfx==='function') playSfx('ui_close');
-  hbHud(); }
+  hbHud(); renderHome(); }   // 하단 패널을 업그레이드로 되돌린다
 function hbArmStart(k,gx,gy){ if(!_hb) return;
   hbBuildEnter();
   _hb.arm={ k:k, gx:gx, gy:gy, dir:[1,0], last:null };   // dir = 연속 배치가 나아가는 방향(기본 오른쪽)
@@ -7424,6 +7936,9 @@ function hbBunkerField(bk){ if(!bk) return null;
 function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char;
   if(S.build){ hbFx(dt); return; }   // 🛠 건설 중 = 시계도 전투도 멈춘다(이펙트만 사그라들게 둔다)
   S.t+=dt;
+  // 📅 일일 — 사냥터 플레이타임(초). 건설 중은 위에서 빠지므로 '실제로 돈 시간'만 쌓인다.
+  { S.dqT=(S.dqT||0)+dt; if(S.dqT>=1){ const w=Math.floor(S.dqT); S.dqT-=w;
+      if(typeof dqNote==='function') dqNote('play',w); } }
   // 적이 따라올 길 — 캐릭터가 다른 칸으로 넘어갔을 때만 다시 굽는다(900칸 BFS는 1ms 미만)
   { const key=hbGx(c.x)+','+hbGx(c.y);
     if(_hbFoeAt!==key || S._blkSeq!==_hbBlkSeq){ _hbFoeAt=key; S._blkSeq=_hbBlkSeq; S.foeF=hbBakeField(hbGx(c.x),hbGx(c.y)); } }
@@ -7522,6 +8037,7 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char;
   hbFx(dt); }
 // 처치 1건 — 캐릭터·동료·펫·터렛·스킬이 전부 이 한 곳을 지난다(보상 규칙을 여러 벌 두지 않는다)
 function hbKill(f){ const S=_hb, i=S.foes.indexOf(f); if(i<0) return; S.foes.splice(i,1); S.kills++;
+  if(typeof dqNote==='function') dqNote('kill',1);   // 📅 일일 — 적 처치
   // 처치 보상은 즉시 지급 — 재화 바가 바로 오른다. 사망 시 잃는 것은 '라운드 클리어 보너스'뿐.
   const rm=(f.elite?HB_ELITE_REW:1)*(hbBoostOn('inc')?2:1);
   const r0=hbKillReward(S.dg,S.round), r={min:r0.min*rm, gas:r0.gas*rm, xp:r0.xp*rm};
@@ -7572,7 +8088,7 @@ let _hbDirty=false;         // 전투 보상이 메모리에만 있는 상태(lo
 const HB_SAVE_KILLS=8;      // 처치 N건마다 저장(매 건 저장은 무겁고, 안 하면 화면 전환 때 재화가 날아간다)
 const HB_ATK_SHOW=6/14;     // 공격 모션 길이(초) = 실험장 시트 규격(6프레임 · 14fps)과 같다
 const HB_TILE_SCALE=0.34;   // 타일 원본은 크다 — 월드 좌표에 1:1로 깔면 흙 한 덩이가 화면을 덮는다
-// 던전 배경 그림 — assets/backgrounds/dungeons/dg1.webp … dg10.webp
+// 던전 배경 그림 — HB_BG_DIR/dg1.webp … dg10.webp (라운드 시트의 던전 카드도 같은 파일을 쓴다)
 // 파일을 넣기만 하면 그 던전에 뜬다(코드 수정 불필요). 없으면 아래 타일 바닥으로 떨어진다.
 const _hbBg={}; let _hbBgCur='';
 function hbBgImg(dg){ const key='dg'+(dg||1), t=_hbBg[key];
@@ -7580,13 +8096,13 @@ function hbBgImg(dg){ const key='dg'+(dg||1), t=_hbBg[key];
   // (지우면 다시 요청되지만 브라우저 캐시에서 오므로 재방문 비용은 사실상 없다)
   if(_hbBgCur!==key){ for(const k in _hbBg) if(k!==key) delete _hbBg[k]; _hbBgCur=key; }
   if(t!==undefined) return (t&&t.complete&&t.naturalWidth)?t:null;   // 404면 naturalWidth=0 → 영원히 null(재시도 안 함)
-  const im=new Image(); im.src='assets/backgrounds/dungeons/'+key+'.webp'; _hbBg[key]=im; return null; }
+  const im=new Image(); im.src=HB_BG_DIR+key+'.webp'; _hbBg[key]=im; return null; }
 // 움직임 프레임 — dgN_f1.webp … dgN_f4.webp. 넷이 다 오기 전엔 정지 그림으로 버틴다.
 const _hbBgF={};
 function hbBgFrames(dg){ if(!HB_BG_ANIM) return null;
   const key='dg'+(dg||1), have=_hbBgF[key];
   if(!have){ const a=[]; for(let i=1;i<=HB_BG_FRAMES;i++){ const im=new Image();
-      im.src='assets/backgrounds/dungeons/'+key+'_f'+i+'.webp'; a.push(im); } _hbBgF[key]=a; return null; }
+      im.src=HB_BG_DIR+key+'_f'+i+'.webp'; a.push(im); } _hbBgF[key]=a; return null; }
   for(const im of have) if(!(im.complete && im.naturalWidth)) return null;   // 하나라도 없으면 안 씀(깜빡임 방지)
   return have; }
 // 첫 프레임만 와도 그것을 바탕으로 쓴다 — 넷을 다 기다리면 그동안 정지 그림을 또 받아야 해서
@@ -8051,7 +8567,7 @@ function townCollectAll(){ const S=townState(); let n=0;
   if(!n && typeof showTownToast==='function') showTownToast('아직 모인 것이 없습니다'); }
 
 // 마을 화면 — 배경 그림은 그대로 쓰고, 그 위에 슬롯과 하단 구매 바를 얹는다(걸어다니지 않는다)
-function openVillage(){ loadMeta(); if(!CHAR()){ openCharScreen('create'); return; }
+function openVillage(){ loadMeta(); profEnsureChar();
   _townOpen=true; showAppScreen('townScreen'); navShow('home');   // 사냥터에서 온 화면 — 네비는 그대로 두고 '사냥터' 탭 활성
   document.body.classList.add('vgMode');   // 마을 전용 상단 바(.twBar)를 숨겨 재화 바 하나만 보이게
   vgMoveHud(true);
@@ -8118,9 +8634,7 @@ const TOWN_PANELS={
   gacha:   { title:'상점',             render:()=>renderProfGacha(), screen:'shop' },   // 전용 화면으로(팝업 아님)
   gate:    { title:'관문',             render:()=>renderProfGate()   },
   gym:     { title:'훈련장',           render:()=>renderProfIdle()   },
-  gear:    { title:'장비',             render:()=>renderProfGear()   },
-  charsel: { title:'캐릭터 보관소',    render:()=>renderCharSelect() },
-  charmake:{ title:'캐릭터 생성소',    render:()=>renderCharCreate() } };
+  gear:    { title:'장비',             render:()=>renderProfGear()   } };
 let _townOpen=false, _twZone=null;
 let _twW=0,_twH=0, _twVW=0,_twVH=0, _twVL=0,_twVT=0;   // 월드 크기 / 화면(뷰포트) 크기·위치
 let _twChar={x:0,y:0,tx:0,ty:0,dx:0,dy:0,mode:null,face:1};   // mode: null=정지 | 'to'=목적지 이동 | 'dir'=방향 이동
@@ -8128,7 +8642,7 @@ let _twPtr=null, _twGoZone=null, _twRaf=0, _twLast=0;   // _twGoZone = 지금 �
 function mapToHub(){ if(typeof stopRoomsTick==='function') stopRoomsTick(); if(typeof playSfx==='function') playSfx('ui_close'); openHome(); }   // 유즈맵 선택 → 메인(HOME)으로 복귀
 // 걸어다니던 마을 화면은 폐지됐다. 옛 진입점은 전부 사냥터(HOME)로 보낸다.
 // ⚠ 이동 엔진(twStep/twCamApply/twClampWall)은 남아 있지만 아무도 켜지 않는다.
-function openTown(){ loadMeta(); if(!CHAR()){ openCharScreen('create'); return; }   // 캐릭터가 없으면 생성 화면으로
+function openTown(){ loadMeta(); profEnsureChar();   // 없으면 조용히 지급
   _townOpen=false; twStopLoop(); openHome(); return; }
 // 마을을 떠날 때의 공통 정리 — 루프·패널·시트를 한 번에 닫는다(그대로 두면 배경에서 계속 돈다)
 function twLeave(){ _townOpen=false; twStopLoop(); closeTownPanel(); twCloseSocial(); twCloseChat(); profStampSeen(); }
@@ -8233,7 +8747,7 @@ function openTownPanel(zone){ const _z=TOWN_PANELS[zone];
 // 팝업이 아니라 독립 화면이다. 내용 렌더러는 renderProfGacha() 하나뿐(단일 소스) — 마크업을 복제하지 말 것.
 function shopOpen(){ const e=document.getElementById('shopScreen'); return !!(e && !e.classList.contains('hide')); }
 function openShop(){ if(typeof loadMeta==='function') loadMeta();
-  if(typeof CHAR==='function' && !CHAR()){ openCharScreen('create'); return; }   // 캐릭터 없으면 생성부터
+  profEnsureChar();   // 캐릭터가 없으면 조용히 기본 유닛을 지급한다(선택 화면 없음)
   if(typeof twLeave==='function') twLeave();                                     // 마을에서 들어왔으면 루프·팝업 정리
   showAppScreen('shopScreen'); navShow('shop'); renderShop();
   if(typeof paintIcons==='function') paintIcons(document.getElementById('shopScreen')); }
@@ -8276,12 +8790,12 @@ function _chrSkillHTML(){ let h='<div class="hbGrowLbl">사냥터 스킬</div>';
   h+='<div class="hbRoundNote" style="padding:8px 0 0">스킬 강화는 아직 없습니다 — 사냥터 하단 바에서 직접 쓰거나 자동(A)으로 켤 수 있습니다.</div>';
   return h; }
 function openUpgScreen(){ if(typeof loadMeta==='function') loadMeta();
-  if(typeof CHAR==='function' && !CHAR()){ openCharScreen('create'); return; }
+  profEnsureChar();
   if(typeof twLeave==='function') twLeave();
   showAppScreen('upgScreen'); navShow('upg'); renderChr();
   if(typeof paintIcons==='function') paintIcons(document.getElementById('upgScreen')); }
 function openGear(){ if(typeof loadMeta==='function') loadMeta();
-  if(typeof CHAR==='function' && !CHAR()){ openCharScreen('create'); return; }   // 캐릭터 없으면 생성부터
+  profEnsureChar();   // 캐릭터가 없으면 조용히 기본 유닛을 지급한다(선택 화면 없음)
   if(typeof twLeave==='function') twLeave();                                     // 마을에서 들어왔으면 루프·팝업 정리
   _gearPick=null; _gearSel=null; _gearCat='';
   showAppScreen('gearScreen'); navShow('gear'); renderGear();
@@ -8540,69 +9054,8 @@ function bagScrollHint(){   // 장비창은 마을 팝업·정비 화면 두 곳
   const s=document.querySelector((typeof gearOpen==='function'&&gearOpen()?'#gearBody':'#tpBody')+' .bagScroll'); if(!s) return;
   const b=s.querySelector('.bagBody'); if(!b) return;
   s.classList.toggle('more', b.scrollHeight-b.scrollTop-b.clientHeight>4); }
-function closeTownPanel(){ popHide('townPanel'); _twZone=null; _charDelId=null; _gearPick=null; _gearSel=null; _gearCat=''; }
-// ── 🧍 캐릭터 선택/생성 ─────────────────────────────────────────────────────
-// 렌더러는 한 벌뿐이고 입장 화면(#charScreen)과 마을 구역(보관소·생성소)이 같은 것을 쓴다. 복제 금지.
-function renderCharSelect(){ const p=PROF(), list=p.chars||[];
-  let h='<div class="twHead">캐릭터를 골라 마을로 들어갑니다. 슬롯 <b>'+list.length+'/'+PROF_MAX_CHARS+'</b><br>재화(P)와 펫은 모든 캐릭터가 함께 씁니다.</div>';
-  if(!list.length) h+='<div class="twRow"><div class="twRowInfo"><div class="twRowSub">아직 캐릭터가 없습니다 — 먼저 만들어 주세요.</div></div></div>';
-  for(const c of list){ const C=PROF_CLASSES[c.cls], J=PROF_JOBS[c.unit.jobId]||PROF_JOBS[c.cls], on=(c.id===p.curId);
-    if(_charDelId===c.id){   // 삭제 확인 — 무엇을 잃고 무엇을 돌려받는지 그 자리에서 보여준다
-      h+='<div class="twRow"><span class="twPet">'+C.ico+'</span><div class="twRowInfo">'
-        +'<div class="twRowName">'+escHtml(c.name)+' 삭제할까요?</div>'
-        +'<div class="twRowSub ok">'+profRefundOf(c)+' P 반환</div>'
-        +'<div class="twRowSub lock">Lv.'+c.level+' · 경험치 소멸</div></div>'
-        +'<button class="twBtn" onclick="charCancelDelete()">취소</button>'
-        +'<button class="twBtn del" onclick="charDoDelete(\''+c.id+'\')">삭제</button></div>';
-      continue; }
-    h+='<div class="twRow"><span class="twPet">'+C.ico+'</span><div class="twRowInfo">'
-      +'<div class="twRowName">'+escHtml(c.name)+(on?' <span class="twStars">선택중</span>':'')+'</div>'
-      +'<div class="twRowSub">'+(J.name===C.name? C.name : C.name+' 계열 · '+J.name)+' · Lv.'+c.level+'</div></div>'
-      +'<button class="twBtn'+(on?' on':'')+'" onclick="charPick(\''+c.id+'\')">'+(on?'입장':'선택')+'</button>'
-      +'<button class="twDel" onclick="charAskDelete(\''+c.id+'\')" aria-label="삭제">✕</button></div>'; }
-  if(list.length<PROF_MAX_CHARS)
-    h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">새 캐릭터 만들기</div><div class="twRowSub">레인저 · 척후병 · 워든</div></div><button class="twBtn" onclick="charGoCreate()">만들기</button></div>';
-  return h; }
-function renderCharCreate(){ const p=PROF(), full=(p.chars||[]).length>=PROF_MAX_CHARS;
-  let h='<div class="twHead">종류를 고르면 그 자리에서 캐릭터가 만들어집니다.<br>종류마다 기본 스탯이 다릅니다 — 전직은 없고, 강해지는 축은 강화·동료·장비입니다.</div>';
-  h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">이름</div><div class="twRowSub">비우면 종류 이름으로</div></div><input id="ccName" class="twInput" maxlength="10" placeholder="10자 이내"></div>';
-  for(const id in PROF_CLASSES){ const C=PROF_CLASSES[id], J=PROF_JOBS[id];
-    const bs=PROF_STATS.map(k=>PROF_STAT_NAME[k]+' '+J.base[k]).join(' · ');
-    h+='<div class="twRow"><span class="twPet">'+C.ico+'</span><div class="twRowInfo"><div class="twRowName">'+C.name+'</div>'
-      +'<div class="twRowSub">'+C.tip+'</div><div class="twRowSub">'+bs+'</div></div>'
-      +'<button class="twBtn csMake" onclick="charDoCreate(\''+id+'\')"'+(full?' disabled':'')+'>'+(full?'슬롯 참':'만들기')+'</button></div>'; }
-  if((p.chars||[]).length) h+='<div class="twRow"><div class="twRowInfo"><div class="twRowSub">이미 만든 캐릭터를 고르려면</div></div><button class="twBtn" onclick="charGoSelect()">보관소</button></div>';
-  return h; }
-// 지금 떠 있는 호스트(마을 구역 / 입장 화면)를 그대로 두고 내용만 바꾼다
-function _charHostRender(mode){ if(_townOpen && _twZone){ openTownPanel(mode==='create'?'charmake':'charsel'); return; } openCharScreen(mode); }
-let _charDelId=null;   // 삭제 확인 중인 캐릭터(한 번 더 눌러야 지워진다)
-function charAskDelete(id){ _charDelId=id; if(typeof playSfx==='function') playSfx('ui_open'); _charHostRender('select'); }
-function charCancelDelete(){ _charDelId=null; _charHostRender('select'); }
-function charDoDelete(id){ const c=(PROF().chars||[]).find(x=>x.id===id); if(!c) return;
-  const nm=c.name, rf=profDeleteChar(id); if(rf<0) return;
-  _charDelId=null; if(typeof playSfx==='function') playSfx('ui_close');
-  if(!CHAR()){ closeTownPanel(); _townOpen=false; twStopLoop(); openCharScreen('create'); return; }   // 마지막 한 명을 지웠으면 생성 화면으로
-  if(_townOpen){ twApplyChar(); renderTownBar(); showTownToast(nm+' 삭제 · '+rf+' P 반환'); }
-  _charHostRender('select'); }
-function charGoCreate(){ _charDelId=null; if(typeof playSfx==='function') playSfx('ui_open'); _charHostRender('create'); }
-function charGoSelect(){ if(typeof playSfx==='function') playSfx('ui_open'); _charHostRender('select'); }
-function charPick(id){ if(!profSelectChar(id)) return; if(typeof playSfx==='function') playSfx('ui_open'); _charEnter(); }
-function charDoCreate(cls){ const el=document.getElementById('ccName'), c=profCreateChar(cls, el?el.value:'');
-  if(!c){ if(_townOpen) showTownToast('슬롯이 가득 찼습니다'); return; }
-  if(typeof playSfx==='function') playSfx('ui_open'); _charEnter(); }
-// 선택 직후 — 마을 안이면 그 자리에서 교체, 밖(입장 화면)이면 마을로 입장
-function _charEnter(){ const c=CHAR(); _charDelId=null;
-  if(_townOpen){ closeTownPanel(); renderTownBar(); if(c) showTownToast(c.name+' 선택'); }
-  else openHome(); }   // 캐릭터 만들면 사냥터로
-let _csMode='select';
-function openCharScreen(mode){ loadMeta();
-  _csMode=(mode==='create' || !(PROF().chars||[]).length) ? 'create' : 'select';
-  const t=document.getElementById('csTitle'); if(t) t.textContent=(_csMode==='create')?'캐릭터 만들기':'캐릭터 선택';
-  const b=document.getElementById('csBody'); if(b) b.innerHTML=(_csMode==='create')?renderCharCreate():renderCharSelect();
-  showAppScreen('charScreen'); }
-function charBackToHub(){ if(typeof playSfx==='function') playSfx('ui_close');
-  if(typeof CHAR==='function' && !CHAR()){ askLogout(); return; }   // 캐릭터가 없으면 사냥터가 다시 이 화면으로 돌려보낸다
-  openHome(); }
+function closeTownPanel(){ popHide('townPanel'); _twZone=null; _gearPick=null; _gearSel=null; _gearCat=''; }
+
 function twApplyChar(){ const c=CHAR(), b=document.querySelector('#twAvatar .twAvBody');   // 아바타 겉모습 = 현재 캐릭터 종류
   if(b) b.textContent=(c && PROF_CLASSES[c.cls] && PROF_CLASSES[c.cls].ico) || '🧍'; }
 function renderTownIdle(){ renderTownBar(); const tp=document.getElementById('townPanel'); if(_twZone==='gym' && tp && !tp.classList.contains('hide')) refreshTownPanel(); }
@@ -8748,6 +9201,7 @@ function profUseGearTicket(){ const p=PROF();
   const it=profMakeItem(sl[Math.floor(Math.random()*sl.length)], Math.max(1, dgMaxFloor()));
   if(!it) return;
   p.tickets.gear--; profAddItem(it); saveMeta();
+  if(typeof dqNote==='function') dqNote('gacha',1);   // 📅 일일 — 뽑기
   if(typeof playSfx==='function') playSfx('ui_open');
   renderTownBar(); refreshTownPanel(); showTownToast('🎟 '+profItemName(it)+' 획득'); }
 function profDoGacha(){ const res=profPetRoll(); if(!res) return; if(typeof playSfx==='function') playSfx('ui_open');
@@ -9022,6 +9476,7 @@ function dgWin(){ const c=CHAR(), p=PROF(), r=dgFloorReward(DG.floor);
   if(c){ profGainXp(c, r.xp); profApplyLevelUps(c); if(DG.floor>prevMax) c.dgFloor=DG.floor; }
   if(DG.needKey && DG.dgId && typeof dgSpendKey==='function') dgSpendKey(DG.dgId);   // 완료 시 열쇠 1 소모(실패 시 미소모)
   r.tix=isNew ? dgAwardTickets(DG.floor) : null;                    // 새 단계 클리어 = 뽑기권
+  if(typeof dqNote==='function') dqNote('dgWin',1);                 // 📅 일일 — 토벌 단계 클리어
   profSyncUnlocks(); saveMeta(); dgStopLoop(); dgRender(); }
 function dgLose(){ DG.over=-1; dgStopLoop(); dgRender(); }
 function dgSkill(){ if(!DG || DG.over || DG.skill.cd>0) return;
@@ -9044,7 +9499,7 @@ function dgAddTicket(kind,n){ const p=PROF(); if(!p.tickets) p.tickets={gear:0,p
 function dgAwardTickets(floor){ const g={gear:1}; if(floor%5===0) g.pet=1; if(floor%10===0) g.ally=1;   // 새 단계 클리어 보상
   for(const k in g) dgAddTicket(k,g[k]); return g; }
 function openDungeonHub(){ if(typeof loadMeta==='function') loadMeta();
-  if(typeof CHAR==='function' && !CHAR()){ openCharScreen('create'); return; }   // 캐릭터 없으면 생성부터
+  profEnsureChar();   // 캐릭터가 없으면 조용히 기본 유닛을 지급한다(선택 화면 없음)
   const home=document.getElementById('homeScreen');
   if(home && home.classList.contains('hide')) openHome();                        // 토벌은 HOME 위 팝업 — 다른 화면에서 부르면 먼저 HOME으로
   dgCloseSheet(); popShow('dgHubScreen'); renderDungeonHub();
@@ -9441,14 +9896,12 @@ function ownedCombineGroups(){ const grp={};   // gid별 묶음(고정·파견 �
   for(const u of G.units){ if(u.fixed||u.atBoss||!u.gid) continue; (grp[u.gid]=grp[u.gid]||[]).push(u); }
   const out={}; for(const gid in grp){ if(grp[gid].length>=3 && combineResultFor(gid, grp[gid][0].gtier)) out[gid]=grp[gid]; } return out; }
 function setHomeMode(m){ if(m==='boss') m='select'; _homeMode=m; _sellSig=''; _combSig=''; _selSig='';
-  const ids={select:'hsTabSel',combine:'hsTabComb',sell:'hsTabSell'};
-  for(const k in ids){ const el=document.getElementById(ids[k]); if(el) el.classList.toggle('on', m===k); }
+  if(typeof gtabPaint==='function') gtabPaint();   // 하단 네비의 .cur 이동(판 안에 탭 줄은 없다)
   renderHomeLeft(); }
 function renderHomeLeft(){ if(_homeMode==='select') renderSelectPanel(); else if(_homeMode==='combine') renderCombinePanel(); else renderSellPanel(); updateCombDot(); }
-function updateCombDot(){ const n=Object.keys(ownedCombineGroups()).length;
-  const tab=document.getElementById('hsTabComb'); if(tab) tab.classList.toggle('hide', !n);   // 조합 탭은 조합 가능할 때만 표시
-  const dot=document.getElementById('combDot'); if(dot){ dot.textContent=n||''; dot.classList.toggle('hide', !n); }
-  if(!n && _homeMode==='combine') setHomeMode('select'); }   // 조합 불가가 되면 지정으로 복귀
+// 조합 가능 여부가 바뀌면 하단 네비의 '유닛 조합' 칸이 생기거나 사라진다(GTAB_TREE.Main.subs[].show)
+// 조합 칸은 늘 있으므로 여기서 쫓아내지 않는다 — 조합할 게 없으면 판이 '같은 유닛 3개 필요'라고 알린다.
+function updateCombDot(){}
 function setCombTier(t){ _combTier=t; _combSig=''; renderCombinePanel(); }
 function combineOneOfType(gid, quiet){
   const list=G.units.filter(u=>u.gid===gid && !u.fixed && !u.atBoss); if(list.length<3) return;
@@ -9469,7 +9922,7 @@ function renderCombinePanel(){ const tiersBox=document.getElementById('hsTiers')
   if(!_combTier || tierSet.indexOf(_combTier)<0) _combTier=tierSet[0];
   const sig=_combTier+'|'+gids.map(g=>groups[g][0].gtier+':'+g+':'+groups[g].length).sort().join(',');
   if(sig===_combSig) return; _combSig=sig;
-  tiersBox.innerHTML=tierSet.map(function(t){ return '<button class="hsTier'+(t===_combTier?' on':'')+'" style="--tc:'+(TIER_COLOR[t]||'#fff')+'" onclick="setCombTier(\''+t+'\')">'+GACHA_TIERS[t].name+'</button>'; }).join('');
+  tiersBox.innerHTML=tierSegHTML(tierSet, _combTier, 'setCombTier');
   let cells='';
   for(const gid of gids){ const list=groups[gid]; if(list[0].gtier!==_combTier) continue; const gu=GACHA_UNITS[gid]; if(!gu) continue;
     const res=combineResultFor(gid, list[0].gtier);
@@ -9495,7 +9948,7 @@ function renderSelectPanel(){ const tiersBox=document.getElementById('hsTiers'),
   const byGid={}; for(const u of byTier[_selTierH]){ (byGid[u.gid]=byGid[u.gid]||[]).push(u); }
   const sig=_selTierH+'|'+live.map(u=>u.gtier+':'+u.gid).sort().join(',');
   if(sig===_selSig) return; _selSig=sig;
-  tiersBox.innerHTML=tierSet.map(function(t){ return '<button class="hsTier'+(t===_selTierH?' on':'')+'" style="--tc:'+(TIER_COLOR[t]||'#fff')+'" onclick="setSelTier(\''+t+'\')">'+GACHA_TIERS[t].name+'</button>'; }).join('');
+  tiersBox.innerHTML=tierSegHTML(tierSet, _selTierH, 'setSelTier');
   let cells='';
   const _go=Object.keys(byGid).sort((a,b)=>byGid[b].length-byGid[a].length);   // 마릿수 많은 순(왼쪽부터)
   for(const gid of _go){ const list=byGid[gid], gu=GACHA_UNITS[gid]; if(!gu) continue;
@@ -9516,7 +9969,7 @@ function renderSellPanel(){ const tiersBox=document.getElementById('hsTiers'), g
   if(!_sellTier || tierSet.indexOf(_sellTier)<0) _sellTier=tierSet[0];
   const sig=_sellTier+'|'+owned.map(u=>u.gtier+':'+u.gid).sort().join(',');   // 구성 변화 시에만 재렌더(클릭 끊김 방지)
   if(sig===_sellSig) return; _sellSig=sig;
-  tiersBox.innerHTML=tierSet.map(function(t){ return '<button class="hsTier'+(t===_sellTier?' on':'')+'" style="--tc:'+(TIER_COLOR[t]||'#fff')+'" onclick="setSellTier(\''+t+'\')">'+GACHA_TIERS[t].name+'</button>'; }).join('');
+  tiersBox.innerHTML=tierSegHTML(tierSet, _sellTier, 'setSellTier');
   const byGid={}; for(const u of owned){ if(u.gtier!==_sellTier) continue; (byGid[u.gid]=byGid[u.gid]||[]).push(u); }
   let cells='';
   const _go=Object.keys(byGid).sort((a,b)=>byGid[b].length-byGid[a].length);   // 마릿수 많은 순(왼쪽부터)
@@ -11711,6 +12164,7 @@ function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 
   G.mainSheet=null; G.sheetDown=false;   // 🎰 실제 탭 전환 = 유닛뽑기 등 메인 시트 모드 종료 + 접힘상태 해제
   G.tab=id;
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on')); el.classList.add('on');
+  gtabDrill(id);   // 그 구역에 하위가 있으면 내려간다(없으면 최상위 유지)
   document.querySelectorAll('.gview').forEach(v=>v.classList.remove('on')); document.getElementById('v'+(id==='Battle'?'Main':id)).classList.add('on');   // 전투실험은 메인 아레나 뷰 공유
   document.querySelectorAll('.bp').forEach(p=>p.classList.remove('on')); document.getElementById('bp'+id).classList.add('on');
   document.body.classList.toggle('sheetOpen', id!=='Build');   // 탭 진입 = 시트 자동 오픈(건설은 선택 시 시트)
@@ -12059,12 +12513,16 @@ function mainProfileRender(){ const host=document.getElementById('unitCmd'); if(
   if(host._cgSig!==sig){ host._cgSig=sig; m.page=host._cgPage||0; renderCmdGrid(host,m); }
   _mainCmdLive(); }
 // 🎰 유닛뽑기 시트 — 하단 프로필 자리(#unitCmd)에 4그리드(유닛1회·에너지·미사일 포탑·에너지 타워). 캔버스 이동 대신 시트 슬라이드업. 셀=runBeacon 직접 실행.
-const GACHA_SHEET_CELLS=['draw','energy','buyTurret','buyPhoton'];
+// 하위 구역별 칸 목록 — 하단 네비(GTAB_TREE.Unit)가 고르는 그 키다
+const GACHA_SEC_CELLS={ draw:['draw','draw5','energy','energy5'], tower:['buyTurret','buyPhoton'] };
+const GACHA_SEC_INFO={ draw:{ name:'유닛 및 가스 뽑기', desc:'길게 누르면 연속 구매' },
+                       tower:{ name:'방어 타워 구매',   desc:'길게 누르면 연속 구매' } };
 const BLDG_ICON_DIR='assets/icons/buildings/';
 const BEACON_ICON_IMG={
   buyTurret:'buildings/bld_turret.webp', buyPhoton:'buildings/bld_cannon.webp',
   draw:'auto/auto_unit.webp',      // 유닛 1회 = 자동 유닛 소환과 같은 뜻 — 한 장을 공유
   energy:'auto/auto_energy.webp',  // 가스 1회 = 자동 가스 변환과 같은 뜻
+  draw5:'auto/auto_unit.webp', energy5:'auto/auto_energy.webp',   // ×5 는 같은 그림 + 이름으로 구분(새 에셋을 만들지 않는다)
   gachaUp:'upgrades/up_gacha_up.webp', creditUp:'upgrades/up_mineral_up.webp', perm:'upgrades/up_perm.webp'
 };   // 값 = assets/icons/ 하위 경로. 같은 뜻은 새로 만들지 않고 공유한다(SKILL_ICO와 같은 규칙)   // 구매 타워 = 실제 건물 아이콘(미사일 포탑=미사일 터렛 · 에너지 타워=포톤 캐논)
 function beaconProHTML(id){ const f=BEACON_ICON_IMG[id];   // 업그레이드 아이콘(wpnBadgeHTML)과 동일 패턴 — 이미지 우선, 없으면 기존 SVG
@@ -12072,13 +12530,16 @@ function beaconProHTML(id){ const f=BEACON_ICON_IMG[id];   // 업그레이드 �
   return '<svg viewBox="0 0 24 24">'+beaconIcon(id)+'</svg>'; }
 // 파일이 아직 없을 때: 원래 쓰던 비콘 SVG로 교체(빈칸 방지)
 function _beaconFail(im){ try{ im.outerHTML='<svg viewBox="0 0 24 24">'+beaconIcon(im.getAttribute('data-fb'))+'</svg>'; }catch(_e){ try{ im.remove(); }catch(_e2){} } }
+function _beaconLabel(id){ const bulk=BEACON_BULK[id]; if(bulk) return bulk.name;
+  const b=DRAW_BEACONS.find(x=>x.id===id); return (b&&b.name)||id; }
 function _gachaSheetModel(){
-  const items=GACHA_SHEET_CELLS.map(id=>{ const b=(DRAW_BEACONS.find(x=>x.id===id))||{id:id,name:id}, cost=beaconCost(id), afford=((G.mineral||0)>=cost);
-    return { pro:beaconProHTML(id), sn:b.name, cr:cost, en:0, state:afford?'ok':'dim', act:'onpointerdown="gachaHoldStart(\''+id+'\',event)"' }; });
+  const cells=GACHA_SEC_CELLS[_gachaSec]||GACHA_SEC_CELLS.draw;
+  const items=cells.map(id=>{ const cost=beaconCost(id), afford=((G.mineral||0)>=cost);
+    return { pro:beaconProHTML(id), sn:_beaconLabel(id), cr:cost, en:0, state:afford?'ok':'dim', act:'onpointerdown="gachaHoldStart(\''+id+'\',event)"' }; });
   return { mode:'gacha', title:'유닛 뽑기', icon:'<svg viewBox="0 0 24 24">'+BEACON_ICON.unit+'</svg>', sub:'', compact:true, build:true,
-    info:{ eb:'', name:'유닛 및 타워 구매', desc:'길게 누르면 연속 구매' }, items:items }; }
+    info:Object.assign({eb:''}, GACHA_SEC_INFO[_gachaSec]||GACHA_SEC_INFO.draw), items:items }; }
 function renderGachaSheet(){ const host=document.getElementById('unitCmd'); if(!host) return; host.classList.add('simple');
-  const sig='g|'+Math.floor(G.mineral||0)+'|'+(host._cgPage||0);
+  const sig='g|'+_gachaSec+'|'+Math.floor(G.mineral||0)+'|'+(host._cgPage||0);
   if(host._gSig!==sig){ host._gSig=sig; host._cgSig=undefined; renderCmdGrid(host, _gachaSheetModel()); } }
 // ⚔ 토벌장(보스방) 하단 시트 — 트랙 홈 대신. 4그리드: 파견슬롯1·2(빈=파견 선택 / 채워짐=다중지정 프로필 카드+휴지통) · 전체회수 · 돌아가기.
 const _PIN_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6.5-5.2-6.5-11a6.5 6.5 0 0 1 13 0c0 5.8-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg>';
@@ -12142,25 +12603,34 @@ function bossDeployOne(gid){ if(!(G.coopBoss&&!G.coopBoss.dead)){ toast('ℹ️ 
   deployUnitToBoss(u); if(typeof playSfx==='function') playSfx('place_unit'); bossDeployExit(); }
 // ⬆️ 업그레이드 시트 — 하단 프로필 자리에 8칸(2페이지). 1p: 보병·메카닉·스웜·에테리얼 무기 강화(꾹=연속). 2p: 뽑기확률·크레딧획득·(빈)·영구강화(팝업).
 const UPG_CATS=[ {wpn:'inf',name:'보병'}, {wpn:'mech',name:'메카닉'}, {wpn:'zrg',name:'스웜'}, {wpn:'pro',name:'에테리얼'} ];
-function _upgradeSheetModel(){
-  const items=UPG_CATS.map(c=>{ const lv=(G.atkLv&&G.atkLv[c.wpn])||0, isMax=lv>=UPG_MAX, cost=upgCost(c.wpn), afford=((G.gas||0)>=cost);
+// 하위 구역별 칸 — 하단 네비(GTAB_TREE.Upgrade)가 고르는 그 키다.
+// 전에는 7칸을 한 격자에 몰아넣고 1/2 페이지로 넘겼는데, 지금은 구역이 페이지를 대신한다.
+const UPG_SEC_INFO={ atk:{ name:'공격력 강화',   desc:'길게 누르면 연속 구매' },
+                     luck:{ name:'획득 확률 강화', desc:'뽑기 등급과 미네랄 수급' },
+                     perm:{ name:'영구 강화',     desc:'판이 끝나도 남는 강화' } };
+function _upgAtkItems(){
+  return UPG_CATS.map(c=>{ const lv=(G.atkLv&&G.atkLv[c.wpn])||0, isMax=lv>=UPG_MAX, cost=upgCost(c.wpn), afford=((G.gas||0)>=cost);
     return { pro:wpnBadgeHTML(c.wpn,'#ff3b3b'), sn:c.name, en:cost, cr:0, sub:isMax?'MAX':('Lv.'+lv),
       bottom:'<div class="cgCost">'+(isMax?'':('<span class="cc en">'+resIco('gas')+_cgFmt(cost)+'</span>'))+'</div>',
-      state:isMax?'max':(afford?'ok':'dim'), act:isMax?'':('onpointerdown="upgHoldStart(\''+c.wpn+'\',event)"') }; });
+      state:isMax?'max':(afford?'ok':'dim'), act:isMax?'':('onpointerdown="upgHoldStart(\''+c.wpn+'\',event)"') }; }); }
+function _upgLuckItems(){
   const gLv=(G.gachaLuckLv||0), gMax=gLv>=GACHA_UP_MAX, gC=gachaUpCost();
-  items.push({ pro:beaconProHTML('gachaUp'), sn:'뽑기 확률', cr:gC, en:0, sub:gMax?'MAX':('Lv.'+gLv),
-    bottom:'<div class="cgCost">'+(gMax?'':('<span class="cc cr">'+resIco('mineral')+_cgFmt(gC)+'</span>'))+'</div>',
-    state:gMax?'max':(((G.mineral||0)>=gC)?'ok':'dim'), act:gMax?'':'onclick="buyGachaUp()"' });
   const cLv=(G.creditLv||0), cMax=cLv>=CREDIT_UP_MAX, cC=creditUpCost();
-  items.push({ pro:beaconProHTML('creditUp'), sn:'미네랄 획득', cr:cC, en:0, sub:cMax?'MAX':('Lv.'+cLv),
-    bottom:'<div class="cgCost">'+(cMax?'':('<span class="cc cr">'+resIco('mineral')+_cgFmt(cC)+'</span>'))+'</div>',
-    state:cMax?'max':(((G.mineral||0)>=cC)?'ok':'dim'), act:cMax?'':'onclick="buyCreditUp()"' });
-  items.push(null);   // 2페이지 3번 = 빈칸
-  items.push({ pro:beaconProHTML('perm'), sn:'영구 강화', cr:0, en:0, state:'ok', act:'onclick="openPointUpgrade()"' });
+  return [
+    { pro:beaconProHTML('gachaUp'), sn:'뽑기 확률', cr:gC, en:0, sub:gMax?'MAX':('Lv.'+gLv),
+      bottom:'<div class="cgCost">'+(gMax?'':('<span class="cc cr">'+resIco('mineral')+_cgFmt(gC)+'</span>'))+'</div>',
+      state:gMax?'max':(((G.mineral||0)>=gC)?'ok':'dim'), act:gMax?'':'onclick="buyGachaUp()"' },
+    { pro:beaconProHTML('creditUp'), sn:'미네랄 획득', cr:cC, en:0, sub:cMax?'MAX':('Lv.'+cLv),
+      bottom:'<div class="cgCost">'+(cMax?'':('<span class="cc cr">'+resIco('mineral')+_cgFmt(cC)+'</span>'))+'</div>',
+      state:cMax?'max':(((G.mineral||0)>=cC)?'ok':'dim'), act:cMax?'':'onclick="buyCreditUp()"' } ]; }
+function _upgPermItems(){
+  return [{ pro:beaconProHTML('perm'), sn:'영구 강화', cr:0, en:0, state:'ok', act:'onclick="openPointUpgrade()"' }]; }
+function _upgradeSheetModel(){
+  const items=(_upgSec==='luck')?_upgLuckItems():(_upgSec==='perm')?_upgPermItems():_upgAtkItems();
   return { mode:'upg', title:'업그레이드', icon:pIco('PERM'), sub:'', compact:true, build:true,
-    info:{ eb:'', name:'공격력 강화 및 업그레이드', desc:'길게 누르면 연속 구매' }, items:items }; }
+    info:Object.assign({eb:''}, UPG_SEC_INFO[_upgSec]||UPG_SEC_INFO.atk), items:items }; }
 function renderUpgradeSheet(){ const host=document.getElementById('unitCmd'); if(!host) return; host.classList.add('simple');
-  const sig='u|'+((G.atkLv&&[G.atkLv.inf,G.atkLv.mech,G.atkLv.zrg,G.atkLv.pro].join('.'))||'')+'|'+(G.gachaLuckLv||0)+'|'+(G.creditLv||0)+'|'+Math.floor(G.mineral||0)+'|'+Math.floor(G.gas||0)+'|'+(host._cgPage||0);
+  const sig='u|'+_upgSec+'|'+((G.atkLv&&[G.atkLv.inf,G.atkLv.mech,G.atkLv.zrg,G.atkLv.pro].join('.'))||'')+'|'+(G.gachaLuckLv||0)+'|'+(G.creditLv||0)+'|'+Math.floor(G.mineral||0)+'|'+Math.floor(G.gas||0)+'|'+(host._cgPage||0);
   if(host._gSig!==sig){ host._gSig=sig; host._cgSig=undefined; renderCmdGrid(host, _upgradeSheetModel()); } }
 // ═══ 공통 관전 플레이어 시트 빌더(단일 소스) — 협동/대전(versus)을 옵션으로. 네모·오토배틀·향후 유즈맵 공용 ═══
 //   cfg: { me, active[], names{}, versus, team(n), color(n), portrait(n,o), nameOf(n), badgeOf(n,o), watchingOf(n),
@@ -12183,7 +12653,14 @@ function playerSheetModel(cfg){
     compact:true, build:true, info:cfg.info||{ eb:'플레이어', hideName:true, desc:'' }, items:items }; }
 // 👥 네모(협동) 플레이어 시트 — 나 빼고 전부 관전 가능. 셀 탭 = 그 플레이어 화면.
 function _playersSheetModel(){ const me=G.myPlayer||1;
-  return playerSheetModel({ me:me, active:G.activePlayers||[1,2,3,4,5,6,7,8], versus:false,
+  // 아군/적군은 팀이 갈리는 판에서만 나뉜다(gameHasVersus). 개인전·협동은 전원 아군이라 하위 네비 자체가 안 뜨고
+  // _plSec 는 'ally' 로 남으므로 아래 필터는 전원 통과 = 지금까지와 같은 목록이다.
+  const versus=(typeof gameHasVersus==='function')&&gameHasVersus(), teams=G.teams||{};
+  const list=(G.activePlayers||[1,2,3,4,5,6,7,8]).filter(function(n){
+    if(!versus) return true;
+    const foe=(teams[n]!==teams[me]);
+    return (_plSec==='foe')?foe:!foe; });
+  return playerSheetModel({ me:me, active:list, versus:versus, team:function(n){ return teams[n]; },
     selfPickable:false, selfState:'max',
     nameOf:function(n){ return (typeof playerName==='function'?playerName(n):('P'+n))+(n===me?' (나)':''); },
     badgeOf:function(n,o){ return o.isMe?'현재':'관전'; },
@@ -12193,7 +12670,7 @@ function _playersSheetModel(){ const me=G.myPlayer||1;
     mode:'players', title:'플레이어', icon:pIco('👥'), sub:'다른 플레이어 화면 보기',
     info:{ eb:'플레이어', name:'다른 플레이어 관전', desc:'플레이어를 눌러 그 화면으로 이동' } }); }
 function renderPlayersSheet(){ const host=document.getElementById('unitCmd'); if(!host) return; host.classList.add('simple');
-  const sig='p|'+(G.myPlayer||1)+'|'+((G.activePlayers||[]).join('.'))+'|'+(G.curPlayer||0)+'|'+(host._cgPage||0);
+  const sig='p|'+_plSec+'|'+(G.myPlayer||1)+'|'+((G.activePlayers||[]).join('.'))+'|'+(G.curPlayer||0)+'|'+(host._cgPage||0);
   if(host._gSig!==sig){ host._gSig=sig; host._cgSig=undefined; renderCmdGrid(host, _playersSheetModel()); } }
 function viewPlayerFromSheet(n){ G.curPlayer=n; if(typeof playSfx==='function') playSfx('ui_open'); switchTab('Players', document.querySelector('.tab[data-tab="Players"]')); }
 // 💀 보스 시트 — 개인보스 소환(4종) 전용. 포인트방(파견·회수·토벌장)은 우상단 공용보스 바 클릭 팝업으로 분리.
@@ -12232,6 +12709,81 @@ window.addEventListener('blur', bossHoldClear);
 function renderMainSheet(){ if(G.mainSheet==='gacha') renderGachaSheet(); else if(G.mainSheet==='upgrade') renderUpgradeSheet(); else if(G.mainSheet==='players') renderPlayersSheet(); else if(G.mainSheet==='boss') renderBossSheet(); else if(G.mainSheet==='auto') renderAutoSheet(); }
 // 하단 탭 하이라이트 = 활성 섹션(메인/유닛뽑기/업그레이드/플레이어). 게임 화면과 무관하게 섹션 탭만 표시.
 function _setBottomTab(tab){ document.querySelectorAll('#tabs .tab').forEach(function(t){ t.classList.toggle('on', t.getAttribute('data-tab')===tab); }); }
+// ══ 인게임 하단 탭 = 2층(최상위 5칸 → 구역 전용) ═══════════════════════════
+// HOME 네비(NAV_TREE + navPaint)와 **같은 구조·같은 칸**이다 — 하위 칸은 `_navCell()` 로 만든다.
+// ⛔ 여기에 새 버튼 스타일이나 두 번째 탭 띠를 만들지 말 것. 생김새는 .navIt 하나가 단일 소스.
+// 최상위 .tab 마크업은 건드리지 않는다: 내려가면 CSS(#tabs.drill .tab)가 숨기고, 올라오면 그대로 살아난다.
+//   sub.cur 가 가리키는 키와 같은 칸이 .cur 로 표시된다. show() 가 false 인 하위는 아예 안 나온다.
+//   하위가 하나도 없는 구역(전투실험·건설 등 관리자 탭)은 내려가지 않는다.
+const GTAB_TREE={
+  // 자동화는 _homeMode 가 아니라 시트 모드(G.mainSheet==='auto')다 — cur 에서 그것부터 본다
+  Main:    { cur:()=>(G.mainSheet==='auto'?'auto':_homeMode), subs:[
+      { k:'select',  label:'유닛 지정', ico:'marine', act:()=>mainGoMode('select') },
+      { k:'sell',    label:'유닛 판매', ico:'coin',   act:()=>mainGoMode('sell') },
+      // 조합은 늘 자리를 지킨다 — 조합할 게 없으면 칸이 사라지는 게 아니라 판이 '3개 필요'라고 알린다
+      { k:'combine', label:'유닛 조합', ico:'photon', act:()=>mainGoMode('combine') },
+      // 자동화 = 옛 '전송 옆 AUTO 배너'. 표시 조건도 그 배너가 쓰던 것 그대로(하나라도 해금됐을 때)
+      { k:'auto',    label:'자동화',   ico:'cpu',    act:()=>openAutoSheet(),
+        show:()=>autoAnyOwned() } ] },
+  Unit:    { cur:()=>_gachaSec, subs:[
+      { k:'draw',  label:'뽑기',     ico:'gift',   act:()=>setGachaSec('draw') },
+      { k:'tower', label:'타워구매', ico:'sunken', act:()=>setGachaSec('tower') } ] },
+  Upgrade: { cur:()=>_upgSec, subs:[
+      { k:'atk',  label:'공격력',   ico:'boost', act:()=>setUpgSec('atk') },
+      { k:'luck', label:'확률',     ico:'rand',  act:()=>setUpgSec('luck') },
+      { k:'perm', label:'영구강화', ico:'upg',   act:()=>setUpgSec('perm') } ] },
+  Boss:    { cur:()=>(G.bossOpen?'arena':'pboss'), subs:[
+      { k:'pboss', label:'개인보스', ico:'dungeon', act:()=>{ if(G.bossOpen) closeBossArena(); openBossSheet(); } },
+      // 포인트방은 '섹션'이 아니라 화면 전환이다 — 공용 보스가 살아 있을 때만 나온다
+      { k:'arena', label:'포인트방', ico:'flag', act:()=>openBossArena(),
+        show:()=>!!(G.coopBoss && !G.coopBoss.dead) } ] },
+  // 아군/적군은 대전(팀이 갈리는 판)에서만 뜻이 있다 — 개인전·협동은 전원 아군이라 하위를 두지 않는다
+  Players: { cur:()=>_plSec, subs:[
+      { k:'ally', label:'아군', ico:'friend', act:()=>setPlSec('ally') },
+      { k:'foe',  label:'적군', ico:'cpu',   act:()=>setPlSec('foe') } ],
+      show:()=>gameHasVersus() },
+};
+let _gtabDrill='';   // 내려가 있는 구역('' = 최상위 5칸)
+// 이 구역이 지금 실제로 보여줄 하위 목록(show() 통과분). 0개면 내려갈 것이 없다.
+function gtabSubs(tab){ const sec=GTAB_TREE[tab];
+  // 관리자 샌드박스·직스는 같은 탭 이름이 다른 화면을 가리킨다(유닛=이펙트 랩, 업그레이드=보급 …) —
+  // 여기 하위는 네모네모 인게임 전용이므로 그 모드에선 내려가지 않는다.
+  if(typeof G!=='undefined' && (G.sandbox||G.strike)) return [];
+  if(!sec || (sec.show && !sec.show())) return [];
+  return sec.subs.filter(t=>!t.show || t.show()); }
+function gtabPaint(){ const b=document.getElementById('tabs'); if(!b) return;
+  b.querySelectorAll('.navIt').forEach(e=>e.remove());        // 지난 하위 칸 걷어내기
+  const subs=_gtabDrill?gtabSubs(_gtabDrill):[];
+  b.classList.toggle('drill', subs.length>0);
+  if(!subs.length){ _gtabDrill=''; return; }
+  const sec=GTAB_TREE[_gtabDrill], cur=sec.cur?sec.cur():null;
+  let h=_navCell('nav','back','뒤로','back','navBk','gtabBack()');
+  for(const t of subs) h+=_navCell('sub', t.k, t.label, t.ico, (cur===t.k?'cur':''), "gtabSub('"+t.k+"')");
+  b.insertAdjacentHTML('beforeend', h);
+  if(typeof paintIcons==='function') paintIcons(b); }
+// 최상위 칸을 눌렀을 때 — 화면 전환은 이미 각 open*() 가 했고, 여기서는 층만 정한다
+function gtabDrill(tab){ _gtabDrill=gtabSubs(tab).length?tab:''; gtabPaint(); }
+function gtabSub(k){ const subs=gtabSubs(_gtabDrill), t=subs.find(x=>x.k===k); if(!t) return;
+  if(typeof playSfx==='function') playSfx('ui_tab');
+  t.act(); gtabPaint(); }
+// ‹ = 한 층 위(최상위 5칸). 보고 있는 화면은 그대로 둔다 — HOME 네비의 navBack 과 같은 뜻이다.
+function gtabBack(){ if(typeof playSfx==='function') playSfx('ui_back');
+  _gtabDrill=''; gtabPaint(); }
+// 대전 판인가 — 나와 팀이 다른 플레이어가 실제로 있는가. 네모(협동)는 전원 같은 편이라 항상 false.
+function gameHasVersus(){ if(typeof G==='undefined' || !G.teams) return false;
+  const me=G.myPlayer||1, mine=G.teams[me];
+  return (G.activePlayers||[]).some(n=>G.teams[n]!==undefined && G.teams[n]!==mine); }
+// 자동화 항목을 하나라도 해금했는가 — 옛 #autoFab 의 표시 조건과 같은 식이다
+function autoAnyOwned(){ if(typeof autoUtilOwned!=='function' || typeof G==='undefined' || G.phase!=='playing') return false;
+  const o=autoUtilOwned(); return !!(o.combine||o.unit||o.energy||o.place||o.bossdeploy); }
+// 지정/판매/조합으로 돌아가기 — 자동화 시트를 보고 있었다면 먼저 메인 홈으로 되돌린다
+function mainGoMode(m){ if(typeof G!=='undefined' && G.mainSheet!=null && typeof openMainHome==='function') openMainHome();
+  setHomeMode(m); }
+// 구역별 '지금 고른 하위'
+let _gachaSec='draw', _upgSec='atk', _plSec='ally';
+function setGachaSec(k){ _gachaSec=k; const h=document.getElementById('unitCmd'); if(h){ h._gSig=undefined; h._cgPage=0; } renderGachaSheet(); }
+function setUpgSec(k){ _upgSec=k; const h=document.getElementById('unitCmd'); if(h){ h._gSig=undefined; h._cgPage=0; } renderUpgradeSheet(); }
+function setPlSec(k){ _plSec=k; const h=document.getElementById('unitCmd'); if(h){ h._gSig=undefined; h._cgPage=0; } renderPlayersSheet(); }
 // 하단 탭 버튼 → 화면 이동 대신 메인 뷰 유지 + 하단 섹션만 전환(모드별) + 탭 하이라이트 이동. 관리자 샌드박스는 기존 탭 동작 유지.
 function openMainSheet(mode, el, sbTab){
   if(G.sandbox && sbTab && sbTab!=='Upgrade'){ switchTab(sbTab, el||document.querySelector('.tab[data-tab="'+sbTab+'"]')); return; }   // 업그레이드는 전체화면 뷰 폐지 → 관리자도 하단 시트
@@ -12240,7 +12792,7 @@ function openMainSheet(mode, el, sbTab){
     if(typeof _syncSheetLift==='function'){ requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); }
     if(typeof playSfx==='function') playSfx('ui_open'); return; }
   if(G.tab!=='Main') switchTab('Main', document.querySelector('.tab[data-tab="Main"]'));   // 다른 뷰(건설 등)에서 왔으면 메인 뷰 복귀
-  G.sel=[]; G.selEnemy=null; G.selType=null; G.mainSheet=mode; G.sheetDown=false; _setBottomTab(sbTab);   // 이 섹션으로 전환 + 하이라이트 이동
+  G.sel=[]; G.selEnemy=null; G.selType=null; G.mainSheet=mode; G.sheetDown=false; _setBottomTab(sbTab); gtabDrill(sbTab);   // 이 섹션으로 전환 + 하이라이트 이동 + 그 구역 하위 네비로
   document.body.classList.add('sheetOpen');   // 섹션 전환 = 시트 올림(직전에 토글로 내려놨을 수 있으므로 명시)
   if(typeof playSfx==='function') playSfx('ui_open'); refreshSelCard(); }
 // 메인 탭 = 유닛지정/판매/조합 섹션(하단 홈). 다른 섹션에서 눌러도 반드시 메인 섹션으로 복귀.
@@ -12252,10 +12804,10 @@ function openMainHome(el){
     if(typeof _syncSheetLift==='function'){ requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); }
     if(typeof playSfx==='function') playSfx('ui_open'); return; }
   if(G.tab!=='Main') switchTab('Main', document.querySelector('.tab[data-tab="Main"]'));
-  G.mainSheet=null; G.sel=[]; G.selEnemy=null; G.selType=null; _selViaTab=false; G.sheetDown=false; _setBottomTab('Main'); document.body.classList.add('sheetOpen'); if(typeof playSfx==='function') playSfx('ui_open'); refreshSelCard(); }
+  G.mainSheet=null; G.sel=[]; G.selEnemy=null; G.selType=null; _selViaTab=false; G.sheetDown=false; _setBottomTab('Main'); gtabDrill('Main'); document.body.classList.add('sheetOpen'); if(typeof playSfx==='function') playSfx('ui_open'); refreshSelCard(); }
 function openGachaSheet(el){ if(G.strike){ switchTab('Unit', el||document.querySelector('.tab[data-tab="Unit"]')); return; } openMainSheet('gacha', el, 'Unit'); }   // 직스: 건설지 탭
 function openUpgradeSheet(el){ if(G.strike){ switchTab('Upgrade', el||document.querySelector('.tab[data-tab="Upgrade"]')); return; } openMainSheet('upgrade', el, 'Upgrade'); }   // 직스: 보급 탭
-function openAutoSheet(el){ openMainSheet('auto', el, ''); }   // 전송 옆 자동설정 버튼 → 하단 자동화 그리드(전용 탭 없음)
+function openAutoSheet(el){ openMainSheet('auto', el, 'Main'); }   // 메인 구역의 하위 '자동화' → 하단 자동화 그리드(최상위 탭은 메인 유지)
 // ⚙ 자동화 설정 시트 — 팝업 대신 하단 그리드(on/off 셀). 켜두면 유지되는 것들이라 여기서 한 번 설정.
 const AUTO_ICON_DIR='assets/icons/auto/';
 // 자동화 아이콘 — 이미지 우선(auto_<kind>.webp), 없으면 기존 라인SVG 그대로(beaconProHTML·wpnBadgeHTML과 같은 패턴)
@@ -12289,7 +12841,7 @@ function openBossSheet(el){
     if(typeof _syncSheetLift==='function'){ requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); }
     if(typeof playSfx==='function') playSfx('ui_open'); return; }
   if(G.tab!=='Main') switchTab('Main', document.querySelector('.tab[data-tab="Main"]'));
-  G.sel=[]; G.selEnemy=null; G.selType=null; G.mainSheet='boss'; G.sheetDown=false; _setBottomTab('Boss');   // 보스 탭 하이라이트
+  G.sel=[]; G.selEnemy=null; G.selType=null; G.mainSheet='boss'; G.sheetDown=false; _setBottomTab('Boss'); gtabDrill('Boss');   // 보스 탭 하이라이트 + 하위 네비(개인보스·포인트방)
   document.body.classList.add('sheetOpen');
   if(typeof playSfx==='function') playSfx('ui_open'); refreshSelCard(); }
 // 커스텀 초상화 이미지(유닛/건물 id → 파일). 있으면 3D/라인아트 대신 사용.
@@ -13023,13 +13575,13 @@ function togglePbossAuto(ev, id){ if(ev){ ev.stopPropagation(); ev.preventDefaul
 // ── 메인 자동화 묶음 버튼/팝업(자동 조합·유닛·에너지) ──
 function autoUtilOwned(){ return {combine:autoUsable('combine'), unit:autoUsable('unit'), energy:autoUsable('energy'), place:autoUsable('place'), bossdeploy:autoUsable('bossdeploy')}; }
 function autoSig(){ const o=autoUtilOwned(); const a=G.auto||{}; return ''+(a.combine?1:0)+(a.unit?1:0)+(a.energy?1:0)+(a.place?1:0)+(a.bossdeploy?1:0)+(o.combine?1:0)+(o.unit?1:0)+(o.energy?1:0)+(o.place?1:0)+(o.bossdeploy?1:0)+(G.rallyShow!==false?1:0); }
-function updateAutoFab(){ const b=document.getElementById('autoFab'); if(!b) return;
-  if(!G.auto) G.auto={unit:false,combine:false,energy:false,pboss:{}};
-  const o=autoUtilOwned(), anyOwned=o.combine||o.unit||o.energy||o.place||o.bossdeploy;
-  const showFab=(G.tab==='Main' && G.phase==='playing' && anyOwned);   // 전송 옆 자동설정 버튼 → 선택과 무관하게 표시
-  b.classList.toggle('hide', !showFab);
-  if(!showFab) return;
-  b.classList.toggle('act', !!((o.combine&&G.auto.combine)||(o.unit&&G.auto.unit)||(o.energy&&G.auto.energy)||(o.place&&G.auto.place)||(o.bossdeploy&&G.auto.bossdeploy))); }   // 하나라도 ON이면 버튼 강조
+// 자동화는 전송 옆 배너(#autoFab)에서 메인 구역의 하위 칸으로 옮겼다(2026-08-14).
+// 매 프레임 도는 자리라 해금 여부가 '바뀐 순간'에만 네비를 다시 그린다 — 아니면 DOM을 매 프레임 갈아엎는다.
+let _autoOwnedSig=null;
+function updateAutoFab(){ if(!G.auto) G.auto={unit:false,combine:false,energy:false,pboss:{}};
+  const own=autoAnyOwned(); if(own===_autoOwnedSig) return;
+  _autoOwnedSig=own;
+  if(typeof gtabPaint==='function' && _gtabDrill==='Main') gtabPaint(); }
 function toggleAuto(kind){ const o=autoUtilOwned(); if(!o[kind]){ toast('🔒 업그레이드 필요'); return; }
   if(!G.auto) G.auto={unit:false,combine:false,energy:false,pboss:{}};
   G.auto[kind]=!G.auto[kind];
@@ -13268,7 +13820,7 @@ function renderCmdGrid(host, m){ const el=(typeof host==='string')?document.getE
   const pager=(pages>1)?('<div class="cgPage"><button onclick="_cgTurn(this,-1)">◀</button><span class="dots">'+dots+'</span><span class="pn">'+(pg+1)+' / '+pages+'</span><button onclick="_cgTurn(this,1)">▶</button></div>'):'';
   const pill=m.status?('<span class="cgPill'+(m.statusIdle?' idle':'')+'">'+m.status+'</span>'):'';
   el.innerHTML='<div class="cmdG" data-mode="'+(m.mode||'upg')+'" data-compact="'+(m.compact?1:0)+'" data-build="'+(m.build?1:0)+'">'
-    +'<div class="cgHead"><div class="cgPort">'+(m.icon||'')+'</div><div class="cgTtl"><div class="cgN">'+(m.title||'')+'</div>'+(m.hpsh?'<div class="cgHpsh">'+m.hpsh+'</div>':(m.sub?'<div class="cgS">'+m.sub+'</div>':''))+'</div>'+pill+pager+(m.topRight||'')+(m.back||'')+'</div>'   // 우상단 순서 = [상태칩][◀페이지▶][자원스텝퍼·랠리·부양 / 전체지정] → 페이지네이션이 왼쪽, 건물 조작 버튼이 오른쪽 끝(전 프로필 통일) · 🔙 돌아가기(유턴)는 그보다 뒤
+    +'<div class="cgHead"><div class="cgTtl"><div class="cgN">'+(m.title||'')+'</div>'+(m.hpsh?'<div class="cgHpsh">'+m.hpsh+'</div>':(m.sub?'<div class="cgS">'+m.sub+'</div>':''))+'</div>'+pill+pager+(m.topRight||'')+(m.back||'')+'</div>'   // 우상단 순서 = [상태칩][◀페이지▶][자원스텝퍼·랠리·부양 / 전체지정] → 페이지네이션이 왼쪽, 건물 조작 버튼이 오른쪽 끝(전 프로필 통일) · 🔙 돌아가기(유턴)는 그보다 뒤
     +'<div class="cgBody"><div class="cgInfo">'+_cgInfoHTML(m.info)+'</div><div class="cgCol"><div class="cgGrid">'+cells.join('')+'</div></div></div></div>';
   if(m.build){ const nms=el.querySelectorAll('.cgName'); for(const nm of nms){ let fs=10; nm.style.fontSize=fs+'px'; let g=0; while(nm.scrollWidth>nm.clientWidth+0.5 && fs>6 && g++<12){ fs-=0.5; nm.style.fontSize=fs+'px'; } } } }   // 이름 생략(...) 대신 폰트 축소로 한 줄에 전부
 function _cgTurn(btn,delta){ let h=btn; while(h && !h._cgModel) h=h.parentElement; if(!h||!h._cgModel) return; h._cgModel.page=(h._cgPage||0)+delta; renderCmdGrid(h,h._cgModel); }
@@ -13393,6 +13945,8 @@ function _renderMission(){ const box=document.getElementById('body-mission'); if
 function openAppSettings(){ const p=document.getElementById('settingsPop'); if(!p) return; p.classList.remove('hide'); p.classList.add('appCtx');
   if(typeof fxPop==='function') fxPop(p.querySelector('.setCard'));
   const lo=document.getElementById('setLogout'); if(lo) lo.style.display=(typeof AUTH!=='undefined'&&AUTH.user)?'':'none';   // 로그인 상태에서만 로그아웃
+  // 계정 연결은 '클라우드에 올라간 게스트'만 할 수 있다(로컬 게스트는 붙일 uid 가 없다)
+  const lk=document.getElementById('setLink'); if(lk) lk.style.display=(typeof authCanLink==='function'&&authCanLink())?'':'none';
   if(typeof syncSndUI==='function') syncSndUI();
   if(typeof applyVideo==='function') applyVideo(); }   // 소리는 상단 고정 스위치라 따로 펼칠 것이 없다
 // 설정 하위 팝업 — 리스트 항목 하나당 한 화면.
@@ -13562,6 +14116,8 @@ function closeSheet(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); docume
 function ovStatRow(label,val){ return '<div class="ovStat"><span class="osL">'+label+'</span><span class="osV">'+val+'</span></div>'; }
 // 이번 판 획득 요약 1회 계산(해금 감지 포함)
 function _runSummary(){ if(G._runSum) return G._runSum;
+  // 📅 일일 — 유즈맵 1판 종료. 이 함수는 판당 1회만 계산되므로 여기가 유일한 계측 지점이다(중도 나가기는 제외).
+  if(typeof dqNote==='function' && G.phase!=='quit'){ dqNote('umRun',1); if(G.phase==='won') dqNote('umWin',1); }
   if(G.strike){ const S=(typeof STK!=='undefined'&&STK)?STK:{}, me=S.me||{};   // 직스: 라운드·코인 대신 결과·처치·플레이타임
     G._runSum={ strike:true, result:(G.phase==='won')?'win':'lose', kills:(me.kills||0), time:(S.t||0), gold:Math.floor(me.gold||0) }; return G._runSum; }
   const hadDiff=(typeof PLAYER_META!=='undefined'&&PLAYER_META.clearedDifficulty)||'';
@@ -13692,7 +14248,8 @@ function _lsGet(k,d){ try{ const v=JSON.parse(localStorage.getItem(k)); return v
 function _lsSet(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
 function sbUser(u){ const meta=u.user_metadata||{};
   const nick = meta.nick || (u.email ? u.email.split('@')[0] : ('게스트'+String(u.id||'').replace(/-/g,'').slice(0,4)));
-  return { email:u.email||null, nick, uid:u.id, anon:!!u.is_anonymous }; }   // 익명 사용자는 이메일 없음 → 게스트 닉 생성
+  // 익명 = 게스트다. 여기 한 곳에서 정하므로 세션 복원(새로고침) 뒤에도 게스트 판정이 유지된다.
+  return { email:u.email||null, nick, uid:u.id, anon:!!u.is_anonymous, guest:!!u.is_anonymous }; }
 async function initAuth(){
   if(SUPABASE_CONFIG.url && SUPABASE_CONFIG.anonKey){
     try{
@@ -13705,7 +14262,7 @@ async function initAuth(){
       if(AUTH.user){ await sbEnsureProfile(); await sbSyncMetaOnLogin(); }   // 프로필 보정 + 계정 메타(포인트) 로드
       _sb.auth.onAuthStateChange((_e,sess)=>{
         if(sess&&sess.user){ AUTH.user=sbUser(sess.user); sbEnsureProfile(); return; }
-        if(AUTH.user&&AUTH.user.guest) return;   // 게스트는 supabase 세션이 없다 — 이 이벤트로 지우면 안 된다
+        if(AUTH.user&&AUTH.user.local) return;   // ⚠ '로컬' 게스트만 보호한다. 익명 게스트는 진짜 세션이 있어 이 이벤트를 받아야 한다
         AUTH.user=null; });
       return;
     }catch(e){ console.warn('Supabase 초기화 실패 → 로컬 계정 모드', e); AUTH.mode='local'; }
@@ -13713,7 +14270,10 @@ async function initAuth(){
   if(!AUTH.user) AUTH.user = _lsGet('nm_session', null);   // 로컬 모드: 저장된 세션 자동 복원(이미 들어왔으면 그대로)
 }
 const ID_DOMAIN='nemonemo.app';   // 아이디를 Supabase 이메일 인증으로 처리하기 위한 합성 도메인(실제 메일 아님)
-function idToEmail(id){ return String(id).toLowerCase().replace(/[^a-z0-9._-]/g,'') + '@' + ID_DOMAIN; }
+// 이미 진짜 이메일이면 그대로 쓴다 — 이메일로 가입한 계정만 재설정 메일을 받을 수 있다.
+function idToEmail(id){ const v=String(id).trim();
+  if(v.indexOf('@')>=0) return v.toLowerCase();
+  return v.toLowerCase().replace(/[^a-z0-9._-]/g,'') + '@' + ID_DOMAIN; }
 async function authSignUp(id,pw,nick){ nick=(nick||id);   // 닉네임=게임 내 표시명(아이디는 로그인 전용)
   if(AUTH.mode==='supabase'){ const {data,error}=await _sb.auth.signUp({email:idToEmail(id),password:pw,options:{data:{nick}}});
     if(error) throw new Error(/registered|already|exists/i.test(error.message||'')?'이미 사용 중인 아이디입니다.':(error.message||'회원가입에 실패했습니다.'));
@@ -13742,9 +14302,9 @@ function playScreenFx(){ }
 function fxPop(card){ if(!card) return; card.classList.remove('fxPop'); void card.offsetWidth; card.classList.add('fxPop');
   clearTimeout(card._fxT); card._fxT=setTimeout(()=>card.classList.remove('fxPop'),200); }
 // ── 앱 화면 전환 ──
-const APP_SCREENS=['opening','auth','mapSelect','modeSheet','homeScreen','charScreen','townScreen','dgScreen','shopScreen','gearScreen','upgScreen'];   // ⚠ 여기 없는 화면은 showAppScreen 이 영영 안 켠다(캐릭터 화면이 그랬다)
+const APP_SCREENS=['opening','auth','mapSelect','modeSheet','homeScreen','townScreen','dgScreen','shopScreen','gearScreen','upgScreen'];   // ⚠ 여기 없는 화면은 showAppScreen 이 영영 안 켠다
 // 💠 공용 재화 바를 띄우는 화면(RPG/허브 + 유즈맵 선택). 로그인·타이틀·캐릭터생성·인게임은 제외.
-const CUR_SCREENS=['homeScreen','townScreen','mapSelect','modeSheet','dgScreen','shopScreen','gearScreen','upgScreen'];   // 캐릭터 화면도 재화 바를 쓴다
+const CUR_SCREENS=['homeScreen','townScreen','mapSelect','modeSheet','dgScreen','shopScreen','gearScreen','upgScreen'];   // 이 화면들은 공용 재화 바를 쓴다
 // 그중 바를 '판'이 아니라 배경 위 숫자로 두는 화면(.curBar.bare) — 배경이 상단까지 이어져 보여야 하는 곳
 const BARE_CUR_SCREENS=['homeScreen','townScreen','mapSelect','shopScreen','gearScreen','upgScreen'];   // 재화 바를 '판'이 아니라 배경 위 숫자로 — 상단 줄이 겹쳐 답답해진다(구분선 없이 배경이 이어진다)
 function curSetTitle(t){ const e=document.getElementById('curTitle'); if(e) e.textContent=t||''; }   // 재화 바 왼쪽 제목(화면별)
@@ -13772,7 +14332,7 @@ function showAppScreen(id){ setInGame(false);
   // (openTown이 _townOpen을 켜고 나서 이 함수를 부른다 — 끄면 마을 3D가 안 뜬다).
   if(id!=='townScreen' && typeof _townOpen!=='undefined' && _townOpen && typeof twLeave==='function') twLeave();
   if(typeof tw3dDetach==='function') tw3dDetach();
-  for(const id of ['hbRoundSheet','hbBoostModal','hbGrowModal','hbInfoModal']){ const el=document.getElementById(id); if(el) el.classList.add('hide'); }
+  for(const id of ['hbRoundSheet','hbBoostModal','hbGrowModal','hbInfoModal','hbDailySheet','hbAttSheet']){ const el=document.getElementById(id); if(el) el.classList.add('hide'); }
   if(id!=='mapSelect' && id!=='modeSheet' && typeof stopMapLive==='function') stopMapLive();   // 유즈맵 화면 떠나면 실시간 갱신 정지
   ['ov','lobby','rooms','createPanel','pwPanel'].forEach(x=>{const e=document.getElementById(x); if(e)e.classList.add('hide');});
   APP_SCREENS.forEach(s=>{ const e=document.getElementById(s); if(e) e.classList.toggle('hide', s!==id); });
@@ -13920,16 +14480,64 @@ async function bootApp(){
   // ⚠ 이 타이머는 '오프닝을 걷어내는' 용도다. 그 사이 다른 화면으로 이미 넘어갔다면 건드리지 않는다 —
   //    무조건 openAuth()를 부르면 1.7초 뒤에 사용자가 보고 있던 화면을 로그인 화면이 덮어버린다(스모크가 간헐 실패했다).
   setTimeout(()=>{ const op=document.getElementById('opening');
-    if(!op || !op.classList.contains('hide')) openAuth(); }, 1700); }
+    if(op && op.classList.contains('hide')) return;                 // 이미 다른 화면으로 넘어갔다
+    if(AUTH.user){ enterAfterWarm(); return; }                      // 세션이 살아 있으면 로그인 화면을 건너뛴다
+    openAuth(); }, 1700); }
 // 🧍 방치 하트비트: 앱 켜져 있으면 60초마다 100% 자동 적립(유즈맵과 무관)
 try{ setInterval(profIdleTick, 60000); }catch(e){}
 window.addEventListener('beforeunload', function(){ try{ profStampSeen(); }catch(e){} });   // 종료 시 시각 스탬프(다음 접속 오프라인 정산 기준)
 // ── 로그인 화면 ──
-let _authTab='login';
+// ── 로그인 화면 = 방식 선택 허브(①) + 로그인/회원가입 폼(②) 두 단계 ──
+// 폼은 한 벌뿐이다. 아이디냐 이메일이냐는 _authKind 하나로만 갈린다 — 폼을 두 벌 만들지 말 것.
+let _authTab='login', _authKind='id';
+// 게스트 → 정식 계정 '연결' 모드. 같은 폼을 쓰되 제출만 authLinkAccount 로 간다(폼을 또 만들지 않는다).
+let _authLink=false;
+function openAuthLink(){ if(!authCanLink()) return;
+  _authLink=true; openAuth();
+  document.getElementById('authSub').textContent='게스트 진행도를 계정에 연결합니다'; }
+function authLinkCancel(){ _authLink=false; if(typeof openHome==='function') openHome(); }
+const AUTH_WAYS={ id:{label:'아이디', ico:'user'}, email:{label:'이메일', ico:'mail'}, guest:{label:'게스트', ico:'user'} };
+function authRememberWay(k){ try{ _lsSet('nm_last_auth', k); }catch(e){} }   // 재방문 때 그 방식 폼으로 바로 연다
+function authLastWay(){ const k=_lsGet('nm_last_auth', null); return AUTH_WAYS[k]? k : null; }
+// 허브로 — '다른 방법으로'와 최초 진입이 같은 상태로 수렴한다
+function authShowHub(){
+  document.getElementById('authHub').classList.remove('hide');
+  document.getElementById('authForm').classList.add('hide');
+  document.getElementById('authSub').textContent=_authLink?'게스트 진행도를 계정에 연결합니다':'로그인하고 시작하세요';
+  // 연결 모드엔 게스트로 다시 들어갈 이유가 없다 — 아이디/이메일만 남긴다
+  document.getElementById('authHubOr').classList.toggle('hide', _authLink);
+  document.getElementById('authGuest').classList.toggle('hide', _authLink);
+  document.getElementById('wayGoogle').classList.toggle('hide', _authLink);
+  document.getElementById('wayId').textContent='';
+  document.getElementById('wayId').innerHTML='<span data-ico="user"></span>'+(_authLink?'아이디로 연결':'아이디로 로그인');
+  document.getElementById('wayEmail').innerHTML='<span data-ico="mail"></span>'+(_authLink?'이메일로 연결':'이메일로 로그인');
+  if(typeof paintIcons==='function') paintIcons(document.getElementById('authHub'));
+  document.getElementById('authErr').textContent=''; }
+function authOpenForm(kind, quiet){
+  _authKind=(kind==='email')?'email':'id';
+  const f=document.getElementById('authId');
+  if(_authKind==='email'){ f.type='email'; f.removeAttribute('maxlength'); f.autocomplete='email';
+    f.placeholder='이메일 주소'; }
+  else { f.type='text'; f.setAttribute('maxlength','16'); f.autocomplete='username';
+    f.placeholder='아이디 (로그인용 · 영문·숫자 3~16자)'; }
+  f.value='';
+  document.getElementById('authHub').classList.add('hide');
+  document.getElementById('authForm').classList.remove('hide');
+  authMode('login');
+  if(!quiet && typeof playSfx==='function') playSfx('ui_open'); }
+function authBackToHub(){ authShowHub(); if(typeof playSfx==='function') playSfx('ui_close'); }
+// 아직 못 붙인 방식 — 동작하는 척하지 않는다(Supabase 대시보드에 provider 설정이 있어야 켜진다)
+function authWayLocked(){ const err=document.getElementById('authErr'); if(!err) return;
+  err.classList.add('info'); err.textContent='Google 로그인은 아직 준비 중입니다. 아이디·이메일·게스트로 시작해 주세요.'; }
 function openAuth(){
   document.getElementById('authId').value=''; document.getElementById('authPw').value='';
   document.getElementById('authNick').value=''; document.getElementById('authPw2').value='';
-  authMode('login'); showAppScreen('auth');
+  // 다시 로그인해야 하는 상황이면 방식을 또 고르게 하지 않는다 — 마지막에 쓴 경로의 폼을 바로 연다.
+  // (게스트는 고를 것이 없으니 허브로 — 한 번만 누르면 들어간다)
+  const last=_authLink? null : authLastWay();
+  _authKind='id'; authMode('login');
+  if(last && last!=='guest') authOpenForm(last, true); else authShowHub();
+  showAppScreen('auth');
   // 로그인 화면에 머무는 동안 미리 데운다 — 여기서 끝나면 로그인 버튼을 눌렀을 때 로딩이 거의 없다.
   // 한 프레임에 모델 하나씩이라 입력·애니메이션을 막지 않는다.
   setTimeout(()=>{ try{ warmAll(); }catch(e){} }, 400);
@@ -13937,47 +14545,96 @@ function openAuth(){
   authLockHeight();   // 화면이 보이는 상태에서 실측해야 한다(display:none이면 높이가 0)
   if(typeof bgmStart==='function') bgmStart('lobby'); }   // 로그인 화면부터 로비 BGM
 function authMode(m){ _authTab=m;
-  document.getElementById('segLogin').classList.toggle('on', m==='login');
-  document.getElementById('segSignup').classList.toggle('on', m==='signup');
-  document.getElementById('authNick').classList.toggle('hide', m!=='signup');
-  document.getElementById('authPw2').classList.toggle('hide', m!=='signup');
-  document.getElementById('authBtn').textContent = m==='login'?'로그인':'가입하기';
-  document.getElementById('authSub').textContent = m==='login'?'아이디로 로그인하세요':'아이디로 즉시 가입';
-  const hideGuest = (m==='signup');   // 가입 화면엔 게스트 진입을 두지 않는다(높이도 여기서 맞춰진다)
-  document.querySelector('.authOr').classList.toggle('hide', hideGuest);
-  document.getElementById('authGuest').classList.toggle('hide', hideGuest);
+  const K=(_authKind==='email')?'이메일':'아이디';
+  const tb=document.getElementById('authTabs');
+  if(tb){ tb.classList.toggle('hide', _authLink);   // 연결 모드는 고를 탭이 없다
+    tb.innerHTML=segNavHTML([{label:'로그인'},{label:'회원가입'}], m==='login'?0:1,
+      function(k){ return "authMode('"+(k?'signup':'login')+"')"; }); }
+  const wantFull = _authLink || m==='signup';       // 닉네임·비밀번호 확인이 필요한 형태
+  document.getElementById('authNick').classList.toggle('hide', !wantFull);
+  document.getElementById('authPw2').classList.toggle('hide', !wantFull);
+  document.getElementById('authBtn').textContent = _authLink?'계정 연결':(m==='login'?'로그인':'가입하기');
+  if(!_authLink) document.getElementById('authSub').textContent = m==='login'?(K+'로 로그인하세요'):(K+'로 가입하기');
+  // 비밀번호 재설정은 진짜 메일함이 있는 이메일 계정에서만 뜻이 있다(아이디는 가짜 주소라 메일이 안 간다)
+  const note=document.getElementById('authNote');
+  if(note) note.classList.toggle('hide', _authLink || m!=='login');
+  const later=document.getElementById('authLater');
+  if(later) later.classList.toggle('hide', !_authLink);
   document.getElementById('authErr').textContent=''; }
-// 두 탭의 카드 높이를 같게 — 긴 쪽을 실측해 min-height로 고정한다.
-// (탭마다 줄 수가 달라 그냥 두면 카드가 늘었다 줄었다 한다. 고정값을 적어두면 폰트·문구가 바뀔 때 어긋나므로 실측한다.)
-function authLockHeight(){ const card=document.querySelector('.authCard'); if(!card) return;
-  const keep=_authTab; card.style.setProperty('--authH','0px');
-  let max=0; for(const m of ['login','signup']){ authMode(m); max=Math.max(max, card.getBoundingClientRect().height); }
-  authMode(keep); card.style.setProperty('--authH', Math.ceil(max)+'px'); }
+// 카드 높이를 상태와 무관하게 같게 — 가장 긴 화면을 실측해 min-height로 고정한다.
+// (허브·로그인·가입은 줄 수가 달라 그냥 두면 카드가 늘었다 줄었다 한다. 고정값을 적으면 문구가 바뀔 때 어긋나므로 실측한다.)
+function authLockHeight(){ const form=document.getElementById('authForm'), hub=document.getElementById('authHub');
+  if(!form||!hub) return;
+  const keepTab=_authTab, keepHub=!hub.classList.contains('hide');
+  form.style.setProperty('--authH','0px');
+  hub.classList.add('hide'); form.classList.remove('hide');   // 숨은 채로는 높이가 0이라 재려면 잠깐 보여야 한다
+  let max=0;
+  for(const m of ['login','signup']){ authMode(m); max=Math.max(max, form.getBoundingClientRect().height); }
+  authMode(keepTab);
+  if(keepHub) authShowHub();
+  form.style.setProperty('--authH', Math.ceil(max)+'px'); }
 async function authSubmit(){
   const id=(document.getElementById('authId').value||'').trim(), pw=document.getElementById('authPw').value||'';
   const err=document.getElementById('authErr');
   err.classList.remove('info');   // 안내문 뒤에 진짜 오류가 오면 빨강으로 되돌린다
   // 빈 칸 바로 입장은 없앴다 — 체험 입장은 '게스트로 시작하기' 버튼이 맡는다.
-  if(!/^[A-Za-z0-9._-]{3,16}$/.test(id)){ err.textContent='아이디는 영문·숫자 3~16자입니다.'; return; }
+  if(_authKind==='email'){ if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(id)){ err.textContent='이메일 주소 형식이 올바르지 않습니다.'; return; } }
+  else if(!/^[A-Za-z0-9._-]{3,16}$/.test(id)){ err.textContent='아이디는 영문·숫자 3~16자입니다.'; return; }
   if(pw.length<6){ err.textContent='비밀번호는 6자 이상이어야 합니다.'; return; }
   try{
-    if(_authTab==='signup'){ const nick=(document.getElementById('authNick').value||'').trim(), pw2=document.getElementById('authPw2').value||'';
+    if(_authLink || _authTab==='signup'){ const nick=(document.getElementById('authNick').value||'').trim(), pw2=document.getElementById('authPw2').value||'';
       if(nick.length<2){ err.textContent='닉네임을 2자 이상 입력하세요.'; return; }
       if(pw!==pw2){ err.textContent='비밀번호가 일치하지 않습니다.'; return; }
+      if(_authLink){ await authLinkAccount(id,pw,nick); _authLink=false;
+        if(typeof toast==='function') toast('계정이 연결됐습니다');
+        if(typeof openHome==='function') openHome(); return; }   // 진행도는 그대로 — 다시 데울 필요가 없다
       await authSignUp(id,pw,nick);
     } else { await authSignIn(id,pw); }
+    authRememberWay(_authKind);
     await enterAfterWarm();   // 로그인·가입 성공 → 로딩(데우기 완료)까지 마치고 HOME. 부팅 흐름과 도착지를 통일한다.
   }catch(e){ err.textContent = (e&&e.message)||'인증에 실패했습니다.'; }
 }
-function authGuestUser(){ AUTH.user={email:'', nick:'게스트'+(1000+Math.floor(Math.random()*9000)), guest:true};
-  _lsSet('nm_session',AUTH.user); return AUTH.user; }   // 게스트 계정 생성만(화면 이동은 호출부가)
-function authGuest(){ authGuestUser(); enterAfterWarm(); }
-// ⚠ 계정 아이디는 idToEmail()로 만든 가짜 주소라 실제 메일함이 없다 → 복구 메일을 보낼 수 없다.
-//    연락 가능한 주소를 계정에 받기 전까지는 안내만 한다(동작하는 척하지 않는다).
-function authFindPw(){ const err=document.getElementById('authErr'); if(!err) return;
+function authGuestUser(){ AUTH.user={email:'', nick:'게스트'+(1000+Math.floor(Math.random()*9000)), guest:true, local:true};
+  _lsSet('nm_session',AUTH.user); return AUTH.user; }   // 로컬 게스트(폴백) — 이 기기에만 남는다
+// 게스트도 진짜 계정을 갖는다: Supabase 익명 로그인 → uid 가 생겨 클라우드 저장·소셜이 켜지고,
+// 나중에 authLinkAccount()로 같은 uid 를 유지한 채 정식 계정이 된다.
+// ⚠ 대시보드에서 Anonymous sign-in 이 꺼져 있으면 실패한다 → 그때는 예전처럼 로컬 게스트로 떨어진다(입장은 항상 된다).
+async function authGuestStart(){
+  if(AUTH.mode==='supabase' && _sb){
+    try{ const {data,error}=await _sb.auth.signInAnonymously();
+      if(!error && data && data.user){ AUTH.user=sbUser(data.user);
+        await sbEnsureProfile(); await sbSyncMetaOnLogin(); return AUTH.user; }
+    }catch(e){ console.warn('익명 로그인 실패 → 로컬 게스트', e); } }
+  return authGuestUser(); }
+async function authGuest(){ await authGuestStart(); authRememberWay('guest'); enterAfterWarm(); }
+// 게스트 → 정식 계정. uid 를 그대로 두고 이메일·비밀번호만 붙이므로 진행도가 따라온다.
+function authIsGuest(){ return !!(AUTH.user && AUTH.user.guest); }
+function authCanLink(){ return !!(AUTH.mode==='supabase' && _sb && AUTH.user && AUTH.user.uid && AUTH.user.guest); }
+async function authLinkAccount(idOrEmail, pw, nick){
+  if(!authCanLink()) throw new Error('이 게스트는 이 기기에만 저장돼 있어 계정 연결을 지원하지 않습니다.');
+  if(pw.length<6) throw new Error('비밀번호는 6자 이상이어야 합니다.');
+  const {error}=await _sb.auth.updateUser({ email:idToEmail(idOrEmail), password:pw,
+    data:{ nick:(nick||'').trim()||AUTH.user.nick } });
+  if(error) throw new Error(/registered|already|exists/i.test(error.message||'')?'이미 사용 중인 아이디·이메일입니다.':(error.message||'계정 연결에 실패했습니다.'));
+  const {data}=await _sb.auth.getUser();
+  if(data&&data.user){ AUTH.user=sbUser(data.user); AUTH.user.guest=false; }
+  await sbEnsureProfile();
+  authRememberWay(String(idOrEmail).indexOf('@')>=0?'email':'id');
+  return AUTH.user; }
+// ⚠ 아이디 계정은 idToEmail()로 만든 가짜 주소라 실제 메일함이 없다 → 복구 메일을 보낼 수 없다.
+//    이메일로 가입한 계정에서만 진짜로 재설정 메일이 간다. 아이디 계정은 안내만 한다(동작하는 척하지 않는다).
+async function authFindPw(){ const err=document.getElementById('authErr'); if(!err) return;
   err.classList.add('info');
-  err.textContent='아직 비밀번호 재발급을 지원하지 않습니다. 게스트로 시작하거나 새 아이디로 가입해 주세요.'; }
-function doLogout(){ if(typeof hbEnd==='function') hbEnd();   // 전투 완전 종료 — 배경 시뮬이 다음 계정까지 따라가지 않게
+  if(_authKind!=='email'){
+    err.textContent='아이디 계정은 메일함이 없어 재발급을 보낼 수 없습니다. 이메일로 가입하면 재설정이 가능합니다.'; return; }
+  const to=(document.getElementById('authId').value||'').trim();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(to)){ err.textContent='재설정 메일을 받을 이메일 주소를 먼저 입력하세요.'; return; }
+  if(AUTH.mode!=='supabase' || !_sb){ err.textContent='지금은 오프라인 모드라 메일을 보낼 수 없습니다.'; return; }
+  try{ const {error}=await _sb.auth.resetPasswordForEmail(to);
+    if(error) throw error;
+    err.textContent=to+' 로 재설정 메일을 보냈습니다. 메일함을 확인해 주세요.';
+  }catch(e){ err.classList.remove('info'); err.textContent=(e&&e.message)||'재설정 메일을 보내지 못했습니다.'; } }
+function doLogout(){ _authLink=false; if(typeof hbEnd==='function') hbEnd();   // 전투 완전 종료 — 배경 시뮬이 다음 계정까지 따라가지 않게
   if(typeof bgmStop==='function') bgmStop(); if(typeof rtStop==='function') rtStop(); authSignOut().then(openAuth); }
 // ── 유즈맵 데이터 ──
 const MAPS=Object.values(USEMAPS);   // 맵 선택 화면 목록(레지스트리에서 파생)
@@ -14022,6 +14679,11 @@ const ICO={
   bag:_svg('<path d="M4.6 8.4h14.8L18.6 20H5.4z"/><path d="M9 8.4V6.6a3 3 0 0 1 6 0v1.8"/>'),
   dungeon:_svg('<path d="M4.5 4.5 15 15"/><path d="M19.5 4.5 9 15"/><path d="M9 15 6 18l-1.5-.5"/><path d="M15 15 18 18l1.5-.5"/><path d="M3.5 6.5 6.5 3.5"/><path d="M20.5 6.5 17.5 3.5"/>'),   // ⚔ 던전(크로스드 소드)
   gift:_svg('<rect x="4" y="9.4" width="16" height="10.6" rx="1.6"/><path d="M3.2 9.4h17.6M12 9.4V20"/><path d="M12 9.4C10.6 6 9.4 5 8.2 5a2 2 0 0 0 0 4.4M12 9.4C13.4 6 14.6 5 15.8 5a2 2 0 0 1 0 4.4"/>'),
+  // 📅 출석 — 달력. 머리줄(진한 띠 대신 가로선)과 도장 두 칸으로 '채워 가는 판'을 읽히게 한다
+  cal:_svg('<rect x="3.8" y="5.4" width="16.4" height="14.4" rx="2"/><path d="M3.8 9.6h16.4"/>'
+    +'<path d="M8.2 3.6v3.4M15.8 3.6v3.4"/>'
+    +'<rect x="6.6" y="12" width="3.2" height="3" rx=".6" fill="currentColor" stroke="none"/>'
+    +'<rect x="11.4" y="12" width="3.2" height="3" rx=".6"/>'),
   back:_svg('<path d="M14.5 5.5 8 12l6.5 6.5"/>'),                     // ‹ 돌아가기(최상위 네비로)
   armor:_svg('<path d="M12 3.4 5 6v6.1c0 4 2.9 7.1 7 8.5 4.1-1.4 7-4.5 7-8.5V6z"/><path d="M9.3 11.9l1.9 2 3.5-3.8"/>'),   // 장비
   coin:_svg('<circle cx="12" cy="12" r="7.6"/><path d="M12 8.2v7.6M10 10.2h3a1.8 1.8 0 0 1 0 3.6h-2a1.8 1.8 0 0 0 0 3.6h3"/>'),   // 재화
@@ -14071,7 +14733,18 @@ const MISSION={
 // 상태 점(대기=초록 링, 게임=빨강 채움) — 작아서 색으로 의미 전달
 const ICO_WAIT='<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6.4" fill="none" stroke="#5dff8f" stroke-width="3.4"/></svg>';
 const ICO_PLAY='<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.2" fill="#ff6b6b"/></svg>';
-function paintIcons(root){ (root||document).querySelectorAll('[data-ico]').forEach(el=>{ const k=el.dataset.ico; if(ICO[k]) el.innerHTML=ICO[k]; }); }
+function paintIcons(root){ (root||document).querySelectorAll('[data-ico]').forEach(el=>{ const k=el.dataset.ico; if(ICO[k]) el.innerHTML=ICO[k]; });
+  paintArrows(root); }
+// ── ◀▶ 방향 버튼(공용) — '모서리 컷 + 테두리만'. 게임 화면의 방향·증감 버튼은 전부 이걸 쓴다.
+// ⚠ clip-path 로 자르면 테두리까지 잘려 잘린 변에 선이 안 남는다 → 외곽선을 SVG 로 직접 그린다.
+//   바깥쪽 두 귀만 깎아 '방향'을 형태가 말하게 한다(DESIGN §0 — 라운드 대신 모서리를 잘라낸다).
+const ARW_SVG={
+  l:'<svg class="arwFrame" viewBox="0 0 30 30" aria-hidden="true"><path d="M9 .5H29.5V29.5H9L.5 15Z"/></svg>'
+   +'<svg class="arwIco" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>',
+  r:'<svg class="arwFrame" viewBox="0 0 30 30" aria-hidden="true"><path d="M21 .5H.5V29.5H21L29.5 15Z"/></svg>'
+   +'<svg class="arwIco" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>' };
+function paintArrows(root){ (root||document).querySelectorAll('[data-arw]').forEach(el=>{
+  const k=el.dataset.arw; if(ARW_SVG[k] && !el.firstChild) el.innerHTML=ARW_SVG[k]; }); }
 // 유즈맵별 실시간 접속 인원(대기중=로비/방찾기, 게임중=인게임) — 시뮬레이션
 const _mapLive={};
 function initMapLive(){ if(!_mapLive.__rpg){ const b=900+Math.round(Math.random()*700); _mapLive.__rpg={wait:0, play:b}; }   // RPG 접속자(맵과 같은 시뮬 표에 보관)
@@ -19138,7 +19811,7 @@ function strikeSetTabLabels(map){ for(const t in map){ const el=document.querySe
   if(span){ span.textContent=map[t]; continue; }
   let tn=null; el.childNodes.forEach(n=>{ if(n.nodeType===3 && n.textContent.trim()) tn=n; });
   if(tn) tn.textContent=map[t]; else el.appendChild(document.createTextNode(map[t])); } }
-function strikeHideNemoChrome(on){ ['coopBossBar','mergeFab','skillFab','autoFab','deselTop','cvMarine','cvFx','mergeZone','miniWrap','defaultCmd','zoneLabel','chatBar'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display=on?'none':''; });   // unitCmd 제외: 직스 선택 프로필(커맨드 그리드) 호스트로 사용 → .on 클래스로 표시 제어 · chatBar 숨김(전투화면 하단 비움)
+function strikeHideNemoChrome(on){ ['coopBossBar','mergeFab','skillFab','deselTop','cvMarine','cvFx','mergeZone','miniWrap','defaultCmd','zoneLabel','chatBar'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display=on?'none':''; });   // unitCmd 제외: 직스 선택 프로필(커맨드 그리드) 호스트로 사용 → .on 클래스로 표시 제어 · chatBar 숨김(전투화면 하단 비움)
   { const uc=document.getElementById('unitCmd'); if(uc){ uc.classList.remove('on','simple'); uc.innerHTML=''; uc._stkSig=null; uc.style.display=''; } }   // 진입/종료 시 초기화(인라인 display 잔존 제거)
   const kill=document.querySelector('#hudL .kill'); if(kill) kill.style.display=on?'none':'';
   const stage=document.querySelector('#hudL .stage'); if(stage) stage.style.display=on?'none':'';   // 좌상단 ROUND 숨김

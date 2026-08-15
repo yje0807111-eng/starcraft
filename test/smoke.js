@@ -54,13 +54,29 @@ async function groupLobby(){
     openAuth();
     assert(visible($('auth')),'로그인 화면이 안 뜸(자동 로그인으로 건너뛰는지 확인)');
     assert(!visible($('townScreen')),'로그인 전에 메인(마을)이 떠 있음');
+    // 첫 화면 = 방식 선택 허브. 아이디/비번은 방식을 고른 뒤에 나온다
+    assert(visible($('authHub')),'로그인 방식 허브가 안 보임');
+    assert(!visible($('authForm')),'허브인데 입력 폼이 이미 떠 있음');
+    assert(visible($('authGuest')),'허브에 게스트 시작 버튼이 없음');
+    assert($('wayGoogle').classList.contains('lock'),'Google 버튼이 잠김 표시가 아님(대시보드 설정 전까지는 잠겨 있어야 한다)');
+    authWayLocked(); assert(visible($('authHub')),'잠긴 방식을 눌렀는데 화면이 넘어감');
+    // 아이디를 고르면 폼으로
+    authOpenForm('id');
+    assert(!visible($('authHub')) && visible($('authForm')),'아이디를 골랐는데 폼이 안 열림');
     assert(visible($('authId')) && visible($('authPw')),'아이디/비밀번호 입력칸이 없음');
     assert($('authNick').classList.contains('hide'),'로그인 탭인데 닉네임 칸이 보임');
-    // 탭은 허브·유즈맵과 같은 공용 컴포넌트를 쓴다(로그인 화면만 별도 세그먼트 금지)
-    var lt=$('segLogin');
-    assert(lt.classList.contains('msTab2'),'로그인 탭이 공용 탭(.msTab2)이 아님: '+lt.className);
-    assert(document.querySelector('.authTabs').classList.contains('msTabs2'),'탭 바가 .msTabs2가 아님');
-    assert(lt.querySelector('svg'),'탭 아이콘이 없음(paintIcons 누락)');
+    // 이메일은 같은 폼 한 벌을 쓰되 입력 타입만 바뀐다(폼을 두 벌 만들면 여기서 걸린다)
+    authOpenForm('email');
+    assert($('authId').type==='email','이메일 방식인데 첫 칸이 email 타입이 아님: '+$('authId').type);
+    assert(document.querySelectorAll('#auth input[type=password]').length===2,'비밀번호 칸이 폼마다 복제됨');
+    authBackToHub(); assert(visible($('authHub')),'뒤로가기가 허브로 안 돌아감');
+    authOpenForm('id');
+    // 탭은 사냥터·장비창과 같은 공용 세그먼트 바를 쓴다(로그인 화면만 별도 탭 금지)
+    var seg=document.querySelector('#authTabs .pdSeg');
+    assert(seg,'로그인/회원가입 탭이 공용 세그먼트 바(.pdSeg)를 안 씀');
+    assert(seg.querySelectorAll('.pdSegBtn').length===2,'탭이 2개가 아님');
+    assert(seg.querySelector('.pdSegInd'),'현재 탭을 가리키는 판(.pdSegInd)이 없음');
+    assert(seg.querySelector('.pdSegBtn.on').textContent.indexOf('로그인')>=0,'켜진 탭이 로그인이 아님');
     var ac=getComputedStyle(document.querySelector('.authCard'));
     // 배경이 단색이든 그라데든, 뒤 배경이 비치지 않을 만큼 불투명해야 한다
     var acAlpha=(ac.backgroundImage.indexOf('gradient')>=0)
@@ -69,6 +85,11 @@ async function groupLobby(){
     assert(acAlpha>0.6,'로그인 카드가 투명해 배경과 겹침(alpha '+acAlpha+')');
     assert(ac.boxShadow!=='none','로그인 카드에 질감(그림자)이 없음');
     assert(ac.clipPath && ac.clipPath!=='none','로그인 카드 외곽이 각진 HUD 형태가 아님');
+    // 액센트는 사냥터와 같은 빨강 — 푸른기로 되돌아가면 여기서 걸린다
+    { var rgb=ac.getPropertyValue('--acRGB').trim().split(',').map(Number);
+      assert(rgb.length===3 && rgb[0]>rgb[2]+80,'로그인 액센트가 붉은 계열이 아님: '+ac.getPropertyValue('--acRGB'));
+      var segCol=getComputedStyle(document.querySelector('#authTabs .pdSegInd')).getPropertyValue('--segCol').trim();
+      assert(segCol===ac.getPropertyValue('--acRGB').trim(),'탭 광원이 카드 액센트와 다름: '+segCol); }
     authMode('signup');
     assert(!$('authNick').classList.contains('hide'),'회원가입인데 닉네임 칸이 안 보임');
     assert(!$('authPw2').classList.contains('hide'),'회원가입인데 비밀번호 확인 칸이 안 보임');
@@ -128,22 +149,42 @@ async function groupLobby(){
   // DESIGN.md 규칙 — 허브(볼륨 3)만. 다른 볼륨 3 화면(타이틀·로그인·대기실)은 각자 전환될 때 스텝을 추가할 것.
   // 빈 칸 바로 입장은 없앴다(2026-08-06). 체험 입장은 '게스트로 시작하기' 버튼 전용.
   await step('인증: 빈 칸은 막고, 게스트 버튼으로 입장', async()=>{ skipIf(typeof authSubmit!=='function','인증 없음');
-    openAuth(); $('authId').value=''; $('authPw').value='';
+    openAuth(); authOpenForm('id');   // 허브에서 아이디를 골라야 입력 폼이 나온다
+    $('authId').value=''; $('authPw').value='';
     await authSubmit(); await sleep(120);
     assert(visible($('auth')),'빈 칸인데 로그인 화면을 벗어남(자동 입장이 남아 있음)');
     assert(!visible($('hubScreen')),'빈 칸인데 게임 선택으로 넘어감');
     assert(($('authErr').textContent||'').length>0,'빈 칸인데 안내가 없음');
+    authBackToHub();   // 게스트 진입은 폼이 아니라 허브에 있다
     const gb=$('authGuest'); assert(gb && visible(gb),'게스트로 시작하기 버튼이 없음');
     gb.click();
     // 게스트 입장도 로딩(#opening에서 3D 데우기)을 거친다 — 끝날 때까지 기다린다.
     // ⚠ 이 대기는 넉넉해야 한다: 실기기(GPU)에선 1초 안이지만 헤드리스 소프트웨어 렌더러(swiftshader)에선
     //   3D 예열에 10초 넘게 걸린다. 4초로 뒀다가 '게스트가 안 들어간다'고 잘못 실패했다(앱은 정상).
-    for(let i=0;i<120 && !(visible($('townScreen'))||visible($('charScreen'))||visible($('homeScreen'))); i++) await sleep(250);
-    assert(visible($('townScreen'))||visible($('charScreen'))||visible($('homeScreen')),'게스트 버튼을 눌렀는데 메인으로 안 감');
+    for(let i=0;i<120 && !(visible($('townScreen'))||visible($('homeScreen'))); i++) await sleep(250);
+    assert(visible($('townScreen'))||visible($('homeScreen')),'게스트 버튼을 눌렀는데 메인으로 안 감');
     assert(!visible($('auth')),'로그인 화면이 안 닫힘');
     for(let i=0;i<40 && !AUTH.user; i++) await sleep(50);   // 로딩 게이트를 거치면 몇 프레임 늦게 채워질 수 있다
     assert(AUTH.user,'입장했는데 유저가 비어 있음');
     return AUTH.user.nick||AUTH.user.id; });
+  // 캐릭터를 '고르는' 화면은 없다 — 처음 들어오면 기본 유닛이 조용히 지급된다(2026-08-13 설계 변경).
+  // 종족 선택은 나중에 길드 가입 시점으로 옮겼다. 여기서 지키는 것은 '입구마다 캐릭터가 보장된다' 하나.
+  await step('캐릭터: 생성 화면 없이 기본 유닛이 자동 지급된다', ()=>{ skipIf(typeof profEnsureChar!=='function','캐릭터 시스템 없음');
+    assert(typeof openCharScreen==='undefined' && typeof renderCharCreate==='undefined'
+        && typeof renderCharSelect==='undefined' && !$('charScreen'),'캐릭터 선택/생성 화면이 아직 남아 있음');
+    assert(PROF_MAX_CHARS===1,'계정당 캐릭터는 하나여야 함: '+PROF_MAX_CHARS);
+    const p=PROF(); p.chars=[]; p.curId=''; saveMeta();
+    const c=profEnsureChar();
+    assert(c && CHAR()===c,'기본 유닛이 지급되지 않음');
+    assert(c.cls===PROF_DEFAULT_CLASS,'기본 유닛 종류가 PROF_DEFAULT_CLASS 와 다름: '+c.cls);
+    assert(profEnsureChar()===c,'이미 있는데 또 만들었음(중복 지급)');
+    // 두 번째 캐릭터는 만들어지지 않는다 — 보관소도 함께 폐지했다
+    assert(!profCreateChar('scout','둘째'),'캐릭터가 하나를 넘어 생성됨');
+    // 모두 같은 스탯·같은 외형으로 시작한다
+    { const p2=PROF(); p2.chars=[]; p2.curId=''; const d=profEnsureChar();
+      for(const k of PROF_STATS) assert(profStat(k)>0,'기본 스탯이 0: '+k);
+      assert(d.cls===c.cls,'사람마다 시작 유닛이 다름'); }
+    return '기본 '+PROF_DEFAULT_CLASS+' · 슬롯 '+PROF().chars.length+'/'+PROF_MAX_CHARS; });
   // 부팅 타이머는 '오프닝을 걷어내는' 용도지 화면을 되돌리는 용도가 아니다.
   // 가드가 없으면 1.7초 뒤 openAuth()가 그때 보고 있던 화면을 로그인으로 덮는다 —
   // 스모크가 간헐적으로 "유즈맵에서 뒤로 갔는데 HOME으로 안 옴"으로 터지던 진짜 원인이었다.
@@ -258,18 +299,24 @@ async function groupLobby(){
       // 건설 카드는 격자에 없다 — 여긴 '지어진 것의 스탯을 올리는' 곳이고, 짓는 것은 전장 위 버튼이다
       assert(!document.querySelector('#hmUpgGrid .hmUp[data-k^="b_"]'),'건물 구역에 건설 카드가 남아 있음');
       assert(document.querySelector('#hmUpgGrid .hmUp[data-k="tuatk"]'),'건물 구역에 강화 카드가 없음');
-      // 짓는 입구는 전장 위 '건설' 한 칸 — 누르면 목록이 펴진다
-      { assert(document.querySelectorAll('#hbBuildWrap .hbRoundBtn').length===1,'좌상단 건설 버튼이 없음');
-        assert(!document.querySelector('#hbBuildWrap .hbBdMenu'),'누르지도 않았는데 건설 목록이 열려 있음');
-        hbToggleBuild();
-        const it=[...document.querySelectorAll('#hbBuildWrap .hbBdMenu .hbBdIt')];
-        assert(it.length===HB_BUILD_KEYS.length,'건설 목록이 '+HB_BUILD_KEYS.length+'개가 아님: '+it.length);
-        assert(it.every(b=>b.querySelector('img')),'건설 목록에 건물 아이콘이 없음');
-        hbToggleBuild();
-        assert(!document.querySelector('#hbBuildWrap .hbBdMenu'),'다시 눌렀는데 목록이 안 닫힘');
-        // 토벌·부스트·건설은 ☰ 더보기 시트로 갔다(2026-08-12) — 좌상단에는 없다
+      // 짓는 입구는 더보기 > 건설 — 누르면 '이 패널'이 건설 구역이 된다(2026-08-14 · 좌상단 드롭다운 폐지)
+      { assert(!document.getElementById('hbBuildWrap'),'좌상단 건설 랩이 아직 남아 있음');
+        assert(typeof hbToggleBuild!=='function' && typeof renderHbBuild!=='function','옛 좌상단 건설 드롭다운이 남아 있음');
         assert(!document.getElementById('hbDgBtn')&&!document.getElementById('hbBoostBtn'),'토벌·부스트가 아직 좌상단에 있음');
-        assert(typeof hbOpenMore==='function','더보기가 없는데 좌상단에서도 빠졌다 — 들어갈 길이 사라진다'); }
+        assert(typeof hbOpenMore==='function','더보기가 없는데 좌상단에서도 빠졌다 — 들어갈 길이 사라진다');
+        hbBuildStart();
+        const card=document.querySelector('#homeScreen .hmUpg');
+        assert(_hb.build===true,'건설 모드로 안 들어감');
+        assert(card.classList.contains('bd'),'하단 패널이 건설 구역으로 안 바뀜');
+        assert(document.querySelector('#homeScreen .hmUpgTtl').textContent==='건설','패널 제목이 건설이 아님');
+        assert(!visible(document.querySelector('#homeScreen .hmUpgBar')),'건설 모드인데 탭 띠·수량이 남아 있음');
+        const bc=[...document.querySelectorAll('#hmUpgGrid .hmUp[data-k^="b_"]')];
+        assert(bc.length===HB_BUILD_KEYS.length,'건설 카드가 '+HB_BUILD_KEYS.length+'장이 아님: '+bc.length);
+        assert(bc.every(b=>b.querySelector('img')),'건설 카드에 건물 아이콘이 없음');
+        assert(!$('hbBuildStop').classList.contains('hide'),'해제(⊘) 버튼이 안 보임');
+        hbBuildExit();
+        assert(_hb.build===false && !card.classList.contains('bd'),'⊘ 로 건설 모드가 안 풀림');
+        assert(document.querySelector('#homeScreen .hmUpgTtl').textContent!=='건설','나갔는데 제목이 건설로 남음'); }
       assert(typeof hbOpenBuild!=='function','건설 팝업이 아직 남아 있음(패널로 흡수됐어야 한다)');
       hmUpgTab(before); }
     // 수량은 한 칸을 눌러 돌린다 — 1 → 10 → MAX → 1. 폭은 라벨이 바뀌어도 고정
@@ -611,11 +658,9 @@ async function groupLobby(){
     openHome(); await sleep(600);
     // ⚠ 이 파일에는 전역 .hide 규칙이 없다(요소마다 선언). 안 만들면 '항상 떠 있는' 상태가 된다.
     assert(!visible($('hbMoreSheet')),'더보기가 처음부터 떠 있음 — .hbMoreWrap.hide 규칙 누락');
-    // 좌상단 줄에서 빠졌는지 — 판 여는 것이 두 곳에 있으면 어디를 눌러야 할지 모른다
-    const row=[...document.querySelector('.hbIcoRow').children].filter(visible)
-      .map(e=>e.getAttribute('aria-label')||e.id);
-    for(const gone of ['토벌','부스트']) assert(row.indexOf(gone)<0,'좌상단에 '+gone+'이 남아 있음: '+row.join(','));
-    assert(!visible(document.querySelector('#hbBuildWrap > .hbRoundBtn')),'좌상단에 건설 버튼이 남아 있음');
+    // 좌상단 아이콘 줄은 통째로 없앴다 — 판 여는 것이 두 곳에 있으면 어디를 눌러야 할지 모른다
+    assert(!document.querySelector('.hbIcoRow'),'좌상단 아이콘 줄이 아직 남아 있음');
+    assert(!document.getElementById('hbBuildWrap'),'좌상단에 건설 버튼이 남아 있음');
     // ☰ → 더보기(설정이 아니라)
     // ⚠ id로 부르면 안 된다 — ☰ 는 #settingsBtn(게임 HUD)과 #curSettingsBtn(재화 바)이 겹쳐 있고
     //    사용자가 누르는 건 위에 있는 쪽이다. 좌표로 집어서 실제 손가락과 같은 경로로 누른다.
@@ -680,14 +725,24 @@ async function groupLobby(){
     for(const sel of ['#hbMoreBox','#hbMoreGrid .hbMoreIt']){
       const r=getComputedStyle(document.querySelector(sel)).borderTopLeftRadius;
       assert(r==='3px','더 각져야 한다 — '+sel+' r='+r); }
-    // 건설을 고르면 시트가 닫히고 메뉴가 화면 안에 뜬다(필드를 눌러 배치해야 하므로)
+    // 📅 출석과 일일 퀘스트는 **따로 있는 칸**이고 각자의 판을 연다(2026-08-14 분리)
+    for(const [k,sheet,close] of [['daily','hbDailySheet',closeDaily],['att','hbAttSheet',closeAtt]]){
+      const b=document.querySelector('#hbMoreGrid [data-k="'+k+'"]');
+      assert(b && !b.disabled,'더보기에 '+k+' 칸이 없음');
+      b.click(); await sleep(250);
+      assert(visible($(sheet)),'더보기 > '+k+' 가 안 열림');
+      close(); hbOpenMore(); await sleep(150); }
+    // 건설을 고르면 시트가 닫히고 '하단 패널'이 건설 구역이 된다(2026-08-14 · 좌상단 드롭다운 폐지)
     PROF().pcoin=99999;
     document.querySelector('#hbMoreGrid [data-k="build"]').click(); await sleep(250);
     assert(!visible($('hbMoreSheet')),'건설을 골랐는데 시트가 안 닫힘');
-    const menu=document.querySelector('.hbBdMenu'); assert(visible(menu),'건설 메뉴가 안 열림');
-    { const m=menu.getBoundingClientRect(), ph=$('phone').getBoundingClientRect();
-      assert(m.left>=ph.left-1 && m.right<=ph.right+1 && m.bottom<=ph.bottom+1,'건설 메뉴가 화면 밖으로 나감'); }
-    if(typeof hbToggleBuild==='function') hbToggleBuild();
+    assert(_hb.build===true,'건설을 골랐는데 건설 모드로 안 들어감');
+    { const card=document.querySelector('#homeScreen .hmUpg');
+      assert(card.classList.contains('bd'),'하단 패널이 건설 구역으로 안 바뀜');
+      assert(document.querySelectorAll('#hmUpgGrid .hmUp[data-k^="b_"]').length===HB_BUILD_KEYS.length,'건설 카드가 안 뜸');
+      const c=card.getBoundingClientRect(), ph=$('phone').getBoundingClientRect();
+      assert(c.left>=ph.left-1 && c.right<=ph.right+1,'건설 구역이 화면 밖으로 나감'); }
+    hbBuildExit(); await sleep(60);
     // 유즈맵에서는 같은 버튼이 설정이어야 한다
     hbStop(); enterSandbox(); await sleep(700);
     $('settingsBtn').click(); await sleep(200);
@@ -695,6 +750,119 @@ async function groupLobby(){
     assert(!visible($('hbMoreSheet')),'유즈맵에서 더보기가 열림');
     $('settingsPop').classList.add('hide');
     return '항목 '+its.length+'개 · ☰ 아래 2칸 드롭다운 · 유즈맵은 설정 유지'; });
+  // 📅 일일 — 출석 캘린더(4주) + 하루 5개 퀘스트. 하루 경계는 던전 열쇠와 같은 축(_dgDayKey · 09:00).
+  await step('일일 출석: 하루 1도장 · 주 5칸 + 보너스 2칸 · 20도장 = 최종', async()=>{
+    skipIf(typeof dqState!=='function','일일 없음');
+    const p=PROF(), keep={pc:p.pcoin, gas:p.gas, gem:p.gem};
+    const reset=()=>{ p.daily={day:_dgDayKey(), q:dqDraw(_dgDayKey()), allGot:0, att:{n:0,day:0,bn:{},fin:0,cyc:0}}; };
+    reset();
+    // ① 하루 한 번 — 두 번은 안 된다
+    assert(dqAttCan(),'첫 출석이 막힘');
+    p.pcoin=0; dqCheckIn();
+    assert(dqState().att.n===1,'도장이 안 찍힘: '+dqState().att.n);
+    assert(p.pcoin===dqAttRw(0,0).pcoin,'1일차 보상이 안 들어옴: '+p.pcoin);
+    assert(!dqAttCan(),'같은 날 두 번 출석이 됨');
+    dqCheckIn(); assert(dqState().att.n===1,'두 번째 출석이 먹힘: '+dqState().att.n);
+    // ② 한 주 = 출석 5칸. 그 5칸을 채워야 '나머지 2일' 몫인 보너스가 열린다
+    const nextDay=()=>{ dqState().att.day=0; dqCheckIn(); };
+    assert(!dqBonusOpen(0),'5칸을 안 채웠는데 보너스가 열림');
+    while(dqState().att.n<DQ_PER_WEEK) nextDay();
+    assert(dqBonusOpen(0),'5칸을 채웠는데 보너스가 안 열림');
+    assert(!dqBonusOpen(1),'다음 주 보너스까지 열림');
+    { const g0=p.gem; dqClaimBonus(0,1);
+      assert(p.gem===g0+dqAttBonusRw(0,1).gem,'보너스 젬이 안 들어옴: +'+(p.gem-g0));
+      const g1=p.gem; dqClaimBonus(0,1); assert(p.gem===g1,'같은 보너스를 두 번 받음'); }
+    // ③ 20도장 = 최종. 받으면 남은 보너스까지 주고 캘린더가 새로 깔린다
+    assert(!dqFinalOpen(),'20도장 전에 최종이 열림');
+    while(dqState().att.n<DQ_ATT_MAX) nextDay();
+    assert(dqFinalOpen(),'20도장인데 최종이 안 열림');
+    { let bonusGem=0;
+      for(let w=0;w<DQ_WEEKS;w++) for(let b=0;b<DQ_BONUS;b++) if(!dqBonusGot(w,b)) bonusGem+=(dqAttBonusRw(w,b).gem||0);
+      const g0=p.gem; dqClaimFinal();
+      assert(p.gem===g0+DQ_FINAL_RW.gem+bonusGem,'최종 보상(+남은 보너스)이 안 맞음: +'+(p.gem-g0));
+      assert(dqState().att.n===0 && dqState().att.cyc===1,'캘린더가 새로 안 깔림'); }
+    // ④ 화면 = 4주 × (5+2)칸. 출석은 퀘스트와 **다른 판**에 뜬다(2026-08-14 분리)
+    openAtt(); await sleep(150);
+    const cells=document.querySelectorAll('#hbAttSheet .dqC');
+    assert(cells.length===DQ_WEEKS*(DQ_PER_WEEK+DQ_BONUS),'칸 수가 다름: '+cells.length);
+    assert(!visible($('hbDailySheet')),'출석을 열었는데 퀘스트 판까지 뜸');
+    assert(document.querySelectorAll('#hbAttSheet .dqC.got').length===0,'새 캘린더인데 채워진 칸이 있음');
+    assert(!document.querySelector('#hbAttSheet .pdSegBtn'),'출석 판에 옛 탭 띠가 남아 있음');
+    closeAtt();
+    reset(); p.pcoin=keep.pc; p.gas=keep.gas; p.gem=keep.gem;
+    return DQ_WEEKS+'주 × '+DQ_PER_WEEK+'+'+DQ_BONUS+'칸 · 최종 후 재시작 ok'; });
+  await step('일일 퀘스트: 하루 5개 + 주간 25개 · 계측 → 수령 → 완주/주간 보너스', async()=>{
+    skipIf(typeof dqState!=='function','일일 없음');
+    const p=PROF(), keep={pc:p.pcoin, gas:p.gas, gem:p.gem}, dk=_dgDayKey();
+    // ① 같은 날이면 몇 번을 뽑아도 같은 5개(새로고침 리롤 방지)
+    const a=dqDraw(dk).map(e=>e.id).join(','), b=dqDraw(dk).map(e=>e.id).join(',');
+    assert(a===b,'같은 날인데 퀘스트가 달라짐: '+a+' / '+b);
+    // ② 구성 — 5개 중 DQ_OUT_N개는 사냥터 바깥(다른 구역까지 자연스럽게 끌어낸다)
+    p.daily={day:dk, q:dqDraw(dk), allGot:0, att:{n:0,day:dk,bn:{},fin:0,cyc:0}};
+    const D=dqState();
+    assert(D.q.length===DQ_N,'퀘스트가 '+D.q.length+'개');
+    assert(new Set(D.q.map(e=>e.id)).size===DQ_N,'같은 퀘스트가 중복으로 뽑힘');
+    // 같은 kind 가 두 개면 큰 쪽을 하는 순간 작은 쪽이 덤으로 끝난다 — 5개가 사실상 4개가 된다
+    assert(new Set(D.q.map(e=>DQ_BY[e.id].kind)).size===DQ_N,
+      '같은 종류가 두 번 뽑힘: '+D.q.map(e=>DQ_BY[e.id].kind).join(','));
+    const outN=D.q.filter(e=>DQ_BY[e.id].cat==='out').length;
+    assert(outN===DQ_OUT_N,'바깥 구역 퀘스트가 '+outN+'개(기대 '+DQ_OUT_N+')');
+    // ③ 계측 — 종류별로 목표만큼 밀어 넣으면 5개가 다 찬다
+    for(const e of D.q){ const Q=DQ_BY[e.id]; dqNote(Q.kind, Q.goal); }
+    assert(dqDoneN()===DQ_N,'계측이 안 들어감: '+dqDoneN()+'/'+DQ_N);
+    // ④ 수령은 1회 · 보상이 실제로 들어온다
+    { const Q=DQ_BY[D.q[0].id]; p.pcoin=0; dqClaim(0);
+      assert(p.pcoin===(Q.rw.pcoin||0),'보상이 안 들어옴: '+p.pcoin);
+      p.pcoin=0; dqClaim(0); assert(p.pcoin===0,'같은 퀘스트를 두 번 받음'); }
+    // ⑤ 5개를 다 받으면 완주 보너스
+    assert(!dqAllGot(),'아직 다 안 받았는데 완주로 침');
+    for(let i=1;i<DQ_N;i++) dqClaim(i);
+    assert(dqAllGot(),'다 받았는데 완주가 아님');
+    { const g0=p.gem; dqClaimAll();
+      assert(p.gem===g0+DQ_ALL_RW.gem,'완주 보너스 젬이 안 들어옴: +'+(p.gem-g0));
+      const g1=p.gem; dqClaimAll(); assert(p.gem===g1,'완주 보너스를 두 번 받음'); }
+    // ⑥ 주간 — '수령'이 아니라 '완료'로 센다. 25개면 보너스, 월요일에 0으로 돌아간다.
+    assert(dqWeekN()>=DQ_N,'주간 누적이 완료를 못 셈: '+dqWeekN());
+    assert(!dqWeekOpen(),DQ_N+'개인데 주간 보너스가 열림');
+    dqState().wk.n=DQ_WEEK_GOAL;
+    assert(dqWeekOpen(),DQ_WEEK_GOAL+'개인데 주간 보너스가 안 열림');
+    { const g0=p.gem; dqClaimWeek();
+      assert(p.gem===g0+DQ_WEEK_RW.gem,'주간 보너스 젬이 안 들어옴: +'+(p.gem-g0));
+      const g1=p.gem; dqClaimWeek(); assert(p.gem===g1,'주간 보너스를 두 번 받음'); }
+    dqState().wk.key=_dqWeekKey()-7*86400000;        // 지난주 것으로 위장 → 다음 호출에서 비워져야 한다
+    assert(dqWeekN()===0 && !dqWeekGot(),'주가 바뀌었는데 주간 누적이 안 비워짐: '+dqWeekN());
+    // ⑦ 퀘스트 판은 출석과 따로 뜨고, 맨 위에 주간 진행이 있다
+    openDaily(); await sleep(150);
+    assert(visible($('hbDailySheet')) && !visible($('hbAttSheet')),'퀘스트를 열었는데 출석 판까지 뜸');
+    assert(document.querySelector('#hbDailyBody .dqWeek'),'퀘스트 판에 주간 진행이 없음');
+    assert(document.querySelectorAll('#hbDailyBody .hbRow.dqQ').length===DQ_N+2,'주간 + 퀘스트 + 완주 줄이 안 맞음');
+    // 보상은 '줄'이 아니라 '수령 버튼 안'에 있어야 한다 — 무엇을 받는지가 누르는 자리에 있어야 한다
+    { const row=document.querySelectorAll('#hbDailyBody .hbRow.dqQ')[1];   // 첫 퀘스트 줄(0=주간)
+      assert(row.querySelector('.dqBtn .dqRwB'),'수령 버튼 안에 보상 표기가 없음');
+      assert(!row.querySelector('.hbRowTx .dqRw'),'보상이 아직 줄 본문에 남아 있음');
+      assert(row.querySelector('.hbRowTx b') && row.querySelector('.hbRowTx em'),'제목/내용 두 줄 구성이 아님');
+      const bw=row.querySelector('.dqBtn').getBoundingClientRect();
+      assert(bw.width>=80 && bw.height>=44,'수령 버튼이 안 커짐: '+Math.round(bw.width)+'x'+Math.round(bw.height));
+      const rr=row.getBoundingClientRect(), card=$('hbDailySheet').querySelector('.hbmCard').getBoundingClientRect();
+      assert(rr.right<=card.right+1,'줄이 카드 밖으로 넘침'); }
+    // 받을 수 있는 버튼은 면이 금색이다 — 그 위 보상 글자가 금색이면 안 보인다(대비 검사)
+    { const D=dqState(); D.q[0].n=DQ_BY[D.q[0].id].goal; D.q[0].got=0; renderDaily();
+      const b=document.querySelectorAll('#hbDailyBody .hbRow.dqQ')[1].querySelector('.dqBtn');
+      assert(!b.disabled,'완료했는데 수령 버튼이 잠겨 있음');
+      const lum=s=>{ const m=(s||'').match(/\d+/g)||[0,0,0]; return (+m[0]*0.3 + +m[1]*0.59 + +m[2]*0.11); };
+      const face=lum(getComputedStyle(b).backgroundColor)||lum('rgb(232,169,43)');
+      const tx=lum(getComputedStyle(b.querySelector('.dqRwB i')).color);
+      assert(Math.abs(face-tx)>60 || tx<90,'금색 면 위에 금색 보상 글자 — 안 보인다: 면'+Math.round(face)+' 글자'+Math.round(tx)); }
+    closeDaily();
+    // ⑧ 계측 지점이 실제 게임 코드에 붙어 있는가 — 여기가 빠지면 퀘스트가 영원히 0이다
+    const H=[[hbKill,'kill'],[hbBreakChest,'chest'],[hmBuyUpg,'upg'],[hmBuyUpgQuiet,'upg'],
+             [hbSettle,'round'],[hbPlaceStruct,'build'],[hbStep,'play'],[_runSummary,'umRun'],
+             [_runSummary,'umWin'],[dgWin,'dgWin'],[hbMateRoll,'gacha'],[hbBuyBoost,'boost']];
+    for(const h of H)
+      assert(new RegExp("dqNote\\(\\s*'"+h[1]+"'").test(h[0].toString()), h[1]+' 계측이 안 붙어 있음: '+h[0].name);
+    p.daily={day:dk, q:dqDraw(dk), allGot:0, att:{n:0,day:0,bn:{},fin:0,cyc:0}};
+    p.pcoin=keep.pc; p.gas=keep.gas; p.gem=keep.gem;
+    return '5개(바깥 '+DQ_OUT_N+') · 주간 '+DQ_WEEK_GOAL+' · 계측 '+H.length+'곳 확인'; });
   // 📦 상자 — 맵을 돌아다닐 이유. '공격 대상'이라 사거리 안에 있어야 부순다.
   await step('상자: 사거리 안일 때만 부수고 · 적이 우선 · 보상은 섞여 나온다', async()=>{
     skipIf(typeof hbSpawnChest!=='function','상자 없음');
@@ -883,6 +1051,9 @@ async function groupLobby(){
     assert($('hbGrowBody').textContent.indexOf('파워 350')<0,'옛 파워 문구가 남음');
     hbCloseGrow();
     // ⑥ 할 게 없으면 배지는 꺼진다 — 단 버튼 진입점은 그대로 남아야 한다
+    //    ☰ 의 !는 성장과 📅 일일이 함께 쓰는 신호라, 일일 쪽도 '받을 게 없는' 상태로 만들어야 성장만 본다
+    { const D=dqState(); D.att.day=_dgDayKey(); D.att.n=1; D.att.bn={}; D.att.fin=0;
+      D.allGot=1; D.q.forEach(e=>{ e.got=1; }); }
     c.level=1; c.unit.level=1; p.pcoin=0; renderHome();
     assert(!visible($('hbGrowDot')),'할 게 없는데 성장 배지가 남아 있음');
     { hbOpenMore(); await sleep(100);
@@ -1364,14 +1535,20 @@ async function groupLobby(){
     hbGoDungeon(2); assert(hbHunt().dg===1,'잠긴 던전으로 이동됨');
     hbHunt().best[1]=HB_DG_UNLOCK;
     assert(hbDgOpen(2),HB_DG_UNLOCK+'라운드 도달했는데 던전2가 안 열림');
+    // 던전은 ◀▶ 로 한 장씩 넘긴다(칩 줄 폐지, 2026-08-14) — 넘기는 것만으로는 이동하지 않는다
     hbOpenRounds(); await sleep(40);
-    const chips=document.querySelectorAll('#hbDgRow .hbDg');
-    assert(chips.length===HB_DG_MAX,'던전 칩이 '+HB_DG_MAX+'개가 아님: '+chips.length);
-    assert(chips[2].classList.contains('lock'),'던전3이 잠금 표시가 아님');
-    hbGoDungeon(2);
-    assert(hbHunt().dg===2 && _hb.dg===2,'던전 이동이 반영되지 않음');
+    assert(document.getElementById('hbPickCard'),'던전 카드가 없음');
+    assert($('hbPickPrev').disabled===true,'던전 1인데 ◀ 가 살아 있음');
+    assert($('hbPickNext').disabled===false,'던전 2가 열렸는데 ▶ 가 잠김');
+    { const dg0=hbHunt().dg;
+      hbPickDg(1);
+      assert(_hbPick.dg===2,'▶ 로 던전이 안 넘어감: '+_hbPick.dg);
+      assert(hbHunt().dg===dg0 && (!_hb||_hb.dg===dg0),'넘기기만 했는데 이동돼 버림(이동 버튼 전이어야 한다)');
+      hbPickGo(); await sleep(20); }
+    assert(hbHunt().dg===2 && _hb.dg===2,'[이동]으로 던전이 안 옮겨짐');
     assert(_hb.round===HB_DG_UNLOCK||_hb.round===1,'이동 후 라운드가 이상함: '+_hb.round);
-    hbCloseRounds(); hbGoDungeon(1); hbGoRound(1);
+    assert(!visible($('hbRoundSheet')),'이동 후 시트가 안 닫힘');
+    hbGoDungeon(1); hbGoRound(1);
     HB_DG_ALL_OPEN=_dgAll;   // 원래 값으로 복구 — 이후 스텝은 앱 기본 상태로 돈다
     // ② 엘리트 — 확률이 라운드·던전에 따라 오르고, 체력·보상 배수가 붙는다
     assert(hbEliteChance(1,1)<hbEliteChance(1,20),'엘리트 확률이 라운드로 안 오름');
@@ -1611,7 +1788,7 @@ async function groupLobby(){
     // 허브는 '화면'이 아니라 HOME 위 팝업이라 화면 전환으로 안 닫힌다 — HOME으로 돌아오면 걷어내야 한다
     openHome(); await sleep(80);
     assert(!visible($('dgHubScreen')),'HOME으로 돌아왔는데 토벌 허브 팝업이 HOME을 덮은 채 남음');
-    assert(document.getElementById('hbRound').textContent.indexOf('던전')>=0,'자동사냥은 던전 표기를 유지해야 함');
+    assert($('hbMid').textContent.indexOf('던전')>=0,'자동사냥은 던전 표기를 유지해야 함');
     return '네비 토벌 · HOME 던전'; });
   // HOME 좌상단 HUD — 프로필은 상세하게 맨 위 왼쪽에 고정 · 킬수는 없음 · 라운드 조절은 전용 아이콘 버튼.
   await step('HOME HUD: 좌상단 프로필 상세 · 킬수 없음 · 라운드는 아이콘 버튼', async()=>{
@@ -1699,11 +1876,25 @@ async function groupLobby(){
       assert(Math.abs(w/bw-0.5)<0.06,'경험치 바가 xp 비율(50%)을 따르지 않음: '+Math.round(w/bw*100)+'%');
       c.xp=0; hbHud();
       assert(bar.getBoundingClientRect().width<2,'xp=0인데 바가 비지 않음'); }
-    // ④ 라운드 조절 = 던전 제목 구역을 누른다(2026-08-14 · 깃발 아이콘은 폐지)
+    // ④ 라운드 조절 = ◀▶ 로 ±1, 가운데를 누르면 전체 목록(2026-08-14 · 깃발 아이콘은 폐지)
     const rb=$('hbMid');
     assert(rb && getComputedStyle(rb).pointerEvents!=='none','던전 제목이 눌리지 않음');
-    assert(/hbOpenRounds/.test(rb.getAttribute('onclick')||''),'던전 제목에 라운드 선택이 안 걸림');
+    assert(/hbOpenRounds/.test(($('hbMidTx').getAttribute('onclick')||'')),'가운데를 눌러도 라운드 목록이 안 열림');
+    assert($('hbRdPrev') && $('hbRdNext'),'라운드 ±1 화살표가 없음');
     assert(!$('hbRoundBtn'),'옛 깃발 버튼이 남아 있음');
+    // ±1 은 시트를 거치지 않고 바로 먹어야 한다 · 1~최고 도달 밖으로는 안 나간다
+    { const H=hbHunt(); H.best[H.dg]=3; hbSetRound(2); hbHud();
+      assert($('hbRdPrev').disabled===false && $('hbRdNext').disabled===false,'중간 라운드인데 화살표가 잠김');
+      hbRoundStep(1); assert(_hb.round===3,'▶ 로 라운드가 안 오름: '+_hb.round);
+      assert($('hbRdNext').disabled===true,'최고 도달인데 ▶ 가 안 잠김');
+      hbRoundStep(1); assert(_hb.round===3,'최고 도달을 넘어감: '+_hb.round);
+      hbRoundStep(-1); hbRoundStep(-1); assert(_hb.round===1,'◀ 로 1까지 안 내려감: '+_hb.round);
+      assert($('hbRdPrev').disabled===true,'라운드 1인데 ◀ 가 안 잠김');
+      hbRoundStep(-1); assert(_hb.round===1,'라운드 1 아래로 내려감: '+_hb.round);
+      assert(visible($('hbRoundSheet'))===false,'화살표를 눌렀는데 시트가 열림'); }
+    // 숫자와 이름은 따로 나온다(제목=던전 이름 · 숫자=라운드)
+    assert(/^\d+$/.test($('hbRound').textContent.trim()),'라운드 칸에 숫자만 있어야 함: '+$('hbRound').textContent);
+    assert($('hbDgName').textContent.indexOf(hbDun(_hb.dg).name)>=0,'제목에 던전 이름이 없음');
     // 제목을 눌러도 캐릭터가 따라가면 안 된다(필드 탭과 같은 자리다)
     { const r=rb.getBoundingClientRect(), cx=(r.left+r.right)/2, cy=(r.top+r.bottom)/2;
       _hb.char.tx=null; hbFieldTap({target:document.elementFromPoint(cx,cy), clientX:cx, clientY:cy});
@@ -1720,14 +1911,12 @@ async function groupLobby(){
     // 대신 필드 탭으로 새지 않는지는 위 ④에서 hbFieldTap으로 직접 확인한다.
     assert(getComputedStyle(mid).pointerEvents!=='none','던전 제목이 클릭을 못 받음');
     hbCloseRounds(); await sleep(20);
-    rb.click(); await sleep(60);
-    assert(visible($('hbRoundSheet')),'아이콘을 눌렀는데 라운드 팝업이 안 열림');
+    $('hbMidTx').click(); await sleep(60);   // 가운데(제목·라운드)를 눌러야 목록이 열린다 — 화살표는 ±1만
+    assert(visible($('hbRoundSheet')),'가운데를 눌렀는데 라운드 팝업이 안 열림');
     hbCloseRounds();
-    // ⑤ 이름 충돌 금지 — 인게임 홈 하단 탭 줄(.hbTop)이 좌상단 규칙에 먹히면 세로로 무너진다
-    { const tabs=document.querySelector('.hbTop.hsTabs'); assert(tabs,'인게임 홈 탭 줄(.hbTop.hsTabs)이 없음');
-      const cs=getComputedStyle(tabs);
-      assert(cs.position!=='absolute','인게임 탭 줄이 좌상단 규칙에 오염됨(position)');
-      assert(cs.flexDirection==='row','인게임 탭 줄이 좌상단 규칙에 오염됨(flex-direction='+cs.flexDirection+')'); }
+    // ⑤ 이름 충돌 금지 — 예전엔 인게임 홈 탭 줄이 `.hbTop`을 같이 써서 좌상단 규칙에 먹히면 세로로 무너졌다.
+    //    그 탭 줄은 하단 네비로 옮겨가며 사라졌다(2026-08-14). 이름이 다시 겹치지 않는지만 지킨다.
+    assert(!document.querySelector('.hbTop'),'`.hbTop`이 다시 쓰이고 있음 — 좌상단(.hbHudTop) 규칙과 이름이 겹친다');
     return '좌상단 고정(+'+Math.round(tr.left-ph.left)+','+Math.round(tr.top-ph.top)+') · 킬수 없음 · 아이콘 팝업 ok'; });
   // 라운드 선택 — 최고 도달까지만 고를 수 있고, 반복/등반이 클리어 후 행동을 가른다.
   await step('자동사냥: 라운드 선택 · 반복/등반', async()=>{ skipIf(typeof hbOpenRounds!=='function','라운드 선택 없음');
@@ -1770,13 +1959,24 @@ async function groupLobby(){
             if(r===undefined) continue;
             // 허용폭 12 = HOME 톤 검사와 같은 기준(공용 --metal-edge rgb(60,62,70)이 B-R=10이라 그 아래로 잡으면 오검출)
             assert(b<=r+12,'라운드 팝업에 푸른기가 남음('+(el.className||el.tagName)+'): '+m); } } } }
-    // 칸 수 = 최고 도달 · 단 '다음 마일스톤'까지는 목표로 한 칸 더 보여 준다(도전정신 — 못 고르게 잠근다)
-    const cells=document.querySelectorAll('#hbRoundGrid .hbRd');
-    const want=Math.max(hbBest(1), hbNextRw(1,_hb.round)||0);
-    assert(cells.length===want,'선택지 수가 규칙과 다름: '+cells.length+' vs '+want+'(최고 '+hbBest(1)+' · 다음 보상 '+hbNextRw(1,_hb.round)+')');
-    for(const cell of cells){ const n=parseInt(cell.textContent,10);
-      assert((n>hbBest(1))===cell.disabled,'라운드 '+n+' 잠금 상태가 최고 도달과 안 맞음(disabled='+cell.disabled+')'); }
-    assert(document.querySelector('#hbRoundGrid .hbRd.on').textContent.replace(/\D+$/,'')===String(_hb.round),'현재 라운드가 강조되지 않음');
+    // 라운드 = 세로 피커. 고를 수 있는 것(최고 도달까지)만 넣고, 아래가 1라운드다.
+    // 칸 수 = 최고 도달 · 단 '다음 마일스톤'까지는 목표로 더 보여 준다(못 고르게 잠근다)
+    const cells=[...document.querySelectorAll('#hbRdScroll .hbRd')];
+    const want=Math.max(hbBest(1), hbNextRw(1,_hbPick.round)||0);
+    assert(cells.length===want,'선택지 수가 규칙과 다름: '+cells.length+' vs '+want);
+    assert(+cells[0].dataset.r===want,'맨 위가 목표 라운드가 아님: '+cells[0].dataset.r);
+    assert(+cells[cells.length-1].dataset.r===1,'맨 아래가 1라운드가 아님: '+cells[cells.length-1].dataset.r);
+    for(const c of cells) assert((+c.dataset.r>hbBest(1))===c.disabled,'라운드 '+c.dataset.r+' 잠금이 최고 도달과 안 맞음');
+    assert(document.querySelector('#hbRdScroll .hbRd.on').dataset.r===String(_hb.round),'현재 라운드가 강조되지 않음');
+    // 칸을 누르면 '선택'만 바뀐다 — 이동은 [이동] 버튼에서만
+    { const r0=_hb.round, pick=Math.max(1,hbBest(1)-1);
+      hbRdTap(pick);
+      assert(_hbPick.round===pick,'탭으로 선택이 안 바뀜');
+      assert(_hb.round===r0,'탭만 했는데 이동돼 버림');
+      assert(document.querySelector('#hbRdScroll .hbRd.on').dataset.r===String(pick),'선택 강조가 안 옮겨감');
+      hbPickGo(); await sleep(20);
+      assert(_hb.round===pick,'[이동]으로 라운드가 안 옮겨짐: '+_hb.round); }
+    hbOpenRounds(); await sleep(40);
     // ④ 라운드 이동 = 진행 초기화 + 시트 닫힘 · 상한 넘는 값은 잘린다
     hbGoRound(1); await sleep(40);
     assert(_hb.round===1 && _hb.wave===1,'라운드 이동이 반영되지 않음');
@@ -2219,8 +2419,12 @@ async function groupLobby(){
     hbOpenRounds(); await sleep(40);
     const nx=hbNextRw(1,1);
     assert(nx===HB_RW_EVERY,'다음 마일스톤 안내가 틀림: '+nx);
-    assert(document.querySelectorAll('#hbRoundGrid .hbRd.rw').length>=1,'팝업에 마일스톤 표시가 없음');
-    assert(($('hbRoundNote').textContent||'').indexOf('라운드 '+nx)>=0,'팝업 안내에 다음 보상이 안 적힘');
+    // 안내 줄은 없앴다(2026-08-14) — '다음 목표'는 피커 맨 위의 잠긴 🎁 칸이 대신한다
+    assert(!$('hbRoundNote'),'안내 줄이 아직 남아 있음');
+    { const cs=[...document.querySelectorAll('#hbRdScroll .hbRd')];
+      assert(+cs[0].dataset.r===nx,'피커 맨 위가 다음 마일스톤이 아님: '+cs[0].dataset.r+' vs '+nx);
+      assert(cs[0].disabled && cs[0].textContent.indexOf('🎁')>=0,'다음 목표 칸이 잠긴 🎁 가 아님'); }
+    assert(hbRoundRw(1,nx),'다음 마일스톤 보상표가 비어 있음');   // 문구가 아니라 표로 확인(안내 줄 폐지)
     hbCloseRounds();
     return '간격 '+HB_RW_EVERY+' · 최초 1회 · 던전별 분리 ok'; });
 
@@ -2573,37 +2777,6 @@ async function groupLobby(){
       if(e) assert(+getComputedStyle(e).fontWeight<=700, sel+' 굵기가 700 초과(가짜 볼드): '+getComputedStyle(e).fontWeight); }
     openHome(); await sleep(40);
     return '하위 3칸 · renderProfGear/_shopPetPanel 재사용 ok'; });
-      await step('캐릭터: 성장은 따로 · 재화와 펫은 공용', ()=>{ skipIf(typeof profCreateChar!=='function','캐릭터 시스템 없음');
-    const p=PROF(); p.pcoin=1000; p.pets={wolf:{count:1}}; p.equip=['wolf'];
-    const a=CHAR(); a.unit.stats.pow=(a.unit.stats.pow||0)+12;   // 성장 흔적을 직접 넣는다(찍는 경로는 없앴다)
-    const powA=profStat('pow'), spA=a.statPoints||0;
-    const b=profCreateChar('scout','둘째'); assert(b,'두 번째 캐릭터 생성 실패');
-    assert(CHAR().id===b.id,'새로 만든 캐릭터가 선택되지 않음');
-    assert(PROF().pcoin===1000,'재화가 캐릭터를 따라감(공용이어야 함): '+PROF().pcoin);
-    assert(PROF().equip.length===1,'펫 장착이 캐릭터를 따라감(공용이어야 함)');
-    assert(!b.statPoints && b.level===1 && profStat('pow')!==powA,'새 캐릭터가 성장을 물려받음');
-    assert(profSelectChar(a.id),'되돌아가기 실패');
-    assert((a.statPoints||0)===spA && profStat('pow')===powA,'되돌아온 캐릭터의 성장이 바뀜');
-    return '슬롯 '+PROF().chars.length+'/'+PROF_MAX_CHARS; });
-  await step('캐릭터 삭제: 재화는 환급 · 경험치는 소멸 · 장비는 가방에 남음', ()=>{ skipIf(typeof profDeleteChar!=='function','캐릭터 삭제 없음');
-    const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0; p.pcoin=100000; p.unlocks={evolve:true};
-    const c=profCreateChar('ranger','환급'); assert(c,'캐릭터 생성 실패');
-    const before=p.pcoin;
-    c.unit.level=30; c.level=30;                         // 진화 레벨 요건 충족(전직은 폐지됨)
-    assert(profEvolve(),'진화 실패');
-    const spent=before-p.pcoin; assert(spent>0,'지출이 0');
-    const it=profAddItem(profMakeItem('weapon',3,'rare')); assert(profEquipItem(it.iid),'장비 장착 실패');
-    c.xp=999; c.level=12; c.statPoints=7;                 // 경험치로 얻은 것 — 환급 대상이 아니어야 한다
-    assert(profRefundOf(c)===spent,'환급액이 쓴 재화와 다름(장비가 섞였는지 확인): '+profRefundOf(c)+' vs '+spent);
-    _charDelId=c.id;                                      // 확인 UI(무엇을 잃고 얻는지)
-    const html=renderCharSelect(); _charDelId=null;
-    assert(html.indexOf('삭제할까요')>=0 && html.indexOf('P 반환')>=0 && html.indexOf('경험치 소멸')>=0,'삭제 확인 UI가 안 나옴');
-    const cash=p.pcoin, got=profDeleteChar(c.id);
-    assert(got===spent,'삭제 환급액 불일치: '+got);
-    assert(p.pcoin===cash+spent,'재화가 안 돌아옴: '+p.pcoin);
-    assert(p.chars.length===0 && CHAR()===null,'캐릭터가 안 지워짐');
-    assert(profItems().length===1 && !profItemHolder(it.iid),'장비가 사라졌거나 장착이 안 풀림');
-    return '지출 '+spent+'P → 전액 환급 · 장비는 가방에 남음'; });
   await step('장비: 던전 드랍 → 장착하면 스탯에 반영', ()=>{ skipIf(typeof profMakeItem!=='function','장비 아이템 없음');
     const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0; p.unlocks={};
     p.pets={}; p.equip=[];                                // 펫 %보너스가 곱해지면 장비 기여분만 떼어 볼 수 없다
@@ -2620,11 +2793,12 @@ async function groupLobby(){
     const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0; p.pcoin=0;
     const a=profCreateChar('ranger','A'), it=profAddItem(profMakeItem('weapon',2,'rare'));
     assert(profEquipItem(it.iid),'A 장착 실패');
-    profCreateChar('scout','B');                          // 새 캐릭터가 현재 선택된다
+    // 계정당 캐릭터는 하나라 UI로는 둘째를 못 만든다 — 소유권 판정만 보려고 저장소에 직접 꽂는다
+    const b=defaultChar('scout','B'); p.chars.push(b); p.curId=b.id;
     assert(profItems().length===1,'가방이 캐릭터를 따라감(계정 공용이어야 함)');
     assert(!profEquipItem(it.iid),'다른 캐릭터가 장착 중인데 장착됨');
     assert(profScrapItem(it.iid)===-1,'장착 중인데 분해됨');
-    assert(profSelectChar(a.id) && profEquipItem(it.iid),'A로 돌아가 해제 실패');
+    p.curId=a.id; assert(profEquipItem(it.iid),'A로 돌아가 해제 실패');
     const v=profScrapValue(it), got=profScrapItem(it.iid);
     assert(got===v && p.pcoin===v,'분해 환급 불일치: '+got+'/'+p.pcoin);
     assert(profItems().length===0,'가방에서 안 사라짐');
@@ -2886,8 +3060,6 @@ async function groupLobby(){
     const p=PROF(); p.chars.length=0; p.curId='';
     profCreateChar('scout','<b>x</b>');                 // 이름은 사용자 입력 — innerHTML에 그대로 들어가면 안 된다
     const host=document.createElement('div');
-    host.innerHTML=renderCharSelect();
-    assert(host.textContent.indexOf('<b>x</b>')>=0,'보관소에서 이름이 마크업으로 해석됨');
     host.innerHTML=renderProfStats();
     assert(host.textContent.indexOf('<b>x</b>')>=0,'광장에서 이름이 마크업으로 해석됨');
     return '이스케이프 확인'; });
@@ -2921,6 +3093,144 @@ async function groupGame(){
   await step('시트 복원: 선택→해제 시 섹션 유지', ()=>{ openGachaSheet(); const u=G.units[0]; G.sel=[u.uid]; refreshSelCard();
     assert(G.mainSheet==='gacha','선택 중 시트 상태 소실'); G.sel=[]; refreshSelCard();
     assert(G.mainSheet==='gacha' && $('unitCmd').classList.contains('on'),'해제 후 시트 미복원'); openMainHome(); return 'ok'; });
+  // 하단 프로필 구역 = 사냥터 톤(회색 판 + 검정 속살 + 각진 윗변). 섹션마다 높이가 달라 튀던 것도 여기서 막는다.
+  await step('하단 프로필: 다섯 섹션 같은 높이 · 회색 판 · 검정 속살', async()=>{
+    // ⚠ 헤드리스에선 three.js(esm.sh)가 막혀 로딩 게이트가 안 걷히고 #phone.inGame 이 안 켜진다
+    //    → #bot 이 display:none 이라 하단 패널 높이가 전부 0으로 측정된다. 재는 동안만 켠다.
+    const ph=$('phone'), faked=ph && !ph.classList.contains('inGame'); if(faked) ph.classList.add('inGame');
+    document.body.classList.add('sheetOpen');
+    const bluish = t => { let m,bad=false; const re=/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/g;
+      while((m=re.exec(t))){ const r=+m[1],g=+m[2],b=+m[3]; if(b-r>=10 && b-g>=6 && b>=20) bad=true; } return bad; };
+    const hs={};
+    try{
+      for(const [n,fn] of [['메인',openMainHome],['유닛뽑기',openGachaSheet],['업그레이드',openUpgradeSheet],
+                           ['보스',openBossSheet],['플레이어',()=>switchTab('Players',document.querySelector('.tab[data-tab="Players"]'))]]){
+        fn(); await sleep(120);
+        const p=document.querySelector('.bp.on'); assert(p,n+' 섹션에 하단 패널이 없음');
+        // 판의 '면'은 ::before 다(요소에 clip-path 를 걸면 시트 밖 #btCardCtl 이 잘려 사라진다)
+        const c=getComputedStyle(p), face=getComputedStyle(p,'::before');
+        hs[n]=Math.round(p.getBoundingClientRect().height);
+        assert(c.borderTopLeftRadius==='0px' && c.borderTopRightRadius==='0px', n+' 판이 아직 둥금: '+c.borderTopLeftRadius);
+        assert(!bluish(face.backgroundImage), n+' 판이 아직 푸른 톤: '+face.backgroundImage);
+        assert(face.backgroundImage && face.backgroundImage!=='none', n+' 판에 면이 없음(::before 가 안 붙음)');
+        // 좌우 '위' 모서리는 사냥터 카드처럼 잘린다
+        assert(/polygon\(/.test(face.clipPath) && face.clipPath.indexOf('7px')>=0,
+          n+' 판 위 모서리가 안 잘림: '+face.clipPath);
+        // 속살(좌측 설명·그리드 칸·유닛 카드·플레이어 슬롯)은 전부 검정이어야 한다
+        for(const sel of ['.cgInfo','.cgSlot','.hsCell','.plbtn']){ const e=p.querySelector(sel); if(!e) continue;
+          assert(!bluish(getComputedStyle(e).backgroundImage), n+' '+sel+' 이 아직 푸른 톤: '+getComputedStyle(e).backgroundImage); }
+      }
+      const vals=Object.values(hs), lo=Math.min(...vals), hi=Math.max(...vals);
+      assert(hi>0,'하단 패널 높이를 못 쟀다(숨은 상태로 측정): '+JSON.stringify(hs));
+      assert(hi-lo<=1,'섹션마다 하단 높이가 다름: '+JSON.stringify(hs));
+      return Object.keys(hs).length+'섹션 모두 '+hi+'px';
+    } finally { if(faked) ph.classList.remove('inGame'); openMainHome(); }
+  });
+  // 하단 탭바 = 2층(최상위 5칸 → [‹][하위…]). HOME 네비와 같은 칸(.navIt)을 쓰고, 칸 폭은 전부 같다.
+  await step('하단 탭바: 등폭 · 구역을 누르면 [‹]+하위로 내려간다', async()=>{
+    const ph=$('phone'), faked=ph && !ph.classList.contains('inGame'); if(faked) ph.classList.add('inGame');
+    document.body.classList.add('sheetOpen');
+    if(typeof updatePbossFab==='function') updatePbossFab();   // 보스 탭은 게임 중에만 뜬다 — 5칸을 세려면 먼저 켠다
+    const cells=()=>[...document.querySelectorAll('#tabs > *')].filter(e=>getComputedStyle(e).display!=='none');
+    const widths=els=>els.map(e=>Math.round(e.getBoundingClientRect().width));
+    try{
+      // ① 최상위 = 5칸 등폭. 선택 칸만 넓어지던 flex-grow:1.42 를 없앤 것을 지킨다.
+      gtabBack(); await sleep(80);
+      const top=cells(); assert(top.length===5,'최상위 칸이 5개가 아님: '+top.length);
+      { const w=widths(top), lo=Math.min(...w), hi=Math.max(...w);
+        assert(hi-lo<=1,'최상위 칸 폭이 다름: '+JSON.stringify(w));
+        // 선택 칸도 같은 폭이어야 한다
+        openGachaSheet(); await sleep(80); gtabBack(); await sleep(80);
+        const w2=widths(cells()); assert(Math.max(...w2)-Math.min(...w2)<=1,'선택 칸만 넓어짐: '+JSON.stringify(w2)); }
+      // ② 구역별 하위 — 왼쪽 첫 칸은 항상 뒤로가기, 하위 칸끼리는 등폭
+      const want={ Main:['유닛 지정','유닛 판매'], Unit:['뽑기','타워구매'], Upgrade:['공격력','확률','영구강화'], Boss:['개인보스'] };
+      const go={ Main:openMainHome, Unit:openGachaSheet, Upgrade:openUpgradeSheet, Boss:openBossSheet };
+      for(const k in want){
+        go[k](); await sleep(90);
+        const cs=cells();
+        assert(cs[0] && cs[0].classList.contains('navBk'),k+' 구역에 뒤로가기 칸이 없음');
+        const labels=cs.slice(1).map(e=>e.textContent.trim());
+        for(const lb of want[k]) assert(labels.indexOf(lb)>=0, k+' 하위에 "'+lb+'"이 없음: '+JSON.stringify(labels));
+        const w=widths(cs.slice(1));
+        assert(Math.max(...w)-Math.min(...w)<=1, k+' 하위 칸 폭이 다름: '+JSON.stringify(w));
+        assert(cs.filter(e=>e.classList.contains('cur')).length<=1, k+' 하위에 선택 표시가 둘 이상');
+      }
+      // ③ 하위를 누르면 그 구역 내용이 바뀐다(칸 이름으로 확인)
+      openGachaSheet(); await sleep(90); gtabSub('draw'); await sleep(90);
+      { const names=[...document.querySelectorAll('#unitCmd .cgSlot .cgName')].map(e=>e.textContent.trim());
+        for(const nm of ['유닛 1회','유닛 5회','가스 1회','가스 5회']) assert(names.indexOf(nm)>=0,'뽑기 칸에 "'+nm+'"이 없음: '+JSON.stringify(names)); }
+      gtabSub('tower'); await sleep(90);
+      { const names=[...document.querySelectorAll('#unitCmd .cgSlot .cgName')].map(e=>e.textContent.trim());
+        assert(names.length && names.every(n=>n.indexOf('회')<0),'타워구매인데 뽑기 칸이 남아 있음: '+JSON.stringify(names)); }
+      // ×5 는 1회의 5배 가격이어야 한다(별도 가격표를 만들지 않았다는 뜻)
+      assert(beaconCost('draw5')===beaconCost('draw')*5,'유닛 5회 가격이 5배가 아님');
+      assert(beaconCost('energy5')===beaconCost('energy')*5,'가스 5회 가격이 5배가 아님');
+      // ×5 는 맵 위 비콘 표에 들어가면 안 된다(좌표가 없어 패드·라벨이 NaN 자리에 생긴다)
+      assert(!DRAW_BEACONS.some(b=>b.id==='draw5'||b.id==='energy5'),'×5 가 맵 비콘 표(DRAW_BEACONS)에 섞였음');
+      // ④ 개인전/협동은 아군·적군이 없다 → 플레이어는 내려가지 않는다
+      switchTab('Players', document.querySelector('.tab[data-tab="Players"]')); await sleep(90);
+      assert(!gameHasVersus(),'네모는 대전 판이 아님(팀이 갈리면 안 됨)');
+      assert(cells().length===5,'개인전인데 플레이어가 하위로 내려감');
+      // ⑤ ‹ = 한 층 위(보고 있는 화면은 그대로)
+      openUpgradeSheet(); await sleep(90); assert(cells()[0].classList.contains('navBk'),'업그레이드가 안 내려감');
+      gtabBack(); await sleep(90);
+      assert(cells().length===5 && !document.getElementById('tabs').classList.contains('drill'),'뒤로가기로 최상위 복귀 실패');
+      assert(G.mainSheet==='upgrade','뒤로가기가 보고 있던 섹션까지 바꿨음: '+G.mainSheet);
+      // ⑥ 머리줄에는 초상이 없고 제목은 흰 글자다
+      openGachaSheet(); await sleep(90);
+      assert(!document.querySelector('.cmdG .cgPort'),'머리줄 초상(.cgPort)이 남아 있음');
+      { const t=document.querySelector('.cmdG .cgN'); assert(t,'머리줄 제목이 없음');
+        const c=getComputedStyle(t);
+        assert(c.color==='rgb(255, 255, 255)','머리줄 제목이 흰색이 아님: '+c.color);
+        assert(c.textShadow==='none','머리줄 제목에 글로우가 남아 있음: '+c.textShadow); }
+      // ⑦ 등급 띠 = 공용 세그먼트 바(전용 칩을 새로 만들지 않는다)
+      openMainHome(); await sleep(90);
+      { const box=$('hsTiers');
+        if(box && box.children.length){
+          assert(box.querySelector('.pdSeg'),'등급 띠가 공용 세그먼트 바(.pdSeg)가 아님: '+box.innerHTML.slice(0,60));
+          assert(!box.querySelector('.hsTier'),'옛 등급 칩(.hsTier)이 남아 있음'); } }
+      // ⑧ 판 안에 같은 조작을 두 번 두지 않는다(옛 .hsTabs 탭 줄 · 전송 옆 AUTO 배너)
+      assert(!document.querySelector('#defaultCmd .hsTab'),'판 안에 옛 모드 탭 줄이 남아 있음(하단 네비와 중복)');
+      assert(!$('autoFab'),'전송 옆 AUTO 배너가 남아 있음 — 자동화는 메인 하위 칸으로 옮겼다');
+      // ⑦ 자동화 = 메인 하위의 '마지막' 칸이고, 누르면 자동화 시트가 뜬다
+      openMainHome(); await sleep(90);
+      { const labels=cells().slice(1).map(e=>e.textContent.trim());
+        skipIf(!autoAnyOwned(),'자동화 미해금');
+        assert(labels[labels.length-1]==='자동화','자동화가 메인 하위 마지막 칸이 아님: '+JSON.stringify(labels)); }
+      gtabSub('auto'); await sleep(120);
+      assert(G.mainSheet==='auto','자동화 칸을 눌렀는데 시트가 안 바뀜: '+G.mainSheet);
+      { const cur=cells().find(e=>e.classList.contains('cur'));
+        assert(cur && cur.textContent.trim()==='자동화','자동화인데 선택 표시가 딴 칸: '+(cur&&cur.textContent.trim())); }
+      assert(cells()[0].classList.contains('navBk'),'자동화로 갔더니 최상위로 올라감');
+      // 지정으로 돌아오면 자동화 시트가 걷히고 메인 홈이 돌아온다
+      gtabSub('select'); await sleep(120);
+      assert(G.mainSheet==null && !$('defaultCmd').classList.contains('hide'),'자동화에서 유닛 지정으로 못 돌아옴');
+      return '최상위 5칸 등폭 · 4구역 드릴다운 · 자동화 하위 ok';
+    } finally { if(faked) ph.classList.remove('inGame'); openMainHome(); }
+  });
+  // 포인트방은 화면 전체를 덮는 입력 차단막(#bossPanel z22)을 깐다 — 우상단 ☰(#hud z20)이 통째로 먹혔었다.
+  await step('포인트방에서도 우상단 ☰ 가 눌린다', async()=>{
+    skipIf(typeof openBossArena!=='function','포인트방 없음');
+    const ph=$('phone'), faked=ph && !ph.classList.contains('inGame'); if(faked) ph.classList.add('inGame');
+    // ⚠ 헤드리스에선 three.js(esm.sh)가 막혀 로딩 게이트(#opening)가 안 걷힌다 — 히트 테스트를 그게 먼저 먹는다
+    const op=$('opening'), opUp=op && !op.classList.contains('hide'); if(opUp) op.classList.add('hide');
+    try{
+      if(!G.coopBoss && typeof spawnCoopBoss==='function') spawnCoopBoss(1);
+      skipIf(!G.coopBoss,'공용 보스 없음');
+      openBossArena(); await sleep(150);
+      assert(G.bossOpen,'포인트방이 안 열림');
+      const set=$('settingsBtn'), r=set.getBoundingClientRect();
+      assert(r.width>0,'설정 버튼이 안 보임');
+      const hit=document.elementFromPoint((r.left+r.right)/2,(r.top+r.bottom)/2);
+      assert(set.contains(hit)||hit===set,'포인트방에서 ☰ 가 다른 요소에 먹힘: '+((hit&&(hit.id||hit.className))||hit));
+      // 실제로 열리는지까지
+      set.click(); await sleep(150);
+      const pop=$('settingsPop');
+      assert(pop && !pop.classList.contains('hide'),'☰ 를 눌렀는데 설정이 안 열림');
+      if(typeof closeSettings==='function') closeSettings();
+      return 'z'+getComputedStyle($('hud')).zIndex+' — 차단막 위';
+    } finally { if(typeof closeBossArena==='function') closeBossArena();
+      if(opUp) op.classList.remove('hide'); if(faked) ph.classList.remove('inGame'); } });
   await step('무기 업그레이드 구매', ()=>{ skipIf(typeof upgCost!=='function'||typeof buyGachaUp!=='function','업그레이드 API 없음');
     hackCredits(); const b=G.gachaLuckLv||0; buyGachaUp(); assert((G.gachaLuckLv||0)===b+1,'gachaLuckLv 미증가'); return 'Lv'+G.gachaLuckLv; });
   await step('보스 탭 표시/배지 갱신', ()=>{ updatePbossFab(); const bt=$('bossTab');
