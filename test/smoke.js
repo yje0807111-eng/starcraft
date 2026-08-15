@@ -54,13 +54,29 @@ async function groupLobby(){
     openAuth();
     assert(visible($('auth')),'로그인 화면이 안 뜸(자동 로그인으로 건너뛰는지 확인)');
     assert(!visible($('townScreen')),'로그인 전에 메인(마을)이 떠 있음');
+    // 첫 화면 = 방식 선택 허브. 아이디/비번은 방식을 고른 뒤에 나온다
+    assert(visible($('authHub')),'로그인 방식 허브가 안 보임');
+    assert(!visible($('authForm')),'허브인데 입력 폼이 이미 떠 있음');
+    assert(visible($('authGuest')),'허브에 게스트 시작 버튼이 없음');
+    assert($('wayGoogle').classList.contains('lock'),'Google 버튼이 잠김 표시가 아님(대시보드 설정 전까지는 잠겨 있어야 한다)');
+    authWayLocked(); assert(visible($('authHub')),'잠긴 방식을 눌렀는데 화면이 넘어감');
+    // 아이디를 고르면 폼으로
+    authOpenForm('id');
+    assert(!visible($('authHub')) && visible($('authForm')),'아이디를 골랐는데 폼이 안 열림');
     assert(visible($('authId')) && visible($('authPw')),'아이디/비밀번호 입력칸이 없음');
     assert($('authNick').classList.contains('hide'),'로그인 탭인데 닉네임 칸이 보임');
-    // 탭은 허브·유즈맵과 같은 공용 컴포넌트를 쓴다(로그인 화면만 별도 세그먼트 금지)
-    var lt=$('segLogin');
-    assert(lt.classList.contains('msTab2'),'로그인 탭이 공용 탭(.msTab2)이 아님: '+lt.className);
-    assert(document.querySelector('.authTabs').classList.contains('msTabs2'),'탭 바가 .msTabs2가 아님');
-    assert(lt.querySelector('svg'),'탭 아이콘이 없음(paintIcons 누락)');
+    // 이메일은 같은 폼 한 벌을 쓰되 입력 타입만 바뀐다(폼을 두 벌 만들면 여기서 걸린다)
+    authOpenForm('email');
+    assert($('authId').type==='email','이메일 방식인데 첫 칸이 email 타입이 아님: '+$('authId').type);
+    assert(document.querySelectorAll('#auth input[type=password]').length===2,'비밀번호 칸이 폼마다 복제됨');
+    authBackToHub(); assert(visible($('authHub')),'뒤로가기가 허브로 안 돌아감');
+    authOpenForm('id');
+    // 탭은 사냥터·장비창과 같은 공용 세그먼트 바를 쓴다(로그인 화면만 별도 탭 금지)
+    var seg=document.querySelector('#authTabs .pdSeg');
+    assert(seg,'로그인/회원가입 탭이 공용 세그먼트 바(.pdSeg)를 안 씀');
+    assert(seg.querySelectorAll('.pdSegBtn').length===2,'탭이 2개가 아님');
+    assert(seg.querySelector('.pdSegInd'),'현재 탭을 가리키는 판(.pdSegInd)이 없음');
+    assert(seg.querySelector('.pdSegBtn.on').textContent.indexOf('로그인')>=0,'켜진 탭이 로그인이 아님');
     var ac=getComputedStyle(document.querySelector('.authCard'));
     // 배경이 단색이든 그라데든, 뒤 배경이 비치지 않을 만큼 불투명해야 한다
     var acAlpha=(ac.backgroundImage.indexOf('gradient')>=0)
@@ -69,6 +85,11 @@ async function groupLobby(){
     assert(acAlpha>0.6,'로그인 카드가 투명해 배경과 겹침(alpha '+acAlpha+')');
     assert(ac.boxShadow!=='none','로그인 카드에 질감(그림자)이 없음');
     assert(ac.clipPath && ac.clipPath!=='none','로그인 카드 외곽이 각진 HUD 형태가 아님');
+    // 액센트는 사냥터와 같은 빨강 — 푸른기로 되돌아가면 여기서 걸린다
+    { var rgb=ac.getPropertyValue('--acRGB').trim().split(',').map(Number);
+      assert(rgb.length===3 && rgb[0]>rgb[2]+80,'로그인 액센트가 붉은 계열이 아님: '+ac.getPropertyValue('--acRGB'));
+      var segCol=getComputedStyle(document.querySelector('#authTabs .pdSegInd')).getPropertyValue('--segCol').trim();
+      assert(segCol===ac.getPropertyValue('--acRGB').trim(),'탭 광원이 카드 액센트와 다름: '+segCol); }
     authMode('signup');
     assert(!$('authNick').classList.contains('hide'),'회원가입인데 닉네임 칸이 안 보임');
     assert(!$('authPw2').classList.contains('hide'),'회원가입인데 비밀번호 확인 칸이 안 보임');
@@ -128,22 +149,42 @@ async function groupLobby(){
   // DESIGN.md 규칙 — 허브(볼륨 3)만. 다른 볼륨 3 화면(타이틀·로그인·대기실)은 각자 전환될 때 스텝을 추가할 것.
   // 빈 칸 바로 입장은 없앴다(2026-08-06). 체험 입장은 '게스트로 시작하기' 버튼 전용.
   await step('인증: 빈 칸은 막고, 게스트 버튼으로 입장', async()=>{ skipIf(typeof authSubmit!=='function','인증 없음');
-    openAuth(); $('authId').value=''; $('authPw').value='';
+    openAuth(); authOpenForm('id');   // 허브에서 아이디를 골라야 입력 폼이 나온다
+    $('authId').value=''; $('authPw').value='';
     await authSubmit(); await sleep(120);
     assert(visible($('auth')),'빈 칸인데 로그인 화면을 벗어남(자동 입장이 남아 있음)');
     assert(!visible($('hubScreen')),'빈 칸인데 게임 선택으로 넘어감');
     assert(($('authErr').textContent||'').length>0,'빈 칸인데 안내가 없음');
+    authBackToHub();   // 게스트 진입은 폼이 아니라 허브에 있다
     const gb=$('authGuest'); assert(gb && visible(gb),'게스트로 시작하기 버튼이 없음');
     gb.click();
     // 게스트 입장도 로딩(#opening에서 3D 데우기)을 거친다 — 끝날 때까지 기다린다.
     // ⚠ 이 대기는 넉넉해야 한다: 실기기(GPU)에선 1초 안이지만 헤드리스 소프트웨어 렌더러(swiftshader)에선
     //   3D 예열에 10초 넘게 걸린다. 4초로 뒀다가 '게스트가 안 들어간다'고 잘못 실패했다(앱은 정상).
-    for(let i=0;i<120 && !(visible($('townScreen'))||visible($('charScreen'))||visible($('homeScreen'))); i++) await sleep(250);
-    assert(visible($('townScreen'))||visible($('charScreen'))||visible($('homeScreen')),'게스트 버튼을 눌렀는데 메인으로 안 감');
+    for(let i=0;i<120 && !(visible($('townScreen'))||visible($('homeScreen'))); i++) await sleep(250);
+    assert(visible($('townScreen'))||visible($('homeScreen')),'게스트 버튼을 눌렀는데 메인으로 안 감');
     assert(!visible($('auth')),'로그인 화면이 안 닫힘');
     for(let i=0;i<40 && !AUTH.user; i++) await sleep(50);   // 로딩 게이트를 거치면 몇 프레임 늦게 채워질 수 있다
     assert(AUTH.user,'입장했는데 유저가 비어 있음');
     return AUTH.user.nick||AUTH.user.id; });
+  // 캐릭터를 '고르는' 화면은 없다 — 처음 들어오면 기본 유닛이 조용히 지급된다(2026-08-13 설계 변경).
+  // 종족 선택은 나중에 길드 가입 시점으로 옮겼다. 여기서 지키는 것은 '입구마다 캐릭터가 보장된다' 하나.
+  await step('캐릭터: 생성 화면 없이 기본 유닛이 자동 지급된다', ()=>{ skipIf(typeof profEnsureChar!=='function','캐릭터 시스템 없음');
+    assert(typeof openCharScreen==='undefined' && typeof renderCharCreate==='undefined'
+        && typeof renderCharSelect==='undefined' && !$('charScreen'),'캐릭터 선택/생성 화면이 아직 남아 있음');
+    assert(PROF_MAX_CHARS===1,'계정당 캐릭터는 하나여야 함: '+PROF_MAX_CHARS);
+    const p=PROF(); p.chars=[]; p.curId=''; saveMeta();
+    const c=profEnsureChar();
+    assert(c && CHAR()===c,'기본 유닛이 지급되지 않음');
+    assert(c.cls===PROF_DEFAULT_CLASS,'기본 유닛 종류가 PROF_DEFAULT_CLASS 와 다름: '+c.cls);
+    assert(profEnsureChar()===c,'이미 있는데 또 만들었음(중복 지급)');
+    // 두 번째 캐릭터는 만들어지지 않는다 — 보관소도 함께 폐지했다
+    assert(!profCreateChar('scout','둘째'),'캐릭터가 하나를 넘어 생성됨');
+    // 모두 같은 스탯·같은 외형으로 시작한다
+    { const p2=PROF(); p2.chars=[]; p2.curId=''; const d=profEnsureChar();
+      for(const k of PROF_STATS) assert(profStat(k)>0,'기본 스탯이 0: '+k);
+      assert(d.cls===c.cls,'사람마다 시작 유닛이 다름'); }
+    return '기본 '+PROF_DEFAULT_CLASS+' · 슬롯 '+PROF().chars.length+'/'+PROF_MAX_CHARS; });
   // 부팅 타이머는 '오프닝을 걷어내는' 용도지 화면을 되돌리는 용도가 아니다.
   // 가드가 없으면 1.7초 뒤 openAuth()가 그때 보고 있던 화면을 로그인으로 덮는다 —
   // 스모크가 간헐적으로 "유즈맵에서 뒤로 갔는데 HOME으로 안 옴"으로 터지던 진짜 원인이었다.
@@ -1864,11 +1905,9 @@ async function groupLobby(){
     $('hbMidTx').click(); await sleep(60);   // 가운데(제목·라운드)를 눌러야 목록이 열린다 — 화살표는 ±1만
     assert(visible($('hbRoundSheet')),'가운데를 눌렀는데 라운드 팝업이 안 열림');
     hbCloseRounds();
-    // ⑤ 이름 충돌 금지 — 인게임 홈 하단 탭 줄(.hbTop)이 좌상단 규칙에 먹히면 세로로 무너진다
-    { const tabs=document.querySelector('.hbTop.hsTabs'); assert(tabs,'인게임 홈 탭 줄(.hbTop.hsTabs)이 없음');
-      const cs=getComputedStyle(tabs);
-      assert(cs.position!=='absolute','인게임 탭 줄이 좌상단 규칙에 오염됨(position)');
-      assert(cs.flexDirection==='row','인게임 탭 줄이 좌상단 규칙에 오염됨(flex-direction='+cs.flexDirection+')'); }
+    // ⑤ 이름 충돌 금지 — 예전엔 인게임 홈 탭 줄이 `.hbTop`을 같이 써서 좌상단 규칙에 먹히면 세로로 무너졌다.
+    //    그 탭 줄은 하단 네비로 옮겨가며 사라졌다(2026-08-14). 이름이 다시 겹치지 않는지만 지킨다.
+    assert(!document.querySelector('.hbTop'),'`.hbTop`이 다시 쓰이고 있음 — 좌상단(.hbHudTop) 규칙과 이름이 겹친다');
     return '좌상단 고정(+'+Math.round(tr.left-ph.left)+','+Math.round(tr.top-ph.top)+') · 킬수 없음 · 아이콘 팝업 ok'; });
   // 라운드 선택 — 최고 도달까지만 고를 수 있고, 반복/등반이 클리어 후 행동을 가른다.
   await step('자동사냥: 라운드 선택 · 반복/등반', async()=>{ skipIf(typeof hbOpenRounds!=='function','라운드 선택 없음');
@@ -2519,37 +2558,6 @@ async function groupLobby(){
       if(e) assert(+getComputedStyle(e).fontWeight<=700, sel+' 굵기가 700 초과(가짜 볼드): '+getComputedStyle(e).fontWeight); }
     openHome(); await sleep(40);
     return '하위 3칸 · renderProfGear/_shopPetPanel 재사용 ok'; });
-      await step('캐릭터: 성장은 따로 · 재화와 펫은 공용', ()=>{ skipIf(typeof profCreateChar!=='function','캐릭터 시스템 없음');
-    const p=PROF(); p.pcoin=1000; p.pets={wolf:{count:1}}; p.equip=['wolf'];
-    const a=CHAR(); a.unit.stats.pow=(a.unit.stats.pow||0)+12;   // 성장 흔적을 직접 넣는다(찍는 경로는 없앴다)
-    const powA=profStat('pow'), spA=a.statPoints||0;
-    const b=profCreateChar('scout','둘째'); assert(b,'두 번째 캐릭터 생성 실패');
-    assert(CHAR().id===b.id,'새로 만든 캐릭터가 선택되지 않음');
-    assert(PROF().pcoin===1000,'재화가 캐릭터를 따라감(공용이어야 함): '+PROF().pcoin);
-    assert(PROF().equip.length===1,'펫 장착이 캐릭터를 따라감(공용이어야 함)');
-    assert(!b.statPoints && b.level===1 && profStat('pow')!==powA,'새 캐릭터가 성장을 물려받음');
-    assert(profSelectChar(a.id),'되돌아가기 실패');
-    assert((a.statPoints||0)===spA && profStat('pow')===powA,'되돌아온 캐릭터의 성장이 바뀜');
-    return '슬롯 '+PROF().chars.length+'/'+PROF_MAX_CHARS; });
-  await step('캐릭터 삭제: 재화는 환급 · 경험치는 소멸 · 장비는 가방에 남음', ()=>{ skipIf(typeof profDeleteChar!=='function','캐릭터 삭제 없음');
-    const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0; p.pcoin=100000; p.unlocks={evolve:true};
-    const c=profCreateChar('ranger','환급'); assert(c,'캐릭터 생성 실패');
-    const before=p.pcoin;
-    c.unit.level=30; c.level=30;                         // 진화 레벨 요건 충족(전직은 폐지됨)
-    assert(profEvolve(),'진화 실패');
-    const spent=before-p.pcoin; assert(spent>0,'지출이 0');
-    const it=profAddItem(profMakeItem('weapon',3,'rare')); assert(profEquipItem(it.iid),'장비 장착 실패');
-    c.xp=999; c.level=12; c.statPoints=7;                 // 경험치로 얻은 것 — 환급 대상이 아니어야 한다
-    assert(profRefundOf(c)===spent,'환급액이 쓴 재화와 다름(장비가 섞였는지 확인): '+profRefundOf(c)+' vs '+spent);
-    _charDelId=c.id;                                      // 확인 UI(무엇을 잃고 얻는지)
-    const html=renderCharSelect(); _charDelId=null;
-    assert(html.indexOf('삭제할까요')>=0 && html.indexOf('P 반환')>=0 && html.indexOf('경험치 소멸')>=0,'삭제 확인 UI가 안 나옴');
-    const cash=p.pcoin, got=profDeleteChar(c.id);
-    assert(got===spent,'삭제 환급액 불일치: '+got);
-    assert(p.pcoin===cash+spent,'재화가 안 돌아옴: '+p.pcoin);
-    assert(p.chars.length===0 && CHAR()===null,'캐릭터가 안 지워짐');
-    assert(profItems().length===1 && !profItemHolder(it.iid),'장비가 사라졌거나 장착이 안 풀림');
-    return '지출 '+spent+'P → 전액 환급 · 장비는 가방에 남음'; });
   await step('장비: 던전 드랍 → 장착하면 스탯에 반영', ()=>{ skipIf(typeof profMakeItem!=='function','장비 아이템 없음');
     const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0; p.unlocks={};
     p.pets={}; p.equip=[];                                // 펫 %보너스가 곱해지면 장비 기여분만 떼어 볼 수 없다
@@ -2566,11 +2574,12 @@ async function groupLobby(){
     const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0; p.pcoin=0;
     const a=profCreateChar('ranger','A'), it=profAddItem(profMakeItem('weapon',2,'rare'));
     assert(profEquipItem(it.iid),'A 장착 실패');
-    profCreateChar('scout','B');                          // 새 캐릭터가 현재 선택된다
+    // 계정당 캐릭터는 하나라 UI로는 둘째를 못 만든다 — 소유권 판정만 보려고 저장소에 직접 꽂는다
+    const b=defaultChar('scout','B'); p.chars.push(b); p.curId=b.id;
     assert(profItems().length===1,'가방이 캐릭터를 따라감(계정 공용이어야 함)');
     assert(!profEquipItem(it.iid),'다른 캐릭터가 장착 중인데 장착됨');
     assert(profScrapItem(it.iid)===-1,'장착 중인데 분해됨');
-    assert(profSelectChar(a.id) && profEquipItem(it.iid),'A로 돌아가 해제 실패');
+    p.curId=a.id; assert(profEquipItem(it.iid),'A로 돌아가 해제 실패');
     const v=profScrapValue(it), got=profScrapItem(it.iid);
     assert(got===v && p.pcoin===v,'분해 환급 불일치: '+got+'/'+p.pcoin);
     assert(profItems().length===0,'가방에서 안 사라짐');
@@ -2832,8 +2841,6 @@ async function groupLobby(){
     const p=PROF(); p.chars.length=0; p.curId='';
     profCreateChar('scout','<b>x</b>');                 // 이름은 사용자 입력 — innerHTML에 그대로 들어가면 안 된다
     const host=document.createElement('div');
-    host.innerHTML=renderCharSelect();
-    assert(host.textContent.indexOf('<b>x</b>')>=0,'보관소에서 이름이 마크업으로 해석됨');
     host.innerHTML=renderProfStats();
     assert(host.textContent.indexOf('<b>x</b>')>=0,'광장에서 이름이 마크업으로 해석됨');
     return '이스케이프 확인'; });
@@ -2867,6 +2874,144 @@ async function groupGame(){
   await step('시트 복원: 선택→해제 시 섹션 유지', ()=>{ openGachaSheet(); const u=G.units[0]; G.sel=[u.uid]; refreshSelCard();
     assert(G.mainSheet==='gacha','선택 중 시트 상태 소실'); G.sel=[]; refreshSelCard();
     assert(G.mainSheet==='gacha' && $('unitCmd').classList.contains('on'),'해제 후 시트 미복원'); openMainHome(); return 'ok'; });
+  // 하단 프로필 구역 = 사냥터 톤(회색 판 + 검정 속살 + 각진 윗변). 섹션마다 높이가 달라 튀던 것도 여기서 막는다.
+  await step('하단 프로필: 다섯 섹션 같은 높이 · 회색 판 · 검정 속살', async()=>{
+    // ⚠ 헤드리스에선 three.js(esm.sh)가 막혀 로딩 게이트가 안 걷히고 #phone.inGame 이 안 켜진다
+    //    → #bot 이 display:none 이라 하단 패널 높이가 전부 0으로 측정된다. 재는 동안만 켠다.
+    const ph=$('phone'), faked=ph && !ph.classList.contains('inGame'); if(faked) ph.classList.add('inGame');
+    document.body.classList.add('sheetOpen');
+    const bluish = t => { let m,bad=false; const re=/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/g;
+      while((m=re.exec(t))){ const r=+m[1],g=+m[2],b=+m[3]; if(b-r>=10 && b-g>=6 && b>=20) bad=true; } return bad; };
+    const hs={};
+    try{
+      for(const [n,fn] of [['메인',openMainHome],['유닛뽑기',openGachaSheet],['업그레이드',openUpgradeSheet],
+                           ['보스',openBossSheet],['플레이어',()=>switchTab('Players',document.querySelector('.tab[data-tab="Players"]'))]]){
+        fn(); await sleep(120);
+        const p=document.querySelector('.bp.on'); assert(p,n+' 섹션에 하단 패널이 없음');
+        // 판의 '면'은 ::before 다(요소에 clip-path 를 걸면 시트 밖 #btCardCtl 이 잘려 사라진다)
+        const c=getComputedStyle(p), face=getComputedStyle(p,'::before');
+        hs[n]=Math.round(p.getBoundingClientRect().height);
+        assert(c.borderTopLeftRadius==='0px' && c.borderTopRightRadius==='0px', n+' 판이 아직 둥금: '+c.borderTopLeftRadius);
+        assert(!bluish(face.backgroundImage), n+' 판이 아직 푸른 톤: '+face.backgroundImage);
+        assert(face.backgroundImage && face.backgroundImage!=='none', n+' 판에 면이 없음(::before 가 안 붙음)');
+        // 좌우 '위' 모서리는 사냥터 카드처럼 잘린다
+        assert(/polygon\(/.test(face.clipPath) && face.clipPath.indexOf('7px')>=0,
+          n+' 판 위 모서리가 안 잘림: '+face.clipPath);
+        // 속살(좌측 설명·그리드 칸·유닛 카드·플레이어 슬롯)은 전부 검정이어야 한다
+        for(const sel of ['.cgInfo','.cgSlot','.hsCell','.plbtn']){ const e=p.querySelector(sel); if(!e) continue;
+          assert(!bluish(getComputedStyle(e).backgroundImage), n+' '+sel+' 이 아직 푸른 톤: '+getComputedStyle(e).backgroundImage); }
+      }
+      const vals=Object.values(hs), lo=Math.min(...vals), hi=Math.max(...vals);
+      assert(hi>0,'하단 패널 높이를 못 쟀다(숨은 상태로 측정): '+JSON.stringify(hs));
+      assert(hi-lo<=1,'섹션마다 하단 높이가 다름: '+JSON.stringify(hs));
+      return Object.keys(hs).length+'섹션 모두 '+hi+'px';
+    } finally { if(faked) ph.classList.remove('inGame'); openMainHome(); }
+  });
+  // 하단 탭바 = 2층(최상위 5칸 → [‹][하위…]). HOME 네비와 같은 칸(.navIt)을 쓰고, 칸 폭은 전부 같다.
+  await step('하단 탭바: 등폭 · 구역을 누르면 [‹]+하위로 내려간다', async()=>{
+    const ph=$('phone'), faked=ph && !ph.classList.contains('inGame'); if(faked) ph.classList.add('inGame');
+    document.body.classList.add('sheetOpen');
+    if(typeof updatePbossFab==='function') updatePbossFab();   // 보스 탭은 게임 중에만 뜬다 — 5칸을 세려면 먼저 켠다
+    const cells=()=>[...document.querySelectorAll('#tabs > *')].filter(e=>getComputedStyle(e).display!=='none');
+    const widths=els=>els.map(e=>Math.round(e.getBoundingClientRect().width));
+    try{
+      // ① 최상위 = 5칸 등폭. 선택 칸만 넓어지던 flex-grow:1.42 를 없앤 것을 지킨다.
+      gtabBack(); await sleep(80);
+      const top=cells(); assert(top.length===5,'최상위 칸이 5개가 아님: '+top.length);
+      { const w=widths(top), lo=Math.min(...w), hi=Math.max(...w);
+        assert(hi-lo<=1,'최상위 칸 폭이 다름: '+JSON.stringify(w));
+        // 선택 칸도 같은 폭이어야 한다
+        openGachaSheet(); await sleep(80); gtabBack(); await sleep(80);
+        const w2=widths(cells()); assert(Math.max(...w2)-Math.min(...w2)<=1,'선택 칸만 넓어짐: '+JSON.stringify(w2)); }
+      // ② 구역별 하위 — 왼쪽 첫 칸은 항상 뒤로가기, 하위 칸끼리는 등폭
+      const want={ Main:['유닛 지정','유닛 판매'], Unit:['뽑기','타워구매'], Upgrade:['공격력','확률','영구강화'], Boss:['개인보스'] };
+      const go={ Main:openMainHome, Unit:openGachaSheet, Upgrade:openUpgradeSheet, Boss:openBossSheet };
+      for(const k in want){
+        go[k](); await sleep(90);
+        const cs=cells();
+        assert(cs[0] && cs[0].classList.contains('navBk'),k+' 구역에 뒤로가기 칸이 없음');
+        const labels=cs.slice(1).map(e=>e.textContent.trim());
+        for(const lb of want[k]) assert(labels.indexOf(lb)>=0, k+' 하위에 "'+lb+'"이 없음: '+JSON.stringify(labels));
+        const w=widths(cs.slice(1));
+        assert(Math.max(...w)-Math.min(...w)<=1, k+' 하위 칸 폭이 다름: '+JSON.stringify(w));
+        assert(cs.filter(e=>e.classList.contains('cur')).length<=1, k+' 하위에 선택 표시가 둘 이상');
+      }
+      // ③ 하위를 누르면 그 구역 내용이 바뀐다(칸 이름으로 확인)
+      openGachaSheet(); await sleep(90); gtabSub('draw'); await sleep(90);
+      { const names=[...document.querySelectorAll('#unitCmd .cgSlot .cgName')].map(e=>e.textContent.trim());
+        for(const nm of ['유닛 1회','유닛 5회','가스 1회','가스 5회']) assert(names.indexOf(nm)>=0,'뽑기 칸에 "'+nm+'"이 없음: '+JSON.stringify(names)); }
+      gtabSub('tower'); await sleep(90);
+      { const names=[...document.querySelectorAll('#unitCmd .cgSlot .cgName')].map(e=>e.textContent.trim());
+        assert(names.length && names.every(n=>n.indexOf('회')<0),'타워구매인데 뽑기 칸이 남아 있음: '+JSON.stringify(names)); }
+      // ×5 는 1회의 5배 가격이어야 한다(별도 가격표를 만들지 않았다는 뜻)
+      assert(beaconCost('draw5')===beaconCost('draw')*5,'유닛 5회 가격이 5배가 아님');
+      assert(beaconCost('energy5')===beaconCost('energy')*5,'가스 5회 가격이 5배가 아님');
+      // ×5 는 맵 위 비콘 표에 들어가면 안 된다(좌표가 없어 패드·라벨이 NaN 자리에 생긴다)
+      assert(!DRAW_BEACONS.some(b=>b.id==='draw5'||b.id==='energy5'),'×5 가 맵 비콘 표(DRAW_BEACONS)에 섞였음');
+      // ④ 개인전/협동은 아군·적군이 없다 → 플레이어는 내려가지 않는다
+      switchTab('Players', document.querySelector('.tab[data-tab="Players"]')); await sleep(90);
+      assert(!gameHasVersus(),'네모는 대전 판이 아님(팀이 갈리면 안 됨)');
+      assert(cells().length===5,'개인전인데 플레이어가 하위로 내려감');
+      // ⑤ ‹ = 한 층 위(보고 있는 화면은 그대로)
+      openUpgradeSheet(); await sleep(90); assert(cells()[0].classList.contains('navBk'),'업그레이드가 안 내려감');
+      gtabBack(); await sleep(90);
+      assert(cells().length===5 && !document.getElementById('tabs').classList.contains('drill'),'뒤로가기로 최상위 복귀 실패');
+      assert(G.mainSheet==='upgrade','뒤로가기가 보고 있던 섹션까지 바꿨음: '+G.mainSheet);
+      // ⑥ 머리줄에는 초상이 없고 제목은 흰 글자다
+      openGachaSheet(); await sleep(90);
+      assert(!document.querySelector('.cmdG .cgPort'),'머리줄 초상(.cgPort)이 남아 있음');
+      { const t=document.querySelector('.cmdG .cgN'); assert(t,'머리줄 제목이 없음');
+        const c=getComputedStyle(t);
+        assert(c.color==='rgb(255, 255, 255)','머리줄 제목이 흰색이 아님: '+c.color);
+        assert(c.textShadow==='none','머리줄 제목에 글로우가 남아 있음: '+c.textShadow); }
+      // ⑦ 등급 띠 = 공용 세그먼트 바(전용 칩을 새로 만들지 않는다)
+      openMainHome(); await sleep(90);
+      { const box=$('hsTiers');
+        if(box && box.children.length){
+          assert(box.querySelector('.pdSeg'),'등급 띠가 공용 세그먼트 바(.pdSeg)가 아님: '+box.innerHTML.slice(0,60));
+          assert(!box.querySelector('.hsTier'),'옛 등급 칩(.hsTier)이 남아 있음'); } }
+      // ⑧ 판 안에 같은 조작을 두 번 두지 않는다(옛 .hsTabs 탭 줄 · 전송 옆 AUTO 배너)
+      assert(!document.querySelector('#defaultCmd .hsTab'),'판 안에 옛 모드 탭 줄이 남아 있음(하단 네비와 중복)');
+      assert(!$('autoFab'),'전송 옆 AUTO 배너가 남아 있음 — 자동화는 메인 하위 칸으로 옮겼다');
+      // ⑦ 자동화 = 메인 하위의 '마지막' 칸이고, 누르면 자동화 시트가 뜬다
+      openMainHome(); await sleep(90);
+      { const labels=cells().slice(1).map(e=>e.textContent.trim());
+        skipIf(!autoAnyOwned(),'자동화 미해금');
+        assert(labels[labels.length-1]==='자동화','자동화가 메인 하위 마지막 칸이 아님: '+JSON.stringify(labels)); }
+      gtabSub('auto'); await sleep(120);
+      assert(G.mainSheet==='auto','자동화 칸을 눌렀는데 시트가 안 바뀜: '+G.mainSheet);
+      { const cur=cells().find(e=>e.classList.contains('cur'));
+        assert(cur && cur.textContent.trim()==='자동화','자동화인데 선택 표시가 딴 칸: '+(cur&&cur.textContent.trim())); }
+      assert(cells()[0].classList.contains('navBk'),'자동화로 갔더니 최상위로 올라감');
+      // 지정으로 돌아오면 자동화 시트가 걷히고 메인 홈이 돌아온다
+      gtabSub('select'); await sleep(120);
+      assert(G.mainSheet==null && !$('defaultCmd').classList.contains('hide'),'자동화에서 유닛 지정으로 못 돌아옴');
+      return '최상위 5칸 등폭 · 4구역 드릴다운 · 자동화 하위 ok';
+    } finally { if(faked) ph.classList.remove('inGame'); openMainHome(); }
+  });
+  // 포인트방은 화면 전체를 덮는 입력 차단막(#bossPanel z22)을 깐다 — 우상단 ☰(#hud z20)이 통째로 먹혔었다.
+  await step('포인트방에서도 우상단 ☰ 가 눌린다', async()=>{
+    skipIf(typeof openBossArena!=='function','포인트방 없음');
+    const ph=$('phone'), faked=ph && !ph.classList.contains('inGame'); if(faked) ph.classList.add('inGame');
+    // ⚠ 헤드리스에선 three.js(esm.sh)가 막혀 로딩 게이트(#opening)가 안 걷힌다 — 히트 테스트를 그게 먼저 먹는다
+    const op=$('opening'), opUp=op && !op.classList.contains('hide'); if(opUp) op.classList.add('hide');
+    try{
+      if(!G.coopBoss && typeof spawnCoopBoss==='function') spawnCoopBoss(1);
+      skipIf(!G.coopBoss,'공용 보스 없음');
+      openBossArena(); await sleep(150);
+      assert(G.bossOpen,'포인트방이 안 열림');
+      const set=$('settingsBtn'), r=set.getBoundingClientRect();
+      assert(r.width>0,'설정 버튼이 안 보임');
+      const hit=document.elementFromPoint((r.left+r.right)/2,(r.top+r.bottom)/2);
+      assert(set.contains(hit)||hit===set,'포인트방에서 ☰ 가 다른 요소에 먹힘: '+((hit&&(hit.id||hit.className))||hit));
+      // 실제로 열리는지까지
+      set.click(); await sleep(150);
+      const pop=$('settingsPop');
+      assert(pop && !pop.classList.contains('hide'),'☰ 를 눌렀는데 설정이 안 열림');
+      if(typeof closeSettings==='function') closeSettings();
+      return 'z'+getComputedStyle($('hud')).zIndex+' — 차단막 위';
+    } finally { if(typeof closeBossArena==='function') closeBossArena();
+      if(opUp) op.classList.remove('hide'); if(faked) ph.classList.remove('inGame'); } });
   await step('무기 업그레이드 구매', ()=>{ skipIf(typeof upgCost!=='function'||typeof buyGachaUp!=='function','업그레이드 API 없음');
     hackCredits(); const b=G.gachaLuckLv||0; buyGachaUp(); assert((G.gachaLuckLv||0)===b+1,'gachaLuckLv 미증가'); return 'Lv'+G.gachaLuckLv; });
   await step('보스 탭 표시/배지 갱신', ()=>{ updatePbossFab(); const bt=$('bossTab');
