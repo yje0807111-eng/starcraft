@@ -1,0 +1,290 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>로그인 시네마틱 5안</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Jua&family=Rajdhani:wght@500;600;700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap');
+
+:root{
+  --font-ko:'Noto Sans KR','Apple SD Gothic Neo',sans-serif;
+  --font-ti:'Jua','Apple SD Gothic Neo',sans-serif;
+  --font-num:'Rajdhani','IBM Plex Sans KR',sans-serif;
+  --r-bar:3px; --r-md:6px; --r-lg:9px;
+  --fs-xs:9.5px; --fs-sm:10px; --fs-md:11px; --fs-lg:12px; --fs-xl:13px;
+  --neon:#ff3b3b; --acc-sel:#5cd6ff; --gold:#ffd24a;
+  --metal-edge:rgba(255,255,255,.14);
+  --acRGB:255,59,59; --ac:rgb(255,59,59);
+  --pg:#0b0c10; --line:rgba(255,255,255,.09);
+  --tx1:#ececec; --tx2:#9a9a9c; --tx3:#6e7076;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--pg);color:var(--tx1);font-family:var(--font-ko);
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:1360px;margin:0 auto;padding:0 22px 60px}
+
+header{padding:44px 0 8px}
+.eyebrow{font-family:var(--font-num);font-size:var(--fs-md);letter-spacing:.22em;
+  color:var(--neon);text-transform:uppercase;margin-bottom:9px}
+h1{font-family:var(--font-ti);font-size:31px;font-weight:400;margin:0 0 12px;color:#fff}
+.sub{margin:0;max-width:76ch;font-size:var(--fs-lg);line-height:1.85;color:var(--tx2)}
+.sub code{font-family:var(--font-num);color:#c8c8ca;background:rgba(255,255,255,.05);
+  padding:1px 5px;border-radius:var(--r-bar)}
+.sub b{color:#d8d8da}
+
+/* 위계 설명 판 */
+.pri-note{margin:24px 0 8px;border:1px solid var(--line);border-radius:var(--r-bar);
+  padding:16px 18px;background:rgba(255,255,255,.02)}
+.pri-note h3{margin:0 0 10px;font-family:var(--font-ti);font-weight:400;font-size:15px;color:#fff}
+.pri-note table{width:100%;border-collapse:collapse;font-size:var(--fs-md)}
+.pri-note td,.pri-note th{padding:7px 9px;text-align:left;border-bottom:1px solid rgba(255,255,255,.05)}
+.pri-note th{color:var(--tx3);font-weight:400;font-size:var(--fs-sm);letter-spacing:.05em}
+.pri-note td:first-child{color:#d8d8da;width:112px}
+.pri-note td em{font-style:normal;color:var(--tx2)}
+.pri-note tr:last-child td{border-bottom:none}
+.pri-note .x{color:#ff8a9a}
+.pri-note .o{color:var(--ok,#5dff8f)}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:30px;margin-top:26px}
+.sheet{min-width:0}
+.lab{display:flex;align-items:baseline;gap:9px;margin-bottom:7px}
+.num{font-family:var(--font-num);font-size:var(--fs-sm);letter-spacing:.1em;
+  color:#08080a;background:var(--gold);border-radius:var(--r-bar);padding:2px 8px}
+.nm{font-family:var(--font-ti);font-size:16px;color:#fff}
+.why{margin:0 0 9px;font-size:var(--fs-md);line-height:1.75;color:var(--tx2)}
+.why b{color:#d8d8da}
+.tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px}
+.tag{font-size:var(--fs-xs);color:var(--tx3);border:1px solid var(--line);
+  border-radius:var(--r-bar);padding:3px 6px}
+.tag.hi{color:var(--gold);border-color:rgba(255,210,74,.3)}
+.stage{position:relative;width:100%;aspect-ratio:360/740;border-radius:var(--r-bar);
+  overflow:hidden;background:#04050b;border:1px solid var(--line)}
+
+/* ══ 공통 시네마틱 뼈대 ══════════════════════════════════════════
+   아트 3층(그림 → 비네트 → 오라)은 다섯 안이 전부 공유한다.
+   유즈맵 모드 팝업(2026-08-18)과 같은 문법 — z-index 를 전부 명시한다. */
+.scr{position:absolute;inset:0;overflow:hidden;background:#08080a}
+.art{position:absolute;inset:0;z-index:0}
+.art .bg{position:absolute;left:0;right:0;top:0;height:64%;z-index:0;
+  background:url('../../assets/backgrounds/usemaps/temple.webp') center/cover no-repeat}
+.art .vig{position:absolute;inset:0;z-index:1;
+  background:linear-gradient(180deg,rgba(4,5,8,.1) 0%,rgba(6,7,10,.66) 34%,#08080a 58%)}
+.art .aura{position:absolute;inset:0;z-index:2;
+  background:radial-gradient(78% 46% at 50% 20%,rgba(var(--acRGB),1),transparent 70%);
+  opacity:.1}
+.in{position:absolute;inset:0;z-index:1;display:flex;flex-direction:column}
+
+.gear{position:absolute;top:13px;right:13px;z-index:4;width:24px;height:24px;color:#7b838e;opacity:.8}
+.gear svg{width:100%;height:100%;display:block}
+
+.logo{font-family:var(--font-ti);font-size:32px;letter-spacing:1.6px;line-height:1.05;
+  text-align:center}
+.logo .a{color:#f3f6fb;text-shadow:0 2px 10px rgba(0,0,0,.9)}
+.logo .b{color:var(--ac);text-shadow:0 2px 10px rgba(0,0,0,.9)}
+.slog{display:flex;align-items:center;justify-content:center;gap:8px;
+  font-size:var(--fs-xs);color:#8b97a6;letter-spacing:.6px;margin-top:7px}
+.slog::before,.slog::after{content:'';flex:0 0 28px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(var(--acRGB),.6))}
+.slog::after{background:linear-gradient(270deg,transparent,rgba(var(--acRGB),.6))}
+
+/* ── 방식 버튼 세 등급 ─────────────────────────────────────────
+   ① 주(.w1)   빨간 링 + 밑변 광원 — 화면에 하나뿐
+   ② 보조(.w2) 은색 링 · 광원 없음
+   ③ 조용(.w3) 링 없음 · 글자만                                  */
+.w{position:relative;display:flex;align-items:center;gap:10px;width:100%;min-height:46px;
+  padding:0 13px;margin-bottom:8px;border:none;border-radius:var(--r-bar);cursor:pointer;
+  font-family:inherit;font-size:var(--fs-lg);font-weight:700;letter-spacing:.3px;
+  color:#dfe7f0;text-align:left;background:linear-gradient(180deg,#0d0d0d,#000);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.w::before{content:'';position:absolute;inset:0;padding:1px;border-radius:inherit;
+  background:var(--ln,linear-gradient(180deg,rgba(255,255,255,.2),rgba(255,255,255,.05)));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+.w .ic{width:15px;height:15px;flex:none;color:#9fb0c2}
+.w .ic svg{width:100%;height:100%;display:block}
+.w .g{font-family:var(--font-num);font-weight:700;font-size:14px;width:15px;text-align:center}
+.w .tag2{margin-left:auto;font-size:var(--fs-xs);font-weight:400;color:#6e7076;
+  border:1px solid rgba(255,255,255,.1);border-radius:var(--r-bar);padding:1px 5px}
+.w .ar{margin-left:auto;color:#5c6068;font-family:var(--font-num);font-size:14px}
+
+.w1{--ln:linear-gradient(180deg,rgba(var(--acRGB),1) 0%,rgba(var(--acRGB),.55) 40%,
+  rgba(var(--acRGB),.34) 72%,rgba(var(--acRGB),.28) 100%);color:#fff}
+.w1::after{content:'';position:absolute;left:11%;right:11%;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,#fff 50%,transparent);
+  box-shadow:0 0 3px rgba(var(--acRGB),.9),0 0 7px rgba(var(--acRGB),.5)}
+.w1 .ic{color:#ffb4b4}
+.w2{--ln:linear-gradient(180deg,rgba(255,255,255,.2),rgba(255,255,255,.05))}
+.w3{background:none;box-shadow:none;color:#8b8f96;font-weight:400}
+.w3::before{display:none}
+.w3 .ic{color:#5c6068}
+.lock{color:#7b838e;--ln:rgba(255,255,255,.1)}
+.lock .ic,.lock .g{color:#5c6068}
+
+/* 게스트 — 판이 아니라 조용한 텍스트 줄 */
+.guest{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;
+  min-height:44px;background:none;border:none;cursor:pointer;font-family:inherit;
+  font-size:var(--fs-md);color:#8b8f96}
+.guest u{text-decoration:none;color:#c8ccd2;border-bottom:1px solid rgba(255,255,255,.22);
+  padding-bottom:1px}
+
+.hair{height:1px;margin:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent)}
+
+/* ══ 안 A · 기준 — 안 6 에서 위계만 고쳤다 ══ */
+.vA .in{justify-content:flex-end;padding:0 24px 30px}
+.vA .head{margin-bottom:24px}
+
+/* ══ 안 B · 행 목록 ══ 판을 벗기고 헤어라인으로 가른다 */
+.vB .in{justify-content:flex-end;padding:0 24px 26px}
+.vB .head{margin-bottom:22px}
+.vB .rows{border-top:1px solid rgba(255,255,255,.08)}
+.vB .w{margin:0;border-radius:0;background:none;box-shadow:none;min-height:52px;
+  border-bottom:1px solid rgba(255,255,255,.08)}
+.vB .w::before{display:none}
+.vB .w1{color:#fff}
+.vB .w1 .ic{color:var(--ac)}
+.vB .w1::after{left:0;right:auto;width:22px;bottom:-1px;
+  background:var(--ac);box-shadow:0 0 4px rgba(var(--acRGB),.9),0 0 9px rgba(var(--acRGB),.5)}
+.vB .guest{margin-top:6px}
+
+/* ══ 안 C · 하단 판 ══ 아트와 조작을 판 경계로 확실히 가른다 */
+.vC .art .vig{background:linear-gradient(180deg,rgba(4,5,8,.06) 0%,rgba(6,7,10,.5) 40%,rgba(8,8,10,.9) 62%)}
+.vC .in{justify-content:space-between;padding:0}
+.vC .head{padding:78px 24px 0}
+.vC .panel{position:relative;padding:22px 22px 26px;background:#08080a;
+  border-top:1px solid rgba(var(--acRGB),.34);border-radius:var(--r-lg) var(--r-lg) 0 0}
+.vC .panel::before{content:'';position:absolute;left:14%;right:14%;top:-1px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(var(--acRGB),.95),transparent);
+  box-shadow:0 0 6px rgba(var(--acRGB),.6)}
+
+/* ══ 안 D · 2열 + 스킵 ══ 게스트를 상단 우측 '건너뛰기'로 뺀다 */
+.vD .in{justify-content:flex-end;padding:0 24px 30px}
+.vD .head{margin-bottom:24px}
+/* ⚠ 글자는 작지만 히트 영역은 44px 를 지킨다 — 보이는 크기와 누르는 크기를 따로 둔다.
+   패딩으로 키우고 위치는 패딩만큼 당겨, 글자 위치는 그대로 남는다. */
+.vD .skip{position:absolute;top:2px;left:3px;z-index:4;font-size:var(--fs-md);
+  min-height:44px;display:flex;align-items:center;padding:0 13px;
+  color:#8b8f96;background:none;border:none;font-family:inherit;cursor:pointer}
+.vD .skip u{text-decoration:none;border-bottom:1px solid rgba(255,255,255,.2);color:#c8ccd2}
+.vD .two{display:flex;gap:8px;margin-bottom:8px}
+.vD .two .w{margin:0;flex:1;justify-content:center;text-align:center;padding:0 8px}
+.vD .two .w .ic{margin-right:-2px}
+
+/* ══ 안 E · 시네마 ══ 아트를 더 크게, 정보는 아래 1/3, 폭을 좁힌다 */
+.vE .art .bg{height:76%}
+.vE .art .vig{background:linear-gradient(180deg,rgba(4,5,8,0) 0%,rgba(6,7,10,.35) 44%,
+  rgba(8,8,10,.92) 68%,#08080a 78%)}
+.vE .art .aura{opacity:.13;
+  background:radial-gradient(70% 40% at 50% 26%,rgba(var(--acRGB),1),transparent 70%)}
+.vE .in{justify-content:flex-end;align-items:center;padding:0 24px 34px}
+.vE .head{margin-bottom:26px}
+.vE .logo{font-size:36px;letter-spacing:2px}
+.vE .col{width:100%;max-width:236px}
+.vE .w{justify-content:center;text-align:center;padding:0 10px}
+.vE .w .ar,.vE .w .tag2{position:absolute;right:12px}
+
+footer{margin-top:44px;padding-top:22px;border-top:1px solid var(--line);
+  font-size:var(--fs-md);color:var(--tx3);line-height:1.9}
+footer b{color:#c8c8ca}
+footer code{font-family:var(--font-num);color:#c8c8ca}
+@media(max-width:760px){.wrap{padding:0 14px 40px}h1{font-size:25px}.grid{grid-template-columns:1fr}}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">진입 화면 · 로그인 · 6번 디벨롭</div>
+  <h1>시네마틱 5안</h1>
+  <p class="sub">
+    16안 중 <b>6번(시네마틱)</b>을 고른 뒤, 지적하신 <b>게스트 위계</b>를 고치고 같은 결로 다섯 갈래를 냈다.
+    아트 3층(그림 → 비네트 → 오라)과 액센트는 다섯 안이 <b>전부 공유</b>하고,
+    갈리는 것은 <b>조작 블록의 형태와 위치</b>뿐이다.
+  </p>
+
+  <div class="pri-note">
+    <h3>먼저 — 게스트에서 빛을 뺀다</h3>
+    <table>
+      <tr><th>등급</th><th>표기</th><th>무엇에</th></tr>
+      <tr><td>① 주</td><td><em>빨간 링 + <b>밑변 광원</b></em></td>
+        <td>화면에 <b>하나뿐</b>. 마지막에 쓴 방식(<code>nm_last_auth</code>)이 여기 온다 — 신규는 아이디</td></tr>
+      <tr><td>② 보조</td><td><em>은색 링 · 광원 없음</em></td><td>나머지 로그인 방식</td></tr>
+      <tr><td>③ 조용</td><td><em>링 없음 · 글자만</em></td><td>Google(잠김) · <b>게스트</b></td></tr>
+    </table>
+    <p style="margin:12px 0 0;font-size:var(--fs-md);line-height:1.8;color:var(--tx2)">
+      밑변 광원은 이 앱에서 <b>주 버튼의 서명</b>이다(<code>.authBtn</code> · <code>.pdSegInd</code> 전등).
+      게스트에 붙이면 <span class="x">"기본 동작은 게스트"</span>라고 말하게 된다 —
+      계정을 안 만들고 들어가는 길은 <b>있되 권하지는 않는</b> 자리가 맞다.
+      다섯 안 모두 게스트를 <b>판이 아닌 텍스트</b>로 내렸고, 그래도 터치 타겟 44px 는 유지한다.
+    </p>
+  </div>
+</header>
+
+<div class="grid" id="grid"></div>
+
+<footer>
+  아트 3층은 <code>z-index</code> 를 전부 명시한다 — 안 주면 비네트가 그림 <b>아래</b>로 깔린다(유즈맵 팝업에서 겪은 것).<br>
+  ⚠ 배경은 <code>assets/backgrounds/usemaps/temple.webp</code> 를 <b>임시로</b> 빌려 썼다.
+  다섯 안 비교를 위해 전부 같은 그림이다 — 확정되면 <b>로그인 전용 키 아트</b>가 필요하고,
+  규격·프롬프트는 <code>ART.md</code> 가 단일 소스다. 구도 요구: <b>아래쪽 40%를 비울 것</b>(조작 블록 자리).<br>
+  ⚠ 글꼴은 Google Fonts 로 근사했다 — 실제 앱은 같은 글꼴을 base64 로 내장해 쓴다.
+</footer>
+</div>
+
+<script>
+const IC={
+ user:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-4.4 0-8 2.2-8 5v3h16v-3c0-2.8-3.6-5-8-5z"/></svg>',
+ mail:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 5h18a1 1 0 011 1v12a1 1 0 01-1 1H3a1 1 0 01-1-1V6a1 1 0 011-1zm9 8L4.2 7.2 4 7v.6l8 5.8 8-5.8V7l-.2.2L12 13z"/></svg>'
+};
+const GEAR='<span class="gear"><svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg></span>';
+const ART='<div class="art"><i class="bg"></i><i class="vig"></i><i class="aura"></i></div>';
+const HEAD='<div class="head"><div class="logo"><span class="a">STAR </span><span class="b">WAR</span></div>'
+  +'<div class="slog">로그인하고 시작하세요</div></div>';
+const w=(cls,ic,tx,tail)=>'<button class="w '+cls+'">'
+  +(ic==='g'?'<i class="g">G</i>':'<span class="ic">'+IC[ic]+'</span>')+tx+(tail||'')+'</button>';
+const GUEST='<button class="guest">계정 없이 <u>게스트로 시작</u></button>';
+const LOCK='<i class="tag2">준비 중</i>';
+
+const V=[
+{k:'A', n:'기준 — 위계만 고침',
+ tags:['안 6 그대로','주 1 · 보조 1 · 조용 2','게스트 = 텍스트','바꾸는 게 가장 적다'],
+ why:'안 6의 배치를 <b>그대로</b> 두고 버튼 등급만 바로잡았다. 아이디가 주(빨간 링 + 밑변 광원), 이메일이 보조(은색 링), Google과 게스트는 조용한 줄. 광원이 화면에 <b>하나뿐</b>이라 시선이 갈 곳이 정해진다.',
+ html: ART+GEAR+'<div class="in">'+HEAD
+   + w('w1','user','아이디로 로그인') + w('w2','mail','이메일로 로그인')
+   + w('w3 lock','g','Google로 로그인',LOCK) + GUEST + '</div>'},
+
+{k:'B', n:'행 목록',
+ tags:['판 0개','헤어라인 구분','주 표시 = 좌측 짧은 광선','아트가 제일 넓게 보인다'],
+ why:'버튼 판을 전부 벗기고 <b>헤어라인으로 갈린 행</b>만 남긴다. 주 방식은 면이 아니라 <b>왼쪽 22px 광선</b> 하나로 표시한다(사냥터 탭 띠와 같은 문법). 판이 없으니 그림이 가장 넓게 보이고, 화면이 가장 조용하다.',
+ html: ART+GEAR+'<div class="in">'+HEAD
+   + '<div class="rows">'
+   + w('w1','user','아이디로 로그인','<i class="ar">›</i>')
+   + w('w2','mail','이메일로 로그인','<i class="ar">›</i>')
+   + w('w3 lock','g','Google로 로그인',LOCK) + '</div>' + GUEST + '</div>'},
+
+{k:'C', n:'하단 판',
+ tags:['아트 / 조작 경계 명확','판 윗변 광원 1줄','라운드 9px','.twSheet 문법'],
+ why:'아래에 <b>짙은 판</b>을 세워 아트와 조작을 확실히 가른다. 판 윗변에 광원 한 줄이 지나가 경계 자체가 강조가 된다 — 버튼에 빛을 나눠 주지 않아도 된다. 마을 시설 시트(<code>.twSheet</code>)가 이미 쓰는 형태라 앱 안에서 낯설지 않다.',
+ html: ART+GEAR+'<div class="in">'+HEAD
+   + '<div class="panel">'
+   + w('w1','user','아이디로 로그인') + w('w2','mail','이메일로 로그인')
+   + w('w3 lock','g','Google로 로그인',LOCK) + GUEST + '</div></div>'},
+
+{k:'D', n:'2열 + 건너뛰기',
+ tags:['아이디/이메일 가로 2칸','게스트 = 좌상단 건너뛰기','세로 길이 최소','⚠ 글자 잘림 주의'],
+ why:'로그인 두 방식을 <b>가로 2칸</b>으로 눕혀 조작 블록의 세로 길이를 줄이고, 그만큼 그림을 더 보여 준다. 게스트는 아예 목록에서 빼서 <b>좌상단 「건너뛰기」</b>로 옮겼다 — 흐름을 벗어나는 길은 흐름 밖에 두는 편이 정직하다. ⚠ 2칸이라 라벨이 짧아야 한다.',
+ html: ART+GEAR+'<button class="skip">계정 없이 <u>건너뛰기</u></button><div class="in">'+HEAD
+   + '<div class="two">' + w('w1','user','아이디') + w('w2','mail','이메일') + '</div>'
+   + w('w3 lock','g','Google로 로그인',LOCK) + '</div>'},
+
+{k:'E', n:'시네마 (아트 최대)',
+ tags:['그림 76%','로고 36px','버튼 폭 236px','가장 영화적'],
+ why:'그림을 <b>76%</b>까지 올리고 정보는 아래 1/3에만 둔다. 버튼 폭을 236px로 좁혀 가운데 정렬하면 조작 블록이 <b>자막처럼</b> 읽힌다. 다섯 중 첫인상이 제일 세고, 대신 버튼이 좁아 긴 라벨을 못 쓴다.',
+ html: ART+GEAR+'<div class="in">'+HEAD+'<div class="col">'
+   + w('w1','user','아이디로 로그인') + w('w2','mail','이메일로 로그인')
+   + w('w3 lock','g','Google',LOCK) + GUEST + '</div></div>'}
+];
+
+document.getElementById('grid').innerHTML = V.map(v =>
+  '<section class="sheet">'
+  + '<div class="lab"><span class="num">6-' + v.k + '</span><span class="nm">' + v.n + '</span></div>'
+  + '<p class="why">' + v.why + '</p>'
+  + '<div class="tags">' + v.tags.map((t,i) => '<span class="tag' + (i===0?' hi':'') + '">' + t + '</span>').join('') + '</div>'
+  + '<div class="stage"><div class="scr v' + v.k + '">' + v.html + '</div></div>'
+  + '</section>').join('');
+</script>

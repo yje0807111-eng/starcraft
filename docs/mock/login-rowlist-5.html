@@ -1,0 +1,251 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>로그인 행목록 5안</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Jua&family=Rajdhani:wght@500;600;700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap');
+
+:root{
+  --font-ko:'Noto Sans KR','Apple SD Gothic Neo',sans-serif;
+  --font-ti:'Jua','Apple SD Gothic Neo',sans-serif;
+  --font-num:'Rajdhani','IBM Plex Sans KR',sans-serif;
+  --r-bar:3px; --r-md:6px; --r-lg:9px;
+  --fs-xs:9.5px; --fs-sm:10px; --fs-md:11px; --fs-lg:12px; --fs-xl:13px;
+  --neon:#ff3b3b; --acc-sel:#5cd6ff; --gold:#ffd24a;
+  --acRGB:255,59,59; --ac:rgb(255,59,59);
+  --pg:#0b0c10; --line:rgba(255,255,255,.09);
+  --tx1:#ececec; --tx2:#9a9a9c; --tx3:#6e7076;
+
+  /* ⭐ 하단 블록을 바닥에서 얼마나 띄우는가 — 다섯 안의 단일 소스.
+     6-B 원안은 26px 이라 바닥에 붙어 보였다. */
+  --lift:78px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--pg);color:var(--tx1);font-family:var(--font-ko);
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:1360px;margin:0 auto;padding:0 22px 60px}
+
+header{padding:44px 0 8px}
+.eyebrow{font-family:var(--font-num);font-size:var(--fs-md);letter-spacing:.22em;
+  color:var(--neon);text-transform:uppercase;margin-bottom:9px}
+h1{font-family:var(--font-ti);font-size:31px;font-weight:400;margin:0 0 12px;color:#fff}
+.sub{margin:0;max-width:76ch;font-size:var(--fs-lg);line-height:1.85;color:var(--tx2)}
+.sub code{font-family:var(--font-num);color:#c8c8ca;background:rgba(255,255,255,.05);
+  padding:1px 5px;border-radius:var(--r-bar)}
+.sub b{color:#d8d8da}
+
+.keep{margin:22px 0 8px;border:1px solid var(--line);border-radius:var(--r-bar);
+  padding:15px 18px;background:rgba(255,255,255,.02);
+  display:flex;flex-wrap:wrap;gap:10px 26px;font-size:var(--fs-md);color:var(--tx2)}
+.keep b{color:#d8d8da}
+.keep .t{color:var(--gold);font-family:var(--font-num);letter-spacing:.08em;
+  margin-right:4px;text-transform:uppercase;font-size:var(--fs-sm)}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:30px;margin-top:26px}
+.sheet{min-width:0}
+.lab{display:flex;align-items:baseline;gap:9px;margin-bottom:7px}
+.num{font-family:var(--font-num);font-size:var(--fs-sm);letter-spacing:.1em;
+  color:#08080a;background:var(--gold);border-radius:var(--r-bar);padding:2px 8px}
+.nm{font-family:var(--font-ti);font-size:16px;color:#fff}
+.why{margin:0 0 9px;font-size:var(--fs-md);line-height:1.75;color:var(--tx2)}
+.why b{color:#d8d8da}
+.tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px}
+.tag{font-size:var(--fs-xs);color:var(--tx3);border:1px solid var(--line);
+  border-radius:var(--r-bar);padding:3px 6px}
+.tag.hi{color:var(--gold);border-color:rgba(255,210,74,.3)}
+.stage{position:relative;width:100%;aspect-ratio:360/740;border-radius:var(--r-bar);
+  overflow:hidden;background:#04050b;border:1px solid var(--line)}
+
+/* ══ 공유 뼈대 — 아트 3층 · 행 목록 · 게스트 텍스트 ══════════════
+   다섯 안이 전부 같은 것을 쓴다. 갈리는 것은 행의 표기법과 여백뿐. */
+.scr{position:absolute;inset:0;overflow:hidden;background:#08080a}
+.art{position:absolute;inset:0;z-index:0}
+.art .bg{position:absolute;left:0;right:0;top:0;height:64%;z-index:0;
+  background:url('../../assets/backgrounds/usemaps/temple.webp') center/cover no-repeat}
+.art .vig{position:absolute;inset:0;z-index:1;
+  background:linear-gradient(180deg,rgba(4,5,8,.1) 0%,rgba(6,7,10,.66) 34%,#08080a 58%)}
+.art .aura{position:absolute;inset:0;z-index:2;opacity:.1;
+  background:radial-gradient(78% 46% at 50% 20%,rgba(var(--acRGB),1),transparent 70%)}
+.in{position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;
+  justify-content:flex-end;padding:0 24px var(--lift)}
+
+.gear{position:absolute;top:13px;right:13px;z-index:4;width:24px;height:24px;color:#7b838e;opacity:.8}
+.gear svg{width:100%;height:100%;display:block}
+
+.logo{font-family:var(--font-ti);font-size:32px;letter-spacing:1.6px;line-height:1.05;
+  text-align:center}
+.logo .a{color:#f3f6fb;text-shadow:0 2px 10px rgba(0,0,0,.9)}
+.logo .b{color:var(--ac);text-shadow:0 2px 10px rgba(0,0,0,.9)}
+.slog{display:flex;align-items:center;justify-content:center;gap:8px;
+  font-size:var(--fs-xs);color:#8b97a6;letter-spacing:.6px;margin-top:7px}
+.slog::before,.slog::after{content:'';flex:0 0 28px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(var(--acRGB),.6))}
+.slog::after{background:linear-gradient(270deg,transparent,rgba(var(--acRGB),.6))}
+.head{margin-bottom:22px}
+
+/* ── 행 ── 판 없음 · 헤어라인으로만 갈린다 ── */
+.rows{border-top:1px solid rgba(255,255,255,.08)}
+.w{position:relative;display:flex;align-items:center;gap:11px;width:100%;min-height:52px;
+  padding:0 2px;border:none;border-bottom:1px solid rgba(255,255,255,.08);background:none;
+  cursor:pointer;font-family:inherit;font-size:var(--fs-lg);font-weight:700;letter-spacing:.3px;
+  color:#dfe7f0;text-align:left}
+/* 인덱스 번호는 B2 전용이다 — 마크업은 공유하고 여기서 기본 숨김 */
+.w .ix{display:none}
+.w .ic{width:15px;height:15px;flex:none;color:#8b8f96}
+.w .ic svg{width:100%;height:100%;display:block}
+.w .g{font-family:var(--font-num);font-weight:700;font-size:14px;width:15px;text-align:center;
+  color:#8b8f96}
+.w .ar{margin-left:auto;color:#5c6068;font-family:var(--font-num);font-size:14px}
+.w .tag2{margin-left:auto;font-size:var(--fs-xs);font-weight:400;color:#6e7076;
+  border:1px solid rgba(255,255,255,.1);border-radius:var(--r-bar);padding:1px 5px}
+/* 주 방식 — 면이 아니라 왼쪽 짧은 광선 하나(사냥터 탭 띠와 같은 문법) */
+.w1{color:#fff}
+.w1 .ic{color:var(--ac)}
+.w1::after{content:'';position:absolute;left:0;bottom:-1px;width:22px;height:1px;
+  background:var(--ac);box-shadow:0 0 4px rgba(var(--acRGB),.9),0 0 9px rgba(var(--acRGB),.5)}
+.lock{color:#7b838e}
+.lock .ic,.lock .g{color:#5c6068}
+
+.guest{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;
+  min-height:44px;margin-top:6px;background:none;border:none;cursor:pointer;
+  font-family:inherit;font-size:var(--fs-md);color:#8b8f96}
+.guest u{text-decoration:none;color:#c8ccd2;border-bottom:1px solid rgba(255,255,255,.22);
+  padding-bottom:1px}
+
+/* ══ B1 · 기준 — 6-B 를 위로 올린 것 ══ (공유 뼈대 그대로) */
+
+/* ══ B2 · 인덱스 번호 ══ 아이콘 대신 01/02/03 — 타이포만으로 정렬을 세운다 */
+.vB2 .w .ix{display:block;font-family:var(--font-num);font-size:var(--fs-lg);font-weight:600;
+  font-style:normal;letter-spacing:.06em;color:#5c6068;width:19px;flex:none}
+.vB2 .w1 .ix{color:var(--ac)}
+.vB2 .w .ic,.vB2 .w .g{display:none}   /* 번호가 아이콘 자리를 대신한다 — Google 의 G 도 같이 뺀다 */
+.vB2 .rows{border-top-color:rgba(255,255,255,.12)}
+.vB2 .w{letter-spacing:.02em}
+
+/* ══ B3 · 비대칭 ══ 로고를 왼쪽으로 내리고 주 표시를 오른쪽 끝 세로 광선으로 */
+.vB3 .head{margin-bottom:26px}
+.vB3 .logo{text-align:left;font-size:30px}
+.vB3 .slog{justify-content:flex-start;margin-top:9px}
+.vB3 .slog::before{display:none}
+.vB3 .w .ar{display:none}
+.vB3 .w1::after{left:auto;right:0;bottom:auto;top:50%;transform:translateY(-50%);
+  width:1px;height:20px;
+  box-shadow:0 0 4px rgba(var(--acRGB),.9),0 0 10px rgba(var(--acRGB),.55)}
+
+/* ══ B4 · 넉넉한 여백 ══ 행을 키우고 선을 흐리게 — 여백이 곧 품격 */
+.vB4{--lift:86px}
+.vB4 .head{margin-bottom:30px}
+.vB4 .rows{border-top-color:rgba(255,255,255,.055)}
+.vB4 .w{min-height:64px;font-size:14px;letter-spacing:.01em;
+  border-bottom-color:rgba(255,255,255,.055)}
+.vB4 .w .ic{width:16px;height:16px}
+.vB4 .guest{margin-top:14px}
+
+/* ══ B5 · 윤곽선 블록 ══ 판은 아니고 1px 윤곽 + 모서리 브래킷만 */
+.vB5 .listWrap{position:relative;padding:0 13px}
+.vB5 .listWrap::before{content:'';position:absolute;inset:0;pointer-events:none;
+  border:1px solid rgba(255,255,255,.09)}
+.vB5 .brk{position:absolute;width:9px;height:9px;border:1px solid rgba(var(--acRGB),.75);
+  z-index:2;pointer-events:none}
+.vB5 .brk.tl{top:-1px;left:-1px;border-right:0;border-bottom:0}
+.vB5 .brk.tr{top:-1px;right:-1px;border-left:0;border-bottom:0}
+.vB5 .brk.bl{bottom:-1px;left:-1px;border-right:0;border-top:0}
+.vB5 .brk.br{bottom:-1px;right:-1px;border-left:0;border-top:0}
+.vB5 .rows{border-top:none}
+.vB5 .w:last-of-type{border-bottom:none}
+.vB5 .w1::after{left:-13px;width:22px}
+.vB5 .guest{margin-top:12px}
+
+footer{margin-top:44px;padding-top:22px;border-top:1px solid var(--line);
+  font-size:var(--fs-md);color:var(--tx3);line-height:1.9}
+footer b{color:#c8c8ca}
+footer code{font-family:var(--font-num);color:#c8c8ca}
+@media(max-width:760px){.wrap{padding:0 14px 40px}h1{font-size:25px}.grid{grid-template-columns:1fr}}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">진입 화면 · 로그인 · 6-B 디벨롭</div>
+  <h1>행 목록 5안</h1>
+  <p class="sub">
+    6-B(행 목록)로 확정하고 <b>하단 블록을 올렸다</b> — 바닥 여백 <code>26px → 78px</code>.
+    나머지 넷은 같은 계열에서 <b>행의 표기법과 여백만</b> 갈랐다.
+    아트 3층 · 액센트 · 게스트 위계는 다섯 안이 전부 공유한다.
+  </p>
+  <div class="keep">
+    <span><i class="t">고정</i>판 없음 — <b>헤어라인으로만</b> 갈린다</span>
+    <span><i class="t">고정</i>주 방식 = <b>짧은 광선 하나</b> (화면에 1개)</span>
+    <span><i class="t">고정</i>게스트 = <b>텍스트</b> · 판 없음</span>
+    <span><i class="t">고정</i>터치 타겟 <b>≥ 44px</b></span>
+    <span><i class="t">고정</i>라운드 <b>0 / 3</b>만</span>
+  </div>
+</header>
+
+<div class="grid" id="grid"></div>
+
+<footer>
+  올린 양은 토큰 하나(<code>--lift</code>)가 단일 소스다 — 다섯 안이 같은 값을 읽고, B4 만 더 올린다(86px).
+  실제 화면에 옮길 땐 고정 px 이 아니라 <b>안전영역(safe-area)</b> 을 더해야 한다:
+  <code>calc(var(--lift) + env(safe-area-inset-bottom))</code>.<br>
+  ⚠ 배경은 <code>assets/backgrounds/usemaps/temple.webp</code> 를 <b>비교용으로</b> 빌려 썼다 —
+  다섯 안 모두 같은 그림이다. 확정되면 <b>로그인 전용 키 아트</b>가 필요하고 규격은 <code>ART.md</code> 가 단일 소스다.
+  구도 요구: 블록이 올라갔으므로 <b>아래쪽 46%를 비울 것</b>(원래 40%).<br>
+  ⚠ 글꼴은 Google Fonts 로 근사했다 — 실제 앱은 같은 글꼴을 base64 로 내장해 쓴다.
+</footer>
+</div>
+
+<script>
+const IC={
+ user:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-4.4 0-8 2.2-8 5v3h16v-3c0-2.8-3.6-5-8-5z"/></svg>',
+ mail:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 5h18a1 1 0 011 1v12a1 1 0 01-1 1H3a1 1 0 01-1-1V6a1 1 0 011-1zm9 8L4.2 7.2 4 7v.6l8 5.8 8-5.8V7l-.2.2L12 13z"/></svg>'
+};
+const GEAR='<span class="gear"><svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg></span>';
+const ART='<div class="art"><i class="bg"></i><i class="vig"></i><i class="aura"></i></div>';
+const HEAD='<div class="head"><div class="logo"><span class="a">STAR </span><span class="b">WAR</span></div>'
+  +'<div class="slog">로그인하고 시작하세요</div></div>';
+const GUEST='<button class="guest">계정 없이 <u>게스트로 시작</u></button>';
+const LOCK='<i class="tag2">준비 중</i>';
+const AR='<i class="ar">›</i>';
+// ix = 인덱스 번호(B2 만 보인다) · ic = 아이콘
+const row=(cls,ix,ic,tx,tail)=>'<button class="w '+cls+'"><i class="ix">'+ix+'</i>'
+  +(ic==='g'?'<i class="g">G</i>':'<span class="ic">'+IC[ic]+'</span>')+tx+(tail||'')+'</button>';
+const LIST=(tail)=>row('w1','01','user','아이디로 로그인',tail)
+  + row('w2','02','mail','이메일로 로그인',tail)
+  + row('w3 lock','03','g','Google로 로그인',LOCK);
+
+const V=[
+{k:'B1', n:'기준 — 올림',
+ tags:['6-B 그대로','바닥 26 → 78px','바꾸는 게 가장 적다'],
+ why:'6-B의 표기법을 <b>하나도 안 바꾸고</b> 블록만 올렸다. 바닥 여백 <code>26px → 78px</code>. 그림이 가려지는 면적은 그대로인데 화면이 아래로 쏠린 느낌이 사라진다.',
+ html: ART+GEAR+'<div class="in">'+HEAD+'<div class="rows">'+LIST(AR)+'</div>'+GUEST+'</div>'},
+
+{k:'B2', n:'인덱스 번호',
+ tags:['아이콘 → 01/02/03','Rajdhani 숫자','가장 정제됨'],
+ why:'아이콘을 빼고 <b>번호</b>를 세운다. 숫자는 폭이 일정해서(<code>--font-num</code> tabular) 왼쪽 정렬이 칼같이 맞고, 아이콘 세 개가 서로 다른 무게로 튀던 것이 사라진다. 주 방식은 번호가 빨갛게 켜진다.',
+ html: ART+GEAR+'<div class="in">'+HEAD+'<div class="rows">'+LIST(AR)+'</div>'+GUEST+'</div>'},
+
+{k:'B3', n:'비대칭',
+ tags:['로고 좌측 정렬','주 표시 = 우측 세로 광선','화살표 제거'],
+ why:'로고를 <b>왼쪽으로</b> 내려 행 목록과 같은 축에 세운다. 주 표시는 왼쪽 밑줄이 아니라 <b>오른쪽 끝 20px 세로 광선</b> — 시선이 라벨 → 오른쪽으로 흐르고, 화살표를 안 써도 "여기로 간다"가 읽힌다.',
+ html: ART+GEAR+'<div class="in">'+HEAD+'<div class="rows">'+LIST('')+'</div>'+GUEST+'</div>'},
+
+{k:'B4', n:'넉넉한 여백',
+ tags:['행 52 → 64px','라벨 12 → 14px','선을 더 흐리게','바닥 86px'],
+ why:'행을 키우고 구분선을 <b>더 흐리게</b> 한다(.08 → .055). 요소를 더하지 않고 <b>여백만</b>으로 급을 올리는 방향 — 선이 옅어질수록 글자가 주인공이 된다. 다섯 중 가장 여유롭고, 대신 목록이 길어져 그림을 조금 더 가린다.',
+ html: ART+GEAR+'<div class="in">'+HEAD+'<div class="rows">'+LIST(AR)+'</div>'+GUEST+'</div>'},
+
+{k:'B5', n:'윤곽선 블록',
+ tags:['1px 윤곽 + 모서리 브래킷','면은 여전히 없음','SF 계기판 느낌'],
+ why:'목록 전체를 <b>1px 윤곽</b>으로 감싸고 네 모서리에 브래킷을 찍는다. 면을 채우지 않으니 "판"이 아니라 <b>윤곽</b>이고, 그림이 그대로 비친다. 홀로 슬레이트(16안 중 10번)의 브래킷을 이 계열로 가져온 것.',
+ html: ART+GEAR+'<div class="in">'+HEAD
+   + '<div class="listWrap"><i class="brk tl"></i><i class="brk tr"></i><i class="brk bl"></i><i class="brk br"></i>'
+   + '<div class="rows">'+LIST(AR)+'</div></div>'+GUEST+'</div>'}
+];
+
+document.getElementById('grid').innerHTML = V.map(v =>
+  '<section class="sheet">'
+  + '<div class="lab"><span class="num">' + v.k + '</span><span class="nm">' + v.n + '</span></div>'
+  + '<p class="why">' + v.why + '</p>'
+  + '<div class="tags">' + v.tags.map((t,i) => '<span class="tag' + (i===0?' hi':'') + '">' + t + '</span>').join('') + '</div>'
+  + '<div class="stage"><div class="scr v' + v.k + '">' + v.html + '</div></div>'
+  + '</section>').join('');
+</script>

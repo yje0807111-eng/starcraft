@@ -1,0 +1,228 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>로그인 중앙 정렬 4안</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Jua&family=Rajdhani:wght@500;600;700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap');
+
+:root{
+  --font-ko:'Noto Sans KR','Apple SD Gothic Neo',sans-serif;
+  --font-ti:'Jua','Apple SD Gothic Neo',sans-serif;
+  --font-num:'Rajdhani','IBM Plex Sans KR',sans-serif;
+  --r-bar:3px; --r-md:6px; --r-lg:9px;
+  --fs-xs:9.5px; --fs-sm:10px; --fs-md:11px; --fs-lg:12px; --fs-xl:13px;
+  --neon:#ff3b3b; --gold:#ffd24a;
+  --acRGB:255,59,59; --ac:rgb(255,59,59);
+  --pg:#0b0c10; --line:rgba(255,255,255,.09);
+  --tx1:#ececec; --tx2:#9a9a9c; --tx3:#6e7076;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--pg);color:var(--tx1);font-family:var(--font-ko);
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:1360px;margin:0 auto;padding:0 22px 60px}
+
+header{padding:44px 0 8px}
+.eyebrow{font-family:var(--font-num);font-size:var(--fs-md);letter-spacing:.22em;
+  color:var(--neon);text-transform:uppercase;margin-bottom:9px}
+h1{font-family:var(--font-ti);font-size:31px;font-weight:400;margin:0 0 12px;color:#fff}
+.sub{margin:0;max-width:76ch;font-size:var(--fs-lg);line-height:1.85;color:var(--tx2)}
+.sub code{font-family:var(--font-num);color:#c8c8ca;background:rgba(255,255,255,.05);
+  padding:1px 5px;border-radius:var(--r-bar)}
+.sub b{color:#d8d8da}
+
+.note{margin:22px 0 8px;border:1px solid var(--line);border-radius:var(--r-bar);
+  padding:16px 18px;background:rgba(255,255,255,.02)}
+.note h3{margin:0 0 9px;font-family:var(--font-ti);font-weight:400;font-size:15px;color:#fff}
+.note p{margin:0 0 9px;font-size:var(--fs-md);line-height:1.85;color:var(--tx2)}
+.note p:last-child{margin:0}
+.note b{color:#d8d8da}
+.note code{font-family:var(--font-num);color:#c8c8ca}
+.note .x{color:#ff8a9a}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:30px;margin-top:26px}
+.sheet{min-width:0}
+.lab{display:flex;align-items:baseline;gap:9px;margin-bottom:7px}
+.num{font-family:var(--font-num);font-size:var(--fs-sm);letter-spacing:.1em;
+  color:#08080a;background:var(--gold);border-radius:var(--r-bar);padding:2px 8px}
+.nm{font-family:var(--font-ti);font-size:16px;color:#fff}
+.why{margin:0 0 9px;font-size:var(--fs-md);line-height:1.75;color:var(--tx2)}
+.why b{color:#d8d8da}
+.tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px}
+.tag{font-size:var(--fs-xs);color:var(--tx3);border:1px solid var(--line);
+  border-radius:var(--r-bar);padding:3px 6px}
+.tag.hi{color:var(--gold);border-color:rgba(255,210,74,.3)}
+.stage{position:relative;width:100%;aspect-ratio:360/740;border-radius:var(--r-bar);
+  overflow:hidden;background:#04050b;border:1px solid var(--line)}
+/* 가운데 기준선 — 어디가 정중앙인지 눈으로 확인하려고 둔다(목업 전용) */
+.stage::after{content:'';position:absolute;left:0;right:0;top:50%;height:1px;z-index:5;
+  background:repeating-linear-gradient(90deg,rgba(255,210,74,.5) 0 5px,transparent 5px 11px);
+  opacity:.5;pointer-events:none}
+
+/* ══ 공유 뼈대 ══ B2(인덱스 번호)의 표기법을 그대로 쓴다 ══ */
+.scr{position:absolute;inset:0;overflow:hidden;background:#08080a}
+.art{position:absolute;inset:0;z-index:0}
+.art .bg{position:absolute;inset:0;z-index:0;
+  background:url('../../assets/backgrounds/usemaps/temple.webp') center/cover no-repeat}
+/* ⭐ 비네트는 '글자가 놓일 자리'를 어둡게 만드는 장치다 — 블록을 옮기면 이것도 같이 옮긴다.
+   아래 정렬일 때는 아래가 어두웠고, 중앙 정렬이면 중앙이 어두워야 한다. */
+.art .vig{position:absolute;inset:0;z-index:1}
+.art .aura{position:absolute;inset:0;z-index:2;opacity:.1;
+  background:radial-gradient(78% 46% at 50% 50%,rgba(var(--acRGB),1),transparent 70%)}
+.in{position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;
+  align-items:stretch;padding:0 24px}
+
+.gear{position:absolute;top:13px;right:13px;z-index:4;width:24px;height:24px;color:#7b838e;opacity:.8}
+.gear svg{width:100%;height:100%;display:block}
+
+.logo{font-family:var(--font-ti);font-size:32px;letter-spacing:1.6px;line-height:1.05;
+  text-align:center}
+.logo .a{color:#f3f6fb;text-shadow:0 2px 10px rgba(0,0,0,.9)}
+.logo .b{color:var(--ac);text-shadow:0 2px 10px rgba(0,0,0,.9)}
+.slog{display:flex;align-items:center;justify-content:center;gap:8px;
+  font-size:var(--fs-xs);color:#8b97a6;letter-spacing:.6px;margin-top:7px}
+.slog::before,.slog::after{content:'';flex:0 0 28px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(var(--acRGB),.6))}
+.slog::after{background:linear-gradient(270deg,transparent,rgba(var(--acRGB),.6))}
+.head{margin-bottom:22px}
+
+.rows{border-top:1px solid rgba(255,255,255,.08)}
+.w{position:relative;display:flex;align-items:center;gap:11px;width:100%;min-height:52px;
+  padding:0 2px;border:none;border-bottom:1px solid rgba(255,255,255,.08);background:none;
+  cursor:pointer;font-family:inherit;font-size:var(--fs-lg);font-weight:700;letter-spacing:.02em;
+  color:#dfe7f0;text-align:left}
+.w .ix{font-family:var(--font-num);font-size:var(--fs-lg);font-weight:600;font-style:normal;
+  letter-spacing:.06em;color:#5c6068;width:19px;flex:none;font-variant-numeric:tabular-nums}
+.w .ar{margin-left:auto;color:#5c6068;font-family:var(--font-num);font-size:14px}
+.w .tag2{margin-left:auto;font-size:var(--fs-xs);font-weight:400;color:#6e7076;
+  border:1px solid rgba(255,255,255,.1);border-radius:var(--r-bar);padding:1px 5px}
+.w1{color:#fff}
+.w1 .ix{color:var(--ac)}
+.w1::after{content:'';position:absolute;left:0;bottom:-1px;width:22px;height:1px;
+  background:var(--ac);box-shadow:0 0 4px rgba(var(--acRGB),.9),0 0 9px rgba(var(--acRGB),.5)}
+.lock{color:#7b838e}
+.lock .ix{color:#4e5158}
+
+.guest{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;
+  min-height:44px;margin-top:6px;background:none;border:none;cursor:pointer;
+  font-family:inherit;font-size:var(--fs-md);color:#8b8f96}
+.guest u{text-decoration:none;color:#c8ccd2;border-bottom:1px solid rgba(255,255,255,.22);
+  padding-bottom:1px}
+
+/* ══ C1 · 완전 중앙 ══ 비네트 중심을 정확히 50% 로 옮긴다 */
+.vC1 .in{justify-content:center}
+.vC1 .art .vig{background:
+  linear-gradient(180deg,rgba(6,7,10,.5) 0%,rgba(4,5,8,.14) 16%,rgba(6,7,10,.86) 46%,
+    rgba(6,7,10,.86) 64%,rgba(4,5,8,.2) 84%,rgba(6,7,10,.55) 100%)}
+
+/* ══ C2 · 중앙 밴드 ══ 그림은 위아래로 살리고 가운데만 띠처럼 어둡게 */
+.vC2 .in{justify-content:center}
+.vC2 .art .vig{background:
+  radial-gradient(120% 34% at 50% 50%,rgba(4,5,8,.94) 40%,rgba(4,5,8,.55) 72%,transparent 100%),
+  linear-gradient(180deg,rgba(4,5,8,.4),rgba(4,5,8,.1) 26%,rgba(4,5,8,.1) 74%,rgba(4,5,8,.5))}
+.vC2 .rows{border-top-color:rgba(255,255,255,.12)}
+.vC2 .w{border-bottom-color:rgba(255,255,255,.12)}
+
+/* ══ C3 · 로고 상단 · 목록만 중앙 ══ 두 덩이를 따로 앉힌다 */
+.vC3 .in{justify-content:center}
+.vC3 .head{position:absolute;left:24px;right:24px;top:16%;margin:0}
+.vC3 .art .vig{background:
+  linear-gradient(180deg,rgba(4,5,8,.24) 0%,rgba(6,7,10,.72) 20%,rgba(6,7,10,.5) 34%,
+    rgba(6,7,10,.88) 48%,rgba(6,7,10,.88) 66%,rgba(4,5,8,.3) 88%,rgba(6,7,10,.6) 100%)}
+
+/* ══ C4 · 광학적 중앙 ══ 정중앙보다 살짝 위 — 눈에는 이쪽이 '가운데'다
+   ⚠ padding-bottom:% 로 올리면 안 된다 — CSS 에서 padding 의 % 는 높이가 아니라 **폭** 기준이라
+      360×740 화면에서 8% 를 줘도 실제로는 높이의 3.9% 만 움직인다(실측 48.1%).
+      .in 은 inset:0 이라 제 높이가 곧 화면 높이 → translateY 의 % 가 정확히 화면 비율이 된다. */
+.vC4 .in{justify-content:center;transform:translateY(-4%)}
+.vC4 .art .vig{background:
+  linear-gradient(180deg,rgba(6,7,10,.5) 0%,rgba(4,5,8,.12) 14%,rgba(6,7,10,.86) 40%,
+    rgba(6,7,10,.86) 60%,rgba(4,5,8,.18) 82%,rgba(6,7,10,.6) 100%)}
+.vC4 .art .aura{background:radial-gradient(78% 44% at 50% 44%,rgba(var(--acRGB),1),transparent 70%)}
+
+footer{margin-top:44px;padding-top:22px;border-top:1px solid var(--line);
+  font-size:var(--fs-md);color:var(--tx3);line-height:1.9}
+footer b{color:#c8c8ca}
+footer code{font-family:var(--font-num);color:#c8c8ca}
+@media(max-width:760px){.wrap{padding:0 14px 40px}h1{font-size:25px}.grid{grid-template-columns:1fr}}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">진입 화면 · 로그인 · B2 중앙 정렬</div>
+  <h1>중앙 정렬 4안</h1>
+  <p class="sub">
+    B2(인덱스 번호)의 <b>표기법은 그대로</b> 두고 블록을 가운데로 옮겼다.
+    비네트 · 오라의 중심도 같이 옮겼다 — 넷은 <b>어디를 「가운데」로 보느냐</b>만 다르다.
+    노란 점선이 화면 정중앙(50%)이다.
+  </p>
+
+  <div class="note">
+    <h3>왜 지금까지 아래 정렬이었나</h3>
+    <p>
+      규칙이 아니라 <b>안 6에서 물려받은 것</b>이다. 안 6은 2026-08-18에 확정한
+      <b>유즈맵 모드 선택 팝업</b>의 언어를 가져온 것인데, 그 팝업은 「위는 아트 · 아래는 정보」 구조다 —
+      가운데에 또렷한 미니맵이 놓이고 그 아래로 설명이 흐른다.
+      그래서 비네트가 <b>아래쪽을 어둡게 까는 그라데이션</b>이고, 글자를 읽히게 하려면 그 어두운 자리로 가야 했다.
+    </p>
+    <p>
+      로그인에는 가운데에 놓을 미니맵이 없다. <span class="x">즉 아래로 갈 이유가 원래 없었다.</span>
+      비네트를 다시 그리면 중앙도 된다 — 아래 넷이 그것이다.
+      <b>비네트를 안 옮기고 블록만 올리면</b> 밝은 그림 위에 글자가 놓여 대비가 무너진다.
+    </p>
+  </div>
+</header>
+
+<div class="grid" id="grid"></div>
+
+<footer>
+  ⚠ 중앙 정렬은 <b>키 아트 구도 요구가 통째로 바뀐다</b> — 아래쪽을 비우는 게 아니라
+  <b>가운데 띠를 비우고 위아래에 볼거리를 두는</b> 구도가 된다. 규격은 <code>ART.md</code> 가 단일 소스다.<br>
+  ⚠ 세로가 짧은 기기에서는 중앙 정렬이 위아래 여백을 동시에 잃는다 —
+  <code>justify-content:center</code> 는 넘칠 때 위쪽이 잘리므로, 실제 반영 때
+  <code>overflow-y:auto</code> + <code>safe-area</code> 를 같이 넣어야 한다.<br>
+  ⚠ 배경은 <code>usemaps/temple.webp</code> 를 비교용으로 빌려 썼다 · 글꼴은 Google Fonts 근사.
+</footer>
+</div>
+
+<script>
+const GEAR='<span class="gear"><svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg></span>';
+const ART='<div class="art"><i class="bg"></i><i class="vig"></i><i class="aura"></i></div>';
+const HEAD='<div class="head"><div class="logo"><span class="a">STAR </span><span class="b">WAR</span></div>'
+  +'<div class="slog">로그인하고 시작하세요</div></div>';
+const GUEST='<button class="guest">계정 없이 <u>게스트로 시작</u></button>';
+const AR='<i class="ar">›</i>';
+const LIST='<div class="rows">'
+  +'<button class="w w1"><i class="ix">01</i>아이디로 로그인'+AR+'</button>'
+  +'<button class="w"><i class="ix">02</i>이메일로 로그인'+AR+'</button>'
+  +'<button class="w lock"><i class="ix">03</i>Google로 로그인<i class="tag2">준비 중</i></button>'
+  +'</div>';
+
+const V=[
+{k:'C1', n:'완전 중앙',
+ tags:['블록 정중앙','비네트 중심 50%','가장 단순'],
+ why:'블록을 <b>화면 정중앙</b>에 놓고 비네트 중심도 50%로 옮겼다. 위아래로 그림이 똑같이 남아 좌우 대칭처럼 위아래도 대칭이 된다. 넷 중 가장 단순하고 예측 가능하다.',
+ html: ART+GEAR+'<div class="in">'+HEAD+LIST+GUEST+'</div>'},
+
+{k:'C2', n:'중앙 밴드',
+ tags:['가운데만 띠처럼 어둡게','위아래 그림이 살아난다','대비 최대'],
+ why:'전면을 고르게 덮는 대신 <b>가운데만 타원으로</b> 어둡게 판다. 위아래 그림이 훨씬 밝게 살아나고, 글자 자리는 오히려 더 또렷해진다 — 어두운 띠가 <b>스스로 자리를 만든다</b>. 구분선도 한 단계 밝혀(.08 → .12) 띠 안에서 또렷하게 잡았다.',
+ html: ART+GEAR+'<div class="in">'+HEAD+LIST+GUEST+'</div>'},
+
+{k:'C3', n:'로고 상단 · 목록 중앙',
+ tags:['두 덩이를 따로','로고 16% · 목록 50%','아트가 가장 넓다'],
+ why:'로고와 목록을 <b>한 덩이로 묶지 않는다.</b> 로고는 위쪽 16% 자리에 고정하고, 조작만 정중앙에 앉힌다. 둘 사이가 벌어진 만큼 그림이 통째로 드러나서 넷 중 아트가 가장 넓게 보인다.',
+ html: ART+GEAR+'<div class="in">'+HEAD+LIST+GUEST+'</div>'},
+
+{k:'C4', n:'광학적 중앙',
+ tags:['정중앙보다 4% 위','눈에는 이쪽이 가운데','타이포 관례'],
+ why:'수치상 정중앙(50%)에 놓으면 사람 눈에는 <b>살짝 아래로 처져</b> 보인다 — 표지·포스터가 제목을 늘 중앙보다 위에 두는 이유다. 그래서 <b>4%쯤 위</b>로 올렸다. C1과 나란히 놓고 보면 차이가 분명하다(노란 점선이 진짜 50%).',
+ html: ART+GEAR+'<div class="in">'+HEAD+LIST+GUEST+'</div>'}
+];
+
+document.getElementById('grid').innerHTML = V.map(v =>
+  '<section class="sheet">'
+  + '<div class="lab"><span class="num">' + v.k + '</span><span class="nm">' + v.n + '</span></div>'
+  + '<p class="why">' + v.why + '</p>'
+  + '<div class="tags">' + v.tags.map((t,i) => '<span class="tag' + (i===0?' hi':'') + '">' + t + '</span>').join('') + '</div>'
+  + '<div class="stage"><div class="scr v' + v.k + '">' + v.html + '</div></div>'
+  + '</section>').join('');
+</script>

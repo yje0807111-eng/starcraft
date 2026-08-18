@@ -83,6 +83,34 @@ async function groupLobby(){
     assert($('authId').type==='email','이메일 방식인데 첫 칸이 email 타입이 아님: '+$('authId').type);
     assert(document.querySelectorAll('#auth input[type=password]').length===2,'비밀번호 칸이 폼마다 복제됨');
     authBackToHub(); assert(visible($('authHub')),'뒤로가기가 허브로 안 돌아감');
+    // ⚠ authShowHub 는 라벨을 다시 그린다 — 번호(.awIx)·화살표(.awAr)까지 지우면 행이 무너진다.
+    //   (옛 코드가 innerHTML 을 통째로 덮어쓰고 있었다)
+    assert($('wayId').querySelector('.awIx') && $('wayId').querySelector('.awAr'),
+      '허브로 돌아오니 행 번호/화살표가 사라짐: '+$('wayId').innerHTML);
+    // ══ 🎬 시네마틱 행 목록 (2026-08-19 · C4) ══════════════════════════════════
+    //   ⚠ 이 검사들은 **허브가 보이는 동안** 해야 한다 — 폼을 열면 허브가 display:none 이라
+    //      getBoundingClientRect() 가 전부 0 이 되고, '가운데를 벗어남 11%' 같은 헛 실패가 난다(실제로 그랬다).
+    { // ① 블록은 화면 가운데 근처, 정중앙보다는 위(광학적 중앙)
+      var sc=$('auth').getBoundingClientRect(), bl=document.querySelector('.authIn').getBoundingClientRect();
+      var mid=((bl.top+bl.bottom)/2-sc.top)/sc.height*100;
+      assert(mid>38 && mid<50,'로그인 블록이 광학적 중앙을 벗어남: '+mid.toFixed(1)+'%');
+      // ② 방식은 '행'이다 — 판(면)이 없고 헤어라인으로 갈린다
+      var w0=getComputedStyle($('wayId'));
+      assert(w0.backgroundImage==='none','방식 칸에 판(면)이 되살아남: '+w0.backgroundImage);
+      assert(parseFloat(w0.borderBottomWidth)>0,'방식 칸을 가르는 헤어라인이 없음');
+      assert(document.querySelectorAll('.authWay .awIx').length===3,'행 번호(.awIx)가 3개가 아님');
+      // ③ ⭐ 주 표시는 화면에 하나뿐 — 광원이 둘이면 위계가 무너진다
+      assert(document.querySelectorAll('.authWay.pri').length===1,
+        '주 방식 표시가 1개가 아님: '+document.querySelectorAll('.authWay.pri').length);
+      // ④ ⭐ 게스트는 판을 갖지 않는다 — 밑변 광원은 주 버튼의 서명이라
+      //    게스트에 붙으면 "기본 동작은 게스트"가 된다(2026-08-19 정리).
+      var gs=getComputedStyle($('authGuest'));
+      assert(gs.backgroundImage==='none','게스트에 판(면)이 되살아남: '+gs.backgroundImage);
+      assert(gs.clipPath==='none','게스트가 다시 각진 버튼이 됨');
+      // ⑤ 터치 타겟 — 게스트는 글자가 작아도 누르는 영역은 44px 다
+      assert($('authGuest').offsetHeight>=44,'게스트 터치 타겟이 44px 미만: '+$('authGuest').offsetHeight);
+      [].forEach.call(document.querySelectorAll('.authWay'),function(w){
+        assert(w.offsetHeight>=44,'방식 칸이 44px 미만: '+w.id+' '+w.offsetHeight); }); }
     authOpenForm('id');
     // 탭은 사냥터·장비창과 같은 공용 세그먼트 바를 쓴다(로그인 화면만 별도 탭 금지)
     var seg=document.querySelector('#authTabs .pdSeg');
@@ -90,14 +118,18 @@ async function groupLobby(){
     assert(seg.querySelectorAll('.pdSegBtn').length===2,'탭이 2개가 아님');
     assert(seg.querySelector('.pdSegInd'),'현재 탭을 가리키는 판(.pdSegInd)이 없음');
     assert(seg.querySelector('.pdSegBtn.on').textContent.indexOf('로그인')>=0,'켜진 탭이 로그인이 아님');
+    // ══ 🎬 시네마틱 행 목록 (2026-08-19 · C4) ══════════════════════════════════
+    //   판(카드)을 없앴다 — 배경 아트가 그대로 비치고, 조작은 헤어라인으로 갈린 '행'이다.
+    //   ⛔ 옛 검사(카드 면 알파·그림자·clip-path)로 되돌리지 말 것: .authCard 는 display:contents 라
+    //      상자를 만들지 않는데 getComputedStyle 은 캐스케이드 값을 그대로 돌려준다 →
+    //      '없는 상자'를 재고 통과하는 검사가 된다(실제로 그랬다).
     var ac=getComputedStyle(document.querySelector('.authCard'));
-    // 배경이 단색이든 그라데든, 뒤 배경이 비치지 않을 만큼 불투명해야 한다
-    var acAlpha=(ac.backgroundImage.indexOf('gradient')>=0)
-      ? Math.min.apply(null,(ac.backgroundImage.match(/rgba([^)]*)/g)||['rgba(0,0,0,1)']).map(function(c){var m=c.match(/[0-9.]+/g);return parseFloat(m[3]||1);}))
-      : parseFloat((ac.backgroundColor.match(/[0-9.]+/g)||[])[3]||0);
-    assert(acAlpha>0.6,'로그인 카드가 투명해 배경과 겹침(alpha '+acAlpha+')');
-    assert(ac.boxShadow!=='none','로그인 카드에 질감(그림자)이 없음');
-    assert(ac.clipPath && ac.clipPath!=='none','로그인 카드 외곽이 각진 HUD 형태가 아님');
+    assert(ac.display==='contents','.authCard 가 다시 판이 됨(display '+ac.display+')');
+    // 배경 아트 3층 — 그림 + 비네트. 비네트가 없으면 밝은 그림 위에 글자가 얹힌다.
+    { var bg=getComputedStyle($('auth'),'::before').backgroundImage;
+      assert(bg.indexOf('url(')>=0,'로그인 배경 아트가 없음');
+      var vg=getComputedStyle($('auth'),'::after').backgroundImage;
+      assert(vg.indexOf('gradient')>=0,'로그인 비네트가 없음 — 글자 자리가 안 어두워진다'); }
     // 액센트는 사냥터와 같은 빨강 — 푸른기로 되돌아가면 여기서 걸린다
     { var rgb=ac.getPropertyValue('--acRGB').trim().split(',').map(Number);
       assert(rgb.length===3 && rgb[0]>rgb[2]+80,'로그인 액센트가 붉은 계열이 아님: '+ac.getPropertyValue('--acRGB'));
