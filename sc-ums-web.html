@@ -3349,25 +3349,26 @@
      같은 함정이 .pdSeg 주석에도 적혀 있다. 반드시 대체값을 함께 적을 것. */
   .msPanel{position:relative;flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden;
     background:var(--hmPanel,linear-gradient(180deg,#191919,#0e0e0e));
-    border:1px solid var(--hbEdge,rgba(255,255,255,.07));
-    border-radius:0;clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px)}
-  /* 이중 테두리 — 바깥 1px(금속 엣지) + 안쪽 1px(액센트 프레임). 선을 굵히지 않고 겹을 늘린다(DESIGN §2).
-     큰 패널이라 라운드 대신 모서리 컷을 쓴다.
-     ⚠ 안쪽 프레임의 컷 길이는 카드와 **똑같이 11px** 이어야 한다 — 짧게 주면 두 대각선이 평행하지 않아 어긋난다.
-     ⚠ clip-path 가 걸린 카드는 바깥 box-shadow 를 못 쓴다(그림자까지 잘려 나간다). 이 카드는 원래 그림자가 없다.
-     ⚠ 팝업(.setCard 계열)에서는 이 이중선을 걷어냈다 — 여기는 '목록 상자'로 되살린 것이니 같이 지우지 말 것. */
-  .msPanel::before{content:'';position:absolute;inset:4px;z-index:0;pointer-events:none;
-    border:1px solid var(--frameAcc,rgba(92,214,255,.34));
-    clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px)}
-  .msPanel>*{position:relative;z-index:1}
+    border:1px solid var(--hbEdge,rgba(255,255,255,.07));border-radius:var(--r-bar);
+    box-shadow:inset 0 -1px 0 rgba(0,0,0,.6)}
+  /* 헤어라인 — 카드 윗변에 1px 붉은 광선 하나. DESIGN §0: 강조는 두께가 아니라 빛.
+     선은 카드 위에 얹히므로 z-index 2(내용보다 위)에 둔다. 양끝은 투명으로 흘려 판에 스며들게. */
+  .msPanel::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;z-index:2;pointer-events:none;
+    background:linear-gradient(90deg,transparent,rgba(255,59,59,.72) 18%,rgba(255,59,59,.72) 82%,transparent);
+    box-shadow:0 0 7px -1px rgba(255,59,59,.5)}
   /* 정렬 띠 = 사냥터 업그레이드 탭 띠와 같은 컴포넌트(.pdSeg/.pdSegInd/.pdSegBtn · segNavHTML).
      생김새는 전부 공용 규칙이 갖는다 — 여기서 덮는 것은 여백·폭·글자뿐이다.
      ⚠ 아래 실선 없음 — 탭 띠 자체가 상자라 선이 겹친다(사냥터 .hmUpgBar 와 같은 이유). */
-  .msSortTabs{flex:0 0 auto;display:flex;align-items:stretch;padding:8px 12px 4px}   /* 좌우 12px = 안쪽 프레임(5px)과 내용이 붙지 않게 */
+  .msSortTabs{flex:0 0 auto;display:flex;align-items:stretch;padding:8px 8px 4px}   /* 좌우는 목록(.msList)과 같은 8px — 탭 띠와 카드의 변이 맞는다 */
   .msSortTabs .pdSeg{flex:1 1 0;max-width:none;margin:0}
   .msSortTabs .pdSegBtn{padding:7px 4px;font-size:11.5px;font-weight:700;letter-spacing:.02em;text-align:center}
   /* 목록이 끝나는 자리의 선은 상자(.msPanel) 자신의 아래 테두리가 맡는다 — 여기에 또 그으면 두 줄로 겹친다 */
-  #mapSelect .msList{flex:1 1 auto;min-height:0;padding:8px 12px 10px}   /* 좌우는 탭 띠와 같은 12px — 카드와 변이 맞는다 */
+  /* ⚠ 스크롤 영역은 **padding box** 에서 잘린다 — 아래 여백을 padding 으로 주면 카드가 그 여백까지 흘러들어와
+     카드 맨 아래 선에 딱 붙어 잘린다('밖으로 나간' 느낌의 원인). margin 으로 줘야 잘리는 자리가 안쪽으로 들어온다.
+     여기에 마스크로 끝을 흐려 '안쪽에서 자연스럽게 끝난다'로 읽히게 한다. */
+  #mapSelect .msList{flex:1 1 auto;min-height:0;padding:8px 8px 0;margin-bottom:10px;
+    -webkit-mask-image:linear-gradient(180deg,#000 calc(100% - 18px),transparent);
+    mask-image:linear-gradient(180deg,#000 calc(100% - 18px),transparent)}
   /* 마을 채팅 시트 — 소셜 블록을 그대로 담는다(유즈맵에서 옮겨옴) */
   #twChat .msSocial.inTown{flex:1;min-height:0;margin-top:0;border:0;border-radius:0;background:none}
   /* 정렬 드롭다운(커스텀 HUD 메뉴) */

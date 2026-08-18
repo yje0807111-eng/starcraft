@@ -2452,13 +2452,18 @@ async function groupLobby(){
       const panel=document.querySelector('#mapSelect .msPanel');
       assert(panel && panel.contains($('msList')) && panel.contains($('msSortTabs')),'탭 띠·목록이 한 상자 안에 없음');
       assert(!panel.contains(dock),'소셜이 목록 카드 안에 들어가 있음(독립 카드여야 한다)');
-      // 이중 테두리 — 바깥 1px + 안쪽 1px 프레임. ⚠ 두 모서리 컷 길이가 같아야 대각선이 평행하다
-      { const pb=getComputedStyle(panel,'::before');
-        assert(pb.content!=='none','이중 테두리의 안쪽 프레임(::before)이 없음');
-        assert(parseFloat(pb.borderTopWidth)>=1,'안쪽 프레임 선이 없음');
-        const cut=s=>((s||'').match(/(\d+(?:\.\d+)?)px/)||[])[1];
-        const a=cut(getComputedStyle(panel).clipPath), b=cut(pb.clipPath);
-        assert(a && b && a===b,'안쪽 프레임의 모서리 컷 길이가 카드와 다름: '+a+' vs '+b); }
+      // 헤어라인 — 카드 윗변 1px 붉은 광선(::after). 색이 붉은지까지 본다(흰빛으로 돌아가면 잡힌다)
+      { const pa=getComputedStyle(panel,'::after');
+        assert(pa.content!=='none','윗변 헤어라인(::after)이 없음');
+        assert(parseFloat(pa.height)<=2,'헤어라인이 1px 이 아님: '+pa.height);
+        const cols=[...((pa.backgroundImage||'').matchAll(/rgba?\((\d+),\s*(\d+),\s*(\d+)/g))];
+        assert(cols.some(c=>+c[1]>=180 && +c[2]<=110 && +c[3]<=110),
+          '헤어라인이 붉은색이 아님: '+(pa.backgroundImage||'').slice(0,80)); }
+      // 목록은 카드 안쪽에서 끝난다 — 아래 여백이 padding 이면 카드가 판 끝선에 붙어 잘린다
+      { const ls=getComputedStyle($('msList'));
+        assert(parseFloat(ls.marginBottom)>=6,'목록 아래 여백이 margin 이 아님(카드가 판 끝에 붙어 잘린다)');
+        const lb=$('msList').getBoundingClientRect(), pr=panel.getBoundingClientRect();
+        assert(pr.bottom-lb.bottom>=6,'목록이 카드 안쪽에서 안 끝남: '+(pr.bottom-lb.bottom).toFixed(1)+'px'); }
       // 카드 면 = 사냥터 업그레이드 칸(.hmUp)과 같은 검정. 옛 회색(rgba(36,38,47,…))으로 돌아가면 잡힌다
       { const g=getComputedStyle(document.querySelector('#msList .mapItem')).backgroundImage||'';
         const m=(g.match(/rgba?\(([^)]+)\)/)||[,'255,255,255'])[1].split(',').map(parseFloat);
