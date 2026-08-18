@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/", "destination": "/sc-ums-web.html" }
+  ]
+}
