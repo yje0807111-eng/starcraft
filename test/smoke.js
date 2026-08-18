@@ -2490,7 +2490,6 @@ async function groupLobby(){
     assert(document.querySelector('#twChat.hide'),'파티를 눌렀는데 마을 시트가 열림(도크가 맡아야 한다)');
     assert(getComputedStyle($('msPanelBody')).display!=='none','파티 패널이 안 보임');
     assert(document.querySelector('#navBar .navIt.cur').dataset.sub==='party','소셜 선택 표시가 안 따라옴');
-    closePartyFind();   // 파티가 없으면 게시판이 자동으로 뜬다 — 뒤 검사에 안 걸리게 접는다
     // 마을 채팅 시트가 열리면 소셜을 되찾아 가고, 유즈맵에 다시 오면 도크로 돌아온다
     openTown(); await sleep(40); twOpenChat(); await sleep(40);
     assert(document.querySelector('#twChat .msSocial'),'마을 시트가 소셜을 못 되찾음');
@@ -2549,7 +2548,17 @@ async function groupLobby(){
     navSub('chat'); await sleep(30);
     { _party=null; _pbRooms=null;
       navSub('party'); await sleep(120);
-      assert(visible($('ptFindOv')),'파티가 없는데 게시판이 자동으로 안 뜸');
+      // ⛔ 자동으로 뜨지 않는다 — 탭을 누를 때마다 판이 덮여 내 파티가 안 보였다
+      assert(!visible($('ptFindOv')),'파티 탭에서 게시판이 자동으로 뜸');
+      // 8칸(2열×4행)이 스크롤 없이 다 보인다
+      { const body=$('msPanelBody');
+        assert(body.querySelectorAll('.ptSlot').length===PARTY_MAX,'파티 칸이 8개가 아님');
+        assert(body.scrollHeight<=body.clientHeight+1,
+          '파티 구역이 스크롤됨(8칸이 화면에 다 안 들어옴): '+body.scrollHeight+' > '+body.clientHeight);
+        const last=[...body.querySelectorAll('.ptSlot')].pop().getBoundingClientRect();
+        assert(last.bottom<=body.getBoundingClientRect().bottom+1,'마지막 칸이 구역 밖으로 나감'); }
+      openPartyFind(); await sleep(120);
+      assert(visible($('ptFindOv')),'파티 찾기 버튼 경로로도 게시판이 안 열림');
       // 판은 방 찾기(#rooms) 컴포넌트를 그대로 빌린다 — 새 목록 UI 를 만들면 그건 버그다
       const card=$('ptFindOv').querySelector('.rmCard');
       assert(card,'파티 찾기가 방 찾기 카드(.rmCard)를 안 씀');
@@ -2571,9 +2580,9 @@ async function groupLobby(){
       assert(_party.members.length===before+1,'내가 안 들어갔거나 인원이 안 맞음: '+_party.members.length);
       assert($('msPanelBody').querySelector('.ptTitle').textContent.indexOf(target.name)>=0,'하단 내 파티에 이름이 안 뜸');
       assert(!$('msPanelBody').querySelector('.ptKick'),'남의 파티인데 내보내기 버튼이 보임');
-      // 파티가 있으면 탭을 다시 눌러도 게시판이 자동으로 뜨지 않는다
+      // 탭을 다시 눌러도 게시판이 뜨지 않는다
       navSub('chat'); await sleep(30); navSub('party'); await sleep(80);
-      assert(!visible($('ptFindOv')),'파티가 있는데 게시판이 또 뜸');
+      assert(!visible($('ptFindOv')),'파티 탭에서 게시판이 또 뜸');
       // 나가기 → 게시판 인원도 되돌아온다(한쪽만 지우면 인원이 샌다)
       await partyDisband(); await sleep(40);
       openPartyFind(); await sleep(60);

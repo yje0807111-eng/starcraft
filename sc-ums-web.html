@@ -3075,7 +3075,7 @@
      판 두 장을 포갠 이음새처럼 보인다(실제로 그랬다). 자연스럽게 나누는 법은 둘:
        ① 선은 양끝을 투명으로 흘려 벽에 닿기 전에 사라지게(카드의 붉은 헤어라인과 같은 문법)
        ② 위에서 드리우는 그늘로 아래 구역이 '한 단 내려앉은' 것처럼 — 선보다 그늘이 더 많이 말한다 */
-  #msSocialDock{position:relative;flex:0 0 30%;min-height:156px;display:flex;flex-direction:column;overflow:hidden;
+  #msSocialDock{position:relative;flex:0 0 30%;min-height:186px;display:flex;flex-direction:column;overflow:hidden;
     background:rgba(0,0,0,.34);
     box-shadow:inset 0 9px 11px -11px rgba(0,0,0,.9);
     padding-bottom:6px}   /* 안쪽 목록이 카드 끝선에 딱 붙어 잘리지 않게 — 스크롤러가 아니라 도크에 준다 */
@@ -3561,25 +3561,27 @@
     font-size:var(--fs-sm);font-weight:700;letter-spacing:.2px;
     color:#dfe4ea;background:rgba(255,255,255,.045);border:1px solid var(--metal-edge)}
   .ptFind:active{opacity:.75;transform:translateY(1px)}
-  .ptGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-  .ptSlot{display:flex;align-items:center;gap:7px;min-height:40px;padding:5px 8px;border-radius:var(--r-lg);overflow:hidden}
+  /* 8칸(2열×4행)이 소셜 구역 안에 **스크롤 없이** 들어와야 한다 — 칸 높이·글자·아바타를 한 치수씩 내렸다.
+     계산: 구역 안높이 170 − 머리줄 31 = 139 ≥ 4×30 + 3×4 = 132 ✓ (도크 min-height 도 그만큼 올려 둔다) */
+  .ptGrid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+  .ptSlot{display:flex;align-items:center;gap:6px;min-height:30px;padding:3px 6px;border-radius:var(--r-md);overflow:hidden}
   .ptSlot.fill{background:linear-gradient(180deg,rgba(28,30,36,.9),rgba(11,12,16,.92));border:1px solid var(--metal-edge)}
   .ptSlot.fill.leader{border-color:var(--neon-soft);background:linear-gradient(180deg,rgba(255,59,59,.22),rgba(11,12,16,.9))}
   .ptSlot.empty{cursor:pointer;border:1px dashed rgba(255,255,255,.3);background:rgba(14,16,22,.55);transition:border-color .12s,background .12s}
   .ptSlot.empty:hover{border-color:var(--neon-soft);background:var(--neon-faint)}
   .ptSlot.empty:active{transform:scale(.98)}
-  .ptAddAv{flex:0 0 auto;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-    font-size:16px;font-weight:300;line-height:1;color:#c4cdd6;background:rgba(255,255,255,.08);border:1px dashed rgba(255,255,255,.4)}
-  .ptAddLbl{font-size:var(--fs-sm);font-weight:600;color:#aeb7c1}
+  .ptAddAv{flex:0 0 auto;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:13px;font-weight:300;line-height:1;color:#c4cdd6;background:rgba(255,255,255,.08);border:1px dashed rgba(255,255,255,.4)}
+  .ptAddLbl{font-size:var(--fs-xs);font-weight:600;color:#aeb7c1}
   .ptSlot.empty:hover .ptAddAv{color:var(--neon-lt);border-color:var(--neon-soft);background:var(--neon-faint)}
   .ptSlot.empty:hover .ptAddLbl{color:var(--neon-lt)}
   
   
   .ptSlot .ptName{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.2}   /* 파티 슬롯 전용 — 공학소 행(.ptNameRow)의 이름까지 늘어나지 않게 범위 한정 */
-  .ptNick{font-size:var(--fs-md);font-weight:700;color:#e8eef5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .ptRole{font-style:normal;font-size:var(--fs-xs);color:#79838f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ptNick{font-size:var(--fs-sm);font-weight:700;color:#e8eef5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ptRole{font-style:normal;font-size:8.5px;color:#79838f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .ptSlot.fill.leader .ptRole{color:var(--neon-lt)}
-  .ptKick{flex:0 0 auto;width:18px;height:18px;border-radius:var(--r-md);cursor:pointer;font-size:var(--fs-sm);line-height:1;
+  .ptKick{flex:0 0 auto;width:16px;height:16px;border-radius:var(--r-bar);cursor:pointer;font-size:var(--fs-xs);line-height:1;
     color:var(--txt-hud);background:var(--glass);border:1px solid var(--metal-edge)}
   .ptKick:active{transform:translateY(1px)}
   /* 친구 초대 팝업 */
@@ -3628,8 +3630,8 @@
   .fStat-offline{color:#828b96;background:var(--glass);border:1px solid var(--metal-edge)}
   .fStat-busy{color:#b6a0ff;background:rgba(150,120,255,.12);border:1px solid rgba(150,120,255,.35)}
   /* 파티 슬롯 아바타(색상 이니셜) */
-  .ptAva{position:relative;flex:0 0 auto;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-    font-size:var(--fs-md);font-weight:800;border:1px solid}
+  .ptAva{position:relative;flex:0 0 auto;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:var(--fs-sm);font-weight:800;border:1px solid}
   /* 친구 행 액션 버튼 */
   .foActs{flex:0 0 auto;display:flex;align-items:center;gap:5px}
   .foAct{display:flex;align-items:center;justify-content:center;width:33px;height:33px;border-radius:var(--r-lg);cursor:pointer;
@@ -14590,9 +14592,9 @@ function setBottomTab(t){ _bottomTab=t;
   if(!wrap||!chat||!panel) return;
   if(t==='chat'){ wrap.style.display='flex'; panel.style.display='none'; chat.scrollTop=chat.scrollHeight; }
   else { wrap.style.display='none'; panel.style.display='block';
-    if(t==='party'){ renderPartyTab();
-      // 파티가 없으면 '이전 단계'인 게시판이 먼저 뜬다 — 빈 슬롯만 보여 주면 어디서 사람을 구하는지 알 수 없다.
-      if(!hasParty()) openPartyFind(); }
+    // ⛔ 게시판을 자동으로 띄우지 않는다 — 탭을 누를 때마다 판이 덮여 내 파티가 안 보였다.
+    //    들어가는 길은 머리줄의 '파티 찾기' 버튼 하나뿐이다.
+    if(t==='party') renderPartyTab();
     else renderFriendList(); } }
    // 구버전 호환
 // ── 임시 친구(기능 확인용) + 파티(내가 초대하면 무조건 수락) ──
