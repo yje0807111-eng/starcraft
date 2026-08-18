@@ -2482,10 +2482,13 @@ async function groupLobby(){
     // ① 총량 = (레벨-1)×LP_PER_LEVEL · 처음엔 전부 남아 있다
     assert(lpTotal(c)===10*LP_PER_LEVEL,'포인트 총량이 레벨에서 안 나옴: '+lpTotal(c));
     assert(lpFree(c)===lpTotal(c) && lpSpent(c)===0,'처음부터 쓴 포인트가 있음');
-    // ② 남은 것보다 많이 못 찍는다
-    assert(lpAdd('atk', 999)===lpTotal(c),'남은 것보다 많이 찍힘');
-    assert(lpFree(c)===0,'다 썼는데 남은 포인트가 있음');
-    assert(lpAdd('hp',1)===0,'포인트가 없는데 찍힘');
+    // ② 남은 것보다 많이 못 찍는다 — 비용 곡선(ptCostAt)을 올려도 이 규칙은 그대로여야 한다
+    { const got=lpAdd('atk', 999);
+      assert(got>0,'한 칸도 못 찍음');
+      assert(lpPts('atk')===got,'찍은 칸 수가 반환값과 다름: '+lpPts('atk')+' vs '+got);
+      assert(lpFree(c) < ptCost('lp','atk',c),'더 살 수 있는데 안 삼: 남은 '+lpFree(c)+'p · 값 '+ptCost('lp','atk',c)+'p');
+      const hpCost=ptCost('lp','hp',c);
+      if(lpFree(c)<hpCost) assert(lpAdd('hp',1)===0,'포인트가 모자란데 찍힘'); }
     // ③ 표의 모든 키가 실제로 전투에 걸린다 — 표에만 있고 안 걸린 키는 거짓말이 된다
     const H=hbHunt(); for(const k in HB_UPG) H.unl[k]=1;   // 동료·건물 배수는 해금돼 있어야 값이 보인다
     const snap=()=>{ const st=hbCharStats(), M=hbAllyMul();
@@ -2531,18 +2534,33 @@ async function groupLobby(){
     const rows=[...host.querySelectorAll('.lpRow')];
     assert(rows.length===LP_STATS.length,'포인트 줄 수가 표와 다름: '+rows.length);
     assert(host.querySelector('.lpFree b').textContent==='60','남은 포인트 표시가 다름: '+host.querySelector('.lpFree b').textContent);
-    // 2열 격자 · 설명 없이 '바뀌는 수치'만 · 이름은 잘리지 않는다
+    // 2열 격자 · 줄에는 '수치'만 · 이름은 잘리지 않는다
     { const top=rows[0].getBoundingClientRect().top;
       const per=rows.filter(e=>Math.abs(e.getBoundingClientRect().top-top)<2).length;
       assert(per===2,'포인트 목록이 2열이 아님: 한 줄 '+per+'칸');
-      for(const e of rows){
-        assert(!e.querySelector('em'),'줄에 설명이 남아 있음: '+e.textContent.trim());
+      rows.forEach((e,i)=>{ const S=LP_STATS[i];
         const nm=e.querySelector('.lpTx b');
         assert(nm.scrollWidth<=nm.clientWidth+1,'이름이 잘림: '+nm.textContent);
+        // 지금 걸려 있는 배수
         const v=e.querySelector('.lpVal').textContent.trim();
-        assert(/^\+\d+%$/.test(v),'값이 배수 하나가 아님: '+v); } }
+        assert(/^\+\d+%$/.test(v),'값이 배수 하나가 아님: '+v);
+        // 제목 아래 = 1p당 상승치(용도 설명이 아니라 수치여야 한다)
+        const em=e.querySelector('.lpTx em'); assert(em,'1p당 상승치 줄이 없음: '+S.name);
+        const want='1p당 +'+(S.step*100).toFixed(S.step<0.02?1:0)+'%';
+        assert(em.textContent.trim()===want,S.name+' 1p당 표기가 다름: '+em.textContent.trim()+' vs '+want);
+        assert(em.scrollWidth<=em.clientWidth+1,'1p당 표기가 잘림: '+em.textContent);
+        // 버튼 = 값이 적힌 비용 표기
+        const bt=e.querySelector('.lpBtn').textContent.trim();
+        assert(bt==='-'+ptCost('lp',S.k)+'p','버튼이 비용 표기가 아님: '+bt); }); }
     // 이름은 수치 축과 같은 말을 쓴다 — 같은 것을 두 이름으로 부르지 않는다
     assert(lpDef('critd').name===CS_AXES.critd.name,'치명 피해 이름이 축과 다름: '+lpDef('critd').name);
+    // 버튼에 적힌 값만큼 '실제로' 빠진다 — 표기와 차감이 갈라지면 여기서 잡힌다
+    { const c2=CHAR(); c2.unit.pts={};
+      const before=lpFree(c2), cost=ptCost('lp','atk',c2);
+      assert(lpAdd('atk',1)===1,'1칸이 안 올라감');
+      assert(lpPts('atk')===1,'찍은 칸이 1이 아님');
+      assert(lpFree(c2)===before-cost,'버튼에 적힌 값('+cost+'p)만큼 안 빠짐: '+before+'→'+lpFree(c2));
+      c2.unit.pts={}; }
     // 화면 버튼으로 찍는다 — 렌더러·상태·전투가 한 줄로 이어지는지 본다
     rows[0].querySelector('.lpBtn').click(); await sleep(40);
     assert(lpPts('atk')===1,'버튼을 눌렀는데 안 찍힘');
@@ -2573,18 +2591,19 @@ async function groupLobby(){
     assert(rpTotal(c)===RP_PER_REB*step1,'환생 포인트 지급량이 다름: '+rpTotal(c));
     // ② 레벨 포인트는 되감기고, 환생 포인트는 남는다 — 둘이 같은 필드면 여기서 잡힌다
     assert(lpTotal(c)===0 && lpSpent(c)===0,'레벨 포인트가 안 되감김');
-    rpAdd('atk', 3);
-    assert(rpPts('atk')===3,'환생 포인트가 안 찍힘');
+    const put=rpAdd('atk', 3);
+    assert(put>0 && rpPts('atk')===put,'환생 포인트가 안 찍힘: '+put+'/'+rpPts('atk'));
     c.level=PROF_REB_EVERY*2; c.unit.level=PROF_REB_EVERY*2;
     const step2=profRebirth(c);
-    assert(rpPts('atk')===3,'환생했더니 찍어 둔 환생 포인트가 사라짐');
+    assert(rpPts('atk')===put,'환생했더니 찍어 둔 환생 포인트가 사라짐');
     assert(rpTotal(c)===RP_PER_REB*(step1+step2),'두 번째 지급이 누적 안 됨: '+rpTotal(c));
     // ③ 1p 가 레벨 포인트보다 세다 · 남은 것보다 많이 못 찍는다
     assert(rpStep('atk')>lpDef('atk').step,'환생 포인트가 레벨 포인트보다 안 셈');
-    assert(Math.abs(rpMul('atk')-(1+rpStep('atk')*3))<1e-9,'환생 배수가 선형이 아님');
-    const free=rpFree(c);
-    assert(rpAdd('hp', 999)===free,'남은 것보다 많이 찍힘');
-    assert(rpAdd('hp', 1)===0,'없는데 또 찍힘');
+    assert(Math.abs(rpMul('atk')-(1+rpStep('atk')*put))<1e-9,'환생 배수가 선형이 아님');
+    { const got=rpAdd('hp', 999);
+      assert(got>0,'한 칸도 못 찍음');
+      assert(rpFree(c) < ptCost('rp','hp',c),'더 살 수 있는데 안 삼: 남은 '+rpFree(c)+'p');
+      if(rpFree(c)<ptCost('rp','hp',c)) assert(rpAdd('hp', 1)===0,'없는데 또 찍힘'); }
     // ④ 전투에도 걸린다 — 레벨 포인트와 '따로' 곱해져야 한다
     c.unit.pts={}; c.unit.rpts={};
     const base=csVal('atk');
