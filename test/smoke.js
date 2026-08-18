@@ -392,6 +392,36 @@ async function groupLobby(){
     assert(visible($('navBar')),'유즈맵 화면에 네비가 없음');
     assert(document.querySelectorAll('#navBar .navIt[data-sub]').length===3,'유즈맵 하위(소셜)가 3칸이 아님');
     assert(document.getElementById('msSortTabs'),'유즈맵 정렬 띠가 화면 위에 없음');
+    // 정렬 띠 = 사냥터 업그레이드 탭과 **같은 컴포넌트**(.pdSeg · segNavHTML). 전용 탭 클래스를 되살리면 안 된다.
+    { const seg=document.querySelector('#msSortTabs .pdSeg');
+      assert(seg,'유즈맵 정렬 띠가 공용 세그먼트 바(.pdSeg)를 안 씀');
+      assert(seg.querySelector('.pdSegInd') && seg.querySelectorAll('.pdSegBtn').length===MAP_SORTS.length,'세그먼트 구성이 다름');
+      assert(!document.querySelector('.msSortTab'),'옛 전용 탭(.msSortTab)이 남아 있음');
+      // 선택 표시가 실제로 움직이는가 — 인디케이터 left 가 탭마다 달라야 한다
+      const at=()=>document.querySelector('#msSortTabs .pdSegInd').getBoundingClientRect().left;
+      const x0=at(); setMapSort('rec'); await sleep(60);
+      assert(Math.abs(at()-x0)>10,'정렬을 바꿨는데 선택 표시가 안 움직임');
+      assert(document.querySelectorAll('#msSortTabs .pdSegBtn.on').length===1,'선택 표시가 하나가 아님');
+      setMapSort('pop'); await sleep(40);
+      // 사냥터 탭 띠와 같은 물성인가 — 판·인디케이터의 라운드가 같아야 한다(공용 규칙을 안 덮었다는 뜻)
+      openHome(); await sleep(220); renderHome();
+      const hs=document.querySelector('#hmUpgTabs .pdSeg');
+      if(hs){ const r=e=>getComputedStyle(e).borderTopLeftRadius;
+        navGo('map'); await sleep(120);
+        const ms=document.querySelector('#msSortTabs .pdSeg');
+        assert(r(ms)===r(hs),'사냥터 탭 띠와 라운드가 다름: '+r(ms)+' vs '+r(hs)); }
+      else { navGo('map'); await sleep(120); } }
+    // 탭 띠와 목록은 **한 상자**(.msPanel) 안에 있고, 가로가 정확히 같아야 한다
+    { const panel=document.querySelector('#mapSelect .msPanel');
+      assert(panel && panel.contains($('msSortTabs')) && panel.contains($('msList')),'탭 띠와 목록이 한 상자 안에 없음');
+      const cs=getComputedStyle(panel);
+      // ⚠ --hmPanel/--hbEdge 는 HOME·마을 안에서만 정의된다 — 대체값을 빼면 면도 테두리도 통째로 사라진다
+      assert(cs.borderTopStyle!=='none' && parseFloat(cs.borderTopWidth)>=1,'상자 테두리가 안 그려짐(--hbEdge 대체값 누락?)');
+      assert(cs.backgroundImage!=='none','상자 면이 안 칠해짐(--hmPanel 대체값 누락?)');
+      const seg=document.querySelector('#msSortTabs .pdSeg').getBoundingClientRect();
+      const it=document.querySelector('#msList .mapItem').getBoundingClientRect();
+      assert(Math.abs(seg.left-it.left)<=0.6 && Math.abs(seg.right-it.right)<=0.6,
+        '탭 띠와 목록 가로가 안 맞음: '+seg.left.toFixed(1)+'~'+seg.right.toFixed(1)+' vs '+it.left.toFixed(1)+'~'+it.right.toFixed(1)); }
     assert(!document.querySelector('#mapSelect .msHeadL .twBack'),'유즈맵 좌상단 뒤로가기 버튼이 아직 있음');
     mapToHub(); await sleep(80);
     assert(visible($('homeScreen')),'유즈맵에서 뒤로 갔는데 HOME으로 안 옴 [DBG 보이는화면='+
@@ -2534,7 +2564,7 @@ async function groupLobby(){
     navGo('map'); await sleep(60);
     assert(read().join(',')==='back,~chat,~friend,~party','유즈맵 전용 네비가 아님: '+read().join(','));
     assert(document.querySelector('#navBar .navIt.cur').dataset.sub==='chat','유즈맵 기본 하위가 채팅이 아님');
-    assert(document.querySelectorAll('#msSortTabs .msSortTab').length===4,'유즈맵 정렬 띠가 화면 위로 안 돌아옴');
+    assert(document.querySelectorAll('#msSortTabs .pdSegBtn').length===4,'유즈맵 정렬 띠가 화면 위로 안 돌아옴');
     // ⑦ 소셜 = 유즈맵 하단 상주 구역(#msSocialDock). 시트가 아니라 항상 화면 몫을 차지한다.
     //    ⛔ DOM(.msSocial)은 하나뿐 — 도크에 '옮겨' 온 것이어야 한다(복제 검사)
     { const dock=$('msSocialDock');
@@ -2543,7 +2573,62 @@ async function groupLobby(){
       assert(document.querySelectorAll('.msSocial').length===1,'소셜 DOM 이 복제됨');
       assert(dock.querySelector('.msSocial'),'소셜이 도크로 안 옮겨짐');
       assert(!visible(dock.querySelector('.msTabs2')),'도크 안 탭 띠가 네비와 중복 노출됨');
-      assert(visible(dock.querySelector('#msChatWrap')),'기본(채팅)인데 채팅 창이 안 보임'); }
+      assert(visible(dock.querySelector('#msChatWrap')),'기본(채팅)인데 채팅 창이 안 보임');
+      const panel=document.querySelector('#mapSelect .msPanel');
+      assert(panel && panel.contains($('msList')) && panel.contains($('msSortTabs')),'탭 띠·목록이 한 카드 안에 없음');
+      // 헤어라인 — 카드 **위·아래** 변 1px 붉은 광선. 색이 붉은지까지 본다(흰빛으로 돌아가면 잡힌다)
+      for(const pe of ['::before','::after']){ const pa=getComputedStyle(panel,pe);
+        assert(pa.content!=='none',pe+' 헤어라인이 없음');
+        assert(parseFloat(pa.height)<=2,pe+' 헤어라인이 1px 이 아님: '+pa.height);
+        const cols=[...((pa.backgroundImage||'').matchAll(/rgba?\((\d+),\s*(\d+),\s*(\d+)/g))];
+        assert(cols.some(c=>+c[1]>=180 && +c[2]<=110 && +c[3]<=110),
+          pe+' 헤어라인이 붉은색이 아님: '+(pa.backgroundImage||'').slice(0,80)); }
+      // 목록은 칸막이에 딱 붙지 않는다 — 아래 여백이 padding 이면 카드가 판 끝선에 붙어 잘린다
+      { const ls=getComputedStyle($('msList'));
+        assert(parseFloat(ls.marginBottom)>=4,'목록 아래 여백이 margin 이 아님(카드가 끝선에 붙어 잘린다)');
+        const lb=$('msList').getBoundingClientRect(), pb2=panel.getBoundingClientRect();
+        assert(pb2.bottom-lb.bottom>=4,'목록이 카드 끝선에 붙어 잘림: '+(pb2.bottom-lb.bottom).toFixed(1)+'px'); }
+      // 목록 구역(.msTop)만 한 톤 어두운 판으로 묶인다 — 소셜은 **바깥 카드에서도 빠져** 별도 카드다
+      { const top=panel.querySelector('.msTop');
+        assert(top && top.contains($('msSortTabs')) && top.contains($('msList')),'정렬 띠·목록을 묶는 판(.msTop)이 없음');
+        assert(!top.contains(dock) && !panel.contains(dock),'소셜이 아직 목록 카드 안에 있음');
+        const c=((getComputedStyle(top).backgroundColor||'').match(/[\d.]+/g)||['0','0','0','0']).map(parseFloat);
+        const a=(c.length>3?c[3]:1);
+        assert(a>=0.08 && a<=0.4 && c[0]<30 && c[1]<30 && c[2]<30,
+          '목록 판이 카드보다 한 톤 어둡지 않음: '+getComputedStyle(top).backgroundColor);
+        // 소셜은 '다른 섹션' — 화면 좌우를 꽉 채우고, 실버 링 테두리에 검은 반투명 면이다
+        const ds=getComputedStyle(dock), pb=panel.getBoundingClientRect(), db=dock.getBoundingClientRect();
+        const ph=$('phone').getBoundingClientRect();
+        assert(db.left<=ph.left+1 && db.right>=ph.right-1,'소셜이 화면 좌우를 안 채움: '+db.left.toFixed(1)+'~'+db.right.toFixed(1));
+        assert(db.width>pb.width+10,'소셜이 목록 카드보다 넓지 않음');
+        assert(db.top-pb.bottom>=4,'두 섹션이 붙어 있음: '+(db.top-pb.bottom).toFixed(1)+'px');
+        // 면·모서리·윗선 = 사냥터 하단 패널(.hmUpg)과 같은 처리
+        { const hm=document.querySelector('#homeScreen .hmUpg');
+          assert(/polygon/.test(ds.clipPath||''),'위쪽 모서리 컷이 없음: '+ds.clipPath);
+          if(hm) assert(getComputedStyle(hm).clipPath===ds.clipPath,'사냥터 하단 패널과 모서리 컷이 다름');
+          const rb=getComputedStyle(dock,'::before');
+          assert(rb.content!=='none' && /gradient/.test(rb.backgroundImage),'윗변 1px 선(::before)이 없음');
+          assert(parseFloat(rb.height)<=2,'윗변 선이 1px 이 아님: '+rb.height);
+          const c=((ds.backgroundImage.match(/rgba?\(([^)]+)\)/)||[,'0,0,0,1'])[1]).split(',').map(parseFloat);
+          const a=(c.length>3?c[3]:1);
+          assert(c[0]<40 && a>0.7 && a<1,'소셜 면이 반투명 어두운 회색이 아님: '+ds.backgroundImage.slice(0,60)); } }
+      // 목록에 카드가 **정확히 5장** 들어온다(잘린 6번째가 끼면 마감이 지저분하다)
+      { const list=$('msList'), ls=getComputedStyle(list), it=list.querySelector('.mapItem');
+        const inner=list.clientHeight-parseFloat(ls.paddingTop)-parseFloat(ls.paddingBottom);
+        const gap=parseFloat(ls.rowGap)||0, ih=it.getBoundingClientRect().height;
+        const fit=(inner+gap)/(ih+gap);
+        assert(fit>=4.98 && fit<5.2,'목록에 5장이 딱 안 들어옴: '+fit.toFixed(2)+'장');
+        const fifth=[...list.querySelectorAll('.mapItem')][4];
+        if(fifth) assert(fifth.getBoundingClientRect().bottom<=list.getBoundingClientRect().bottom+0.6,
+          '5번째 카드가 목록 밖으로 넘침'); }
+      // 카드 면 = 사냥터 업그레이드 칸(.hmUp)과 같은 검정. 옛 회색(rgba(36,38,47,…))으로 돌아가면 잡힌다
+      { const g=getComputedStyle(document.querySelector('#msList .mapItem')).backgroundImage||'';
+        const m=(g.match(/rgba?\(([^)]+)\)/)||[,'255,255,255'])[1].split(',').map(parseFloat);
+        const lum=m[0]*0.3+m[1]*0.59+m[2]*0.11;
+        assert(lum<=12,'유즈맵 카드 면이 검정이 아님(휘도 '+lum.toFixed(1)+')'); }
+      // 카드 모양은 도크가 직접 갖는다 — 안의 .msSocial 이 또 테두리를 가지면 두 줄로 보인다
+      { const so=getComputedStyle(dock.querySelector('.msSocial'));
+        assert(so.borderTopStyle==='none' && so.backgroundImage==='none','소셜 안쪽이 또 카드 껍데기를 가짐'); } }
     navSub('party'); await sleep(40);
     assert(document.querySelector('#twChat.hide'),'파티를 눌렀는데 마을 시트가 열림(도크가 맡아야 한다)');
     assert(getComputedStyle($('msPanelBody')).display!=='none','파티 패널이 안 보임');
@@ -2555,6 +2640,110 @@ async function groupLobby(){
     twCloseChat(); navGo('map'); await sleep(60);
     assert($('msSocialDock').querySelector('.msSocial'),'유즈맵 복귀 시 소셜이 도크로 안 돌아옴');
     navSub('chat');   // 상태 정리(기본 채팅)
+    // 👥 친구 = 머리 한 줄(친구 N + ＋) · 온라인/오프라인 라벨 없이 밝기로 갈린다
+    navSub('friend'); await sleep(120);
+    { const body=$('msPanelBody');
+      // 머리줄은 파티 머리줄과 **같은 컴포넌트**(.ptHead/.ptTitle) — 전용 클래스를 새로 만들면 안 된다
+      assert(body.querySelector('.ptHead .ptTitle'),'친구 머리줄이 파티 머리줄 규격(.ptHead)이 아님');
+      { const ts=getComputedStyle(body.querySelector('.ptTitle'));
+        assert(parseFloat(ts.fontSize)>=12,'구역 제목이 너무 작음: '+ts.fontSize);
+        // 소셜 머리줄은 제목 가족(Jua)이 아니라 본문 가족이다 — 작은 줄에서 획이 뭉친다
+        assert(!/Jua/i.test(ts.fontFamily),'소셜 머리줄이 제목 폰트로 나옴: '+ts.fontFamily);
+        // 친구 수는 총원이 아니라 '(온라인 N)' — 상태값이라 초록
+        { const on=body.querySelector('.ptTitle .onN');
+          assert(on && /^\(온라인 \d+\)$/.test(on.textContent.trim()),'친구 수 표기가 (온라인 N) 이 아님: '+(on&&on.textContent));
+          assert(parseFloat(getComputedStyle(on).fontSize) < parseFloat(ts.fontSize),'접속 수가 제목보다 작지 않음');
+          const g=getComputedStyle(on).color.match(/\d+/g).map(Number);
+          assert(g[1]>g[0]+40 && g[1]>g[2]+40,'접속 수가 초록이 아님: '+getComputedStyle(on).color);
+          const rows=[...body.querySelectorAll('#foFriends .foRow')];
+          assert(+on.textContent.replace(/\D/g,'')===rows.filter(r=>!r.classList.contains('off')).length,
+            '접속 수가 실제 온라인 행 수와 다름'); }
+        // 머리줄 버튼 = 더보기 배너 칸과 같은 물성(각진 3px · 검은 판)
+        const bs=getComputedStyle(body.querySelector('.ptFind'));
+        assert(bs.borderTopLeftRadius==='3px','머리줄 버튼이 각지지 않음: '+bs.borderTopLeftRadius);
+        const lum=c=>{const m=((c||'').match(/[\d.]+/g)||['0','0','0']).map(parseFloat);
+          const a=(m.length>3?m[3]:1); return (m[0]*0.3+m[1]*0.59+m[2]*0.11)*a; };   // 반투명이면 알파까지 곱해야 실제 밝기다
+        assert(lum(bs.backgroundColor)<=40,'머리줄 버튼 면이 검지 않음: '+bs.backgroundColor); }
+      assert(!body.querySelector('.foHead'),'옛 전용 머리줄(.foHead)이 남아 있음');
+      assert(!body.querySelector('.foSecOn') && !body.querySelector('.foSecOff'),'온라인/오프라인 섹션 라벨이 아직 남아 있음');
+      assert(!body.querySelector('#foSearch'),'친구 추가 검색이 아직 목록 위에 남아 있음');
+      const rows=[...body.querySelectorAll('#foFriends .foRow')];
+      assert(rows.length>=2,'친구 행이 안 그려짐: '+rows.length);
+      // 정렬 = 온라인 먼저, 오프라인 나중. 뒤섞이면 '밝은 위 / 어두운 아래'가 깨진다
+      const offAt=rows.map(r=>r.classList.contains('off'));
+      assert(offAt.indexOf(true)<0 || offAt.lastIndexOf(false)<offAt.indexOf(true),
+        '오프라인 행이 온라인 사이에 섞임: '+offAt.map(b=>b?'x':'o').join(''));
+      // 오프라인 = 어두운 상자(투명도만으로 흐리게 두지 않는다)
+      const off=rows.find(r=>r.classList.contains('off')), on=rows.find(r=>!r.classList.contains('off'));
+      // ⛔ 친구 카드에 푸른기 금지 — 옛 rgba(26,28,34)는 B가 R보다 8 높아 푸르게 보였다
+      { const g=getComputedStyle(on||rows[0]).backgroundImage||'';
+        const m=((g.match(/rgba?\(([^)]+)\)/)||[,'0,0,0'])[1]).split(',').map(parseFloat);
+        assert(m[2]<=m[0]+3,'친구 카드에 푸른기가 돎: '+g.slice(0,60));
+        assert(getComputedStyle(on||rows[0]).borderTopLeftRadius==='3px','친구 카드가 덜 각짐'); }
+      if(off&&on){
+        // ⚠ 면이 gradient 라 backgroundColor 는 투명하다 — backgroundImage 의 첫 색을 본다
+        const lum=el=>{ const g=getComputedStyle(el).backgroundImage||'';
+          const m=(g.match(/rgba?\(([^)]+)\)/)||[,'0,0,0'])[1].split(',').map(parseFloat);
+          return m[0]*0.3 + m[1]*0.59 + m[2]*0.11; };
+        assert(getComputedStyle(off).opacity==='1','오프라인을 투명도로 흐리게 처리함(어두운 면이어야 한다)');
+        assert(lum(off) < lum(on)-2,'오프라인 상자가 온라인보다 어둡지 않음: '+lum(off).toFixed(1)+' vs '+lum(on).toFixed(1)); }
+      // ＋ = 친구 추가 팝업(목록 위가 아니라 팝업 안에 검색이 있다)
+      body.querySelector('.ptFind.foAddBtn').click(); await sleep(80);
+      assert(visible($('foAddOv')),'＋ 를 눌렀는데 친구 추가 팝업이 안 뜸');
+      assert($('foAddOv').querySelector('#foSearch'),'팝업 안에 검색칸이 없음');
+      closeFriendAdd(); }
+    // 🎪 파티 = 게시판(이전 단계) → 참가/만들기 → 하단 내 파티
+    navSub('chat'); await sleep(30);
+    { _party=null; _pbRooms=null;
+      navSub('party'); await sleep(120);
+      // ⛔ 자동으로 뜨지 않는다 — 탭을 누를 때마다 판이 덮여 내 파티가 안 보였다
+      assert(!visible($('ptFindOv')),'파티 탭에서 게시판이 자동으로 뜸');
+      // 8칸(2열×4행)이 스크롤 없이 다 보인다
+      { const body=$('msPanelBody');
+        assert(body.querySelectorAll('.ptSlot').length===PARTY_MAX,'파티 칸이 8개가 아님');
+        assert(body.scrollHeight<=body.clientHeight+1,
+          '파티 구역이 스크롤됨(8칸이 화면에 다 안 들어옴): '+body.scrollHeight+' > '+body.clientHeight);
+        const last=[...body.querySelectorAll('.ptSlot')].pop().getBoundingClientRect();
+        assert(last.bottom<=body.getBoundingClientRect().bottom+1,'마지막 칸이 구역 밖으로 나감'); }
+      openPartyFind(); await sleep(120);
+      assert(visible($('ptFindOv')),'파티 찾기 버튼 경로로도 게시판이 안 열림');
+      // 판은 방 찾기(#rooms) 컴포넌트를 그대로 빌린다 — 새 목록 UI 를 만들면 그건 버그다
+      const card=$('ptFindOv').querySelector('.rmCard');
+      assert(card,'파티 찾기가 방 찾기 카드(.rmCard)를 안 씀');
+      assert(card.querySelector('.rmHead .rmTitle').textContent==='파티 찾기','머리 제목이 다름');
+      assert(card.querySelector('.rmNum input') && card.querySelector('#pbList.rmList'),'방 찾기의 입력줄·목록 규격이 아님');
+      assert(card.querySelectorAll('.rmBtns .rmSq').length===2 && card.querySelector('.rmBtns .rmQuick'),'하단 버튼 4칸 규격이 아님');
+      const rows=[...card.querySelectorAll('.roomItem')];
+      assert(rows.length===PB_DEMO.length,'게시판 목록이 안 그려짐: '+rows.length);
+      assert(rows.some(r=>r.classList.contains('locked') && /가득참/.test(r.textContent)),'가득 찬 파티가 참가 불가로 안 막힘');
+      // 이름으로 찾기 = .rmNum 줄(방 번호 자리)
+      pbSetQuery('네모'); await sleep(30);
+      assert(card.querySelectorAll('.roomItem').length===1,'이름 검색이 안 걸림');
+      pbSetQuery(''); await sleep(30);
+      // 참가 → 내 파티가 그 이름·인원으로 채워진다
+      const target=PB_DEMO[0], before=target.mates.length;
+      pbJoin(target.id); await sleep(60);
+      assert(!visible($('ptFindOv')),'참가했는데 게시판이 안 닫힘');
+      assert(_party && _party.name===target.name,'참가한 파티 이름이 안 들어옴: '+(_party&&_party.name));
+      assert(_party.members.length===before+1,'내가 안 들어갔거나 인원이 안 맞음: '+_party.members.length);
+      assert($('msPanelBody').querySelector('.ptTitle').textContent.indexOf(target.name)>=0,'하단 내 파티에 이름이 안 뜸');
+      assert(!$('msPanelBody').querySelector('.ptKick'),'남의 파티인데 내보내기 버튼이 보임');
+      // 탭을 다시 눌러도 게시판이 뜨지 않는다
+      navSub('chat'); await sleep(30); navSub('party'); await sleep(80);
+      assert(!visible($('ptFindOv')),'파티 탭에서 게시판이 또 뜸');
+      // 나가기 → 게시판 인원도 되돌아온다(한쪽만 지우면 인원이 샌다)
+      await partyDisband(); await sleep(40);
+      openPartyFind(); await sleep(60);
+      assert(pbCount(pbFind(target.id))===before,'나갔는데 게시판 인원이 안 줄어듦: '+pbCount(pbFind(target.id)));
+      // 만들기 → 내가 파티장이고 게시판 맨 위에 내 방이 선다
+      pbToggleMake(); await sleep(40);
+      const inp=$('pbNameInput'); assert(inp,'파티 이름 입력칸이 없음');
+      inp.value='스모크 파티'; pbCreate(); await sleep(60);
+      assert(_party && _party.name==='스모크 파티' && iAmLeader(),'파티를 못 만들었거나 파티장이 아님');
+      assert(pbRooms()[0].id==='pb_my','내가 만든 파티가 게시판 맨 위에 없음');
+      assert($('msPanelBody').querySelector('.ptDisband').textContent.indexOf('해제')>=0,'파티장인데 해제 버튼이 아님');
+      await partyDisband(); await sleep(40); closePartyFind(); _pbRooms=null; }
+    navSub('chat'); await sleep(30);
     // ⑧ 판형: 최상위 등폭 · 뒤로 = 정사각 · 하위 선택(.cur) = 최상위 선택(.on)과 같은 판·링
     navBack(); await sleep(40);
     { const ws=[...document.querySelectorAll('#navBar .navIt')].map(e=>e.getBoundingClientRect().width);

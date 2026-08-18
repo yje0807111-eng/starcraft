@@ -3190,9 +3190,27 @@
     max-height:64%;padding:0 0 8px;background:rgba(11,16,29,.96);border-top:1px solid var(--hbEdge,rgba(90,120,190,.26));
     box-shadow:0 -14px 34px -20px #000}
   .twSheet.hide{display:none}
-  /* 유즈맵 소셜 도크 — 사냥터 하단 패널처럼 화면 몫을 고정으로 떼어 준다. 탭 띠는 하단 네비가 맡으므로 감춘다 */
-  #msSocialDock{flex:0 0 30%;min-height:150px;display:flex;flex-direction:column;overflow:hidden}
-  #msSocialDock .msSocial{flex:1;min-height:0}
+  /* 유즈맵 소셜 = 목록 카드(.msPanel)와 **나란히 선 두 번째 카드**(2026-08-18 분리).
+     화면 몫을 고정으로 떼어 주고, 탭 띠는 하단 네비가 맡으므로 감춘다.
+     ⚠ 카드 모양(면·테두리·라운드)은 **도크가 직접 갖는다** — 안의 .msSocial 은 껍데기를 벗은 채로 둔다
+       (카드 안에 카드가 겹치면 테두리가 두 줄로 보인다). 값은 목록 카드와 같은 토큰이라 같은 재질로 읽힌다.
+     ⚠ 목록 카드에 붙으면 한 덩어리로 보인다 — 채팅 한 줄(17px)만큼 띄우고 그만큼 낮춘다(margin + calc).
+       차지하는 총 높이가 그대로라 위 목록은 줄지 않는다. */
+  #msSocialDock{position:relative;flex:0 0 calc(30% - 24px);min-height:168px;display:flex;flex-direction:column;overflow:hidden;
+    /* 화면 좌우를 꽉 채우는 띠 — #mapSelect 의 좌우 여백(13px)을 음수 마진으로 되돌린다.
+       목록 카드와 '다른 섹션'으로 읽혀야 하므로 폭·면·테두리를 전부 다르게 간다. */
+    margin:17px -13px 0;border-radius:0;
+    /* 면·모서리·윗선 = 사냥터 하단 패널(.hmUpg)과 같은 처리 — 뒤가 살짝 비치는 반투명 회색 +
+       위쪽 두 모서리 10px 컷. 각진 SF 규칙(큰 판은 라운드 대신 모서리 컷). */
+    background:linear-gradient(180deg,rgba(25,25,25,.9),rgba(14,14,14,.92));
+    clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 10px,100% 100%,0 100%,0 10px);
+    padding-bottom:6px}   /* 안쪽 목록이 띠 끝선에 딱 붙어 잘리지 않게 — 스크롤러가 아니라 도크에 준다 */
+  /* ⚠ 테두리는 챔퍼에 잘려 안 보인다 — .hmUpg 와 똑같이 윗변에 1px 선을 따로 얹어 '판'으로 세운다.
+     선은 컷 길이(10px)만큼 안쪽에서 시작해야 잘린 모서리와 어긋나지 않는다. */
+  #msSocialDock::before{content:'';position:absolute;left:10px;right:10px;top:0;height:1px;z-index:4;pointer-events:none;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.18) 22%,rgba(255,255,255,.18) 78%,transparent)}
+  #msSocialDock .msSocial{flex:1;min-height:0;margin-top:0;border:0;border-radius:0;background:none;box-shadow:none}
+  #msSocialDock .msSocial::before{display:none}
   #msSocialDock .msTabs2{display:none}
   .twSheetHead{flex:none;display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px;
     font-size:var(--fs-xl);font-weight:800;color:#eaf1fb}
@@ -3466,20 +3484,35 @@
   
   /* 상단: 접속현황(좌) + 정렬 드롭다운(우) 한 줄 */
   .msTopBar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
-  /* 유즈맵 목록 상자 — 머리(정렬 탭 띠) + 본문(나열). HOME .hmCard와 같은 규격 */
-  .msPanel{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden;
+  /* 목록 상자 — 머리(탭 띠) + 본문(나열)을 한 상자가 감싼다. HOME .hmCard와 같은 규격.
+     면·테두리는 큰 카드 공용 토큰(--panelBig/--panelBigEdge)에서 꺼낸다.
+     ⛔ --hmPanel/--hbEdge 를 쓰지 말 것 — 그 둘은 #homeScreen·#townScreen 안에서만 정의돼
+     여기서는 var()가 무효가 되고 면도 테두리도 통째로 사라진다(상자가 안 보이던 진짜 이유). */
+  .msPanel{position:relative;flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden;
     background:var(--panelBig);border:1px solid var(--panelBigEdge);border-radius:var(--r-bar)}
-  .msSortTabs{flex:0 0 auto;display:flex;align-items:stretch;border-bottom:1px solid rgba(255,255,255,.07)}
-  .msSortTab{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;gap:5px;
-    padding:9px 4px;cursor:pointer;font-family:inherit;font-size:var(--fs-md);font-weight:700;letter-spacing:.3px;
-    color:#9a9a9a;background:none;border:none;position:relative;transition:color .13s}
-  .msSortTab .ic{width:13px;height:13px}
-  .msSortTab+.msSortTab::before{content:'';position:absolute;left:0;top:26%;bottom:26%;width:1px;background:rgba(255,255,255,.07)}
-  .msSortTab.on{color:#7ee0ff}
-  .msSortTab.on::after{content:'';position:absolute;left:14%;right:14%;bottom:0;height:2px;
-    background:linear-gradient(90deg,transparent,rgba(124,224,255,.15) 20%,#7ee0ff 50%,rgba(124,224,255,.15) 80%,transparent);
-    box-shadow:0 0 7px -1px rgba(92,214,255,.6)}
-  #mapSelect .msList{flex:1 1 auto;min-height:0;padding:8px}
+  /* 헤어라인 — 카드 **위·아래 변**에 1px 붉은 광선. DESIGN §0: 강조는 두께가 아니라 빛.
+     선은 카드 위에 얹히므로 z-index 2(내용보다 위)에 둔다. 양끝은 투명으로 흘려 판에 스며들게.
+     ⚠ 아래쪽 어두운 inset 선은 뺐다 — 붉은 선 바로 옆에 검은 선이 겹쳐 선이 두 줄로 보였다. */
+  .msPanel::before,.msPanel::after{content:'';position:absolute;left:0;right:0;height:1px;z-index:2;pointer-events:none;
+    background:linear-gradient(90deg,transparent,rgba(255,59,59,.72) 18%,rgba(255,59,59,.72) 82%,transparent);
+    box-shadow:0 0 7px -1px rgba(255,59,59,.5)}
+  .msPanel::before{top:0}
+  .msPanel::after{bottom:0}
+  /* 목록 구역(정렬 띠 + 목록)을 묶는 안쪽 판 — 카드 면 위에 한 톤 어두운 막을 덮는다.
+     소셜 구역은 이 판 밖이라 카드 면 그대로다(둘 사이 17px 틈에서 카드 색이 드러나 구역이 갈린다). */
+  .msTop{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden;
+    background:rgba(0,0,0,.2)}
+  /* 정렬 띠 = 사냥터 업그레이드 탭 띠와 같은 컴포넌트(.pdSeg/.pdSegInd/.pdSegBtn · segNavHTML).
+     생김새는 전부 공용 규칙이 갖는다 — 여기서 덮는 것은 여백·폭·글자뿐이다.
+     ⚠ 아래 실선 없음 — 탭 띠 자체가 상자라 선이 겹친다(사냥터 .hmUpgBar 와 같은 이유). */
+  .msSortTabs{flex:0 0 auto;display:flex;align-items:stretch;padding:8px 8px 4px}   /* 좌우는 목록(.msList)과 같은 8px — 탭 띠와 카드의 변이 맞는다 */
+  .msSortTabs .pdSeg{flex:1 1 0;max-width:none;margin:0}
+  .msSortTabs .pdSegBtn{padding:7px 4px;font-size:11.5px;font-weight:700;letter-spacing:.02em;text-align:center}
+  /* 목록이 끝나는 자리의 선은 상자(.msPanel) 자신의 아래 테두리가 맡는다 — 여기에 또 그으면 두 줄로 겹친다 */
+  /* ⚠ 스크롤 영역은 **padding box** 에서 잘린다 — 아래 여백을 padding 으로 주면 카드가 그 여백까지 흘러들어와
+     카드 맨 아래 선에 딱 붙어 잘린다('밖으로 나간' 느낌의 원인). margin 으로 줘야 잘리는 자리가 안쪽으로 들어온다.
+     ⛔ 끝을 흐리는 마스크는 뺐다(2026-08-18) — 안쪽에서 끝난다는 것은 여백이 이미 말한다. */
+  #mapSelect .msList{flex:1 1 auto;min-height:0;padding:8px 8px 0;margin-bottom:6px}
   /* 마을 채팅 시트 — 소셜 블록을 그대로 담는다(유즈맵에서 옮겨옴) */
   #twChat .msSocial.inTown{flex:1;min-height:0;margin-top:0;border:0;border-radius:0;background:none}
   /* 정렬 드롭다운(커스텀 HUD 메뉴) */
@@ -3615,9 +3648,12 @@
   .foSecAdd{display:flex;align-items:center;gap:4px;color:#aeb7c1;margin-top:2px}.foSecAdd .ic{width:12px;height:12px;color:var(--neon)}
   .foSecOn b{color:var(--ok)}
   .foSecOff{color:#6a727d;margin-top:13px;padding-top:9px;border-top:1px solid rgba(255,255,255,.06)}.foSecOff b{color:#828b96}
-  .foList{display:flex;flex-direction:column;gap:5px}
-  .foRow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;border-radius:var(--r-md);
-    background:linear-gradient(180deg,rgba(26,28,34,.88),rgba(11,12,16,.9));border:1px solid var(--metal-edge)}
+  /* 친구 머리줄은 파티 머리줄(.ptHead/.ptTitle/.ptHeadBtns)을 그대로 쓴다 — 같은 구역의 같은 것이다 */
+  .foList{display:flex;flex-direction:column;gap:3px}
+  /* 면 = 다른 곳과 같은 짙은 검정(.hmUp/.mapItem). 옛 rgba(26,28,34)는 B가 R보다 8 높아 푸른기가 돌았다.
+     테두리도 푸른기 있는 --metal-edge(#3c3e46) 대신 중립 흰빛 알파로. 라운드는 6 → 3px(더 각지게). */
+  .foRow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 9px;border-radius:var(--r-bar);
+    background:linear-gradient(180deg,#0f0f0f,#050505);border:1px solid rgba(255,255,255,.09)}
   .foRow.found{border-color:var(--neon-soft)}
   .foNick{font-size:var(--fs-lg);font-weight:700;color:#e8eef5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
   .foTag{font-size:var(--fs-md);font-weight:700;color:#7d8b98;margin-left:2px}
@@ -3634,36 +3670,63 @@
   
   /* 파티: 헤더(제목 + 해제) + 2열 × 4행 슬롯 그리드 */
   .ptHead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:1px 1px 6px;min-height:20px}
-  .ptTitle{font-size:var(--fs-sm);font-weight:800;letter-spacing:.5px;color:#8a9aa8}
+  .ptTitle{font-size:var(--fs-xl);font-weight:800;letter-spacing:.3px;color:#b6c0cc}   /* 구역 제목 — 10px 은 읽히지 않았다 */
   .ptTitle b{color:var(--neon)}
+  /* 접속 수 = 상태값이라 초록(§역할별 액센트) · 제목보다 한 단 작게(제목을 밀어내지 않게) */
+  .ptTitle .onN{font-style:normal;font-weight:700;font-size:var(--fs-sm);color:var(--ok)}
+  /* 소셜 머리줄만 **본문 가족**(--font-ko) — 제목 폰트(Jua)는 이 작은 줄에서 획이 뭉쳐 보인다.
+     ⚠ 스타일시트 끝의 제목-폰트 목록에서 .ptTitle 을 빼면 설정 쪽 동명 컴포넌트까지 바뀐다.
+       그래서 목록은 그대로 두고 여기서 선택자 특이도로만 덮는다(.msSocial 안에서만). */
+  .msSocial .ptTitle{font-family:var(--font-ko);font-weight:700}
   .ptDisband{flex:0 0 auto;padding:4px 9px;border-radius:var(--r-md);cursor:pointer;font-family:inherit;font-size:var(--fs-sm);font-weight:700;
     color:#ffd2d2;background:rgba(200,50,50,.18);border:1px solid rgba(255,80,80,.4)}
   .ptDisband:active{transform:translateY(1px)}
-  .ptGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-  .ptSlot{display:flex;align-items:center;gap:7px;min-height:40px;padding:5px 8px;border-radius:var(--r-lg);overflow:hidden}
+  .ptHeadBtns{flex:0 0 auto;display:flex;align-items:center;gap:5px}
+  /* 파티 찾기 = 파티 색(보라 · .msTab2[data-bt=party]와 같은 계열) */
+  /* 머리줄 버튼(파티 찾기 · 친구 추가) = 오른쪽 위 더보기 배너 칸(.hbMoreIt)과 같은 물성 —
+     각진 3px · 검은 판 · 금속 엣지. 구역색으로 물들이지 않는다(그 자리는 제목의 숫자가 맡는다). */
+  .ptFind{flex:0 0 auto;padding:4px 8px;border-radius:var(--r-bar);cursor:pointer;font-family:inherit;
+    font-size:var(--fs-sm);font-weight:700;letter-spacing:.2px;
+    color:#dfe4ea;background:rgba(255,255,255,.045);border:1px solid var(--metal-edge)}
+  .ptFind:active{opacity:.75;transform:translateY(1px)}
+  /* 8칸(2열×4행)이 소셜 구역 안에 **스크롤 없이** 들어와야 한다 — 칸 높이·글자·아바타를 치수로 맞춘다.
+     계산: 구역 안높이 151 − 머리줄 31 = 120 ≥ 4×28 + 3×2 = 118 ✓ */
+  .ptGrid{display:grid;grid-template-columns:1fr 1fr;gap:2px}
+  .ptSlot{display:flex;align-items:center;gap:6px;min-height:28px;padding:2px 6px;border-radius:var(--r-bar);overflow:hidden}
   .ptSlot.fill{background:linear-gradient(180deg,rgba(28,30,36,.9),rgba(11,12,16,.92));border:1px solid var(--metal-edge)}
   .ptSlot.fill.leader{border-color:var(--neon-soft);background:linear-gradient(180deg,rgba(255,59,59,.22),rgba(11,12,16,.9))}
   .ptSlot.empty{cursor:pointer;border:1px dashed rgba(255,255,255,.3);background:rgba(14,16,22,.55);transition:border-color .12s,background .12s}
   .ptSlot.empty:hover{border-color:var(--neon-soft);background:var(--neon-faint)}
   .ptSlot.empty:active{transform:scale(.98)}
-  .ptAddAv{flex:0 0 auto;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-    font-size:16px;font-weight:300;line-height:1;color:#c4cdd6;background:rgba(255,255,255,.08);border:1px dashed rgba(255,255,255,.4)}
-  .ptAddLbl{font-size:var(--fs-sm);font-weight:600;color:#aeb7c1}
+  .ptAddAv{flex:0 0 auto;width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:13px;font-weight:300;line-height:1;color:#c4cdd6;background:rgba(255,255,255,.08);border:1px dashed rgba(255,255,255,.4)}
+  .ptAddLbl{font-size:var(--fs-xs);font-weight:600;color:#aeb7c1}
   .ptSlot.empty:hover .ptAddAv{color:var(--neon-lt);border-color:var(--neon-soft);background:var(--neon-faint)}
   .ptSlot.empty:hover .ptAddLbl{color:var(--neon-lt)}
   
   
   .ptSlot .ptName{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.2}   /* 파티 슬롯 전용 — 공학소 행(.ptNameRow)의 이름까지 늘어나지 않게 범위 한정 */
-  .ptNick{font-size:var(--fs-md);font-weight:700;color:#e8eef5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .ptRole{font-style:normal;font-size:var(--fs-xs);color:#79838f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ptNick{font-size:var(--fs-sm);font-weight:700;color:#e8eef5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ptRole{font-style:normal;font-size:8.5px;color:#79838f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .ptSlot.fill.leader .ptRole{color:var(--neon-lt)}
-  .ptKick{flex:0 0 auto;width:18px;height:18px;border-radius:var(--r-md);cursor:pointer;font-size:var(--fs-sm);line-height:1;
+  .ptKick{flex:0 0 auto;width:16px;height:16px;border-radius:var(--r-bar);cursor:pointer;font-size:var(--fs-xs);line-height:1;
     color:var(--txt-hud);background:var(--glass);border:1px solid var(--metal-edge)}
   .ptKick:active{transform:translateY(1px)}
   /* 친구 초대 팝업 */
   .ptInviteOv{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.6)}
   .ptInviteOv.hide{display:none}
-  .ptInviteCard{width:100%;max-width:300px;height:516px;max-height:calc(100% - 16px);display:flex;flex-direction:column;overflow:hidden}
+  /* #phone 에 붙는 팝업 — 마을 시트(63)·네비(62) 위로 올라와야 보인다 */
+  .ptInviteOv.top{z-index:110}
+  /* 🎪 파티 찾기 = 방 찾기(#rooms) 팝업을 그대로 빌려 쓴다 — 카드(.rmCard)·목록(.rmList/.roomItem)·
+     하단 버튼(.rmBtns)까지 전부 같은 컴포넌트다. 여기서 정하는 것은 '어디에 뜨는가'뿐:
+     #rooms 는 전용 화면이라 우주 배경(::before)을 깔지만, 이건 유즈맵 위에 덮는 팝업이라 딤만 쓴다. */
+  .pfOv{position:absolute;inset:0;z-index:110;display:flex;align-items:center;justify-content:center;
+    padding:var(--popPad);background:var(--popDim);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+  .pfOv.hide{display:none}
+  .ptInviteCard{width:100%;max-width:300px;height:516px;max-height:calc(100% - 16px);display:flex;flex-direction:column;overflow:hidden;
+    /* ⚠ 공용 카드 면(.cpCard 계열)은 반투명이다 — 유즈맵 목록 위에 뜨면 뒤 카드가 글자 사이로 비쳐 못 읽는다.
+       이 팝업은 목록 위에 뜨는 것이 기본이므로 면을 불투명하게 덮는다(친구 초대·추가·파티 찾기 공통). */
+    background:linear-gradient(180deg,rgba(19,15,17,.975),rgba(6,6,8,.985))}
   .ptInviteHead{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:11px 13px;
     border-bottom:1px solid rgba(255,255,255,.08);font-size:var(--fs-lg);font-weight:800;color:#e8eef5}
   .ptInviteX{background:none;border:none;color:#8a939e;font-size:var(--fs-xl);cursor:pointer;padding:2px 5px}
@@ -3686,14 +3749,17 @@
   .fStar{font-size:var(--fs-sm);color:#ffce4a;flex:0 0 auto}
   .fL2{font-size:var(--fs-xs);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#79838f}
   .fL2-online{color:#6fcf8f}.fL2-ingame{color:#cBa35a}
-  .foRow.off{opacity:.55}
+  /* 오프라인 = 어두운 상자. 섹션 라벨로 나누지 않고 물성으로 나눈다(밝은 위 / 어두운 아래) */
+  .foRow.off{background:linear-gradient(180deg,#060606,#000);border-color:rgba(255,255,255,.04)}
+  .foRow.off .fL1{color:#8b939d}
+  .foRow.off .fAva{filter:saturate(.3) brightness(.72)}
   .fStatLbl{flex:0 0 auto;font-size:var(--fs-sm);font-weight:700;padding:4px 9px;border-radius:var(--r-md);white-space:nowrap}
   .fStat-ingame{color:#ffce8a;background:rgba(255,192,74,.1);border:1px solid rgba(255,192,74,.3)}
   .fStat-offline{color:#828b96;background:var(--glass);border:1px solid var(--metal-edge)}
   .fStat-busy{color:#b6a0ff;background:rgba(150,120,255,.12);border:1px solid rgba(150,120,255,.35)}
   /* 파티 슬롯 아바타(색상 이니셜) */
-  .ptAva{position:relative;flex:0 0 auto;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-    font-size:var(--fs-md);font-weight:800;border:1px solid}
+  .ptAva{position:relative;flex:0 0 auto;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:var(--fs-sm);font-weight:800;border:1px solid}
   /* 친구 행 액션 버튼 */
   .foActs{flex:0 0 auto;display:flex;align-items:center;gap:5px}
   .foAct{display:flex;align-items:center;justify-content:center;width:33px;height:33px;border-radius:var(--r-lg);cursor:pointer;
@@ -3718,8 +3784,10 @@
     padding:8px 14px;border-radius:var(--r-lg);background:rgba(10,10,14,.96);border:1px solid var(--neon-soft);color:var(--txt);
     font-size:var(--fs-md);font-weight:600;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;box-shadow:0 6px 20px var(--shade)}
   .lobbyToast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-  .mapItem{flex:0 0 auto;position:relative;display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:var(--r-bar);cursor:pointer;overflow:hidden;
-    background:linear-gradient(135deg,rgba(36,38,47,.84),rgba(13,14,19,.9));border:1px solid var(--metal-edge);   /* 쉬는 상태=중립(빨강 남발 제거). 강조는 호버에만 */
+  /* 세로 여백 7px = 목록에 카드가 **정확히 5장** 들어오는 값. 좌우(12px)는 건드리지 않는다.
+     계산: 안높이 386 ≥ 5×71.2 + 4×7(gap) = 384 · 카드 높이 = 7+7(여백) + 2(테두리) + 55.2(내용) */
+  .mapItem{flex:0 0 auto;position:relative;display:flex;align-items:center;gap:11px;padding:7px 12px;border-radius:var(--r-bar);cursor:pointer;overflow:hidden;
+    background:linear-gradient(180deg,#0a0a0a,#000);border:1px solid var(--metal-edge);   /* 면 = 사냥터 업그레이드 칸(.hmUp)과 같은 검정. 쉬는 상태=중립(빨강 남발 제거), 강조는 호버에만 */
     box-shadow:0 5px 15px -11px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05);transition:transform .15s,border-color .15s,box-shadow .15s}
   button.mapItem{width:100%;font-family:inherit;text-align:left;-webkit-appearance:none}   /* 버튼으로 쓸 때도 카드 모양 유지(허브 게임 선택) */
   .mapItem::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:11px 0 0 11px;
@@ -4214,15 +4282,15 @@
       </div>
       <!-- 목록 상자 — 머리 = 정렬 탭 띠(네비바 형태) · 본문 = 유즈맵 나열 -->
       <div class="msPanel">
-        <div class="msSortTabs" id="msSortTabs">
-          <button class="msSortTab on" data-v="pop" onclick="setMapSort('pop')"><span data-ico="pop"></span>인기순</button>
-          <button class="msSortTab" data-v="new" onclick="setMapSort('new')"><span data-ico="new"></span>신규</button>
-          <button class="msSortTab" data-v="rec" onclick="setMapSort('rec')"><span data-ico="rec"></span>추천</button>
-          <button class="msSortTab" data-v="fav" onclick="setMapSort('fav')"><span data-ico="fav"></span>즐겨찾기</button>
+        <!-- 정렬 띠 + 목록만 감싸는 안쪽 판 — 바깥 카드보다 한 톤 어둡게 해서 '목록 구역'을 묶는다 -->
+        <div class="msTop">
+          <!-- 정렬 띠 = 사냥터 업그레이드 탭과 같은 컴포넌트(segNavHTML) — 속은 renderMapSortTabs()가 채운다 -->
+          <div class="msSortTabs" id="msSortTabs"></div>
+          <div class="msList uiScroll" id="msList"></div>
         </div>
-        <div class="msList uiScroll" id="msList"></div>
       </div>
-      <!-- 소셜 상주 구역(하단) — 내용(.msSocial)은 #twChat 의 것을 옮겨 쓴다(복제 금지). 탭 전환은 하단 네비가 맡는다 -->
+      <!-- 소셜 = 목록 카드와 **완전히 분리된 카드**. 내용(.msSocial)은 #twChat 의 것을 옮겨 쓴다(복제 금지).
+           탭 전환은 하단 네비가 맡는다 -->
       <div id="msSocialDock"></div>
     </div>
 
@@ -14422,6 +14490,8 @@ function showAppScreen(id){ setInGame(false);
   if(id!=='townScreen' && typeof _townOpen!=='undefined' && _townOpen && typeof twLeave==='function') twLeave();
   if(typeof tw3dDetach==='function') tw3dDetach();
   for(const id of ['hbRoundSheet','hbBoostModal','hbGrowModal','hbInfoModal','hbDailySheet','hbAttSheet']){ const el=document.getElementById(id); if(el) el.classList.add('hide'); }
+  // 소셜 팝업(#phone 에 붙어 z-index 110)은 화면을 바꿔도 남아 화면을 덮는다 — 여기서 함께 접는다
+  for(const id of ['ptFindOv','foAddOv','ptInviteOv','foCtxOv']){ const el=document.getElementById(id); if(el) el.classList.add('hide'); }
   if(id!=='mapSelect' && id!=='modeSheet' && typeof stopMapLive==='function') stopMapLive();   // 유즈맵 화면 떠나면 실시간 갱신 정지
   ['ov','lobby','rooms','createPanel','pwPanel'].forEach(x=>{const e=document.getElementById(x); if(e)e.classList.add('hide');});
   APP_SCREENS.forEach(s=>{ const e=document.getElementById(s); if(e) e.classList.toggle('hide', s!==id); });
@@ -15051,14 +15121,17 @@ async function refreshFriendBadge(){ if(!sbReady()) return; try{ const {incoming
 // 하단 영역 탭 전환(채팅/파티/친구)
 let _bottomTab='chat';
 function setBottomTab(t){ _bottomTab=t;
-  if(t!=='party' && typeof closePartyInvite==='function') closePartyInvite();
-  if(t!=='friend' && typeof closeFriendCtx==='function') closeFriendCtx();
+  if(t!=='party'){ if(typeof closePartyInvite==='function') closePartyInvite(); if(typeof closePartyFind==='function') closePartyFind(); }
+  if(t!=='friend'){ if(typeof closeFriendCtx==='function') closeFriendCtx(); if(typeof closeFriendAdd==='function') closeFriendAdd(); }
   document.querySelectorAll('.msTab2').forEach(b=>b.classList.toggle('on', b.dataset.bt===t));
   const wrap=document.getElementById('msChatWrap'), chat=document.getElementById('msChat'), panel=document.getElementById('msPanelBody');
   if(!wrap||!chat||!panel) return;
   if(t==='chat'){ wrap.style.display='flex'; panel.style.display='none'; chat.scrollTop=chat.scrollHeight; }
   else { wrap.style.display='none'; panel.style.display='block';
-    if(t==='party') renderPartyTab(); else renderFriendList(); } }
+    // ⛔ 게시판을 자동으로 띄우지 않는다 — 탭을 누를 때마다 판이 덮여 내 파티가 안 보였다.
+    //    들어가는 길은 머리줄의 '파티 찾기' 버튼 하나뿐이다.
+    if(t==='party') renderPartyTab();
+    else renderFriendList(); } }
    // 구버전 호환
 // ── 임시 친구(기능 확인용) + 파티(내가 초대하면 무조건 수락) ──
 const _tempFriends=[
@@ -15110,7 +15183,9 @@ function friendCellHTML(f, right, rowAttrs){ const st=presenceOf(f), fav=friendF
     +avatarHTML(f.nick,'fAva',st)
     +'<span class="fMeta"><span class="fL1">'+escHtml(f.nick)+'<span class="fTag">#'+escHtml(f.tag||'----')+'</span>'+(fav?'<span class="fStar" title="즐겨찾기">★</span>':'')+'</span>'
     +'<span class="fL2 fL2-'+st+'">'+escHtml(friendStatusSub(f))+'</span></span>'+(right||'')+'</div>'; }
-function friendSortCmp(a,b){ return (friendFav(a)?0:1)-(friendFav(b)?0:1) || statusRank(presenceOf(a))-statusRank(presenceOf(b)); }
+// 접속 상태가 1순위 — 목록이 '밝은 상자 → 어두운 상자'로 자연히 갈린다(섹션 라벨을 없앤 대가).
+// 즐겨찾기는 같은 상태 안에서만 위로 올린다.
+function friendSortCmp(a,b){ return statusRank(presenceOf(a))-statusRank(presenceOf(b)) || (friendFav(a)?0:1)-(friendFav(b)?0:1); }
 // 친구 행 우측 액션(즐겨찾기 토글 / 파티 초대·참가 / 귓속말)
 function friendActions(f){ const id=f.id||f.uid, st=presenceOf(f), busy=friendBusy(f);
   let h='<span class="foActs">';
@@ -15157,6 +15232,11 @@ let _party=null, _invitableCache=[];
 function ensureParty(){ if(!_party) _party={members:[{uid:(AUTH.user&&AUTH.user.uid)||'me', nick:myNick(), tag:(AUTH.user&&AUTH.user.tag)||'', leader:true}]}; return _party; }
 function inParty(uid){ return ensureParty().members.some(m=>m.uid===uid); }
 const PARTY_MAX=8;
+// '파티를 꾸린 상태'인가 — 이름이 붙었거나(만들기·참가) 나 말고 누가 더 있으면 파티다.
+// 파티 탭에 들어왔을 때 게시판을 자동으로 띄울지 여기서 갈린다.
+function hasParty(){ return !!(_party && (_party.name || _party.members.length>1)); }
+function iAmLeader(){ const m=_party&&_party.members&&_party.members[0]; return !_party || !!(m&&m.leader&&m.uid===myUid2()); }
+function myUid2(){ return (AUTH.user&&AUTH.user.uid)||'me'; }
 async function partyInvite(uid){ const f=_invitableCache.find(x=>x.id===uid) || _friendIndex[uid]; if(!f) return; if(inParty(uid)) return;
   if(RT.active && !f.temp && f.id){   // 실연동: 초대장 전송 → 상대가 수락해야 합류
     try{ await rtEnsurePartyDB();
@@ -15175,6 +15255,7 @@ async function partyKick(uid){ if(RT.active && RT.partyId){ try{ await _sb.from(
   if(!_party) return; _party.members=_party.members.filter(m=>m.leader||m.uid!==uid); renderPartyTab(); }
 async function partyDisband(){ closePartyInvite();
   if(RT.active && RT.partyId){ try{ await _sb.from('parties').delete().eq('id',RT.partyId); }catch(e){ console.warn(e); } RT.partyId=null; }
+  pbLeave();                       // 게시판에 올라가 있던 자리도 되돌린다
   _party=null; renderPartyTab(); }
 async function renderPartyTab(){ const body=document.getElementById('msPanelBody'); if(!body) return;
   // 게스트도 본다 — 로컬 파티 + 임시 친구 초대는 sb 없이 동작한다(실연동 초대만 rtEnsurePartyDB 쪽에서 갈린다)
@@ -15184,12 +15265,138 @@ async function renderPartyTab(){ const body=document.getElementById('msPanelBody
     if(m){ cells+='<div class="ptSlot fill'+(m.leader?' leader':'')+'">'
         +avatarHTML(m.nick,'ptAva')
         +'<span class="ptName"><b class="ptNick">'+escHtml(m.nick)+'</b><em class="ptRole">'+(m.leader?'파티장':'#'+(m.tag||'----'))+'</em></span>'
-        +(m.leader?'':'<button class="ptKick" onclick="partyKick(\''+m.uid+'\')" title="내보내기">✕</button>')
+        +((m.leader||!iAmLeader())?'':'<button class="ptKick" onclick="partyKick(\''+m.uid+'\')" title="내보내기">✕</button>')
         +'</div>';
     } else { cells+='<div class="ptSlot empty" onclick="openPartyInvite()"><span class="ptAddAv">+</span><span class="ptAddLbl">친구 초대</span></div>'; }
   }
-  const dis=_party.members.length>1 ? '<button class="ptDisband" onclick="partyDisband()">파티 해제</button>' : '';
-  body.innerHTML='<div class="ptHead"><span class="ptTitle">내 파티 <b>'+_party.members.length+'</b> / '+PARTY_MAX+'</span>'+dis+'</div><div class="ptGrid">'+cells+'</div>'; }
+  // 머리 = [파티 이름 n/8] … [파티 찾기] [해제|나가기]. 게시판(이전 단계)으로 가는 길을 늘 열어 둔다.
+  const lead=iAmLeader();
+  const dis=hasParty() ? '<button class="ptDisband" onclick="partyDisband()">'+(lead?'파티 해제':'파티 나가기')+'</button>' : '';
+  body.innerHTML='<div class="ptHead"><span class="ptTitle">'+escHtml(_party.name||'내 파티')+' <b>'+_party.members.length+'</b> / '+PARTY_MAX+'</span>'
+    +'<span class="ptHeadBtns"><button class="ptFind" onclick="openPartyFind()">파티 찾기</button>'+dis+'</span></div>'
+    +'<div class="ptGrid">'+cells+'</div>'; }
+// ══════════════════════════════════════════════════════════════════════════
+// 🎪 파티 게시판 — 파티 탭의 '이전 단계'
+// ──────────────────────────────────────────────────────────────────────────
+//  · 유즈맵과 무관한 **자유 파티**다. 사람을 먼저 모으고 뭘 할지는 모여서 정한다
+//    (그래서 한 파티로 여러 맵을 몰려다닐 수 있다).
+//  · 파티 탭에 들어왔는데 파티가 없으면 이 게시판이 먼저 뜬다 → 찾아 들어가거나 만든다.
+//  · ⚠ 서버 parties 테이블에는 이름·공개 칼럼이 없다. 지금은 로컬 게시판(임시친구와 같은 결)이고,
+//    실연동은 parties 에 name/open 을 추가한 뒤 pbRooms()/pbJoin() 둘만 갈아 끼우면 된다.
+// ══════════════════════════════════════════════════════════════════════════
+const PB_DEMO=[
+  {id:'pb1', name:'초보 환영 파티',  mates:['별빛','도토리','한여름']},
+  {id:'pb2', name:'네모네모 같이',   mates:['각설탕','폭풍전야','미르','청현','노을']},
+  {id:'pb3', name:'같이 돌실 분',    mates:['라온']},
+  {id:'pb4', name:'가시탑 정복대',   mates:['흑기사','바람돌이','세인','유월','단하','겨울잠','솔']},
+  {id:'pb5', name:'풀방 갑니다',     mates:['해준','민트초코','가랑비','토리','설아','은하','우주','한별']},
+  {id:'pb6', name:'오토배틀 연구소', mates:['계산기','전략가']},
+  {id:'pb7', name:'조용히 하실 분',  mates:['묵묵']},
+  {id:'pb8', name:'유즈맵 순례단',   mates:['방랑','나침반','오후세시','기록자']},
+];
+let _pbRooms=null, _pbMaking=false;
+function pbRooms(){ if(!_pbRooms) _pbRooms=PB_DEMO.map(function(r){ return {id:r.id, name:r.name, mates:r.mates.slice()}; });
+  return _pbRooms; }
+function pbFind(id){ return pbRooms().filter(function(r){ return r.id===id; })[0]||null; }
+function pbMineId(){ return (_party&&_party.pbId)||null; }
+// 내가 들어가 있으면 한 명 더 센다. 내가 만든 방은 실제 파티 인원이 곧 정원이다.
+function pbCount(r){ if(r.mine) return (_party&&_party.members.length)||1;
+  return r.mates.length + (r.joined?1:0); }
+// 게시판에서 내 자리를 뺀다 — 방을 옮기거나 파티를 해제할 때 양쪽에서 부른다(한쪽만 하면 인원이 샌다)
+function pbLeave(){ const id=pbMineId(); if(!id) return; const r=pbFind(id); if(!r) return;
+  if(r.mine) _pbRooms=_pbRooms.filter(function(x){ return x!==r; }); else r.joined=false; }
+function pbMeMember(lead){ return {uid:myUid2(), nick:myNick(), tag:(AUTH.user&&AUTH.user.tag)||'', leader:!!lead}; }
+function pbJoin(id){ const r=pbFind(id); if(!r) return;
+  if(pbMineId()===r.id) return;
+  if(pbCount(r)>=PARTY_MAX){ lobbyToast('파티가 가득 찼어요'); return; }
+  pbLeave();                                   // 다른 파티에 있었다면 먼저 빠진다
+  r.joined=true;
+  _party={ pbId:r.id, name:r.name,
+    members:r.mates.map(function(nk,i){ return {uid:'pb_'+r.id+'_'+i, nick:nk, tag:'', leader:i===0}; }).concat([pbMeMember(false)]) };
+  closePartyFind(); renderPartyTab(); if(typeof playSfx==='function') playSfx('ui_confirm');
+  lobbyToast('"'+r.name+'" 파티에 참가했어요'); }
+function pbToggleMake(){ _pbMaking=!_pbMaking; renderPartyFind(); }
+function pbCreate(){ const inp=document.getElementById('pbNameInput');
+  const name=((inp&&inp.value)||'').trim().slice(0,18) || (myNick()+'님의 파티');
+  pbLeave();
+  _party={ pbId:'pb_my', name:name, members:[pbMeMember(true)] };
+  _pbRooms=pbRooms().filter(function(r){ return r.id!=='pb_my'; });
+  _pbRooms.unshift({id:'pb_my', name:name, mates:[myNick()], mine:true});
+  _pbMaking=false; closePartyFind(); renderPartyTab();
+  if(typeof playSfx==='function') playSfx('ui_confirm');
+  lobbyToast('"'+name+'" 파티를 만들었어요 · 친구를 초대해 보세요'); }
+// ── 게시판 팝업 = 방 찾기(#rooms)를 그대로 빌린 판 ──
+//   카드·목록·하단 버튼이 전부 같은 컴포넌트라, '방을 고르는 손'이 '파티를 고르는 손'과 같아진다.
+//   방 번호 줄(.rmNum)은 파티엔 번호가 없으므로 '이름으로 찾기'가 맡고,
+//   파티 만들기를 누르면 같은 줄이 이름 입력으로 바뀐다(따로 판을 하나 더 띄우지 않는다).
+let _pbQuery='';
+function openPartyFind(){ _lobbyOv('ptFindOv', closePartyFind, 'pfOv'); renderPartyFind();
+  if(typeof playSfx==='function') playSfx('ui_open'); }
+function closePartyFind(){ _pbMaking=false; _pbQuery=''; popHide('ptFindOv'); }
+function pbRefresh(){ renderPartyFind(); lobbyToast('파티 목록을 새로 고쳤어요'); }
+function pbQuick(){ const r=pbVisible().filter(function(x){ return pbCount(x)<PARTY_MAX && pbMineId()!==x.id; })[0];
+  if(!r){ lobbyToast('바로 들어갈 수 있는 파티가 없어요'); return; }
+  pbJoin(r.id); }
+function pbVisible(){ const q=(_pbQuery||'').trim().toLowerCase();
+  return pbRooms().filter(function(r){ return !q || r.name.toLowerCase().indexOf(q)>=0; }); }
+function pbSetQuery(v){ _pbQuery=v||''; pbPaintList(); }
+// 목록만 다시 그린다 — 입력 중에 판 전체를 갈아 끼우면 포커스가 날아간다
+function pbPaintList(){ const el=document.getElementById('pbList'); if(!el) return;
+  const rooms=pbVisible();
+  el.innerHTML = rooms.length ? rooms.map(pbRowHTML).join('')
+    : '<div class="rmEmpty">'+(_pbQuery?'그런 이름의 파티가 없습니다':'열려 있는 파티가 없습니다 · 파티 만들기로 시작해 보세요')+'</div>';
+  const c=document.getElementById('pbCount'); if(c) c.textContent=rooms.length; }
+// 줄 = 방 목록(.roomItem)과 같은 규격: 왼쪽 이름/파티장 · 오른쪽 인원/상태
+function pbRowHTML(r){ const n=pbCount(r), mine=pbMineId()===r.id, full=n>=PARTY_MAX;
+  const joinable=!mine && !full;
+  return '<div class="roomItem'+(joinable?'':' locked')+'"'+(joinable?' onclick="pbJoin(&#39;'+r.id+'&#39;)"':'')+'>'
+    +'<div class="riMain"><div class="riName">'+escHtml(r.name)+'</div>'
+    +'<div class="riSub">파티장 - '+escHtml(r.mates[0]||myNick())+'</div></div>'
+    +'<div class="riRight"><div class="riCnt'+(full?' full':'')+'">'+n+'/'+PARTY_MAX+'</div>'
+    +'<div class="riStat '+(mine?'wait':(full?'play':'wait'))+'">'+(mine?'참가 중':(full?'가득참':'모집중'))+'</div></div></div>'; }
+function renderPartyFind(){ const ov=document.getElementById('ptFindOv'); if(!ov) return;
+  // 방 번호 줄(.rmNum)의 두 얼굴 — 평소엔 이름 검색, 만들기 모드에선 이름 입력
+  const numRow = _pbMaking
+    ? '<div class="rmNum"><input id="pbNameInput" type="text" placeholder="파티 이름" maxlength="18" autocomplete="off"'
+      +' onkeydown="if(event.key===&#39;Enter&#39;)pbCreate()"><button onclick="pbCreate()">만들기</button></div>'
+    : '<div class="rmNum"><input id="pbFindInput" type="text" placeholder="파티 이름으로 찾기" maxlength="18" autocomplete="off"'
+      +' oninput="pbSetQuery(this.value)"></div>';
+  ov.innerHTML='<div class="rmCard">'
+    +'<div class="rmHead"><span class="rmTitle">파티 찾기</span>'
+    +'<span class="rmHeadR"><span class="rmOnline">파티 <b id="pbCount">0</b>개</span></span></div>'
+    + numRow
+    +'<div class="rmList" id="pbList"></div>'
+    +'<div class="rmBtns">'
+    +'<button class="rmSq" onclick="closePartyFind()" title="닫기" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>'
+    +'<button class="rmCreate" onclick="pbToggleMake()">'+(_pbMaking?'취소':'파티 만들기')+'</button>'
+    +'<button class="rmQuick" onclick="pbQuick()">빠른 참가</button>'
+    +'<button class="rmSq rmRefresh" onclick="pbRefresh()" title="새로고침" aria-label="새로고침"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 12a8.4 8.4 0 0 1 14.5-5.8M20.4 12a8.4 8.4 0 0 1-14.5 5.8"/><path d="M18.4 2.9v3.6h-3.6M5.6 21.1v-3.6h3.6"/></svg></button>'
+    +'</div></div>';
+  pbPaintList();
+  if(_pbMaking){ const i=document.getElementById('pbNameInput');
+    if(i){ i.value=myNick()+'님의 파티'; setTimeout(function(){ try{ i.focus(); i.select(); }catch(e){} },30); } }
+  else { const i=document.getElementById('pbFindInput'); if(i && _pbQuery) i.value=_pbQuery; } }
+// ── 로비 팝업 껍데기(공용) ──
+// ⚠ #phone 에 붙인다 — 소셜은 유즈맵 도크와 마을 시트를 오가므로 화면 하나에 매달면 반대쪽에서 안 보인다.
+//   .top 은 시트(63)·네비(62) 위로 올리는 변형.
+function _lobbyOv(id, onClose, cls){ let ov=document.getElementById(id);
+  if(!ov){ ov=document.createElement('div'); ov.id=id; ov.className=cls||'ptInviteOv top';
+    (document.getElementById('phone')||document.body).appendChild(ov);
+    ov.addEventListener('click', function(e){ if(e.target===ov) onClose(); }); }
+  ov.classList.remove('hide'); return ov; }
+// ── ＋ 친구 추가 팝업 — 검색·요청 보내기. 입력 id(#foSearch/#foSearchResult)는 그대로라
+//    friendSearch()/friendAdd() 를 손대지 않고 재사용한다.
+function openFriendAdd(){ const ov=_lobbyOv('foAddOv', closeFriendAdd);
+  ov.innerHTML='<div class="ptInviteCard">'
+    +'<div class="ptInviteHead"><span>친구 추가</span><button class="ptInviteX" onclick="closeFriendAdd()">✕</button></div>'
+    +'<div class="ptInviteSearch"><div class="foAdd">'
+    +'<input id="foSearch" placeholder="닉네임 또는 닉#코드" maxlength="30" autocomplete="off" onkeydown="if(event.key===\'Enter\')friendSearch()">'
+    +'<button class="foSearchBtn" onclick="friendSearch()">검색</button></div></div>'
+    +'<div class="ptInviteList"><div id="foSearchResult">'
+    +'<div class="foEmpty">닉#코드로 정확히 입력하면 바로 찾을 수 있어요</div></div></div></div>';
+  const inp=document.getElementById('foSearch'); if(inp) setTimeout(function(){ try{ inp.focus(); }catch(e){} },30);
+  if(typeof playSfx==='function') playSfx('ui_open'); }
+function closeFriendAdd(){ popHide('foAddOv'); }
 // 친구 초대 팝업
 function openPartyInvite(){ const host=document.getElementById('mapSelect'); if(!host) return;
   let ov=document.getElementById('ptInviteOv');
@@ -15221,10 +15428,11 @@ function filterInviteRows(q){ _inviteQuery=q; const ov=document.getElementById('
   const nm=ov.querySelector('.ptNoMatch'); if(nm) nm.style.display=(rows.length && vis===0)?'':'none'; }
 async function renderFriendList(){ const body=document.getElementById('msPanelBody'); if(!body) return;
   // 게스트도 본다 — 임시 친구(_tempFriends)로 전체 레이아웃이 그려진다. 실계정 목록·요청만 로그인 시 합류.
+  // ⛔ 맨 위는 목록이다 — 친구 추가(검색)는 헤더 오른쪽 ＋ 로 들어간 팝업이 맡는다.
   body.innerHTML =
-    '<div class="foSecLbl foSecAdd"><span data-ico="invite"></span> 친구 추가</div>'
-    +'<div class="foAdd"><input id="foSearch" placeholder="추가할 친구의 닉네임 또는 닉#코드" maxlength="30" onkeydown="if(event.key===\'Enter\')friendSearch()"><button class="foSearchBtn" onclick="friendSearch()">친구 검색</button></div>'
-    +'<div id="foSearchResult"></div><div id="foReqSec"></div>'
+    '<div class="ptHead"><span class="ptTitle">친구 <i class="onN" id="foCount">(온라인 0)</i></span>'
+    +'<span class="ptHeadBtns"><button class="ptFind foAddBtn" onclick="openFriendAdd()">친구 추가</button></span></div>'
+    +'<div id="foReqSec"></div>'
     +'<div id="foFriends" class="foList"><div class="foEmpty">불러오는 중…</div></div>';
   paintIcons(body);
   try{ const {friends,incoming}=sbReady()? await sbLoadFriends() : {friends:[],incoming:[]};
@@ -15235,12 +15443,11 @@ async function renderFriendList(){ const body=document.getElementById('msPanelBo
     const fRow=function(f){ const id=f.id||f.uid;
       const rowAttrs='onpointerdown="lpStart(event,\''+id+'\')" onpointerup="lpEnd()" onpointerleave="lpEnd()" oncontextmenu="return false"';
       return friendCellHTML(f, friendActions(f), rowAttrs); };
-    const onF=allF.filter(f=>presenceOf(f)!=='offline'), offF=allF.filter(f=>presenceOf(f)==='offline');   // 온라인/오프라인 그룹
-    let html='';
-    if(!allF.length) html='<div class="foEmpty">아직 친구가 없어요</div>';
-    else { html += '<div class="foSecLbl foSecOn">온라인 <b>'+onF.length+'</b></div>'+onF.map(fRow).join('');
-      if(offF.length) html += '<div class="foSecLbl foSecOff">오프라인 <b>'+offF.length+'</b></div>'+offF.map(fRow).join(''); }
-    document.getElementById('foFriends').innerHTML = html;
+    // 한 목록 — 정렬이 이미 온라인→오프라인이고, 오프라인은 .foRow.off(어두운 상자)로 갈린다
+    document.getElementById('foFriends').innerHTML =
+      allF.length ? allF.map(fRow).join('') : '<div class="foEmpty">아직 친구가 없어요</div>';
+    { const c=document.getElementById('foCount');   // 총원이 아니라 **접속 중**을 센다(오프라인은 어두운 상자로 이미 보인다)
+      if(c) c.textContent='(온라인 '+allF.filter(function(f){ return presenceOf(f)!=='offline'; }).length+')'; }
     updateFriendBadge(incoming.length);
   }catch(e){ const f=document.getElementById('foFriends'); if(f) f.innerHTML='<div class="foEmpty">불러오기 실패</div>'; console.warn(e.message||e); } }
 async function friendSearch(){ const inp=document.getElementById('foSearch'), res=document.getElementById('foSearchResult'); if(!inp||!res) return;
@@ -15387,12 +15594,19 @@ document.addEventListener('pointerdown', function(e){
 function openMapSelect(){ updateMyNameTag(); bgmStart('lobby'); loadMeta();
   if(TEMP_COIN_TEST){ PLAYER_META.buildLevels={}; PLAYER_META.coins=9999999; saveMeta(); }   // [임시] 로비 진입(게임 나갔다 오면) 시 포인트 상점 업그레이드 초기화(저장까지 → 상점 재오픈 loadMeta가 덮어쓰지 않게)   // 계정별 메타 성장 데이터 로드(메인/로비 진입 시 로비 BGM)
   if(sbReady()){ rtStart(); rtSetStatus('online',''); }   // 실시간 소셜 연결 + 로비 상태
-  initMapLive(); showAppScreen('mapSelect'); navShow('map'); curSetTitle('유즈맵 선택'); paintIcons(document.getElementById('mapSelect')); renderMaps(); startMapLive();
+  initMapLive(); showAppScreen('mapSelect'); navShow('map'); curSetTitle('유즈맵 선택'); paintIcons(document.getElementById('mapSelect')); renderMapSortTabs(); renderMaps(); startMapLive();
   mapDockSocial();   // 소셜(채팅·친구·파티)을 화면 하단 상주 구역으로   // 하단 네비로 이동(좌상단 뒤로가기 없음)
   if(typeof refreshFriendBadge==='function') refreshFriendBadge(); }   // 기본 탭은 mapDockSocial 이 맞춘다
 const _SORT_LBL={pop:'인기순',new:'신규',rec:'추천',fav:'즐겨찾기'};
+const MAP_SORTS=[['pop','인기순'],['new','신규'],['rec','추천'],['fav','즐겨찾기']];
+// 정렬 띠 — 사냥터 업그레이드 탭과 **같은 함수**(segNavHTML)로 그린다. 새 탭 띠를 만들지 말 것.
+// 글자만 — 아이콘을 같이 넣으면 아이콘+글자가 한 덩어리로 가운데 정렬돼 글자가 중앙에서 밀린다(사냥터와 같은 이유).
+function renderMapSortTabs(){ const tb=document.getElementById('msSortTabs'); if(!tb) return;
+  const i=Math.max(0, MAP_SORTS.findIndex(function(c){ return c[0]===_mapSort; }));
+  tb.innerHTML=segNavHTML(MAP_SORTS.map(function(c){ return { label:c[1] }; }), i,
+    function(k){ return 'setMapSort(&#39;'+MAP_SORTS[k][0]+'&#39;)'; }); }
 function setMapSort(s){ _mapSort=s;
-  document.querySelectorAll('#msSortTabs .msSortTab').forEach(b=>b.classList.toggle('on', b.dataset.v===s));   // 정렬은 화면 위 띠가 맡는다
+  renderMapSortTabs();   // 정렬은 화면 위 띠가 맡는다
   const di=document.getElementById('msSortDDi'); if(di && ICO[s]) di.innerHTML=ICO[s];                          // 옛 드롭다운 흔적(있으면 갱신)
   const lb=document.getElementById('msSortLbl'); if(lb) lb.textContent=_SORT_LBL[s]||s;
   document.querySelectorAll('#msSortMenu .msSortOpt').forEach(b=>b.classList.toggle('on', b.dataset.v===s));
