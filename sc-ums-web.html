@@ -3658,7 +3658,9 @@
     padding:8px 14px;border-radius:var(--r-lg);background:rgba(10,10,14,.96);border:1px solid var(--neon-soft);color:var(--txt);
     font-size:var(--fs-md);font-weight:600;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;box-shadow:0 6px 20px var(--shade)}
   .lobbyToast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-  .mapItem{flex:0 0 auto;position:relative;display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:var(--r-bar);cursor:pointer;overflow:hidden;
+  /* 세로 여백 7px = 목록에 카드가 **정확히 5장** 들어오는 값. 좌우(12px)는 건드리지 않는다.
+     계산: 안높이 386 ≥ 5×71.2 + 4×7(gap) = 384 · 카드 높이 = 7+7(여백) + 2(테두리) + 55.2(내용) */
+  .mapItem{flex:0 0 auto;position:relative;display:flex;align-items:center;gap:11px;padding:7px 12px;border-radius:var(--r-bar);cursor:pointer;overflow:hidden;
     background:linear-gradient(180deg,#0a0a0a,#000);border:1px solid var(--metal-edge);   /* 면 = 사냥터 업그레이드 칸(.hmUp)과 같은 검정. 쉬는 상태=중립(빨강 남발 제거), 강조는 호버에만 */
     box-shadow:0 5px 15px -11px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05);transition:transform .15s,border-color .15s,box-shadow .15s}
   button.mapItem{width:100%;font-family:inherit;text-align:left;-webkit-appearance:none}   /* 버튼으로 쓸 때도 카드 모양 유지(허브 게임 선택) */

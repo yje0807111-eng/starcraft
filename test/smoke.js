@@ -2469,6 +2469,15 @@ async function groupLobby(){
         assert(parseFloat(ls.marginBottom)>=4,'목록 아래 여백이 margin 이 아님(카드가 끝선에 붙어 잘린다)');
         const lb=$('msList').getBoundingClientRect(), dt=dock.getBoundingClientRect();
         assert(dt.top-lb.bottom>=4,'목록이 칸막이에 붙어 잘림: '+(dt.top-lb.bottom).toFixed(1)+'px'); }
+      // 목록에 카드가 **정확히 5장** 들어온다(잘린 6번째가 끼면 마감이 지저분하다)
+      { const list=$('msList'), ls=getComputedStyle(list), it=list.querySelector('.mapItem');
+        const inner=list.clientHeight-parseFloat(ls.paddingTop)-parseFloat(ls.paddingBottom);
+        const gap=parseFloat(ls.rowGap)||0, ih=it.getBoundingClientRect().height;
+        const fit=(inner+gap)/(ih+gap);
+        assert(fit>=4.98 && fit<5.2,'목록에 5장이 딱 안 들어옴: '+fit.toFixed(2)+'장');
+        const fifth=[...list.querySelectorAll('.mapItem')][4];
+        if(fifth) assert(fifth.getBoundingClientRect().bottom<=list.getBoundingClientRect().bottom+0.6,
+          '5번째 카드가 목록 밖으로 넘침'); }
       // 카드 면 = 사냥터 업그레이드 칸(.hmUp)과 같은 검정. 옛 회색(rgba(36,38,47,…))으로 돌아가면 잡힌다
       { const g=getComputedStyle(document.querySelector('#msList .mapItem')).backgroundImage||'';
         const m=(g.match(/rgba?\(([^)]+)\)/)||[,'255,255,255'])[1].split(',').map(parseFloat);
