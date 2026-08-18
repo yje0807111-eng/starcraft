@@ -2531,27 +2531,37 @@ async function groupLobby(){
     const a0=_hb.char.atk, cd0=_hb.char.cd, cdm0=_hb.char.critDmg;
     navGo('upg'); await sleep(60); setChrSec('stat'); await sleep(40);
     const host=$('chrBody');
-    const rows=[...host.querySelectorAll('.lpRow')];
-    assert(rows.length===LP_STATS.length,'포인트 줄 수가 표와 다름: '+rows.length);
+    // 카드는 사냥터 업그레이드와 '같은 함수'가 그린다 — 마크업을 베낀 두 번째 구현이 있으면 안 된다
+    const rows=[...host.querySelectorAll('.lpList .hmUp')];
+    assert(rows.length===LP_STATS.length,'포인트 카드 수가 표와 다름: '+rows.length);
+    assert(!host.querySelector('.lpRow'),'옛 자체 제작 줄(.lpRow)이 남아 있음');
     assert(host.querySelector('.lpFree b').textContent==='60','남은 포인트 표시가 다름: '+host.querySelector('.lpFree b').textContent);
-    // 2열 격자 · 줄에는 '수치'만 · 이름은 잘리지 않는다
+    // 사냥터 카드와 같은 뼈대인가 — 한 조각이라도 빠지면 '비슷한 것을 새로 만든' 것이다
+    { // ⚠ SVG 요소의 className 은 문자열이 아니다(SVGAnimatedString) → getAttribute 로 읽는다
+      const skel=root=>[...root.querySelectorAll('*')]
+        .map(e=>e.tagName.toLowerCase()+'.'+(e.getAttribute('class')||''))
+        .filter(x=>x.indexOf('icoImg')<0).sort().join(' ');
+      const d=document.createElement('div');
+      d.innerHTML=hmUpCardHTML({key:'x',ico:'',name:'n',val:'1',next:'2',lv:'a',nextLv:'b',cost:'c'});
+      const home=skel(d.firstChild), mine=skel(rows[0]);
+      assert(mine===home,'포인트 카드 뼈대가 사냥터 카드와 다름:\n  내것: '+mine+'\n  사냥터: '+home); }
+    // 2열 격자 · 이름과 수치는 잘리지 않는다
     { const top=rows[0].getBoundingClientRect().top;
       const per=rows.filter(e=>Math.abs(e.getBoundingClientRect().top-top)<2).length;
       assert(per===2,'포인트 목록이 2열이 아님: 한 줄 '+per+'칸');
-      rows.forEach((e,i)=>{ const S=LP_STATS[i];
-        const nm=e.querySelector('.lpTx b');
-        assert(nm.scrollWidth<=nm.clientWidth+1,'이름이 잘림: '+nm.textContent);
-        // 지금 걸려 있는 배수
-        const v=e.querySelector('.lpVal').textContent.trim();
-        assert(/^\+\d+%$/.test(v),'값이 배수 하나가 아님: '+v);
-        // 제목 아래 = 1p당 상승치(용도 설명이 아니라 수치여야 한다)
-        const em=e.querySelector('.lpTx em'); assert(em,'1p당 상승치 줄이 없음: '+S.name);
-        const want='1p당 +'+(S.step*100).toFixed(S.step<0.02?1:0)+'%';
-        assert(em.textContent.trim()===want,S.name+' 1p당 표기가 다름: '+em.textContent.trim()+' vs '+want);
-        assert(em.scrollWidth<=em.clientWidth+1,'1p당 표기가 잘림: '+em.textContent);
-        // 버튼 = 값이 적힌 비용 표기
-        const bt=e.querySelector('.lpBtn').textContent.trim();
-        assert(bt==='-'+ptCost('lp',S.k)+'p','버튼이 비용 표기가 아님: '+bt); }); }
+      rows.forEach((e,i)=>{ const S=LP_STATS[i], n=lpPts(S.k);
+        for(const sel of ['.hmUpName','.hmUpVl']){ const el=e.querySelector(sel);
+          assert(el.scrollWidth<=el.clientWidth+1,sel+' 이 잘림: '+el.textContent); }
+        // 제목 아래 = 지금 배수 ▸ 이 1점을 찍으면 갈 배수
+        const vl=e.querySelector('.hmUpVl').textContent.replace(/\s/g,'');
+        assert(vl===_ptPct(n,S.step)+_ptPct(n+1,S.step),S.name+' 수치 변화 표기가 다름: '+vl);
+        // 버튼 = 찍은 칸 변화(위) + 값(아래)
+        assert(e.querySelector('.hmUpBl').textContent.replace(/\s/g,'')===n+'p'+(n+1)+'p',S.name+' 칸 표기가 다름');
+        assert(e.querySelector('.hmUpBc').textContent.trim()==='-'+ptCost('lp',S.k)+'p','버튼이 비용 표기가 아님'); }); }
+    // 초기화 = 사냥터 수량 버튼과 같은 물성
+    { const q=host.querySelector('.lpHead .hmUpQty .hmUpQ');
+      assert(q && q.textContent.trim()==='초기화','초기화가 수량 버튼 물성이 아님');
+      assert(q.scrollWidth<=q.clientWidth+1,'초기화 글자가 잘림'); }
     // 이름은 수치 축과 같은 말을 쓴다 — 같은 것을 두 이름으로 부르지 않는다
     assert(lpDef('critd').name===CS_AXES.critd.name,'치명 피해 이름이 축과 다름: '+lpDef('critd').name);
     // 버튼에 적힌 값만큼 '실제로' 빠진다 — 표기와 차감이 갈라지면 여기서 잡힌다
@@ -2562,7 +2572,7 @@ async function groupLobby(){
       assert(lpFree(c2)===before-cost,'버튼에 적힌 값('+cost+'p)만큼 안 빠짐: '+before+'→'+lpFree(c2));
       c2.unit.pts={}; }
     // 화면 버튼으로 찍는다 — 렌더러·상태·전투가 한 줄로 이어지는지 본다
-    rows[0].querySelector('.lpBtn').click(); await sleep(40);
+    rows[0].querySelector('.hmUpBtn').click(); await sleep(40);
     assert(lpPts('atk')===1,'버튼을 눌렀는데 안 찍힘');
     assert($('chrBody').querySelector('.lpFree b').textContent==='59','찍은 뒤 남은 포인트가 안 줄어듦');
     assert(_hb.char.atk>a0+1e-9,'전투 중인 캐릭터 공격력에 반영 안 됨: '+a0+'→'+_hb.char.atk);
@@ -2572,7 +2582,7 @@ async function groupLobby(){
     assert(_hb.char.critDmg>cdm0+1e-9,'치명타 피해가 반영 안 됨');
     assert(_hb.char.cd<cd0-1e-9,'공격속도가 반영 안 됨');
     // 초기화 버튼도 같은 경로
-    $('chrBody').querySelector('.lpReset').click(); await sleep(40);
+    $('chrBody').querySelector('.lpHead .hmUpQ').click(); await sleep(40);
     assert(lpSpent()===0,'초기화가 안 됨');
     assert(Math.abs(_hb.char.atk-a0)<1e-6,'초기화 뒤 전투 수치가 안 돌아옴');
     navBack(); await sleep(40);
@@ -2614,14 +2624,14 @@ async function groupLobby(){
     c.unit.rpts={}; saveMeta();
     navGo('upg'); await sleep(60); setChrSec('reb'); await sleep(40);
     const host=$('chrBody');
-    const rows=[...host.querySelectorAll('.lpRow')];
-    assert(rows.length===LP_STATS.length,'환생 포인트 줄 수가 표와 다름: '+rows.length);
+    const rows=[...host.querySelectorAll('.lpList .hmUp')];
+    assert(rows.length===LP_STATS.length,'환생 포인트 카드 수가 표와 다름: '+rows.length);
     assert(host.textContent.indexOf('환생 포인트')>=0,'환생 탭에 환생 포인트 구역이 없음');
     const before=csVal('atk');
-    rows[0].querySelector('.lpBtn').click(); await sleep(40);
+    rows[0].querySelector('.hmUpBtn').click(); await sleep(40);
     assert(rpPts('atk')===1,'환생 탭 버튼으로 안 찍힘');
     assert(csVal('atk')>before+1e-9,'찍었는데 공격력이 그대로');
-    $('chrBody').querySelector('.lpReset').click(); await sleep(40);
+    $('chrBody').querySelector('.lpHead .hmUpQ').click(); await sleep(40);
     assert(rpSpent()===0,'초기화가 안 됨');
     navBack(); await sleep(40);
     return '환생 '+RP_PER_REB+'p/단계 · 1p = 레벨 포인트 ×'+RP_STEP_MUL; });
