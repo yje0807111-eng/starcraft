@@ -3359,7 +3359,10 @@
   .msSortTabs{flex:0 0 auto;display:flex;align-items:stretch;padding:6px 8px 4px}
   .msSortTabs .pdSeg{flex:1 1 0;max-width:none;margin:0}
   .msSortTabs .pdSegBtn{padding:7px 4px;font-size:11.5px;font-weight:700;letter-spacing:.02em;text-align:center}
-  #mapSelect .msList{flex:1 1 auto;min-height:0;padding:8px}
+  /* 목록이 끝나는 자리에 선 하나 — 스크롤이라 마지막 카드가 잘린 채 멈추는데,
+     선이 없으면 '화면이 잘렸다'로 읽힌다. 선은 테두리라 스크롤을 따라 움직이지 않는다. */
+  #mapSelect .msList{flex:1 1 auto;min-height:0;padding:8px;
+    border-bottom:1px solid var(--hbEdge,rgba(255,255,255,.07))}
   /* 마을 채팅 시트 — 소셜 블록을 그대로 담는다(유즈맵에서 옮겨옴) */
   #twChat .msSocial.inTown{flex:1;min-height:0;margin-top:0;border:0;border-radius:0;background:none}
   /* 정렬 드롭다운(커스텀 HUD 메뉴) */

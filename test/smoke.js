@@ -2452,6 +2452,9 @@ async function groupLobby(){
       const panel=document.querySelector('#mapSelect .msPanel');
       assert(panel && panel.contains(dock) && panel.contains($('msList')) && panel.contains($('msSortTabs')),
         '소셜·목록·탭 띠가 한 상자 안에 없음');
+      // 목록이 끝나는 자리에 선 — 없으면 마지막 카드가 잘린 채 멈춰 '화면이 잘렸다'로 읽힌다
+      { const ls=getComputedStyle($('msList'));
+        assert(ls.borderBottomStyle!=='none' && parseFloat(ls.borderBottomWidth)>=1,'목록 끝 선이 없음'); }
       // 소셜은 자기 상자를 갖되, 목록에 맞닿지 않게 도크의 안여백으로 띄운다
       { const soEl=dock.querySelector('.msSocial'), so=getComputedStyle(soEl);
         assert(so.borderTopStyle!=='none','소셜 상자의 테두리가 없음');
