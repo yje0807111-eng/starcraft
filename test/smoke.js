@@ -275,9 +275,12 @@ async function groupLobby(){
               'HOME '+(isBd?'테두리':'면')+'에 회색·빨강 밖의 색('+(el.className||el.tagName)+'): '+m); } }
         for(const v of c.borderRadius.split(/[\s\/]+/))
           assert(!v || v==='0px' || v==='3px', 'HOME 모서리가 너무 둥금('+(el.className||el.tagName)+'): '+v); } }
-    assert(document.querySelectorAll('#navBar .navIt').length===5,'하단 네비가 5칸이 아님(사냥터·정비·강화·유즈맵·상점)');
+    // 사냥터는 칸이 없다(NAV_TREE noCell) — 기본 화면이자 '‹ 뒤로'가 돌아가는 곳이라 고를 대상이 아니다
+    assert(document.querySelectorAll('#navBar .navIt').length===4,'하단 네비가 4칸이 아님(캐릭터·정비·유즈맵·상점)');
     { const navs=[...document.querySelectorAll('#navBar .navIt')].map(x=>x.dataset.nav).join(',');
-      assert(navs==='home,upg,gear,map,shop','네비 구성이 다름: '+navs);
+      assert(navs==='upg,gear,map,shop','네비 구성이 다름: '+navs);
+      assert(!document.querySelector('#navBar .navIt[data-nav=home]'),'사냥터 칸이 아직 남아 있음');
+      assert(!document.querySelector('#navBar .navIt.on'),'사냥터에 있는데 켜진 칸이 있음');
       // 토벌은 네비에서 빠지고 HOME 팝업이 됐다 — 2번 칸은 정비(장비·펫·동료)
       assert(document.querySelector('#navBar .navIt[data-nav=upg]').textContent.indexOf('캐릭터')>=0,'2번 칸 표기가 캐릭터가 아님'); }
     // ⚠ .hide 가 실제로 숨기는지 — id 선택자에 display 를 주면 .appScreen.hide(클래스 2개)를 이겨
@@ -286,7 +289,8 @@ async function groupLobby(){
       for(const el of document.querySelectorAll('.appScreen.hide'))
         if(getComputedStyle(el).display!=='none') shown.push(el.id||el.className);
       assert(!shown.length,'.hide 인데 안 숨는 화면: '+shown.join(', ')); }
-    assert(document.querySelector('#navBar .navIt.on').dataset.nav==='home','HOME 탭이 활성이 아님');
+    // 사냥터엔 칸이 없다(noCell) — '거기 있음'은 화면으로 확인하고, 켜진 칸은 없어야 한다
+    assert(visible($('homeScreen')) && !document.querySelector('#navBar .navIt.on'),'사냥터로 안 왔거나 켜진 칸이 남음');
     // 실데이터에 붙은 곳 = 사냥터 업그레이드(내 캐릭터·동료·건물·펫 4구역 · 해금제)
     // 탭 띠는 장비창 섹션 바와 같은 컴포넌트여야 한다(segNavHTML 단일 소스) — 새 탭 띠를 만들면 여기서 걸린다
     { const seg=document.querySelector('#hmUpgTabs .pdSeg');
@@ -446,7 +450,8 @@ async function groupLobby(){
     navGo('town'); await sleep(80);   // 마을 폐지 — 옛 진입점은 HOME으로 리다이렉트된다
     assert(visible($('homeScreen')) && visible($('navBar')),'마을 진입이 HOME으로 안 감 [DBG 보이는화면='+
       [...document.querySelectorAll('.appScreen')].filter(e=>visible(e)).map(e=>e.id).join(',')+']');
-    assert(document.querySelector('#navBar .navIt.on').dataset.nav==='home','HOME 탭이 활성이 아님');
+    // 사냥터엔 칸이 없다(noCell) — '거기 있음'은 화면으로 확인하고, 켜진 칸은 없어야 한다
+    assert(visible($('homeScreen')) && !document.querySelector('#navBar .navIt.on'),'사냥터로 안 왔거나 켜진 칸이 남음');
     // 정비 탭 = 장비·펫·동료 전용 화면 · 상점 탭 = 상점 전용 화면
     navGo('gear'); await sleep(60);
     // 정비·유즈맵·상점은 내려가므로 구역 칸(.on)이 없다 — 화면과 하위 칸으로 확인한다
@@ -499,9 +504,9 @@ async function groupLobby(){
     assert(hard===0,'개별 규칙에 폰트 이름이 박혀 있음('+hard+'곳): '+sample);
     // 위계 = 가족 + 크기. Jua는 400 단일 굵기라 굵기로는 가를 수 없다.
     // ⚠ 하단(네비·탭·카드 이름)과 사냥터 패널 제목은 Noto 로 통일했다 — Jua 는 큰 제목에만 남는다.
-    //   그래서 Jua 표본은 .hmUpgHead 가 아니라 상점 제목(.shopTitle)에서 잰다.
+    //   그래서 Jua 표본은 .hmUpgHead 가 아니라 화면 제목(.curTitle = 재화 바 왼쪽)에서 잰다.
     openShop(); await sleep(60);
-    const head=document.querySelector('#shopScreen .shopTitle'), hs=getComputedStyle(head);
+    const head=document.querySelector('#curBar .curTitle'), hs=getComputedStyle(head);
     assert(/JuaKR/.test(hs.fontFamily),'큰 제목에 제목 폰트(JuaKR)가 안 걸림: '+hs.fontFamily);
     openHome(); await sleep(60);
     const body=document.querySelector('.hmUpName'), bs=getComputedStyle(body);
@@ -524,7 +529,7 @@ async function groupLobby(){
     assert($('curGas').textContent==='67' && $('curGem').textContent==='8','가스/젬 표시 불일치');
     navGo('map'); assert(shown(),'유즈맵 선택에 재화 바가 없음');
     mapToHub(); navGo('town'); assert(shown(),'마을에 재화 바가 없음');
-    if(typeof dgEnter==='function'){ dgEnter(1); assert(shown(),'던전에 재화 바가 없음'); openTown(); }
+    if(typeof dgEnter==='function'){ dgEnter(1); assert(shown(),'던전에 재화 바가 없음'); openHome(); }
     openHome(); await sleep(40);
     return '미네랄=pcoin(12,345) · 가스/젬 · 홈/유즈맵/마을/던전 상시'; });
   // 자동사냥(라운드 머신) — 던전과 같은 격리 규칙. hbStep을 직접 돌린다(rAF 비의존).
@@ -666,7 +671,7 @@ async function groupLobby(){
     const home=await spy(700);
     assert(home.nemo===0,'HOME인데 유즈맵이 자기 유닛 목록으로 sync를 '+home.nemo+'번 부름 — 두 화면이 같은 씬을 민다');
     assert(home.total>0,'HOME이 3D를 아예 안 그림(sync 0회) — 가드가 과하게 막았다');
-    if(typeof openTown==='function'){ openTown(); await sleep(500);
+    if(typeof openTown==='function'){ openHome(); await sleep(500);
       const town=await spy(700);
       assert(town.nemo===0,'마을인데 유즈맵이 sync를 '+town.nemo+'번 부름');
       if(typeof twLeave==='function') twLeave(); }
@@ -974,6 +979,45 @@ async function groupLobby(){
     assert(ch2.hp===999,'적이 사거리에 있는데 상자를 때림 — 딜을 흘린다');
     S.foes.length=0; S.chests.length=0;
     return '최소거리 '+HB_CHEST_MIN_D+' · 사거리 밖 무시 · 적 우선 ok'; });
+  // 캐릭터 스탯 페이지 상단 — 전투력 칩 하나 + 하이라인 2열.
+  // 띄우는 숫자는 전투력뿐이다. 나머지 축은 상자 없이 밑선으로만 나눈다(줄마다 상자면 위계가 없다).
+  await step('캐릭터 스탯: 전투력 칩 + 하이라인 2열', async()=>{
+    skipIf(typeof renderChrStat!=='function','스탯 화면 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    navGo('upg'); await sleep(120);
+    const host=$('upgScreen');
+    const hv=host.querySelector('.csHv');
+    assert(hv,'전투력 칩이 없음');
+    assert(hv.textContent.replace(/[^0-9]/g,'')===String(profPower()),
+      '칩 값이 profPower와 다름: '+hv.textContent+' vs '+profPower());
+    const rows=[...host.querySelectorAll('.csR')];
+    assert(rows.length===CS_ORDER.length,'줄 수가 축 수와 다름: '+rows.length+' vs '+CS_ORDER.length);
+    assert(!host.querySelector('.csBar'),'옛 가로 바가 남아 있음');
+    // 2열인가 — 줄들의 왼쪽 좌표가 정확히 두 가지여야 한다
+    const cols=new Set(rows.map(r=>Math.round(r.getBoundingClientRect().left)));
+    assert(cols.size===2,'2열이 아님(열 '+cols.size+'개)');
+    // 각 열의 마지막 줄만 밑선이 없다 — 끝에서 두 개가 그 자리다(홀수·짝수 무관)
+    assert(getComputedStyle(rows[0]).borderBottomWidth==='1px','첫 줄에 밑선이 없음');
+    for(const r of rows.slice(-2)) assert(getComputedStyle(r).borderBottomWidth==='0px',
+      '열 끝 줄에 밑선이 남아 매달린 선이 보인다');
+    // 같은 값이 두 번 나오면 안 된다(옛 lpNums 요약 블록은 이 목록이 대신한다)
+    assert(!host.querySelector('.lpNums .lpNum span'),'옛 전투 수치 요약이 남아 있음 — 같은 값이 두 벌이다');
+    return '전투력 '+hv.textContent+' · '+rows.length+'줄 2열'; });
+  // 화면 제목 — 유즈맵과 같이 재화 바 왼쪽에 붙는다. 화면 안에 가운데 제목을 또 두면 두 벌이 된다.
+  await step('제목: 재화 바 왼쪽 한 곳 (캐릭터·정비·상점)', async()=>{
+    skipIf(typeof SCREEN_TITLE!=='object','제목 표 없음');
+    const out=[];
+    for(const [id,go] of [['upgScreen',()=>navGo('upg')],['gearScreen',()=>openGear()],['shopScreen',()=>openShop()]]){
+      go(); await sleep(150);
+      const t=$('curTitle'), tr=t.getBoundingClientRect();
+      const res=document.querySelector('#curBar .res').getBoundingClientRect();
+      assert(t.textContent===SCREEN_TITLE[id], id+' 제목이 표와 다름: "'+t.textContent+'"');
+      assert(Math.abs((tr.top+tr.height/2)-(res.top+res.height/2))<=4, id+' 제목이 재화와 다른 줄에 있음');
+      assert(tr.right<=res.left, id+' 제목이 재화 왼쪽이 아님');
+      assert(!document.querySelector('#'+id+' .shopTitle'), id+' 안에 가운데 제목이 남아 있음 — 제목이 두 벌');
+      out.push(t.textContent); }
+    openHome(); await sleep(60);
+    return out.join('·')+' 좌상단 ok'; });
   // 사냥터 맵 — 그림이 덮는 범위와 걸어갈 수 있는 범위가 같아야 한다.
   // 예전엔 필드(±900×±620)가 그림보다 훨씬 넓어서 걸어 나가면 검은 바닥이 나왔다.
   await step('사냥터: 걸을 수 있는 범위 = 그림이 덮는 범위', async()=>{
@@ -2745,12 +2789,14 @@ async function groupLobby(){
   await step('하단 네비 2층: 구역 → 전용 네비 → 돌아가기', async()=>{
     const read=()=>[...document.querySelectorAll('#navBar .navIt')].map(e=>e.dataset.nav||('~'+e.dataset.sub));
     openHome(); await sleep(40);
-    // ① 최상위 = 5구역. NAV_TREE 가 단일 소스이므로 순서도 표에서 온다
-    assert(read().join(',')==='home,upg,gear,map,shop','최상위 네비가 5구역이 아님: '+read().join(','));
-    assert(document.querySelector('#navBar .navIt.on').dataset.nav==='home','사냥터가 활성이 아님');
-    // ② 사냥터는 내려가지 않는다 — 하위는 화면 상단 버튼줄이 맡는다
+    // ① 최상위 = 4구역. 사냥터는 칸이 없다(noCell) — NAV_TREE 가 단일 소스라 순서도 표에서 온다
+    assert(read().join(',')==='upg,gear,map,shop','최상위 네비가 4구역이 아님: '+read().join(','));
+    assert(!document.querySelector('#navBar .navIt.on'),'사냥터에 있는데 켜진 칸이 있음');
+    assert(visible($('homeScreen')),'기본 화면이 사냥터가 아님');
+    assert(visible(document.querySelector('#homeScreen .hmUpg')),'사냥터 업그레이드 구역이 안 떠 있음');
+    // ② 사냥터는 내려가지 않는다 — 하위는 ☰ 더보기가 맡는다
     navGo('home'); await sleep(40);
-    assert(read().join(',')==='home,upg,gear,map,shop','사냥터를 눌렀는데 내려감: '+read().join(','));
+    assert(read().join(',')==='upg,gear,map,shop','사냥터를 눌렀는데 구성이 바뀜: '+read().join(','));
     { hbOpenMore(); await sleep(120);   // 마을·성장은 ☰ 더보기 안이다(동료는 폐지)
       for(const k of ['town','grow'])
         assert(document.querySelector('#hbMoreGrid [data-k="'+k+'"]'),'더보기에 '+k+' 가 없음');
@@ -2768,7 +2814,7 @@ async function groupLobby(){
     // ⑤ 돌아가기 = 사냥터 화면 + 최상위(홈이 허브)
     navBack(); await sleep(40);
     assert(visible($('homeScreen')),'돌아가기가 사냥터로 안 감');
-    assert(read().join(',')==='home,upg,gear,map,shop','돌아가기 후 최상위가 아님: '+read().join(','));
+    assert(read().join(',')==='upg,gear,map,shop','돌아가기 후 최상위가 아님: '+read().join(','));
     // ⑥ 상점 = 5구역 · 유즈맵 = 소셜 3구역(정렬은 화면 위 띠로 되돌렸다)
     navGo('shop'); await sleep(60);
     assert(read().join(',')==='back,~deal,~draw,~res,~pack,~gem','상점 전용 네비가 아님: '+read().join(','));
@@ -2813,16 +2859,24 @@ async function groupLobby(){
         assert(db.left<=ph.left+1 && db.right>=ph.right-1,'소셜이 화면 좌우를 안 채움: '+db.left.toFixed(1)+'~'+db.right.toFixed(1));
         assert(db.width>pb.width+10,'소셜이 목록 카드보다 넓지 않음');
         assert(db.top-pb.bottom>=4,'두 섹션이 붙어 있음: '+(db.top-pb.bottom).toFixed(1)+'px');
-        // 면·모서리·윗선 = 사냥터 하단 패널(.hmUpg)과 같은 처리
-        { const hm=document.querySelector('#homeScreen .hmUpg');
-          assert(/polygon/.test(ds.clipPath||''),'위쪽 모서리 컷이 없음: '+ds.clipPath);
-          if(hm) assert(getComputedStyle(hm).clipPath===ds.clipPath,'사냥터 하단 패널과 모서리 컷이 다름');
-          const rb=getComputedStyle(dock,'::before');
-          assert(rb.content!=='none' && /gradient/.test(rb.backgroundImage),'윗변 1px 선(::before)이 없음');
-          assert(parseFloat(rb.height)<=2,'윗변 선이 1px 이 아님: '+rb.height);
-          const c=((ds.backgroundImage.match(/rgba?\(([^)]+)\)/)||[,'0,0,0,1'])[1]).split(',').map(parseFloat);
-          const a=(c.length>3?c[3]:1);
-          assert(c[0]<40 && a>0.7 && a<1,'소셜 면이 반투명 어두운 회색이 아님: '+ds.backgroundImage.slice(0,60)); } }
+        // 3안 '터미널'(2026-08-14 확정) — 면은 완전 검정, 위엔 금속선 1px. 모서리 컷은 쓰지 않는다.
+        //   목록 카드(회색 판)와 가장 멀어져 '읽는 로그'로 읽히는 것이 이 안의 요점이다.
+        { assert(ds.clipPath==='none','3안은 모서리 컷을 쓰지 않는다: '+ds.clipPath);
+          assert(parseFloat(ds.borderTopWidth)===1,'윗변 금속선이 1px 이 아님: '+ds.borderTopWidth);
+          const c=((ds.backgroundImage.match(/rgba?\(([^)]+)\)/)||[,'99,99,99'])[1]).split(',').map(function(x){return parseFloat(x);});
+          assert(c[0]<=12 && c[1]<=12 && c[2]<=12,'소셜 면이 검정이 아님: '+ds.backgroundImage.slice(0,60));
+          // 채팅·친구·파티가 같은 결 — 안쪽에 또 판을 깔지 않고 헤어라인으로만 나눈다
+          setBottomTab('chat');
+          assert(getComputedStyle(dock.querySelector('.mcLine'),'::before').content!=='none','채팅 줄 프리픽스가 없음');
+          setBottomTab('friend');
+          { const row=dock.querySelector('.foRow');
+            if(row){ const rs=getComputedStyle(row);
+              assert(rs.backgroundImage==='none','친구 줄에 판이 남아 있음(터미널은 헤어라인만)');
+              assert(parseFloat(rs.borderBottomWidth)===1,'친구 줄 구분선이 없음'); } }
+          setBottomTab('party');
+          { const slot=dock.querySelector('.ptSlot.fill');
+            if(slot) assert(getComputedStyle(slot).backgroundImage==='none','파티 칸에 판이 남아 있음'); }
+          setBottomTab('chat'); } }
       // 목록에 카드가 **정확히 5장** 들어온다(잘린 6번째가 끼면 마감이 지저분하다)
       { const list=$('msList'), ls=getComputedStyle(list), it=list.querySelector('.mapItem');
         const inner=list.clientHeight-parseFloat(ls.paddingTop)-parseFloat(ls.paddingBottom);
@@ -2845,7 +2899,7 @@ async function groupLobby(){
     assert(getComputedStyle($('msPanelBody')).display!=='none','파티 패널이 안 보임');
     assert(document.querySelector('#navBar .navIt.cur').dataset.sub==='party','소셜 선택 표시가 안 따라옴');
     // 마을 채팅 시트가 열리면 소셜을 되찾아 가고, 유즈맵에 다시 오면 도크로 돌아온다
-    openTown(); await sleep(40); twOpenChat(); await sleep(40);
+    openHome(); await sleep(40); twOpenChat(); await sleep(40);
     assert(document.querySelector('#twChat .msSocial'),'마을 시트가 소셜을 못 되찾음');
     assert(visible(document.querySelector('#twChat .msTabs2')),'마을 시트에선 탭 띠가 보여야 함(네비에 소셜 칸이 없다)');
     twCloseChat(); navGo('map'); await sleep(60);
@@ -2890,14 +2944,20 @@ async function groupLobby(){
       { const g=getComputedStyle(on||rows[0]).backgroundImage||'';
         const m=((g.match(/rgba?\(([^)]+)\)/)||[,'0,0,0'])[1]).split(',').map(parseFloat);
         assert(m[2]<=m[0]+3,'친구 카드에 푸른기가 돎: '+g.slice(0,60));
-        assert(getComputedStyle(on||rows[0]).borderTopLeftRadius==='3px','친구 카드가 덜 각짐'); }
+        // 3안 터미널은 카드를 걷고 헤어라인만 남긴다(radius 0) — '덜 각지면 안 된다' 가 원래 뜻이라 상한으로 본다
+        assert(parseFloat(getComputedStyle(on||rows[0]).borderTopLeftRadius)<=3,'친구 카드가 덜 각짐'); }
       if(off&&on){
         // ⚠ 면이 gradient 라 backgroundColor 는 투명하다 — backgroundImage 의 첫 색을 본다
         const lum=el=>{ const g=getComputedStyle(el).backgroundImage||'';
           const m=(g.match(/rgba?\(([^)]+)\)/)||[,'0,0,0'])[1].split(',').map(parseFloat);
           return m[0]*0.3 + m[1]*0.59 + m[2]*0.11; };
         assert(getComputedStyle(off).opacity==='1','오프라인을 투명도로 흐리게 처리함(어두운 면이어야 한다)');
-        assert(lum(off) < lum(on)-2,'오프라인 상자가 온라인보다 어둡지 않음: '+lum(off).toFixed(1)+' vs '+lum(on).toFixed(1)); }
+        // 3안 터미널은 행에 면이 없다 — 오프라인 신호는 '글자가 죽는 것'이다. 면이 있으면 면으로, 없으면 글자로 잰다.
+        const tone=el=>{ const t=(el.querySelector('.fL1')||el); const m=getComputedStyle(t).color.replace(/[^0-9,]/g,'').split(',').map(Number);
+          return m[0]*0.3 + m[1]*0.59 + m[2]*0.11; };
+        const useFace = lum(on)>0 || lum(off)>0;
+        assert(useFace ? (lum(off) < lum(on)-2) : (tone(off) < tone(on)-8),
+          '오프라인이 온라인보다 어둡지 않음: '+(useFace?(lum(off).toFixed(1)+' vs '+lum(on).toFixed(1)):(tone(off).toFixed(1)+' vs '+tone(on).toFixed(1)))); }
       // ＋ = 친구 추가 팝업(목록 위가 아니라 팝업 안에 검색이 있다)
       body.querySelector('.ptFind.foAddBtn').click(); await sleep(80);
       assert(visible($('foAddOv')),'＋ 를 눌렀는데 친구 추가 팝업이 안 뜸');
@@ -2959,7 +3019,6 @@ async function groupLobby(){
     navBack(); await sleep(40);
     { const ws=[...document.querySelectorAll('#navBar .navIt')].map(e=>e.getBoundingClientRect().width);
       assert(Math.max(...ws)-Math.min(...ws)<1.5,'최상위 칸이 등폭이 아님: '+ws.map(w=>w|0).join(','));
-      const on=getComputedStyle(document.querySelector('#navBar .navIt.on'));
       navGo('gear'); }
     await sleep(60);
     { const bk=document.querySelector('#navBar .navIt.navBk').getBoundingClientRect();
@@ -2988,7 +3047,7 @@ async function groupLobby(){
     assert(visible($('shopScreen')),'네비 상점이 전용 화면을 안 엶');
     assert(!visible($('townPanel')),'상점이 아직 팝업으로 열림');
     assert(!visible($('townScreen')),'상점인데 마을 화면이 남아 있음');
-    assert(document.querySelector('#shopBody .shopTitle'),'상점 제목줄이 없음');
+    assert($('curTitle').textContent==='상점','상점 제목이 재화 바 왼쪽에 없음: "'+$('curTitle').textContent+'"');
     // 구역 5개를 하단 네비로 나눴다(2026-08-14) — 화면에는 고른 구역 하나만 그린다
     assert(document.querySelectorAll('#shopBody .shopPanel').length>=1,'상점 구역이 안 그려짐');
     { const seen=[];
@@ -3005,11 +3064,11 @@ async function groupLobby(){
     // 재화 아이콘은 resIco 공용(이모지 임의 사용 금지) — 카드 안에 실제 아이콘이 들어갔는지
     assert(document.querySelectorAll('#shopBody img.gi[src*="res_"]').length>0,'상점에 공용 재화 아이콘이 없음');
     // IBM Plex Sans KR은 700이 최대 — 800/900은 가짜 볼드가 된다(DESIGN.md §2)
-    for(const sel of ['.shopTitle','.shopHead','.shopTag','.shopBuy']){ const e=document.querySelector('#shopBody '+sel)||document.querySelector(sel);
+    for(const sel of ['.curTitle','.shopHead','.shopTag','.shopBuy']){ const e=document.querySelector('#shopBody '+sel)||document.querySelector(sel);
       if(e) assert(+getComputedStyle(e).fontWeight<=700, sel+' 굵기가 700 초과(가짜 볼드): '+getComputedStyle(e).fontWeight); }
     assert(document.querySelectorAll('#navBar .navIt[data-sub]').length===5,'상점 하위가 5칸이 아님');
     // 마을 구역(뽑기집)도 팝업이 아니라 같은 화면으로
-    openTown(); await sleep(40); openTownPanel('gacha'); await sleep(60);
+    openHome(); await sleep(40); openTownPanel('gacha'); await sleep(60);
     assert(visible($('shopScreen')) && !visible($('townPanel')),'마을 구역이 아직 팝업으로 열림');
     openHome(); await sleep(40);
     return '전용 화면 · 두 경로 ok'; });
@@ -3247,7 +3306,7 @@ async function groupLobby(){
     setGearTab('gear'); await sleep(40);
     setGearTab('gear');
     // 굵기 700 상한(DESIGN.md §2)
-    for(const sel of ['#gearScreen .shopTitle','#navBar .navIt']){ const e=document.querySelector(sel);
+    for(const sel of ['#curBar .curTitle','#navBar .navIt']){ const e=document.querySelector(sel);
       if(e) assert(+getComputedStyle(e).fontWeight<=700, sel+' 굵기가 700 초과(가짜 볼드): '+getComputedStyle(e).fontWeight); }
     openHome(); await sleep(40);
     return '하위 3칸 · renderProfGear/_shopPetPanel 재사용 ok'; });
@@ -3283,7 +3342,7 @@ async function groupLobby(){
     const it=profAddItem(profMakeItem('top',4,'epic')); profEquipItem(it.iid);
     profAddItem(profMakeItem('shoes',4,'rare')); saveMeta();
     _gearPick=null; _gearSel=null; _gearPage=PROF_GEAR_PAGES[0].id;
-    openTown(); openTownPanel('gear');                        // openTown이 loadMeta로 다시 읽으므로 CHAR()는 이 뒤에 잡는다
+    openHome(); openTownPanel('gear');                        // openTown이 loadMeta로 다시 읽으므로 CHAR()는 이 뒤에 잡는다
     const c=CHAR(); c.level=1; refreshTownPanel();
     const body=$('tpBody');
     const slots=body.querySelectorAll('.pdSlot');
@@ -3364,7 +3423,7 @@ async function groupLobby(){
     const ks2=profPageSlots(PROF_GEAR_PAGES[1].id);            // 다른 페이지 표본(가방이 페이지를 따라가는지 볼 것)
     for(let i=0;i<5;i++) profAddItem(profMakeItem(ks2[i%ks2.length], 1+(i%5), ts[i%ts.length]));
     saveMeta(); _gearPick=null; _gearSel=null;
-    openTown(); openTownPanel('gear'); CHAR().level=40; refreshTownPanel();
+    openHome(); openTownPanel('gear'); CHAR().level=40; refreshTownPanel();
     const body=$('tpBody'), card=document.querySelector('#townPanel .twCard');
     const sc=body.querySelector('.bagScroll'), bag=body.querySelector('.bagBody'), sec=body.querySelector('.bagSec');
     assert(sc&&bag,'가방 스크롤 영역이 없음');
@@ -3458,7 +3517,7 @@ async function groupLobby(){
     const c=CHAR(); c.level=40;
     const hi=profItems().find(i=>i.tier==='god'); profEquipItem(hi.iid);
     saveMeta(); _gearPick=null; _gearSel=null; _gearPage='armor';
-    openTown(); openTownPanel('gear'); refreshTownPanel();
+    openHome(); openTownPanel('gear'); refreshTownPanel();
     const body=$('tpBody');
     // ① 두 곳 다 같은 헬퍼가 그린다 — 단계 속성과 프레임 층이 빠지면 안 된다
     const on=body.querySelector('.pdSlot.on');
@@ -3531,7 +3590,7 @@ async function groupLobby(){
     const ks=Object.keys(PROF_GEAR), ts=PROF_ITEM_TIERS.map(t=>t.id);
     for(let i=0;i<14;i++) profAddItem(profMakeItem(ks[i%ks.length], 1+(i%5), ts[i%ts.length]));
     saveMeta(); _gearPick=null; _gearSel=null; _gearPage=PROF_GEAR_PAGES[0].id;
-    openTown(); openTownPanel('gear'); CHAR().level=40; refreshTownPanel();
+    openHome(); openTownPanel('gear'); CHAR().level=40; refreshTownPanel();
     const body=$('tpBody'), OK=['3px','6px','9px'];
     const scan=()=>{ const bad=[], cyan=[];
       for(const e of body.querySelectorAll('*')){ const c=getComputedStyle(e);

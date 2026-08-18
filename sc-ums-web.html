@@ -2441,6 +2441,7 @@
   .pdSlot.lock{opacity:.62}
   .pdSlot.pick{border-color:#8e9dae;color:#e4ebf3;background:linear-gradient(180deg,rgba(58,71,92,.96),rgba(26,33,46,.96))}   /* 가방 필터 중 = 중립 강조(시안 아님) */
   .pdSlot:active{transform:translate(-50%,-50%) translateY(1px)}
+  /* 장비 세트 — 진행도를 맨 위에. 색은 세트마다 --sc 하나로만 바뀐다 */
   .gearSum{flex:0 0 auto;text-align:center;font-size:12px;color:var(--txt-mute);padding:4px 0}
   .gearSum b{color:#eaf1fb;font-family:var(--font-num);font-size:13px;font-variant-numeric:tabular-nums}
   /* 아래 구역: 가방 */
@@ -2728,6 +2729,21 @@
   .hbMoreBox{pointer-events:auto}
   .hbMoreWrap.hide{display:none}   /* ⚠ 전역 .hide 규칙이 없는 파일이다 — 컴포넌트마다 직접 선언해야 숨는다 */
   /* 칸 크기는 ☰(.hudSet 24px)와 같다 — 한 값에서 가져와 둘이 어긋나지 않게 한다 */
+  /* 전투력 칩 — 이 화면에서 띄우는 유일한 숫자 */
+  .csHead{display:flex;flex-direction:column;align-items:center;gap:1px;padding:9px 0 11px;margin-bottom:8px;
+    background:radial-gradient(120% 100% at 50% 0%, rgba(255,59,59,.10), rgba(0,0,0,0) 70%);
+    border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+  .csHl{font-size:9.5px;font-weight:700;letter-spacing:2px;color:var(--txt-dim)}
+  .csHv{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:28px;font-weight:900;
+    line-height:1.05;color:var(--gold);letter-spacing:.5px}
+  /* 수치 목록 = 하이라인 2열. 줄마다 상자를 두지 않는다 — 일곱 줄이 다 상자면 무엇이 중요한지 안 보인다.
+     띄우는 것은 전투력 하나뿐(.csHead)이고, 나머지는 밑선으로만 나눈다. */
+  .csGrid{display:grid;grid-template-columns:1fr 1fr;column-gap:16px;padding:2px 0 4px}
+  .csR{display:flex;justify-content:space-between;align-items:baseline;gap:8px;
+    padding:6px 0;border-bottom:1px solid var(--metal-edge);font-size:10.5px;color:var(--txt-dim)}
+  .csR b{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:800;color:var(--txt)}
+  /* 각 열의 마지막 줄만 밑선을 뺀다 — 홀수·짝수 어느 개수여도 끝의 두 개가 각 열의 끝이다 */
+  .csR:nth-last-child(-n+2){border-bottom:0}
   .hbMoreWrap{--mi:24px}
   .hbMoreBox{position:absolute;right:8px;padding:6px;
     background:rgba(12,13,16,.96);border:1px solid var(--metal-edge);border-radius:var(--r-bar);
@@ -3146,7 +3162,7 @@
   #shopScreen .twToast,#gearScreen .twToast{position:absolute;left:50%;bottom:calc(var(--navH) + 16px);transform:translateX(-50%)}
   /* 🧰 정비 — 유즈맵 목록 상자(.msPanel)와 같은 규격. 여백·배경 규칙은 #mapSelect와 공유한다 */
   #gearScreen{padding:12px 13px calc(var(--navH) + 12px)}
-  #phone.curOn #gearScreen{padding-top:calc(var(--curH) + var(--topPad) + 12px)}
+  #phone.curOn #gearScreen{padding-top:calc(var(--curH) + var(--topPad) + 4px)}   /* 제목이 재화 바로 갔다 — 그만큼 위 여백을 줄여 카드를 키운다 */
   #gearScreen .shopTitle{flex:none}
   #gearScreen .shopTitle .ic{width:15px;height:15px;vertical-align:-2px;margin-right:5px}   /* 제목 아이콘 = 네비 '정비'와 같은 bag SVG(이모지 금지) */
   .gearBody{flex:1 1 auto;min-height:0;padding:8px;overflow-y:auto;overflow-x:hidden}
@@ -3160,7 +3176,7 @@
   /* 캐릭터 본문 — 빌려 온 팝업 본문(.hbRows)이 여기서는 패널 안 스크롤 영역이 된다 */
   .chrBody{flex:1 1 auto;min-height:0;padding:8px;overflow-y:auto;overflow-x:hidden}
   .chrBody>.hbRows{padding:0;overflow:visible;min-height:0}
-  #phone.curOn #upgScreen{padding-top:calc(var(--curH) + var(--topPad) + 12px)}
+  #phone.curOn #upgScreen{padding-top:calc(var(--curH) + var(--topPad) + 4px)}   /* 제목이 재화 바로 갔다 — 그만큼 위 여백을 줄여 카드를 키운다 */
   .shopTitle{text-align:center;font-size:15px;font-weight:700;letter-spacing:.6px;color:#ececec;padding:6px 0 12px}
   /* 구역 패널 = HOME .hmCard */
   .shopPanel{flex:none;background:var(--panelBig);border:1px solid var(--panelBigEdge);border-radius:var(--r-bar);overflow:hidden;margin:0 2px 12px}   /* flex:none — 부모가 flex 컬럼이라 없으면 내용이 눌려 잘린다(HOME .hmCard와 같은 이유) */
@@ -3284,18 +3300,38 @@
     /* 화면 좌우를 꽉 채우는 띠 — #mapSelect 의 좌우 여백(13px)을 음수 마진으로 되돌린다.
        목록 카드와 '다른 섹션'으로 읽혀야 하므로 폭·면·테두리를 전부 다르게 간다. */
     margin:17px -13px 0;border-radius:0;
-    /* 면·모서리·윗선 = 사냥터 하단 패널(.hmUpg)과 같은 처리 — 뒤가 살짝 비치는 반투명 회색 +
-       위쪽 두 모서리 10px 컷. 각진 SF 규칙(큰 판은 라운드 대신 모서리 컷). */
-    background:linear-gradient(180deg,rgba(25,25,25,.9),rgba(14,14,14,.92));
-    clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 10px,100% 100%,0 100%,0 10px);
+    /* 3안 '터미널'(2026-08-14 확정) — 면을 완전 검정으로 떨어뜨리고 윗변만 금속선 하나.
+       목록 카드(회색 판)와 가장 멀어져 '읽는 로그'로 읽힌다. 모서리 컷은 쓰지 않는다(면이 검정이라 컷이 안 읽힌다). */
+    background:linear-gradient(180deg,#0a0a0a,#000);
+    border-top:1px solid var(--metal-edge);
     padding-bottom:6px}   /* 안쪽 목록이 띠 끝선에 딱 붙어 잘리지 않게 — 스크롤러가 아니라 도크에 준다 */
-  /* ⚠ 테두리는 챔퍼에 잘려 안 보인다 — .hmUpg 와 똑같이 윗변에 1px 선을 따로 얹어 '판'으로 세운다.
-     선은 컷 길이(10px)만큼 안쪽에서 시작해야 잘린 모서리와 어긋나지 않는다. */
-  #msSocialDock::before{content:'';position:absolute;left:10px;right:10px;top:0;height:1px;z-index:4;pointer-events:none;
-    background:linear-gradient(90deg,transparent,rgba(255,255,255,.18) 22%,rgba(255,255,255,.18) 78%,transparent)}
   #msSocialDock .msSocial{flex:1;min-height:0;margin-top:0;border:0;border-radius:0;background:none;box-shadow:none}
   #msSocialDock .msSocial::before{display:none}
   #msSocialDock .msTabs2{display:none}
+  /* ── 3안 '터미널' 본문 — 채팅·친구·파티가 같은 결을 쓴다 ───────────────
+     공통 규칙: 면은 도크의 검정 하나뿐(안쪽 카드에 또 판을 깔지 않는다) · 구분은 1px 헤어라인 ·
+     액센트는 채팅 청록 하나. ⚠ .foRow/.ptSlot 은 마을 시트와 공용이라 여기서만 덮는다. */
+  /* 채팅 — 줄 앞에 › 프리픽스, 이름은 한 단 죽여 본문이 먼저 읽히게 */
+  #msSocialDock .msChat .mcLine{color:#b8c2cc}
+  #msSocialDock .msChat .mcLine::before{content:'›  ';color:#4d5560;font-weight:800}
+  #msSocialDock .msChat .mcWho{color:#7f8b98}
+  #msSocialDock .msChatBar{border-top:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.02)}
+  /* 친구 — 카드 판을 걷고 헤어라인 목록으로 */
+  #msSocialDock .foList{gap:0}
+  #msSocialDock .foRow{background:none;border:0;border-bottom:1px solid rgba(255,255,255,.055);border-radius:0;padding:7px 2px}
+  #msSocialDock .foRow:last-child{border-bottom:0}
+  #msSocialDock .foSecLbl{color:#6f7a86;margin:8px 2px 3px}
+  #msSocialDock .foSecLbl::before{content:'›  ';color:#4d5560}
+  #msSocialDock .foAdd input{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.10);border-radius:var(--r-bar)}
+  /* 파티 — 채워진 칸만 얇은 테두리, 빈 칸은 점선 대신 헤어라인 */
+  #msSocialDock .ptHead{border-bottom:1px solid rgba(255,255,255,.09);padding-bottom:5px}
+  #msSocialDock .ptTitle{color:#9aa4b0}
+  #msSocialDock .ptGrid{gap:1px}
+  #msSocialDock .ptSlot{border-radius:0}
+  #msSocialDock .ptSlot.fill{background:none;border:0;border-bottom:1px solid rgba(255,255,255,.055)}
+  #msSocialDock .ptSlot.fill.leader{background:none;border-bottom-color:rgba(0,229,255,.30)}
+  #msSocialDock .ptSlot.empty{background:none;border:0;border-bottom:1px solid rgba(255,255,255,.045);color:#5c646e}
+  #msSocialDock .ptSlot.empty:hover{background:rgba(255,255,255,.03)}
   .twSheetHead{flex:none;display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px;
     font-size:var(--fs-xl);font-weight:800;color:#eaf1fb}
   .twSheetX{width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;
@@ -4734,12 +4770,10 @@
        탭 띠 = 유즈맵 목록 상자와 같은 .msPanel/.msSortTabs 규격(복제 금지, 클래스만 재사용). -->
   <!-- ⬆ 강화 — 자리만 잡아 뇐다(내용 미정). 화면 구조는 다른 화면과 같은 .appScreen 규격 -->
   <div id="upgScreen" class="appScreen hide">
-    <div class="shopTitle"><span data-ico="user"></span><b>캐릭터</b></div>
     <!-- 본문은 비어 있다 — 정보·성장은 팝업 본문을 빌려 오고, 스킬만 여기서 그린다(setChrSec) -->
     <div class="msPanel"><div class="chrBody uiScroll" id="chrBody"></div></div>
   </div>
   <div id="gearScreen" class="appScreen hide">
-    <div class="shopTitle"><span data-ico="bag"></span><b>정비</b></div>
     <div class="msPanel">
       <div class="gearBody uiScroll" id="gearBody"></div>
     </div>
@@ -7016,7 +7050,9 @@ function hmToast(msg){ if(typeof showTownToast==='function') showTownToast(msg);
 //   하위가 없는 구역(강화·상점)은 내려가지 않는다 — [‹][상점] 2칸은 빈 껍데기라서.
 const NAV_TREE=[
   // 사냥터 = 기본 화면이자 최상위 그 자체 — 눌러도 내려가지 않는다(하위는 화면 상단 버튼줄이 맡는다)
-  { k:'home', label:'사냥터', ico:'home', go:()=>openHome(), subs:[] },
+  // 사냥터 = 기본 화면이자 '‹ 뒤로'가 돌아가는 곳. 칸은 두지 않는다(noCell) — 다른 구역이 내려갈 때
+  //   자기 이름 칸을 빼는 것과 같은 규칙이다. ⚠ 항목 자체는 남겨야 navShow('home')·navBack() 이 찾는다.
+  { k:'home', label:'사냥터', ico:'home', noCell:true, go:()=>openHome(), subs:[] },
   // 캐릭터 — '나 자신'에 관한 것. 내용은 아직 비어 있다(옛 '강화' 자리).
   { k:'upg',  label:'캐릭터', ico:'user', go:()=>openUpgScreen(), cur:()=>_chrSec, reset:()=>setChrSec('stat'), subs:[
       { k:'stat',  label:'스탯', ico:'user',  act:()=>setChrSec('stat') },
@@ -7053,7 +7089,8 @@ function navPaint(){ const b=document.getElementById('navBar'); if(!b) return;
     const cur=sec.cur?sec.cur():null;
     for(const t of sec.subs) h+=_navCell('sub', t.k, t.label, t.ico, (cur===t.k?'cur':''), "navSub('"+t.k+"')");
   } else {
-    for(const x of NAV_TREE) h+=_navCell('nav', x.k, x.label, x.ico, (x.k===_navSec?'on':''), "navGo('"+x.k+"')");
+    for(const x of NAV_TREE){ if(x.noCell) continue;   // 사냥터는 칸이 없다 — 거기 있을 땐 아무 칸도 켜지지 않는다
+      h+=_navCell('nav', x.k, x.label, x.ico, (x.k===_navSec?'on':''), "navGo('"+x.k+"')"); }
   }
   b.innerHTML=h;
   b.classList.toggle('drill', !!_navDrill);
@@ -9096,7 +9133,7 @@ function openShop(){ if(typeof loadMeta==='function') loadMeta();
   if(typeof paintIcons==='function') paintIcons(document.getElementById('shopScreen')); }
 function renderShop(){ const body=document.getElementById('shopBody'); if(!body) return;
   const old=body.querySelector('.bagBody'), keep=old?old.scrollTop:0;
-  body.innerHTML='<div class="shopTitle"><span>🎁</span><b>상점</b></div>'+(SHOP_SECS[_shopSec]||SHOP_SECS.deal)();
+  body.innerHTML=(SHOP_SECS[_shopSec]||SHOP_SECS.deal)();
   const nb=body.querySelector('.bagBody'); if(nb&&keep) nb.scrollTop=keep; }
 // ── 🧰 정비(전용 화면) — 장비·펫·동료 ────────────────────────────────────
 // ⛔ 내용을 새로 만들지 않는다. 장비 = renderProfGear() (마을 장비창과 같은 함수),
@@ -9142,12 +9179,14 @@ function csFmt(k, v){ const A=CS_AXES[k];
   if(A.unit==='%') return Math.round(v)+'%';
   return String(Math.round(v)); }
 function renderChrStat(){ const c=CHAR(); if(!c) return '<div class="hbRoundNote">캐릭터가 없습니다.</div>';
-  let h='<div class="hbRoundNote" style="padding:0 0 8px">'+escHtml(c.name)+' · Lv.'+c.level
-    +' · 파워 <b>'+profPower()+'</b>'+(c.reb?(' · 환생 '+c.reb+'회'):'')+'</div>';
-  // ① 전투 수치 — 자세한 출처 분해는 사냥터 좌상단 프로필 팝업이 맡는다
+  // ① 전투력 헤더 — 한 숫자로 '얼마나 셌는지'. 파워 표기는 여기로 합쳤다(이름 줄에서 뺀다).
+  let h='<div class="csHead"><span class="csHl">전투력</span><b class="csHv">'+profPower().toLocaleString('en-US')+'</b></div>';
+  h+='<div class="hbRoundNote" style="padding:0 0 8px">'+escHtml(c.name)+' · Lv.'+c.level
+    +(c.reb?(' · 환생 '+c.reb+'회'):'')+'</div>';
+  // ② 전투 수치 = 하이라인 2열. 자세한 출처 분해는 사냥터 좌상단 프로필 팝업이 맡는다
   h+='<div class="hbGrowLbl">전투 수치 <span class="hbTblSub">좌상단 프로필에서 출처를 볼 수 있습니다</span></div>';
-  h+='<div class="lpNums">'+CS_ORDER.map(k=>
-      '<div class="lpNum"><span>'+CS_AXES[k].name+'</span><b>'+csFmt(k, csVal(k))+'</b></div>').join('')+'</div>';
+  h+='<div class="csGrid">'+CS_ORDER.map(function(k){
+      return '<div class="csR"><span>'+CS_AXES[k].name+'</span><b>'+csFmt(k, csVal(k))+'</b></div>'; }).join('')+'</div>';
   // ② 레벨 포인트 — 이 화면의 조작
   h+=_ptListHTML('lp', c);
   return h; }
@@ -14739,6 +14778,9 @@ function fxPop(card){ if(!card) return; card.classList.remove('fxPop'); void car
 // ── 앱 화면 전환 ──
 const APP_SCREENS=['opening','auth','mapSelect','modeSheet','homeScreen','townScreen','dgScreen','shopScreen','gearScreen','upgScreen'];   // ⚠ 여기 없는 화면은 showAppScreen 이 영영 안 켠다
 // 💠 공용 재화 바를 띄우는 화면(RPG/허브 + 유즈맵 선택). 로그인·타이틀·캐릭터생성·인게임은 제외.
+// 화면 제목은 재화 바 왼쪽에 붙는다(유즈맵과 같은 방식) — 화면 안에 가운데 제목을 또 두지 않는다.
+// 여기 한 곳에서만 정한다. 화면마다 curSetTitle을 부르면 새 화면에서 빠뜨린다.
+const SCREEN_TITLE={ upgScreen:'캐릭터', gearScreen:'정비', shopScreen:'상점' };
 const CUR_SCREENS=['homeScreen','townScreen','mapSelect','modeSheet','dgScreen','shopScreen','gearScreen','upgScreen'];   // 이 화면들은 공용 재화 바를 쓴다
 // 그중 바를 '판'이 아니라 배경 위 숫자로 두는 화면(.curBar.bare) — 배경이 상단까지 이어져 보여야 하는 곳
 const BARE_CUR_SCREENS=['homeScreen','townScreen','mapSelect','shopScreen','gearScreen','upgScreen'];   // 재화 바를 '판'이 아니라 배경 위 숫자로 — 상단 줄이 겹쳐 답답해진다(구분선 없이 배경이 이어진다)
@@ -14773,7 +14815,7 @@ function showAppScreen(id){ setInGame(false);
   if(id!=='mapSelect' && id!=='modeSheet' && typeof stopMapLive==='function') stopMapLive();   // 유즈맵 화면 떠나면 실시간 갱신 정지
   ['ov','lobby','rooms','createPanel','pwPanel'].forEach(x=>{const e=document.getElementById(x); if(e)e.classList.add('hide');});
   APP_SCREENS.forEach(s=>{ const e=document.getElementById(s); if(e) e.classList.toggle('hide', s!==id); });
-  const _cur=CUR_SCREENS.indexOf(id)>=0; curShow(_cur); curSetTitle(''); if(_cur) updateCurBar();   // 💠 공용 재화 바
+  const _cur=CUR_SCREENS.indexOf(id)>=0; curShow(_cur); curSetTitle(SCREEN_TITLE[id]||''); if(_cur) updateCurBar();   // 💠 공용 재화 바
   { const cb=document.getElementById('curBar');                                    // HOME만 배경 위 숫자(.bare) — 다른 화면은 판 그대로
     if(cb) cb.classList.toggle('bare', BARE_CUR_SCREENS.indexOf(id)>=0); }
   const tgt=document.getElementById(id); if(tgt && id!=='opening') playScreenFx(tgt); }   // 전환 FX(부팅 로딩 제외)
