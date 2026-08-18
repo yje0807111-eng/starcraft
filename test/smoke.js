@@ -2459,10 +2459,14 @@ async function groupLobby(){
         const cols=[...((pa.backgroundImage||'').matchAll(/rgba?\((\d+),\s*(\d+),\s*(\d+)/g))];
         assert(cols.some(c=>+c[1]>=180 && +c[2]<=110 && +c[3]<=110),
           pe+' 헤어라인이 붉은색이 아님: '+(pa.backgroundImage||'').slice(0,80)); }
-      // 소셜 카드 테두리 = 금속 링(그라데) — border 를 색으로 칠하면 링이 안 나온다
-      { const so=getComputedStyle(dock.querySelector('.msSocial'));
+      // 소셜 카드 = 테두리만 금속 링(::before 마스크). ⚠ 면은 원래 어두운 반투명 그대로여야 한다
+      { const soEl=dock.querySelector('.msSocial'), so=getComputedStyle(soEl), rb=getComputedStyle(soEl,'::before');
         assert(/transparent|rgba\(0, 0, 0, 0\)/.test(so.borderTopColor),'소셜 테두리가 단색이라 금속 링이 안 나옴: '+so.borderTopColor);
-        assert((so.backgroundImage.match(/gradient/g)||[]).length>=2,'금속 링(2겹 배경)이 아님'); }
+        assert(rb.content!=='none' && /gradient/.test(rb.backgroundImage),'금속 링(::before)이 없음');
+        assert(/xor|exclude/.test((rb.webkitMaskComposite||'')+(rb.maskComposite||'')),'링이 마스크로 잘리지 않음 — 면까지 덮는다');
+        // 면이 회색으로 물들면 잡는다 — 첫 색이 어두워야 한다(회색 링이 면 뒤로 깔린 적이 있다)
+        const c=((so.backgroundImage||'').match(/rgba?\(([^)]+)\)/)||[,'0,0,0'])[1].split(',').map(parseFloat);
+        assert(c[0]*0.3+c[1]*0.59+c[2]*0.11<=20,'소셜 카드 면이 회색으로 물듦: '+(so.backgroundImage||'').slice(0,60)); }
       // 목록은 카드 안쪽에서 끝난다 — 아래 여백이 padding 이면 카드가 판 끝선에 붙어 잘린다
       { const ls=getComputedStyle($('msList'));
         assert(parseFloat(ls.marginBottom)>=6,'목록 아래 여백이 margin 이 아님(카드가 판 끝에 붙어 잘린다)');

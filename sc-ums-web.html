@@ -3070,11 +3070,15 @@
      탭 띠는 하단 네비가 맡으므로 감춘다. 두 카드의 좌우 변은 같고, 사이는 .msSocial 의 margin-top 이 띄운다. */
   #msSocialDock{flex:0 0 30%;min-height:150px;display:flex;flex-direction:column;overflow:hidden}
   /* 목록 카드와의 간격은 .msSocial 자신의 margin-top 이 맡는다.
-     테두리 = 금속 링(탭 띠 .pdSeg·하단 네비와 같은 --metal-ring · 회색 그대로).
-     ⚠ 그라데 테두리는 padding-box/border-box 2겹 배경이라야 나온다 — border 는 transparent 로 비워 둔다. */
-  #msSocialDock .msSocial{flex:1;min-height:0;border:1px solid transparent;
-    background:linear-gradient(180deg,rgba(6,7,11,.42),rgba(4,5,8,.5)) padding-box,
-      var(--metal-ring) border-box}
+     테두리 = 금속 링(탭 띠 .pdSeg·하단 네비와 같은 --metal-ring · 회색 그대로). **면은 건드리지 않는다.**
+     ⚠ padding-box/border-box 2겹 배경으로 그리면 안 된다 — border-box 층은 면 **뒤에 깔리므로**
+       이 카드처럼 면이 반투명하면 회색 그라데가 그대로 비쳐 배경 전체가 회색이 된다(실제로 그랬다).
+       면이 불투명한 .pdSeg 에서는 안 보이던 문제다. 그래서 마스크로 **테두리 1px 만** 그린다(.cpCard::before 와 같은 수법). */
+  #msSocialDock .msSocial{flex:1;min-height:0;position:relative;border-color:transparent}
+  #msSocialDock .msSocial::before{content:'';position:absolute;inset:0;padding:1px;pointer-events:none;
+    border-radius:inherit;background:var(--metal-ring);
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;mask-composite:exclude}
   #msSocialDock .msTabs2{display:none}
   .twSheetHead{flex:none;display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px;
     font-size:var(--fs-xl);font-weight:800;color:#eaf1fb}
