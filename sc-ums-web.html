@@ -394,7 +394,7 @@
   /* 고정 4열 · 왼쪽부터 채움 · stretch = 카드가 칸 높이를 채운다(아래가 비지 않게).
      ⚠ 카드 폭은 항상 (뷰 - 3*--hsGap)/4 여야 '한 화면에 딱 4장'이 지켜진다.
      카드를 좁히고 싶으면 폭이 아니라 --hsGap 을 키울 것 — 폭만 줄이면 5번째가 삐져나와 잘려 보인다. */
-  .hsGrid{--hsGap:18px;display:flex;flex-wrap:nowrap;justify-content:flex-start;gap:var(--hsGap);align-items:stretch;overflow-x:auto;overflow-y:hidden;padding-bottom:1px;flex:1;min-height:0}
+  .hsGrid{--hsGap:6px;display:flex;flex-wrap:nowrap;justify-content:flex-start;gap:var(--hsGap);align-items:stretch;overflow-x:auto;overflow-y:hidden;padding-bottom:1px;flex:1;min-height:0}
   .hsGrid::-webkit-scrollbar{height:4px}.hsGrid::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
   /* 유닛 셀 = 통일된 SC 카드(메탈+네온 엣지+사선 모서리+스캔라인) */
   .hsCell{position:relative;flex:0 0 calc((100% - 3*var(--hsGap))/4);min-width:0;padding:0;cursor:pointer;overflow:hidden;transition:all .12s;display:flex;flex-direction:column;
@@ -404,17 +404,20 @@
   .hsCell::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent);pointer-events:none;z-index:4}
   .hsCell:hover{border-color:var(--gold);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 0 10px -3px rgba(255,210,74,.6)}
   .hsCell:active{transform:translateY(1px)}
-  .hsThumb{position:relative;width:100%;flex:1;min-height:42px;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:3px;
+  /* 초상 — 카드 폭은 꽉 채우고 여백은 여기 안쪽 패딩으로 만든다(그림이 칸 벽에 붙지 않게) */
+  .hsThumb{position:relative;width:100%;flex:1;min-height:34px;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:3px 9px;
     background:var(--bpTile)}
-  .hsThumb img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))}.hsThumb svg{width:32px;height:32px}
-  .hsCnt{position:absolute;top:3px;left:4px;z-index:5;font-family:var(--font-num);font-size:var(--fs-sm);font-weight:800;color:#fff;
-    padding:0 4px;border-radius:var(--r-bar);background:rgba(6,8,12,.78);border:1px solid rgba(255,255,255,.18);line-height:1.45;text-shadow:0 1px 2px #000}
-  .hsMeta{flex:none;display:flex;align-items:baseline;gap:3px;padding:2px 5px 3px;background:rgba(6,8,12,.66);border-top:1px solid rgba(255,255,255,.07)}   /* 이름(좌) · 회수가(우) 한 줄 */
-  .hsName{flex:1 1 auto;min-width:0;font-size:9px;font-weight:700;color:#dbe3ee;text-align:left;line-height:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  /* 지정/조합 카드는 .hsMeta 없이 이름이 칸의 직계 자식이다 — 여기서 flex:1 을 물려받으면
-     남는 높이를 이름 상자가 통째로 먹어 카드 아래가 새까맣게 빈다(실제로 그랬다). */
-  .hsCell>.hsName{flex:none;padding:2px 5px 3px;text-align:center}
-  .hsVal{flex:0 0 auto;font-family:var(--font-num);font-size:11px;font-weight:800;color:var(--gold);line-height:12px;letter-spacing:.2px;text-shadow:0 1px 2px #000}
+  .hsThumb img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))}.hsThumb svg{width:28px;height:28px}
+  /* 초상 아래 글자 묶음 — 이름 + 줄들(수량 · 가격 · 등급 화살표). 세 화면이 같은 마크업(_hsCardHTML)을 쓴다 */
+  .hsInfo{flex:none;display:flex;flex-direction:column;align-items:center;gap:0;padding:2px 3px 3px;
+    background:rgba(6,8,12,.66);border-top:1px solid rgba(255,255,255,.07)}
+  .hsName{max-width:100%;font-size:10.5px;font-weight:700;color:#e8eef6;text-align:center;line-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hsQty{font-family:var(--font-num);font-size:10px;font-weight:800;color:#aeb6c2;line-height:13px}
+  .hsVal{display:flex;align-items:center;gap:2px;font-family:var(--font-num);font-size:10px;font-weight:800;color:var(--gold);line-height:13px;text-shadow:0 1px 2px #000}
+  .hsVal .riSm{width:9px;height:9px;object-fit:contain;display:block}
+  /* 조합 결과 — "일반 › 에픽". 색은 등급색 두 개뿐이고 화살표는 중립이다 */
+  .hsUp{display:flex;align-items:center;gap:2px;max-width:100%;font-size:9px;font-weight:800;line-height:13px;white-space:nowrap;overflow:hidden}
+  .hsUp i{font-style:normal;color:var(--cf)} .hsUp em{font-style:normal;color:#6b7480;font-weight:700}
   .hsEmpty{font-size:var(--fs-xs);color:#7d8590;padding:8px 2px}
   
   
@@ -9640,14 +9643,27 @@ function renderCombinePanel(){ const tiersBox=document.getElementById('hsTiers')
   let cells='';
   for(const gid of gids){ const list=groups[gid]; if(list[0].gtier!==_combTier) continue; const gu=GACHA_UNITS[gid]; if(!gu) continue;
     const res=combineResultFor(gid, list[0].gtier);
-    const pk=GACHA_MODEL[gid]||GACHA_PROXY[gid], img=PORTRAIT_IMG[pk];
-    const thumb=img?('<img src="'+img+'" draggable="false">'):(typeof unitSVG==='function'?unitSVG(GACHA_PROXY[gid]||'marine'):'');
-    const rtName=res.type==='transcend'?'초월':GACHA_TIERS[res.nextTier].name;   // 툴팁용(결과 등급)
-    cells+='<button class="hsCell" onclick="combineOneOfType(\''+gid+'\')" title="'+escHtml(gu.displayName)+' ×3 → '+rtName+'"><div class="hsThumb">'+thumb+'</div>'
-      +'<span class="hsCnt">×'+list.length+'</span><span class="hsName">'+escHtml(gu.displayName)+'</span></button>';   // →다음등급 텍스트 제거(툴팁엔 유지)
+    const to=(res.type==='transcend')?'transcend':res.nextTier;   // 초월도 등급표에 있으므로 키 그대로 넘긴다
+    const rtName=GACHA_TIERS[to]?GACHA_TIERS[to].name:to;
+    cells+=_hsCardHTML(gid, gu.displayName, "combineOneOfType('"+gid+"')",
+      gu.displayName+' ×3 → '+rtName, [_hsQty(list.length), _hsUpRow(list[0].gtier, to)]);
   }
   grid.innerHTML=cells;
 }
+// ── 🃏 유닛 카드 한 장 — 지정·판매·조합이 **같은 마크업**을 쓴다(칸을 세 번 만들지 말 것) ──
+// 초상 아래로 [이름] + rows 가 쌓인다: 지정=[수량] · 판매=[수량][가격] · 조합=[수량][등급 화살표]
+function _hsThumbHTML(gid){ const pk=GACHA_MODEL[gid]||GACHA_PROXY[gid], img=PORTRAIT_IMG[pk];
+  return '<div class="hsThumb">'+(img?('<img src="'+img+'" draggable="false">')
+    :(typeof unitSVG==='function'?unitSVG(GACHA_PROXY[gid]||'marine'):''))+'</div>'; }
+function _hsCardHTML(gid, name, act, title, rows){
+  return '<button class="hsCell" onclick="'+act+'" title="'+escHtml(title)+'">'+_hsThumbHTML(gid)
+    +'<div class="hsInfo"><span class="hsName">'+escHtml(name)+'</span>'+(rows||[]).join('')+'</div></button>'; }
+function _hsQty(n){ return '<span class="hsQty">×'+n+'</span>'; }
+function _hsPrice(v){ return '<span class="hsVal">'+resIco('mineral','riSm')+'+'+v+'</span>'; }
+// 조합 결과 = "현재등급 → 다음등급". 등급색은 공용 TIER_COLOR 를 인라인 변수로만 받는다.
+function _hsUpRow(from, to){
+  return '<span class="hsUp" style="--cf:'+(TIER_COLOR[from]||'#fff')+'"><i>'+GACHA_TIERS[from].name+'</i>'
+    +'<em>›</em><b style="color:'+(TIER_COLOR[to]||'#fff')+'">'+(GACHA_TIERS[to]?GACHA_TIERS[to].name:to)+'</b></span>'; }
 function selectByGid(gid){ if(G.bossDeployPick){ bossDeployOne(gid); return; }   // 🎯 파견 선택 모드: 카드 탭 = 그 종류 1기만 파견(지정 안 함)
   _selViaTab=true; const ids=G.units.filter(u=>!u.fixed&&!u.atBoss&&u.gid===gid).map(u=>u.uid);
   if(ids.length){ G.sel=capSelTypes(ids,true); G.selEnemy=null; refreshSelCard(); } }   // 프로필 클릭 → 그 종류 전부 지정(30 제한 없음)
@@ -9666,10 +9682,8 @@ function renderSelectPanel(){ const tiersBox=document.getElementById('hsTiers'),
   let cells='';
   const _go=Object.keys(byGid).sort((a,b)=>byGid[b].length-byGid[a].length);   // 마릿수 많은 순(왼쪽부터)
   for(const gid of _go){ const list=byGid[gid], gu=GACHA_UNITS[gid]; if(!gu) continue;
-    const pk=GACHA_MODEL[gid]||GACHA_PROXY[gid], img=PORTRAIT_IMG[pk];
-    const thumb=img?('<img src="'+img+'" draggable="false">'):(typeof unitSVG==='function'?unitSVG(GACHA_PROXY[gid]||'marine'):'');
-    cells+='<button class="hsCell" onclick="selectByGid(\''+gid+'\')" title="'+escHtml(gu.displayName)+' '+list.length+'기 지정"><div class="hsThumb">'+thumb+'</div>'
-      +'<span class="hsCnt">×'+list.length+'</span><span class="hsName">'+escHtml(gu.displayName)+'</span></button>';
+    cells+=_hsCardHTML(gid, gu.displayName, "selectByGid('"+gid+"')",
+      gu.displayName+' '+list.length+'기 지정', [_hsQty(list.length)]);
   }
   grid.innerHTML=cells;
 }
@@ -9688,11 +9702,9 @@ function renderSellPanel(){ const tiersBox=document.getElementById('hsTiers'), g
   let cells='';
   const _go=Object.keys(byGid).sort((a,b)=>byGid[b].length-byGid[a].length);   // 마릿수 많은 순(왼쪽부터)
   for(const gid of _go){ const list=byGid[gid], gu=GACHA_UNITS[gid]; if(!gu) continue;
-    const pk=GACHA_MODEL[gid]||GACHA_PROXY[gid], img=PORTRAIT_IMG[pk];
-    const thumb=img?('<img src="'+img+'" draggable="false">'):(typeof unitSVG==='function'?unitSVG(GACHA_PROXY[gid]||'marine'):'');
     const val=unitSellValue(list[0]);
-    cells+='<button class="hsCell" onclick="sellOneOfType(\''+gid+'\')" title="'+escHtml(gu.displayName)+' 판매 +'+val+'"><div class="hsThumb">'+thumb+'</div>'
-      +'<span class="hsCnt">×'+list.length+'</span><div class="hsMeta"><span class="hsName">'+escHtml(gu.displayName)+'</span><span class="hsVal">+'+val+'</span></div></button>';
+    cells+=_hsCardHTML(gid, gu.displayName, "sellOneOfType('"+gid+"')",
+      gu.displayName+' 판매 +'+val, [_hsQty(list.length), _hsPrice(val)]);
   }
   grid.innerHTML=cells;
 }
