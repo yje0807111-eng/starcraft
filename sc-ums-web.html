@@ -2399,11 +2399,6 @@
   /* 가방은 높이 고정(2줄) — 짐이 아무리 많아도 위 구역을 밀어내지 않는다. 상세 팝업의 기준 상자이기도 하다 */
   .bagSec{position:relative;flex:0 0 auto;display:flex;flex-direction:column;border-top:1px solid rgba(255,255,255,.09);padding-top:8px}
   /* 가방 분류 칩 — 페이퍼돌 섹션과 같은 축(전체 + PROF_GEAR_PAGES). 섹션 바와 헷갈리지 않게 작고 가볍게 */
-  .bagCats{display:flex;gap:4px;min-width:0;overflow:hidden}
-  .bagCat{flex:0 0 auto;padding:4px 8px;border-radius:var(--r-md);cursor:pointer;font-family:inherit;font-size:10.5px;font-weight:800;
-    color:#8b98a8;background:rgba(255,255,255,.035);border:1px solid var(--metal-edge);white-space:nowrap}
-  .bagCat.on{color:#eaf1fb;background:linear-gradient(160deg,rgba(30,36,48,.62),rgba(8,10,14,.72));border-color:#5b6675}   /* 켜짐 = 중립 강조(시안은 고른 아이템에만) */
-  .bagCat:active{transform:translateY(1px)}
   .bagCnt{flex:0 0 auto}
   .bagHead{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
   .bagTtl{font-size:12px;font-weight:800;color:#aeb8c6}
@@ -2518,13 +2513,20 @@
   .igMat i{font-style:normal;opacity:.75}
   .igEmpty.sm{font-size:10px;padding:8px 2px}
   .igGrid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;padding:0 4px 8px 0;justify-items:center}
-  .igCell{position:relative;width:100%;max-width:52px;aspect-ratio:1;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;
-    background:linear-gradient(180deg,rgba(24,31,44,.9),rgba(14,19,28,.9));border:1px solid var(--metal-edge)}
+  /* 가방 칸 — 위 슬롯 카드(.pdSlot)와 같은 성질: 각진 판(라운드 3) + 윗변 광선.
+     등급색은 인라인 color 로 들어온다 → currentColor 로 받아 쓴다(색값을 CSS에 복제하지 말 것). */
+  .igCell{position:relative;width:100%;max-width:52px;aspect-ratio:1;border-radius:var(--r-bar);display:flex;align-items:center;justify-content:center;cursor:pointer;
+    background:linear-gradient(180deg,rgba(36,45,60,.94),rgba(20,26,37,.94));border:1px solid var(--metal-edge);
+    box-shadow:inset 0 1px 0 currentColor, 0 0 8px -5px currentColor}
+  .igCell::before{content:'';position:absolute;left:3px;right:3px;top:0;height:1px;pointer-events:none;z-index:2;
+    background:linear-gradient(90deg,transparent 0%,currentColor 50%,transparent 100%);
+    opacity:.9;filter:drop-shadow(0 0 3px currentColor)}
+  /* 안쪽 1px 하이라이트가 세지 않게 눌러 준다(슬롯 카드와 같은 방식) */
+  .igCell::after{content:'';position:absolute;left:3px;right:3px;top:1px;height:1px;pointer-events:none;background:rgba(0,0,0,.45)}
   .igCell .slIco{width:21px;height:21px}
   .igCell.sel{border-color:var(--acc-sel);box-shadow:0 0 0 1px rgba(92,214,255,.45),0 0 10px -3px rgba(92,214,255,.5)}   /* 선택 = 시안(--acc-sel) */
   .igCell.busy{opacity:.4}
   .igCell:active{transform:translateY(1px)}
-  .igCell .igLv{position:absolute;right:2px;bottom:0;font-family:var(--font-num);font-size:9px;font-weight:800;font-style:normal;font-variant-numeric:tabular-nums;color:#dbe3ec}
   .igCell .igOn{position:absolute;left:3px;top:3px;width:4px;height:4px;border-radius:50%;background:#6ff0a0}
   .igEmpty{padding:16px 4px;font-size:12px;color:var(--txt-mute);text-align:center}
   /* 상세 = 가방을 밀어내지 않고 가방 위로 올라오는 팝업(.bagSec 기준) */
@@ -8827,10 +8829,10 @@ function openUpgScreen(){ if(typeof loadMeta==='function') loadMeta();
 function openGear(){ if(typeof loadMeta==='function') loadMeta();
   profEnsureChar();   // 캐릭터가 없으면 조용히 기본 유닛을 지급한다(선택 화면 없음)
   if(typeof twLeave==='function') twLeave();                                     // 마을에서 들어왔으면 루프·팝업 정리
-  _gearPick=null; _gearSel=null; _gearCat='';
+  _gearPick=null; _gearSel=null;
   showAppScreen('gearScreen'); navShow('gear'); renderGear();
   if(typeof paintIcons==='function') paintIcons(document.getElementById('gearScreen')); }
-function setGearTab(v){ if(_gearTab===v) return; _gearTab=v; _gearPick=null; _gearSel=null; _gearCat='';
+function setGearTab(v){ if(_gearTab===v) return; _gearTab=v; _gearPick=null; _gearSel=null;
   if(typeof playSfx==='function') playSfx('ui_tab');
   if(typeof navPaint==='function') navPaint();   // 탭 띠는 하단 네비로 갔다 — 표시는 거기서 한다
   renderGear(); }
@@ -9050,7 +9052,7 @@ function _mgGrid(k){ const M=MG[k], owned=M.owned(), on=M.on();
       +' onclick="mgCellTap(\''+k+'\',\''+id+'\')"><span class="mgEmo">'+M.ico(id)+'</span>'
       +(on.indexOf(id)>=0?'<i class="igOn"></i>':'')
       +(M.dup(id)?('<i class="igDup">'+M.dup(id)+'</i>'):'')
-      +'<i class="igLv">'+M.lvTx(id).replace('Lv.','')+'</i></div>'; }
+      +'</div>'; }   // 숫자는 칸에 넣지 않는다 — 레벨/★ 은 위 슬롯과 상태창에서 본다
   return h+'</div>'; }
 // ── 패널 — 펫·동료가 같은 함수를 쓴다 ──
 function _mgPanel(k, note){ const M=MG[k], on=M.on(), mx=M.max();
@@ -9084,7 +9086,7 @@ function bagScrollHint(){   // 장비창은 마을 팝업·정비 화면 두 곳
   const s=document.querySelector((typeof gearOpen==='function'&&gearOpen()?'#gearBody':'#tpBody')+' .bagScroll'); if(!s) return;
   const b=s.querySelector('.bagBody'); if(!b) return;
   s.classList.toggle('more', b.scrollHeight-b.scrollTop-b.clientHeight>4); }
-function closeTownPanel(){ popHide('townPanel'); _twZone=null; _gearPick=null; _gearSel=null; _gearCat=''; }
+function closeTownPanel(){ popHide('townPanel'); _twZone=null; _gearPick=null; _gearSel=null; }
 
 function twApplyChar(){ const c=CHAR(), b=document.querySelector('#twAvatar .twAvBody');   // 아바타 겉모습 = 현재 캐릭터 종류
   if(b) b.textContent=(c && PROF_CLASSES[c.cls] && PROF_CLASSES[c.cls].ico) || '🧍'; }
@@ -9274,13 +9276,7 @@ function profGearPageAt(i){ const n=PROF_GEAR_PAGES.length;
   if(typeof playSfx==='function') playSfx('ui_open'); refreshTownPanel(); }
 function profGearPageStep(d){ profGearPageAt(PROF_GEAR_PAGES.findIndex(p=>p.id===_gearPage)+d); }
 // 가방 분류 — 페이퍼돌 섹션과 같은 축(전체 + PROF_GEAR_PAGES)이라 표기가 하나로 유지된다
-const PROF_BAG_CATS=[{id:'',name:'전체'}].concat(PROF_GEAR_PAGES.map(p=>({id:p.id,name:p.name})));
-let _gearCat='';
-function profBagCat(id){ _gearCat=(_gearCat===id?'':id); _gearSel=null; _gearPick=null;
-  if(typeof playSfx==='function') playSfx('ui_open'); refreshTownPanel(); }
-function _profBagCats(){ let h='<div class="bagCats">';
-  for(const t of PROF_BAG_CATS) h+='<button class="bagCat'+(_gearCat===t.id?' on':'')+'" onclick="profBagCat(\''+t.id+'\')">'+t.name+'</button>';
-  return h+'</div>'; }
+function _gearPageName(){ const pg=PROF_GEAR_PAGES.find(x=>x.id===_gearPage); return pg?pg.name:'장비'; }
 // 아이템 1개가 주는 스탯 합(주 스탯 + 옵션) — 비교 표시와 합계에 함께 쓴다
 function _profItemStats(it){ const o={pow:0,vit:0,foc:0,agi:0}; if(!it) return o;
   const g=PROF_GEAR[it.slot]; if(g) o[g.stat]+=it.main;
@@ -9321,7 +9317,7 @@ function _profGearGrid(c, list){
     const holder=profItemHolder(it.iid), mine=(holder===c), busy=holder&&!mine;
     h+='<div class="igCell'+(_gearSel===it.iid?' sel':'')+(busy?' busy':'')+'" style="border-color:'+col+'88;color:'+col+'"'
       +' onclick="profSelItem(\''+it.iid+'\')">'+_slotGlyph(it.slot)
-      +(mine?'<i class="igOn"></i>':'')+'<i class="igLv">'+it.lv+'</i></div>'; }
+      +(mine?'<i class="igOn"></i>':'')+'</div>'; }   // 숫자는 칸에 넣지 않는다(등급은 테두리가 말한다)
   return h+'</div>'; }
 // 고른 아이템 — 이름/스탯/증감/버튼을 한 덩어리로 압축(구역을 밀어내지 않게)
 function _profGearInfo(c, it){ const g=PROF_GEAR[it.slot], col=TIER_COLOR[it.tier]||'#b8c0cc';
@@ -9352,7 +9348,9 @@ function renderProfGear(){ const c=CHAR(); if(!c) return '<div class="twHead">�
   const slot=(_gearPick && PROF_GEAR[_gearPick]) ? _gearPick : null, g=slot? PROF_GEAR[slot] : null;
   const order=PROF_ITEM_TIERS.map(t=>t.id);
   // 칸을 지정했으면 그 칸만, 아니면 분류(전체/방어구/무기·장신구)로 거른다
-  const list=profItems().filter(i=>slot? (i.slot===slot) : (!_gearCat || (PROF_GEAR[i.slot]||{}).part===_gearCat))
+  // 가방은 '위 페이지'를 따라간다 — 장비 페이지면 장비만, 장신구 페이지면 장신구만.
+  // ⚠ 분류 칩(_gearCat)은 없앴다. 같은 축을 두 군데서 고르게 하면 서로 어긋난다.
+  const list=profItems().filter(i=>slot? (i.slot===slot) : ((PROF_GEAR[i.slot]||{}).part===_gearPage))
     .sort((a,b)=>(order.indexOf(b.tier)-order.indexOf(a.tier))||(profItemPower(b)-profItemPower(a)));
   let sum=0, n=0;
   for(const k in c.unit.gear){ const it=profFindItem(c.unit.gear[k]); if(it){ sum+=profItemPower(it); n++; } }
@@ -9363,7 +9361,7 @@ function renderProfGear(){ const c=CHAR(); if(!c) return '<div class="twHead">�
     +'<div class="bagSec"><div class="bagHead">'                // 분류 줄 + 개수를 한 줄에(높이 절약)
       +(g? ('<span class="bagTtl">'+g.name+' <span class="gsSub">'+list.length+'</span></span>'
             +'<button class="twBtn igBack" onclick="profPickBack()">전체</button>')
-         : (_profBagCats()+'<span class="gsSub bagCnt">'+list.length+'/'+PROF_INV_MAX+'</span>'))
+         : ('<span class="bagTtl">'+_gearPageName()+'</span><span class="gsSub bagCnt">'+list.length+'/'+PROF_INV_MAX+'</span>'))
       +'</div>'
     +'<div class="bagScroll"><div class="bagBody" onscroll="bagScrollHint()">'+_profGearGrid(c, list)+'</div></div>'
     +(hasInfo? _profGearInfo(c, sel) : '');   // 가방 구역 안에 겹쳐 뜨는 팝업

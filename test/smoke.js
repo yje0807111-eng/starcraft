@@ -2927,8 +2927,12 @@ async function groupLobby(){
   await step('장비창: 짐이 많아도 카드가 안 늘어나고 가방만 스크롤', ()=>{ skipIf(typeof bagScrollHint!=='function','가방 스크롤 없음');
     const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0;
     profCreateChar('ranger','짐');
-    const ks=Object.keys(PROF_GEAR), ts=PROF_ITEM_TIERS.map(t=>t.id);
+    // ⚠ 가방은 '지금 페이지'의 부위만 보여 준다 — 아무 부위나 채우면 화면에 안 나와 넘치지 않는다
+    _gearPage=PROF_GEAR_PAGES[0].id;
+    const ks=profPageSlots(_gearPage), ts=PROF_ITEM_TIERS.map(t=>t.id);
     for(let i=0;i<26;i++) profAddItem(profMakeItem(ks[i%ks.length], 1+(i%5), ts[i%ts.length]));
+    const ks2=profPageSlots(PROF_GEAR_PAGES[1].id);            // 다른 페이지 표본(가방이 페이지를 따라가는지 볼 것)
+    for(let i=0;i<5;i++) profAddItem(profMakeItem(ks2[i%ks2.length], 1+(i%5), ts[i%ts.length]));
     saveMeta(); _gearPick=null; _gearSel=null;
     openTown(); openTownPanel('gear'); CHAR().level=40; refreshTownPanel();
     const body=$('tpBody'), card=document.querySelector('#townPanel .twCard');
@@ -2956,16 +2960,24 @@ async function groupLobby(){
     assert(cells[0].width<=54,'가방 칸이 너무 큼: '+Math.round(cells[0].width)+'px');
     const rows=Math.floor(bh/(cells[0].height+6));
     assert(rows>=3,'가방이 한 화면에 3줄도 못 보여줌: '+rows+'줄('+Math.round(bh)+'px)');
-    // 분류 칩 — 고른 분류의 장비만 남아야 한다
-    const cats=body.querySelectorAll('.bagHead .bagCat');
-    assert(cats.length===PROF_BAG_CATS.length,'가방 분류 칩 수 불일치: '+cats.length);
-    assert(body.querySelector('.bagCat.on').textContent===PROF_BAG_CATS[0].name,'기본 분류가 전체가 아님');
-    profBagCat('acc');
-    const accItems=profItems().filter(i=>PROF_GEAR[i.slot].part==='acc').length;
-    assert($('tpBody').querySelectorAll('.igCell').length===accItems,'분류를 골라도 다른 분류가 같이 나옴');
-    assert(accItems>0 && accItems<profItems().length,'분류 검사용 표본이 치우침');
-    profBagCat('');
-    assert($('tpBody').querySelectorAll('.igCell').length===profItems().length,'전체로 안 돌아옴');
+    // 가방은 위 페이지 네비(장비/장신구)를 따라간다 — 따로 거르는 분류 칩은 없다
+    assert(!body.querySelector('.bagCat'),'가방에 분류 칩이 남아 있음');
+    const nItem=pg=>profItems().filter(i=>(PROF_GEAR[i.slot]||{}).part===pg).length;
+    const nArm=nItem(PROF_GEAR_PAGES[0].id), nAcc=nItem(PROF_GEAR_PAGES[1].id);
+    assert(nArm>0 && nAcc>0 && nArm!==nAcc,'페이지 검사용 표본이 치우침: 장비 '+nArm+' / 장신구 '+nAcc);
+    assert(body.querySelector('.bagHead .bagTtl').textContent===PROF_GEAR_PAGES[0].name,'가방 머리가 지금 페이지 이름이 아님');
+    assert(body.querySelectorAll('.igCell').length===nArm,'가방이 장비 페이지 것만 보여 주지 않음');
+    profGearPageAt(1);
+    assert($('tpBody').querySelector('.bagHead .bagTtl').textContent===PROF_GEAR_PAGES[1].name,'페이지를 넘겨도 가방 머리가 안 바뀜');
+    assert($('tpBody').querySelectorAll('.igCell').length===nAcc,'페이지를 넘겨도 가방이 안 따라감');
+    profGearPageAt(0);
+    assert($('tpBody').querySelectorAll('.igCell').length===nArm,'페이지를 되돌려도 가방이 안 따라감');
+    // 칸 안 숫자(강화 수치)는 지웠다 · 테두리는 착용 칸과 같은 처리
+    const cell0=$('tpBody').querySelector('.igCell');
+    assert(!cell0.querySelector('.igLv'),'가방 칸에 숫자가 남아 있음');
+    const cs0=getComputedStyle(cell0), bf=getComputedStyle(cell0,'::before');
+    assert(parseFloat(cs0.borderTopLeftRadius)<=3,'가방 칸이 착용 칸보다 둥금: '+cs0.borderTopLeftRadius);
+    assert(bf.backgroundImage.indexOf('gradient')>=0,'가방 칸에 착용 칸과 같은 빛 테두리가 없음');
     // ⑤ 스크롤한 채로 아이템을 골라 다시 그려도 보던 위치를 유지한다(위 분류 조작으로 노드가 갈렸으니 다시 잡는다)
     const bagNow=$('tpBody').querySelector('.bagBody');
     bagNow.scrollTop=90; bagScrollHint();
@@ -2990,7 +3002,7 @@ async function groupLobby(){
     profCreateChar('ranger','룰');
     const ks=Object.keys(PROF_GEAR), ts=PROF_ITEM_TIERS.map(t=>t.id);
     for(let i=0;i<14;i++) profAddItem(profMakeItem(ks[i%ks.length], 1+(i%5), ts[i%ts.length]));
-    saveMeta(); _gearPick=null; _gearSel=null; _gearCat=''; _gearPage=PROF_GEAR_PAGES[0].id;
+    saveMeta(); _gearPick=null; _gearSel=null; _gearPage=PROF_GEAR_PAGES[0].id;
     openTown(); openTownPanel('gear'); CHAR().level=40; refreshTownPanel();
     const body=$('tpBody'), OK=['3px','6px','9px'];
     const scan=()=>{ const bad=[], cyan=[];
@@ -3006,17 +3018,17 @@ async function groupLobby(){
     assert(!r.bad.length,'토큰 밖 라운드/두꺼운 테두리: '+r.bad.slice(0,4).join(', '));
     // 아무것도 안 골랐으면 시안 채움은 없어야 한다(탭·분류는 중립 강조)
     assert(!r.cyan.length,'선택 전인데 시안을 쓴 요소가 있음: '+r.cyan.slice(0,4).join(', '));
-    profGearPageAt(1); profBagCat('acc');
-    r=scan(); assert(!r.cyan.length,'섹션/분류가 시안을 채움: '+r.cyan.slice(0,4).join(', '));
-    profBagCat(''); profGearPageAt(0);
+    profGearPageAt(1);
+    r=scan(); assert(!r.cyan.length,'섹션/페이지 전환이 시안을 채움: '+r.cyan.slice(0,4).join(', '));
+    profGearPageAt(0);
     // 아이템을 고르면 그 칸 하나만 시안(공용 .twBtn 제외 — 마을 전체 전환 때 처리)
-    profSelItem(profItems()[2].iid);
+    profSelItem(profItems().filter(i=>(PROF_GEAR[i.slot]||{}).part===_gearPage)[2].iid);   // 가방은 지금 페이지 것만 보인다
     r=scan();
     const own=r.cyan.filter(c=>String(c).indexOf('twBtn')<0);
     assert(own.length===1 && String(own[0]).indexOf('igCell')>=0,
       '선택 시 시안이 정확히 고른 칸 하나가 아님: '+JSON.stringify(own));
     // 숫자는 Rajdhani + tabular-nums
-    for(const sel of ['.gearSum b','.gsSub','.igCell .igLv']){ const e=body.querySelector(sel);
+    for(const sel of ['.gearSum b','.gsSub']){ const e=body.querySelector(sel);
       if(!e) continue; const c=getComputedStyle(e);
       assert(/Rajdhani/i.test(c.fontFamily), sel+' 숫자가 Rajdhani가 아님: '+c.fontFamily);
       assert(c.fontVariantNumeric.indexOf('tabular-nums')>=0, sel+' tabular-nums 없음'); }
