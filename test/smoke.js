@@ -336,6 +336,25 @@ async function groupLobby(){
     assert(visible($('navBar')),'유즈맵 화면에 네비가 없음');
     assert(document.querySelectorAll('#navBar .navIt[data-sub]').length===3,'유즈맵 하위(소셜)가 3칸이 아님');
     assert(document.getElementById('msSortTabs'),'유즈맵 정렬 띠가 화면 위에 없음');
+    // 정렬 띠 = 사냥터 업그레이드 탭과 **같은 컴포넌트**(.pdSeg · segNavHTML). 전용 탭 클래스를 되살리면 안 된다.
+    { const seg=document.querySelector('#msSortTabs .pdSeg');
+      assert(seg,'유즈맵 정렬 띠가 공용 세그먼트 바(.pdSeg)를 안 씀');
+      assert(seg.querySelector('.pdSegInd') && seg.querySelectorAll('.pdSegBtn').length===MAP_SORTS.length,'세그먼트 구성이 다름');
+      assert(!document.querySelector('.msSortTab'),'옛 전용 탭(.msSortTab)이 남아 있음');
+      // 선택 표시가 실제로 움직이는가 — 인디케이터 left 가 탭마다 달라야 한다
+      const at=()=>document.querySelector('#msSortTabs .pdSegInd').getBoundingClientRect().left;
+      const x0=at(); setMapSort('rec'); await sleep(60);
+      assert(Math.abs(at()-x0)>10,'정렬을 바꿨는데 선택 표시가 안 움직임');
+      assert(document.querySelectorAll('#msSortTabs .pdSegBtn.on').length===1,'선택 표시가 하나가 아님');
+      setMapSort('pop'); await sleep(40);
+      // 사냥터 탭 띠와 같은 물성인가 — 판·인디케이터의 라운드가 같아야 한다(공용 규칙을 안 덮었다는 뜻)
+      openHome(); await sleep(220); renderHome();
+      const hs=document.querySelector('#hmUpgTabs .pdSeg');
+      if(hs){ const r=e=>getComputedStyle(e).borderTopLeftRadius;
+        navGo('map'); await sleep(120);
+        const ms=document.querySelector('#msSortTabs .pdSeg');
+        assert(r(ms)===r(hs),'사냥터 탭 띠와 라운드가 다름: '+r(ms)+' vs '+r(hs)); }
+      else { navGo('map'); await sleep(120); } }
     assert(!document.querySelector('#mapSelect .msHeadL .twBack'),'유즈맵 좌상단 뒤로가기 버튼이 아직 있음');
     mapToHub(); await sleep(80);
     assert(visible($('homeScreen')),'유즈맵에서 뒤로 갔는데 HOME으로 안 옴 [DBG 보이는화면='+
@@ -2408,7 +2427,7 @@ async function groupLobby(){
     navGo('map'); await sleep(60);
     assert(read().join(',')==='back,~chat,~friend,~party','유즈맵 전용 네비가 아님: '+read().join(','));
     assert(document.querySelector('#navBar .navIt.cur').dataset.sub==='chat','유즈맵 기본 하위가 채팅이 아님');
-    assert(document.querySelectorAll('#msSortTabs .msSortTab').length===4,'유즈맵 정렬 띠가 화면 위로 안 돌아옴');
+    assert(document.querySelectorAll('#msSortTabs .pdSegBtn').length===4,'유즈맵 정렬 띠가 화면 위로 안 돌아옴');
     // ⑦ 소셜 = 유즈맵 하단 상주 구역(#msSocialDock). 시트가 아니라 항상 화면 몫을 차지한다.
     //    ⛔ DOM(.msSocial)은 하나뿐 — 도크에 '옮겨' 온 것이어야 한다(복제 검사)
     { const dock=$('msSocialDock');

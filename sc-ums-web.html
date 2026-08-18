@@ -3345,15 +3345,12 @@
   /* 유즈맵 목록 상자 — 머리(정렬 탭 띠) + 본문(나열). HOME .hmCard와 같은 규격 */
   .msPanel{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden;
     background:var(--hmPanel);border:1px solid var(--hbEdge);border-radius:var(--r-bar)}
-  .msSortTabs{flex:0 0 auto;display:flex;align-items:stretch;border-bottom:1px solid rgba(255,255,255,.07)}
-  .msSortTab{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;gap:5px;
-    padding:9px 4px;cursor:pointer;font-family:inherit;font-size:var(--fs-md);font-weight:700;letter-spacing:.3px;
-    color:#9a9a9a;background:none;border:none;position:relative;transition:color .13s}
-  .msSortTab .ic{width:13px;height:13px}
-  .msSortTab+.msSortTab::before{content:'';position:absolute;left:0;top:26%;bottom:26%;width:1px;background:rgba(255,255,255,.07)}
-  .msSortTab.on{color:#7ee0ff}
-  .msSortTab.on::after{content:'';position:absolute;left:14%;right:14%;bottom:0;height:2px;
-    background:linear-gradient(90deg,transparent,rgba(124,224,255,.15) 20%,#7ee0ff 50%,rgba(124,224,255,.15) 80%,transparent);
+  /* 정렬 띠 = 사냥터 업그레이드 탭 띠와 같은 컴포넌트(.pdSeg/.pdSegInd/.pdSegBtn · segNavHTML).
+     생김새는 전부 공용 규칙이 갖는다 — 여기서 덮는 것은 여백·폭·글자뿐이다.
+     ⚠ 아래 실선 없음 — 탭 띠 자체가 상자라 선이 겹친다(사냥터 .hmUpgBar 와 같은 이유). */
+  .msSortTabs{flex:0 0 auto;display:flex;align-items:stretch;padding:6px 8px 4px}
+  .msSortTabs .pdSeg{flex:1 1 0;max-width:none;margin:0}
+  .msSortTabs .pdSegBtn{padding:7px 4px;font-size:11.5px;font-weight:700;letter-spacing:.02em;text-align:center}
     box-shadow:0 0 7px -1px rgba(92,214,255,.6)}
   #mapSelect .msList{flex:1 1 auto;min-height:0;padding:8px}
   /* 마을 채팅 시트 — 소셜 블록을 그대로 담는다(유즈맵에서 옮겨옴) */
@@ -4109,12 +4106,8 @@
       </div>
       <!-- 목록 상자 — 머리 = 정렬 탭 띠(네비바 형태) · 본문 = 유즈맵 나열 -->
       <div class="msPanel">
-        <div class="msSortTabs" id="msSortTabs">
-          <button class="msSortTab on" data-v="pop" onclick="setMapSort('pop')"><span data-ico="pop"></span>인기순</button>
-          <button class="msSortTab" data-v="new" onclick="setMapSort('new')"><span data-ico="new"></span>신규</button>
-          <button class="msSortTab" data-v="rec" onclick="setMapSort('rec')"><span data-ico="rec"></span>추천</button>
-          <button class="msSortTab" data-v="fav" onclick="setMapSort('fav')"><span data-ico="fav"></span>즐겨찾기</button>
-        </div>
+        <!-- 정렬 띠 = 사냥터 업그레이드 탭과 같은 컴포넌트(segNavHTML) — 속은 renderMapSortTabs()가 채운다 -->
+        <div class="msSortTabs" id="msSortTabs"></div>
         <div class="msList uiScroll" id="msList"></div>
       </div>
       <!-- 소셜 상주 구역(하단) — 내용(.msSocial)은 #twChat 의 것을 옮겨 쓴다(복제 금지). 탭 전환은 하단 네비가 맡는다 -->
@@ -15026,12 +15019,19 @@ document.addEventListener('pointerdown', function(e){
 function openMapSelect(){ updateMyNameTag(); bgmStart('lobby'); loadMeta();
   if(TEMP_COIN_TEST){ PLAYER_META.buildLevels={}; PLAYER_META.coins=9999999; saveMeta(); }   // [임시] 로비 진입(게임 나갔다 오면) 시 포인트 상점 업그레이드 초기화(저장까지 → 상점 재오픈 loadMeta가 덮어쓰지 않게)   // 계정별 메타 성장 데이터 로드(메인/로비 진입 시 로비 BGM)
   if(sbReady()){ rtStart(); rtSetStatus('online',''); }   // 실시간 소셜 연결 + 로비 상태
-  initMapLive(); showAppScreen('mapSelect'); navShow('map'); curSetTitle('유즈맵 선택'); paintIcons(document.getElementById('mapSelect')); renderMaps(); startMapLive();
+  initMapLive(); showAppScreen('mapSelect'); navShow('map'); curSetTitle('유즈맵 선택'); paintIcons(document.getElementById('mapSelect')); renderMapSortTabs(); renderMaps(); startMapLive();
   mapDockSocial();   // 소셜(채팅·친구·파티)을 화면 하단 상주 구역으로   // 하단 네비로 이동(좌상단 뒤로가기 없음)
   if(typeof refreshFriendBadge==='function') refreshFriendBadge(); }   // 기본 탭은 mapDockSocial 이 맞춘다
 const _SORT_LBL={pop:'인기순',new:'신규',rec:'추천',fav:'즐겨찾기'};
+const MAP_SORTS=[['pop','인기순'],['new','신규'],['rec','추천'],['fav','즐겨찾기']];
+// 정렬 띠 — 사냥터 업그레이드 탭과 **같은 함수**(segNavHTML)로 그린다. 새 탭 띠를 만들지 말 것.
+// 글자만 — 아이콘을 같이 넣으면 아이콘+글자가 한 덩어리로 가운데 정렬돼 글자가 중앙에서 밀린다(사냥터와 같은 이유).
+function renderMapSortTabs(){ const tb=document.getElementById('msSortTabs'); if(!tb) return;
+  const i=Math.max(0, MAP_SORTS.findIndex(function(c){ return c[0]===_mapSort; }));
+  tb.innerHTML=segNavHTML(MAP_SORTS.map(function(c){ return { label:c[1] }; }), i,
+    function(k){ return 'setMapSort(&#39;'+MAP_SORTS[k][0]+'&#39;)'; }); }
 function setMapSort(s){ _mapSort=s;
-  document.querySelectorAll('#msSortTabs .msSortTab').forEach(b=>b.classList.toggle('on', b.dataset.v===s));   // 정렬은 화면 위 띠가 맡는다
+  renderMapSortTabs();   // 정렬은 화면 위 띠가 맡는다
   const di=document.getElementById('msSortDDi'); if(di && ICO[s]) di.innerHTML=ICO[s];                          // 옛 드롭다운 흔적(있으면 갱신)
   const lb=document.getElementById('msSortLbl'); if(lb) lb.textContent=_SORT_LBL[s]||s;
   document.querySelectorAll('#msSortMenu .msSortOpt').forEach(b=>b.classList.toggle('on', b.dataset.v===s));
