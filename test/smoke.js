@@ -2459,10 +2459,11 @@ async function groupLobby(){
         const cols=[...((pa.backgroundImage||'').matchAll(/rgba?\((\d+),\s*(\d+),\s*(\d+)/g))];
         assert(cols.some(c=>+c[1]>=180 && +c[2]<=110 && +c[3]<=110),
           pe+' 헤어라인이 붉은색이 아님: '+(pa.backgroundImage||'').slice(0,80)); }
-      // 아래 구역의 면은 어둡게 가라앉아야 한다 — 회색으로 물들면 잡는다
+      // ⛔ 아래 구역은 **자기 면을 깔지 않는다** — 카드의 회색 그라데가 그대로 이어져야 한 장으로 읽힌다
       { const ds=getComputedStyle(dock);
-        const c=((ds.backgroundColor||'').match(/\d+/g)||['0','0','0']).map(parseFloat);
-        assert(c[0]*0.3+c[1]*0.59+c[2]*0.11<=24,'아래 구역 면이 회색으로 물듦: '+ds.backgroundColor); }
+        const c=((ds.backgroundColor||'').match(/[\d.]+/g)||['0','0','0','0']).map(parseFloat);
+        const a=(c.length>3?c[3]:1);
+        assert(a<0.05 && ds.backgroundImage==='none','아래 구역이 카드 배경을 덮는 면을 깔았음: '+ds.backgroundColor); }
       // 목록은 칸막이에 딱 붙지 않는다 — 아래 여백이 padding 이면 카드가 판 끝선에 붙어 잘린다
       { const ls=getComputedStyle($('msList'));
         assert(parseFloat(ls.marginBottom)>=4,'목록 아래 여백이 margin 이 아님(카드가 끝선에 붙어 잘린다)');

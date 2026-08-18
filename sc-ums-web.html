@@ -3068,8 +3068,9 @@
   .twSheet.hide{display:none}
   /* 유즈맵 소셜 = 목록과 **같은 카드의 아래 구역**. 화면 몫을 고정으로 떼어 준다.
      탭 띠는 하단 네비가 맡으므로 감춘다.
-     ⚠ 카드 안에 카드를 두지 않는다 — '다른 구역'임을 말하는 것은 둘뿐이다:
-       ① 판을 가로지르는 1px 칸막이(+ 윗변 광선 1줄)  ② 살짝 가라앉은 면.
+     ⚠ 카드 안에 카드를 두지 않는다. **면도 자기 것을 깔지 않는다** — 카드(.msPanel)의 회색 그라데가
+       그대로 이어져야 한 장으로 읽힌다(어두운 판을 한 겹 덮었더니 위아래가 딴 화면처럼 보였다).
+       '다른 구역'임을 말하는 것은 ① 양끝이 흘러 사라지는 1px 선 ② 위에서 드리우는 그늘, 둘뿐이다.
      그래서 .msSocial 이 갖고 있던 테두리·면·바깥여백은 여기서 전부 걷어낸다. */
   /* ⚠ 칸막이를 '끝에서 끝까지 그은 1px 선 + 밝은 하이라이트'로 두면 카드 양 벽에 T자로 부딪혀
      판 두 장을 포갠 이음새처럼 보인다(실제로 그랬다). 자연스럽게 나누는 법은 둘:
@@ -3078,7 +3079,6 @@
   /* ⚠ 목록 바로 아래에 딱 붙으면 두 구역이 한 덩어리로 보인다 — 채팅 한 줄(16.5px)만큼 띄우고
      그만큼 구역을 낮춘다(margin + calc). 차지하는 총 높이가 그대로라 위 목록은 줄지 않는다. */
   #msSocialDock{position:relative;flex:0 0 calc(30% - 17px);margin-top:17px;min-height:174px;display:flex;flex-direction:column;overflow:hidden;
-    background:rgba(0,0,0,.34);
     box-shadow:inset 0 9px 11px -11px rgba(0,0,0,.9);
     padding-bottom:6px}   /* 안쪽 목록이 카드 끝선에 딱 붙어 잘리지 않게 — 스크롤러가 아니라 도크에 준다 */
   #msSocialDock::before{content:'';position:absolute;left:9%;right:9%;top:0;height:1px;z-index:1;pointer-events:none;
