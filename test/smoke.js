@@ -2933,6 +2933,9 @@ async function groupGame(){
       // ① 최상위 = 5칸 등폭. 선택 칸만 넓어지던 flex-grow:1.42 를 없앤 것을 지킨다.
       gtabBack(); await sleep(80);
       const top=cells(); assert(top.length===5,'최상위 칸이 5개가 아님: '+top.length);
+      // ⚠ 탭 이름의 실제 소스는 STK_NEMOLABEL 이다(startGameNow 가 마크업 글자를 덮어쓴다) — 둘 다 봐야 한다
+      assert(top[0].textContent.trim()==='관리','첫 칸 이름이 관리가 아님: '+JSON.stringify(top.map(e=>e.textContent.trim())));
+      assert(typeof STK_NEMOLABEL==='undefined' || STK_NEMOLABEL.Main==='관리','STK_NEMOLABEL.Main 이 관리가 아님: '+STK_NEMOLABEL.Main);
       { const w=widths(top), lo=Math.min(...w), hi=Math.max(...w);
         assert(hi-lo<=1,'최상위 칸 폭이 다름: '+JSON.stringify(w));
         // 선택 칸도 같은 폭이어야 한다
@@ -3022,7 +3025,10 @@ async function groupGame(){
           // 수량 뱃지 = 반대편(우상단) · 각진 사각 · 글자 정중앙
           const b=c.querySelector('.hsCnt'); assert(b,'수량 뱃지가 없음');
           const cr=c.getBoundingClientRect(), br=b.getBoundingClientRect();
-          assert((cr.right-br.right) < (br.left-cr.left),'수량 뱃지가 우상단이 아님(왼쪽에 붙어 있다)');
+          // ⚠ 판이 아직 안 펼쳐졌으면(폭 0) 위치를 못 잰다 — 0<0 이 되어 '왼쪽에 붙었다'로 헛 실패한다
+          skipIf(cr.width<10 || br.width<4, '카드가 아직 배치 전(폭 '+Math.round(cr.width)+')');
+          assert((cr.right-br.right) < (br.left-cr.left),
+            '수량 뱃지가 우상단이 아님(오른쪽 여백 '+Math.round(cr.right-br.right)+' / 왼쪽 여백 '+Math.round(br.left-cr.left)+')');
           assert((br.top-cr.top)<8,'수량 뱃지가 위쪽이 아님: '+(br.top-cr.top));
           assert(getComputedStyle(b).borderRadius==='0px','수량 뱃지가 각지지 않음: '+getComputedStyle(b).borderRadius);
           // ⚠ Range 의 사각형은 '라인 박스'라 늘 가운데다 — 눈에 보이는 건 글자 **잉크**다.
@@ -3051,7 +3057,27 @@ async function groupGame(){
           const l=g.getBoundingClientRect().left;
           if(cs[3]) assert(Math.round(cs[3].getBoundingClientRect().right-l)<=view+1,'4장째가 화면 밖으로 잘림');
           if(cs[4]) assert(cs[4].getBoundingClientRect().left-l>=view-1,'5장째가 삐져나와 보임'); } }
-      // ⑧ 판 안에 같은 조작을 두 번 두지 않는다(옛 .hsTabs 탭 줄 · 전송 옆 AUTO 배너)
+      // ⑧ 구역에 '들어올 때'는 늘 첫 하위로 되돌아온다
+      //    (타워구매를 보다 나갔다 다시 들어와도 타워구매가 열려 있으면 구역 이름과 내용이 어긋난다)
+      { gtabBack(); await sleep(90);
+        openGachaSheet(); await sleep(90);
+        gtabSub('tower'); await sleep(90);
+        assert(_gachaSec==='tower','하위 전환이 안 됨');
+        gtabBack(); await sleep(110);
+        openGachaSheet(); await sleep(110);
+        assert(_gachaSec==='draw','유닛뽑기 재진입인데 첫 하위가 아님: '+_gachaSec);
+        // 업그레이드도 같은 규칙 — 다른 구역을 들렀다 와도 첫 하위
+        gtabSub('tower'); await sleep(90); openUpgradeSheet(); await sleep(90);
+        gtabSub('luck'); await sleep(90); openBossSheet(); await sleep(90);
+        openUpgradeSheet(); await sleep(110);
+        assert(_upgSec==='atk','업그레이드 재진입인데 첫 하위가 아님: '+_upgSec);
+        openMainHome(); await sleep(110);
+        assert(_homeMode==='sell','관리 진입인데 첫 하위가 아님: '+_homeMode);
+        // ⚠ 이미 그 구역에 있을 때는 되돌리지 않는다 — 되돌리면 자동화가 곧바로 판매로 튕긴다
+        gtabSub('auto'); await sleep(140);
+        assert(G.mainSheet==='auto','자동화가 리셋에 튕겨 나감: '+G.mainSheet);
+        gtabBack(); await sleep(140); }
+      // ⑨ 판 안에 같은 조작을 두 번 두지 않는다(옛 .hsTabs 탭 줄 · 전송 옆 AUTO 배너)
       assert(!document.querySelector('#defaultCmd .hsTab'),'판 안에 옛 모드 탭 줄이 남아 있음(하단 네비와 중복)');
       assert(!$('autoFab'),'전송 옆 AUTO 배너가 남아 있음 — 자동화는 메인 하위 칸으로 옮겼다');
       // ⑦ 자동화 = 메인 하위의 '마지막' 칸이고, 누르면 자동화 시트가 뜬다

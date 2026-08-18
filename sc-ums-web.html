@@ -4151,7 +4151,7 @@
 
   <div id="bot">
     <div id="tabs">
-      <div class="tab on" data-tab="Main"  onclick="openMainHome(this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 11L12 4.3 20.4 11"/><path d="M5.7 9.4V19.6h12.6V9.4"/><path d="M9.8 19.6v-4.7h4.4v4.7"/></svg></span>메인</div>
+      <div class="tab on" data-tab="Main"  onclick="openMainHome(this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 11L12 4.3 20.4 11"/><path d="M5.7 9.4V19.6h12.6V9.4"/><path d="M9.8 19.6v-4.7h4.4v4.7"/></svg></span>관리</div>
       <div class="tab" data-tab="Unit"     onclick="openGachaSheet(this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9.5" cy="8.5" r="3"/><path d="M4 19.5c0-3 2.5-5.2 5.5-5.2s5.5 2.2 5.5 5.2"/><path d="M18.5 4v5M16 6.5h5"/></svg></span><span id="unitTabLbl">유닛뽑기</span></div>
       <div class="tab" data-tab="Upgrade"  onclick="openUpgradeSheet(this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5l5.3 5.3h-3.1v4.6h-4.4V9.8H6.7z"/><path d="M7 18.5h10"/></svg></span>업그레이드</div>
       <div class="tab" id="bossTab" data-tab="Boss" style="display:none" onclick="openBossSheet(this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6c-3.9 0-6.9 2.8-6.9 6.5 0 2.2 1 3.9 2.5 4.9v3.4h8.8V15c1.5-1 2.5-2.7 2.5-4.9 0-3.7-3-6.5-6.9-6.5z"/><circle cx="9.4" cy="10.4" r="1.15"/><circle cx="14.6" cy="10.4" r="1.15"/><path d="M10.6 18.4v2M13.4 18.4v2"/></svg></span>보스<span class="tabDot" id="bossTabDot"></span></div>
@@ -12463,17 +12463,17 @@ const GTAB_TREE={
   // ⚠ '유닛 지정'은 여기 없다 — 아무 구역도 안 고른 **기본 상태**(gameRestHome)가 그 자리다.
   //   메인 = 유닛을 처분·정리하는 묶음(판매·조합·자동화).
   // 자동화는 _homeMode 가 아니라 시트 모드(G.mainSheet==='auto')다 — cur 에서 그것부터 본다
-  Main:    { cur:()=>(G.mainSheet==='auto'?'auto':_homeMode), subs:[
-      { k:'sell',    label:'유닛 판매', ico:'coin',   act:()=>mainGoMode('sell') },
+  Main:    { cur:()=>(G.mainSheet==='auto'?'auto':_homeMode), reset:()=>mainGoMode('sell'), subs:[
+      { k:'sell',    label:'유닛 판매', ico:'coin',   act:()=>mainGoMode('sell') },   // ← 첫 칸(reset 대상)
       // 조합은 늘 자리를 지킨다 — 조합할 게 없으면 칸이 사라지는 게 아니라 판이 '3개 필요'라고 알린다
       { k:'combine', label:'유닛 조합', ico:'photon', act:()=>mainGoMode('combine') },
       // 자동화 = 옛 '전송 옆 AUTO 배너'. 표시 조건도 그 배너가 쓰던 것 그대로(하나라도 해금됐을 때)
       { k:'auto',    label:'자동화',   ico:'cpu',    act:()=>openAutoSheet(),
         show:()=>autoAnyOwned() } ] },
-  Unit:    { cur:()=>_gachaSec, subs:[
+  Unit:    { cur:()=>_gachaSec, reset:()=>setGachaSec('draw'), subs:[
       { k:'draw',  label:'뽑기',     ico:'gift',   act:()=>setGachaSec('draw') },
       { k:'tower', label:'타워구매', ico:'sunken', act:()=>setGachaSec('tower') } ] },
-  Upgrade: { cur:()=>_upgSec, subs:[
+  Upgrade: { cur:()=>_upgSec, reset:()=>setUpgSec('atk'), subs:[
       { k:'atk',  label:'공격력',   ico:'boost', act:()=>setUpgSec('atk') },
       { k:'luck', label:'확률',     ico:'rand',  act:()=>setUpgSec('luck') },
       { k:'perm', label:'영구강화', ico:'upg',   act:()=>setUpgSec('perm') } ] },
@@ -12483,7 +12483,7 @@ const GTAB_TREE={
       { k:'arena', label:'포인트방', ico:'flag', act:()=>openBossArena(),
         show:()=>!!(G.coopBoss && !G.coopBoss.dead) } ] },
   // 아군/적군은 대전(팀이 갈리는 판)에서만 뜻이 있다 — 개인전·협동은 전원 아군이라 하위를 두지 않는다
-  Players: { cur:()=>_plSec, subs:[
+  Players: { cur:()=>_plSec, reset:()=>setPlSec('ally'), subs:[
       { k:'ally', label:'아군', ico:'friend', act:()=>setPlSec('ally') },
       { k:'foe',  label:'적군', ico:'cpu',   act:()=>setPlSec('foe') } ],
       show:()=>gameHasVersus() },
@@ -12506,8 +12506,16 @@ function gtabPaint(){ const b=document.getElementById('tabs'); if(!b) return;
   for(const t of subs) h+=_navCell('sub', t.k, t.label, t.ico, (cur===t.k?'cur':''), "gtabSub('"+t.k+"')");
   b.insertAdjacentHTML('beforeend', h);
   if(typeof paintIcons==='function') paintIcons(b); }
-// 최상위 칸을 눌렀을 때 — 화면 전환은 이미 각 open*() 가 했고, 여기서는 층만 정한다
-function gtabDrill(tab){ _gtabDrill=gtabSubs(tab).length?tab:''; gtabPaint(); }
+// 최상위 칸을 눌렀을 때 — 화면 전환은 이미 각 open*() 가 했고, 여기서는 층만 정한다.
+// ⚠ 구역에 '들어올 때'는 늘 첫 하위로 되돌린다 — 안 그러면 타워구매를 보다 나갔다 다시 들어와도
+//   타워구매가 열려 있어서, 구역 이름과 보이는 내용이 어긋난다(사용자가 짚은 것).
+//   하위 칸을 누르는 경로(gtabSub)는 gtabDrill 을 안 지나므로 그때는 유지된다.
+function gtabDrill(tab){ const sec=GTAB_TREE[tab], was=_gtabDrill;
+  _gtabDrill=gtabSubs(tab).length?tab:'';
+  // ⚠ '밖에서 들어올 때'만 되돌린다(was!==tab). 이미 그 구역에 있는데 되돌리면
+  //   자동화(openMainSheet('auto',…) → gtabDrill('Main'))가 곧바로 판매로 튕겨 나간다.
+  if(_gtabDrill && was!==_gtabDrill && sec && sec.reset) sec.reset();
+  gtabPaint(); }
 function gtabSub(k){ const subs=gtabSubs(_gtabDrill), t=subs.find(x=>x.k===k); if(!t) return;
   if(typeof playSfx==='function') playSfx('ui_tab');
   t.act(); gtabPaint(); }
@@ -12559,7 +12567,6 @@ function openMainSheet(mode, el, sbTab){
   if(typeof playSfx==='function') playSfx('ui_open'); refreshSelCard(); }
 // 메인 탭 = 유닛 판매/조합/자동화 묶음. '유닛 지정'은 여기 없다 — 그건 무선택 기본 상태(gameRestHome)다.
 // 그래서 다른 구역에서 메인을 누르면 **첫 하위(유닛 판매)** 로 들어간다(기본 상태로 가는 건 ‹ 다).
-const MAIN_SUB_MODES=['sell','combine'];   // _homeMode 로 표현되는 하위(자동화는 G.mainSheet)
 function openMainHome(el){
   if(G.strike){ switchTab('Main', el||document.querySelector('.tab[data-tab="Main"]')); return; }   // 직스: 전투 탭 → 직스 라우팅
   if(G.sandbox){ switchTab('Main', el||document.querySelector('.tab[data-tab="Main"]')); return; }
@@ -12571,9 +12578,9 @@ function openMainHome(el){
     if(typeof playSfx==='function') playSfx('ui_open'); return; }
   if(G.tab!=='Main') switchTab('Main', document.querySelector('.tab[data-tab="Main"]'));
   G.sel=[]; G.selEnemy=null; G.selType=null; _selViaTab=false; G.sheetDown=false;
-  if(G.mainSheet!=='auto'){ G.mainSheet=null;                                   // 자동화를 보고 있었다면 그대로 유지
-    setHomeMode(MAIN_SUB_MODES.indexOf(_homeMode)>=0 ? _homeMode : 'sell'); }   // 아니면 마지막 하위, 없으면 첫 칸
-  _setBottomTab('Main'); gtabDrill('Main'); document.body.classList.add('sheetOpen');
+  if(G.mainSheet!=='auto') G.mainSheet=null;   // 자동화를 보고 있었다면 그대로 유지
+  _setBottomTab('Main'); gtabDrill('Main');    // ← 밖에서 들어왔으면 여기서 첫 하위(유닛 판매)로 되돌린다
+  document.body.classList.add('sheetOpen');
   if(typeof playSfx==='function') playSfx('ui_open'); refreshSelCard(); }
 function openGachaSheet(el){ if(G.strike){ switchTab('Unit', el||document.querySelector('.tab[data-tab="Unit"]')); return; } openMainSheet('gacha', el, 'Unit'); }   // 직스: 건설지 탭
 function openUpgradeSheet(el){ if(G.strike){ switchTab('Upgrade', el||document.querySelector('.tab[data-tab="Upgrade"]')); return; } openMainSheet('upgrade', el, 'Upgrade'); }   // 직스: 보급 탭
@@ -19501,7 +19508,9 @@ function strikeDrawScenery(ctx,w2s,scale,S,W,H){ if(!S.dec) S.dec=strikeGenScene
   for(const m of D.motes){ const p=w2s(m.x+Math.sin(t*m.sp+m.ph)*m.amp, m.y+Math.cos(t*m.sp*0.7+m.ph)*m.amp*0.6); if(p.x<0||p.x>W||p.y<0||p.y>H) continue; ctx.beginPath(); ctx.arc(p.x,p.y,1.5+Math.sin(t*2+m.ph)*0.6,0,6.28); ctx.fill(); }
   ctx.restore(); }
 const STK_TABLABEL ={ Main:'전투', Build:'건설지', Upgrade:'업그레이드', Players:'관전' };   // 건설지 = 관리자 건설 탭(Build) 그대로 사용
-const STK_NEMOLABEL={ Main:'메인', Unit:'유닛뽑기', Upgrade:'업그레이드', Players:'플레이어', Build:'건설' };
+// ⚠ 인게임 탭 이름의 **실제 소스는 이 표**다 — startGameNow 가 strikeSetTabLabels(STK_NEMOLABEL) 로
+//    마크업 글자를 덮어쓴다. 마크업(#tabs 의 .tab 안 글자)은 게임 시작 전에만 보이므로 둘을 같이 고칠 것.
+const STK_NEMOLABEL={ Main:'관리', Unit:'유닛뽑기', Upgrade:'업그레이드', Players:'플레이어', Build:'건설' };
 const STK_TECH_RACE={ terran:'union', zerg:'swarm', protoss:'aetherial' };   // 직스 종족 → 관리자 건설 트리 종족
 const STK_TECH_COLS=48;      // 오토배틀 건설지 가로 칸 수(관리자 20칸 → 보드처럼 넓게, 이전 32칸의 1.5배)
 const STK_TECH_ROWS=30;      // 세로 칸 수(이전 12칸의 2.5배) — 밴드 높이는 이 행 수로 산출
