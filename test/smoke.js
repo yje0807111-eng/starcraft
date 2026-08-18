@@ -2447,7 +2447,15 @@ async function groupLobby(){
       assert(document.querySelectorAll('.msSocial').length===1,'소셜 DOM 이 복제됨');
       assert(dock.querySelector('.msSocial'),'소셜이 도크로 안 옮겨짐');
       assert(!visible(dock.querySelector('.msTabs2')),'도크 안 탭 띠가 네비와 중복 노출됨');
-      assert(visible(dock.querySelector('#msChatWrap')),'기본(채팅)인데 채팅 창이 안 보임'); }
+      assert(visible(dock.querySelector('#msChatWrap')),'기본(채팅)인데 채팅 창이 안 보임');
+      // 정렬 띠·목록·소셜이 **한 상자**(.msPanel) 안이고, 상자 안에 상자를 또 그리지 않는다
+      const panel=document.querySelector('#mapSelect .msPanel');
+      assert(panel && panel.contains(dock) && panel.contains($('msList')) && panel.contains($('msSortTabs')),
+        '소셜·목록·탭 띠가 한 상자 안에 없음');
+      { const so=getComputedStyle(dock.querySelector('.msSocial'));
+        assert(so.borderTopStyle==='none' && so.backgroundImage==='none',
+          '상자 안 소셜이 자기 테두리·면을 그대로 갖고 있음(상자 안 상자)'); }
+      assert(getComputedStyle(dock).borderTopStyle!=='none','목록과 소셜을 나누는 구분선이 없음'); }
     navSub('party'); await sleep(40);
     assert(document.querySelector('#twChat.hide'),'파티를 눌렀는데 마을 시트가 열림(도크가 맡아야 한다)');
     assert(getComputedStyle($('msPanelBody')).display!=='none','파티 패널이 안 보임');

@@ -3066,9 +3066,13 @@
     max-height:64%;padding:0 0 8px;background:rgba(11,16,29,.96);border-top:1px solid var(--hbEdge,rgba(90,120,190,.26));
     box-shadow:0 -14px 34px -20px #000}
   .twSheet.hide{display:none}
-  /* 유즈맵 소셜 도크 — 사냥터 하단 패널처럼 화면 몫을 고정으로 떼어 준다. 탭 띠는 하단 네비가 맡으므로 감춘다 */
-  #msSocialDock{flex:0 0 30%;min-height:150px;display:flex;flex-direction:column;overflow:hidden}
-  #msSocialDock .msSocial{flex:1;min-height:0}
+  /* 유즈맵 소셜 도크 — 목록과 **같은 상자(.msPanel) 안** 아래칸. 화면 몫을 고정으로 떼어 준다.
+     탭 띠는 하단 네비가 맡으므로 감춘다.
+     ⚠ 상자 안에 상자를 또 그리지 않는다 — .msSocial 이 갖고 있던 테두리·면·여백을 벗기고
+     목록과의 경계는 구분선 1px 하나로만 말한다(마을 시트의 .inTown 과 같은 처리). */
+  #msSocialDock{flex:0 0 30%;min-height:150px;display:flex;flex-direction:column;overflow:hidden;
+    border-top:1px solid var(--hbEdge,rgba(255,255,255,.07))}
+  #msSocialDock .msSocial{flex:1;min-height:0;margin-top:0;border:0;border-radius:0;background:none;box-shadow:none}
   #msSocialDock .msTabs2{display:none}
   .twSheetHead{flex:none;display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px;
     font-size:var(--fs-xl);font-weight:800;color:#eaf1fb}
@@ -4112,9 +4116,10 @@
         <!-- 정렬 띠 = 사냥터 업그레이드 탭과 같은 컴포넌트(segNavHTML) — 속은 renderMapSortTabs()가 채운다 -->
         <div class="msSortTabs" id="msSortTabs"></div>
         <div class="msList uiScroll" id="msList"></div>
+        <!-- 소셜 상주 구역 — 같은 상자 안 아래칸. 내용(.msSocial)은 #twChat 의 것을 옮겨 쓴다(복제 금지).
+             탭 전환은 하단 네비가 맡는다 -->
+        <div id="msSocialDock"></div>
       </div>
-      <!-- 소셜 상주 구역(하단) — 내용(.msSocial)은 #twChat 의 것을 옮겨 쓴다(복제 금지). 탭 전환은 하단 네비가 맡는다 -->
-      <div id="msSocialDock"></div>
     </div>
 
 
