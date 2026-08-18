@@ -2996,6 +2996,104 @@ async function groupLobby(){
     twLeave();
     return '가방 '+Math.round(bh)+'px에 '+rows+'줄 · 내용 '+bs+'px'; });
   // DESIGN.md 규칙을 이 화면에만 강제한다. 다른 화면은 전환될 때 각자 스텝을 추가할 것.
+  await step('장비 등급: 계정 공용 7단계 사다리를 그대로 쓴다', ()=>{
+    skipIf(typeof PROF_ITEM_TIERS==='undefined','장비 등급 없음');
+    const ids=PROF_ITEM_TIERS.map(t=>t.id);
+    assert(ids.join(',')===GACHA_TIER_ORDER.join(','),
+      '장비 등급이 계정 사다리와 다름: '+ids.join(',')+' vs '+GACHA_TIER_ORDER.join(','));
+    // 단계마다 '강해지고 · 귀해지고 · 옵션이 는다' — 하나라도 뒤집히면 위계가 깨진다
+    for(let i=1;i<PROF_ITEM_TIERS.length;i++){ const a=PROF_ITEM_TIERS[i-1], b=PROF_ITEM_TIERS[i];
+      assert(b.mul>a.mul, a.id+'→'+b.id+' 배수가 안 오름');
+      assert(b.opts>a.opts, a.id+'→'+b.id+' 옵션 수가 안 늘어남');
+      assert(b.p<a.p, a.id+'→'+b.id+' 드랍 가중이 안 줄어듦'); }
+    // 이름·색·단계는 전부 공용 표에서만 나온다(장비 전용 사본이 있으면 안 된다)
+    for(const id of ids){
+      assert(PROF_ITEM_PREFIX[id],'접두사 없음: '+id);
+      assert(TIER_COLOR[id],'등급 색 없음: '+id);
+      assert(tierName(id)===GACHA_TIERS[id].name,'등급 이름이 공용 표와 다름: '+id);
+      assert(tierRank(id)===GACHA_TIER_ORDER.indexOf(id)+1,'단계 번호가 어긋남: '+id); }
+    // 깊은 층에선 최고 등급도 실제로 나와야 한다(가중이 0이면 영원히 안 나온다)
+    const seen={}; const R=(function(){ let x=12345;
+      return function(){ x=(x*1103515245+12345)&0x7fffffff; return x/0x7fffffff; }; })();
+    const or=Math.random; Math.random=R;
+    try{ for(let i=0;i<40000;i++) seen[profMakeItem('weapon',40).tier]=1; } finally{ Math.random=or; }
+    for(const id of ids) assert(seen[id],'깊은 층에서도 안 나오는 등급: '+id);
+    return ids.length+'단계 · '+PROF_ITEM_TIERS[6].mul+'배까지'; });
+  await step('장비 등급 프레임: 착용 칸과 가방 칸이 한 사다리', ()=>{
+    skipIf(typeof tierFrame!=='function','등급 프레임 없음');
+    const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0;
+    profCreateChar('ranger','프레임');
+    const ts=PROF_ITEM_TIERS.map(t=>t.id), ks=profPageSlots('armor');
+    ts.forEach((t,i)=>profAddItem(profMakeItem(ks[i%ks.length], 5, t)));
+    const c=CHAR(); c.level=40;
+    const hi=profItems().find(i=>i.tier==='god'); profEquipItem(hi.iid);
+    saveMeta(); _gearPick=null; _gearSel=null; _gearPage='armor';
+    openTown(); openTownPanel('gear'); refreshTownPanel();
+    const body=$('tpBody');
+    // ① 두 곳 다 같은 헬퍼가 그린다 — 단계 속성과 프레임 층이 빠지면 안 된다
+    const on=body.querySelector('.pdSlot.on');
+    assert(on && on.dataset.tr==='7','착용 칸에 단계 속성이 없음: '+(on&&on.dataset.tr));
+    assert(on.querySelector('.tfx'),'착용 칸에 프레임 층(.tfx)이 없음');
+    const cells=[...body.querySelectorAll('.igCell')];
+    assert(cells.length===ts.length,'가방 표본 수가 안 맞음: '+cells.length);
+    assert(cells.every(e=>e.querySelector('.tfx')),'가방 칸에 프레임 층이 없음');
+    // ② 빈 칸은 등급 구조를 하나도 갖지 않는다
+    const emp=body.querySelector('.pdSlot.empty');
+    assert(emp && !emp.dataset.tr,'빈 칸에 단계 속성이 붙음');
+    assert(emp && !emp.querySelector('.tfx'),'빈 칸에 프레임 층이 붙음');
+    // ③ 단계가 오를수록 구조가 '늘기만' 한다 — 어느 축도 뒤로 가면 안 된다
+    const rank=e=>+e.dataset.tr;
+    const byTier={}; for(const e of cells) byTier[rank(e)]=e;
+    let prev=null, grew=0;
+    for(let r=1;r<=7;r++){ const e=byTier[r]; assert(e,'단계 '+r+' 표본이 없음');
+      const cs=getComputedStyle(e), fx=getComputedStyle(e.querySelector('.tfx'));
+      const now={ b:parseFloat(getComputedStyle(e.querySelector('.tfx'),'::before').height)||0,
+                  ring:parseFloat(fx.getPropertyValue('--tfR'))||0,
+                  brk:parseFloat(fx.getPropertyValue('--tfKL'))||0,
+                  glow:parseFloat(cs.getPropertyValue('--tfG'))||0 };
+      if(prev){ for(const k in now) assert(now[k]>=prev[k], '단계 '+r+'에서 '+k+'가 뒤로 감: '+prev[k]+'→'+now[k]);
+        if(Object.keys(now).some(k=>now[k]>prev[k])) grew++; }
+      prev=now; }
+    assert(grew===6,'단계가 올라가도 구조가 그대로인 구간이 있음: '+grew+'/6');
+    // ④ 색은 인라인으로 들어오고 CSS는 currentColor 로만 받는다 — 등급 색값을 CSS에 복제하면 실패
+    const god=byTier[7];
+    assert(god.style.color.replace(/\s/g,'')==='rgb(255,43,214)','가방 칸이 등급색을 인라인으로 안 받음: '+god.style.color);
+    // ⚠ var() 가 든 선언은 크롬이 '적은 그대로' 보관한다 — #hex 가 rgb() 로 안 바뀐다. 두 표기 다 찾아야 한다.
+    const hex2rgb=h=>{ const n=parseInt(h.slice(1),16);
+      return 'rgb('+((n>>16)&255)+', '+((n>>8)&255)+', '+(n&255)+')'; };
+    let frameCss='';
+    for(const sh of document.styleSheets){ try{ for(const r of sh.cssRules){
+      if(/pdSlot|igCell|tfx|data-tr/.test(r.selectorText||'')) frameCss+=r.cssText+'\n'; } }catch(e){} }
+    assert(frameCss.length>400,'프레임 CSS를 못 읽음: '+frameCss.length);
+    const low=frameCss.toLowerCase();
+    const dup=Object.keys(TIER_COLOR).filter(t=>
+      low.indexOf(TIER_COLOR[t].toLowerCase())>=0 || low.indexOf(hex2rgb(TIER_COLOR[t]))>=0);
+    assert(!dup.length,'등급 색값이 CSS에 복제됨(currentColor 로 받아야 한다): '+dup.join(','));
+    // 글로우가 실제로 사다리를 타는가 — 두 칸 모두 --tfG 를 써야 한다(계산된 값 비교로는 색 차이에 묻힌다)
+    // 줄바꿈은 원문 그대로 보관되므로 줄 단위로 세면 안 된다 — 공백을 눌러 선언 단위로 자른다
+    const glowUses=frameCss.replace(/\s+/g,' ').split(';')
+      .filter(d=>/box-shadow/.test(d) && /var\(--tfG\)/.test(d)).length;
+    assert(glowUses>=2,'글로우가 단계를 안 탐 — box-shadow 가 --tfG 를 쓰는 곳 '+glowUses+'곳(착용·가방 둘 다여야 한다)');
+    // ⑤ 칸 안 숫자·등급 배지는 없다(테두리가 말한다)
+    assert(!god.querySelector('.igLv'),'칸에 숫자가 남아 있음');
+    twLeave();
+    return '7단계 · 구조 6번 증가 · 착용/가방 공용'; });
+  await step('장비 아이콘: 그림이 없으면 라인아트로 돌아간다(404 없음)', ()=>{
+    skipIf(typeof gearIco!=='function','장비 아이콘 파이프라인 없음');
+    // 목록에 없는 부위/등급은 절대 <img> 를 만들지 않는다 — 가방 40칸이 전부 404를 쏘게 된다
+    for(const slot in PROF_GEAR) for(const t of PROF_ITEM_TIERS.map(x=>x.id)){
+      const h=gearIco(slot, t);
+      if(h.indexOf('<img')>=0){
+        const k=h.match(/gear\/([^.]+)\.webp/)[1];
+        assert(GEAR_ART.has(k),'목록에 없는 파일을 부름: '+k); }
+      else assert(h.indexOf('<svg')===0 && h.indexOf('slIco')>0,'폴백이 라인아트 글리프가 아님: '+slot); }
+    // 화면에 실제로 뜬 아이콘도 전부 목록 안이어야 한다
+    const bad=[...document.querySelectorAll('.igCell img.slIco,.pdSlot img.slIco')]
+      .filter(im=>!GEAR_ART.has((im.getAttribute('src').match(/gear\/([^.]+)\.webp/)||[])[1]));
+    assert(!bad.length,'목록 밖 그림이 화면에 붙음: '+bad.length+'개');
+    // 부위마다 라인아트가 실재해야 한다(빈 svg 는 빈 칸으로 보인다)
+    for(const slot in PROF_GEAR) assert((PROF_SLOT_ICON[slot]||'').indexOf('<path')>=0,'라인아트 없음: '+slot);
+    return GEAR_ART.size+'장 등록 · 나머지 '+Object.keys(PROF_GEAR).length+'부위 라인아트'; });
   await step('장비창: DESIGN.md 규칙(라운드 토큰 · 시안 1곳 · 1px 테두리)', ()=>{
     skipIf(typeof profPickSlot!=='function','장비창 없음');
     const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0;
