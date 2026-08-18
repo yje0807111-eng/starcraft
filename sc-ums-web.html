@@ -3376,6 +3376,10 @@
     box-shadow:0 0 7px -1px rgba(255,59,59,.5)}
   .msPanel::before{top:0}
   .msPanel::after{bottom:0}
+  /* 목록 구역(정렬 띠 + 목록)을 묶는 안쪽 판 — 카드 면 위에 한 톤 어두운 막을 덮는다.
+     소셜 구역은 이 판 밖이라 카드 면 그대로다(둘 사이 17px 틈에서 카드 색이 드러나 구역이 갈린다). */
+  .msTop{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden;
+    background:rgba(0,0,0,.2)}
   /* 정렬 띠 = 사냥터 업그레이드 탭 띠와 같은 컴포넌트(.pdSeg/.pdSegInd/.pdSegBtn · segNavHTML).
      생김새는 전부 공용 규칙이 갖는다 — 여기서 덮는 것은 여백·폭·글자뿐이다.
      ⚠ 아래 실선 없음 — 탭 띠 자체가 상자라 선이 겹친다(사냥터 .hmUpgBar 와 같은 이유). */
@@ -4148,9 +4152,12 @@
       </div>
       <!-- 목록 상자 — 머리 = 정렬 탭 띠(네비바 형태) · 본문 = 유즈맵 나열 -->
       <div class="msPanel">
-        <!-- 정렬 띠 = 사냥터 업그레이드 탭과 같은 컴포넌트(segNavHTML) — 속은 renderMapSortTabs()가 채운다 -->
-        <div class="msSortTabs" id="msSortTabs"></div>
-        <div class="msList uiScroll" id="msList"></div>
+        <!-- 정렬 띠 + 목록만 감싸는 안쪽 판 — 바깥 카드보다 한 톤 어둡게 해서 '목록 구역'을 묶는다 -->
+        <div class="msTop">
+          <!-- 정렬 띠 = 사냥터 업그레이드 탭과 같은 컴포넌트(segNavHTML) — 속은 renderMapSortTabs()가 채운다 -->
+          <div class="msSortTabs" id="msSortTabs"></div>
+          <div class="msList uiScroll" id="msList"></div>
+        </div>
         <!-- 소셜 = 같은 카드의 **아래 구역**. 내용(.msSocial)은 #twChat 의 것을 옮겨 쓴다(복제 금지).
              탭 전환은 하단 네비가 맡는다 -->
         <div id="msSocialDock"></div>

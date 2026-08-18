@@ -2469,6 +2469,14 @@ async function groupLobby(){
         assert(parseFloat(ls.marginBottom)>=4,'목록 아래 여백이 margin 이 아님(카드가 끝선에 붙어 잘린다)');
         const lb=$('msList').getBoundingClientRect(), dt=dock.getBoundingClientRect();
         assert(dt.top-lb.bottom>=4,'목록이 칸막이에 붙어 잘림: '+(dt.top-lb.bottom).toFixed(1)+'px'); }
+      // 목록 구역(.msTop)만 한 톤 어두운 판으로 묶인다 — 소셜은 그 밖이라 카드 면 그대로다
+      { const top=panel.querySelector('.msTop');
+        assert(top && top.contains($('msSortTabs')) && top.contains($('msList')),'정렬 띠·목록을 묶는 판(.msTop)이 없음');
+        assert(!top.contains(dock),'소셜이 목록 판 안에 들어가 있음');
+        const c=((getComputedStyle(top).backgroundColor||'').match(/[\d.]+/g)||['0','0','0','0']).map(parseFloat);
+        const a=(c.length>3?c[3]:1);
+        assert(a>=0.08 && a<=0.4 && c[0]<30 && c[1]<30 && c[2]<30,
+          '목록 판이 카드보다 한 톤 어둡지 않음: '+getComputedStyle(top).backgroundColor); }
       // 목록에 카드가 **정확히 5장** 들어온다(잘린 6번째가 끼면 마감이 지저분하다)
       { const list=$('msList'), ls=getComputedStyle(list), it=list.querySelector('.mapItem');
         const inner=list.clientHeight-parseFloat(ls.paddingTop)-parseFloat(ls.paddingBottom);
