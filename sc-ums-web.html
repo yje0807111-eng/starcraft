@@ -398,20 +398,23 @@
   .hsGrid{--hsGap:6px;display:flex;flex-wrap:nowrap;justify-content:flex-start;gap:var(--hsGap);align-items:stretch;overflow-x:auto;overflow-y:hidden;padding-bottom:1px;flex:1;min-height:0}
   .hsGrid::-webkit-scrollbar{height:4px}.hsGrid::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
   /* 유닛 셀 = 통일된 SC 카드(메탈+네온 엣지+사선 모서리+스캔라인) */
-  .hsCell{position:relative;flex:0 0 calc((100% - 3*var(--hsGap))/4);min-width:0;padding:0;cursor:pointer;overflow:hidden;transition:all .12s;display:flex;flex-direction:column;
-    background:var(--bpFace);border:1px solid var(--metal-edge);
-    clip-path:polygon(0 0,calc(100% - 7px) 0,100% 7px,100% 100%,7px 100%,0 calc(100% - 7px));
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
-  .hsCell::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent);pointer-events:none;z-index:4}
-  .hsCell:hover{border-color:var(--gold);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 0 10px -3px rgba(255,210,74,.6)}
+  /* 카드 = 사냥터 업그레이드 카드(.hmUp)와 같은 문법: 완전 검정 면 + 위가 밝고 아래로 스러지는 붉은 테두리.
+     ⚠ 테두리 그라데는 `면 padding-box, 액센트 border-box, 금속링 border-box` 3층이다 —
+       금속을 아래 깔지 않으면 순색 빨강이 되어 너무 쌀해 보인다(사냥터에서 이미 겪은 것).
+     ⚠ border-color 로는 이 테두리를 못 바꾼다(그라데라서) — hover/선택은 box-shadow 로 낸다. */
+  .hsCell{--accRGB:255,59,59;
+    position:relative;flex:0 0 calc((100% - 3*var(--hsGap))/4);min-width:0;padding:0;cursor:pointer;overflow:hidden;transition:box-shadow .12s,transform .12s;display:flex;flex-direction:column;
+    clip-path:polygon(0 0,calc(100% - 7px) 0,100% 7px,100% 100%,7px 100%,0 calc(100% - 7px))}
+  .hsCell::after{content:'';position:absolute;left:0;right:7px;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.13) 30%,rgba(255,255,255,.13) 70%,transparent);pointer-events:none;z-index:4}
+  .hsCell:hover{box-shadow:0 0 10px -3px rgba(var(--accRGB),.6)}
   .hsCell:active{transform:translateY(1px)}
   /* 초상 — 카드 폭은 꽉 채우고 여백은 여기 안쪽 패딩으로 만든다(그림이 칸 벽에 붙지 않게) */
   .hsThumb{position:relative;width:100%;flex:1;min-height:34px;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:3px 9px;
-    background:var(--bpTile)}
+    background:none}   /* 카드 면(완전 검정)이 그대로 비친다 — 회색 타일을 덮지 않는다 */
   .hsThumb img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))}.hsThumb svg{width:28px;height:28px}
   /* 초상 아래 글자 묶음 — 이름 + 줄들(수량 · 가격 · 등급 화살표). 세 화면이 같은 마크업(_hsCardHTML)을 쓴다 */
   .hsInfo{flex:none;display:flex;flex-direction:column;align-items:center;gap:0;padding:2px 3px 3px;
-    background:rgba(6,8,12,.66);border-top:1px solid rgba(255,255,255,.07)}
+    background:none;border-top:1px solid rgba(255,255,255,.07)}   /* 면은 카드가 갖는다 — 글자 묶음은 구분선 한 줄만 */
   .hsName{max-width:100%;font-size:10.5px;font-weight:700;color:#e8eef6;text-align:center;line-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   /* 수량 = 초상 좌상단 뱃지(줄이 아니다 — 두 곳에 같은 값을 두지 않는다) */
   .hsCnt{position:absolute;top:3px;left:4px;z-index:5;font-family:var(--font-num);font-size:var(--fs-sm);font-weight:800;color:#fff;
@@ -2799,13 +2802,20 @@
      빨강은 여기, 업그레이드를 감싸는 테두리가 맡는다(안쪽 작은 버튼은 은색 그대로).
      테두리는 단색이 아니라 '위에서 빛을 받은' 그라데다 — 두 겹 배경(면=padding-box / 테두리=border-box)으로 낸다.
      ⚠ 색은 알파만 바꿔 만든다. 검정 위에서 알파가 곧 밝기라 토큰(--hmAccRGB) 하나로 명암이 전부 나온다. */
-  .hmUp{position:relative;display:flex;align-items:center;gap:6px;padding:6px;min-width:0;
-    background:linear-gradient(180deg,#0a0a0a,#000) padding-box,
-      linear-gradient(180deg,rgba(var(--hmAccRGB),.40) 0%,rgba(var(--hmAccRGB),.26) 34%,
-        rgba(var(--hmAccRGB),.15) 68%,rgba(var(--hmAccRGB),.09) 100%) border-box,
-      var(--metal-ring-n) border-box;   /* 아래에 금속을 깔아 구역색을 탁하게 — 순색 빨강은 너무 쌀해 보인다 */
-    border:1px solid transparent;border-radius:var(--r-bar);
-    box-shadow:0 0 7px -5px rgba(var(--hmAccRGB),.35);
+  /* 🎴 카드 껍데기 — 사냥터 업그레이드 카드와 유즈맵 유닛 카드가 **이 한 규칙**을 공유한다.
+     액센트만 각자 --accRGB 로 정하고, 면·테두리·그림자 문법은 여기 한 곳에만 쓴다.
+     ⚠ 토큰(:root{--cardRing:…})으로는 못 묶는다 — 커스텀 속성 안의 var() 는 **선언 지점**에서 치환되므로
+       :root 에 없는 --accRGB 가 무효가 되어 background 가 통째로 죽는다(실제로 그랬다). 선택자를 묶는 게 답이다.
+     ⚠ 금속 링을 아래 깔지 않으면 순색 액센트가 되어 너무 쌀해 보인다.
+     ⚠ 이 테두리는 그라데라서 border-color 로 못 바꾼다 — hover/선택은 box-shadow 로 낼 것. */
+  .hmUp,.hsCell{background:var(--bpFace) padding-box,
+      linear-gradient(180deg,rgba(var(--accRGB),.40) 0%,rgba(var(--accRGB),.26) 34%,
+        rgba(var(--accRGB),.15) 68%,rgba(var(--accRGB),.09) 100%) border-box,
+      var(--metal-ring-n) border-box;
+    border:1px solid transparent;
+    box-shadow:0 0 7px -5px rgba(var(--accRGB),.35)}
+  .hmUp{--accRGB:var(--hmAccRGB);
+    position:relative;display:flex;align-items:center;gap:6px;padding:6px;min-width:0;border-radius:var(--r-bar);
     clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
   /* 윗면 하이라이트 — 카드가 '판'으로 떠야 평평해 보이지 않는다 */
   .hmUp::before{content:'';position:absolute;left:7px;right:0;top:0;height:1px;pointer-events:none;

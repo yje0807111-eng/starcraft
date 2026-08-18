@@ -619,6 +619,27 @@ border:1px solid var(--metal-edge);                                       /* 바
   스모크가 폭·균일성·5번째 위치를 함께 검사한다.
   (지금은 `--hsGap:6px` 로 카드가 폭을 꽉 채우고, **여백은 초상 안쪽 패딩 `3px 9px`** 으로 만든다.)
 
+##### 유닛 카드 껍데기 = 사냥터 업그레이드 카드와 한 규칙 (2026-08-14 4차)
+
+유닛 카드(`.hsCell`)를 사냥터 업그레이드 카드(`.hmUp`)와 **같은 껍데기**로 맞췄다:
+완전 검정 면 + 위가 밝고 아래로 스러지는 붉은 그라데 테두리 + 아래에 깔린 금속 링.
+
+```css
+.hmUp,.hsCell{ background:var(--bpFace) padding-box,
+    linear-gradient(180deg,rgba(var(--accRGB),.40) 0%, … .09) border-box,
+    var(--metal-ring-n) border-box;
+  border:1px solid transparent; box-shadow:0 0 7px -5px rgba(var(--accRGB),.35) }
+```
+
+- 액센트만 각자 `--accRGB` 로 정한다(사냥터=구역색, 유즈맵=빨강 `255,59,59`). 문법은 위 한 규칙에만 있다.
+- ⚠ **토큰(`:root{--cardRing:…}`)으로는 못 묶는다.** 커스텀 속성 안의 `var()` 는 **선언 지점**에서 치환되므로,
+  `:root` 에 없는 `--accRGB` 가 무효가 되어 `background` 가 통째로 죽는다(`backgroundImage:none`). 실제로 한 번 밟았다.
+  **선택자를 묶는 게 답이다.**
+- 카드 안쪽(`.hsThumb`·`.hsInfo`)은 면을 갖지 않는다 — 카드의 검정이 그대로 비친다. 회색 타일을 덮으면 '짙은 검정'이 아니게 된다.
+- hover 는 `box-shadow` 로 낸다. 이 테두리는 그라데라 `border-color` 로는 아무 일도 안 일어난다.
+- 스모크 `assertCardRing()` 이 두 화면(사냥터·유즈맵)에서 **같은 잣대**로 검사한다 —
+  그룹마다 페이지가 달라 한 자리에서 둘을 못 비교하므로 양쪽에 각각 댄다.
+
 ##### 유닛 카드 = `_hsCardHTML()` 한 함수 (2026-08-14 3차)
 
 지정·판매·조합이 각자 카드 마크업을 만들고 있었다(이름 위치도, 수량 표기도 조금씩 달랐다). 한 함수로 합쳤다.

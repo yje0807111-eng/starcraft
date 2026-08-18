@@ -107,6 +107,8 @@
 - 하단 패널 `.bp` — **id는 `'bp'+탭명` 동적 참조**(`bpMain/bpUnit/bpUpgrade/bpPlayers/bpBattle/bpBuild`). ⚠️ 미참조로 보여도 살아있음.
 - **하단 판의 '면'은 `.bp::before` / `#btSheet::before` 다**(2026-08-14). 좌우 위 7px 사선 컷을 거기 건다 —
   요소 자체에 `clip-path` 를 걸면 시트 밖 `#btCardCtl`(top:-28px)이 잘려 사라진다.
+- **카드 껍데기는 `.hmUp,.hsCell` 한 규칙**이다(2026-08-14) — 사냥터 업그레이드 카드와 유즈맵 유닛 카드가 면·테두리·그림자를 공유하고 액센트만 `--accRGB` 로 갈린다.
+  ⚠ `:root` 토큰으로 묶으면 안 된다 — 커스텀 속성 안의 `var()` 는 선언 지점에서 치환돼 `--accRGB` 가 무효가 되고 `background` 가 통째로 죽는다.
 - **유닛 카드(지정·판매·조합)는 `_hsCardHTML(gid, name, act, title, qty, rows)` 한 함수**다(2026-08-14). 수량은 초상 좌상단 뱃지고, `rows` 는 이름 아래 줄(`_hsPrice`/`_hsUpRow`).
   세 렌더러가 각자 마크업을 만들던 것을 합쳤다 — 새 화면이 유닛 카드를 쓸 때도 이걸 부를 것.
 - 머리줄 초상(`.cgPort`)은 폐지했다 — `renderCmdGrid` 가 그리지 않는다(모델의 `icon` 은 남아 있다). 등급 띠는 `tierSegHTML()` → 공용 `.pdSeg`.

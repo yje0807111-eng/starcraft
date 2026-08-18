@@ -36,6 +36,19 @@ async function step(name, fn){
 }
 function assert(cond, msg){ if(!cond) throw new Error(msg||'assert fail'); }
 function skipIf(cond, why){ if(cond){ const e=new Error('SKIP: '+why); e._skip=true; throw e; } }
+// 🎴 '완전 검정 면 + 액센트 그라데 테두리' 카드(--cardRing)를 쓰고 있는가.
+//   사냥터 업그레이드 카드(.hmUp)와 유즈맵 유닛 카드(.hsCell)가 같은 토큰을 쓴다 —
+//   그룹마다 페이지가 달라 한 자리에서 둘을 못 비교하므로, 같은 잣대를 두 그룹에서 각각 댄다.
+function assertCardRing(el, who){
+  assert(el, who+' 카드를 못 찾음');
+  const c=getComputedStyle(el), bg=String(c.backgroundImage).replace(/\s+/g,' ');
+  assert(/rgb\(10, 10, 10\)/.test(bg) && /rgb\(0, 0, 0\)/.test(bg), who+' 면이 완전 검정이 아님: '+bg.slice(0,90));
+  const acc=(bg.match(/rgba\((\d+), (\d+), (\d+), 0\.4\)/)||[])[0];
+  assert(acc, who+' 액센트 테두리 그라데가 없음(첫 스톱 alpha .4): '+bg.slice(0,140));
+  assert(/0\.26\)/.test(bg) && /0\.15\)/.test(bg) && /0\.09\)/.test(bg), who+' 테두리 스톱이 --cardRing 규격과 다름: '+bg.slice(0,160));
+  assert(/rgb\(92, 92, 92\)/.test(bg), who+' 테두리 아래 금속 링이 없음(순색 액센트가 된다)');
+  assert(/rgba\(0, 0, 0, 0\)/.test(c.borderTopColor), who+' 테두리가 그라데가 아님(border-color 를 쓰고 있다): '+c.borderTopColor);
+  return acc; }
 
 // ── 게임 헬퍼 ──
 function hackCredits(){ G.credits=999999; G.mineral=Math.max(G.mineral||0,999999); G.gas=Math.max(G.gas||0,99999); }
@@ -279,6 +292,8 @@ async function groupLobby(){
         const cols=HB_UPG_CAT.map(c=>c[2]);
         assert(new Set(cols).size===cols.length,'구역색이 겹침: '+cols.join(' / ')); }
       assert(seg.querySelectorAll('.pdSegInd').length===1,'현재 구역을 가리키는 판(.pdSegInd)이 없음');
+      // 카드 껍데기(--cardRing)는 유즈맵 유닛 카드(.hsCell)와 같은 토큰이다 — 한쪽만 바꾸면 둘이 갈린다
+      assertCardRing(document.querySelector('#hmUpgGrid .hmUp'), '사냥터 업그레이드 카드');
       // 글자만 — 아이콘이 끼면 아이콘+글자가 한 덩어리로 가운데 정렬돼 글자가 중앙에서 밀린다
       assert(!seg.querySelector('[data-ico]'),'탭에 아이콘이 다시 들어옴(글자가 중앙에서 밀린다)');
       // 판이 바깥 테두리 안쪽 --pad 만큼만 띄워져 있어야 한다(양쪽 틈이 같아야 '맞닿는' 느낌이 난다)
@@ -2996,6 +3011,10 @@ async function groupGame(){
           const t=document.querySelector('#hsGrid .hsUp').textContent.replace(/\s+/g,'');
           assert(/[가-힣]+›[가-힣]+/.test(t),'조합 등급 줄이 "A › B" 꼴이 아님: '+t); }
         gtabBack(); await sleep(120); }
+      // 카드 껍데기 = 사냥터 업그레이드 카드와 같은 --cardRing(검정 면 + 붉은 그라데 테두리 + 금속 링)
+      { const c=document.querySelector('#hsGrid .hsCell');
+        if(c){ const acc=assertCardRing(c,'유닛 카드');
+          assert(/255, 59, 59/.test(acc),'유닛 카드 액센트가 빨강이 아님: '+acc); } }
       { const g=$('hsGrid'), cs=[...g.querySelectorAll('.hsCell')];
         if(cs.length>=2){
           const w=cs.map(e=>Math.round(e.getBoundingClientRect().width));
