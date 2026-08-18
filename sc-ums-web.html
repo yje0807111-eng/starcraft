@@ -12494,12 +12494,28 @@ const GTAB_TREE={
       { k:'foe',  label:'적군', ico:'cpu',   act:()=>setPlSec('foe') } ],
       show:()=>gameHasVersus() },
 };
-let _gtabDrill='';   // 내려가 있는 구역('' = 최상위 5칸)
+// ══ 오토배틀(직스) 하단 탭 트리 ══
+// 같은 페인터를 쓰고 표만 갈아 끼운다 — 칸 생김새·‹ 동작·리셋 규칙이 네모와 하나다.
+//   전투는 탭이 아니라 **무선택 기본 화면**이다(‹ 가 여기로 돌아온다).
+const STK_TREE={
+  // 🏗 건설지 = 관리자 건설 화면(#vBuild + G.tech). '강화'는 그 화면 위에서 하단 시트만 바뀐다.
+  Build:   { cur:()=>(STK&&STK.supSheet?'upg':'build'), reset:()=>stkGoBuild(), subs:[
+      { k:'build', label:'건설', ico:'build', act:()=>stkGoBuild() },
+      { k:'upg',   label:'강화', ico:'boost', act:()=>stkGoUpg() } ] },
+  // 💥 특수무기 = 화면 이동 없이 하단 시트만(전장을 계속 본다)
+  Upgrade: { cur:()=>(STK&&STK.supPage==='wpnUse'?'use':'buy'), reset:()=>stkGoWpn('buy'), subs:[
+      { k:'buy', label:'구입', ico:'coin', act:()=>stkGoWpn('buy') },
+      { k:'use', label:'사용', ico:'boost', act:()=>stkGoWpn('use') } ] },
+  // 👁 관전은 하위가 없다 — 옛 동작(시트 토글) 그대로
+};
+let _gtabDrill='';   // 내려가 있는 구역('' = 최상위 칸들)
 // 이 구역이 지금 실제로 보여줄 하위 목록(show() 통과분). 0개면 내려갈 것이 없다.
-function gtabSubs(tab){ const sec=GTAB_TREE[tab];
-  // 관리자 샌드박스·직스는 같은 탭 이름이 다른 화면을 가리킨다(유닛=이펙트 랩, 업그레이드=보급 …) —
-  // 여기 하위는 네모네모 인게임 전용이므로 그 모드에선 내려가지 않는다.
-  if(typeof G!=='undefined' && (G.sandbox||G.strike)) return [];
+// 지금 모드의 트리 — 네모 인게임은 GTAB_TREE, 오토배틀은 STK_TREE.
+// ⚠ 같은 탭 키(Build/Upgrade)가 모드마다 다른 화면을 가리키므로 표를 갈아 끼워야 한다.
+function gtabTree(){ return (typeof G!=='undefined' && G.strike) ? STK_TREE : GTAB_TREE; }
+function gtabSubs(tab){ const sec=gtabTree()[tab];
+  // 관리자 샌드박스는 같은 탭 이름이 또 다른 화면(이펙트 랩 등)이라 내려가지 않는다.
+  if(typeof G!=='undefined' && G.sandbox) return [];
   if(!sec || (sec.show && !sec.show())) return [];
   return sec.subs.filter(t=>!t.show || t.show()); }
 function gtabPaint(){ const b=document.getElementById('tabs'); if(!b) return;
@@ -12507,7 +12523,7 @@ function gtabPaint(){ const b=document.getElementById('tabs'); if(!b) return;
   const subs=_gtabDrill?gtabSubs(_gtabDrill):[];
   b.classList.toggle('drill', subs.length>0);
   if(!subs.length){ _gtabDrill=''; return; }
-  const sec=GTAB_TREE[_gtabDrill], cur=sec.cur?sec.cur():null;
+  const sec=gtabTree()[_gtabDrill], cur=sec.cur?sec.cur():null;
   let h=_navCell('nav','back','뒤로','back','navBk','gtabBack()');
   for(const t of subs) h+=_navCell('sub', t.k, t.label, t.ico, (cur===t.k?'cur':''), "gtabSub('"+t.k+"')");
   b.insertAdjacentHTML('beforeend', h);
@@ -12516,7 +12532,7 @@ function gtabPaint(){ const b=document.getElementById('tabs'); if(!b) return;
 // ⚠ 구역에 '들어올 때'는 늘 첫 하위로 되돌린다 — 안 그러면 타워구매를 보다 나갔다 다시 들어와도
 //   타워구매가 열려 있어서, 구역 이름과 보이는 내용이 어긋난다(사용자가 짚은 것).
 //   하위 칸을 누르는 경로(gtabSub)는 gtabDrill 을 안 지나므로 그때는 유지된다.
-function gtabDrill(tab){ const sec=GTAB_TREE[tab], was=_gtabDrill;
+function gtabDrill(tab){ const sec=gtabTree()[tab], was=_gtabDrill;
   _gtabDrill=gtabSubs(tab).length?tab:'';
   // ⚠ '밖에서 들어올 때'만 되돌린다(was!==tab). 이미 그 구역에 있는데 되돌리면
   //   자동화(openMainSheet('auto',…) → gtabDrill('Main'))가 곧바로 판매로 튕겨 나간다.
@@ -12527,7 +12543,9 @@ function gtabSub(k){ const subs=gtabSubs(_gtabDrill), t=subs.find(x=>x.k===k); i
   t.act(); gtabPaint(); }
 // ‹ = 기본 상태로 돌아간다. 층만 올리면 '보스 구역에 있으면서 최상위 네비를 보는' 어중간한 상태가 남는다
 // (하단은 보스 시트인데 네비는 최상위 — 실제로 그랬다). HOME 네비의 navBack 이 openHome() 을 부르는 것과 같은 뜻.
-function gtabBack(){ if(typeof playSfx==='function') playSfx('ui_back'); gameRestHome(); }
+function gtabBack(){ if(typeof playSfx==='function') playSfx('ui_back');
+  if(typeof G!=='undefined' && G.strike){ strikeRestHome(); return; }   // 오토배틀 = 전투 화면이 기본
+  gameRestHome(); }
 // 🏠 기본 상태 — 아무 구역도 고르지 않았을 때의 하단. 내용은 '유닛 지정'이고 네비는 어느 칸도 안 켜진다.
 //   ⚠ switchTab 이 안에서 gtabDrill 을 부르므로, 층·하이라이트 정리는 반드시 그 뒤에 한다.
 function gameRestHome(){
@@ -19513,7 +19531,7 @@ function strikeDrawScenery(ctx,w2s,scale,S,W,H){ if(!S.dec) S.dec=strikeGenScene
   ctx.fillStyle='rgba(222,212,182,.15)';   // 떠다니는 먼지(다이나믹)
   for(const m of D.motes){ const p=w2s(m.x+Math.sin(t*m.sp+m.ph)*m.amp, m.y+Math.cos(t*m.sp*0.7+m.ph)*m.amp*0.6); if(p.x<0||p.x>W||p.y<0||p.y>H) continue; ctx.beginPath(); ctx.arc(p.x,p.y,1.5+Math.sin(t*2+m.ph)*0.6,0,6.28); ctx.fill(); }
   ctx.restore(); }
-const STK_TABLABEL ={ Main:'전투', Build:'건설지', Upgrade:'업그레이드', Players:'관전' };   // 건설지 = 관리자 건설 탭(Build) 그대로 사용
+const STK_TABLABEL ={ Build:'건설지', Upgrade:'특수무기', Players:'관전' };   // 건설지 = 관리자 건설 탭(Build) 그대로 사용 · 전투는 탭이 아니라 기본 화면
 // ⚠ 인게임 탭 이름의 **실제 소스는 이 표**다 — startGameNow 가 strikeSetTabLabels(STK_NEMOLABEL) 로
 //    마크업 글자를 덮어쓴다. 마크업(#tabs 의 .tab 안 글자)은 게임 시작 전에만 보이므로 둘을 같이 고칠 것.
 const STK_NEMOLABEL={ Main:'관리', Unit:'유닛뽑기', Upgrade:'업그레이드', Players:'플레이어', Build:'건설' };
@@ -19546,9 +19564,9 @@ function strikeNewState(){ const W=mapCfg('world',4800), hp=mapCfg('baseHp',7500
     world:W, cycleTime:mapCfg('cycleTime',30), cycleT:mapCfg('cycleTime',30),
     incomeBase:inc, mineIncome:mi,
     // 진영별 경제(me=나, ai=컴퓨터). 광산/돈 리더보드용. shield=중립 신전 보상 쉴드(다음 단계 전투에서 적용)
-    me:{ name:'나', compCol:(typeof PLAYER_VIEW_COLORS!=='undefined'?PLAYER_VIEW_COLORS[0]:'#4570d3'), base:{x:W*0.115,y:W*0.885, hp:hp, max:hp, dead:false}, hp:hp, max:hp, shield:0, gold:mapCfg('startGold',3000), mines:0, mineCost:mc, atkLv:0, hpLv:0, bombs:0, units:[], buildings:[],
-         sec:{x:W*0.339,y:W*0.661, hp:sHp, max:sHp, dead:false} },   // 좌하단 메인 + 2차 신전 / compCol=아군 컴퓨터(생산자) 색 / atkLv·hpLv=유닛강화, bombs=폭탄 재고
-    ai:{ name:'컴퓨터', compCol:(typeof PLAYER_VIEW_COLORS!=='undefined'?PLAYER_VIEW_COLORS[1]:'#d6292f'), base:{x:W*0.885,y:W*0.115, hp:hp, max:hp, dead:false}, hp:hp, max:hp, shield:0, gold:mapCfg('startGold',3000), mines:0, mineCost:mc, atkLv:0, hpLv:0, bombs:0, units:[], buildings:[], aiT:0,
+    me:{ name:'나', compCol:(typeof PLAYER_VIEW_COLORS!=='undefined'?PLAYER_VIEW_COLORS[0]:'#4570d3'), base:{x:W*0.115,y:W*0.885, hp:hp, max:hp, dead:false}, hp:hp, max:hp, shield:0, gold:mapCfg('startGold',3000), mines:0, mineCost:mc, atkLv:0, hpLv:0, wpn:{}, units:[], buildings:[],
+         sec:{x:W*0.339,y:W*0.661, hp:sHp, max:sHp, dead:false} },   // 좌하단 메인 + 2차 신전 / compCol=아군 컴퓨터(생산자) 색 / atkLv·hpLv=유닛강화, wpn=특수무기 재고(종류별)
+    ai:{ name:'컴퓨터', compCol:(typeof PLAYER_VIEW_COLORS!=='undefined'?PLAYER_VIEW_COLORS[1]:'#d6292f'), base:{x:W*0.885,y:W*0.115, hp:hp, max:hp, dead:false}, hp:hp, max:hp, shield:0, gold:mapCfg('startGold',3000), mines:0, mineCost:mc, atkLv:0, hpLv:0, wpn:{}, units:[], buildings:[], aiT:0,
          sec:{x:W*0.661,y:W*0.339, hp:sHp, max:sHp, dead:false} },   // 우상단 메인 + 2차 신전 / compCol=적군 컴퓨터 색
     central:{x:W*0.5,y:W*0.5, hp:cHp, max:cHp, owner:null, dead:false},   // 중앙 중립 보너스 신전(깬 팀 메인에 쉴드)
     cam:{x:W/2,y:W/2}, zoom:STK_DEFZOOM, viewWorld:Math.round(2600/STK_DEFZOOM), cw:0, ch:0, sel:null, userCam:false,
@@ -19565,6 +19583,28 @@ function strikeMineBuy(side){ side.mineCost=(side.mineCost||200)+(side._mineStep
 function strikeUpCost(kind, lv){ const B={atk:120, hp:120}; return Math.round((B[kind]||300)*Math.pow(1.55, lv||0)); }
 function strikeKillGold(e){ return Math.max(1, Math.min(5, Math.round((e&&e.maxHp||130)/250))); }   // 처치 보상(티어 비례)
 const STK_BOMB_COST=150, STK_BOMB_DMG=520, STK_BOMB_R=520;   // 폭탄: 비용/피해/반경
+// 💥 특수무기 — **이 표 하나가 단일 소스**다(구입 그리드·사용 그리드·효과 분기가 전부 여기서 나온다).
+// ⚠ 효과는 시뮬에 새 필드를 만들지 않는다. 이미 있는 것만 쓴다:
+//    광역 피해=hp · 정지=u.wait(소환 직후 대기와 같은 필드) · 회복=hp.
+//    새 상태이상을 넣고 싶으면 strikeStepUnits 를 먼저 읽고 거기 있는 것을 재사용할 것.
+// ⚠ 아래 상수는 표의 desc 가 참조하므로 반드시 표보다 먼저 온다(TDZ).
+const STK_EMP_DUR=3.5;                       // EMP 정지 시간(초)
+const STK_HEAL_F=0.35;                       // 재생 필드 회복량(최대 체력 비율)
+const STK_ORBIT_DMG=780, STK_ORBIT_R=760;    // 궤도 포격: 폭탄보다 1.5× 피해 · 1.46× 반경
+const STK_WEAPONS=[
+  { k:'bomb',  name:'폭탄',      ico:'💣', cls:'ic-danger', cost:STK_BOMB_COST, cap:3,
+    desc:'가장 밀집한 적 무리에 투하 — 반경 안 광역 피해' },
+  { k:'emp',   name:'EMP',       ico:'⚡', cls:'ic-info',   cost:120, cap:3,
+    desc:'적 전군을 '+STK_EMP_DUR+'초 멈춘다 — 피해는 없다' },
+  { k:'orbit', name:'궤도 포격', ico:'☄',  cls:'ic-danger', cost:240, cap:2,
+    desc:'폭탄보다 넓고 강하게 — 가장 밀집한 곳을 때린다' },
+  { k:'heal',  name:'재생 필드', ico:'✚',  cls:'ic-gold',   cost:110, cap:3,
+    desc:'내 전군의 체력을 '+Math.round(STK_HEAL_F*100)+'% 회복한다' },
+];
+const STK_WPN=k=>STK_WEAPONS.find(w=>w.k===k)||null;
+function strikeWpnHave(k){ const S=STK; return (S&&S.me&&S.me.wpn&&S.me.wpn[k])||0; }
+function strikeWpnTotal(){ const S=STK; if(!S||!S.me||!S.me.wpn) return 0;
+  return STK_WEAPONS.reduce((n,w)=>n+(S.me.wpn[w.k]||0),0); }
 // 유닛 강화 배율(소환 시 적용) — 공격 +12%/Lv, 체력 +16%/Lv
 // 종족 전투 파워 배수(hp·공격 동시) — 배출 배수(테마)는 고정하고 이 값으로 종족 균형을 맞춘다. 밸런싱 단일 소스.
 const STK_RACE_POWER={ union:1.00, swarm:1.00, aetherial:1.00 };   // 종족 세기는 스탯(공격·체력)으로만 조절 — 전역 파워 배수는 중립(1). 상성이 승패를 결정하도록.
@@ -19604,6 +19644,10 @@ function strikeHideNemoChrome(on){ ['coopBossBar','mergeFab','skillFab','deselTo
   ['shopProfile','prodHint','opsManual'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display=on?'none':''; });   // 켜기/끄기 대칭 — 안 그러면 직스를 한 번 하고 나온 뒤 nemo 안내가 계속 숨겨진다
   { const ut=document.querySelector('.tab[data-tab="Unit"]'), bt=document.getElementById('buildTab');   // 건설지 = 관리자 건설 탭(Build)을 그대로 노출, nemo 유닛뽑기 탭은 숨김
     if(ut) ut.style.display=on?'none':''; if(bt) bt.style.display=on?'':'none'; }
+  // ⚔ 전투는 **탭이 아니라 무선택 기본 화면**이다(2026-08-14) — 최상위는 [건설지][특수무기][관전] 셋뿐.
+  //   보스는 네모 전용 탭이다 — 직스로 넘어올 때 켜져 있으면 그대로 남는다(updatePbossFab 이 네모에서만 돈다).
+  { const mt=document.querySelector('.tab[data-tab="Main"]'); if(mt) mt.style.display=on?'none':'';
+    const bt=document.getElementById('bossTab'); if(bt) bt.style.display='none'; }
   if(!on) document.body.classList.remove('cstMode');
 }
 function strikeStart(activePlayers, myNum, names){ if(typeof bgmStop==='function') bgmStop();
@@ -19628,9 +19672,9 @@ function strikeStart(activePlayers, myNum, names){ if(typeof bgmStop==='function
   if(typeof setInGame==='function') setInGame(true);
   strikeHideNemoChrome(true);
   if(STK.sizeCmp){ const mcv=document.getElementById('cvMarine'); if(mcv) mcv.style.display='block'; }   // 3D 유닛 오버레이 캔버스 켜기
-  strikeSetTabLabels(STK_TABLABEL); strikeSetTabOrder(['Main','Build','Upgrade','Players']);   // 건설지 = 두 번째
+  strikeSetTabLabels(STK_TABLABEL); strikeSetTabOrder(['Build','Upgrade','Players']);   // 전투 탭은 숨김(무선택 기본 화면)
   const mn=document.getElementById('mapName'); if(mn) mn.textContent='◈ 오토 배틀';
-  strikeSwitchTab('Main');
+  strikeRestHome();   // 전투 = 무선택 기본 화면에서 시작
   G.loading=true;   // 로딩 동안 시뮬 정지(네모와 동일 — 오프닝 워프 후 진행)
   if(typeof gameStartCountdown==='function') gameStartCountdown();   // 네모와 동일한 게임 진입 로딩 화면(맵 썸네일·특징 설명·플레이어·준비) — 설명은 cpu.feats(오토배틀용)
   else if(typeof showLoading==='function') showLoading(null, 1300);   // 폴백
@@ -20775,37 +20819,46 @@ function _stkSpecGridHTML(){ const S=STK, me=(G.myPlayer||1), myA=(me<=4), names
   return h+'</div>'; }
 // 📦 업그레이드 시트 — 4그리드(① 광산 ② 강화 ④ 특수무기 / 3번은 비움). 구매·강화·투하는 기존 함수를 그대로 호출.
 function _stkLv(cur,max){ return (cur>=max)?'MAX':(cur+'/'+max); }   // 카드 우상단 표기 통일
-function _stkSupplyModel(){ const S=STK, me=S.me, gold=Math.floor(me.gold||0);
-  if(S.supPage==='upg'){
-    const items=[['atk','공격력','⚔'],['hp','체력','❤']].map(function(kv){
-      const k=kv[0], lv=(k==='atk'?me.atkLv:me.hpLv), cost=strikeUpCost(k,lv), full=(lv>=10);
-      return { pro:pIco(kv[2],'ic-gold'), sn:kv[1], cr:(full?0:cost), tr:_stkLv(lv,10), metaCls:'lv', tip:k,   // 레벨 = 우상단 배지
-        state:(full||gold<cost)?'dim':'on', act:full?'':('onclick="strikeUpg(\''+k+'\')"')+_techTipAttr('sup',k) }; });
-    items.push({state:'empty'});                                                     // 3번 칸 = 빈 칸(네모 하단에서 카드가 모자랄 때와 같은 공용 스타일)
-    items.push({ pro:pIco('↩','ic-info'), sn:'뒤로', act:'onclick="strikeSupPage(null)"' });     // 뒤로가기 = 4번 칸
-    return { mode:'prod', compact:true, build:true, title:'업그레이드 · 강화', icon:pIco('🔧','ic-gold'), items:items,
-      info:{ eb:'강화', hideName:true,
-        desc:'카드를 길게 누르면 설명이 나옵니다.' } }; }
-  const hasBomb=(me.bombs||0)>0;
+// ── 📦 하단 시트 모델 ────────────────────────────────────────────────────
+// 구역·하위는 하단 네비(STK_TREE)가 고르고, 여기서는 그 키에 맞는 그리드만 만든다.
+//   건설지 > 강화 = 광산 + 공격력·체력   ·   특수무기 > 구입/사용 = STK_WEAPONS 표
+function _stkUpgModel(){ const S=STK, me=S.me, gold=Math.floor(me.gold||0);
   const items=[
     { pro:pIco('⛏','ic-gold'), sn:'광산', cr:me.mineCost, tr:_stkLv(me.mines||0, STK_MINE_CAP), metaCls:'lv',
-      state:((me.mines||0)>=STK_MINE_CAP||gold<me.mineCost)?'dim':'on', act:'onclick="strikeBuyMine()"'+_techTipAttr('sup','mine') },
-    { pro:pIco('🔧','ic-gold'), sn:'강화',
-      act:'onclick="strikeSupPage(\'upg\')"'+_techTipAttr('sup','upg') },
-    {state:'empty'},                                                                 // 3번 칸 = 빈 칸(네모 하단과 동일한 공용 스타일)
-    { pro:pIco('💣','ic-danger'), sn:'특수무기', cr:(hasBomb?0:STK_BOMB_COST), tr:_stkLv(me.bombs||0, STK_BOMB_CAP), metaCls:'lv',
-      state:(hasBomb||gold>=STK_BOMB_COST)?'on':'dim',
-      act:'onclick="'+(hasBomb?'strikeDropBomb()':'strikeBuyBomb()')+'"'+_techTipAttr('sup','bomb') } ];   // 특수무기 = 4번 칸
-  return { mode:'prod', compact:true, build:true, title:'업그레이드', icon:pIco('📦','ic-info'), items:items,
-    info:{ eb:'업그레이드', hideName:true,
-      desc:'수입 '+strikeIncome(me)+'/웨이브<br>카드를 길게 누르면 설명이 나옵니다.' } }; }
+      state:((me.mines||0)>=STK_MINE_CAP||gold<me.mineCost)?'dim':'on', act:'onclick="strikeBuyMine()"'+_techTipAttr('sup','mine') } ];
+  for(const kv of [['atk','공격력','⚔'],['hp','체력','❤']]){
+    const k=kv[0], lv=(k==='atk'?me.atkLv:me.hpLv), cost=strikeUpCost(k,lv), full=(lv>=10);
+    items.push({ pro:pIco(kv[2],'ic-gold'), sn:kv[1], cr:(full?0:cost), tr:_stkLv(lv,10), metaCls:'lv', tip:k,
+      state:(full||gold<cost)?'dim':'on', act:full?'':('onclick="strikeUpg(\''+k+'\')"')+_techTipAttr('sup',k) }); }
+  return { mode:'prod', compact:true, build:true, title:'강화', icon:pIco('🔧','ic-gold'), items:items,
+    info:{ eb:'강화', hideName:true, desc:'수입 '+strikeIncome(me)+'/웨이브<br>카드를 길게 누르면 설명이 나옵니다.' } }; }
+// 🛒 구입 — 표 그대로가 상점 칸이 된다(품목을 여기서 새로 적지 말 것)
+function _stkWpnBuyModel(){ const S=STK, me=S.me, gold=Math.floor(me.gold||0);
+  const items=STK_WEAPONS.map(function(w){ const have=(me.wpn&&me.wpn[w.k])||0, full=(have>=w.cap);
+    return { pro:pIco(w.ico,w.cls), sn:w.name, cr:(full?0:w.cost), tr:_stkLv(have,w.cap), metaCls:'lv',
+      state:(full||gold<w.cost)?'dim':'on', act:full?'':('onclick="strikeBuyWpn(\''+w.k+'\')"') }; });
+  return { mode:'prod', compact:true, build:true, title:'특수무기 · 구입', icon:pIco('🛒','ic-gold'), items:items,
+    info:{ eb:'구입', hideName:true, desc:'골드로 구입해 두고 <b>사용</b>에서 꺼내 쓴다.' } }; }
+// 💥 사용 — 보유한 것만. 하나도 없으면 빈 칸으로 '구입에서 먼저 사라'를 보여준다.
+function _stkWpnUseModel(){ const S=STK, me=S.me;
+  const own=STK_WEAPONS.filter(w=>((me.wpn&&me.wpn[w.k])||0)>0);
+  const items=own.map(function(w){ const have=me.wpn[w.k];
+    return { pro:pIco(w.ico,w.cls), sn:w.name, tr:'×'+have, metaCls:'lv', state:'on',
+      act:'onclick="strikeUseWpn(\''+w.k+'\')"' }; });
+  while(items.length<4) items.push({state:'empty'});
+  return { mode:'prod', compact:true, build:true, title:'특수무기 · 사용', icon:pIco('💥','ic-danger'), items:items,
+    info:{ eb:'사용', hideName:true,
+      desc:own.length?'칸을 누르면 즉시 발동한다.':'가진 무기가 없습니다 — <b>구입</b>에서 먼저 사세요.' } }; }
+function _stkSupplyModel(){ return (STK && STK.supPage==='wpnUse') ? _stkWpnUseModel()
+  : (STK && STK.supPage==='wpnBuy') ? _stkWpnBuyModel() : _stkUpgModel(); }
 function strikeRenderSelInfo(){ const S=STK; const host=document.getElementById('unitCmd');
   { const old=document.getElementById('stSelInfo'); if(old && !old.classList.contains('hide')){ old.classList.add('hide'); old.innerHTML=''; } }   // 구 프로필 사용 안 함
   if(!host) return;
   let model=null, sig=null, specHTML=null;
   if(S && S.specSheet){ specHTML=_stkSpecGridHTML(); sig='spec|'+(S.specView||'-')+'|'+((G.activePlayers||[]).join('.'))+'|'+(G.myPlayer||1); }   // 👁 관전 = 전용 .plbtn 그리드(커맨드 그리드 아님)
   else if(S && S.supSheet){ model=_stkSupplyModel();
-    sig='sup|'+(S.supPage||'-')+'|'+Math.floor(S.me.gold)+'|'+(S.me.mines||0)+'|'+((S.me.atkLv||0)+'-'+(S.me.hpLv||0))+'|'+(S.me.bombs||0)+'|'+S.me.mineCost; }
+    sig='sup|'+(S.supPage||'-')+'|'+Math.floor(S.me.gold)+'|'+(S.me.mines||0)+'|'+((S.me.atkLv||0)+'-'+(S.me.hpLv||0))
+      +'|'+STK_WEAPONS.map(w=>(S.me.wpn&&S.me.wpn[w.k])||0).join('')+'|'+S.me.mineCost; }
   else if(S && S.selTemple && !S.selTemple.dead){ const o=S.selTemple, nm=S.selTempleName||'신전'; model=_stkTempleModel(o,nm); sig='t|'+nm+'|'+Math.round(o.hp); }
   else if(S && S.selEnemy && !S.selEnemy.dead){ const u=S.selEnemy; model=_stkUnitModel(u,'ai'); sig='e|'+u.id+'|'+Math.round(u.hp); }
   else if(S){ const u=(S.selAllies||[]).map(uid=>strikeFindUnit(S.me.units,uid)).filter(Boolean)[0]; if(u){ model=_stkUnitModel(u,'me'); sig='a|'+u.id+'|'+Math.round(u.hp); } }
@@ -20985,21 +21038,11 @@ function strikeHud(){ const S=STK; if(!S) return;
   hudSetTime(S.cycleT); }                                                // 좌상단 시계 = 출격까지(nemo와 같은 mm:ss)
 
 // ── 탭(nemo 탭+하단 .bp 재사용, 직스 전용 동작) ──
-function strikeSwitchTab(id,el){ const S=STK; if(!S) return;
-  if(id==='Upgrade'){
-    // 업그레이드 탭으로 **내릴** 때는 지정도 함께 해제해 하단을 완전히 비운다.
-    //   (전투·건설지 탭으로 내릴 때와 다르다 — 그쪽은 지정해 둔 대상의 프로필로 복귀한다)
-    if(S.supSheet){ strikeClearSel();
-      if(G.tab==='Build' && G.tech){ G.tech.sel=null; G.tech.selU=[]; G.tech.selRes=null;
-        if(G.tech.sheet){ G.tech.sheet.open=false; G.tech.sheet.sec=null; } } }
-    strikeToggleSupply(); return; }   // 📦 업그레이드 = 화면 이동 없이 하단 시트만 토글
-  if(id==='Players'){   // 👁 관전 = 보급과 동일 — 화면 이동 없이 하단 시트만 토글(플레이어 선택 → 관전 진입)
-    if(S.specSheet){ strikeClearSel(); }   // 내릴 때 지정 해제(하단 완전 비움)
-    strikeToggleSpec(); return; }
-  // 지금 보고 있는 화면의 탭을 다시 누르면 = 보급/관전 시트만 내린다(화면은 그대로).
-  if(S.supSheet && id===G.tab){ strikeToggleSupply(false); return; }
-  if(S.supSheet) strikeToggleSupply(false);   // 다른 화면으로 이동하면 시트는 내린다
-  if(S.specSheet) strikeToggleSpec(false);    // 관전 시트도 다른 화면 이동 시 내림(관전 종료)
+// ══ 오토배틀 하단 탭 ══ 네모와 같은 2층 구조(STK_TREE + 공용 페인터).
+//   전투는 탭이 아니라 **무선택 기본 화면**이다 — ‹ 가 여기로 돌아온다.
+//   최상위: [건설지][특수무기][관전]
+// 화면 전환만 하는 알맹이 — 시트(보급/관전) 처리는 부르는 쪽이 한다.
+function _stkShowScreen(id, el){ const S=STK; if(!S) return;
   G.tab=id; S.userCam=false; if(id!=='Players') S.specView=null;   // 관전 종료
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
   (el||document.querySelector('.tab[data-tab="'+id+'"]'))?.classList.add('on');
@@ -21008,17 +21051,62 @@ function strikeSwitchTab(id,el){ const S=STK; if(!S) return;
   document.querySelectorAll('.gview').forEach(v=>v.classList.toggle('on', v.id===(_bld?'vBuild':'vMain')));   // 직스 전장 캔버스 ↔ 건설 맵
   document.querySelectorAll('.bp').forEach(p=>p.classList.toggle('on', p.id==='bp'+id));        // 하단 패널은 nemo .bp 재사용
   if(_bld){ techSyncWallet(); if(typeof techUIEnsure==='function') techUIEnsure();   // 관리자와 동일한 맵·일꾼·프로필 렌더
-    if(typeof playSfx==='function') playSfx('ui_tab');
     document.body.classList.add('sheetOpen'); if(typeof _syncSheetLift==='function'){ requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); }
     return; }
   if(typeof techHidePreview==='function') techHidePreview(); if(window.M3D&&M3D.techMap3DStop) M3D.techMap3DStop();   // 건설지 이탈 = 프리뷰·라이브3D 정지
   const zl=document.getElementById('zoneLabel');
-  if(zl){ const _m={Main:['⚔️','전장'],Upgrade:['📦','보급'],Players:['👁','관전']}[id];
+  if(zl){ const _m={Main:['⚔️','전장'],Upgrade:['💥','특수무기'],Players:['👁','관전']}[id];
     zl.innerHTML=_m? pIco(_m[0])+'<span class="zlTx">'+_m[1]+'</span>' : ''; }
   // 전투(Main)=선택 있을 때만 하단 프로필 시트 · 그 외 탭=패널 상시 표시
   if(id==='Main'){ const uc=document.getElementById('unitCmd'); if(uc) uc._stkShown=undefined; strikeRenderSelInfo(); }
-  else { document.body.classList.add('sheetOpen'); if(typeof _syncSheetLift==='function'){ requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); } }
-  if(typeof playSfx==='function') playSfx('ui_tab'); }
+  else { document.body.classList.add('sheetOpen'); if(typeof _syncSheetLift==='function'){ requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); } } }
+// 🏗 건설지 > 건설 — 건설 화면 + 건설 프로필(보급 시트는 내린다)
+function stkGoBuild(){ const S=STK; if(!S) return;
+  if(S.supSheet) strikeToggleSupply(false);
+  if(S.specSheet) strikeToggleSpec(false);
+  if(G.tab!=='Build') _stkShowScreen('Build');
+  else if(typeof techPanelRender==='function') techPanelRender(); }
+// 🏗 건설지 > 강화 — 화면은 건설지 그대로, 하단만 강화 시트(광산·공격력·체력)
+function stkGoUpg(){ const S=STK; if(!S) return;
+  if(S.specSheet) strikeToggleSpec(false);
+  if(G.tab!=='Build') _stkShowScreen('Build');
+  if(!S.supSheet) strikeToggleSupply(true);
+  strikeSupPage(null);
+  if(typeof techPanelRender==='function') techPanelRender(); }
+// 💥 특수무기 > 구입/사용 — 화면은 전장을 유지하고 하단 시트만 바꾼다
+function stkGoWpn(page){ const S=STK; if(!S) return;
+  if(S.specSheet) strikeToggleSpec(false);
+  if(G.tab!=='Main') _stkShowScreen('Main');
+  strikeClearSel();                       // 무기 시트는 지정 프로필과 자리를 다툰다 — 비우고 연다
+  if(!S.supSheet) strikeToggleSupply(true);
+  strikeSupPage(page==='use'?'wpnUse':'wpnBuy');
+  document.body.classList.add('sheetOpen');
+  if(typeof strikeRenderSelInfo==='function') strikeRenderSelInfo(); }
+// ⚔ 전투 = 무선택 기본 화면. ‹ 가 여기로 온다(구역·시트·지정을 전부 걷는다)
+function strikeRestHome(){ const S=STK; if(!S) return;
+  if(S.supSheet) strikeToggleSupply(false);
+  if(S.specSheet) strikeToggleSpec(false);
+  strikeClearSel();
+  if(G.tech){ G.tech.sel=null; G.tech.selU=[]; G.tech.selRes=null;
+    if(G.tech.sheet){ G.tech.sheet.open=false; G.tech.sheet.sec=null; } }
+  _stkShowScreen('Main');
+  _setBottomTab(''); _gtabDrill=''; gtabPaint(); }
+function strikeSwitchTab(id,el){ const S=STK; if(!S) return;
+  if(id==='Players'){   // 👁 관전 = 하위가 없다 — 옛 동작(시트 토글) 그대로
+    if(S.specSheet){ strikeClearSel(); }
+    if(G.tab!=='Main') _stkShowScreen('Main');
+    strikeToggleSpec();
+    _setBottomTab(S.specSheet?'Players':''); _gtabDrill=''; gtabPaint();
+    if(typeof playSfx==='function') playSfx('ui_tab'); return; }
+  if(id==='Main'){ strikeRestHome(); if(typeof playSfx==='function') playSfx('ui_tab'); return; }
+  if(id==='Build' || id==='Upgrade'){
+    // 이미 그 구역에 내려가 있는데 또 눌렀다 = 하단 시트 접기(네모 재탭과 같은 뜻)
+    if(_gtabDrill===id){ const open=document.body.classList.toggle('sheetOpen');
+      if(typeof _syncSheetLift==='function'){ requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); }
+      if(typeof playSfx==='function') playSfx('ui_open'); return; }
+    _setBottomTab(id); gtabDrill(id);   // ← 첫 하위(건설 / 구입)로 되돌린다
+    if(typeof playSfx==='function') playSfx('ui_tab'); return; }
+  _stkShowScreen(id, el); if(typeof playSfx==='function') playSfx('ui_tab'); }
 
 // ── 보급(내 진영) — 화면 시설 탭 → 하단 패널 ──
 function strikeBuyMine(){ const S=STK; if(!S) return; const me=S.me;
@@ -21034,17 +21122,55 @@ function strikeUpg(kind){ const S=STK; if(!S) return; const me=S.me;   // 유닛
   if(me.gold<cost){ if(typeof playSfx==='function') playSfx('ui_denied'); return; }
   me.gold-=cost; if(kind==='atk') me.atkLv++; else { me.hpLv++; strikeApplyHpUpg(me); }
   if(typeof playSfx==='function') playSfx('ui_confirm'); }
-function strikeBuyBomb(){ const S=STK; if(!S) return; const me=S.me;
-  if((me.bombs||0)>=STK_BOMB_CAP){ if(typeof playSfx==='function') playSfx('ui_denied'); return; }
-  if(me.gold<STK_BOMB_COST){ if(typeof playSfx==='function') playSfx('ui_denied'); return; }
-  me.gold-=STK_BOMB_COST; me.bombs=(me.bombs||0)+1; if(typeof playSfx==='function') playSfx('ui_confirm'); }
-function strikeDropBomb(){ const S=STK; if(!S||!S.me.bombs) return; const me=S.me, foe=S.ai;   // 가장 밀집한 적 무리에 투하(자동 조준)
-  const alive=foe.units.filter(u=>!u.dead); if(!alive.length){ strikeToast('투하할 적이 없습니다'); return; }
-  let best=alive[0], bestN=-1; for(const a of alive){ let n=0; for(const b of alive){ const dx=a.x-b.x, dy=a.y-b.y; if(dx*dx+dy*dy<STK_BOMB_R*STK_BOMB_R) n++; } if(n>bestN){ bestN=n; best=a; } }
-  me.bombs--; const r2=STK_BOMB_R*STK_BOMB_R; let hit=0;
-  for(const e of alive){ const dx=e.x-best.x, dy=e.y-best.y, d2=dx*dx+dy*dy; if(d2<=r2){ e.hp-=STK_BOMB_DMG*(1-Math.sqrt(d2)/STK_BOMB_R*0.5); if(e.hp<=0) e.dead=true; hit++; } }   // 중심일수록 큰 피해
-  if(!S.fx||!S.fx.shots){ S.fx=FX.store(); S.fx.hitK=STK_HIT_K; } FX.death(S.fx, best.x, best.y, {unitSize:60, color:'#ff9a4c'});   // 특수무기 폭탄 — 여긴 연출이 요점이라 파편 수는 기본값 유지
-  if(typeof playSfx==='function') playSfx('boss_hit'); strikeToast('💥 폭탄 투하 — '+hit+'기 타격'); }
+// 🛒 구입 — 종류(k)를 받는다. 재고 상한·골드 판정은 표(STK_WEAPONS)에서만 나온다.
+function strikeBuyWpn(k){ const S=STK, w=STK_WPN(k); if(!S||!w) return false; const me=S.me;
+  if(!me.wpn) me.wpn={};
+  if((me.wpn[k]||0)>=w.cap){ if(typeof playSfx==='function') playSfx('ui_denied'); return false; }
+  if(me.gold<w.cost){ if(typeof playSfx==='function') playSfx('ui_denied'); return false; }
+  me.gold-=w.cost; me.wpn[k]=(me.wpn[k]||0)+1;
+  if(typeof playSfx==='function') playSfx('ui_confirm');
+  if(typeof strikeRenderSelInfo==='function') strikeRenderSelInfo();
+  return true; }
+// 가장 밀집한 적 무리의 중심 — 폭탄·궤도 포격이 같이 쓴다
+function _stkDensest(alive, r){ let best=alive[0], bestN=-1, r2=r*r;
+  for(const a of alive){ let n=0; for(const b of alive){ const dx=a.x-b.x, dy=a.y-b.y; if(dx*dx+dy*dy<r2) n++; } if(n>bestN){ bestN=n; best=a; } }
+  return best; }
+function _stkBlast(cx, cy, r, dmg, col, size){ const S=STK, alive=S.ai.units.filter(u=>!u.dead);
+  const r2=r*r; let hit=0;
+  for(const e of alive){ const dx=e.x-cx, dy=e.y-cy, d2=dx*dx+dy*dy;
+    if(d2<=r2){ e.hp-=dmg*(1-Math.sqrt(d2)/r*0.5); if(e.hp<=0) e.dead=true; hit++; } }   // 중심일수록 큰 피해
+  if(!S.fx||!S.fx.shots){ S.fx=FX.store(); S.fx.hitK=STK_HIT_K; }
+  FX.death(S.fx, cx, cy, {unitSize:size, color:col});   // 연출이 요점이라 파편 수는 기본값 유지
+  return hit; }
+// 💥 사용 — 표에 있는 종류만 받는다. 효과는 여기 한 곳에서 갈린다.
+function strikeUseWpn(k){ const S=STK, w=STK_WPN(k); if(!S||!w) return false;
+  const me=S.me; if(!(me.wpn&&me.wpn[k]>0)) return false;
+  const alive=S.ai.units.filter(u=>!u.dead);
+  if(k==='heal'){
+    const mine=me.units.filter(u=>!u.dead);
+    if(!mine.length){ strikeToast('회복할 아군이 없습니다'); return false; }
+    me.wpn[k]--; let n=0;
+    for(const u of mine){ const mx=u.maxHp||u.hp; if(u.hp<mx){ u.hp=Math.min(mx, u.hp+mx*STK_HEAL_F); n++; } }
+    if(typeof playSfx==='function') playSfx('ui_confirm'); strikeToast('✚ 재생 필드 — '+n+'기 회복');
+  } else {
+    if(!alive.length){ strikeToast('사용할 적이 없습니다'); return false; }
+    me.wpn[k]--;
+    if(k==='emp'){
+      // ⚠ 새 상태이상 필드를 만들지 않는다 — 소환 직후 대기에 쓰는 u.wait 를 그대로 쓴다
+      //   (strikeStepUnits 가 wait>0 이면 이동·공격을 통째로 건너뛴다).
+      for(const e of alive) e.wait=Math.max(e.wait||0, STK_EMP_DUR);
+      if(typeof playSfx==='function') playSfx('ui_open'); strikeToast('⚡ EMP — 적 '+alive.length+'기 정지');
+    } else {
+      const big=(k==='orbit');
+      const r=big?STK_ORBIT_R:STK_BOMB_R, dmg=big?STK_ORBIT_DMG:STK_BOMB_DMG;
+      const c=_stkDensest(alive, r);
+      const hit=_stkBlast(c.x, c.y, r, dmg, big?'#ffd24a':'#ff9a4c', big?86:60);
+      if(typeof playSfx==='function') playSfx('boss_hit');
+      strikeToast(w.ico+' '+w.name+' — '+hit+'기 타격');
+    }
+  }
+  if(typeof strikeRenderSelInfo==='function') strikeRenderSelInfo();
+  return true; }
 // 종족별 빌드 메뉴(그 종족 소환 유닛 = 지을 수 있는 생산 건물). STK_UNITS에서 이름·아이콘·비용 도출
 function strikeBuildable(race){ const r=race||(STK&&STK.me&&STK.me.race)||'terran';
   return (STK_BUILDINGS[r]||STK_BUILDINGS.terran).map(b=>({key:b.key, name:b.name, ico:b.ico, cost:b.cost, fp:b.fp, produces:b.produces})); }   // 관전 데모 빌드용(fp만 사용)

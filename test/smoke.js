@@ -3501,6 +3501,74 @@ async function groupGame(){
     for(const k of need) assert(CST_BLDG_CFG[k].s>0, k+': 크기(s) 없음');
     assert(Math.abs(CST_BLDG_CFG.union_engineering_bay.f-Math.PI)<1e-6, '공학소 정면 보정(f=π)이 사라짐');
     return need.length+'종 확인'; });
+  // ⚔ 오토배틀(직스) — 하단 네비를 네모와 같은 2층으로 통합했다(2026-08-14).
+  //   최상위 [건설지][특수무기][관전] · 전투는 탭이 아니라 무선택 기본 화면(‹ 가 여기로 온다).
+  //   ⚠ 이 스텝은 게임 상태를 직스로 바꾸므로 **game 그룹 맨 뒤**에 둔다.
+  await step('오토배틀: 2층 네비 · 특수무기 구입/사용', async()=>{
+    skipIf(typeof strikeStart!=='function' || typeof STK_WEAPONS==='undefined','오토배틀 없음');
+    const ph=$('phone'), faked=ph && !ph.classList.contains('inGame'); if(faked) ph.classList.add('inGame');
+    strikeStart(); await sleep(400);
+    G.loading=false;
+    const cells=()=>[...document.querySelectorAll('#tabs > *')].filter(e=>getComputedStyle(e).display!=='none');
+    const names=()=>[...document.querySelectorAll('#unitCmd .cgSlot .cgName')].map(e=>e.textContent.trim());
+    try{
+      // ① 최상위 = 세 칸. 전투 탭은 없다(무선택 기본 화면)
+      strikeRestHome(); await sleep(120);
+      { const t=cells().map(e=>e.textContent.trim());
+        assert(t.length===3,'오토배틀 최상위가 3칸이 아님: '+JSON.stringify(t));
+        assert(t.join('/')==='건설지/특수무기/관전','오토배틀 최상위 이름이 다름: '+JSON.stringify(t));
+        assert(G.tab==='Main' && _gtabDrill==='','전투 기본 화면이 아님: '+G.tab+'/'+_gtabDrill); }
+      // ② 건설지 = [‹][건설][강화] · 강화는 광산+공격력+체력
+      strikeSwitchTab('Build'); await sleep(140);
+      { const c=cells(); assert(c[0].classList.contains('navBk'),'건설지에 뒤로가기 칸이 없음');
+        assert(c.slice(1).map(e=>e.textContent.trim()).join('/')==='건설/강화','건설지 하위가 다름');
+        assert(G.tab==='Build','건설지인데 건설 화면이 아님: '+G.tab); }
+      gtabSub('upg'); await sleep(160);
+      { const n=[...document.querySelectorAll('#btSheetBody .cgSlot .cgName')].map(e=>e.textContent.trim());
+        for(const w of ['광산','공격력','체력']) assert(n.indexOf(w)>=0,'강화 그리드에 '+w+'이 없음: '+JSON.stringify(n)); }
+      // ③ 특수무기 = [‹][구입][사용] · 구입 그리드는 표 그대로
+      strikeSwitchTab('Upgrade'); await sleep(160);
+      { const c=cells(); assert(c[0].classList.contains('navBk'),'특수무기에 뒤로가기 칸이 없음');
+        assert(c.slice(1).map(e=>e.textContent.trim()).join('/')==='구입/사용','특수무기 하위가 다름');
+        assert(G.tab==='Main','특수무기는 화면을 옮기지 않는다(전장 유지): '+G.tab);
+        const n=names();
+        for(const w of STK_WEAPONS) assert(n.indexOf(w.name)>=0,'구입 그리드에 '+w.name+'이 없음: '+JSON.stringify(n)); }
+      // ④ 사용 = 보유분만. 아무것도 없으면 빈 칸.
+      gtabSub('use'); await sleep(140);
+      assert(!names().length,'가진 무기가 없는데 사용 그리드에 칸이 있음: '+JSON.stringify(names()));
+      // ⑤ 구입 → 사용 그리드에 등장
+      STK.me.gold=99999;
+      for(const w of STK_WEAPONS) assert(strikeBuyWpn(w.k), w.name+' 구입 실패');
+      gtabSub('use'); await sleep(140);
+      { const n=names(); for(const w of STK_WEAPONS) assert(n.indexOf(w.name)>=0,'산 무기가 사용 그리드에 없음: '+w.name); }
+      // ⑥ 효과 — ⚠ 헤드리스에선 3D·건설이 안 서서 유닛이 안 나온다. 검증용 유닛을 직접 꽂는다.
+      //    무기 함수는 hp/maxHp/x/y/dead/wait 만 읽으므로 이걸로 진짜 효과를 잰다.
+      { const mk=(i,side)=>({uid:side+i, id:'marine', side:side, x:1000+(i%5)*40, y:1000+Math.floor(i/5)*40,
+          hp:600, maxHp:600, dead:false, wait:0, size:14});
+        STK.ai.units=[]; STK.me.units=[];
+        for(let i=0;i<10;i++){ STK.ai.units.push(mk(i,'ai')); STK.me.units.push(mk(i,'me')); }
+        // EMP = 정지(피해 없음) — 새 상태이상 필드를 만들지 않고 u.wait 를 쓴다
+        const hpB=STK.ai.units.reduce((s,u)=>s+u.hp,0);
+        assert(strikeUseWpn('emp'),'EMP 사용 실패');
+        assert(strikeWpnHave('emp')===0,'EMP 재고가 안 줄었음');
+        assert(STK.ai.units.every(u=>u.wait>0),'EMP 인데 안 멈춘 적이 있음');
+        assert(STK.ai.units.reduce((s,u)=>s+u.hp,0)===hpB,'EMP 가 피해를 줬음(정지만이어야 한다)');
+        // 폭탄 = 광역 피해
+        assert(strikeUseWpn('bomb'),'폭탄 사용 실패');
+        assert(STK.ai.units.reduce((s,u)=>s+u.hp,0)<hpB,'폭탄인데 적 체력이 그대로');
+        // 재생 필드 = 아군 회복
+        STK.me.units.forEach(u=>u.hp=u.maxHp*0.3);
+        const my0=STK.me.units.reduce((s,u)=>s+u.hp,0);
+        assert(strikeUseWpn('heal'),'재생 필드 사용 실패');
+        assert(STK.me.units.reduce((s,u)=>s+u.hp,0)>my0,'재생 필드인데 아군 체력이 그대로'); }
+      // ⑦ ‹ = 전투(무선택 기본 화면)
+      gtabBack(); await sleep(160);
+      assert(G.tab==='Main' && _gtabDrill==='','‹ 인데 전투 기본 화면이 아님: '+G.tab+'/'+_gtabDrill);
+      assert(!STK.supSheet,'‹ 인데 시트가 남아 있음');
+      assert(!cells().some(e=>e.classList.contains('on')||e.classList.contains('cur')),'‹ 뒤인데 켜진 칸이 있음');
+      return '3칸 · 건설지2 · 특수무기 '+STK_WEAPONS.length+'종 ok';
+    } finally { if(typeof strikeEnd==='function') try{ strikeEnd(); }catch(e){}
+      if(faked) ph.classList.remove('inGame'); } });
 }
 
 // ── 그룹: sandbox (관리자) ──
