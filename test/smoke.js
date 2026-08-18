@@ -2448,27 +2448,24 @@ async function groupLobby(){
       assert(dock.querySelector('.msSocial'),'소셜이 도크로 안 옮겨짐');
       assert(!visible(dock.querySelector('.msTabs2')),'도크 안 탭 띠가 네비와 중복 노출됨');
       assert(visible(dock.querySelector('#msChatWrap')),'기본(채팅)인데 채팅 창이 안 보임');
-      // 정렬 띠·목록·소셜이 **한 상자**(.msPanel) 안이고, 상자 안에 상자를 또 그리지 않는다
+      // 목록 카드(.msPanel)와 소셜 카드는 **서로 독립된 카드**다 — 한쪽이 다른 쪽 안에 들어가면 안 된다
       const panel=document.querySelector('#mapSelect .msPanel');
-      assert(panel && panel.contains(dock) && panel.contains($('msList')) && panel.contains($('msSortTabs')),
-        '소셜·목록·탭 띠가 한 상자 안에 없음');
+      assert(panel && panel.contains($('msList')) && panel.contains($('msSortTabs')),'탭 띠·목록이 한 상자 안에 없음');
+      assert(!panel.contains(dock),'소셜이 목록 카드 안에 들어가 있음(독립 카드여야 한다)');
       // 카드 면 = 사냥터 업그레이드 칸(.hmUp)과 같은 검정. 옛 회색(rgba(36,38,47,…))으로 돌아가면 잡힌다
       { const g=getComputedStyle(document.querySelector('#msList .mapItem')).backgroundImage||'';
         const m=(g.match(/rgba?\(([^)]+)\)/)||[,'255,255,255'])[1].split(',').map(parseFloat);
         const lum=m[0]*0.3+m[1]*0.59+m[2]*0.11;
         assert(lum<=12,'유즈맵 카드 면이 검정이 아님(휘도 '+lum.toFixed(1)+')'); }
-      // 목록이 끝나는 자리에 선 — 없으면 마지막 카드가 잘린 채 멈춰 '화면이 잘렸다'로 읽힌다
-      { const ls=getComputedStyle($('msList'));
-        assert(ls.borderBottomStyle!=='none' && parseFloat(ls.borderBottomWidth)>=1,'목록 끝 선이 없음'); }
-      // 소셜은 자기 상자를 갖되, 목록에 맞닿지 않게 도크의 안여백으로 띄운다
-      { const soEl=dock.querySelector('.msSocial'), so=getComputedStyle(soEl);
-        assert(so.borderTopStyle!=='none','소셜 상자의 테두리가 없음');
-        const gap=soEl.getBoundingClientRect().top - $('msList').getBoundingClientRect().bottom;
-        assert(gap>=4 && gap<=16,'목록과 소셜 사이 여백이 이상함: '+gap.toFixed(1)+'px');
-        // 좌우는 목록 카드와 같은 변에 선다
-        const it=document.querySelector('#msList .mapItem').getBoundingClientRect(), sb=soEl.getBoundingClientRect();
-        assert(Math.abs(sb.left-it.left)<=0.6 && Math.abs(sb.right-it.right)<=0.6,
-          '소셜 상자가 목록 카드와 변이 안 맞음'); } }
+      // 두 카드는 각자 테두리를 갖고, 좌우 변이 맞고, 사이가 떠 있다
+      { const soEl=dock.querySelector('.msSocial'), so=getComputedStyle(soEl), ps=getComputedStyle(panel);
+        assert(so.borderTopStyle!=='none','소셜 카드의 테두리가 없음');
+        assert(ps.borderBottomStyle!=='none','목록 카드의 아래 테두리가 없음');
+        const pb=panel.getBoundingClientRect(), sb=soEl.getBoundingClientRect();
+        const gap=sb.top-pb.bottom;
+        assert(gap>=4 && gap<=16,'두 카드 사이 여백이 이상함: '+gap.toFixed(1)+'px');
+        assert(Math.abs(sb.left-pb.left)<=0.6 && Math.abs(sb.right-pb.right)<=0.6,
+          '두 카드의 좌우 변이 안 맞음'); } }
     navSub('party'); await sleep(40);
     assert(document.querySelector('#twChat.hide'),'파티를 눌렀는데 마을 시트가 열림(도크가 맡아야 한다)');
     assert(getComputedStyle($('msPanelBody')).display!=='none','파티 패널이 안 보임');

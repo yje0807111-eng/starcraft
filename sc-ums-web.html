@@ -3066,13 +3066,10 @@
     max-height:64%;padding:0 0 8px;background:rgba(11,16,29,.96);border-top:1px solid var(--hbEdge,rgba(90,120,190,.26));
     box-shadow:0 -14px 34px -20px #000}
   .twSheet.hide{display:none}
-  /* 유즈맵 소셜 도크 — 목록과 **같은 상자(.msPanel) 안** 아래칸. 화면 몫을 고정으로 떼어 준다.
-     탭 띠는 하단 네비가 맡으므로 감춘다.
-     소셜은 자기 상자를 그대로 두고, 도크가 안여백으로 띄운다 — 목록에 바로 맞닿으면
-     친구 줄이 지도 카드에 붙어 보인다. 좌우 8px 은 목록(.msList)과 같아 카드와 변이 맞는다. */
-  #msSocialDock{flex:0 0 30%;min-height:158px;display:flex;flex-direction:column;overflow:hidden;
-    padding:7px 8px 8px}
-  #msSocialDock .msSocial{flex:1;min-height:0;margin-top:0}   /* 띄우는 일은 도크의 안여백이 맡는다 */
+  /* 유즈맵 소셜 도크 — 목록 상자(.msPanel)와 **나란히 선 독립 카드**. 화면 몫을 고정으로 떼어 준다.
+     탭 띠는 하단 네비가 맡으므로 감춘다. 두 카드의 좌우 변은 같고, 사이는 .msSocial 의 margin-top 이 띄운다. */
+  #msSocialDock{flex:0 0 30%;min-height:150px;display:flex;flex-direction:column;overflow:hidden}
+  #msSocialDock .msSocial{flex:1;min-height:0}   /* 목록 카드와의 간격은 .msSocial 자신의 margin-top 이 맡는다 */
   #msSocialDock .msTabs2{display:none}
   .twSheetHead{flex:none;display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px;
     font-size:var(--fs-xl);font-weight:800;color:#eaf1fb}
@@ -3359,10 +3356,8 @@
   .msSortTabs{flex:0 0 auto;display:flex;align-items:stretch;padding:6px 8px 4px}
   .msSortTabs .pdSeg{flex:1 1 0;max-width:none;margin:0}
   .msSortTabs .pdSegBtn{padding:7px 4px;font-size:11.5px;font-weight:700;letter-spacing:.02em;text-align:center}
-  /* 목록이 끝나는 자리에 선 하나 — 스크롤이라 마지막 카드가 잘린 채 멈추는데,
-     선이 없으면 '화면이 잘렸다'로 읽힌다. 선은 테두리라 스크롤을 따라 움직이지 않는다. */
-  #mapSelect .msList{flex:1 1 auto;min-height:0;padding:8px;
-    border-bottom:1px solid var(--hbEdge,rgba(255,255,255,.07))}
+  /* 목록이 끝나는 자리의 선은 상자(.msPanel) 자신의 아래 테두리가 맡는다 — 여기에 또 그으면 두 줄로 겹친다 */
+  #mapSelect .msList{flex:1 1 auto;min-height:0;padding:8px}
   /* 마을 채팅 시트 — 소셜 블록을 그대로 담는다(유즈맵에서 옮겨옴) */
   #twChat .msSocial.inTown{flex:1;min-height:0;margin-top:0;border:0;border-radius:0;background:none}
   /* 정렬 드롭다운(커스텀 HUD 메뉴) */
@@ -4119,10 +4114,10 @@
         <!-- 정렬 띠 = 사냥터 업그레이드 탭과 같은 컴포넌트(segNavHTML) — 속은 renderMapSortTabs()가 채운다 -->
         <div class="msSortTabs" id="msSortTabs"></div>
         <div class="msList uiScroll" id="msList"></div>
-        <!-- 소셜 상주 구역 — 같은 상자 안 아래칸. 내용(.msSocial)은 #twChat 의 것을 옮겨 쓴다(복제 금지).
-             탭 전환은 하단 네비가 맡는다 -->
-        <div id="msSocialDock"></div>
       </div>
+      <!-- 소셜 상주 구역 — 목록과 **독립된 카드**. 내용(.msSocial)은 #twChat 의 것을 옮겨 쓴다(복제 금지).
+           탭 전환은 하단 네비가 맡는다 -->
+      <div id="msSocialDock"></div>
     </div>
 
 
