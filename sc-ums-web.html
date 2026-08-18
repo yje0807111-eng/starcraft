@@ -3522,9 +3522,7 @@
   .foSecAdd{display:flex;align-items:center;gap:4px;color:#aeb7c1;margin-top:2px}.foSecAdd .ic{width:12px;height:12px;color:var(--neon)}
   .foSecOn b{color:var(--ok)}
   .foSecOff{color:#6a727d;margin-top:13px;padding-top:9px;border-top:1px solid rgba(255,255,255,.06)}.foSecOff b{color:#828b96}
-  /* 친구 머리줄은 파티 머리줄(.ptHead/.ptTitle/.ptHeadBtns)을 그대로 쓴다 — 같은 구역의 같은 것이다.
-     여기서 더하는 건 버튼 색 하나뿐: 친구 = 짙은 파랑(하단 탭 .msTab2[data-bt=friend] 와 같은 계열) */
-  .ptFind.foAddBtn{color:#a8c4ff;background:rgba(58,110,224,.16);border-color:rgba(58,110,224,.5)}
+  /* 친구 머리줄은 파티 머리줄(.ptHead/.ptTitle/.ptHeadBtns)을 그대로 쓴다 — 같은 구역의 같은 것이다 */
   .foList{display:flex;flex-direction:column;gap:5px}
   .foRow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;border-radius:var(--r-md);
     background:linear-gradient(180deg,rgba(26,28,34,.88),rgba(11,12,16,.9));border:1px solid var(--metal-edge)}
@@ -3544,16 +3542,19 @@
   
   /* 파티: 헤더(제목 + 해제) + 2열 × 4행 슬롯 그리드 */
   .ptHead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:1px 1px 6px;min-height:20px}
-  .ptTitle{font-size:var(--fs-sm);font-weight:800;letter-spacing:.5px;color:#8a9aa8}
+  .ptTitle{font-size:var(--fs-xl);font-weight:800;letter-spacing:.3px;color:#b6c0cc}   /* 구역 제목 — 10px 은 읽히지 않았다 */
   .ptTitle b{color:var(--neon)}
   .ptDisband{flex:0 0 auto;padding:4px 9px;border-radius:var(--r-md);cursor:pointer;font-family:inherit;font-size:var(--fs-sm);font-weight:700;
     color:#ffd2d2;background:rgba(200,50,50,.18);border:1px solid rgba(255,80,80,.4)}
   .ptDisband:active{transform:translateY(1px)}
   .ptHeadBtns{flex:0 0 auto;display:flex;align-items:center;gap:5px}
   /* 파티 찾기 = 파티 색(보라 · .msTab2[data-bt=party]와 같은 계열) */
-  .ptFind{flex:0 0 auto;padding:4px 9px;border-radius:var(--r-md);cursor:pointer;font-family:inherit;font-size:var(--fs-sm);font-weight:700;
-    color:#c9b6ff;background:rgba(138,86,255,.16);border:1px solid rgba(138,86,255,.45)}
-  .ptFind:active{transform:translateY(1px)}
+  /* 머리줄 버튼(파티 찾기 · 친구 추가) = 오른쪽 위 더보기 배너 칸(.hbMoreIt)과 같은 물성 —
+     각진 3px · 검은 판 · 금속 엣지. 구역색으로 물들이지 않는다(그 자리는 제목의 숫자가 맡는다). */
+  .ptFind{flex:0 0 auto;padding:5px 10px;border-radius:var(--r-bar);cursor:pointer;font-family:inherit;
+    font-size:var(--fs-md);font-weight:700;letter-spacing:.2px;
+    color:#dfe4ea;background:rgba(255,255,255,.045);border:1px solid var(--metal-edge)}
+  .ptFind:active{opacity:.75;transform:translateY(1px)}
   .ptGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
   .ptSlot{display:flex;align-items:center;gap:7px;min-height:40px;padding:5px 8px;border-radius:var(--r-lg);overflow:hidden}
   .ptSlot.fill{background:linear-gradient(180deg,rgba(28,30,36,.9),rgba(11,12,16,.92));border:1px solid var(--metal-edge)}

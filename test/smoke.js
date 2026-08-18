@@ -2503,6 +2503,14 @@ async function groupLobby(){
     { const body=$('msPanelBody');
       // 머리줄은 파티 머리줄과 **같은 컴포넌트**(.ptHead/.ptTitle) — 전용 클래스를 새로 만들면 안 된다
       assert(body.querySelector('.ptHead .ptTitle'),'친구 머리줄이 파티 머리줄 규격(.ptHead)이 아님');
+      { const ts=getComputedStyle(body.querySelector('.ptTitle'));
+        assert(parseFloat(ts.fontSize)>=12,'구역 제목이 너무 작음: '+ts.fontSize);
+        // 머리줄 버튼 = 더보기 배너 칸과 같은 물성(각진 3px · 검은 판)
+        const bs=getComputedStyle(body.querySelector('.ptFind'));
+        assert(bs.borderTopLeftRadius==='3px','머리줄 버튼이 각지지 않음: '+bs.borderTopLeftRadius);
+        const lum=c=>{const m=((c||'').match(/[\d.]+/g)||['0','0','0']).map(parseFloat);
+          const a=(m.length>3?m[3]:1); return (m[0]*0.3+m[1]*0.59+m[2]*0.11)*a; };   // 반투명이면 알파까지 곱해야 실제 밝기다
+        assert(lum(bs.backgroundColor)<=40,'머리줄 버튼 면이 검지 않음: '+bs.backgroundColor); }
       assert(!body.querySelector('.foHead'),'옛 전용 머리줄(.foHead)이 남아 있음');
       assert(!body.querySelector('.foSecOn') && !body.querySelector('.foSecOff'),'온라인/오프라인 섹션 라벨이 아직 남아 있음');
       assert(!body.querySelector('#foSearch'),'친구 추가 검색이 아직 목록 위에 남아 있음');
