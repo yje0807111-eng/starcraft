@@ -2505,9 +2505,12 @@ async function groupLobby(){
       assert(body.querySelector('.ptHead .ptTitle'),'친구 머리줄이 파티 머리줄 규격(.ptHead)이 아님');
       { const ts=getComputedStyle(body.querySelector('.ptTitle'));
         assert(parseFloat(ts.fontSize)>=12,'구역 제목이 너무 작음: '+ts.fontSize);
+        // 소셜 머리줄은 제목 가족(Jua)이 아니라 본문 가족이다 — 작은 줄에서 획이 뭉친다
+        assert(!/Jua/i.test(ts.fontFamily),'소셜 머리줄이 제목 폰트로 나옴: '+ts.fontFamily);
         // 친구 수는 총원이 아니라 '(온라인 N)' — 상태값이라 초록
         { const on=body.querySelector('.ptTitle .onN');
           assert(on && /^\(온라인 \d+\)$/.test(on.textContent.trim()),'친구 수 표기가 (온라인 N) 이 아님: '+(on&&on.textContent));
+          assert(parseFloat(getComputedStyle(on).fontSize) < parseFloat(ts.fontSize),'접속 수가 제목보다 작지 않음');
           const g=getComputedStyle(on).color.match(/\d+/g).map(Number);
           assert(g[1]>g[0]+40 && g[1]>g[2]+40,'접속 수가 초록이 아님: '+getComputedStyle(on).color);
           const rows=[...body.querySelectorAll('#foFriends .foRow')];

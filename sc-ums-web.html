@@ -3544,7 +3544,12 @@
   .ptHead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:1px 1px 6px;min-height:20px}
   .ptTitle{font-size:var(--fs-xl);font-weight:800;letter-spacing:.3px;color:#b6c0cc}   /* 구역 제목 — 10px 은 읽히지 않았다 */
   .ptTitle b{color:var(--neon)}
-  .ptTitle .onN{font-style:normal;font-weight:800;color:var(--ok)}   /* 접속 수 = 상태값이라 초록(§역할별 액센트) */
+  /* 접속 수 = 상태값이라 초록(§역할별 액센트) · 제목보다 한 단 작게(제목을 밀어내지 않게) */
+  .ptTitle .onN{font-style:normal;font-weight:700;font-size:var(--fs-sm);color:var(--ok)}
+  /* 소셜 머리줄만 **본문 가족**(--font-ko) — 제목 폰트(Jua)는 이 작은 줄에서 획이 뭉쳐 보인다.
+     ⚠ 스타일시트 끝의 제목-폰트 목록에서 .ptTitle 을 빼면 설정 쪽 동명 컴포넌트까지 바뀐다.
+       그래서 목록은 그대로 두고 여기서 선택자 특이도로만 덮는다(.msSocial 안에서만). */
+  .msSocial .ptTitle{font-family:var(--font-ko);font-weight:700}
   .ptDisband{flex:0 0 auto;padding:4px 9px;border-radius:var(--r-md);cursor:pointer;font-family:inherit;font-size:var(--fs-sm);font-weight:700;
     color:#ffd2d2;background:rgba(200,50,50,.18);border:1px solid rgba(255,80,80,.4)}
   .ptDisband:active{transform:translateY(1px)}
