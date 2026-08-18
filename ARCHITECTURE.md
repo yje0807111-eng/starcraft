@@ -115,6 +115,7 @@
 - 유닛뽑기·업그레이드 시트는 **구역별로 칸이 갈린다**: `GACHA_SEC_CELLS`(뽑기/타워구매) · `_upgAtkItems/_upgLuckItems/_upgPermItems`(공격력/확률/영구강화). ×5 뽑기는 `BEACON_BULK`(1회 값 × 배수) — ⚠ 좌표가 없으므로 `DRAW_BEACONS`(맵 위 비콘 표)에 넣지 말 것.
 - 시트 모드: `G.mainSheet` + `renderMainSheet()` 디스패처. 유닛 지정 중엔 프로필 우선, 해제 시 시트 복원(`refreshSelCard` 분기).
 - 프로필/그리드는 전부 `renderCmdGrid(host, model)` — 모델 객체로만 내용 제어(레지스트리 참조).
+- **두 네비 바(HOME `NAV_TREE`/`navGo` · 유즈맵 `GTAB_TREE`/`gtabDrill`)는 같은 규칙을 쓴다**: 구역에 밖에서 들어오면 `reset()` 으로 늘 첫 하위. 이미 그 구역이면 되돌리지 않는다(안 그러면 자동화가 판매로 튕긴다).
 - **하단 구역의 톤·높이는 토큰 셋 하나가 정한다**(2026-08-14): `--panelBig`(판) · `--bpFace`(속살 검정) ·
   `--bpTile`(초상 방사) · **`--bpBodyH`**(본문 높이). 다섯 섹션(메인 홈 `#defaultCmd` · 시트 `#unitCmd`/`#btSheetBody` ·
   플레이어 `#plGridWrap`)이 같은 변수를 쓰므로 값을 개별 규칙에 다시 박지 말 것 — 예전엔 시트 176px / 메인·플레이어 126px 이라

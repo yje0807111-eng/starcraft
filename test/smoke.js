@@ -408,6 +408,21 @@ async function groupLobby(){
     assert(document.querySelectorAll('#navBar .navIt[data-sub]').length===3,'정비 하위가 3칸이 아님');
     navGo('shop'); await sleep(60);
     assert(document.querySelectorAll('#navBar .navIt[data-sub]').length===5,'상점 하위가 5칸이 아님');
+    // 구역에 '들어올 때'는 늘 첫 하위로 — 유즈맵 하단 탭바(gtabDrill)와 같은 규칙(2026-08-14).
+    //   펫을 보다 나갔다 다시 들어와도 펫이 열려 있으면 구역 이름과 내용이 어긋난다.
+    { const cur=()=>{ const e=document.querySelector('#navBar .navIt.cur'); return e?e.dataset.sub:null; };
+      navGo('gear'); await sleep(80);
+      assert(cur()==='gear','정비 진입인데 첫 하위가 아님: '+cur());
+      navSub('pet'); await sleep(80); assert(cur()==='pet','하위 전환이 안 됨: '+cur());
+      navBack(); await sleep(80);
+      navGo('gear'); await sleep(90);
+      assert(cur()==='gear','정비 재진입인데 첫 하위가 아님: '+cur());
+      assert(_gearTab==='gear','정비 재진입인데 _gearTab 이 안 되돌아옴: '+_gearTab);
+      // 다른 구역을 들렀다 와도 마찬가지
+      navGo('shop'); await sleep(80); navSub('gem'); await sleep(80);
+      navGo('upg'); await sleep(80);
+      navGo('shop'); await sleep(90);
+      assert(cur()==='deal','상점 재진입인데 첫 하위가 아님: '+cur()); }
     openHome(); await sleep(60);
     return 'HOME 카드 1개 + 네비 5칸(home·정비·마을·유즈맵·상점) ok'; });
   // 폰트 3종 — 제목 Jua(내장) · 본문 Noto Sans KR Bold(내장) · 숫자 Rajdhani(웹폰트).

@@ -6712,21 +6712,21 @@ const NAV_TREE=[
   // 사냥터 = 기본 화면이자 최상위 그 자체 — 눌러도 내려가지 않는다(하위는 화면 상단 버튼줄이 맡는다)
   { k:'home', label:'사냥터', ico:'home', go:()=>openHome(), subs:[] },
   // 캐릭터 — '나 자신'에 관한 것. 내용은 아직 비어 있다(옛 '강화' 자리).
-  { k:'upg',  label:'캐릭터', ico:'user', go:()=>openUpgScreen(), cur:()=>_chrSec, subs:[
+  { k:'upg',  label:'캐릭터', ico:'user', go:()=>openUpgScreen(), cur:()=>_chrSec, reset:()=>setChrSec('info'), subs:[
       { k:'info',  label:'정보', ico:'user',  act:()=>setChrSec('info') },
       { k:'grow',  label:'성장', ico:'fav',   act:()=>setChrSec('grow') },
       { k:'skill', label:'스킬', ico:'boost', act:()=>setChrSec('skill') } ] },
-  { k:'gear', label:'정비', ico:'bag', go:()=>openGear(), cur:()=>_gearTab, subs:[
+  { k:'gear', label:'정비', ico:'bag', go:()=>openGear(), cur:()=>_gearTab, reset:()=>setGearTab('gear'), subs:[
       { k:'gear', label:'장비', ico:'armor', act:()=>setGearTab('gear') },
       { k:'pet',  label:'펫',   ico:'paw',   act:()=>setGearTab('pet') },
       { k:'ally', label:'동료', ico:'party', act:()=>setGearTab('ally') } ] },
   // 유즈맵: 정렬(인기·신규·추천·즐겨찾기)은 화면 위 띠로 되돌렸고, 하단은 소셜이 맡는다.
   //   ⛔ 소셜 UI 를 새로 만들지 않는다 — 이미 있는 #twChat 시트(.msSocial 채팅·파티·친구)를 연다.
-  { k:'map',  label:'유즈맵', ico:'map', go:()=>twGoMap(), cur:()=>_mapSocial, subs:[
+  { k:'map',  label:'유즈맵', ico:'map', go:()=>twGoMap(), cur:()=>_mapSocial, reset:()=>mapOpenSocial('chat'), subs:[
       { k:'chat',   label:'채팅', ico:'chat',   act:()=>mapOpenSocial('chat') },
       { k:'friend', label:'친구', ico:'friend', act:()=>mapOpenSocial('friend') },
       { k:'party',  label:'파티', ico:'party',  act:()=>mapOpenSocial('party') } ] },
-  { k:'shop', label:'상점', ico:'gift', go:()=>openShop(), cur:()=>_shopSec, subs:[
+  { k:'shop', label:'상점', ico:'gift', go:()=>openShop(), cur:()=>_shopSec, reset:()=>setShopSec('deal'), subs:[
       { k:'deal', label:'한정구매', ico:'flag',  act:()=>setShopSec('deal') },
       { k:'draw', label:'뽑기',    ico:'gift',  act:()=>setShopSec('draw') },
       { k:'res',  label:'재화',    ico:'coin',  act:()=>setShopSec('res') },
@@ -6764,8 +6764,14 @@ function navShow(tab){ const b=document.getElementById('navBar'); if(!b) return;
 function navGo(tab){ if(typeof playSfx==='function') playSfx('ui_tab');
   if(tab==='town'){ openHome(); return navShow('home'); }   // 마을 폐지 — 옛 진입점은 HOME으로
   const sec=navSec(tab); if(!sec) return;
+  const was=_navDrill;
   sec.go();                                   // 화면 이동(안에서 navShow 를 부르며 _navDrill 을 비운다)
-  if(sec.subs.length){ _navDrill=tab; navPaint(); } }
+  if(!sec.subs.length) return;
+  // 구역에 '밖에서 들어올 때'는 늘 첫 하위로 되돌린다 — 유즈맵 하단 탭바(gtabDrill)와 같은 규칙.
+  // 안 그러면 정비의 '펫'을 보다 나갔다 다시 들어와도 펫이 열려 있어 구역 이름과 내용이 어긋난다.
+  // ⚠ sec.go() 가 이미 그 구역 내용을 그렸으므로 reset 은 반드시 그 뒤에(렌더까지 하는 setter 로) 부른다.
+  if(was!==tab && sec.reset) sec.reset();
+  _navDrill=tab; navPaint(); }
 // 구역 전용 칸
 function navSub(k){ const sec=navSec(_navDrill); if(!sec) return;
   const t=sec.subs.find(x=>x.k===k); if(!t) return;
