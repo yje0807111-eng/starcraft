@@ -3072,10 +3072,18 @@
        (카드 안에 카드가 겹치면 테두리가 두 줄로 보인다). 값은 목록 카드와 같은 토큰이라 같은 재질로 읽힌다.
      ⚠ 목록 카드에 붙으면 한 덩어리로 보인다 — 채팅 한 줄(17px)만큼 띄우고 그만큼 낮춘다(margin + calc).
        차지하는 총 높이가 그대로라 위 목록은 줄지 않는다. */
-  #msSocialDock{position:relative;flex:0 0 calc(30% - 24px);margin-top:17px;min-height:168px;display:flex;flex-direction:column;overflow:hidden;
-    background:var(--hmPanel,linear-gradient(180deg,#191919,#0e0e0e));
-    border:1px solid var(--hbEdge,rgba(255,255,255,.07));border-radius:var(--r-bar);
-    padding-bottom:6px}   /* 안쪽 목록이 카드 끝선에 딱 붙어 잘리지 않게 — 스크롤러가 아니라 도크에 준다 */
+  #msSocialDock{position:relative;flex:0 0 calc(30% - 24px);min-height:168px;display:flex;flex-direction:column;overflow:hidden;
+    /* 화면 좌우를 꽉 채우는 띠 — #mapSelect 의 좌우 여백(13px)을 음수 마진으로 되돌린다.
+       목록 카드와 '다른 섹션'으로 읽혀야 하므로 폭·면·테두리를 전부 다르게 간다. */
+    margin:17px -13px 0;border-radius:0;
+    background:rgba(0,0,0,.55);
+    padding-bottom:6px}   /* 안쪽 목록이 띠 끝선에 딱 붙어 잘리지 않게 — 스크롤러가 아니라 도크에 준다 */
+  /* 실버 링 1px — ⚠ 면이 반투명이라 padding-box/border-box 2겹 배경으로 그리면 링이 면 뒤로 깔려
+     배경 전체가 회색이 된다(앞서 그랬다). 마스크로 테두리만 그린다(.cpCard::before 와 같은 수법). */
+  #msSocialDock::before{content:'';position:absolute;inset:0;z-index:2;padding:1px;pointer-events:none;
+    background:var(--metal-ring);
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;mask-composite:exclude}
   #msSocialDock .msSocial{flex:1;min-height:0;margin-top:0;border:0;border-radius:0;background:none;box-shadow:none}
   #msSocialDock .msSocial::before{display:none}
   #msSocialDock .msTabs2{display:none}

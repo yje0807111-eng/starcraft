@@ -2470,11 +2470,18 @@ async function groupLobby(){
         const a=(c.length>3?c[3]:1);
         assert(a>=0.08 && a<=0.4 && c[0]<30 && c[1]<30 && c[2]<30,
           '목록 판이 카드보다 한 톤 어둡지 않음: '+getComputedStyle(top).backgroundColor);
-        // 두 카드는 각자 테두리를 갖고 좌우 변이 맞는다
+        // 소셜은 '다른 섹션' — 화면 좌우를 꽉 채우고, 실버 링 테두리에 검은 반투명 면이다
         const ds=getComputedStyle(dock), pb=panel.getBoundingClientRect(), db=dock.getBoundingClientRect();
-        assert(ds.borderTopStyle!=='none','소셜 카드에 테두리가 없음');
-        assert(Math.abs(db.left-pb.left)<=0.6 && Math.abs(db.right-pb.right)<=0.6,'두 카드의 좌우 변이 안 맞음');
-        assert(db.top-pb.bottom>=4,'두 카드가 붙어 있음: '+(db.top-pb.bottom).toFixed(1)+'px'); }
+        const ph=$('phone').getBoundingClientRect();
+        assert(db.left<=ph.left+1 && db.right>=ph.right-1,'소셜이 화면 좌우를 안 채움: '+db.left.toFixed(1)+'~'+db.right.toFixed(1));
+        assert(db.width>pb.width+10,'소셜이 목록 카드보다 넓지 않음');
+        assert(db.top-pb.bottom>=4,'두 섹션이 붙어 있음: '+(db.top-pb.bottom).toFixed(1)+'px');
+        { const rb=getComputedStyle(dock,'::before');
+          assert(rb.content!=='none' && /gradient/.test(rb.backgroundImage),'실버 링(::before)이 없음');
+          assert(/xor|exclude/.test((rb.webkitMaskComposite||'')+(rb.maskComposite||'')),'링이 마스크로 안 잘림 — 면까지 덮는다'); }
+        { const c=((ds.backgroundColor||'').match(/[\d.]+/g)||['0','0','0','1']).map(parseFloat);
+          const a=(c.length>3?c[3]:1);
+          assert(c[0]<20 && c[1]<20 && c[2]<20 && a>0.2 && a<0.95,'소셜 면이 검정 반투명이 아님: '+ds.backgroundColor); } }
       // 목록에 카드가 **정확히 5장** 들어온다(잘린 6번째가 끼면 마감이 지저분하다)
       { const list=$('msList'), ls=getComputedStyle(list), it=list.querySelector('.mapItem');
         const inner=list.clientHeight-parseFloat(ls.paddingTop)-parseFloat(ls.paddingBottom);
