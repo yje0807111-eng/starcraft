@@ -2380,12 +2380,19 @@
   .pdSlot.empty .pdPlus::after{top:3px;bottom:3px;left:50%;width:1.5px;transform:translateX(-50%)}
   .pdSlot.empty:active .pdPlus{opacity:1}
   .pdSlot .pdLockIco{position:absolute;width:19px;height:19px;color:#95a3b3}
-  .pdSlot.on{background:linear-gradient(180deg,rgba(42,55,74,.96),rgba(22,29,42,.96))}
+  /* 🎽 착용 칸 — 기본(은색) 테두리 표현을 '전부' 등급색이 대신한다.
+     단순한 외곽선이 아니라 기본 칸과 같은 성질(가운데만 밝은 윗변 광선 + 안쪽 1px 하이라이트)을 등급색으로 갖는다.
+     ⚠ 색은 인라인 color 로 들어온다 → currentColor 로 받아 쓴다(등급 색을 CSS에 복제하지 말 것). */
+  .pdSlot.on{background:linear-gradient(180deg,rgba(42,55,74,.96),rgba(22,29,42,.96));
+    box-shadow:0 6px 16px -10px #000, inset 0 1px 0 currentColor, 0 0 10px -4px currentColor}
+  .pdSlot.on::before{background:linear-gradient(90deg,transparent 0%,currentColor 50%,transparent 100%);
+    opacity:.95;filter:drop-shadow(0 0 3px currentColor)}
+  /* 안쪽 하이라이트가 너무 세지 않게 — 1px 선이라 알파를 못 주므로 얇은 덮개로 눌러 준다 */
+  .pdSlot.on::after{content:'';position:absolute;left:3px;right:3px;top:1px;height:1px;pointer-events:none;
+    background:rgba(0,0,0,.45)}
   .pdSlot.lock{opacity:.62}
   .pdSlot.pick{border-color:#8e9dae;color:#e4ebf3;background:linear-gradient(180deg,rgba(58,71,92,.96),rgba(26,33,46,.96))}   /* 가방 필터 중 = 중립 강조(시안 아님) */
   .pdSlot:active{transform:translate(-50%,-50%) translateY(1px)}
-  .pdSlot .pdLv{position:absolute;top:-7px;right:-5px;font-family:var(--font-num);font-size:10px;font-weight:800;font-style:normal;
-    font-variant-numeric:tabular-nums;padding:0 4px;border-radius:var(--r-bar);color:inherit;background:#0b0e16;border:1px solid currentColor}
   .gearSum{flex:0 0 auto;text-align:center;font-size:12px;color:var(--txt-mute);padding:4px 0}
   .gearSum b{color:#eaf1fb;font-family:var(--font-num);font-size:13px;font-variant-numeric:tabular-nums}
   /* 아래 구역: 가방 */
@@ -9304,7 +9311,7 @@ function _profPaperdoll(c){
     h+='<div class="'+cls+'" style="left:'+g.x+'%;top:'+g.y+'%;'+(col?('border-color:'+col+'aa;color:'+col+';'):'')+'"'
       +' title="'+g.name+'" onclick="profSlotTap(\''+slot+'\')">'
       +_slotGlyph(slot)
-      +(locked? PROF_LOCK_SVG : (it?('<i class="pdLv">'+it.lv+'</i>'):'<i class="pdPlus">＋</i>'))
+      +(locked? PROF_LOCK_SVG : (it?'':'<i class="pdPlus">＋</i>'))   // 착용 칸엔 숫자 배너를 달지 않는다(테두리가 등급을 말한다)
       +'</div>'; }
   return h+'</div>'+_profPageNav(); }   // 섹션 바는 아바타 아래
 function _profGearGrid(c, list){

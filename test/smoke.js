@@ -2609,20 +2609,34 @@ async function groupLobby(){
     assert(document.querySelector('#navBar .navIt.cur').dataset.sub==='gear','기본 하위가 장비가 아님');
     // ⓪ 장비 슬롯 카드 — 각진 판 + 윗변 광선(네비바와 같은 --edge-light)
     { setGearTab('gear'); await sleep(40);
+      // 착용 칸이 있어야 '등급 테두리가 통째로 차지하는가'를 볼 수 있다
+      { const c2=CHAR(); const it=profMakeItem('helmet',6,'epic');
+        if(it){ profAddItem(it); profEquipItem(it.iid); } renderGear(); await sleep(40); }
       const slots=[].slice.call(document.querySelectorAll('#gearBody .pdSlot'));
       assert(slots.length>0,'장비 슬롯이 없음');
-      const on=slots.find(e=>e.classList.contains('on'))||slots[0];
-      const cs=getComputedStyle(on);
+      const base=slots.find(e=>!e.classList.contains('on'));
+      const on=slots.find(e=>e.classList.contains('on'));
+      assert(base,'빈/잠긴 칸이 없어 기본 표현 검사 불가');
+      assert(on,'착용 칸이 없어 등급 테두리 검사 불가');
+      const cs=getComputedStyle(base);
       // 각지게 — 라운드는 DESIGN.md 토큰의 아래쪽(≤3px)
       assert(parseFloat(cs.borderTopLeftRadius)<=3,'슬롯이 아직 둥긂: '+cs.borderTopLeftRadius);
       // 윗변 광선 = 네비바와 '같은' 그라데여야 한다(두 벌로 만들지 말 것)
       const lightOf=el=>getComputedStyle(el,'::before').backgroundImage;
       const nav=document.querySelector('.navBar');
       assert(nav,'네비바가 없음');
-      const a=lightOf(on), b2=lightOf(nav);
+      const a=lightOf(base), b2=lightOf(nav);
       assert(a && a!=='none','슬롯에 윗변 광선이 없음');
-      assert(a===b2,'슬롯 광선이 네비바와 다른 그라데임(단일 소스 위반)');
+      assert(a===b2,'기본 슬롯 광선이 네비바와 다른 그라데임(단일 소스 위반)');
       assert(a.indexOf('gradient')>=0,'광선이 그라데가 아님: '+a.slice(0,40));
+      // 착용 칸 = 기본(은색) 표현이 '전부' 등급색으로 바뀐다. 단순 외곽선이 아니라 같은 성질을 갖는다.
+      { const oc=getComputedStyle(on), lit=lightOf(on);
+        assert(lit && lit!=='none','착용 칸에 윗변 광선이 없음');
+        assert(lit!==b2,'착용 칸이 아직 은색 광선을 씀(등급색이 차지해야 한다)');
+        assert(lit.indexOf('gradient')>=0,'착용 칸 광선이 그라데가 아님(단순 선 금지)');
+        const rgb=(oc.color.match(/\d+/g)||[]).slice(0,3).join(', ');
+        assert(rgb && lit.indexOf(rgb)>=0,'착용 칸 광선이 등급색이 아님: '+lit.slice(0,60)+' / color '+oc.color);
+        assert(oc.borderTopColor!==getComputedStyle(base).borderTopColor,'착용 칸 테두리가 기본과 같음'); }
       // ⚠ overflow:hidden 을 쓰면 레벨 배지(.pdLv)가 잘린다 — 실제로 그렇게 잘렸었다
       assert(cs.overflow!=='hidden','슬롯에 overflow:hidden 이 걸려 레벨 배지가 잘린다');
       // 면이 배경보다 밝아야 '판'으로 읽힌다
@@ -2885,7 +2899,8 @@ async function groupLobby(){
     assert(body.innerHTML.indexOf('🔒')<0,'슬롯에 자물쇠 이모지가 남아 있음');
     for(const k in PROF_GEAR) assert(PROF_SLOT_ICON[k],'슬롯 아이콘 누락: '+k);
     const eq=body.querySelector('.pdSlot.on'); assert(eq,'장착한 슬롯이 on으로 안 보임');
-    assert(eq.querySelector('.pdLv').textContent==='4','슬롯에 아이템 레벨이 안 뜸');
+    // 숫자 배너는 뺐다(2026-08-15) — 등급은 테두리가, 레벨은 가방 칸이 말한다
+    assert(!eq.querySelector('.pdLv'),'착용 칸에 숫자 배너가 아직 있음');
     // Lv.1엔 기본 5칸만 열리고 나머지는 레벨로 잠겨 있어야 한다
     const open=Object.keys(PROF_GEAR).filter(k=>!profSlotLocked(k));
     assert(open.length===5,'Lv.1 해금 슬롯이 5칸이 아님: '+open.join(','));
