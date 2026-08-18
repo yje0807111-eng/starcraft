@@ -2607,6 +2607,36 @@ async function groupLobby(){
     assert(!document.getElementById('gearTabs'),'정비 화면에 옛 탭 띠가 남아 있음');
     assert(document.querySelectorAll('#navBar .navIt[data-sub]').length===3,'정비 하위가 네비에 3칸이 아님');
     assert(document.querySelector('#navBar .navIt.cur').dataset.sub==='gear','기본 하위가 장비가 아님');
+    // ⓪ 장비 슬롯 카드 — 각진 판 + 윗변 광선(네비바와 같은 --edge-light)
+    { setGearTab('gear'); await sleep(40);
+      const slots=[].slice.call(document.querySelectorAll('#gearBody .pdSlot'));
+      assert(slots.length>0,'장비 슬롯이 없음');
+      const on=slots.find(e=>e.classList.contains('on'))||slots[0];
+      const cs=getComputedStyle(on);
+      // 각지게 — 라운드는 DESIGN.md 토큰의 아래쪽(≤3px)
+      assert(parseFloat(cs.borderTopLeftRadius)<=3,'슬롯이 아직 둥긂: '+cs.borderTopLeftRadius);
+      // 윗변 광선 = 네비바와 '같은' 그라데여야 한다(두 벌로 만들지 말 것)
+      const lightOf=el=>getComputedStyle(el,'::before').backgroundImage;
+      const nav=document.querySelector('.navBar');
+      assert(nav,'네비바가 없음');
+      const a=lightOf(on), b2=lightOf(nav);
+      assert(a && a!=='none','슬롯에 윗변 광선이 없음');
+      assert(a===b2,'슬롯 광선이 네비바와 다른 그라데임(단일 소스 위반)');
+      assert(a.indexOf('gradient')>=0,'광선이 그라데가 아님: '+a.slice(0,40));
+      // ⚠ overflow:hidden 을 쓰면 레벨 배지(.pdLv)가 잘린다 — 실제로 그렇게 잘렸었다
+      assert(cs.overflow!=='hidden','슬롯에 overflow:hidden 이 걸려 레벨 배지가 잘린다');
+      // 면이 배경보다 밝아야 '판'으로 읽힌다
+      { const g=cs.backgroundImage+cs.backgroundColor;
+        const nums=(g.match(/\d+/g)||[]).map(Number);
+        assert(nums.length>=3,'슬롯 면 색을 읽지 못함');
+        assert(nums[0]+nums[1]+nums[2]>=60,'슬롯 면이 너무 어두움: '+nums.slice(0,3).join(',')); }
+      // ＋ 는 부위 글리프와 겹치지 않는다(가운데에 겹쳐 두면 둘 다 안 읽힌다)
+      { const emp=slots.find(e=>e.classList.contains('empty'));
+        if(emp){ const plus=emp.querySelector('.pdPlus'), ico=emp.querySelector('.slIco');
+          assert(plus,'빈 슬롯에 ＋ 가 없음');
+          if(ico){ const a2=plus.getBoundingClientRect(), b3=ico.getBoundingClientRect();
+            const overlap=!(a2.right<=b3.left||a2.left>=b3.right||a2.bottom<=b3.top||a2.top>=b3.bottom);
+            assert(!overlap,'＋ 가 부위 글리프와 겹침'); } } } }
     // ① 장비 = 마을 장비창과 같은 renderProfGear() — 아바타(페이퍼돌) + 가방이 그대로 나와야 한다
     assert(document.querySelector('#gearBody .gearWrap'),'장비 탭에 장비창이 없음');
     assert(document.querySelector('#gearBody .bagBody'),'장비 탭에 가방이 없음');

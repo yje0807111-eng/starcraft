@@ -80,6 +80,10 @@
     --ov-dim:rgba(2,3,6,.62);              /* 모달 오버레이 딤(공통) */
     /* ── 공통 스케일: 라운드/폰트 ── */
     --r-bar:3px; --r-sm:4px; --r-md:6px; --r-lg:9px;
+    /* ✨ 윗변 광선(단일 소스) — 양 끝은 사라지고 가운데만 밝다. 네비바와 장비 슬롯이 같이 쓴다.
+       ⚠ 실선이 아니다. 굵기·색을 올리지 말 것 — 정체는 두께가 아니라 '가운데만 밝은 그라데'다. */
+    --edge-light:linear-gradient(90deg,rgba(150,158,172,.14) 0%,rgba(160,168,182,.26) 13%,rgba(186,194,208,.55) 30%,
+      rgb(232,236,244) 50%,rgba(186,194,208,.55) 70%,rgba(160,168,182,.26) 87%,rgba(150,158,172,.14) 100%);
     --fs-xs:9.5px; --fs-sm:10px; --fs-md:11px; --fs-lg:12px; --fs-xl:13px;
   }
   /* ── 📜 공용 스크롤바(단일 소스) ──
@@ -2347,18 +2351,38 @@
   .pdWrap{position:relative;flex:1 1 auto;min-height:186px;margin:4px 0}
   .pdFig{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);height:100%;width:auto;color:#5f7183;opacity:.34}
   .pdFig svg{display:block;height:100%;width:auto}
-  .pdSlot{position:absolute;transform:translate(-50%,-50%);width:46px;height:46px;border-radius:var(--r-lg);cursor:pointer;
-    display:flex;align-items:center;justify-content:center;color:#7f8b99;
-    background:linear-gradient(180deg,rgba(24,31,44,.92),rgba(14,19,28,.92));border:1px solid var(--metal-edge);
-    box-shadow:0 6px 16px -10px #000, inset 0 1px 0 rgba(255,255,255,.05)}
+  /* 🔲 장비 슬롯 — 각진 판(라운드 3) + 윗변 광선. 광선은 네비바와 같은 --edge-light 를 쓴다.
+     ⚠ 라운드를 다시 올리지 말 것(9px은 '둥글둥글'해서 뺐다). 면은 네비 판보다 한 단만 밝다. */
+  .pdSlot{position:absolute;transform:translate(-50%,-50%);width:46px;height:46px;border-radius:var(--r-bar);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;color:#8a97a6;
+    background:linear-gradient(180deg,rgba(36,45,60,.94),rgba(20,26,37,.94));border:1px solid var(--metal-edge);
+    box-shadow:0 6px 16px -10px #000, inset 0 1px 0 rgba(255,255,255,.06)}
+  /* 윗변 광선 — 가운데만 밝다. 슬롯은 12개라 네비처럼 숨쉬게 하지 않는다(전부 깜박이면 산만하다) */
+  /* ⚠ overflow:hidden 을 쓰면 안 된다 — 레벨 배지(.pdLv)가 칸 밖에 있어 잘린다.
+     대신 좌우를 라운드만큼(3px) 접어 모서리 밖으로 새지 않게 한다. */
+  .pdSlot::before{content:'';position:absolute;left:3px;right:3px;top:0;height:1px;pointer-events:none;z-index:2;
+    background:var(--edge-light);opacity:.72;filter:drop-shadow(0 0 2px rgba(206,214,228,.30))}
+  .pdSlot.empty::before{opacity:.34;filter:none}      /* 빈 칸은 빛을 낮춘다 — 채워진 칸이 먼저 눈에 들어와야 한다 */
+  .pdSlot.lock::before{opacity:.18;filter:none}
   .pdSlot .slIco{width:27px;height:27px}
-  .pdSlot.empty .slIco{opacity:.24}
+  /* 빈 칸 글리프는 한 단 작게 — 오른쪽 아래 ＋ 배지와 모서리가 맞닿지 않게 여유를 준다(실측 1px 겹쳤었다) */
+  .pdSlot.empty .slIco{opacity:.24;width:24px;height:24px}
   .pdSlot.lock .slIco{opacity:.4}
-  .pdSlot.empty .pdPlus{position:absolute;font-style:normal;font-size:19px;font-weight:300;color:#8e9bab;line-height:1}
+  /* ＋ — 글꼴 글리프는 크기·굵기가 폰트에 휘둘린다. 선 두 개로 직접 그려 각지게 통제한다.
+     ⚠ 가운데에 두면 흐린 부위 글리프와 겹친다 → 오른쪽 아래 모서리에 작은 배지로 둔다. */
+  /*  ⚠ 칸 '안' 모서리에 두면 27px 부위 글리프와 겹친다(실측). 레벨 배지처럼 칸 밖에 붙인다. */
+  .pdSlot.empty .pdPlus{position:absolute;right:-5px;bottom:-5px;width:14px;height:14px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:0;line-height:0;color:transparent;opacity:.95;
+    border:1px solid var(--metal-edge);border-radius:var(--r-bar);background:#12161d}
+  .pdSlot.empty .pdPlus::before,.pdSlot.empty .pdPlus::after{content:'';position:absolute;background:#a6b3c2;border-radius:0}
+  .pdSlot.empty .pdPlus::before{left:3px;right:3px;top:50%;height:1.5px;transform:translateY(-50%)}
+  .pdSlot.empty .pdPlus::after{top:3px;bottom:3px;left:50%;width:1.5px;transform:translateX(-50%)}
+  .pdSlot.empty:active .pdPlus{opacity:1}
   .pdSlot .pdLockIco{position:absolute;width:19px;height:19px;color:#95a3b3}
-  .pdSlot.on{background:linear-gradient(180deg,rgba(30,42,58,.95),rgba(16,22,32,.95))}
+  .pdSlot.on{background:linear-gradient(180deg,rgba(42,55,74,.96),rgba(22,29,42,.96))}
   .pdSlot.lock{opacity:.62}
-  .pdSlot.pick{border-color:#7d8b9c;color:#dbe3ec;background:linear-gradient(180deg,rgba(44,54,70,.95),rgba(20,26,36,.95))}   /* 가방 필터 중 = 중립 강조(시안 아님) */
+  .pdSlot.pick{border-color:#8e9dae;color:#e4ebf3;background:linear-gradient(180deg,rgba(58,71,92,.96),rgba(26,33,46,.96))}   /* 가방 필터 중 = 중립 강조(시안 아님) */
   .pdSlot:active{transform:translate(-50%,-50%) translateY(1px)}
   .pdSlot .pdLv{position:absolute;top:-7px;right:-5px;font-family:var(--font-num);font-size:10px;font-weight:800;font-style:normal;
     font-variant-numeric:tabular-nums;padding:0 4px;border-radius:var(--r-bar);color:inherit;background:#0b0e16;border:1px solid currentColor}
@@ -2988,8 +3012,7 @@
      ⚠ 굵기·색을 올리지 말 것. 이 선의 정체는 두께가 아니라 '가운데만 밝은 그라데'다. */
   /* z-index 2 — 선택 칸 테두리(z:1)가 이 선을 덮으면 가운데 광이 끊겨 보인다 */
   .navBar::before,#tabs::before{content:'';position:absolute;left:0;right:0;top:0;height:1px;pointer-events:none;z-index:2;
-    background:linear-gradient(90deg,rgba(150,158,172,.14) 0%,rgba(160,168,182,.26) 13%,rgba(186,194,208,.55) 30%,
-      rgb(232,236,244) 50%,rgba(186,194,208,.55) 70%,rgba(160,168,182,.26) 87%,rgba(150,158,172,.14) 100%);
+    background:var(--edge-light);
     animation:navEdgeBreath 5.2s ease-in-out infinite}
   /* 은색은 붉은색보다 번짐이 눈에 세다 — halo 를 한 단 낮춘다(2/4px, 알파 .28/.55) */
   @keyframes navEdgeBreath{0%,100%{opacity:.62;filter:drop-shadow(0 0 2px rgba(206,214,228,.28))}
