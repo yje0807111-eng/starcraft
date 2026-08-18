@@ -2452,6 +2452,11 @@ async function groupLobby(){
       const panel=document.querySelector('#mapSelect .msPanel');
       assert(panel && panel.contains(dock) && panel.contains($('msList')) && panel.contains($('msSortTabs')),
         '소셜·목록·탭 띠가 한 상자 안에 없음');
+      // 카드 면 = 사냥터 업그레이드 칸(.hmUp)과 같은 검정. 옛 회색(rgba(36,38,47,…))으로 돌아가면 잡힌다
+      { const g=getComputedStyle(document.querySelector('#msList .mapItem')).backgroundImage||'';
+        const m=(g.match(/rgba?\(([^)]+)\)/)||[,'255,255,255'])[1].split(',').map(parseFloat);
+        const lum=m[0]*0.3+m[1]*0.59+m[2]*0.11;
+        assert(lum<=12,'유즈맵 카드 면이 검정이 아님(휘도 '+lum.toFixed(1)+')'); }
       // 목록이 끝나는 자리에 선 — 없으면 마지막 카드가 잘린 채 멈춰 '화면이 잘렸다'로 읽힌다
       { const ls=getComputedStyle($('msList'));
         assert(ls.borderBottomStyle!=='none' && parseFloat(ls.borderBottomWidth)>=1,'목록 끝 선이 없음'); }
