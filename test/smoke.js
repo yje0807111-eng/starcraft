@@ -3058,16 +3058,43 @@ async function groupGame(){
   await step('보스 시트 = 개인보스만(포인트방 분리)', ()=>{ openMainHome(); const bt=$('bossTab'); bt.click();
     const txt=$('unitCmd').innerText; assert(/개인보스/.test(txt),'보스 시트 아님');
     assert(!/유닛 파견|토벌장/.test(txt),'보스 시트에 포인트방 셀이 남음'); openMainHome(); return 'ok'; });
-  await step('보스바 클릭 → 토벌장 직행(맵 영역 전환)', ()=>{ skipIf(typeof openBossArena!=='function','없음'); skipIf(!G.coopBoss,'공용보스 없음(맵 설정)');
-    assert(!$('pointRoomPop'),'구 포인트방 팝업이 남아있음(보스바=직행이어야 함)');
+  // 포인트방 입장 경로는 하단 네비(보스 > 포인트방) **하나뿐**이다(2026-08-14).
+  // 우상단 공용 보스 바는 보기 전용 — 클릭을 받으면 입장 경로가 둘이 된다.
+  await step('포인트방: 입장은 네비 하나뿐 · 우상단 바는 보기 전용', async()=>{
+    skipIf(typeof openBossArena!=='function','없음'); skipIf(!G.coopBoss,'공용보스 없음(맵 설정)');
+    assert(!$('pointRoomPop'),'구 포인트방 팝업이 남아있음');
     assert(!$('mapName'),'구 맵이름(#mapName)이 남아있음');
-    assert($('coopBossBar').getAttribute('onclick').includes('openBossArena'),'보스바가 아레나로 직행 안 함');
-    $('coopBossBar').click(); assert(G.bossOpen===true,'토벌장 미진입');
-    assert(visible($('bossPanel')),'아레나 컨트롤 패널 숨김'); return 'ok'; });
+    { const bar=$('coopBossBar'), c=getComputedStyle(bar);
+      assert(!bar.getAttribute('onclick'),'우상단 보스 바가 아직 클릭을 받는다(입장 경로가 둘)');
+      assert(c.pointerEvents==='none','보스 바가 아직 포인터를 먹는다: '+c.pointerEvents); }
+    const ph=$('phone'), faked=ph && !ph.classList.contains('inGame'); if(faked) ph.classList.add('inGame');
+    try{
+      openBossSheet(); await sleep(90);
+      const cells=()=>[...document.querySelectorAll('#tabs > *')].filter(e=>getComputedStyle(e).display!=='none');
+      const arena=cells().find(e=>e.textContent.trim()==='포인트방');
+      assert(arena,'보스 하위에 포인트방 칸이 없음');
+      gtabSub('arena'); await sleep(200);
+      assert(G.bossOpen===true,'네비로 포인트방 미진입');
+      assert(visible($('bossPanel')),'아레나 컨트롤 패널 숨김');
+      // 나가기 = 네비 ‹ 하나뿐. ⚠ 포인트방은 화면이 아니라 오버레이라 switchTab 을 안 지난다 —
+      //   gameRestHome 이 직접 닫지 않으면 네비만 올라오고 아레나는 열린 채 남는다(실제로 그랬다).
+      gtabBack(); await sleep(220);
+      assert(G.bossOpen===false,'‹ 를 눌렀는데 포인트방이 안 닫힘');
+      assert(!visible($('bossPanel')),'‹ 뒤에도 아레나 패널이 떠 있음');
+      assert(_gtabDrill==='' && _homeMode==='select','‹ 뒤 기본 상태가 아님: '+_gtabDrill+'/'+_homeMode);
+      // 뒤 스텝들(아레나 4그리드·건물 프로필)이 아레나 안을 보므로 다시 들어가 둔다
+      openBossSheet(); await sleep(60); gtabSub('arena'); await sleep(200);
+      assert(G.bossOpen===true,'다시 들어가지 못함');
+      return 'ok';
+    } finally { if(faked) ph.classList.remove('inGame'); } });
   await step('아레나 4그리드 + 카드탭=1기 즉시 파견', ()=>{ skipIf(!G.bossOpen,'아레나 아님');
     assert(!$('baCtl') && !$('baBackBtn') && !$('bossDeployBar'),'구 상단버튼/확정바가 안 지워짐');
     refreshSelCard(); const host=$('unitCmd'); assert(host.classList.contains('on'),'하단 시트 비활성');
-    let txt=host.innerText; assert(/전체 회수/.test(txt) && /돌아가기/.test(txt),'4그리드 라벨 누락');
+    let txt=host.innerText; assert(/전체 회수/.test(txt),'4그리드에 전체 회수가 없음');
+    // '돌아가기' 칸은 없앴다 — 나가기는 하단 네비의 ‹ 하나뿐이다
+    assert(!/돌아가기/.test(txt),'아레나 4그리드에 옛 돌아가기 칸이 남아 있음');
+    { const names=[...host.querySelectorAll('.cgSlot .cgName')].map(e=>e.textContent.trim());
+      assert(names[names.length-1]==='전체 회수','전체 회수가 마지막(4번) 칸이 아님: '+JSON.stringify(names)); }
     assert(!/빈 슬롯/.test(txt) && !/탭 = 회수/.test(txt),'제거해야 할 텍스트가 남음');
     const u=G.units.find(x=>!x.fixed && !x.hero && !x.atBoss); skipIf(!u,'파견할 유닛 없음');
     bossSlotTap(0); assert(G.bossDeployPick===true,'파견 선택 모드 진입 실패');

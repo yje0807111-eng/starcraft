@@ -94,6 +94,9 @@
   칸은 HOME 네비와 같은 `_navCell()`(`.navIt`)로 만들고, **최상위 `.tab` 마크업은 그대로 두고 CSS(`#tabs.drill .tab`)로만 숨긴다**
   — `switchTab`/`_setBottomTab`/`updatePbossFab` 이 `style.display`·`.on` 을 직접 만지므로 지웠다 다시 만들면 그 상태가 날아간다.
   구역 상태는 `_homeMode`/`_gachaSec`/`_upgSec`/`_plSec`(+ 보스는 `G.bossOpen`, 자동화는 `G.mainSheet==='auto'`). 샌드박스·직스에선 내려가지 않는다.
+- **포인트방(`openBossArena`)은 화면이 아니라 오버레이**다 — 입장은 네비 `보스 › 포인트방` 하나뿐이고(우상단 `#coopBossBar` 는 `pointer-events:none` 보기 전용),
+  퇴장은 `gtabBack()`(‹). `gameRestHome()` 이 `closeBossArena()` 를 **직접** 부른다 — `G.tab` 이 `'Main'` 그대로라 `switchTab` 의 정리를 안 지난다.
+  하단 4칸은 `[파견][파견][빈칸][전체 회수]`(`_bossArenaSheetModel`) — '돌아가기' 칸은 폐지.
 - **무선택 기본 상태 = `gameRestHome()`**(2026-08-14): 하단 = 유닛 지정(`_homeMode='select'`), 네비 = 최상위 5칸이되 **어느 칸도 안 켜짐**(`_setBottomTab('')`).
   `gtabBack()`(‹)이 이걸 부른다 — 층만 올리면 '하단은 보스 시트인데 네비는 최상위'인 어중간한 상태가 남는다.
   ⚠ `switchTab` 이 안에서 `gtabDrill` 을 부르므로 층·하이라이트 정리는 반드시 그 뒤에 할 것. 메인 탭(`openMainHome`)은 첫 하위(유닛 판매)로 들어간다.

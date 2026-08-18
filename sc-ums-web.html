@@ -374,7 +374,8 @@
   
   
   
-  #coopBossBar{cursor:pointer;pointer-events:auto}
+  /* 보기 전용 — 입장 경로는 하단 네비(보스 > 포인트방) 하나뿐이다(2026-08-14). 클릭을 받지 않는다. */
+  #coopBossBar{cursor:default;pointer-events:none}
   /* 메인 홈 하단 — 좌(판매)·우(보스 파견): 칸 없이 중앙 구분선으로만 분리 */
   .homeCols{position:relative;display:flex;gap:0;align-items:stretch;flex:1;min-height:0}
   .homeSell{display:flex;flex-direction:column;gap:4px;padding:0 8px;background:none;border:none;min-width:0}
@@ -3843,7 +3844,7 @@
     </div>
     <div id="zoneLabel">📍 내 디펜스 구역</div>
     <!-- 상시 공용 보스(협동) HP 바 — 메인 전투 화면 상단 -->
-    <div id="coopBossBar" class="hide" onclick="openBossArena()" title="토벌장 입장 (보스 구역)">
+    <div id="coopBossBar" class="hide" title="공용 보스 상태">
       <div class="cbMid">
         <div class="cbTop"><span class="cbName" id="cbName"></span></div>
         <div class="cbBarOuter"><div class="cbBarFill" id="cbFill"></div><span class="cbHpTxt" id="cbHp"></span></div>
@@ -12298,10 +12299,10 @@ function _bossBldProfileModel(){ const cb=G.coopBoss||{};
 function renderBossBldProfile(){ const host=document.getElementById('unitCmd'); if(!host) return; host.classList.add('simple');
   const cb=G.coopBoss||{}; const sig='bbp|'+Math.round(cb.hp||0)+'|'+(cb.max||0)+'|'+(cb.lv||1)+'|'+_bossBldReward();
   if(host._gSig!==sig){ host._gSig=sig; host._cgSig=undefined; renderCmdGrid(host, _bossBldProfileModel()); } }
+// 4칸 = [파견1][파견2][빈칸][전체 회수]. '돌아가기' 칸은 없앴다 — 나가기는 하단 네비의 ‹ 하나뿐이다(2026-08-14).
 function _bossArenaSheetModel(){ const dep=G.units.filter(u=>u.atBoss);
-  const items=[ _bossArenaSlot(0), _bossArenaSlot(1),
-    { pro:bossIcoHTML('recall'), sn:'전체 회수', state:(dep.length>0?'ok':'dim'), act:'onclick="recallFromBoss(\'all\')"' },
-    { pro:bossIcoHTML('back'), sn:'돌아가기', state:'ok', act:'onclick="closeBossArena()"' } ];
+  const items=[ _bossArenaSlot(0), _bossArenaSlot(1), null,
+    { pro:bossIcoHTML('recall'), sn:'전체 회수', state:(dep.length>0?'ok':'dim'), act:'onclick="recallFromBoss(\'all\')"' } ];
   return { mode:'bossArena', title:'포인트방', icon:bossIcoHTML('head'), sub:'', compact:true, build:true,
     info:{ eb:'', name:'포인트 획득 방', desc:'건물 파괴로 포인트 획득 · 모두 동일' }, items:items }; }
 function renderBossArenaSheet(){ const host=document.getElementById('unitCmd'); if(!host) return; host.classList.add('simple');
@@ -12501,6 +12502,9 @@ function gtabBack(){ if(typeof playSfx==='function') playSfx('ui_back'); gameRes
 // 🏠 기본 상태 — 아무 구역도 고르지 않았을 때의 하단. 내용은 '유닛 지정'이고 네비는 어느 칸도 안 켜진다.
 //   ⚠ switchTab 이 안에서 gtabDrill 을 부르므로, 층·하이라이트 정리는 반드시 그 뒤에 한다.
 function gameRestHome(){
+  // ⚠ 포인트방은 '화면'이 아니라 전장 위 오버레이(#bossPanel)다 — G.tab 은 계속 'Main' 이라
+  //   아래 switchTab 을 안 지나고, 그러면 열린 채로 남는다. 여기서 직접 걷는다.
+  if(G.bossOpen && typeof closeBossArena==='function') closeBossArena();
   if(G.tab!=='Main') switchTab('Main', document.querySelector('.tab[data-tab="Main"]'));
   G.mainSheet=null; G.sel=[]; G.selEnemy=null; G.selType=null; _selViaTab=false; G.sheetDown=false;
   setHomeMode('select');
