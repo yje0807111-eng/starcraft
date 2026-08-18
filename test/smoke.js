@@ -2461,9 +2461,19 @@ async function groupLobby(){
     { _party=null; _pbRooms=null;
       navSub('party'); await sleep(120);
       assert(visible($('ptFindOv')),'파티가 없는데 게시판이 자동으로 안 뜸');
-      const rows=[...$('ptFindOv').querySelectorAll('.foRow')];
+      // 판은 방 찾기(#rooms) 컴포넌트를 그대로 빌린다 — 새 목록 UI 를 만들면 그건 버그다
+      const card=$('ptFindOv').querySelector('.rmCard');
+      assert(card,'파티 찾기가 방 찾기 카드(.rmCard)를 안 씀');
+      assert(card.querySelector('.rmHead .rmTitle').textContent==='파티 찾기','머리 제목이 다름');
+      assert(card.querySelector('.rmNum input') && card.querySelector('#pbList.rmList'),'방 찾기의 입력줄·목록 규격이 아님');
+      assert(card.querySelectorAll('.rmBtns .rmSq').length===2 && card.querySelector('.rmBtns .rmQuick'),'하단 버튼 4칸 규격이 아님');
+      const rows=[...card.querySelectorAll('.roomItem')];
       assert(rows.length===PB_DEMO.length,'게시판 목록이 안 그려짐: '+rows.length);
-      assert(rows.some(r=>r.querySelector('.fStat-offline')),'가득 찬 파티가 참가 불가로 안 막힘');
+      assert(rows.some(r=>r.classList.contains('locked') && /가득참/.test(r.textContent)),'가득 찬 파티가 참가 불가로 안 막힘');
+      // 이름으로 찾기 = .rmNum 줄(방 번호 자리)
+      pbSetQuery('네모'); await sleep(30);
+      assert(card.querySelectorAll('.roomItem').length===1,'이름 검색이 안 걸림');
+      pbSetQuery(''); await sleep(30);
       // 참가 → 내 파티가 그 이름·인원으로 채워진다
       const target=PB_DEMO[0], before=target.mates.length;
       pbJoin(target.id); await sleep(60);

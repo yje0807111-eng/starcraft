@@ -3528,13 +3528,6 @@
   .ptFind{flex:0 0 auto;padding:4px 9px;border-radius:var(--r-md);cursor:pointer;font-family:inherit;font-size:var(--fs-sm);font-weight:700;
     color:#c9b6ff;background:rgba(138,86,255,.16);border:1px solid rgba(138,86,255,.45)}
   .ptFind:active{transform:translateY(1px)}
-  /* 파티 만들기 줄(게시판 맨 위) — 목록 행과 같은 폭, 점선으로 '비어 있는 자리'임을 말한다 */
-  .ptMake{width:100%;display:flex;align-items:center;gap:9px;padding:9px;margin-bottom:7px;cursor:pointer;
-    font-family:inherit;text-align:left;border-radius:var(--r-md);
-    color:#c9b6ff;background:rgba(138,86,255,.1);border:1px dashed rgba(138,86,255,.5)}
-  .ptMake:active{transform:translateY(1px)}
-  .ptMake .ptAddAv{color:#c9b6ff;border-color:rgba(138,86,255,.6);background:rgba(138,86,255,.14)}
-  .ptMake b{font-size:var(--fs-lg);font-weight:700}
   .ptGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
   .ptSlot{display:flex;align-items:center;gap:7px;min-height:40px;padding:5px 8px;border-radius:var(--r-lg);overflow:hidden}
   .ptSlot.fill{background:linear-gradient(180deg,rgba(28,30,36,.9),rgba(11,12,16,.92));border:1px solid var(--metal-edge)}
@@ -3561,6 +3554,12 @@
   .ptInviteOv.hide{display:none}
   /* #phone 에 붙는 팝업 — 마을 시트(63)·네비(62) 위로 올라와야 보인다 */
   .ptInviteOv.top{z-index:110}
+  /* 🎪 파티 찾기 = 방 찾기(#rooms) 팝업을 그대로 빌려 쓴다 — 카드(.rmCard)·목록(.rmList/.roomItem)·
+     하단 버튼(.rmBtns)까지 전부 같은 컴포넌트다. 여기서 정하는 것은 '어디에 뜨는가'뿐:
+     #rooms 는 전용 화면이라 우주 배경(::before)을 깔지만, 이건 유즈맵 위에 덮는 팝업이라 딤만 쓴다. */
+  .pfOv{position:absolute;inset:0;z-index:110;display:flex;align-items:center;justify-content:center;
+    padding:var(--popPad);background:var(--popDim);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+  .pfOv.hide{display:none}
   .ptInviteCard{width:100%;max-width:300px;height:516px;max-height:calc(100% - 16px);display:flex;flex-direction:column;overflow:hidden;
     /* ⚠ 공용 카드 면(.cpCard 계열)은 반투명이다 — 유즈맵 목록 위에 뜨면 뒤 카드가 글자 사이로 비쳐 못 읽는다.
        이 팝업은 목록 위에 뜨는 것이 기본이므로 면을 불투명하게 덮는다(친구 초대·추가·파티 찾기 공통). */
@@ -14758,35 +14757,62 @@ function pbCreate(){ const inp=document.getElementById('pbNameInput');
   _pbMaking=false; closePartyFind(); renderPartyTab();
   if(typeof playSfx==='function') playSfx('ui_confirm');
   lobbyToast('"'+name+'" 파티를 만들었어요 · 친구를 초대해 보세요'); }
-// ── 게시판 팝업 ──
-function openPartyFind(){ _lobbyOv('ptFindOv', closePartyFind); renderPartyFind();
+// ── 게시판 팝업 = 방 찾기(#rooms)를 그대로 빌린 판 ──
+//   카드·목록·하단 버튼이 전부 같은 컴포넌트라, '방을 고르는 손'이 '파티를 고르는 손'과 같아진다.
+//   방 번호 줄(.rmNum)은 파티엔 번호가 없으므로 '이름으로 찾기'가 맡고,
+//   파티 만들기를 누르면 같은 줄이 이름 입력으로 바뀐다(따로 판을 하나 더 띄우지 않는다).
+let _pbQuery='';
+function openPartyFind(){ _lobbyOv('ptFindOv', closePartyFind, 'pfOv'); renderPartyFind();
   if(typeof playSfx==='function') playSfx('ui_open'); }
-function closePartyFind(){ _pbMaking=false; popHide('ptFindOv'); }
+function closePartyFind(){ _pbMaking=false; _pbQuery=''; popHide('ptFindOv'); }
+function pbRefresh(){ renderPartyFind(); lobbyToast('파티 목록을 새로 고쳤어요'); }
+function pbQuick(){ const r=pbVisible().filter(function(x){ return pbCount(x)<PARTY_MAX && pbMineId()!==x.id; })[0];
+  if(!r){ lobbyToast('바로 들어갈 수 있는 파티가 없어요'); return; }
+  pbJoin(r.id); }
+function pbVisible(){ const q=(_pbQuery||'').trim().toLowerCase();
+  return pbRooms().filter(function(r){ return !q || r.name.toLowerCase().indexOf(q)>=0; }); }
+function pbSetQuery(v){ _pbQuery=v||''; pbPaintList(); }
+// 목록만 다시 그린다 — 입력 중에 판 전체를 갈아 끼우면 포커스가 날아간다
+function pbPaintList(){ const el=document.getElementById('pbList'); if(!el) return;
+  const rooms=pbVisible();
+  el.innerHTML = rooms.length ? rooms.map(pbRowHTML).join('')
+    : '<div class="rmEmpty">'+(_pbQuery?'그런 이름의 파티가 없습니다':'열려 있는 파티가 없습니다 · 파티 만들기로 시작해 보세요')+'</div>';
+  const c=document.getElementById('pbCount'); if(c) c.textContent=rooms.length; }
+// 줄 = 방 목록(.roomItem)과 같은 규격: 왼쪽 이름/파티장 · 오른쪽 인원/상태
 function pbRowHTML(r){ const n=pbCount(r), mine=pbMineId()===r.id, full=n>=PARTY_MAX;
-  const right = mine ? '<span class="fStatLbl fStat-busy">참가 중</span>'
-    : full ? '<span class="fStatLbl fStat-offline">가득</span>'
-    : '<button class="foAdd2" onclick="pbJoin(&#39;'+r.id+'&#39;)">참가</button>';
-  return '<div class="foRow ptRow'+((full&&!mine)?' off':'')+'">'+avatarHTML(r.name,'fAva')
-    +'<span class="fMeta"><span class="fL1">'+escHtml(r.name)+'</span>'
-    +'<span class="fL2'+(mine?' fL2-online':'')+'">'+escHtml(r.mates[0]||myNick())+' · '+n+'/'+PARTY_MAX+'</span></span>'
-    +right+'</div>'; }
+  const joinable=!mine && !full;
+  return '<div class="roomItem'+(joinable?'':' locked')+'"'+(joinable?' onclick="pbJoin(&#39;'+r.id+'&#39;)"':'')+'>'
+    +'<div class="riMain"><div class="riName">'+escHtml(r.name)+'</div>'
+    +'<div class="riSub">파티장 - '+escHtml(r.mates[0]||myNick())+'</div></div>'
+    +'<div class="riRight"><div class="riCnt'+(full?' full':'')+'">'+n+'/'+PARTY_MAX+'</div>'
+    +'<div class="riStat '+(mine?'wait':(full?'play':'wait'))+'">'+(mine?'참가 중':(full?'가득참':'모집중'))+'</div></div></div>'; }
 function renderPartyFind(){ const ov=document.getElementById('ptFindOv'); if(!ov) return;
-  const rooms=pbRooms();
-  const head='<div class="ptInviteHead"><span>파티 찾기</span><button class="ptInviteX" onclick="closePartyFind()">✕</button></div>';
-  const make=_pbMaking
-    ? '<div class="ptInviteSearch"><div class="foAdd">'
-      +'<input id="pbNameInput" placeholder="파티 이름" maxlength="18" autocomplete="off" onkeydown="if(event.key===&#39;Enter&#39;)pbCreate()">'
-      +'<button class="foSearchBtn" onclick="pbCreate()">만들기</button></div></div>'
-    : '<div class="ptInviteSearch"><button class="ptMake" onclick="pbToggleMake()"><span class="ptAddAv">+</span><b>파티 만들기</b></button></div>';
-  const list = rooms.length ? rooms.map(pbRowHTML).join('') : '<div class="foEmpty">열려 있는 파티가 없어요</div>';
-  ov.innerHTML='<div class="ptInviteCard">'+head+make+'<div class="foList ptInviteList">'+list+'</div></div>';
+  // 방 번호 줄(.rmNum)의 두 얼굴 — 평소엔 이름 검색, 만들기 모드에선 이름 입력
+  const numRow = _pbMaking
+    ? '<div class="rmNum"><input id="pbNameInput" type="text" placeholder="파티 이름" maxlength="18" autocomplete="off"'
+      +' onkeydown="if(event.key===&#39;Enter&#39;)pbCreate()"><button onclick="pbCreate()">만들기</button></div>'
+    : '<div class="rmNum"><input id="pbFindInput" type="text" placeholder="파티 이름으로 찾기" maxlength="18" autocomplete="off"'
+      +' oninput="pbSetQuery(this.value)"></div>';
+  ov.innerHTML='<div class="rmCard">'
+    +'<div class="rmHead"><span class="rmTitle">파티 찾기</span>'
+    +'<span class="rmHeadR"><span class="rmOnline">파티 <b id="pbCount">0</b>개</span></span></div>'
+    + numRow
+    +'<div class="rmList" id="pbList"></div>'
+    +'<div class="rmBtns">'
+    +'<button class="rmSq" onclick="closePartyFind()" title="닫기" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>'
+    +'<button class="rmCreate" onclick="pbToggleMake()">'+(_pbMaking?'취소':'파티 만들기')+'</button>'
+    +'<button class="rmQuick" onclick="pbQuick()">빠른 참가</button>'
+    +'<button class="rmSq rmRefresh" onclick="pbRefresh()" title="새로고침" aria-label="새로고침"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 12a8.4 8.4 0 0 1 14.5-5.8M20.4 12a8.4 8.4 0 0 1-14.5 5.8"/><path d="M18.4 2.9v3.6h-3.6M5.6 21.1v-3.6h3.6"/></svg></button>'
+    +'</div></div>';
+  pbPaintList();
   if(_pbMaking){ const i=document.getElementById('pbNameInput');
-    if(i){ i.value=myNick()+'님의 파티'; setTimeout(function(){ try{ i.focus(); i.select(); }catch(e){} },30); } } }
+    if(i){ i.value=myNick()+'님의 파티'; setTimeout(function(){ try{ i.focus(); i.select(); }catch(e){} },30); } }
+  else { const i=document.getElementById('pbFindInput'); if(i && _pbQuery) i.value=_pbQuery; } }
 // ── 로비 팝업 껍데기(공용) ──
 // ⚠ #phone 에 붙인다 — 소셜은 유즈맵 도크와 마을 시트를 오가므로 화면 하나에 매달면 반대쪽에서 안 보인다.
 //   .top 은 시트(63)·네비(62) 위로 올리는 변형.
-function _lobbyOv(id, onClose){ let ov=document.getElementById(id);
-  if(!ov){ ov=document.createElement('div'); ov.id=id; ov.className='ptInviteOv top';
+function _lobbyOv(id, onClose, cls){ let ov=document.getElementById(id);
+  if(!ov){ ov=document.createElement('div'); ov.id=id; ov.className=cls||'ptInviteOv top';
     (document.getElementById('phone')||document.body).appendChild(ov);
     ov.addEventListener('click', function(e){ if(e.target===ov) onClose(); }); }
   ov.classList.remove('hide'); return ov; }
