@@ -12427,9 +12427,10 @@ function _setBottomTab(tab){ document.querySelectorAll('#tabs .tab').forEach(fun
 //   sub.cur 가 가리키는 키와 같은 칸이 .cur 로 표시된다. show() 가 false 인 하위는 아예 안 나온다.
 //   하위가 하나도 없는 구역(전투실험·건설 등 관리자 탭)은 내려가지 않는다.
 const GTAB_TREE={
+  // ⚠ '유닛 지정'은 여기 없다 — 아무 구역도 안 고른 **기본 상태**(gameRestHome)가 그 자리다.
+  //   메인 = 유닛을 처분·정리하는 묶음(판매·조합·자동화).
   // 자동화는 _homeMode 가 아니라 시트 모드(G.mainSheet==='auto')다 — cur 에서 그것부터 본다
   Main:    { cur:()=>(G.mainSheet==='auto'?'auto':_homeMode), subs:[
-      { k:'select',  label:'유닛 지정', ico:'marine', act:()=>mainGoMode('select') },
       { k:'sell',    label:'유닛 판매', ico:'coin',   act:()=>mainGoMode('sell') },
       // 조합은 늘 자리를 지킨다 — 조합할 게 없으면 칸이 사라지는 게 아니라 판이 '3개 필요'라고 알린다
       { k:'combine', label:'유닛 조합', ico:'photon', act:()=>mainGoMode('combine') },
@@ -12477,9 +12478,19 @@ function gtabDrill(tab){ _gtabDrill=gtabSubs(tab).length?tab:''; gtabPaint(); }
 function gtabSub(k){ const subs=gtabSubs(_gtabDrill), t=subs.find(x=>x.k===k); if(!t) return;
   if(typeof playSfx==='function') playSfx('ui_tab');
   t.act(); gtabPaint(); }
-// ‹ = 한 층 위(최상위 5칸). 보고 있는 화면은 그대로 둔다 — HOME 네비의 navBack 과 같은 뜻이다.
-function gtabBack(){ if(typeof playSfx==='function') playSfx('ui_back');
-  _gtabDrill=''; gtabPaint(); }
+// ‹ = 기본 상태로 돌아간다. 층만 올리면 '보스 구역에 있으면서 최상위 네비를 보는' 어중간한 상태가 남는다
+// (하단은 보스 시트인데 네비는 최상위 — 실제로 그랬다). HOME 네비의 navBack 이 openHome() 을 부르는 것과 같은 뜻.
+function gtabBack(){ if(typeof playSfx==='function') playSfx('ui_back'); gameRestHome(); }
+// 🏠 기본 상태 — 아무 구역도 고르지 않았을 때의 하단. 내용은 '유닛 지정'이고 네비는 어느 칸도 안 켜진다.
+//   ⚠ switchTab 이 안에서 gtabDrill 을 부르므로, 층·하이라이트 정리는 반드시 그 뒤에 한다.
+function gameRestHome(){
+  if(G.tab!=='Main') switchTab('Main', document.querySelector('.tab[data-tab="Main"]'));
+  G.mainSheet=null; G.sel=[]; G.selEnemy=null; G.selType=null; _selViaTab=false; G.sheetDown=false;
+  setHomeMode('select');
+  _setBottomTab(''); _gtabDrill=''; gtabPaint();
+  document.body.classList.add('sheetOpen');
+  if(typeof _syncSheetLift==='function'){ requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); }
+  refreshSelCard(); }
 // 대전 판인가 — 나와 팀이 다른 플레이어가 실제로 있는가. 네모(협동)는 전원 같은 편이라 항상 false.
 function gameHasVersus(){ if(typeof G==='undefined' || !G.teams) return false;
   const me=G.myPlayer||1, mine=G.teams[me];
@@ -12487,9 +12498,13 @@ function gameHasVersus(){ if(typeof G==='undefined' || !G.teams) return false;
 // 자동화 항목을 하나라도 해금했는가 — 옛 #autoFab 의 표시 조건과 같은 식이다
 function autoAnyOwned(){ if(typeof autoUtilOwned!=='function' || typeof G==='undefined' || G.phase!=='playing') return false;
   const o=autoUtilOwned(); return !!(o.combine||o.unit||o.energy||o.place||o.bossdeploy); }
-// 지정/판매/조합으로 돌아가기 — 자동화 시트를 보고 있었다면 먼저 메인 홈으로 되돌린다
-function mainGoMode(m){ if(typeof G!=='undefined' && G.mainSheet!=null && typeof openMainHome==='function') openMainHome();
-  setHomeMode(m); }
+// 판매/조합으로 전환 — 자동화 시트를 보고 있었다면 그 시트만 걷어낸다.
+// ⚠ openMainHome() 을 부르면 안 된다: 이미 메인 구역에 있으므로 '재탭 = 시트 접기' 로 새어 하단이 내려간다.
+function mainGoMode(m){
+  if(typeof G!=='undefined' && G.mainSheet!=null){ G.mainSheet=null; G.sheetDown=false;
+    document.body.classList.add('sheetOpen'); }
+  setHomeMode(m);
+  if(typeof refreshSelCard==='function') refreshSelCard(); }
 // 구역별 '지금 고른 하위'
 let _gachaSec='draw', _upgSec='atk', _plSec='ally';
 function setGachaSec(k){ _gachaSec=k; const h=document.getElementById('unitCmd'); if(h){ h._gSig=undefined; h._cgPage=0; } renderGachaSheet(); }
@@ -12506,16 +12521,24 @@ function openMainSheet(mode, el, sbTab){
   G.sel=[]; G.selEnemy=null; G.selType=null; G.mainSheet=mode; G.sheetDown=false; _setBottomTab(sbTab); gtabDrill(sbTab);   // 이 섹션으로 전환 + 하이라이트 이동 + 그 구역 하위 네비로
   document.body.classList.add('sheetOpen');   // 섹션 전환 = 시트 올림(직전에 토글로 내려놨을 수 있으므로 명시)
   if(typeof playSfx==='function') playSfx('ui_open'); refreshSelCard(); }
-// 메인 탭 = 유닛지정/판매/조합 섹션(하단 홈). 다른 섹션에서 눌러도 반드시 메인 섹션으로 복귀.
+// 메인 탭 = 유닛 판매/조합/자동화 묶음. '유닛 지정'은 여기 없다 — 그건 무선택 기본 상태(gameRestHome)다.
+// 그래서 다른 구역에서 메인을 누르면 **첫 하위(유닛 판매)** 로 들어간다(기본 상태로 가는 건 ‹ 다).
+const MAIN_SUB_MODES=['sell','combine'];   // _homeMode 로 표현되는 하위(자동화는 G.mainSheet)
 function openMainHome(el){
   if(G.strike){ switchTab('Main', el||document.querySelector('.tab[data-tab="Main"]')); return; }   // 직스: 전투 탭 → 직스 라우팅
   if(G.sandbox){ switchTab('Main', el||document.querySelector('.tab[data-tab="Main"]')); return; }
-  if(G.tab==='Main' && G.mainSheet==null && G.sel.length===0 && G.selEnemy==null){   // 홈 섹션 재탭(무선택) = 하단 시트 내리기/올리기 토글
+  // 이미 메인 구역에 내려가 있는데 또 눌렀다 = 하단 시트 내리기/올리기
+  // ⚠ 조건이 'G.mainSheet==null' 이면 기본 상태(유닛 지정)에서 메인을 눌러도 토글로 새어 구역에 못 들어간다.
+  if(G.tab==='Main' && _gtabDrill==='Main' && G.sel.length===0 && G.selEnemy==null){
     const open=document.body.classList.toggle('sheetOpen'); G.sheetDown=!open;
     if(typeof _syncSheetLift==='function'){ requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); }
     if(typeof playSfx==='function') playSfx('ui_open'); return; }
   if(G.tab!=='Main') switchTab('Main', document.querySelector('.tab[data-tab="Main"]'));
-  G.mainSheet=null; G.sel=[]; G.selEnemy=null; G.selType=null; _selViaTab=false; G.sheetDown=false; _setBottomTab('Main'); gtabDrill('Main'); document.body.classList.add('sheetOpen'); if(typeof playSfx==='function') playSfx('ui_open'); refreshSelCard(); }
+  G.sel=[]; G.selEnemy=null; G.selType=null; _selViaTab=false; G.sheetDown=false;
+  if(G.mainSheet!=='auto'){ G.mainSheet=null;                                   // 자동화를 보고 있었다면 그대로 유지
+    setHomeMode(MAIN_SUB_MODES.indexOf(_homeMode)>=0 ? _homeMode : 'sell'); }   // 아니면 마지막 하위, 없으면 첫 칸
+  _setBottomTab('Main'); gtabDrill('Main'); document.body.classList.add('sheetOpen');
+  if(typeof playSfx==='function') playSfx('ui_open'); refreshSelCard(); }
 function openGachaSheet(el){ if(G.strike){ switchTab('Unit', el||document.querySelector('.tab[data-tab="Unit"]')); return; } openMainSheet('gacha', el, 'Unit'); }   // 직스: 건설지 탭
 function openUpgradeSheet(el){ if(G.strike){ switchTab('Upgrade', el||document.querySelector('.tab[data-tab="Upgrade"]')); return; } openMainSheet('upgrade', el, 'Upgrade'); }   // 직스: 보급 탭
 function openAutoSheet(el){ openMainSheet('auto', el, 'Main'); }   // 메인 구역의 하위 '자동화' → 하단 자동화 그리드(최상위 탭은 메인 유지)

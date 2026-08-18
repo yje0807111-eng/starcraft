@@ -94,6 +94,9 @@
   칸은 HOME 네비와 같은 `_navCell()`(`.navIt`)로 만들고, **최상위 `.tab` 마크업은 그대로 두고 CSS(`#tabs.drill .tab`)로만 숨긴다**
   — `switchTab`/`_setBottomTab`/`updatePbossFab` 이 `style.display`·`.on` 을 직접 만지므로 지웠다 다시 만들면 그 상태가 날아간다.
   구역 상태는 `_homeMode`/`_gachaSec`/`_upgSec`/`_plSec`(+ 보스는 `G.bossOpen`, 자동화는 `G.mainSheet==='auto'`). 샌드박스·직스에선 내려가지 않는다.
+- **무선택 기본 상태 = `gameRestHome()`**(2026-08-14): 하단 = 유닛 지정(`_homeMode='select'`), 네비 = 최상위 5칸이되 **어느 칸도 안 켜짐**(`_setBottomTab('')`).
+  `gtabBack()`(‹)이 이걸 부른다 — 층만 올리면 '하단은 보스 시트인데 네비는 최상위'인 어중간한 상태가 남는다.
+  ⚠ `switchTab` 이 안에서 `gtabDrill` 을 부르므로 층·하이라이트 정리는 반드시 그 뒤에 할 것. 메인 탭(`openMainHome`)은 첫 하위(유닛 판매)로 들어간다.
 - **자동화는 메인 구역의 마지막 하위**다(2026-08-14, 옛 전송 옆 `#autoFab` 배너 폐지). `updateAutoFab()` 은 이제 배너를 만지지 않고
   해금 여부가 **바뀐 순간에만** 네비를 다시 그린다 — 매 프레임 도는 자리라 무조건 `gtabPaint()` 하면 DOM 을 매 프레임 갈아엎는다.
 - ⚠ **`#hud` 는 `z-index:24`** (2026-08-14). 포인트방 입력 차단막 `#bossPanel`(z22) 위여야 우상단 ☰ 가 눌린다.

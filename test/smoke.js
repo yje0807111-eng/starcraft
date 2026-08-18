@@ -2924,7 +2924,8 @@ async function groupGame(){
         openGachaSheet(); await sleep(80); gtabBack(); await sleep(80);
         const w2=widths(cells()); assert(Math.max(...w2)-Math.min(...w2)<=1,'선택 칸만 넓어짐: '+JSON.stringify(w2)); }
       // ② 구역별 하위 — 왼쪽 첫 칸은 항상 뒤로가기, 하위 칸끼리는 등폭
-      const want={ Main:['유닛 지정','유닛 판매'], Unit:['뽑기','타워구매'], Upgrade:['공격력','확률','영구강화'], Boss:['개인보스'] };
+      // ⚠ Main 에 '유닛 지정'은 없다 — 그건 아무 구역도 안 고른 기본 상태(gameRestHome)의 자리다
+      const want={ Main:['유닛 판매','유닛 조합'], Unit:['뽑기','타워구매'], Upgrade:['공격력','확률','영구강화'], Boss:['개인보스'] };
       const go={ Main:openMainHome, Unit:openGachaSheet, Upgrade:openUpgradeSheet, Boss:openBossSheet };
       for(const k in want){
         go[k](); await sleep(90);
@@ -2952,11 +2953,16 @@ async function groupGame(){
       switchTab('Players', document.querySelector('.tab[data-tab="Players"]')); await sleep(90);
       assert(!gameHasVersus(),'네모는 대전 판이 아님(팀이 갈리면 안 됨)');
       assert(cells().length===5,'개인전인데 플레이어가 하위로 내려감');
-      // ⑤ ‹ = 한 층 위(보고 있는 화면은 그대로)
+      // ⑤ ‹ = 기본 상태로 (구역 해제 + 하단은 유닛 지정 + 어느 칸도 안 켜짐)
+      //    층만 올리면 '보스 구역에 있는데 네비는 최상위' 인 어중간한 상태가 남는다 — 그걸 막는 검사다.
       openUpgradeSheet(); await sleep(90); assert(cells()[0].classList.contains('navBk'),'업그레이드가 안 내려감');
-      gtabBack(); await sleep(90);
+      gtabBack(); await sleep(120);
       assert(cells().length===5 && !document.getElementById('tabs').classList.contains('drill'),'뒤로가기로 최상위 복귀 실패');
-      assert(G.mainSheet==='upgrade','뒤로가기가 보고 있던 섹션까지 바꿨음: '+G.mainSheet);
+      assert(G.mainSheet==null,'‹ 를 눌렀는데 구역 시트가 남아 있음: '+G.mainSheet);
+      assert(_homeMode==='select','‹ 뒤 하단이 유닛 지정이 아님: '+_homeMode);
+      assert(!$('defaultCmd').classList.contains('hide'),'‹ 뒤 기본 판이 안 보임');
+      assert(!cells().some(e=>e.classList.contains('on')||e.classList.contains('cur')),
+        '‹ 뒤인데 아직 켜진 칸이 있음: '+cells().filter(e=>e.classList.contains('on')).map(e=>e.textContent.trim()));
       // ⑥ 머리줄에는 초상이 없고 제목은 흰 글자다
       openGachaSheet(); await sleep(90);
       assert(!document.querySelector('.cmdG .cgPort'),'머리줄 초상(.cgPort)이 남아 있음');
@@ -2983,9 +2989,10 @@ async function groupGame(){
       { const cur=cells().find(e=>e.classList.contains('cur'));
         assert(cur && cur.textContent.trim()==='자동화','자동화인데 선택 표시가 딴 칸: '+(cur&&cur.textContent.trim())); }
       assert(cells()[0].classList.contains('navBk'),'자동화로 갔더니 최상위로 올라감');
-      // 지정으로 돌아오면 자동화 시트가 걷히고 메인 홈이 돌아온다
-      gtabSub('select'); await sleep(120);
-      assert(G.mainSheet==null && !$('defaultCmd').classList.contains('hide'),'자동화에서 유닛 지정으로 못 돌아옴');
+      // 판매로 돌아오면 자동화 시트가 걷히고 판이 돌아온다(하단이 내려가면 안 된다)
+      gtabSub('sell'); await sleep(120);
+      assert(G.mainSheet==null && !$('defaultCmd').classList.contains('hide'),'자동화에서 유닛 판매로 못 돌아옴');
+      assert(document.body.classList.contains('sheetOpen'),'자동화 → 판매에서 하단이 내려감(재탭 토글로 샜다)');
       return '최상위 5칸 등폭 · 4구역 드릴다운 · 자동화 하위 ok';
     } finally { if(faked) ph.classList.remove('inGame'); openMainHome(); }
   });
