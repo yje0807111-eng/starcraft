@@ -3011,10 +3011,34 @@ async function groupGame(){
           const t=document.querySelector('#hsGrid .hsUp').textContent.replace(/\s+/g,'');
           assert(/[가-힣]+›[가-힣]+/.test(t),'조합 등급 줄이 "A › B" 꼴이 아님: '+t); }
         gtabBack(); await sleep(120); }
-      // 카드 껍데기 = 사냥터 업그레이드 카드와 같은 --cardRing(검정 면 + 붉은 그라데 테두리 + 금속 링)
+      // 카드 껍데기 = 사냥터 업그레이드 카드와 같은 규칙(검정 면 + 붉은 그라데 테두리 + 금속 링)
       { const c=document.querySelector('#hsGrid .hsCell');
         if(c){ const acc=assertCardRing(c,'유닛 카드');
-          assert(/255, 59, 59/.test(acc),'유닛 카드 액센트가 빨강이 아님: '+acc); } }
+          assert(/255, 59, 59/.test(acc),'유닛 카드 액센트가 빨강이 아님: '+acc);
+          // 잘린 모서리는 왼쪽 위 · 오른쪽 아래(사냥터 카드와 같은 방향)
+          const cp=String(getComputedStyle(c).clipPath).replace(/\s+/g,' ');
+          assert(/^polygon\(7px 0px, 100% 0px,/.test(cp),'카드 컷이 왼쪽 위가 아님: '+cp);
+          assert(/calc\(100% - 7px\) 100%, 0px 100%, 0px 7px\)$/.test(cp),'카드 컷이 오른쪽 아래가 아님: '+cp);
+          // 수량 뱃지 = 반대편(우상단) · 각진 사각 · 글자 정중앙
+          const b=c.querySelector('.hsCnt'); assert(b,'수량 뱃지가 없음');
+          const cr=c.getBoundingClientRect(), br=b.getBoundingClientRect();
+          assert((cr.right-br.right) < (br.left-cr.left),'수량 뱃지가 우상단이 아님(왼쪽에 붙어 있다)');
+          assert((br.top-cr.top)<8,'수량 뱃지가 위쪽이 아님: '+(br.top-cr.top));
+          assert(getComputedStyle(b).borderRadius==='0px','수량 뱃지가 각지지 않음: '+getComputedStyle(b).borderRadius);
+          // ⚠ Range 의 사각형은 '라인 박스'라 늘 가운데다 — 눈에 보이는 건 글자 **잉크**다.
+          //   숫자 글꼴은 위아래 여백이 비대칭이라 line-height 로 맞추면 잉크가 위로 뜬다(그게 원래 증상이었다).
+          //   그래서 폰트 메트릭으로 잉크 중앙을 직접 계산한다.
+          { const rg=document.createRange(); rg.selectNodeContents(b); const tr=rg.getBoundingClientRect();
+            const cs=getComputedStyle(b), cv=document.createElement('canvas').getContext('2d');
+            cv.font=cs.fontStyle+' '+cs.fontWeight+' '+cs.fontSize+' '+cs.fontFamily;
+            const m=cv.measureText(b.textContent||'0');
+            const fa=m.fontBoundingBoxAscent, fd=m.fontBoundingBoxDescent;
+            const ia=m.actualBoundingBoxAscent, id=m.actualBoundingBoxDescent;
+            if(fa!=null && ia!=null){
+              const base=tr.top+(tr.height-(fa+fd))/2+fa;      // 라인 박스 안 베이스라인
+              const inkMid=base-(ia-id)/2;                      // 실제 글자 잉크의 세로 중앙
+              const dy=inkMid-((br.top+br.bottom)/2);
+              assert(Math.abs(dy)<=1.2,'뱃지 글자(잉크)가 세로 중앙이 아님: '+dy.toFixed(2)+'px'); } } } }
       { const g=$('hsGrid'), cs=[...g.querySelectorAll('.hsCell')];
         if(cs.length>=2){
           const w=cs.map(e=>Math.round(e.getBoundingClientRect().width));
