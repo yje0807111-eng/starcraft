@@ -10,7 +10,6 @@ assets/backgrounds/usemaps/*.png
 assets/backgrounds/dungeons/*.mp4
 assets/backgrounds/dungeons/*.webm
 
-# 로컬 에셋 최적화 도구(배포 제외 — 정적 사이트 빌드 동작 변경 방지)
+# 배포 제외 — package.json 이 보이면 Vercel 이 정적 사이트 대신 빌드를 시도한다
 /package.json
 /package-lock.json
-/scripts/

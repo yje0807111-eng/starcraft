@@ -122,9 +122,9 @@ No text, no logos, no user interface, no characters, no watermark.
 
 `scripts/usemap-bg.mjs` 하나가 맡는다. **공용 변환기 `scripts/optimize-img.mjs` 는 이 폴더를 다루지 않는다**(밝기를 안 맞춘다).
 
-> ⚠ **`scripts/` 는 `.gitignore` 에 걸려 있다**(배포용 정적 사이트에 빌드 도구를 넣지 않으려는 기존 규칙).
-> 즉 `usemap-bg.mjs`·`art-lint.mjs` 는 **이 작업 폴더에만 있고 리포지토리에는 없다** — 새로 클론한 곳에는 없다.
-> 규격(이 문서)은 커밋되므로 프롬프트는 어디서든 재현되지만, **후처리 도구가 필요하면 `.gitignore` 의 `/scripts/` 를 풀어야 한다.**
+> ⚠ **`package.json` 은 여전히 `.gitignore` 다** — 그게 보이면 Vercel 이 정적 사이트 대신 빌드를 시도한다.
+> 스크립트는 커밋되지만 의존성 목록은 안 따라간다 → 새로 클론한 곳에서는 `npm i sharp` 를 한 번 해줘야 돈다.
+> (`optimize-glb.mjs` 는 `@gltf-transform/*`, `video-frames.mjs` 는 `puppeteer-core` 도 필요하다.)
 
 ```bash
 # assets/backgrounds/usemaps/<맵id>.png 를 두고
