@@ -182,8 +182,16 @@ async function groupLobby(){
     assert(!profCreateChar('scout','둘째'),'캐릭터가 하나를 넘어 생성됨');
     // 모두 같은 스탯·같은 외형으로 시작한다
     { const p2=PROF(); p2.chars=[]; p2.curId=''; const d=profEnsureChar();
-      for(const k of PROF_STATS) assert(profStat(k)>0,'기본 스탯이 0: '+k);
+      // 장비 스탯(pow/vit/foc/agi)은 '장비 전용'이 됐다 — 맨몸이면 0이 맞다
+      for(const k of PROF_STATS) assert(profStat(k)===0,'맨몸인데 장비 스탯이 0이 아님: '+k+'='+profStat(k));
+      // 그래도 전투 수치는 기본값에서 시작한다(0이면 아무것도 못 때린다)
+      for(const k of CS_ORDER) assert(csVal(k)===CS_AXES[k].base,k+' 이 기본값에서 시작하지 않음: '+csVal(k));
       assert(d.cls===c.cls,'사람마다 시작 유닛이 다름'); }
+    // 종류를 바꿔도 성능이 같다 — 직업 차이는 폐지했다
+    { const p3=PROF(); const before=CS_ORDER.map(k=>csVal(k)).join(',');
+      p3.chars=[]; p3.curId=''; profCreateChar('warden','워든');
+      assert(CS_ORDER.map(k=>csVal(k)).join(',')===before,'캐릭터 종류에 따라 수치가 다름(직업 차이가 남아 있음)');
+      p3.chars=[]; p3.curId=''; profEnsureChar(); }
     return '기본 '+PROF_DEFAULT_CLASS+' · 슬롯 '+PROF().chars.length+'/'+PROF_MAX_CHARS; });
   // 부팅 타이머는 '오프닝을 걷어내는' 용도지 화면을 되돌리는 용도가 아니다.
   // 가드가 없으면 1.7초 뒤 openAuth()가 그때 보고 있던 화면을 로그인으로 덮는다 —
@@ -972,14 +980,28 @@ async function groupLobby(){
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(60);
     const c=CHAR(), p=PROF();
-    c.level=30; c.unit.level=30; c.unit.stats={pow:20,vit:15,foc:10,agi:8};
-    p.pets={wolf:1}; p.equip=['wolf'];
-    // ① 분해값의 합이 실제 profStat과 일치해야 한다(식이 갈라지면 여기서 잡힌다)
-    for(const k of PROF_STATS){ const P=profStatParts(k);
-      const sum=Math.round((P.job+P.alloc+P.level+P.evo+P.gear)*(1+P.petPct/100));
-      assert(sum===P.total,PROF_STAT_NAME[k]+' 분해합이 profStat과 다름: '+sum+' vs '+P.total);
-      assert(P.level===c.unit.level,'레벨 기여가 안 맞음'); }
-    assert(profStatParts('pow').petPct>0,'펫 보너스가 내역에 안 잡힘');
+    c.level=30; c.unit.level=30; c.unit.pts={atk:6}; c.rp=20; c.unit.rpts={atk:4};
+    { const H=hbHunt(); H.unl={}; H.upg={atk:9, hp:5, crit:4, rng:3, aspd:7, regen:2}; }
+    { const ks=profPageSlots('armor');                       // 장비도 실제로 끼워 둔다
+      p.items.length=0; for(const k of ks){ const it=profMakeItem(k,4,'epic'); profAddItem(it); profEquipItem(it.iid); } }
+    // ① 기본 스탯 = (기본 + 업그레이드 + 장비) × 레벨 포인트 × 환생 포인트 — 표와 전투가 같은 식을 써야 한다
+    for(const k of CS_ORDER){ const a=csAxis(k);
+      let want=(a.base+a.upg+a.gear)*a.lp*a.rp;
+      if(CS_AXES[k].cap!=null) want=Math.min(CS_AXES[k].cap, want);
+      assert(Math.abs(want-a.sub)<1e-9, a.name+' 분해합이 축 값과 다름: '+want+' vs '+a.sub);
+      assert(Math.abs(a.sub*a.bonus-a.total)<1e-9, a.name+' 전투 수치가 기본 스탯×보정이 아님'); }
+    assert(Math.abs(hbCharStats().atk-csVal('atk'))<1e-9,'전투 공격력이 축 값에서 안 나옴');
+    // ② 네 출처가 '전부' 실제로 값을 바꾼다
+    { const A=csAxis('atk');
+      assert(A.upg>0,'사냥터 업그레이드가 공격력에 안 걸림');
+      assert(A.gear>0,'장비가 공격력에 안 걸림');
+      assert(A.lp>1,'레벨 포인트가 공격력에 안 걸림');
+      assert(A.rp>1,'환생 포인트가 공격력에 안 걸림'); }
+    // ③ 그 넷 말고는 아무것도 안 걸린다 — 펫을 장착해도 내 스탯은 그대로
+    { const before=CS_ORDER.map(k=>csVal(k)).join(',');
+      p.pets={wolf:1}; p.equip=['wolf'];
+      assert(CS_ORDER.map(k=>csVal(k)).join(',')===before,'펫이 아직 내 기본 스탯을 올림');
+      assert(typeof profStatParts('pow').petPct==='undefined','내역에 펫 몫이 남아 있음'); }
     // ② 정보 팝업 — 좌상단 HUD로 연다
     const hud=$('hbHud'); assert(hud && hud.tagName==='BUTTON','HUD가 누를 수 있는 버튼이 아님');
     hbOpenInfo(); await sleep(40);
@@ -989,16 +1011,18 @@ async function groupLobby(){
     // 스탯 출처 상세표는 '여기'가 주인이다(캐릭터>스탯 구역에서 옮겨 왔다)
     assert($('hbInfoModal').querySelector('.hbmHead b').textContent==='스탯 출처',
       '팝업 제목이 스탯 출처가 아님: '+$('hbInfoModal').querySelector('.hbmHead b').textContent);
+    // 출처는 넷뿐이다 — 직업·진화·펫 열은 없어야 하고, 넷은 다 있어야 한다
     { const th=[...$('hbInfoBody').querySelectorAll('.hbTbl th')].map(e=>e.textContent);
-      assert(th.indexOf('배분')<0,'영영 0인 배분 열이 남아 있음: '+th.join(','));
-      for(const nm of ['직업','레벨','진화','장비','펫','합']) assert(th.indexOf(nm)>=0,'출처 열 누락: '+nm); }
-    // 레벨 포인트도 출처다 — 찍은 것이 있으면 여기 나와야 설명이 안 끊긴다
-    { const c2=CHAR(); c2.level=11; c2.unit.level=11; c2.unit.pts={atk:4}; renderInfoModal();
-      const tx=$('hbInfoBody').textContent;
-      assert(tx.indexOf('레벨 포인트')>=0,'포인트 구역이 출처에 없음');
-      assert(tx.indexOf('+'+Math.round((lpMul('atk')-1)*100)+'%')>=0,'포인트 배수가 출처에 안 나옴');
-      c2.unit.pts={}; renderInfoModal();
-      assert($('hbInfoBody').textContent.indexOf('레벨 포인트')<0,'안 찍었는데 포인트 구역이 나옴'); }
+      for(const nm of ['배분','직업','진화','펫']) assert(th.indexOf(nm)<0,'없앤 열이 남아 있음: '+nm);
+      for(const nm of ['업그레이드','장비','레벨','환생','합']) assert(th.indexOf(nm)>=0,'출처 열 누락: '+nm); }
+    // 두 틀만 남는다 — 옛 칩 구역(레벨 포인트·업그레이드 레벨)은 지웠다
+    { const lbl=[...$('hbInfoBody').querySelectorAll('.hbGrowLbl')].map(e=>e.textContent);
+      assert(lbl.length===2,'스탯 출처가 두 틀이 아님: '+lbl.join(' / '));
+      assert(lbl[0].indexOf('기본 스탯')===0 && lbl[1].indexOf('전투 수치')===0,'두 틀 이름이 다름: '+lbl.join(' / '));
+      assert(!$('hbInfoBody').querySelector('.hbChips'),'칩 구역이 아직 남아 있음'); }
+    // 행은 전투 수치 축 그대로
+    { const rows=$('hbInfoBody').querySelectorAll('.hbTbl tbody tr');
+      assert(rows.length===CS_ORDER.length+Math.ceil(CS_ORDER.length/2),'표 줄 수가 축 수와 안 맞음: '+rows.length); }
     hbCloseInfo();
     // ③ 파워 해금 — 표시만 하는 항목이 없어야 한다(전부 실제 상한을 바꾼다)
     p.unlocks={};
@@ -1049,8 +1073,9 @@ async function groupLobby(){
     // ③ 전직은 사라졌다 — 흔적이 남아 있으면 안 된다
     assert(typeof profClassChange==='undefined','전직 함수가 아직 남아 있음');
     assert($('hbGrowBody').textContent.indexOf('전직')<0,'성장 팝업에 전직이 남음');
-    for(const id in PROF_JOBS) assert(!PROF_JOBS[id].next,'직업 트리(next)가 아직 남아 있음: '+id);
-    assert(Object.keys(PROF_JOBS).length===Object.keys(PROF_CLASSES).length,'직업이 뿌리 3종이 아님');
+    assert(typeof PROF_JOBS==='undefined','직업 표(PROF_JOBS)가 아직 남아 있음');
+    assert(typeof profEvolve==='undefined' && typeof profEvolveReq==='undefined','진화 함수가 아직 남아 있음');
+    assert(!PROF_UNLOCKS.some(u=>u.id==='evolve'),'해금 표에 진화가 남아 있음');
     // ④ 환생 — 조건이 차면 상단 성장 버튼에 ! 배지(패널 안 줄은 폐기 — 높이가 흔들렸다 · 2026-08-14)
     c.level=PROF_REB_EVERY; c.unit.level=PROF_REB_EVERY; p.pcoin=50000;
     renderHome();
@@ -1058,21 +1083,22 @@ async function groupLobby(){
     assert(!document.getElementById('hmStatRow'),'옛 성장 줄이 아직 패널에 있음');
     renderGrowModal();
     assert($('hbGrowBody').textContent.indexOf('환생')>=0,'성장 팝업에 환생이 없음');
-    // ⑤ 진화 잠금 안내는 레벨 기준(옛 '파워 350' 문구가 남아 있으면 안 된다)
-    const r=profEvolveReq();
-    if(!r.unlock) assert($('hbGrowBody').textContent.indexOf('Lv.'+profUnlockNeed('evolve'))>=0,'진화 잠금 안내가 레벨 기준이 아님');
+    // ⑤ 진화는 폐지됐다 — 팝업에 흔적이 남아 있으면 안 된다
+    assert($('hbGrowBody').textContent.indexOf('진화')<0,'환생 팝업에 진화가 남음');
     assert($('hbGrowBody').textContent.indexOf('파워 350')<0,'옛 파워 문구가 남음');
     hbCloseGrow();
     // ⑥ 할 게 없으면 배지는 꺼진다 — 단 버튼 진입점은 그대로 남아야 한다
     //    ☰ 의 !는 성장과 📅 일일이 함께 쓰는 신호라, 일일 쪽도 '받을 게 없는' 상태로 만들어야 성장만 본다
     { const D=dqState(); D.att.day=_dgDayKey(); D.att.n=1; D.att.bn={}; D.att.fin=0;
       D.allGot=1; D.q.forEach(e=>{ e.got=1; }); }
-    c.level=1; c.unit.level=1; p.pcoin=0; renderHome();
+    c.level=1; c.unit.level=1; p.pcoin=0;
+    c.rp=0; c.unit.rpts={};                      // 안 찍은 환생 포인트도 '할 일'이다 — 같이 비운다
+    renderHome();
     assert(!visible($('hbGrowDot')),'할 게 없는데 성장 배지가 남아 있음');
     { hbOpenMore(); await sleep(100);
       assert(document.querySelector('#hbMoreGrid [data-k="grow"]'),'성장 항목까지 사라짐(항상 열려 있어야 한다)');
       hbCloseMore(); }
-    return '실측 '+p.hunt.rate.toFixed(2)+'/s · 직업 '+PROF_JOBS[CHAR().unit.jobId].name; });
+    return '실측 '+p.hunt.rate.toFixed(2)+'/s · 진화·직업 폐지 확인'; });
   // Phase 4 — 스킬 · 부스트 · 동료/펫 · 건설(터렛·벙커)
   await step('자동사냥: 스킬·부스트·동료·건설', async()=>{ skipIf(typeof hbUseSkill!=='function','Phase4 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
@@ -2004,9 +2030,10 @@ async function groupLobby(){
     assert(typeof profClassChange==='undefined','profClassChange 가 남아 있음');
     assert(typeof profClassCost==='undefined','profClassCost 가 남아 있음');
     assert(typeof hbGrowJobs==='undefined','hbGrowJobs 가 남아 있음');
-    assert(Object.keys(PROF_JOBS).length===3,'직업이 뿌리 3종이 아님: '+Object.keys(PROF_JOBS).length);
-    for(const id in PROF_JOBS){ assert(PROF_CLASSES[id],'뿌리가 아닌 직업이 남음: '+id);
-      assert(!PROF_JOBS[id].next && !PROF_JOBS[id].tier,'직업 트리 잔재(next/tier): '+id); }
+    assert(typeof PROF_JOBS==='undefined','직업 표(PROF_JOBS)가 남아 있음');
+    assert(Object.keys(PROF_CLASSES).length===3,'캐릭터 종류가 3종이 아님: '+Object.keys(PROF_CLASSES).length);
+    // 종류는 '외형'일 뿐 — 성능 차이를 만드는 값을 들고 있으면 안 된다
+    for(const id in PROF_CLASSES) assert(!PROF_CLASSES[id].base,'캐릭터 종류가 기본 스탯을 들고 있음: '+id);
     // ② 옛 상위 직업 12종이 '전부' 동료로 옮겨 왔다 — 하나라도 빠지면 그 유닛이 사라진 것이다
     const moved=['sniper','gunner','phantom','goliath','spike','swarmling','thornqueen','ultra',
                  'sentinel','darksage','void','highsage'];
@@ -2326,11 +2353,9 @@ async function groupLobby(){
       idle:{sourceId:'drill',lastClaimTs:0}, unlocks:{}, pets:{}, equip:[], petSlots:2 } };
     migrateProfile();
     const p=PLAYER_META.profile, c=p.chars[0];
-    assert(PROF_JOBS[c.unit.jobId],'없어진 직업이 그대로 남음: '+c.unit.jobId);
     assert(c.unit.jobId==='ranger','뿌리로 안 돌아감: '+c.unit.jobId);
     assert(((p.hunt.mates||{}).sniper||{}).lv>=1,'전직해 뒀던 직업이 동료로 안 들어옴');
     assert((p.hunt.party||[]).indexOf('sniper')>=0,'받은 동료가 출전 목록에 없음');
-    assert(c.unit.evoStars===1,'진화★가 사라짐');
     assert(p.pcoin>0,'옛 범용 동료(build.ally) 환급이 없음: '+p.pcoin);
     assert(!p.hunt.build.ally,'옛 동료 수가 남아 있음');
     // 버전 숫자를 박지 않는다 — 마이그레이션이 늘 때마다 이 줄이 깨진다
@@ -2492,7 +2517,7 @@ async function groupLobby(){
     c.unit.pts={};
     return '레벨당 '+LP_PER_LEVEL+'p · '+LP_STATS.length+'항목 전부 배선됨'; });
   await step('레벨 포인트: 스탯 화면에서 찍으면 전투 중인 캐릭터에 바로 반영', async()=>{
-    skipIf(typeof lpTap!=='function','레벨 포인트 없음');
+    assert(typeof ptTap==='function','레벨 포인트 조작이 없음');   // ⚠ skipIf 로 두면 이름이 바뀔 때 조용히 건너뛴다
     const p0=PROF(); p0.chars.length=0; p0.curId='';
     { const c0=profCreateChar('ranger','반영'); c0.level=21; c0.unit.level=21; c0.unit.pts={}; }
     saveMeta();
@@ -2522,6 +2547,53 @@ async function groupLobby(){
     assert(Math.abs(_hb.char.atk-a0)<1e-6,'초기화 뒤 전투 수치가 안 돌아옴');
     navBack(); await sleep(40);
     return '찍기·초기화 → 전투 즉시 반영'; });
+  await step('환생 포인트: 환생으로만 얻고 환생해도 남는다', async()=>{
+    assert(typeof rpAdd==='function','환생 포인트가 없음');
+    const p=PROF(); p.chars.length=0; p.curId='';
+    { const c0=profCreateChar('ranger','환포'); c0.level=1; c0.unit.level=1; }
+    saveMeta();
+    let c=CHAR();
+    assert(rpTotal(c)===0,'처음부터 환생 포인트가 있음: '+rpTotal(c));
+    // ① 환생해야 나온다
+    c.level=PROF_REB_EVERY; c.unit.level=PROF_REB_EVERY; c.unit.pts={atk:5};
+    const step1=profRebirth(c);
+    assert(step1>=1,'환생이 안 됨');
+    assert(rpTotal(c)===RP_PER_REB*step1,'환생 포인트 지급량이 다름: '+rpTotal(c));
+    // ② 레벨 포인트는 되감기고, 환생 포인트는 남는다 — 둘이 같은 필드면 여기서 잡힌다
+    assert(lpTotal(c)===0 && lpSpent(c)===0,'레벨 포인트가 안 되감김');
+    rpAdd('atk', 3);
+    assert(rpPts('atk')===3,'환생 포인트가 안 찍힘');
+    c.level=PROF_REB_EVERY*2; c.unit.level=PROF_REB_EVERY*2;
+    const step2=profRebirth(c);
+    assert(rpPts('atk')===3,'환생했더니 찍어 둔 환생 포인트가 사라짐');
+    assert(rpTotal(c)===RP_PER_REB*(step1+step2),'두 번째 지급이 누적 안 됨: '+rpTotal(c));
+    // ③ 1p 가 레벨 포인트보다 세다 · 남은 것보다 많이 못 찍는다
+    assert(rpStep('atk')>lpDef('atk').step,'환생 포인트가 레벨 포인트보다 안 셈');
+    assert(Math.abs(rpMul('atk')-(1+rpStep('atk')*3))<1e-9,'환생 배수가 선형이 아님');
+    const free=rpFree(c);
+    assert(rpAdd('hp', 999)===free,'남은 것보다 많이 찍힘');
+    assert(rpAdd('hp', 1)===0,'없는데 또 찍힘');
+    // ④ 전투에도 걸린다 — 레벨 포인트와 '따로' 곱해져야 한다
+    c.unit.pts={}; c.unit.rpts={};
+    const base=csVal('atk');
+    c.unit.rpts={atk:4};
+    assert(Math.abs(csAxis('atk').rp-(1+rpStep('atk')*4))<1e-9,'축이 환생 배수를 안 읽음');
+    assert(csVal('atk')>base+1e-9,'환생 포인트가 공격력에 반영 안 됨');
+    // ⑤ 환생 탭에서 찍는다 — 화면·상태·전투가 한 줄로 이어지는지
+    c.unit.rpts={}; saveMeta();
+    navGo('upg'); await sleep(60); setChrSec('reb'); await sleep(40);
+    const host=$('chrBody');
+    const rows=[...host.querySelectorAll('.lpRow')];
+    assert(rows.length===LP_STATS.length,'환생 포인트 줄 수가 표와 다름: '+rows.length);
+    assert(host.textContent.indexOf('환생 포인트')>=0,'환생 탭에 환생 포인트 구역이 없음');
+    const before=csVal('atk');
+    rows[0].querySelector('.lpBtn').click(); await sleep(40);
+    assert(rpPts('atk')===1,'환생 탭 버튼으로 안 찍힘');
+    assert(csVal('atk')>before+1e-9,'찍었는데 공격력이 그대로');
+    $('chrBody').querySelector('.lpReset').click(); await sleep(40);
+    assert(rpSpent()===0,'초기화가 안 됨');
+    navBack(); await sleep(40);
+    return '환생 '+RP_PER_REB+'p/단계 · 1p = 레벨 포인트 ×'+RP_STEP_MUL; });
   await step('캐릭터: 스탯·환생·스킬 · 환생 본문은 빌려 쓴다', async()=>{
     skipIf(typeof setChrSec!=='function','캐릭터 구역 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
@@ -3291,11 +3363,13 @@ async function groupLobby(){
     assert(CHAR().dgFloor===1,'최고 층이 기록되지 않음');
     return n+'프레임 · +'+r.pc+'P/+'+r.xp+'XP'; });
   await step('던전: 스펙이 오르면 같은 층이 빨리 끝남', ()=>{ skipIf(typeof dgStart!=='function','던전 없음');
-    const run=(stats)=>{ const p=PROF(); p.chars.length=0; p.curId='';
-      const c=profCreateChar('ranger','T'); c.unit.stats=stats;   // foc=0 → 치명타 없음 = 결정적
+    // 세기는 '실제 출처'로 만든다 — 옛 배분(unit.stats)은 아무 데도 안 걸린다
+    const run=(atkUpg)=>{ const p=PROF(); p.chars.length=0; p.curId='';
+      profCreateChar('ranger','T');
+      const H=hbHunt(); H.unl={}; H.upg={atk:atkUpg, hp:30};   // 치명타 0 = 결정적
       dgStart(1); dgStopLoop(); let n=0; while(DG && !DG.over && n<20000){ dgStep(0.016); n++; }
       const o=DG.over; DG=null; return {over:o, n:n}; };
-    const weak=run({pow:12,vit:40,foc:0,agi:0}), strong=run({pow:60,vit:40,foc:0,agi:0});
+    const weak=run(2), strong=run(40);
     assert(weak.over>0 && strong.over>0,'비교하려면 둘 다 이겨야 함: '+weak.over+'/'+strong.over);
     assert(strong.n < weak.n*0.9,'공격력을 올렸는데 클리어가 안 빨라짐: '+weak.n+'→'+strong.n);
     return weak.n+' → '+strong.n+'프레임'; });

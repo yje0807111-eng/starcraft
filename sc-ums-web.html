@@ -5514,8 +5514,8 @@ function profGas(){ const p=PROF(); return Math.floor(p&&p.gas||0); }
 function profGem(){ const p=PROF(); return Math.floor(p&&p.gem||0); }
 function defaultChar(cls, name){ const C=PROF_CLASSES[cls]||PROF_CLASSES.ranger, id=(PROF_CLASSES[cls]?cls:'ranger');
   return { id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), cls:id, name:(name||C.name),
-    xp:0, level:1, statPoints:0, dgFloor:0, reb:0, rebMul:0,   // 🔁 환생 횟수 · 누적 경험치 배수(profGainXp)
-    unit:{ jobId:id, level:1, evoStars:0, stats:{pow:0,vit:0,foc:0,agi:0}, pts:{}, gear:_emptyGear() } }; }
+    xp:0, level:1, statPoints:0, dgFloor:0, reb:0, rebMul:0, rp:0,   // 🔁 환생 횟수 · 누적 경험치 배수 · 환생 포인트
+    unit:{ jobId:id, level:1, stats:{pow:0,vit:0,foc:0,agi:0}, pts:{}, rpts:{}, gear:_emptyGear() } }; }
 function defaultMeta(){ return { coins:0, buildLevels:{}, highestRound:0, clearedDifficulty:'', profile:defaultProfile() }; }   // clearedDifficulty:''=아무것도 클리어 안 함(이지만 개방)
 let PLAYER_META = defaultMeta();
 const TEMP_COIN_TEST=false;   // [임시] 포인트 상점 밸런스 테스트 — 포인트 무한 + 로비 진입 시 업그레이드 초기화. 끝나면 false 또는 이 블록 제거.
@@ -5548,7 +5548,7 @@ function migrateProfile(){ const d=defaultProfile();
   if((p.ver||0)<7){
     const H=p.hunt||(p.hunt={}); if(!H.mates) H.mates={}; if(!Array.isArray(H.party)) H.party=[];
     for(const c of p.chars){ const jid=c.unit&&c.unit.jobId;
-      if(jid && !PROF_JOBS[jid]){                       // 이제 없는 직업 = 옛 상위 직업
+      if(jid && PROF_JOB_MIG.indexOf(jid)<0){           // 뿌리가 아니면 = 옛 상위 직업
         if(HB_MATES[jid]){ const ex=H.mates[jid];                    // 보유 표기는 v8 형식({lv,dup})으로 바로 쓴다
           H.mates[jid]=(ex&&typeof ex==='object')? ex : {lv:Math.max(1, (typeof ex==='number'?ex:0)), dup:0};
           if(!(H.mates[jid].lv>0)) H.mates[jid].lv=1;
@@ -5624,8 +5624,9 @@ function fixChar(c){ const d=defaultChar(c&&c.cls, c&&c.name);
     if(!c.unit.stats) c.unit.stats=Object.assign({},d.unit.stats); else for(const k in d.unit.stats) if(c.unit.stats[k]===undefined) c.unit.stats[k]=0;
     if(!c.unit.gear)  c.unit.gear =Object.assign({},d.unit.gear);  else for(const k in d.unit.gear)  if(c.unit.gear[k]===undefined)  c.unit.gear[k]='';
     // 🎯 레벨 포인트(LP_STATS) — 옛 unit.stats(배분)와 '다른' 필드다. 그건 마이그레이션이 0으로 비운다.
-    if(!c.unit.pts || typeof c.unit.pts!=='object') c.unit.pts={}; }
-  if(!PROF_JOBS[c.unit.jobId] || PROF_JOBS[c.unit.jobId].cls!==c.cls) c.unit.jobId=c.cls;   // 구 직업 트리는 폐기 → 뿌리로
+    if(!c.unit.pts  || typeof c.unit.pts !=='object') c.unit.pts ={};
+    if(!c.unit.rpts || typeof c.unit.rpts!=='object') c.unit.rpts={}; }   // 🔁 환생 포인트(영구)
+  c.unit.jobId=c.cls;   // 직업 폐지 — jobId 는 캐릭터 종류를 따라가는 흔적 필드일 뿐이다
   return c; }
 function PROF(){ return PLAYER_META.profile || (PLAYER_META.profile=defaultProfile()); }   // 안전 접근자
 function CHAR(){ const p=PROF(); if(!p.chars||!p.chars.length) return null;                // 현재 조종 중인 캐릭터(없으면 null)
@@ -5651,11 +5652,11 @@ const PROF_MAX_CHARS=1;   // 계정당 캐릭터 하나(선택 화면 폐지 —
 //   ⚠ 옛 상위 직업 12종은 삭제된 게 아니라 **동료(HB_MATES)로 옮겨 갔다** — 영입해서 함께 싸운다.
 //      전직 관련 함수(profClassChange·profClassCost·hbGrowJobs·PROF_JOB_PARENT)도 같이 없어졌다.
 //      옛 저장은 migrateProfile(v7)이 뿌리로 되돌리면서 그 동료를 무료로 넣어 준다.
-const PROF_JOBS={
-  ranger:{ name:'레인저', cls:'ranger', unit:'marine',  reqLv:1, base:{pow:8, vit:6, foc:7, agi:5} },
-  scout: { name:'척후병', cls:'scout',  unit:'snapper', reqLv:1, base:{pow:6, vit:5, foc:5, agi:10} },
-  warden:{ name:'워든',   cls:'warden', unit:'blade',   reqLv:1, base:{pow:9, vit:9, foc:4, agi:4} },
-};
+// 직업(PROF_JOBS)은 폐지됐다(2026-08-18). 하던 일이 '기본 스탯 3종 차이'뿐이었는데
+// 스탯 출처를 넷(업그레이드·레벨 포인트·장비·환생 포인트)으로 정리하면서 같이 걷어냈다.
+// ⚠ 캐릭터 종류(PROF_CLASSES)는 남아 있다 — 그건 직업이 아니라 '외형·3D 모델·던전 스킬'이고,
+//    나중 길드 종족 선택이 쓸 표다. 성능에는 일절 관여하지 않는다.
+const PROF_JOB_MIG=['ranger','scout','warden'];   // v7 마이그레이션이 '옛 뿌리 직업'을 알아보는 데만 쓴다
 // 장비 슬롯 — reqLv = 캐릭터 레벨(성장 축 하나로 통일).
 // 초반엔 기본 5칸(헬멧·상의·하의·신발·무기)만 열려 있고 레벨이 오르며 나머지가 열린다.
 // part = 페이퍼돌 페이지(PROF_GEAR_PAGES). 한 페이지에 자기 part만 나오므로 칸이 널널하다.
@@ -5795,7 +5796,6 @@ const PROF_IDLE_SOURCES={ drill:{name:'훈련장',rate:0.6,tip:'공격 위주'},
 //   ⚠ 표를 고칠 땐 lv가 오름차순이고 서로 3레벨 이상 떨어져 있어야 한다 — 스모크가 검사한다.
 const PROF_UNLOCKS=[
   {id:'idle_arena', lv:5,   label:'투기장 자동수익'},
-  {id:'evolve',     lv:12,  label:'유닛 진화(★)'},
   {id:'idle_8h',    lv:20,  label:'오프라인 8시간·100%'},
   {id:'turret_plus',lv:50,  label:'터렛 최대 +2'},
   {id:'idle_12h',   lv:80,  label:'오프라인 12시간'},
@@ -5832,20 +5832,23 @@ function profGainXp(c, xp){ c=c||CHAR(); if(!c || !(xp>0)) return 0;
 function profRebirth(c){ c=c||CHAR(); if(!profCanRebirth(c)) return 0;
   const step=profRebStep(c.level);
   c.reb=(c.reb||0)+1; c.rebMul=(c.rebMul||0)+PROF_REB_GAIN*step;
-  c.level=1; c.xp=0; if(c.unit) c.unit.level=1;      // 진화★·장비는 그대로 둔다
+  c.rp=(c.rp|0)+RP_PER_REB*step;                     // 🔁 환생 포인트 지급(영구 — 다시 환생해도 안 사라진다)
+  c.level=1; c.xp=0; if(c.unit){ c.unit.level=1; c.unit.pts={}; }   // 레벨 포인트는 레벨에서 나오므로 같이 되감는다
   try{ saveMeta(); }catch(e){}
   return step; }
 // 스탯/파워(전부 read-only)
-function profStat(k){ const c=CHAR(); if(!c) return 0; const J=PROF_JOBS[c.unit.jobId]||PROF_JOBS[c.cls]||PROF_JOBS.ranger;
+// 장비가 주는 스탯 합(pow/vit/foc/agi) — 이제 이 네 키는 '장비 전용 꼬리표'다.
+// ⚠ 직업 기본치·진화★·레벨 자동증가·펫 %는 전부 뺐다(2026-08-18). 스탯 출처는 넷뿐이다:
+//    사냥터 업그레이드 · 레벨 포인트 · 장비 · 환생 포인트. 여기에 다시 무언가를 더하지 말 것.
+function profStat(k){ const c=CHAR(); if(!c) return 0;
   let gear=0;
   for(const slot in c.unit.gear){ const it=profFindItem(c.unit.gear[slot]); if(!it) continue;
     const g=PROF_GEAR[slot]; if(g && g.stat===k) gear+=it.main;
     for(const o of it.opts) if(o.k===k) gear+=o.v; }
-  let v=(J.base[k]||0) + (c.unit.stats[k]||0) + gear + c.unit.level + c.unit.evoStars*2;
-  if(k==='pow') v*=(1+profPetBonus('atk'));   // 🐾 펫 % 보너스(프로필 전용)
-  else if(k==='vit') v*=(1+profPetBonus('vit'));
-  return Math.round(v); }
-function profPower(){ return Math.round(profStat('pow')*3 + profStat('vit')*2 + profStat('foc')*2 + profStat('agi')*1.5); }
+  return Math.round(gear); }
+// 파워 = 대략적인 세기 한 줄. 전투 수치에서 뽑는다(장비 스탯만 보던 옛 식은 업그레이드·포인트를 무시했다).
+function profPower(){ const dps=csVal('atk')*(csVal('aspd')/100)*(1+(csVal('crit')/100)*(csVal('critd')/100-1));
+  return Math.round(dps*2 + csVal('hp')*0.15); }
 function profHasUnlock(id){ const p=PROF(); if(p.unlocks[id]) return true; const u=PROF_UNLOCKS.find(x=>x.id===id); return !!u && profUnlockLv()>=u.lv; }
 function profSyncUnlocks(){ const p=PROF(), lv=profUnlockLv(); for(const u of PROF_UNLOCKS){ if(!p.unlocks[u.id] && lv>=u.lv) p.unlocks[u.id]=true; } }   // 한 번 넘으면 영구(환생해도 안 닫힌다)
 // 레벨업(xp→level, 스탯 포인트 지급). 유닛 레벨도 동반 상승.
@@ -5960,12 +5963,9 @@ function profPetMats(){ const p=PROF(), out=[];
 function profPetEquip(id){ const p=PROF(); if(!p.pets[id]) return false; const i=p.equip.indexOf(id);
   if(i>=0){ p.equip.splice(i,1); saveMeta(); return true; }                                // 토글 해제
   if(p.equip.length>=profPetSlots()) return false; p.equip.push(id); saveMeta(); return true; }
-// 🌟 유닛 진화(별) — evolve 해금(PROF_UNLOCKS의 레벨 게이트) 필요. 별마다 레벨 문턱·pcoin 비용↑. profStat에서 evoStars*2 반영.
-function profEvolveCost(stars){ return (stars+1)*500; }   // 별 stars → stars+1 로 올리는 비용(환급 계산과 공용)
-function profEvolveReq(){ const c=CHAR(), s=c?c.unit.evoStars:0; return { unlock:profHasUnlock('evolve'), stars:s, maxed:s>=5, lvReq:(s+1)*10, cost:profEvolveCost(s) }; }
-function profEvolve(){ const p=PROF(), c=CHAR(), r=profEvolveReq(); if(!c||!r.unlock||r.maxed) return false;
-  if(c.unit.level<r.lvReq) return false; if(p.pcoin<r.cost) return false;
-  p.pcoin-=r.cost; c.unit.evoStars++; profSyncUnlocks(); saveMeta(); return true; }
+// 🌟 유닛 진화(별)는 폐지됐다(2026-08-18) — 하던 일이 '전 스탯 +2' 하나뿐이라, 스탯 출처를 넷으로
+//   정리하면서 같이 걷어냈다. 되감고 다시 키우는 축은 환생(+환생 포인트) 하나로 통일한다.
+//   ⚠ 옛 저장의 c.unit.evoStars 는 남아 있을 수 있지만 아무 데서도 읽지 않는다(새 캐릭터엔 필드 자체가 없다).
 // 액션(성공 true · saveMeta 포함 · 재렌더는 호출측)
 // 성장 축은 미네랄 업그레이드(HB_UPG) 하나다. 레벨업은 미네랄을 주고(PROF_LV_MINERAL),
 // 캐릭터 스탯(unit.stats)에 직접 찍는 경로는 없다 — 레벨 포인트도, 자동 배분도 폐지했다.
@@ -5977,7 +5977,7 @@ function profCreateChar(cls, name){ const p=PROF(); if(!PROF_CLASSES[cls] || p.c
 // 처음 들어오면 기본 유닛이 조용히 지급되고 바로 게임으로 간다(2026-08-13 설계 변경).
 // 모두 같은 스탯·같은 외형으로 시작해서 각자 키운다.
 // 종족은 나중에 '길드 가입' 시점에 고르고, 그때 그 종족 유닛을 추가로 받는다 —
-// ⚠ 그래서 PROF_CLASSES/PROF_JOBS 테이블은 지우지 않았다. 길드 종족 선택이 이 표를 그대로 쓴다.
+// ⚠ 그래서 PROF_CLASSES 테이블은 지우지 않았다. 길드 종족 선택이 이 표를 그대로 쓴다.
 const PROF_DEFAULT_CLASS='ranger';
 // 캐릭터가 없으면 조용히 만들어 준다. 반환값 = 지금 캐릭터(항상 있다)
 function profEnsureChar(){ return CHAR() || profCreateChar(PROF_DEFAULT_CLASS, ''); }
@@ -6720,32 +6720,44 @@ function hbNoteRate(min, sec){ if(!(sec>0)) return;
 //   전직은 폐지됐다(2026-08-12) — 그 자리는 동료 영입(HB_MATES)이 대신한다.
 // 성장 배지(!) — '지금 할 수 있는 게 있다'는 신호. 진입점 자체는 항상 열려 있다(좌상단 아이콘).
 function hbGrowHas(){ const c=(typeof CHAR==='function')?CHAR():null; if(!c) return false;
-  if(profCanRebirth(c)) return true;
-  const r=profEvolveReq(); return !!(r.unlock && !r.maxed && c.unit.level>=r.lvReq && PROF().pcoin>=r.cost); }
+  return profCanRebirth(c) || rpFree(c)>0; }   // 환생할 수 있거나 · 안 찍은 환생 포인트가 있거나
 function hbOpenGrow(){ const el=document.getElementById('hbGrowModal'); if(!el) return;
   if(typeof chrReturnBody==='function') chrReturnBody();   // 캐릭터 화면이 빌려 갔으면 되찾는다
   el.classList.remove('hide'); renderGrowModal(); if(typeof playSfx==='function') playSfx('ui_open'); }
 function hbCloseGrow(){ const el=document.getElementById('hbGrowModal'); if(el) el.classList.add('hide'); }
 function renderGrowModal(){ const box=document.getElementById('hbGrowBody'); if(!box) return;
   const c=CHAR(); if(!c) return;
-  const J=PROF_JOBS[c.unit.jobId], r=profEvolveReq(), coin=Math.floor(PROF().pcoin||0);
-  let h='<div class="hbRoundNote" style="padding:0 0 8px">현재 <b>'+J.name+'</b> · Lv.'+c.unit.level+' · 보유 '+coin.toLocaleString('en-US')+' 미네랄</div>';
-  h+='<div class="hbGrowLbl">진화 <span class="hbStars">'+('★'.repeat(r.stars)+'☆'.repeat(5-r.stars))+'</span></div>';
-  if(!r.unlock) h+='<div class="hbRow"><span class="hbRowTx"><em>🔒 Lv.'+profUnlockNeed('evolve')+' 달성 시 개방</em></span></div>';
-  else if(r.maxed) h+='<div class="hbRow"><span class="hbRowTx"><em>✓ 최대 진화(★5)</em></span></div>';
-  else { const ok=c.unit.level>=r.lvReq && coin>=r.cost;
-    h+='<div class="hbRow"><span class="hbRowIco">✦</span>'
-      +'<span class="hbRowTx"><b>별 +1 (전 스탯 +2)</b><em>'+(c.unit.level>=r.lvReq?('비용 '+r.cost.toLocaleString('en-US')+' 미네랄'):('🔒 Lv.'+r.lvReq+' 필요'))+'</em></span>'
-      +'<button class="hbRowBtn" onclick="hbDoEvolve()"'+(ok?'':' disabled')+'>진화</button></div>'; }
-  // 🔁 환생 — 레벨 곡선이 무거워지는 지점에서 '되감고 배수를 얻는' 축. 성장 팝업에 함께 둔다.
+  let h='<div class="hbRoundNote" style="padding:0 0 8px">Lv.'+c.level
+    +' · 환생 <b>'+(c.reb||0)+'</b>회 · 보유 환생 포인트 <b>'+rpFree(c)+'</b>/'+rpTotal(c)+'</div>';
+  // 🔁 환생 — 레벨 곡선이 무거워지는 지점에서 '되감고 배수를 얻는' 축.
   h+='<div class="hbGrowLbl">환생 <span class="hbStars">'+(c.reb?('×'+profXpMul(c).toFixed(2)+' 경험치'):'—')+'</span></div>';
   { const step=profRebStep(c.level), can=step>=1, next=(step+1)*PROF_REB_EVERY;
     h+='<div class="hbRow"><span class="hbRowIco">🔁</span>'
       +'<span class="hbRowTx"><b>'+(can?('환생 '+step+'단계 — 경험치 ×'+(profXpMul(c)+PROF_REB_GAIN*step).toFixed(2)+'로'):'환생')+'</b>'
-      +'<em>'+(can?('레벨·경험치가 1로 돌아갑니다. 미네랄 업그레이드·장비·펫·진화★는 그대로. Lv.'+next+'까지 밀면 '+(step+1)+'단계')
+      +'<em>'+(can?('레벨·레벨 포인트가 1로 돌아갑니다. 업그레이드·장비·펫·환생 포인트는 그대로. 환생 포인트 +'+(RP_PER_REB*step))
                  :('🔒 Lv.'+PROF_REB_EVERY+' 필요 — '+PROF_REB_EVERY+'레벨마다 1단계씩 커집니다'))+'</em></span>'
       +'<button class="hbRowBtn" onclick="hbDoRebirth()"'+(can?'':' disabled')+'>환생</button></div>'; }
+  // 🔁 환생 포인트 — 환생으로만 얻고 환생해도 안 사라진다. 줄 모양은 스탯 화면의 레벨 포인트와 같은 컴포넌트.
+  h+=_ptListHTML('rp', c);
   box.innerHTML=h; }
+// 포인트 목록(레벨 포인트 · 환생 포인트 공용) — 두 벌로 만들면 반드시 어긋난다.
+//   kind='lp' → unit.pts / lpMul   ·   kind='rp' → unit.rpts / rpMul(1점이 RP_STEP_MUL 배 세다)
+function _ptListHTML(kind, c){ const rp=(kind==='rp');
+  const free = rp? rpFree(c) : lpFree(c), spent = rp? rpSpent(c) : lpSpent(c);
+  let h='<div class="hbGrowLbl">'+(rp?'환생 포인트':'레벨 포인트')
+    +' <span class="hbTblSub">'+(rp? ('환생 1단계당 '+RP_PER_REB+'p · 1p가 레벨 포인트의 '+RP_STEP_MUL+'배 · 환생해도 남는다')
+                                   : ('레벨 1회 = '+LP_PER_LEVEL+'p · 환생하면 함께 돌아갑니다'))+'</span></div>';
+  h+='<div class="lpHead"><span class="lpFree'+(free?' on':'')+'">남은 포인트 <b>'+free+'</b></span>'
+    +'<button class="lpReset" onclick="ptDoReset(\''+kind+'\')"'+(spent?'':' disabled')+'>초기화</button></div>';
+  h+='<div class="lpList">';
+  for(const S of LP_STATS){ const n=rp? rpPts(S.k,c) : lpPts(S.k,c);
+    const step=rp? rpStep(S.k) : S.step, pct=_lpPct(1+n*step);
+    h+='<div class="lpRow'+(n?' on':'')+'">'
+      +'<span class="lpIco">'+_icoPathImg(S.ico)+'</span>'
+      +'<span class="lpTx"><b>'+S.name+'</b><em>'+S.tip+' · 1p마다 +'+(step*100).toFixed(step<0.02?1:0)+'%</em></span>'
+      +'<span class="lpVal"><b>+'+pct+'%</b><em>'+n+'p</em></span>'
+      +'<button class="lpBtn" onclick="ptTap(\''+kind+'\',\''+S.k+'\')"'+(free?'':' disabled')+'>＋</button></div>'; }
+  return h+'</div>'; }
 // 실행 — 마을 렌더러를 부르지 않는다(HOME에서는 마을 DOM이 숨어 있어 토스트가 안 보인다)
 function hbAfterGrow(msg){ if(_hb){ hbSyncChar();
     _hb.floats.push({x:0,y:-40,tx:msg,cl:'#5dff8f',t:0}); }
@@ -6760,48 +6772,48 @@ function hbDoRebirth(){ const c=CHAR(); if(!c || !profCanRebirth(c)) return;
   if(_hb){ _hb.round=1; hbHunt().round=1; _hb.wave=1; _hb.phase='fight';
     _hb.foes.length=0; _hb.pend.length=0; hbSpawnWave(); }
   hbAfterGrow('환생! 경험치 ×'+profXpMul(c).toFixed(2)); }
-function hbDoEvolve(){ if(typeof profEvolve==='function' && profEvolve()) hbAfterGrow('★ 진화!'); }
 // ── C. 스탯 출처 내역 — "어디를 올려야 이득인가"를 화면에서 알 수 있게 ──
 // profStat()의 계산식을 그대로 분해한다(식이 바뀌면 여기도 같이 고칠 것 — 값을 두 번 계산하지 않도록 합계는 profStat로 검산).
+// 장비가 주는 스탯의 분해(부위별 합) — 지금은 장비만 남았으므로 이름 그대로 '장비 몫'이다.
+// 스탯 출처 표는 이걸 쓰지 않는다(csAxis 가 축 단위로 답한다). 장비 화면 검증용으로 남긴다.
 function profStatParts(k){ const c=CHAR(); if(!c) return null;
-  const J=PROF_JOBS[c.unit.jobId]||PROF_JOBS[c.cls]||PROF_JOBS.ranger;
   let gear=0;
   for(const slot in c.unit.gear){ const it=profFindItem(c.unit.gear[slot]); if(!it) continue;
     const g=PROF_GEAR[slot]; if(g && g.stat===k) gear+=it.main;
     for(const o of it.opts) if(o.k===k) gear+=o.v; }
-  const petMul = (k==='pow') ? profPetBonus('atk') : (k==='vit') ? profPetBonus('vit') : 0;
-  return { job:J.base[k]||0, alloc:c.unit.stats[k]||0, level:c.unit.level,
-           evo:c.unit.evoStars*2, gear:gear, petPct:Math.round(petMul*100), total:profStat(k) }; }
+  return { gear:gear, total:profStat(k) }; }
 function hbOpenInfo(){ const el=document.getElementById('hbInfoModal'); if(!el) return;
   if(typeof chrReturnBody==='function') chrReturnBody();   // 캐릭터 화면이 빌려 갔으면 되찾는다
   el.classList.remove('hide'); renderInfoModal(); if(typeof playSfx==='function') playSfx('ui_open'); }
 function hbCloseInfo(){ const el=document.getElementById('hbInfoModal'); if(el) el.classList.add('hide'); }
 function renderInfoModal(){ const box=document.getElementById('hbInfoBody'); if(!box) return;
   const c=CHAR(); if(!c) return;
-  const J=PROF_JOBS[c.unit.jobId], st=hbCharStats(), u=hbHunt().upg;
-  let h='<div class="hbRoundNote" style="padding:0 0 8px">'+escHtml(c.name)+' · <b>'+J.name+'</b> · Lv.'+c.unit.level
-    +' · 파워 <b>'+profPower()+'</b> · 진화 '+('★'.repeat(c.unit.evoStars)||'없음')+'</div>';
-  // ⚠ '배분' 열은 뺐다 — unit.stats 에 찍는 경로가 없어져(성장 축을 미네랄 업그레이드로 통일) 영영 0이었다.
-  //    레벨로 얻는 포인트는 아래 '레벨 포인트'가 따로 말한다(unit.pts — 다른 필드다).
-  h+='<div class="hbGrowLbl">기본 스탯 <span class="hbTblSub">직업 · 레벨 · 진화 · 장비 · 펫</span></div>'
-    +'<table class="hbTbl"><thead><tr><th>스탯</th><th>직업</th><th>레벨</th><th>진화</th><th>장비</th><th>펫</th><th>합</th></tr></thead><tbody>';
-  for(const k of PROF_STATS){ const P=profStatParts(k);
-    h+='<tr><td class="l">'+PROF_STAT_NAME[k]+'</td><td>'+P.job+'</td><td>'+P.level+'</td>'
-      +'<td>'+(P.evo||'-')+'</td><td>'+(P.gear||'-')+'</td><td>'+(P.petPct?('+'+P.petPct+'%'):'-')+'</td>'
-      +'<td class="s">'+P.total+'</td></tr>'; }
+  let h='<div class="hbRoundNote" style="padding:0 0 8px">'+escHtml(c.name)+' · Lv.'+c.level
+    +' · 파워 <b>'+profPower()+'</b>'+(c.reb?(' · 환생 '+c.reb+'회'):'')+'</div>';
+  // ① 기본 스탯 — 출처는 넷뿐이다. 가산(업그레이드·장비)은 숫자로, 배수(레벨·환생 포인트)는 %로 적는다.
+  //    열 순서 = 계산 순서((기본+업그레이드+장비) × 레벨 × 환생) — 읽는 대로 계산되게 둔다.
+  h+='<div class="hbGrowLbl">기본 스탯 <span class="hbTblSub">업그레이드 · 장비 · 레벨 · 환생</span></div>'
+    +'<table class="hbTbl"><thead><tr><th>스탯</th><th>기본</th><th>업그레이드</th><th>장비</th><th>레벨</th><th>환생</th><th>합</th></tr></thead><tbody>';
+  const pc=v=>((v-1)>1e-9)? ('+'+Math.round((v-1)*100)+'%') : '-';
+  // ⚠ 열마다 반올림하면 '0 + 10 → 9.6' 처럼 합이 안 맞아 보인다(체력회복 1.2/레벨). 소수는 소수로 적는다.
+  const n1=v=>(Math.abs(v-Math.round(v))<0.05)? String(Math.round(v)) : v.toFixed(1);
+  for(const k of CS_ORDER){ const a=csAxis(k);
+    h+='<tr><td class="l">'+a.name+'</td><td>'+n1(a.base)+'</td>'
+      +'<td>'+(a.upg? ('+'+n1(a.upg)) : '-')+'</td>'
+      +'<td>'+(a.gear? ('+'+n1(a.gear)) : '-')+'</td>'
+      +'<td>'+pc(a.lp)+'</td><td>'+pc(a.rp)+'</td>'
+      +'<td class="s">'+csFmt(k, a.sub)+(a.capped?' <i>상한</i>':'')+'</td></tr>'; }
   h+='</tbody></table>';
-  h+='<div class="hbGrowLbl">전투 수치 <span class="hbTblSub">스탯 + 계정 업그레이드</span></div><table class="hbTbl"><tbody>'
-    +'<tr><td class="l">공격력</td><td class="s">'+Math.round(st.atk)+'</td><td class="l">체력</td><td class="s">'+Math.round(st.hpMax)+'</td></tr>'
-    +'<tr><td class="l">공격속도</td><td class="s">'+st.cd.toFixed(2)+'초</td><td class="l">치명타</td><td class="s">'+Math.round(st.crit*100)+'%</td></tr>'
-    +'<tr><td class="l">사거리</td><td class="s">'+Math.round(st.range)+'</td><td class="l">체력회복</td><td class="s">'+st.regen.toFixed(1)+'/s</td></tr>'
-    +'</tbody></table>';
-  // 🎯 레벨 포인트도 '출처'다 — 여기 없으면 수치가 어디서 왔는지 설명이 끊긴다(찍은 것만 보여 준다)
-  { const on=LP_STATS.filter(S=>lpPts(S.k));
-    if(on.length){ h+='<div class="hbGrowLbl">레벨 포인트 <span class="hbTblSub">'+lpSpent()+'p 투자 · 남은 '+lpFree()+'p</span></div><div class="hbChips">'
-      +on.map(S=>'<span class="hbChip">'+S.name+' <b>+'+_lpPct(lpMul(S.k))+'%</b></span>').join('')+'</div>'; } }
-  h+='<div class="hbGrowLbl">업그레이드 레벨</div><div class="hbChips">'
-    +Object.keys(HB_UPG).filter(k=>hbUpgOwned(k))
-      .map(k=>'<span class="hbChip">'+HB_UPG[k].name+' <b>'+(u[k]||0)+'</b></span>').join('')+'</div>';
+  // ② 전투 수치 = 기본 스탯 × 추가 보정(장비 어빌리티 % · 펫/동료 패시브). 원천이 생기면 csBonus 가 답한다.
+  h+='<div class="hbGrowLbl">전투 수치 <span class="hbTblSub">기본 스탯 + 추가 보정</span></div>'
+    +'<table class="hbTbl"><tbody>';
+  for(let i=0;i<CS_ORDER.length;i+=2){ h+='<tr>';
+    for(const k of CS_ORDER.slice(i,i+2))
+      h+='<td class="l">'+CS_AXES[k].name+'</td><td class="s">'+csFmt(k, csVal(k))+'</td>';
+    if(CS_ORDER.slice(i,i+2).length<2) h+='<td></td><td></td>';
+    h+='</tr>'; }
+  h+='</tbody></table>';
+  if(!csHasBonus()) h+='<div class="hbRoundNote" style="padding:6px 0 0">추가 보정 원천이 아직 없습니다 — 장비 어빌리티·펫/동료 패시브가 생기면 여기에 얹힙니다.</div>';
   box.innerHTML=h; }
 // ── D. 레벨 해금 확장 — 해금이 실제로 무언가를 열도록 배선 ──
 // 🔓 장착/출전 칸 — 펫·동료 모두 **0칸에서 시작해 미네랄로 하나씩 연다**(2026-08-14 확정).
@@ -7212,6 +7224,25 @@ const LP_STATS=[
   {k:'bld',   name:'건물 데미지',    step:0.05, ico:'buildings/bld_turret',   tip:'터렛·벙커'},
 ];
 function lpDef(k){ return LP_STATS.find(x=>x.k===k)||null; }
+// 🔁 환생 포인트 — 환생으로만 얻고 '환생해도 사라지지 않는' 영구 축.
+//   레벨 포인트와 같은 항목에 찍지만 1점이 더 세다(RP_STEP_MUL). 그래야 되감는 값이 있다.
+//   ⚠ 레벨 포인트(unit.pts)와 다른 필드(unit.rpts)다 — 같이 담으면 환생 때 같이 날아간다.
+const RP_PER_REB=5;        // 환생 1회 = 5 × 그 환생의 단계
+const RP_STEP_MUL=2.5;     // 1포인트의 세기 = 레벨 포인트의 2.5배
+function rpBag(c){ c=c||((typeof CHAR==='function')?CHAR():null); if(!c) return {};
+  if(!c.unit.rpts || typeof c.unit.rpts!=='object') c.unit.rpts={}; return c.unit.rpts; }
+function rpSpent(c){ const b=rpBag(c); let n=0; for(const S of LP_STATS) n+=Math.max(0, b[S.k]|0); return n; }
+function rpFree(c){ c=c||((typeof CHAR==='function')?CHAR():null);
+  return c ? Math.max(0, (c.rp|0)-rpSpent(c)) : 0; }
+function rpTotal(c){ c=c||((typeof CHAR==='function')?CHAR():null); return c ? (c.rp|0) : 0; }
+function rpPts(k, c){ return Math.max(0, rpBag(c)[k]|0); }
+function rpStep(k){ const S=lpDef(k); return S ? S.step*RP_STEP_MUL : 0; }
+function rpMul(k, c){ return 1 + rpPts(k,c)*rpStep(k); }
+function rpAdd(k, n){ const c=CHAR(), S=lpDef(k); if(!c||!S) return 0;
+  n=Math.min(Math.max(1, n|0), rpFree(c)); if(n<=0) return 0;
+  const b=rpBag(c); b[k]=(b[k]|0)+n; saveMeta(); return n; }
+function rpReset(){ const c=CHAR(); if(!c) return 0; const n=rpSpent(c);
+  c.unit.rpts={}; saveMeta(); return n; }
 function lpTotal(c){ c=c||((typeof CHAR==='function')?CHAR():null);
   return c ? Math.max(0, (c.level||1)-1)*LP_PER_LEVEL : 0; }
 function lpBag(c){ c=c||((typeof CHAR==='function')?CHAR():null); if(!c) return {};
@@ -7227,14 +7258,50 @@ function lpAdd(k, n){ const c=CHAR(), S=lpDef(k); if(!c||!S) return 0;
 function lpReset(){ const c=CHAR(); if(!c) return 0; const n=lpSpent(c);
   c.unit.pts={}; saveMeta(); return n; }
 // ══════════════════════════════════════════════════════════════════════════════════════
-function hbCharStats(){ const u=hbHunt().upg;
-  const pw=profStat('pow'), vt=profStat('vit'), fc=profStat('foc'), ag=profStat('agi');
-  // 🎯 레벨 포인트는 '마지막에 곱한다' — 업그레이드·스탯으로 쌓은 값 전체에 배수로 얹혀야 체감이 크다.
-  return { hpMax:(120+(u.hp||0)*18+vt*10)*lpMul('hp'), atk:(12+(u.atk||0)*3+pw*2)*lpMul('atk'),
-    cd:Math.max(.22, .70*Math.pow(.985,u.aspd||0)*Math.pow(.99,ag)/lpMul('aspd')),   // 대기시간이라 나눈다
-    crit:Math.min(.6, .05+(u.crit||0)*.006+fc*.004),
-    critDmg:HB_CRIT_DMG*lpMul('critd'),                                              // 치명타 '피해 배수'
-    range:Math.min(HB_RNG_MAX, (HB_RNG_BASE+(u.rng||0)*4)*lpMul('range')), regen:(u.regen||0)*1.2 }; }
+// ══ 📊 기본 스탯 축 — 이 게임의 스탯은 '전투 수치' 그 자체다 ═══════════════════════════════
+//   한 축의 값 = (기본 + 사냥터 업그레이드 + 장비) × 레벨 포인트 × 환생 포인트
+//   출처는 이 넷뿐이다. 직업·진화·펫은 2026-08-18에 뺐다(펫·동료는 자기 화력으로 따로 싸운다).
+//   ⛔ 표(스탯 출처 팝업)와 전투가 '같은 식'을 써야 한다 → 둘 다 csAxis() 하나만 부른다.
+//      hbCharStats 안에 식을 다시 적으면 두 벌이 되어 반드시 어긋난다.
+//   gearK = 장비 스탯 꼬리표(pow/vit/foc/agi) · lp/rp = 배수를 얹는 포인트 키
+const CS_AXES={
+  atk:  { name:'공격력',   base:12,          upgK:'atk',   upgV:3,    gearK:'pow', gearV:2,    lp:'atk',   rp:'atk'   },
+  hp:   { name:'체력',     base:120,         upgK:'hp',    upgV:18,   gearK:'vit', gearV:10,   lp:'hp',    rp:'hp'    },
+  aspd: { name:'공격속도', base:100,         upgK:'aspd',  upgV:1.5,  gearK:'agi', gearV:1,    lp:'aspd',  rp:'aspd', unit:'%' },
+  crit: { name:'치명타',   base:5,           upgK:'crit',  upgV:0.6,  gearK:'foc', gearV:0.4,  cap:60,     unit:'%'   },
+  critd:{ name:'치명 피해', base:HB_CRIT_DMG*100,                                              lp:'critd', rp:'critd', unit:'%' },
+  range:{ name:'사거리',   base:HB_RNG_BASE, upgK:'rng',   upgV:4,                 cap:HB_RNG_MAX, lp:'range', rp:'range' },
+  regen:{ name:'체력회복', base:0,           upgK:'regen', upgV:1.2 },
+};
+const CS_ORDER=['atk','hp','aspd','crit','critd','range','regen'];
+// 한 축의 출처별 기여. 표도 전투도 이걸 읽는다.
+//   sub   = 기본 스탯(네 출처의 결과)
+//   total = 전투 수치 = 기본 스탯 × 추가 보정(장비 어빌리티 % · 펫/동료 패시브 — 아직 없다)
+function csAxis(k){ const A=CS_AXES[k]; if(!A) return null;
+  const u=hbHunt().upg;
+  const upg  = A.upgK ? (u[A.upgK]||0)*A.upgV : 0;
+  const gear = A.gearK ? profStat(A.gearK)*A.gearV : 0;
+  const lp   = A.lp ? lpMul(A.lp) : 1;
+  const rp   = A.rp ? rpMul(A.rp) : 1;
+  let sub=(A.base+upg+gear)*lp*rp;
+  if(A.cap!=null) sub=Math.min(A.cap, sub);
+  const bonus=csBonus(k);
+  let total=sub*bonus;
+  if(A.cap!=null) total=Math.min(A.cap, total);
+  return { name:A.name, unit:A.unit||'', base:A.base, upg:upg, gear:gear, lp:lp, rp:rp,
+           sub:sub, bonus:bonus, total:total, capped:(A.cap!=null && sub>=A.cap) }; }
+function csVal(k){ const a=csAxis(k); return a?a.total:0; }
+// 추가 보정 훅 — 장비 어빌리티(공격력 %)·펫/동료 패시브가 생기면 여기서만 곱한다.
+// ⚠ 지금은 원천이 없어 항상 1이다. 새 보정을 만들면 이 함수 안에 넣을 것(전투식에 직접 곱하지 말 것).
+function csBonus(k){ return 1; }
+function csHasBonus(){ for(const k of CS_ORDER) if(Math.abs(csBonus(k)-1)>1e-9) return true; return false; }
+// ══════════════════════════════════════════════════════════════════════════════════════
+function hbCharStats(){
+  return { atk:csVal('atk'), hpMax:csVal('hp'),
+    cd:Math.max(.22, .70/(csVal('aspd')/100)),          // 공격속도(%)는 '빠르기'라 대기시간을 나눈다
+    crit:csVal('crit')/100,
+    critDmg:csVal('critd')/100,
+    range:csVal('range'), regen:csVal('regen') }; }
 // 전투 중인 캐릭터에 수치를 다시 입힌다 — 업그레이드·레벨·포인트를 바꾼 직후 부르는 '단일 지점'.
 // ⛔ 이 복사를 손으로 다시 적지 말 것: 새 수치를 추가할 때 여기 한 곳만 고치면 되게 둔다.
 //    (치명타 피해 critDmg 를 넣을 때 복사가 세 군데로 흩어져 있어 한 곳을 빠뜨릴 뻔했다)
@@ -7301,7 +7368,7 @@ const HB_BOOSTS={
 // ⛔ 옛 개수형 건설 표(HB_BUILD)는 없앴다 — 터렛·벙커·벽은 전부 타일에 직접 놓는다(HB_STRUCT).
 //    같은 뜻의 표를 두 벌 두면 반드시 어긋난다. 이름·비용·상한은 HB_STRUCT 하나에서만 온다.
 // 🤝 동료 — 옛 상위 직업 12종이 그대로 넘어왔다(전직 폐지, 2026-08-12).
-//   이름·3D 모델(unit)은 옛 PROF_JOBS 값을 그대로 쓴다.
+//   이름·3D 모델(unit)은 옛 직업표 값을 그대로 물려받았다.
 //   ⚠ 영입은 '구매'가 아니라 '뽑기'다(2026-08-12 2차 전환) — 등급(tier)이 해금 레벨을 대체했고,
 //      강화는 미네랄이 아니라 '중복 동료 합성'으로만 한다. hbMateBuy/hbMateCost/hbMateOpen은 없어졌다.
 //   등급은 공용 GACHA_TIERS/TIER_COLOR를 그대로 쓴다 — 새 등급 체계를 만들지 말 것.
@@ -8965,44 +9032,33 @@ function setChrSec(k){ if(!CHR_SECS[k]) return; _chrSec=k; renderChr();
 //   위 = 지금 내가 어떤 상태인지 '아주 간단히'(자세한 출처 분해는 사냥터 좌상단 프로필 팝업).
 //   아래 = 레벨 포인트를 찍는 곳. 여기가 이 화면의 유일한 조작이다.
 function _lpPct(v){ return Math.round((v-1)*100); }
+// 축 값 표시 — 단위(%·초·×)는 축 표가 갖는다. 두 화면이 같은 표기를 쓰도록 여기 하나만 둔다.
+function csFmt(k, v){ const A=CS_AXES[k];
+  if(k==='aspd') return (0.70/(v/100)).toFixed(2)+'초';
+  if(k==='critd') return '×'+(v/100).toFixed(2);
+  if(k==='regen') return v.toFixed(1)+'/s';
+  if(A.unit==='%') return Math.round(v)+'%';
+  return String(Math.round(v)); }
 function renderChrStat(){ const c=CHAR(); if(!c) return '<div class="hbRoundNote">캐릭터가 없습니다.</div>';
-  const J=PROF_JOBS[c.unit.jobId]||PROF_JOBS[c.cls], st=hbCharStats();
-  const free=lpFree(c), spent=lpSpent(c);
-  let h='<div class="hbRoundNote" style="padding:0 0 8px">'+escHtml(c.name)+' · <b>'+J.name+'</b> · Lv.'+c.level
-    +' · 파워 <b>'+profPower()+'</b>'+(c.unit.evoStars?(' · 진화 '+'★'.repeat(c.unit.evoStars)):'')
-    +(c.reb?(' · 환생 '+c.reb+'회'):'')+'</div>';
-  // ① 전투 수치 — 6칸만. 자세한 건 프로필 팝업으로 보낸다.
-  h+='<div class="hbGrowLbl">전투 수치 <span class="hbTblSub">스탯 + 업그레이드 + 포인트</span></div>';
-  const box=[['공격력',Math.round(st.atk)],['체력',Math.round(st.hpMax)],
-             ['공격속도',st.cd.toFixed(2)+'초'],['치명타',Math.round(st.crit*100)+'%'],
-             ['치명 피해','×'+st.critDmg.toFixed(2)],['사거리',Math.round(st.range)]];
-  h+='<div class="lpNums">'+box.map(b=>'<div class="lpNum"><span>'+b[0]+'</span><b>'+b[1]+'</b></div>').join('')+'</div>';
-  // ② 사냥터 업그레이드 — 해금한 것만, 레벨만
-  const own=Object.keys(HB_UPG).filter(k=>hbUpgOwned(k));
-  h+='<div class="hbGrowLbl">사냥터 업그레이드 <span class="hbTblSub">'+own.length+'/'+Object.keys(HB_UPG).length+' 해금</span></div>'
-    +'<div class="hbChips">'+(own.length
-      ? own.map(k=>'<span class="hbChip">'+HB_UPG[k].name+' <b>'+(hbHunt().upg[k]||0)+'</b></span>').join('')
-      : '<span class="hbChip lock">아직 해금한 것이 없습니다</span>')+'</div>';
-  // ③ 레벨 포인트 — 이 화면의 조작
-  h+='<div class="hbGrowLbl">레벨 포인트 <span class="hbTblSub">레벨 1회 = '+LP_PER_LEVEL+'p · 환생하면 함께 돌아갑니다</span></div>';
-  h+='<div class="lpHead"><span class="lpFree'+(free?' on':'')+'">남은 포인트 <b>'+free+'</b></span>'
-    +'<button class="lpReset" onclick="lpDoReset()"'+(spent?'':' disabled')+'>초기화</button></div>';
-  h+='<div class="lpList">';
-  for(const S of LP_STATS){ const n=lpPts(S.k,c), pct=_lpPct(lpMul(S.k,c));
-    h+='<div class="lpRow'+(n?' on':'')+'">'
-      +'<span class="lpIco">'+_icoPathImg(S.ico)+'</span>'
-      +'<span class="lpTx"><b>'+S.name+'</b><em>'+S.tip+' · 1p마다 +'+(S.step*100).toFixed(S.step<0.02?1:0)+'%</em></span>'
-      +'<span class="lpVal"><b>+'+pct+'%</b><em>'+n+'p</em></span>'
-      +'<button class="lpBtn" onclick="lpTap(\''+S.k+'\')"'+(free?'':' disabled')+'>＋</button></div>'; }
-  h+='</div>';
+  let h='<div class="hbRoundNote" style="padding:0 0 8px">'+escHtml(c.name)+' · Lv.'+c.level
+    +' · 파워 <b>'+profPower()+'</b>'+(c.reb?(' · 환생 '+c.reb+'회'):'')+'</div>';
+  // ① 전투 수치 — 자세한 출처 분해는 사냥터 좌상단 프로필 팝업이 맡는다
+  h+='<div class="hbGrowLbl">전투 수치 <span class="hbTblSub">좌상단 프로필에서 출처를 볼 수 있습니다</span></div>';
+  h+='<div class="lpNums">'+CS_ORDER.map(k=>
+      '<div class="lpNum"><span>'+CS_AXES[k].name+'</span><b>'+csFmt(k, csVal(k))+'</b></div>').join('')+'</div>';
+  // ② 레벨 포인트 — 이 화면의 조작
+  h+=_ptListHTML('lp', c);
   return h; }
 // 찍기 — 남은 포인트가 있으면 1점. 전투 중이면 그 자리에서 반영된다.
-function lpTap(k){ if(!lpAdd(k,1)) return;
-  if(typeof playSfx==='function') playSfx('ui_confirm');
-  hbSyncChar(); renderChr(); if(typeof renderHome==='function') renderHome(); }
-function lpDoReset(){ const n=lpReset(); if(!n) return;
-  if(typeof playSfx==='function') playSfx('ui_close');
-  hbSyncChar(); renderChr(); if(typeof renderHome==='function') renderHome(); }
+//   두 포인트가 같은 경로를 탄다(kind만 다르다) — 화면이 둘이라고 동작을 두 벌 만들지 말 것.
+function _ptRepaint(){ hbSyncChar();
+  if(typeof renderChr==='function') renderChr();
+  if(document.getElementById('hbGrowBody') && typeof renderGrowModal==='function') renderGrowModal();
+  if(typeof renderHome==='function') renderHome(); }
+function ptTap(kind, k){ if(!(kind==='rp'? rpAdd(k,1) : lpAdd(k,1))) return;
+  if(typeof playSfx==='function') playSfx('ui_confirm'); _ptRepaint(); }
+function ptDoReset(kind){ if(!(kind==='rp'? rpReset() : lpReset())) return;
+  if(typeof playSfx==='function') playSfx('ui_close'); _ptRepaint(); }
 // 스킬 — 지금은 읽는 곳이다(레벨·강화는 아직 없다). 표는 HB_SKILLS 하나에서만 온다.
 function _chrSkillHTML(){ let h='<div class="hbGrowLbl">사냥터 스킬</div>';
   for(const k in HB_SKILLS){ const SK=HB_SKILLS[k];
@@ -9280,21 +9336,14 @@ function closeTownPanel(){ popHide('townPanel'); _twZone=null; _gearPick=null; _
 function twApplyChar(){ const c=CHAR(), b=document.querySelector('#twAvatar .twAvBody');   // 아바타 겉모습 = 현재 캐릭터 종류
   if(b) b.textContent=(c && PROF_CLASSES[c.cls] && PROF_CLASSES[c.cls].ico) || '🧍'; }
 function renderTownIdle(){ renderTownBar(); const tp=document.getElementById('townPanel'); if(_twZone==='gym' && tp && !tp.classList.contains('hide')) refreshTownPanel(); }
-// 광장: 스탯 + 전직
-function renderProfStats(){ const p=PROF(), c=CHAR(); if(!c) return '<div class="twHead">캐릭터가 없습니다.</div>';
-  const C=PROF_CLASSES[c.cls], J=PROF_JOBS[c.unit.jobId]||PROF_JOBS[c.cls];
-  let h='<div class="twHead">'+C.ico+' <b>'+escHtml(c.name)+'</b> · '+C.name+' 계열<br>현재 <b>'+J.name+'</b> · Lv.'+c.level+' · 파워 <b>'+profPower()+'</b><br>다음 레벨까지 '+Math.max(0,profXpForLevel(c.level)-c.xp)+' XP</div><div class="twStatGrid">';
-  // 스탯은 레벨업 때 자동으로 오른다 — 배분 버튼은 없다(성장 축은 미네랄 업그레이드로 통일)
-  for(const k of PROF_STATS){ h+='<div class="twStat"><span class="tsL">'+PROF_STAT_NAME[k]+'</span><span class="tsV">'+profStat(k)+'</span></div>'; }
-  h+='</div>';
-  const r=profEvolveReq();   // 🌟 진화(별)
-  h+='<div class="twSectLbl">진화 <span class="twStars">'+('★'.repeat(r.stars)+'☆'.repeat(5-r.stars))+'</span></div>';
-  if(!r.unlock) h+='<div class="twRow"><div class="twRowInfo"><div class="twRowSub lock">🔒 Lv.'+profUnlockNeed('evolve')+' 달성 시 진화 개방</div></div></div>';
-  else if(r.maxed) h+='<div class="twRow"><div class="twRowInfo"><div class="twRowSub ok">✓ 최대 진화(★5)</div></div></div>';
-  else { const ok=c.unit.level>=r.lvReq && p.pcoin>=r.cost;
-    h+='<div class="twRow"><div class="twRowInfo"><div class="twRowName">별 +1 (스탯 강화)</div><div class="twRowSub'+(c.unit.level>=r.lvReq?'':' lock')+'">필요 Lv.'+r.lvReq+' · 비용 '+r.cost+' P</div></div><button class="twBtn" onclick="profDoEvolve()"'+(ok?'':' disabled')+'>진화</button></div>'; }
-  return h; }
-function profDoEvolve(){ if(profEvolve()){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); showTownToast('⭐ 진화 성공!'); } }
+// 광장: 캐릭터 요약(스탯 조작은 캐릭터 화면이 맡는다)
+function renderProfStats(){ const c=CHAR(); if(!c) return '<div class="twHead">캐릭터가 없습니다.</div>';
+  const C=PROF_CLASSES[c.cls]||{ico:'🧍',name:'캐릭터'};
+  let h='<div class="twHead">'+C.ico+' <b>'+escHtml(c.name)+'</b><br>Lv.'+c.level+' · 파워 <b>'+profPower()+'</b>'
+    +(c.reb?(' · 환생 '+c.reb+'회'):'')+'<br>다음 레벨까지 '+Math.max(0,profXpForLevel(c.level)-c.xp)+' XP</div>'
+    +'<div class="twStatGrid">';
+  for(const k of CS_ORDER) h+='<div class="twStat"><span class="tsL">'+CS_AXES[k].name+'</span><span class="tsV">'+csFmt(k, csVal(k))+'</span></div>';
+  return h+'</div>'; }
 // 뽑기집: 펫 뽑기 + 보유 펫 장착
 // ── 💠 재화 아이콘 단일 소스 ────────────────────────────────────────────────
 // ⛔ 새 UI에서 미네랄·가스·젬·인구를 표시할 땐 **반드시 resIco()**를 쓴다. 이모지를 임의로 넣지 말 것.
@@ -9629,9 +9678,14 @@ function dgFoeStat(key, floor){ const f=DG_FOES[key], k=Math.pow(1.28, floor-1);
   return { key:key, name:f.name, ico:f.ico, boss:!!f.boss, hpMax:Math.round(f.hp*k),
            atk:Math.round(f.atk*k*0.92), spd:f.spd, range:f.range, cd:f.cd }; }
 // 캐릭터 스탯 → 전투 수치. '스펙업이 체감되는' 유일한 환산 지점이다.
-function dgMySpec(){ const pow=profStat('pow'), vit=profStat('vit'), foc=profStat('foc'), agi=profStat('agi');
-  return { hpMax:Math.round(70+vit*13), atk:Math.round(5+pow*1.7), crit:Math.min(0.5, foc*0.007),
-           spd:52+agi*1.5, range:52, cd:Math.max(0.34, 1.05-agi*0.013) }; }
+// 던전 스펙 — 사냥터와 '같은 기본 스탯'에서 나온다(2026-08-18).
+//   옛 식은 pow/vit/foc/agi 를 직접 읽었는데, 그 네 키가 장비 전용이 되면서 업그레이드·포인트가
+//   던전에만 반영되지 않는 구멍이 생겼다. 배수는 옛 체감을 그대로 맞춘 값이다.
+const DG_SPEC_MUL={ atk:1.6, hp:1.35, cd:1.5 };
+function dgMySpec(){ const st=hbCharStats();
+  return { hpMax:Math.round(st.hpMax*DG_SPEC_MUL.hp), atk:Math.round(st.atk*DG_SPEC_MUL.atk),
+           crit:Math.min(0.5, st.crit),
+           spd:52*(csVal('aspd')/100), range:52, cd:Math.max(0.34, st.cd*DG_SPEC_MUL.cd) }; }
 
 let DG=null, _dgRaf=0, _dgLast=0;
 function dgEnter(floor){ if(floor>dgFloorCap()){ showTownToast('Lv.'+dgFloorReqLv(floor)+'부터 도전할 수 있습니다'); return; }
