@@ -2532,6 +2532,11 @@ async function groupLobby(){
         '오프라인 행이 온라인 사이에 섞임: '+offAt.map(b=>b?'x':'o').join(''));
       // 오프라인 = 어두운 상자(투명도만으로 흐리게 두지 않는다)
       const off=rows.find(r=>r.classList.contains('off')), on=rows.find(r=>!r.classList.contains('off'));
+      // ⛔ 친구 카드에 푸른기 금지 — 옛 rgba(26,28,34)는 B가 R보다 8 높아 푸르게 보였다
+      { const g=getComputedStyle(on||rows[0]).backgroundImage||'';
+        const m=((g.match(/rgba?\(([^)]+)\)/)||[,'0,0,0'])[1]).split(',').map(parseFloat);
+        assert(m[2]<=m[0]+3,'친구 카드에 푸른기가 돎: '+g.slice(0,60));
+        assert(getComputedStyle(on||rows[0]).borderTopLeftRadius==='3px','친구 카드가 덜 각짐'); }
       if(off&&on){
         // ⚠ 면이 gradient 라 backgroundColor 는 투명하다 — backgroundImage 의 첫 색을 본다
         const lum=el=>{ const g=getComputedStyle(el).backgroundImage||'';
