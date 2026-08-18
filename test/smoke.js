@@ -198,7 +198,8 @@ async function groupLobby(){
       // 장비 스탯(pow/vit/foc/agi)은 '장비 전용'이 됐다 — 맨몸이면 0이 맞다
       for(const k of PROF_STATS) assert(profStat(k)===0,'맨몸인데 장비 스탯이 0이 아님: '+k+'='+profStat(k));
       // 그래도 전투 수치는 기본값에서 시작한다(0이면 아무것도 못 때린다)
-      for(const k of CS_ORDER) assert(csVal(k)===CS_AXES[k].base,k+' 이 기본값에서 시작하지 않음: '+csVal(k));
+      // ⚠ 기본값은 CS_AXES 가 아니라 HB_UPG 가 갖는다(2026-08-18 단일 소스화) → csAxis()에서 받아 본다
+      for(const k of CS_ORDER) assert(csVal(k)===csAxis(k).base,k+' 이 기본값에서 시작하지 않음: '+csVal(k));
       assert(d.cls===c.cls,'사람마다 시작 유닛이 다름'); }
     // 종류를 바꿔도 성능이 같다 — 직업 차이는 폐지했다
     { const p3=PROF(); const before=CS_ORDER.map(k=>csVal(k)).join(',');
@@ -1306,7 +1307,10 @@ async function groupLobby(){
     //    혼자서는 절반쯤만 잡는 라운드에서 잰다. 스펙을 고정하지 않으면 앞 단계의 누적 성장에 흔들린다.
     const setSpec=()=>{ const c=_hb.char;
       c.atk=60; c.cd=.30; c.range=140; c.crit=0; c.regen=0; c.hpMax=1e9; c.hp=1e9; };
-    const runWave=()=>{ _hb.round=40; _hb.wave=1; _hb.phase='fight'; setSpec();
+    // ⚠ 라운드를 숫자로 박지 말 것 — 곡선이 지수(HB_ROUND_HP)라 상수를 조금만 만져도 포화된다.
+    //    고정 스펙(atk 60 · cd .30 = 200DPS)이 15초에 약 3000 피해 → 적 1기가 그 1/5쯤인 라운드를 역산한다.
+    const RD=(()=>{ let r=1; while(r<300 && hbFoeHp(1,r,2)<600) r++; return Math.max(1,r-1); })();
+    const runWave=()=>{ _hb.round=RD; _hb.wave=1; _hb.phase='fight'; setSpec();
       _hb.foes.length=0; _hb.pend.length=0; hbSpawnWave();
       // 사거리가 근접(34)이라 적이 화면 밖에서 걸어 들어올 시간이 필요하다 — 6초로는 도착 전에 끝난다
       const k=_hb.kills; for(let i=0;i<300;i++) hbStep(0.05); return _hb.kills-k; };
@@ -1317,7 +1321,7 @@ async function groupLobby(){
     for(const id of Object.keys(HB_MATES).slice(0,hbMateMax())){ hbHunt().mates[id]={lv:1,dup:0}; hbHunt().party.push(id); }
     hbLayoutAllies();
     const withAllies=runWave();
-    assert(solo>0,'측정 불가 — 캐릭터 혼자 하나도 못 잡음(라운드가 너무 셈)');
+    assert(solo>0,'측정 불가 — 캐릭터 혼자 하나도 못 잡음(라운드 '+RD+' · 적 체력 '+Math.round(hbFoeHp(1,RD,2))+')');
     assert(withAllies>solo,'아군을 세워도 화력이 안 늘어남: '+solo+' → '+withAllies);
     // 측정 뒤 원복 — 잔적뿐 아니라 '캐릭터 위치'도 되돌린다.
     // 적 출현 위치는 캐릭터 기준이라(hbPlaceFoe), 캐릭터가 구석에 서 있으면 스폰이 화면 경계에 몰려
@@ -2486,7 +2490,21 @@ async function groupLobby(){
     for(let l=PROF_LV_SOFT; l<PROF_LV_SOFT+40; l++){
       const rt=profXpForLevel(l+1)/profXpForLevel(l);
       assert(Math.abs(rt-PROF_XP_GEO)<0.02,'Lv'+l+'→'+(l+1)+' 증가율이 등비가 아님: '+rt.toFixed(3)); }
-    assert(profXpForLevel(PROF_LV_SOFT+30) > profXpForLevel(PROF_LV_SOFT)*8,'후반이 충분히 무거워지지 않음');
+    { const want=Math.pow(PROF_XP_GEO,30);   // ⚠ 8배 고정을 박지 말 것 — 곡선 상수를 바꾸면 바로 깨진다
+      const got=profXpForLevel(PROF_LV_SOFT+30)/profXpForLevel(PROF_LV_SOFT);
+      assert(got>want*0.98,'후반 등비가 상수와 다름: '+got.toFixed(2)+' vs '+want.toFixed(2)); }
+    // ⑤ 레벨 상한(= 마지막 환생 레벨)이 '사실상 도달 불가'로 굳는 것을 막는 파국 감지기.
+    //    ⚠ 정밀한 소요 시간 예측이 아니다 — 실제 플레이는 진행도를 올려 가며 레벨을 먹으므로
+    //       아래 상한선보다 훨씬 빠르다(실측 마지막 런 6.6시간 vs 이 식으로는 178시간).
+    //       이 검사의 목적은 옛 곡선(×1.10 → 44만 판) 같은 사고를 잡는 것 하나다.
+    //    기준: 마지막 환생 직전의 현실적 조건 — 전역 진행도 120 · 경험치 배수 4.0(=1+0.2×(1+2+3+4+5)).
+    { const need=newCum(PROF_LV_CAP), PROG=120, XPMUL=4.0;
+      const rd=((PROG-1)%HB_ROUND_MAX)+1, dg=Math.floor((PROG-1)/HB_ROUND_MAX)+1;
+      let n=0; for(let w=1;w<=HB_WAVES;w++) n+=hbFoeCount(rd,w);
+      const perRound=n*hbKillReward(dg,rd).xp*XPMUL;
+      const plays=need/perRound;
+      assert(plays<50000,'레벨 상한 Lv'+PROF_LV_CAP+' 이 사실상 도달 불가: 진행도 '+PROG+'에서 '
+        +Math.round(plays).toLocaleString()+'판'); }
     // ③ 경계에서 튀지 않는다(두 식이 이어져야 한다)
     { const a=profXpForLevel(PROF_LV_SOFT-1), b=profXpForLevel(PROF_LV_SOFT);
       assert(b>a && b<a*1.3,'구간 경계에서 필요 경험치가 튐: '+a+' → '+b); }
@@ -2494,33 +2512,60 @@ async function groupLobby(){
     for(let l=1;l<200;l++) assert(profXpForLevel(l+1)>=profXpForLevel(l),'Lv'+l+'에서 곡선이 내려감');
     return '30레벨 누적 '+c30n.toLocaleString()+'(옛 '+c30o.toLocaleString()+') · 이후 레벨당 ×'+PROF_XP_GEO; });
 
-  await step('환생: 25레벨마다 · 깊이 밀수록 배수↑ · 계정 축은 유지', ()=>{ skipIf(typeof profRebirth!=='function','환생 없음');
+  // 🔁 환생 규칙(2026-08-18): **정해진 레벨에서 한 번씩만** · 미네랄 업그레이드/재화/진행도까지 리셋 ·
+  //    해금과 최고 기록은 남는다. 옛 계단식(floor(lv/20))은 같은 레벨 무한 반복이 가능해 RP가 폭주했다.
+  await step('환생: 정해진 레벨에서 1회 · 미네랄 축까지 리셋 · 해금/기록은 유지', ()=>{
+    skipIf(typeof profRebirth!=='function','환생 없음');
     const p=PROF(); p.chars.length=0; p.curId=''; const c=profCreateChar('ranger','환생');
-    // ① 문턱 미만이면 못 한다
-    c.level=PROF_REB_EVERY-1;
+    const H=hbHunt(); H.upg={}; H.unl={}; H.best={}; H.dg=1; H.round=1;
+    // ① 요구 레벨 표 — 오름차순이고 마지막이 레벨 상한
+    let prev=0; for(const lv of PROF_REB_LEVELS){ assert(lv>prev,'요구 레벨이 오름차순이 아님: '+lv); prev=lv; }
+    assert(PROF_LV_CAP===PROF_REB_LEVELS[PROF_REB_LEVELS.length-1],'레벨 상한이 마지막 환생 레벨과 다름');
+    // ② 문턱 미만이면 못 한다
+    c.level=PROF_REB_LEVELS[0]-1;
     assert(!profCanRebirth(c),'문턱 미만인데 환생이 가능함');
     assert(profRebirth(c)===0,'문턱 미만인데 환생이 실행됨');
-    assert(c.level===PROF_REB_EVERY-1,'실패한 환생이 레벨을 건드림');
-    // ② 문턱에서 1단계 · 계정 축(미네랄 업그레이드)과 장비·진화는 그대로
-    const H=hbHunt(); H.upg.atk=7; c.unit.evoStars=2;
-    c.level=PROF_REB_EVERY; c.xp=123;
+    assert(c.level===PROF_REB_LEVELS[0]-1,'실패한 환생이 레벨을 건드림');
+    // ③ 문턱에서 1회차 — 무엇이 지워지고 무엇이 남는가
+    H.upg={atk:7,hp:3}; H.unl={crit:1,rng:1}; H.best={1:31}; H.dg=1; H.round=31;
+    p.pcoin=12345; p.gas=777; c.unit.evoStars=2;
+    c.level=PROF_REB_LEVELS[0]; c.xp=123;
     assert(profCanRebirth(c),'문턱인데 환생이 안 됨');
-    assert(profRebirth(c)===1,'문턱에서 1단계가 아님');
+    assert(profRebirth(c)===1,'문턱에서 1회차가 아님');
     assert(c.level===1 && c.xp===0,'환생 뒤 레벨·경험치가 1/0이 아님: Lv'+c.level+' xp'+c.xp);
     assert(c.unit.level===1,'환생 뒤 유닛 레벨이 안 돌아감');
-    assert(hbHunt().upg.atk===7,'환생이 계정 축(미네랄 업그레이드)을 지움');
+    { const H2=hbHunt();
+      assert(Object.keys(H2.upg).length===0,'미네랄 업그레이드가 안 지워짐: '+JSON.stringify(H2.upg));
+      assert(PROF().pcoin===0,'미네랄 재화가 안 지워짐: '+PROF().pcoin);
+      assert(H2.dg===1 && H2.round===1,'진행 던전/라운드가 안 돌아감: '+H2.dg+'-'+H2.round);
+      assert(H2.unl.crit===1 && H2.unl.rng===1,'업그레이드 해금이 지워짐(유지해야 한다)');
+      assert((H2.best[1]||0)===31,'최고 기록이 지워짐(유지해야 한다): '+H2.best[1]); }
+    assert(PROF().gas===777,'가스가 지워짐(유지해야 한다)');
     assert(c.unit.evoStars===2,'환생이 진화★를 지움');
     const mul1=profXpMul(c);
-    assert(Math.abs(mul1-(1+PROF_REB_GAIN))<1e-9,'1단계 배수가 다름: '+mul1);
-    // ③ 깊이 밀고 환생할수록 많이 받는다 — 2배 레벨 = 2단계
-    c.level=PROF_REB_EVERY*2;
-    assert(profRebirth(c)===2,'2배 레벨인데 2단계가 아님');
-    assert(Math.abs(profXpMul(c)-(1+PROF_REB_GAIN*3))<1e-9,'누적 배수가 다름: '+profXpMul(c));
-    // ④ 배수가 '실제 지급'에 붙는다 — 지급 경로가 profGainXp 한 곳인지까지 본다
+    assert(Math.abs(mul1-(1+PROF_REB_GAIN))<1e-9,'1회차 배수가 다름: '+mul1);
+    // ④ 같은 레벨에서 두 번은 못 한다 — rebLvMax
+    c.level=PROF_REB_LEVELS[0];
+    assert(!profCanRebirth(c),'같은 레벨에서 또 환생이 가능함(rebLvMax가 안 걸림)');
+    c.level=PROF_REB_LEVELS[1]-1;
+    assert(!profCanRebirth(c),'다음 요구 레벨 미만인데 환생이 가능함');
+    // ⑤ 회차마다 요구 레벨이 올라가고, 지급도 커진다
+    let rp0=c.rp|0;
+    for(let i=1;i<PROF_REB_LEVELS.length;i++){
+      c.level=PROF_REB_LEVELS[i]; c.unit.level=c.level;
+      const want=profRebGrant(i+1);
+      assert(profRebirth(c)===i+1,(i+1)+'회차가 아님');
+      assert((c.rp|0)-rp0===want,(i+1)+'회차 지급량이 다름: '+((c.rp|0)-rp0)+' vs '+want);
+      rp0=c.rp|0; }
+    // ⑥ 다 끝나면 더 없다 + 레벨이 상한에 묶인다
+    assert(profRebNextLv(c)===0,'마지막 환생 뒤에도 다음 환생이 남아 있음');
+    c.level=PROF_LV_CAP; assert(!profCanRebirth(c),'끝났는데 또 환생이 가능함');
+    { c.level=PROF_LV_CAP-1; c.xp=1e18; const ups=profApplyLevelUps(c);
+      assert(c.level===PROF_LV_CAP,'레벨이 상한을 넘거나 못 미침: '+c.level+' (ups '+ups+')'); }
+    // ⑦ 배수가 '실제 지급'에 붙는다 — 지급 경로가 profGainXp 한 곳인지까지 본다
     c.xp=0; const got=profGainXp(c,100);
     assert(Math.abs(got-100*profXpMul(c))<1e-6,'지급에 배수가 안 붙음: '+got);
-    assert(Math.abs(c.xp-got)<1e-6,'지급값과 누적값이 다름');
-    return '1단계 ×'+mul1.toFixed(2)+' → 3단계 누적 ×'+profXpMul(c).toFixed(2); });
+    return PROF_REB_LEVELS.length+'회차 ('+PROF_REB_LEVELS.join('·')+') · 누적 RP '+(c.rp|0)+' · 경험치 ×'+profXpMul(c).toFixed(2); });
 
   await step('해금: 레벨 게이트 · 한 번에 몰려 열리지 않는다', ()=>{ skipIf(typeof profUnlockLv!=='function','레벨 해금 없음');
     // ① 표가 레벨 기준이고 오름차순 · 간격이 벌어져 있어야 '하나씩' 열린다
@@ -2587,6 +2632,197 @@ async function groupLobby(){
     // 마을: 월드 좌표계 + 카메라. 헤드리스는 rAF가 멈춰 있어 twStep(dt)을 직접 pump한다.
       // 🎁 상점 = 팝업이 아니라 전용 화면. 네비·마을 구역 두 경로 모두 같은 화면으로 간다.
   // 🧍 캐릭터 = '나 자신'(정보·성장·스킬). 장착물(장비·펫·동료)은 정비에 남는다 — 두 곳에 두면 어긋난다.
+  // ⚔ 사냥터 업그레이드 — '카드에 적힌 값'과 '전투에 들어가는 값'이 같아야 한다(2026-08-18 단일 소스화).
+  //    예전엔 HB_UPG(카드)와 CS_AXES(전투)가 두 벌이라 '데미지 10/+2'라고 써 놓고 12/+3을 쓰고 있었고,
+  //    사거리는 카드 100 · 실제 34였다. 그리고 32종 중 17종은 사기만 되고 전투에 안 걸려 있었다.
+  await step('사냥터 업그레이드: 카드 = 전투 · 전 항목 배선 · 초반 5미네랄', async()=>{
+    skipIf(typeof HB_UPG!=='object'||typeof csAxis!=='function','업그레이드 표 없음');
+    // ⚠ hunt.upg / hunt.unl 은 캐릭터가 아니라 '계정'에 붙는다 — 캐릭터를 새로 만들어도 안 지워진다.
+    //    이 스텝은 값을 0으로 비우고 재기 때문에, 끝날 때 반드시 되돌려 놔야 뒤 스텝이 약해진 채로 돈다.
+    //    (실제로 뒤의 '던전: 1층 클리어'가 이것 때문에 한 번 무너졌다)
+    const keep={ upg:JSON.stringify(hbHunt().upg||{}), unl:JSON.stringify(hbHunt().unl||{}) };
+    { const p=PROF(); p.chars.length=0; p.curId=''; profCreateChar('ranger','업글'); saveMeta(); }
+    let H=hbHunt(); H.upg={}; for(const k in HB_UPG) H.unl[k]=1;
+    // ① CS_AXES 는 제 값을 갖지 않는다 — 두 벌이 되는 순간 다시 어긋난다
+    for(const k in CS_AXES){ const A=CS_AXES[k];
+      assert(A.base===undefined && A.upgV===undefined,
+        'CS_AXES.'+k+' 가 제 base/upgV 를 다시 들고 있음 — 단일 소스가 깨졌다'); }
+    // ② 카드가 적는 숫자 == 전투가 쓰는 숫자. 0레벨과 10레벨 양쪽에서 본다.
+    for(const k of CS_ORDER){ const A=CS_AXES[k]; if(!A||!A.upgK) continue;
+      const U=HB_UPG[A.upgK];
+      H.upg={};
+      assert(Math.abs(csAxis(k).base-U.v0)<1e-9,
+        k+' 0레벨 값이 카드와 다름: 카드 '+U.v0+' · 전투 '+csAxis(k).base);
+      H.upg[A.upgK]=10;
+      const want=U.v0+U.vs*10;
+      assert(Math.abs(csAxis(k).sub-want)<1e-6,
+        k+' 10레벨 값이 카드와 다름: 카드 '+want+' · 전투 '+csAxis(k).sub);
+      const shown=parseFloat(String(hbUpgVal(A.upgK,10)).replace('x',''));
+      assert(Math.abs(shown-want)<0.06,
+        k+' 카드에 찍히는 글자가 값과 다름: "'+hbUpgVal(A.upgK,10)+'" · 값 '+want);
+      H.upg={}; }
+    // ③ 32종 전부 — 10레벨 올렸는데 전투 수치가 하나도 안 변하면 카드에만 있는 거짓말이다
+    const snap=()=>{ const st=hbCharStats(), M=hbAllyMul();
+      return [st.atk,st.hpMax,st.cd,st.crit,st.critDmg,st.range,st.regen,
+              st.lifest,st.knock,st.multiC,st.multiN,st.bncC,st.bncN,st.scritC,st.scritM,
+              st.shdMax,st.shdReg,st.mspd,st.rrng,
+              hbUpgNum('mk'),hbUpgNum('gk'),hbUpgNum('mw'),hbUpgNum('gw'),
+              M.ally.mul,M.ally.cdMul,M.turret.dps,M.turret.rng,M.bunker.hp,M.pet.dps,M.pet.cdMul,
+              hbBunkerAtkMul()].join(','); };
+    for(const k in HB_UPG){ H.upg={}; const a=snap(); H.upg[k]=10; const b=snap();
+      assert(a!==b, k+'('+HB_UPG[k].name+') 10레벨인데 전투 수치가 하나도 안 변함 — 배선이 없다'); }
+    H.upg={};
+    // ④ 비용 — 가장 싼 카드가 5미네랄에서 시작하고, 증가율은 1.15 를 넘지 않는다
+    { let mn=1e9, mx=0;
+      for(const k in HB_UPG){ mn=Math.min(mn,HB_UPG[k].base); mx=Math.max(mx,HB_UPG[k].mul); }
+      assert(mn===5,'초반 업그레이드가 5미네랄에서 시작하지 않음: '+mn);
+      assert(mx<=1.15+1e-9,'비용 증가율이 1.15 를 넘음: '+mx);
+      assert(hbUpgCost('atk',0)===5,'데미지 1레벨이 5미네랄이 아님: '+hbUpgCost('atk',0)); }
+    // ⑤ 표가 아니라 '실제 지급·실제 피해'로 확인한다 — 표만 보면 hbUpgNum 을 되읽는 순환 검사가 된다
+    if(typeof hbEnd==='function') hbEnd();
+    openHome(); await sleep(80);
+    assert(_hb && _hb.on,'전투가 시작 안 됨');
+    _hb.manual=true; H=hbHunt(); for(const k in HB_UPG) H.unl[k]=1;
+    const arm=()=>{ _hb.char.atk=1e9; _hb.char.range=1e9; _hb.char.cd=.05; _hb.char.cdT=0;
+      _hb.char.hp=1e9; _hb.char.hpMax=1e9; _hb.char.crit=0; _hb.char.scritC=0; };
+    // ⑤-a 미네랄(킬) — 처치 보상에 실제로 얹힌다
+    const killGain=(lv)=>{ H.upg={}; if(lv) H.upg.mk=lv; hbSyncChar();
+      _hb.wave=1; _hb.phase='fight'; _hb.waveT=999; _hb.foes.length=0; _hb.pend.length=0; arm();
+      _hb.foes.push({ico:'🟢',mdl:'snapper',x:5,y:0,hp:1,hpMax:1,atk:0,spd:0,cdT:9,elite:false});
+      const p0=PROF().pcoin;
+      for(let i=0;i<40 && PROF().pcoin<=p0;i++) hbStep(0.05);
+      return PROF().pcoin-p0; };
+    { const a=killGain(0), b=killGain(10);
+      assert(b>a+4,'미네랄(킬)이 실제 지급에 안 들어감: '+a.toFixed(2)+' → '+b.toFixed(2)); }
+    // ⑤-b 미네랄(웨이브) — 웨이브를 비운 순간 들어온다
+    const waveGain=(lv)=>{ H.upg={}; if(lv) H.upg.mw=lv; hbSyncChar();
+      _hb.wave=1; _hb.phase='fight'; _hb.waveT=999; _hb.foes.length=0; _hb.pend.length=0;
+      const p0=PROF().pcoin; hbStep(0.05); return PROF().pcoin-p0; };
+    { const a=waveGain(0), b=waveGain(10);
+      assert(b>a+20,'미네랄(웨이브)가 웨이브 클리어에 안 들어감: '+a.toFixed(2)+' → '+b.toFixed(2)); }
+    // ⑤-c 실드 — 체력보다 먼저 닳는다
+    { H.upg={shd:10}; hbSyncChar(); const c=_hb.char;
+      c.hp=c.hpMax; c.shd=c.shdMax;
+      assert(c.shdMax>0,'실드를 샀는데 상한이 0');
+      hbCharTake(c.shdMax/2);
+      assert(c.hp===c.hpMax,'실드가 남았는데 체력이 깎임');
+      assert(c.shd<c.shdMax && c.shd>0,'실드가 안 깎임: '+c.shd);
+      hbCharTake(c.shdMax);
+      assert(c.shd===0 && c.hp<c.hpMax,'실드를 넘겼는데 체력이 안 깎임'); }
+    // ⑤-d 생명력 흡수 — 준 피해의 %만큼 실제로 찬다
+    { H.upg={lifest:20}; hbSyncChar(); const c=_hb.char;
+      c.hpMax=1e6; c.hp=1000; c.atk=1000; c.crit=0; c.scritC=0; c.knock=0;
+      _hb.foes.length=0;
+      const t={ico:'🟢',mdl:'snapper',x:5,y:0,hp:1e9,hpMax:1e9,atk:0,spd:0,cdT:9,elite:false};
+      _hb.foes.push(t);
+      const h0=c.hp; hbCharHit(t,1);
+      assert(c.hp>h0,'생명력 흡수가 회복시키지 않음: '+h0+' → '+c.hp); }
+    // ⑤-e 멀티샷 — 확률 100%면 사거리 안 여러 적이 한 번에 맞는다
+    { H.upg={multic:100,multin:3}; hbSyncChar(); const c=_hb.char;
+      c.atk=1000; c.crit=0; c.scritC=0; c.knock=0; c.multiC=1; c.range=1e9;
+      _hb.foes.length=0;
+      const mk=(x)=>({ico:'🟢',mdl:'snapper',x:x,y:0,hp:1e9,hpMax:1e9,atk:0,spd:0,cdT:9,elite:false});
+      const a=mk(5), b=mk(20), d=mk(35);
+      _hb.foes.push(a,b,d);
+      hbCharShot(a);
+      assert(b.hp<1e9 && d.hp<1e9,'멀티샷인데 부가 표적이 안 맞음'); }
+    const n=Object.keys(HB_UPG).length;
+    // 들어올 때 상태로 되돌린다 — 계정 축이라 그냥 두면 뒤 스텝이 전부 약해진 캐릭터로 돈다
+    { const h=hbHunt(); h.upg=JSON.parse(keep.upg); h.unl=JSON.parse(keep.unl);
+      hbSyncChar(); saveMeta(); }
+    return n+'종 전부 배선 · 카드=전투 · 최저 '+hbUpgCost('atk',0)+'M'; });
+
+  // 🏁 던전 = 99라운드짜리 챕터. 99를 깨면 자동으로 다음 던전 1라운드로 넘어가고,
+  //    난이도·보상 곡선은 그 경계에서 '한 칸 오른 것'과 정확히 같아야 한다(계단이 있으면 설계가 무너진다).
+  await step('던전: 99라운드 상한 · 자동 이동 · 경계에서 곡선이 이어진다', async()=>{
+    skipIf(typeof hbAdvanceDungeon!=='function','던전 자동 이동 없음');
+    // ① 경계 연속성 — 던전 d 라운드 99 → 던전 d+1 라운드 1 이 정확히 라운드 한 칸
+    for(const d of [1,2,3]){
+      const pairs=[['체력',(dd,rr)=>hbFoeHp(dd,rr,2),HB_ROUND_HP],
+                   ['공격',(dd,rr)=>hbFoeAtk(dd,rr),  HB_ROUND_ATK],
+                   ['보상',(dd,rr)=>hbKillReward(dd,rr).min, HB_ROUND_REW],
+                   ['경험치',(dd,rr)=>hbKillReward(dd,rr).xp, HB_ROUND_XP]];
+      for(const [nm,f,mul] of pairs){
+        const seam=f(d+1,1)/f(d,HB_ROUND_MAX);      // 던전 경계를 넘는 한 칸
+        const inner=f(d,HB_ROUND_MAX)/f(d,HB_ROUND_MAX-1);   // 던전 안의 한 칸
+        assert(Math.abs(seam-mul)<1e-6,'던전 '+d+'→'+(d+1)+' '+nm+' 경계가 한 칸이 아님: ×'+seam.toFixed(4));
+        assert(Math.abs(seam-inner)<1e-6,'던전 '+d+' '+nm+' 경계와 내부 증가율이 다름'); }
+      assert(hbProg(d+1,1)-hbProg(d,HB_ROUND_MAX)===1,'전역 진행도가 경계에서 1칸이 아님'); }
+    // ② 99를 깨면 실제로 다음 던전으로 넘어간다(등반)
+    if(typeof hbEnd==='function') hbEnd();
+    { const p=PROF(); p.chars.length=0; p.curId=''; profCreateChar('ranger','던전상한');
+      p.hunt={dg:1,round:1,climb:true,climbChosen:1,best:{},rw:{},mates:{},party:[],upg:{},unl:{}}; saveMeta(); }
+    openHome(); await sleep(120);
+    assert(_hb && _hb.on,'전투가 안 돌아감');
+    _hb.manual=true;
+    const clearOnce=()=>{ _hb.wave=HB_WAVES; _hb.phase='fight'; _hb.waveT=999;
+      _hb.foes.length=0; _hb.pend.length=0; hbStep(0.05); };
+    _hb.dg=1; hbHunt().dg=1; _hb.round=HB_ROUND_MAX-1; hbHunt().round=_hb.round;
+    clearOnce();
+    assert(_hb.dg===1 && _hb.round===HB_ROUND_MAX,'98 클리어인데 99로 안 감: '+_hb.dg+'-'+_hb.round);
+    clearOnce();
+    assert(_hb.dg===2 && _hb.round===1,'99 클리어인데 다음 던전으로 안 감: '+_hb.dg+'-'+_hb.round);
+    assert(hbHunt().dg===2 && hbHunt().round===1,'저장쪽 던전/라운드가 안 따라옴');
+    assert((hbHunt().best[1]||0)===HB_ROUND_MAX,'이전 던전 최고 기록이 99로 안 찍힘: '+hbHunt().best[1]);
+    assert(hbDgOpen(2),'99를 깼는데 다음 던전이 안 열림');
+    // ③ 반복(climb=false)에서는 넘어가지 않는다 — 그 라운드를 계속 도는 게 반복의 정의다
+    hbHunt().climb=false; _hb.dg=2; hbHunt().dg=2; _hb.round=HB_ROUND_MAX; hbHunt().round=HB_ROUND_MAX;
+    clearOnce();
+    assert(_hb.dg===2 && _hb.round===HB_ROUND_MAX,'반복인데 던전이 넘어감: '+_hb.dg+'-'+_hb.round);
+    hbHunt().climb=true;
+    // ④ 마지막 던전에서는 99에 머문다(넘어갈 곳이 없다)
+    _hb.dg=HB_DG_MAX; hbHunt().dg=HB_DG_MAX; _hb.round=HB_ROUND_MAX; hbHunt().round=HB_ROUND_MAX;
+    clearOnce();
+    assert(_hb.dg===HB_DG_MAX && _hb.round===HB_ROUND_MAX,'마지막 던전에서 넘어가 버림: '+_hb.dg+'-'+_hb.round);
+    // ⑤ 라운드 이동은 99를 넘지 못한다
+    { const H=hbHunt(); H.dg=1; H.best[1]=HB_ROUND_MAX; _hb.dg=1;
+      hbSetRound(HB_ROUND_MAX+50);
+      assert(H.round<=HB_ROUND_MAX,'라운드가 상한을 넘음: '+H.round);
+      assert(hbBest(1)<=HB_ROUND_MAX,'최고 기록이 상한을 넘음: '+hbBest(1)); }
+    // ⑥ 큰 수 표기 — 곡선이 지수라 T(1e12)에서 끊기면 안 된다
+    assert(fmtCur(999999)==='1.0M','큰 수 표기 경계가 틀림: '+fmtCur(999999));
+    for(const v of [4e15,9e20,1.2e33]) assert(!/[0-9]{7}/.test(fmtCur(v)),'큰 수가 원시 숫자로 나옴: '+fmtCur(v));
+    return '던전 '+HB_DG_MAX+' × '+HB_ROUND_MAX+'라운드 · 경계 이음새 ok'; });
+
+  // 🔀 상한 있는 축(사거리·공격속도·치명타)에 더 넣어도 버려지지 않는다 — 다른 값으로 넘어간다.
+  //    환생 포인트는 영구라 잘못 넣으면 되돌리기 어렵다. '넣으면 손해인 축'을 남기지 않는 것이 목적.
+  await step('상한 초과분 환산: 사거리→상자 · 공속→멀티샷 · 치명타→치명 피해', ()=>{
+    skipIf(typeof csOver!=='function','오버플로 환산 없음');
+    const p=PROF(); p.chars.length=0; p.curId=''; const c=profCreateChar('ranger','초과');
+    const H=hbHunt(); H.upg={}; H.unl={}; for(const k in HB_UPG) H.unl[k]=1;
+    c.level=1; c.unit.pts={}; c.unit.rpts={};
+    // ① 상한이 실제로 걸려 있다
+    for(const k of ['range','aspd','crit']) assert(CS_AXES[k].cap>0,k+' 축에 상한이 없음(초과분을 셀 수 없다)');
+    // ② 상한 미만이면 초과분 0 · 환산도 0
+    { const st=hbCharStats();
+      assert(csOver('range')===0 && csOver('aspd')===0,'상한 미만인데 초과분이 있음');
+      assert(Math.abs(st.chestDmg-1)<1e-9,'초과분이 없는데 상자 피해 배수가 1이 아님: '+st.chestDmg); }
+    // ③ 사거리를 상한의 2배로 → 상자 피해가 정확히 HB_OV_CHEST 만큼 붙는다
+    { c.unit.pts={}; H.upg={};
+      H.upg.rng=Math.ceil((CS_AXES.range.cap*2-HB_UPG.rng.v0)/HB_UPG.rng.vs);
+      const a=csAxis('range');
+      assert(a.capped && a.total===a.cap,'상한을 넘겼는데 전투값이 상한이 아님: '+a.total);
+      assert(Math.abs(csOver('range')-1)<0.02,'초과 비율이 1이 아님: '+csOver('range'));
+      const st=hbCharStats();
+      assert(Math.abs(st.chestDmg-(1+HB_OV_CHEST))<0.05,'상자 피해로 안 넘어감: '+st.chestDmg);
+      H.upg={}; }
+    // ④ 공격속도를 상한의 2배로 → 멀티샷 확률이 붙는다(쿨다운은 하한 그대로)
+    { const base=hbCharStats();
+      H.upg.aspd=Math.ceil((CS_AXES.aspd.cap*2-HB_UPG.aspd.v0)/HB_UPG.aspd.vs);
+      const st=hbCharStats();
+      assert(Math.abs(st.cd-HB_CD_MIN)<1e-9,'공속 상한인데 쿨다운이 하한이 아님: '+st.cd);
+      assert(st.multiC>base.multiC+1e-9,'멀티샷 확률로 안 넘어감: '+base.multiC+' → '+st.multiC);
+      assert(Math.abs(st.multiC-base.multiC-HB_OV_MULTI)<0.02,'멀티샷 환산량이 다름: '+(st.multiC-base.multiC));
+      H.upg={}; }
+    // ⑤ 치명타 확률을 상한의 2배로 → 치명 피해가 붙는다
+    { const base=hbCharStats();
+      H.upg.crit=Math.ceil((CS_AXES.crit.cap*2-HB_UPG.crit.v0)/HB_UPG.crit.vs);
+      const st=hbCharStats();
+      assert(Math.abs(csVal('crit')-CS_AXES.crit.cap)<1e-9,'치명타가 상한을 넘김: '+csVal('crit'));
+      assert(st.critDmg>base.critDmg+1e-9,'치명 피해로 안 넘어감: '+base.critDmg+' → '+st.critDmg);
+      assert(Math.abs(st.critDmg-base.critDmg-HB_OV_CRITD)<0.05,'치명 피해 환산량이 다름');
+      H.upg={}; }
+    return '사거리 ×'+HB_OV_CHEST+' 상자 · 공속 +'+(HB_OV_MULTI*100)+'%p 멀티샷 · 치명타 +'+(HB_OV_CRITD*100)+'%p 치명피해'; });
   await step('레벨 포인트: 총량은 레벨에서 · 찍으면 전투 수치가 곧바로 오른다', ()=>{
     skipIf(typeof lpMul!=='function','레벨 포인트 없음');
     const p=PROF(); p.chars.length=0; p.curId='';
@@ -2639,7 +2875,8 @@ async function groupLobby(){
     if(typeof hbEnd==='function') hbEnd();
     openHome(); await sleep(120);          // ⚠ openHome→loadMeta 가 PROF()를 갈아 끼운다 — 위 참조는 버린다
     assert(_hb && _hb.char,'사냥터가 안 돌아감');
-    { const c=CHAR(); assert(c.level===21 && lpTotal(c)===60,'표본 레벨이 안 실림: Lv.'+c.level+' / '+lpTotal(c)+'p'); }
+    { const c=CHAR(); assert(c.level===21 && lpTotal(c)===20*LP_PER_LEVEL,   // ⚠ 3p 고정을 박지 말 것
+        '표본 레벨이 안 실림: Lv.'+c.level+' / '+lpTotal(c)+'p'); }
     const a0=_hb.char.atk, cd0=_hb.char.cd, cdm0=_hb.char.critDmg;
     navGo('upg'); await sleep(60); setChrSec('stat'); await sleep(40);
     const host=$('chrBody');
@@ -2647,7 +2884,7 @@ async function groupLobby(){
     const rows=[...host.querySelectorAll('.lpList .hmUp')];
     assert(rows.length===LP_STATS.length,'포인트 카드 수가 표와 다름: '+rows.length);
     assert(!host.querySelector('.lpRow'),'옛 자체 제작 줄(.lpRow)이 남아 있음');
-    assert(host.querySelector('.lpFree b').textContent==='60','남은 포인트 표시가 다름: '+host.querySelector('.lpFree b').textContent);
+    assert(host.querySelector('.lpFree b').textContent===String(20*LP_PER_LEVEL),'남은 포인트 표시가 다름: '+host.querySelector('.lpFree b').textContent);
     // 사냥터 카드와 같은 뼈대인가 — 한 조각이라도 빠지면 '비슷한 것을 새로 만든' 것이다
     { // ⚠ SVG 요소의 className 은 문자열이 아니다(SVGAnimatedString) → getAttribute 로 읽는다
       const skel=root=>[...root.querySelectorAll('*')]
@@ -2688,7 +2925,7 @@ async function groupLobby(){
     // 화면 버튼으로 찍는다 — 렌더러·상태·전투가 한 줄로 이어지는지 본다
     rows[0].querySelector('.hmUpBtn').click(); await sleep(40);
     assert(lpPts('atk')===1,'버튼을 눌렀는데 안 찍힘');
-    assert($('chrBody').querySelector('.lpFree b').textContent==='59','찍은 뒤 남은 포인트가 안 줄어듦');
+    assert($('chrBody').querySelector('.lpFree b').textContent===String(20*LP_PER_LEVEL-1),'찍은 뒤 남은 포인트가 안 줄어듦');
     assert(_hb.char.atk>a0+1e-9,'전투 중인 캐릭터 공격력에 반영 안 됨: '+a0+'→'+_hb.char.atk);
     // 치명타 피해·공격속도도 같은 경로를 탄다
     for(const S of LP_STATS) if(S.k==='critd'||S.k==='aspd') lpAdd(S.k,10);
@@ -2709,21 +2946,25 @@ async function groupLobby(){
     let c=CHAR();
     assert(rpTotal(c)===0,'처음부터 환생 포인트가 있음: '+rpTotal(c));
     // ① 환생해야 나온다
-    c.level=PROF_REB_EVERY; c.unit.level=PROF_REB_EVERY; c.unit.pts={atk:5};
+    { const H0=hbHunt(); H0.best={}; H0.dg=1; H0.round=1; }   // 기록 기반 몫을 0으로 두고 지급분만 본다
+    c.level=PROF_REB_LEVELS[0]; c.unit.level=c.level; c.unit.pts={atk:5};
     const step1=profRebirth(c);
-    assert(step1>=1,'환생이 안 됨');
-    assert(rpTotal(c)===RP_PER_REB*step1,'환생 포인트 지급량이 다름: '+rpTotal(c));
+    assert(step1===1,'환생이 안 됨');
+    assert(rpTotal(c)===profRebGrant(1),'환생 포인트 지급량이 다름: '+rpTotal(c)+' vs '+profRebGrant(1));
     // ② 레벨 포인트는 되감기고, 환생 포인트는 남는다 — 둘이 같은 필드면 여기서 잡힌다
     assert(lpTotal(c)===0 && lpSpent(c)===0,'레벨 포인트가 안 되감김');
     const put=rpAdd('atk', 3);
     assert(put>0 && rpPts('atk')===put,'환생 포인트가 안 찍힘: '+put+'/'+rpPts('atk'));
-    c.level=PROF_REB_EVERY*2; c.unit.level=PROF_REB_EVERY*2;
+    c.level=PROF_REB_LEVELS[1]; c.unit.level=c.level;
     const step2=profRebirth(c);
+    assert(step2===2,'2회차가 아님');
     assert(rpPts('atk')===put,'환생했더니 찍어 둔 환생 포인트가 사라짐');
-    assert(rpTotal(c)===RP_PER_REB*(step1+step2),'두 번째 지급이 누적 안 됨: '+rpTotal(c));
-    // ③ 1p 가 레벨 포인트보다 세다 · 남은 것보다 많이 못 찍는다
-    assert(rpStep('atk')>lpDef('atk').step,'환생 포인트가 레벨 포인트보다 안 셈');
-    assert(Math.abs(rpMul('atk')-(1+rpStep('atk')*put))<1e-9,'환생 배수가 선형이 아님');
+    assert(rpTotal(c)===profRebGrant(1)+profRebGrant(2),'두 번째 지급이 누적 안 됨: '+rpTotal(c));
+    // ③ 배수는 **곱셈(복리)** 이다 — 가산이면 회차가 갈수록 1점이 희석돼 설계가 성립하지 않는다
+    assert(Math.abs(rpMul('atk')-Math.pow(1+RP_STEP,put))<1e-9,'환생 배수가 곱셈이 아님: '+rpMul('atk'));
+    { // 곱셈이면 여러 축에 나눠 찍어도 총 배수(곱)가 같다 — 함정 빌드가 없다는 성질
+      const a=Math.pow(1+RP_STEP,6)*Math.pow(1+RP_STEP,0), b=Math.pow(1+RP_STEP,3)*Math.pow(1+RP_STEP,3);
+      assert(Math.abs(a-b)<1e-9,'곱셈 배수인데 배분에 따라 총량이 달라짐'); }
     { const got=rpAdd('hp', 999);
       assert(got>0,'한 칸도 못 찍음');
       assert(rpFree(c) < ptCost('rp','hp',c),'더 살 수 있는데 안 삼: 남은 '+rpFree(c)+'p');
@@ -2732,7 +2973,7 @@ async function groupLobby(){
     c.unit.pts={}; c.unit.rpts={};
     const base=csVal('atk');
     c.unit.rpts={atk:4};
-    assert(Math.abs(csAxis('atk').rp-(1+rpStep('atk')*4))<1e-9,'축이 환생 배수를 안 읽음');
+    assert(Math.abs(csAxis('atk').rp-Math.pow(1+RP_STEP,4))<1e-9,'축이 환생 배수를 안 읽음');
     assert(csVal('atk')>base+1e-9,'환생 포인트가 공격력에 반영 안 됨');
     // ⑤ 환생 탭에서 찍는다 — 화면·상태·전투가 한 줄로 이어지는지
     c.unit.rpts={}; saveMeta();
@@ -2748,7 +2989,19 @@ async function groupLobby(){
     $('chrBody').querySelector('.lpHead .hmUpQ').click(); await sleep(40);
     assert(rpSpent()===0,'초기화가 안 됨');
     navBack(); await sleep(40);
-    return '환생 '+RP_PER_REB+'p/단계 · 1p = 레벨 포인트 ×'+RP_STEP_MUL; });
+    // ⑥ 🏁 마지막 환생을 끝내면 그때부터 '기록'이 포인트를 준다(그 전에는 0)
+    { const c2=CHAR(), H2=hbHunt();
+      H2.best={1:HB_ROUND_MAX, 2:50};                       // 전역 진행도 = 99+50 = 149
+      assert(profRecordRp(c2)===0,'마지막 환생 전인데 기록 포인트가 나옴: '+profRecordRp(c2));
+      for(let i=profRebDone(c2); i<PROF_REB_LEVELS.length; i++){
+        c2.level=PROF_REB_LEVELS[i]; c2.unit.level=c2.level; profRebirth(c2); }
+      H2.best={1:HB_ROUND_MAX, 2:50};                       // 환생이 진행도를 되감으므로 기록을 다시 세운다
+      const want=Math.floor(hbProg(2,50)/PROF_REC_RP_PER);
+      assert(profRecordRp(c2)===want,'기록 포인트가 전역 진행도와 다름: '+profRecordRp(c2)+' vs '+want);
+      assert(rpTotal(c2)>=(c2.rp|0)+want,'총량이 기록 몫을 안 더함');
+      H2.best={1:HB_ROUND_MAX, 2:60};
+      assert(profRecordRp(c2)>want,'기록을 갱신했는데 포인트가 안 늘어남'); }
+    return PROF_REB_LEVELS.length+'회차 · 1p = ×'+(1+RP_STEP).toFixed(2)+' 복리 · 기록 '+PROF_REC_RP_PER+'칸당 1p'; });
   await step('캐릭터: 스탯·환생·스킬 · 환생 본문은 빌려 쓴다', async()=>{
     skipIf(typeof setChrSec!=='function','캐릭터 구역 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
@@ -3678,7 +3931,10 @@ async function groupLobby(){
       m:G.mineral,g:G.gas,r:G.round,t:G.tab,s:G.mainSheet,k:G.kills});
     const before=snap();
     const p=PROF(); p.chars.length=0; p.curId=''; const c=profCreateChar('warden','던전');
-    c.unit.stats={pow:40,vit:40,foc:0,agi:10};                 // 1층은 확실히 이기는 스펙
+    // ⚠ 스펙을 여기서 직접 세운다. 예전엔 c.unit.stats 에 넣었는데 profStat 은 '장비'만 읽으므로
+    //    아무 효과가 없었고, 실제로는 앞 스텝이 남긴 계정 업그레이드에 기대 통과하고 있었다
+    //    (환생 스텝이 그걸 지우자 바로 무너졌다). 이제 이 스텝은 순서와 무관하다.
+    { const H=hbHunt(); H.unl={}; H.upg={atk:30,hp:30,aspd:10,crit:10}; }
     const coin=p.pcoin, lv0=c.level;
     assert(dgStart(1),'던전 진입 실패'); dgStopLoop();
     let n=0; while(DG && !DG.over && n<20000){ dgStep(0.016); n++; }
