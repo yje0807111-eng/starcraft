@@ -983,9 +983,22 @@ async function groupLobby(){
     // ② 정보 팝업 — 좌상단 HUD로 연다
     const hud=$('hbHud'); assert(hud && hud.tagName==='BUTTON','HUD가 누를 수 있는 버튼이 아님');
     hbOpenInfo(); await sleep(40);
-    assert(visible($('hbInfoModal')),'캐릭터 정보 팝업이 안 열림');
+    assert(visible($('hbInfoModal')),'스탯 출처 팝업이 안 열림');
     assert(document.querySelectorAll('#hbInfoBody .hbTbl').length>=2,'스탯/전투 수치 표가 없음');
     assert($('hbInfoBody').textContent.indexOf('파워')>=0,'파워 표기가 없음');
+    // 스탯 출처 상세표는 '여기'가 주인이다(캐릭터>스탯 구역에서 옮겨 왔다)
+    assert($('hbInfoModal').querySelector('.hbmHead b').textContent==='스탯 출처',
+      '팝업 제목이 스탯 출처가 아님: '+$('hbInfoModal').querySelector('.hbmHead b').textContent);
+    { const th=[...$('hbInfoBody').querySelectorAll('.hbTbl th')].map(e=>e.textContent);
+      assert(th.indexOf('배분')<0,'영영 0인 배분 열이 남아 있음: '+th.join(','));
+      for(const nm of ['직업','레벨','진화','장비','펫','합']) assert(th.indexOf(nm)>=0,'출처 열 누락: '+nm); }
+    // 레벨 포인트도 출처다 — 찍은 것이 있으면 여기 나와야 설명이 안 끊긴다
+    { const c2=CHAR(); c2.level=11; c2.unit.level=11; c2.unit.pts={atk:4}; renderInfoModal();
+      const tx=$('hbInfoBody').textContent;
+      assert(tx.indexOf('레벨 포인트')>=0,'포인트 구역이 출처에 없음');
+      assert(tx.indexOf('+'+Math.round((lpMul('atk')-1)*100)+'%')>=0,'포인트 배수가 출처에 안 나옴');
+      c2.unit.pts={}; renderInfoModal();
+      assert($('hbInfoBody').textContent.indexOf('레벨 포인트')<0,'안 찍었는데 포인트 구역이 나옴'); }
     hbCloseInfo();
     // ③ 파워 해금 — 표시만 하는 항목이 없어야 한다(전부 실제 상한을 바꾼다)
     p.unlocks={};
@@ -2437,38 +2450,113 @@ async function groupLobby(){
     // 마을: 월드 좌표계 + 카메라. 헤드리스는 rAF가 멈춰 있어 twStep(dt)을 직접 pump한다.
       // 🎁 상점 = 팝업이 아니라 전용 화면. 네비·마을 구역 두 경로 모두 같은 화면으로 간다.
   // 🧍 캐릭터 = '나 자신'(정보·성장·스킬). 장착물(장비·펫·동료)은 정비에 남는다 — 두 곳에 두면 어긋난다.
-  await step('캐릭터: 정보·성장·스킬 · 본문은 빌려 쓴다', async()=>{
+  await step('레벨 포인트: 총량은 레벨에서 · 찍으면 전투 수치가 곧바로 오른다', ()=>{
+    skipIf(typeof lpMul!=='function','레벨 포인트 없음');
+    const p=PROF(); p.chars.length=0; p.curId='';
+    const c=profCreateChar('ranger','포인트'); c.level=11; c.unit.level=11; c.unit.pts={}; saveMeta();
+    // ① 총량 = (레벨-1)×LP_PER_LEVEL · 처음엔 전부 남아 있다
+    assert(lpTotal(c)===10*LP_PER_LEVEL,'포인트 총량이 레벨에서 안 나옴: '+lpTotal(c));
+    assert(lpFree(c)===lpTotal(c) && lpSpent(c)===0,'처음부터 쓴 포인트가 있음');
+    // ② 남은 것보다 많이 못 찍는다
+    assert(lpAdd('atk', 999)===lpTotal(c),'남은 것보다 많이 찍힘');
+    assert(lpFree(c)===0,'다 썼는데 남은 포인트가 있음');
+    assert(lpAdd('hp',1)===0,'포인트가 없는데 찍힘');
+    // ③ 표의 모든 키가 실제로 전투에 걸린다 — 표에만 있고 안 걸린 키는 거짓말이 된다
+    const H=hbHunt(); for(const k in HB_UPG) H.unl[k]=1;   // 동료·건물 배수는 해금돼 있어야 값이 보인다
+    const snap=()=>{ const st=hbCharStats(), M=hbAllyMul();
+      return { atk:st.atk, hp:st.hpMax, cd:st.cd, range:st.range, critd:st.critDmg,
+               ally:M.ally.mul, pet:M.pet.dps, turret:M.turret.dps, bunker:hbBunkerAtkMul() }; };
+    const wired={ atk:['atk'], hp:['hp'], aspd:['cd'], range:['range'], critd:['critd'],
+                  ally:['ally','pet'], bld:['turret','bunker'] };
+    for(const S of LP_STATS){
+      c.unit.pts={}; const a=snap();
+      c.unit.pts={}; c.unit.pts[S.k]=10; const b=snap();
+      const keys=wired[S.k]; assert(keys,'배선 표에 없는 항목: '+S.k);
+      for(const kk of keys){
+        const up=(kk==='cd')? (b[kk]<a[kk]-1e-9) : (b[kk]>a[kk]+1e-9);
+        assert(up, S.k+' 10p 를 찍었는데 '+kk+' 가 안 변함: '+a[kk]+'→'+b[kk]); }
+      // 안 건드린 축은 그대로여야 한다(한 항목이 여러 곳을 흔들면 배수 설계가 무너진다)
+      for(const kk in a){ if(keys.indexOf(kk)>=0) continue;
+        assert(Math.abs(a[kk]-b[kk])<1e-9, S.k+' 가 무관한 '+kk+' 까지 바꿈'); } }
+    // ④ 배수는 선형 — 10p = step×10
+    c.unit.pts={atk:10};
+    assert(Math.abs(lpMul('atk')-(1+lpDef('atk').step*10))<1e-9,'배수가 선형이 아님: '+lpMul('atk'));
+    // ⑤ 초기화하면 전부 돌아온다
+    c.unit.pts={atk:5,hp:5}; saveMeta();
+    assert(lpReset()===10,'초기화 반환 수가 다름');
+    assert(lpFree(c)===lpTotal(c) && lpMul('atk')===1,'초기화 뒤에도 배수가 남음');
+    // ⑥ 환생하면 레벨이 1로 돌아가므로 포인트 총량도 0이 된다
+    c.level=25; c.unit.level=25; c.unit.pts={atk:10}; saveMeta();
+    profRebirth(c);
+    assert(lpTotal(c)===0,'환생했는데 포인트 총량이 남음: '+lpTotal(c));
+    c.unit.pts={};
+    return '레벨당 '+LP_PER_LEVEL+'p · '+LP_STATS.length+'항목 전부 배선됨'; });
+  await step('레벨 포인트: 스탯 화면에서 찍으면 전투 중인 캐릭터에 바로 반영', async()=>{
+    skipIf(typeof lpTap!=='function','레벨 포인트 없음');
+    const p0=PROF(); p0.chars.length=0; p0.curId='';
+    { const c0=profCreateChar('ranger','반영'); c0.level=21; c0.unit.level=21; c0.unit.pts={}; }
+    saveMeta();
+    if(typeof hbEnd==='function') hbEnd();
+    openHome(); await sleep(120);          // ⚠ openHome→loadMeta 가 PROF()를 갈아 끼운다 — 위 참조는 버린다
+    assert(_hb && _hb.char,'사냥터가 안 돌아감');
+    { const c=CHAR(); assert(c.level===21 && lpTotal(c)===60,'표본 레벨이 안 실림: Lv.'+c.level+' / '+lpTotal(c)+'p'); }
+    const a0=_hb.char.atk, cd0=_hb.char.cd, cdm0=_hb.char.critDmg;
+    navGo('upg'); await sleep(60); setChrSec('stat'); await sleep(40);
+    const host=$('chrBody');
+    const rows=[...host.querySelectorAll('.lpRow')];
+    assert(rows.length===LP_STATS.length,'포인트 줄 수가 표와 다름: '+rows.length);
+    assert(host.querySelector('.lpFree b').textContent==='60','남은 포인트 표시가 다름: '+host.querySelector('.lpFree b').textContent);
+    // 화면 버튼으로 찍는다 — 렌더러·상태·전투가 한 줄로 이어지는지 본다
+    rows[0].querySelector('.lpBtn').click(); await sleep(40);
+    assert(lpPts('atk')===1,'버튼을 눌렀는데 안 찍힘');
+    assert($('chrBody').querySelector('.lpFree b').textContent==='59','찍은 뒤 남은 포인트가 안 줄어듦');
+    assert(_hb.char.atk>a0+1e-9,'전투 중인 캐릭터 공격력에 반영 안 됨: '+a0+'→'+_hb.char.atk);
+    // 치명타 피해·공격속도도 같은 경로를 탄다
+    for(const S of LP_STATS) if(S.k==='critd'||S.k==='aspd') lpAdd(S.k,10);
+    hbSyncChar();
+    assert(_hb.char.critDmg>cdm0+1e-9,'치명타 피해가 반영 안 됨');
+    assert(_hb.char.cd<cd0-1e-9,'공격속도가 반영 안 됨');
+    // 초기화 버튼도 같은 경로
+    $('chrBody').querySelector('.lpReset').click(); await sleep(40);
+    assert(lpSpent()===0,'초기화가 안 됨');
+    assert(Math.abs(_hb.char.atk-a0)<1e-6,'초기화 뒤 전투 수치가 안 돌아옴');
+    navBack(); await sleep(40);
+    return '찍기·초기화 → 전투 즉시 반영'; });
+  await step('캐릭터: 스탯·환생·스킬 · 환생 본문은 빌려 쓴다', async()=>{
     skipIf(typeof setChrSec!=='function','캐릭터 구역 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     navGo('upg'); await sleep(60);
     assert(visible($('upgScreen')),'캐릭터 화면이 안 열림');   // APP_SCREENS 에 빠지면 영영 안 켜진다
     assert(document.querySelector('#navBar .navIt[data-nav=upg]')===null,'내려간 상태인데 구역 칸이 남음');
     const subs=[...document.querySelectorAll('#navBar .navIt[data-sub]')].map(e=>e.dataset.sub);
-    assert(subs.join(',')==='info,grow,skill','캐릭터 하위가 정보·성장·스킬이 아님: '+subs.join(','));
+    assert(subs.join(',')==='stat,reb,skill','캐릭터 하위가 스탯·환생·스킬이 아님: '+subs.join(','));
+    const lab=[...document.querySelectorAll('#navBar .navIt[data-sub]')].map(e=>e.textContent.trim());
+    assert(lab.join(',').indexOf('스탯')>=0 && lab.join(',').indexOf('환생')>=0,'하위 이름이 스탯·환생이 아님: '+lab.join(','));
     const host=()=>$('chrBody');
-    // ① 정보 = 팝업 본문(#hbInfoBody)을 빌려 온다 — 복제하면 두 벌이 된다
-    assert(host().querySelector('#hbInfoBody'),'정보 본문을 안 빌려옴');
-    assert(host().querySelectorAll('.hbTbl tr').length>1,'스탯 출처 표가 비어 있음');
-    // ② 성장 — 빌려 오면서 앞 구역 본문은 제자리로 돌아가야 한다
-    setChrSec('grow'); await sleep(40);
-    assert(host().querySelector('#hbGrowBody'),'성장 본문을 안 빌려옴');
-    assert($('hbInfoModal').querySelector('#hbInfoBody'),'정보 본문이 팝업으로 안 돌아감');
-    assert([...host().querySelectorAll('.hbRowBtn')].some(b=>b.textContent==='환생'),'성장에 환생 버튼이 없음');
+    // ① 스탯 = 이 화면 전용 렌더러다 — 팝업 본문을 빌려오지 않는다(상세표는 사냥터 프로필이 맡는다)
+    assert(!host().querySelector('#hbInfoBody'),'스탯이 아직 팝업 본문을 빌려옴');
+    assert(!host().querySelector('.hbTbl'),'스탯 출처 표가 스탯 구역에 남아 있음(프로필 팝업으로 옮겼다)');
+    assert(host().querySelector('.lpList'),'레벨 포인트 구역이 없음');
+    assert($('hbInfoModal').querySelector('#hbInfoBody'),'스탯 출처 본문이 팝업에 없음');
+    // ② 환생 — 빌려 오면서 앞 구역 본문은 제자리로 돌아가야 한다
+    setChrSec('reb'); await sleep(40);
+    assert(host().querySelector('#hbGrowBody'),'환생 본문을 안 빌려옴');
+    assert([...host().querySelectorAll('.hbRowBtn')].some(b=>b.textContent==='환생'),'환생에 환생 버튼이 없음');
     // ③ 스킬 = HB_SKILLS 표 하나에서만 온다
     setChrSec('skill'); await sleep(40);
-    assert($('hbGrowModal').querySelector('#hbGrowBody'),'성장 본문이 팝업으로 안 돌아감');
+    assert($('hbGrowModal').querySelector('#hbGrowBody'),'환생 본문이 팝업으로 안 돌아감');
     assert(host().querySelectorAll('.hbRow').length===Object.keys(HB_SKILLS).length,'스킬 줄 수가 HB_SKILLS 와 다름');
     for(const k in HB_SKILLS) assert(host().textContent.indexOf(HB_SKILLS[k].name)>=0,'스킬 누락: '+HB_SKILLS[k].name);
     // ④ 팝업(더보기) 경로가 열리면 본문을 되찾아 간다 — DOM 은 끝까지 한 벌
-    setChrSec('grow'); await sleep(40); hbOpenGrow(); await sleep(40);
+    setChrSec('reb'); await sleep(40); hbOpenGrow(); await sleep(40);
     assert($('hbGrowModal').querySelector('#hbGrowBody'),'팝업이 본문을 못 되찾음');
     assert($('hbGrowBody').textContent.indexOf('환생')>=0,'되찾은 본문이 비어 있음');
     hbCloseGrow(); navGo('upg'); await sleep(60);
     assert(host().querySelector('#hbGrowBody'),'화면 복귀 시 본문을 다시 못 빌려옴');
     for(const id of ['hbInfoBody','hbGrowBody'])
       assert(document.querySelectorAll('#'+id).length===1,'본문이 복제됨: '+id);
-    setChrSec('info'); navBack(); await sleep(40);
-    return '정보·성장·스킬 3칸 · 본문 단일 DOM';
+    setChrSec('stat'); navBack(); await sleep(40);
+    return '스탯·환생·스킬 3칸 · 본문 단일 DOM';
   });
 
   await step('하단 네비 2층: 구역 → 전용 네비 → 돌아가기', async()=>{
