@@ -2448,10 +2448,8 @@ async function groupLobby(){
       assert(dock.querySelector('.msSocial'),'소셜이 도크로 안 옮겨짐');
       assert(!visible(dock.querySelector('.msTabs2')),'도크 안 탭 띠가 네비와 중복 노출됨');
       assert(visible(dock.querySelector('#msChatWrap')),'기본(채팅)인데 채팅 창이 안 보임');
-      // 카드는 **하나**다 — 그 안이 위(목록) / 아래(소셜) 두 구역으로 나뉜다
       const panel=document.querySelector('#mapSelect .msPanel');
-      assert(panel && panel.contains($('msList')) && panel.contains($('msSortTabs')) && panel.contains(dock),
-        '탭 띠·목록·소셜이 한 카드 안에 없음');
+      assert(panel && panel.contains($('msList')) && panel.contains($('msSortTabs')),'탭 띠·목록이 한 카드 안에 없음');
       // 헤어라인 — 카드 **위·아래** 변 1px 붉은 광선. 색이 붉은지까지 본다(흰빛으로 돌아가면 잡힌다)
       for(const pe of ['::before','::after']){ const pa=getComputedStyle(panel,pe);
         assert(pa.content!=='none',pe+' 헤어라인이 없음');
@@ -2459,24 +2457,24 @@ async function groupLobby(){
         const cols=[...((pa.backgroundImage||'').matchAll(/rgba?\((\d+),\s*(\d+),\s*(\d+)/g))];
         assert(cols.some(c=>+c[1]>=180 && +c[2]<=110 && +c[3]<=110),
           pe+' 헤어라인이 붉은색이 아님: '+(pa.backgroundImage||'').slice(0,80)); }
-      // ⛔ 아래 구역은 **자기 면을 깔지 않는다** — 카드의 회색 그라데가 그대로 이어져야 한 장으로 읽힌다
-      { const ds=getComputedStyle(dock);
-        const c=((ds.backgroundColor||'').match(/[\d.]+/g)||['0','0','0','0']).map(parseFloat);
-        const a=(c.length>3?c[3]:1);
-        assert(a<0.05 && ds.backgroundImage==='none','아래 구역이 카드 배경을 덮는 면을 깔았음: '+ds.backgroundColor); }
       // 목록은 칸막이에 딱 붙지 않는다 — 아래 여백이 padding 이면 카드가 판 끝선에 붙어 잘린다
       { const ls=getComputedStyle($('msList'));
         assert(parseFloat(ls.marginBottom)>=4,'목록 아래 여백이 margin 이 아님(카드가 끝선에 붙어 잘린다)');
-        const lb=$('msList').getBoundingClientRect(), dt=dock.getBoundingClientRect();
-        assert(dt.top-lb.bottom>=4,'목록이 칸막이에 붙어 잘림: '+(dt.top-lb.bottom).toFixed(1)+'px'); }
-      // 목록 구역(.msTop)만 한 톤 어두운 판으로 묶인다 — 소셜은 그 밖이라 카드 면 그대로다
+        const lb=$('msList').getBoundingClientRect(), pb2=panel.getBoundingClientRect();
+        assert(pb2.bottom-lb.bottom>=4,'목록이 카드 끝선에 붙어 잘림: '+(pb2.bottom-lb.bottom).toFixed(1)+'px'); }
+      // 목록 구역(.msTop)만 한 톤 어두운 판으로 묶인다 — 소셜은 **바깥 카드에서도 빠져** 별도 카드다
       { const top=panel.querySelector('.msTop');
         assert(top && top.contains($('msSortTabs')) && top.contains($('msList')),'정렬 띠·목록을 묶는 판(.msTop)이 없음');
-        assert(!top.contains(dock),'소셜이 목록 판 안에 들어가 있음');
+        assert(!top.contains(dock) && !panel.contains(dock),'소셜이 아직 목록 카드 안에 있음');
         const c=((getComputedStyle(top).backgroundColor||'').match(/[\d.]+/g)||['0','0','0','0']).map(parseFloat);
         const a=(c.length>3?c[3]:1);
         assert(a>=0.08 && a<=0.4 && c[0]<30 && c[1]<30 && c[2]<30,
-          '목록 판이 카드보다 한 톤 어둡지 않음: '+getComputedStyle(top).backgroundColor); }
+          '목록 판이 카드보다 한 톤 어둡지 않음: '+getComputedStyle(top).backgroundColor);
+        // 두 카드는 각자 테두리를 갖고 좌우 변이 맞는다
+        const ds=getComputedStyle(dock), pb=panel.getBoundingClientRect(), db=dock.getBoundingClientRect();
+        assert(ds.borderTopStyle!=='none','소셜 카드에 테두리가 없음');
+        assert(Math.abs(db.left-pb.left)<=0.6 && Math.abs(db.right-pb.right)<=0.6,'두 카드의 좌우 변이 안 맞음');
+        assert(db.top-pb.bottom>=4,'두 카드가 붙어 있음: '+(db.top-pb.bottom).toFixed(1)+'px'); }
       // 목록에 카드가 **정확히 5장** 들어온다(잘린 6번째가 끼면 마감이 지저분하다)
       { const list=$('msList'), ls=getComputedStyle(list), it=list.querySelector('.mapItem');
         const inner=list.clientHeight-parseFloat(ls.paddingTop)-parseFloat(ls.paddingBottom);
@@ -2491,19 +2489,9 @@ async function groupLobby(){
         const m=(g.match(/rgba?\(([^)]+)\)/)||[,'255,255,255'])[1].split(',').map(parseFloat);
         const lum=m[0]*0.3+m[1]*0.59+m[2]*0.11;
         assert(lum<=12,'유즈맵 카드 면이 검정이 아님(휘도 '+lum.toFixed(1)+')'); }
-      // 아래 구역은 '카드 안의 카드'가 아니다 — 칸막이 1px + 가라앉은 면으로만 갈린다
-      { const soEl=dock.querySelector('.msSocial'), so=getComputedStyle(soEl), ds=getComputedStyle(dock);
-        assert(so.borderTopStyle==='none','소셜이 자기 테두리를 갖고 있음(카드 안 카드)');
-        assert(so.backgroundImage==='none','소셜이 자기 면을 갖고 있음(카드 안 카드)');
-        // ⚠ 칸막이는 카드 벽까지 닿지 않는다 — 끝까지 그으면 T자로 부딪혀 '판 두 장'으로 보인다
-        const dv=getComputedStyle(dock,'::before');
-        assert(dv.content!=='none','두 구역을 가르는 칸막이가 없음');
-        assert(ds.borderTopStyle==='none','칸막이를 벽까지 닿는 border 로 그림(양끝이 흘러야 한다)');
-        assert(/inset/.test(ds.boxShadow||''),'아래 구역이 한 단 내려앉은 그늘이 없음');
-        // 칸막이는 카드 폭을 가로지른다(안쪽에 떠 있는 상자가 아니다)
-        const db=dock.getBoundingClientRect(), pb=panel.getBoundingClientRect();
-        assert(Math.abs(db.left-pb.left)<=1.5 && Math.abs(db.right-pb.right)<=1.5,
-          '아래 구역이 카드 폭을 안 채움'); } }
+      // 카드 모양은 도크가 직접 갖는다 — 안의 .msSocial 이 또 테두리를 가지면 두 줄로 보인다
+      { const so=getComputedStyle(dock.querySelector('.msSocial'));
+        assert(so.borderTopStyle==='none' && so.backgroundImage==='none','소셜 안쪽이 또 카드 껍데기를 가짐'); } }
     navSub('party'); await sleep(40);
     assert(document.querySelector('#twChat.hide'),'파티를 눌렀는데 마을 시트가 열림(도크가 맡아야 한다)');
     assert(getComputedStyle($('msPanelBody')).display!=='none','파티 패널이 안 보임');

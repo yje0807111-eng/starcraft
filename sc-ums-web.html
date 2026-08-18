@@ -3066,26 +3066,16 @@
     max-height:64%;padding:0 0 8px;background:rgba(11,16,29,.96);border-top:1px solid var(--hbEdge,rgba(90,120,190,.26));
     box-shadow:0 -14px 34px -20px #000}
   .twSheet.hide{display:none}
-  /* 유즈맵 소셜 = 목록과 **같은 카드의 아래 구역**. 화면 몫을 고정으로 떼어 준다.
-     탭 띠는 하단 네비가 맡으므로 감춘다.
-     ⚠ 카드 안에 카드를 두지 않는다. **면도 자기 것을 깔지 않는다** — 카드(.msPanel)의 회색 그라데가
-       그대로 이어져야 한 장으로 읽힌다(어두운 판을 한 겹 덮었더니 위아래가 딴 화면처럼 보였다).
-       '다른 구역'임을 말하는 것은 ① 양끝이 흘러 사라지는 1px 선 ② 위에서 드리우는 그늘, 둘뿐이다.
-     그래서 .msSocial 이 갖고 있던 테두리·면·바깥여백은 여기서 전부 걷어낸다. */
-  /* ⚠ 칸막이를 '끝에서 끝까지 그은 1px 선 + 밝은 하이라이트'로 두면 카드 양 벽에 T자로 부딪혀
-     판 두 장을 포갠 이음새처럼 보인다(실제로 그랬다). 자연스럽게 나누는 법은 둘:
-       ① 선은 양끝을 투명으로 흘려 벽에 닿기 전에 사라지게(카드의 붉은 헤어라인과 같은 문법)
-       ② 위에서 드리우는 그늘로 아래 구역이 '한 단 내려앉은' 것처럼 — 선보다 그늘이 더 많이 말한다 */
-  /* ⚠ 목록 바로 아래에 딱 붙으면 두 구역이 한 덩어리로 보인다 — 채팅 한 줄(16.5px)만큼 띄우고
-     그만큼 구역을 낮춘다(margin + calc). 차지하는 총 높이가 그대로라 위 목록은 줄지 않는다. */
-  #msSocialDock{position:relative;flex:0 0 calc(30% - 17px);margin-top:17px;min-height:174px;display:flex;flex-direction:column;overflow:hidden;
-    box-shadow:inset 0 9px 11px -11px rgba(0,0,0,.9);
+  /* 유즈맵 소셜 = 목록 카드(.msPanel)와 **나란히 선 두 번째 카드**(2026-08-18 분리).
+     화면 몫을 고정으로 떼어 주고, 탭 띠는 하단 네비가 맡으므로 감춘다.
+     ⚠ 카드 모양(면·테두리·라운드)은 **도크가 직접 갖는다** — 안의 .msSocial 은 껍데기를 벗은 채로 둔다
+       (카드 안에 카드가 겹치면 테두리가 두 줄로 보인다). 값은 목록 카드와 같은 토큰이라 같은 재질로 읽힌다.
+     ⚠ 목록 카드에 붙으면 한 덩어리로 보인다 — 채팅 한 줄(17px)만큼 띄우고 그만큼 낮춘다(margin + calc).
+       차지하는 총 높이가 그대로라 위 목록은 줄지 않는다. */
+  #msSocialDock{position:relative;flex:0 0 calc(30% - 24px);margin-top:17px;min-height:168px;display:flex;flex-direction:column;overflow:hidden;
+    background:var(--hmPanel,linear-gradient(180deg,#191919,#0e0e0e));
+    border:1px solid var(--hbEdge,rgba(255,255,255,.07));border-radius:var(--r-bar);
     padding-bottom:6px}   /* 안쪽 목록이 카드 끝선에 딱 붙어 잘리지 않게 — 스크롤러가 아니라 도크에 준다 */
-  #msSocialDock::before{content:'';position:absolute;left:9%;right:9%;top:0;height:1px;z-index:1;pointer-events:none;
-    background:linear-gradient(90deg,transparent,rgba(255,255,255,.13) 22%,rgba(255,255,255,.13) 78%,transparent)}
-  /* 위 목록과 같은 처리 — 끝을 흐려 '안쪽에서 끝난다'로 읽히게 한다 */
-  #msSocialDock .msPanelBody{-webkit-mask-image:linear-gradient(180deg,#000 calc(100% - 14px),transparent);
-    mask-image:linear-gradient(180deg,#000 calc(100% - 14px),transparent)}
   #msSocialDock .msSocial{flex:1;min-height:0;margin-top:0;border:0;border-radius:0;background:none;box-shadow:none}
   #msSocialDock .msSocial::before{display:none}
   #msSocialDock .msTabs2{display:none}
@@ -3568,8 +3558,8 @@
     color:#dfe4ea;background:rgba(255,255,255,.045);border:1px solid var(--metal-edge)}
   .ptFind:active{opacity:.75;transform:translateY(1px)}
   /* 8칸(2열×4행)이 소셜 구역 안에 **스크롤 없이** 들어와야 한다 — 칸 높이·글자·아바타를 치수로 맞춘다.
-     계산: 구역 안높이 153 − 머리줄 31 = 122 ≥ 4×28 + 3×3 = 121 ✓ (도크 min-height 174px 이 이 값을 받친다) */
-  .ptGrid{display:grid;grid-template-columns:1fr 1fr;gap:3px}
+     계산: 구역 안높이 151 − 머리줄 31 = 120 ≥ 4×28 + 3×2 = 118 ✓ */
+  .ptGrid{display:grid;grid-template-columns:1fr 1fr;gap:2px}
   .ptSlot{display:flex;align-items:center;gap:6px;min-height:28px;padding:2px 6px;border-radius:var(--r-bar);overflow:hidden}
   .ptSlot.fill{background:linear-gradient(180deg,rgba(28,30,36,.9),rgba(11,12,16,.92));border:1px solid var(--metal-edge)}
   .ptSlot.fill.leader{border-color:var(--neon-soft);background:linear-gradient(180deg,rgba(255,59,59,.22),rgba(11,12,16,.9))}
@@ -4158,10 +4148,10 @@
           <div class="msSortTabs" id="msSortTabs"></div>
           <div class="msList uiScroll" id="msList"></div>
         </div>
-        <!-- 소셜 = 같은 카드의 **아래 구역**. 내용(.msSocial)은 #twChat 의 것을 옮겨 쓴다(복제 금지).
-             탭 전환은 하단 네비가 맡는다 -->
-        <div id="msSocialDock"></div>
       </div>
+      <!-- 소셜 = 목록 카드와 **완전히 분리된 카드**. 내용(.msSocial)은 #twChat 의 것을 옮겨 쓴다(복제 금지).
+           탭 전환은 하단 네비가 맡는다 -->
+      <div id="msSocialDock"></div>
     </div>
 
 
