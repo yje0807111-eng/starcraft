@@ -3491,6 +3491,14 @@
   .foSecAdd{display:flex;align-items:center;gap:4px;color:#aeb7c1;margin-top:2px}.foSecAdd .ic{width:12px;height:12px;color:var(--neon)}
   .foSecOn b{color:var(--ok)}
   .foSecOff{color:#6a727d;margin-top:13px;padding-top:9px;border-top:1px solid rgba(255,255,255,.06)}.foSecOff b{color:#828b96}
+  /* 친구 목록 머리 — 이름 하나(친구 N)와 오른쪽 ＋. 친구 추가는 팝업으로 갔다(목록이 맨 위에 오게) */
+  .foHead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:1px 1px 7px;min-height:24px}
+  .foHeadTx{font-size:var(--fs-sm);font-weight:800;letter-spacing:.5px;color:#8a9aa8}
+  .foHeadTx b{color:var(--ok)}
+  .foHeadAdd{flex:0 0 auto;width:24px;height:24px;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;
+    border-radius:var(--r-md);color:var(--neon-lt);background:rgba(255,59,59,.14);border:1px solid var(--neon-soft)}
+  .foHeadAdd svg{width:14px;height:14px}
+  .foHeadAdd:active{transform:translateY(1px)}
   .foList{display:flex;flex-direction:column;gap:5px}
   .foRow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;border-radius:var(--r-md);
     background:linear-gradient(180deg,rgba(26,28,34,.88),rgba(11,12,16,.9));border:1px solid var(--metal-edge)}
@@ -3515,6 +3523,18 @@
   .ptDisband{flex:0 0 auto;padding:4px 9px;border-radius:var(--r-md);cursor:pointer;font-family:inherit;font-size:var(--fs-sm);font-weight:700;
     color:#ffd2d2;background:rgba(200,50,50,.18);border:1px solid rgba(255,80,80,.4)}
   .ptDisband:active{transform:translateY(1px)}
+  .ptHeadBtns{flex:0 0 auto;display:flex;align-items:center;gap:5px}
+  /* 파티 찾기 = 파티 색(보라 · .msTab2[data-bt=party]와 같은 계열) */
+  .ptFind{flex:0 0 auto;padding:4px 9px;border-radius:var(--r-md);cursor:pointer;font-family:inherit;font-size:var(--fs-sm);font-weight:700;
+    color:#c9b6ff;background:rgba(138,86,255,.16);border:1px solid rgba(138,86,255,.45)}
+  .ptFind:active{transform:translateY(1px)}
+  /* 파티 만들기 줄(게시판 맨 위) — 목록 행과 같은 폭, 점선으로 '비어 있는 자리'임을 말한다 */
+  .ptMake{width:100%;display:flex;align-items:center;gap:9px;padding:9px;margin-bottom:7px;cursor:pointer;
+    font-family:inherit;text-align:left;border-radius:var(--r-md);
+    color:#c9b6ff;background:rgba(138,86,255,.1);border:1px dashed rgba(138,86,255,.5)}
+  .ptMake:active{transform:translateY(1px)}
+  .ptMake .ptAddAv{color:#c9b6ff;border-color:rgba(138,86,255,.6);background:rgba(138,86,255,.14)}
+  .ptMake b{font-size:var(--fs-lg);font-weight:700}
   .ptGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
   .ptSlot{display:flex;align-items:center;gap:7px;min-height:40px;padding:5px 8px;border-radius:var(--r-lg);overflow:hidden}
   .ptSlot.fill{background:linear-gradient(180deg,rgba(28,30,36,.9),rgba(11,12,16,.92));border:1px solid var(--metal-edge)}
@@ -3539,7 +3559,12 @@
   /* 친구 초대 팝업 */
   .ptInviteOv{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.6)}
   .ptInviteOv.hide{display:none}
-  .ptInviteCard{width:100%;max-width:300px;height:516px;max-height:calc(100% - 16px);display:flex;flex-direction:column;overflow:hidden}
+  /* #phone 에 붙는 팝업 — 마을 시트(63)·네비(62) 위로 올라와야 보인다 */
+  .ptInviteOv.top{z-index:110}
+  .ptInviteCard{width:100%;max-width:300px;height:516px;max-height:calc(100% - 16px);display:flex;flex-direction:column;overflow:hidden;
+    /* ⚠ 공용 카드 면(.cpCard 계열)은 반투명이다 — 유즈맵 목록 위에 뜨면 뒤 카드가 글자 사이로 비쳐 못 읽는다.
+       이 팝업은 목록 위에 뜨는 것이 기본이므로 면을 불투명하게 덮는다(친구 초대·추가·파티 찾기 공통). */
+    background:linear-gradient(180deg,rgba(19,15,17,.975),rgba(6,6,8,.985))}
   .ptInviteHead{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:11px 13px;
     border-bottom:1px solid rgba(255,255,255,.08);font-size:var(--fs-lg);font-weight:800;color:#e8eef5}
   .ptInviteX{background:none;border:none;color:#8a939e;font-size:var(--fs-xl);cursor:pointer;padding:2px 5px}
@@ -3562,7 +3587,10 @@
   .fStar{font-size:var(--fs-sm);color:#ffce4a;flex:0 0 auto}
   .fL2{font-size:var(--fs-xs);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#79838f}
   .fL2-online{color:#6fcf8f}.fL2-ingame{color:#cBa35a}
-  .foRow.off{opacity:.55}
+  /* 오프라인 = 어두운 상자. 섹션 라벨로 나누지 않고 물성으로 나눈다(밝은 위 / 어두운 아래) */
+  .foRow.off{background:linear-gradient(180deg,rgba(13,14,18,.92),rgba(7,8,11,.94));border-color:rgba(255,255,255,.05)}
+  .foRow.off .fL1{color:#8b939d}
+  .foRow.off .fAva{filter:saturate(.3) brightness(.72)}
   .fStatLbl{flex:0 0 auto;font-size:var(--fs-sm);font-weight:700;padding:4px 9px;border-radius:var(--r-md);white-space:nowrap}
   .fStat-ingame{color:#ffce8a;background:rgba(255,192,74,.1);border:1px solid rgba(255,192,74,.3)}
   .fStat-offline{color:#828b96;background:var(--glass);border:1px solid var(--metal-edge)}
@@ -13992,6 +14020,8 @@ function showAppScreen(id){ setInGame(false);
   if(id!=='townScreen' && typeof _townOpen!=='undefined' && _townOpen && typeof twLeave==='function') twLeave();
   if(typeof tw3dDetach==='function') tw3dDetach();
   for(const id of ['hbRoundSheet','hbBoostModal','hbGrowModal','hbInfoModal','hbDailySheet','hbAttSheet']){ const el=document.getElementById(id); if(el) el.classList.add('hide'); }
+  // 소셜 팝업(#phone 에 붙어 z-index 110)은 화면을 바꿔도 남아 화면을 덮는다 — 여기서 함께 접는다
+  for(const id of ['ptFindOv','foAddOv','ptInviteOv','foCtxOv']){ const el=document.getElementById(id); if(el) el.classList.add('hide'); }
   if(id!=='mapSelect' && id!=='modeSheet' && typeof stopMapLive==='function') stopMapLive();   // 유즈맵 화면 떠나면 실시간 갱신 정지
   ['ov','lobby','rooms','createPanel','pwPanel'].forEach(x=>{const e=document.getElementById(x); if(e)e.classList.add('hide');});
   APP_SCREENS.forEach(s=>{ const e=document.getElementById(s); if(e) e.classList.toggle('hide', s!==id); });
@@ -14524,14 +14554,17 @@ async function refreshFriendBadge(){ if(!sbReady()) return; try{ const {incoming
 // 하단 영역 탭 전환(채팅/파티/친구)
 let _bottomTab='chat';
 function setBottomTab(t){ _bottomTab=t;
-  if(t!=='party' && typeof closePartyInvite==='function') closePartyInvite();
-  if(t!=='friend' && typeof closeFriendCtx==='function') closeFriendCtx();
+  if(t!=='party'){ if(typeof closePartyInvite==='function') closePartyInvite(); if(typeof closePartyFind==='function') closePartyFind(); }
+  if(t!=='friend'){ if(typeof closeFriendCtx==='function') closeFriendCtx(); if(typeof closeFriendAdd==='function') closeFriendAdd(); }
   document.querySelectorAll('.msTab2').forEach(b=>b.classList.toggle('on', b.dataset.bt===t));
   const wrap=document.getElementById('msChatWrap'), chat=document.getElementById('msChat'), panel=document.getElementById('msPanelBody');
   if(!wrap||!chat||!panel) return;
   if(t==='chat'){ wrap.style.display='flex'; panel.style.display='none'; chat.scrollTop=chat.scrollHeight; }
   else { wrap.style.display='none'; panel.style.display='block';
-    if(t==='party') renderPartyTab(); else renderFriendList(); } }
+    if(t==='party'){ renderPartyTab();
+      // 파티가 없으면 '이전 단계'인 게시판이 먼저 뜬다 — 빈 슬롯만 보여 주면 어디서 사람을 구하는지 알 수 없다.
+      if(!hasParty()) openPartyFind(); }
+    else renderFriendList(); } }
    // 구버전 호환
 // ── 임시 친구(기능 확인용) + 파티(내가 초대하면 무조건 수락) ──
 const _tempFriends=[
@@ -14583,7 +14616,9 @@ function friendCellHTML(f, right, rowAttrs){ const st=presenceOf(f), fav=friendF
     +avatarHTML(f.nick,'fAva',st)
     +'<span class="fMeta"><span class="fL1">'+escHtml(f.nick)+'<span class="fTag">#'+escHtml(f.tag||'----')+'</span>'+(fav?'<span class="fStar" title="즐겨찾기">★</span>':'')+'</span>'
     +'<span class="fL2 fL2-'+st+'">'+escHtml(friendStatusSub(f))+'</span></span>'+(right||'')+'</div>'; }
-function friendSortCmp(a,b){ return (friendFav(a)?0:1)-(friendFav(b)?0:1) || statusRank(presenceOf(a))-statusRank(presenceOf(b)); }
+// 접속 상태가 1순위 — 목록이 '밝은 상자 → 어두운 상자'로 자연히 갈린다(섹션 라벨을 없앤 대가).
+// 즐겨찾기는 같은 상태 안에서만 위로 올린다.
+function friendSortCmp(a,b){ return statusRank(presenceOf(a))-statusRank(presenceOf(b)) || (friendFav(a)?0:1)-(friendFav(b)?0:1); }
 // 친구 행 우측 액션(즐겨찾기 토글 / 파티 초대·참가 / 귓속말)
 function friendActions(f){ const id=f.id||f.uid, st=presenceOf(f), busy=friendBusy(f);
   let h='<span class="foActs">';
@@ -14630,6 +14665,11 @@ let _party=null, _invitableCache=[];
 function ensureParty(){ if(!_party) _party={members:[{uid:(AUTH.user&&AUTH.user.uid)||'me', nick:myNick(), tag:(AUTH.user&&AUTH.user.tag)||'', leader:true}]}; return _party; }
 function inParty(uid){ return ensureParty().members.some(m=>m.uid===uid); }
 const PARTY_MAX=8;
+// '파티를 꾸린 상태'인가 — 이름이 붙었거나(만들기·참가) 나 말고 누가 더 있으면 파티다.
+// 파티 탭에 들어왔을 때 게시판을 자동으로 띄울지 여기서 갈린다.
+function hasParty(){ return !!(_party && (_party.name || _party.members.length>1)); }
+function iAmLeader(){ const m=_party&&_party.members&&_party.members[0]; return !_party || !!(m&&m.leader&&m.uid===myUid2()); }
+function myUid2(){ return (AUTH.user&&AUTH.user.uid)||'me'; }
 async function partyInvite(uid){ const f=_invitableCache.find(x=>x.id===uid) || _friendIndex[uid]; if(!f) return; if(inParty(uid)) return;
   if(RT.active && !f.temp && f.id){   // 실연동: 초대장 전송 → 상대가 수락해야 합류
     try{ await rtEnsurePartyDB();
@@ -14648,6 +14688,7 @@ async function partyKick(uid){ if(RT.active && RT.partyId){ try{ await _sb.from(
   if(!_party) return; _party.members=_party.members.filter(m=>m.leader||m.uid!==uid); renderPartyTab(); }
 async function partyDisband(){ closePartyInvite();
   if(RT.active && RT.partyId){ try{ await _sb.from('parties').delete().eq('id',RT.partyId); }catch(e){ console.warn(e); } RT.partyId=null; }
+  pbLeave();                       // 게시판에 올라가 있던 자리도 되돌린다
   _party=null; renderPartyTab(); }
 async function renderPartyTab(){ const body=document.getElementById('msPanelBody'); if(!body) return;
   // 게스트도 본다 — 로컬 파티 + 임시 친구 초대는 sb 없이 동작한다(실연동 초대만 rtEnsurePartyDB 쪽에서 갈린다)
@@ -14657,12 +14698,111 @@ async function renderPartyTab(){ const body=document.getElementById('msPanelBody
     if(m){ cells+='<div class="ptSlot fill'+(m.leader?' leader':'')+'">'
         +avatarHTML(m.nick,'ptAva')
         +'<span class="ptName"><b class="ptNick">'+escHtml(m.nick)+'</b><em class="ptRole">'+(m.leader?'파티장':'#'+(m.tag||'----'))+'</em></span>'
-        +(m.leader?'':'<button class="ptKick" onclick="partyKick(\''+m.uid+'\')" title="내보내기">✕</button>')
+        +((m.leader||!iAmLeader())?'':'<button class="ptKick" onclick="partyKick(\''+m.uid+'\')" title="내보내기">✕</button>')
         +'</div>';
     } else { cells+='<div class="ptSlot empty" onclick="openPartyInvite()"><span class="ptAddAv">+</span><span class="ptAddLbl">친구 초대</span></div>'; }
   }
-  const dis=_party.members.length>1 ? '<button class="ptDisband" onclick="partyDisband()">파티 해제</button>' : '';
-  body.innerHTML='<div class="ptHead"><span class="ptTitle">내 파티 <b>'+_party.members.length+'</b> / '+PARTY_MAX+'</span>'+dis+'</div><div class="ptGrid">'+cells+'</div>'; }
+  // 머리 = [파티 이름 n/8] … [파티 찾기] [해제|나가기]. 게시판(이전 단계)으로 가는 길을 늘 열어 둔다.
+  const lead=iAmLeader();
+  const dis=hasParty() ? '<button class="ptDisband" onclick="partyDisband()">'+(lead?'파티 해제':'파티 나가기')+'</button>' : '';
+  body.innerHTML='<div class="ptHead"><span class="ptTitle">'+escHtml(_party.name||'내 파티')+' <b>'+_party.members.length+'</b> / '+PARTY_MAX+'</span>'
+    +'<span class="ptHeadBtns"><button class="ptFind" onclick="openPartyFind()">파티 찾기</button>'+dis+'</span></div>'
+    +'<div class="ptGrid">'+cells+'</div>'; }
+// ══════════════════════════════════════════════════════════════════════════
+// 🎪 파티 게시판 — 파티 탭의 '이전 단계'
+// ──────────────────────────────────────────────────────────────────────────
+//  · 유즈맵과 무관한 **자유 파티**다. 사람을 먼저 모으고 뭘 할지는 모여서 정한다
+//    (그래서 한 파티로 여러 맵을 몰려다닐 수 있다).
+//  · 파티 탭에 들어왔는데 파티가 없으면 이 게시판이 먼저 뜬다 → 찾아 들어가거나 만든다.
+//  · ⚠ 서버 parties 테이블에는 이름·공개 칼럼이 없다. 지금은 로컬 게시판(임시친구와 같은 결)이고,
+//    실연동은 parties 에 name/open 을 추가한 뒤 pbRooms()/pbJoin() 둘만 갈아 끼우면 된다.
+// ══════════════════════════════════════════════════════════════════════════
+const PB_DEMO=[
+  {id:'pb1', name:'초보 환영 파티',  mates:['별빛','도토리','한여름']},
+  {id:'pb2', name:'네모네모 같이',   mates:['각설탕','폭풍전야','미르','청현','노을']},
+  {id:'pb3', name:'같이 돌실 분',    mates:['라온']},
+  {id:'pb4', name:'가시탑 정복대',   mates:['흑기사','바람돌이','세인','유월','단하','겨울잠','솔']},
+  {id:'pb5', name:'풀방 갑니다',     mates:['해준','민트초코','가랑비','토리','설아','은하','우주','한별']},
+  {id:'pb6', name:'오토배틀 연구소', mates:['계산기','전략가']},
+  {id:'pb7', name:'조용히 하실 분',  mates:['묵묵']},
+  {id:'pb8', name:'유즈맵 순례단',   mates:['방랑','나침반','오후세시','기록자']},
+];
+let _pbRooms=null, _pbMaking=false;
+function pbRooms(){ if(!_pbRooms) _pbRooms=PB_DEMO.map(function(r){ return {id:r.id, name:r.name, mates:r.mates.slice()}; });
+  return _pbRooms; }
+function pbFind(id){ return pbRooms().filter(function(r){ return r.id===id; })[0]||null; }
+function pbMineId(){ return (_party&&_party.pbId)||null; }
+// 내가 들어가 있으면 한 명 더 센다. 내가 만든 방은 실제 파티 인원이 곧 정원이다.
+function pbCount(r){ if(r.mine) return (_party&&_party.members.length)||1;
+  return r.mates.length + (r.joined?1:0); }
+// 게시판에서 내 자리를 뺀다 — 방을 옮기거나 파티를 해제할 때 양쪽에서 부른다(한쪽만 하면 인원이 샌다)
+function pbLeave(){ const id=pbMineId(); if(!id) return; const r=pbFind(id); if(!r) return;
+  if(r.mine) _pbRooms=_pbRooms.filter(function(x){ return x!==r; }); else r.joined=false; }
+function pbMeMember(lead){ return {uid:myUid2(), nick:myNick(), tag:(AUTH.user&&AUTH.user.tag)||'', leader:!!lead}; }
+function pbJoin(id){ const r=pbFind(id); if(!r) return;
+  if(pbMineId()===r.id) return;
+  if(pbCount(r)>=PARTY_MAX){ lobbyToast('파티가 가득 찼어요'); return; }
+  pbLeave();                                   // 다른 파티에 있었다면 먼저 빠진다
+  r.joined=true;
+  _party={ pbId:r.id, name:r.name,
+    members:r.mates.map(function(nk,i){ return {uid:'pb_'+r.id+'_'+i, nick:nk, tag:'', leader:i===0}; }).concat([pbMeMember(false)]) };
+  closePartyFind(); renderPartyTab(); if(typeof playSfx==='function') playSfx('ui_confirm');
+  lobbyToast('"'+r.name+'" 파티에 참가했어요'); }
+function pbToggleMake(){ _pbMaking=!_pbMaking; renderPartyFind(); }
+function pbCreate(){ const inp=document.getElementById('pbNameInput');
+  const name=((inp&&inp.value)||'').trim().slice(0,18) || (myNick()+'님의 파티');
+  pbLeave();
+  _party={ pbId:'pb_my', name:name, members:[pbMeMember(true)] };
+  _pbRooms=pbRooms().filter(function(r){ return r.id!=='pb_my'; });
+  _pbRooms.unshift({id:'pb_my', name:name, mates:[myNick()], mine:true});
+  _pbMaking=false; closePartyFind(); renderPartyTab();
+  if(typeof playSfx==='function') playSfx('ui_confirm');
+  lobbyToast('"'+name+'" 파티를 만들었어요 · 친구를 초대해 보세요'); }
+// ── 게시판 팝업 ──
+function openPartyFind(){ _lobbyOv('ptFindOv', closePartyFind); renderPartyFind();
+  if(typeof playSfx==='function') playSfx('ui_open'); }
+function closePartyFind(){ _pbMaking=false; popHide('ptFindOv'); }
+function pbRowHTML(r){ const n=pbCount(r), mine=pbMineId()===r.id, full=n>=PARTY_MAX;
+  const right = mine ? '<span class="fStatLbl fStat-busy">참가 중</span>'
+    : full ? '<span class="fStatLbl fStat-offline">가득</span>'
+    : '<button class="foAdd2" onclick="pbJoin(&#39;'+r.id+'&#39;)">참가</button>';
+  return '<div class="foRow ptRow'+((full&&!mine)?' off':'')+'">'+avatarHTML(r.name,'fAva')
+    +'<span class="fMeta"><span class="fL1">'+escHtml(r.name)+'</span>'
+    +'<span class="fL2'+(mine?' fL2-online':'')+'">'+escHtml(r.mates[0]||myNick())+' · '+n+'/'+PARTY_MAX+'</span></span>'
+    +right+'</div>'; }
+function renderPartyFind(){ const ov=document.getElementById('ptFindOv'); if(!ov) return;
+  const rooms=pbRooms();
+  const head='<div class="ptInviteHead"><span>파티 찾기</span><button class="ptInviteX" onclick="closePartyFind()">✕</button></div>';
+  const make=_pbMaking
+    ? '<div class="ptInviteSearch"><div class="foAdd">'
+      +'<input id="pbNameInput" placeholder="파티 이름" maxlength="18" autocomplete="off" onkeydown="if(event.key===&#39;Enter&#39;)pbCreate()">'
+      +'<button class="foSearchBtn" onclick="pbCreate()">만들기</button></div></div>'
+    : '<div class="ptInviteSearch"><button class="ptMake" onclick="pbToggleMake()"><span class="ptAddAv">+</span><b>파티 만들기</b></button></div>';
+  const list = rooms.length ? rooms.map(pbRowHTML).join('') : '<div class="foEmpty">열려 있는 파티가 없어요</div>';
+  ov.innerHTML='<div class="ptInviteCard">'+head+make+'<div class="foList ptInviteList">'+list+'</div></div>';
+  if(_pbMaking){ const i=document.getElementById('pbNameInput');
+    if(i){ i.value=myNick()+'님의 파티'; setTimeout(function(){ try{ i.focus(); i.select(); }catch(e){} },30); } } }
+// ── 로비 팝업 껍데기(공용) ──
+// ⚠ #phone 에 붙인다 — 소셜은 유즈맵 도크와 마을 시트를 오가므로 화면 하나에 매달면 반대쪽에서 안 보인다.
+//   .top 은 시트(63)·네비(62) 위로 올리는 변형.
+function _lobbyOv(id, onClose){ let ov=document.getElementById(id);
+  if(!ov){ ov=document.createElement('div'); ov.id=id; ov.className='ptInviteOv top';
+    (document.getElementById('phone')||document.body).appendChild(ov);
+    ov.addEventListener('click', function(e){ if(e.target===ov) onClose(); }); }
+  ov.classList.remove('hide'); return ov; }
+// ── ＋ 친구 추가 팝업 — 검색·요청 보내기. 입력 id(#foSearch/#foSearchResult)는 그대로라
+//    friendSearch()/friendAdd() 를 손대지 않고 재사용한다.
+function openFriendAdd(){ const ov=_lobbyOv('foAddOv', closeFriendAdd);
+  ov.innerHTML='<div class="ptInviteCard">'
+    +'<div class="ptInviteHead"><span>친구 추가</span><button class="ptInviteX" onclick="closeFriendAdd()">✕</button></div>'
+    +'<div class="ptInviteSearch"><div class="foAdd">'
+    +'<input id="foSearch" placeholder="닉네임 또는 닉#코드" maxlength="30" autocomplete="off" onkeydown="if(event.key===\'Enter\')friendSearch()">'
+    +'<button class="foSearchBtn" onclick="friendSearch()">검색</button></div></div>'
+    +'<div class="ptInviteList"><div id="foSearchResult">'
+    +'<div class="foEmpty">닉#코드로 정확히 입력하면 바로 찾을 수 있어요</div></div></div></div>';
+  const inp=document.getElementById('foSearch'); if(inp) setTimeout(function(){ try{ inp.focus(); }catch(e){} },30);
+  if(typeof playSfx==='function') playSfx('ui_open'); }
+function closeFriendAdd(){ popHide('foAddOv'); }
 // 친구 초대 팝업
 function openPartyInvite(){ const host=document.getElementById('mapSelect'); if(!host) return;
   let ov=document.getElementById('ptInviteOv');
@@ -14692,12 +14832,14 @@ function filterInviteRows(q){ _inviteQuery=q; const ov=document.getElementById('
   const qq=(q||'').trim().toLowerCase(); const rows=ov.querySelectorAll('.ptInviteList .foRow'); let vis=0;
   rows.forEach(function(r){ const m=!qq || (r.getAttribute('data-nm')||'').indexOf(qq)>=0; r.style.display=m?'':'none'; if(m) vis++; });
   const nm=ov.querySelector('.ptNoMatch'); if(nm) nm.style.display=(rows.length && vis===0)?'':'none'; }
+const FO_PLUS_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5.5v13M5.5 12h13"/></svg>';
 async function renderFriendList(){ const body=document.getElementById('msPanelBody'); if(!body) return;
   // 게스트도 본다 — 임시 친구(_tempFriends)로 전체 레이아웃이 그려진다. 실계정 목록·요청만 로그인 시 합류.
+  // ⛔ 맨 위는 목록이다 — 친구 추가(검색)는 헤더 오른쪽 ＋ 로 들어간 팝업이 맡는다.
   body.innerHTML =
-    '<div class="foSecLbl foSecAdd"><span data-ico="invite"></span> 친구 추가</div>'
-    +'<div class="foAdd"><input id="foSearch" placeholder="추가할 친구의 닉네임 또는 닉#코드" maxlength="30" onkeydown="if(event.key===\'Enter\')friendSearch()"><button class="foSearchBtn" onclick="friendSearch()">친구 검색</button></div>'
-    +'<div id="foSearchResult"></div><div id="foReqSec"></div>'
+    '<div class="foHead"><span class="foHeadTx">친구 <b id="foCount">0</b></span>'
+    +'<button class="foHeadAdd" onclick="openFriendAdd()" title="친구 추가" aria-label="친구 추가">'+FO_PLUS_SVG+'</button></div>'
+    +'<div id="foReqSec"></div>'
     +'<div id="foFriends" class="foList"><div class="foEmpty">불러오는 중…</div></div>';
   paintIcons(body);
   try{ const {friends,incoming}=sbReady()? await sbLoadFriends() : {friends:[],incoming:[]};
@@ -14708,12 +14850,10 @@ async function renderFriendList(){ const body=document.getElementById('msPanelBo
     const fRow=function(f){ const id=f.id||f.uid;
       const rowAttrs='onpointerdown="lpStart(event,\''+id+'\')" onpointerup="lpEnd()" onpointerleave="lpEnd()" oncontextmenu="return false"';
       return friendCellHTML(f, friendActions(f), rowAttrs); };
-    const onF=allF.filter(f=>presenceOf(f)!=='offline'), offF=allF.filter(f=>presenceOf(f)==='offline');   // 온라인/오프라인 그룹
-    let html='';
-    if(!allF.length) html='<div class="foEmpty">아직 친구가 없어요</div>';
-    else { html += '<div class="foSecLbl foSecOn">온라인 <b>'+onF.length+'</b></div>'+onF.map(fRow).join('');
-      if(offF.length) html += '<div class="foSecLbl foSecOff">오프라인 <b>'+offF.length+'</b></div>'+offF.map(fRow).join(''); }
-    document.getElementById('foFriends').innerHTML = html;
+    // 한 목록 — 정렬이 이미 온라인→오프라인이고, 오프라인은 .foRow.off(어두운 상자)로 갈린다
+    document.getElementById('foFriends').innerHTML =
+      allF.length ? allF.map(fRow).join('') : '<div class="foEmpty">아직 친구가 없어요</div>';
+    { const c=document.getElementById('foCount'); if(c) c.textContent=allF.length; }
     updateFriendBadge(incoming.length);
   }catch(e){ const f=document.getElementById('foFriends'); if(f) f.innerHTML='<div class="foEmpty">불러오기 실패</div>'; console.warn(e.message||e); } }
 async function friendSearch(){ const inp=document.getElementById('foSearch'), res=document.getElementById('foSearchResult'); if(!inp||!res) return;

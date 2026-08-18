@@ -234,6 +234,14 @@ node test/bench-strike.mjs 400 80 4   # 대규모 전투 렌더 벤치(유닛수
   - **계측은 `dqNote(kind,n)` 한 곳으로만** 들어온다. 지금 붙어 있는 곳: `hbKill`(kill) · `hbBreakChest`(chest) · `hmBuyUpg`/`hmBuyUpgQuiet`(upg) · `hbSettle`(round) · `hbPlaceStruct`(build) · `hbStep`(play, 1초 단위) · `_runSummary`(umRun/umWin) · `dgWin`(dgWin) · `hbMateRoll`/`profPetRoll`/`profUseGearTicket`(gacha) · `hbBuyBoost`(boost). 스모크가 **정적으로** 이 12곳을 검사한다(빠지면 퀘스트가 영원히 0이다).
   - ⚠ **`dqNote`는 초당 여러 번 들어온다**(처치). 저장·배지·리렌더는 **완료된 순간과 시트가 열려 있을 때만** 한다 — 매번 하면 전투 중 프레임이 죽는다.
   - ☰의 `!` 배지(`#hbGrowDot`)는 **성장과 일일이 함께 쓴다**(`renderHomeStats`). 더보기 격자 안의 점은 **글자 없는 점**이어야 한다 — 그 격자는 '아이콘만'이 규칙이고 스모크가 `textContent`를 검사한다.
+- **👥 유즈맵 소셜 — 친구는 한 목록, 파티는 게시판이 앞에 선다**(2026-08-18).
+  - **친구**: 맨 위는 목록이다. 머리줄은 `.foHead`(친구 N + ＋) 하나뿐이고 **온라인/오프라인 섹션 라벨은 없앴다** — `friendSortCmp`가 **접속 상태를 1순위**로 정렬해 온라인이 위로 오고(즐겨찾기는 같은 상태 안에서만), 오프라인은 `.foRow.off`가 **어두운 상자**로 갈라 준다. ⚠ `.foRow.off`를 `opacity`로 흐리게 두면 '어두운 상자'가 아니라 '흐린 상자'가 된다 — 면 색을 낮춘다(스모크가 두 행의 배경 휘도를 비교한다).
+  - **친구 추가**는 목록 위 검색줄에서 `openFriendAdd()` 팝업으로 옮겼다. 입력 id(`#foSearch`/`#foSearchResult`)를 그대로 유지해 `friendSearch()`/`friendAdd()`는 손대지 않았다.
+  - **파티**: 탭에 들어왔는데 `hasParty()`가 거짓이면 **게시판(`openPartyFind`)이 먼저 뜬다** — 빈 슬롯만 보여 주면 어디서 사람을 구하는지 알 수 없다. 하단 내 파티(`renderPartyTab`)는 그대로 남고, 머리에 `파티 찾기` 버튼이 상시 있다.
+  - 파티는 **맵과 무관한 자유 파티**다(사람을 먼저 모으고 뭘 할지는 모여서 정한다 → 한 파티로 여러 맵을 돌 수 있다). 게시판 상태는 `_pbRooms` + `_party.pbId`이고, **자리 반납은 `pbLeave()` 한 곳**에서만 한다 — 방을 옮길 때와 파티를 해제할 때 양쪽에서 부르지 않으면 인원이 샌다.
+  - ⚠ 서버 `parties` 테이블에는 이름·공개 칼럼이 없어 지금은 **로컬 게시판**(임시친구 `_tempFriends`와 같은 결)이다. 실연동은 `parties`에 `name`/`open`을 추가한 뒤 `pbRooms()`/`pbJoin()` 둘만 갈아 끼우면 된다.
+  - 팝업 껍데기는 **`_lobbyOv(id, onClose)` 하나**로 모았고 `#phone`에 붙인다(`.ptInviteOv.top`, z-index 110) — 소셜은 유즈맵 도크와 마을 시트를 오가므로 화면 하나에 매달면 반대쪽에서 안 보인다. `showAppScreen`이 화면을 바꿀 때 이 팝업들을 함께 접는다(안 접으면 `#phone`에 남아 다음 화면을 덮는다).
+  - ⚠ 공용 카드 면(`.cpCard` 계열)은 반투명이다 — 유즈맵 목록 위에 뜨는 `.ptInviteCard`는 뒤 카드가 글자 사이로 비쳐 못 읽는다. 이 카드만 면을 불투명하게 덮었다.
 - ⚠ **`.curBar.bare`는 click-through다**(`pointer-events:none`, `.res`·`.hudSet`만 되살림). 되살릴 자식을 빠뜨리면 그 UI는 '눌러도 아무 일 없고 뒤 화면이 대신 반응'한다 — 설정(☰ `#curSettingsBtn`)이 이 때문에 HOME·마을·유즈맵·상점·정비 다섯 화면에서 죽어 있었고, 클릭이 `#homeScreen`까지 내려가 캐릭터가 그리로 걸어갔다. **필드 탭 화이트리스트의 전제('UI는 자식이라 자동 제외')가 click-through 레이어에서는 깨진다** — `pointer-events:none`을 새로 줄 때마다 여기를 볼 것. 또 `#curBar`의 설정은 `openAppSettings()`(앱용)를 불러야 한다. `openSettings()`는 인게임용이라 HOME에서도 임무 목표·배속·게임 나가기가 뜬다.
 - ⚠ **`applyVideo()`와 `fxLevel()`의 기본값을 맞출 것.** `fxLevel()`은 `G.opt.fx` 미설정을 `'full'`로 보는데 `applyVideo()`만 `G.opt.fx!=='full'`로 봐서, fx가 아직 없는 새 프로필은 **설정을 한 번 여는 것만으로** `body.lite`(`box-shadow`·`backdrop-filter` 전부 `none!important`)가 켜졌다 — 화면엔 '고화질'이라 떠 있는데 이펙트만 사라졌다. 지금은 둘 다 `fxLevel()`을 쓴다.
 - **🎥 가장자리 끌기 = 배치 고스트를 화면 끝으로 끌면 카메라가 따라간다**(2026-08-12). 방향 판정은 **`edgePush(fx,fy)` 하나**를 HOME 사냥터(`hbEdgePan`)와 관리자 건설 화면(`techEdgePan`)이 함께 쓴다 — 상수도 `EDGE_PAD`/`EDGE_SPD` 공용.

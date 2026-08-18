@@ -2422,6 +2422,7 @@ async function groupLobby(){
     assert(document.querySelector('#twChat.hide'),'파티를 눌렀는데 마을 시트가 열림(도크가 맡아야 한다)');
     assert(getComputedStyle($('msPanelBody')).display!=='none','파티 패널이 안 보임');
     assert(document.querySelector('#navBar .navIt.cur').dataset.sub==='party','소셜 선택 표시가 안 따라옴');
+    closePartyFind();   // 파티가 없으면 게시판이 자동으로 뜬다 — 뒤 검사에 안 걸리게 접는다
     // 마을 채팅 시트가 열리면 소셜을 되찾아 가고, 유즈맵에 다시 오면 도크로 돌아온다
     openTown(); await sleep(40); twOpenChat(); await sleep(40);
     assert(document.querySelector('#twChat .msSocial'),'마을 시트가 소셜을 못 되찾음');
@@ -2429,6 +2430,64 @@ async function groupLobby(){
     twCloseChat(); navGo('map'); await sleep(60);
     assert($('msSocialDock').querySelector('.msSocial'),'유즈맵 복귀 시 소셜이 도크로 안 돌아옴');
     navSub('chat');   // 상태 정리(기본 채팅)
+    // 👥 친구 = 머리 한 줄(친구 N + ＋) · 온라인/오프라인 라벨 없이 밝기로 갈린다
+    navSub('friend'); await sleep(120);
+    { const body=$('msPanelBody');
+      assert(body.querySelector('.foHead'),'친구 머리줄이 없음');
+      assert(!body.querySelector('.foSecOn') && !body.querySelector('.foSecOff'),'온라인/오프라인 섹션 라벨이 아직 남아 있음');
+      assert(!body.querySelector('#foSearch'),'친구 추가 검색이 아직 목록 위에 남아 있음');
+      const rows=[...body.querySelectorAll('#foFriends .foRow')];
+      assert(rows.length>=2,'친구 행이 안 그려짐: '+rows.length);
+      // 정렬 = 온라인 먼저, 오프라인 나중. 뒤섞이면 '밝은 위 / 어두운 아래'가 깨진다
+      const offAt=rows.map(r=>r.classList.contains('off'));
+      assert(offAt.indexOf(true)<0 || offAt.lastIndexOf(false)<offAt.indexOf(true),
+        '오프라인 행이 온라인 사이에 섞임: '+offAt.map(b=>b?'x':'o').join(''));
+      // 오프라인 = 어두운 상자(투명도만으로 흐리게 두지 않는다)
+      const off=rows.find(r=>r.classList.contains('off')), on=rows.find(r=>!r.classList.contains('off'));
+      if(off&&on){
+        // ⚠ 면이 gradient 라 backgroundColor 는 투명하다 — backgroundImage 의 첫 색을 본다
+        const lum=el=>{ const g=getComputedStyle(el).backgroundImage||'';
+          const m=(g.match(/rgba?\(([^)]+)\)/)||[,'0,0,0'])[1].split(',').map(parseFloat);
+          return m[0]*0.3 + m[1]*0.59 + m[2]*0.11; };
+        assert(getComputedStyle(off).opacity==='1','오프라인을 투명도로 흐리게 처리함(어두운 면이어야 한다)');
+        assert(lum(off) < lum(on)-2,'오프라인 상자가 온라인보다 어둡지 않음: '+lum(off).toFixed(1)+' vs '+lum(on).toFixed(1)); }
+      // ＋ = 친구 추가 팝업(목록 위가 아니라 팝업 안에 검색이 있다)
+      body.querySelector('.foHeadAdd').click(); await sleep(80);
+      assert(visible($('foAddOv')),'＋ 를 눌렀는데 친구 추가 팝업이 안 뜸');
+      assert($('foAddOv').querySelector('#foSearch'),'팝업 안에 검색칸이 없음');
+      closeFriendAdd(); }
+    // 🎪 파티 = 게시판(이전 단계) → 참가/만들기 → 하단 내 파티
+    navSub('chat'); await sleep(30);
+    { _party=null; _pbRooms=null;
+      navSub('party'); await sleep(120);
+      assert(visible($('ptFindOv')),'파티가 없는데 게시판이 자동으로 안 뜸');
+      const rows=[...$('ptFindOv').querySelectorAll('.foRow')];
+      assert(rows.length===PB_DEMO.length,'게시판 목록이 안 그려짐: '+rows.length);
+      assert(rows.some(r=>r.querySelector('.fStat-offline')),'가득 찬 파티가 참가 불가로 안 막힘');
+      // 참가 → 내 파티가 그 이름·인원으로 채워진다
+      const target=PB_DEMO[0], before=target.mates.length;
+      pbJoin(target.id); await sleep(60);
+      assert(!visible($('ptFindOv')),'참가했는데 게시판이 안 닫힘');
+      assert(_party && _party.name===target.name,'참가한 파티 이름이 안 들어옴: '+(_party&&_party.name));
+      assert(_party.members.length===before+1,'내가 안 들어갔거나 인원이 안 맞음: '+_party.members.length);
+      assert($('msPanelBody').querySelector('.ptTitle').textContent.indexOf(target.name)>=0,'하단 내 파티에 이름이 안 뜸');
+      assert(!$('msPanelBody').querySelector('.ptKick'),'남의 파티인데 내보내기 버튼이 보임');
+      // 파티가 있으면 탭을 다시 눌러도 게시판이 자동으로 뜨지 않는다
+      navSub('chat'); await sleep(30); navSub('party'); await sleep(80);
+      assert(!visible($('ptFindOv')),'파티가 있는데 게시판이 또 뜸');
+      // 나가기 → 게시판 인원도 되돌아온다(한쪽만 지우면 인원이 샌다)
+      await partyDisband(); await sleep(40);
+      openPartyFind(); await sleep(60);
+      assert(pbCount(pbFind(target.id))===before,'나갔는데 게시판 인원이 안 줄어듦: '+pbCount(pbFind(target.id)));
+      // 만들기 → 내가 파티장이고 게시판 맨 위에 내 방이 선다
+      pbToggleMake(); await sleep(40);
+      const inp=$('pbNameInput'); assert(inp,'파티 이름 입력칸이 없음');
+      inp.value='스모크 파티'; pbCreate(); await sleep(60);
+      assert(_party && _party.name==='스모크 파티' && iAmLeader(),'파티를 못 만들었거나 파티장이 아님');
+      assert(pbRooms()[0].id==='pb_my','내가 만든 파티가 게시판 맨 위에 없음');
+      assert($('msPanelBody').querySelector('.ptDisband').textContent.indexOf('해제')>=0,'파티장인데 해제 버튼이 아님');
+      await partyDisband(); await sleep(40); closePartyFind(); _pbRooms=null; }
+    navSub('chat'); await sleep(30);
     // ⑧ 판형: 최상위 등폭 · 뒤로 = 정사각 · 하위 선택(.cur) = 최상위 선택(.on)과 같은 판·링
     navBack(); await sleep(40);
     { const ws=[...document.querySelectorAll('#navBar .navIt')].map(e=>e.getBoundingClientRect().width);
