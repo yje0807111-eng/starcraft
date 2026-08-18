@@ -2531,6 +2531,18 @@ async function groupLobby(){
     const rows=[...host.querySelectorAll('.lpRow')];
     assert(rows.length===LP_STATS.length,'포인트 줄 수가 표와 다름: '+rows.length);
     assert(host.querySelector('.lpFree b').textContent==='60','남은 포인트 표시가 다름: '+host.querySelector('.lpFree b').textContent);
+    // 2열 격자 · 설명 없이 '바뀌는 수치'만 · 이름은 잘리지 않는다
+    { const top=rows[0].getBoundingClientRect().top;
+      const per=rows.filter(e=>Math.abs(e.getBoundingClientRect().top-top)<2).length;
+      assert(per===2,'포인트 목록이 2열이 아님: 한 줄 '+per+'칸');
+      for(const e of rows){
+        assert(!e.querySelector('em'),'줄에 설명이 남아 있음: '+e.textContent.trim());
+        const nm=e.querySelector('.lpTx b');
+        assert(nm.scrollWidth<=nm.clientWidth+1,'이름이 잘림: '+nm.textContent);
+        const v=e.querySelector('.lpVal').textContent.trim();
+        assert(/^\+\d+%$/.test(v),'값이 배수 하나가 아님: '+v); } }
+    // 이름은 수치 축과 같은 말을 쓴다 — 같은 것을 두 이름으로 부르지 않는다
+    assert(lpDef('critd').name===CS_AXES.critd.name,'치명 피해 이름이 축과 다름: '+lpDef('critd').name);
     // 화면 버튼으로 찍는다 — 렌더러·상태·전투가 한 줄로 이어지는지 본다
     rows[0].querySelector('.lpBtn').click(); await sleep(40);
     assert(lpPts('atk')===1,'버튼을 눌렀는데 안 찍힘');
