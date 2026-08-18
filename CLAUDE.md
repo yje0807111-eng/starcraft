@@ -4,6 +4,7 @@
 - Deliverable: a single self-contained file `sc-ums-web.html` — a mobile StarCraft-style usemap (vanilla JS + inline CSS/HTML, Three.js 3D, Supabase realtime). No build step and **no test framework**.
 - **Read `ARCHITECTURE.md` first** — section map (jump by banner search strings), global state, frame pipeline, M3D API, and a pitfall list. Update it when structure changes.
 - **Read `DESIGN.md` before any visual change** — 확정된 스타일 규칙(각진 SF · 볼륨 3단 · 라운드 0/3/6/9 · 역할별 액센트). 값은 고민하지 말고 표에서 꺼낼 것. **일괄 치환 금지** — 화면을 만지는 김에 그 화면만 체크리스트를 통과시킨다(touch-it-fix-it).
+- **Read `ART.md` before generating any image asset** — 장면 이미지(유즈맵 키 아트·배경)의 모델·비율·프롬프트 템플릿·후처리 규격. **프롬프트를 새로 쓰지 말 것**: 고정 블록 4개를 그대로 복사하고 장면 한 칸만 바꾼다. 세션이 바뀌어도 같은 스타일이 나와야 하므로 이 문서가 단일 소스다. 새로 뽑았으면 §6에 전문을 추가하고 **`node scripts/art-lint.mjs`** 로 규격(고정 블록·금지 표현·맵 표↔`UMAP_BG` 일치)을 확인할 것.
 - Behavioral verification = **`npm test`** (headless smoke suite: `test/smoke.js` + `test/run-smoke.mjs`, groups lobby/game/sandbox, ~10s) plus browser preview for visuals. Run it after every change; add a `step(...)` when you add a feature. Never claim "done" without it passing.
 - After editing inline JS, **syntax-check** the non-module `<script>` (extract it and `new vm.Script(...)`).
 - Edit with exact-string replacements; match the surrounding style and line endings.
