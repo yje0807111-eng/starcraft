@@ -3894,6 +3894,10 @@ async function groupGame(){
     const ph=$('phone'), faked=ph && !ph.classList.contains('inGame'); if(faked) ph.classList.add('inGame');
     // ⚠ 헤드리스에선 three.js(esm.sh)가 막혀 로딩 게이트(#opening)가 안 걷힌다 — 히트 테스트를 그게 먼저 먹는다
     const op=$('opening'), opUp=op && !op.classList.contains('hide'); if(opUp) op.classList.add('hide');
+    // ⚠ '인게임'을 흉내만 내면(.inGame 만 붙임) 앱 화면이 그대로 남는다 — 실제 진입은 hideAppScreens()가 전부 숨긴다.
+    //    로그인 화면(#auth)이 떠 있으면 그 우상단 톱니(.authGear)가 ☰ 자리를 먹어 히트 테스트가 헛돈다.
+    const shown=[...document.querySelectorAll('.appScreen')].filter(e=>!e.classList.contains('hide'));
+    shown.forEach(e=>e.classList.add('hide'));
     try{
       if(!G.coopBoss && typeof spawnCoopBoss==='function') spawnCoopBoss(1);
       skipIf(!G.coopBoss,'공용 보스 없음');
@@ -3910,6 +3914,7 @@ async function groupGame(){
       if(typeof closeSettings==='function') closeSettings();
       return 'z'+getComputedStyle($('hud')).zIndex+' — 차단막 위';
     } finally { if(typeof closeBossArena==='function') closeBossArena();
+      shown.forEach(e=>e.classList.remove('hide'));
       if(opUp) op.classList.remove('hide'); if(faked) ph.classList.remove('inGame'); } });
   await step('무기 업그레이드 구매', ()=>{ skipIf(typeof upgCost!=='function'||typeof buyGachaUp!=='function','업그레이드 API 없음');
     hackCredits(); const b=G.gachaLuckLv||0; buyGachaUp(); assert((G.gachaLuckLv||0)===b+1,'gachaLuckLv 미증가'); return 'Lv'+G.gachaLuckLv; });
