@@ -2477,7 +2477,11 @@ async function groupLobby(){
       { const soEl=dock.querySelector('.msSocial'), so=getComputedStyle(soEl), ds=getComputedStyle(dock);
         assert(so.borderTopStyle==='none','소셜이 자기 테두리를 갖고 있음(카드 안 카드)');
         assert(so.backgroundImage==='none','소셜이 자기 면을 갖고 있음(카드 안 카드)');
-        assert(ds.borderTopStyle!=='none','두 구역을 가르는 칸막이가 없음');
+        // ⚠ 칸막이는 카드 벽까지 닿지 않는다 — 끝까지 그으면 T자로 부딪혀 '판 두 장'으로 보인다
+        const dv=getComputedStyle(dock,'::before');
+        assert(dv.content!=='none','두 구역을 가르는 칸막이가 없음');
+        assert(ds.borderTopStyle==='none','칸막이를 벽까지 닿는 border 로 그림(양끝이 흘러야 한다)');
+        assert(/inset/.test(ds.boxShadow||''),'아래 구역이 한 단 내려앉은 그늘이 없음');
         // 칸막이는 카드 폭을 가로지른다(안쪽에 떠 있는 상자가 아니다)
         const db=dock.getBoundingClientRect(), pb=panel.getBoundingClientRect();
         assert(Math.abs(db.left-pb.left)<=1.5 && Math.abs(db.right-pb.right)<=1.5,
@@ -2497,7 +2501,9 @@ async function groupLobby(){
     // 👥 친구 = 머리 한 줄(친구 N + ＋) · 온라인/오프라인 라벨 없이 밝기로 갈린다
     navSub('friend'); await sleep(120);
     { const body=$('msPanelBody');
-      assert(body.querySelector('.foHead'),'친구 머리줄이 없음');
+      // 머리줄은 파티 머리줄과 **같은 컴포넌트**(.ptHead/.ptTitle) — 전용 클래스를 새로 만들면 안 된다
+      assert(body.querySelector('.ptHead .ptTitle'),'친구 머리줄이 파티 머리줄 규격(.ptHead)이 아님');
+      assert(!body.querySelector('.foHead'),'옛 전용 머리줄(.foHead)이 남아 있음');
       assert(!body.querySelector('.foSecOn') && !body.querySelector('.foSecOff'),'온라인/오프라인 섹션 라벨이 아직 남아 있음');
       assert(!body.querySelector('#foSearch'),'친구 추가 검색이 아직 목록 위에 남아 있음');
       const rows=[...body.querySelectorAll('#foFriends .foRow')];
@@ -2516,7 +2522,7 @@ async function groupLobby(){
         assert(getComputedStyle(off).opacity==='1','오프라인을 투명도로 흐리게 처리함(어두운 면이어야 한다)');
         assert(lum(off) < lum(on)-2,'오프라인 상자가 온라인보다 어둡지 않음: '+lum(off).toFixed(1)+' vs '+lum(on).toFixed(1)); }
       // ＋ = 친구 추가 팝업(목록 위가 아니라 팝업 안에 검색이 있다)
-      body.querySelector('.foHeadAdd').click(); await sleep(80);
+      body.querySelector('.ptFind.foAddBtn').click(); await sleep(80);
       assert(visible($('foAddOv')),'＋ 를 눌렀는데 친구 추가 팝업이 안 뜸');
       assert($('foAddOv').querySelector('#foSearch'),'팝업 안에 검색칸이 없음');
       closeFriendAdd(); }

@@ -3071,10 +3071,16 @@
      ⚠ 카드 안에 카드를 두지 않는다 — '다른 구역'임을 말하는 것은 둘뿐이다:
        ① 판을 가로지르는 1px 칸막이(+ 윗변 광선 1줄)  ② 살짝 가라앉은 면.
      그래서 .msSocial 이 갖고 있던 테두리·면·바깥여백은 여기서 전부 걷어낸다. */
-  #msSocialDock{flex:0 0 30%;min-height:156px;display:flex;flex-direction:column;overflow:hidden;
-    border-top:1px solid var(--metal-edge);background:rgba(0,0,0,.34);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
+  /* ⚠ 칸막이를 '끝에서 끝까지 그은 1px 선 + 밝은 하이라이트'로 두면 카드 양 벽에 T자로 부딪혀
+     판 두 장을 포갠 이음새처럼 보인다(실제로 그랬다). 자연스럽게 나누는 법은 둘:
+       ① 선은 양끝을 투명으로 흘려 벽에 닿기 전에 사라지게(카드의 붉은 헤어라인과 같은 문법)
+       ② 위에서 드리우는 그늘로 아래 구역이 '한 단 내려앉은' 것처럼 — 선보다 그늘이 더 많이 말한다 */
+  #msSocialDock{position:relative;flex:0 0 30%;min-height:156px;display:flex;flex-direction:column;overflow:hidden;
+    background:rgba(0,0,0,.34);
+    box-shadow:inset 0 9px 11px -11px rgba(0,0,0,.9);
     padding-bottom:6px}   /* 안쪽 목록이 카드 끝선에 딱 붙어 잘리지 않게 — 스크롤러가 아니라 도크에 준다 */
+  #msSocialDock::before{content:'';position:absolute;left:9%;right:9%;top:0;height:1px;z-index:1;pointer-events:none;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.13) 22%,rgba(255,255,255,.13) 78%,transparent)}
   /* 위 목록과 같은 처리 — 끝을 흐려 '안쪽에서 끝난다'로 읽히게 한다 */
   #msSocialDock .msPanelBody{-webkit-mask-image:linear-gradient(180deg,#000 calc(100% - 14px),transparent);
     mask-image:linear-gradient(180deg,#000 calc(100% - 14px),transparent)}
@@ -3516,14 +3522,9 @@
   .foSecAdd{display:flex;align-items:center;gap:4px;color:#aeb7c1;margin-top:2px}.foSecAdd .ic{width:12px;height:12px;color:var(--neon)}
   .foSecOn b{color:var(--ok)}
   .foSecOff{color:#6a727d;margin-top:13px;padding-top:9px;border-top:1px solid rgba(255,255,255,.06)}.foSecOff b{color:#828b96}
-  /* 친구 목록 머리 — 이름 하나(친구 N)와 오른쪽 ＋. 친구 추가는 팝업으로 갔다(목록이 맨 위에 오게) */
-  .foHead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:1px 1px 7px;min-height:24px}
-  .foHeadTx{font-size:var(--fs-sm);font-weight:800;letter-spacing:.5px;color:#8a9aa8}
-  .foHeadTx b{color:var(--ok)}
-  .foHeadAdd{flex:0 0 auto;width:24px;height:24px;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;
-    border-radius:var(--r-md);color:var(--neon-lt);background:rgba(255,59,59,.14);border:1px solid var(--neon-soft)}
-  .foHeadAdd svg{width:14px;height:14px}
-  .foHeadAdd:active{transform:translateY(1px)}
+  /* 친구 머리줄은 파티 머리줄(.ptHead/.ptTitle/.ptHeadBtns)을 그대로 쓴다 — 같은 구역의 같은 것이다.
+     여기서 더하는 건 버튼 색 하나뿐: 친구 = 짙은 파랑(하단 탭 .msTab2[data-bt=friend] 와 같은 계열) */
+  .ptFind.foAddBtn{color:#a8c4ff;background:rgba(58,110,224,.16);border-color:rgba(58,110,224,.5)}
   .foList{display:flex;flex-direction:column;gap:5px}
   .foRow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;border-radius:var(--r-md);
     background:linear-gradient(180deg,rgba(26,28,34,.88),rgba(11,12,16,.9));border:1px solid var(--metal-edge)}
@@ -14880,13 +14881,12 @@ function filterInviteRows(q){ _inviteQuery=q; const ov=document.getElementById('
   const qq=(q||'').trim().toLowerCase(); const rows=ov.querySelectorAll('.ptInviteList .foRow'); let vis=0;
   rows.forEach(function(r){ const m=!qq || (r.getAttribute('data-nm')||'').indexOf(qq)>=0; r.style.display=m?'':'none'; if(m) vis++; });
   const nm=ov.querySelector('.ptNoMatch'); if(nm) nm.style.display=(rows.length && vis===0)?'':'none'; }
-const FO_PLUS_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5.5v13M5.5 12h13"/></svg>';
 async function renderFriendList(){ const body=document.getElementById('msPanelBody'); if(!body) return;
   // 게스트도 본다 — 임시 친구(_tempFriends)로 전체 레이아웃이 그려진다. 실계정 목록·요청만 로그인 시 합류.
   // ⛔ 맨 위는 목록이다 — 친구 추가(검색)는 헤더 오른쪽 ＋ 로 들어간 팝업이 맡는다.
   body.innerHTML =
-    '<div class="foHead"><span class="foHeadTx">친구 <b id="foCount">0</b></span>'
-    +'<button class="foHeadAdd" onclick="openFriendAdd()" title="친구 추가" aria-label="친구 추가">'+FO_PLUS_SVG+'</button></div>'
+    '<div class="ptHead"><span class="ptTitle">친구 <b id="foCount">0</b></span>'
+    +'<span class="ptHeadBtns"><button class="ptFind foAddBtn" onclick="openFriendAdd()">친구 추가</button></span></div>'
     +'<div id="foReqSec"></div>'
     +'<div id="foFriends" class="foList"><div class="foEmpty">불러오는 중…</div></div>';
   paintIcons(body);
