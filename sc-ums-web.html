@@ -773,7 +773,7 @@
     background:none;border:none;border-radius:0;box-shadow:0 -9px 26px rgba(0,0,0,.6);
     transform:translateY(112%);transition:transform .26s cubic-bezier(.2,.8,.25,1);pointer-events:none}
   /* 판의 '면'은 여기(::before)다 — 요소 자체에 clip-path 를 걸면 시트 밖으로 나가 있는
-     #btCardCtl(top:-28px)까지 잘려 사라진다. z-index:-1 은 .bp/#btSheet 가 z-index 를 가져
+     자식(예: ⊘ 지정 해제 버튼)까지 잘려 사라진다. z-index:-1 은 .bp/#btSheet 가 z-index 를 가져
      쌓임 맥락을 만들기 때문에 판 안에만 머문다(자식 위로 새지 않는다).
      모서리 컷은 사냥터 카드(.hmUp)와 같은 7px — 위 두 귀퉁이만 자른다(아래는 화면 끝에 붙는다). */
   .bp::before,#btSheet::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;--ch:7px;
@@ -1117,19 +1117,9 @@
     box-shadow:0 -8px 24px rgba(0,0,0,.55);padding:9px 8px 12px;gap:0}
   #bpPlayers{padding-top:9px}   /* 관전 탭 기본(플레이어 그리드) 하단 높이 = 메인/유닛뽑기/업그레이드(#bpMain 9px)와 통일 — .bp 기본 10px에서 1px 보정 */
   #btSheet.open{transform:translateY(0)}
-  #btCardCtl{position:absolute;top:-28px;right:14px;z-index:31;width:46px;height:23px;padding:0;   /* 프로필 간소화/최소화 사이클 버튼(상단 우측 밖, 부양 버튼과 겹침 방지 위로) */
-    border:1px solid var(--panelBigEdge);border-bottom:none;border-radius:var(--r-bar) var(--r-bar) 0 0;
-    background:linear-gradient(180deg,rgba(30,30,30,.96),rgba(16,16,16,.98));color:#a6a6a6;
-    display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 -4px 12px rgba(0,0,0,.35);
-    transition:color .15s,background .15s,transform .1s}
-  #btSheet.open #btCardCtl{display:flex}
-  #btCardCtl:hover{color:#e6e6e6;background:linear-gradient(180deg,rgba(44,44,44,.98),rgba(24,24,24,.99))}
-  #btCardCtl:active{transform:translateY(1px)}
-  #btCardCtl svg{width:17px;height:17px;display:block;transition:transform .22s cubic-bezier(.2,.8,.25,1)}
-  #btCardCtl.up svg{transform:rotate(180deg)}
+  /* (제거) #btCardCtl — 하단 시트 접기(간소화/최소화) 버튼. 시트 높이는 이제 --bpBodyH 하나로 고정이다. */
   #btSheet.simple #btSheetBody,#unitCmd.simple,#playerProfile.simple{height:var(--bpBodyH);max-height:var(--bpBodyH)}   /* 간소화 = 1줄 그리드 · 높이 고정(건물 프로필 기준 ≈120px · 개인·다중·혼합 모두 동일) · 메인 프로필(#unitCmd)도 동일 규격 */
   #btSheet.simple .cmdG .cgGrid,#unitCmd.simple .cmdG .cgGrid{grid-template-rows:1fr}
-  #btSheet.mini #btSheetBody{display:none}   /* 최소화 = 본문 숨김(버튼 바만) */
   #btSheetBody,#unitCmd,#playerProfile{height:min(48vh,246px);max-height:min(48vh,246px);min-height:0;flex-direction:column}   /* 일꾼 지정 패널 크기로 고정(건물·유닛 모두 동일 높이) · #unitCmd는 display만 .on에서 제어 */
   #btSheetBody{display:flex}
   #techSkTip{position:fixed;z-index:60;max-width:210px;padding:7px 9px;border-radius:10px;pointer-events:none;   /* 🔮 스킬 롱프레스 설명 팝업 — 프로필 시트와 동일 글래스 톤 */
@@ -1152,9 +1142,13 @@
   #btDesel.on{display:flex}
   #btDesel svg{filter:drop-shadow(0 0 5px var(--neon-glow))}
   #btDesel:active{transform:translateY(1px);border-color:var(--neon);box-shadow:0 0 12px var(--neon-glow)}
-  body.cstMode #chatBar,body.cstMode #chatLog,body.cstMode #miniWrap,body.cstMode #deselTop,body.cstMode #mergeFab,body.cstMode #skillFab,body.cstMode #btCtl,body.cstMode #hud{display:none !important}   /* 건설=자체 상단바(.bmapTop)만 사용 → HUD 이중 표시 방지 */
-  /* 상단 HUD(크레딧·에너지·인구·라운드·킬·시계)는 모든 구역 공통 고정 — 건설 탭에서도 표시. 건설맵 상단바는 그 아래로 */
-  body.cstMode .bmapTop{top:0}   /* #hud 숨김 → 건설 자체 상단바를 최상단으로 */
+  body.cstMode #chatBar,body.cstMode #chatLog,body.cstMode #miniWrap,body.cstMode #deselTop,body.cstMode #mergeFab,body.cstMode #skillFab,body.cstMode #btCtl{display:none !important}
+  /* 🏗 관리자 건설은 자체 상단바(.bmapTop = 종족 탭·치트 버튼·자원)만 쓴다 → 게임 HUD 숨김(이중 표시 방지).
+     오토배틀 건설지(.stkCst)는 반대다 — 상단이 전투 화면과 **같아야** 하므로 #hud 를 그대로 두고
+     건설맵 쪽 자원 복제본(.bres)을 만들지 않는다(techMapRender 가 techWallet() 일 때 생략). */
+  body.cstMode:not(.stkCst) #hud{display:none !important}
+  body.cstMode .bmapTop{top:0}                 /* #hud 숨김 → 건설 자체 상단바를 최상단으로 */
+  body.cstMode.stkCst .bmapTop{top:34px}       /* #hud 표시 → 좌측 도구열(철거)이 시계 아래로 */
   /* 적군 유닛 구분(붉은 링) */
   .unit.foe .ubox:not(.model3d){box-shadow:0 0 0 2px rgba(255,66,66,.62),0 0 9px rgba(255,54,54,.5)!important}   /* 2D 폴백 전용 — 3D는 플레이어색 본체 틴트로 구분(적/아군 구분 안 함) */
   
@@ -3882,7 +3876,7 @@
     <div class="gview" id="vBoss"><canvas id="cvBoss"></canvas></div>
     <div class="gview" id="vBuild"><div id="cstMain"></div><canvas id="cstFog"></canvas><div id="cstLabels"></div><canvas id="techMap3d"></canvas><div id="cstPrev"><canvas id="cstPrevCv"></canvas><div id="cstPrevName"></div><div id="cstPrevInfo"></div><button id="cstPrevX" onclick="techHidePreview()"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg> 닫기</button></div>
       <!-- ExoMiner식 하단 인터페이스: 슬라이드 시트 + 아이콘 독 + 유닛 지정 해제(메인 deselTop 재사용 디자인) -->
-      <div id="btSheet"><button id="btCardCtl" onclick="techCardCycle(event)" title="간소화"></button><div id="btSheetBody"></div></div>
+      <div id="btSheet"><div id="btSheetBody"></div></div>
       <div id="techSkTip" class="hide"></div>   <!-- 🔮 스킬 롱프레스 설명 팝업(손 떼면 사라짐) -->
 
       <div id="btDesel" onclick="techDeselU(event)" title="유닛 지정 해제"><svg viewBox="0 0 24 24" width="26" height="26"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.4"/><line x1="6.2" y1="6.2" x2="17.8" y2="17.8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></div>
@@ -11928,6 +11922,7 @@ function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 
     const _zl=document.getElementById('zoneLabel');
     if(_zl) _zl.innerHTML=_hit? pIco(_e)+'<span class="zlTx">'+escHtml(_m[2])+'</span>' : escHtml(_z); }
   document.body.classList.toggle('cstMode', id==='Build');   // 건설 탭: 게임 HUD 숨김
+  document.body.classList.remove('stkCst');                  // 네모/관리자 경로 = 오토배틀 건설지 표시 해제(직스에서 빠져나온 잔여 클래스 제거)
   if(id==='Build' && typeof techUIEnsure==='function') techUIEnsure(); else { if(typeof techHidePreview==='function') techHidePreview(); if(window.M3D&&M3D.techMap3DStop) M3D.techMap3DStop();
     if(G.tech){ G.tech.sel=null; G.tech.selU=[]; G.tech.arm=null; if(G.tech.sheet){ G.tech.sheet.open=false; G.tech.sheet.sec=null; } } G._weldFx=null; }   // 건설 진입 렌더 / 이탈 시 프리뷰·라이브3D 정지 + 지정·시트·용접스파크 해제
   deselectUnit(); G.prodB=null; G.techB=null; G.mergeMode=false; { const mb=document.getElementById('mergeBtn'); if(mb) mb.classList.remove('on'); }
@@ -18360,10 +18355,10 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
   let tabs=''; ['union','swarm','aetherial'].forEach(r=>{ tabs+='<span class="techTab'+(r===race?' on':'')+'" onclick="techRace(event,\''+r+'\')">'+_TECH_RKO[r]+'</span>'; });
   const selE=(G.tech.sel!=null)?G.tech.ents.find(e=>e.eid===G.tech.sel):null, canDemo=selE&&selE.type==='bldg'&&((techGetBldg(race,selE.bk)||{}).k!==TECH_TREE[race].buildings[0].k);
   let res='';   // 🔁 메인 #hudR DOM을 그대로 클론(복사본 마크업 유지 X) — 메인 HUD 디자인 변경 시 자동 반영. 숫자만 이 탭 값으로 치환
-  { const _h=document.getElementById('hudR'); if(_h){ const c=_h.cloneNode(true);
+  //   ⚠ 오토배틀은 클론을 만들지 않는다 — 건설지에서도 진짜 #hud 가 그대로 떠 있어 두 번 표시된다(strikeHud 가 값을 채운다).
+  { const _h=document.getElementById('hudR'); if(_h && !techWallet()){ const c=_h.cloneNode(true);
     const set=(id,v)=>{ const el=c.querySelector('#'+id); if(el){ el.innerHTML=v; el.removeAttribute('id'); } };   // id 제거(중복 방지)
     set('hMin',(G.tech.inf?'∞':G.tech.credit)); set('hGas',(G.tech.inf?'∞':G.tech.energy)); set('hPop',G.tech.sup+'/'+G.tech.supCap);
-    if(techWallet()){ const gs=c.querySelector('.res.gas'); if(gs) gs.remove(); }   // 오토배틀 = 크레딧 단일 자원(에너지 칸 생략)
     res=c.innerHTML; } }
   const btns=(canDemo?'<span class="cbtn dz" onclick="techDemolish(event)">'+pIco('🗑','sm')+' 철거</span>':'')+'<span class="cbtn'+(G.tech.inf?' on':'')+'" onclick="techInf(event)" title="무제한 자원">∞</span><span class="cbtn'+(G.tech.nocool?' on':'')+'" onclick="techNocool(event)" title="즉시 건설·생산">⏱</span><span class="cbtn'+(techFogEnabled()?' on':'')+'" onclick="techFog(event)" title="전장의 안개">🌫️</span><span class="cbtn'+(G.tech.pcheck?' on':'')+'" onclick="techPCheck(event)" title="플레이어 색 확인">🎨</span><span class="cbtn" onclick="techReset(event)" title="리셋">↺</span>';
   // 좌측 도구열: 관리자는 종족 전환·치트 토글까지, 오토배틀은 게임에 필요한 철거만(테스트 도구 비노출)
@@ -18464,7 +18459,7 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
       if(e._skOn&&e._skOn.psi_cloak&&typeof SKILLS!=='undefined'&&SKILLS.psi_cloak) skZ+=_circ(e.x,e.y,SKILLS.psi_cloak.radius||0.12,'border:1px solid rgba(150,210,255,.55);background:radial-gradient(circle,rgba(150,210,255,.13),transparent 70%)');
       if(e._skOn&&e._skOn.siege) skZ+=_circ(e.x,e.y,0.024,'border:2px solid rgba(255,180,80,.7);background:radial-gradient(circle,rgba(255,180,80,.14),transparent 70%)');
       if(e._healF!=null){ const t=G.tech.ents.find(x=>x.eid===e._healF); if(t){ const p2=_techW2S(t.x,t.y); skZ+='<div class="tkHeal" style="left:'+(p2.x*100).toFixed(2)+'%;top:'+(p2.y*100).toFixed(2)+'%">'+((typeof SKILL_ICON!=='undefined'&&SKILL_ICON.heal)||'✚')+'</div>'; } } } }
-  map.innerHTML='<div class="bmap'+(techWallet()?' stk':'')+(G.tech.arm?' arming':'')+(G.tech.rallySet!=null?' rally':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none">'+_floor+hillZ+creepZ+psi+gasZone+mineZ+rallyZ+skZ+oobZ+'<div class="bmapTop">'+_side+'<div class="bres" onpointerdown="event.stopPropagation()">'+res+'</div></div>'+pcPanel+ents+foot+ghost+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div></div>';
+  map.innerHTML='<div class="bmap'+(techWallet()?' stk':'')+(G.tech.arm?' arming':'')+(G.tech.rallySet!=null?' rally':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none">'+_floor+hillZ+creepZ+psi+gasZone+mineZ+rallyZ+skZ+oobZ+'<div class="bmapTop">'+_side+(res?'<div class="bres" onpointerdown="event.stopPropagation()">'+res+'</div>':'')+'</div>'+pcPanel+ents+foot+ghost+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div></div>';
   const _lblLayer=document.getElementById('cstLabels'); if(_lblLayer) _lblLayer.innerHTML=labels+armBtns+resumeBtn;   // 남은시간 라벨 + 배치 ✓/✕ + ▶재개 버튼을 전용 오버레이(z8)에 → 3D 유닛·건물 위(리파이너리 등 큰 건물에 안 가림)
   techFogDraw(); }   // 🌫️ 건설 안개 오버레이 재그림(맵 재렌더마다)
 // ══ 🎨 플레이어 색 확인 구역 ══
@@ -18872,7 +18867,7 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
     else if(selUs.length){ const _selEgg=selUs.filter(e=>e.type==='egg'), _selLv=selUs.filter(e=>e.type==='larva');
       model=_selEgg.length?techEggModel(_selEgg):(_selLv.length?techLarvaProdModel(_selLv):(_allWk?techWorkerBuildModel(selUs):techUnitPanelModel(selUs))); } }   // 🥚 알 = 진화중(잠금) 프로필
   // 🔢 모든 건물 = 4그리드 1줄(간소화)로 높이 통일. 5개↑는 2줄로 높이지 않고 페이지로 넘김(슬롯 위치 보존). cm2=최소화(본문 숨김)만 별도
-  let cm=(G.tech.cardMode===2)?2:1; G.tech.cardMode=cm;   // cm0(2줄 전체) 제거 → 1(간소화) 또는 2(최소화)만. 사이클의 0은 1로 수렴
+  const cm=1; G.tech.cardMode=1;   // 카드 높이는 한 가지(간소화 1줄)뿐 — 접기 버튼을 없애면서 cm2(최소화)도 함께 사라졌다
   // 📦 보급 시트는 화면 전환이 아니라 하단 시트 토글이라, 건설지에서도 같은 호스트(#btSheetBody)에 그대로 올린다.
   //   모델(_stkSupplyModel)과 렌더(renderCmdGrid)는 전투 화면과 동일한 것을 쓴다 — UI를 두 번 만들지 않는다.
   let _sup=false, specHTML=null;
@@ -18881,13 +18876,11 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
   const _shown=!!((sh.open||_sup) && (model||specHTML) && G.tech.arm==null && G.tech.rallySet==null);   // 🗺 배치·착륙(arm)·랠리 지정 중 = 프로필 시트 잠시 내려 맵을 넓게 확보 · 모드 종료 시 자동 복귀
   if(model && !_sup){ model.compact=(cm===1); model.build=true; }   // 건설 탭 카드 스타일(업그레이드 시트는 모델이 이미 같은 스타일을 들고 온다)
   sheet.classList.toggle('open', _shown);
-  if(_shown){ sheet.classList.toggle('simple', cm===1); sheet.classList.toggle('mini', cm===2); }   // 숨길 땐 높이 클래스(.simple/.mini) 유지 → 현재 높이 그대로 아래로 슬라이드(150→204 즉시 확대로 위로 울컥이는 것 방지)
-  const cardCtl=document.getElementById('btCardCtl'); if(cardCtl){ const _up=(cm===2); cardCtl.classList.toggle('up',_up); cardCtl.innerHTML='<svg viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'; cardCtl.title=(_up?'프로필 펼치기':(cm===1?'하단으로 최소화':'간소화')); }
+  if(_shown) sheet.classList.add('simple');   // 숨길 땐 높이 클래스(.simple) 유지 → 현재 높이 그대로 아래로 슬라이드(즉시 확대로 위로 울컥이는 것 방지)
   body.classList.toggle('stkSpec', specHTML!=null);
   if(specHTML!=null) body.innerHTML=specHTML; else if(model) renderCmdGrid(body, model);
   const _liftSel=(G.tech.sel!=null)&&!!G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'&&x._lifted);   // 부양 건물 선택 = 바닥탭이 이동이라 금지버튼으로 해제
   const dz=document.getElementById('btDesel'); if(dz) dz.classList.toggle('on',(G.tech.selU||[]).length>0 || _liftSel || !!G.tech.selRes); }
-function techCardCycle(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return; G.tech.cardMode=((G.tech.cardMode||0)+1)%3; if(typeof playSfx==='function') playSfx('ui_open'); techPanelRender(); }   // 유닛 지정 해제 버튼(메인 deselTop 규약)
 function techDeselU(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;
   if(G.tech.arm!=null){ techCancelArm(ev); return; }   // 🚫 건설 배치 중 = 지정 해제(⊘) 버튼 = 건설 취소 → 일꾼 지정·프로필 복귀(맵에 올리지 않고도 취소)
   G.tech.selU=[]; G.tech.sel=null; G.tech.selRes=null;   // 유닛·건물(부양 포함)·중립 자원 지정 모두 해제
@@ -19652,7 +19645,7 @@ function strikeHideNemoChrome(on){ ['coopBossBar','mergeFab','skillFab','deselTo
   //   보스는 네모 전용 탭이다 — 직스로 넘어올 때 켜져 있으면 그대로 남는다(updatePbossFab 이 네모에서만 돈다).
   { const mt=document.querySelector('.tab[data-tab="Main"]'); if(mt) mt.style.display=on?'none':'';
     const bt=document.getElementById('bossTab'); if(bt) bt.style.display='none'; }
-  if(!on) document.body.classList.remove('cstMode');
+  if(!on) document.body.classList.remove('cstMode','stkCst');
 }
 function strikeStart(activePlayers, myNum, names){ if(typeof bgmStop==='function') bgmStop();
   G=newGame(); G.strike=true; G.phase='playing'; G.tab='Main'; G.sel=[]; G.selEnemy=null;
@@ -21040,7 +21033,11 @@ function strikeDrawTemple(ctx,w2s,scale,wx,wy,col,glow,worldR,opt){ opt=opt||{};
 
 // ── HUD(nemo 상단 재사용): 크레딧=내 골드, 에너지=내 광산, 인구=내 유닛, 시계=출격 ──
 function strikeHud(){ const S=STK; if(!S) return;
-  hudSetRes(Math.floor(S.me.gold), S.me.mines, S.me.units.length, '∞');   // 크레딧=골드 · 에너지=광산 · 인구=유닛 수(상한 없음)
+  // 🏗 건설지도 **같은 HUD**를 쓴다(전용 자원 바 없음). 인구 칸만 그 화면의 뜻으로 바꾼다 —
+  //    전장에서는 '내 유닛 수', 건설지에서는 '보급(sup/supCap)'. 나머지 두 칸·시계·☰ 는 그대로 같다.
+  const bld=(G.tab==='Build' && G.tech);
+  hudSetRes(Math.floor(S.me.gold), S.me.mines,                           // 크레딧=골드 · 에너지=광산
+    bld?G.tech.sup:S.me.units.length, bld?G.tech.supCap:'∞');
   hudSetTime(S.cycleT); }                                                // 좌상단 시계 = 출격까지(nemo와 같은 mm:ss)
 
 // ── 탭(nemo 탭+하단 .bp 재사용, 직스 전용 동작) ──
@@ -21054,6 +21051,7 @@ function _stkShowScreen(id, el){ const S=STK; if(!S) return;
   (el||document.querySelector('.tab[data-tab="'+id+'"]'))?.classList.add('on');
   const _bld=(id==='Build');   // 🏗 건설지 = 관리자 건설 화면(#vBuild + G.tech)을 그대로 사용
   document.body.classList.toggle('cstMode', _bld);
+  document.body.classList.toggle('stkCst', _bld);   // 오토배틀 건설지 = 상단 HUD 유지(관리자 건설과 갈리는 지점)
   document.querySelectorAll('.gview').forEach(v=>v.classList.toggle('on', v.id===(_bld?'vBuild':'vMain')));   // 직스 전장 캔버스 ↔ 건설 맵
   document.querySelectorAll('.bp').forEach(p=>p.classList.toggle('on', p.id==='bp'+id));        // 하단 패널은 nemo .bp 재사용
   if(_bld){ techSyncWallet(); if(typeof techUIEnsure==='function') techUIEnsure();   // 관리자와 동일한 맵·일꾼·프로필 렌더

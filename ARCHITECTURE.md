@@ -120,6 +120,9 @@
   특수무기는 `STK_WEAPONS` 표 하나(구입 그리드·사용 그리드·효과 분기) · 재고는 `STK.me.wpn` · 효과는 기존 필드(`hp`,`u.wait`)만 쓴다.
   건설 진입(`stkGoBuild`)은 `stkPickWorker()` 로 일꾼을 자동 지정한다(이미 지정된 것이 있으면 유지). 강화 칸 = `[공격력][체력][빈칸][광산]`,
   사용 그리드 = 구입과 같은 자리·같은 순서에 미보유는 `dim`(빈 칸으로 비우지 말 것). 하단 판 높이는 세 화면 모두 `--bpBodyH`.
+  건설지 상단은 전투 화면의 **`#hud` 그 자체**다 — `body.cstMode.stkCst` 가 `#hud` 를 살려 두고 `techMapRender` 는 `techWallet()` 이면 `.bres` 복제본을 만들지 않는다.
+  값은 `strikeHud()` 가 채우며 인구 칸만 건설지에서 `G.tech.sup/supCap` 로 바뀐다. **관리자 건설은 반대**(좌상단 종족 탭과 시계가 겹쳐 `#hud` 숨김 + `.bres`) — 갈리는 지점은 `stkCst` 클래스 하나.
+  하단 시트 접기 버튼(`#btCardCtl`)과 카드 최소화 모드(`cm2`)는 제거됐다 — 높이는 `--bpBodyH` 하나뿐.
 - **두 네비 바(HOME `NAV_TREE`/`navGo` · 유즈맵 `GTAB_TREE`/`gtabDrill`)는 같은 규칙을 쓴다**: 구역에 밖에서 들어오면 `reset()` 으로 늘 첫 하위. 이미 그 구역이면 되돌리지 않는다(안 그러면 자동화가 판매로 튕긴다).
 - **하단 구역의 톤·높이는 토큰 셋 하나가 정한다**(2026-08-14): `--panelBig`(판) · `--bpFace`(속살 검정) ·
   `--bpTile`(초상 방사) · **`--bpBodyH`**(본문 높이). ⚠ `--bpBodyH` 는 `min(28vh,140px)` 이라 `getPropertyValue()` 로 읽으면 원문 문자열이다 —

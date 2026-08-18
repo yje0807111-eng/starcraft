@@ -3542,6 +3542,21 @@ async function groupGame(){
             assert(h>=9,'건설 카드 이름이 뭉개짐(높이 '+h.toFixed(1)+'px): '+n.textContent.trim()); }
         } finally { if(keepH) de.style.setProperty('--bpBodyH',keepH); else de.style.removeProperty('--bpBodyH'); }
         await sleep(120); }
+      // 상단은 전투 화면과 **같은 #hud** 다(건설 전용 자원 바를 따로 만들지 않는다).
+      //   ⚠ 같은 DOM 인지까지 본다 — 예전엔 .bres 라는 복제본을 띄우고 #hud 를 숨겼다.
+      { const hud=$('hud'), r=e=>{ const b=e.getBoundingClientRect(); return [Math.round(b.x),Math.round(b.y),Math.round(b.width)]; };
+        assert(getComputedStyle(hud).display!=='none','건설지에서 상단 HUD 가 숨겨짐');
+        assert(!document.querySelector('.bres'),'건설지에 자원 바 복제본(.bres)이 있음 — #hud 와 이중 표시');
+        assert($('settingsBtn') && $('settingsBtn').getBoundingClientRect().width>0,'건설지에 ☰ 가 없음');
+        assert(/^\d\d:\d\d$/.test($('hTime').textContent.trim()),'건설지 좌상단 시계가 mm:ss 가 아님: '+$('hTime').textContent);
+        assert([...document.querySelectorAll('#hudR .res')].length===3,'건설지 자원 칸이 3개가 아님');
+        const bH=[r(hud),r($('hTime')),r($('settingsBtn'))];
+        strikeRestHome(); await sleep(200);
+        const mH=[r(hud),r($('hTime')),r($('settingsBtn'))];
+        assert(JSON.stringify(bH)===JSON.stringify(mH),'건설지 상단이 전투 화면과 다름: '+JSON.stringify(bH)+' vs '+JSON.stringify(mH));
+        strikeSwitchTab('Build'); await sleep(200); }
+      // 하단 시트 접기 버튼은 없앴다(높이는 --bpBodyH 하나로 고정)
+      assert(!$('btCardCtl'),'하단 시트에 접기 버튼(#btCardCtl)이 남아 있음');
       // 강화 = [공격력][체력][빈칸][광산] 자리 고정
       gtabSub('upg'); await sleep(160);
       { const n=[...document.querySelectorAll('#btSheetBody .cgSlot')].map(e=>{ const t=e.querySelector('.cgName');
@@ -3620,6 +3635,15 @@ async function groupSandbox(){
   await step('샌드박스 탭 구성(전투실험·건설 표시, 보스 숨김)', ()=>{ updatePbossFab();
     assert($('battleTab').style.display!=='none','battleTab 숨김'); assert($('buildTab').style.display!=='none','buildTab 숨김');
     assert($('bossTab').style.display==='none','bossTab이 샌드박스에 노출'); return 'ok'; });
+  // 관리자 건설은 자체 상단바(.bmapTop)를 쓴다 — 오토배틀의 '상단 HUD 유지' 규칙이 여기로 새면 안 된다.
+  await step('관리자 건설: 자체 상단바 유지(오토배틀 규칙 미오염)', async()=>{
+    switchTab('Build', document.querySelector('.tab[data-tab="Build"]')); await sleep(400);
+    assert(document.body.classList.contains('cstMode'),'건설 탭인데 cstMode 가 아님');
+    assert(!document.body.classList.contains('stkCst'),'관리자 건설에 오토배틀 전용 클래스(stkCst)가 붙음');
+    assert(getComputedStyle($('hud')).display==='none','관리자 건설에서 게임 HUD 가 보임(자체 상단바와 이중 표시)');
+    assert(document.querySelector('.bres'),'관리자 건설에 자원 바(.bres)가 없음');
+    assert(!$('btCardCtl'),'건설 시트에 접기 버튼(#btCardCtl)이 남아 있음');
+    return 'ok'; });
   // 관리자 건설 탭에서 병영을 고르면 레인저·화력병·의무병·저격수 카드가 실제로 그려져야 한다.
   await step('관리자 건설: 병영 생산 카드', async()=>{
     switchTab('Build', document.querySelector('.tab[data-tab="Build"]')); await sleep(400);
