@@ -412,7 +412,9 @@
   .hsInfo{flex:none;display:flex;flex-direction:column;align-items:center;gap:0;padding:2px 3px 3px;
     background:rgba(6,8,12,.66);border-top:1px solid rgba(255,255,255,.07)}
   .hsName{max-width:100%;font-size:10.5px;font-weight:700;color:#e8eef6;text-align:center;line-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .hsQty{font-family:var(--font-num);font-size:10px;font-weight:800;color:#aeb6c2;line-height:13px}
+  /* 수량 = 초상 좌상단 뱃지(줄이 아니다 — 두 곳에 같은 값을 두지 않는다) */
+  .hsCnt{position:absolute;top:3px;left:4px;z-index:5;font-family:var(--font-num);font-size:var(--fs-sm);font-weight:800;color:#fff;
+    padding:0 4px;border-radius:var(--r-bar);background:rgba(6,8,12,.78);border:1px solid rgba(255,255,255,.18);line-height:1.45;text-shadow:0 1px 2px #000}
   .hsVal{display:flex;align-items:center;gap:2px;font-family:var(--font-num);font-size:10px;font-weight:800;color:var(--gold);line-height:13px;text-shadow:0 1px 2px #000}
   .hsVal .riSm{width:9px;height:9px;object-fit:contain;display:block}
   /* 조합 결과 — "일반 › 에픽". 색은 등급색 두 개뿐이고 화살표는 중립이다 */
@@ -9646,19 +9648,19 @@ function renderCombinePanel(){ const tiersBox=document.getElementById('hsTiers')
     const to=(res.type==='transcend')?'transcend':res.nextTier;   // 초월도 등급표에 있으므로 키 그대로 넘긴다
     const rtName=GACHA_TIERS[to]?GACHA_TIERS[to].name:to;
     cells+=_hsCardHTML(gid, gu.displayName, "combineOneOfType('"+gid+"')",
-      gu.displayName+' ×3 → '+rtName, [_hsQty(list.length), _hsUpRow(list[0].gtier, to)]);
+      gu.displayName+' ×3 → '+rtName, list.length, [_hsUpRow(list[0].gtier, to)]);
   }
   grid.innerHTML=cells;
 }
 // ── 🃏 유닛 카드 한 장 — 지정·판매·조합이 **같은 마크업**을 쓴다(칸을 세 번 만들지 말 것) ──
-// 초상 아래로 [이름] + rows 가 쌓인다: 지정=[수량] · 판매=[수량][가격] · 조합=[수량][등급 화살표]
+// 수량(×N)은 초상 좌상단 뱃지(.hsCnt)다. 초상 아래로는 [이름] + rows: 지정=[] · 판매=[가격] · 조합=[등급 화살표]
 function _hsThumbHTML(gid){ const pk=GACHA_MODEL[gid]||GACHA_PROXY[gid], img=PORTRAIT_IMG[pk];
   return '<div class="hsThumb">'+(img?('<img src="'+img+'" draggable="false">')
     :(typeof unitSVG==='function'?unitSVG(GACHA_PROXY[gid]||'marine'):''))+'</div>'; }
-function _hsCardHTML(gid, name, act, title, rows){
+function _hsCardHTML(gid, name, act, title, qty, rows){
   return '<button class="hsCell" onclick="'+act+'" title="'+escHtml(title)+'">'+_hsThumbHTML(gid)
+    +'<span class="hsCnt">×'+qty+'</span>'
     +'<div class="hsInfo"><span class="hsName">'+escHtml(name)+'</span>'+(rows||[]).join('')+'</div></button>'; }
-function _hsQty(n){ return '<span class="hsQty">×'+n+'</span>'; }
 function _hsPrice(v){ return '<span class="hsVal">'+resIco('mineral','riSm')+'+'+v+'</span>'; }
 // 조합 결과 = "현재등급 → 다음등급". 등급색은 공용 TIER_COLOR 를 인라인 변수로만 받는다.
 function _hsUpRow(from, to){
@@ -9683,7 +9685,7 @@ function renderSelectPanel(){ const tiersBox=document.getElementById('hsTiers'),
   const _go=Object.keys(byGid).sort((a,b)=>byGid[b].length-byGid[a].length);   // 마릿수 많은 순(왼쪽부터)
   for(const gid of _go){ const list=byGid[gid], gu=GACHA_UNITS[gid]; if(!gu) continue;
     cells+=_hsCardHTML(gid, gu.displayName, "selectByGid('"+gid+"')",
-      gu.displayName+' '+list.length+'기 지정', [_hsQty(list.length)]);
+      gu.displayName+' '+list.length+'기 지정', list.length, []);
   }
   grid.innerHTML=cells;
 }
@@ -9704,7 +9706,7 @@ function renderSellPanel(){ const tiersBox=document.getElementById('hsTiers'), g
   for(const gid of _go){ const list=byGid[gid], gu=GACHA_UNITS[gid]; if(!gu) continue;
     const val=unitSellValue(list[0]);
     cells+=_hsCardHTML(gid, gu.displayName, "sellOneOfType('"+gid+"')",
-      gu.displayName+' 판매 +'+val, [_hsQty(list.length), _hsPrice(val)]);
+      gu.displayName+' 판매 +'+val, list.length, [_hsPrice(val)]);
   }
   grid.innerHTML=cells;
 }

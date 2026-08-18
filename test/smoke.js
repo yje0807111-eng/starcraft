@@ -2976,20 +2976,23 @@ async function groupGame(){
         if(box && box.children.length){
           assert(box.querySelector('.pdSeg'),'등급 띠가 공용 세그먼트 바(.pdSeg)가 아님: '+box.innerHTML.slice(0,60));
           assert(!box.querySelector('.hsTier'),'옛 등급 칩(.hsTier)이 남아 있음'); } }
-      // 카드 속 줄 구성 — 지정=[이름][수량] · 판매=[이름][수량][가격] · 조합=[이름][수량][등급→등급]
-      //   세 화면이 _hsCardHTML 한 함수를 쓴다. 칸을 따로 만들면 여기서 걸린다.
+      // 카드 구성 — 수량(×N)은 초상 좌상단 뱃지, 초상 아래는 [이름] + 화면별 줄.
+      //   지정=[] · 판매=[가격] · 조합=[등급→등급]. 세 화면이 _hsCardHTML 한 함수를 쓴다.
       { const rows=()=>{ const c=document.querySelector('#hsGrid .hsCell'); if(!c) return null;
-          return { name:!!c.querySelector('.hsName'), qty:!!c.querySelector('.hsQty'),
+          return { name:!!c.querySelector('.hsName'), cnt:!!c.querySelector('.hsCnt'),
                    val:!!c.querySelector('.hsVal'), up:!!c.querySelector('.hsUp'),
                    info:!!c.querySelector('.hsInfo') }; };
         gtabBack(); await sleep(120);
         let r=rows();
-        if(r){ assert(r.info && r.name && r.qty,'지정 카드에 이름/수량 줄이 없음: '+JSON.stringify(r));
-               assert(!r.val && !r.up,'지정 카드에 가격/등급 줄이 끼어 있음: '+JSON.stringify(r)); }
+        if(r){ assert(r.info && r.name && r.cnt,'지정 카드에 이름/수량 뱃지가 없음: '+JSON.stringify(r));
+               assert(!r.val && !r.up,'지정 카드에 가격/등급 줄이 끼어 있음: '+JSON.stringify(r));
+               // 수량은 뱃지 하나뿐 — 줄로도 내면 같은 값이 두 곳에 뜬다
+               const c=document.querySelector('#hsGrid .hsCell');
+               assert(!/×\s*\d/.test((c.querySelector('.hsInfo')||{}).textContent||''),'수량이 이름 아래 줄에도 중복 표시됨'); }
         openMainHome(); gtabSub('sell'); await sleep(140);
-        r=rows(); if(r){ assert(r.name && r.qty && r.val,'판매 카드에 이름/수량/가격 줄이 없음: '+JSON.stringify(r)); }
+        r=rows(); if(r){ assert(r.name && r.cnt && r.val,'판매 카드에 이름/수량/가격이 없음: '+JSON.stringify(r)); }
         gtabSub('combine'); await sleep(140);
-        r=rows(); if(r){ assert(r.name && r.qty && r.up,'조합 카드에 이름/수량/등급 줄이 없음: '+JSON.stringify(r));
+        r=rows(); if(r){ assert(r.name && r.cnt && r.up,'조합 카드에 이름/수량/등급이 없음: '+JSON.stringify(r));
           const t=document.querySelector('#hsGrid .hsUp').textContent.replace(/\s+/g,'');
           assert(/[가-힣]+›[가-힣]+/.test(t),'조합 등급 줄이 "A › B" 꼴이 아님: '+t); }
         gtabBack(); await sleep(120); }
