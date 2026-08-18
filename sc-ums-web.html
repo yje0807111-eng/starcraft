@@ -3297,41 +3297,90 @@
      ⚠ 목록 카드에 붙으면 한 덩어리로 보인다 — 채팅 한 줄(17px)만큼 띄우고 그만큼 낮춘다(margin + calc).
        차지하는 총 높이가 그대로라 위 목록은 줄지 않는다. */
   #msSocialDock{position:relative;flex:0 0 calc(30% - 24px);min-height:168px;display:flex;flex-direction:column;overflow:hidden;
-    /* 화면 좌우를 꽉 채우는 띠 — #mapSelect 의 좌우 여백(13px)을 음수 마진으로 되돌린다.
-       목록 카드와 '다른 섹션'으로 읽혀야 하므로 폭·면·테두리를 전부 다르게 간다. */
-    margin:17px -13px 0;border-radius:0;
-    /* 3안 '터미널'(2026-08-14 확정) — 면을 완전 검정으로 떨어뜨리고 윗변만 금속선 하나.
-       목록 카드(회색 판)와 가장 멀어져 '읽는 로그'로 읽힌다. 모서리 컷은 쓰지 않는다(면이 검정이라 컷이 안 읽힌다). */
-    background:linear-gradient(180deg,#0a0a0a,#000);
-    border-top:1px solid var(--metal-edge);
-    padding-bottom:6px}   /* 안쪽 목록이 띠 끝선에 딱 붙어 잘리지 않게 — 스크롤러가 아니라 도크에 준다 */
+    /* B안(2026-08-18 확정) — 목록 카드와 **같은 규격의 두 번째 카드**, 무게만 한 단 낮다.
+       좌우 변·라운드·테두리를 목록 카드에 맞춘다(전폭 띠였던 옛 3안 '터미널'은 좌우가 26px 어긋나
+       '화면 밖으로 샌' 것처럼 보였다). 폭만 바뀌므로 높이 계산(목록 5장·파티 8칸)은 그대로다. */
+    margin:17px 0 0;border-radius:var(--r-bar);
+    /* 면은 목록 카드(--panelBig)보다 한 톤 어둡게 — 같은 반투명 재질이라 뒤 배경이 똑같이 비친다.
+       완전 검정으로 떨어뜨리면 목록 '항목'(.mapItem)과 같은 색이 되어 구역이 아니라 큰 항목 한 장으로 읽힌다. */
+    background:linear-gradient(180deg,rgba(18,18,18,.9),rgba(9,9,9,.92));
+    border:1px solid var(--panelBigEdge);
+    /* 안쪽 목록이 판 끝선에 딱 붙어 잘리지 않게 — 스크롤러가 아니라 도크에 준다.
+       ⚠ 6px → 4px(DESIGN 간격 표의 값): 도크는 box-sizing:border-box + 높이 고정이라 **아랫변 테두리 1px 이
+       그대로 안높이에서 빠진다**. 파티 8칸은 여유가 1px 뿐이라 그 1px 에 스크롤이 생겼다(실제로 겪었다).
+       바깥 높이는 그대로라 목록 '5장' 계산은 건드리지 않는다. */
+    padding-bottom:4px}
+  /* 헤어라인 — 목록 카드와 같은 붉은 광선이되 **윗변 한 줄뿐**이다(카드는 위·아래 두 줄).
+     두 줄씩 넷이 되면 어느 판이 주인공인지 사라진다. 이 한 줄이 위아래를 같은 화면으로 묶는다. */
+  #msSocialDock::before{content:'';position:absolute;left:0;right:0;top:0;height:1px;z-index:2;pointer-events:none;
+    background:linear-gradient(90deg,transparent,rgba(255,59,59,.72) 18%,rgba(255,59,59,.72) 82%,transparent);
+    box-shadow:0 0 7px -1px rgba(255,59,59,.5)}
   #msSocialDock .msSocial{flex:1;min-height:0;margin-top:0;border:0;border-radius:0;background:none;box-shadow:none}
   #msSocialDock .msSocial::before{display:none}
   #msSocialDock .msTabs2{display:none}
-  /* ── 3안 '터미널' 본문 — 채팅·친구·파티가 같은 결을 쓴다 ───────────────
-     공통 규칙: 면은 도크의 검정 하나뿐(안쪽 카드에 또 판을 깔지 않는다) · 구분은 1px 헤어라인 ·
+  /* ── 도크 본문 — 채팅·친구·파티가 같은 결을 쓴다 ───────────────
+     공통 규칙: 면은 도크의 것 하나뿐(안쪽 카드에 또 판을 깔지 않는다) · 구분은 1px 헤어라인 ·
      액센트는 채팅 청록 하나. ⚠ .foRow/.ptSlot 은 마을 시트와 공용이라 여기서만 덮는다. */
-  /* 채팅 — 줄 앞에 › 프리픽스, 이름은 한 단 죽여 본문이 먼저 읽히게 */
+  /* 채팅 (2026-08-18 · B+F+G안) — **이름이 본문보다 밝다**. 예전엔 반대여서 누가 말했는지가 본문보다 덜 읽혔다.
+     ⛔ 줄머리 `›` 프리픽스는 뺐다 — 친구·파티에서 이미 사라진 옛 '터미널' 문법이고, ` : ` 구분자와 겹쳐 줄머리에 기호가 둘이었다. */
   #msSocialDock .msChat .mcLine{color:#b8c2cc}
-  #msSocialDock .msChat .mcLine::before{content:'›  ';color:#4d5560;font-weight:800}
-  #msSocialDock .msChat .mcWho{color:#7f8b98}
-  #msSocialDock .msChatBar{border-top:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.02)}
-  /* 친구 — 카드 판을 걷고 헤어라인 목록으로 */
+  #msSocialDock .msChat .mcWho{color:#e8eef5}
+  /* 입력 바 — 판을 걷고 청록을 뺀다. ⛔ 시안은 DESIGN §2 에서 '지금 선택된 것' 전용(화면당 1곳)인데
+     전송 버튼과 범위 라벨 둘이 쓰고 있었다. 범위는 색이 아니라 **글자('전체'·'파티'·'친구')**가 말한다. */
+  #msSocialDock .msChatBar{border-top:1px solid rgba(255,255,255,.07);background:none}
+  #msSocialDock .msChatSend{color:#cfd8e3}
+  #msSocialDock .msChatSend:active{background:rgba(255,255,255,.07)}
+  #msSocialDock .msScopeLbl{color:#aeb7c1}
+  #msSocialDock .msScopeTrig{border-radius:var(--r-bar)}
+  /* 친구 — 카드 판을 걷고 헤어라인 목록으로 · **한 줄 조밀형**(2026-08-18 확정)
+     안높이가 131px 뿐이라 2줄·48px 행은 세 명째가 잘렸다(4명 목록에 scrollHeight 265). 한 줄로 눕혀 32px 로 낮춘다.
+     ⚠ 초상은 **동그란 채로 둔다** — 이 화면에서 유일한 원이지만 '사람'을 뜻하는 자리라 그렇게 정했다.
+       라운드 3단계(DESIGN §2)는 판·칸·버튼의 규칙이고 초상은 거기에 들지 않는다. 각지게 바꾸지 말 것. */
   #msSocialDock .foList{gap:0}
-  #msSocialDock .foRow{background:none;border:0;border-bottom:1px solid rgba(255,255,255,.055);border-radius:0;padding:7px 2px}
+  #msSocialDock .foRow{background:none;border:0;border-bottom:1px solid rgba(255,255,255,.055);border-radius:0;padding:3px 2px}
   #msSocialDock .foRow:last-child{border-bottom:0}
+  /* 이름·상태를 한 줄에 — 상태는 오른쪽 끝으로 밀어 이름줄을 비운다(2줄일 때 이름 밑에 붙어 있던 것) */
+  #msSocialDock .fMeta{flex-direction:row;align-items:center;gap:7px}
+  #msSocialDock .fL1{flex:0 1 auto}
+  #msSocialDock .fL2{margin-left:auto;font-size:var(--fs-xs);text-align:right}
+  /* ⚠ `.foRow` 로 한 번 더 좁힌다 — `avatarHTML()` 은 파티 슬롯 초상에도 `.fAva` 를 함께 붙이므로
+     `#msSocialDock .fAva` 로 두면 id 특이도가 `.ptAva`(18px)를 이겨 **파티 초상까지 커진다**(실제로 그랬다). */
+  #msSocialDock .foRow .fAva{width:22px;height:22px;font-size:var(--fs-sm)}   /* 원형(border-radius:50%)은 공용 규칙 그대로 */
+  #msSocialDock .foRow .fAvaDot{width:7px;height:7px;border-width:1.5px}
+  /* 액션은 글리프만 — 도크 규칙(안쪽에 또 판을 깔지 않는다)을 이 둘만 어기고 있었다.
+     ⚠ 그 판의 테두리(--metal-edge)는 목록 항목(.mapItem)이 쓰는 선과 같은 값이라, 도크 면에서 걷어낸 언어가 여기 남아 있던 것이다. */
+  /* ⚠ 행 높이를 정하는 것은 초상(22px)이 아니라 **이 버튼의 높이**다 — 여기를 키우면 곧바로 '4명 안 보임'이 된다.
+     세로만 26px 로 낮추고 가로는 30px 로 벌려 터치 면적을 지킨다(33² → 30×26, 72%). */
+  #msSocialDock .foActs{gap:2px}
+  #msSocialDock .foAct{width:30px;height:26px;background:none;border:0;color:#8b95a1}
+  #msSocialDock .foAct .ic{width:16px;height:16px}
+  #msSocialDock .foAct:active{color:#dfe7f0}
   #msSocialDock .foSecLbl{color:#6f7a86;margin:8px 2px 3px}
   #msSocialDock .foSecLbl::before{content:'›  ';color:#4d5560}
   #msSocialDock .foAdd input{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.10);border-radius:var(--r-bar)}
-  /* 파티 — 채워진 칸만 얇은 테두리, 빈 칸은 점선 대신 헤어라인 */
+  /* 파티 — **친구 행과 같은 한 줄 33px**(2026-08-18 확정). 소셜 세 탭(채팅 줄·친구 행·파티 행)이 한 결로 묶인다.
+     빈 자리는 칸이 아니라 아래 `.ptInviteLine` 한 줄이 맡는다(렌더러가 그렇게 낸다).
+     ⚠ 4명까지 스크롤 없이 보이고 그 위는 스크롤이다 — 친구 목록과 같은 규칙이다(옛 2열 8칸 무스크롤은 폐기). */
   #msSocialDock .ptHead{border-bottom:1px solid rgba(255,255,255,.09);padding-bottom:5px}
   #msSocialDock .ptTitle{color:#9aa4b0}
-  #msSocialDock .ptGrid{gap:1px}
-  #msSocialDock .ptSlot{border-radius:0}
+  #msSocialDock .ptGrid{grid-template-columns:1fr;gap:0}
+  #msSocialDock .ptSlot{border-radius:0;min-height:33px;padding:3px 2px;gap:8px}
+  #msSocialDock .ptSlot .fAva{width:22px;height:22px;font-size:var(--fs-sm)}   /* 친구 행 초상과 같은 크기 */
+  #msSocialDock .ptSlot .ptName{flex-direction:row;align-items:center;gap:7px}
+  #msSocialDock .ptNick{font-size:var(--fs-lg)}
+  #msSocialDock .ptRole{margin-left:auto;font-size:var(--fs-xs)}   /* 역할·태그는 오른쪽 끝 — 친구 행의 상태와 같은 자리 */
   #msSocialDock .ptSlot.fill{background:none;border:0;border-bottom:1px solid rgba(255,255,255,.055)}
-  #msSocialDock .ptSlot.fill.leader{background:none;border-bottom-color:rgba(0,229,255,.30)}
-  #msSocialDock .ptSlot.empty{background:none;border:0;border-bottom:1px solid rgba(255,255,255,.045);color:#5c646e}
-  #msSocialDock .ptSlot.empty:hover{background:rgba(255,255,255,.03)}
+  /* 파티장 = **빨강**(화면 성격색). 시안은 DESIGN 에서 '지금 선택된 것' 전용이고 파티장은 선택이 아니다. */
+  #msSocialDock .ptSlot.fill.leader{position:relative;padding-left:8px;background:none;border-bottom-color:rgba(255,59,59,.34)}
+  #msSocialDock .ptSlot.fill.leader::before{content:'';position:absolute;left:0;top:5px;bottom:5px;width:2px;
+    background:var(--neon);box-shadow:0 0 6px -1px rgba(255,59,59,.6)}
+  /* 내보내기 ✕ 도 글리프만 — 친구 액션 버튼과 같은 이유로 판을 걷는다(그 테두리는 목록 항목의 선이었다) */
+  #msSocialDock .ptKick{width:22px;height:22px;background:none;border:0;color:#7f8b98;font-size:var(--fs-sm)}
+  #msSocialDock .ptKick:active{color:#ff8a8a}
+  /* ⚠ 파티원이 3명만 돼도 이 줄이 접히는 자리 밑으로 내려간다 — 빈 칸을 없앤 대가로 **초대 입구가 사라졌다**.
+     스크롤러 바닥에 붙여 늘 손에 닿게 둔다. 면은 **도크의 것과 같은 검정**이다(새 판을 까는 게 아니라 글자가 비치는 것을 막는 것). */
+  #msSocialDock .ptInviteLine{position:sticky;bottom:0;z-index:1;margin-top:0;padding:7px 2px;
+    background:#0b0b0b}   /* ⚠ 반투명·그라데로 두면 밑을 지나가는 행이 글자 사이로 비쳐 겹쳐 보인다 — 불투명이어야 한다 */
   .twSheetHead{flex:none;display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px;
     font-size:var(--fs-xl);font-weight:800;color:#eaf1fb}
   .twSheetX{width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;
@@ -3731,6 +3780,7 @@
   .msChat .mcLine.whisper{display:block}
   .msChat .mcLine .mcWho{font-weight:800}
   .msChat .mcLine .mcSep{color:#6b7682;font-weight:700}
+  .msChat .mcT{float:right;margin-left:8px;font-style:normal;font-family:var(--font-num);font-size:var(--fs-xs);color:#5f6a76}
   .msChat .mcLine.me .mcWho{color:#7fd0ff}
   .msChat .mcLine.sc-party{color:#ffb454}
   .msChat .mcLine.sc-party .mcWho{color:#ffc266}
@@ -3798,7 +3848,9 @@
      ⚠ 스타일시트 끝의 제목-폰트 목록에서 .ptTitle 을 빼면 설정 쪽 동명 컴포넌트까지 바뀐다.
        그래서 목록은 그대로 두고 여기서 선택자 특이도로만 덮는다(.msSocial 안에서만). */
   .msSocial .ptTitle{font-family:var(--font-ko);font-weight:700}
-  .ptDisband{flex:0 0 auto;padding:4px 9px;border-radius:var(--r-md);cursor:pointer;font-family:inherit;font-size:var(--fs-sm);font-weight:700;
+  /* 해제/나가기 — 뜻(위험)은 색이 말하고, 모양은 옆의 `파티 찾기`(.ptFind)와 같은 각진 3px 이다.
+     ⚠ --r-md(6px)로 두면 한 줄에 라운드가 두 가지가 되어 같은 머리줄인데 버튼이 따로 논다. */
+  .ptDisband{flex:0 0 auto;padding:4px 9px;border-radius:var(--r-bar);cursor:pointer;font-family:inherit;font-size:var(--fs-sm);font-weight:700;
     color:#ffd2d2;background:rgba(200,50,50,.18);border:1px solid rgba(255,80,80,.4)}
   .ptDisband:active{transform:translateY(1px)}
   .ptHeadBtns{flex:0 0 auto;display:flex;align-items:center;gap:5px}
@@ -3832,6 +3884,11 @@
   .ptKick{flex:0 0 auto;width:16px;height:16px;border-radius:var(--r-bar);cursor:pointer;font-size:var(--fs-xs);line-height:1;
     color:var(--txt-hud);background:var(--glass);border:1px solid var(--metal-edge)}
   .ptKick:active{transform:translateY(1px)}
+  /* 빈 자리 한 줄 — 빈 칸 N개를 대신한다. 숫자는 오른쪽 끝(친구 행의 상태 자리와 같은 자리). */
+  .ptInviteLine{display:flex;align-items:center;gap:7px;margin-top:6px;padding:7px 6px;cursor:pointer;
+    border-top:1px solid rgba(255,255,255,.06);font-size:var(--fs-md);font-weight:700;color:#8b95a1}
+  .ptInviteLine em{margin-left:auto;font-style:normal;font-family:var(--font-num);font-size:var(--fs-sm);color:#6f7a86}
+  .ptInviteLine:active{color:#dfe7f0}
   /* 친구 초대 팝업 */
   .ptInviteOv{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.6)}
   .ptInviteOv.hide{display:none}
@@ -15264,14 +15321,18 @@ function _msScopeClose(){ const m=document.getElementById('msScopeMenu'); if(m) 
 function toggleMsScope(ev){ if(ev){ ev.stopPropagation(); ev.preventDefault(); } const m=document.getElementById('msScopeMenu'), d=document.getElementById('msScopeDD'); if(!m||!d) return;
   const willOpen=m.classList.contains('hide'); m.classList.toggle('hide', !willOpen); d.classList.toggle('open', willOpen); if(typeof playSfx==='function') playSfx('ui_tab'); }
 function pickMsScope(sc){ _msScopeClose(); if(typeof setChatScope==='function') setChatScope(sc); }
+// 줄의 시각 — **맨 앞에 넣지만 `float:right` 라 오른쪽 끝에 붙는다**(친구 행의 상태와 같은 자리).
+//   ⚠ flex 로 오른쪽에 붙이면 본문이 익명 flex 아이템이 되어 길어질 때 줄바꿈이 깨진다 — float 여야 본문이 감싸 흐른다.
+function _mcTime(){ const d=new Date();
+  return '<em class="mcT">'+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+'</em>'; }
 function addGlobalMsg(who, text, cls, scope){ const box=document.getElementById('msChat'); if(!box) return;
   const d=document.createElement('div'); d.className='mcLine sc-'+(scope||'all')+(cls?(' '+cls):'');
-  d.innerHTML=(who?'<span class="mcWho">'+escHtml(who)+'</span><span class="mcSep"> : </span>':'')+escHtml(text);
+  d.innerHTML=_mcTime()+(who?'<span class="mcWho">'+escHtml(who)+'</span><span class="mcSep"> : </span>':'')+escHtml(text);
   box.appendChild(d); while(box.children.length>60) box.removeChild(box.firstChild);
   box.scrollTop=box.scrollHeight; }
 function addWhisperMsg(fromNick, toNick, text){ const box=document.getElementById('msChat'); if(!box) return;
   const d=document.createElement('div'); d.className='mcLine whisper';
-  d.innerHTML='<span class="mcWhisper">'+escHtml(fromNick)+'<span class="mcArrow"> → </span>'+escHtml(toNick)+'</span><span class="mcSep"> : </span>'+escHtml(text);
+  d.innerHTML=_mcTime()+'<span class="mcWhisper">'+escHtml(fromNick)+'<span class="mcArrow"> → </span>'+escHtml(toNick)+'</span><span class="mcSep"> : </span>'+escHtml(text);
   box.appendChild(d); while(box.children.length>60) box.removeChild(box.firstChild); box.scrollTop=box.scrollHeight; }
 function findFriendByNick(nick){ const lo=(nick||'').toLowerCase(); for(const k in _friendIndex){ const f=_friendIndex[k]; if(f && (f.nick||'').toLowerCase()===lo) return f; } return null; }
 async function sendWhisper(nick, msg){ const f=findFriendByNick(nick);
@@ -15580,21 +15641,23 @@ async function partyDisband(){ closePartyInvite();
 async function renderPartyTab(){ const body=document.getElementById('msPanelBody'); if(!body) return;
   // 게스트도 본다 — 로컬 파티 + 임시 친구 초대는 sb 없이 동작한다(실연동 초대만 rtEnsurePartyDB 쪽에서 갈린다)
   ensureParty();
+  // ⛔ 빈 자리를 칸으로 늘어놓지 않는다(2026-08-18). 1명일 때 '＋ 친구 초대'가 **일곱 번** 반복돼
+  //   본문의 대부분이 정보 0인 반복 문구였다. 사람만 칸으로 두고, 빈 자리는 아래 한 줄이 대신 말한다.
   let cells='';
-  for(let i=0;i<PARTY_MAX;i++){ const m=_party.members[i];
-    if(m){ cells+='<div class="ptSlot fill'+(m.leader?' leader':'')+'">'
-        +avatarHTML(m.nick,'ptAva')
-        +'<span class="ptName"><b class="ptNick">'+escHtml(m.nick)+'</b><em class="ptRole">'+(m.leader?'파티장':'#'+(m.tag||'----'))+'</em></span>'
-        +((m.leader||!iAmLeader())?'':'<button class="ptKick" onclick="partyKick(\''+m.uid+'\')" title="내보내기">✕</button>')
-        +'</div>';
-    } else { cells+='<div class="ptSlot empty" onclick="openPartyInvite()"><span class="ptAddAv">+</span><span class="ptAddLbl">친구 초대</span></div>'; }
-  }
+  _party.members.forEach(function(m){ cells+='<div class="ptSlot fill'+(m.leader?' leader':'')+'">'
+      +avatarHTML(m.nick,'ptAva')
+      +'<span class="ptName"><b class="ptNick">'+escHtml(m.nick)+'</b><em class="ptRole">'+(m.leader?'파티장':'#'+(m.tag||'----'))+'</em></span>'
+      +((m.leader||!iAmLeader())?'':'<button class="ptKick" onclick="partyKick(\''+m.uid+'\')" title="내보내기">✕</button>')
+      +'</div>'; });
+  const open=PARTY_MAX-_party.members.length;
+  const invite = open ? '<div class="ptInviteLine" onclick="openPartyInvite()"><span class="ptAddAv">+</span>'
+    +'<span>친구 초대</span><em>빈자리 '+open+'</em></div>' : '';
   // 머리 = [파티 이름 n/8] … [파티 찾기] [해제|나가기]. 게시판(이전 단계)으로 가는 길을 늘 열어 둔다.
   const lead=iAmLeader();
   const dis=hasParty() ? '<button class="ptDisband" onclick="partyDisband()">'+(lead?'파티 해제':'파티 나가기')+'</button>' : '';
   body.innerHTML='<div class="ptHead"><span class="ptTitle">'+escHtml(_party.name||'내 파티')+' <b>'+_party.members.length+'</b> / '+PARTY_MAX+'</span>'
     +'<span class="ptHeadBtns"><button class="ptFind" onclick="openPartyFind()">파티 찾기</button>'+dis+'</span></div>'
-    +'<div class="ptGrid">'+cells+'</div>'; }
+    +'<div class="ptGrid">'+cells+'</div>'+invite; }
 // ══════════════════════════════════════════════════════════════════════════
 // 🎪 파티 게시판 — 파티 탭의 '이전 단계'
 // ──────────────────────────────────────────────────────────────────────────

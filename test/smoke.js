@@ -2853,21 +2853,59 @@ async function groupLobby(){
         const a=(c.length>3?c[3]:1);
         assert(a>=0.08 && a<=0.4 && c[0]<30 && c[1]<30 && c[2]<30,
           '목록 판이 카드보다 한 톤 어둡지 않음: '+getComputedStyle(top).backgroundColor);
-        // 소셜은 '다른 섹션' — 화면 좌우를 꽉 채우고, 실버 링 테두리에 검은 반투명 면이다
-        const ds=getComputedStyle(dock), pb=panel.getBoundingClientRect(), db=dock.getBoundingClientRect();
-        const ph=$('phone').getBoundingClientRect();
-        assert(db.left<=ph.left+1 && db.right>=ph.right-1,'소셜이 화면 좌우를 안 채움: '+db.left.toFixed(1)+'~'+db.right.toFixed(1));
-        assert(db.width>pb.width+10,'소셜이 목록 카드보다 넓지 않음');
+        // 소셜 = 목록 카드와 **같은 규격의 두 번째 카드**(B안) — 좌우 변·라운드·테두리가 카드와 맞는다
+        const ds=getComputedStyle(dock), ps=getComputedStyle(panel),
+              pb=panel.getBoundingClientRect(), db=dock.getBoundingClientRect();
+        assert(Math.abs(db.left-pb.left)<=1 && Math.abs(db.right-pb.right)<=1,
+          '소셜의 좌우 변이 목록 카드와 안 맞음: 카드 '+pb.left.toFixed(1)+'~'+pb.right.toFixed(1)+' / 소셜 '+db.left.toFixed(1)+'~'+db.right.toFixed(1));
         assert(db.top-pb.bottom>=4,'두 섹션이 붙어 있음: '+(db.top-pb.bottom).toFixed(1)+'px');
-        // 3안 '터미널'(2026-08-14 확정) — 면은 완전 검정, 위엔 금속선 1px. 모서리 컷은 쓰지 않는다.
-        //   목록 카드(회색 판)와 가장 멀어져 '읽는 로그'로 읽히는 것이 이 안의 요점이다.
-        { assert(ds.clipPath==='none','3안은 모서리 컷을 쓰지 않는다: '+ds.clipPath);
-          assert(parseFloat(ds.borderTopWidth)===1,'윗변 금속선이 1px 이 아님: '+ds.borderTopWidth);
-          const c=((ds.backgroundImage.match(/rgba?\(([^)]+)\)/)||[,'99,99,99'])[1]).split(',').map(function(x){return parseFloat(x);});
-          assert(c[0]<=12 && c[1]<=12 && c[2]<=12,'소셜 면이 검정이 아님: '+ds.backgroundImage.slice(0,60));
+        // B안(2026-08-18 확정) — 사방 1px 테두리 + 카드와 같은 라운드, 면은 카드보다 한 톤 어두운 **반투명**.
+        //   ⚠ 완전 검정으로 떨어뜨리면 목록 항목(.mapItem)과 같은 색이라 '큰 항목 한 장'으로 읽힌다.
+        { assert(ds.clipPath==='none','B안은 모서리 컷을 쓰지 않는다: '+ds.clipPath);
+          assert(parseFloat(ds.borderTopWidth)===1 && parseFloat(ds.borderLeftWidth)===1,
+            '사방 1px 테두리가 아님: '+ds.borderTopWidth+' / '+ds.borderLeftWidth);
+          assert(ds.borderTopLeftRadius===ps.borderTopLeftRadius,
+            '라운드가 목록 카드와 다름: 카드 '+ps.borderTopLeftRadius+' / 소셜 '+ds.borderTopLeftRadius);
+          const face=g=>{const m=((g.match(/rgba?\(([^)]+)\)/)||[,'99,99,99,1'])[1]).split(',').map(parseFloat);
+            return {lum:m[0]*.3+m[1]*.59+m[2]*.11, a:(m.length>3?m[3]:1)};};
+          const dF=face(ds.backgroundImage), pF=face(ps.backgroundImage),
+                iF=face(getComputedStyle(document.querySelector('#msList .mapItem')).backgroundImage);
+          assert(dF.a<1,'소셜 면이 불투명함(카드와 같은 반투명 재질이어야 한다): '+ds.backgroundImage.slice(0,60));
+          assert(dF.lum<pF.lum,'소셜 면이 목록 카드보다 어둡지 않음: '+dF.lum.toFixed(1)+' vs '+pF.lum.toFixed(1));
+          assert(dF.lum>iF.lum+3,'소셜 면이 목록 항목의 검정과 같음(구역이 아니라 큰 항목으로 읽힌다): '
+            +dF.lum.toFixed(1)+' vs '+iF.lum.toFixed(1));
+          // 붉은 헤어라인은 **윗변 한 줄뿐** — 카드(위·아래 두 줄)와 겹쳐 넷이 되면 주인공이 사라진다
+          { const be=getComputedStyle(dock,'::before'), af=getComputedStyle(dock,'::after');
+            assert(be.content!=='none','소셜 윗변 헤어라인이 없음');
+            assert(parseFloat(be.height)<=2,'소셜 헤어라인이 1px 이 아님: '+be.height);
+            const cols=[...((be.backgroundImage||'').matchAll(/rgba?\((\d+),\s*(\d+),\s*(\d+)/g))];
+            assert(cols.some(c=>+c[1]>=180 && +c[2]<=110 && +c[3]<=110),
+              '소셜 헤어라인이 붉은색이 아님: '+(be.backgroundImage||'').slice(0,80));
+            assert(af.content==='none','소셜 아랫변에도 헤어라인이 생김(윗변 한 줄뿐이다)'); }
           // 채팅·친구·파티가 같은 결 — 안쪽에 또 판을 깔지 않고 헤어라인으로만 나눈다
           setBottomTab('chat');
-          assert(getComputedStyle(dock.querySelector('.mcLine'),'::before').content!=='none','채팅 줄 프리픽스가 없음');
+          { const line=dock.querySelector('.mcLine'), lum=c=>{const m=((c||'').match(/[\d.]+/g)||[0,0,0]).map(Number);
+              return m[0]*.3+m[1]*.59+m[2]*.11; };
+            // ⛔ 줄머리 `›` 프리픽스는 뺐다 — ` : ` 구분자와 겹쳐 기호가 둘이었다
+            assert(getComputedStyle(line,'::before').content==='none','채팅 줄머리 › 프리픽스가 되살아남');
+            // 이름이 본문보다 **밝다**. 반대로 두면 누가 말했는지가 본문보다 덜 읽힌다(전에 그랬다)
+            const who=line.querySelector('.mcWho');
+            if(who) assert(lum(getComputedStyle(who).color) > lum(getComputedStyle(line).color)+8,
+              '채팅 이름이 본문보다 밝지 않음: '+getComputedStyle(who).color+' vs '+getComputedStyle(line).color);
+            // 시각은 오른쪽 끝(친구 행의 상태와 같은 자리) — float 여야 본문이 감싸 흐른다
+            const t=line.querySelector('.mcT');
+            assert(t,'채팅 줄에 시각이 없음');
+            assert(getComputedStyle(t).float==='right','시각이 오른쪽에 붙지 않음: '+getComputedStyle(t).float);
+            assert(/^\d{2}:\d{2}$/.test(t.textContent.trim()),'시각 표기가 HH:MM 이 아님: '+t.textContent);
+            // 입력 바 — 판을 깔지 않고, 시안은 쓰지 않는다(DESIGN §2: 시안 = 지금 선택된 것 전용)
+            const bar=getComputedStyle(dock.querySelector('.msChatBar'));
+            const bb=(bar.backgroundColor.match(/[\d.]+/g)||['0','0','0','0']);
+            assert(bar.backgroundImage==='none' && (bb.length>3?parseFloat(bb[3]):1)===0,
+              '채팅 입력 바에 판이 남아 있음: '+bar.backgroundColor);
+            const cyan=el=>{ const m=(getComputedStyle(el).color.match(/\d+/g)||[0,0,0]).map(Number);
+              return m[2]>m[0]+50 && m[1]>m[0]+30; };   // 파랑·초록이 빨강보다 한참 높으면 청록이다
+            assert(!cyan(dock.querySelector('.msChatSend')),'전송 버튼이 아직 청록임: '+getComputedStyle(dock.querySelector('.msChatSend')).color);
+            assert(!cyan(dock.querySelector('.msScopeLbl')),'범위 라벨이 아직 청록임: '+getComputedStyle(dock.querySelector('.msScopeLbl')).color); }
           setBottomTab('friend');
           { const row=dock.querySelector('.foRow');
             if(row){ const rs=getComputedStyle(row);
@@ -2934,6 +2972,23 @@ async function groupLobby(){
       assert(!body.querySelector('#foSearch'),'친구 추가 검색이 아직 목록 위에 남아 있음');
       const rows=[...body.querySelectorAll('#foFriends .foRow')];
       assert(rows.length>=2,'친구 행이 안 그려짐: '+rows.length);
+      // 한 줄 조밀형(2026-08-18) — 2줄 48px 행은 안높이 131px 에서 세 명째가 잘렸다
+      { const r0=rows[0];
+        assert(getComputedStyle(r0.querySelector('.fMeta')).flexDirection==='row',
+          '친구 행이 아직 2줄임(이름 밑에 상태가 붙어 있다)');
+        const rh=r0.getBoundingClientRect().height;
+        assert(rh<=34,'친구 행이 조밀하지 않음: '+rh.toFixed(1)+'px');
+        const head=body.querySelector('.ptHead').getBoundingClientRect().height;
+        const fit=(body.clientHeight-head)/rh;
+        assert(fit>=4,'친구가 한 화면에 4명도 안 보임: '+fit.toFixed(2)+'명');
+        // 초상은 **동그란 채로 둔다** — '사람'을 뜻하는 자리라 라운드 3단계(판·칸·버튼)의 예외로 정했다
+        assert(getComputedStyle(r0.querySelector('.fAva')).borderRadius==='50%','친구 초상이 원형이 아님');
+        // 액션은 글리프만 — 도크 안쪽에 또 판을 깔지 않는다(그 판의 테두리는 목록 항목의 선과 같은 값이었다)
+        { const as=getComputedStyle(r0.querySelector('.foAct'));
+          const bc=(as.backgroundColor.match(/[\d.]+/g)||['0','0','0','0']);
+          assert(parseFloat(as.borderTopWidth)===0,'친구 액션 버튼에 테두리가 남아 있음: '+as.borderTopWidth);
+          assert(as.backgroundImage==='none' && (bc.length>3?parseFloat(bc[3]):1)===0,
+            '친구 액션 버튼에 판이 남아 있음: '+as.backgroundColor); } }
       // 정렬 = 온라인 먼저, 오프라인 나중. 뒤섞이면 '밝은 위 / 어두운 아래'가 깨진다
       const offAt=rows.map(r=>r.classList.contains('off'));
       assert(offAt.indexOf(true)<0 || offAt.lastIndexOf(false)<offAt.indexOf(true),
@@ -2969,13 +3024,59 @@ async function groupLobby(){
       navSub('party'); await sleep(120);
       // ⛔ 자동으로 뜨지 않는다 — 탭을 누를 때마다 판이 덮여 내 파티가 안 보였다
       assert(!visible($('ptFindOv')),'파티 탭에서 게시판이 자동으로 뜸');
-      // 8칸(2열×4행)이 스크롤 없이 다 보인다
-      { const body=$('msPanelBody');
-        assert(body.querySelectorAll('.ptSlot').length===PARTY_MAX,'파티 칸이 8개가 아님');
+      // 사람만 칸이 된다 · 빈 자리는 한 줄 · 친구 행과 같은 한 줄 33px (2026-08-18)
+      { const body=$('msPanelBody'), mem=_party.members.length;
+        const slots=[...body.querySelectorAll('.ptSlot')];
+        assert(slots.length===mem,'파티 칸이 파티원 수와 다름: '+slots.length+' vs '+mem);
+        assert(!body.querySelector('.ptSlot.empty'),'빈 자리가 아직 칸으로 늘어서 있음(＋ 친구 초대 반복)');
+        { const line=body.querySelector('.ptInviteLine');
+          assert(line,'빈 자리 한 줄(.ptInviteLine)이 없음');
+          assert(+line.querySelector('em').textContent.replace(/\D/g,'')===PARTY_MAX-mem,
+            '빈자리 수 표기가 실제와 다름: '+line.textContent.trim()); }
+        { const s0=slots[0];
+          assert(getComputedStyle(body.querySelector('.ptGrid')).gridTemplateColumns.split(' ').length===1,
+            '파티가 아직 2열임');
+          const rh=s0.getBoundingClientRect().height;
+          assert(rh<=34,'파티 행이 친구 행(33px)과 다름: '+rh.toFixed(1)+'px');
+          assert(getComputedStyle(s0.querySelector('.ptName')).flexDirection==='row','파티 행이 아직 2줄임');
+          // 파티장 = 빨강. 시안(--acc-sel)은 '지금 선택된 것' 전용이라 여기 쓰면 안 된다
+          const ld=body.querySelector('.ptSlot.leader');
+          if(ld){ const bs=getComputedStyle(ld), bc=(bs.borderBottomColor.match(/\d+/g)||[0,0,0]).map(Number);
+            assert(bc[0]>=140 && bc[1]<=110 && bc[2]<=110,'파티장 표시가 빨강이 아님: '+bs.borderBottomColor);
+            assert(getComputedStyle(ld,'::before').content!=='none','파티장 왼쪽 표시선이 없음'); }
+          // 내보내기 ✕ 도 글리프만 — 친구 액션과 같은 규칙(판의 테두리는 목록 항목의 선이었다)
+          const kick=body.querySelector('.ptKick');
+          if(kick){ const ks=getComputedStyle(kick), kb=(ks.backgroundColor.match(/[\d.]+/g)||['0','0','0','0']);
+            assert(parseFloat(ks.borderTopWidth)===0 && (kb.length>3?parseFloat(kb[3]):1)===0,
+              '내보내기 ✕ 에 판이 남아 있음: '+ks.backgroundColor); } }
+        // 4명까지는 스크롤 없이 보인다(친구 목록과 같은 규칙 — 옛 '2열 8칸 무스크롤'은 폐기)
         assert(body.scrollHeight<=body.clientHeight+1,
-          '파티 구역이 스크롤됨(8칸이 화면에 다 안 들어옴): '+body.scrollHeight+' > '+body.clientHeight);
-        const last=[...body.querySelectorAll('.ptSlot')].pop().getBoundingClientRect();
-        assert(last.bottom<=body.getBoundingClientRect().bottom+1,'마지막 칸이 구역 밖으로 나감'); }
+          '파티 구역이 스크롤됨: '+body.scrollHeight+' > '+body.clientHeight);
+        const last=slots[slots.length-1].getBoundingClientRect();
+        assert(last.bottom<=body.getBoundingClientRect().bottom+1,'마지막 칸이 구역 밖으로 나감');
+        // ⚠ 빈 칸을 없앤 대가 — 파티원이 늘면 초대 줄이 접히는 자리 밑으로 내려간다. 바닥에 붙어 늘 보여야 한다
+        { const back=_party.members.slice();
+          for(let i=_party.members.length;i<PARTY_MAX;i++) _party.members.push({uid:'smk'+i,nick:'테스트'+i,tag:'0000'});
+          renderPartyTab(); await sleep(60);
+          const line=body.querySelector('.ptInviteLine');
+          assert(!line,'파티가 가득 찼는데 초대 줄이 남아 있음');
+          _party.members.length=back.length;   // 한 자리 비우고 다시 본다
+          renderPartyTab(); await sleep(60);
+          const l2=body.querySelector('.ptInviteLine');
+          assert(getComputedStyle(l2).position==='sticky','초대 줄이 바닥에 붙어 있지 않음(파티원이 늘면 화면 밖으로 나간다)');
+          // ⚠ 반투명이면 밑을 지나가는 행이 글자 사이로 비친다
+          { const bg=(getComputedStyle(l2).backgroundColor.match(/[\d.]+/g)||['0','0','0','1']);
+            assert((bg.length>3?parseFloat(bg[3]):1)===1,'초대 줄 면이 불투명하지 않음: '+getComputedStyle(l2).backgroundColor); }
+          assert(l2.getBoundingClientRect().bottom<=body.getBoundingClientRect().bottom+1,
+            '초대 줄이 구역 밖으로 나감');
+          _party.members=back; renderPartyTab(); await sleep(60); }
+        // 해제/나가기 버튼의 모서리는 옆의 `파티 찾기`와 같다(한 줄에 라운드가 두 가지면 따로 논다)
+        { _party.name='스모크'; renderPartyTab(); await sleep(60);
+          const d=body.querySelector('.ptDisband'), f=body.querySelector('.ptFind');
+          assert(d,'파티가 있는데 해제 버튼이 없음');
+          assert(getComputedStyle(d).borderTopLeftRadius===getComputedStyle(f).borderTopLeftRadius,
+            '해제 버튼 모서리가 파티 찾기와 다름: '+getComputedStyle(d).borderTopLeftRadius+' vs '+getComputedStyle(f).borderTopLeftRadius);
+          _party.name=null; renderPartyTab(); await sleep(60); } }
       openPartyFind(); await sleep(120);
       assert(visible($('ptFindOv')),'파티 찾기 버튼 경로로도 게시판이 안 열림');
       // 판은 방 찾기(#rooms) 컴포넌트를 그대로 빌린다 — 새 목록 UI 를 만들면 그건 버그다
