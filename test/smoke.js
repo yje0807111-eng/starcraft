@@ -355,6 +355,17 @@ async function groupLobby(){
         const ms=document.querySelector('#msSortTabs .pdSeg');
         assert(r(ms)===r(hs),'사냥터 탭 띠와 라운드가 다름: '+r(ms)+' vs '+r(hs)); }
       else { navGo('map'); await sleep(120); } }
+    // 탭 띠와 목록은 **한 상자**(.msPanel) 안에 있고, 가로가 정확히 같아야 한다
+    { const panel=document.querySelector('#mapSelect .msPanel');
+      assert(panel && panel.contains($('msSortTabs')) && panel.contains($('msList')),'탭 띠와 목록이 한 상자 안에 없음');
+      const cs=getComputedStyle(panel);
+      // ⚠ --hmPanel/--hbEdge 는 HOME·마을 안에서만 정의된다 — 대체값을 빼면 면도 테두리도 통째로 사라진다
+      assert(cs.borderTopStyle!=='none' && parseFloat(cs.borderTopWidth)>=1,'상자 테두리가 안 그려짐(--hbEdge 대체값 누락?)');
+      assert(cs.backgroundImage!=='none','상자 면이 안 칠해짐(--hmPanel 대체값 누락?)');
+      const seg=document.querySelector('#msSortTabs .pdSeg').getBoundingClientRect();
+      const it=document.querySelector('#msList .mapItem').getBoundingClientRect();
+      assert(Math.abs(seg.left-it.left)<=0.6 && Math.abs(seg.right-it.right)<=0.6,
+        '탭 띠와 목록 가로가 안 맞음: '+seg.left.toFixed(1)+'~'+seg.right.toFixed(1)+' vs '+it.left.toFixed(1)+'~'+it.right.toFixed(1)); }
     assert(!document.querySelector('#mapSelect .msHeadL .twBack'),'유즈맵 좌상단 뒤로가기 버튼이 아직 있음');
     mapToHub(); await sleep(80);
     assert(visible($('homeScreen')),'유즈맵에서 뒤로 갔는데 HOME으로 안 옴 [DBG 보이는화면='+
