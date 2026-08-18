@@ -2970,12 +2970,24 @@ async function groupGame(){
         const c=getComputedStyle(t);
         assert(c.color==='rgb(255, 255, 255)','머리줄 제목이 흰색이 아님: '+c.color);
         assert(c.textShadow==='none','머리줄 제목에 글로우가 남아 있음: '+c.textShadow); }
-      // ⑦ 등급 띠 = 공용 세그먼트 바(전용 칩을 새로 만들지 않는다)
-      openMainHome(); await sleep(90);
+      // ⑦ 등급 띠 = 공용 세그먼트 바(전용 칩을 새로 만들지 않는다) · 카드는 '한 화면에 딱 4장'
+      gtabBack(); await sleep(120);   // 기본 상태(유닛 지정)
       { const box=$('hsTiers');
         if(box && box.children.length){
           assert(box.querySelector('.pdSeg'),'등급 띠가 공용 세그먼트 바(.pdSeg)가 아님: '+box.innerHTML.slice(0,60));
           assert(!box.querySelector('.hsTier'),'옛 등급 칩(.hsTier)이 남아 있음'); } }
+      { const g=$('hsGrid'), cs=[...g.querySelectorAll('.hsCell')];
+        if(cs.length>=2){
+          const w=cs.map(e=>Math.round(e.getBoundingClientRect().width));
+          assert(Math.max(...w)-Math.min(...w)<=1,'카드 폭이 서로 다름: '+JSON.stringify(w));
+          // 폭은 항상 (뷰 - 3*gap)/4 여야 5번째가 삐져나와 잘리지 않는다 — 좁히고 싶으면 --hsGap 을 키울 것
+          const view=g.clientWidth, gap=parseFloat(getComputedStyle(g).columnGap)||0;
+          const want=(view-3*gap)/4;
+          assert(Math.abs(w[0]-want)<=1.5,'카드 폭이 1/4 규격과 다름(5번째가 잘려 보인다): '+w[0]+' vs '+want.toFixed(1));
+          // 보이는 만큼은 정확히 4장 — 4장째 오른끝이 뷰 안에 있고, 5장째는 완전히 밖
+          const l=g.getBoundingClientRect().left;
+          if(cs[3]) assert(Math.round(cs[3].getBoundingClientRect().right-l)<=view+1,'4장째가 화면 밖으로 잘림');
+          if(cs[4]) assert(cs[4].getBoundingClientRect().left-l>=view-1,'5장째가 삐져나와 보임'); } }
       // ⑧ 판 안에 같은 조작을 두 번 두지 않는다(옛 .hsTabs 탭 줄 · 전송 옆 AUTO 배너)
       assert(!document.querySelector('#defaultCmd .hsTab'),'판 안에 옛 모드 탭 줄이 남아 있음(하단 네비와 중복)');
       assert(!$('autoFab'),'전송 옆 AUTO 배너가 남아 있음 — 자동화는 메인 하위 칸으로 옮겼다');

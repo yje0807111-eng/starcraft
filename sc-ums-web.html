@@ -107,7 +107,7 @@
      갈라져 있어서, 값을 흩뿌리면 섹션을 옮길 때마다 톤이 바뀐다(실제로 그랬다). */
   :root{--bpFace:linear-gradient(180deg,#0a0a0a,#000);
         --bpTile:radial-gradient(circle at 50% 34%,rgba(96,96,104,.32),#050505 82%);
-        --bpBodyH:min(29vh,148px)}   /* 본문 높이 단일 소스 — 시트·메인 홈·플레이어 그리드가 같은 높이여야 섹션 전환에서 안 튄다.
+        --bpBodyH:min(28vh,140px)}   /* 본문 높이 단일 소스 — 시트·메인 홈·플레이어 그리드가 같은 높이여야 섹션 전환에서 안 튄다.
                                        176→148: 머리줄 초상(48px)을 지운 만큼 낮췄다(등급 띠가 커진 21px 은 상쇄) */
   :root{--phW:963;--phH:1997;--navH:56px;--curH:34px;--topPad:10px}   /* --topPad: 모바일에서 화면 끝에 붙으면 잘 안 보인다 — 상단을 그만큼 내린다 */   /* 하단 바 높이(네비·유즈맵 탭바 공용) — 61 → 56px 로 살짝 얇게 */
   #phone{width:390px;height:calc(390px * var(--phH) / var(--phW));aspect-ratio:var(--phW)/var(--phH);position:relative;
@@ -388,13 +388,16 @@
   /* 등급 필터 = 작은 알약 칩(3차 — 가장 가볍게, 선택된 등급만 채워짐) */
   /* 등급 띠 = 공용 세그먼트 바(.pdSeg — 장비창 섹션 바·사냥터 탭과 한 함수).
      여기서 덮는 건 두 가지뿐: 전폭으로 펴기(공용 기본은 286px 가운데 정렬)와 칸 높이. */
-  .hsTiers{flex:none;padding:1px 0 5px}
+  .hsTiers{flex:none;padding:0 0 4px}
   .hsTiers .pdSeg{max-width:none;margin:0}
-  .hsTiers .pdSegBtn{padding:10px 4px;font-size:11px}   /* 세로를 조금 늘려 손가락이 닿는 띠로 */
-  .hsGrid{display:flex;flex-wrap:nowrap;justify-content:flex-start;gap:6px;align-items:stretch;overflow-x:auto;overflow-y:hidden;padding-bottom:1px;flex:1;min-height:0}   /* 고정 4열(각 셀 1/4폭) · 왼쪽부터 채움 · stretch = 카드가 칸 높이를 채운다(아래가 비지 않게) */
+  .hsTiers .pdSegBtn{padding:6px 4px;font-size:11px}   /* 얇은 띠 — 터치 타겟은 34px 로 유지된다(패딩 6+글자 22) */
+  /* 고정 4열 · 왼쪽부터 채움 · stretch = 카드가 칸 높이를 채운다(아래가 비지 않게).
+     ⚠ 카드 폭은 항상 (뷰 - 3*--hsGap)/4 여야 '한 화면에 딱 4장'이 지켜진다.
+     카드를 좁히고 싶으면 폭이 아니라 --hsGap 을 키울 것 — 폭만 줄이면 5번째가 삐져나와 잘려 보인다. */
+  .hsGrid{--hsGap:18px;display:flex;flex-wrap:nowrap;justify-content:flex-start;gap:var(--hsGap);align-items:stretch;overflow-x:auto;overflow-y:hidden;padding-bottom:1px;flex:1;min-height:0}
   .hsGrid::-webkit-scrollbar{height:4px}.hsGrid::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
   /* 유닛 셀 = 통일된 SC 카드(메탈+네온 엣지+사선 모서리+스캔라인) */
-  .hsCell{position:relative;flex:0 0 calc((100% - 18px)/4);min-width:0;padding:0;cursor:pointer;overflow:hidden;transition:all .12s;display:flex;flex-direction:column;
+  .hsCell{position:relative;flex:0 0 calc((100% - 3*var(--hsGap))/4);min-width:0;padding:0;cursor:pointer;overflow:hidden;transition:all .12s;display:flex;flex-direction:column;
     background:var(--bpFace);border:1px solid var(--metal-edge);
     clip-path:polygon(0 0,calc(100% - 7px) 0,100% 7px,100% 100%,7px 100%,0 calc(100% - 7px));
     box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
