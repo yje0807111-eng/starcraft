@@ -342,6 +342,14 @@ async function groupLobby(){
       // 잠긴 칸은 값·레벨 대신 자물쇠 — 해금 전에 사면 안 된다
       assert(document.querySelectorAll('.hmUp.lk').length>0,'잠긴 업그레이드가 하나도 없음(해금제가 안 걸림)');
       assert(hbUpgOwned('atk') && hbUpgOwned('aspd'),'데미지·공격속도는 처음부터 열려 있어야 함'); }
+    // 버튼 윗줄 = '지금 레벨'만. 값 변화는 바로 위 줄이 말하므로 여기서 또 화살표를 쓰지 않는다.
+    { const cards=[...document.querySelectorAll('#hmUpgGrid .hmUp:not(.lk)')];
+      assert(cards.length>0,'열린 카드가 없음');
+      for(const e of cards){ const k=e.dataset.k, bl=e.querySelector('.hmUpBl');
+        assert(bl.textContent.trim()==='LV.'+(hbHunt().upg[k]||0),k+' 버튼 윗줄이 지금 레벨이 아님: '+bl.textContent.trim());
+        assert(!bl.querySelector('.nx') && !bl.querySelector('svg'),k+' 버튼 윗줄에 화살표가 남아 있음'); }
+      // 값 줄은 반대로 '지금 ▸ 다음' 이 남아 있어야 한다(무엇이 오르는지는 여기서 본다)
+      assert(cards[0].querySelector('.hmUpVl .nx'),'값 줄에서 다음 값이 사라짐'); }
     // 2.7행이 보이는 '고정' 높이 — 0.7행이 걸쳐 보이는 게 '더 있다'는 신호. 탭마다 개수가 달라도 안 흔들린다
     { const gr=$('hmUpgGrid'), cell=gr.querySelector('.hmUp');
       // ⚠ 간격·패딩을 박지 말 것 — CSS 에서 조정하면 검사가 헛걸린다. 실제 값을 읽어 계산한다
@@ -2555,8 +2563,10 @@ async function groupLobby(){
         // 제목 아래 = 지금 배수 ▸ 이 1점을 찍으면 갈 배수
         const vl=e.querySelector('.hmUpVl').textContent.replace(/\s/g,'');
         assert(vl===_ptPct(n,S.step)+_ptPct(n+1,S.step),S.name+' 수치 변화 표기가 다름: '+vl);
-        // 버튼 = 찍은 칸 변화(위) + 값(아래)
-        assert(e.querySelector('.hmUpBl').textContent.replace(/\s/g,'')===n+'p'+(n+1)+'p',S.name+' 칸 표기가 다름');
+        // 버튼 = 지금 레벨(위) + 값(아래). 윗줄에 '▸ 다음' 을 붙이지 않는다 — 바로 위 값 줄이 이미 말한다
+        const bl=e.querySelector('.hmUpBl');
+        assert(bl.textContent.trim()==='LV.'+n,S.name+' 레벨 표기가 다름: '+bl.textContent.trim());
+        assert(!bl.querySelector('.nx') && !bl.querySelector('svg'),S.name+' 버튼 윗줄에 화살표가 남아 있음');
         assert(e.querySelector('.hmUpBc').textContent.trim()==='-'+ptCost('lp',S.k)+'p','버튼이 비용 표기가 아님'); }); }
     // 초기화 = 사냥터 수량 버튼과 같은 물성
     { const q=host.querySelector('.lpHead .hmUpQty .hmUpQ');

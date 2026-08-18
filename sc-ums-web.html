@@ -6010,14 +6010,15 @@ const HM_SUF=['확률','배수','계수','재생','표적','수','흡수'];
 // ═══ 업그레이드/건설 카드 한 장 — 단일 소스 ═══
 //  사냥터(renderHome)와 마을(_vgShop)이 둘 다 이 함수만 부른다.
 //  ⚠ 마크업을 베껴 두 번째 구현을 만들지 말 것. 새 화면이 필요하면 인자만 늘린다.
-//  o = { ico, name, val, next, lv, nextLv, cost, off, lock, key }
-//    val→next 가 있으면 '값 ▸ 다음값', lv→nextLv 가 있으면 'LV.n ▸ 다음'으로 화살표가 붙는다.
+//  o = { ico, name, val, next, lv, cost, off, lock, key }
+//    val→next 가 있으면 제목 아래에 '값 ▸ 다음값' 으로 화살표가 붙는다.
+//  ⚠ 버튼 윗줄은 '지금 레벨'만 적는다(2026-08-18). 예전엔 'LV.8 ▸ 12' 였는데,
+//    바로 위에서 이미 값이 어떻게 변하는지 화살표로 말하고 있어 같은 말이 두 번이었다.
 function hmUpCardHTML(o){
   const arw=(a,b)=>(b==null||b==='')?a:(a+HM_ARW+'<b class="nx">'+b+'</b>');
   const head=o.lock ? '<span class="hmUpLk">'+HM_LOCK+(o.lockTx||'해금 필요')+'</span>'
                     : '<span class="hmUpVl">'+arw(o.val,o.next)+'</span>';
-  const foot=(o.lock?'<span class="hmUpBl">'+HM_LOCK+'</span>'
-                    :'<span class="hmUpBl">'+arw(o.lv,o.nextLv)+'</span>')
+  const foot='<span class="hmUpBl">'+(o.lock?HM_LOCK:o.lv)+'</span>'
             +'<span class="hmUpBc">'+o.cost+'</span>';
   return '<div class="hmUp'+(o.lock?' lk':'')+'" data-k="'+o.key+'">'
     +'<span class="hmUpIco">'+o.ico+'</span>'
@@ -6061,12 +6062,12 @@ function renderHome(){ try{
       let off;
       let _hd;
       if(own){ const P=hbUpgPlan(k); off=coin<P.sum;
-        _hd={ v:hbUpgVal(k,lv), n:hbUpgVal(k,lv+P.n), l:'LV.'+lv, ln:(lv+P.n),
+        _hd={ v:hbUpgVal(k,lv), n:hbUpgVal(k,lv+P.n), l:'LV.'+lv,
               c:resIco('mineral')+P.sum.toLocaleString('en-US') }; }
       else { off=coin<U.u;
         _hd={ c:resIco('mineral')+U.u.toLocaleString('en-US') }; }
       return hmUpCardHTML({ key:k, ico:hbUpgIco(k), name:hmUpgName(U.name), off:off,
-        lock:!own, val:_hd.v, next:_hd.n, lv:_hd.l, nextLv:_hd.ln, cost:_hd.c }); }).join('');
+        lock:!own, val:_hd.v, next:_hd.n, lv:_hd.l, cost:_hd.c }); }).join('');
     hmUpgBindHold(); }
   renderHomeStats();
   const card=document.querySelector('#homeScreen .hmUpg');
@@ -6207,7 +6208,7 @@ function hbBuildCardHTML(bk){
   return hmUpCardHTML({ key:'b_'+bk,
     ico:'<img class="icoImg" src="'+ICO_DIR+'buildings/'+B.ico+'.webp" alt="" draggable="false">', name:B.name,
     off:full||coin<cost, lock:full, lockTx:'최대 '+mx+(bk==='wall'?'칸':'기'),
-    val:tot(n), next:full?null:tot(n+1), lv:'LV.'+n, nextLv:full?null:(n+1),
+    val:tot(n), next:full?null:tot(n+1), lv:'LV.'+n,
     cost:resIco('mineral')+cost.toLocaleString('en-US'),
     act:full?null:('hbBuy(&#39;'+bk+'&#39;)') }); }
 // 더보기 > 건설 = 즉시 건설 모드. 하단 업그레이드 패널이 그대로 '건설' 구역이 된다(팝업·드롭다운 없음).
@@ -6733,13 +6734,13 @@ function _ptListHTML(kind, c){ const rp=(kind==='rp');
     +'<span class="hmUpQty lpQ"><button class="hmUpQ on" onclick="ptDoReset(\''+kind+'\')"'
     +(spent?'':' disabled')+'>초기화</button></span></div>';
   // ⛔ 카드 마크업을 베끼지 말 것 — 사냥터 업그레이드와 '같은 함수'(hmUpCardHTML)를 부른다.
-  //    val▸next = 이 1점으로 배수가 어디까지 가는지 · lv▸nextLv = 찍은 칸 · cost = 값
+  //    val▸next = 이 1점으로 배수가 어디까지 가는지 · lv = 지금 찍은 칸 · cost = 값
   h+='<div class="lpList">';
   for(const S of LP_STATS){ const n=rp? rpPts(S.k,c) : lpPts(S.k,c);
     const step=rp? rpStep(S.k) : S.step, cost=ptCost(kind, S.k, c);
     h+=hmUpCardHTML({ key:S.k, ico:_icoPathImg(S.ico), name:S.name, off:free<cost,
       val:_ptPct(n, step), next:_ptPct(n+1, step),
-      lv:n+'p', nextLv:(n+1)+'p', cost:'-'+cost+'p',
+      lv:'LV.'+n, cost:'-'+cost+'p',
       act:'ptTap(&#39;'+kind+'&#39;,&#39;'+S.k+'&#39;)' }); }
   return h+'</div>'; }
 // 실행 — 마을 렌더러를 부르지 않는다(HOME에서는 마을 DOM이 숨어 있어 토스트가 안 보인다)
@@ -8857,7 +8858,7 @@ function _vgShop(){ let el=document.getElementById('vgShop');
     cards+=hmUpCardHTML({ key:k, off:off,
       ico:'<img class="icoImg" src="'+ICO_DIR+'buildings/'+B.ico+'.webp" alt="" draggable="false">',
       name:B.name, val:(B.rate*n).toFixed(2)+'/s', next:(B.rate*(n+1)).toFixed(2)+'/s',   // 지금 총 산출 → 하나 더 지었을 때
-      lv:'LV.'+n, nextLv:(n+1), cost:cost,
+      lv:'LV.'+n, cost:cost,
       act:'townBuy(&#39;'+k+'&#39;)' }); }
   el.innerHTML='<div class="hmCard hmUpg">'
     +'<button class="hmUpgHead" onclick="townCollectAll()" aria-label="전부 수집">'
