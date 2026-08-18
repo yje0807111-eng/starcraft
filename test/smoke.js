@@ -36,6 +36,19 @@ async function step(name, fn){
 }
 function assert(cond, msg){ if(!cond) throw new Error(msg||'assert fail'); }
 function skipIf(cond, why){ if(cond){ const e=new Error('SKIP: '+why); e._skip=true; throw e; } }
+// 🎴 '완전 검정 면 + 액센트 그라데 테두리' 카드(--cardRing)를 쓰고 있는가.
+//   사냥터 업그레이드 카드(.hmUp)와 유즈맵 유닛 카드(.hsCell)가 같은 토큰을 쓴다 —
+//   그룹마다 페이지가 달라 한 자리에서 둘을 못 비교하므로, 같은 잣대를 두 그룹에서 각각 댄다.
+function assertCardRing(el, who){
+  assert(el, who+' 카드를 못 찾음');
+  const c=getComputedStyle(el), bg=String(c.backgroundImage).replace(/\s+/g,' ');
+  assert(/rgb\(10, 10, 10\)/.test(bg) && /rgb\(0, 0, 0\)/.test(bg), who+' 면이 완전 검정이 아님: '+bg.slice(0,90));
+  const acc=(bg.match(/rgba\((\d+), (\d+), (\d+), 0\.4\)/)||[])[0];
+  assert(acc, who+' 액센트 테두리 그라데가 없음(첫 스톱 alpha .4): '+bg.slice(0,140));
+  assert(/0\.26\)/.test(bg) && /0\.15\)/.test(bg) && /0\.09\)/.test(bg), who+' 테두리 스톱이 --cardRing 규격과 다름: '+bg.slice(0,160));
+  assert(/rgb\(92, 92, 92\)/.test(bg), who+' 테두리 아래 금속 링이 없음(순색 액센트가 된다)');
+  assert(/rgba\(0, 0, 0, 0\)/.test(c.borderTopColor), who+' 테두리가 그라데가 아님(border-color 를 쓰고 있다): '+c.borderTopColor);
+  return acc; }
 
 // ── 게임 헬퍼 ──
 function hackCredits(){ G.credits=999999; G.mineral=Math.max(G.mineral||0,999999); G.gas=Math.max(G.gas||0,99999); }
@@ -279,6 +292,8 @@ async function groupLobby(){
         const cols=HB_UPG_CAT.map(c=>c[2]);
         assert(new Set(cols).size===cols.length,'구역색이 겹침: '+cols.join(' / ')); }
       assert(seg.querySelectorAll('.pdSegInd').length===1,'현재 구역을 가리키는 판(.pdSegInd)이 없음');
+      // 카드 껍데기(--cardRing)는 유즈맵 유닛 카드(.hsCell)와 같은 토큰이다 — 한쪽만 바꾸면 둘이 갈린다
+      assertCardRing(document.querySelector('#hmUpgGrid .hmUp'), '사냥터 업그레이드 카드');
       // 글자만 — 아이콘이 끼면 아이콘+글자가 한 덩어리로 가운데 정렬돼 글자가 중앙에서 밀린다
       assert(!seg.querySelector('[data-ico]'),'탭에 아이콘이 다시 들어옴(글자가 중앙에서 밀린다)');
       // 판이 바깥 테두리 안쪽 --pad 만큼만 띄워져 있어야 한다(양쪽 틈이 같아야 '맞닿는' 느낌이 난다)
@@ -423,6 +438,21 @@ async function groupLobby(){
     assert(document.querySelectorAll('#navBar .navIt[data-sub]').length===3,'정비 하위가 3칸이 아님');
     navGo('shop'); await sleep(60);
     assert(document.querySelectorAll('#navBar .navIt[data-sub]').length===5,'상점 하위가 5칸이 아님');
+    // 구역에 '들어올 때'는 늘 첫 하위로 — 유즈맵 하단 탭바(gtabDrill)와 같은 규칙(2026-08-14).
+    //   펫을 보다 나갔다 다시 들어와도 펫이 열려 있으면 구역 이름과 내용이 어긋난다.
+    { const cur=()=>{ const e=document.querySelector('#navBar .navIt.cur'); return e?e.dataset.sub:null; };
+      navGo('gear'); await sleep(80);
+      assert(cur()==='gear','정비 진입인데 첫 하위가 아님: '+cur());
+      navSub('pet'); await sleep(80); assert(cur()==='pet','하위 전환이 안 됨: '+cur());
+      navBack(); await sleep(80);
+      navGo('gear'); await sleep(90);
+      assert(cur()==='gear','정비 재진입인데 첫 하위가 아님: '+cur());
+      assert(_gearTab==='gear','정비 재진입인데 _gearTab 이 안 되돌아옴: '+_gearTab);
+      // 다른 구역을 들렀다 와도 마찬가지
+      navGo('shop'); await sleep(80); navSub('gem'); await sleep(80);
+      navGo('upg'); await sleep(80);
+      navGo('shop'); await sleep(90);
+      assert(cur()==='deal','상점 재진입인데 첫 하위가 아님: '+cur()); }
     openHome(); await sleep(60);
     return 'HOME 카드 1개 + 네비 5칸(home·정비·마을·유즈맵·상점) ok'; });
   // 폰트 3종 — 제목 Jua(내장) · 본문 Noto Sans KR Bold(내장) · 숫자 Rajdhani(웹폰트).
@@ -3326,13 +3356,17 @@ async function groupGame(){
       // ① 최상위 = 5칸 등폭. 선택 칸만 넓어지던 flex-grow:1.42 를 없앤 것을 지킨다.
       gtabBack(); await sleep(80);
       const top=cells(); assert(top.length===5,'최상위 칸이 5개가 아님: '+top.length);
+      // ⚠ 탭 이름의 실제 소스는 STK_NEMOLABEL 이다(startGameNow 가 마크업 글자를 덮어쓴다) — 둘 다 봐야 한다
+      assert(top[0].textContent.trim()==='관리','첫 칸 이름이 관리가 아님: '+JSON.stringify(top.map(e=>e.textContent.trim())));
+      assert(typeof STK_NEMOLABEL==='undefined' || STK_NEMOLABEL.Main==='관리','STK_NEMOLABEL.Main 이 관리가 아님: '+STK_NEMOLABEL.Main);
       { const w=widths(top), lo=Math.min(...w), hi=Math.max(...w);
         assert(hi-lo<=1,'최상위 칸 폭이 다름: '+JSON.stringify(w));
         // 선택 칸도 같은 폭이어야 한다
         openGachaSheet(); await sleep(80); gtabBack(); await sleep(80);
         const w2=widths(cells()); assert(Math.max(...w2)-Math.min(...w2)<=1,'선택 칸만 넓어짐: '+JSON.stringify(w2)); }
       // ② 구역별 하위 — 왼쪽 첫 칸은 항상 뒤로가기, 하위 칸끼리는 등폭
-      const want={ Main:['유닛 지정','유닛 판매'], Unit:['뽑기','타워구매'], Upgrade:['공격력','확률','영구강화'], Boss:['개인보스'] };
+      // ⚠ Main 에 '유닛 지정'은 없다 — 그건 아무 구역도 안 고른 기본 상태(gameRestHome)의 자리다
+      const want={ Main:['유닛 판매','유닛 조합'], Unit:['뽑기','타워구매'], Upgrade:['공격력','확률','영구강화'], Boss:['개인보스'] };
       const go={ Main:openMainHome, Unit:openGachaSheet, Upgrade:openUpgradeSheet, Boss:openBossSheet };
       for(const k in want){
         go[k](); await sleep(90);
@@ -3360,11 +3394,16 @@ async function groupGame(){
       switchTab('Players', document.querySelector('.tab[data-tab="Players"]')); await sleep(90);
       assert(!gameHasVersus(),'네모는 대전 판이 아님(팀이 갈리면 안 됨)');
       assert(cells().length===5,'개인전인데 플레이어가 하위로 내려감');
-      // ⑤ ‹ = 한 층 위(보고 있는 화면은 그대로)
+      // ⑤ ‹ = 기본 상태로 (구역 해제 + 하단은 유닛 지정 + 어느 칸도 안 켜짐)
+      //    층만 올리면 '보스 구역에 있는데 네비는 최상위' 인 어중간한 상태가 남는다 — 그걸 막는 검사다.
       openUpgradeSheet(); await sleep(90); assert(cells()[0].classList.contains('navBk'),'업그레이드가 안 내려감');
-      gtabBack(); await sleep(90);
+      gtabBack(); await sleep(120);
       assert(cells().length===5 && !document.getElementById('tabs').classList.contains('drill'),'뒤로가기로 최상위 복귀 실패');
-      assert(G.mainSheet==='upgrade','뒤로가기가 보고 있던 섹션까지 바꿨음: '+G.mainSheet);
+      assert(G.mainSheet==null,'‹ 를 눌렀는데 구역 시트가 남아 있음: '+G.mainSheet);
+      assert(_homeMode==='select','‹ 뒤 하단이 유닛 지정이 아님: '+_homeMode);
+      assert(!$('defaultCmd').classList.contains('hide'),'‹ 뒤 기본 판이 안 보임');
+      assert(!cells().some(e=>e.classList.contains('on')||e.classList.contains('cur')),
+        '‹ 뒤인데 아직 켜진 칸이 있음: '+cells().filter(e=>e.classList.contains('on')).map(e=>e.textContent.trim()));
       // ⑥ 머리줄에는 초상이 없고 제목은 흰 글자다
       openGachaSheet(); await sleep(90);
       assert(!document.querySelector('.cmdG .cgPort'),'머리줄 초상(.cgPort)이 남아 있음');
@@ -3372,13 +3411,96 @@ async function groupGame(){
         const c=getComputedStyle(t);
         assert(c.color==='rgb(255, 255, 255)','머리줄 제목이 흰색이 아님: '+c.color);
         assert(c.textShadow==='none','머리줄 제목에 글로우가 남아 있음: '+c.textShadow); }
-      // ⑦ 등급 띠 = 공용 세그먼트 바(전용 칩을 새로 만들지 않는다)
-      openMainHome(); await sleep(90);
+      // ⑦ 등급 띠 = 공용 세그먼트 바(전용 칩을 새로 만들지 않는다) · 카드는 '한 화면에 딱 4장'
+      gtabBack(); await sleep(120);   // 기본 상태(유닛 지정)
       { const box=$('hsTiers');
         if(box && box.children.length){
           assert(box.querySelector('.pdSeg'),'등급 띠가 공용 세그먼트 바(.pdSeg)가 아님: '+box.innerHTML.slice(0,60));
           assert(!box.querySelector('.hsTier'),'옛 등급 칩(.hsTier)이 남아 있음'); } }
-      // ⑧ 판 안에 같은 조작을 두 번 두지 않는다(옛 .hsTabs 탭 줄 · 전송 옆 AUTO 배너)
+      // 카드 구성 — 수량(×N)은 초상 좌상단 뱃지, 초상 아래는 [이름] + 화면별 줄.
+      //   지정=[] · 판매=[가격] · 조합=[등급→등급]. 세 화면이 _hsCardHTML 한 함수를 쓴다.
+      { const rows=()=>{ const c=document.querySelector('#hsGrid .hsCell'); if(!c) return null;
+          return { name:!!c.querySelector('.hsName'), cnt:!!c.querySelector('.hsCnt'),
+                   val:!!c.querySelector('.hsVal'), up:!!c.querySelector('.hsUp'),
+                   info:!!c.querySelector('.hsInfo') }; };
+        gtabBack(); await sleep(120);
+        let r=rows();
+        if(r){ assert(r.info && r.name && r.cnt,'지정 카드에 이름/수량 뱃지가 없음: '+JSON.stringify(r));
+               assert(!r.val && !r.up,'지정 카드에 가격/등급 줄이 끼어 있음: '+JSON.stringify(r));
+               // 수량은 뱃지 하나뿐 — 줄로도 내면 같은 값이 두 곳에 뜬다
+               const c=document.querySelector('#hsGrid .hsCell');
+               assert(!/×\s*\d/.test((c.querySelector('.hsInfo')||{}).textContent||''),'수량이 이름 아래 줄에도 중복 표시됨'); }
+        openMainHome(); gtabSub('sell'); await sleep(140);
+        r=rows(); if(r){ assert(r.name && r.cnt && r.val,'판매 카드에 이름/수량/가격이 없음: '+JSON.stringify(r)); }
+        gtabSub('combine'); await sleep(140);
+        r=rows(); if(r){ assert(r.name && r.cnt && r.up,'조합 카드에 이름/수량/등급이 없음: '+JSON.stringify(r));
+          const t=document.querySelector('#hsGrid .hsUp').textContent.replace(/\s+/g,'');
+          assert(/[가-힣]+›[가-힣]+/.test(t),'조합 등급 줄이 "A › B" 꼴이 아님: '+t); }
+        gtabBack(); await sleep(120); }
+      // 카드 껍데기 = 사냥터 업그레이드 카드와 같은 규칙(검정 면 + 붉은 그라데 테두리 + 금속 링)
+      { const c=document.querySelector('#hsGrid .hsCell');
+        if(c){ const acc=assertCardRing(c,'유닛 카드');
+          assert(/255, 59, 59/.test(acc),'유닛 카드 액센트가 빨강이 아님: '+acc);
+          // 잘린 모서리는 왼쪽 위 · 오른쪽 아래(사냥터 카드와 같은 방향)
+          const cp=String(getComputedStyle(c).clipPath).replace(/\s+/g,' ');
+          assert(/^polygon\(7px 0px, 100% 0px,/.test(cp),'카드 컷이 왼쪽 위가 아님: '+cp);
+          assert(/calc\(100% - 7px\) 100%, 0px 100%, 0px 7px\)$/.test(cp),'카드 컷이 오른쪽 아래가 아님: '+cp);
+          // 수량 뱃지 = 반대편(우상단) · 각진 사각 · 글자 정중앙
+          const b=c.querySelector('.hsCnt'); assert(b,'수량 뱃지가 없음');
+          const cr=c.getBoundingClientRect(), br=b.getBoundingClientRect();
+          // ⚠ 판이 아직 안 펼쳐졌으면(폭 0) 위치를 못 잰다 — 0<0 이 되어 '왼쪽에 붙었다'로 헛 실패한다
+          skipIf(cr.width<10 || br.width<4, '카드가 아직 배치 전(폭 '+Math.round(cr.width)+')');
+          assert((cr.right-br.right) < (br.left-cr.left),
+            '수량 뱃지가 우상단이 아님(오른쪽 여백 '+Math.round(cr.right-br.right)+' / 왼쪽 여백 '+Math.round(br.left-cr.left)+')');
+          assert((br.top-cr.top)<8,'수량 뱃지가 위쪽이 아님: '+(br.top-cr.top));
+          assert(getComputedStyle(b).borderRadius==='0px','수량 뱃지가 각지지 않음: '+getComputedStyle(b).borderRadius);
+          // ⚠ Range 의 사각형은 '라인 박스'라 늘 가운데다 — 눈에 보이는 건 글자 **잉크**다.
+          //   숫자 글꼴은 위아래 여백이 비대칭이라 line-height 로 맞추면 잉크가 위로 뜬다(그게 원래 증상이었다).
+          //   그래서 폰트 메트릭으로 잉크 중앙을 직접 계산한다.
+          { const rg=document.createRange(); rg.selectNodeContents(b); const tr=rg.getBoundingClientRect();
+            const cs=getComputedStyle(b), cv=document.createElement('canvas').getContext('2d');
+            cv.font=cs.fontStyle+' '+cs.fontWeight+' '+cs.fontSize+' '+cs.fontFamily;
+            const m=cv.measureText(b.textContent||'0');
+            const fa=m.fontBoundingBoxAscent, fd=m.fontBoundingBoxDescent;
+            const ia=m.actualBoundingBoxAscent, id=m.actualBoundingBoxDescent;
+            if(fa!=null && ia!=null){
+              const base=tr.top+(tr.height-(fa+fd))/2+fa;      // 라인 박스 안 베이스라인
+              const inkMid=base-(ia-id)/2;                      // 실제 글자 잉크의 세로 중앙
+              const dy=inkMid-((br.top+br.bottom)/2);
+              assert(Math.abs(dy)<=1.2,'뱃지 글자(잉크)가 세로 중앙이 아님: '+dy.toFixed(2)+'px'); } } } }
+      { const g=$('hsGrid'), cs=[...g.querySelectorAll('.hsCell')];
+        if(cs.length>=2){
+          const w=cs.map(e=>Math.round(e.getBoundingClientRect().width));
+          assert(Math.max(...w)-Math.min(...w)<=1,'카드 폭이 서로 다름: '+JSON.stringify(w));
+          // 폭은 항상 (뷰 - 3*gap)/4 여야 5번째가 삐져나와 잘리지 않는다 — 좁히고 싶으면 --hsGap 을 키울 것
+          const view=g.clientWidth, gap=parseFloat(getComputedStyle(g).columnGap)||0;
+          const want=(view-3*gap)/4;
+          assert(Math.abs(w[0]-want)<=1.5,'카드 폭이 1/4 규격과 다름(5번째가 잘려 보인다): '+w[0]+' vs '+want.toFixed(1));
+          // 보이는 만큼은 정확히 4장 — 4장째 오른끝이 뷰 안에 있고, 5장째는 완전히 밖
+          const l=g.getBoundingClientRect().left;
+          if(cs[3]) assert(Math.round(cs[3].getBoundingClientRect().right-l)<=view+1,'4장째가 화면 밖으로 잘림');
+          if(cs[4]) assert(cs[4].getBoundingClientRect().left-l>=view-1,'5장째가 삐져나와 보임'); } }
+      // ⑧ 구역에 '들어올 때'는 늘 첫 하위로 되돌아온다
+      //    (타워구매를 보다 나갔다 다시 들어와도 타워구매가 열려 있으면 구역 이름과 내용이 어긋난다)
+      { gtabBack(); await sleep(90);
+        openGachaSheet(); await sleep(90);
+        gtabSub('tower'); await sleep(90);
+        assert(_gachaSec==='tower','하위 전환이 안 됨');
+        gtabBack(); await sleep(110);
+        openGachaSheet(); await sleep(110);
+        assert(_gachaSec==='draw','유닛뽑기 재진입인데 첫 하위가 아님: '+_gachaSec);
+        // 업그레이드도 같은 규칙 — 다른 구역을 들렀다 와도 첫 하위
+        gtabSub('tower'); await sleep(90); openUpgradeSheet(); await sleep(90);
+        gtabSub('luck'); await sleep(90); openBossSheet(); await sleep(90);
+        openUpgradeSheet(); await sleep(110);
+        assert(_upgSec==='atk','업그레이드 재진입인데 첫 하위가 아님: '+_upgSec);
+        openMainHome(); await sleep(110);
+        assert(_homeMode==='sell','관리 진입인데 첫 하위가 아님: '+_homeMode);
+        // ⚠ 이미 그 구역에 있을 때는 되돌리지 않는다 — 되돌리면 자동화가 곧바로 판매로 튕긴다
+        gtabSub('auto'); await sleep(140);
+        assert(G.mainSheet==='auto','자동화가 리셋에 튕겨 나감: '+G.mainSheet);
+        gtabBack(); await sleep(140); }
+      // ⑨ 판 안에 같은 조작을 두 번 두지 않는다(옛 .hsTabs 탭 줄 · 전송 옆 AUTO 배너)
       assert(!document.querySelector('#defaultCmd .hsTab'),'판 안에 옛 모드 탭 줄이 남아 있음(하단 네비와 중복)');
       assert(!$('autoFab'),'전송 옆 AUTO 배너가 남아 있음 — 자동화는 메인 하위 칸으로 옮겼다');
       // ⑦ 자동화 = 메인 하위의 '마지막' 칸이고, 누르면 자동화 시트가 뜬다
@@ -3391,9 +3513,10 @@ async function groupGame(){
       { const cur=cells().find(e=>e.classList.contains('cur'));
         assert(cur && cur.textContent.trim()==='자동화','자동화인데 선택 표시가 딴 칸: '+(cur&&cur.textContent.trim())); }
       assert(cells()[0].classList.contains('navBk'),'자동화로 갔더니 최상위로 올라감');
-      // 지정으로 돌아오면 자동화 시트가 걷히고 메인 홈이 돌아온다
-      gtabSub('select'); await sleep(120);
-      assert(G.mainSheet==null && !$('defaultCmd').classList.contains('hide'),'자동화에서 유닛 지정으로 못 돌아옴');
+      // 판매로 돌아오면 자동화 시트가 걷히고 판이 돌아온다(하단이 내려가면 안 된다)
+      gtabSub('sell'); await sleep(120);
+      assert(G.mainSheet==null && !$('defaultCmd').classList.contains('hide'),'자동화에서 유닛 판매로 못 돌아옴');
+      assert(document.body.classList.contains('sheetOpen'),'자동화 → 판매에서 하단이 내려감(재탭 토글로 샜다)');
       return '최상위 5칸 등폭 · 4구역 드릴다운 · 자동화 하위 ok';
     } finally { if(faked) ph.classList.remove('inGame'); openMainHome(); }
   });
@@ -3427,16 +3550,43 @@ async function groupGame(){
   await step('보스 시트 = 개인보스만(포인트방 분리)', ()=>{ openMainHome(); const bt=$('bossTab'); bt.click();
     const txt=$('unitCmd').innerText; assert(/개인보스/.test(txt),'보스 시트 아님');
     assert(!/유닛 파견|토벌장/.test(txt),'보스 시트에 포인트방 셀이 남음'); openMainHome(); return 'ok'; });
-  await step('보스바 클릭 → 토벌장 직행(맵 영역 전환)', ()=>{ skipIf(typeof openBossArena!=='function','없음'); skipIf(!G.coopBoss,'공용보스 없음(맵 설정)');
-    assert(!$('pointRoomPop'),'구 포인트방 팝업이 남아있음(보스바=직행이어야 함)');
+  // 포인트방 입장 경로는 하단 네비(보스 > 포인트방) **하나뿐**이다(2026-08-14).
+  // 우상단 공용 보스 바는 보기 전용 — 클릭을 받으면 입장 경로가 둘이 된다.
+  await step('포인트방: 입장은 네비 하나뿐 · 우상단 바는 보기 전용', async()=>{
+    skipIf(typeof openBossArena!=='function','없음'); skipIf(!G.coopBoss,'공용보스 없음(맵 설정)');
+    assert(!$('pointRoomPop'),'구 포인트방 팝업이 남아있음');
     assert(!$('mapName'),'구 맵이름(#mapName)이 남아있음');
-    assert($('coopBossBar').getAttribute('onclick').includes('openBossArena'),'보스바가 아레나로 직행 안 함');
-    $('coopBossBar').click(); assert(G.bossOpen===true,'토벌장 미진입');
-    assert(visible($('bossPanel')),'아레나 컨트롤 패널 숨김'); return 'ok'; });
+    { const bar=$('coopBossBar'), c=getComputedStyle(bar);
+      assert(!bar.getAttribute('onclick'),'우상단 보스 바가 아직 클릭을 받는다(입장 경로가 둘)');
+      assert(c.pointerEvents==='none','보스 바가 아직 포인터를 먹는다: '+c.pointerEvents); }
+    const ph=$('phone'), faked=ph && !ph.classList.contains('inGame'); if(faked) ph.classList.add('inGame');
+    try{
+      openBossSheet(); await sleep(90);
+      const cells=()=>[...document.querySelectorAll('#tabs > *')].filter(e=>getComputedStyle(e).display!=='none');
+      const arena=cells().find(e=>e.textContent.trim()==='포인트방');
+      assert(arena,'보스 하위에 포인트방 칸이 없음');
+      gtabSub('arena'); await sleep(200);
+      assert(G.bossOpen===true,'네비로 포인트방 미진입');
+      assert(visible($('bossPanel')),'아레나 컨트롤 패널 숨김');
+      // 나가기 = 네비 ‹ 하나뿐. ⚠ 포인트방은 화면이 아니라 오버레이라 switchTab 을 안 지난다 —
+      //   gameRestHome 이 직접 닫지 않으면 네비만 올라오고 아레나는 열린 채 남는다(실제로 그랬다).
+      gtabBack(); await sleep(220);
+      assert(G.bossOpen===false,'‹ 를 눌렀는데 포인트방이 안 닫힘');
+      assert(!visible($('bossPanel')),'‹ 뒤에도 아레나 패널이 떠 있음');
+      assert(_gtabDrill==='' && _homeMode==='select','‹ 뒤 기본 상태가 아님: '+_gtabDrill+'/'+_homeMode);
+      // 뒤 스텝들(아레나 4그리드·건물 프로필)이 아레나 안을 보므로 다시 들어가 둔다
+      openBossSheet(); await sleep(60); gtabSub('arena'); await sleep(200);
+      assert(G.bossOpen===true,'다시 들어가지 못함');
+      return 'ok';
+    } finally { if(faked) ph.classList.remove('inGame'); } });
   await step('아레나 4그리드 + 카드탭=1기 즉시 파견', ()=>{ skipIf(!G.bossOpen,'아레나 아님');
     assert(!$('baCtl') && !$('baBackBtn') && !$('bossDeployBar'),'구 상단버튼/확정바가 안 지워짐');
     refreshSelCard(); const host=$('unitCmd'); assert(host.classList.contains('on'),'하단 시트 비활성');
-    let txt=host.innerText; assert(/전체 회수/.test(txt) && /돌아가기/.test(txt),'4그리드 라벨 누락');
+    let txt=host.innerText; assert(/전체 회수/.test(txt),'4그리드에 전체 회수가 없음');
+    // '돌아가기' 칸은 없앴다 — 나가기는 하단 네비의 ‹ 하나뿐이다
+    assert(!/돌아가기/.test(txt),'아레나 4그리드에 옛 돌아가기 칸이 남아 있음');
+    { const names=[...host.querySelectorAll('.cgSlot .cgName')].map(e=>e.textContent.trim());
+      assert(names[names.length-1]==='전체 회수','전체 회수가 마지막(4번) 칸이 아님: '+JSON.stringify(names)); }
     assert(!/빈 슬롯/.test(txt) && !/탭 = 회수/.test(txt),'제거해야 할 텍스트가 남음');
     const u=G.units.find(x=>!x.fixed && !x.hero && !x.atBoss); skipIf(!u,'파견할 유닛 없음');
     bossSlotTap(0); assert(G.bossDeployPick===true,'파견 선택 모드 진입 실패');
@@ -3759,6 +3909,131 @@ async function groupGame(){
     for(const k of need) assert(CST_BLDG_CFG[k].s>0, k+': 크기(s) 없음');
     assert(Math.abs(CST_BLDG_CFG.union_engineering_bay.f-Math.PI)<1e-6, '공학소 정면 보정(f=π)이 사라짐');
     return need.length+'종 확인'; });
+  // ⚔ 오토배틀(직스) — 하단 네비를 네모와 같은 2층으로 통합했다(2026-08-14).
+  //   최상위 [건설지][특수무기][관전] · 전투는 탭이 아니라 무선택 기본 화면(‹ 가 여기로 온다).
+  //   ⚠ 이 스텝은 게임 상태를 직스로 바꾸므로 **game 그룹 맨 뒤**에 둔다.
+  await step('오토배틀: 2층 네비 · 특수무기 구입/사용', async()=>{
+    skipIf(typeof strikeStart!=='function' || typeof STK_WEAPONS==='undefined','오토배틀 없음');
+    const ph=$('phone'), faked=ph && !ph.classList.contains('inGame'); if(faked) ph.classList.add('inGame');
+    strikeStart(); await sleep(400);
+    G.loading=false;
+    const cells=()=>[...document.querySelectorAll('#tabs > *')].filter(e=>getComputedStyle(e).display!=='none');
+    const names=()=>[...document.querySelectorAll('#unitCmd .cgSlot .cgName')].map(e=>e.textContent.trim());
+    try{
+      // ① 최상위 = 세 칸. 전투 탭은 없다(무선택 기본 화면)
+      strikeRestHome(); await sleep(120);
+      { const t=cells().map(e=>e.textContent.trim());
+        assert(t.length===3,'오토배틀 최상위가 3칸이 아님: '+JSON.stringify(t));
+        assert(t.join('/')==='건설지/특수무기/관전','오토배틀 최상위 이름이 다름: '+JSON.stringify(t));
+        assert(G.tab==='Main' && _gtabDrill==='','전투 기본 화면이 아님: '+G.tab+'/'+_gtabDrill); }
+      // ② 건설지 = [‹][건설][강화] · 강화는 광산+공격력+체력
+      strikeSwitchTab('Build'); await sleep(140);
+      { const c=cells(); assert(c[0].classList.contains('navBk'),'건설지에 뒤로가기 칸이 없음');
+        assert(c.slice(1).map(e=>e.textContent.trim()).join('/')==='건설/강화','건설지 하위가 다름');
+        assert(G.tab==='Build','건설지인데 건설 화면이 아님: '+G.tab); }
+      // 건설 = 일꾼이 자동 지정되어 그 일꾼의 건설 그리드가 바로 뜬다(빈 화면으로 들어가지 않는다)
+      { assert(G.tech,'건설 상태(G.tech)가 없음');
+        assert((G.tech.selU||[]).length===1,'건설인데 일꾼이 자동 지정되지 않음: '+JSON.stringify(G.tech.selU));
+        const wk=G.tech.ents.find(e=>e.eid===G.tech.selU[0]);
+        assert(wk && wk.type==='worker','지정된 것이 일꾼이 아님: '+(wk&&wk.type));
+        assert(G.tech.sheet && G.tech.sheet.open,'건설 시트가 안 열림');
+        const cards=[...document.querySelectorAll('#btSheetBody .cgSlot')];
+        assert(cards.length>=2,'건설 그리드가 비어 있음: '+cards.length);
+        // ⚠ 글자 줄이 눌리면 안 된다 — 칸이 모자라면 초상이 줄어야 한다(전엔 이름이 4px 로 뭉개졌다).
+        //    기본 높이는 넉넉해서 어떤 CSS로도 통과한다 → 판을 일부러 좁혀 놓고 재야 규칙을 진짜로 잰다.
+        const de=document.documentElement, keepH=de.style.getPropertyValue('--bpBodyH');
+        de.style.setProperty('--bpBodyH','96px'); await sleep(140);
+        try{
+          for(const c of [...document.querySelectorAll('#btSheetBody .cgSlot')]){
+            const n=c.querySelector('.cgName'); if(!n||!n.textContent.trim()) continue;
+            const h=n.getBoundingClientRect().height;
+            assert(h>=9,'건설 카드 이름이 뭉개짐(높이 '+h.toFixed(1)+'px): '+n.textContent.trim()); }
+        } finally { if(keepH) de.style.setProperty('--bpBodyH',keepH); else de.style.removeProperty('--bpBodyH'); }
+        await sleep(120); }
+      // 상단은 전투 화면과 **같은 #hud** 다(건설 전용 자원 바를 따로 만들지 않는다).
+      //   ⚠ 같은 DOM 인지까지 본다 — 예전엔 .bres 라는 복제본을 띄우고 #hud 를 숨겼다.
+      { const hud=$('hud'), r=e=>{ const b=e.getBoundingClientRect(); return [Math.round(b.x),Math.round(b.y),Math.round(b.width)]; };
+        assert(getComputedStyle(hud).display!=='none','건설지에서 상단 HUD 가 숨겨짐');
+        assert(!document.querySelector('.bres'),'건설지에 자원 바 복제본(.bres)이 있음 — #hud 와 이중 표시');
+        assert($('settingsBtn') && $('settingsBtn').getBoundingClientRect().width>0,'건설지에 ☰ 가 없음');
+        assert(/^\d\d:\d\d$/.test($('hTime').textContent.trim()),'건설지 좌상단 시계가 mm:ss 가 아님: '+$('hTime').textContent);
+        assert([...document.querySelectorAll('#hudR .res')].length===3,'건설지 자원 칸이 3개가 아님');
+        const bH=[r(hud),r($('hTime')),r($('settingsBtn'))];
+        strikeRestHome(); await sleep(200);
+        const mH=[r(hud),r($('hTime')),r($('settingsBtn'))];
+        assert(JSON.stringify(bH)===JSON.stringify(mH),'건설지 상단이 전투 화면과 다름: '+JSON.stringify(bH)+' vs '+JSON.stringify(mH));
+        strikeSwitchTab('Build'); await sleep(200); }
+      // 하단 시트 접기 버튼은 없앴다(높이는 --bpBodyH 하나로 고정)
+      assert(!$('btCardCtl'),'하단 시트에 접기 버튼(#btCardCtl)이 남아 있음');
+      // 강화 = [공격력][체력][빈칸][광산] 자리 고정
+      gtabSub('upg'); await sleep(160);
+      { const n=[...document.querySelectorAll('#btSheetBody .cgSlot')].map(e=>{ const t=e.querySelector('.cgName');
+          return t?t.textContent.trim():(e.classList.contains('empty')?'':'?'); });
+        assert(n[0]==='공격력' && n[1]==='체력' && n[3]==='광산','강화 칸 자리가 다름: '+JSON.stringify(n)); }
+      // ③ 특수무기 = [‹][구입][사용] · 구입 그리드는 표 그대로
+      strikeSwitchTab('Upgrade'); await sleep(160);
+      { const c=cells(); assert(c[0].classList.contains('navBk'),'특수무기에 뒤로가기 칸이 없음');
+        assert(c.slice(1).map(e=>e.textContent.trim()).join('/')==='구입/사용','특수무기 하위가 다름');
+        assert(G.tab==='Main','특수무기는 화면을 옮기지 않는다(전장 유지): '+G.tab);
+        const n=names();
+        for(const w of STK_WEAPONS) assert(n.indexOf(w.name)>=0,'구입 그리드에 '+w.name+'이 없음: '+JSON.stringify(n)); }
+      // ④ 사용 = **구입과 같은 자리에 같은 순서로**. 없는 것은 빈 칸이 아니라 비활성(dim).
+      gtabSub('use'); await sleep(140);
+      { const n=names();
+        assert(n.join('/')===STK_WEAPONS.map(w=>w.name).join('/'),'사용 그리드 자리가 구입과 다름: '+JSON.stringify(n));
+        const cs=[...document.querySelectorAll('#unitCmd .cgSlot')];
+        assert(cs.every(e=>e.classList.contains('dim')),'가진 게 없는데 비활성이 아닌 칸이 있음');
+        assert(!document.querySelector('#unitCmd .cgSlot.empty'),'사용 그리드에 빈 칸이 있음(비활성으로 두어야 한다)'); }
+      // ⑤ 구입 → 그 칸만 살아난다(자리는 그대로)
+      STK.me.gold=99999;
+      assert(strikeBuyWpn('bomb'),'폭탄 구입 실패');
+      gtabSub('buy'); await sleep(120); gtabSub('use'); await sleep(140);
+      { const cs=[...document.querySelectorAll('#unitCmd .cgSlot')];
+        assert(!cs[0].classList.contains('dim'),'산 무기가 아직 비활성');
+        assert(cs[1].classList.contains('dim'),'안 산 무기가 활성으로 보임'); }
+      for(const w of STK_WEAPONS) if(strikeWpnHave(w.k)<1) assert(strikeBuyWpn(w.k), w.name+' 구입 실패');
+      // ⑥ 효과 — ⚠ 헤드리스에선 3D·건설이 안 서서 유닛이 안 나온다. 검증용 유닛을 직접 꽂는다.
+      //    무기 함수는 hp/maxHp/x/y/dead/wait 만 읽으므로 이걸로 진짜 효과를 잰다.
+      { const mk=(i,side)=>({uid:side+i, id:'marine', side:side, x:1000+(i%5)*40, y:1000+Math.floor(i/5)*40,
+          hp:600, maxHp:600, dead:false, wait:0, size:14});
+        STK.ai.units=[]; STK.me.units=[];
+        for(let i=0;i<10;i++){ STK.ai.units.push(mk(i,'ai')); STK.me.units.push(mk(i,'me')); }
+        // EMP = 정지(피해 없음) — 새 상태이상 필드를 만들지 않고 u.wait 를 쓴다
+        const hpB=STK.ai.units.reduce((s,u)=>s+u.hp,0);
+        assert(strikeUseWpn('emp'),'EMP 사용 실패');
+        assert(strikeWpnHave('emp')===0,'EMP 재고가 안 줄었음');
+        assert(STK.ai.units.every(u=>u.wait>0),'EMP 인데 안 멈춘 적이 있음');
+        assert(STK.ai.units.reduce((s,u)=>s+u.hp,0)===hpB,'EMP 가 피해를 줬음(정지만이어야 한다)');
+        // 폭탄 = 광역 피해
+        assert(strikeUseWpn('bomb'),'폭탄 사용 실패');
+        assert(STK.ai.units.reduce((s,u)=>s+u.hp,0)<hpB,'폭탄인데 적 체력이 그대로');
+        // 재생 필드 = 아군 회복
+        STK.me.units.forEach(u=>u.hp=u.maxHp*0.3);
+        const my0=STK.me.units.reduce((s,u)=>s+u.hp,0);
+        assert(strikeUseWpn('heal'),'재생 필드 사용 실패');
+        assert(STK.me.units.reduce((s,u)=>s+u.hp,0)>my0,'재생 필드인데 아군 체력이 그대로'); }
+      // ⑦ ‹ = 전투(무선택 기본 화면)
+      gtabBack(); await sleep(160);
+      assert(G.tab==='Main' && _gtabDrill==='','‹ 인데 전투 기본 화면이 아님: '+G.tab+'/'+_gtabDrill);
+      assert(!STK.supSheet,'‹ 인데 시트가 남아 있음');
+      assert(!cells().some(e=>e.classList.contains('on')||e.classList.contains('cur')),'‹ 뒤인데 켜진 칸이 있음');
+      // ⑧ 하단 판 높이는 네모 인게임과 같다(--bpBodyH 공용)
+      // ⚠ getPropertyValue('--bpBodyH') 는 계산값이 아니라 원문 'min(28vh,140px)' 이라 parseFloat=NaN 이다.
+      //    토큰을 실제로 적용한 탐침을 재서 기준값을 얻는다(예전엔 NaN>0 이 거짓이라 이 검사가 통째로 건너뛰어졌다).
+      { const probe=document.createElement('div');
+        probe.style.cssText='position:absolute;left:-9999px;top:0;width:10px;height:var(--bpBodyH)';
+        document.body.appendChild(probe);
+        const want=Math.round(probe.getBoundingClientRect().height); probe.remove();
+        assert(want>0,'--bpBodyH 기준값을 못 잼: '+want);
+        for(const [n,fn] of [['건설지',()=>strikeSwitchTab('Build')],['특수무기',()=>strikeSwitchTab('Upgrade')],['관전',()=>strikeSwitchTab('Players')]]){
+          fn(); await sleep(180);
+          const body=document.getElementById(G.tab==='Build'?'btSheetBody':'unitCmd');
+          const h=Math.round(body.getBoundingClientRect().height);
+          assert(Math.abs(h-want)<=1, n+' 하단 본문 높이가 네모와 다름: '+h+' vs '+want); } }
+      strikeSwitchTab('Upgrade'); await sleep(140);
+      return '3칸 · 건설지2 · 특수무기 '+STK_WEAPONS.length+'종 ok';
+    } finally { if(typeof strikeEnd==='function') try{ strikeEnd(); }catch(e){}
+      if(faked) ph.classList.remove('inGame'); } });
 }
 
 // ── 그룹: sandbox (관리자) ──
@@ -3768,6 +4043,15 @@ async function groupSandbox(){
   await step('샌드박스 탭 구성(전투실험·건설 표시, 보스 숨김)', ()=>{ updatePbossFab();
     assert($('battleTab').style.display!=='none','battleTab 숨김'); assert($('buildTab').style.display!=='none','buildTab 숨김');
     assert($('bossTab').style.display==='none','bossTab이 샌드박스에 노출'); return 'ok'; });
+  // 관리자 건설은 자체 상단바(.bmapTop)를 쓴다 — 오토배틀의 '상단 HUD 유지' 규칙이 여기로 새면 안 된다.
+  await step('관리자 건설: 자체 상단바 유지(오토배틀 규칙 미오염)', async()=>{
+    switchTab('Build', document.querySelector('.tab[data-tab="Build"]')); await sleep(400);
+    assert(document.body.classList.contains('cstMode'),'건설 탭인데 cstMode 가 아님');
+    assert(!document.body.classList.contains('stkCst'),'관리자 건설에 오토배틀 전용 클래스(stkCst)가 붙음');
+    assert(getComputedStyle($('hud')).display==='none','관리자 건설에서 게임 HUD 가 보임(자체 상단바와 이중 표시)');
+    assert(document.querySelector('.bres'),'관리자 건설에 자원 바(.bres)가 없음');
+    assert(!$('btCardCtl'),'건설 시트에 접기 버튼(#btCardCtl)이 남아 있음');
+    return 'ok'; });
   // 관리자 건설 탭에서 병영을 고르면 레인저·화력병·의무병·저격수 카드가 실제로 그려져야 한다.
   await step('관리자 건설: 병영 생산 카드', async()=>{
     switchTab('Build', document.querySelector('.tab[data-tab="Build"]')); await sleep(400);

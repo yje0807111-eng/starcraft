@@ -107,7 +107,7 @@
      갈라져 있어서, 값을 흩뿌리면 섹션을 옮길 때마다 톤이 바뀐다(실제로 그랬다). */
   :root{--bpFace:linear-gradient(180deg,#0a0a0a,#000);
         --bpTile:radial-gradient(circle at 50% 34%,rgba(96,96,104,.32),#050505 82%);
-        --bpBodyH:min(29vh,148px)}   /* 본문 높이 단일 소스 — 시트·메인 홈·플레이어 그리드가 같은 높이여야 섹션 전환에서 안 튄다.
+        --bpBodyH:min(28vh,140px)}   /* 본문 높이 단일 소스 — 시트·메인 홈·플레이어 그리드가 같은 높이여야 섹션 전환에서 안 튄다.
                                        176→148: 머리줄 초상(48px)을 지운 만큼 낮췄다(등급 띠가 커진 21px 은 상쇄) */
   :root{--phW:963;--phH:1997;--navH:56px;--curH:34px;--topPad:10px}   /* --topPad: 모바일에서 화면 끝에 붙으면 잘 안 보인다 — 상단을 그만큼 내린다 */   /* 하단 바 높이(네비·유즈맵 탭바 공용) — 61 → 56px 로 살짝 얇게 */
   #phone{width:390px;height:calc(390px * var(--phH) / var(--phW));aspect-ratio:var(--phW)/var(--phH);position:relative;
@@ -374,7 +374,8 @@
   
   
   
-  #coopBossBar{cursor:pointer;pointer-events:auto}
+  /* 보기 전용 — 입장 경로는 하단 네비(보스 > 포인트방) 하나뿐이다(2026-08-14). 클릭을 받지 않는다. */
+  #coopBossBar{cursor:default;pointer-events:none}
   /* 메인 홈 하단 — 좌(판매)·우(보스 파견): 칸 없이 중앙 구분선으로만 분리 */
   .homeCols{position:relative;display:flex;gap:0;align-items:stretch;flex:1;min-height:0}
   .homeSell{display:flex;flex-direction:column;gap:4px;padding:0 8px;background:none;border:none;min-width:0}
@@ -388,30 +389,46 @@
   /* 등급 필터 = 작은 알약 칩(3차 — 가장 가볍게, 선택된 등급만 채워짐) */
   /* 등급 띠 = 공용 세그먼트 바(.pdSeg — 장비창 섹션 바·사냥터 탭과 한 함수).
      여기서 덮는 건 두 가지뿐: 전폭으로 펴기(공용 기본은 286px 가운데 정렬)와 칸 높이. */
-  .hsTiers{flex:none;padding:1px 0 5px}
+  .hsTiers{flex:none;padding:0 0 4px}
   .hsTiers .pdSeg{max-width:none;margin:0}
-  .hsTiers .pdSegBtn{padding:10px 4px;font-size:11px}   /* 세로를 조금 늘려 손가락이 닿는 띠로 */
-  .hsGrid{display:flex;flex-wrap:nowrap;justify-content:flex-start;gap:6px;align-items:stretch;overflow-x:auto;overflow-y:hidden;padding-bottom:1px;flex:1;min-height:0}   /* 고정 4열(각 셀 1/4폭) · 왼쪽부터 채움 · stretch = 카드가 칸 높이를 채운다(아래가 비지 않게) */
+  .hsTiers .pdSegBtn{padding:6px 4px;font-size:11px}   /* 얇은 띠 — 터치 타겟은 34px 로 유지된다(패딩 6+글자 22) */
+  /* 고정 4열 · 왼쪽부터 채움 · stretch = 카드가 칸 높이를 채운다(아래가 비지 않게).
+     ⚠ 카드 폭은 항상 (뷰 - 3*--hsGap)/4 여야 '한 화면에 딱 4장'이 지켜진다.
+     카드를 좁히고 싶으면 폭이 아니라 --hsGap 을 키울 것 — 폭만 줄이면 5번째가 삐져나와 잘려 보인다. */
+  .hsGrid{--hsGap:6px;display:flex;flex-wrap:nowrap;justify-content:flex-start;gap:var(--hsGap);align-items:stretch;overflow-x:auto;overflow-y:hidden;padding-bottom:1px;flex:1;min-height:0}
   .hsGrid::-webkit-scrollbar{height:4px}.hsGrid::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
   /* 유닛 셀 = 통일된 SC 카드(메탈+네온 엣지+사선 모서리+스캔라인) */
-  .hsCell{position:relative;flex:0 0 calc((100% - 18px)/4);min-width:0;padding:0;cursor:pointer;overflow:hidden;transition:all .12s;display:flex;flex-direction:column;
-    background:var(--bpFace);border:1px solid var(--metal-edge);
-    clip-path:polygon(0 0,calc(100% - 7px) 0,100% 7px,100% 100%,7px 100%,0 calc(100% - 7px));
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
-  .hsCell::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent);pointer-events:none;z-index:4}
-  .hsCell:hover{border-color:var(--gold);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 0 10px -3px rgba(255,210,74,.6)}
+  /* 카드 = 사냥터 업그레이드 카드(.hmUp)와 같은 문법: 완전 검정 면 + 위가 밝고 아래로 스러지는 붉은 테두리.
+     ⚠ 테두리 그라데는 `면 padding-box, 액센트 border-box, 금속링 border-box` 3층이다 —
+       금속을 아래 깔지 않으면 순색 빨강이 되어 너무 쌀해 보인다(사냥터에서 이미 겪은 것).
+     ⚠ border-color 로는 이 테두리를 못 바꾼다(그라데라서) — hover/선택은 box-shadow 로 낸다. */
+  .hsCell{--accRGB:255,59,59;
+    position:relative;flex:0 0 calc((100% - 3*var(--hsGap))/4);min-width:0;padding:0;cursor:pointer;overflow:hidden;transition:box-shadow .12s,transform .12s;display:flex;flex-direction:column;
+    clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
+  /* 윗면 하이라이트 — 잘린 왼쪽 위를 피해서 시작한다(.hmUp::before 와 같은 규칙) */
+  .hsCell::after{content:'';position:absolute;left:7px;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.13) 30%,rgba(255,255,255,.13) 70%,transparent);pointer-events:none;z-index:4}
+  .hsCell:hover{box-shadow:0 0 10px -3px rgba(var(--accRGB),.6)}
   .hsCell:active{transform:translateY(1px)}
-  .hsThumb{position:relative;width:100%;flex:1;min-height:42px;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:3px;
-    background:var(--bpTile)}
-  .hsThumb img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))}.hsThumb svg{width:32px;height:32px}
-  .hsCnt{position:absolute;top:3px;left:4px;z-index:5;font-family:var(--font-num);font-size:var(--fs-sm);font-weight:800;color:#fff;
-    padding:0 4px;border-radius:var(--r-bar);background:rgba(6,8,12,.78);border:1px solid rgba(255,255,255,.18);line-height:1.45;text-shadow:0 1px 2px #000}
-  .hsMeta{flex:none;display:flex;align-items:baseline;gap:3px;padding:2px 5px 3px;background:rgba(6,8,12,.66);border-top:1px solid rgba(255,255,255,.07)}   /* 이름(좌) · 회수가(우) 한 줄 */
-  .hsName{flex:1 1 auto;min-width:0;font-size:9px;font-weight:700;color:#dbe3ee;text-align:left;line-height:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  /* 지정/조합 카드는 .hsMeta 없이 이름이 칸의 직계 자식이다 — 여기서 flex:1 을 물려받으면
-     남는 높이를 이름 상자가 통째로 먹어 카드 아래가 새까맣게 빈다(실제로 그랬다). */
-  .hsCell>.hsName{flex:none;padding:2px 5px 3px;text-align:center}
-  .hsVal{flex:0 0 auto;font-family:var(--font-num);font-size:11px;font-weight:800;color:var(--gold);line-height:12px;letter-spacing:.2px;text-shadow:0 1px 2px #000}
+  /* 초상 — 카드 폭은 꽉 채우고 여백은 여기 안쪽 패딩으로 만든다(그림이 칸 벽에 붙지 않게) */
+  .hsThumb{position:relative;width:100%;flex:1;min-height:34px;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:3px 9px;
+    background:none}   /* 카드 면(완전 검정)이 그대로 비친다 — 회색 타일을 덮지 않는다 */
+  .hsThumb img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))}.hsThumb svg{width:28px;height:28px}
+  /* 초상 아래 글자 묶음 — 이름 + 줄들(수량 · 가격 · 등급 화살표). 세 화면이 같은 마크업(_hsCardHTML)을 쓴다 */
+  .hsInfo{flex:none;display:flex;flex-direction:column;align-items:center;gap:0;padding:2px 3px 3px;
+    background:none;border-top:1px solid rgba(255,255,255,.07)}   /* 면은 카드가 갖는다 — 글자 묶음은 구분선 한 줄만 */
+  .hsName{max-width:100%;font-size:10.5px;font-weight:700;color:#e8eef6;text-align:center;line-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* 수량 = 초상 **우상단** 뱃지(줄이 아니다 — 두 곳에 같은 값을 두지 않는다).
+     카드의 잘린 모서리는 왼쪽 위라 뱃지는 반대편에 둔다.
+     ⚠ 글자는 flex 로 세운다 — line-height 로 맞추면 숫자 글꼴의 여백 때문에 위로 뜬다(실제로 그랬다). */
+  .hsCnt{position:absolute;top:3px;right:3px;z-index:5;display:flex;align-items:center;justify-content:center;
+    min-width:19px;height:15px;padding:0 4px;box-sizing:border-box;
+    font-family:var(--font-num);font-size:var(--fs-sm);font-weight:800;color:#fff;line-height:1;
+    border-radius:0;background:rgba(6,8,12,.85);border:1px solid rgba(255,255,255,.18);text-shadow:0 1px 2px #000}
+  .hsVal{display:flex;align-items:center;gap:2px;font-family:var(--font-num);font-size:10px;font-weight:800;color:var(--gold);line-height:13px;text-shadow:0 1px 2px #000}
+  .hsVal .riSm{width:9px;height:9px;object-fit:contain;display:block}
+  /* 조합 결과 — "일반 › 에픽". 색은 등급색 두 개뿐이고 화살표는 중립이다 */
+  .hsUp{display:flex;align-items:center;gap:2px;max-width:100%;font-size:9px;font-weight:800;line-height:13px;white-space:nowrap;overflow:hidden}
+  .hsUp i{font-style:normal;color:var(--cf)} .hsUp em{font-style:normal;color:#6b7480;font-weight:700}
   .hsEmpty{font-size:var(--fs-xs);color:#7d8590;padding:8px 2px}
   
   
@@ -756,7 +773,7 @@
     background:none;border:none;border-radius:0;box-shadow:0 -9px 26px rgba(0,0,0,.6);
     transform:translateY(112%);transition:transform .26s cubic-bezier(.2,.8,.25,1);pointer-events:none}
   /* 판의 '면'은 여기(::before)다 — 요소 자체에 clip-path 를 걸면 시트 밖으로 나가 있는
-     #btCardCtl(top:-28px)까지 잘려 사라진다. z-index:-1 은 .bp/#btSheet 가 z-index 를 가져
+     자식(예: ⊘ 지정 해제 버튼)까지 잘려 사라진다. z-index:-1 은 .bp/#btSheet 가 z-index 를 가져
      쌓임 맥락을 만들기 때문에 판 안에만 머문다(자식 위로 새지 않는다).
      모서리 컷은 사냥터 카드(.hmUp)와 같은 7px — 위 두 귀퉁이만 자른다(아래는 화면 끝에 붙는다). */
   .bp::before,#btSheet::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;--ch:7px;
@@ -1100,19 +1117,9 @@
     box-shadow:0 -8px 24px rgba(0,0,0,.55);padding:9px 8px 12px;gap:0}
   #bpPlayers{padding-top:9px}   /* 관전 탭 기본(플레이어 그리드) 하단 높이 = 메인/유닛뽑기/업그레이드(#bpMain 9px)와 통일 — .bp 기본 10px에서 1px 보정 */
   #btSheet.open{transform:translateY(0)}
-  #btCardCtl{position:absolute;top:-28px;right:14px;z-index:31;width:46px;height:23px;padding:0;   /* 프로필 간소화/최소화 사이클 버튼(상단 우측 밖, 부양 버튼과 겹침 방지 위로) */
-    border:1px solid var(--panelBigEdge);border-bottom:none;border-radius:var(--r-bar) var(--r-bar) 0 0;
-    background:linear-gradient(180deg,rgba(30,30,30,.96),rgba(16,16,16,.98));color:#a6a6a6;
-    display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 -4px 12px rgba(0,0,0,.35);
-    transition:color .15s,background .15s,transform .1s}
-  #btSheet.open #btCardCtl{display:flex}
-  #btCardCtl:hover{color:#e6e6e6;background:linear-gradient(180deg,rgba(44,44,44,.98),rgba(24,24,24,.99))}
-  #btCardCtl:active{transform:translateY(1px)}
-  #btCardCtl svg{width:17px;height:17px;display:block;transition:transform .22s cubic-bezier(.2,.8,.25,1)}
-  #btCardCtl.up svg{transform:rotate(180deg)}
+  /* (제거) #btCardCtl — 하단 시트 접기(간소화/최소화) 버튼. 시트 높이는 이제 --bpBodyH 하나로 고정이다. */
   #btSheet.simple #btSheetBody,#unitCmd.simple,#playerProfile.simple{height:var(--bpBodyH);max-height:var(--bpBodyH)}   /* 간소화 = 1줄 그리드 · 높이 고정(건물 프로필 기준 ≈120px · 개인·다중·혼합 모두 동일) · 메인 프로필(#unitCmd)도 동일 규격 */
   #btSheet.simple .cmdG .cgGrid,#unitCmd.simple .cmdG .cgGrid{grid-template-rows:1fr}
-  #btSheet.mini #btSheetBody{display:none}   /* 최소화 = 본문 숨김(버튼 바만) */
   #btSheetBody,#unitCmd,#playerProfile{height:min(48vh,246px);max-height:min(48vh,246px);min-height:0;flex-direction:column}   /* 일꾼 지정 패널 크기로 고정(건물·유닛 모두 동일 높이) · #unitCmd는 display만 .on에서 제어 */
   #btSheetBody{display:flex}
   #techSkTip{position:fixed;z-index:60;max-width:210px;padding:7px 9px;border-radius:10px;pointer-events:none;   /* 🔮 스킬 롱프레스 설명 팝업 — 프로필 시트와 동일 글래스 톤 */
@@ -1135,9 +1142,13 @@
   #btDesel.on{display:flex}
   #btDesel svg{filter:drop-shadow(0 0 5px var(--neon-glow))}
   #btDesel:active{transform:translateY(1px);border-color:var(--neon);box-shadow:0 0 12px var(--neon-glow)}
-  body.cstMode #chatBar,body.cstMode #chatLog,body.cstMode #miniWrap,body.cstMode #deselTop,body.cstMode #mergeFab,body.cstMode #skillFab,body.cstMode #btCtl,body.cstMode #hud{display:none !important}   /* 건설=자체 상단바(.bmapTop)만 사용 → HUD 이중 표시 방지 */
-  /* 상단 HUD(크레딧·에너지·인구·라운드·킬·시계)는 모든 구역 공통 고정 — 건설 탭에서도 표시. 건설맵 상단바는 그 아래로 */
-  body.cstMode .bmapTop{top:0}   /* #hud 숨김 → 건설 자체 상단바를 최상단으로 */
+  body.cstMode #chatBar,body.cstMode #chatLog,body.cstMode #miniWrap,body.cstMode #deselTop,body.cstMode #mergeFab,body.cstMode #skillFab,body.cstMode #btCtl{display:none !important}
+  /* 🏗 관리자 건설은 자체 상단바(.bmapTop = 종족 탭·치트 버튼·자원)만 쓴다 → 게임 HUD 숨김(이중 표시 방지).
+     오토배틀 건설지(.stkCst)는 반대다 — 상단이 전투 화면과 **같아야** 하므로 #hud 를 그대로 두고
+     건설맵 쪽 자원 복제본(.bres)을 만들지 않는다(techMapRender 가 techWallet() 일 때 생략). */
+  body.cstMode:not(.stkCst) #hud{display:none !important}
+  body.cstMode .bmapTop{top:0}                 /* #hud 숨김 → 건설 자체 상단바를 최상단으로 */
+  body.cstMode.stkCst .bmapTop{top:34px}       /* #hud 표시 → 좌측 도구열(철거)이 시계 아래로 */
   /* 적군 유닛 구분(붉은 링) */
   .unit.foe .ubox:not(.model3d){box-shadow:0 0 0 2px rgba(255,66,66,.62),0 0 9px rgba(255,54,54,.5)!important}   /* 2D 폴백 전용 — 3D는 플레이어색 본체 틴트로 구분(적/아군 구분 안 함) */
   
@@ -1479,7 +1490,9 @@
     border:1px solid var(--metal-edge);border-radius:var(--r-lg);background:var(--bpFace);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.05);transition:.12s}
   .cmdG .cgSlot::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent)}
-  .cmdG .cgPro{width:100%;aspect-ratio:1.2;flex:none;position:relative;overflow:hidden;color:var(--ca);border:1px solid var(--caS);border-radius:var(--r-md);
+  /* 초상은 남는 높이만 갖는다(flex:0 1 auto + min-height:0) — 글자 줄을 밀어내지 않게.
+     이미지는 object-fit:contain 이라 눌려도 찌그러지지 않고 레터박스가 된다. */
+  .cmdG .cgPro{width:100%;aspect-ratio:1.2;flex:0 1 auto;min-height:0;position:relative;overflow:hidden;color:var(--ca);border:1px solid var(--caS);border-radius:var(--r-md);
     background:var(--bpTile);display:flex;align-items:center;justify-content:center;font-size:22px}
   /* 스캔라인 + 아래쪽 비네트 — 초상이 커진 만큼 재질을 주고 이름줄과 분리한다 */
   .cmdG .cgPro::after{content:'';position:absolute;inset:0;
@@ -1495,8 +1508,10 @@
   .cmdG .cgPro img.cgIco{width:100%;height:100%;object-fit:contain}   /* 실제 아이콘 이미지 = 초상처럼 칸을 꽉 채움 */
   .cmdG .cgPro:has(img.cgIco)::after{display:none}        /* 실제 아이콘 위에는 가로 스캔라인을 덮지 않는다(아이콘 자체 질감이 있음) */
   .cmdG .cgSlot.iconFill{justify-content:center;padding:6px} .cmdG .cgSlot.iconFill .cgPro{width:72%;height:auto;aspect-ratio:1;border:none;background:none;box-shadow:none} .cmdG .cgSlot.iconFill .cgPro svg{width:100%;height:100%} .cmdG .cgSlot.iconFill .cgName,.cmdG .cgSlot.iconFill .cgCost{display:none}   /* 아이콘만 채우는 칸(일시정지 등): 빈 이름/비용 줄 숨겨 아이콘이 칸 정중앙에 크게 */
-  .cmdG .cgName{font:800 10px/1.05 sans-serif;letter-spacing:-.2px;color:#e6eefc;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .cmdG .cgSub{font:800 8.5px/1 var(--font-num);color:var(--caL);text-align:center;margin-top:2px;font-variant-numeric:tabular-nums;white-space:nowrap}
+  /* ⚠ 글자 줄은 절대 눌리지 않는다(flex:none). 칸이 모자라면 초상이 줄어든다 —
+     반대로 두면 이름이 4px 로 뭉개져 읽을 수 없게 된다(오토배틀 건설 카드에서 실제로 그랬다). */
+  .cmdG .cgName{flex:none;font:800 10px/1.05 sans-serif;letter-spacing:-.2px;color:#e6eefc;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cmdG .cgSub{flex:none;font:800 8.5px/1 var(--font-num);color:var(--caL);text-align:center;margin-top:2px;font-variant-numeric:tabular-nums;white-space:nowrap}
   .cmdG .cgSlot.max .cgSub{color:var(--cgGood)}
   .cmdG .cgCost .ri{width:11px;height:11px;flex:none}
   .cmdG .cgDcost .ri{width:12px;height:12px;flex:none}
@@ -2890,13 +2905,20 @@
      빨강은 여기, 업그레이드를 감싸는 테두리가 맡는다(안쪽 작은 버튼은 은색 그대로).
      테두리는 단색이 아니라 '위에서 빛을 받은' 그라데다 — 두 겹 배경(면=padding-box / 테두리=border-box)으로 낸다.
      ⚠ 색은 알파만 바꿔 만든다. 검정 위에서 알파가 곧 밝기라 토큰(--hmAccRGB) 하나로 명암이 전부 나온다. */
-  .hmUp{position:relative;display:flex;align-items:center;gap:6px;padding:6px;min-width:0;
-    background:linear-gradient(180deg,#0a0a0a,#000) padding-box,
-      linear-gradient(180deg,rgba(var(--hmAccRGB),.40) 0%,rgba(var(--hmAccRGB),.26) 34%,
-        rgba(var(--hmAccRGB),.15) 68%,rgba(var(--hmAccRGB),.09) 100%) border-box,
-      var(--metal-ring-n) border-box;   /* 아래에 금속을 깔아 구역색을 탁하게 — 순색 빨강은 너무 쌀해 보인다 */
-    border:1px solid transparent;border-radius:var(--r-bar);
-    box-shadow:0 0 7px -5px rgba(var(--hmAccRGB),.35);
+  /* 🎴 카드 껍데기 — 사냥터 업그레이드 카드와 유즈맵 유닛 카드가 **이 한 규칙**을 공유한다.
+     액센트만 각자 --accRGB 로 정하고, 면·테두리·그림자 문법은 여기 한 곳에만 쓴다.
+     ⚠ 토큰(:root{--cardRing:…})으로는 못 묶는다 — 커스텀 속성 안의 var() 는 **선언 지점**에서 치환되므로
+       :root 에 없는 --accRGB 가 무효가 되어 background 가 통째로 죽는다(실제로 그랬다). 선택자를 묶는 게 답이다.
+     ⚠ 금속 링을 아래 깔지 않으면 순색 액센트가 되어 너무 쌀해 보인다.
+     ⚠ 이 테두리는 그라데라서 border-color 로 못 바꾼다 — hover/선택은 box-shadow 로 낼 것. */
+  .hmUp,.hsCell{background:var(--bpFace) padding-box,
+      linear-gradient(180deg,rgba(var(--accRGB),.40) 0%,rgba(var(--accRGB),.26) 34%,
+        rgba(var(--accRGB),.15) 68%,rgba(var(--accRGB),.09) 100%) border-box,
+      var(--metal-ring-n) border-box;
+    border:1px solid transparent;
+    box-shadow:0 0 7px -5px rgba(var(--accRGB),.35)}
+  .hmUp{--accRGB:var(--hmAccRGB);
+    position:relative;display:flex;align-items:center;gap:6px;padding:6px;min-width:0;border-radius:var(--r-bar);
     clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
   /* 윗면 하이라이트 — 카드가 '판'으로 떠야 평평해 보이지 않는다 */
   .hmUp::before{content:'';position:absolute;left:7px;right:0;top:0;height:1px;pointer-events:none;
@@ -4003,7 +4025,7 @@
     </div>
     <div id="zoneLabel">📍 내 디펜스 구역</div>
     <!-- 상시 공용 보스(협동) HP 바 — 메인 전투 화면 상단 -->
-    <div id="coopBossBar" class="hide" onclick="openBossArena()" title="토벌장 입장 (보스 구역)">
+    <div id="coopBossBar" class="hide" title="공용 보스 상태">
       <div class="cbMid">
         <div class="cbTop"><span class="cbName" id="cbName"></span></div>
         <div class="cbBarOuter"><div class="cbBarFill" id="cbFill"></div><span class="cbHpTxt" id="cbHp"></span></div>
@@ -4022,7 +4044,7 @@
     <div class="gview" id="vBoss"><canvas id="cvBoss"></canvas></div>
     <div class="gview" id="vBuild"><div id="cstMain"></div><canvas id="cstFog"></canvas><div id="cstLabels"></div><canvas id="techMap3d"></canvas><div id="cstPrev"><canvas id="cstPrevCv"></canvas><div id="cstPrevName"></div><div id="cstPrevInfo"></div><button id="cstPrevX" onclick="techHidePreview()"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg> 닫기</button></div>
       <!-- ExoMiner식 하단 인터페이스: 슬라이드 시트 + 아이콘 독 + 유닛 지정 해제(메인 deselTop 재사용 디자인) -->
-      <div id="btSheet"><button id="btCardCtl" onclick="techCardCycle(event)" title="간소화"></button><div id="btSheetBody"></div></div>
+      <div id="btSheet"><div id="btSheetBody"></div></div>
       <div id="techSkTip" class="hide"></div>   <!-- 🔮 스킬 롱프레스 설명 팝업(손 떼면 사라짐) -->
 
       <div id="btDesel" onclick="techDeselU(event)" title="유닛 지정 해제"><svg viewBox="0 0 24 24" width="26" height="26"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.4"/><line x1="6.2" y1="6.2" x2="17.8" y2="17.8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></div>
@@ -4295,7 +4317,7 @@
 
   <div id="bot">
     <div id="tabs">
-      <div class="tab on" data-tab="Main"  onclick="openMainHome(this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 11L12 4.3 20.4 11"/><path d="M5.7 9.4V19.6h12.6V9.4"/><path d="M9.8 19.6v-4.7h4.4v4.7"/></svg></span>메인</div>
+      <div class="tab on" data-tab="Main"  onclick="openMainHome(this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 11L12 4.3 20.4 11"/><path d="M5.7 9.4V19.6h12.6V9.4"/><path d="M9.8 19.6v-4.7h4.4v4.7"/></svg></span>관리</div>
       <div class="tab" data-tab="Unit"     onclick="openGachaSheet(this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9.5" cy="8.5" r="3"/><path d="M4 19.5c0-3 2.5-5.2 5.5-5.2s5.5 2.2 5.5 5.2"/><path d="M18.5 4v5M16 6.5h5"/></svg></span><span id="unitTabLbl">유닛뽑기</span></div>
       <div class="tab" data-tab="Upgrade"  onclick="openUpgradeSheet(this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5l5.3 5.3h-3.1v4.6h-4.4V9.8H6.7z"/><path d="M7 18.5h10"/></svg></span>업그레이드</div>
       <div class="tab" id="bossTab" data-tab="Boss" style="display:none" onclick="openBossSheet(this)"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6c-3.9 0-6.9 2.8-6.9 6.5 0 2.2 1 3.9 2.5 4.9v3.4h8.8V15c1.5-1 2.5-2.7 2.5-4.9 0-3.7-3-6.5-6.9-6.5z"/><circle cx="9.4" cy="10.4" r="1.15"/><circle cx="14.6" cy="10.4" r="1.15"/><path d="M10.6 18.4v2M13.4 18.4v2"/></svg></span>보스<span class="tabDot" id="bossTabDot"></span></div>
@@ -6864,21 +6886,21 @@ const NAV_TREE=[
   // 사냥터 = 기본 화면이자 최상위 그 자체 — 눌러도 내려가지 않는다(하위는 화면 상단 버튼줄이 맡는다)
   { k:'home', label:'사냥터', ico:'home', go:()=>openHome(), subs:[] },
   // 캐릭터 — '나 자신'에 관한 것. 내용은 아직 비어 있다(옛 '강화' 자리).
-  { k:'upg',  label:'캐릭터', ico:'user', go:()=>openUpgScreen(), cur:()=>_chrSec, subs:[
+  { k:'upg',  label:'캐릭터', ico:'user', go:()=>openUpgScreen(), cur:()=>_chrSec, reset:()=>setChrSec('info'), subs:[
       { k:'info',  label:'정보', ico:'user',  act:()=>setChrSec('info') },
       { k:'grow',  label:'성장', ico:'fav',   act:()=>setChrSec('grow') },
       { k:'skill', label:'스킬', ico:'boost', act:()=>setChrSec('skill') } ] },
-  { k:'gear', label:'정비', ico:'bag', go:()=>openGear(), cur:()=>_gearTab, subs:[
+  { k:'gear', label:'정비', ico:'bag', go:()=>openGear(), cur:()=>_gearTab, reset:()=>setGearTab('gear'), subs:[
       { k:'gear', label:'장비', ico:'armor', act:()=>setGearTab('gear') },
       { k:'pet',  label:'펫',   ico:'paw',   act:()=>setGearTab('pet') },
       { k:'ally', label:'동료', ico:'party', act:()=>setGearTab('ally') } ] },
   // 유즈맵: 정렬(인기·신규·추천·즐겨찾기)은 화면 위 띠로 되돌렸고, 하단은 소셜이 맡는다.
   //   ⛔ 소셜 UI 를 새로 만들지 않는다 — 이미 있는 #twChat 시트(.msSocial 채팅·파티·친구)를 연다.
-  { k:'map',  label:'유즈맵', ico:'map', go:()=>twGoMap(), cur:()=>_mapSocial, subs:[
+  { k:'map',  label:'유즈맵', ico:'map', go:()=>twGoMap(), cur:()=>_mapSocial, reset:()=>mapOpenSocial('chat'), subs:[
       { k:'chat',   label:'채팅', ico:'chat',   act:()=>mapOpenSocial('chat') },
       { k:'friend', label:'친구', ico:'friend', act:()=>mapOpenSocial('friend') },
       { k:'party',  label:'파티', ico:'party',  act:()=>mapOpenSocial('party') } ] },
-  { k:'shop', label:'상점', ico:'gift', go:()=>openShop(), cur:()=>_shopSec, subs:[
+  { k:'shop', label:'상점', ico:'gift', go:()=>openShop(), cur:()=>_shopSec, reset:()=>setShopSec('deal'), subs:[
       { k:'deal', label:'한정구매', ico:'flag',  act:()=>setShopSec('deal') },
       { k:'draw', label:'뽑기',    ico:'gift',  act:()=>setShopSec('draw') },
       { k:'res',  label:'재화',    ico:'coin',  act:()=>setShopSec('res') },
@@ -6916,8 +6938,14 @@ function navShow(tab){ const b=document.getElementById('navBar'); if(!b) return;
 function navGo(tab){ if(typeof playSfx==='function') playSfx('ui_tab');
   if(tab==='town'){ openHome(); return navShow('home'); }   // 마을 폐지 — 옛 진입점은 HOME으로
   const sec=navSec(tab); if(!sec) return;
+  const was=_navDrill;
   sec.go();                                   // 화면 이동(안에서 navShow 를 부르며 _navDrill 을 비운다)
-  if(sec.subs.length){ _navDrill=tab; navPaint(); } }
+  if(!sec.subs.length) return;
+  // 구역에 '밖에서 들어올 때'는 늘 첫 하위로 되돌린다 — 유즈맵 하단 탭바(gtabDrill)와 같은 규칙.
+  // 안 그러면 정비의 '펫'을 보다 나갔다 다시 들어와도 펫이 열려 있어 구역 이름과 내용이 어긋난다.
+  // ⚠ sec.go() 가 이미 그 구역 내용을 그렸으므로 reset 은 반드시 그 뒤에(렌더까지 하는 setter 로) 부른다.
+  if(was!==tab && sec.reset) sec.reset();
+  _navDrill=tab; navPaint(); }
 // 구역 전용 칸
 function navSub(k){ const sec=navSec(_navDrill); if(!sec) return;
   const t=sec.subs.find(x=>x.k===k); if(!t) return;
@@ -9994,14 +10022,27 @@ function renderCombinePanel(){ const tiersBox=document.getElementById('hsTiers')
   let cells='';
   for(const gid of gids){ const list=groups[gid]; if(list[0].gtier!==_combTier) continue; const gu=GACHA_UNITS[gid]; if(!gu) continue;
     const res=combineResultFor(gid, list[0].gtier);
-    const pk=GACHA_MODEL[gid]||GACHA_PROXY[gid], img=PORTRAIT_IMG[pk];
-    const thumb=img?('<img src="'+img+'" draggable="false">'):(typeof unitSVG==='function'?unitSVG(GACHA_PROXY[gid]||'marine'):'');
-    const rtName=res.type==='transcend'?'초월':GACHA_TIERS[res.nextTier].name;   // 툴팁용(결과 등급)
-    cells+='<button class="hsCell" onclick="combineOneOfType(\''+gid+'\')" title="'+escHtml(gu.displayName)+' ×3 → '+rtName+'"><div class="hsThumb">'+thumb+'</div>'
-      +'<span class="hsCnt">×'+list.length+'</span><span class="hsName">'+escHtml(gu.displayName)+'</span></button>';   // →다음등급 텍스트 제거(툴팁엔 유지)
+    const to=(res.type==='transcend')?'transcend':res.nextTier;   // 초월도 등급표에 있으므로 키 그대로 넘긴다
+    const rtName=GACHA_TIERS[to]?GACHA_TIERS[to].name:to;
+    cells+=_hsCardHTML(gid, gu.displayName, "combineOneOfType('"+gid+"')",
+      gu.displayName+' ×3 → '+rtName, list.length, [_hsUpRow(list[0].gtier, to)]);
   }
   grid.innerHTML=cells;
 }
+// ── 🃏 유닛 카드 한 장 — 지정·판매·조합이 **같은 마크업**을 쓴다(칸을 세 번 만들지 말 것) ──
+// 수량(×N)은 초상 좌상단 뱃지(.hsCnt)다. 초상 아래로는 [이름] + rows: 지정=[] · 판매=[가격] · 조합=[등급 화살표]
+function _hsThumbHTML(gid){ const pk=GACHA_MODEL[gid]||GACHA_PROXY[gid], img=PORTRAIT_IMG[pk];
+  return '<div class="hsThumb">'+(img?('<img src="'+img+'" draggable="false">')
+    :(typeof unitSVG==='function'?unitSVG(GACHA_PROXY[gid]||'marine'):''))+'</div>'; }
+function _hsCardHTML(gid, name, act, title, qty, rows){
+  return '<button class="hsCell" onclick="'+act+'" title="'+escHtml(title)+'">'+_hsThumbHTML(gid)
+    +'<span class="hsCnt">×'+qty+'</span>'
+    +'<div class="hsInfo"><span class="hsName">'+escHtml(name)+'</span>'+(rows||[]).join('')+'</div></button>'; }
+function _hsPrice(v){ return '<span class="hsVal">'+resIco('mineral','riSm')+'+'+v+'</span>'; }
+// 조합 결과 = "현재등급 → 다음등급". 등급색은 공용 TIER_COLOR 를 인라인 변수로만 받는다.
+function _hsUpRow(from, to){
+  return '<span class="hsUp" style="--cf:'+(TIER_COLOR[from]||'#fff')+'"><i>'+GACHA_TIERS[from].name+'</i>'
+    +'<em>›</em><b style="color:'+(TIER_COLOR[to]||'#fff')+'">'+(GACHA_TIERS[to]?GACHA_TIERS[to].name:to)+'</b></span>'; }
 function selectByGid(gid){ if(G.bossDeployPick){ bossDeployOne(gid); return; }   // 🎯 파견 선택 모드: 카드 탭 = 그 종류 1기만 파견(지정 안 함)
   _selViaTab=true; const ids=G.units.filter(u=>!u.fixed&&!u.atBoss&&u.gid===gid).map(u=>u.uid);
   if(ids.length){ G.sel=capSelTypes(ids,true); G.selEnemy=null; refreshSelCard(); } }   // 프로필 클릭 → 그 종류 전부 지정(30 제한 없음)
@@ -10020,10 +10061,8 @@ function renderSelectPanel(){ const tiersBox=document.getElementById('hsTiers'),
   let cells='';
   const _go=Object.keys(byGid).sort((a,b)=>byGid[b].length-byGid[a].length);   // 마릿수 많은 순(왼쪽부터)
   for(const gid of _go){ const list=byGid[gid], gu=GACHA_UNITS[gid]; if(!gu) continue;
-    const pk=GACHA_MODEL[gid]||GACHA_PROXY[gid], img=PORTRAIT_IMG[pk];
-    const thumb=img?('<img src="'+img+'" draggable="false">'):(typeof unitSVG==='function'?unitSVG(GACHA_PROXY[gid]||'marine'):'');
-    cells+='<button class="hsCell" onclick="selectByGid(\''+gid+'\')" title="'+escHtml(gu.displayName)+' '+list.length+'기 지정"><div class="hsThumb">'+thumb+'</div>'
-      +'<span class="hsCnt">×'+list.length+'</span><span class="hsName">'+escHtml(gu.displayName)+'</span></button>';
+    cells+=_hsCardHTML(gid, gu.displayName, "selectByGid('"+gid+"')",
+      gu.displayName+' '+list.length+'기 지정', list.length, []);
   }
   grid.innerHTML=cells;
 }
@@ -10042,11 +10081,9 @@ function renderSellPanel(){ const tiersBox=document.getElementById('hsTiers'), g
   let cells='';
   const _go=Object.keys(byGid).sort((a,b)=>byGid[b].length-byGid[a].length);   // 마릿수 많은 순(왼쪽부터)
   for(const gid of _go){ const list=byGid[gid], gu=GACHA_UNITS[gid]; if(!gu) continue;
-    const pk=GACHA_MODEL[gid]||GACHA_PROXY[gid], img=PORTRAIT_IMG[pk];
-    const thumb=img?('<img src="'+img+'" draggable="false">'):(typeof unitSVG==='function'?unitSVG(GACHA_PROXY[gid]||'marine'):'');
     const val=unitSellValue(list[0]);
-    cells+='<button class="hsCell" onclick="sellOneOfType(\''+gid+'\')" title="'+escHtml(gu.displayName)+' 판매 +'+val+'"><div class="hsThumb">'+thumb+'</div>'
-      +'<span class="hsCnt">×'+list.length+'</span><div class="hsMeta"><span class="hsName">'+escHtml(gu.displayName)+'</span><span class="hsVal">+'+val+'</span></div></button>';
+    cells+=_hsCardHTML(gid, gu.displayName, "sellOneOfType('"+gid+"')",
+      gu.displayName+' 판매 +'+val, list.length, [_hsPrice(val)]);
   }
   grid.innerHTML=cells;
 }
@@ -12242,6 +12279,7 @@ function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 
     const _zl=document.getElementById('zoneLabel');
     if(_zl) _zl.innerHTML=_hit? pIco(_e)+'<span class="zlTx">'+escHtml(_m[2])+'</span>' : escHtml(_z); }
   document.body.classList.toggle('cstMode', id==='Build');   // 건설 탭: 게임 HUD 숨김
+  document.body.classList.remove('stkCst');                  // 네모/관리자 경로 = 오토배틀 건설지 표시 해제(직스에서 빠져나온 잔여 클래스 제거)
   if(id==='Build' && typeof techUIEnsure==='function') techUIEnsure(); else { if(typeof techHidePreview==='function') techHidePreview(); if(window.M3D&&M3D.techMap3DStop) M3D.techMap3DStop();
     if(G.tech){ G.tech.sel=null; G.tech.selU=[]; G.tech.arm=null; if(G.tech.sheet){ G.tech.sheet.open=false; G.tech.sheet.sec=null; } } G._weldFx=null; }   // 건설 진입 렌더 / 이탈 시 프리뷰·라이브3D 정지 + 지정·시트·용접스파크 해제
   deselectUnit(); G.prodB=null; G.techB=null; G.mergeMode=false; { const mb=document.getElementById('mergeBtn'); if(mb) mb.classList.remove('on'); }
@@ -12638,10 +12676,10 @@ function _bossBldProfileModel(){ const cb=G.coopBoss||{};
 function renderBossBldProfile(){ const host=document.getElementById('unitCmd'); if(!host) return; host.classList.add('simple');
   const cb=G.coopBoss||{}; const sig='bbp|'+Math.round(cb.hp||0)+'|'+(cb.max||0)+'|'+(cb.lv||1)+'|'+_bossBldReward();
   if(host._gSig!==sig){ host._gSig=sig; host._cgSig=undefined; renderCmdGrid(host, _bossBldProfileModel()); } }
+// 4칸 = [파견1][파견2][빈칸][전체 회수]. '돌아가기' 칸은 없앴다 — 나가기는 하단 네비의 ‹ 하나뿐이다(2026-08-14).
 function _bossArenaSheetModel(){ const dep=G.units.filter(u=>u.atBoss);
-  const items=[ _bossArenaSlot(0), _bossArenaSlot(1),
-    { pro:bossIcoHTML('recall'), sn:'전체 회수', state:(dep.length>0?'ok':'dim'), act:'onclick="recallFromBoss(\'all\')"' },
-    { pro:bossIcoHTML('back'), sn:'돌아가기', state:'ok', act:'onclick="closeBossArena()"' } ];
+  const items=[ _bossArenaSlot(0), _bossArenaSlot(1), null,
+    { pro:bossIcoHTML('recall'), sn:'전체 회수', state:(dep.length>0?'ok':'dim'), act:'onclick="recallFromBoss(\'all\')"' } ];
   return { mode:'bossArena', title:'포인트방', icon:bossIcoHTML('head'), sub:'', compact:true, build:true,
     info:{ eb:'', name:'포인트 획득 방', desc:'건물 파괴로 포인트 획득 · 모두 동일' }, items:items }; }
 function renderBossArenaSheet(){ const host=document.getElementById('unitCmd'); if(!host) return; host.classList.add('simple');
@@ -12784,19 +12822,20 @@ function _setBottomTab(tab){ document.querySelectorAll('#tabs .tab').forEach(fun
 //   sub.cur 가 가리키는 키와 같은 칸이 .cur 로 표시된다. show() 가 false 인 하위는 아예 안 나온다.
 //   하위가 하나도 없는 구역(전투실험·건설 등 관리자 탭)은 내려가지 않는다.
 const GTAB_TREE={
+  // ⚠ '유닛 지정'은 여기 없다 — 아무 구역도 안 고른 **기본 상태**(gameRestHome)가 그 자리다.
+  //   메인 = 유닛을 처분·정리하는 묶음(판매·조합·자동화).
   // 자동화는 _homeMode 가 아니라 시트 모드(G.mainSheet==='auto')다 — cur 에서 그것부터 본다
-  Main:    { cur:()=>(G.mainSheet==='auto'?'auto':_homeMode), subs:[
-      { k:'select',  label:'유닛 지정', ico:'marine', act:()=>mainGoMode('select') },
-      { k:'sell',    label:'유닛 판매', ico:'coin',   act:()=>mainGoMode('sell') },
+  Main:    { cur:()=>(G.mainSheet==='auto'?'auto':_homeMode), reset:()=>mainGoMode('sell'), subs:[
+      { k:'sell',    label:'유닛 판매', ico:'coin',   act:()=>mainGoMode('sell') },   // ← 첫 칸(reset 대상)
       // 조합은 늘 자리를 지킨다 — 조합할 게 없으면 칸이 사라지는 게 아니라 판이 '3개 필요'라고 알린다
       { k:'combine', label:'유닛 조합', ico:'photon', act:()=>mainGoMode('combine') },
       // 자동화 = 옛 '전송 옆 AUTO 배너'. 표시 조건도 그 배너가 쓰던 것 그대로(하나라도 해금됐을 때)
       { k:'auto',    label:'자동화',   ico:'cpu',    act:()=>openAutoSheet(),
         show:()=>autoAnyOwned() } ] },
-  Unit:    { cur:()=>_gachaSec, subs:[
+  Unit:    { cur:()=>_gachaSec, reset:()=>setGachaSec('draw'), subs:[
       { k:'draw',  label:'뽑기',     ico:'gift',   act:()=>setGachaSec('draw') },
       { k:'tower', label:'타워구매', ico:'sunken', act:()=>setGachaSec('tower') } ] },
-  Upgrade: { cur:()=>_upgSec, subs:[
+  Upgrade: { cur:()=>_upgSec, reset:()=>setUpgSec('atk'), subs:[
       { k:'atk',  label:'공격력',   ico:'boost', act:()=>setUpgSec('atk') },
       { k:'luck', label:'확률',     ico:'rand',  act:()=>setUpgSec('luck') },
       { k:'perm', label:'영구강화', ico:'upg',   act:()=>setUpgSec('perm') } ] },
@@ -12806,17 +12845,33 @@ const GTAB_TREE={
       { k:'arena', label:'포인트방', ico:'flag', act:()=>openBossArena(),
         show:()=>!!(G.coopBoss && !G.coopBoss.dead) } ] },
   // 아군/적군은 대전(팀이 갈리는 판)에서만 뜻이 있다 — 개인전·협동은 전원 아군이라 하위를 두지 않는다
-  Players: { cur:()=>_plSec, subs:[
+  Players: { cur:()=>_plSec, reset:()=>setPlSec('ally'), subs:[
       { k:'ally', label:'아군', ico:'friend', act:()=>setPlSec('ally') },
       { k:'foe',  label:'적군', ico:'cpu',   act:()=>setPlSec('foe') } ],
       show:()=>gameHasVersus() },
 };
-let _gtabDrill='';   // 내려가 있는 구역('' = 최상위 5칸)
+// ══ 오토배틀(직스) 하단 탭 트리 ══
+// 같은 페인터를 쓰고 표만 갈아 끼운다 — 칸 생김새·‹ 동작·리셋 규칙이 네모와 하나다.
+//   전투는 탭이 아니라 **무선택 기본 화면**이다(‹ 가 여기로 돌아온다).
+const STK_TREE={
+  // 🏗 건설지 = 관리자 건설 화면(#vBuild + G.tech). '강화'는 그 화면 위에서 하단 시트만 바뀐다.
+  Build:   { cur:()=>(STK&&STK.supSheet?'upg':'build'), reset:()=>stkGoBuild(), subs:[
+      { k:'build', label:'건설', ico:'build', act:()=>stkGoBuild() },
+      { k:'upg',   label:'강화', ico:'boost', act:()=>stkGoUpg() } ] },
+  // 💥 특수무기 = 화면 이동 없이 하단 시트만(전장을 계속 본다)
+  Upgrade: { cur:()=>(STK&&STK.supPage==='wpnUse'?'use':'buy'), reset:()=>stkGoWpn('buy'), subs:[
+      { k:'buy', label:'구입', ico:'coin', act:()=>stkGoWpn('buy') },
+      { k:'use', label:'사용', ico:'boost', act:()=>stkGoWpn('use') } ] },
+  // 👁 관전은 하위가 없다 — 옛 동작(시트 토글) 그대로
+};
+let _gtabDrill='';   // 내려가 있는 구역('' = 최상위 칸들)
 // 이 구역이 지금 실제로 보여줄 하위 목록(show() 통과분). 0개면 내려갈 것이 없다.
-function gtabSubs(tab){ const sec=GTAB_TREE[tab];
-  // 관리자 샌드박스·직스는 같은 탭 이름이 다른 화면을 가리킨다(유닛=이펙트 랩, 업그레이드=보급 …) —
-  // 여기 하위는 네모네모 인게임 전용이므로 그 모드에선 내려가지 않는다.
-  if(typeof G!=='undefined' && (G.sandbox||G.strike)) return [];
+// 지금 모드의 트리 — 네모 인게임은 GTAB_TREE, 오토배틀은 STK_TREE.
+// ⚠ 같은 탭 키(Build/Upgrade)가 모드마다 다른 화면을 가리키므로 표를 갈아 끼워야 한다.
+function gtabTree(){ return (typeof G!=='undefined' && G.strike) ? STK_TREE : GTAB_TREE; }
+function gtabSubs(tab){ const sec=gtabTree()[tab];
+  // 관리자 샌드박스는 같은 탭 이름이 또 다른 화면(이펙트 랩 등)이라 내려가지 않는다.
+  if(typeof G!=='undefined' && G.sandbox) return [];
   if(!sec || (sec.show && !sec.show())) return [];
   return sec.subs.filter(t=>!t.show || t.show()); }
 function gtabPaint(){ const b=document.getElementById('tabs'); if(!b) return;
@@ -12824,19 +12879,42 @@ function gtabPaint(){ const b=document.getElementById('tabs'); if(!b) return;
   const subs=_gtabDrill?gtabSubs(_gtabDrill):[];
   b.classList.toggle('drill', subs.length>0);
   if(!subs.length){ _gtabDrill=''; return; }
-  const sec=GTAB_TREE[_gtabDrill], cur=sec.cur?sec.cur():null;
+  const sec=gtabTree()[_gtabDrill], cur=sec.cur?sec.cur():null;
   let h=_navCell('nav','back','뒤로','back','navBk','gtabBack()');
   for(const t of subs) h+=_navCell('sub', t.k, t.label, t.ico, (cur===t.k?'cur':''), "gtabSub('"+t.k+"')");
   b.insertAdjacentHTML('beforeend', h);
   if(typeof paintIcons==='function') paintIcons(b); }
-// 최상위 칸을 눌렀을 때 — 화면 전환은 이미 각 open*() 가 했고, 여기서는 층만 정한다
-function gtabDrill(tab){ _gtabDrill=gtabSubs(tab).length?tab:''; gtabPaint(); }
+// 최상위 칸을 눌렀을 때 — 화면 전환은 이미 각 open*() 가 했고, 여기서는 층만 정한다.
+// ⚠ 구역에 '들어올 때'는 늘 첫 하위로 되돌린다 — 안 그러면 타워구매를 보다 나갔다 다시 들어와도
+//   타워구매가 열려 있어서, 구역 이름과 보이는 내용이 어긋난다(사용자가 짚은 것).
+//   하위 칸을 누르는 경로(gtabSub)는 gtabDrill 을 안 지나므로 그때는 유지된다.
+function gtabDrill(tab){ const sec=gtabTree()[tab], was=_gtabDrill;
+  _gtabDrill=gtabSubs(tab).length?tab:'';
+  // ⚠ '밖에서 들어올 때'만 되돌린다(was!==tab). 이미 그 구역에 있는데 되돌리면
+  //   자동화(openMainSheet('auto',…) → gtabDrill('Main'))가 곧바로 판매로 튕겨 나간다.
+  if(_gtabDrill && was!==_gtabDrill && sec && sec.reset) sec.reset();
+  gtabPaint(); }
 function gtabSub(k){ const subs=gtabSubs(_gtabDrill), t=subs.find(x=>x.k===k); if(!t) return;
   if(typeof playSfx==='function') playSfx('ui_tab');
   t.act(); gtabPaint(); }
-// ‹ = 한 층 위(최상위 5칸). 보고 있는 화면은 그대로 둔다 — HOME 네비의 navBack 과 같은 뜻이다.
+// ‹ = 기본 상태로 돌아간다. 층만 올리면 '보스 구역에 있으면서 최상위 네비를 보는' 어중간한 상태가 남는다
+// (하단은 보스 시트인데 네비는 최상위 — 실제로 그랬다). HOME 네비의 navBack 이 openHome() 을 부르는 것과 같은 뜻.
 function gtabBack(){ if(typeof playSfx==='function') playSfx('ui_back');
-  _gtabDrill=''; gtabPaint(); }
+  if(typeof G!=='undefined' && G.strike){ strikeRestHome(); return; }   // 오토배틀 = 전투 화면이 기본
+  gameRestHome(); }
+// 🏠 기본 상태 — 아무 구역도 고르지 않았을 때의 하단. 내용은 '유닛 지정'이고 네비는 어느 칸도 안 켜진다.
+//   ⚠ switchTab 이 안에서 gtabDrill 을 부르므로, 층·하이라이트 정리는 반드시 그 뒤에 한다.
+function gameRestHome(){
+  // ⚠ 포인트방은 '화면'이 아니라 전장 위 오버레이(#bossPanel)다 — G.tab 은 계속 'Main' 이라
+  //   아래 switchTab 을 안 지나고, 그러면 열린 채로 남는다. 여기서 직접 걷는다.
+  if(G.bossOpen && typeof closeBossArena==='function') closeBossArena();
+  if(G.tab!=='Main') switchTab('Main', document.querySelector('.tab[data-tab="Main"]'));
+  G.mainSheet=null; G.sel=[]; G.selEnemy=null; G.selType=null; _selViaTab=false; G.sheetDown=false;
+  setHomeMode('select');
+  _setBottomTab(''); _gtabDrill=''; gtabPaint();
+  document.body.classList.add('sheetOpen');
+  if(typeof _syncSheetLift==='function'){ requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); }
+  refreshSelCard(); }
 // 대전 판인가 — 나와 팀이 다른 플레이어가 실제로 있는가. 네모(협동)는 전원 같은 편이라 항상 false.
 function gameHasVersus(){ if(typeof G==='undefined' || !G.teams) return false;
   const me=G.myPlayer||1, mine=G.teams[me];
@@ -12844,9 +12922,13 @@ function gameHasVersus(){ if(typeof G==='undefined' || !G.teams) return false;
 // 자동화 항목을 하나라도 해금했는가 — 옛 #autoFab 의 표시 조건과 같은 식이다
 function autoAnyOwned(){ if(typeof autoUtilOwned!=='function' || typeof G==='undefined' || G.phase!=='playing') return false;
   const o=autoUtilOwned(); return !!(o.combine||o.unit||o.energy||o.place||o.bossdeploy); }
-// 지정/판매/조합으로 돌아가기 — 자동화 시트를 보고 있었다면 먼저 메인 홈으로 되돌린다
-function mainGoMode(m){ if(typeof G!=='undefined' && G.mainSheet!=null && typeof openMainHome==='function') openMainHome();
-  setHomeMode(m); }
+// 판매/조합으로 전환 — 자동화 시트를 보고 있었다면 그 시트만 걷어낸다.
+// ⚠ openMainHome() 을 부르면 안 된다: 이미 메인 구역에 있으므로 '재탭 = 시트 접기' 로 새어 하단이 내려간다.
+function mainGoMode(m){
+  if(typeof G!=='undefined' && G.mainSheet!=null){ G.mainSheet=null; G.sheetDown=false;
+    document.body.classList.add('sheetOpen'); }
+  setHomeMode(m);
+  if(typeof refreshSelCard==='function') refreshSelCard(); }
 // 구역별 '지금 고른 하위'
 let _gachaSec='draw', _upgSec='atk', _plSec='ally';
 function setGachaSec(k){ _gachaSec=k; const h=document.getElementById('unitCmd'); if(h){ h._gSig=undefined; h._cgPage=0; } renderGachaSheet(); }
@@ -12863,16 +12945,23 @@ function openMainSheet(mode, el, sbTab){
   G.sel=[]; G.selEnemy=null; G.selType=null; G.mainSheet=mode; G.sheetDown=false; _setBottomTab(sbTab); gtabDrill(sbTab);   // 이 섹션으로 전환 + 하이라이트 이동 + 그 구역 하위 네비로
   document.body.classList.add('sheetOpen');   // 섹션 전환 = 시트 올림(직전에 토글로 내려놨을 수 있으므로 명시)
   if(typeof playSfx==='function') playSfx('ui_open'); refreshSelCard(); }
-// 메인 탭 = 유닛지정/판매/조합 섹션(하단 홈). 다른 섹션에서 눌러도 반드시 메인 섹션으로 복귀.
+// 메인 탭 = 유닛 판매/조합/자동화 묶음. '유닛 지정'은 여기 없다 — 그건 무선택 기본 상태(gameRestHome)다.
+// 그래서 다른 구역에서 메인을 누르면 **첫 하위(유닛 판매)** 로 들어간다(기본 상태로 가는 건 ‹ 다).
 function openMainHome(el){
   if(G.strike){ switchTab('Main', el||document.querySelector('.tab[data-tab="Main"]')); return; }   // 직스: 전투 탭 → 직스 라우팅
   if(G.sandbox){ switchTab('Main', el||document.querySelector('.tab[data-tab="Main"]')); return; }
-  if(G.tab==='Main' && G.mainSheet==null && G.sel.length===0 && G.selEnemy==null){   // 홈 섹션 재탭(무선택) = 하단 시트 내리기/올리기 토글
+  // 이미 메인 구역에 내려가 있는데 또 눌렀다 = 하단 시트 내리기/올리기
+  // ⚠ 조건이 'G.mainSheet==null' 이면 기본 상태(유닛 지정)에서 메인을 눌러도 토글로 새어 구역에 못 들어간다.
+  if(G.tab==='Main' && _gtabDrill==='Main' && G.sel.length===0 && G.selEnemy==null){
     const open=document.body.classList.toggle('sheetOpen'); G.sheetDown=!open;
     if(typeof _syncSheetLift==='function'){ requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); }
     if(typeof playSfx==='function') playSfx('ui_open'); return; }
   if(G.tab!=='Main') switchTab('Main', document.querySelector('.tab[data-tab="Main"]'));
-  G.mainSheet=null; G.sel=[]; G.selEnemy=null; G.selType=null; _selViaTab=false; G.sheetDown=false; _setBottomTab('Main'); gtabDrill('Main'); document.body.classList.add('sheetOpen'); if(typeof playSfx==='function') playSfx('ui_open'); refreshSelCard(); }
+  G.sel=[]; G.selEnemy=null; G.selType=null; _selViaTab=false; G.sheetDown=false;
+  if(G.mainSheet!=='auto') G.mainSheet=null;   // 자동화를 보고 있었다면 그대로 유지
+  _setBottomTab('Main'); gtabDrill('Main');    // ← 밖에서 들어왔으면 여기서 첫 하위(유닛 판매)로 되돌린다
+  document.body.classList.add('sheetOpen');
+  if(typeof playSfx==='function') playSfx('ui_open'); refreshSelCard(); }
 function openGachaSheet(el){ if(G.strike){ switchTab('Unit', el||document.querySelector('.tab[data-tab="Unit"]')); return; } openMainSheet('gacha', el, 'Unit'); }   // 직스: 건설지 탭
 function openUpgradeSheet(el){ if(G.strike){ switchTab('Upgrade', el||document.querySelector('.tab[data-tab="Upgrade"]')); return; } openMainSheet('upgrade', el, 'Upgrade'); }   // 직스: 보급 탭
 function openAutoSheet(el){ openMainSheet('auto', el, 'Main'); }   // 메인 구역의 하위 '자동화' → 하단 자동화 그리드(최상위 탭은 메인 유지)
@@ -18769,10 +18858,10 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
   let tabs=''; ['union','swarm','aetherial'].forEach(r=>{ tabs+='<span class="techTab'+(r===race?' on':'')+'" onclick="techRace(event,\''+r+'\')">'+_TECH_RKO[r]+'</span>'; });
   const selE=(G.tech.sel!=null)?G.tech.ents.find(e=>e.eid===G.tech.sel):null, canDemo=selE&&selE.type==='bldg'&&((techGetBldg(race,selE.bk)||{}).k!==TECH_TREE[race].buildings[0].k);
   let res='';   // 🔁 메인 #hudR DOM을 그대로 클론(복사본 마크업 유지 X) — 메인 HUD 디자인 변경 시 자동 반영. 숫자만 이 탭 값으로 치환
-  { const _h=document.getElementById('hudR'); if(_h){ const c=_h.cloneNode(true);
+  //   ⚠ 오토배틀은 클론을 만들지 않는다 — 건설지에서도 진짜 #hud 가 그대로 떠 있어 두 번 표시된다(strikeHud 가 값을 채운다).
+  { const _h=document.getElementById('hudR'); if(_h && !techWallet()){ const c=_h.cloneNode(true);
     const set=(id,v)=>{ const el=c.querySelector('#'+id); if(el){ el.innerHTML=v; el.removeAttribute('id'); } };   // id 제거(중복 방지)
     set('hMin',(G.tech.inf?'∞':G.tech.credit)); set('hGas',(G.tech.inf?'∞':G.tech.energy)); set('hPop',G.tech.sup+'/'+G.tech.supCap);
-    if(techWallet()){ const gs=c.querySelector('.res.gas'); if(gs) gs.remove(); }   // 오토배틀 = 크레딧 단일 자원(에너지 칸 생략)
     res=c.innerHTML; } }
   const btns=(canDemo?'<span class="cbtn dz" onclick="techDemolish(event)">'+pIco('🗑','sm')+' 철거</span>':'')+'<span class="cbtn'+(G.tech.inf?' on':'')+'" onclick="techInf(event)" title="무제한 자원">∞</span><span class="cbtn'+(G.tech.nocool?' on':'')+'" onclick="techNocool(event)" title="즉시 건설·생산">⏱</span><span class="cbtn'+(techFogEnabled()?' on':'')+'" onclick="techFog(event)" title="전장의 안개">🌫️</span><span class="cbtn'+(G.tech.pcheck?' on':'')+'" onclick="techPCheck(event)" title="플레이어 색 확인">🎨</span><span class="cbtn" onclick="techReset(event)" title="리셋">↺</span>';
   // 좌측 도구열: 관리자는 종족 전환·치트 토글까지, 오토배틀은 게임에 필요한 철거만(테스트 도구 비노출)
@@ -18873,7 +18962,7 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
       if(e._skOn&&e._skOn.psi_cloak&&typeof SKILLS!=='undefined'&&SKILLS.psi_cloak) skZ+=_circ(e.x,e.y,SKILLS.psi_cloak.radius||0.12,'border:1px solid rgba(150,210,255,.55);background:radial-gradient(circle,rgba(150,210,255,.13),transparent 70%)');
       if(e._skOn&&e._skOn.siege) skZ+=_circ(e.x,e.y,0.024,'border:2px solid rgba(255,180,80,.7);background:radial-gradient(circle,rgba(255,180,80,.14),transparent 70%)');
       if(e._healF!=null){ const t=G.tech.ents.find(x=>x.eid===e._healF); if(t){ const p2=_techW2S(t.x,t.y); skZ+='<div class="tkHeal" style="left:'+(p2.x*100).toFixed(2)+'%;top:'+(p2.y*100).toFixed(2)+'%">'+((typeof SKILL_ICON!=='undefined'&&SKILL_ICON.heal)||'✚')+'</div>'; } } } }
-  map.innerHTML='<div class="bmap'+(techWallet()?' stk':'')+(G.tech.arm?' arming':'')+(G.tech.rallySet!=null?' rally':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none">'+_floor+hillZ+creepZ+psi+gasZone+mineZ+rallyZ+skZ+oobZ+'<div class="bmapTop">'+_side+'<div class="bres" onpointerdown="event.stopPropagation()">'+res+'</div></div>'+pcPanel+ents+foot+ghost+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div></div>';
+  map.innerHTML='<div class="bmap'+(techWallet()?' stk':'')+(G.tech.arm?' arming':'')+(G.tech.rallySet!=null?' rally':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none">'+_floor+hillZ+creepZ+psi+gasZone+mineZ+rallyZ+skZ+oobZ+'<div class="bmapTop">'+_side+(res?'<div class="bres" onpointerdown="event.stopPropagation()">'+res+'</div>':'')+'</div>'+pcPanel+ents+foot+ghost+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div></div>';
   const _lblLayer=document.getElementById('cstLabels'); if(_lblLayer) _lblLayer.innerHTML=labels+armBtns+resumeBtn;   // 남은시간 라벨 + 배치 ✓/✕ + ▶재개 버튼을 전용 오버레이(z8)에 → 3D 유닛·건물 위(리파이너리 등 큰 건물에 안 가림)
   techFogDraw(); }   // 🌫️ 건설 안개 오버레이 재그림(맵 재렌더마다)
 // ══ 🎨 플레이어 색 확인 구역 ══
@@ -19281,7 +19370,7 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
     else if(selUs.length){ const _selEgg=selUs.filter(e=>e.type==='egg'), _selLv=selUs.filter(e=>e.type==='larva');
       model=_selEgg.length?techEggModel(_selEgg):(_selLv.length?techLarvaProdModel(_selLv):(_allWk?techWorkerBuildModel(selUs):techUnitPanelModel(selUs))); } }   // 🥚 알 = 진화중(잠금) 프로필
   // 🔢 모든 건물 = 4그리드 1줄(간소화)로 높이 통일. 5개↑는 2줄로 높이지 않고 페이지로 넘김(슬롯 위치 보존). cm2=최소화(본문 숨김)만 별도
-  let cm=(G.tech.cardMode===2)?2:1; G.tech.cardMode=cm;   // cm0(2줄 전체) 제거 → 1(간소화) 또는 2(최소화)만. 사이클의 0은 1로 수렴
+  const cm=1; G.tech.cardMode=1;   // 카드 높이는 한 가지(간소화 1줄)뿐 — 접기 버튼을 없애면서 cm2(최소화)도 함께 사라졌다
   // 📦 보급 시트는 화면 전환이 아니라 하단 시트 토글이라, 건설지에서도 같은 호스트(#btSheetBody)에 그대로 올린다.
   //   모델(_stkSupplyModel)과 렌더(renderCmdGrid)는 전투 화면과 동일한 것을 쓴다 — UI를 두 번 만들지 않는다.
   let _sup=false, specHTML=null;
@@ -19290,13 +19379,11 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
   const _shown=!!((sh.open||_sup) && (model||specHTML) && G.tech.arm==null && G.tech.rallySet==null);   // 🗺 배치·착륙(arm)·랠리 지정 중 = 프로필 시트 잠시 내려 맵을 넓게 확보 · 모드 종료 시 자동 복귀
   if(model && !_sup){ model.compact=(cm===1); model.build=true; }   // 건설 탭 카드 스타일(업그레이드 시트는 모델이 이미 같은 스타일을 들고 온다)
   sheet.classList.toggle('open', _shown);
-  if(_shown){ sheet.classList.toggle('simple', cm===1); sheet.classList.toggle('mini', cm===2); }   // 숨길 땐 높이 클래스(.simple/.mini) 유지 → 현재 높이 그대로 아래로 슬라이드(150→204 즉시 확대로 위로 울컥이는 것 방지)
-  const cardCtl=document.getElementById('btCardCtl'); if(cardCtl){ const _up=(cm===2); cardCtl.classList.toggle('up',_up); cardCtl.innerHTML='<svg viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'; cardCtl.title=(_up?'프로필 펼치기':(cm===1?'하단으로 최소화':'간소화')); }
+  if(_shown) sheet.classList.add('simple');   // 숨길 땐 높이 클래스(.simple) 유지 → 현재 높이 그대로 아래로 슬라이드(즉시 확대로 위로 울컥이는 것 방지)
   body.classList.toggle('stkSpec', specHTML!=null);
   if(specHTML!=null) body.innerHTML=specHTML; else if(model) renderCmdGrid(body, model);
   const _liftSel=(G.tech.sel!=null)&&!!G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'&&x._lifted);   // 부양 건물 선택 = 바닥탭이 이동이라 금지버튼으로 해제
   const dz=document.getElementById('btDesel'); if(dz) dz.classList.toggle('on',(G.tech.selU||[]).length>0 || _liftSel || !!G.tech.selRes); }
-function techCardCycle(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return; G.tech.cardMode=((G.tech.cardMode||0)+1)%3; if(typeof playSfx==='function') playSfx('ui_open'); techPanelRender(); }   // 유닛 지정 해제 버튼(메인 deselTop 규약)
 function techDeselU(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;
   if(G.tech.arm!=null){ techCancelArm(ev); return; }   // 🚫 건설 배치 중 = 지정 해제(⊘) 버튼 = 건설 취소 → 일꾼 지정·프로필 복귀(맵에 올리지 않고도 취소)
   G.tech.selU=[]; G.tech.sel=null; G.tech.selRes=null;   // 유닛·건물(부양 포함)·중립 자원 지정 모두 해제
@@ -19944,8 +20031,10 @@ function strikeDrawScenery(ctx,w2s,scale,S,W,H){ if(!S.dec) S.dec=strikeGenScene
   ctx.fillStyle='rgba(222,212,182,.15)';   // 떠다니는 먼지(다이나믹)
   for(const m of D.motes){ const p=w2s(m.x+Math.sin(t*m.sp+m.ph)*m.amp, m.y+Math.cos(t*m.sp*0.7+m.ph)*m.amp*0.6); if(p.x<0||p.x>W||p.y<0||p.y>H) continue; ctx.beginPath(); ctx.arc(p.x,p.y,1.5+Math.sin(t*2+m.ph)*0.6,0,6.28); ctx.fill(); }
   ctx.restore(); }
-const STK_TABLABEL ={ Main:'전투', Build:'건설지', Upgrade:'업그레이드', Players:'관전' };   // 건설지 = 관리자 건설 탭(Build) 그대로 사용
-const STK_NEMOLABEL={ Main:'메인', Unit:'유닛뽑기', Upgrade:'업그레이드', Players:'플레이어', Build:'건설' };
+const STK_TABLABEL ={ Build:'건설지', Upgrade:'특수무기', Players:'관전' };   // 건설지 = 관리자 건설 탭(Build) 그대로 사용 · 전투는 탭이 아니라 기본 화면
+// ⚠ 인게임 탭 이름의 **실제 소스는 이 표**다 — startGameNow 가 strikeSetTabLabels(STK_NEMOLABEL) 로
+//    마크업 글자를 덮어쓴다. 마크업(#tabs 의 .tab 안 글자)은 게임 시작 전에만 보이므로 둘을 같이 고칠 것.
+const STK_NEMOLABEL={ Main:'관리', Unit:'유닛뽑기', Upgrade:'업그레이드', Players:'플레이어', Build:'건설' };
 const STK_TECH_RACE={ terran:'union', zerg:'swarm', protoss:'aetherial' };   // 직스 종족 → 관리자 건설 트리 종족
 const STK_TECH_COLS=48;      // 오토배틀 건설지 가로 칸 수(관리자 20칸 → 보드처럼 넓게, 이전 32칸의 1.5배)
 const STK_TECH_ROWS=30;      // 세로 칸 수(이전 12칸의 2.5배) — 밴드 높이는 이 행 수로 산출
@@ -19975,9 +20064,9 @@ function strikeNewState(){ const W=mapCfg('world',4800), hp=mapCfg('baseHp',7500
     world:W, cycleTime:mapCfg('cycleTime',30), cycleT:mapCfg('cycleTime',30),
     incomeBase:inc, mineIncome:mi,
     // 진영별 경제(me=나, ai=컴퓨터). 광산/돈 리더보드용. shield=중립 신전 보상 쉴드(다음 단계 전투에서 적용)
-    me:{ name:'나', compCol:(typeof PLAYER_VIEW_COLORS!=='undefined'?PLAYER_VIEW_COLORS[0]:'#4570d3'), base:{x:W*0.115,y:W*0.885, hp:hp, max:hp, dead:false}, hp:hp, max:hp, shield:0, gold:mapCfg('startGold',3000), mines:0, mineCost:mc, atkLv:0, hpLv:0, bombs:0, units:[], buildings:[],
-         sec:{x:W*0.339,y:W*0.661, hp:sHp, max:sHp, dead:false} },   // 좌하단 메인 + 2차 신전 / compCol=아군 컴퓨터(생산자) 색 / atkLv·hpLv=유닛강화, bombs=폭탄 재고
-    ai:{ name:'컴퓨터', compCol:(typeof PLAYER_VIEW_COLORS!=='undefined'?PLAYER_VIEW_COLORS[1]:'#d6292f'), base:{x:W*0.885,y:W*0.115, hp:hp, max:hp, dead:false}, hp:hp, max:hp, shield:0, gold:mapCfg('startGold',3000), mines:0, mineCost:mc, atkLv:0, hpLv:0, bombs:0, units:[], buildings:[], aiT:0,
+    me:{ name:'나', compCol:(typeof PLAYER_VIEW_COLORS!=='undefined'?PLAYER_VIEW_COLORS[0]:'#4570d3'), base:{x:W*0.115,y:W*0.885, hp:hp, max:hp, dead:false}, hp:hp, max:hp, shield:0, gold:mapCfg('startGold',3000), mines:0, mineCost:mc, atkLv:0, hpLv:0, wpn:{}, units:[], buildings:[],
+         sec:{x:W*0.339,y:W*0.661, hp:sHp, max:sHp, dead:false} },   // 좌하단 메인 + 2차 신전 / compCol=아군 컴퓨터(생산자) 색 / atkLv·hpLv=유닛강화, wpn=특수무기 재고(종류별)
+    ai:{ name:'컴퓨터', compCol:(typeof PLAYER_VIEW_COLORS!=='undefined'?PLAYER_VIEW_COLORS[1]:'#d6292f'), base:{x:W*0.885,y:W*0.115, hp:hp, max:hp, dead:false}, hp:hp, max:hp, shield:0, gold:mapCfg('startGold',3000), mines:0, mineCost:mc, atkLv:0, hpLv:0, wpn:{}, units:[], buildings:[], aiT:0,
          sec:{x:W*0.661,y:W*0.339, hp:sHp, max:sHp, dead:false} },   // 우상단 메인 + 2차 신전 / compCol=적군 컴퓨터 색
     central:{x:W*0.5,y:W*0.5, hp:cHp, max:cHp, owner:null, dead:false},   // 중앙 중립 보너스 신전(깬 팀 메인에 쉴드)
     cam:{x:W/2,y:W/2}, zoom:STK_DEFZOOM, viewWorld:Math.round(2600/STK_DEFZOOM), cw:0, ch:0, sel:null, userCam:false,
@@ -19994,6 +20083,28 @@ function strikeMineBuy(side){ side.mineCost=(side.mineCost||200)+(side._mineStep
 function strikeUpCost(kind, lv){ const B={atk:120, hp:120}; return Math.round((B[kind]||300)*Math.pow(1.55, lv||0)); }
 function strikeKillGold(e){ return Math.max(1, Math.min(5, Math.round((e&&e.maxHp||130)/250))); }   // 처치 보상(티어 비례)
 const STK_BOMB_COST=150, STK_BOMB_DMG=520, STK_BOMB_R=520;   // 폭탄: 비용/피해/반경
+// 💥 특수무기 — **이 표 하나가 단일 소스**다(구입 그리드·사용 그리드·효과 분기가 전부 여기서 나온다).
+// ⚠ 효과는 시뮬에 새 필드를 만들지 않는다. 이미 있는 것만 쓴다:
+//    광역 피해=hp · 정지=u.wait(소환 직후 대기와 같은 필드) · 회복=hp.
+//    새 상태이상을 넣고 싶으면 strikeStepUnits 를 먼저 읽고 거기 있는 것을 재사용할 것.
+// ⚠ 아래 상수는 표의 desc 가 참조하므로 반드시 표보다 먼저 온다(TDZ).
+const STK_EMP_DUR=3.5;                       // EMP 정지 시간(초)
+const STK_HEAL_F=0.35;                       // 재생 필드 회복량(최대 체력 비율)
+const STK_ORBIT_DMG=780, STK_ORBIT_R=760;    // 궤도 포격: 폭탄보다 1.5× 피해 · 1.46× 반경
+const STK_WEAPONS=[
+  { k:'bomb',  name:'폭탄',      ico:'💣', cls:'ic-danger', cost:STK_BOMB_COST, cap:3,
+    desc:'가장 밀집한 적 무리에 투하 — 반경 안 광역 피해' },
+  { k:'emp',   name:'EMP',       ico:'⚡', cls:'ic-info',   cost:120, cap:3,
+    desc:'적 전군을 '+STK_EMP_DUR+'초 멈춘다 — 피해는 없다' },
+  { k:'orbit', name:'궤도 포격', ico:'☄',  cls:'ic-danger', cost:240, cap:2,
+    desc:'폭탄보다 넓고 강하게 — 가장 밀집한 곳을 때린다' },
+  { k:'heal',  name:'재생 필드', ico:'✚',  cls:'ic-gold',   cost:110, cap:3,
+    desc:'내 전군의 체력을 '+Math.round(STK_HEAL_F*100)+'% 회복한다' },
+];
+const STK_WPN=k=>STK_WEAPONS.find(w=>w.k===k)||null;
+function strikeWpnHave(k){ const S=STK; return (S&&S.me&&S.me.wpn&&S.me.wpn[k])||0; }
+function strikeWpnTotal(){ const S=STK; if(!S||!S.me||!S.me.wpn) return 0;
+  return STK_WEAPONS.reduce((n,w)=>n+(S.me.wpn[w.k]||0),0); }
 // 유닛 강화 배율(소환 시 적용) — 공격 +12%/Lv, 체력 +16%/Lv
 // 종족 전투 파워 배수(hp·공격 동시) — 배출 배수(테마)는 고정하고 이 값으로 종족 균형을 맞춘다. 밸런싱 단일 소스.
 const STK_RACE_POWER={ union:1.00, swarm:1.00, aetherial:1.00 };   // 종족 세기는 스탯(공격·체력)으로만 조절 — 전역 파워 배수는 중립(1). 상성이 승패를 결정하도록.
@@ -20033,7 +20144,11 @@ function strikeHideNemoChrome(on){ ['coopBossBar','mergeFab','skillFab','deselTo
   ['shopProfile','prodHint','opsManual'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display=on?'none':''; });   // 켜기/끄기 대칭 — 안 그러면 직스를 한 번 하고 나온 뒤 nemo 안내가 계속 숨겨진다
   { const ut=document.querySelector('.tab[data-tab="Unit"]'), bt=document.getElementById('buildTab');   // 건설지 = 관리자 건설 탭(Build)을 그대로 노출, nemo 유닛뽑기 탭은 숨김
     if(ut) ut.style.display=on?'none':''; if(bt) bt.style.display=on?'':'none'; }
-  if(!on) document.body.classList.remove('cstMode');
+  // ⚔ 전투는 **탭이 아니라 무선택 기본 화면**이다(2026-08-14) — 최상위는 [건설지][특수무기][관전] 셋뿐.
+  //   보스는 네모 전용 탭이다 — 직스로 넘어올 때 켜져 있으면 그대로 남는다(updatePbossFab 이 네모에서만 돈다).
+  { const mt=document.querySelector('.tab[data-tab="Main"]'); if(mt) mt.style.display=on?'none':'';
+    const bt=document.getElementById('bossTab'); if(bt) bt.style.display='none'; }
+  if(!on) document.body.classList.remove('cstMode','stkCst');
 }
 function strikeStart(activePlayers, myNum, names){ if(typeof bgmStop==='function') bgmStop();
   G=newGame(); G.strike=true; G.phase='playing'; G.tab='Main'; G.sel=[]; G.selEnemy=null;
@@ -20057,9 +20172,9 @@ function strikeStart(activePlayers, myNum, names){ if(typeof bgmStop==='function
   if(typeof setInGame==='function') setInGame(true);
   strikeHideNemoChrome(true);
   if(STK.sizeCmp){ const mcv=document.getElementById('cvMarine'); if(mcv) mcv.style.display='block'; }   // 3D 유닛 오버레이 캔버스 켜기
-  strikeSetTabLabels(STK_TABLABEL); strikeSetTabOrder(['Main','Build','Upgrade','Players']);   // 건설지 = 두 번째
+  strikeSetTabLabels(STK_TABLABEL); strikeSetTabOrder(['Build','Upgrade','Players']);   // 전투 탭은 숨김(무선택 기본 화면)
   const mn=document.getElementById('mapName'); if(mn) mn.textContent='◈ 오토 배틀';
-  strikeSwitchTab('Main');
+  strikeRestHome();   // 전투 = 무선택 기본 화면에서 시작
   G.loading=true;   // 로딩 동안 시뮬 정지(네모와 동일 — 오프닝 워프 후 진행)
   if(typeof gameStartCountdown==='function') gameStartCountdown();   // 네모와 동일한 게임 진입 로딩 화면(맵 썸네일·특징 설명·플레이어·준비) — 설명은 cpu.feats(오토배틀용)
   else if(typeof showLoading==='function') showLoading(null, 1300);   // 폴백
@@ -21204,37 +21319,48 @@ function _stkSpecGridHTML(){ const S=STK, me=(G.myPlayer||1), myA=(me<=4), names
   return h+'</div>'; }
 // 📦 업그레이드 시트 — 4그리드(① 광산 ② 강화 ④ 특수무기 / 3번은 비움). 구매·강화·투하는 기존 함수를 그대로 호출.
 function _stkLv(cur,max){ return (cur>=max)?'MAX':(cur+'/'+max); }   // 카드 우상단 표기 통일
-function _stkSupplyModel(){ const S=STK, me=S.me, gold=Math.floor(me.gold||0);
-  if(S.supPage==='upg'){
-    const items=[['atk','공격력','⚔'],['hp','체력','❤']].map(function(kv){
-      const k=kv[0], lv=(k==='atk'?me.atkLv:me.hpLv), cost=strikeUpCost(k,lv), full=(lv>=10);
-      return { pro:pIco(kv[2],'ic-gold'), sn:kv[1], cr:(full?0:cost), tr:_stkLv(lv,10), metaCls:'lv', tip:k,   // 레벨 = 우상단 배지
-        state:(full||gold<cost)?'dim':'on', act:full?'':('onclick="strikeUpg(\''+k+'\')"')+_techTipAttr('sup',k) }; });
-    items.push({state:'empty'});                                                     // 3번 칸 = 빈 칸(네모 하단에서 카드가 모자랄 때와 같은 공용 스타일)
-    items.push({ pro:pIco('↩','ic-info'), sn:'뒤로', act:'onclick="strikeSupPage(null)"' });     // 뒤로가기 = 4번 칸
-    return { mode:'prod', compact:true, build:true, title:'업그레이드 · 강화', icon:pIco('🔧','ic-gold'), items:items,
-      info:{ eb:'강화', hideName:true,
-        desc:'카드를 길게 누르면 설명이 나옵니다.' } }; }
-  const hasBomb=(me.bombs||0)>0;
-  const items=[
-    { pro:pIco('⛏','ic-gold'), sn:'광산', cr:me.mineCost, tr:_stkLv(me.mines||0, STK_MINE_CAP), metaCls:'lv',
-      state:((me.mines||0)>=STK_MINE_CAP||gold<me.mineCost)?'dim':'on', act:'onclick="strikeBuyMine()"'+_techTipAttr('sup','mine') },
-    { pro:pIco('🔧','ic-gold'), sn:'강화',
-      act:'onclick="strikeSupPage(\'upg\')"'+_techTipAttr('sup','upg') },
-    {state:'empty'},                                                                 // 3번 칸 = 빈 칸(네모 하단과 동일한 공용 스타일)
-    { pro:pIco('💣','ic-danger'), sn:'특수무기', cr:(hasBomb?0:STK_BOMB_COST), tr:_stkLv(me.bombs||0, STK_BOMB_CAP), metaCls:'lv',
-      state:(hasBomb||gold>=STK_BOMB_COST)?'on':'dim',
-      act:'onclick="'+(hasBomb?'strikeDropBomb()':'strikeBuyBomb()')+'"'+_techTipAttr('sup','bomb') } ];   // 특수무기 = 4번 칸
-  return { mode:'prod', compact:true, build:true, title:'업그레이드', icon:pIco('📦','ic-info'), items:items,
-    info:{ eb:'업그레이드', hideName:true,
-      desc:'수입 '+strikeIncome(me)+'/웨이브<br>카드를 길게 누르면 설명이 나옵니다.' } }; }
+// ── 📦 하단 시트 모델 ────────────────────────────────────────────────────
+// 구역·하위는 하단 네비(STK_TREE)가 고르고, 여기서는 그 키에 맞는 그리드만 만든다.
+//   건설지 > 강화 = 광산 + 공격력·체력   ·   특수무기 > 구입/사용 = STK_WEAPONS 표
+// 칸 자리: [공격력][체력][빈칸][광산] — 유닛 강화가 앞, 경제(광산)는 끝 칸
+function _stkUpgModel(){ const S=STK, me=S.me, gold=Math.floor(me.gold||0);
+  const items=[];
+  for(const kv of [['atk','공격력','⚔'],['hp','체력','❤']]){
+    const k=kv[0], lv=(k==='atk'?me.atkLv:me.hpLv), cost=strikeUpCost(k,lv), full=(lv>=10);
+    items.push({ pro:pIco(kv[2],'ic-gold'), sn:kv[1], cr:(full?0:cost), tr:_stkLv(lv,10), metaCls:'lv', tip:k,
+      state:(full||gold<cost)?'dim':'on', act:full?'':('onclick="strikeUpg(\''+k+'\')"')+_techTipAttr('sup',k) }); }
+  items.push({state:'empty'});
+  items.push({ pro:pIco('⛏','ic-gold'), sn:'광산', cr:me.mineCost, tr:_stkLv(me.mines||0, STK_MINE_CAP), metaCls:'lv',
+    state:((me.mines||0)>=STK_MINE_CAP||gold<me.mineCost)?'dim':'on', act:'onclick="strikeBuyMine()"'+_techTipAttr('sup','mine') });
+  return { mode:'prod', compact:true, build:true, title:'강화', icon:pIco('🔧','ic-gold'), items:items,
+    info:{ eb:'강화', hideName:true, desc:'수입 '+strikeIncome(me)+'/웨이브<br>카드를 길게 누르면 설명이 나옵니다.' } }; }
+// 🛒 구입 — 표 그대로가 상점 칸이 된다(품목을 여기서 새로 적지 말 것)
+function _stkWpnBuyModel(){ const S=STK, me=S.me, gold=Math.floor(me.gold||0);
+  const items=STK_WEAPONS.map(function(w){ const have=(me.wpn&&me.wpn[w.k])||0, full=(have>=w.cap);
+    return { pro:pIco(w.ico,w.cls), sn:w.name, cr:(full?0:w.cost), tr:_stkLv(have,w.cap), metaCls:'lv',
+      state:(full||gold<w.cost)?'dim':'on', act:full?'':('onclick="strikeBuyWpn(\''+w.k+'\')"') }; });
+  return { mode:'prod', compact:true, build:true, title:'특수무기 · 구입', icon:pIco('🛒','ic-gold'), items:items,
+    info:{ eb:'구입', hideName:true, desc:'골드로 구입해 두고 <b>사용</b>에서 꺼내 쓴다.' } }; }
+// 💥 사용 — **구입과 같은 자리에 같은 순서로** 늘어놓는다. 없는 것은 빈 칸이 아니라 '비활성'이다
+//   (자리가 비면 산 것과 안 산 것의 위치가 매번 달라져 손이 헷갈린다).
+function _stkWpnUseModel(){ const S=STK, me=S.me;
+  const own=STK_WEAPONS.filter(w=>((me.wpn&&me.wpn[w.k])||0)>0);
+  const items=STK_WEAPONS.map(function(w){ const have=(me.wpn&&me.wpn[w.k])||0;
+    return { pro:pIco(w.ico,w.cls), sn:w.name, tr:'×'+have, metaCls:'lv',
+      state:have>0?'on':'dim', act:have>0?('onclick="strikeUseWpn(\''+w.k+'\')"'):'' }; });
+  return { mode:'prod', compact:true, build:true, title:'특수무기 · 사용', icon:pIco('💥','ic-danger'), items:items,
+    info:{ eb:'사용', hideName:true,
+      desc:own.length?'칸을 누르면 즉시 발동한다.':'가진 무기가 없습니다 — <b>구입</b>에서 먼저 사세요.' } }; }
+function _stkSupplyModel(){ return (STK && STK.supPage==='wpnUse') ? _stkWpnUseModel()
+  : (STK && STK.supPage==='wpnBuy') ? _stkWpnBuyModel() : _stkUpgModel(); }
 function strikeRenderSelInfo(){ const S=STK; const host=document.getElementById('unitCmd');
   { const old=document.getElementById('stSelInfo'); if(old && !old.classList.contains('hide')){ old.classList.add('hide'); old.innerHTML=''; } }   // 구 프로필 사용 안 함
   if(!host) return;
   let model=null, sig=null, specHTML=null;
   if(S && S.specSheet){ specHTML=_stkSpecGridHTML(); sig='spec|'+(S.specView||'-')+'|'+((G.activePlayers||[]).join('.'))+'|'+(G.myPlayer||1); }   // 👁 관전 = 전용 .plbtn 그리드(커맨드 그리드 아님)
   else if(S && S.supSheet){ model=_stkSupplyModel();
-    sig='sup|'+(S.supPage||'-')+'|'+Math.floor(S.me.gold)+'|'+(S.me.mines||0)+'|'+((S.me.atkLv||0)+'-'+(S.me.hpLv||0))+'|'+(S.me.bombs||0)+'|'+S.me.mineCost; }
+    sig='sup|'+(S.supPage||'-')+'|'+Math.floor(S.me.gold)+'|'+(S.me.mines||0)+'|'+((S.me.atkLv||0)+'-'+(S.me.hpLv||0))
+      +'|'+STK_WEAPONS.map(w=>(S.me.wpn&&S.me.wpn[w.k])||0).join('')+'|'+S.me.mineCost; }
   else if(S && S.selTemple && !S.selTemple.dead){ const o=S.selTemple, nm=S.selTempleName||'신전'; model=_stkTempleModel(o,nm); sig='t|'+nm+'|'+Math.round(o.hp); }
   else if(S && S.selEnemy && !S.selEnemy.dead){ const u=S.selEnemy; model=_stkUnitModel(u,'ai'); sig='e|'+u.id+'|'+Math.round(u.hp); }
   else if(S){ const u=(S.selAllies||[]).map(uid=>strikeFindUnit(S.me.units,uid)).filter(Boolean)[0]; if(u){ model=_stkUnitModel(u,'me'); sig='a|'+u.id+'|'+Math.round(u.hp); } }
@@ -21410,44 +21536,95 @@ function strikeDrawTemple(ctx,w2s,scale,wx,wy,col,glow,worldR,opt){ opt=opt||{};
 
 // ── HUD(nemo 상단 재사용): 크레딧=내 골드, 에너지=내 광산, 인구=내 유닛, 시계=출격 ──
 function strikeHud(){ const S=STK; if(!S) return;
-  hudSetRes(Math.floor(S.me.gold), S.me.mines, S.me.units.length, '∞');   // 크레딧=골드 · 에너지=광산 · 인구=유닛 수(상한 없음)
+  // 🏗 건설지도 **같은 HUD**를 쓴다(전용 자원 바 없음). 인구 칸만 그 화면의 뜻으로 바꾼다 —
+  //    전장에서는 '내 유닛 수', 건설지에서는 '보급(sup/supCap)'. 나머지 두 칸·시계·☰ 는 그대로 같다.
+  const bld=(G.tab==='Build' && G.tech);
+  hudSetRes(Math.floor(S.me.gold), S.me.mines,                           // 크레딧=골드 · 에너지=광산
+    bld?G.tech.sup:S.me.units.length, bld?G.tech.supCap:'∞');
   hudSetTime(S.cycleT); }                                                // 좌상단 시계 = 출격까지(nemo와 같은 mm:ss)
 
 // ── 탭(nemo 탭+하단 .bp 재사용, 직스 전용 동작) ──
-function strikeSwitchTab(id,el){ const S=STK; if(!S) return;
-  if(id==='Upgrade'){
-    // 업그레이드 탭으로 **내릴** 때는 지정도 함께 해제해 하단을 완전히 비운다.
-    //   (전투·건설지 탭으로 내릴 때와 다르다 — 그쪽은 지정해 둔 대상의 프로필로 복귀한다)
-    if(S.supSheet){ strikeClearSel();
-      if(G.tab==='Build' && G.tech){ G.tech.sel=null; G.tech.selU=[]; G.tech.selRes=null;
-        if(G.tech.sheet){ G.tech.sheet.open=false; G.tech.sheet.sec=null; } } }
-    strikeToggleSupply(); return; }   // 📦 업그레이드 = 화면 이동 없이 하단 시트만 토글
-  if(id==='Players'){   // 👁 관전 = 보급과 동일 — 화면 이동 없이 하단 시트만 토글(플레이어 선택 → 관전 진입)
-    if(S.specSheet){ strikeClearSel(); }   // 내릴 때 지정 해제(하단 완전 비움)
-    strikeToggleSpec(); return; }
-  // 지금 보고 있는 화면의 탭을 다시 누르면 = 보급/관전 시트만 내린다(화면은 그대로).
-  if(S.supSheet && id===G.tab){ strikeToggleSupply(false); return; }
-  if(S.supSheet) strikeToggleSupply(false);   // 다른 화면으로 이동하면 시트는 내린다
-  if(S.specSheet) strikeToggleSpec(false);    // 관전 시트도 다른 화면 이동 시 내림(관전 종료)
+// ══ 오토배틀 하단 탭 ══ 네모와 같은 2층 구조(STK_TREE + 공용 페인터).
+//   전투는 탭이 아니라 **무선택 기본 화면**이다 — ‹ 가 여기로 돌아온다.
+//   최상위: [건설지][특수무기][관전]
+// 화면 전환만 하는 알맹이 — 시트(보급/관전) 처리는 부르는 쪽이 한다.
+function _stkShowScreen(id, el){ const S=STK; if(!S) return;
   G.tab=id; S.userCam=false; if(id!=='Players') S.specView=null;   // 관전 종료
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
   (el||document.querySelector('.tab[data-tab="'+id+'"]'))?.classList.add('on');
   const _bld=(id==='Build');   // 🏗 건설지 = 관리자 건설 화면(#vBuild + G.tech)을 그대로 사용
   document.body.classList.toggle('cstMode', _bld);
+  document.body.classList.toggle('stkCst', _bld);   // 오토배틀 건설지 = 상단 HUD 유지(관리자 건설과 갈리는 지점)
   document.querySelectorAll('.gview').forEach(v=>v.classList.toggle('on', v.id===(_bld?'vBuild':'vMain')));   // 직스 전장 캔버스 ↔ 건설 맵
   document.querySelectorAll('.bp').forEach(p=>p.classList.toggle('on', p.id==='bp'+id));        // 하단 패널은 nemo .bp 재사용
   if(_bld){ techSyncWallet(); if(typeof techUIEnsure==='function') techUIEnsure();   // 관리자와 동일한 맵·일꾼·프로필 렌더
-    if(typeof playSfx==='function') playSfx('ui_tab');
     document.body.classList.add('sheetOpen'); if(typeof _syncSheetLift==='function'){ requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); }
     return; }
   if(typeof techHidePreview==='function') techHidePreview(); if(window.M3D&&M3D.techMap3DStop) M3D.techMap3DStop();   // 건설지 이탈 = 프리뷰·라이브3D 정지
   const zl=document.getElementById('zoneLabel');
-  if(zl){ const _m={Main:['⚔️','전장'],Upgrade:['📦','보급'],Players:['👁','관전']}[id];
+  if(zl){ const _m={Main:['⚔️','전장'],Upgrade:['💥','특수무기'],Players:['👁','관전']}[id];
     zl.innerHTML=_m? pIco(_m[0])+'<span class="zlTx">'+_m[1]+'</span>' : ''; }
   // 전투(Main)=선택 있을 때만 하단 프로필 시트 · 그 외 탭=패널 상시 표시
   if(id==='Main'){ const uc=document.getElementById('unitCmd'); if(uc) uc._stkShown=undefined; strikeRenderSelInfo(); }
-  else { document.body.classList.add('sheetOpen'); if(typeof _syncSheetLift==='function'){ requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); } }
-  if(typeof playSfx==='function') playSfx('ui_tab'); }
+  else { document.body.classList.add('sheetOpen'); if(typeof _syncSheetLift==='function'){ requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); } } }
+// 🏗 건설지 > 건설 — 건설 화면 + **일꾼 자동 지정**(빈 화면으로 들어가지 않게).
+//   지정 경로는 techSubSelectOne 과 같다(selU + 시트 열기 + techUIRender) — 새로 만들지 말 것.
+function stkGoBuild(){ const S=STK; if(!S) return;
+  if(S.supSheet) strikeToggleSupply(false);
+  if(S.specSheet) strikeToggleSpec(false);
+  if(G.tab!=='Build') _stkShowScreen('Build');
+  stkPickWorker();
+  if(typeof techPanelRender==='function') techPanelRender(); }
+// 맵의 일꾼을 골라 지정한다 — 이미 뭔가 지정돼 있으면 건드리지 않는다(사용자가 고른 것을 덮지 않는다)
+function stkPickWorker(){ if(!G.tech) return false;
+  const sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null});
+  if(G.tech.sel!=null || (G.tech.selU&&G.tech.selU.length)){ sh.open=true; sh.sec='ent'; return true; }
+  const wk=(G.tech.ents||[]).find(e=>e.type==='worker'); if(!wk) return false;
+  G.tech.sel=null; G.tech.selU=[wk.eid]; G.tech.selRes=null;
+  sh.open=true; sh.sec='ent';
+  const body=document.getElementById('btSheetBody'); if(body) body._cgPage=0;
+  return true; }
+// 🏗 건설지 > 강화 — 화면은 건설지 그대로, 하단만 강화 시트(광산·공격력·체력)
+function stkGoUpg(){ const S=STK; if(!S) return;
+  if(S.specSheet) strikeToggleSpec(false);
+  if(G.tab!=='Build') _stkShowScreen('Build');
+  if(!S.supSheet) strikeToggleSupply(true);
+  strikeSupPage(null);
+  if(typeof techPanelRender==='function') techPanelRender(); }
+// 💥 특수무기 > 구입/사용 — 화면은 전장을 유지하고 하단 시트만 바꾼다
+function stkGoWpn(page){ const S=STK; if(!S) return;
+  if(S.specSheet) strikeToggleSpec(false);
+  if(G.tab!=='Main') _stkShowScreen('Main');
+  strikeClearSel();                       // 무기 시트는 지정 프로필과 자리를 다툰다 — 비우고 연다
+  if(!S.supSheet) strikeToggleSupply(true);
+  strikeSupPage(page==='use'?'wpnUse':'wpnBuy');
+  document.body.classList.add('sheetOpen');
+  if(typeof strikeRenderSelInfo==='function') strikeRenderSelInfo(); }
+// ⚔ 전투 = 무선택 기본 화면. ‹ 가 여기로 온다(구역·시트·지정을 전부 걷는다)
+function strikeRestHome(){ const S=STK; if(!S) return;
+  if(S.supSheet) strikeToggleSupply(false);
+  if(S.specSheet) strikeToggleSpec(false);
+  strikeClearSel();
+  if(G.tech){ G.tech.sel=null; G.tech.selU=[]; G.tech.selRes=null;
+    if(G.tech.sheet){ G.tech.sheet.open=false; G.tech.sheet.sec=null; } }
+  _stkShowScreen('Main');
+  _setBottomTab(''); _gtabDrill=''; gtabPaint(); }
+function strikeSwitchTab(id,el){ const S=STK; if(!S) return;
+  if(id==='Players'){   // 👁 관전 = 하위가 없다 — 옛 동작(시트 토글) 그대로
+    if(S.specSheet){ strikeClearSel(); }
+    if(G.tab!=='Main') _stkShowScreen('Main');
+    strikeToggleSpec();
+    _setBottomTab(S.specSheet?'Players':''); _gtabDrill=''; gtabPaint();
+    if(typeof playSfx==='function') playSfx('ui_tab'); return; }
+  if(id==='Main'){ strikeRestHome(); if(typeof playSfx==='function') playSfx('ui_tab'); return; }
+  if(id==='Build' || id==='Upgrade'){
+    // 이미 그 구역에 내려가 있는데 또 눌렀다 = 하단 시트 접기(네모 재탭과 같은 뜻)
+    if(_gtabDrill===id){ const open=document.body.classList.toggle('sheetOpen');
+      if(typeof _syncSheetLift==='function'){ requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); }
+      if(typeof playSfx==='function') playSfx('ui_open'); return; }
+    _setBottomTab(id); gtabDrill(id);   // ← 첫 하위(건설 / 구입)로 되돌린다
+    if(typeof playSfx==='function') playSfx('ui_tab'); return; }
+  _stkShowScreen(id, el); if(typeof playSfx==='function') playSfx('ui_tab'); }
 
 // ── 보급(내 진영) — 화면 시설 탭 → 하단 패널 ──
 function strikeBuyMine(){ const S=STK; if(!S) return; const me=S.me;
@@ -21463,17 +21640,55 @@ function strikeUpg(kind){ const S=STK; if(!S) return; const me=S.me;   // 유닛
   if(me.gold<cost){ if(typeof playSfx==='function') playSfx('ui_denied'); return; }
   me.gold-=cost; if(kind==='atk') me.atkLv++; else { me.hpLv++; strikeApplyHpUpg(me); }
   if(typeof playSfx==='function') playSfx('ui_confirm'); }
-function strikeBuyBomb(){ const S=STK; if(!S) return; const me=S.me;
-  if((me.bombs||0)>=STK_BOMB_CAP){ if(typeof playSfx==='function') playSfx('ui_denied'); return; }
-  if(me.gold<STK_BOMB_COST){ if(typeof playSfx==='function') playSfx('ui_denied'); return; }
-  me.gold-=STK_BOMB_COST; me.bombs=(me.bombs||0)+1; if(typeof playSfx==='function') playSfx('ui_confirm'); }
-function strikeDropBomb(){ const S=STK; if(!S||!S.me.bombs) return; const me=S.me, foe=S.ai;   // 가장 밀집한 적 무리에 투하(자동 조준)
-  const alive=foe.units.filter(u=>!u.dead); if(!alive.length){ strikeToast('투하할 적이 없습니다'); return; }
-  let best=alive[0], bestN=-1; for(const a of alive){ let n=0; for(const b of alive){ const dx=a.x-b.x, dy=a.y-b.y; if(dx*dx+dy*dy<STK_BOMB_R*STK_BOMB_R) n++; } if(n>bestN){ bestN=n; best=a; } }
-  me.bombs--; const r2=STK_BOMB_R*STK_BOMB_R; let hit=0;
-  for(const e of alive){ const dx=e.x-best.x, dy=e.y-best.y, d2=dx*dx+dy*dy; if(d2<=r2){ e.hp-=STK_BOMB_DMG*(1-Math.sqrt(d2)/STK_BOMB_R*0.5); if(e.hp<=0) e.dead=true; hit++; } }   // 중심일수록 큰 피해
-  if(!S.fx||!S.fx.shots){ S.fx=FX.store(); S.fx.hitK=STK_HIT_K; } FX.death(S.fx, best.x, best.y, {unitSize:60, color:'#ff9a4c'});   // 특수무기 폭탄 — 여긴 연출이 요점이라 파편 수는 기본값 유지
-  if(typeof playSfx==='function') playSfx('boss_hit'); strikeToast('💥 폭탄 투하 — '+hit+'기 타격'); }
+// 🛒 구입 — 종류(k)를 받는다. 재고 상한·골드 판정은 표(STK_WEAPONS)에서만 나온다.
+function strikeBuyWpn(k){ const S=STK, w=STK_WPN(k); if(!S||!w) return false; const me=S.me;
+  if(!me.wpn) me.wpn={};
+  if((me.wpn[k]||0)>=w.cap){ if(typeof playSfx==='function') playSfx('ui_denied'); return false; }
+  if(me.gold<w.cost){ if(typeof playSfx==='function') playSfx('ui_denied'); return false; }
+  me.gold-=w.cost; me.wpn[k]=(me.wpn[k]||0)+1;
+  if(typeof playSfx==='function') playSfx('ui_confirm');
+  if(typeof strikeRenderSelInfo==='function') strikeRenderSelInfo();
+  return true; }
+// 가장 밀집한 적 무리의 중심 — 폭탄·궤도 포격이 같이 쓴다
+function _stkDensest(alive, r){ let best=alive[0], bestN=-1, r2=r*r;
+  for(const a of alive){ let n=0; for(const b of alive){ const dx=a.x-b.x, dy=a.y-b.y; if(dx*dx+dy*dy<r2) n++; } if(n>bestN){ bestN=n; best=a; } }
+  return best; }
+function _stkBlast(cx, cy, r, dmg, col, size){ const S=STK, alive=S.ai.units.filter(u=>!u.dead);
+  const r2=r*r; let hit=0;
+  for(const e of alive){ const dx=e.x-cx, dy=e.y-cy, d2=dx*dx+dy*dy;
+    if(d2<=r2){ e.hp-=dmg*(1-Math.sqrt(d2)/r*0.5); if(e.hp<=0) e.dead=true; hit++; } }   // 중심일수록 큰 피해
+  if(!S.fx||!S.fx.shots){ S.fx=FX.store(); S.fx.hitK=STK_HIT_K; }
+  FX.death(S.fx, cx, cy, {unitSize:size, color:col});   // 연출이 요점이라 파편 수는 기본값 유지
+  return hit; }
+// 💥 사용 — 표에 있는 종류만 받는다. 효과는 여기 한 곳에서 갈린다.
+function strikeUseWpn(k){ const S=STK, w=STK_WPN(k); if(!S||!w) return false;
+  const me=S.me; if(!(me.wpn&&me.wpn[k]>0)) return false;
+  const alive=S.ai.units.filter(u=>!u.dead);
+  if(k==='heal'){
+    const mine=me.units.filter(u=>!u.dead);
+    if(!mine.length){ strikeToast('회복할 아군이 없습니다'); return false; }
+    me.wpn[k]--; let n=0;
+    for(const u of mine){ const mx=u.maxHp||u.hp; if(u.hp<mx){ u.hp=Math.min(mx, u.hp+mx*STK_HEAL_F); n++; } }
+    if(typeof playSfx==='function') playSfx('ui_confirm'); strikeToast('✚ 재생 필드 — '+n+'기 회복');
+  } else {
+    if(!alive.length){ strikeToast('사용할 적이 없습니다'); return false; }
+    me.wpn[k]--;
+    if(k==='emp'){
+      // ⚠ 새 상태이상 필드를 만들지 않는다 — 소환 직후 대기에 쓰는 u.wait 를 그대로 쓴다
+      //   (strikeStepUnits 가 wait>0 이면 이동·공격을 통째로 건너뛴다).
+      for(const e of alive) e.wait=Math.max(e.wait||0, STK_EMP_DUR);
+      if(typeof playSfx==='function') playSfx('ui_open'); strikeToast('⚡ EMP — 적 '+alive.length+'기 정지');
+    } else {
+      const big=(k==='orbit');
+      const r=big?STK_ORBIT_R:STK_BOMB_R, dmg=big?STK_ORBIT_DMG:STK_BOMB_DMG;
+      const c=_stkDensest(alive, r);
+      const hit=_stkBlast(c.x, c.y, r, dmg, big?'#ffd24a':'#ff9a4c', big?86:60);
+      if(typeof playSfx==='function') playSfx('boss_hit');
+      strikeToast(w.ico+' '+w.name+' — '+hit+'기 타격');
+    }
+  }
+  if(typeof strikeRenderSelInfo==='function') strikeRenderSelInfo();
+  return true; }
 // 종족별 빌드 메뉴(그 종족 소환 유닛 = 지을 수 있는 생산 건물). STK_UNITS에서 이름·아이콘·비용 도출
 function strikeBuildable(race){ const r=race||(STK&&STK.me&&STK.me.race)||'terran';
   return (STK_BUILDINGS[r]||STK_BUILDINGS.terran).map(b=>({key:b.key, name:b.name, ico:b.ico, cost:b.cost, fp:b.fp, produces:b.produces})); }   // 관전 데모 빌드용(fp만 사용)

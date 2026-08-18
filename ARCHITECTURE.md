@@ -94,6 +94,12 @@
   칸은 HOME 네비와 같은 `_navCell()`(`.navIt`)로 만들고, **최상위 `.tab` 마크업은 그대로 두고 CSS(`#tabs.drill .tab`)로만 숨긴다**
   — `switchTab`/`_setBottomTab`/`updatePbossFab` 이 `style.display`·`.on` 을 직접 만지므로 지웠다 다시 만들면 그 상태가 날아간다.
   구역 상태는 `_homeMode`/`_gachaSec`/`_upgSec`/`_plSec`(+ 보스는 `G.bossOpen`, 자동화는 `G.mainSheet==='auto'`). 샌드박스·직스에선 내려가지 않는다.
+- **포인트방(`openBossArena`)은 화면이 아니라 오버레이**다 — 입장은 네비 `보스 › 포인트방` 하나뿐이고(우상단 `#coopBossBar` 는 `pointer-events:none` 보기 전용),
+  퇴장은 `gtabBack()`(‹). `gameRestHome()` 이 `closeBossArena()` 를 **직접** 부른다 — `G.tab` 이 `'Main'` 그대로라 `switchTab` 의 정리를 안 지난다.
+  하단 4칸은 `[파견][파견][빈칸][전체 회수]`(`_bossArenaSheetModel`) — '돌아가기' 칸은 폐지.
+- **무선택 기본 상태 = `gameRestHome()`**(2026-08-14): 하단 = 유닛 지정(`_homeMode='select'`), 네비 = 최상위 5칸이되 **어느 칸도 안 켜짐**(`_setBottomTab('')`).
+  `gtabBack()`(‹)이 이걸 부른다 — 층만 올리면 '하단은 보스 시트인데 네비는 최상위'인 어중간한 상태가 남는다.
+  ⚠ `switchTab` 이 안에서 `gtabDrill` 을 부르므로 층·하이라이트 정리는 반드시 그 뒤에 할 것. 메인 탭(`openMainHome`)은 첫 하위(유닛 판매)로 들어간다.
 - **자동화는 메인 구역의 마지막 하위**다(2026-08-14, 옛 전송 옆 `#autoFab` 배너 폐지). `updateAutoFab()` 은 이제 배너를 만지지 않고
   해금 여부가 **바뀐 순간에만** 네비를 다시 그린다 — 매 프레임 도는 자리라 무조건 `gtabPaint()` 하면 DOM 을 매 프레임 갈아엎는다.
 - ⚠ **`#hud` 는 `z-index:24`** (2026-08-14). 포인트방 입력 차단막 `#bossPanel`(z22) 위여야 우상단 ☰ 가 눌린다.
@@ -101,12 +107,26 @@
 - 하단 패널 `.bp` — **id는 `'bp'+탭명` 동적 참조**(`bpMain/bpUnit/bpUpgrade/bpPlayers/bpBattle/bpBuild`). ⚠️ 미참조로 보여도 살아있음.
 - **하단 판의 '면'은 `.bp::before` / `#btSheet::before` 다**(2026-08-14). 좌우 위 7px 사선 컷을 거기 건다 —
   요소 자체에 `clip-path` 를 걸면 시트 밖 `#btCardCtl`(top:-28px)이 잘려 사라진다.
+- **카드 껍데기는 `.hmUp,.hsCell` 한 규칙**이다(2026-08-14) — 사냥터 업그레이드 카드와 유즈맵 유닛 카드가 면·테두리·그림자를 공유하고 액센트만 `--accRGB` 로 갈린다.
+  ⚠ `:root` 토큰으로 묶으면 안 된다 — 커스텀 속성 안의 `var()` 는 선언 지점에서 치환돼 `--accRGB` 가 무효가 되고 `background` 가 통째로 죽는다.
+- **유닛 카드(지정·판매·조합)는 `_hsCardHTML(gid, name, act, title, qty, rows)` 한 함수**다(2026-08-14). 수량은 초상 좌상단 뱃지고, `rows` 는 이름 아래 줄(`_hsPrice`/`_hsUpRow`).
+  세 렌더러가 각자 마크업을 만들던 것을 합쳤다 — 새 화면이 유닛 카드를 쓸 때도 이걸 부를 것.
 - 머리줄 초상(`.cgPort`)은 폐지했다 — `renderCmdGrid` 가 그리지 않는다(모델의 `icon` 은 남아 있다). 등급 띠는 `tierSegHTML()` → 공용 `.pdSeg`.
 - 유닛뽑기·업그레이드 시트는 **구역별로 칸이 갈린다**: `GACHA_SEC_CELLS`(뽑기/타워구매) · `_upgAtkItems/_upgLuckItems/_upgPermItems`(공격력/확률/영구강화). ×5 뽑기는 `BEACON_BULK`(1회 값 × 배수) — ⚠ 좌표가 없으므로 `DRAW_BEACONS`(맵 위 비콘 표)에 넣지 말 것.
 - 시트 모드: `G.mainSheet` + `renderMainSheet()` 디스패처. 유닛 지정 중엔 프로필 우선, 해제 시 시트 복원(`refreshSelCard` 분기).
 - 프로필/그리드는 전부 `renderCmdGrid(host, model)` — 모델 객체로만 내용 제어(레지스트리 참조).
+- **오토배틀도 같은 페인터를 쓴다**(2026-08-14): `gtabTree()` 가 모드에 따라 `GTAB_TREE`(네모) / `STK_TREE`(직스) 를 고른다.
+  직스 최상위 = 건설지·특수무기·관전, 전투는 무선택 기본 화면(`strikeRestHome`). 화면 전환 알맹이는 `_stkShowScreen()`.
+  특수무기는 `STK_WEAPONS` 표 하나(구입 그리드·사용 그리드·효과 분기) · 재고는 `STK.me.wpn` · 효과는 기존 필드(`hp`,`u.wait`)만 쓴다.
+  건설 진입(`stkGoBuild`)은 `stkPickWorker()` 로 일꾼을 자동 지정한다(이미 지정된 것이 있으면 유지). 강화 칸 = `[공격력][체력][빈칸][광산]`,
+  사용 그리드 = 구입과 같은 자리·같은 순서에 미보유는 `dim`(빈 칸으로 비우지 말 것). 하단 판 높이는 세 화면 모두 `--bpBodyH`.
+  건설지 상단은 전투 화면의 **`#hud` 그 자체**다 — `body.cstMode.stkCst` 가 `#hud` 를 살려 두고 `techMapRender` 는 `techWallet()` 이면 `.bres` 복제본을 만들지 않는다.
+  값은 `strikeHud()` 가 채우며 인구 칸만 건설지에서 `G.tech.sup/supCap` 로 바뀐다. **관리자 건설은 반대**(좌상단 종족 탭과 시계가 겹쳐 `#hud` 숨김 + `.bres`) — 갈리는 지점은 `stkCst` 클래스 하나.
+  하단 시트 접기 버튼(`#btCardCtl`)과 카드 최소화 모드(`cm2`)는 제거됐다 — 높이는 `--bpBodyH` 하나뿐.
+- **두 네비 바(HOME `NAV_TREE`/`navGo` · 유즈맵 `GTAB_TREE`/`gtabDrill`)는 같은 규칙을 쓴다**: 구역에 밖에서 들어오면 `reset()` 으로 늘 첫 하위. 이미 그 구역이면 되돌리지 않는다(안 그러면 자동화가 판매로 튕긴다).
 - **하단 구역의 톤·높이는 토큰 셋 하나가 정한다**(2026-08-14): `--panelBig`(판) · `--bpFace`(속살 검정) ·
-  `--bpTile`(초상 방사) · **`--bpBodyH`**(본문 높이). 다섯 섹션(메인 홈 `#defaultCmd` · 시트 `#unitCmd`/`#btSheetBody` ·
+  `--bpTile`(초상 방사) · **`--bpBodyH`**(본문 높이). ⚠ `--bpBodyH` 는 `min(28vh,140px)` 이라 `getPropertyValue()` 로 읽으면 원문 문자열이다 —
+  숫자로 재려면 그 토큰을 적용한 탐침 요소를 만들어 잴 것(스모크가 예전에 `parseFloat`=NaN 으로 검사를 통째로 건너뛴 적 있음). 다섯 섹션(메인 홈 `#defaultCmd` · 시트 `#unitCmd`/`#btSheetBody` ·
   플레이어 `#plGridWrap`)이 같은 변수를 쓰므로 값을 개별 규칙에 다시 박지 말 것 — 예전엔 시트 176px / 메인·플레이어 126px 이라
   탭을 옮길 때마다 판이 튀었다. 스모크 `하단 프로필: 다섯 섹션 같은 높이 …` 가 지킨다.
 
