@@ -3076,14 +3076,15 @@
     /* 화면 좌우를 꽉 채우는 띠 — #mapSelect 의 좌우 여백(13px)을 음수 마진으로 되돌린다.
        목록 카드와 '다른 섹션'으로 읽혀야 하므로 폭·면·테두리를 전부 다르게 간다. */
     margin:17px -13px 0;border-radius:0;
-    background:rgba(0,0,0,.55);
+    /* 면·모서리·윗선 = 사냥터 하단 패널(.hmUpg)과 같은 처리 — 뒤가 살짝 비치는 반투명 회색 +
+       위쪽 두 모서리 10px 컷. 각진 SF 규칙(큰 판은 라운드 대신 모서리 컷). */
+    background:linear-gradient(180deg,rgba(25,25,25,.9),rgba(14,14,14,.92));
+    clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 10px,100% 100%,0 100%,0 10px);
     padding-bottom:6px}   /* 안쪽 목록이 띠 끝선에 딱 붙어 잘리지 않게 — 스크롤러가 아니라 도크에 준다 */
-  /* 실버 링 1px — ⚠ 면이 반투명이라 padding-box/border-box 2겹 배경으로 그리면 링이 면 뒤로 깔려
-     배경 전체가 회색이 된다(앞서 그랬다). 마스크로 테두리만 그린다(.cpCard::before 와 같은 수법). */
-  #msSocialDock::before{content:'';position:absolute;inset:0;z-index:2;padding:1px;pointer-events:none;
-    background:var(--metal-ring);
-    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
-    -webkit-mask-composite:xor;mask-composite:exclude}
+  /* ⚠ 테두리는 챔퍼에 잘려 안 보인다 — .hmUpg 와 똑같이 윗변에 1px 선을 따로 얹어 '판'으로 세운다.
+     선은 컷 길이(10px)만큼 안쪽에서 시작해야 잘린 모서리와 어긋나지 않는다. */
+  #msSocialDock::before{content:'';position:absolute;left:10px;right:10px;top:0;height:1px;z-index:4;pointer-events:none;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.18) 22%,rgba(255,255,255,.18) 78%,transparent)}
   #msSocialDock .msSocial{flex:1;min-height:0;margin-top:0;border:0;border-radius:0;background:none;box-shadow:none}
   #msSocialDock .msSocial::before{display:none}
   #msSocialDock .msTabs2{display:none}

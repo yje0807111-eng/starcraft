@@ -2476,12 +2476,16 @@ async function groupLobby(){
         assert(db.left<=ph.left+1 && db.right>=ph.right-1,'소셜이 화면 좌우를 안 채움: '+db.left.toFixed(1)+'~'+db.right.toFixed(1));
         assert(db.width>pb.width+10,'소셜이 목록 카드보다 넓지 않음');
         assert(db.top-pb.bottom>=4,'두 섹션이 붙어 있음: '+(db.top-pb.bottom).toFixed(1)+'px');
-        { const rb=getComputedStyle(dock,'::before');
-          assert(rb.content!=='none' && /gradient/.test(rb.backgroundImage),'실버 링(::before)이 없음');
-          assert(/xor|exclude/.test((rb.webkitMaskComposite||'')+(rb.maskComposite||'')),'링이 마스크로 안 잘림 — 면까지 덮는다'); }
-        { const c=((ds.backgroundColor||'').match(/[\d.]+/g)||['0','0','0','1']).map(parseFloat);
+        // 면·모서리·윗선 = 사냥터 하단 패널(.hmUpg)과 같은 처리
+        { const hm=document.querySelector('#homeScreen .hmUpg');
+          assert(/polygon/.test(ds.clipPath||''),'위쪽 모서리 컷이 없음: '+ds.clipPath);
+          if(hm) assert(getComputedStyle(hm).clipPath===ds.clipPath,'사냥터 하단 패널과 모서리 컷이 다름');
+          const rb=getComputedStyle(dock,'::before');
+          assert(rb.content!=='none' && /gradient/.test(rb.backgroundImage),'윗변 1px 선(::before)이 없음');
+          assert(parseFloat(rb.height)<=2,'윗변 선이 1px 이 아님: '+rb.height);
+          const c=((ds.backgroundImage.match(/rgba?\(([^)]+)\)/)||[,'0,0,0,1'])[1]).split(',').map(parseFloat);
           const a=(c.length>3?c[3]:1);
-          assert(c[0]<20 && c[1]<20 && c[2]<20 && a>0.2 && a<0.95,'소셜 면이 검정 반투명이 아님: '+ds.backgroundColor); } }
+          assert(c[0]<40 && a>0.7 && a<1,'소셜 면이 반투명 어두운 회색이 아님: '+ds.backgroundImage.slice(0,60)); } }
       // 목록에 카드가 **정확히 5장** 들어온다(잘린 6번째가 끼면 마감이 지저분하다)
       { const list=$('msList'), ls=getComputedStyle(list), it=list.querySelector('.mapItem');
         const inner=list.clientHeight-parseFloat(ls.paddingTop)-parseFloat(ls.paddingBottom);
