@@ -195,8 +195,16 @@ async function groupLobby(){
     assert(!profCreateChar('scout','둘째'),'캐릭터가 하나를 넘어 생성됨');
     // 모두 같은 스탯·같은 외형으로 시작한다
     { const p2=PROF(); p2.chars=[]; p2.curId=''; const d=profEnsureChar();
-      for(const k of PROF_STATS) assert(profStat(k)>0,'기본 스탯이 0: '+k);
+      // 장비 스탯(pow/vit/foc/agi)은 '장비 전용'이 됐다 — 맨몸이면 0이 맞다
+      for(const k of PROF_STATS) assert(profStat(k)===0,'맨몸인데 장비 스탯이 0이 아님: '+k+'='+profStat(k));
+      // 그래도 전투 수치는 기본값에서 시작한다(0이면 아무것도 못 때린다)
+      for(const k of CS_ORDER) assert(csVal(k)===CS_AXES[k].base,k+' 이 기본값에서 시작하지 않음: '+csVal(k));
       assert(d.cls===c.cls,'사람마다 시작 유닛이 다름'); }
+    // 종류를 바꿔도 성능이 같다 — 직업 차이는 폐지했다
+    { const p3=PROF(); const before=CS_ORDER.map(k=>csVal(k)).join(',');
+      p3.chars=[]; p3.curId=''; profCreateChar('warden','워든');
+      assert(CS_ORDER.map(k=>csVal(k)).join(',')===before,'캐릭터 종류에 따라 수치가 다름(직업 차이가 남아 있음)');
+      p3.chars=[]; p3.curId=''; profEnsureChar(); }
     return '기본 '+PROF_DEFAULT_CLASS+' · 슬롯 '+PROF().chars.length+'/'+PROF_MAX_CHARS; });
   // 부팅 타이머는 '오프닝을 걷어내는' 용도지 화면을 되돌리는 용도가 아니다.
   // 가드가 없으면 1.7초 뒤 openAuth()가 그때 보고 있던 화면을 로그인으로 덮는다 —
@@ -349,6 +357,14 @@ async function groupLobby(){
       // 잠긴 칸은 값·레벨 대신 자물쇠 — 해금 전에 사면 안 된다
       assert(document.querySelectorAll('.hmUp.lk').length>0,'잠긴 업그레이드가 하나도 없음(해금제가 안 걸림)');
       assert(hbUpgOwned('atk') && hbUpgOwned('aspd'),'데미지·공격속도는 처음부터 열려 있어야 함'); }
+    // 버튼 윗줄 = '지금 레벨'만. 값 변화는 바로 위 줄이 말하므로 여기서 또 화살표를 쓰지 않는다.
+    { const cards=[...document.querySelectorAll('#hmUpgGrid .hmUp:not(.lk)')];
+      assert(cards.length>0,'열린 카드가 없음');
+      for(const e of cards){ const k=e.dataset.k, bl=e.querySelector('.hmUpBl');
+        assert(bl.textContent.trim()==='LV.'+(hbHunt().upg[k]||0),k+' 버튼 윗줄이 지금 레벨이 아님: '+bl.textContent.trim());
+        assert(!bl.querySelector('.nx') && !bl.querySelector('svg'),k+' 버튼 윗줄에 화살표가 남아 있음'); }
+      // 값 줄은 반대로 '지금 ▸ 다음' 이 남아 있어야 한다(무엇이 오르는지는 여기서 본다)
+      assert(cards[0].querySelector('.hmUpVl .nx'),'값 줄에서 다음 값이 사라짐'); }
     // 2.7행이 보이는 '고정' 높이 — 0.7행이 걸쳐 보이는 게 '더 있다'는 신호. 탭마다 개수가 달라도 안 흔들린다
     { const gr=$('hmUpgGrid'), cell=gr.querySelector('.hmUp');
       // ⚠ 간격·패딩을 박지 말 것 — CSS 에서 조정하면 검사가 헛걸린다. 실제 값을 읽어 계산한다
@@ -1032,20 +1048,49 @@ async function groupLobby(){
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(60);
     const c=CHAR(), p=PROF();
-    c.level=30; c.unit.level=30; c.unit.stats={pow:20,vit:15,foc:10,agi:8};
-    p.pets={wolf:1}; p.equip=['wolf'];
-    // ① 분해값의 합이 실제 profStat과 일치해야 한다(식이 갈라지면 여기서 잡힌다)
-    for(const k of PROF_STATS){ const P=profStatParts(k);
-      const sum=Math.round((P.job+P.alloc+P.level+P.evo+P.gear)*(1+P.petPct/100));
-      assert(sum===P.total,PROF_STAT_NAME[k]+' 분해합이 profStat과 다름: '+sum+' vs '+P.total);
-      assert(P.level===c.unit.level,'레벨 기여가 안 맞음'); }
-    assert(profStatParts('pow').petPct>0,'펫 보너스가 내역에 안 잡힘');
+    c.level=30; c.unit.level=30; c.unit.pts={atk:6}; c.rp=20; c.unit.rpts={atk:4};
+    { const H=hbHunt(); H.unl={}; H.upg={atk:9, hp:5, crit:4, rng:3, aspd:7, regen:2}; }
+    { const ks=profPageSlots('armor');                       // 장비도 실제로 끼워 둔다
+      p.items.length=0; for(const k of ks){ const it=profMakeItem(k,4,'epic'); profAddItem(it); profEquipItem(it.iid); } }
+    // ① 기본 스탯 = (기본 + 업그레이드 + 장비) × 레벨 포인트 × 환생 포인트 — 표와 전투가 같은 식을 써야 한다
+    for(const k of CS_ORDER){ const a=csAxis(k);
+      let want=(a.base+a.upg+a.gear)*a.lp*a.rp;
+      if(CS_AXES[k].cap!=null) want=Math.min(CS_AXES[k].cap, want);
+      assert(Math.abs(want-a.sub)<1e-9, a.name+' 분해합이 축 값과 다름: '+want+' vs '+a.sub);
+      assert(Math.abs(a.sub*a.bonus-a.total)<1e-9, a.name+' 전투 수치가 기본 스탯×보정이 아님'); }
+    assert(Math.abs(hbCharStats().atk-csVal('atk'))<1e-9,'전투 공격력이 축 값에서 안 나옴');
+    // ② 네 출처가 '전부' 실제로 값을 바꾼다
+    { const A=csAxis('atk');
+      assert(A.upg>0,'사냥터 업그레이드가 공격력에 안 걸림');
+      assert(A.gear>0,'장비가 공격력에 안 걸림');
+      assert(A.lp>1,'레벨 포인트가 공격력에 안 걸림');
+      assert(A.rp>1,'환생 포인트가 공격력에 안 걸림'); }
+    // ③ 그 넷 말고는 아무것도 안 걸린다 — 펫을 장착해도 내 스탯은 그대로
+    { const before=CS_ORDER.map(k=>csVal(k)).join(',');
+      p.pets={wolf:1}; p.equip=['wolf'];
+      assert(CS_ORDER.map(k=>csVal(k)).join(',')===before,'펫이 아직 내 기본 스탯을 올림');
+      assert(typeof profStatParts('pow').petPct==='undefined','내역에 펫 몫이 남아 있음'); }
     // ② 정보 팝업 — 좌상단 HUD로 연다
     const hud=$('hbHud'); assert(hud && hud.tagName==='BUTTON','HUD가 누를 수 있는 버튼이 아님');
     hbOpenInfo(); await sleep(40);
-    assert(visible($('hbInfoModal')),'캐릭터 정보 팝업이 안 열림');
+    assert(visible($('hbInfoModal')),'스탯 출처 팝업이 안 열림');
     assert(document.querySelectorAll('#hbInfoBody .hbTbl').length>=2,'스탯/전투 수치 표가 없음');
     assert($('hbInfoBody').textContent.indexOf('파워')>=0,'파워 표기가 없음');
+    // 스탯 출처 상세표는 '여기'가 주인이다(캐릭터>스탯 구역에서 옮겨 왔다)
+    assert($('hbInfoModal').querySelector('.hbmHead b').textContent==='스탯 출처',
+      '팝업 제목이 스탯 출처가 아님: '+$('hbInfoModal').querySelector('.hbmHead b').textContent);
+    // 출처는 넷뿐이다 — 직업·진화·펫 열은 없어야 하고, 넷은 다 있어야 한다
+    { const th=[...$('hbInfoBody').querySelectorAll('.hbTbl th')].map(e=>e.textContent);
+      for(const nm of ['배분','직업','진화','펫']) assert(th.indexOf(nm)<0,'없앤 열이 남아 있음: '+nm);
+      for(const nm of ['업그레이드','장비','레벨','환생','합']) assert(th.indexOf(nm)>=0,'출처 열 누락: '+nm); }
+    // 두 틀만 남는다 — 옛 칩 구역(레벨 포인트·업그레이드 레벨)은 지웠다
+    { const lbl=[...$('hbInfoBody').querySelectorAll('.hbGrowLbl')].map(e=>e.textContent);
+      assert(lbl.length===2,'스탯 출처가 두 틀이 아님: '+lbl.join(' / '));
+      assert(lbl[0].indexOf('기본 스탯')===0 && lbl[1].indexOf('전투 수치')===0,'두 틀 이름이 다름: '+lbl.join(' / '));
+      assert(!$('hbInfoBody').querySelector('.hbChips'),'칩 구역이 아직 남아 있음'); }
+    // 행은 전투 수치 축 그대로
+    { const rows=$('hbInfoBody').querySelectorAll('.hbTbl tbody tr');
+      assert(rows.length===CS_ORDER.length+Math.ceil(CS_ORDER.length/2),'표 줄 수가 축 수와 안 맞음: '+rows.length); }
     hbCloseInfo();
     // ③ 파워 해금 — 표시만 하는 항목이 없어야 한다(전부 실제 상한을 바꾼다)
     p.unlocks={};
@@ -1096,8 +1141,9 @@ async function groupLobby(){
     // ③ 전직은 사라졌다 — 흔적이 남아 있으면 안 된다
     assert(typeof profClassChange==='undefined','전직 함수가 아직 남아 있음');
     assert($('hbGrowBody').textContent.indexOf('전직')<0,'성장 팝업에 전직이 남음');
-    for(const id in PROF_JOBS) assert(!PROF_JOBS[id].next,'직업 트리(next)가 아직 남아 있음: '+id);
-    assert(Object.keys(PROF_JOBS).length===Object.keys(PROF_CLASSES).length,'직업이 뿌리 3종이 아님');
+    assert(typeof PROF_JOBS==='undefined','직업 표(PROF_JOBS)가 아직 남아 있음');
+    assert(typeof profEvolve==='undefined' && typeof profEvolveReq==='undefined','진화 함수가 아직 남아 있음');
+    assert(!PROF_UNLOCKS.some(u=>u.id==='evolve'),'해금 표에 진화가 남아 있음');
     // ④ 환생 — 조건이 차면 상단 성장 버튼에 ! 배지(패널 안 줄은 폐기 — 높이가 흔들렸다 · 2026-08-14)
     c.level=PROF_REB_EVERY; c.unit.level=PROF_REB_EVERY; p.pcoin=50000;
     renderHome();
@@ -1105,21 +1151,22 @@ async function groupLobby(){
     assert(!document.getElementById('hmStatRow'),'옛 성장 줄이 아직 패널에 있음');
     renderGrowModal();
     assert($('hbGrowBody').textContent.indexOf('환생')>=0,'성장 팝업에 환생이 없음');
-    // ⑤ 진화 잠금 안내는 레벨 기준(옛 '파워 350' 문구가 남아 있으면 안 된다)
-    const r=profEvolveReq();
-    if(!r.unlock) assert($('hbGrowBody').textContent.indexOf('Lv.'+profUnlockNeed('evolve'))>=0,'진화 잠금 안내가 레벨 기준이 아님');
+    // ⑤ 진화는 폐지됐다 — 팝업에 흔적이 남아 있으면 안 된다
+    assert($('hbGrowBody').textContent.indexOf('진화')<0,'환생 팝업에 진화가 남음');
     assert($('hbGrowBody').textContent.indexOf('파워 350')<0,'옛 파워 문구가 남음');
     hbCloseGrow();
     // ⑥ 할 게 없으면 배지는 꺼진다 — 단 버튼 진입점은 그대로 남아야 한다
     //    ☰ 의 !는 성장과 📅 일일이 함께 쓰는 신호라, 일일 쪽도 '받을 게 없는' 상태로 만들어야 성장만 본다
     { const D=dqState(); D.att.day=_dgDayKey(); D.att.n=1; D.att.bn={}; D.att.fin=0;
       D.allGot=1; D.q.forEach(e=>{ e.got=1; }); }
-    c.level=1; c.unit.level=1; p.pcoin=0; renderHome();
+    c.level=1; c.unit.level=1; p.pcoin=0;
+    c.rp=0; c.unit.rpts={};                      // 안 찍은 환생 포인트도 '할 일'이다 — 같이 비운다
+    renderHome();
     assert(!visible($('hbGrowDot')),'할 게 없는데 성장 배지가 남아 있음');
     { hbOpenMore(); await sleep(100);
       assert(document.querySelector('#hbMoreGrid [data-k="grow"]'),'성장 항목까지 사라짐(항상 열려 있어야 한다)');
       hbCloseMore(); }
-    return '실측 '+p.hunt.rate.toFixed(2)+'/s · 직업 '+PROF_JOBS[CHAR().unit.jobId].name; });
+    return '실측 '+p.hunt.rate.toFixed(2)+'/s · 진화·직업 폐지 확인'; });
   // Phase 4 — 스킬 · 부스트 · 동료/펫 · 건설(터렛·벙커)
   await step('자동사냥: 스킬·부스트·동료·건설', async()=>{ skipIf(typeof hbUseSkill!=='function','Phase4 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
@@ -2051,9 +2098,10 @@ async function groupLobby(){
     assert(typeof profClassChange==='undefined','profClassChange 가 남아 있음');
     assert(typeof profClassCost==='undefined','profClassCost 가 남아 있음');
     assert(typeof hbGrowJobs==='undefined','hbGrowJobs 가 남아 있음');
-    assert(Object.keys(PROF_JOBS).length===3,'직업이 뿌리 3종이 아님: '+Object.keys(PROF_JOBS).length);
-    for(const id in PROF_JOBS){ assert(PROF_CLASSES[id],'뿌리가 아닌 직업이 남음: '+id);
-      assert(!PROF_JOBS[id].next && !PROF_JOBS[id].tier,'직업 트리 잔재(next/tier): '+id); }
+    assert(typeof PROF_JOBS==='undefined','직업 표(PROF_JOBS)가 남아 있음');
+    assert(Object.keys(PROF_CLASSES).length===3,'캐릭터 종류가 3종이 아님: '+Object.keys(PROF_CLASSES).length);
+    // 종류는 '외형'일 뿐 — 성능 차이를 만드는 값을 들고 있으면 안 된다
+    for(const id in PROF_CLASSES) assert(!PROF_CLASSES[id].base,'캐릭터 종류가 기본 스탯을 들고 있음: '+id);
     // ② 옛 상위 직업 12종이 '전부' 동료로 옮겨 왔다 — 하나라도 빠지면 그 유닛이 사라진 것이다
     const moved=['sniper','gunner','phantom','goliath','spike','swarmling','thornqueen','ultra',
                  'sentinel','darksage','void','highsage'];
@@ -2373,11 +2421,9 @@ async function groupLobby(){
       idle:{sourceId:'drill',lastClaimTs:0}, unlocks:{}, pets:{}, equip:[], petSlots:2 } };
     migrateProfile();
     const p=PLAYER_META.profile, c=p.chars[0];
-    assert(PROF_JOBS[c.unit.jobId],'없어진 직업이 그대로 남음: '+c.unit.jobId);
     assert(c.unit.jobId==='ranger','뿌리로 안 돌아감: '+c.unit.jobId);
     assert(((p.hunt.mates||{}).sniper||{}).lv>=1,'전직해 뒀던 직업이 동료로 안 들어옴');
     assert((p.hunt.party||[]).indexOf('sniper')>=0,'받은 동료가 출전 목록에 없음');
-    assert(c.unit.evoStars===1,'진화★가 사라짐');
     assert(p.pcoin>0,'옛 범용 동료(build.ally) 환급이 없음: '+p.pcoin);
     assert(!p.hunt.build.ally,'옛 동료 수가 남아 있음');
     // 버전 숫자를 박지 않는다 — 마이그레이션이 늘 때마다 이 줄이 깨진다
@@ -2497,38 +2543,203 @@ async function groupLobby(){
     // 마을: 월드 좌표계 + 카메라. 헤드리스는 rAF가 멈춰 있어 twStep(dt)을 직접 pump한다.
       // 🎁 상점 = 팝업이 아니라 전용 화면. 네비·마을 구역 두 경로 모두 같은 화면으로 간다.
   // 🧍 캐릭터 = '나 자신'(정보·성장·스킬). 장착물(장비·펫·동료)은 정비에 남는다 — 두 곳에 두면 어긋난다.
-  await step('캐릭터: 정보·성장·스킬 · 본문은 빌려 쓴다', async()=>{
+  await step('레벨 포인트: 총량은 레벨에서 · 찍으면 전투 수치가 곧바로 오른다', ()=>{
+    skipIf(typeof lpMul!=='function','레벨 포인트 없음');
+    const p=PROF(); p.chars.length=0; p.curId='';
+    const c=profCreateChar('ranger','포인트'); c.level=11; c.unit.level=11; c.unit.pts={}; saveMeta();
+    // ① 총량 = (레벨-1)×LP_PER_LEVEL · 처음엔 전부 남아 있다
+    assert(lpTotal(c)===10*LP_PER_LEVEL,'포인트 총량이 레벨에서 안 나옴: '+lpTotal(c));
+    assert(lpFree(c)===lpTotal(c) && lpSpent(c)===0,'처음부터 쓴 포인트가 있음');
+    // ② 남은 것보다 많이 못 찍는다 — 비용 곡선(ptCostAt)을 올려도 이 규칙은 그대로여야 한다
+    { const got=lpAdd('atk', 999);
+      assert(got>0,'한 칸도 못 찍음');
+      assert(lpPts('atk')===got,'찍은 칸 수가 반환값과 다름: '+lpPts('atk')+' vs '+got);
+      assert(lpFree(c) < ptCost('lp','atk',c),'더 살 수 있는데 안 삼: 남은 '+lpFree(c)+'p · 값 '+ptCost('lp','atk',c)+'p');
+      const hpCost=ptCost('lp','hp',c);
+      if(lpFree(c)<hpCost) assert(lpAdd('hp',1)===0,'포인트가 모자란데 찍힘'); }
+    // ③ 표의 모든 키가 실제로 전투에 걸린다 — 표에만 있고 안 걸린 키는 거짓말이 된다
+    const H=hbHunt(); for(const k in HB_UPG) H.unl[k]=1;   // 동료·건물 배수는 해금돼 있어야 값이 보인다
+    const snap=()=>{ const st=hbCharStats(), M=hbAllyMul();
+      return { atk:st.atk, hp:st.hpMax, cd:st.cd, range:st.range, critd:st.critDmg,
+               ally:M.ally.mul, pet:M.pet.dps, turret:M.turret.dps, bunker:hbBunkerAtkMul() }; };
+    const wired={ atk:['atk'], hp:['hp'], aspd:['cd'], range:['range'], critd:['critd'],
+                  ally:['ally','pet'], bld:['turret','bunker'] };
+    for(const S of LP_STATS){
+      c.unit.pts={}; const a=snap();
+      c.unit.pts={}; c.unit.pts[S.k]=10; const b=snap();
+      const keys=wired[S.k]; assert(keys,'배선 표에 없는 항목: '+S.k);
+      for(const kk of keys){
+        const up=(kk==='cd')? (b[kk]<a[kk]-1e-9) : (b[kk]>a[kk]+1e-9);
+        assert(up, S.k+' 10p 를 찍었는데 '+kk+' 가 안 변함: '+a[kk]+'→'+b[kk]); }
+      // 안 건드린 축은 그대로여야 한다(한 항목이 여러 곳을 흔들면 배수 설계가 무너진다)
+      for(const kk in a){ if(keys.indexOf(kk)>=0) continue;
+        assert(Math.abs(a[kk]-b[kk])<1e-9, S.k+' 가 무관한 '+kk+' 까지 바꿈'); } }
+    // ④ 배수는 선형 — 10p = step×10
+    c.unit.pts={atk:10};
+    assert(Math.abs(lpMul('atk')-(1+lpDef('atk').step*10))<1e-9,'배수가 선형이 아님: '+lpMul('atk'));
+    // ⑤ 초기화하면 전부 돌아온다
+    c.unit.pts={atk:5,hp:5}; saveMeta();
+    assert(lpReset()===10,'초기화 반환 수가 다름');
+    assert(lpFree(c)===lpTotal(c) && lpMul('atk')===1,'초기화 뒤에도 배수가 남음');
+    // ⑥ 환생하면 레벨이 1로 돌아가므로 포인트 총량도 0이 된다
+    c.level=25; c.unit.level=25; c.unit.pts={atk:10}; saveMeta();
+    profRebirth(c);
+    assert(lpTotal(c)===0,'환생했는데 포인트 총량이 남음: '+lpTotal(c));
+    c.unit.pts={};
+    return '레벨당 '+LP_PER_LEVEL+'p · '+LP_STATS.length+'항목 전부 배선됨'; });
+  await step('레벨 포인트: 스탯 화면에서 찍으면 전투 중인 캐릭터에 바로 반영', async()=>{
+    assert(typeof ptTap==='function','레벨 포인트 조작이 없음');   // ⚠ skipIf 로 두면 이름이 바뀔 때 조용히 건너뛴다
+    const p0=PROF(); p0.chars.length=0; p0.curId='';
+    { const c0=profCreateChar('ranger','반영'); c0.level=21; c0.unit.level=21; c0.unit.pts={}; }
+    saveMeta();
+    if(typeof hbEnd==='function') hbEnd();
+    openHome(); await sleep(120);          // ⚠ openHome→loadMeta 가 PROF()를 갈아 끼운다 — 위 참조는 버린다
+    assert(_hb && _hb.char,'사냥터가 안 돌아감');
+    { const c=CHAR(); assert(c.level===21 && lpTotal(c)===60,'표본 레벨이 안 실림: Lv.'+c.level+' / '+lpTotal(c)+'p'); }
+    const a0=_hb.char.atk, cd0=_hb.char.cd, cdm0=_hb.char.critDmg;
+    navGo('upg'); await sleep(60); setChrSec('stat'); await sleep(40);
+    const host=$('chrBody');
+    // 카드는 사냥터 업그레이드와 '같은 함수'가 그린다 — 마크업을 베낀 두 번째 구현이 있으면 안 된다
+    const rows=[...host.querySelectorAll('.lpList .hmUp')];
+    assert(rows.length===LP_STATS.length,'포인트 카드 수가 표와 다름: '+rows.length);
+    assert(!host.querySelector('.lpRow'),'옛 자체 제작 줄(.lpRow)이 남아 있음');
+    assert(host.querySelector('.lpFree b').textContent==='60','남은 포인트 표시가 다름: '+host.querySelector('.lpFree b').textContent);
+    // 사냥터 카드와 같은 뼈대인가 — 한 조각이라도 빠지면 '비슷한 것을 새로 만든' 것이다
+    { // ⚠ SVG 요소의 className 은 문자열이 아니다(SVGAnimatedString) → getAttribute 로 읽는다
+      const skel=root=>[...root.querySelectorAll('*')]
+        .map(e=>e.tagName.toLowerCase()+'.'+(e.getAttribute('class')||''))
+        .filter(x=>x.indexOf('icoImg')<0).sort().join(' ');
+      const d=document.createElement('div');
+      d.innerHTML=hmUpCardHTML({key:'x',ico:'',name:'n',val:'1',next:'2',lv:'a',nextLv:'b',cost:'c'});
+      const home=skel(d.firstChild), mine=skel(rows[0]);
+      assert(mine===home,'포인트 카드 뼈대가 사냥터 카드와 다름:\n  내것: '+mine+'\n  사냥터: '+home); }
+    // 2열 격자 · 이름과 수치는 잘리지 않는다
+    { const top=rows[0].getBoundingClientRect().top;
+      const per=rows.filter(e=>Math.abs(e.getBoundingClientRect().top-top)<2).length;
+      assert(per===2,'포인트 목록이 2열이 아님: 한 줄 '+per+'칸');
+      rows.forEach((e,i)=>{ const S=LP_STATS[i], n=lpPts(S.k);
+        for(const sel of ['.hmUpName','.hmUpVl']){ const el=e.querySelector(sel);
+          assert(el.scrollWidth<=el.clientWidth+1,sel+' 이 잘림: '+el.textContent); }
+        // 제목 아래 = 지금 배수 ▸ 이 1점을 찍으면 갈 배수
+        const vl=e.querySelector('.hmUpVl').textContent.replace(/\s/g,'');
+        assert(vl===_ptPct(n,S.step)+_ptPct(n+1,S.step),S.name+' 수치 변화 표기가 다름: '+vl);
+        // 버튼 = 지금 레벨(위) + 값(아래). 윗줄에 '▸ 다음' 을 붙이지 않는다 — 바로 위 값 줄이 이미 말한다
+        const bl=e.querySelector('.hmUpBl');
+        assert(bl.textContent.trim()==='LV.'+n,S.name+' 레벨 표기가 다름: '+bl.textContent.trim());
+        assert(!bl.querySelector('.nx') && !bl.querySelector('svg'),S.name+' 버튼 윗줄에 화살표가 남아 있음');
+        assert(e.querySelector('.hmUpBc').textContent.trim()==='-'+ptCost('lp',S.k)+'p','버튼이 비용 표기가 아님'); }); }
+    // 초기화 = 사냥터 수량 버튼과 같은 물성
+    { const q=host.querySelector('.lpHead .hmUpQty .hmUpQ');
+      assert(q && q.textContent.trim()==='초기화','초기화가 수량 버튼 물성이 아님');
+      assert(q.scrollWidth<=q.clientWidth+1,'초기화 글자가 잘림'); }
+    // 이름은 수치 축과 같은 말을 쓴다 — 같은 것을 두 이름으로 부르지 않는다
+    assert(lpDef('critd').name===CS_AXES.critd.name,'치명 피해 이름이 축과 다름: '+lpDef('critd').name);
+    // 버튼에 적힌 값만큼 '실제로' 빠진다 — 표기와 차감이 갈라지면 여기서 잡힌다
+    { const c2=CHAR(); c2.unit.pts={};
+      const before=lpFree(c2), cost=ptCost('lp','atk',c2);
+      assert(lpAdd('atk',1)===1,'1칸이 안 올라감');
+      assert(lpPts('atk')===1,'찍은 칸이 1이 아님');
+      assert(lpFree(c2)===before-cost,'버튼에 적힌 값('+cost+'p)만큼 안 빠짐: '+before+'→'+lpFree(c2));
+      c2.unit.pts={}; }
+    // 화면 버튼으로 찍는다 — 렌더러·상태·전투가 한 줄로 이어지는지 본다
+    rows[0].querySelector('.hmUpBtn').click(); await sleep(40);
+    assert(lpPts('atk')===1,'버튼을 눌렀는데 안 찍힘');
+    assert($('chrBody').querySelector('.lpFree b').textContent==='59','찍은 뒤 남은 포인트가 안 줄어듦');
+    assert(_hb.char.atk>a0+1e-9,'전투 중인 캐릭터 공격력에 반영 안 됨: '+a0+'→'+_hb.char.atk);
+    // 치명타 피해·공격속도도 같은 경로를 탄다
+    for(const S of LP_STATS) if(S.k==='critd'||S.k==='aspd') lpAdd(S.k,10);
+    hbSyncChar();
+    assert(_hb.char.critDmg>cdm0+1e-9,'치명타 피해가 반영 안 됨');
+    assert(_hb.char.cd<cd0-1e-9,'공격속도가 반영 안 됨');
+    // 초기화 버튼도 같은 경로
+    $('chrBody').querySelector('.lpHead .hmUpQ').click(); await sleep(40);
+    assert(lpSpent()===0,'초기화가 안 됨');
+    assert(Math.abs(_hb.char.atk-a0)<1e-6,'초기화 뒤 전투 수치가 안 돌아옴');
+    navBack(); await sleep(40);
+    return '찍기·초기화 → 전투 즉시 반영'; });
+  await step('환생 포인트: 환생으로만 얻고 환생해도 남는다', async()=>{
+    assert(typeof rpAdd==='function','환생 포인트가 없음');
+    const p=PROF(); p.chars.length=0; p.curId='';
+    { const c0=profCreateChar('ranger','환포'); c0.level=1; c0.unit.level=1; }
+    saveMeta();
+    let c=CHAR();
+    assert(rpTotal(c)===0,'처음부터 환생 포인트가 있음: '+rpTotal(c));
+    // ① 환생해야 나온다
+    c.level=PROF_REB_EVERY; c.unit.level=PROF_REB_EVERY; c.unit.pts={atk:5};
+    const step1=profRebirth(c);
+    assert(step1>=1,'환생이 안 됨');
+    assert(rpTotal(c)===RP_PER_REB*step1,'환생 포인트 지급량이 다름: '+rpTotal(c));
+    // ② 레벨 포인트는 되감기고, 환생 포인트는 남는다 — 둘이 같은 필드면 여기서 잡힌다
+    assert(lpTotal(c)===0 && lpSpent(c)===0,'레벨 포인트가 안 되감김');
+    const put=rpAdd('atk', 3);
+    assert(put>0 && rpPts('atk')===put,'환생 포인트가 안 찍힘: '+put+'/'+rpPts('atk'));
+    c.level=PROF_REB_EVERY*2; c.unit.level=PROF_REB_EVERY*2;
+    const step2=profRebirth(c);
+    assert(rpPts('atk')===put,'환생했더니 찍어 둔 환생 포인트가 사라짐');
+    assert(rpTotal(c)===RP_PER_REB*(step1+step2),'두 번째 지급이 누적 안 됨: '+rpTotal(c));
+    // ③ 1p 가 레벨 포인트보다 세다 · 남은 것보다 많이 못 찍는다
+    assert(rpStep('atk')>lpDef('atk').step,'환생 포인트가 레벨 포인트보다 안 셈');
+    assert(Math.abs(rpMul('atk')-(1+rpStep('atk')*put))<1e-9,'환생 배수가 선형이 아님');
+    { const got=rpAdd('hp', 999);
+      assert(got>0,'한 칸도 못 찍음');
+      assert(rpFree(c) < ptCost('rp','hp',c),'더 살 수 있는데 안 삼: 남은 '+rpFree(c)+'p');
+      if(rpFree(c)<ptCost('rp','hp',c)) assert(rpAdd('hp', 1)===0,'없는데 또 찍힘'); }
+    // ④ 전투에도 걸린다 — 레벨 포인트와 '따로' 곱해져야 한다
+    c.unit.pts={}; c.unit.rpts={};
+    const base=csVal('atk');
+    c.unit.rpts={atk:4};
+    assert(Math.abs(csAxis('atk').rp-(1+rpStep('atk')*4))<1e-9,'축이 환생 배수를 안 읽음');
+    assert(csVal('atk')>base+1e-9,'환생 포인트가 공격력에 반영 안 됨');
+    // ⑤ 환생 탭에서 찍는다 — 화면·상태·전투가 한 줄로 이어지는지
+    c.unit.rpts={}; saveMeta();
+    navGo('upg'); await sleep(60); setChrSec('reb'); await sleep(40);
+    const host=$('chrBody');
+    const rows=[...host.querySelectorAll('.lpList .hmUp')];
+    assert(rows.length===LP_STATS.length,'환생 포인트 카드 수가 표와 다름: '+rows.length);
+    assert(host.textContent.indexOf('환생 포인트')>=0,'환생 탭에 환생 포인트 구역이 없음');
+    const before=csVal('atk');
+    rows[0].querySelector('.hmUpBtn').click(); await sleep(40);
+    assert(rpPts('atk')===1,'환생 탭 버튼으로 안 찍힘');
+    assert(csVal('atk')>before+1e-9,'찍었는데 공격력이 그대로');
+    $('chrBody').querySelector('.lpHead .hmUpQ').click(); await sleep(40);
+    assert(rpSpent()===0,'초기화가 안 됨');
+    navBack(); await sleep(40);
+    return '환생 '+RP_PER_REB+'p/단계 · 1p = 레벨 포인트 ×'+RP_STEP_MUL; });
+  await step('캐릭터: 스탯·환생·스킬 · 환생 본문은 빌려 쓴다', async()=>{
     skipIf(typeof setChrSec!=='function','캐릭터 구역 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     navGo('upg'); await sleep(60);
     assert(visible($('upgScreen')),'캐릭터 화면이 안 열림');   // APP_SCREENS 에 빠지면 영영 안 켜진다
     assert(document.querySelector('#navBar .navIt[data-nav=upg]')===null,'내려간 상태인데 구역 칸이 남음');
     const subs=[...document.querySelectorAll('#navBar .navIt[data-sub]')].map(e=>e.dataset.sub);
-    assert(subs.join(',')==='info,grow,skill','캐릭터 하위가 정보·성장·스킬이 아님: '+subs.join(','));
+    assert(subs.join(',')==='stat,reb,skill','캐릭터 하위가 스탯·환생·스킬이 아님: '+subs.join(','));
+    const lab=[...document.querySelectorAll('#navBar .navIt[data-sub]')].map(e=>e.textContent.trim());
+    assert(lab.join(',').indexOf('스탯')>=0 && lab.join(',').indexOf('환생')>=0,'하위 이름이 스탯·환생이 아님: '+lab.join(','));
     const host=()=>$('chrBody');
-    // ① 정보 = 팝업 본문(#hbInfoBody)을 빌려 온다 — 복제하면 두 벌이 된다
-    assert(host().querySelector('#hbInfoBody'),'정보 본문을 안 빌려옴');
-    assert(host().querySelectorAll('.hbTbl tr').length>1,'스탯 출처 표가 비어 있음');
-    // ② 성장 — 빌려 오면서 앞 구역 본문은 제자리로 돌아가야 한다
-    setChrSec('grow'); await sleep(40);
-    assert(host().querySelector('#hbGrowBody'),'성장 본문을 안 빌려옴');
-    assert($('hbInfoModal').querySelector('#hbInfoBody'),'정보 본문이 팝업으로 안 돌아감');
-    assert([...host().querySelectorAll('.hbRowBtn')].some(b=>b.textContent==='환생'),'성장에 환생 버튼이 없음');
+    // ① 스탯 = 이 화면 전용 렌더러다 — 팝업 본문을 빌려오지 않는다(상세표는 사냥터 프로필이 맡는다)
+    assert(!host().querySelector('#hbInfoBody'),'스탯이 아직 팝업 본문을 빌려옴');
+    assert(!host().querySelector('.hbTbl'),'스탯 출처 표가 스탯 구역에 남아 있음(프로필 팝업으로 옮겼다)');
+    assert(host().querySelector('.lpList'),'레벨 포인트 구역이 없음');
+    assert($('hbInfoModal').querySelector('#hbInfoBody'),'스탯 출처 본문이 팝업에 없음');
+    // ② 환생 — 빌려 오면서 앞 구역 본문은 제자리로 돌아가야 한다
+    setChrSec('reb'); await sleep(40);
+    assert(host().querySelector('#hbGrowBody'),'환생 본문을 안 빌려옴');
+    assert([...host().querySelectorAll('.hbRowBtn')].some(b=>b.textContent==='환생'),'환생에 환생 버튼이 없음');
     // ③ 스킬 = HB_SKILLS 표 하나에서만 온다
     setChrSec('skill'); await sleep(40);
-    assert($('hbGrowModal').querySelector('#hbGrowBody'),'성장 본문이 팝업으로 안 돌아감');
+    assert($('hbGrowModal').querySelector('#hbGrowBody'),'환생 본문이 팝업으로 안 돌아감');
     assert(host().querySelectorAll('.hbRow').length===Object.keys(HB_SKILLS).length,'스킬 줄 수가 HB_SKILLS 와 다름');
     for(const k in HB_SKILLS) assert(host().textContent.indexOf(HB_SKILLS[k].name)>=0,'스킬 누락: '+HB_SKILLS[k].name);
     // ④ 팝업(더보기) 경로가 열리면 본문을 되찾아 간다 — DOM 은 끝까지 한 벌
-    setChrSec('grow'); await sleep(40); hbOpenGrow(); await sleep(40);
+    setChrSec('reb'); await sleep(40); hbOpenGrow(); await sleep(40);
     assert($('hbGrowModal').querySelector('#hbGrowBody'),'팝업이 본문을 못 되찾음');
     assert($('hbGrowBody').textContent.indexOf('환생')>=0,'되찾은 본문이 비어 있음');
     hbCloseGrow(); navGo('upg'); await sleep(60);
     assert(host().querySelector('#hbGrowBody'),'화면 복귀 시 본문을 다시 못 빌려옴');
     for(const id of ['hbInfoBody','hbGrowBody'])
       assert(document.querySelectorAll('#'+id).length===1,'본문이 복제됨: '+id);
-    setChrSec('info'); navBack(); await sleep(40);
-    return '정보·성장·스킬 3칸 · 본문 단일 DOM';
+    setChrSec('stat'); navBack(); await sleep(40);
+    return '스탯·환생·스킬 3칸 · 본문 단일 DOM';
   });
 
   await step('하단 네비 2층: 구역 → 전용 네비 → 돌아가기', async()=>{
@@ -2826,6 +3037,50 @@ async function groupLobby(){
     assert(!document.getElementById('gearTabs'),'정비 화면에 옛 탭 띠가 남아 있음');
     assert(document.querySelectorAll('#navBar .navIt[data-sub]').length===3,'정비 하위가 네비에 3칸이 아님');
     assert(document.querySelector('#navBar .navIt.cur').dataset.sub==='gear','기본 하위가 장비가 아님');
+    // ⓪ 장비 슬롯 카드 — 각진 판 + 윗변 광선(네비바와 같은 --edge-light)
+    { setGearTab('gear'); await sleep(40);
+      // 착용 칸이 있어야 '등급 테두리가 통째로 차지하는가'를 볼 수 있다
+      { const c2=CHAR(); const it=profMakeItem('helmet',6,'epic');
+        if(it){ profAddItem(it); profEquipItem(it.iid); } renderGear(); await sleep(40); }
+      const slots=[].slice.call(document.querySelectorAll('#gearBody .pdSlot'));
+      assert(slots.length>0,'장비 슬롯이 없음');
+      const base=slots.find(e=>!e.classList.contains('on'));
+      const on=slots.find(e=>e.classList.contains('on'));
+      assert(base,'빈/잠긴 칸이 없어 기본 표현 검사 불가');
+      assert(on,'착용 칸이 없어 등급 테두리 검사 불가');
+      const cs=getComputedStyle(base);
+      // 각지게 — 라운드는 DESIGN.md 토큰의 아래쪽(≤3px)
+      assert(parseFloat(cs.borderTopLeftRadius)<=3,'슬롯이 아직 둥긂: '+cs.borderTopLeftRadius);
+      // 윗변 광선 = 네비바와 '같은' 그라데여야 한다(두 벌로 만들지 말 것)
+      const lightOf=el=>getComputedStyle(el,'::before').backgroundImage;
+      const nav=document.querySelector('.navBar');
+      assert(nav,'네비바가 없음');
+      const a=lightOf(base), b2=lightOf(nav);
+      assert(a && a!=='none','슬롯에 윗변 광선이 없음');
+      assert(a===b2,'기본 슬롯 광선이 네비바와 다른 그라데임(단일 소스 위반)');
+      assert(a.indexOf('gradient')>=0,'광선이 그라데가 아님: '+a.slice(0,40));
+      // 착용 칸 = 기본(은색) 표현이 '전부' 등급색으로 바뀐다. 단순 외곽선이 아니라 같은 성질을 갖는다.
+      { const oc=getComputedStyle(on), lit=lightOf(on);
+        assert(lit && lit!=='none','착용 칸에 윗변 광선이 없음');
+        assert(lit!==b2,'착용 칸이 아직 은색 광선을 씀(등급색이 차지해야 한다)');
+        assert(lit.indexOf('gradient')>=0,'착용 칸 광선이 그라데가 아님(단순 선 금지)');
+        const rgb=(oc.color.match(/\d+/g)||[]).slice(0,3).join(', ');
+        assert(rgb && lit.indexOf(rgb)>=0,'착용 칸 광선이 등급색이 아님: '+lit.slice(0,60)+' / color '+oc.color);
+        assert(oc.borderTopColor!==getComputedStyle(base).borderTopColor,'착용 칸 테두리가 기본과 같음'); }
+      // ⚠ overflow:hidden 을 쓰면 레벨 배지(.pdLv)가 잘린다 — 실제로 그렇게 잘렸었다
+      assert(cs.overflow!=='hidden','슬롯에 overflow:hidden 이 걸려 레벨 배지가 잘린다');
+      // 면이 배경보다 밝아야 '판'으로 읽힌다
+      { const g=cs.backgroundImage+cs.backgroundColor;
+        const nums=(g.match(/\d+/g)||[]).map(Number);
+        assert(nums.length>=3,'슬롯 면 색을 읽지 못함');
+        assert(nums[0]+nums[1]+nums[2]>=60,'슬롯 면이 너무 어두움: '+nums.slice(0,3).join(',')); }
+      // ＋ 는 부위 글리프와 겹치지 않는다(가운데에 겹쳐 두면 둘 다 안 읽힌다)
+      { const emp=slots.find(e=>e.classList.contains('empty'));
+        if(emp){ const plus=emp.querySelector('.pdPlus'), ico=emp.querySelector('.slIco');
+          assert(plus,'빈 슬롯에 ＋ 가 없음');
+          if(ico){ const a2=plus.getBoundingClientRect(), b3=ico.getBoundingClientRect();
+            const overlap=!(a2.right<=b3.left||a2.left>=b3.right||a2.bottom<=b3.top||a2.top>=b3.bottom);
+            assert(!overlap,'＋ 가 부위 글리프와 겹침'); } } } }
     // ① 장비 = 마을 장비창과 같은 renderProfGear() — 아바타(페이퍼돌) + 가방이 그대로 나와야 한다
     assert(document.querySelector('#gearBody .gearWrap'),'장비 탭에 장비창이 없음');
     assert(document.querySelector('#gearBody .bagBody'),'장비 탭에 가방이 없음');
@@ -3074,7 +3329,8 @@ async function groupLobby(){
     assert(body.innerHTML.indexOf('🔒')<0,'슬롯에 자물쇠 이모지가 남아 있음');
     for(const k in PROF_GEAR) assert(PROF_SLOT_ICON[k],'슬롯 아이콘 누락: '+k);
     const eq=body.querySelector('.pdSlot.on'); assert(eq,'장착한 슬롯이 on으로 안 보임');
-    assert(eq.querySelector('.pdLv').textContent==='4','슬롯에 아이템 레벨이 안 뜸');
+    // 숫자 배너는 뺐다(2026-08-15) — 등급은 테두리가, 레벨은 가방 칸이 말한다
+    assert(!eq.querySelector('.pdLv'),'착용 칸에 숫자 배너가 아직 있음');
     // Lv.1엔 기본 5칸만 열리고 나머지는 레벨로 잠겨 있어야 한다
     const open=Object.keys(PROF_GEAR).filter(k=>!profSlotLocked(k));
     assert(open.length===5,'Lv.1 해금 슬롯이 5칸이 아님: '+open.join(','));
@@ -3101,8 +3357,12 @@ async function groupLobby(){
   await step('장비창: 짐이 많아도 카드가 안 늘어나고 가방만 스크롤', ()=>{ skipIf(typeof bagScrollHint!=='function','가방 스크롤 없음');
     const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0;
     profCreateChar('ranger','짐');
-    const ks=Object.keys(PROF_GEAR), ts=PROF_ITEM_TIERS.map(t=>t.id);
+    // ⚠ 가방은 '지금 페이지'의 부위만 보여 준다 — 아무 부위나 채우면 화면에 안 나와 넘치지 않는다
+    _gearPage=PROF_GEAR_PAGES[0].id;
+    const ks=profPageSlots(_gearPage), ts=PROF_ITEM_TIERS.map(t=>t.id);
     for(let i=0;i<26;i++) profAddItem(profMakeItem(ks[i%ks.length], 1+(i%5), ts[i%ts.length]));
+    const ks2=profPageSlots(PROF_GEAR_PAGES[1].id);            // 다른 페이지 표본(가방이 페이지를 따라가는지 볼 것)
+    for(let i=0;i<5;i++) profAddItem(profMakeItem(ks2[i%ks2.length], 1+(i%5), ts[i%ts.length]));
     saveMeta(); _gearPick=null; _gearSel=null;
     openTown(); openTownPanel('gear'); CHAR().level=40; refreshTownPanel();
     const body=$('tpBody'), card=document.querySelector('#townPanel .twCard');
@@ -3130,16 +3390,24 @@ async function groupLobby(){
     assert(cells[0].width<=54,'가방 칸이 너무 큼: '+Math.round(cells[0].width)+'px');
     const rows=Math.floor(bh/(cells[0].height+6));
     assert(rows>=3,'가방이 한 화면에 3줄도 못 보여줌: '+rows+'줄('+Math.round(bh)+'px)');
-    // 분류 칩 — 고른 분류의 장비만 남아야 한다
-    const cats=body.querySelectorAll('.bagHead .bagCat');
-    assert(cats.length===PROF_BAG_CATS.length,'가방 분류 칩 수 불일치: '+cats.length);
-    assert(body.querySelector('.bagCat.on').textContent===PROF_BAG_CATS[0].name,'기본 분류가 전체가 아님');
-    profBagCat('acc');
-    const accItems=profItems().filter(i=>PROF_GEAR[i.slot].part==='acc').length;
-    assert($('tpBody').querySelectorAll('.igCell').length===accItems,'분류를 골라도 다른 분류가 같이 나옴');
-    assert(accItems>0 && accItems<profItems().length,'분류 검사용 표본이 치우침');
-    profBagCat('');
-    assert($('tpBody').querySelectorAll('.igCell').length===profItems().length,'전체로 안 돌아옴');
+    // 가방은 위 페이지 네비(장비/장신구)를 따라간다 — 따로 거르는 분류 칩은 없다
+    assert(!body.querySelector('.bagCat'),'가방에 분류 칩이 남아 있음');
+    const nItem=pg=>profItems().filter(i=>(PROF_GEAR[i.slot]||{}).part===pg).length;
+    const nArm=nItem(PROF_GEAR_PAGES[0].id), nAcc=nItem(PROF_GEAR_PAGES[1].id);
+    assert(nArm>0 && nAcc>0 && nArm!==nAcc,'페이지 검사용 표본이 치우침: 장비 '+nArm+' / 장신구 '+nAcc);
+    assert(body.querySelector('.bagHead .bagTtl').textContent===PROF_GEAR_PAGES[0].name,'가방 머리가 지금 페이지 이름이 아님');
+    assert(body.querySelectorAll('.igCell').length===nArm,'가방이 장비 페이지 것만 보여 주지 않음');
+    profGearPageAt(1);
+    assert($('tpBody').querySelector('.bagHead .bagTtl').textContent===PROF_GEAR_PAGES[1].name,'페이지를 넘겨도 가방 머리가 안 바뀜');
+    assert($('tpBody').querySelectorAll('.igCell').length===nAcc,'페이지를 넘겨도 가방이 안 따라감');
+    profGearPageAt(0);
+    assert($('tpBody').querySelectorAll('.igCell').length===nArm,'페이지를 되돌려도 가방이 안 따라감');
+    // 칸 안 숫자(강화 수치)는 지웠다 · 테두리는 착용 칸과 같은 처리
+    const cell0=$('tpBody').querySelector('.igCell');
+    assert(!cell0.querySelector('.igLv'),'가방 칸에 숫자가 남아 있음');
+    const cs0=getComputedStyle(cell0), bf=getComputedStyle(cell0,'::before');
+    assert(parseFloat(cs0.borderTopLeftRadius)<=3,'가방 칸이 착용 칸보다 둥금: '+cs0.borderTopLeftRadius);
+    assert(bf.backgroundImage.indexOf('gradient')>=0,'가방 칸에 착용 칸과 같은 빛 테두리가 없음');
     // ⑤ 스크롤한 채로 아이템을 골라 다시 그려도 보던 위치를 유지한다(위 분류 조작으로 노드가 갈렸으니 다시 잡는다)
     const bagNow=$('tpBody').querySelector('.bagBody');
     bagNow.scrollTop=90; bagScrollHint();
@@ -3158,13 +3426,111 @@ async function groupLobby(){
     twLeave();
     return '가방 '+Math.round(bh)+'px에 '+rows+'줄 · 내용 '+bs+'px'; });
   // DESIGN.md 규칙을 이 화면에만 강제한다. 다른 화면은 전환될 때 각자 스텝을 추가할 것.
+  await step('장비 등급: 계정 공용 7단계 사다리를 그대로 쓴다', ()=>{
+    skipIf(typeof PROF_ITEM_TIERS==='undefined','장비 등급 없음');
+    const ids=PROF_ITEM_TIERS.map(t=>t.id);
+    assert(ids.join(',')===GACHA_TIER_ORDER.join(','),
+      '장비 등급이 계정 사다리와 다름: '+ids.join(',')+' vs '+GACHA_TIER_ORDER.join(','));
+    // 단계마다 '강해지고 · 귀해지고 · 옵션이 는다' — 하나라도 뒤집히면 위계가 깨진다
+    for(let i=1;i<PROF_ITEM_TIERS.length;i++){ const a=PROF_ITEM_TIERS[i-1], b=PROF_ITEM_TIERS[i];
+      assert(b.mul>a.mul, a.id+'→'+b.id+' 배수가 안 오름');
+      assert(b.opts>a.opts, a.id+'→'+b.id+' 옵션 수가 안 늘어남');
+      assert(b.p<a.p, a.id+'→'+b.id+' 드랍 가중이 안 줄어듦'); }
+    // 이름·색·단계는 전부 공용 표에서만 나온다(장비 전용 사본이 있으면 안 된다)
+    for(const id of ids){
+      assert(PROF_ITEM_PREFIX[id],'접두사 없음: '+id);
+      assert(TIER_COLOR[id],'등급 색 없음: '+id);
+      assert(tierName(id)===GACHA_TIERS[id].name,'등급 이름이 공용 표와 다름: '+id);
+      assert(tierRank(id)===GACHA_TIER_ORDER.indexOf(id)+1,'단계 번호가 어긋남: '+id); }
+    // 깊은 층에선 최고 등급도 실제로 나와야 한다(가중이 0이면 영원히 안 나온다)
+    const seen={}; const R=(function(){ let x=12345;
+      return function(){ x=(x*1103515245+12345)&0x7fffffff; return x/0x7fffffff; }; })();
+    const or=Math.random; Math.random=R;
+    try{ for(let i=0;i<40000;i++) seen[profMakeItem('weapon',40).tier]=1; } finally{ Math.random=or; }
+    for(const id of ids) assert(seen[id],'깊은 층에서도 안 나오는 등급: '+id);
+    return ids.length+'단계 · '+PROF_ITEM_TIERS[6].mul+'배까지'; });
+  await step('장비 등급 프레임: 착용 칸과 가방 칸이 한 사다리', ()=>{
+    skipIf(typeof tierFrame!=='function','등급 프레임 없음');
+    const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0;
+    profCreateChar('ranger','프레임');
+    const ts=PROF_ITEM_TIERS.map(t=>t.id), ks=profPageSlots('armor');
+    ts.forEach((t,i)=>profAddItem(profMakeItem(ks[i%ks.length], 5, t)));
+    const c=CHAR(); c.level=40;
+    const hi=profItems().find(i=>i.tier==='god'); profEquipItem(hi.iid);
+    saveMeta(); _gearPick=null; _gearSel=null; _gearPage='armor';
+    openTown(); openTownPanel('gear'); refreshTownPanel();
+    const body=$('tpBody');
+    // ① 두 곳 다 같은 헬퍼가 그린다 — 단계 속성과 프레임 층이 빠지면 안 된다
+    const on=body.querySelector('.pdSlot.on');
+    assert(on && on.dataset.tr==='7','착용 칸에 단계 속성이 없음: '+(on&&on.dataset.tr));
+    assert(on.querySelector('.tfx'),'착용 칸에 프레임 층(.tfx)이 없음');
+    const cells=[...body.querySelectorAll('.igCell')];
+    assert(cells.length===ts.length,'가방 표본 수가 안 맞음: '+cells.length);
+    assert(cells.every(e=>e.querySelector('.tfx')),'가방 칸에 프레임 층이 없음');
+    // ② 빈 칸은 등급 구조를 하나도 갖지 않는다
+    const emp=body.querySelector('.pdSlot.empty');
+    assert(emp && !emp.dataset.tr,'빈 칸에 단계 속성이 붙음');
+    assert(emp && !emp.querySelector('.tfx'),'빈 칸에 프레임 층이 붙음');
+    // ③ 단계가 오를수록 구조가 '늘기만' 한다 — 어느 축도 뒤로 가면 안 된다
+    const rank=e=>+e.dataset.tr;
+    const byTier={}; for(const e of cells) byTier[rank(e)]=e;
+    let prev=null, grew=0;
+    for(let r=1;r<=7;r++){ const e=byTier[r]; assert(e,'단계 '+r+' 표본이 없음');
+      const cs=getComputedStyle(e), fx=getComputedStyle(e.querySelector('.tfx'));
+      const now={ b:parseFloat(getComputedStyle(e.querySelector('.tfx'),'::before').height)||0,
+                  ring:parseFloat(fx.getPropertyValue('--tfR'))||0,
+                  brk:parseFloat(fx.getPropertyValue('--tfKL'))||0,
+                  glow:parseFloat(cs.getPropertyValue('--tfG'))||0 };
+      if(prev){ for(const k in now) assert(now[k]>=prev[k], '단계 '+r+'에서 '+k+'가 뒤로 감: '+prev[k]+'→'+now[k]);
+        if(Object.keys(now).some(k=>now[k]>prev[k])) grew++; }
+      prev=now; }
+    assert(grew===6,'단계가 올라가도 구조가 그대로인 구간이 있음: '+grew+'/6');
+    // ④ 색은 인라인으로 들어오고 CSS는 currentColor 로만 받는다 — 등급 색값을 CSS에 복제하면 실패
+    const god=byTier[7];
+    assert(god.style.color.replace(/\s/g,'')==='rgb(255,43,214)','가방 칸이 등급색을 인라인으로 안 받음: '+god.style.color);
+    // ⚠ var() 가 든 선언은 크롬이 '적은 그대로' 보관한다 — #hex 가 rgb() 로 안 바뀐다. 두 표기 다 찾아야 한다.
+    const hex2rgb=h=>{ const n=parseInt(h.slice(1),16);
+      return 'rgb('+((n>>16)&255)+', '+((n>>8)&255)+', '+(n&255)+')'; };
+    let frameCss='';
+    for(const sh of document.styleSheets){ try{ for(const r of sh.cssRules){
+      if(/pdSlot|igCell|tfx|data-tr/.test(r.selectorText||'')) frameCss+=r.cssText+'\n'; } }catch(e){} }
+    assert(frameCss.length>400,'프레임 CSS를 못 읽음: '+frameCss.length);
+    const low=frameCss.toLowerCase();
+    const dup=Object.keys(TIER_COLOR).filter(t=>
+      low.indexOf(TIER_COLOR[t].toLowerCase())>=0 || low.indexOf(hex2rgb(TIER_COLOR[t]))>=0);
+    assert(!dup.length,'등급 색값이 CSS에 복제됨(currentColor 로 받아야 한다): '+dup.join(','));
+    // 글로우가 실제로 사다리를 타는가 — 두 칸 모두 --tfG 를 써야 한다(계산된 값 비교로는 색 차이에 묻힌다)
+    // 줄바꿈은 원문 그대로 보관되므로 줄 단위로 세면 안 된다 — 공백을 눌러 선언 단위로 자른다
+    const glowUses=frameCss.replace(/\s+/g,' ').split(';')
+      .filter(d=>/box-shadow/.test(d) && /var\(--tfG\)/.test(d)).length;
+    assert(glowUses>=2,'글로우가 단계를 안 탐 — box-shadow 가 --tfG 를 쓰는 곳 '+glowUses+'곳(착용·가방 둘 다여야 한다)');
+    // ⑤ 칸 안 숫자·등급 배지는 없다(테두리가 말한다)
+    assert(!god.querySelector('.igLv'),'칸에 숫자가 남아 있음');
+    twLeave();
+    return '7단계 · 구조 6번 증가 · 착용/가방 공용'; });
+  await step('장비 아이콘: 그림이 없으면 라인아트로 돌아간다(404 없음)', ()=>{
+    skipIf(typeof gearIco!=='function','장비 아이콘 파이프라인 없음');
+    // 목록에 없는 부위/등급은 절대 <img> 를 만들지 않는다 — 가방 40칸이 전부 404를 쏘게 된다
+    for(const slot in PROF_GEAR) for(const t of PROF_ITEM_TIERS.map(x=>x.id)){
+      const h=gearIco(slot, t);
+      if(h.indexOf('<img')>=0){
+        const k=h.match(/gear\/([^.]+)\.webp/)[1];
+        assert(GEAR_ART.has(k),'목록에 없는 파일을 부름: '+k); }
+      else assert(h.indexOf('<svg')===0 && h.indexOf('slIco')>0,'폴백이 라인아트 글리프가 아님: '+slot); }
+    // 화면에 실제로 뜬 아이콘도 전부 목록 안이어야 한다
+    const bad=[...document.querySelectorAll('.igCell img.slIco,.pdSlot img.slIco')]
+      .filter(im=>!GEAR_ART.has((im.getAttribute('src').match(/gear\/([^.]+)\.webp/)||[])[1]));
+    assert(!bad.length,'목록 밖 그림이 화면에 붙음: '+bad.length+'개');
+    // 부위마다 라인아트가 실재해야 한다(빈 svg 는 빈 칸으로 보인다)
+    for(const slot in PROF_GEAR) assert((PROF_SLOT_ICON[slot]||'').indexOf('<path')>=0,'라인아트 없음: '+slot);
+    return GEAR_ART.size+'장 등록 · 나머지 '+Object.keys(PROF_GEAR).length+'부위 라인아트'; });
   await step('장비창: DESIGN.md 규칙(라운드 토큰 · 시안 1곳 · 1px 테두리)', ()=>{
     skipIf(typeof profPickSlot!=='function','장비창 없음');
     const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0;
     profCreateChar('ranger','룰');
     const ks=Object.keys(PROF_GEAR), ts=PROF_ITEM_TIERS.map(t=>t.id);
     for(let i=0;i<14;i++) profAddItem(profMakeItem(ks[i%ks.length], 1+(i%5), ts[i%ts.length]));
-    saveMeta(); _gearPick=null; _gearSel=null; _gearCat=''; _gearPage=PROF_GEAR_PAGES[0].id;
+    saveMeta(); _gearPick=null; _gearSel=null; _gearPage=PROF_GEAR_PAGES[0].id;
     openTown(); openTownPanel('gear'); CHAR().level=40; refreshTownPanel();
     const body=$('tpBody'), OK=['3px','6px','9px'];
     const scan=()=>{ const bad=[], cyan=[];
@@ -3180,17 +3546,17 @@ async function groupLobby(){
     assert(!r.bad.length,'토큰 밖 라운드/두꺼운 테두리: '+r.bad.slice(0,4).join(', '));
     // 아무것도 안 골랐으면 시안 채움은 없어야 한다(탭·분류는 중립 강조)
     assert(!r.cyan.length,'선택 전인데 시안을 쓴 요소가 있음: '+r.cyan.slice(0,4).join(', '));
-    profGearPageAt(1); profBagCat('acc');
-    r=scan(); assert(!r.cyan.length,'섹션/분류가 시안을 채움: '+r.cyan.slice(0,4).join(', '));
-    profBagCat(''); profGearPageAt(0);
+    profGearPageAt(1);
+    r=scan(); assert(!r.cyan.length,'섹션/페이지 전환이 시안을 채움: '+r.cyan.slice(0,4).join(', '));
+    profGearPageAt(0);
     // 아이템을 고르면 그 칸 하나만 시안(공용 .twBtn 제외 — 마을 전체 전환 때 처리)
-    profSelItem(profItems()[2].iid);
+    profSelItem(profItems().filter(i=>(PROF_GEAR[i.slot]||{}).part===_gearPage)[2].iid);   // 가방은 지금 페이지 것만 보인다
     r=scan();
     const own=r.cyan.filter(c=>String(c).indexOf('twBtn')<0);
     assert(own.length===1 && String(own[0]).indexOf('igCell')>=0,
       '선택 시 시안이 정확히 고른 칸 하나가 아님: '+JSON.stringify(own));
     // 숫자는 Rajdhani + tabular-nums
-    for(const sel of ['.gearSum b','.gsSub','.igCell .igLv']){ const e=body.querySelector(sel);
+    for(const sel of ['.gearSum b','.gsSub']){ const e=body.querySelector(sel);
       if(!e) continue; const c=getComputedStyle(e);
       assert(/Rajdhani/i.test(c.fontFamily), sel+' 숫자가 Rajdhani가 아님: '+c.fontFamily);
       assert(c.fontVariantNumeric.indexOf('tabular-nums')>=0, sel+' tabular-nums 없음'); }
@@ -3267,11 +3633,13 @@ async function groupLobby(){
     assert(CHAR().dgFloor===1,'최고 층이 기록되지 않음');
     return n+'프레임 · +'+r.pc+'P/+'+r.xp+'XP'; });
   await step('던전: 스펙이 오르면 같은 층이 빨리 끝남', ()=>{ skipIf(typeof dgStart!=='function','던전 없음');
-    const run=(stats)=>{ const p=PROF(); p.chars.length=0; p.curId='';
-      const c=profCreateChar('ranger','T'); c.unit.stats=stats;   // foc=0 → 치명타 없음 = 결정적
+    // 세기는 '실제 출처'로 만든다 — 옛 배분(unit.stats)은 아무 데도 안 걸린다
+    const run=(atkUpg)=>{ const p=PROF(); p.chars.length=0; p.curId='';
+      profCreateChar('ranger','T');
+      const H=hbHunt(); H.unl={}; H.upg={atk:atkUpg, hp:30};   // 치명타 0 = 결정적
       dgStart(1); dgStopLoop(); let n=0; while(DG && !DG.over && n<20000){ dgStep(0.016); n++; }
       const o=DG.over; DG=null; return {over:o, n:n}; };
-    const weak=run({pow:12,vit:40,foc:0,agi:0}), strong=run({pow:60,vit:40,foc:0,agi:0});
+    const weak=run(2), strong=run(40);
     assert(weak.over>0 && strong.over>0,'비교하려면 둘 다 이겨야 함: '+weak.over+'/'+strong.over);
     assert(strong.n < weak.n*0.9,'공격력을 올렸는데 클리어가 안 빨라짐: '+weak.n+'→'+strong.n);
     return weak.n+' → '+strong.n+'프레임'; });
