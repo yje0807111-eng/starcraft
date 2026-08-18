@@ -2401,6 +2401,106 @@
   .bagBody{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
   .bagBody::-webkit-scrollbar{width:4px}
   .bagBody::-webkit-scrollbar-thumb{border-radius:3px;background:rgba(255,255,255,.18)}
+  /* 🧰 정비 상단 슬롯(펫·동료) — 장비의 페이퍼돌 자리를 대신한다. 등급은 '테두리 색' 하나로만 표현(3탭 공용 규칙).
+     빈 자리도 같은 크기로 남겨 상단이 허전해 보이지 않게 한다. */
+  /* 세로로 길게 쌓는다 — 남는 세로 공간은 상단이 먹고, 하단 격자는 장비와 같은 172px 고정이다.
+     한 줄 = [등급 테두리 카드] [이름·능력치] [+ 확장 칸] */
+  .mgSlots{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+    display:flex;flex-direction:column;gap:7px;padding:8px 12px 12px}
+  .mgSlots::-webkit-scrollbar{width:4px}
+  .mgSlots::-webkit-scrollbar-thumb{border-radius:3px;background:rgba(255,255,255,.18)}
+  /* ⚠ 빈칸·잠긴 칸·채워진 칸의 높이는 반드시 같아야 한다 — 다르면 칸을 열 때 화면이 들썩인다.
+     그래서 내용이 아니라 이 한 줄(--mgRowH)이 높이를 정한다. */
+  :root{--mgRowH:64px}
+  .mgSlot{position:relative;flex:0 0 auto;box-sizing:border-box;height:var(--mgRowH);
+    display:flex;align-items:center;gap:10px;padding:6px 9px;cursor:pointer;
+    border-radius:var(--r-md);border:1px solid var(--metal-edge);background:rgba(255,255,255,.045);color:var(--txt-mute)}
+  .mgSlot.empty{border-style:dashed;opacity:.55}
+  .mgSlot.lock{border-style:dashed;opacity:.8;background:rgba(255,255,255,.025)}
+  .mgSlot.lock .mgIco{font-size:19px}
+  .mgSlot.pick{background:rgba(255,255,255,.11)}
+  .mgCard{position:relative;flex:0 0 auto;width:40px;height:40px;display:flex;align-items:center;justify-content:center;
+    border-radius:var(--r-md);border:1px solid var(--metal-edge);background:rgba(0,0,0,.32)}
+  .mgSlot .mgIco{font-size:22px;line-height:1}
+  /* 레벨/★ 는 카드 위 배지가 아니라 '이름 오른쪽 텍스트'다 — 초상을 가리지 않는다 */
+  .mgNameRow{display:flex;align-items:baseline;gap:6px;min-width:0}
+  .mgLv{flex:0 0 auto;font-style:normal;font-family:var(--font-num);font-variant-numeric:tabular-nums;
+    font-size:11px;font-weight:800;color:#c6ccd4}
+  .mgBody{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .mgSlot .mgName{font-size:12px;font-weight:700;color:#ececec;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mgStat{font-style:normal;font-size:10px;color:var(--txt-mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* + 확장 칸 — 해제 '왼쪽'에 나란히. 본문에 두면 줄 높이를 25px 밀어 올린다 */
+  .mgAdd{display:flex;gap:5px}
+  .mgAddBtn{width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;
+    font-size:15px;font-weight:700;line-height:1;color:#7a7a7a;
+    border:1px dashed var(--metal-edge);border-radius:var(--r-bar);background:rgba(255,255,255,.03)}
+  .mgAddBtn:disabled{opacity:.35;cursor:default}
+  /* 합성 · 해제 — 줄 오른쪽 끝. 세로로 쌓아 폭을 아낀다 */
+  .mgBtns{flex:0 0 auto;display:flex;flex-direction:row;align-items:center;gap:6px}
+  .mgBtn{min-width:46px;padding:4px 8px;cursor:pointer;font-size:11px;font-weight:700;line-height:1;
+    color:#c6ccd4;border:1px solid var(--metal-edge);border-radius:var(--r-bar);background:rgba(255,255,255,.05)}
+  .mgBtn.on{color:#0e0e0e;background:var(--acc-sel,#5cd6ff);border-color:transparent}
+  .mgSlot.feeding{border-color:var(--acc-sel,#5cd6ff)}
+  /* 경험치 막대 — 합성으로 차오른다 */
+  /* EXP — 막대와 숫자를 한 줄에(따로 두면 8px 더 든다) */
+  .mgExpRow{display:flex;align-items:center;gap:6px;margin-top:2px}
+  .mgExp{flex:1 1 auto;height:3px;border-radius:var(--r-bar);background:rgba(255,255,255,.10);overflow:hidden}
+  .mgExp i{display:block;height:100%;background:#5dff8f}
+  .mgStat.sm{font-size:9px}
+  .igEmpty.feed{color:#c6ccd4}
+  /* 하단에서 고른 항목 팝업 — 추가/교체. 껍데기는 공용 .hbModal 규격을 따른다 */
+  .mgSheet{position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;
+    padding:16px;background:rgba(2,3,8,.55);backdrop-filter:blur(2px)}
+  /* ⚠ 교체 후보가 정원만큼 늘어난다(최대 5) — 높이를 제한하고 안에서 스크롤해야 아래가 잘리지 않는다 */
+  .mgSheetCard{width:100%;max-width:300px;max-height:100%;overflow-y:auto;overscroll-behavior:contain;
+    display:flex;flex-direction:column;gap:8px;padding:12px;
+    border:1px solid var(--metal-edge);border-radius:var(--r-lg);background:linear-gradient(180deg,#191919,#0e0e0e)}
+  .mgSheetCard::-webkit-scrollbar{width:4px}
+  .mgSheetCard::-webkit-scrollbar-thumb{border-radius:3px;background:rgba(255,255,255,.18)}
+  .mgSheetHead{position:sticky;top:-12px;padding-top:12px;margin-top:-12px;z-index:1;background:#141414}
+  .mgSheetHead{display:flex;align-items:center;gap:9px}
+  .mgSheetHead .hbmX{margin-left:auto}
+  .mgSheetNote{font-size:10px;color:var(--txt-mute);line-height:1.5}
+  .mgAutoRow{display:flex;margin-top:2px}
+  .mgAutoRow .twBtn{flex:1;justify-content:center}
+  /* 🔁 교체 유도 — 상단 칸 테두리를 빨갛게 해서 '여기를 누르라'를 색으로 말한다 */
+  .mgSlot.swapT{border-color:#ff6b7a;background:rgba(255,107,122,.07)}
+  .mgSwapHint{font-size:11px;font-weight:800;color:#ff6b7a}
+  /* 상태창 표 */
+  .mgStatTbl{display:flex;flex-direction:column;gap:4px}
+  .mgStatTbl>div{display:flex;justify-content:space-between;gap:10px;font-size:11px}
+  .mgStatTbl span{color:var(--txt-mute)}
+  .mgStatTbl b{color:#ececec;text-align:right}
+  .mgSheetBtns{display:flex;gap:6px;margin-top:2px}
+  .mgSheetBtns .twBtn{flex:1;justify-content:center}
+  .mgSheetBtns .twBtn.on{color:#0e0e0e;background:var(--acc-sel,#5cd6ff);border-color:transparent}
+  .mgSheetCard.wide{max-width:330px}
+  /* 등급 일괄 담기 버튼 */
+  .mgTierRow{display:flex;flex-wrap:wrap;gap:6px}
+  .mgTierBtn{display:flex;align-items:center;gap:4px;padding:5px 9px;cursor:pointer;font-size:11px;font-weight:700;
+    border:1px solid var(--metal-edge);border-radius:var(--r-bar);background:rgba(255,255,255,.04)}
+  .mgTierBtn.on{background:rgba(255,255,255,.13)}
+  .mgTierBtn i{font-style:normal;font-family:var(--font-num);opacity:.85}
+  .mgGain{color:#5dff8f}
+  .twBtn.wide{width:100%;justify-content:center}
+  .mgEmo{font-size:21px;line-height:1}
+  /* 보유 격자 배지 — 중복 수는 오른쪽 위(레벨/★은 오른쪽 아래에 이미 있다) */
+  .igDup{position:absolute;left:2px;top:2px;font-style:normal;font-size:9px;font-weight:800;
+    padding:0 3px;border-radius:var(--r-bar);background:rgba(0,0,0,.6);color:#ececec}
+  /* 고른 항목 정보 — 가방 아래에 붙는 얇은 판(장비의 .igInfo 와 같은 자리) */
+  .igInfo{flex:0 0 auto;margin-top:8px;padding:8px 10px;border:1px solid var(--metal-edge);border-radius:var(--r-md);
+    background:rgba(255,255,255,.04)}
+  .igInfoTop{display:flex;align-items:center;gap:9px}
+  .igInfoTx{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .igInfoTx b{font-size:12px;font-weight:700}
+  .igInfoTx em{font-style:normal;font-size:10px;color:var(--txt-mute)}
+  .igInfoBtns{display:flex;gap:6px;margin-top:8px}
+  .igInfoBtns .twBtn{flex:1}
+  .igFeed{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .igMat{display:flex;align-items:center;gap:4px;padding:4px 7px;cursor:pointer;font-size:10px;font-weight:700;
+    border:1px solid var(--metal-edge);border-radius:var(--r-bar);background:rgba(255,255,255,.045)}
+  .igMat i{font-style:normal;opacity:.75}
+  .igEmpty.sm{font-size:10px;padding:8px 2px}
   .igGrid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;padding:0 4px 8px 0;justify-items:center}
   .igCell{position:relative;width:100%;max-width:52px;aspect-ratio:1;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;
     background:linear-gradient(180deg,rgba(24,31,44,.9),rgba(14,19,28,.9));border:1px solid var(--metal-edge)}
@@ -5311,12 +5411,12 @@ function metaEffLv(id){ return _metaEffFromRaw(META_BUILDS[id], buildLevel(id));
 // 플레이어 메타(계정별 영구 데이터)
 // 🧍 개인 프로필 RPG(1단계) 기본값 — 유즈맵 경제와 완전 분리(재화명 pcoin, coins 아님). 자세한 규칙은 PROF_* 블록 참조.
 // 계정 공용(재화·펫·해금·방치) + 캐릭터별(chars[]: 레벨·경험치·스탯·장비·진화)로 나뉜다.
-function defaultProfile(){ return { ver:9, pcoin:0, gas:0, gem:0, chars:[], curId:'', items:[],
-  hunt:{ dg:1, round:1, climb:true, best:{}, rw:{}, mates:{}, party:[], mateN:0, upg:{atk:0,rng:0,aspd:0,crit:0,hp:0,regen:0} },   // ⚔ 자동사냥(HOME) 진행·마일스톤 수령 · 기본 = 등반(rw)·영구 업그레이드
+function defaultProfile(){ return { ver:10, pcoin:0, gas:0, gem:0, chars:[], curId:'', items:[],
+  hunt:{ dg:1, round:1, climb:true, best:{}, rw:{}, mates:{}, party:[], mateN:0, allySlots:0, upg:{atk:0,rng:0,aspd:0,crit:0,hp:0,regen:0} },   // ⚔ 자동사냥(HOME) 진행·마일스톤 수령 · 기본 = 등반(rw)·영구 업그레이드
   idle:{ sourceId:'drill', lastClaimTs:0 }, unlocks:{}, lastSeenTs:0,
   dgKeys:{}, tickets:{gear:0,pet:0,ally:0},   // 🗝 던전별 열쇠(매일 09:00 보충) · 🎟 뽑기권(장비/펫/동료)
   daily:{ day:0, q:[], allGot:0, wk:{key:0,n:0,got:0}, att:{n:0, day:0, bn:{}, fin:0, cyc:0} },   // 📅 일일 — 출석 캘린더 + 오늘의 퀘스트 + 주간 누적(dqState가 스스로 보정한다)
-  pets:{}, equip:[], petSlots:2, petN:0 }; }   // 🐾 펫(중복=별)·장착 슬롯 — 캐릭터를 새로 만들어도 그대로 쓴다
+  pets:{}, equip:[], petSlots:0, petN:0 }; }   // 🐾 펫(중복=별)·장착 칸(0에서 시작해 미네랄로 연다)
 // 계정 영구 재화(공용 재화 바) — 미네랄=pcoin(기존 이름 유지)·가스·젬. 없던 프로필도 0으로 살려 읽는다.
 function profMineral(){ const p=PROF(); return Math.floor(p&&p.pcoin||0); }
 function profGas(){ const p=PROF(); return Math.floor(p&&p.gas||0); }
@@ -5386,7 +5486,7 @@ function migrateProfile(){ const d=defaultProfile();
   if(!p.idle) p.idle=d.idle; else for(const k in d.idle) if(p.idle[k]===undefined) p.idle[k]=d.idle[k];
   if(!p.unlocks) p.unlocks={};
   if(!p.pets||typeof p.pets!=='object') p.pets={};                 // 🐾 펫
-  if(!Array.isArray(p.equip)) p.equip=[]; if(typeof p.petSlots!=='number') p.petSlots=2;
+  if(!Array.isArray(p.equip)) p.equip=[]; if(typeof p.petSlots!=='number') p.petSlots=0;
   // v6 자동사냥: 스탯 포인트 체계 흡수 — 배분 스탯 → 대응 업그레이드 레벨(캐릭터 중 최대),
   //   남은 포인트 → 미네랄 환급(1pt=20). migrated 표식으로 1회만(부팅 저장 이후엔 재실행 안 됨).
   if(p.hunt && !p.hunt.migrated){ p.hunt.migrated=1;
@@ -5417,6 +5517,13 @@ function migrateProfile(){ const d=defaultProfile();
     if(typeof p.petN!=='number') p.petN=0;
     if(!p.tickets) p.tickets={gear:0,pet:0,ally:0};
     p.tickets.pet=(p.tickets.pet||0)+PROF_PET_START_TICKETS; }
+  // v10 장착 칸을 '미네랄로 사는 것'으로 — 이미 쓰고 있던 칸은 뺏지 않는다(산 것을 잃지 않는다).
+  //   옛 기본값은 펫 2칸이었고 동료는 정원 3이 그냥 열려 있었다.
+  if((p.ver||0)<10){
+    const H=p.hunt||(p.hunt={});
+    p.petSlots=Math.max(0, Math.min(MG_SLOT_MAX, (typeof p.petSlots==='number')?p.petSlots:2));
+    if(typeof H.allySlots!=='number') H.allySlots=Math.min(MG_SLOT_MAX, Math.max(3,(H.party||[]).length));
+    if(p.unlocks){ delete p.unlocks.pet_slot3; delete p.unlocks.pet_slot4; delete p.unlocks.ally_plus; } }
   p.ver=d.ver; }
 // 캐릭터 1건 보정(신규 키 back-fill + 폐기된 직업 id 복구)
 function fixChar(c){ const d=defaultChar(c&&c.cls, c&&c.name);
@@ -5571,7 +5678,8 @@ function profBuyItem(tierId){ const p=PROF(), T=profItemTier(tierId);
 const PROF_IDLE_SOURCES={ drill:{name:'훈련장',rate:0.6,tip:'공격 위주'}, library:{name:'수련관',rate:0.6,tip:'집중 위주'}, arena:{name:'투기장',rate:1.0,reqUnlock:'idle_arena',tip:'고수익'} };
 // 레벨 해금 — 전부 실제로 무언가를 연다(표시만 하는 항목을 두지 않는다).
 // idle_arena→훈련장 장소 / evolve→진화 / idle_8h·idle_12h→오프라인 상한
-// pet_slot3·4→profPetSlots() / ally_plus·turret_plus→hbBuildMax()
+// turret_plus→hbBuildMax()
+// ⚠ 장착 칸(펫·동료)은 여기 없다 — 레벨이 아니라 미네랄로 여는 것이다(mgBuySlot).
 // ⚠ 게이트는 '레벨'이다(2026-08-12 설계 전환 — 옛 기준은 파워였다).
 //   설계 의도: 혼자 라운드 미는 게 막힐 때쯤 새 요소가 '하나씩' 열려야 한다 → 한꺼번에 열리면 안 된다.
 //   그래서 간격을 레벨 곡선이 무거워지는 속도에 맞춰 벌려 둔다(초반 촘촘 → 후반 성김).
@@ -5580,10 +5688,7 @@ const PROF_UNLOCKS=[
   {id:'idle_arena', lv:5,   label:'투기장 자동수익'},
   {id:'evolve',     lv:12,  label:'유닛 진화(★)'},
   {id:'idle_8h',    lv:20,  label:'오프라인 8시간·100%'},
-  {id:'pet_slot3',  lv:28,  label:'펫 슬롯 3'},
-  {id:'ally_plus',  lv:38,  label:'동료 최대 +2'},
   {id:'turret_plus',lv:50,  label:'터렛 최대 +2'},
-  {id:'pet_slot4',  lv:65,  label:'펫 슬롯 4'},
   {id:'idle_12h',   lv:80,  label:'오프라인 12시간'},
 ];
 // 해금 판정에 쓰는 레벨 — 환생해도 이미 연 것은 유지되고(unlocks에 영구 기록),
@@ -6436,7 +6541,7 @@ function renderMateModal(){ const box=document.getElementById('hbMateBody'); if(
   box.innerHTML=h; _mateNote(party); }
 function _mateNote(party){ const nt=document.getElementById('hbMateNote'); if(!nt) return;
   nt.textContent='출전 '+party.length+'/'+hbMateMax()+'명 — 함께 싸웁니다. 중복으로 얻은 동료는 다른 동료의 강화 재료가 됩니다.'
-    +(profHasUnlock('ally_plus')?'':' · 해금 「동료 최대 +2」로 정원이 늘어납니다.'); }
+    ; }
 function hbDoMateRoll(){ const r=hbMateRoll();
   if(!r){ hmToast('동료 뽑기권이 없습니다'); return; }
   const M=HB_MATES[r.id];
@@ -6584,13 +6689,16 @@ function renderInfoModal(){ const box=document.getElementById('hbInfoBody'); if(
       .map(k=>'<span class="hbChip">'+HB_UPG[k].name+' <b>'+(u[k]||0)+'</b></span>').join('')+'</div>';
   box.innerHTML=h; }
 // ── D. 레벨 해금 확장 — 해금이 실제로 무언가를 열도록 배선 ──
-function profPetSlots(){ const p=PROF(); let n=2;
-  if(profHasUnlock('pet_slot3')) n=3;
-  if(profHasUnlock('pet_slot4')) n=4;
-  return Math.max(n, p.petSlots||2); }
+// 🔓 장착/출전 칸 — 펫·동료 모두 **0칸에서 시작해 미네랄로 하나씩 연다**(2026-08-14 확정).
+//   최대 3칸이고 레벨 해금이 아니다 — 그래서 PROF_UNLOCKS 의 pet_slot3·4, ally_plus 는 전부 삭제됐다.
+//   ⚠ 여는 값을 두 곳에 적지 말 것. MG_SLOT_COST 한 줄이 전부다.
+const MG_SLOT_MAX=3;
+const MG_SLOT_COST=[500, 6000, 60000];   // 1·2·3번째 칸을 여는 미네랄
+function mgSlotCost(n){ return MG_SLOT_COST[n]||0; }
+function profPetSlots(){ const p=PROF(); return Math.max(0, Math.min(MG_SLOT_MAX, p.petSlots||0)); }
 function hbBuildMax(k){ const B=HB_STRUCT[k]; if(!B) return 0;
   let m=B.max;
-  // ⚠ 'ally'는 없어졌다 — 동료 정원은 hbMateMax()가 ally_plus 해금을 받는다
+  // ⚠ 'ally'는 없어졌다 — 동료 정원은 hbMateMax()가 따로 정한다(3칸 고정)
   if(k==='turret'&& profHasUnlock('turret_plus')) m+=2;
   return m; }
 function hmToggleUpg(){ const H=hbHunt(); H.upgDown=!H.upgDown;
@@ -7082,10 +7190,14 @@ const HB_MATE_PT={common:1, rare:3, epic:9, unique:27, legend:81, transcend:243,
 const HB_MATE_STEP=0.22;     // 강화 1레벨당 위력 증가(비율)
 const HB_MATE_NEED_MUL=1.5;  // 다음 레벨에 드는 재료 배수
 const HB_MATE_START_TICKETS=5;   // 처음 열 때 쥐여 주는 동료 뽑기권
-const HB_MATE_PARTY=3;       // 동시에 데리고 나가는 기본 인원 — ally_plus 해금으로 늘어난다
+// 동시에 데리고 나가는 인원 — **해금과 무관하게 3칸 고정**이다(2026-08-14 확정).
+//   늘리는 해금을 두지 않기로 했으므로 PROF_UNLOCKS 의 ally_plus 항목도 함께 삭제했다
+//   (「해금은 전부 실제로 무언가를 연다」 규칙 — 늘릴 게 없으면 항목을 남기면 안 된다).
+const HB_MATE_PARTY=3;
 // 보유 상태 = { lv:강화 레벨(1↑), dup:합성 재료로 쓸 수 있는 중복 수 }
 function hbMates(){ const H=hbHunt(); if(!H.mates) H.mates={}; if(!Array.isArray(H.party)) H.party=[];
   if(typeof H.mateN!=='number') H.mateN=0;    // 누적 뽑기 횟수 → 뽑기 레벨
+  if(typeof H.allySlots!=='number') H.allySlots=0;   // 출전 칸(미네랄로 연다)
   return H; }
 function hbMateRec(id){ const H=hbMates(); return H.mates[id]||null; }
 function hbMateLv(id){ const r=hbMateRec(id); return r? (r.lv||0) : 0; }
@@ -7093,7 +7205,7 @@ function hbMateDup(id){ const r=hbMateRec(id); return r? (r.dup||0) : 0; }
 function hbMateOwned(id){ return hbMateLv(id)>0; }
 function hbMateDps(id){ const M=HB_MATES[id]; if(!M) return 0;
   return M.dps*(1+HB_MATE_STEP*Math.max(0,hbMateLv(id)-1)); }
-function hbMateMax(){ return HB_MATE_PARTY + (profHasUnlock('ally_plus')?2:0); }
+function hbMateMax(){ return Math.max(0, Math.min(MG_SLOT_MAX, hbHunt().allySlots||0)); }
 // ── 뽑기 레벨 · 확률 ──
 function hbGachaStage(n){ n=(n==null)?hbMates().mateN:n;
   let i=0; for(let k=0;k<HB_MATE_GACHA.length;k++) if(n>=HB_MATE_GACHA[k].need) i=k;
@@ -8727,26 +8839,236 @@ function renderGear(){ const body=document.getElementById('gearBody'); if(!body)
                  : renderProfGear();
   const nb=body.querySelector('.bagBody'); if(nb&&keep) nb.scrollTop=keep;
   bagScrollHint(); }
-// 동료 — 전용 편성 시스템은 아직 없다. 실제로 동작하는 건 HOME 건설의 동료뿐이라 현황만 보여주고 그리로 보낸다.
-function _gearAllyPanel(){ const party=hbParty(), mx=hbMateMax();
-  const owned=Object.keys(HB_MATES).filter(hbMateOwned);
-  let h='<div class="shopPanel"><div class="shopHead">동료<em>'+party.length+'/'+mx+'</em></div><div class="shopBody">';
-  h+='<div class="shopNote">옛 상위 직업들이 <b>동료</b>가 됐습니다 — 영입해서 함께 싸우고, 미네랄로 강화합니다.</div>';
-  if(!owned.length) h+='<div class="shopNote">아직 영입한 동료가 없습니다</div>';
-  for(const id of owned){ const M=HB_MATES[id], out=party.indexOf(id)>=0;
-    h+='<div class="shopRow"><span class="twPet">'+M.ico+'</span><div class="twRowInfo">'
-      +'<div class="twRowName">'+M.name+(out?' · 출전':'')+'</div>'
-      +'<div class="twRowSub">Lv.'+hbMateLv(id)+' · 위력 '+Math.round(hbMateDps(id)*100)+'% · '+M.tip+'</div></div>'
-      +'<button class="twBtn'+(out?' on':'')+'" onclick="gearMateToggle(&#39;'+id+'&#39;)">'+(out?'대기':'출전')+'</button></div>'; }
-  h+='<div class="shopRow"><span class="twPet">🤝</span><div class="twRowInfo">'
-    +'<div class="twRowName">동료 영입·강화</div><div class="twRowSub">사냥터 좌상단 동료 아이콘에서</div></div>'
-    +'<button class="twBtn" onclick="gearGoHire()">영입하러 가기</button></div>';
-  h+='</div></div>';
+// 🧰 정비 3탭 공용 뼈대 — 장비 화면의 구조를 펫·동료도 그대로 쓴다(2026-08-14).
+//   상단 = 지금 쓰고 있는 것(슬롯) + 요약 / 하단 = 보유한 전부(격자).
+//   ⛔ 새 껍데기를 만들지 말 것 — .gearWrap/.gearSum/.bagSec/.igGrid 는 장비와 같은 클래스다.
+//   등급 표현은 세 탭 모두 '테두리 색'으로 통일한다(글자색·배지로 갈라 쓰지 않는다).
+function _gearFrame(sum, top, headL, headR, grid, info){
+  return '<div class="gearWrap">'
+    +'<div class="gearSum">'+sum+'</div>'
+    +top
+    +'<div class="bagSec"><div class="bagHead">'+headL+'<span class="gsSub bagCnt">'+headR+'</span></div>'
+    +'<div class="bagScroll"><div class="bagBody" onscroll="bagScrollHint()">'+grid+'</div></div>'
+    +(info||'')
+    +'</div></div>'; }
+// ── 🧰 정비 상단(펫·동료) — 종류만 다르고 조작은 같다. 표 하나로 묶어 두 벌로 만들지 않는다 ──
+//   한 줄 = [등급 테두리 카드] [이름·능력치·확장칸] [합성][해제]  ·  빈 자리 = [＋]
+//   합성  : 슬롯의 대상을 고른 뒤 하단에서 재료를 고르면 그 재료의 경험치가 대상에 들어간다(레벨/★↑)
+//   해제  : 슬롯에서 내린다 → 그 자리는 ＋ 가 된다
+//   하단 탭: 팝업이 떠서 '빈 자리에 추가' 또는 '어느 슬롯과 교체'를 고른다
+const MG_ADD_SLOTS=2;          // 추가 능력치·스킬이 들어갈 확장 칸(내용 미정 — 자리만)
+const MG={
+  pet:{ label:'펫', unit:'마리',
+    max:()=>profPetSlots(),
+    on:()=>((PROF().equip||[]).slice(0,profPetSlots())),
+    owned:()=>Object.keys(PROF().pets||{}).filter(id=>PROF_PETS[id])
+      .sort((a,b)=>GACHA_TIER_ORDER.indexOf(PROF_PETS[b].tier)-GACHA_TIER_ORDER.indexOf(PROF_PETS[a].tier)),
+    has:id=>!!profPetRec(id),
+    tier:id=>PROF_PETS[id].tier, ico:id=>PROF_PETS[id].emoji, name:id=>PROF_PETS[id].name,
+    lvTx:id=>'★'+profPetStar(id),
+    // 줄에 쓰는 짧은 능력치 — 등급은 테두리 색이 말하므로 글자로 또 쓰지 않는다
+    stat:id=>PROF_BONUS_NAME[PROF_PETS[id].bonus.type]+' +'+Math.round(profPetVal(id)*100)+'%',
+    exp:id=>({cur:profPetFed(id), need:profPetNeed(id), max:profPetStar(id)>=PROF_PET_STAR_MAX}),
+    dup:id=>profPetDup(id), pt:id=>profPetPt(id),
+    // 자동 선택 기준 — '강함' 한 줄. 등급과 ★를 함께 보므로 같은 등급이면 ★ 높은 쪽이 이긴다.
+    power:id=>GACHA_TIER_ORDER.indexOf(PROF_PETS[id].tier)*1000 + Math.round(profPetVal(id)*1000),
+    statOnly:id=>PROF_BONUS_NAME[PROF_PETS[id].bonus.type]+' +'+Math.round(profPetVal(id)*100)+'%',
+    addSlot:()=>{ const p=PROF(); p.petSlots=Math.min(MG_SLOT_MAX,(p.petSlots||0)+1); },
+    toggle:id=>profPetEquip(id), feed:(t,m)=>profPetFeed(t,m),
+    sum:()=>{ const eq=PROF().equip||[];
+      return '장착 <b>'+eq.length+'</b>/'+profPetSlots()+' · '
+        +['atk','vit','coin'].map(k=>PROF_BONUS_NAME[k].replace(' %','')+' <b>+'+Math.round(profPetBonus(k)*100)+'%</b>').join(' · '); },
+    empty:'빈 슬롯', none:'비어 있음 — 상점에서 펫을 뽑아 보세요.' },
+  ally:{ label:'동료', unit:'명',
+    max:()=>hbMateMax(),
+    on:()=>hbParty(),
+    owned:()=>Object.keys(HB_MATES).filter(hbMateOwned)
+      .sort((a,b)=>GACHA_TIER_ORDER.indexOf(HB_MATES[b].tier)-GACHA_TIER_ORDER.indexOf(HB_MATES[a].tier)),
+    has:id=>hbMateOwned(id),
+    tier:id=>HB_MATES[id].tier, ico:id=>HB_MATES[id].ico, name:id=>HB_MATES[id].name,
+    lvTx:id=>'Lv.'+hbMateLv(id),
+    stat:id=>'위력 '+Math.round(hbMateDps(id)*100)+'%',
+    exp:id=>({cur:hbMateFed(id), need:hbMateNeed(id), max:false}),
+    dup:id=>hbMateDup(id), pt:id=>hbMatePt(id),
+    power:id=>Math.round(hbMateDps(id)*1000),
+    statOnly:id=>'위력 '+Math.round(hbMateDps(id)*100)+'% · '+HB_MATES[id].tip,
+    addSlot:()=>{ const H=hbMates(); H.allySlots=Math.min(MG_SLOT_MAX,(H.allySlots||0)+1); },
+    toggle:id=>hbMateToggle(id), feed:(t,m)=>hbMateFeed(t,m),
+    sum:()=>{ const party=hbParty(); let d=0; for(const id of party) d+=hbMateDps(id);
+      return '출전 <b>'+party.length+'</b>/'+hbMateMax()+' · 합계 위력 <b>'+Math.round(d*100)+'%</b>'; },
+    empty:'빈 자리', none:'비어 있음 — 동료 뽑기권으로 영입하세요.' },
+};
+// 조작 상태 — 셋은 서로 배타적이다(하나가 켜지면 나머지는 꺼진다)
+let _mgPick=null;   // 상태창: {kind,id}
+let _mgSwap=null;   // 교체 대상 고르는 중: {kind,id} — 상단 세 칸이 빨갛게 변한다
+let _mgMix=null;    // 합성 팝업: {kind,id,sel:{재료id:개수}}
+function _mgReset(){ _mgPick=null; _mgSwap=null; _mgMix=null; }
+function _mgK(){ return _gearTab==='pet' ? 'pet' : 'ally'; }
+
+// ── 상단 한 줄 ──
+// 아직 안 산 칸 — 무엇을 내면 열리는지 그 줄에서 바로 보여 준다
+function _mgLockRow(k, i){ const cost=mgSlotCost(i), can=Math.floor((PROF().pcoin||0))>=cost;
+  return '<div class="mgSlot lock">'
+    +'<span class="mgCard"><span class="mgIco">🔒</span></span>'
+    +'<span class="mgBody"><b class="mgName">'+(i+1)+'번째 칸</b>'
+    +'<em class="mgStat">'+resIco('mineral','gi')+' '+cost.toLocaleString('en-US')+' 로 열립니다</em></span>'
+    +'<span class="mgBtns"><button class="mgBtn'+(can?' on':'')+'" onclick="mgBuySlot(\''+k+'\')"'+(can?'':' disabled')+'>열기</button></span></div>'; }
+function _mgRow(k, id){ const M=MG[k], swapping=_mgSwap&&_mgSwap.kind===k;
+  if(!id) return '<div class="mgSlot empty'+(swapping?' swapT':'')+'"'
+    +(swapping?(' onclick="mgSwapTo(\'\')"'):' onclick="mgAddTap(\''+k+'\')"')+'>'
+    +'<span class="mgCard"><span class="mgIco"><i class="pdPlus">＋</i></span></span>'
+    +'<span class="mgBody"><b class="mgName">'+M.empty+'</b>'
+    +'<em class="mgStat">'+(swapping?'여기에 넣기':'아래 목록에서 고르세요')+'</em></span></div>';
+  const col=TIER_COLOR[M.tier(id)]||'#b8c0cc', ex=M.exp(id);
+  // ⚠ 줄 높이는 '본문 스택'이 만든다(카드는 44px 바닥값일 뿐). 그래서 두 가지를 줄였다:
+  //   ① 확장 칸을 본문 밖 오른쪽 열로 뺀다(-25px)  ② EXP 숫자를 막대와 한 줄에 놓는다(-8px)
+  let add='<span class="mgAdd">';
+  for(let n=0;n<MG_ADD_SLOTS;n++) add+='<button class="mgAddBtn" onclick="event.stopPropagation();mgExtTap()">＋</button>';
+  add+='</span>';
+  const pct=ex.max?100:Math.min(100,Math.round(ex.cur/Math.max(1,ex.need)*100));
+  return '<div class="mgSlot on'+(swapping?' swapT':'')+'"'+(swapping?(' onclick="mgSwapTo(\''+id+'\')"'):'')+'>'
+    +'<span class="mgCard" style="border-color:'+col+'aa;color:'+col+'"><span class="mgIco">'+M.ico(id)+'</span></span>'
+    +'<span class="mgBody"><span class="mgNameRow"><b class="mgName" style="color:'+col+'">'+M.name(id)+'</b>'
+      +'<i class="mgLv">'+M.lvTx(id)+'</i></span>'
+      +'<em class="mgStat">'+M.stat(id)+'</em>'
+      +'<span class="mgExpRow"><span class="mgExp"><i style="width:'+pct+'%"></i></span>'
+        +'<em class="mgStat sm">'+(ex.max?'★ 최대':(ex.cur+'/'+ex.need))+'</em></span></span>'
+    +(swapping?'<span class="mgBtns"><span class="mgSwapHint">교체</span></span>'
+             :'<span class="mgBtns">'+add+'<button class="mgBtn" onclick="mgUnequip(\''+k+'\',\''+id+'\')">해제</button></span>')
+    +'</div>'; }
+function mgAddTap(k){ showTownToast('아래 목록에서 '+MG[k].label+'을 눌러 상태창을 여세요'); }
+// 🔓 칸 열기 — 미네랄로 산다(레벨 해금이 아니다)
+function mgBuySlot(k){ const M=MG[k], n=M.max(), p=PROF();
+  if(n>=MG_SLOT_MAX) return;
+  const cost=mgSlotCost(n);
+  if(Math.floor(p.pcoin||0)<cost){ showTownToast('미네랄이 부족합니다'); return; }
+  p.pcoin-=cost; M.addSlot(); saveMeta();
+  if(typeof playSfx==='function') playSfx('ui_confirm');
+  if(typeof updateCurBar==='function') updateCurBar();
+  showTownToast(M.label+' 칸 '+(n+1)+'/'+MG_SLOT_MAX+' 열림'); refreshTownPanel(); }
+function mgExtTap(){ showTownToast('추가 능력치·스킬 칸 — 준비 중입니다'); }
+function mgUnequip(k,id){ if(!MG[k].toggle(id)) return; _mgReset();
+  if(typeof playSfx==='function') playSfx('ui_close'); refreshTownPanel(); }
+
+// ⚡ 자동 선택 — 가장 강한 순서대로 정원만큼 채운다
+function mgAuto(k){ const M=MG[k], mx=M.max();
+  const rank=M.owned().slice().sort((a,b)=>M.power(b)-M.power(a)).slice(0,mx);
+  for(const id of M.on().slice()) if(rank.indexOf(id)<0) M.toggle(id);   // 뺄 것부터 빼야 자리가 난다
+  for(const id of rank) if(M.on().indexOf(id)<0) M.toggle(id);
+  _mgReset(); if(typeof playSfx==='function') playSfx('ui_open');
+  showTownToast('가장 강한 '+M.on().length+'을 올렸습니다'); refreshTownPanel(); }
+
+// ── 하단 카드 탭 = 상태창 ──
+function mgCellTap(k,id){
+  if(_mgSwap){ showTownToast('위에서 바꿀 자리를 고르세요'); return; }
+  _mgPick={kind:k,id:id}; _mgMix=null;
+  if(typeof playSfx==='function') playSfx('ui_open'); refreshTownPanel(); }
+function mgPickClose(){ _mgPick=null; refreshTownPanel(); }
+// 교체 — 팝업을 내리고 상단을 빨갛게. 그 다음 상단에서 자리를 고른다.
+function mgSwapStart(){ const P=_mgPick; if(!P) return;
+  if(MG[P.kind].on().indexOf(P.id)>=0){ showTownToast('이미 올라가 있습니다'); return; }
+  _mgSwap={kind:P.kind,id:P.id}; _mgPick=null;
+  if(typeof playSfx==='function') playSfx('ui_open');
+  showTownToast('바꿀 자리를 고르세요'); refreshTownPanel(); }
+function mgSwapCancel(){ _mgSwap=null; refreshTownPanel(); }
+function mgSwapTo(slotId){ const S=_mgSwap; if(!S) return; const M=MG[S.kind];
+  if(slotId && !M.toggle(slotId)) return;              // 먼저 내려야 자리가 난다(빈 칸이면 건너뛴다)
+  if(!M.toggle(S.id) && slotId) M.toggle(slotId);      // 실패하면 되돌린다
+  _mgReset(); if(typeof playSfx==='function') playSfx('ui_open'); refreshTownPanel(); }
+function _mgPickSheet(){ const P=_mgPick; if(!P) return ''; const M=MG[P.kind], id=P.id;
+  if(!M.has(id)) return '';
+  const col=TIER_COLOR[M.tier(id)], up=M.on().indexOf(id)>=0, ex=M.exp(id);
+  return '<div class="mgSheet" onclick="if(event.target===this)mgPickClose()"><div class="mgSheetCard" style="border-color:'+col+'66">'
+    +'<div class="mgSheetHead"><span class="mgEmo" style="color:'+col+'">'+M.ico(id)+'</span>'
+    +'<span class="igInfoTx"><b style="color:'+col+'">'+M.name(id)+' '+M.lvTx(id)+'</b><em>'+GACHA_TIERS[M.tier(id)].name+'</em></span>'
+    +'<button class="hbmX" onclick="mgPickClose()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button></div>'
+    +'<div class="mgStatTbl">'
+      +'<div><span>능력</span><b>'+M.statOnly(id)+'</b></div>'
+      +'<div><span>경험치</span><b>'+(ex.max?'최대':(ex.cur+' / '+ex.need))+'</b></div>'
+      +'<div><span>보유 중복</span><b>'+M.dup(id)+'</b></div>'
+      +'<div><span>상태</span><b>'+(up?'출전 중':'대기')+'</b></div></div>'
+    +'<div class="mgSheetBtns">'
+      +'<button class="twBtn" onclick="mgMixOpen()"'+(ex.max?' disabled':'')+'>합성</button>'
+      +'<button class="twBtn" onclick="mgSwapStart()"'+(up?' disabled':'')+'>교체</button>'
+    +'</div></div></div>'; }
+
+// ── 합성 팝업 — 등급 버튼으로 그 등급 중복을 통째로 담고, 취소/완료로 끝낸다 ──
+function mgMixOpen(){ const P=_mgPick; if(!P) return;
+  _mgMix={kind:P.kind, id:P.id, sel:{}}; _mgPick=null;
+  if(typeof playSfx==='function') playSfx('ui_open'); refreshTownPanel(); }
+function mgMixCancel(){ _mgMix=null; refreshTownPanel(); }
+function _mgMixPool(){ const X=_mgMix, M=MG[X.kind], out={};
+  for(const id of M.owned()){ const d=M.dup(id); if(d>0) out[M.tier(id)]=(out[M.tier(id)]||0)+d; }
+  return out; }
+// 등급 버튼 — 그 등급의 모든 중복을 한 번에 담는다(다시 누르면 뺀다)
+function mgMixTier(t){ const X=_mgMix; if(!X) return; const M=MG[X.kind];
+  const ids=M.owned().filter(id=>M.tier(id)===t && M.dup(id)>0);
+  const allIn=ids.every(id=>(X.sel[id]||0)>=M.dup(id));
+  for(const id of ids) X.sel[id]=allIn?0:M.dup(id);
+  if(typeof playSfx==='function') playSfx('ui_tab'); refreshTownPanel(); }
+function mgMixExp(){ const X=_mgMix; if(!X) return 0; const M=MG[X.kind];
+  let e=0; for(const id in X.sel) e+=(X.sel[id]||0)*M.pt(id); return e; }
+// 완료 — 담은 재료를 한 번에 넣는다
+function mgMixApply(){ const X=_mgMix; if(!X) return; const M=MG[X.kind];
+  let n=0, lv0=M.lvTx(X.id);
+  for(const id in X.sel){ for(let i=0;i<(X.sel[id]||0);i++){ if(M.feed(X.id, id)) n++; } }
+  _mgMix=null;
+  if(typeof playSfx==='function') playSfx('ui_confirm');
+  if(n) showTownToast('합성 '+n+'개 · '+M.name(X.id)+' '+M.lvTx(X.id)+(M.lvTx(X.id)!==lv0?' 달성!':''));
+  else showTownToast('담은 재료가 없습니다');
+  refreshTownPanel(); }
+function _mgMixSheet(){ const X=_mgMix; if(!X) return ''; const M=MG[X.kind], col=TIER_COLOR[M.tier(X.id)];
+  const pool=_mgMixPool(), ex=M.exp(X.id), got=mgMixExp();
+  let h='<div class="mgSheet" onclick="if(event.target===this)mgMixCancel()"><div class="mgSheetCard wide" style="border-color:'+col+'66">'
+    +'<div class="mgSheetHead"><span class="mgEmo" style="color:'+col+'">'+M.ico(X.id)+'</span>'
+    +'<span class="igInfoTx"><b style="color:'+col+'">'+M.name(X.id)+' '+M.lvTx(X.id)+'</b>'
+    +'<em>EXP '+ex.cur+' + <b class="mgGain">'+got+'</b> / '+ex.need+'</em></span></div>'
+    +'<div class="mgSheetNote">등급을 누르면 그 등급의 <b>중복 전부</b>가 재료로 담깁니다</div>'
+    +'<div class="mgTierRow">';
+  const tiers=GACHA_TIER_ORDER.filter(t=>pool[t]);
+  if(!tiers.length) h+='<span class="mgSheetNote">중복으로 얻은 '+M.label+'이 없습니다</span>';
+  for(const t of tiers){ const c2=TIER_COLOR[t];
+    const ids=M.owned().filter(id=>M.tier(id)===t && M.dup(id)>0);
+    const inN=ids.reduce((a,id)=>a+(X.sel[id]||0),0), on=inN>0;
+    h+='<button class="mgTierBtn'+(on?' on':'')+'" style="border-color:'+c2+(on?'':'66')+';color:'+c2+'"'
+      +' onclick="mgMixTier(\''+t+'\')">'+GACHA_TIERS[t].name+' <i>'+(on?inN:pool[t])+'</i></button>'; }
+  h+='</div>'
+    +'<div class="mgSheetBtns">'
+      +'<button class="twBtn" onclick="mgMixCancel()">취소</button>'
+      +'<button class="twBtn on" onclick="mgMixApply()"'+(got>0?'':' disabled')+'>완료</button>'
+    +'</div></div></div>';
   return h; }
-// 편성 토글도 사냥터와 같은 함수를 쓴다(단일 소스) — 여기서는 화면만 다시 그린다
-function gearMateToggle(id){ if(!hbMateToggle(id)){ hmToast('출전 정원이 찼습니다'); return; }
-  if(typeof playSfx==='function') playSfx('ui_tab'); renderGear(); }
-// 영입·개별 강화는 동료 팝업, 아군 전체 업그레이드는 하단 패널 '동료' 구역 — 서로 다른 화면이다
+
+// ── 하단 보유 격자 ──
+function _mgGrid(k){ const M=MG[k], owned=M.owned(), on=M.on();
+  if(!owned.length) return '<div class="igEmpty">'+M.none+'</div>';
+  let h='<div class="igGrid">';
+  for(const id of owned){ const col=TIER_COLOR[M.tier(id)]||'#b8c0cc';
+    h+='<div class="igCell'+(_mgPick&&_mgPick.id===id?' sel':'')+'" style="border-color:'+col+'88;color:'+col+'"'
+      +' onclick="mgCellTap(\''+k+'\',\''+id+'\')"><span class="mgEmo">'+M.ico(id)+'</span>'
+      +(on.indexOf(id)>=0?'<i class="igOn"></i>':'')
+      +(M.dup(id)?('<i class="igDup">'+M.dup(id)+'</i>'):'')
+      +'<i class="igLv">'+M.lvTx(id).replace('Lv.','')+'</i></div>'; }
+  return h+'</div>'; }
+// ── 패널 — 펫·동료가 같은 함수를 쓴다 ──
+function _mgPanel(k, note){ const M=MG[k], on=M.on(), mx=M.max();
+  let top='<div class="mgSlots">';
+  for(let i=0;i<MG_SLOT_MAX;i++) top += (i<mx) ? _mgRow(k, on[i]||null) : _mgLockRow(k, i);
+  if(mx>0) top+='<div class="mgAutoRow">'
+    +(_mgSwap? '<button class="twBtn" onclick="mgSwapCancel()">교체 취소</button>'
+             : '<button class="twBtn" onclick="mgAuto(\''+k+'\')">⚡ 자동 선택 — 가장 강한 '+mx+'</button>')
+    +'</div>';
+  top+='</div>';
+  const hint=_mgSwap&&_mgSwap.kind===k
+    ? '<div class="igEmpty sm feed">🔁 <b>'+M.name(_mgSwap.id)+'</b> 을 넣을 자리를 <b>위에서</b> 고르세요</div>'
+    : (note?'<div class="igEmpty sm">'+note+'</div>':'');
+  return _gearFrame(M.sum(), top, '<span class="bagTtl">보유 '+M.label+'</span>',
+    M.owned().length+M.unit, _mgGrid(k), hint+_mgPickSheet()+_mgMixSheet()); }
+function _shopPetPanel(note){ return _mgPanel('pet', note||'펫을 장착하면 <b>코인·공격·체력 %</b>가 오릅니다'); }
+function _gearAllyPanel(){ return _mgPanel('ally', '동료는 <b>동료 뽑기권</b>으로 영입합니다 — 사냥터 좌상단 동료 아이콘'); }
+function profDoBuyPetTicket(){ doBuyTicket('pet'); }
+function profDoPetEquip(id){ if(profPetEquip(id)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); } }
+// 영입·뽑기는 동료 팝업, 아군 전체 업그레이드는 하단 패널 '동료' 구역 — 서로 다른 화면이다
 function gearGoHire(){ openHome(); hbOpenMates(); }
 function refreshTownPanel(){ if(gearOpen()){ renderGear(); return; }              // 정비 전용 화면이 열려 있으면 그쪽을 갱신
   if(shopOpen()){ renderShop(); return; }   // 상점 전용 화면이 열려 있으면 그쪽을 갱신
@@ -8885,40 +9207,7 @@ function setShopSec(k){ if(!SHOP_SECS[k]) return; _shopSec=k;
   if(typeof navPaint==='function') navPaint(); }
 // 옛 호출부 호환 — '전부 이어 붙이기'. 상점 화면은 구역 하나만 그린다.
 function renderProfGacha(){ return _shopDealHTML()+_shopDrawHTML()+_shopGemHTML(); }
-// 보유 펫 패널 — 상점(뽑기 아래)과 정비 '펫' 탭이 함께 쓴다. ⛔ 복제 금지: 펫 목록은 여기 하나뿐.
-function _shopPetPanel(note){ const p=PROF(), eq=p.equip||[];
-  const owned=Object.keys(p.pets||{}).filter(id=>PROF_PETS[id]).sort((a,b)=>GACHA_TIER_ORDER.indexOf(PROF_PETS[b].tier)-GACHA_TIER_ORDER.indexOf(PROF_PETS[a].tier));
-  let h='<div class="shopPanel"><div class="shopHead">보유 펫<em>장착 '+eq.length+'/'+profPetSlots()+' · '+owned.length+'마리</em></div><div class="shopBody">';
-  if(note) h+='<div class="shopNote">'+note+'</div>';
-  if(!owned.length) h+='<div class="shopNote">아직 없음 — 상점에서 뽑아보세요!</div>';
-  for(const id of owned){ const P=PROF_PETS[id], col=TIER_COLOR[P.tier], star=profPetStar(id), on=eq.indexOf(id)>=0, full=eq.length>=profPetSlots();
-    h+='<div class="shopRow"><span class="twPet" style="color:'+col+';border-color:'+col+'55">'+P.emoji+'</span>'
-      +'<div class="twRowInfo"><div class="twRowName">'+P.name+' <span class="twStars">'+'★'.repeat(star)+'</span></div>'
-      +'<div class="twRowSub" style="color:'+col+'">'+GACHA_TIERS[P.tier].name+' · '+PROF_BONUS_NAME[P.bonus.type]+' +'+Math.round(profPetVal(id)*100)+'%'
-      +(profPetDup(id)?(' · 중복 '+profPetDup(id)):'')
-      +(star<PROF_PET_STAR_MAX?(' · ★ 재료 '+profPetFed(id)+'/'+profPetNeed(id)):' · ★ 최대')+'</div></div>'
-      +(star<PROF_PET_STAR_MAX?('<button class="twBtn" onclick="petFeedStart(&#39;'+id+'&#39;)">강화</button>'):'')
-      +'<button class="twBtn'+(on?' on':'')+'" onclick="profDoPetEquip(\''+id+'\')"'+((!on&&full)?' disabled':'')+'>'+(on?'장착중':'장착')+'</button></div>';
-    // 강화를 누른 펫 아래에 재료(중복) 목록을 편다 — 동료 합성과 같은 흐름
-    if(_petFeedT===id){ const mats=profPetMats();
-      if(!mats.length) h+='<div class="shopNote">중복으로 얻은 펫이 없습니다 — 뽑기에서 겹치면 재료가 됩니다</div>';
-      for(const m of mats){ const MM=PROF_PETS[m.id];
-        h+='<div class="shopRow"><span class="twPet" style="color:'+TIER_COLOR[MM.tier]+';border-color:'+TIER_COLOR[MM.tier]+'55">'+MM.emoji+'</span>'
-          +'<div class="twRowInfo"><div class="twRowName">'+MM.name+' ×'+m.dup+'</div>'
-          +'<div class="twRowSub">'+GACHA_TIERS[MM.tier].name+' · 재료 '+m.pt+'</div></div>'
-          +'<button class="twBtn" onclick="petDoFeed(&#39;'+m.id+'&#39;)">넣기</button></div>'; }
-      h+='<div class="shopRow"><div class="twRowInfo"><div class="twRowSub">재료 고르기를 닫습니다</div></div>'
-        +'<button class="twBtn" onclick="petFeedEnd()">닫기</button></div>'; } }
-  return h+'</div></div>'; }
-let _petFeedT=null;      // 합성 재료를 고르는 중인 대상 펫 id
-function petFeedStart(id){ _petFeedT=(_petFeedT===id)?null:id; refreshTownPanel(); }
-function petFeedEnd(){ _petFeedT=null; refreshTownPanel(); }
-function petDoFeed(matId){ const t=_petFeedT; if(!t) return;
-  const r=profPetFeed(t, matId);
-  if(!r){ showTownToast('재료가 없습니다'); return; }
-  if(typeof playSfx==='function') playSfx('ui_tab');
-  if(typeof r==='number') showTownToast('⭐ '+PROF_PETS[t].name+' ★'+profPetStar(t)+' 달성');
-  refreshTownPanel(); }
+// 보유 펫 패널은 정비 탭 쪽(_shopPetPanel)이 단일 소스다 — 상점도 그 함수를 부른다.
 // 🎟 뽑기권 구매 줄 — 상점·동료 팝업이 함께 쓴다(값과 문구를 두 곳에 적지 말 것)
 function ticketBuyRow(kind){ const can=profGem()>=TICKET_GEM[kind];
   return '<div class="shopRow"><div class="twRowInfo"><div class="twRowName">'+TICKET_NAME[kind]+' 뽑기권 구매</div>'
