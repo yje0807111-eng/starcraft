@@ -3544,6 +3544,7 @@
   .ptHead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:1px 1px 6px;min-height:20px}
   .ptTitle{font-size:var(--fs-xl);font-weight:800;letter-spacing:.3px;color:#b6c0cc}   /* 구역 제목 — 10px 은 읽히지 않았다 */
   .ptTitle b{color:var(--neon)}
+  .ptTitle .onN{font-style:normal;font-weight:800;color:var(--ok)}   /* 접속 수 = 상태값이라 초록(§역할별 액센트) */
   .ptDisband{flex:0 0 auto;padding:4px 9px;border-radius:var(--r-md);cursor:pointer;font-family:inherit;font-size:var(--fs-sm);font-weight:700;
     color:#ffd2d2;background:rgba(200,50,50,.18);border:1px solid rgba(255,80,80,.4)}
   .ptDisband:active{transform:translateY(1px)}
@@ -3551,8 +3552,8 @@
   /* 파티 찾기 = 파티 색(보라 · .msTab2[data-bt=party]와 같은 계열) */
   /* 머리줄 버튼(파티 찾기 · 친구 추가) = 오른쪽 위 더보기 배너 칸(.hbMoreIt)과 같은 물성 —
      각진 3px · 검은 판 · 금속 엣지. 구역색으로 물들이지 않는다(그 자리는 제목의 숫자가 맡는다). */
-  .ptFind{flex:0 0 auto;padding:5px 10px;border-radius:var(--r-bar);cursor:pointer;font-family:inherit;
-    font-size:var(--fs-md);font-weight:700;letter-spacing:.2px;
+  .ptFind{flex:0 0 auto;padding:4px 8px;border-radius:var(--r-bar);cursor:pointer;font-family:inherit;
+    font-size:var(--fs-sm);font-weight:700;letter-spacing:.2px;
     color:#dfe4ea;background:rgba(255,255,255,.045);border:1px solid var(--metal-edge)}
   .ptFind:active{opacity:.75;transform:translateY(1px)}
   .ptGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
@@ -14886,7 +14887,7 @@ async function renderFriendList(){ const body=document.getElementById('msPanelBo
   // 게스트도 본다 — 임시 친구(_tempFriends)로 전체 레이아웃이 그려진다. 실계정 목록·요청만 로그인 시 합류.
   // ⛔ 맨 위는 목록이다 — 친구 추가(검색)는 헤더 오른쪽 ＋ 로 들어간 팝업이 맡는다.
   body.innerHTML =
-    '<div class="ptHead"><span class="ptTitle">친구 <b id="foCount">0</b></span>'
+    '<div class="ptHead"><span class="ptTitle">친구 <i class="onN" id="foCount">(온라인 0)</i></span>'
     +'<span class="ptHeadBtns"><button class="ptFind foAddBtn" onclick="openFriendAdd()">친구 추가</button></span></div>'
     +'<div id="foReqSec"></div>'
     +'<div id="foFriends" class="foList"><div class="foEmpty">불러오는 중…</div></div>';
@@ -14902,7 +14903,8 @@ async function renderFriendList(){ const body=document.getElementById('msPanelBo
     // 한 목록 — 정렬이 이미 온라인→오프라인이고, 오프라인은 .foRow.off(어두운 상자)로 갈린다
     document.getElementById('foFriends').innerHTML =
       allF.length ? allF.map(fRow).join('') : '<div class="foEmpty">아직 친구가 없어요</div>';
-    { const c=document.getElementById('foCount'); if(c) c.textContent=allF.length; }
+    { const c=document.getElementById('foCount');   // 총원이 아니라 **접속 중**을 센다(오프라인은 어두운 상자로 이미 보인다)
+      if(c) c.textContent='(온라인 '+allF.filter(function(f){ return presenceOf(f)!=='offline'; }).length+')'; }
     updateFriendBadge(incoming.length);
   }catch(e){ const f=document.getElementById('foFriends'); if(f) f.innerHTML='<div class="foEmpty">불러오기 실패</div>'; console.warn(e.message||e); } }
 async function friendSearch(){ const inp=document.getElementById('foSearch'), res=document.getElementById('foSearchResult'); if(!inp||!res) return;

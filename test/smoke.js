@@ -2505,6 +2505,14 @@ async function groupLobby(){
       assert(body.querySelector('.ptHead .ptTitle'),'친구 머리줄이 파티 머리줄 규격(.ptHead)이 아님');
       { const ts=getComputedStyle(body.querySelector('.ptTitle'));
         assert(parseFloat(ts.fontSize)>=12,'구역 제목이 너무 작음: '+ts.fontSize);
+        // 친구 수는 총원이 아니라 '(온라인 N)' — 상태값이라 초록
+        { const on=body.querySelector('.ptTitle .onN');
+          assert(on && /^\(온라인 \d+\)$/.test(on.textContent.trim()),'친구 수 표기가 (온라인 N) 이 아님: '+(on&&on.textContent));
+          const g=getComputedStyle(on).color.match(/\d+/g).map(Number);
+          assert(g[1]>g[0]+40 && g[1]>g[2]+40,'접속 수가 초록이 아님: '+getComputedStyle(on).color);
+          const rows=[...body.querySelectorAll('#foFriends .foRow')];
+          assert(+on.textContent.replace(/\D/g,'')===rows.filter(r=>!r.classList.contains('off')).length,
+            '접속 수가 실제 온라인 행 수와 다름'); }
         // 머리줄 버튼 = 더보기 배너 칸과 같은 물성(각진 3px · 검은 판)
         const bs=getComputedStyle(body.querySelector('.ptFind'));
         assert(bs.borderTopLeftRadius==='3px','머리줄 버튼이 각지지 않음: '+bs.borderTopLeftRadius);
