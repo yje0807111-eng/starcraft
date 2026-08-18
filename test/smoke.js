@@ -2452,10 +2452,15 @@ async function groupLobby(){
       const panel=document.querySelector('#mapSelect .msPanel');
       assert(panel && panel.contains(dock) && panel.contains($('msList')) && panel.contains($('msSortTabs')),
         '소셜·목록·탭 띠가 한 상자 안에 없음');
-      { const so=getComputedStyle(dock.querySelector('.msSocial'));
-        assert(so.borderTopStyle==='none' && so.backgroundImage==='none',
-          '상자 안 소셜이 자기 테두리·면을 그대로 갖고 있음(상자 안 상자)'); }
-      assert(getComputedStyle(dock).borderTopStyle!=='none','목록과 소셜을 나누는 구분선이 없음'); }
+      // 소셜은 자기 상자를 갖되, 목록에 맞닿지 않게 도크의 안여백으로 띄운다
+      { const soEl=dock.querySelector('.msSocial'), so=getComputedStyle(soEl);
+        assert(so.borderTopStyle!=='none','소셜 상자의 테두리가 없음');
+        const gap=soEl.getBoundingClientRect().top - $('msList').getBoundingClientRect().bottom;
+        assert(gap>=4 && gap<=16,'목록과 소셜 사이 여백이 이상함: '+gap.toFixed(1)+'px');
+        // 좌우는 목록 카드와 같은 변에 선다
+        const it=document.querySelector('#msList .mapItem').getBoundingClientRect(), sb=soEl.getBoundingClientRect();
+        assert(Math.abs(sb.left-it.left)<=0.6 && Math.abs(sb.right-it.right)<=0.6,
+          '소셜 상자가 목록 카드와 변이 안 맞음'); } }
     navSub('party'); await sleep(40);
     assert(document.querySelector('#twChat.hide'),'파티를 눌렀는데 마을 시트가 열림(도크가 맡아야 한다)');
     assert(getComputedStyle($('msPanelBody')).display!=='none','파티 패널이 안 보임');
