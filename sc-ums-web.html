@@ -1496,7 +1496,9 @@
     border:1px solid var(--metal-edge);border-radius:var(--r-lg);background:var(--bpFace);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.05);transition:.12s}
   .cmdG .cgSlot::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent)}
-  .cmdG .cgPro{width:100%;aspect-ratio:1.2;flex:none;position:relative;overflow:hidden;color:var(--ca);border:1px solid var(--caS);border-radius:var(--r-md);
+  /* 초상은 남는 높이만 갖는다(flex:0 1 auto + min-height:0) — 글자 줄을 밀어내지 않게.
+     이미지는 object-fit:contain 이라 눌려도 찌그러지지 않고 레터박스가 된다. */
+  .cmdG .cgPro{width:100%;aspect-ratio:1.2;flex:0 1 auto;min-height:0;position:relative;overflow:hidden;color:var(--ca);border:1px solid var(--caS);border-radius:var(--r-md);
     background:var(--bpTile);display:flex;align-items:center;justify-content:center;font-size:22px}
   /* 스캔라인 + 아래쪽 비네트 — 초상이 커진 만큼 재질을 주고 이름줄과 분리한다 */
   .cmdG .cgPro::after{content:'';position:absolute;inset:0;
@@ -1512,8 +1514,10 @@
   .cmdG .cgPro img.cgIco{width:100%;height:100%;object-fit:contain}   /* 실제 아이콘 이미지 = 초상처럼 칸을 꽉 채움 */
   .cmdG .cgPro:has(img.cgIco)::after{display:none}        /* 실제 아이콘 위에는 가로 스캔라인을 덮지 않는다(아이콘 자체 질감이 있음) */
   .cmdG .cgSlot.iconFill{justify-content:center;padding:6px} .cmdG .cgSlot.iconFill .cgPro{width:72%;height:auto;aspect-ratio:1;border:none;background:none;box-shadow:none} .cmdG .cgSlot.iconFill .cgPro svg{width:100%;height:100%} .cmdG .cgSlot.iconFill .cgName,.cmdG .cgSlot.iconFill .cgCost{display:none}   /* 아이콘만 채우는 칸(일시정지 등): 빈 이름/비용 줄 숨겨 아이콘이 칸 정중앙에 크게 */
-  .cmdG .cgName{font:800 10px/1.05 sans-serif;letter-spacing:-.2px;color:#e6eefc;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .cmdG .cgSub{font:800 8.5px/1 var(--font-num);color:var(--caL);text-align:center;margin-top:2px;font-variant-numeric:tabular-nums;white-space:nowrap}
+  /* ⚠ 글자 줄은 절대 눌리지 않는다(flex:none). 칸이 모자라면 초상이 줄어든다 —
+     반대로 두면 이름이 4px 로 뭉개져 읽을 수 없게 된다(오토배틀 건설 카드에서 실제로 그랬다). */
+  .cmdG .cgName{flex:none;font:800 10px/1.05 sans-serif;letter-spacing:-.2px;color:#e6eefc;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cmdG .cgSub{flex:none;font:800 8.5px/1 var(--font-num);color:var(--caL);text-align:center;margin-top:2px;font-variant-numeric:tabular-nums;white-space:nowrap}
   .cmdG .cgSlot.max .cgSub{color:var(--cgGood)}
   .cmdG .cgCost .ri{width:11px;height:11px;flex:none}
   .cmdG .cgDcost .ri{width:12px;height:12px;flex:none}
@@ -20822,14 +20826,16 @@ function _stkLv(cur,max){ return (cur>=max)?'MAX':(cur+'/'+max); }   // 카드 �
 // ── 📦 하단 시트 모델 ────────────────────────────────────────────────────
 // 구역·하위는 하단 네비(STK_TREE)가 고르고, 여기서는 그 키에 맞는 그리드만 만든다.
 //   건설지 > 강화 = 광산 + 공격력·체력   ·   특수무기 > 구입/사용 = STK_WEAPONS 표
+// 칸 자리: [공격력][체력][빈칸][광산] — 유닛 강화가 앞, 경제(광산)는 끝 칸
 function _stkUpgModel(){ const S=STK, me=S.me, gold=Math.floor(me.gold||0);
-  const items=[
-    { pro:pIco('⛏','ic-gold'), sn:'광산', cr:me.mineCost, tr:_stkLv(me.mines||0, STK_MINE_CAP), metaCls:'lv',
-      state:((me.mines||0)>=STK_MINE_CAP||gold<me.mineCost)?'dim':'on', act:'onclick="strikeBuyMine()"'+_techTipAttr('sup','mine') } ];
+  const items=[];
   for(const kv of [['atk','공격력','⚔'],['hp','체력','❤']]){
     const k=kv[0], lv=(k==='atk'?me.atkLv:me.hpLv), cost=strikeUpCost(k,lv), full=(lv>=10);
     items.push({ pro:pIco(kv[2],'ic-gold'), sn:kv[1], cr:(full?0:cost), tr:_stkLv(lv,10), metaCls:'lv', tip:k,
       state:(full||gold<cost)?'dim':'on', act:full?'':('onclick="strikeUpg(\''+k+'\')"')+_techTipAttr('sup',k) }); }
+  items.push({state:'empty'});
+  items.push({ pro:pIco('⛏','ic-gold'), sn:'광산', cr:me.mineCost, tr:_stkLv(me.mines||0, STK_MINE_CAP), metaCls:'lv',
+    state:((me.mines||0)>=STK_MINE_CAP||gold<me.mineCost)?'dim':'on', act:'onclick="strikeBuyMine()"'+_techTipAttr('sup','mine') });
   return { mode:'prod', compact:true, build:true, title:'강화', icon:pIco('🔧','ic-gold'), items:items,
     info:{ eb:'강화', hideName:true, desc:'수입 '+strikeIncome(me)+'/웨이브<br>카드를 길게 누르면 설명이 나옵니다.' } }; }
 // 🛒 구입 — 표 그대로가 상점 칸이 된다(품목을 여기서 새로 적지 말 것)
@@ -20839,13 +20845,13 @@ function _stkWpnBuyModel(){ const S=STK, me=S.me, gold=Math.floor(me.gold||0);
       state:(full||gold<w.cost)?'dim':'on', act:full?'':('onclick="strikeBuyWpn(\''+w.k+'\')"') }; });
   return { mode:'prod', compact:true, build:true, title:'특수무기 · 구입', icon:pIco('🛒','ic-gold'), items:items,
     info:{ eb:'구입', hideName:true, desc:'골드로 구입해 두고 <b>사용</b>에서 꺼내 쓴다.' } }; }
-// 💥 사용 — 보유한 것만. 하나도 없으면 빈 칸으로 '구입에서 먼저 사라'를 보여준다.
+// 💥 사용 — **구입과 같은 자리에 같은 순서로** 늘어놓는다. 없는 것은 빈 칸이 아니라 '비활성'이다
+//   (자리가 비면 산 것과 안 산 것의 위치가 매번 달라져 손이 헷갈린다).
 function _stkWpnUseModel(){ const S=STK, me=S.me;
   const own=STK_WEAPONS.filter(w=>((me.wpn&&me.wpn[w.k])||0)>0);
-  const items=own.map(function(w){ const have=me.wpn[w.k];
-    return { pro:pIco(w.ico,w.cls), sn:w.name, tr:'×'+have, metaCls:'lv', state:'on',
-      act:'onclick="strikeUseWpn(\''+w.k+'\')"' }; });
-  while(items.length<4) items.push({state:'empty'});
+  const items=STK_WEAPONS.map(function(w){ const have=(me.wpn&&me.wpn[w.k])||0;
+    return { pro:pIco(w.ico,w.cls), sn:w.name, tr:'×'+have, metaCls:'lv',
+      state:have>0?'on':'dim', act:have>0?('onclick="strikeUseWpn(\''+w.k+'\')"'):'' }; });
   return { mode:'prod', compact:true, build:true, title:'특수무기 · 사용', icon:pIco('💥','ic-danger'), items:items,
     info:{ eb:'사용', hideName:true,
       desc:own.length?'칸을 누르면 즉시 발동한다.':'가진 무기가 없습니다 — <b>구입</b>에서 먼저 사세요.' } }; }
@@ -21060,12 +21066,23 @@ function _stkShowScreen(id, el){ const S=STK; if(!S) return;
   // 전투(Main)=선택 있을 때만 하단 프로필 시트 · 그 외 탭=패널 상시 표시
   if(id==='Main'){ const uc=document.getElementById('unitCmd'); if(uc) uc._stkShown=undefined; strikeRenderSelInfo(); }
   else { document.body.classList.add('sheetOpen'); if(typeof _syncSheetLift==='function'){ requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); } } }
-// 🏗 건설지 > 건설 — 건설 화면 + 건설 프로필(보급 시트는 내린다)
+// 🏗 건설지 > 건설 — 건설 화면 + **일꾼 자동 지정**(빈 화면으로 들어가지 않게).
+//   지정 경로는 techSubSelectOne 과 같다(selU + 시트 열기 + techUIRender) — 새로 만들지 말 것.
 function stkGoBuild(){ const S=STK; if(!S) return;
   if(S.supSheet) strikeToggleSupply(false);
   if(S.specSheet) strikeToggleSpec(false);
   if(G.tab!=='Build') _stkShowScreen('Build');
-  else if(typeof techPanelRender==='function') techPanelRender(); }
+  stkPickWorker();
+  if(typeof techPanelRender==='function') techPanelRender(); }
+// 맵의 일꾼을 골라 지정한다 — 이미 뭔가 지정돼 있으면 건드리지 않는다(사용자가 고른 것을 덮지 않는다)
+function stkPickWorker(){ if(!G.tech) return false;
+  const sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null});
+  if(G.tech.sel!=null || (G.tech.selU&&G.tech.selU.length)){ sh.open=true; sh.sec='ent'; return true; }
+  const wk=(G.tech.ents||[]).find(e=>e.type==='worker'); if(!wk) return false;
+  G.tech.sel=null; G.tech.selU=[wk.eid]; G.tech.selRes=null;
+  sh.open=true; sh.sec='ent';
+  const body=document.getElementById('btSheetBody'); if(body) body._cgPage=0;
+  return true; }
 // 🏗 건설지 > 강화 — 화면은 건설지 그대로, 하단만 강화 시트(광산·공격력·체력)
 function stkGoUpg(){ const S=STK; if(!S) return;
   if(S.specSheet) strikeToggleSpec(false);

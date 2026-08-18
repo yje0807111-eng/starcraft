@@ -3523,9 +3523,30 @@ async function groupGame(){
       { const c=cells(); assert(c[0].classList.contains('navBk'),'건설지에 뒤로가기 칸이 없음');
         assert(c.slice(1).map(e=>e.textContent.trim()).join('/')==='건설/강화','건설지 하위가 다름');
         assert(G.tab==='Build','건설지인데 건설 화면이 아님: '+G.tab); }
+      // 건설 = 일꾼이 자동 지정되어 그 일꾼의 건설 그리드가 바로 뜬다(빈 화면으로 들어가지 않는다)
+      { assert(G.tech,'건설 상태(G.tech)가 없음');
+        assert((G.tech.selU||[]).length===1,'건설인데 일꾼이 자동 지정되지 않음: '+JSON.stringify(G.tech.selU));
+        const wk=G.tech.ents.find(e=>e.eid===G.tech.selU[0]);
+        assert(wk && wk.type==='worker','지정된 것이 일꾼이 아님: '+(wk&&wk.type));
+        assert(G.tech.sheet && G.tech.sheet.open,'건설 시트가 안 열림');
+        const cards=[...document.querySelectorAll('#btSheetBody .cgSlot')];
+        assert(cards.length>=2,'건설 그리드가 비어 있음: '+cards.length);
+        // ⚠ 글자 줄이 눌리면 안 된다 — 칸이 모자라면 초상이 줄어야 한다(전엔 이름이 4px 로 뭉개졌다).
+        //    기본 높이는 넉넉해서 어떤 CSS로도 통과한다 → 판을 일부러 좁혀 놓고 재야 규칙을 진짜로 잰다.
+        const de=document.documentElement, keepH=de.style.getPropertyValue('--bpBodyH');
+        de.style.setProperty('--bpBodyH','96px'); await sleep(140);
+        try{
+          for(const c of [...document.querySelectorAll('#btSheetBody .cgSlot')]){
+            const n=c.querySelector('.cgName'); if(!n||!n.textContent.trim()) continue;
+            const h=n.getBoundingClientRect().height;
+            assert(h>=9,'건설 카드 이름이 뭉개짐(높이 '+h.toFixed(1)+'px): '+n.textContent.trim()); }
+        } finally { if(keepH) de.style.setProperty('--bpBodyH',keepH); else de.style.removeProperty('--bpBodyH'); }
+        await sleep(120); }
+      // 강화 = [공격력][체력][빈칸][광산] 자리 고정
       gtabSub('upg'); await sleep(160);
-      { const n=[...document.querySelectorAll('#btSheetBody .cgSlot .cgName')].map(e=>e.textContent.trim());
-        for(const w of ['광산','공격력','체력']) assert(n.indexOf(w)>=0,'강화 그리드에 '+w+'이 없음: '+JSON.stringify(n)); }
+      { const n=[...document.querySelectorAll('#btSheetBody .cgSlot')].map(e=>{ const t=e.querySelector('.cgName');
+          return t?t.textContent.trim():(e.classList.contains('empty')?'':'?'); });
+        assert(n[0]==='공격력' && n[1]==='체력' && n[3]==='광산','강화 칸 자리가 다름: '+JSON.stringify(n)); }
       // ③ 특수무기 = [‹][구입][사용] · 구입 그리드는 표 그대로
       strikeSwitchTab('Upgrade'); await sleep(160);
       { const c=cells(); assert(c[0].classList.contains('navBk'),'특수무기에 뒤로가기 칸이 없음');
@@ -3533,14 +3554,21 @@ async function groupGame(){
         assert(G.tab==='Main','특수무기는 화면을 옮기지 않는다(전장 유지): '+G.tab);
         const n=names();
         for(const w of STK_WEAPONS) assert(n.indexOf(w.name)>=0,'구입 그리드에 '+w.name+'이 없음: '+JSON.stringify(n)); }
-      // ④ 사용 = 보유분만. 아무것도 없으면 빈 칸.
+      // ④ 사용 = **구입과 같은 자리에 같은 순서로**. 없는 것은 빈 칸이 아니라 비활성(dim).
       gtabSub('use'); await sleep(140);
-      assert(!names().length,'가진 무기가 없는데 사용 그리드에 칸이 있음: '+JSON.stringify(names()));
-      // ⑤ 구입 → 사용 그리드에 등장
+      { const n=names();
+        assert(n.join('/')===STK_WEAPONS.map(w=>w.name).join('/'),'사용 그리드 자리가 구입과 다름: '+JSON.stringify(n));
+        const cs=[...document.querySelectorAll('#unitCmd .cgSlot')];
+        assert(cs.every(e=>e.classList.contains('dim')),'가진 게 없는데 비활성이 아닌 칸이 있음');
+        assert(!document.querySelector('#unitCmd .cgSlot.empty'),'사용 그리드에 빈 칸이 있음(비활성으로 두어야 한다)'); }
+      // ⑤ 구입 → 그 칸만 살아난다(자리는 그대로)
       STK.me.gold=99999;
-      for(const w of STK_WEAPONS) assert(strikeBuyWpn(w.k), w.name+' 구입 실패');
-      gtabSub('use'); await sleep(140);
-      { const n=names(); for(const w of STK_WEAPONS) assert(n.indexOf(w.name)>=0,'산 무기가 사용 그리드에 없음: '+w.name); }
+      assert(strikeBuyWpn('bomb'),'폭탄 구입 실패');
+      gtabSub('buy'); await sleep(120); gtabSub('use'); await sleep(140);
+      { const cs=[...document.querySelectorAll('#unitCmd .cgSlot')];
+        assert(!cs[0].classList.contains('dim'),'산 무기가 아직 비활성');
+        assert(cs[1].classList.contains('dim'),'안 산 무기가 활성으로 보임'); }
+      for(const w of STK_WEAPONS) if(strikeWpnHave(w.k)<1) assert(strikeBuyWpn(w.k), w.name+' 구입 실패');
       // ⑥ 효과 — ⚠ 헤드리스에선 3D·건설이 안 서서 유닛이 안 나온다. 검증용 유닛을 직접 꽂는다.
       //    무기 함수는 hp/maxHp/x/y/dead/wait 만 읽으므로 이걸로 진짜 효과를 잰다.
       { const mk=(i,side)=>({uid:side+i, id:'marine', side:side, x:1000+(i%5)*40, y:1000+Math.floor(i/5)*40,
@@ -3566,6 +3594,20 @@ async function groupGame(){
       assert(G.tab==='Main' && _gtabDrill==='','‹ 인데 전투 기본 화면이 아님: '+G.tab+'/'+_gtabDrill);
       assert(!STK.supSheet,'‹ 인데 시트가 남아 있음');
       assert(!cells().some(e=>e.classList.contains('on')||e.classList.contains('cur')),'‹ 뒤인데 켜진 칸이 있음');
+      // ⑧ 하단 판 높이는 네모 인게임과 같다(--bpBodyH 공용)
+      // ⚠ getPropertyValue('--bpBodyH') 는 계산값이 아니라 원문 'min(28vh,140px)' 이라 parseFloat=NaN 이다.
+      //    토큰을 실제로 적용한 탐침을 재서 기준값을 얻는다(예전엔 NaN>0 이 거짓이라 이 검사가 통째로 건너뛰어졌다).
+      { const probe=document.createElement('div');
+        probe.style.cssText='position:absolute;left:-9999px;top:0;width:10px;height:var(--bpBodyH)';
+        document.body.appendChild(probe);
+        const want=Math.round(probe.getBoundingClientRect().height); probe.remove();
+        assert(want>0,'--bpBodyH 기준값을 못 잼: '+want);
+        for(const [n,fn] of [['건설지',()=>strikeSwitchTab('Build')],['특수무기',()=>strikeSwitchTab('Upgrade')],['관전',()=>strikeSwitchTab('Players')]]){
+          fn(); await sleep(180);
+          const body=document.getElementById(G.tab==='Build'?'btSheetBody':'unitCmd');
+          const h=Math.round(body.getBoundingClientRect().height);
+          assert(Math.abs(h-want)<=1, n+' 하단 본문 높이가 네모와 다름: '+h+' vs '+want); } }
+      strikeSwitchTab('Upgrade'); await sleep(140);
       return '3칸 · 건설지2 · 특수무기 '+STK_WEAPONS.length+'종 ok';
     } finally { if(typeof strikeEnd==='function') try{ strikeEnd(); }catch(e){}
       if(faked) ph.classList.remove('inGame'); } });
