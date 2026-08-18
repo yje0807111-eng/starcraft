@@ -2452,13 +2452,17 @@ async function groupLobby(){
       const panel=document.querySelector('#mapSelect .msPanel');
       assert(panel && panel.contains($('msList')) && panel.contains($('msSortTabs')),'탭 띠·목록이 한 상자 안에 없음');
       assert(!panel.contains(dock),'소셜이 목록 카드 안에 들어가 있음(독립 카드여야 한다)');
-      // 헤어라인 — 카드 윗변 1px 붉은 광선(::after). 색이 붉은지까지 본다(흰빛으로 돌아가면 잡힌다)
-      { const pa=getComputedStyle(panel,'::after');
-        assert(pa.content!=='none','윗변 헤어라인(::after)이 없음');
-        assert(parseFloat(pa.height)<=2,'헤어라인이 1px 이 아님: '+pa.height);
+      // 헤어라인 — 카드 **위·아래** 변 1px 붉은 광선. 색이 붉은지까지 본다(흰빛으로 돌아가면 잡힌다)
+      for(const pe of ['::before','::after']){ const pa=getComputedStyle(panel,pe);
+        assert(pa.content!=='none',pe+' 헤어라인이 없음');
+        assert(parseFloat(pa.height)<=2,pe+' 헤어라인이 1px 이 아님: '+pa.height);
         const cols=[...((pa.backgroundImage||'').matchAll(/rgba?\((\d+),\s*(\d+),\s*(\d+)/g))];
         assert(cols.some(c=>+c[1]>=180 && +c[2]<=110 && +c[3]<=110),
-          '헤어라인이 붉은색이 아님: '+(pa.backgroundImage||'').slice(0,80)); }
+          pe+' 헤어라인이 붉은색이 아님: '+(pa.backgroundImage||'').slice(0,80)); }
+      // 소셜 카드 테두리 = 금속 링(그라데) — border 를 색으로 칠하면 링이 안 나온다
+      { const so=getComputedStyle(dock.querySelector('.msSocial'));
+        assert(/transparent|rgba\(0, 0, 0, 0\)/.test(so.borderTopColor),'소셜 테두리가 단색이라 금속 링이 안 나옴: '+so.borderTopColor);
+        assert((so.backgroundImage.match(/gradient/g)||[]).length>=2,'금속 링(2겹 배경)이 아님'); }
       // 목록은 카드 안쪽에서 끝난다 — 아래 여백이 padding 이면 카드가 판 끝선에 붙어 잘린다
       { const ls=getComputedStyle($('msList'));
         assert(parseFloat(ls.marginBottom)>=6,'목록 아래 여백이 margin 이 아님(카드가 판 끝에 붙어 잘린다)');
