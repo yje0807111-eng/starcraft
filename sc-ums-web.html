@@ -3385,10 +3385,8 @@
   /* 목록이 끝나는 자리의 선은 상자(.msPanel) 자신의 아래 테두리가 맡는다 — 여기에 또 그으면 두 줄로 겹친다 */
   /* ⚠ 스크롤 영역은 **padding box** 에서 잘린다 — 아래 여백을 padding 으로 주면 카드가 그 여백까지 흘러들어와
      카드 맨 아래 선에 딱 붙어 잘린다('밖으로 나간' 느낌의 원인). margin 으로 줘야 잘리는 자리가 안쪽으로 들어온다.
-     여기에 마스크로 끝을 흐려 '안쪽에서 자연스럽게 끝난다'로 읽히게 한다. */
-  #mapSelect .msList{flex:1 1 auto;min-height:0;padding:8px 8px 0;margin-bottom:5px;
-    -webkit-mask-image:linear-gradient(180deg,#000 calc(100% - 16px),transparent);
-    mask-image:linear-gradient(180deg,#000 calc(100% - 16px),transparent)}
+     ⛔ 끝을 흐리는 마스크는 뺐다(2026-08-18) — 안쪽에서 끝난다는 것은 여백이 이미 말한다. */
+  #mapSelect .msList{flex:1 1 auto;min-height:0;padding:8px 8px 0;margin-bottom:6px}
   /* 마을 채팅 시트 — 소셜 블록을 그대로 담는다(유즈맵에서 옮겨옴) */
   #twChat .msSocial.inTown{flex:1;min-height:0;margin-top:0;border:0;border-radius:0;background:none}
   /* 정렬 드롭다운(커스텀 HUD 메뉴) */
