@@ -2582,6 +2582,60 @@ async function groupLobby(){
     await step('유즈맵 선택 → 네모네모 모드 팝업', ()=>{ openMapSelect(); openModeSheet(USEMAPS.nemo_inf||USEMAPS.nemo);
     const mo=document.querySelector('#modeSheet .moCard'); assert(visible(mo),'moCard 안 보임');
     const w=mo.getBoundingClientRect().width; assert(w>200&&w<400,'moCard 폭 이상: '+w); closeModeSheet(); return 'w='+w; });
+  // ⚙ 게임 밖 설정(유즈맵 ☰ → .appCtx) — 게임 안 설정과 **같은 카드**를 문맥만 바꿔 쓴다
+  await step('유즈맵 설정: 프로필 머리줄 · 붉은 선 · 44px ✕ · 중립 ON', async ()=>{
+    openMapSelect(); await sleep(60); openAppSettings(); await sleep(120);
+    const card=document.querySelector('#settingsPop .setCard');
+    assert(visible($('settingsPop')),'설정이 안 열림');
+    // ① 내 프로필 한 줄 — 초상·닉은 기존 것(avatarHTML/myNick)을 그대로 쓴다(복제 금지)
+    const me=$('setMe'); assert(me && visible(me),'프로필 머리줄이 없음');
+    assert(me.querySelector('.fAva'),'프로필 초상이 avatarHTML 산출물이 아님');
+    assert((me.querySelector('.setMeN')||{}).textContent.indexOf(myNick())===0,'프로필 닉이 myNick() 과 다름');
+    // ② 배지 = 계정 상태. 게스트면 **버튼**이고 누르면 계정 연결 경로로 간다
+    const badge=me.querySelector('.setMeTag');
+    assert(badge,'계정 배지가 없음');
+    // 정식 계정이 **아닌** 모든 상태(계정 없음·게스트)에서 배지는 계정으로 가는 버튼이어야 한다
+    const acct=!!(AUTH.user && !AUTH.user.guest);
+    if(!acct) assert(badge.tagName==='BUTTON' && /setAcctGo/.test(badge.getAttribute('onclick')||''),
+      '계정이 없는데 배지가 계정 입구가 아님: '+badge.outerHTML.slice(0,60));
+    else assert(badge.tagName!=='BUTTON','정식 계정인데 배지가 버튼임');
+    // ③ 금색 스캔라인 → 붉은 헤어라인(이 화면 성격색). 금색은 재화·보상 전용이다
+    { const ti=getComputedStyle(card.querySelector('.setTitle'),'::after');
+      const cols=[...((ti.backgroundImage||'').matchAll(/rgba?\((\d+),\s*(\d+),\s*(\d+)/g))];
+      assert(cols.some(c=>+c[1]>=180 && +c[2]<=110 && +c[3]<=110),
+        '설정 제목 밑선이 붉지 않음(금색이 남았다): '+(ti.backgroundImage||'').slice(0,80)); }
+    // ④ 닫기 ✕ 터치 타겟 — 31.5×17.5px 이었다(§0 권고 44px 의 절반도 안 됨)
+    { const x=card.querySelector('.setX').getBoundingClientRect();
+      assert(x.width>=40 && x.height>=40,'✕ 터치 타겟이 작음: '+x.width.toFixed(1)+'×'+x.height.toFixed(1)); }
+    // ⑤ 켜짐을 빨강으로 칠하지 않는다 — 빨강은 위험·파괴·나가기다
+    { const sw=$('flag-chat'); if(!sw.classList.contains('on')) sw.click();
+      const g=getComputedStyle(sw).backgroundImage||'';
+      const m=[...g.matchAll(/rgba?\((\d+),\s*(\d+),\s*(\d+)/g)].map(c=>[+c[1],+c[2],+c[3]]);
+      assert(m.every(c=>c[0]-Math.max(c[1],c[2])<=25),'켜진 스위치가 빨강임: '+g.slice(0,80)); }
+    // ⑥ 게임 밖에만 있는 항목 — 진동·화면(지원 시)·닉네임·버전
+    assert(visible($('flag-vib')),'진동 스위치가 없음');
+    assert(visible($('si-nick')),'닉네임 변경 항목이 없음');
+    assert($('setVer').textContent==='v'+APP_VER,'버전 표기가 APP_VER 과 다름: '+$('setVer').textContent);
+    { const c=(getComputedStyle($('setVer')).color.match(/\d+/g)||[0,0,0]).map(Number);
+      assert(c[0]-Math.max(c[1],c[2])<=25,'버전 값이 빨강임(참고 값이지 강조가 아니다): '+getComputedStyle($('setVer')).color); }
+    assert(wakeSupported()===visible($('qrow-wake')),'화면 항상 켜기 줄이 지원 여부와 어긋남');
+    // ⑦ 새 스위치는 SND 초기값이 있어야 첫 탭이 헛돌지 않는다
+    for(const k of ['vib','wake']) assert(typeof SND[k+'On']==='boolean','SND.'+k+'On 초기값이 없음');
+    // ⑧ 닉네임 하위 팝업도 보관함에서 옮겨 온다(복사 금지)
+    { const body=$('body-nick'), st=$('setStash');
+      assert(body && body.parentNode===st,'닉네임 본문이 보관함에 없음');
+      openSetSub('nick'); await sleep(60);
+      assert($('body-nick')===body,'닉네임 본문을 복사해 두 번 만들었다');
+      assert($('setNickInp').value===myNick(),'닉네임 입력칸이 현재 닉으로 안 채워짐');
+      // 하위 팝업도 같은 문맥이어야 한다 — 안 물려주면 '닉네임 변경'만 금색 선인 채로 남는다
+      assert($('setSubPop').classList.contains('appCtx'),'하위 팝업이 게임 밖 문맥을 못 물려받음');
+      { const ti=getComputedStyle($('setSubPop').querySelector('.setTitle'),'::after');
+        const cols=[...((ti.backgroundImage||'').matchAll(/rgba?\((\d+),\s*(\d+),\s*(\d+)/g))];
+        assert(cols.some(c=>+c[1]>=180 && +c[2]<=110 && +c[3]<=110),'하위 팝업 제목 밑선이 붉지 않음'); }
+      closeSetSub(); }
+    closeSettings();
+    return '프로필·붉은 선·✕ 44px·중립 ON·항목 5';
+  });
   await step('방찾기 열림+목록', ()=>{ openRooms(); const rm=document.querySelector('#rooms .rmCard'); assert(visible(rm),'rmCard 안 보임');
     const n=$('roomList').children.length; assert(n>0,'방 목록 비어있음'); $('rooms').classList.add('hide'); return n+'개 방'; });
     // 마을: 월드 좌표계 + 카메라. 헤드리스는 rAF가 멈춰 있어 twStep(dt)을 직접 pump한다.
@@ -2905,7 +2959,19 @@ async function groupLobby(){
             const cyan=el=>{ const m=(getComputedStyle(el).color.match(/\d+/g)||[0,0,0]).map(Number);
               return m[2]>m[0]+50 && m[1]>m[0]+30; };   // 파랑·초록이 빨강보다 한참 높으면 청록이다
             assert(!cyan(dock.querySelector('.msChatSend')),'전송 버튼이 아직 청록임: '+getComputedStyle(dock.querySelector('.msChatSend')).color);
-            assert(!cyan(dock.querySelector('.msScopeLbl')),'범위 라벨이 아직 청록임: '+getComputedStyle(dock.querySelector('.msScopeLbl')).color); }
+            assert(!cyan(dock.querySelector('.msScopeLbl')),'범위 라벨이 아직 청록임: '+getComputedStyle(dock.querySelector('.msScopeLbl')).color);
+            // 내 말 = 왼쪽 2px **중립** 바(파티장과 같은 문법, 색만 중립). 옛 시안 이름은 되살리지 않는다
+            { addGlobalMsg(myNick(),'스모크 내 말','me','all');
+              const me=[...dock.querySelectorAll('.mcLine.me')].pop();
+              assert(me,'내 말 줄(.me)이 안 그려짐');
+              const af=getComputedStyle(me,'::after');
+              assert(af.content!=='none','내 말 표시가 없음');
+              assert(parseFloat(af.width)<=3,'내 말 표시 바가 2px 이 아님: '+af.width);
+              const bc=(af.backgroundColor.match(/\d+/g)||[0,0,0]).map(Number);
+              assert(Math.max(bc[0],bc[1],bc[2])-Math.min(bc[0],bc[1],bc[2])<=20,
+                '내 말 표시 바에 색이 들어감(중립이어야 한다): '+af.backgroundColor);
+              assert(!cyan(me.querySelector('.mcWho')),'내 말 이름이 다시 청록임: '+getComputedStyle(me.querySelector('.mcWho')).color);
+              me.remove(); } }
           setBottomTab('friend');
           { const row=dock.querySelector('.foRow');
             if(row){ const rs=getComputedStyle(row);
@@ -4179,9 +4245,10 @@ async function groupGame(){
     // ② 옛 아코디언(제자리 펼침)은 폐기 — 항목은 하위 팝업으로 연다
     assert(typeof setExpand==='undefined','옛 아코디언 setExpand 가 남아 있음');
     // 리스트에는 '뒤에 실제 화면이 붙은 것'만 둔다 — 껍데기 항목은 걷어냈다(2026-08-14).
-    const items=[...document.querySelectorAll('#settingsPop .setMenu .setItem')];
+    // ⚠ 게임 밖(.appCtx)에만 있는 항목(닉네임·버전)이 DOM 에는 늘 있다 — **보이는 것만** 센다
+    const items=[...document.querySelectorAll('#settingsPop .setMenu .setItem')].filter(e=>getComputedStyle(e).display!=='none');
     const keys=items.map(e=>(e.getAttribute('onclick')||'').replace(/[^a-z]/g,''));
-    assert(items.length===3,'설정 리스트는 3개여야 한다(비디오·임무·디스코드): '+items.length);
+    assert(items.length===3,'게임 안 설정 리스트는 3개여야 한다(비디오·임무·디스코드): '+items.length);
     for(const dead of ['acct','lang','patch','priv','ask'])
       assert(!keys.some(k=>k.indexOf('openSetSub'+dead)===0),'걷어낸 껍데기 항목이 남음: '+dead);
     // ③ 본문은 다시 만들지 않고 보관함(#setStash)에서 통째로 옮겨 온다 — 같은 노드여야 한다

@@ -563,6 +563,50 @@
   #settingsPop.appCtx .setCard{background:linear-gradient(180deg,rgba(25,25,25,.985),rgba(14,14,14,.99))}   /* 거의 불투명(겹침 방지) */
   #settingsPop.appCtx #si-mission,#settingsPop.appCtx #body-mission,#settingsPop.appCtx #qrow-spd,#settingsPop.appCtx #body-spd,#settingsPop.appCtx #setPauseBtn,#settingsPop.appCtx #setExit{display:none}
   #settingsPop:not(.appCtx) #setLogout{display:none}
+  /* 게임 안에서는 프로필 머리줄·닉네임·버전을 두지 않는다 — 전장 위 카드에 더 얹을 자리가 없다 */
+  #settingsPop:not(.appCtx) .setMe,#settingsPop:not(.appCtx) #si-nick,#settingsPop:not(.appCtx) #si-ver{display:none}
+  /* ══ 게임 밖 설정(유즈맵 ☰) — 2026-08-18 · H안 ══
+     ⛔ 금색 스캔라인을 뺐다: 금색은 DESIGN §2 에서 **재화·보상 전용**이고, 이 화면의 성격색은 빨강이다.
+        바로 뒤의 목록 카드·소셜 카드가 쓰는 붉은 헤어라인과 같은 값으로 맞춘다. */
+  /* ⚠ 하위 팝업(#setSubPop)에도 같이 건다 — `openSetSub` 가 부모의 `.appCtx` 를 그대로 옮겨 붙인다.
+     안 그러면 '닉네임 변경'만 금색 선인 채로 남는다(실제로 그랬다). */
+  #settingsPop.appCtx .setTitle::after,#setSubPop.appCtx .setTitle::after{
+    background:linear-gradient(90deg,transparent,rgba(255,59,59,.72) 18%,rgba(255,59,59,.72) 82%,transparent);
+    box-shadow:0 0 7px -1px rgba(255,59,59,.5)}
+  /* ⚠ 닫기 ✕ 의 터치 타겟이 31.5×17.5px 이었다 — §0 권고 44px 의 절반도 안 됐다.
+     글자 크기는 그대로 두고 패딩으로만 키우고, 음수 마진으로 제목줄 높이는 건드리지 않는다. */
+  #settingsPop.appCtx .setX,#setSubPop.appCtx .setX{width:44px;height:44px;padding:0;margin:-11px -11px -11px 0;
+    display:flex;align-items:center;justify-content:center}   /* 글리프 크기는 그대로 두고 상자만 44px */
+  /* ⛔ 켜짐을 빨강으로 칠하지 않는다 — 빨강은 위험·파괴·나가기다. 켜짐 = 중립 강조(밝은 면 + 흰 손잡이). */
+  #settingsPop.appCtx .setSw.on{background:linear-gradient(180deg,rgba(255,255,255,.24),rgba(255,255,255,.09)) padding-box,var(--metal-ring) border-box}
+  #settingsPop.appCtx .setSw.on>i{background:linear-gradient(180deg,#fff,#d6dde6)}
+  /* 두 판(즉시조작 · 리스트)을 한 판으로 — 구분선만으로 나눈다 */
+  #settingsPop.appCtx .setQuick{margin-bottom:0;clip-path:none;border-radius:var(--r-bar) var(--r-bar) 0 0}
+  #settingsPop.appCtx .setMenu{border-top:0;border-radius:0 0 var(--r-bar) var(--r-bar)}
+  #settingsPop.appCtx .setMenu .setItem:first-child{border-top:1px solid rgba(255,255,255,.07)}
+  /* 내 프로필 한 줄 — 초상·닉은 기존 것(avatarHTML·myNick)을 그대로 쓴다 */
+  .setMe{display:flex;align-items:center;gap:9px;margin-bottom:9px;padding:8px 10px;
+    border:1px solid rgba(255,255,255,.07);border-radius:var(--r-bar);background:linear-gradient(180deg,#0a0a0a,#000)}
+  .setMe .fAva{width:28px;height:28px;font-size:var(--fs-lg)}
+  .setMeN{flex:1;min-width:0;font-size:var(--fs-lg);font-weight:700;color:#e8eef5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .setMeN i{font-style:normal;font-size:var(--fs-sm);color:#7d8b98;margin-left:3px}
+  /* 배지 = 계정 상태. 게스트일 때만 **버튼**(계정 연결 입구)이고, 물성은 머리줄 버튼(.ptFind)과 같다. */
+  .setMeTag{flex:0 0 auto;font-family:inherit;font-style:normal;font-size:var(--fs-xs);font-weight:700;color:#aeb7c1;
+    padding:5px 8px;border:1px solid var(--metal-edge);border-radius:var(--r-bar);background:rgba(255,255,255,.045)}
+  .setMeTag.go{cursor:pointer;color:#dfe4ea}
+  .setMeTag.go:active{opacity:.75;transform:translateY(1px)}
+  /* ⚠ `.setItem b` 가 `--setAcc`(게임 밖 = 빨강)로 칠한다 — 여기서 이겨야 버전이 붉게 남지 않는다.
+     버전은 강조할 값이 아니라 참고 값이다. */
+  .setItem b.setVer{font-family:var(--font-num);font-size:var(--fs-md);font-weight:700;color:#7d8b98}
+  #si-ver{cursor:default}
+  /* 닉네임 변경 하위 팝업 */
+  .setNickInp{width:100%;height:40px;padding:0 10px;box-sizing:border-box;font-family:inherit;font-size:var(--fs-lg);
+    color:var(--txt);background:rgba(255,255,255,.04);border:1px solid var(--metal-edge);border-radius:var(--r-bar);outline:none}
+  .setNickInp:focus{border-color:rgba(255,255,255,.28)}
+  .setNickSave{width:100%;height:42px;margin-top:9px;cursor:pointer;font-family:inherit;font-size:var(--fs-lg);font-weight:800;
+    color:#dfe7f0;border:1px solid transparent;border-radius:var(--r-bar);
+    background:var(--nav-plate) padding-box,var(--metal-ring) border-box}
+  .setNickSave:active{transform:translateY(1px)}
   .setLogout{margin-top:8px;width:100%;height:44px;padding:0;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-lg);font-weight:800;letter-spacing:.3px;cursor:pointer;
     color:#dfe7f0;background:rgba(255,255,255,.07);border:1px solid var(--glass-edge);transition:background .16s,border-color .16s}
   .setLogout:active{transform:translateY(1px);background:rgba(255,255,255,.1)}
@@ -3796,7 +3840,12 @@
   .msChat .mcLine .mcWho{font-weight:800}
   .msChat .mcLine .mcSep{color:#6b7682;font-weight:700}
   .msChat .mcT{float:right;margin-left:8px;font-style:normal;font-family:var(--font-num);font-size:var(--fs-xs);color:#5f6a76}
-  .msChat .mcLine.me .mcWho{color:#7fd0ff}
+  /* 내 말 = **왼쪽 2px 중립 바**. 파티장 표시와 같은 문법이고 색만 중립이다.
+     ⛔ 시안(옛 `.me .mcWho{color:#7fd0ff}`)은 쓰지 않는다 — §2 에서 시안은 '지금 선택된 것' 전용이고 화면당 한 곳이다.
+     DESIGN 의 '중립 강조'(밝은 선 + 흰 글자) 그대로. ⚠ `::before` 는 쓰지 않는다 — 줄머리 프리픽스를 없앤 자리라
+     되살아난 것처럼 보이고 스모크도 그렇게 읽는다. */
+  .msChat .mcLine.me{position:relative;padding-left:7px}
+  .msChat .mcLine.me::after{content:'';position:absolute;left:0;top:2px;bottom:2px;width:2px;background:rgba(255,255,255,.30)}
   .msChat .mcLine.sc-party{color:#ffb454}
   .msChat .mcLine.sc-party .mcWho{color:#ffc266}
   .msChat .mcLine.sys{color:#7d8b98;font-style:italic}
@@ -5025,6 +5074,8 @@
   <div id="settingsPop" class="hide" onclick="if(event.target===this)closeSettings()">
     <div class="setCard">
       <div class="setTitle"><span>설정</span><div class="setX" onclick="closeSettings()"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></div></div>
+      <!-- 내 프로필 한 줄 — 게임 밖(.appCtx)에서만 보인다. 배지가 계정 연결 입구다. -->
+      <div class="setMe" id="setMe"></div>
       <!-- 상단 = 바로 조작하는 것(소리 토글 · 배속). 나머지는 아래 리스트 → 하위 팝업 -->
       <div class="setQuick">
         <div class="setQRow"><span>효과음</span>
@@ -5033,6 +5084,10 @@
           <button class="setSw on" id="flag-bgm" onclick="event.stopPropagation();toggleSnd('bgm')"><i></i></button></div>
         <div class="setQRow"><span>채팅 표시</span>
           <button class="setSw on" id="flag-chat" onclick="event.stopPropagation();toggleSnd('chat')"><i></i></button></div>
+        <div class="setQRow"><span>진동</span>
+          <button class="setSw on" id="flag-vib" onclick="event.stopPropagation();toggleSnd('vib')"><i></i></button></div>
+        <div class="setQRow" id="qrow-wake"><span>화면 항상 켜기</span>
+          <button class="setSw" id="flag-wake" onclick="event.stopPropagation();toggleSnd('wake')"><i></i></button></div>
         <div class="setQRow" id="qrow-spd"><span>게임 배속 <b class="spdNow" id="spdNow">1x</b></span>
           <button class="setQGo" onclick="openSetSub('spd')">변경</button></div>
       </div>
@@ -5040,6 +5095,8 @@
       <div class="setItem" onclick="openSetSub('vid')"><span>비디오 설정</span><b class="setArr">›</b></div>
       <div class="setItem" id="si-mission" onclick="openSetSub('mission')"><span>임무 목표</span><b class="setArr">›</b></div>
       <div class="setItem" onclick="openSetSub('disc')"><span>디스코드</span><b class="setArr">›</b></div>
+      <div class="setItem" id="si-nick" onclick="openSetSub('nick')"><span>닉네임 변경</span><b class="setArr">›</b></div>
+      <div class="setItem" id="si-ver"><span>버전</span><b class="setVer" id="setVer"></b></div>
       </div>
       <!-- 옮겨 쓰는 본문 보관함 — 하위 팝업이 열릴 때 여기서 꺼내 쓰고 닫힐 때 돌려놓는다 -->
       <div id="setStash" style="display:none">
@@ -5052,6 +5109,12 @@
         <div class="setHint" id="qHint"></div>
       </div>
         <div class="setBody" id="body-mission">
+      </div>
+        <div class="setBody" id="body-nick">
+        <div class="setRowLbl">새 닉네임</div>
+        <input class="setNickInp" id="setNickInp" type="text" maxlength="12" autocomplete="off" placeholder="2~12자">
+        <div class="setHint" id="setNickHint"></div>
+        <button class="setNickSave" onclick="setNickSave()">변경하기</button>
       </div>
         <div class="setBody" id="body-spd">
         <div class="voteCols">
@@ -14581,18 +14644,61 @@ function openAppSettings(){ const p=document.getElementById('settingsPop'); if(!
   // 계정 연결은 '클라우드에 올라간 게스트'만 할 수 있다(로컬 게스트는 붙일 uid 가 없다)
   const lk=document.getElementById('setLink'); if(lk) lk.style.display=(typeof authCanLink==='function'&&authCanLink())?'':'none';
   if(typeof syncSndUI==='function') syncSndUI();
+  setPaintMe();
+  { const v=document.getElementById('setVer'); if(v) v.textContent='v'+APP_VER; }
   if(typeof applyVideo==='function') applyVideo(); }   // 소리는 상단 고정 스위치라 따로 펼칠 것이 없다
+// ── 설정 머리줄의 내 프로필 — 배지가 계정 상태이자 **계정 연결 입구**다 ──
+//   ⚠ 초상·닉은 만들지 말고 기존 것을 쓴다: avatarHTML() · myNick() (단일 소스 규칙)
+function setPaintMe(){ const el=document.getElementById('setMe'); if(!el) return;
+  const u=(typeof AUTH!=='undefined' && AUTH.user) || null;
+  const nick=(typeof myNick==='function')?myNick():'나';
+  const tag=(u&&u.tag)?('#'+u.tag):'';
+  // ⚠ '계정 없음'과 '정식 계정'을 가르는 것은 u 의 유무다 — u 가 null 인데 정식 계정으로 읽으면
+  //   계정이 없는 사람에게 연결 입구가 사라진다(실제로 그랬다).
+  const acct=!!(u && !u.guest);
+  // 정식 계정이면 배지는 그냥 표시다(누를 곳이 없다). 그 외에는 눌러서 계정으로 간다.
+  const badge = acct ? '<em class="setMeTag">계정</em>'
+    : '<button class="setMeTag go" onclick="setAcctGo()">'
+      +(!u ? '로그인' : ((typeof authCanLink==='function'&&authCanLink()) ? '게스트 연결' : '게스트'))+' ›</button>';
+  el.innerHTML=(typeof avatarHTML==='function'?avatarHTML(nick,''):'')
+    +'<span class="setMeN">'+escHtml(nick)+(tag?'<i>'+escHtml(tag)+'</i>':'')+'</span>'+badge; }
+// 게스트 → 계정. 클라우드 게스트는 uid 를 그대로 두고 붙일 수 있고(진행도 유지),
+// 로컬 게스트(supabase 폴백)는 붙일 uid 가 없다 — 그 사실을 숨기지 않고 알린다.
+function setAcctGo(){
+  if(typeof authCanLink==='function' && authCanLink()){ closeSettings(); openAuthLink(); return; }
+  toast('이 게스트는 이 기기에만 저장돼 있어 진행도를 옮길 수 없어요. 새 계정으로 시작합니다.');
+  closeSettings(); if(typeof openAuth==='function') openAuth(); }
+// 닉네임 변경 — 서버(auth 메타 + profiles.nick)와 로컬 세션을 함께 맞춘다.
+//   ⚠ 프레즌스에도 다시 실어야 남들 목록의 내 이름이 바뀐다(sbEnsureProfile 과 같은 마무리).
+async function setNickSave(){
+  const inp=document.getElementById('setNickInp'), hint=document.getElementById('setNickHint'); if(!inp) return;
+  const v=(inp.value||'').trim();
+  if(v.length<2 || v.length>12){ if(hint) hint.textContent='닉네임은 2~12자여야 합니다.'; return; }
+  if(v===myNick()){ closeSetSub(); return; }
+  if(hint) hint.textContent='변경 중…';
+  try{
+    if(typeof sbReady==='function' && sbReady()){
+      const up=await _sb.auth.updateUser({ data:{ nick:v } }); if(up.error) throw up.error;
+      const pr=await _sb.from('profiles').update({ nick:v }).eq('id', AUTH.user.uid); if(pr.error) throw pr.error; }
+    AUTH.user.nick=v; try{ _lsSet('nm_session', AUTH.user); }catch(e){}
+    if(typeof updateMyNameTag==='function') updateMyNameTag();
+    if(typeof RT!=='undefined' && RT.active && RT.lobby){ try{ RT.lobby.track(_rtTrackPayload()); }catch(e){} }
+    setPaintMe(); closeSetSub(); toast('닉네임을 바꿨어요');
+  }catch(e){ if(hint) hint.textContent=(e.message||'변경에 실패했어요'); } }
 // 설정 하위 팝업 — 리스트 항목 하나당 한 화면.
 // ⚠ 본문은 복사하지 않고 보관함(#setStash)에서 통째로 옮겨 쓴 뒤 닫을 때 돌려놓는다.
 // 껍데기 항목(계정·언어·패치노트·개인정보·문의)은 걷어냈다 — 뒤에 붙은 것이 없으면 리스트에 두지 않는다.
 //   채팅 표시는 '열어 보는 화면'이 아니라 껐다 켜는 것이라 상단 스위치로 올렸다.
-const SET_SUB={ vid:'비디오 설정', mission:'임무 목표', disc:'디스코드', spd:'게임 배속' };
-const SET_SUB_BODY={ vid:'body-vid', mission:'body-mission', spd:'body-spd' };   // 옮겨 쓰는 기존 본문
+const SET_SUB={ vid:'비디오 설정', mission:'임무 목표', disc:'디스코드', spd:'게임 배속', nick:'닉네임 변경' };
+const SET_SUB_BODY={ vid:'body-vid', mission:'body-mission', spd:'body-spd', nick:'body-nick' };   // 옮겨 쓰는 기존 본문
 let _setSubKey='';
 function openSetSub(k){ const bd=document.getElementById('setSubBody');
   if(!bd||!SET_SUB[k]) return;
   closeSetSub();                                   // 열려 있는 것을 먼저 돌려놓는다
   _setSubKey=k;
+  // 문맥(게임 밖 = .appCtx)을 그대로 물려준다 — 껍데기 규칙(붉은 선·44px ✕)이 하위 팝업에도 걸린다
+  { const par=document.getElementById('settingsPop'), sub=document.getElementById('setSubPop');
+    if(par&&sub) sub.classList.toggle('appCtx', par.classList.contains('appCtx')); }
   document.getElementById('setSubTitle').textContent=SET_SUB[k];
   const moveId=SET_SUB_BODY[k];
   if(moveId){ const el=document.getElementById(moveId);
@@ -14600,6 +14706,8 @@ function openSetSub(k){ const bd=document.getElementById('setSubBody');
   else bd.innerHTML='<div class="setSoon">준비 중입니다</div>';
   if(k==='mission' && typeof _renderMission==='function') _renderMission();
   if(k==='spd' && typeof renderVote==='function') renderVote();
+  if(k==='nick'){ const i=document.getElementById('setNickInp'), h=document.getElementById('setNickHint');
+    if(i) i.value=myNick(); if(h) h.textContent=''; }
   popShow('setSubPop'); playSfx('ui_open'); }
 function closeSetSub(){ const bd=document.getElementById('setSubBody');
   if(!bd) return;
@@ -14697,12 +14805,31 @@ function _sndPaintBar(k){ const fb=document.getElementById('flag-'+k);
 function toggleSnd(key){ SND[key+'On']=!SND[key+'On']; _sndSave();
   if(key==='bgm') _bgmApplyVol();
   if(key==='chat') _chatApplyShow();
+  if(key==='wake') wakeApply();
   _sndPaintBar(key); }
+// ── 햅틱 — UI 탭에 짧은 진동. 소리와 **독립**이다(음소거 중에도 진동은 남는다) ──
+//   ⚠ playSfx 안쪽이 아니라 맨 앞에서 부른다 — 볼륨 0이면 playSfx 가 곧바로 return 하기 때문.
+function hapt(ms){ if(SND.vibOn===false) return;
+  try{ if(navigator.vibrate) navigator.vibrate(ms||9); }catch(e){} }
+// ── 화면 항상 켜기(Wake Lock) ──
+//   ⚠ 잠금은 탭이 숨으면 브라우저가 **자동으로 푼다** — 돌아왔을 때 다시 잡아 줘야 켜 둔 것이 유지된다.
+//   ⚠ 지원하지 않는 브라우저에서는 스위치 줄 자체를 감춘다(꺼도 켜도 아무 일 없는 스위치를 두지 않는다).
+let _wakeLock=null;
+function wakeSupported(){ try{ return !!(navigator.wakeLock && navigator.wakeLock.request); }catch(e){ return false; } }
+async function wakeApply(){
+  if(!wakeSupported()) return;
+  if(SND.wakeOn===false || !SND.wakeOn){ if(_wakeLock){ try{ await _wakeLock.release(); }catch(e){} _wakeLock=null; } return; }
+  if(_wakeLock) return;
+  try{ _wakeLock=await navigator.wakeLock.request('screen');
+    _wakeLock.addEventListener('release', function(){ _wakeLock=null; }); }
+  catch(e){ _wakeLock=null; console.warn('wakeLock', e.message||e); } }
+document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible') wakeApply(); });
 // 채팅 끄기 = 플레이어 채팅·입력창·로비 채팅만 감춘다.
 //   시스템 알림(.cmsg.sys)은 뽑기 결과·패배 경고를 나르므로 끄지 않는다.
 function _chatApplyShow(){ if(document.body) document.body.classList.toggle('chatOff', SND.chatOn===false); }
 // 열 때 SND 값으로 스위치 3개 동기화
-function syncSndUI(){ ['sfx','bgm','chat'].forEach(_sndPaintBar); }
+function syncSndUI(){ ['sfx','bgm','chat','vib','wake'].forEach(_sndPaintBar);
+  const wr=document.getElementById('qrow-wake'); if(wr) wr.style.display=wakeSupported()?'':'none'; }
 // ── 채팅(메인-하단 사이) — 로컬 입력 + 다른 플레이어 가짜 메시지(임시) ──
 function escHtml(s){ return String(s).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
 let _lastSysMsg='', _lastSysT=-1e9;   // 시스템 알림 중복 억제 상태(toast·addChat 공통)
@@ -15284,6 +15411,8 @@ async function authFindPw(){ const err=document.getElementById('authErr'); if(!e
 function doLogout(){ _authLink=false; if(typeof hbEnd==='function') hbEnd();   // 전투 완전 종료 — 배경 시뮬이 다음 계정까지 따라가지 않게
   if(typeof bgmStop==='function') bgmStop(); if(typeof rtStop==='function') rtStop(); authSignOut().then(openAuth); }
 // ── 유즈맵 데이터 ──
+// ⚠ 설정 > 버전에 그대로 뜬다. package.json 의 version 과 손으로 맞춘다(빌드 단계가 없는 단일 파일이라 자동화가 없다).
+const APP_VER='1.0.0';
 const MAPS=Object.values(USEMAPS);   // 맵 선택 화면 목록(레지스트리에서 파생)
 // ── 라인아트 아이콘(인게임과 동일 스타일: viewBox 24, stroke=currentColor) ──
 const _svg=(b,extra)=>'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"'+(extra||'')+'>'+b+'</svg>';
@@ -15975,7 +16104,9 @@ const BGM_DIR = 'assets/audio/bgm/';
 const _bgm = { audio:null, set:null, pendingGesture:false };
 let _bgmLast = -1;
 // 전역 사운드 설정(로비/로그인/인게임 공통). 100 = 현재 기준 볼륨.
-const SND = { bgm:100, sfx:100, bgmOn:false, sfxOn:false, chatOn:true };   // chatOn = 플레이어 채팅 표시   // (임시) 기본 음소거 — 되돌리려면 bgmOn/sfxOn을 true로
+// ⚠ 새 스위치를 넣을 때는 **여기 초기값을 반드시 같이 넣는다** — 없으면 `!undefined`=true 라
+//   첫 탭이 '켜짐 → 켜짐'으로 헛돌고 스위치가 한 번 안 먹는다.
+const SND = { bgm:100, sfx:100, bgmOn:false, sfxOn:false, chatOn:true, vibOn:true, wakeOn:false };   // chatOn = 플레이어 채팅 표시 · vibOn = 햅틱 · wakeOn = 화면 항상 켜기   // (임시) 기본 음소거 — 되돌리려면 bgmOn/sfxOn을 true로
 (function(){ try{ const s=JSON.parse(localStorage.getItem('nm_snd')); if(s&&typeof s==='object') Object.assign(SND,s); }catch(e){} SND.bgmOn=false; SND.sfxOn=false; _chatApplyShow(); })();   // (임시) 시작 시 강제 음소거 — 되돌릴 때 이 강제 두 줄만 제거
 function _sndSave(){ try{ localStorage.setItem('nm_snd', JSON.stringify(SND)); }catch(e){} }
 function _bgmTracks(){ return BGM_SETS[_bgm.set] || []; }
@@ -16037,7 +16168,8 @@ const SFX_GAIN = { buy_unit:0.38, enemy_spawn:1.2, death_terran:0.3, death_zerg:
   attack_dragoon:0.30, attack_archon:0.30, attack_photon:0.30,                                  // 프로토스 공격음(조금 키움)
   attack_ghost:0.14, attack_marine:0.14, attack_goliath:0.14, attack_turret:0.14 };             // 테란 공격음(조금 줄임). 기타 기본 0.18
 // 종류별 재생. 파일 없으면: UI(ui_*)는 클릭음으로 폴백, 게임 이벤트는 무음(파일 추가 시 자동 활성화).
-function playSfx(name){ const g=(SFX_GAIN[name]!=null)?SFX_GAIN[name]:((typeof name==='string'&&name.indexOf('attack_')===0)?0.18:1);
+function playSfx(name){ if(typeof name==='string' && name.indexOf('ui_')===0) hapt(9);   // 햅틱은 소리보다 먼저 — 음소거여도 진동은 남는다
+  const g=(SFX_GAIN[name]!=null)?SFX_GAIN[name]:((typeof name==='string'&&name.indexOf('attack_')===0)?0.18:1);
   const v=_sfxVol()*g; if(v<=0) return;
   if(!_sfx.ctx) _sfxInit(); const ctx=_sfx.ctx; if(!ctx) return;
   if(ctx.state==='suspended'){ try{ ctx.resume(); }catch(e){} }

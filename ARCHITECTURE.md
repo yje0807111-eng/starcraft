@@ -332,6 +332,11 @@ node test/bench-strike.mjs 400 80 4   # 대규모 전투 렌더 벤치(유닛수
   - ⚠ 서버 `parties` 테이블에는 이름·공개 칼럼이 없어 지금은 **로컬 게시판**(임시친구 `_tempFriends`와 같은 결)이다. 실연동은 `parties`에 `name`/`open`을 추가한 뒤 `pbRooms()`/`pbJoin()` 둘만 갈아 끼우면 된다.
   - 팝업 껍데기는 **`_lobbyOv(id, onClose)` 하나**로 모았고 `#phone`에 붙인다(`.ptInviteOv.top`, z-index 110) — 소셜은 유즈맵 도크와 마을 시트를 오가므로 화면 하나에 매달면 반대쪽에서 안 보인다. `showAppScreen`이 화면을 바꿀 때 이 팝업들을 함께 접는다(안 접으면 `#phone`에 남아 다음 화면을 덮는다).
   - ⚠ 공용 카드 면(`.cpCard` 계열)은 반투명이다 — 유즈맵 목록 위에 뜨는 `.ptInviteCard`는 뒤 카드가 글자 사이로 비쳐 못 읽는다. 이 카드만 면을 불투명하게 덮었다.
+- **게임 밖 설정(`#settingsPop.appCtx`)은 게임 안 설정과 같은 카드**를 문맥 클래스 하나로 갈라 쓴다(2026-08-18 · H안). 게임 밖에만 있는 것 = **내 프로필 머리줄(`#setMe`) · 진동 · 화면 항상 켜기 · 닉네임 변경 · 버전**, 게임 안에만 있는 것 = 임무 목표 · 배속 · 일시정지 · 나가기. 둘 다 `#settingsPop(:not).appCtx` 선택자로만 갈린다 — **두 번째 설정 화면을 만들지 말 것**.
+  - **프로필 배지가 계정 연결 입구다**(`setAcctGo()`). 정식 계정이면 `계정`(표시만), 클라우드 게스트면 `게스트 연결 ›` → `openAuthLink()`(uid 유지 → 진행도 따라옴), 로컬 게스트·미로그인은 사실대로 알리고 `openAuth()`. ⚠ `AUTH.user` 가 null 인 상태를 '정식 계정'으로 읽으면 계정 없는 사람에게서 입구가 사라진다.
+  - ⚠ **하위 팝업(`#setSubPop`)은 `openSetSub` 가 부모의 `.appCtx` 를 옮겨 붙여** 껍데기 규칙(붉은 헤어라인 · 44px ✕)을 물려받는다. 안 하면 하위 팝업만 금색 선으로 남는다.
+  - ⚠ **새 스위치는 `SND` 초기값을 같이 넣는다** — 없으면 `!undefined`=true 라 첫 탭이 헛돈다. 진동은 `playSfx()` **맨 앞**에서 `hapt()` 로 낸다(안쪽에 두면 음소거일 때 진동도 죽는다). 화면 항상 켜기는 `wakeSupported()` 가 거짓이면 **줄 자체를 감춘다**.
+  - 버전은 `APP_VER` 하나가 소스다 — 빌드 단계가 없으니 `package.json` 과 손으로 맞춘다.
 - ⚠ **`.curBar.bare`는 click-through다**(`pointer-events:none`, `.res`·`.hudSet`만 되살림). 되살릴 자식을 빠뜨리면 그 UI는 '눌러도 아무 일 없고 뒤 화면이 대신 반응'한다 — 설정(☰ `#curSettingsBtn`)이 이 때문에 HOME·마을·유즈맵·상점·정비 다섯 화면에서 죽어 있었고, 클릭이 `#homeScreen`까지 내려가 캐릭터가 그리로 걸어갔다. **필드 탭 화이트리스트의 전제('UI는 자식이라 자동 제외')가 click-through 레이어에서는 깨진다** — `pointer-events:none`을 새로 줄 때마다 여기를 볼 것. 또 `#curBar`의 설정은 `openAppSettings()`(앱용)를 불러야 한다. `openSettings()`는 인게임용이라 HOME에서도 임무 목표·배속·게임 나가기가 뜬다.
 - ⚠ **`applyVideo()`와 `fxLevel()`의 기본값을 맞출 것.** `fxLevel()`은 `G.opt.fx` 미설정을 `'full'`로 보는데 `applyVideo()`만 `G.opt.fx!=='full'`로 봐서, fx가 아직 없는 새 프로필은 **설정을 한 번 여는 것만으로** `body.lite`(`box-shadow`·`backdrop-filter` 전부 `none!important`)가 켜졌다 — 화면엔 '고화질'이라 떠 있는데 이펙트만 사라졌다. 지금은 둘 다 `fxLevel()`을 쓴다.
 - **🎥 가장자리 끌기 = 배치 고스트를 화면 끝으로 끌면 카메라가 따라간다**(2026-08-12). 방향 판정은 **`edgePush(fx,fy)` 하나**를 HOME 사냥터(`hbEdgePan`)와 관리자 건설 화면(`techEdgePan`)이 함께 쓴다 — 상수도 `EDGE_PAD`/`EDGE_SPD` 공용.
