@@ -5090,6 +5090,37 @@ async function groupSandbox(){
     assert(cc[0].classList.contains('cr') && cc[1].classList.contains('en'),'미네랄이 윗줄·가스가 아랫줄이 아님');
     assert(c.scrollHeight-c.clientHeight<=0,'건물 카드 안에서 내용이 넘침');
     return 'ok'; });
+  // 머리줄이 두꺼워지면 그만큼 아래 그리드가 눌린다 — 제목·HP 는 한 줄, 조작 버튼은 판 밖으로.
+  await step('건물 프로필: 머리줄 한 줄 · 조작 버튼은 판 밖 · 마나는 왼쪽', async()=>{
+    switchTab('Build', document.querySelector('.tab[data-tab="Build"]')); await sleep(300);
+    skipIf(!G.tech,'건설 상태 없음');
+    const body=$('btSheetBody'), pick=(f)=>{ f(); G.tech.sheet={open:true,sec:'ent'}; techPanelRender(); };
+    const wk=(G.tech.ents||[]).find(e=>e.type==='worker'), bl=(G.tech.ents||[]).find(e=>e.type==='bldg');
+    skipIf(!wk||!bl,'일꾼/건물 없음');
+    pick(()=>{ G.tech.sel=null; G.tech.selU=[wk.eid]; }); await sleep(220);
+    const gWk=body.querySelector('.cgGrid').getBoundingClientRect().height;
+    pick(()=>{ G.tech.selU=[]; G.tech.sel=bl.eid; }); await sleep(220);
+    const nm=body.querySelector('.cgN'), hp=body.querySelector('.cgHpsh'), head=body.querySelector('.cgHead');
+    assert(nm&&hp,'제목/HP 가 없음');
+    const nr=nm.getBoundingClientRect(), hr=hp.getBoundingClientRect();
+    assert(hr.left>=nr.right-1,'HP 가 제목 오른쪽이 아님: 제목 '+nr.right.toFixed(1)+' / HP '+hr.left.toFixed(1));
+    assert(Math.min(nr.bottom,hr.bottom)-Math.max(nr.top,hr.top)>0,'제목과 HP 가 같은 줄이 아님(머리줄이 두 줄)');
+    // 일꾼 스텝퍼·랠리·부양은 머리줄이 아니라 판 밖 오른쪽 위
+    const to=body.querySelector('.cgTopOut'); assert(to,'조작 버튼 묶음(.cgTopOut)이 없음');
+    const cg=body.querySelector('.cmdG').getBoundingClientRect();
+    assert(to.getBoundingClientRect().bottom<=cg.top+0.5,'조작 버튼이 판 안에 있음');
+    assert(!head.querySelector('.cgGasAuto,.cgRally,.cgLift,.cgSelAll'),'조작 버튼이 아직 머리줄 안에 있음');
+    // 머리줄이 얇아진 만큼 그리드는 일꾼 프로필보다 짧지 않아야 한다(전엔 88 vs 97 로 눌렸다)
+    const gB=body.querySelector('.cgGrid').getBoundingClientRect().height;
+    assert(gB>=gWk-4,'건물 프로필 그리드가 일꾼보다 짧음: '+gB.toFixed(1)+' vs '+gWk.toFixed(1));
+    // 🔮 마나는 머리줄이 아니라 왼쪽 정보 구역(스탯)이다
+    assert(!body.querySelector('.cgHpsh .env'),'마나가 머리줄에 있음');
+    { const mid=Object.keys(U).find(k=>U[k].energy>0); skipIf(!mid,'마나 유닛 없음');
+      const st=_techUnitStatList({hp:100,atk:10,rng:5}, mid, {en:35,maxEn:U[mid].energy});
+      assert(st.some(r=>r[0]==='마나'),'마나 유닛인데 왼쪽 스탯에 마나가 없음: '+JSON.stringify(st));
+      const st0=_techUnitStatList({hp:100,atk:10,rng:5}, 'worker_human', null);
+      assert(!st0.some(r=>r[0]==='마나'),'마나 없는 유닛에 마나 줄이 생김'); }
+    return '머리줄 '+head.getBoundingClientRect().height.toFixed(0)+'px · 그리드 '+gB.toFixed(0)+'px'; });
   // 관리자 건설 탭에서 병영을 고르면 레인저·화력병·의무병·저격수 카드가 실제로 그려져야 한다.
   await step('관리자 건설: 병영 생산 카드', async()=>{
     switchTab('Build', document.querySelector('.tab[data-tab="Build"]')); await sleep(400);

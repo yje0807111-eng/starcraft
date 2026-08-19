@@ -1453,14 +1453,21 @@
   .cmdG[data-mode="prod"]{--ca:#5cd6ff;--caG:rgba(92,214,255,.45);--caS:rgba(92,214,255,.5);--caL:#dff4ff}
   .cmdG[data-mode="build"]{--ca:var(--gold);--caG:rgba(255,210,74,.45);--caS:rgba(255,210,74,.5);--caL:var(--gold-lt)}
   .cmdG[data-mode="boss"]{--ca:#ff5c6e;--caG:rgba(255,92,110,.45);--caS:rgba(255,92,110,.5);--caL:#ffd6db}   /* 보스 시트 = 붉은 강조 */
+  .cmdG{position:relative}
+  /* 건물 조작(일꾼 스텝퍼·랠리·부양)과 전체지정은 **판 밖 오른쪽 위**에 띄운다.
+     머리줄 안에 두면 버튼 높이(38px)가 머리줄을 밀어 올려 그리드가 그만큼 짧아졌다. */
+  .cmdG .cgTopOut{position:absolute;right:0;bottom:calc(100% + 12px);display:flex;align-items:center;gap:6px;z-index:31;pointer-events:auto}
   .cmdG .cgHead{display:flex;align-items:center;gap:9px;padding:5px 2px 9px;position:relative;flex:none}
   .cmdG .cgHead::after{content:'';position:absolute;left:2px;right:6px;bottom:0;height:1px;background:linear-gradient(90deg,var(--caS),transparent 72%)}
   /* 머리줄 초상(.cgPort)은 폐지했다(2026-08-14) — 제목은 글자 하나로 읽는다. 모델의 icon 은 그대로 두되 그리지 않는다.
      ⚠ 되살릴 거면 renderCmdGrid 의 머리줄 마크업도 같이 되돌릴 것(여기 CSS만 넣으면 아무 데도 안 붙는다). */
-  .cmdG .cgTtl{flex:1;min-width:0} .cmdG .cgN{font-size:var(--fs-xl);font-weight:800;color:#fff;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* 제목과 HP/실드는 **같은 줄**이다. 세로로 쌓으면 머리줄이 그만큼 두꺼워지고 아래 그리드가 눌린다
+     (실측: 일꾼 42.8px ↔ 건물 52px → 그리드 97.2 ↔ 88). 설명 줄(.cgS)만 아래로 내린다. */
+  .cmdG .cgTtl{flex:1;min-width:0;display:flex;align-items:baseline;flex-wrap:wrap;gap:0 8px}
+  .cmdG .cgN{font-size:var(--fs-xl);font-weight:800;color:#fff;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
   .cmdG .cgN .nsub{font-size:10px;font-weight:700;color:#9fb0c2;text-shadow:none;margin-left:3px}   /* 이름 옆 작은 괄호 수치(라바 수 등) */
-  .cmdG .cgS{margin-top:1px;font-size:var(--fs-xs);color:var(--cgDim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .cmdG .cgS b{color:#cfe0f5;font-weight:700}
-  .cmdG .cgHpsh{margin-top:2px;display:flex;gap:9px;font-family:var(--font-num);font-weight:800;font-size:12.5px;line-height:1}
+  .cmdG .cgS{flex-basis:100%;margin-top:1px;font-size:var(--fs-xs);color:var(--cgDim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .cmdG .cgS b{color:#cfe0f5;font-weight:700}
+  .cmdG .cgHpsh{flex:none;display:flex;gap:9px;font-family:var(--font-num);font-weight:800;font-size:12.5px;line-height:1}
   .cmdG .cgHpsh .hpv{color:#7ee081} .cmdG .cgHpsh .shv{color:#8fd8ff} .cmdG .cgHpsh .env{color:#b06bff}
   .cmdG .cgHpsh .stAb{font-style:normal;font-size:8.5px;font-weight:700;opacity:.7;margin-right:2px;vertical-align:1px;letter-spacing:.3px}   /* S/H/E 약자 프리픽스(아이콘 대체) */
   .cmdG .cgPill{flex:none;align-self:flex-start;font:800 9px/1 sans-serif;letter-spacing:.5px;padding:4px 6px;border-radius:5px;color:var(--caL);background:rgba(255,255,255,.04);border:1px solid var(--caS)}
@@ -13253,8 +13260,10 @@ function _mainPort(u){ return unitPortraitHTML(u.gmodel||u.id); }
 function _mainMaxHp(u){ const d=U[u.id]||{}, m=u.hero?HERO_STAT_MUL:1; return u.maxHp||Math.round((d.hp||0)*m); }
 function _mainMaxSh(u){ const d=U[u.id]||{}, m=u.hero?HERO_STAT_MUL:1; return (u.maxSh!=null)?u.maxSh:Math.round((d.shield||0)*m); }
 function _mainMaxEn(u){ const d=U[u.id]||{}; return (u.maxEn!=null)?u.maxEn:(d.energy||0); }
-function _mainHpsh(u){ const mh=_mainMaxHp(u), ms=_mainMaxSh(u), me=_mainMaxEn(u);
-  return _cgHpShStr(Math.round(u.hp!=null?u.hp:mh)+'/'+mh, ms>0?(Math.round(u.sh!=null?u.sh:ms)+'/'+ms):0, me>0?(Math.round(u.en!=null?u.en:me)+'/'+me):0); }
+// ⚠ 마나는 머리줄에 넣지 않는다 — 제목 옆 한 줄에 HP·실드까지가 한계고, 마나는 왼쪽 정보 구역(스탯)이 자리다.
+function _mainHpsh(u){ const mh=_mainMaxHp(u), ms=_mainMaxSh(u);
+  return _cgHpShStr(Math.round(u.hp!=null?u.hp:mh)+'/'+mh, ms>0?(Math.round(u.sh!=null?u.sh:ms)+'/'+ms):0, 0); }
+function _mainManaStat(u){ const me=_mainMaxEn(u); return (me>0)?[['마나', Math.round(u.en!=null?u.en:me)+'/'+me]]:[]; }
 // 좌측 스탯 = 건설 프로필과 동일 구성(공격력·사거리·공격속도·처치) · 처치=메인 누적 킬
 function _mainUnitStatList(u){ const def=(G.sandbox&&!G.strike&&typeof Ueff==='function')?Ueff(u):(U[u.id]||{}), k=u.gmodel||u.id;
   const rng=(G.sandbox&&typeof effRange==='function')?(Math.round(effRange(k,def.range)/SB_ANCHOR_RANGE*10)/10)
@@ -13262,7 +13271,7 @@ function _mainUnitStatList(u){ const def=(G.sandbox&&!G.strike&&typeof Ueff==='f
   const _cdf=(typeof cdOf==='function')?cdOf(u,def):def.cd, _sbcd=(G.sandbox&&typeof _sbBaseCd==='function')?_sbBaseCd(k):null;
   const spd=(_sbcd!=null)?((1/_sbcd).toFixed(1)+'/s'):((_cdf>0)?((60/_cdf).toFixed(1)+'/s'):'-');
   const dp=(typeof unitDmgParts==='function')?unitDmgParts(u):null, atk=(dp&&dp.total>0)?fmtStat(dp.total):(def.dmg>0?fmtStat(def.dmg):'무공격');
-  return [['공격력',atk], ['사거리', rng>0?(''+rng):'-'], ['공격속도',spd], ['처치', ''+(u.kills||0)]]; }
+  return [['공격력',atk], ['사거리', rng>0?(''+rng):'-'], ['공격속도',spd], ['처치', ''+(u.kills||0)]].concat(_mainManaStat(u)); }
 // 👥 활성셋(건설 techCastSkill과 동일 규약): 지정 중 이 스킬 보유 유닛 전부 · 소프트선택(G.selType) 시 그 종류만
 function _mainSkillSet(key){ const list=(G.sel||[]).map(id=>G.units.find(u=>u.uid===id)).filter(Boolean);
   const owns=u=>unitSkillKeys(u).indexOf(key)>=0;
@@ -14821,7 +14830,8 @@ function renderCmdGrid(host, m){ const el=(typeof host==='string')?document.getE
   const pager=(pages>1)?('<div class="cgPage"><button onclick="_cgTurn(this,-1)">◀</button><span class="dots">'+dots+'</span><span class="pn">'+(pg+1)+' / '+pages+'</span><button onclick="_cgTurn(this,1)">▶</button></div>'):'';
   const pill=m.status?('<span class="cgPill'+(m.statusIdle?' idle':'')+'">'+m.status+'</span>'):'';
   el.innerHTML='<div class="cmdG" data-mode="'+(m.mode||'upg')+'" data-compact="'+(m.compact?1:0)+'" data-build="'+(m.build?1:0)+'">'
-    +'<div class="cgHead"><div class="cgTtl"><div class="cgN">'+(m.title||'')+'</div>'+(m.hpsh?'<div class="cgHpsh">'+m.hpsh+'</div>':(m.sub?'<div class="cgS">'+m.sub+'</div>':''))+'</div>'+pill+pager+(m.topRight||'')+(m.back||'')+'</div>'   // 우상단 순서 = [상태칩][◀페이지▶][자원스텝퍼·랠리·부양 / 전체지정] → 페이지네이션이 왼쪽, 건물 조작 버튼이 오른쪽 끝(전 프로필 통일) · 🔙 돌아가기(유턴)는 그보다 뒤
+    +(m.topRight?('<div class="cgTopOut">'+m.topRight+'</div>'):'')   // 판 밖 오른쪽 위 = 자원 스텝퍼·랠리·부양·전체지정(머리줄을 두껍게 하지 않는다)
+    +'<div class="cgHead"><div class="cgTtl"><div class="cgN">'+(m.title||'')+'</div>'+(m.hpsh?'<div class="cgHpsh">'+m.hpsh+'</div>':(m.sub?'<div class="cgS">'+m.sub+'</div>':''))+'</div>'+pill+pager+(m.back||'')+'</div>'   // 머리줄 = [제목 HP/실드 / 설명][상태칩][◀페이지▶][🔙]
     +'<div class="cgBody"><div class="cgInfo">'+_cgInfoHTML(m.info)+'</div><div class="cgCol"><div class="cgGrid">'+cells.join('')+'</div></div></div></div>';
   if(m.build){ const nms=el.querySelectorAll('.cgName'); for(const nm of nms){ let fs=10; nm.style.fontSize=fs+'px'; let g=0; while(nm.scrollWidth>nm.clientWidth+0.5 && fs>6 && g++<12){ fs-=0.5; nm.style.fontSize=fs+'px'; } } } }   // 이름 생략(...) 대신 폰트 축소로 한 줄에 전부
 function _cgTurn(btn,delta){ let h=btn; while(h && !h._cgModel) h=h.parentElement; if(!h||!h._cgModel) return; h._cgModel.page=(h._cgPage||0)+delta; renderCmdGrid(h,h._cgModel); }
@@ -18795,8 +18805,11 @@ function _techEnsureRoster(race){ const t=TECH_TREE[race]; if(!t||t._rosterSynce
   for(const r of roster){ const key=r.key; if(!key||have.has(key)||/^worker/.test(key)||key==='broodling'||key==='larva') continue;   // 일꾼·스웜링(브루들링=메두사 소환 전용)·라바(리버 중복 키)는 자동 생산 제외
     if(typeof TECH_MORPH!=='undefined' && Object.keys(TECH_MORPH).some(src=>TECH_MORPH[src].some(m=>m.to===key))) continue;   // 🧬 2차 변태 전용 유닛(베놈퀸·베놈·베히모스)은 직접 생산 제외
     const u=(typeof U!=='undefined'&&U[key])||{}; main.produces.push({id:key, name:r.n, m:(u.cost||50), g:0, pop:1}); have.add(key); } }
-function _techUnitStatList(spec,uid){ const _spd=(spec.atk&&(typeof _sbBaseCd==='function'))?((1/_sbBaseCd(uid)).toFixed(1)+'/s'):'-';   // 공격속도 = base_stats 공속(/s) — 메인 배너와 동일 표시
-  return [['공격력', spec.atk?(''+spec.atk):'무공격'], ['사거리', spec.rng!=null?(''+spec.rng):'-'], ['공격속도', _spd], ['처치','0']]; }
+function _techUnitStatList(spec,uid,ent){ const _spd=(spec.atk&&(typeof _sbBaseCd==='function'))?((1/_sbBaseCd(uid)).toFixed(1)+'/s'):'-';   // 공격속도 = base_stats 공속(/s) — 메인 배너와 동일 표시
+  const out=[['공격력', spec.atk?(''+spec.atk):'무공격'], ['사거리', spec.rng!=null?(''+spec.rng):'-'], ['공격속도', _spd], ['처치','0']];
+  const me=(ent&&ent.maxEn>0)?ent.maxEn:((typeof U!=='undefined'&&U[uid]&&U[uid].energy)||0);   // 🔮 마나 = 머리줄이 아니라 여기(왼쪽 정보 구역)
+  if(me>0) out.push(['마나', Math.round((ent&&ent.en!=null)?ent.en:me)+'/'+Math.round(me)]);
+  return out; }
 function _techUnitPortrait(id){ return (typeof unitPortraitHTML==='function'&&unitPortraitHTML(id))||pIco('🔧'); }
 // 🏢 건물 초상 = 그 건물의 실제 3D 모델 렌더 이미지(M3D.bldgImage — key별 1회 캐시, 준비되면 techUIRender로 자동 갱신).
 // 유닛 초상(_techUnitPortrait)과 동일한 portImg 규격 · 모델 없음/미로드/3D 끔 = 기존 이모지 폴백
@@ -20246,11 +20259,11 @@ function techUnitPanelModel(list){ const race=G.tech.race, grp={}, ord=[];   // 
   const _hpsh=(list.length===1 && f && f.hp!=null)   // 🔴 단일 지정 = 실시간 HP/쉴드/마나(스팀팩 등 소모 반영) · 초기화 전이면 spec 폴백
     ? _cgHpShStr(Math.round(f.hp)+'/'+Math.round(f.maxHp!=null?f.maxHp:spec.hp),
         (f.maxSh>0)?(Math.round(f.sh!=null?f.sh:f.maxSh)+'/'+Math.round(f.maxSh)):0,
-        (f.maxEn>0)?(Math.round(f.en!=null?f.en:f.maxEn)+'/'+Math.round(f.maxEn)):0)
-    : _cgHpShDual(spec.hp,spec.sh,(typeof U!=='undefined'&&U[fid]&&U[fid].energy)||0);
+        0)                                       // ⚠ 마나는 머리줄이 아니라 왼쪽 정보 구역(스탯)에 넣는다
+    : _cgHpShDual(spec.hp,spec.sh,0);
   return { mode:'prod', title:nm, icon:_techUnitPortrait(fid), hpsh:_hpsh, sub:(_amE?'내부 장전 — 탭 · 맵 탭=이동':'맵을 탭하면 이동 · 해제는 우상단 ✕'), items,
     topRight:_techSelAllBtn((f.type==='worker')?'__wk':fid),   // 👥 화면 내 같은 종류 전체 지정
-    info:_amE?_techAmmoInfo(_amE, _amE.uid):{ eb:'', hideName:true, stats:_techUnitStatList(spec,fid), cr:0, en:0 } }; }   // 왼쪽: 장전 큐(캐리어·리버) / 유닛 스탯
+    info:_amE?_techAmmoInfo(_amE, _amE.uid):{ eb:'', hideName:true, stats:_techUnitStatList(spec,fid,f), cr:0, en:0 } }; }   // 왼쪽: 장전 큐(캐리어·리버) / 유닛 스탯(+마나)
 function techWorkerBuildModel(list, canBack){ const race=G.tech.race, fid=(TECH_WORKER[race]||'worker_human'), n=list.length;   // 일꾼 지정 시트 — 헤더=일꾼 프로필, 그리드=건물 생성 카드 · canBack=혼합 소프트선택에서 ▲ 복귀
   const ws=techUnitSpec(race,fid)||{}, rn=_techRealName(race,fid), role=_techRoleOf(fid);
   // 👥 2기 이상 = 다른 동일종류 다중 지정과 동일하게 유닛별 HP 칩(탭=개별 지정) · 1기 = 유닛 스탯
