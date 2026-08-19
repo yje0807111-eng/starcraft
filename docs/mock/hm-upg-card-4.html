@@ -1,0 +1,198 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>업그레이드 카드 4안</title>
+<style>
+:root{
+  --font-ko:'IBM Plex Sans KR','Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  --font-num:'Rajdhani','IBM Plex Sans KR','Apple SD Gothic Neo',sans-serif;
+  --r-bar:3px; --r-md:6px; --r-lg:9px;
+  --metal-edge:#3c3e46;
+  --metal-ring-n:linear-gradient(180deg,#5c5c5c 0%,#404040 38%,#2d2d2d 72%,#494949 100%);
+  --nav-ring-on-d:linear-gradient(180deg,#cf9090 0%,#d64848 42%,#8c3232 100%);
+  --nav-ring-n:linear-gradient(180deg,#8c8c8c 0%,#606060 46%,#424242 100%);
+  --bpFace:linear-gradient(180deg,#0a0a0a,#000);
+  --hmPanel:linear-gradient(180deg,#191919,#0e0e0e);
+  --panelBig:linear-gradient(180deg,rgba(25,25,25,.9),rgba(14,14,14,.92));
+  --hmAccRGB:255,59,59; --hmAccLt:#ff8f8f;
+  --acc-sel:#5cd6ff; --txt-mute:#9aa0a8;
+}
+*{box-sizing:border-box}
+button{margin:0;padding:0;font:inherit;color:inherit;background:none;border:none;cursor:pointer;text-align:left}
+body{margin:0;padding:22px 16px 60px;background:#08090c;color:#ececec;font-family:var(--font-ko)}
+h1{margin:0 0 4px;font-size:19px;letter-spacing:.02em}
+.lead{margin:0 0 20px;font-size:12.5px;color:var(--txt-mute);line-height:1.65;max-width:840px}
+.lead b{color:#ececec}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;max-width:1240px}
+.cell{min-width:0}
+.cap{display:flex;align-items:baseline;gap:6px;margin:0 0 7px;font-size:12.5px;font-weight:700}
+.cap i{font-style:normal;font-family:var(--font-num);font-size:11px;color:#fff;background:#2a2c33;
+  border:1px solid var(--metal-edge);border-radius:var(--r-bar);padding:1px 5px}
+.cap.now i{background:#1b1d22;color:#8a9099}
+.note{margin:7px 2px 0;font-size:11px;color:var(--txt-mute);line-height:1.62}
+.note b{color:#cfd5dd;font-weight:700}
+.gain{display:block;margin-top:4px;color:#8fd6a8}
+/* 폰 틀 — 패널이 실제로 먹는 세로 높이를 같은 자로 잰다 */
+.phone{position:relative;width:368px;height:330px;border-radius:var(--r-lg);overflow:hidden;
+  border:1px solid var(--metal-edge);
+  background:radial-gradient(120% 80% at 50% 0%,#3a3350 0%,#241f33 40%,#14121c 100%);
+  display:flex;flex-direction:column}
+.fieldPad{flex:1 1 auto;position:relative}
+.foe{position:absolute;width:8px;height:8px;border-radius:50%;background:#c8a24a;opacity:.8}
+.hero{position:absolute;left:50%;top:46%;width:14px;height:19px;transform:translate(-50%,-50%);
+  background:linear-gradient(180deg,#7d8ea8,#3d4657);border-radius:2px}
+.navPad{flex:none;height:30px;border-top:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(180deg,#141414,#0b0b0b);
+  display:flex;align-items:center;justify-content:space-around;font-size:8px;color:#7c828c}
+/* ── 패널 껍데기(공용) ── */
+.hmUpg{position:relative;background:var(--panelBig);
+  clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 10px,100% 100%,0 100%,0 10px)}
+.hmUpg::before{content:'';position:absolute;left:10px;right:10px;top:0;height:1px;z-index:4;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.18) 22%,rgba(255,255,255,.18) 78%,transparent)}
+.hmUpgHead{display:flex;align-items:center;gap:6px;padding:5px 8px 4px 12px}
+.hmUpgTtl{flex:1;font-size:12px;font-weight:700;color:#fff;letter-spacing:-.01em}
+.hmUpQty{display:flex;align-items:center;justify-content:center;min-width:34px;height:20px;padding:0 6px;
+  border-radius:var(--r-bar);background:linear-gradient(180deg,#1c1c1c,#0e0e0e);
+  border:1px solid var(--metal-edge);font-family:var(--font-num);font-size:9.5px;font-weight:700;color:#cfd5dd}
+.hmUpQty.au{color:#aeb4bd}
+/* 탭 띠 = 공용 .pdSeg */
+.pdSeg{--pad:2px;position:relative;display:flex;margin:0 8px 5px;padding:var(--pad);border-radius:var(--r-bar);
+  background:var(--hmPanel) padding-box,var(--metal-ring-n) border-box;border:1px solid transparent}
+.pdSegInd{position:absolute;top:var(--pad);bottom:var(--pad);border-radius:2px;background:var(--bpFace)}
+.pdSegInd::after{content:'';position:absolute;left:6px;right:6px;bottom:0;height:1px;background:rgba(255,255,255,.62);
+  box-shadow:0 0 2px rgba(var(--hmAccRGB),.9),0 0 5px rgba(var(--hmAccRGB),.55)}
+.pdSegBtn{position:relative;z-index:1;flex:1 1 0;height:22px;display:flex;align-items:center;justify-content:center;
+  font-size:9.5px;font-weight:700;color:#8a9099}
+.pdSegBtn.on{color:#fff}
+.res{display:inline-block;width:10px;height:10px;vertical-align:-1px}
+/* ══════ 기준 카드(지금) — 네 안이 전부 이 값을 물려받고 필요한 것만 덮는다 ══════ */
+.n0grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:5px;padding:3px 6px 6px;grid-auto-rows:54px}
+.hmUp{position:relative;display:flex;align-items:center;gap:6px;padding:6px;border-radius:var(--r-bar);
+  border:1px solid transparent;
+  clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
+  background:var(--bpFace) padding-box,
+    linear-gradient(180deg,rgba(var(--hmAccRGB),.40) 0%,rgba(var(--hmAccRGB),.26) 34%,
+      rgba(var(--hmAccRGB),.15) 68%,rgba(var(--hmAccRGB),.09) 100%) border-box,
+    var(--metal-ring-n) border-box;
+  box-shadow:0 0 7px -5px rgba(var(--hmAccRGB),.35)}
+.hmUp::before{content:'';position:absolute;left:7px;right:0;top:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.13) 30%,rgba(255,255,255,.13) 70%,transparent)}
+.hmUpIco{position:relative;flex:none;width:27px;height:27px;background:#000;border-radius:var(--r-bar);overflow:hidden}
+.hmUpIco img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.hmUpTx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.hmUpName{display:flex;align-items:baseline;gap:4px;font-size:11.5px;font-weight:700;color:#ececec;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hmUpVl{font-size:9px;font-weight:700;color:#8a8a8a;font-family:var(--font-num);white-space:nowrap}
+.hmUpVl .nx{color:#fff}
+.hmUpBtn{position:relative;flex:none;width:54px;height:40px;padding:1.5px;display:flex;flex-direction:column;
+  border-radius:var(--r-bar);background:var(--nav-ring-on-d)}
+.hmUpBtn::after{content:'';position:absolute;left:6px;right:6px;top:1.5px;height:1px;z-index:2;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.44),transparent)}
+.hmUpBtn::before{content:'';position:absolute;inset:1.5px;border-radius:2px;
+  background:linear-gradient(180deg,rgba(var(--hmAccRGB),.34) 0%,rgba(var(--hmAccRGB),.27) 55%,rgba(var(--hmAccRGB),.11) 100%),
+    linear-gradient(180deg,#1c1c1c,#0e0e0e)}
+.hmUpBl,.hmUpBc{position:relative;z-index:1;flex:1;display:flex;align-items:center;justify-content:center;gap:2px;
+  font-family:var(--font-num);font-size:9.5px;font-weight:700}
+.hmUpBl{color:var(--hmAccLt);border-bottom:1px solid rgba(0,0,0,.62);box-shadow:0 1px 0 rgba(255,255,255,.16)}
+.hmUpBc{color:#ececec}
+.hmUpBtn.off{background:linear-gradient(180deg,#5a5a5a,#3e3e3e 34%,#222)}
+.hmUpBtn.off::before{background:linear-gradient(180deg,#262626,#262626)}
+.hmUpBtn.off::after{display:none}
+.hmUpBtn.off .hmUpBl,.hmUpBtn.off .hmUpBc{color:#7a7a7a}
+.hmUp.lk{background:linear-gradient(180deg,#000,#000) padding-box,
+    linear-gradient(180deg,rgba(var(--hmAccRGB),.28),rgba(var(--hmAccRGB),.07)) border-box,
+    var(--metal-ring-n) border-box;box-shadow:none}
+.hmUp.lk .hmUpName{color:#9a9a9a}
+.hmUp.lk .hmUpIco img{filter:grayscale(1) brightness(.5)}
+.lvb{display:none}
+
+/* ══════ D1 · 이중 테두리 — 굵히지 않고 한 겹 더 긋는다 ══════ */
+.d1 .hmUp::after{content:'';position:absolute;inset:3px;pointer-events:none;
+  border:1px solid rgba(var(--hmAccRGB),.30);
+  clip-path:polygon(4px 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%,0 4px)}
+.d1 .hmUp.lk::after{border-color:rgba(255,255,255,.07)}
+.d1 .hmUpBtn{box-shadow:inset 0 0 0 1px rgba(0,0,0,.6),inset 0 0 0 2px rgba(var(--hmAccRGB),.42)}
+.d1 .hmUpBtn.off{box-shadow:inset 0 0 0 1px rgba(0,0,0,.6),inset 0 0 0 2px rgba(255,255,255,.10)}
+.d1 .hmUpIco{box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)}
+
+/* ══════ D2 · 통짜 아이콘 면 — 타일을 없애고 카드 왼쪽 끝까지 ══════ */
+.d2 .hmUp{padding:0 6px 0 0;gap:6px;overflow:hidden}
+.d2 .hmUpIco{width:36px;height:100%;border-radius:0;
+  background:linear-gradient(135deg,rgba(var(--hmAccRGB),.13),rgba(0,0,0,0) 62%),#000;
+  border-right:1px solid rgba(255,255,255,.09)}
+.d2 .hmUpIco img{padding:6px}
+.d2 .hmUp.lk .hmUpIco{background:#000}
+.d2 .hmUp::before{left:0}
+
+/* ══════ D3 · 버튼은 가격표 하나 — 레벨은 이름 옆으로 ══════ */
+.d3 .lvb{display:inline;font-family:var(--font-num);font-size:8.5px;font-weight:800;color:var(--hmAccLt)}
+.d3 .hmUp.lk .lvb{color:#7a7a7a}
+.d3 .hmUpBl{display:none}
+.d3 .hmUpBtn{width:54px}
+.d3 .hmUpBc{font-size:14px;font-weight:800;gap:3px;color:#fff}
+.d3 .hmUpBc .res{width:12px;height:12px}
+.d3 .hmUpBtn.off .hmUpBc{color:#8a8a8a}
+
+/* ══════ D4 · 왼쪽 신호 바 — 붉은 테두리를 걷고 광선 하나로 ══════ */
+.d4 .hmUp{background:var(--bpFace) padding-box,var(--metal-ring-n) border-box;box-shadow:none;
+  padding-left:9px}
+.d4 .hmUp::after{content:'';position:absolute;left:2px;top:7px;bottom:2px;width:2px;border-radius:2px;
+  background:rgba(var(--hmAccRGB),.9);box-shadow:0 0 4px rgba(var(--hmAccRGB),.7),0 0 9px rgba(var(--hmAccRGB),.35)}
+.d4 .hmUp.lk::after{background:#3a3d44;box-shadow:none}
+.d4 .hmUpBtn{background:var(--metal-ring-n)}
+.d4 .hmUpBtn::before{background:linear-gradient(180deg,#1c1c1c,#0e0e0e)}
+.d4 .hmUpBl{color:#cfd5dd}
+</style>
+
+<h1>업그레이드 카드 — 생김새 4안</h1>
+<p class="lead"><b>구조는 지금 그대로다</b> — 2열 격자 · 54px 칸 · 아이콘 · 이름 · 값 변화 · 오른쪽 54×40 구매 버튼.
+바뀌는 건 <b>카드와 버튼의 생김새뿐</b>이고, 값·글자 크기·배치는 손대지 않았다.
+넷 다 DESIGN.md 규칙 안에서만 움직인다 — 테두리는 1px 고정, 강조는 색을 채우지 않고 <b>선과 빛</b>으로.
+왼쪽 첫 칸이 <b>지금</b>이다.</p>
+<div class="grid" id="grid"></div>
+
+<script>
+const RES='<img class="res" src="../../assets/icons/res_mineral.webp" alt="">';
+const U=[
+  {n:'데미지',    ic:'upgrades/up_melee_atk', lv:8, v:'12',   nx:'15',     c:'5'},
+  {n:'공격속도',  ic:'skills/sk_stim',        lv:5, v:'100%', nx:'101.5%', c:'8'},
+  {n:'체력',      ic:'upgrades/up_carapace',  lv:6, v:'120',  nx:'138',    c:'5'},
+  {n:'사거리',    ic:'upgrades/up_range',     lv:2, v:'220',  nx:'224',    c:'6'},
+  {n:'치명타 확률',ic:'upgrades/up_gnd_wpn',  lv:0, v:'5%',   nx:'5.6%',   c:'40',  off:1},
+  {n:'치명 피해',  ic:'upgrades/up_inf_atk',  lv:0, v:'150%', nx:'155%',   c:'100', off:1},
+];
+const img=k=>'<img src="../../assets/icons/'+k+'.webp" alt="">';
+const TABS=['내 캐릭터','동료','건물','펫'];
+const HEAD='<div class="hmUpgHead"><b class="hmUpgTtl">사냥터 업그레이드</b>'
+  +'<span class="hmUpQty au">자동</span><span class="hmUpQty">×1</span></div>'
+  +'<div class="pdSeg"><div class="pdSegInd" style="left:2px;width:calc(25% - 1px)"></div>'
+  +TABS.map((t,i)=>'<button class="pdSegBtn'+(i?'':' on')+'">'+t+'</button>').join('')+'</div>';
+const CARDS='<div class="n0grid">'+U.map(u=>
+  '<div class="hmUp'+(u.off?' lk':'')+'"><span class="hmUpIco">'+img(u.ic)+'</span>'
+  +'<span class="hmUpTx"><b class="hmUpName">'+u.n+'<i class="lvb">LV.'+u.lv+'</i></b>'
+  +'<span class="hmUpVl">'+u.v+' ▸ <b class="nx">'+u.nx+'</b></span></span>'
+  +'<button class="hmUpBtn'+(u.off?' off':'')+'"><span class="hmUpBl">LV.'+u.lv+'</span>'
+  +'<span class="hmUpBc">'+RES+u.c+'</span></button></div>').join('')+'</div>';
+const FOE=[[16,26],[62,14],[80,44],[34,58],[74,70],[24,74]];
+function phone(cls){
+  return '<div class="phone '+cls+'"><div class="fieldPad">'
+    +FOE.map(f=>'<i class="foe" style="left:'+f[0]+'%;top:'+f[1]+'%"></i>').join('')
+    +'<div class="hero"></div></div>'
+    +'<div class="hmUpg">'+HEAD+CARDS+'</div>'
+    +'<div class="navPad"><span>캐릭터</span><span>정비</span><span>유즈맵</span><span>상점</span></div></div>';
+}
+const V=[
+ {tag:'지금', cls:'', now:1, t:'확정분',
+  d:'카드 테두리 하나가 붉은 알파 그라데를 지고, 버튼은 붉은 링 + 위아래 2단(레벨/비용). 아래 넷은 여기서 <b>한 가지씩만</b> 바꾼 것이다.'},
+ {tag:'D1', cls:'d1', t:'이중 테두리 — 굵히지 않고 한 겹 더',
+  d:'DESIGN §이중 테두리 그대로. 카드 안쪽에 <b>1px 프레임을 한 겹 더</b> 두르고(inset 3px), 버튼도 어두운 틈 1px + 안쪽 선 1px로 겹을 만들었다. 선은 하나도 안 굵어졌는데 카드가 확실히 "짜여진 물건"으로 보인다. ⚠ 안쪽 프레임의 모서리 컷은 7-3=<b>4px</b>이어야 바깥과 평행하다.'},
+ {tag:'D2', cls:'d2', t:'통짜 아이콘 면 — 타일을 없앤다',
+  d:'27px 검정 타일을 지우고 <b>아이콘 면이 카드 왼쪽 끝에서 위아래로 꽉 찬다</b>. 경계는 세로 헤어라인 1줄뿐. 카드 안에 상자가 두 개 겹쳐 있던 것이 하나로 정리되고, 아이콘이 8px 커진다. 왼쪽 위에서 붉은 기가 아주 옅게 흐른다.'},
+ {tag:'D3', cls:'d3', t:'버튼은 가격표 하나 — 레벨은 이름 옆으로',
+  d:'버튼의 위아래 2단을 없애고 <b>비용 하나만 크게</b>(9.5px → 14px). 레벨은 이름 옆 작은 배지로 옮겼다. 버튼이 "값이 얼마인가"만 말하게 되어 <b>살까 말까를 한눈에</b> 판단하고, 가운데 파인 이음매도 사라진다.'},
+ {tag:'D4', cls:'d4', t:'왼쪽 신호 바 — 붉은 면적을 줄인다',
+  d:'카드를 감싸던 붉은 테두리를 <b>회색 금속으로 되돌리고</b>, "지금 살 수 있다"는 왼쪽 2px 광선 하나가 맡는다. 버튼도 은색. 붉은 것이 카드당 선 하나로 줄어 <b>패널 전체가 훨씬 조용해지고</b>, 살 수 있는 칸이 오히려 더 잘 세어진다.'},
+];
+document.getElementById('grid').innerHTML=V.map(v=>
+  '<div class="cell"><div class="cap'+(v.now?' now':'')+'"><i>'+v.tag+'</i>'+v.t+'</div>'
+  +phone(v.cls)+'<div class="note">'+v.d+'</div></div>').join('');
+</script>
