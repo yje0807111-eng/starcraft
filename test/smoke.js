@@ -2752,6 +2752,60 @@ async function groupLobby(){
     closeSoloDiff(); await sleep(40);
     return '스테퍼 '+dots.length+'단 · 잠금 분리 ok'; });
   // ⚙ 게임 밖 설정(유즈맵 ☰ → .appCtx) — 게임 안 설정과 **같은 카드**를 문맥만 바꿔 쓴다
+  // ══ 게임 진입 로딩 = 카드 덱(H안). 한 화면이 협동·팀전·개인 셋을 다 맡는다 ══
+  await step('게임 진입 로딩: 카드 덱 · 팀은 윗변 · 준비는 밑변 · 혼자면 덱이 없다', async ()=>{
+    skipIf(typeof gameStartCountdown!=='function','시작 화면 없음');
+    const op=$('opening'), root=$('gsRoot');
+    assert(root,'게임 진입 로딩(#gsRoot)이 없음');
+    const freeze=()=>{ _gsClearTimers(); clearTimeout(op._cdEnd); clearTimeout(op._holdT); op._holdT=null; };
+    const restore=()=>{ freeze(); op.classList.add('hide'); op.classList.remove('counting','ready','timing','warp');
+      G.activePlayers=[1]; G.loading=false; };
+    // ① 협동 8인 — 4장씩 두 줄, 준비한 카드만 .rdy
+    openMapSelect(); await sleep(60);
+    _selMap=USEMAPS.nemo; _selDiff='easy';
+    G.activePlayers=[1,2,3,4,5,6,7,8]; G.myPlayer=1; G.playerNames={2:'호랑이',3:'까치',4:'별똥',5:'무쇠',6:'파랑',7:'노을',8:'단비'};
+    gameStartCountdown(); await sleep(120); freeze();
+    _gsReady=new Set([1,2,4,5,7]); _renderGsPlayers(); await sleep(60);
+    assert(!root.classList.contains('solo') && !root.classList.contains('teamed'),'협동인데 solo/teamed 가 붙음');
+    assert($('gsDeck').querySelectorAll('.gsRow').length===2,'협동 덱이 4장씩 두 줄이 아님');
+    assert($('gsDeck').querySelectorAll('.gsCd').length===8,'카드 수가 인원과 다름');
+    assert($('gsDeck').querySelectorAll('.gsCd.rdy').length===5,'준비한 카드 수가 다름');
+    // 초상은 **공용 avatarHTML** 이다 — 카드용 초상을 새로 만들지 말 것
+    assert($('gsDeck').querySelector('.gsCd .fAva'),'카드 초상이 공용 avatarHTML 산출물이 아님');
+    // 배지 = 난이도. ⛔ 초록이면 안 된다(초록은 준비 완료 전용)
+    { const bd=$('gsLine').querySelector('.gsBd');
+      assert(bd && bd.textContent===DIFFICULTY.easy.name,'난이도 배지가 안 나옴');
+      const c=(getComputedStyle(bd).color.match(/\d+/g)||[]).map(Number);
+      assert(!(c[1]>c[0]+40 && c[1]>c[2]+40),'난이도 배지가 초록이다 — 초록은 준비 완료 전용'); }
+    assert($('gsCntN').textContent.replace(/\s/g,'')==='5/8','준비 인원 표기가 다름: '+$('gsCntN').textContent);
+    // 배경 = 유즈맵 키 아트. ⚠ .gsWrap>* 규칙에 눌려 흐름으로 돌아오면 높이가 0이 된다
+    { const art=$('gsArt'); assert(getComputedStyle(art).position==='absolute','키 아트가 absolute 가 아님(배경이 안 보인다)');
+      assert(/nemo/.test(art.style.backgroundImage||''),'키 아트가 안 실림: '+(art.style.backgroundImage||'')); }
+    // ② 팀전 4v4 — 팀마다 한 줄 · 팀 색은 **윗변**, 준비는 **밑변**(자리가 달라 안 섞인다)
+    op.classList.add('hide'); _selMap=USEMAPS.cpu; _lobbyMax=8;
+    gameStartCountdown(); await sleep(120); freeze();
+    _gsReady=new Set([1,2,4,5,7]); _renderGsPlayers(); await sleep(60);
+    assert(root.classList.contains('teamed'),'팀 맵인데 .teamed 가 없음');
+    assert($('gsDeck').querySelectorAll('.gsTlb').length===2,'팀 라벨이 둘이 아님');
+    assert($('gsDeck').querySelector('.gsT1 .gsRow').children.length===4,'1팀이 4명이 아님');
+    { const cd=$('gsDeck').querySelector('.gsT1 .gsCd'), top=getComputedStyle(cd,'::before'), bot=getComputedStyle(cd,'::after');
+      assert(top.content!=='none','팀전인데 카드 윗변(팀 색)이 없음');
+      const rdy=$('gsDeck').querySelector('.gsT1 .gsCd.rdy');
+      assert(rdy && getComputedStyle(rdy,'::after').content!=='none','준비한 카드에 밑변(초록)이 없음'); }
+    assert($('gsLine').querySelector('.gsBd.vs'),'팀전인데 대진 배지(4 vs 4)가 없음');
+    // ③ 개인 — 덱이 없고 하단이 로딩 진행률로 바뀐다('준비'는 혼자서 뜻이 없다)
+    op.classList.add('hide'); _selMap=USEMAPS.nemo; G.activePlayers=[1];
+    gameStartCountdown(); await sleep(160); freeze();
+    assert(root.classList.contains('solo'),'혼자인데 .solo 가 없음');
+    assert(!$('gsDeck').querySelector('.gsCd'),'혼자인데 카드 덱이 남아 있음');
+    assert($('gsCntLb').textContent==='LOADING','개인 플레이 하단이 준비 표기 그대로임');
+    assert(/%$/.test($('gsCntN').textContent),'개인 플레이인데 진행률이 아님: '+$('gsCntN').textContent);
+    assert($('opStartTxt').textContent==='전투 시작','개인 플레이 버튼이 아직 준비 완료임');
+    // 버튼은 공용 액션 버튼이다 — 이 화면 전용 버튼을 만들지 말 것
+    assert($('opStart').classList.contains('actBtn')&&$('opStart').classList.contains('pri'),'시작 버튼이 공용 .actBtn.pri 가 아님');
+    assert($('opQuit').classList.contains('actBtn'),'나가기가 공용 .actBtn 이 아님');
+    restore(); await sleep(40);
+    return '협동 8 · 팀전 4v4 · 개인 진행률 ok'; });
   await step('유즈맵 설정: 프로필 머리줄 · 붉은 선 · 44px ✕ · 중립 ON', async ()=>{
     openMapSelect(); await sleep(60); openAppSettings(); await sleep(120);
     const card=document.querySelector('#settingsPop .setCard');

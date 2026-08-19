@@ -315,7 +315,21 @@ node test/bench-strike.mjs 400 80 4   # 대규모 전투 렌더 벤치(유닛수
   - **아트는 4층이고 `z-index` 를 전부 명시한다** — 0 맵 전용 키 아트(`#moWash` ← `mapBgUrl()`/`UMAP_BG`, 없으면 빈 층) / 1 또렷한 맵(`#moThumb`) / 2 비네트(`.moArt::before`) / 3 맵색 오라(`.moArt::after`). 의사요소는 `::before`=첫 자식·`::after`=마지막 자식이라 z를 안 주면 비네트가 맵 아래로 깔린다.
   - ⚠ **`#moWash` 도 `.moThumb` 클래스를 갖는다.** `#modeSheet .moWash` 는 `#modeSheet .moThumb` 와 명시도가 같아 **반드시 뒤에 와야** 이긴다.
   - **키 아트는 `scripts/usemap-bg.mjs` 가 만든다** — 맵마다 노출이 3배씩 흔들려 밝기 정규화가 필요하다(공용 `optimize-img.mjs` 는 이 폴더를 다루지 않는다). 원본 `.png` 는 gitignore, `.webp` 만 커밋. **새 그림을 뽑기 전에 `ART.md` 를 볼 것** — 모델·비율·프롬프트 전문·후처리 규격의 단일 소스다(세션이 바뀌어도 같은 스타일이 나와야 한다). 팝업이 그림을 어떻게 쓰는지는 DESIGN.md 「유즈맵 팝업 뒤 배경」.
-  - ⚠ **`.moThumb`/`.moMap`/`.moInfo`/`.moFeat` 의 주인은 이제 게임 시작(`#opening.counting`)·결과(`#resultScreen`) 화면이다** — `.moThumb.opThumb`/`.opMapName.moMap`/`.opPanel.moInfo`. 팝업 쪽 값은 전부 `#modeSheet` 안에 가둬 두었다. 공용 베이스를 지우면 시작 화면의 미니맵·제목·설명 패널이 통째로 사라진다(전환 중 실제로 그랬다).
+  - ⚠ **`.moThumb`/`.moMap`/`.moInfo`/`.moFeat` 의 주인은 결과(`#resultScreen`) 화면이다** — `.moThumb.opThumb`/`.opMapName.moMap`/`.opPanel.moInfo`. 팝업 쪽 값은 전부 `#modeSheet` 안에 가둬 두었다. 공용 베이스를 지우면 결과 화면의 미니맵·제목·기록 패널이 통째로 사라진다(전환 중 실제로 그랬다). 게임 **진입** 로딩은 아래 `#gsRoot` 로 떨어져 나갔고 특징 리스트(`.moFeats`)만 빌려 쓴다.
+- **🎬 게임 진입 로딩 = 카드 덱**(`#gsRoot`, 2026-08-19). 한 화면이 세 경우를 다 맡는다 — 다른 화면을 만들지 말고 클래스만 붙일 것.
+  | 경우 | 클래스 | 덱 | 하단 |
+  |---|---|---|---|
+  | 협동 | (없음) | 카드 4장씩 두 줄 | `준비 n/N` |
+  | 팀전(`cfg.teams`) | `.teamed` | 팀마다 4장 한 줄 + 팀 라벨 | `준비 n/N` |
+  | 개인(1명) | `.solo` | **없음** | `LOADING n%` · 버튼 `전투 시작` |
+  - **팀 색은 카드 윗변, 준비는 밑변**이다 — 자리가 달라야 팀전에서 두 정보가 겹쳐 읽히지 않는다. 팀 색은 대기실과 같은 `--tmC1`/`--tmC2`.
+  - ⛔ **이 화면에서 초록은 '준비 완료' 전용**이다. 난이도 배지를 초록으로 두면 두 뜻이 섞인다(스모크가 배지 색을 검사한다).
+  - 배경 = 유즈맵 **키 아트**(`_mapBgInto` — 목록·팝업과 같은 단일 소스). 그림이 없는 맵은 비워 둔다(미니맵으로 대신 채우지 않는다).
+  - 초상은 공용 **`avatarHTML()`**, 버튼은 공용 **`.actBtn`/`.actBtn.pri`**. 카드용 초상이나 전용 버튼을 새로 만들지 말 것.
+  - 특징 3줄은 `_mapGuideHTML(m)` 이고, **`.moFeats` 클래스를 같이 붙여야** 아이콘 판·간격이 산다(안 붙였더니 글자만 나왔다).
+  - ⚠ **`.gsWrap>*{position:relative}` 가 `.gsArt` 를 이긴다**(특이도 동률 → 나중 규칙). `.gsWrap>.gsArt` 를 **뒤에** 적어야 `absolute` 가 살고, 아니면 아트가 흐름으로 돌아와 높이 0이 되어 배경이 통째로 안 보인다. 난이도 워터마크에서 똑같이 당했다.
+  - ⚠ `_gsTimers` 에는 `setInterval` 도 들어간다(`{__iv}` — 개인 로딩 진행률). `_gsClearTimers` 가 `clearTimeout` 만 돌리면 화면을 나가도 계속 돈다.
+  - 부팅 오프닝(`.opWrap` — 로고·LOADING…)과 **별개 층**이다. `.opWrap`/`.opMap`/`.opBtns` 는 결과 화면과 공용이라 `#opening.counting` 에서 덮으면 그쪽이 같이 바뀐다.
   - ⚠ **`.moCard` 는 공용 카드 껍데기(`.cpCard,.rmCard,.lbCard,.authCard,.foCtxCard,.ptInviteCard`) 목록에서 빠졌다.** 되돌리면 모서리 컷과 붉은 네온 테두리가 다시 붙어 맵 액센트와 색이 경쟁한다.
   - ⚠ **설명 칸 높이는 상수가 아니다** — `_moFitInfo` 가 부모 `.moBody`(`flex:1`)의 남은 높이를 재고, 못 재면 `_MO_INFO_H`(306)로 떨어진다. 카드 높이 `--popH` 가 `min(564px,90%)` 라 짧은 기기에서 실제로 줄어들기 때문이다.
   - **난이도 팝업(`#soloDiffPanel .cpCard`)도 같은 언어다**(2026-08-18) — 시네마틱 카드에서 아트만 뺀 것. `openSoloDiff` 가 `_selMap` 의 액센트를 이어 심는다. ⚠ `.cpCard` 는 방 만들기·종족 선택·로그아웃과 공용이라 **전부 `#soloDiffPanel` 안에서만** 덮었다. 죽은 `.raceTrig`(없는 함수 `openSoloRace` 호출)는 삭제했다.

@@ -2142,13 +2142,14 @@
   .opBar{height:100%;width:8%;border-radius:var(--r-bar);background:linear-gradient(90deg,var(--neon-d2),var(--neon));box-shadow:0 0 10px var(--neon-glow);animation:opLoad 1.6s ease-out forwards}
   @keyframes opLoad{0%{width:8%}60%{width:72%}100%{width:100%}}
   .opLoading{font-size:var(--fs-xs);color:#7a8390;letter-spacing:2px}
-  /* 게임 시작 로딩: 중앙보다 살짝 위에 미니맵+설명, 그 아래 카운트다운/플레이어/시작 */
-  #opening.counting .opLogo,#opening.counting .opTitle,#opening.counting .opSub,#opening.counting .opBarWrap,#opening.counting .opLoading{display:none}
-  #opening.counting .opWrap,#resultScreen .opWrap{flex:1;min-height:0;width:100%;box-sizing:border-box;justify-content:flex-start;gap:10px;padding:8% 24px 0;
-    overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none}   /* 8인+긴 닉네임이라 세로가 빡빡한 짧은 화면에서도 잘리지 않게(스크롤바는 숨김) */
-  #opening.counting .opWrap::-webkit-scrollbar{width:0;height:0}
+  /* 게임 시작 로딩 = 카드 덱(H안) — 부팅 오프닝(.opWrap)은 통째로 감추고 #gsRoot 만 띄운다.
+     ⚠ .opWrap/.opMap/.opBtns 는 통계 창(#resultScreen)과 공용이다 — 여기서 덮지 말 것. */
+  #opening.counting .opWrap{display:none}
+  #resultScreen .opWrap{flex:1;min-height:0;width:100%;box-sizing:border-box;justify-content:flex-start;gap:10px;padding:8% 24px 0;
+    overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none}
+  #resultScreen .opWrap::-webkit-scrollbar{width:0;height:0}
   .opMap{display:none;flex-direction:column;align-items:center;gap:11px}
-  #opening.counting .opMap,#resultScreen .opMap{display:flex}
+  #resultScreen .opMap{display:flex}
   /* 썸네일·제목·정보 패널 = 유즈맵 팝업 컴포넌트 재사용(.moThumb / .moMap / .moInfo) — 크기만 이 화면에 맞게 조정 */
   .moThumb.opThumb{width:150px;height:150px;margin:0}
   .opMapName{margin:0}
@@ -2156,64 +2157,98 @@
   .opPanel.moInfo{margin:0}
   #opening .moFeat .mfTx{color:#b3c0cf}
   #opening .moFeat .mfTx b{color:#f0f4fa}
-  /* 준비 인원 = 타이포 + 얇은 라인(라인 폭 = 준비 비율) */
-  .opCount{display:none;flex-direction:column;align-items:center;gap:10px;flex:none}
-  #opening.counting .opCount{display:flex;margin-top:16px}
-  .opLine{width:150px;max-width:52vw;height:2px;border-radius:var(--r-bar);background:rgba(255,255,255,.1);overflow:hidden}
-  .opLineFill{display:block;height:100%;width:0;border-radius:var(--r-bar);background:var(--mapAccent,#4aa8ff);
-    box-shadow:0 0 8px var(--mapAccent,#4aa8ff);transition:width .3s ease}
-  /* 하단 액션 = 팝업·대기실과 같은 한 쌍: 중립 글래스(나가기) + 맵 강조색 채움(시작) */
+  /* ══════════ 게임 진입 로딩 #gsRoot — 맵 키 아트 + 플레이어 카드 덱 + 하단 준비 도크 ══════════
+     한 화면이 세 경우를 다 맡는다. 다른 화면을 만들지 말고 클래스만 붙일 것:
+       (기본)   협동 — 카드 4장씩 두 줄
+       .teamed  팀전 — 팀마다 4장 한 줄. 카드 **윗변**이 팀 색, 준비는 **밑변**이 초록 → 두 축이 안 섞인다
+       .solo    개인 — 덱을 걷고 로딩 진행률만(혼자면 '준비'라는 개념이 없다) */
+  .gsWrap{display:none;position:absolute;inset:0;flex-direction:column;text-align:left}
+  #opening.counting .gsWrap{display:flex}
+  .gsWrap>*{position:relative;z-index:1}
+  /* ⚠ 위 `.gsWrap>*` 와 특이도가 같아 **뒤에** 와야 absolute 가 산다 — 앞에 두면 아트가 흐름으로
+       돌아와 높이 0이 되고 배경이 통째로 안 보인다(난이도 워터마크에서 똑같이 당했다). */
+  .gsWrap>.gsArt{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center}
+  .gsArt::after{content:'';position:absolute;inset:0;
+    background:linear-gradient(180deg,rgba(4,4,8,.55),rgba(7,7,11,.86) 42%,rgba(7,7,11,.97))}
+  .gsHead{flex:none;padding:50px 20px 0;text-align:center}
+  .gsName{font-family:var(--font-ti);font-size:23px;color:#fff;text-shadow:0 2px 14px #000}
+  .gsLine{margin-top:8px;display:flex;align-items:center;justify-content:center;gap:9px;font-size:var(--fs-md);color:#8a929c}
+  /* 배지 = 난이도(협동) 또는 4vs4(팀전). ⛔ 초록을 쓰지 말 것 — 초록은 '준비 완료' 전용이다 */
+  .gsBd{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:2px;
+    font-family:var(--font-num);font-size:var(--fs-lg);font-weight:700;letter-spacing:.6px;
+    color:#c6cdd6;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.05)}
+  .gsBd.vs{color:#fff}
+  .gsBd.vs s{width:7px;height:7px;border-radius:50%;text-decoration:none;background:var(--tmC1);box-shadow:0 0 5px var(--tmC1)}
+  .gsBd.vs s.b{background:var(--tmC2);box-shadow:0 0 5px var(--tmC2)}
+  .gsDeck{flex:none;margin-top:20px;padding:0 18px;display:flex;flex-direction:column;gap:11px}
+  .gsWrap.solo .gsDeck{display:none}
+  .gsRow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+  .gsTlb{display:flex;align-items:center;gap:6px;margin-bottom:6px;
+    font-size:var(--fs-xs);font-weight:800;letter-spacing:.5px;color:var(--tmC)}
+  .gsTlb s{flex:1;height:1px;text-decoration:none;opacity:.5;background:linear-gradient(90deg,var(--tmC),transparent)}
+  .gsT1{--tmC:var(--tmC1)} .gsT2{--tmC:var(--tmC2)}
+  .gsCd{position:relative;height:100px;overflow:hidden;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:6px;border-radius:var(--r-bar);
+    background:linear-gradient(180deg,#121317,#08090b);border:1px solid rgba(255,255,255,.07);
+    transition:border-color .18s,background .18s}
+  .gsCd .fAva{width:29px;height:29px;font-size:12px;filter:saturate(.62) brightness(.92)}
+  .gsCd b{max-width:100%;padding:0 5px;font-size:var(--fs-sm);font-weight:700;color:#7d8792;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gsCd em{font-style:normal;font-family:var(--font-num);font-size:var(--fs-xs);font-weight:700;letter-spacing:.5px;color:#5a626c}
+  /* 팀 색 = 윗변 · 준비 = 밑변. 자리가 달라서 팀전에서도 두 정보가 겹쳐 읽히지 않는다 */
+  .gsWrap.teamed .gsCd::before{content:'';position:absolute;left:0;right:0;top:0;height:2px;
+    background:var(--tmC);box-shadow:0 0 6px var(--tmC)}
+  .gsCd.rdy{border-color:rgba(93,255,143,.42);
+    background:linear-gradient(0deg,rgba(93,255,143,.16),rgba(10,14,11,.9) 62%)}
+  .gsCd.rdy b{color:#fff}
+  .gsCd.rdy em{color:var(--ok,#5dff8f)}
+  .gsCd.rdy::after{content:'';position:absolute;left:0;right:0;bottom:0;height:2px;
+    background:var(--ok,#5dff8f);box-shadow:0 0 8px var(--ok,#5dff8f)}
+  /* 특징은 아래 도크에 붙인다 — 남는 높이를 위 한 곳에 몰아 아트가 보이게 하고,
+     정보가 '위 덩어리(이름·덱) / 아래 덩어리(특징·준비)' 둘로만 읽히게 한다 */
+  .gsFeat{flex:none;margin-top:auto;margin-bottom:20px;padding:0 18px;display:flex;flex-direction:column;gap:6px}
+  #opening .gsFeat .moFeat{margin:0}
+  #opening .gsFeat .mfTx{color:#b3c0cf}
+  #opening .gsFeat .mfTx b{color:#f0f4fa}
+  .gsBot{flex:none;padding:0 18px 32px}
+  .gsCnt{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:7px}
+  .gsCnt i{font-style:normal;font-size:var(--fs-md);color:#8a929c}
+  .gsWrap.solo .gsCnt i{letter-spacing:2px;font-size:var(--fs-sm)}
+  .gsCnt b{font-family:var(--font-num);font-size:22px;font-weight:700;color:#fff;white-space:nowrap}
+  .gsCnt b s{font-size:14px;color:#7d8792;text-decoration:none}
+  .gsBar{position:relative;height:3px;border-radius:2px;background:rgba(255,255,255,.09);overflow:hidden}
+  .gsBar i{position:absolute;left:0;top:0;bottom:0;border-radius:2px;background:var(--neon);
+    box-shadow:0 0 8px var(--neon);transition:width .3s ease}
+  .gsBtns{display:flex;gap:8px;margin-top:13px}
+  .gsBtns .actBtn{flex:0 0 34%}
+  .gsBtns .actBtn.pri{flex:1}
+  /* 하단 액션(통계 창 전용) = 중립 글래스 한 개 */
   .opBtns{display:none;width:290px;max-width:84vw;gap:9px;align-items:stretch;position:relative;z-index:2}
-  #opening.counting .opBtns,#resultScreen .opBtns{display:flex;flex:0 0 auto;margin:0 auto;padding:12px 0 5%}   /* 스크롤과 무관하게 항상 하단에 노출 */
+  #resultScreen .opBtns{display:flex;flex:0 0 auto;margin:0 auto;padding:12px 0 5%}
   /* 통계 창 = 게임 진입 로딩 창과 같은 전체 화면 구조(팝업 아님) */
   #resultScreen{z-index:88;align-items:center;justify-content:center;text-align:center}
   #resultScreen.hide{display:none}
   #resultScreen .ovStats{margin:0;width:290px;max-width:84vw}
-  .opQuit,.opStart{flex:1 1 0;min-width:0;height:48px;padding:0 8px;border-radius:13px;font-family:inherit;font-size:var(--fs-lg);font-weight:800;letter-spacing:.2px;
-    cursor:pointer;white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:7px;position:relative;overflow:hidden;
-    transition:transform .1s,filter .16s,background .16s,border-color .16s}
-  .opQuit{color:#dfe7f0;background:rgba(255,255,255,.07);border:1px solid var(--glass-edge)}
-  .opStart{display:none;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5);
-    background:linear-gradient(180deg,rgba(0,0,0,.06),rgba(0,0,0,.34)),var(--mapAccent,#4aa8ff);
-    border:1px solid rgba(255,255,255,.2);box-shadow:0 8px 20px -11px var(--mapAccent,#4aa8ff),inset 0 1px 0 rgba(255,255,255,.14)}
-  #opening.counting.ready .opStart{display:flex}
-  .opQuit:active,.opStart:active{transform:translateY(1px) scale(.99)}
-  /* 남은 시간 = 버튼 전체를 왼→오른쪽으로 채우는 빛(뒤는 은은하게 깔리고, 선단만 또렷하게) */
-  .opStartBar{position:absolute;left:0;top:0;bottom:0;width:0;pointer-events:none;
+  /* 통계 창(#resultScreen)의 나가기 — 게임 진입 로딩은 공용 .actBtn 을 쓴다 */
+  .opQuit{flex:1 1 0;min-width:0;height:48px;padding:0 8px;border-radius:13px;font-family:inherit;
+    font-size:var(--fs-lg);font-weight:800;letter-spacing:.2px;cursor:pointer;white-space:nowrap;
+    display:flex;align-items:center;justify-content:center;gap:7px;position:relative;overflow:hidden;
+    color:#dfe7f0;background:rgba(255,255,255,.07);border:1px solid var(--glass-edge);transition:transform .1s}
+  .opQuit:active{transform:translateY(1px) scale(.99)}
+  .gsBtns .opQuit{flex:0 0 34%}
+  /* 남은 시간 = 준비 버튼을 왼→오른쪽으로 채우는 빛(뒤는 은은하게, 선단만 또렷하게) */
+  .opStartBar{position:absolute;left:0;top:0;bottom:0;width:0;pointer-events:none;z-index:0;
     background:linear-gradient(90deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.05) 42%,rgba(255,255,255,.12) 78%,rgba(255,255,255,.22) 100%)}
   .opStartBar::after{content:'';position:absolute;right:0;top:0;bottom:0;width:2px;   /* 선단 = 위아래로 사라지는 빛줄기 */
     background:linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,.9) 45%,rgba(255,255,255,0));
     box-shadow:0 0 12px 1px rgba(255,255,255,.45)}
   #opening.counting.ready.timing .opStartBar{animation:opBarSweep var(--gsDur,5s) linear forwards}
   @keyframes opBarSweep{from{width:0}to{width:100%}}
-  .opStart.done{cursor:default;color:#93a0b0;background:rgba(255,255,255,.04);   /* 준비 완료 = 무채색 비활성(초록 제거) */
-    border-color:var(--metal-edge);box-shadow:none;text-shadow:none}
-  .opStart.done .opStartBar{display:none}
-  .opStart .opChk{width:22px;height:22px;animation:opChkIn .34s cubic-bezier(.2,.9,.25,1)}
+  /* 내가 준비를 마치면 = 공용 비활성(.actBtn:disabled)이 모습을 갖는다. 여기선 스윕만 끈다 */
+  #opStart.done .opStartBar{display:none}
+  #opStart .opChk{width:19px;height:19px;animation:opChkIn .34s cubic-bezier(.2,.9,.25,1)}
   @keyframes opChkIn{0%{transform:scale(.4);opacity:0}60%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
-  .opStartTxt,.opStart #opStartTxt{position:relative;z-index:1;display:inline-flex;align-items:center;gap:7px}
-  /* 플레이어 = 정보 패널 하단 섹션(구분선으로만 분리) · 준비 표시는 맵 강조색 */
-  .opPlSec{display:flex;flex-direction:column;align-items:stretch;gap:8px;margin-top:11px;padding-top:11px;border-top:1px solid rgba(255,255,255,.07)}
-  .opPlLb{font-size:var(--fs-sm);font-weight:800;letter-spacing:.3px;color:var(--txt-mute)}
-  /* 4칸 × 2줄 고정 그리드 — 칸을 넘는 닉네임은 말줄임 */
-  .opPlayers{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
-  /* 팀전 유즈맵: 시작 화면 플레이어 칸도 대기실과 같은 규약(팀 라벨 + 좌측 팀 색 바)으로 나눔 */
-  .opPlSec.teamed{margin-top:9px;padding-top:9px}
-  .opPlSec.teamed .opPlLb{display:none}   /* 팀 라벨이 역할을 대신 — '플레이어' 제목 생략(하단 준비 표기가 잘리지 않게 높이 확보) */
-  .opPlayers.teamed{display:flex;flex-direction:column;gap:6px}
-  .opTeamRow{display:flex;flex-direction:column;gap:4px}
-  .opTeamRow>b{font-size:9px;font-weight:800;letter-spacing:.5px;color:var(--tmC)}
-  .opTeamRow>.opTeamG{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
-  .opTeamRow.t1{--tmC:var(--tmC1)} .opTeamRow.t2{--tmC:var(--tmC2)}
-  .opTeamRow .opPl{box-shadow:inset 3px 0 0 var(--tmC);padding-left:9px}
-  .opPl{display:flex;align-items:center;justify-content:center;min-width:0;padding:6px 7px;border-radius:9px;
-    font-size:9.5px;font-weight:800;letter-spacing:-.1px;line-height:1;
-    color:#9aa6b4;background:rgba(255,255,255,.04);border:1px solid var(--metal-edge);transition:all .18s}
-  .opPl .opPlNm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .opPl.ready{color:#eaf1fb;border-color:color-mix(in srgb,var(--mapAccent,#4aa8ff) 45%,transparent);background:color-mix(in srgb,var(--mapAccent,#4aa8ff) 14%,transparent)}
-  .opNum{font-family:var(--font-num);font-weight:800;font-size:31px;line-height:1;color:#eaf1fb;letter-spacing:.5px;
-    display:flex;align-items:baseline;gap:8px;text-shadow:0 0 12px var(--mapAccent,#4aa8ff),0 3px 8px rgba(0,0,0,.6)}
-  .opNumLb{font-family:inherit;font-size:var(--fs-md);font-weight:800;font-style:normal;letter-spacing:.5px;color:var(--txt-mute);text-shadow:none}
+  #opStartTxt{position:relative;z-index:1;display:inline-flex;align-items:center;gap:7px}
   /* ── 게임 전환: 화면이 서서히 흐려지며 안으로 들어가는 디졸브(길이 = JS의 GS_WARP_MS) ── */
   #opening.warp{transform-origin:center 46%;animation:opOut var(--gsWarp,.75s) cubic-bezier(.33,0,.2,1) forwards}
   @keyframes opOut{0%{transform:scale(1);opacity:1;filter:blur(0)}
@@ -5234,20 +5269,25 @@
       <div class="opSub">BATTLE ARENA</div>
       <div class="opBarWrap"><div class="opBar"></div></div>
       <div class="opLoading">LOADING…</div>
-      <div class="opMap" id="opMap">
-        <div class="opMapThumb" id="opMapThumb"></div>
-        <div class="opMapName moMap" id="opMapName"></div>
-        <div class="opPanel moInfo">   <!-- 설명 + 플레이어를 한 패널에(구분선으로만 분리) -->
-          <div class="opMapDesc" id="opMapDesc"></div>
-          <div class="opPlSec"><span class="opPlLb">플레이어</span><div class="opPlayers" id="opPlayers"></div></div>
+    </div>
+    <!-- 게임 진입 로딩 = 카드 덱(H안, 2026-08-19). 부팅 오프닝(.opWrap)과 **별개 층**이다 —
+         .opWrap/.opMap/.opBtns 는 통계 창(#resultScreen)과 공용이라 여기서 건드리면 그쪽이 같이 바뀐다. -->
+    <div class="gsWrap" id="gsRoot">
+      <div class="gsArt" id="gsArt"></div>
+      <div class="gsHead">
+        <div class="gsName" id="gsName"></div>
+        <div class="gsLine" id="gsLine"></div>
+      </div>
+      <div class="gsDeck" id="gsDeck"></div>
+      <div class="gsFeat" id="gsFeat"></div>
+      <div class="gsBot">
+        <div class="gsCnt"><i id="gsCntLb">전원 준비하면 바로 진입합니다</i><b id="gsCntN"></b></div>
+        <div class="gsBar"><i id="gsBarFill"></i></div>
+        <div class="gsBtns">
+          <button class="actBtn" id="opQuit" onclick="gsQuitToMaps()">나가기</button>
+          <button class="actBtn pri" id="opStart" data-sfx="game_start" onclick="gsReadyMe()"><i class="opStartBar"></i><span id="opStartTxt">준비 완료</span></button>
         </div>
       </div>
-      <div class="opCount" id="opCount"><span class="opNum" id="opNum"></span><i class="opLine"><b class="opLineFill" id="opLineFill"></b></i></div>
-      <div class="opPlayers" id="opPlayers"></div>
-    </div>
-    <div class="opBtns">   <!-- 스크롤 영역(.opWrap) 밖 = 인원이 많아도 하단에 고정 -->
-      <button class="opQuit" id="opQuit" onclick="gsQuitToMaps()">나가기</button>
-      <button class="opStart" id="opStart" data-sfx="game_start" onclick="gsReadyMe()"><i class="opStartBar"></i><span id="opStartTxt">시작</span></button>
     </div>
   </div>
 
@@ -15461,32 +15501,46 @@ function _mapThumbInto(el, m, extra){ if(!el) return;
 function _mapGuideHTML(m){ if(!m) return '';
   if(m.feats && m.feats.length) return _featRowsHTML(m.feats, 3);
   return escHtml(m.desc||''); }
-// 들어온 플레이어 목록 렌더(준비 상태 표시)
-function _renderGsPlayers(){ const box=document.getElementById('opPlayers'); if(!box) return;
-  const list=(typeof G!=='undefined'&&G.activePlayers&&G.activePlayers.length)?G.activePlayers:[1];
-  _gsPaintCount(list);   // 상단 표기·라인 = 준비 인원
-  const chip=function(p){ const rdy=_gsReady&&_gsReady.has(p);
-    const nm=escHtml(typeof playerName==='function'?playerName(p):('P'+p));
-    return '<div class="opPl'+(rdy?' ready':'')+'" data-p="'+p+'" title="'+nm+'">'
-      +'<span class="opPlNm">'+nm+'</span></div>'; };   // 준비 여부 = 칸 강조색으로 표시(점·상태 텍스트 없음)
-  const teams=(typeof lobbyTeams==='function' && lobbyTeams());   // 팀전 유즈맵 = 대기실과 같은 기준(앞 절반 1팀 / 뒤 절반 2팀)
-  box.classList.toggle('teamed', !!teams);
-  { const sec=box.closest?box.closest('.opPlSec'):null; if(sec) sec.classList.toggle('teamed', !!teams); }   // 팀 모드: '플레이어' 제목 생략(공간 확보)
-  if(!teams){ box.innerHTML=list.map(chip).join(''); return; }
-  const _mx=(typeof _lobbyMax!=='undefined'&&_lobbyMax)?_lobbyMax:Math.max.apply(null,list.concat([2]));
-  const half=Math.ceil(_mx/2), t1=list.filter(p=>p<=half), t2=list.filter(p=>p>half);
-  box.innerHTML=[[1,t1],[2,t2]].map(function(g){ if(!g[1].length) return '';
-    return '<div class="opTeamRow t'+g[0]+'"><b>'+g[0]+'팀</b><div class="opTeamG">'+g[1].map(chip).join('')+'</div></div>'; }).join(''); }
-// 준비 인원 표기(준비 2/4) + 라인 폭 갱신
-function _gsPaintCount(list){ const op=document.getElementById('opening'), num=document.getElementById('opNum');
-  if(!op||!num||!op.classList.contains('ready')) return;
+// 지금 접속한 플레이어 목록(단일 소스) — 없으면 나 혼자
+function _gsList(){ return (typeof G!=='undefined'&&G.activePlayers&&G.activePlayers.length)?G.activePlayers:[1]; }
+function _gsSolo(){ return _gsList().length<=1; }
+// 팀 배정 = 대기실과 같은 기준(앞 절반 1팀 / 뒤 절반 2팀). 팀이 없는 맵이면 0.
+function _gsTeamOf(p){ if(!(typeof lobbyTeams==='function' && lobbyTeams())) return 0;
+  const list=_gsList(), mx=(typeof _lobbyMax!=='undefined'&&_lobbyMax)?_lobbyMax:Math.max.apply(null,list.concat([2]));
+  return p<=Math.ceil(mx/2) ? 1 : 2; }
+// 플레이어 카드 덱 — 협동은 4장씩 두 줄, 팀전은 팀마다 한 줄(윗변이 팀 색).
+// ⛔ 새 카드 마크업을 만들지 말 것: 초상은 공용 avatarHTML(), 준비는 .rdy 한 클래스가 전부다.
+function _renderGsPlayers(){ const deck=document.getElementById('gsDeck'), root=document.getElementById('gsRoot');
+  if(!deck||!root) return;
+  const list=_gsList(), solo=_gsSolo(), teams=!solo && (typeof lobbyTeams==='function') && lobbyTeams();
+  root.classList.toggle('solo', solo); root.classList.toggle('teamed', !!teams);
+  _gsPaintCount(list);
+  if(solo){ deck.innerHTML=''; return; }   // 혼자면 덱 자체가 없다
+  const card=function(p){ const rdy=!!(_gsReady&&_gsReady.has(p));
+    const nm=(typeof playerName==='function')?playerName(p):('P'+p);
+    return '<div class="gsCd'+(rdy?' rdy':'')+'" data-p="'+p+'" title="'+escHtml(nm)+'">'
+      +((typeof avatarHTML==='function')?avatarHTML(nm):'<span class="fAva"></span>')
+      +'<b>'+escHtml(nm)+'</b><em>'+(rdy?'READY':'…')+'</em></div>'; };
+  const row=function(ps){ return '<div class="gsRow">'+ps.map(card).join('')+'</div>'; };
+  if(teams){ deck.innerHTML=[1,2].map(function(t){ const g=list.filter(function(p){ return _gsTeamOf(p)===t; });
+      if(!g.length) return '';
+      return '<div class="gsT'+t+'"><div class="gsTlb">'+t+'팀<s></s></div>'+row(g)+'</div>'; }).join(''); return; }
+  deck.innerHTML=row(list.slice(0,4))+(list.length>4?row(list.slice(4)):''); }
+// 하단 표기 — 여럿이면 '준비 n/N', 혼자면 로딩 진행률(혼자서 '준비'는 뜻이 없다)
+function _gsPaintCount(list){ const op=document.getElementById('opening');
+  const lb=document.getElementById('gsCntLb'), n=document.getElementById('gsCntN'), fill=document.getElementById('gsBarFill');
+  if(!op||!n||!fill||!op.classList.contains('ready')) return;
+  list=list||_gsList();
+  if(_gsSolo()){ const pc=Math.round((_gsSoloPct||0)*100);
+    if(lb) lb.textContent='LOADING'; n.innerHTML=pc+'<s>%</s>'; fill.style.width=pc+'%'; return; }
   const rdy=list.filter(function(p){ return _gsReady&&_gsReady.has(p); }).length;
-  num.innerHTML='<i class="opNumLb">준비</i>'+rdy+'/'+list.length;
-  const fill=document.getElementById('opLineFill'); if(fill) fill.style.width=Math.round(rdy/Math.max(1,list.length)*100)+'%'; }   // 라인 = 준비 비율
+  if(lb) lb.textContent='전원 준비하면 바로 진입합니다';
+  n.innerHTML=rdy+'<s>/'+list.length+'</s>';
+  fill.style.width=Math.round(rdy/Math.max(1,list.length)*100)+'%'; }
 // 시작 버튼 → 준비완료 UI(체크)로 전환
 function _gsMarkMeReadyUI(){ const b=document.getElementById('opStart'), t=document.getElementById('opStartTxt');
   if(b){ b.disabled=true; b.classList.add('done'); }
-  if(t){ t.innerHTML='<svg class="opChk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.4 4.4L19 7"/></svg>준비 완료'; } }
+  if(t && !_gsSolo()) t.innerHTML='<svg class="opChk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.4 4.4L19 7"/></svg>준비 완료'; }
 // 내가 시작(준비완료) 버튼을 누름 — 전원 준비 시 즉시 시작(빠른 경로)
 function gsReadyMe(){ if(typeof G==='undefined'||!_gsReady) return; const me=(G.myPlayer||1);
   if(_gsReady.has(me)) return;
@@ -15503,11 +15557,18 @@ function _gsSet(p){ if(!_gsReady) return; _gsReady.add(p); _renderGsPlayers();
   if(list.every(function(x){ return _gsReady.has(x); })){   // 전원 준비 → 0.5초 머문 뒤 전환(즉시 잘리지 않게)
     const op=document.getElementById('opening'); if(op){ if(op._holdT) return; op._holdT=setTimeout(function(){ op._holdT=null; _gsFinish(); }, GS_HOLD_MS); _gsTimers.push(op._holdT); }
     else _gsFinish(); } }
-let _gsReady=null, _gsTimers=[], _gsDone=null;
-function _gsClearTimers(){ _gsTimers.forEach(clearTimeout); _gsTimers=[]; }
+let _gsReady=null, _gsTimers=[], _gsDone=null, _gsSoloPct=0;   // _gsSoloPct = 개인 플레이 로딩 진행률(0~1)
+// ⚠ 타이머 통에는 setInterval 도 들어간다({__iv}) — clearTimeout 만 돌리면 개인 로딩 진행률이 계속 돈다
+function _gsClearTimers(){ _gsTimers.forEach(function(t){ if(t&&t.__iv) clearInterval(t.__iv); else clearTimeout(t); }); _gsTimers=[]; }
 // 3·2·1 종료 → 준비 단계(시작 버튼이 채워지는 동안 다른 플레이어도 준비)
 function _gsEnterReady(){ const op=document.getElementById('opening'); op.classList.add('ready'); _renderGsPlayers();   // 원 표시를 준비 인원으로 전환
   op.style.setProperty('--gsDur', (GS_READY_MS/1000)+'s');                      // CSS 진행 표시 길이 = JS 대기 시간과 동일
+  // 혼자면 준비할 사람이 없다 → 같은 대기 시간을 **로딩 진행률**로 보여 준다(자동 시작까지 남은 양과 같은 값)
+  if(_gsSolo()){ const t0=(typeof performance!=='undefined'?performance.now():0);
+    const iv=setInterval(function(){ const el=(typeof performance!=='undefined'?performance.now():t0+GS_READY_MS)-t0;
+      _gsSoloPct=Math.min(1, el/GS_READY_MS); _gsPaintCount();
+      if(_gsSoloPct>=1) clearInterval(iv); }, 60);
+    _gsTimers.push({__iv:iv}); }
   const bar=document.querySelector('#opStart .opStartBar'); if(bar){ bar.style.animation='none'; void bar.offsetWidth; bar.style.animation=''; }  // 진행 표시 애니 재시작
   op.classList.add('timing');                                                   // 진행 표시 시작
   const list=(G.activePlayers&&G.activePlayers.length)?G.activePlayers:[1], me=(G.myPlayer||1);
@@ -15519,29 +15580,44 @@ function _gsEnterReady(){ const op=document.getElementById('opening'); op.classL
 function gsQuitToMaps(){ const op=document.getElementById('opening'); if(!op) return;
   clearTimeout(op._loadT); clearTimeout(op._cdEnd); clearTimeout(op._holdT); op._holdT=null; _gsClearTimers(); op._finished=false; _gsDone=null;
   op.classList.remove('counting','ready','timing','warp');
-  const nm=document.getElementById('opNum'); if(nm){ nm.textContent=''; }
   if(typeof G!=='undefined'&&G) G.loading=false;
   if(typeof G!=='undefined'&&G&&G.strike){ G.strike=false; STK=null; }   // 직스: 카운트다운 중 나가기(크롬 원복은 overlayToLobby의 resetGameChrome이 담당)
   if(typeof setInGame==='function') setInGame(false);
   if(typeof playSfx==='function') playSfx('ui_close');
   overlayToLobby(); }   // G 리셋·코옵 종료·방 닫기 → 로딩 → 유즈맵 선택
 // 게임 시작 화면: 곧바로 준비 단계(3·2·1 카운트 없음) → 워프 전환
-function gameStartCountdown(done){ const op=document.getElementById('opening'), num=document.getElementById('opNum');
-  if(!op||!num){ if(typeof done==='function') done(); return; }
+// 머리줄 배지 = 이 판이 어떤 판인지 한 조각. 팀전이면 대진(4 vs 4), 아니면 난이도.
+// ⛔ 초록을 쓰지 말 것 — 이 화면에서 초록은 '준비 완료' 전용이다(카드 밑변).
+function _gsHeadHTML(m){
+  const list=_gsList(), teams=(typeof lobbyTeams==='function') && lobbyTeams() && list.length>1;
+  if(teams){ const a=list.filter(function(p){ return _gsTeamOf(p)===1; }).length, b=list.length-a;
+    return { bd:'<span class="gsBd vs"><s></s>'+a+'<span style="opacity:.5;margin:0 2px">vs</span>'+b+'<s class="b"></s></span>',
+             tx:list.length+'인 대전 · 2팀' }; }
+  const noDiff=!!(m&&m.noDiff), D=(typeof DIFFICULTY!=='undefined')&&DIFFICULTY[(typeof _selDiff!=='undefined')?_selDiff:'easy'];
+  if(noDiff||!D) return { bd:'', tx:(m&&m.desc)||'' };
+  const hp=(D.enemyHp/DIFFICULTY.easy.enemyHp).toFixed(1);
+  return { bd:'<span class="gsBd">'+escHtml(D.name)+'</span>', tx:'적 HP ×'+hp+' · 포인트 ×'+D.coinMult }; }
+function gameStartCountdown(done){ const op=document.getElementById('opening');
+  if(!op||!document.getElementById('gsRoot')){ if(typeof done==='function') done(); return; }
   clearTimeout(op._loadT); clearTimeout(op._cdEnd); clearTimeout(op._holdT); op._holdT=null; _gsClearTimers(); op._finished=false; _gsDone=done||null;
-  // 상단: 선택한 유즈맵 미니맵 + 이름 + 상세 설명
   const m=(typeof _selMap!=='undefined' && _selMap) ? _selMap : null;
-  const th=document.getElementById('opMapThumb'), nmEl=document.getElementById('opMapName'), ds=document.getElementById('opMapDesc');
-  { const ac=(m && typeof MAP_ACCENT!=='undefined' && MAP_ACCENT[m.id])||'#7f93b0'; op.style.setProperty('--mapAccent', ac); }   // 아이콘 틴트 = 맵 강조색(팝업과 통일)
-  _mapThumbInto(th, m, 'opThumb'); if(nmEl) nmEl.textContent=m?m.name:'';
-  if(ds){ ds.className='opMapDesc'+((m&&m.feats&&m.feats.length)?' moInfo moFeats':''); ds.innerHTML=_mapGuideHTML(m); }   // 특징 리스트 = 팝업 정보 패널(.moInfo)과 동일
+  { const ac=(m && typeof MAP_ACCENT!=='undefined' && MAP_ACCENT[m.id])||'#7f93b0'; op.style.setProperty('--mapAccent', ac); }
+  // 배경 = 유즈맵 키 아트(팝업·목록과 같은 단일 소스). 그림이 없는 맵은 비워 둔다 — 미니맵으로 대신 채우지 않는다.
+  { const art=document.getElementById('gsArt'); if(art) _mapBgInto(art, m); }
+  { const nm=document.getElementById('gsName'); if(nm) nm.textContent=m?m.name:''; }
+  { const ln=document.getElementById('gsLine'), h=_gsHeadHTML(m);
+    if(ln) ln.innerHTML=h.bd+'<span>'+escHtml(h.tx)+'</span>'; }
+  { const fe=document.getElementById('gsFeat');   // 특징 = 유즈맵 팝업과 같은 리스트(_featRowsHTML)
+    if(fe){ const has=!!(m&&m.feats&&m.feats.length);
+      fe.className='gsFeat'+(has?' moFeats':'');   // ⚠ .moFeats 를 안 붙이면 아이콘 판·간격이 통째로 죽는다
+      fe.innerHTML=_mapGuideHTML(m); } }
   if(typeof paintIcons==='function') paintIcons(op);
-  // 준비 상태 초기화 + 플레이어 목록
+  _gsSoloPct=0;
   _gsReady=new Set(); _renderGsPlayers();
   const sb=document.getElementById('opStart'), st=document.getElementById('opStartTxt');
-  if(sb){ sb.disabled=false; sb.classList.remove('done'); } if(st){ st.innerHTML='시작'; }
+  if(sb){ sb.disabled=false; sb.classList.remove('done'); } if(st){ st.textContent=_gsSolo()?'전투 시작':'준비 완료'; }
   op.classList.remove('hide','warp','ready','timing'); op.classList.add('counting');
-  { const fill=document.getElementById('opLineFill'); if(fill) fill.style.width='0%'; }   // 진행 라인 초기화(준비 인원 0)
+  { const fill=document.getElementById('gsBarFill'); if(fill) fill.style.width='0%'; }
   _gsEnterReady(); }   // 대기 없이 바로 준비 단계
 // 준비 완료(전원 또는 5초 자동) → 워프 전환 후 게임 진행
 function _gsFinish(){ const op=document.getElementById('opening'); if(!op||op._finished) return; op._finished=true;
@@ -15549,7 +15625,6 @@ function _gsFinish(){ const op=document.getElementById('opening'); if(!op||op._f
   op.style.setProperty('--gsWarp', (GS_WARP_MS/1000)+'s');   // CSS 전환 길이 = JS 대기 시간과 동일
   op.classList.add('warp');   // 'ready' 유지한 채 서서히 흐려지며 게임 안으로
   op._cdEnd=setTimeout(function(){ op.classList.add('hide'); op.classList.remove('warp','counting','ready','timing'); op._finished=false;
-    const nm=document.getElementById('opNum'); if(nm){ nm.textContent=''; }
     if(typeof G!=='undefined'&&G) G.loading=false;                     // 로딩 종료 → 게임 타이머 10초부터 진행
     if(typeof bgmStart==='function') bgmStart('ingame');               // 라운드 시작 → 인게임 BGM(로비 BGM 정지)
     if(typeof _gsDone==='function') _gsDone(); }, GS_WARP_MS); }
