@@ -4895,6 +4895,13 @@ async function groupGame(){
         const ri=c0.querySelector('.cgCost .ri'), cs=getComputedStyle(c0.querySelector('.cgCost .cc'));
         if(ri) assert(Math.abs(ri.getBoundingClientRect().height-parseFloat(cs.fontSize))<=0.5,
           '재화 아이콘이 옆 숫자 크기와 다름: '+ri.getBoundingClientRect().height.toFixed(1)+' vs '+cs.fontSize);
+        // ⚠ 수치와 재화 사이의 틈 = 카드에서 남는 높이 전부다(비용은 아래 붙박이, 초상은 정사각으로 묶임).
+        //   틈만 따로 줄일 수 없으므로 초상이 남는 높이를 먹어야 한다 — 커지면 틈이 닫힌다.
+        //   ⚠ 칸 폭은 왼쪽 설명 패널 길이에 따라 달라진다 → 절대 px 로 박지 말고 '줄간격 위에 남은 몫'으로 잰다.
+        { const sub=c0.querySelector('.cgSub'), cost=c0.querySelector('.cgCost');
+          if(sub&&cost){ const g=cost.getBoundingClientRect().top - sub.getBoundingClientRect().bottom;
+            const fg=parseFloat(getComputedStyle(c0).rowGap)||0, extra=g-fg;
+            assert(extra<=2,'수치와 재화 사이에 남는 높이가 큼(초상이 못 먹음): 틈 '+g.toFixed(2)+'px = 줄간격 '+fg+' + 남은 몫 '+extra.toFixed(2)); } }
         // 수치 줄은 이름보다 확실히 작아야 한다 — 이 줄이 없는 칸과 높이 차이를 줄이려는 규칙이다
         const sub=c0.querySelector('.cgSub'), nm=c0.querySelector('.cgName');
         if(sub&&nm) assert(parseFloat(getComputedStyle(sub).fontSize) < parseFloat(getComputedStyle(nm).fontSize)-1.5,
