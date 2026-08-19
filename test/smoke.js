@@ -380,15 +380,24 @@ async function groupLobby(){
       assert(typeof hbOpenBuild!=='function','건설 팝업이 아직 남아 있음(패널로 흡수됐어야 한다)');
       hmUpgTab(before); }
     // 수량은 한 칸을 눌러 돌린다 — 1 → 10 → MAX → 1. 폭은 라벨이 바뀌어도 고정
-    { const qs=document.querySelectorAll('.hmUpQ');
+    { const qs=document.querySelectorAll('#hmUpgQty .hmUpQ');
       assert(qs.length===1,'수량은 한 칸이어야 함: '+qs.length+'개');
-      const box=document.querySelector('.hmUpQty'), w0=Math.round(box.getBoundingClientRect().width);
+      const box=$('hmUpgQty'), w0=Math.round(box.getBoundingClientRect().width);
       const seen=[];
-      for(let i=0;i<4;i++){ seen.push(document.querySelector('.hmUpQ').textContent);
-        assert(Math.round(document.querySelector('.hmUpQty').getBoundingClientRect().width)===w0,'수량 칸 폭이 변함');
+      for(let i=0;i<4;i++){ seen.push(box.querySelector('.hmUpQ').textContent);
+        assert(Math.round($('hmUpgQty').getBoundingClientRect().width)===w0,'수량 칸 폭이 변함');
         hmUpgQtyCycle(); }
       assert(seen.join(',')==='×1,×10,MAX,×1','수량 순환이 1→10→MAX→1이 아님: '+seen.join(','));
       hbHunt().upgQty=1; renderHome(); }   // 뒤 검사(1회 구매)가 오염되지 않게 되돌린다
+    // 🤖 자동 업그레이드 — 수량 버튼과 같은 물성, 켜짐은 .on 으로만 구분
+    { const a=document.querySelector('#hmUpgAuto .hmUpQ');
+      assert(a && a.textContent.trim()==='자동','자동 업그레이드 버튼이 없음: '+(a&&a.textContent));
+      assert(a.scrollWidth<=a.clientWidth+1,'자동 글자가 잘림');
+      const on0=hmAutoOn(); if(on0) hmAutoToggle();
+      assert(!document.querySelector('#hmUpgAuto .hmUpQ').classList.contains('on'),'꺼졌는데 켜져 보임');
+      hmAutoToggle();
+      assert(hmAutoOn() && document.querySelector('#hmUpgAuto .hmUpQ').classList.contains('on'),'켰는데 안 켜져 보임');
+      hmAutoToggle(); }
     { const n=document.querySelectorAll('.hmUp').length, all=Object.keys(HB_UPG).length;
       assert(n>0 && n<all,'현재 탭만 그려야 하는데 '+n+'/'+all+'칸');
       // 잠긴 칸은 값·레벨 대신 자물쇠 — 해금 전에 사면 안 된다
@@ -413,26 +422,12 @@ async function groupLobby(){
       hmUpgTab('char');
       assert(h0===h1,'탭을 바꾸면 높이가 변함: '+h0+' → '+h1);
       assert(gr.scrollHeight-gr.clientHeight>10,'나머지 칸이 스크롤되지 않음'); }
-    // 접으면 헤더만 남고 전장이 그만큼 넓어진다(캐릭터가 내려온다)
-    // ⚠ 접힘은 max-height 전환(.28s)이라 토글 직후엔 아직 높다 — 전환이 끝난 뒤 재야 한다.
-    //   캐릭터 y도 매 프레임 목표를 좇는 형태라 hbResize를 여러 번 돌려 수렴시킨다.
-    // ⚠ 헤드리스에선 CSS 전환이 프레임 없이는 진행되지 않아 시작값에 멈춘다(실브라우저는 정상).
-    //   시간에 기대지 말고 대기 중인 애니메이션을 확정시킨 뒤 잰다 — '접으면 넓어지는가'만 검사하면 된다.
-    { const settle=async()=>{ await sleep(320);
-        if(document.getAnimations) for(const a of document.getAnimations()){ try{ a.finish(); }catch(e){} }
-        for(let i=0;i<40;i++) hbResize(); };
-      const yOpen=_hb.cy, botOpen=_hb.vBot, kOpen=_hb.k;
-      hmToggleUpg(); await settle();
-      assert(document.querySelector('.hmUpg').classList.contains('down'),'접힘 상태가 안 됨');
-      assert(getComputedStyle($('hmUpgGrid')).transitionDuration!=='0s','접힘에 애니메이션이 없음');
-      assert(_hb.vBot>botOpen+40,'접었는데 전장이 안 넓어짐: '+Math.round(botOpen)+' → '+Math.round(_hb.vBot));
-      assert(_hb.cy>yOpen+20,'접었는데 전장 중심이 안 내려옴');
-      // 위치만이 아니라 배율까지 바뀌어야 한다 — 적·글자·링이 캐릭터와 같은 비율로 커진다
-      assert(_hb.k>kOpen*1.15,'접었는데 전장 배율이 안 커짐: '+kOpen.toFixed(2)+' → '+_hb.k.toFixed(2));
-      hmToggleUpg(); await settle();
-      assert(!document.querySelector('.hmUpg').classList.contains('down'),'다시 펴지지 않음');
-      assert(Math.abs(_hb.vBot-botOpen)<8,'다시 폈는데 전장이 원래대로 안 돌아옴');
-      assert(Math.abs(_hb.k-kOpen)<0.03,'다시 폈는데 배율이 원래대로 안 돌아옴: '+_hb.k.toFixed(2)); }
+    // 접기는 폐지했다(2026-08-19) — 늘 펴 두는 구역이라 접는 칸이 자리만 먹었다
+    { assert(typeof hmToggleUpg==='undefined','접기 함수가 아직 남아 있음');
+      assert(!document.querySelector('#homeScreen .hmUpgChev'),'접기 화살표가 아직 있음');
+      assert(!document.querySelector('.hmUpg').classList.contains('down'),'접힌 채로 시작함');
+      const hd=document.querySelector('#homeScreen .hmUpgHead');
+      assert(hd && hd.tagName!=='BUTTON','머리줄이 아직 누르는 버튼임'); }
     PROF().pcoin=99999; renderHome();
     const btn=document.querySelector('.hmUp .hmUpBtn'); assert(!btn.disabled,'미네랄이 있는데 버튼이 잠김');
     const lv0=PROF().hunt.upg.atk||0, pc0=PROF().pcoin; btn.click();
@@ -3068,6 +3063,64 @@ async function groupLobby(){
     assert(Math.abs(_hb.char.atk-a0)<1e-6,'초기화 뒤 전투 수치가 안 돌아옴');
     navBack(); await sleep(40);
     return '찍기·초기화 → 전투 즉시 반영'; });
+  await step('사냥터 업그레이드: 미네랄이 차면 그 자리에서 버튼이 열린다', async()=>{
+    assert(typeof hmUpgAfford==='function','살 수 있는지 다시 칠하는 함수가 없음');
+    if(typeof hbEnd==='function') hbEnd();
+    const p=PROF(); p.chars.length=0; p.curId=''; profCreateChar('ranger','열림'); saveMeta();
+    openHome(); await sleep(120);
+    hbHunt().upgAuto=0; hmUpgTab('char'); p.pcoin=0; renderHome();
+    const btn=k=>document.querySelector('#hmUpgGrid .hmUpBtn[data-k="'+k+'"]');
+    assert(btn('atk'),'데미지 카드가 없음');
+    assert(btn('atk').classList.contains('off'),'미네랄이 0인데 버튼이 열려 있음');
+    // ⭐ 핵심: 화면을 떠났다 오지 않아도, 미네랄이 차면 열려야 한다
+    PROF().pcoin=1e9;
+    const n=hmUpgAfford();
+    assert(n>0,'미네랄이 찼는데 다시 칠해진 버튼이 없음');
+    assert(!btn('atk').classList.contains('off'),'미네랄이 충분한데 버튼이 잠긴 채임');
+    // 판정은 한 곳에서만 나온다 — 그릴 때와 다시 칠할 때가 갈리면 '회색인데 눌리는 버튼'이 생긴다
+    { const before=[...document.querySelectorAll('#hmUpgGrid .hmUpBtn[data-k]')]
+        .map(b=>b.dataset.k+':'+b.classList.contains('off')).join(',');
+      renderHome();
+      const after=[...document.querySelectorAll('#hmUpgGrid .hmUpBtn[data-k]')]
+        .map(b=>b.dataset.k+':'+b.classList.contains('off')).join(',');
+      assert(before===after,'다시 칠한 결과가 새로 그린 결과와 다름'); }
+    // 반대로 다 쓰면 그 자리에서 다시 잠긴다
+    PROF().pcoin=0; hmUpgAfford();
+    assert(btn('atk').classList.contains('off'),'미네랄이 없는데 버튼이 열린 채임');
+    return '즉시 열림/잠김 ok'; });
+  await step('자동 업그레이드: 켜 두면 살 수 있는 것을 싼 것부터 산다', async()=>{
+    assert(typeof hmAutoUpgTick==='function','자동 업그레이드가 없음');
+    if(typeof hbEnd==='function') hbEnd();
+    const p=PROF(); p.chars.length=0; p.curId=''; profCreateChar('ranger','자동업'); saveMeta();
+    openHome(); await sleep(120);
+    const H=hbHunt(); H.upg={}; H.unl={}; H.upgQty=1; H.upgAuto=0;
+    // ① 꺼져 있으면 아무것도 안 산다
+    PROF().pcoin=1e9;
+    assert(hmAutoUpgTick()===0,'꺼져 있는데 샀음');
+    assert(Object.keys(H.upg).length===0,'꺼져 있는데 레벨이 올랐음');
+    // ② 켜면 산다 — 미네랄이 줄고 레벨이 오른다
+    H.upgAuto=1;
+    const coin0=PROF().pcoin, got=hmAutoUpgTick();
+    assert(got>0,'켰는데 하나도 안 삼');
+    assert(PROF().pcoin<coin0,'샀는데 미네랄이 안 줄어듦');
+    assert(Object.keys(hbHunt().upg).length>0,'샀는데 레벨이 안 오름');
+    // ③ 한 틱에 무한히 사지 않는다 — 미네랄이 많아도 상한이 있다(프레임이 멈추면 안 된다)
+    PROF().pcoin=1e12;
+    assert(hmAutoUpgTick()<=HM_AUTO_MAX,'한 틱 상한을 넘김');
+    // ④ 싼 것부터 산다 — 다음에 살 것이 지금 살 수 있는 것 중 가장 싸야 한다
+    { const coin=Math.floor(PROF().pcoin);
+      const k=hmAutoNext(); assert(k,'살 수 있는 게 있는데 못 고름');
+      for(const kk in HB_UPG){ const c=hmUpgCost(kk);
+        assert(!(c<=coin && c<hmUpgCost(k)),'더 싼 것이 있는데 안 골랐다: '+kk+'('+c+') vs '+k+'('+hmUpgCost(k)+')'); } }
+    // ⑤ 잠긴 칸도 연다 — 안 그러면 해금이 영영 안 된다
+    { const H2=hbHunt(); H2.upg={}; H2.unl={}; PROF().pcoin=1e9;
+      for(let i=0;i<40 && Object.keys(H2.unl).length<3;i++) hmAutoUpgTick();
+      assert(Object.keys(hbHunt().unl).length>=3,'자동인데 해금이 안 됨: '+JSON.stringify(hbHunt().unl)); }
+    // ⑥ 다 쓰면 멈춘다(무한 루프가 아니다)
+    PROF().pcoin=0;
+    assert(hmAutoUpgTick()===0,'미네랄이 없는데 샀음');
+    hbHunt().upgAuto=0;
+    return '싼 것부터 · 한 틱 최대 '+HM_AUTO_MAX+'개'; });
   await step('자동 배분: 골라 둔 한 축에만 계속 찍힌다', async()=>{
     assert(typeof lpAutoSpend==='function','자동 배분이 없음');
     const p=PROF(); p.chars.length=0; p.curId='';

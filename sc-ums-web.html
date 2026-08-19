@@ -2938,7 +2938,7 @@
   /* 헤더 = 접기/펴기 손잡이. 접으면 이 줄만 남고 뒤 배경이 화면 전체로 보인다 */
   /* ⚠ 공용 제목 규칙(#ovTitle,…,.hmUpgHead,… → Jua 700)이 뒤에 오며 같은 명시도로 덮는다.
      부모(.hmUpg)를 붙여 0,2,0 으로 올려 이 제목만 Noto 로 내린다 — 공용 규칙은 건드리지 않는다. */
-  .hmUpg .hmUpgHead{position:relative;width:100%;display:flex;align-items:center;gap:9px;padding:7px 12px 4px;
+  .hmUpg .hmUpgHead{position:relative;width:100%;display:flex;align-items:center;gap:9px;padding:7px 12px 4px;cursor:default;
     font-family:var(--font-ko);font-size:15px;font-weight:700;letter-spacing:.11em;
     color:#ececec;cursor:pointer;background:none;border:none;border-bottom:none;text-align:left}
   /* 머리줄 아래 스캔라인은 뺐다(2026-08-12) — 바로 아래 탭 띠가 이미 상자라 선이 두 겹으로 보였다 */
@@ -4993,9 +4993,9 @@
     <div class="hmScroll uiScroll" id="hmScroll">
       <!-- POWER UPGRADES — 화면에 남은 유일한 카드. 위쪽은 비워서 우주 배경(.spaceBg)이 그대로 보인다 -->
       <div class="hmCard hmUpg">
-        <button class="hmUpgHead" id="hmUpgHead" onclick="hmToggleUpg()" aria-label="업그레이드 접기/펴기">
-          <b class="hmUpgTtl">사냥터 업그레이드</b><i class="hmUpgChev"></i></button>
-        <div class="hmUpgBar"><span class="hmUpgTabs" id="hmUpgTabs"></span><span class="hmUpQty" id="hmUpgQty"></span></div>
+        <div class="hmUpgHead" id="hmUpgHead"><b class="hmUpgTtl">사냥터 업그레이드</b></div>
+        <div class="hmUpgBar"><span class="hmUpgTabs" id="hmUpgTabs"></span>
+          <span class="hmUpQty lpQ au" id="hmUpgAuto"></span><span class="hmUpQty" id="hmUpgQty"></span></div>
       <div class="hmUpgGrid" id="hmUpgGrid"></div>
       </div>
     </div>
@@ -6493,6 +6493,7 @@ function renderHome(){ try{
       tb.innerHTML=segNavHTML(HB_UPG_CAT.map(function(c){ return { label:c[1], col:c[2] }; }), ci,
         function(k){ return 'hmUpgTab(&#39;'+HB_UPG_CAT[k][0]+'&#39;)'; }); }
     // 수량 1 / 10 / MAX
+    hmAutoPaint();
     const qb=document.getElementById('hmUpgQty'), q=hbHunt().upgQty||1;
     if(qb) qb.innerHTML='<button class="hmUpQ on" onclick="hmUpgQtyCycle()">'
       +(q==='max'?'MAX':('×'+q))+'</button>';
@@ -6502,19 +6503,17 @@ function renderHome(){ try{
     // ⚠ 건설 카드는 여기 없다 — 여긴 '지어진 것의 스활을 올리는' 곳이다.
     //   짓는 것은 전장 위 버튼(renderHbBar → hbBuy)에서 한다 — 어떤 자리에 놓을지 고라야 하므로 필드 옆에 있어야 한다.
     gr.innerHTML=keys.map(function(k){ const U=HB_UPG[k], lv=u[k]||0, own=hbUpgOwned(k);
-      let off;
       let _hd;
-      if(own){ const P=hbUpgPlan(k); off=coin<P.sum;
+      if(own){ const P=hbUpgPlan(k);
         _hd={ v:hbUpgVal(k,lv), n:hbUpgVal(k,lv+P.n), l:'LV.'+lv,
               c:resIco('mineral')+P.sum.toLocaleString('en-US') }; }
-      else { off=coin<U.u;
-        _hd={ c:resIco('mineral')+U.u.toLocaleString('en-US') }; }
-      return hmUpCardHTML({ key:k, ico:hbUpgIco(k), name:hmUpgName(U.name), off:off,
+      else _hd={ c:resIco('mineral')+U.u.toLocaleString('en-US') };
+      return hmUpCardHTML({ key:k, ico:hbUpgIco(k), name:hmUpgName(U.name), off:hmUpgOff(k),
         lock:!own, val:_hd.v, next:_hd.n, lv:_hd.l, cost:_hd.c }); }).join('');
     hmUpgBindHold(); }
   renderHomeStats();
   const card=document.querySelector('#homeScreen .hmUpg');
-  if(card) card.classList.toggle('down', !!hbHunt().upgDown);
+  if(card) card.classList.remove('down');   // 접기 폐지 — 옛 저장에 upgDown 이 남아 있어도 늘 펴 둔다
 }catch(e){} }
 // 레벨업으로 받은 스탯 포인트 — 남았을 때만 줄이 뜬다. 배분은 공용 profAllocStat()(마을 광장과 같은 함수).
 // 진화·환생 신호 — 하단 패널의 줄이 아니라 상단 성장 버튼의 ! 배지.
@@ -6650,7 +6649,7 @@ function hbBuildCardHTML(bk){
                                                : Math.round(M.turret.dps*100*c)+'%'; };
   return hmUpCardHTML({ key:'b_'+bk,
     ico:'<img class="icoImg" src="'+ICO_DIR+'buildings/'+B.ico+'.webp" alt="" draggable="false">', name:B.name,
-    off:full||coin<cost, lock:full, lockTx:'최대 '+mx+(bk==='wall'?'칸':'기'),
+    off:hmUpgOff('b_'+bk), lock:full, lockTx:'최대 '+mx+(bk==='wall'?'칸':'기'),
     val:tot(n), next:full?null:tot(n+1), lv:'LV.'+n,
     cost:resIco('mineral')+cost.toLocaleString('en-US'),
     act:full?null:('hbBuy(&#39;'+bk+'&#39;)') }); }
@@ -7280,10 +7279,8 @@ function hbBuildMax(k){ const B=HB_STRUCT[k]; if(!B) return 0;
   // ⚠ 'ally'는 없어졌다 — 동료 정원은 hbMateMax()가 따로 정한다(3칸 고정)
   if(k==='turret'&& profHasUnlock('turret_plus')) m+=2;
   return m; }
-function hmToggleUpg(){ const H=hbHunt(); H.upgDown=!H.upgDown;
-  const card=document.querySelector('#homeScreen .hmUpg'); if(card) card.classList.toggle('down', !!H.upgDown);
-  if(typeof playSfx==='function') playSfx('ui_tab');
-  if(typeof saveMeta==='function') saveMeta(); }
+// 접기는 없앴다(2026-08-19) — 늘 펴 두는 구역이라 접는 칸이 자리만 먹었다.
+// ⚠ .hmUpg.down 스타일은 마을 패널이 아직 쓰므로 남겨 둔다.
 
 // 해금 — 한 번 지불하면 그 업그레이드가 열린다(레벨은 0부터)
 function hmUnlockUpg(k){ const p=PROF(), U=HB_UPG[k]; if(!U || hbUpgOwned(k)) return;
@@ -7293,6 +7290,60 @@ function hmUnlockUpg(k){ const p=PROF(), U=HB_UPG[k]; if(!U || hbUpgOwned(k)) re
   if(typeof updateCurBar==='function') updateCurBar(); renderHome(); hmUpgWon(k); }
 function hmUpgTab(c){ hbHunt().upgCat=c; if(typeof playSfx==='function') playSfx('ui_tab'); saveMeta(); renderHome(); }
 // 한 칸을 눌러 돌린다 — 1 → 10 → MAX → 1
+// ══ 🤖 자동 업그레이드 ══════════════════════════════════════════════════════════
+//   켜 두면 살 수 있는 것 중 **가장 싼 것**을 계속 산다. '눌러 놓고 유즈맵 가는' 구역이라
+//   미네랄이 쌓인 채로 놀지 않게 하는 게 목적이다.
+//   ⭐ 대상을 고르게 하지 않는 이유: 업그레이드가 31종·4구역이라 하나만 고르면 나머지가 놀고,
+//      싼 것부터 사면 저절로 고르게 오른다(가격이 곧 우선순위다).
+//   ⚠ 해금(HB_UPG[k].u)도 '살 수 있는 것'에 포함된다 — 안 그러면 잠긴 칸이 영영 안 열린다.
+//   ⚠ 한 틱에 무한히 사지 않는다(HM_AUTO_MAX) — 미네랄이 많으면 프레임이 통째로 멈춘다.
+const HM_AUTO_MAX=12;
+function hmAutoOn(){ return !!hbHunt().upgAuto; }
+function hmAutoToggle(){ const H=hbHunt(); H.upgAuto=H.upgAuto?0:1;
+  if(typeof playSfx==='function') playSfx('ui_tab');
+  if(typeof saveMeta==='function') saveMeta();
+  if(H.upgAuto) hmAutoUpgTick();
+  renderHome(); }
+// 지금 살 수 있는 것 중 가장 싼 키(없으면 '')
+function hmAutoNext(){ const coin=Math.floor((PROF()||{}).pcoin||0);
+  let best='', bc=Infinity;
+  for(const k in HB_UPG){ const c=hmUpgCost(k);
+    if(c<=coin && c<bc){ bc=c; best=k; } }
+  return best; }
+// 한 번에 최대 HM_AUTO_MAX 개. 실제로 산 개수를 돌려준다.
+// ⚠ hmBuyUpg/hmUnlockUpg 를 쓰면 안 된다 — 매번 renderHome()과 소리를 부른다(초당 수십 번).
+//    조용한 경로로 사고, 산 게 있을 때만 '한 번' 다시 그린다.
+function hmAutoUpgTick(){ if(!hmAutoOn()) return 0;
+  const p=PROF(); let n=0;
+  for(; n<HM_AUTO_MAX; n++){ const k=hmAutoNext(); if(!k) break;
+    if(hbUpgOwned(k)){ if(!hmBuyUpgQuiet(k, true)) break; }
+    else { const U=HB_UPG[k]; if(Math.floor(p.pcoin||0)<U.u) break;
+      p.pcoin-=U.u; hbHunt().unl[k]=1; } }
+  if(n>0){ saveMeta();
+    if(typeof hbSyncChar==='function') hbSyncChar();
+    if(typeof updateCurBar==='function') updateCurBar();
+    if(typeof renderHome==='function') renderHome(); }
+  return n; }
+function hmAutoPaint(){ const el=document.getElementById('hmUpgAuto'); if(!el) return;
+  el.innerHTML='<button class="hmUpQ'+(hmAutoOn()?' on':'')+'" onclick="hmAutoToggle()">자동</button>'; }
+// ══════════════════════════════════════════════════════════════════════════════
+// 💠 이 칸을 지금 살 수 있는가 — 값이 모자라면 true(꺼짐).
+//   ⛔ 판정을 두 벌로 두지 말 것: 그릴 때(renderHome)와 다시 칠할 때(hmUpgAfford)가 갈리면
+//      '회색인데 눌리는 버튼'이 생긴다. key 는 업그레이드 키 또는 건설 카드의 'b_<종류>'.
+function hmUpgCost(key){
+  if(String(key).indexOf('b_')===0){ const bk=key.slice(2);
+    return hbStructN(bk)>=hbBuildMax(bk) ? Infinity : hbBuildCost(bk); }   // 최대면 살 수 없다
+  const U=HB_UPG[key]; if(!U) return Infinity;
+  return hbUpgOwned(key) ? hbUpgPlan(key).sum : U.u; }
+function hmUpgOff(key){ return Math.floor((PROF()||{}).pcoin||0) < hmUpgCost(key); }
+// 재화는 처치마다 늘어나는데 카드를 통째로 다시 그리면 너무 비싸다 → 살 수 있는지만 다시 칠한다.
+//   ⚠ 이게 없으면 미네랄이 충분해져도 화면을 떠났다 와야 버튼이 열린다(2026-08-19 버그).
+function hmUpgAfford(){ const gr=document.getElementById('hmUpgGrid'); if(!gr) return 0;
+  let n=0;
+  for(const btn of gr.querySelectorAll('.hmUpBtn[data-k]')){
+    const off=hmUpgOff(btn.dataset.k);
+    if(btn.classList.contains('off')!==off){ btn.classList.toggle('off', off); n++; } }
+  return n; }
 function hmUpgQtyCycle(){ const H=hbHunt(), q=H.upgQty||1;
   H.upgQty=(q===1)?10:((q===10)?'max':1);
   if(typeof playSfx==='function') playSfx('ui_tab'); saveMeta(); renderHome(); }
@@ -7346,12 +7397,13 @@ function hmHoldStart(k){
     _hmHold.t=setTimeout(tick, _hmHold.d); };
   _hmHold.t=setTimeout(tick, 350); }
 // 구매 1회 — 화면을 다시 그리지 않는다(연타용). 샀으면 true
-function hmBuyUpgQuiet(k){ const p=PROF(), U=HB_UPG[k]; if(!p||!U) return false;
+// silent=true 면 소리도 안 낸다 — 자동 업그레이드는 초당 수십 번 사서 소리가 기관총이 된다.
+function hmBuyUpgQuiet(k, silent){ const p=PROF(), U=HB_UPG[k]; if(!p||!U) return false;
   if(!hbUpgOwned(k)) return false;
   const P=hbUpgPlan(k); if(Math.floor(p.pcoin||0)<P.sum) return false;
   p.pcoin-=P.sum; hbHunt().upg[k]=(hbHunt().upg[k]||0)+P.n;
   if(typeof dqNote==='function') dqNote('upg',P.n);   // 📅 일일 — 길게 눌러 연타로 사는 쪽도 같은 계측
-  if(typeof playSfxT==='function') playSfxT('upgrade', 60);
+  if(!silent && typeof playSfxT==='function') playSfxT('upgrade', 60);
   return true; }
 // 포인터 흐름: down 에서 1회 + 연타 시작 / up·cancel 에서 정지. click 은 안 쓴다.
 function hmUpgBindHold(){ const gr=document.getElementById('hmUpgGrid'); if(!gr||gr._holdBound) return;
@@ -8962,7 +9014,9 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char;
   if(c.shdMax>0 && c.shd<c.shdMax && c.shdReg>0) c.shd=Math.min(c.shdMax, c.shd+c.shdReg*dt);
   if(c.hp<=0){ hbDie(); }
   if(S.curDirty && S.t-(S.curT||0)>.2){ S.curT=S.t; S.curDirty=false;
-    if(typeof updateCurBar==='function') updateCurBar(); }
+    if(typeof updateCurBar==='function') updateCurBar();
+    if(typeof hmAutoUpgTick==='function') hmAutoUpgTick();   // 🤖 자동 업그레이드 — 살 수 있으면 산다
+    if(typeof hmUpgAfford==='function') hmUpgAfford(); }     // 💠 살 수 있게 됐으면 버튼을 연다
   hbFx(dt); }
 // 처치 1건 — 캐릭터·동료·펫·터렛·스킬이 전부 이 한 곳을 지난다(보상 규칙을 여러 벌 두지 않는다)
 function hbKill(f){ const S=_hb, i=S.foes.indexOf(f); if(i<0) return; S.foes.splice(i,1); S.kills++;
