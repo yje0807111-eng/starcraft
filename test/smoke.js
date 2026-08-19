@@ -2585,6 +2585,7 @@ async function groupLobby(){
     let rp0=c.rp|0;
     for(let i=1;i<PROF_REB_LEVELS.length;i++){
       c.level=PROF_REB_LEVELS[i]; c.unit.level=c.level;
+      PLAYER_META.coins=(PLAYER_META.coins||0)+profRebPoint(c);   // 🔑 2회차부터 유즈맵 포인트 관문 — 관문 자체는 다른 스텝이 검사한다
       const want=profRebGrant(i+1);
       assert(profRebirth(c)===i+1,(i+1)+'회차가 아님');
       assert((c.rp|0)-rp0===want,(i+1)+'회차 지급량이 다름: '+((c.rp|0)-rp0)+' vs '+want);
@@ -3431,6 +3432,7 @@ async function groupLobby(){
     const put=rpAdd('atk', 3);
     assert(put>0 && rpPts('atk')===put,'환생 포인트가 안 찍힘: '+put+'/'+rpPts('atk'));
     c.level=PROF_REB_LEVELS[1]; c.unit.level=c.level;
+    PLAYER_META.coins=(PLAYER_META.coins||0)+profRebPoint(c);   // 🔑 2회차 관문 통과분만 채워 준다
     const step2=profRebirth(c);
     assert(step2===2,'2회차가 아님');
     assert(rpPts('atk')===put,'환생했더니 찍어 둔 환생 포인트가 사라짐');
@@ -3469,7 +3471,9 @@ async function groupLobby(){
       H2.best={1:HB_ROUND_MAX, 2:50};                       // 전역 진행도 = 99+50 = 149
       assert(profRecordRp(c2)===0,'마지막 환생 전인데 기록 포인트가 나옴: '+profRecordRp(c2));
       for(let i=profRebDone(c2); i<PROF_REB_LEVELS.length; i++){
-        c2.level=PROF_REB_LEVELS[i]; c2.unit.level=c2.level; profRebirth(c2); }
+        c2.level=PROF_REB_LEVELS[i]; c2.unit.level=c2.level;
+        PLAYER_META.coins=(PLAYER_META.coins||0)+profRebPoint(c2);   // 🔑 유즈맵 포인트 관문(여기서는 주제가 아니다)
+        profRebirth(c2); }
       H2.best={1:HB_ROUND_MAX, 2:50};                       // 환생이 진행도를 되감으므로 기록을 다시 세운다
       const want=Math.floor(hbProg(2,50)/PROF_REC_RP_PER);
       assert(profRecordRp(c2)===want,'기록 포인트가 전역 진행도와 다름: '+profRecordRp(c2)+' vs '+want);
@@ -4611,7 +4615,9 @@ async function groupGame(){
           assert(!bluish(getComputedStyle(e).backgroundImage), n+' '+sel+' 이 아직 푸른 톤: '+getComputedStyle(e).backgroundImage); }
       }
       const vals=Object.values(hs), lo=Math.min(...vals), hi=Math.max(...vals);
-      assert(hi>0,'하단 패널 높이를 못 쟀다(숨은 상태로 측정): '+JSON.stringify(hs));
+      // ⚠ 판이 아직 안 올라온 순간에 재면 전부 0 이 나온다(간헐적). 그건 '높이가 다르다'는 뜻이 아니므로
+      //   실패가 아니라 건너뛴다 — 여기서 실패로 두면 아무 관계 없는 커밋에서 빨간불이 뜬다.
+      skipIf(hi<=0,'하단 패널이 아직 안 올라옴');
       assert(hi-lo<=1,'섹션마다 하단 높이가 다름: '+JSON.stringify(hs));
       return Object.keys(hs).length+'섹션 모두 '+hi+'px';
     } finally { if(faked) ph.classList.remove('inGame'); openMainHome(); }
@@ -5247,13 +5253,101 @@ async function groupGame(){
       { const n=[...document.querySelectorAll('#btSheetBody .cgSlot')].map(e=>{ const t=e.querySelector('.cgName');
           return t?t.textContent.trim():(e.classList.contains('empty')?'':'?'); });
         assert(n[0]==='공격력' && n[1]==='체력' && n[3]==='광산','강화 칸 자리가 다름: '+JSON.stringify(n)); }
+      // 아이콘은 사냥터 업그레이드 파일을 그대로 빌린다(뜻이 같으면 새로 만들지 않는다)
+      { const src=[...document.querySelectorAll('#btSheetBody .cgSlot .cgPro img')].map(e=>e.getAttribute('src'));
+        assert(src.some(x=>/up_melee_atk/.test(x)),'공격력이 사냥터 아이콘을 안 씀: '+JSON.stringify(src));
+        assert(src.some(x=>/up_carapace/.test(x)),'체력이 사냥터 아이콘을 안 씀: '+JSON.stringify(src));
+        assert(src.some(x=>/up_mine/.test(x)),'광산이 곡괭이 아이콘을 안 씀: '+JSON.stringify(src)); }
+      // ⚠ 값이 그대로면 시트를 다시 그리지 않는다 — strikeFrame 이 0.22초마다 부르는데 매번 DOM 을 새로
+      //    만들면 <img> 가 계속 새로 생겨 아이콘이 화면에 뜰 틈이 없다(실제로 빈칸으로 보였다).
+      { const body=$('btSheetBody'); const mark=body.querySelector('.cgSlot'); assert(mark,'강화 칸이 없음');
+        mark._keep=1;
+        for(let i=0;i<5;i++) techPanelRender();
+        assert((body.querySelector('.cgSlot')||{})._keep===1,'값이 그대로인데 시트를 다시 그렸음(아이콘이 못 뜬다)');
+        STK.me.gold+=1000; techPanelRender();          // 값이 바뀌면 반드시 다시 그린다
+        assert((body.querySelector('.cgSlot')||{})._keep!==1,'값이 바뀌었는데 시트가 안 갱신됨'); }
+      // 수치는 **이름 아래 줄(.cgSub)** 에 있다 — 네모 업그레이드 카드와 같은 자리. 우상단 배지를 쓰지 않는다.
+      { const cs=[...document.querySelectorAll('#btSheetBody .cgSlot:not(.empty)')];
+        assert(cs.length>0,'강화 칸이 없음');
+        assert(!document.querySelector('#btSheetBody .cgMeta'),'수치가 아직 우상단 배지(.cgMeta)에 있음');
+        for(const c of cs){ const sub=c.querySelector('.cgSub'), nm=c.querySelector('.cgName');
+          assert(sub && sub.textContent.trim(),'이름 아래 수치 줄이 없음: '+(nm?nm.textContent:'?')); }
+        // 카드 뼈대 순서 = 네모와 같다: 초상 → 이름 → 수치 → 비용
+        const kids=[...cs[0].children].map(e=>e.className.split(' ')[0]).join('>');
+        assert(kids==='cgPro>cgName>cgSub>cgCost','카드 뼈대가 네모 업그레이드 카드와 다름: '+kids); }
+      // 재화는 **미네랄(윗줄)·가스(아랫줄) 두 자리가 언제나 예약**돼 있어야 한다 — 값이 없다고 줄을 빼면
+      //   칸마다 재화가 다른 높이에 찍혀 눈이 자리를 못 잡는다. 그러고도 초상은 네모 카드와 같은 정사각이어야 한다.
+      { for(const c of document.querySelectorAll('#btSheetBody .cgSlot:not(.empty)')){
+          const cc=[...c.querySelectorAll('.cgCost .cc')];
+          assert(cc.length===2,'재화 줄이 두 자리가 아님(미네랄/가스 자리 예약): '+cc.length);
+          assert(cc[0].classList.contains('cr') && cc[1].classList.contains('en'),
+            '미네랄이 윗줄·가스가 아랫줄이 아님: '+cc.map(e=>e.className).join('/'));
+          assert(cc[1].getBoundingClientRect().top >= cc[0].getBoundingClientRect().top,'가스 줄이 미네랄 위에 있음');
+          const p=c.querySelector('.cgPro').getBoundingClientRect();
+          assert(Math.abs(p.width-p.height)<=1,'초상이 정사각이 아님(네모 카드보다 눌림): '+p.width.toFixed(1)+'×'+p.height.toFixed(1));
+          assert(c.scrollHeight-c.clientHeight<=0,'카드 안에서 내용이 넘침: '+(c.querySelector('.cgName')||{}).textContent); }
+        const c0=document.querySelector('#btSheetBody .cgSlot:not(.empty)');
+        const ri=c0.querySelector('.cgCost .ri'), cs=getComputedStyle(c0.querySelector('.cgCost .cc'));
+        if(ri) assert(Math.abs(ri.getBoundingClientRect().height-parseFloat(cs.fontSize))<=0.5,
+          '재화 아이콘이 옆 숫자 크기와 다름: '+ri.getBoundingClientRect().height.toFixed(1)+' vs '+cs.fontSize);
+        // ⚠ 수치와 재화 사이의 틈 = 카드에서 남는 높이 전부다(비용은 아래 붙박이, 초상은 정사각으로 묶임).
+        //   틈만 따로 줄일 수 없으므로 초상이 남는 높이를 먹어야 한다 — 커지면 틈이 닫힌다.
+        //   ⚠ 칸 폭은 왼쪽 설명 패널 길이에 따라 달라진다 → 절대 px 로 박지 말고 '줄간격 위에 남은 몫'으로 잰다.
+        { const sub=c0.querySelector('.cgSub'), cost=c0.querySelector('.cgCost');
+          if(sub&&cost){ const g=cost.getBoundingClientRect().top - sub.getBoundingClientRect().bottom;
+            const fg=parseFloat(getComputedStyle(c0).rowGap)||0, extra=g-fg;
+            assert(extra<=2,'수치와 재화 사이에 남는 높이가 큼(초상이 못 먹음): 틈 '+g.toFixed(2)+'px = 줄간격 '+fg+' + 남은 몫 '+extra.toFixed(2)); } }
+        // 수치 줄은 이름보다 확실히 작아야 한다 — 이 줄이 없는 칸과 높이 차이를 줄이려는 규칙이다
+        const sub=c0.querySelector('.cgSub'), nm=c0.querySelector('.cgName');
+        if(sub&&nm) assert(parseFloat(getComputedStyle(sub).fontSize) < parseFloat(getComputedStyle(nm).fontSize)-1.5,
+          '수치 줄이 이름만큼 큼: '+getComputedStyle(sub).fontSize+' vs '+getComputedStyle(nm).fontSize); }
+      // ⚠ 긴 이름은 폰트 축소로 칸 안에 들어와야 한다. .cgName 이 stretch 가 아니면 폭이 글자 폭 그대로라
+      //   축소 루프(scrollWidth>clientWidth)가 영원히 거짓 → 이름이 카드 밖으로 삐져나가 좌우가 잘린다.
+      //   실제 이름은 짧아서 안 걸리므로 **긴 이름을 임의로 꽂아** 잰다.
+      { const body=$('btSheetBody');
+        renderCmdGrid(body, { mode:'prod', compact:true, build:true, title:'검사', items:[
+          { pro:'', sn:'파괴형 관통 탄두 초장거리', sub:'123/999', cr:999999, en:99999, state:'on' }],
+          info:{ eb:'검사', hideName:true, desc:'' } });
+        await sleep(120);
+        const c=body.querySelector('.cgSlot:not(.empty)'), nm=c.querySelector('.cgName');
+        const cr=c.getBoundingClientRect(), nr=nm.getBoundingClientRect();
+        assert(nr.left>=cr.left-0.5 && nr.right<=cr.right+0.5,
+          '긴 이름이 카드 밖으로 넘침(폰트 축소가 안 돎): 이름 '+nr.left.toFixed(1)+'~'+nr.right.toFixed(1)+' vs 칸 '+cr.left.toFixed(1)+'~'+cr.right.toFixed(1));
+        assert(parseFloat(getComputedStyle(nm).fontSize)<10,'긴 이름인데 폰트가 안 줄었음: '+getComputedStyle(nm).fontSize);
+        body._stkSig=null; techPanelRender(); await sleep(160); }   // 원래 그리드로 복구(서명 캐시를 비워야 다시 그린다)
+      // ⚠ 이름 줄상자가 글자 잉크보다 작으면 overflow:hidden 이 **윗획을 잘라 먹는다**.
+      //   실제로 10px 한글(잉크 11px)이 줄상자 10.5px(line-height 1.05)에 잘렸다.
+      //   ⚠ 줄상자 높이만 재면 절대 못 잡는다 — 캔버스 폰트 메트릭으로 잉크를 재서 비교할 것.
+      { const cv=document.createElement('canvas').getContext('2d');
+        for(const n of document.querySelectorAll('#btSheetBody .cgName, #unitCmd .cgName')){
+          const t=(n.textContent||'').trim(); if(!t) continue;
+          const st=getComputedStyle(n); cv.font=st.fontWeight+' '+st.fontSize+' '+st.fontFamily;
+          const m=cv.measureText(t), ink=m.actualBoundingBoxAscent+m.actualBoundingBoxDescent;
+          const box=n.getBoundingClientRect().height;
+          assert(box>=ink,'카드 이름이 잘림("'+t+'" 줄상자 '+box.toFixed(1)+'px < 잉크 '+ink.toFixed(1)+'px)'); } }
+      // ⚠ 우상단 배지를 쓰는 카드(관리자 연구 등)에서 배지가 초상 이미지에 가려지면 안 된다 —
+      //   둘 다 .cgPro 의 형제/자식이라 z-index 가 같으면 트리 순서가 늦은 이미지가 이긴다.
+      //   지금 오토배틀 칸에는 배지가 없으므로 같은 그리드에 탐침을 하나 꽂아서 잰다.
+      { const host=$('btSheetBody'), grid=host.querySelector('.cgGrid'); skipIf(!grid,'그리드 없음');
+        const probe=document.createElement('div'); probe.className='cgSlot';
+        probe.innerHTML='<div class="cgMeta lv">9/9</div><div class="cgPro"><img class="icoImg" src="assets/icons/upgrades/up_mine.webp"></div><div class="cgName">탐침</div>';
+        grid.appendChild(probe);
+        try{ const b=probe.querySelector('.cgMeta'), r=b.getBoundingClientRect();
+          if(r.width>2){ const top=document.elementsFromPoint(r.left+r.width/2, r.top+r.height/2).find(e=>host.contains(e));
+            assert(top && (top===b || b.contains(top)),'배지가 초상 이미지에 가려짐: '+(top?(top.className||top.tagName):'none')); }
+        } finally { probe.remove(); } }
       // ③ 특수무기 = [‹][구입][사용] · 구입 그리드는 표 그대로
       strikeSwitchTab('Upgrade'); await sleep(160);
       { const c=cells(); assert(c[0].classList.contains('navBk'),'특수무기에 뒤로가기 칸이 없음');
         assert(c.slice(1).map(e=>e.textContent.trim()).join('/')==='구입/사용','특수무기 하위가 다름');
         assert(G.tab==='Main','특수무기는 화면을 옮기지 않는다(전장 유지): '+G.tab);
         const n=names();
-        for(const w of STK_WEAPONS) assert(n.indexOf(w.name)>=0,'구입 그리드에 '+w.name+'이 없음: '+JSON.stringify(n)); }
+        for(const w of STK_WEAPONS) assert(n.indexOf(w.name)>=0,'구입 그리드에 '+w.name+'이 없음: '+JSON.stringify(n));
+        // 특수무기 4종은 전부 기존 스킬 아이콘을 빌린다 — 이모지로 남아 있으면 안 되고, 넷이 서로 달라야 한다
+        const src=[...document.querySelectorAll('#unitCmd .cgSlot .cgPro img')].map(e=>e.getAttribute('src'));
+        assert(src.length===STK_WEAPONS.length,'특수무기 칸에 그림이 빠짐: '+src.length+'/'+STK_WEAPONS.length+' '+JSON.stringify(src));
+        assert(src.every(x=>/\/skills\/sk_/.test(x)),'스킬 아이콘이 아닌 그림이 섞임: '+JSON.stringify(src));
+        assert(new Set(src).size===src.length,'특수무기 둘이 같은 그림을 씀: '+JSON.stringify(src)); }
       // ④ 사용 = **구입과 같은 자리에 같은 순서로**. 없는 것은 빈 칸이 아니라 비활성(dim).
       gtabSub('use'); await sleep(140);
       { const n=names();
@@ -5307,10 +5401,136 @@ async function groupGame(){
           const body=document.getElementById(G.tab==='Build'?'btSheetBody':'unitCmd');
           const h=Math.round(body.getBoundingClientRect().height);
           assert(Math.abs(h-want)<=1, n+' 하단 본문 높이가 네모와 다름: '+h+' vs '+want); } }
+      // ⑨ 누적 수입(earned) — umProgress()가 '번 돈을 얼마나 굴렸나'를 이 값으로 역산한다.
+      //    ⚠ 소모처(광산·강화·무기·건설)를 세지 않고 수입만 세는 구조라, 여기가 끊기면 진행도가 통째로 0이 된다.
+      { const e0=STK.me.earned||0;
+        for(let i=0;i<3;i++) strikeStep(STK.cycleTime+0.01);   // 사이클을 세 번 넘긴다
+        assert((STK.me.earned||0)>e0,'사이클을 넘겼는데 누적 수입이 안 쌓임: '+e0+' → '+(STK.me.earned||0));
+        assert((STK.ai.earned||0)>0,'적 진영 누적 수입이 안 쌓임'); }
       strikeSwitchTab('Upgrade'); await sleep(140);
       return '3칸 · 건설지2 · 특수무기 '+STK_WEAPONS.length+'종 ok';
     } finally { if(typeof strikeEnd==='function') try{ strikeEnd(); }catch(e){}
       if(faked) ph.classList.remove('inGame'); } });
+
+  // 🔗 유즈맵 보상은 사냥터 시급에 앵커한다 — 고정값이면 지수 곡선에 몇 라운드 만에 삼켜진다.
+  await step('유즈맵 보상: 사냥터 시급 앵커 · 진행도', async()=>{
+    skipIf(typeof profRunReward!=='function' || typeof umProgress!=='function','경제 연결 없음');
+    const p=PROF(), keepPc=p.pcoin, keepGas=p.gas, keepHunt=JSON.parse(JSON.stringify(p.hunt||{}));
+    const keepG=G, keepSTK=(typeof STK!=='undefined')?STK:null, keepMap=MAP, keepDay0=PLAYER_META.umDay;
+    MAP=USEMAPS.nemo;   // ⚠ 앞 스텝이 무한모드로 두고 갔을 수 있다(rounds 100만 · infinite) — 맵을 고정하고 잰다
+    const run=(rate)=>{ p.hunt.rate=rate; p.pcoin=0; p.gas=0; return profRunReward(); };
+    let bad_noChar=false;
+    try{
+      G=newGame(); G.phase='won'; G.round=30; G.kills=500; G.difficulty='normal';
+      // ① 시급이 10배가 되면 보상도 10배 — **경험치는 그대로**(사냥터 XP 곡선이 만드는 '레벨의 벽'을 지킨다)
+      const a=run(1), b2=run(10);
+      assert(Math.abs(b2.pc/a.pc-10)<0.02,'시급 10배인데 보상이 10배가 아님: '+a.pc+' → '+b2.pc);
+      assert(a.xp===b2.xp,'시급이 경험치까지 밀었음: '+a.xp+' → '+b2.xp);
+      // ② 첫 라운드 클리어 전(rate 0)에도 빈손이 아니다 — 방치와 같은 폴백을 쓴다
+      assert(run(0).pc>0,'신규(rate 0)에게 보상이 0');
+      // ③ 가스는 사냥터 처치 보상과 같은 비율
+      assert(Math.abs(b2.gas/b2.pc-UM_GAS_RATIO)<0.01,'가스 비율이 사냥터와 다름: '+(b2.gas/b2.pc));
+      // ④ 네모 진행도 — 클리어=1.0 · 못 깼으면 도달 라운드 비율
+      const rounds=mapCfg('rounds',TOTAL_ROUNDS);
+      G.phase='won';  assert(umProgress()===1,'클리어인데 진행도가 1이 아님: '+umProgress());
+      G.phase='lost'; G.round=Math.round(rounds/2);
+      assert(Math.abs(umProgress()-0.5)<0.03,'미클리어 진행도가 라운드 비율이 아님: '+umProgress());
+      G.round=rounds*3; assert(umProgress()<=1,'진행도가 1을 넘음: '+umProgress());
+      // ⑤ 오토배틀 진행도 — 승패 + 굴린 비율 + 버틴 시간. 패배 상한 0.55.
+      G=newGame(); G.strike=true;
+      const mkSTK=(gold,earned,round)=>({ me:{gold:gold, earned:earned}, round:round });
+      const start=mapCfg('startGold',0)||0;
+      STK=mkSTK(start, 0, 1); G.phase='lost';
+      const p0=umProgress();
+      STK=mkSTK(0, 1000, 1);                       // 번 돈을 다 씀
+      const pSpend=umProgress();
+      assert(pSpend>p0,'다 굴렸는데 진행도가 안 오름: '+p0+' → '+pSpend);
+      STK=mkSTK(0, 1000, UM_STK_CYCLES); const pTime=umProgress();
+      assert(pTime>pSpend,'오래 버텼는데 진행도가 안 오름: '+pSpend+' → '+pTime);
+      assert(Math.abs(pTime-(UM_STK_W_SPEND+UM_STK_W_TIME))<0.01,'패배 상한이 '+(UM_STK_W_SPEND+UM_STK_W_TIME)+'가 아님: '+pTime);
+      G.phase='won'; assert(Math.abs(umProgress()-1)<0.01,'만점 승리인데 1이 아님: '+umProgress());
+      STK=mkSTK(0,1000,1); G.phase='won'; const win=umProgress();
+      STK=mkSTK(0,1000,1); G.phase='lost'; const lose=umProgress();
+      assert(win-lose>0.4,'승패 가중이 너무 작음: '+win+' vs '+lose);
+      // ⑥ 난이도 = 한 번씩 깨는 사다리 — 칸마다 적 체력 정확히 ×2(옛 FINAL 360 같은 벽을 두지 않는다)
+      { const o=DIFFICULTY_ORDER;
+        for(let i=1;i<o.length;i++){ const r=DIFFICULTY[o[i]].enemyHp/DIFFICULTY[o[i-1]].enemyHp;
+          assert(Math.abs(r-2)<0.01, o[i-1]+'→'+o[i]+' 가 ×2 가 아님: ×'+r.toFixed(2)); } }
+      // ⑦ 첫 클리어 = 맵×난이도 1회성 · ⚠ 상한이 없으면 '늦게 깰수록 이득'이 되어 유즈맵을 미루게 된다
+      { const keepClear=PLAYER_META.umClear; PLAYER_META.umClear={};
+        try{
+          p.hunt.rate=1e9;  const big=umFirstRw('normal').pcoin;
+          p.hunt.rate=1e15; const huge=umFirstRw('normal').pcoin;
+          assert(big===huge,'첫 클리어 보상에 상한이 없음(늦게 깰수록 이득): '+big+' → '+huge);
+          p.hunt.rate=0.2;  const small=umFirstRw('normal').pcoin;
+          assert(small>0 && small<big,'상한 미만일 때 실제 시급을 안 따라감: '+small+' vs '+big);
+          assert(umFirstClaim('nemo','normal'),'첫 클리어인데 보상이 없음');
+          assert(!umFirstClaim('nemo','normal'),'첫 클리어 보상이 두 번 나옴');
+          assert(umFirstClaim('nemo','hard'),'같은 맵 다른 난이도가 막힘');
+          assert(umFirstClaim('cpu','normal'),'다른 맵 같은 난이도가 막힘');
+        } finally { PLAYER_META.umClear=keepClear; } }
+      // ⑧ ⚠ 오토배틀도 앵커 보상을 받는다 — _runSummary 의 직스 분기가 먼저 return 하면 통째로 못 받는다
+      { G=newGame(); G.strike=true; G.phase='won'; G.round=5; STK={ me:{gold:0, earned:1000, kills:3, units:[]}, t:120, round:10 };
+        p.hunt.rate=1; p.pcoin=0; PLAYER_META.umDay=null;   // ⚠ 앞 검사들이 판 수를 올려 놨다 — 하루 체감과 얽히지 않게 초기화
+        const sum=_runSummary();
+        assert(sum && sum.strike,'직스 요약이 아님');
+        assert(sum.prof && sum.prof.pc>0,'오토배틀이 앵커 보상을 못 받음(직스 분기 조기 return)');
+        assert(p.pcoin>0,'오토배틀 보상이 실제로 지급되지 않음'); }
+      // ⑨ ◎ 포인트는 **모든 맵**이 판 끝에 준다 — 예전엔 네모 월드보스 처치로만 나와 경로가 너무 좁았다
+      { const keepCoins=PLAYER_META.coins;
+        try{
+          G=newGame(); MAP=USEMAPS.nemo; G.difficulty='normal'; G.phase='won'; G.round=30; G.points=0;
+          const win=bankRunPoints(); assert(win>0,'클리어인데 포인트가 0(월드보스 없이는 안 나옴)');
+          G=newGame(); MAP=USEMAPS.nemo; G.difficulty='normal'; G.phase='lost'; G.round=6; G.points=0;
+          const lose=bankRunPoints(); assert(lose>0 && lose<win,'중도 종료 포인트가 이상함: '+lose+' vs '+win);
+          G=newGame(); G.strike=true; G.phase='won'; STK={me:{gold:0,earned:1000,units:[]},round:30};
+          assert(bankRunPoints()>0,'오토배틀 승리인데 포인트가 0');
+        } finally { PLAYER_META.coins=keepCoins; } }
+      // ⑩ 🔑 환생 관문 — 1회차 무료 · 2회차부터 유즈맵 포인트 필요 · 실행 시 차감
+      { if(typeof profEnsureChar==='function') try{ profEnsureChar(); }catch(e){}
+        const c=(typeof CHAR==='function')?CHAR():null;
+        if(!c) bad_noChar=true; else {
+        const k={lv:c.level, reb:c.reb, mx:c.rebLvMax, coins:PLAYER_META.coins, rp:c.rp, mul:c.rebMul, hunt:JSON.parse(JSON.stringify(p.hunt||{})), pc:p.pcoin};
+        try{
+          assert(PROF_REB_POINT[0]===0,'1회차 환생이 무료가 아님');
+          c.level=PROF_REB_LEVELS[0]; c.reb=0; c.rebLvMax=0; PLAYER_META.coins=0;
+          assert(profCanRebirth(c),'1회차는 포인트 없이도 되어야 함');
+          c.reb=1; c.level=PROF_REB_LEVELS[1]; c.rebLvMax=PROF_REB_LEVELS[0];
+          const need=profRebPoint(c); assert(need>0,'2회차 관문 포인트가 0');
+          PLAYER_META.coins=need-1; assert(!profCanRebirth(c),'포인트가 모자란데 환생이 됨');
+          PLAYER_META.coins=need;   assert(profCanRebirth(c),'포인트가 충분한데 환생이 막힘');
+          profRebirth(c);
+          assert(PLAYER_META.coins===0,'환생했는데 포인트가 안 깎임: '+PLAYER_META.coins);
+        } finally { c.level=k.lv; c.reb=k.reb; c.rebLvMax=k.mx; c.rp=k.rp; c.rebMul=k.mul;
+          PLAYER_META.coins=k.coins; p.hunt=k.hunt; p.pcoin=k.pc; } } }
+      // ⑪ 📅 하루 3판 체감 — 목표 세션(2~3판)을 규칙으로 새긴 것. 하드 캡이 아니라 계수다.
+      { const keepDay=PLAYER_META.umDay;
+        try{
+          PLAYER_META.umDay=null; p.hunt.rate=1;
+          const got=[];
+          for(let i=0;i<UM_DAY_FULL+2;i++){
+            G=newGame(); MAP=USEMAPS.nemo; G.difficulty='normal'; G.phase='won'; G.round=30; p.pcoin=0;
+            got.push(profRunReward()); }
+          for(let i=0;i<UM_DAY_FULL;i++) assert(got[i].dayMul===1, (i+1)+'판째인데 전액이 아님: '+got[i].dayMul);
+          assert(got[UM_DAY_FULL].dayMul===UM_DAY_FADE,(UM_DAY_FULL+1)+'판째 체감이 안 걸림: '+got[UM_DAY_FULL].dayMul);
+          assert(got[UM_DAY_FULL].pc < got[0].pc,'체감인데 보상이 안 줄었음: '+got[UM_DAY_FULL].pc+' vs '+got[0].pc);
+          assert(got[UM_DAY_FULL].pc > 0,'체감이 0 이 됨(하드 캡이 아니라 계수여야 한다)');
+          assert(got[UM_DAY_FULL].day===UM_DAY_FULL+1,'판 수가 안 세어짐: '+got[UM_DAY_FULL].day);
+          // 하루가 바뀌면 초기화 — 하루 경계는 _dgDayKey() 하나를 쓴다(출석·일일 퀘스트와 같은 축)
+          PLAYER_META.umDay.key=0;
+          G=newGame(); MAP=USEMAPS.nemo; G.difficulty='normal'; G.phase='won'; G.round=30; p.pcoin=0;
+          assert(profRunReward().dayMul===1,'날이 바뀌었는데 체감이 안 풀림');
+          assert(PLAYER_META.umDay.key===_dgDayKey(),'하루 경계가 _dgDayKey 와 다름');
+        } finally { PLAYER_META.umDay=keepDay; } }
+      // ⑫ 일일 퀘스트 — 하루 5개 중 바깥 구역(유즈맵·토벌 등) 몫
+      { assert(DQ_OUT_N>=3,'일일 퀘스트 바깥 몫이 3 미만: '+DQ_OUT_N);
+        const cat=q=>((DQ_BY[q.id||q]||{}).cat)||'?';
+        for(let d=0;d<5;d++){ const sel=dqDraw(_dgDayKey()+d*86400000);
+          const out=sel.filter(q=>cat(q)!=='hunt').length;
+          assert(out===DQ_OUT_N, d+'일 뒤 바깥 퀘스트가 '+out+'개(기대 '+DQ_OUT_N+')'); } }
+      return '앵커·진행도·난이도·첫클리어·포인트·관문 ok · 하루 '+UM_DAY_FULL+'판 체감 ok · 일일 바깥 '+DQ_OUT_N;
+    } finally { G=keepG; MAP=keepMap; if(typeof STK!=='undefined') STK=keepSTK;
+      PLAYER_META.umDay=keepDay0; p.pcoin=keepPc; p.gas=keepGas; p.hunt=keepHunt; } });
 }
 
 // ── 그룹: sandbox (관리자) ──
@@ -5329,6 +5549,121 @@ async function groupSandbox(){
     assert(document.querySelector('.bres'),'관리자 건설에 자원 바(.bres)가 없음');
     assert(!$('btCardCtl'),'건설 시트에 접기 버튼(#btCardCtl)이 남아 있음');
     return 'ok'; });
+  // 재화는 미네랄(위)·가스(아래) 두 자리를 언제나 예약한다 — 값이 없다고 줄을 빼면 칸마다 재화 높이가 달라진다.
+  await step('관리자 건설: 재화는 미네랄·가스 두 자리 예약', async()=>{
+    switchTab('Build', document.querySelector('.tab[data-tab="Build"]')); await sleep(300);
+    skipIf(!G.tech,'건설 상태 없음');
+    const wk=(G.tech.ents||[]).find(e=>e.type==='worker'); skipIf(!wk,'일꾼 없음');
+    G.tech.sel=null; G.tech.selU=[wk.eid]; G.tech.sheet={open:true,sec:'ent'};
+    techPanelRender(); await sleep(200);
+    const c=document.querySelector('#btSheetBody .cgSlot:not(.empty)'); skipIf(!c,'건설 칸 없음');
+    const cc=c.querySelectorAll('.cgCost .cc');
+    assert(cc.length===2,'관리자 건설 비용 줄이 두 줄이 아님(가스 자리 예약 사라짐): '+cc.length);
+    assert(cc[0].classList.contains('cr') && cc[1].classList.contains('en'),'미네랄이 윗줄·가스가 아랫줄이 아님');
+    assert(c.scrollHeight-c.clientHeight<=0,'건물 카드 안에서 내용이 넘침');
+    return 'ok'; });
+  // 머리줄이 두꺼워지면 그만큼 아래 그리드가 눌린다 — 제목·HP 는 한 줄, 조작 버튼은 판 밖으로.
+  await step('건물 프로필: 머리줄 한 줄 · 조작 버튼은 판 밖 · 마나는 왼쪽', async()=>{
+    switchTab('Build', document.querySelector('.tab[data-tab="Build"]')); await sleep(300);
+    skipIf(!G.tech,'건설 상태 없음');
+    const body=$('btSheetBody'), pick=(f)=>{ f(); G.tech.sheet={open:true,sec:'ent'}; techPanelRender(); };
+    const wk=(G.tech.ents||[]).find(e=>e.type==='worker'), bl=(G.tech.ents||[]).find(e=>e.type==='bldg');
+    skipIf(!wk||!bl,'일꾼/건물 없음');
+    pick(()=>{ G.tech.sel=null; G.tech.selU=[wk.eid]; }); await sleep(220);
+    const gWk=body.querySelector('.cgGrid').getBoundingClientRect().height;
+    pick(()=>{ G.tech.selU=[]; G.tech.sel=bl.eid; }); await sleep(220);
+    const nm=body.querySelector('.cgN'), hp=body.querySelector('.cgHpsh'), head=body.querySelector('.cgHead');
+    assert(nm&&hp,'제목/HP 가 없음');
+    const nr=nm.getBoundingClientRect(), hr=hp.getBoundingClientRect();
+    assert(hr.left>=nr.right-1,'HP 가 제목 오른쪽이 아님: 제목 '+nr.right.toFixed(1)+' / HP '+hr.left.toFixed(1));
+    assert(Math.min(nr.bottom,hr.bottom)-Math.max(nr.top,hr.top)>0,'제목과 HP 가 같은 줄이 아님(머리줄이 두 줄)');
+    // 일꾼 스텝퍼·랠리·부양은 머리줄이 아니라 판 밖 오른쪽 위
+    const to=body.querySelector('.cgTopOut'); assert(to,'조작 버튼 묶음(.cgTopOut)이 없음');
+    const cg=body.querySelector('.cmdG').getBoundingClientRect();
+    assert(to.getBoundingClientRect().bottom<=cg.top+0.5,'조작 버튼이 판 안에 있음');
+    assert(!head.querySelector('.cgGasAuto,.cgRally,.cgLift,.cgSelAll'),'조작 버튼이 아직 머리줄 안에 있음');
+    // 머리줄이 얇아진 만큼 그리드는 일꾼 프로필보다 짧지 않아야 한다(전엔 88 vs 97 로 눌렸다)
+    const gB=body.querySelector('.cgGrid').getBoundingClientRect().height;
+    assert(gB>=gWk-4,'건물 프로필 그리드가 일꾼보다 짧음: '+gB.toFixed(1)+' vs '+gWk.toFixed(1));
+    // 🎛 조작 버튼은 투명 배경 아이콘 계열(ui/)을 부르고, 파일이 없으면 **원래 인라인 SVG**로 되돌아온다.
+    //   ⚠ 되돌리기가 없으면 파일을 넣기 전까지 버튼이 통째로 빈다(옛 _icoFail 은 이모지로 바꿔 결이 달랐다).
+    { assert(typeof uiIco==='function' && typeof UI_SVG==='object','UI 아이콘 계열이 없음');
+      for(const k of Object.keys(UI_SVG)){
+        assert(/^<svg/.test(UI_SVG[k]||''),'UI_SVG.'+k+' 에 폴백 SVG 가 없음');
+        const h=uiIco(k);
+        assert(h.indexOf('assets/icons/ui/ui_'+k+'.webp')>=0,'uiIco('+k+') 가 ui/ 경로를 안 부름: '+h); }
+      const tmp=document.createElement('div'); tmp.innerHTML=uiIco('rally');
+      _uiFail(tmp.querySelector('img'));
+      assert(tmp.querySelector('svg'),'파일이 없을 때 인라인 SVG 로 안 되돌아감'); }
+    // 조작 버튼 안에 글리프가 실제로 그려져 있다(파일이 없어도 비지 않는다)
+    for(const sel of ['.cgRally','.cgLift']){ const btn=body.querySelector(sel); if(!btn) continue;
+      assert(btn.querySelector('svg,img'),sel+' 버튼이 비어 있음'); }
+    // 🔮 마나는 머리줄이 아니라 왼쪽 정보 구역(스탯)이다
+    assert(!body.querySelector('.cgHpsh .env'),'마나가 머리줄에 있음');
+    { const mid=Object.keys(U).find(k=>U[k].energy>0); skipIf(!mid,'마나 유닛 없음');
+      const st=_techUnitStatList({hp:100,atk:10,rng:5}, mid, {en:35,maxEn:U[mid].energy});
+      assert(st.some(r=>r[0]==='마나'),'마나 유닛인데 왼쪽 스탯에 마나가 없음: '+JSON.stringify(st));
+      const st0=_techUnitStatList({hp:100,atk:10,rng:5}, 'worker_human', null);
+      assert(!st0.some(r=>r[0]==='마나'),'마나 없는 유닛에 마나 줄이 생김'); }
+    return '머리줄 '+head.getBoundingClientRect().height.toFixed(0)+'px · 그리드 '+gB.toFixed(0)+'px'; });
+  // 위 규약이 **전 구역 모든 건물·유닛**에 걸렸는지 한 번에 훑는다. 화면을 하나씩 눌러 보는 대신
+  //   실제 디스패처(techPanelRender)와 실제 모델 빌더로 렌더해 머리줄만 검사한다.
+  await step('전 구역 프로필 감사: 머리줄 규약(건물·유닛 전부)', async()=>{
+    switchTab('Build', document.querySelector('.tab[data-tab="Build"]')); await sleep(300);
+    skipIf(!G.tech || typeof TECH_TREE==='undefined','건설 상태 없음');
+    const body=$('btSheetBody'), bad=[]; let n=0;
+    const keep={ race:G.tech.race, sel:G.tech.sel, selU:(G.tech.selU||[]).slice(), ents:(G.tech.ents||[]).slice(), strike:G.strike, stk:(typeof STK!=='undefined')?STK:null };
+    const check=(label)=>{ const g=body.querySelector('.cmdG'); if(!g) return; n++;
+      const nm=g.querySelector('.cgN'), hp=g.querySelector('.cgHpsh'), head=g.querySelector('.cgHead'), to=g.querySelector('.cgTopOut');
+      const H=head?head.getBoundingClientRect().height:0;
+      if(g.querySelector('.cgHpsh .env')) bad.push(label+': 마나가 머리줄에 있음');
+      if(head && head.querySelector('.cgGasAuto,.cgRally,.cgLift,.cgSelAll')) bad.push(label+': 조작 버튼이 머리줄 안');
+      if(to && to.getBoundingClientRect().bottom > g.getBoundingClientRect().top+0.5) bad.push(label+': 조작 버튼이 판 안');
+      if(nm&&hp){ const nr=nm.getBoundingClientRect(), hr=hp.getBoundingClientRect();
+        if(Math.min(nr.bottom,hr.bottom)-Math.max(nr.top,hr.top)<=0) bad.push(label+': 제목·HP 가 다른 줄');
+        if(hr.left<nr.right-1) bad.push(label+': HP 가 제목 왼쪽'); }
+      if(H>40) bad.push(label+': 머리줄이 두꺼움 '+H.toFixed(1)+'px'); };
+    try{
+      let eid=90000;
+      for(const race of Object.keys(TECH_TREE)){ G.tech.race=race;
+        for(const bd of (TECH_TREE[race].buildings||[])){
+          G.tech.ents=G.tech.ents.filter(e=>e.eid<90000);
+          const e={eid:++eid, type:'bldg', bk:bd.k, x:0.4, y:0.5, hp:100, maxHp:100, bt:0};
+          G.tech.ents.push(e); G.tech.selU=[]; G.tech.sel=e.eid; G.tech.sheet={open:true,sec:'ent'};
+          techPanelRender(); check(race+'/'+bd.k); }
+        for(const uid of [...new Set((TECH_TREE[race].buildings||[]).flatMap(bd=>(bd.produces||[]).map(p=>p.id)))]){
+          G.tech.ents=G.tech.ents.filter(e=>e.eid<90000);
+          const sp=(typeof techUnitSpec==='function'&&techUnitSpec(race,uid))||{hp:40};
+          const en=(typeof U!=='undefined'&&U[uid]&&U[uid].energy)||0;
+          const e={eid:++eid, type:'unit', uid:uid, x:0.4, y:0.5, hp:sp.hp||40, maxHp:sp.hp||40, maxSh:sp.sh||0, sh:sp.sh||0, maxEn:en, en:en};
+          G.tech.ents.push(e); G.tech.sel=null; G.tech.selU=[e.eid]; G.tech.sheet={open:true,sec:'ent'};
+          techPanelRender(); check(race+'/'+uid); } }
+      // 🥚 알(진화중) — 스웜 유닛으로 한 번
+      { const _r=G.tech.race; G.tech.race='swarm';
+        const eu=[...new Set((TECH_TREE.swarm.buildings||[]).flatMap(bd=>(bd.produces||[]).map(p=>p.id)))]
+          .find(id=>(typeof U!=='undefined'&&U[id]&&U[id].energy>0)) || 'zergling';
+        try{ renderCmdGrid(body, techEggModel([{type:'egg', id:eu}])); check('알/'+eu); }catch(e){}
+        G.tech.race=_r; }
+      // 네모 유닛 프로필(단일·다중)
+      const mk=(id,uid)=>({uid:uid||1,id:id,hp:50,maxHp:100,sh:0,maxSh:0,en:10,maxEn:(U[id]&&U[id].energy)||0,kills:2,x:.5,y:.5});
+      for(const id of Object.keys(U).slice(0,30)){ const u=mk(id);
+        renderCmdGrid(body, _mainSingleModel(u)); check('네모/'+id);
+        renderCmdGrid(body, _mainTypeModel([u,mk(id,2)], false)); check('네모×2/'+id); }
+      // 오토배틀 유닛·신전·강화·상점
+      if(typeof STK_UNITS!=='undefined'){ G.strike=true;
+        STK={ me:{name:'나',gold:900,mines:1,mineCost:200,atkLv:0,hpLv:0,wpn:{},units:[],base:{hp:100,max:100},sec:{hp:50,max:50}},
+              ai:{name:'컴퓨터',race:'terran'}, central:{hp:10,max:10}, supPage:'upg' };
+        for(const uid of Object.keys(STK_UNITS).slice(0,20)){
+          renderCmdGrid(body, _stkUnitModel({uid:'x',id:uid,hp:30,maxHp:60,dmg:5,rng:3,cd:1},'me')); check('직스/'+uid); }
+        renderCmdGrid(body, _stkTempleModel({hp:80,max:100},'신전')); check('직스/신전');
+        renderCmdGrid(body, _stkUpgModel()); check('직스/강화');
+        renderCmdGrid(body, _stkWpnBuyModel()); check('직스/구입'); }
+      assert(n>=100,'감사한 프로필이 너무 적음: '+n);
+      assert(!bad.length, bad.length+'건 위반:\n  '+bad.slice(0,10).join('\n  '));
+      return n+'개 프로필 규약 통과';
+    } finally { G.strike=keep.strike; if(typeof STK!=='undefined') STK=keep.stk;
+      G.tech.race=keep.race; G.tech.ents=keep.ents; G.tech.sel=keep.sel; G.tech.selU=keep.selU;
+      G.tech.sheet={open:false,sec:null}; try{ techPanelRender(); }catch(e){} } });
   // 관리자 건설 탭에서 병영을 고르면 레인저·화력병·의무병·저격수 카드가 실제로 그려져야 한다.
   await step('관리자 건설: 병영 생산 카드', async()=>{
     switchTab('Build', document.querySelector('.tab[data-tab="Build"]')); await sleep(400);

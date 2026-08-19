@@ -1453,14 +1453,21 @@
   .cmdG[data-mode="prod"]{--ca:#5cd6ff;--caG:rgba(92,214,255,.45);--caS:rgba(92,214,255,.5);--caL:#dff4ff}
   .cmdG[data-mode="build"]{--ca:var(--gold);--caG:rgba(255,210,74,.45);--caS:rgba(255,210,74,.5);--caL:var(--gold-lt)}
   .cmdG[data-mode="boss"]{--ca:#ff5c6e;--caG:rgba(255,92,110,.45);--caS:rgba(255,92,110,.5);--caL:#ffd6db}   /* 보스 시트 = 붉은 강조 */
+  .cmdG{position:relative}
+  /* 건물 조작(일꾼 스텝퍼·랠리·부양)과 전체지정은 **판 밖 오른쪽 위**에 띄운다.
+     머리줄 안에 두면 버튼 높이(38px)가 머리줄을 밀어 올려 그리드가 그만큼 짧아졌다. */
+  .cmdG .cgTopOut{position:absolute;right:0;bottom:calc(100% + 12px);display:flex;align-items:center;gap:6px;z-index:31;pointer-events:auto}
   .cmdG .cgHead{display:flex;align-items:center;gap:9px;padding:5px 2px 9px;position:relative;flex:none}
   .cmdG .cgHead::after{content:'';position:absolute;left:2px;right:6px;bottom:0;height:1px;background:linear-gradient(90deg,var(--caS),transparent 72%)}
   /* 머리줄 초상(.cgPort)은 폐지했다(2026-08-14) — 제목은 글자 하나로 읽는다. 모델의 icon 은 그대로 두되 그리지 않는다.
      ⚠ 되살릴 거면 renderCmdGrid 의 머리줄 마크업도 같이 되돌릴 것(여기 CSS만 넣으면 아무 데도 안 붙는다). */
-  .cmdG .cgTtl{flex:1;min-width:0} .cmdG .cgN{font-size:var(--fs-xl);font-weight:800;color:#fff;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* 제목과 HP/실드는 **같은 줄**이다. 세로로 쌓으면 머리줄이 그만큼 두꺼워지고 아래 그리드가 눌린다
+     (실측: 일꾼 42.8px ↔ 건물 52px → 그리드 97.2 ↔ 88). 설명 줄(.cgS)만 아래로 내린다. */
+  .cmdG .cgTtl{flex:1;min-width:0;display:flex;align-items:baseline;flex-wrap:wrap;gap:0 8px}
+  .cmdG .cgN{font-size:var(--fs-xl);font-weight:800;color:#fff;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
   .cmdG .cgN .nsub{font-size:10px;font-weight:700;color:#9fb0c2;text-shadow:none;margin-left:3px}   /* 이름 옆 작은 괄호 수치(라바 수 등) */
-  .cmdG .cgS{margin-top:1px;font-size:var(--fs-xs);color:var(--cgDim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .cmdG .cgS b{color:#cfe0f5;font-weight:700}
-  .cmdG .cgHpsh{margin-top:2px;display:flex;gap:9px;font-family:var(--font-num);font-weight:800;font-size:12.5px;line-height:1}
+  .cmdG .cgS{flex-basis:100%;margin-top:1px;font-size:var(--fs-xs);color:var(--cgDim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .cmdG .cgS b{color:#cfe0f5;font-weight:700}
+  .cmdG .cgHpsh{flex:none;display:flex;gap:9px;font-family:var(--font-num);font-weight:800;font-size:12.5px;line-height:1}
   .cmdG .cgHpsh .hpv{color:#7ee081} .cmdG .cgHpsh .shv{color:#8fd8ff} .cmdG .cgHpsh .env{color:#b06bff}
   .cmdG .cgHpsh .stAb{font-style:normal;font-size:8.5px;font-weight:700;opacity:.7;margin-right:2px;vertical-align:1px;letter-spacing:.3px}   /* S/H/E 약자 프리픽스(아이콘 대체) */
   .cmdG .cgPill{flex:none;align-self:flex-start;font:800 9px/1 sans-serif;letter-spacing:.5px;padding:4px 6px;border-radius:5px;color:var(--caL);background:rgba(255,255,255,.04);border:1px solid var(--caS)}
@@ -1473,6 +1480,9 @@
   .cmdG .cgLift.busy{opacity:.6;cursor:default}
   .cmdG .cgRally{flex:none;align-self:center;width:38px;height:38px;border-radius:9px;border:1px solid var(--glass);background:rgba(70,240,106,.13);color:#8ef2a8;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}   /* 랠리 버튼(정사각 아이콘 카드) */
   .cmdG .cgRally svg{width:24px;height:24px;display:block}
+  /* 🎛 UI 조작 아이콘(투명 배경 계열) — 판이 없으므로 버튼 면이 색을 낸다. 크기는 옛 인라인 SVG와 같게. */
+  .cmdG .uiIco{width:24px;height:24px;display:block;object-fit:contain}
+  .cmdG .cgTrash .uiIco{width:13px;height:13px}
   .cmdG .cgRally.on{border-color:#46f06a;background:rgba(70,240,106,.24);box-shadow:0 0 6px rgba(70,240,106,.45)}
   .cmdG .cgRally:active{background:rgba(70,240,106,.32)}
   .cmdG .cgSelAll{flex:none;align-self:center;width:38px;height:38px;border-radius:9px;border:1px solid var(--glass);background:rgba(92,214,255,.13);color:#a9e4ff;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}   /* 👥 화면 내 같은 종류 전체 지정(정사각 아이콘 카드) */
@@ -1534,7 +1544,10 @@
   /* 그리드(주역) + 페이저 */
   .cmdG .cgCol{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
   .cmdG .cgGrid{flex:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(2,1fr);gap:4px;min-height:0}
-  .cmdG .cgSlot{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:3px;cursor:pointer;padding:7px 4px 6px;touch-action:none;
+  /* ⚠ 비용 줄은 아래에 붙박이(.cgCost margin-top:auto)이고 초상은 정사각으로 크기가 묶여 있다 →
+     **수치와 비용 사이의 틈 = 남는 높이 전부**다. 틈만 따로 줄일 수가 없다(gap 을 줄이면 그만큼 남는 높이가 늘어 제자리).
+     그래서 남는 높이를 초상이 먹게 한다 — 좌우 여백을 줄이면 초상이 그만큼 커지고 틈이 닫힌다. */
+  .cmdG .cgSlot{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:2px;cursor:pointer;padding:7px 2px 6px;touch-action:none;
     border:1px solid var(--metal-edge);border-radius:var(--r-lg);background:var(--bpFace);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.05);transition:.12s}
   .cmdG .cgSlot::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent)}
@@ -1558,10 +1571,19 @@
   .cmdG .cgSlot.iconFill{justify-content:center;padding:6px} .cmdG .cgSlot.iconFill .cgPro{width:72%;height:auto;aspect-ratio:1;border:none;background:none;box-shadow:none} .cmdG .cgSlot.iconFill .cgPro svg{width:100%;height:100%} .cmdG .cgSlot.iconFill .cgName,.cmdG .cgSlot.iconFill .cgCost{display:none}   /* 아이콘만 채우는 칸(일시정지 등): 빈 이름/비용 줄 숨겨 아이콘이 칸 정중앙에 크게 */
   /* ⚠ 글자 줄은 절대 눌리지 않는다(flex:none). 칸이 모자라면 초상이 줄어든다 —
      반대로 두면 이름이 4px 로 뭉개져 읽을 수 없게 된다(오토배틀 건설 카드에서 실제로 그랬다). */
-  .cmdG .cgName{flex:none;font:800 10px/1.05 sans-serif;letter-spacing:-.2px;color:#e6eefc;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .cmdG .cgSub{flex:none;font:800 8.5px/1 var(--font-num);color:var(--caL);text-align:center;margin-top:2px;font-variant-numeric:tabular-nums;white-space:nowrap}
+  /* ⚠ 줄높이는 글자 잉크보다 커야 한다. 10px 한글의 잉크는 최대 11px 인데 줄상자가 10.5px(1.05)여서
+     overflow:hidden 에 **윗획이 잘렸다**(체력·공격력 등). 1.3 = 13px 로 잉크(11px)에 여유 2px.
+     늘어난 만큼은 아래 여백(.cgSub margin-top)에서 뺀다 — 카드 총 높이는 그대로 두고 이름만 살린다.
+     ⚠ 비율(단위 없는 1.3)이라 renderCmdGrid 의 폰트 축소(최소 6px)를 그대로 따라간다. px 로 박지 말 것. */
+  /* ⚠ align-self:stretch 가 없으면 칸이 `align-items:center` 라 이름 폭이 **글자 폭 그대로**가 된다.
+     그러면 renderCmdGrid 의 폰트 축소 루프(scrollWidth>clientWidth)가 영원히 거짓이라 안 돌고,
+     긴 이름이 카드 밖으로 삐져나가 좌우가 잘린다(실측: '파괴형 관통 탄두' 가 양쪽으로 넘쳤다).
+     폭을 칸에 맞춰 고정해야 축소도 돌고 말줄임도 제자리에서 걸린다. */
+  .cmdG .cgName{flex:none;align-self:stretch;font:800 10px/1.3 sans-serif;letter-spacing:-.2px;color:#e6eefc;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* 수치 줄은 **최대한 얇게** — 이 줄이 없는 칸(건설 등)과 높이 차이가 작아야 한 격자 안에서 카드가 고르게 보인다. */
+  .cmdG .cgSub{flex:none;font:800 7px/1 var(--font-num);color:var(--caL);text-align:center;margin-top:-1px;font-variant-numeric:tabular-nums;white-space:nowrap}
   .cmdG .cgSlot.max .cgSub{color:var(--cgGood)}
-  .cmdG .cgCost .ri{width:11px;height:11px;flex:none}
+  .cmdG .cgCost .ri{width:8px;height:8px;flex:none}   /* 옆 숫자와 같은 높이 — 아이콘이 숫자보다 커 보이지 않게 */
   .cmdG .cgDcost .ri{width:12px;height:12px;flex:none}
   /* 🧱 벙커 탑승 슬롯: 가로 꽉 찬 초상 → 이름 → HP 세로 스택 */
   .cmdG .cgSlot.cgBunk{justify-content:flex-start;gap:3px;padding:5px 4px}
@@ -1570,15 +1592,17 @@
   .cmdG .cgBunkHp{font:800 10px/1 var(--font-num);color:#ff9a9a;text-align:center;margin-top:auto;text-shadow:0 1px 2px #000}
   .cmdG .cgCost{display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap;line-height:1;margin-top:auto}
   .cmdG[data-build="1"] .cgName{text-overflow:clip;max-width:none}   /* 생략(...) 없이 — JS가 폰트 축소로 한 줄 */
-  .cmdG[data-build="1"] .cgCost{flex-direction:column;flex-wrap:nowrap;gap:1px;margin-top:auto}   /* 크레딧(위)/에너지(아래) 각 한 줄 */
-  .cmdG[data-build="1"] .cgCost .cc{font-size:9px;min-height:11px;display:flex;align-items:center;justify-content:center;gap:2px}   /* 빈 줄도 높이 유지(자리 예약) */
+  .cmdG[data-build="1"] .cgCost{flex-direction:column;flex-wrap:nowrap;gap:0;margin-top:auto}   /* 미네랄(위)/가스(아래) 각 한 줄 — 자리 고정 */
+  .cmdG[data-build="1"] .cgCost .cc{font-size:8.5px;min-height:9px;display:flex;align-items:center;justify-content:center;gap:2px}   /* 빈 줄도 높이 유지(자리 예약) */
   .cmdG .cgCost.cgRwd{flex-direction:row;flex-wrap:nowrap;gap:4px;font-size:9px;font-weight:800;color:var(--cgGood);white-space:nowrap}   /* 보스 셀: 소환 무료 → 코스트 대신 처치 보상(+초록=획득 신호, 한 줄) */
   .cmdG .cgCost.cgRwd span{display:inline-flex;align-items:center;gap:2px}
   
   .cmdG .cc{display:inline-flex;align-items:center;gap:1px;font:800 10px/1 var(--font-num);font-variant-numeric:tabular-nums}
   .cmdG .cc.cr{color:var(--cgCr)} .cmdG .cc.en{color:var(--cgEn)} .cmdG .cc.hp{color:#ff8a8a}   /* 스킬 HP 코스트(아드레날린) */
   .cmdG .cgMeta{position:absolute;top:5px;right:5px;display:inline-flex;align-items:center;gap:1px;font:800 8.5px/1 var(--font-num);
-    color:var(--cgPop);background:rgba(10,12,20,.72);border:1px solid rgba(200,182,255,.3);border-radius:4px;padding:2px 3px;font-variant-numeric:tabular-nums;z-index:1}
+    color:var(--cgPop);background:rgba(10,12,20,.72);border:1px solid rgba(200,182,255,.3);border-radius:4px;padding:2px 3px;font-variant-numeric:tabular-nums;z-index:2}
+  /* ⚠ z-index 2 인 이유: 배지는 .cgPro 의 '형제'인데 초상 이미지(.icoImg)도 z-index 1 이다.
+     같은 층이면 트리 순서가 늦은 초상이 이겨 배지가 통째로 가려진다(생성 아이콘을 쓰는 카드에서 실제로 그랬다). */
   .cmdG .cgMeta.lv{color:var(--caL);border-color:var(--caS)}
   .cmdG .cgSlot.sel{border-color:var(--ca);box-shadow:0 0 13px -2px var(--caG),inset 0 0 10px rgba(0,0,0,.35)}
   .cmdG .cgSlot.sel .cgPro{box-shadow:0 0 9px -2px var(--caG)}
@@ -5999,12 +6023,17 @@ function gachaRangeMul(u){ if(u&&u.gid==='phantom_t') return 1.8;   // 디토네
 //   설계서: "네모네모 디펜스 — 메타 성장 시스템 설계서"
 //   ※ 포인트=영구(계정별), 빌드 효과=개인 적용 예정, coop 그룹=데이터만(효과 보류)
 // ============================================================================
+// 🎚 난이도 = **한 번씩 깨는 마일스톤 사다리**다(2026-08-19 재설계). 칸마다 적 체력 정확히 ×2 —
+//   '메타를 한 겹 더 쌓으면 다음 칸'이 눈에 보이게. 끝없는 도전은 무한모드(highestRound)가 맡는다.
+//   ⛔ 옛 곡선(HARD 3.5 · HELL 8 · FINAL 360)으로 되돌리지 말 것: NORMAL→HARD 가 ×4.4,
+//     HELL→FINAL 이 ×45 라 사실상 통과 불가 구간이었고, 그래서 아무도 안 갔다.
+//   coinMult 는 그대로 두고 **반복 보상의 난이도 배율(umDiffMul)로도 같은 값을 재사용**한다.
 const DIFFICULTY = {
-  easy:   { name:'EASY', enemyHp:0.5,  enemyAtk:1.0, coinMult:1.0, bossHp:1.0 },   // 비콘너프+보스필수 반영 재튠. 약간메타 ~50%·기본 1~2랩 ~80%
-  normal: { name:'NORMAL', enemyHp:0.8,  enemyAtk:1.3, coinMult:1.5, bossHp:1.3 },   // 중반메타 ~60~75%
-  hard:   { name:'HARD', enemyHp:3.5,  enemyAtk:1.6, coinMult:2.0, bossHp:1.7 },   // 거의만렙(t5~6) 운보통 충분히
-  hell:   { name:'HELL',   enemyHp:8.0,  enemyAtk:2.0, coinMult:2.5, bossHp:2.4 },   // 거의만렙(t6) 다수 통과·초월진입(t7) 확실
-  nightmare:{ name:'FINAL', enemyHp:360.0, enemyAtk:2.5, coinMult:3.0, bossHp:3.0 },   // 최종 단계(영문 FINAL = 끝까지 도전 동기). 초월 '완성'(t9) + 운(봇 t9 ~50%·t8 ~22%)
+  easy:   { name:'EASY',   enemyHp:0.5, enemyAtk:1.0, coinMult:1.0, bossHp:1.0 },
+  normal: { name:'NORMAL', enemyHp:1.0, enemyAtk:1.2, coinMult:1.5, bossHp:1.2 },
+  hard:   { name:'HARD',   enemyHp:2.0, enemyAtk:1.5, coinMult:2.0, bossHp:1.6 },
+  hell:   { name:'HELL',   enemyHp:4.0, enemyAtk:1.8, coinMult:2.5, bossHp:2.2 },
+  nightmare:{ name:'FINAL',enemyHp:8.0, enemyAtk:2.2, coinMult:3.0, bossHp:2.8 },
 };
 const DIFFICULTY_ORDER = ['easy','normal','hard','hell','nightmare'];
 // 보스 처치 포인트(기본, 난이도 coinMult 적용 전). 표에 없는 라운드는 라운드 비례 폴백.
@@ -6402,14 +6431,22 @@ function profRebNextLv(c){ c=c||CHAR(); const n=profRebDone(c);
 function profRebGrant(N){ return PROF_REB_RP0 + PROF_REB_RP1*Math.max(1,N|0); }
 function profRebStep(lv, c){ return profCanRebirth(c) ? (profRebDone(c)+1) : 0; }   // '이번이 몇 회차인가'
 // ⚠ rebLvMax = 이미 환생에 쓴 최고 레벨. 같은 레벨에서 두 번 환생하는 것을 막는다.
+// 🔑 환생 관문 — 2회차부터 **유즈맵 전용 재화(포인트)** 를 요구한다.
+//   설계: 평소엔 강제가 없고(1회차 무료), 사냥터 최상위 축을 끝까지 밀려면 결국 유즈맵을 하게 된다.
+//   ⛔ 사냥터에서 얻을 수 있는 재화로 바꾸지 말 것 — 그러면 관문이 아니라 그냥 비용이 된다.
+const PROF_REB_POINT=[0, 30, 90, 200, 400, 700, 1200];   // 회차별 요구 포인트(1회차 무료)
+function profRebPoint(c){ c=c||CHAR(); const n=profRebDone(c); return PROF_REB_POINT[n]||0; }
+function profRebPointOk(c){ const need=profRebPoint(c);
+  return need<=0 || (((typeof PLAYER_META!=='undefined'&&PLAYER_META.coins)||0) >= need); }
 function profCanRebirth(c){ c=c||CHAR(); if(!c) return false;
   const need=profRebNextLv(c);
-  return need>0 && (c.level|0)>=need && (c.level|0)>((c.rebLvMax|0)); }
+  return need>0 && (c.level|0)>=need && (c.level|0)>((c.rebLvMax|0)) && profRebPointOk(c); }
 function profXpMul(c){ c=c||CHAR(); return 1+((c&&c.rebMul)||0); }
 // ⚠ 경험치 지급은 반드시 이 함수를 지난다 — 지급 지점이 4곳이라 배수를 각자 곱하면 언젠가 어긋난다.
 function profGainXp(c, xp){ c=c||CHAR(); if(!c || !(xp>0)) return 0;
   const got=xp*profXpMul(c); c.xp+=got; return got; }
 function profRebirth(c){ c=c||CHAR(); if(!profCanRebirth(c)) return 0;
+  { const cost=profRebPoint(c); if(cost>0){ PLAYER_META.coins=(PLAYER_META.coins||0)-cost; } }   // 🔑 관문 = 유즈맵 포인트 차감
   const N=profRebDone(c)+1;                          // 이번이 몇 번째 환생인가
   c.reb=N; c.rebMul=(c.rebMul||0)+PROF_REB_GAIN*N;
   c.rp=(c.rp|0)+profRebGrant(N);                     // 🔁 환생 포인트 지급(영구 — 다시 환생해도 안 사라진다)
@@ -6587,13 +6624,85 @@ const PROF_DEFAULT_CLASS='ranger';
 function profEnsureChar(){ return CHAR() || profCreateChar(PROF_DEFAULT_CLASS, ''); }
 // 캐릭터 선택·삭제·환급은 폐지했다(계정당 하나) — 고를 것도, 지울 것도 없다.
 function profSetIdleSource(id){ const p=PROF(), src=PROF_IDLE_SOURCES[id]; if(!src) return false; if(src.reqUnlock && !profHasUnlock(src.reqUnlock)) return false; p.idle.sourceId=id; saveMeta(); return true; }
-// 판 종료 보상 — 순수 read G / write profile. 자체 난이도배율(유즈맵 coinMult와 무관). _runSummary에서 1회 호출.
+// ══ 🔗 유즈맵 ↔ 사냥터 경제 ═══════════════════════════════════════════════
+// 유즈맵 보상은 고정값이 아니라 **사냥터 시급에 앵커**한다. 사냥터 재화는 지수(라운드 ×HB_ROUND_REW ·
+// 던전 ×그것의 99제곱)라서 고정값은 몇 라운드만 지나면 반올림 오차가 된다 — 실측으로 옛 공식은
+// 판당 117 미네랄이었고 그건 던전1 R50 기준 **0.7초치**였다.
+//   ⚠ 시급의 단일 소스는 `hunt.rate`(hbSettle 이 EMA 로 적는 '초당 미네랄')다. 방치 수입(profIdleRate)이
+//      이미 이 값을 본다 — 유즈맵용 곡선을 새로 만들지 말 것.
+//   ⚠ 경험치는 앵커에 붙이지 않는다. 사냥터 XP 곡선(HB_ROUND_XP)만 일부러 완만해서 '레벨이 적 체력을
+//      못 따라가는 벽'을 만드는데, XP까지 시급에 앵커하면 그 설계가 통째로 무너진다.
+const UM_ANCHOR_MIN=60;              // 판당 기준 = 사냥터 60분치(진행도·난이도로 오르내린다)
+const UM_PROG_MIN=0.2;               // 진행도 하한 — 일찍 끝나도 빈손은 아니다
+const UM_GAS_RATIO=0.09/0.85;        // 가스:미네랄 = 사냥터 처치 보상(hbKillReward)과 같은 비율
+function umRate(){ const p=(typeof PROF==='function')?PROF():null, H=p&&p.hunt;
+  return (H && H.rate>0) ? H.rate*60 : PROF_IDLE_BASE; }   // 분당 미네랄 · 첫 라운드 클리어 전에는 방치와 같은 폴백
+// 판 진행도 0~1 — '얼마나 해냈나'의 뜻이 맵마다 다르다.
+//   네모      : 클리어 = 1.0 · 못 깼으면 도달 라운드 비율 (라운드가 이미 다 말해 준다 — 소모 자원은 안 본다)
+//   오토배틀  : 승패 + '번 돈을 굴린 비율' + 버틴 시간 (라운드 개념이 없다)
+//   무한      : 클리어가 없다 → 도달 라운드 / 기준 라운드
+const UM_STK_W_WIN=0.45, UM_STK_W_SPEND=0.35, UM_STK_W_TIME=0.20;   // 합 1.0 · 패배 상한 = 0.55
+const UM_STK_CYCLES=30;              // 만점 기준 사이클 수(cycleTime 20초 × 30 = 10분)
+function umProgress(){ if(typeof G==='undefined' || !G) return 0;
+  if(G.strike){ const S=(typeof STK!=='undefined'&&STK)?STK:null; if(!S) return 0;
+    const me=S.me||{}, pool=(mapCfg('startGold',0)||0)+(me.earned||0);   // 그 판에 쓸 수 있었던 총액
+    const sp=(pool>0) ? Math.max(0,Math.min(1,(pool-(me.gold||0))/pool)) : 0;   // ⚠ 소모는 '수입−잔액'으로 파생시킨다 —
+    const tm=Math.min(1,(S.round||1)/UM_STK_CYCLES);                            //    골드를 깎는 곳(광산·강화·무기·건설)을 건드리지 않아 새 소모처가 생겨도 안 어긋난다
+    return UM_STK_W_WIN*((G.phase==='won')?1:0) + UM_STK_W_SPEND*sp + UM_STK_W_TIME*tm; }
+  const rounds=mapCfg('rounds',TOTAL_ROUNDS)||TOTAL_ROUNDS;
+  if(mapCfg('infinite')) return Math.min(1,(G.round||0)/rounds);
+  return (G.phase==='won') ? 1 : Math.min(1,(G.round||0)/rounds); }
+// 🏁 첫 클리어 마일스톤 — 맵×난이도마다 **평생 1회**. 사냥터 마일스톤(hunt.rw[dg][round])과 같은 문법이다.
+//   보상 크기는 '사냥터 N시간치'인데, ⚠ **상한을 걸지 않으면 유즈맵을 최대한 늦게 하는 것이 최적 플레이**가 된다
+//     (시급이 계속 오르므로). 그래서 min(현재 시급, 난이도별 권장 시급) 으로 막는다.
+const UM_DIFF_R={ easy:20, normal:35, hard:50, hell:65, nightmare:80 };   // 난이도별 '권장 사냥터 라운드'(상한 기준)
+const UM_FIRST={   // h=사냥터 시간치 · gem/tk=시급과 무관한 절대 재화
+  easy:      {h:1,  gem:10,  tk:{gear:1}},
+  normal:    {h:2,  gem:20,  tk:{gear:1, pet:1}},
+  hard:      {h:4,  gem:40,  tk:{gear:2, ally:1}},
+  hell:      {h:8,  gem:80,  tk:{gear:3, pet:1, ally:1}},
+  nightmare: {h:16, gem:150, tk:{gear:5, pet:2, ally:2}},
+};
+const UM_STK_FIRST='hard';   // 오토배틀은 난이도가 없다(noDiff) → '첫 승리' 1회를 이 급으로
+// 권장 진행도의 시급(분당 미네랄). ⚠ 사냥터 곡선 함수를 그대로 쓴다 — 새 곡선을 만들면 반드시 어긋난다.
+function umCapRate(diff){ const R=UM_DIFF_R[diff]||UM_DIFF_R.normal;
+  let foes=0, sec=0; for(let w=1;w<=HB_WAVES;w++){ foes+=hbFoeCount(R,w); sec+=hbWaveTime(w)+HB_GAP_S; }
+  return (foes*hbKillReward(1,R).min + hbClearBonus(1,R).min) / (sec/60); }
+function umFirstRw(diff){ const F=UM_FIRST[diff]; if(!F) return null;
+  const min=Math.round(Math.min(umRate(), umCapRate(diff))*60*F.h);
+  return Object.assign({ pcoin:min, gas:Math.round(min*UM_GAS_RATIO), gem:F.gem }, F.tk||{}); }
+function umClearTbl(){ const M=PLAYER_META; if(!M.umClear) M.umClear={}; return M.umClear; }
+function umFirstGot(mapId,diff){ const t=umClearTbl()[mapId]; return !!(t&&t[diff]); }
+// 최초 클리어면 지급하고 보상을 돌려준다(중복 지급 불가). 지급은 dqGive 한 곳을 지난다.
+function umFirstClaim(mapId,diff){ if(!mapId||!diff||umFirstGot(mapId,diff)) return null;
+  const rw=umFirstRw(diff); if(!rw) return null;
+  const t=umClearTbl(); if(!t[mapId]) t[mapId]={}; t[mapId][diff]=1;
+  if(typeof dqGive==='function') dqGive(rw); else saveMeta();
+  return rw; }
+// 📅 하루 몇 판째인가 — 목표 세션이 '하루 2~3판'이라 그 숫자를 규칙으로 새긴다.
+//   ⚠ 하드 캡이 아니라 체감이다: 4판째부터 30% — 더 해도 손해는 아니고, 짧은 판 반복으로 긁는 것만 막는다.
+//   ⚠ 하루 경계는 **_dgDayKey() 하나**를 쓴다(출석·일일 퀘스트와 같은 축) — 새 축을 만들면 하루가 새는 날이 생긴다.
+const UM_DAY_FULL=3, UM_DAY_FADE=0.3;
+function umDayRec(){ const M=PLAYER_META, dk=_dgDayKey();
+  if(!M.umDay || M.umDay.key!==dk) M.umDay={ key:dk, n:0 };
+  return M.umDay; }
+function umTodayN(){ return umDayRec().n; }                       // 오늘 이미 끝낸 판 수
+function umDayMul(){ return (umTodayN()<UM_DAY_FULL)?1:UM_DAY_FADE; }   // 이번 판에 붙을 계수
+function umDayCount(){ const r=umDayRec(); r.n++; try{ saveMeta(); }catch(e){} return r.n; }
+function umDiffMul(){ const D=(typeof DIFFICULTY!=='undefined')&&DIFFICULTY[G.difficulty];
+  return (D&&D.coinMult)||1; }   // 난이도 배율은 DIFFICULTY 표 하나만 본다(두 벌을 두지 말 것)
+// 판 종료 보상 — 순수 read G / write profile. _runSummary에서 1회 호출.
 function profRunReward(){ const p=PROF();
-  const dMul={easy:0.8,normal:1,hard:1.4,hell:1.8,nightmare:2.4}[G.difficulty||'normal']||1;
+  const prog=Math.max(UM_PROG_MIN, Math.min(1, umProgress())), dMul=umDiffMul(), day=umDayMul();
+  const min=Math.round(umRate()*UM_ANCHOR_MIN*prog*dMul*day*(1+profPetBonus('coin')));   // 🐾 펫 코인% 반영 · 📅 하루 3판 뒤 체감
+  const gas=Math.round(min*UM_GAS_RATIO);
   const k=G.kills||0, rd=G.round||0;
-  const xp=Math.round((10 + k*0.5 + rd*8)*dMul), pc=Math.round((5 + k*0.2 + rd*4)*dMul*(1+profPetBonus('coin')));   // 🐾 펫 코인% 반영
-  const c=CHAR(); profGainXp(c, xp); const ups=profApplyLevelUps(c); p.pcoin+=pc; profSyncUnlocks(); saveMeta();
-  return { xp:xp, pc:pc, ups:ups, level:c?c.level:1 }; }
+  const xp=Math.round((10 + k*0.5 + rd*8)*dMul);   // ⚠ 앵커 아님(위 주석 참조)
+  const c=CHAR(); profGainXp(c, xp); const ups=profApplyLevelUps(c);
+  p.pcoin=(p.pcoin||0)+min; p.gas=(p.gas||0)+gas; profSyncUnlocks();
+  const dayN=umDayCount();   // 📅 판 수는 여기서만 센다(정산은 판당 1회다)
+  saveMeta();
+  return { xp:xp, pc:min, gas:gas, prog:prog, ups:ups, level:c?c.level:1, day:dayN, dayMul:day }; }
 // 방치 정산(오프라인/켜둠) — Date.now 기준(1단계 클라이언트 신뢰). 유즈맵과 무관.
 function profOfflineCapMin(){ return profHasUnlock('idle_12h')?PROF_OFF_CAP12_MIN
   : profHasUnlock('idle_8h')?PROF_OFF_CAP8_MIN : PROF_OFF_CAP_MIN; }
@@ -6926,7 +7035,7 @@ function hbMoreTap(k){
 // ══════════════════════════════════════════════════════════════════════════
 const DQ_WEEKS=4, DQ_PER_WEEK=5, DQ_BONUS=2;          // 4주 × (출석 5칸 + 보너스 2칸)
 const DQ_ATT_MAX=DQ_WEEKS*DQ_PER_WEEK;                 // 20도장 = 최종 보상 조건
-const DQ_N=5, DQ_OUT_N=2;                              // 하루 5개 중 2개는 사냥터 바깥(다른 구역으로 끌어낸다)
+const DQ_N=5, DQ_OUT_N=3;                              // 하루 5개 중 **3개**는 사냥터 바깥(2026-08-19: 유즈맵을 주류로 올리며 2→3)
 const DQ_WEEK_MAX=DQ_N*7;                              // 한 주에 나올 수 있는 최대(35개)
 const DQ_WEEK_GOAL=25;                                 // 주간 목표 = 5일치. 이틀을 빠져도 채울 수 있다(출석 5/7과 같은 결)
 const DQ_TK={gear:'장비', pet:'펫', ally:'동료'};
@@ -7337,6 +7446,8 @@ function renderGrowModal(){ const box=document.getElementById('hbGrowBody'); if(
   // 🔁 환생 — 레벨 곡선이 무거워지는 지점에서 '되감고 배수를 얻는' 축.
   h+='<div class="hbGrowLbl">환생 <span class="hbStars">'+(c.reb?('×'+profXpMul(c).toFixed(2)+' 경험치'):'—')+'</span></div>';
   { const need=profRebNextLv(c), N=profRebDone(c)+1, can=profCanRebirth(c), last=(need===0);
+    const pNeed=profRebPoint(c), pHave=((typeof PLAYER_META!=='undefined'&&PLAYER_META.coins)||0);
+    const lvOk=(need>0 && (c.level|0)>=need && (c.level|0)>((c.rebLvMax|0)));
     h+='<div class="hbRow"><span class="hbRowIco">🔁</span>'
       +'<span class="hbRowTx"><b>'
       +(last ? ('환생 완료 — Lv.'+PROF_LV_CAP+' 고정 · 이제 기록이 포인트를 줍니다')
@@ -7344,7 +7455,9 @@ function renderGrowModal(){ const box=document.getElementById('hbGrowBody'); if(
                     : (N+'회차 환생')))+'</b>'
       +'<em>'+(last ? ('전역 진행도 '+PROF_REC_RP_PER+'칸당 환생 포인트 +1 (지금 '+profRecordRp(c)+'p)')
              : (can ? ('레벨·레벨 포인트·<b>미네랄 업그레이드·미네랄</b>이 처음으로 돌아갑니다. 해금·최고 기록·장비·펫·환생 포인트는 그대로. 환생 포인트 +'+profRebGrant(N))
-                    : ('🔒 Lv.'+need+' 필요 — 회차마다 요구 레벨이 올라갑니다 ('+PROF_REB_LEVELS.join(' · ')+')')))+'</em></span>'
+                    : (lvOk ? ('🔒 ◎ 포인트 '+pNeed+' 필요 (보유 '+pHave+') — 포인트는 <b>유즈맵에서만</b> 나옵니다')
+                            : ('🔒 Lv.'+need+' 필요 — 회차마다 요구 레벨이 올라갑니다 ('+PROF_REB_LEVELS.join(' · ')+')'
+                               +(pNeed>0?(' · ◎ 포인트 '+pNeed):'')))))+'</em></span>'
       +'<button class="hbRowBtn" onclick="hbDoRebirth()"'+(can?'':' disabled')+'>환생</button></div>'; }
   // 🔁 환생 포인트 — 환생으로만 얻고 환생해도 안 사라진다. 줄 모양은 스탯 화면의 레벨 포인트와 같은 컴포넌트.
   h+=_ptListHTML('rp', c);
@@ -10748,9 +10861,13 @@ function maxUnits(){ return mapCfg('maxUnits',MAX_UNITS) + ((G.metaB&&G.metaB.un
 // 게임 종료 정산: 이번 판에서 모은 포인트(G.points)에 난이도 배율을 곱해 계정에 누적·저장(1회만).
 // 포인트(◎ = 다음 판 업그레이드 화폐)은 '월드보스(공용 보스)' 처치로만 획득 — coopBossDown()이 G.points에 적립.
    // 이번 판 적립 포인트(월드보스 처치 합) = 정산 대상
+// ◎ 포인트 = **유즈맵에서만 나오는 재화**다(사냥터에서는 한 톨도 안 나온다). 그래서 환생 관문의 열쇠가 된다.
+//   ⚠ 예전엔 네모 월드보스 처치로만 나와서 획득 경로가 너무 좁았다 → **모든 맵이 판 끝에 성과만큼** 준다.
+const UM_POINT_RUN=12;   // 판당 기준 포인트(진행도·난이도로 오르내린다)
 function bankRunPoints(){ if(G._pointsBanked) return G._bankedAmt||0; G._pointsBanked=true;
-  const cm=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).coinMult;
-  const gained=Math.round((G.points||0)*cm);   // 포인트 = 월드보스 처치 포인트 × 난이도 배율
+  const cm=umDiffMul();
+  const run=Math.round(UM_POINT_RUN * Math.max(UM_PROG_MIN, Math.min(1, umProgress())) * cm);   // 판 성과
+  const gained=Math.round((G.points||0)*cm) + run;   // + 월드보스 처치 포인트(네모 전용, 큰 몫)
   if(gained>0){ PLAYER_META.coins=(PLAYER_META.coins||0)+gained; saveMeta(); }
   G._bankedAmt=gained; return gained; }
 const DIFF_RANK=['easy','normal','hard','hell','nightmare'];
@@ -13414,8 +13531,10 @@ function _mainPort(u){ return unitPortraitHTML(u.gmodel||u.id); }
 function _mainMaxHp(u){ const d=U[u.id]||{}, m=u.hero?HERO_STAT_MUL:1; return u.maxHp||Math.round((d.hp||0)*m); }
 function _mainMaxSh(u){ const d=U[u.id]||{}, m=u.hero?HERO_STAT_MUL:1; return (u.maxSh!=null)?u.maxSh:Math.round((d.shield||0)*m); }
 function _mainMaxEn(u){ const d=U[u.id]||{}; return (u.maxEn!=null)?u.maxEn:(d.energy||0); }
-function _mainHpsh(u){ const mh=_mainMaxHp(u), ms=_mainMaxSh(u), me=_mainMaxEn(u);
-  return _cgHpShStr(Math.round(u.hp!=null?u.hp:mh)+'/'+mh, ms>0?(Math.round(u.sh!=null?u.sh:ms)+'/'+ms):0, me>0?(Math.round(u.en!=null?u.en:me)+'/'+me):0); }
+// ⚠ 마나는 머리줄에 넣지 않는다 — 제목 옆 한 줄에 HP·실드까지가 한계고, 마나는 왼쪽 정보 구역(스탯)이 자리다.
+function _mainHpsh(u){ const mh=_mainMaxHp(u), ms=_mainMaxSh(u);
+  return _cgHpShStr(Math.round(u.hp!=null?u.hp:mh)+'/'+mh, ms>0?(Math.round(u.sh!=null?u.sh:ms)+'/'+ms):0, 0); }
+function _mainManaStat(u){ const me=_mainMaxEn(u); return (me>0)?[['마나', Math.round(u.en!=null?u.en:me)+'/'+me]]:[]; }
 // 좌측 스탯 = 건설 프로필과 동일 구성(공격력·사거리·공격속도·처치) · 처치=메인 누적 킬
 function _mainUnitStatList(u){ const def=(G.sandbox&&!G.strike&&typeof Ueff==='function')?Ueff(u):(U[u.id]||{}), k=u.gmodel||u.id;
   const rng=(G.sandbox&&typeof effRange==='function')?(Math.round(effRange(k,def.range)/SB_ANCHOR_RANGE*10)/10)
@@ -13423,7 +13542,7 @@ function _mainUnitStatList(u){ const def=(G.sandbox&&!G.strike&&typeof Ueff==='f
   const _cdf=(typeof cdOf==='function')?cdOf(u,def):def.cd, _sbcd=(G.sandbox&&typeof _sbBaseCd==='function')?_sbBaseCd(k):null;
   const spd=(_sbcd!=null)?((1/_sbcd).toFixed(1)+'/s'):((_cdf>0)?((60/_cdf).toFixed(1)+'/s'):'-');
   const dp=(typeof unitDmgParts==='function')?unitDmgParts(u):null, atk=(dp&&dp.total>0)?fmtStat(dp.total):(def.dmg>0?fmtStat(def.dmg):'무공격');
-  return [['공격력',atk], ['사거리', rng>0?(''+rng):'-'], ['공격속도',spd], ['처치', ''+(u.kills||0)]]; }
+  return [['공격력',atk], ['사거리', rng>0?(''+rng):'-'], ['공격속도',spd], ['처치', ''+(u.kills||0)]].concat(_mainManaStat(u)); }
 // 👥 활성셋(건설 techCastSkill과 동일 규약): 지정 중 이 스킬 보유 유닛 전부 · 소프트선택(G.selType) 시 그 종류만
 function _mainSkillSet(key){ const list=(G.sel||[]).map(id=>G.units.find(u=>u.uid===id)).filter(Boolean);
   const owns=u=>unitSkillKeys(u).indexOf(key)>=0;
@@ -13488,7 +13607,7 @@ function _mainTransportCards(u){ const out=[]; if(typeof isTransport!=='function
   return out; }
 function _mainSelAllBtn(u){ if(typeof isBuilding==='function'&&isBuilding(u.id)) return '';
   const key=_mainTypeKey(u), cnt=G.units.filter(x=>!isBuilding(x.id)&&_mainTypeKey(x)===key).length;
-  return (cnt>1)?('<button class="cgSelAll" onclick="selectAllOfType()" title="같은 종류 전체 지정">'+_SVG_SELALL+'</button>'):''; }
+  return (cnt>1)?('<button class="cgSelAll" onclick="selectAllOfType()" title="같은 종류 전체 지정">'+uiIco('selall')+'</button>'):''; }
 function _mainSingleModel(u){ const def=U[u.id]||{}, role=_mainRole(u);
   return { mode:'prod', title:gNameStar(u,def)+(u.hero?' [영웅]':''), icon:_mainPort(u), hpsh:_mainHpsh(u),   // 이름 옆 (보직/직업) 표기 제거 — 건설 프로필과 통일
     sub:'맵을 탭하면 이동 · 해제는 우상단 ✕', items:_mainSkillCards([u]).concat(_mainTransportCards(u)), topRight:_mainSelAllBtn(u),
@@ -13499,12 +13618,12 @@ function _mainTypeModel(list, canBack){ const u0=list[0], def=U[u0.id]||{}, n=li
   if(n>CAP) rows.push({ more:n-CAP });
   return { mode:'prod', title:gNameStar(u0,def)+' <span class="nsub">×'+n+'</span>', icon:_mainPort(u0),   // 이름 옆 (보직/직업) 표기 제거
     sub:'', items:_mainSkillCards(list), topRight:_mainSelAllBtn(u0),   // 활성셋 전체 기준 상태(ON·마나·쿨다운)
-    back:canBack?'<button class="cgLift cgBack" onclick="mainSubSelectType(event,\'\')" title="전체 선택으로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6L4 11l5 5"/><path d="M4 11h9a6 6 0 0 1 6 6v1"/></svg></button>':'',   // 🔙 소프트선택 해제(전체 복귀)
+    back:canBack?'<button class="cgLift cgBack" onclick="mainSubSelectType(event,\'\')" title="전체 선택으로">'+uiIco('back')+'</button>':'',   // 🔙 소프트선택 해제(전체 복귀)
     info:{ eb:'', hideName:true, units:rows, cr:0, en:0 } }; }
 function _mainMixedModel(list){ const grp={}, ord=[];
   for(const u of list){ const k=_mainTypeKey(u); if(!grp[k]){ grp[k]={n:0,u:u}; ord.push(k); } grp[k].n++; }
   const items=ord.map(k=>({ pro:_mainPort(grp[k].u), sn:gNameStar(grp[k].u,U[grp[k].u.id]||{}), tr:'×'+grp[k].n, metaCls:'lv', state:'ok',
-    bottom:'<div class="cgTrash" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()" onclick="mainRemoveType(event,\''+k+'\')" title="이 종류 지정 해제">'+_SVG_TRASH+'</div>',
+    bottom:'<div class="cgTrash" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()" onclick="mainRemoveType(event,\''+k+'\')" title="이 종류 지정 해제">'+uiIco('untype')+'</div>',
     act:'onpointerdown="mainChipDown(event,\''+k+'\')" onpointerup="mainChipUp(event)" onpointerleave="mainChipCancel()" onpointercancel="mainChipCancel()" oncontextmenu="return false"' }));   // 짧게=소프트(전부 유지) · 꾹=그 종류만 분리 · 🗑=그 종류 해제
   if(typeof unitSkillKeys==='function'){ const sets=ord.map(k=>new Set(unitSkillKeys(grp[k].u)));   // 🪄 혼합 = 전 종류 공통 스킬(교집합)만 카드로(건설과 동일)
     const common=sets.length?[...sets[0]].filter(kk=>sets.every(s=>s.has(kk))):[];
@@ -13656,7 +13775,7 @@ const _BACK_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 function _bossArenaSlot(i){ const dep=G.units.filter(u=>u.atBoss), u=dep[i], hasBoss=!!(G.coopBoss&&!G.coopBoss.dead);
   if(u){ const id=u.gmodel||u.id, def=U[u.id]||{}, nm=u.gname||def.name||id;   // 채워짐 = 다중지정 카드 그대로(초상화+이름+휴지통). 파견N·탭=회수 텍스트 없음
     return { pro:unitPortraitHTML(id), sn:nm, metaCls:'lv', state:'ok',
-      bottom:'<div class="cgTrash" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()" onclick="bossRecallSlot(event,'+i+')" title="회수">'+_SVG_TRASH+'</div>', act:'' }; }
+      bottom:'<div class="cgTrash" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()" onclick="bossRecallSlot(event,'+i+')" title="회수">'+uiIco('untype')+'</div>', act:'' }; }
   return { pro:bossIcoHTML('deploy'), sn:'파견', state:hasBoss?'ok':'dim', act:'onclick="bossSlotTap('+i+')"' }; }
 // 🏢 포인트방 건물 프로필 — 이름 + 체력 + 처치 포인트(간단). 관리자 건물 프로필과 동일한 build 카드.
 const _BLD_ICON_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M4 20h16M6 20V9l6-4 6 4v11M9.5 20v-5h5v5"/></svg>';
@@ -14944,7 +15063,10 @@ function upgCost(wpn){ return UPG_COST; }   // 정액 5 에너지(에너지 수�
 //     info:{ eb, name, desc, stats:[[라벨,값]] | val:{cur,nxt,unit}, progLabel, progVal, prog, cr, en, time }, page }
 function _cgFmt(n){ n=n||0; return n>=10000?((n/1000).toFixed(n>=100000?0:1)+'K'):(''+n); }
 function _cgCost(cr,en,ce){ { const _p=(typeof techCostView==='function')?techCostView(cr,en):null; if(_p){ cr=_p.cr; en=_p.en; } }   // 오토배틀: 지갑이 하나(골드) → 에너지 비용을 크레딧으로 환산해 표기(단일 지점)
-  let h=''; if(ce){ h+='<span class="cc cr">'+(cr?(resIco('mineral')+_cgFmt(cr)):'')+'</span>'+'<span class="cc en">'+(en?(resIco('gas')+_cgFmt(en)):'')+'</span>'; return h; }   // 건설 카드=아이콘 없이 c/e. 에너지 없어도 아래 줄 자리 항상 예약(크레딧 위 고정)
+  // 건설 카드는 **미네랄(윗줄)·가스(아랫줄) 두 자리를 언제나 예약**한다 — 값이 없다고 줄을 빼면
+  //   칸마다 재화가 다른 높이에 찍혀 눈이 자리를 못 잡는다. 비는 만큼은 글자·아이콘 치수로 흡수한다.
+  let h=''; if(ce){ h+='<span class="cc cr">'+(cr?(resIco('mineral')+_cgFmt(cr)):'')+'</span>'
+      +'<span class="cc en">'+(en?(resIco('gas')+_cgFmt(en)):'')+'</span>'; return h; }
   if(cr) h+='<span class="cc cr">'+resIco('mineral')+_cgFmt(cr)+'</span>'; if(en) h+='<span class="cc en">'+resIco('gas')+_cgFmt(en)+'</span>'; return h; }   // 무료 표기 제거(빈칸)
 function _cgHpShStr(hp,sh,en){ let s=''; if(sh) s+='<span class="shv"><i class="stAb">S</i>'+sh+'</span>'; if(hp!=null&&hp!=='') s+='<span class="hpv"><i class="stAb">H</i>'+hp+'</span>'; if(en) s+='<span class="env"><i class="stAb">E</i>'+en+'</span>'; return s; }   // 헤더: 쉴드(S)→HP(H)→마나(E) · 약자 프리픽스(아이콘 없음)
 function _cgHpShDual(hp,sh,en){ let s=''; if(sh) s+='<span class="shv"><i class="stAb">S</i>'+sh+'/'+sh+'</span>'; if(hp!=null&&hp!=='') s+='<span class="hpv"><i class="stAb">H</i>'+hp+'/'+hp+'</span>'; if(en) s+='<span class="env"><i class="stAb">E</i>'+en+'/'+en+'</span>'; return s; }   // 유닛 헤더: 쉴드→HP→마나(현재/기본)
@@ -14979,7 +15101,8 @@ function renderCmdGrid(host, m){ const el=(typeof host==='string')?document.getE
   const pager=(pages>1)?('<div class="cgPage"><button onclick="_cgTurn(this,-1)">◀</button><span class="dots">'+dots+'</span><span class="pn">'+(pg+1)+' / '+pages+'</span><button onclick="_cgTurn(this,1)">▶</button></div>'):'';
   const pill=m.status?('<span class="cgPill'+(m.statusIdle?' idle':'')+'">'+m.status+'</span>'):'';
   el.innerHTML='<div class="cmdG" data-mode="'+(m.mode||'upg')+'" data-compact="'+(m.compact?1:0)+'" data-build="'+(m.build?1:0)+'">'
-    +'<div class="cgHead"><div class="cgTtl"><div class="cgN">'+(m.title||'')+'</div>'+(m.hpsh?'<div class="cgHpsh">'+m.hpsh+'</div>':(m.sub?'<div class="cgS">'+m.sub+'</div>':''))+'</div>'+pill+pager+(m.topRight||'')+(m.back||'')+'</div>'   // 우상단 순서 = [상태칩][◀페이지▶][자원스텝퍼·랠리·부양 / 전체지정] → 페이지네이션이 왼쪽, 건물 조작 버튼이 오른쪽 끝(전 프로필 통일) · 🔙 돌아가기(유턴)는 그보다 뒤
+    +(m.topRight?('<div class="cgTopOut">'+m.topRight+'</div>'):'')   // 판 밖 오른쪽 위 = 자원 스텝퍼·랠리·부양·전체지정(머리줄을 두껍게 하지 않는다)
+    +'<div class="cgHead"><div class="cgTtl"><div class="cgN">'+(m.title||'')+'</div>'+(m.hpsh?'<div class="cgHpsh">'+m.hpsh+'</div>':(m.sub?'<div class="cgS">'+m.sub+'</div>':''))+'</div>'+pill+pager+(m.back||'')+'</div>'   // 머리줄 = [제목 HP/실드 / 설명][상태칩][◀페이지▶][🔙]
     +'<div class="cgBody"><div class="cgInfo">'+_cgInfoHTML(m.info)+'</div><div class="cgCol"><div class="cgGrid">'+cells.join('')+'</div></div></div></div>';
   if(m.build){ const nms=el.querySelectorAll('.cgName'); for(const nm of nms){ let fs=10; nm.style.fontSize=fs+'px'; let g=0; while(nm.scrollWidth>nm.clientWidth+0.5 && fs>6 && g++<12){ fs-=0.5; nm.style.fontSize=fs+'px'; } } } }   // 이름 생략(...) 대신 폰트 축소로 한 줄에 전부
 function _cgTurn(btn,delta){ let h=btn; while(h && !h._cgModel) h=h.parentElement; if(!h||!h._cgModel) return; h._cgModel.page=(h._cgPage||0)+delta; renderCmdGrid(h,h._cgModel); }
@@ -15342,16 +15465,34 @@ function _runSummary(){ if(G._runSum) return G._runSum;
   // 📅 일일 — 유즈맵 1판 종료. 이 함수는 판당 1회만 계산되므로 여기가 유일한 계측 지점이다(중도 나가기는 제외).
   if(typeof dqNote==='function' && G.phase!=='quit'){ dqNote('umRun',1); if(G.phase==='won') dqNote('umWin',1); }
   if(G.strike){ const S=(typeof STK!=='undefined'&&STK)?STK:{}, me=S.me||{};   // 직스: 라운드·코인 대신 결과·처치·플레이타임
-    G._runSum={ strike:true, result:(G.phase==='won')?'win':'lose', kills:(me.kills||0), time:(S.t||0), gold:Math.floor(me.gold||0) }; return G._runSum; }
-  const hadDiff=(typeof PLAYER_META!=='undefined'&&PLAYER_META.clearedDifficulty)||'';
-  const hadInf=(typeof infiniteUnlocked==='function')&&infiniteUnlocked();
-  recordRunResult();
-  const nowDiff=(typeof PLAYER_META!=='undefined'&&PLAYER_META.clearedDifficulty)||'';
-  const nowInf=(typeof infiniteUnlocked==='function')&&infiniteUnlocked();
-  let nextName=''; if(nowDiff!==hadDiff){ const nx=DIFF_RANK[DIFF_RANK.indexOf(nowDiff)+1]; if(nx&&DIFFICULTY[nx]) nextName=DIFFICULTY[nx].name; }
-  G._runSum={ coins:bankRunPoints(), kills:G.kills||0, round:G.round, time:G.timeSec, newDiff:nextName, infNew:(!hadInf&&nowInf) };
-  G._runSum.prof=(typeof profRunReward==='function')?profRunReward():null;   // 🧍 프로필 RPG 보상(유즈맵 재화와 완전 분리)
+    G._runSum={ strike:true, result:(G.phase==='won')?'win':'lose', kills:(me.kills||0), time:(S.t||0), gold:Math.floor(me.gold||0) }; }
+  else {
+    const hadDiff=(typeof PLAYER_META!=='undefined'&&PLAYER_META.clearedDifficulty)||'';
+    const hadInf=(typeof infiniteUnlocked==='function')&&infiniteUnlocked();
+    recordRunResult();
+    const nowDiff=(typeof PLAYER_META!=='undefined'&&PLAYER_META.clearedDifficulty)||'';
+    const nowInf=(typeof infiniteUnlocked==='function')&&infiniteUnlocked();
+    let nextName=''; if(nowDiff!==hadDiff){ const nx=DIFF_RANK[DIFF_RANK.indexOf(nowDiff)+1]; if(nx&&DIFFICULTY[nx]) nextName=DIFFICULTY[nx].name; }
+    G._runSum={ coins:bankRunPoints(), kills:G.kills||0, round:G.round, time:G.timeSec, newDiff:nextName, infNew:(!hadInf&&nowInf) };
+  }
+  // ⚠ 보상 지급은 두 갈래가 **끝난 뒤 한 곳**에서 한다. 예전엔 직스 분기가 먼저 return 해서
+  //   오토배틀이 앵커 보상을 통째로 못 받았다(umProgress 의 직스 분기가 죽은 코드였다).
+  if(G.strike) G._runSum.coins=bankRunPoints();   // ◎ 포인트는 맵을 가리지 않는다(네모는 위 분기에서 이미 적립)
+  G._runSum.prof=(typeof profRunReward==='function')?profRunReward():null;   // 🧍 사냥터 재화 = 유즈맵 앵커 보상
+  // 🏁 첫 클리어 마일스톤 — 이겼을 때만, 맵×난이도마다 평생 1회. 무한모드는 클리어가 없어 제외.
+  if(G.phase==='won' && !mapCfg('infinite') && typeof umFirstClaim==='function')
+    G._runSum.first=umFirstClaim(MAP&&MAP.id, G.strike?UM_STK_FIRST:G.difficulty);
   return G._runSum; }
+// 판 보상 줄 — 네모·오토배틀 통계 화면 공용. 표기를 두 벌로 만들지 말 것.
+function _umRwRows(S){ let h='';
+  if(S.prof) h+=ovStatRow('내 캐릭터 XP','<b class="osNew">+'+S.prof.xp+'</b>'+(S.prof.ups?' · Lv.'+S.prof.level:''))
+    +ovStatRow('미네랄','<b class="osNew">+'+fmtCur(S.prof.pc)+'</b>')
+    +ovStatRow('가스','<b class="osNew">+'+fmtCur(S.prof.gas)+'</b>');
+  if(S.prof && S.prof.dayMul<1) h+=ovStatRow('오늘 '+S.prof.day+'판째','<span class="osDim">보상 '+Math.round(S.prof.dayMul*100)+'% — 하루 '+UM_DAY_FULL+'판까지 전액</span>');
+  if(S.first){ const f=S.first, tk=[['gear','장비'],['pet','펫'],['ally','동료']].filter(t=>f[t[0]]).map(t=>t[1]+' ×'+f[t[0]]).join(' · ');
+    h+=ovStatRow('<b class="osNew">🏁 첫 클리어</b>','<b class="osNew">'+fmtCur(f.pcoin)+' M · '+fmtCur(f.gas)+' G</b>')
+      +ovStatRow('첫 클리어 보너스','<b class="osNew">💎 '+f.gem+(tk?(' · '+tk):'')+'</b>'); }
+  return h; }
 function fmtTime(sec){ sec=Math.max(0,Math.floor(sec||0)); const m=Math.floor(sec/60), s=sec%60; return (m<10?'0':'')+m+':'+(s<10?'0':'')+s; }
 function _ovBtnTx(btn,txt){ const t=btn&&btn.querySelector('.ovBtnTx'); if(t) t.textContent=txt; }   // 라벨만 교체(진행 바 유지)
 function showOverlay(){ const ov=document.getElementById('ov'),tt=document.getElementById('ovTitle'),dd=document.getElementById('ovDesc'),bt=document.getElementById('ovBtn');
@@ -15391,7 +15532,8 @@ function openResultScreen(){ const sc=document.getElementById('resultScreen'); i
       ovStatRow('결과', S.result==='win'?'<b class="osNew">승리</b>':'<b style="color:#ff6b7a">패배</b>')
      +ovStatRow('처치', (S.kills||0).toLocaleString())
      +ovStatRow('플레이타임', fmtTime(S.time))
-     +ovStatRow('최종 자원', '⛁ '+(S.gold||0).toLocaleString());
+     +ovStatRow('최종 자원', '⛁ '+(S.gold||0).toLocaleString())
+     +_umRwRows(S);
     if(typeof setInGame==='function') setInGame(false);
     sc.classList.remove('hide'); _rsStartAuto(); return; }
   document.getElementById('rsStats').innerHTML=
@@ -15402,8 +15544,7 @@ function openResultScreen(){ const sc=document.getElementById('resultScreen'); i
    +(S.newDiff?ovStatRow('난이도 해금','<b class="osNew">'+S.newDiff+'</b>'):'')
    +(S.infNew?ovStatRow('모드 해금','<b class="osNew">무한 모드</b>'):'')
    +ovStatRow('보유 포인트','◎ '+(((typeof PLAYER_META!=='undefined')&&PLAYER_META.coins)||0))
-   +((S.prof)?(ovStatRow('내 캐릭터 XP','<b class="osNew">+'+S.prof.xp+'</b>'+(S.prof.ups?' · Lv.'+S.prof.level:''))
-             +ovStatRow('수련 코인','<b class="osNew">+'+S.prof.pc+'</b>')):'');   // 🧍 프로필 RPG 보상 표기
+   +_umRwRows(S);
   if(typeof setInGame==='function') setInGame(false);   // 게임 크롬(하단 콘솔) 정리
   sc.classList.remove('hide'); _rsStartAuto(); }        // 10초 뒤 자동으로 로비
 function resultToLobby(){ _rsClearAuto(); const sc=document.getElementById('resultScreen'); if(sc) sc.classList.add('hide');
@@ -19202,8 +19343,11 @@ function _techEnsureRoster(race){ const t=TECH_TREE[race]; if(!t||t._rosterSynce
   for(const r of roster){ const key=r.key; if(!key||have.has(key)||/^worker/.test(key)||key==='broodling'||key==='larva') continue;   // 일꾼·스웜링(브루들링=메두사 소환 전용)·라바(리버 중복 키)는 자동 생산 제외
     if(typeof TECH_MORPH!=='undefined' && Object.keys(TECH_MORPH).some(src=>TECH_MORPH[src].some(m=>m.to===key))) continue;   // 🧬 2차 변태 전용 유닛(베놈퀸·베놈·베히모스)은 직접 생산 제외
     const u=(typeof U!=='undefined'&&U[key])||{}; main.produces.push({id:key, name:r.n, m:(u.cost||50), g:0, pop:1}); have.add(key); } }
-function _techUnitStatList(spec,uid){ const _spd=(spec.atk&&(typeof _sbBaseCd==='function'))?((1/_sbBaseCd(uid)).toFixed(1)+'/s'):'-';   // 공격속도 = base_stats 공속(/s) — 메인 배너와 동일 표시
-  return [['공격력', spec.atk?(''+spec.atk):'무공격'], ['사거리', spec.rng!=null?(''+spec.rng):'-'], ['공격속도', _spd], ['처치','0']]; }
+function _techUnitStatList(spec,uid,ent){ const _spd=(spec.atk&&(typeof _sbBaseCd==='function'))?((1/_sbBaseCd(uid)).toFixed(1)+'/s'):'-';   // 공격속도 = base_stats 공속(/s) — 메인 배너와 동일 표시
+  const out=[['공격력', spec.atk?(''+spec.atk):'무공격'], ['사거리', spec.rng!=null?(''+spec.rng):'-'], ['공격속도', _spd], ['처치','0']];
+  const me=(ent&&ent.maxEn>0)?ent.maxEn:((typeof U!=='undefined'&&U[uid]&&U[uid].energy)||0);   // 🔮 마나 = 머리줄이 아니라 여기(왼쪽 정보 구역)
+  if(me>0) out.push(['마나', Math.round((ent&&ent.en!=null)?ent.en:me)+'/'+Math.round(me)]);
+  return out; }
 function _techUnitPortrait(id){ return (typeof unitPortraitHTML==='function'&&unitPortraitHTML(id))||pIco('🔧'); }
 // 🏢 건물 초상 = 그 건물의 실제 3D 모델 렌더 이미지(M3D.bldgImage — key별 1회 캐시, 준비되면 techUIRender로 자동 갱신).
 // 유닛 초상(_techUnitPortrait)과 동일한 portImg 규격 · 모델 없음/미로드/3D 끔 = 기존 이모지 폴백
@@ -19458,7 +19602,7 @@ function techEggModel(list){ const e=list[0], id=e.id, race=G.tech.race, spec=te
   const rn=_techRealName(race,id)||id;
   const base=techUnitPanelModel([{type:'unit',uid:id}]);   // 그 유닛의 카드 그리드를 잠금 상태로 표시
   const items=(base.items||[]).map(it=>it?Object.assign({}, it, { state:'dim', act:'', sel:false }):null);
-  return { mode:'prod', title:rn+' <span class="nsub">(진화중)</span>', icon:_techUnitPortrait(id), hpsh:_cgHpShDual(spec.hp,spec.sh,(typeof U!=='undefined'&&U[id]&&U[id].energy)||0), sub:'', items,
+  return { mode:'prod', title:rn+' <span class="nsub">(진화중)</span>', icon:_techUnitPortrait(id), hpsh:_cgHpShDual(spec.hp,spec.sh,0), sub:'', items,
     info:{ eb:'진화', hideName:true, stats:_techUnitStatList(spec,id), cr:0, en:0 } }; }
 // 라바 지정 시 생산 패널 — 그리드=생성 가능 유닛(카드 1탭=라바 1마리 소모)
 function techLarvaProdModel(list){ const hb=techGetBldg('swarm','hatchery')||{produces:[]};
@@ -19713,7 +19857,15 @@ const _SVG_ARR_UP='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 const _SVG_ARR_DOWN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.5v11"/><path d="M6.5 11.5l5.5 5.5 5.5-5.5"/></svg>';   // 짧고 굵은 아래 화살표(하강)
 const _SVG_RALLY='<svg viewBox="0 0 24 24" fill="none"><path d="M12 3v8.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M9.3 8.9l2.7 2.7 2.7-2.7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="12" cy="17.2" rx="6" ry="4.1" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="12" cy="17.2" r="1.5" fill="currentColor"/></svg>';   // 위→아래 얇은 화살표 + 원+점(웨이포인트와 통일)
 const _SVG_SELALL='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3.5" y="3.5" width="17" height="17" rx="2.5" stroke-dasharray="3 2.3"/><circle cx="9" cy="9" r="1.7" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="1.7" fill="currentColor" stroke="none"/><circle cx="9" cy="15" r="1.7" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="1.7" fill="currentColor" stroke="none"/></svg>';   // 👥 마퀴(점선 상자)+4점 = 화면 내 같은 종류 전체 지정
+// ══ 🎛 UI 조작 아이콘(투명 배경 계열) ══════════════════════════════════
+// 능력 아이콘(금속판 계열)과 **다른 계열**이다 — 판·테두리 없이 단색 실루엣 하나.
+//   파일: assets/icons/ui/ui_<키>.webp (알파 유지). 없으면 아래 표의 기존 인라인 SVG로 되돌아간다.
+//   ⚠ 색은 버튼이 낸다(.cgRally/.cgLift/.cgSelAll 의 면·테두리). 아이콘 자체에 색을 넣지 말 것.
+const _SVG_BACK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6L4 11l5 5"/><path d="M4 11h9a6 6 0 0 1 6 6v1"/></svg>';   // ↩ 한 종류 보기 → 여러 종류 전체로 복귀
 const _SVG_TRASH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12"/><path d="M10 11v6M14 11v6"/></svg>';   // 🗑 휴지통 = 그 종류 지정 해제
+const UI_SVG={ rally:_SVG_RALLY, lift:_SVG_ARR_UP, land:_SVG_ARR_DOWN, selall:_SVG_SELALL, back:_SVG_BACK, untype:_SVG_TRASH };
+function uiIco(k){ return '<img class="uiIco" src="'+ICO_DIR+'ui/ui_'+k+'.webp" alt="" draggable="false" data-ui="'+k+'" onerror="_uiFail(this)">'; }
+function _uiFail(im){ try{ im.outerHTML=UI_SVG[im.getAttribute('data-ui')]||''; }catch(_e){ try{ im.remove(); }catch(_e2){} } }   // 파일이 없으면 원래 인라인 SVG로(칸이 비지 않는다)
 function _techAutoBtn(b){ const e=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'):null; if(!e||e.bk!==b.k) return '';
   const isMain=(b.k===((TECH_TREE[G.tech.race].buildings[0])||{}).k); if(!isMain && !b.gas) return '';   // 본진 또는 가스 건물만
   const tt=isMain?'이 본진과 연동 중인 미네랄 채취 일꾼 수':'이 가스 건물에서 작업 중인 일꾼 수', n=isMain?_techMineralWorkers(e).length:_techGasWorkers(e).length;   // 우상단 배너와 동일 톤 스텝퍼(아이콘 제거, − n +)
@@ -19721,19 +19873,19 @@ function _techAutoBtn(b){ const e=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid==
 function _techLiftBtn(b){ const e=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'):null; if(!e||e.bk!==b.k||e.bt>0||!_techCanLift(b.k)) return '';   // 🛫 부양 버튼(프로필 우상단) — 상태별
   let up,ttl,busy=false; const ph=e._liftPhase;
   if(!e._lifted){ up=true; ttl='부양'; } else if(ph==='flying'){ up=false; ttl='착륙 위치 지정'; } else { up=(ph==='rising'); ttl=(ph==='descending'?'착륙 중':(ph==='toland'?'착륙 지점 이동 중':'이륙 중')); busy=true; }
-  const ico=up?_SVG_ARR_UP:_SVG_ARR_DOWN;
+  const ico=uiIco(up?'lift':'land');
   return '<button class="cgLift'+(e._lifted?' on':'')+(busy?' busy':'')+'"'+(busy?'':' onclick="techLiftToggle(event)"')+' title="'+ttl+'">'+ico+'</button>'; }
 function _techRallyBtn(b){ const e=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'):null; if(!e||e.bk!==b.k||e.bt>0) return '';   // 🚩 랠리 포인트(생성 유닛 자동 이동) — 유닛 생산 건물만
   if(!(b.produces&&b.produces.length)) return '';
   const on=(G.tech.rallySet===e.eid)||!!e._rally;
-  return '<button class="cgRally'+(on?' on':'')+'" onclick="techRallySet(event)" title="랠리 포인트 — 생성된 유닛이 자동으로 갈 위치 지정">'+_SVG_RALLY+'</button>'; }
+  return '<button class="cgRally'+(on?' on':'')+'" onclick="techRallySet(event)" title="랠리 포인트 — 생성된 유닛이 자동으로 갈 위치 지정">'+uiIco('rally')+'</button>'; }
 function techRallySet(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech||G.tech.sel==null) return;
   const e=G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'); if(!e) return;
   if(G.tech.rallySet===e.eid){ G.tech.rallySet=null; e._rally=null; if(typeof toast==='function') toast('랠리 해제'); }   // 지정 중 다시 누르면 해제
   else { G.tech.rallySet=e.eid; if(typeof toast==='function') toast('🚩 맵을 탭해 랠리 위치 지정'); }
   if(typeof playSfx==='function') playSfx('ui_open'); techUIRender(); }
 function _techBldgTR(b){ return _techAutoBtn(b)+_techRallyBtn(b)+_techLiftBtn(b); }   // 프로필 우상단 = [자원 스텝퍼][랠리][부양] (지정해제는 메인 금지버튼으로 통일)
-function _techSelAllBtn(key){ return '<button class="cgSelAll" onclick="techSelectAllType(event,\''+key+'\')" title="화면 안의 같은 종류 전체 지정">'+_SVG_SELALL+'</button>'; }   // 👥 프로필 우상단 = 화면 내 같은 종류 전체 지정
+function _techSelAllBtn(key){ return '<button class="cgSelAll" onclick="techSelectAllType(event,\''+key+'\')" title="화면 안의 같은 종류 전체 지정">'+uiIco('selall')+'</button>'; }   // 👥 프로필 우상단 = 화면 내 같은 종류 전체 지정
 function techSelectAllType(ev,key){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech||!G.tech.ents) return;
   const keyOf=e=>(e.type==='worker')?'__wk':e.uid;
   const list=G.tech.ents.filter(e=>{ if(e.type!=='unit'&&e.type!=='worker') return false; if(keyOf(e)!==key) return false;
@@ -20448,8 +20600,8 @@ function techBldgPlainModel(b, e){ const race=G.tech.race, bs=techBldgSpec(race,
   if(_amk){ const a=TECH_AMMO[_amk], cap=_techAmmoCap(_amk), have=(e?((e._chc||0)+((e._chq||[]).length)):0);
     const aitems=[{ pro:pIco(a.ico), sn:a.label+' 장전', cr:a.m, en:a.g, meta:have+'/'+cap, metaCls:'lv', state:(have>=cap||!_techAfford(a.m,a.g))?'dim':'ok', act:'onclick="techChargeAmmo(event,\''+_amk+'\')"' }];
     return { mode:'info', title:b.name, icon:_techBldgPortrait(b.k, b.ico), hpsh:_cgHpShStr(bs.hp,bs.sh), sub:'☢️ 단일 장전(최대 1)', items:aitems, info:_techAmmoInfo(e||{}, _amk) }; }
-  let _gasHp='';
-  if(b.gas){ const tot=TECH_GAS_START, rem=_techGasRemain(); _gasHp='<span class="shv" style="color:#7ee081">⚡ '+(G.tech.inf?'∞':(rem+' / '+tot))+'</span>'; }   // ⚡ 에너지 총량/남은 = 체력 옆(하단 stats 아님)
+  // ⚡ 에너지 잔량은 **왼쪽 정보 구역**이다 — 머리줄은 제목 + HP/실드 한 줄까지가 한계다(넘치면 그리드가 낮아진다).
+  if(b.gas) stats.push(['에너지 잔량', G.tech.inf?'∞':(_techGasRemain()+' / '+TECH_GAS_START)]);
   const _evc=_techEvolveCards(b, e); let _pit=[];   // 🧬 진화 카드 = 3·4번 슬롯(크립 콜로니→성큰/스포어)
   if(_evc.length){ _pit=[null,null]; for(let i=0;i<_evc.length;i++) _pit[2+i]=_evc[i]; }
   const items=_techWithAddons(_pit, b.k);   // 🔗 부속 카드 + 진화 카드
@@ -20459,7 +20611,8 @@ function techBldgPlainModel(b, e){ const race=G.tech.race, bs=techBldgSpec(race,
   const _def=_techIsDef(b.k);
   const _bMx=(typeof BLDG_EN!=='undefined'&&BLDG_EN[b.k])||0;   // 🏢 건물 마나(컴셋·쉴드배터리) = 실시간 현재/최대(선택 당시 고정 아님)
   const _bEn=(_bMx>0)?((e&&e.en!=null)?(Math.round(e.en)+'/'+Math.round(e.maxEn||_bMx)):(_bMx+'/'+_bMx)):0;
-  return { mode:'info', title:b.name, icon:_techBldgPortrait(b.k, b.ico), hpsh:_cgHpShStr(bs.hp,bs.sh,_bEn)+_gasHp, sub:(b.gas?'⛽ 에너지 채취 건물':(b.supply?'👤 인구 공급':(_def?'🛡 방어 건물':'건물 정보'))), items, topRight:_techBldgTR(b),
+  if(_bMx>0) stats.push(['마나', _bEn]);   // 🔮 마나도 왼쪽 정보 구역(유닛 프로필과 같은 규약)
+  return { mode:'info', title:b.name, icon:_techBldgPortrait(b.k, b.ico), hpsh:_cgHpShStr(bs.hp,bs.sh), sub:(b.gas?'⛽ 에너지 채취 건물':(b.supply?'👤 인구 공급':(_def?'🛡 방어 건물':'건물 정보'))), items, topRight:_techBldgTR(b),
     info:{ eb:(_techSpawnCard(b.k)?'':_techBldgKind(b)+(b.detector?' (탐지)':'')), name:b.name, hideName:true, desc:_techBldgSummary(b), stats, cr:0, en:0 } }; }   // 프로필은 요약 한 줄(팝업은 섹션 포함 _techBldgDesc) · 오토배틀 배출 건물은 라벨 없이 배출 정보만
 // 💎⛽ 중립 자원(미네랄·가스 광산) 프로필 — 이름 + 하단 HP 자리에 잔량 표시
 function techResourceModel(res){ if(!res) return null;
@@ -20605,13 +20758,13 @@ function _techMultiTypeModel(units, canBack){ const race=G.tech.race, uid=units[
   const rn=_techRealName(race,uid), role=_techRoleOf(uid);
   return { mode:'prod', title:rn+' <span class="nsub">×'+n+'</span>', icon:_techUnitPortrait(uid),
     sub:'', items, topRight:_techSelAllBtn(uid),   // 👥 화면 내 같은 종류 전체 지정
-    back:canBack?'<button class="cgLift cgBack" onclick="techSubSelectType(event,\'\')" title="전체 선택으로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6L4 11l5 5"/><path d="M4 11h9a6 6 0 0 1 6 6v1"/></svg></button>':'',   // 🔙 소프트선택 해제(전체 복귀) — 오른쪽 끝
+    back:canBack?'<button class="cgLift cgBack" onclick="techSubSelectType(event,\'\')" title="전체 선택으로">'+uiIco('back')+'</button>':'',   // 🔙 소프트선택 해제(전체 복귀) — 오른쪽 끝
     info:{ eb:'', hideName:true, units:rows, cr:0, en:0 } }; }
 function _techMultiMixedModel(list, grp, ord){ const race=G.tech.race, items=[];   // 👥 혼합 지정(여러 종류) — 종류 초상화 칩(탭=그 종류만) + 공통 스킬(교집합)만(SC식)
   const uidOf=k=>(k==='__wk')?(TECH_WORKER[race]||'worker_human'):k;
   for(const k of ord){ const uid=uidOf(k);
     items.push({ pro:_techUnitPortrait(uid), sn:_techRealName(race,uid), tr:'×'+grp[k].n, metaCls:'lv', state:'ok',
-      bottom:'<div class="cgTrash" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()" onclick="techRemoveType(event,\''+k+'\')" title="이 종류 지정 해제">'+_SVG_TRASH+'</div>',   // 🗑 카드 하단 = 그 종류만 지정 해제(카드 사라지고 뒤 카드 당겨짐)
+      bottom:'<div class="cgTrash" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()" onclick="techRemoveType(event,\''+k+'\')" title="이 종류 지정 해제">'+uiIco('untype')+'</div>',   // 🗑 카드 하단 = 그 종류만 지정 해제(카드 사라지고 뒤 카드 당겨짐)
       act:'onpointerdown="techChipDown(event,\''+k+'\')" onpointerup="techChipUp(event)" onpointerleave="techChipCancel()" onpointercancel="techChipCancel()" oncontextmenu="return false"' }); }   // 짧게=소프트(전부 유지) · 꾹=그 종류만 분리 · 전환은 pointerup에서(터치 롱프레스 대응) + 뒤따르는 click은 삼킴
   if(typeof UNIT_SKILLS!=='undefined'){ const sets=ord.filter(k=>k!=='__wk').map(k=>new Set(UNIT_SKILLS[grp[k].e.uid]||[]));
     const common=(sets.length&&sets.length===ord.length)?[...sets[0]].filter(kk=>sets.every(s=>s.has(kk))):[];   // 일꾼 포함 시 공통 없음
@@ -20653,11 +20806,11 @@ function techUnitPanelModel(list){ const race=G.tech.race, grp={}, ord=[];   // 
   const _hpsh=(list.length===1 && f && f.hp!=null)   // 🔴 단일 지정 = 실시간 HP/쉴드/마나(스팀팩 등 소모 반영) · 초기화 전이면 spec 폴백
     ? _cgHpShStr(Math.round(f.hp)+'/'+Math.round(f.maxHp!=null?f.maxHp:spec.hp),
         (f.maxSh>0)?(Math.round(f.sh!=null?f.sh:f.maxSh)+'/'+Math.round(f.maxSh)):0,
-        (f.maxEn>0)?(Math.round(f.en!=null?f.en:f.maxEn)+'/'+Math.round(f.maxEn)):0)
-    : _cgHpShDual(spec.hp,spec.sh,(typeof U!=='undefined'&&U[fid]&&U[fid].energy)||0);
+        0)                                       // ⚠ 마나는 머리줄이 아니라 왼쪽 정보 구역(스탯)에 넣는다
+    : _cgHpShDual(spec.hp,spec.sh,0);
   return { mode:'prod', title:nm, icon:_techUnitPortrait(fid), hpsh:_hpsh, sub:(_amE?'내부 장전 — 탭 · 맵 탭=이동':'맵을 탭하면 이동 · 해제는 우상단 ✕'), items,
     topRight:_techSelAllBtn((f.type==='worker')?'__wk':fid),   // 👥 화면 내 같은 종류 전체 지정
-    info:_amE?_techAmmoInfo(_amE, _amE.uid):{ eb:'', hideName:true, stats:_techUnitStatList(spec,fid), cr:0, en:0 } }; }   // 왼쪽: 장전 큐(캐리어·리버) / 유닛 스탯
+    info:_amE?_techAmmoInfo(_amE, _amE.uid):{ eb:'', hideName:true, stats:_techUnitStatList(spec,fid,f), cr:0, en:0 } }; }   // 왼쪽: 장전 큐(캐리어·리버) / 유닛 스탯(+마나)
 function techWorkerBuildModel(list, canBack){ const race=G.tech.race, fid=(TECH_WORKER[race]||'worker_human'), n=list.length;   // 일꾼 지정 시트 — 헤더=일꾼 프로필, 그리드=건물 생성 카드 · canBack=혼합 소프트선택에서 ▲ 복귀
   const ws=techUnitSpec(race,fid)||{}, rn=_techRealName(race,fid), role=_techRoleOf(fid);
   // 👥 2기 이상 = 다른 동일종류 다중 지정과 동일하게 유닛별 HP 칩(탭=개별 지정) · 1기 = 유닛 스탯
@@ -20666,7 +20819,7 @@ function techWorkerBuildModel(list, canBack){ const race=G.tech.race, fid=(TECH_
       sh:(u.sh!=null?u.sh:(u.maxSh||0)), maxSh:(u.maxSh||0), en:(u.en!=null?u.en:0), maxEn:(u.maxEn||0) }));
     if(n>CAP) rows.push({ more:n-CAP });
     return { eb:'', hideName:true, units:rows, cr:0, en:0 }; })();
-  const _bk=canBack?'<button class="cgLift cgBack" onclick="techSubSelectType(event,\'\')" title="전체 선택으로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6L4 11l5 5"/><path d="M4 11h9a6 6 0 0 1 6 6v1"/></svg></button>':'';
+  const _bk=canBack?'<button class="cgLift cgBack" onclick="techSubSelectType(event,\'\')" title="전체 선택으로">'+uiIco('back')+'</button>':'';
   let _bd=null; for(const w of list){ const b=_techBuildBldg(w); if(b&&b.bt>0&&!b._bpause){ _bd=b; break; } }   // 지정 중 한 마리라도 건설 중(미일시정지) 일꾼이 있으면 = 작업 프로필(그리드 비우고 4번째 칸에 일시정지만)
   if(_bd){
     const items=[null,null,null,{ pro:'<svg viewBox="0 0 24 24" style="display:block;width:100%;height:100%"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.4"/><line x1="6.2" y1="6.2" x2="17.8" y2="17.8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>', sn:'', state:'ok', cls:'iconFill', act:'onclick="techPauseBuild(event)"' }];   // 4번째(우상단) 칸 = 유닛 지정해제와 동일한 금지 아이콘(칸 중앙에 크게, 텍스트 없음), 나머지 비움 → 다른 행동 불가
@@ -20740,7 +20893,12 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
   sheet.classList.toggle('open', _shown);
   if(_shown) sheet.classList.add('simple');   // 숨길 땐 높이 클래스(.simple) 유지 → 현재 높이 그대로 아래로 슬라이드(즉시 확대로 위로 울컥이는 것 방지)
   body.classList.toggle('stkSpec', specHTML!=null);
-  if(specHTML!=null) body.innerHTML=specHTML; else if(model) renderCmdGrid(body, model);
+  // ⚠ 보급·관전 시트는 값이 안 변해도 0.22초마다 이 함수를 부른다(strikeFrame). DOM 을 통째로 새로 만들면
+  //    그때마다 <img> 가 새로 생겨 **아이콘이 화면에 뜰 틈이 없다** — 실제로 강화·구입 칸이 빈칸으로 보였다.
+  //    서명이 같으면 그대로 둔다(전투 화면 호스트 strikeRenderSelInfo 와 같은 규약).
+  const _sig=_sup?_stkSheetSig():null;
+  if(_sig==null || _sig!==body._stkSig){ body._stkSig=_sig;
+    if(specHTML!=null) body.innerHTML=specHTML; else if(model) renderCmdGrid(body, model); }
   const _liftSel=(G.tech.sel!=null)&&!!G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'&&x._lifted);   // 부양 건물 선택 = 바닥탭이 이동이라 금지버튼으로 해제
   const dz=document.getElementById('btDesel'); if(dz) dz.classList.toggle('on',(G.tech.selU||[]).length>0 || _liftSel || !!G.tech.selRes); }
 function techDeselU(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;
@@ -21423,9 +21581,9 @@ function strikeNewState(){ const W=mapCfg('world',4800), hp=mapCfg('baseHp',7500
     world:W, cycleTime:mapCfg('cycleTime',30), cycleT:mapCfg('cycleTime',30),
     incomeBase:inc, mineIncome:mi,
     // 진영별 경제(me=나, ai=컴퓨터). 광산/돈 리더보드용. shield=중립 신전 보상 쉴드(다음 단계 전투에서 적용)
-    me:{ name:'나', compCol:(typeof PLAYER_VIEW_COLORS!=='undefined'?PLAYER_VIEW_COLORS[0]:'#4570d3'), base:{x:W*0.115,y:W*0.885, hp:hp, max:hp, dead:false}, hp:hp, max:hp, shield:0, gold:mapCfg('startGold',3000), mines:0, mineCost:mc, atkLv:0, hpLv:0, wpn:{}, units:[], buildings:[],
+    me:{ name:'나', compCol:(typeof PLAYER_VIEW_COLORS!=='undefined'?PLAYER_VIEW_COLORS[0]:'#4570d3'), base:{x:W*0.115,y:W*0.885, hp:hp, max:hp, dead:false}, hp:hp, max:hp, shield:0, gold:mapCfg('startGold',3000), earned:0, mines:0, mineCost:mc, atkLv:0, hpLv:0, wpn:{}, units:[], buildings:[],
          sec:{x:W*0.339,y:W*0.661, hp:sHp, max:sHp, dead:false} },   // 좌하단 메인 + 2차 신전 / compCol=아군 컴퓨터(생산자) 색 / atkLv·hpLv=유닛강화, wpn=특수무기 재고(종류별)
-    ai:{ name:'컴퓨터', compCol:(typeof PLAYER_VIEW_COLORS!=='undefined'?PLAYER_VIEW_COLORS[1]:'#d6292f'), base:{x:W*0.885,y:W*0.115, hp:hp, max:hp, dead:false}, hp:hp, max:hp, shield:0, gold:mapCfg('startGold',3000), mines:0, mineCost:mc, atkLv:0, hpLv:0, wpn:{}, units:[], buildings:[], aiT:0,
+    ai:{ name:'컴퓨터', compCol:(typeof PLAYER_VIEW_COLORS!=='undefined'?PLAYER_VIEW_COLORS[1]:'#d6292f'), base:{x:W*0.885,y:W*0.115, hp:hp, max:hp, dead:false}, hp:hp, max:hp, shield:0, gold:mapCfg('startGold',3000), earned:0, mines:0, mineCost:mc, atkLv:0, hpLv:0, wpn:{}, units:[], buildings:[], aiT:0,
          sec:{x:W*0.661,y:W*0.339, hp:sHp, max:sHp, dead:false} },   // 우상단 메인 + 2차 신전 / compCol=적군 컴퓨터 색
     central:{x:W*0.5,y:W*0.5, hp:cHp, max:cHp, owner:null, dead:false},   // 중앙 중립 보너스 신전(깬 팀 메인에 쉴드)
     cam:{x:W/2,y:W/2}, zoom:STK_DEFZOOM, viewWorld:Math.round(2600/STK_DEFZOOM), cw:0, ch:0, sel:null, userCam:false,
@@ -21450,14 +21608,16 @@ const STK_BOMB_COST=150, STK_BOMB_DMG=520, STK_BOMB_R=520;   // 폭탄: 비용/�
 const STK_EMP_DUR=3.5;                       // EMP 정지 시간(초)
 const STK_HEAL_F=0.35;                       // 재생 필드 회복량(최대 체력 비율)
 const STK_ORBIT_DMG=780, STK_ORBIT_R=760;    // 궤도 포격: 폭탄보다 1.5× 피해 · 1.46× 반경
+// `sk` = assets/icons/skills/sk_<sk>.webp — 뜻이 같은 스킬 아이콘을 그대로 빌린다(파일을 복사하지 말 것).
+//   파일이 없으면 _icoFail 이 ico 이모지로 되돌리므로, 아이콘을 나중에 넣어도 칸이 비지 않는다.
 const STK_WEAPONS=[
-  { k:'bomb',  name:'폭탄',      ico:'💣', cls:'ic-danger', cost:STK_BOMB_COST, cap:3,
+  { k:'bomb',  name:'폭탄',      ico:'💣', sk:'bomb',    cls:'ic-danger', cost:STK_BOMB_COST, cap:3,
     desc:'가장 밀집한 적 무리에 투하 — 반경 안 광역 피해' },
-  { k:'emp',   name:'EMP',       ico:'⚡', cls:'ic-info',   cost:120, cap:3,
+  { k:'emp',   name:'EMP',       ico:'⚡', sk:'emp',     cls:'ic-info',   cost:120, cap:3,
     desc:'적 전군을 '+STK_EMP_DUR+'초 멈춘다 — 피해는 없다' },
-  { k:'orbit', name:'궤도 포격', ico:'☄',  cls:'ic-danger', cost:240, cap:2,
+  { k:'orbit', name:'궤도 포격', ico:'☄',  sk:'yamato',  cls:'ic-danger', cost:240, cap:2,
     desc:'폭탄보다 넓고 강하게 — 가장 밀집한 곳을 때린다' },
-  { k:'heal',  name:'재생 필드', ico:'✚',  cls:'ic-gold',   cost:110, cap:3,
+  { k:'heal',  name:'재생 필드', ico:'✚',  sk:'heal',    cls:'ic-gold',   cost:110, cap:3,
     desc:'내 전군의 체력을 '+Math.round(STK_HEAL_F*100)+'% 회복한다' },
 ];
 const STK_WPN=k=>STK_WEAPONS.find(w=>w.k===k)||null;
@@ -21641,7 +21801,9 @@ function strikeStep(dt){ const S=STK; if(!S) return; if(S.over) return; if(G&&G.
   strikeStepUnits(dt);   // 전투 시뮬(소환·진격·교전·신전 타격)
   S.cycleT-=dt;
   if(S.cycleT<=0){ S.cycleT+=S.cycleTime; S.round++;
-    S.me.gold += strikeIncome(S.me); S.ai.gold += strikeIncome(S.ai);   // 라운드 수입(양 진영)
+    { const im=strikeIncome(S.me), ia=strikeIncome(S.ai);   // 라운드 수입(양 진영)
+      S.me.gold+=im; S.ai.gold+=ia;
+      S.me.earned=(S.me.earned||0)+im; S.ai.earned=(S.ai.earned||0)+ia; }   // 📊 누적 수입 — umProgress()가 '얼마나 굴렸나'를 여기서 역산한다
     strikeAiEconomy(); strikeSpawnWave();   // 출격 주기마다 유닛 일괄 소환(중앙 타이머 0초 시점)
   }
   { const ter=strikeTerritory(); if(S.terBlue==null){ S.terBlue=ter.blue; S.terRed=ter.red; } const k=Math.min(1,dt*1.4);   // 영역 경계 부드럽게 슬라이드
@@ -22677,27 +22839,32 @@ function _stkSpecGridHTML(){ const S=STK, me=(G.myPlayer||1), myA=(me<=4), names
     h+='<div class="'+cls+'" style="--pc:'+col+'"'+click+'><div class="plnum">'+n+'P</div><div class="plst">'+nm+'</div></div>'; }
   return h+'</div>'; }
 // 📦 업그레이드 시트 — 4그리드(① 광산 ② 강화 ④ 특수무기 / 3번은 비움). 구매·강화·투하는 기존 함수를 그대로 호출.
-function _stkLv(cur,max){ return (cur>=max)?'MAX':(cur+'/'+max); }   // 카드 우상단 표기 통일
+// 카드 표기 통일 — 자리는 **이름 아래 줄(`sub`)**, 네모 업그레이드 카드(_upgAtkItems)와 같은 규약이다.
+//   ⚠ 우상단 배지(`tr`)로 되돌리지 말 것: 배지는 초상 위에 떠서 그림을 가리고, 네모와 판이 달라 보인다.
+function _stkLv(cur,max){ return (cur>=max)?'MAX':(cur+'/'+max); }
 // ── 📦 하단 시트 모델 ────────────────────────────────────────────────────
 // 구역·하위는 하단 네비(STK_TREE)가 고르고, 여기서는 그 키에 맞는 그리드만 만든다.
 //   건설지 > 강화 = 광산 + 공격력·체력   ·   특수무기 > 구입/사용 = STK_WEAPONS 표
 // 칸 자리: [공격력][체력][빈칸][광산] — 유닛 강화가 앞, 경제(광산)는 끝 칸
 function _stkUpgModel(){ const S=STK, me=S.me, gold=Math.floor(me.gold||0);
   const items=[];
-  for(const kv of [['atk','공격력','⚔'],['hp','체력','❤']]){
+  // 아이콘은 사냥터 업그레이드(HB_UPG)와 **같은 파일을 빌린다** — 뜻이 같으면 새로 만들지 않는다.
+  for(const kv of [['atk','공격력','⚔','up_melee_atk'],['hp','체력','❤','up_carapace']]){
     const k=kv[0], lv=(k==='atk'?me.atkLv:me.hpLv), cost=strikeUpCost(k,lv), full=(lv>=10);
-    items.push({ pro:pIco(kv[2],'ic-gold'), sn:kv[1], cr:(full?0:cost), tr:_stkLv(lv,10), metaCls:'lv', tip:k,
-      state:(full||gold<cost)?'dim':'on', act:full?'':('onclick="strikeUpg(\''+k+'\')"')+_techTipAttr('sup',k) }); }
+    items.push({ pro:_icoImg('upgrades',kv[3],kv[2]), sn:kv[1], cr:(full?0:cost), sub:_stkLv(lv,10), tip:k,
+      state:full?'max':(gold<cost?'dim':'on'), act:full?'':('onclick="strikeUpg(\''+k+'\')"')+_techTipAttr('sup',k) }); }
   items.push({state:'empty'});
-  items.push({ pro:pIco('⛏','ic-gold'), sn:'광산', cr:me.mineCost, tr:_stkLv(me.mines||0, STK_MINE_CAP), metaCls:'lv',
-    state:((me.mines||0)>=STK_MINE_CAP||gold<me.mineCost)?'dim':'on', act:'onclick="strikeBuyMine()"'+_techTipAttr('sup','mine') });
+  { const mn=(me.mines||0), mfull=(mn>=STK_MINE_CAP);
+    items.push({ pro:_icoImg('upgrades','up_mine','⛏'), sn:'광산', cr:mfull?0:me.mineCost, sub:_stkLv(mn, STK_MINE_CAP),
+      state:mfull?'max':(gold<me.mineCost?'dim':'on'), act:mfull?'':('onclick="strikeBuyMine()"'+_techTipAttr('sup','mine')) }); }
   return { mode:'prod', compact:true, build:true, title:'강화', icon:pIco('🔧','ic-gold'), items:items,
     info:{ eb:'강화', hideName:true, desc:'수입 '+strikeIncome(me)+'/웨이브<br>카드를 길게 누르면 설명이 나옵니다.' } }; }
+function _stkWpnIco(w){ return w.sk ? _icoImg('skills','sk_'+w.sk, w.ico) : pIco(w.ico,w.cls); }   // 구입·사용이 같은 그림을 쓴다
 // 🛒 구입 — 표 그대로가 상점 칸이 된다(품목을 여기서 새로 적지 말 것)
 function _stkWpnBuyModel(){ const S=STK, me=S.me, gold=Math.floor(me.gold||0);
   const items=STK_WEAPONS.map(function(w){ const have=(me.wpn&&me.wpn[w.k])||0, full=(have>=w.cap);
-    return { pro:pIco(w.ico,w.cls), sn:w.name, cr:(full?0:w.cost), tr:_stkLv(have,w.cap), metaCls:'lv',
-      state:(full||gold<w.cost)?'dim':'on', act:full?'':('onclick="strikeBuyWpn(\''+w.k+'\')"') }; });
+    return { pro:_stkWpnIco(w), sn:w.name, cr:(full?0:w.cost), sub:_stkLv(have,w.cap),
+      state:full?'max':(gold<w.cost?'dim':'on'), act:full?'':('onclick="strikeBuyWpn(\''+w.k+'\')"') }; });
   return { mode:'prod', compact:true, build:true, title:'특수무기 · 구입', icon:pIco('🛒','ic-gold'), items:items,
     info:{ eb:'구입', hideName:true, desc:'골드로 구입해 두고 <b>사용</b>에서 꺼내 쓴다.' } }; }
 // 💥 사용 — **구입과 같은 자리에 같은 순서로** 늘어놓는다. 없는 것은 빈 칸이 아니라 '비활성'이다
@@ -22705,21 +22872,27 @@ function _stkWpnBuyModel(){ const S=STK, me=S.me, gold=Math.floor(me.gold||0);
 function _stkWpnUseModel(){ const S=STK, me=S.me;
   const own=STK_WEAPONS.filter(w=>((me.wpn&&me.wpn[w.k])||0)>0);
   const items=STK_WEAPONS.map(function(w){ const have=(me.wpn&&me.wpn[w.k])||0;
-    return { pro:pIco(w.ico,w.cls), sn:w.name, tr:'×'+have, metaCls:'lv',
+    return { pro:_stkWpnIco(w), sn:w.name, sub:'×'+have,
       state:have>0?'on':'dim', act:have>0?('onclick="strikeUseWpn(\''+w.k+'\')"'):'' }; });
   return { mode:'prod', compact:true, build:true, title:'특수무기 · 사용', icon:pIco('💥','ic-danger'), items:items,
     info:{ eb:'사용', hideName:true,
       desc:own.length?'칸을 누르면 즉시 발동한다.':'가진 무기가 없습니다 — <b>구입</b>에서 먼저 사세요.' } }; }
 function _stkSupplyModel(){ return (STK && STK.supPage==='wpnUse') ? _stkWpnUseModel()
   : (STK && STK.supPage==='wpnBuy') ? _stkWpnBuyModel() : _stkUpgModel(); }
+// 📦 보급·관전 시트의 '내용 서명' — 값이 그대로면 다시 그릴 이유가 없다.
+//   ⚠ 두 호스트(#unitCmd = 전투/특수무기 · #btSheetBody = 건설지)가 **같은 함수**를 본다.
+//     서명을 두 벌로 적으면 한쪽만 갱신되는 화면이 생긴다.
+function _stkSheetSig(){ const S=STK; if(!S) return null;
+  if(S.specSheet) return 'spec|'+(S.specView||'-')+'|'+((G.activePlayers||[]).join('.'))+'|'+(G.myPlayer||1);
+  if(S.supSheet) return 'sup|'+(S.supPage||'-')+'|'+Math.floor(S.me.gold)+'|'+(S.me.mines||0)+'|'+((S.me.atkLv||0)+'-'+(S.me.hpLv||0))
+    +'|'+STK_WEAPONS.map(w=>(S.me.wpn&&S.me.wpn[w.k])||0).join('')+'|'+S.me.mineCost;
+  return null; }
 function strikeRenderSelInfo(){ const S=STK; const host=document.getElementById('unitCmd');
   { const old=document.getElementById('stSelInfo'); if(old && !old.classList.contains('hide')){ old.classList.add('hide'); old.innerHTML=''; } }   // 구 프로필 사용 안 함
   if(!host) return;
   let model=null, sig=null, specHTML=null;
-  if(S && S.specSheet){ specHTML=_stkSpecGridHTML(); sig='spec|'+(S.specView||'-')+'|'+((G.activePlayers||[]).join('.'))+'|'+(G.myPlayer||1); }   // 👁 관전 = 전용 .plbtn 그리드(커맨드 그리드 아님)
-  else if(S && S.supSheet){ model=_stkSupplyModel();
-    sig='sup|'+(S.supPage||'-')+'|'+Math.floor(S.me.gold)+'|'+(S.me.mines||0)+'|'+((S.me.atkLv||0)+'-'+(S.me.hpLv||0))
-      +'|'+STK_WEAPONS.map(w=>(S.me.wpn&&S.me.wpn[w.k])||0).join('')+'|'+S.me.mineCost; }
+  if(S && S.specSheet){ specHTML=_stkSpecGridHTML(); sig=_stkSheetSig(); }   // 👁 관전 = 전용 .plbtn 그리드(커맨드 그리드 아님)
+  else if(S && S.supSheet){ model=_stkSupplyModel(); sig=_stkSheetSig(); }
   else if(S && S.selTemple && !S.selTemple.dead){ const o=S.selTemple, nm=S.selTempleName||'신전'; model=_stkTempleModel(o,nm); sig='t|'+nm+'|'+Math.round(o.hp); }
   else if(S && S.selEnemy && !S.selEnemy.dead){ const u=S.selEnemy; model=_stkUnitModel(u,'ai'); sig='e|'+u.id+'|'+Math.round(u.hp); }
   else if(S){ const u=(S.selAllies||[]).map(uid=>strikeFindUnit(S.me.units,uid)).filter(Boolean)[0]; if(u){ model=_stkUnitModel(u,'me'); sig='a|'+u.id+'|'+Math.round(u.hp); } }
