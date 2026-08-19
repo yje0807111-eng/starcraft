@@ -1703,7 +1703,8 @@
   #ovBtn,#ovBtn2.ghost{transform:none}
   #ovBtn:active,#ovBtn2.ghost:active{transform:translateY(1px)}
   /* 멀티플레이 대기실(로비) */
-  #lobby{position:absolute;inset:0;z-index:46;display:flex;align-items:center;justify-content:center;padding:var(--popPad);background:var(--popDim);backdrop-filter:blur(3px)}   /* 대기실 배경 사용(::before) */
+  /* ══ 대기실 = **전체 화면**이다(2026-08-19). 방 찾기·방 만들기와 같은 규약 — 딤도 카드 테두리도 없다. */
+  #lobby{position:absolute;inset:0;z-index:46;display:flex;align-items:stretch;justify-content:stretch;padding:0;background:none}
   #lobby.hide{display:none}
   /* 대기실 배경: waiting_room_bg.png 전체 cover(9:16), 중앙은 어둡게(UI 패널용) */
   #lobby::before{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;transform-origin:center center;
@@ -1713,7 +1714,9 @@
     background:
       radial-gradient(ellipse 78% 60% at 50% 50%, rgba(2,3,8,.72), rgba(2,3,8,.3) 70%),
       linear-gradient(180deg, rgba(2,3,8,.9) 0%, rgba(2,3,8,.35) 22%, rgba(2,3,8,.35) 78%, rgba(2,3,8,.92) 100%)}
-  .lbCard{width:var(--popW);max-width:var(--popMaxW);height:var(--popH);max-height:90%;overflow:hidden;padding:var(--popPad);display:flex;flex-direction:column}   /* 방찾기 카드와 폭·높이 통일(92%/350/555) · 작은 화면은 max-height 90%가 캡, 남는 높이는 플레이어 그리드(flex)가 흡수 */
+  .lbCard{width:100%;max-width:none;height:100%;max-height:none;overflow:hidden;display:flex;flex-direction:column;
+    padding:42px 16px 22px;background:none;border:0;border-radius:0;clip-path:none;box-shadow:none}
+  .lbCard::before,.lbCard::after{display:none}
   /* 대기실 채팅 = 보기영역 + 입력줄 일체형(로비 전체채팅과 동일 구조) · 4~5줄 */
   .lbChatWrap{flex:1 1 0;min-height:0;display:flex;flex-direction:column;overflow:hidden;margin-bottom:10px;border-radius:var(--r-bar);   /* 남는 높이만 흡수(basis 0) — 메시지가 쌓여도 플레이어 슬롯을 밀지 않음 */
     background:rgba(0,0,0,.3);border:1px solid var(--metal-edge)}
@@ -1730,26 +1733,46 @@
   .lbChatBar button{flex:0 0 auto;background:transparent;border:none;border-left:1px solid rgba(255,255,255,.09);border-radius:0;
     color:#ff8a8a;padding:0 13px;font-size:var(--fs-md);font-weight:800;cursor:pointer;white-space:nowrap;transition:background .12s}
   .lbChatBar button:active{background:rgba(255,90,90,.12)}
-  .lbHead{flex:0 0 auto;display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:8px}
-  .lbTitleWrap{display:flex;align-items:baseline;gap:7px;min-width:0}
-  .lbTitle{font-size:17px;font-weight:800;color:#eef1f6;text-shadow:0 1px 3px rgba(0,0,0,.65);letter-spacing:.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}   /* 방 이름 = 무난한 화이트(붉은 네온 제거) */
-  .lbCount{flex:0 0 auto;font-family:var(--font-num);font-size:14px;font-weight:800;color:var(--hud)}
-  .lbRoom{font-size:var(--fs-md);color:var(--hud);text-shadow:0 0 6px var(--hud-glow);white-space:nowrap}
+  .lbHead{flex:0 0 auto;display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .lbTitleWrap{display:flex;align-items:baseline;gap:6px;min-width:0}
+  .lbTitle{font-family:var(--font-ti);font-size:17px;font-weight:400;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lbCount{flex:0 0 auto;font-family:var(--font-num);font-size:14px;font-weight:700;color:#fff}
+  .lbCount s{text-decoration:none;font-size:10px;color:#7d8792}
+  .lbRoom{margin-left:auto;flex:0 0 auto;display:flex;align-items:center;gap:5px;font-size:10px;color:#8a929c;white-space:nowrap}
+  /* 배지 = 난이도(협동) 또는 대진(팀전). ⛔ 초록은 준비 완료 전용이 아니라 여기선 난이도색을 따른다 */
+  .lbBd{display:inline-flex;align-items:center;gap:4px;height:18px;padding:0 6px;border-radius:var(--r-bar);
+    font-family:var(--font-num);font-size:10.5px;font-weight:700;color:var(--dc,#c6cdd6);
+    border:1px solid color-mix(in srgb,var(--dc,#fff) 40%,transparent);background:color-mix(in srgb,var(--dc,#fff) 10%,transparent)}
+  .lbBd s{width:5px;height:5px;border-radius:50%;text-decoration:none;background:var(--tmC1)}
+  .lbBd s.b{background:var(--tmC2)}
+  .lbX{width:28px;height:28px;flex:none;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;
+    color:#8a929c;background:none;border:none}
+  .lbX svg{width:16px;height:16px}
+  /* 내 종족 = 공용 탭 띠 한 줄. ⛔ 여기 전용 종족 UI 를 새로 만들지 말 것 */
+  .lbRaceSec{flex:0 0 auto;margin-bottom:9px}
+  .lbRaceSec:empty{display:none}
+  .lbRaceSec .lbRaceLb{display:block;font-size:10.5px;font-weight:700;color:#7d8792;margin-bottom:5px}
+  .lbRaceSec .pdSeg{margin:0}
+  .lbRaceSec .pdSegBtn{padding:11px 0;font-family:var(--font-ti);font-size:12px;letter-spacing:0}
+  .lbRaceLk{display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:var(--r-bar);
+    background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.13);font-size:10px;color:#7d8792}
+  .lbRaceLk svg{width:12px;height:12px;flex:none}
   /* 슬롯 = 하나의 글래스 패널에 구분선 행(방찾기·방만들기 언어와 통일) · 8자리 넘치면 패널 내부 스크롤(채팅·버튼은 고정) */
-  .lbGrid{flex:0 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:0;margin-bottom:9px;padding:1px 11px;border-radius:13px;   /* 슬롯 수만큼만 차지(8번 아래 빈 구역 없음) · 넘치면 내부 스크롤 */
-    background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.014));border:1px solid var(--metal-edge);
-    scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}
+  /* 슬롯 = 8칸이 **스크롤 없이** 다 보여야 한다(대기실에서 제일 중요한 정보다).
+     ⚠ 행 높이를 키우면 그 순간 8번째가 잘린다 — 채팅이 남는 높이를 먹는 구조라 티가 안 나고 새어 나간다. */
+  .lbGrid{flex:0 0 auto;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:0;margin-bottom:9px;padding:1px 11px;border-radius:var(--r-bar);
+    background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.014));border:1px solid var(--metal-edge)}
   .lbGrid::-webkit-scrollbar{width:5px} .lbGrid::-webkit-scrollbar-thumb{background:rgba(120,140,170,.4);border-radius:3px}
-  .lbSlot{flex:0 0 auto;display:flex;align-items:center;gap:9px;padding:4px 2px;min-height:35px;position:relative;overflow:hidden;   /* 슬롯 높이 = 전 유즈맵 공통(오토배틀 기준) → 맵마다 플레이어·채팅 구역 크기 동일 */
+  .lbSlot{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:3px 2px;min-height:32px;position:relative;overflow:hidden;   /* 슬롯 높이 = 전 유즈맵 공통(오토배틀 기준) → 맵마다 플레이어·채팅 구역 크기 동일 */
     background:none;border:none;border-bottom:1px solid rgba(255,255,255,.06);border-radius:0}
   .lbSlot:last-child{border-bottom:none}
   .lbSlot.me{background:rgba(255,255,255,.045)}
   /* 팀전 대기실 = 좌측 색 바 + 얇은 구분선 라벨 · 슬롯 최소높이를 낮춰 채팅 손실 최소화 */
-  .lbTeamSep{position:relative;height:24px;display:flex;align-items:center;pointer-events:none}
+  .lbTeamSep{position:relative;height:20px;display:flex;align-items:center;pointer-events:none}
   .lbTeamSep::before{content:'';position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(255,255,255,.08)}
   .lbTeamSep b{position:relative;padding-right:7px;font-size:9px;font-weight:800;letter-spacing:.5px;color:var(--tmC);background:#0e1219}
   .lbTeamSep.t1{--tmC:var(--tmC1)} .lbTeamSep.t2{--tmC:var(--tmC2)}
-  .lbGrid.teamed .lbSlot{min-height:34px;padding-top:3px;padding-bottom:3px}   /* 기존(35px)에 근접 · 남는 높이는 채팅 4줄에 맞춤 */
+  .lbGrid.teamed .lbSlot{min-height:31px;padding-top:2px;padding-bottom:2px}
   /* 팀맵도 슬롯 자체는 기존 대기실과 동일(번호=플레이어 색, 종족 칩 그대로) · 팀 신호는 좌측 바 + 얇은 라벨뿐 */
   .lbTeamSep b{background:transparent}
   .lbTeamSep::before{left:30px}
@@ -1809,13 +1832,10 @@
   .lbRace:not(.me){opacity:.66}   /* 남의 종족 = 살짝 흐리게(내 프로필과 미세 구분) */
   .lbRace.me{cursor:pointer;border-color:var(--glass-edge)}
   .lbRace.me:active{transform:translateY(1px)}
+  /* 하단 = 공용 액션 버튼. 시작이 주 액션이고 잠기면 .actBtn:disabled 모습이 그대로 나온다 */
   .lbBtns{flex:0 0 auto;display:flex;gap:8px}
-  .lbLeave,.lbStart{padding:10px;border-radius:var(--r-md);font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:.5px;transition:all .12s}
-  .lbLeave{flex:0 0 34%;color:#cfd8e3;background:rgba(255,255,255,.06);border:1px solid var(--metal-edge)}   /* 나가기=중립 글래스(게임 시작 레드와 구분) */
-  .lbStart{flex:1;color:#cfcfd4;background:linear-gradient(180deg,rgba(70,70,76,.5),rgba(34,34,40,.5));border:1px solid var(--metal-edge)}
-  .lbStart.ready{color:#fff;background:linear-gradient(180deg,var(--neon-face1),var(--neon-d1));border-color:var(--neon);box-shadow:0 0 13px -3px var(--neon-glow),inset 0 1px 0 rgba(255,255,255,.22)}
-  .lbStart:disabled{cursor:default;opacity:.7}
-  .lbLeave:active,.lbStart:active{transform:translateY(1px)}
+  .lbBtns .actBtn{flex:1;height:44px}
+  .lbBtns .actBtn.sub{flex:0 0 34%}
   /* ══ 방 찾기 = **전체 화면**이다(2026-08-19). 팝업 카드가 아니라 화면 하나를 통째로 쓴다 —
      상단 재화 바도 하단 네비도 없이 배경(우주)이 네 변까지 이어진다.
      ⛔ 카드(.rmCard) 안에 다시 넣지 말 것. 카드로 감싸면 안쪽에 상자가 또 생겨 목록이 좁아진다.
@@ -4607,8 +4627,14 @@
     <!-- 멀티플레이 대기실(로비) -->
     <div id="lobby" class="hide spaceBg">
       <div class="lbCard">
-        <div class="lbHead"><span class="lbTitleWrap"><span class="lbTitle">멀티플레이 대기실</span><span class="lbCount" id="lbCount"></span></span><span class="lbRoom">◈ 용암 정거장</span></div>
+        <div class="lbHead">
+          <span class="lbTitleWrap"><span class="lbTitle" id="lbTitle">멀티플레이 대기실</span><span class="lbCount" id="lbCount"></span></span>
+          <span class="lbRoom" id="lbRoom"></span>
+          <button class="lbX" onclick="leaveLobby()" aria-label="나가기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+        </div>
         <div class="lbStatus" id="lbStatus" style="display:none"></div>
+        <!-- 내가 할 일 = 종족 고르기. 공용 탭 띠(segNavHTML) 한 줄 · 잠긴 유즈맵이면 안내문으로 바뀐다 -->
+        <div class="lbRaceSec" id="lbRaceSec"></div>
         <div class="lbGrid" id="lbGrid"></div>
         <div class="lbChatWrap">   <!-- 로비 전체채팅처럼 보기영역+입력줄 일체형 -->
           <div class="lbChat" id="lbChat"></div>
@@ -4618,8 +4644,8 @@
           </div>
         </div>
         <div class="lbBtns">
-          <button class="lbLeave" onclick="leaveLobby()">나가기</button>
-          <button class="lbStart" id="lbStart" onclick="lobbyStart()" disabled>대기 중…</button>
+          <button class="actBtn sub" onclick="leaveLobby()">나가기</button>
+          <button class="actBtn pri" id="lbStart" onclick="lobbyStart()" disabled>대기 중…</button>
         </div>
       </div>
       <div class="lbMenu hide" id="lbMenu"></div>   <!-- 슬롯 탭 시 나오는 드롭다운(이동/잠금 · 친구추가/추방) -->
@@ -16671,8 +16697,8 @@ function _sfxForEl(el){
   if(el.matches('.tab, .msTab2, .msScopeBtn')) return 'ui_tab';                                   // 탭 전환
   if(el.matches('.msSortCur, .msSortOpt')) return 'ui_dropdown';                                  // 정렬 드롭다운
   if(el.matches('.segBtn, .setSw, .cpSegBtn, .msTab2, .voteCol')) return 'ui_toggle';        // 켜기↔끄기/세그먼트/배속
-  if(el.matches('.moClose, .setX, .actBtn.sub, .ecCancel, .lbLeave')) return 'ui_close';   // 닫기/취소/뒤로
-  if(el.matches('.opStart, .moBtn, .actBtn.pri, .lbStart, .ecGo, .authBtn, .authGuest, #chatSend, .msChatSend')) return 'ui_confirm';  // 시작·만들기·전송·확정
+  if(el.matches('.moClose, .setX, .actBtn.sub, .ecCancel')) return 'ui_close';   // 닫기/취소/뒤로
+  if(el.matches('.opStart, .moBtn, .actBtn.pri, .ecGo, .authBtn, .authGuest, #chatSend, .msChatSend')) return 'ui_confirm';  // 시작·만들기·전송·확정
   return 'click';                                                                                  // 일반 버튼 기본음
 }
 // 모든 버튼/탭/메뉴/모달에 위임 바인딩 — 누르는 순간(pointerdown) 즉시 재생
@@ -17475,7 +17501,7 @@ function openLobby(room){ _lobbyRoom=room||{name:'나의 대기실',host:'나',j
   const _lb=document.getElementById('lobby'); _lb.classList.remove('hide'); if(typeof playScreenFx==='function') playScreenFx(_lb);
   const tt=document.querySelector('.lbTitle'); if(tt) tt.textContent=_lobbyRoom.name;   // 방 이름을 제목으로
   const dN=_lobbyRoom.inf?'♾️ 무한 모드':(DIFFICULTY[_lobbyRoom.diff]||DIFFICULTY[_selDiff]||DIFFICULTY.normal).name, dC=_lobbyRoom.inf?'#b06bff':(DIFF_COLOR[_lobbyRoom.diff||_selDiff]||'#888');
-  const rm=document.querySelector('.lbRoom'); if(rm) rm.innerHTML=(_lobbyRoom.visibility==='private'?'🔒 ':'')+(_lobbyRoom.num?'방 #'+_lobbyRoom.num:'◈ 용암 정거장')+' · <span class="lbDiff" style="color:'+dC+'">'+dN+'</span>';   // 방 번호 + 난이도
+  renderLobbyHeadR();   // 방 번호 + 배지(난이도 / 대진)
   const cb=document.getElementById('lbChat'); if(cb) cb.innerHTML='';
   if(_lobbyRoom.real){   // 실제 방: 슬롯은 room 채널 presence가 구성(rtRoomSync), 봇 없음
     _lobbySlots=[null,null,null,null,null,null,null,null];
@@ -17568,7 +17594,39 @@ function stopLobbyChat(){ if(_lobbyChatT){ clearInterval(_lobbyChatT); _lobbyCha
 // 대기실 종족: 직스(컴퓨터가 싸운다) 맵에서만 활성. 그 외(네모네모 등)는 칸은 있되 잠금
 function lobbyRaceEnabled(){ return !!(_selMap && _selMap.cfg && _selMap.cfg.mode==='strike'); }
 function openLobbyRace(anchor){ if(!lobbyRaceEnabled()) return; const me=_lobbySlots.find(s=>s&&s.me); const cur=(me&&me.race)||_selRace||'terran';
-  showRaceMenu(anchor, cur, function(k){ if(me) me.race=k; _selRace=k; renderLobby(); }); }   // 칩 아래 인라인 드롭다운 → 내 종족 변경(게임 반영)
+  showRaceMenu(anchor, cur, function(k){ setLobbyRace(k); }); }   // (구 경로) 칩 아래 드롭다운
+// 머리줄 오른쪽 = 방 번호 + 배지 한 개. 팀전이면 대진(4 vs 4), 아니면 난이도.
+function renderLobbyHeadR(){ const rm=document.getElementById('lbRoom'); if(!rm) return;
+  const priv=(_lobbyRoom&&_lobbyRoom.visibility==='private')?'🔒 ':'';
+  const num=(_lobbyRoom&&_lobbyRoom.num)?('#'+_lobbyRoom.num):'';
+  let bd='';
+  if(lobbyTeams()){ const half=Math.ceil(_lobbyMax/2);
+    bd='<span class="lbBd" style="--dc:#c6cdd6"><s></s>'+half+' vs '+(_lobbyMax-half)+'<s class="b"></s></span>'; }
+  else if(mapHasDiff()){ const inf=!!(_lobbyRoom&&_lobbyRoom.inf);
+    const dN=inf?'∞ 무한':(DIFFICULTY[(_lobbyRoom&&_lobbyRoom.diff)||_selDiff]||DIFFICULTY.normal).name;
+    const dC=inf?'#b06bff':(DIFF_COLOR[(_lobbyRoom&&_lobbyRoom.diff)||_selDiff]||'#888');
+    bd='<span class="lbBd" style="--dc:'+dC+'">'+escHtml(dN)+'</span>'; }
+  if(_lobbyRoom && _lobbyRoom.opts) bd+='<span class="lbBd" style="--dc:#ffb14d">사용자 지정</span>';   // 기본 밸런스가 아닌 방
+  rm.innerHTML=priv+num+' '+bd; }
+// 내 종족 = 공용 탭 띠 한 줄(segNavHTML). 종족이 없는 유즈맵은 그 자리가 안내문으로 바뀐다.
+// ⛔ 여기 전용 종족 UI 를 새로 만들지 말 것 — 관리자·인게임과 같은 STK_RACES/STK_RACE_ORDER 를 본다.
+function renderLobbyRace(){ const box=document.getElementById('lbRaceSec'); if(!box) return;
+  if(!lobbyRaceEnabled()){
+    box.innerHTML='<span class="lbRaceLb">내 종족</span><div class="lbRaceLk">'
+      +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>'
+      +'이 유즈맵은 종족을 쓰지 않습니다 — 모두 같은 조건으로 시작합니다</div>'; return; }
+  const me=_lobbySlots.find(function(s){ return s&&s.me; });
+  const cur=(me&&me.race)||_selRace||'terran';
+  const i=Math.max(0, STK_RACE_ORDER.indexOf(cur));
+  box.innerHTML='<span class="lbRaceLb">내 종족</span>'
+    +segNavHTML(STK_RACE_ORDER.map(function(k){ const R=STK_RACES[k];
+        return { label:R.name, col:(typeof hexChannels==='function')?hexChannels(R.col):'' }; }), i,
+      function(k){ return 'setLobbyRace(&#39;'+STK_RACE_ORDER[k]+'&#39;)'; }); }
+function setLobbyRace(k){ if(!STK_RACES[k]) return;
+  const me=_lobbySlots.find(function(s){ return s&&s.me; }); if(me) me.race=k;
+  _selRace=k; renderLobby(); renderLobbyRace();
+  // ⚠ 실방(Supabase presence)으로 내 종족을 전파하는 경로는 아직 없다 — 로컬/봇 방에서만 반영된다.
+  if(typeof playSfx==='function') playSfx('ui_tab'); }
 // 팀전 유즈맵(cfg.teams) = 앞 절반 1팀 / 뒤 절반 2팀. 자리를 옮기면 팀도 따라 바뀜
 function lobbyTeams(){ return !!(_selMap && _selMap.cfg && _selMap.cfg.teams); }   // MAP(=플레이 중 맵)이 아니라 선택한 맵 기준 — 안 그러면 직전 게임의 맵이 대기실에 남는다
 // 입장 순서: 팀 맵이면 두 팀을 번갈아(1,5,2,6,3,7,4,8) 채워 인원이 한쪽으로 쏠리지 않게
@@ -17580,6 +17638,7 @@ function lobbyFillOrder(){ const n=_lobbyMax, half=Math.ceil(n/2), out=[];
 function lobbyNextSlot(){ for(const i of lobbyFillOrder()){ if(!_lobbySlots[i] && _lobbyLock.indexOf(i)<0) return i; } return -1; }
 function slotTeam(i){ return i < Math.ceil(_lobbyMax/2) ? 1 : 2; }
 function renderLobby(){ const g=document.getElementById('lbGrid'); if(!g) return; g.innerHTML='';
+  renderLobbyRace(); renderLobbyHeadR();
   const raceOn=lobbyRaceEnabled();   // 슬롯 높이는 .lbSlot에서 전 맵 공통 → 종족 칩 유무와 무관하게 창 크기 고정
   const teams=lobbyTeams(), half=Math.ceil(_lobbyMax/2);
   g.classList.toggle('teamed', teams);
@@ -17592,9 +17651,10 @@ function renderLobby(){ const g=document.getElementById('lbGrid'); if(!g) return
       const cls = s.host?'host' : (s.ready?'ok':'');
       if(!s.race) s.race = s.me ? (STK_RACES[_selRace]?_selRace:'terran') : strikeRandomRace();   // 종족 지연 배정(나=선택값, 봇=랜덤)
       const R=STK_RACES[s.race]||STK_RACES.terran;
+      // 칩은 **읽기 전용**이다 — 내 종족을 바꾸는 곳은 위 띠 하나뿐(두 입구를 두면 어디를 눌러야 할지 모른다)
       const chip = raceOn
-        ? '<div class="lbRace'+(s.me?' me':'')+'" style="'+raceVars(R.col)+'"'+(s.me?' onclick="openLobbyRace(this)" title="종족 선택"':'')+'><span class="lrDot"></span><span class="lrNm">'+R.name+'</span></div>'   // 캐럿 없음(폭 축소)
-        : '';   // 종족 선택이 없는 유즈맵(네모네모 등) = 칩 숨김(잠금 텍스트 제거)
+        ? '<div class="lbRace'+(s.me?' me':'')+'" style="'+raceVars(R.col)+'"><span class="lrDot"></span><span class="lrNm">'+R.name+'</span></div>'
+        : '';   // 종족이 없는 유즈맵 = 칩 없음(위 띠가 '잠김'을 대신 말한다)
       el.innerHTML='<div class="lbNum">'+(i+1)+'</div><div class="lbInfo"><span class="lbName">'+escHtml(s.me?myNick():(s.label||s.name))+'</span><span class="lbStat '+cls+'">'+stt+'</span></div>'+chip;
       if(_swapReq && _swapReq.to===i) el.classList.add('swapWait');   // 교체 요청 대기 중
       if(!s.me){ el.classList.add('tapmenu'); el.onclick=(e)=>openSlotMenu(i,e); }   // 남의 프로필 탭 → 교체/친구추가/추방 메뉴
@@ -17671,12 +17731,12 @@ function openSlotMenu(i, ev){ if(ev){ ev.stopPropagation(); ev.preventDefault();
 function updateLobbyStart(){ const players=_lobbySlots.filter(Boolean), cnt=players.length, allReady=players.every(s=>s.ready);
   const meSlot=_lobbySlots.find(s=>s&&s.me), meHost=!!(meSlot&&meSlot.host);
   const btn=document.getElementById('lbStart');
-  const cntEl=document.getElementById('lbCount'); if(cntEl) cntEl.textContent='('+cnt+'/'+_lobbyMax+')';   // 헤더: 현재/정원
+  const cntEl=document.getElementById('lbCount'); if(cntEl) cntEl.innerHTML=cnt+'<s>/'+_lobbyMax+'</s>';   // 헤더: 현재/정원
   if(meHost){   // 방장: 직접 시작
-    if(btn){ const ok=cnt>=2&&allReady; btn.disabled=!ok; btn.textContent=ok?'게임 시작':'대기 중…'; btn.classList.toggle('ready',ok); }
+    if(btn){ const ok=cnt>=2&&allReady; btn.disabled=!ok; btn.textContent=ok?'게임 시작':'대기 중…'; }   // 잠김 모습은 공용 .actBtn:disabled 가 갖는다
   } else {   // 참가자: 시작 불가(방장만)
     const ready=cnt>=2 && allReady && _lobbyT===null;
-    if(btn){ btn.disabled=true; btn.textContent='방장 대기 중'; btn.classList.remove('ready'); }
+    if(btn){ btn.disabled=true; btn.textContent='방장 대기 중'; }
     // 파티방: 방장이 시작 신호를 보낼 때까지 대기(자동 시작 안 함). 일반 시뮬방만 자동 시작.
     if(!(_lobbyRoom && (_lobbyRoom.party||_lobbyRoom.real)) && ready && !_autoStartT){ _autoStartT=setTimeout(()=>{ _autoStartT=null;
       if(document.getElementById('lobby').classList.contains('hide')) return;

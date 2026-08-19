@@ -2718,6 +2718,60 @@ async function groupLobby(){
     backToTitle(); await sleep(200);
     { const nav=$('navBar'); assert(nav && !nav.classList.contains('hide'),'방 찾기에서 나왔는데 하단 네비가 안 돌아옴'); }
     return '전체 화면 · 난이도 있음/없음 두 경로 ok'; });
+  // ══ 멀티 대기실 — 전체 화면 · 내 종족은 공용 탭 띠 · 8칸이 스크롤 없이 다 보인다 ══
+  await step('대기실: 전체 화면 · 종족 띠(잠긴 맵은 안내) · 슬롯 8칸 노출', async ()=>{
+    skipIf(typeof openLobby!=='function','대기실 없음');
+    const close=()=>{ if(typeof leaveLobby==='function'){ try{ leaveLobby(); }catch(e){} }
+      const l=$('lobby'); if(l) l.classList.add('hide'); };
+    // ① 오토 배틀 — 팀 + 종족
+    openMapSelect(); await sleep(60);
+    _selMap=USEMAPS.cpu; _lobbyMax=8; hideAppScreens(); openRooms(); await sleep(120);
+    openLobby({num:3855,name:'오토배틀 연구소',host:myNick(),startCount:6,joining:false,visibility:'public',max:8,
+      opts:{cycleTime:10,startGold:700,incomeBase:70,hpMul:0.7}});
+    await sleep(500);
+    const card=document.querySelector('#lobby .lbCard');
+    assert(card,'대기실 카드가 없음');
+    // ⛔ 팝업 카드가 아니다 — 화면을 통째로 쓴다
+    { const r=card.getBoundingClientRect(), o=$('lobby').getBoundingClientRect();
+      assert(Math.abs(r.width-o.width)<1 && Math.abs(r.height-o.height)<1,'대기실이 화면을 다 안 씀(카드 틀에 갇혔다)');
+      assert(parseFloat(getComputedStyle(card).borderTopWidth)===0,'전체 화면인데 카드 테두리가 남아 있음'); }
+    // 종족 = 공용 탭 띠. ⛔ 여기 전용 종족 UI 를 새로 만들면 안 된다
+    { const sec=$('lbRaceSec');
+      assert(sec.querySelector('.pdSeg'),'종족 선택이 공용 탭 띠(.pdSeg)가 아님');
+      assert(sec.querySelectorAll('.pdSegBtn').length===STK_RACE_ORDER.length,'종족 칸 수가 STK_RACE_ORDER 와 다름');
+      assert(!sec.querySelector('.lbRaceLk'),'오토배틀인데 종족이 잠겨 있음');
+      // 탭 글자가 잘리면 안 된다
+      sec.querySelectorAll('.pdSegBtn').forEach(b=>assert(b.scrollWidth<=b.clientWidth+0.5,'종족 탭 글자가 잘림: '+b.textContent)); }
+    // 띠를 누르면 내 종족이 바뀐다(입구는 이 하나뿐 — 슬롯 칩은 읽기 전용)
+    { const k=STK_RACE_ORDER[1]; setLobbyRace(k); await sleep(80);
+      const me=_lobbySlots.find(s=>s&&s.me);
+      assert(me && me.race===k,'띠로 고른 종족이 내 슬롯에 안 실림');
+      const chip=document.querySelector('#lbGrid .lbSlot.me .lbRace');
+      assert(chip && !chip.getAttribute('onclick'),'슬롯 종족 칩이 아직 클릭 입구를 갖고 있음(입구가 둘)'); }
+    // 슬롯 8칸이 스크롤 없이 다 보인다
+    { const g=$('lbGrid');
+      assert(g.querySelectorAll('.lbSlot').length===_lobbyMax,'슬롯 수가 정원과 다름');
+      assert(g.scrollHeight<=g.clientHeight+0.5,'슬롯 8칸이 스크롤됨: '+g.scrollHeight+'>'+g.clientHeight); }
+    // 머리줄 배지 — 팀전이면 대진, 사용자 지정 방이면 그 표시까지
+    { const rt=$('lbRoom').textContent;
+      assert(/vs/.test(rt),'팀전인데 대진 배지가 없음: '+rt);
+      assert(/사용자 지정/.test(rt),'사용자 지정 방인데 표시가 없음: '+rt); }
+    // 하단 = 공용 액션 버튼
+    assert($('lbStart').classList.contains('actBtn')&&$('lbStart').classList.contains('pri'),'시작이 공용 .actBtn.pri 가 아님');
+    assert(document.querySelector('#lobby .lbBtns .actBtn.sub'),'나가기가 공용 .actBtn.sub 가 아님');
+    // ② 네모네모 — 종족이 없으니 그 자리가 잠긴 안내로 바뀐다
+    close(); await sleep(200);
+    _selMap=USEMAPS.nemo; hideAppScreens(); openRooms(); await sleep(120);
+    openLobby({num:4821,name:'같이 클리어해요',host:myNick(),startCount:6,joining:false,visibility:'public',diff:'easy',max:8});
+    await sleep(500);
+    { const sec=$('lbRaceSec');
+      assert(sec.querySelector('.lbRaceLk'),'종족 없는 유즈맵인데 잠김 안내가 없음');
+      assert(!sec.querySelector('.pdSeg'),'종족 없는 유즈맵인데 선택 띠가 떠 있음');
+      assert(!document.querySelector('#lbGrid .lbRace'),'종족 없는 유즈맵인데 슬롯에 종족 칩이 있음'); }
+    { const g=$('lbGrid'); assert(g.scrollHeight<=g.clientHeight+0.5,'네모네모 슬롯 8칸이 스크롤됨'); }
+    assert(/EASY/i.test($('lbRoom').textContent),'난이도 배지가 없음: '+$('lbRoom').textContent);
+    close(); await sleep(150); openMapSelect(); await sleep(80);
+    return '오토배틀 종족 '+STK_RACE_ORDER.length+'칸 · 네모네모 잠김 ok'; });
   // ══ 방 만들기 — 전체 화면 · 난이도는 스테퍼 · 오토배틀은 프리셋/사용자 지정 ══
   await step('방 만들기: 전체 화면 · 난이도 스테퍼 · 대전 설정이 실제 cfg 로 간다', async ()=>{
     skipIf(typeof createRoom!=='function','방 만들기 없음');
