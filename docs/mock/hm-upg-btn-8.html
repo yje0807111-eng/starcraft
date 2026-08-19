@@ -1,0 +1,271 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>업그레이드 버튼 8안</title>
+<style>
+:root{
+  /* 작은 버튼의 링 — 진한 쪽이 오른쪽·아래로 오도록 315deg(빛은 왼쪽 위에서). 색은 그대로, 방향만 돌렸다 */
+  --ringRed:linear-gradient(315deg,#8c3232 0%,#d64848 58%,#cf9090 100%);
+  --ringSilver:linear-gradient(315deg,#2d2d2d 0%,#404040 38%,#5c5c5c 100%);
+  --ringGrayOff:linear-gradient(315deg,#222 0%,#3e3e3e 66%,#5a5a5a 100%);
+  --ringBrick:linear-gradient(315deg,#5e2828 0%,#8e4a4a 58%,#a87a7a 100%);
+  --ringWine:linear-gradient(315deg,#4a1f1f 0%,#6e2f2f 58%,#8c5a5a 100%);
+  --font-ko:'IBM Plex Sans KR','Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  --font-num:'Rajdhani','IBM Plex Sans KR','Apple SD Gothic Neo',sans-serif;
+  --r-bar:3px; --r-md:6px; --r-lg:9px;
+  --metal-edge:#3c3e46;
+  --metal-ring-n:linear-gradient(180deg,#5c5c5c 0%,#404040 38%,#2d2d2d 72%,#494949 100%);
+  --nav-ring-on-d:linear-gradient(180deg,#cf9090 0%,#d64848 42%,#8c3232 100%);
+  --nav-ring-n:linear-gradient(180deg,#8c8c8c 0%,#606060 46%,#424242 100%);
+  --bpFace:linear-gradient(180deg,#0a0a0a,#000);
+  --hmPanel:linear-gradient(180deg,#191919,#0e0e0e);
+  --panelBig:linear-gradient(180deg,rgba(25,25,25,.9),rgba(14,14,14,.92));
+  --hmAccRGB:255,59,59; --hmAccLt:#ff8f8f;
+  --acc-sel:#5cd6ff; --txt-mute:#9aa0a8;
+}
+*{box-sizing:border-box}
+button{margin:0;padding:0;font:inherit;color:inherit;background:none;border:none;cursor:pointer;text-align:left}
+body{margin:0;padding:22px 16px 60px;background:#08090c;color:#ececec;font-family:var(--font-ko)}
+h1{margin:0 0 4px;font-size:19px;letter-spacing:.02em}
+.lead{margin:0 0 20px;font-size:12.5px;color:var(--txt-mute);line-height:1.65;max-width:840px}
+.lead b{color:#ececec}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;max-width:1560px}
+.cell{min-width:0}
+.cap{display:flex;align-items:baseline;gap:6px;margin:0 0 7px;font-size:12.5px;font-weight:700}
+.cap i{font-style:normal;font-family:var(--font-num);font-size:11px;color:#fff;background:#2a2c33;
+  border:1px solid var(--metal-edge);border-radius:var(--r-bar);padding:1px 5px}
+.cap.now i{background:#1b1d22;color:#8a9099}
+.note{margin:7px 2px 0;font-size:11px;color:var(--txt-mute);line-height:1.62}
+.note b{color:#cfd5dd;font-weight:700}
+.gain{display:block;margin-top:4px;color:#8fd6a8}
+/* 폰 틀 — 패널이 실제로 먹는 세로 높이를 같은 자로 잰다 */
+.phone{position:relative;width:368px;height:300px;border-radius:var(--r-lg);overflow:hidden;
+  border:1px solid var(--metal-edge);
+  background:radial-gradient(120% 80% at 50% 0%,#3a3350 0%,#241f33 40%,#14121c 100%);
+  display:flex;flex-direction:column}
+.fieldPad{flex:1 1 auto;position:relative}
+.foe{position:absolute;width:8px;height:8px;border-radius:50%;background:#c8a24a;opacity:.8}
+.hero{position:absolute;left:50%;top:46%;width:14px;height:19px;transform:translate(-50%,-50%);
+  background:linear-gradient(180deg,#7d8ea8,#3d4657);border-radius:2px}
+.navPad{flex:none;height:30px;border-top:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(180deg,#141414,#0b0b0b);
+  display:flex;align-items:center;justify-content:space-around;font-size:8px;color:#7c828c}
+/* ── 패널 껍데기(공용) ── */
+.hmUpg{position:relative;background:var(--panelBig);
+  clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 10px,100% 100%,0 100%,0 10px)}
+.hmUpg::before{content:'';position:absolute;left:10px;right:10px;top:0;height:1px;z-index:4;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.18) 22%,rgba(255,255,255,.18) 78%,transparent)}
+.hmUpgHead{display:flex;align-items:center;gap:6px;padding:5px 8px 4px 12px}
+.hmUpgTtl{flex:1;font-size:12px;font-weight:700;color:#fff;letter-spacing:-.01em}
+.hmUpQty{display:flex;align-items:center;justify-content:center;min-width:34px;height:20px;padding:0 6px;
+  border-radius:var(--r-bar);background:linear-gradient(180deg,#1c1c1c,#0e0e0e);
+  border:1px solid var(--metal-edge);font-family:var(--font-num);font-size:9.5px;font-weight:700;color:#cfd5dd}
+.hmUpQty.au{color:#aeb4bd}
+/* 탭 띠 = 공용 .pdSeg */
+.pdSeg{--pad:2px;position:relative;display:flex;margin:0 8px 5px;padding:var(--pad);border-radius:var(--r-bar);
+  background:var(--hmPanel) padding-box,var(--metal-ring-n) border-box;border:1px solid transparent}
+.pdSegInd{position:absolute;top:var(--pad);bottom:var(--pad);border-radius:2px;background:var(--bpFace)}
+.pdSegInd::after{content:'';position:absolute;left:6px;right:6px;bottom:0;height:1px;background:rgba(255,255,255,.62);
+  box-shadow:0 0 2px rgba(var(--hmAccRGB),.9),0 0 5px rgba(var(--hmAccRGB),.55)}
+.pdSegBtn{position:relative;z-index:1;flex:1 1 0;height:22px;display:flex;align-items:center;justify-content:center;
+  font-size:9.5px;font-weight:700;color:#8a9099}
+.pdSegBtn.on{color:#fff}
+.res{display:inline-block;width:10px;height:10px;vertical-align:-1px}
+/* ══════ 기준 카드(지금) — 네 안이 전부 이 값을 물려받고 필요한 것만 덮는다 ══════ */
+/* ⚠ 칸 폭은 정수여야 한다 — 1fr 로 두면 (368-12-5)/2 = 175.5px 라 세로 테두리가 한쪽만 두 픽셀로 번진다.
+   본편은 hmUpgSnapGrid() 가 floor 로 못 박는다(DESIGN.md 2026-08-19). 목업은 폰 폭이 고정이라 값을 직접 적는다. */
+.n0grid{display:grid;grid-template-columns:repeat(2,175px);justify-content:start;
+  gap:5px;padding:3px 6px 6px;grid-auto-rows:54px}
+.hmUp{position:relative;display:flex;align-items:center;gap:6px;padding:6px;border-radius:var(--r-bar);
+  border:1px solid transparent;
+  clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
+  background:var(--bpFace) padding-box,
+    linear-gradient(180deg,rgba(var(--hmAccRGB),.40) 0%,rgba(var(--hmAccRGB),.26) 34%,
+      rgba(var(--hmAccRGB),.15) 68%,rgba(var(--hmAccRGB),.09) 100%) border-box,
+    var(--metal-ring-n) border-box;
+  box-shadow:0 0 7px -5px rgba(var(--hmAccRGB),.35)}
+.hmUp::before{content:'';position:absolute;left:7px;right:0;top:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.13) 30%,rgba(255,255,255,.13) 70%,transparent)}
+.hmUpIco{position:relative;flex:none;width:27px;height:27px;background:#000;border-radius:var(--r-bar);overflow:hidden}
+.hmUpIco img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.hmUpTx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.hmUpName{display:flex;align-items:baseline;gap:4px;font-size:11.5px;font-weight:700;color:#ececec;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hmUpVl{font-size:9px;font-weight:700;color:#8a8a8a;font-family:var(--font-num);white-space:nowrap}
+.hmUpVl .nx{color:#fff}
+.hmUpBtn{position:relative;flex:none;width:54px;height:40px;padding:1.5px;display:flex;flex-direction:column;
+  border-radius:var(--r-bar);background:var(--btnRing,var(--ringRed))}
+.hmUpBtn::after{content:'';position:absolute;left:6px;right:6px;top:1.5px;height:1px;z-index:2;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.44),transparent)}
+.hmUpBtn::before{content:'';position:absolute;inset:1.5px;border-radius:2px;
+  background:linear-gradient(180deg,rgba(var(--hmAccRGB),.34) 0%,rgba(var(--hmAccRGB),.27) 55%,rgba(var(--hmAccRGB),.11) 100%),
+    linear-gradient(180deg,#1c1c1c,#0e0e0e)}
+.hmUpBl,.hmUpBc{position:relative;z-index:1;flex:1;display:flex;align-items:center;justify-content:center;gap:2px;
+  font-family:var(--font-num);font-size:9.5px;font-weight:700}
+.hmUpBl{color:var(--hmAccLt);border-bottom:1px solid rgba(0,0,0,.62);box-shadow:0 1px 0 rgba(255,255,255,.16)}
+.hmUpBc{color:#ececec}
+.hmUpBtn.off{background:var(--ringGrayOff)}
+.hmUpBtn.off::before{background:linear-gradient(180deg,#262626,#262626)}
+.hmUpBtn.off::after{display:none}
+.hmUpBtn.off .hmUpBl,.hmUpBtn.off .hmUpBc{color:#7a7a7a}
+.hmUp.lk{background:linear-gradient(180deg,#000,#000) padding-box,
+    linear-gradient(180deg,rgba(var(--hmAccRGB),.28),rgba(var(--hmAccRGB),.07)) border-box,
+    var(--metal-ring-n) border-box;box-shadow:none}
+.hmUp.lk .hmUpName{color:#9a9a9a}
+.hmUp.lk .hmUpIco img{filter:grayscale(1) brightness(.5)}
+.lvb{display:none}
+
+/* D1(확정) — 이중 테두리는 여덟 안이 전부 그대로 물려받는다 */
+.hmUp::after{content:'';position:absolute;inset:3px;pointer-events:none;
+  border:1px solid rgba(var(--hmAccRGB),.30);
+  clip-path:polygon(4px 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%,0 4px)}
+.hmUp.lk::after{border-color:rgba(255,255,255,.07)}
+.hmUpIco{box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)}
+.hmUpBtn{box-shadow:
+    inset 1px 1px 0 rgba(255,255,255,.20),      /* 위·왼쪽 — 빛이 드는 쪽 */
+    inset -1px -1px 0 rgba(0,0,0,.60),          /* 오른쪽·아래 — 진한 쪽 */
+    inset 0 0 0 2px var(--btnLine,rgba(var(--hmAccRGB),.42))}
+.hmUpBtn.off{--btnLine:rgba(255,255,255,.10)}
+
+/* ══════ 여기서부터 버튼만 바뀐다 — 링(테두리) 색 · 면 색 · 안쪽 선 ══════ */
+/* B1 · 링 은색 · 면 한 단 낮춘 붉은기 */
+.b1 .hmUpBtn:not(.off){background:var(--ringSilver);--btnLine:rgba(var(--hmAccRGB),.30)}
+.b1 .hmUpBtn:not(.off)::before{background:
+  linear-gradient(180deg,rgba(var(--hmAccRGB),.20) 0%,rgba(var(--hmAccRGB),.15) 55%,rgba(var(--hmAccRGB),.06) 100%),
+  linear-gradient(180deg,#1c1c1c,#0e0e0e)}
+/* B2 · 링은 붉게 두고 면만 검정 */
+.b2 .hmUpBtn:not(.off)::before{background:linear-gradient(180deg,#1c1c1c,#0e0e0e)}
+/* B3 · 둘 다 한 단 낮춤(탁한 붉은 링 + 옅은 면) */
+.b3 .hmUpBtn:not(.off){background:var(--ringBrick);--btnLine:rgba(var(--hmAccRGB),.26)}
+.b3 .hmUpBtn:not(.off)::before{background:
+  linear-gradient(180deg,rgba(var(--hmAccRGB),.18) 0%,rgba(var(--hmAccRGB),.13) 55%,rgba(var(--hmAccRGB),.05) 100%),
+  linear-gradient(180deg,#1c1c1c,#0e0e0e)}
+/* B4 · 링 은색 · 면 검정 — 붉은 것은 글자뿐 */
+.b4 .hmUpBtn:not(.off){background:var(--ringSilver);--btnLine:rgba(255,255,255,.10)}
+.b4 .hmUpBtn:not(.off)::before{background:linear-gradient(180deg,#1c1c1c,#0e0e0e)}
+/* B5 · 와인 링 · 면 검정 */
+.b5 .hmUpBtn:not(.off){background:var(--ringWine);--btnLine:rgba(var(--hmAccRGB),.22)}
+.b5 .hmUpBtn:not(.off)::before{background:linear-gradient(180deg,#1c1c1c,#0e0e0e)}
+/* B6 · 아래로 갈수록만 붉은 면(불이 아래에서 든다) · 링 은색 */
+.b6 .hmUpBtn:not(.off){background:var(--ringSilver);--btnLine:rgba(255,255,255,.10)}
+.b6 .hmUpBtn:not(.off)::before{background:
+  linear-gradient(180deg,rgba(var(--hmAccRGB),0) 0%,rgba(var(--hmAccRGB),.05) 45%,rgba(var(--hmAccRGB),.30) 100%),
+  linear-gradient(180deg,#1c1c1c,#0e0e0e)}
+/* B7 · 링을 없애고(어두운 금속 엣지) 안쪽 붉은 선 하나가 대신한다 */
+.b7 .hmUpBtn:not(.off){background:linear-gradient(315deg,#2e3038,#4a4c56);--btnLine:rgba(var(--hmAccRGB),.55)}
+.b7 .hmUpBtn:not(.off)::before{background:linear-gradient(180deg,#1c1c1c,#0e0e0e)}
+/* B8 · 링 은색 · 아주 옅은 워시 + 밑변 1px 광선(색은 선에만 — '전등' 문법) */
+.b8 .hmUpBtn:not(.off){background:var(--ringSilver);--btnLine:rgba(255,255,255,.10)}
+.b8 .hmUpBtn:not(.off)::before{background:
+  linear-gradient(180deg,rgba(var(--hmAccRGB),.10),rgba(var(--hmAccRGB),.04)),
+  linear-gradient(180deg,#1c1c1c,#0e0e0e)}
+.b8 .hmUpBtn:not(.off)::after{top:auto;bottom:2.5px;left:7px;right:7px;
+  background:rgba(255,255,255,.62);
+  box-shadow:0 0 2px rgba(var(--hmAccRGB),.9),0 0 5px rgba(var(--hmAccRGB),.55)}
+
+/* 버튼만 크게 늘어놓고 색을 직접 대는 줄 */
+.cnRow{display:flex;flex-wrap:wrap;gap:22px;width:max-content;margin:0 0 22px;padding:16px 20px;
+  border:1px solid var(--metal-edge);border-radius:var(--r-lg);background:var(--panelBig)}
+.cnOne{display:flex;flex-direction:column;align-items:center;gap:7px}
+.cnOne .hmUp{width:230px;height:62px}
+.cnLb{font-size:10.5px;font-weight:700;color:#8a9099;text-align:center;line-height:1.5}
+.cnLb i{display:block;font-style:normal;font-family:var(--font-num);font-size:9.5px;color:#6f7681}
+/* S0 = 지금(대각선 컷) · S2 = 아래 두 모서리 · S3 = 네 모서리 */
+.s1 .hmUp{clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 7px,100% 100%,0 100%,0 7px)}
+.s1 .hmUp::before{right:7px}
+.s1 .hmUp::after{clip-path:polygon(4px 0,calc(100% - 4px) 0,100% 4px,100% 100%,0 100%,0 4px)}
+.s2 .hmUp{clip-path:polygon(0 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,7px 100%,0 calc(100% - 7px))}
+.s2 .hmUp::before{left:0;right:0}
+.s2 .hmUp::after{clip-path:polygon(0 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,0 calc(100% - 4px))}
+.s3 .hmUp{clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 7px,100% calc(100% - 7px),calc(100% - 7px) 100%,7px 100%,0 calc(100% - 7px),0 7px)}
+.s3 .hmUp::after{clip-path:polygon(4px 0,calc(100% - 4px) 0,100% 4px,100% calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,0 calc(100% - 4px),0 4px)}
+.btnRow{display:flex;flex-wrap:wrap;gap:20px;width:max-content;max-width:1560px;margin:0 0 26px;padding:16px 20px;
+  border:1px solid var(--metal-edge);border-radius:var(--r-lg);background:var(--panelBig)}
+.btnOne{display:flex;flex-direction:column;align-items:center;gap:6px}
+.btnOne .hmUpBtn{width:92px;height:62px}
+.btnOne .hmUpBl,.btnOne .hmUpBc{font-size:14px}
+.btnOne .res{width:15px;height:15px}
+.btnLb{font-family:var(--font-num);font-size:10px;font-weight:700;letter-spacing:.06em;color:#8a9099}
+</style>
+
+<h1>업그레이드 버튼 — 색 8안</h1>
+<p class="lead">카드는 <b>D1(이중 테두리)로 확정</b>하고 그대로 깔았다. 버튼도 <b>형태와 내부 요소는 그대로</b> —
+54×40 · 위 레벨 / 아래 비용 · 윗면 광택 선 · 안쪽 1px 선. 바꾼 건 <b>링(테두리) 색과 면 색</b>뿐이다.
+위 줄은 버튼만 크게 늘어놓고 색을 직접 댄 것이고, 아래는 같은 색을 <b>패널에 얹었을 때</b>다 —
+버튼 하나로 볼 때와 여섯 개가 모였을 때의 인상이 다르므로 둘 다 봐야 한다.</p>
+<p class="lead"><b>"왼쪽 칸과 오른쪽 칸의 테두리가 다르게 빛난다"의 원인은 색도 모서리도 아니라 반 픽셀이었다.</b>
+칸 폭이 <b>175.5px</b>(폰 368 − 안쪽 여백 12 − 칸 사이 5, 을 둘로 나눔)라 세로 테두리가 기기 픽셀 격자에 안 맞고
+<b>한쪽 변만 두 픽셀로 번졌다</b>. 칸 폭을 <b>정수로 못 박아</b> 고쳤고, 본편에도 같은 수정(<code>hmUpgSnapGrid()</code>)을 넣었다.
+모서리 컷은 <b>원래대로(대각선)</b> 되돌렸다 — 그건 다른 이야기였다. 아래 줄은 참고용 대안이다.</p>
+<div class="cnRow" id="cnRow"></div>
+<div class="btnRow" id="btnRow"></div>
+<div class="grid" id="grid"></div>
+
+<script>
+const RES='<img class="res" src="../../assets/icons/res_mineral.webp" alt="">';
+const U=[
+  {n:'데미지',    ic:'upgrades/up_melee_atk', lv:8, v:'12',   nx:'15',     c:'5'},
+  {n:'공격속도',  ic:'skills/sk_stim',        lv:5, v:'100%', nx:'101.5%', c:'8'},
+  {n:'체력',      ic:'upgrades/up_carapace',  lv:6, v:'120',  nx:'138',    c:'5'},
+  {n:'사거리',    ic:'upgrades/up_range',     lv:2, v:'220',  nx:'224',    c:'6'},
+  {n:'치명타 확률',ic:'upgrades/up_gnd_wpn',  lv:0, v:'5%',   nx:'5.6%',   c:'40',  off:1},
+  {n:'치명 피해',  ic:'upgrades/up_inf_atk',  lv:0, v:'150%', nx:'155%',   c:'100', off:1},
+];
+const img=k=>'<img src="../../assets/icons/'+k+'.webp" alt="">';
+const TABS=['내 캐릭터','동료','건물','펫'];
+const HEAD='<div class="hmUpgHead"><b class="hmUpgTtl">사냥터 업그레이드</b>'
+  +'<span class="hmUpQty au">자동</span><span class="hmUpQty">×1</span></div>'
+  +'<div class="pdSeg"><div class="pdSegInd" style="left:2px;width:calc(25% - 1px)"></div>'
+  +TABS.map((t,i)=>'<button class="pdSegBtn'+(i?'':' on')+'">'+t+'</button>').join('')+'</div>';
+const CARDS='<div class="n0grid">'+U.map(u=>
+  '<div class="hmUp'+(u.off?' lk':'')+'"><span class="hmUpIco">'+img(u.ic)+'</span>'
+  +'<span class="hmUpTx"><b class="hmUpName">'+u.n+'</b>'
+  +'<span class="hmUpVl">'+u.v+' ▸ <b class="nx">'+u.nx+'</b></span></span>'
+  +'<button class="hmUpBtn'+(u.off?' off':'')+'"><span class="hmUpBl">LV.'+u.lv+'</span>'
+  +'<span class="hmUpBc">'+RES+u.c+'</span></button></div>').join('')+'</div>';
+const FOE=[[16,26],[62,14],[80,44],[34,58],[74,70],[24,74]];
+function phone(cls){
+  return '<div class="phone '+cls+'"><div class="fieldPad">'
+    +FOE.map(f=>'<i class="foe" style="left:'+f[0]+'%;top:'+f[1]+'%"></i>').join('')
+    +'<div class="hero"></div></div>'
+    +'<div class="hmUpg">'+HEAD+CARDS+'</div>'
+    +'<div class="navPad"><span>캐릭터</span><span>정비</span><span>유즈맵</span><span>상점</span></div></div>';
+}
+const V=[
+ {tag:'지금', cls:'', now:1, t:'확정분 버튼',
+  d:'붉은 링(#cf9090→#d64848→#8c3232) + 붉은 면(.34→.11). 링과 면이 <b>둘 다</b> 붉어서 버튼이 카드보다 세게 튄다.'},
+ {tag:'B1', cls:'b1', t:'링 은색 · 면은 한 단 낮춘 붉은기',
+  d:'링을 <b>은색(--metal-ring-n)</b>으로 내리고 면의 붉은기도 .34 → <b>.20</b>으로. 붉은 것이 면 하나로 줄어 카드 테두리와 세기가 맞는다.'},
+ {tag:'B2', cls:'b2', t:'링은 붉게 · 면만 검정',
+  d:'반대로 <b>면에서 색을 완전히 뺐다</b>(카드 속색과 같은 검정). 붉은 것은 감싸는 링뿐 — DESIGN "빨강은 감싸는 테두리에만"과 정확히 같은 규칙이 된다.'},
+ {tag:'B3', cls:'b3', t:'둘 다 한 단 낮춤 — 탁한 붉은 링',
+  d:'링을 채도 낮은 벽돌색으로, 면도 <b>.18</b>로. 지금 것의 인상은 유지하면서 전체를 한 단 눌렀다. 가장 변화가 작은 안.'},
+ {tag:'B4', cls:'b4', t:'은색 링 · 검정 면 — 붉은 건 글자뿐',
+  d:'버튼에서 붉은 면과 붉은 링을 <b>둘 다</b> 걷고, 위칸 레벨 글자(#ff8f8f)에만 붉은기를 남겼다. 여덟 중 가장 조용하다.'},
+ {tag:'B5', cls:'b5', t:'와인 링 · 검정 면',
+  d:'B2와 같은 구성인데 링을 <b>어두운 와인색</b>(#8c5a5a→#4a1f1f)으로. 붉은 것이 남아 "누르는 자리"는 지키면서 채도만 죽인다.'},
+ {tag:'B6', cls:'b6', t:'아래에서만 붉은 면 — 불이 아래에서 든다',
+  d:'면 그라데를 뒤집어 <b>위는 검정, 아래로 갈수록 붉게</b>. 위쪽 광택 선과 아래쪽 불빛이 마주 보며 버튼이 두꺼워 보이고, 위쪽이 검어 글자가 잘 읽힌다.'},
+ {tag:'B7', cls:'b7', t:'링을 없애고 안쪽 붉은 선 하나로',
+  d:'바깥 링을 어두운 금속 엣지(#3c3e46)로 바꾸고, <b>안쪽 1px 선</b>이 붉은색을 혼자 맡는다. 이중 테두리 문법을 버튼에도 그대로 적용한 안 — 카드와 가장 같은 말을 한다.'},
+ {tag:'B8', cls:'b8', t:'옅은 워시 + 밑변 1px 광선',
+  d:'면은 <b>.10</b>짜리 아주 옅은 워시만 남기고, 색은 <b>밑변 1px 광선</b>이 낸다(심지 흰색 + 붉은 halo). DESIGN의 "전등" 문법 — 색을 칠하지 않고 빛으로 말한다.'},
+];
+const CNCARD='<div class="hmUp"><span class="hmUpIco">'+img(U[0].ic)+'</span>'
+  +'<span class="hmUpTx"><b class="hmUpName">데미지</b>'
+  +'<span class="hmUpVl">12 ▸ <b class="nx">15</b></span></span>'
+  +'<button class="hmUpBtn"><span class="hmUpBl">LV.8</span>'
+  +'<span class="hmUpBc">'+RES+'5</span></button></div>';
+document.getElementById('cnRow').innerHTML=[
+  ['',  '지금 — 대각선 컷','좌상단 + 우하단 · 적용됨(원래대로)'],
+  ['s1','S1 — 위 두 모서리','패널(.hmUpg)과 같은 문법'],
+  ['s2','S2 — 아래 두 모서리','아래 줄과 맞물린다'],
+  ['s3','S3 — 네 모서리 전부','가장 균일'],
+].map(([c,t,d])=>'<div class="cnOne '+c+'">'+CNCARD+'<span class="cnLb">'+t+'<i>'+d+'</i></span></div>').join('');
+document.getElementById('btnRow').innerHTML=V.map(v=>
+  '<div class="btnOne '+v.cls+'"><button class="hmUpBtn">'
+  +'<span class="hmUpBl">LV.8</span><span class="hmUpBc">'+RES+'5</span></button>'
+  +'<span class="btnLb">'+v.tag+'</span></div>').join('');
+document.getElementById('grid').innerHTML=V.map(v=>
+  '<div class="cell"><div class="cap'+(v.now?' now':'')+'"><i>'+v.tag+'</i>'+v.t+'</div>'
+  +phone(v.cls)+'<div class="note">'+v.d+'</div></div>').join('');
+</script>

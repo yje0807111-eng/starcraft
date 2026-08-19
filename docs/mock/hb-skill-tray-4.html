@@ -1,0 +1,219 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>사냥터 스킬 트레이 4안</title>
+<style>
+:root{
+  --font-ko:'IBM Plex Sans KR','Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  --font-num:'Rajdhani','IBM Plex Sans KR','Apple SD Gothic Neo',sans-serif;
+  --r-bar:3px; --r-md:6px; --r-lg:9px;
+  --metal-edge:#3c3e46;
+  --metal-ring-n:linear-gradient(180deg,#5c5c5c 0%,#404040 38%,#2d2d2d 72%,#494949 100%);
+  --nav-ring-on-d:linear-gradient(180deg,#cf9090 0%,#d64848 42%,#8c3232 100%);
+  --nav-ring-n:linear-gradient(180deg,#8c8c8c 0%,#606060 46%,#424242 100%);
+  --bpFace:linear-gradient(180deg,#0a0a0a,#000);
+  --hmPanel:linear-gradient(180deg,#191919,#0e0e0e);
+  --hmAccRGB:255,59,59; --hmAccLt:#ff8f8f;
+  --acc-sel:#5cd6ff; --ok:#5dff8f; --gold:#ffd24a; --info:#4aa8ff;
+  --txt-mute:#9aa0a8;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:22px 16px 60px;background:#08090c;color:#ececec;font-family:var(--font-ko)}
+h1{margin:0 0 4px;font-size:19px;letter-spacing:.02em}
+.lead{margin:0 0 20px;font-size:12.5px;color:var(--txt-mute);line-height:1.65;max-width:820px}
+.lead b{color:#ececec}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;max-width:760px}
+.cell{min-width:0}
+.cap{display:flex;align-items:baseline;gap:6px;margin:0 0 7px;font-size:12.5px;font-weight:700}
+.cap i{font-style:normal;font-family:var(--font-num);font-size:11px;color:#fff;background:#2a2c33;
+  border:1px solid var(--metal-edge);border-radius:var(--r-bar);padding:1px 5px}
+.cap em{font-style:normal;font-size:11px;font-weight:400;color:var(--txt-mute)}
+.note{margin:7px 2px 0;font-size:11px;color:var(--txt-mute);line-height:1.62}
+.note b{color:#cfd5dd;font-weight:700}
+/* 전장 */
+.field{position:relative;height:250px;border-radius:var(--r-lg);overflow:hidden;
+  background:radial-gradient(120% 90% at 50% 18%,#3a3350 0%,#241f33 42%,#14121c 100%);
+  border:1px solid var(--metal-edge)}
+.hero{position:absolute;left:50%;top:40%;width:16px;height:22px;transform:translate(-50%,-50%);
+  background:linear-gradient(180deg,#7d8ea8,#3d4657);border-radius:2px}
+.ring{position:absolute;left:50%;top:40%;width:104px;height:52px;transform:translate(-50%,-50%);
+  border:1px solid rgba(93,255,143,.4);border-radius:50%}
+.foe{position:absolute;width:9px;height:9px;border-radius:50%;background:#c8a24a;opacity:.85}
+.hud{position:absolute;left:8px;top:8px;font-family:var(--font-num);font-size:10px;color:#b9bec6;letter-spacing:.04em}
+.dock{position:absolute;right:9px;bottom:9px}
+.ic{position:relative;display:block}
+.ic img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+
+/* ══════════ T1 · 업그레이드 카드 트레이 (빨강) ══════════ */
+.t1tray{display:flex;align-items:stretch;gap:4px;padding:4px;
+  background:var(--hmPanel);border:1px solid var(--metal-edge);border-radius:var(--r-bar);
+  clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
+.t1auto{position:relative;flex:none;width:34px;display:flex;flex-direction:column;padding:1.5px;
+  border:none;border-radius:var(--r-bar);background:var(--nav-ring-on-d);box-shadow:0 1px 2px rgba(0,0,0,.55)}
+.t1auto::after{content:'';position:absolute;left:5px;right:5px;top:1.5px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.44),transparent)}
+.t1auto::before{content:'';position:absolute;inset:1.5px;border-radius:2px;
+  background:linear-gradient(180deg,rgba(var(--hmAccRGB),.34) 0%,rgba(var(--hmAccRGB),.27) 55%,rgba(var(--hmAccRGB),.11) 100%),
+    linear-gradient(180deg,#1c1c1c,#0e0e0e)}
+.t1auto b,.t1auto em{position:relative;z-index:1;flex:1;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-num);font-style:normal;text-shadow:0 1px 1px rgba(0,0,0,.55)}
+.t1auto b{font-size:11px;font-weight:800;color:#fff;border-bottom:1px solid rgba(0,0,0,.62);
+  box-shadow:0 1px 0 rgba(255,255,255,.16)}
+.t1auto em{font-size:9.5px;font-weight:700;color:var(--hmAccLt)}
+.t1s{position:relative;width:46px;height:46px;display:flex;align-items:center;justify-content:center;
+  border-radius:var(--r-bar);border:1px solid transparent;
+  clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
+  background:var(--bpFace) padding-box,
+    linear-gradient(180deg,rgba(var(--hmAccRGB),.40) 0%,rgba(var(--hmAccRGB),.26) 34%,
+      rgba(var(--hmAccRGB),.15) 68%,rgba(var(--hmAccRGB),.09) 100%) border-box,
+    var(--metal-ring-n) border-box;
+  box-shadow:0 0 7px -5px rgba(var(--hmAccRGB),.35)}
+.t1s::before{content:'';position:absolute;left:7px;right:0;top:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.13) 30%,rgba(255,255,255,.13) 70%,transparent)}
+.t1s .ic{width:26px;height:26px}
+.t1s .sec{position:absolute;font-family:var(--font-num);font-size:15px;font-weight:800;color:#e6e9ee;
+  text-shadow:0 1px 2px #000,0 0 6px rgba(0,0,0,.9)}
+.t1s .bar{position:absolute;left:3px;right:3px;bottom:3px;height:2px;border-radius:2px;background:rgba(255,255,255,.07)}
+.t1s .bar i{display:block;height:100%;border-radius:2px;width:var(--w);background:rgba(var(--hmAccRGB),.75)}
+/* 쿨 = '잠긴 카드' 문법 — 검정은 같고 발광만 없다 */
+.t1s.cool{background:linear-gradient(180deg,#000,#000) padding-box,
+    linear-gradient(180deg,rgba(var(--hmAccRGB),.28) 0%,rgba(var(--hmAccRGB),.18) 34%,
+      rgba(var(--hmAccRGB),.11) 68%,rgba(var(--hmAccRGB),.07) 100%) border-box,
+    var(--metal-ring-n) border-box;
+  box-shadow:none}
+.t1s.cool .bar i{background:#4a4a4a}
+.t1s.cool .ic{opacity:.26}
+
+/* ══════════ T2 · 세그 띠 트레이 (시안 · 미끄러지는 판) ══════════ */
+.t2seg{--pad:2px;position:relative;display:flex;align-items:stretch;padding:var(--pad);
+  background:var(--hmPanel);border:1px solid transparent;border-radius:var(--r-bar);
+  background:var(--hmPanel) padding-box,var(--metal-ring-n) border-box}
+/* 미끄러지는 판 = '다음에 자동으로 나갈 스킬' */
+.t2ind{position:absolute;top:var(--pad);bottom:var(--pad);border-radius:2px;
+  background:var(--bpFace);transition:left .22s cubic-bezier(.4,0,.2,1)}
+.t2ind::after{content:'';position:absolute;left:5px;right:5px;bottom:0;height:1px;
+  background:rgba(255,255,255,.62);
+  box-shadow:0 0 2px rgba(92,214,255,.9),0 0 5px rgba(92,214,255,.55)}
+.t2s{position:relative;z-index:1;width:46px;height:46px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:2px}
+.t2s .ic{width:24px;height:24px}
+.t2s b{font-family:var(--font-num);font-size:9.5px;font-weight:700;letter-spacing:.04em;color:#8a8a8a}
+.t2s.rdy b{color:#fff}
+.t2s.cool .ic{opacity:.3}
+.t2s.cool b{color:#7a8089}
+.t2a{position:relative;z-index:1;width:34px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:2px;border-right:1px solid rgba(255,255,255,.07);
+  font-family:var(--font-num);font-size:8.5px;font-weight:700;letter-spacing:.08em;color:var(--acc-sel)}
+.t2a i{font-style:normal;width:5px;height:5px;border-radius:50%;background:var(--acc-sel);
+  box-shadow:0 0 6px var(--acc-sel)}
+
+/* ══════════ T3 · 커맨드 카드 트레이 (게임 안 문법 · 파랑 진행) ══════════ */
+.t3tray{position:relative;display:flex;align-items:stretch;gap:4px;padding:5px 5px 4px;
+  border:1px solid var(--metal-edge);border-radius:var(--r-md);
+  background:linear-gradient(160deg,rgba(30,36,48,.62),rgba(8,10,14,.72))}
+/* 자동 = 윗변 광선 — 네비 윗변과 같은 문법(가운데만 밝다) */
+.t3tray::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;z-index:2;
+  background:linear-gradient(90deg,rgba(93,255,143,.12) 0%,rgba(93,255,143,.55) 30%,
+    rgb(150,255,190) 50%,rgba(93,255,143,.55) 70%,rgba(93,255,143,.12) 100%);
+  filter:drop-shadow(0 0 3px rgba(93,255,143,.8))}
+.t3s{position:relative;width:46px;height:48px;display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.045);border:1px solid var(--metal-edge);border-radius:var(--r-lg)}
+.t3s .ix{position:absolute;left:4px;top:2px;font-family:var(--font-num);font-size:8px;font-weight:700;
+  letter-spacing:.06em;color:#6f7681}
+.t3s .ic{width:24px;height:24px}
+.t3s .sec{position:absolute;font-family:var(--font-num);font-size:15px;font-weight:800;color:#dfe4ea;
+  text-shadow:0 1px 2px #000,0 0 6px rgba(0,0,0,.9)}
+.t3s .cgBar{position:absolute;left:4px;right:4px;bottom:3px;height:3px;border-radius:2px;
+  background:rgba(0,0,0,.55);overflow:hidden}
+.t3s .cgBar i{display:block;height:100%;width:var(--w);background:linear-gradient(90deg,#2d6fd6,#4aa8ff)}
+.t3s.rdy{border-color:rgba(255,255,255,.4)}
+.t3s.rdy .cgBar i{background:rgba(255,255,255,.55)}
+.t3s.rdy .ic{filter:drop-shadow(0 0 4px rgba(255,255,255,.25))}
+.t3s.cool .ic{opacity:.3}
+.t3lbl{display:flex;flex-direction:column;align-items:center;justify-content:center;width:30px;
+  font-family:var(--font-num);font-size:8.5px;font-weight:700;letter-spacing:.08em;color:var(--ok)}
+.t3lbl b{font-size:12px;color:#fff}
+
+/* ══════════ T4 · 헤어라인 행 트레이 (판 없음) ══════════ */
+.t4tray{position:relative;display:flex;align-items:stretch;
+  background:linear-gradient(180deg,rgba(10,11,14,.72),rgba(6,7,9,.8));
+  border:1px solid rgba(255,255,255,.09);
+  clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px)}
+.t4s{position:relative;width:48px;height:50px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:3px;border-left:1px solid rgba(255,255,255,.08)}
+.t4s:first-child{border-left:none}
+.t4s .ic{width:23px;height:23px}
+.t4s b{font-family:var(--font-num);font-size:9.5px;font-weight:700;letter-spacing:.04em;
+  color:#7c828c;font-variant-numeric:tabular-nums}
+/* 지금 나갈 것 하나에만 광선 — 화면에 1개뿐 */
+.t4s.rdy b{color:#fff}
+.t4s.rdy::after{content:'';position:absolute;left:8px;right:8px;bottom:0;height:1px;
+  background:rgba(255,255,255,.72);box-shadow:0 0 2px rgba(255,255,255,.9),0 0 5px rgba(255,255,255,.4)}
+.t4s.cool .ic{opacity:.32}
+.t4a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:40px;
+  font-family:var(--font-num);font-size:8px;font-weight:700;letter-spacing:.1em;color:#7c828c}
+.t4a b{font-size:9px;color:#ececec;letter-spacing:.08em}
+.t4a em{font-style:normal;font-size:8px;font-weight:700;letter-spacing:.1em;color:#ececec}
+</style>
+
+<h1>사냥터 스킬 트레이 — A3 확장 4안</h1>
+<p class="lead">A3(한 판 트레이)로 확정. 넷 다 <b>한 판 · 3스킬 · 왼쪽 끝 자동 · 칸 아래 남은 시간</b>이라는 A3의 뼈대를 그대로 두고,
+<b>판의 껍데기만</b> 이미 앱에 있는 컴포넌트에서 각각 다르게 빌려 왔다. 새 색·새 문법은 하나도 만들지 않았다.
+샘플 상태는 폭발=준비 · 응급=8초 · 감속=31초.</p>
+<div class="grid" id="grid"></div>
+
+<script>
+const SK=[{n:'폭발',ic:'sk_nova'},{n:'응급',ic:'sk_emrg'},{n:'감속',ic:'sk_slow'}];
+const ST=[{rdy:true},{rdy:false,left:8,rem:8/30},{rdy:false,left:31,rem:31/45}];
+const img=k=>'<span class="ic"><img src="../../assets/icons/skills/'+k+'.webp" alt=""></span>';
+const FOE=[[18,58],[62,38],[80,66],[40,80],[70,86],[26,86]];
+function field(inner,cls){
+  return '<div class="field '+cls+'"><div class="hud">라운드 12 · 웨이브 2/3</div>'
+    +FOE.map(f=>'<i class="foe" style="left:'+f[0]+'%;top:'+f[1]+'%"></i>').join('')
+    +'<div class="ring"></div><div class="hero"></div>'+inner+'</div>';
+}
+const V=[];
+
+/* T1 */ V.push({t:'업그레이드 카드 트레이', tag:'T1',
+  d:'칸을 <b>사냥터 업그레이드 카드(.hmUp)와 완전히 같은 규격</b>으로 만들었다 — 완전 검정 면 · 붉은 알파 그라데 1px 테두리 · 모서리 컷 7px. 쿨인 칸은 잠긴 카드(.hmUp.lk) 문법이라 <b>붉은 발광만 꺼진다</b>: "붉으면 지금 쓸 수 있다"가 패널 아래위로 같은 뜻이 된다. 자동 버튼도 구매 버튼(.hmUpBtn)과 같은 붉은 링.',
+  html: field('<div class="dock"><div class="t1tray">'
+    +'<button class="t1auto"><b>AUTO</b><em>ON</em></button>'
+    +SK.map((s,i)=>{const t=ST[i];
+      return '<div class="t1s '+(t.rdy?'rdy':'cool')+'">'
+        +img(s.ic)+(t.rdy?'':'<span class="sec">'+t.left+'</span>')
+        +'<span class="bar"><i style="--w:'+(t.rdy?100:t.rem*100)+'%"></i></span></div>';}).join('')
+    +'</div></div>','t1')});
+
+/* T2 */ V.push({t:'세그 띠 트레이', tag:'T2',
+  d:'탭 띠(.pdSeg) 문법 그대로 — 패널색 띠 위를 <b>검정 판 하나가 미끄러진다</b>. 그 판이 곧 "자동이 다음에 쏠 스킬"이라, 자동이 돌고 있다는 걸 <b>글자 없이 움직임으로</b> 말한다. 자동을 끄면 판이 사라진다. 색을 가진 건 판 밑변 1px 광선(시안=선택)뿐.',
+  html: (function(){ const ai=0, left='calc(2px + 34px + '+(ai*46)+'px)';
+    return field('<div class="dock"><div class="t2seg">'
+    +'<div class="t2ind" style="left:'+left+';width:46px"></div>'
+    +'<div class="t2a"><i></i>AUTO</div>'
+    +SK.map((s,i)=>{const t=ST[i];
+      return '<div class="t2s '+(t.rdy?'rdy':'cool')+'">'+img(s.ic)
+        +'<b>'+(t.rdy?'READY':t.left)+'</b></div>';}).join('')
+    +'</div></div>','t2'); })()});
+
+/* T3 */ V.push({t:'커맨드 카드 트레이', tag:'T3',
+  d:'게임 안 하단 커맨드 카드와 같은 성질 — 라운드 9px 칸 · 좌상단 인덱스 번호 · 아래 <b>파랑 진행 바(.cgBar)</b>. 생산 진행과 같은 그림이라 "차오르는 중"이 설명 없이 읽힌다. 자동은 판 <b>윗변 광선</b>(하단 네비 윗변과 같은 문법)이 켜지는 것으로 — 버튼 자리를 안 먹는다. 준비 표시는 색이 아니라 밝은 테두리(중립 강조).',
+  html: field('<div class="dock"><div class="t3tray">'
+    +'<div class="t3lbl"><b>A</b>AUTO</div>'
+    +SK.map((s,i)=>{const t=ST[i];
+      return '<div class="t3s '+(t.rdy?'rdy':'cool')+'"><span class="ix">0'+(i+1)+'</span>'
+        +img(s.ic)+(t.rdy?'':'<span class="sec">'+t.left+'</span>')
+        +'<span class="cgBar"><i style="--w:'+(t.rdy?100:t.rem*100)+'%"></i></span></div>';}).join('')
+    +'</div></div>','t3')});
+
+/* T4 */ V.push({t:'헤어라인 행 트레이', tag:'T4',
+  d:'로그인 화면에서 확정한 <b>"판을 없애고 헤어라인으로 가른다"</b>를 트레이에 가져왔다. 칸마다 테두리를 주지 않고 세로 헤어라인 1줄로만 나누고, 모서리 컷 9px 통짜 판 하나. <b>광선은 화면에 하나뿐</b> — 지금 나갈 스킬 밑에만 켜진다. 넷 중 전장을 제일 덜 가리고 제일 조용하다.',
+  html: field('<div class="dock"><div class="t4tray">'
+    +'<div class="t4a"><b>AUTO</b><em>ON</em></div>'
+    +SK.map((s,i)=>{const t=ST[i];
+      return '<div class="t4s '+(t.rdy?'rdy':'cool')+'">'+img(s.ic)
+        +'<b>'+(t.rdy?'READY':t.left+'s')+'</b></div>';}).join('')
+    +'</div></div>','t4')});
+
+document.getElementById('grid').innerHTML=V.map(v=>
+  '<div class="cell"><div class="cap"><i>'+v.tag+'</i>'+v.t+'</div>'
+  +v.html+'<div class="note">'+v.d+'</div></div>').join('');
+</script>

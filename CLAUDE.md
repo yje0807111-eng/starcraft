@@ -38,6 +38,8 @@
 | 지정(선택) 표시 | 3D 하단 링 | 유닛·건물·라바·중립 자원(미네랄/가스) 전부 이것으로 통일 |
 | 지정 해제 버튼 | 금지(⊘) SVG — 메인 `#deselTop` = 건설 `#btDesel` = 일시정지 카드 | 새 해제/중단 UI도 이 아이콘 재사용 |
 | 확정/취소 플로팅 버튼 | `.bArmBtns` (▶ ok / ✕ cancel) | 배치 확정·재개·철거 공용 |
+| 게임 진입 로딩 | `#gsRoot` + `gameStartCountdown()` · `.teamed`(팀전) / `.solo`(개인) | 카드 덱 한 화면이 협동·팀전·개인을 다 맡는다 · 팀 색=카드 윗변 / 준비=밑변 · 초록은 '준비 완료' 전용 · 초상 `avatarHTML()` · 버튼 `.actBtn` |
+| **액션 버튼(확정·취소·시작)** | **`.actBtn`** + `.pri`(주 동작) / 기본(하위) / `:disabled`(잠김) | 볼록한 중립 판 + **밑변 광원 한 줄** · 위계는 색이 아니라 빛의 양 · 새 버튼에 면·테두리를 따로 쓰지 말고 클래스만 붙일 것(화면이 덮는 건 크기뿐) · `.cpBtns` 안에서 취소는 `.sub` · ⚠ 결과창·확인창 `.ecGo`/`.ecCancel` 은 예외(DESIGN 별도 확정) |
 | 유닛 초상 | `_techUnitPortrait(uid)` | 카드·헤더·대기열 공용 |
 | 프리뷰 패널 | `#cstPrev` + `techHidePreview()` | (구 cstHidePreview는 삭제됨) |
 | 알림/사운드 | `toast()` / `playSfx()`·`playSfxT()` | |
@@ -53,7 +55,10 @@
 | 친구 목록 | `renderFriendList()` → `.ptHead`/`.ptTitle`(파티 머리줄과 같은 것) + `.foList` | 온라인/오프라인 **섹션 라벨 없음** — 정렬(`friendSortCmp`)이 온라인을 위로 올리고 오프라인은 `.foRow.off`(어두운 상자)로 갈린다 |
 | 친구 추가 | `openFriendAdd()` → `#foAddOv` | 목록 위가 아니라 팝업 · 검색 id(`#foSearch`/`#foSearchResult`)는 그대로라 `friendSearch()`/`friendAdd()` 재사용 |
 | 파티 게시판(찾기·만들기) | `openPartyFind()` → `#ptFindOv` + `pbRooms()`/`pbJoin()`/`pbCreate()` | 머리줄 **`파티 찾기` 버튼으로만** 연다(자동 노출 금지) · 맵과 무관한 자유 파티 |
-| 목록 고르는 판(방 찾기·파티 찾기) | `.rmCard` + `.rmHead`/`.rmNum`/`.rmList`+`.roomItem`/`.rmBtns` | 방 찾기(`#rooms`)가 원본 · 파티 찾기는 이 컴포넌트를 그대로 빌린다(딤만 `.pfOv`) · **새 목록 판을 만들지 말 것** |
+| 대기실 종족 선택 | `#lbRaceSec` + `segNavHTML(STK_RACE_ORDER)` → `setLobbyRace()` | 입구는 이 띠 **하나뿐** · 슬롯 칩(`.lbRace`)은 읽기 전용 · 종족 없는 유즈맵은 `.lbRaceLk` 안내로 대체 |
+| 난이도 고르기(선택 화면·방 만들기) | `.sdStepRow`/`.sdStepTx`/`.sdDots` + 상세 판 + `.sdInf`(무한 모드) | 개인 플레이 난이도 선택(`#soloDiffPanel`)이 원본 · 방 만들기가 그대로 빌린다 · ⛔ 화면별 난이도 UI 를 새로 만들지 말 것 |
+| 오토배틀 대전 설정 | `STK_OPTS`(상하한 표) + `STK_PRESETS` + `renderCpMode()` | 상하한·기본값은 표 한 곳에서만 · 엔진 반영은 `MAP_CFG_OVR` → `mapCfg` 한 입구(시작 때 심고 로비 복귀 때 반납) |
+| 목록 고르는 판(방 찾기·파티 찾기) | `.rmCard` + `.rmHead`/`.rmNum`/`.rmList`+`.roomItem`/`.rmBtns` | 방 찾기(`#rooms`)가 원본 · 파티 찾기는 이 컴포넌트를 그대로 빌린다(딤만 `.pfOv`) · **새 목록 판을 만들지 말 것** · 행 밑변 광원 = `--dc`(난이도 색, 없으면 중립) · 하단은 `.actBtn`(주 동작 길게 + `.sq` 38px 둘) |
 | **일일 퀘스트** | `openDaily()` → `#hbDailySheet` + `renderDaily()` | 더보기 ☰ > 일일 퀘스트 · 하루 5개 + 주간 25개 |
 | **출석** | `openAtt()` → `#hbAttSheet` + `renderAtt()` | 더보기 ☰ > 출석 · **퀘스트와 화면이 다르다**(같은 판에 탭으로 묶지 말 것 — 2026-08-14 분리) |
 | 일일 진행 계측·보상 | **`dqNote(kind, n)`** / `dqGive(rw)` | 출석·퀘스트가 함께 쓰는 뒷단 · 새 계측 지점이 생기면 `dqNote` 한 줄만 넣는다 |

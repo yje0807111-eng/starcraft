@@ -1,0 +1,162 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>T1 자동 버튼 4안</title>
+<style>
+:root{
+  --font-ko:'IBM Plex Sans KR','Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  --font-num:'Rajdhani','IBM Plex Sans KR','Apple SD Gothic Neo',sans-serif;
+  --r-bar:3px; --r-md:6px; --r-lg:9px;
+  --metal-edge:#3c3e46;
+  --metal-ring-n:linear-gradient(180deg,#5c5c5c 0%,#404040 38%,#2d2d2d 72%,#494949 100%);
+  --nav-ring-n:linear-gradient(180deg,#8c8c8c 0%,#606060 46%,#424242 100%);
+  --bpFace:linear-gradient(180deg,#0a0a0a,#000);
+  --hmPanel:linear-gradient(180deg,#191919,#0e0e0e);
+  --hmAccRGB:255,59,59; --hmAccLt:#ff8f8f;
+  --txt-mute:#9aa0a8;
+}
+*{box-sizing:border-box}
+button{margin:0;padding:0;font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+body{margin:0;padding:22px 16px 60px;background:#08090c;color:#ececec;font-family:var(--font-ko)}
+h1{margin:0 0 4px;font-size:19px;letter-spacing:.02em}
+.lead{margin:0 0 20px;font-size:12.5px;color:var(--txt-mute);line-height:1.65;max-width:780px}
+.lead b{color:#ececec}
+.row{max-width:760px;margin:0 0 20px;padding:0 0 18px;border-bottom:1px solid rgba(255,255,255,.07)}
+.row:last-child{border-bottom:none}
+.cap{display:flex;align-items:baseline;gap:6px;margin:0 0 9px;font-size:12.5px;font-weight:700}
+.cap i{font-style:normal;font-family:var(--font-num);font-size:11px;color:#fff;background:#2a2c33;
+  border:1px solid var(--metal-edge);border-radius:var(--r-bar);padding:1px 5px}
+.note{margin:9px 2px 0;font-size:11px;color:var(--txt-mute);line-height:1.62}
+.note b{color:#cfd5dd;font-weight:700}
+.pair{display:flex;gap:14px;flex-wrap:wrap}
+.one{position:relative}
+.st{position:absolute;left:0;top:-1px;font-family:var(--font-num);font-size:9.5px;font-weight:700;
+  letter-spacing:.1em;color:#6f7681}
+/* 전장 조각 — 트레이가 얹히는 자리만 */
+.field{position:relative;width:352px;height:112px;margin-top:14px;border-radius:var(--r-lg);overflow:hidden;
+  background:radial-gradient(140% 220% at 50% -70%,#3a3350 0%,#241f33 46%,#14121c 100%);
+  border:1px solid var(--metal-edge)}
+.foe{position:absolute;width:9px;height:9px;border-radius:50%;background:#c8a24a;opacity:.85}
+.dock{position:absolute;right:9px;bottom:9px}
+.ic{position:relative;display:block}
+.ic img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+
+/* ── T1 트레이 본체 (확정분 — 여기는 안 건드린다) ── */
+.t1tray{display:flex;align-items:stretch;gap:4px;padding:4px;
+  background:var(--hmPanel);border:1px solid var(--metal-edge);border-radius:var(--r-bar);
+  clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
+.t1s{position:relative;width:46px;height:46px;display:flex;align-items:center;justify-content:center;
+  border-radius:var(--r-bar);border:1px solid transparent;
+  clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
+  background:var(--bpFace) padding-box,
+    linear-gradient(180deg,rgba(var(--hmAccRGB),.40) 0%,rgba(var(--hmAccRGB),.26) 34%,
+      rgba(var(--hmAccRGB),.15) 68%,rgba(var(--hmAccRGB),.09) 100%) border-box,
+    var(--metal-ring-n) border-box;
+  box-shadow:0 0 7px -5px rgba(var(--hmAccRGB),.35)}
+.t1s::before{content:'';position:absolute;left:7px;right:0;top:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.13) 30%,rgba(255,255,255,.13) 70%,transparent)}
+.t1s .ic{width:26px;height:26px}
+.t1s .sec{position:absolute;font-family:var(--font-num);font-size:15px;font-weight:800;color:#e6e9ee;
+  text-shadow:0 1px 2px #000,0 0 6px rgba(0,0,0,.9)}
+.t1s .bar{position:absolute;left:3px;right:3px;bottom:3px;height:2px;border-radius:2px;background:rgba(255,255,255,.07)}
+.t1s .bar i{display:block;height:100%;border-radius:2px;width:var(--w);background:rgba(var(--hmAccRGB),.75)}
+.t1s.cool{background:linear-gradient(180deg,#000,#000) padding-box,
+    linear-gradient(180deg,rgba(var(--hmAccRGB),.28) 0%,rgba(var(--hmAccRGB),.18) 34%,
+      rgba(var(--hmAccRGB),.11) 68%,rgba(var(--hmAccRGB),.07) 100%) border-box,
+    var(--metal-ring-n) border-box;
+  box-shadow:none}
+.t1s.cool .bar i{background:#4a4a4a}
+.t1s.cool .ic{opacity:.26}
+
+/* ══════════ N1 · 은색 링 (같은 자리 · 색만 뺀다) ══════════ */
+.n1{position:relative;flex:none;width:34px;display:flex;flex-direction:column;padding:1.5px;
+  border:none;border-radius:var(--r-bar);background:var(--nav-ring-n);box-shadow:0 1px 2px rgba(0,0,0,.55)}
+.n1::before{content:'';position:absolute;inset:1.5px;border-radius:2px;background:linear-gradient(180deg,#1c1c1c,#0e0e0e)}
+.n1::after{content:'';position:absolute;left:5px;right:5px;top:1.5px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.44),transparent)}
+.n1 b,.n1 em{position:relative;z-index:1;flex:1;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-num);font-style:normal;text-shadow:0 1px 1px rgba(0,0,0,.55)}
+.n1 b{font-size:10.5px;font-weight:800;color:#dfe3e9;border-bottom:1px solid rgba(0,0,0,.62);
+  box-shadow:0 1px 0 rgba(255,255,255,.12)}
+.n1 em{font-size:9.5px;font-weight:700;color:#fff}
+.n1.off{background:linear-gradient(180deg,#4e4e4e,#333 46%,#222)}
+.n1.off::after{display:none}
+.n1.off b{color:#8a8f96}
+.n1.off em{color:#6f7681}
+
+/* ══════════ N2 · 헤어라인 라벨 (판 없음) ══════════ */
+.n2{position:relative;flex:none;width:36px;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:2px;margin-right:2px;
+  border-right:1px solid rgba(255,255,255,.09);
+  font-family:var(--font-num);font-size:8.5px;font-weight:700;letter-spacing:.1em;color:#6f7681}
+.n2 em{font-style:normal;font-size:10px;font-weight:800;letter-spacing:.06em;color:#ececec}
+.n2.off em{color:#5f656d}
+
+/* ══════════ N3 · 슬림 세로 스위치 ══════════ */
+.n3{position:relative;flex:none;width:18px;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:5px;border-radius:var(--r-bar);
+  background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
+  border:1px solid rgba(255,255,255,.08);
+  font-family:var(--font-num);font-size:10px;font-weight:800;color:#c6ccd4}
+.n3 i{font-style:normal;width:5px;height:5px;border-radius:50%;background:#f0f3f7;
+  box-shadow:0 0 4px rgba(255,255,255,.8)}
+.n3.off{color:#6f7681}
+.n3.off i{background:none;border:1px solid #5a606a;box-shadow:none;width:5px;height:5px}
+
+/* ══════════ N4 · 트레이 밖 작은 칩 ══════════ */
+.n4wrap{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.n4{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border-radius:var(--r-bar);
+  background:rgba(10,11,14,.72);border:1px solid rgba(255,255,255,.1);
+  font-family:var(--font-num);font-size:8.5px;font-weight:700;letter-spacing:.1em;color:#aeb4bd}
+.n4 i{font-style:normal;width:5px;height:5px;border-radius:50%;background:#f0f3f7;
+  box-shadow:0 0 4px rgba(255,255,255,.8)}
+.n4.off{color:#6f7681}
+.n4.off i{background:none;border:1px solid #5a606a;box-shadow:none}
+</style>
+
+<h1>T1 트레이 — 자동 버튼 4안</h1>
+<p class="lead">트레이·스킬 칸은 <b>T1 확정분 그대로</b>. 자동 버튼만 낮춘 네 가지다.
+공통 전제는 <b>빨강은 스킬 칸이 독점한다</b> — 자동에서 붉은색을 빼면 "붉으면 지금 쓸 수 있다"가 트레이 안에서 유일한 뜻이 된다.
+왼쪽이 켜짐, 오른쪽이 꺼짐.</p>
+<div id="wrap"></div>
+
+<script>
+const SK=[{n:'폭발',ic:'sk_nova'},{n:'응급',ic:'sk_emrg'},{n:'감속',ic:'sk_slow'}];
+const ST=[{rdy:true},{rdy:false,left:8,rem:8/30},{rdy:false,left:31,rem:31/45}];
+const img=k=>'<span class="ic"><img src="../../assets/icons/skills/'+k+'.webp" alt=""></span>';
+const FOE=[[14,30],[54,18],[76,52],[34,66],[88,26]];
+const cells=()=>SK.map((s,i)=>{const t=ST[i];
+  return '<div class="t1s '+(t.rdy?'rdy':'cool')+'">'+img(s.ic)
+    +(t.rdy?'':'<span class="sec">'+t.left+'</span>')
+    +'<span class="bar"><i style="--w:'+(t.rdy?100:t.rem*100)+'%"></i></span></div>';}).join('');
+function scene(dock,label){
+  return '<div class="one"><div class="st">'+label+'</div><div class="field">'
+    +FOE.map(f=>'<i class="foe" style="left:'+f[0]+'%;top:'+f[1]+'%"></i>').join('')
+    +'<div class="dock">'+dock+'</div></div></div>';
+}
+const N=[];
+
+N.push({tag:'N1', t:'은색 링 — 같은 자리, 색만 뺀다',
+  d:'모양·크기·물성은 확정분 그대로 두고 <b>붉은 링을 잠긴 칸 버튼의 은색(--nav-ring-n)으로</b> 바꿨다. 켜짐은 윗면 광택 선 + 흰 글자, 꺼짐은 선이 사라지고 글자가 가라앉는다 — 앱이 이미 쓰는 켜짐/꺼짐 문법이라 새로 배울 게 없다. <b>네 안 중 존재감이 제일 크다</b>(= 잘못 꺼놓고 모를 일이 없다).',
+  on:'<div class="t1tray"><button class="n1"><b>AUTO</b><em>ON</em></button>'+cells()+'</div>',
+  off:'<div class="t1tray"><button class="n1 off"><b>AUTO</b><em>OFF</em></button>'+cells()+'</div>'});
+
+N.push({tag:'N2', t:'헤어라인 라벨 — 판을 없앤다',
+  d:'버튼 판 자체를 지우고 <b>세로 헤어라인 1줄</b>로만 갈랐다. 트레이 안이지만 "칸"이 아니라 "여백에 적힌 글자"로 읽혀서 스킬 칸 셋만 도드라진다. 누르는 자리는 그대로 36px이라 터치는 안 좁아진다.',
+  on:'<div class="t1tray"><button class="n2">AUTO<em>ON</em></button>'+cells()+'</div>',
+  off:'<div class="t1tray"><button class="n2 off">AUTO<em>OFF</em></button>'+cells()+'</div>'});
+
+N.push({tag:'N3', t:'슬림 세로 스위치 — 자리를 줄인다',
+  d:'폭 18px 짜리 얇은 띠. 글자는 <b>A 한 글자</b>, 상태는 아래 점이 <b>켜지면 차고 꺼지면 빈다</b>. 트레이가 그만큼 짧아져 전장을 덜 가린다. 대신 상태가 점 하나라 넷 중 제일 조용하다.',
+  on:'<div class="t1tray"><button class="n3">A<i></i></button>'+cells()+'</div>',
+  off:'<div class="t1tray"><button class="n3 off">A<i></i></button>'+cells()+'</div>'});
+
+N.push({tag:'N4', t:'트레이 밖 작은 칩 — 아예 빼낸다',
+  d:'자동을 트레이에서 꺼내 <b>위쪽에 작은 칩</b>으로 올렸다. 트레이 안은 스킬 칸 셋으로 균일해지고, 자동은 "가끔 만지는 설정"의 무게가 된다. 네 안 중 자동이 제일 안 보이고, 트레이 폭도 제일 짧다.',
+  on:'<div class="n4wrap"><span class="n4"><i></i>AUTO ON</span><div class="t1tray">'+cells()+'</div></div>',
+  off:'<div class="n4wrap"><span class="n4 off"><i></i>AUTO OFF</span><div class="t1tray">'+cells()+'</div></div>'});
+
+document.getElementById('wrap').innerHTML=N.map(v=>
+  '<div class="row"><div class="cap"><i>'+v.tag+'</i>'+v.t+'</div>'
+  +'<div class="pair">'+scene(v.on,'켜짐')+scene(v.off,'꺼짐')+'</div>'
+  +'<div class="note">'+v.d+'</div></div>').join('');
+</script>

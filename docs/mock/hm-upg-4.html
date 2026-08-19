@@ -1,0 +1,273 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>사냥터 업그레이드 4안</title>
+<style>
+:root{
+  --font-ko:'IBM Plex Sans KR','Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  --font-num:'Rajdhani','IBM Plex Sans KR','Apple SD Gothic Neo',sans-serif;
+  --r-bar:3px; --r-md:6px; --r-lg:9px;
+  --metal-edge:#3c3e46;
+  --metal-ring-n:linear-gradient(180deg,#5c5c5c 0%,#404040 38%,#2d2d2d 72%,#494949 100%);
+  --nav-ring-on-d:linear-gradient(180deg,#cf9090 0%,#d64848 42%,#8c3232 100%);
+  --nav-ring-n:linear-gradient(180deg,#8c8c8c 0%,#606060 46%,#424242 100%);
+  --bpFace:linear-gradient(180deg,#0a0a0a,#000);
+  --hmPanel:linear-gradient(180deg,#191919,#0e0e0e);
+  --panelBig:linear-gradient(180deg,rgba(25,25,25,.9),rgba(14,14,14,.92));
+  --hmAccRGB:255,59,59; --hmAccLt:#ff8f8f;
+  --acc-sel:#5cd6ff; --txt-mute:#9aa0a8;
+}
+*{box-sizing:border-box}
+button{margin:0;padding:0;font:inherit;color:inherit;background:none;border:none;cursor:pointer;text-align:left}
+body{margin:0;padding:22px 16px 60px;background:#08090c;color:#ececec;font-family:var(--font-ko)}
+h1{margin:0 0 4px;font-size:19px;letter-spacing:.02em}
+.lead{margin:0 0 20px;font-size:12.5px;color:var(--txt-mute);line-height:1.65;max-width:840px}
+.lead b{color:#ececec}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;max-width:1000px}
+.cell{min-width:0}
+.cap{display:flex;align-items:baseline;gap:6px;margin:0 0 7px;font-size:12.5px;font-weight:700}
+.cap i{font-style:normal;font-family:var(--font-num);font-size:11px;color:#fff;background:#2a2c33;
+  border:1px solid var(--metal-edge);border-radius:var(--r-bar);padding:1px 5px}
+.cap.now i{background:#1b1d22;color:#8a9099}
+.note{margin:7px 2px 0;font-size:11px;color:var(--txt-mute);line-height:1.62}
+.note b{color:#cfd5dd;font-weight:700}
+.gain{display:block;margin-top:4px;color:#8fd6a8}
+/* 폰 틀 — 패널이 실제로 먹는 세로 높이를 같은 자로 잰다 */
+.phone{position:relative;width:290px;height:360px;border-radius:var(--r-lg);overflow:hidden;
+  border:1px solid var(--metal-edge);
+  background:radial-gradient(120% 80% at 50% 0%,#3a3350 0%,#241f33 40%,#14121c 100%);
+  display:flex;flex-direction:column}
+.fieldPad{flex:1 1 auto;position:relative}
+.foe{position:absolute;width:8px;height:8px;border-radius:50%;background:#c8a24a;opacity:.8}
+.hero{position:absolute;left:50%;top:46%;width:14px;height:19px;transform:translate(-50%,-50%);
+  background:linear-gradient(180deg,#7d8ea8,#3d4657);border-radius:2px}
+.navPad{flex:none;height:30px;border-top:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(180deg,#141414,#0b0b0b);
+  display:flex;align-items:center;justify-content:space-around;font-size:8px;color:#7c828c}
+/* ── 패널 껍데기(공용) ── */
+.hmUpg{position:relative;background:var(--panelBig);
+  clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 10px,100% 100%,0 100%,0 10px)}
+.hmUpg::before{content:'';position:absolute;left:10px;right:10px;top:0;height:1px;z-index:4;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.18) 22%,rgba(255,255,255,.18) 78%,transparent)}
+.hmUpgHead{display:flex;align-items:center;gap:6px;padding:5px 8px 4px 12px}
+.hmUpgTtl{flex:1;font-size:12px;font-weight:700;color:#fff;letter-spacing:-.01em}
+.hmUpQty{display:flex;align-items:center;justify-content:center;min-width:34px;height:20px;padding:0 6px;
+  border-radius:var(--r-bar);background:linear-gradient(180deg,#1c1c1c,#0e0e0e);
+  border:1px solid var(--metal-edge);font-family:var(--font-num);font-size:9.5px;font-weight:700;color:#cfd5dd}
+.hmUpQty.au{color:#aeb4bd}
+/* 탭 띠 = 공용 .pdSeg */
+.pdSeg{--pad:2px;position:relative;display:flex;margin:0 8px 5px;padding:var(--pad);border-radius:var(--r-bar);
+  background:var(--hmPanel) padding-box,var(--metal-ring-n) border-box;border:1px solid transparent}
+.pdSegInd{position:absolute;top:var(--pad);bottom:var(--pad);border-radius:2px;background:var(--bpFace)}
+.pdSegInd::after{content:'';position:absolute;left:6px;right:6px;bottom:0;height:1px;background:rgba(255,255,255,.62);
+  box-shadow:0 0 2px rgba(var(--hmAccRGB),.9),0 0 5px rgba(var(--hmAccRGB),.55)}
+.pdSegBtn{position:relative;z-index:1;flex:1 1 0;height:22px;display:flex;align-items:center;justify-content:center;
+  font-size:9.5px;font-weight:700;color:#8a9099}
+.pdSegBtn.on{color:#fff}
+.res{display:inline-block;width:10px;height:10px;vertical-align:-1px}
+/* ══════ 현재(비교 기준) ══════ */
+.n0grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:3px 6px 6px;grid-auto-rows:54px}
+.hmUp{position:relative;display:flex;align-items:center;gap:6px;padding:6px;border-radius:var(--r-bar);
+  border:1px solid transparent;
+  clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
+  background:var(--bpFace) padding-box,
+    linear-gradient(180deg,rgba(var(--hmAccRGB),.40) 0%,rgba(var(--hmAccRGB),.26) 34%,
+      rgba(var(--hmAccRGB),.15) 68%,rgba(var(--hmAccRGB),.09) 100%) border-box,
+    var(--metal-ring-n) border-box;
+  box-shadow:0 0 7px -5px rgba(var(--hmAccRGB),.35)}
+.hmUpIco{position:relative;flex:none;width:27px;height:27px;background:#000;border-radius:var(--r-bar);overflow:hidden}
+.hmUpIco img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.hmUpTx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.hmUpName{font-size:11.5px;font-weight:700;color:#ececec;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hmUpVl{font-size:9px;font-weight:700;color:#8a8a8a;font-family:var(--font-num);white-space:nowrap}
+.hmUpVl .nx{color:#fff}
+.hmUpBtn{position:relative;flex:none;width:54px;height:40px;padding:1.5px;display:flex;flex-direction:column;
+  border-radius:var(--r-bar);background:var(--nav-ring-on-d)}
+.hmUpBtn::before{content:'';position:absolute;inset:1.5px;border-radius:2px;
+  background:linear-gradient(180deg,rgba(var(--hmAccRGB),.34) 0%,rgba(var(--hmAccRGB),.27) 55%,rgba(var(--hmAccRGB),.11) 100%),
+    linear-gradient(180deg,#1c1c1c,#0e0e0e)}
+.hmUpBl,.hmUpBc{position:relative;z-index:1;flex:1;display:flex;align-items:center;justify-content:center;gap:2px;
+  font-family:var(--font-num);font-size:9.5px;font-weight:700}
+.hmUpBl{color:var(--hmAccLt);border-bottom:1px solid rgba(0,0,0,.62);box-shadow:0 1px 0 rgba(255,255,255,.16)}
+.hmUpBc{color:#ececec}
+.hmUpBtn.off{background:linear-gradient(180deg,#5a5a5a,#3e3e3e 34%,#222)}
+.hmUpBtn.off::before{background:linear-gradient(180deg,#262626,#262626)}
+.hmUpBtn.off .hmUpBl,.hmUpBtn.off .hmUpBc{color:#7a7a7a}
+.hmUp.lk{background:linear-gradient(180deg,#000,#000) padding-box,
+    linear-gradient(180deg,rgba(var(--hmAccRGB),.28),rgba(var(--hmAccRGB),.07)) border-box,
+    var(--metal-ring-n) border-box;box-shadow:none}
+.hmUp.lk .hmUpName{color:#9a9a9a}
+.hmUp.lk .hmUpIco img{filter:grayscale(1) brightness(.5)}
+/* ══════ U1 · 통짜 행 ══════ */
+.u1list{display:flex;flex-direction:column;gap:4px;padding:2px 6px 6px}
+.u1row{position:relative;display:flex;align-items:center;gap:8px;width:100%;height:46px;padding:0 8px 0 6px;
+  border:1px solid transparent;border-radius:var(--r-bar);
+  clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
+  background:var(--bpFace) padding-box,
+    linear-gradient(180deg,rgba(var(--hmAccRGB),.40) 0%,rgba(var(--hmAccRGB),.26) 34%,
+      rgba(var(--hmAccRGB),.15) 68%,rgba(var(--hmAccRGB),.09) 100%) border-box,
+    var(--metal-ring-n) border-box;
+  box-shadow:0 0 7px -5px rgba(var(--hmAccRGB),.35)}
+.u1row::after{content:'';position:absolute;left:7px;right:0;top:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.13) 30%,rgba(255,255,255,.13) 70%,transparent)}
+.u1ico{position:relative;flex:none;width:32px;height:32px;background:#000;border-radius:var(--r-bar);overflow:hidden}
+.u1ico img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.u1tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.u1nm{display:flex;align-items:baseline;gap:5px;font-size:12px;font-weight:700;color:#ececec}
+.u1lv{font-family:var(--font-num);font-size:9px;font-weight:700;color:var(--hmAccLt)}
+.u1vl{font-family:var(--font-num);font-size:9.5px;font-weight:700;color:#8a8a8a;white-space:nowrap}
+.u1vl .nx{color:#fff}
+.u1cost{flex:none;display:flex;align-items:center;gap:3px;font-family:var(--font-num);
+  font-size:14px;font-weight:800;color:#fff}
+.u1row.off{background:linear-gradient(180deg,#000,#000) padding-box,
+    linear-gradient(180deg,rgba(var(--hmAccRGB),.28),rgba(var(--hmAccRGB),.07)) border-box,
+    var(--metal-ring-n) border-box;box-shadow:none}
+.u1row.off .u1cost{color:#7a7a7a}
+.u1row.off .u1nm,.u1row.off .u1lv{color:#9a9a9a}
+.u1row.off .u1ico img{filter:grayscale(1) brightness(.55)}
+/* ══════ U2 · 2열 · 칸이 곧 버튼 ══════ */
+.u2grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:2px 6px 6px;grid-auto-rows:50px}
+.u2c{position:relative;display:flex;align-items:center;gap:6px;width:100%;padding:5px 7px 5px 5px;
+  border:1px solid transparent;border-radius:var(--r-bar);
+  clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
+  background:var(--bpFace) padding-box,
+    linear-gradient(180deg,rgba(var(--hmAccRGB),.40) 0%,rgba(var(--hmAccRGB),.26) 34%,
+      rgba(var(--hmAccRGB),.15) 68%,rgba(var(--hmAccRGB),.09) 100%) border-box,
+    var(--metal-ring-n) border-box;
+  box-shadow:0 0 7px -5px rgba(var(--hmAccRGB),.35)}
+.u2ico{position:relative;flex:none;width:28px;height:28px;background:#000;border-radius:var(--r-bar);overflow:hidden}
+.u2ico img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.u2lv{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:0 2px;text-align:center;
+  background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.88) 55%);
+  font-family:var(--font-num);font-size:8px;font-weight:800;color:#fff;letter-spacing:.02em}
+.u2tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.u2nm{font-size:11px;font-weight:700;color:#ececec;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.u2cost{display:flex;align-items:center;gap:3px;font-family:var(--font-num);font-size:13px;font-weight:800;color:#fff}
+.u2c.off{background:linear-gradient(180deg,#000,#000) padding-box,
+    linear-gradient(180deg,rgba(var(--hmAccRGB),.28),rgba(var(--hmAccRGB),.07)) border-box,
+    var(--metal-ring-n) border-box;box-shadow:none}
+.u2c.off .u2cost{color:#7a7a7a}
+.u2c.off .u2nm{color:#9a9a9a}
+.u2c.off .u2ico img{filter:grayscale(1) brightness(.55)}
+/* ══════ U3 · 살 수 있는 것 위로 · 잠김은 한 줄로 접기 ══════ */
+.u3lk{display:flex;align-items:center;gap:6px;margin:4px 6px 6px;padding:0 8px;height:26px;
+  border:1px dashed rgba(255,255,255,.13);border-radius:var(--r-bar);
+  font-size:10px;font-weight:700;color:#8a9099}
+.u3lk b{margin-left:auto;font-family:var(--font-num);font-size:10px;color:#cfd5dd}
+.u3lk svg{width:11px;height:11px;fill:none;stroke:#8a9099;stroke-width:2;stroke-linejoin:round}
+.u3hint{margin:0 6px 3px;font-size:8.5px;font-weight:700;letter-spacing:.06em;color:#6f7681}
+/* ══════ U4 · 아이콘 타일 3열 ══════ */
+.u4grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:2px 6px 6px}
+.u4t{position:relative;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  height:64px;padding:5px 3px 4px;border:1px solid transparent;border-radius:var(--r-bar);
+  clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
+  background:var(--bpFace) padding-box,
+    linear-gradient(180deg,rgba(var(--hmAccRGB),.40) 0%,rgba(var(--hmAccRGB),.26) 34%,
+      rgba(var(--hmAccRGB),.15) 68%,rgba(var(--hmAccRGB),.09) 100%) border-box,
+    var(--metal-ring-n) border-box;
+  box-shadow:0 0 7px -5px rgba(var(--hmAccRGB),.35)}
+.u4ico{position:relative;width:28px;height:28px}
+.u4ico img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.u4lv{position:absolute;left:4px;top:3px;font-family:var(--font-num);font-size:7.5px;font-weight:800;
+  letter-spacing:.02em;color:var(--hmAccLt)}
+.u4nm{font-size:8.5px;font-weight:700;color:#b9bec6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.u4cost{display:flex;align-items:center;gap:2px;font-family:var(--font-num);font-size:12px;font-weight:800;color:#fff}
+.u4t.off{background:linear-gradient(180deg,#000,#000) padding-box,
+    linear-gradient(180deg,rgba(var(--hmAccRGB),.28),rgba(var(--hmAccRGB),.07)) border-box,
+    var(--metal-ring-n) border-box;box-shadow:none}
+.u4t.off .u4cost{color:#7a7a7a}
+.u4t.off .u4nm,.u4t.off .u4lv{color:#8a8a8a}
+.u4t.off .u4ico img{filter:grayscale(1) brightness(.55)}
+</style>
+
+<h1>사냥터 업그레이드 — 4안</h1>
+<p class="lead">가장 자주 누르는 자리다. 그래서 네 안의 공통 전제는 <b>칸 자체가 버튼이다</b> —
+오른쪽 작은 구매 버튼(54×40)을 없애고 칸 전체를 누르게 해서 <b>터치 타겟을 2~4배로</b> 키웠다.
+레벨은 이름 옆, 비용은 오른쪽 큰 숫자로 <b>합쳤다</b>. 껍데기(검정 면·붉은 테두리·모서리 컷)는 확정분 그대로다.
+왼쪽 첫 칸이 <b>지금</b>이고, 같은 폰 틀·같은 항목으로 <b>패널이 먹는 세로 높이</b>까지 같이 비교한다.</p>
+<div class="grid" id="grid"></div>
+
+<script>
+const RES='<img class="res" src="../../assets/icons/res_mineral.webp" alt="">';
+const U=[
+  {n:'데미지',    ic:'upgrades/up_melee_atk', lv:8,  v:'12',   nx:'15',     c:'5'},
+  {n:'공격속도',  ic:'skills/sk_stim',        lv:5,  v:'100%', nx:'101.5%', c:'8'},
+  {n:'체력',      ic:'upgrades/up_carapace',  lv:6,  v:'120',  nx:'138',    c:'5'},
+  {n:'사거리',    ic:'upgrades/up_range',     lv:2,  v:'220',  nx:'224',    c:'6'},
+  {n:'치명타 확률',ic:'upgrades/up_gnd_wpn',  lv:0,  v:'5%',   nx:'5.6%',   c:'40',  off:1},
+  {n:'치명 피해',  ic:'upgrades/up_inf_atk',  lv:0,  v:'150%', nx:'155%',   c:'100', off:1},
+  {n:'생명력 흡수',ic:'skills/sk_consume',    lv:0,  v:'0%',   nx:'0.5%',   c:'150', off:1},
+  {n:'실드량',    ic:'upgrades/up_shield',    lv:0,  v:'0',    nx:'15',     c:'120', off:1},
+  {n:'넉백 확률',  ic:'skills/sk_maelstrom',  lv:0,  v:'0%',   nx:'1.5%',   c:'90',  off:1},
+];
+const img=k=>'<img src="../../assets/icons/'+k+'.webp" alt="">';
+const TABS=['내 캐릭터','동료','건물','펫'];
+function head(title, qty){
+  return (title? '<div class="hmUpgHead"><b class="hmUpgTtl">사냥터 업그레이드</b>'
+      +'<span class="hmUpQty au">자동</span><span class="hmUpQty">×1</span></div>' : '')
+    +'<div class="pdSeg"><div class="pdSegInd" style="left:2px;width:calc(25% - 1px)"></div>'
+    +TABS.map((t,i)=>'<button class="pdSegBtn'+(i?'':' on')+'">'+t+'</button>').join('')
+    +(qty? '<button class="hmUpQty au" style="margin-left:4px">자동</button>'
+          +'<button class="hmUpQty" style="margin-left:3px">×1</button>' : '')
+    +'</div>';
+}
+const FOE=[[16,26],[62,14],[80,44],[34,58],[74,70],[24,74]];
+function phone(panel){
+  return '<div class="phone"><div class="fieldPad">'
+    +FOE.map(f=>'<i class="foe" style="left:'+f[0]+'%;top:'+f[1]+'%"></i>').join('')
+    +'<div class="hero"></div></div>'
+    +'<div class="hmUpg">'+panel+'</div>'
+    +'<div class="navPad"><span>캐릭터</span><span>정비</span><span>유즈맵</span><span>상점</span></div></div>';
+}
+const V=[];
+
+/* 현재 */ V.push({tag:'지금', now:1, t:'2열 카드 + 오른쪽 구매 버튼',
+  d:'칸 안에 아이콘·이름·값 변화·레벨·비용 다섯 가지가 들어가고, 실제로 누르는 곳은 <b>오른쪽 54×40 버튼뿐</b>이다. 칸의 나머지 70%는 눌러도 아무 일이 없다.',
+  html: head(1,0)+'<div class="n0grid">'+U.slice(0,6).map(u=>
+    '<div class="hmUp'+(u.off?' lk':'')+'"><span class="hmUpIco">'+img(u.ic)+'</span>'
+    +'<span class="hmUpTx"><b class="hmUpName">'+u.n+'</b>'
+    +'<span class="hmUpVl">'+u.v+' ▸ <b class="nx">'+u.nx+'</b></span></span>'
+    +'<button class="hmUpBtn'+(u.off?' off':'')+'"><span class="hmUpBl">LV.'+u.lv+'</span>'
+    +'<span class="hmUpBc">'+RES+u.c+'</span></button></div>').join('')+'</div>'});
+
+/* U1 */ V.push({tag:'U1', t:'통짜 행 — 한 줄이 통째로 버튼',
+  d:'1열 46px 행. <b>행 전체가 버튼</b>이라 터치 타겟이 화면 폭 그대로다. 레벨은 이름 옆 작은 글자로, 비용은 오른쪽 큰 숫자로 합쳤다. 방치형 모바일에서 가장 흔한 형태 — 엄지를 정확히 겨눌 필요가 없다.',
+  gain:'터치 면적 54×40 → 278×46 (약 6배) · 한 화면 4개',
+  html: head(1,0)+'<div class="u1list">'+U.slice(0,4).map(u=>
+    '<button class="u1row'+(u.off?' off':'')+'"><span class="u1ico">'+img(u.ic)+'</span>'
+    +'<span class="u1tx"><span class="u1nm">'+u.n+'<i class="u1lv">LV.'+u.lv+'</i></span>'
+    +'<span class="u1vl">'+u.v+' ▸ <b class="nx">'+u.nx+'</b></span></span>'
+    +'<span class="u1cost">'+RES+u.c+'</span></button>').join('')+'</div>'});
+
+/* U2 */ V.push({tag:'U2', t:'2열 유지 — 칸이 곧 버튼',
+  d:'지금의 2열 격자를 그대로 두고 <b>오른쪽 버튼만 흡수</b>했다. 레벨은 아이콘 위 배지, 값 변화는 뺐다(자주 보는 건 비용과 살 수 있는지다). 한 화면에 많이 보이는 장점을 지키면서 터치 타겟만 3배가 된다.',
+  gain:'터치 면적 54×40 → 135×50 (약 3배) · 한 화면 6개',
+  html: head(1,0)+'<div class="u2grid">'+U.slice(0,6).map(u=>
+    '<button class="u2c'+(u.off?' off':'')+'"><span class="u2ico">'+img(u.ic)
+    +'<i class="u2lv">LV.'+u.lv+'</i></span>'
+    +'<span class="u2tx"><span class="u2nm">'+u.n+'</span>'
+    +'<span class="u2cost">'+RES+u.c+'</span></span></button>').join('')+'</div>'});
+
+/* U3 */ V.push({tag:'U3', t:'살 수 있는 것만 위로 · 잠김은 한 줄',
+  d:'칸 생김새는 U1과 같고 <b>순서와 묶음</b>만 바꿨다. 지금 살 수 있는 것이 항상 맨 위에 오고, 못 사는 것들은 <b>"잠김 5"</b> 한 줄로 접힌다. 스크롤 없이 누를 것만 엄지 사정권에 들어온다 — 항목이 20개로 늘어도 화면이 안 길어진다.',
+  gain:'스크롤해서 찾는 일이 사라짐 · 패널 높이 고정',
+  html: head(1,0)+'<div class="u3hint">지금 올릴 수 있는 것</div><div class="u1list">'+U.slice(0,3).map(u=>
+    '<button class="u1row"><span class="u1ico">'+img(u.ic)+'</span>'
+    +'<span class="u1tx"><span class="u1nm">'+u.n+'<i class="u1lv">LV.'+u.lv+'</i></span>'
+    +'<span class="u1vl">'+u.v+' ▸ <b class="nx">'+u.nx+'</b></span></span>'
+    +'<span class="u1cost">'+RES+u.c+'</span></button>').join('')+'</div>'
+    +'<div class="u3lk"><svg viewBox="0 0 24 24"><path d="M7.5 10.5V7.6a4.5 4.5 0 0 1 9 0v2.9M5.6 10.5h12.8v9.4H5.6z"/></svg>'
+    +'잠김 5개 <b>다음 해금 '+RES+'40</b></div>'});
+
+/* U4 */ V.push({tag:'U4', t:'아이콘 타일 3열 — 이름을 줄이고 개수를 늘린다',
+  d:'글자를 최소로 줄이고 <b>아이콘·레벨·비용 세 가지만</b> 남긴 정사각 타일. 한 화면에 9개가 보이고 전부 큰 터치 타겟이다. 값 변화는 길게 눌러 보는 것으로 미룬다. 넷 중 요소를 가장 많이 합쳤고, 가장 "게임 상점"처럼 보인다.',
+  gain:'터치 면적 54×40 → 88×64 (약 2.6배) · 한 화면 9개',
+  html: head(0,1)+'<div class="u4grid">'+U.map(u=>
+    '<button class="u4t'+(u.off?' off':'')+'"><i class="u4lv">LV.'+u.lv+'</i>'
+    +'<span class="u4ico">'+img(u.ic)+'</span>'
+    +'<span class="u4nm">'+u.n+'</span>'
+    +'<span class="u4cost">'+RES+u.c+'</span></button>').join('')+'</div>'});
+
+document.getElementById('grid').innerHTML=V.map(v=>
+  '<div class="cell"><div class="cap'+(v.now?' now':'')+'"><i>'+v.tag+'</i>'+v.t+'</div>'
+  +phone(v.html)+'<div class="note">'+v.d+(v.gain?'<b class="gain">▸ '+v.gain+'</b>':'')+'</div></div>').join('');
+</script>
