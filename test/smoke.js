@@ -4880,6 +4880,16 @@ async function groupGame(){
         // 카드 뼈대 순서 = 네모와 같다: 초상 → 이름 → 수치 → 비용
         const kids=[...cs[0].children].map(e=>e.className.split(' ')[0]).join('>');
         assert(kids==='cgPro>cgName>cgSub>cgCost','카드 뼈대가 네모 업그레이드 카드와 다름: '+kids); }
+      // ⚠ 이름 줄상자가 글자 잉크보다 작으면 overflow:hidden 이 **윗획을 잘라 먹는다**.
+      //   실제로 10px 한글(잉크 11px)이 줄상자 10.5px(line-height 1.05)에 잘렸다.
+      //   ⚠ 줄상자 높이만 재면 절대 못 잡는다 — 캔버스 폰트 메트릭으로 잉크를 재서 비교할 것.
+      { const cv=document.createElement('canvas').getContext('2d');
+        for(const n of document.querySelectorAll('#btSheetBody .cgName, #unitCmd .cgName')){
+          const t=(n.textContent||'').trim(); if(!t) continue;
+          const st=getComputedStyle(n); cv.font=st.fontWeight+' '+st.fontSize+' '+st.fontFamily;
+          const m=cv.measureText(t), ink=m.actualBoundingBoxAscent+m.actualBoundingBoxDescent;
+          const box=n.getBoundingClientRect().height;
+          assert(box>=ink,'카드 이름이 잘림("'+t+'" 줄상자 '+box.toFixed(1)+'px < 잉크 '+ink.toFixed(1)+'px)'); } }
       // ⚠ 우상단 배지를 쓰는 카드(관리자 연구 등)에서 배지가 초상 이미지에 가려지면 안 된다 —
       //   둘 다 .cgPro 의 형제/자식이라 z-index 가 같으면 트리 순서가 늦은 이미지가 이긴다.
       //   지금 오토배틀 칸에는 배지가 없으므로 같은 그리드에 탐침을 하나 꽂아서 잰다.
