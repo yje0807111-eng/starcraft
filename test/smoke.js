@@ -2659,6 +2659,32 @@ async function groupLobby(){
     await step('유즈맵 선택 → 네모네모 모드 팝업', ()=>{ openMapSelect(); openModeSheet(USEMAPS.nemo_inf||USEMAPS.nemo);
     const mo=document.querySelector('#modeSheet .moCard'); assert(visible(mo),'moCard 안 보임');
     const w=mo.getBoundingClientRect().width; assert(w>200&&w<400,'moCard 폭 이상: '+w); closeModeSheet(); return 'w='+w; });
+  // 🎚 개인 플레이 난이도 = 세그먼트 바로 고르고 상세에서 확인 후 시작(목록 훑어 즉시 시작하던 방식 폐지)
+  await step('난이도 선택: 세그먼트 + 상세 · 잠긴 것은 고를 수 있고 시작만 막힌다', async ()=>{
+    skipIf(typeof openSoloDiff!=='function','난이도 선택 없음');
+    openMapSelect(); await sleep(60); _selMap=USEMAPS.nemo; openSoloDiff(); await sleep(150);
+    // 탭 띠는 **공용 컴포넌트**(.pdSeg) — 전용 목록(.soloDiffBtns)을 되살리면 안 된다
+    const nav=$('sdNav'), seg=nav&&nav.querySelector('.pdSeg');
+    assert(seg,'난이도 탭이 공용 세그먼트 바(.pdSeg)가 아님');
+    assert(!document.querySelector('.soloDiffBtns .moDiffBtn'),'옛 난이도 목록이 남아 있음');
+    const tabs=[...nav.querySelectorAll('.pdSegBtn')];
+    assert(tabs.length===DIFFICULTY_ORDER.length,'탭이 난이도 수와 다름: '+tabs.length);
+    // ⚠ 350px 안에 5칸 — 한 글자라도 잘리면 안 된다(NORMAL 이 제일 길다)
+    tabs.forEach(b=>assert(b.scrollWidth<=b.clientWidth+0.5,'탭 글자가 잘림: '+b.textContent));
+    // 잠긴 난이도 = 고를 수는 있고(무엇이 필요한지 보여 준다) 시작만 막힌다
+    const li=DIFFICULTY_ORDER.findIndex(d=>!diffUnlocked(d));
+    if(li>=0){ sdPick(li); await sleep(80);
+      assert($('sdGo').disabled,'잠긴 난이도인데 시작 버튼이 열려 있음');
+      assert($('sdDet').querySelector('.sdLock'),'잠금 사유가 안 보임'); }
+    // 해금된 난이도 = 시작 버튼이 열리고 상세에 수치가 나온다
+    sdPick(0); await sleep(80);
+    assert(!$('sdGo').disabled,'해금된 난이도인데 시작 버튼이 잠김');
+    assert($('sdDet').querySelectorAll('.sdStat').length===2,'적 HP·포인트 두 지표가 안 나옴');
+    assert($('sdDet').querySelector('.sdMap b').textContent===USEMAPS.nemo.name,'상세 머리에 고른 맵이 없음');
+    // 무한 모드는 난이도가 아니다 — 탭이 아니라 별도 줄
+    assert(!visible($('sdInf'))||$('sdInf').textContent.indexOf('무한')>=0,'무한 모드 줄이 이상함');
+    closeSoloDiff(); await sleep(40);
+    return '탭 '+tabs.length+'칸 · 잠금 분리 ok'; });
   // ⚙ 게임 밖 설정(유즈맵 ☰ → .appCtx) — 게임 안 설정과 **같은 카드**를 문맥만 바꿔 쓴다
   await step('유즈맵 설정: 프로필 머리줄 · 붉은 선 · 44px ✕ · 중립 ON', async ()=>{
     openMapSelect(); await sleep(60); openAppSettings(); await sleep(120);

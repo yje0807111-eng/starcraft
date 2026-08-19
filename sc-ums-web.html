@@ -1914,8 +1914,54 @@
      z-index 를 주지 않는다 — .cpCard>* 가 z:1 이라 내용은 자동으로 이 위에 온다 */
   #soloDiffPanel .cpCard::after{content:'';position:absolute;inset:0;pointer-events:none;opacity:.14;
     background:radial-gradient(78% 34% at 50% 0%,var(--mapAccent,#4aa8ff),transparent 70%)}
-  /* 스크롤바가 안 생기게 여백을 줄여 내용을 카드 안에 넣는다(넘침 8px → 여백 24px 확보) */
-  #soloDiffPanel .moDiffBtns{flex:1 1 auto;min-height:0;overflow:hidden;gap:6px;margin-bottom:8px}
+  /* 난이도 고르기 = 위 세그먼트 바(공용 .pdSeg · segNavHTML) + 아래 상세 한 장.
+     ⛔ 새 탭 띠를 만들지 말 것 — 생김새는 전부 공용 규칙이 갖고 여기서 덮는 건 글자 크기뿐이다. */
+  #soloDiffPanel .sdNav{flex:none;margin-bottom:9px}
+  #soloDiffPanel .sdNav .pdSeg{max-width:none;margin:0}
+  #soloDiffPanel .sdNav .pdSegBtn{padding:8px 0;font-family:var(--font-num);font-size:12px;letter-spacing:0}   /* 좌우 여백 0 = NORMAL(58px)이 한 칸(59px)에 들어가는 값 · 무한은 탭이 아니라 아래 별도 줄 */
+  /* 상세 = 고른 것 하나만 크게. 카드가 남는 높이를 전부 먹고 내용은 가운데, 시작 버튼은 아래에 붙는다 */
+  #soloDiffPanel .sdDet{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;
+    padding:16px 14px 14px;margin-bottom:8px;border-radius:var(--r-md);
+    background:linear-gradient(180deg,#0d0d0d,#050505);border:1px solid var(--metal-edge)}
+  /* 상세 머리 = 지금 고른 맵(썸네일 + 이름) — 두 팝업이 한 흐름으로 읽히고, 빈 칸도 메운다 */
+  .sdMap{flex:none;display:flex;align-items:center;gap:9px;padding-bottom:11px;margin-bottom:2px;
+    border-bottom:1px solid rgba(255,255,255,.06)}
+  .sdMap .moThumb{width:38px;height:38px;flex:none}
+  .sdMap .sdMapTx{flex:1;min-width:0;display:flex;flex-direction:column}
+  .sdMap b{font-size:var(--fs-lg);font-weight:700;color:#eef2f6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sdMap em{font-style:normal;font-size:var(--fs-xs);color:#7d8b98;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sdBody{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:11px}
+  .sdName{font-family:var(--font-num);font-size:30px;font-weight:700;letter-spacing:1px;color:var(--dc,#fff);
+    text-shadow:0 0 18px color-mix(in srgb,var(--dc,#fff) 45%,transparent)}
+  .sdStats{display:flex;justify-content:center;gap:22px}
+  .sdStat{text-align:center}
+  .sdStat i{display:block;font-style:normal;font-size:var(--fs-xs);color:#828b96}
+  .sdStat b{display:block;font-family:var(--font-num);font-size:19px;font-weight:700;margin-top:2px}
+  .sdStat.e b{color:#ff9e9e}.sdStat.c b{color:#ffd485}
+  .sdDesc{font-size:var(--fs-md);color:#8a929c;text-align:center;line-height:1.6}
+  .sdLock{display:flex;align-items:center;gap:6px;font-size:var(--fs-md);font-weight:700;color:#7d8b98}
+  .sdLock svg{width:13px;height:13px}
+  /* 시작 = 유즈맵 팝업의 주 버튼과 같은 금속 링 판(취소와 같은 규격 · 색만 밝다) */
+  .sdGo{flex:none;width:100%;height:44px;margin-top:12px;cursor:pointer;font-family:inherit;
+    font-size:var(--fs-xl);font-weight:800;letter-spacing:.3px;color:#fff;text-shadow:0 1px 1px rgba(0,0,0,.6);
+    border:1.5px solid transparent;border-radius:var(--r-bar);
+    background:linear-gradient(180deg,#2a2a2a,#151515) padding-box,var(--metal-ring-n) border-box;
+    box-shadow:0 1px 2px rgba(0,0,0,.55)}
+  .sdGo:active{transform:translateY(1.5px);box-shadow:0 0 0 rgba(0,0,0,0)}
+  .sdGo:disabled{cursor:default;color:#6d7480;background:linear-gradient(180deg,#141414,#0b0b0b) padding-box,var(--metal-ring-n) border-box}
+  /* 무한 모드 = 난이도 밖의 별개 모드. 한 줄로 두되 보라 광원 하나로만 구분한다 */
+  .sdInf{position:relative;flex:none;width:100%;height:42px;margin-bottom:8px;padding:0 13px;cursor:pointer;overflow:hidden;
+    display:flex;align-items:center;gap:8px;font-family:inherit;text-align:left;
+    border:1px solid transparent;border-radius:var(--r-bar);
+    background:linear-gradient(180deg,#0a0a0a,#000) padding-box,var(--metal-ring-n) border-box}
+  .sdInf::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:#b06bff;
+    box-shadow:0 0 4px #b06bff,0 0 10px #b06bff}
+  .sdInf b{font-size:var(--fs-lg);font-weight:800;color:#d9c4ff}
+  .sdInf em{flex:1;font-style:normal;font-size:var(--fs-sm);color:#8a929c;text-align:right}
+  .sdInf.hide{display:none}
+  .sdInf.lk{cursor:default}
+  .sdInf.lk::before{background:#4a525e;box-shadow:none}
+  .sdInf.lk b{color:#7f8a98}
   #soloDiffPanel .cpTitle{margin-bottom:10px}
   #soloDiffPanel .pickHint{margin-bottom:8px;color:#8a8a8a}
   /* 취소 = 유즈맵 팝업의 '개인 플레이'와 같은 금속 링 버튼(두 겹 background — 의사요소를 쓰면 글자 위에 얹힌다) */
@@ -4269,45 +4315,7 @@
   .cpDiffInfo{display:flex;justify-content:center;gap:14px;margin:0 0 20px;font-size:9px;font-weight:700}
   .cpDiffInfo .cpdE{color:#b58585} .cpDiffInfo .cpdE b{color:#ff9e9e;font-weight:800;font-family:var(--font-num)}
   .cpDiffInfo .cpdC{color:#b59d63} .cpDiffInfo .cpdC b{color:#ffd485;font-weight:800;font-family:var(--font-num)}
-  /* 개인 플레이 난이도: 2×2 그리드, 난이도별 색으로 구분, 여유로운 버튼 */
-  /* 난이도 = 입체 글래스 카드 + 좌측 색 바/항상 켜진 색 글로우 + 우측 화살표. 모바일 = 호버 미사용(정지 상태로 포인트). */
-  /* 난이도 줄 = 사냥터 업그레이드 카드(.hmUp)와 같은 성질 — 면은 완전 검정, 테두리는 금속 링,
-     색을 갖는 것은 왼쪽 1px 광원 하나뿐이다(2026-08-18, 유즈맵 팝업 언어에 맞춤).
-     밝은 유리 면(rgba(255,255,255,.1))과 라운드 12px 을 버렸다 — 검정 카드 위에서 그것만 떠 보였다. */
-  .soloDiffBtns{display:flex;flex-direction:column;gap:7px;margin:6px 0 12px}
-  .soloDiffBtns .moDiffBtn{position:relative;flex:0 0 auto;display:flex;align-items:center;gap:10px;height:56px;padding:0 13px 0 16px;
-    border:1px solid transparent;border-radius:var(--r-bar);text-align:left;overflow:hidden;cursor:pointer;
-    background:linear-gradient(180deg,#0a0a0a,#000) padding-box,
-      linear-gradient(180deg,rgba(255,255,255,.22) 0%,rgba(255,255,255,.07) 42%,
-        rgba(255,255,255,.04) 84%,rgba(255,255,255,.16) 100%) border-box;
-    box-shadow:0 2px 6px -4px rgba(0,0,0,.75);transition:transform .1s,filter .12s}
-  .soloDiffBtns .moDiffBtn:hover{filter:brightness(1.14)}
-  /* 좌측 난이도 광원 — 두께가 아니라 빛이다(4px 면 → 2px 심지 + halo) */
-  .soloDiffBtns .moDiffBtn::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--dc);
-    box-shadow:0 0 4px 0 var(--dc),0 0 10px 0 var(--dc)}
-  .soloDiffBtns .moDiffBtn .ddN{flex:1;min-width:0;font-size:13px;font-weight:800;color:#ececec;text-shadow:0 1px 2px rgba(0,0,0,.6);margin:0}
-  .soloDiffBtns .moDiffBtn .ddC{flex:none;font-size:11.5px;font-weight:700;color:#9a9a9a;white-space:nowrap;margin:0;line-height:1.2}
-  /* 스탯 = 두 줄 텍스트(적 HP / 포인트 획득량) — 라벨+값을 붙여 한 덩어리로, 각 줄은 우측 정렬 */
-  .soloDiffBtns .ddStats{display:flex;flex-direction:column;justify-content:center;align-items:flex-end;gap:3px}
-  .soloDiffBtns .ddStat{display:flex;align-items:baseline;gap:6px;line-height:1.15}
-  .soloDiffBtns .ddLbl{font-size:9px;font-weight:700;letter-spacing:.2px}   /* 색은 스탯별로(라벨=흐린 같은 색) */
-  .soloDiffBtns .ddStat em{font-family:var(--font-num);font-style:normal;font-size:11.5px;font-weight:700;font-variant-numeric:tabular-nums}   /* 값 크기·굵기 다운 */
-  .soloDiffBtns .ddEnemy .ddLbl{color:#b58585} .soloDiffBtns .ddEnemy em{color:#ff9e9e}   /* 적 HP = 붉은 한 쌍(라벨 흐림·값 진함) */
-  .soloDiffBtns .ddCoin .ddLbl{color:#b59d63} .soloDiffBtns .ddCoin em{color:#ffd485}      /* 포인트 획득량 = 금색 한 쌍 */
-  .soloDiffBtns .moDiffBtn .ddGo{flex:none;width:15px;height:15px;color:#7a8593}
-  .soloDiffBtns .moDiffBtn:active{transform:scale(.99) translateY(1px)}
-  /* 무한 모드 = 살짝 띄운 특별 항목(설명 줄바꿈) */
-  .soloDiffBtns .ddInf{margin-top:7px;height:auto;min-height:58px;padding-top:11px;padding-bottom:11px;flex-wrap:wrap}
-  .soloDiffBtns .ddInf .ddN{flex:1 0 auto}
-  .soloDiffBtns .ddInf .ddC{flex:1 0 100%;white-space:normal;margin-top:3px;line-height:1.35;color:#9aa6b4}
-  /* 잠금 = 회색 바·색 글로우 제거·흐리게(선택 불가) */
-  .soloDiffBtns .moDiffBtn.locked{cursor:default;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.014));
-    box-shadow:0 2px 8px -6px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.03)}
-  .soloDiffBtns .moDiffBtn.locked::before{background:#4a525e;box-shadow:none}
-  .soloDiffBtns .moDiffBtn.locked .ddN{color:#7f8a98;text-shadow:none}
-  .soloDiffBtns .moDiffBtn.locked:active{transform:none}
-  .soloDiffBtns .ddLock{display:inline-flex;align-items:center;gap:5px;color:#828d9b;font-weight:700}
-  .soloDiffBtns .ddLockIco{width:12px;height:12px;flex:none}
+  /* (구 .soloDiffBtns 난이도 목록은 폐지 — 세그먼트 바 + 상세(#soloDiffPanel .sdNav/.sdDet)로 바뀌었다) */
   /* 개인/멀티 = 사냥터 구매 버튼(.hmUpBtn)의 금속 링 구조.
      링(테두리) 그라데 + 안쪽 면을 두 겹 background 로 낸다 — 의사요소를 쓰면
      absolute ::before 가 글자 위에 얹힌다(글자는 z-index 를 못 받는 텍스트 노드).
@@ -4545,8 +4553,12 @@
     <div id="soloDiffPanel" class="hide">
       <div class="cpCard">
         <div class="cpTitle">난이도 선택</div>
-        <div class="pickHint">개인 플레이 · 난이도를 고르면 바로 시작합니다</div>
-        <div class="moDiffBtns soloDiffBtns" id="soloDiffBtns"></div>
+        <div class="pickHint">개인 플레이 · 난이도를 고르고 시작하세요</div>
+        <!-- 위에서 고르고(공용 세그먼트 바) 아래에서 확인 후 시작 — 목록을 훑지 않고 한 칸씩 비교한다 -->
+        <div class="sdNav" id="sdNav"></div>
+        <div class="sdDet" id="sdDet"></div>
+        <!-- 무한 모드는 난이도가 아니다(노말 고정) — 탭에 끼우지 않고 별도 줄로 둔다 -->
+        <button class="sdInf hide" id="sdInf" onclick="sdStartInf()"></button>
         <div class="cpBtns"><button class="cpCancel" onclick="closeSoloDiff()" style="flex:1">취소</button></div>
       </div>
     </div>
@@ -16654,31 +16666,63 @@ function hideRaceMenu(){ const menu=document.getElementById('raceMenu'); if(menu
 function closeRaceSelect(){ popHide('raceSelPanel'); _racePickCb=null; }
 function pickRace(k){ if(!STK_RACES[k]) return; if(typeof playSfx==='function') playSfx('ui_confirm'); const cb=_racePickCb; _racePickCb=null; popHide('raceSelPanel'); if(cb) cb(k); }
 // 개인 플레이 난이도 선택 팝업(고르면 즉시 시작)
-function openSoloDiff(){ const box=document.getElementById('soloDiffBtns'); if(box){ box.innerHTML='';
-    const _toast=(typeof lobbyToast==='function')?lobbyToast:(typeof toast==='function'?toast:function(){});
-    const _prevKo=d=>{ const r=DIFF_RANK.indexOf(d); return (r>0 && DIFFICULTY[DIFF_RANK[r-1]])?DIFFICULTY[DIFF_RANK[r-1]].name:''; };
-    DIFFICULTY_ORDER.forEach(d=>{ const D=DIFFICULTY[d]; const b=document.createElement('div');
-      const unlocked=(typeof diffUnlocked==='function')?diffUnlocked(d):true;
-      b.className='moDiffBtn'+(unlocked?'':' locked'); b.style.setProperty('--dc', DIFF_COLOR[d]||'#fff');
-      if(unlocked){
-        const _atk=(D.enemyHp/DIFFICULTY.easy.enemyHp).toFixed(1);
-        b.innerHTML='<span class="ddN">'+D.name+'</span>'
-          +'<span class="ddC ddStats"><span class="ddStat ddEnemy"><span class="ddLbl">적 HP</span><em>×'+_atk+'</em></span>'
-          +'<span class="ddStat ddCoin"><span class="ddLbl">포인트 획득량</span><em>×'+D.coinMult+'</em></span></span>'
-          +'<svg class="ddGo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
-        b.onclick=()=>startSoloWithDiff(d);
-      } else {
-        b.innerHTML='<span class="ddN">'+D.name+'</span><span class="ddC ddLock"><svg class="ddLockIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>'+_prevKo(d)+' 클리어 시 잠금 해제</span>';
-        b.onclick=()=>_toast('🔒 '+_prevKo(d)+' 난이도를 먼저 클리어하세요');
-      }
-      box.appendChild(b); });
-    if(_selMap && _selMap.id==='nemo' && USEMAPS.nemo_inf){   // 무한 모드 진입(네모 한정) — 노말 클리어 시 개방
-      const infOk=(typeof infiniteUnlocked!=='function')||infiniteUnlocked();
-      const inf=document.createElement('div'); inf.className='moDiffBtn ddInf'+(infOk?'':' locked'); inf.style.setProperty('--dc','#b06bff');
-      if(infOk){ inf.innerHTML='<span class="ddN">♾️ 무한 모드</span><span class="ddC">노말 고정 · 끝없이 도전</span>'; inf.onclick=()=>startSoloInfinite(); }
-      else { inf.innerHTML='<span class="ddN">♾️ 무한 모드</span><span class="ddC ddLock"><svg class="ddLockIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>NORMAL 클리어 시 개방</span>'; inf.onclick=()=>_toast('🔒 노말을 클리어하면 열립니다'); }
-      box.appendChild(inf); } }
-  const p=document.getElementById('soloDiffPanel'); if(p){ p.classList.add('noDim'); p.classList.remove('hide');   // 화면전환: 배경 딤 유지(페이드 생략) + 카드 슬라이드 인
+// ── 개인 플레이 난이도 = 세그먼트 바로 고르고 상세에서 확인 후 시작(2026-08-19) ──
+//   ⛔ 목록을 훑어 바로 시작하던 방식은 폐지 — 오탭으로 시작되고, 난이도끼리 비교가 안 됐다.
+//   잠긴 난이도도 **고를 수는 있다**(무엇이 필요한지 보여 준다) — 시작 버튼만 잠긴다.
+let _sdPick='easy';
+// 난이도 한 줄 — 수치만으로는 '나한테 맞는지'를 못 고른다
+const SD_DESC={ easy:'처음이라면 여기서 · 규칙을 익히는 단계',
+  normal:'기본 난이도 · 대부분 여기서 시작합니다',
+  hard:'메타 업그레이드가 어느 정도 쌓여야 버팁니다',
+  hell:'거의 만렙 · 운영 실수를 봐주지 않습니다',
+  nightmare:'최종 단계 · 초월까지 갖춰야 넘어갑니다' };
+function _sdRGB(hex){ const h=(hex||'#ffffff').replace('#',''); 
+  return [0,2,4].map(function(i){ return parseInt(h.substr(i,2),16); }).join(','); }
+// 탭에는 난이도만 — 무한 모드는 아래 별도 줄이 맡는다(노말 고정이라 난이도 축이 아니다)
+function _sdList(){ return DIFFICULTY_ORDER.map(function(d){ return {k:d, name:DIFFICULTY[d].name, col:DIFF_COLOR[d]}; }); }
+function _sdHasInf(){ return !!(_selMap && _selMap.id==='nemo' && USEMAPS.nemo_inf); }
+function _sdOk(k){ return (k==='inf') ? ((typeof infiniteUnlocked!=='function')||infiniteUnlocked())
+                                      : ((typeof diffUnlocked!=='function')||diffUnlocked(k)); }
+function sdStartInf(){ if(!_sdOk('inf')){ if(typeof lobbyToast==='function') lobbyToast('🔒 노말을 클리어하면 열립니다'); return; }
+  startSoloInfinite(); }
+function _sdPrevKo(k){ if(k==='inf') return 'NORMAL';
+  const r=DIFF_RANK.indexOf(k); return (r>0 && DIFFICULTY[DIFF_RANK[r-1]]) ? DIFFICULTY[DIFF_RANK[r-1]].name : ''; }
+function sdPick(i){ const L=_sdList(); if(!L[i]) return; _sdPick=L[i].k; renderSoloDiff();
+  if(typeof playSfx==='function') playSfx('ui_tab'); }
+function renderSoloDiff(){ const nav=document.getElementById('sdNav'), det=document.getElementById('sdDet');
+  if(!nav||!det) return;
+  const L=_sdList(); let i=L.findIndex(function(x){ return x.k===_sdPick; }); if(i<0){ i=0; _sdPick=L[0].k; }
+  // 탭 띠는 공용 컴포넌트 — 화면이 덮는 건 광원 색(--segCol) 하나뿐(DESIGN §세그먼트 바)
+  nav.innerHTML=segNavHTML(L.map(function(x){ return {label:x.name, col:_sdRGB(x.col)}; }), i,
+    function(k){ return 'sdPick('+k+')'; });
+  const cur=L[i], ok=_sdOk(cur.k);
+  det.style.setProperty('--dc', cur.col);
+  let body;
+  if(!ok){ body='<div class="sdLock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>'
+      +escHtml(_sdPrevKo(cur.k))+' 클리어 시 잠금 해제</div>'; }
+  else { const D=DIFFICULTY[cur.k], hp=(D.enemyHp/DIFFICULTY.easy.enemyHp).toFixed(1);
+    body='<div class="sdStats"><span class="sdStat e"><i>적 HP</i><b>×'+hp+'</b></span>'
+        +'<span class="sdStat c"><i>포인트 획득량</i><b>×'+D.coinMult+'</b></span></div>'
+        +'<div class="sdDesc">'+(SD_DESC[cur.k]||'')+'</div>'; }
+  // 머리에 지금 고른 맵을 얹는다 — '무엇을 어느 난이도로' 가 한 화면에 있다
+  const mapHead='<div class="sdMap"><span class="moThumb" id="sdThumb"></span>'
+    +'<span class="sdMapTx"><b>'+escHtml((_selMap&&_selMap.name)||'')+'</b>'
+    +'<em>'+escHtml((_selMap&&_selMap.desc)||'')+'</em></span></div>';
+  det.innerHTML=mapHead+'<div class="sdBody"><div class="sdName">'+escHtml(cur.name)+'</div>'+body+'</div>'
+    +'<button class="sdGo" id="sdGo" onclick="sdStart()"'+(ok?'':' disabled')+'>'
+    +(ok ? '이 난이도로 시작' : '잠겨 있습니다')+'</button>';
+  if(typeof _mapThumbInto==='function') _mapThumbInto(document.getElementById('sdThumb'), _selMap);
+  // 무한 모드 줄 — 이 맵에 있을 때만
+  { const el=document.getElementById('sdInf'); if(el){ const has=_sdHasInf(), iok=_sdOk('inf');
+      el.classList.toggle('hide', !has); el.classList.toggle('lk', !iok);
+      if(has) el.innerHTML='<b>∞ 무한 모드</b><em>'+(iok?'노말 고정 · 끝없이 도전':'NORMAL 클리어 시 개방')+'</em>'; } } }
+function sdStart(){ if(!_sdOk(_sdPick)) return; startSoloWithDiff(_sdPick); }
+function openSoloDiff(){
+  // 처음 열 때는 **해금된 것 중 가장 높은 난이도**를 고른 상태로 — 매번 EASY 부터 넘기지 않게
+  { const L=_sdList().filter(function(x){ return _sdOk(x.k); });
+    _sdPick = L.length ? L[L.length-1].k : 'easy'; }
+  renderSoloDiff();
+  const p=document.getElementById('soloDiffPanel'); if(p){ p.classList.add('noDim'); p.classList.remove('hide');   // 화면전환: 배경 딤 유지(페이드 생략)
     const card=p.querySelector('.cpCard'); if(card){ card.classList.remove('fxPop','fxPush');   // 난이도 선택 = 효과 없이 즉시(요청)
       const ac=(typeof MAP_ACCENT!=='undefined'&&_selMap&&MAP_ACCENT[_selMap.id])||'#7f93b0';
       card.style.setProperty('--mapAccent', ac); } }   // 방금 고른 맵의 액센트를 이어받는다 — 두 팝업이 한 흐름으로 읽힌다
