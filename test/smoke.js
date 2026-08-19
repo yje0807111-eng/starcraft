@@ -2660,7 +2660,396 @@ async function groupLobby(){
     await step('유즈맵 선택 → 네모네모 모드 팝업', ()=>{ openMapSelect(); openModeSheet(USEMAPS.nemo_inf||USEMAPS.nemo);
     const mo=document.querySelector('#modeSheet .moCard'); assert(visible(mo),'moCard 안 보임');
     const w=mo.getBoundingClientRect().width; assert(w>200&&w<400,'moCard 폭 이상: '+w); closeModeSheet(); return 'w='+w; });
+  // 🎚 개인 플레이 난이도 = 세그먼트 바로 고르고 상세에서 확인 후 시작(목록 훑어 즉시 시작하던 방식 폐지)
+  // ══ 방 찾기 — 빠른 입장이 맨 위 · 난이도는 공용 탭 띠 · 행 밑변이 난이도 색 ══
+  await step('방 찾기: 빠른 입장이 주 액션 · 난이도 없는 맵은 띠를 통째로 비운다', async ()=>{
+    skipIf(typeof openRooms!=='function','방 찾기 없음');
+    openMapSelect(); await sleep(60);
+    // ① 난이도 있는 유즈맵
+    _selMap=USEMAPS.nemo; hideAppScreens(); openRooms(); await sleep(300);
+    const card=document.querySelector('#rooms .rmCard');
+    assert(card,'방 찾기 카드가 없음');
+    // ⛔ 방 찾기는 **전체 화면**이다 — 팝업 카드 틀 안에 다시 넣으면 안 된다(상·하단까지 화면이 쓴다)
+    { const r=card.getBoundingClientRect(), o=$('rooms').getBoundingClientRect();
+      assert(Math.abs(r.width-o.width)<1 && Math.abs(r.height-o.height)<1,
+        '방 찾기가 화면을 다 안 씀(카드 틀에 갇혔다): '+Math.round(r.width)+'x'+Math.round(r.height)+' vs '+Math.round(o.width)+'x'+Math.round(o.height));
+      const cs=getComputedStyle(card);
+      assert(parseFloat(cs.borderTopWidth)===0,'전체 화면인데 카드 테두리가 남아 있음');
+      assert(getComputedStyle(card,'::before').display==='none','전체 화면인데 공용 네온 프레임이 남아 있음');
+      const nav=$('navBar');
+      assert(!nav || nav.classList.contains('hide'),'방 찾기인데 하단 네비가 떠 있음'); }
+    // 주 액션은 **맨 위 빠른 입장 하나뿐**이다(하단은 전부 하위 단계)
+    const q=card.querySelector('.rmQuickTop');
+    assert(q && q.classList.contains('actBtn') && q.classList.contains('pri'),'빠른 입장이 맨 위 주 액션(.actBtn.pri)이 아님');
+    assert(card.querySelectorAll('.actBtn.pri').length===1,'주 액션이 둘 이상임');
+    assert(/방/.test($('rmQuickSub').textContent),'빠른 입장 안의 방 수 표기가 없음: '+$('rmQuickSub').textContent);
+    // 난이도 = 공용 탭 띠. ⛔ 옛 팝다운(.rmDiff)을 되살리면 안 된다
+    assert($('rmFilter').querySelector('.pdSeg'),'난이도 필터가 공용 탭 띠(.pdSeg)가 아님');
+    assert(!document.querySelector('#rooms .rmDiffMenu'),'옛 난이도 팝다운이 남아 있음');
+    // 행 밑변 = 난이도 색. 잠긴 행(게임중·가득참)은 광원이 죽는다
+    { const rows=[...card.querySelectorAll('.roomItem')];
+      assert(rows.length,'방 목록이 비었음');
+      const open=rows.find(r=>!r.classList.contains('locked'));
+      assert(open && /^#[0-9a-f]{3,8}$/i.test((open.style.getPropertyValue('--dc')||'').trim()),
+        '행에 난이도 색(--dc)이 안 실림: '+open.style.getPropertyValue('--dc'));
+      assert(getComputedStyle(open,'::after').content!=='none','행 밑변 광원이 없음');
+      const lk=rows.find(r=>r.classList.contains('locked'));
+      if(lk) assert(!lk.style.getPropertyValue('--dcGlow'),'잠긴 행인데 광원이 살아 있음'); }
+    // 하단 = 방 만들기가 가로로 길고, 뒤로·새로고침은 작은 정사각
+    { const btns=[...card.querySelectorAll('.rmBtns .actBtn')];
+      assert(btns.length===3,'하단 버튼이 3개가 아님: '+btns.length);
+      const sq=btns.filter(b=>b.classList.contains('sq'));
+      assert(sq.length===2,'뒤로·새로고침이 작은 정사각이 아님');
+      const grow=btns.find(b=>!b.classList.contains('sq'));
+      assert(grow.getBoundingClientRect().width > sq[0].getBoundingClientRect().width*2,
+        '방 만들기가 충분히 길지 않음'); }
+    // 방 번호 입장 = 평소엔 접혀 있고 🔍로 편다
+    assert($('rmNumRow').classList.contains('hide'),'방 번호 줄이 처음부터 펼쳐져 있음');
+    toggleRoomNum(); await sleep(80);
+    assert(!$('rmNumRow').classList.contains('hide') && $('rmNumBtn').classList.contains('on'),'🔍로 방 번호 줄이 안 펴짐');
+    toggleRoomNum(); await sleep(60);
+    // ② 난이도 없는 유즈맵 = 띠를 통째로 비운다(요약 줄 같은 것으로 대신 채우지 않는다)
+    backToTitle(); await sleep(80);
+    _selMap=USEMAPS.cpu; hideAppScreens(); openRooms(); await sleep(300);
+    assert($('rmFilter').innerHTML==='','난이도 없는 유즈맵인데 필터 띠가 남아 있음');
+    assert(!$('rmFilter').getBoundingClientRect().height,'빈 필터 띠가 자리를 차지함');
+    { const r=document.querySelector('#rooms .roomItem');
+      assert(r && !r.style.getPropertyValue('--dc'),'난이도 없는 맵인데 행에 난이도 색이 실림'); }
+    assert(document.querySelector('#rooms .rmQuickTop'),'난이도 없는 맵에서 빠른 입장이 사라짐');
+    backToTitle(); await sleep(200);
+    { const nav=$('navBar'); assert(nav && !nav.classList.contains('hide'),'방 찾기에서 나왔는데 하단 네비가 안 돌아옴'); }
+    return '전체 화면 · 난이도 있음/없음 두 경로 ok'; });
+  // ══ 멀티 대기실 — 전체 화면 · 내 종족은 공용 탭 띠 · 8칸이 스크롤 없이 다 보인다 ══
+  await step('대기실: 전체 화면 · 종족 띠(잠긴 맵은 안내) · 슬롯 8칸 노출', async ()=>{
+    skipIf(typeof openLobby!=='function','대기실 없음');
+    const close=()=>{ if(typeof leaveLobby==='function'){ try{ leaveLobby(); }catch(e){} }
+      const l=$('lobby'); if(l) l.classList.add('hide'); };
+    // ① 오토 배틀 — 팀 + 종족
+    openMapSelect(); await sleep(60);
+    _selMap=USEMAPS.cpu; _lobbyMax=8; hideAppScreens(); openRooms(); await sleep(120);
+    openLobby({num:3855,name:'오토배틀 연구소',host:myNick(),startCount:6,joining:false,visibility:'public',max:8,
+      opts:{cycleTime:10,startGold:700,incomeBase:70,hpMul:0.7}});
+    await sleep(500);
+    const card=document.querySelector('#lobby .lbCard');
+    assert(card,'대기실 카드가 없음');
+    // ⛔ 팝업 카드가 아니다 — 화면을 통째로 쓴다
+    { const r=card.getBoundingClientRect(), o=$('lobby').getBoundingClientRect();
+      assert(Math.abs(r.width-o.width)<1 && Math.abs(r.height-o.height)<1,'대기실이 화면을 다 안 씀(카드 틀에 갇혔다)');
+      assert(parseFloat(getComputedStyle(card).borderTopWidth)===0,'전체 화면인데 카드 테두리가 남아 있음'); }
+    // 방 조건 카드 = 방 만들기의 대전 설정 판과 같은 언어. 사용자 지정 값이 그대로 보여야 한다
+    { const c=$('lbCond'), st=[...c.querySelectorAll('.lbCondSt b')].map(b=>b.textContent);
+      assert(c.querySelectorAll('.lbCondSt span').length===4,'방 조건 칸이 4개가 아님');
+      assert(st.join(' ').indexOf('10초')>=0 && st.join(' ').indexOf('700')>=0,
+        '사용자 지정 값이 방 조건에 안 실림: '+st.join(' ')); }
+    // 종족 = 공용 탭 띠. ⛔ 여기 전용 종족 UI 를 새로 만들면 안 된다
+    { const sec=$('lbRaceSec');
+      assert(sec.querySelector('.pdSeg'),'종족 선택이 공용 탭 띠(.pdSeg)가 아님');
+      // ⚠ 공용 .pdSeg 는 max-width:286px 라 그대로 두면 오른쪽에 여백이 남는다
+      { const a=sec.querySelector('.pdSeg').getBoundingClientRect().width, b=sec.getBoundingClientRect().width;
+        assert(Math.abs(a-b)<1.5,'종족 띠가 폭을 다 안 씀: '+Math.round(a)+' vs '+Math.round(b)); }
+      assert(sec.querySelectorAll('.pdSegBtn').length===STK_RACE_ORDER.length,'종족 칸 수가 STK_RACE_ORDER 와 다름');
+      assert(!sec.querySelector('.lbRaceLk'),'오토배틀인데 종족이 잠겨 있음');
+      // 탭 글자가 잘리면 안 된다
+      sec.querySelectorAll('.pdSegBtn').forEach(b=>assert(b.scrollWidth<=b.clientWidth+0.5,'종족 탭 글자가 잘림: '+b.textContent)); }
+    // 띠를 누르면 내 종족이 바뀐다(입구는 이 하나뿐 — 슬롯 칩은 읽기 전용)
+    { const k=STK_RACE_ORDER[1]; setLobbyRace(k); await sleep(80);
+      const me=_lobbySlots.find(s=>s&&s.me);
+      assert(me && me.race===k,'띠로 고른 종족이 내 슬롯에 안 실림');
+      const chip=document.querySelector('#lbGrid .lbSlot.me .lbRace');
+      assert(chip && !chip.getAttribute('onclick'),'슬롯 종족 칩이 아직 클릭 입구를 갖고 있음(입구가 둘)'); }
+    // 슬롯 8칸이 스크롤 없이 다 보인다
+    { const g=$('lbGrid');
+      assert(g.querySelectorAll('.lbSlot').length===_lobbyMax,'슬롯 수가 정원과 다름');
+      assert(g.scrollHeight<=g.clientHeight+0.5,'슬롯 8칸이 스크롤됨: '+g.scrollHeight+'>'+g.clientHeight); }
+    // 머리줄 배지 — 팀전이면 대진, 사용자 지정 방이면 그 표시까지
+    { const rt=$('lbRoom').textContent;
+      assert(/vs/.test(rt),'팀전인데 대진 배지가 없음: '+rt);
+      assert(/사용자 지정/.test(rt),'사용자 지정 방인데 표시가 없음: '+rt); }
+    // 하단 = 공용 액션 버튼
+    assert($('lbStart').classList.contains('actBtn')&&$('lbStart').classList.contains('pri'),'시작이 공용 .actBtn.pri 가 아님');
+    assert(document.querySelector('#lobby .lbBtns .actBtn.sub'),'나가기가 공용 .actBtn.sub 가 아님');
+    // ② 네모네모 — 종족이 없으니 그 자리가 잠긴 안내로 바뀐다
+    close(); await sleep(200);
+    _selMap=USEMAPS.nemo; hideAppScreens(); openRooms(); await sleep(120);
+    openLobby({num:4821,name:'같이 클리어해요',host:myNick(),startCount:6,joining:false,visibility:'public',diff:'easy',max:8});
+    await sleep(500);
+    { const sec=$('lbRaceSec');
+      assert(sec.querySelector('.lbRaceLk'),'종족 없는 유즈맵인데 잠김 안내가 없음');
+      assert(!sec.querySelector('.pdSeg'),'종족 없는 유즈맵인데 선택 띠가 떠 있음');
+      assert(!document.querySelector('#lbGrid .lbRace'),'종족 없는 유즈맵인데 슬롯에 종족 칩이 있음'); }
+    { const g=$('lbGrid'); assert(g.scrollHeight<=g.clientHeight+0.5,'네모네모 슬롯 8칸이 스크롤됨'); }
+    // 난이도 맵도 같은 자리에 조건 카드가 뜬다(난이도·적HP·포인트·정원)
+    { const st=[...$('lbCond').querySelectorAll('.lbCondSt b')].map(b=>b.textContent);
+      assert(st.length===4 && st[0]===DIFFICULTY.easy.name,'난이도 맵 방 조건이 이상함: '+st.join(' ')); }
+    // ⚠ 채팅이 남는 높이를 통째로 먹으면 화면 절반이 빈 검은 판이 된다 — 상한이 살아 있는지 본다
+    { const w=document.querySelector('#lobby .lbChatWrap').getBoundingClientRect(),
+            card=document.querySelector('#lobby .lbCard').getBoundingClientRect();
+      assert(w.height <= card.height*0.28, '채팅이 너무 넓다: '+Math.round(w.height)+'px / 카드 '+Math.round(card.height)); }
+    assert(/EASY/i.test($('lbRoom').textContent),'난이도 배지가 없음: '+$('lbRoom').textContent);
+    // ③ 슬롯 판 높이는 **고정**이다 — 팀 유무와 정원이 달라져도 같아야 한다
+    //    (팀전은 라벨 2줄이 더 들어가므로 팀이 없으면 행을 그만큼 키워 메운다)
+    const gridH=async(map,max)=>{ close(); await sleep(150);
+      _selMap=USEMAPS[map]; _lobbyMax=max; hideAppScreens(); openRooms(); await sleep(100);
+      openLobby({num:1234,name:'높이 확인',host:myNick(),startCount:2,joining:false,visibility:'public',diff:'easy',max:max});
+      await sleep(400);
+      const g=$('lbGrid');
+      return { h:Math.round(g.getBoundingClientRect().height), ov:g.scrollHeight-g.clientHeight,
+               n:g.querySelectorAll('.lbSlot').length }; };
+    const t8=await gridH('cpu',8), c8=await gridH('nemo',8), c4=await gridH('nemo',4), t4=await gridH('cpu',4);
+    assert(t8.h===c8.h,'팀 유무로 슬롯 판 높이가 달라짐: 팀전 '+t8.h+' vs 협동 '+c8.h);
+    assert(c8.h===c4.h && t8.h===t4.h,'정원이 줄자 슬롯 판이 같이 줄었다: '+c8.h+'→'+c4.h+' / '+t8.h+'→'+t4.h);
+    assert(c4.n===4 && t4.n===4,'정원이 줄었는데 행이 안 사라짐');
+    [t8,c8,c4,t4].forEach(x=>assert(x.ov<=0.5,'슬롯 판이 스크롤됨(높이 식이 안 맞는다)'));
+    close(); await sleep(150); openMapSelect(); await sleep(80);
+    return '종족 '+STK_RACE_ORDER.length+'칸 · 잠김 ok · 슬롯 판 '+t8.h+'px 고정'; });
+  // ══ 방 만들기 — 전체 화면 · 난이도는 스테퍼 · 오토배틀은 프리셋/사용자 지정 ══
+  await step('방 만들기: 전체 화면 · 난이도 스테퍼 · 대전 설정이 실제 cfg 로 간다', async ()=>{
+    skipIf(typeof createRoom!=='function','방 만들기 없음');
+    // ① 난이도 있는 유즈맵 — 난이도 선택 화면과 **같은 컴포넌트**를 쓴다
+    openMapSelect(); await sleep(60); _selMap=USEMAPS.nemo; hideAppScreens(); openRooms(); await sleep(200);
+    createRoom(); await sleep(200);
+    const card=document.querySelector('#createPanel .cpCard');
+    assert(card,'방 만들기 카드가 없음');
+    { const r=card.getBoundingClientRect(), o=$('createPanel').getBoundingClientRect();
+      assert(Math.abs(r.width-o.width)<1 && Math.abs(r.height-o.height)<1,'방 만들기가 화면을 다 안 씀(카드 틀에 갇혔다)');
+      assert(parseFloat(getComputedStyle(card).borderTopWidth)===0,'전체 화면인데 카드 테두리가 남아 있음'); }
+    assert($('cpDiffStep').querySelector('.sdStepRow'),'난이도가 스테퍼(.sdStepRow)가 아님');
+    assert($('cpDiffStep').querySelectorAll('.sdDots i').length===DIFFICULTY_ORDER.length,'난이도 점이 난이도 수와 다름');
+    assert(!document.querySelector('#createPanel .cpDiffBtns .moDiffBtn'),'옛 난이도 pill 나열이 남아 있음');
+    assert($('cpInfBtn').classList.contains('sdInf'),'무한 모드 줄이 공용 .sdInf 가 아님');
+    assert($('cpMode').innerHTML==='','난이도 있는 맵인데 대전 설정 구역이 채워졌다');
+    // 인원 = 1~8 칸 게이지(고른 값까지 채우고 고른 칸만 발광)
+    setCpMax(5, true); await sleep(50);
+    { const on=document.querySelectorAll('#cpMaxGrid .cpPc.on'), sel=document.querySelectorAll('#cpMaxGrid .cpPc.sel');
+      assert(on.length===5,'인원 게이지가 고른 값까지 안 채워짐: '+on.length);
+      assert(sel.length===1 && sel[0].textContent==='5','고른 칸이 하나가 아님'); }
+    // ② 오토 배틀 — 프리셋 3장, 일반은 오버라이드가 없다
+    closeCreate(); await sleep(60); backToTitle(); await sleep(80);
+    _selMap=USEMAPS.cpu; hideAppScreens(); openRooms(); await sleep(200); createRoom(); await sleep(200);
+    assert($('cpDiffSec').style.display==='none','난이도 없는 맵인데 난이도 구역이 보인다');
+    assert($('cpMode').querySelectorAll('.cpPreC').length===STK_PRESETS.length,'프리셋 카드 수가 다름');
+    assert(_createPre==='normal' && cpOptsPayload()===null,'일반 모드인데 오버라이드가 생김');
+    assert(stkCfgFromOpts(cpOptsPayload())===null,'일반 모드인데 cfg 오버라이드가 생김');
+    // ③ 프리셋(속도전) → 실제 cfg 로 번역된다. 체력 배율은 신전 3종 **구체값**이 되어야 한다
+    setCpPreset('blitz'); await sleep(80);
+    { const cfg=stkCfgFromOpts(cpOptsPayload());
+      assert(cfg && cfg.cycleTime===10,'속도전 프리셋이 cfg 로 안 감');
+      const base=USEMAPS.cpu.cfg;
+      assert(cfg.baseHp===Math.round(base.baseHp*0.7) && cfg.secHp===Math.round(base.secHp*0.7)
+        && cfg.centralHp===Math.round(base.centralHp*0.7),'체력 배율이 신전 3종에 안 곱해짐'); }
+    // ④ 사용자 지정 = 상하한 밖으로 못 나간다(표가 단일 소스)
+    setCpPreset('custom'); await sleep(80);
+    assert($('cpMode').querySelectorAll('.cpOptRow').length===STK_OPTS.length,'조절 항목 수가 표와 다름');
+    for(const o of STK_OPTS){
+      for(let i=0;i<40;i++) stepCpOpt(o.k, 1);
+      assert(stkOptVal(o.k)===o.max, o.name+' 이 상한을 넘거나 못 미침: '+stkOptVal(o.k)+' vs '+o.max);
+      for(let i=0;i<60;i++) stepCpOpt(o.k, -1);
+      assert(stkOptVal(o.k)===o.min, o.name+' 이 하한을 넘거나 못 미침: '+stkOptVal(o.k)+' vs '+o.min); }
+    await sleep(60);
+    // 하한을 다 찍은 상태 = 기본값이 아니므로 반드시 오버라이드가 생긴다
+    { const pay=cpOptsPayload(); assert(pay,'사용자 지정인데 오버라이드가 비었음');
+      STK_OPTS.forEach(o=>assert(pay[o.k]===o.min, o.name+' 값이 안 실림')); }
+    // ⑤ 기본값 그대로면 오버라이드가 없어야 한다(일반과 같은 판이 되도록)
+    STK_OPTS.forEach(o=>{ _createOpts[o.k]=o.def; }); renderCpMode(); await sleep(50);
+    assert(cpOptsPayload()===null,'사용자 지정이지만 값이 기본값인데 오버라이드가 생김');
+    closeCreate(); await sleep(60); backToTitle(); await sleep(80);
+    return '난이도 스테퍼 · 프리셋 '+STK_PRESETS.length+' · 상하한 '+STK_OPTS.length+'항목 ok'; });
+  // ⚠ 라운드가 화면마다 다르면 '둥글다'는 인상이 생긴다 — DESIGN §라운드 표(0/3/6/9) 밖 값을 잡는다
+  await step('유즈맵 진입 화면 라운드: DESIGN 표(0/3/6/9) 밖이 없다', async ()=>{
+    skipIf(typeof openRooms!=='function','방 찾기 없음');
+    const scan=(id)=>{ const bad=[], KS=['borderTopLeftRadius','borderTopRightRadius','borderBottomLeftRadius','borderBottomRightRadius'];
+      document.querySelectorAll('#'+id+' *').forEach(function(el){
+        const r=el.getBoundingClientRect(); if(!r.width||!r.height) return;
+        const cs=getComputedStyle(el);
+        KS.forEach(function(k){ const raw=cs[k], v=parseFloat(raw)||0;
+          if(v && [3,6,9].indexOf(Math.round(v))<0 && raw.indexOf('%')<0)
+            bad.push((el.id||el.className||el.tagName)+' '+k+'='+raw); }); });
+      return Array.from(new Set(bad)); };
+    openMapSelect(); await sleep(60);
+    _selMap=USEMAPS.nemo; hideAppScreens(); openRooms(); await sleep(250);
+    { const b=scan('rooms'); assert(!b.length,'방 찾기에 표 밖 라운드: '+b.slice(0,3).join(' / ')); }
+    createRoom(); await sleep(250);
+    { const b=scan('createPanel'); assert(!b.length,'방 만들기(난이도)에 표 밖 라운드: '+b.slice(0,3).join(' / ')); }
+    closeCreate(); await sleep(50); backToTitle(); await sleep(80);
+    _selMap=USEMAPS.cpu; hideAppScreens(); openRooms(); await sleep(250); createRoom(); await sleep(200);
+    setCpPreset('custom'); await sleep(120);
+    { const b=scan('createPanel'); assert(!b.length,'방 만들기(대전 설정)에 표 밖 라운드: '+b.slice(0,3).join(' / ')); }
+    closeCreate(); await sleep(50); backToTitle(); await sleep(80);
+    return '세 화면 0건'; });
+  // ⛔ UI 만 바뀌고 실제 게임 값이 그대로면 아무 의미가 없다 — 엔진 입구(mapCfg)까지 확인한다
+  await step('대전 설정이 실제 게임 값을 바꾼다(mapCfg 까지)', async ()=>{
+    skipIf(typeof stkCfgFromOpts!=='function','대전 설정 없음');
+    const base=USEMAPS.cpu.cfg, keep=MAP, keepRoom=(typeof _lobbyRoom!=='undefined')?_lobbyRoom:null;
+    MAP=USEMAPS.cpu; MAP_CFG_OVR=null;
+    assert(mapCfg('cycleTime')===base.cycleTime,'기본 상태인데 맵 cfg 를 안 씀');
+    // 방 설정을 심는다 = startGameNow 가 하는 것과 같은 한 줄
+    MAP_CFG_OVR=stkCfgFromOpts({cycleTime:10,startGold:700,incomeBase:70,hpMul:0.5});
+    assert(mapCfg('cycleTime')===10,'라운드 길이가 안 바뀜: '+mapCfg('cycleTime'));
+    assert(mapCfg('startGold')===700,'시작 골드가 안 바뀜');
+    assert(mapCfg('incomeBase')===70,'라운드 수입이 안 바뀜');
+    assert(mapCfg('baseHp')===Math.round(base.baseHp*0.5),'본진 체력이 안 바뀜');
+    assert(mapCfg('mineCost')===base.mineCost,'건드리지 않은 값까지 바뀜(오버라이드가 맵 cfg 를 통째로 덮었다)');
+    // ⚠ 반납을 잊으면 다음 판까지 새어 밸런스가 조용히 어긋난다
+    MAP_CFG_OVR=null;
+    assert(mapCfg('cycleTime')===base.cycleTime,'반납했는데 값이 남아 있음');
+    assert(/MAP_CFG_OVR\s*=\s*null/.test(String(overlayToLobby)),'로비 복귀 경로에 방 설정 반납이 없음');
+    assert(/MAP_CFG_OVR\s*=/.test(String(startGameNow)),'게임 시작 경로에 방 설정 주입이 없음');
+    MAP=keep; if(typeof _lobbyRoom!=='undefined') _lobbyRoom=keepRoom;
+    return '라운드·골드·수입·체력 4항목 반영 ok'; });
+  // ══ 공용 액션 버튼(.actBtn) — 세 상태를 한 컴포넌트가 갖는다 ══
+  await step('공용 액션 버튼: 활성·비활성·하위가 한 판에서 빛으로만 갈린다', async ()=>{
+    openMapSelect(); await sleep(60); _selMap=USEMAPS.nemo; openSoloDiff(); await sleep(150);
+    const li=DIFFICULTY_ORDER.findIndex(d=>!diffUnlocked(d)), ui=DIFFICULTY_ORDER.findIndex(d=>diffUnlocked(d));
+    skipIf(ui<0,'해금된 난이도 없음');
+    const rgb=x=>(x.match(/\d+/g)||[]).slice(0,3).map(Number);
+    const lum=c=>(0.2126*c[0]+0.7152*c[1]+0.0722*c[2])/255;
+    // ① 면(背)은 세 상태 **모두 중립 회색**이다 — 색은 밑변 광원만 갖는다(DESIGN §0: 면을 채우지 않는다)
+    sdPick(ui); await sleep(70);
+    const pri=$('sdGo'), sub=document.querySelector('#soloDiffPanel .cpBtns .actBtn');
+    assert(pri.classList.contains('pri'),'주 동작에 .pri 가 없음');
+    assert(sub && !sub.classList.contains('pri'),'하위 단계에 .pri 가 붙어 있음');
+    for(const [nm,el] of [['활성',pri],['하위',sub]]){
+      const bg=rgb(getComputedStyle(el).backgroundColor);
+      const dev=Math.max(...bg)-Math.min(...bg);
+      assert(dev<=30, nm+' 버튼 면이 회색이 아님(채널 편차 '+dev+') — 색은 밑변 광원만 갖는다'); }
+    // ② 밑변 광원: 활성은 붉고, 하위는 중립. ::after 한 겹이 단일 소스다
+    const bar=el=>getComputedStyle(el,'::after').backgroundImage;
+    const isRed=t=>[...t.matchAll(/rgba?\((\d+),\s*(\d+),\s*(\d+)/g)].some(m=>+m[1]>=180 && +m[2]<=110 && +m[3]<=110);
+    assert(isRed(bar(pri)),'활성 버튼의 밑변 광원이 붉지 않음: '+bar(pri).slice(0,70));
+    assert(!isRed(bar(sub)),'하위 버튼의 밑변까지 붉다 — 위계가 안 갈린다');
+    // ③ 비활성 = 볼록 ↔ 오목이 통째로 뒤집힌다(윗변 하이라이트가 사라지고 위에서 그림자가 들어온다)
+    // ⚠ renderSoloDiff 가 상세를 통째로 다시 그린다 → 값은 **다시 그리기 전에** 재 둘 것
+    //    (떨어져 나간 노드에 getComputedStyle 을 걸면 빈 값이 와서 어떤 비교도 통과한다)
+    const onSh=getComputedStyle(pri).boxShadow, onLum=lum(rgb(getComputedStyle(pri).color));
+    if(li>=0){ sdPick(li); await sleep(70);
+      const off=$('sdGo'); assert(off.disabled,'잠긴 난이도인데 버튼이 열려 있음');
+      assert(getComputedStyle(off).boxShadow!==onSh,'비활성인데 볼록 그림자가 그대로다(오목으로 뒤집혀야 한다)');
+      assert(!isRed(bar(off)),'비활성인데 밑변이 아직 붉다');
+      assert(lum(rgb(getComputedStyle(off).color))<onLum,'비활성 글자가 활성보다 어둡지 않음'); }
+    // ④ 방 만들기도 **같은 컴포넌트**를 쓴다 — 확정/취소 짝이 화면마다 달라지면 안 된다
+    closeSoloDiff(); await sleep(40); openRooms(); await sleep(60); createRoom(); await sleep(120);
+    const cGo=document.querySelector('#createPanel .actBtn.pri'), cNo=document.querySelector('#createPanel .actBtn.sub');
+    assert(cGo && cNo,'방 만들기가 공용 액션 버튼을 안 씀');
+    assert(!document.querySelector('.cpMake,.cpCancel'),'옛 확정/취소 클래스가 남아 있음');
+    assert(cGo.getBoundingClientRect().width > cNo.getBoundingClientRect().width,'주 동작이 취소보다 넓지 않음');
+    closeCreate(); await sleep(40);
+    return '면 중립 · 광원으로만 위계 ok'; });
+  await step('난이도 선택: 스테퍼 + 상세 · 잠긴 것은 고를 수 있고 시작만 막힌다', async ()=>{
+    skipIf(typeof openSoloDiff!=='function','난이도 선택 없음');
+    openMapSelect(); await sleep(60); _selMap=USEMAPS.nemo; openSoloDiff(); await sleep(150);
+    // 상단 = **스테퍼**(◀ 이름 ▶ + 점). 화살표는 공용 .arwBtn 이고 옛 방식들은 되살아나면 안 된다
+    const nav=$('sdNav');
+    assert(!nav.querySelector('.pdSeg'),'난이도가 아직 탭 띠(.pdSeg)임 — 스테퍼로 바뀌었다');
+    assert(!document.querySelector('.soloDiffBtns .moDiffBtn'),'옛 난이도 목록이 남아 있음');
+    const prev=$('sdPrev'), next=$('sdNext');
+    assert(prev&&next&&prev.classList.contains('arwBtn')&&next.classList.contains('arwBtn'),
+      '◀▶ 가 공용 .arwBtn 이 아님');
+    assert(prev.querySelector('.arwIco')&&next.querySelector('.arwIco'),'화살표 글리프가 안 채워짐(paintArrows 누락)');
+    const dots=[...nav.querySelectorAll('.sdDots i')];
+    assert(dots.length===DIFFICULTY_ORDER.length,'점이 난이도 수와 다름: '+dots.length);
+    // 이름은 스테퍼가 갖는다 — 상세에 또 쓰면 같은 글자가 두 번 나온다
+    const stx=nav.querySelector('.sdStepTx');
+    assert(stx && stx.scrollWidth<=stx.clientWidth+0.5,'스테퍼 이름이 잘림: '+(stx&&stx.textContent));
+    assert(!$('sdDet').querySelector('.sdName'),'난이도 이름이 상세에 중복으로 남아 있음');
+    // 양 끝에서는 멈춘다(순환하지 않는다)
+    sdPick(0); await sleep(60);
+    assert($('sdPrev').disabled && !$('sdNext').disabled,'첫 난이도에서 ◀ 가 안 잠김');
+    sdPick(DIFFICULTY_ORDER.length-1); await sleep(60);
+    assert($('sdNext').disabled && !$('sdPrev').disabled,'마지막 난이도에서 ▶ 가 안 잠김');
+    sdStepBy(1); await sleep(40); assert(_sdPick===DIFFICULTY_ORDER[DIFFICULTY_ORDER.length-1],'끝에서 ▶ 가 순환함');
+    sdStepBy(-1); await sleep(60);
+    assert(_sdPick===DIFFICULTY_ORDER[DIFFICULTY_ORDER.length-2],'◀ 가 한 칸 안 움직임');
+    assert(nav.querySelectorAll('.sdDots i.on').length===1,'켜진 점이 하나가 아님');
+    // 잠긴 난이도 = 고를 수는 있고(무엇이 필요한지 보여 준다) 시작만 막힌다
+    const li=DIFFICULTY_ORDER.findIndex(d=>!diffUnlocked(d));
+    if(li>=0){ sdPick(li); await sleep(80);
+      assert($('sdGo').disabled,'잠긴 난이도인데 시작 버튼이 열려 있음');
+      assert($('sdDet').querySelector('.sdLock'),'잠금 사유가 안 보임'); }
+    // 해금된 난이도 = 시작 버튼이 열리고 상세에 수치가 나온다
+    sdPick(0); await sleep(80);
+    assert(!$('sdGo').disabled,'해금된 난이도인데 시작 버튼이 잠김');
+    assert($('sdDet').querySelectorAll('.sdStat').length===2,'적 HP·포인트 두 지표가 안 나옴');
+    assert($('sdDet').querySelector('.sdMap b').textContent===USEMAPS.nemo.name,'상세 머리에 고른 맵이 없음');
+    // ⚠ 상세 본문(이름·수치·설명)이 시작 버튼 위로 흘러 잘렸던 적이 있다 — 모든 난이도에서 담기는지 본다
+    for(let i=0;i<DIFFICULTY_ORDER.length;i++){ sdPick(i); await sleep(50);
+      const body=$('sdDet').querySelector('.sdBody'), go=$('sdGo');
+      assert(body.scrollHeight<=body.clientHeight+0.5,
+        DIFFICULTY_ORDER[i]+' 상세 본문이 넘침: '+body.scrollHeight+'>'+body.clientHeight);
+      assert(body.getBoundingClientRect().bottom<=go.getBoundingClientRect().top+0.5,
+        DIFFICULTY_ORDER[i]+' 본문이 시작 버튼과 겹침'); }
+    // ⛔ 시작 버튼 색은 **난이도를 따라가지 않는다** — 공용 액션 버튼(.actBtn.pri) 한 색으로 고정
+    assert($('sdGo').classList.contains('actBtn')&&$('sdGo').classList.contains('pri'),
+      '시작 버튼이 공용 액션 버튼(.actBtn.pri)을 안 씀');
+    { const face=[]; for(let i=0;i<DIFFICULTY_ORDER.length;i++){ sdPick(i); await sleep(50);
+        const g=$('sdGo'); if(!g.disabled) face.push(getComputedStyle(g).backgroundImage); }
+      assert(face.length && face.every(f=>f===face[0]),'난이도마다 시작 버튼 색이 다름'); }
+    // 무한 모드는 난이도가 아니다 — 스테퍼가 아니라 별도 줄
+    assert(!visible($('sdInf'))||$('sdInf').textContent.indexOf('무한')>=0,'무한 모드 줄이 이상함');
+    closeSoloDiff(); await sleep(40);
+    return '스테퍼 '+dots.length+'단 · 잠금 분리 ok'; });
   // ⚙ 게임 밖 설정(유즈맵 ☰ → .appCtx) — 게임 안 설정과 **같은 카드**를 문맥만 바꿔 쓴다
+  // ══ 게임 진입 로딩 = 카드 덱(H안). 한 화면이 협동·팀전·개인 셋을 다 맡는다 ══
+  await step('게임 진입 로딩: 카드 덱 · 팀은 윗변 · 준비는 밑변 · 혼자면 덱이 없다', async ()=>{
+    skipIf(typeof gameStartCountdown!=='function','시작 화면 없음');
+    const op=$('opening'), root=$('gsRoot');
+    assert(root,'게임 진입 로딩(#gsRoot)이 없음');
+    const freeze=()=>{ _gsClearTimers(); clearTimeout(op._cdEnd); clearTimeout(op._holdT); op._holdT=null; };
+    const restore=()=>{ freeze(); op.classList.add('hide'); op.classList.remove('counting','ready','timing','warp');
+      G.activePlayers=[1]; G.loading=false; };
+    // ① 협동 8인 — 4장씩 두 줄, 준비한 카드만 .rdy
+    openMapSelect(); await sleep(60);
+    _selMap=USEMAPS.nemo; _selDiff='easy';
+    G.activePlayers=[1,2,3,4,5,6,7,8]; G.myPlayer=1; G.playerNames={2:'호랑이',3:'까치',4:'별똥',5:'무쇠',6:'파랑',7:'노을',8:'단비'};
+    gameStartCountdown(); await sleep(120); freeze();
+    _gsReady=new Set([1,2,4,5,7]); _renderGsPlayers(); await sleep(60);
+    assert(!root.classList.contains('solo') && !root.classList.contains('teamed'),'협동인데 solo/teamed 가 붙음');
+    assert($('gsDeck').querySelectorAll('.gsRow').length===2,'협동 덱이 4장씩 두 줄이 아님');
+    assert($('gsDeck').querySelectorAll('.gsCd').length===8,'카드 수가 인원과 다름');
+    assert($('gsDeck').querySelectorAll('.gsCd.rdy').length===5,'준비한 카드 수가 다름');
+    // 초상은 **공용 avatarHTML** 이다 — 카드용 초상을 새로 만들지 말 것
+    assert($('gsDeck').querySelector('.gsCd .fAva'),'카드 초상이 공용 avatarHTML 산출물이 아님');
+    // 배지 = 난이도. ⛔ 초록이면 안 된다(초록은 준비 완료 전용)
+    { const bd=$('gsLine').querySelector('.gsBd');
+      assert(bd && bd.textContent===DIFFICULTY.easy.name,'난이도 배지가 안 나옴');
+      const c=(getComputedStyle(bd).color.match(/\d+/g)||[]).map(Number);
+      assert(!(c[1]>c[0]+40 && c[1]>c[2]+40),'난이도 배지가 초록이다 — 초록은 준비 완료 전용'); }
+    assert($('gsCntN').textContent.replace(/\s/g,'')==='5/8','준비 인원 표기가 다름: '+$('gsCntN').textContent);
+    // 세로 배치 = 위 덩어리(이름·덱)를 남는 높이의 가운데로. 맨 위에 붙어 있으면 아래가 통째로 빈다
+    { const hd=document.querySelector('.gsHead').getBoundingClientRect();
+      assert(hd.top>80,'머리줄이 화면 맨 위에 붙음 — 아래가 비어 보인다'); }
+    // 배경 = 유즈맵 키 아트. ⚠ .gsWrap>* 규칙에 눌려 흐름으로 돌아오면 높이가 0이 된다
+    { const art=$('gsArt'); assert(getComputedStyle(art).position==='absolute','키 아트가 absolute 가 아님(배경이 안 보인다)');
+      assert(/nemo/.test(art.style.backgroundImage||''),'키 아트가 안 실림: '+(art.style.backgroundImage||'')); }
+    // ② 팀전 4v4 — 팀마다 한 줄 · 팀 색은 **윗변**, 준비는 **밑변**(자리가 달라 안 섞인다)
+    op.classList.add('hide'); _selMap=USEMAPS.cpu; _lobbyMax=8;
+    gameStartCountdown(); await sleep(120); freeze();
+    _gsReady=new Set([1,2,4,5,7]); _renderGsPlayers(); await sleep(60);
+    assert(root.classList.contains('teamed'),'팀 맵인데 .teamed 가 없음');
+    assert($('gsDeck').querySelectorAll('.gsTlb').length===2,'팀 라벨이 둘이 아님');
+    assert($('gsDeck').querySelector('.gsT1 .gsRow').children.length===4,'1팀이 4명이 아님');
+    { const cd=$('gsDeck').querySelector('.gsT1 .gsCd'), top=getComputedStyle(cd,'::before'), bot=getComputedStyle(cd,'::after');
+      assert(top.content!=='none','팀전인데 카드 윗변(팀 색)이 없음');
+      const rdy=$('gsDeck').querySelector('.gsT1 .gsCd.rdy');
+      assert(rdy && getComputedStyle(rdy,'::after').content!=='none','준비한 카드에 밑변(초록)이 없음'); }
+    assert($('gsLine').querySelector('.gsBd.vs'),'팀전인데 대진 배지(4 vs 4)가 없음');
+    // ③ 개인 — 덱이 없고 하단이 로딩 진행률로 바뀐다('준비'는 혼자서 뜻이 없다)
+    op.classList.add('hide'); _selMap=USEMAPS.nemo; G.activePlayers=[1];
+    gameStartCountdown(); await sleep(160); freeze();
+    assert(root.classList.contains('solo'),'혼자인데 .solo 가 없음');
+    assert(!$('gsDeck').querySelector('.gsCd'),'혼자인데 카드 덱이 남아 있음');
+    assert($('gsCntLb').textContent==='LOADING','개인 플레이 하단이 준비 표기 그대로임');
+    assert(/%$/.test($('gsCntN').textContent),'개인 플레이인데 진행률이 아님: '+$('gsCntN').textContent);
+    assert($('opStartTxt').textContent==='전투 시작','개인 플레이 버튼이 아직 준비 완료임');
+    // ⚠ 덱이 빠지면 auto 가 위 하나뿐이라 이름이 특징 바로 위에 달라붙는다 — 아래쪽에도 auto 를 줘 막았다
+    { const hd=document.querySelector('.gsHead').getBoundingClientRect(),
+            fe=document.querySelector('.gsFeat').getBoundingClientRect();
+      assert(hd.top>80,'개인 플레이 머리줄이 화면 맨 위에 붙음');
+      assert(fe.top-hd.bottom>80,'개인 플레이 머리줄이 특징에 달라붙음(아래쪽 auto 가 빠졌다)'); }
+    // 버튼은 공용 액션 버튼이다 — 이 화면 전용 버튼을 만들지 말 것
+    assert($('opStart').classList.contains('actBtn')&&$('opStart').classList.contains('pri'),'시작 버튼이 공용 .actBtn.pri 가 아님');
+    assert($('opQuit').classList.contains('actBtn'),'나가기가 공용 .actBtn 이 아님');
+    restore(); await sleep(40);
+    return '협동 8 · 팀전 4v4 · 개인 진행률 ok'; });
   await step('유즈맵 설정: 프로필 머리줄 · 붉은 선 · 44px ✕ · 중립 ON', async ()=>{
     openMapSelect(); await sleep(60); openAppSettings(); await sleep(120);
     const card=document.querySelector('#settingsPop .setCard');
@@ -3439,7 +3828,7 @@ async function groupLobby(){
       assert(card,'파티 찾기가 방 찾기 카드(.rmCard)를 안 씀');
       assert(card.querySelector('.rmHead .rmTitle').textContent==='파티 찾기','머리 제목이 다름');
       assert(card.querySelector('.rmNum input') && card.querySelector('#pbList.rmList'),'방 찾기의 입력줄·목록 규격이 아님');
-      assert(card.querySelectorAll('.rmBtns .rmSq').length===2 && card.querySelector('.rmBtns .rmQuick'),'하단 버튼 4칸 규격이 아님');
+      assert(card.querySelectorAll('.rmBtns .actBtn.sq').length===2 && card.querySelector('.rmBtns .actBtn.pri'),'하단 버튼 4칸 규격이 아님(공용 .actBtn)');
       const rows=[...card.querySelectorAll('.roomItem')];
       assert(rows.length===PB_DEMO.length,'게시판 목록이 안 그려짐: '+rows.length);
       assert(rows.some(r=>r.classList.contains('locked') && /가득참/.test(r.textContent)),'가득 찬 파티가 참가 불가로 안 막힘');
