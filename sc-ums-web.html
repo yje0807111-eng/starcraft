@@ -6540,10 +6540,21 @@ function renderHome(){ try{
       return hmUpCardHTML({ key:k, ico:hbUpgIco(k), name:hmUpgName(U.name), off:hmUpgOff(k),
         lock:!own, val:_hd.v, next:_hd.n, lv:_hd.l, cost:_hd.c }); }).join('');
     hmUpgBindHold(); }
+  hmUpgSnapGrid();
   renderHomeStats();
   const card=document.querySelector('#homeScreen .hmUpg');
   if(card) card.classList.remove('down');   // 접기 폐지 — 옛 저장에 upgDown 이 남아 있어도 늘 펴 둔다
 }catch(e){} }
+// 칸 폭을 정수로 못 박는다 — 1fr 로 두면 (안쪽폭 - 간격)이 홀수일 때 칸이 185.5px 같은 반 픽셀이 되고,
+// 세로 테두리가 기기 픽셀 격자에 안 맞아 한쪽 변만 두 픽셀로 번진다(왼쪽 칸의 오른쪽 변만 흐려 보였다).
+// justify-content:start 로 남는 소수는 오른쪽 끝 여백으로 보낸다 — 가운데로 나누면 격자 전체가 다시 반 픽셀로 밀린다.
+function hmUpgSnapGrid(){ const g=document.getElementById('hmUpgGrid'); if(!g) return;
+  const cs=getComputedStyle(g), gap=parseFloat(cs.columnGap)||0;
+  const inner=g.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  if(!(inner>0)) return;
+  const col=Math.floor((inner-gap)/2); if(!(col>0)) return;
+  g.style.justifyContent='start';
+  g.style.gridTemplateColumns=col+'px '+col+'px'; }
 // 레벨업으로 받은 스탯 포인트 — 남았을 때만 줄이 뜬다. 배분은 공용 profAllocStat()(마을 광장과 같은 함수).
 // 진화·환생 신호 — 하단 패널의 줄이 아니라 상단 성장 버튼의 ! 배지.
 //   (줄로 두면 조건이 찰 때마다 패널 높이가 흔들렸다 — 2026-08-14 이동)
@@ -8492,6 +8503,7 @@ function hbResize(){ const S=_hb, cv=S.cv, w=cv.clientWidth||1, h=cv.clientHeigh
   { const bar=document.getElementById('hbBar'), up=document.querySelector('#homeScreen .hmUpg');
     if(bar&&up){ const r=up.getBoundingClientRect(), pr=cv.getBoundingClientRect();
       bar.style.bottom=Math.round(pr.bottom-r.top+8)+'px'; } }
+  if(typeof hmUpgSnapGrid==='function') hmUpgSnapGrid();   // 폭이 바뀌면 칸 폭도 다시 정수로 잡는다
   const box=cv.getBoundingClientRect();
   const cur=document.getElementById('curBar'), up=document.querySelector('#homeScreen .hmUpg');
   const curB=(cur && !cur.classList.contains('hide')) ? cur.getBoundingClientRect().bottom-box.top : 0;

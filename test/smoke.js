@@ -1426,6 +1426,21 @@ async function groupLobby(){
       if(!!hbHunt().skAuto!==was) hbToggleAuto(); }
     _hb.skT.nova=0; hbSkCdPaint();
     return '트레이 1판 · 칸=업그레이드 카드 규격 · 자동 칩 판 밖 · 바 '+w8.toFixed(0)+'→'+w2.toFixed(0)+'px'; });
+  // 📐 업그레이드 격자 — 칸 변이 반 픽셀에 놓이면 세로 테두리가 한쪽만 두 픽셀로 번진다.
+  //    (실측: 안쪽폭 376 - 간격 5 = 371 을 둘로 나눠 185.5px → 왼쪽 칸의 오른쪽 변만 흐렸다)
+  await step('업그레이드 격자: 칸 폭이 정수 — 테두리가 한쪽만 번지지 않는다', async()=>{
+    skipIf(typeof hmUpgSnapGrid!=='function','격자 스냅 없음');
+    openHome(); await sleep(90); renderHome();
+    const g=$('hmUpgGrid'), cs=[...g.querySelectorAll('.hmUp')].slice(0,4);
+    assert(cs.length>=2,'업그레이드 칸이 2개 미만: '+cs.length);
+    const frac=v=>Math.abs(v-Math.round(v));
+    for(const c of cs){ const r=c.getBoundingClientRect();
+      assert(frac(r.left)<0.01 && frac(r.right)<0.01,
+        '칸 변이 정수 자리가 아님(반 픽셀이면 한쪽 테두리만 번진다): left '+r.left.toFixed(3)+' · right '+r.right.toFixed(3));
+      assert(frac(r.width)<0.01,'칸 폭이 정수가 아님: '+r.width.toFixed(3)); }
+    const ws=new Set(cs.map(c=>Math.round(c.getBoundingClientRect().width)));
+    assert(ws.size===1,'칸마다 폭이 다름: '+[...ws].join(' / '));
+    return '칸 '+cs.length+'개 · 폭 '+[...ws][0]+'px 정수'; });
   // 🧱 기지 격자 — 타일이 단일 소스. 저장 왕복 · 겹침/범위 · 봉쇄 금지 · 옛 개수형 이관.
   await step('기지 격자: 배치·저장 왕복·겹침/범위·봉쇄 금지', async()=>{ skipIf(typeof hbPlaceStruct!=='function','기지 격자 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
