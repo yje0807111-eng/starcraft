@@ -187,6 +187,7 @@ const SKILL_ICO={ nuke:'bomb' };
 | `upgrades/` | `up_<키>.webp` | `UPG_ICO` — 연구 73종이 23장을 공유 |
 | `buildings/` | `bld_<키>.webp` | `TECH_TREE` 건물 키 |
 | `auto/` | `auto_<키>.webp` | `AUTO_SHEET_DEFS` — unit·combine·energy·bossdeploy·place·rally |
+| `upgrades/` | `up_mine.webp` | 오토배틀 **강화 > 광산** — `UPG_ICO` 를 안 거치고 `_icoImg('upgrades','up_mine')` 로 직접 부른다 |
 | 루트 | `res_<키>.webp` | `resIco()` — 미네랄·가스·젬·인구 |
 
 **폴백:** 파일이 없으면 `_icoFail()` 이 공용 라인 SVG(`pIco`)로 바꿔 넣는다.
@@ -201,3 +202,55 @@ const SKILL_ICO={ nuke:'bomb' };
 2. **시점이 옆칸과 다르면** → 블록을 잘못 골랐다(스킬에 B를 쓴 경우)
 3. **32px에서 뭉개지면** → 덩어리가 많은 것. SUBJECT를 줄여 다시 뽑는다
 4. **톤이 옆칸과 다르면** → 참조 판 이미지를 안 붙였거나 모델이 판을 다시 그린 것
+
+---
+
+# 오토배틀 하단 섹션 (2026-08-19)
+
+칸마다 그림이 어디서 오는지. **뜻이 같으면 새로 만들지 않고 빌린다.**
+
+| 칸 | 파일 | 상태 |
+|---|---|---|
+| 건설 > 본부·보급소·병영·훈련소 | `buildings/bld_*.webp` | 있음 |
+| 강화 > 공격력 | `upgrades/up_melee_atk.webp` | **빌림**(사냥터 `HB_UPG.atk` 와 같은 파일) |
+| 강화 > 체력 | `upgrades/up_carapace.webp` | **빌림**(사냥터 `HB_UPG.hp`) |
+| 강화 > 광산 | `upgrades/up_mine.webp` | 있음(곡괭이 · 2026-08-19 추가) |
+| 특수무기 > 폭탄 | `skills/sk_bomb.webp` | 빌림 |
+| 특수무기 > EMP | `skills/sk_emp.webp` | 빌림 |
+| 특수무기 > 궤도 포격 | `skills/sk_yamato.webp` | 빌림(조준환 = 지점을 지정해 때린다) |
+| 특수무기 > 재생 필드 | `skills/sk_heal.webp` | 빌림 |
+
+> 특수무기 4종은 **전부 기존 스킬 아이콘을 빌린다** — 새로 뽑지 않았다.
+> 고른 근거: 폭탄=둥근 폭탄 그대로 · EMP=이름이 같은 파일 · 재생 필드=굵은 십자(회복) ·
+> 궤도 포격=**조준환**(`sk_yamato`, 전함 주포 = 대구경 원거리 포격이라 뜻도 맞고 폭탄의 둥근 실루엣과 안 겹친다).
+>
+> **계열은 '무엇을 그리느냐'가 아니라 '옆칸이 무엇이냐'로 고른다.**
+
+### SUBJECT — 광산 (블록 B · `upgrades/up_mine.webp`)
+```
+a heavy mining pickaxe — one straight handle bar of constant width running the full
+length of the icon, and one crosswise head mounted across its upper end; the head is two
+arms of exactly the same length and thickness sweeping out from the handle in a shallow
+even arc, each arm ending in a blunt square-cut point. The mining mark
+```
+
+### ⚠ 시트를 매 프레임 다시 그리면 아이콘이 못 뜬다
+오토배틀의 보급·관전 시트는 `strikeFrame` 이 **0.22초마다** `techPanelRender()` 를 부른다.
+DOM 을 통째로 새로 만들면 그때마다 `<img>` 가 새로 생겨 **디코드가 끝나기 전에 사라진다** — 칸이 빈칸으로 보였다.
+`_stkSheetSig()` 로 서명을 재고 같으면 그대로 둔다(전투 화면 호스트 `strikeRenderSelInfo` 와 같은 규약).
+새 라이브 시트를 만들 때도 **반드시 서명 가드를 붙일 것**. 스모크가 '값이 그대로면 안 그림 / 값이 바뀌면 그림' 양쪽을 검사한다.
+
+### PNG → WebP 변환(이 저장소 환경)
+`sharp` 가 없어도 된다 — 크로미엄 캔버스로 변환한다. 512~1024 PNG → **128×128 · q0.82 · 알파 없음**:
+```bash
+node test/png2icon.mjs <입력.png> assets/icons/<폴더>/<이름>.webp
+```
+
+### 배선은 이미 끝나 있다
+`_stkUpgModel` / `_stkWpnIco` 가 위 경로를 부른다 — **파일을 폴더에 넣기만 하면 그 자리가 교체된다.**
+없는 동안은 `_icoFail` 이 이모지(⛏ · ☄)로 되돌리므로 칸이 비지 않는다.
+
+> ⚠ **우상단 배지(`.cgMeta`)는 `z-index:2`** 여야 한다. 배지는 `.cgPro` 의 형제이고 초상 이미지(`.icoImg`)도
+> `z-index:1` 이라, 같은 층이면 트리 순서가 늦은 초상이 이겨 **배지가 통째로 사라진다**(실제로 그랬다).
+> 스모크가 배지 중심의 최상위 요소를 검사한다.
+

@@ -4858,13 +4858,37 @@ async function groupGame(){
       { const n=[...document.querySelectorAll('#btSheetBody .cgSlot')].map(e=>{ const t=e.querySelector('.cgName');
           return t?t.textContent.trim():(e.classList.contains('empty')?'':'?'); });
         assert(n[0]==='공격력' && n[1]==='체력' && n[3]==='광산','강화 칸 자리가 다름: '+JSON.stringify(n)); }
+      // 아이콘은 사냥터 업그레이드 파일을 그대로 빌린다(뜻이 같으면 새로 만들지 않는다)
+      { const src=[...document.querySelectorAll('#btSheetBody .cgSlot .cgPro img')].map(e=>e.getAttribute('src'));
+        assert(src.some(x=>/up_melee_atk/.test(x)),'공격력이 사냥터 아이콘을 안 씀: '+JSON.stringify(src));
+        assert(src.some(x=>/up_carapace/.test(x)),'체력이 사냥터 아이콘을 안 씀: '+JSON.stringify(src));
+        assert(src.some(x=>/up_mine/.test(x)),'광산이 곡괭이 아이콘을 안 씀: '+JSON.stringify(src)); }
+      // ⚠ 값이 그대로면 시트를 다시 그리지 않는다 — strikeFrame 이 0.22초마다 부르는데 매번 DOM 을 새로
+      //    만들면 <img> 가 계속 새로 생겨 아이콘이 화면에 뜰 틈이 없다(실제로 빈칸으로 보였다).
+      { const body=$('btSheetBody'); const mark=body.querySelector('.cgSlot'); assert(mark,'강화 칸이 없음');
+        mark._keep=1;
+        for(let i=0;i<5;i++) techPanelRender();
+        assert((body.querySelector('.cgSlot')||{})._keep===1,'값이 그대로인데 시트를 다시 그렸음(아이콘이 못 뜬다)');
+        STK.me.gold+=1000; techPanelRender();          // 값이 바뀌면 반드시 다시 그린다
+        assert((body.querySelector('.cgSlot')||{})._keep!==1,'값이 바뀌었는데 시트가 안 갱신됨'); }
+      // ⚠ 우상단 배지가 초상 이미지에 가려지면 안 된다 — 둘 다 .cgPro 형제/자식이라 z-index가 같으면 이미지가 이긴다.
+      //   ⚠ 판 위에 로딩 오버레이가 떠 있을 수 있으니 시트 안쪽 요소만 추려서 본다.
+      { const host=$('btSheetBody'), b=host.querySelector('.cgSlot .cgMeta'); skipIf(!b,'배지 없음');
+        const r=b.getBoundingClientRect();
+        if(r.width>2){ const top=document.elementsFromPoint(r.left+r.width/2, r.top+r.height/2).find(e=>host.contains(e));
+          assert(top && (top===b || b.contains(top)),'배지가 초상 이미지에 가려짐: '+(top?(top.className||top.tagName):'none')); } }
       // ③ 특수무기 = [‹][구입][사용] · 구입 그리드는 표 그대로
       strikeSwitchTab('Upgrade'); await sleep(160);
       { const c=cells(); assert(c[0].classList.contains('navBk'),'특수무기에 뒤로가기 칸이 없음');
         assert(c.slice(1).map(e=>e.textContent.trim()).join('/')==='구입/사용','특수무기 하위가 다름');
         assert(G.tab==='Main','특수무기는 화면을 옮기지 않는다(전장 유지): '+G.tab);
         const n=names();
-        for(const w of STK_WEAPONS) assert(n.indexOf(w.name)>=0,'구입 그리드에 '+w.name+'이 없음: '+JSON.stringify(n)); }
+        for(const w of STK_WEAPONS) assert(n.indexOf(w.name)>=0,'구입 그리드에 '+w.name+'이 없음: '+JSON.stringify(n));
+        // 특수무기 4종은 전부 기존 스킬 아이콘을 빌린다 — 이모지로 남아 있으면 안 되고, 넷이 서로 달라야 한다
+        const src=[...document.querySelectorAll('#unitCmd .cgSlot .cgPro img')].map(e=>e.getAttribute('src'));
+        assert(src.length===STK_WEAPONS.length,'특수무기 칸에 그림이 빠짐: '+src.length+'/'+STK_WEAPONS.length+' '+JSON.stringify(src));
+        assert(src.every(x=>/\/skills\/sk_/.test(x)),'스킬 아이콘이 아닌 그림이 섞임: '+JSON.stringify(src));
+        assert(new Set(src).size===src.length,'특수무기 둘이 같은 그림을 씀: '+JSON.stringify(src)); }
       // ④ 사용 = **구입과 같은 자리에 같은 순서로**. 없는 것은 빈 칸이 아니라 비활성(dim).
       gtabSub('use'); await sleep(140);
       { const n=names();
