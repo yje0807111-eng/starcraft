@@ -19064,7 +19064,7 @@ function techEggModel(list){ const e=list[0], id=e.id, race=G.tech.race, spec=te
   const rn=_techRealName(race,id)||id;
   const base=techUnitPanelModel([{type:'unit',uid:id}]);   // 그 유닛의 카드 그리드를 잠금 상태로 표시
   const items=(base.items||[]).map(it=>it?Object.assign({}, it, { state:'dim', act:'', sel:false }):null);
-  return { mode:'prod', title:rn+' <span class="nsub">(진화중)</span>', icon:_techUnitPortrait(id), hpsh:_cgHpShDual(spec.hp,spec.sh,(typeof U!=='undefined'&&U[id]&&U[id].energy)||0), sub:'', items,
+  return { mode:'prod', title:rn+' <span class="nsub">(진화중)</span>', icon:_techUnitPortrait(id), hpsh:_cgHpShDual(spec.hp,spec.sh,0), sub:'', items,
     info:{ eb:'진화', hideName:true, stats:_techUnitStatList(spec,id), cr:0, en:0 } }; }
 // 라바 지정 시 생산 패널 — 그리드=생성 가능 유닛(카드 1탭=라바 1마리 소모)
 function techLarvaProdModel(list){ const hb=techGetBldg('swarm','hatchery')||{produces:[]};
@@ -20054,8 +20054,8 @@ function techBldgPlainModel(b, e){ const race=G.tech.race, bs=techBldgSpec(race,
   if(_amk){ const a=TECH_AMMO[_amk], cap=_techAmmoCap(_amk), have=(e?((e._chc||0)+((e._chq||[]).length)):0);
     const aitems=[{ pro:pIco(a.ico), sn:a.label+' 장전', cr:a.m, en:a.g, meta:have+'/'+cap, metaCls:'lv', state:(have>=cap||!_techAfford(a.m,a.g))?'dim':'ok', act:'onclick="techChargeAmmo(event,\''+_amk+'\')"' }];
     return { mode:'info', title:b.name, icon:_techBldgPortrait(b.k, b.ico), hpsh:_cgHpShStr(bs.hp,bs.sh), sub:'☢️ 단일 장전(최대 1)', items:aitems, info:_techAmmoInfo(e||{}, _amk) }; }
-  let _gasHp='';
-  if(b.gas){ const tot=TECH_GAS_START, rem=_techGasRemain(); _gasHp='<span class="shv" style="color:#7ee081">⚡ '+(G.tech.inf?'∞':(rem+' / '+tot))+'</span>'; }   // ⚡ 에너지 총량/남은 = 체력 옆(하단 stats 아님)
+  // ⚡ 에너지 잔량은 **왼쪽 정보 구역**이다 — 머리줄은 제목 + HP/실드 한 줄까지가 한계다(넘치면 그리드가 낮아진다).
+  if(b.gas) stats.push(['에너지 잔량', G.tech.inf?'∞':(_techGasRemain()+' / '+TECH_GAS_START)]);
   const _evc=_techEvolveCards(b, e); let _pit=[];   // 🧬 진화 카드 = 3·4번 슬롯(크립 콜로니→성큰/스포어)
   if(_evc.length){ _pit=[null,null]; for(let i=0;i<_evc.length;i++) _pit[2+i]=_evc[i]; }
   const items=_techWithAddons(_pit, b.k);   // 🔗 부속 카드 + 진화 카드
@@ -20065,7 +20065,8 @@ function techBldgPlainModel(b, e){ const race=G.tech.race, bs=techBldgSpec(race,
   const _def=_techIsDef(b.k);
   const _bMx=(typeof BLDG_EN!=='undefined'&&BLDG_EN[b.k])||0;   // 🏢 건물 마나(컴셋·쉴드배터리) = 실시간 현재/최대(선택 당시 고정 아님)
   const _bEn=(_bMx>0)?((e&&e.en!=null)?(Math.round(e.en)+'/'+Math.round(e.maxEn||_bMx)):(_bMx+'/'+_bMx)):0;
-  return { mode:'info', title:b.name, icon:_techBldgPortrait(b.k, b.ico), hpsh:_cgHpShStr(bs.hp,bs.sh,_bEn)+_gasHp, sub:(b.gas?'⛽ 에너지 채취 건물':(b.supply?'👤 인구 공급':(_def?'🛡 방어 건물':'건물 정보'))), items, topRight:_techBldgTR(b),
+  if(_bMx>0) stats.push(['마나', _bEn]);   // 🔮 마나도 왼쪽 정보 구역(유닛 프로필과 같은 규약)
+  return { mode:'info', title:b.name, icon:_techBldgPortrait(b.k, b.ico), hpsh:_cgHpShStr(bs.hp,bs.sh), sub:(b.gas?'⛽ 에너지 채취 건물':(b.supply?'👤 인구 공급':(_def?'🛡 방어 건물':'건물 정보'))), items, topRight:_techBldgTR(b),
     info:{ eb:(_techSpawnCard(b.k)?'':_techBldgKind(b)+(b.detector?' (탐지)':'')), name:b.name, hideName:true, desc:_techBldgSummary(b), stats, cr:0, en:0 } }; }   // 프로필은 요약 한 줄(팝업은 섹션 포함 _techBldgDesc) · 오토배틀 배출 건물은 라벨 없이 배출 정보만
 // 💎⛽ 중립 자원(미네랄·가스 광산) 프로필 — 이름 + 하단 HP 자리에 잔량 표시
 function techResourceModel(res){ if(!res) return null;

@@ -5121,6 +5121,64 @@ async function groupSandbox(){
       const st0=_techUnitStatList({hp:100,atk:10,rng:5}, 'worker_human', null);
       assert(!st0.some(r=>r[0]==='마나'),'마나 없는 유닛에 마나 줄이 생김'); }
     return '머리줄 '+head.getBoundingClientRect().height.toFixed(0)+'px · 그리드 '+gB.toFixed(0)+'px'; });
+  // 위 규약이 **전 구역 모든 건물·유닛**에 걸렸는지 한 번에 훑는다. 화면을 하나씩 눌러 보는 대신
+  //   실제 디스패처(techPanelRender)와 실제 모델 빌더로 렌더해 머리줄만 검사한다.
+  await step('전 구역 프로필 감사: 머리줄 규약(건물·유닛 전부)', async()=>{
+    switchTab('Build', document.querySelector('.tab[data-tab="Build"]')); await sleep(300);
+    skipIf(!G.tech || typeof TECH_TREE==='undefined','건설 상태 없음');
+    const body=$('btSheetBody'), bad=[]; let n=0;
+    const keep={ race:G.tech.race, sel:G.tech.sel, selU:(G.tech.selU||[]).slice(), ents:(G.tech.ents||[]).slice(), strike:G.strike, stk:(typeof STK!=='undefined')?STK:null };
+    const check=(label)=>{ const g=body.querySelector('.cmdG'); if(!g) return; n++;
+      const nm=g.querySelector('.cgN'), hp=g.querySelector('.cgHpsh'), head=g.querySelector('.cgHead'), to=g.querySelector('.cgTopOut');
+      const H=head?head.getBoundingClientRect().height:0;
+      if(g.querySelector('.cgHpsh .env')) bad.push(label+': 마나가 머리줄에 있음');
+      if(head && head.querySelector('.cgGasAuto,.cgRally,.cgLift,.cgSelAll')) bad.push(label+': 조작 버튼이 머리줄 안');
+      if(to && to.getBoundingClientRect().bottom > g.getBoundingClientRect().top+0.5) bad.push(label+': 조작 버튼이 판 안');
+      if(nm&&hp){ const nr=nm.getBoundingClientRect(), hr=hp.getBoundingClientRect();
+        if(Math.min(nr.bottom,hr.bottom)-Math.max(nr.top,hr.top)<=0) bad.push(label+': 제목·HP 가 다른 줄');
+        if(hr.left<nr.right-1) bad.push(label+': HP 가 제목 왼쪽'); }
+      if(H>40) bad.push(label+': 머리줄이 두꺼움 '+H.toFixed(1)+'px'); };
+    try{
+      let eid=90000;
+      for(const race of Object.keys(TECH_TREE)){ G.tech.race=race;
+        for(const bd of (TECH_TREE[race].buildings||[])){
+          G.tech.ents=G.tech.ents.filter(e=>e.eid<90000);
+          const e={eid:++eid, type:'bldg', bk:bd.k, x:0.4, y:0.5, hp:100, maxHp:100, bt:0};
+          G.tech.ents.push(e); G.tech.selU=[]; G.tech.sel=e.eid; G.tech.sheet={open:true,sec:'ent'};
+          techPanelRender(); check(race+'/'+bd.k); }
+        for(const uid of [...new Set((TECH_TREE[race].buildings||[]).flatMap(bd=>(bd.produces||[]).map(p=>p.id)))]){
+          G.tech.ents=G.tech.ents.filter(e=>e.eid<90000);
+          const sp=(typeof techUnitSpec==='function'&&techUnitSpec(race,uid))||{hp:40};
+          const en=(typeof U!=='undefined'&&U[uid]&&U[uid].energy)||0;
+          const e={eid:++eid, type:'unit', uid:uid, x:0.4, y:0.5, hp:sp.hp||40, maxHp:sp.hp||40, maxSh:sp.sh||0, sh:sp.sh||0, maxEn:en, en:en};
+          G.tech.ents.push(e); G.tech.sel=null; G.tech.selU=[e.eid]; G.tech.sheet={open:true,sec:'ent'};
+          techPanelRender(); check(race+'/'+uid); } }
+      // 🥚 알(진화중) — 스웜 유닛으로 한 번
+      { const _r=G.tech.race; G.tech.race='swarm';
+        const eu=[...new Set((TECH_TREE.swarm.buildings||[]).flatMap(bd=>(bd.produces||[]).map(p=>p.id)))]
+          .find(id=>(typeof U!=='undefined'&&U[id]&&U[id].energy>0)) || 'zergling';
+        try{ renderCmdGrid(body, techEggModel([{type:'egg', id:eu}])); check('알/'+eu); }catch(e){}
+        G.tech.race=_r; }
+      // 네모 유닛 프로필(단일·다중)
+      const mk=(id,uid)=>({uid:uid||1,id:id,hp:50,maxHp:100,sh:0,maxSh:0,en:10,maxEn:(U[id]&&U[id].energy)||0,kills:2,x:.5,y:.5});
+      for(const id of Object.keys(U).slice(0,30)){ const u=mk(id);
+        renderCmdGrid(body, _mainSingleModel(u)); check('네모/'+id);
+        renderCmdGrid(body, _mainTypeModel([u,mk(id,2)], false)); check('네모×2/'+id); }
+      // 오토배틀 유닛·신전·강화·상점
+      if(typeof STK_UNITS!=='undefined'){ G.strike=true;
+        STK={ me:{name:'나',gold:900,mines:1,mineCost:200,atkLv:0,hpLv:0,wpn:{},units:[],base:{hp:100,max:100},sec:{hp:50,max:50}},
+              ai:{name:'컴퓨터',race:'terran'}, central:{hp:10,max:10}, supPage:'upg' };
+        for(const uid of Object.keys(STK_UNITS).slice(0,20)){
+          renderCmdGrid(body, _stkUnitModel({uid:'x',id:uid,hp:30,maxHp:60,dmg:5,rng:3,cd:1},'me')); check('직스/'+uid); }
+        renderCmdGrid(body, _stkTempleModel({hp:80,max:100},'신전')); check('직스/신전');
+        renderCmdGrid(body, _stkUpgModel()); check('직스/강화');
+        renderCmdGrid(body, _stkWpnBuyModel()); check('직스/구입'); }
+      assert(n>=100,'감사한 프로필이 너무 적음: '+n);
+      assert(!bad.length, bad.length+'건 위반:\n  '+bad.slice(0,10).join('\n  '));
+      return n+'개 프로필 규약 통과';
+    } finally { G.strike=keep.strike; if(typeof STK!=='undefined') STK=keep.stk;
+      G.tech.race=keep.race; G.tech.ents=keep.ents; G.tech.sel=keep.sel; G.tech.selU=keep.selU;
+      G.tech.sheet={open:false,sec:null}; try{ techPanelRender(); }catch(e){} } });
   // 관리자 건설 탭에서 병영을 고르면 레인저·화력병·의무병·저격수 카드가 실제로 그려져야 한다.
   await step('관리자 건설: 병영 생산 카드', async()=>{
     switchTab('Build', document.querySelector('.tab[data-tab="Build"]')); await sleep(400);
