@@ -1162,7 +1162,8 @@
   #playerProfile{display:none}#playerProfile.on{display:flex}   /* 관전 프로필 = 메인 프로필과 동일 커맨드 그리드 호스트 */
   #btSheet,#bpMain:has(#unitCmd.on),#bpMain:has(#defaultCmd:not(.hide)),#bpPlayers:has(#playerProfile.on){
     background:none;border:none;border-radius:0;
-    box-shadow:0 -8px 24px rgba(0,0,0,.55);padding:9px 8px 12px;gap:0}
+    box-shadow:0 -8px 24px rgba(0,0,0,.55);padding:9px 8px 12px;gap:0;
+    overflow:visible}   /* 프로필 중에는 .bp 의 overflow-y:auto 를 끈다 — 판 '밖'(위쪽)에 붙는 조작 버튼(.cgTopOut)이 잘려 사라진다. 프로필 호스트는 스스로 높이가 고정이라 바깥 스크롤이 필요 없다. */
   #bpPlayers{padding-top:9px}   /* 관전 탭 기본(플레이어 그리드) 하단 높이 = 메인/유닛뽑기/업그레이드(#bpMain 9px)와 통일 — .bp 기본 10px에서 1px 보정 */
   #btSheet.open{transform:translateY(0)}
   /* (제거) #btCardCtl — 하단 시트 접기(간소화/최소화) 버튼. 시트 높이는 이제 --bpBodyH 하나로 고정이다. */

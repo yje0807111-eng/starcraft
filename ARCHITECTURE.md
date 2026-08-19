@@ -129,6 +129,11 @@
   숫자로 재려면 그 토큰을 적용한 탐침 요소를 만들어 잴 것(스모크가 예전에 `parseFloat`=NaN 으로 검사를 통째로 건너뛴 적 있음). 다섯 섹션(메인 홈 `#defaultCmd` · 시트 `#unitCmd`/`#btSheetBody` ·
   플레이어 `#plGridWrap`)이 같은 변수를 쓰므로 값을 개별 규칙에 다시 박지 말 것 — 예전엔 시트 176px / 메인·플레이어 126px 이라
   탭을 옮길 때마다 판이 튀었다. 스모크 `하단 프로필: 다섯 섹션 같은 높이 …` 가 지킨다.
+  ⚠ **판 '밖'(위쪽)에 붙는 조작 버튼(`.cgTopOut` — 랠리·부양/착륙·전체지정)은 `.bp` 의 `overflow-y:auto` 에 통째로 잘린다.**
+  `overflow-y:auto` 는 `overflow-x` 까지 `auto` 로 만들기 때문에 위로 삐져나온 자식이 사라진다 — 화면엔 아무것도 안 보이는데
+  `getBoundingClientRect()` 는 멀쩡한 값을 돌려주므로 **위치만 재는 검사는 통과한다**(건설 시트에선 잘 보여서 더 늦게 발견됐다).
+  그래서 프로필을 띄운 동안은 `#bpMain:has(#unitCmd.on)` 계열 규칙이 `overflow:visible` 로 끈다(프로필 호스트는 높이가 고정이라 바깥 스크롤이 필요 없다).
+  스모크 `메인 프로필: 판 밖 조작 버튼이 잘리지 않는다 …` 는 위치가 아니라 **`elementFromPoint` 로 실제로 눌리는지**를 본다.
 
 ## 6. 3D 모듈 (window.M3D)
 - 진입: `M3D.sync(units, GW, GH, dt, sel, enemies, selEnemy, scaleMul, view)` — 유닛/적 모델 동기화+렌더. 그 외 `syncShop/syncBuild/syncBldg/syncBoss`(탭별), `portrait`, `hasModel`, `loadMapModels/keepOnlyMap`(맵별 VRAM), `dbg()/matDbg(uid)`(디버그).

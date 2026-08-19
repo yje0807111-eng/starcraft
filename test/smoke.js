@@ -4184,6 +4184,37 @@ async function groupGame(){
   await step('대량 스폰 30기', async()=>{ const c=spawnMany(30); await sleep(1200); assert(c>=30,'spawn '+c); return G.units.length+'기'; });
   await step('전체 선택 → 프로필 표시', ()=>{ G.sel=G.units.map(u=>u.uid); refreshSelCard();
     assert($('unitCmd').classList.contains('on'),'unitCmd off'); return G.sel.length+'기 선택'; });
+  // 🎛 판 '밖' 오른쪽 위에 붙는 조작 버튼(.cgTopOut)은 .bp 의 overflow-y:auto 에 통째로 잘려 사라진 적이 있다.
+  //   위치만 재면 통과한다(레이아웃 사각형은 잘려도 그대로다) → **실제로 눌리는지**(elementFromPoint) 까지 본다.
+  await step('메인 프로필: 판 밖 조작 버튼이 잘리지 않는다 · UI 아이콘 6종 로드', async()=>{
+    // ⚠ 헤드리스에선 three.js(esm.sh)가 막혀 오프닝 오버레이가 안 걷힌다 — 재는 동안만 치운다(안 그러면 opWrap 이 전부 가린다)
+    const ph=$('phone'), faked=ph && !ph.classList.contains('inGame'); if(faked) ph.classList.add('inGame');
+    const op=$('opening'), opHid=op && !op.classList.contains('hide'); if(opHid) op.classList.add('hide');
+    document.body.classList.add('sheetOpen');
+    try{
+      const same=G.units.filter(u=>typeof isBuilding!=='function'||!isBuilding(u.id));
+      skipIf(same.length<2,'유닛 부족');
+      const k=_mainTypeKey(same[0]), grp=same.filter(u=>_mainTypeKey(u)===k);
+      skipIf(grp.length<2,'같은 종류가 2기 미만이라 전체지정 버튼이 안 뜸');
+      // ⚠ sleep 을 두면 다음 프레임이 지정을 걷어간다(스모크 환경에서 유닛이 정리된다) → 렌더는 동기라 바로 잰다
+      G.sel=grp.map(u=>u.uid); G.selType=null; refreshSelCard();
+      const to=document.querySelector('#unitCmd .cgTopOut');
+      assert(to,'조작 버튼 묶음(.cgTopOut)이 없음 — 제목 '+((document.querySelector('#unitCmd .cgN')||{}).textContent||'-'));
+      const cg=document.querySelector('#unitCmd .cmdG').getBoundingClientRect(), r=to.getBoundingClientRect();
+      assert(r.bottom<=cg.top+0.5,'조작 버튼이 판 안에 있음');
+      assert(r.width>0&&r.height>0,'조작 버튼 크기가 0');
+      const hit=document.elementFromPoint(r.x+r.width/2, r.y+r.height/2);
+      assert(hit && to.contains(hit),'조작 버튼이 잘려 안 보임(맨 위 요소: '+(hit?(hit.id||hit.className||hit.tagName):'없음')+')');
+      // 아이콘 파일(ui/*.webp)이 실제로 있고 열린다 — 없으면 인라인 SVG 로 되돌아가 조용히 넘어간다
+      const keys=Object.keys(UI_SVG), bad=[];
+      await Promise.all(keys.map(kk=>new Promise(ok=>{ const im=new Image();
+        im.onload=()=>{ if(!(im.naturalWidth>0)) bad.push(kk); ok(); };
+        im.onerror=()=>{ bad.push(kk); ok(); };
+        im.src=ICO_DIR+'ui/ui_'+kk+'.webp'; })));
+      assert(!bad.length,'UI 조작 아이콘 파일이 안 열림: '+bad.join(','));
+      return keys.length+'종 · 버튼 '+r.width.toFixed(0)+'px';
+    } finally { G.selType=null; G.sel=[]; refreshSelCard(); if(faked) ph.classList.remove('inGame'); if(opHid) op.classList.remove('hide'); }
+  });
   await step('이동 명령 + 60프레임 진행', ()=>{ for(const u of G.units) u.moveTo={x:0.35+Math.random()*0.3,y:0.35+Math.random()*0.3};
     pump(60); return '예외 없음'; });
   await step('분리 수렴(강제 겹침 해소)', ()=>{ const us=G.units.filter(u=>!u.fixed).slice(0,20);
