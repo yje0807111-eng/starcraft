@@ -5814,12 +5814,17 @@ function gachaRangeMul(u){ if(u&&u.gid==='phantom_t') return 1.8;   // 디토네
 //   설계서: "네모네모 디펜스 — 메타 성장 시스템 설계서"
 //   ※ 포인트=영구(계정별), 빌드 효과=개인 적용 예정, coop 그룹=데이터만(효과 보류)
 // ============================================================================
+// 🎚 난이도 = **한 번씩 깨는 마일스톤 사다리**다(2026-08-19 재설계). 칸마다 적 체력 정확히 ×2 —
+//   '메타를 한 겹 더 쌓으면 다음 칸'이 눈에 보이게. 끝없는 도전은 무한모드(highestRound)가 맡는다.
+//   ⛔ 옛 곡선(HARD 3.5 · HELL 8 · FINAL 360)으로 되돌리지 말 것: NORMAL→HARD 가 ×4.4,
+//     HELL→FINAL 이 ×45 라 사실상 통과 불가 구간이었고, 그래서 아무도 안 갔다.
+//   coinMult 는 그대로 두고 **반복 보상의 난이도 배율(umDiffMul)로도 같은 값을 재사용**한다.
 const DIFFICULTY = {
-  easy:   { name:'EASY', enemyHp:0.5,  enemyAtk:1.0, coinMult:1.0, bossHp:1.0 },   // 비콘너프+보스필수 반영 재튠. 약간메타 ~50%·기본 1~2랩 ~80%
-  normal: { name:'NORMAL', enemyHp:0.8,  enemyAtk:1.3, coinMult:1.5, bossHp:1.3 },   // 중반메타 ~60~75%
-  hard:   { name:'HARD', enemyHp:3.5,  enemyAtk:1.6, coinMult:2.0, bossHp:1.7 },   // 거의만렙(t5~6) 운보통 충분히
-  hell:   { name:'HELL',   enemyHp:8.0,  enemyAtk:2.0, coinMult:2.5, bossHp:2.4 },   // 거의만렙(t6) 다수 통과·초월진입(t7) 확실
-  nightmare:{ name:'FINAL', enemyHp:360.0, enemyAtk:2.5, coinMult:3.0, bossHp:3.0 },   // 최종 단계(영문 FINAL = 끝까지 도전 동기). 초월 '완성'(t9) + 운(봇 t9 ~50%·t8 ~22%)
+  easy:   { name:'EASY',   enemyHp:0.5, enemyAtk:1.0, coinMult:1.0, bossHp:1.0 },
+  normal: { name:'NORMAL', enemyHp:1.0, enemyAtk:1.2, coinMult:1.5, bossHp:1.2 },
+  hard:   { name:'HARD',   enemyHp:2.0, enemyAtk:1.5, coinMult:2.0, bossHp:1.6 },
+  hell:   { name:'HELL',   enemyHp:4.0, enemyAtk:1.8, coinMult:2.5, bossHp:2.2 },
+  nightmare:{ name:'FINAL',enemyHp:8.0, enemyAtk:2.2, coinMult:3.0, bossHp:2.8 },
 };
 const DIFFICULTY_ORDER = ['easy','normal','hard','hell','nightmare'];
 // 보스 처치 포인트(기본, 난이도 coinMult 적용 전). 표에 없는 라운드는 라운드 비례 폴백.
@@ -6217,14 +6222,22 @@ function profRebNextLv(c){ c=c||CHAR(); const n=profRebDone(c);
 function profRebGrant(N){ return PROF_REB_RP0 + PROF_REB_RP1*Math.max(1,N|0); }
 function profRebStep(lv, c){ return profCanRebirth(c) ? (profRebDone(c)+1) : 0; }   // '이번이 몇 회차인가'
 // ⚠ rebLvMax = 이미 환생에 쓴 최고 레벨. 같은 레벨에서 두 번 환생하는 것을 막는다.
+// 🔑 환생 관문 — 2회차부터 **유즈맵 전용 재화(포인트)** 를 요구한다.
+//   설계: 평소엔 강제가 없고(1회차 무료), 사냥터 최상위 축을 끝까지 밀려면 결국 유즈맵을 하게 된다.
+//   ⛔ 사냥터에서 얻을 수 있는 재화로 바꾸지 말 것 — 그러면 관문이 아니라 그냥 비용이 된다.
+const PROF_REB_POINT=[0, 30, 90, 200, 400, 700, 1200];   // 회차별 요구 포인트(1회차 무료)
+function profRebPoint(c){ c=c||CHAR(); const n=profRebDone(c); return PROF_REB_POINT[n]||0; }
+function profRebPointOk(c){ const need=profRebPoint(c);
+  return need<=0 || (((typeof PLAYER_META!=='undefined'&&PLAYER_META.coins)||0) >= need); }
 function profCanRebirth(c){ c=c||CHAR(); if(!c) return false;
   const need=profRebNextLv(c);
-  return need>0 && (c.level|0)>=need && (c.level|0)>((c.rebLvMax|0)); }
+  return need>0 && (c.level|0)>=need && (c.level|0)>((c.rebLvMax|0)) && profRebPointOk(c); }
 function profXpMul(c){ c=c||CHAR(); return 1+((c&&c.rebMul)||0); }
 // ⚠ 경험치 지급은 반드시 이 함수를 지난다 — 지급 지점이 4곳이라 배수를 각자 곱하면 언젠가 어긋난다.
 function profGainXp(c, xp){ c=c||CHAR(); if(!c || !(xp>0)) return 0;
   const got=xp*profXpMul(c); c.xp+=got; return got; }
 function profRebirth(c){ c=c||CHAR(); if(!profCanRebirth(c)) return 0;
+  { const cost=profRebPoint(c); if(cost>0){ PLAYER_META.coins=(PLAYER_META.coins||0)-cost; } }   // 🔑 관문 = 유즈맵 포인트 차감
   const N=profRebDone(c)+1;                          // 이번이 몇 번째 환생인가
   c.reb=N; c.rebMul=(c.rebMul||0)+PROF_REB_GAIN*N;
   c.rp=(c.rp|0)+profRebGrant(N);                     // 🔁 환생 포인트 지급(영구 — 다시 환생해도 안 사라진다)
@@ -6430,18 +6443,57 @@ function umProgress(){ if(typeof G==='undefined' || !G) return 0;
   const rounds=mapCfg('rounds',TOTAL_ROUNDS)||TOTAL_ROUNDS;
   if(mapCfg('infinite')) return Math.min(1,(G.round||0)/rounds);
   return (G.phase==='won') ? 1 : Math.min(1,(G.round||0)/rounds); }
+// 🏁 첫 클리어 마일스톤 — 맵×난이도마다 **평생 1회**. 사냥터 마일스톤(hunt.rw[dg][round])과 같은 문법이다.
+//   보상 크기는 '사냥터 N시간치'인데, ⚠ **상한을 걸지 않으면 유즈맵을 최대한 늦게 하는 것이 최적 플레이**가 된다
+//     (시급이 계속 오르므로). 그래서 min(현재 시급, 난이도별 권장 시급) 으로 막는다.
+const UM_DIFF_R={ easy:20, normal:35, hard:50, hell:65, nightmare:80 };   // 난이도별 '권장 사냥터 라운드'(상한 기준)
+const UM_FIRST={   // h=사냥터 시간치 · gem/tk=시급과 무관한 절대 재화
+  easy:      {h:1,  gem:10,  tk:{gear:1}},
+  normal:    {h:2,  gem:20,  tk:{gear:1, pet:1}},
+  hard:      {h:4,  gem:40,  tk:{gear:2, ally:1}},
+  hell:      {h:8,  gem:80,  tk:{gear:3, pet:1, ally:1}},
+  nightmare: {h:16, gem:150, tk:{gear:5, pet:2, ally:2}},
+};
+const UM_STK_FIRST='hard';   // 오토배틀은 난이도가 없다(noDiff) → '첫 승리' 1회를 이 급으로
+// 권장 진행도의 시급(분당 미네랄). ⚠ 사냥터 곡선 함수를 그대로 쓴다 — 새 곡선을 만들면 반드시 어긋난다.
+function umCapRate(diff){ const R=UM_DIFF_R[diff]||UM_DIFF_R.normal;
+  let foes=0, sec=0; for(let w=1;w<=HB_WAVES;w++){ foes+=hbFoeCount(R,w); sec+=hbWaveTime(w)+HB_GAP_S; }
+  return (foes*hbKillReward(1,R).min + hbClearBonus(1,R).min) / (sec/60); }
+function umFirstRw(diff){ const F=UM_FIRST[diff]; if(!F) return null;
+  const min=Math.round(Math.min(umRate(), umCapRate(diff))*60*F.h);
+  return Object.assign({ pcoin:min, gas:Math.round(min*UM_GAS_RATIO), gem:F.gem }, F.tk||{}); }
+function umClearTbl(){ const M=PLAYER_META; if(!M.umClear) M.umClear={}; return M.umClear; }
+function umFirstGot(mapId,diff){ const t=umClearTbl()[mapId]; return !!(t&&t[diff]); }
+// 최초 클리어면 지급하고 보상을 돌려준다(중복 지급 불가). 지급은 dqGive 한 곳을 지난다.
+function umFirstClaim(mapId,diff){ if(!mapId||!diff||umFirstGot(mapId,diff)) return null;
+  const rw=umFirstRw(diff); if(!rw) return null;
+  const t=umClearTbl(); if(!t[mapId]) t[mapId]={}; t[mapId][diff]=1;
+  if(typeof dqGive==='function') dqGive(rw); else saveMeta();
+  return rw; }
+// 📅 하루 몇 판째인가 — 목표 세션이 '하루 2~3판'이라 그 숫자를 규칙으로 새긴다.
+//   ⚠ 하드 캡이 아니라 체감이다: 4판째부터 30% — 더 해도 손해는 아니고, 짧은 판 반복으로 긁는 것만 막는다.
+//   ⚠ 하루 경계는 **_dgDayKey() 하나**를 쓴다(출석·일일 퀘스트와 같은 축) — 새 축을 만들면 하루가 새는 날이 생긴다.
+const UM_DAY_FULL=3, UM_DAY_FADE=0.3;
+function umDayRec(){ const M=PLAYER_META, dk=_dgDayKey();
+  if(!M.umDay || M.umDay.key!==dk) M.umDay={ key:dk, n:0 };
+  return M.umDay; }
+function umTodayN(){ return umDayRec().n; }                       // 오늘 이미 끝낸 판 수
+function umDayMul(){ return (umTodayN()<UM_DAY_FULL)?1:UM_DAY_FADE; }   // 이번 판에 붙을 계수
+function umDayCount(){ const r=umDayRec(); r.n++; try{ saveMeta(); }catch(e){} return r.n; }
 function umDiffMul(){ const D=(typeof DIFFICULTY!=='undefined')&&DIFFICULTY[G.difficulty];
   return (D&&D.coinMult)||1; }   // 난이도 배율은 DIFFICULTY 표 하나만 본다(두 벌을 두지 말 것)
 // 판 종료 보상 — 순수 read G / write profile. _runSummary에서 1회 호출.
 function profRunReward(){ const p=PROF();
-  const prog=Math.max(UM_PROG_MIN, Math.min(1, umProgress())), dMul=umDiffMul();
-  const min=Math.round(umRate()*UM_ANCHOR_MIN*prog*dMul*(1+profPetBonus('coin')));   // 🐾 펫 코인% 반영
+  const prog=Math.max(UM_PROG_MIN, Math.min(1, umProgress())), dMul=umDiffMul(), day=umDayMul();
+  const min=Math.round(umRate()*UM_ANCHOR_MIN*prog*dMul*day*(1+profPetBonus('coin')));   // 🐾 펫 코인% 반영 · 📅 하루 3판 뒤 체감
   const gas=Math.round(min*UM_GAS_RATIO);
   const k=G.kills||0, rd=G.round||0;
   const xp=Math.round((10 + k*0.5 + rd*8)*dMul);   // ⚠ 앵커 아님(위 주석 참조)
   const c=CHAR(); profGainXp(c, xp); const ups=profApplyLevelUps(c);
-  p.pcoin=(p.pcoin||0)+min; p.gas=(p.gas||0)+gas; profSyncUnlocks(); saveMeta();
-  return { xp:xp, pc:min, gas:gas, prog:prog, ups:ups, level:c?c.level:1 }; }
+  p.pcoin=(p.pcoin||0)+min; p.gas=(p.gas||0)+gas; profSyncUnlocks();
+  const dayN=umDayCount();   // 📅 판 수는 여기서만 센다(정산은 판당 1회다)
+  saveMeta();
+  return { xp:xp, pc:min, gas:gas, prog:prog, ups:ups, level:c?c.level:1, day:dayN, dayMul:day }; }
 // 방치 정산(오프라인/켜둠) — Date.now 기준(1단계 클라이언트 신뢰). 유즈맵과 무관.
 function profOfflineCapMin(){ return profHasUnlock('idle_12h')?PROF_OFF_CAP12_MIN
   : profHasUnlock('idle_8h')?PROF_OFF_CAP8_MIN : PROF_OFF_CAP_MIN; }
@@ -6774,7 +6826,7 @@ function hbMoreTap(k){
 // ══════════════════════════════════════════════════════════════════════════
 const DQ_WEEKS=4, DQ_PER_WEEK=5, DQ_BONUS=2;          // 4주 × (출석 5칸 + 보너스 2칸)
 const DQ_ATT_MAX=DQ_WEEKS*DQ_PER_WEEK;                 // 20도장 = 최종 보상 조건
-const DQ_N=5, DQ_OUT_N=2;                              // 하루 5개 중 2개는 사냥터 바깥(다른 구역으로 끌어낸다)
+const DQ_N=5, DQ_OUT_N=3;                              // 하루 5개 중 **3개**는 사냥터 바깥(2026-08-19: 유즈맵을 주류로 올리며 2→3)
 const DQ_WEEK_MAX=DQ_N*7;                              // 한 주에 나올 수 있는 최대(35개)
 const DQ_WEEK_GOAL=25;                                 // 주간 목표 = 5일치. 이틀을 빠져도 채울 수 있다(출석 5/7과 같은 결)
 const DQ_TK={gear:'장비', pet:'펫', ally:'동료'};
@@ -7185,6 +7237,8 @@ function renderGrowModal(){ const box=document.getElementById('hbGrowBody'); if(
   // 🔁 환생 — 레벨 곡선이 무거워지는 지점에서 '되감고 배수를 얻는' 축.
   h+='<div class="hbGrowLbl">환생 <span class="hbStars">'+(c.reb?('×'+profXpMul(c).toFixed(2)+' 경험치'):'—')+'</span></div>';
   { const need=profRebNextLv(c), N=profRebDone(c)+1, can=profCanRebirth(c), last=(need===0);
+    const pNeed=profRebPoint(c), pHave=((typeof PLAYER_META!=='undefined'&&PLAYER_META.coins)||0);
+    const lvOk=(need>0 && (c.level|0)>=need && (c.level|0)>((c.rebLvMax|0)));
     h+='<div class="hbRow"><span class="hbRowIco">🔁</span>'
       +'<span class="hbRowTx"><b>'
       +(last ? ('환생 완료 — Lv.'+PROF_LV_CAP+' 고정 · 이제 기록이 포인트를 줍니다')
@@ -7192,7 +7246,9 @@ function renderGrowModal(){ const box=document.getElementById('hbGrowBody'); if(
                     : (N+'회차 환생')))+'</b>'
       +'<em>'+(last ? ('전역 진행도 '+PROF_REC_RP_PER+'칸당 환생 포인트 +1 (지금 '+profRecordRp(c)+'p)')
              : (can ? ('레벨·레벨 포인트·<b>미네랄 업그레이드·미네랄</b>이 처음으로 돌아갑니다. 해금·최고 기록·장비·펫·환생 포인트는 그대로. 환생 포인트 +'+profRebGrant(N))
-                    : ('🔒 Lv.'+need+' 필요 — 회차마다 요구 레벨이 올라갑니다 ('+PROF_REB_LEVELS.join(' · ')+')')))+'</em></span>'
+                    : (lvOk ? ('🔒 ◎ 포인트 '+pNeed+' 필요 (보유 '+pHave+') — 포인트는 <b>유즈맵에서만</b> 나옵니다')
+                            : ('🔒 Lv.'+need+' 필요 — 회차마다 요구 레벨이 올라갑니다 ('+PROF_REB_LEVELS.join(' · ')+')'
+                               +(pNeed>0?(' · ◎ 포인트 '+pNeed):'')))))+'</em></span>'
       +'<button class="hbRowBtn" onclick="hbDoRebirth()"'+(can?'':' disabled')+'>환생</button></div>'; }
   // 🔁 환생 포인트 — 환생으로만 얻고 환생해도 안 사라진다. 줄 모양은 스탯 화면의 레벨 포인트와 같은 컴포넌트.
   h+=_ptListHTML('rp', c);
@@ -10596,9 +10652,13 @@ function maxUnits(){ return mapCfg('maxUnits',MAX_UNITS) + ((G.metaB&&G.metaB.un
 // 게임 종료 정산: 이번 판에서 모은 포인트(G.points)에 난이도 배율을 곱해 계정에 누적·저장(1회만).
 // 포인트(◎ = 다음 판 업그레이드 화폐)은 '월드보스(공용 보스)' 처치로만 획득 — coopBossDown()이 G.points에 적립.
    // 이번 판 적립 포인트(월드보스 처치 합) = 정산 대상
+// ◎ 포인트 = **유즈맵에서만 나오는 재화**다(사냥터에서는 한 톨도 안 나온다). 그래서 환생 관문의 열쇠가 된다.
+//   ⚠ 예전엔 네모 월드보스 처치로만 나와서 획득 경로가 너무 좁았다 → **모든 맵이 판 끝에 성과만큼** 준다.
+const UM_POINT_RUN=12;   // 판당 기준 포인트(진행도·난이도로 오르내린다)
 function bankRunPoints(){ if(G._pointsBanked) return G._bankedAmt||0; G._pointsBanked=true;
-  const cm=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).coinMult;
-  const gained=Math.round((G.points||0)*cm);   // 포인트 = 월드보스 처치 포인트 × 난이도 배율
+  const cm=umDiffMul();
+  const run=Math.round(UM_POINT_RUN * Math.max(UM_PROG_MIN, Math.min(1, umProgress())) * cm);   // 판 성과
+  const gained=Math.round((G.points||0)*cm) + run;   // + 월드보스 처치 포인트(네모 전용, 큰 몫)
   if(gained>0){ PLAYER_META.coins=(PLAYER_META.coins||0)+gained; saveMeta(); }
   G._bankedAmt=gained; return gained; }
 const DIFF_RANK=['easy','normal','hard','hell','nightmare'];
@@ -15197,16 +15257,34 @@ function _runSummary(){ if(G._runSum) return G._runSum;
   // 📅 일일 — 유즈맵 1판 종료. 이 함수는 판당 1회만 계산되므로 여기가 유일한 계측 지점이다(중도 나가기는 제외).
   if(typeof dqNote==='function' && G.phase!=='quit'){ dqNote('umRun',1); if(G.phase==='won') dqNote('umWin',1); }
   if(G.strike){ const S=(typeof STK!=='undefined'&&STK)?STK:{}, me=S.me||{};   // 직스: 라운드·코인 대신 결과·처치·플레이타임
-    G._runSum={ strike:true, result:(G.phase==='won')?'win':'lose', kills:(me.kills||0), time:(S.t||0), gold:Math.floor(me.gold||0) }; return G._runSum; }
-  const hadDiff=(typeof PLAYER_META!=='undefined'&&PLAYER_META.clearedDifficulty)||'';
-  const hadInf=(typeof infiniteUnlocked==='function')&&infiniteUnlocked();
-  recordRunResult();
-  const nowDiff=(typeof PLAYER_META!=='undefined'&&PLAYER_META.clearedDifficulty)||'';
-  const nowInf=(typeof infiniteUnlocked==='function')&&infiniteUnlocked();
-  let nextName=''; if(nowDiff!==hadDiff){ const nx=DIFF_RANK[DIFF_RANK.indexOf(nowDiff)+1]; if(nx&&DIFFICULTY[nx]) nextName=DIFFICULTY[nx].name; }
-  G._runSum={ coins:bankRunPoints(), kills:G.kills||0, round:G.round, time:G.timeSec, newDiff:nextName, infNew:(!hadInf&&nowInf) };
-  G._runSum.prof=(typeof profRunReward==='function')?profRunReward():null;   // 🧍 프로필 RPG 보상(유즈맵 재화와 완전 분리)
+    G._runSum={ strike:true, result:(G.phase==='won')?'win':'lose', kills:(me.kills||0), time:(S.t||0), gold:Math.floor(me.gold||0) }; }
+  else {
+    const hadDiff=(typeof PLAYER_META!=='undefined'&&PLAYER_META.clearedDifficulty)||'';
+    const hadInf=(typeof infiniteUnlocked==='function')&&infiniteUnlocked();
+    recordRunResult();
+    const nowDiff=(typeof PLAYER_META!=='undefined'&&PLAYER_META.clearedDifficulty)||'';
+    const nowInf=(typeof infiniteUnlocked==='function')&&infiniteUnlocked();
+    let nextName=''; if(nowDiff!==hadDiff){ const nx=DIFF_RANK[DIFF_RANK.indexOf(nowDiff)+1]; if(nx&&DIFFICULTY[nx]) nextName=DIFFICULTY[nx].name; }
+    G._runSum={ coins:bankRunPoints(), kills:G.kills||0, round:G.round, time:G.timeSec, newDiff:nextName, infNew:(!hadInf&&nowInf) };
+  }
+  // ⚠ 보상 지급은 두 갈래가 **끝난 뒤 한 곳**에서 한다. 예전엔 직스 분기가 먼저 return 해서
+  //   오토배틀이 앵커 보상을 통째로 못 받았다(umProgress 의 직스 분기가 죽은 코드였다).
+  if(G.strike) G._runSum.coins=bankRunPoints();   // ◎ 포인트는 맵을 가리지 않는다(네모는 위 분기에서 이미 적립)
+  G._runSum.prof=(typeof profRunReward==='function')?profRunReward():null;   // 🧍 사냥터 재화 = 유즈맵 앵커 보상
+  // 🏁 첫 클리어 마일스톤 — 이겼을 때만, 맵×난이도마다 평생 1회. 무한모드는 클리어가 없어 제외.
+  if(G.phase==='won' && !mapCfg('infinite') && typeof umFirstClaim==='function')
+    G._runSum.first=umFirstClaim(MAP&&MAP.id, G.strike?UM_STK_FIRST:G.difficulty);
   return G._runSum; }
+// 판 보상 줄 — 네모·오토배틀 통계 화면 공용. 표기를 두 벌로 만들지 말 것.
+function _umRwRows(S){ let h='';
+  if(S.prof) h+=ovStatRow('내 캐릭터 XP','<b class="osNew">+'+S.prof.xp+'</b>'+(S.prof.ups?' · Lv.'+S.prof.level:''))
+    +ovStatRow('미네랄','<b class="osNew">+'+fmtCur(S.prof.pc)+'</b>')
+    +ovStatRow('가스','<b class="osNew">+'+fmtCur(S.prof.gas)+'</b>');
+  if(S.prof && S.prof.dayMul<1) h+=ovStatRow('오늘 '+S.prof.day+'판째','<span class="osDim">보상 '+Math.round(S.prof.dayMul*100)+'% — 하루 '+UM_DAY_FULL+'판까지 전액</span>');
+  if(S.first){ const f=S.first, tk=[['gear','장비'],['pet','펫'],['ally','동료']].filter(t=>f[t[0]]).map(t=>t[1]+' ×'+f[t[0]]).join(' · ');
+    h+=ovStatRow('<b class="osNew">🏁 첫 클리어</b>','<b class="osNew">'+fmtCur(f.pcoin)+' M · '+fmtCur(f.gas)+' G</b>')
+      +ovStatRow('첫 클리어 보너스','<b class="osNew">💎 '+f.gem+(tk?(' · '+tk):'')+'</b>'); }
+  return h; }
 function fmtTime(sec){ sec=Math.max(0,Math.floor(sec||0)); const m=Math.floor(sec/60), s=sec%60; return (m<10?'0':'')+m+':'+(s<10?'0':'')+s; }
 function _ovBtnTx(btn,txt){ const t=btn&&btn.querySelector('.ovBtnTx'); if(t) t.textContent=txt; }   // 라벨만 교체(진행 바 유지)
 function showOverlay(){ const ov=document.getElementById('ov'),tt=document.getElementById('ovTitle'),dd=document.getElementById('ovDesc'),bt=document.getElementById('ovBtn');
@@ -15246,7 +15324,8 @@ function openResultScreen(){ const sc=document.getElementById('resultScreen'); i
       ovStatRow('결과', S.result==='win'?'<b class="osNew">승리</b>':'<b style="color:#ff6b7a">패배</b>')
      +ovStatRow('처치', (S.kills||0).toLocaleString())
      +ovStatRow('플레이타임', fmtTime(S.time))
-     +ovStatRow('최종 자원', '⛁ '+(S.gold||0).toLocaleString());
+     +ovStatRow('최종 자원', '⛁ '+(S.gold||0).toLocaleString())
+     +_umRwRows(S);
     if(typeof setInGame==='function') setInGame(false);
     sc.classList.remove('hide'); _rsStartAuto(); return; }
   document.getElementById('rsStats').innerHTML=
@@ -15257,9 +15336,7 @@ function openResultScreen(){ const sc=document.getElementById('resultScreen'); i
    +(S.newDiff?ovStatRow('난이도 해금','<b class="osNew">'+S.newDiff+'</b>'):'')
    +(S.infNew?ovStatRow('모드 해금','<b class="osNew">무한 모드</b>'):'')
    +ovStatRow('보유 포인트','◎ '+(((typeof PLAYER_META!=='undefined')&&PLAYER_META.coins)||0))
-   +((S.prof)?(ovStatRow('내 캐릭터 XP','<b class="osNew">+'+S.prof.xp+'</b>'+(S.prof.ups?' · Lv.'+S.prof.level:''))
-             +ovStatRow('미네랄','<b class="osNew">+'+fmtCur(S.prof.pc)+'</b>')
-             +ovStatRow('가스','<b class="osNew">+'+fmtCur(S.prof.gas)+'</b>')):'');   // 🧍 사냥터 재화 = 유즈맵 앵커 보상
+   +_umRwRows(S);
   if(typeof setInGame==='function') setInGame(false);   // 게임 크롬(하단 콘솔) 정리
   sc.classList.remove('hide'); _rsStartAuto(); }        // 10초 뒤 자동으로 로비
 function resultToLobby(){ _rsClearAuto(); const sc=document.getElementById('resultScreen'); if(sc) sc.classList.add('hide');

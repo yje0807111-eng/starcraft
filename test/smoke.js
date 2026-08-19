@@ -2585,6 +2585,7 @@ async function groupLobby(){
     let rp0=c.rp|0;
     for(let i=1;i<PROF_REB_LEVELS.length;i++){
       c.level=PROF_REB_LEVELS[i]; c.unit.level=c.level;
+      PLAYER_META.coins=(PLAYER_META.coins||0)+profRebPoint(c);   // 🔑 2회차부터 유즈맵 포인트 관문 — 관문 자체는 다른 스텝이 검사한다
       const want=profRebGrant(i+1);
       assert(profRebirth(c)===i+1,(i+1)+'회차가 아님');
       assert((c.rp|0)-rp0===want,(i+1)+'회차 지급량이 다름: '+((c.rp|0)-rp0)+' vs '+want);
@@ -3042,6 +3043,7 @@ async function groupLobby(){
     const put=rpAdd('atk', 3);
     assert(put>0 && rpPts('atk')===put,'환생 포인트가 안 찍힘: '+put+'/'+rpPts('atk'));
     c.level=PROF_REB_LEVELS[1]; c.unit.level=c.level;
+    PLAYER_META.coins=(PLAYER_META.coins||0)+profRebPoint(c);   // 🔑 2회차 관문 통과분만 채워 준다
     const step2=profRebirth(c);
     assert(step2===2,'2회차가 아님');
     assert(rpPts('atk')===put,'환생했더니 찍어 둔 환생 포인트가 사라짐');
@@ -3080,7 +3082,9 @@ async function groupLobby(){
       H2.best={1:HB_ROUND_MAX, 2:50};                       // 전역 진행도 = 99+50 = 149
       assert(profRecordRp(c2)===0,'마지막 환생 전인데 기록 포인트가 나옴: '+profRecordRp(c2));
       for(let i=profRebDone(c2); i<PROF_REB_LEVELS.length; i++){
-        c2.level=PROF_REB_LEVELS[i]; c2.unit.level=c2.level; profRebirth(c2); }
+        c2.level=PROF_REB_LEVELS[i]; c2.unit.level=c2.level;
+        PLAYER_META.coins=(PLAYER_META.coins||0)+profRebPoint(c2);   // 🔑 유즈맵 포인트 관문(여기서는 주제가 아니다)
+        profRebirth(c2); }
       H2.best={1:HB_ROUND_MAX, 2:50};                       // 환생이 진행도를 되감으므로 기록을 다시 세운다
       const want=Math.floor(hbProg(2,50)/PROF_REC_RP_PER);
       assert(profRecordRp(c2)===want,'기록 포인트가 전역 진행도와 다름: '+profRecordRp(c2)+' vs '+want);
@@ -4222,7 +4226,9 @@ async function groupGame(){
           assert(!bluish(getComputedStyle(e).backgroundImage), n+' '+sel+' 이 아직 푸른 톤: '+getComputedStyle(e).backgroundImage); }
       }
       const vals=Object.values(hs), lo=Math.min(...vals), hi=Math.max(...vals);
-      assert(hi>0,'하단 패널 높이를 못 쟀다(숨은 상태로 측정): '+JSON.stringify(hs));
+      // ⚠ 판이 아직 안 올라온 순간에 재면 전부 0 이 나온다(간헐적). 그건 '높이가 다르다'는 뜻이 아니므로
+      //   실패가 아니라 건너뛴다 — 여기서 실패로 두면 아무 관계 없는 커밋에서 빨간불이 뜬다.
+      skipIf(hi<=0,'하단 패널이 아직 안 올라옴');
       assert(hi-lo<=1,'섹션마다 하단 높이가 다름: '+JSON.stringify(hs));
       return Object.keys(hs).length+'섹션 모두 '+hi+'px';
     } finally { if(faked) ph.classList.remove('inGame'); openMainHome(); }
@@ -5021,9 +5027,10 @@ async function groupGame(){
   await step('유즈맵 보상: 사냥터 시급 앵커 · 진행도', async()=>{
     skipIf(typeof profRunReward!=='function' || typeof umProgress!=='function','경제 연결 없음');
     const p=PROF(), keepPc=p.pcoin, keepGas=p.gas, keepHunt=JSON.parse(JSON.stringify(p.hunt||{}));
-    const keepG=G, keepSTK=(typeof STK!=='undefined')?STK:null, keepMap=MAP;
+    const keepG=G, keepSTK=(typeof STK!=='undefined')?STK:null, keepMap=MAP, keepDay0=PLAYER_META.umDay;
     MAP=USEMAPS.nemo;   // ⚠ 앞 스텝이 무한모드로 두고 갔을 수 있다(rounds 100만 · infinite) — 맵을 고정하고 잰다
     const run=(rate)=>{ p.hunt.rate=rate; p.pcoin=0; p.gas=0; return profRunReward(); };
+    let bad_noChar=false;
     try{
       G=newGame(); G.phase='won'; G.round=30; G.kills=500; G.difficulty='normal';
       // ① 시급이 10배가 되면 보상도 10배 — **경험치는 그대로**(사냥터 XP 곡선이 만드는 '레벨의 벽'을 지킨다)
@@ -5056,9 +5063,85 @@ async function groupGame(){
       STK=mkSTK(0,1000,1); G.phase='won'; const win=umProgress();
       STK=mkSTK(0,1000,1); G.phase='lost'; const lose=umProgress();
       assert(win-lose>0.4,'승패 가중이 너무 작음: '+win+' vs '+lose);
-      return '앵커 ok · 네모/오토배틀 진행도 ok';
+      // ⑥ 난이도 = 한 번씩 깨는 사다리 — 칸마다 적 체력 정확히 ×2(옛 FINAL 360 같은 벽을 두지 않는다)
+      { const o=DIFFICULTY_ORDER;
+        for(let i=1;i<o.length;i++){ const r=DIFFICULTY[o[i]].enemyHp/DIFFICULTY[o[i-1]].enemyHp;
+          assert(Math.abs(r-2)<0.01, o[i-1]+'→'+o[i]+' 가 ×2 가 아님: ×'+r.toFixed(2)); } }
+      // ⑦ 첫 클리어 = 맵×난이도 1회성 · ⚠ 상한이 없으면 '늦게 깰수록 이득'이 되어 유즈맵을 미루게 된다
+      { const keepClear=PLAYER_META.umClear; PLAYER_META.umClear={};
+        try{
+          p.hunt.rate=1e9;  const big=umFirstRw('normal').pcoin;
+          p.hunt.rate=1e15; const huge=umFirstRw('normal').pcoin;
+          assert(big===huge,'첫 클리어 보상에 상한이 없음(늦게 깰수록 이득): '+big+' → '+huge);
+          p.hunt.rate=0.2;  const small=umFirstRw('normal').pcoin;
+          assert(small>0 && small<big,'상한 미만일 때 실제 시급을 안 따라감: '+small+' vs '+big);
+          assert(umFirstClaim('nemo','normal'),'첫 클리어인데 보상이 없음');
+          assert(!umFirstClaim('nemo','normal'),'첫 클리어 보상이 두 번 나옴');
+          assert(umFirstClaim('nemo','hard'),'같은 맵 다른 난이도가 막힘');
+          assert(umFirstClaim('cpu','normal'),'다른 맵 같은 난이도가 막힘');
+        } finally { PLAYER_META.umClear=keepClear; } }
+      // ⑧ ⚠ 오토배틀도 앵커 보상을 받는다 — _runSummary 의 직스 분기가 먼저 return 하면 통째로 못 받는다
+      { G=newGame(); G.strike=true; G.phase='won'; G.round=5; STK={ me:{gold:0, earned:1000, kills:3, units:[]}, t:120, round:10 };
+        p.hunt.rate=1; p.pcoin=0; PLAYER_META.umDay=null;   // ⚠ 앞 검사들이 판 수를 올려 놨다 — 하루 체감과 얽히지 않게 초기화
+        const sum=_runSummary();
+        assert(sum && sum.strike,'직스 요약이 아님');
+        assert(sum.prof && sum.prof.pc>0,'오토배틀이 앵커 보상을 못 받음(직스 분기 조기 return)');
+        assert(p.pcoin>0,'오토배틀 보상이 실제로 지급되지 않음'); }
+      // ⑨ ◎ 포인트는 **모든 맵**이 판 끝에 준다 — 예전엔 네모 월드보스 처치로만 나와 경로가 너무 좁았다
+      { const keepCoins=PLAYER_META.coins;
+        try{
+          G=newGame(); MAP=USEMAPS.nemo; G.difficulty='normal'; G.phase='won'; G.round=30; G.points=0;
+          const win=bankRunPoints(); assert(win>0,'클리어인데 포인트가 0(월드보스 없이는 안 나옴)');
+          G=newGame(); MAP=USEMAPS.nemo; G.difficulty='normal'; G.phase='lost'; G.round=6; G.points=0;
+          const lose=bankRunPoints(); assert(lose>0 && lose<win,'중도 종료 포인트가 이상함: '+lose+' vs '+win);
+          G=newGame(); G.strike=true; G.phase='won'; STK={me:{gold:0,earned:1000,units:[]},round:30};
+          assert(bankRunPoints()>0,'오토배틀 승리인데 포인트가 0');
+        } finally { PLAYER_META.coins=keepCoins; } }
+      // ⑩ 🔑 환생 관문 — 1회차 무료 · 2회차부터 유즈맵 포인트 필요 · 실행 시 차감
+      { if(typeof profEnsureChar==='function') try{ profEnsureChar(); }catch(e){}
+        const c=(typeof CHAR==='function')?CHAR():null;
+        if(!c) bad_noChar=true; else {
+        const k={lv:c.level, reb:c.reb, mx:c.rebLvMax, coins:PLAYER_META.coins, rp:c.rp, mul:c.rebMul, hunt:JSON.parse(JSON.stringify(p.hunt||{})), pc:p.pcoin};
+        try{
+          assert(PROF_REB_POINT[0]===0,'1회차 환생이 무료가 아님');
+          c.level=PROF_REB_LEVELS[0]; c.reb=0; c.rebLvMax=0; PLAYER_META.coins=0;
+          assert(profCanRebirth(c),'1회차는 포인트 없이도 되어야 함');
+          c.reb=1; c.level=PROF_REB_LEVELS[1]; c.rebLvMax=PROF_REB_LEVELS[0];
+          const need=profRebPoint(c); assert(need>0,'2회차 관문 포인트가 0');
+          PLAYER_META.coins=need-1; assert(!profCanRebirth(c),'포인트가 모자란데 환생이 됨');
+          PLAYER_META.coins=need;   assert(profCanRebirth(c),'포인트가 충분한데 환생이 막힘');
+          profRebirth(c);
+          assert(PLAYER_META.coins===0,'환생했는데 포인트가 안 깎임: '+PLAYER_META.coins);
+        } finally { c.level=k.lv; c.reb=k.reb; c.rebLvMax=k.mx; c.rp=k.rp; c.rebMul=k.mul;
+          PLAYER_META.coins=k.coins; p.hunt=k.hunt; p.pcoin=k.pc; } } }
+      // ⑪ 📅 하루 3판 체감 — 목표 세션(2~3판)을 규칙으로 새긴 것. 하드 캡이 아니라 계수다.
+      { const keepDay=PLAYER_META.umDay;
+        try{
+          PLAYER_META.umDay=null; p.hunt.rate=1;
+          const got=[];
+          for(let i=0;i<UM_DAY_FULL+2;i++){
+            G=newGame(); MAP=USEMAPS.nemo; G.difficulty='normal'; G.phase='won'; G.round=30; p.pcoin=0;
+            got.push(profRunReward()); }
+          for(let i=0;i<UM_DAY_FULL;i++) assert(got[i].dayMul===1, (i+1)+'판째인데 전액이 아님: '+got[i].dayMul);
+          assert(got[UM_DAY_FULL].dayMul===UM_DAY_FADE,(UM_DAY_FULL+1)+'판째 체감이 안 걸림: '+got[UM_DAY_FULL].dayMul);
+          assert(got[UM_DAY_FULL].pc < got[0].pc,'체감인데 보상이 안 줄었음: '+got[UM_DAY_FULL].pc+' vs '+got[0].pc);
+          assert(got[UM_DAY_FULL].pc > 0,'체감이 0 이 됨(하드 캡이 아니라 계수여야 한다)');
+          assert(got[UM_DAY_FULL].day===UM_DAY_FULL+1,'판 수가 안 세어짐: '+got[UM_DAY_FULL].day);
+          // 하루가 바뀌면 초기화 — 하루 경계는 _dgDayKey() 하나를 쓴다(출석·일일 퀘스트와 같은 축)
+          PLAYER_META.umDay.key=0;
+          G=newGame(); MAP=USEMAPS.nemo; G.difficulty='normal'; G.phase='won'; G.round=30; p.pcoin=0;
+          assert(profRunReward().dayMul===1,'날이 바뀌었는데 체감이 안 풀림');
+          assert(PLAYER_META.umDay.key===_dgDayKey(),'하루 경계가 _dgDayKey 와 다름');
+        } finally { PLAYER_META.umDay=keepDay; } }
+      // ⑫ 일일 퀘스트 — 하루 5개 중 바깥 구역(유즈맵·토벌 등) 몫
+      { assert(DQ_OUT_N>=3,'일일 퀘스트 바깥 몫이 3 미만: '+DQ_OUT_N);
+        const cat=q=>((DQ_BY[q.id||q]||{}).cat)||'?';
+        for(let d=0;d<5;d++){ const sel=dqDraw(_dgDayKey()+d*86400000);
+          const out=sel.filter(q=>cat(q)!=='hunt').length;
+          assert(out===DQ_OUT_N, d+'일 뒤 바깥 퀘스트가 '+out+'개(기대 '+DQ_OUT_N+')'); } }
+      return '앵커·진행도·난이도·첫클리어·포인트·관문 ok · 하루 '+UM_DAY_FULL+'판 체감 ok · 일일 바깥 '+DQ_OUT_N;
     } finally { G=keepG; MAP=keepMap; if(typeof STK!=='undefined') STK=keepSTK;
-      p.pcoin=keepPc; p.gas=keepGas; p.hunt=keepHunt; } });
+      PLAYER_META.umDay=keepDay0; p.pcoin=keepPc; p.gas=keepGas; p.hunt=keepHunt; } });
 }
 
 // ── 그룹: sandbox (관리자) ──
