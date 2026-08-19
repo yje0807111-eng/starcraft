@@ -1816,12 +1816,20 @@
   .lbStart.ready{color:#fff;background:linear-gradient(180deg,var(--neon-face1),var(--neon-d1));border-color:var(--neon);box-shadow:0 0 13px -3px var(--neon-glow),inset 0 1px 0 rgba(255,255,255,.22)}
   .lbStart:disabled{cursor:default;opacity:.7}
   .lbLeave:active,.lbStart:active{transform:translateY(1px)}
-  /* 방 찾기(룸 리스트) */
-  #rooms{position:absolute;inset:0;z-index:46;display:flex;align-items:center;justify-content:center;padding:var(--popPad);background:var(--popDim);backdrop-filter:blur(3px)}   /* 로비 배경 사용(::before) */
+  /* ══ 방 찾기 = **전체 화면**이다(2026-08-19). 팝업 카드가 아니라 화면 하나를 통째로 쓴다 —
+     상단 재화 바도 하단 네비도 없이 배경(우주)이 네 변까지 이어진다.
+     ⛔ 카드(.rmCard) 안에 다시 넣지 말 것. 카드로 감싸면 안쪽에 상자가 또 생겨 목록이 좁아진다.
+     ⚠ 파티 찾기(.pfOv)는 여전히 **팝업**이라 같은 .rmCard 를 카드 모습으로 쓴다 → 아래 .pfOv 항목이 그쪽 값을 되돌린다. */
+  #rooms{position:absolute;inset:0;z-index:46;display:flex;align-items:stretch;justify-content:stretch;padding:0;background:none}
   #rooms.hide{display:none}
   .rmCard{width:var(--popW);max-width:var(--popMaxW);height:var(--popH);max-height:90%;display:flex;flex-direction:column;padding:var(--popPad)}
+  /* 전체 화면 판 — 껍데기(테두리·네온 프레임·라운드)를 전부 벗긴다 */
+  #rooms .rmCard{width:100%;max-width:none;height:100%;max-height:none;padding:52px 18px 30px;
+    background:none;border:0;border-radius:0;clip-path:none;box-shadow:none}
+  #rooms .rmCard::before,#rooms .rmCard::after{display:none}
   .rmHead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
   .rmTitle{font-size:17px;font-weight:800;color:#eef1f6;text-shadow:0 1px 3px rgba(0,0,0,.65);letter-spacing:.5px}   /* 제목 = 화이트 통일 */
+  #rooms .rmTitle{font-family:var(--font-ti);font-size:19px;font-weight:400}   /* 전체 화면 = 화면 제목 크기 */
   .rmHeadR{display:flex;align-items:center;gap:8px;flex:0 0 auto}
   .rmOnline{font-size:var(--fs-md);color:var(--txt-dim)}.rmOnline b{color:var(--hud)}
   /* 우상단 = 방 번호 입장(친구 방)을 여는 🔍 하나. 옛 난이도 팝다운은 폐지 — 난이도는 아래 탭 띠가 맡는다 */
@@ -3360,7 +3368,8 @@
   /* 팝업은 재화 바 여백을 받지 않는다 — 카드가 가운데 정렬이라 바와 겹치지 않고,
      여백을 받으면 재화 바가 없는 화면(방찾기·대기실)의 팝업과 7px 어긋난다. */
   #phone.curOn #modeSheet,#phone.curOn #soloDiffPanel,
-  #phone.curOn #rooms,#phone.curOn #createPanel,#phone.curOn #lobby{padding-top:var(--popPad)}
+  #phone.curOn #createPanel,#phone.curOn #lobby{padding-top:var(--popPad)}
+  #phone.curOn #rooms{padding-top:0}   /* 방 찾기는 전체 화면 — 자기 여백(.rmCard)이 상단을 맡는다 */
   #mapSelect{padding-bottom:calc(var(--navH) + 12px)}   /* 하단 네비에 내용이 가리지 않게 */
   #phone.inGame #curBar{display:none}   /* 실경기(인게임)에선 자체 HUD(#hudR) 사용 — 공용 바 숨김 */
   /* ⚔ 던전 허브 — 던전 목록 카드(배너) + 팝업(소탕/입장) */
@@ -4115,6 +4124,8 @@
   .pfOv{position:absolute;inset:0;z-index:110;display:flex;align-items:center;justify-content:center;
     padding:var(--popPad);background:var(--popDim);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
   .pfOv.hide{display:none}
+  /* ⚠ 방 찾기는 전체 화면이 됐지만 파티 찾기는 **팝업 그대로**다 — 카드 크기·여백을 여기서 지킨다 */
+  .pfOv .rmCard{width:var(--popW);max-width:var(--popMaxW);height:var(--popH);max-height:90%;padding:var(--popPad)}
   .ptInviteCard{width:100%;max-width:300px;height:516px;max-height:calc(100% - 16px);display:flex;flex-direction:column;overflow:hidden;
     /* ⚠ 공용 카드 면(.cpCard 계열)은 반투명이다 — 유즈맵 목록 위에 뜨면 뒤 카드가 글자 사이로 비쳐 못 읽는다.
        이 팝업은 목록 위에 뜨는 것이 기본이므로 면을 불투명하게 덮는다(친구 초대·추가·파티 찾기 공통). */
@@ -15334,6 +15345,7 @@ function tickRooms(){ if(!_roomList||document.getElementById('rooms').classList.
   if(changed){ renderRoomList(); const rc=document.getElementById('roomCount'); if(rc) rc.textContent=_roomList.length; }
 }
 function openRooms(){ setInGame(false); document.getElementById('ov').classList.add('hide'); document.getElementById('lobby').classList.add('hide');
+  if(typeof navShow==='function') navShow(null);   // 전체 화면 = 하단 네비도 덮는다(뒤로는 화면 안 ◀가 맡는다)
   const rm=document.getElementById('rooms'); rm.classList.remove('hide'); if(typeof playScreenFx==='function') playScreenFx(rm);
   _roomFilter='all'; renderRmFilter(); _rmNumClose();   // 진입 시 필터·방번호 줄 초기화
   if(rtRoomsActive()){ rtRoomsEnsure(); rtRoomsSync(); }   // 실제 방 목록(presence) — 시뮬 정지

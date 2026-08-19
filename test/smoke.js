@@ -2668,6 +2668,15 @@ async function groupLobby(){
     _selMap=USEMAPS.nemo; hideAppScreens(); openRooms(); await sleep(300);
     const card=document.querySelector('#rooms .rmCard');
     assert(card,'방 찾기 카드가 없음');
+    // ⛔ 방 찾기는 **전체 화면**이다 — 팝업 카드 틀 안에 다시 넣으면 안 된다(상·하단까지 화면이 쓴다)
+    { const r=card.getBoundingClientRect(), o=$('rooms').getBoundingClientRect();
+      assert(Math.abs(r.width-o.width)<1 && Math.abs(r.height-o.height)<1,
+        '방 찾기가 화면을 다 안 씀(카드 틀에 갇혔다): '+Math.round(r.width)+'x'+Math.round(r.height)+' vs '+Math.round(o.width)+'x'+Math.round(o.height));
+      const cs=getComputedStyle(card);
+      assert(parseFloat(cs.borderTopWidth)===0,'전체 화면인데 카드 테두리가 남아 있음');
+      assert(getComputedStyle(card,'::before').display==='none','전체 화면인데 공용 네온 프레임이 남아 있음');
+      const nav=$('navBar');
+      assert(!nav || nav.classList.contains('hide'),'방 찾기인데 하단 네비가 떠 있음'); }
     // 주 액션은 **맨 위 빠른 입장 하나뿐**이다(하단은 전부 하위 단계)
     const q=card.querySelector('.rmQuickTop');
     assert(q && q.classList.contains('actBtn') && q.classList.contains('pri'),'빠른 입장이 맨 위 주 액션(.actBtn.pri)이 아님');
@@ -2706,8 +2715,9 @@ async function groupLobby(){
     { const r=document.querySelector('#rooms .roomItem');
       assert(r && !r.style.getPropertyValue('--dc'),'난이도 없는 맵인데 행에 난이도 색이 실림'); }
     assert(document.querySelector('#rooms .rmQuickTop'),'난이도 없는 맵에서 빠른 입장이 사라짐');
-    backToTitle(); await sleep(60);
-    return '난이도 있음/없음 두 경로 ok'; });
+    backToTitle(); await sleep(200);
+    { const nav=$('navBar'); assert(nav && !nav.classList.contains('hide'),'방 찾기에서 나왔는데 하단 네비가 안 돌아옴'); }
+    return '전체 화면 · 난이도 있음/없음 두 경로 ok'; });
   // ══ 공용 액션 버튼(.actBtn) — 세 상태를 한 컴포넌트가 갖는다 ══
   await step('공용 액션 버튼: 활성·비활성·하위가 한 판에서 빛으로만 갈린다', async ()=>{
     openMapSelect(); await sleep(60); _selMap=USEMAPS.nemo; openSoloDiff(); await sleep(150);
