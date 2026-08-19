@@ -22264,7 +22264,9 @@ function _stkSpecGridHTML(){ const S=STK, me=(G.myPlayer||1), myA=(me<=4), names
     h+='<div class="'+cls+'" style="--pc:'+col+'"'+click+'><div class="plnum">'+n+'P</div><div class="plst">'+nm+'</div></div>'; }
   return h+'</div>'; }
 // 📦 업그레이드 시트 — 4그리드(① 광산 ② 강화 ④ 특수무기 / 3번은 비움). 구매·강화·투하는 기존 함수를 그대로 호출.
-function _stkLv(cur,max){ return (cur>=max)?'MAX':(cur+'/'+max); }   // 카드 우상단 표기 통일
+// 카드 표기 통일 — 자리는 **이름 아래 줄(`sub`)**, 네모 업그레이드 카드(_upgAtkItems)와 같은 규약이다.
+//   ⚠ 우상단 배지(`tr`)로 되돌리지 말 것: 배지는 초상 위에 떠서 그림을 가리고, 네모와 판이 달라 보인다.
+function _stkLv(cur,max){ return (cur>=max)?'MAX':(cur+'/'+max); }
 // ── 📦 하단 시트 모델 ────────────────────────────────────────────────────
 // 구역·하위는 하단 네비(STK_TREE)가 고르고, 여기서는 그 키에 맞는 그리드만 만든다.
 //   건설지 > 강화 = 광산 + 공격력·체력   ·   특수무기 > 구입/사용 = STK_WEAPONS 표
@@ -22274,19 +22276,20 @@ function _stkUpgModel(){ const S=STK, me=S.me, gold=Math.floor(me.gold||0);
   // 아이콘은 사냥터 업그레이드(HB_UPG)와 **같은 파일을 빌린다** — 뜻이 같으면 새로 만들지 않는다.
   for(const kv of [['atk','공격력','⚔','up_melee_atk'],['hp','체력','❤','up_carapace']]){
     const k=kv[0], lv=(k==='atk'?me.atkLv:me.hpLv), cost=strikeUpCost(k,lv), full=(lv>=10);
-    items.push({ pro:_icoImg('upgrades',kv[3],kv[2]), sn:kv[1], cr:(full?0:cost), tr:_stkLv(lv,10), metaCls:'lv', tip:k,
-      state:(full||gold<cost)?'dim':'on', act:full?'':('onclick="strikeUpg(\''+k+'\')"')+_techTipAttr('sup',k) }); }
+    items.push({ pro:_icoImg('upgrades',kv[3],kv[2]), sn:kv[1], cr:(full?0:cost), sub:_stkLv(lv,10), tip:k,
+      state:full?'max':(gold<cost?'dim':'on'), act:full?'':('onclick="strikeUpg(\''+k+'\')"')+_techTipAttr('sup',k) }); }
   items.push({state:'empty'});
-  items.push({ pro:_icoImg('upgrades','up_mine','⛏'), sn:'광산', cr:me.mineCost, tr:_stkLv(me.mines||0, STK_MINE_CAP), metaCls:'lv',
-    state:((me.mines||0)>=STK_MINE_CAP||gold<me.mineCost)?'dim':'on', act:'onclick="strikeBuyMine()"'+_techTipAttr('sup','mine') });
+  { const mn=(me.mines||0), mfull=(mn>=STK_MINE_CAP);
+    items.push({ pro:_icoImg('upgrades','up_mine','⛏'), sn:'광산', cr:mfull?0:me.mineCost, sub:_stkLv(mn, STK_MINE_CAP),
+      state:mfull?'max':(gold<me.mineCost?'dim':'on'), act:mfull?'':('onclick="strikeBuyMine()"'+_techTipAttr('sup','mine')) }); }
   return { mode:'prod', compact:true, build:true, title:'강화', icon:pIco('🔧','ic-gold'), items:items,
     info:{ eb:'강화', hideName:true, desc:'수입 '+strikeIncome(me)+'/웨이브<br>카드를 길게 누르면 설명이 나옵니다.' } }; }
 function _stkWpnIco(w){ return w.sk ? _icoImg('skills','sk_'+w.sk, w.ico) : pIco(w.ico,w.cls); }   // 구입·사용이 같은 그림을 쓴다
 // 🛒 구입 — 표 그대로가 상점 칸이 된다(품목을 여기서 새로 적지 말 것)
 function _stkWpnBuyModel(){ const S=STK, me=S.me, gold=Math.floor(me.gold||0);
   const items=STK_WEAPONS.map(function(w){ const have=(me.wpn&&me.wpn[w.k])||0, full=(have>=w.cap);
-    return { pro:_stkWpnIco(w), sn:w.name, cr:(full?0:w.cost), tr:_stkLv(have,w.cap), metaCls:'lv',
-      state:(full||gold<w.cost)?'dim':'on', act:full?'':('onclick="strikeBuyWpn(\''+w.k+'\')"') }; });
+    return { pro:_stkWpnIco(w), sn:w.name, cr:(full?0:w.cost), sub:_stkLv(have,w.cap),
+      state:full?'max':(gold<w.cost?'dim':'on'), act:full?'':('onclick="strikeBuyWpn(\''+w.k+'\')"') }; });
   return { mode:'prod', compact:true, build:true, title:'특수무기 · 구입', icon:pIco('🛒','ic-gold'), items:items,
     info:{ eb:'구입', hideName:true, desc:'골드로 구입해 두고 <b>사용</b>에서 꺼내 쓴다.' } }; }
 // 💥 사용 — **구입과 같은 자리에 같은 순서로** 늘어놓는다. 없는 것은 빈 칸이 아니라 '비활성'이다
@@ -22294,7 +22297,7 @@ function _stkWpnBuyModel(){ const S=STK, me=S.me, gold=Math.floor(me.gold||0);
 function _stkWpnUseModel(){ const S=STK, me=S.me;
   const own=STK_WEAPONS.filter(w=>((me.wpn&&me.wpn[w.k])||0)>0);
   const items=STK_WEAPONS.map(function(w){ const have=(me.wpn&&me.wpn[w.k])||0;
-    return { pro:_stkWpnIco(w), sn:w.name, tr:'×'+have, metaCls:'lv',
+    return { pro:_stkWpnIco(w), sn:w.name, sub:'×'+have,
       state:have>0?'on':'dim', act:have>0?('onclick="strikeUseWpn(\''+w.k+'\')"'):'' }; });
   return { mode:'prod', compact:true, build:true, title:'특수무기 · 사용', icon:pIco('💥','ic-danger'), items:items,
     info:{ eb:'사용', hideName:true,

@@ -4871,12 +4871,26 @@ async function groupGame(){
         assert((body.querySelector('.cgSlot')||{})._keep===1,'값이 그대로인데 시트를 다시 그렸음(아이콘이 못 뜬다)');
         STK.me.gold+=1000; techPanelRender();          // 값이 바뀌면 반드시 다시 그린다
         assert((body.querySelector('.cgSlot')||{})._keep!==1,'값이 바뀌었는데 시트가 안 갱신됨'); }
-      // ⚠ 우상단 배지가 초상 이미지에 가려지면 안 된다 — 둘 다 .cgPro 형제/자식이라 z-index가 같으면 이미지가 이긴다.
-      //   ⚠ 판 위에 로딩 오버레이가 떠 있을 수 있으니 시트 안쪽 요소만 추려서 본다.
-      { const host=$('btSheetBody'), b=host.querySelector('.cgSlot .cgMeta'); skipIf(!b,'배지 없음');
-        const r=b.getBoundingClientRect();
-        if(r.width>2){ const top=document.elementsFromPoint(r.left+r.width/2, r.top+r.height/2).find(e=>host.contains(e));
-          assert(top && (top===b || b.contains(top)),'배지가 초상 이미지에 가려짐: '+(top?(top.className||top.tagName):'none')); } }
+      // 수치는 **이름 아래 줄(.cgSub)** 에 있다 — 네모 업그레이드 카드와 같은 자리. 우상단 배지를 쓰지 않는다.
+      { const cs=[...document.querySelectorAll('#btSheetBody .cgSlot:not(.empty)')];
+        assert(cs.length>0,'강화 칸이 없음');
+        assert(!document.querySelector('#btSheetBody .cgMeta'),'수치가 아직 우상단 배지(.cgMeta)에 있음');
+        for(const c of cs){ const sub=c.querySelector('.cgSub'), nm=c.querySelector('.cgName');
+          assert(sub && sub.textContent.trim(),'이름 아래 수치 줄이 없음: '+(nm?nm.textContent:'?')); }
+        // 카드 뼈대 순서 = 네모와 같다: 초상 → 이름 → 수치 → 비용
+        const kids=[...cs[0].children].map(e=>e.className.split(' ')[0]).join('>');
+        assert(kids==='cgPro>cgName>cgSub>cgCost','카드 뼈대가 네모 업그레이드 카드와 다름: '+kids); }
+      // ⚠ 우상단 배지를 쓰는 카드(관리자 연구 등)에서 배지가 초상 이미지에 가려지면 안 된다 —
+      //   둘 다 .cgPro 의 형제/자식이라 z-index 가 같으면 트리 순서가 늦은 이미지가 이긴다.
+      //   지금 오토배틀 칸에는 배지가 없으므로 같은 그리드에 탐침을 하나 꽂아서 잰다.
+      { const host=$('btSheetBody'), grid=host.querySelector('.cgGrid'); skipIf(!grid,'그리드 없음');
+        const probe=document.createElement('div'); probe.className='cgSlot';
+        probe.innerHTML='<div class="cgMeta lv">9/9</div><div class="cgPro"><img class="icoImg" src="assets/icons/upgrades/up_mine.webp"></div><div class="cgName">탐침</div>';
+        grid.appendChild(probe);
+        try{ const b=probe.querySelector('.cgMeta'), r=b.getBoundingClientRect();
+          if(r.width>2){ const top=document.elementsFromPoint(r.left+r.width/2, r.top+r.height/2).find(e=>host.contains(e));
+            assert(top && (top===b || b.contains(top)),'배지가 초상 이미지에 가려짐: '+(top?(top.className||top.tagName):'none')); }
+        } finally { probe.remove(); } }
       // ③ 특수무기 = [‹][구입][사용] · 구입 그리드는 표 그대로
       strikeSwitchTab('Upgrade'); await sleep(160);
       { const c=cells(); assert(c[0].classList.contains('navBk'),'특수무기에 뒤로가기 칸이 없음');
