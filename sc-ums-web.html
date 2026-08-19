@@ -1872,7 +1872,13 @@
     box-shadow:inset 0 1px 0 rgba(255,255,255,.055),0 1px 3px rgba(0,0,0,.5);cursor:default;transition:border-color .12s,transform .08s}
   .lbRace .lrDot{flex:none;width:6px;height:6px;border-radius:50%;background:var(--rc,#8a93a0);
     box-shadow:0 0 0 1.5px rgba(0,0,0,.5),0 0 4px -1px var(--rc65,transparent)}   /* 상태등: 다크 링 + 아주 옅은 발광 */
-  .lbRace .lrNm{font-family:var(--font-num);font-size:9.5px;font-weight:800;color:#c9d2dd;letter-spacing:.35px;white-space:nowrap;text-shadow:0 1px 1px rgba(0,0,0,.6)}
+  /* ⚠ 종족 이름은 **한글**이다(유니온·스웜·에테리얼) — `--font-num`(Rajdhani)에는 한글 글리프가 없어
+     글자마다 폴백을 타고, 폴백이 잡히는 시점에 따라 줄 높이가 14 ↔ 16px 로 흔들린다.
+     그러면 칩이 26 → 28px, 내 슬롯이 31 → 32px 가 되고 `.lbGrid` 의 높이 식은 **여유가 0px** 이라
+     그 1px 이 그대로 스크롤이 된다(스모크가 간헐 실패했다).
+     → 본문 가족으로 되돌리고(DESIGN §2: `--font-num` 은 **숫자 전용**) 줄 높이를 못 박아 흔들림을 없앤다.
+     ⚠ `font-weight`도 800 → 700: 한글 가족은 700이 최대라 800을 두면 브라우저가 가짜 볼드를 그린다. */
+  .lbRace .lrNm{font-family:inherit;font-size:9.5px;line-height:14px;font-weight:700;color:#c9d2dd;letter-spacing:.35px;white-space:nowrap;text-shadow:0 1px 1px rgba(0,0,0,.6)}
   .lbRace:not(.me){opacity:.66}   /* 남의 종족 = 살짝 흐리게(내 프로필과 미세 구분) */
   .lbRace.me{cursor:pointer;border-color:var(--glass-edge)}
   .lbRace.me:active{transform:translateY(1px)}

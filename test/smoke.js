@@ -2871,6 +2871,13 @@ async function groupLobby(){
       const chip=document.querySelector('#lbGrid .lbSlot.me .lbRace');
       assert(chip && !chip.getAttribute('onclick'),'슬롯 종족 칩이 아직 클릭 입구를 갖고 있음(입구가 둘)'); }
     // 슬롯 8칸이 스크롤 없이 다 보인다
+    // ⚠ 슬롯 판은 여유가 0px 이라 **한 줄이 1px만 자라도** 스크롤이 된다.
+    //   종족 이름은 한글이므로 숫자 글꼴(Rajdhani)에 맡기면 글자마다 폴백을 타 줄 높이가 흔들린다 →
+    //   가족·줄높이를 못 박았는지 정적으로 본다(간헐 실패를 운에 맡기지 않는다).
+    { const nm=document.querySelector('#lbGrid .lbRace .lrNm');
+      if(nm){ const ns=getComputedStyle(nm);
+        assert(!/Rajdhani/i.test(ns.fontFamily),'종족 이름(한글)이 숫자 글꼴로 지정됨: '+ns.fontFamily);
+        assert(ns.lineHeight!=='normal','종족 이름 줄 높이가 폰트 메트릭에 맡겨져 있음(흔들린다)'); } }
     { const g=$('lbGrid');
       assert(g.querySelectorAll('.lbSlot').length===_lobbyMax,'슬롯 수가 정원과 다름');
       assert(g.scrollHeight<=g.clientHeight+0.5,'슬롯 8칸이 스크롤됨: '+g.scrollHeight+'>'+g.clientHeight); }
@@ -4878,6 +4885,10 @@ async function groupGame(){
     // ⚠ 헤드리스에선 three.js(esm.sh)가 막혀 오프닝 오버레이가 안 걷힌다 — 재는 동안만 치운다(안 그러면 opWrap 이 전부 가린다)
     const ph=$('phone'), faked=ph && !ph.classList.contains('inGame'); if(faked) ph.classList.add('inGame');
     const op=$('opening'), opHid=op && !op.classList.contains('hide'); if(opHid) op.classList.add('hide');
+    // ⚠ 오프닝이 안 걷히면 `bootApp()` 의 1.7초 타이머가 '아직 오프닝'으로 보고 openAuth() 를 부른다 →
+    //   로그인 화면(#auth, z-index 48)이 게임 UI 위에 남아 elementFromPoint 가 그걸 집는다.
+    //   `.inGame`·`#opening` 과 같은 이유로 **재는 동안만** 치운다(실제 플레이에서는 오프닝이 걷혀 이 경로가 안 생긴다).
+    const au=$('auth'), auHid=au && !au.classList.contains('hide'); if(auHid) au.classList.add('hide');
     document.body.classList.add('sheetOpen');
     try{
       const same=G.units.filter(u=>typeof isBuilding!=='function'||!isBuilding(u.id));
@@ -4901,7 +4912,8 @@ async function groupGame(){
         im.src=ICO_DIR+'ui/ui_'+kk+'.webp'; })));
       assert(!bad.length,'UI 조작 아이콘 파일이 안 열림: '+bad.join(','));
       return keys.length+'종 · 버튼 '+r.width.toFixed(0)+'px';
-    } finally { G.selType=null; G.sel=[]; refreshSelCard(); if(faked) ph.classList.remove('inGame'); if(opHid) op.classList.remove('hide'); }
+    } finally { G.selType=null; G.sel=[]; refreshSelCard(); if(faked) ph.classList.remove('inGame');
+      if(opHid) op.classList.remove('hide'); if(auHid) au.classList.remove('hide'); }
   });
   await step('이동 명령 + 60프레임 진행', ()=>{ for(const u of G.units) u.moveTo={x:0.35+Math.random()*0.3,y:0.35+Math.random()*0.3};
     pump(60); return '예외 없음'; });
