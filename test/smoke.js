@@ -2660,6 +2660,54 @@ async function groupLobby(){
     const mo=document.querySelector('#modeSheet .moCard'); assert(visible(mo),'moCard 안 보임');
     const w=mo.getBoundingClientRect().width; assert(w>200&&w<400,'moCard 폭 이상: '+w); closeModeSheet(); return 'w='+w; });
   // 🎚 개인 플레이 난이도 = 세그먼트 바로 고르고 상세에서 확인 후 시작(목록 훑어 즉시 시작하던 방식 폐지)
+  // ══ 방 찾기 — 빠른 입장이 맨 위 · 난이도는 공용 탭 띠 · 행 밑변이 난이도 색 ══
+  await step('방 찾기: 빠른 입장이 주 액션 · 난이도 없는 맵은 띠를 통째로 비운다', async ()=>{
+    skipIf(typeof openRooms!=='function','방 찾기 없음');
+    openMapSelect(); await sleep(60);
+    // ① 난이도 있는 유즈맵
+    _selMap=USEMAPS.nemo; hideAppScreens(); openRooms(); await sleep(300);
+    const card=document.querySelector('#rooms .rmCard');
+    assert(card,'방 찾기 카드가 없음');
+    // 주 액션은 **맨 위 빠른 입장 하나뿐**이다(하단은 전부 하위 단계)
+    const q=card.querySelector('.rmQuickTop');
+    assert(q && q.classList.contains('actBtn') && q.classList.contains('pri'),'빠른 입장이 맨 위 주 액션(.actBtn.pri)이 아님');
+    assert(card.querySelectorAll('.actBtn.pri').length===1,'주 액션이 둘 이상임');
+    assert(/방/.test($('rmQuickSub').textContent),'빠른 입장 안의 방 수 표기가 없음: '+$('rmQuickSub').textContent);
+    // 난이도 = 공용 탭 띠. ⛔ 옛 팝다운(.rmDiff)을 되살리면 안 된다
+    assert($('rmFilter').querySelector('.pdSeg'),'난이도 필터가 공용 탭 띠(.pdSeg)가 아님');
+    assert(!document.querySelector('#rooms .rmDiffMenu'),'옛 난이도 팝다운이 남아 있음');
+    // 행 밑변 = 난이도 색. 잠긴 행(게임중·가득참)은 광원이 죽는다
+    { const rows=[...card.querySelectorAll('.roomItem')];
+      assert(rows.length,'방 목록이 비었음');
+      const open=rows.find(r=>!r.classList.contains('locked'));
+      assert(open && /^#[0-9a-f]{3,8}$/i.test((open.style.getPropertyValue('--dc')||'').trim()),
+        '행에 난이도 색(--dc)이 안 실림: '+open.style.getPropertyValue('--dc'));
+      assert(getComputedStyle(open,'::after').content!=='none','행 밑변 광원이 없음');
+      const lk=rows.find(r=>r.classList.contains('locked'));
+      if(lk) assert(!lk.style.getPropertyValue('--dcGlow'),'잠긴 행인데 광원이 살아 있음'); }
+    // 하단 = 방 만들기가 가로로 길고, 뒤로·새로고침은 작은 정사각
+    { const btns=[...card.querySelectorAll('.rmBtns .actBtn')];
+      assert(btns.length===3,'하단 버튼이 3개가 아님: '+btns.length);
+      const sq=btns.filter(b=>b.classList.contains('sq'));
+      assert(sq.length===2,'뒤로·새로고침이 작은 정사각이 아님');
+      const grow=btns.find(b=>!b.classList.contains('sq'));
+      assert(grow.getBoundingClientRect().width > sq[0].getBoundingClientRect().width*2,
+        '방 만들기가 충분히 길지 않음'); }
+    // 방 번호 입장 = 평소엔 접혀 있고 🔍로 편다
+    assert($('rmNumRow').classList.contains('hide'),'방 번호 줄이 처음부터 펼쳐져 있음');
+    toggleRoomNum(); await sleep(80);
+    assert(!$('rmNumRow').classList.contains('hide') && $('rmNumBtn').classList.contains('on'),'🔍로 방 번호 줄이 안 펴짐');
+    toggleRoomNum(); await sleep(60);
+    // ② 난이도 없는 유즈맵 = 띠를 통째로 비운다(요약 줄 같은 것으로 대신 채우지 않는다)
+    backToTitle(); await sleep(80);
+    _selMap=USEMAPS.cpu; hideAppScreens(); openRooms(); await sleep(300);
+    assert($('rmFilter').innerHTML==='','난이도 없는 유즈맵인데 필터 띠가 남아 있음');
+    assert(!$('rmFilter').getBoundingClientRect().height,'빈 필터 띠가 자리를 차지함');
+    { const r=document.querySelector('#rooms .roomItem');
+      assert(r && !r.style.getPropertyValue('--dc'),'난이도 없는 맵인데 행에 난이도 색이 실림'); }
+    assert(document.querySelector('#rooms .rmQuickTop'),'난이도 없는 맵에서 빠른 입장이 사라짐');
+    backToTitle(); await sleep(60);
+    return '난이도 있음/없음 두 경로 ok'; });
   // ══ 공용 액션 버튼(.actBtn) — 세 상태를 한 컴포넌트가 갖는다 ══
   await step('공용 액션 버튼: 활성·비활성·하위가 한 판에서 빛으로만 갈린다', async ()=>{
     openMapSelect(); await sleep(60); _selMap=USEMAPS.nemo; openSoloDiff(); await sleep(150);
@@ -3589,7 +3637,7 @@ async function groupLobby(){
       assert(card,'파티 찾기가 방 찾기 카드(.rmCard)를 안 씀');
       assert(card.querySelector('.rmHead .rmTitle').textContent==='파티 찾기','머리 제목이 다름');
       assert(card.querySelector('.rmNum input') && card.querySelector('#pbList.rmList'),'방 찾기의 입력줄·목록 규격이 아님');
-      assert(card.querySelectorAll('.rmBtns .rmSq').length===2 && card.querySelector('.rmBtns .rmQuick'),'하단 버튼 4칸 규격이 아님');
+      assert(card.querySelectorAll('.rmBtns .actBtn.sq').length===2 && card.querySelector('.rmBtns .actBtn.pri'),'하단 버튼 4칸 규격이 아님(공용 .actBtn)');
       const rows=[...card.querySelectorAll('.roomItem')];
       assert(rows.length===PB_DEMO.length,'게시판 목록이 안 그려짐: '+rows.length);
       assert(rows.some(r=>r.classList.contains('locked') && /가득참/.test(r.textContent)),'가득 찬 파티가 참가 불가로 안 막힘');

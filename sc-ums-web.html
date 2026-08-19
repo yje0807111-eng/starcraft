@@ -1824,35 +1824,25 @@
   .rmTitle{font-size:17px;font-weight:800;color:#eef1f6;text-shadow:0 1px 3px rgba(0,0,0,.65);letter-spacing:.5px}   /* 제목 = 화이트 통일 */
   .rmHeadR{display:flex;align-items:center;gap:8px;flex:0 0 auto}
   .rmOnline{font-size:var(--fs-md);color:var(--txt-dim)}.rmOnline b{color:var(--hud)}
-  /* 우상단 난이도 필터 = 커스텀 팝다운(테마 통일) */
-  .rmCard>.rmHead{z-index:20}   /* 헤드를 목록 위로 → 드롭다운 메뉴가 방 목록에 가려 비치지 않게 */
-  .rmDiff{position:relative;flex:0 0 auto}
-  .rmDiffBtn{display:flex;align-items:center;gap:5px;font-family:inherit;font-size:var(--fs-md);font-weight:800;color:#cfd8e3;cursor:pointer;
-    padding:6px 8px 6px 11px;border-radius:9px;background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);transition:border-color .12s,background .12s}
-  .rmDiffBtn:active{transform:translateY(1px)}
-  .rmDiff.open .rmDiffBtn{border-color:var(--glass-edge);background:rgba(255,255,255,.09)}
-  .rmDiffChev{width:12px;height:12px;flex:0 0 auto;color:#9fb0c2;transition:transform .18s}
-  .rmDiff.open .rmDiffChev{transform:rotate(180deg)}
-  .rmDiffMenu{position:absolute;top:calc(100% + 5px);right:0;z-index:30;min-width:104px;display:flex;flex-direction:column;gap:1px;padding:4px;
-    background:linear-gradient(180deg,rgba(16,22,32,.985),rgba(9,13,20,.99));border:1px solid var(--metal-edge);border-radius:9px;
-    box-shadow:0 12px 28px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.04)}
-  .rmDiffMenu.hide{display:none}
-  .rmDiffOpt{display:flex;align-items:center;gap:7px;font-family:inherit;font-size:var(--fs-md);font-weight:700;color:#c6d2df;text-align:left;cursor:pointer;white-space:nowrap;
-    padding:6px 9px;border-radius:calc(var(--r-md) - 2px);background:transparent;border:1px solid transparent;transition:background .1s,border-color .1s,color .1s}
-  .rmDiffOpt:hover{background:rgba(255,255,255,.05)}
-  .rmDiffOpt.on{color:#fff;background:rgba(255,59,59,.13);border-color:rgba(255,59,59,.4)}
-  .rmDiffDot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;box-shadow:0 0 0 2px rgba(255,255,255,.05)}
-  
-  /* 하단 액션 = 팝업과 같은 언어: 중립 글래스(보조) + 레드 강조 필(주 액션) */
-  .rmQuick,.rmCreate{flex:1;min-width:0;height:48px;padding:0 8px;border-radius:11px;font-family:inherit;font-size:var(--fs-lg);font-weight:800;cursor:pointer;letter-spacing:.2px;white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:7px;transition:transform .1s,filter .16s,background .16s,border-color .16s}
-  .rmQuick{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5);
-    background:linear-gradient(180deg,rgba(0,0,0,.08),rgba(0,0,0,.34)),var(--neon);
-    border:1px solid rgba(255,255,255,.2);box-shadow:0 8px 20px -11px var(--neon-glow),inset 0 1px 0 rgba(255,255,255,.14)}
-  .rmQuick:hover{filter:brightness(1.08) saturate(1.03)}
-  .rmCreate{color:#cfd8e3;background:rgba(255,255,255,.055);border:1px solid var(--metal-edge)}
-  .rmCreate:hover{background:rgba(255,255,255,.1);border-color:var(--glass-edge);color:#eef3f9}
-  .rmQuick:active,.rmCreate:active{transform:translateY(1px) scale(.99)}
+  /* 우상단 = 방 번호 입장(친구 방)을 여는 🔍 하나. 옛 난이도 팝다운은 폐지 — 난이도는 아래 탭 띠가 맡는다 */
+  .rmIco{width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;
+    color:#c6cdd6;border:1px solid rgba(255,255,255,.12);border-radius:var(--r-bar);background:rgba(255,255,255,.04);
+    transition:color .12s,border-color .12s,background .12s}
+  .rmIco svg{width:16px;height:16px}
+  .rmIco.on{color:#fff;border-color:rgba(255,59,59,.45);background:rgba(255,59,59,.1)}
+  .rmIco:active{transform:translateY(1px)}
+  /* 빠른 입장 = 이 화면의 유일한 주 액션. 가장 잦은 동작이라 맨 위에 크게 둔다 */
+  .rmQuickTop{flex:none;width:100%;height:58px;margin-bottom:14px;font-size:15px}
+  .rmQuickTop svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+  .rmQuickTop em{font-family:var(--font-ko);font-style:normal;font-size:var(--fs-sm);font-weight:400;color:#ffb9b9;margin-left:3px}
+  .rmQuickTop em:empty{display:none}
+  /* 난이도 필터 = 공용 탭 띠(segNavHTML). ⛔ 새 탭 띠를 만들지 말 것 · 난이도 없는 유즈맵에선 통째로 비운다 */
+  .rmFilter{flex:none}
+  .rmFilter:empty{display:none}
+  .rmFilter .pdSeg{margin:0 0 12px}
+  .rmFilter .pdSegBtn{padding:8px 0;font-family:var(--font-num);font-size:11.5px;letter-spacing:0}
   .rmNum{display:flex;gap:7px;margin-bottom:12px}
+  .rmNum.hide{display:none}
   .rmNum input{flex:1;min-width:0;padding:10px 12px;border-radius:10px;background:rgba(0,0,0,.32);border:1px solid var(--metal-edge);color:var(--txt);font-family:inherit;font-size:var(--fs-lg);outline:none;transition:border-color .14s}
   .rmNum input:focus{border-color:rgba(255,59,59,.5)}
   .rmNum input::placeholder{color:#6f757d}
@@ -2059,16 +2049,27 @@
   .cpBtns .actBtn{flex:1;min-width:0}
   .cpBtns .actBtn.sub{flex:0 0 34%}
   /* 6칸 고정 높이: 방이 적어도 크기 유지(빈 공간), 많으면 내부 드래그 스크롤 */
-  .rmList{--rmRows:6;--rmItemH:54px;--rmGap:6px;flex:none;
-    height:calc(var(--rmRows) * var(--rmItemH) + (var(--rmRows) - 1) * var(--rmGap));
+  /* 목록은 카드가 남는 높이를 전부 먹는다(방이 적어도 카드 높이는 그대로다 — 카드가 고정 높이라) */
+  .rmList{--rmItemH:58px;--rmGap:7px;flex:1;min-height:0;
     overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
     display:flex;flex-direction:column;gap:var(--rmGap);padding-right:2px}
   .rmList::-webkit-scrollbar{width:5px}.rmList::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
-  .roomItem{flex:0 0 auto;height:var(--rmItemH);box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border-radius:var(--r-md);cursor:pointer;
-    background:linear-gradient(180deg,rgba(30,32,38,.85),rgba(12,13,17,.88));border:1px solid var(--metal-edge);transition:border-color .12s}
+  /* 행 = 액션 버튼과 같은 문법(볼록 판 + 밑변 광원). 광원 색이 곧 난이도라 배지를 안 읽어도 훑힌다.
+     ⚠ 난이도가 없는 유즈맵/파티 목록은 --dc 를 안 실어 주면 중립 흰선이 된다(.actBtn 기본형과 같다). */
+  .roomItem{position:relative;flex:0 0 auto;height:var(--rmItemH);box-sizing:border-box;overflow:hidden;
+    display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 13px;cursor:pointer;
+    border-radius:var(--r-bar);border:1px solid rgba(255,255,255,.07);
+    background:linear-gradient(180deg,#16171b,#0b0c0e);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.07);transition:border-color .12s}
+  .roomItem::after{content:'';position:absolute;left:8%;right:8%;bottom:0;height:2px;pointer-events:none;
+    background:linear-gradient(90deg,transparent,var(--dc,rgba(255,255,255,.3)),transparent);
+    box-shadow:0 0 7px var(--dcGlow,transparent)}
   .roomItem:hover{border-color:var(--neon-soft)}
   .roomItem:active{transform:translateY(1px)}
-  .roomItem.locked{cursor:default;opacity:.5}
+  /* 잠김(게임중·가득참) = 볼록 ↔ 오목으로 뒤집고 광원을 죽인다(공용 .actBtn:disabled 와 같은 규칙) */
+  .roomItem.locked{cursor:default;opacity:.5;box-shadow:inset 0 3px 6px -4px #000;
+    background:linear-gradient(180deg,#131316,#0a0a0c);border-color:#2b2d33}
+  .roomItem.locked::after{background:linear-gradient(90deg,transparent,#33363c,transparent);box-shadow:none}
   .riMain{min-width:0;flex:1}
   .riName{font-size:var(--fs-xl);font-weight:700;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .riDiff{font-size:8.5px;font-weight:800;letter-spacing:.3px;color:var(--dc,#888);border:1px solid var(--dc,#888);border-radius:var(--r-bar);padding:0 4px;margin-right:5px;vertical-align:1px}
@@ -2080,15 +2081,19 @@
   .riCnt.full{color:#ff7676}
   .riStat{font-size:var(--fs-xs);font-weight:700;margin-top:2px}
   .riStat.wait{color:var(--ok)}.riStat.play{color:var(--txt-mute)}
-  .rmBtns{display:flex;gap:8px;margin-top:20px;align-items:stretch}
-  /* 뒤로·새로고침 = 중립 글래스 아이콘 버튼(주 액션보다 위계 낮게) — 하단 버튼과 높이 통일 */
+  /* 하단 = 공용 액션 버튼. 주 동작(방 만들기)이 가로로 길고, 뒤로·새로고침은 작은 정사각으로 물러난다.
+     ⚠ 화면의 주 액션(.pri)은 위의 빠른 입장 하나뿐이다 — 여기 것들은 전부 하위 단계다. */
+  .rmBtns{display:flex;gap:9px;margin-top:14px;align-items:center}
+  /* ⚠ 공용 .actBtn 의 좌우 여백(14px)을 그대로 두면 '파티 만들기'가 두 줄로 접힌다 — 여기선 조인다 */
+  .rmBtns .actBtn{flex:1;min-width:0;height:46px;padding:0 6px;white-space:nowrap}
+  .rmBtns .actBtn.sq{flex:0 0 38px;height:38px;padding:0}
+  .rmBtns .actBtn.sq::after{left:16%;right:16%}
+  .rmBtns .actBtn svg{width:17px;height:17px;display:block;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
   .rmSq{flex:0 0 auto;width:46px;height:48px;display:flex;align-items:center;justify-content:center;padding:0;
     border-radius:11px;cursor:pointer;transition:transform .1s,background .16s,color .16s,border-color .16s;
     color:#9fb0c2;background:rgba(255,255,255,.05);border:1px solid var(--metal-edge)}
   .rmSq svg{width:19px;height:19px;display:block}
-  .rmSq:hover{background:rgba(255,255,255,.1);color:#e2e9f2;border-color:var(--glass-edge)}
   .rmSq:active{transform:translateY(1px) scale(.98)}
-  .rmSq.rmRefresh{color:#b9c3cf}   /* 통일: 중립 글래스(시안 제거) */
   /* 토스트 */
   #toast{position:absolute;bottom:46px;left:50%;transform:translateX(-50%);z-index:95;
     background:rgba(10,20,35,.92);border:1px solid var(--neon-soft);border-radius:var(--r-lg);padding:7px 14px;
@@ -4556,28 +4561,22 @@
           <span class="rmTitle">방 찾기</span>
           <span class="rmHeadR">
             <span class="rmOnline">방 <b id="roomCount">0</b>개</span>
-            <div class="rmDiff" id="rmDiff">
-              <button class="rmDiffBtn" type="button" onclick="toggleRmDiff(event)" title="난이도 필터"><span id="rmDiffLabel">전체 난이도</span><svg class="rmDiffChev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
-              <div class="rmDiffMenu hide" id="rmDiffMenu" role="listbox">
-                <button type="button" class="rmDiffOpt on" data-f="all" onclick="pickRmDiff('all')">전체 난이도</button>
-                <button type="button" class="rmDiffOpt" data-f="easy" onclick="pickRmDiff('easy')"><span class="rmDiffDot" style="background:var(--ok)"></span>EASY</button>
-                <button type="button" class="rmDiffOpt" data-f="normal" onclick="pickRmDiff('normal')"><span class="rmDiffDot" style="background:var(--info)"></span>NORMAL</button>
-                <button type="button" class="rmDiffOpt" data-f="hard" onclick="pickRmDiff('hard')"><span class="rmDiffDot" style="background:var(--warn)"></span>HARD</button>
-                <button type="button" class="rmDiffOpt" data-f="hell" onclick="pickRmDiff('hell')"><span class="rmDiffDot" style="background:var(--bad)"></span>HELL</button>
-              </div>
-            </div>
+            <button class="rmIco" id="rmNumBtn" onclick="toggleRoomNum()" title="방 번호로 입장" aria-label="방 번호로 입장"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg></button>
           </span>
         </div>
-        <div class="rmNum">
+        <!-- 가장 잦은 동작이 맨 위 = 빠른 입장(화면의 유일한 주 액션) -->
+        <button class="actBtn pri rmQuickTop" onclick="quickJoin()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3 5 14h6l-1 7 8-11h-6z"/></svg>빠른 입장<em id="rmQuickSub"></em></button>
+        <!-- 방 번호 입장 = 친구 방 전용이라 평소엔 접어 둔다(우상단 🔍로 편다) -->
+        <div class="rmNum hide" id="rmNumRow">
           <input id="roomNumField" type="text" inputmode="numeric" placeholder="방 번호로 입장 (친구 방)" maxlength="5" onkeydown="if(event.key==='Enter')joinByNumber()">
           <button onclick="joinByNumber()">입장</button>
         </div>
+        <div class="rmFilter" id="rmFilter"></div>   <!-- 난이도 있는 유즈맵에서만 (segNavHTML) -->
         <div class="rmList" id="roomList"></div>
         <div class="rmBtns">
-          <button class="rmSq rmBack" onclick="backToTitle()" title="로비로 돌아가기" aria-label="로비로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
-          <button class="rmCreate" data-sfx="ui_open" onclick="createRoom()">방 만들기</button>
-          <button class="rmQuick" onclick="quickJoin()">빠른 입장</button>
-          <button class="rmSq rmRefresh" onclick="refreshRooms()" title="새로고침" aria-label="새로고침"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 12a8.4 8.4 0 0 1 14.5-5.8M20.4 12a8.4 8.4 0 0 1-14.5 5.8"/><path d="M18.4 2.9v3.6h-3.6M5.6 21.1v-3.6h3.6"/></svg></button>
+          <button class="actBtn sq" onclick="backToTitle()" title="로비로 돌아가기" aria-label="로비로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+          <button class="actBtn" data-sfx="ui_open" onclick="createRoom()">방 만들기</button>
+          <button class="actBtn sq" onclick="refreshRooms()" title="새로고침" aria-label="새로고침"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 12a8.4 8.4 0 0 1 14.5-5.8M20.4 12a8.4 8.4 0 0 1-14.5 5.8"/><path d="M18.4 2.9v3.6h-3.6M5.6 21.1v-3.6h3.6"/></svg></button>
         </div>
       </div>
     </div>
@@ -11037,7 +11036,6 @@ function drawBoss(dt){ const {ctx,W,H}=setup('cvBoss'); BAW=W;BAH=H; dt=dt||0;
   }
   ctx.textAlign='left';
 }
-document.addEventListener('pointerdown', function(ev){ const m=document.getElementById('rmDiffMenu'); if(!m||m.classList.contains('hide'))return; if(ev.target.closest&&ev.target.closest('#rmDiff'))return; if(typeof _rmDiffClose==='function') _rmDiffClose(); }, true);   // 방찾기 난이도 팝다운 바깥 클릭 닫기
 document.addEventListener('pointerdown', function(ev){ const m=document.getElementById('msScopeMenu'); if(!m||m.classList.contains('hide'))return; if(ev.target.closest&&ev.target.closest('#msScopeDD'))return; if(typeof _msScopeClose==='function') _msScopeClose(); }, true);   // 로비 채팅 범위 팝다운 바깥 클릭 닫기
 document.addEventListener('pointerdown', function(ev){ const m=document.getElementById('lbMenu'); if(!m||m.classList.contains('hide'))return; if(ev.target.closest&&(ev.target.closest('#lbMenu')||ev.target.closest('.lbSlot.tapmenu')))return; if(typeof _lbMenuClose==='function') _lbMenuClose(); }, true);   // 대기실 슬롯 메뉴 바깥 클릭 닫기
 function updateBossViewBtn(){ const b=document.getElementById('bossViewBtn'); if(b){ b.textContent=G.bossOpen?'메인':'보스방'; b.classList.toggle('viewing', !!G.bossOpen); } }
@@ -15337,8 +15335,7 @@ function tickRooms(){ if(!_roomList||document.getElementById('rooms').classList.
 }
 function openRooms(){ setInGame(false); document.getElementById('ov').classList.add('hide'); document.getElementById('lobby').classList.add('hide');
   const rm=document.getElementById('rooms'); rm.classList.remove('hide'); if(typeof playScreenFx==='function') playScreenFx(rm);
-  _roomFilter='all'; { const _lbl=document.getElementById('rmDiffLabel'); if(_lbl) _lbl.textContent='전체 난이도'; document.querySelectorAll('#rmDiffMenu .rmDiffOpt').forEach(o=>o.classList.toggle('on', o.dataset.f==='all')); if(typeof _rmDiffClose==='function') _rmDiffClose(); }   // 진입 시 난이도 필터 초기화(우상단 팝다운)
-  { const rd=document.getElementById('rmDiff'); if(rd) rd.style.display=(typeof mapHasDiff==='function'&&mapHasDiff())?'':'none'; }   // 대인전 유즈맵 = 난이도 필터 숨김
+  _roomFilter='all'; renderRmFilter(); _rmNumClose();   // 진입 시 필터·방번호 줄 초기화
   if(rtRoomsActive()){ rtRoomsEnsure(); rtRoomsSync(); }   // 실제 방 목록(presence) — 시뮬 정지
   else { buildRoomList(); startRoomsTick(); } }
 function backToTitle(){ stopRoomsTick(); document.getElementById('rooms').classList.add('hide'); openMapSelect(); }   // 방찾기 뒤로 → 유즈맵 선택
@@ -16382,10 +16379,10 @@ function renderPartyFind(){ const ov=document.getElementById('ptFindOv'); if(!ov
     + numRow
     +'<div class="rmList" id="pbList"></div>'
     +'<div class="rmBtns">'
-    +'<button class="rmSq" onclick="closePartyFind()" title="닫기" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>'
-    +'<button class="rmCreate" onclick="pbToggleMake()">'+(_pbMaking?'취소':'파티 만들기')+'</button>'
-    +'<button class="rmQuick" onclick="pbQuick()">빠른 참가</button>'
-    +'<button class="rmSq rmRefresh" onclick="pbRefresh()" title="새로고침" aria-label="새로고침"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 12a8.4 8.4 0 0 1 14.5-5.8M20.4 12a8.4 8.4 0 0 1-14.5 5.8"/><path d="M18.4 2.9v3.6h-3.6M5.6 21.1v-3.6h3.6"/></svg></button>'
+    +'<button class="actBtn sq" onclick="closePartyFind()" title="닫기" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>'
+    +'<button class="actBtn" onclick="pbToggleMake()">'+(_pbMaking?'취소':'파티 만들기')+'</button>'
+    +'<button class="actBtn pri" onclick="pbQuick()">빠른 참가</button>'
+    +'<button class="actBtn sq" onclick="pbRefresh()" title="새로고침" aria-label="새로고침"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 12a8.4 8.4 0 0 1 14.5-5.8M20.4 12a8.4 8.4 0 0 1-14.5 5.8"/><path d="M18.4 2.9v3.6h-3.6M5.6 21.1v-3.6h3.6"/></svg></button>'
     +'</div></div>';
   pbPaintList();
   if(_pbMaking){ const i=document.getElementById('pbNameInput');
@@ -16598,8 +16595,8 @@ function _sfxForEl(el){
   if(el.matches('.tab, .msTab2, .msScopeBtn')) return 'ui_tab';                                   // 탭 전환
   if(el.matches('.msSortCur, .msSortOpt')) return 'ui_dropdown';                                  // 정렬 드롭다운
   if(el.matches('.segBtn, .setSw, .cpSegBtn, .msTab2, .voteCol')) return 'ui_toggle';        // 켜기↔끄기/세그먼트/배속
-  if(el.matches('.moClose, .setX, .actBtn.sub, .ecCancel, .rmBack, .lbLeave')) return 'ui_close';   // 닫기/취소/뒤로
-  if(el.matches('.opStart, .moBtn, .actBtn.pri, .rmQuick, .lbStart, .ecGo, .authBtn, .authGuest, #chatSend, .msChatSend')) return 'ui_confirm';  // 시작·만들기·전송·확정
+  if(el.matches('.moClose, .setX, .actBtn.sub, .ecCancel, .lbLeave')) return 'ui_close';   // 닫기/취소/뒤로
+  if(el.matches('.opStart, .moBtn, .actBtn.pri, .lbStart, .ecGo, .authBtn, .authGuest, #chatSend, .msChatSend')) return 'ui_confirm';  // 시작·만들기·전송·확정
   return 'click';                                                                                  // 일반 버튼 기본음
 }
 // 모든 버튼/탭/메뉴/모달에 위임 바인딩 — 누르는 순간(pointerdown) 즉시 재생
@@ -16878,21 +16875,37 @@ function diffBadge(d){ const D=DIFFICULTY[d]||DIFFICULTY.normal; return '<span c
 let _roomFilter='all';
 function setRoomFilter(f){ _roomFilter=f;
   if(typeof playSfx==='function') playSfx('ui_tab'); renderRoomList(); }
-// 우상단 난이도 커스텀 팝다운
-const _RM_DIFF_KO={all:'전체 난이도',easy:'EASY',normal:'NORMAL',hard:'HARD',hell:'HELL'};
-function _rmDiffClose(){ const m=document.getElementById('rmDiffMenu'); if(m) m.classList.add('hide'); const d=document.getElementById('rmDiff'); if(d) d.classList.remove('open'); }
-function toggleRmDiff(ev){ if(ev){ ev.stopPropagation(); ev.preventDefault(); } const m=document.getElementById('rmDiffMenu'), d=document.getElementById('rmDiff'); if(!m||!d) return;
-  const willOpen=m.classList.contains('hide'); m.classList.toggle('hide', !willOpen); d.classList.toggle('open', willOpen); if(typeof playSfx==='function') playSfx('ui_tab'); }
-function pickRmDiff(f){ const lbl=document.getElementById('rmDiffLabel'); if(lbl) lbl.textContent=_RM_DIFF_KO[f]||f;
-  document.querySelectorAll('#rmDiffMenu .rmDiffOpt').forEach(o=>o.classList.toggle('on', o.dataset.f===f));
-  _rmDiffClose(); if(typeof setRoomFilter==='function') setRoomFilter(f); }
+// 난이도 필터 = 공용 탭 띠(segNavHTML). 난이도가 없는 유즈맵(대인전)에서는 **띠 자체를 비운다** —
+// 빈 자리에 요약 줄 같은 것을 대신 채우지 않는다(요청, 2026-08-19).
+const RM_FILTERS=[{k:'all',label:'전체'},{k:'easy',label:'EASY'},{k:'normal',label:'NORMAL'},{k:'hard',label:'HARD'},{k:'hell',label:'HELL'}];
+function renderRmFilter(){ const box=document.getElementById('rmFilter'); if(!box) return;
+  if(!(typeof mapHasDiff==='function' && mapHasDiff())){ box.innerHTML=''; return; }   // 대인전 = 난이도 개념 없음
+  const i=Math.max(0, RM_FILTERS.findIndex(function(f){ return f.k===_roomFilter; }));
+  box.innerHTML=segNavHTML(RM_FILTERS.map(function(f){ return {label:f.label}; }), i, function(k){ return 'pickRmDiff(\''+RM_FILTERS[k].k+'\')'; }); }
+function pickRmDiff(f){ if(typeof setRoomFilter==='function') setRoomFilter(f); renderRmFilter(); }
+// 방 번호 입장(친구 방)은 자주 쓰는 동작이 아니라 평소엔 접어 둔다 — 우상단 🔍로 편다
+function toggleRoomNum(){ const row=document.getElementById('rmNumRow'), btn=document.getElementById('rmNumBtn');
+  if(!row) return; const open=row.classList.contains('hide');
+  row.classList.toggle('hide', !open); if(btn) btn.classList.toggle('on', open);
+  if(open){ const f=document.getElementById('roomNumField'); if(f) setTimeout(function(){ try{ f.focus(); }catch(e){} },30); }
+  if(typeof playSfx==='function') playSfx('ui_tab'); }
+function _rmNumClose(){ const row=document.getElementById('rmNumRow'), btn=document.getElementById('rmNumBtn');
+  if(row) row.classList.add('hide'); if(btn) btn.classList.remove('on');
+  const f=document.getElementById('roomNumField'); if(f) f.value=''; }
 function renderRoomList(){ const list=document.getElementById('roomList'); if(!list) return; list.innerHTML='';
   const shown=(_roomFilter==='all')?_roomList:_roomList.filter(r=>r.diff===_roomFilter);   // 난이도 필터
   const rc=document.getElementById('roomCount'); if(rc) rc.textContent=shown.length;
   const need=partySize();
-  if(!shown.length){ const e=document.createElement('div'); e.className='rmEmpty'; e.textContent=(_roomFilter==='all')?'대기 중인 방이 없습니다 · 새로고침 또는 방 만들기':'해당 난이도의 방이 없습니다'; list.appendChild(e); return; }
+  if(!shown.length){ { const q=document.getElementById('rmQuickSub'); if(q) q.textContent='들어갈 방 없음'; }
+    const e=document.createElement('div'); e.className='rmEmpty'; e.textContent=(_roomFilter==='all')?'대기 중인 방이 없습니다 · 새로고침 또는 방 만들기':'해당 난이도의 방이 없습니다'; list.appendChild(e); return; }
+  { const q=document.getElementById('rmQuickSub');   // 빠른 입장 버튼 안의 부제 = 지금 들어갈 수 있는 방 수
+    if(q){ const w=shown.filter(r=>r.status==='wait' && (r.max-r.cur)>=need).length;
+      q.textContent = w? ('대기 중 '+w+'방') : '들어갈 방 없음'; } }
   shown.forEach(r=>{ const full=r.cur>=r.max, waiting=r.status==='wait', fits=(r.max-r.cur)>=need, joinable=waiting&&!full&&fits, priv=r.visibility==='private';
     const el=document.createElement('div'); el.className='roomItem'+(joinable?'':' locked');
+    // 밑변 광원 = 난이도 색. 난이도가 없는 유즈맵은 안 실어 주고 중립 흰선으로 둔다(.actBtn 기본형)
+    if(mapHasDiff()){ const c=DIFF_COLOR[r.diff]||'#888';
+      el.style.setProperty('--dc', c); if(joinable) el.style.setProperty('--dcGlow', c); }
     el.innerHTML='<div class="riMain"><div class="riName">'+(mapHasDiff()?diffBadge(r.diff):'')+'<span class="riNum">#'+r.num+'</span>'+(priv?'<span class="riLock">🔒</span>':'')+escHtml(r.name)+'</div><div class="riSub">방장 - '+escHtml(r.host)+(need>1&&waiting&&!full&&!fits?' · <span class="riOver">파티 자리 부족</span>':'')+'</div></div>'
       +'<div class="riRight"><div class="riCnt'+(full?' full':'')+'">'+r.cur+'/'+r.max+'</div><div class="riStat '+(waiting?'wait':'play')+'">'+(waiting?(full?'가득참':'대기중'):(r.round?('게임중 '+r.round+'R'):'게임중'))+'</div></div>';
     if(joinable) el.onclick=()=> priv? openPwPrompt(r) : joinRoom(r);
