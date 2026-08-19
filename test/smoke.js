@@ -5027,7 +5027,7 @@ async function groupGame(){
   await step('유즈맵 보상: 사냥터 시급 앵커 · 진행도', async()=>{
     skipIf(typeof profRunReward!=='function' || typeof umProgress!=='function','경제 연결 없음');
     const p=PROF(), keepPc=p.pcoin, keepGas=p.gas, keepHunt=JSON.parse(JSON.stringify(p.hunt||{}));
-    const keepG=G, keepSTK=(typeof STK!=='undefined')?STK:null, keepMap=MAP;
+    const keepG=G, keepSTK=(typeof STK!=='undefined')?STK:null, keepMap=MAP, keepDay0=PLAYER_META.umDay;
     MAP=USEMAPS.nemo;   // ⚠ 앞 스텝이 무한모드로 두고 갔을 수 있다(rounds 100만 · infinite) — 맵을 고정하고 잰다
     const run=(rate)=>{ p.hunt.rate=rate; p.pcoin=0; p.gas=0; return profRunReward(); };
     let bad_noChar=false;
@@ -5082,7 +5082,7 @@ async function groupGame(){
         } finally { PLAYER_META.umClear=keepClear; } }
       // ⑧ ⚠ 오토배틀도 앵커 보상을 받는다 — _runSummary 의 직스 분기가 먼저 return 하면 통째로 못 받는다
       { G=newGame(); G.strike=true; G.phase='won'; G.round=5; STK={ me:{gold:0, earned:1000, kills:3, units:[]}, t:120, round:10 };
-        p.hunt.rate=1; p.pcoin=0;
+        p.hunt.rate=1; p.pcoin=0; PLAYER_META.umDay=null;   // ⚠ 앞 검사들이 판 수를 올려 놨다 — 하루 체감과 얽히지 않게 초기화
         const sum=_runSummary();
         assert(sum && sum.strike,'직스 요약이 아님');
         assert(sum.prof && sum.prof.pc>0,'오토배틀이 앵커 보상을 못 받음(직스 분기 조기 return)');
@@ -5114,9 +5114,34 @@ async function groupGame(){
           assert(PLAYER_META.coins===0,'환생했는데 포인트가 안 깎임: '+PLAYER_META.coins);
         } finally { c.level=k.lv; c.reb=k.reb; c.rebLvMax=k.mx; c.rp=k.rp; c.rebMul=k.mul;
           PLAYER_META.coins=k.coins; p.hunt=k.hunt; p.pcoin=k.pc; } } }
-      return '앵커·진행도·난이도·첫클리어 ok · 포인트 확대 ok · 환생 관문 '+(bad_noChar?'건너뜀(캐릭터 없음)':'ok');
+      // ⑪ 📅 하루 3판 체감 — 목표 세션(2~3판)을 규칙으로 새긴 것. 하드 캡이 아니라 계수다.
+      { const keepDay=PLAYER_META.umDay;
+        try{
+          PLAYER_META.umDay=null; p.hunt.rate=1;
+          const got=[];
+          for(let i=0;i<UM_DAY_FULL+2;i++){
+            G=newGame(); MAP=USEMAPS.nemo; G.difficulty='normal'; G.phase='won'; G.round=30; p.pcoin=0;
+            got.push(profRunReward()); }
+          for(let i=0;i<UM_DAY_FULL;i++) assert(got[i].dayMul===1, (i+1)+'판째인데 전액이 아님: '+got[i].dayMul);
+          assert(got[UM_DAY_FULL].dayMul===UM_DAY_FADE,(UM_DAY_FULL+1)+'판째 체감이 안 걸림: '+got[UM_DAY_FULL].dayMul);
+          assert(got[UM_DAY_FULL].pc < got[0].pc,'체감인데 보상이 안 줄었음: '+got[UM_DAY_FULL].pc+' vs '+got[0].pc);
+          assert(got[UM_DAY_FULL].pc > 0,'체감이 0 이 됨(하드 캡이 아니라 계수여야 한다)');
+          assert(got[UM_DAY_FULL].day===UM_DAY_FULL+1,'판 수가 안 세어짐: '+got[UM_DAY_FULL].day);
+          // 하루가 바뀌면 초기화 — 하루 경계는 _dgDayKey() 하나를 쓴다(출석·일일 퀘스트와 같은 축)
+          PLAYER_META.umDay.key=0;
+          G=newGame(); MAP=USEMAPS.nemo; G.difficulty='normal'; G.phase='won'; G.round=30; p.pcoin=0;
+          assert(profRunReward().dayMul===1,'날이 바뀌었는데 체감이 안 풀림');
+          assert(PLAYER_META.umDay.key===_dgDayKey(),'하루 경계가 _dgDayKey 와 다름');
+        } finally { PLAYER_META.umDay=keepDay; } }
+      // ⑫ 일일 퀘스트 — 하루 5개 중 바깥 구역(유즈맵·토벌 등) 몫
+      { assert(DQ_OUT_N>=3,'일일 퀘스트 바깥 몫이 3 미만: '+DQ_OUT_N);
+        const cat=q=>((DQ_BY[q.id||q]||{}).cat)||'?';
+        for(let d=0;d<5;d++){ const sel=dqDraw(_dgDayKey()+d*86400000);
+          const out=sel.filter(q=>cat(q)!=='hunt').length;
+          assert(out===DQ_OUT_N, d+'일 뒤 바깥 퀘스트가 '+out+'개(기대 '+DQ_OUT_N+')'); } }
+      return '앵커·진행도·난이도·첫클리어·포인트·관문 ok · 하루 '+UM_DAY_FULL+'판 체감 ok · 일일 바깥 '+DQ_OUT_N;
     } finally { G=keepG; MAP=keepMap; if(typeof STK!=='undefined') STK=keepSTK;
-      p.pcoin=keepPc; p.gas=keepGas; p.hunt=keepHunt; } });
+      PLAYER_META.umDay=keepDay0; p.pcoin=keepPc; p.gas=keepGas; p.hunt=keepHunt; } });
 }
 
 // ── 그룹: sandbox (관리자) ──

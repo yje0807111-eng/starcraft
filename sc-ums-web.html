@@ -6470,18 +6470,30 @@ function umFirstClaim(mapId,diff){ if(!mapId||!diff||umFirstGot(mapId,diff)) ret
   const t=umClearTbl(); if(!t[mapId]) t[mapId]={}; t[mapId][diff]=1;
   if(typeof dqGive==='function') dqGive(rw); else saveMeta();
   return rw; }
+// 📅 하루 몇 판째인가 — 목표 세션이 '하루 2~3판'이라 그 숫자를 규칙으로 새긴다.
+//   ⚠ 하드 캡이 아니라 체감이다: 4판째부터 30% — 더 해도 손해는 아니고, 짧은 판 반복으로 긁는 것만 막는다.
+//   ⚠ 하루 경계는 **_dgDayKey() 하나**를 쓴다(출석·일일 퀘스트와 같은 축) — 새 축을 만들면 하루가 새는 날이 생긴다.
+const UM_DAY_FULL=3, UM_DAY_FADE=0.3;
+function umDayRec(){ const M=PLAYER_META, dk=_dgDayKey();
+  if(!M.umDay || M.umDay.key!==dk) M.umDay={ key:dk, n:0 };
+  return M.umDay; }
+function umTodayN(){ return umDayRec().n; }                       // 오늘 이미 끝낸 판 수
+function umDayMul(){ return (umTodayN()<UM_DAY_FULL)?1:UM_DAY_FADE; }   // 이번 판에 붙을 계수
+function umDayCount(){ const r=umDayRec(); r.n++; try{ saveMeta(); }catch(e){} return r.n; }
 function umDiffMul(){ const D=(typeof DIFFICULTY!=='undefined')&&DIFFICULTY[G.difficulty];
   return (D&&D.coinMult)||1; }   // 난이도 배율은 DIFFICULTY 표 하나만 본다(두 벌을 두지 말 것)
 // 판 종료 보상 — 순수 read G / write profile. _runSummary에서 1회 호출.
 function profRunReward(){ const p=PROF();
-  const prog=Math.max(UM_PROG_MIN, Math.min(1, umProgress())), dMul=umDiffMul();
-  const min=Math.round(umRate()*UM_ANCHOR_MIN*prog*dMul*(1+profPetBonus('coin')));   // 🐾 펫 코인% 반영
+  const prog=Math.max(UM_PROG_MIN, Math.min(1, umProgress())), dMul=umDiffMul(), day=umDayMul();
+  const min=Math.round(umRate()*UM_ANCHOR_MIN*prog*dMul*day*(1+profPetBonus('coin')));   // 🐾 펫 코인% 반영 · 📅 하루 3판 뒤 체감
   const gas=Math.round(min*UM_GAS_RATIO);
   const k=G.kills||0, rd=G.round||0;
   const xp=Math.round((10 + k*0.5 + rd*8)*dMul);   // ⚠ 앵커 아님(위 주석 참조)
   const c=CHAR(); profGainXp(c, xp); const ups=profApplyLevelUps(c);
-  p.pcoin=(p.pcoin||0)+min; p.gas=(p.gas||0)+gas; profSyncUnlocks(); saveMeta();
-  return { xp:xp, pc:min, gas:gas, prog:prog, ups:ups, level:c?c.level:1 }; }
+  p.pcoin=(p.pcoin||0)+min; p.gas=(p.gas||0)+gas; profSyncUnlocks();
+  const dayN=umDayCount();   // 📅 판 수는 여기서만 센다(정산은 판당 1회다)
+  saveMeta();
+  return { xp:xp, pc:min, gas:gas, prog:prog, ups:ups, level:c?c.level:1, day:dayN, dayMul:day }; }
 // 방치 정산(오프라인/켜둠) — Date.now 기준(1단계 클라이언트 신뢰). 유즈맵과 무관.
 function profOfflineCapMin(){ return profHasUnlock('idle_12h')?PROF_OFF_CAP12_MIN
   : profHasUnlock('idle_8h')?PROF_OFF_CAP8_MIN : PROF_OFF_CAP_MIN; }
@@ -6814,7 +6826,7 @@ function hbMoreTap(k){
 // ══════════════════════════════════════════════════════════════════════════
 const DQ_WEEKS=4, DQ_PER_WEEK=5, DQ_BONUS=2;          // 4주 × (출석 5칸 + 보너스 2칸)
 const DQ_ATT_MAX=DQ_WEEKS*DQ_PER_WEEK;                 // 20도장 = 최종 보상 조건
-const DQ_N=5, DQ_OUT_N=2;                              // 하루 5개 중 2개는 사냥터 바깥(다른 구역으로 끌어낸다)
+const DQ_N=5, DQ_OUT_N=3;                              // 하루 5개 중 **3개**는 사냥터 바깥(2026-08-19: 유즈맵을 주류로 올리며 2→3)
 const DQ_WEEK_MAX=DQ_N*7;                              // 한 주에 나올 수 있는 최대(35개)
 const DQ_WEEK_GOAL=25;                                 // 주간 목표 = 5일치. 이틀을 빠져도 채울 수 있다(출석 5/7과 같은 결)
 const DQ_TK={gear:'장비', pet:'펫', ally:'동료'};
@@ -15268,6 +15280,7 @@ function _umRwRows(S){ let h='';
   if(S.prof) h+=ovStatRow('내 캐릭터 XP','<b class="osNew">+'+S.prof.xp+'</b>'+(S.prof.ups?' · Lv.'+S.prof.level:''))
     +ovStatRow('미네랄','<b class="osNew">+'+fmtCur(S.prof.pc)+'</b>')
     +ovStatRow('가스','<b class="osNew">+'+fmtCur(S.prof.gas)+'</b>');
+  if(S.prof && S.prof.dayMul<1) h+=ovStatRow('오늘 '+S.prof.day+'판째','<span class="osDim">보상 '+Math.round(S.prof.dayMul*100)+'% — 하루 '+UM_DAY_FULL+'판까지 전액</span>');
   if(S.first){ const f=S.first, tk=[['gear','장비'],['pet','펫'],['ally','동료']].filter(t=>f[t[0]]).map(t=>t[1]+' ×'+f[t[0]]).join(' · ');
     h+=ovStatRow('<b class="osNew">🏁 첫 클리어</b>','<b class="osNew">'+fmtCur(f.pcoin)+' M · '+fmtCur(f.gas)+' G</b>')
       +ovStatRow('첫 클리어 보너스','<b class="osNew">💎 '+f.gem+(tk?(' · '+tk):'')+'</b>'); }
