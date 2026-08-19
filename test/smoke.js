@@ -4861,7 +4861,16 @@ async function groupGame(){
       // 아이콘은 사냥터 업그레이드 파일을 그대로 빌린다(뜻이 같으면 새로 만들지 않는다)
       { const src=[...document.querySelectorAll('#btSheetBody .cgSlot .cgPro img')].map(e=>e.getAttribute('src'));
         assert(src.some(x=>/up_melee_atk/.test(x)),'공격력이 사냥터 아이콘을 안 씀: '+JSON.stringify(src));
-        assert(src.some(x=>/up_carapace/.test(x)),'체력이 사냥터 아이콘을 안 씀: '+JSON.stringify(src)); }
+        assert(src.some(x=>/up_carapace/.test(x)),'체력이 사냥터 아이콘을 안 씀: '+JSON.stringify(src));
+        assert(src.some(x=>/up_mine/.test(x)),'광산이 곡괭이 아이콘을 안 씀: '+JSON.stringify(src)); }
+      // ⚠ 값이 그대로면 시트를 다시 그리지 않는다 — strikeFrame 이 0.22초마다 부르는데 매번 DOM 을 새로
+      //    만들면 <img> 가 계속 새로 생겨 아이콘이 화면에 뜰 틈이 없다(실제로 빈칸으로 보였다).
+      { const body=$('btSheetBody'); const mark=body.querySelector('.cgSlot'); assert(mark,'강화 칸이 없음');
+        mark._keep=1;
+        for(let i=0;i<5;i++) techPanelRender();
+        assert((body.querySelector('.cgSlot')||{})._keep===1,'값이 그대로인데 시트를 다시 그렸음(아이콘이 못 뜬다)');
+        STK.me.gold+=1000; techPanelRender();          // 값이 바뀌면 반드시 다시 그린다
+        assert((body.querySelector('.cgSlot')||{})._keep!==1,'값이 바뀌었는데 시트가 안 갱신됨'); }
       // ⚠ 우상단 배지가 초상 이미지에 가려지면 안 된다 — 둘 다 .cgPro 형제/자식이라 z-index가 같으면 이미지가 이긴다.
       //   ⚠ 판 위에 로딩 오버레이가 떠 있을 수 있으니 시트 안쪽 요소만 추려서 본다.
       { const host=$('btSheetBody'), b=host.querySelector('.cgSlot .cgMeta'); skipIf(!b,'배지 없음');

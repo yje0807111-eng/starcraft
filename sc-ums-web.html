@@ -20318,7 +20318,12 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
   sheet.classList.toggle('open', _shown);
   if(_shown) sheet.classList.add('simple');   // 숨길 땐 높이 클래스(.simple) 유지 → 현재 높이 그대로 아래로 슬라이드(즉시 확대로 위로 울컥이는 것 방지)
   body.classList.toggle('stkSpec', specHTML!=null);
-  if(specHTML!=null) body.innerHTML=specHTML; else if(model) renderCmdGrid(body, model);
+  // ⚠ 보급·관전 시트는 값이 안 변해도 0.22초마다 이 함수를 부른다(strikeFrame). DOM 을 통째로 새로 만들면
+  //    그때마다 <img> 가 새로 생겨 **아이콘이 화면에 뜰 틈이 없다** — 실제로 강화·구입 칸이 빈칸으로 보였다.
+  //    서명이 같으면 그대로 둔다(전투 화면 호스트 strikeRenderSelInfo 와 같은 규약).
+  const _sig=_sup?_stkSheetSig():null;
+  if(_sig==null || _sig!==body._stkSig){ body._stkSig=_sig;
+    if(specHTML!=null) body.innerHTML=specHTML; else if(model) renderCmdGrid(body, model); }
   const _liftSel=(G.tech.sel!=null)&&!!G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'&&x._lifted);   // 부양 건물 선택 = 바닥탭이 이동이라 금지버튼으로 해제
   const dz=document.getElementById('btDesel'); if(dz) dz.classList.toggle('on',(G.tech.selU||[]).length>0 || _liftSel || !!G.tech.selRes); }
 function techDeselU(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;
@@ -22296,14 +22301,20 @@ function _stkWpnUseModel(){ const S=STK, me=S.me;
       desc:own.length?'칸을 누르면 즉시 발동한다.':'가진 무기가 없습니다 — <b>구입</b>에서 먼저 사세요.' } }; }
 function _stkSupplyModel(){ return (STK && STK.supPage==='wpnUse') ? _stkWpnUseModel()
   : (STK && STK.supPage==='wpnBuy') ? _stkWpnBuyModel() : _stkUpgModel(); }
+// 📦 보급·관전 시트의 '내용 서명' — 값이 그대로면 다시 그릴 이유가 없다.
+//   ⚠ 두 호스트(#unitCmd = 전투/특수무기 · #btSheetBody = 건설지)가 **같은 함수**를 본다.
+//     서명을 두 벌로 적으면 한쪽만 갱신되는 화면이 생긴다.
+function _stkSheetSig(){ const S=STK; if(!S) return null;
+  if(S.specSheet) return 'spec|'+(S.specView||'-')+'|'+((G.activePlayers||[]).join('.'))+'|'+(G.myPlayer||1);
+  if(S.supSheet) return 'sup|'+(S.supPage||'-')+'|'+Math.floor(S.me.gold)+'|'+(S.me.mines||0)+'|'+((S.me.atkLv||0)+'-'+(S.me.hpLv||0))
+    +'|'+STK_WEAPONS.map(w=>(S.me.wpn&&S.me.wpn[w.k])||0).join('')+'|'+S.me.mineCost;
+  return null; }
 function strikeRenderSelInfo(){ const S=STK; const host=document.getElementById('unitCmd');
   { const old=document.getElementById('stSelInfo'); if(old && !old.classList.contains('hide')){ old.classList.add('hide'); old.innerHTML=''; } }   // 구 프로필 사용 안 함
   if(!host) return;
   let model=null, sig=null, specHTML=null;
-  if(S && S.specSheet){ specHTML=_stkSpecGridHTML(); sig='spec|'+(S.specView||'-')+'|'+((G.activePlayers||[]).join('.'))+'|'+(G.myPlayer||1); }   // 👁 관전 = 전용 .plbtn 그리드(커맨드 그리드 아님)
-  else if(S && S.supSheet){ model=_stkSupplyModel();
-    sig='sup|'+(S.supPage||'-')+'|'+Math.floor(S.me.gold)+'|'+(S.me.mines||0)+'|'+((S.me.atkLv||0)+'-'+(S.me.hpLv||0))
-      +'|'+STK_WEAPONS.map(w=>(S.me.wpn&&S.me.wpn[w.k])||0).join('')+'|'+S.me.mineCost; }
+  if(S && S.specSheet){ specHTML=_stkSpecGridHTML(); sig=_stkSheetSig(); }   // 👁 관전 = 전용 .plbtn 그리드(커맨드 그리드 아님)
+  else if(S && S.supSheet){ model=_stkSupplyModel(); sig=_stkSheetSig(); }
   else if(S && S.selTemple && !S.selTemple.dead){ const o=S.selTemple, nm=S.selTempleName||'신전'; model=_stkTempleModel(o,nm); sig='t|'+nm+'|'+Math.round(o.hp); }
   else if(S && S.selEnemy && !S.selEnemy.dead){ const u=S.selEnemy; model=_stkUnitModel(u,'ai'); sig='e|'+u.id+'|'+Math.round(u.hp); }
   else if(S){ const u=(S.selAllies||[]).map(uid=>strikeFindUnit(S.me.units,uid)).filter(Boolean)[0]; if(u){ model=_stkUnitModel(u,'me'); sig='a|'+u.id+'|'+Math.round(u.hp); } }

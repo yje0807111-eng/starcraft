@@ -214,7 +214,7 @@ const SKILL_ICO={ nuke:'bomb' };
 | 건설 > 본부·보급소·병영·훈련소 | `buildings/bld_*.webp` | 있음 |
 | 강화 > 공격력 | `upgrades/up_melee_atk.webp` | **빌림**(사냥터 `HB_UPG.atk` 와 같은 파일) |
 | 강화 > 체력 | `upgrades/up_carapace.webp` | **빌림**(사냥터 `HB_UPG.hp`) |
-| 강화 > 광산 | `upgrades/up_mine.webp` | **없음 — 새로 만들 것**(곡괭이 · 블록 **B** 사선) |
+| 강화 > 광산 | `upgrades/up_mine.webp` | 있음(곡괭이 · 2026-08-19 추가) |
 | 특수무기 > 폭탄 | `skills/sk_bomb.webp` | 빌림 |
 | 특수무기 > EMP | `skills/sk_emp.webp` | 빌림 |
 | 특수무기 > 궤도 포격 | `skills/sk_yamato.webp` | 빌림(조준환 = 지점을 지정해 때린다) |
@@ -224,8 +224,6 @@ const SKILL_ICO={ nuke:'bomb' };
 > 고른 근거: 폭탄=둥근 폭탄 그대로 · EMP=이름이 같은 파일 · 재생 필드=굵은 십자(회복) ·
 > 궤도 포격=**조준환**(`sk_yamato`, 전함 주포 = 대구경 원거리 포격이라 뜻도 맞고 폭탄의 둥근 실루엣과 안 겹친다).
 >
-> ⚠ **광산만 새로 만든다. 그리고 블록 B(사선)** 다 — 옆칸(공격력·체력)이 `upgrades/` 계열이라
-> 정면으로 뽑으면 그 줄만 시점이 어긋난다.
 > **계열은 '무엇을 그리느냐'가 아니라 '옆칸이 무엇이냐'로 고른다.**
 
 ### SUBJECT — 광산 (블록 B · `upgrades/up_mine.webp`)
@@ -234,6 +232,18 @@ a heavy mining pickaxe — one straight handle bar of constant width running the
 length of the icon, and one crosswise head mounted across its upper end; the head is two
 arms of exactly the same length and thickness sweeping out from the handle in a shallow
 even arc, each arm ending in a blunt square-cut point. The mining mark
+```
+
+### ⚠ 시트를 매 프레임 다시 그리면 아이콘이 못 뜬다
+오토배틀의 보급·관전 시트는 `strikeFrame` 이 **0.22초마다** `techPanelRender()` 를 부른다.
+DOM 을 통째로 새로 만들면 그때마다 `<img>` 가 새로 생겨 **디코드가 끝나기 전에 사라진다** — 칸이 빈칸으로 보였다.
+`_stkSheetSig()` 로 서명을 재고 같으면 그대로 둔다(전투 화면 호스트 `strikeRenderSelInfo` 와 같은 규약).
+새 라이브 시트를 만들 때도 **반드시 서명 가드를 붙일 것**. 스모크가 '값이 그대로면 안 그림 / 값이 바뀌면 그림' 양쪽을 검사한다.
+
+### PNG → WebP 변환(이 저장소 환경)
+`sharp` 가 없어도 된다 — 크로미엄 캔버스로 변환한다. 512~1024 PNG → **128×128 · q0.82 · 알파 없음**:
+```bash
+node test/png2icon.mjs <입력.png> assets/icons/<폴더>/<이름>.webp
 ```
 
 ### 배선은 이미 끝나 있다
