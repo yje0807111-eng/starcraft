@@ -7141,12 +7141,12 @@ function renderGrowModal(){ const box=document.getElementById('hbGrowBody'); if(
   h+=_ptListHTML('rp', c);
   box.innerHTML=h; }
 // 포인트 목록(레벨 포인트 · 환생 포인트 공용) — 두 벌로 만들면 반드시 어긋난다.
-//   kind='lp' → unit.pts / lpMul   ·   kind='rp' → unit.rpts / rpMul(1점이 RP_STEP_MUL 배 세다)
+//   kind='lp' → unit.pts / lpVal(덧셈)   ·   kind='rp' → unit.rpts / rpMul(복리 곱셈)
 function _ptListHTML(kind, c){ const rp=(kind==='rp');
   const free = rp? rpFree(c) : lpFree(c), spent = rp? rpSpent(c) : lpSpent(c);
   let h='<div class="hbGrowLbl">'+(rp?'환생 포인트':'레벨 포인트')
     +' <span class="hbTblSub">'+(rp? ('1p = ×'+(1+RP_STEP).toFixed(2)+' 복리 · 환생해도 남는다')
-                                   : ('레벨 1회 = '+LP_PER_LEVEL+'p · 환생하면 함께 돌아갑니다'))+'</span></div>';
+                                   : ('레벨 1회 = '+LP_PER_LEVEL+'p · 1p = 업그레이드 '+LP_GAIN+'레벨어치 · 환생하면 함께 돌아갑니다'))+'</span></div>';
   // 초기화 = 사냥터 수량 버튼(×1/×10/MAX)과 같은 물성. 새 버튼 물성을 만들지 않는다.
   h+='<div class="lpHead"><span class="lpFree'+(free?' on':'')+'">남은 포인트 <b>'+free+'</b></span>'
     +'<span class="hmUpQty lpQ"><button class="hmUpQ on" onclick="ptDoReset(\''+kind+'\')"'
@@ -7210,7 +7210,7 @@ function renderInfoModal(){ const box=document.getElementById('hbInfoBody'); if(
     h+='<tr><td class="l">'+a.name+'</td><td>'+n1(a.base)+'</td>'
       +'<td>'+(a.upg? ('+'+n1(a.upg)) : '-')+'</td>'
       +'<td>'+(a.gear? ('+'+n1(a.gear)) : '-')+'</td>'
-      +'<td>'+pc(a.lp)+'</td><td>'+pc(a.rp)+'</td>'
+      +'<td>'+(a.lp? ('+'+n1(a.lp)) : '-')+'</td><td>'+pc(a.rp)+'</td>'
       +'<td class="s">'+csFmt(k, a.sub)+(a.capped?' <i>상한</i>':'')+'</td></tr>'; }
   h+='</tbody></table>';
   // ② 전투 수치 = 기본 스탯 × 추가 보정(장비 어빌리티 % · 펫/동료 패시브). 원천이 생기면 csBonus 가 답한다.
@@ -7615,12 +7615,13 @@ const HB_UPG_CAT=[['char','내 캐릭터','255,59,59'],['ally','동료','74,168,
 const HB_BUILD_KEYS=['wall','turret','bunker'];
 // 업그레이드 레벨 → 실제 전투 수치. 아군 배수는 전부 여기서만 나온다(hbUnitFire 호출부가 이 값을 받는다)
 function hbAllyMul(){ const u=hbHunt().upg;
-  const lpA=lpMul('ally'), lpB=lpMul('bld');          // 🎯 레벨 포인트 — 동료 계열 / 건물 계열
-  const aMul=(1+(u.alatk||0)*0.08)*lpA;
+  // 🎯 레벨 포인트는 '업그레이드 레벨을 더 가진 것'과 같다 — 곱하지 않고 레벨에 더한다.
+  const lpA=lpPts('ally')*LP_GAIN, lpB=lpPts('bld')*LP_GAIN;
+  const aMul=1+((u.alatk||0)+lpA)*0.08;
   return { ally:  { dps:HB_ALLY_DPS*aMul, mul:aMul, cdMul:Math.pow(0.985, u.alspd||0) },
-           turret:{ dps:HB_TURRET_DPS*(1+(u.tuatk||0)*0.08)*lpB, rng:HB_TURRET_RANGE*(1+(u.turng||0)*0.03) },
+           turret:{ dps:HB_TURRET_DPS*(1+((u.tuatk||0)+lpB)*0.08), rng:HB_TURRET_RANGE*(1+(u.turng||0)*0.03) },
            bunker:{ hp:HB_BUNKER_HP  *(1+(u.bnhp ||0)*0.12) },
-           pet:   { dps:HB_PET_DPS   *(1+(u.peatk||0)*0.08)*lpA, cdMul:Math.pow(0.985, u.pespd||0) } }; }
+           pet:   { dps:HB_PET_DPS   *(1+((u.peatk||0)+lpA)*0.08), cdMul:Math.pow(0.985, u.pespd||0) } }; }
 function hbHunt(){ const p=PROF();
   if(!p.hunt) p.hunt={dg:1,round:1,climb:true,best:{},upg:{atk:0,rng:0,aspd:0,crit:0,hp:0,regen:0}};   // 기본 = 등반
   if(typeof p.hunt.skAuto!=='number') p.hunt.skAuto=0;   // 스킬 자동 사용 — 세 개를 한 번에(0/1)
@@ -7658,25 +7659,27 @@ function hbUpgPlan(k){ const lv=hbHunt().upg[k]||0, q=hbHunt().upgQty||1;
 //   ⚠ 전투 반영은 아래 네 곳에서만 한다: hbCharStats / hbAllyMul / hbBunkerAtkMul / 치명타 피해.
 //     새 항목을 넣을 땐 반드시 이 중 한 곳에 배선할 것 — 표에만 있고 안 걸린 키는 거짓말이 된다.
 //   ⚠ 환생하면 레벨이 1로 돌아가므로 포인트도 함께 돌아간다(총량이 레벨에서 나온다).
-// 🎯 설계(2026-08-18 재조정): **레벨 1회 = 포인트 1 · 1포인트 = +50%**.
-//    포인트를 잘게 나눠 조금씩 세지는 대신, 한 레벨이 곧 한 번의 큰 도약이 되게 했다.
-//    → 초반 성장이 폭발적이다(Lv11에 한 축 6배). 그 대신 라운드 난이도를 지수로 올려
-//      (HB_ROUND_HP 등) '금방 세지지만 금방 벽에 부딪히는' 곡선을 만든다.
-//    ⚠ 이 값을 만질 땐 반드시 난이도 지수도 같이 본다 — 한쪽만 바꾸면 곡선이 무너진다.
-const LP_PER_LEVEL=1;                       // 레벨 1회 = 포인트 1
+// 🎯 설계(2026-08-19 재조정): **레벨 1회 = 포인트 1 · 1포인트 = 업그레이드 1레벨어치(덧셈)**.
+//    옛 설계는 1포인트 = +50% 배수였다 — Lv11에 한 축이 6배가 돼 전투가 무너졌다.
+//    이제 포인트는 '미네랄 없이 얻는 업그레이드 레벨'이다. 성장 축이 하나(업그레이드)로 읽힌다.
+//    ⚠ 세기를 조절할 땐 LP_GAIN 하나만 만진다. 그리고 반드시 라운드 난이도 지수(HB_ROUND_HP 등)를
+//      같이 본다 — 난이도는 옛 '폭발적 성장'에 맞춰 올려 둔 값이라 한쪽만 바꾸면 곡선이 무너진다.
 // ⚠ name 은 2열 칸에 한 줄로 들어가야 한다 — 길면 말줄임된다(실측: '치명타 데미지'가 잘렸다).
 //    수치 축과 같은 이름을 쓴다(CS_AXES.critd = '치명 피해') — 같은 것을 두 이름으로 부르지 말 것.
-// ⚠ step 은 전부 LP_STEP 하나다 — 항목마다 다르게 두면 '어디 찍는 게 이득인지'가 숨은 지식이 된다.
-//    자연 상한(공속 쿨다운 하한 · 사거리 HB_RNG_MAX · 치명타 60%)이 알아서 과열을 막는다.
-const LP_STEP=0.5;                          // 1포인트 = +50%
+// ⚠ 1포인트 = 그 축의 **사냥터 업그레이드 1레벨과 같은 양**. 곱이 아니라 덧셈이다(2026-08-19).
+//    ⛔ 배수(1 + n×step)로 되돌리지 말 것 — 1점 +50%였을 때 레벨 몇 번에 전투가 무너졌다.
+//    값을 여기 적지 않는다: 증가폭은 HB_UPG[upg].vs 하나에서만 나온다(카드에 적힌 수와 같아진다).
+//    upg = 그 항목을 대표하는 사냥터 업그레이드 키.
+const LP_PER_LEVEL=1;                       // 레벨 1회 = 포인트 1
+const LP_GAIN=1;                            // 1포인트가 업그레이드 몇 레벨어치인가(세기 조절은 여기 하나)
 const LP_STATS=[
-  {k:'atk',   name:'공격력',     step:LP_STEP, ico:'upgrades/up_melee_atk'},
-  {k:'hp',    name:'체력',       step:LP_STEP, ico:'upgrades/up_carapace'},
-  {k:'aspd',  name:'공격속도',   step:LP_STEP, ico:'skills/sk_stim'},
-  {k:'range', name:'사거리',     step:LP_STEP, ico:'upgrades/up_range'},
-  {k:'critd', name:'치명 피해',  step:LP_STEP, ico:'skills/sk_yamato'},
-  {k:'ally',  name:'동료 데미지', step:LP_STEP, ico:'upgrades/up_veh_atk'},
-  {k:'bld',   name:'건물 데미지', step:LP_STEP, ico:'buildings/bld_turret'},
+  {k:'atk',   name:'공격력',     upg:'atk',   ico:'upgrades/up_melee_atk'},
+  {k:'hp',    name:'체력',       upg:'hp',    ico:'upgrades/up_carapace'},
+  {k:'aspd',  name:'공격속도',   upg:'aspd',  ico:'skills/sk_stim'},
+  {k:'range', name:'사거리',     upg:'rng',   ico:'upgrades/up_range'},
+  {k:'critd', name:'치명 피해',  upg:'critm', ico:'skills/sk_yamato'},
+  {k:'ally',  name:'동료 데미지', upg:'alatk', ico:'upgrades/up_veh_atk'},
+  {k:'bld',   name:'건물 데미지', upg:'tuatk', ico:'buildings/bld_turret'},
 ];
 function lpDef(k){ return LP_STATS.find(x=>x.k===k)||null; }
 // 🔁 환생 포인트 — 환생으로만 얻고 '환생해도 사라지지 않는' 영구 축.
@@ -7727,7 +7730,12 @@ function lpSpent(c){ return ptSpent('lp', c); }
 function lpFree(c){ return Math.max(0, lpTotal(c)-lpSpent(c)); }
 function lpPts(k, c){ return Math.max(0, lpBag(c)[k]|0); }
 // 배수 — 찍은 수만큼 선형으로 오른다(1포인트 = step). 전투는 전부 이 함수만 부른다.
-function lpMul(k, c){ const S=lpDef(k); return S ? 1 + lpPts(k,c)*S.step : 1; }
+// 1포인트가 올려 주는 양 = 대표 업그레이드의 레벨당 증가폭(vs) × LP_GAIN
+function lpStepVal(k){ const S=lpDef(k), U=S&&HB_UPG[S.upg]; return U ? U.vs*LP_GAIN : 0; }
+// 지금 찍은 포인트가 더해 주는 총량. ⛔ 배수가 아니다 — 쓰는 쪽에서 곱하지 말고 '더할' 것.
+function lpVal(k, c){ return lpPts(k,c)*lpStepVal(k); }
+// 표시용 단위(업그레이드 카드와 같은 접미사) — '' / '%' / '/s'
+function lpUnit(k){ const S=lpDef(k), U=S&&HB_UPG[S.upg]; return (U&&U.f&&U.f!=='x')? U.f : ''; }
 // n = '올리고 싶은 칸 수'. 남은 포인트로 살 수 있는 만큼만 올리고, 실제로 올린 칸 수를 돌려준다.
 function lpAdd(k, n){ const c=CHAR(), S=lpDef(k); if(!c||!S) return 0;
   n=Math.max(1, n|0); const b=lpBag(c); let got=0;
@@ -7764,9 +7772,9 @@ function csAxis(k){ const A=CS_AXES[k]; if(!A) return null;
   const base = U ? U.v0 : (A.base||0);                 // 0레벨 값 = 카드가 적는 값과 같은 것
   const upg  = U ? (u[A.upgK]||0)*U.vs : 0;
   const gear = A.gearK ? profStat(A.gearK)*A.gearV : 0;
-  const lp   = A.lp ? lpMul(A.lp) : 1;
-  const rp   = A.rp ? rpMul(A.rp) : 1;
-  const raw=(base+upg+gear)*lp*rp;                    // 상한을 걸기 전 값
+  const lp   = A.lp ? lpVal(A.lp) : 0;               // 🎯 레벨 포인트 = 업그레이드와 같은 '덧셈'
+  const rp   = A.rp ? rpMul(A.rp) : 1;               // 🔁 환생 포인트만 배수(복리)로 남는다
+  const raw=(base+upg+gear+lp)*rp;                    // 상한을 걸기 전 값
   let sub=raw;
   if(A.cap!=null) sub=Math.min(A.cap, sub);
   const bonus=csBonus(k);
@@ -8048,7 +8056,9 @@ function hbBunkerMates(t){ if(!t||t.k!=='bunker') return [];
 function hbMateBunkerQ(id){ const T=hbBase().tiles;
   for(const q in T){ const t=T[q]; if(t.k==='bunker' && (t.m||[]).indexOf(id)>=0) return q; }
   return null; }
-function hbBunkerAtkMul(){ return hbUpgNum('bkatk')/100*lpMul('bld'); }   // '건물' 업그레이드 '벙커 공격력'(%) → 배수(기본 100%=1) × 레벨 포인트
+// '건물' 업그레이드 '벙커 공격력'(%) → 배수(기본 100%=1). 레벨 포인트는 레벨에 '더한' 몫이다.
+function hbBunkerAtkMul(){ const U=HB_UPG.bkatk;
+  return (hbUpgNum('bkatk') + lpPts('bld')*LP_GAIN*U.vs)/100; }
 // 옛 개수형 보유분 → 타일. 'ally'는 없다 — 동료는 뽑기 로스터(HB_MATES)로 옮겨졌다.
 const HB_BUILD_MIG={ turret:'turret', bunker:'bunker' };
 function hbKey(gx,gy){ return gx+','+gy; }
@@ -9642,10 +9652,11 @@ function setChrSec(k){ if(!CHR_SECS[k]) return; _chrSec=k; renderChr();
 // ⚠ (1+n*step-1)*100 으로 되짚지 말 것 — 부동소수 오차로 1.5%가 1%로 반올림됐다(실측).
 function _ptPct(n, step){ const v=n*step*100;
   return '+'+((Math.abs(v-Math.round(v))<0.01)? String(Math.round(v)) : v.toFixed(1))+'%'; }
-// 카드에 찍히는 배수 글자 — ⛔ 화면이 제 식을 따로 갖지 말 것. lpMul/rpMul 과 같은 식을 여기서만 쓴다.
-//   lp = 가산(1+n·step) → '+X%' · rp = 곱셈((1+s)^n) → '×N.NN'
+// 카드에 찍히는 글자 — ⛔ 화면이 제 식을 따로 갖지 말 것. lpVal/rpMul 과 같은 식을 여기서만 쓴다.
+//   lp = 덧셈(n × 업그레이드 1레벨어치) → '+12' / '+1.5%' · rp = 곱셈((1+s)^n) → '×N.NN'
 function _ptShow(kind, k, n){ const S=lpDef(k); if(!S) return '';
-  if(kind!=='rp') return _ptPct(n, S.step);
+  if(kind!=='rp'){ const v=n*lpStepVal(k);
+    return '+'+((Math.abs(v-Math.round(v))<0.01)? String(Math.round(v)) : v.toFixed(1))+lpUnit(k); }
   const m=Math.pow(1+RP_STEP, n);
   return 'x'+(m<10? m.toFixed(2) : (m<1000? m.toFixed(1) : Math.round(m).toLocaleString('en-US'))); }
 // 축 값 표시 — 단위(%·초·×)는 축 표가 갖는다. 두 화면이 같은 표기를 쓰도록 여기 하나만 둔다.

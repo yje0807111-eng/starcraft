@@ -1131,7 +1131,7 @@ async function groupLobby(){
       p.items.length=0; for(const k of ks){ const it=profMakeItem(k,4,'epic'); profAddItem(it); profEquipItem(it.iid); } }
     // ① 기본 스탯 = (기본 + 업그레이드 + 장비) × 레벨 포인트 × 환생 포인트 — 표와 전투가 같은 식을 써야 한다
     for(const k of CS_ORDER){ const a=csAxis(k);
-      let want=(a.base+a.upg+a.gear)*a.lp*a.rp;
+      let want=(a.base+a.upg+a.gear+a.lp)*a.rp;   // 🎯 레벨 포인트는 덧셈 · 🔁 환생 포인트만 곱
       if(CS_AXES[k].cap!=null) want=Math.min(CS_AXES[k].cap, want);
       assert(Math.abs(want-a.sub)<1e-9, a.name+' 분해합이 축 값과 다름: '+want+' vs '+a.sub);
       assert(Math.abs(a.sub*a.bonus-a.total)<1e-9, a.name+' 전투 수치가 기본 스탯×보정이 아님'); }
@@ -1140,7 +1140,7 @@ async function groupLobby(){
     { const A=csAxis('atk');
       assert(A.upg>0,'사냥터 업그레이드가 공격력에 안 걸림');
       assert(A.gear>0,'장비가 공격력에 안 걸림');
-      assert(A.lp>1,'레벨 포인트가 공격력에 안 걸림');
+      assert(A.lp>0,'레벨 포인트가 공격력에 안 걸림');
       assert(A.rp>1,'환생 포인트가 공격력에 안 걸림'); }
     // ③ 그 넷 말고는 아무것도 안 걸린다 — 펫을 장착해도 내 스탯은 그대로
     { const before=CS_ORDER.map(k=>csVal(k)).join(',');
@@ -2910,7 +2910,8 @@ async function groupLobby(){
       H.upg={}; }
     return '사거리 ×'+HB_OV_CHEST+' 상자 · 공속 +'+(HB_OV_MULTI*100)+'%p 멀티샷 · 치명타 +'+(HB_OV_CRITD*100)+'%p 치명피해'; });
   await step('레벨 포인트: 총량은 레벨에서 · 찍으면 전투 수치가 곧바로 오른다', ()=>{
-    skipIf(typeof lpMul!=='function','레벨 포인트 없음');
+    assert(typeof lpVal==='function','레벨 포인트가 없음');
+    assert(typeof lpMul==='undefined','옛 배수 API(lpMul)가 남아 있음 — 레벨 포인트는 덧셈이다');
     const p=PROF(); p.chars.length=0; p.curId='';
     const c=profCreateChar('ranger','포인트'); c.level=11; c.unit.level=11; c.unit.pts={}; saveMeta();
     // ① 총량 = (레벨-1)×LP_PER_LEVEL · 처음엔 전부 남아 있다
@@ -2942,11 +2943,31 @@ async function groupLobby(){
         assert(Math.abs(a[kk]-b[kk])<1e-9, S.k+' 가 무관한 '+kk+' 까지 바꿈'); } }
     // ④ 배수는 선형 — 10p = step×10
     c.unit.pts={atk:10};
-    assert(Math.abs(lpMul('atk')-(1+lpDef('atk').step*10))<1e-9,'배수가 선형이 아님: '+lpMul('atk'));
+    // 1포인트 = 그 축의 사냥터 업그레이드 1레벨과 같은 양(값은 HB_UPG 한 곳에서만 나온다)
+    assert(Math.abs(lpStepVal('atk')-HB_UPG[lpDef('atk').upg].vs*LP_GAIN)<1e-9,'1p 증가폭이 업그레이드 vs 와 다름');
+    assert(Math.abs(lpVal('atk')-10*lpStepVal('atk'))<1e-9,'증가량이 선형이 아님: '+lpVal('atk'));
+    for(const S of LP_STATS) assert(HB_UPG[S.upg],'대표 업그레이드 키가 실재하지 않음: '+S.k+'→'+S.upg);
+    // 아군 축(동료·건물)도 같은 규칙 — '포인트 N점' 과 '업그레이드 N레벨' 이 같은 값이어야 한다.
+    // ⚠ 이게 곱으로 돌아가면 두 값이 갈라진다(CS 축 검사로는 안 잡힌다 — 아군은 hbAllyMul 소관).
+    { const H=hbHunt(), c2=CHAR();
+      const meas=(upg, pts)=>{ H.upg=Object.assign({}, upg); c2.unit.pts=Object.assign({}, pts);
+        return { ally:hbAllyMul().ally.mul, pet:hbAllyMul().pet.dps,
+                 turret:hbAllyMul().turret.dps, bunker:hbBunkerAtkMul() }; };
+      const byUpg=meas({alatk:5, peatk:5, tuatk:5, bkatk:5}, {});   // 펫도 '동료' 포인트가 먹인다
+      const byPts=meas({}, {ally:5*LP_GAIN, bld:5*LP_GAIN});
+      for(const kk of ['ally','pet','turret'])
+        assert(Math.abs(byUpg[kk]-byPts[kk])<1e-9,
+          kk+': 포인트 5점과 업그레이드 5레벨이 다름(덧셈이 아님): '+byUpg[kk]+' vs '+byPts[kk]);
+      // 벙커는 자기 업그레이드(bkatk)가 레벨당 10% 라 포인트(대표 tuatk 8%)와 값이 다르다 —
+      // 그래도 '곱'이 아니라 '레벨을 더한' 형태인지는 봐야 한다
+      const bunkStep=(meas({}, {bld:1*LP_GAIN}).bunker - meas({}, {}).bunker);
+      const bunk5=(meas({}, {bld:5*LP_GAIN}).bunker - meas({}, {}).bunker);
+      assert(Math.abs(bunk5-bunkStep*5)<1e-9,'벙커에 포인트가 선형으로 안 들어감');
+      H.upg={}; c2.unit.pts={}; }
     // ⑤ 초기화하면 전부 돌아온다
     c.unit.pts={atk:5,hp:5}; saveMeta();
     assert(lpReset()===10,'초기화 반환 수가 다름');
-    assert(lpFree(c)===lpTotal(c) && lpMul('atk')===1,'초기화 뒤에도 배수가 남음');
+    assert(lpFree(c)===lpTotal(c) && lpVal('atk')===0,'초기화 뒤에도 증가량이 남음');
     // ⑥ 환생하면 레벨이 1로 돌아가므로 포인트 총량도 0이 된다
     c.level=25; c.unit.level=25; c.unit.pts={atk:10}; saveMeta();
     profRebirth(c);
@@ -2988,8 +3009,12 @@ async function groupLobby(){
         for(const sel of ['.hmUpName','.hmUpVl']){ const el=e.querySelector(sel);
           assert(el.scrollWidth<=el.clientWidth+1,sel+' 이 잘림: '+el.textContent); }
         // 제목 아래 = 지금 배수 ▸ 이 1점을 찍으면 갈 배수
+        // ⚠ _ptShow 끼리 비교하면 그 함수를 고쳐도 통과한다(헛돈다) → 독립적으로 계산해서 맞춘다
+        const want=m=>{ const v=m*HB_UPG[S.upg].vs*LP_GAIN;
+          return '+'+((Math.abs(v-Math.round(v))<0.01)? String(Math.round(v)) : v.toFixed(1))
+                 +((HB_UPG[S.upg].f && HB_UPG[S.upg].f!=='x')? HB_UPG[S.upg].f : ''); };
         const vl=e.querySelector('.hmUpVl').textContent.replace(/\s/g,'');
-        assert(vl===_ptPct(n,S.step)+_ptPct(n+1,S.step),S.name+' 수치 변화 표기가 다름: '+vl);
+        assert(vl===want(n)+want(n+1),S.name+' 수치 변화 표기가 다름: '+vl+' vs '+want(n)+want(n+1));
         // 버튼 = 지금 레벨(위) + 값(아래). 윗줄에 '▸ 다음' 을 붙이지 않는다 — 바로 위 값 줄이 이미 말한다
         const bl=e.querySelector('.hmUpBl');
         assert(bl.textContent.trim()==='LV.'+n,S.name+' 레벨 표기가 다름: '+bl.textContent.trim());
