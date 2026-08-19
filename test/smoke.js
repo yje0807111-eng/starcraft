@@ -1426,6 +1426,40 @@ async function groupLobby(){
       if(!!hbHunt().skAuto!==was) hbToggleAuto(); }
     _hb.skT.nova=0; hbSkCdPaint();
     return '트레이 1판 · 칸=업그레이드 카드 규격 · 자동 칩 판 밖 · 바 '+w8.toFixed(0)+'→'+w2.toFixed(0)+'px'; });
+  // 🎴 업그레이드 카드 — 이중 테두리(D1) + 비용 버튼(B3). 둘 다 '방향'이 규칙이라 뒤집히면 안 된다.
+  await step('업그레이드 카드: 이중 테두리 · 버튼은 왼쪽 위에서 빛이 든다', async()=>{
+    openHome(); await sleep(90); renderHome();
+    const card=document.querySelector('#hmUpgGrid .hmUp:not(.lk)'); assert(card,'살 수 있는 카드가 없음');
+    // ① 이중 테두리 — 안쪽 프레임이 실재하고, 모서리 컷이 바깥과 평행하다(바깥 7 - inset 3 = 안쪽 4)
+    const af=getComputedStyle(card,'::after');
+    assert(af.content && af.content!=='none','카드 안쪽 프레임(::after)이 없음');
+    assert(Math.abs(parseFloat(af.borderTopWidth)-1)<0.01,'안쪽 프레임이 1px 이 아님: '+af.borderTopWidth);
+    assert(!/rgba\(0, 0, 0, 0\)|transparent/.test(af.borderTopColor),'안쪽 프레임 색이 투명함: '+af.borderTopColor);
+    { const inset=parseFloat(af.top);
+      const outer=parseFloat((getComputedStyle(card).clipPath.match(/(\d+(?:\.\d+)?)px/)||[])[1]);
+      const inner=parseFloat((af.clipPath.match(/(\d+(?:\.\d+)?)px/)||[])[1]);
+      assert(outer>0 && inner>0 && inset>0,'모서리 컷/여백을 못 읽음: '+outer+' / '+inner+' / '+inset);
+      assert(Math.abs((outer-inset)-inner)<0.01,
+        '안쪽 프레임 컷이 바깥과 평행하지 않음(대각선이 어긋난다): 바깥 '+outer+' - inset '+inset+' ≠ 안쪽 '+inner); }
+    // ② 비용 버튼 — 위·왼쪽이 밝고 오른쪽·아래가 진하다(빛은 왼쪽 위에서)
+    const btn=card.querySelector('.hmUpBtn'); assert(btn,'비용 버튼이 없음');
+    { const raw=getComputedStyle(btn).boxShadow, parts=[]; let d=0,cur='';
+      for(const ch of raw){ if(ch==='(') d++; else if(ch===')') d--;
+        if(ch===',' && d===0){ parts.push(cur.trim()); cur=''; } else cur+=ch; }
+      if(cur.trim()) parts.push(cur.trim());
+      const lum=t=>{ const m=t.match(/rgba?\(([^)]+)\)/); if(!m) return null;
+        const n=m[1].split(',').map(parseFloat); const a=n.length>3?n[3]:1;
+        return (0.3*n[0]+0.59*n[1]+0.11*n[2])*a; };
+      const find=re=>parts.filter(t=>t.indexOf('inset')>=0).find(t=>re.test(t));
+      const hi=find(/\s1px\s+1px\s/), lo=find(/\s-1px\s+-1px\s/);
+      assert(hi,'위·왼쪽 밝은 선(inset 1px 1px)이 없음: '+raw);
+      assert(lo,'오른쪽·아래 진한 선(inset -1px -1px)이 없음: '+raw);
+      assert(lum(hi)>lum(lo)+20,
+        '빛의 방향이 뒤집혔다 — 위·왼쪽이 오른쪽·아래보다 밝아야 한다: '+lum(hi).toFixed(1)+' vs '+lum(lo).toFixed(1)); }
+    // ③ 링도 같은 방향(대각선). 세로 그라데로 되돌아가면 버튼만 방향을 잃는다
+    assert(/315deg/.test(getComputedStyle(btn).backgroundImage),
+      '버튼 링이 대각선이 아님: '+getComputedStyle(btn).backgroundImage.slice(0,80));
+    return '이중 테두리 ok · 컷 7-3=4 · 빛 왼쪽 위'; });
   // 📐 업그레이드 격자 — 칸 변이 반 픽셀에 놓이면 세로 테두리가 한쪽만 두 픽셀로 번진다.
   //    (실측: 안쪽폭 376 - 간격 5 = 371 을 둘로 나눠 185.5px → 왼쪽 칸의 오른쪽 변만 흐렸다)
   await step('업그레이드 격자: 칸 폭이 정수 — 테두리가 한쪽만 번지지 않는다', async()=>{

@@ -3153,12 +3153,19 @@
   /* 윗면 하이라이트 — 카드가 '판'으로 떠야 평평해 보이지 않는다 */
   .hmUp::before{content:'';position:absolute;left:7px;right:0;top:0;height:1px;pointer-events:none;
     background:linear-gradient(90deg,transparent,rgba(255,255,255,.13) 30%,rgba(255,255,255,.13) 70%,transparent)}
+  /* 이중 테두리(D1안, 2026-08-19) — 화려함은 굵기가 아니라 겹이다(DESIGN §이중 테두리).
+     ⚠ 안쪽 프레임의 모서리 컷은 바깥(7px)에서 inset(3px)을 뺀 4px 이어야 대각선이 평행하다. */
+  .hmUp::after{content:'';position:absolute;inset:3px;z-index:0;pointer-events:none;
+    border:1px solid rgba(var(--hmAccRGB),.30);
+    clip-path:polygon(4px 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%,0 4px)}
+  .hmUp.lk::after{border-color:rgba(255,255,255,.07)}
   /* 구매 직후 한 번 번찍 — 올랐다는 걸 몸으로 알게 한다 */
   @keyframes hmUpWon{0%{box-shadow:inset 0 0 0 1px rgba(var(--hmAccRGB),.7), 0 0 12px rgba(var(--hmAccRGB),.35)}
     100%{box-shadow:inset 0 0 0 1px rgba(var(--hmAccRGB),0), 0 0 0 rgba(var(--hmAccRGB),0)}}
   .hmUp.won{animation:hmUpWon .5s ease-out}
   .hmUpIco{position:relative;flex:none;width:27px;height:27px;display:flex;align-items:center;justify-content:center;
-    background:#000;border:none;border-radius:var(--r-bar);overflow:hidden}
+    background:#000;border:none;border-radius:var(--r-bar);overflow:hidden;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)}   /* 카드가 겹을 가졌으니 타일도 한 줄 */
   .hmUpIco .icoImg{padding:0}   /* 타일을 꽉 채운다 — 공용 .icoImg 가 inset:0 이라 여백만 빼면 끝까지 닿는다 */   /* 공용 .icoImg 가 inset:0 로 타일을 채운다 — 여백만 주고 크기는 건드리지 않는다 */
 /* 건설 카드(동료·터렛·벙커)는 에셋 대신 이모지 */
   .hmUpTx{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:2px}
@@ -3174,16 +3181,23 @@
   .hmLk{display:block;width:8px;height:8px;flex:none;fill:none;stroke:#7a7a7a;stroke-width:2;stroke-linejoin:round}
   /* 버튼 — 오른쪽 정사각. 위 = 레벨 변화(잠김은 자물쇠) · 아래 = 비용 */
   /* 작은 버튼은 은색 메탈 그대로 — 빨강은 카드 테두리(.hmUp)가 맡는다 */
-  .hmUpBtn{position:relative;flex:none;width:54px;height:40px;padding:1.5px;cursor:pointer;font-family:inherit;
+  /* 링·안쪽 선 — 색은 여기 두 토큰에서만 꺼낸다(B3안, 2026-08-19).
+     빛은 왼쪽 위에서 든다: 위·왼쪽이 밝고 오른쪽·아래가 진하다.
+     ⚠ 방향을 링(background 1.5px)으로 내려 하면 안 된다 — 아래 inset 선들이 그 위를 거의 다 덮는다. */
+  .hmUpBtn{--btnRing:linear-gradient(315deg,#5e2828 0%,#8e4a4a 58%,#a87a7a 100%);
+    --btnLine:rgba(var(--hmAccRGB),.26);
+    --btnBevel:inset 1px 1px 0 rgba(255,255,255,.20), inset -1px -1px 0 rgba(0,0,0,.60),
+      inset 0 0 0 2px var(--btnLine);
+    position:relative;flex:none;width:54px;height:40px;padding:1.5px;cursor:pointer;font-family:inherit;
     display:flex;flex-direction:column;border:none;border-radius:var(--r-bar);
-    background:var(--nav-ring-on-d);   /* 선택된 네비 칸과 같은 계열의 붉은 링(한 단 탁한 변형) */
-    box-shadow:0 1px 2px rgba(0,0,0,.55);transition:transform .06s, box-shadow .06s, filter .12s}
+    background:var(--btnRing);
+    box-shadow:var(--btnBevel), 0 1px 2px rgba(0,0,0,.55);transition:transform .06s, box-shadow .06s, filter .12s}
   /* 살 수 있을 때만 윗면에 빛나는 선 — '올릴 수 있다'는 신호 */
   .hmUpBtn::after{content:'';position:absolute;left:6px;right:6px;top:1.5px;height:1px;pointer-events:none;
     background:linear-gradient(90deg,transparent,rgba(255,255,255,.44),transparent)}
   .hmUpBtn:hover{filter:brightness(1.1)}
   /* 진짜로 들어간다 — 누르는 맛이 없으면 업그레이드가 재미없다 */
-  .hmUpBtn:active{transform:translateY(1.5px);box-shadow:0 0 0 rgba(0,0,0,0)}
+  .hmUpBtn:active{transform:translateY(1.5px);box-shadow:var(--btnBevel)}   /* 눌리면 바닥 그림자만 사라진다 */
   .hmUpBtn:active .hmUpBl,.hmUpBtn:active .hmUpBc{filter:brightness(.92)}
   /* ⚠ 단색이어야 한다 — 그라데를 주면 위칸·아래칸이 각자 처음부터 다시 그려서 가운데 이음매가 생긴다 */
   .hmUpBl,.hmUpBc{flex:1;display:flex;align-items:center;justify-content:center;gap:2px;width:100%;
@@ -3191,7 +3205,7 @@
     position:relative;z-index:1;background:none}
   /* 면은 버튼 전체에 한 장으로 — 위아래가 같은 색이고 아래로 가면서만 어두워진다 */
   .hmUpBtn::before{content:'';position:absolute;inset:1.5px;z-index:0;border-radius:2px;
-    background:linear-gradient(180deg,rgba(var(--hmAccRGB),.34) 0%,rgba(var(--hmAccRGB),.27) 55%,rgba(var(--hmAccRGB),.11) 100%),
+    background:linear-gradient(180deg,rgba(var(--hmAccRGB),.18) 0%,rgba(var(--hmAccRGB),.13) 55%,rgba(var(--hmAccRGB),.05) 100%),
       linear-gradient(180deg,#1c1c1c,#0e0e0e)}
   /* 가운데 선 — 단일 선이 아니라 검정 1px 아래 흰 1px 이 맞대 있다(파인 자국)
      ⚠ box-shadow 는 테두리 바깥에 그려져 흰 줄이 아래쪽 반쪽 윗면에 얹힌다 */
@@ -3202,8 +3216,9 @@
   .hmUpBl .hmLk{width:11px;height:11px;stroke:#c8c8c8}
   .hmUpBc{gap:3px;font-size:9.5px;font-weight:700;color:#ececec;border-radius:0 0 2px 2px}
   .hmUpBc .ri{display:block;width:10px;height:10px;flex:none}
-  .hmUpBtn.off{background:linear-gradient(180deg,#5a5a5a,#3e3e3e 34%,#222);cursor:default;
-    box-shadow:none;transform:none;filter:none}
+  .hmUpBtn.off{--btnRing:linear-gradient(315deg,#222 0%,#3e3e3e 66%,#5a5a5a 100%);
+    --btnLine:rgba(255,255,255,.10);cursor:default;
+    box-shadow:var(--btnBevel);transform:none;filter:none}
   .hmUpBtn.off::after{display:none}
   .hmUpBtn.off:hover{filter:none}
   .hmUpBtn.off:active{transform:none}
@@ -3221,7 +3236,8 @@
   .hmUp.lk .hmUpIco .icoImg{filter:grayscale(1) brightness(.5);opacity:.85}
   .hmUp.lk .hmUpName{color:#9a9a9a}
   /* 잠긴 칸은 붉은색을 쓰지 않는다 — 붉은 것 = 지금 살 수 있다는 신호 */
-  .hmUp.lk .hmUpBtn{background:var(--nav-ring-n)}
+  .hmUp.lk .hmUpBtn{--btnRing:linear-gradient(315deg,#424242 0%,#606060 54%,#8c8c8c 100%);
+    --btnLine:rgba(255,255,255,.10)}
   .hmUp.lk .hmUpBtn::before{background:linear-gradient(180deg,#2b2b2b 0%,#262626 55%,#161616 100%)}
   .hmUp.lk .hmUpBl{box-shadow:0 1px 0 rgba(255,255,255,.09)}
   .hmUp.lk .hmUpBl{color:#8f8f8f}
