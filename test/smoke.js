@@ -4874,7 +4874,12 @@ async function groupGame(){
         assert(c.slice(1).map(e=>e.textContent.trim()).join('/')==='구입/사용','특수무기 하위가 다름');
         assert(G.tab==='Main','특수무기는 화면을 옮기지 않는다(전장 유지): '+G.tab);
         const n=names();
-        for(const w of STK_WEAPONS) assert(n.indexOf(w.name)>=0,'구입 그리드에 '+w.name+'이 없음: '+JSON.stringify(n)); }
+        for(const w of STK_WEAPONS) assert(n.indexOf(w.name)>=0,'구입 그리드에 '+w.name+'이 없음: '+JSON.stringify(n));
+        // 특수무기 4종은 전부 기존 스킬 아이콘을 빌린다 — 이모지로 남아 있으면 안 되고, 넷이 서로 달라야 한다
+        const src=[...document.querySelectorAll('#unitCmd .cgSlot .cgPro img')].map(e=>e.getAttribute('src'));
+        assert(src.length===STK_WEAPONS.length,'특수무기 칸에 그림이 빠짐: '+src.length+'/'+STK_WEAPONS.length+' '+JSON.stringify(src));
+        assert(src.every(x=>/\/skills\/sk_/.test(x)),'스킬 아이콘이 아닌 그림이 섞임: '+JSON.stringify(src));
+        assert(new Set(src).size===src.length,'특수무기 둘이 같은 그림을 씀: '+JSON.stringify(src)); }
       // ④ 사용 = **구입과 같은 자리에 같은 순서로**. 없는 것은 빈 칸이 아니라 비활성(dim).
       gtabSub('use'); await sleep(140);
       { const n=names();
