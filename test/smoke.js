@@ -2660,17 +2660,32 @@ async function groupLobby(){
     const mo=document.querySelector('#modeSheet .moCard'); assert(visible(mo),'moCard 안 보임');
     const w=mo.getBoundingClientRect().width; assert(w>200&&w<400,'moCard 폭 이상: '+w); closeModeSheet(); return 'w='+w; });
   // 🎚 개인 플레이 난이도 = 세그먼트 바로 고르고 상세에서 확인 후 시작(목록 훑어 즉시 시작하던 방식 폐지)
-  await step('난이도 선택: 세그먼트 + 상세 · 잠긴 것은 고를 수 있고 시작만 막힌다', async ()=>{
+  await step('난이도 선택: 스테퍼 + 상세 · 잠긴 것은 고를 수 있고 시작만 막힌다', async ()=>{
     skipIf(typeof openSoloDiff!=='function','난이도 선택 없음');
     openMapSelect(); await sleep(60); _selMap=USEMAPS.nemo; openSoloDiff(); await sleep(150);
-    // 탭 띠는 **공용 컴포넌트**(.pdSeg) — 전용 목록(.soloDiffBtns)을 되살리면 안 된다
-    const nav=$('sdNav'), seg=nav&&nav.querySelector('.pdSeg');
-    assert(seg,'난이도 탭이 공용 세그먼트 바(.pdSeg)가 아님');
+    // 상단 = **스테퍼**(◀ 이름 ▶ + 점). 화살표는 공용 .arwBtn 이고 옛 방식들은 되살아나면 안 된다
+    const nav=$('sdNav');
+    assert(!nav.querySelector('.pdSeg'),'난이도가 아직 탭 띠(.pdSeg)임 — 스테퍼로 바뀌었다');
     assert(!document.querySelector('.soloDiffBtns .moDiffBtn'),'옛 난이도 목록이 남아 있음');
-    const tabs=[...nav.querySelectorAll('.pdSegBtn')];
-    assert(tabs.length===DIFFICULTY_ORDER.length,'탭이 난이도 수와 다름: '+tabs.length);
-    // ⚠ 350px 안에 5칸 — 한 글자라도 잘리면 안 된다(NORMAL 이 제일 길다)
-    tabs.forEach(b=>assert(b.scrollWidth<=b.clientWidth+0.5,'탭 글자가 잘림: '+b.textContent));
+    const prev=$('sdPrev'), next=$('sdNext');
+    assert(prev&&next&&prev.classList.contains('arwBtn')&&next.classList.contains('arwBtn'),
+      '◀▶ 가 공용 .arwBtn 이 아님');
+    assert(prev.querySelector('.arwIco')&&next.querySelector('.arwIco'),'화살표 글리프가 안 채워짐(paintArrows 누락)');
+    const dots=[...nav.querySelectorAll('.sdDots i')];
+    assert(dots.length===DIFFICULTY_ORDER.length,'점이 난이도 수와 다름: '+dots.length);
+    // 이름은 스테퍼가 갖는다 — 상세에 또 쓰면 같은 글자가 두 번 나온다
+    const stx=nav.querySelector('.sdStepTx');
+    assert(stx && stx.scrollWidth<=stx.clientWidth+0.5,'스테퍼 이름이 잘림: '+(stx&&stx.textContent));
+    assert(!$('sdDet').querySelector('.sdName'),'난이도 이름이 상세에 중복으로 남아 있음');
+    // 양 끝에서는 멈춘다(순환하지 않는다)
+    sdPick(0); await sleep(60);
+    assert($('sdPrev').disabled && !$('sdNext').disabled,'첫 난이도에서 ◀ 가 안 잠김');
+    sdPick(DIFFICULTY_ORDER.length-1); await sleep(60);
+    assert($('sdNext').disabled && !$('sdPrev').disabled,'마지막 난이도에서 ▶ 가 안 잠김');
+    sdStepBy(1); await sleep(40); assert(_sdPick===DIFFICULTY_ORDER[DIFFICULTY_ORDER.length-1],'끝에서 ▶ 가 순환함');
+    sdStepBy(-1); await sleep(60);
+    assert(_sdPick===DIFFICULTY_ORDER[DIFFICULTY_ORDER.length-2],'◀ 가 한 칸 안 움직임');
+    assert(nav.querySelectorAll('.sdDots i.on').length===1,'켜진 점이 하나가 아님');
     // 잠긴 난이도 = 고를 수는 있고(무엇이 필요한지 보여 준다) 시작만 막힌다
     const li=DIFFICULTY_ORDER.findIndex(d=>!diffUnlocked(d));
     if(li>=0){ sdPick(li); await sleep(80);
@@ -2688,10 +2703,15 @@ async function groupLobby(){
         DIFFICULTY_ORDER[i]+' 상세 본문이 넘침: '+body.scrollHeight+'>'+body.clientHeight);
       assert(body.getBoundingClientRect().bottom<=go.getBoundingClientRect().top+0.5,
         DIFFICULTY_ORDER[i]+' 본문이 시작 버튼과 겹침'); }
-    // 무한 모드는 난이도가 아니다 — 탭이 아니라 별도 줄
+    // ⛔ 시작 버튼 색은 **난이도를 따라가지 않는다** — 공용 확정 버튼(.cpMake) 한 색으로 고정
+    assert($('sdGo').classList.contains('cpMake'),'시작 버튼이 공용 확정 버튼(.cpMake)을 안 씀');
+    { const face=[]; for(let i=0;i<DIFFICULTY_ORDER.length;i++){ sdPick(i); await sleep(50);
+        const g=$('sdGo'); if(!g.disabled) face.push(getComputedStyle(g).backgroundImage); }
+      assert(face.length && face.every(f=>f===face[0]),'난이도마다 시작 버튼 색이 다름'); }
+    // 무한 모드는 난이도가 아니다 — 스테퍼가 아니라 별도 줄
     assert(!visible($('sdInf'))||$('sdInf').textContent.indexOf('무한')>=0,'무한 모드 줄이 이상함');
     closeSoloDiff(); await sleep(40);
-    return '탭 '+tabs.length+'칸 · 잠금 분리 ok'; });
+    return '스테퍼 '+dots.length+'단 · 잠금 분리 ok'; });
   // ⚙ 게임 밖 설정(유즈맵 ☰ → .appCtx) — 게임 안 설정과 **같은 카드**를 문맥만 바꿔 쓴다
   await step('유즈맵 설정: 프로필 머리줄 · 붉은 선 · 44px ✕ · 중립 ON', async ()=>{
     openMapSelect(); await sleep(60); openAppSettings(); await sleep(120);

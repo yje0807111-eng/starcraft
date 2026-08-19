@@ -1904,7 +1904,7 @@
      면 검정 · 1px 중립 테두리 · 라운드 3 · 위쪽 맵색 오라 · 바깥 맵색 발광 — 시네마틱 카드에서 아트만 뺀 것이다.
      ⚠ .moCard 값을 바꾸면 여기도 같이 바꿀 것 — 같아야 하는 두 값이다.
      ⚠ .cpCard 는 방 만들기·종족 선택·로그아웃과 공용이다 — 반드시 #soloDiffPanel 안에서만 덮을 것. */
-  #soloDiffPanel .cpCard{width:var(--popW);max-width:var(--popMaxW);height:min(524px,90%);max-height:90%;
+  #soloDiffPanel .cpCard{width:var(--popW);max-width:var(--popMaxW);height:min(466px,90%);max-height:90%;
     display:flex;flex-direction:column;overflow:hidden;padding:20px 16px 16px;
     clip-path:none;border-radius:var(--r-bar);
     background:#08080a;border:1px solid rgba(255,255,255,.08);
@@ -1914,15 +1914,21 @@
      z-index 를 주지 않는다 — .cpCard>* 가 z:1 이라 내용은 자동으로 이 위에 온다 */
   #soloDiffPanel .cpCard::after{content:'';position:absolute;inset:0;pointer-events:none;opacity:.14;
     background:radial-gradient(78% 34% at 50% 0%,var(--mapAccent,#4aa8ff),transparent 70%)}
-  /* 난이도 고르기 = 위 세그먼트 바(공용 .pdSeg · segNavHTML) + 아래 상세 한 장.
-     ⛔ 새 탭 띠를 만들지 말 것 — 생김새는 전부 공용 규칙이 갖고 여기서 덮는 건 글자 크기뿐이다. */
-  #soloDiffPanel .sdNav{flex:none;margin-bottom:9px}
-  #soloDiffPanel .sdNav .pdSeg{max-width:none;margin:0}
-  #soloDiffPanel .sdNav .pdSegBtn{padding:8px 0;font-family:var(--font-num);font-size:12px;letter-spacing:0}   /* 좌우 여백 0 = NORMAL(58px)이 한 칸(59px)에 들어가는 값 · 무한은 탭이 아니라 아래 별도 줄 */
-  /* 상세 = 고른 것 하나만 크게. 카드가 남는 높이를 전부 먹고 내용은 가운데, 시작 버튼은 아래에 붙는다 */
-  /* 상세 = 고른 난이도가 판 전체를 물들인다(테두리 광원 + 윗변 선 + 큰 이름).
-     ⚠ 색을 갖는 건 선·빛·글자뿐이고 면은 검정 그대로다(DESIGN §0) — 난이도를 바꾸면 '판이 바뀐' 느낌만 준다.
-     ⛔ 난이도 이름을 두 번 쓰지 말 것 — 워터마크를 뒤에 깔아 봤으나 .sdName 과 겹쳐 읽기만 나빠졌다(2026-08-19).
+  /* 난이도 고르기 = 위 스테퍼(◀ 이름 ▶ + 점) + 아래 상세 한 장(2026-08-19).
+     ⛔ 탭 띠(.pdSeg)로 5칸을 늘어놓던 방식은 폐지 — 한 칸이 59px 뿐이라 글자가 잘리기 직전이었고,
+        난이도는 **순서가 있는 축**이라 좌우 이동이 맞다(사냥터 라운드 ◀▶ 와 같은 동작).
+     ◀▶ 는 공용 .arwBtn(data-arw) 그대로 — 새 화살표 SVG를 박지 말 것. */
+  #soloDiffPanel .sdNav{flex:none;margin-bottom:9px;display:flex;flex-direction:column;align-items:center;gap:5px}
+  .sdStepRow{display:flex;align-items:center;justify-content:center;gap:4px;width:100%}
+  .sdStepTx{flex:1;min-width:0;text-align:center;font-family:var(--font-num);font-size:23px;font-weight:700;
+    letter-spacing:1px;color:var(--dc,#eef2f6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    text-shadow:0 0 16px color-mix(in srgb,var(--dc,#fff) 40%,transparent)}
+  .sdDots{display:flex;align-items:center;justify-content:center;gap:5px}
+  .sdDots i{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.16);transition:background .12s,width .12s}
+  .sdDots i.on{width:14px;border-radius:3px;background:var(--dc,#fff)}
+  /* 상세 = 고른 난이도가 판 전체를 물들인다(테두리 광원 + 윗변 선). 카드가 남는 높이를 전부 먹는다.
+     ⚠ 색을 갖는 건 선·빛뿐이고 면은 검정 그대로다(DESIGN §0) — 난이도를 바꾸면 '판이 바뀐' 느낌만 준다.
+     ⛔ 난이도 이름을 여기에 또 쓰지 말 것 — 이름은 위 스테퍼가 갖는다(워터마크·.sdName 둘 다 폐지, 2026-08-19).
      --dc(hex) 와 --dcRGB(채널 셋)를 renderSoloDiff 가 함께 실어 준다(알파를 얹으려면 채널이 필요). */
   #soloDiffPanel .sdDet{position:relative;flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden;
     padding:16px 14px 14px;margin-bottom:8px;border-radius:var(--r-md);
@@ -1941,8 +1947,6 @@
   .sdMap em{font-style:normal;font-size:var(--fs-xs);color:#7d8b98;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   /* ⚠ overflow:hidden 없이 두면 설명 줄이 시작 버튼 위로 흘러 잘린 것처럼 보인다(2026-08-19) */
   .sdBody{flex:1 1 auto;min-height:0;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
-  .sdName{font-family:var(--font-num);font-size:28px;font-weight:700;letter-spacing:1px;color:var(--dc,#fff);
-    text-shadow:0 0 18px color-mix(in srgb,var(--dc,#fff) 45%,transparent)}
   .sdStats{display:flex;justify-content:center;gap:22px}
   .sdStat{text-align:center}
   .sdStat i{display:block;font-style:normal;font-size:var(--fs-xs);color:#828b96}
@@ -1951,15 +1955,14 @@
   .sdDesc{font-size:var(--fs-md);color:#8a929c;text-align:center;line-height:1.6}
   .sdLock{display:flex;align-items:center;gap:6px;font-size:var(--fs-md);font-weight:700;color:#7d8b98}
   .sdLock svg{width:13px;height:13px}
-  /* 시작 = 이 화면의 **주 액션**. 난이도 색을 면으로 채우는 유일한 예외다 —
-     시작과 취소가 같은 금속 판이면 무엇이 주 동작인지 안 읽힌다(취소는 아래에서 글자만 남긴다). */
-  .sdGo{flex:none;width:100%;height:50px;margin-top:12px;cursor:pointer;font-family:inherit;
-    font-size:15px;font-weight:800;letter-spacing:.3px;color:#08080a;
-    border:1px solid rgba(255,255,255,.28);border-radius:var(--r-bar);
-    background:linear-gradient(180deg,rgba(255,255,255,.14) 0%,rgba(0,0,0,.18) 46%,rgba(0,0,0,.46) 100%),var(--dc,#8a8a8a);
-    box-shadow:0 8px 20px -14px var(--dc,#000),inset 0 1px 0 rgba(255,255,255,.34)}
-  .sdGo:active{transform:translateY(1.5px);box-shadow:0 0 0 rgba(0,0,0,0)}
-  .sdGo:disabled{cursor:default;color:#6d7480;border-color:var(--metal-edge);box-shadow:none;
+  /* 시작 = 이 화면의 **주 액션**. 면색은 공용 확정 버튼(.cpMake — 붉은 네온)을 그대로 물려받는다
+     (마크업이 class="cpMake sdGo"). 여기서는 크기와 잠금 상태만 덮는다.
+     ⛔ 난이도 색으로 물들이지 말 것 — 고를 때마다 확정 버튼 색이 바뀌면 '무엇이 확정인지'가 흔들린다.
+        난이도 색은 위 스테퍼와 상세 판(선·빛)이 이미 말해 준다. 취소는 아래에서 글자만 남긴다. */
+  /* ⚠ 공용 .cpMake 규칙이 이 블록보다 **아래**에 있다(flex:1 · padding:12px) — 같은 특이도면 진다.
+     크기를 덮으려면 ID 를 붙여야 한다(안 그러면 버튼이 상세 판을 다 먹고 94px 로 늘어난다). */
+  #soloDiffPanel .sdGo{flex:none;width:100%;height:50px;margin-top:12px;padding:0;border-radius:var(--r-bar)}
+  #soloDiffPanel .sdGo:disabled{cursor:default;color:#6d7480;border-color:var(--metal-edge);box-shadow:none;
     background:linear-gradient(180deg,#141414,#0b0b0b)}
   /* 무한 모드 = 난이도 밖의 별개 모드. 한 줄로 두되 보라 광원 하나로만 구분한다 */
   .sdInf{position:relative;flex:none;width:100%;height:42px;margin-bottom:8px;padding:0 13px;cursor:pointer;overflow:hidden;
@@ -16699,17 +16702,23 @@ function _sdPrevKo(k){ if(k==='inf') return 'NORMAL';
   const r=DIFF_RANK.indexOf(k); return (r>0 && DIFFICULTY[DIFF_RANK[r-1]]) ? DIFFICULTY[DIFF_RANK[r-1]].name : ''; }
 function sdPick(i){ const L=_sdList(); if(!L[i]) return; _sdPick=L[i].k; renderSoloDiff();
   if(typeof playSfx==='function') playSfx('ui_tab'); }
+// 스테퍼 = ±1 이동. 양 끝에서는 멈춘다(순환하지 않는다 — 난이도는 순서가 있는 축이라 끝이 있어야 위치가 읽힌다)
+function sdStepBy(d){ const L=_sdList(); let i=L.findIndex(function(x){ return x.k===_sdPick; });
+  if(i<0) i=0; const n=i+d; if(n<0||n>=L.length) return; sdPick(n); }
 function renderSoloDiff(){ const nav=document.getElementById('sdNav'), det=document.getElementById('sdDet');
   if(!nav||!det) return;
   const L=_sdList(); let i=L.findIndex(function(x){ return x.k===_sdPick; }); if(i<0){ i=0; _sdPick=L[0].k; }
-  // 탭 띠는 공용 컴포넌트 — 화면이 덮는 건 광원 색(--segCol) 하나뿐(DESIGN §세그먼트 바)
-  nav.innerHTML=segNavHTML(L.map(function(x){ return {label:x.name, col:_sdRGB(x.col)}; }), i,
-    function(k){ return 'sdPick('+k+')'; });
   const cur=L[i], ok=_sdOk(cur.k);
   // 잠긴 난이도는 회색으로 물들인다 — 색이 살아 있으면 '고를 수 있다'로 읽힌다
   const col = ok ? cur.col : '#5a626c';
-  det.style.setProperty('--dc', col);
-  det.style.setProperty('--dcRGB', _sdRGB(col));
+  [nav,det].forEach(function(el){ el.style.setProperty('--dc', col); el.style.setProperty('--dcRGB', _sdRGB(col)); });
+  // ◀ 이름 ▶ + 위치 점. 화살표는 공용 .arwBtn(paintIcons 가 글리프를 채운다)
+  nav.innerHTML='<div class="sdStepRow">'
+    +'<button class="arwBtn" data-arw="l" id="sdPrev" onclick="sdStepBy(-1)" aria-label="이전 난이도"'+(i>0?'':' disabled')+'></button>'
+    +'<div class="sdStepTx">'+escHtml(cur.name)+'</div>'
+    +'<button class="arwBtn" data-arw="r" id="sdNext" onclick="sdStepBy(1)" aria-label="다음 난이도"'+(i<L.length-1?'':' disabled')+'></button>'
+    +'</div><div class="sdDots">'+L.map(function(x,j){ return '<i class="'+(j===i?'on':'')+'"></i>'; }).join('')+'</div>';
+  if(typeof paintArrows==='function') paintArrows(nav);
   let body;
   if(!ok){ body='<div class="sdLock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>'
       +escHtml(_sdPrevKo(cur.k))+' 클리어 시 잠금 해제</div>'; }
@@ -16721,8 +16730,8 @@ function renderSoloDiff(){ const nav=document.getElementById('sdNav'), det=docum
   const mapHead='<div class="sdMap"><span class="moThumb" id="sdThumb"></span>'
     +'<span class="sdMapTx"><b>'+escHtml((_selMap&&_selMap.name)||'')+'</b>'
     +'<em>'+escHtml((_selMap&&_selMap.desc)||'')+'</em></span></div>';
-  det.innerHTML=mapHead+'<div class="sdBody"><div class="sdName">'+escHtml(cur.name)+'</div>'+body+'</div>'
-    +'<button class="sdGo" id="sdGo" onclick="sdStart()"'+(ok?'':' disabled')+'>'
+  det.innerHTML=mapHead+'<div class="sdBody">'+body+'</div>'
+    +'<button class="cpMake sdGo" id="sdGo" onclick="sdStart()"'+(ok?'':' disabled')+'>'
     +(ok ? '이 난이도로 시작' : '잠겨 있습니다')+'</button>';
   if(typeof _mapThumbInto==='function') _mapThumbInto(document.getElementById('sdThumb'), _selMap);
   // 무한 모드 줄 — 이 맵에 있을 때만
