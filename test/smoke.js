@@ -4880,16 +4880,25 @@ async function groupGame(){
         // 카드 뼈대 순서 = 네모와 같다: 초상 → 이름 → 수치 → 비용
         const kids=[...cs[0].children].map(e=>e.className.split(' ')[0]).join('>');
         assert(kids==='cgPro>cgName>cgSub>cgCost','카드 뼈대가 네모 업그레이드 카드와 다름: '+kids); }
-      // 초상은 정사각 = 네모 업그레이드 카드와 같은 크기. 오토배틀은 지갑이 하나라 비용 줄이 **한 줄**이고,
-      //   빈 가스 줄을 예약하면 그만큼(8px) 초상이 눌린다 — 실제로 네모보다 작았다.
-      { const c=document.querySelector('#btSheetBody .cgSlot:not(.empty)');
-        const cc=c.querySelectorAll('.cgCost .cc');
-        assert(cc.length===1,'오토배틀 비용 줄이 한 줄이 아님(빈 가스 줄 예약): '+cc.length);
-        const p=c.querySelector('.cgPro').getBoundingClientRect();
-        assert(Math.abs(p.width-p.height)<=1,'초상이 정사각이 아님(네모 카드보다 눌림): '+p.width.toFixed(1)+'×'+p.height.toFixed(1));
-        const ri=c.querySelector('.cgCost .ri'), cs=getComputedStyle(c.querySelector('.cgCost .cc'));
+      // 재화는 **미네랄(윗줄)·가스(아랫줄) 두 자리가 언제나 예약**돼 있어야 한다 — 값이 없다고 줄을 빼면
+      //   칸마다 재화가 다른 높이에 찍혀 눈이 자리를 못 잡는다. 그러고도 초상은 네모 카드와 같은 정사각이어야 한다.
+      { for(const c of document.querySelectorAll('#btSheetBody .cgSlot:not(.empty)')){
+          const cc=[...c.querySelectorAll('.cgCost .cc')];
+          assert(cc.length===2,'재화 줄이 두 자리가 아님(미네랄/가스 자리 예약): '+cc.length);
+          assert(cc[0].classList.contains('cr') && cc[1].classList.contains('en'),
+            '미네랄이 윗줄·가스가 아랫줄이 아님: '+cc.map(e=>e.className).join('/'));
+          assert(cc[1].getBoundingClientRect().top >= cc[0].getBoundingClientRect().top,'가스 줄이 미네랄 위에 있음');
+          const p=c.querySelector('.cgPro').getBoundingClientRect();
+          assert(Math.abs(p.width-p.height)<=1,'초상이 정사각이 아님(네모 카드보다 눌림): '+p.width.toFixed(1)+'×'+p.height.toFixed(1));
+          assert(c.scrollHeight-c.clientHeight<=0,'카드 안에서 내용이 넘침: '+(c.querySelector('.cgName')||{}).textContent); }
+        const c0=document.querySelector('#btSheetBody .cgSlot:not(.empty)');
+        const ri=c0.querySelector('.cgCost .ri'), cs=getComputedStyle(c0.querySelector('.cgCost .cc'));
         if(ri) assert(Math.abs(ri.getBoundingClientRect().height-parseFloat(cs.fontSize))<=0.5,
-          '재화 아이콘이 옆 숫자 크기와 다름: '+ri.getBoundingClientRect().height.toFixed(1)+' vs '+cs.fontSize); }
+          '재화 아이콘이 옆 숫자 크기와 다름: '+ri.getBoundingClientRect().height.toFixed(1)+' vs '+cs.fontSize);
+        // 수치 줄은 이름보다 확실히 작아야 한다 — 이 줄이 없는 칸과 높이 차이를 줄이려는 규칙이다
+        const sub=c0.querySelector('.cgSub'), nm=c0.querySelector('.cgName');
+        if(sub&&nm) assert(parseFloat(getComputedStyle(sub).fontSize) < parseFloat(getComputedStyle(nm).fontSize)-1.5,
+          '수치 줄이 이름만큼 큼: '+getComputedStyle(sub).fontSize+' vs '+getComputedStyle(nm).fontSize); }
       // ⚠ 이름 줄상자가 글자 잉크보다 작으면 overflow:hidden 이 **윗획을 잘라 먹는다**.
       //   실제로 10px 한글(잉크 11px)이 줄상자 10.5px(line-height 1.05)에 잘렸다.
       //   ⚠ 줄상자 높이만 재면 절대 못 잡는다 — 캔버스 폰트 메트릭으로 잉크를 재서 비교할 것.
@@ -5047,9 +5056,8 @@ async function groupSandbox(){
     assert(document.querySelector('.bres'),'관리자 건설에 자원 바(.bres)가 없음');
     assert(!$('btCardCtl'),'건설 시트에 접기 버튼(#btCardCtl)이 남아 있음');
     return 'ok'; });
-  // 관리자는 미네랄·가스 두 지갑이라 빈 가스 줄도 자리를 예약한다 — 칸마다 크레딧 줄 높이가 달라지면 안 된다.
-  //   ⚠ 오토배틀의 '한 줄' 규칙이 여기로 새면 건물 카드 비용 줄이 들쭉날쭉해진다.
-  await step('관리자 건설: 비용 줄은 두 줄 예약(오토배틀 한 줄 규칙 미오염)', async()=>{
+  // 재화는 미네랄(위)·가스(아래) 두 자리를 언제나 예약한다 — 값이 없다고 줄을 빼면 칸마다 재화 높이가 달라진다.
+  await step('관리자 건설: 재화는 미네랄·가스 두 자리 예약', async()=>{
     switchTab('Build', document.querySelector('.tab[data-tab="Build"]')); await sleep(300);
     skipIf(!G.tech,'건설 상태 없음');
     const wk=(G.tech.ents||[]).find(e=>e.type==='worker'); skipIf(!wk,'일꾼 없음');
@@ -5058,6 +5066,8 @@ async function groupSandbox(){
     const c=document.querySelector('#btSheetBody .cgSlot:not(.empty)'); skipIf(!c,'건설 칸 없음');
     const cc=c.querySelectorAll('.cgCost .cc');
     assert(cc.length===2,'관리자 건설 비용 줄이 두 줄이 아님(가스 자리 예약 사라짐): '+cc.length);
+    assert(cc[0].classList.contains('cr') && cc[1].classList.contains('en'),'미네랄이 윗줄·가스가 아랫줄이 아님');
+    assert(c.scrollHeight-c.clientHeight<=0,'건물 카드 안에서 내용이 넘침');
     return 'ok'; });
   // 관리자 건설 탭에서 병영을 고르면 레인저·화력병·의무병·저격수 카드가 실제로 그려져야 한다.
   await step('관리자 건설: 병영 생산 카드', async()=>{
