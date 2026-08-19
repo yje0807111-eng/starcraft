@@ -3029,13 +3029,21 @@ async function groupLobby(){
         assert(bl.textContent.trim()==='LV.'+n,S.name+' 레벨 표기가 다름: '+bl.textContent.trim());
         assert(!bl.querySelector('.nx') && !bl.querySelector('svg'),S.name+' 버튼 윗줄에 화살표가 남아 있음');
         assert(e.querySelector('.hmUpBc').textContent.trim()==='-'+ptCost('lp',S.k)+'p','버튼이 비용 표기가 아님'); }); }
+    // 극단값에서도 칸 안에 남는가 — 만 레벨이면 한 축에 수천 포인트가 쌓인다
+    { const c9=CHAR(), keep=Object.assign({}, c9.unit.pts), keepLv=c9.level;
+      c9.level=10000; c9.unit.pts={atk:9999}; renderChr();
+      const e=$('chrBody').querySelector('.lpList .hmUp[data-k="atk"]');
+      for(const sel of ['.hmUpName','.hmUpVl','.hmUpBl','.hmUpBc']){ const el=e.querySelector(sel);
+        assert(el.scrollWidth<=el.clientWidth+1,'9999p 에서 '+sel+' 이 잘림: '+el.textContent.trim()); }
+      c9.level=keepLv; c9.unit.pts=keep; renderChr(); }
     // 초기화 = 사냥터 수량 버튼과 같은 물성
     { const q=host.querySelector('.lpHead .lpQ.rs .hmUpQ');
       assert(q && q.textContent.trim()==='초기화','초기화가 수량 버튼 물성이 아님');
       assert(q.scrollWidth<=q.clientWidth+1,'초기화 글자가 잘림');
       const au=host.querySelector('.lpHead .lpQ.au .hmUpQ');
-      assert(au && au.textContent.trim()==='자동','자동 버튼이 없음');
-      assert(au.scrollWidth<=au.clientWidth+1,'자동 글자가 잘림'); }
+      assert(au && au.textContent.trim().indexOf('자동')===0,'자동 버튼이 없음: '+(au&&au.textContent));
+      assert(au.textContent.trim()==='자동 '+lpAutoName(),'자동 버튼이 대상을 안 적음: '+au.textContent.trim());
+      assert(au.scrollWidth<=au.clientWidth+1,'자동 글자가 잘림: '+au.textContent.trim()); }
     // 이름은 수치 축과 같은 말을 쓴다 — 같은 것을 두 이름으로 부르지 않는다
     assert(lpDef('critd').name===CS_AXES.critd.name,'치명 피해 이름이 축과 다름: '+lpDef('critd').name);
     // 버튼에 적힌 값만큼 '실제로' 빠진다 — 표기와 차감이 갈라지면 여기서 잡힌다
@@ -3061,45 +3069,49 @@ async function groupLobby(){
     assert(Math.abs(_hb.char.atk-a0)<1e-6,'초기화 뒤 전투 수치가 안 돌아옴');
     navBack(); await sleep(40);
     return '찍기·초기화 → 전투 즉시 반영'; });
-  await step('자동 배분: 레벨업하면 포인트가 알아서 균등하게 찍힌다', async()=>{
+  await step('자동 배분: 골라 둔 한 축에만 계속 찍힌다', async()=>{
     assert(typeof lpAutoSpend==='function','자동 배분이 없음');
     const p=PROF(); p.chars.length=0; p.curId='';
-    { const c0=profCreateChar('ranger','자동'); c0.lpAuto=1; }
-    saveMeta();
+    profCreateChar('ranger','자동'); saveMeta();
     let c=CHAR();
-    assert(c.lpAuto,'자동이 기본으로 꺼져 있음');   // 눌러 놓고 떠나는 구역이라 기본은 켬
-    // ① 레벨이 오르면 남은 포인트가 0이 된다 — 들를 필요가 없어야 한다
+    // ① 기본값이 실제 항목을 가리킨다 — 안 들러도 세지는 게 설계 의도다
+    assert(lpAutoKey(c)===LP_AUTO_DEFAULT && lpDef(LP_AUTO_DEFAULT),'기본 자동 대상이 실재하지 않음: '+c.lpAuto);
+    // ② 레벨이 오르면 '그 축에만' 들어간다 — 남는 포인트가 없어야 한다
+    c.lpAuto='critd'; c.unit.pts={};
     c.xp=1e7; const ups=profApplyLevelUps(c);
     assert(ups>0,'레벨이 안 오름');
     assert(lpFree(c)===0,'자동인데 포인트가 남아 있음: '+lpFree(c));
-    assert(lpSpent(c)===lpTotal(c),'찍힌 합이 총량과 다름');
-    // ② 균등하다 — 가장 많이/적게 찍힌 축의 차이가 1을 넘지 않는다
-    { const n=LP_STATS.map(S=>lpPts(S.k,c));
-      assert(Math.max.apply(null,n)-Math.min.apply(null,n)<=1,'균등하지 않음: '+n.join(',')); }
-    // ③ 배수가 선형이라 균등 배분이 손해가 아니다 — 몰빵과 총합이 같아야 한다
-    { const even=LP_STATS.reduce((t,S)=>t+lpMul(S.k,c),0);
-      const all=Object.assign({}, c.unit.pts); const tot=lpTotal(c);
-      c.unit.pts={}; c.unit.pts[LP_STATS[0].k]=tot;
-      const solo=LP_STATS.reduce((t,S)=>t+lpMul(S.k,c),0);
-      assert(Math.abs(even-solo)<1e-9,'균등이 몰빵보다 손해임(자동이 함정이 된다): '+even+' vs '+solo);
-      c.unit.pts=all; }
-    // ④ 끄면 안 찍힌다 · 다시 켜면 밀린 몫까지 바로 찍는다
-    c.lpAuto=0; c.unit.pts={}; c.xp=1e7; profApplyLevelUps(c);
+    assert(lpPts('critd',c)===lpTotal(c),'고른 축에 다 안 들어감: '+lpPts('critd',c)+'/'+lpTotal(c));
+    for(const S of LP_STATS) if(S.k!=='critd')
+      assert(lpPts(S.k,c)===0,'고르지 않은 축에도 찍힘: '+S.k+'='+lpPts(S.k,c));
+    // ③ 대상을 바꾸면 그 뒤로는 새 축에만 쌓인다(이미 찍힌 것은 그대로)
+    const before=lpPts('critd',c);
+    c.lpAuto='hp'; c.xp=1e7; profApplyLevelUps(c);
+    assert(lpPts('critd',c)===before,'대상을 바꿨는데 옛 축이 변함');
+    assert(lpPts('hp',c)>0 && lpFree(c)===0,'바꾼 축에 안 들어감');
+    // ④ 끄면 안 찍힌다
+    c.lpAuto=''; c.xp=1e7; profApplyLevelUps(c);
     assert(lpFree(c)>0,'껐는데도 자동으로 찍힘');
-    const left=lpFree(c);
-    lpAutoSpend(c);
-    assert(lpFree(c)===0,'수동 호출로도 안 찍힘 (남은 '+left+')');
-    // ⑤ 화면 버튼으로도 같은 경로를 탄다
-    c.lpAuto=0; c.unit.pts={}; saveMeta();
+    assert(lpAutoSpend(c)===0,'꺼진 상태인데 자동이 실행됨');
+    // ⑤ 화면 버튼 = 한 칸씩 돌리기(끔 → 첫 항목 → … → 끔). 수량 버튼과 같은 방식.
+    c.unit.pts={}; c.lpAuto=''; saveMeta();
     navGo('upg'); await sleep(60); setChrSec('stat'); await sleep(40);
     const au=()=>$('chrBody').querySelector('.lpHead .lpQ.au .hmUpQ');
-    assert(au() && !au().classList.contains('on'),'꺼져 있는데 자동 버튼이 켜져 보임');
+    assert(!au().classList.contains('on'),'꺼져 있는데 켜져 보임');
     au().click(); await sleep(40);
-    assert(CHAR().lpAuto,'버튼으로 안 켜짐');
+    assert(lpAutoKey()===LP_STATS[0].k,'첫 클릭이 첫 항목이 아님: '+lpAutoKey());
     assert(lpFree()===0,'켰는데 밀린 포인트가 안 찍힘');
-    assert(au().classList.contains('on'),'켰는데 버튼이 안 켜져 보임');
+    assert(au().classList.contains('on'),'켰는데 안 켜져 보임');
+    // 목록이 어느 축인지 표시한다
+    assert($('chrBody').querySelector('.lpList').dataset.auto===LP_STATS[0].k,'목록에 자동 대상 표시가 없음');
+    // 한 바퀴 돌면 다시 꺼진다
+    for(let i=1;i<LP_STATS.length;i++){ au().click(); await sleep(20);
+      assert(lpAutoKey()===LP_STATS[i].k,i+'번째 항목으로 안 넘어감: '+lpAutoKey()); }
+    au().click(); await sleep(20);
+    assert(lpAutoKey()==='','한 바퀴 돌았는데 안 꺼짐: '+lpAutoKey());
+    assert(!$('chrBody').querySelector('.lpList').dataset.auto,'껐는데 표시가 남음');
     navBack(); await sleep(40);
-    return '레벨 '+lpTotal(c)+'p 균등 자동 배분'; });
+    return '대상 지정 자동 · '+LP_STATS.length+'항목 순환'; });
   await step('미네랄 획득: 환생 배수를 탄다(되돌려받는 것은 안 탄다)', ()=>{
     assert(typeof profGainCoin==='function','미네랄 획득 배수가 없음');
     const p=PROF(); p.chars.length=0; p.curId=''; const c=profCreateChar('ranger','코인');

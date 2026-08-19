@@ -3047,6 +3047,16 @@
   .lpFree b{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:14px;color:#9a9a9a}
   .lpFree.on b{color:#5dff8f}                       /* 쓸 수 있는 포인트가 있을 때만 초록(HOME 경험치 바와 같은 값) */
   .lpBtns{display:flex;align-items:center;gap:6px}
+  /* 🤖 자동 대상 카드 — 어느 축으로 가고 있는지 목록에서 바로 보인다.
+     ⚠ 카드 함수(hmUpCardHTML)는 건드리지 않는다 — 목록의 data-auto 로만 건다. */
+  .lpList[data-auto] .hmUp[data-k]{opacity:.72}
+  .lpList[data-auto="atk"]   .hmUp[data-k="atk"],
+  .lpList[data-auto="hp"]    .hmUp[data-k="hp"],
+  .lpList[data-auto="aspd"]  .hmUp[data-k="aspd"],
+  .lpList[data-auto="range"] .hmUp[data-k="range"],
+  .lpList[data-auto="critd"] .hmUp[data-k="critd"],
+  .lpList[data-auto="ally"]  .hmUp[data-k="ally"],
+  .lpList[data-auto="bld"]   .hmUp[data-k="bld"]{opacity:1;box-shadow:0 0 0 1px rgba(93,255,143,.55), 0 0 9px -5px rgba(93,255,143,.6)}
   .hmUpQty.lpQ{width:auto;min-width:46px}           /* '초기화'는 ×10 보다 길다 — 폭만 내용에 맡긴다 */
   /* 자동이 꺼져 있을 때 — 켜진 칸(.on)과 확실히 갈리게 흐리게 둔다 */
   .lpQ .hmUpQ:not(.on){color:#6f6f6f;background:rgba(0,0,0,.34)}
@@ -3055,6 +3065,8 @@
      ⚠ .hmUpgGrid 를 쓰지 말 것 — 그건 2.7줄 고정 높이라 항목이 7개인 여기선 잘린다. */
   .lpList{--hmAccRGB:255,59,59;--hmAccLt:#ff8f8f;   /* '내 캐릭터' 업그레이드 구역과 같은 계열 */
     display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+  /* 2열이라 사냥터(1열 폭)보다 좁다 — 버튼을 줄여 수치 줄에 자리를 준다(수치가 길어지는 쪽이다) */
+  .lpList .hmUpBtn{width:46px}
   /* ── 사냥터 업그레이드 ── */
   /* 탭 띠 = 장비창 섹션 바와 같은 컴포넌트(.pdSeg/.pdSegInd/.pdSegBtn · segNavHTML).
      생김새는 전부 공용 규칙이 갖는다 — 여기 오버라이드는 폭·글자뿐이다. */
@@ -5873,7 +5885,7 @@ function profGas(){ const p=PROF(); return Math.floor(p&&p.gas||0); }
 function profGem(){ const p=PROF(); return Math.floor(p&&p.gem||0); }
 function defaultChar(cls, name){ const C=PROF_CLASSES[cls]||PROF_CLASSES.ranger, id=(PROF_CLASSES[cls]?cls:'ranger');
   return { id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), cls:id, name:(name||C.name),
-    xp:0, level:1, statPoints:0, dgFloor:0, reb:0, rebMul:0, rp:0, lpAuto:1,   // 🔁 환생 횟수 · 환생 포인트 · 🤖 자동 배분(기본 켬)
+    xp:0, level:1, statPoints:0, dgFloor:0, reb:0, rebMul:0, rp:0, lpAuto:LP_AUTO_DEFAULT,   // 🔁 환생 횟수 · 환생 포인트 · 🤖 자동 배분 대상
     unit:{ jobId:id, level:1, stats:{pow:0,vit:0,foc:0,agi:0}, pts:{}, rpts:{}, gear:_emptyGear() } }; }
 function defaultMeta(){ return { coins:0, buildLevels:{}, highestRound:0, clearedDifficulty:'', profile:defaultProfile() }; }   // clearedDifficulty:''=아무것도 클리어 안 함(이지만 개방)
 let PLAYER_META = defaultMeta();
@@ -5985,6 +5997,9 @@ function fixChar(c){ const d=defaultChar(c&&c.cls, c&&c.name);
     // 🎯 레벨 포인트(LP_STATS) — 옛 unit.stats(배분)와 '다른' 필드다. 그건 마이그레이션이 0으로 비운다.
     if(!c.unit.pts  || typeof c.unit.pts !=='object') c.unit.pts ={};
     if(!c.unit.rpts || typeof c.unit.rpts!=='object') c.unit.rpts={}; }   // 🔁 환생 포인트(영구)
+  // 🤖 자동 배분은 0/1 이었다가 '대상 축의 키'가 됐다(2026-08-19) — 켜져 있던 저장은 기본 축으로 옮긴다
+  if(c.lpAuto===1 || c.lpAuto===true) c.lpAuto=LP_AUTO_DEFAULT;
+  else if(!LP_STATS.some(S=>S.k===c.lpAuto)) c.lpAuto='';
   c.unit.jobId=c.cls;   // 직업 폐지 — jobId 는 캐릭터 종류를 따라가는 흔적 필드일 뿐이다
   return c; }
 function PROF(){ return PLAYER_META.profile || (PLAYER_META.profile=defaultProfile()); }   // 안전 접근자
@@ -7167,12 +7182,12 @@ function _ptListHTML(kind, c){ const rp=(kind==='rp');
   h+='<div class="lpHead"><span class="lpFree'+(free?' on':'')+'">남은 포인트 <b>'+free+'</b></span>'
     +'<span class="lpBtns">'
     +(rp? '' : ('<span class="hmUpQty lpQ au"><button class="hmUpQ'+(lpAutoOn(c)?' on':'')
-                +'" onclick="lpAutoToggle()">자동</button></span>'))
+                +'" onclick="lpAutoCycle()">자동 '+lpAutoName(c)+'</button></span>'))
     +'<span class="hmUpQty lpQ rs"><button class="hmUpQ on" onclick="ptDoReset(\''+kind+'\')"'
     +(spent?'':' disabled')+'>초기화</button></span></span></div>';
   // ⛔ 카드 마크업을 베끼지 말 것 — 사냥터 업그레이드와 '같은 함수'(hmUpCardHTML)를 부른다.
   //    val▸next = 이 1점으로 배수가 어디까지 가는지 · lv = 지금 찍은 칸 · cost = 값
-  h+='<div class="lpList">';
+  h+='<div class="lpList"'+((!rp && lpAutoKey(c))? (' data-auto="'+lpAutoKey(c)+'"') : '')+'>';
   for(const S of LP_STATS){ const n=rp? rpPts(S.k,c) : lpPts(S.k,c);
     const cost=ptCost(kind, S.k, c);
     h+=hmUpCardHTML({ key:S.k, ico:_icoPathImg(S.ico), name:S.name, off:free<cost,
@@ -7766,22 +7781,25 @@ function lpAdd(k, n){ const c=CHAR(), S=lpDef(k); if(!c||!S) return 0;
 function lpReset(){ const c=CHAR(); if(!c) return 0; const n=lpSpent(c);
   c.unit.pts={}; saveMeta(); return n; }
 // 🤖 자동 배분 — '눌러 놓고 떠나는' 구역이라 레벨업 때 포인트가 알아서 찍힌다.
-//   가장 적게 찍힌 축부터 채운다(균등). ⭐ 배수가 선형이라 어디 찍든 총합이 같아서
-//   균등 배분이 손해가 아니다 — 그래서 '어디에 찍을지'를 묻지 않아도 된다.
-//   ⚠ 복리로 바꾸면 이 전제가 깨진다(몰빵이 이득이 되어 자동이 손해가 된다).
-function lpAutoSpend(c){ c=c||CHAR(); if(!c) return 0;
+//   ⭐ **미리 골라 둔 한 축**에만 계속 찍는다. 고르는 건 플레이어 몫이고, 그 뒤로는 안 들러도 된다.
+//   c.lpAuto = LP_STATS 의 키(''=끔). ⚠ 옛 저장은 0/1 이라 fixChar 가 키로 옮긴다.
+const LP_AUTO_DEFAULT='atk';                 // 처음엔 공격력에 자동(안 들러도 세지도록 · 언제든 바꾼다)
+function lpAutoKey(c){ c=c||CHAR(); const k=c&&c.lpAuto;
+  return (k && lpDef(k)) ? k : ''; }
+function lpAutoOn(c){ return !!lpAutoKey(c); }
+function lpAutoName(c){ const k=lpAutoKey(c); return k? lpDef(k).name : '끔'; }
+// 고른 축에 남은 포인트를 전부 넣는다
+function lpAutoSpend(c){ c=c||CHAR(); const k=lpAutoKey(c); if(!c||!k) return 0;
   let put=0;
   for(let guard=0; guard<9999; guard++){
-    let best=null;
-    for(const S of LP_STATS){ if(best===null || lpPts(S.k,c)<lpPts(best,c)) best=S.k; }
-    if(!best || lpFree(c)<ptCost('lp',best,c)) break;
-    if(!lpAdd(best,1)) break;
+    if(lpFree(c)<ptCost('lp',k,c)) break;
+    if(!lpAdd(k,1)) break;
     put++; }
   return put; }
-function lpAutoOn(c){ c=c||CHAR(); return !!(c && c.lpAuto); }
-// 켜면 그동안 쌓아 둔 몫까지 바로 찍는다 — 켜 놓고 떠나는 게 목적이라 남겨 두면 뜻이 없다
-function lpAutoToggle(){ const c=CHAR(); if(!c) return;
-  c.lpAuto = c.lpAuto?0:1;
+// 끔 → 첫 항목 → … → 마지막 → 끔. 수량 버튼(×1/×10/MAX)과 같은 '한 칸을 눌러 돌리는' 방식이다.
+function lpAutoCycle(){ const c=CHAR(); if(!c) return;
+  const ks=LP_STATS.map(S=>S.k), i=ks.indexOf(lpAutoKey(c));
+  c.lpAuto = (i<0) ? ks[0] : (i+1<ks.length ? ks[i+1] : '');
   if(c.lpAuto) lpAutoSpend(c);
   saveMeta();
   if(typeof playSfx==='function') playSfx('ui_tab');
@@ -9696,8 +9714,14 @@ function _ptPct(n, step){ const v=n*step*100;
   return '+'+((Math.abs(v-Math.round(v))<0.01)? String(Math.round(v)) : v.toFixed(1))+'%'; }
 // 카드에 찍히는 글자 — ⛔ 화면이 제 식을 따로 갖지 말 것. lpMul/rpMul 과 같은 식을 여기서만 쓴다.
 //   둘 다 선형 배수(1+n·step) → '+X%'. 세기만 다르다(lp=LP_STEP · rp=RP_STEP).
+// ⚠ 퍼센트는 끝없이 길어진다(만 레벨이면 +49995%). 커지면 배수 표기로 바꿔 칸 안에 남긴다.
+//    실측: 299p 에서 '+1495%▸+1500%' 가 81px 이라 64px 칸을 넘쳤다.
+const PT_PCT_MAX=1000;                       // 이 %를 넘으면 ×N 으로 적는다
 function _ptShow(kind, k, n){ const S=lpDef(k); if(!S) return '';
-  return _ptPct(n, (kind==='rp')? RP_STEP : S.step); }
+  const step=(kind==='rp')? RP_STEP : S.step, pct=n*step*100;
+  if(pct<PT_PCT_MAX) return _ptPct(n, step);
+  const m=1+n*step;
+  return '×'+(m<100? m.toFixed(1) : Math.round(m).toLocaleString('en-US')); }
 // 축 값 표시 — 단위(%·초·×)는 축 표가 갖는다. 두 화면이 같은 표기를 쓰도록 여기 하나만 둔다.
 function csFmt(k, v){ const A=CS_AXES[k];
   if(k==='aspd') return (0.70/(v/100)).toFixed(2)+'초';
