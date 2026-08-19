@@ -2718,6 +2718,78 @@ async function groupLobby(){
     backToTitle(); await sleep(200);
     { const nav=$('navBar'); assert(nav && !nav.classList.contains('hide'),'방 찾기에서 나왔는데 하단 네비가 안 돌아옴'); }
     return '전체 화면 · 난이도 있음/없음 두 경로 ok'; });
+  // ══ 방 만들기 — 전체 화면 · 난이도는 스테퍼 · 오토배틀은 프리셋/사용자 지정 ══
+  await step('방 만들기: 전체 화면 · 난이도 스테퍼 · 대전 설정이 실제 cfg 로 간다', async ()=>{
+    skipIf(typeof createRoom!=='function','방 만들기 없음');
+    // ① 난이도 있는 유즈맵 — 난이도 선택 화면과 **같은 컴포넌트**를 쓴다
+    openMapSelect(); await sleep(60); _selMap=USEMAPS.nemo; hideAppScreens(); openRooms(); await sleep(200);
+    createRoom(); await sleep(200);
+    const card=document.querySelector('#createPanel .cpCard');
+    assert(card,'방 만들기 카드가 없음');
+    { const r=card.getBoundingClientRect(), o=$('createPanel').getBoundingClientRect();
+      assert(Math.abs(r.width-o.width)<1 && Math.abs(r.height-o.height)<1,'방 만들기가 화면을 다 안 씀(카드 틀에 갇혔다)');
+      assert(parseFloat(getComputedStyle(card).borderTopWidth)===0,'전체 화면인데 카드 테두리가 남아 있음'); }
+    assert($('cpDiffStep').querySelector('.sdStepRow'),'난이도가 스테퍼(.sdStepRow)가 아님');
+    assert($('cpDiffStep').querySelectorAll('.sdDots i').length===DIFFICULTY_ORDER.length,'난이도 점이 난이도 수와 다름');
+    assert(!document.querySelector('#createPanel .cpDiffBtns .moDiffBtn'),'옛 난이도 pill 나열이 남아 있음');
+    assert($('cpInfBtn').classList.contains('sdInf'),'무한 모드 줄이 공용 .sdInf 가 아님');
+    assert($('cpMode').innerHTML==='','난이도 있는 맵인데 대전 설정 구역이 채워졌다');
+    // 인원 = 1~8 칸 게이지(고른 값까지 채우고 고른 칸만 발광)
+    setCpMax(5, true); await sleep(50);
+    { const on=document.querySelectorAll('#cpMaxGrid .cpPc.on'), sel=document.querySelectorAll('#cpMaxGrid .cpPc.sel');
+      assert(on.length===5,'인원 게이지가 고른 값까지 안 채워짐: '+on.length);
+      assert(sel.length===1 && sel[0].textContent==='5','고른 칸이 하나가 아님'); }
+    // ② 오토 배틀 — 프리셋 3장, 일반은 오버라이드가 없다
+    closeCreate(); await sleep(60); backToTitle(); await sleep(80);
+    _selMap=USEMAPS.cpu; hideAppScreens(); openRooms(); await sleep(200); createRoom(); await sleep(200);
+    assert($('cpDiffSec').style.display==='none','난이도 없는 맵인데 난이도 구역이 보인다');
+    assert($('cpMode').querySelectorAll('.cpPreC').length===STK_PRESETS.length,'프리셋 카드 수가 다름');
+    assert(_createPre==='normal' && cpOptsPayload()===null,'일반 모드인데 오버라이드가 생김');
+    assert(stkCfgFromOpts(cpOptsPayload())===null,'일반 모드인데 cfg 오버라이드가 생김');
+    // ③ 프리셋(속도전) → 실제 cfg 로 번역된다. 체력 배율은 신전 3종 **구체값**이 되어야 한다
+    setCpPreset('blitz'); await sleep(80);
+    { const cfg=stkCfgFromOpts(cpOptsPayload());
+      assert(cfg && cfg.cycleTime===10,'속도전 프리셋이 cfg 로 안 감');
+      const base=USEMAPS.cpu.cfg;
+      assert(cfg.baseHp===Math.round(base.baseHp*0.7) && cfg.secHp===Math.round(base.secHp*0.7)
+        && cfg.centralHp===Math.round(base.centralHp*0.7),'체력 배율이 신전 3종에 안 곱해짐'); }
+    // ④ 사용자 지정 = 상하한 밖으로 못 나간다(표가 단일 소스)
+    setCpPreset('custom'); await sleep(80);
+    assert($('cpMode').querySelectorAll('.cpOptRow').length===STK_OPTS.length,'조절 항목 수가 표와 다름');
+    for(const o of STK_OPTS){
+      for(let i=0;i<40;i++) stepCpOpt(o.k, 1);
+      assert(stkOptVal(o.k)===o.max, o.name+' 이 상한을 넘거나 못 미침: '+stkOptVal(o.k)+' vs '+o.max);
+      for(let i=0;i<60;i++) stepCpOpt(o.k, -1);
+      assert(stkOptVal(o.k)===o.min, o.name+' 이 하한을 넘거나 못 미침: '+stkOptVal(o.k)+' vs '+o.min); }
+    await sleep(60);
+    // 하한을 다 찍은 상태 = 기본값이 아니므로 반드시 오버라이드가 생긴다
+    { const pay=cpOptsPayload(); assert(pay,'사용자 지정인데 오버라이드가 비었음');
+      STK_OPTS.forEach(o=>assert(pay[o.k]===o.min, o.name+' 값이 안 실림')); }
+    // ⑤ 기본값 그대로면 오버라이드가 없어야 한다(일반과 같은 판이 되도록)
+    STK_OPTS.forEach(o=>{ _createOpts[o.k]=o.def; }); renderCpMode(); await sleep(50);
+    assert(cpOptsPayload()===null,'사용자 지정이지만 값이 기본값인데 오버라이드가 생김');
+    closeCreate(); await sleep(60); backToTitle(); await sleep(80);
+    return '난이도 스테퍼 · 프리셋 '+STK_PRESETS.length+' · 상하한 '+STK_OPTS.length+'항목 ok'; });
+  // ⛔ UI 만 바뀌고 실제 게임 값이 그대로면 아무 의미가 없다 — 엔진 입구(mapCfg)까지 확인한다
+  await step('대전 설정이 실제 게임 값을 바꾼다(mapCfg 까지)', async ()=>{
+    skipIf(typeof stkCfgFromOpts!=='function','대전 설정 없음');
+    const base=USEMAPS.cpu.cfg, keep=MAP, keepRoom=(typeof _lobbyRoom!=='undefined')?_lobbyRoom:null;
+    MAP=USEMAPS.cpu; MAP_CFG_OVR=null;
+    assert(mapCfg('cycleTime')===base.cycleTime,'기본 상태인데 맵 cfg 를 안 씀');
+    // 방 설정을 심는다 = startGameNow 가 하는 것과 같은 한 줄
+    MAP_CFG_OVR=stkCfgFromOpts({cycleTime:10,startGold:700,incomeBase:70,hpMul:0.5});
+    assert(mapCfg('cycleTime')===10,'라운드 길이가 안 바뀜: '+mapCfg('cycleTime'));
+    assert(mapCfg('startGold')===700,'시작 골드가 안 바뀜');
+    assert(mapCfg('incomeBase')===70,'라운드 수입이 안 바뀜');
+    assert(mapCfg('baseHp')===Math.round(base.baseHp*0.5),'본진 체력이 안 바뀜');
+    assert(mapCfg('mineCost')===base.mineCost,'건드리지 않은 값까지 바뀜(오버라이드가 맵 cfg 를 통째로 덮었다)');
+    // ⚠ 반납을 잊으면 다음 판까지 새어 밸런스가 조용히 어긋난다
+    MAP_CFG_OVR=null;
+    assert(mapCfg('cycleTime')===base.cycleTime,'반납했는데 값이 남아 있음');
+    assert(/MAP_CFG_OVR\s*=\s*null/.test(String(overlayToLobby)),'로비 복귀 경로에 방 설정 반납이 없음');
+    assert(/MAP_CFG_OVR\s*=/.test(String(startGameNow)),'게임 시작 경로에 방 설정 주입이 없음');
+    MAP=keep; if(typeof _lobbyRoom!=='undefined') _lobbyRoom=keepRoom;
+    return '라운드·골드·수입·체력 4항목 반영 ok'; });
   // ══ 공용 액션 버튼(.actBtn) — 세 상태를 한 컴포넌트가 갖는다 ══
   await step('공용 액션 버튼: 활성·비활성·하위가 한 판에서 빛으로만 갈린다', async ()=>{
     openMapSelect(); await sleep(60); _selMap=USEMAPS.nemo; openSoloDiff(); await sleep(150);
