@@ -389,6 +389,22 @@ async function groupLobby(){
         hmUpgQtyCycle(); }
       assert(seen.join(',')==='×1,×10,MAX,×1','수량 순환이 1→10→MAX→1이 아님: '+seen.join(','));
       hbHunt().upgQty=1; renderHome(); }   // 뒤 검사(1회 구매)가 오염되지 않게 되돌린다
+    // 자동·수량은 제목과 '같은 줄' 오른쪽 끝에 있고, 탭 띠가 아래 줄을 통째로 쓴다
+    { const box=e=>document.querySelector(e).getBoundingClientRect();
+      const ttl=box('#homeScreen .hmUpgTtl'), au=box('#hmUpgAuto'), q=box('#hmUpgQty');
+      assert(Math.abs((au.top+au.height/2)-(ttl.top+ttl.height/2))<8,'자동이 제목과 같은 줄이 아님');
+      assert(Math.abs((q.top+q.height/2)-(ttl.top+ttl.height/2))<8,'수량이 제목과 같은 줄이 아님');
+      assert(au.left>ttl.right-1 && q.left>=au.right-1,'자동·수량이 오른쪽 끝에 붙지 않음');
+      const tabs=box('#hmUpgTabs'), bar=box('#homeScreen .hmUpgBar');
+      assert(tabs.top>ttl.bottom-1,'탭 띠가 제목 줄 위로 올라옴');
+      assert(bar.right-tabs.right<12,'탭 띠가 남은 폭을 안 채움: '+Math.round(bar.right-tabs.right)+'px 남음');
+      assert(!document.querySelector('#homeScreen .hmUpgBar .hmUpQty'),'자동·수량이 아직 아래 줄에 있음');
+      // 건설 모드엔 탭 띠가 숨는다 — 머리줄로 옮긴 자동·수량도 같이 숨어야 한다
+      { const card=document.querySelector('#homeScreen .hmUpg');
+        card.classList.add('bd');
+        assert(getComputedStyle($('hmUpgAuto')).display==='none','건설 모드인데 자동이 남아 있음');
+        assert(getComputedStyle($('hmUpgQty')).display==='none','건설 모드인데 수량이 남아 있음');
+        card.classList.remove('bd'); } }
     // 🤖 자동 업그레이드 — 수량 버튼과 같은 물성, 켜짐은 .on 으로만 구분
     { const a=document.querySelector('#hmUpgAuto .hmUpQ');
       assert(a && a.textContent.trim()==='자동','자동 업그레이드 버튼이 없음: '+(a&&a.textContent));

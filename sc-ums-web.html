@@ -2938,9 +2938,13 @@
   /* 헤더 = 접기/펴기 손잡이. 접으면 이 줄만 남고 뒤 배경이 화면 전체로 보인다 */
   /* ⚠ 공용 제목 규칙(#ovTitle,…,.hmUpgHead,… → Jua 700)이 뒤에 오며 같은 명시도로 덮는다.
      부모(.hmUpg)를 붙여 0,2,0 으로 올려 이 제목만 Noto 로 내린다 — 공용 규칙은 건드리지 않는다. */
-  .hmUpg .hmUpgHead{position:relative;width:100%;display:flex;align-items:center;gap:9px;padding:7px 12px 4px;cursor:default;
+  /* 자동·수량이 이 줄 오른쪽 끝에 붙는다(2026-08-19) — 아래 탭 띠는 그만큼 폭을 되찾는다.
+     ⚠ 버튼이 15px 제목 줄에 얹히므로 위 여백을 줄여 줄 높이가 커지지 않게 한다. */
+  .hmUpg .hmUpgHead{position:relative;width:100%;display:flex;align-items:center;gap:6px;padding:5px 8px 4px 12px;cursor:default;
     font-family:var(--font-ko);font-size:15px;font-weight:700;letter-spacing:.11em;
-    color:#ececec;cursor:pointer;background:none;border:none;border-bottom:none;text-align:left}
+    color:#ececec;background:none;border:none;border-bottom:none;text-align:left}
+  .hmUpgHead .hmUpQty{align-self:center}
+  .hmUpg.bd .hmUpgHead .hmUpQty{display:none}   /* 건설 모드엔 자동·수량이 뜻이 없다(탭 띠와 같은 규칙) */
   /* 머리줄 아래 스캔라인은 뺐다(2026-08-12) — 바로 아래 탭 띠가 이미 상자라 선이 두 겹으로 보였다 */
   /* 제목 — 흰색 단색. 색은 구매 버튼과 선택 탭의 광원이 맡고 제목은 조용히 읽히기만 한다 */
   .hmUpgTtl{flex:1;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.85)}
@@ -3073,6 +3077,7 @@
      생김새는 전부 공용 규칙이 갖는다 — 여기 오버라이드는 폭·글자뿐이다. */
   .hmUpg.bd .hmUpgBar{display:none}   /* 건설 모드엔 탭 띠·수량이 없다 — 종류가 셋뿐이라 격자로 충분 */
   .hmUpgBar{display:flex;align-items:stretch;gap:6px;padding:3px 8px 1px}   /* 아래 실선 없음 — 탭 띠 자체가 상자라 선이 겹친다 */
+  /* 자동·수량이 머리줄로 올라갔으므로 탭 띠가 이 줄을 통째로 쓴다 */
   .hmUpgTabs{flex:1 1 0;display:flex;align-items:stretch;min-width:0}
   /* 탭 띠의 생김새는 전부 공용 .pdSeg 가 갖는다(장비창 섹션 바와 같은 것). 여기서 덮는 건 아래 둘뿐:
      ① 수량 칩 옆에서 남는 폭을 다 쓴다  ② 글자 크기. 구역색은 segNavHTML 이 --segCol 로 인라인에 실어 준다. */
@@ -4993,9 +4998,9 @@
     <div class="hmScroll uiScroll" id="hmScroll">
       <!-- POWER UPGRADES — 화면에 남은 유일한 카드. 위쪽은 비워서 우주 배경(.spaceBg)이 그대로 보인다 -->
       <div class="hmCard hmUpg">
-        <div class="hmUpgHead" id="hmUpgHead"><b class="hmUpgTtl">사냥터 업그레이드</b></div>
-        <div class="hmUpgBar"><span class="hmUpgTabs" id="hmUpgTabs"></span>
+        <div class="hmUpgHead" id="hmUpgHead"><b class="hmUpgTtl">사냥터 업그레이드</b>
           <span class="hmUpQty lpQ au" id="hmUpgAuto"></span><span class="hmUpQty" id="hmUpgQty"></span></div>
+        <div class="hmUpgBar"><span class="hmUpgTabs" id="hmUpgTabs"></span></div>
       <div class="hmUpgGrid" id="hmUpgGrid"></div>
       </div>
     </div>
