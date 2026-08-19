@@ -4918,10 +4918,59 @@ async function groupGame(){
           const body=document.getElementById(G.tab==='Build'?'btSheetBody':'unitCmd');
           const h=Math.round(body.getBoundingClientRect().height);
           assert(Math.abs(h-want)<=1, n+' 하단 본문 높이가 네모와 다름: '+h+' vs '+want); } }
+      // ⑨ 누적 수입(earned) — umProgress()가 '번 돈을 얼마나 굴렸나'를 이 값으로 역산한다.
+      //    ⚠ 소모처(광산·강화·무기·건설)를 세지 않고 수입만 세는 구조라, 여기가 끊기면 진행도가 통째로 0이 된다.
+      { const e0=STK.me.earned||0;
+        for(let i=0;i<3;i++) strikeStep(STK.cycleTime+0.01);   // 사이클을 세 번 넘긴다
+        assert((STK.me.earned||0)>e0,'사이클을 넘겼는데 누적 수입이 안 쌓임: '+e0+' → '+(STK.me.earned||0));
+        assert((STK.ai.earned||0)>0,'적 진영 누적 수입이 안 쌓임'); }
       strikeSwitchTab('Upgrade'); await sleep(140);
       return '3칸 · 건설지2 · 특수무기 '+STK_WEAPONS.length+'종 ok';
     } finally { if(typeof strikeEnd==='function') try{ strikeEnd(); }catch(e){}
       if(faked) ph.classList.remove('inGame'); } });
+
+  // 🔗 유즈맵 보상은 사냥터 시급에 앵커한다 — 고정값이면 지수 곡선에 몇 라운드 만에 삼켜진다.
+  await step('유즈맵 보상: 사냥터 시급 앵커 · 진행도', async()=>{
+    skipIf(typeof profRunReward!=='function' || typeof umProgress!=='function','경제 연결 없음');
+    const p=PROF(), keepPc=p.pcoin, keepGas=p.gas, keepHunt=JSON.parse(JSON.stringify(p.hunt||{}));
+    const keepG=G, keepSTK=(typeof STK!=='undefined')?STK:null, keepMap=MAP;
+    MAP=USEMAPS.nemo;   // ⚠ 앞 스텝이 무한모드로 두고 갔을 수 있다(rounds 100만 · infinite) — 맵을 고정하고 잰다
+    const run=(rate)=>{ p.hunt.rate=rate; p.pcoin=0; p.gas=0; return profRunReward(); };
+    try{
+      G=newGame(); G.phase='won'; G.round=30; G.kills=500; G.difficulty='normal';
+      // ① 시급이 10배가 되면 보상도 10배 — **경험치는 그대로**(사냥터 XP 곡선이 만드는 '레벨의 벽'을 지킨다)
+      const a=run(1), b2=run(10);
+      assert(Math.abs(b2.pc/a.pc-10)<0.02,'시급 10배인데 보상이 10배가 아님: '+a.pc+' → '+b2.pc);
+      assert(a.xp===b2.xp,'시급이 경험치까지 밀었음: '+a.xp+' → '+b2.xp);
+      // ② 첫 라운드 클리어 전(rate 0)에도 빈손이 아니다 — 방치와 같은 폴백을 쓴다
+      assert(run(0).pc>0,'신규(rate 0)에게 보상이 0');
+      // ③ 가스는 사냥터 처치 보상과 같은 비율
+      assert(Math.abs(b2.gas/b2.pc-UM_GAS_RATIO)<0.01,'가스 비율이 사냥터와 다름: '+(b2.gas/b2.pc));
+      // ④ 네모 진행도 — 클리어=1.0 · 못 깼으면 도달 라운드 비율
+      const rounds=mapCfg('rounds',TOTAL_ROUNDS);
+      G.phase='won';  assert(umProgress()===1,'클리어인데 진행도가 1이 아님: '+umProgress());
+      G.phase='lost'; G.round=Math.round(rounds/2);
+      assert(Math.abs(umProgress()-0.5)<0.03,'미클리어 진행도가 라운드 비율이 아님: '+umProgress());
+      G.round=rounds*3; assert(umProgress()<=1,'진행도가 1을 넘음: '+umProgress());
+      // ⑤ 오토배틀 진행도 — 승패 + 굴린 비율 + 버틴 시간. 패배 상한 0.55.
+      G=newGame(); G.strike=true;
+      const mkSTK=(gold,earned,round)=>({ me:{gold:gold, earned:earned}, round:round });
+      const start=mapCfg('startGold',0)||0;
+      STK=mkSTK(start, 0, 1); G.phase='lost';
+      const p0=umProgress();
+      STK=mkSTK(0, 1000, 1);                       // 번 돈을 다 씀
+      const pSpend=umProgress();
+      assert(pSpend>p0,'다 굴렸는데 진행도가 안 오름: '+p0+' → '+pSpend);
+      STK=mkSTK(0, 1000, UM_STK_CYCLES); const pTime=umProgress();
+      assert(pTime>pSpend,'오래 버텼는데 진행도가 안 오름: '+pSpend+' → '+pTime);
+      assert(Math.abs(pTime-(UM_STK_W_SPEND+UM_STK_W_TIME))<0.01,'패배 상한이 '+(UM_STK_W_SPEND+UM_STK_W_TIME)+'가 아님: '+pTime);
+      G.phase='won'; assert(Math.abs(umProgress()-1)<0.01,'만점 승리인데 1이 아님: '+umProgress());
+      STK=mkSTK(0,1000,1); G.phase='won'; const win=umProgress();
+      STK=mkSTK(0,1000,1); G.phase='lost'; const lose=umProgress();
+      assert(win-lose>0.4,'승패 가중이 너무 작음: '+win+' vs '+lose);
+      return '앵커 ok · 네모/오토배틀 진행도 ok';
+    } finally { G=keepG; MAP=keepMap; if(typeof STK!=='undefined') STK=keepSTK;
+      p.pcoin=keepPc; p.gas=keepGas; p.hunt=keepHunt; } });
 }
 
 // ── 그룹: sandbox (관리자) ──

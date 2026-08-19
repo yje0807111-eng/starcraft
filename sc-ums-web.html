@@ -6378,13 +6378,46 @@ const PROF_DEFAULT_CLASS='ranger';
 function profEnsureChar(){ return CHAR() || profCreateChar(PROF_DEFAULT_CLASS, ''); }
 // 캐릭터 선택·삭제·환급은 폐지했다(계정당 하나) — 고를 것도, 지울 것도 없다.
 function profSetIdleSource(id){ const p=PROF(), src=PROF_IDLE_SOURCES[id]; if(!src) return false; if(src.reqUnlock && !profHasUnlock(src.reqUnlock)) return false; p.idle.sourceId=id; saveMeta(); return true; }
-// 판 종료 보상 — 순수 read G / write profile. 자체 난이도배율(유즈맵 coinMult와 무관). _runSummary에서 1회 호출.
+// ══ 🔗 유즈맵 ↔ 사냥터 경제 ═══════════════════════════════════════════════
+// 유즈맵 보상은 고정값이 아니라 **사냥터 시급에 앵커**한다. 사냥터 재화는 지수(라운드 ×HB_ROUND_REW ·
+// 던전 ×그것의 99제곱)라서 고정값은 몇 라운드만 지나면 반올림 오차가 된다 — 실측으로 옛 공식은
+// 판당 117 미네랄이었고 그건 던전1 R50 기준 **0.7초치**였다.
+//   ⚠ 시급의 단일 소스는 `hunt.rate`(hbSettle 이 EMA 로 적는 '초당 미네랄')다. 방치 수입(profIdleRate)이
+//      이미 이 값을 본다 — 유즈맵용 곡선을 새로 만들지 말 것.
+//   ⚠ 경험치는 앵커에 붙이지 않는다. 사냥터 XP 곡선(HB_ROUND_XP)만 일부러 완만해서 '레벨이 적 체력을
+//      못 따라가는 벽'을 만드는데, XP까지 시급에 앵커하면 그 설계가 통째로 무너진다.
+const UM_ANCHOR_MIN=60;              // 판당 기준 = 사냥터 60분치(진행도·난이도로 오르내린다)
+const UM_PROG_MIN=0.2;               // 진행도 하한 — 일찍 끝나도 빈손은 아니다
+const UM_GAS_RATIO=0.09/0.85;        // 가스:미네랄 = 사냥터 처치 보상(hbKillReward)과 같은 비율
+function umRate(){ const p=(typeof PROF==='function')?PROF():null, H=p&&p.hunt;
+  return (H && H.rate>0) ? H.rate*60 : PROF_IDLE_BASE; }   // 분당 미네랄 · 첫 라운드 클리어 전에는 방치와 같은 폴백
+// 판 진행도 0~1 — '얼마나 해냈나'의 뜻이 맵마다 다르다.
+//   네모      : 클리어 = 1.0 · 못 깼으면 도달 라운드 비율 (라운드가 이미 다 말해 준다 — 소모 자원은 안 본다)
+//   오토배틀  : 승패 + '번 돈을 굴린 비율' + 버틴 시간 (라운드 개념이 없다)
+//   무한      : 클리어가 없다 → 도달 라운드 / 기준 라운드
+const UM_STK_W_WIN=0.45, UM_STK_W_SPEND=0.35, UM_STK_W_TIME=0.20;   // 합 1.0 · 패배 상한 = 0.55
+const UM_STK_CYCLES=30;              // 만점 기준 사이클 수(cycleTime 20초 × 30 = 10분)
+function umProgress(){ if(typeof G==='undefined' || !G) return 0;
+  if(G.strike){ const S=(typeof STK!=='undefined'&&STK)?STK:null; if(!S) return 0;
+    const me=S.me||{}, pool=(mapCfg('startGold',0)||0)+(me.earned||0);   // 그 판에 쓸 수 있었던 총액
+    const sp=(pool>0) ? Math.max(0,Math.min(1,(pool-(me.gold||0))/pool)) : 0;   // ⚠ 소모는 '수입−잔액'으로 파생시킨다 —
+    const tm=Math.min(1,(S.round||1)/UM_STK_CYCLES);                            //    골드를 깎는 곳(광산·강화·무기·건설)을 건드리지 않아 새 소모처가 생겨도 안 어긋난다
+    return UM_STK_W_WIN*((G.phase==='won')?1:0) + UM_STK_W_SPEND*sp + UM_STK_W_TIME*tm; }
+  const rounds=mapCfg('rounds',TOTAL_ROUNDS)||TOTAL_ROUNDS;
+  if(mapCfg('infinite')) return Math.min(1,(G.round||0)/rounds);
+  return (G.phase==='won') ? 1 : Math.min(1,(G.round||0)/rounds); }
+function umDiffMul(){ const D=(typeof DIFFICULTY!=='undefined')&&DIFFICULTY[G.difficulty];
+  return (D&&D.coinMult)||1; }   // 난이도 배율은 DIFFICULTY 표 하나만 본다(두 벌을 두지 말 것)
+// 판 종료 보상 — 순수 read G / write profile. _runSummary에서 1회 호출.
 function profRunReward(){ const p=PROF();
-  const dMul={easy:0.8,normal:1,hard:1.4,hell:1.8,nightmare:2.4}[G.difficulty||'normal']||1;
+  const prog=Math.max(UM_PROG_MIN, Math.min(1, umProgress())), dMul=umDiffMul();
+  const min=Math.round(umRate()*UM_ANCHOR_MIN*prog*dMul*(1+profPetBonus('coin')));   // 🐾 펫 코인% 반영
+  const gas=Math.round(min*UM_GAS_RATIO);
   const k=G.kills||0, rd=G.round||0;
-  const xp=Math.round((10 + k*0.5 + rd*8)*dMul), pc=Math.round((5 + k*0.2 + rd*4)*dMul*(1+profPetBonus('coin')));   // 🐾 펫 코인% 반영
-  const c=CHAR(); profGainXp(c, xp); const ups=profApplyLevelUps(c); p.pcoin+=pc; profSyncUnlocks(); saveMeta();
-  return { xp:xp, pc:pc, ups:ups, level:c?c.level:1 }; }
+  const xp=Math.round((10 + k*0.5 + rd*8)*dMul);   // ⚠ 앵커 아님(위 주석 참조)
+  const c=CHAR(); profGainXp(c, xp); const ups=profApplyLevelUps(c);
+  p.pcoin=(p.pcoin||0)+min; p.gas=(p.gas||0)+gas; profSyncUnlocks(); saveMeta();
+  return { xp:xp, pc:min, gas:gas, prog:prog, ups:ups, level:c?c.level:1 }; }
 // 방치 정산(오프라인/켜둠) — Date.now 기준(1단계 클라이언트 신뢰). 유즈맵과 무관.
 function profOfflineCapMin(){ return profHasUnlock('idle_12h')?PROF_OFF_CAP12_MIN
   : profHasUnlock('idle_8h')?PROF_OFF_CAP8_MIN : PROF_OFF_CAP_MIN; }
@@ -15195,7 +15228,8 @@ function openResultScreen(){ const sc=document.getElementById('resultScreen'); i
    +(S.infNew?ovStatRow('모드 해금','<b class="osNew">무한 모드</b>'):'')
    +ovStatRow('보유 포인트','◎ '+(((typeof PLAYER_META!=='undefined')&&PLAYER_META.coins)||0))
    +((S.prof)?(ovStatRow('내 캐릭터 XP','<b class="osNew">+'+S.prof.xp+'</b>'+(S.prof.ups?' · Lv.'+S.prof.level:''))
-             +ovStatRow('수련 코인','<b class="osNew">+'+S.prof.pc+'</b>')):'');   // 🧍 프로필 RPG 보상 표기
+             +ovStatRow('미네랄','<b class="osNew">+'+fmtCur(S.prof.pc)+'</b>')
+             +ovStatRow('가스','<b class="osNew">+'+fmtCur(S.prof.gas)+'</b>')):'');   // 🧍 사냥터 재화 = 유즈맵 앵커 보상
   if(typeof setInGame==='function') setInGame(false);   // 게임 크롬(하단 콘솔) 정리
   sc.classList.remove('hide'); _rsStartAuto(); }        // 10초 뒤 자동으로 로비
 function resultToLobby(){ _rsClearAuto(); const sc=document.getElementById('resultScreen'); if(sc) sc.classList.add('hide');
@@ -20965,9 +20999,9 @@ function strikeNewState(){ const W=mapCfg('world',4800), hp=mapCfg('baseHp',7500
     world:W, cycleTime:mapCfg('cycleTime',30), cycleT:mapCfg('cycleTime',30),
     incomeBase:inc, mineIncome:mi,
     // 진영별 경제(me=나, ai=컴퓨터). 광산/돈 리더보드용. shield=중립 신전 보상 쉴드(다음 단계 전투에서 적용)
-    me:{ name:'나', compCol:(typeof PLAYER_VIEW_COLORS!=='undefined'?PLAYER_VIEW_COLORS[0]:'#4570d3'), base:{x:W*0.115,y:W*0.885, hp:hp, max:hp, dead:false}, hp:hp, max:hp, shield:0, gold:mapCfg('startGold',3000), mines:0, mineCost:mc, atkLv:0, hpLv:0, wpn:{}, units:[], buildings:[],
+    me:{ name:'나', compCol:(typeof PLAYER_VIEW_COLORS!=='undefined'?PLAYER_VIEW_COLORS[0]:'#4570d3'), base:{x:W*0.115,y:W*0.885, hp:hp, max:hp, dead:false}, hp:hp, max:hp, shield:0, gold:mapCfg('startGold',3000), earned:0, mines:0, mineCost:mc, atkLv:0, hpLv:0, wpn:{}, units:[], buildings:[],
          sec:{x:W*0.339,y:W*0.661, hp:sHp, max:sHp, dead:false} },   // 좌하단 메인 + 2차 신전 / compCol=아군 컴퓨터(생산자) 색 / atkLv·hpLv=유닛강화, wpn=특수무기 재고(종류별)
-    ai:{ name:'컴퓨터', compCol:(typeof PLAYER_VIEW_COLORS!=='undefined'?PLAYER_VIEW_COLORS[1]:'#d6292f'), base:{x:W*0.885,y:W*0.115, hp:hp, max:hp, dead:false}, hp:hp, max:hp, shield:0, gold:mapCfg('startGold',3000), mines:0, mineCost:mc, atkLv:0, hpLv:0, wpn:{}, units:[], buildings:[], aiT:0,
+    ai:{ name:'컴퓨터', compCol:(typeof PLAYER_VIEW_COLORS!=='undefined'?PLAYER_VIEW_COLORS[1]:'#d6292f'), base:{x:W*0.885,y:W*0.115, hp:hp, max:hp, dead:false}, hp:hp, max:hp, shield:0, gold:mapCfg('startGold',3000), earned:0, mines:0, mineCost:mc, atkLv:0, hpLv:0, wpn:{}, units:[], buildings:[], aiT:0,
          sec:{x:W*0.661,y:W*0.339, hp:sHp, max:sHp, dead:false} },   // 우상단 메인 + 2차 신전 / compCol=적군 컴퓨터 색
     central:{x:W*0.5,y:W*0.5, hp:cHp, max:cHp, owner:null, dead:false},   // 중앙 중립 보너스 신전(깬 팀 메인에 쉴드)
     cam:{x:W/2,y:W/2}, zoom:STK_DEFZOOM, viewWorld:Math.round(2600/STK_DEFZOOM), cw:0, ch:0, sel:null, userCam:false,
@@ -21183,7 +21217,9 @@ function strikeStep(dt){ const S=STK; if(!S) return; if(S.over) return; if(G&&G.
   strikeStepUnits(dt);   // 전투 시뮬(소환·진격·교전·신전 타격)
   S.cycleT-=dt;
   if(S.cycleT<=0){ S.cycleT+=S.cycleTime; S.round++;
-    S.me.gold += strikeIncome(S.me); S.ai.gold += strikeIncome(S.ai);   // 라운드 수입(양 진영)
+    { const im=strikeIncome(S.me), ia=strikeIncome(S.ai);   // 라운드 수입(양 진영)
+      S.me.gold+=im; S.ai.gold+=ia;
+      S.me.earned=(S.me.earned||0)+im; S.ai.earned=(S.ai.earned||0)+ia; }   // 📊 누적 수입 — umProgress()가 '얼마나 굴렸나'를 여기서 역산한다
     strikeAiEconomy(); strikeSpawnWave();   // 출격 주기마다 유닛 일괄 소환(중앙 타이머 0초 시점)
   }
   { const ter=strikeTerritory(); if(S.terBlue==null){ S.terBlue=ter.blue; S.terRed=ter.red; } const k=Math.min(1,dt*1.4);   // 영역 경계 부드럽게 슬라이드
