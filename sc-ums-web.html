@@ -2959,36 +2959,60 @@
   /* 줄이 늦어나면 hbResize 가 바 높이를 다시 재어 전장이 그만큼 줄어들다(자동) */
   .hbBar{position:absolute;left:0;right:0;z-index:2;display:flex;flex-direction:column;align-items:stretch;gap:5px;padding:0 8px;pointer-events:none}   /* stretch — 줄을 가로로 펴야 안에서 오른쪽 정렬이 먹힐다 */
   .hbGrp{display:flex;justify-content:flex-end;align-items:center;gap:5px;pointer-events:none}   /* 스킬은 오른쪽 — 왼쪽은 전장을 비워 둔다 */
-  .hbAuto{margin-right:3px}
   .hbBar button{pointer-events:auto}   /* 줄 랩포는 퇵과 — 버튼만 받는다(전장 탭이 사라지면 이게 범인) */
   /* ⛔ 좌상단 건설 드롭다운(.hbBdWrap/.hbBdMenu/.hbBdIt …)은 폐지했다 — 건설은 하단 패널이 담당한다 */
   .hbRoundBtn.on{color:#fff;background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.34)}
-  /* 스킬 = 원. 이름은 빼고 아이콘만 — 쌀 때는 남은 초가 그 자리에 들어간다 */
-  /* 스킬 = 반투명 원 + 진한 은색 링. 면을 투명하게 두어 뒤 전장이 비친다 */
-  .hbSk{position:relative;flex:0 0 auto;width:37px;height:37px;border-radius:50%;
-    display:flex;align-items:center;justify-content:center;overflow:hidden;
-    cursor:pointer;font-family:inherit;color:#ececec;
-    background:rgba(20,20,20,.55);border:1.5px solid #a2a9b5;   /* 그라데 없음 — 면도 테두리도 단색 */
-    box-shadow:0 2px 8px -3px #000, inset 0 1px 0 rgba(255,255,255,.08)}
-
-  .hbSk.cool{color:#7a7a7a;background:rgba(20,20,20,.9)}
-  .hbSk.on{border-color:rgba(255,210,74,.55);color:#ffd24a}
-  /* 아이콘을 정확히 가운데로 — 이모지는 라인박스 때문에 그냥 두면 아래로 처진다 */
-  .hbSkIco{position:relative;z-index:1;width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+  /* 스킬 = 한 판 트레이(T1안, 2026-08-19). 원 3개를 흩어 놓지 않고 판 하나에 담는다.
+     칸은 바로 아래 사냥터 업그레이드 카드(.hmUp)와 같은 규격 — 그래서 '붉으면 지금 쓸 수 있다'가
+     스킬과 업그레이드에서 한 뜻이 된다. 목업: docs/mock/hb-skill-tray-4.html */
+  .hbSkWrap{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+  .hbTray{--hmAccRGB:255,59,59;   /* 업그레이드 패널과 같은 계열 — 알파를 얹어 쓰므로 색이 아니라 채널 셋으로 둔다 */
+    display:flex;align-items:stretch;gap:4px;padding:4px;
+    background:var(--hmPanel);border:1px solid var(--metal-edge);border-radius:var(--r-bar);
+    clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
+  /* 칸 — .hmUp 과 같은 값(완전 검정 면 · 붉은 알파 그라데 테두리 · 모서리 컷 7px) */
+  .hbSk{position:relative;flex:0 0 auto;width:46px;height:46px;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;color:#ececec;
+    border:1px solid transparent;border-radius:var(--r-bar);
+    clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
+    background:var(--bpFace) padding-box,
+      linear-gradient(180deg,rgba(var(--hmAccRGB),.40) 0%,rgba(var(--hmAccRGB),.26) 34%,
+        rgba(var(--hmAccRGB),.15) 68%,rgba(var(--hmAccRGB),.09) 100%) border-box,
+      var(--metal-ring-n) border-box;
+    box-shadow:0 0 7px -5px rgba(var(--hmAccRGB),.35)}
+  /* 윗면 하이라이트 — 칸이 '판'으로 떠야 평평해 보이지 않는다 */
+  .hbSk::before{content:'';position:absolute;left:7px;right:0;top:0;height:1px;pointer-events:none;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.13) 30%,rgba(255,255,255,.13) 70%,transparent)}
+  /* 쿨 = 잠긴 카드(.hmUp.lk) 문법 — 검정은 그대로고 붉은 발광만 꺼진다 */
+  .hbSk.cool{background:linear-gradient(180deg,#000,#000) padding-box,
+      linear-gradient(180deg,rgba(var(--hmAccRGB),.28) 0%,rgba(var(--hmAccRGB),.18) 34%,
+        rgba(var(--hmAccRGB),.11) 68%,rgba(var(--hmAccRGB),.07) 100%) border-box,
+      var(--metal-ring-n) border-box;
+    box-shadow:none}
+  /* 아이콘을 정확히 가운데로 — 이모지는 라인박스 때문에 그냥 두면 아래로 처진다
+     ⚠ 공용 .icoImg 는 inset:0 이라 이 틀의 크기가 곧 아이콘 크기다(width 로 키우지 말 것) */
+  .hbSkIco{position:relative;z-index:1;width:26px;height:26px;display:flex;align-items:center;justify-content:center;
     font-size:17px;line-height:1}
-  /* 쇼타임 껍데기 — 남은 만큼 회색으로 덮고 시계방향으로 풀린다 */
-  .hbCd{position:absolute;inset:0;z-index:2;pointer-events:none;border-radius:50%;
-    background:conic-gradient(rgba(6,7,10,.74) calc(var(--cd,0) * 360deg), transparent 0)}
-  .hbSkIco .icoImg{padding:5px}   /* 37px 원 안에서 링에 닿지 않게 */
-  .hbSk.cool .hbSkIco{opacity:.5}
-  /* 자동 사용 — 스킬 왼쪽의 작은 원. 꺼지면 가라앉고 켜지면 테두리가 살아난다 */
-  .hbAuto{flex:0 0 auto;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-    cursor:pointer;font-family:var(--font-num);font-size:12px;font-weight:800;letter-spacing:0;
-    color:#8a8a8a;background:rgba(20,20,20,.55);border:1.5px solid #a2a9b5;   /* 스킬 원과 같은 단색 은색 */
-    transition:color .13s,background .13s}
-  .hbAuto.on{color:#fff;background:rgba(180,42,42,.36)}
-  .hbAuto:active{transform:translateY(1px)}
+  .hbSkIco .icoImg{padding:0}
+  .hbSk.cool .hbSkIco{opacity:.26}
+  /* 남은 초 — 아이콘을 지우지 않고 그 위에 얹는다. 어떤 스킬이 도는 중인지가 보여야 한다 */
+  .hbSkSec{position:absolute;z-index:3;pointer-events:none;font-family:var(--font-num);
+    font-size:15px;font-weight:800;color:#e6e9ee;text-shadow:0 1px 2px #000,0 0 6px rgba(0,0,0,.9)}
+  /* 남은 시간 = 칸 아래 얇은 바. 껍데기는 --cd 로만 움직인다(다시 그리지 않음) */
+  .hbCd{position:absolute;z-index:2;left:3px;right:3px;bottom:3px;height:2px;border-radius:2px;
+    pointer-events:none;background:rgba(255,255,255,.07)}
+  .hbCd b{display:block;height:100%;width:100%;border-radius:2px;background:rgba(var(--hmAccRGB),.75)}
+  .hbSk.cool .hbCd b{width:calc(var(--cd,0) * 100%);background:#4a4a4a}
   .hbSk:active{transform:translateY(1px)}
+  /* 자동 사용 — 트레이 '밖' 작은 칩(N4안). 가끔 만지는 설정이라 스킬 칸보다 가벼워야 한다.
+     ⛔ 붉은색을 쓰지 않는다 — 빨강은 '지금 쓸 수 있다'는 뜻으로 스킬 칸이 독점한다 */
+  .hbAutoChip{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;cursor:pointer;
+    border-radius:var(--r-bar);background:rgba(10,11,14,.72);border:1px solid rgba(255,255,255,.1);
+    font-family:var(--font-num);font-size:8.5px;font-weight:700;letter-spacing:.1em;color:#6f7681}
+  .hbAutoChip i{font-style:normal;width:5px;height:5px;border-radius:50%;border:1px solid #5a606a}
+  .hbAutoChip.on{color:#aeb4bd}
+  .hbAutoChip.on i{background:#f0f3f7;border-color:transparent;box-shadow:0 0 4px rgba(255,255,255,.8)}
+  .hbAutoChip:active{transform:translateY(1px)}
   /* 건설·부스트 팝업 행 */
   .hbRows{flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:0 12px}
   .hbRow{display:flex;align-items:center;gap:8px;padding:8px;background:rgba(255,255,255,.045);
@@ -7010,14 +7034,17 @@ function dqAttHTML(){ const D=dqState(); if(!D) return ''; const A=D.att;
 function renderHbBar(){ const bar=document.getElementById('hbBar'); if(!bar||!_hb) return;
   const S=_hb, coin=Math.floor(((typeof PROF==='function'&&PROF())||{}).pcoin||0);
   // 하단 바는 '전투 중에 쓰는 것'만 — 스킬 3개. 판을 여는 것(건설·토벌·부스트)은 좌상단 줄로 갔다.
-  let h='<div class="hbGrp">';
+  // 판 하나에 셋을 담고(트레이), 자동은 판 '밖' 작은 칩으로 뺀다 — 가끔 만지는 설정이라 스킬보다 가벼워야 한다.
   const au=!!hbHunt().skAuto;
-  h+='<button class="hbAuto'+(au?' on':'')+'" onclick="hbToggleAuto()" title="스킬 자동 사용 '+(au?'켬':'꺼짐')+'">A</button>';
+  let h='<div class="hbGrp"><div class="hbSkWrap">'
+    +'<button class="hbAutoChip'+(au?' on':'')+'" onclick="hbToggleAuto()" title="스킬 자동 사용 '+(au?'켬':'꺼짐')+'">'
+    +'<i></i>AUTO '+(au?'ON':'OFF')+'</button><div class="hbTray">';
   for(const k in HB_SKILLS){ const SK=HB_SKILLS[k];
     h+='<button class="hbSk" data-k="'+k+'" onclick="hbUseSkill(&#39;'+k+'&#39;)" title="'+SK.name+' — '+SK.tip+'">'
       +'<span class="hbSkIco">'+_icoImg('skills', SK.ico)+'</span>'
-      +'<i class="hbCd"></i></button>'; }   // 껍데기는 --cd 로만 움직인다(다시 그리지 않음)
-  bar.innerHTML=h+'</div>'; }
+      +'<b class="hbSkSec"></b>'                    // 남은 초 — 글자는 hbSkCdPaint 가 넣는다
+      +'<i class="hbCd"><b></b></i></button>'; }   // 껍데기는 --cd 로만 움직인다(다시 그리지 않음)
+  bar.innerHTML=h+'</div></div></div>'; }
 // 🤝 동료 — 영입(첫 구매)·강화(같은 버튼)·출전 토글. 옛 전직 트리가 여기로 옮겨 왔다.
 function hbOpenMates(){ const el=document.getElementById('hbMateModal'); if(!el) return;
   el.classList.remove('hide'); renderMateModal(); if(typeof playSfx==='function') playSfx('ui_open'); }
@@ -8391,7 +8418,10 @@ function hbSkCdPaint(){ const S=_hb; if(!S) return;
     const tot=HB_SKILLS[k].cd||1, left=Math.max(0, S.skT[k]||0);
     const f=Math.max(0, Math.min(1, left/tot));
     el.style.setProperty('--cd', f.toFixed(3));
-    el.classList.toggle('cool', f>0); } }
+    el.classList.toggle('cool', f>0);
+    // 숫자도 여기서 — 준비되면 비운다(아이콘만 남는다)
+    const sec=el.querySelector('.hbSkSec'), tx=f>0? String(Math.ceil(left)) : '';
+    if(sec && sec.textContent!==tx) sec.textContent=tx; } }
 function hbToggleAuto(){ const H=hbHunt(); H.skAuto=H.skAuto?0:1;
   if(typeof playSfx==='function') playSfx('ui_toggle');
   if(typeof saveMeta==='function') saveMeta(); renderHbBar(); }

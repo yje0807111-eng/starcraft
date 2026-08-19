@@ -1373,6 +1373,59 @@ async function groupLobby(){
     { const c=_hb.char; c.x=0; c.y=0; c.tx=0; c.ty=0; c.mv=0; }
     hbHunt().mates={}; hbHunt().party=[]; hbLayoutAllies();
     return '동료·터렛·벙커·펫 배치 ok · 스킬 3종 · 부스트 연장 ok'; });
+  // 🎛 스킬 트레이 — 칸은 사냥터 업그레이드 카드(.hmUp)와 '같은 규격'이라는 것이 이 디자인의 전부다.
+  //    두 벌로 갈라지면 '붉으면 지금 쓸 수 있다'가 스킬과 업그레이드에서 다른 뜻이 된다.
+  await step('스킬 트레이: 업그레이드 카드와 같은 규격 · 자동은 판 밖', async()=>{
+    skipIf(typeof renderHbBar!=='function','스킬 바 없음');
+    openHome(); await sleep(60); _hb.manual=true;
+    renderHbBar(); hbSkCdPaint();
+    // ① 한 판에 담긴다 — 셋 다 트레이 안, 자동은 트레이 '밖'
+    const tray=document.querySelector('#hbBar .hbTray'); assert(tray,'스킬 트레이(.hbTray)가 없음');
+    assert(tray.querySelectorAll('.hbSk').length===Object.keys(HB_SKILLS).length,
+      '트레이 안 스킬 칸 수가 안 맞음: '+tray.querySelectorAll('.hbSk').length);
+    const chip=document.querySelector('#hbBar .hbAutoChip'); assert(chip,'자동 칩(.hbAutoChip)이 없음');
+    assert(!tray.contains(chip),'자동 칩이 트레이 안에 있음 — N4안은 판 밖이다');
+    // ② 칸의 껍데기가 업그레이드 카드와 같은 값인가 (색·모서리·라운드를 직접 대조한다)
+    const card=document.querySelector('#hmUpgGrid .hmUp:not(.lk)');
+    assert(card,'대조할 업그레이드 카드(.hmUp)를 못 찾음');
+    { const a=getComputedStyle(document.querySelector('#hbBar .hbSk:not(.cool)')), b=getComputedStyle(card);
+      for(const prop of ['backgroundImage','clipPath','borderRadius','borderTopWidth']){
+        assert(a[prop]===b[prop],'스킬 칸이 업그레이드 카드와 다름 ['+prop+']\n  스킬: '+a[prop]+'\n  카드: '+b[prop]); } }
+    // ③ 쿨 = 붉은 발광만 꺼진다(잠긴 카드 문법). 아이콘은 남는다 — 무엇이 도는 중인지 보여야 한다
+    const el=document.querySelector('#hbBar .hbSk[data-k="nova"]');
+    _hb.skT.nova=0; hbSkCdPaint();
+    const glowRdy=getComputedStyle(el).boxShadow;
+    assert(glowRdy!=='none','준비된 칸에 붉은 발광이 없음');
+    assert(!el.classList.contains('cool'),'준비된 칸에 cool 이 남아 있음');
+    assert(el.querySelector('.hbSkSec').textContent==='','준비된 칸에 남은 초가 남아 있음');
+    const LEFT=HB_SKILLS.nova.cd*0.5 + 0.4;   // ⚠ 정수로 재면 ceil/floor 가 같아 표기 규칙이 안 잡힌다
+    _hb.skT.nova=LEFT; hbSkCdPaint();
+    assert(el.classList.contains('cool'),'쿨인데 cool 이 안 붙음');
+    assert(getComputedStyle(el).boxShadow==='none','쿨인 칸에 발광이 남아 있음: '+getComputedStyle(el).boxShadow);
+    { const ico=el.querySelector('.hbSkIco'), r=ico&&ico.getBoundingClientRect();
+      assert(ico && r.width>8 && parseFloat(getComputedStyle(ico).opacity)>.1,
+        '쿨이라고 아이콘이 사라졌음 — 무엇이 도는 중인지 보여야 한다'); }
+    assert(el.querySelector('.hbSkSec').textContent===String(Math.ceil(LEFT)),
+      '남은 초가 올림이 아님(1초 남았는데 0 으로 보이면 안 된다): '+el.querySelector('.hbSkSec').textContent);
+    // ④ 남은 시간 바는 --cd 로만 움직인다(다시 그리지 않는다)
+    const fill=el.querySelector('.hbCd b'), w = x=>{ _hb.skT.nova=HB_SKILLS.nova.cd*x; hbSkCdPaint();
+      return fill.getBoundingClientRect().width; };
+    const w8=w(0.8), w2=w(0.2);
+    assert(w8>w2+4,'남은 시간 바가 --cd 를 안 따름: 80% '+w8.toFixed(1)+'px vs 20% '+w2.toFixed(1)+'px');
+    // ⑤ 빨강은 스킬 칸이 독점한다 — 자동 칩에 붉은색이 섞이면 '지금 쓸 수 있다'는 신호가 흐려진다.
+    //    ⚠ 켜짐·꺼짐을 둘 다 봐야 한다 — 한쪽만 보면 반대 상태의 규칙이 그대로 새어 나간다(실제로 놓쳤다)
+    { const red=/rgba?\(\s*(1[6-9]\d|2[0-5]\d)\s*,\s*([0-7]\d?)\s*,\s*([0-7]\d?)\s*[,)]/;
+      const was=!!hbHunt().skAuto;
+      for(const want of [true,false]){
+        if(!!hbHunt().skAuto!==want) hbToggleAuto(); else renderHbBar();
+        const ch=document.querySelector('#hbBar .hbAutoChip'), dot=ch.querySelector('i');
+        assert(ch.classList.contains('on')===want,'자동 칩이 상태를 안 따름(want '+want+')');
+        for(const el of [ch,dot]) { const c=getComputedStyle(el);
+          for(const prop of ['color','backgroundColor','borderTopColor','boxShadow']){
+            assert(!red.test(c[prop]),'자동 칩에 붉은색이 섞였음 [auto '+(want?'ON':'OFF')+' · '+prop+']: '+c[prop]); } } }
+      if(!!hbHunt().skAuto!==was) hbToggleAuto(); }
+    _hb.skT.nova=0; hbSkCdPaint();
+    return '트레이 1판 · 칸=업그레이드 카드 규격 · 자동 칩 판 밖 · 바 '+w8.toFixed(0)+'→'+w2.toFixed(0)+'px'; });
   // 🧱 기지 격자 — 타일이 단일 소스. 저장 왕복 · 겹침/범위 · 봉쇄 금지 · 옛 개수형 이관.
   await step('기지 격자: 배치·저장 왕복·겹침/범위·봉쇄 금지', async()=>{ skipIf(typeof hbPlaceStruct!=='function','기지 격자 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
