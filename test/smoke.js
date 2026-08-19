@@ -4880,6 +4880,16 @@ async function groupGame(){
         // 카드 뼈대 순서 = 네모와 같다: 초상 → 이름 → 수치 → 비용
         const kids=[...cs[0].children].map(e=>e.className.split(' ')[0]).join('>');
         assert(kids==='cgPro>cgName>cgSub>cgCost','카드 뼈대가 네모 업그레이드 카드와 다름: '+kids); }
+      // 초상은 정사각 = 네모 업그레이드 카드와 같은 크기. 오토배틀은 지갑이 하나라 비용 줄이 **한 줄**이고,
+      //   빈 가스 줄을 예약하면 그만큼(8px) 초상이 눌린다 — 실제로 네모보다 작았다.
+      { const c=document.querySelector('#btSheetBody .cgSlot:not(.empty)');
+        const cc=c.querySelectorAll('.cgCost .cc');
+        assert(cc.length===1,'오토배틀 비용 줄이 한 줄이 아님(빈 가스 줄 예약): '+cc.length);
+        const p=c.querySelector('.cgPro').getBoundingClientRect();
+        assert(Math.abs(p.width-p.height)<=1,'초상이 정사각이 아님(네모 카드보다 눌림): '+p.width.toFixed(1)+'×'+p.height.toFixed(1));
+        const ri=c.querySelector('.cgCost .ri'), cs=getComputedStyle(c.querySelector('.cgCost .cc'));
+        if(ri) assert(Math.abs(ri.getBoundingClientRect().height-parseFloat(cs.fontSize))<=0.5,
+          '재화 아이콘이 옆 숫자 크기와 다름: '+ri.getBoundingClientRect().height.toFixed(1)+' vs '+cs.fontSize); }
       // ⚠ 이름 줄상자가 글자 잉크보다 작으면 overflow:hidden 이 **윗획을 잘라 먹는다**.
       //   실제로 10px 한글(잉크 11px)이 줄상자 10.5px(line-height 1.05)에 잘렸다.
       //   ⚠ 줄상자 높이만 재면 절대 못 잡는다 — 캔버스 폰트 메트릭으로 잉크를 재서 비교할 것.
@@ -5036,6 +5046,18 @@ async function groupSandbox(){
     assert(getComputedStyle($('hud')).display==='none','관리자 건설에서 게임 HUD 가 보임(자체 상단바와 이중 표시)');
     assert(document.querySelector('.bres'),'관리자 건설에 자원 바(.bres)가 없음');
     assert(!$('btCardCtl'),'건설 시트에 접기 버튼(#btCardCtl)이 남아 있음');
+    return 'ok'; });
+  // 관리자는 미네랄·가스 두 지갑이라 빈 가스 줄도 자리를 예약한다 — 칸마다 크레딧 줄 높이가 달라지면 안 된다.
+  //   ⚠ 오토배틀의 '한 줄' 규칙이 여기로 새면 건물 카드 비용 줄이 들쭉날쭉해진다.
+  await step('관리자 건설: 비용 줄은 두 줄 예약(오토배틀 한 줄 규칙 미오염)', async()=>{
+    switchTab('Build', document.querySelector('.tab[data-tab="Build"]')); await sleep(300);
+    skipIf(!G.tech,'건설 상태 없음');
+    const wk=(G.tech.ents||[]).find(e=>e.type==='worker'); skipIf(!wk,'일꾼 없음');
+    G.tech.sel=null; G.tech.selU=[wk.eid]; G.tech.sheet={open:true,sec:'ent'};
+    techPanelRender(); await sleep(200);
+    const c=document.querySelector('#btSheetBody .cgSlot:not(.empty)'); skipIf(!c,'건설 칸 없음');
+    const cc=c.querySelectorAll('.cgCost .cc');
+    assert(cc.length===2,'관리자 건설 비용 줄이 두 줄이 아님(가스 자리 예약 사라짐): '+cc.length);
     return 'ok'; });
   // 관리자 건설 탭에서 병영을 고르면 레인저·화력병·의무병·저격수 카드가 실제로 그려져야 한다.
   await step('관리자 건설: 병영 생산 카드', async()=>{
