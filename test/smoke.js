@@ -4899,6 +4899,20 @@ async function groupGame(){
         const sub=c0.querySelector('.cgSub'), nm=c0.querySelector('.cgName');
         if(sub&&nm) assert(parseFloat(getComputedStyle(sub).fontSize) < parseFloat(getComputedStyle(nm).fontSize)-1.5,
           '수치 줄이 이름만큼 큼: '+getComputedStyle(sub).fontSize+' vs '+getComputedStyle(nm).fontSize); }
+      // ⚠ 긴 이름은 폰트 축소로 칸 안에 들어와야 한다. .cgName 이 stretch 가 아니면 폭이 글자 폭 그대로라
+      //   축소 루프(scrollWidth>clientWidth)가 영원히 거짓 → 이름이 카드 밖으로 삐져나가 좌우가 잘린다.
+      //   실제 이름은 짧아서 안 걸리므로 **긴 이름을 임의로 꽂아** 잰다.
+      { const body=$('btSheetBody');
+        renderCmdGrid(body, { mode:'prod', compact:true, build:true, title:'검사', items:[
+          { pro:'', sn:'파괴형 관통 탄두 초장거리', sub:'123/999', cr:999999, en:99999, state:'on' }],
+          info:{ eb:'검사', hideName:true, desc:'' } });
+        await sleep(120);
+        const c=body.querySelector('.cgSlot:not(.empty)'), nm=c.querySelector('.cgName');
+        const cr=c.getBoundingClientRect(), nr=nm.getBoundingClientRect();
+        assert(nr.left>=cr.left-0.5 && nr.right<=cr.right+0.5,
+          '긴 이름이 카드 밖으로 넘침(폰트 축소가 안 돎): 이름 '+nr.left.toFixed(1)+'~'+nr.right.toFixed(1)+' vs 칸 '+cr.left.toFixed(1)+'~'+cr.right.toFixed(1));
+        assert(parseFloat(getComputedStyle(nm).fontSize)<10,'긴 이름인데 폰트가 안 줄었음: '+getComputedStyle(nm).fontSize);
+        body._stkSig=null; techPanelRender(); await sleep(160); }   // 원래 그리드로 복구(서명 캐시를 비워야 다시 그린다)
       // ⚠ 이름 줄상자가 글자 잉크보다 작으면 overflow:hidden 이 **윗획을 잘라 먹는다**.
       //   실제로 10px 한글(잉크 11px)이 줄상자 10.5px(line-height 1.05)에 잘렸다.
       //   ⚠ 줄상자 높이만 재면 절대 못 잡는다 — 캔버스 폰트 메트릭으로 잉크를 재서 비교할 것.

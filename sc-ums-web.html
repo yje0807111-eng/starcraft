@@ -1562,7 +1562,11 @@
      overflow:hidden 에 **윗획이 잘렸다**(체력·공격력 등). 1.3 = 13px 로 잉크(11px)에 여유 2px.
      늘어난 만큼은 아래 여백(.cgSub margin-top)에서 뺀다 — 카드 총 높이는 그대로 두고 이름만 살린다.
      ⚠ 비율(단위 없는 1.3)이라 renderCmdGrid 의 폰트 축소(최소 6px)를 그대로 따라간다. px 로 박지 말 것. */
-  .cmdG .cgName{flex:none;font:800 10px/1.3 sans-serif;letter-spacing:-.2px;color:#e6eefc;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* ⚠ align-self:stretch 가 없으면 칸이 `align-items:center` 라 이름 폭이 **글자 폭 그대로**가 된다.
+     그러면 renderCmdGrid 의 폰트 축소 루프(scrollWidth>clientWidth)가 영원히 거짓이라 안 돌고,
+     긴 이름이 카드 밖으로 삐져나가 좌우가 잘린다(실측: '파괴형 관통 탄두' 가 양쪽으로 넘쳤다).
+     폭을 칸에 맞춰 고정해야 축소도 돌고 말줄임도 제자리에서 걸린다. */
+  .cmdG .cgName{flex:none;align-self:stretch;font:800 10px/1.3 sans-serif;letter-spacing:-.2px;color:#e6eefc;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* 수치 줄은 **최대한 얇게** — 이 줄이 없는 칸(건설 등)과 높이 차이가 작아야 한 격자 안에서 카드가 고르게 보인다. */
   .cmdG .cgSub{flex:none;font:800 7px/1 var(--font-num);color:var(--caL);text-align:center;margin-top:-1px;font-variant-numeric:tabular-nums;white-space:nowrap}
   .cmdG .cgSlot.max .cgSub{color:var(--cgGood)}
