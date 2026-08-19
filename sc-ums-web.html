@@ -3046,7 +3046,10 @@
   .lpFree{font-size:var(--fs-sm);color:var(--txt-mute)}
   .lpFree b{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:14px;color:#9a9a9a}
   .lpFree.on b{color:#5dff8f}                       /* 쓸 수 있는 포인트가 있을 때만 초록(HOME 경험치 바와 같은 값) */
+  .lpBtns{display:flex;align-items:center;gap:6px}
   .hmUpQty.lpQ{width:auto;min-width:46px}           /* '초기화'는 ×10 보다 길다 — 폭만 내용에 맡긴다 */
+  /* 자동이 꺼져 있을 때 — 켜진 칸(.on)과 확실히 갈리게 흐리게 둔다 */
+  .lpQ .hmUpQ:not(.on){color:#6f6f6f;background:rgba(0,0,0,.34)}
   .hmUpQ:disabled{opacity:.42;cursor:default}
   /* 포인트 목록 — 카드는 사냥터 업그레이드(.hmUp)와 '같은 것'이다. 여기선 격자와 구역색만 정한다.
      ⚠ .hmUpgGrid 를 쓰지 말 것 — 그건 2.7줄 고정 높이라 항목이 7개인 여기선 잘린다. */
@@ -5870,7 +5873,7 @@ function profGas(){ const p=PROF(); return Math.floor(p&&p.gas||0); }
 function profGem(){ const p=PROF(); return Math.floor(p&&p.gem||0); }
 function defaultChar(cls, name){ const C=PROF_CLASSES[cls]||PROF_CLASSES.ranger, id=(PROF_CLASSES[cls]?cls:'ranger');
   return { id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), cls:id, name:(name||C.name),
-    xp:0, level:1, statPoints:0, dgFloor:0, reb:0, rebMul:0, rp:0,   // 🔁 환생 횟수 · 누적 경험치 배수 · 환생 포인트
+    xp:0, level:1, statPoints:0, dgFloor:0, reb:0, rebMul:0, rp:0, lpAuto:1,   // 🔁 환생 횟수 · 환생 포인트 · 🤖 자동 배분(기본 켬)
     unit:{ jobId:id, level:1, stats:{pow:0,vit:0,foc:0,agi:0}, pts:{}, rpts:{}, gear:_emptyGear() } }; }
 function defaultMeta(){ return { coins:0, buildLevels:{}, highestRound:0, clearedDifficulty:'', profile:defaultProfile() }; }   // clearedDifficulty:''=아무것도 클리어 안 함(이지만 개방)
 let PLAYER_META = defaultMeta();
@@ -6164,45 +6167,55 @@ function profUnlockNeed(id){ const u=PROF_UNLOCKS.find(x=>x.id===id); return u? 
 const PROF_OFF_CAP_MIN=4*60, PROF_OFF_RATE=0.5, PROF_OFF_CAP8_MIN=8*60, PROF_OFF_RATE8=1.0, PROF_OFF_CAP12_MIN=12*60;   // 오프라인 상한/비율(idle_8h 해금 시 8h/100%)
 // 곡선(순수함수)
 // 📈 레벨 곡선 — 설계: "초반은 아주 빠르게, 뒤로 갈수록 배로" (2026-08-12 확정)
-//   PROF_LV_SOFT 미만 = 다항식(옛 50·lv^1.5보다 가벼워 30레벨까지 약 2.6배 빨리 도달)
-//   그 이상       = 등비수열 — 레벨당 ×PROF_XP_GEO 라 약 7.3레벨마다 필요량이 2배가 된다.
-//   두 식은 lv=PROF_LV_SOFT 에서 값이 같아 이어진다(경계에서 튀지 않는다).
-//   ⚠ 벽에 부딪히는 지점이 곧 '환생할 때'다 — 아래 PROF_REB_* 와 한 세트로 움직인다.
-const PROF_LV_SOFT=30;                       // 여기까지는 빠르게
-const PROF_XP_A=30, PROF_XP_P=1.35;          // 초반 곡선 계수
-// ⚠ 1.10 이면 Lv200 한 칸이 293억 XP라 마지막 환생(Lv200)이 물리적으로 불가능했다(실측 79,556시간).
-//    1.03 으로 내리면 Lv200 누적이 780만 XP — 마지막 런이 2시간대가 된다. Lv30 이하는 손대지 않았다.
-const PROF_XP_GEO=1.045;                     // 이후 레벨당 배수
+//   레벨당 필요 경험치 = A·lv^P — **다항식 하나**다(등비 구간 없음).
+//   ⛔ 등비(×1.045 등)로 되돌리지 말 것: 지수는 몇백 레벨에서 물리적으로 막혀 만 레벨을 못 간다.
+//      설계 목표는 '나중엔 1000, 아주 나중엔 10000레벨'이라 곡선이 다항식이어야 한다.
+//   한 칸: Lv30 ≈ 1.4천 · Lv200 ≈ 1.5만 · Lv1000 ≈ 11만 · Lv10000 ≈ 200만
+//   ⚠ 성장은 이 곡선이 아니라 **환생 배수**(경험치·미네랄)가 민다 — 둘은 한 세트다.
+const PROF_XP_A=20, PROF_XP_P=1.25;
 function profXpForLevel(lv){ lv=Math.max(1, lv|0);
-  if(lv<PROF_LV_SOFT) return Math.round(PROF_XP_A*Math.pow(lv,PROF_XP_P));
-  const b=PROF_XP_A*Math.pow(PROF_LV_SOFT,PROF_XP_P);
-  return Math.round(b*Math.pow(PROF_XP_GEO, lv-PROF_LV_SOFT)); }
+  return Math.round(PROF_XP_A*Math.pow(lv, PROF_XP_P)); }
 // 🔁 환생 — **정해진 레벨에서 한 번씩만**. 회차가 갈수록 요구 레벨이 높아지고, 마지막이 레벨 상한이다.
 //   되돌리는 것: 레벨·경험치·레벨 포인트 · **미네랄 업그레이드 레벨** · **미네랄 재화** · 진행 던전/라운드.
 //   그대로 두는 것: 업그레이드 **해금** · 최고 기록(hunt.best) · 환생 포인트 · 장비 · 펫 · 가스 · 젬 · 뽑기권.
 //   ⛔ 옛 계단식(floor(lv/20))으로 되돌리지 말 것 — 같은 레벨에서 무한 반복 환생이 가능해 RP가 폭주한다.
-const PROF_REB_LEVELS=[20,45,75,110,145,175,200];   // 회차별 요구 레벨(간격 체증) — 마지막이 레벨 상한
-const PROF_LV_CAP=PROF_REB_LEVELS[PROF_REB_LEVELS.length-1];
-const PROF_REB_GAIN=0.2;                     // 1회차당 경험치 획득 배수 증가(누적)
-const PROF_REB_RP0=10, PROF_REB_RP1=8;       // 회차 N 지급 환생 포인트 = RP0 + RP1×N
-const PROF_REB_EVERY=PROF_REB_LEVELS[0];     // 옛 이름 호환(= 첫 환생 레벨)
+// 회차 N 의 요구 레벨 = REB_A·N^REB_P — **수식**이라 끝이 없다(회차가 갈수록 폭이 벌어진다).
+//   1→20 · 2→60 · 3→112 · 5→248 · 10→796 · 20→2.4천 · 50→1.0만
+//   ⛔ 고정 배열로 되돌리지 말 것 — 배열은 마지막 칸이 곧 레벨 상한이 되어 만 레벨을 막는다.
+//   ⛔ 옛 계단식(floor(lv/20))으로도 되돌리지 말 것 — 같은 레벨에서 무한 반복 환생이 된다.
+const PROF_REB_A=20, PROF_REB_P=1.6;
+function profRebNeedLv(N){ return Math.round(PROF_REB_A*Math.pow(Math.max(1,N|0), PROF_REB_P)); }
+// 🎁 환생 보상 = 경험치 배수 + **미네랄 획득 배수**. 회차의 '누적 합'(1+2+…+N)에 비례해
+//    회차가 갈수록 훨씬 크게 벌어진다 — 되감아도 금방 따라잡히는 이유가 이것이다.
+//    ⚠ 저장하지 않고 c.reb 에서 늘 다시 센다(옛 c.rebMul 은 안 읽는다) — 값을 바꿔도 소급 적용된다.
+const PROF_REB_XP=0.5;                       // 누적합 1당 경험치 배수 +50%
+const PROF_REB_COIN=0.35;                    // 누적합 1당 미네랄 획득 배수 +35%
+const PROF_REB_RP=5;                         // 환생 1회당 환생 포인트(회차와 무관 — 수백 회차를 견뎌야 한다)
+const PROF_REB_EVERY=profRebNeedLv(1);       // 옛 이름 호환(= 첫 환생 레벨)
 function profRebDone(c){ c=c||CHAR(); return Math.max(0,(c&&c.reb)|0); }      // 지금까지 환생한 횟수
-// 다음 환생에 필요한 레벨. 0 = 더 없음(마지막 환생까지 끝냈다)
-function profRebNextLv(c){ c=c||CHAR(); const n=profRebDone(c);
-  return (n<PROF_REB_LEVELS.length) ? PROF_REB_LEVELS[n] : 0; }
-function profRebGrant(N){ return PROF_REB_RP0 + PROF_REB_RP1*Math.max(1,N|0); }
+// 다음 환생에 필요한 레벨 — 끝이 없다
+function profRebNextLv(c){ return profRebNeedLv(profRebDone(c)+1); }
+function profRebGrant(N){ return PROF_REB_RP; }
+// 회차의 누적합(1+2+…+N) — 보상 배수의 밑이 된다
+function profRebTri(c){ const n=profRebDone(c); return n*(n+1)/2; }
 function profRebStep(lv, c){ return profCanRebirth(c) ? (profRebDone(c)+1) : 0; }   // '이번이 몇 회차인가'
 // ⚠ rebLvMax = 이미 환생에 쓴 최고 레벨. 같은 레벨에서 두 번 환생하는 것을 막는다.
 function profCanRebirth(c){ c=c||CHAR(); if(!c) return false;
   const need=profRebNextLv(c);
   return need>0 && (c.level|0)>=need && (c.level|0)>((c.rebLvMax|0)); }
-function profXpMul(c){ c=c||CHAR(); return 1+((c&&c.rebMul)||0); }
+function profXpMul(c){ return 1+PROF_REB_XP*profRebTri(c); }
+// 💠 미네랄 획득 배수 — 환생으로 미네랄과 업그레이드가 0이 되는 대신 버는 속도가 빨라진다.
+function profCoinMul(c){ return 1+PROF_REB_COIN*profRebTri(c); }
+// ⚠ 미네랄 '획득'은 반드시 이 함수를 지난다 — 지급 지점이 여럿이라 배수를 각자 곱하면 언젠가 어긋난다.
+//    되돌려받는 것(분해 환급·마이그레이션 보정)은 획득이 아니므로 여기를 안 지난다.
+function profGainCoin(n){ const p=PROF(); if(!p || !(n>0)) return 0;
+  const got=n*profCoinMul(); p.pcoin=(p.pcoin||0)+got; return got; }
 // ⚠ 경험치 지급은 반드시 이 함수를 지난다 — 지급 지점이 4곳이라 배수를 각자 곱하면 언젠가 어긋난다.
 function profGainXp(c, xp){ c=c||CHAR(); if(!c || !(xp>0)) return 0;
   const got=xp*profXpMul(c); c.xp+=got; return got; }
 function profRebirth(c){ c=c||CHAR(); if(!profCanRebirth(c)) return 0;
   const N=profRebDone(c)+1;                          // 이번이 몇 번째 환생인가
-  c.reb=N; c.rebMul=(c.rebMul||0)+PROF_REB_GAIN*N;
+  c.reb=N;                                           // 배수는 c.reb 에서 다시 센다(따로 저장하지 않는다)
   c.rp=(c.rp|0)+profRebGrant(N);                     // 🔁 환생 포인트 지급(영구 — 다시 환생해도 안 사라진다)
   c.rebLvMax=Math.max(c.rebLvMax|0, c.level|0);      // 이 레벨은 다 썼다
   c.level=1; c.xp=0; if(c.unit){ c.unit.level=1; c.unit.pts={}; }   // 레벨 포인트는 레벨에서 나오므로 같이 되감는다
@@ -6216,12 +6229,11 @@ function profRebirth(c){ c=c||CHAR(); if(!profCanRebirth(c)) return 0;
   }catch(e){}
   try{ saveMeta(); }catch(e){}
   return N; }
-// 🏁 마지막 환생 뒤에는 레벨이 상한에 묶이므로, 그때부터는 **기록**이 환생 포인트를 준다.
-//    전역 진행도(던전·라운드를 이어 붙인 값) 10칸당 1점 — 적 체력은 지수, 포인트는 선형이라 끝없이 민다.
+// 🏁 기록이 주는 환생 포인트 — 전역 진행도(던전·라운드를 이어 붙인 값) 20칸당 1점.
 //    ⚠ 누적이 아니라 '최고 기록 함수'다. 반복 파밍으로 쌓이지 않는다.
-const PROF_REC_RP_PER=10;
-function profRecordRp(c){ c=c||CHAR();
-  if(!c || profRebDone(c)<PROF_REB_LEVELS.length) return 0;   // 마지막 환생 전에는 0
+//    레벨 상한이 없어진 뒤로는(2026-08-19) 회차와 무관하게 늘 함께 들어온다.
+const PROF_REC_RP_PER=20;
+function profRecordRp(c){ c=c||CHAR(); if(!c) return 0;
   const H=hbHunt(); let best=0;
   for(const d in H.best) best=Math.max(best, hbProg(+d, H.best[d]||1));
   return Math.floor(best/PROF_REC_RP_PER); }
@@ -6244,12 +6256,13 @@ function profSyncUnlocks(){ const p=PROF(), lv=profUnlockLv(); for(const u of PR
 // 성장은 두 축이다 — 캐릭터(레벨→스탯 포인트, 마을 광장에서 배분) / 계정(미네랄→업그레이드 6종).
 // 둘 다 hbCharStats()에서 합산된다.
 const PROF_LV_MINERAL=10;   // 레벨업 보상 = 미네랄. 성장 축은 미네랄 업그레이드(HB_UPG) 하나로 통일했다.
+// ⚠ 레벨 상한은 없다(2026-08-19) — 환생 요구 레벨이 수식이라 끝이 없기 때문이다.
+//    한 번에 9999칸까지만 올리는 것은 무한 루프 방지용 안전장치다.
 function profApplyLevelUps(c){ c=c||CHAR(); if(!c) return 0; let ups=0;
-  // 🏁 레벨 상한 = 마지막 환생 레벨. 여기 닿으면 성장 축이 환생 포인트(기록 기반)로 넘어간다.
-  while(c.level<PROF_LV_CAP && c.xp>=profXpForLevel(c.level) && ups<9999){
+  while(c.xp>=profXpForLevel(c.level) && ups<9999){
     c.xp-=profXpForLevel(c.level); c.level++; c.unit.level++; ups++; }
-  if(c.level>=PROF_LV_CAP) c.xp=0;
-  if(ups>0){ const p=PROF(); if(p) p.pcoin=(p.pcoin||0)+ups*PROF_LV_MINERAL; }   // 레벨업 = 미네랄
+  if(ups>0) profGainCoin(ups*PROF_LV_MINERAL);        // 레벨업 = 미네랄(환생 배수를 탄다)
+  if(ups>0 && c.lpAuto) lpAutoSpend(c);               // 🤖 자동 배분 — 켜 뒀으면 받은 포인트를 바로 찍는다
   return ups; }
 // 방치 수익(분당 pcoin) = 파워 기반 × 소스 배율
 // 방치·오프라인 수입(분당) = 자동사냥에서 실제로 벌던 속도 × 훈련 장소 배율 × 펫 코인%.
@@ -6391,9 +6404,9 @@ function profOfflineCapMin(){ return profHasUnlock('idle_12h')?PROF_OFF_CAP12_MI
 function profOfflineRate(){ return profHasUnlock('idle_8h')?PROF_OFF_RATE8:PROF_OFF_RATE; }
 function profClaimOffline(){ const p=PROF(), now=Date.now(), last=p.idle.lastClaimTs||p.lastSeenTs||now;
   const mins=Math.max(0, Math.min((now-last)/60000, profOfflineCapMin())), gained=Math.round(profIdleRate()*mins*profOfflineRate());
-  p.idle.lastClaimTs=now; p.lastSeenTs=now; if(gained>0){ p.pcoin+=gained; saveMeta(); } return gained; }
+  p.idle.lastClaimTs=now; p.lastSeenTs=now; if(gained>0){ profGainCoin(gained); saveMeta(); } return gained; }
 function profIdleTick(){ if(!PLAYER_META||!PLAYER_META.profile) return; const p=PROF();   // 켜둔 동안 60초마다 100%
-  p.pcoin+=profIdleRate(); const now=Date.now(); p.lastSeenTs=now; p.idle.lastClaimTs=now; saveMeta();
+  profGainCoin(profIdleRate()); const now=Date.now(); p.lastSeenTs=now; p.idle.lastClaimTs=now; saveMeta();
   if(typeof _townOpen!=='undefined' && _townOpen && typeof renderTownIdle==='function') renderTownIdle(); }
 function profStampSeen(){ if(PLAYER_META&&PLAYER_META.profile){ PLAYER_META.profile.lastSeenTs=Date.now(); try{ localStorage.setItem(metaKey(), JSON.stringify(PLAYER_META)); }catch(e){} } }
 
@@ -7126,17 +7139,19 @@ function renderGrowModal(){ const box=document.getElementById('hbGrowBody'); if(
   let h='<div class="hbRoundNote" style="padding:0 0 8px">Lv.'+c.level
     +' · 환생 <b>'+(c.reb||0)+'</b>회 · 보유 환생 포인트 <b>'+rpFree(c)+'</b>/'+rpTotal(c)+'</div>';
   // 🔁 환생 — 레벨 곡선이 무거워지는 지점에서 '되감고 배수를 얻는' 축.
-  h+='<div class="hbGrowLbl">환생 <span class="hbStars">'+(c.reb?('×'+profXpMul(c).toFixed(2)+' 경험치'):'—')+'</span></div>';
-  { const need=profRebNextLv(c), N=profRebDone(c)+1, can=profCanRebirth(c), last=(need===0);
+  h+='<div class="hbGrowLbl">환생 <span class="hbStars">경험치 ×'+profXpMul(c).toFixed(2)
+    +' · 미네랄 ×'+profCoinMul(c).toFixed(2)+'</span></div>';
+  { const need=profRebNextLv(c), N=profRebDone(c)+1, can=profCanRebirth(c);
+    const nx=(t)=>{ const k=N*(N+1)/2; return (1+t*k); };   // 이번 환생을 마쳤을 때의 배수
     h+='<div class="hbRow"><span class="hbRowIco">🔁</span>'
-      +'<span class="hbRowTx"><b>'
-      +(last ? ('환생 완료 — Lv.'+PROF_LV_CAP+' 고정 · 이제 기록이 포인트를 줍니다')
-             : (can ? (N+'회차 환생 — 경험치 ×'+(profXpMul(c)+PROF_REB_GAIN*N).toFixed(2)+'로')
-                    : (N+'회차 환생')))+'</b>'
-      +'<em>'+(last ? ('전역 진행도 '+PROF_REC_RP_PER+'칸당 환생 포인트 +1 (지금 '+profRecordRp(c)+'p)')
-             : (can ? ('레벨·레벨 포인트·<b>미네랄 업그레이드·미네랄</b>이 처음으로 돌아갑니다. 해금·최고 기록·장비·펫·환생 포인트는 그대로. 환생 포인트 +'+profRebGrant(N))
-                    : ('🔒 Lv.'+need+' 필요 — 회차마다 요구 레벨이 올라갑니다 ('+PROF_REB_LEVELS.join(' · ')+')')))+'</em></span>'
-      +'<button class="hbRowBtn" onclick="hbDoRebirth()"'+(can?'':' disabled')+'>환생</button></div>'; }
+      +'<span class="hbRowTx"><b>'+N+'회차 환생'
+      +(can? (' — 경험치 ×'+nx(PROF_REB_XP).toFixed(2)+' · 미네랄 ×'+nx(PROF_REB_COIN).toFixed(2)) : '')+'</b>'
+      +'<em>'+(can ? ('레벨·레벨 포인트·<b>미네랄 업그레이드·미네랄</b>이 처음으로 돌아갑니다. 해금·최고 기록·장비·펫·환생 포인트는 그대로. 환생 포인트 +'+profRebGrant(N))
+                   : ('🔒 Lv.'+need+' 필요 — 회차마다 요구 레벨이 벌어집니다 (다음: '
+                      +[1,2,3].map(i=>profRebNeedLv(N+i-1)).join(' · ')+' …)'))+'</em></span>'
+      +'<button class="hbRowBtn" onclick="hbDoRebirth()"'+(can?'':' disabled')+'>환생</button></div>';
+    h+='<div class="hbRoundNote" style="padding:4px 0 0">기록 보너스 — 전역 진행도 '+PROF_REC_RP_PER
+      +'칸당 환생 포인트 +1 (지금 '+profRecordRp(c)+'p)</div>'; }
   // 🔁 환생 포인트 — 환생으로만 얻고 환생해도 안 사라진다. 줄 모양은 스탯 화면의 레벨 포인트와 같은 컴포넌트.
   h+=_ptListHTML('rp', c);
   box.innerHTML=h; }
@@ -7145,12 +7160,16 @@ function renderGrowModal(){ const box=document.getElementById('hbGrowBody'); if(
 function _ptListHTML(kind, c){ const rp=(kind==='rp');
   const free = rp? rpFree(c) : lpFree(c), spent = rp? rpSpent(c) : lpSpent(c);
   let h='<div class="hbGrowLbl">'+(rp?'환생 포인트':'레벨 포인트')
-    +' <span class="hbTblSub">'+(rp? ('1p = ×'+(1+RP_STEP).toFixed(2)+' 복리 · 환생해도 남는다')
+    +' <span class="hbTblSub">'+(rp? ('1p = +'+Math.round(RP_STEP*100)+'% · 환생해도 남는다')
                                    : ('레벨 1회 = '+LP_PER_LEVEL+'p · 1p = +'+Math.round(LP_STEP*100)+'% · 환생하면 함께 돌아갑니다'))+'</span></div>';
-  // 초기화 = 사냥터 수량 버튼(×1/×10/MAX)과 같은 물성. 새 버튼 물성을 만들지 않는다.
+  // 자동·초기화 = 사냥터 수량 버튼(×1/×10/MAX)과 같은 물성. 새 버튼 물성을 만들지 않는다.
+  //   자동은 레벨 포인트에만 둔다 — 환생 포인트는 회차마다 몇 점씩 들어오는 '고르는' 축이다.
   h+='<div class="lpHead"><span class="lpFree'+(free?' on':'')+'">남은 포인트 <b>'+free+'</b></span>'
-    +'<span class="hmUpQty lpQ"><button class="hmUpQ on" onclick="ptDoReset(\''+kind+'\')"'
-    +(spent?'':' disabled')+'>초기화</button></span></div>';
+    +'<span class="lpBtns">'
+    +(rp? '' : ('<span class="hmUpQty lpQ au"><button class="hmUpQ'+(lpAutoOn(c)?' on':'')
+                +'" onclick="lpAutoToggle()">자동</button></span>'))
+    +'<span class="hmUpQty lpQ rs"><button class="hmUpQ on" onclick="ptDoReset(\''+kind+'\')"'
+    +(spent?'':' disabled')+'>초기화</button></span></span></div>';
   // ⛔ 카드 마크업을 베끼지 말 것 — 사냥터 업그레이드와 '같은 함수'(hmUpCardHTML)를 부른다.
   //    val▸next = 이 1점으로 배수가 어디까지 가는지 · lv = 지금 찍은 칸 · cost = 값
   h+='<div class="lpList">';
@@ -7174,7 +7193,9 @@ function hbDoRebirth(){ const c=CHAR(); if(!c || !profCanRebirth(c)) return;
       'Lv.'+c.level+' 에서 '+N+'회차 환생을 합니다.\n\n'
      +'· 레벨·레벨 포인트 → 1\n· 미네랄 업그레이드 레벨 → 0\n· 보유 미네랄 → 0\n· 던전/라운드 → 1-1\n\n'
      +'남는 것: 업그레이드 해금 · 최고 기록 · 환생 포인트 · 장비 · 펫\n'
-     +'받는 것: 환생 포인트 +'+profRebGrant(N)+' · 경험치 ×'+(profXpMul(c)+PROF_REB_GAIN*N).toFixed(2)+'\n\n계속할까요?')) return;
+     +'받는 것: 환생 포인트 +'+profRebGrant(N)
+     +' · 경험치 ×'+(1+PROF_REB_XP*N*(N+1)/2).toFixed(2)
+     +' · 미네랄 ×'+(1+PROF_REB_COIN*N*(N+1)/2).toFixed(2)+'\n\n계속할까요?')) return;
   if(!profRebirth(c)) return;
   if(_hb){ _hb.dg=hbHunt().dg; _hb.round=1; _hb.wave=1; _hb.phase='fight'; _hb._pat=null;
     _hb.foes.length=0; _hb.pend.length=0; _hb.chests&&(_hb.chests.length=0);
@@ -7687,11 +7708,12 @@ function lpDef(k){ return LP_STATS.find(x=>x.k===k)||null; }
 // 🔁 환생 포인트 — 환생으로만 얻고 '환생해도 사라지지 않는' 영구 축.
 //   레벨 포인트와 같은 항목에 찍지만 1점이 더 세다(RP_STEP_MUL). 그래야 되감는 값이 있다.
 //   ⚠ 레벨 포인트(unit.pts)와 다른 필드(unit.rpts)다 — 같이 담으면 환생 때 같이 날아간다.
-// ⭐ 배수는 **곱셈(복리)** 이다 — 가산이면 회차가 갈수록 1점의 가치가 0으로 희석돼
-//    '회차마다 두 배'를 만들 수 없다(미네랄 업그레이드가 매 회차 0에서 다시 쌓이므로 필수).
-//    ⛔ 1 + n×step 으로 되돌리지 말 것.
-const RP_STEP=0.06;        // 1포인트 = +6% (복리) — 12점 ×2.0 · 24점 ×4.0 · 48점 ×16.4
-const RP_PER_REB=PROF_REB_RP0+PROF_REB_RP1;   // 옛 이름 호환(= 1회차 지급량)
+// ⭐ 배수는 **선형**이다(2026-08-19 전환). 옛 설계는 복리였는데, 그건 환생이 7회뿐이던 시절 값이다.
+//    이제 환생 요구 레벨이 수식이라 회차가 수백까지 가므로 복리면 후반이 그대로 폭주한다.
+//    '매 회차 0에서 다시 쌓는 미네랄'을 따라잡는 몫은 이제 환생의 **미네랄 획득 배수**가 맡는다.
+//    ⛔ 복리(Math.pow)로 되돌리지 말 것 — 되돌리려면 환생 횟수 상한부터 다시 만들어야 한다.
+const RP_STEP=0.02;        // 1포인트 = +2% (선형) — 50점 ×2.0 · 250점 ×6.0
+const RP_PER_REB=PROF_REB_RP;                 // 옛 이름 호환(= 환생 1회 지급량)
 const RP_STEP_MUL=1;       // 옛 이름 호환 — 이제 레벨 포인트와 '다른 종류'의 배수다
 function rpBag(c){ c=c||((typeof CHAR==='function')?CHAR():null); if(!c) return {};
   if(!c.unit.rpts || typeof c.unit.rpts!=='object') c.unit.rpts={}; return c.unit.rpts; }
@@ -7704,8 +7726,8 @@ function rpTotal(c){ c=c||((typeof CHAR==='function')?CHAR():null);
   return c ? ((c.rp|0) + profRecordRp(c)) : 0; }
 function rpPts(k, c){ return Math.max(0, rpBag(c)[k]|0); }
 function rpStep(k){ return lpDef(k) ? RP_STEP : 0; }
-// 곱셈 — 같은 밑수라 여러 축에 나눠 찍어도 총 전투력은 같다(함정 빌드가 없다).
-function rpMul(k, c){ return Math.pow(1+RP_STEP, rpPts(k,c)); }
+// 선형 — 레벨 포인트와 같은 형태라 여러 축에 나눠 찍어도 총 전투력은 같다(함정 빌드가 없다).
+function rpMul(k, c){ return 1 + rpPts(k,c)*RP_STEP; }
 function rpAdd(k, n){ const c=CHAR(), S=lpDef(k); if(!c||!S) return 0;
   n=Math.max(1, n|0); const b=rpBag(c); let got=0;
   while(got<n){ const cost=ptCostAt('rp', k, b[k]|0); if(rpFree(c)<cost) break;
@@ -7743,6 +7765,28 @@ function lpAdd(k, n){ const c=CHAR(), S=lpDef(k); if(!c||!S) return 0;
   if(got) saveMeta(); return got; }
 function lpReset(){ const c=CHAR(); if(!c) return 0; const n=lpSpent(c);
   c.unit.pts={}; saveMeta(); return n; }
+// 🤖 자동 배분 — '눌러 놓고 떠나는' 구역이라 레벨업 때 포인트가 알아서 찍힌다.
+//   가장 적게 찍힌 축부터 채운다(균등). ⭐ 배수가 선형이라 어디 찍든 총합이 같아서
+//   균등 배분이 손해가 아니다 — 그래서 '어디에 찍을지'를 묻지 않아도 된다.
+//   ⚠ 복리로 바꾸면 이 전제가 깨진다(몰빵이 이득이 되어 자동이 손해가 된다).
+function lpAutoSpend(c){ c=c||CHAR(); if(!c) return 0;
+  let put=0;
+  for(let guard=0; guard<9999; guard++){
+    let best=null;
+    for(const S of LP_STATS){ if(best===null || lpPts(S.k,c)<lpPts(best,c)) best=S.k; }
+    if(!best || lpFree(c)<ptCost('lp',best,c)) break;
+    if(!lpAdd(best,1)) break;
+    put++; }
+  return put; }
+function lpAutoOn(c){ c=c||CHAR(); return !!(c && c.lpAuto); }
+// 켜면 그동안 쌓아 둔 몫까지 바로 찍는다 — 켜 놓고 떠나는 게 목적이라 남겨 두면 뜻이 없다
+function lpAutoToggle(){ const c=CHAR(); if(!c) return;
+  c.lpAuto = c.lpAuto?0:1;
+  if(c.lpAuto) lpAutoSpend(c);
+  saveMeta();
+  if(typeof playSfx==='function') playSfx('ui_tab');
+  if(typeof hbSyncChar==='function') hbSyncChar();
+  _ptRepaint(); }
 // ══════════════════════════════════════════════════════════════════════════════════════
 // ══ 📊 기본 스탯 축 — 이 게임의 스탯은 '전투 수치' 그 자체다 ═══════════════════════════════
 //   한 축의 값 = (기본 + 사냥터 업그레이드 + 장비) × 레벨 포인트 × 환생 포인트
@@ -7872,7 +7916,7 @@ function hbRwGot(dg,round){ const H=hbHunt(); return !!(H.rw && H.rw[dg] && H.rw
 function hbRwClaim(dg,round){ const r=hbRoundRw(dg,round); if(!r || hbRwGot(dg,round)) return false;
   const H=hbHunt(), p=PROF();
   if(!H.rw) H.rw={}; if(!H.rw[dg]) H.rw[dg]={}; H.rw[dg][round]=1;
-  p.pcoin=(p.pcoin||0)+r.min; p.gas=(p.gas||0)+r.gas;
+  profGainCoin(r.min); p.gas=(p.gas||0)+r.gas;                     // 💠 미네랄 획득은 환생 배수를 탄다
   if(!p.tickets) p.tickets={gear:0,pet:0,ally:0};
   if(r.tk)  p.tickets.gear=(p.tickets.gear||0)+r.tk;
   if(r.atk) p.tickets.ally=(p.tickets.ally||0)+r.atk;
@@ -8441,7 +8485,7 @@ function hbSettle(){ const S=_hb, p=PROF();
   hbNoteRate((S.buf.paid||0)+hbClearBonus(S.dg,S.round).min, Math.max(1,S.t-(S.rt0||0)));   // 방치 수입 기준 = 실제로 번 속도
   S.rt0=S.t;
   const bo=hbClearBonus(S.dg,S.round);        // 처치 보상은 이미 지급됨 — 여기서 주는 건 클리어 보너스뿐(사망 시 소실되는 몫)
-  p.pcoin=(p.pcoin||0)+bo.min; p.gas=(p.gas||0)+bo.gas;
+  profGainCoin(bo.min); p.gas=(p.gas||0)+bo.gas;                   // 💠 미네랄 획득은 환생 배수를 탄다
   S.floats.push({x:S.char.x,y:S.char.y-32,tx:'ROUND CLEAR +'+Math.round(bo.min)+'M',cl:'#ffd24a',t:0});
   if(typeof dqNote==='function') dqNote('round',1);   // 📅 일일 — 라운드 클리어
   S.buf={min:0,gas:0,xp:0,kills:0,paid:0};
@@ -8898,7 +8942,7 @@ function hbKill(f){ const S=_hb, i=S.foes.indexOf(f); if(i<0) return; S.foes.spl
   const r0=hbKillReward(S.dg,S.round),
         r={ min:(r0.min+hbUpgNum('mk')*ub)*rm, gas:(r0.gas+hbUpgNum('gk')*ub)*rm, xp:r0.xp*rm };
   const p=PROF(), c=(typeof CHAR==='function')?CHAR():null;
-  p.pcoin=(p.pcoin||0)+r.min; p.gas=(p.gas||0)+r.gas;
+  profGainCoin(r.min); p.gas=(p.gas||0)+r.gas;                     // 💠 미네랄 획득은 환생 배수를 탄다
   if(Math.random() < (f.elite?HB_TICKET_ELITE:HB_TICKET_NORMAL)){   // 🎟 장비 뽑기권
     if(typeof dgAddTicket==='function') dgAddTicket('gear',1);
     S.floats.push({x:f.x,y:f.y-48,tx:'🎟 장비 뽑기권!',cl:'#ffd24a',t:0}); }
@@ -9651,11 +9695,9 @@ function setChrSec(k){ if(!CHR_SECS[k]) return; _chrSec=k; renderChr();
 function _ptPct(n, step){ const v=n*step*100;
   return '+'+((Math.abs(v-Math.round(v))<0.01)? String(Math.round(v)) : v.toFixed(1))+'%'; }
 // 카드에 찍히는 글자 — ⛔ 화면이 제 식을 따로 갖지 말 것. lpMul/rpMul 과 같은 식을 여기서만 쓴다.
-//   lp = 선형 배수(1+n·step) → '+X%' · rp = 복리 배수((1+s)^n) → '×N.NN'
+//   둘 다 선형 배수(1+n·step) → '+X%'. 세기만 다르다(lp=LP_STEP · rp=RP_STEP).
 function _ptShow(kind, k, n){ const S=lpDef(k); if(!S) return '';
-  if(kind!=='rp') return _ptPct(n, S.step);
-  const m=Math.pow(1+RP_STEP, n);
-  return 'x'+(m<10? m.toFixed(2) : (m<1000? m.toFixed(1) : Math.round(m).toLocaleString('en-US'))); }
+  return _ptPct(n, (kind==='rp')? RP_STEP : S.step); }
 // 축 값 표시 — 단위(%·초·×)는 축 표가 갖는다. 두 화면이 같은 표기를 쓰도록 여기 하나만 둔다.
 function csFmt(k, v){ const A=CS_AXES[k];
   if(k==='aspd') return (0.70/(v/100)).toFixed(2)+'초';

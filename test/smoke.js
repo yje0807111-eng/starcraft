@@ -2512,37 +2512,48 @@ async function groupLobby(){
     return '뿌리 복귀 + 동료 지급 + 환급 ok'; });
 
   // 📈 성장 설계(2026-08-12) — 초반 빠르게 / 뒤로 갈수록 배로 / 25레벨마다 환생 / 해금은 레벨 게이트 / 라운드 보상
-  await step('성장 곡선: 초반 가속 · 후반 등비 · 환생 배수', ()=>{ skipIf(typeof profXpForLevel!=='function','곡선 없음');
-    // ① 초반은 옛 곡선(50·lv^1.5)보다 확실히 가볍다 — '30레벨까지 아주 빠르게'
-    const oldCum=(to)=>{ let t=0; for(let l=1;l<to;l++) t+=Math.round(50*Math.pow(l,1.5)); return t; };
+  await step('성장 곡선: 다항식 하나 · 만 레벨까지 열려 있다 · 환생 배수', ()=>{
+    skipIf(typeof profXpForLevel!=='function','곡선 없음');
     const newCum=(to)=>{ let t=0; for(let l=1;l<to;l++) t+=profXpForLevel(l); return t; };
+    // ① 초반은 옛 곡선(50·lv^1.5)보다 확실히 가볍다
+    const oldCum=(to)=>{ let t=0; for(let l=1;l<to;l++) t+=Math.round(50*Math.pow(l,1.5)); return t; };
     const c30o=oldCum(30), c30n=newCum(30);
     assert(c30n < c30o*0.55,'30레벨까지가 옛 곡선보다 충분히 빠르지 않음: '+c30n+' vs '+c30o);
-    // ② PROF_LV_SOFT 이후는 등비 — 레벨당 같은 배수로 오르고, 결국 '배로' 든다
-    for(let l=PROF_LV_SOFT; l<PROF_LV_SOFT+40; l++){
-      const rt=profXpForLevel(l+1)/profXpForLevel(l);
-      assert(Math.abs(rt-PROF_XP_GEO)<0.02,'Lv'+l+'→'+(l+1)+' 증가율이 등비가 아님: '+rt.toFixed(3)); }
-    { const want=Math.pow(PROF_XP_GEO,30);   // ⚠ 8배 고정을 박지 말 것 — 곡선 상수를 바꾸면 바로 깨진다
-      const got=profXpForLevel(PROF_LV_SOFT+30)/profXpForLevel(PROF_LV_SOFT);
-      assert(got>want*0.98,'후반 등비가 상수와 다름: '+got.toFixed(2)+' vs '+want.toFixed(2)); }
-    // ⑤ 레벨 상한(= 마지막 환생 레벨)이 '사실상 도달 불가'로 굳는 것을 막는 파국 감지기.
-    //    ⚠ 정밀한 소요 시간 예측이 아니다 — 실제 플레이는 진행도를 올려 가며 레벨을 먹으므로
-    //       아래 상한선보다 훨씬 빠르다(실측 마지막 런 6.6시간 vs 이 식으로는 178시간).
-    //       이 검사의 목적은 옛 곡선(×1.10 → 44만 판) 같은 사고를 잡는 것 하나다.
-    //    기준: 마지막 환생 직전의 현실적 조건 — 전역 진행도 120 · 경험치 배수 4.0(=1+0.2×(1+2+3+4+5)).
-    { const need=newCum(PROF_LV_CAP), PROG=120, XPMUL=4.0;
-      const rd=((PROG-1)%HB_ROUND_MAX)+1, dg=Math.floor((PROG-1)/HB_ROUND_MAX)+1;
+    // ② 다항식 하나다 — 어디서도 등비로 꺾이면 안 된다.
+    //    ⚠ 지수 곡선은 몇백 레벨에서 물리적으로 막혀 만 레벨을 못 간다. 증가율이 계속 '완만해져야' 한다.
+    // 지수는 비율이 '일정'하고, 다항식은 비율이 '계속 줄어든다' — 이게 둘을 가르는 성질이다
+    { let prev=Infinity;
+      for(const l of [10,50,200,1000,5000]){ const rt=profXpForLevel(l+1)/profXpForLevel(l);
+        assert(rt<prev,'Lv'+l+' 에서 증가율이 안 줄어듦(지수 성분): ×'+rt.toFixed(4)); prev=rt; }
+      assert(prev<1.001,'만 레벨 근처에서도 증가율이 큼: ×'+prev.toFixed(4)); }
+    { const a=profXpForLevel(100)/profXpForLevel(50), b=profXpForLevel(1000)/profXpForLevel(500);
+      assert(Math.abs(a-b)<0.01,'같은 배율 구간의 증가율이 다름(다항식이 아님): '+a.toFixed(3)+' vs '+b.toFixed(3)); }
+    // ③ 만 레벨이 '수'로 표현 가능해야 한다 — 옛 등비는 여기서 무한대가 됐다
+    assert(isFinite(profXpForLevel(10000)) && isFinite(newCum(10000)),'만 레벨에서 곡선이 발산함');
+    assert(profXpForLevel(10000) < 1e8,'만 레벨 한 칸이 너무 큼: '+profXpForLevel(10000).toLocaleString());
+    // ④ 단조 증가 — 어느 지점에서도 쉬워지면 안 된다
+    for(let l=1;l<300;l++) assert(profXpForLevel(l+1)>=profXpForLevel(l),'Lv'+l+'에서 곡선이 내려감');
+    // ⑤ 환생 요구 레벨은 끝이 없고, 폭이 갈수록 벌어진다
+    let prevGap=0;
+    for(let N=1;N<=60;N++){ const a=profRebNeedLv(N), b=profRebNeedLv(N+1);
+      assert(b>a,'회차 '+N+'→'+(N+1)+' 요구 레벨이 안 오름');
+      const gap=b-a; assert(gap>=prevGap,'회차 '+N+' 에서 폭이 좁아짐: '+prevGap+'→'+gap); prevGap=gap; }
+    assert(profRebNeedLv(50)>=8000,'50회차가 만 레벨 근처가 아님: Lv'+profRebNeedLv(50));
+    // ⑥ 회차가 갈수록 경험치·미네랄 배수가 '더 크게' 벌어진다
+    { const c=CHAR()||{}, at=n=>{ const t=n*(n+1)/2; return {xp:1+PROF_REB_XP*t, coin:1+PROF_REB_COIN*t}; };
+      let gx=0, gc=0;
+      for(let n=1;n<=30;n++){ const d=at(n), e=at(n-1);
+        assert(d.xp-e.xp>=gx && d.coin-e.coin>=gc,'회차 '+n+' 에서 배수 증가폭이 안 커짐');
+        gx=d.xp-e.xp; gc=d.coin-e.coin; } }
+    // ⑦ 만 레벨이 '언젠가 닿을 수 있는' 범위인가 — 파국 감지기(정밀 예측이 아니다)
+    { const need=newCum(10000), N=50, t=N*(N+1)/2, XPMUL=1+PROF_REB_XP*t;
+      const PROG=300, rd=((PROG-1)%HB_ROUND_MAX)+1, dg=Math.floor((PROG-1)/HB_ROUND_MAX)+1;
       let n=0; for(let w=1;w<=HB_WAVES;w++) n+=hbFoeCount(rd,w);
       const perRound=n*hbKillReward(dg,rd).xp*XPMUL;
       const plays=need/perRound;
-      assert(plays<50000,'레벨 상한 Lv'+PROF_LV_CAP+' 이 사실상 도달 불가: 진행도 '+PROG+'에서 '
-        +Math.round(plays).toLocaleString()+'판'); }
-    // ③ 경계에서 튀지 않는다(두 식이 이어져야 한다)
-    { const a=profXpForLevel(PROF_LV_SOFT-1), b=profXpForLevel(PROF_LV_SOFT);
-      assert(b>a && b<a*1.3,'구간 경계에서 필요 경험치가 튐: '+a+' → '+b); }
-    // ④ 곡선은 단조 증가 — 어느 지점에서도 쉬워지면 안 된다
-    for(let l=1;l<200;l++) assert(profXpForLevel(l+1)>=profXpForLevel(l),'Lv'+l+'에서 곡선이 내려감');
-    return '30레벨 누적 '+c30n.toLocaleString()+'(옛 '+c30o.toLocaleString()+') · 이후 레벨당 ×'+PROF_XP_GEO; });
+      assert(plays<200000,'만 레벨이 사실상 도달 불가: '+Math.round(plays).toLocaleString()+'판'); }
+    return '30레벨 누적 '+c30n.toLocaleString()+' · Lv10000 한 칸 '
+      +profXpForLevel(10000).toLocaleString()+' · 50회차 Lv'+profRebNeedLv(50); });
 
   // 🔁 환생 규칙(2026-08-18): **정해진 레벨에서 한 번씩만** · 미네랄 업그레이드/재화/진행도까지 리셋 ·
   //    해금과 최고 기록은 남는다. 옛 계단식(floor(lv/20))은 같은 레벨 무한 반복이 가능해 RP가 폭주했다.
@@ -2550,18 +2561,18 @@ async function groupLobby(){
     skipIf(typeof profRebirth!=='function','환생 없음');
     const p=PROF(); p.chars.length=0; p.curId=''; const c=profCreateChar('ranger','환생');
     const H=hbHunt(); H.upg={}; H.unl={}; H.best={}; H.dg=1; H.round=1;
-    // ① 요구 레벨 표 — 오름차순이고 마지막이 레벨 상한
-    let prev=0; for(const lv of PROF_REB_LEVELS){ assert(lv>prev,'요구 레벨이 오름차순이 아님: '+lv); prev=lv; }
-    assert(PROF_LV_CAP===PROF_REB_LEVELS[PROF_REB_LEVELS.length-1],'레벨 상한이 마지막 환생 레벨과 다름');
+    // ① 요구 레벨은 수식이고 끝이 없다 — 레벨 상한도 없다
+    assert(typeof PROF_LV_CAP==='undefined','레벨 상한이 아직 남아 있음(만 레벨을 막는다)');
+    assert(profRebNextLv(c)===profRebNeedLv(1),'첫 환생 요구 레벨이 수식과 다름');
     // ② 문턱 미만이면 못 한다
-    c.level=PROF_REB_LEVELS[0]-1;
+    c.level=profRebNeedLv(1)-1;
     assert(!profCanRebirth(c),'문턱 미만인데 환생이 가능함');
     assert(profRebirth(c)===0,'문턱 미만인데 환생이 실행됨');
-    assert(c.level===PROF_REB_LEVELS[0]-1,'실패한 환생이 레벨을 건드림');
+    assert(c.level===profRebNeedLv(1)-1,'실패한 환생이 레벨을 건드림');
     // ③ 문턱에서 1회차 — 무엇이 지워지고 무엇이 남는가
     H.upg={atk:7,hp:3}; H.unl={crit:1,rng:1}; H.best={1:31}; H.dg=1; H.round=31;
     p.pcoin=12345; p.gas=777; c.unit.evoStars=2;
-    c.level=PROF_REB_LEVELS[0]; c.xp=123;
+    c.level=profRebNeedLv(1); c.xp=123;
     assert(profCanRebirth(c),'문턱인데 환생이 안 됨');
     assert(profRebirth(c)===1,'문턱에서 1회차가 아님');
     assert(c.level===1 && c.xp===0,'환생 뒤 레벨·경험치가 1/0이 아님: Lv'+c.level+' xp'+c.xp);
@@ -2574,30 +2585,33 @@ async function groupLobby(){
       assert((H2.best[1]||0)===31,'최고 기록이 지워짐(유지해야 한다): '+H2.best[1]); }
     assert(PROF().gas===777,'가스가 지워짐(유지해야 한다)');
     assert(c.unit.evoStars===2,'환생이 진화★를 지움');
-    const mul1=profXpMul(c);
-    assert(Math.abs(mul1-(1+PROF_REB_GAIN))<1e-9,'1회차 배수가 다름: '+mul1);
+    // 보상은 경험치·미네랄 두 축이고 c.reb 에서 다시 센다
+    assert(Math.abs(profXpMul(c)-(1+PROF_REB_XP))<1e-9,'1회차 경험치 배수가 다름: '+profXpMul(c));
+    assert(Math.abs(profCoinMul(c)-(1+PROF_REB_COIN))<1e-9,'1회차 미네랄 배수가 다름: '+profCoinMul(c));
     // ④ 같은 레벨에서 두 번은 못 한다 — rebLvMax
-    c.level=PROF_REB_LEVELS[0];
+    c.level=profRebNeedLv(1);
     assert(!profCanRebirth(c),'같은 레벨에서 또 환생이 가능함(rebLvMax가 안 걸림)');
-    c.level=PROF_REB_LEVELS[1]-1;
+    c.level=profRebNeedLv(2)-1;
     assert(!profCanRebirth(c),'다음 요구 레벨 미만인데 환생이 가능함');
-    // ⑤ 회차마다 요구 레벨이 올라가고, 지급도 커진다
-    let rp0=c.rp|0;
-    for(let i=1;i<PROF_REB_LEVELS.length;i++){
-      c.level=PROF_REB_LEVELS[i]; c.unit.level=c.level;
-      const want=profRebGrant(i+1);
-      assert(profRebirth(c)===i+1,(i+1)+'회차가 아님');
-      assert((c.rp|0)-rp0===want,(i+1)+'회차 지급량이 다름: '+((c.rp|0)-rp0)+' vs '+want);
-      rp0=c.rp|0; }
-    // ⑥ 다 끝나면 더 없다 + 레벨이 상한에 묶인다
-    assert(profRebNextLv(c)===0,'마지막 환생 뒤에도 다음 환생이 남아 있음');
-    c.level=PROF_LV_CAP; assert(!profCanRebirth(c),'끝났는데 또 환생이 가능함');
-    { c.level=PROF_LV_CAP-1; c.xp=1e18; const ups=profApplyLevelUps(c);
-      assert(c.level===PROF_LV_CAP,'레벨이 상한을 넘거나 못 미침: '+c.level+' (ups '+ups+')'); }
+    // ⑤ 회차를 20까지 밀어도 계속된다 — 배수는 갈수록 크게 벌어지고 지급은 회차와 무관하다
+    let rp0=c.rp|0, prevXp=profXpMul(c), prevCoin=profCoinMul(c), gapXp=0;
+    for(let N=2;N<=20;N++){
+      c.level=profRebNeedLv(N); c.unit.level=c.level;
+      assert(profRebirth(c)===N,N+'회차가 아님');
+      assert((c.rp|0)-rp0===profRebGrant(N),N+'회차 지급량이 다름'); rp0=c.rp|0;
+      const dx=profXpMul(c)-prevXp;
+      assert(dx>=gapXp,N+'회차에서 경험치 배수 증가폭이 안 커짐'); gapXp=dx;
+      assert(profCoinMul(c)>prevCoin,N+'회차에서 미네랄 배수가 안 늘어남');
+      prevXp=profXpMul(c); prevCoin=profCoinMul(c); }
+    // ⑥ 끝이 없다 — 레벨도 안 묶인다
+    assert(profRebNextLv(c)>0,'20회차 뒤 다음 환생이 사라짐');
+    { c.level=1; c.xp=1e12; const ups=profApplyLevelUps(c);
+      assert(ups>0 && c.level>200,'레벨이 어딘가에 묶임: Lv'+c.level); }
     // ⑦ 배수가 '실제 지급'에 붙는다 — 지급 경로가 profGainXp 한 곳인지까지 본다
     c.xp=0; const got=profGainXp(c,100);
     assert(Math.abs(got-100*profXpMul(c))<1e-6,'지급에 배수가 안 붙음: '+got);
-    return PROF_REB_LEVELS.length+'회차 ('+PROF_REB_LEVELS.join('·')+') · 누적 RP '+(c.rp|0)+' · 경험치 ×'+profXpMul(c).toFixed(2); });
+    return '20회차까지 · 요구 Lv'+profRebNeedLv(20)+' · 누적 RP '+(c.rp|0)
+      +' · 경험치 ×'+profXpMul(c).toFixed(1)+' · 미네랄 ×'+profCoinMul(c).toFixed(1); });
 
   await step('해금: 레벨 게이트 · 한 번에 몰려 열리지 않는다', ()=>{ skipIf(typeof profUnlockLv!=='function','레벨 해금 없음');
     // ① 표가 레벨 기준이고 오름차순 · 간격이 벌어져 있어야 '하나씩' 열린다
@@ -3016,9 +3030,12 @@ async function groupLobby(){
         assert(!bl.querySelector('.nx') && !bl.querySelector('svg'),S.name+' 버튼 윗줄에 화살표가 남아 있음');
         assert(e.querySelector('.hmUpBc').textContent.trim()==='-'+ptCost('lp',S.k)+'p','버튼이 비용 표기가 아님'); }); }
     // 초기화 = 사냥터 수량 버튼과 같은 물성
-    { const q=host.querySelector('.lpHead .hmUpQty .hmUpQ');
+    { const q=host.querySelector('.lpHead .lpQ.rs .hmUpQ');
       assert(q && q.textContent.trim()==='초기화','초기화가 수량 버튼 물성이 아님');
-      assert(q.scrollWidth<=q.clientWidth+1,'초기화 글자가 잘림'); }
+      assert(q.scrollWidth<=q.clientWidth+1,'초기화 글자가 잘림');
+      const au=host.querySelector('.lpHead .lpQ.au .hmUpQ');
+      assert(au && au.textContent.trim()==='자동','자동 버튼이 없음');
+      assert(au.scrollWidth<=au.clientWidth+1,'자동 글자가 잘림'); }
     // 이름은 수치 축과 같은 말을 쓴다 — 같은 것을 두 이름으로 부르지 않는다
     assert(lpDef('critd').name===CS_AXES.critd.name,'치명 피해 이름이 축과 다름: '+lpDef('critd').name);
     // 버튼에 적힌 값만큼 '실제로' 빠진다 — 표기와 차감이 갈라지면 여기서 잡힌다
@@ -3039,21 +3056,86 @@ async function groupLobby(){
     assert(_hb.char.critDmg>cdm0+1e-9,'치명타 피해가 반영 안 됨');
     assert(_hb.char.cd<cd0-1e-9,'공격속도가 반영 안 됨');
     // 초기화 버튼도 같은 경로
-    $('chrBody').querySelector('.lpHead .hmUpQ').click(); await sleep(40);
+    $('chrBody').querySelector('.lpHead .lpQ.rs .hmUpQ').click(); await sleep(40);
     assert(lpSpent()===0,'초기화가 안 됨');
     assert(Math.abs(_hb.char.atk-a0)<1e-6,'초기화 뒤 전투 수치가 안 돌아옴');
     navBack(); await sleep(40);
     return '찍기·초기화 → 전투 즉시 반영'; });
+  await step('자동 배분: 레벨업하면 포인트가 알아서 균등하게 찍힌다', async()=>{
+    assert(typeof lpAutoSpend==='function','자동 배분이 없음');
+    const p=PROF(); p.chars.length=0; p.curId='';
+    { const c0=profCreateChar('ranger','자동'); c0.lpAuto=1; }
+    saveMeta();
+    let c=CHAR();
+    assert(c.lpAuto,'자동이 기본으로 꺼져 있음');   // 눌러 놓고 떠나는 구역이라 기본은 켬
+    // ① 레벨이 오르면 남은 포인트가 0이 된다 — 들를 필요가 없어야 한다
+    c.xp=1e7; const ups=profApplyLevelUps(c);
+    assert(ups>0,'레벨이 안 오름');
+    assert(lpFree(c)===0,'자동인데 포인트가 남아 있음: '+lpFree(c));
+    assert(lpSpent(c)===lpTotal(c),'찍힌 합이 총량과 다름');
+    // ② 균등하다 — 가장 많이/적게 찍힌 축의 차이가 1을 넘지 않는다
+    { const n=LP_STATS.map(S=>lpPts(S.k,c));
+      assert(Math.max.apply(null,n)-Math.min.apply(null,n)<=1,'균등하지 않음: '+n.join(',')); }
+    // ③ 배수가 선형이라 균등 배분이 손해가 아니다 — 몰빵과 총합이 같아야 한다
+    { const even=LP_STATS.reduce((t,S)=>t+lpMul(S.k,c),0);
+      const all=Object.assign({}, c.unit.pts); const tot=lpTotal(c);
+      c.unit.pts={}; c.unit.pts[LP_STATS[0].k]=tot;
+      const solo=LP_STATS.reduce((t,S)=>t+lpMul(S.k,c),0);
+      assert(Math.abs(even-solo)<1e-9,'균등이 몰빵보다 손해임(자동이 함정이 된다): '+even+' vs '+solo);
+      c.unit.pts=all; }
+    // ④ 끄면 안 찍힌다 · 다시 켜면 밀린 몫까지 바로 찍는다
+    c.lpAuto=0; c.unit.pts={}; c.xp=1e7; profApplyLevelUps(c);
+    assert(lpFree(c)>0,'껐는데도 자동으로 찍힘');
+    const left=lpFree(c);
+    lpAutoSpend(c);
+    assert(lpFree(c)===0,'수동 호출로도 안 찍힘 (남은 '+left+')');
+    // ⑤ 화면 버튼으로도 같은 경로를 탄다
+    c.lpAuto=0; c.unit.pts={}; saveMeta();
+    navGo('upg'); await sleep(60); setChrSec('stat'); await sleep(40);
+    const au=()=>$('chrBody').querySelector('.lpHead .lpQ.au .hmUpQ');
+    assert(au() && !au().classList.contains('on'),'꺼져 있는데 자동 버튼이 켜져 보임');
+    au().click(); await sleep(40);
+    assert(CHAR().lpAuto,'버튼으로 안 켜짐');
+    assert(lpFree()===0,'켰는데 밀린 포인트가 안 찍힘');
+    assert(au().classList.contains('on'),'켰는데 버튼이 안 켜져 보임');
+    navBack(); await sleep(40);
+    return '레벨 '+lpTotal(c)+'p 균등 자동 배분'; });
+  await step('미네랄 획득: 환생 배수를 탄다(되돌려받는 것은 안 탄다)', ()=>{
+    assert(typeof profGainCoin==='function','미네랄 획득 배수가 없음');
+    const p=PROF(); p.chars.length=0; p.curId=''; const c=profCreateChar('ranger','코인');
+    hbHunt().best={};
+    // ① 환생 전에는 배수 1
+    assert(profCoinMul(c)===1,'환생 전인데 미네랄 배수가 1이 아님: '+profCoinMul(c));
+    p.pcoin=0; profGainCoin(100);
+    assert(p.pcoin===100,'배수 1인데 지급이 다름: '+p.pcoin);
+    // ② 환생할수록 커진다 — 회차 증가폭이 갈수록 벌어져야 한다
+    let prev=1, gap=0;
+    for(let N=1;N<=6;N++){ c.level=profRebNeedLv(N); c.unit.level=c.level; profRebirth(N&&c);
+      const m=profCoinMul(c);
+      assert(m>prev,N+'회차에서 미네랄 배수가 안 늘어남');
+      assert(m-prev>=gap,N+'회차에서 증가폭이 안 커짐'); gap=m-prev; prev=m; }
+    // ③ 실제 지급에 붙는다
+    { const P=PROF(); P.pcoin=0; const got=profGainCoin(100);
+      assert(Math.abs(got-100*profCoinMul())<1e-6,'지급에 배수가 안 붙음: '+got);
+      assert(Math.abs(P.pcoin-got)<1e-6,'지급액과 잔고 증가가 다름'); }
+    // ④ 되돌려받는 것(장비 분해)은 배수를 타지 않는다 — 무한 증식이 된다
+    { const P=PROF(); P.items.length=0;
+      const it=profMakeItem('weapon',1,'common'); profAddItem(it);
+      const v=profScrapValue(it); P.pcoin=0;
+      assert(profScrapItem(it.iid)===v,'분해 환급액이 다름');
+      assert(Math.abs(P.pcoin-v)<1e-6,'분해 환급에 획득 배수가 붙음(무한 증식): '+P.pcoin+' vs '+v); }
+    return '6회차 미네랄 ×'+profCoinMul(c).toFixed(1); });
   await step('환생 포인트: 환생으로만 얻고 환생해도 남는다', async()=>{
     assert(typeof rpAdd==='function','환생 포인트가 없음');
     const p=PROF(); p.chars.length=0; p.curId='';
-    { const c0=profCreateChar('ranger','환포'); c0.level=1; c0.unit.level=1; }
+    { const c0=profCreateChar('ranger','환포'); c0.level=1; c0.unit.level=1; c0.lpAuto=0; }
+    hbHunt().best={};                                  // 기록 보너스(profRecordRp)가 섞이지 않게 비운다
     saveMeta();
     let c=CHAR();
     assert(rpTotal(c)===0,'처음부터 환생 포인트가 있음: '+rpTotal(c));
     // ① 환생해야 나온다
     { const H0=hbHunt(); H0.best={}; H0.dg=1; H0.round=1; }   // 기록 기반 몫을 0으로 두고 지급분만 본다
-    c.level=PROF_REB_LEVELS[0]; c.unit.level=c.level; c.unit.pts={atk:5};
+    c.level=profRebNeedLv(1); c.unit.level=c.level; c.unit.pts={atk:5};
     const step1=profRebirth(c);
     assert(step1===1,'환생이 안 됨');
     assert(rpTotal(c)===profRebGrant(1),'환생 포인트 지급량이 다름: '+rpTotal(c)+' vs '+profRebGrant(1));
@@ -3061,16 +3143,16 @@ async function groupLobby(){
     assert(lpTotal(c)===0 && lpSpent(c)===0,'레벨 포인트가 안 되감김');
     const put=rpAdd('atk', 3);
     assert(put>0 && rpPts('atk')===put,'환생 포인트가 안 찍힘: '+put+'/'+rpPts('atk'));
-    c.level=PROF_REB_LEVELS[1]; c.unit.level=c.level;
+    c.level=profRebNeedLv(2); c.unit.level=c.level;
     const step2=profRebirth(c);
     assert(step2===2,'2회차가 아님');
     assert(rpPts('atk')===put,'환생했더니 찍어 둔 환생 포인트가 사라짐');
     assert(rpTotal(c)===profRebGrant(1)+profRebGrant(2),'두 번째 지급이 누적 안 됨: '+rpTotal(c));
-    // ③ 배수는 **곱셈(복리)** 이다 — 가산이면 회차가 갈수록 1점이 희석돼 설계가 성립하지 않는다
-    assert(Math.abs(rpMul('atk')-Math.pow(1+RP_STEP,put))<1e-9,'환생 배수가 곱셈이 아님: '+rpMul('atk'));
-    { // 곱셈이면 여러 축에 나눠 찍어도 총 배수(곱)가 같다 — 함정 빌드가 없다는 성질
-      const a=Math.pow(1+RP_STEP,6)*Math.pow(1+RP_STEP,0), b=Math.pow(1+RP_STEP,3)*Math.pow(1+RP_STEP,3);
-      assert(Math.abs(a-b)<1e-9,'곱셈 배수인데 배분에 따라 총량이 달라짐'); }
+    // ③ 배수는 **선형**이다 — 환생이 수백 회차까지 가므로 복리면 후반이 폭주한다
+    assert(Math.abs(rpMul('atk')-(1+put*RP_STEP))<1e-9,'환생 배수가 선형이 아님: '+rpMul('atk'));
+    // 선형이라 여러 축에 나눠 찍어도 총합이 같다 — 자동 균등 배분이 손해가 아닌 근거다
+    { const a=(1+6*RP_STEP)+(1+0*RP_STEP), b=(1+3*RP_STEP)+(1+3*RP_STEP);
+      assert(Math.abs(a-b)<1e-9,'나눠 찍기와 몰빵의 합이 다름(함정 빌드가 생긴다)'); }
     { const got=rpAdd('hp', 999);
       assert(got>0,'한 칸도 못 찍음');
       assert(rpFree(c) < ptCost('rp','hp',c),'더 살 수 있는데 안 삼: 남은 '+rpFree(c)+'p');
@@ -3079,7 +3161,7 @@ async function groupLobby(){
     c.unit.pts={}; c.unit.rpts={};
     const base=csVal('atk');
     c.unit.rpts={atk:4};
-    assert(Math.abs(csAxis('atk').rp-Math.pow(1+RP_STEP,4))<1e-9,'축이 환생 배수를 안 읽음');
+    assert(Math.abs(csAxis('atk').rp-(1+4*RP_STEP))<1e-9,'축이 환생 배수를 안 읽음');
     assert(csVal('atk')>base+1e-9,'환생 포인트가 공격력에 반영 안 됨');
     // ⑤ 환생 탭에서 찍는다 — 화면·상태·전투가 한 줄로 이어지는지
     c.unit.rpts={}; saveMeta();
@@ -3092,22 +3174,19 @@ async function groupLobby(){
     rows[0].querySelector('.hmUpBtn').click(); await sleep(40);
     assert(rpPts('atk')===1,'환생 탭 버튼으로 안 찍힘');
     assert(csVal('atk')>before+1e-9,'찍었는데 공격력이 그대로');
-    $('chrBody').querySelector('.lpHead .hmUpQ').click(); await sleep(40);
+    $('chrBody').querySelector('.lpHead .lpQ.rs .hmUpQ').click(); await sleep(40);
     assert(rpSpent()===0,'초기화가 안 됨');
     navBack(); await sleep(40);
-    // ⑥ 🏁 마지막 환생을 끝내면 그때부터 '기록'이 포인트를 준다(그 전에는 0)
+    // ⑥ 🏁 기록이 주는 포인트 — 레벨 상한이 없어진 뒤로는 회차와 무관하게 늘 함께 들어온다
     { const c2=CHAR(), H2=hbHunt();
       H2.best={1:HB_ROUND_MAX, 2:50};                       // 전역 진행도 = 99+50 = 149
-      assert(profRecordRp(c2)===0,'마지막 환생 전인데 기록 포인트가 나옴: '+profRecordRp(c2));
-      for(let i=profRebDone(c2); i<PROF_REB_LEVELS.length; i++){
-        c2.level=PROF_REB_LEVELS[i]; c2.unit.level=c2.level; profRebirth(c2); }
-      H2.best={1:HB_ROUND_MAX, 2:50};                       // 환생이 진행도를 되감으므로 기록을 다시 세운다
       const want=Math.floor(hbProg(2,50)/PROF_REC_RP_PER);
       assert(profRecordRp(c2)===want,'기록 포인트가 전역 진행도와 다름: '+profRecordRp(c2)+' vs '+want);
       assert(rpTotal(c2)>=(c2.rp|0)+want,'총량이 기록 몫을 안 더함');
-      H2.best={1:HB_ROUND_MAX, 2:60};
+      // ⚠ 한 칸당이 아니라 PROF_REC_RP_PER 칸당 1점이다 — 갱신 폭이 그보다 작으면 안 늘어난다
+      H2.best={1:HB_ROUND_MAX, 2:50+PROF_REC_RP_PER*2};
       assert(profRecordRp(c2)>want,'기록을 갱신했는데 포인트가 안 늘어남'); }
-    return PROF_REB_LEVELS.length+'회차 · 1p = ×'+(1+RP_STEP).toFixed(2)+' 복리 · 기록 '+PROF_REC_RP_PER+'칸당 1p'; });
+    return '1p = +'+Math.round(RP_STEP*100)+'%(선형) · 회차당 '+PROF_REB_RP+'p · 기록 '+PROF_REC_RP_PER+'칸당 1p'; });
   await step('캐릭터: 스탯·환생·스킬 · 환생 본문은 빌려 쓴다', async()=>{
     skipIf(typeof setChrSec!=='function','캐릭터 구역 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
