@@ -329,6 +329,8 @@ node test/bench-strike.mjs 400 80 4   # 대규모 전투 렌더 벤치(유닛수
   - 특징 3줄은 `_mapGuideHTML(m)` 이고, **`.moFeats` 클래스를 같이 붙여야** 아이콘 판·간격이 산다(안 붙였더니 글자만 나왔다).
   - ⚠ **`.gsWrap>*{position:relative}` 가 `.gsArt` 를 이긴다**(특이도 동률 → 나중 규칙). `.gsWrap>.gsArt` 를 **뒤에** 적어야 `absolute` 가 살고, 아니면 아트가 흐름으로 돌아와 높이 0이 되어 배경이 통째로 안 보인다. 난이도 워터마크에서 똑같이 당했다.
   - ⚠ `_gsTimers` 에는 `setInterval` 도 들어간다(`{__iv}` — 개인 로딩 진행률). `_gsClearTimers` 가 `clearTimeout` 만 돌리면 화면을 나가도 계속 돈다.
+  - **세로 배치** — 위 덩어리(이름·배지·덱)는 남는 높이의 **가운데**, 특징·도크는 **하단 고정**. 남는 높이를 `.gsHead` 위와 `.gsDeck` 아래 두 `auto` 가 반씩 나눠 갖는다. 엄지가 닿는 하단을 안 건드리면서 가운데가 비지 않는다(2026-08-19 · 전체를 중앙에 모으는 안은 버튼이 밑바닥에서 떠서 뺐다).
+    - ⚠ **개인은 덱이 `display:none` 이라 `auto` 가 위 하나만 남는다** → 이름이 특징 바로 위에 달라붙는다. `.gsWrap.solo .gsHead{margin-bottom:auto}` 로 아래쪽 `auto` 를 이름이 대신 갖게 해 멀티와 같은 자리로 되돌렸다. 스모크가 위·아래 여백을 둘 다 잰다.
   - 부팅 오프닝(`.opWrap` — 로고·LOADING…)과 **별개 층**이다. `.opWrap`/`.opMap`/`.opBtns` 는 결과 화면과 공용이라 `#opening.counting` 에서 덮으면 그쪽이 같이 바뀐다.
   - ⚠ **`.moCard` 는 공용 카드 껍데기(`.cpCard,.rmCard,.lbCard,.authCard,.foCtxCard,.ptInviteCard`) 목록에서 빠졌다.** 되돌리면 모서리 컷과 붉은 네온 테두리가 다시 붙어 맵 액센트와 색이 경쟁한다.
   - ⚠ **설명 칸 높이는 상수가 아니다** — `_moFitInfo` 가 부모 `.moBody`(`flex:1`)의 남은 높이를 재고, 못 재면 `_MO_INFO_H`(306)로 떨어진다. 카드 높이 `--popH` 가 `min(564px,90%)` 라 짧은 기기에서 실제로 줄어들기 때문이다.

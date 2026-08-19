@@ -2170,7 +2170,10 @@
   .gsWrap>.gsArt{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center}
   .gsArt::after{content:'';position:absolute;inset:0;
     background:linear-gradient(180deg,rgba(4,4,8,.55),rgba(7,7,11,.86) 42%,rgba(7,7,11,.97))}
-  .gsHead{flex:none;padding:50px 20px 0;text-align:center}
+  /* 세로 배치(2안, 2026-08-19) — 위 덩어리(이름·배지·덱)는 남는 높이의 **가운데**로 내리고
+     특징·도크는 하단에 그대로 둔다. 엄지가 닿는 아래를 안 건드리면서 가운데가 비지 않는다.
+     남는 높이를 `.gsHead` 위와 `.gsDeck` 아래 두 auto 가 반씩 나눠 갖는 구조다. */
+  .gsHead{flex:none;margin-top:auto;padding:0 20px;text-align:center}
   .gsName{font-family:var(--font-ti);font-size:23px;color:#fff;text-shadow:0 2px 14px #000}
   .gsLine{margin-top:8px;display:flex;align-items:center;justify-content:center;gap:9px;font-size:var(--fs-md);color:#8a929c}
   /* 배지 = 난이도(협동) 또는 4vs4(팀전). ⛔ 초록을 쓰지 말 것 — 초록은 '준비 완료' 전용이다 */
@@ -2180,8 +2183,11 @@
   .gsBd.vs{color:#fff}
   .gsBd.vs s{width:7px;height:7px;border-radius:50%;text-decoration:none;background:var(--tmC1);box-shadow:0 0 5px var(--tmC1)}
   .gsBd.vs s.b{background:var(--tmC2);box-shadow:0 0 5px var(--tmC2)}
-  .gsDeck{flex:none;margin-top:20px;padding:0 18px;display:flex;flex-direction:column;gap:11px}
+  .gsDeck{flex:none;margin-top:26px;margin-bottom:auto;padding:0 18px;display:flex;flex-direction:column;gap:11px}
   .gsWrap.solo .gsDeck{display:none}
+  /* 개인 = 같은 배치에서 **덱만 빠진다**. 덱이 사라지면 auto 가 위 하나뿐이라 이름이 특징 바로 위에
+     붙어 버리므로, 아래쪽 auto 를 이름이 대신 갖게 해 멀티와 같은 자리로 되돌린다. */
+  .gsWrap.solo .gsHead{margin-bottom:auto}
   .gsRow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
   .gsTlb{display:flex;align-items:center;gap:6px;margin-bottom:6px;
     font-size:var(--fs-xs);font-weight:800;letter-spacing:.5px;color:var(--tmC)}
@@ -2204,9 +2210,8 @@
   .gsCd.rdy em{color:var(--ok,#5dff8f)}
   .gsCd.rdy::after{content:'';position:absolute;left:0;right:0;bottom:0;height:2px;
     background:var(--ok,#5dff8f);box-shadow:0 0 8px var(--ok,#5dff8f)}
-  /* 특징은 아래 도크에 붙인다 — 남는 높이를 위 한 곳에 몰아 아트가 보이게 하고,
-     정보가 '위 덩어리(이름·덱) / 아래 덩어리(특징·준비)' 둘로만 읽히게 한다 */
-  .gsFeat{flex:none;margin-top:auto;margin-bottom:20px;padding:0 18px;display:flex;flex-direction:column;gap:6px}
+  /* 특징은 하단 도크에 붙는다 — 정보가 '위 덩어리(이름·덱) / 아래 덩어리(특징·준비)' 둘로만 읽힌다 */
+  .gsFeat{flex:none;margin-bottom:20px;padding:0 18px;display:flex;flex-direction:column;gap:6px}
   #opening .gsFeat .moFeat{margin:0}
   #opening .gsFeat .mfTx{color:#b3c0cf}
   #opening .gsFeat .mfTx b{color:#f0f4fa}

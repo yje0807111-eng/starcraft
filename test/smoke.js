@@ -2778,6 +2778,9 @@ async function groupLobby(){
       const c=(getComputedStyle(bd).color.match(/\d+/g)||[]).map(Number);
       assert(!(c[1]>c[0]+40 && c[1]>c[2]+40),'난이도 배지가 초록이다 — 초록은 준비 완료 전용'); }
     assert($('gsCntN').textContent.replace(/\s/g,'')==='5/8','준비 인원 표기가 다름: '+$('gsCntN').textContent);
+    // 세로 배치 = 위 덩어리(이름·덱)를 남는 높이의 가운데로. 맨 위에 붙어 있으면 아래가 통째로 빈다
+    { const hd=document.querySelector('.gsHead').getBoundingClientRect();
+      assert(hd.top>80,'머리줄이 화면 맨 위에 붙음 — 아래가 비어 보인다'); }
     // 배경 = 유즈맵 키 아트. ⚠ .gsWrap>* 규칙에 눌려 흐름으로 돌아오면 높이가 0이 된다
     { const art=$('gsArt'); assert(getComputedStyle(art).position==='absolute','키 아트가 absolute 가 아님(배경이 안 보인다)');
       assert(/nemo/.test(art.style.backgroundImage||''),'키 아트가 안 실림: '+(art.style.backgroundImage||'')); }
@@ -2801,6 +2804,11 @@ async function groupLobby(){
     assert($('gsCntLb').textContent==='LOADING','개인 플레이 하단이 준비 표기 그대로임');
     assert(/%$/.test($('gsCntN').textContent),'개인 플레이인데 진행률이 아님: '+$('gsCntN').textContent);
     assert($('opStartTxt').textContent==='전투 시작','개인 플레이 버튼이 아직 준비 완료임');
+    // ⚠ 덱이 빠지면 auto 가 위 하나뿐이라 이름이 특징 바로 위에 달라붙는다 — 아래쪽에도 auto 를 줘 막았다
+    { const hd=document.querySelector('.gsHead').getBoundingClientRect(),
+            fe=document.querySelector('.gsFeat').getBoundingClientRect();
+      assert(hd.top>80,'개인 플레이 머리줄이 화면 맨 위에 붙음');
+      assert(fe.top-hd.bottom>80,'개인 플레이 머리줄이 특징에 달라붙음(아래쪽 auto 가 빠졌다)'); }
     // 버튼은 공용 액션 버튼이다 — 이 화면 전용 버튼을 만들지 말 것
     assert($('opStart').classList.contains('actBtn')&&$('opStart').classList.contains('pri'),'시작 버튼이 공용 .actBtn.pri 가 아님');
     assert($('opQuit').classList.contains('actBtn'),'나가기가 공용 .actBtn 이 아님');
