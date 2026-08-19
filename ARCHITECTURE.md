@@ -134,6 +134,11 @@
   `getBoundingClientRect()` 는 멀쩡한 값을 돌려주므로 **위치만 재는 검사는 통과한다**(건설 시트에선 잘 보여서 더 늦게 발견됐다).
   그래서 프로필을 띄운 동안은 `#bpMain:has(#unitCmd.on)` 계열 규칙이 `overflow:visible` 로 끈다(프로필 호스트는 높이가 고정이라 바깥 스크롤이 필요 없다).
   스모크 `메인 프로필: 판 밖 조작 버튼이 잘리지 않는다 …` 는 위치가 아니라 **`elementFromPoint` 로 실제로 눌리는지**를 본다.
+  - **조작 묶음 = 한 판 트레이**(2026-08-19 · E+S3). 사냥터 스킬 바(`.hbTray`/`.hbSk`)와 **같은 구조·같은 토큰**이다 — 회색 판(`--trayPanel`) + 모서리 컷 7px 안에 검정 칸(`--bpFace` + `--trayEdge` 붉은 테두리) 38px. `.on`(랠리 지정 중·부양 중)이면 `--trayEdgeOn` 으로 붉게 빛난다. 한 슬롯(`topRight`)에 **11군데**가 물려 있으니 여기만 고치면 전부 따라온다.
+    - **일꾼 수(`.cgGasAuto`)는 넓은 칸 하나(76px)** — 안쪽 `−`/`+` 는 판을 갖지 않고 구분선만이다. 세 칸으로 늘어놓으면 트레이가 5칸이 되어 숫자 조정이 제일 커 보인다.
+    - ⚠ **판 색은 `--trayPanel`(`:root`)** 이다. `--hmPanel` 은 `#homeScreen`·`#townScreen` 스코프라 게임 화면에서 쓰면 판이 통째로 사라진다.
+    - ⚠ `.gaBtn` 은 전역에 동명의 다른 버튼이 있다 — `.cmdG .cgGasAuto` 아래로 좁혀 쓸 것.
+    - 스모크가 트레이 판·모서리 컷·칸의 붉은 테두리(시안/파랑 금지)·일꾼 칸 폭을 검사한다.
 
 ## 6. 3D 모듈 (window.M3D)
 - 진입: `M3D.sync(units, GW, GH, dt, sel, enemies, selEnemy, scaleMul, view)` — 유닛/적 모델 동기화+렌더. 그 외 `syncShop/syncBuild/syncBldg/syncBoss`(탭별), `portrait`, `hasModel`, `loadMapModels/keepOnlyMap`(맵별 VRAM), `dbg()/matDbg(uid)`(디버그).

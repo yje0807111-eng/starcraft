@@ -109,6 +109,12 @@
      판은 회색(--panelBig), 그 안의 칸(좌측 설명·그리드 카드)은 완전 검정. 푸른 톤을 되살리지 말 것.
      ⚠ 색을 여기 세 토큰으로만 두는 이유: 같은 구역이 시트(뽑기·업그레이드·보스)·메인 홈·플레이어 셋으로
      갈라져 있어서, 값을 흩뿌리면 섹션을 옮길 때마다 톤이 바뀐다(실제로 그랬다). */
+  /* 🎛 조작 트레이 — 사냥터 스킬 바(.hbTray/.hbSk)와 게임 안 조작 버튼(.cgTopOut)이 **같은 값**을 쓴다.
+     ⚠ `--hmPanel` 로 두면 안 된다: 그 토큰은 `#homeScreen`·`#townScreen` 안에서만 정의돼
+        게임 화면에서는 var() 가 무효가 되고 판이 통째로 사라진다(ARCHITECTURE 의 같은 함정). */
+  :root{--trayPanel:linear-gradient(180deg,#191919,#0e0e0e);
+        --trayEdge:linear-gradient(180deg,rgba(255,59,59,.40) 0%,rgba(255,59,59,.26) 34%,rgba(255,59,59,.15) 68%,rgba(255,59,59,.09) 100%);
+        --trayEdgeOn:linear-gradient(180deg,rgba(255,59,59,.72) 0%,rgba(255,59,59,.48) 34%,rgba(255,59,59,.30) 68%,rgba(255,59,59,.18) 100%)}
   :root{--bpFace:linear-gradient(180deg,#0a0a0a,#000);
         --bpTile:radial-gradient(circle at 50% 34%,rgba(96,96,104,.32),#050505 82%);
         --bpBodyH:min(28vh,140px)}   /* 본문 높이 단일 소스 — 시트·메인 홈·플레이어 그리드가 같은 높이여야 섹션 전환에서 안 튄다.
@@ -1456,8 +1462,16 @@
   .cmdG[data-mode="boss"]{--ca:#ff5c6e;--caG:rgba(255,92,110,.45);--caS:rgba(255,92,110,.5);--caL:#ffd6db}   /* 보스 시트 = 붉은 강조 */
   .cmdG{position:relative}
   /* 건물 조작(일꾼 스텝퍼·랠리·부양)과 전체지정은 **판 밖 오른쪽 위**에 띄운다.
-     머리줄 안에 두면 버튼 높이(38px)가 머리줄을 밀어 올려 그리드가 그만큼 짧아졌다. */
-  .cmdG .cgTopOut{position:absolute;right:0;bottom:calc(100% + 12px);display:flex;align-items:center;gap:6px;z-index:31;pointer-events:auto}
+     머리줄 안에 두면 버튼 높이(38px)가 머리줄을 밀어 올려 그리드가 그만큼 짧아졌다.
+     ── 한 판 트레이(2026-08-19 · E+S3안) ────────────────────────────────
+     사냥터 스킬 바(.hbTray/.hbSk)와 **같은 구조**다: 회색 판 하나에 검정 칸을 담고, 판·칸 모두 모서리 7px 컷.
+     그래서 '붉은 테두리 = 지금 만질 수 있는 칸'이 스킬과 조작 버튼에서 한 뜻이 된다.
+     ⛔ 예전처럼 버튼마다 다른 색(랠리=초록·부양=파랑·전체지정=시안)을 주지 말 것 — 특히 시안은
+        DESIGN §2 에서 '지금 선택된 것' 전용(화면당 한 곳)이라 상시로 쓰면 그 뜻이 닳는다. */
+  .cmdG .cgTopOut{position:absolute;right:0;bottom:calc(100% + 12px);display:flex;align-items:stretch;gap:4px;padding:4px;
+    z-index:31;pointer-events:auto;
+    background:var(--trayPanel);border:1px solid var(--metal-edge);border-radius:var(--r-bar);
+    clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
   .cmdG .cgHead{display:flex;align-items:center;gap:9px;padding:5px 2px 9px;position:relative;flex:none}
   .cmdG .cgHead::after{content:'';position:absolute;left:2px;right:6px;bottom:0;height:1px;background:linear-gradient(90deg,var(--caS),transparent 72%)}
   /* 머리줄 초상(.cgPort)은 폐지했다(2026-08-14) — 제목은 글자 하나로 읽는다. 모델의 icon 은 그대로 두되 그리지 않는다.
@@ -1473,29 +1487,43 @@
   .cmdG .cgHpsh .stAb{font-style:normal;font-size:8.5px;font-weight:700;opacity:.7;margin-right:2px;vertical-align:1px;letter-spacing:.3px}   /* S/H/E 약자 프리픽스(아이콘 대체) */
   .cmdG .cgPill{flex:none;align-self:flex-start;font:800 9px/1 sans-serif;letter-spacing:.5px;padding:4px 6px;border-radius:5px;color:var(--caL);background:rgba(255,255,255,.04);border:1px solid var(--caS)}
   .cmdG .cgPill.idle{color:var(--cgMuted);border-color:var(--metal-edge)}
-  .cmdG .cgGasAuto{flex:none;align-self:center;height:32px;display:flex;align-items:center;gap:3px;padding:0 3px;border-radius:8px;background:rgba(70,240,106,.1);border:1px solid var(--glass)}   /* 일꾼 수 스텝퍼 — 배너 톤, −/+ 구분 셀 */
-  .cmdG .cgLift{flex:none;align-self:center;width:38px;height:38px;border-radius:9px;border:1px solid var(--glass);background:rgba(120,170,255,.14);color:#dbe8ff;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}   /* 부양 버튼(프로필 우상단, 정사각 아이콘 카드) */
-  .cmdG .cgLift svg{width:23px;height:23px;display:block}
-  .cmdG .cgLift.on{border-color:#5ad1ff;background:rgba(90,209,255,.26);box-shadow:0 0 6px rgba(90,209,255,.45)}
-  .cmdG .cgLift:active{background:rgba(120,170,255,.34)}
-  .cmdG .cgLift.busy{opacity:.6;cursor:default}
-  .cmdG .cgRally{flex:none;align-self:center;width:38px;height:38px;border-radius:9px;border:1px solid var(--glass);background:rgba(70,240,106,.13);color:#8ef2a8;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}   /* 랠리 버튼(정사각 아이콘 카드) */
-  .cmdG .cgRally svg{width:24px;height:24px;display:block}
-  /* 🎛 UI 조작 아이콘(투명 배경 계열) — 판이 없으므로 버튼 면이 색을 낸다. 크기는 옛 인라인 SVG와 같게. */
-  .cmdG .uiIco{width:24px;height:24px;display:block;object-fit:contain}
+  /* 칸 = 스킬 칸(.hbSk)과 같은 값 — 완전 검정 면 + 붉은 알파 그라데 테두리 + 금속 링 + 모서리 컷 7px.
+     ⚠ 크기만 38px 로 줄였다(스킬은 46px). 이건 판 '밖'에 떠 있어서 46px 면 전장을 그만큼 더 가린다. */
+  .cmdG .cgLift,.cmdG .cgRally,.cmdG .cgSelAll{flex:none;width:38px;height:38px;padding:0;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;color:#ececec;
+    border:1px solid transparent;border-radius:var(--r-bar);
+    clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
+    background:var(--bpFace) padding-box,var(--trayEdge) border-box,var(--metal-ring-n) border-box;
+    box-shadow:0 0 7px -5px rgba(255,59,59,.35)}
+  .cmdG .cgLift svg,.cmdG .cgRally svg,.cmdG .cgSelAll svg{width:21px;height:21px;display:block}
+  /* 켜짐(랠리 지정 중 · 부양 중) = 붉은 발광. 스킬 칸의 '지금 도는 중'과 같은 신호다 */
+  .cmdG .cgLift.on,.cmdG .cgRally.on{background:var(--bpFace) padding-box,var(--trayEdgeOn) border-box,var(--metal-ring-n) border-box;
+    box-shadow:0 0 9px -3px rgba(255,59,59,.65)}
+  .cmdG .cgLift:active,.cmdG .cgRally:active,.cmdG .cgSelAll:active{transform:translateY(1px)}
+  .cmdG .cgLift.busy{opacity:.45;cursor:default}
+  /* 일꾼 수(S3안) — **넓은 칸 하나**다. 세 칸으로 늘어놓으면 트레이가 5칸이 되어
+     숫자 조정이 랠리·부양보다 커 보였다. 껍데기는 위 칸과 같고 안쪽만 구분선으로 나눈다. */
+  .cmdG .cgGasAuto{flex:none;width:76px;height:38px;display:flex;align-items:stretch;gap:0;padding:0;overflow:hidden;
+    border:1px solid transparent;border-radius:var(--r-bar);
+    clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
+    background:var(--bpFace) padding-box,var(--trayEdge) border-box,var(--metal-ring-n) border-box;
+    box-shadow:0 0 7px -5px rgba(255,59,59,.35)}
+  /* 🎛 UI 조작 아이콘(투명 배경 계열) — 판이 없으므로 버튼 면이 색을 낸다 */
+  .cmdG .uiIco{width:21px;height:21px;display:block;object-fit:contain}
   .cmdG .cgTrash .uiIco{width:13px;height:13px}
-  .cmdG .cgRally.on{border-color:#46f06a;background:rgba(70,240,106,.24);box-shadow:0 0 6px rgba(70,240,106,.45)}
-  .cmdG .cgRally:active{background:rgba(70,240,106,.32)}
-  .cmdG .cgSelAll{flex:none;align-self:center;width:38px;height:38px;border-radius:9px;border:1px solid var(--glass);background:rgba(92,214,255,.13);color:#a9e4ff;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}   /* 👥 화면 내 같은 종류 전체 지정(정사각 아이콘 카드) */
-  .cmdG .cgSelAll svg{width:23px;height:23px;display:block}
-  .cmdG .cgSelAll:active{background:rgba(92,214,255,.3);border-color:var(--ca)}
   .cmdG .cgTrash{display:flex;align-items:center;justify-content:center;width:100%;margin-top:auto;color:#6d7787;cursor:pointer;padding:0}   /* 🗑 종류 지정 해제 — 파괴 동작이라도 평소엔 초상보다 약해야 한다 */
   .cmdG .cgTrash svg{width:13px;height:13px;display:block}
   .cmdG .cgTrash:active{color:var(--neon);transform:scale(.88)}
   .cmdG .cgProg .pl .pt{color:var(--caL);font:800 9px/1 var(--font-num);margin-left:4px;letter-spacing:.2px}   /* 생산 중 옆 남은시간(작게) */
-  .cmdG .cgGasAuto .gaBtn{width:23px;height:24px;flex:none;border-radius:6px;border:1px solid rgba(120,232,150,.4);background:rgba(120,232,150,.14);color:#c7f5d6;font:800 16px/1 sans-serif;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
-  .cmdG .cgGasAuto .gaBtn:active{background:rgba(70,240,106,.32)}
-  .cmdG .cgGasAuto .gaN{min-width:32px;padding:0 5px;text-align:center;font:800 15px/1 var(--font-num);color:#eafff0}   /* 숫자 구역 가로로 여유 */
+  /* ⚠ `.gaBtn` 은 전역에도 같은 이름의 다른 버튼이 있다 — 반드시 `.cmdG .cgGasAuto` 아래로 좁혀 쓸 것 */
+  .cmdG .cgGasAuto .gaBtn{flex:none;width:22px;height:100%;padding:0;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    background:none;border:0;border-radius:0;color:#c3cad3;font:700 15px/1 var(--font-num)}
+  .cmdG .cgGasAuto .gaBtn:first-of-type{border-right:1px solid rgba(255,255,255,.10)}
+  .cmdG .cgGasAuto .gaBtn:last-of-type{border-left:1px solid rgba(255,255,255,.10)}
+  .cmdG .cgGasAuto .gaBtn:active{background:rgba(255,255,255,.07)}
+  .cmdG .cgGasAuto .gaN{flex:1;min-width:0;height:100%;display:flex;align-items:center;justify-content:center;
+    padding:0;text-align:center;font:800 16px/1 var(--font-num);color:#ececec}
   .cmdG .cgBody{display:flex;gap:8px;align-items:stretch;flex:1;min-height:0}
   /* 좌측 보조 정보 */
   .cmdG .cgInfo{flex:0 0 31%;max-width:158px;min-width:110px;display:flex;flex-direction:column;gap:4px;padding:7px 8px;overflow:hidden;
@@ -1524,8 +1552,10 @@
   .cmdG .cgUnits::-webkit-scrollbar,.cmdG .cgStats.cgScr::-webkit-scrollbar{width:4px;height:4px}
   .cmdG .cgUnits::-webkit-scrollbar-thumb,.cmdG .cgStats.cgScr::-webkit-scrollbar-thumb{background:rgba(120,140,170,.4);border-radius:3px}
   .cmdG .cgUnits::-webkit-scrollbar-track,.cmdG .cgStats.cgScr::-webkit-scrollbar-track{background:transparent}
-  .cmdG .cgBack{width:30px;height:30px;border-radius:8px}   /* ↩ 전체(소프트선택 복귀) — cgLift 변형(왼쪽 유턴 아이콘) */
-  .cmdG .cgBack svg{width:18px;height:18px}
+  /* ↩ 전체(소프트선택 복귀) — `.cgLift` 변형이라 트레이 칸 껍데기를 그대로 물려받는다.
+     ⚠ 자리는 머리줄 안이다(트레이가 아니다) — 되돌아가기는 '지금 보는 프로필'에 딸린 것이라 제목 옆이 맞다. */
+  .cmdG .cgBack{width:30px;height:30px}
+  .cmdG .cgBack svg,.cmdG .cgBack .uiIco{width:17px;height:17px}
   .cmdG .cgProg{margin-top:1px} .cmdG .cgProg .pl{display:flex;justify-content:space-between;font-size:8.5px;color:var(--cgMuted);margin-bottom:2px} .cmdG .cgProg .pl b{color:var(--caL);font-family:var(--font-num);font-size:10px}
   .cmdG .cgBar{height:6px;border-radius:3px;background:rgba(0,0,0,.55);overflow:hidden;box-shadow:inset 0 0 4px rgba(0,0,0,.7)}
   .cmdG .cgBar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,color-mix(in srgb,var(--ca) 55%,#000),var(--ca));box-shadow:0 0 7px var(--caG);transition:width .12s linear}
@@ -1861,8 +1891,8 @@
   .lbName{flex:0 1 auto;font-size:var(--fs-lg);font-weight:700;color:#e6e2e2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.15}
   .lbStat{flex:0 0 auto;font-size:var(--fs-xs);color:#9aa6b4;letter-spacing:.2px;white-space:nowrap}
   .lbStat.ok{color:var(--ok)}.lbStat.host{color:var(--hud)}
-  .lbEmpty{font-size:var(--fs-sm);color:#7a8696}
-  /* 대기실 종족 칩(카드 내부 우측) — 내 것=누르면 종족 팝업, 봇=읽기전용, 잠금(네모네모 등)=비활성 */
+  /* (.lbEmpty 는 위 빈 자리 묶음에서 이미 정의 — 병합이 남긴 동일 중복을 지웠다) */
+  /* 대기실 종족 칩(카드 내부 우측) — 내 것=읽기전용 표시(종족 입구는 공용 탭 띠 하나) */
   /* 종족 칩 — 드롭다운 배너와 같은 SC 톤(각진 클립·상단 네온 바·종족색 보더) */
   /* 종족 칩 = 라운드 글래스 + 종족색 점(대기실 패널·통일 톤). 각진 클립 제거 · 콤팩트(슬롯 높이 유지) */
   /* 종족 칸 = 전부 같은 크기 · 웜다크 그라데이션(주변 카드 톤) · 구분은 왼쪽 종족색 상태등으로만 */
@@ -2063,30 +2093,7 @@
   .raceOpt .roGo{flex:none;width:15px;height:15px;color:#7a8593}
   .raceOpt.on .roNm{color:#fff}
   .raceOpt.on{border-color:var(--rc42,var(--glass-edge))}
-  /* 인라인 드롭다운 메뉴(트리거 아래로 펼쳐짐) — 모달 X */
-  /* SC 우주전쟁식 인라인 드롭다운 — 각진 메탈 프레임 + 시안 네온 엣지 + 스캔라인 */
-  /* 종족 드롭다운 = 라운드 글래스 패널 + 종족색 점 칩(대기실·통일 톤). 각진 클립·시안 네온 제거 */
-  /* 종족 드롭다운 = 슬롯 메뉴와 동일한 각진 패널 + 은은한 테두리(네온 발광 억제) */
-  #raceMenu{position:fixed;z-index:60;display:flex;flex-direction:row;gap:0;padding:5px 4px;border-radius:0;
-    background:linear-gradient(180deg,rgba(24,20,22,.97),rgba(9,8,10,.98));border:none;
-    clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px);
-    box-shadow:0 0 0 1px var(--shade),0 10px 26px -10px #000}
-  #raceMenu::before{content:'';position:absolute;inset:0;padding:1px;pointer-events:none;z-index:0;
-    background:linear-gradient(155deg,rgba(255,90,90,.3),rgba(140,140,150,.13) 52%,rgba(255,90,90,.18));
-    clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px);
-    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
-  #raceMenu>*{position:relative;z-index:1}
-  #raceMenu.hide{display:none}
-  /* 안쪽 박스 없이 — 세로 구분선으로만 구역 분리(창 속 창 느낌 제거) */
-  #raceMenu .rmOpt{position:relative;flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:5px;padding:5px 12px;cursor:pointer;text-align:center;
-    background:none;border:none;border-radius:0;border-right:1px solid rgba(255,255,255,.085)}
-  #raceMenu .rmOpt:last-child{border-right:none}
-  #raceMenu .rmOpt .rmDot{flex:none;width:6px;height:6px;border-radius:50%;background:var(--rc,#8a93a0);opacity:.45}
-  #raceMenu .rmOpt.on .rmDot{opacity:1;box-shadow:0 0 4px var(--rc65,transparent)}
-  #raceMenu .rmOpt:active{background:rgba(255,255,255,.05)}
-  #raceMenu .rmOpt .rmNm{position:relative;font-family:var(--font-num);font-size:10px;font-weight:800;letter-spacing:.3px;color:#94a1b0;white-space:nowrap}   /* 미선택=흐리게 */
-  #raceMenu .rmOpt.on .rmNm{color:#fff}
-  /* 솔로 난이도 팝업 안 종족 드롭다운 트리거 */
+  /* (인라인 종족 드롭다운 #raceMenu 계열 CSS 는 2026-08-19 삭제 — JS·마크업과 함께. 종족 입구 = 공용 탭 띠) */
   /* .raceTrig(솔로 종족 트리거)는 2026-08-18 삭제 — 항상 hide 였고 onclick 이 없는 함수(openSoloRace)를 불렀다.
      종족은 난이도 선택 뒤 별도 팝업(#raceSelPanel)이 맡는다. */
   .pwRoomName{font-size:var(--fs-xl);font-weight:700;color:#cfe0ec;text-align:center;margin-bottom:14px}
@@ -3174,7 +3181,7 @@
   .hbSkWrap{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
   .hbTray{--hmAccRGB:255,59,59;   /* 업그레이드 패널과 같은 계열 — 알파를 얹어 쓰므로 색이 아니라 채널 셋으로 둔다 */
     display:flex;align-items:stretch;gap:4px;padding:4px;
-    background:var(--hmPanel);border:1px solid var(--metal-edge);border-radius:var(--r-bar);
+    background:var(--trayPanel);border:1px solid var(--metal-edge);border-radius:var(--r-bar);   /* 게임 안 조작 트레이(.cgTopOut)와 같은 토큰 */
     clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
   /* 칸 — .hmUp 과 같은 값(완전 검정 면 · 붉은 알파 그라데 테두리 · 모서리 컷 7px) */
   .hbSk{position:relative;flex:0 0 auto;width:46px;height:46px;
@@ -4851,9 +4858,6 @@
         <div class="cpBtns"><button class="actBtn" onclick="closeRaceSelect()">취소</button></div>
       </div>
     </div>
-    <!-- 종족 드롭다운(인라인) — 트리거(대기실 칩/솔로 트리거) 아래로 펼쳐짐 -->
-    <div id="raceMenu" class="hide"></div>
-
     <!-- 로그아웃 확인 — 기존 .cpCard 다이얼로그 구조 재사용 -->
     <div id="logoutPanel" class="hide">
       <div class="cpCard">
@@ -6500,7 +6504,6 @@ function profRebDone(c){ c=c||CHAR(); return Math.max(0,(c&&c.reb)|0); }      //
 function profRebNextLv(c){ c=c||CHAR(); const n=profRebDone(c);
   return (n<PROF_REB_LEVELS.length) ? PROF_REB_LEVELS[n] : 0; }
 function profRebGrant(N){ return PROF_REB_RP0 + PROF_REB_RP1*Math.max(1,N|0); }
-function profRebStep(lv, c){ return profCanRebirth(c) ? (profRebDone(c)+1) : 0; }   // '이번이 몇 회차인가'
 // ⚠ rebLvMax = 이미 환생에 쓴 최고 레벨. 같은 레벨에서 두 번 환생하는 것을 막는다.
 // 🔑 환생 관문 — 2회차부터 **유즈맵 전용 재화(포인트)** 를 요구한다.
 //   설계: 평소엔 강제가 없고(1회차 무료), 사냥터 최상위 축을 끝까지 밀려면 결국 유즈맵을 하게 된다.
@@ -8186,7 +8189,6 @@ function rpFree(c){ c=c||((typeof CHAR==='function')?CHAR():null);
 function rpTotal(c){ c=c||((typeof CHAR==='function')?CHAR():null);
   return c ? ((c.rp|0) + profRecordRp(c)) : 0; }
 function rpPts(k, c){ return Math.max(0, rpBag(c)[k]|0); }
-function rpStep(k){ return lpDef(k) ? RP_STEP : 0; }
 // 선형 — 레벨 포인트와 같은 형태라 여러 축에 나눠 찍어도 총 전투력은 같다(함정 빌드가 없다).
 function rpMul(k, c){ return Math.pow(1+RP_STEP, rpPts(k,c)); }
 function rpAdd(k, n){ const c=CHAR(), S=lpDef(k); if(!c||!S) return 0;
@@ -10468,10 +10470,8 @@ function _mgPanel(k, note){ const M=MG[k], on=M.on(), mx=M.max();
     M.owned().length+M.unit, _mgGrid(k), hint+_mgPickSheet()+_mgMixSheet()); }
 function _shopPetPanel(note){ return _mgPanel('pet', note||'펫을 장착하면 <b>코인·공격·체력 %</b>가 오릅니다'); }
 function _gearAllyPanel(){ return _mgPanel('ally', '동료는 <b>동료 뽑기권</b>으로 영입합니다 — 사냥터 좌상단 동료 아이콘'); }
-function profDoBuyPetTicket(){ doBuyTicket('pet'); }
-function profDoPetEquip(id){ if(profPetEquip(id)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); } }
-// 영입·뽑기는 동료 팝업, 아군 전체 업그레이드는 하단 패널 '동료' 구역 — 서로 다른 화면이다
-function gearGoHire(){ openHome(); hbOpenMates(); }
+// (profDoBuyPetTicket · profDoPetEquip · gearGoHire 는 2026-08-19 삭제 — 참조 0회.
+//  펫 뽑기권 구매는 onclick 의 doBuyTicket('pet'), 펫 장착은 _mgPanel 의 toggle→profPetEquip 이 실제 경로다.)
 function refreshTownPanel(){ if(gearOpen()){ renderGear(); return; }              // 정비 전용 화면이 열려 있으면 그쪽을 갱신
   if(shopOpen()){ renderShop(); return; }   // 상점 전용 화면이 열려 있으면 그쪽을 갱신
   const body=document.getElementById('tpBody'), z=TOWN_PANELS[_twZone]; if(!body||!z) return;
@@ -10630,7 +10630,6 @@ function profUseGearTicket(){ const p=PROF();
 function profDoGacha(){ const res=profPetRoll(); if(!res) return; if(typeof playSfx==='function') playSfx('ui_open');
   const P=PROF_PETS[res.id]; renderTownBar(); refreshTownPanel();
   showTownToast((res.isNew?'🎉 ':'♻ ')+GACHA_TIERS[res.tier].name+' '+P.name+(res.isNew?' 획득!':' — 중복 → 강화 재료')); }
-function profDoPetEquip(id){ if(profPetEquip(id)){ if(typeof playSfx==='function') playSfx('ui_open'); renderTownBar(); refreshTownPanel(); } }
 // ── 장비창(위=아바타+슬롯 / 아래=가방) ──
 // 아바타 = SF 파워아머 실루엣(자체 제작). 얼굴은 그리지 않고 바이저로 대신한다.
 // 부위마다 닫힌 외곽선 + 배경색 채움으로 겹침을 가리고, 먼 것부터(다리 → 골반 → 몸통 → 팔 → 어깨판 → 투구) 쌓는다.
@@ -17233,25 +17232,8 @@ function openRacePicker(current, onPick){ _racePickCb=onPick||null;
       b.onclick=()=>pickRace(k); box.appendChild(b); }); }
   const p=document.getElementById('raceSelPanel'); if(p){ p.classList.remove('hide'); if(typeof fxPop==='function') fxPop(p.querySelector('.cpCard')); } if(typeof playSfx==='function') playSfx('ui_open'); }
 function openRaceSelect(){ openRacePicker(_selRace, function(k){ _selRace=k; _startSoloNow(); }); }   // 솔로: 난이도 후 종족 확정 → 게임 시작
-// ── 인라인 종족 드롭다운(모달 아님): 트리거 요소 아래로 목록이 펼쳐짐 ──
-let _raceMenuCb=null;
-function showRaceMenu(anchor, current, onPick){ const menu=document.getElementById('raceMenu'); if(!menu||!anchor) return; _raceMenuCb=onPick||null;
-  menu.innerHTML='';
-  STK_RACE_ORDER.forEach(function(k){ const R=STK_RACES[k]; const o=document.createElement('div'); o.className='rmOpt'+(k===current?' on':''); o.setAttribute('style', raceVars(R.col));
-    o.innerHTML='<span class="rmDot"></span><span class="rmNm">'+R.name+'</span>';   // 종족색 점 + 이름(괄호 서브명 제거)
-    o.onclick=function(e){ if(e) e.stopPropagation(); const cb=_raceMenuCb; hideRaceMenu(); if(cb) cb(k); };
-    menu.appendChild(o); });
-  menu.classList.remove('hide');
-  const r=anchor.getBoundingClientRect(), mw=menu.offsetWidth, mh=menu.offsetHeight, vw=window.innerWidth, vh=window.innerHeight, M=8;
-  let left=r.right-mw;                            // 칩 우측 끝에 메뉴 우측 정렬(가로 메뉴가 화면 밖으로 안 나가게)
-  left=Math.max(M, Math.min(left, vw-M-mw));      // 좌우 화면 안으로 하드 클램프
-  let top=r.bottom+3; if(top+mh>vh-M) top=r.top-3-mh;   // 아래 공간 없으면 위로 펼침
-  top=Math.max(M, Math.min(top, vh-M-mh));
-  menu.style.left=left+'px'; menu.style.top=top+'px';
-  setTimeout(function(){ document.addEventListener('pointerdown', _raceMenuOutside, true); }, 0);
-}
-function _raceMenuOutside(e){ const menu=document.getElementById('raceMenu'); if(menu && !menu.contains(e.target)) hideRaceMenu(); }
-function hideRaceMenu(){ const menu=document.getElementById('raceMenu'); if(menu) menu.classList.add('hide'); document.removeEventListener('pointerdown', _raceMenuOutside, true); _raceMenuCb=null; }
+// (인라인 종족 드롭다운 showRaceMenu/hideRaceMenu/#raceMenu 는 2026-08-19 삭제 — 유일한 입구였던
+//  대기실 칩 경로(openLobbyRace)가 공용 탭 띠로 대체되면서 통째로 고아가 됐다.)
 function closeRaceSelect(){ popHide('raceSelPanel'); _racePickCb=null; }
 function pickRace(k){ if(!STK_RACES[k]) return; if(typeof playSfx==='function') playSfx('ui_confirm'); const cb=_racePickCb; _racePickCb=null; popHide('raceSelPanel'); if(cb) cb(k); }
 // 개인 플레이 난이도 선택 팝업(고르면 즉시 시작)
@@ -17424,7 +17406,6 @@ function setCpMax(m, silent){ m=Math.max(2,Math.min(8,m|0)); _createMax=m;
   if(g){ let h=''; for(let i=1;i<=8;i++){ h+='<button type="button" class="cpPc'+(i<=m?' on':'')+(i===m?' sel':'')
       +'" onclick="setCpMax('+i+')"'+(i<2?' disabled':'')+'>'+i+'</button>'; } g.innerHTML=h; }
   if(!silent && typeof playSfx==='function') playSfx('ui_toggle'); }
-function stepCpMax(d){ setCpMax(_createMax+d); }
 // 난이도 = 난이도 선택 화면(#soloDiffPanel)과 **같은 컴포넌트**: ◀ 이름 ▶ + 점 + 상세 판 + 무한 모드 줄.
 // ⛔ 여기에만 있는 난이도 UI 를 새로 만들지 말 것 — 두 화면이 어긋난다(옛 .cpDiffBtns pill 나열은 폐지).
 function renderCpDiff(){ const nav=document.getElementById('cpDiffStep'), det=document.getElementById('cpDiffInfo');
@@ -17968,8 +17949,8 @@ function startLobbyChat(){ stopLobbyChat();
 function stopLobbyChat(){ if(_lobbyChatT){ clearInterval(_lobbyChatT); _lobbyChatT=null; } }
 // 대기실 종족: 직스(컴퓨터가 싸운다) 맵에서만 활성. 그 외(네모네모 등)는 칸은 있되 잠금
 function lobbyRaceEnabled(){ return !!(_selMap && _selMap.cfg && _selMap.cfg.mode==='strike'); }
-function openLobbyRace(anchor){ if(!lobbyRaceEnabled()) return; const me=_lobbySlots.find(s=>s&&s.me); const cur=(me&&me.race)||_selRace||'terran';
-  showRaceMenu(anchor, cur, function(k){ setLobbyRace(k); }); }   // (구 경로) 칩 아래 드롭다운
+// (구 경로 openLobbyRace — 칩 아래 종족 드롭다운 — 는 2026-08-19 삭제. 종족 입구는 공용 탭 띠(setLobbyRace) 하나뿐이고,
+//  드롭다운 하위계(showRaceMenu/#raceMenu)도 이것이 유일한 입구여서 함께 걷어냈다.)
 // 머리줄 오른쪽 = 방 번호 + 배지 한 개. 팀전이면 대진(4 vs 4), 아니면 난이도.
 function renderLobbyHeadR(){ const rm=document.getElementById('lbRoom'); if(!rm) return;
   const priv=(_lobbyRoom&&_lobbyRoom.visibility==='private')?'🔒 ':'';

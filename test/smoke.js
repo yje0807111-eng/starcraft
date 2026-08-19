@@ -4904,6 +4904,20 @@ async function groupGame(){
       assert(r.width>0&&r.height>0,'조작 버튼 크기가 0');
       const hit=document.elementFromPoint(r.x+r.width/2, r.y+r.height/2);
       assert(hit && to.contains(hit),'조작 버튼이 잘려 안 보임(맨 위 요소: '+(hit?(hit.id||hit.className||hit.tagName):'없음')+')');
+      // 🎛 한 판 트레이(2026-08-19 · E+S3) — 사냥터 스킬 바와 같은 구조·같은 토큰
+      { const ts=getComputedStyle(to);
+        // ⚠ --trayPanel 이 :root 에 없으면 var() 가 무효가 되어 판이 통째로 사라진다(--hmPanel 함정)
+        assert(getComputedStyle(document.documentElement).getPropertyValue('--trayPanel').trim(),'--trayPanel 토큰이 :root 에 없음');
+        assert(ts.backgroundImage!=='none','조작 트레이에 판이 없음');
+        assert(ts.clipPath!=='none','조작 트레이에 모서리 컷이 없음');
+        const cell=to.querySelector('.cgSelAll,.cgRally,.cgLift');
+        if(cell){ const cs=getComputedStyle(cell), bg=cs.backgroundImage||'';
+          assert(cs.clipPath!=='none','조작 칸에 모서리 컷이 없음');
+          assert(parseFloat(cs.borderTopLeftRadius)<=3,'조작 칸이 덜 각짐: '+cs.borderTopLeftRadius);
+          // ⛔ 버튼마다 다른 색(초록·파랑·시안)으로 되돌아가면 여기서 잡힌다 — 테두리는 붉은 계열 하나뿐이다
+          assert(/rgba?\(255,\s*59,\s*59/.test(bg),'조작 칸 테두리가 붉은 계열이 아님: '+bg.slice(0,90));
+          const cy=[...bg.matchAll(/rgba?\((\d+),\s*(\d+),\s*(\d+)/g)].some(c=>+c[3]>+c[1]+40 && +c[2]>+c[1]+20);
+          assert(!cy,'조작 칸에 시안/파랑이 남아 있음(시안은 지금 선택된 것 전용): '+bg.slice(0,90)); } }
       // 아이콘 파일(ui/*.webp)이 실제로 있고 열린다 — 없으면 인라인 SVG 로 되돌아가 조용히 넘어간다
       const keys=Object.keys(UI_SVG), bad=[];
       await Promise.all(keys.map(kk=>new Promise(ok=>{ const im=new Image();
@@ -5960,6 +5974,13 @@ async function groupSandbox(){
       const H=head?head.getBoundingClientRect().height:0;
       if(g.querySelector('.cgHpsh .env')) bad.push(label+': 마나가 머리줄에 있음');
       if(head && head.querySelector('.cgGasAuto,.cgRally,.cgLift,.cgSelAll')) bad.push(label+': 조작 버튼이 머리줄 안');
+      // 일꾼 수는 **넓은 칸 하나**다(S3안) — 세 칸으로 늘어놓으면 트레이가 5칸이 되어 숫자 조정이 제일 커 보인다
+      { const ga=g.querySelector('.cgGasAuto');
+        if(ga){ const gs=getComputedStyle(ga), w=ga.getBoundingClientRect().width;
+          if(w<60||w>96) bad.push(label+': 일꾼 칸 폭 '+w.toFixed(0)+'px(넓은 칸 하나가 아님)');
+          if(gs.clipPath==='none') bad.push(label+': 일꾼 칸에 모서리 컷 없음');
+          const inner=[...ga.querySelectorAll('.gaBtn')].some(b=>getComputedStyle(b).backgroundImage!=='none');
+          if(inner) bad.push(label+': 일꾼 칸 안쪽 −/+ 가 또 판을 가짐(구분선만이어야 한다)'); } }
       if(to && to.getBoundingClientRect().bottom > g.getBoundingClientRect().top+0.5) bad.push(label+': 조작 버튼이 판 안');
       if(nm&&hp){ const nr=nm.getBoundingClientRect(), hr=hp.getBoundingClientRect();
         if(Math.min(nr.bottom,hr.bottom)-Math.max(nr.top,hr.top)<=0) bad.push(label+': 제목·HP 가 다른 줄');
