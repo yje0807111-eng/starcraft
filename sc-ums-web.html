@@ -1772,25 +1772,30 @@
     background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.13);font-size:10px;color:#7d8792}
   .lbRaceLk svg{width:12px;height:12px;flex:none}
   /* 슬롯 = 하나의 글래스 패널에 구분선 행(방찾기·방만들기 언어와 통일) · 8자리 넘치면 패널 내부 스크롤(채팅·버튼은 고정) */
-  /* 슬롯 = 8칸이 **스크롤 없이** 다 보여야 한다(대기실에서 제일 중요한 정보다).
-     ⚠ 행 높이를 키우면 그 순간 8번째가 잘린다 — 채팅이 남는 높이를 먹는 구조라 티가 안 나고 새어 나간다. */
-  .lbGrid{flex:0 0 auto;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:0;margin-bottom:9px;padding:1px 11px;border-radius:var(--r-bar);
+  /* 슬롯 판 = **높이가 고정**이다(2026-08-19).
+     ① 팀 유무와 상관없이 같은 높이여야 한다 — 팀전은 라벨 2줄이 더 들어가므로, 팀이 없으면 그만큼 행을 키워 메운다.
+     ② 정원이 줄어도 판은 그대로다 — 안의 행만 하나씩 사라진다(판이 같이 줄면 화면이 통째로 출렁인다).
+     ⚠ 그래서 행 높이는 이 식에서 역산한 값이다. 아무 값이나 넣으면 ①이 깨진다.
+        (팀전) 라벨 2×20 + 행 8×31 = 288  ·  (팀 없음) 행 8×36 = 288 */
+  .lbGrid{--lbRowH:36px;--lbRowTH:31px;--lbSepH:20px;--lbGridPad:1px;
+    flex:0 0 auto;height:calc(8*var(--lbRowTH) + 2*var(--lbSepH) + 2*var(--lbGridPad) + 2px);
+    overflow:hidden;display:flex;flex-direction:column;gap:0;margin-bottom:9px;padding:var(--lbGridPad) 11px;border-radius:var(--r-bar);
     background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.014));border:1px solid var(--metal-edge)}
   .lbGrid::-webkit-scrollbar{width:5px} .lbGrid::-webkit-scrollbar-thumb{background:rgba(120,140,170,.4);border-radius:3px}
-  .lbSlot{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:3px 2px;min-height:32px;position:relative;overflow:hidden;   /* 슬롯 높이 = 전 유즈맵 공통(오토배틀 기준) → 맵마다 플레이어·채팅 구역 크기 동일 */
+  .lbSlot{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:3px 2px;min-height:var(--lbRowH);position:relative;overflow:hidden;   /* 높이는 .lbGrid 의 식에서 나온 값 — 여기만 고치지 말 것 */
     background:none;border:none;border-bottom:1px solid rgba(255,255,255,.06);border-radius:0}
   .lbSlot:last-child{border-bottom:none}
   .lbSlot.me{background:rgba(255,255,255,.045)}
   /* 팀전 대기실 = 좌측 색 바 + 얇은 구분선 라벨 · 슬롯 최소높이를 낮춰 채팅 손실 최소화 */
-  .lbTeamSep{position:relative;height:20px;display:flex;align-items:center;pointer-events:none}
+  .lbTeamSep{position:relative;height:var(--lbSepH);flex:0 0 auto;display:flex;align-items:center;pointer-events:none}
   .lbTeamSep::before{content:'';position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(255,255,255,.08)}
   .lbTeamSep b{position:relative;padding-right:7px;font-size:9px;font-weight:800;letter-spacing:.5px;color:var(--tmC);background:#0e1219}
   .lbTeamSep.t1{--tmC:var(--tmC1)} .lbTeamSep.t2{--tmC:var(--tmC2)}
-  .lbGrid.teamed .lbSlot{min-height:31px;padding-top:2px;padding-bottom:2px}
+  .lbGrid.teamed .lbSlot{min-height:var(--lbRowTH);padding-top:2px;padding-bottom:2px}
   /* 팀맵도 슬롯 자체는 기존 대기실과 동일(번호=플레이어 색, 종족 칩 그대로) · 팀 신호는 좌측 바 + 얇은 라벨뿐 */
   .lbTeamSep b{background:transparent}
   .lbTeamSep::before{left:30px}
-  .lbGrid.teamed .lbTeamSep:first-child{height:20px}
+  /* (구 예외 .lbGrid.teamed .lbTeamSep:first-child{height:20px} 삭제 — 라벨 높이는 --lbSepH 하나로 고정, 높이 식의 항이다) */
   .lbSlot.swapWait{background:rgba(255,255,255,.06)}
   .lbSlot.swapWait .lbStat::after{content:' · 교체 요청 중';color:var(--txt-mute);font-weight:700}
   .lbGrid.teamed .lbSlot.empty{box-shadow:inset 3px 0 0 color-mix(in srgb,var(--tmC) 34%,transparent)}   /* 내 슬롯 = 은은한 하이라이트 */

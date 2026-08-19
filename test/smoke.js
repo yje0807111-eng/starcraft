@@ -2785,8 +2785,22 @@ async function groupLobby(){
             card=document.querySelector('#lobby .lbCard').getBoundingClientRect();
       assert(w.height <= card.height*0.28, '채팅이 너무 넓다: '+Math.round(w.height)+'px / 카드 '+Math.round(card.height)); }
     assert(/EASY/i.test($('lbRoom').textContent),'난이도 배지가 없음: '+$('lbRoom').textContent);
+    // ③ 슬롯 판 높이는 **고정**이다 — 팀 유무와 정원이 달라져도 같아야 한다
+    //    (팀전은 라벨 2줄이 더 들어가므로 팀이 없으면 행을 그만큼 키워 메운다)
+    const gridH=async(map,max)=>{ close(); await sleep(150);
+      _selMap=USEMAPS[map]; _lobbyMax=max; hideAppScreens(); openRooms(); await sleep(100);
+      openLobby({num:1234,name:'높이 확인',host:myNick(),startCount:2,joining:false,visibility:'public',diff:'easy',max:max});
+      await sleep(400);
+      const g=$('lbGrid');
+      return { h:Math.round(g.getBoundingClientRect().height), ov:g.scrollHeight-g.clientHeight,
+               n:g.querySelectorAll('.lbSlot').length }; };
+    const t8=await gridH('cpu',8), c8=await gridH('nemo',8), c4=await gridH('nemo',4), t4=await gridH('cpu',4);
+    assert(t8.h===c8.h,'팀 유무로 슬롯 판 높이가 달라짐: 팀전 '+t8.h+' vs 협동 '+c8.h);
+    assert(c8.h===c4.h && t8.h===t4.h,'정원이 줄자 슬롯 판이 같이 줄었다: '+c8.h+'→'+c4.h+' / '+t8.h+'→'+t4.h);
+    assert(c4.n===4 && t4.n===4,'정원이 줄었는데 행이 안 사라짐');
+    [t8,c8,c4,t4].forEach(x=>assert(x.ov<=0.5,'슬롯 판이 스크롤됨(높이 식이 안 맞는다)'));
     close(); await sleep(150); openMapSelect(); await sleep(80);
-    return '오토배틀 종족 '+STK_RACE_ORDER.length+'칸 · 네모네모 잠김 ok'; });
+    return '종족 '+STK_RACE_ORDER.length+'칸 · 잠김 ok · 슬롯 판 '+t8.h+'px 고정'; });
   // ══ 방 만들기 — 전체 화면 · 난이도는 스테퍼 · 오토배틀은 프리셋/사용자 지정 ══
   await step('방 만들기: 전체 화면 · 난이도 스테퍼 · 대전 설정이 실제 cfg 로 간다', async ()=>{
     skipIf(typeof createRoom!=='function','방 만들기 없음');
