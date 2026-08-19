@@ -5056,7 +5056,31 @@ async function groupGame(){
       STK=mkSTK(0,1000,1); G.phase='won'; const win=umProgress();
       STK=mkSTK(0,1000,1); G.phase='lost'; const lose=umProgress();
       assert(win-lose>0.4,'승패 가중이 너무 작음: '+win+' vs '+lose);
-      return '앵커 ok · 네모/오토배틀 진행도 ok';
+      // ⑥ 난이도 = 한 번씩 깨는 사다리 — 칸마다 적 체력 정확히 ×2(옛 FINAL 360 같은 벽을 두지 않는다)
+      { const o=DIFFICULTY_ORDER;
+        for(let i=1;i<o.length;i++){ const r=DIFFICULTY[o[i]].enemyHp/DIFFICULTY[o[i-1]].enemyHp;
+          assert(Math.abs(r-2)<0.01, o[i-1]+'→'+o[i]+' 가 ×2 가 아님: ×'+r.toFixed(2)); } }
+      // ⑦ 첫 클리어 = 맵×난이도 1회성 · ⚠ 상한이 없으면 '늦게 깰수록 이득'이 되어 유즈맵을 미루게 된다
+      { const keepClear=PLAYER_META.umClear; PLAYER_META.umClear={};
+        try{
+          p.hunt.rate=1e9;  const big=umFirstRw('normal').pcoin;
+          p.hunt.rate=1e15; const huge=umFirstRw('normal').pcoin;
+          assert(big===huge,'첫 클리어 보상에 상한이 없음(늦게 깰수록 이득): '+big+' → '+huge);
+          p.hunt.rate=0.2;  const small=umFirstRw('normal').pcoin;
+          assert(small>0 && small<big,'상한 미만일 때 실제 시급을 안 따라감: '+small+' vs '+big);
+          assert(umFirstClaim('nemo','normal'),'첫 클리어인데 보상이 없음');
+          assert(!umFirstClaim('nemo','normal'),'첫 클리어 보상이 두 번 나옴');
+          assert(umFirstClaim('nemo','hard'),'같은 맵 다른 난이도가 막힘');
+          assert(umFirstClaim('cpu','normal'),'다른 맵 같은 난이도가 막힘');
+        } finally { PLAYER_META.umClear=keepClear; } }
+      // ⑧ ⚠ 오토배틀도 앵커 보상을 받는다 — _runSummary 의 직스 분기가 먼저 return 하면 통째로 못 받는다
+      { G=newGame(); G.strike=true; G.phase='won'; G.round=5; STK={ me:{gold:0, earned:1000, kills:3, units:[]}, t:120, round:10 };
+        p.hunt.rate=1; p.pcoin=0;
+        const sum=_runSummary();
+        assert(sum && sum.strike,'직스 요약이 아님');
+        assert(sum.prof && sum.prof.pc>0,'오토배틀이 앵커 보상을 못 받음(직스 분기 조기 return)');
+        assert(p.pcoin>0,'오토배틀 보상이 실제로 지급되지 않음'); }
+      return '앵커 ok · 진행도 ok · 난이도 ×2 · 첫 클리어 상한·1회성 ok';
     } finally { G=keepG; MAP=keepMap; if(typeof STK!=='undefined') STK=keepSTK;
       p.pcoin=keepPc; p.gas=keepGas; p.hunt=keepHunt; } });
 }
