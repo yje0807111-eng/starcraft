@@ -4858,6 +4858,16 @@ async function groupGame(){
       { const n=[...document.querySelectorAll('#btSheetBody .cgSlot')].map(e=>{ const t=e.querySelector('.cgName');
           return t?t.textContent.trim():(e.classList.contains('empty')?'':'?'); });
         assert(n[0]==='공격력' && n[1]==='체력' && n[3]==='광산','강화 칸 자리가 다름: '+JSON.stringify(n)); }
+      // 아이콘은 사냥터 업그레이드 파일을 그대로 빌린다(뜻이 같으면 새로 만들지 않는다)
+      { const src=[...document.querySelectorAll('#btSheetBody .cgSlot .cgPro img')].map(e=>e.getAttribute('src'));
+        assert(src.some(x=>/up_melee_atk/.test(x)),'공격력이 사냥터 아이콘을 안 씀: '+JSON.stringify(src));
+        assert(src.some(x=>/up_carapace/.test(x)),'체력이 사냥터 아이콘을 안 씀: '+JSON.stringify(src)); }
+      // ⚠ 우상단 배지가 초상 이미지에 가려지면 안 된다 — 둘 다 .cgPro 형제/자식이라 z-index가 같으면 이미지가 이긴다.
+      //   ⚠ 판 위에 로딩 오버레이가 떠 있을 수 있으니 시트 안쪽 요소만 추려서 본다.
+      { const host=$('btSheetBody'), b=host.querySelector('.cgSlot .cgMeta'); skipIf(!b,'배지 없음');
+        const r=b.getBoundingClientRect();
+        if(r.width>2){ const top=document.elementsFromPoint(r.left+r.width/2, r.top+r.height/2).find(e=>host.contains(e));
+          assert(top && (top===b || b.contains(top)),'배지가 초상 이미지에 가려짐: '+(top?(top.className||top.tagName):'none')); } }
       // ③ 특수무기 = [‹][구입][사용] · 구입 그리드는 표 그대로
       strikeSwitchTab('Upgrade'); await sleep(160);
       { const c=cells(); assert(c[0].classList.contains('navBk'),'특수무기에 뒤로가기 칸이 없음');

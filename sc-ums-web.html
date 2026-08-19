@@ -1578,7 +1578,9 @@
   .cmdG .cc{display:inline-flex;align-items:center;gap:1px;font:800 10px/1 var(--font-num);font-variant-numeric:tabular-nums}
   .cmdG .cc.cr{color:var(--cgCr)} .cmdG .cc.en{color:var(--cgEn)} .cmdG .cc.hp{color:#ff8a8a}   /* 스킬 HP 코스트(아드레날린) */
   .cmdG .cgMeta{position:absolute;top:5px;right:5px;display:inline-flex;align-items:center;gap:1px;font:800 8.5px/1 var(--font-num);
-    color:var(--cgPop);background:rgba(10,12,20,.72);border:1px solid rgba(200,182,255,.3);border-radius:4px;padding:2px 3px;font-variant-numeric:tabular-nums;z-index:1}
+    color:var(--cgPop);background:rgba(10,12,20,.72);border:1px solid rgba(200,182,255,.3);border-radius:4px;padding:2px 3px;font-variant-numeric:tabular-nums;z-index:2}
+  /* ⚠ z-index 2 인 이유: 배지는 .cgPro 의 '형제'인데 초상 이미지(.icoImg)도 z-index 1 이다.
+     같은 층이면 트리 순서가 늦은 초상이 이겨 배지가 통째로 가려진다(생성 아이콘을 쓰는 카드에서 실제로 그랬다). */
   .cmdG .cgMeta.lv{color:var(--caL);border-color:var(--caS)}
   .cmdG .cgSlot.sel{border-color:var(--ca);box-shadow:0 0 13px -2px var(--caG),inset 0 0 10px rgba(0,0,0,.35)}
   .cmdG .cgSlot.sel .cgPro{box-shadow:0 0 9px -2px var(--caG)}
@@ -21026,14 +21028,16 @@ const STK_BOMB_COST=150, STK_BOMB_DMG=520, STK_BOMB_R=520;   // 폭탄: 비용/�
 const STK_EMP_DUR=3.5;                       // EMP 정지 시간(초)
 const STK_HEAL_F=0.35;                       // 재생 필드 회복량(최대 체력 비율)
 const STK_ORBIT_DMG=780, STK_ORBIT_R=760;    // 궤도 포격: 폭탄보다 1.5× 피해 · 1.46× 반경
+// `sk` = assets/icons/skills/sk_<sk>.webp — 뜻이 같은 스킬 아이콘을 그대로 빌린다(파일을 복사하지 말 것).
+//   파일이 없으면 _icoFail 이 ico 이모지로 되돌리므로, 아이콘을 나중에 넣어도 칸이 비지 않는다.
 const STK_WEAPONS=[
-  { k:'bomb',  name:'폭탄',      ico:'💣', cls:'ic-danger', cost:STK_BOMB_COST, cap:3,
+  { k:'bomb',  name:'폭탄',      ico:'💣', sk:'bomb',    cls:'ic-danger', cost:STK_BOMB_COST, cap:3,
     desc:'가장 밀집한 적 무리에 투하 — 반경 안 광역 피해' },
-  { k:'emp',   name:'EMP',       ico:'⚡', cls:'ic-info',   cost:120, cap:3,
+  { k:'emp',   name:'EMP',       ico:'⚡', sk:'emp',     cls:'ic-info',   cost:120, cap:3,
     desc:'적 전군을 '+STK_EMP_DUR+'초 멈춘다 — 피해는 없다' },
-  { k:'orbit', name:'궤도 포격', ico:'☄',  cls:'ic-danger', cost:240, cap:2,
+  { k:'orbit', name:'궤도 포격', ico:'☄',  sk:'orbital', cls:'ic-danger', cost:240, cap:2,
     desc:'폭탄보다 넓고 강하게 — 가장 밀집한 곳을 때린다' },
-  { k:'heal',  name:'재생 필드', ico:'✚',  cls:'ic-gold',   cost:110, cap:3,
+  { k:'heal',  name:'재생 필드', ico:'✚',  sk:'heal',    cls:'ic-gold',   cost:110, cap:3,
     desc:'내 전군의 체력을 '+Math.round(STK_HEAL_F*100)+'% 회복한다' },
 ];
 const STK_WPN=k=>STK_WEAPONS.find(w=>w.k===k)||null;
@@ -22262,19 +22266,21 @@ function _stkLv(cur,max){ return (cur>=max)?'MAX':(cur+'/'+max); }   // 카드 �
 // 칸 자리: [공격력][체력][빈칸][광산] — 유닛 강화가 앞, 경제(광산)는 끝 칸
 function _stkUpgModel(){ const S=STK, me=S.me, gold=Math.floor(me.gold||0);
   const items=[];
-  for(const kv of [['atk','공격력','⚔'],['hp','체력','❤']]){
+  // 아이콘은 사냥터 업그레이드(HB_UPG)와 **같은 파일을 빌린다** — 뜻이 같으면 새로 만들지 않는다.
+  for(const kv of [['atk','공격력','⚔','up_melee_atk'],['hp','체력','❤','up_carapace']]){
     const k=kv[0], lv=(k==='atk'?me.atkLv:me.hpLv), cost=strikeUpCost(k,lv), full=(lv>=10);
-    items.push({ pro:pIco(kv[2],'ic-gold'), sn:kv[1], cr:(full?0:cost), tr:_stkLv(lv,10), metaCls:'lv', tip:k,
+    items.push({ pro:_icoImg('upgrades',kv[3],kv[2]), sn:kv[1], cr:(full?0:cost), tr:_stkLv(lv,10), metaCls:'lv', tip:k,
       state:(full||gold<cost)?'dim':'on', act:full?'':('onclick="strikeUpg(\''+k+'\')"')+_techTipAttr('sup',k) }); }
   items.push({state:'empty'});
-  items.push({ pro:pIco('⛏','ic-gold'), sn:'광산', cr:me.mineCost, tr:_stkLv(me.mines||0, STK_MINE_CAP), metaCls:'lv',
+  items.push({ pro:_icoImg('upgrades','up_mine','⛏'), sn:'광산', cr:me.mineCost, tr:_stkLv(me.mines||0, STK_MINE_CAP), metaCls:'lv',
     state:((me.mines||0)>=STK_MINE_CAP||gold<me.mineCost)?'dim':'on', act:'onclick="strikeBuyMine()"'+_techTipAttr('sup','mine') });
   return { mode:'prod', compact:true, build:true, title:'강화', icon:pIco('🔧','ic-gold'), items:items,
     info:{ eb:'강화', hideName:true, desc:'수입 '+strikeIncome(me)+'/웨이브<br>카드를 길게 누르면 설명이 나옵니다.' } }; }
+function _stkWpnIco(w){ return w.sk ? _icoImg('skills','sk_'+w.sk, w.ico) : pIco(w.ico,w.cls); }   // 구입·사용이 같은 그림을 쓴다
 // 🛒 구입 — 표 그대로가 상점 칸이 된다(품목을 여기서 새로 적지 말 것)
 function _stkWpnBuyModel(){ const S=STK, me=S.me, gold=Math.floor(me.gold||0);
   const items=STK_WEAPONS.map(function(w){ const have=(me.wpn&&me.wpn[w.k])||0, full=(have>=w.cap);
-    return { pro:pIco(w.ico,w.cls), sn:w.name, cr:(full?0:w.cost), tr:_stkLv(have,w.cap), metaCls:'lv',
+    return { pro:_stkWpnIco(w), sn:w.name, cr:(full?0:w.cost), tr:_stkLv(have,w.cap), metaCls:'lv',
       state:(full||gold<w.cost)?'dim':'on', act:full?'':('onclick="strikeBuyWpn(\''+w.k+'\')"') }; });
   return { mode:'prod', compact:true, build:true, title:'특수무기 · 구입', icon:pIco('🛒','ic-gold'), items:items,
     info:{ eb:'구입', hideName:true, desc:'골드로 구입해 두고 <b>사용</b>에서 꺼내 쓴다.' } }; }
@@ -22283,7 +22289,7 @@ function _stkWpnBuyModel(){ const S=STK, me=S.me, gold=Math.floor(me.gold||0);
 function _stkWpnUseModel(){ const S=STK, me=S.me;
   const own=STK_WEAPONS.filter(w=>((me.wpn&&me.wpn[w.k])||0)>0);
   const items=STK_WEAPONS.map(function(w){ const have=(me.wpn&&me.wpn[w.k])||0;
-    return { pro:pIco(w.ico,w.cls), sn:w.name, tr:'×'+have, metaCls:'lv',
+    return { pro:_stkWpnIco(w), sn:w.name, tr:'×'+have, metaCls:'lv',
       state:have>0?'on':'dim', act:have>0?('onclick="strikeUseWpn(\''+w.k+'\')"'):'' }; });
   return { mode:'prod', compact:true, build:true, title:'특수무기 · 사용', icon:pIco('💥','ic-danger'), items:items,
     info:{ eb:'사용', hideName:true,

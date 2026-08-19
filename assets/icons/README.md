@@ -187,6 +187,8 @@ const SKILL_ICO={ nuke:'bomb' };
 | `upgrades/` | `up_<키>.webp` | `UPG_ICO` — 연구 73종이 23장을 공유 |
 | `buildings/` | `bld_<키>.webp` | `TECH_TREE` 건물 키 |
 | `auto/` | `auto_<키>.webp` | `AUTO_SHEET_DEFS` — unit·combine·energy·bossdeploy·place·rally |
+| `upgrades/` | `up_mine.webp` | 오토배틀 **강화 > 광산** — `UPG_ICO` 를 안 거치고 `_icoImg('upgrades','up_mine')` 로 직접 부른다 |
+| `skills/` | `sk_orbital.webp` | 오토배틀 **특수무기 > 궤도 포격** — `STK_WEAPONS[].sk` |
 | 루트 | `res_<키>.webp` | `resIco()` — 미네랄·가스·젬·인구 |
 
 **폴백:** 파일이 없으면 `_icoFail()` 이 공용 라인 SVG(`pIco`)로 바꿔 넣는다.
@@ -201,3 +203,49 @@ const SKILL_ICO={ nuke:'bomb' };
 2. **시점이 옆칸과 다르면** → 블록을 잘못 골랐다(스킬에 B를 쓴 경우)
 3. **32px에서 뭉개지면** → 덩어리가 많은 것. SUBJECT를 줄여 다시 뽑는다
 4. **톤이 옆칸과 다르면** → 참조 판 이미지를 안 붙였거나 모델이 판을 다시 그린 것
+
+---
+
+# 오토배틀 하단 섹션 (2026-08-19)
+
+칸마다 그림이 어디서 오는지. **뜻이 같으면 새로 만들지 않고 빌린다.**
+
+| 칸 | 파일 | 상태 |
+|---|---|---|
+| 건설 > 본부·보급소·병영·훈련소 | `buildings/bld_*.webp` | 있음 |
+| 강화 > 공격력 | `upgrades/up_melee_atk.webp` | **빌림**(사냥터 `HB_UPG.atk` 와 같은 파일) |
+| 강화 > 체력 | `upgrades/up_carapace.webp` | **빌림**(사냥터 `HB_UPG.hp`) |
+| 강화 > 광산 | `upgrades/up_mine.webp` | **없음 — 새로 만들 것**(곡괭이 · 블록 **B** 사선) |
+| 특수무기 > 폭탄 | `skills/sk_bomb.webp` | 빌림 |
+| 특수무기 > EMP | `skills/sk_emp.webp` | 빌림 |
+| 특수무기 > 궤도 포격 | `skills/sk_orbital.webp` | **없음 — 새로 만들 것**(블록 **A** 정면) |
+| 특수무기 > 재생 필드 | `skills/sk_heal.webp` | 빌림 |
+
+> ⚠ **광산은 블록 B(사선)** 다. 옆칸(공격력·체력)이 `upgrades/` 계열이라 정면으로 만들면 그 줄만 시점이 어긋난다.
+> 반대로 **궤도 포격은 블록 A(정면)** — 옆칸(폭탄·EMP·재생 필드)이 전부 `skills/` 정면이다.
+> **계열은 '무엇을 그리느냐'가 아니라 '옆칸이 무엇이냐'로 고른다.**
+
+### SUBJECT — 광산 (블록 B · `upgrades/up_mine.webp`)
+```
+a heavy mining pickaxe — one straight handle bar of constant width running the full
+length of the icon, and one crosswise head mounted across its upper end; the head is two
+arms of exactly the same length and thickness sweeping out from the handle in a shallow
+even arc, each arm ending in a blunt square-cut point. The mining mark
+```
+
+### SUBJECT — 궤도 포격 (블록 A · `skills/sk_orbital.webp`)
+```
+an orbital strike shell pointed nose-down — one thick vertical body bar with a solid
+triangular nose at its lower end and two short straight fins of exactly the same size
+and thickness standing out at its upper left and upper right, mounted above one wide
+flat horizontal bar that reads as the ground. The orbital bombardment mark
+```
+
+### 배선은 이미 끝나 있다
+`_stkUpgModel` / `_stkWpnIco` 가 위 경로를 부른다 — **파일을 폴더에 넣기만 하면 그 자리가 교체된다.**
+없는 동안은 `_icoFail` 이 이모지(⛏ · ☄)로 되돌리므로 칸이 비지 않는다.
+
+> ⚠ **우상단 배지(`.cgMeta`)는 `z-index:2`** 여야 한다. 배지는 `.cgPro` 의 형제이고 초상 이미지(`.icoImg`)도
+> `z-index:1` 이라, 같은 층이면 트리 순서가 늦은 초상이 이겨 **배지가 통째로 사라진다**(실제로 그랬다).
+> 스모크가 배지 중심의 최상위 요소를 검사한다.
+
