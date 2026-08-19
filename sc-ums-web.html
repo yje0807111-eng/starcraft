@@ -1904,7 +1904,7 @@
      면 검정 · 1px 중립 테두리 · 라운드 3 · 위쪽 맵색 오라 · 바깥 맵색 발광 — 시네마틱 카드에서 아트만 뺀 것이다.
      ⚠ .moCard 값을 바꾸면 여기도 같이 바꿀 것 — 같아야 하는 두 값이다.
      ⚠ .cpCard 는 방 만들기·종족 선택·로그아웃과 공용이다 — 반드시 #soloDiffPanel 안에서만 덮을 것. */
-  #soloDiffPanel .cpCard{width:var(--popW);max-width:var(--popMaxW);height:min(466px,90%);max-height:90%;
+  #soloDiffPanel .cpCard{width:var(--popW);max-width:var(--popMaxW);height:min(474px,90%);max-height:90%;
     display:flex;flex-direction:column;overflow:hidden;padding:20px 16px 16px;
     clip-path:none;border-radius:var(--r-bar);
     background:#08080a;border:1px solid rgba(255,255,255,.08);
@@ -1955,15 +1955,12 @@
   .sdDesc{font-size:var(--fs-md);color:#8a929c;text-align:center;line-height:1.6}
   .sdLock{display:flex;align-items:center;gap:6px;font-size:var(--fs-md);font-weight:700;color:#7d8b98}
   .sdLock svg{width:13px;height:13px}
-  /* 시작 = 이 화면의 **주 액션**. 면색은 공용 확정 버튼(.cpMake — 붉은 네온)을 그대로 물려받는다
-     (마크업이 class="cpMake sdGo"). 여기서는 크기와 잠금 상태만 덮는다.
+  /* 시작 = 이 화면의 **주 액션**. 면·상태는 공용 액션 버튼(.actBtn.pri)이 전부 갖는다
+     (마크업이 class="actBtn pri sdGo"). 여기서 덮는 건 **크기뿐이다** — 잠김 모습도 .actBtn:disabled 그대로.
      ⛔ 난이도 색으로 물들이지 말 것 — 고를 때마다 확정 버튼 색이 바뀌면 '무엇이 확정인지'가 흔들린다.
-        난이도 색은 위 스테퍼와 상세 판(선·빛)이 이미 말해 준다. 취소는 아래에서 글자만 남긴다. */
-  /* ⚠ 공용 .cpMake 규칙이 이 블록보다 **아래**에 있다(flex:1 · padding:12px) — 같은 특이도면 진다.
-     크기를 덮으려면 ID 를 붙여야 한다(안 그러면 버튼이 상세 판을 다 먹고 94px 로 늘어난다). */
-  #soloDiffPanel .sdGo{flex:none;width:100%;height:50px;margin-top:12px;padding:0;border-radius:var(--r-bar)}
-  #soloDiffPanel .sdGo:disabled{cursor:default;color:#6d7480;border-color:var(--metal-edge);box-shadow:none;
-    background:linear-gradient(180deg,#141414,#0b0b0b)}
+        난이도 색은 위 스테퍼와 상세 판(선·빛)이 이미 말해 준다.
+     ⚠ 공용 .actBtn 규칙이 이 블록보다 **아래**에 있어 같은 특이도면 진다 → ID 를 붙인다. */
+  #soloDiffPanel .sdGo{flex:none;width:100%;height:50px;margin-top:12px}
   /* 무한 모드 = 난이도 밖의 별개 모드. 한 줄로 두되 보라 광원 하나로만 구분한다 */
   .sdInf{position:relative;flex:none;width:100%;height:42px;margin-bottom:8px;padding:0 13px;cursor:pointer;overflow:hidden;
     display:flex;align-items:center;gap:8px;font-family:inherit;text-align:left;
@@ -1979,11 +1976,10 @@
   .sdInf.lk b{color:#7f8a98}
   #soloDiffPanel .cpTitle{margin-bottom:10px}
   #soloDiffPanel .pickHint{margin-bottom:8px;color:#8a8a8a}
-  /* 취소 = 보조 동작이라 글자만. 시작(면을 채운 큰 버튼)과 위계를 벌린다 */
+  /* 취소 = 하위 단계. 공용 .actBtn 기본형(중립 밑변) 그대로 — 판이 같아서 시작과 '같은 줄'로 읽히고,
+     위계는 밑변 광원의 색·세기만으로 갈린다. 여기서 덮는 건 높이뿐이다. */
   #soloDiffPanel .cpBtns{flex:none}
-  #soloDiffPanel .cpCancel{height:34px;padding:0;border:none;border-radius:var(--r-bar);
-    font-size:var(--fs-lg);font-weight:700;color:#8a929c;background:none;box-shadow:none;text-shadow:none}
-  #soloDiffPanel .cpCancel:active{color:#c8ced6;transform:none}
+  #soloDiffPanel .cpBtns .actBtn{height:40px}
   #raceSelPanel{position:absolute;inset:0;z-index:54;display:flex;align-items:center;justify-content:center;background:var(--ov-dim);backdrop-filter:blur(2px)}
   #raceSelPanel.hide{display:none}
   /* 종족 선택 — 아이콘 없는 깔끔한 드롭다운(세로 목록) */
@@ -2031,11 +2027,37 @@
   .cpHint{font-size:var(--fs-sm);color:var(--txt-mute);margin-bottom:18px;padding-left:2px}
   .cpHint:empty{display:none}   /* 안내 텍스트 없을 땐 공간 차지 안 함(에러 시에만 표시) */
   .cpBtns{display:flex;gap:8px}
-  .cpCancel,.cpMake,.ecCancel,.ecGo{flex:1;padding:12px;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-xl);font-weight:800;cursor:pointer;transition:transform .08s}
-  .cpCancel,.ecCancel{color:var(--txt);background:var(--glass);border:1px solid var(--metal-edge)}
-  .cpCancel{flex:0 0 34%}
-  .cpMake,.ecGo{color:#fff;background:linear-gradient(180deg,var(--neon-face1),var(--neon-d1));border:1px solid var(--neon);box-shadow:0 0 11px -3px var(--neon-glow)}
-  .cpCancel:active,.cpMake:active{transform:translateY(1px)}
+  .ecCancel,.ecGo{flex:1;padding:12px;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-xl);font-weight:800;cursor:pointer;transition:transform .08s}
+  .ecCancel{color:var(--txt);background:var(--glass);border:1px solid var(--metal-edge)}
+  .ecGo{color:#fff;background:linear-gradient(180deg,var(--neon-face1),var(--neon-d1));border:1px solid var(--neon);box-shadow:0 0 11px -3px var(--neon-glow)}
+  .ecCancel:active,.ecGo:active{transform:translateY(1px)}
+  /* ══════════ 공용 액션 버튼 `.actBtn` — 볼록한 중립 판 + 밑변 광원 한 줄 (2026-08-19 확정) ══════════
+     세 상태를 **한 컴포넌트**가 갖는다. 위계는 색을 넓게 칠해서가 아니라 **빛의 양**으로만 벌린다(DESIGN §0).
+       활성(.pri) : 밑변이 붉게 발광 · 글자 흰색
+       비활성(:disabled) : 볼록 ↔ 오목이 통째로 뒤집히고 광원이 회색으로 죽는다(DESIGN §볼록/오목 표)
+       하위(기본) : 같은 판에 중립 흰 밑변 — 판이 같아서 '같은 줄의 버튼'으로 읽힌다
+     ⛔ 새 확정/취소 버튼을 만들 때 면·테두리를 따로 쓰지 말 것. 여기에 클래스만 붙인다.
+     ⚠ 결과창·확인창(.ecGo/.ecCancel)은 이 규칙 밖이다 — 'DESIGN §팝업 액션 버튼은 중립 회색'이 따로 확정돼 있다. */
+  .actBtn{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;
+    height:44px;padding:0 14px;cursor:pointer;overflow:hidden;
+    font-family:var(--font-ti);font-size:var(--fs-xl);letter-spacing:.3px;color:#c6cdd6;
+    border:1px solid var(--metal-edge);border-radius:var(--r-bar);
+    background:linear-gradient(180deg,#24262b 0%,#15161a 46%,#0c0d10 100%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.13),inset 0 -6px 9px -6px #000,0 2px 4px -2px rgba(0,0,0,.7);
+    transition:color .12s,border-color .12s}
+  /* 밑변 광원 — 양 끝에서 사라진다. ⚠ 전폭으로 그으면 카드 벽과 T자로 부딪혀 어색하다(유즈맵 구분선에서 겪었다) */
+  .actBtn::after{content:'';position:absolute;left:8%;right:8%;bottom:1px;height:2px;pointer-events:none;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent)}
+  .actBtn.pri{color:#fff;border-color:rgba(255,59,59,.34)}
+  .actBtn.pri::after{background:linear-gradient(90deg,transparent,var(--neon),transparent);
+    box-shadow:0 0 9px var(--neon)}
+  .actBtn:active{transform:translateY(1px)}
+  .actBtn:disabled{cursor:default;color:#5f6772;border-color:#2b2d33;transform:none;
+    background:linear-gradient(180deg,#131316,#0a0a0c);box-shadow:inset 0 3px 6px -4px #000}
+  .actBtn:disabled::after{background:linear-gradient(90deg,transparent,#33363c,transparent);box-shadow:none}
+  /* 확정/취소 한 줄 — 취소는 좁게(주 동작이 넓다). .cpBtns 안에서만 적용한다 */
+  .cpBtns .actBtn{flex:1;min-width:0}
+  .cpBtns .actBtn.sub{flex:0 0 34%}
   /* 6칸 고정 높이: 방이 적어도 크기 유지(빈 공간), 많으면 내부 드래그 스크롤 */
   .rmList{--rmRows:6;--rmItemH:54px;--rmGap:6px;flex:none;
     height:calc(var(--rmRows) * var(--rmItemH) + (var(--rmRows) - 1) * var(--rmGap));
@@ -4291,7 +4313,7 @@
   #createPanel .cpCard.noDiff{height:auto;max-height:92%}   /* 난이도 없는 유즈맵 = 빈 공간 없이 내용만큼 */
   #createPanel .cpTitle{margin-bottom:11px}
   #createPanel .cpBtns{margin-top:auto;flex:0 0 auto;padding-top:11px}   /* 버튼은 항상 하단 고정(화면 밖으로 안 나감) */
-  #createPanel .cpCancel,#createPanel .cpMake{padding:10px}
+  #createPanel .cpBtns .actBtn{height:40px}
   /* 입력 높이 축소(방이름·비밀번호) */
   #createPanel #cpName{margin:0;padding:9px 12px;font-size:13px}
   #createPanel #cpPw{padding:9px 12px;font-size:13px;letter-spacing:1.5px}
@@ -4556,8 +4578,8 @@
         </div>
         <div class="cpHint" id="cpHint"></div>
         <div class="cpBtns">
-          <button class="cpCancel" onclick="closeCreate()">취소</button>
-          <button class="cpMake" onclick="confirmCreate()">만들기</button>
+          <button class="actBtn sub" onclick="closeCreate()">취소</button>
+          <button class="actBtn pri" onclick="confirmCreate()">만들기</button>
         </div>
       </div>
     </div>
@@ -4572,7 +4594,7 @@
         <div class="sdDet" id="sdDet"></div>
         <!-- 무한 모드는 난이도가 아니다(노말 고정) — 탭에 끼우지 않고 별도 줄로 둔다 -->
         <button class="sdInf hide" id="sdInf" onclick="sdStartInf()"></button>
-        <div class="cpBtns"><button class="cpCancel" onclick="closeSoloDiff()" style="flex:1">취소</button></div>
+        <div class="cpBtns"><button class="actBtn" onclick="closeSoloDiff()">취소</button></div>
       </div>
     </div>
     <!-- 종족 선택(컴퓨터가 싸운다): 맵→종족→난이도 -->
@@ -4581,7 +4603,7 @@
         <div class="cpTitle">종족 선택</div>
         <div class="pickHint">선택한 종족으로 게임을 플레이합니다</div>
         <div class="raceSelBtns" id="raceSelBtns"></div>
-        <div class="cpBtns"><button class="cpCancel" onclick="closeRaceSelect()" style="flex:1">취소</button></div>
+        <div class="cpBtns"><button class="actBtn" onclick="closeRaceSelect()">취소</button></div>
       </div>
     </div>
     <!-- 종족 드롭다운(인라인) — 트리거(대기실 칩/솔로 트리거) 아래로 펼쳐짐 -->
@@ -4593,8 +4615,8 @@
         <div class="cpTitle"><span data-ico="user"></span>로그아웃</div>
         <div class="cpHint" style="text-align:center;margin:2px 0 10px">로그아웃하시겠습니까?</div>
         <div class="cpBtns">
-          <button class="cpCancel" onclick="closeLogout()">취소</button>
-          <button class="cpMake" onclick="doLogoutNow()">로그아웃</button>
+          <button class="actBtn sub" onclick="closeLogout()">취소</button>
+          <button class="actBtn pri" onclick="doLogoutNow()">로그아웃</button>
         </div>
       </div>
     </div>
@@ -4606,8 +4628,8 @@
         <input id="pwField" type="text" inputmode="numeric" placeholder="비밀번호 입력" maxlength="8" onkeydown="if(event.key==='Enter')submitPw()">
         <div class="cpHint" id="pwErr"></div>
         <div class="cpBtns">
-          <button class="cpCancel" onclick="closePw()">취소</button>
-          <button class="cpMake" onclick="submitPw()">입장</button>
+          <button class="actBtn sub" onclick="closePw()">취소</button>
+          <button class="actBtn pri" onclick="submitPw()">입장</button>
         </div>
       </div>
     </div>
@@ -16496,8 +16518,8 @@ function _sfxForEl(el){
   if(el.matches('.tab, .msTab2, .msScopeBtn')) return 'ui_tab';                                   // 탭 전환
   if(el.matches('.msSortCur, .msSortOpt')) return 'ui_dropdown';                                  // 정렬 드롭다운
   if(el.matches('.segBtn, .setSw, .cpSegBtn, .msTab2, .voteCol')) return 'ui_toggle';        // 켜기↔끄기/세그먼트/배속
-  if(el.matches('.moClose, .setX, .cpCancel, .ecCancel, .rmBack, .lbLeave')) return 'ui_close';   // 닫기/취소/뒤로
-  if(el.matches('.opStart, .moBtn, .cpMake, .rmQuick, .lbStart, .ecGo, .authBtn, .authGuest, #chatSend, .msChatSend')) return 'ui_confirm';  // 시작·만들기·전송·확정
+  if(el.matches('.moClose, .setX, .actBtn.sub, .ecCancel, .rmBack, .lbLeave')) return 'ui_close';   // 닫기/취소/뒤로
+  if(el.matches('.opStart, .moBtn, .actBtn.pri, .rmQuick, .lbStart, .ecGo, .authBtn, .authGuest, #chatSend, .msChatSend')) return 'ui_confirm';  // 시작·만들기·전송·확정
   return 'click';                                                                                  // 일반 버튼 기본음
 }
 // 모든 버튼/탭/메뉴/모달에 위임 바인딩 — 누르는 순간(pointerdown) 즉시 재생
@@ -16731,7 +16753,7 @@ function renderSoloDiff(){ const nav=document.getElementById('sdNav'), det=docum
     +'<span class="sdMapTx"><b>'+escHtml((_selMap&&_selMap.name)||'')+'</b>'
     +'<em>'+escHtml((_selMap&&_selMap.desc)||'')+'</em></span></div>';
   det.innerHTML=mapHead+'<div class="sdBody">'+body+'</div>'
-    +'<button class="cpMake sdGo" id="sdGo" onclick="sdStart()"'+(ok?'':' disabled')+'>'
+    +'<button class="actBtn pri sdGo" id="sdGo" onclick="sdStart()"'+(ok?'':' disabled')+'>'
     +(ok ? '이 난이도로 시작' : '잠겨 있습니다')+'</button>';
   if(typeof _mapThumbInto==='function') _mapThumbInto(document.getElementById('sdThumb'), _selMap);
   // 무한 모드 줄 — 이 맵에 있을 때만

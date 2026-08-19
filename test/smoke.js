@@ -2660,6 +2660,44 @@ async function groupLobby(){
     const mo=document.querySelector('#modeSheet .moCard'); assert(visible(mo),'moCard 안 보임');
     const w=mo.getBoundingClientRect().width; assert(w>200&&w<400,'moCard 폭 이상: '+w); closeModeSheet(); return 'w='+w; });
   // 🎚 개인 플레이 난이도 = 세그먼트 바로 고르고 상세에서 확인 후 시작(목록 훑어 즉시 시작하던 방식 폐지)
+  // ══ 공용 액션 버튼(.actBtn) — 세 상태를 한 컴포넌트가 갖는다 ══
+  await step('공용 액션 버튼: 활성·비활성·하위가 한 판에서 빛으로만 갈린다', async ()=>{
+    openMapSelect(); await sleep(60); _selMap=USEMAPS.nemo; openSoloDiff(); await sleep(150);
+    const li=DIFFICULTY_ORDER.findIndex(d=>!diffUnlocked(d)), ui=DIFFICULTY_ORDER.findIndex(d=>diffUnlocked(d));
+    skipIf(ui<0,'해금된 난이도 없음');
+    const rgb=x=>(x.match(/\d+/g)||[]).slice(0,3).map(Number);
+    const lum=c=>(0.2126*c[0]+0.7152*c[1]+0.0722*c[2])/255;
+    // ① 면(背)은 세 상태 **모두 중립 회색**이다 — 색은 밑변 광원만 갖는다(DESIGN §0: 면을 채우지 않는다)
+    sdPick(ui); await sleep(70);
+    const pri=$('sdGo'), sub=document.querySelector('#soloDiffPanel .cpBtns .actBtn');
+    assert(pri.classList.contains('pri'),'주 동작에 .pri 가 없음');
+    assert(sub && !sub.classList.contains('pri'),'하위 단계에 .pri 가 붙어 있음');
+    for(const [nm,el] of [['활성',pri],['하위',sub]]){
+      const bg=rgb(getComputedStyle(el).backgroundColor);
+      const dev=Math.max(...bg)-Math.min(...bg);
+      assert(dev<=30, nm+' 버튼 면이 회색이 아님(채널 편차 '+dev+') — 색은 밑변 광원만 갖는다'); }
+    // ② 밑변 광원: 활성은 붉고, 하위는 중립. ::after 한 겹이 단일 소스다
+    const bar=el=>getComputedStyle(el,'::after').backgroundImage;
+    const isRed=t=>[...t.matchAll(/rgba?\((\d+),\s*(\d+),\s*(\d+)/g)].some(m=>+m[1]>=180 && +m[2]<=110 && +m[3]<=110);
+    assert(isRed(bar(pri)),'활성 버튼의 밑변 광원이 붉지 않음: '+bar(pri).slice(0,70));
+    assert(!isRed(bar(sub)),'하위 버튼의 밑변까지 붉다 — 위계가 안 갈린다');
+    // ③ 비활성 = 볼록 ↔ 오목이 통째로 뒤집힌다(윗변 하이라이트가 사라지고 위에서 그림자가 들어온다)
+    // ⚠ renderSoloDiff 가 상세를 통째로 다시 그린다 → 값은 **다시 그리기 전에** 재 둘 것
+    //    (떨어져 나간 노드에 getComputedStyle 을 걸면 빈 값이 와서 어떤 비교도 통과한다)
+    const onSh=getComputedStyle(pri).boxShadow, onLum=lum(rgb(getComputedStyle(pri).color));
+    if(li>=0){ sdPick(li); await sleep(70);
+      const off=$('sdGo'); assert(off.disabled,'잠긴 난이도인데 버튼이 열려 있음');
+      assert(getComputedStyle(off).boxShadow!==onSh,'비활성인데 볼록 그림자가 그대로다(오목으로 뒤집혀야 한다)');
+      assert(!isRed(bar(off)),'비활성인데 밑변이 아직 붉다');
+      assert(lum(rgb(getComputedStyle(off).color))<onLum,'비활성 글자가 활성보다 어둡지 않음'); }
+    // ④ 방 만들기도 **같은 컴포넌트**를 쓴다 — 확정/취소 짝이 화면마다 달라지면 안 된다
+    closeSoloDiff(); await sleep(40); openRooms(); await sleep(60); createRoom(); await sleep(120);
+    const cGo=document.querySelector('#createPanel .actBtn.pri'), cNo=document.querySelector('#createPanel .actBtn.sub');
+    assert(cGo && cNo,'방 만들기가 공용 액션 버튼을 안 씀');
+    assert(!document.querySelector('.cpMake,.cpCancel'),'옛 확정/취소 클래스가 남아 있음');
+    assert(cGo.getBoundingClientRect().width > cNo.getBoundingClientRect().width,'주 동작이 취소보다 넓지 않음');
+    closeCreate(); await sleep(40);
+    return '면 중립 · 광원으로만 위계 ok'; });
   await step('난이도 선택: 스테퍼 + 상세 · 잠긴 것은 고를 수 있고 시작만 막힌다', async ()=>{
     skipIf(typeof openSoloDiff!=='function','난이도 선택 없음');
     openMapSelect(); await sleep(60); _selMap=USEMAPS.nemo; openSoloDiff(); await sleep(150);
@@ -2703,8 +2741,9 @@ async function groupLobby(){
         DIFFICULTY_ORDER[i]+' 상세 본문이 넘침: '+body.scrollHeight+'>'+body.clientHeight);
       assert(body.getBoundingClientRect().bottom<=go.getBoundingClientRect().top+0.5,
         DIFFICULTY_ORDER[i]+' 본문이 시작 버튼과 겹침'); }
-    // ⛔ 시작 버튼 색은 **난이도를 따라가지 않는다** — 공용 확정 버튼(.cpMake) 한 색으로 고정
-    assert($('sdGo').classList.contains('cpMake'),'시작 버튼이 공용 확정 버튼(.cpMake)을 안 씀');
+    // ⛔ 시작 버튼 색은 **난이도를 따라가지 않는다** — 공용 액션 버튼(.actBtn.pri) 한 색으로 고정
+    assert($('sdGo').classList.contains('actBtn')&&$('sdGo').classList.contains('pri'),
+      '시작 버튼이 공용 액션 버튼(.actBtn.pri)을 안 씀');
     { const face=[]; for(let i=0;i<DIFFICULTY_ORDER.length;i++){ sdPick(i); await sleep(50);
         const g=$('sdGo'); if(!g.disabled) face.push(getComputedStyle(g).backgroundImage); }
       assert(face.length && face.every(f=>f===face[0]),'난이도마다 시작 버튼 색이 다름'); }
