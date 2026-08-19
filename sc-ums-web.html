@@ -3047,16 +3047,17 @@
   .lpFree b{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:14px;color:#9a9a9a}
   .lpFree.on b{color:#5dff8f}                       /* 쓸 수 있는 포인트가 있을 때만 초록(HOME 경험치 바와 같은 값) */
   .lpBtns{display:flex;align-items:center;gap:6px}
-  /* 🤖 자동 대상 카드 — 어느 축으로 가고 있는지 목록에서 바로 보인다.
-     ⚠ 카드 함수(hmUpCardHTML)는 건드리지 않는다 — 목록의 data-auto 로만 건다. */
-  .lpList[data-auto] .hmUp[data-k]{opacity:.72}
-  .lpList[data-auto="atk"]   .hmUp[data-k="atk"],
-  .lpList[data-auto="hp"]    .hmUp[data-k="hp"],
-  .lpList[data-auto="aspd"]  .hmUp[data-k="aspd"],
-  .lpList[data-auto="range"] .hmUp[data-k="range"],
-  .lpList[data-auto="critd"] .hmUp[data-k="critd"],
-  .lpList[data-auto="ally"]  .hmUp[data-k="ally"],
-  .lpList[data-auto="bld"]   .hmUp[data-k="bld"]{opacity:1;box-shadow:0 0 0 1px rgba(93,255,143,.55), 0 0 9px -5px rgba(93,255,143,.6)}
+  /* 🤖 자동 대상 — 지정한 칸만 진하고 나머지는 어두워진다.
+     ⚠ 카드 함수(hmUpCardHTML)는 건드리지 않는다 — 감싸는 칸(.lpCell)에만 건다. */
+  .lpCell{display:block;min-width:0;border-radius:var(--r-bar);transition:opacity .14s}
+  .lpList[data-auto] .lpCell{opacity:.42}                    /* 지정하면 나머지는 어두워진다 */
+  .lpList[data-auto] .lpCell.on{opacity:1}
+  .lpCell.on .hmUp{box-shadow:0 0 0 1px rgba(93,255,143,.6), 0 0 10px -4px rgba(93,255,143,.65)}
+  /* 고르는 중 — 전부 눌리는 자리다. 어둡게 하지 않고 '고르라'고 밝힌다. */
+  .lpList.picking .lpCell{opacity:1;cursor:pointer}
+  .lpList.picking .hmUp{box-shadow:0 0 0 1px rgba(93,255,143,.42)}
+  .lpList.picking .lpCell:active{transform:translateY(1px)}
+  .lpList.picking .hmUpBtn{pointer-events:none}              /* 고르는 중엔 ＋ 대신 '칸 고르기'가 먼저다 */
   .hmUpQty.lpQ{width:auto;min-width:46px}           /* '초기화'는 ×10 보다 길다 — 폭만 내용에 맡긴다 */
   /* 자동이 꺼져 있을 때 — 켜진 칸(.on)과 확실히 갈리게 흐리게 둔다 */
   .lpQ .hmUpQ:not(.on){color:#6f6f6f;background:rgba(0,0,0,.34)}
@@ -7181,19 +7182,25 @@ function _ptListHTML(kind, c){ const rp=(kind==='rp');
   //   자동은 레벨 포인트에만 둔다 — 환생 포인트는 회차마다 몇 점씩 들어오는 '고르는' 축이다.
   h+='<div class="lpHead"><span class="lpFree'+(free?' on':'')+'">남은 포인트 <b>'+free+'</b></span>'
     +'<span class="lpBtns">'
-    +(rp? '' : ('<span class="hmUpQty lpQ au"><button class="hmUpQ'+(lpAutoOn(c)?' on':'')
-                +'" onclick="lpAutoCycle()">자동 '+lpAutoName(c)+'</button></span>'))
+    +(rp? '' : ('<span class="hmUpQty lpQ au"><button class="hmUpQ'+((lpAutoOn(c)||_lpPicking)?' on':'')
+                +'" onclick="lpAutoBtn()">'+lpAutoBtnTx(c)+'</button></span>'))
     +'<span class="hmUpQty lpQ rs"><button class="hmUpQ on" onclick="ptDoReset(\''+kind+'\')"'
     +(spent?'':' disabled')+'>초기화</button></span></span></div>';
   // ⛔ 카드 마크업을 베끼지 말 것 — 사냥터 업그레이드와 '같은 함수'(hmUpCardHTML)를 부른다.
   //    val▸next = 이 1점으로 배수가 어디까지 가는지 · lv = 지금 찍은 칸 · cost = 값
-  h+='<div class="lpList"'+((!rp && lpAutoKey(c))? (' data-auto="'+lpAutoKey(c)+'"') : '')+'>';
+  // ⚠ 카드는 감싸는 칸(.lpCell) 안에 그대로 들어간다 — 카드 함수(hmUpCardHTML)의 트리는 안 건드린다.
+  //    고르는 중일 때만 이 칸이 '눌리는 자리'가 된다.
+  const pick=(!rp && _lpPicking), auto=(rp? '' : lpAutoKey(c));
+  h+='<div class="lpList'+(pick?' picking':'')+'"'+(auto? (' data-auto="'+auto+'"') : '')+'>';
   for(const S of LP_STATS){ const n=rp? rpPts(S.k,c) : lpPts(S.k,c);
     const cost=ptCost(kind, S.k, c);
-    h+=hmUpCardHTML({ key:S.k, ico:_icoPathImg(S.ico), name:S.name, off:free<cost,
-      val:_ptShow(kind, S.k, n), next:_ptShow(kind, S.k, n+1),
-      lv:'LV.'+n, cost:'-'+cost+'p',
-      act:'ptTap(&#39;'+kind+'&#39;,&#39;'+S.k+'&#39;)' }); }
+    h+='<span class="lpCell'+(auto===S.k?' on':'')+'"'
+      +(pick? (' onclick="lpAutoSet(&#39;'+S.k+'&#39;)"') : '')+'>'
+      +hmUpCardHTML({ key:S.k, ico:_icoPathImg(S.ico), name:S.name, off:free<cost,
+        val:_ptShow(kind, S.k, n), next:_ptShow(kind, S.k, n+1),
+        lv:'LV.'+n, cost:'-'+cost+'p',
+        act:'ptTap(&#39;'+kind+'&#39;,&#39;'+S.k+'&#39;)' })
+      +'</span>'; }
   return h+'</div>'; }
 // 실행 — 마을 렌더러를 부르지 않는다(HOME에서는 마을 DOM이 숨어 있어 토스트가 안 보인다)
 function hbAfterGrow(msg){ if(_hb){ hbSyncChar();
@@ -7787,7 +7794,6 @@ const LP_AUTO_DEFAULT='atk';                 // 처음엔 공격력에 자동(�
 function lpAutoKey(c){ c=c||CHAR(); const k=c&&c.lpAuto;
   return (k && lpDef(k)) ? k : ''; }
 function lpAutoOn(c){ return !!lpAutoKey(c); }
-function lpAutoName(c){ const k=lpAutoKey(c); return k? lpDef(k).name : '끔'; }
 // 고른 축에 남은 포인트를 전부 넣는다
 function lpAutoSpend(c){ c=c||CHAR(); const k=lpAutoKey(c); if(!c||!k) return 0;
   let put=0;
@@ -7796,13 +7802,21 @@ function lpAutoSpend(c){ c=c||CHAR(); const k=lpAutoKey(c); if(!c||!k) return 0;
     if(!lpAdd(k,1)) break;
     put++; }
   return put; }
-// 끔 → 첫 항목 → … → 마지막 → 끔. 수량 버튼(×1/×10/MAX)과 같은 '한 칸을 눌러 돌리는' 방식이다.
-function lpAutoCycle(){ const c=CHAR(); if(!c) return;
-  const ks=LP_STATS.map(S=>S.k), i=ks.indexOf(lpAutoKey(c));
-  c.lpAuto = (i<0) ? ks[0] : (i+1<ks.length ? ks[i+1] : '');
-  if(c.lpAuto) lpAutoSpend(c);
-  saveMeta();
+// 고르는 흐름: [자동 선택] → 카드를 눌러 지정 → 그 카드만 진하고 나머지는 어두워진다 → [지정 해제]
+//   ⚠ '고르는 중'은 저장하지 않는 순간 상태다. 화면을 떠나면 남기지 않는다(setChrSec 에서 끈다).
+let _lpPicking=false;
+function lpAutoBtnTx(c){ return _lpPicking ? '취소' : (lpAutoKey(c) ? '지정 해제' : '자동 선택'); }
+// 머리 버튼 하나가 세 가지 일을 한다 — 지금 상태가 곧 다음 동작이다
+function lpAutoBtn(){ const c=CHAR(); if(!c) return;
+  if(_lpPicking) _lpPicking=false;                   // 취소
+  else if(lpAutoKey(c)){ c.lpAuto=''; saveMeta(); }  // 지정 해제
+  else _lpPicking=true;                              // 고르기 시작
   if(typeof playSfx==='function') playSfx('ui_tab');
+  _ptRepaint(); }
+// 고르는 중에 카드를 누르면 그 축이 대상이 된다(그동안 쌓인 포인트도 바로 들어간다)
+function lpAutoSet(k){ const c=CHAR(); if(!c||!lpDef(k)) return;
+  c.lpAuto=k; _lpPicking=false; lpAutoSpend(c); saveMeta();
+  if(typeof playSfx==='function') playSfx('ui_confirm');
   if(typeof hbSyncChar==='function') hbSyncChar();
   _ptRepaint(); }
 // ══════════════════════════════════════════════════════════════════════════════════════
@@ -9703,7 +9717,9 @@ function renderChr(){ const host=document.getElementById('chrBody'); if(!host) r
     if(el){ host.innerHTML=''; host.appendChild(el); S.render(); } }
   else { host.innerHTML=S.html(); }
   if(typeof paintIcons==='function') paintIcons(host); }
-function setChrSec(k){ if(!CHR_SECS[k]) return; _chrSec=k; renderChr();
+function setChrSec(k){ if(!CHR_SECS[k]) return; _chrSec=k;
+  if(typeof _lpPicking!=='undefined') _lpPicking=false;   // 화면을 옮기면 '고르는 중'은 남기지 않는다
+  renderChr();
   if(typeof navPaint==='function') navPaint(); }
 // ── 🧍 스탯 구역 ────────────────────────────────────────────────────────────────
 //   위 = 지금 내가 어떤 상태인지 '아주 간단히'(자세한 출처 분해는 사냥터 좌상단 프로필 팝업).

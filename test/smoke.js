@@ -2998,7 +2998,7 @@ async function groupLobby(){
     navGo('upg'); await sleep(60); setChrSec('stat'); await sleep(40);
     const host=$('chrBody');
     // 카드는 사냥터 업그레이드와 '같은 함수'가 그린다 — 마크업을 베낀 두 번째 구현이 있으면 안 된다
-    const rows=[...host.querySelectorAll('.lpList .hmUp')];
+    const rows=[...host.querySelectorAll('.lpList .lpCell > .hmUp')];
     assert(rows.length===LP_STATS.length,'포인트 카드 수가 표와 다름: '+rows.length);
     assert(!host.querySelector('.lpRow'),'옛 자체 제작 줄(.lpRow)이 남아 있음');
     assert(host.querySelector('.lpFree b').textContent===String(20*LP_PER_LEVEL),'남은 포인트 표시가 다름: '+host.querySelector('.lpFree b').textContent);
@@ -3041,8 +3041,7 @@ async function groupLobby(){
       assert(q && q.textContent.trim()==='초기화','초기화가 수량 버튼 물성이 아님');
       assert(q.scrollWidth<=q.clientWidth+1,'초기화 글자가 잘림');
       const au=host.querySelector('.lpHead .lpQ.au .hmUpQ');
-      assert(au && au.textContent.trim().indexOf('자동')===0,'자동 버튼이 없음: '+(au&&au.textContent));
-      assert(au.textContent.trim()==='자동 '+lpAutoName(),'자동 버튼이 대상을 안 적음: '+au.textContent.trim());
+      assert(au && au.textContent.trim()===lpAutoBtnTx(),'자동 버튼 표기가 상태와 다름: '+(au&&au.textContent));
       assert(au.scrollWidth<=au.clientWidth+1,'자동 글자가 잘림: '+au.textContent.trim()); }
     // 이름은 수치 축과 같은 말을 쓴다 — 같은 것을 두 이름으로 부르지 않는다
     assert(lpDef('critd').name===CS_AXES.critd.name,'치명 피해 이름이 축과 다름: '+lpDef('critd').name);
@@ -3093,25 +3092,47 @@ async function groupLobby(){
     c.lpAuto=''; c.xp=1e7; profApplyLevelUps(c);
     assert(lpFree(c)>0,'껐는데도 자동으로 찍힘');
     assert(lpAutoSpend(c)===0,'꺼진 상태인데 자동이 실행됨');
-    // ⑤ 화면 버튼 = 한 칸씩 돌리기(끔 → 첫 항목 → … → 끔). 수량 버튼과 같은 방식.
+    // ⑤ 화면 흐름: [자동 선택] → 카드를 눌러 지정 → [지정 해제]
     c.unit.pts={}; c.lpAuto=''; saveMeta();
     navGo('upg'); await sleep(60); setChrSec('stat'); await sleep(40);
     const au=()=>$('chrBody').querySelector('.lpHead .lpQ.au .hmUpQ');
-    assert(!au().classList.contains('on'),'꺼져 있는데 켜져 보임');
+    const list=()=>$('chrBody').querySelector('.lpList');
+    const cells=()=>[...$('chrBody').querySelectorAll('.lpList .lpCell')];
+    // 지정 전 — 버튼은 '자동 선택', 고르는 중이 아니고, 어두워진 칸도 없다
+    assert(au().textContent.trim()==='자동 선택','지정 전 버튼 표기가 다름: '+au().textContent.trim());
+    assert(!list().classList.contains('picking'),'누르기 전인데 고르는 중임');
+    assert(!list().dataset.auto,'지정 전인데 대상 표시가 있음');
+    // 누르면 고르는 중 — 칸이 눌리는 자리가 되고 버튼은 '취소'
     au().click(); await sleep(40);
-    assert(lpAutoKey()===LP_STATS[0].k,'첫 클릭이 첫 항목이 아님: '+lpAutoKey());
-    assert(lpFree()===0,'켰는데 밀린 포인트가 안 찍힘');
-    assert(au().classList.contains('on'),'켰는데 안 켜져 보임');
-    // 목록이 어느 축인지 표시한다
-    assert($('chrBody').querySelector('.lpList').dataset.auto===LP_STATS[0].k,'목록에 자동 대상 표시가 없음');
-    // 한 바퀴 돌면 다시 꺼진다
-    for(let i=1;i<LP_STATS.length;i++){ au().click(); await sleep(20);
-      assert(lpAutoKey()===LP_STATS[i].k,i+'번째 항목으로 안 넘어감: '+lpAutoKey()); }
-    au().click(); await sleep(20);
-    assert(lpAutoKey()==='','한 바퀴 돌았는데 안 꺼짐: '+lpAutoKey());
-    assert(!$('chrBody').querySelector('.lpList').dataset.auto,'껐는데 표시가 남음');
+    assert(list().classList.contains('picking'),'자동 선택을 눌러도 고르는 중이 안 됨');
+    assert(au().textContent.trim()==='취소','고르는 중인데 버튼이 취소가 아님: '+au().textContent.trim());
+    assert(cells().every(e=>e.getAttribute('onclick')),'고르는 중인데 칸을 누를 수 없음');
+    assert(lpAutoKey()==='','고르기만 시작했는데 대상이 정해짐');
+    // 취소로 빠져나올 수 있다
+    au().click(); await sleep(40);
+    assert(!list().classList.contains('picking'),'취소했는데 고르는 중이 안 풀림');
+    assert(lpAutoKey()==='','취소했는데 대상이 정해짐');
+    // 다시 골라서 세 번째 카드를 지정
+    au().click(); await sleep(30);
+    const want=LP_STATS[2].k;
+    cells()[2].click(); await sleep(40);
+    assert(lpAutoKey()===want,'카드를 눌렀는데 그 축이 대상이 안 됨: '+lpAutoKey());
+    assert(!list().classList.contains('picking'),'지정했는데 고르는 중이 안 풀림');
+    assert(lpFree()===0,'지정했는데 밀린 포인트가 안 찍힘');
+    assert(list().dataset.auto===want,'목록에 자동 대상 표시가 없음');
+    // 지정한 칸만 진하고 나머지는 어두워진다
+    { const on=cells().filter(e=>e.classList.contains('on'));
+      assert(on.length===1 && on[0]===cells()[2],'진한 칸이 지정한 하나가 아님');
+      const a=parseFloat(getComputedStyle(cells()[2]).opacity), b=parseFloat(getComputedStyle(cells()[0]).opacity);
+      assert(a>b+0.2,'지정한 칸이 나머지보다 진하지 않음: '+a+' vs '+b); }
+    // 버튼이 '지정 해제'로 바뀌고, 누르면 풀린다
+    assert(au().textContent.trim()==='지정 해제','지정 뒤 버튼이 지정 해제가 아님: '+au().textContent.trim());
+    au().click(); await sleep(40);
+    assert(lpAutoKey()==='','지정 해제를 눌렀는데 안 풀림: '+lpAutoKey());
+    assert(!list().dataset.auto,'풀었는데 표시가 남음');
+    assert(au().textContent.trim()==='자동 선택','푼 뒤 버튼이 자동 선택으로 안 돌아감');
     navBack(); await sleep(40);
-    return '대상 지정 자동 · '+LP_STATS.length+'항목 순환'; });
+    return '자동 선택 → 카드 지정 → 지정 해제'; });
   await step('미네랄 획득: 환생 배수를 탄다(되돌려받는 것은 안 탄다)', ()=>{
     assert(typeof profGainCoin==='function','미네랄 획득 배수가 없음');
     const p=PROF(); p.chars.length=0; p.curId=''; const c=profCreateChar('ranger','코인');
@@ -3179,7 +3200,7 @@ async function groupLobby(){
     c.unit.rpts={}; saveMeta();
     navGo('upg'); await sleep(60); setChrSec('reb'); await sleep(40);
     const host=$('chrBody');
-    const rows=[...host.querySelectorAll('.lpList .hmUp')];
+    const rows=[...host.querySelectorAll('.lpList .lpCell > .hmUp')];
     assert(rows.length===LP_STATS.length,'환생 포인트 카드 수가 표와 다름: '+rows.length);
     assert(host.textContent.indexOf('환생 포인트')>=0,'환생 탭에 환생 포인트 구역이 없음');
     const before=csVal('atk');
