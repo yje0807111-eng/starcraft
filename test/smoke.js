@@ -2735,9 +2735,17 @@ async function groupLobby(){
     { const r=card.getBoundingClientRect(), o=$('lobby').getBoundingClientRect();
       assert(Math.abs(r.width-o.width)<1 && Math.abs(r.height-o.height)<1,'대기실이 화면을 다 안 씀(카드 틀에 갇혔다)');
       assert(parseFloat(getComputedStyle(card).borderTopWidth)===0,'전체 화면인데 카드 테두리가 남아 있음'); }
+    // 방 조건 카드 = 방 만들기의 대전 설정 판과 같은 언어. 사용자 지정 값이 그대로 보여야 한다
+    { const c=$('lbCond'), st=[...c.querySelectorAll('.lbCondSt b')].map(b=>b.textContent);
+      assert(c.querySelectorAll('.lbCondSt span').length===4,'방 조건 칸이 4개가 아님');
+      assert(st.join(' ').indexOf('10초')>=0 && st.join(' ').indexOf('700')>=0,
+        '사용자 지정 값이 방 조건에 안 실림: '+st.join(' ')); }
     // 종족 = 공용 탭 띠. ⛔ 여기 전용 종족 UI 를 새로 만들면 안 된다
     { const sec=$('lbRaceSec');
       assert(sec.querySelector('.pdSeg'),'종족 선택이 공용 탭 띠(.pdSeg)가 아님');
+      // ⚠ 공용 .pdSeg 는 max-width:286px 라 그대로 두면 오른쪽에 여백이 남는다
+      { const a=sec.querySelector('.pdSeg').getBoundingClientRect().width, b=sec.getBoundingClientRect().width;
+        assert(Math.abs(a-b)<1.5,'종족 띠가 폭을 다 안 씀: '+Math.round(a)+' vs '+Math.round(b)); }
       assert(sec.querySelectorAll('.pdSegBtn').length===STK_RACE_ORDER.length,'종족 칸 수가 STK_RACE_ORDER 와 다름');
       assert(!sec.querySelector('.lbRaceLk'),'오토배틀인데 종족이 잠겨 있음');
       // 탭 글자가 잘리면 안 된다
@@ -2769,6 +2777,13 @@ async function groupLobby(){
       assert(!sec.querySelector('.pdSeg'),'종족 없는 유즈맵인데 선택 띠가 떠 있음');
       assert(!document.querySelector('#lbGrid .lbRace'),'종족 없는 유즈맵인데 슬롯에 종족 칩이 있음'); }
     { const g=$('lbGrid'); assert(g.scrollHeight<=g.clientHeight+0.5,'네모네모 슬롯 8칸이 스크롤됨'); }
+    // 난이도 맵도 같은 자리에 조건 카드가 뜬다(난이도·적HP·포인트·정원)
+    { const st=[...$('lbCond').querySelectorAll('.lbCondSt b')].map(b=>b.textContent);
+      assert(st.length===4 && st[0]===DIFFICULTY.easy.name,'난이도 맵 방 조건이 이상함: '+st.join(' ')); }
+    // ⚠ 채팅이 남는 높이를 통째로 먹으면 화면 절반이 빈 검은 판이 된다 — 상한이 살아 있는지 본다
+    { const w=document.querySelector('#lobby .lbChatWrap').getBoundingClientRect(),
+            card=document.querySelector('#lobby .lbCard').getBoundingClientRect();
+      assert(w.height <= card.height*0.28, '채팅이 너무 넓다: '+Math.round(w.height)+'px / 카드 '+Math.round(card.height)); }
     assert(/EASY/i.test($('lbRoom').textContent),'난이도 배지가 없음: '+$('lbRoom').textContent);
     close(); await sleep(150); openMapSelect(); await sleep(80);
     return '오토배틀 종족 '+STK_RACE_ORDER.length+'칸 · 네모네모 잠김 ok'; });

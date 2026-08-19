@@ -1718,9 +1718,11 @@
     padding:42px 16px 22px;background:none;border:0;border-radius:0;clip-path:none;box-shadow:none}
   .lbCard::before,.lbCard::after{display:none}
   /* 대기실 채팅 = 보기영역 + 입력줄 일체형(로비 전체채팅과 동일 구조) · 4~5줄 */
-  .lbChatWrap{flex:1 1 0;min-height:0;display:flex;flex-direction:column;overflow:hidden;margin-bottom:10px;border-radius:var(--r-bar);   /* 남는 높이만 흡수(basis 0) — 메시지가 쌓여도 플레이어 슬롯을 밀지 않음 */
-    background:rgba(0,0,0,.3);border:1px solid var(--metal-edge)}
-  .lbChat{flex:1 1 auto;min-height:77px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;padding:7px 9px;   /* 최소 4줄 보장 + 남는 높이만큼 확장 */
+  /* ⚠ 상한이 없으면 채팅이 남는 높이를 통째로 먹어 화면 절반이 빈 검은 판이 된다(2026-08-19).
+     margin-top:auto 로 하단에 붙이고, 남는 높이는 위 여백으로 흘린다. */
+  .lbChatWrap{flex:1 1 0;min-height:78px;max-height:168px;margin-top:auto;display:flex;flex-direction:column;overflow:hidden;
+    margin-bottom:9px;border-radius:var(--r-bar);background:rgba(0,0,0,.3);border:1px solid var(--metal-edge)}
+  .lbChat{flex:1 1 auto;min-height:44px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;padding:7px 9px;
     background:transparent;border:none;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
   .lbChat::-webkit-scrollbar{width:4px}.lbChat::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
   .lbMsg{font-size:var(--fs-md);line-height:1.35;color:#d6d2d2;word-break:break-all}
@@ -1748,11 +1750,23 @@
   .lbX{width:28px;height:28px;flex:none;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;
     color:#8a929c;background:none;border:none}
   .lbX svg{width:16px;height:16px}
+  /* 이 방의 조건 — 방 만들기의 대전 설정 판(.cpVs)과 같은 언어(자리·모양이 같아야 화면이 안 흔들린다) */
+  .lbCond{--cc:var(--tmC1);position:relative;flex:0 0 auto;margin-bottom:9px;padding:10px 11px;overflow:hidden;
+    border-radius:var(--r-bar);background:linear-gradient(180deg,#0d0d0d,#050505);
+    border:1px solid color-mix(in srgb,var(--cc) 22%,transparent);box-shadow:inset 0 0 30px -18px var(--cc)}
+  .lbCond:empty{display:none}
+  .lbCond::before{content:'';position:absolute;left:9%;right:9%;top:0;height:1px;opacity:.75;
+    background:linear-gradient(90deg,transparent,var(--cc),transparent);box-shadow:0 0 7px -1px var(--cc)}
+  .lbCondSt{display:flex;justify-content:center;gap:16px}
+  .lbCondSt span{text-align:center;min-width:0}
+  .lbCondSt i{display:block;font-style:normal;font-size:var(--fs-xs);color:#828b96;white-space:nowrap}
+  .lbCondSt b{display:block;font-family:var(--font-num);font-size:16px;font-weight:700;color:var(--vc,#fff);margin-top:2px}
   /* 내 종족 = 공용 탭 띠 한 줄. ⛔ 여기 전용 종족 UI 를 새로 만들지 말 것 */
   .lbRaceSec{flex:0 0 auto;margin-bottom:9px}
   .lbRaceSec:empty{display:none}
   .lbRaceSec .lbRaceLb{display:block;font-size:10.5px;font-weight:700;color:#7d8792;margin-bottom:5px}
-  .lbRaceSec .pdSeg{margin:0}
+  /* ⚠ 공용 .pdSeg 는 max-width:286px 라 그대로 두면 오른쪽에 여백이 남는다 — 화면 폭을 다 쓰게 푼다 */
+  .lbRaceSec .pdSeg{max-width:none;margin:0}
   .lbRaceSec .pdSegBtn{padding:11px 0;font-family:var(--font-ti);font-size:12px;letter-spacing:0}
   .lbRaceLk{display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:var(--r-bar);
     background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.13);font-size:10px;color:#7d8792}
@@ -4633,6 +4647,8 @@
           <button class="lbX" onclick="leaveLobby()" aria-label="나가기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
         </div>
         <div class="lbStatus" id="lbStatus" style="display:none"></div>
+        <!-- 이 방의 조건 = 방 만들기의 대전 설정 판과 같은 카드. 나중에 들어온 사람도 무슨 판인지 안다 -->
+        <div class="lbCond" id="lbCond"></div>
         <!-- 내가 할 일 = 종족 고르기. 공용 탭 띠(segNavHTML) 한 줄 · 잠긴 유즈맵이면 안내문으로 바뀐다 -->
         <div class="lbRaceSec" id="lbRaceSec"></div>
         <div class="lbGrid" id="lbGrid"></div>
@@ -17608,6 +17624,30 @@ function renderLobbyHeadR(){ const rm=document.getElementById('lbRoom'); if(!rm)
     bd='<span class="lbBd" style="--dc:'+dC+'">'+escHtml(dN)+'</span>'; }
   if(_lobbyRoom && _lobbyRoom.opts) bd+='<span class="lbBd" style="--dc:#ffb14d">사용자 지정</span>';   // 기본 밸런스가 아닌 방
   rm.innerHTML=priv+num+' '+bd; }
+// 이 방의 조건 — 오토배틀이면 대전 설정(사용자 지정이면 그 값), 아니면 난이도 수치.
+// 방 만들기의 .cpVs 와 같은 자리·같은 모양이라 두 화면이 형제로 읽힌다.
+function renderLobbyCond(){ const box=document.getElementById('lbCond'); if(!box) return;
+  const cell=(nm,v,c)=>'<span><i>'+nm+'</i><b'+(c?' style="--vc:'+c+'"':'')+'>'+v+'</b></span>';
+  if(lobbyTeams()){   // 오토 배틀 — 방장이 정한 값이 있으면 그것이 이긴다(없으면 맵 기본값)
+    const o=(_lobbyRoom&&_lobbyRoom.opts)||null, base=(USEMAPS.cpu&&USEMAPS.cpu.cfg)||{};
+    const g=(k,d)=>(o&&o[k]!==undefined)?o[k]:(base[k]!==undefined?base[k]:d);
+    const cus=!!o, ac=cus?'#ffb14d':'#5aa9ff';
+    box.style.setProperty('--cc', ac);
+    box.innerHTML='<div class="lbCondSt">'
+      +cell('라운드', g('cycleTime',20)+'초', cus?'#ffd9a8':'')
+      +cell('시작 골드', g('startGold',450), cus?'#ffd9a8':'')
+      +cell('라운드 수입', g('incomeBase',50), cus?'#ffd9a8':'')
+      +cell('본진 체력', '×'+((o&&o.hpMul!==undefined)?o.hpMul.toFixed(1):'1.0'), cus?'#ffd9a8':'')
+      +'</div>'; return; }
+  if(!mapHasDiff()){ box.innerHTML=''; box.style.removeProperty('--cc'); return; }
+  const inf=!!(_lobbyRoom&&_lobbyRoom.inf);
+  if(inf){ box.style.setProperty('--cc','#b06bff');
+    box.innerHTML='<div class="lbCondSt">'+cell('모드','∞ 무한','#d9c4ff')+cell('난이도','NORMAL')+cell('정원',_lobbyMax+'명')+'</div>'; return; }
+  const dk=(_lobbyRoom&&_lobbyRoom.diff)||_selDiff, D=DIFFICULTY[dk]||DIFFICULTY.normal;
+  const col=DIFF_COLOR[dk]||'#888', atk=(D.enemyHp/DIFFICULTY.easy.enemyHp).toFixed(1);
+  box.style.setProperty('--cc', col);
+  box.innerHTML='<div class="lbCondSt">'+cell('난이도', escHtml(D.name), col)
+    +cell('적 HP','×'+atk)+cell('포인트','×'+D.coinMult)+cell('정원',_lobbyMax+'명')+'</div>'; }
 // 내 종족 = 공용 탭 띠 한 줄(segNavHTML). 종족이 없는 유즈맵은 그 자리가 안내문으로 바뀐다.
 // ⛔ 여기 전용 종족 UI 를 새로 만들지 말 것 — 관리자·인게임과 같은 STK_RACES/STK_RACE_ORDER 를 본다.
 function renderLobbyRace(){ const box=document.getElementById('lbRaceSec'); if(!box) return;
@@ -17638,7 +17678,7 @@ function lobbyFillOrder(){ const n=_lobbyMax, half=Math.ceil(n/2), out=[];
 function lobbyNextSlot(){ for(const i of lobbyFillOrder()){ if(!_lobbySlots[i] && _lobbyLock.indexOf(i)<0) return i; } return -1; }
 function slotTeam(i){ return i < Math.ceil(_lobbyMax/2) ? 1 : 2; }
 function renderLobby(){ const g=document.getElementById('lbGrid'); if(!g) return; g.innerHTML='';
-  renderLobbyRace(); renderLobbyHeadR();
+  renderLobbyCond(); renderLobbyRace(); renderLobbyHeadR();
   const raceOn=lobbyRaceEnabled();   // 슬롯 높이는 .lbSlot에서 전 맵 공통 → 종족 칩 유무와 무관하게 창 크기 고정
   const teams=lobbyTeams(), half=Math.ceil(_lobbyMax/2);
   g.classList.toggle('teamed', teams);
