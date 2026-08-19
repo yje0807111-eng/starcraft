@@ -1851,10 +1851,10 @@
   .rmFilter .pdSegBtn{padding:8px 0;font-family:var(--font-num);font-size:11.5px;letter-spacing:0}
   .rmNum{display:flex;gap:7px;margin-bottom:12px}
   .rmNum.hide{display:none}
-  .rmNum input{flex:1;min-width:0;padding:10px 12px;border-radius:10px;background:rgba(0,0,0,.32);border:1px solid var(--metal-edge);color:var(--txt);font-family:inherit;font-size:var(--fs-lg);outline:none;transition:border-color .14s}
+  .rmNum input{flex:1;min-width:0;padding:10px 12px;border-radius:var(--r-bar);background:rgba(0,0,0,.32);border:1px solid var(--metal-edge);color:var(--txt);font-family:inherit;font-size:var(--fs-lg);outline:none;transition:border-color .14s}
   .rmNum input:focus{border-color:rgba(255,59,59,.5)}
   .rmNum input::placeholder{color:#6f757d}
-  .rmNum button{flex:0 0 auto;padding:0 16px;border-radius:10px;font-family:inherit;font-size:var(--fs-lg);font-weight:800;cursor:pointer;color:#dfe7f0;background:rgba(255,255,255,.06);border:1px solid var(--metal-edge);transition:background .14s,border-color .14s}
+  .rmNum button{flex:0 0 auto;padding:0 16px;border-radius:var(--r-bar);font-family:inherit;font-size:var(--fs-lg);font-weight:800;cursor:pointer;color:#dfe7f0;background:rgba(255,255,255,.06);border:1px solid var(--metal-edge);transition:background .14s,border-color .14s}
   .rmNum button:hover{background:rgba(255,255,255,.1);border-color:var(--glass-edge)}
   .rmNum button:active{transform:translateY(1px)}
   .riNum{font-family:var(--font-num);font-weight:800;color:var(--hud);margin-right:5px}
@@ -1879,16 +1879,16 @@
   .cpTitle{font-size:17px;font-weight:800;color:#eef1f6;text-shadow:0 1px 3px rgba(0,0,0,.65);margin-bottom:16px;text-align:center;display:flex;align-items:center;justify-content:center;gap:7px}   /* 제목 = 화이트 통일(방 만들기·난이도·종족 선택 공용) */
   .cpTitle [data-ico] .ic{width:18px;height:18px}
   .cpLabel{display:block;font-size:var(--fs-md);font-weight:700;color:var(--txt-mute);margin:0 0 6px 2px}
-  #cpName{width:100%;box-sizing:border-box;padding:12px 12px;border-radius:9px;background:rgba(0,0,0,.4);border:1px solid var(--metal-edge);color:var(--txt);font-family:inherit;font-size:14px;outline:none;margin-bottom:20px}
+  #cpName{width:100%;box-sizing:border-box;padding:12px 12px;border-radius:var(--r-bar);background:rgba(0,0,0,.4);border:1px solid var(--metal-edge);color:var(--txt);font-family:inherit;font-size:14px;outline:none;margin-bottom:20px}
   #cpName:focus{border-color:var(--neon-soft)}
   #cpName::placeholder{color:#6f757d}
   .cpSeg{display:flex;gap:8px;margin-bottom:14px}
-  .cpSegBtn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-xl);font-weight:800;cursor:pointer;color:var(--txt-mute);background:var(--glass);border:1px solid var(--metal-edge);transition:all .12s}
+  .cpSegBtn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px;border-radius:var(--r-bar);font-family:inherit;font-size:var(--fs-xl);font-weight:800;cursor:pointer;color:var(--txt-mute);background:var(--glass);border:1px solid var(--metal-edge);transition:all .12s}
   .cpSegBtn .ic{width:15px;height:15px}
   .cpSegBtn.on{color:#fff;background:rgba(255,255,255,.14);border-color:var(--glass-edge);box-shadow:inset 0 1px 0 rgba(255,255,255,.09)}   /* 선택=중립 밝은 토글(레드 만들기 버튼과 구분) */
   .cpPwWrap{margin-bottom:9px}.cpPwWrap.hide{display:none}
   .cpPwWrap .cpLabel{margin-top:4px}
-  #cpPw,#pwField{width:100%;box-sizing:border-box;padding:11px 12px;border-radius:var(--r-md);background:rgba(0,0,0,.4);border:1px solid var(--metal-edge);color:var(--txt);font-family:inherit;font-size:14px;letter-spacing:2px;outline:none}
+  #cpPw,#pwField{width:100%;box-sizing:border-box;padding:11px 12px;border-radius:var(--r-bar);background:rgba(0,0,0,.4);border:1px solid var(--metal-edge);color:var(--txt);font-family:inherit;font-size:14px;letter-spacing:2px;outline:none}
   #cpPw:focus,#pwField:focus{border-color:var(--neon-soft)}
   #cpPw::placeholder,#pwField::placeholder{color:#6f757d;letter-spacing:.5px}
   #pwPanel{position:absolute;inset:0;z-index:51;display:flex;align-items:center;justify-content:center;background:var(--ov-dim);backdrop-filter:blur(2px)}
@@ -4356,16 +4356,9 @@
   
   .rmEmpty{text-align:center;color:#7d8b98;font-size:var(--fs-lg);font-weight:700;padding:26px 0}
   .cpDiffBtns{margin-bottom:4px}
-  /* 최대 인원 = 라벨 + 콤팩트 스테퍼 한 줄(값 박스 과폭 제거 · 중립 글래스) */
+  /* (구 인원 −/+ 스테퍼 .cpStepper/.cpStepBtn/.cpStepVal 은 폐지 — 1~8 칸 게이지(.cpPGrid)로 바뀌었다) */
   .cpRow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:20px}
   .cpRow .cpLabel{margin:0}
-  .cpStepper{display:flex;align-items:center;gap:6px;margin:0}
-  .cpStepBtn{flex:0 0 auto;width:32px;height:32px;border-radius:8px;font-family:inherit;font-size:18px;font-weight:800;line-height:1;cursor:pointer;
-    color:#dfe7f0;background:rgba(255,255,255,.06);border:1px solid var(--metal-edge);transition:background .12s,border-color .12s}
-  .cpStepBtn:hover{background:rgba(255,255,255,.1);border-color:var(--glass-edge)} .cpStepBtn:active{transform:translateY(1px)}
-  .cpStepBtn:disabled{opacity:.32;cursor:default;background:rgba(255,255,255,.03);border-color:var(--metal-edge);color:var(--txt-mute)}
-  .cpStepVal{flex:0 0 auto;width:48px;text-align:center;font-family:var(--font-num);font-size:17px;font-weight:800;color:#fff;
-    padding:5px 0;border-radius:8px;background:rgba(0,0,0,.3);border:1px solid var(--metal-edge);font-variant-numeric:tabular-nums}
   /* ══ 방 만들기 = **전체 화면**이다(2026-08-19). 방 찾기와 같은 규약 — 딤도 카드 테두리도 없다.
      ⛔ 팝업 카드 안에 다시 넣지 말 것. 상·하단까지 화면이 쓴다. */
   #createPanel .cpCard{width:100%;max-width:none;height:100%;max-height:none;padding:50px 18px 28px;
@@ -4400,7 +4393,7 @@
   .cpPreC.on::after{content:'';position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--tmC1);box-shadow:0 0 8px var(--tmC1)}
   .cpPreC.cu.on{border-color:rgba(255,177,77,.45);background:linear-gradient(0deg,rgba(255,177,77,.14),rgba(11,12,14,.92) 62%)}
   .cpPreC.cu.on::after{background:var(--warn);box-shadow:0 0 8px var(--warn)}
-  .cpVs{--cc:var(--tmC1);position:relative;padding:13px 12px;border-radius:var(--r-md);overflow:hidden;
+  .cpVs{--cc:var(--tmC1);position:relative;padding:13px 12px;border-radius:var(--r-bar);overflow:hidden;
     background:linear-gradient(180deg,#0d0d0d,#050505);border:1px solid color-mix(in srgb,var(--cc) 22%,transparent);
     box-shadow:inset 0 0 30px -18px var(--cc)}
   .cpVs.cu{--cc:var(--warn)}

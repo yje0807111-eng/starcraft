@@ -2770,6 +2770,28 @@ async function groupLobby(){
     assert(cpOptsPayload()===null,'사용자 지정이지만 값이 기본값인데 오버라이드가 생김');
     closeCreate(); await sleep(60); backToTitle(); await sleep(80);
     return '난이도 스테퍼 · 프리셋 '+STK_PRESETS.length+' · 상하한 '+STK_OPTS.length+'항목 ok'; });
+  // ⚠ 라운드가 화면마다 다르면 '둥글다'는 인상이 생긴다 — DESIGN §라운드 표(0/3/6/9) 밖 값을 잡는다
+  await step('유즈맵 진입 화면 라운드: DESIGN 표(0/3/6/9) 밖이 없다', async ()=>{
+    skipIf(typeof openRooms!=='function','방 찾기 없음');
+    const scan=(id)=>{ const bad=[], KS=['borderTopLeftRadius','borderTopRightRadius','borderBottomLeftRadius','borderBottomRightRadius'];
+      document.querySelectorAll('#'+id+' *').forEach(function(el){
+        const r=el.getBoundingClientRect(); if(!r.width||!r.height) return;
+        const cs=getComputedStyle(el);
+        KS.forEach(function(k){ const raw=cs[k], v=parseFloat(raw)||0;
+          if(v && [3,6,9].indexOf(Math.round(v))<0 && raw.indexOf('%')<0)
+            bad.push((el.id||el.className||el.tagName)+' '+k+'='+raw); }); });
+      return Array.from(new Set(bad)); };
+    openMapSelect(); await sleep(60);
+    _selMap=USEMAPS.nemo; hideAppScreens(); openRooms(); await sleep(250);
+    { const b=scan('rooms'); assert(!b.length,'방 찾기에 표 밖 라운드: '+b.slice(0,3).join(' / ')); }
+    createRoom(); await sleep(250);
+    { const b=scan('createPanel'); assert(!b.length,'방 만들기(난이도)에 표 밖 라운드: '+b.slice(0,3).join(' / ')); }
+    closeCreate(); await sleep(50); backToTitle(); await sleep(80);
+    _selMap=USEMAPS.cpu; hideAppScreens(); openRooms(); await sleep(250); createRoom(); await sleep(200);
+    setCpPreset('custom'); await sleep(120);
+    { const b=scan('createPanel'); assert(!b.length,'방 만들기(대전 설정)에 표 밖 라운드: '+b.slice(0,3).join(' / ')); }
+    closeCreate(); await sleep(50); backToTitle(); await sleep(80);
+    return '세 화면 0건'; });
   // ⛔ UI 만 바뀌고 실제 게임 값이 그대로면 아무 의미가 없다 — 엔진 입구(mapCfg)까지 확인한다
   await step('대전 설정이 실제 게임 값을 바꾼다(mapCfg 까지)', async ()=>{
     skipIf(typeof stkCfgFromOpts!=='function','대전 설정 없음');
