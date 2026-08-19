@@ -6222,14 +6222,22 @@ function profRebNextLv(c){ c=c||CHAR(); const n=profRebDone(c);
 function profRebGrant(N){ return PROF_REB_RP0 + PROF_REB_RP1*Math.max(1,N|0); }
 function profRebStep(lv, c){ return profCanRebirth(c) ? (profRebDone(c)+1) : 0; }   // '이번이 몇 회차인가'
 // ⚠ rebLvMax = 이미 환생에 쓴 최고 레벨. 같은 레벨에서 두 번 환생하는 것을 막는다.
+// 🔑 환생 관문 — 2회차부터 **유즈맵 전용 재화(포인트)** 를 요구한다.
+//   설계: 평소엔 강제가 없고(1회차 무료), 사냥터 최상위 축을 끝까지 밀려면 결국 유즈맵을 하게 된다.
+//   ⛔ 사냥터에서 얻을 수 있는 재화로 바꾸지 말 것 — 그러면 관문이 아니라 그냥 비용이 된다.
+const PROF_REB_POINT=[0, 30, 90, 200, 400, 700, 1200];   // 회차별 요구 포인트(1회차 무료)
+function profRebPoint(c){ c=c||CHAR(); const n=profRebDone(c); return PROF_REB_POINT[n]||0; }
+function profRebPointOk(c){ const need=profRebPoint(c);
+  return need<=0 || (((typeof PLAYER_META!=='undefined'&&PLAYER_META.coins)||0) >= need); }
 function profCanRebirth(c){ c=c||CHAR(); if(!c) return false;
   const need=profRebNextLv(c);
-  return need>0 && (c.level|0)>=need && (c.level|0)>((c.rebLvMax|0)); }
+  return need>0 && (c.level|0)>=need && (c.level|0)>((c.rebLvMax|0)) && profRebPointOk(c); }
 function profXpMul(c){ c=c||CHAR(); return 1+((c&&c.rebMul)||0); }
 // ⚠ 경험치 지급은 반드시 이 함수를 지난다 — 지급 지점이 4곳이라 배수를 각자 곱하면 언젠가 어긋난다.
 function profGainXp(c, xp){ c=c||CHAR(); if(!c || !(xp>0)) return 0;
   const got=xp*profXpMul(c); c.xp+=got; return got; }
 function profRebirth(c){ c=c||CHAR(); if(!profCanRebirth(c)) return 0;
+  { const cost=profRebPoint(c); if(cost>0){ PLAYER_META.coins=(PLAYER_META.coins||0)-cost; } }   // 🔑 관문 = 유즈맵 포인트 차감
   const N=profRebDone(c)+1;                          // 이번이 몇 번째 환생인가
   c.reb=N; c.rebMul=(c.rebMul||0)+PROF_REB_GAIN*N;
   c.rp=(c.rp|0)+profRebGrant(N);                     // 🔁 환생 포인트 지급(영구 — 다시 환생해도 안 사라진다)
@@ -7217,6 +7225,8 @@ function renderGrowModal(){ const box=document.getElementById('hbGrowBody'); if(
   // 🔁 환생 — 레벨 곡선이 무거워지는 지점에서 '되감고 배수를 얻는' 축.
   h+='<div class="hbGrowLbl">환생 <span class="hbStars">'+(c.reb?('×'+profXpMul(c).toFixed(2)+' 경험치'):'—')+'</span></div>';
   { const need=profRebNextLv(c), N=profRebDone(c)+1, can=profCanRebirth(c), last=(need===0);
+    const pNeed=profRebPoint(c), pHave=((typeof PLAYER_META!=='undefined'&&PLAYER_META.coins)||0);
+    const lvOk=(need>0 && (c.level|0)>=need && (c.level|0)>((c.rebLvMax|0)));
     h+='<div class="hbRow"><span class="hbRowIco">🔁</span>'
       +'<span class="hbRowTx"><b>'
       +(last ? ('환생 완료 — Lv.'+PROF_LV_CAP+' 고정 · 이제 기록이 포인트를 줍니다')
@@ -7224,7 +7234,9 @@ function renderGrowModal(){ const box=document.getElementById('hbGrowBody'); if(
                     : (N+'회차 환생')))+'</b>'
       +'<em>'+(last ? ('전역 진행도 '+PROF_REC_RP_PER+'칸당 환생 포인트 +1 (지금 '+profRecordRp(c)+'p)')
              : (can ? ('레벨·레벨 포인트·<b>미네랄 업그레이드·미네랄</b>이 처음으로 돌아갑니다. 해금·최고 기록·장비·펫·환생 포인트는 그대로. 환생 포인트 +'+profRebGrant(N))
-                    : ('🔒 Lv.'+need+' 필요 — 회차마다 요구 레벨이 올라갑니다 ('+PROF_REB_LEVELS.join(' · ')+')')))+'</em></span>'
+                    : (lvOk ? ('🔒 ◎ 포인트 '+pNeed+' 필요 (보유 '+pHave+') — 포인트는 <b>유즈맵에서만</b> 나옵니다')
+                            : ('🔒 Lv.'+need+' 필요 — 회차마다 요구 레벨이 올라갑니다 ('+PROF_REB_LEVELS.join(' · ')+')'
+                               +(pNeed>0?(' · ◎ 포인트 '+pNeed):'')))))+'</em></span>'
       +'<button class="hbRowBtn" onclick="hbDoRebirth()"'+(can?'':' disabled')+'>환생</button></div>'; }
   // 🔁 환생 포인트 — 환생으로만 얻고 환생해도 안 사라진다. 줄 모양은 스탯 화면의 레벨 포인트와 같은 컴포넌트.
   h+=_ptListHTML('rp', c);
@@ -10628,9 +10640,13 @@ function maxUnits(){ return mapCfg('maxUnits',MAX_UNITS) + ((G.metaB&&G.metaB.un
 // 게임 종료 정산: 이번 판에서 모은 포인트(G.points)에 난이도 배율을 곱해 계정에 누적·저장(1회만).
 // 포인트(◎ = 다음 판 업그레이드 화폐)은 '월드보스(공용 보스)' 처치로만 획득 — coopBossDown()이 G.points에 적립.
    // 이번 판 적립 포인트(월드보스 처치 합) = 정산 대상
+// ◎ 포인트 = **유즈맵에서만 나오는 재화**다(사냥터에서는 한 톨도 안 나온다). 그래서 환생 관문의 열쇠가 된다.
+//   ⚠ 예전엔 네모 월드보스 처치로만 나와서 획득 경로가 너무 좁았다 → **모든 맵이 판 끝에 성과만큼** 준다.
+const UM_POINT_RUN=12;   // 판당 기준 포인트(진행도·난이도로 오르내린다)
 function bankRunPoints(){ if(G._pointsBanked) return G._bankedAmt||0; G._pointsBanked=true;
-  const cm=(DIFFICULTY[G.difficulty]||DIFFICULTY.normal).coinMult;
-  const gained=Math.round((G.points||0)*cm);   // 포인트 = 월드보스 처치 포인트 × 난이도 배율
+  const cm=umDiffMul();
+  const run=Math.round(UM_POINT_RUN * Math.max(UM_PROG_MIN, Math.min(1, umProgress())) * cm);   // 판 성과
+  const gained=Math.round((G.points||0)*cm) + run;   // + 월드보스 처치 포인트(네모 전용, 큰 몫)
   if(gained>0){ PLAYER_META.coins=(PLAYER_META.coins||0)+gained; saveMeta(); }
   G._bankedAmt=gained; return gained; }
 const DIFF_RANK=['easy','normal','hard','hell','nightmare'];
@@ -15241,6 +15257,7 @@ function _runSummary(){ if(G._runSum) return G._runSum;
   }
   // ⚠ 보상 지급은 두 갈래가 **끝난 뒤 한 곳**에서 한다. 예전엔 직스 분기가 먼저 return 해서
   //   오토배틀이 앵커 보상을 통째로 못 받았다(umProgress 의 직스 분기가 죽은 코드였다).
+  if(G.strike) G._runSum.coins=bankRunPoints();   // ◎ 포인트는 맵을 가리지 않는다(네모는 위 분기에서 이미 적립)
   G._runSum.prof=(typeof profRunReward==='function')?profRunReward():null;   // 🧍 사냥터 재화 = 유즈맵 앵커 보상
   // 🏁 첫 클리어 마일스톤 — 이겼을 때만, 맵×난이도마다 평생 1회. 무한모드는 클리어가 없어 제외.
   if(G.phase==='won' && !mapCfg('infinite') && typeof umFirstClaim==='function')
