@@ -259,15 +259,21 @@ node test/png2icon.mjs <입력.png> assets/icons/<폴더>/<이름>.webp
 
 # 🎛 조작 버튼 아이콘 — 투명 배경 계열 (2026-08-19)
 
-**능력 아이콘(금속판 계열)과 다른 계열이다.** 판 위에 얹는 그림이 아니라, 버튼 안에 들어가는 **글리프**다.
-버튼이 이미 면·테두리·상태색을 갖고 있으므로 아이콘은 **배경 없이 단색 실루엣 하나**여야 한다.
+**판만 없을 뿐, 나머지는 능력 아이콘과 같은 물성이다.** 브러시드 스틸 · 왼쪽 위 하드 키라이트 ·
+챔퍼 스펙큘러 · 90년대 RTS 손그림 — 전부 그대로 가져간다. 다르게 하는 것은 셋뿐이다:
+**배경이 없고, 그림자를 안 깔고, 24px에서 읽히도록 더 굵고 단순하다.**
 
-| | 능력 아이콘(A/B) | **조작 버튼(C)** |
+버튼(`.cgRally` 초록 · `.cgLift` 파랑 · `.cgSelAll` 하늘)이 이미 면·테두리·상태색을 갖고 있으므로
+아이콘이 판을 또 가지면 **판 안에 판**이 된다.
+
+| | 능력 아이콘 (A/B) | **조작 버튼 (C)** |
 |---|---|---|
+| 재질·조명 | 브러시드 스틸 · 좌상단 키라이트 · 챔퍼 | **같음** |
 | 배경 | 금속판(참조 이미지) | **없음(알파)** |
-| 색 | 브러시드 스틸 명암 | **단색 #e8eef6 · 명암 없음** |
-| 크기 | 128px, 표시 32~44px | 128px, **표시 24px** |
-| 쓰는 곳 | `skills/` `buildings/` `upgrades/` `auto/` | **`ui/`** |
+| 그림자 | 판 위로 하드 캐스트 섀도 | **없음**(뒤에 면이 없다) |
+| 표시 크기 | 32~44px | **24px** → 획 더 굵게, 덩어리 3개 이하 |
+| 폴더 | `skills/` `buildings/` `upgrades/` `auto/` | **`ui/`** |
+| 참조 이미지 | 붙인다 | **안 붙인다** |
 
 ## 만들 목록
 
@@ -276,93 +282,116 @@ node test/png2icon.mjs <입력.png> assets/icons/<폴더>/<이름>.webp
 | `rally` | 생산한 유닛이 자동으로 갈 위치 | 건물 프로필 `.cgRally` |
 | `lift` | 건물 띄우기 | `.cgLift`(부양 전) |
 | `land` | 건물 내리기 | `.cgLift`(부양 중) |
-| `selall` | 화면 안 같은 종류 전부 지정 | `.cgSelAll`(건물·유닛 프로필) |
+| `selall` | 화면 안 같은 종류 전부 지정 | `.cgSelAll` |
 | `back` | 한 종류 보기 → 여러 종류 전체로 복귀 | `.cgBack` |
 | `untype` | 혼합 지정에서 그 종류만 빼기 | 카드 하단 `.cgTrash` |
 
 ## 공통 블록 C — 투명 배경 조작 아이콘 (고정 · 절대 수정 금지)
 
+⚠ A/B와 달리 **`--- REFERENCE ---` 블록을 붙이지 않는다**(참조할 판이 없다).
+
 ```
 --- RENDER SPEC ---
-A single mobile game UI control glyph. Flat vector-style icon, no background.
+A single StarCraft-style game UI control glyph. Hand-painted 90s RTS interface art.
+One symbol only, centered, standing on a fully transparent background — no plate, no tile,
+no frame behind it.
 SYMBOL: [[SUBJECT]]
-STYLE: one solid shape in a single flat colour #e8eef6 on a fully transparent background.
-No plate, no tile, no frame, no container, no badge. No shading, no gradient, no texture,
-no bevel, no outline in a second colour. Think of a modern phone HUD glyph cut from one
-sheet of light metal.
-SHAPE DISCIPLINE: every edge is a straight line or a clean arc and every corner is crisp.
-Bars, arms and strokes keep a constant width along their length and end in flat square
-cuts. Matching parts are exactly the same size and thickness as each other. Symmetrical
-subjects stay symmetrical.
-WEIGHT: bars and strokes are thick — at least 8% of the icon width — and gaps between
-parts are at least as wide as the bars, so the shape still reads at 24 pixels on a phone.
-COMPOSITION: seen straight from the front, square to the viewer, no rotation, no tilt, no
-perspective. Centred, filling about 78% of the frame, with clear empty margin on all four
-sides.
-READABILITY: three large forms at most. The silhouette alone must say what it does.
-OUTPUT: 512x512 PNG with a transparent background (real alpha channel), crisp edges.
+MATERIAL: the symbol is machined from brushed steel, base #8a939c, ranging #b8c2ca on
+top-lit faces to #3a4046 on shadow sides, with faint horizontal brush streaks along its
+faces and a few small nicks on the edges. Same hand-painted retro game art treatment as
+the ability icons, no color tint, no paint.
+CONSTRUCTION: the symbol is a solid extruded shape — a flat front face squarely facing the
+viewer, straight side walls showing its thickness, and a chamfered edge where the front
+face meets the walls. The chamfer catches a bright specular line along every upper and
+left edge. Think of a part milled from steel, floating free with nothing behind it.
+SHAPE DISCIPLINE: every edge is a straight line or a clean arc, every corner is crisp, and
+the whole shape looks machined rather than hand-drawn. Bars, arms and strokes keep a
+constant width along their length and end in flat square cuts. Matching parts are exactly
+the same size and thickness as each other.
+WEIGHT: this glyph is shown at 24 pixels on a phone, smaller than the ability icons. Bars
+are thick — at least 10% of the icon width — gaps between parts are at least as wide as
+the bars, and there are three large forms at most. The silhouette alone must say what it
+does.
+COMPOSITION: seen straight from the front, square to the viewer, with no rotation and no
+tilt. Symmetrical subjects stay symmetrical. Depth reads only from the extruded side walls
+and the chamfer. Centered, filling roughly 78% of the frame, with clear empty margin on
+all four sides.
+LIGHT: single hard key light from the upper left. Bright specular chamfer on upper and
+left edges, mid-tone front face, deep shadow on the lower and right side walls. No cast
+shadow — there is no surface behind the symbol.
+OUTPUT: 512x512 PNG with a real transparent alpha channel, crisp edges, retro game UI art.
 --- NEGATIVE ---
 background, backdrop, plate, tile, frame, border, circle badge, rounded square container,
-metal texture, rivets, panel seams, bevel, emboss, drop shadow, inner shadow, gradient,
-glow, bloom, neon, 3D render, photorealistic, chrome, reflection, perspective, isometric,
-three-quarter view, tilted, rotated,
-multiple colours, colour tint, two-tone, outline only, unfilled, thin hairlines, fine
-detail, tiny parts, varying line thickness, wobbly edges, hand-drawn, sketchy,
-text, letters, numbers, watermark, logo, scene, character, cute, low contrast
+rivets, panel seams, cast shadow, drop shadow, ground shadow, floor,
+three-quarter view, rotated, turned to the side, tilted, angled perspective, isometric,
+oblique projection, foreshortening, perspective distortion, diagonal placement,
+pure side profile, flattened depth, no thickness,
+varying line thickness, thick and thin lines, brush stroke, calligraphy, uneven width,
+wobbly edges, hand-drawn lines, sketchy, inconsistent thickness between matching parts,
+painted symbol, flat colored symbol, blue, green, colored tint, glossy plastic, sticker,
+decal, line art, outline only, unfilled, flat vector, minimal icon, modern flat design,
+white background, soft gradient, airbrush, blur, glow, bloom, neon, photorealistic,
+3D render, chrome, mirror reflection, text, letters, numbers, watermark, logo, ornate
+frame, decorative border, multiple symbols, scene, character, cute, rounded soft shapes,
+low contrast, fine detail, tiny parts
 ```
 
-> ⚠ **색을 넣지 말 것.** 버튼(`.cgRally` 초록 · `.cgLift` 파랑 · `.cgSelAll` 하늘)이 면과 테두리로 상태를
-> 표현하고, `.on` 일 때 그 면이 밝아진다. 아이콘까지 색을 가지면 상태 표시가 두 벌이 되어 어긋난다.
+> ⚠ **색은 버튼이 낸다.** 아이콘은 능력 아이콘과 같은 무채색 스틸이고, 상태(`.on`)는 버튼 면이
+> 밝아지며 표현한다. 아이콘에 초록·파랑을 칠하면 상태 표시가 두 벌이 되어 어긋난다.
 
 ## SUBJECT
 
 ### `ui_rally` — 랠리 포인트
 ```
 a rally flag — one straight vertical pole of constant width, a solid triangular pennant
-attached to the upper half of the pole and pointing right, and one wide flat bar across
-the bottom of the pole as its base. The gathering point mark
+mounted on the upper half of the pole and pointing right, and one wide flat bar across the
+bottom of the pole as its base. The gathering point mark
 ```
 
 ### `ui_lift` — 건물 띄우기
 ```
-a lift-off arrow — one wide flat bar across the bottom of the icon, and above it one thick
-vertical bar rising to a solid triangular arrowhead that points straight up, the bar and
-the base separated by a clean gap. The take-off mark
+a lift-off arrow — one thick vertical bar rising to a solid triangular arrowhead that
+points straight up, and beneath it one wide flat bar across the bottom of the icon,
+separated from the arrow by one clean straight gap. The take-off mark
 ```
 
 ### `ui_land` — 건물 내리기
 ```
-a landing arrow — one thick vertical bar descending to a solid triangular arrowhead that
+a landing arrow — one thick vertical bar dropping to a solid triangular arrowhead that
 points straight down, and beneath it one wide flat bar across the bottom of the icon,
-separated by a clean gap. The touch-down mark
+separated from the arrowhead by one clean straight gap. The touch-down mark
 ```
 
 ### `ui_selall` — 전체 지정
 ```
-a selection marquee — four short right-angle corner brackets of exactly the same size
-placed at the four corners of a square, with four solid round dots evenly spaced in a
-2 by 2 grid inside them. The select-all-of-this-kind mark
+a selection marquee — four short right-angle corner brackets of exactly the same size and
+thickness placed at the four corners of a square, and four solid square studs of exactly
+the same size evenly spaced in a two by two grid inside them. The select-all-of-this-kind
+mark
 ```
 
 ### `ui_back` — 전체로 돌아가기
 ```
 a u-turn arrow — one horizontal bar running left and ending in a solid triangular
-arrowhead that points left, the bar joined at its right end by a quarter-circle elbow that
-turns down into a shorter vertical bar. The return-to-all mark
+arrowhead that points left, joined at its right end by a quarter-circle elbow of the same
+width that turns down into one shorter vertical bar. The return-to-all mark
 ```
 
 ### `ui_untype` — 그 종류만 빼기
 ```
-a trash bin — one wide flat lid bar across the top with a small rectangular handle
-centred above it, and beneath the lid a tapered bin body with two vertical slots of
-exactly the same width inside. The remove-this-kind mark
+a trash bin — one wide flat lid bar across the top with a short rectangular handle block
+centered above it, and beneath the lid a bin body that tapers slightly toward the bottom
+with two vertical slots of exactly the same width cut into its front face. The
+remove-this-kind mark
 ```
+
+> ⚠ `lift` 와 `land` 는 **한 쌍**이다. 바닥 바는 같은 두께·같은 위치로 두고 화살표 방향만 뒤집는다 —
+> 두 아이콘이 같은 자리에서 교대로 뜨므로(부양 전/후) 바닥이 어긋나면 버튼이 흔들려 보인다.
 
 ## 배선은 이미 끝나 있다
 `uiIco(키)` 가 위 경로를 부른다 — **파일을 `assets/icons/ui/` 에 넣기만 하면 그 자리가 교체된다.**
 없는 동안은 `_uiFail` 이 **원래 인라인 SVG**(`UI_SVG` 표)로 되돌리므로 버튼이 비지 않는다.
-변환은 다른 계열과 같다. 단 **알파를 유지**해야 하므로 검정 배경으로 눌러 담지 말 것:
+변환은 **`--alpha`** 를 붙인다(안 붙이면 검정으로 눌려 판처럼 보인다):
 ```bash
-node test/png2icon.mjs <입력.png> assets/icons/ui/ui_<키>.webp --alpha
+node test/png2icon.mjs <입력.png> assets/icons/ui/ui_<키>.webp 0.82 --alpha
 ```
-
