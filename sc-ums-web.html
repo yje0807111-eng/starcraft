@@ -1480,6 +1480,9 @@
   .cmdG .cgLift.busy{opacity:.6;cursor:default}
   .cmdG .cgRally{flex:none;align-self:center;width:38px;height:38px;border-radius:9px;border:1px solid var(--glass);background:rgba(70,240,106,.13);color:#8ef2a8;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}   /* 랠리 버튼(정사각 아이콘 카드) */
   .cmdG .cgRally svg{width:24px;height:24px;display:block}
+  /* 🎛 UI 조작 아이콘(투명 배경 계열) — 판이 없으므로 버튼 면이 색을 낸다. 크기는 옛 인라인 SVG와 같게. */
+  .cmdG .uiIco{width:24px;height:24px;display:block;object-fit:contain}
+  .cmdG .cgTrash .uiIco{width:13px;height:13px}
   .cmdG .cgRally.on{border-color:#46f06a;background:rgba(70,240,106,.24);box-shadow:0 0 6px rgba(70,240,106,.45)}
   .cmdG .cgRally:active{background:rgba(70,240,106,.32)}
   .cmdG .cgSelAll{flex:none;align-self:center;width:38px;height:38px;border-radius:9px;border:1px solid var(--glass);background:rgba(92,214,255,.13);color:#a9e4ff;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}   /* 👥 화면 내 같은 종류 전체 지정(정사각 아이콘 카드) */
@@ -13336,7 +13339,7 @@ function _mainTransportCards(u){ const out=[]; if(typeof isTransport!=='function
   return out; }
 function _mainSelAllBtn(u){ if(typeof isBuilding==='function'&&isBuilding(u.id)) return '';
   const key=_mainTypeKey(u), cnt=G.units.filter(x=>!isBuilding(x.id)&&_mainTypeKey(x)===key).length;
-  return (cnt>1)?('<button class="cgSelAll" onclick="selectAllOfType()" title="같은 종류 전체 지정">'+_SVG_SELALL+'</button>'):''; }
+  return (cnt>1)?('<button class="cgSelAll" onclick="selectAllOfType()" title="같은 종류 전체 지정">'+uiIco('selall')+'</button>'):''; }
 function _mainSingleModel(u){ const def=U[u.id]||{}, role=_mainRole(u);
   return { mode:'prod', title:gNameStar(u,def)+(u.hero?' [영웅]':''), icon:_mainPort(u), hpsh:_mainHpsh(u),   // 이름 옆 (보직/직업) 표기 제거 — 건설 프로필과 통일
     sub:'맵을 탭하면 이동 · 해제는 우상단 ✕', items:_mainSkillCards([u]).concat(_mainTransportCards(u)), topRight:_mainSelAllBtn(u),
@@ -13347,12 +13350,12 @@ function _mainTypeModel(list, canBack){ const u0=list[0], def=U[u0.id]||{}, n=li
   if(n>CAP) rows.push({ more:n-CAP });
   return { mode:'prod', title:gNameStar(u0,def)+' <span class="nsub">×'+n+'</span>', icon:_mainPort(u0),   // 이름 옆 (보직/직업) 표기 제거
     sub:'', items:_mainSkillCards(list), topRight:_mainSelAllBtn(u0),   // 활성셋 전체 기준 상태(ON·마나·쿨다운)
-    back:canBack?'<button class="cgLift cgBack" onclick="mainSubSelectType(event,\'\')" title="전체 선택으로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6L4 11l5 5"/><path d="M4 11h9a6 6 0 0 1 6 6v1"/></svg></button>':'',   // 🔙 소프트선택 해제(전체 복귀)
+    back:canBack?'<button class="cgLift cgBack" onclick="mainSubSelectType(event,\'\')" title="전체 선택으로">'+uiIco('back')+'</button>':'',   // 🔙 소프트선택 해제(전체 복귀)
     info:{ eb:'', hideName:true, units:rows, cr:0, en:0 } }; }
 function _mainMixedModel(list){ const grp={}, ord=[];
   for(const u of list){ const k=_mainTypeKey(u); if(!grp[k]){ grp[k]={n:0,u:u}; ord.push(k); } grp[k].n++; }
   const items=ord.map(k=>({ pro:_mainPort(grp[k].u), sn:gNameStar(grp[k].u,U[grp[k].u.id]||{}), tr:'×'+grp[k].n, metaCls:'lv', state:'ok',
-    bottom:'<div class="cgTrash" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()" onclick="mainRemoveType(event,\''+k+'\')" title="이 종류 지정 해제">'+_SVG_TRASH+'</div>',
+    bottom:'<div class="cgTrash" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()" onclick="mainRemoveType(event,\''+k+'\')" title="이 종류 지정 해제">'+uiIco('untype')+'</div>',
     act:'onpointerdown="mainChipDown(event,\''+k+'\')" onpointerup="mainChipUp(event)" onpointerleave="mainChipCancel()" onpointercancel="mainChipCancel()" oncontextmenu="return false"' }));   // 짧게=소프트(전부 유지) · 꾹=그 종류만 분리 · 🗑=그 종류 해제
   if(typeof unitSkillKeys==='function'){ const sets=ord.map(k=>new Set(unitSkillKeys(grp[k].u)));   // 🪄 혼합 = 전 종류 공통 스킬(교집합)만 카드로(건설과 동일)
     const common=sets.length?[...sets[0]].filter(kk=>sets.every(s=>s.has(kk))):[];
@@ -13504,7 +13507,7 @@ const _BACK_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 function _bossArenaSlot(i){ const dep=G.units.filter(u=>u.atBoss), u=dep[i], hasBoss=!!(G.coopBoss&&!G.coopBoss.dead);
   if(u){ const id=u.gmodel||u.id, def=U[u.id]||{}, nm=u.gname||def.name||id;   // 채워짐 = 다중지정 카드 그대로(초상화+이름+휴지통). 파견N·탭=회수 텍스트 없음
     return { pro:unitPortraitHTML(id), sn:nm, metaCls:'lv', state:'ok',
-      bottom:'<div class="cgTrash" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()" onclick="bossRecallSlot(event,'+i+')" title="회수">'+_SVG_TRASH+'</div>', act:'' }; }
+      bottom:'<div class="cgTrash" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()" onclick="bossRecallSlot(event,'+i+')" title="회수">'+uiIco('untype')+'</div>', act:'' }; }
   return { pro:bossIcoHTML('deploy'), sn:'파견', state:hasBoss?'ok':'dim', act:'onclick="bossSlotTap('+i+')"' }; }
 // 🏢 포인트방 건물 프로필 — 이름 + 체력 + 처치 포인트(간단). 관리자 건물 프로필과 동일한 build 카드.
 const _BLD_ICON_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M4 20h16M6 20V9l6-4 6 4v11M9.5 20v-5h5v5"/></svg>';
@@ -19319,7 +19322,15 @@ const _SVG_ARR_UP='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 const _SVG_ARR_DOWN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.5v11"/><path d="M6.5 11.5l5.5 5.5 5.5-5.5"/></svg>';   // 짧고 굵은 아래 화살표(하강)
 const _SVG_RALLY='<svg viewBox="0 0 24 24" fill="none"><path d="M12 3v8.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M9.3 8.9l2.7 2.7 2.7-2.7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="12" cy="17.2" rx="6" ry="4.1" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="12" cy="17.2" r="1.5" fill="currentColor"/></svg>';   // 위→아래 얇은 화살표 + 원+점(웨이포인트와 통일)
 const _SVG_SELALL='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3.5" y="3.5" width="17" height="17" rx="2.5" stroke-dasharray="3 2.3"/><circle cx="9" cy="9" r="1.7" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="1.7" fill="currentColor" stroke="none"/><circle cx="9" cy="15" r="1.7" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="1.7" fill="currentColor" stroke="none"/></svg>';   // 👥 마퀴(점선 상자)+4점 = 화면 내 같은 종류 전체 지정
+// ══ 🎛 UI 조작 아이콘(투명 배경 계열) ══════════════════════════════════
+// 능력 아이콘(금속판 계열)과 **다른 계열**이다 — 판·테두리 없이 단색 실루엣 하나.
+//   파일: assets/icons/ui/ui_<키>.webp (알파 유지). 없으면 아래 표의 기존 인라인 SVG로 되돌아간다.
+//   ⚠ 색은 버튼이 낸다(.cgRally/.cgLift/.cgSelAll 의 면·테두리). 아이콘 자체에 색을 넣지 말 것.
+const _SVG_BACK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6L4 11l5 5"/><path d="M4 11h9a6 6 0 0 1 6 6v1"/></svg>';   // ↩ 한 종류 보기 → 여러 종류 전체로 복귀
 const _SVG_TRASH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12"/><path d="M10 11v6M14 11v6"/></svg>';   // 🗑 휴지통 = 그 종류 지정 해제
+const UI_SVG={ rally:_SVG_RALLY, lift:_SVG_ARR_UP, land:_SVG_ARR_DOWN, selall:_SVG_SELALL, back:_SVG_BACK, untype:_SVG_TRASH };
+function uiIco(k){ return '<img class="uiIco" src="'+ICO_DIR+'ui/ui_'+k+'.webp" alt="" draggable="false" data-ui="'+k+'" onerror="_uiFail(this)">'; }
+function _uiFail(im){ try{ im.outerHTML=UI_SVG[im.getAttribute('data-ui')]||''; }catch(_e){ try{ im.remove(); }catch(_e2){} } }   // 파일이 없으면 원래 인라인 SVG로(칸이 비지 않는다)
 function _techAutoBtn(b){ const e=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'):null; if(!e||e.bk!==b.k) return '';
   const isMain=(b.k===((TECH_TREE[G.tech.race].buildings[0])||{}).k); if(!isMain && !b.gas) return '';   // 본진 또는 가스 건물만
   const tt=isMain?'이 본진과 연동 중인 미네랄 채취 일꾼 수':'이 가스 건물에서 작업 중인 일꾼 수', n=isMain?_techMineralWorkers(e).length:_techGasWorkers(e).length;   // 우상단 배너와 동일 톤 스텝퍼(아이콘 제거, − n +)
@@ -19327,19 +19338,19 @@ function _techAutoBtn(b){ const e=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid==
 function _techLiftBtn(b){ const e=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'):null; if(!e||e.bk!==b.k||e.bt>0||!_techCanLift(b.k)) return '';   // 🛫 부양 버튼(프로필 우상단) — 상태별
   let up,ttl,busy=false; const ph=e._liftPhase;
   if(!e._lifted){ up=true; ttl='부양'; } else if(ph==='flying'){ up=false; ttl='착륙 위치 지정'; } else { up=(ph==='rising'); ttl=(ph==='descending'?'착륙 중':(ph==='toland'?'착륙 지점 이동 중':'이륙 중')); busy=true; }
-  const ico=up?_SVG_ARR_UP:_SVG_ARR_DOWN;
+  const ico=uiIco(up?'lift':'land');
   return '<button class="cgLift'+(e._lifted?' on':'')+(busy?' busy':'')+'"'+(busy?'':' onclick="techLiftToggle(event)"')+' title="'+ttl+'">'+ico+'</button>'; }
 function _techRallyBtn(b){ const e=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'):null; if(!e||e.bk!==b.k||e.bt>0) return '';   // 🚩 랠리 포인트(생성 유닛 자동 이동) — 유닛 생산 건물만
   if(!(b.produces&&b.produces.length)) return '';
   const on=(G.tech.rallySet===e.eid)||!!e._rally;
-  return '<button class="cgRally'+(on?' on':'')+'" onclick="techRallySet(event)" title="랠리 포인트 — 생성된 유닛이 자동으로 갈 위치 지정">'+_SVG_RALLY+'</button>'; }
+  return '<button class="cgRally'+(on?' on':'')+'" onclick="techRallySet(event)" title="랠리 포인트 — 생성된 유닛이 자동으로 갈 위치 지정">'+uiIco('rally')+'</button>'; }
 function techRallySet(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech||G.tech.sel==null) return;
   const e=G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'); if(!e) return;
   if(G.tech.rallySet===e.eid){ G.tech.rallySet=null; e._rally=null; if(typeof toast==='function') toast('랠리 해제'); }   // 지정 중 다시 누르면 해제
   else { G.tech.rallySet=e.eid; if(typeof toast==='function') toast('🚩 맵을 탭해 랠리 위치 지정'); }
   if(typeof playSfx==='function') playSfx('ui_open'); techUIRender(); }
 function _techBldgTR(b){ return _techAutoBtn(b)+_techRallyBtn(b)+_techLiftBtn(b); }   // 프로필 우상단 = [자원 스텝퍼][랠리][부양] (지정해제는 메인 금지버튼으로 통일)
-function _techSelAllBtn(key){ return '<button class="cgSelAll" onclick="techSelectAllType(event,\''+key+'\')" title="화면 안의 같은 종류 전체 지정">'+_SVG_SELALL+'</button>'; }   // 👥 프로필 우상단 = 화면 내 같은 종류 전체 지정
+function _techSelAllBtn(key){ return '<button class="cgSelAll" onclick="techSelectAllType(event,\''+key+'\')" title="화면 안의 같은 종류 전체 지정">'+uiIco('selall')+'</button>'; }   // 👥 프로필 우상단 = 화면 내 같은 종류 전체 지정
 function techSelectAllType(ev,key){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech||!G.tech.ents) return;
   const keyOf=e=>(e.type==='worker')?'__wk':e.uid;
   const list=G.tech.ents.filter(e=>{ if(e.type!=='unit'&&e.type!=='worker') return false; if(keyOf(e)!==key) return false;
@@ -20212,13 +20223,13 @@ function _techMultiTypeModel(units, canBack){ const race=G.tech.race, uid=units[
   const rn=_techRealName(race,uid), role=_techRoleOf(uid);
   return { mode:'prod', title:rn+' <span class="nsub">×'+n+'</span>', icon:_techUnitPortrait(uid),
     sub:'', items, topRight:_techSelAllBtn(uid),   // 👥 화면 내 같은 종류 전체 지정
-    back:canBack?'<button class="cgLift cgBack" onclick="techSubSelectType(event,\'\')" title="전체 선택으로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6L4 11l5 5"/><path d="M4 11h9a6 6 0 0 1 6 6v1"/></svg></button>':'',   // 🔙 소프트선택 해제(전체 복귀) — 오른쪽 끝
+    back:canBack?'<button class="cgLift cgBack" onclick="techSubSelectType(event,\'\')" title="전체 선택으로">'+uiIco('back')+'</button>':'',   // 🔙 소프트선택 해제(전체 복귀) — 오른쪽 끝
     info:{ eb:'', hideName:true, units:rows, cr:0, en:0 } }; }
 function _techMultiMixedModel(list, grp, ord){ const race=G.tech.race, items=[];   // 👥 혼합 지정(여러 종류) — 종류 초상화 칩(탭=그 종류만) + 공통 스킬(교집합)만(SC식)
   const uidOf=k=>(k==='__wk')?(TECH_WORKER[race]||'worker_human'):k;
   for(const k of ord){ const uid=uidOf(k);
     items.push({ pro:_techUnitPortrait(uid), sn:_techRealName(race,uid), tr:'×'+grp[k].n, metaCls:'lv', state:'ok',
-      bottom:'<div class="cgTrash" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()" onclick="techRemoveType(event,\''+k+'\')" title="이 종류 지정 해제">'+_SVG_TRASH+'</div>',   // 🗑 카드 하단 = 그 종류만 지정 해제(카드 사라지고 뒤 카드 당겨짐)
+      bottom:'<div class="cgTrash" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()" onclick="techRemoveType(event,\''+k+'\')" title="이 종류 지정 해제">'+uiIco('untype')+'</div>',   // 🗑 카드 하단 = 그 종류만 지정 해제(카드 사라지고 뒤 카드 당겨짐)
       act:'onpointerdown="techChipDown(event,\''+k+'\')" onpointerup="techChipUp(event)" onpointerleave="techChipCancel()" onpointercancel="techChipCancel()" oncontextmenu="return false"' }); }   // 짧게=소프트(전부 유지) · 꾹=그 종류만 분리 · 전환은 pointerup에서(터치 롱프레스 대응) + 뒤따르는 click은 삼킴
   if(typeof UNIT_SKILLS!=='undefined'){ const sets=ord.filter(k=>k!=='__wk').map(k=>new Set(UNIT_SKILLS[grp[k].e.uid]||[]));
     const common=(sets.length&&sets.length===ord.length)?[...sets[0]].filter(kk=>sets.every(s=>s.has(kk))):[];   // 일꾼 포함 시 공통 없음
@@ -20273,7 +20284,7 @@ function techWorkerBuildModel(list, canBack){ const race=G.tech.race, fid=(TECH_
       sh:(u.sh!=null?u.sh:(u.maxSh||0)), maxSh:(u.maxSh||0), en:(u.en!=null?u.en:0), maxEn:(u.maxEn||0) }));
     if(n>CAP) rows.push({ more:n-CAP });
     return { eb:'', hideName:true, units:rows, cr:0, en:0 }; })();
-  const _bk=canBack?'<button class="cgLift cgBack" onclick="techSubSelectType(event,\'\')" title="전체 선택으로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6L4 11l5 5"/><path d="M4 11h9a6 6 0 0 1 6 6v1"/></svg></button>':'';
+  const _bk=canBack?'<button class="cgLift cgBack" onclick="techSubSelectType(event,\'\')" title="전체 선택으로">'+uiIco('back')+'</button>':'';
   let _bd=null; for(const w of list){ const b=_techBuildBldg(w); if(b&&b.bt>0&&!b._bpause){ _bd=b; break; } }   // 지정 중 한 마리라도 건설 중(미일시정지) 일꾼이 있으면 = 작업 프로필(그리드 비우고 4번째 칸에 일시정지만)
   if(_bd){
     const items=[null,null,null,{ pro:'<svg viewBox="0 0 24 24" style="display:block;width:100%;height:100%"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.4"/><line x1="6.2" y1="6.2" x2="17.8" y2="17.8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>', sn:'', state:'ok', cls:'iconFill', act:'onclick="techPauseBuild(event)"' }];   // 4번째(우상단) 칸 = 유닛 지정해제와 동일한 금지 아이콘(칸 중앙에 크게, 텍스트 없음), 나머지 비움 → 다른 행동 불가

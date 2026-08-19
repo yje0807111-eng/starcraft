@@ -187,6 +187,7 @@ const SKILL_ICO={ nuke:'bomb' };
 | `upgrades/` | `up_<키>.webp` | `UPG_ICO` — 연구 73종이 23장을 공유 |
 | `buildings/` | `bld_<키>.webp` | `TECH_TREE` 건물 키 |
 | `auto/` | `auto_<키>.webp` | `AUTO_SHEET_DEFS` — unit·combine·energy·bossdeploy·place·rally |
+| `ui/` | `ui_<키>.webp` | **조작 버튼**(투명 배경 계열) — `UI_SVG` 표 · `uiIco(키)` |
 | `upgrades/` | `up_mine.webp` | 오토배틀 **강화 > 광산** — `UPG_ICO` 를 안 거치고 `_icoImg('upgrades','up_mine')` 로 직접 부른다 |
 | 루트 | `res_<키>.webp` | `resIco()` — 미네랄·가스·젬·인구 |
 
@@ -253,4 +254,115 @@ node test/png2icon.mjs <입력.png> assets/icons/<폴더>/<이름>.webp
 > ⚠ **우상단 배지(`.cgMeta`)는 `z-index:2`** 여야 한다. 배지는 `.cgPro` 의 형제이고 초상 이미지(`.icoImg`)도
 > `z-index:1` 이라, 같은 층이면 트리 순서가 늦은 초상이 이겨 **배지가 통째로 사라진다**(실제로 그랬다).
 > 스모크가 배지 중심의 최상위 요소를 검사한다.
+
+---
+
+# 🎛 조작 버튼 아이콘 — 투명 배경 계열 (2026-08-19)
+
+**능력 아이콘(금속판 계열)과 다른 계열이다.** 판 위에 얹는 그림이 아니라, 버튼 안에 들어가는 **글리프**다.
+버튼이 이미 면·테두리·상태색을 갖고 있으므로 아이콘은 **배경 없이 단색 실루엣 하나**여야 한다.
+
+| | 능력 아이콘(A/B) | **조작 버튼(C)** |
+|---|---|---|
+| 배경 | 금속판(참조 이미지) | **없음(알파)** |
+| 색 | 브러시드 스틸 명암 | **단색 #e8eef6 · 명암 없음** |
+| 크기 | 128px, 표시 32~44px | 128px, **표시 24px** |
+| 쓰는 곳 | `skills/` `buildings/` `upgrades/` `auto/` | **`ui/`** |
+
+## 만들 목록
+
+| 키 | 뜻 | 지금 쓰는 곳 |
+|---|---|---|
+| `rally` | 생산한 유닛이 자동으로 갈 위치 | 건물 프로필 `.cgRally` |
+| `lift` | 건물 띄우기 | `.cgLift`(부양 전) |
+| `land` | 건물 내리기 | `.cgLift`(부양 중) |
+| `selall` | 화면 안 같은 종류 전부 지정 | `.cgSelAll`(건물·유닛 프로필) |
+| `back` | 한 종류 보기 → 여러 종류 전체로 복귀 | `.cgBack` |
+| `untype` | 혼합 지정에서 그 종류만 빼기 | 카드 하단 `.cgTrash` |
+
+## 공통 블록 C — 투명 배경 조작 아이콘 (고정 · 절대 수정 금지)
+
+```
+--- RENDER SPEC ---
+A single mobile game UI control glyph. Flat vector-style icon, no background.
+SYMBOL: [[SUBJECT]]
+STYLE: one solid shape in a single flat colour #e8eef6 on a fully transparent background.
+No plate, no tile, no frame, no container, no badge. No shading, no gradient, no texture,
+no bevel, no outline in a second colour. Think of a modern phone HUD glyph cut from one
+sheet of light metal.
+SHAPE DISCIPLINE: every edge is a straight line or a clean arc and every corner is crisp.
+Bars, arms and strokes keep a constant width along their length and end in flat square
+cuts. Matching parts are exactly the same size and thickness as each other. Symmetrical
+subjects stay symmetrical.
+WEIGHT: bars and strokes are thick — at least 8% of the icon width — and gaps between
+parts are at least as wide as the bars, so the shape still reads at 24 pixels on a phone.
+COMPOSITION: seen straight from the front, square to the viewer, no rotation, no tilt, no
+perspective. Centred, filling about 78% of the frame, with clear empty margin on all four
+sides.
+READABILITY: three large forms at most. The silhouette alone must say what it does.
+OUTPUT: 512x512 PNG with a transparent background (real alpha channel), crisp edges.
+--- NEGATIVE ---
+background, backdrop, plate, tile, frame, border, circle badge, rounded square container,
+metal texture, rivets, panel seams, bevel, emboss, drop shadow, inner shadow, gradient,
+glow, bloom, neon, 3D render, photorealistic, chrome, reflection, perspective, isometric,
+three-quarter view, tilted, rotated,
+multiple colours, colour tint, two-tone, outline only, unfilled, thin hairlines, fine
+detail, tiny parts, varying line thickness, wobbly edges, hand-drawn, sketchy,
+text, letters, numbers, watermark, logo, scene, character, cute, low contrast
+```
+
+> ⚠ **색을 넣지 말 것.** 버튼(`.cgRally` 초록 · `.cgLift` 파랑 · `.cgSelAll` 하늘)이 면과 테두리로 상태를
+> 표현하고, `.on` 일 때 그 면이 밝아진다. 아이콘까지 색을 가지면 상태 표시가 두 벌이 되어 어긋난다.
+
+## SUBJECT
+
+### `ui_rally` — 랠리 포인트
+```
+a rally flag — one straight vertical pole of constant width, a solid triangular pennant
+attached to the upper half of the pole and pointing right, and one wide flat bar across
+the bottom of the pole as its base. The gathering point mark
+```
+
+### `ui_lift` — 건물 띄우기
+```
+a lift-off arrow — one wide flat bar across the bottom of the icon, and above it one thick
+vertical bar rising to a solid triangular arrowhead that points straight up, the bar and
+the base separated by a clean gap. The take-off mark
+```
+
+### `ui_land` — 건물 내리기
+```
+a landing arrow — one thick vertical bar descending to a solid triangular arrowhead that
+points straight down, and beneath it one wide flat bar across the bottom of the icon,
+separated by a clean gap. The touch-down mark
+```
+
+### `ui_selall` — 전체 지정
+```
+a selection marquee — four short right-angle corner brackets of exactly the same size
+placed at the four corners of a square, with four solid round dots evenly spaced in a
+2 by 2 grid inside them. The select-all-of-this-kind mark
+```
+
+### `ui_back` — 전체로 돌아가기
+```
+a u-turn arrow — one horizontal bar running left and ending in a solid triangular
+arrowhead that points left, the bar joined at its right end by a quarter-circle elbow that
+turns down into a shorter vertical bar. The return-to-all mark
+```
+
+### `ui_untype` — 그 종류만 빼기
+```
+a trash bin — one wide flat lid bar across the top with a small rectangular handle
+centred above it, and beneath the lid a tapered bin body with two vertical slots of
+exactly the same width inside. The remove-this-kind mark
+```
+
+## 배선은 이미 끝나 있다
+`uiIco(키)` 가 위 경로를 부른다 — **파일을 `assets/icons/ui/` 에 넣기만 하면 그 자리가 교체된다.**
+없는 동안은 `_uiFail` 이 **원래 인라인 SVG**(`UI_SVG` 표)로 되돌리므로 버튼이 비지 않는다.
+변환은 다른 계열과 같다. 단 **알파를 유지**해야 하므로 검정 배경으로 눌러 담지 말 것:
+```bash
+node test/png2icon.mjs <입력.png> assets/icons/ui/ui_<키>.webp --alpha
+```
 

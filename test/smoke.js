@@ -5113,6 +5113,19 @@ async function groupSandbox(){
     // 머리줄이 얇아진 만큼 그리드는 일꾼 프로필보다 짧지 않아야 한다(전엔 88 vs 97 로 눌렸다)
     const gB=body.querySelector('.cgGrid').getBoundingClientRect().height;
     assert(gB>=gWk-4,'건물 프로필 그리드가 일꾼보다 짧음: '+gB.toFixed(1)+' vs '+gWk.toFixed(1));
+    // 🎛 조작 버튼은 투명 배경 아이콘 계열(ui/)을 부르고, 파일이 없으면 **원래 인라인 SVG**로 되돌아온다.
+    //   ⚠ 되돌리기가 없으면 파일을 넣기 전까지 버튼이 통째로 빈다(옛 _icoFail 은 이모지로 바꿔 결이 달랐다).
+    { assert(typeof uiIco==='function' && typeof UI_SVG==='object','UI 아이콘 계열이 없음');
+      for(const k of Object.keys(UI_SVG)){
+        assert(/^<svg/.test(UI_SVG[k]||''),'UI_SVG.'+k+' 에 폴백 SVG 가 없음');
+        const h=uiIco(k);
+        assert(h.indexOf('assets/icons/ui/ui_'+k+'.webp')>=0,'uiIco('+k+') 가 ui/ 경로를 안 부름: '+h); }
+      const tmp=document.createElement('div'); tmp.innerHTML=uiIco('rally');
+      _uiFail(tmp.querySelector('img'));
+      assert(tmp.querySelector('svg'),'파일이 없을 때 인라인 SVG 로 안 되돌아감'); }
+    // 조작 버튼 안에 글리프가 실제로 그려져 있다(파일이 없어도 비지 않는다)
+    for(const sel of ['.cgRally','.cgLift']){ const btn=body.querySelector(sel); if(!btn) continue;
+      assert(btn.querySelector('svg,img'),sel+' 버튼이 비어 있음'); }
     // 🔮 마나는 머리줄이 아니라 왼쪽 정보 구역(스탯)이다
     assert(!body.querySelector('.cgHpsh .env'),'마나가 머리줄에 있음');
     { const mid=Object.keys(U).find(k=>U[k].energy>0); skipIf(!mid,'마나 유닛 없음');
