@@ -2681,6 +2681,13 @@ async function groupLobby(){
     assert(!$('sdGo').disabled,'해금된 난이도인데 시작 버튼이 잠김');
     assert($('sdDet').querySelectorAll('.sdStat').length===2,'적 HP·포인트 두 지표가 안 나옴');
     assert($('sdDet').querySelector('.sdMap b').textContent===USEMAPS.nemo.name,'상세 머리에 고른 맵이 없음');
+    // ⚠ 상세 본문(이름·수치·설명)이 시작 버튼 위로 흘러 잘렸던 적이 있다 — 모든 난이도에서 담기는지 본다
+    for(let i=0;i<DIFFICULTY_ORDER.length;i++){ sdPick(i); await sleep(50);
+      const body=$('sdDet').querySelector('.sdBody'), go=$('sdGo');
+      assert(body.scrollHeight<=body.clientHeight+0.5,
+        DIFFICULTY_ORDER[i]+' 상세 본문이 넘침: '+body.scrollHeight+'>'+body.clientHeight);
+      assert(body.getBoundingClientRect().bottom<=go.getBoundingClientRect().top+0.5,
+        DIFFICULTY_ORDER[i]+' 본문이 시작 버튼과 겹침'); }
     // 무한 모드는 난이도가 아니다 — 탭이 아니라 별도 줄
     assert(!visible($('sdInf'))||$('sdInf').textContent.indexOf('무한')>=0,'무한 모드 줄이 이상함');
     closeSoloDiff(); await sleep(40);
