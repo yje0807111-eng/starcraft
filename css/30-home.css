@@ -971,6 +971,16 @@
   .gi{width:15px;height:15px;flex:none;object-fit:contain;vertical-align:middle}
   .giT{font-style:normal;font-size:13px;width:15px;flex:none;text-align:center}
   .shopGem button{width:100%}
+  /* ⚔ 직접 토벌 — 사냥터 화면(HOME)을 그대로 빌린다. 두 번째 전투 화면을 만들지 않는다(단일 소스).
+     빌린 화면에서 **사냥터 것만** 걷어낸다: 업그레이드 카드 · 라운드 ◀▶ · 건설 종료. */
+  body:not(.dgFight) #dgFightOut{display:none}
+  body.dgFight .hmScroll{display:none}                 /* 사냥터 업그레이드 카드 */
+  body.dgFight #hbRdPrev, body.dgFight #hbRdNext{display:none}   /* 토벌 중에 단계를 갈아탈 수는 없다 */
+  body.dgFight #hbMidTx{pointer-events:none}           /* 가운데도 목록을 열지 않는다 */
+  body.dgFight #hbBuildStop{display:none}              /* 토벌 중 건설 종료는 뜻이 없다 */
+  /* AUTO 칩은 사냥터의 '스킬 자동' 토글이다. 직접 토벌은 스킬이 늘 수동이라(그게 '직접'을 고르는 이유다)
+     여기 두면 눌러도 아무 일이 없는 거짓말 컨트롤이 된다. */
+  body.dgFight .hbAutoChip{display:none}
   .dgCard{position:relative;display:flex;align-items:stretch;height:74px;margin:0 2px 10px;border:1px solid var(--metal-edge);border-radius:var(--r-bar);overflow:hidden;cursor:pointer;
     background:linear-gradient(115deg,var(--dgTint,#2f4a72) 0%,rgba(10,13,18,.72) 60%)}
   .dgCard.lock{opacity:.5;cursor:default}

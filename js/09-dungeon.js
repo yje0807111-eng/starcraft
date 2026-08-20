@@ -115,8 +115,9 @@ function dgHbWin(S){ const c=CHAR(), id=S.dgId, r=dgFloorReward(S.floor, id);
   dgHbDone(S, true, r); }
 function dgHbLose(S){ dgHbDone(S, false, null); }
 // 결과 알림 — 자동은 화면이 없으므로 토스트로. 허브가 열려 있으면 새로 그린다.
-function dgHbDone(S, won, r){ const d=dgDef(S.dgId), fl=S.floor;
+function dgHbDone(S, won, r){ const d=dgDef(S.dgId), fl=S.floor, manual=!S.auto;
   if(typeof dgHbEnd==='function') dgHbEnd();
+  if(manual) dgFightRestore();                          // 🎮 직접 전투였으면 화면을 사냥터로 되돌린다
   if(typeof playSfx==='function') playSfx(won?'hero_merge':'ui_close');
   if(typeof toast==='function'){
     if(won){ let tx='⚔ '+d.name+' '+fl+'단계 클리어 · +'+r.pc.toLocaleString()+' M';
@@ -125,9 +126,45 @@ function dgHbDone(S, won, r){ const d=dgDef(S.dgId), fl=S.floor;
       toast(tx+' · +'+r.xp+' XP'); }
     else toast('⚔ '+d.name+' '+fl+'단계 실패 — 🗝 열쇠는 소모되지 않았습니다'); }
   if(typeof updateCurBar==='function') updateCurBar();
-  renderDungeonHub(); if(_dgSheetId) renderDgSheet(); }
+  if(manual) openDungeonHub();                          // 직접 전투는 허브로 돌아온다
+  else { renderDungeonHub(); if(_dgSheetId) renderDgSheet(); } }
 // 토벌이 지금 돌고 있나 — 자동이 도는 중에 또 누르면 판이 덮인다
 function dgBusy(){ return !!(DG || (typeof HBS!=='undefined' && HBS.dg && HBS.dg.on)); }
+// ══ 🎮 직접 전투(5단계) — 사냥터 화면(HOME)을 **그대로 빌린다** ═══════════════════════════
+// ⛔ 두 번째 전투 화면을 만들지 말 것(단일 소스). 빌린 화면에서 사냥터 것만 CSS(.dgFight)로 걷는다.
+// 🧹 3D 는 공용이다 — 빌릴 때와 돌려줄 때 **양쪽에서** 지운다. 한쪽만 하면 반대 방향 전환에서 잔상이 샌다.
+function dg3dWipe(){ if(!window.M3D) return;
+  try{ M3D.clearGameModels && M3D.clearGameModels(); }catch(e){}
+  try{ M3D.clearIdlePools && M3D.clearIdlePools(); }catch(e){} }
+function dgFightEnter(floor, id, key){
+  const cv=document.getElementById('hbCv'); if(!cv) return false;
+  if(typeof openHome==='function') openHome();          // 사냥터 화면이 곧 전장이다
+  if(HBS.hunt) HBS.hunt.bg=true;                        // 사냥터는 배경으로 — 시뮬은 hbPumpAll 이 계속 민다
+  const S=dgHbStart(floor, id, { auto:false, key:!!key, cv:cv });
+  if(!S) return false;
+  hbUse('dg');                                          // 화면이 보는 세션을 토벌로 옮긴다
+  document.body.classList.add('dgFight');
+  dg3dWipe();                                           // 🧹 빌릴 때 — 사냥터가 만든 모델을 지우고 시작
+  hbWith('dg', ()=>{ hbResize(); hbHud(); });
+  if(typeof renderHbBar==='function') renderHbBar();
+  hbKick();                                             // 그리기 재개
+  return true; }
+// 화면을 사냥터로 되돌린다 — 포기·클리어·실패가 전부 여기를 지난다(되돌리기를 여러 벌 두지 않는다)
+function dgFightRestore(){
+  if(!document.body.classList.contains('dgFight')) return;
+  document.body.classList.remove('dgFight');
+  hbUse('hunt');
+  dg3dWipe();                                           // 🧹 돌려줄 때 — 토벌이 만든 모델을 지운다
+  if(HBS.hunt){ HBS.hunt.bg=false; HBS.hunt.lastSim=performance.now(); }
+  hbWith('hunt', ()=>{ hbResize(); hbHud(); });
+  if(typeof renderHbBar==='function') renderHbBar();
+  hbKick(); }
+// 포기 — 전투를 버린다. ⚠ 열쇠는 소모하지 않는다(완료할 때만 쓴다는 규칙 그대로).
+function dgFightGiveUp(){ const S=HBS.dg; if(!S) return;
+  hbSetSess('dg', null); dgFightRestore();
+  if(typeof playSfx==='function') playSfx('ui_close');
+  if(typeof toast==='function') toast('⚔ 토벌을 포기했습니다 — 🗝 열쇠는 소모되지 않았습니다');
+  openDungeonHub(); }
 // opt: { auto:자동 전투(화면 없이 배속) · id:토벌 종류 · key:완료 시 열쇠 소모 }
 // ⚠ id/key 를 **여기서** 심는다 — 자동은 이 함수 안에서 판이 끝날 수도 있어, 호출부에서
 //   dgStart(...) 뒤에 심으면 이미 dgWin 이 지나간 뒤가 된다(보상이 엉뚱한 종류로 들어간다).
@@ -281,10 +318,10 @@ function dgSheetEnter(auto){ const d=DG_DUNGEONS.find(x=>x.id===_dgSheetId); if(
   if(nx>dgFloorCap()){ if(typeof toast==='function') toast('Lv.'+dgFloorReqLv(nx)+'부터 도전할 수 있습니다'); return; }
   if(dgKeyN(d.id)<1){ if(typeof toast==='function') toast('🗝 열쇠가 없습니다(매일 09:00 보충)'); return; }
   dgCloseSheet(); if(typeof playSfx==='function') playSfx('ui_open');
-  // 🤖 자동 = 사냥터 엔진(화면 없이 배속) · 🎮 직접 = 아직 옛 DG 화면(5단계에서 옮긴다)
+  // 둘 다 사냥터 엔진이다 — 다른 것은 '화면을 빌리는가'와 '배속·자동 스킬'뿐.
   if(auto){ if(typeof toast==='function') toast('⚔ '+d.name+' '+nx+'단계 자동 전투…');
     dgHbStart(nx, d.id, { auto:true, key:true }); return; }
-  dgStart(nx, { id:d.id, key:true }); }
+  dgFightEnter(nx, d.id, true); }
 // 이전 단계 토벌(소탕) — 그 종류의 최고 단계 보상을 즉시 지급. 전투 없음.
 function dgSheetSweep(){ const d=DG_DUNGEONS.find(x=>x.id===_dgSheetId), c=CHAR(), p=PROF(); if(!d||!c||!p) return;
   const mx=dgMaxFloor(d.id); if(mx<1){ if(typeof toast==='function') toast('클리어한 단계가 없습니다'); return; }

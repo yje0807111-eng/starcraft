@@ -625,7 +625,7 @@
         <button class="arwBtn" data-arw="l" id="hbRdPrev" onclick="hbRoundStep(-1)" aria-label="이전 라운드"></button>
         <button class="hbMidTx" id="hbMidTx" onclick="hbOpenRounds()" aria-label="던전·라운드 선택">
           <b id="hbDgName">던전 1 · 감염된 둥지</b>
-          <span class="hbMidRd">라운드 <em id="hbRound">1</em></span>
+          <span class="hbMidRd"><i id="hbRoundLb">라운드</i> <em id="hbRound">1</em></span>
           <i class="hbMidLine"></i>
         </button>
         <button class="arwBtn" data-arw="r" id="hbRdNext" onclick="hbRoundStep(1)" aria-label="다음 라운드"></button>
@@ -636,6 +636,10 @@
          ⚠ #curBar는 .bare에서 click-through라 그 안에 두면 안 눌린다 — #homeScreen의 자식으로 둔다. -->
     <div class="hbHudRight">
       <button class="hbRoundBtn hide" id="hbBuildStop" onclick="hbBuildExit(event)" aria-label="건설 종료" title="건설 종료">
+        <svg viewBox="0 0 24 24" width="26" height="26"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.4"/><line x1="6.2" y1="6.2" x2="17.8" y2="17.8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      </button>
+      <!-- ⚔ 토벌 포기 — 중단 아이콘은 공용 금지(⊘) SVG 하나뿐이다(건설 종료와 같은 그림). 표시는 CSS(.dgFight)가 맡는다 -->
+      <button class="hbRoundBtn" id="dgFightOut" onclick="dgFightGiveUp()" aria-label="토벌 포기" title="토벌 포기">
         <svg viewBox="0 0 24 24" width="26" height="26"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.4"/><line x1="6.2" y1="6.2" x2="17.8" y2="17.8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
       </button>
     </div>

@@ -5294,6 +5294,89 @@ async function groupLobby(){
       assert(dgKeyN('gear')===k0-1,'클리어인데 열쇠를 안 썼다');
       return '실패·클리어 양쪽 정리 ok';
     } finally{ hbSetSess('dg', null); hbUse('hunt'); c.dgFloors={}; } });
+  // 🎮 5단계 — 직접 전투는 **사냥터 화면(HOME)을 빌린다.** 두 번째 전투 화면을 만들지 않는다.
+  await step('직접 토벌: 사냥터 화면을 빌리고 깨끗이 돌려준다', async()=>{
+    skipIf(typeof dgFightEnter!=='function','직접 토벌 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','던전'); saveMeta(); }
+    const c=CHAR(); c.level=40; c.dgFloors={}; dgSetFloor('gear',3);
+    { const H=hbHunt(); H.unl={}; H.upg={atk:30,hp:30,aspd:10,crit:10}; }
+    openHome(); await sleep(250);
+    skipIf(!HBS.hunt || !HBS.hunt.on,'사냥터 세션이 안 돌고 있음');
+    // ⚠ dgFightEnter 는 openHome() 을 지나고 openHome 은 loadMeta() 로 프로필을 **다시 읽는다**.
+    //   저장하지 않은 변경은 그때 사라진다 — 열쇠를 리셋했으면 반드시 saveMeta() 까지 해야 한다.
+    PROF().dgKeys={}; saveMeta();
+    const k0=dgKeyN('gear');
+    const shown=id=>{ const e=$(id); return !!(e && e.getClientRects().length); };
+    try{
+      assert(dgFightEnter(4,'gear',true),'직접 토벌 진입 실패');
+      // ① 세션이 바뀌고 사냥터는 배경으로 — 둘 다 살아 있어야 한다
+      assert(_hbView==='dg','보는 세션이 안 바뀜: '+_hbView);
+      assert(HBS.dg && HBS.dg.cv,'토벌 세션에 캔버스가 안 붙음');
+      assert(!HBS.dg.auto && HBS.dg.speed===1,'직접인데 자동/배속이 붙음');
+      assert(HBS.hunt.bg===true,'사냥터가 배경으로 안 내려감');
+      assert(HBS.hunt.on,'사냥터 세션이 죽었다 — 배경에서 계속 돌아야 한다');
+      // ② 화면 — 사냥터 것만 걷는다
+      assert(document.body.classList.contains('dgFight'),'.dgFight 가 안 붙음');
+      assert(!shown('hmScroll'),'토벌 중인데 사냥터 업그레이드 카드가 보인다');
+      assert(!shown('hbRdPrev') && !shown('hbRdNext'),'토벌 중인데 라운드 ◀▶ 가 보인다');
+      assert(shown('dgFightOut'),'포기 버튼이 안 보인다');
+      // ③ HUD 는 토벌을 말한다 — 배경 사냥터가 덮어쓰면 안 된다(실제로 덮어썼다)
+      assert($('hbRoundLb').textContent.trim()==='단계','라벨이 단계가 아님: '+$('hbRoundLb').textContent);
+      assert($('hbRound').textContent.trim()==='4','단계 숫자가 틀림: '+$('hbRound').textContent);
+      assert($('hbDgName').textContent.indexOf('장비 토벌')>=0,'이름이 토벌이 아님: '+$('hbDgName').textContent);
+      hbWith('hunt',()=>{ hbHud(); });                 // 배경 세션이 HUD 를 만져도
+      assert($('hbRound').textContent.trim()==='4','배경 사냥터가 토벌 HUD 를 덮어썼다: '+$('hbRound').textContent);
+      // ④ 스킬 트레이가 **하단 네비에 안 가린다.**
+      //   ⚠ 위치 계산이 업그레이드 카드(.hmUpg) 기준인데 직접 토벌은 그 카드를 숨긴다 → rect 가 전부 0 이라
+      //     바가 네비 뒤로 깔렸다(실제로 그랬다 — 트레이가 통째로 안 보이고 AUTO 칩만 삐져나왔다).
+      //   ⛔ '화면 안에 있는가'로 재지 말 것: 네비 뒤에 깔려도 화면 안이라 통과한다(그렇게 짰다가 red 가 안 떴다).
+      //   실패 모드가 **둘**이다 — 하나만 재면 다른 하나가 통과한다(실제로 red 가 안 떴다):
+      //     ⓐ 카드 rect 가 0 이라 bottom 이 커져 트레이가 화면 **위로** 날아간다
+      //     ⓑ 캔버스 아래 고정으로 두면 트레이가 하단 네비 **뒤로** 깔린다
+      { const tray=document.querySelector('#hbBar .hbTray') || $('hbBar');
+        const r=tray.getBoundingClientRect(), ph=$('phone').getBoundingClientRect();
+        const nav=$('navBar'), nr=nav&&nav.getClientRects().length?nav.getBoundingClientRect():null;
+        assert(r.height>0,'스킬 트레이가 안 그려짐');
+        assert(r.top>=ph.top-1,'ⓐ 스킬 트레이가 화면 위로 날아갔다: top='+r.top.toFixed(0)+' (화면 top='+ph.top.toFixed(0)+')');
+        if(nr) assert(r.bottom<=nr.top+1,'ⓑ 스킬 트레이가 하단 네비 뒤로 깔렸다: bottom='+r.bottom.toFixed(0)+' > 네비 top='+nr.top.toFixed(0)); }
+      // ⑤ 이동 조작 — '사냥터 맵처럼 이동하며 카이팅'이 요구다
+      { const S=HBS.dg, x0=S.char.x, y0=S.char.y;
+        hbWith('dg',()=>{ hbSetDest(200,120); for(let i=0;i<20;i++) hbStep(0.05); });
+        assert(S.char.x!==x0 || S.char.y!==y0,'직접인데 이동 조작이 안 먹는다'); }
+      // ⑥ 포기 — 열쇠 미소모 + 화면 원상복구
+      dgFightGiveUp();
+      assert(!HBS.dg,'포기했는데 세션이 남음');
+      assert(_hbView==='hunt','포기 후 보는 세션이 안 돌아옴: '+_hbView);
+      assert(!document.body.classList.contains('dgFight'),'.dgFight 가 안 걷힘');
+      assert(shown('hmScroll'),'포기 후 사냥터 업그레이드 카드가 안 돌아옴');
+      assert(!shown('dgFightOut'),'포기 후 포기 버튼이 남음');
+      assert(HBS.hunt.bg===false,'포기 후 사냥터가 배경에 남음');
+      assert($('hbRoundLb').textContent.trim()==='라운드','포기 후 라벨이 단계로 남음');
+      assert(dgKeyN('gear')===k0,'포기인데 열쇠를 썼다: '+k0+' → '+dgKeyN('gear'));
+      assert(dgMaxFloor('gear')===3,'포기인데 단계가 올랐다');
+      return '빌림·HUD·조작·복귀 ok';
+    } finally{ hbSetSess('dg',null); document.body.classList.remove('dgFight'); hbUse('hunt');
+      if(HBS.hunt) HBS.hunt.bg=false; c.dgFloors={}; } });
+  // 🧹 잔상 금지 — 3D 는 공용이라 빌릴 때와 돌려줄 때 **양쪽에서** 지운다(한쪽만 하면 반대 전환에서 샌다)
+  await step('직접 토벌: 3D 를 빌릴 때와 돌려줄 때 양쪽에서 지운다', async()=>{
+    skipIf(typeof dgFightEnter!=='function','직접 토벌 없음');
+    const c=CHAR(); c.dgFloors={}; PROF().dgKeys={}; saveMeta();
+    // ⚠ 헤드리스에선 three.js(esm.sh)가 막혀 M3D 가 아예 없다 — 그러면 이 검사가 통째로 건너뛰어져
+    //   "지웠다고 착각"하게 된다. 없으면 **가짜 M3D 를 세워서** 호출 여부만 잰다(dg3dWipe 의 계약 검사).
+    const hadM3D=!!window.M3D, realG=hadM3D?M3D.clearGameModels:null, realI=hadM3D?M3D.clearIdlePools:null;
+    let g=0, i=0;
+    try{
+      if(!hadM3D) window.M3D={};
+      M3D.clearGameModels=function(){ g++; }; M3D.clearIdlePools=function(){ i++; };
+      openHome(); await sleep(150);
+      g=0; i=0; dgFightEnter(2,'gear',false);
+      assert(g>0 && i>0,'빌릴 때 안 지웠다: game='+g+' idle='+i);
+      g=0; i=0; dgFightGiveUp();
+      assert(g>0 && i>0,'돌려줄 때 안 지웠다: game='+g+' idle='+i);
+      return '양방향 정리 ok';
+    } finally{ if(hadM3D){ M3D.clearGameModels=realG; M3D.clearIdlePools=realI; } else { delete window.M3D; }
+      hbSetSess('dg',null); document.body.classList.remove('dgFight'); hbUse('hunt');
+      if(HBS.hunt) HBS.hunt.bg=false; c.dgFloors={}; } });
   // 실패해도 열쇠는 안 쓴다 — 자동이 1초 만에 끝나므로 실패가 잦아진다(이 규칙이 없으면 열쇠가 순식간에 마른다)
   await step('토벌 실패는 열쇠를 쓰지 않는다', async()=>{
     skipIf(typeof dgStart!=='function','토벌 없음');

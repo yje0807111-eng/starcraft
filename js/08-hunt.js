@@ -963,6 +963,12 @@ function hbPump(){ const S=_hb; if(!S||!S.on||S.manual) return;   // manual = �
   const sub=Math.max(1, Math.min(HB_SUB_MAX, Math.round(S.speed||1)));   // speed 미설정 = 1 = 옛 동작 그대로
   for(let i=0;i<sub;i++){ hbStep(dt); if(_hb!==S) break; }         // 스텝 도중 세션이 걷히면(사망·클리어) 즉시 중단
 }
+// 그리기 재개 — 보는 세션이 바뀌었을 때(사냥터 ↔ 토벌) 한 줄로 다시 돌린다.
+// ⚠ hbFrame 은 `_hb.bg` 면 스스로 멎고 _hbRaf 를 0 으로 놓는다 — 그래서 되살릴 입구가 필요하다.
+function hbKick(){ const S=_hb; if(!S||!S.on||S.bg) return;
+  S.lastSim=performance.now();
+  if(!_hbRaf) _hbRaf=requestAnimationFrame(hbFrame);
+  if(!_hbTick) _hbTick=setInterval(hbPumpAll,50); }
 // 살아 있는 세션을 **전부** 민다 — 배경 세션도 여기서 진행한다.
 // ⚠ 반드시 원래 보던 세션으로 되돌려 놓는다(finally). 안 하면 다음 그리기가 남의 세션을 그린다.
 function hbPumpAll(){ const v=_hbView;
@@ -1047,14 +1053,25 @@ function hbStop(){ if(_hbRaf) cancelAnimationFrame(_hbRaf); _hbRaf=0;
 function hbEnd(){ hbStop(); if(_hbTick) clearInterval(_hbTick); _hbTick=0;
   for(const k in HBS){ if(HBS[k]) HBS[k].on=false; hbSetSess(k, null); }
   hbUse('hunt'); }
+const HB_BAR_BOT=12;   // 업그레이드 카드가 없을 때(직접 토벌) 스킬 바를 띄울 캔버스 아래 간격(px)
 // 전장은 화면 전체가 아니라 '보이는 영역'이다 — 위는 재화 바 아래, 아래는 업그레이드 카드 위.
 // 카드를 접으면 그만큼 전장이 넓어지고 캐릭터도 내려온다(매 프레임 다시 재므로 토글이 바로 반영된다).
 function hbResize(){ const S=_hb, cv=S.cv, w=cv.clientWidth||1, h=cv.clientHeight||1, d=Math.min(2,window.devicePixelRatio||1);
   if(cv.width!==Math.round(w*d) || cv.height!==Math.round(h*d)){ cv.width=Math.round(w*d); cv.height=Math.round(h*d); }
   S.w=w; S.h=h; S.d=d;
   { const bar=document.getElementById('hbBar'), up=document.querySelector('#homeScreen .hmUpg');
-    if(bar&&up){ const r=up.getBoundingClientRect(), pr=cv.getBoundingClientRect();
-      bar.style.bottom=Math.round(pr.bottom-r.top+8)+'px'; } }
+    // ⚠ 직접 토벌은 업그레이드 카드를 숨긴다(.dgFight) — 그러면 rect 가 전부 0 이라
+    //   pr.bottom-0+8 이 되어 **스킬 바가 화면 밖으로 밀린다**(실제로 사라졌다).
+    //   카드가 없을 땐 캔버스 아래에서 고정 간격으로 띄운다.
+    //   ⚠ 그냥 캔버스 아래 12px 로 두면 이번엔 **하단 네비 뒤**로 깔린다(실제로 그랬다) —
+    //     카드가 없을 땐 네비 위를 기준으로 삼는다.
+    const upOn=!!(up && up.getClientRects().length);
+    if(bar){ const pr=cv.getBoundingClientRect();
+      let bot=HB_BAR_BOT;
+      if(upOn) bot=Math.round(pr.bottom-up.getBoundingClientRect().top+8);
+      else { const nav=document.getElementById('navBar');
+        if(nav && nav.getClientRects().length) bot=Math.round(pr.bottom-nav.getBoundingClientRect().top+HB_BAR_BOT); }
+      bar.style.bottom=bot+'px'; } }
   if(typeof hmUpgSnapGrid==='function') hmUpgSnapGrid();   // 폭이 바뀌면 칸 폭도 다시 정수로 잡는다
   const box=cv.getBoundingClientRect();
   const cur=document.getElementById('curBar'), up=document.querySelector('#homeScreen .hmUpg');
@@ -1144,7 +1161,11 @@ function hbPlaceFoe(proto){ const S=_hb;
   S.foes.push({ ico:proto.ico, mdl:proto.mdl, x:sx, y:sy, hp:hp, hpMax:hp, elite:elite, boss:!!proto.boss,
     atk:hbFoeAtk(S.dg,S.round)*proto.atkMul*(elite?HB_ELITE_ATK:1),
     spd:proto.spd*(elite?0.85:1), cdT:Math.random()*0.6 }); }
-function hbHud(){ const S=_hb; if(!S) return; const c=(typeof CHAR==='function')?CHAR():null;
+function hbHud(){ const S=_hb; if(!S) return;
+  // ⚠ HUD 는 **화면에 보이는 세션만** 그린다(스킬 바와 같은 규칙). 배경 세션이 만지면
+  //   직접 토벌 중에 배경 사냥터가 hbSettle 을 지나면서 '던전 1 · 라운드 5'로 덮어쓴다(실제로 그랬다).
+  if(S.bg) return;
+  const c=(typeof CHAR==='function')?CHAR():null;
   const put=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
   put('hbName', c? (c.name||'캐릭터') : '캐릭터');
   { const K=(c&&PROF_CLASSES[c.cls])||null;   // 직업 이름은 안 쓰지만 초상 아이콘은 여기서 온다
@@ -1154,6 +1175,14 @@ function hbHud(){ const S=_hb; if(!S) return; const c=(typeof CHAR==='function')
   { const bar=document.getElementById('hbXpBar');                       // 다음 레벨까지
     if(bar && c && typeof profXpForLevel==='function'){ const need=profXpForLevel(c.level)||1;
       bar.style.width=Math.max(0,Math.min(100,(c.xp/need)*100))+'%'; } }
+  put('hbWaveTx','웨이브 '+Math.min(S.wave,HB_WAVES)+'/'+HB_WAVES);
+  // ⚔ 토벌(직접 전투)은 같은 자리에 **단계**를 쓴다. 라운드 ◀▶ 는 CSS(.dgFight)가 숨긴다 —
+  //    토벌 도중에 단계를 갈아탈 수는 없다.
+  if(S.mode==='dg'){ const d=(typeof dgDef==='function')?dgDef(S.dgId):null;
+    put('hbDgName', (d?d.name:'토벌'));
+    put('hbRoundLb','단계'); put('hbRound', String(S.floor));
+    put('hbMode', S.auto?'자동':'직접'); return; }
+  put('hbRoundLb','라운드');   // 토벌에서 돌아왔을 수 있다 — 라벨을 되돌린다
   // ⚔ 번호만으로는 이동한 느낌이 없다 → 던전 고유 이름을 같이 보여준다.
   //    '던전' 표기는 유지한다(자동사냥=던전 / 옛 콘텐츠=토벌 용어 분리 · 스모크가 검사)
   put('hbDgName','던전 '+S.dg+' · '+hbDun(S.dg).name);
@@ -1162,7 +1191,6 @@ function hbHud(){ const S=_hb; if(!S) return; const c=(typeof CHAR==='function')
     const pv=document.getElementById('hbRdPrev'), nx=document.getElementById('hbRdNext');
     if(pv) pv.disabled=(S.round<=1);
     if(nx) nx.disabled=(S.round>=best); }
-  put('hbWaveTx','웨이브 '+Math.min(S.wave,HB_WAVES)+'/'+HB_WAVES);
   put('hbMode', hbHunt().climb?'등반':'반복'); }   // 킬수 표시는 제거(요청)
 function hbSettle(){ const S=_hb, p=PROF();
   // ⚔ 토벌: 마지막 웨이브를 비웠다 = **단계 클리어**. 사냥터 진행도(hbHunt)는 한 줄도 안 건드린다.
@@ -1810,6 +1838,7 @@ function hbSheetImg(url){ const c=_hbSheet[url];
   const im=new Image(); im.src=url; _hbSheet[url]=im; return null; }
 // 중앙 회복 구역 — 지형이다(안전지대 아님). 부감이라 세로를 61%로 눌러 타원으로 그린다.
 function hbDrawHeal(x, S){
+  if(hbNoBase()) return;   // ⚔ 토벌엔 회복 구역이 없다 — 로직만 끄면 초록 원이 남아 "여기서 회복된다"고 거짓말한다
   const R=hbHealR(), pulse=0.5+0.5*Math.sin(S.t*2.2);
   x.save(); x.translate(0,0); x.scale(1,0.61);
   const g=x.createRadialGradient(0,0,R*0.15,0,0,R);
