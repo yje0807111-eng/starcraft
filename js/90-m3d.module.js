@@ -1111,8 +1111,22 @@ window.M3D={
     //   화면 밖으로 나갔다 2초(DEAD_HOLD) 안에 돌아온 유닛은 사망 모션이 걸린 모델을 그대로 재사용하게 된다.
     //   그 상태로 두면 자세 분기가 세워놓은 것을 아래 사망 루프가 매 프레임 다시 눕혀서
     //   "멀쩡한 유닛이 누운 채로 이동하다가 모델이 제거·재생성될 때 벌떡 일어나는" 현상이 된다. → 되살아나면 해제.
+    // 🧱 배치 고스트(반투명 회색 예비 건물) — **syncBuild 와 같은 풀·같은 생성자**를 쓴다.
+    //   사냥터(HOME)는 메인 sync 하나로 전부 그리므로(syncBuild 를 같은 프레임에 부르면 서로를 지운다)
+    //   관리자 건설의 고스트를 여기서도 쓸 수 있게 열어 둔 것이다. 항목에 ghost:true 를 넣으면 된다.
+    { const seenG=new Set();
+      for(const it of uList){ if(!it.ghost || !MODELS[it.id]) continue;
+        let g=buildGhostModels.get(it.id);
+        if(!g){ g=makeBuildGhost(it.id); if(!g) continue; g.kind='buildghost'; buildGhostModels.set(it.id,g); }
+        seenG.add(it.id); g.holder.visible=true; if(g.inner) g.inner.visible=true; if(g.shadow) g.shadow.visible=false;
+        if(it.face!=null) g.yaw.rotation.y=it.face + (MODEL_YAW_OFF[it.id]||0);
+        g.holder.scale.setScalar((SCALE[it.id]||MODEL_SCALE)*(scaleMul||1)*(it.scl||1));
+        g.holder.position.set(it.x*W, (H-it.y*H)-Y_DROP-(it.yoff||0), (it.z!=null?it.z:it.y*H*2.5));
+        g.holder.rotation.x=it.pitch||0; }
+      for(const [k,g] of buildGhostModels){ if(!seenG.has(k)) g.holder.visible=false; } }
     // ── 아군 유닛 ──
-    for(const u of uList){ const _id=_mid(u); let m=models.get(u.uid); if(!m){ m=makeModel(_id); if(!m) continue; m.kind='unit'; models.set(u.uid,m); }
+    for(const u of uList){ if(u.ghost) continue;   // 고스트는 위에서 따로 그렸다(유닛 풀에 넣지 않는다)
+      const _id=_mid(u); let m=models.get(u.uid); if(!m){ m=makeModel(_id); if(!m) continue; m.kind='unit'; models.set(u.uid,m); }
       if(m.dying) reviveModel(m, _id);
       if(u.rimCol) applyTeamTint(m, u.rimCol);   // 한 화면에 여러 플레이어(직스) → 인스턴스별 플레이어색 틴트
       else if(typeof window!=='undefined' && window.__sandbox) sandboxAllyFix(m, _id);   // 샌드박스: 전 유닛 내 소유 → 인스턴스 틴트(ENEMY_MODEL 공유 모델 포함)

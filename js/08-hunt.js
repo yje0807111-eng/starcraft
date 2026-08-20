@@ -15,29 +15,85 @@
 // 이 표가 던전 정체성의 단일 소스다. 적 유닛(mdl)은 RACE_ROSTER/MODELS의 실제 3D 모델 키,
 // 바닥(tile)은 assets/tiles의 실제 파일, tint는 그 위에 덮는 색(a가 클수록 어둡고 무섭게).
 // ⚠ 새 던전을 넣거나 적을 바꿀 땐 여기만 고친다. 스모크가 모델 키·타일 파일 실재를 검사한다.
-const HB_FOE_ROLE=[{hp:1.0, atk:1.0, spd:50},{hp:0.7, atk:0.8, spd:82},{hp:1.6, atk:1.3, spd:38}];   // 3자리 역할(표준·빠름·둔중)
+// 👾 적 종류 = **단일 소스**. 스탯·행동·크기·이동 방식을 여기서만 정한다.
+//   ⚠ 외형(mdl/ico)은 여기 없다 — 역할과 얼굴은 분리돼 있어서 같은 '사수'가 던전마다 다르게 생겼다.
+//   way 'ground' 벽을 못 넘어 거리장으로 우회(기본) · 'phase' 벽을 통과(유령) · 'air' 벽·기지를 통째로 무시(비행)
+//   rng  0 이면 근접(HB_STOP 까지 붙는다) · >0 이면 그 거리에서 멈춰 쏜다
+//   rw   처치 보상 배수 — 던전 안에서 역할끼리의 **상대** 크기만 뜻한다(중장갑이 돌격보다 많이 준다).
+//        절대 크기는 hbRwNormPlan(plan) 이 **웨이브마다** 맞춘다 → 그 웨이브의 평균 처치 보상은 늘 1.0.
+//        ⚠ 이게 시급을 지키는 핵심이다. 실측해 보니 이 엔진의 처리량은 **웨이브 페이스**가 정한다 —
+//          처치 수는 편성을 바꿔도 거의 안 변하고(42.9→39.8), 시급은 오직 '처치당 보상'을 따라간다.
+//          그래서 '보상÷체력'을 맞추는 것으로는 부족했다(그렇게 했다가 던전1 R20 시급이 −32% 났다).
+//          시급은 hunt.rate → umRate() → 유즈맵 보상 앵커까지 그대로 이어진다.
+const HB_FOE_KIND={
+  grunt : {nm:'기본',   hp:1.00, atk:1.00, spd:50, sz:1.00, rng:0,   way:'ground', rw:0.854},
+  runner: {nm:'돌격',   hp:0.55, atk:0.75, spd:96, sz:0.76, rng:0,   way:'ground', rw:0.469},
+  ranger: {nm:'사수',   hp:0.70, atk:0.85, spd:44, sz:0.95, rng:118, way:'ground', rw:0.687},
+  flyer : {nm:'비행',   hp:0.75, atk:0.90, spd:64, sz:0.92, rng:92,  way:'air',    rw:0.800},
+  brute : {nm:'중장갑', hp:2.60, atk:1.45, spd:32, sz:1.38, rng:0,   way:'ground', rw:2.219},
+  phase : {nm:'유령',   hp:0.85, atk:1.15, spd:54, sz:0.95, rng:0,   way:'phase',  rw:0.834},
+};
+function hbKindOf(k){ return HB_FOE_KIND[k] || HB_FOE_KIND.grunt; }
+const HB_FOE_ROLE=[{hp:1.0, atk:1.0, spd:50},{hp:0.7, atk:0.8, spd:82},{hp:1.6, atk:1.3, spd:38}];   // (구) 3자리 역할 — 옛 foes 표 하위호환용으로만 남는다
 const HB_FOE_SPD_MUL=1.45;   // 미로 때문에 걷는 거리가 길어져 전체 속도를 올렸다 — 속도 조절은 이 손잡이 하나로
+
+// 🎭 역할 → 얼굴. **던전마다 60줄을 손으로 쓰지 않는다** — 종족 팔레트 하나에서 뽑는다.
+//   ⚠ phase(유령)는 반드시 **지상 모델**이어야 한다(way!=='air' 이므로) — FXLAB_AIR 에 없는 것만 넣을 것.
+//     유니온은 은신 침투병 ghost, 에테리얼은 dark_templar, 스웜은 thornqueen 이 그 자리다.
+const HB_RACE_FACE={
+  swarm:    { grunt:[['swarm_larva','🥚'],['snapper','🦗']], runner:[['broodling','🐛']],
+              ranger:[['hydra','🐍']], flyer:[['stinger','💥'],['wyvern','🦇']],
+              brute:[['ultralisk','🦏']], phase:[['thornqueen','👑']] },
+  union:    { grunt:[['worker_human','🔧'],['marine','🪖']], runner:[['racer','🏍']],
+              ranger:[['machinegun','🔫'],['tank','🛡']], flyer:[['hellfire','🔥'],['dreadnought','🚀']],
+              brute:[['goliath','🤖']], phase:[['ghost','👻']] },
+  aetherial:{ grunt:[['worker_light','🔹']], runner:[['blade','⚔️']],
+              ranger:[['dragoon','🔷']], flyer:[['observer','👁'],['falcon','🦅']],
+              brute:[['archon','⚡']], phase:[['dark_templar','🌑']] },
+  abyss:    { grunt:[['archon','⚡']], runner:[['broodling','🐛']],
+              ranger:[['dragoon','🔷']], flyer:[['dreadnought','🚀']],
+              brute:[['ultralisk','🦏']], phase:[['dark_templar','🌑']] },
+};
+// 📈 등장 규칙 — **라운드와 웨이브가 정한다**(던전이 아니다).
+//   from  이 라운드부터 나온다(문턱)  ·  ramp  이 라운드에 상한에 닿는다
+//   cap   **웨이브당 최대 마릿수**(0=무제한). 적이 아무리 많아져도 이 수를 절대 안 넘는다 —
+//         '하늘이 덮이는' 상황이 구조적으로 불가능해진다.
+//   ⚠ 기본·돌격은 상한이 없다(주력). 나머지 넷은 상한이 곧 난이도 천장이다.
+const HB_SPAWN={
+  grunt : {from:1,  ramp:1,  cap:0},
+  runner: {from:1,  ramp:1,  cap:0},
+  ranger: {from:5,  ramp:35, cap:4},
+  flyer : {from:15, ramp:45, cap:5},
+  brute : {from:30, ramp:60, cap:3},
+  phase : {from:50, ramp:80, cap:2},
+};
+const HB_WAVE_MUL=[0.45, 0.75, 1.0];   // 웨이브 1·2·3 — 뒤 웨이브일수록 까다로운 놈이 많다
+const HB_BASIC_MIN=1;                  // 어떤 웨이브든 기본 계열을 최소 이만큼은 남긴다
+// 그 라운드·웨이브에서 이 역할이 **몇 기까지** 나오는가
+function hbKindQuota(k, round, wave){ const P=HB_SPAWN[k]; if(!P) return 0;
+  if(!P.cap) return -1;                                   // -1 = 무제한(기본·돌격)
+  if(round<P.from) return 0;                              // 아직 안 나오는 라운드
+  const span=Math.max(1, P.ramp-P.from);
+  const t=Math.max(0, Math.min(1, (round-P.from)/span));
+  const byRound=Math.max(1, Math.round(P.cap*t));          // 문턱에선 1기부터 — 처음 만나는 순간이 최대치면 안 된다
+  const w=HB_WAVE_MUL[Math.max(0,Math.min(HB_WAVE_MUL.length-1,(wave||1)-1))];
+  return Math.max(0, Math.min(P.cap, Math.round(byRound*w))); }
+// 얼굴 뽑기 — 같은 역할이라도 던전 종족에 맞는 모델로 나온다
+function hbFaceOf(D, k){ const pal=HB_RACE_FACE[(D&&D.race)||'union']||HB_RACE_FACE.union;
+  const arr=pal[k]||pal.grunt||[['marine','🪖']];
+  const f=arr[(Math.random()*arr.length)|0]||arr[0];
+  return { mdl:f[0], ico:f[1] }; }
 const HB_DUNGEONS=[
-  {dg:1,  race:'swarm',     name:'감염된 둥지',   tile:'badlands',          tint:'rgba(38,54,26,.30)',
-   foes:[{mdl:'swarm_larva', ico:'🥚'},{mdl:'broodling', ico:'🐛'},{mdl:'snapper', ico:'🦗'}]},
-  {dg:2,  race:'union',     name:'버려진 전초기지', tile:'terran_tile_light', tint:'rgba(30,38,52,.32)',
-   foes:[{mdl:'worker_human', ico:'🔧'},{mdl:'marine', ico:'🪖'},{mdl:'machinegun', ico:'🔫'}]},
-  {dg:3,  race:'aetherial', name:'잊혀진 회랑',   tile:'protoss_floor',     tint:'rgba(34,30,58,.34)',
-   foes:[{mdl:'worker_light', ico:'🔹'},{mdl:'blade', ico:'⚔️'},{mdl:'observer', ico:'👁'}]},
-  {dg:4,  race:'swarm',     name:'산란장',       tile:'badlands',          tint:'rgba(40,44,20,.42)',
-   foes:[{mdl:'snapper', ico:'🦗'},{mdl:'hydra', ico:'🐍'},{mdl:'stinger', ico:'💥'}]},
-  {dg:5,  race:'union',     name:'폐쇄된 시설',   tile:'installation',      tint:'rgba(26,32,44,.46)',
-   foes:[{mdl:'machinegun', ico:'🔫'},{mdl:'medic', ico:'💉'},{mdl:'goliath', ico:'🤖'}]},
-  {dg:6,  race:'aetherial', name:'봉인된 성소',   tile:'protoss_floor',     tint:'rgba(30,24,58,.50)',
-   foes:[{mdl:'blade', ico:'⚔️'},{mdl:'dragoon', ico:'🔷'},{mdl:'falcon', ico:'🦅'}]},
-  {dg:7,  race:'swarm',     name:'군단의 심장',   tile:'ashworld',          tint:'rgba(52,20,16,.54)',
-   foes:[{mdl:'hydra', ico:'🐍'},{mdl:'thornqueen', ico:'👑'},{mdl:'ultralisk', ico:'🦏'}]},
-  {dg:8,  race:'union',     name:'함대 정박지',   tile:'space_platform',    tint:'rgba(20,26,40,.58)',
-   foes:[{mdl:'goliath', ico:'🤖'},{mdl:'tank', ico:'🛡'},{mdl:'dreadnought', ico:'🚀'}]},
-  {dg:9,  race:'aetherial', name:'공허의 문',     tile:'protoss_floor',     tint:'rgba(26,14,46,.62)',
-   foes:[{mdl:'dragoon', ico:'🔷'},{mdl:'archon', ico:'⚡'},{mdl:'dark_templar', ico:'🌑'}]},
-  {dg:10, race:'abyss',     name:'심연',         tile:'space_bg',          tint:'rgba(30,8,14,.66)',
-   foes:[{mdl:'ultralisk', ico:'🦏'},{mdl:'dreadnought', ico:'🚀'},{mdl:'archon', ico:'⚡'}]},
+  {dg:1,  race:'swarm',     name:'감염된 둥지',   tile:'badlands',          tint:'rgba(38,54,26,.30)'},
+  {dg:2,  race:'union',     name:'버려진 전초기지', tile:'terran_tile_light', tint:'rgba(30,38,52,.32)'},
+  {dg:3,  race:'aetherial', name:'잊혀진 회랑',   tile:'protoss_floor',     tint:'rgba(34,30,58,.34)'},
+  {dg:4,  race:'swarm',     name:'산란장',       tile:'badlands',          tint:'rgba(40,44,20,.42)'},
+  {dg:5,  race:'union',     name:'폐쇄된 시설',   tile:'installation',      tint:'rgba(26,32,44,.46)'},
+  {dg:6,  race:'aetherial', name:'봉인된 성소',   tile:'protoss_floor',     tint:'rgba(30,24,58,.50)'},
+  {dg:7,  race:'swarm',     name:'군단의 심장',   tile:'ashworld',          tint:'rgba(52,20,16,.54)'},
+  {dg:8,  race:'union',     name:'함대 정박지',   tile:'space_platform',    tint:'rgba(20,26,40,.58)'},
+  {dg:9,  race:'aetherial', name:'공허의 문',     tile:'protoss_floor',     tint:'rgba(26,14,46,.62)'},
+  {dg:10, race:'abyss',     name:'심연',         tile:'space_bg',          tint:'rgba(30,8,14,.66)'},
 ];
 function hbDun(dg){ return HB_DUNGEONS[Math.min(HB_DUNGEONS.length, Math.max(1, dg||1))-1]; }
 const HB_DG_MAX=10;                 // 던전 1~10
@@ -52,6 +108,8 @@ const HB_DG_UNLOCK=HB_ROUND_MAX;    // 다음 던전 해금 = 지금 던전을 �
 let HB_DG_ALL_OPEN=true;
 // 엘리트 — 라운드·던전이 오를수록 자주 나온다. 체력·공격이 크고 보상도 크다.
 const HB_ELITE_HP=4, HB_ELITE_ATK=1.6, HB_ELITE_REW=5, HB_ELITE_MAX=.35;
+const HB_AIR_LIFT=18;        // ✈️ 공중 유닛을 띄워 그리는 높이(월드 px) — 바닥 그림자와 짝이다
+const HB_ELITE_SCALE=1.46;   // 엘리트는 더 크게 — 옛 2D 그리기의 38/26 을 상수로 꺼낸 것(크기가 종류별로 갈리면서 한 곳이 필요해졌다)
 // 👑 보스 = 마지막 웨이브에 섞여 나오는 한 마리. 별도 단계가 아니라 그 웨이브의 유닛이다.
 //    라운드 클리어 조건이 '잔적 0'이라, 보스를 눕혀야 웨이브가 비고 곧 클리어가 된다.
 const HB_BOSS_HP=14, HB_BOSS_ATK=2.4, HB_BOSS_REW=18, HB_BOSS_SPD=0.72, HB_BOSS_SCALE=1.85;
@@ -657,6 +715,8 @@ function hbParty(){ const H=hbMates();
 const HB_ALLY_DPS=.35, HB_TURRET_DPS=.55, HB_TURRET_RANGE=1.45;   // 캐릭터 대비 비율
 const HB_PET_DPS=.18;                                             // 장착 펫 1마리당
 const HB_BUNKER_HP=6, HB_BUNKER_R=150;                            // 캐릭터 최대체력 대비 배수 · 도발 반경
+// ⚠ 적 사거리(HB_FOE_KIND.rng)는 이 반경을 넘으면 안 된다 — 넘는 순간 사수가 벙커 밖에 서서 캐릭터만 쏴
+//    벙커의 존재 이유('대신 맞아준다')가 사라진다. 스모크가 표를 훑어 막는다.
 // ═══ 🧱 기지 격자 — 사냥터 타일에 직접 짓는다 ═══════════════════════════════
 // 좌표계: 타일 인덱스 (gx,gy). 타일 중심의 월드 좌표 = gx*HB_TILE + HB_TILE/2.
 //   맵이 ±HB_MAP_R(300)이고 타일이 20이므로 gx,gy ∈ [-15, 14] → 30×30 = 900칸.
@@ -878,6 +938,37 @@ function hbLayoutBase(){ hbGridDirty();   // 구조물이 바뀌었을 수 있�
     ph:i/Math.max(1,eq.length)*Math.PI*2, x:0, y:0, cdT:Math.random()*.5 })); }
 function hbLayoutAllies(){ return hbLayoutBase(); }   // 옛 이름 유지(호출부·스모크가 쓴다)
 // 아군 한 명의 사격 — 가장 가까운 적을 친다(공용: 동료·펫·터렛)
+// ✨ 공격 이펙트 = **관리자 페이지·유즈맵과 같은 공용 FX 코어**(FX/ATK_STYLE, js/18-strike.js).
+//   ⛔ 사냥터 전용 사격선을 따로 만들지 말 것 — 예전엔 S.shots 에 직선 하나를 그렸다(두 번째 구현).
+//   사격 주체는 전부 진짜 유닛 id 를 갖고 있어(캐릭터=PROF_CLASSES[cls].unit · 동료/몹=mdl)
+//   ATK_STYLE 이 바로 걸린다 → 레인저는 3연사, 히드라는 가시, 드라군은 플라즈마로 각자 다르게 나간다.
+// 캐릭터의 유닛 id — 3D 모델과 공격 이펙트가 **같은 값**을 봐야 한다(직업이 바뀌면 둘 다 따라간다)
+function hbCharMdl(){ const ch=(typeof CHAR==='function')?CHAR():null;
+  return (ch && PROF_CLASSES[ch.cls] && PROF_CLASSES[ch.cls].unit) || 'marine'; }
+// ⚠ 이름은 hbFxStore 다. 사냥터엔 이미 hbFx(dt)(이펙트 스텝)가 있어서 hbFx 로 두면
+//    같은 이름의 선언 둘이 서로를 덮어 무한 재귀가 난다(실제로 그랬다 — 스택 오버플로).
+// 좌표계: 월드 390 = 관리자 화면 폭 1.0. 오토배틀의 STK_FX_SPAN(1400)과 같은 뜻이고,
+//   사냥터는 월드가 거의 1:1 px 이라 390 이면 관리자와 **크기·오프셋 체감이 같아진다**.
+const HB_FX_SPAN=390;
+function hbFxStore(){ const S=_hb; if(!S || typeof FX==='undefined') return null;
+  if(!S.fx || !S.fx.shots) S.fx=FX.store();          // 월드 좌표 스토어 — 사망 이펙트용
+  return S.fx; }
+function hbFxUnit(){ const S=_hb; if(!S || typeof FX==='undefined') return null;
+  if(!S.fxU || !S.fxU.store) S.fxU={ store:FX.store(), pend:[] };   // 정규화 스토어 — 유닛별 발사 이펙트용
+  return S.fxU; }
+// ✨ 발사는 **관리자(이펙트 랩·전투실험)와 같은 디스패처** unitFireFx 를 지난다.
+//   ⛔ FX.spawn 을 직접 부르지 말 것 — 그건 한 단계 아래라 골리앗 어깨 미사일·레이서 쌍권총 같은
+//     유닛별 연출이 통째로 빠진다(오토배틀도 unitFireFx 를 쓰고 FX.spawn 은 폴백으로만 둔다).
+function hbFire(sx,sy,tx,ty,mdl,size,tgtAir){
+  const L=hbFxUnit(); if(!L) return; const W=HB_FX_SPAN;
+  if(typeof unitFireFx==='function'){
+    const pu={ uid:'hb'+(mdl||'?'), id:mdl||'marine', gmodel:mdl||null, x:sx/W, y:sy/W, size:size||FX.REF, face:Math.atan2(tx-sx,ty-sy) };
+    try{ unitFireFx(L, pu, tx/W, ty/W, size||FX.REF, !!tgtAir); return; }catch(e){}
+  }
+  FX.spawn(L.store, mdl||'_default', sx/W,sy/W, tx/W,ty/W, {unitSize:size||FX.REF});   // 폴백
+}
+function hbFoeSize(f){ return FX.REF*(f&&f.sz||1); }
+function hbIsAir(mdl){ return (typeof FXLAB_AIR!=='undefined') && FXLAB_AIR.has(mdl); }
 function hbUnitFire(u, dps, rangeMul, dt, cdMul){ const S=_hb, c=S.char;
   u.cdT-=dt; if(u.cdT>0) return;
   const rng=c.range*(rangeMul||1); let best=null,bd=1e18;
@@ -885,7 +976,7 @@ function hbUnitFire(u, dps, rangeMul, dt, cdMul){ const S=_hb, c=S.char;
   if(!best || bd>rng) return;
   if(u.face!==undefined) u.face=Math.atan2(best.x-u.x, best.y-u.y);   // 쏠 땐 표적을 본다
   u.cdT=c.cd*(cdMul||1); const dmg=c.atk*dps*(hbBoostOn('atk')?2:1);
-  best.hp-=dmg; S.shots.push({x1:u.x,y1:u.y,x2:best.x,y2:best.y,t:0,ally:1});
+  best.hp-=dmg; hbFire(u.x,u.y-6, best.x,best.y, u.mdl, FX.REF, hbIsAir(best.mdl));
   if(best.hp<=0) hbKill(best); }
 // 스킬
 function hbSkillReady(k){ const S=_hb; return !!S && (S.skT&&S.skT[k]||0)<=0; }
@@ -940,7 +1031,7 @@ function hbStart(){ const cv=document.getElementById('hbCv'); if(!cv) return;
   const H=hbHunt(), st=hbCharStats();
   _hb={ on:true, cv, ctx:cv.getContext('2d'), w:0,h:0,d:1, vTop:0, vBot:0, cx:0, cy:0, k:1, t:0,
     dg:H.dg||1, round:H.round||1, wave:1, phase:'fight', waveT:hbWaveTime(1), gapT:0, downT:0,
-    pend:[], pendT:0, foes:[], chests:[], shots:[], floats:[], kills:0, rt0:0, charDir:4, charFace:0, atkT:0,
+    pend:[], pendT:0, foes:[], chests:[], fx:null, floats:[], kills:0, rt0:0, charDir:4, charFace:0, atkT:0,
     allies:[], turrets:[], bunkers:[], pets:[], skT:{nova:0,heal:0,slow:0}, slowT:0, skDirty:false,
     buf:{min:0,gas:0,xp:0,kills:0},
     char:{ x:0,y:0, hp:st.hpMax, hpMax:st.hpMax, atk:st.atk, cd:st.cd, crit:st.crit, critDmg:st.critDmg,
@@ -1007,20 +1098,63 @@ function hbSpawnWave(){ const S=_hb, n=hbFoeCount(S.round,S.wave);
     if(b.q){ const _bt=hbBase().tiles[b.q]; if(_bt) _bt.hp=b.hp; } }
   S.waveT=hbWaveTime(S.wave); S.pend.length=0;
   const D=hbDun(S.dg);
-  const mk=()=>{ const i=(Math.random()*3)|0, r=HB_FOE_ROLE[i], f=D.foes[i];
-    return { ico:f.ico, mdl:f.mdl, hpMul:r.hp, atkMul:r.atk, spd:r.spd*HB_FOE_SPD_MUL*(1+S.round*0.01) }; };
+  const plan=hbWavePlan(D, S.round, S.wave, n);          // 🧮 이 웨이브에 누가 몇 기 나오는지 — 라운드·웨이브가 정한다
+  const rwN=hbRwNormPlan(plan);                          // 🔒 그 구성의 평균 처치 보상 = 1.0(시급 고정)
+  let _i=0; const mk=()=>hbFoeProto(plan[_i++]||'grunt', S, D, rwN);
   const boss=(S.wave===HB_WAVES);   // 마지막 웨이브 = 보스가 함께 나온다
   if(S.chests) S.chests.length=0;                        // 📦 지난 웨이브 상자는 사라진다(모아 두는 플레이 방지)
   hbSpawnChest();                                        // 📦 웨이브마다 하나
-  if(n<=HB_SPREAD_N){ for(let i=0;i<n;i++) hbPlaceFoe(mk()); if(boss) hbPlaceFoe(mkBoss(D,S)); }
-  else{ for(let i=0;i<n;i++) S.pend.push(mk()); if(boss) S.pend.push(mkBoss(D,S)); S.pendT=0; }
+  if(n<=HB_SPREAD_N){ for(let i=0;i<n;i++) hbPlaceFoe(mk()); if(boss) hbPlaceFoe(mkBoss(D,S,rwN)); }
+  else{ for(let i=0;i<n;i++) S.pend.push(mk()); if(boss) S.pend.push(mkBoss(D,S,rwN)); S.pendT=0; }
   if(boss){ S.floats.push({x:S.char.x,y:S.char.y-46,tx:'⚠ 보스 출현',cl:'#ff3b3b',t:0});
     if(typeof playSfx==='function') playSfx('ui_open'); }
   hbHud(); }
-// 보스 원형 — 던전의 3번째(가장 강한) 적을 키운 것. 새 모델을 만들지 않는다.
-function mkBoss(D,S){ const f=D.foes[2]||D.foes[0];
-  return { ico:f.ico, mdl:f.mdl, boss:true,
-    hpMul:HB_BOSS_HP, atkMul:HB_BOSS_ATK, spd:HB_FOE_ROLE[2].spd*HB_FOE_SPD_MUL*HB_BOSS_SPD*(1+S.round*0.01) }; }
+// 🎲 편성표에서 가중 추첨 — 역할(HB_FOE_KIND)과 얼굴(roster)이 여기서 만난다.
+//   ⚠ 원형에는 kind 키까지 실어 보낸다. 이동·사격·크기가 전부 그 키 하나에서 갈린다.
+// 그 던전에 나올 수 있는 (역할×얼굴) 전부 — 종족 팔레트에서 유도한다(표를 두 벌로 두지 않는다).
+//   모델 미리받기(hbEnsureModels)와 스모크 검사가 이걸 쓴다.
+function hbRoster(D){ const pal=HB_RACE_FACE[(D&&D.race)||'union']||HB_RACE_FACE.union, out=[];
+  for(const k of Object.keys(HB_FOE_KIND)) for(const f of (pal[k]||[])) out.push({ k:k, mdl:f[0], ico:f[1] });
+  return out.length?out:[{k:'grunt',mdl:null,ico:'👾'}]; }
+// 원형 하나 — 역할(kind)과 던전(얼굴)과 그 웨이브의 보상 정규화(rwN)를 합친다
+function hbFoeProto(kind,S,D,rwN){ const K=hbKindOf(kind), F=hbFaceOf(D,kind);
+  return { kind:kind, ico:F.ico, mdl:F.mdl, hpMul:K.hp, atkMul:K.atk, sz:K.sz, rng:K.rng, way:K.way,
+    rw:K.rw*(rwN||1), spd:K.spd*HB_FOE_SPD_MUL*(1+S.round*0.01) }; }
+// 🧮 **웨이브 편성표를 짠다** — 이 함수 하나가 '언제 · 얼마나' 를 전부 정한다.
+//   ① 상한 있는 역할(사수·비행·중장갑·유령)은 hbKindQuota 가 정한 **정확한 마릿수**만 넣는다.
+//   ② 남은 자리는 기본·돌격이 채운다(주력). 기본 계열은 최소 HB_BASIC_MIN 기 남긴다.
+//   ③ 순서를 섞는다 — 안 섞으면 늘 같은 순서로 등장해 '대열'처럼 보인다.
+//   ⚠ 던전은 **얼굴만** 정한다. 구성은 라운드·웨이브가 정한다(2026-08-20 재설계).
+function hbWavePlan(D, round, wave, n){
+  const out=[];
+  let room=Math.max(0, n-HB_BASIC_MIN);
+  for(const k of ['ranger','flyer','brute','phase']){
+    let q=hbKindQuota(k, round, wave);
+    if(q<=0) continue;
+    q=Math.min(q, room); room-=q;
+    for(let i=0;i<q;i++) out.push(k); }
+  // 남은 자리 = 기본·돌격. 돌격 비중은 라운드가 오를수록 조금 늘어난다(초반은 기본이 주력)
+  const rest=Math.max(0, n-out.length);
+  const runP=Math.min(0.45, 0.15+round*0.004);
+  for(let i=0;i<rest;i++) out.push(Math.random()<runP?'runner':'grunt');
+  for(let i=out.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=out[i]; out[i]=out[j]; out[j]=t; }
+  return out; }
+// 🔒 **그 웨이브의 평균 처치 보상 = 1.0**. 구성이 라운드·웨이브마다 달라져도 시급은 안 움직인다.
+//   ⚠ 예전엔 던전 편성표(고정 가중치)로 한 번만 계산했다. 이제 구성이 매 웨이브 달라지므로
+//     **짜인 편성표를 받아** 그때그때 정규화한다. 안 그러면 후반 웨이브(강한 놈 비중↑)에서 시급이 뛴다.
+function hbRwNormPlan(plan){ if(!plan||!plan.length) return 1;
+  let rw=0; for(const k of plan) rw+=hbKindOf(k).rw;
+  return (rw>0)? plan.length/rw : 1; }
+// 보스 원형 — 편성표에서 **가장 무거운 놈**(중장갑 > 가중치 낮은 순)을 키운 것. 새 모델을 만들지 않는다.
+//   ⚠ 보스는 늘 지상 근접이다 — 날거나 벽을 통과하는 보스는 벽·기지 설계를 통째로 무의미하게 만든다.
+// 보스 역할 = 그 라운드에 이미 등장하는 것 중 가장 무거운 지상 근접. 아직 안 열린 역할을 보스로 쓰지 않는다.
+function hbBossKind(round){ for(const k of ['brute','phase','grunt'])
+    if(k==='grunt' || round>=((HB_SPAWN[k]||{}).from||1)) return k;
+  return 'grunt'; }
+function hbBossEntry(D,round){ const k=hbBossKind(round==null?99:round), F=hbFaceOf(D,k); return { k:k, mdl:F.mdl, ico:F.ico }; }
+function mkBoss(D,S,rwN){ const e=hbBossEntry(D,S&&S.round), K=hbKindOf(e.k);
+  return { kind:e.k, ico:e.ico, mdl:e.mdl, boss:true, sz:K.sz, rng:0, way:'ground', rw:K.rw*(rwN||1),
+    hpMul:HB_BOSS_HP, atkMul:HB_BOSS_ATK, spd:K.spd*HB_FOE_SPD_MUL*HB_BOSS_SPD*(1+S.round*0.01) }; }
 // 맵 테두리에서 뚫린 칸 찾기 — 같은 방향(ca,sa) 쪽 가장자리부터 시계방향으로 훑는다
 function hbEdgeSpawn(ca,sa){
   const R=HB_GRID_R, ring=[];
@@ -1030,6 +1164,29 @@ function hbEdgeSpawn(ca,sa){
     const sc=(hbTx(c[0])*ca+hbTx(c[1])*sa);        // 요청 방향과 가장 잘 맞는 테두리 칸
     if(sc>bd){ bd=sc; best=c; } }
   return best? [hbTx(best[0]),hbTx(best[1])] : [0,0]; }
+// 🚶 유닛 간 회피 조향 — **관리자/유즈맵 엔진(unitAI)과 같은 레시피**를 사냥터 좌표계로 옮긴 것.
+//   반발만 주면 서로 밀며 뭉치고, 전방을 막은 놈은 영영 못 지나간다. 그래서 두 겹이다:
+//     ① 반발  가까울수록 서로 밀어낸다
+//     ② 접선  **진행 방향 앞을 막고 있을 때만** 옆으로 돌아간다(비켜 지나가는 움직임)
+//   ⛔ 미로 경로탐색(hbFieldDir/hbSlide)을 대체하는 게 아니다 — 그 위에 얹는 보정이다.
+//     벽·기지·미로는 그대로 두고, 유닛끼리 겹치는 것만 푼다.
+const HB_AVOID_MUL=2.4;     // 회피 반경 = (내 반지름+상대 반지름) × 이 값 (엔진과 같은 계수)
+const HB_AVOID_TAN=1.6;     // 접선(옆으로 비키기) 세기 — 엔진과 같은 값
+const HB_AVOID_FWD=0.25;    // '내 앞을 막고 있다' 판정(진행 방향과의 내적)
+function hbFoeR(f){ return 9*((f&&f.sz)||1); }              // 충돌 반지름 = 크기에 비례(중장갑은 넓게 자리를 차지)
+function hbAvoid(f, dirx, diry){ const S=_hb; if(!S) return [dirx,diry];
+  let sx=0, sy=0; const myR=hbFoeR(f);
+  for(const o of S.foes){ if(o===f) continue;
+    const ox=o.x-f.x, oy=o.y-f.y, od=Math.hypot(ox,oy);
+    const aR=(myR+hbFoeR(o))*HB_AVOID_MUL;
+    if(od<=0.01 || od>=aR) continue;
+    const w=1-od/aR, nx=ox/od, ny=oy/od;
+    sx-=nx*w; sy-=ny*w;                                       // ① 반발
+    if(nx*dirx+ny*diry>HB_AVOID_FWD){                         // ② 앞을 막았을 때만 접선으로
+      const tnx=-diry, tny=dirx, side=(tnx*ox+tny*oy)>=0?-1:1;
+      sx+=tnx*side*w*HB_AVOID_TAN; sy+=tny*side*w*HB_AVOID_TAN; } }
+  const mx=dirx+sx, my=diry+sy, ml=Math.hypot(mx,my)||1;
+  return [mx/ml, my/ml]; }
 function hbPlaceFoe(proto){ const S=_hb;
   const a=Math.random()*Math.PI*2, ca=Math.cos(a), sa=Math.sin(a);
   const k=S.k||1;                                                        // 화면 경계를 월드 단위로 환산
@@ -1046,19 +1203,25 @@ function hbPlaceFoe(proto){ const S=_hb;
   //   기지가 차지한 사각 범위 안이면 같은 방향으로 그 바깥까지 밀어낸다.
   //   기지가 작을 땐 거의 그대로 → 초반 진행 속도가 안 바뀐다. 커질수록 자연히 바깥에서 온다.
   hbBlocked();
-  const BX=_hbBaseBox;
+  // ✈️👻 공중·유령은 벽을 무시하므로 '기지 밖으로 밀어내기'와 '뚫린 칸 찾기'를 건너뛴다.
+  //    지상 몹에게만 걸던 규칙을 이들에게도 걸면 엉뚱한 데서 태어난다(벽이 의미 없는 종류다).
+  const ghost=(proto.way==='air'||proto.way==='phase');
+  const BX=ghost?null:_hbBaseBox;
   if(BX && sx>BX.x0 && sx<BX.x1 && sy>BX.y0 && sy<BX.y1){
     for(let step=1; step<=HB_GRID_R*2; step++){ const nx=sx+ca*HB_TILE*step, ny=sy+sa*HB_TILE*step;
       sx=Math.max(-HB_FIELD_RX,Math.min(HB_FIELD_RX,nx)); sy=Math.max(-HB_FIELD_RY,Math.min(HB_FIELD_RY,ny));
       if(!(sx>BX.x0 && sx<BX.x1 && sy>BX.y0 && sy<BX.y1)) break;
       if(Math.abs(nx)>HB_FIELD_RX && Math.abs(ny)>HB_FIELD_RY) break; } }
   // 그래도 막힌 칸이면(건물 위) 뚫린 자리를 찾는다 — 마지막 수단은 맵 테두리
-  if(!hbWalkable(sx,sy)){ let ok=false;
+  if(!ghost && !hbWalkable(sx,sy)){ let ok=false;
     for(let step=1; step<=HB_GRID_R; step++){ const nx=sx+ca*HB_TILE*step, ny=sy+sa*HB_TILE*step;
       if(Math.abs(nx)>HB_FIELD_RX||Math.abs(ny)>HB_FIELD_RY) break;
       if(hbWalkable(nx,ny)){ sx=nx; sy=ny; ok=true; break; } }
     if(!ok){ const e=hbEdgeSpawn(ca,sa); sx=e[0]; sy=e[1]; } }
-  S.foes.push({ ico:proto.ico, mdl:proto.mdl, x:sx, y:sy, hp:hp, hpMax:hp, elite:elite, boss:!!proto.boss,
+  S.foes.push({ kind:proto.kind||'grunt', ico:proto.ico, mdl:proto.mdl, x:sx, y:sy, hp:hp, hpMax:hp,
+    elite:elite, boss:!!proto.boss,
+    sz:(proto.sz||1)*(proto.boss?HB_BOSS_SCALE:(elite?HB_ELITE_SCALE:1)),
+    rng:proto.rng||0, way:proto.way||'ground', rw:proto.rw||1,
     atk:hbFoeAtk(S.dg,S.round)*proto.atkMul*(elite?HB_ELITE_ATK:1),
     spd:proto.spd*(elite?0.85:1), cdT:Math.random()*0.6 }); }
 function hbHud(){ const S=_hb; if(!S) return; const c=(typeof CHAR==='function')?CHAR():null;
@@ -1128,7 +1291,7 @@ function hbAdvanceDungeon(){ const S=_hb, H=hbHunt();
   S.floats.push({x:S.char.x,y:S.char.y-64,tx:'🏁 던전 '+nd+' 진입',cl:'#7ad1ff',t:0}); }
 function hbDie(){ const S=_hb, H=hbHunt();
   S.buf={min:0,gas:0,xp:0,kills:0};                               // 클리어 보너스 몫 소실(처치 보상은 이미 받았다)
-  S.foes.length=0; S.shots.length=0; S.pend.length=0;
+  S.foes.length=0; S.pend.length=0; S.fx=null; S.fxU=null;
   // ⭐ 라운드 하강 — 1 밑으로 내려가면 **이전 던전 마지막 라운드**로 물러난다(hbAdvanceDungeon 의 반대).
   //    ⛔ Math.max(1, …) 로만 막지 말 것: 자동 이동으로 올라간 던전 1라운드에서 약해지면
   //       내려올 길이 없어 영영 갇힌다(실측 — 환생 직후 던전3 1라운드에서 40시간을 헛돌았다).
@@ -1150,7 +1313,7 @@ function hbRetreatDungeon(){ const S=_hb, H=hbHunt();
 // 라운드가 내려가지 않는다. 3초 뒤 캐릭터가 가운데에서 최대 체력으로 다시 선다.
 function hbWaveFail(){ const S=_hb; if(!S) return;
   S.buf={min:0,gas:0,xp:0,kills:0};                                // 클리어 보너스 몫 소실(처치 보상은 이미 받았다)
-  S.foes.length=0; S.shots.length=0; S.pend.length=0;
+  S.foes.length=0; S.pend.length=0; S.fx=null; S.fxU=null;
   if(S.chests) S.chests.length=0;
   S.phase='fail'; S.failT=HB_FAIL_S;
   S.floats.push({x:S.char.x, y:S.char.y-32, tx:'시간 초과 — 1웨이브부터', cl:'#ff8a9a', t:0});
@@ -1173,7 +1336,7 @@ function hbCharHit(t, mul){ const S=_hb, c=S.char;
   const k=sup ? (c.scritM||3) : (crit ? (c.critDmg||HB_CRIT_DMG) : 1);
   const dmg=c.atk*k*(mul||1)*(hbBoostOn('atk')?2:1);
   t.hp-=dmg;
-  S.shots.push({x1:c.x,y1:c.y-10,x2:t.x,y2:t.y,t:0});
+  hbFire(c.x,c.y-10, t.x,t.y, hbCharMdl(), FX.REF, hbIsAir(t.mdl));
   S.floats.push({x:t.x,y:t.y-20,tx:(sup?'★':(crit?'✦':''))+fmtCur(dmg),
                  cl:sup?'#ff6bd6':(crit?'#ffd24a':'#ececec'),t:0});
   if(c.lifest>0 && c.hp<c.hpMax){                                   // 🩸 생명력 흡수 — 준 피해의 %
@@ -1358,7 +1521,7 @@ document.addEventListener('pointercancel', hbFieldUp, true);
 // 되돌리고 시계를 멈춘다. 나가면(오른쪽 위 ⊘ 또는 ✕) 1웨이브부터 새로 시작한다.
 function hbBuildEnter(){ const S=_hb; if(!S||S.build) return;
   S.build=true;
-  S.foes.length=0; S.pend.length=0; S.shots.length=0;
+  S.foes.length=0; S.pend.length=0; S.fx=null; S.fxU=null;
   if(S.chests) S.chests.length=0;
   S.wave=1; S.phase='fight'; S.waveT=hbWaveTime(1); S.buf={min:0,gas:0,xp:0,kills:0};
   S.char.tx=null; S.char.ty=null; S.char.mv=0;      // 캐릭터도 멈춘다
@@ -1490,20 +1653,35 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char;
   // ── 전투(쓰러진 동안만 정지 — 웨이브 간격에도 잔존 적은 계속 싸운다) ──
   const spdMul=(S.slowT>0)?HB_SLOW_MUL:1;
   for(const f of S.foes){
-    // 벙커가 반경 안에 있으면 그쪽을 때린다(캐릭터 대신 맞아준다)
+    // ⚠ 이동 방식은 f.way 다 — f.mv 가 아니다. f.mv 는 아래에서 '움직이는 중(0/1)'으로 덮어쓰는
+    //    옛 플래그라, 여기에 'phase' 를 담으면 첫 프레임 뒤 1 로 바뀌어 지상 취급된다(실제로 그랬다).
+    const ghost=(f.way==='air'||f.way==='phase');          // 벽을 무시하는 종류 — 경로탐색도 충돌도 건너뛴다
+    const rng=f.rng||0;
+    // 벙커가 반경 안에 있으면 그쪽을 때린다(캐릭터 대신 맞아준다) — 사수도 이 대상을 그대로 쏜다
     let tg=c, bk=null, bd2=HB_BUNKER_R;
     for(const b of S.bunkers){ if(b.hp<=0) continue; const d2=Math.hypot(b.x-f.x,b.y-f.y); if(d2<bd2){ bd2=d2; bk=b; } }
     if(bk) tg=bk;
     const dx=tg.x-f.x, dy=tg.y-f.y, d=Math.hypot(dx,dy)||1;
-    if(d>HB_STOP){ const sp=f.spd*spdMul*dt;
+    // 🏹 사거리 안 + 쏠 수 있으면 멈춰서 쏜다. 지상 사수는 벽에 가리면 못 쏘고(더 붙는다),
+    //    공중은 넘어서 보므로 시야를 안 따진다.
+    const inRange = rng>0 && d<=rng && (f.way==='air' || hbLineClear(f.x,f.y,tg.x,tg.y));
+    const stop = inRange || d<=HB_STOP;
+    if(!stop){ const sp=f.spd*spdMul*dt;
       // 벽은 부수지 않고 반드시 돌아간다. 목표가 캐릭터면 공용 거리장을, 벙커면 그 벙커용을 쓴다.
       let ux=dx/d, uy=dy/d;
-      if(!hbLineClear(f.x,f.y,tg.x,tg.y)){                    // 가리는 게 있을 때만 우회 — 열린 곳에선 직진(각도가 자연스럽다)
+      if(!ghost && !hbLineClear(f.x,f.y,tg.x,tg.y)){          // 가리는 게 있을 때만 우회 — 열린 곳에선 직진(각도가 자연스럽다)
         const fd=(tg===c) ? hbFieldDir(S.foeF, f.x, f.y) : hbFieldDir(hbBunkerField(bk), f.x, f.y);
         if(fd){ ux=fd[0]; uy=fd[1]; } }
-      hbSlide(f, ux*sp, uy*sp);
+      const st=hbAvoid(f, ux, uy);                            // 🚶 유닛끼리는 밀치지 않고 옆으로 비켜 간다(공용 레시피)
+      ux=st[0]; uy=st[1];
+      if(ghost) { f.x+=ux*sp; f.y+=uy*sp; }                   // 👻✈️ 벽을 통과 — 거리장도 hbSlide 도 타지 않는다(회피는 한다)
+      else hbSlide(f, ux*sp, uy*sp);
       f.face=Math.atan2(ux, uy); f.mv=1; }            // ⚠ 게임과 같은 식: atan2(dx,dy). -dy로 쓰면 모델이 정반대를 본다
-    else{ f.mv=0; f.cdT-=dt; if(f.cdT<=0){ f.cdT=1.1;
+    else{ f.mv=0; f.face=Math.atan2(dx/d, dy/d);      // 멈춰 쏠 때도 대상을 본다(등 뒤로 쏘는 것처럼 보이지 않게)
+      f.cdT-=dt; if(f.cdT<=0){ f.cdT=1.1;
+      // ✨ 공격이 **실제로 일어나는 순간**에 그 유닛의 이펙트를 낸다(ATK_STYLE 이 근접·투사체를 알아서 가른다)
+      //   ⛔ 사거리 판정에 걸지 말 것 — 그러면 근접 몹은 자기 이펙트(발톱·낫)가 영영 안 나온다.
+      hbFire(f.x,f.y-8*(f.sz||1), tg.x,tg.y, f.mdl, hbFoeSize(f), false);   // 대상=캐릭터/벙커=지상
       if(bk){ bk.hp-=f.atk; if(bk.q){ const _bt=hbBase().tiles[bk.q]; if(_bt) _bt.hp=Math.max(0,bk.hp); }   // 타일이 단일 소스 — 재배치해도 체력이 되살아나지 않는다
         S.floats.push({x:bk.x,y:bk.y-20,tx:'-'+fmtCur(f.atk),cl:'#c9a24a',t:0}); }
       else hbCharTake(f.atk);                                     // 🛡 실드 → 체력 순서는 hbCharTake 한 곳에서만
@@ -1524,7 +1702,7 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char;
       for(const ch of S.chests){ const d=Math.hypot(ch.x-c.x, ch.y-c.y); if(d<cd2){ cd2=d; cb=ch; } }
       if(cb && cd2<=c.range){ c.cdT=c.cd;
         const dmg=c.atk*(c.chestDmg||1)*(hbBoostOn('atk')?2:1);   // 🔀 사거리 상한 초과분이 여기로 온다
-        cb.hp-=dmg; S.shots.push({x1:c.x,y1:c.y-10,x2:cb.x,y2:cb.y,t:0});
+        cb.hp-=dmg; hbFire(c.x,c.y-10, cb.x,cb.y, hbCharMdl(), FX.REF);
         S.atkT=HB_ATK_SHOW; if(S._u) S._u.fireSeq=(S._u.fireSeq||0)+1;
         if(cb.hp<=0) hbBreakChest(cb); } } }
   // 아군 — 동료는 캐릭터 주위를 천천히 돌고, 터렛은 고정, 펫은 가깝게 붙어 돈다
@@ -1562,9 +1740,13 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char;
   hbFx(dt); }
 // 처치 1건 — 캐릭터·동료·펫·터렛·스킬이 전부 이 한 곳을 지난다(보상 규칙을 여러 벌 두지 않는다)
 function hbKill(f){ const S=_hb, i=S.foes.indexOf(f); if(i<0) return; S.foes.splice(i,1); S.kills++;
+  // 💥 사망 이펙트도 공용 코어 — 크기가 큰 놈은 크게 터진다(FX.REF 대비 f.sz)
+  { const st=hbFxStore(); if(st && FX.death) FX.death(st, f.x, f.y, {unitSize:hbFoeSize(f)}); }
   if(typeof dqNote==='function') dqNote('kill',1);   // 📅 일일 — 적 처치
   // 처치 보상은 즉시 지급 — 재화 바가 바로 오른다. 사망 시 잃는 것은 '라운드 클리어 보너스'뿐.
-  const rm=(f.elite?HB_ELITE_REW:1)*(hbBoostOn('inc')?2:1);
+  // ⚠ 종류 배수(f.rw)는 **여기 한 곳에서만** 곱한다 — 보상 경로를 두 벌 만들지 않는다.
+  //    중장갑은 잡는 데 오래 걸리므로 그만큼 더 준다(안 그러면 탱커가 나오는 던전이 시급만 깎는 함정이 된다).
+  const rm=(f.elite?HB_ELITE_REW:1)*(hbBoostOn('inc')?2:1)*(f.rw||1);
   // 💰 처치 재화 업그레이드(mk/gk)는 던전 배수를 같이 받는다 — 안 그러면 상위 던전에서 반올림 오차가 된다
   const ub=HB_DG_REW(S.dg);
   const r0=hbKillReward(S.dg,S.round),
@@ -1589,7 +1771,8 @@ function hbKill(f){ const S=_hb, i=S.foes.indexOf(f); if(i<0) return; S.foes.spl
   if(S.saveT>=HB_SAVE_KILLS){ S.saveT=0; _hbDirty=false; if(typeof saveMeta==='function') saveMeta(); }
   S.floats.push({x:f.x,y:f.y-34,tx:'+'+fmtCur(r.min),cl:'#ffd24a',t:0}); hbHud(); }
 function hbFx(dt){ const S=_hb;
-  for(const s of S.shots) s.t+=dt;  S.shots=S.shots.filter(s=>s.t<.12);
+  { const st=hbFxStore(); if(st) FX.advance(st, dt);                          // 사망 이펙트(월드 좌표)
+    const L=hbFxUnit(); if(L){ if(typeof tickUnitFx==='function') tickUnitFx(L, dt); FX.advance(L.store, dt); } }   // 유닛별 발사(정규화) — 오토배틀과 같은 순서
   for(const f of S.floats) f.t+=dt; S.floats=S.floats.filter(f=>f.t<.9); }
 // ── 던전 겉모습: 적 스프라이트 · 바닥 타일 ──
 // 3D 모델은 로드·굽기가 비동기라 준비되기 전엔 null을 준다 → 그리는 쪽이 이모지로 폴백한다.
@@ -1605,10 +1788,11 @@ const _hbTile={};
 function hbTile(name){ if(!name) return null;
   const t=_hbTile[name]; if(t!==undefined) return (t&&t.complete&&t.naturalWidth)?t:null;
   const im=new Image(); im.src='assets/tiles/'+name+'.webp'; _hbTile[name]=im; return null; }
-// 던전에 들어가면 그 던전 적 3종의 3D 모델만 지연 로드한다(전부 미리 받으면 HOME 진입이 느려진다)
+// 던전에 들어가면 그 던전 편성(roster)에 실린 모델만 지연 로드한다(전부 미리 받으면 HOME 진입이 느려진다)
+//   ⚠ 보스도 편성표에서 고르므로(hbBossEntry) 따로 받을 필요가 없다 — 목록이 두 벌로 갈리지 않는다.
 function hbEnsureModels(dg){ const D=hbDun(dg);
   if(!(window.M3D && M3D.ensureUnits)) return;
-  const keys=D.foes.map(f=>f.mdl).filter(Boolean);
+  const keys=[...new Set(hbRoster(D).map(f=>f.mdl).filter(Boolean))];
   try{ M3D.ensureUnits(keys, ()=>{ for(const k in _hbSpr) if(keys.indexOf(k.split('#')[0])>=0) delete _hbSpr[k]; }); }catch(e){}
 }
 // 바닥 = 던전 타일을 월드 좌표로 깔고, 그 위에 던전 틴트를 덮는다(dg가 오를수록 진해져 어두워진다)
@@ -1729,21 +1913,32 @@ function hbIcoImg(k){ let im=_hbIco[k];
   return (im&&im.complete&&im.naturalWidth)?im:null; }
 // 격자는 **건설 중일 때만** 보인다 — 평소엔 전장이 격자로 덮여 답답하다.
 // 화면에 보이는 범위만 그린다(맵 전체 30×30을 매 프레임 긋는 것은 낭비다).
+// 🧱 배치 격자 — **화면 전체에 깔지 않는다.** 지으려는 건물 둘레 한 칸까지만, 면 없이 선만 흐리게.
+//   ⛔ 예전엔 보이는 맵 전체를 푸른 면으로 덮고 격자를 다 그렸다 — 전장이 안 보이고 배치할 칸도 눈에 안 띄었다.
+const HB_GRID_PAD=1;                       // 건물 둘레로 더 보여 줄 칸 수
+const HB_GRID_COL='rgba(90,230,140,.85)';  // 격자 색 — 진한 초록(배경이 어두워 파란 흐린 선은 묻힌다)
+const HB_GRID_LW=1.4;                      // 선 굵기 배수
+const HB_GRID_DASH=4;                       // 점선 간격(px, 줌 보정 전)
 function hbDrawGrid(x, S){ if(!S.arm) return;
   const R=HB_MAP_R, lw=1/(S.k||1);
-  const hw=(S.w/(S.k||1))/2+HB_TILE, hh=(((S.vBot||S.h)-(S.vTop||0))/(S.k||1))/2+HB_TILE;
-  const x0=Math.max(-R, (S.camX||0)-hw), x1=Math.min(R, (S.camX||0)+hw);
-  const y0=Math.max(-R, (S.camY||0)-hh), y1=Math.min(R, (S.camY||0)+hh);
+  const B=HB_STRUCT[S.arm.k]||{w:1,h:1}, ok=hbArmOk();
+  const gx=hbTx(S.arm.gx)-HB_TILE/2, gy=hbTx(S.arm.gy)-HB_TILE/2;
+  // 건물 자리 + 둘레 한 칸(맵 밖으로는 안 넘어간다)
+  const x0=Math.max(-R, gx-HB_GRID_PAD*HB_TILE), x1=Math.min(R, gx+B.w*HB_TILE+HB_GRID_PAD*HB_TILE);
+  const y0=Math.max(-R, gy-HB_GRID_PAD*HB_TILE), y1=Math.min(R, gy+B.h*HB_TILE+HB_GRID_PAD*HB_TILE);
   x.save();
-  x.fillStyle='rgba(120,180,255,.05)'; x.fillRect(x0,y0,x1-x0,y1-y0);
-  x.strokeStyle='rgba(140,190,255,.13)'; x.lineWidth=lw; x.beginPath();
+  x.beginPath(); x.rect(x0,y0,x1-x0,y1-y0); x.clip();                      // 이 안에만 격자를 그린다
+  // 진한 초록 점선 — 면은 안 깔고 칸 경계만. 흐린 파란 선은 배경에 묻혀 안 보였다.
+  x.strokeStyle=HB_GRID_COL; x.lineWidth=lw*HB_GRID_LW; x.setLineDash([HB_GRID_DASH*lw, HB_GRID_DASH*lw]);
+  x.beginPath();
   for(let w=Math.ceil(x0/HB_TILE)*HB_TILE; w<=x1; w+=HB_TILE){ x.moveTo(w,y0); x.lineTo(w,y1); }
   for(let w=Math.ceil(y0/HB_TILE)*HB_TILE; w<=y1; w+=HB_TILE){ x.moveTo(x0,w); x.lineTo(x1,w); }
-  x.stroke();
-  x.strokeStyle='rgba(140,190,255,.30)'; x.lineWidth=lw*1.6;              // 맵 경계
+  x.stroke(); x.setLineDash([]);
+  x.restore();
+  x.save();
+  x.strokeStyle='rgba(140,190,255,.30)'; x.lineWidth=lw*1.6;              // 맵 경계(격자와 별개 — 어디까지가 맵인지)
   x.strokeRect(-R,-R,R*2,R*2);
-  { const B=HB_STRUCT[S.arm.k]||{w:1,h:1}, ok=hbArmOk();                  // 배치 고스트
-    const gx=hbTx(S.arm.gx)-HB_TILE/2, gy=hbTx(S.arm.gy)-HB_TILE/2;
+  {                                                                        // 배치 고스트(위에서 잰 gx/gy/B/ok 를 그대로 쓴다)
     x.fillStyle=ok?'rgba(124,224,255,.22)':'rgba(255,90,110,.26)';
     x.fillRect(gx,gy,B.w*HB_TILE,B.h*HB_TILE);
     x.strokeStyle=ok?'#7ee0ff':'#ff5a6e'; x.lineWidth=lw*2;
@@ -1785,8 +1980,13 @@ function hbDraw(){ const S=_hb, x=S.ctx, c=S.char; if(!x) return;
     x.fillRect(-S.w,-S.h,S.w*2,S.h*2); x.restore(); }               // 감속 중 화면 틴트
   x.save(); x.globalAlpha=.25; x.strokeStyle='#7fa8ff'; x.lineWidth=1;   // 바닥 링(수비 반경 암시)
   x.beginPath(); x.ellipse(c.x,c.y+8,c.range*.62,c.range*.24,0,0,Math.PI*2); x.stroke(); x.restore();
-  for(const s of S.shots){ x.save(); x.globalAlpha=1-s.t/.12; x.strokeStyle=s.ally?'#8fe0a0':'#ffd24a'; x.lineWidth=1.5;
-    x.beginPath(); x.moveTo(s.x1,s.y1); x.lineTo(s.x2,s.y2); x.stroke(); x.restore(); }
+  if(typeof FX!=='undefined' && FX.drawShots){   // ✨ 공용 FX 코어가 그린다(월드 변환 안이라 좌표 변환만 맞춘다)
+    const st=hbFxStore(); if(st) FX.drawShots(x, st, (px,py)=>({x:px,y:py}), 1);            // 사망 = 월드 좌표 그대로
+    // 발사 = 정규화 → 월드. 크기는 **줌을 따라간다**(오토배틀 strikeDrawFx 와 같은 환산) —
+    //   고정값으로 두면 확대했을 때 이펙트만 그대로라 유닛에 비해 쪼그라들어 보인다.
+    const L=hbFxUnit();
+    if(L){ const szU=Math.max(0.55, Math.min(2.2, (HB_FX_SPAN*(S.k||1))/390));
+      FX.drawShots(x, L.store, (px,py)=>({x:px*HB_FX_SPAN,y:py*HB_FX_SPAN}), szU); } }
   x.textAlign='center'; x.textBaseline='middle';
   for(const ch of S.chests){                                       // 📦 상자 — 유닛보다 먼저(발밑에 깔린다)
     x.font='17px sans-serif'; x.fillText('📦', ch.x, ch.y);
@@ -1804,8 +2004,12 @@ function hbDraw(){ const S=_hb, x=S.ctx, c=S.char; if(!x) return;
       x.beginPath(); x.ellipse(f.x,f.y+4,32,32*0.61,0,0,Math.PI*2); x.stroke(); x.restore(); }
     else if(el){ x.save(); x.globalAlpha=.5; x.strokeStyle='#ffd24a'; x.lineWidth=1.5;
       x.beginPath(); x.arc(f.x,f.y,17,0,Math.PI*2); x.stroke(); x.restore(); }
-    if(!hb3dReady()) hbUnitArt(x, f.mdl, f.ico, f.x, f.y, bs?26*HB_BOSS_SCALE:(el?38:26), f.dir);   // 3D가 없을 때만 2D 폴백
-    if(f.hp<f.hpMax){ const w2=bs?46:(el?30:22), hh=bs?4.5:3, yy=f.y-(bs?32:(el?22:16));
+    // ✈️ 공중은 띄워 그리고 바닥에 그림자를 남긴다 — 그림자가 없으면 '어디 있는지' 안 읽힌다
+    const av=(f.way==='air')?HB_AIR_LIFT:0;
+    if(av){ x.save(); x.globalAlpha=.28; x.fillStyle='#000';
+      x.beginPath(); x.ellipse(f.x, f.y+3, 9*(f.sz||1), 9*(f.sz||1)*0.42, 0, 0, Math.PI*2); x.fill(); x.restore(); }
+    if(!hb3dReady()) hbUnitArt(x, f.mdl, f.ico, f.x, f.y-av, 26*(f.sz||1), f.dir);   // 3D가 없을 때만 2D 폴백 · 크기는 종류가 정한다
+    if(f.hp<f.hpMax){ const sz=(f.sz||1), w2=22*sz, hh=bs?4.5:3, yy=f.y-av-16*sz;
       x.fillStyle='rgba(0,0,0,.6)'; x.fillRect(f.x-w2/2,yy,w2,hh);
       x.fillStyle=bs?'#ff3b3b':(el?'#ffd24a':'#ff6b7a'); x.fillRect(f.x-w2/2,yy,w2*Math.max(0,f.hp/f.hpMax),hh); } }
   x.save(); if(S.phase==='down') x.globalAlpha=.35+.25*Math.sin(S.t*6);   // 쓰러짐 = 깜빡임
@@ -1916,12 +2120,19 @@ function _hbU(host, id, x, y, face, moving){
 function hb3dList(){ const S=_hb, W=S.w||1, H=S.h||1, k=S.k||1, out=[];
   const nx=(wx)=>((S.cx||W/2)+wx*k)/W, ny=(wy)=>((S.cy||H/2)+wy*k)/H;
   const c=S.char, ch=(typeof CHAR==='function')?CHAR():null;
-  const mdl=(ch && PROF_CLASSES[ch.cls] && PROF_CLASSES[ch.cls].unit) || 'marine';
+  const mdl=hbCharMdl();   // 공격 이펙트(hbFire)와 같은 단일 소스
   out.push(_hbU(S, mdl, nx(c.x), ny(c.y), S.charFace||0, false));
   for(const a of S.allies){ if(!a.mdl) continue;                       // 🤝 동료도 캐릭터와 같은 경로로 그린다
     out.push(_hbU(a, a.mdl, nx(a.x), ny(a.y), a.face||0, true)); }
   for(const f of S.foes){ if(!f.mdl) continue;
-    out.push(_hbU(f, f.mdl, nx(f.x), ny(f.y), f.face||0, !!f.mv)); }
+    // ⚠ 고도는 여기서 더하지 않는다 — M3D 가 모델 id 로 판정해(FXLAB_AIR) 알아서 띄운다.
+    //   여기서 y 를 빼면 화면에서 뜨는 게 아니라 **바닥 위를 북쪽으로 밀어** 두 번 어긋난다.
+    //   HB_AIR_LIFT 는 3D 가 없을 때의 2D 폴백 전용이다.
+    const u=_hbU(f, f.mdl, nx(f.x), ny(f.y), f.face||0, !!f.mv);
+    // 크기는 종류가 정한다. M3D 의 per-unit 크기 손잡이는 bossScale 하나뿐이라 그걸 쓴다
+    //   (u.size 는 메인 sync 가 안 본다 — 넣어도 3D 에서는 아무 일도 안 일어난다).
+    u.bossScale=(f.sz||1);
+    out.push(u); }
   hb3dStructs(out, S, nx, ny, k);
   return out; }
 const HB_M3D_FIT=1.15;   // 모델을 타일보다 조금 크게 — 발자국에 딱 맞추면 실제보다 작아 보인다
@@ -1941,7 +2152,19 @@ function hb3dStructs(out, S, nx, ny, k){
     const fp=M3D.footprintOf && M3D.footprintOf(id);   // 모델의 실제 표시 반경(px)
     const want=(B.w*HB_TILE*k)/2*HB_M3D_FIT;           // 타일 발자국에 맞출 반경
     out.push({ uid:'hbs_'+q, id:id, x:nx(wx), y:ny(wy), face:0, moving:false, fireSeq:0,
-      scl:(fp&&fp>0.5)? (want/(fp*k3)) : 1, size:B.w*HB_TILE*0.5 }); } }
+      scl:(fp&&fp>0.5)? (want/(fp*k3)) : 1, size:B.w*HB_TILE*0.5 }); }
+  // 🧱 배치 고스트 = **관리자 건설과 같은 반투명 회색 3D**(M3D 의 makeBuildGhost/buildGhostModels).
+  //   ⛔ 새로 만들지 말 것 — 항목에 ghost:true 만 실으면 M3D 가 같은 풀로 그린다.
+  //   사냥터는 메인 sync 하나로 전부 그리므로(syncBuild 를 같은 프레임에 부르면 서로를 지운다)
+  //   같은 목록에 얹는다.
+  if(S.arm){ const B=HB_STRUCT[S.arm.k];
+    if(B && B.m3d){ const id='cb_'+B.m3d;
+      if(M3D.hasModel(id)){
+        const wx=hbTx(S.arm.gx)+(B.w-1)*HB_TILE/2, wy=hbTx(S.arm.gy)+(B.h-1)*HB_TILE/2;
+        const fp=M3D.footprintOf && M3D.footprintOf(id);
+        const want=(B.w*HB_TILE*k)/2*HB_M3D_FIT;
+        out.push({ uid:'__bghost__', id:id, x:nx(wx), y:ny(wy), face:0, ghost:true,
+          scl:(fp&&fp>0.5)? (want/(fp*k3)) : 1 }); } } } }
 // 기지 건물 3D 모델 지연 로드 — 관리자 건설과 같은 에셋(cb_*). 한 번만 부른다.
 let _hbCstLoaded=false;
 function hbEnsureStructModels(){ if(_hbCstLoaded) return; if(!(window.M3D&&M3D.cstEnsure)) return;
@@ -1977,7 +2200,7 @@ function tw3dDetach(){ const cv=document.getElementById('cvMarine');
     if(window.M3D && M3D.clearGameModels){ try{ M3D.clearGameModels(); }catch(e){} } }
   _tw3dHome=null; _tw3dU=null; }
 function tw3dList(){ const ch=(typeof CHAR==='function')?CHAR():null;
-  const mdl=(ch && PROF_CLASSES[ch.cls] && PROF_CLASSES[ch.cls].unit) || 'marine';   // 내가 고른 캐릭터의 유닛(던전과 같은 출처)
+  const mdl=hbCharMdl();   // 내가 고른 캐릭터의 유닛(3D·이펙트와 같은 단일 소스)
   if(!_tw3dU || _tw3dU.id!==mdl) _tw3dU={ uid:'tw1', id:mdl, x:.5, y:.5, face:0, moving:false, fireSeq:0, size:13, hidden:false };
   _tw3dU.x=.5; _tw3dU.y=.5;                                  // 화면 정중앙 고정
   _tw3dU.face=(_twChar.face<0)? -Math.PI/2 : Math.PI/2;      // 좌우 바라보기
