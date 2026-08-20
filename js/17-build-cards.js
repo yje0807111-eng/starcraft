@@ -41,7 +41,7 @@ function techPCUnits(ev){ if(ev) ev.stopPropagation(); const race=G.tech.race;
 //   건설 구역과 같은 패널 컴포넌트(_pcPanel)를 쓰고, 액션만 메인용으로 교체.
 //   메인은 유닛이 원래 크기로 렌더되므로 화면 줌(G.view.zoom)으로 키워서 액센트를 눈으로 확인할 수 있다.
 const PC_ZOOMS=[1,1.8,2.6,3.6];
-const PC_RACE_KR={union:'유니온', swarm:'스웜', aetherial:'에테리얼'};
+const PC_RACE_KR={union:'유니온', swarm:'스웜', aetherial:'에테리얼', feral:'페럴', colossus:'콜로서스'};
 function pcMainPanel(){ const z=G.pcScale||1;
   return _pcPanel('pcMainPick',
     '<span class="pcAct" onclick="pcMainUnits(event)">전 유닛 배치</span>'
@@ -60,7 +60,7 @@ function updatePcFab(){ const b=document.getElementById('pcFab'); if(!b) return;
 function pcMainToggle(ev){ if(ev) ev.stopPropagation(); if(!G.sandbox) return; G.pcheck=!G.pcheck; if(!G.pcheck) G.pcScale=1; pcMainSync(); }
 function pcMainPick(ev,n){ if(ev) ev.stopPropagation(); G.myPlayer=n; pcMainSync(); }
 function pcMainRace(ev){ if(ev) ev.stopPropagation();
-  const R=['union','swarm','aetherial']; G.pcRace=R[(R.indexOf(G.pcRace||'union')+1)%R.length];
+  const R=Object.keys(TECH_TREE); G.pcRace=R[(R.indexOf(G.pcRace||'union')+1)%R.length];   // 목록을 손으로 적지 말 것(종족을 늘리면 여기만 빠진다)
   pcMainUnits(); }
 function pcMainZoom(ev){ if(ev) ev.stopPropagation();
   const i=PC_ZOOMS.indexOf(+((G.pcScale||1).toFixed(1)));

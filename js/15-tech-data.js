@@ -211,6 +211,120 @@ TECH_TREE.aetherial={ name:'에테리얼', res:{m:'크레딧', g:'에너지'}, b
       {k:'maelstrom', name:'마비 폭풍', desc:'생체 유닛 일정시간 마비', m:100, g:100},
       {k:'argus', name:'마나 증폭', desc:'다크보이드 최대 에너지 +50', m:150, g:150} ] },
 ]};
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🐺 페럴(수인) — RACES.md §2 건물표를 코드로 확정 (2026-08-20)
+//   정체성: 단거리 고기동 교전자. 고유 메커니즘 「광폭화」(처치마다 팩 전체 공속·이속↑).
+//   ⚠ 광폭화 로직은 **아직 없다** — 광폭 코어 연구 항목만 자리를 잡아 둔다.
+//   ⚠ 건물 비용은 RACES.md 의 m/g 를 그대로 옮겼다(초반 정렬로 조정된 값 포함: 뼈 무덤 110·사냥 우리 190·발톱 구덩이 175).
+//   생산 구조는 **유니온식**(건물마다 자기 유닛을 뽑는다) — 스웜의 '본진 집중 생산'이 아니다.
+TECH_TREE.feral={ name:'페럴', res:{m:'크레딧', g:'에너지'}, buildings:[
+  // ── 기본·자원 ──
+  { k:'denrock', name:'둥지 바위', ico:'🪨', m:180, g:0, supply:10, req:[],
+    produces:[{id:'worker_feral', name:'채집자', m:50, g:0, pop:1}] },
+  { k:'bonepile', name:'뼈 무덤', ico:'🦴', m:110, g:0, supply:8, req:['denrock'],
+    produces:[{id:'wolfrunner', name:'울프러너', m:50, g:0, pop:1}] },
+  { k:'gasmaw', name:'수액 아귀', ico:'🫗', m:75, g:0, gas:true, req:['denrock'] },
+  // ── 생산 ──
+  { k:'huntpen', name:'사냥 우리', ico:'🏕', m:190, g:0, req:['denrock'],
+    produces:[{id:'thornspitter', name:'쏜 스피터', m:75, g:0, pop:1}] },
+  { k:'clawpit', name:'발톱 구덩이', ico:'🕳', m:175, g:0, req:['bonepile'],
+    produces:[{id:'clawfighter', name:'클로 파이터', m:75, g:25, pop:1}] },
+  { k:'spitpit', name:'투척 구덩이', ico:'🪃', m:125, g:50, req:['huntpen'],
+    produces:[
+      {id:'howlslinger', name:'하울 슬링어', m:75, g:25, pop:1},
+      {id:'venomfang', name:'베놈 팽', m:100, g:75, pop:2, req:['frenzycore']}] },
+  { k:'alphaden', name:'알파 소굴', ico:'🐺', m:200, g:100, req:['clawpit'],
+    produces:[
+      {id:'hornedcharger', name:'혼드 차저', m:100, g:25, pop:2},
+      {id:'stalkercat', name:'스토커캣', m:125, g:50, pop:2},
+      {id:'alphawolf', name:'알파울프', m:200, g:150, pop:4, req:['frenzycore']}] },
+  { k:'shamanhut', name:'샤먼 오두막', ico:'🔮', m:150, g:100, req:['huntpen'],
+    produces:[
+      {id:'packshaman', name:'팩 샤먼', m:100, g:100, pop:2},
+      {id:'hawkeye', name:'호크아이', m:75, g:75, pop:1, detector:true}],
+    research:[
+      {k:'bloodhowl', name:'혈의 포효', desc:'팩 전체 공격속도 +30%(일시)', m:150, g:150},
+      {k:'huntstart', name:'사냥 개시', desc:'광폭화 감쇠 정지', m:200, g:200, req:['beastpit']} ] },
+  { k:'windcliff', name:'바람 절벽', ico:'🪶', m:150, g:100, req:['alphaden'],
+    produces:[
+      {id:'windcarrier', name:'윈드 캐리어', m:100, g:100, pop:2},
+      {id:'wyvernrider', name:'와이번 라이더', m:150, g:100, pop:3},
+      {id:'skytalon', name:'스카이 탈론', m:125, g:125, pop:2}] },
+  { k:'beastpit', name:'야수 구덩이', ico:'🦁', m:200, g:200, req:['windcliff'],
+    produces:[
+      {id:'stormroc', name:'스톰 로크', m:250, g:200, pop:6},
+      {id:'primalbeast', name:'원시신수', m:400, g:300, pop:8}],
+    research:[{k:'leapstrike', name:'도약 강습', desc:'근접 유닛 도약 이동', m:200, g:200}] },
+  // ── 업그레이드·보조·방어 ──
+  { k:'bloodaltar', name:'혈흔 제단', ico:'🩸', m:125, g:0, req:['denrock'],
+    research:[
+      {k:'fer_melee_atk', name:'근접 공격력', desc:'울프러너·클로 파이터·알파울프 등 +/티어', tier:[[100,100],[150,150],[200,200]]},
+      {k:'fer_range_atk', name:'원거리 공격력', desc:'쏜 스피터·하울 슬링어 등 +/티어', tier:[[100,100],[150,150],[200,200]]},
+      {k:'fer_gnd_def', name:'지상 방어력', desc:'모든 지상 +/티어', tier:[[150,150],[225,225],[300,300]]} ] },
+  { k:'frenzycore', name:'광폭 코어', ico:'💢', m:150, g:100, req:['clawpit'],
+    research:[
+      {k:'frenzy_cap', name:'광폭화 상한', desc:'스택 상한 20→30', m:150, g:150},
+      {k:'frenzy_gain', name:'광폭화 획득', desc:'처치당 스택 +2', m:200, g:200},
+      {k:'frenzy_hold', name:'감쇠 지연', desc:'전투 이탈 후 유지 시간↑', m:150, g:150} ] },
+  { k:'totem', name:'뼈 토템', ico:'🗿', m:75, g:0, req:['bonepile'] },
+  { k:'thornburrow', name:'가시 굴', ico:'🌵', m:75, g:0, req:['clawpit'] },
+  { k:'scentden', name:'후각 소굴', ico:'👃', m:100, g:50, req:['huntpen'], detector:true },
+]};
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🗿 콜로서스(거신) — RACES.md §3 건물표를 코드로 확정 (2026-08-20)
+//   정체성: 초장사정 + 전개. 붙으면 무력(최소 사거리).
+//   ⚠ deploy·minRange 로직은 **아직 없다** — U 에 필드만 확정해 뒀고 여기선 연구 항목으로만 잡는다.
+TECH_TREE.colossus={ name:'콜로서스', res:{m:'크레딧', g:'에너지'}, buildings:[
+  // ── 기본·자원 ──
+  { k:'corefoundry', name:'코어 파운드리', ico:'🏭', m:180, g:0, supply:10, req:[],
+    produces:[{id:'worker_col', name:'조립 드론', m:50, g:0, pop:1}] },
+  { k:'strut', name:'지지 기둥', ico:'🏗', m:85, g:0, supply:8, req:['corefoundry'],
+    produces:[{id:'gunner', name:'포대병', m:50, g:0, pop:1}] },
+  { k:'gasrig', name:'가스 시추탑', ico:'🛢', m:100, g:0, gas:true, req:['corefoundry'] },
+  // ── 생산 ──
+  { k:'assembly', name:'조립 공장', ico:'⚙️', m:125, g:0, req:['corefoundry'],
+    produces:[{id:'guardwalker', name:'가드 워커', m:75, g:25, pop:2}] },
+  { k:'flakworks', name:'대공 공작소', ico:'🎆', m:125, g:75, req:['assembly'],
+    produces:[
+      {id:'flakbattery', name:'플랙 배터리', m:100, g:50, pop:2},
+      {id:'arclight', name:'아크 라이트', m:125, g:100, pop:2, req:['skydock']}] },
+  { k:'heavyyard', name:'중장비 야드', ico:'🛠', m:250, g:150, req:['ballistics'],
+    produces:[
+      {id:'railgun', name:'레일건 플랫폼', m:150, g:150, pop:3},
+      {id:'siegecolossus', name:'시즈 콜로서스', m:250, g:200, pop:5}] },
+  { k:'stasislab', name:'정지장 연구소', ico:'🧊', m:150, g:150, req:['assembly'],
+    produces:[{id:'stasistech', name:'정지장 기술자', m:100, g:100, pop:2}],
+    research:[
+      {k:'stasisfield', name:'정지장', desc:'적 일정 시간 정지(무적)', m:150, g:150},
+      {k:'guardshield', name:'수호 보호막', desc:'아군에 보호막 부여', m:200, g:200} ] },
+  { k:'skydock', name:'상공 도크', ico:'🛰', m:150, g:100, req:['assembly'],
+    produces:[
+      {id:'spotterdrone', name:'관측 드론', m:75, g:50, pop:1, detector:true},
+      {id:'supplylifter', name:'보급 비행정', m:100, g:100, pop:2},
+      {id:'skylance', name:'스카이 랜스', m:200, g:150, pop:4, req:['heavyyard']}] },
+  { k:'orbitallink', name:'궤도 링크', ico:'📡', m:250, g:250, req:['heavyyard'],
+    produces:[
+      {id:'orbitalanchor', name:'궤도 앵커', m:250, g:250, pop:6},
+      {id:'worldbreaker', name:'월드 브레이커', m:400, g:350, pop:8}],
+    research:[{k:'orbitaldrop', name:'궤도 낙하', desc:'지정 지점 궤도 폭격', m:200, g:200}] },
+  // ── 업그레이드·보조·방어 ──
+  { k:'ballistics', name:'탄도 연구소', ico:'📐', m:150, g:0, req:['strut'],
+    produces:[{id:'twincannon', name:'트윈 캐논', m:125, g:50, pop:2}],
+    research:[
+      {k:'longbarrel', name:'사거리 강화', desc:'포격 유닛 사거리 +5%/티어', tier:[[100,100],[150,150],[200,200]]},
+      {k:'minrange_cut', name:'근접 조준', desc:'최소 사거리 −30%', m:150, g:150} ] },
+  { k:'armorworks', name:'장갑 공작소', ico:'🛡', m:125, g:0, req:['corefoundry'],
+    research:[
+      {k:'col_atk', name:'공격력', desc:'모든 유닛 +/티어', tier:[[100,100],[175,175],[250,250]]},
+      {k:'col_def', name:'방어력', desc:'모든 유닛 +/티어', tier:[[150,150],[225,225],[300,300]]} ] },
+  { k:'servobay', name:'기동 정비소', ico:'🔧', m:100, g:50, req:['assembly'],
+    research:[
+      {k:'servo_spd', name:'구동계 강화', desc:'이동속도 +15%', m:150, g:150},
+      {k:'fastdeploy', name:'긴급 전개', desc:'전개 시간 −50%', m:200, g:200},
+      {k:'redeploy', name:'전술 재배치', desc:'단거리 순간이동', m:200, g:200, req:['orbitallink']} ] },
+  { k:'watchtower', name:'관측탑', ico:'🗼', m:75, g:0, req:['corefoundry'], detector:true },
+  { k:'bastion', name:'요새 포탑', ico:'🏰', m:125, g:0, req:['ballistics'] },
+]};
 // ══ 테크트리 상세 스펙(SC1 기반, B안=실제 수치) — 건물{hp,ar,size,t(초)} / 유닛{hp,ar,sh,atk,at(공격형),rng,spd,t,abil} ══
 //   at: norm(일반형)·conc(진동형)·expl(폭발형)·'-'(무공격)
 const TECH_SPEC={};
@@ -283,6 +397,27 @@ TECH_SPEC.aetherial={   // 프로토스: 건물·유닛 실드 자동재생(기�
     dark_archon:{hp:25,ar:0,sh:200,atk:0,at:'-',rng:0,t:20,abil:'마인드 컨트롤·메일스트롬·피드백'},   // 다크보이드(다크아칸) — 무공격 마법 · 임시 스탯
     reaver:{hp:100,ar:0,sh:80,atk:100,at:'norm',rng:8,t:70,abil:'스캐럽 최대 10기'},   // 리버
     larva:{hp:100,ar:0,sh:80,atk:100,at:'norm',rng:8,t:70,abil:'스캐럽 100→125·스플'} }
+};
+// 🐺 페럴 — 유기체 진지. 건물 체력은 유니온 대비 −15%(가벼운 대신 싸다)이고 방어는 0~1.
+//   ⚠ unit 표는 비워 둔다 — techUnitSpec 이 U 에서 합성한다(수치 이중관리 금지).
+//   ⚠ bldg 를 비우면 프로필 머리줄에 HP 대신 설명이 들어가 두 줄로 감긴다(스모크가 40px 규약으로 잡는다).
+TECH_SPEC.feral={
+  bldg:{ denrock:{hp:1300,ar:1,size:[4,3],t:110}, bonepile:{hp:450,ar:0,size:[3,2],t:35}, gasmaw:{hp:650,ar:1,size:[4,2],t:40},
+    huntpen:{hp:900,ar:1,size:[4,3],t:70}, clawpit:{hp:850,ar:1,size:[3,2],t:60}, spitpit:{hp:800,ar:1,size:[3,2],t:50},
+    alphaden:{hp:1000,ar:1,size:[4,3],t:80}, shamanhut:{hp:700,ar:0,size:[3,2],t:60}, windcliff:{hp:900,ar:1,size:[4,3],t:70},
+    beastpit:{hp:1200,ar:2,size:[4,3],t:90},
+    bloodaltar:{hp:750,ar:1,size:[3,2],t:50}, frenzycore:{hp:800,ar:1,size:[3,2],t:60},
+    totem:{hp:300,ar:0,size:[2,2],t:25}, thornburrow:{hp:350,ar:1,size:[2,2],t:25,atk:30}, scentden:{hp:400,ar:0,size:[2,2],t:30} },
+  unit:{}
+};
+// 🗿 콜로서스 — 기계 요새. 건물 체력이 전 종족 최고(+15%)이고 방어 2가 기본. 대신 비싸고 느리다.
+TECH_SPEC.colossus={
+  bldg:{ corefoundry:{hp:1700,ar:2,size:[4,3],t:130}, strut:{hp:550,ar:2,size:[3,2],t:40}, gasrig:{hp:850,ar:2,size:[4,2],t:45},
+    assembly:{hp:1200,ar:2,size:[4,3],t:75}, flakworks:{hp:950,ar:2,size:[3,2],t:60}, heavyyard:{hp:1450,ar:2,size:[4,3],t:95},
+    stasislab:{hp:900,ar:1,size:[3,2],t:70}, skydock:{hp:1100,ar:2,size:[4,3],t:70}, orbitallink:{hp:1500,ar:2,size:[4,3],t:100},
+    ballistics:{hp:950,ar:2,size:[3,2],t:60}, armorworks:{hp:900,ar:2,size:[3,2],t:55}, servobay:{hp:800,ar:2,size:[3,2],t:50},
+    watchtower:{hp:400,ar:1,size:[2,2],t:30}, bastion:{hp:450,ar:2,size:[2,2],t:35,atk:45} },
+  unit:{}
 };
 function techUnitSpec(race,id){ const s=TECH_SPEC[race]; const cur=(s&&s.unit&&s.unit[id]);
   const b=(typeof Udef==='function')?Udef(id):(typeof U!=='undefined'?U[id]:null);

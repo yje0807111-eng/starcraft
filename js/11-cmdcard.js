@@ -75,11 +75,15 @@ const UNIT_CLS={   // 유닛 직업/병과 — 모델 id(gmodel) 기준. 베이�
   medic:'의무병', broodling:'소환수', larva:'공성', ultralisk:'돌격괴수', dark_templar:'암살자', high_templar:'대마법사', dark_archon:'암흑마법사',
 };
 // 유닛 종족 → 좌측 바 색(유니온=파랑/스웜=초록/에테리얼=금색). 같은 모델을 다른 종족이 쓰기도 해 모델키(gmodel||id) 기준
-const RACE_BAR={ union:'#4aa8ff', swarm:'#a8472e', aetherial:'#ffc040' };
+const RACE_BAR={ union:'#4aa8ff', swarm:'#a8472e', aetherial:'#ffc040', feral:'#c98b5a', colossus:'#9aa6b2' };   // 페럴·콜로서스 색은 ART.md §종족 다섯과 같은 값
 const RACE_OF={
   marine:'union', goliath:'union', ghost:'union', racer:'union', machinegun:'union', tank:'union', skyguard:'union', hellfire:'union', pelican:'union', dreadnought:'union', aegis:'union', worker_human:'union', turret:'union', photon:'union', citizen:'union', medic:'union',
   dragoon:'aetherial', archon:'aetherial', blade:'aetherial', skydancer:'aetherial', kronos:'aetherial', seraph:'aetherial', archangel:'aetherial', falcon:'aetherial', observer:'aetherial', worker_light:'aetherial', dark_templar:'aetherial', high_templar:'aetherial', dark_archon:'aetherial', larva:'aetherial',
   hydra:'swarm', snapper:'swarm', thornqueen:'swarm', matron:'swarm', overlord:'swarm', stinger:'swarm', venom:'swarm', medusa:'swarm', defiler:'swarm', wyvern:'swarm', behemoth:'swarm', worker_swarm:'swarm', broodling:'swarm', ultralisk:'swarm',
+  // 🐺 페럴 · 🗿 콜로서스 — 관리자 전용(오토배틀 미편입). ⚠ STK_RACE_STAT 에 이 두 키가 없으므로
+  //    오토배틀에 넣을 때 배율(RACES.md §6)을 같이 추가해야 한다 — 없으면 배율 1로 조용히 센다.
+  worker_feral:'feral', wolfrunner:'feral', thornspitter:'feral', clawfighter:'feral', hornedcharger:'feral', howlslinger:'feral', venomfang:'feral', stalkercat:'feral', packshaman:'feral', alphawolf:'feral', hawkeye:'feral', windcarrier:'feral', wyvernrider:'feral', skytalon:'feral', stormroc:'feral', primalbeast:'feral',
+  worker_col:'colossus', gunner:'colossus', guardwalker:'colossus', twincannon:'colossus', flakbattery:'colossus', spotterdrone:'colossus', railgun:'colossus', stasistech:'colossus', arclight:'colossus', supplylifter:'colossus', siegecolossus:'colossus', skylance:'colossus', orbitalanchor:'colossus', worldbreaker:'colossus',
 };
 try{ if(typeof window!=='undefined') window.RACE_OF=RACE_OF; }catch(_e){}   // M3D 모듈(별도 스코프)에서 종족별 틴트 분기용
 // ══ 건설 연구/업그레이드 효과 연결 (건설 샌드박스 전용 · nemo 무관 — G.tech.research만 읽음) ══
@@ -1394,7 +1398,7 @@ function _sbReapDead(){ if(!(typeof G!=='undefined'&&G.sandbox&&G.tab==='Battle'
       if(window.M3D&&M3D.dropModels) M3D.dropModels([u.uid]); }
     G.sel=(G.sel||[]).filter(id=>id!==u.uid); units.splice(i,1); } } }
 // ══ ⚖ 밸런스 자동검증 — 실제 전투코드(stepSbCombat)를 헤드리스로 대량 대결 → 동수 승패표 ══
-const _BAL_RCOL={union:'#5aa8ff',swarm:'#9fd356',aetherial:'#ffc040'}, _BAL_RKO={union:'유니온',swarm:'스웜',aetherial:'에테리얼'};
+const _BAL_RCOL={union:'#5aa8ff',swarm:'#9fd356',aetherial:'#ffc040',feral:'#c98b5a',colossus:'#9aa6b2'}, _BAL_RKO={union:'유니온',swarm:'스웜',aetherial:'에테리얼',feral:'페럴',colossus:'콜로서스'};
 function _balCombatUnits(){ const out=[]; if(typeof SANDBOX_ROSTER==='undefined') return out;
   for(const race in SANDBOX_ROSTER){ for(const it of SANDBOX_ROSTER[race]){ const key=(it.gm&&U[it.gm])?it.gm:it.b; const d=(typeof Udef==='function'?Udef(key):U[key])||{};
     if((typeof FXLAB_NOATK!=='undefined')&&(FXLAB_NOATK.has(it.gm)||FXLAB_NOATK.has(it.b))) continue;   // 지원·수송·무공격 제외

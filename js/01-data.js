@@ -148,6 +148,45 @@ const U = {
   dark_templar: {name:'다크세이지', icon:'🔮', cost:0, dmg:80, up:32, hdmg:160, hup:64, range:0.04, cd:42, splash:false, melee:true, color:'#ffc040', size:14, wpn:'pro', atk:'slash', hp:80, armor:1, shield:80, shArmor:1, energy:0, moveSpd:0.19, model3d:'dark_templar'},   // 샌드박스 전용(보직 스탯)
   high_templar: {name:'하이세이지', icon:'🔮', cost:0, dmg:0, up:0, hdmg:0, hup:0, range:0, cd:40, splash:false, color:'#ffc040', size:12, wpn:'pro', atk:'psi', hp:40, armor:0, shield:40, shArmor:1, energy:200, moveSpd:0.12, model3d:'high_templar'},   // 샌드박스 전용(보직 스탯) — 시전형(무공격)
   dark_archon: {name:'다크보이드', icon:'🌑', cost:0, dmg:0, up:0, hdmg:0, hup:0, range:0, cd:40, splash:false, color:'#b47aff', size:22, wpn:'pro', atk:'psi', hp:25, armor:0, shield:200, shArmor:1, energy:200, moveSpd:0.10, model3d:'dark_archon'},   // 다크아칸(마인드컨트롤·메일스트롬·피드백) — 무공격 마법 · 임시 2D(dark_archon SVG, 아칸 3D 재사용 안 함)
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 🐺 페럴(수인) · 🗿 콜로서스(거신) — RACES.md 설계를 코드로 확정 (2026-08-20)
+  //   ⚠ 지금은 **관리자 페이지 전용**이다 — 샌드박스 진열 + 건설(TECH_TREE)까지만.
+  //      오토배틀(STK_*)에는 **아직 넣지 않았다**. 관리자에서 유닛·건물을 확정한 뒤에 옮긴다.
+  //   수치는 RACES.md §5 「유닛 실수치」 그대로다. 바꾸려면 거기부터 고칠 것(문서가 단일 소스).
+  //   ⛔ model3d 를 임의로 붙이지 말 것 — 에셋이 없어 2D 폴백으로 그린다(있는 척하면 빈 모델이 뜬다).
+  // ── 🐺 페럴: 단거리 고기동 교전자. 사거리 대역 0.14~0.22(전 종족 최단) ──
+  worker_feral:  {name:'채집자',   icon:'🐾', cost:0, dmg:4,   up:2,  hdmg:8,   hup:4,  range:0.035, cd:40, splash:false, melee:true, color:'#c98b5a', size:12, wpn:'fer', atk:'slash', hp:30,   armor:0, shield:0, energy:0,   moveSpd:0.16},
+  wolfrunner:    {name:'울프러너', icon:'🐺', cost:0, dmg:14,  up:6,  hdmg:28,  hup:12, range:0.045, cd:18, splash:false, melee:true, color:'#c98b5a', size:15, wpn:'fer', atk:'slash', hp:60,   armor:0, shield:0, energy:0,   moveSpd:0.24},
+  thornspitter:  {name:'쏜 스피터', icon:'🌵', cost:0, dmg:16,  up:6,  hdmg:32,  hup:12, range:0.20,  cd:24, splash:false, color:'#c98b5a', size:15, wpn:'fer', atk:'spike', hp:55,   armor:0, shield:0, energy:0,   moveSpd:0.18},
+  clawfighter:   {name:'클로 파이터', icon:'🦴', cost:0, dmg:20, up:8, hdmg:40,  hup:16, range:0.045, cd:20, splash:false, melee:true, color:'#c98b5a', size:16, wpn:'fer', atk:'slash', hp:90,   armor:0, shield:0, energy:0,   moveSpd:0.23},
+  hornedcharger: {name:'혼드 차저', icon:'🐗', cost:0, dmg:26,  up:10, hdmg:52,  hup:20, range:0.05,  cd:28, splash:false, melee:true, color:'#c98b5a', size:19, wpn:'fer', atk:'slash', hp:130,  armor:1, shield:0, energy:0,   moveSpd:0.22},
+  howlslinger:   {name:'하울 슬링어', icon:'🪃', cost:0, dmg:0,  up:0,  hdmg:0,   hup:0,  range:0.22,  cd:26, splash:false, color:'#c98b5a', size:16, wpn:'fer', atk:'spike', hp:70,   armor:0, shield:0, energy:0,   moveSpd:0.18, airDmg:30, airUp:12, hairDmg:60, hairUp:24},
+  venomfang:     {name:'베놈 팽',   icon:'🐍', cost:0, dmg:18,  up:7,  hdmg:36,  hup:14, range:0.18,  cd:22, splash:false, color:'#c98b5a', size:17, wpn:'fer', atk:'spike', hp:110,  armor:1, shield:0, energy:0,   moveSpd:0.20, airDmg:18, airUp:7,  hairDmg:36, hairUp:14},
+  stalkercat:    {name:'스토커캣', icon:'🐆', cost:0, dmg:28,  up:11, hdmg:56,  hup:22, range:0.05,  cd:18, splash:false, melee:true, color:'#c98b5a', size:16, wpn:'fer', atk:'slash', hp:120,  armor:0, shield:0, energy:0,   moveSpd:0.28},
+  packshaman:    {name:'팩 샤먼',   icon:'🔮', cost:0, dmg:0,   up:0,  hdmg:0,   hup:0,  range:0,     cd:40, splash:false, color:'#c98b5a', size:14, wpn:'fer', atk:'psi',   hp:80,   armor:1, shield:0, energy:200, moveSpd:0.19},
+  alphawolf:     {name:'알파울프', icon:'🐺', cost:0, dmg:34,  up:14, hdmg:68,  hup:28, range:0.05,  cd:20, splash:false, melee:true, color:'#c98b5a', size:20, wpn:'fer', atk:'slash', hp:220,  armor:2, shield:0, energy:0,   moveSpd:0.24},
+  hawkeye:       {name:'호크아이', icon:'🦅', cost:0, dmg:0,   up:0,  hdmg:0,   hup:0,  range:0,     cd:40, splash:false, color:'#c98b5a', size:14, wpn:'fer', atk:'psi',   hp:90,   armor:0, shield:0, energy:200, moveSpd:0.28, detector:true},
+  windcarrier:   {name:'윈드 캐리어', icon:'🪶', cost:0, dmg:0, up:0,  hdmg:0,   hup:0,  range:0,     cd:40, splash:false, color:'#c98b5a', size:20, wpn:'fer', atk:'spike', hp:180,  armor:1, shield:0, energy:0,   moveSpd:0.25},
+  wyvernrider:   {name:'와이번 라이더', icon:'🐉', cost:0, dmg:44, up:18, hdmg:88, hup:36, range:0.16, cd:22, splash:false, color:'#c98b5a', size:20, wpn:'fer', atk:'spike', hp:300,  armor:2, shield:0, energy:0,   moveSpd:0.26},
+  skytalon:      {name:'스카이 탈론', icon:'🦇', cost:0, dmg:0,  up:0,  hdmg:0,   hup:0,  range:0.20,  cd:16, splash:false, color:'#c98b5a', size:18, wpn:'fer', atk:'spike', hp:240,  armor:1, shield:0, energy:0,   moveSpd:0.30, airDmg:38, airUp:15, hairDmg:76, hairUp:30},
+  stormroc:      {name:'스톰 로크', icon:'🌩', cost:0, dmg:58,  up:23, hdmg:116, hup:46, range:0.22,  cd:26, splash:true,  color:'#c98b5a', size:24, wpn:'fer', atk:'psi',   hp:620,  armor:3, shield:0, energy:200, moveSpd:0.22, airDmg:58, airUp:23, hairDmg:116, hairUp:46},
+  primalbeast:   {name:'원시신수', icon:'🦁', cost:0, dmg:110, up:44, hdmg:220, hup:88, range:0.14,  cd:24, splash:false, color:'#c98b5a', size:26, wpn:'fer', atk:'slash', hp:1900, armor:5, shield:0, energy:0,   moveSpd:0.24, airDmg:110, airUp:44, hairDmg:220, hairUp:88},
+  // ── 🗿 콜로서스: 초장사정 + 전개. 사거리 대역 0.24~0.44(전 종족 최장) ──
+  //   deploy(전개 초) · minRange(최소 사거리)는 **아직 로직이 없다** — 필드만 확정해 둔다(RACES.md §5 「신규 필드」).
+  worker_col:    {name:'조립 드론', icon:'🔩', cost:0, dmg:4,   up:2,  hdmg:8,   hup:4,  range:0.035, cd:40, splash:false, melee:true, color:'#9aa6b2', size:12, wpn:'col', atk:'slash',  hp:35,   armor:0, shield:0,  energy:0,   moveSpd:0.15},
+  gunner:        {name:'포대병',   icon:'💣', cost:0, dmg:22,  up:9,  hdmg:44,  hup:18, range:0.26,  cd:30, splash:false, color:'#9aa6b2', size:16, wpn:'col', atk:'shell',  hp:75,   armor:1, shield:0,  energy:0,   moveSpd:0.14, deploy:1.2, minRange:0.07},
+  guardwalker:   {name:'가드 워커', icon:'🛡', cost:0, dmg:20,  up:8,  hdmg:40,  hup:16, range:0.06,  cd:22, splash:false, melee:true, color:'#9aa6b2', size:18, wpn:'col', atk:'bullet', hp:140,  armor:2, shield:0,  energy:0,   moveSpd:0.20, airDmg:20, airUp:8, hairDmg:40, hairUp:16},
+  twincannon:    {name:'트윈 캐논', icon:'🔫', cost:0, dmg:34,  up:14, hdmg:68,  hup:28, range:0.30,  cd:34, splash:false, color:'#9aa6b2', size:20, wpn:'col', atk:'shell',  hp:150,  armor:2, shield:0,  energy:0,   moveSpd:0.12, deploy:1.4, minRange:0.10},
+  flakbattery:   {name:'플랙 배터리', icon:'🎆', cost:0, dmg:0,  up:0,  hdmg:0,   hup:0,  range:0.28,  cd:20, splash:false, color:'#9aa6b2', size:18, wpn:'col', atk:'missile', hp:120, armor:1, shield:0,  energy:0,   moveSpd:0.13, airDmg:36, airUp:14, hairDmg:72, hairUp:28},
+  spotterdrone:  {name:'관측 드론', icon:'📡', cost:0, dmg:0,   up:0,  hdmg:0,   hup:0,  range:0,     cd:40, splash:false, color:'#9aa6b2', size:14, wpn:'col', atk:'bullet', hp:90,   armor:0, shield:0,  energy:0,   moveSpd:0.24, detector:true},
+  railgun:       {name:'레일건 플랫폼', icon:'⚡', cost:0, dmg:46, up:18, hdmg:92, hup:36, range:0.36, cd:40, splash:false, color:'#9aa6b2', size:21, wpn:'col', atk:'rifle',  hp:180,  armor:2, shield:0,  energy:0,   moveSpd:0.10, airDmg:46, airUp:18, hairDmg:92, hairUp:36, deploy:1.6, minRange:0.12},
+  stasistech:    {name:'정지장 기술자', icon:'🧊', cost:0, dmg:0, up:0,  hdmg:0,   hup:0,  range:0,     cd:40, splash:false, color:'#9aa6b2', size:14, wpn:'col', atk:'plasma', hp:100,  armor:1, shield:60, shArmor:1, energy:200, moveSpd:0.16},
+  arclight:      {name:'아크 라이트', icon:'✴️', cost:0, dmg:0,  up:0,  hdmg:0,   hup:0,  range:0.24,  cd:16, splash:false, color:'#9aa6b2', size:18, wpn:'col', atk:'plasma', hp:200,  armor:2, shield:0,  energy:0,   moveSpd:0.26, airDmg:30, airUp:12, hairDmg:60, hairUp:24},
+  supplylifter:  {name:'보급 비행정', icon:'🚁', cost:0, dmg:0,  up:0,  hdmg:0,   hup:0,  range:0,     cd:40, splash:false, color:'#9aa6b2', size:20, wpn:'col', atk:'bullet', hp:240,  armor:2, shield:0,  energy:0,   moveSpd:0.24},
+  siegecolossus: {name:'시즈 콜로서스', icon:'🗿', cost:0, dmg:88, up:35, hdmg:176, hup:70, range:0.44, cd:52, splash:true, color:'#9aa6b2', size:24, wpn:'col', atk:'shell',  hp:420,  armor:4, shield:0,  energy:0,   moveSpd:0.11, deploy:1.6, minRange:0.12},
+  skylance:      {name:'스카이 랜스', icon:'🛰', cost:0, dmg:50,  up:20, hdmg:100, hup:40, range:0.30,  cd:28, splash:false, color:'#9aa6b2', size:22, wpn:'col', atk:'plasma', hp:380,  armor:3, shield:0,  energy:200, moveSpd:0.18, airDmg:50, airUp:20, hairDmg:100, hairUp:40},
+  orbitalanchor: {name:'궤도 앵커', icon:'⚓', cost:0, dmg:120, up:48, hdmg:240, hup:96, range:0.40,  cd:60, splash:true,  color:'#9aa6b2', size:24, wpn:'col', atk:'shell',  hp:700,  armor:5, shield:0,  energy:200, moveSpd:0.05, airDmg:120, airUp:48, hairDmg:240, hairUp:96},
+  worldbreaker:  {name:'월드 브레이커', icon:'🌋', cost:0, dmg:175, up:70, hdmg:350, hup:140, range:0.40, cd:50, splash:true, color:'#9aa6b2', size:26, wpn:'col', atk:'shell', hp:2600, armor:6, shield:0,  energy:0,   moveSpd:0.12, airDmg:175, airUp:70, hairDmg:350, hairUp:140},
 };
 // ── 사거리 일괄 조정(모든 유즈맵 공통 단일 소스) ──────────────────────────────
 // 전 유닛 +15%, 그리고 유닛 크기 대비 최소 사거리 보장(근접·초단거리 유닛이 겹침 방지 간격에 막혀 못 때리던 문제).

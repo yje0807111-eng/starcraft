@@ -739,18 +739,34 @@ const RACE_ROSTER={
   union:[{n:'정비공',key:'worker_human'},{n:'레인저',key:'marine'},{n:'화력병',key:'machinegun'},{n:'의무병',key:'medic'},{n:'저격수',key:'ghost'},{n:'레이서',key:'racer'},{n:'공성전차',key:'tank'},{n:'기갑병',key:'goliath'},{n:'전투기',key:'skyguard'},{n:'수송선',key:'pelican'},{n:'지원 정찰기',key:'aegis'},{n:'폭격기',key:'hellfire'},{n:'전함',key:'dreadnought'}],
   swarm:[{n:'생산자',key:'worker_swarm'},{n:'수송충',key:'overlord'},{n:'척후병',key:'snapper'},{n:'스파이크',key:'hydra'},{n:'가시여왕',key:'thornqueen'},{n:'자폭충',key:'stinger'},{n:'비행충',key:'wyvern'},{n:'군단여왕',key:'medusa'},{n:'오염술사',key:'defiler'},{n:'산성충',key:'venom'},{n:'포격충',key:'behemoth'},{n:'스웜링',key:'broodling'},{n:'돌격괴수',key:'ultralisk'}],
   aetherial:[{n:'생산자',key:'worker_light'},{n:'센티넬',key:'dragoon'},{n:'광전사',key:'blade'},{n:'보이드',key:'archon'},{n:'팔콘',key:'falcon'},{n:'수송선',key:'seraph'},{n:'요격기',key:'skydancer'},{n:'모함',key:'archangel'},{n:'정찰기',key:'observer'},{n:'전함',key:'kronos'},{n:'다크세이지',key:'dark_templar'},{n:'하이세이지',key:'high_templar'},{n:'공성체',key:'larva'}],
+  // 🐺 페럴 · 🗿 콜로서스 — RACES.md 로스터 그대로. 일꾼이 첫 자리(다른 종족과 같은 규약)
+  feral:[{n:'채집자',key:'worker_feral'},{n:'울프러너',key:'wolfrunner'},{n:'쏜 스피터',key:'thornspitter'},{n:'클로 파이터',key:'clawfighter'},{n:'혼드 차저',key:'hornedcharger'},{n:'하울 슬링어',key:'howlslinger'},{n:'베놈 팽',key:'venomfang'},{n:'스토커캣',key:'stalkercat'},{n:'팩 샤먼',key:'packshaman'},{n:'알파울프',key:'alphawolf'},{n:'호크아이',key:'hawkeye'},{n:'윈드 캐리어',key:'windcarrier'},{n:'와이번 라이더',key:'wyvernrider'},{n:'스카이 탈론',key:'skytalon'},{n:'스톰 로크',key:'stormroc'},{n:'원시신수',key:'primalbeast'}],
+  colossus:[{n:'조립 드론',key:'worker_col'},{n:'포대병',key:'gunner'},{n:'가드 워커',key:'guardwalker'},{n:'트윈 캐논',key:'twincannon'},{n:'플랙 배터리',key:'flakbattery'},{n:'관측 드론',key:'spotterdrone'},{n:'레일건 플랫폼',key:'railgun'},{n:'정지장 기술자',key:'stasistech'},{n:'아크 라이트',key:'arclight'},{n:'보급 비행정',key:'supplylifter'},{n:'시즈 콜로서스',key:'siegecolossus'},{n:'스카이 랜스',key:'skylance'},{n:'궤도 앵커',key:'orbitalanchor'},{n:'월드 브레이커',key:'worldbreaker'}],
 };
 function _rosterName(key){ for(const r in RACE_ROSTER){ const f=RACE_ROSTER[r].find(u=>u.key===key); if(f) return f.n; } return (typeof U!=='undefined'&&U[key]&&U[key].name)||key; }   // 공용 표시 이름(전 구역 통일)
 // SANDBOX_ROSTER(관리자 메인 배치)는 공용 로스터에서 생성 — b/gm 모두 key(모델=스탯 키). 출력은 기존과 동일
 const SANDBOX_ROSTER=(function(){ const o={}; for(const r in RACE_ROSTER){ o[r]=RACE_ROSTER[r].map(u=>({n:u.n, b:u.key, gm:u.key})); } return o; })();
-const SANDBOX_RACE_ORDER=['union','swarm','aetherial'];   // 3종족(테란=유니온 / 저그=스웜 / 프로토스=에테리얼) — 일꾼은 각 종족 첫 자리
-const SANDBOX_RACE_KO={union:'유니온 (인간)',swarm:'스웜 (군체)',aetherial:'에테리얼 (외계)'};
+// 관리자 샌드박스 진열 순서 — 여기 있는 종족만 화면에 깔린다.
+// ⚠ 오토배틀 종족 목록(STK_RACE_ORDER)과 **다른 표다**. 페럴·콜로서스는 관리자에서 확정하는 중이라
+//    여기엔 있고 저기엔 없다 — 저쪽에 넣는 것은 유닛·건물이 확정된 뒤의 별도 작업이다.
+const SANDBOX_RACE_ORDER=['union','swarm','aetherial','feral','colossus'];   // 일꾼은 각 종족 첫 자리
+const SANDBOX_RACE_KO={union:'유니온 (인간)',swarm:'스웜 (군체)',aetherial:'에테리얼 (외계)',feral:'페럴 (수인)',colossus:'콜로서스 (거신)'};
+// 관리자 진열 — 종족·유닛이 늘어도 **한 화면에 들어오게** 간격을 역산한다.
+// ⚠ 예전엔 dy(0.072)·gap(0.04)이 상수였다. 3종족 39기 기준으로 맞춘 값이라 페럴·콜로서스를 더하자
+//    아래 두 종족이 채팅바·네비 밑으로 밀려 나갔다(2026-08-20). 총 줄 수에서 나눠 쓰도록 바꿨다.
+const SB_TOP=0.14, SB_BOT=0.90, SB_DY_MAX=0.072, SB_GAP_R=0.55;   // 위·아래 여백 · 줄 간격 상한 · 종족 사이 간격(줄 간격 배수)
 function placeSandboxUnits(){
   if(G.idSeq==null) G.idSeq=1; G.units.length=0; G._sandboxRows=[];
-  const COLS=5, dy=0.072, gap=0.04; let yc=0.17;
-  SANDBOX_RACE_ORDER.forEach(function(race){
-    const arr=SANDBOX_ROSTER[race]||[]; if(!arr.length) return;
-    G._sandboxRows.push({label:SANDBOX_RACE_KO[race]||race, y:yc-0.05});
+  const COLS=5;
+  const races=SANDBOX_RACE_ORDER.filter(function(r){ return (SANDBOX_ROSTER[r]||[]).length; });
+  const rows=races.reduce(function(n,r){ return n+Math.ceil(SANDBOX_ROSTER[r].length/COLS); }, 0);
+  // 전체 높이 = 줄들 + 종족 사이 틈. 상한을 두어 종족이 적을 땐 예전과 같은 간격을 유지한다.
+  const dy=Math.min(SB_DY_MAX, (SB_BOT-SB_TOP)/Math.max(1, rows+(races.length-1)*SB_GAP_R));
+  const gap=dy*SB_GAP_R;
+  let yc=SB_TOP;
+  races.forEach(function(race){
+    const arr=SANDBOX_ROSTER[race];
+    G._sandboxRows.push({label:SANDBOX_RACE_KO[race]||race, y:yc-dy*0.7});
     const subRows=Math.ceil(arr.length/COLS);
     arr.forEach(function(it, i){
       const c=i%COLS, r=(i/COLS)|0;
