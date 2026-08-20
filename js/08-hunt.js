@@ -20,7 +20,7 @@
 //   way 'ground' 벽을 못 넘어 거리장으로 우회(기본) · 'phase' 벽을 통과(유령) · 'air' 벽·기지를 통째로 무시(비행)
 //   rng  0 이면 근접(HB_STOP 까지 붙는다) · >0 이면 그 거리에서 멈춰 쏜다
 //   rw   처치 보상 배수 — 던전 안에서 역할끼리의 **상대** 크기만 뜻한다(중장갑이 돌격보다 많이 준다).
-//        절대 크기는 hbRwNorm(D) 이 자동으로 맞춘다 → **던전의 평균 처치 보상은 늘 1.0** 이다.
+//        절대 크기는 hbRwNormPlan(plan) 이 **웨이브마다** 맞춘다 → 그 웨이브의 평균 처치 보상은 늘 1.0.
 //        ⚠ 이게 시급을 지키는 핵심이다. 실측해 보니 이 엔진의 처리량은 **웨이브 페이스**가 정한다 —
 //          처치 수는 편성을 바꿔도 거의 안 변하고(42.9→39.8), 시급은 오직 '처치당 보상'을 따라간다.
 //          그래서 '보상÷체력'을 맞추는 것으로는 부족했다(그렇게 했다가 던전1 R20 시급이 −32% 났다).
@@ -36,29 +36,64 @@ const HB_FOE_KIND={
 function hbKindOf(k){ return HB_FOE_KIND[k] || HB_FOE_KIND.grunt; }
 const HB_FOE_ROLE=[{hp:1.0, atk:1.0, spd:50},{hp:0.7, atk:0.8, spd:82},{hp:1.6, atk:1.3, spd:38}];   // (구) 3자리 역할 — 옛 foes 표 하위호환용으로만 남는다
 const HB_FOE_SPD_MUL=1.45;   // 미로 때문에 걷는 거리가 길어져 전체 속도를 올렸다 — 속도 조절은 이 손잡이 하나로
+
+// 🎭 역할 → 얼굴. **던전마다 60줄을 손으로 쓰지 않는다** — 종족 팔레트 하나에서 뽑는다.
+//   ⚠ phase(유령)는 반드시 **지상 모델**이어야 한다(way!=='air' 이므로) — FXLAB_AIR 에 없는 것만 넣을 것.
+//     유니온은 은신 침투병 ghost, 에테리얼은 dark_templar, 스웜은 thornqueen 이 그 자리다.
+const HB_RACE_FACE={
+  swarm:    { grunt:[['swarm_larva','🥚'],['snapper','🦗']], runner:[['broodling','🐛']],
+              ranger:[['hydra','🐍']], flyer:[['stinger','💥'],['wyvern','🦇']],
+              brute:[['ultralisk','🦏']], phase:[['thornqueen','👑']] },
+  union:    { grunt:[['worker_human','🔧'],['marine','🪖']], runner:[['racer','🏍']],
+              ranger:[['machinegun','🔫'],['tank','🛡']], flyer:[['hellfire','🔥'],['dreadnought','🚀']],
+              brute:[['goliath','🤖']], phase:[['ghost','👻']] },
+  aetherial:{ grunt:[['worker_light','🔹']], runner:[['blade','⚔️']],
+              ranger:[['dragoon','🔷']], flyer:[['observer','👁'],['falcon','🦅']],
+              brute:[['archon','⚡']], phase:[['dark_templar','🌑']] },
+  abyss:    { grunt:[['archon','⚡']], runner:[['broodling','🐛']],
+              ranger:[['dragoon','🔷']], flyer:[['dreadnought','🚀']],
+              brute:[['ultralisk','🦏']], phase:[['dark_templar','🌑']] },
+};
+// 📈 등장 규칙 — **라운드와 웨이브가 정한다**(던전이 아니다).
+//   from  이 라운드부터 나온다(문턱)  ·  ramp  이 라운드에 상한에 닿는다
+//   cap   **웨이브당 최대 마릿수**(0=무제한). 적이 아무리 많아져도 이 수를 절대 안 넘는다 —
+//         '하늘이 덮이는' 상황이 구조적으로 불가능해진다.
+//   ⚠ 기본·돌격은 상한이 없다(주력). 나머지 넷은 상한이 곧 난이도 천장이다.
+const HB_SPAWN={
+  grunt : {from:1,  ramp:1,  cap:0},
+  runner: {from:1,  ramp:1,  cap:0},
+  ranger: {from:5,  ramp:35, cap:4},
+  flyer : {from:15, ramp:45, cap:5},
+  brute : {from:30, ramp:60, cap:3},
+  phase : {from:50, ramp:80, cap:2},
+};
+const HB_WAVE_MUL=[0.45, 0.75, 1.0];   // 웨이브 1·2·3 — 뒤 웨이브일수록 까다로운 놈이 많다
+const HB_BASIC_MIN=1;                  // 어떤 웨이브든 기본 계열을 최소 이만큼은 남긴다
+// 그 라운드·웨이브에서 이 역할이 **몇 기까지** 나오는가
+function hbKindQuota(k, round, wave){ const P=HB_SPAWN[k]; if(!P) return 0;
+  if(!P.cap) return -1;                                   // -1 = 무제한(기본·돌격)
+  if(round<P.from) return 0;                              // 아직 안 나오는 라운드
+  const span=Math.max(1, P.ramp-P.from);
+  const t=Math.max(0, Math.min(1, (round-P.from)/span));
+  const byRound=Math.max(1, Math.round(P.cap*t));          // 문턱에선 1기부터 — 처음 만나는 순간이 최대치면 안 된다
+  const w=HB_WAVE_MUL[Math.max(0,Math.min(HB_WAVE_MUL.length-1,(wave||1)-1))];
+  return Math.max(0, Math.min(P.cap, Math.round(byRound*w))); }
+// 얼굴 뽑기 — 같은 역할이라도 던전 종족에 맞는 모델로 나온다
+function hbFaceOf(D, k){ const pal=HB_RACE_FACE[(D&&D.race)||'union']||HB_RACE_FACE.union;
+  const arr=pal[k]||pal.grunt||[['marine','🪖']];
+  const f=arr[(Math.random()*arr.length)|0]||arr[0];
+  return { mdl:f[0], ico:f[1] }; }
 const HB_DUNGEONS=[
-  {dg:1,  race:'swarm',     name:'감염된 둥지',   tile:'badlands',          tint:'rgba(38,54,26,.30)',
-   roster:[{k:'grunt', mdl:'swarm_larva', ico:'🥚', w:5},{k:'runner',mdl:'broodling',ico:'🐛',w:4},{k:'grunt', mdl:'snapper',  ico:'🦗', w:3}]},
-  {dg:2,  race:'union',     name:'버려진 전초기지', tile:'terran_tile_light', tint:'rgba(30,38,52,.32)',
-   roster:[{k:'grunt', mdl:'worker_human',ico:'🔧', w:4},{k:'grunt', mdl:'marine',   ico:'🪖',w:4},{k:'ranger',mdl:'machinegun',ico:'🔫', w:3}]},
-  {dg:3,  race:'aetherial', name:'잊혀진 회랑',   tile:'protoss_floor',     tint:'rgba(34,30,58,.34)',
-   roster:[{k:'grunt', mdl:'worker_light',ico:'🔹', w:3},{k:'runner',mdl:'blade',    ico:'⚔️',w:4},{k:'flyer', mdl:'observer',  ico:'👁', w:3}]},
-  {dg:4,  race:'swarm',     name:'산란장',       tile:'badlands',          tint:'rgba(40,44,20,.42)',
-   roster:[{k:'grunt', mdl:'snapper',     ico:'🦗', w:4},{k:'ranger',mdl:'hydra',    ico:'🐍',w:4},
-           {k:'runner',mdl:'broodling',   ico:'🐛', w:3},{k:'flyer', mdl:'stinger',  ico:'💥',w:2}]},
-  {dg:5,  race:'union',     name:'폐쇄된 시설',   tile:'installation',      tint:'rgba(26,32,44,.46)',
-   roster:[{k:'ranger',mdl:'machinegun',  ico:'🔫', w:4},{k:'grunt', mdl:'medic',    ico:'💉',w:3},{k:'brute', mdl:'goliath',   ico:'🤖', w:2}]},
-  {dg:6,  race:'aetherial', name:'봉인된 성소',   tile:'protoss_floor',     tint:'rgba(30,24,58,.50)',
-   roster:[{k:'runner',mdl:'blade',       ico:'⚔️', w:4},{k:'ranger',mdl:'dragoon',  ico:'🔷',w:4},{k:'flyer', mdl:'falcon',    ico:'🦅', w:3}]},
-  {dg:7,  race:'swarm',     name:'군단의 심장',   tile:'ashworld',          tint:'rgba(52,20,16,.54)',
-   roster:[{k:'ranger',mdl:'hydra',       ico:'🐍', w:4},{k:'flyer', mdl:'wyvern',   ico:'🦇',w:3},{k:'brute', mdl:'ultralisk', ico:'🦏', w:2}]},
-  {dg:8,  race:'union',     name:'함대 정박지',   tile:'space_platform',    tint:'rgba(20,26,40,.58)',
-   roster:[{k:'brute', mdl:'goliath',     ico:'🤖', w:3},{k:'ranger',mdl:'tank',     ico:'🛡',w:4},{k:'flyer', mdl:'dreadnought',ico:'🚀', w:3}]},
-  {dg:9,  race:'aetherial', name:'공허의 문',     tile:'protoss_floor',     tint:'rgba(26,14,46,.62)',
-   roster:[{k:'ranger',mdl:'dragoon',     ico:'🔷', w:4},{k:'brute', mdl:'archon',   ico:'⚡',w:2},{k:'phase', mdl:'dark_templar',ico:'🌑',w:3}]},
-  {dg:10, race:'abyss',     name:'심연',         tile:'space_bg',          tint:'rgba(30,8,14,.66)',
-   roster:[{k:'grunt', mdl:'archon',      ico:'⚡', w:3},{k:'runner',mdl:'broodling',ico:'🐛',w:3},{k:'ranger',mdl:'dragoon',    ico:'🔷', w:3},
-           {k:'flyer', mdl:'dreadnought', ico:'🚀', w:3},{k:'brute', mdl:'ultralisk',ico:'🦏',w:2},{k:'phase', mdl:'dark_templar',ico:'🌑', w:2}]},
+  {dg:1,  race:'swarm',     name:'감염된 둥지',   tile:'badlands',          tint:'rgba(38,54,26,.30)'},
+  {dg:2,  race:'union',     name:'버려진 전초기지', tile:'terran_tile_light', tint:'rgba(30,38,52,.32)'},
+  {dg:3,  race:'aetherial', name:'잊혀진 회랑',   tile:'protoss_floor',     tint:'rgba(34,30,58,.34)'},
+  {dg:4,  race:'swarm',     name:'산란장',       tile:'badlands',          tint:'rgba(40,44,20,.42)'},
+  {dg:5,  race:'union',     name:'폐쇄된 시설',   tile:'installation',      tint:'rgba(26,32,44,.46)'},
+  {dg:6,  race:'aetherial', name:'봉인된 성소',   tile:'protoss_floor',     tint:'rgba(30,24,58,.50)'},
+  {dg:7,  race:'swarm',     name:'군단의 심장',   tile:'ashworld',          tint:'rgba(52,20,16,.54)'},
+  {dg:8,  race:'union',     name:'함대 정박지',   tile:'space_platform',    tint:'rgba(20,26,40,.58)'},
+  {dg:9,  race:'aetherial', name:'공허의 문',     tile:'protoss_floor',     tint:'rgba(26,14,46,.62)'},
+  {dg:10, race:'abyss',     name:'심연',         tile:'space_bg',          tint:'rgba(30,8,14,.66)'},
 ];
 function hbDun(dg){ return HB_DUNGEONS[Math.min(HB_DUNGEONS.length, Math.max(1, dg||1))-1]; }
 const HB_DG_MAX=10;                 // 던전 1~10
@@ -1063,38 +1098,62 @@ function hbSpawnWave(){ const S=_hb, n=hbFoeCount(S.round,S.wave);
     if(b.q){ const _bt=hbBase().tiles[b.q]; if(_bt) _bt.hp=b.hp; } }
   S.waveT=hbWaveTime(S.wave); S.pend.length=0;
   const D=hbDun(S.dg);
-  const mk=()=>hbPickFoe(D,S);
+  const plan=hbWavePlan(D, S.round, S.wave, n);          // 🧮 이 웨이브에 누가 몇 기 나오는지 — 라운드·웨이브가 정한다
+  const rwN=hbRwNormPlan(plan);                          // 🔒 그 구성의 평균 처치 보상 = 1.0(시급 고정)
+  let _i=0; const mk=()=>hbFoeProto(plan[_i++]||'grunt', S, D, rwN);
   const boss=(S.wave===HB_WAVES);   // 마지막 웨이브 = 보스가 함께 나온다
   if(S.chests) S.chests.length=0;                        // 📦 지난 웨이브 상자는 사라진다(모아 두는 플레이 방지)
   hbSpawnChest();                                        // 📦 웨이브마다 하나
-  if(n<=HB_SPREAD_N){ for(let i=0;i<n;i++) hbPlaceFoe(mk()); if(boss) hbPlaceFoe(mkBoss(D,S)); }
-  else{ for(let i=0;i<n;i++) S.pend.push(mk()); if(boss) S.pend.push(mkBoss(D,S)); S.pendT=0; }
+  if(n<=HB_SPREAD_N){ for(let i=0;i<n;i++) hbPlaceFoe(mk()); if(boss) hbPlaceFoe(mkBoss(D,S,rwN)); }
+  else{ for(let i=0;i<n;i++) S.pend.push(mk()); if(boss) S.pend.push(mkBoss(D,S,rwN)); S.pendT=0; }
   if(boss){ S.floats.push({x:S.char.x,y:S.char.y-46,tx:'⚠ 보스 출현',cl:'#ff3b3b',t:0});
     if(typeof playSfx==='function') playSfx('ui_open'); }
   hbHud(); }
 // 🎲 편성표에서 가중 추첨 — 역할(HB_FOE_KIND)과 얼굴(roster)이 여기서 만난다.
 //   ⚠ 원형에는 kind 키까지 실어 보낸다. 이동·사격·크기가 전부 그 키 하나에서 갈린다.
-function hbRoster(D){ return (D&&D.roster&&D.roster.length)?D.roster:[{k:'grunt',mdl:null,ico:'👾',w:1}]; }
-function hbFoeProto(e,S,D){ const K=hbKindOf(e.k), n=D?hbRwNorm(D):1;
-  return { kind:e.k, ico:e.ico, mdl:e.mdl, hpMul:K.hp, atkMul:K.atk, sz:K.sz, rng:K.rng, way:K.way, rw:K.rw*n,
-    spd:K.spd*HB_FOE_SPD_MUL*(1+S.round*0.01) }; }
-// 🔒 편성이 달라져도 **던전의 평균 처치 보상 = 1.0**. 편성은 재미(난이도·다양성)만 바꾸고
-//    경제에는 손대지 않는다. 새 역할을 넣거나 가중치를 바꿔도 시급이 저절로 유지된다.
-function hbRwNorm(D){ if(D._rwN>0) return D._rwN;
-  let tw=0, rw=0;
-  for(const e of hbRoster(D)){ const w=e.w||1; tw+=w; rw+=hbKindOf(e.k).rw*w; }
-  return (D._rwN = (rw>0)? tw/rw : 1); }
-function hbPickFoe(D,S){ const R=hbRoster(D);
-  let tot=0; for(const e of R) tot+=(e.w||1);
-  let r=Math.random()*tot;
-  for(const e of R){ r-=(e.w||1); if(r<=0) return hbFoeProto(e,S,D); }
-  return hbFoeProto(R[R.length-1],S,D); }
+// 그 던전에 나올 수 있는 (역할×얼굴) 전부 — 종족 팔레트에서 유도한다(표를 두 벌로 두지 않는다).
+//   모델 미리받기(hbEnsureModels)와 스모크 검사가 이걸 쓴다.
+function hbRoster(D){ const pal=HB_RACE_FACE[(D&&D.race)||'union']||HB_RACE_FACE.union, out=[];
+  for(const k of Object.keys(HB_FOE_KIND)) for(const f of (pal[k]||[])) out.push({ k:k, mdl:f[0], ico:f[1] });
+  return out.length?out:[{k:'grunt',mdl:null,ico:'👾'}]; }
+// 원형 하나 — 역할(kind)과 던전(얼굴)과 그 웨이브의 보상 정규화(rwN)를 합친다
+function hbFoeProto(kind,S,D,rwN){ const K=hbKindOf(kind), F=hbFaceOf(D,kind);
+  return { kind:kind, ico:F.ico, mdl:F.mdl, hpMul:K.hp, atkMul:K.atk, sz:K.sz, rng:K.rng, way:K.way,
+    rw:K.rw*(rwN||1), spd:K.spd*HB_FOE_SPD_MUL*(1+S.round*0.01) }; }
+// 🧮 **웨이브 편성표를 짠다** — 이 함수 하나가 '언제 · 얼마나' 를 전부 정한다.
+//   ① 상한 있는 역할(사수·비행·중장갑·유령)은 hbKindQuota 가 정한 **정확한 마릿수**만 넣는다.
+//   ② 남은 자리는 기본·돌격이 채운다(주력). 기본 계열은 최소 HB_BASIC_MIN 기 남긴다.
+//   ③ 순서를 섞는다 — 안 섞으면 늘 같은 순서로 등장해 '대열'처럼 보인다.
+//   ⚠ 던전은 **얼굴만** 정한다. 구성은 라운드·웨이브가 정한다(2026-08-20 재설계).
+function hbWavePlan(D, round, wave, n){
+  const out=[];
+  let room=Math.max(0, n-HB_BASIC_MIN);
+  for(const k of ['ranger','flyer','brute','phase']){
+    let q=hbKindQuota(k, round, wave);
+    if(q<=0) continue;
+    q=Math.min(q, room); room-=q;
+    for(let i=0;i<q;i++) out.push(k); }
+  // 남은 자리 = 기본·돌격. 돌격 비중은 라운드가 오를수록 조금 늘어난다(초반은 기본이 주력)
+  const rest=Math.max(0, n-out.length);
+  const runP=Math.min(0.45, 0.15+round*0.004);
+  for(let i=0;i<rest;i++) out.push(Math.random()<runP?'runner':'grunt');
+  for(let i=out.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=out[i]; out[i]=out[j]; out[j]=t; }
+  return out; }
+// 🔒 **그 웨이브의 평균 처치 보상 = 1.0**. 구성이 라운드·웨이브마다 달라져도 시급은 안 움직인다.
+//   ⚠ 예전엔 던전 편성표(고정 가중치)로 한 번만 계산했다. 이제 구성이 매 웨이브 달라지므로
+//     **짜인 편성표를 받아** 그때그때 정규화한다. 안 그러면 후반 웨이브(강한 놈 비중↑)에서 시급이 뛴다.
+function hbRwNormPlan(plan){ if(!plan||!plan.length) return 1;
+  let rw=0; for(const k of plan) rw+=hbKindOf(k).rw;
+  return (rw>0)? plan.length/rw : 1; }
 // 보스 원형 — 편성표에서 **가장 무거운 놈**(중장갑 > 가중치 낮은 순)을 키운 것. 새 모델을 만들지 않는다.
 //   ⚠ 보스는 늘 지상 근접이다 — 날거나 벽을 통과하는 보스는 벽·기지 설계를 통째로 무의미하게 만든다.
-function hbBossEntry(D){ const R=hbRoster(D);
-  return R.find(e=>e.k==='brute') || R.slice().sort((a,b)=>(a.w||1)-(b.w||1))[0] || R[0]; }
-function mkBoss(D,S){ const e=hbBossEntry(D), K=hbKindOf(e.k);
-  return { kind:e.k, ico:e.ico, mdl:e.mdl, boss:true, sz:K.sz, rng:0, way:'ground', rw:K.rw*hbRwNorm(D),
+// 보스 역할 = 그 라운드에 이미 등장하는 것 중 가장 무거운 지상 근접. 아직 안 열린 역할을 보스로 쓰지 않는다.
+function hbBossKind(round){ for(const k of ['brute','phase','grunt'])
+    if(k==='grunt' || round>=((HB_SPAWN[k]||{}).from||1)) return k;
+  return 'grunt'; }
+function hbBossEntry(D,round){ const k=hbBossKind(round==null?99:round), F=hbFaceOf(D,k); return { k:k, mdl:F.mdl, ico:F.ico }; }
+function mkBoss(D,S,rwN){ const e=hbBossEntry(D,S&&S.round), K=hbKindOf(e.k);
+  return { kind:e.k, ico:e.ico, mdl:e.mdl, boss:true, sz:K.sz, rng:0, way:'ground', rw:K.rw*(rwN||1),
     hpMul:HB_BOSS_HP, atkMul:HB_BOSS_ATK, spd:K.spd*HB_FOE_SPD_MUL*HB_BOSS_SPD*(1+S.round*0.01) }; }
 // 맵 테두리에서 뚫린 칸 찾기 — 같은 방향(ca,sa) 쪽 가장자리부터 시계방향으로 훑는다
 function hbEdgeSpawn(ca,sa){

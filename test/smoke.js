@@ -1841,7 +1841,7 @@ async function groupLobby(){
   //   ⚠ 위치·스탯만 재면 안 된다. 예전에 이동 방식을 f.mv 에 담았다가 '움직이는 중' 플래그(f.mv=1)에
   //     덮여 유령이 지상처럼 걸어 다녔다 — 겉으론 멀쩡했고 스탯도 맞았다. 그래서 **실제로 벽을 지났는지**를 본다.
   await step('사냥터 몹: 여섯 역할 · 벽 통과 규약 · 사거리 · 크기', async()=>{
-    skipIf(typeof HB_FOE_KIND==='undefined' || typeof hbPickFoe!=='function','몹 종류 표 없음');
+    skipIf(typeof HB_FOE_KIND==='undefined' || typeof hbWavePlan!=='function','몹 종류 표 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(60); _hb.manual=true;
     const _cSave={..._hb.char};
@@ -1849,11 +1849,11 @@ async function groupLobby(){
       // ① 편성표 무결성 — 죽은 역할·오타난 키·빠진 모델이 없어야 한다
       const seen=new Set(), bad=[];
       for(const D of HB_DUNGEONS){
-        if(!D.roster || !D.roster.length){ bad.push('던전'+D.dg+': roster 없음'); continue; }
-        for(const e of D.roster){
+        const R=hbRoster(D);
+        if(!R || !R.length){ bad.push('던전'+D.dg+': 얼굴표 없음'); continue; }
+        for(const e of R){
           if(!HB_FOE_KIND[e.k]) bad.push('던전'+D.dg+': 없는 역할 '+e.k);
           if(!e.mdl || typeof e.mdl!=='string') bad.push('던전'+D.dg+'/'+e.k+': 모델 없음');
-          if(!(e.w>0)) bad.push('던전'+D.dg+'/'+e.k+': 가중치가 0 이하');
           seen.add(e.k); } }
       assert(!bad.length, bad.join(' · '));
       for(const k of Object.keys(HB_FOE_KIND))
@@ -1865,7 +1865,7 @@ async function groupLobby(){
       //     ⚠ 이 검사는 three.js 없이도 돌아야 한다 — M3D 유무로 건너뛰면 이 환경에선 영영 안 걸린다.
       { assert(typeof FXLAB_AIR!=='undefined' && FXLAB_AIR.has, 'FXLAB_AIR(비행 모델 단일 출처)이 없다');
         const bad=[];
-        for(const D of HB_DUNGEONS) for(const e of D.roster){
+        for(const D of HB_DUNGEONS) for(const e of hbRoster(D)){
           const air=FXLAB_AIR.has(e.mdl), wantAir=(hbKindOf(e.k).way==='air');
           if(air!==wantAir) bad.push('던전'+D.dg+' '+e.k+'→'+e.mdl+(air?'(비행 모델인데 지상 역할)':'(지상 모델인데 비행 역할)')); }
         assert(!bad.length,'역할과 모델의 공중/지상이 어긋남 — 3D 에서 뜨거나 기어간다: '+bad.join(' · ')); }
@@ -1890,7 +1890,7 @@ async function groupLobby(){
         assert(ATK_STYLE[hbCharMdl()], '캐릭터 유닛 id('+hbCharMdl()+')가 ATK_STYLE 에 없다 — 내 공격만 기본 이펙트로 나온다');
         // 편성표 모델들이 서로 다른 공격 스타일을 갖는가(전부 _default 면 다양화가 화면에 안 보인다)
         const kinds=new Set();
-        for(const D of HB_DUNGEONS) for(const e of D.roster){ const st=ATK_STYLE[e.mdl]; if(st&&st.kind) kinds.add(st.kind); }
+        for(const D of HB_DUNGEONS) for(const e of hbRoster(D)){ const st=ATK_STYLE[e.mdl]; if(st&&st.kind) kinds.add(st.kind); }
         assert(kinds.size>=6,'몹 공격 스타일이 '+kinds.size+'종뿐 — 유닛별 이펙트가 안 갈린다');
         // 실제로 공격 한 번 → 공용 스토어에 쌓이는가
         _hb.fx=null; _hb.fxU=null; _hb.foes.length=0;
@@ -2033,14 +2033,34 @@ async function groupLobby(){
       //    사냥터 시급(hunt.rate)은 umRate() 를 거쳐 유즈맵 보상 앵커까지 그대로 간다.
       //    실측(10회×240초): 이 엔진의 처리량은 **웨이브 페이스**가 정한다 — 편성을 바꿔도 분당 처치는
       //    거의 안 변하고(42.9→39.8), 시급은 오직 '처치당 보상'을 따라간다. 그래서 지켜야 할 값은
-      //    **던전의 평균 처치 보상 = 1.0** 하나다. hbRwNorm(D) 이 편성과 무관하게 이걸 맞춘다.
+      //    **그 웨이브의 평균 처치 보상 = 1.0** 하나다. 구성이 라운드·웨이브마다 달라지므로
+      //    hbRwNormPlan(plan) 이 매 웨이브 다시 맞춘다(예전엔 던전당 한 번이었다).
       //    ⛔ '보상÷체력'을 맞추는 것으로는 부족하다(그렇게 짰다가 던전1 R20 시급이 −32% 났다).
       { const off=[];
-        for(const D of HB_DUNGEONS){ let tw=0, rw=0;
-          for(const e of D.roster){ const w=e.w||1; tw+=w; rw+=hbFoeProto(e,{round:1},D).rw*w; }
-          const mean=rw/tw;
-          if(Math.abs(mean-1)>0.02) off.push('던전'+D.dg+' '+mean.toFixed(3)); }
-        assert(!off.length,'던전 평균 처치 보상이 1.0 이 아님 — 편성만 바꿨는데 시급이 움직인다(유즈맵 보상까지 따라간다): '+off.join(' · ')); }
+        for(const D of [hbDun(1),hbDun(5),hbDun(10)])
+          for(const rd of [1,20,50,80,99]) for(const w of [1,2,3]){
+            const plan=hbWavePlan(D,rd,w,hbFoeCount(rd,w)), rwN=hbRwNormPlan(plan);
+            let sum=0; for(const k of plan) sum+=hbKindOf(k).rw*rwN;
+            const mean=sum/plan.length;
+            if(Math.abs(mean-1)>0.02) off.push('던전'+D.dg+' R'+rd+'W'+w+' '+mean.toFixed(3)); }
+        assert(!off.length,'웨이브 평균 처치 보상이 1.0 이 아님 — 구성이 바뀌면 시급이 움직인다(유즈맵 보상까지 따라간다): '+off.slice(0,5).join(' · ')); }
+      // ⑥-b 📈 **등장 규칙은 라운드·웨이브가 정한다**(던전이 아니다). 상한을 절대 안 넘어야 한다.
+      //     ⛔ 표만 읽지 말 것 — 실제로 편성표를 짜서 마릿수를 센다(297칸 전수).
+      { const over=[], D0=hbDun(1);
+        for(let rd=1; rd<=99; rd++) for(let w=1; w<=3; w++){
+          const n=hbFoeCount(rd,w), plan=hbWavePlan(D0,rd,w,n), c={};
+          for(const k of plan) c[k]=(c[k]||0)+1;
+          if(plan.length!==n) over.push('R'+rd+'W'+w+' 총원 '+plan.length+'≠'+n);
+          for(const k of Object.keys(HB_SPAWN)){ const cap=HB_SPAWN[k].cap; if(!cap) continue;
+            if((c[k]||0)>cap) over.push('R'+rd+'W'+w+' '+k+'='+c[k]+'>'+cap);
+            if(rd<HB_SPAWN[k].from && (c[k]||0)>0) over.push('R'+rd+' '+k+' 가 문턱(R'+HB_SPAWN[k].from+') 전에 나옴'); } }
+        assert(!over.length, '등장 규칙 위반 '+over.length+'건: '+over.slice(0,4).join(' · ')); }
+      // ⑥-c 웨이브가 뒤일수록 까다로운 놈이 많다 · 라운드가 오를수록 늘어난다
+      { const D0=hbDun(1), cnt=(rd,w)=>{ const p=hbWavePlan(D0,rd,w,hbFoeCount(rd,w));
+          return p.filter(k=>HB_SPAWN[k]&&HB_SPAWN[k].cap).length; };
+        // ⛔ >= 로 두면 웨이브 보정을 통째로 없애 1·3이 같아져도 통과한다(실제로 그랬다). 반드시 > 다.
+        assert(cnt(60,3)>cnt(60,1),'웨이브 3이 웨이브 1보다 까다롭지 않다: W1='+cnt(60,1)+' W3='+cnt(60,3));
+        assert(cnt(60,3)>cnt(10,3),'라운드가 올라도 안 늘어난다: R10='+cnt(10,3)+' R60='+cnt(60,3)); }
       // ⑦ 보상 배수가 hbKill 한 경로로 흐른다 — 오래 걸리는 놈이 시급만 깎으면 안 된다.
       //    ⛔ hbKill.toString() 에 /f\.rw/ 를 걸면 **주석에 적힌 f.rw** 가 매칭돼 코드를 지워도 통과한다(그렇게 짰다가 걷어냈다).
       //    그래서 실제로 잡아 보고 들어온 미네랄을 비교한다.
@@ -2151,8 +2171,9 @@ async function groupLobby(){
     for(let i=0;i<HB_DUNGEONS.length;i++){ const D=HB_DUNGEONS[i], at='던전'+(i+1)+'('+D.name+')';
       assert(D.dg===i+1, at+' 번호가 어긋남: '+D.dg);
       assert(D.name && !names[D.name], at+' 이름이 없거나 중복');  names[D.name]=1;
-      assert(D.roster && D.roster.length>=3, at+' 편성이 3종 미만');   // (구) foes 표는 roster 로 통합됐다 — 역할·얼굴·가중치를 한 줄이 갖는다
-      for(const f of D.roster){
+      const _R=hbRoster(D);
+      assert(_R && _R.length>=6, at+' 얼굴표가 6역할 미만: '+_R.length);   // 역할 여섯이 전부 얼굴을 가져야 한다(종족 팔레트에서 유도)
+      for(const f of _R){
         assert(f.mdl, at+' 모델 키가 비어 있음');
         assert(f.ico, at+' 폴백 이모지가 없음: '+f.mdl); }
       // 갈수록 어두워야 '무서워지는' 느낌이 난다
@@ -2169,7 +2190,7 @@ async function groupLobby(){
         im.onload=()=>res(true); im.onerror=()=>res(false); im.src='assets/tiles/'+t+'.webp'; });
       assert(ok,'바닥 타일 파일이 없음: assets/tiles/'+t+'.webp'); }
     // 던전을 옮기면 적 구성이 실제로 바뀌어야 한다
-    const f1=HB_DUNGEONS[0].roster.map(f=>f.mdl).join(), f2=HB_DUNGEONS[1].roster.map(f=>f.mdl).join();
+    const f1=hbRoster(HB_DUNGEONS[0]).map(f=>f.mdl).join(), f2=hbRoster(HB_DUNGEONS[1]).map(f=>f.mdl).join();
     assert(f1!==f2,'던전 1과 2의 적이 같음 — 옮겨도 같은 곳으로 느껴진다');
     // 모델 키 오타 검사. MODELS는 모듈 스코프라 전역에서 못 본다 → M3D.modelKeys()로 카탈로그를 받아 대조한다.
     // ⚠ M3D가 없으면(three.js를 못 받는 환경) 검사를 '통과'시키지 말고 그렇게 밝힌다 — 헛도는 검사가 제일 위험하다
@@ -2182,9 +2203,9 @@ async function groupLobby(){
         const m=src.match(/const MODELS=\{([\s\S]*?)\n?\};/);
         if(m){ cat=new Set([...m[1].matchAll(/(\w+)\s*:\s*'/g)].map(x=>x[1])); how='모듈 소스'; } }catch(_e){} }
     assert(cat && cat.size>0,'3D 모델 카탈로그를 못 읽었다 — 모델 키 오타를 못 잡는다');
-    for(const D of HB_DUNGEONS) for(const f of D.roster)
+    for(const D of HB_DUNGEONS) for(const f of hbRoster(D))
       assert(cat.has(f.mdl),'던전'+D.dg+'('+D.name+') 모델 키가 카탈로그에 없음: '+f.mdl);
-    const keyChk='모델 키 '+new Set(HB_DUNGEONS.flatMap(d=>d.roster.map(f=>f.mdl))).size+'종 확인('+how+')';
+    const keyChk='모델 키 '+new Set(HB_DUNGEONS.flatMap(d=>hbRoster(d).map(f=>f.mdl))).size+'종 확인('+how+')';
     return HB_DUNGEONS.length+'곳 · 타일 '+tiles.length+'종 · 틴트 '+alpha(HB_DUNGEONS[0].tint)+'→'+prevA+' · '+keyChk; });
   // 관리자 실험장의 8방향 시트를 던전 전장이 '그대로' 쓴다(새로 만들지 않는다)
   await step('던전: 내 캐릭터가 실험장 8방향 시트를 그대로 쓴다', async()=>{
