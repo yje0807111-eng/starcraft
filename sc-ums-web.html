@@ -9918,6 +9918,13 @@ async function enterAfterWarm(){
   await warmAll((n,t)=>opBarReal(base+(1-base)*(t?n/t:1)));
   await opBarDone();
   opBarReset();
+  // ⚠ 예열은 오래 걸린다(헤드리스 소프트웨어 렌더러에선 20초를 넘긴다). 그 사이 사용자가 이미
+  //    **게임에 들어가 있으면 끌어오지 않는다** — 무조건 openHome() 을 부르면 게임 중에
+  //    setInGame(false) 가 걸려 하단 콘솔(#bot)이 통째로 사라진다(스모크가 간헐 실패했다).
+  //    bootApp() 의 '이미 다른 화면으로 넘어갔으면 건드리지 않는다' 와 같은 규칙이다.
+  //    ⛔ '#opening 이 감춰졌으면 return' 으로 넓게 잡지 말 것 — 예열 중 다른 경로가 오프닝을
+  //       내리는 경우가 있어 정상 진입까지 막힌다(실제로 게스트가 HOME 에 못 갔다).
+  { const ph=document.getElementById('phone'); if(ph && ph.classList.contains('inGame')) return; }
   openHome(); }
 function hb3dAttach(){ const cv=document.getElementById('cvMarine'), host=document.getElementById('homeScreen');
   if(!cv||!host||_hb3dHome) return;
@@ -17689,8 +17696,8 @@ function joinRoom(r){ if(r.status!=='wait'||r.cur>=r.max) return;
   if(need>free){ if(typeof playSfx==='function') playSfx('ui_denied'); toast('⚠️ 파티 인원이 초과되었습니다 (남은 자리 '+free+' / 필요 '+need+')'); return; }
   if(r.real && rtRoomsActive()){   // 실제 방: 대기실 채널 presence로 입장
     rtRoomJoin(r.num, false);
-    openLobby({real:true, num:r.num, name:r.name, host:r.host, hostUid:r.hostUid, startCount:r.cur, joining:true, visibility:r.visibility, diff:r.diff}); return; }
-  openLobby({num:r.num, name:r.name, host:r.host, startCount:r.cur, joining:true, diff:r.diff}); }   // (오프라인 폴백) 시뮬 방
+    openLobby({real:true, num:r.num, name:r.name, host:r.host, hostUid:r.hostUid, startCount:r.cur, joining:true, visibility:r.visibility, diff:r.diff, inf:r.inf, opts:r.opts||null}); return; }
+  openLobby({num:r.num, name:r.name, host:r.host, startCount:r.cur, joining:true, diff:r.diff, inf:r.inf, opts:r.opts||null}); }   // (오프라인 폴백) 시뮬 방
 function quickJoin(){ const need=partySize(), wait=_roomList.filter(r=>r.status==='wait'&&(r.max-r.cur)>=need);
   if(!wait.length){ if(need>1){ toast('⚠️ 파티가 들어갈 빈 자리가 있는 방이 없습니다'); return; } createRoom(); return; }   // 빈 방 없으면 새로 생성(혼자일 때)
   joinRoom(wait[Math.floor(Math.random()*wait.length)]); }
@@ -18072,7 +18079,14 @@ function renderSpectate(num, dt){ const board=buildInterpBoard(num);
 //     슬롯을 차지하고, broadcast(rchat=채팅, start=게임 시작, close=방 닫힘).
 //   · RT 미연결(오프라인/로컬 계정)이면 기존 봇 시뮬 방으로 폴백.
 // ============================================================================
-const RTROOM={ listChan:null, chan:null, num:null, host:false, meta:null, started:false };
+const RTROOM={ listChan:null, chan:null, num:null, host:false, meta:null, started:false, joinT:0 };
+// 대기실 presence 에 싣는 내 상태. ⚠ track 은 **덮어쓰기**라 매번 전부 실어야 한다 —
+//   일부만 보내면 나머지(입장 시각 t 등)가 지워져 슬롯 순서가 뒤바뀐다.
+function rtRoomMe(){ return { uid:myUid(), nick:myNick(), ready:true, host:!!RTROOM.host,
+  race:(typeof _selRace!=='undefined' && _selRace) || 'terran', t:RTROOM.joinT||Date.now() }; }
+// 내 종족이 바뀌면 presence 를 다시 실어 상대 화면에도 반영한다
+function rtRoomSetRace(){ if(!RTROOM.chan) return;
+  try{ RTROOM.chan.track(rtRoomMe()); }catch(e){ console.warn('rtRoomSetRace', e); } }
 function rtRoomsActive(){ return typeof RT!=='undefined' && RT.active && _sb; }
 // 방 목록 채널 구독(1회) — presence sync로 _roomList 실시간 갱신
 function rtRoomsEnsure(){ if(!rtRoomsActive() || RTROOM.listChan) return;
@@ -18111,7 +18125,8 @@ function rtRoomJoin(num, asHost){ rtRoomLeaveChan(); RTROOM.num=num; RTROOM.host
       .on('broadcast',{event:'start'}, m=>rtRoomOnStart(m.payload))
       .on('broadcast',{event:'close'}, m=>rtRoomKicked('방장이 방을 닫았습니다'))
       .subscribe(st=>{ if(st==='SUBSCRIBED'){
-          try{ RTROOM.chan.track({ uid:myUid(), nick:myNick(), ready:true, host:!!asHost, t:Date.now() }); }catch(e){}
+          RTROOM.joinT=Date.now();   // 내 입장 시각 — 종족을 다시 track 할 때도 순서가 안 흔들리게 보존한다
+          try{ RTROOM.chan.track(rtRoomMe()); }catch(e){}
         } else if(st==='CHANNEL_ERROR'||st==='TIMED_OUT'){ toast('⚠️ 대기실 연결이 불안정합니다'); } });
   }catch(e){ console.warn('rtRoomJoin', e); toast('⚠️ 방 입장에 실패했습니다'); rtRoomLeaveChan(); } }
 function rtRoomLeaveChan(){ if(RTROOM.chan){ try{ _sb.removeChannel(RTROOM.chan); }catch(e){} RTROOM.chan=null; } RTROOM.num=null; }
@@ -18127,7 +18142,8 @@ function rtRoomSync(){ if(!RTROOM.chan || !_lobbyRoom || !_lobbyRoom.real) retur
     if(!RTROOM.host && _lobbyRoom.hostUid && !mem.some(m=>m.uid===_lobbyRoom.hostUid)){ rtRoomKicked('방장이 방을 나갔습니다'); return; }
     const before=_lobbySlots.filter(Boolean).length;
     _lobbySlots=[null,null,null,null,null,null,null,null];
-    mem.forEach((m,k)=>{ _lobbySlots[k]={ name:'P'+(k+1), label:m.nick, uid:m.uid, me:m.uid===myUid(), bot:false, ready:m.ready!==false, host:!!m.host }; });
+    mem.forEach((m,k)=>{ _lobbySlots[k]={ name:'P'+(k+1), label:m.nick, uid:m.uid, me:m.uid===myUid(), bot:false, ready:m.ready!==false, host:!!m.host,
+      race:(m.race && STK_RACES[m.race]) ? m.race : undefined }; });   // 상대 종족 = presence 값(없으면 renderLobby 가 배정)
     renderLobby(); updateLobbyStart();
     const now=mem.length;
     if(before && now>before){ addLobbyMsg('', (mem[now-1].nick||'플레이어')+'님이 입장하였습니다.'); if(typeof playSfxT==='function') playSfxT('notify',400); }
@@ -18145,6 +18161,12 @@ function rtRoomOnStart(p){ if(!_lobbyRoom || !_lobbyRoom.real || RTROOM.started)
   let myNum=0; slots.forEach(x=>{ if(x.uid===myUid()) myNum=x.num; });
   if(!myNum){ rtRoomKicked('게임 시작 명단에 없습니다'); return; }
   if(p.diff && DIFFICULTY[p.diff]) _selDiff=p.diff;
+  // 방장이 정한 판 조건이 권위다 — 대전 설정·무한 여부·내 종족을 받아 적용한다.
+  // ⚠ startGameNow 는 _lobbyRoom.opts 를 보고 MAP_CFG_OVR 을 심으므로 **그 전에** 넣어야 한다.
+  _lobbyRoom.opts = p.opts || null;
+  if(p.inf && USEMAPS.nemo_inf) _selMap=USEMAPS.nemo_inf;
+  { const mine=slots.find(function(x){ return x.uid===myUid(); });
+    if(mine && mine.race && STK_RACES[mine.race]) _selRace=mine.race; }
   document.getElementById('lobby').classList.add('hide');
   startGameNow(active, myNum, names);
   startGameCoop(slots);
@@ -18186,8 +18208,10 @@ function lobbyStart(){ const players=_lobbySlots.filter(Boolean); if(players.len
   if(_lobbyRoom && _lobbyRoom.real){   // 실제 방: 방장만 시작 가능, 슬롯 배정을 payload로 전파(권위=방장)
     if(!RTROOM.host || RTROOM.started) return; RTROOM.started=true;
     const slots=[], names={}; let myNum=1;
-    _lobbySlots.forEach((sl,i)=>{ if(sl){ slots.push({num:i+1, uid:sl.uid}); names[i+1]=sl.me?myNick():(sl.label||sl.name); if(sl.me) myNum=i+1; } });
-    try{ if(RTROOM.chan) RTROOM.chan.send({type:'broadcast', event:'start', payload:{slots:slots, names:names, diff:_lobbyRoom.diff, from:myUid()}}); }catch(e){ toast('⚠️ 시작 신호 전송 실패'); RTROOM.started=false; return; }
+    // ⚠ 종족은 **슬롯마다** 실어야 한다 — 각자 다른 것을 고르므로 방 단위 값이 아니다
+    _lobbySlots.forEach((sl,i)=>{ if(sl){ slots.push({num:i+1, uid:sl.uid, race:sl.race||undefined}); names[i+1]=sl.me?myNick():(sl.label||sl.name); if(sl.me) myNum=i+1; } });
+    try{ if(RTROOM.chan) RTROOM.chan.send({type:'broadcast', event:'start',
+      payload:{slots:slots, names:names, diff:_lobbyRoom.diff, inf:!!_lobbyRoom.inf, opts:_lobbyRoom.opts||null, from:myUid()}}); }catch(e){ toast('⚠️ 시작 신호 전송 실패'); RTROOM.started=false; return; }
     if(RTROOM.meta){ RTROOM.meta.status='playing'; RTROOM.meta.round=1; rtRoomPublish(RTROOM.meta); }   // 목록에 '게임중' 표시
     document.getElementById('lobby').classList.add('hide');
     startGameNow(slots.map(x=>x.num), myNum, names);
@@ -18316,7 +18340,7 @@ function renderLobbyRace(){ const box=document.getElementById('lbRaceSec'); if(!
 function setLobbyRace(k){ if(!STK_RACES[k]) return;
   const me=_lobbySlots.find(function(s){ return s&&s.me; }); if(me) me.race=k;
   _selRace=k; renderLobby(); renderLobbyRace();
-  // ⚠ 실방(Supabase presence)으로 내 종족을 전파하는 경로는 아직 없다 — 로컬/봇 방에서만 반영된다.
+  if(typeof rtRoomSetRace==='function') rtRoomSetRace();   // 실방이면 presence 를 다시 실어 상대 화면에도 반영
   if(typeof playSfx==='function') playSfx('ui_tab'); }
 // 팀전 유즈맵(cfg.teams) = 앞 절반 1팀 / 뒤 절반 2팀. 자리를 옮기면 팀도 따라 바뀜
 function lobbyTeams(){ return !!(_selMap && _selMap.cfg && _selMap.cfg.teams); }   // MAP(=플레이 중 맵)이 아니라 선택한 맵 기준 — 안 그러면 직전 게임의 맵이 대기실에 남는다
