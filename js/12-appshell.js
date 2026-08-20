@@ -20,7 +20,13 @@ function sbUser(u){ const meta=u.user_metadata||{};
 async function initAuth(){
   if(SUPABASE_CONFIG.url && SUPABASE_CONFIG.anonKey){
     try{
-      const m=await import('https://esm.sh/@supabase/supabase-js@2');
+      // ⚠ 정확한 버전으로 고정한다 — '@2' 로 두면 esm.sh 가 내보내는 최신 2.x 로 어느 날 조용히 바뀐다
+      //   (three.js 는 three@0.160.0 으로 이미 고정돼 있는데 이것만 안 돼 있었다).
+      //   ⚠ esm.sh 는 단일 장애점이다 — 여기가 막히면 인증·방·소셜이 통째로 죽는다(게임 자체는 로컬이라 돌아간다).
+      //   ⚠ realtime-js 2.112.x 에는 **클라이언트 쪽 전송 제한이 없다**(eventsPerSecond·throttle 모두 없음).
+      //      한도는 Supabase 프로젝트의 서버 쿼터뿐이라, 많이 쏘면 클라이언트가 막아 주는 게 아니라 서버가 끊는다.
+      //      그래서 송신 빈도는 우리가 직접 줄인다 — ARCHITECTURE §8 「대역폭 규칙」.
+      const m=await import('https://esm.sh/@supabase/supabase-js@2.112.3');
       _sb=m.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey); AUTH.mode='supabase';
       const { data }=await _sb.auth.getSession();   // 자동 로그인: 저장된 세션 복원(같은 기기 재실행 — 정식 계정만)
       // ⚠ 기다리는 동안 사용자가 게스트로 들어갔을 수 있다 — 세션이 없을 때 null 로 덮으면 방금 들어온 사람이 팅긴다.
@@ -1675,7 +1681,8 @@ function joinRoom(r){ if(r.status!=='wait'||r.cur>=r.max) return;
   if(need>free){ if(typeof playSfx==='function') playSfx('ui_denied'); toast('⚠️ 파티 인원이 초과되었습니다 (남은 자리 '+free+' / 필요 '+need+')'); return; }
   if(r.real && rtRoomsActive()){   // 실제 방: 대기실 채널 presence로 입장
     rtRoomJoin(r.num, false);
-    openLobby({real:true, num:r.num, name:r.name, host:r.host, hostUid:r.hostUid, startCount:r.cur, joining:true, visibility:r.visibility, diff:r.diff, inf:r.inf, opts:r.opts||null}); return; }
+    // ⚠ max 를 빼먹으면 참가자는 _lobbyMax 가 8 로 잡혀 **방 정원을 모른 채** 대기실을 그린다(2인 방이 8인 방으로 보였다)
+    openLobby({real:true, num:r.num, name:r.name, host:r.host, hostUid:r.hostUid, startCount:r.cur, joining:true, visibility:r.visibility, diff:r.diff, inf:r.inf, max:r.max, opts:r.opts||null}); return; }
   openLobby({num:r.num, name:r.name, host:r.host, startCount:r.cur, joining:true, diff:r.diff, inf:r.inf, opts:r.opts||null}); }   // (오프라인 폴백) 시뮬 방
 function quickJoin(){ const need=partySize(), wait=_roomList.filter(r=>r.status==='wait'&&(r.max-r.cur)>=need);
   if(!wait.length){ if(need>1){ toast('⚠️ 파티가 들어갈 빈 자리가 있는 방이 없습니다'); return; } createRoom(); return; }   // 빈 방 없으면 새로 생성(혼자일 때)
@@ -1992,6 +1999,7 @@ function startGameCoop(slotInfo){ stopGameCoop();
   if(!(typeof RT!=='undefined' && RT.active && _lobbyRoom && (_lobbyRoom.party||_lobbyRoom.real))) return;
   const ids=(slotInfo||[]).filter(s=>s.uid); if(ids.length<2) return;   // 실제 파티원 2명 이상만
   G.coop=true; G.coopSlotInfo=ids.slice(); G.coopNumToUid={}; G.coopUidToNum={}; G.coopState={}; G.coopBoard={}; G.coopBoardPrev={}; G.coopSpeed={}; G.coopUpg={}; G.coopBossU={}; G.coopTeamB={};
+  G._tbPeak=(G.metaB&&G.metaB.startCredit)||0;   // 팀 강화 소급 지급의 기준선(재접속 중복 지급 방지)
   ids.forEach(s=>{ G.coopNumToUid[s.num]=s.uid; G.coopUidToNum[s.uid]=s.num; });
   const sid=(_lobbyRoom&&_lobbyRoom.num)||(RT.partyId)||'g';   // 방 번호로 동일 채널(양쪽 공유)
   const topic='game-'+sid;
@@ -2057,9 +2065,14 @@ function onCoopState(p){ if(!p||p.uid===myUid()) return; const num=G.coopUidToNu
     if(!cur || cur.join(',')!==p.tb.join(',')){ G.coopTeamB[num]=p.tb;
       const before=(G.metaB&&G.metaB.startCredit)||0;
       G.metaB=metaBonus();
-      const diff=G.metaB.startCredit-before;
+      // ⚠ '이번에 오른 만큼'을 그대로 주면 안 된다 — 연결이 불안정한 사람이 나갔다 들어올 때마다
+      //   metaB 가 내려갔다 다시 올라가서 **같은 보너스를 몇 번이고 다시 준다**(판마다 미네랄이 조용히 불어난다).
+      //   지금까지 지급 근거가 된 최고치를 기억해 두고, 그보다 높아진 만큼만 준다.
+      const peak=(G._tbPeak!=null)?G._tbPeak:before;
+      const diff=G.metaB.startCredit-Math.max(peak, before);
       if(diff>0){ G.mineral+=diff; if(typeof updateHud==='function') updateHud();
-        addChat('', '🤝 전체 강화 공유 적용 — 시작 미네랄 +'+diff+' M', '#ffd24a', true); } } }
+        addChat('', '🤝 전체 강화 공유 적용 — 시작 미네랄 +'+diff+' M', '#ffd24a', true); }
+      G._tbPeak=Math.max(peak, before, G.metaB.startCredit); } }
   // 상대 토벌장 파견 유닛 스냅(보간용 직전/현재) — 토벌장 화면에 함께 표시
   { const prevB=(G.coopBossU=G.coopBossU||{})[num];
     G.coopBossU[num]={ t:Date.now(), prev:prevB&&prevB.cur,

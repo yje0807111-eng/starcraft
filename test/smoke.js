@@ -5159,6 +5159,42 @@ async function groupLobby(){
     host.innerHTML=renderProfStats();
     assert(host.textContent.indexOf('<b>x</b>')>=0,'광장에서 이름이 마크업으로 해석됨');
     return '이스케이프 확인'; });
+
+  // ══ 실방 정원 — 방장이 정한 max 를 presence sync 에서 강제한다 ═══════════
+  await step('실방 정원: 정원을 넘은 사람에게는 자리를 주지 않는다', async()=>{
+    skipIf(typeof rtRoomSync!=='function','rtRoomSync 없음');
+    const lb=document.getElementById('lobby'); skipIf(!lb,'#lobby 없음');
+    const hid=lb.classList.contains('hide');
+    const keepRoom=_lobbyRoom, keepMax=_lobbyMax, keepSlots=_lobbySlots, keepChan=RTROOM.chan, keepOver=RTROOM.overN;
+    const keepUid=window.myUid; window.myUid=()=>'me';   // 스모크는 비로그인이라 uid 가 비어 있다 — 고정한다
+    try{
+      lb.classList.remove('hide');
+      _lobbyRoom={ real:true, num:1234, name:'t', hostUid:'me', max:2 };
+      _lobbyMax=2; _lobbySlots=[null,null,null,null,null,null,null,null]; RTROOM.overN=0;
+      // 나(방장) + 늦게 들어온 4명 = 5명이 2인 방에 몰려 있는 상황
+      const st={ me:[{uid:'me', nick:'me', host:true, ready:true, t:1000}] };
+      for(let k=2;k<=5;k++) st['u'+k]=[{uid:'u'+k, nick:'P'+k, host:false, ready:true, t:1000+k}];
+      RTROOM.chan={ presenceState(){ return st; } };
+      rtRoomSync();
+      const n=_lobbySlots.filter(Boolean).length;
+      assert(n===2,'2인 방에 '+n+'명이 자리를 받았다(정원이 강제되지 않는다)');
+      assert(_lobbySlots[0] && _lobbySlots[0].uid==='me','방장이 P1 이 아니다: '+(_lobbySlots[0]&&_lobbySlots[0].uid));
+      assert(!_lobbySlots[2] && !_lobbySlots[4],'정원 밖 슬롯에 사람이 들어갔다');
+      return '5명 → 2자리 · 방장 P1';
+    } finally { _lobbyRoom=keepRoom; _lobbyMax=keepMax; _lobbySlots=keepSlots;
+      RTROOM.chan=keepChan; RTROOM.overN=keepOver; window.myUid=keepUid;
+      if(hid) lb.classList.add('hide'); } });
+
+  await step('실방 정원: 참가자에게도 방 정원이 전달된다', async()=>{
+    skipIf(typeof joinRoom!=='function','joinRoom 없음');
+    // 이 한 줄이 빠져 있어서 참가자는 _lobbyMax 가 8 로 잡혔다(2인 방이 8인 방으로 보였다)
+    assert(/max:\s*r\.max/.test(String(joinRoom)),'joinRoom 이 openLobby 에 max 를 안 넘긴다');
+    const keepRoom=_lobbyRoom, keepMax=_lobbyMax;
+    try{ openLobby({ real:true, num:1, name:'t', host:'h', hostUid:'x', startCount:1, joining:true, max:3 });
+      assert(_lobbyMax===3,'전달된 정원이 반영되지 않았다: '+_lobbyMax);
+      return '_lobbyMax=3';
+    } finally { _lobbyRoom=keepRoom; _lobbyMax=keepMax;
+      const lb=document.getElementById('lobby'); if(lb) lb.classList.add('hide'); } });
 }
 
 // ── 그룹: game (솔로 무한) ──
@@ -6293,6 +6329,22 @@ async function groupGame(){
       assert((G.kills||0)===kills,'전장을 비우면서 킬이 늘었다(사망 처리 함수를 탔다)');
       return '유닛·적·탄 0 · 킬 변화 없음';
     } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('팀 강화 공유: 재접속해도 다시 주지 않는다', async()=>{
+    skipIf(typeof onCoopState!=='function' || typeof killSlot!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null, keepMB=window.metaBonus;
+    try{
+      _coopStub([]);
+      let credit=100;
+      window.metaBonus=function(){ return { startCredit:credit }; };   // 경제 전체 대신 시작 크레딧만 흔든다
+      G.mineral=0; G.metaB={ startCredit:100 }; G._tbPeak=100;
+      credit=150; onCoopState({ uid:'u2', tb:[1], count:0, round:1 });   // 강화가 높은 사람이 합류 → 차액 지급
+      assert(G.mineral===50,'최초 지급이 안 됐다: '+G.mineral);
+      credit=100; killSlot(2,'left');                                    // 연결이 끊겨 이탈 → metaB 내려감
+      credit=150; onCoopState({ uid:'u2', tb:[1], count:0, round:1 });   // 재접속 → 같은 강화가 다시 온다
+      assert(G.mineral===50,'재접속에 같은 보너스를 또 줬다: '+G.mineral+' (50 이어야 한다)');
+      return '최초 +50 · 재접속 +0';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; window.metaBonus=keepMB; } });
 
   await step('대역폭: 관전자가 없으면 전장 데이터를 안 보낸다', async()=>{
     skipIf(typeof coopBroadcastState!=='function','coopBroadcastState 없음');
