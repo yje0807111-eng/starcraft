@@ -2485,7 +2485,11 @@ async function groupLobby(){
       assert(document.querySelectorAll('#gearBody .mgSlot.lock').length===MG_SLOT_MAX,
         k+': 잠긴 칸 줄이 '+MG_SLOT_MAX+'개가 아님: '+document.querySelectorAll('#gearBody .mgSlot.lock').length);
       // ⚠ resIco 는 크기 클래스를 안 주면 원본 크기로 나온다 — 줄이 통째로 무너진다(실제로 그랬다)
-      { const row=document.querySelector('#gearBody .mgSlot.lock'), ic=row.querySelector('img');
+      // ⚠ 이 줄에는 img 가 둘이다 — 왼쪽 칸의 자물쇠(.stIco)와 비용의 재화 아이콘(.gi).
+      //   `querySelector('img')` 로 잡으면 자물쇠가 걸려 엉뚱한 것을 잰다(실제로 그랬다). 둘 다 각각 본다.
+      { const row=document.querySelector('#gearBody .mgSlot.lock'), ic=row.querySelector('img.gi');
+        const lk=row.querySelector('.mgIco img');
+        if(lk) assert(lk.getBoundingClientRect().height<=20,k+': 잠긴 칸 자물쇠가 너무 큼: '+Math.round(lk.getBoundingClientRect().height)+'px');
         assert(ic,k+': 잠긴 줄에 재화 아이콘이 없음');
         assert(ic.getBoundingClientRect().height<=20,k+': 재화 아이콘이 너무 큼(크기 클래스 누락): '+Math.round(ic.getBoundingClientRect().height)+'px');
         assert(row.getBoundingClientRect().height<=90,k+': 잠긴 줄 높이가 비정상: '+Math.round(row.getBoundingClientRect().height)+'px'); }
@@ -3268,10 +3272,12 @@ async function groupLobby(){
     // ②-2 상점 특가는 **한글 이름으로** resIco 를 부른다 — RES_ICON_KO 에 없으면 그 줄만 이모지로 떨어진다
     for(const k in SHOP_GIVE_LABEL){ const nm=SHOP_GIVE_LABEL[k];
       assert(/^<img/.test(resIco(nm,'gi')),'상점 특가 항목이 아이콘으로 안 나옴: '+nm); }
-    // ③ 잠김 자물쇠 = 단일 소스 hmLockHTML() · 파일이 없으면 선 SVG 로 되돌아갈 길이 있다
-    assert(/^<img/.test(hmLockHTML()) && hmLockHTML().indexOf('st_lock.webp')>=0,'잠김 자물쇠가 그림이 아님');
-    assert(hmLockHTML().indexOf('_hmLockFail')>=0,'자물쇠 폴백 경로가 없음');
-    assert(typeof HM_LOCK_SVG==='string' && HM_LOCK_SVG.indexOf('<svg')===0,'자물쇠 폴백 SVG 가 사라짐');
+    // ③ 자물쇠 그림은 **칸이 통째로 잠긴 자리**(정비 펫·동료)에만 쓴다.
+    //    ⛔ 사냥터 업그레이드 카드에는 자물쇠를 두지 않는다 — '해금 필요' 글자와 죽은 색이 이미 말한다
+    { const h=stIco('lock','🔒');
+      assert(h.indexOf('st_lock.webp')>=0,'잠김 자물쇠 경로가 틀림');
+      assert(h.indexOf('data-fb="🔒"')>=0,'자물쇠 폴백이 원래 이모지가 아님');
+      assert(typeof hmLockHTML==='undefined','사냥터 카드용 자물쇠가 되살아남'); }
     // ④ 상태 아이콘은 **원래 이모지**로 되돌아간다(pIco 표에 없는 이모지가 많다)
     { const h=stIco('rebirth','🔁');
       assert(h.indexOf('st_rebirth.webp')>=0,'환생 아이콘 경로가 틀림');

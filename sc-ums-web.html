@@ -2777,6 +2777,8 @@
   .mgSlot.empty{border-style:dashed;opacity:.55}
   .mgSlot.lock{border-style:dashed;opacity:.8;background:rgba(255,255,255,.025)}
   .mgSlot.lock .mgIco{font-size:19px}
+  /* 잠긴 칸 자물쇠 — 공용 .stIco(21px)는 이 줄에서 크다. 이모지였을 때(19px)와 같은 크기로 맞춘다 */
+  .mgSlot .mgIco .stIco{width:19px;height:19px}
   .mgSlot.pick{background:rgba(255,255,255,.11)}
   .mgCard{position:relative;flex:0 0 auto;width:40px;height:40px;display:flex;align-items:center;justify-content:center;
     border-radius:var(--r-md);border:1px solid var(--metal-edge);background:rgba(0,0,0,.32)}
@@ -6827,11 +6829,8 @@ function openHome(){ loadMeta();
 
 // 사냥터 업그레이드 표시 보조물
 const HM_ARW='<svg class="hmArw" viewBox="0 0 24 24"><path d="M6 12h11M13 7.5 17.5 12 13 16.5"/></svg>';
-// 🔒 잠긴 구역 — 그림(`state/st_lock.webp`)이 있으면 그것, 없으면 원래 선 SVG 로 되돌아간다(칸이 비지 않는다).
-//   ⚠ 상수가 아니라 함수다: `ICO_DIR` 은 이 줄보다 **한참 아래**에서 선언되므로 여기서 문자열로 굳히면 TDZ 로 죽는다.
-const HM_LOCK_SVG='<svg class="hmLk" viewBox="0 0 24 24"><path d="M7.5 10.5V7.6a4.5 4.5 0 0 1 9 0v2.9M5.6 10.5h12.8v9.4H5.6z"/></svg>';
-function hmLockHTML(){ return '<img class="hmLk" src="'+ICO_DIR+'state/st_lock.webp" alt="" draggable="false" onerror="_hmLockFail(this)">'; }
-function _hmLockFail(im){ try{ im.outerHTML=HM_LOCK_SVG; }catch(_e){ try{ im.remove(); }catch(_e2){} } }
+// (사냥터 업그레이드 카드의 자물쇠는 2026-08-19 **아예 뺐다** — `해금 필요` 글자와 죽은 색이 이미 잠김을 말한다.
+//  자물쇠 그림이 필요한 곳은 칸 하나가 통째로 잠긴 자리(정비 펫·동료 칸)뿐이고, 거기서는 `stIco('lock','🔒')` 를 쓴다.)
 // 아이콘은 전부 기존 에셋 재사용 — 'upgrades/up_x' 처럼 폴더까지 담겨 있다
 // 경로형 아이콘 — 키에 하위폴더까지 들어 있는 표기('upgrades/up_range'). HB_UPG.ico 와 LP_STATS.ico 가 같이 쓴다.
 function _icoPathImg(path, fb){ return '<img class="icoImg" src="'+ICO_DIR+path+'.webp" alt="" draggable="false" data-fb="'+(fb||'⚙')+'" data-fbcls="" onerror="_icoFail(this)">'; }
@@ -6847,9 +6846,9 @@ const HM_SUF=['확률','배수','계수','재생','표적','수','흡수'];
 //    바로 위에서 이미 값이 어떻게 변하는지 화살표로 말하고 있어 같은 말이 두 번이었다.
 function hmUpCardHTML(o){
   const arw=(a,b)=>(b==null||b==='')?a:(a+HM_ARW+'<b class="nx">'+b+'</b>');
-  const head=o.lock ? '<span class="hmUpLk">'+hmLockHTML()+(o.lockTx||'해금 필요')+'</span>'
+  const head=o.lock ? '<span class="hmUpLk">'+(o.lockTx||'해금 필요')+'</span>'
                     : '<span class="hmUpVl">'+arw(o.val,o.next)+'</span>';
-  const foot='<span class="hmUpBl">'+(o.lock?hmLockHTML():o.lv)+'</span>'
+  const foot='<span class="hmUpBl">'+(o.lock?'':o.lv)+'</span>'
             +'<span class="hmUpBc">'+o.cost+'</span>';
   return '<div class="hmUp'+(o.lock?' lk':'')+'" data-k="'+o.key+'">'
     +'<span class="hmUpIco">'+o.ico+'</span>'
@@ -7568,8 +7567,8 @@ function renderGrowModal(){ const box=document.getElementById('hbGrowBody'); if(
                     : (N+'회차 환생')))+'</b>'
       +'<em>'+(last ? ('전역 진행도 '+PROF_REC_RP_PER+'칸당 환생 포인트 +1 (지금 '+profRecordRp(c)+'p)')
              : (can ? ('레벨·레벨 포인트·<b>미네랄 업그레이드·미네랄</b>이 처음으로 돌아갑니다. 해금·최고 기록·장비·펫·환생 포인트는 그대로. 환생 포인트 +'+profRebGrant(N))
-                    : (lvOk ? ('🔒 ◎ 포인트 '+pNeed+' 필요 (보유 '+pHave+') — 포인트는 <b>유즈맵에서만</b> 나옵니다')
-                            : ('🔒 Lv.'+need+' 필요 — 회차마다 요구 레벨이 올라갑니다 ('+PROF_REB_LEVELS.join(' · ')+')'
+                    : (lvOk ? ('◎ 포인트 '+pNeed+' 필요 (보유 '+pHave+') — 포인트는 <b>유즈맵에서만</b> 나옵니다')
+                            : ('Lv.'+need+' 필요 — 회차마다 요구 레벨이 올라갑니다 ('+PROF_REB_LEVELS.join(' · ')+')'
                                +(pNeed>0?(' · ◎ 포인트 '+pNeed):'')))))+'</em></span>'
       +'<button class="hbRowBtn" onclick="hbDoRebirth()"'+(can?'':' disabled')+'>환생</button></div>'; }
   // 🔁 환생 포인트 — 환생으로만 얻고 환생해도 안 사라진다. 줄 모양은 스탯 화면의 레벨 포인트와 같은 컴포넌트.
@@ -10329,7 +10328,7 @@ function _mgK(){ return _gearTab==='pet' ? 'pet' : 'ally'; }
 // 아직 안 산 칸 — 무엇을 내면 열리는지 그 줄에서 바로 보여 준다
 function _mgLockRow(k, i){ const cost=mgSlotCost(i), can=Math.floor((PROF().pcoin||0))>=cost;
   return '<div class="mgSlot lock">'
-    +'<span class="mgCard"><span class="mgIco">🔒</span></span>'
+    +'<span class="mgCard"><span class="mgIco">'+stIco('lock','🔒')+'</span></span>'
     +'<span class="mgBody"><b class="mgName">'+(i+1)+'번째 칸</b>'
     +'<em class="mgStat">'+resIco('mineral','gi')+' '+cost.toLocaleString('en-US')+' 로 열립니다</em></span>'
     +'<span class="mgBtns"><button class="mgBtn'+(can?' on':'')+'" onclick="mgBuySlot(\''+k+'\')"'+(can?'':' disabled')+'>열기</button></span></div>'; }
@@ -10480,7 +10479,7 @@ function _mgPanel(k, note){ const M=MG[k], on=M.on(), mx=M.max();
     +'</div>';
   top+='</div>';
   const hint=_mgSwap&&_mgSwap.kind===k
-    ? '<div class="igEmpty sm feed">🔁 <b>'+M.name(_mgSwap.id)+'</b> 을 넣을 자리를 <b>위에서</b> 고르세요</div>'
+    ? '<div class="igEmpty sm feed">'+stIco('rebirth','🔁')+' <b>'+M.name(_mgSwap.id)+'</b> 을 넣을 자리를 <b>위에서</b> 고르세요</div>'
     : (note?'<div class="igEmpty sm">'+note+'</div>':'');
   return _gearFrame(M.sum(), top, '<span class="bagTtl">보유 '+M.label+'</span>',
     M.owned().length+M.unit, _mgGrid(k), hint+_mgPickSheet()+_mgMixSheet()); }
@@ -10586,7 +10585,7 @@ function _shopDrawHTML(){ const p=PROF(), eq=p.equip||[]; let h='';
   // 🎰 펫 뽑기 — 동료 뽑기와 같은 형태(뽑기권 + 단계별 확률 + 중복은 합성 재료)
   { const tk=profPetTicket(), nx=profPetNext();
     h+='<div class="shopRow"><div class="twRowInfo"><div class="twRowName">펫 뽑기 <span class="twStars">Lv.'+profPetLv()+'</span></div>'
-      +'<div class="twRowSub'+(tk?'':' lock')+'">보유 🎟 '+tk+' · '
+      +'<div class="twRowSub'+(tk?'':' lock')+'">보유 '+resIco('ticket_pet','gi')+' '+tk+' · '
       +(nx? ('다음 단계까지 '+nx.left+'회'):'최고 단계')+' · 중복은 합성 재료</div></div>'
       +'<button class="twBtn" onclick="profDoGacha()"'+(tk?'':' disabled')+'>뽑기</button></div>';
     h+='<div class="mateOdds">';
@@ -10598,7 +10597,7 @@ function _shopDrawHTML(){ const p=PROF(), eq=p.equip||[]; let h='';
   // 🎟 장비 뽑기권 — 자동사냥 엘리트 처치·토벌 클리어로 얻는다. 여기가 유일한 소비처.
   { const tk=((p.tickets&&p.tickets.gear)||0), full=profItems().length>=PROF_INV_MAX;
     h+='<div class="shopRow"><div class="twRowInfo"><div class="twRowName">장비 뽑기권 사용</div>'
-      +'<div class="twRowSub'+(tk?'':' lock')+'">'+(full?'가방이 가득 찼습니다':('보유 🎟 '+tk+' · 엘리트 처치·토벌에서 획득'))+'</div></div>'
+      +'<div class="twRowSub'+(tk?'':' lock')+'">'+(full?'가방이 가득 찼습니다':('보유 '+resIco('ticket_gear','gi')+' '+tk+' · 엘리트 처치·토벌에서 획득'))+'</div></div>'
       +'<button class="twBtn" onclick="profUseGearTicket()"'+((tk&&!full)?'':' disabled')+'>뽑기</button></div>'; }
   h+='</div></div>';
   h+=_shopPetPanel();   // 뽑은 펫은 뽑기 구역에서 바로 본다(정비 '펫' 탭과 같은 함수)
@@ -10960,9 +10959,9 @@ function renderDungeonHub(){ const body=document.getElementById('dgHubBody'); if
   for(const d of DG_DUNGEONS){ const lock=c.level<d.reqLv, k=lock?0:dgKeyN(d.id);
     h+='<div class="dgCard'+(lock?' lock':'')+'" style="--dgTint:'+d.tint+'"'+(lock?'':' onclick="dgOpenSheet(\''+d.id+'\')"')+'>'
       +'<div class="dgCardArt"><span class="dgCardIco">'+d.ico+'</span><span class="dgCardName">'+d.name+'</span></div>'
-      +'<div class="dgCardR"><span class="dgCardKey">🗝 '+(lock?('🔒 Lv.'+d.reqLv):(k+'/'+DG_KEY_DAILY))+'</span>'
+      +'<div class="dgCardR"><span class="dgCardKey">🗝 '+(lock?('Lv.'+d.reqLv):(k+'/'+DG_KEY_DAILY))+'</span>'
       +(lock?'':'<button class="dgOpenBtn" onclick="event.stopPropagation();dgOpenSheet(\''+d.id+'\')">열기</button>')+'</div></div>'; }
-  const tx=(PROF()&&PROF().tickets)||{}; h+='<div class="dgTix">🎟 장비<b>'+(tx.gear||0)+'</b> · 펫<b>'+(tx.pet||0)+'</b> · 동료<b>'+(tx.ally||0)+'</b></div>';
+  const tx=(PROF()&&PROF().tickets)||{}; h+='<div class="dgTix">'+resIco('ticket_gear','gi')+'<b>'+(tx.gear||0)+'</b> '+resIco('ticket_pet','gi')+'<b>'+(tx.pet||0)+'</b> '+resIco('ticket_ally','gi')+'<b>'+(tx.ally||0)+'</b></div>';
   body.innerHTML=h; }
 // 던전 팝업 — 이전 스테이지 소탕 + 입장
 let _dgSheetId=null;
@@ -10984,7 +10983,7 @@ function renderDgSheet(){ const d=DG_DUNGEONS.find(x=>x.id===_dgSheetId), c=CHAR
   set('dgSheetKey', '🗝 '+k+'/'+DG_KEY_DAILY);
   const bSweep=document.getElementById('dgSheetSweep'), bEnter=document.getElementById('dgSheetEnter');
   if(bSweep) bSweep.disabled=!(mx>0 && k>0);
-  if(bEnter){ bEnter.disabled=!(okLv && k>0); bEnter.textContent = okLv?'입장':('🔒 Lv.'+dgFloorReqLv(nx)); } }
+  if(bEnter){ bEnter.disabled=!(okLv && k>0); bEnter.textContent = okLv?'입장':('Lv.'+dgFloorReqLv(nx)+' 필요'); } }
 function dgSheetEnter(){ const d=DG_DUNGEONS.find(x=>x.id===_dgSheetId); if(!d) return; const nx=dgMaxFloor()+1;
   if(nx>dgFloorCap()){ if(typeof toast==='function') toast('Lv.'+dgFloorReqLv(nx)+'부터 도전할 수 있습니다'); return; }
   if(dgKeyN(d.id)<1){ if(typeof toast==='function') toast('🗝 열쇠가 없습니다(매일 09:00 보충)'); return; }
