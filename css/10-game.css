@@ -864,7 +864,7 @@
     background-repeat:repeat;background-size:28px 28px,28px 28px,132px 132px}
   /* 오토배틀 건설지: 바닥만 오토배틀 보드 타일로 교체(격자선 제거·어둡게) — 그리드·발판·프로필 등 시스템은 관리자와 동일 */
   .bmap.stk{background:#05080c}
-  .bmap.stk .bmapFloor{background:url('assets/tiles/terran_tile_light.webp?v=1');background-repeat:repeat;background-size:150px 150px}
+  .bmap.stk .bmapFloor{background:url('../assets/tiles/terran_tile_light.webp?v=1');background-repeat:repeat;background-size:150px 150px}
   .bmap.stk .bmapFloor::after{content:'';position:absolute;inset:-200%;background:rgba(7,11,16,.62)}   /* 오토배틀 보드와 같은 어두운 오버레이 */
   .bmap.stk .bHill,.bmap.stk .bGasZone{display:none}   /* ⛰ 언덕·⛽ 가스 구역 = 관리자 전용 지형(오토배틀은 채취 경제 미사용) */
   .bmap.stk .bhint{display:none}   /* 조작 안내 문구 미사용(오토배틀) */
@@ -1567,7 +1567,7 @@
      아래 화면들은 position:absolute 라서 폰 프레임(#phone) 안에만 적용됨. */
   .spaceBg{overflow:hidden}
   .spaceBg::before{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;
-    background:url('assets/tiles/space_bg.webp') center/360px repeat #04050b;
+    background:url('../assets/tiles/space_bg.webp') center/360px repeat #04050b;
     animation:spaceDrift 120s linear infinite}
   .spaceBg::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;
     background:

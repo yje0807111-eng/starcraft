@@ -9,7 +9,7 @@
   #lobby.hide{display:none}
   /* 대기실 배경: waiting_room_bg.png 전체 cover(9:16), 중앙은 어둡게(UI 패널용) */
   #lobby::before{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;transform-origin:center center;
-    background:url('assets/backgrounds/waiting_room_bg.webp') center center / cover no-repeat #04050b;
+    background:url('../assets/backgrounds/waiting_room_bg.webp') center center / cover no-repeat #04050b;
     animation:lobbyBreath 12s ease-in-out infinite}
   #lobby::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;
     background:
@@ -798,7 +798,7 @@
   #mapSelect{z-index:47;padding:12px 13px}
   /* 유즈맵 선택 로비 배경(전체 cover, 9:16 기준, UI는 위 레이어) */
   #mapSelect::before,#rooms::before,#createPanel::before,#shopScreen::before,#gearScreen::before,#upgScreen::before{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;transform-origin:center center;
-    background:url('assets/backgrounds/lobby_bg.webp') center center / cover no-repeat #04050b;
+    background:url('../assets/backgrounds/lobby_bg.webp') center center / cover no-repeat #04050b;
     animation:lobbyBreath 12s ease-in-out infinite}   /* 미세한 호흡(위아래 + 약한 확대) */
   @keyframes lobbyBreath{ 0%,100%{transform:scale(1.01) translateY(0)} 50%{transform:scale(1.05) translateY(-1%)} }
   #mapSelect::after,#rooms::after,#createPanel::after,#shopScreen::after,#gearScreen::after,#upgScreen::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg, rgba(2,3,8,.96) 0%, rgba(2,3,8,.66) 16%, rgba(2,3,8,.2) 38%, rgba(2,3,8,.2) 62%, rgba(2,3,8,.66) 84%, rgba(2,3,8,.97) 100%)}   /* 위·아래 빨강 더 톤다운(중앙 이미지 유지) */
