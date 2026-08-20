@@ -2199,6 +2199,7 @@ function resultToLobby(){ _rsClearAuto(); const sc=document.getElementById('resu
   if(typeof playSfx==='function') playSfx('ui_close');
   overlayToLobby(); }
 function overlayToLobby(){
+  if(typeof clearRun==='function') clearRun();   // 판이 끝났다 = 저장본 폐기(끝난 판을 복구하면 안 된다)
   MAP_CFG_OVR=null;   // 로비 복귀 = 방 설정 반납(다음 판에 새면 밸런스가 조용히 어긋난다)
   _ovClearAuto(); _rsClearAuto(); document.getElementById('ov').classList.add('hide');   // 로비로 돌아가기(승/패 공통)
   if(typeof G!=='undefined'&&G&&G.strike && typeof STK!=='undefined') STK=null;

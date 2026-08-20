@@ -452,8 +452,9 @@ function drawProd(){ const {ctx,W,H}=setup('cvUnit'); drawShopBg(ctx,W,H);
 //   ⚠ 이 한계는 상대가 내 자리를 잡아 두는 시간(killSlot 대기)과 **같은 값**이어야 한다.
 let _hiddenAt=0;
 function nemoRunning(){ return !!(typeof G!=='undefined' && G && G.phase==='playing' && !G.sandbox && !G.strike); }
-function nemoOnHide(){ if(!nemoRunning()) return; _hiddenAt=Date.now(); }
+function nemoOnHide(){ if(!nemoRunning()) return; _hiddenAt=Date.now(); saveRun(); }   // 탭이 죽을 수도 있다 — 숨는 순간 판을 저장한다
 function nemoOnShow(){ const t=_hiddenAt; _hiddenAt=0;
+  clearRun();   // 탭이 살아서 돌아왔다 = 저장본은 필요 없다(다음에 숨을 때 다시 쓴다)
   if(!t || !nemoRunning()) return;
   const away=Date.now()-t;
   if(away>AWAY_MS){ abandonRun(away); return; }
@@ -475,6 +476,61 @@ function abandonRun(ms){ if(typeof G==='undefined'||!G) return;
   G.phase='quit';
   if(typeof toast==='function') toast('⚠️ '+Math.round(ms/1000)+'초 넘게 자리를 비워 판에서 나왔습니다 — 보상과 기록이 없습니다');
   if(typeof overlayToLobby==='function') overlayToLobby(); }   // 결과창을 거치지 않는다(_runSummary 가 돌면 판으로 인정된다)
+// ══ 판 상태 저장/복구 — 탭이 죽어도 30초는 이어진다 ═════════════════
+// 화면을 내리면(홈·앱 전환·화면 잠금) 모바일 브라우저가 그 탭을 **통째로 버리는 일이 흔하다**.
+// 그러면 돌아왔을 때 페이지가 처음부터 다시 뜨고 G 가 사라진다 — 따라잡기(nemoCatchUp)로도
+// 못 살린다. 그래서 숨을 때 판을 저장해 두고, 돌아와서 30초 안이면 그대로 복구한다.
+//   ⚠ 한계도 AWAY_MS 하나를 쓴다 — 탭이 살아 있든 죽었든 사용자에겐 같은 규칙이어야 한다.
+const RUN_SAVE_KEY='nm_run';
+function saveRun(){ if(!nemoRunning()) return;
+  try{
+    // ⚠ 채널 객체·타이머 id 는 직렬화할 수 없다(순환 참조로 통째로 실패한다) — 빼고 저장한다
+    const g=JSON.stringify(G, (k,v)=>(k==='coopChan'||k==='coopStateT'||k==='_runSum')?undefined:v);
+    if(typeof _lsSet==='function') _lsSet(RUN_SAVE_KEY, { t:Date.now(), g:g,
+      mapId:(typeof MAP!=='undefined'&&MAP&&MAP.id)||'nemo',
+      cfg:(typeof MAP_CFG_OVR!=='undefined')?MAP_CFG_OVR:null,
+      room:(typeof _lobbyRoom!=='undefined'&&_lobbyRoom)?_lobbyRoom:null,
+      diff:(typeof _selDiff!=='undefined')?_selDiff:null });
+  }catch(e){ console.warn('saveRun', e); } }
+function clearRun(){ try{ localStorage.removeItem('nm_run'); }catch(e){} }
+// 부팅 때 한 번 — 복구했으면 true(그러면 HOME 으로 끌어가지 않는다)
+function tryRestoreRun(){
+  let sv=null;
+  try{ sv=(typeof _lsGet==='function')?_lsGet(RUN_SAVE_KEY,null):null; }catch(e){}
+  clearRun();   // ⛔ 읽는 즉시 지운다 — 깨진 저장이 부팅을 **영원히** 막는 사태를 원천봉쇄한다
+  if(!sv||!sv.g) return false;
+  const age=Date.now()-(sv.t||0);
+  if(age>AWAY_MS){   // 30초 초과 = 의도적 이탈. 보상도 기록도 없다(abandonRun 과 같은 규칙)
+    if(typeof toast==='function') toast('⚠️ '+Math.round(age/1000)+'초 넘게 자리를 비워 판이 사라졌습니다 — 보상과 기록이 없습니다');
+    return false; }
+  try{
+    const g=JSON.parse(sv.g);
+    if(!g || g.phase!=='playing') return false;
+    _selMap=(typeof USEMAPS!=='undefined' && USEMAPS[sv.mapId]) || USEMAPS.nemo;
+    MAP=_selMap; if(typeof applyMapBalance==='function') applyMapBalance();
+    MAP_CFG_OVR=sv.cfg||null;
+    if(sv.room && typeof _lobbyRoom!=='undefined') _lobbyRoom=sv.room;
+    if(sv.diff && typeof _selDiff!=='undefined') _selDiff=sv.diff;
+    if(typeof resetGameChrome==='function') resetGameChrome();
+    if(typeof bgmStop==='function') bgmStop();
+    G=g; G.loading=false; G.paused=false;
+    G.coop=false; G.coopChan=null; G.coopStateT=null;   // 채널은 새로 붙여야 한다(아래에서 시도)
+    const ov=document.getElementById('ov'); if(ov) ov.classList.add('hide');
+    const lb=document.getElementById('lobby'); if(lb) lb.classList.add('hide');
+    if(typeof setInGame==='function') setInGame(true);
+    if(typeof _setBottomTab==='function') _setBottomTab(G.tab||'Main');
+    if(typeof renderUnits==='function') renderUnits();
+    if(typeof updateHud==='function') updateHud();
+    if(typeof placeMergeZone==='function') placeMergeZone();
+    if(typeof updateCoopBossBar==='function') updateCoopBossBar();
+    nemoCatchUp(age);   // 탭이 죽어 있던 시간도 똑같이 따라잡는다
+    // 협동이었으면 채널에 다시 붙어 본다 — 실패해도 혼자 이어서 하면 되므로 판을 막지 않는다
+    if(sv.room && G.coopSlotInfo && typeof startGameCoop==='function'){ try{ startGameCoop(G.coopSlotInfo); }catch(e){} }
+    if(typeof addChat==='function') addChat('', '↻ 판을 복구했습니다 — 자리를 비운 '+Math.round(age/1000)+'초를 이어서 진행합니다.', '#ffd24a', true);
+    return true;
+  }catch(e){ console.warn('tryRestoreRun', e);
+    try{ G=newGame(); }catch(_e){}   // 반쯤 복구된 상태로 두지 않는다 — 깨끗이 되돌리고 평소 부팅으로
+    return false; } }
 // ══ 게임 종료 — 승/패 공통 단일 출구 ══════════════════════════════
 // ⚠ 상대에게 알리지 않으면 상대 화면에서 내가 **영원히 살아 있는 것으로** 보인다
 //   (내 브로드캐스트는 phase!=='playing' 이면 멈추므로 마지막 값에 얼어붙는다).

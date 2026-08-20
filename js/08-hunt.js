@@ -1884,6 +1884,9 @@ async function enterAfterWarm(){
   //    ⛔ '#opening 이 감춰졌으면 return' 으로 넓게 잡지 말 것 — 예열 중 다른 경로가 오프닝을
   //       내리는 경우가 있어 정상 진입까지 막힌다(실제로 게스트가 HOME 에 못 갔다).
   { const ph=document.getElementById('phone'); if(ph && ph.classList.contains('inGame')) return; }
+  // 화면을 내린 사이 탭이 죽었을 수 있다 — 30초 안이면 그 판을 그대로 이어받는다(실패하면 평소대로 HOME)
+  // ⛔ 부팅 경로다 — 여기서 예외가 나면 사용자가 HOME 에 영영 못 간다. 한 겹 더 감싼다.
+  try{ if(typeof tryRestoreRun==='function' && tryRestoreRun()) return; }catch(e){ console.warn('tryRestoreRun', e); }
   openHome(); }
 function hb3dAttach(){ const cv=document.getElementById('cvMarine'), host=document.getElementById('homeScreen');
   if(!cv||!host||_hb3dHome) return;

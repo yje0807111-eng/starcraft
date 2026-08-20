@@ -6567,6 +6567,59 @@ async function groupGame(){
       assert(/renderEmptySlot/.test(src),'프레임 루프에 죽은 자리 분기가 없다 — drawPlayer() 로 떨어지면 내 전장이 그려진다');
       return '내 전장 원상복구 · 루프 분기 있음';
     } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  // ══ 판 저장/복구 — 탭이 죽어도 30초는 이어진다 ══════════════════════
+  await step('판 저장: 숨는 순간 저장되고, 복구하면 그대로 이어진다', async()=>{
+    skipIf(typeof saveRun!=='function' || typeof tryRestoreRun!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]); G.round=7; G.mineral=1234; G.kills=55; G.timeSec=90;
+      for(let i=0;i<5;i++) spawnEnemy({}); G.pendSpawn.splice(0).forEach(ps=>G.enemies.push(ps.e));
+      G.units.push(initUnitStats({uid:G.idSeq++, id:'marine', hero:false, lv:2, x:.3, y:.3, cd:0}));
+      const want={ round:G.round, mineral:G.mineral, kills:G.kills, u:G.units.length, e:G.enemies.length };
+      nemoOnHide();                                     // 화면 내림 = 저장
+      assert(_lsGet('nm_run',null),'숨었는데 저장이 안 됐다');
+      G=newGame();                                      // 탭이 죽었다 치고 판을 날린다
+      const ok=tryRestoreRun();
+      assert(ok,'복구가 실패했다');
+      assert(G.round===want.round && G.mineral===want.mineral && G.kills===want.kills,
+        '값이 어긋난다: 라운드 '+G.round+'/'+want.round+' 미네랄 '+G.mineral+'/'+want.mineral);
+      assert(G.units.length===want.u && G.enemies.length===want.e,
+        '유닛·적이 어긋난다: '+G.units.length+'/'+want.u+' · '+G.enemies.length+'/'+want.e);
+      assert(!_lsGet('nm_run',null),'복구 후 저장본이 남아 있다(다음 부팅에 또 복구된다)');
+      return '라운드 '+G.round+' · 미네랄 '+G.mineral+' · 유닛 '+G.units.length+' · 적 '+G.enemies.length;
+    } finally { G=keepG; if(keepMap) MAP=keepMap; clearRun(); } });
+
+  await step('판 저장: 30초를 넘긴 저장본은 복구하지 않고 버린다', async()=>{
+    skipIf(typeof tryRestoreRun!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]); G.round=7;
+      nemoOnHide();
+      const sv=_lsGet('nm_run',null); assert(sv,'준비 실패');
+      sv.t=Date.now()-45000; _lsSet('nm_run', sv);      // 45초 전으로 되돌린다
+      G=newGame();
+      const ok=tryRestoreRun();
+      assert(!ok,'30초를 넘겼는데 복구했다');
+      assert(G.round===1,'판이 남아 있다: 라운드 '+G.round);
+      assert(!_lsGet('nm_run',null),'버렸는데 저장본이 남아 있다');
+      // 판이 끝나면 저장본을 지운다 — 끝난 판을 복구하면 안 된다
+      assert(/clearRun\(\)/.test(String(overlayToLobby)),'overlayToLobby 가 저장본을 안 지운다');
+      return '45초 → 복구 안 함 · 저장본 삭제';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; clearRun(); } });
+
+  await step('판 저장: 깨진 저장본이 부팅을 막지 않는다', async()=>{
+    skipIf(typeof tryRestoreRun!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _lsSet('nm_run', { t:Date.now(), g:'{{{망가진 JSON', mapId:'nemo' });
+      let threw=false, ok=true;
+      try{ ok=tryRestoreRun(); }catch(e){ threw=true; }
+      assert(!threw,'깨진 저장본에서 예외가 났다 — 부팅이 멈춘다');
+      assert(!ok,'깨진 저장본으로 복구했다고 한다');
+      assert(!_lsGet('nm_run',null),'깨진 저장본이 남아 있다 — 다음 부팅도 같은 곳에서 걸린다');
+      return '예외 없음 · 저장본 삭제';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; clearRun(); } });
 }
 
 // ── 그룹: sandbox (관리자) ──

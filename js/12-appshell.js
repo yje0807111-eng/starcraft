@@ -2001,6 +2001,8 @@ function coopReconnect(){ if(!G || G.phase!=='playing' || !G.coopSlotInfo) retur
   setTimeout(()=>{ if(G && G.phase==='playing' && G.coopSlotInfo) startGameCoop(G.coopSlotInfo); }, 1500*_coopRetryN); }
 // 브라우저 네트워크 상태 — 끊김 알림 + 복귀 시 자동 재접속
 window.addEventListener('offline', ()=>{ if(typeof toast==='function') toast('⚠️ 네트워크 연결이 끊겼습니다'); });
+// 탭이 버려지기 직전 — visibilitychange 가 안 오는 경로(앱 종료·탭 정리)에서도 판을 남긴다
+window.addEventListener('pagehide', ()=>{ try{ if(typeof saveRun==='function') saveRun(); }catch(e){} });
 document.addEventListener('visibilitychange', ()=>{   // 백그라운드 탭: 10Hz 송신 정지(대역·배터리 절약), 복귀 시 재개
   if(document.hidden){ if(typeof profStampSeen==='function') profStampSeen();   // 🧍 숨김 = 방치 시각 스탬프(오프라인 정산 기준)
     if(typeof nemoOnHide==='function') nemoOnHide();   // 유즈맵 판: 자리 비운 시각 기록(돌아올 때 따라잡기/판 포기 판정)
