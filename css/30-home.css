@@ -976,7 +976,12 @@
   .dgCard.lock{opacity:.5;cursor:default}
   .dgCardArt{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:9px;padding:0 12px}
   .dgCardIco{font-size:24px;flex:none}
+  /* 종류가 5개가 되면서 이름만으로는 뭘 주는지 알 수 없다 — 이름 아래 한 줄(보상 성격 · 그 종류의 단계) */
+  .dgCardTx{min-width:0;display:flex;flex-direction:column;gap:2px}
   .dgCardName{font-size:15px;font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dgCardSub{font-size:11px;font-weight:700;color:rgba(255,255,255,.62);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* 뽑기권은 '새 단계'에서만 나온다 — 소탕과 헷갈리지 않게 보상 줄에 꼬리표를 붙인다 */
+  .dgRwNew{margin-left:4px;font-size:10px;font-weight:800;color:#9ad0ff;opacity:.85}
   .dgCardR{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:6px;padding:0 12px}
   .dgCardKey{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:800;color:#ffd24a;font-size:13px;white-space:nowrap}
   .dgOpenBtn{padding:5px 15px;border:none;border-radius:var(--r-bar);background:#3aa0ff;color:#06121f;font-family:inherit;font-weight:800;font-size:12px;cursor:pointer}

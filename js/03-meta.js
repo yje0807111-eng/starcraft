@@ -81,10 +81,14 @@ function metaEffLv(id){ return _metaEffFromRaw(META_BUILDS[id], buildLevel(id));
 // 플레이어 메타(계정별 영구 데이터)
 // 🧍 개인 프로필 RPG(1단계) 기본값 — 유즈맵 경제와 완전 분리(재화명 pcoin, coins 아님). 자세한 규칙은 PROF_* 블록 참조.
 // 계정 공용(재화·펫·해금·방치) + 캐릭터별(chars[]: 레벨·경험치·스탯·장비·진화)로 나뉜다.
-function defaultProfile(){ return { ver:10, pcoin:0, gas:0, gem:0, chars:[], curId:'', items:[],
+// 🎟 뽑기권 종류(단일 소스) — 토벌 종류(DG_DUNGEONS)와 짝이다. 늘릴 땐 **둘을 같이** 늘린다.
+//   ⚠ 여기서 DG_DUNGEONS 를 참조할 수 없다 — 09-dungeon.js 는 이 파일보다 뒤에 로드된다.
+const TIX_KINDS=['gear','pet','ally','rune'];
+function emptyTickets(){ const t={}; for(const k of TIX_KINDS) t[k]=0; return t; }
+function defaultProfile(){ return { ver:11, pcoin:0, gas:0, gem:0, chars:[], curId:'', items:[],
   hunt:{ dg:1, round:1, climb:true, best:{}, rw:{}, mates:{}, party:[], mateN:0, allySlots:0, upg:{atk:0,rng:0,aspd:0,crit:0,hp:0,regen:0} },   // ⚔ 자동사냥(HOME) 진행·마일스톤 수령 · 기본 = 등반(rw)·영구 업그레이드
   idle:{ sourceId:'drill', lastClaimTs:0 }, unlocks:{}, lastSeenTs:0,
-  dgKeys:{}, tickets:{gear:0,pet:0,ally:0},   // 🗝 던전별 열쇠(매일 09:00 보충) · 🎟 뽑기권(장비/펫/동료)
+  dgKeys:{}, tickets:emptyTickets(),   // 🗝 토벌 종류별 열쇠(매일 09:00 보충) · 🎟 뽑기권(장비/펫/동료/룬)
   daily:{ day:0, q:[], allGot:0, wk:{key:0,n:0,got:0}, att:{n:0, day:0, bn:{}, fin:0, cyc:0} },   // 📅 일일 — 출석 캘린더 + 오늘의 퀘스트 + 주간 누적(dqState가 스스로 보정한다)
   pets:{}, equip:[], petSlots:0, petN:0 }; }   // 🐾 펫(중복=별)·장착 칸(0에서 시작해 미네랄로 연다)
 // 계정 영구 재화(공용 재화 바) — 미네랄=pcoin(기존 이름 유지)·가스·젬. 없던 프로필도 0으로 살려 읽는다.
@@ -93,7 +97,7 @@ function profGas(){ const p=PROF(); return Math.floor(p&&p.gas||0); }
 function profGem(){ const p=PROF(); return Math.floor(p&&p.gem||0); }
 function defaultChar(cls, name){ const C=PROF_CLASSES[cls]||PROF_CLASSES.ranger, id=(PROF_CLASSES[cls]?cls:'ranger');
   return { id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), cls:id, name:(name||C.name),
-    xp:0, level:1, statPoints:0, dgFloor:0, reb:0, rebMul:0, rp:0, lpAuto:LP_AUTO_DEFAULT,   // 🔁 환생 횟수 · 환생 포인트 · 🤖 자동 배분 대상
+    xp:0, level:1, statPoints:0, dgFloors:{}, reb:0, rebMul:0, rp:0, lpAuto:LP_AUTO_DEFAULT,   // ⚔ 토벌 단계는 **종류별**(dgFloors) · 🔁 환생 횟수 · 환생 포인트 · 🤖 자동 배분 대상
     unit:{ jobId:id, level:1, stats:{pow:0,vit:0,foc:0,agi:0}, pts:{}, rpts:{}, gear:_emptyGear() } }; }
 function defaultMeta(){ return { coins:0, buildLevels:{}, highestRound:0, clearedDifficulty:'', profile:defaultProfile() }; }   // clearedDifficulty:''=아무것도 클리어 안 함(이지만 개방)
 let PLAYER_META = defaultMeta();
@@ -174,7 +178,7 @@ function migrateProfile(){ const d=defaultProfile();
       else if(!v || typeof v!=='object') delete H.mates[id];
       else { v.lv=Math.max(1,v.lv||1); v.dup=v.dup||0; } }
     if(typeof H.mateN!=='number') H.mateN=0;
-    if(!p.tickets) p.tickets={gear:0,pet:0,ally:0};
+    if(!p.tickets) p.tickets=emptyTickets();
     p.tickets.ally=(p.tickets.ally||0)+HB_MATE_START_TICKETS; }
   // v9 펫 뽑기를 동료와 같은 형태로 — 옛 보유 표기 {count:N} 을 {star:N-1, dup:0} 로 옮긴다.
   //   ⚠ 별은 '중복 수 − 1'이었다. 그 값을 그대로 star 로 옮겨야 펫 성능(profPetVal)이 안 깎인다.
@@ -185,7 +189,7 @@ function migrateProfile(){ const d=defaultProfile();
       if(v.dup===undefined) v.dup=0; if(v.fed===undefined) v.fed=0;
       delete v.count; }
     if(typeof p.petN!=='number') p.petN=0;
-    if(!p.tickets) p.tickets={gear:0,pet:0,ally:0};
+    if(!p.tickets) p.tickets=emptyTickets();
     p.tickets.pet=(p.tickets.pet||0)+PROF_PET_START_TICKETS; }
   // v10 장착 칸을 '미네랄로 사는 것'으로 — 이미 쓰고 있던 칸은 뺏지 않는다(산 것을 잃지 않는다).
   //   옛 기본값은 펫 2칸이었고 동료는 정원 3이 그냥 열려 있었다.
@@ -194,6 +198,16 @@ function migrateProfile(){ const d=defaultProfile();
     p.petSlots=Math.max(0, Math.min(MG_SLOT_MAX, (typeof p.petSlots==='number')?p.petSlots:2));
     if(typeof H.allySlots!=='number') H.allySlots=Math.min(MG_SLOT_MAX, Math.max(3,(H.party||[]).length));
     if(p.unlocks){ delete p.unlocks.pet_slot3; delete p.unlocks.pet_slot4; delete p.unlocks.ally_plus; } }
+  // v11 토벌 단계를 **종류별**로 — 옛 c.dgFloor 하나는 '일반 토벌' 기록이다(그때는 일반만 열려 있었다).
+  //   ⚠ fixChar() 는 위(line 138)에서 이미 돌아 dgFloors 를 빈 객체로 심어 놨다 — 여기서 값을 채운다.
+  //   🎟 룬 뽑기권 칸도 이때 생긴다(없으면 렌더가 undefined 를 찍는다).
+  if((p.ver||0)<11){
+    for(const c of (p.chars||[])){ if(!c) continue;
+      if(!c.dgFloors || typeof c.dgFloors!=='object') c.dgFloors={};
+      if(c.dgFloor && !c.dgFloors.normal) c.dgFloors.normal=c.dgFloor;
+      delete c.dgFloor; }                       // 옮겼으면 지운다 — 두 벌이 남으면 반드시 어긋난다
+    if(!p.tickets) p.tickets=emptyTickets();
+    for(const k of TIX_KINDS) if(typeof p.tickets[k]!=='number') p.tickets[k]=0; }
   p.ver=d.ver; }
 // 캐릭터 1건 보정(신규 키 back-fill + 폐기된 직업 id 복구)
 function fixChar(c){ const d=defaultChar(c&&c.cls, c&&c.name);

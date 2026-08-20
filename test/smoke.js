@@ -5141,12 +5141,16 @@ async function groupLobby(){
   // ⚔ 던전 허브 — 목록 카드 · 팝업(이전 스테이지 소탕/입장) · 열쇠(매일 09:00·던전별) 게이트 · 뽑기권
   await step('던전 허브: 목록 카드·팝업(소탕/입장)·열쇠·뽑기권', ()=>{ skipIf(typeof openDungeonHub!=='function','던전 허브 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','던전'); saveMeta(); }
-    const cc=CHAR(); cc.level=6; cc.dgFloor=2;                  // Lv6 → 3단계 개방, 2단계까지 클리어
-    const p=PROF(); p.dgKeys={}; p.tickets={gear:0,pet:0,ally:0}; saveMeta();
+    const cc=CHAR(); cc.level=6; cc.dgFloors={}; dgSetFloor('normal',2);   // Lv6 → 3단계 개방, 일반 2단계까지 클리어
+    const p=PROF(); p.dgKeys={}; p.tickets=emptyTickets(); saveMeta();
     openDungeonHub();
     assert(visible($('dgHubScreen')),'던전 허브가 안 열림');
-    assert(document.querySelectorAll('#dgHubBody .dgCard').length===3,'던전 카드가 3개가 아님');
-    assert(document.querySelectorAll('#dgHubBody .dgCard.lock').length===2,'장비·룬 던전이 Lv6에서 잠겨 있어야 함');
+    // 종류표(DG_DUNGEONS)가 단일 소스 — 개수를 여기 박지 말고 표에서 꺼낸다
+    assert(document.querySelectorAll('#dgHubBody .dgCard').length===DG_DUNGEONS.length,
+      '카드 수가 종류표와 다름: '+document.querySelectorAll('#dgHubBody .dgCard').length+' ≠ '+DG_DUNGEONS.length);
+    const wantLock=DG_DUNGEONS.filter(d=>d.reqLv>6).length;
+    assert(document.querySelectorAll('#dgHubBody .dgCard.lock').length===wantLock,
+      'Lv6 에서 잠겨야 할 카드 수가 다름: '+document.querySelectorAll('#dgHubBody .dgCard.lock').length+' ≠ '+wantLock);
     assert(dgKeyN('normal')===DG_KEY_DAILY,'일반 던전 열쇠 초기값 불일치: '+dgKeyN('normal'));
     // 팝업 열기 → 소탕 = 열쇠 1 소모 + 미네랄 증가
     dgOpenSheet('normal'); assert(!$('dgSheet').classList.contains('hide'),'던전 팝업이 안 열림');
@@ -5156,11 +5160,46 @@ async function groupLobby(){
     // 열쇠 0이면 입장이 전투로 진입하지 않는다
     PROF().dgKeys.normal.n=0; dgOpenSheet('normal'); dgSheetEnter();
     assert(!visible($('dgScreen')),'열쇠 0인데 입장이 진행됨');
-    // 뽑기권 = 새 단계 클리어 시 적립
-    const t0=(PROF().tickets||{}).gear||0; dgAwardTickets(3);
-    assert(((PROF().tickets||{}).gear||0)===t0+1,'뽑기권이 안 쌓임');
+    // 🎟 뽑기권 = 새 단계 클리어 시 적립 · **권종은 토벌 종류가 정한다**
+    //   ⛔ 옛 규칙(모든 토벌이 장비권 + 5·10층마다 펫·동료권)으로 되돌리지 말 것 —
+    //      그러면 "장비를 원하면 장비 토벌로 간다"가 무너져 종류를 나눈 뜻이 사라진다.
+    for(const d of DG_DUNGEONS){ const t=PROF().tickets, k=d.rw.tix;
+      const b0=Object.assign({}, t); const got=dgAwardTickets(3, d.id);
+      if(!k){ assert(got===null,'일반 토벌이 뽑기권을 줬다: '+JSON.stringify(got));
+        for(const q of TIX_KINDS) assert(t[q]===b0[q],'일반 토벌이 '+q+' 권을 건드림'); continue; }
+      assert(t[k]===(b0[k]||0)+1, d.name+'이 '+k+' 권을 안 줌');
+      for(const q of TIX_KINDS) if(q!==k) assert(t[q]===b0[q], d.name+'이 엉뚱한 권('+q+')도 줌'); }
     dgCloseSheet(); openHome();
-    return '카드3·팝업·소탕·열쇠게이트·뽑기권 ok'; });
+    return '카드'+DG_DUNGEONS.length+'·팝업·소탕·열쇠게이트·권종'+TIX_KINDS.length+'종 ok'; });
+  // 종류별 진행도 — 이걸 공유하면 새 종류를 여는 순간 고단계로 시작해 보상이 한 번에 쏟아진다.
+  await step('토벌 단계는 종류마다 따로 쌓인다', ()=>{ skipIf(typeof dgSetFloor!=='function','토벌 진행도 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','던전'); saveMeta(); }
+    const c=CHAR(); c.dgFloors={};
+    dgSetFloor('normal', 12);
+    assert(dgMaxFloor('normal')===12,'일반 단계 기록 실패: '+dgMaxFloor('normal'));
+    assert(dgMaxFloor('gear')===0,'일반 단계가 장비로 샜다: '+dgMaxFloor('gear'));
+    assert(dgMaxFloor('pet')===0 && dgMaxFloor('ally')===0 && dgMaxFloor('rune')===0,'다른 종류로 샜다');
+    assert(dgMaxFloor()===12,'인자 없는 dgMaxFloor 가 전 종류 최고를 안 돌려줌: '+dgMaxFloor());
+    dgSetFloor('gear', 3);
+    assert(dgMaxFloor('gear')===3 && dgMaxFloor('normal')===12,'두 종류가 섞였다');
+    assert(dgMaxFloor()===12,'전 종류 최고가 틀렸다: '+dgMaxFloor());
+    dgSetFloor('normal', 5);   // 뒤로 가는 값은 무시(최고 기록이다)
+    assert(dgMaxFloor('normal')===12,'최고 기록이 낮은 값으로 덮였다: '+dgMaxFloor('normal'));
+    // v11 마이그레이션 — 옛 저장의 c.dgFloor 하나는 '일반' 기록이다.
+    //   ⚠ migrateProfile() 은 인자를 받지 않고 PLAYER_META.profile 을 직접 고친다 — 실제 경로로 태운다.
+    const keep=PLAYER_META.profile;
+    try{
+      PLAYER_META.profile={ ver:10, chars:[{ id:'x', cls:'ranger', name:'옛', level:9, dgFloor:7,
+        unit:{ jobId:'ranger', level:1, stats:{}, pts:{}, rpts:{}, gear:{} } }], curId:'x' };
+      migrateProfile();
+      const oc=PLAYER_META.profile.chars[0];
+      assert(!('dgFloor' in oc),'옛 필드 dgFloor 가 안 지워졌다 — 두 벌이 남으면 반드시 어긋난다');
+      assert(oc.dgFloors && oc.dgFloors.normal===7,'v11 이 옛 단계를 일반으로 안 옮김: '+JSON.stringify(oc.dgFloors));
+      const tx=PLAYER_META.profile.tickets;
+      for(const q of TIX_KINDS) assert(typeof tx[q]==='number','v11 이 '+q+' 권 칸을 안 만듦');
+    } finally{ PLAYER_META.profile=keep; }
+    c.dgFloors={};
+    return '종류별 분리 ok · v11 이관 ok'; });
   await step('장비 마이그레이션: 구버전 정수 티어 → 아이템 + 12칸 재편', ()=>{ skipIf(typeof migrateProfile!=='function','마이그레이션 없음');
     const keep=JSON.parse(JSON.stringify(PLAYER_META));
     PLAYER_META.profile={ ver:3, pcoin:0, curId:'cX', items:[], chars:[{ id:'cX', cls:'ranger', name:'구버전',
@@ -5199,7 +5238,7 @@ async function groupLobby(){
     const lvUp=c.level-lv0;
     assert(p.pcoin===coin+r.pc+lvUp*PROF_LV_MINERAL,
       '보상 P가 안 들어옴: '+coin+'+'+r.pc+'+레벨업'+lvUp+'×'+PROF_LV_MINERAL+' ≠ '+p.pcoin);
-    assert(CHAR().dgFloor===1,'최고 층이 기록되지 않음');
+    assert(dgMaxFloor('normal')===1,'최고 층이 그 종류에 기록되지 않음: '+dgMaxFloor('normal'));
     return n+'프레임 · +'+r.pc+'P/+'+r.xp+'XP'; });
   await step('던전: 스펙이 오르면 같은 층이 빨리 끝남', ()=>{ skipIf(typeof dgStart!=='function','던전 없음');
     // 세기는 '실제 출처'로 만든다 — 옛 배분(unit.stats)은 아무 데도 안 걸린다

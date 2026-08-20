@@ -27,8 +27,28 @@ const DG_SKILLS={                    // 직업 계열별 1스킬
   scout: { name:'질풍',     ico:'💨', cd:9,  dur:3.5, tip:'이동·공격 속도 상승' },
   warden:{ name:'수호',     ico:'🛡',  cd:11, dur:4.5, tip:'받는 피해 절반' },
 };
-function dgFloorReward(floor){ return { pc:Math.round(40+floor*22), xp:Math.round(25+floor*14) }; }
-function dgMaxFloor(){ const c=CHAR(); return c? (c.dgFloor||0) : 0; }
+// ── 종류별 보상 ────────────────────────────────────────────────────────────
+// ⚠ 아래 두 배수는 **아직 실측 전이다**(BALANCE.md §5 A5). 바꿨으면 거기 표도 갱신할 것.
+const DG_CUR_MUL=6;       // 일반 토벌 = '대량' 지급 배수(다른 종류가 주는 기본 재화 대비)
+const DG_GAS_RATE=0.35;   // 일반 토벌이 주는 가스 = 그 미네랄의 이 비율
+function dgFloorReward(floor, id){ const n=Math.max(1, floor|0), d=dgDef(id);
+  const base=Math.round(40+n*22);
+  const r={ pc:base, gas:0, xp:Math.round(25+n*14), tix:null };
+  if(d.rw.cur){ r.pc=Math.round(base*DG_CUR_MUL); r.gas=Math.round(base*DG_CUR_MUL*DG_GAS_RATE); }
+  return r; }
+// ── 단계 진행도는 **종류마다 따로** 쌓인다(2026-08-20 확정) ─────────────────
+// 보상 성격이 다르니 "오늘은 장비 파러 간다"가 성립해야 한다. 공유하면 새 종류를 열자마자
+// 고단계로 시작해 그 종류의 보상이 한 번에 쏟아진다.
+// ⚠ 옛 저장의 c.dgFloor 하나는 '일반 토벌' 기록이다 — v11 마이그레이션이 옮기고 지운다.
+function dgFloors(){ const c=CHAR(); if(!c) return null;
+  if(!c.dgFloors || typeof c.dgFloors!=='object') c.dgFloors={};
+  for(const d of DG_DUNGEONS) if(typeof c.dgFloors[d.id]!=='number') c.dgFloors[d.id]=0;
+  return c.dgFloors; }
+// 인자 없음 = **전 종류 최고 단계**. 장비 등급·관문 표시가 이걸 본다(종류가 늘수록 자연히 깊어진다).
+function dgMaxFloor(id){ const f=dgFloors(); if(!f) return 0;
+  if(id) return f[id]||0;
+  let m=0; for(const d of DG_DUNGEONS){ const v=f[d.id]||0; if(v>m) m=v; } return m; }
+function dgSetFloor(id, n){ const f=dgFloors(); if(f && n>(f[id]||0)) f[id]=n; }
 const DG_LV_PER_FLOOR=2;                 // 레벨 N당 한 층씩 열린다(장비 슬롯과 같은 성장 축)
 function dgFloorCap(){ const c=CHAR(); return c? 1+Math.floor((c.level-1)/DG_LV_PER_FLOOR) : 1; }
 function dgFloorReqLv(floor){ return 1+(floor-1)*DG_LV_PER_FLOOR; }
@@ -103,15 +123,15 @@ function dgStep(dt){ if(!DG || DG.over) return;
   me.x=Math.max(14, Math.min(DG_W-14, me.x)); me.y=Math.max(14, Math.min(DG.h-14, me.y));
   dgRender(); }
 const DG_DROP_P=0.55;   // 층 클리어 시 장비가 떨어질 확률
-function dgWin(){ const c=CHAR(), p=PROF(), r=dgFloorReward(DG.floor);
+function dgWin(){ const c=CHAR(), p=PROF(), id=(DG&&DG.dgId)||'normal', r=dgFloorReward(DG.floor, id);
   DG.over=1; DG.reward=r;
   const sl=profSlots();   // 층이 깊을수록 고등급·고레벨(profMakeItem이 층을 레벨로 받는다)
   r.item=(sl.length && Math.random()<DG_DROP_P) ? profAddItem(profMakeItem(sl[Math.floor(Math.random()*sl.length)], DG.floor)) : null;
-  p.pcoin+=r.pc;
-  const prevMax=c?(c.dgFloor||0):0, isNew=!!(c && DG.floor>prevMax);
-  if(c){ profGainXp(c, r.xp); profApplyLevelUps(c); if(DG.floor>prevMax) c.dgFloor=DG.floor; }
+  p.pcoin+=r.pc; if(r.gas) p.gas=(p.gas||0)+r.gas;                  // 일반 토벌만 가스를 준다(종류표가 정한다)
+  const prevMax=dgMaxFloor(id), isNew=!!(c && DG.floor>prevMax);    // ⚠ '그 종류'의 최고 단계와 견준다
+  if(c){ profGainXp(c, r.xp); profApplyLevelUps(c); if(isNew) dgSetFloor(id, DG.floor); }
   if(DG.needKey && DG.dgId && typeof dgSpendKey==='function') dgSpendKey(DG.dgId);   // 완료 시 열쇠 1 소모(실패 시 미소모)
-  r.tix=isNew ? dgAwardTickets(DG.floor) : null;                    // 새 단계 클리어 = 뽑기권
+  r.tix=isNew ? dgAwardTickets(DG.floor, id) : null;                // 새 단계 클리어 = 그 종류의 뽑기권
   if(typeof dqNote==='function') dqNote('dgWin',1);                 // 📅 일일 — 토벌 단계 클리어
   profSyncUnlocks(); saveMeta(); dgStopLoop(); dgRender(); }
 function dgLose(){ DG.over=-1; dgStopLoop(); dgRender(); }
@@ -123,17 +143,27 @@ function dgToHub(){ dgStopLoop(); DG=null; openHome(); openDungeonHub(); }   // 
 function dgFlee(){ dgToHub(); }
 // ── 🗝 던전 열쇠(매일 09:00 보충 · 던전별 2개 · 완료 시에만 소모) · 🎟 뽑기권 · 던전 허브 ──
 const DG_KEY_DAILY=2;   // 던전마다 하루 열쇠 수(09:00 리셋)
+// ── 토벌 종류(단일 소스) — 종류를 늘릴 땐 여기 한 줄 + TIX_KINDS 한 칸 ──────────────
+// 종류를 가르는 것은 **보상 성격**이다: 일반 = 재화 대량 / 나머지 = 그 종류의 뽑기권.
+// ⚠ reqLv(해금 레벨)와 단계 상한(dgFloorCap → DG_LV_PER_FLOOR)은 **다른 문**이다.
+//   열려도 단계가 안 열릴 수 있고, 그 반대도 된다. 둘을 한 값으로 합치지 말 것.
 const DG_DUNGEONS=[
-  {id:'normal', name:'일반 토벌', ico:'⚔️', reqLv:1,  tint:'#2f4a72'},
-  {id:'gear',   name:'장비 토벌', ico:'🛡️', reqLv:10, tint:'#6a4a24'},
-  {id:'rune',   name:'룬 토벌',   ico:'🔮', reqLv:20, tint:'#54366a'} ];
+  {id:'normal', name:'일반 토벌', ico:'⚔️', reqLv:1,   tint:'#2f4a72', sub:'미네랄·가스 대량', rw:{cur:1}},
+  {id:'gear',   name:'장비 토벌', ico:'🛡️', reqLv:10,  tint:'#6a4a24', sub:'장비 뽑기권',     rw:{tix:'gear'}},
+  {id:'pet',    name:'펫 토벌',   ico:'🐾', reqLv:30,  tint:'#2f6a52', sub:'펫 뽑기권',       rw:{tix:'pet'}},
+  {id:'ally',   name:'동료 토벌', ico:'🤝', reqLv:50,  tint:'#6a2f4a', sub:'동료 뽑기권',     rw:{tix:'ally'}},
+  {id:'rune',   name:'룬 토벌',   ico:'🔮', reqLv:100, tint:'#54366a', sub:'룬 뽑기권',       rw:{tix:'rune'}} ];
+function dgDef(id){ return DG_DUNGEONS.find(x=>x.id===id) || DG_DUNGEONS[0]; }
 function _dgDayKey(){ const d=new Date(); const day=new Date(d.getFullYear(),d.getMonth(),d.getDate()); if(d.getHours()<9) day.setDate(day.getDate()-1); return day.getTime(); }
 function dgKeyN(id){ const p=PROF(); if(!p) return 0; if(!p.dgKeys) p.dgKeys={};
   const dk=_dgDayKey(); let e=p.dgKeys[id]; if(!e || e.day!==dk){ e={n:DG_KEY_DAILY, day:dk}; p.dgKeys[id]=e; } return e.n; }
 function dgSpendKey(id){ if(dgKeyN(id)<=0) return false; PROF().dgKeys[id].n--; saveMeta(); return true; }
-function dgAddTicket(kind,n){ const p=PROF(); if(!p.tickets) p.tickets={gear:0,pet:0,ally:0}; p.tickets[kind]=(p.tickets[kind]||0)+(n||1); }
-function dgAwardTickets(floor){ const g={gear:1}; if(floor%5===0) g.pet=1; if(floor%10===0) g.ally=1;   // 새 단계 클리어 보상
-  for(const k in g) dgAddTicket(k,g[k]); return g; }
+function dgAddTicket(kind,n){ const p=PROF(); if(!p.tickets) p.tickets=emptyTickets(); p.tickets[kind]=(p.tickets[kind]||0)+(n||1); }
+// 새 단계를 **처음** 깼을 때만 주는 뽑기권 — 그 토벌의 종류가 곧 권종이다.
+// ⚠ 일반 토벌은 재화가 보상이라 권종이 없다(null). 옛 규칙(모든 토벌이 장비권 + 5·10층마다 펫·동료권)은
+//   종류가 하나뿐일 때의 임시안이었다 — 이제 "장비를 원하면 장비 토벌로 간다"가 규칙이다.
+function dgAwardTickets(floor, id){ const d=dgDef(id); if(!d.rw.tix) return null;
+  const g={}; g[d.rw.tix]=1; dgAddTicket(d.rw.tix, 1); return g; }
 function openDungeonHub(){ if(typeof loadMeta==='function') loadMeta();
   profEnsureChar();   // 캐릭터가 없으면 조용히 기본 유닛을 지급한다(선택 화면 없음)
   const home=document.getElementById('homeScreen');
@@ -148,45 +178,60 @@ function renderDungeonHub(){ const body=document.getElementById('dgHubBody'); if
   const c=CHAR(); if(!c) return;
   let h='<div class="dgHubHead">토벌 열쇠는 <b>매일 09:00</b>에 보충됩니다. 열쇠는 토벌을 완료할 때만 소모됩니다.</div>';
   for(const d of DG_DUNGEONS){ const lock=c.level<d.reqLv, k=lock?0:dgKeyN(d.id);
+    const mx=dgMaxFloor(d.id);   // 단계는 **종류별**이라 카드마다 다르다
     h+='<div class="dgCard'+(lock?' lock':'')+'" style="--dgTint:'+d.tint+'"'+(lock?'':' onclick="dgOpenSheet(\''+d.id+'\')"')+'>'
-      +'<div class="dgCardArt"><span class="dgCardIco">'+d.ico+'</span><span class="dgCardName">'+d.name+'</span></div>'
+      +'<div class="dgCardArt"><span class="dgCardIco">'+d.ico+'</span>'
+      +'<span class="dgCardTx"><span class="dgCardName">'+d.name+'</span>'
+      +'<span class="dgCardSub">'+escHtml(d.sub)+(lock?'':' · '+(mx?mx+'단계':'미개척'))+'</span></span></div>'
       +'<div class="dgCardR"><span class="dgCardKey">🗝 '+(lock?('Lv.'+d.reqLv):(k+'/'+DG_KEY_DAILY))+'</span>'
       +(lock?'':'<button class="dgOpenBtn" onclick="event.stopPropagation();dgOpenSheet(\''+d.id+'\')">열기</button>')+'</div></div>'; }
-  const tx=(PROF()&&PROF().tickets)||{}; h+='<div class="dgTix">'+resIco('ticket_gear','gi')+'<b>'+(tx.gear||0)+'</b> '+resIco('ticket_pet','gi')+'<b>'+(tx.pet||0)+'</b> '+resIco('ticket_ally','gi')+'<b>'+(tx.ally||0)+'</b></div>';
+  // 🎟 보유 뽑기권 — 종류가 늘어도 여기는 안 고친다(TIX_KINDS 가 단일 소스)
+  const tx=(PROF()&&PROF().tickets)||{};
+  h+='<div class="dgTix">'+TIX_KINDS.map(k=>resIco('ticket_'+k,'gi')+'<b>'+(tx[k]||0)+'</b>').join(' ')+'</div>';
   body.innerHTML=h; }
 // 던전 팝업 — 이전 스테이지 소탕 + 입장
 let _dgSheetId=null;
 function dgOpenSheet(id){ const d=DG_DUNGEONS.find(x=>x.id===id), c=CHAR(); if(!d||!c) return;
   if(c.level<d.reqLv){ if(typeof toast==='function') toast('Lv.'+d.reqLv+'부터 열립니다'); return; }
-  if(id!=='normal'){ if(typeof toast==='function') toast('준비 중입니다'); return; }
   _dgSheetId=id; renderDgSheet(); const s=document.getElementById('dgSheet');
   if(s){ s.classList.remove('hide'); if(typeof fxPop==='function') fxPop(s.querySelector('.dgSheetCard')); }
   if(typeof playSfx==='function') playSfx('ui_open'); }
 function dgCloseSheet(){ const s=document.getElementById('dgSheet'); if(s) s.classList.add('hide'); _dgSheetId=null; }
+// 보상 한 줄 — 종류표가 정한다. ⛔ 권종을 여기에 직접 쓰지 말 것(옛 코드가 '장비권 + 5·10층마다'를 박아 뒀었다).
+function dgRewardLine(floor, id){ const d=dgDef(id), r=dgFloorReward(floor, id);
+  const cur=resIco('mineral','gi')+' <b>'+r.pc.toLocaleString()+'</b>'+(r.gas?(' · '+resIco('gas','gi')+' <b>'+r.gas.toLocaleString()+'</b>'):'');
+  const tix=d.rw.tix ? (' · '+resIco('ticket_'+d.rw.tix,'gi')+' <b>1</b>'+'<span class="dgRwNew">새 단계</span>') : '';
+  return '보상: '+cur+tix; }
 function renderDgSheet(){ const d=DG_DUNGEONS.find(x=>x.id===_dgSheetId), c=CHAR(); if(!d||!c) return;
-  const mx=dgMaxFloor(), cap=dgFloorCap(), nx=mx+1, k=dgKeyN(d.id), okLv=nx<=cap;
+  // ⚠ 단계는 **그 종류의** 기록을 본다 — dgMaxFloor() 를 인자 없이 부르면 전 종류 최고가 나와,
+  //   장비 토벌을 처음 열었는데 일반 토벌 12단계 다음이 뜬다(실제로 그럴 뻔했다).
+  const mx=dgMaxFloor(d.id), cap=dgFloorCap(), nx=mx+1, k=dgKeyN(d.id), okLv=nx<=cap;
   const set=(id,html)=>{const e=document.getElementById(id); if(e) e.innerHTML=html;};
   set('dgSheetName', d.name); const ico=document.getElementById('dgSheetIco'); if(ico) ico.textContent=d.ico;
   const art=document.getElementById('dgSheetArt'); if(art) art.style.setProperty('--dgTint', d.tint);
   set('dgSheetStage', '난이도 <b>'+nx+'단계</b>');
-  const rN=dgFloorReward(nx);
-  set('dgSheetReward', '보상: 🎟 장비권'+(nx%5===0?'·펫권':'')+(nx%10===0?'·동료권':'')+' · <b>'+rN.pc+'</b> M');
+  set('dgSheetReward', dgRewardLine(nx, d.id));
   set('dgSheetKey', '🗝 '+k+'/'+DG_KEY_DAILY);
   const bSweep=document.getElementById('dgSheetSweep'), bEnter=document.getElementById('dgSheetEnter');
   if(bSweep) bSweep.disabled=!(mx>0 && k>0);
   if(bEnter){ bEnter.disabled=!(okLv && k>0); bEnter.textContent = okLv?'입장':('Lv.'+dgFloorReqLv(nx)+' 필요'); } }
-function dgSheetEnter(){ const d=DG_DUNGEONS.find(x=>x.id===_dgSheetId); if(!d) return; const nx=dgMaxFloor()+1;
+function dgSheetEnter(){ const d=DG_DUNGEONS.find(x=>x.id===_dgSheetId); if(!d) return; const nx=dgMaxFloor(d.id)+1;
   if(nx>dgFloorCap()){ if(typeof toast==='function') toast('Lv.'+dgFloorReqLv(nx)+'부터 도전할 수 있습니다'); return; }
   if(dgKeyN(d.id)<1){ if(typeof toast==='function') toast('🗝 열쇠가 없습니다(매일 09:00 보충)'); return; }
   const did=d.id; dgCloseSheet(); if(typeof playSfx==='function') playSfx('ui_open');
   if(dgStart(nx) && DG){ DG.dgId=did; DG.needKey=true; } }
+// 이전 단계 토벌(소탕) — 그 종류의 최고 단계 보상을 즉시 지급. 전투 없음.
 function dgSheetSweep(){ const d=DG_DUNGEONS.find(x=>x.id===_dgSheetId), c=CHAR(), p=PROF(); if(!d||!c||!p) return;
-  const mx=dgMaxFloor(); if(mx<1){ if(typeof toast==='function') toast('클리어한 단계가 없습니다'); return; }
+  const mx=dgMaxFloor(d.id); if(mx<1){ if(typeof toast==='function') toast('클리어한 단계가 없습니다'); return; }
   if(dgKeyN(d.id)<1){ if(typeof toast==='function') toast('🗝 열쇠가 없습니다(매일 09:00 보충)'); return; }
-  dgSpendKey(d.id); const r=dgFloorReward(mx); p.pcoin+=r.pc; profGainXp(c, r.xp); profApplyLevelUps(c); profSyncUnlocks(); saveMeta();
-  if(typeof playSfx==='function') playSfx('hero_merge'); if(typeof toast==='function') toast('🗝 소탕 +'+r.pc+' M · +'+r.xp+' XP');
+  dgSpendKey(d.id); const r=dgFloorReward(mx, d.id);
+  p.pcoin+=r.pc; if(r.gas) p.gas=(p.gas||0)+r.gas;
+  profGainXp(c, r.xp); profApplyLevelUps(c); profSyncUnlocks(); saveMeta();
+  if(typeof playSfx==='function') playSfx('hero_merge');
+  // ⚠ 소탕은 **이미 깬 단계**를 다시 도는 것이라 뽑기권이 없다(권은 '새 단계' 보상이다).
+  if(typeof toast==='function') toast('🗝 소탕 +'+r.pc.toLocaleString()+' M'+(r.gas?(' · +'+r.gas.toLocaleString()+' G'):'')+' · +'+r.xp+' XP');
   renderDgSheet(); renderDungeonHub(); }
-function dgAgain(next){ const did=(DG&&DG.dgId)||'normal', floor=(DG?DG.floor:dgMaxFloor())+(next?1:0);
+function dgAgain(next){ const did=(DG&&DG.dgId)||'normal', floor=(DG?DG.floor:dgMaxFloor(did))+(next?1:0);
   if(floor>dgFloorCap()){ if(typeof toast==='function') toast('Lv.'+dgFloorReqLv(floor)+'부터 도전할 수 있습니다'); return; }
   if(dgKeyN(did)<1){ if(typeof toast==='function') toast('🗝 열쇠가 없습니다(매일 09:00 보충)'); return; }
   if(typeof playSfx==='function') playSfx('ui_open'); if(dgStart(floor) && DG){ DG.dgId=did; DG.needKey=true; } }

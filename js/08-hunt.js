@@ -2696,13 +2696,23 @@ function renderProfStats(){ const c=CHAR(); if(!c) return '<div class="twHead">�
 // 🎟 뽑기권 3종도 여기 있다 — 세는 물건이라 재화와 같은 자리·같은 함수로 그린다(`resIco('ticket_pet')`).
 //   ⚠ 이모지 🎟 를 새로 박지 말 것: 세 종류가 색으로만 갈리는데 이모지는 하나뿐이라 구분이 사라진다.
 const RES_ICON={ mineral:'res_mineral', gas:'res_gas', gem:'res_gem', pop:'res_pop',
-  ticket_gear:'res_ticket_gear', ticket_pet:'res_ticket_pet', ticket_ally:'res_ticket_ally' };
+  ticket_gear:'res_ticket_gear', ticket_pet:'res_ticket_pet', ticket_ally:'res_ticket_ally',
+  ticket_rune:'res_ticket_rune' };
+// 파일이 아직 없는 것만 여기 적는다 — 없으면 이 글리프로 떨어지고, 파일을 넣으면 자동으로 교체된다
+// (beaconProHTML·_shopArtFail 과 같은 규칙). ⛔ 표에 이모지를 직접 박지 말 것.
+const RES_ICO_FB={ ticket_rune:'🔮' };
 // ⚠ 한글 이름도 열쇠다 — 상점 특가는 `SHOP_GIVE_LABEL` 의 **한글 이름으로** `resIco()` 를 부른다.
 //   여기 세 줄이 없으면 그 줄만 이모지 폴백(🎟)으로 떨어져 세 종류가 같은 그림이 된다.
 const RES_ICON_KO={ '미네랄':'mineral', '가스':'gas', '젬':'gem', '인구':'pop',
-  '장비 뽑기권':'ticket_gear', '펫 뽑기권':'ticket_pet', '동료 뽑기권':'ticket_ally' };
-function resIco(k, cls){ const id=RES_ICON[k]||RES_ICON[RES_ICON_KO[k]];
-  return id ? '<img class="'+(cls||'ri')+'" src="assets/icons/'+id+'.webp" alt="">' : ''; }
+  '장비 뽑기권':'ticket_gear', '펫 뽑기권':'ticket_pet', '동료 뽑기권':'ticket_ally',
+  '룬 뽑기권':'ticket_rune' };
+function resIco(k, cls){ const key=RES_ICON[k]?k:(RES_ICON_KO[k]||''), id=RES_ICON[key];
+  if(!id) return '';
+  const fb=RES_ICO_FB[key], c=(cls||'ri');
+  return '<img class="'+c+'" src="assets/icons/'+id+'.webp" alt=""'
+       + (fb? ' data-fb="'+fb+'" onerror="_resIcoFail(this)"' : '') + '>'; }
+function _resIcoFail(im){ try{ im.outerHTML='<span class="'+(im.className||'ri')+'">'+(im.getAttribute('data-fb')||'')+'</span>'; }
+  catch(_e){ try{ im.remove(); }catch(_e2){} } }
 // ── 🎁 상점 내용(단일 소스) — 모바일 재화상점 형태: 오늘의 특가 → 뽑기 → 젬(현질) → 보유 펫 ──
 // 특가는 매일 09:00 갱신(던전 열쇠와 같은 축). 3개를 다 사면 그 자리에서 새 3개가 나온다.
 // 꼸러미 아이콘 파일이 없으면 원래 이모지로 복귀(빈칸 방지) — 파일을 넣으면 자동 교체
