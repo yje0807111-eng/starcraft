@@ -39,7 +39,7 @@ const server=http.createServer((req,res)=>{
 });
 
 const groupsArg=process.argv[2];
-const GROUPS=groupsArg?[groupsArg]:['lobby','game','sandbox'];
+const GROUPS=(groupsArg && groupsArg!=='duo')?[groupsArg]:(groupsArg==='duo'?[]:['lobby','game','sandbox']);
 const SMOKE_SRC=fs.readFileSync(path.join(ROOT,'test','smoke.js'),'utf8');
 
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
@@ -63,6 +63,16 @@ try{
     report.pageErrors=pageErrors.slice(0,10);
     allReports.push(report);
     await page.close();
+  }
+  // ── 두 클라이언트 통합(멀티) — 그룹 지정이 없을 때만. 상대 시점까지 본다.
+  //    스모크는 가짜 채널로 '보내는 것'만 잡는다. 보내는 모양과 받는 모양이 어긋나는
+  //    (= 멀티가 조용히 죽는) 경우는 여기서만 잡힌다.
+  if(!groupsArg || groupsArg==='duo'){
+    const { runDuo }=await import('./duo.mjs');
+    const steps=await runDuo(browser, `http://127.0.0.1:${PORT}/sc-ums-web.html`);
+    allReports.push({ group:'duo(2인)', steps,
+      pass:steps.filter(s=>s.ok).length, fail:steps.filter(s=>!s.ok).length, skip:0,
+      ms:steps.reduce((a,s)=>a+s.ms,0), knownNoise:0, errors:[], pageErrors:[] });
   }
 }finally{ await browser.close(); server.close(); }
 
