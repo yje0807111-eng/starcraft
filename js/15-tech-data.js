@@ -439,7 +439,7 @@ function techGetBldg(race,k){ const t=TECH_TREE[race]; return t&&t.buildings.fin
 //     한 건물만 올리면 그 건물이 최적해가 되어 조합이 붕괴한다(같은 비율로 커져야 건물 간 서열이 유지됨).
 const TECH_WAVE_POW=47;   // 웨이브 20초 기준(30초 시절 70 → 2/3)
 const TECH_WAVE_MUL=2;    // 전역 배출 배수. 2 = 보급소 레인저 6 · 병영 화력병 4 · 훈련소 의무병 2
-const STK_BLDG_LOCK={ bunker:1, turret:1 };   // 🔒 오토배틀에서만 건설 불가(방어 건물 — 담당 유닛 없음). 관리자 건설 목록은 그대로.
+const STK_BLDG_LOCK={ bunker:1, turret:1, thornburrow:1, bastion:1 };   // 🔒 오토배틀에서만 건설 불가(방어 건물 — 담당 유닛 없음). 관리자 건설 목록은 그대로.
 const TECH_BLDG_UNIT={
   union:{      // 부속(관제탑·특수작전실·화력연구소)도 배출원 · 정비소는 공성전차 업그레이드 전용이라 제외
     supply:{u:'marine', n:3},         // 보급소 100 · pow 19 → 57
@@ -468,12 +468,29 @@ const TECH_BLDG_UNIT={
     stargate:{u:'skydancer', n:1},    // 1050 · pow 55 → 55
     robo:{u:'archon', n:1},           // 1150 · pow 47 → 94
     archives:{u:'dark_templar', n:1}, // 1350 · pow 65 → 65
-    fleet:{u:'archangel', n:1} } };   // 1550 · pow 77 → 77
+    fleet:{u:'archangel', n:1} },     // 1550 · pow 77 → 77
+  // 🐺 페럴 — 최단 사거리·최고 기동. 위와 같은 규칙(pow=DPS×√체력÷10, 기여도 pow×n ≈ TECH_WAVE_POW)
+  feral:{
+    bonepile:{u:'wolfrunner',   n:3},   // 뼈 무덤 110 · pow 21 → 63
+    spitpit:{u:'venomfang',     n:2},   // 투척 구덩이 185 · pow 29 → 58 · ⚠ 페럴의 첫 대공 — 다른 네 종족은 전부 첫 두 건물에 대공이 있다. 여기가 밀리면 공중 유닛에 일방적으로 진다
+    huntpen:{u:'thornspitter',  n:2},   // 사냥 우리 190 · pow 17 → 34   (하울 슬링어=대공 전용이라 지상전에서 무력 → 배출은 지상+공중인 베놈 팽이 맡는다)
+    clawpit:{u:'clawfighter',   n:2},   // 발톱 구덩이 175 · pow 33 → 66
+    alphaden:{u:'alphawolf',    n:1},   // 알파 소굴 320 · pow 80 → 80
+    windcliff:{u:'wyvernrider', n:1},   // 바람 절벽 270 · pow 105 → 105
+    beastpit:{u:'stormroc',     n:1} }, // 야수 구덩이 440 · pow 132 → 132 (최종 테크 — 곡선 위)
+  // 🗿 콜로서스 — 최장 사거리·전개. 소수정예(SPAWN 0.75)라 같은 n이라도 실제 배출은 적다
+  colossus:{
+    strut:{u:'gunner',          n:3},   // 지지 기둥 85 · pow 26 → 78
+    assembly:{u:'guardwalker',  n:2},   // 조립 공장 125 · pow 45 → 90
+    ballistics:{u:'twincannon', n:1},   // 탄도 연구소 150 · pow 51 → 51
+    flakworks:{u:'flakbattery', n:1},   // 대공 공작소 215 · pow 81 → 81
+    skydock:{u:'skylance',      n:1},   // 상공 도크 270 · pow 122 → 122
+    heavyyard:{u:'siegecolossus',n:1} } };   // 중장비 야드 430 · pow 125 → 125
 function _techBU(race,bk){ return (TECH_BLDG_UNIT[race]||{})[bk]||null; }
 function techBldgUnit(race, bk){ const e=_techBU(race,bk);
   return (e && typeof STK_UNITS!=='undefined' && STK_UNITS[e.u]) ? e.u : null; }
 // 종족 평준화: 건물당 배출 수를 종족별로 스케일 — 유니온 기준(1.0) · 에테리얼 소수정예(2/3) · 스웜 물량(1.5배)
-const STK_RACE_SPAWN={ union:1, aetherial:0.85, swarm:1.25 };   // 종족 배출 수 배수(완화) — 스웜=다수/에테리얼=소수 정체성. 스탯 배율(STK_RACE_STAT)이 이 수 차이를 상쇄해 army 밸런스 ~50%.
+const STK_RACE_SPAWN={ union:1, aetherial:0.85, swarm:1.25, feral:1.10, colossus:0.75 };   // 종족 배출 수 배수(완화) — 스웜=다수/에테리얼=소수 정체성. 스탯 배율(STK_RACE_STAT)이 이 수 차이를 상쇄해 army 밸런스 ~50%.
 function techBldgCount(race, bk){ const e=_techBU(race,bk); const rm=(STK_RACE_SPAWN[race]||1); return Math.max(1, Math.round(((e&&e.n)||1)*TECH_WAVE_MUL*rm)); }
 // 기본 공통 자료(data/base_stats.md) — SC 원본 공격 쿨다운 프레임(cd, 작을수록 빠름·24f=1s) / 이동 픽셀(mv, 클수록 빠름). 게임 id 기준.
 const BASE_CD={  // 0=공격 없음(수송·시전·자폭 등)

@@ -5828,6 +5828,32 @@ async function groupGame(){
     assert(_techSpawnText({k:'barracks'})==='', '관리자 건물 프로필에 오토배틀 배출 문구가 붙음');
     assert(_techSpawnCard('barracks')===null, '관리자 건물 프로필에 오토배틀 배출 카드가 붙음');
     return n+'항목'; });
+  // 🐺🗿 오각형 5종족 — 오토배틀에 종족을 넣을 때 **조용히 빠지는 표**가 여럿이다(전부 선례).
+  //   · SB_ATK_MODE 누락 → 기본값이 '지상 전용' → 공중 유닛을 영영 못 때려 그 종족이 100% 진다
+  //   · U.dmg 0 + airDmg 만 있는 대공 전용이 FXLAB_NOATK 에 걸리면 **아무것도** 못 때린다
+  //   · 배출표 앞 두 건물에 대공이 없으면 초반 공중 상대에 일방적으로 진다(전 종족 공통 조건)
+  await step('오각형 5종족: 오토배틀 편입 표 누락 없음', ()=>{
+    skipIf(typeof STK_RACES==='undefined' || typeof TECH_BLDG_UNIT==='undefined','오토배틀 표 없음');
+    assert(STK_RACE_ORDER.length===5, '종족이 5이 아님: '+STK_RACE_ORDER.length);
+    for(const rk of STK_RACE_ORDER){ assert(!!STK_RACES[rk], rk+': STK_RACES 없음');
+      assert(!!STK_BUILDINGS[rk], rk+': STK_BUILDINGS 없음');
+      assert(!!STK_TIERS[rk], rk+': STK_TIERS 없음');
+      const tr=stkTechRace(rk);
+      assert(Object.keys(TECH_BLDG_UNIT[tr]||{}).length>0, rk+' → '+tr+': 배출표가 비었다(AI가 폴백 2기만 낸다)');
+      assert(STK_RACE_STAT[tr]!=null && STK_RACE_SPAWN[tr]!=null, tr+': STAT/SPAWN 누락'); }
+    // 의도적 무공격(지원·시전형)은 예외. 그 외에 '아무것도 못 때리는' 유닛이 로스터에 있으면 표 누락이다.
+    const NOATK_OK=new Set(['medic','aegis','medusa']);
+    let nu=0, aa=0;
+    for(const rk of STK_RACE_ORDER){ for(const id of STK_RACES[rk].units){ nu++;
+      const m=_sbAtkMode({id:id}); assert(m.air||m.gnd||NOATK_OK.has(id), id+': 아무것도 못 때린다(FXLAB_NOATK/SB_ATK_MODE 확인)');
+      assert(!!UNIT_COMBAT_CLASS[id], id+': UNIT_COMBAT_CLASS 누락(상성 중립이 되어 밸런스가 어긋난다)'); } }
+    for(const rk of STK_RACE_ORDER){ const tr=stkTechRace(rk), keys=Object.keys(TECH_BLDG_UNIT[tr]);
+      const early=keys.slice(0,2).map(k=>TECH_BLDG_UNIT[tr][k].u);
+      assert(early.some(u=>_sbAtkMode({id:u}).air), tr+': 배출표 앞 두 건물에 대공 유닛이 없다 — 초반 공중에 무력하다');
+      aa++; }
+    for(const id of ['howlslinger','skytalon','flakbattery','arclight'])
+      assert(!FXLAB_NOATK.has(id), id+': 대공 전용인데 무공격으로 분류됐다');
+    return nu+'유닛 · '+aa+'종족 초반 대공 ok'; });
   // 관리자 건설에서 건물을 고르면 그 건물의 유닛 생산 버튼이 나와야 한다.
   // 오토배틀은 건물이 자동 배출하므로 수동 생산이 일꾼뿐 — 이 규칙이 관리자로 새면 생산 그리드가 통째로 빈다(선례 2회).
   await step('관리자 건설: 건물 유닛 생산 그리드 유지', ()=>{

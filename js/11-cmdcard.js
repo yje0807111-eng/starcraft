@@ -1292,7 +1292,15 @@ function _sbTeam(u){ return (u&&u.team==='foe')?'foe':'ally'; }
 const SB_ATK_MODE={
   stinger:'air', hellfire:'air', venom:'air',   // 공중 전용
   behemoth:'gnd', snapper:'gnd', broodling:'gnd', ultralisk:'gnd', dark_templar:'gnd', blade:'gnd', thornqueen:'gnd', tank:'gnd', machinegun:'gnd', racer:'gnd', worker_human:'gnd', worker_light:'gnd', worker_swarm:'gnd',   // 지상 전용(근접·시즈·러커·가디언·일꾼)
-  marine:'both', ghost:'both', goliath:'both', dragoon:'both', archon:'both', hydra:'both', skyguard:'both', wyvern:'both', falcon:'both', skydancer:'both', dreadnought:'both', kronos:'both', archangel:'both'   // 대공+지상
+  marine:'both', ghost:'both', goliath:'both', dragoon:'both', archon:'both', hydra:'both', skyguard:'both', wyvern:'both', falcon:'both', skydancer:'both', dreadnought:'both', kronos:'both', archangel:'both',   // 대공+지상
+  // 🐺 페럴 — RACES.md §2 '공격 대상' 열 그대로. ⚠ 이 표가 없으면 기본값이 '지상 전용'이라 공중 유닛을 **영영 못 때린다**(오각형이 성립하지 않던 원인).
+  worker_feral:'gnd', wolfrunner:'gnd', thornspitter:'gnd', hornedcharger:'gnd', clawfighter:'gnd', stalkercat:'gnd', alphawolf:'gnd', wyvernrider:'gnd',
+  howlslinger:'air', skytalon:'air',
+  venomfang:'both', stormroc:'both', primalbeast:'both',
+  // 🗿 콜로서스 — RACES.md §3
+  worker_col:'gnd', gunner:'gnd', twincannon:'gnd', siegecolossus:'gnd',
+  flakbattery:'air', arclight:'air',
+  guardwalker:'both', railgun:'both', skylance:'both', orbitalanchor:'both', worldbreaker:'both'
 };
 function _sbAtkMode(u){ const mk=u.gmodel||u.id, id=u.id;
   if((typeof FXLAB_NOATK!=='undefined')&&(FXLAB_NOATK.has(mk)||FXLAB_NOATK.has(id))) return {air:false, gnd:false};   // 비전투(수송·지원·시전형·메두사)
@@ -1342,7 +1350,20 @@ const UNIT_COMBAT_CLASS={
   // 에테리얼 — 대형 폭발 브루저 + 진동 암살
   blade:{dt:'normal',sz:'s'}, dragoon:{dt:'explosive',sz:'l'}, archon:{dt:'normal',sz:'l'},
   falcon:{dt:'explosive',sz:'m'}, skydancer:{dt:'concussive',sz:'m'}, kronos:{dt:'explosive',sz:'l'},
-  archangel:{dt:'explosive',sz:'l'}, dark_templar:{dt:'concussive',sz:'s'}, larva:{dt:'normal',sz:'l'} };
+  archangel:{dt:'explosive',sz:'l'}, dark_templar:{dt:'concussive',sz:'s'}, larva:{dt:'normal',sz:'l'},
+  // 🐺 페럴 — "큰 사냥감을 찢는다": 주력 근접이 **폭발형**(대형 특효·소형 반감) + 몸은 **소형**.
+  //   이 두 줄이 오각형의 페럴 변 세 개를 만든다 — 대형 소수(에테리얼·콜로서스)에 강하고, 소형 물량(스웜)·대인 사격(유니온)에 약하다.
+  worker_feral:{dt:'normal',sz:'s'}, wolfrunner:{dt:'explosive',sz:'s'}, thornspitter:{dt:'normal',sz:'s'},
+  clawfighter:{dt:'explosive',sz:'s'}, hornedcharger:{dt:'explosive',sz:'m'}, howlslinger:{dt:'concussive',sz:'s'},
+  venomfang:{dt:'normal',sz:'m'}, stalkercat:{dt:'normal',sz:'s'}, alphawolf:{dt:'normal',sz:'m'},
+  wyvernrider:{dt:'normal',sz:'m'}, skytalon:{dt:'normal',sz:'m'}, stormroc:{dt:'explosive',sz:'l'},
+  primalbeast:{dt:'explosive',sz:'l'}, packshaman:{dt:'normal',sz:'s'}, hawkeye:{dt:'normal',sz:'s'}, windcarrier:{dt:'normal',sz:'l'},
+  // 🗿 콜로서스 — 폭발형 포열 + 큰 몸. 대형에 강하고 소형(스웜·페럴)에 반감되는 것이 이 종족의 값이다.
+  worker_col:{dt:'normal',sz:'s'}, gunner:{dt:'explosive',sz:'m'}, guardwalker:{dt:'normal',sz:'m'},
+  twincannon:{dt:'explosive',sz:'m'}, flakbattery:{dt:'concussive',sz:'m'}, railgun:{dt:'explosive',sz:'l'},
+  arclight:{dt:'concussive',sz:'m'}, siegecolossus:{dt:'explosive',sz:'l'}, skylance:{dt:'explosive',sz:'l'},
+  orbitalanchor:{dt:'explosive',sz:'l'}, worldbreaker:{dt:'explosive',sz:'l'},
+  spotterdrone:{dt:'normal',sz:'s'}, stasistech:{dt:'normal',sz:'s'}, supplylifter:{dt:'normal',sz:'l'} };
 function _uClass(u){ return u&&(UNIT_COMBAT_CLASS[u.id]||UNIT_COMBAT_CLASS[u.gmodel]); }
 function _sbTypeMul(atk, tgt){ const A=_uClass(atk); if(!A||A.dt==='normal') return 1;   // 무분류·일반형=100%
   const B=_uClass(tgt); const sz=(B&&B.sz)||'m'; const row=TYPE_VS_SIZE[A.dt];   // 대상 크기(미분류=중형 취급)
