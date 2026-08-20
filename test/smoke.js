@@ -3265,6 +3265,9 @@ async function groupLobby(){
     const t=['gear','pet','ally'].map(k=>resIco('ticket_'+k));
     assert(t.every(h=>/^<img/.test(h)),'뽑기권이 resIco 로 안 나옴');
     assert(new Set(t).size===3,'뽑기권 3종이 같은 그림을 씀(색 구분이 사라진다)');
+    // ②-2 상점 특가는 **한글 이름으로** resIco 를 부른다 — RES_ICON_KO 에 없으면 그 줄만 이모지로 떨어진다
+    for(const k in SHOP_GIVE_LABEL){ const nm=SHOP_GIVE_LABEL[k];
+      assert(/^<img/.test(resIco(nm,'gi')),'상점 특가 항목이 아이콘으로 안 나옴: '+nm); }
     // ③ 잠김 자물쇠 = 단일 소스 hmLockHTML() · 파일이 없으면 선 SVG 로 되돌아갈 길이 있다
     assert(/^<img/.test(hmLockHTML()) && hmLockHTML().indexOf('st_lock.webp')>=0,'잠김 자물쇠가 그림이 아님');
     assert(hmLockHTML().indexOf('_hmLockFail')>=0,'자물쇠 폴백 경로가 없음');

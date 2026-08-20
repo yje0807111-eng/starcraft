@@ -10521,7 +10521,10 @@ function renderProfStats(){ const c=CHAR(); if(!c) return '<div class="twHead">�
 //   ⚠ 이모지 🎟 를 새로 박지 말 것: 세 종류가 색으로만 갈리는데 이모지는 하나뿐이라 구분이 사라진다.
 const RES_ICON={ mineral:'res_mineral', gas:'res_gas', gem:'res_gem', pop:'res_pop',
   ticket_gear:'res_ticket_gear', ticket_pet:'res_ticket_pet', ticket_ally:'res_ticket_ally' };
-const RES_ICON_KO={ '미네랄':'mineral', '가스':'gas', '젬':'gem', '인구':'pop' };
+// ⚠ 한글 이름도 열쇠다 — 상점 특가는 `SHOP_GIVE_LABEL` 의 **한글 이름으로** `resIco()` 를 부른다.
+//   여기 세 줄이 없으면 그 줄만 이모지 폴백(🎟)으로 떨어져 세 종류가 같은 그림이 된다.
+const RES_ICON_KO={ '미네랄':'mineral', '가스':'gas', '젬':'gem', '인구':'pop',
+  '장비 뽑기권':'ticket_gear', '펫 뽑기권':'ticket_pet', '동료 뽑기권':'ticket_ally' };
 function resIco(k, cls){ const id=RES_ICON[k]||RES_ICON[RES_ICON_KO[k]];
   return id ? '<img class="'+(cls||'ri')+'" src="assets/icons/'+id+'.webp" alt="">' : ''; }
 // ── 🎁 상점 내용(단일 소스) — 모바일 재화상점 형태: 오늘의 특가 → 뽑기 → 젬(현질) → 보유 펫 ──
