@@ -1857,6 +1857,9 @@ function hbIcoImg(k){ let im=_hbIco[k];
 // 🧱 배치 격자 — **화면 전체에 깔지 않는다.** 지으려는 건물 둘레 한 칸까지만, 면 없이 선만 흐리게.
 //   ⛔ 예전엔 보이는 맵 전체를 푸른 면으로 덮고 격자를 다 그렸다 — 전장이 안 보이고 배치할 칸도 눈에 안 띄었다.
 const HB_GRID_PAD=1;                       // 건물 둘레로 더 보여 줄 칸 수
+const HB_GRID_COL='rgba(90,230,140,.85)';  // 격자 색 — 진한 초록(배경이 어두워 파란 흐린 선은 묻힌다)
+const HB_GRID_LW=1.4;                      // 선 굵기 배수
+const HB_GRID_DASH=4;                       // 점선 간격(px, 줌 보정 전)
 function hbDrawGrid(x, S){ if(!S.arm) return;
   const R=HB_MAP_R, lw=1/(S.k||1);
   const B=HB_STRUCT[S.arm.k]||{w:1,h:1}, ok=hbArmOk();
@@ -1866,10 +1869,12 @@ function hbDrawGrid(x, S){ if(!S.arm) return;
   const y0=Math.max(-R, gy-HB_GRID_PAD*HB_TILE), y1=Math.min(R, gy+B.h*HB_TILE+HB_GRID_PAD*HB_TILE);
   x.save();
   x.beginPath(); x.rect(x0,y0,x1-x0,y1-y0); x.clip();                      // 이 안에만 격자를 그린다
-  x.strokeStyle='rgba(140,190,255,.09)'; x.lineWidth=lw; x.beginPath();    // 면 없이 선만 · 예전(.13)보다 흐리게
+  // 진한 초록 점선 — 면은 안 깔고 칸 경계만. 흐린 파란 선은 배경에 묻혀 안 보였다.
+  x.strokeStyle=HB_GRID_COL; x.lineWidth=lw*HB_GRID_LW; x.setLineDash([HB_GRID_DASH*lw, HB_GRID_DASH*lw]);
+  x.beginPath();
   for(let w=Math.ceil(x0/HB_TILE)*HB_TILE; w<=x1; w+=HB_TILE){ x.moveTo(w,y0); x.lineTo(w,y1); }
   for(let w=Math.ceil(y0/HB_TILE)*HB_TILE; w<=y1; w+=HB_TILE){ x.moveTo(x0,w); x.lineTo(x1,w); }
-  x.stroke();
+  x.stroke(); x.setLineDash([]);
   x.restore();
   x.save();
   x.strokeStyle='rgba(140,190,255,.30)'; x.lineWidth=lw*1.6;              // 맵 경계(격자와 별개 — 어디까지가 맵인지)
@@ -2085,7 +2090,19 @@ function hb3dStructs(out, S, nx, ny, k){
     const fp=M3D.footprintOf && M3D.footprintOf(id);   // 모델의 실제 표시 반경(px)
     const want=(B.w*HB_TILE*k)/2*HB_M3D_FIT;           // 타일 발자국에 맞출 반경
     out.push({ uid:'hbs_'+q, id:id, x:nx(wx), y:ny(wy), face:0, moving:false, fireSeq:0,
-      scl:(fp&&fp>0.5)? (want/(fp*k3)) : 1, size:B.w*HB_TILE*0.5 }); } }
+      scl:(fp&&fp>0.5)? (want/(fp*k3)) : 1, size:B.w*HB_TILE*0.5 }); }
+  // 🧱 배치 고스트 = **관리자 건설과 같은 반투명 회색 3D**(M3D 의 makeBuildGhost/buildGhostModels).
+  //   ⛔ 새로 만들지 말 것 — 항목에 ghost:true 만 실으면 M3D 가 같은 풀로 그린다.
+  //   사냥터는 메인 sync 하나로 전부 그리므로(syncBuild 를 같은 프레임에 부르면 서로를 지운다)
+  //   같은 목록에 얹는다.
+  if(S.arm){ const B=HB_STRUCT[S.arm.k];
+    if(B && B.m3d){ const id='cb_'+B.m3d;
+      if(M3D.hasModel(id)){
+        const wx=hbTx(S.arm.gx)+(B.w-1)*HB_TILE/2, wy=hbTx(S.arm.gy)+(B.h-1)*HB_TILE/2;
+        const fp=M3D.footprintOf && M3D.footprintOf(id);
+        const want=(B.w*HB_TILE*k)/2*HB_M3D_FIT;
+        out.push({ uid:'__bghost__', id:id, x:nx(wx), y:ny(wy), face:0, ghost:true,
+          scl:(fp&&fp>0.5)? (want/(fp*k3)) : 1 }); } } } }
 // 기지 건물 3D 모델 지연 로드 — 관리자 건설과 같은 에셋(cb_*). 한 번만 부른다.
 let _hbCstLoaded=false;
 function hbEnsureStructModels(){ if(_hbCstLoaded) return; if(!(window.M3D&&M3D.cstEnsure)) return;

@@ -1977,11 +1977,12 @@ async function groupLobby(){
       //     ⛔ 함수 소스를 정규식으로 훑지 말 것 — 주석만 남아도 통과한다(그런 검사를 이미 두 번 걷어냈다).
       //     캔버스 호출을 받아 적어 **격자선이 실제로 그려진 범위**를 잰다.
       { assert(typeof hbDrawGrid==='function' && typeof HB_GRID_PAD!=='undefined','배치 격자 그리기가 없다');
-        const rec=[]; let clipped=false, filled=0;
+        const rec=[], filled=[]; let clipped=false, dash=0, col='';
         const stub={ save(){}, restore(){}, beginPath(){}, stroke(){}, clip(){ clipped=true; },
-          rect(){}, fillRect(){ filled++; }, strokeRect(){}, ellipse(){}, arc(){}, fill(){},
+          rect(){}, fillRect(fx,fy,fw,fh){ filled.push([fx,fy,fw,fh]); }, strokeRect(){}, ellipse(){}, arc(){}, fill(){},
+          setLineDash(a){ if(a&&a.length) dash=a[0]; },
           moveTo(x,y){ rec.push([x,y]); }, lineTo(x,y){ rec.push([x,y]); },
-          set strokeStyle(v){}, set fillStyle(v){}, set lineWidth(v){}, set globalAlpha(v){}, set font(v){} };
+          set strokeStyle(v){ if(rec.length===0) col=v; }, set fillStyle(v){}, set lineWidth(v){}, set globalAlpha(v){}, set font(v){} };
         const armSave=_hb.arm;
         _hb.arm={ k:(HB_STRUCT.wall?'wall':Object.keys(HB_STRUCT)[0]), gx:2, gy:1 };
         try{
@@ -1997,6 +1998,32 @@ async function groupLobby(){
           for(const [px,py] of rec){ if(px<okX0-0.5||px>okX1+0.5||py<okY0-0.5||py>okY1+0.5){ out++;
             far=Math.max(far, Math.max(Math.abs(px-gx), Math.abs(py-gy))); } }
           assert(out===0,'격자가 건물 둘레 '+HB_GRID_PAD+'칸을 벗어나 그려진다('+out+'점 · 최대 '+far.toFixed(0)+'px) — 화면 전체에 깔고 있다');
+          // 칠하는 면은 **배치 칸 표시 하나뿐**이어야 한다. 예전 격자 배경은 보이는 맵 전체를 덮었다.
+          //   ⛔ 'fillRect 가 0번'으로 재면 안 된다 — 배치 칸 표시(청록/빨강)까지 잡혀 헛돈다.
+          { let big=0, biggest=0;
+            for(const [fx,fy,fw,fh] of filled){
+              const inside=(fx>=okX0-0.5 && fx+fw<=okX1+0.5 && fy>=okY0-0.5 && fy+fh<=okY1+0.5);
+              if(!inside){ big++; biggest=Math.max(biggest, fw*fh); } }
+            assert(big===0,'격자 면이 건물 둘레를 넘어 깔린다('+big+'개 · 최대 '+Math.round(biggest)+'px²) — 화면 전체 배경이 남아 있다'); }
+          assert(dash>0,'격자가 점선이 아니다(setLineDash 미사용)');
+          // ⛔ '초록 채널이 크다'로만 재면 안 된다 — 옛 파란색 rgba(140,190,255) 도 초록이 190 이라 통과한다.
+          //    초록이 빨강·파랑보다 **우세**한지, 그리고 충분히 진한지(알파)를 본다.
+          { const m2=String(col).match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+))?/);
+            assert(m2,'격자 색을 못 읽었다: '+col);
+            const cr=+m2[1], cg=+m2[2], cb=+m2[3], ca=(m2[4]!=null?+m2[4]:1);
+            assert(cg>cr+40 && cg>cb+40,'격자 색이 초록이 아니다(r'+cr+' g'+cg+' b'+cb+')');
+            assert(ca>=0.5,'격자 색이 너무 흐리다(알파 '+ca+') — 진하게 보여야 한다'); }
+          // 🧱 배치 고스트 = 관리자 건설과 같은 반투명 3D. 새로 만들지 말고 ghost:true 로 같은 풀에 얹는다.
+          { const keepM=window.M3D;
+            window.M3D={ hasModel:()=>true, footprintOf:()=>20, cstEnsure:()=>true, ensureUnits:()=>{} };
+            try{
+              const armed=hb3dList().filter(u=>u.ghost);
+              assert(armed.length===1,'배치 중인데 3D 고스트가 '+armed.length+'개 — ghost:true 항목을 안 싣고 있다');
+              assert(/^cb_/.test(armed[0].id),'고스트 모델 id 가 건설 에셋(cb_*)이 아님: '+armed[0].id);
+              const save2=_hb.arm; _hb.arm=null;
+              assert(hb3dList().filter(u=>u.ghost).length===0,'배치 중이 아닌데 고스트가 남는다');
+              _hb.arm=save2;
+            } finally { window.M3D=keepM; } }
         } finally { _hb.arm=armSave; } }
       // ⑤ 크기 — 중장갑 > 기본 > 돌격. 화면에서 역할이 구분되는 근거다
       assert(HB_FOE_KIND.brute.sz > HB_FOE_KIND.grunt.sz && HB_FOE_KIND.grunt.sz > HB_FOE_KIND.runner.sz,
