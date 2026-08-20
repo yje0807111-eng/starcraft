@@ -860,8 +860,10 @@ function loop(now){
   // 아군 유닛 림 색: 플레이어 구역 관전 시 관전 플레이어 색(+또렷하게), 그 외엔 내 색(은은)
   if(window.M3D && window.M3D.setPlayerRim){ if(G.tab==='Players') window.M3D.setPlayerRim(PLAYER_VIEW_COLORS[(G.curPlayer-1)%PLAYER_VIEW_COLORS.length], 0.9); else window.M3D.setPlayerRim(PLAYER_VIEW_COLORS[((G.myPlayer||1)-1)%PLAYER_VIEW_COLORS.length]); }   // 플레이어 구분=테두리(림) 색 하나로만 · 관전은 구별용으로 조금 더 강하게(0.9)
   const _specNum = (typeof specRemoteBoard==='function') ? specRemoteBoard() : null;   // 관전 중인 상대 번호
+  if(typeof coopWatchSync==='function') coopWatchSync();   // 관전 대상이 바뀌었으면 알린다(바뀔 때만 전송)
   // 관전 전환(내 화면 ↔ 상대 화면) 시 이전 모델 즉시 제거(쓰러지는 사망모션 없이 바로 사라짐)
-  if(G.tab==='Main'||G.tab==='Players'){ const src=_specNum?('s'+_specNum):'main';
+  const _deadSlot = (G.tab==='Players' && typeof slotState==='function' && slotState(G.curPlayer)!=='me' && !_specNum);   // 죽은/빈 자리 = 아무것도 없는 전장
+  if(G.tab==='Main'||G.tab==='Players'){ const src=_specNum?('s'+_specNum):(_deadSlot?'dead':'main');
     if(src!==G._renderSrc){ if(window.M3D&&window.M3D.clearGameModels) window.M3D.clearGameModels(); if(typeof clearPlayerSel==='function') clearPlayerSel(); G._renderSrc=src; } }
   if(G.bossOpen){   // 공용 보스 토벌장 팝업 — 탭과 무관하게 아레나 렌더(위에 vBoss/컨트롤)
     drawBoss(dt); renderBossPanel(); updateCoopBossBar();
@@ -871,6 +873,7 @@ function loop(now){
     const fcv=document.getElementById('cvFx'); if(fcv){ fcv.style.display='block'; withBossFx(drawFx); }   // 토벌장 전용 이펙트만 렌더(메인 이펙트와 분리)
   }
   else if(G.tab==='Players' && _specNum){ renderSpectate(_specNum, dt); }   // 관전: 상대 보드를 3D+이펙트로 그대로 렌더
+  else if(_deadSlot){ renderEmptySlot(); }   // 탈락·이탈·미입장 자리 — 유닛도 적도 새 생성도 없다
   else if(G.sandbox && G.tab==='Unit'){ fxLabRender(dt); }   // 🎆 이펙트 테스트베드(관리자 Unit 탭)
   else if(G.tab==='Build'){ renderBuildTab(dt); }   // 🏗 건설 탭(관리자·오토배틀 공용 단일 소스)
   else {

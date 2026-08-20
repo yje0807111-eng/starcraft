@@ -12,7 +12,7 @@
 //     슬롯을 차지하고, broadcast(rchat=채팅, start=게임 시작, close=방 닫힘).
 //   · RT 미연결(오프라인/로컬 계정)이면 기존 봇 시뮬 방으로 폴백.
 // ============================================================================
-const RTROOM={ listChan:null, chan:null, num:null, host:false, meta:null, started:false, joinT:0 };
+const RTROOM={ listChan:null, chan:null, num:null, host:false, meta:null, started:false, joinT:0, overN:0 };
 // 대기실 presence 에 싣는 내 상태. ⚠ track 은 **덮어쓰기**라 매번 전부 실어야 한다 —
 //   일부만 보내면 나머지(입장 시각 t 등)가 지워져 슬롯 순서가 뒤바뀐다.
 function rtRoomMe(){ return { uid:myUid(), nick:myNick(), ready:true, host:!!RTROOM.host,
@@ -47,7 +47,7 @@ function rtRoomClose(){ if(!RTROOM.host && !RTROOM.meta) return;
   try{ if(RTROOM.listChan) RTROOM.listChan.untrack(); }catch(e){}
   RTROOM.meta=null; RTROOM.host=false; }
 // 대기실 채널 입장(방장/참가자 공통)
-function rtRoomJoin(num, asHost){ rtRoomLeaveChan(); RTROOM.num=num; RTROOM.host=!!asHost; RTROOM.started=false;
+function rtRoomJoin(num, asHost){ rtRoomLeaveChan(); RTROOM.num=num; RTROOM.host=!!asHost; RTROOM.started=false; RTROOM.overN=0;
   try{
     const topic='room-'+num;
     try{ (_sb.getChannels()||[]).forEach(c=>{ if(c.topic===topic||c.topic==='realtime:'+topic) _sb.removeChannel(c); }); }catch(e){}
@@ -70,7 +70,15 @@ function rtRoomSync(){ if(!RTROOM.chan || !_lobbyRoom || !_lobbyRoom.real) retur
     const st=RTROOM.chan.presenceState()||{};
     let mem=[]; Object.keys(st).forEach(uid=>{ const m=(st[uid]||[])[0]; if(m&&m.uid) mem.push(m); });
     mem.sort((a,b)=>(b.host?1:0)-(a.host?1:0) || (a.t||0)-(b.t||0));   // 방장 먼저, 그 다음 입장순
-    mem=mem.slice(0,8);
+    // ⚠ 정원은 **여기서** 강제한다. joinRoom 의 사전 검사는 방장이 presence 로 게시한 cur 를 보는 것이라
+    //   갱신 지연·동시 입장에 뚫린다(2인 방에 5명이 들어가 그대로 시작됐다).
+    //   모든 클라이언트가 같은 presence 를 같은 규칙(방장 먼저 → 입장순)으로 정렬하므로 판정이 일치한다.
+    const cap=Math.max(2, Math.min(8, _lobbyMax||8));
+    if(mem.length>cap && mem.findIndex(m=>m.uid===myUid())>=cap){
+      RTROOM.overN=(RTROOM.overN||0)+1;                       // 어긋난 sync 한 번으로 튕기지 않게 두 번 연속일 때만
+      if(RTROOM.overN>=2){ rtRoomKicked('방이 가득 찼습니다'); return; } }
+    else RTROOM.overN=0;
+    mem=mem.slice(0,cap);
     // 방장 이탈 감지(참가자만): 방장이 presence에서 사라지면 방이 닫힌 것
     if(!RTROOM.host && _lobbyRoom.hostUid && !mem.some(m=>m.uid===_lobbyRoom.hostUid)){ rtRoomKicked('방장이 방을 나갔습니다'); return; }
     const before=_lobbySlots.filter(Boolean).length;

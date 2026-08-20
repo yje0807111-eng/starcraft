@@ -5417,6 +5417,42 @@ async function groupLobby(){
     host.innerHTML=renderProfStats();
     assert(host.textContent.indexOf('<b>x</b>')>=0,'광장에서 이름이 마크업으로 해석됨');
     return '이스케이프 확인'; });
+
+  // ══ 실방 정원 — 방장이 정한 max 를 presence sync 에서 강제한다 ═══════════
+  await step('실방 정원: 정원을 넘은 사람에게는 자리를 주지 않는다', async()=>{
+    skipIf(typeof rtRoomSync!=='function','rtRoomSync 없음');
+    const lb=document.getElementById('lobby'); skipIf(!lb,'#lobby 없음');
+    const hid=lb.classList.contains('hide');
+    const keepRoom=_lobbyRoom, keepMax=_lobbyMax, keepSlots=_lobbySlots, keepChan=RTROOM.chan, keepOver=RTROOM.overN;
+    const keepUid=window.myUid; window.myUid=()=>'me';   // 스모크는 비로그인이라 uid 가 비어 있다 — 고정한다
+    try{
+      lb.classList.remove('hide');
+      _lobbyRoom={ real:true, num:1234, name:'t', hostUid:'me', max:2 };
+      _lobbyMax=2; _lobbySlots=[null,null,null,null,null,null,null,null]; RTROOM.overN=0;
+      // 나(방장) + 늦게 들어온 4명 = 5명이 2인 방에 몰려 있는 상황
+      const st={ me:[{uid:'me', nick:'me', host:true, ready:true, t:1000}] };
+      for(let k=2;k<=5;k++) st['u'+k]=[{uid:'u'+k, nick:'P'+k, host:false, ready:true, t:1000+k}];
+      RTROOM.chan={ presenceState(){ return st; } };
+      rtRoomSync();
+      const n=_lobbySlots.filter(Boolean).length;
+      assert(n===2,'2인 방에 '+n+'명이 자리를 받았다(정원이 강제되지 않는다)');
+      assert(_lobbySlots[0] && _lobbySlots[0].uid==='me','방장이 P1 이 아니다: '+(_lobbySlots[0]&&_lobbySlots[0].uid));
+      assert(!_lobbySlots[2] && !_lobbySlots[4],'정원 밖 슬롯에 사람이 들어갔다');
+      return '5명 → 2자리 · 방장 P1';
+    } finally { _lobbyRoom=keepRoom; _lobbyMax=keepMax; _lobbySlots=keepSlots;
+      RTROOM.chan=keepChan; RTROOM.overN=keepOver; window.myUid=keepUid;
+      if(hid) lb.classList.add('hide'); } });
+
+  await step('실방 정원: 참가자에게도 방 정원이 전달된다', async()=>{
+    skipIf(typeof joinRoom!=='function','joinRoom 없음');
+    // 이 한 줄이 빠져 있어서 참가자는 _lobbyMax 가 8 로 잡혔다(2인 방이 8인 방으로 보였다)
+    assert(/max:\s*r\.max/.test(String(joinRoom)),'joinRoom 이 openLobby 에 max 를 안 넘긴다');
+    const keepRoom=_lobbyRoom, keepMax=_lobbyMax;
+    try{ openLobby({ real:true, num:1, name:'t', host:'h', hostUid:'x', startCount:1, joining:true, max:3 });
+      assert(_lobbyMax===3,'전달된 정원이 반영되지 않았다: '+_lobbyMax);
+      return '_lobbyMax=3';
+    } finally { _lobbyRoom=keepRoom; _lobbyMax=keepMax;
+      const lb=document.getElementById('lobby'); if(lb) lb.classList.add('hide'); } });
 }
 
 // ── 그룹: game (솔로 무한) ──
@@ -6489,6 +6525,359 @@ async function groupGame(){
       return '앵커·진행도·난이도·첫클리어·포인트·관문 ok · 하루 '+UM_DAY_FULL+'판 체감 ok · 일일 바깥 '+DQ_OUT_N;
     } finally { G=keepG; MAP=keepMap; if(typeof STK!=='undefined') STK=keepSTK;
       PLAYER_META.umDay=keepDay0; p.pcoin=keepPc; p.gas=keepGas; p.hunt=keepHunt; } });
+
+  // ══ 협동(멀티) — 죽은 자리 · 정지된 자리 · 대역폭 ══════════════════════
+  // 가짜 채널을 물려 실제 송신 경로(coopSend)를 그대로 태운다. 실제 접속은 하지 않는다.
+  function _coopStub(cap){
+    G=newGame(); MAP=USEMAPS.nemo; G.phase='playing'; G.tab='Main';
+    G.myPlayer=1; G.curPlayer=1; G.activePlayers=[1,2,3]; G.eliminated=[]; G.finished=[];
+    G.coop=true; G.coopChan={ state:'joined', send(m){ cap.push(m); } };
+    G.coopNumToUid={1:'me',2:'u2',3:'u3'}; G.coopUidToNum={me:1,u2:2,u3:3};
+    G.coopState={}; G.coopBoard={}; G.coopBoardPrev={}; G.coopSpeed={};
+    G.coopUpg={}; G.coopBossU={}; G.coopTeamB={}; G.coopWatchers={};
+  }
+  await step('죽은 자리: 탈락하면 그 자리의 모든 것이 지워진다', async()=>{
+    skipIf(typeof killSlot!=='function','killSlot 없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]);
+      G.coopBoard[2]={t:Date.now(),units:[{}],enemies:[{}],shots:[],beams:[]};
+      G.coopState[2]={count:77,round:5,bo:0}; G.coopBossU[2]={}; G.coopSpeed[2]=2; G.coopWatchers.u2=1;
+      assert(slotState(2)==='live','죽이기 전엔 live 여야 한다');
+      killSlot(2,'lost');
+      assert(slotState(2)==='dead','탈락 뒤 dead 가 아님: '+slotState(2));
+      assert(G.activePlayers.indexOf(2)<0,'activePlayers 에 남아 있다');
+      assert(!G.coopBoard[2] && !G.coopState[2] && !G.coopBossU[2] && !G.coopSpeed[2],'보드/상태가 안 지워졌다');
+      assert(!G.coopWatchers.u2,'죽은 자리가 아직 나를 본다고 돼 있다');
+      assert(playerEnemyCount(2)===0,'죽은 자리 적 수가 0이 아님: '+playerEnemyCount(2));
+      assert(slotState(8)==='empty' && playerEnemyCount(8)===0,'미입장 자리도 빈 자리여야 한다');
+      assert(!slotWatchable(2) && !slotWatchable(8),'죽은/빈 자리는 관전 대상이 아니어야 한다');
+      // 죽은 자리가 배속 투표에 남아 있으면 판이 영원히 1배속에 묶인다
+      G.coopSpeed[1]=4; G.coopSpeed[3]=4; ensureVote(); computeSpeed();
+      assert(G.speedMul===4,'죽은 자리가 배속 투표를 붙잡고 있다: '+G.speedMul+'배');
+      return 'dead·empty 모두 0 · 관전 불가 · 배속 '+G.speedMul+'배';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('정지된 자리: 승리는 죽이지 않는다(유닛 유지 · 관전 계속)', async()=>{
+    skipIf(typeof finishSlot!=='function','finishSlot 없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]);
+      G.coopBoard[3]={t:Date.now(),units:[{uid:'a'},{uid:'b'}],enemies:[],shots:[],beams:[]};
+      finishSlot(3);
+      assert(slotState(3)==='done','승리 뒤 done 이 아님: '+slotState(3));
+      assert(slotWatchable(3),'정지된 자리는 계속 관전 가능해야 한다');
+      assert(G.coopBoard[3] && G.coopBoard[3].units.length===2,'승리한 자리의 유닛이 지워졌다');
+      assert(!slotDead(3),'정지된 자리를 죽은 자리로 취급하면 안 된다');
+      return 'done · 유닛 2기 유지 · 관전 가능';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('패배: 내 전장이 비워진다(유닛·적·투사체 전부)', async()=>{
+    skipIf(typeof clearMyField!=='function','clearMyField 없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]);
+      G.round=5; for(let i=0;i<8;i++) spawnEnemy({}); G.pendSpawn.splice(0).forEach(ps=>G.enemies.push(ps.e));
+      G.units.push(initUnitStats({uid:G.idSeq++, id:'marine', hero:false, lv:1, x:.3, y:.3, cd:0}));
+      G.shots.push({x:1,y:1,vx:0,vy:0,kind:'b',color:'#fff'});
+      const kills=G.kills||0;
+      assert(G.enemies.length>0 && G.units.length>0,'준비 실패');
+      clearMyField();
+      assert(G.units.length===0 && G.enemies.length===0 && G.shots.length===0 && G.pendSpawn.length===0,'전장이 안 비었다');
+      assert((G.kills||0)===kills,'전장을 비우면서 킬이 늘었다(사망 처리 함수를 탔다)');
+      return '유닛·적·탄 0 · 킬 변화 없음';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('팀 강화 공유: 재접속해도 다시 주지 않는다', async()=>{
+    skipIf(typeof onCoopState!=='function' || typeof killSlot!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null, keepMB=window.metaBonus;
+    try{
+      _coopStub([]);
+      let credit=100;
+      window.metaBonus=function(){ return { startCredit:credit }; };   // 경제 전체 대신 시작 크레딧만 흔든다
+      G.mineral=0; G.metaB={ startCredit:100 }; G._tbPeak=100;
+      credit=150; onCoopState({ uid:'u2', tb:[1], count:0, round:1 });   // 강화가 높은 사람이 합류 → 차액 지급
+      assert(G.mineral===50,'최초 지급이 안 됐다: '+G.mineral);
+      credit=100; killSlot(2,'left');                                    // 연결이 끊겨 이탈 → metaB 내려감
+      credit=150; onCoopState({ uid:'u2', tb:[1], count:0, round:1 });   // 재접속 → 같은 강화가 다시 온다
+      assert(G.mineral===50,'재접속에 같은 보너스를 또 줬다: '+G.mineral+' (50 이어야 한다)');
+      return '최초 +50 · 재접속 +0';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; window.metaBonus=keepMB; } });
+
+  // ══ 자리 비움 — 따라잡기(30초 이내) / 판 포기(초과) ═══════════════════
+  await step('따라잡기: 자리 비운 시간만큼 게임이 실제로 진행된다', async()=>{
+    skipIf(typeof nemoCatchUp!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]); G.round=11; G.speedMul=1;   // ⚠ 10·20·30 은 보스 라운드라 일반 적이 안 나온다
+      // ⚠ 스모크의 step(name,fn) 이 게임 step(dt) 을 가린다 → window.step 으로 부른다
+      if(typeof beginActivePhase==='function') beginActivePhase();   // 전투 단계여야 적이 유입된다
+      for(let i=0;i<60;i++) window.step(1/60);       // 자리 잡기
+      const t0=G.timeSec||0, e0=G.enemies.length;
+      nemoCatchUp(10000);                            // 10초 자리 비움
+      const dtSec=(G.timeSec||0)-t0;
+      assert(dtSec>8 && dtSec<12,'게임 시간이 10초만큼 안 흘렀다: '+dtSec.toFixed(1)+'초');
+      assert(G.enemies.length>e0,'따라잡았는데 적이 안 쌓였다: '+e0+'→'+G.enemies.length);
+      assert(!G._catchUp,'따라잡기 플래그가 안 꺼졌다');
+      return '+'+dtSec.toFixed(1)+'초 · 적 '+e0+'→'+G.enemies.length+'기';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('따라잡기: 배속을 곱해야 실제로 흐른 게임 시간과 맞는다', async()=>{
+    skipIf(typeof nemoCatchUp!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]); G.round=10; G.speedMul=2;
+      if(typeof beginActivePhase==='function') beginActivePhase();
+      for(let i=0;i<60;i++) window.step(1/60);
+      const t0=G.timeSec||0;
+      nemoCatchUp(10000);                            // 2배속에서 10초 = 게임 시간 20초
+      const dtSec=(G.timeSec||0)-t0;
+      assert(dtSec>17 && dtSec<23,'2배속 보정이 안 됐다: '+dtSec.toFixed(1)+'초 (20초 근처여야 한다)');
+      return '2배속 10초 → 게임 '+dtSec.toFixed(1)+'초';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('자리 비움 30초 초과: 보상도 기록도 없이 로비로', async()=>{
+    skipIf(typeof abandonRun!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    const keepLobby=window.overlayToLobby;
+    let wentLobby=false; window.overlayToLobby=function(){ wentLobby=true; };   // 화면 전환은 막고 호출만 본다
+    try{
+      _coopStub([]); G.round=10; G.points=999; G._pointsBanked=false; G._bankedAmt=0; G._runSum=null;
+      abandonRun(45000);
+      assert(wentLobby,'로비로 안 갔다');
+      assert(G.phase==='quit','판이 안 끝났다: '+G.phase);
+      assert(G._runSum===null,'판 요약이 만들어졌다(판으로 인정됐다)');
+      assert(typeof bankRunPoints!=='function' || bankRunPoints()===0,'보상이 정산됐다: '+bankRunPoints());
+      return 'quit · 정산 0 · 기록 없음';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; window.overlayToLobby=keepLobby; } });
+
+  await step('자리 비움: 30초가 따라잡기와 판 포기를 가른다', async()=>{
+    skipIf(typeof nemoOnShow!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    const keepCatch=window.nemoCatchUp, keepAband=window.abandonRun;
+    let called=null;
+    window.nemoCatchUp=function(ms){ called='catch:'+Math.round(ms/1000); };
+    window.abandonRun =function(ms){ called='abandon:'+Math.round(ms/1000); };
+    try{
+      _coopStub([]);
+      _hiddenAt=Date.now()-20000; called=null; nemoOnShow();
+      assert(called && called.indexOf('catch')===0,'20초인데 따라잡기가 아니다: '+called);
+      _hiddenAt=Date.now()-45000; called=null; nemoOnShow();
+      assert(called && called.indexOf('abandon')===0,'45초인데 판 포기가 아니다: '+called);
+      // 자리를 잡아 두는 시간(상대 화면)과 같은 값이어야 한다
+      assert(AWAY_MS===30000,'경계값이 30초가 아니다: '+AWAY_MS);
+      return '20초=따라잡기 · 45초=판 포기 · 경계 '+(AWAY_MS/1000)+'초';
+    } finally { G=keepG; if(keepMap) MAP=keepMap;
+      window.nemoCatchUp=keepCatch; window.abandonRun=keepAband; _hiddenAt=0; } });
+
+  // ══ 재접속 — 끊김(자리 유지)과 일부러 나감(영구)을 구분한다 ═══════════
+  await step('재접속: 연결이 끊기면 자리를 잡아 둔다(지우지 않는다)', async()=>{
+    skipIf(typeof onCoopPlayerLeft!=='function' || typeof awaySlot!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]);
+      G.coopBoard[2]={t:Date.now(),units:[{uid:'a'}],enemies:[],shots:[],beams:[]};
+      G.coopState[2]={count:42,round:5,bo:0};
+      onCoopPlayerLeft({ uid:'u2', nick:'P2' });
+      assert(slotState(2)==='away','끊긴 자리가 away 가 아님: '+slotState(2));
+      assert(G.coopBoard[2],'자리를 잡아 두는데 보드를 지웠다');
+      assert(slotWatchable(2),'끊긴 자리도 관전은 계속 돼야 한다');
+      assert(playerEnemyCount(2)===42,'끊긴 자리의 마지막 상태가 사라졌다: '+playerEnemyCount(2));
+      assert(!slotDead(2),'끊긴 자리를 죽은 자리로 취급하면 안 된다');
+      return 'away · 보드 유지 · 관전 가능';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('재접속: 일부러 나가면(bye) 기다리지 않고 바로 죽은 자리', async()=>{
+    skipIf(typeof onCoopBye!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]);
+      G.coopBoard[3]={t:Date.now(),units:[{uid:'a'}],enemies:[],shots:[],beams:[]};
+      onCoopBye({ uid:'u3', nick:'P3' });
+      assert(slotState(3)==='dead','bye 인데 dead 가 아님: '+slotState(3));
+      assert(!G.coopBoard[3],'bye 인데 보드가 남아 있다');
+      assert(!G.away||G.away[3]==null,'bye 인데 자리를 잡고 기다린다');
+      return 'dead 즉시';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('재접속: 돌아오면 자리와 보드가 그대로 이어진다', async()=>{
+    skipIf(typeof onCoopPlayerBack!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]);
+      G.coopBoard[2]={t:Date.now(),units:[{uid:'a'},{uid:'b'}],enemies:[],shots:[],beams:[]};
+      onCoopPlayerLeft({ uid:'u2', nick:'P2' });
+      assert(slotState(2)==='away','준비 실패');
+      onCoopPlayerBack({ uid:'u2', nick:'P2' });
+      assert(slotState(2)==='live','돌아왔는데 live 가 아님: '+slotState(2));
+      assert(G.coopBoard[2] && G.coopBoard[2].units.length===2,'복귀했는데 보드가 사라졌다');
+      assert(G.activePlayers.indexOf(2)>=0,'activePlayers 에 안 돌아왔다');
+      return 'live 복귀 · 유닛 2기 유지';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('재접속: 대기 시간을 넘기면 영구 죽은 자리', async()=>{
+    skipIf(typeof tickAway!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]);
+      G.coopBoard[2]={t:Date.now(),units:[{uid:'a'}],enemies:[],shots:[],beams:[]};
+      onCoopPlayerLeft({ uid:'u2', nick:'P2' });
+      G.away[2]=Date.now()-1;            // 시간을 앞당긴다(실제로 30초 기다리지 않는다)
+      tickAway();
+      assert(slotState(2)==='dead','대기 만료인데 dead 가 아님: '+slotState(2));
+      assert(!G.coopBoard[2],'만료됐는데 보드가 남아 있다');
+      assert(G.away[2]==null,'만료됐는데 대기 목록에 남아 있다');
+      // 뒤늦게 도착한 스냅이 죽은 자리를 되살리면 안 된다
+      onCoopState({ uid:'u2', count:9, round:5, tb:null });
+      assert(slotState(2)==='dead' && !G.coopBoard[2],'뒤늦은 스냅이 죽은 자리를 되살렸다');
+      return 'dead · 뒤늦은 스냅 무시';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('재접속: resync 가 끊긴 동안의 승/패를 따라잡는다', async()=>{
+    skipIf(typeof onCoopResync!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]); G.activePlayers=[1,2,3,4];
+      onCoopResync({ uid:'u2', num:2, over:null, speed:1, dead:[3], done:[4] });
+      assert(slotState(3)==='dead','놓친 패배를 못 따라잡았다: '+slotState(3));
+      assert(slotState(4)==='done','놓친 승리를 못 따라잡았다: '+slotState(4));
+      return 'P3 dead · P4 done';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('재접속: 네트워크가 돌아오면 재시도 상한이 풀린다', async()=>{
+    skipIf(typeof coopReconnect!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]);
+      _coopRetryN=5;   // 상한에 걸린 상태 — 이걸 안 풀면 coopReconnect 가 즉시 return 해서 영영 재접속이 안 된다
+      window.dispatchEvent(new Event('online'));
+      assert(_coopRetryN===0,'online 인데 재시도 카운터가 안 풀렸다: '+_coopRetryN);
+      return '카운터 리셋';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; _coopRetryN=0; } });
+
+  await step('재접속: 끊긴 사람은 보스 권위자가 되지 않는다', async()=>{
+    skipIf(typeof coopAuthNum!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]); G.myPlayer=2; G.curPlayer=2;   // 최저 번호(1)가 내가 아닌 상황
+      assert(coopAuthNum()===1,'준비 실패 — 권위자가 1이어야 한다: '+coopAuthNum());
+      onCoopPlayerLeft({ uid:'me', nick:'P1' });     // 1번이 끊긴다
+      assert(slotState(1)==='away','준비 실패: '+slotState(1));
+      assert(coopAuthNum()===2,'끊긴 사람이 권위를 쥐고 있다(보스 동기화가 멈춘다): '+coopAuthNum());
+      return '권위 1 → 2 승계';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('대역폭: 관전자가 없으면 전장 데이터를 안 보낸다', async()=>{
+    skipIf(typeof coopBroadcastState!=='function','coopBroadcastState 없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      const cap=[]; _coopStub(cap);
+      G.round=20; for(let i=0;i<120;i++) spawnEnemy({}); G.pendSpawn.splice(0).forEach(ps=>G.enemies.push(ps.e));
+      for(let i=0;i<30;i++) G.units.push(initUnitStats({uid:G.idSeq++, id:'marine', hero:false, lv:1, x:.2+i/100, y:.3, cd:0}));
+      G._pstateN=0; G.coopWatchers={};
+      cap.length=0; for(let i=0;i<5;i++) coopBroadcastState();
+      assert(cap.length===1,'관전자가 없는데 5틱 중 '+cap.length+'번 보냈다(500ms 주기여야 한다)');
+      const light=JSON.stringify(cap[0]).length;
+      assert(!cap[0].payload.u && !cap[0].payload.e,'관전자가 없는데 전장 데이터를 실었다');
+      G.coopWatchers={ u2:1 };
+      G._pstateN=0; cap.length=0; for(let i=0;i<5;i++) coopBroadcastState();
+      assert(cap.length===5,'관전 중인데 5틱 중 '+cap.length+'번만 보냈다(10Hz 여야 한다)');
+      const full=JSON.stringify(cap[0]).length;
+      assert(cap[0].payload.u && cap[0].payload.e,'관전 중인데 전장 데이터가 없다');
+      assert(light<1000,'가벼운 페이로드가 너무 크다: '+light+'B');
+      assert(full>light*3,'관전 유무로 페이로드가 안 갈린다: '+light+' vs '+full);
+      return light+'B(무관전) vs '+full+'B(관전) · '+Math.round(100-light/full*100)+'% 절감';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('대역폭: 보스 데미지는 합산해서 보낸다', async()=>{
+    skipIf(typeof coopBossDamage!=='function','coopBossDamage 없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      const cap=[]; _coopStub(cap);
+      G.coopBoss={ lv:1, hp:1e9, max:1e9, dead:false, name:'t' };
+      cap.length=0;
+      for(let i=0;i<20;i++) coopBossDamage(10, 1, false);
+      coopBossDmgFlush();
+      const sends=cap.filter(m=>m.event==='bossdmg');
+      assert(sends.length<=2,'20번 때렸는데 '+sends.length+'번 보냈다(합산이 안 된다)');
+      const sum=sends.reduce((a,m)=>a+(m.payload.amt||0),0);
+      assert(Math.abs(sum-200)<0.001,'합산 데미지가 어긋난다: '+sum+' ≠ 200');
+      return '20타 → '+sends.length+'건 · 합계 '+sum;
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('관전 렌더: 죽은/빈 자리에 내 유닛이 새지 않는다', async()=>{
+    skipIf(typeof renderEmptySlot!=='function','renderEmptySlot 없음');
+    const src=String((typeof loop==='function')?loop:'');   // 프레임 루프(js/14-input-fx.js loop)
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]);
+      G.round=3; for(let i=0;i<5;i++) spawnEnemy({}); G.pendSpawn.splice(0).forEach(ps=>G.enemies.push(ps.e));
+      G.units.push(initUnitStats({uid:G.idSeq++, id:'marine', hero:false, lv:1, x:.3, y:.3, cd:0}));
+      const nu=G.units.length, ne=G.enemies.length;
+      // 그리는 **순간** 내 유닛/적이 실려 있는지가 핵심이다 — drawMain 을 잠깐 가로채 확인한다
+      let seen=null; const keepDraw=window.drawMain;
+      window.drawMain=function(id){ seen={ u:G.units.length, e:G.enemies.length, s:G.shots.length, id:id }; };
+      try{ renderEmptySlot(); } finally{ window.drawMain=keepDraw; }
+      assert(seen,'renderEmptySlot 이 전장을 그리지 않았다');
+      assert(seen.id==='cvPlayer','관전 캔버스가 아님: '+seen.id);
+      assert(seen.u===0 && seen.e===0 && seen.s===0,'빈 자리를 그리는데 내 유닛/적이 실려 있다: u='+seen.u+' e='+seen.e);
+      assert(G.units.length===nu && G.enemies.length===ne,'빈 자리를 그린 뒤 내 전장이 복구되지 않았다');
+      assert(/renderEmptySlot/.test(src),'프레임 루프에 죽은 자리 분기가 없다 — drawPlayer() 로 떨어지면 내 전장이 그려진다');
+      return '내 전장 원상복구 · 루프 분기 있음';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  // ══ 판 저장/복구 — 탭이 죽어도 30초는 이어진다 ══════════════════════
+  await step('판 저장: 숨는 순간 저장되고, 복구하면 그대로 이어진다', async()=>{
+    skipIf(typeof saveRun!=='function' || typeof tryRestoreRun!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]); G.round=7; G.mineral=1234; G.kills=55; G.timeSec=90;
+      for(let i=0;i<5;i++) spawnEnemy({}); G.pendSpawn.splice(0).forEach(ps=>G.enemies.push(ps.e));
+      G.units.push(initUnitStats({uid:G.idSeq++, id:'marine', hero:false, lv:2, x:.3, y:.3, cd:0}));
+      const want={ round:G.round, mineral:G.mineral, kills:G.kills, u:G.units.length, e:G.enemies.length };
+      nemoOnHide();                                     // 화면 내림 = 저장
+      assert(_lsGet('nm_run',null),'숨었는데 저장이 안 됐다');
+      G=newGame();                                      // 탭이 죽었다 치고 판을 날린다
+      const ok=tryRestoreRun();
+      assert(ok,'복구가 실패했다');
+      assert(G.round===want.round && G.mineral===want.mineral && G.kills===want.kills,
+        '값이 어긋난다: 라운드 '+G.round+'/'+want.round+' 미네랄 '+G.mineral+'/'+want.mineral);
+      assert(G.units.length===want.u && G.enemies.length===want.e,
+        '유닛·적이 어긋난다: '+G.units.length+'/'+want.u+' · '+G.enemies.length+'/'+want.e);
+      assert(!_lsGet('nm_run',null),'복구 후 저장본이 남아 있다(다음 부팅에 또 복구된다)');
+      return '라운드 '+G.round+' · 미네랄 '+G.mineral+' · 유닛 '+G.units.length+' · 적 '+G.enemies.length;
+    } finally { G=keepG; if(keepMap) MAP=keepMap; clearRun(); } });
+
+  await step('판 저장: 30초를 넘긴 저장본은 복구하지 않고 버린다', async()=>{
+    skipIf(typeof tryRestoreRun!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]); G.round=7;
+      nemoOnHide();
+      const sv=_lsGet('nm_run',null); assert(sv,'준비 실패');
+      sv.t=Date.now()-45000; _lsSet('nm_run', sv);      // 45초 전으로 되돌린다
+      G=newGame();
+      const ok=tryRestoreRun();
+      assert(!ok,'30초를 넘겼는데 복구했다');
+      assert(G.round===1,'판이 남아 있다: 라운드 '+G.round);
+      assert(!_lsGet('nm_run',null),'버렸는데 저장본이 남아 있다');
+      // 판이 끝나면 저장본을 지운다 — 끝난 판을 복구하면 안 된다
+      assert(/clearRun\(\)/.test(String(overlayToLobby)),'overlayToLobby 가 저장본을 안 지운다');
+      return '45초 → 복구 안 함 · 저장본 삭제';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; clearRun(); } });
+
+  await step('판 저장: 깨진 저장본이 부팅을 막지 않는다', async()=>{
+    skipIf(typeof tryRestoreRun!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _lsSet('nm_run', { t:Date.now(), g:'{{{망가진 JSON', mapId:'nemo' });
+      let threw=false, ok=true;
+      try{ ok=tryRestoreRun(); }catch(e){ threw=true; }
+      assert(!threw,'깨진 저장본에서 예외가 났다 — 부팅이 멈춘다');
+      assert(!ok,'깨진 저장본으로 복구했다고 한다');
+      assert(!_lsGet('nm_run',null),'깨진 저장본이 남아 있다 — 다음 부팅도 같은 곳에서 걸린다');
+      return '예외 없음 · 저장본 삭제';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; clearRun(); } });
 }
 
 // ── 그룹: sandbox (관리자) ──
