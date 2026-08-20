@@ -71,8 +71,9 @@ async function groupLobby(){
     assert(visible($('authHub')),'로그인 방식 허브가 안 보임');
     assert(!visible($('authForm')),'허브인데 입력 폼이 이미 떠 있음');
     assert(visible($('authGuest')),'허브에 게스트 시작 버튼이 없음');
-    assert($('wayGoogle').classList.contains('lock'),'Google 버튼이 잠김 표시가 아님(대시보드 설정 전까지는 잠겨 있어야 한다)');
-    authWayLocked(); assert(visible($('authHub')),'잠긴 방식을 눌렀는데 화면이 넘어감');
+    // ⭐ Google 도 '되는 방식'으로 보인다(2026-08-20) — 곧 연동하므로 잠금 표기를 뺐다.
+    assert(!$('wayGoogle').classList.contains('lock'),'Google 에 잠금 표기가 되살아남');
+    authWayLocked(); assert(visible($('authHub')),'Google 을 눌렀는데 화면이 넘어감');
     // 아이디를 고르면 폼으로
     authOpenForm('id');
     assert(!visible($('authHub')) && visible($('authForm')),'아이디를 골랐는데 폼이 안 열림');
@@ -83,25 +84,40 @@ async function groupLobby(){
     assert($('authId').type==='email','이메일 방식인데 첫 칸이 email 타입이 아님: '+$('authId').type);
     assert(document.querySelectorAll('#auth input[type=password]').length===2,'비밀번호 칸이 폼마다 복제됨');
     authBackToHub(); assert(visible($('authHub')),'뒤로가기가 허브로 안 돌아감');
-    // ⚠ authShowHub 는 라벨을 다시 그린다 — 번호(.awIx)·화살표(.awAr)까지 지우면 행이 무너진다.
-    //   (옛 코드가 innerHTML 을 통째로 덮어쓰고 있었다)
-    assert($('wayId').querySelector('.awIx') && $('wayId').querySelector('.awAr'),
-      '허브로 돌아오니 행 번호/화살표가 사라짐: '+$('wayId').innerHTML);
+    assert($('wayId').textContent.trim()==='아이디로 로그인',
+      '허브로 돌아오니 라벨이 무너짐: '+JSON.stringify($('wayId').textContent));
     // ══ 🎬 시네마틱 행 목록 (2026-08-19 · C4) ══════════════════════════════════
     //   ⚠ 이 검사들은 **허브가 보이는 동안** 해야 한다 — 폼을 열면 허브가 display:none 이라
     //      getBoundingClientRect() 가 전부 0 이 되고, '가운데를 벗어남 11%' 같은 헛 실패가 난다(실제로 그랬다).
-    { // ① 블록은 화면 가운데 근처, 정중앙보다는 위(광학적 중앙)
+    { // ① 블록은 화면 '아래'에 있다 — 새 키 아트는 가운데에 주인공이 몰려 있어 거기를 덮으면 안 된다
       var sc=$('auth').getBoundingClientRect(), bl=document.querySelector('.authIn').getBoundingClientRect();
       var mid=((bl.top+bl.bottom)/2-sc.top)/sc.height*100;
-      assert(mid>38 && mid<50,'로그인 블록이 광학적 중앙을 벗어남: '+mid.toFixed(1)+'%');
-      // ② 방식은 '행'이다 — 판(면)이 없고 헤어라인으로 갈린다
+      assert(mid>60,'로그인 블록이 아래로 안 내려감(그림의 주인공을 덮는다): '+mid.toFixed(1)+'%');
+      assert(sc.bottom-bl.bottom < sc.height*0.12,
+        '블록이 바닥에서 너무 떠 있음: '+Math.round(sc.bottom-bl.bottom)+'px');
+      // ② 방식은 '행'이다 — 판(면)도 전폭 헤어라인도 없다. 구분은 짧은 가운데 선 하나뿐(M8)
       var w0=getComputedStyle($('wayId'));
       assert(w0.backgroundImage==='none','방식 칸에 판(면)이 되살아남: '+w0.backgroundImage);
-      assert(parseFloat(w0.borderBottomWidth)>0,'방식 칸을 가르는 헤어라인이 없음');
-      assert(document.querySelectorAll('.authWay .awIx').length===3,'행 번호(.awIx)가 3개가 아님');
-      // ③ ⭐ 주 표시는 화면에 하나뿐 — 광원이 둘이면 위계가 무너진다
-      assert(document.querySelectorAll('.authWay.pri').length===1,
-        '주 방식 표시가 1개가 아님: '+document.querySelectorAll('.authWay.pri').length);
+      assert(parseFloat(w0.borderBottomWidth)===0,'전폭 헤어라인이 되살아남(그림을 가로지른다)');
+      { var d=getComputedStyle($('wayEmail'),'::before');
+        assert(d.content && d.content!=='none','행 사이 가운데 선이 없음');
+        assert(parseFloat(d.width) < $('wayEmail').offsetWidth*0.45,
+          '가운데 선이 너무 길다(전폭 선과 다를 게 없어진다): '+d.width+' / '+$('wayEmail').offsetWidth+'px'); }
+      // ③ ⭐ 셋은 같은 무게다 — 번호도 주 방식 표시도 없다
+      assert(document.querySelectorAll('.authWay .awIx').length===0,'행 번호(.awIx)가 되살아남');
+      assert(document.querySelectorAll('.authWay.pri').length===0,'주 방식 표시(.pri)가 되살아남');
+      { var W=[...document.querySelectorAll('.authWay')].filter(visible);
+        assert(W.length===3,'방식이 3개가 아님: '+W.length);
+        var k=W.map(function(w){ var c=getComputedStyle(w); return c.color+'|'+c.fontSize+'|'+c.fontWeight; });
+        assert(k[0]===k[1] && k[1]===k[2],'셋의 무게가 다름: '+k.join(' / ')); }
+      // ④ 로고 블록 = 부팅 로딩과 같은 것 — 두 화면이 한 장면으로 이어진다
+      { var t=getComputedStyle(document.querySelector('.authLogo')), o=getComputedStyle(document.querySelector('.opTitle'));
+        assert(t.fontFamily===o.fontFamily && t.fontSize===o.fontSize,
+          '로그인 제목이 로딩 제목과 다름: '+t.fontFamily+' '+t.fontSize+' vs '+o.fontFamily+' '+o.fontSize);
+        assert(!/rgb\(255, 59, 59\)/.test(t.color),'제목에 빨강이 섞임(로딩은 흰 단색이다): '+t.color);
+        assert(document.querySelector('.authMark svg'),'로고 육각 마크가 없음');
+        assert($('authSub').textContent.trim()==='BATTLE ARENA',
+          '부제가 로고의 일부가 아님(안내 문구로 덮였다): '+$('authSub').textContent); }
       // ④ ⭐ 게스트는 판을 갖지 않는다 — 밑변 광원은 주 버튼의 서명이라
       //    게스트에 붙으면 "기본 동작은 게스트"가 된다(2026-08-19 정리).
       var gs=getComputedStyle($('authGuest'));
