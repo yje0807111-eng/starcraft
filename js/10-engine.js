@@ -444,6 +444,37 @@ function drawProd(){ const {ctx,W,H}=setup('cvUnit'); drawShopBg(ctx,W,H);
 }
 // 업그레이드 플랫폼 — 통일 타일(우주 정거장 금속) 라운드 사각, 우주에 떠 있는 느낌
 // (삭제) 업그레이드 가동 파티클(UPG_EMIT/drawUpgFx) — 건물 화면 폐지로 제거.
+// ══ 화면이 꺼져 있던 시간 — 따라잡기 / 판 포기 ═══════════════════════
+// loop() 의 dt 는 100ms 로 잘려 있다. 그래서 탭이 숨겨져 있던 동안 게임 시간은 흐르지 않고
+// 돌아오면 그 자리에서 이어졌다. 이제는 **그 시간을 실제로 돌린다** — 그동안 명령을 못 냈으니
+// 적이 쌓인 채로 이어받는다(실측: 30초치 ≈ 1,800스텝 ≈ 0.2초).
+// AWAY_MS(30초)를 넘기면 실수가 아니라 의도적 이탈로 본다 — 보상도 기록도 없이 로비로.
+//   ⚠ 이 한계는 상대가 내 자리를 잡아 두는 시간(killSlot 대기)과 **같은 값**이어야 한다.
+let _hiddenAt=0;
+function nemoRunning(){ return !!(typeof G!=='undefined' && G && G.phase==='playing' && !G.sandbox && !G.strike); }
+function nemoOnHide(){ if(!nemoRunning()) return; _hiddenAt=Date.now(); }
+function nemoOnShow(){ const t=_hiddenAt; _hiddenAt=0;
+  if(!t || !nemoRunning()) return;
+  const away=Date.now()-t;
+  if(away>AWAY_MS){ abandonRun(away); return; }
+  nemoCatchUp(away); }
+// 숨겨져 있던 만큼 시뮬을 몰아서 돌린다. 배속을 곱해야 실제로 흐른 게임 시간과 같아진다.
+function nemoCatchUp(ms){ if(!nemoRunning()) return;
+  const dt=1/60, cap=AWAY_MS/1000;
+  const secs=Math.min(ms/1000, cap)*(G.speedMul||1);
+  const n=Math.round(secs/dt); if(n<6) return;   // 0.1초 미만은 원래 루프가 삼킨다
+  const e0=G.enemies.length, r0=G.round;
+  G._catchUp=true;   // 따라잡는 동안 효과음을 끈다 — 1,800스텝치가 한꺼번에 터진다(채팅은 남긴다: 무슨 일이 있었는지 읽을 수 있게)
+  try{ for(let i=0;i<n;i++){ if(!nemoRunning()) break; if(typeof tickResearch==='function') tickResearch(dt); step(dt); } }
+  finally{ G._catchUp=false; }
+  if(typeof addChat==='function') addChat('', '⏱ 자리를 비운 '+Math.round(ms/1000)+'초를 따라잡았습니다 — 라운드 '+r0+'→'+G.round+' · 적 '+e0+'→'+G.enemies.length+'기', '#ffd24a', true); }
+// 30초를 넘겨 돌아왔다 = 의도적 이탈. 보상도, 판 기록도 없다.
+function abandonRun(ms){ if(typeof G==='undefined'||!G) return;
+  if(typeof coopSend==='function') coopSend('bye', { num:G.myPlayer||1, nick:(typeof myNick==='function')?myNick():'' });   // 남들은 기다리지 말고 바로 지운다
+  G._pointsBanked=true; G._bankedAmt=0; G._runSum=null;   // 정산 차단 — 이 판은 없던 것으로(포인트·기록·일일 계측 전부)
+  G.phase='quit';
+  if(typeof toast==='function') toast('⚠️ '+Math.round(ms/1000)+'초 넘게 자리를 비워 판에서 나왔습니다 — 보상과 기록이 없습니다');
+  if(typeof overlayToLobby==='function') overlayToLobby(); }   // 결과창을 거치지 않는다(_runSummary 가 돌면 판으로 인정된다)
 // ══ 게임 종료 — 승/패 공통 단일 출구 ══════════════════════════════
 // ⚠ 상대에게 알리지 않으면 상대 화면에서 내가 **영원히 살아 있는 것으로** 보인다
 //   (내 브로드캐스트는 phase!=='playing' 이면 멈추므로 마지막 값에 얼어붙는다).

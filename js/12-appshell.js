@@ -1336,7 +1336,8 @@ const SFX_GAIN = { buy_unit:0.38, enemy_spawn:1.2, death_terran:0.3, death_zerg:
   attack_dragoon:0.30, attack_archon:0.30, attack_photon:0.30,                                  // 프로토스 공격음(조금 키움)
   attack_ghost:0.14, attack_marine:0.14, attack_goliath:0.14, attack_turret:0.14 };             // 테란 공격음(조금 줄임). 기타 기본 0.18
 // 종류별 재생. 파일 없으면: UI(ui_*)는 클릭음으로 폴백, 게임 이벤트는 무음(파일 추가 시 자동 활성화).
-function playSfx(name){ if(typeof name==='string' && name.indexOf('ui_')===0) hapt(9);   // 햅틱은 소리보다 먼저 — 음소거여도 진동은 남는다
+function playSfx(name){ if(typeof G!=='undefined' && G && G._catchUp) return;   // 따라잡는 중: 수십 개가 한꺼번에 터진다
+  if(typeof name==='string' && name.indexOf('ui_')===0) hapt(9);   // 햅틱은 소리보다 먼저 — 음소거여도 진동은 남는다
   const g=(SFX_GAIN[name]!=null)?SFX_GAIN[name]:((typeof name==='string'&&name.indexOf('attack_')===0)?0.18:1);
   const v=_sfxVol()*g; if(v<=0) return;
   if(!_sfx.ctx) _sfxInit(); const ctx=_sfx.ctx; if(!ctx) return;
@@ -2002,8 +2003,11 @@ function coopReconnect(){ if(!G || G.phase!=='playing' || !G.coopSlotInfo) retur
 window.addEventListener('offline', ()=>{ if(typeof toast==='function') toast('⚠️ 네트워크 연결이 끊겼습니다'); });
 document.addEventListener('visibilitychange', ()=>{   // 백그라운드 탭: 10Hz 송신 정지(대역·배터리 절약), 복귀 시 재개
   if(document.hidden){ if(typeof profStampSeen==='function') profStampSeen();   // 🧍 숨김 = 방치 시각 스탬프(오프라인 정산 기준)
+    if(typeof nemoOnHide==='function') nemoOnHide();   // 유즈맵 판: 자리 비운 시각 기록(돌아올 때 따라잡기/판 포기 판정)
     if(typeof G!=='undefined' && G && G.coopStateT){ clearInterval(G.coopStateT); G.coopStateT=null; } }
-  else if(typeof G!=='undefined' && G && !G.coopStateT && typeof coopActive==='function' && coopActive()){ G.coopStateT=setInterval(coopBroadcastState, 100); } });
+  else {
+    if(typeof nemoOnShow==='function') nemoOnShow();   // ⚠ 먼저 부른다 — 30초 초과면 여기서 판을 접고 로비로 간다
+    if(typeof G!=='undefined' && G && !G.coopStateT && typeof coopActive==='function' && coopActive()){ G.coopStateT=setInterval(coopBroadcastState, 100); } } });
 window.addEventListener('online', ()=>{ if(typeof toast==='function') toast('✓ 네트워크가 다시 연결되었습니다');
   _coopRetryN=0;   // ⚠ 리셋하지 않으면 상한(5회)에 걸린 채라 coopReconnect 가 즉시 return 한다 — 네트워크가 돌아와도 영영 재접속이 안 됐다
   if(G && G.phase==='playing' && G.coopSlotInfo && !coopActive()) coopReconnect();

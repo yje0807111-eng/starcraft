@@ -6346,6 +6346,72 @@ async function groupGame(){
       return '최초 +50 · 재접속 +0';
     } finally { G=keepG; if(keepMap) MAP=keepMap; window.metaBonus=keepMB; } });
 
+  // ══ 자리 비움 — 따라잡기(30초 이내) / 판 포기(초과) ═══════════════════
+  await step('따라잡기: 자리 비운 시간만큼 게임이 실제로 진행된다', async()=>{
+    skipIf(typeof nemoCatchUp!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]); G.round=11; G.speedMul=1;   // ⚠ 10·20·30 은 보스 라운드라 일반 적이 안 나온다
+      // ⚠ 스모크의 step(name,fn) 이 게임 step(dt) 을 가린다 → window.step 으로 부른다
+      if(typeof beginActivePhase==='function') beginActivePhase();   // 전투 단계여야 적이 유입된다
+      for(let i=0;i<60;i++) window.step(1/60);       // 자리 잡기
+      const t0=G.timeSec||0, e0=G.enemies.length;
+      nemoCatchUp(10000);                            // 10초 자리 비움
+      const dtSec=(G.timeSec||0)-t0;
+      assert(dtSec>8 && dtSec<12,'게임 시간이 10초만큼 안 흘렀다: '+dtSec.toFixed(1)+'초');
+      assert(G.enemies.length>e0,'따라잡았는데 적이 안 쌓였다: '+e0+'→'+G.enemies.length);
+      assert(!G._catchUp,'따라잡기 플래그가 안 꺼졌다');
+      return '+'+dtSec.toFixed(1)+'초 · 적 '+e0+'→'+G.enemies.length+'기';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('따라잡기: 배속을 곱해야 실제로 흐른 게임 시간과 맞는다', async()=>{
+    skipIf(typeof nemoCatchUp!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]); G.round=10; G.speedMul=2;
+      if(typeof beginActivePhase==='function') beginActivePhase();
+      for(let i=0;i<60;i++) window.step(1/60);
+      const t0=G.timeSec||0;
+      nemoCatchUp(10000);                            // 2배속에서 10초 = 게임 시간 20초
+      const dtSec=(G.timeSec||0)-t0;
+      assert(dtSec>17 && dtSec<23,'2배속 보정이 안 됐다: '+dtSec.toFixed(1)+'초 (20초 근처여야 한다)');
+      return '2배속 10초 → 게임 '+dtSec.toFixed(1)+'초';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('자리 비움 30초 초과: 보상도 기록도 없이 로비로', async()=>{
+    skipIf(typeof abandonRun!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    const keepLobby=window.overlayToLobby;
+    let wentLobby=false; window.overlayToLobby=function(){ wentLobby=true; };   // 화면 전환은 막고 호출만 본다
+    try{
+      _coopStub([]); G.round=10; G.points=999; G._pointsBanked=false; G._bankedAmt=0; G._runSum=null;
+      abandonRun(45000);
+      assert(wentLobby,'로비로 안 갔다');
+      assert(G.phase==='quit','판이 안 끝났다: '+G.phase);
+      assert(G._runSum===null,'판 요약이 만들어졌다(판으로 인정됐다)');
+      assert(typeof bankRunPoints!=='function' || bankRunPoints()===0,'보상이 정산됐다: '+bankRunPoints());
+      return 'quit · 정산 0 · 기록 없음';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; window.overlayToLobby=keepLobby; } });
+
+  await step('자리 비움: 30초가 따라잡기와 판 포기를 가른다', async()=>{
+    skipIf(typeof nemoOnShow!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    const keepCatch=window.nemoCatchUp, keepAband=window.abandonRun;
+    let called=null;
+    window.nemoCatchUp=function(ms){ called='catch:'+Math.round(ms/1000); };
+    window.abandonRun =function(ms){ called='abandon:'+Math.round(ms/1000); };
+    try{
+      _coopStub([]);
+      _hiddenAt=Date.now()-20000; called=null; nemoOnShow();
+      assert(called && called.indexOf('catch')===0,'20초인데 따라잡기가 아니다: '+called);
+      _hiddenAt=Date.now()-45000; called=null; nemoOnShow();
+      assert(called && called.indexOf('abandon')===0,'45초인데 판 포기가 아니다: '+called);
+      // 자리를 잡아 두는 시간(상대 화면)과 같은 값이어야 한다
+      assert(AWAY_MS===30000,'경계값이 30초가 아니다: '+AWAY_MS);
+      return '20초=따라잡기 · 45초=판 포기 · 경계 '+(AWAY_MS/1000)+'초';
+    } finally { G=keepG; if(keepMap) MAP=keepMap;
+      window.nemoCatchUp=keepCatch; window.abandonRun=keepAband; _hiddenAt=0; } });
+
   // ══ 재접속 — 끊김(자리 유지)과 일부러 나감(영구)을 구분한다 ═══════════
   await step('재접속: 연결이 끊기면 자리를 잡아 둔다(지우지 않는다)', async()=>{
     skipIf(typeof onCoopPlayerLeft!=='function' || typeof awaySlot!=='function','없음');
