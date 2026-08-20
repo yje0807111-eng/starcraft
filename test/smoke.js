@@ -1956,6 +1956,48 @@ async function groupLobby(){
           assert(Math.abs(r.minD-K.rng)<=12, k+' 가 사거리에서 안 멈췄다: '+Math.round(r.minD)+' vs '+K.rng);
           assert(r.shot>0, k+' 가 사거리 안인데 쏘지 않았다'); }
         else assert(r.minD<=HB_STOP+4, k+'(근접)가 캐릭터에 못 붙었다: '+Math.round(r.minD)); }
+      // ④-b 🚶 유닛 간 회피 조향(엔진 unitAI 와 같은 레시피)이 실제로 겹침을 푸는가.
+      //     ⛔ 함수 존재만 확인하면 안 된다 — 사방에서 몰려오게 해 놓고 **겹친 쌍을 센다**.
+      //     실측: 회피 끔 48쌍 / 켬 11쌍(24기 기준). 미로 경로탐색은 그대로 두고 얹는 보정이다.
+      { assert(typeof hbAvoid==='function','회피 조향(hbAvoid)이 없다');
+        hbHunt().base={tiles:{},open:99}; hbLayoutBase();
+        const c3=_hb.char; c3.x=0; c3.y=0; c3.tx=null; c3.ty=null; c3.hpMax=1e9; c3.hp=1e9; c3.atk=0; c3.range=1; c3.regen=0;
+        const K3=HB_FOE_KIND.grunt, N=24;
+        _hb.foes.length=0; _hb.pend.length=0;
+        for(let i=0;i<N;i++){ const a=i/N*Math.PI*2;
+          _hb.foes.push({kind:'grunt',ico:'x',mdl:null,x:Math.cos(a)*260,y:Math.sin(a)*260,
+            hp:1e9,hpMax:1e9,atk:0,spd:K3.spd,sz:K3.sz,rng:0,way:'ground',rw:K3.rw,cdT:9e9,elite:false}); }
+        for(let i=0;i<300;i++){ _hb.phase='fight'; _hb.waveT=99; hbStep(0.05); }
+        let ov=0; const F=_hb.foes;
+        for(let i=0;i<F.length;i++) for(let j=i+1;j<F.length;j++)
+          if(Math.hypot(F[i].x-F[j].x,F[i].y-F[j].y) < hbFoeR(F[i])+hbFoeR(F[j])) ov++;
+        _hb.foes.length=0;
+        assert(ov<=25, N+'기가 몰렸을 때 겹친 쌍 '+ov+' — 회피 조향이 안 듣는다(끄면 48쌍 수준)'); }
+      // ④-c 🧱 배치 격자는 **지으려는 건물 둘레 한 칸까지만**. 화면 전체에 깔면 전장이 안 보인다.
+      //     ⛔ 함수 소스를 정규식으로 훑지 말 것 — 주석만 남아도 통과한다(그런 검사를 이미 두 번 걷어냈다).
+      //     캔버스 호출을 받아 적어 **격자선이 실제로 그려진 범위**를 잰다.
+      { assert(typeof hbDrawGrid==='function' && typeof HB_GRID_PAD!=='undefined','배치 격자 그리기가 없다');
+        const rec=[]; let clipped=false, filled=0;
+        const stub={ save(){}, restore(){}, beginPath(){}, stroke(){}, clip(){ clipped=true; },
+          rect(){}, fillRect(){ filled++; }, strokeRect(){}, ellipse(){}, arc(){}, fill(){},
+          moveTo(x,y){ rec.push([x,y]); }, lineTo(x,y){ rec.push([x,y]); },
+          set strokeStyle(v){}, set fillStyle(v){}, set lineWidth(v){}, set globalAlpha(v){}, set font(v){} };
+        const armSave=_hb.arm;
+        _hb.arm={ k:(HB_STRUCT.wall?'wall':Object.keys(HB_STRUCT)[0]), gx:2, gy:1 };
+        try{
+          hbDrawGrid(stub, _hb);
+          assert(rec.length>0,'격자선을 하나도 안 그렸다');
+          assert(clipped,'격자를 클립 없이 그린다 — 범위를 좁히는 장치가 없다');
+          const B=HB_STRUCT[_hb.arm.k]||{w:1,h:1};
+          const gx=hbTx(_hb.arm.gx)-HB_TILE/2, gy=hbTx(_hb.arm.gy)-HB_TILE/2;
+          // 허용 범위 = 건물 자리 + 여백 칸 + 한 칸 여유(격자선이 칸 경계에 스냅되므로)
+          const okX0=gx-(HB_GRID_PAD+1)*HB_TILE, okX1=gx+B.w*HB_TILE+(HB_GRID_PAD+1)*HB_TILE;
+          const okY0=gy-(HB_GRID_PAD+1)*HB_TILE, okY1=gy+B.h*HB_TILE+(HB_GRID_PAD+1)*HB_TILE;
+          let out=0, far=0;
+          for(const [px,py] of rec){ if(px<okX0-0.5||px>okX1+0.5||py<okY0-0.5||py>okY1+0.5){ out++;
+            far=Math.max(far, Math.max(Math.abs(px-gx), Math.abs(py-gy))); } }
+          assert(out===0,'격자가 건물 둘레 '+HB_GRID_PAD+'칸을 벗어나 그려진다('+out+'점 · 최대 '+far.toFixed(0)+'px) — 화면 전체에 깔고 있다');
+        } finally { _hb.arm=armSave; } }
       // ⑤ 크기 — 중장갑 > 기본 > 돌격. 화면에서 역할이 구분되는 근거다
       assert(HB_FOE_KIND.brute.sz > HB_FOE_KIND.grunt.sz && HB_FOE_KIND.grunt.sz > HB_FOE_KIND.runner.sz,
         '크기 서열이 중장갑>기본>돌격 이 아니다');

@@ -1105,6 +1105,29 @@ function hbEdgeSpawn(ca,sa){
     const sc=(hbTx(c[0])*ca+hbTx(c[1])*sa);        // 요청 방향과 가장 잘 맞는 테두리 칸
     if(sc>bd){ bd=sc; best=c; } }
   return best? [hbTx(best[0]),hbTx(best[1])] : [0,0]; }
+// 🚶 유닛 간 회피 조향 — **관리자/유즈맵 엔진(unitAI)과 같은 레시피**를 사냥터 좌표계로 옮긴 것.
+//   반발만 주면 서로 밀며 뭉치고, 전방을 막은 놈은 영영 못 지나간다. 그래서 두 겹이다:
+//     ① 반발  가까울수록 서로 밀어낸다
+//     ② 접선  **진행 방향 앞을 막고 있을 때만** 옆으로 돌아간다(비켜 지나가는 움직임)
+//   ⛔ 미로 경로탐색(hbFieldDir/hbSlide)을 대체하는 게 아니다 — 그 위에 얹는 보정이다.
+//     벽·기지·미로는 그대로 두고, 유닛끼리 겹치는 것만 푼다.
+const HB_AVOID_MUL=2.4;     // 회피 반경 = (내 반지름+상대 반지름) × 이 값 (엔진과 같은 계수)
+const HB_AVOID_TAN=1.6;     // 접선(옆으로 비키기) 세기 — 엔진과 같은 값
+const HB_AVOID_FWD=0.25;    // '내 앞을 막고 있다' 판정(진행 방향과의 내적)
+function hbFoeR(f){ return 9*((f&&f.sz)||1); }              // 충돌 반지름 = 크기에 비례(중장갑은 넓게 자리를 차지)
+function hbAvoid(f, dirx, diry){ const S=_hb; if(!S) return [dirx,diry];
+  let sx=0, sy=0; const myR=hbFoeR(f);
+  for(const o of S.foes){ if(o===f) continue;
+    const ox=o.x-f.x, oy=o.y-f.y, od=Math.hypot(ox,oy);
+    const aR=(myR+hbFoeR(o))*HB_AVOID_MUL;
+    if(od<=0.01 || od>=aR) continue;
+    const w=1-od/aR, nx=ox/od, ny=oy/od;
+    sx-=nx*w; sy-=ny*w;                                       // ① 반발
+    if(nx*dirx+ny*diry>HB_AVOID_FWD){                         // ② 앞을 막았을 때만 접선으로
+      const tnx=-diry, tny=dirx, side=(tnx*ox+tny*oy)>=0?-1:1;
+      sx+=tnx*side*w*HB_AVOID_TAN; sy+=tny*side*w*HB_AVOID_TAN; } }
+  const mx=dirx+sx, my=diry+sy, ml=Math.hypot(mx,my)||1;
+  return [mx/ml, my/ml]; }
 function hbPlaceFoe(proto){ const S=_hb;
   const a=Math.random()*Math.PI*2, ca=Math.cos(a), sa=Math.sin(a);
   const k=S.k||1;                                                        // 화면 경계를 월드 단위로 환산
@@ -1587,12 +1610,13 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char;
     if(!stop){ const sp=f.spd*spdMul*dt;
       // 벽은 부수지 않고 반드시 돌아간다. 목표가 캐릭터면 공용 거리장을, 벙커면 그 벙커용을 쓴다.
       let ux=dx/d, uy=dy/d;
-      if(ghost){ f.x+=ux*sp; f.y+=uy*sp; }                   // 👻✈️ 벽을 통과 — 거리장도 hbSlide 도 타지 않는다
-      else{
-        if(!hbLineClear(f.x,f.y,tg.x,tg.y)){                  // 가리는 게 있을 때만 우회 — 열린 곳에선 직진(각도가 자연스럽다)
-          const fd=(tg===c) ? hbFieldDir(S.foeF, f.x, f.y) : hbFieldDir(hbBunkerField(bk), f.x, f.y);
-          if(fd){ ux=fd[0]; uy=fd[1]; } }
-        hbSlide(f, ux*sp, uy*sp); }
+      if(!ghost && !hbLineClear(f.x,f.y,tg.x,tg.y)){          // 가리는 게 있을 때만 우회 — 열린 곳에선 직진(각도가 자연스럽다)
+        const fd=(tg===c) ? hbFieldDir(S.foeF, f.x, f.y) : hbFieldDir(hbBunkerField(bk), f.x, f.y);
+        if(fd){ ux=fd[0]; uy=fd[1]; } }
+      const st=hbAvoid(f, ux, uy);                            // 🚶 유닛끼리는 밀치지 않고 옆으로 비켜 간다(공용 레시피)
+      ux=st[0]; uy=st[1];
+      if(ghost) { f.x+=ux*sp; f.y+=uy*sp; }                   // 👻✈️ 벽을 통과 — 거리장도 hbSlide 도 타지 않는다(회피는 한다)
+      else hbSlide(f, ux*sp, uy*sp);
       f.face=Math.atan2(ux, uy); f.mv=1; }            // ⚠ 게임과 같은 식: atan2(dx,dy). -dy로 쓰면 모델이 정반대를 본다
     else{ f.mv=0; f.face=Math.atan2(dx/d, dy/d);      // 멈춰 쏠 때도 대상을 본다(등 뒤로 쏘는 것처럼 보이지 않게)
       f.cdT-=dt; if(f.cdT<=0){ f.cdT=1.1;
@@ -1830,21 +1854,27 @@ function hbIcoImg(k){ let im=_hbIco[k];
   return (im&&im.complete&&im.naturalWidth)?im:null; }
 // 격자는 **건설 중일 때만** 보인다 — 평소엔 전장이 격자로 덮여 답답하다.
 // 화면에 보이는 범위만 그린다(맵 전체 30×30을 매 프레임 긋는 것은 낭비다).
+// 🧱 배치 격자 — **화면 전체에 깔지 않는다.** 지으려는 건물 둘레 한 칸까지만, 면 없이 선만 흐리게.
+//   ⛔ 예전엔 보이는 맵 전체를 푸른 면으로 덮고 격자를 다 그렸다 — 전장이 안 보이고 배치할 칸도 눈에 안 띄었다.
+const HB_GRID_PAD=1;                       // 건물 둘레로 더 보여 줄 칸 수
 function hbDrawGrid(x, S){ if(!S.arm) return;
   const R=HB_MAP_R, lw=1/(S.k||1);
-  const hw=(S.w/(S.k||1))/2+HB_TILE, hh=(((S.vBot||S.h)-(S.vTop||0))/(S.k||1))/2+HB_TILE;
-  const x0=Math.max(-R, (S.camX||0)-hw), x1=Math.min(R, (S.camX||0)+hw);
-  const y0=Math.max(-R, (S.camY||0)-hh), y1=Math.min(R, (S.camY||0)+hh);
+  const B=HB_STRUCT[S.arm.k]||{w:1,h:1}, ok=hbArmOk();
+  const gx=hbTx(S.arm.gx)-HB_TILE/2, gy=hbTx(S.arm.gy)-HB_TILE/2;
+  // 건물 자리 + 둘레 한 칸(맵 밖으로는 안 넘어간다)
+  const x0=Math.max(-R, gx-HB_GRID_PAD*HB_TILE), x1=Math.min(R, gx+B.w*HB_TILE+HB_GRID_PAD*HB_TILE);
+  const y0=Math.max(-R, gy-HB_GRID_PAD*HB_TILE), y1=Math.min(R, gy+B.h*HB_TILE+HB_GRID_PAD*HB_TILE);
   x.save();
-  x.fillStyle='rgba(120,180,255,.05)'; x.fillRect(x0,y0,x1-x0,y1-y0);
-  x.strokeStyle='rgba(140,190,255,.13)'; x.lineWidth=lw; x.beginPath();
+  x.beginPath(); x.rect(x0,y0,x1-x0,y1-y0); x.clip();                      // 이 안에만 격자를 그린다
+  x.strokeStyle='rgba(140,190,255,.09)'; x.lineWidth=lw; x.beginPath();    // 면 없이 선만 · 예전(.13)보다 흐리게
   for(let w=Math.ceil(x0/HB_TILE)*HB_TILE; w<=x1; w+=HB_TILE){ x.moveTo(w,y0); x.lineTo(w,y1); }
   for(let w=Math.ceil(y0/HB_TILE)*HB_TILE; w<=y1; w+=HB_TILE){ x.moveTo(x0,w); x.lineTo(x1,w); }
   x.stroke();
-  x.strokeStyle='rgba(140,190,255,.30)'; x.lineWidth=lw*1.6;              // 맵 경계
+  x.restore();
+  x.save();
+  x.strokeStyle='rgba(140,190,255,.30)'; x.lineWidth=lw*1.6;              // 맵 경계(격자와 별개 — 어디까지가 맵인지)
   x.strokeRect(-R,-R,R*2,R*2);
-  { const B=HB_STRUCT[S.arm.k]||{w:1,h:1}, ok=hbArmOk();                  // 배치 고스트
-    const gx=hbTx(S.arm.gx)-HB_TILE/2, gy=hbTx(S.arm.gy)-HB_TILE/2;
+  {                                                                        // 배치 고스트(위에서 잰 gx/gy/B/ok 를 그대로 쓴다)
     x.fillStyle=ok?'rgba(124,224,255,.22)':'rgba(255,90,110,.26)';
     x.fillRect(gx,gy,B.w*HB_TILE,B.h*HB_TILE);
     x.strokeStyle=ok?'#7ee0ff':'#ff5a6e'; x.lineWidth=lw*2;
