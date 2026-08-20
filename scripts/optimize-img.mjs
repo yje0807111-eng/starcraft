@@ -3,6 +3,7 @@
 import sharp from 'sharp';
 import fs from 'node:fs';
 import path from 'node:path';
+import { readAllSource } from './_src.mjs';
 
 // [dir, maxSize, quality] — 카테고리별 목표
 const JOBS = [
@@ -17,7 +18,7 @@ const JOBS = [
 ];
 
 // 참조되는 파일만 변환(미참조 데드 에셋은 건드리지 않음)
-const html = fs.readFileSync('sc-ums-web.html','utf8');
+const html = readAllSource();   // sc-ums-web.html + css/ + js/ 전문(분할 이후 단일 입구)
 // 포트레이트는 PORTRAIT_DIR+'파일명'으로 연결되므로 파일명(basename) 기준으로 참조 판정
 function referenced(rel){ const base = rel.split('/').pop(); return html.includes(base); }
 

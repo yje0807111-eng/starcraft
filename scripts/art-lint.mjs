@@ -17,9 +17,10 @@
 //
 // 실행: node scripts/art-lint.mjs      (실패하면 exit 1)
 import fs from 'node:fs';
+import { readAllSource } from './_src.mjs';
 
 const art = fs.readFileSync('ART.md', 'utf8');
-const html = fs.readFileSync('sc-ums-web.html', 'utf8');
+const html = readAllSource();   // sc-ums-web.html + css/ + js/ 전문(분할 이후 단일 입구)
 let fail = 0;
 const bad = (m) => { console.log('  ✗ ' + m); fail++; };
 

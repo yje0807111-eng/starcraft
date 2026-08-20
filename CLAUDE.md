@@ -1,13 +1,15 @@
 # Claude Code Project Guidelines (Superpowers Style)
 
 ## Project Context (this repo)
-- Deliverable: a single self-contained file `sc-ums-web.html` — a mobile StarCraft-style usemap (vanilla JS + inline CSS/HTML, Three.js 3D, Supabase realtime). No build step and **no test framework**.
+- Deliverable: a static file set — `sc-ums-web.html` (markup only, ~900 lines) + **`css/` 5 files** + **`js/` 19 files** — a mobile StarCraft-style usemap (vanilla JS, Three.js 3D, Supabase realtime). No build step and **no test framework**.
+  - **Find the right file first: `ARCHITECTURE.md` §1 파일 지도.** Don't grep the HTML for logic — it holds only markup now.
+  - `js/*.js` are **classic scripts** sharing one global scope, executed in tag order. ⛔ Never reorder the `<script>` tags, never convert them to `type="module"`, and remember declarations hoist **within a file only**.
 - **Read `ARCHITECTURE.md` first** — section map (jump by banner search strings), global state, frame pipeline, M3D API, and a pitfall list. Update it when structure changes.
 - **Read `DESIGN.md` before any visual change** — 확정된 스타일 규칙(각진 SF · 볼륨 3단 · 라운드 0/3/6/9 · 역할별 액센트). 값은 고민하지 말고 표에서 꺼낼 것. **일괄 치환 금지** — 화면을 만지는 김에 그 화면만 체크리스트를 통과시킨다(touch-it-fix-it).
 - **Read `ART.md` before generating any image asset** — 장면 이미지(유즈맵 키 아트·배경)의 모델·비율·프롬프트 템플릿·후처리 규격. **프롬프트를 새로 쓰지 말 것**: 고정 블록 4개를 그대로 복사하고 장면 한 칸만 바꾼다. 세션이 바뀌어도 같은 스타일이 나와야 하므로 이 문서가 단일 소스다. 새로 뽑았으면 §6에 전문을 추가하고 **`node scripts/art-lint.mjs`** 로 규격(고정 블록·금지 표현·맵 표↔`UMAP_BG` 일치)을 확인할 것.
 - **Read `BALANCE.md` before touching any growth/difficulty number** — 성장 축 넷의 역할 · 환생 규칙 · 지금 상수 · **실측 기준선** · 남은 일. ⚠ 값을 바꿨으면 **해석적 추정으로 끝내지 말고** 거기 §4 의 엔진 자동 플레이로 다시 재고 표를 갱신할 것 — 이 프로젝트에서 모델 추정은 여러 번 크게 빗나갔다(회수 시간·손익분기·레벨 간격). *왜 그렇게 설계했는가*는 `ARCHITECTURE.md` 가 단일 소스다.
 - Behavioral verification = **`npm test`** (headless smoke suite: `test/smoke.js` + `test/run-smoke.mjs`, groups lobby/game/sandbox, ~10s) plus browser preview for visuals. Run it after every change; add a `step(...)` when you add a feature. Never claim "done" without it passing.
-- After editing inline JS, **syntax-check** the non-module `<script>` (extract it and `new vm.Script(...)`).
+- After editing JS, **syntax-check** the file you touched: `node --check js/<file>.js` (module file: `node --input-type=module --check`). No more extracting from the HTML.
 - Edit with exact-string replacements; match the surrounding style and line endings.
 - Commit only when asked; end commit messages with the `Co-Authored-By` trailer.
 
