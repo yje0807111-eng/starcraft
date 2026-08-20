@@ -633,15 +633,22 @@ async function groupLobby(){
     // ⚠ 검사가 헛돌지 않게: '마지막 저장 이후에 번 돈'을 만들어 둔다.
     //    라운드 클리어는 이미 saveMeta를 하므로, 클리어 없이 처치만 일으켜야 저장 누락이 드러난다.
     saveMeta();                                   // 기준점 — 여기까지는 저장돼 있다
-    _hb.saveT=0; _hb.foes.length=0; _hb.phase='fight'; _hb.waveT=99;
+    const savedAtBase=localStorage.getItem(metaKey());   // 그 시점의 저장본(아래에서 '저장 안 된 상태'를 되살리는 데 쓴다)
+    // 예약 출현(pend)까지 비워야 창 안에서 다른 적이 튀어나와 처치가 쌓이지 않는다
+    _hb.saveT=0; _hb.foes.length=0; if(_hb.pend) _hb.pend.length=0; _hb.phase='fight'; _hb.waveT=99;
     _hb.char.atk=1e9; _hb.char.range=1e9; _hb.char.cd=.05; _hb.char.cdT=0;   // 확실히 잡도록(사망 부활로 스탯이 돌아와 있다)
     const pcBase=PROF().pcoin;
     _hb.foes.push({ico:'🟢',mdl:'snapper',x:5,y:0,hp:1,hpMax:1,atk:0,spd:0,cdT:9,elite:false});
     for(let i=0;i<60 && PROF().pcoin<=pcBase;i++) hbStep(0.05);
     assert(PROF().pcoin>pcBase,'검사 준비 실패: 처치 보상이 안 들어옴');
+    // ⚠ 이 창 안에서도 자동 저장이 끼어들 수 있다(자동 업그레이드가 코인을 쓰면 saveMeta, 8처치마다 주기 저장 …).
+    //    그러면 '마지막 저장 이후에 번 돈'이 사라져 검사가 헛돌았다(간헐 실패의 정체).
+    //    준비 상태는 **강제로** 만든다 — 저장본을 기준점으로 되돌리면 '번 돈이 아직 안 저장된 상태'가 확정된다.
+    //    ⛔ 여기서 되돌리는 것은 저장본뿐이고 메모리의 PROF() 는 그대로다 — 뒤의 검사(떠날 때 flush)는 그대로 유효하다.
+    if(savedAtBase!=null) localStorage.setItem(metaKey(), savedAtBase);
     { const sv=JSON.parse(localStorage.getItem(metaKey())||'{}');
       assert(((sv.profile&&sv.profile.pcoin)||0)<PROF().pcoin-1e-9,
-        '검사 준비 실패: 이미 저장돼 있어 저장 누락을 잡을 수 없다'); }
+        '검사 준비 실패: 저장본을 되돌렸는데도 저장 누락 상태가 안 만들어짐'); }
     const rd0=_hb.round, kl0=_hb.kills, pc0=PROF().pcoin;
     openMapSelect(); await sleep(60);
     assert(_hb && _hb.on,'홈을 떠났다고 전투가 끝나버림 — 배경 진행이 안 된다');
