@@ -1,0 +1,191 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>로그인 하단 배치 8안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Rajdhani:wght@400;600;700&family=IBM+Plex+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --font-ko:'IBM Plex Sans KR','Apple SD Gothic Neo',sans-serif;
+  --font-num:'Rajdhani','IBM Plex Sans KR',sans-serif;
+  --font-ti:'Jua','Apple SD Gothic Neo',sans-serif;
+  --r-bar:3px; --r-md:6px; --r-lg:9px;
+  --metal-edge:#3c3e46;
+  --neon:#ff3b3b; --neon-d2:#380e0e; --neon-glow:rgba(255,59,59,.45);
+  --ac:rgb(255,59,59); --acRGB:255,59,59;
+  --fs-xs:9.5px; --fs-sm:10px; --fs-md:11px; --fs-lg:12px;
+  --art:url('../../assets/backgrounds/title/boot.webp');
+  --txt-mute:#9aa0a8;
+}
+*{box-sizing:border-box}
+button{margin:0;padding:0;font:inherit;color:inherit;background:none;border:none;cursor:pointer;text-align:left}
+body{margin:0;padding:22px 16px 60px;background:#08090c;color:#ececec;font-family:var(--font-ko)}
+h1{margin:0 0 4px;font-size:19px}
+.lead{margin:0 0 20px;font-size:12.5px;color:var(--txt-mute);line-height:1.65;max-width:900px}
+.lead b{color:#ececec}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;max-width:1020px}
+.cell{min-width:0}
+.cap{display:flex;align-items:baseline;gap:6px;margin:0 0 7px;font-size:12.5px;font-weight:700}
+.cap i{font-style:normal;font-family:var(--font-num);font-size:11px;color:#fff;background:#2a2c33;
+  border:1px solid var(--metal-edge);border-radius:var(--r-bar);padding:1px 5px}
+.cap.now i{background:#1b1d22;color:#8a9099}
+.note{margin:7px 2px 0;font-size:11px;color:var(--txt-mute);line-height:1.62}
+.note b{color:#cfd5dd;font-weight:700}
+/* ── 폰 틀 ── */
+.ph{position:relative;width:300px;height:650px;border-radius:var(--r-lg);overflow:hidden;
+  border:1px solid var(--metal-edge);background:#04050b;display:flex;flex-direction:column}
+.art{position:absolute;inset:0;background:var(--art) center center / cover no-repeat #05070c}
+/* 딤 = 로딩 화면 것 그대로(아래만 덮는다) */
+.dim{position:absolute;inset:0;background:linear-gradient(180deg,
+  rgba(4,6,11,.06) 0%,rgba(4,6,11,.10) 40%,rgba(5,6,10,.62) 74%,rgba(5,6,10,.96) 100%)}
+.gear{position:absolute;right:12px;top:12px;z-index:3;width:26px;height:26px;opacity:.7}
+.gear svg{width:100%;height:100%;fill:#cfd5dd;filter:drop-shadow(0 1px 4px #000)}
+.wrap{position:relative;z-index:2;width:100%;height:100%;display:flex;flex-direction:column;justify-content:flex-end}
+/* ── 로딩 화면에서 그대로 가져온 조각들 ── */
+.opLogo{width:44px;height:44px;margin:0 auto;color:#dbe4ef}
+.opLogo svg{width:100%;height:100%;filter:drop-shadow(0 2px 8px #000)}
+.opTitle{font-family:var(--font-ti);font-weight:400;font-size:31px;letter-spacing:.02em;color:#fff;white-space:nowrap;
+  text-align:center;text-shadow:0 3px 20px #000,0 1px 3px #000;line-height:1.1}
+.opSub{font-family:var(--font-num);font-size:var(--fs-sm);color:#96a1af;letter-spacing:.42em;white-space:nowrap;
+  text-align:center;text-shadow:0 1px 4px #000}
+.opMid{display:flex;flex-direction:column;align-items:center;gap:11px;padding:0 22px 18px}
+.opDock{padding:0 20px 26px}
+.opCnt{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px}
+.opCnt i{font-style:normal;font-size:var(--fs-md);letter-spacing:.2em;color:#8a929c}
+.opBarWrap{width:100%;height:3px;border-radius:2px;background:rgba(255,255,255,.12);overflow:hidden}
+.opBar{height:100%;width:78%;border-radius:var(--r-bar);
+  background:linear-gradient(90deg,var(--neon-d2),var(--neon));box-shadow:0 0 10px var(--neon-glow)}
+/* ── 로그인 행 목록(지금 쓰는 것) ── */
+.hub{display:flex;flex-direction:column;border-top:1px solid rgba(255,255,255,.08)}
+.way{position:relative;display:flex;align-items:center;gap:11px;width:100%;min-height:46px;padding:0 2px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+  font-size:var(--fs-lg);font-weight:700;color:#dfe7f0}
+.ix{flex:none;width:19px;font-style:normal;font-family:var(--font-num);font-size:var(--fs-lg);
+  font-weight:600;letter-spacing:.06em;color:#5c6068}
+.ar{margin-left:auto;font-style:normal;font-family:var(--font-num);font-size:14px;color:#5c6068}
+.way.pri{color:#fff}
+.way.pri .ix{color:var(--ac)}
+.way.pri::after{content:'';position:absolute;left:0;bottom:-1px;width:22px;height:1px;
+  background:var(--ac);box-shadow:0 0 4px rgba(var(--acRGB),.9),0 0 9px rgba(var(--acRGB),.5)}
+.way.lock{color:#7b838e}
+.way.lock .ix{color:#4e5158}
+.tag{margin-left:auto;font-style:normal;font-size:var(--fs-xs);font-weight:700;color:#6f7a88;
+  padding:2px 6px;border:1px solid rgba(255,255,255,.1);border-radius:var(--r-bar)}
+.guest{display:block;width:100%;margin-top:12px;text-align:center;font-size:var(--fs-md);color:#8b97a6}
+.guest u{color:#dfe7f0;text-underline-offset:3px}
+</style>
+
+<h1>로그인 — 하단 배치 8안</h1>
+<p class="lead">여덟 안 모두 <b>로고와 조작을 아래로</b> 내렸다 — 새 키 아트는 가운데 지평선에 폐허 도시·함선이 몰려 있어서
+지금처럼 가운데에 UI를 얹으면 그림의 주인공을 정확히 덮는다.
+스타일은 <b>부팅 로딩에서 그대로 가져왔다</b>: 육각 라인 마크 · 제목 글꼴(Jua) · <b>아래만 까는 딤</b>(가운데를 파던 비네트는 뺐다) ·
+하단 도크(<code>0 20px</code>) · 3px 진행 바 자리. 왼쪽 첫 칸이 <b>지금</b>이다.</p>
+<div class="grid" id="grid"></div>
+
+<script>
+const HEX='<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">'
+ +'<path d="M32 5 55 18.5v27L32 59 9 45.5v-27z"/><path d="M32 19 43 25.5v13L32 45 21 38.5v-13z" opacity=".55"/>'
+ +'<path d="M32 25.5v13M26 29v6M38 29v6" stroke-width="1.2" opacity=".8"/></svg>';
+const GEAR='<svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg>';
+const LOGO_FULL='<div class="opMid"><div class="opLogo">'+HEX+'</div>'
+ +'<div class="opTitle">STAR WAR</div><div class="opSub">BATTLE ARENA</div></div>';
+const WAYS=(cls)=>'<div class="hub'+(cls?' '+cls:'')+'">'
+ +'<button class="way pri"><i class="ix">01</i>아이디로 로그인<i class="ar">›</i></button>'
+ +'<button class="way"><i class="ix">02</i>이메일로 로그인<i class="ar">›</i></button>'
+ +'<button class="way lock"><i class="ix">03</i>Google로 로그인<i class="tag">준비 중</i></button></div>';
+const GUEST='<button class="guest">계정 없이 <u>게스트로 시작</u></button>';
+function phone(inner, extraDim){
+  return '<div class="ph"><div class="art"></div><div class="dim"'+(extraDim?' style="'+extraDim+'"':'')+'></div>'
+    +'<span class="gear">'+GEAR+'</span><div class="wrap">'+inner+'</div></div>';
+}
+const V=[];
+V.push({tag:'지금', now:1, t:'가운데 블록 + 가운데 비네트',
+  d:'로고와 조작이 화면 가운데(46%)에 있고 딤도 <b>가운데를 판다</b>. 새 아트는 그 자리에 도시·함선이 몰려 있어 <b>주인공을 UI가 덮는다</b>. 로딩과 같은 그림인데 두 화면이 다른 물건처럼 보이는 이유이기도 하다.',
+  html:'<div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(2,3,8,.5) 0%,rgba(2,3,8,.12) 14%,rgba(4,5,10,.86) 34%,rgba(4,5,10,.88) 62%,rgba(2,3,8,.18) 84%,rgba(2,3,8,.6) 100%),radial-gradient(78% 44% at 50% 44%,rgba(255,59,59,.1),transparent 70%)"></div>'
+   +'<div style="position:absolute;left:0;right:0;top:50%;transform:translateY(-58%);padding:0 22px">'
+   +'<div class="opTitle" style="font-size:32px;letter-spacing:1.6px">STAR <span style="color:var(--ac)">WAR</span></div>'
+   +'<div class="opSub" style="letter-spacing:.6px;font-family:var(--font-ko);font-size:var(--fs-xs);color:#8b97a6;margin:7px 0 20px">로그인하고 시작하세요</div>'
+   +WAYS()+GUEST+'</div>', raw:1});
+
+V.push({tag:'L1', t:'로딩 그대로 — 로고 블록 + 도크 목록',
+  d:'로딩의 <b>로고 블록(육각 · STAR WAR · BATTLE ARENA)을 자리도 크기도 그대로</b> 두고, 그 아래 도크에 행 목록을 넣었다. 두 화면이 이어져 한 장면처럼 읽힌다. 가장 안전한 안.',
+  html:LOGO_FULL+'<div class="opDock">'+WAYS()+GUEST+'</div>'});
+
+V.push({tag:'L2', t:'진행 바 자리 = 주 버튼',
+  d:'로딩에서 <b>3px 진행 바가 있던 자리</b>에 주 방식 하나를 놓았다. 붉은 광선이 바에서 버튼으로 이어져, 로딩이 끝나면 그 선이 그대로 "누를 것"이 된다. 나머지 둘은 아래 한 줄로 접었다.',
+  html:LOGO_FULL+'<div class="opDock">'
+   +'<div class="opCnt"><i>LOGIN</i><span style="font-family:var(--font-num);font-size:13px;color:#8a929c">01 / 03</span></div>'
+   +'<button class="way pri" style="min-height:44px;border-bottom:none"><i class="ix">01</i>아이디로 로그인<i class="ar">›</i></button>'
+   +'<div class="opBarWrap" style="margin:0 0 14px"><div class="opBar" style="width:100%"></div></div>'
+   +'<div style="display:flex;gap:14px;font-size:var(--fs-md);color:#8b97a6"><span>이메일</span><span>Google <b style="color:#5c6068">준비 중</b></span>'
+   +'<u style="margin-left:auto;color:#dfe7f0;text-underline-offset:3px">게스트</u></div></div>'});
+
+V.push({tag:'L3', t:'LOADING 줄 문법을 그대로',
+  d:'로딩의 <b>「LOADING ─ 89%」 줄</b>을 그대로 빌려 「SIGN IN ─ 03」 머리줄로 쓴다. 그 아래가 행 목록. 진행 바도 자리를 지켜 두 화면의 하단 구조가 같은 자로 찍힌다.',
+  html:LOGO_FULL+'<div class="opDock">'
+   +'<div class="opCnt"><i>SIGN IN</i><div style="font-family:var(--font-num);font-size:23px;font-weight:700;color:#fff">03<s style="text-decoration:none;font-size:14px;color:#7d8792">가지</s></div></div>'
+   +'<div class="opBarWrap" style="margin-bottom:10px"><div class="opBar" style="width:100%"></div></div>'
+   +WAYS()+GUEST+'</div>'});
+
+V.push({tag:'L4', t:'로고를 도크 한 줄로 — 그림을 제일 크게',
+  d:'육각 마크와 제목을 <b>가로 한 줄</b>로 합쳐 도크 맨 위에 얹었다. 세로를 제일 적게 먹어 <b>키 아트가 가장 많이 보인다</b>. BATTLE ARENA는 제목 옆 작은 글자로 붙였다.',
+  html:'<div class="opDock" style="padding-bottom:26px">'
+   +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">'
+   +'<span class="opLogo" style="width:30px;height:30px;margin:0;flex:none">'+HEX+'</span>'
+   +'<span class="opTitle" style="font-size:23px;text-align:left">STAR WAR</span>'
+   +'<span class="opSub" style="margin-left:auto;letter-spacing:.24em;font-size:8.5px">BATTLE ARENA</span></div>'
+   +WAYS()+GUEST+'</div>'});
+
+V.push({tag:'L5', t:'바닥에 붙이고 딤은 아래 30%만',
+  d:'조작을 <b>화면 맨 아래에 완전히 붙이고</b> 딤도 아래 30%만 덮는다. 하늘·지평선이 통째로 살아 있어 <b>여덟 중 그림이 제일 안 가린다</b>. 대신 조작이 홈 인디케이터에 가까워진다.',
+  extraDim:'background:linear-gradient(180deg,rgba(4,6,11,0) 0%,rgba(4,6,11,0) 56%,rgba(5,6,10,.72) 78%,rgba(5,6,10,.98) 100%)',
+  html:'<div class="opDock" style="padding-bottom:14px">'
+   +'<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:10px">'
+   +'<span class="opTitle" style="font-size:22px;text-align:left">STAR WAR</span>'
+   +'<span class="opSub" style="letter-spacing:.2em;font-size:8px">BATTLE ARENA</span></div>'
+   +WAYS()+GUEST+'</div>'});
+
+V.push({tag:'L6', t:'주 버튼 하나 + 나머지는 접는다',
+  d:'도크에 <b>큰 주 버튼 하나</b>와 「다른 방법 · 게스트」 한 줄만 남겼다. 처음 오는 사람은 고를 것이 하나뿐이고, 나머지는 눌러서 편다. 가장 단순하고 그림도 많이 남는다.',
+  html:LOGO_FULL+'<div class="opDock">'
+   +'<button style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:48px;'
+   +'font-family:var(--font-ti);font-size:15px;color:#fff;background:linear-gradient(180deg,rgba(255,59,59,.20),rgba(255,59,59,.06));'
+   +'border:1px solid rgba(255,59,59,.55);border-radius:var(--r-bar);'
+   +'box-shadow:inset 1px 1px 0 rgba(255,255,255,.18),inset -1px -1px 0 rgba(0,0,0,.5),0 0 14px -6px var(--neon)">아이디로 로그인</button>'
+   +'<div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-top:13px;font-size:var(--fs-md);color:#8b97a6">'
+   +'<span>다른 방법</span><i style="font-style:normal;color:#3e444d">|</i><u style="color:#dfe7f0;text-underline-offset:3px">게스트로 시작</u></div></div>'});
+
+V.push({tag:'L7', t:'가로 2단 — 왼쪽 로고 · 오른쪽 목록',
+  d:'세로 대신 <b>가로를 쓴다</b>. 왼쪽에 로고 덩어리, 오른쪽에 행 목록. 도크 높이가 줄어 <b>지평선을 안 가린다</b>. 대신 행 하나하나가 좁아진다.',
+  html:'<div class="opDock" style="padding-bottom:26px;display:flex;gap:12px;align-items:flex-end">'
+   +'<div style="flex:0 0 70px;text-align:center;padding-bottom:8px">'
+   +'<span class="opLogo" style="width:32px;height:32px;display:block;margin:0 auto 6px">'+HEX+'</span>'
+   +'<div class="opTitle" style="font-size:15px;line-height:1.2">STAR<br>WAR</div></div>'
+   +'<div style="flex:1;min-width:0">'
+   +'<div class="hub">'
+   +'<button class="way pri" style="min-height:42px"><i class="ix">01</i>아이디<i class="ar">›</i></button>'
+   +'<button class="way" style="min-height:42px"><i class="ix">02</i>이메일<i class="ar">›</i></button>'
+   +'<button class="way lock" style="min-height:42px"><i class="ix">03</i>Google<i class="tag">준비 중</i></button></div>'
+   +GUEST+'</div></div>'});
+
+V.push({tag:'L8', t:'타일 3칸 — 콘솔 문법',
+  d:'방식 셋을 <b>가로 타일 3개</b>로 늘어놓았다. 번호가 크게 서서 콘솔·아케이드 느낌이 나고, 세로를 제일 적게 먹는다. 대신 방식 이름이 짧아져야 한다.',
+  html:LOGO_FULL+'<div class="opDock">'
+   +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">'
+   +[['01','아이디',1],['02','이메일',0],['03','Google',0]].map(([n,t,pri])=>
+     '<button style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:11px 4px 9px;position:relative;'
+     +'border:1px solid rgba(255,255,255,.10);border-radius:var(--r-bar);background:rgba(6,8,13,.55);'
+     +(pri?'border-color:rgba(255,59,59,.5);':'')+'">'
+     +'<i style="font-style:normal;font-family:var(--font-num);font-size:15px;font-weight:700;color:'+(pri?'var(--ac)':'#5c6068')+'">'+n+'</i>'
+     +'<span style="font-size:var(--fs-md);font-weight:700;color:'+(pri?'#fff':'#9aa4b0')+'">'+t+'</span>'
+     +(pri?'<i style="position:absolute;left:50%;transform:translateX(-50%);bottom:-1px;width:22px;height:1px;background:var(--ac);box-shadow:0 0 4px rgba(var(--acRGB),.9),0 0 9px rgba(var(--acRGB),.5)"></i>':'')
+     +'</button>').join('')
+   +'</div>'+GUEST+'</div>'});
+
+document.getElementById('grid').innerHTML=V.map(v=>
+  '<div class="cell"><div class="cap'+(v.now?' now':'')+'"><i>'+v.tag+'</i>'+v.t+'</div>'
+  +(v.raw
+    ? '<div class="ph"><div class="art"></div><span class="gear">'+GEAR+'</span>'+v.html+'</div>'
+    : phone(v.html, v.extraDim))
+  +'<div class="note">'+v.d+'</div></div>').join('');
+</script>
