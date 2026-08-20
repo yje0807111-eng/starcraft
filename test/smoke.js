@@ -1858,6 +1858,30 @@ async function groupLobby(){
       assert(!bad.length, bad.join(' · '));
       for(const k of Object.keys(HB_FOE_KIND))
         assert(seen.has(k), '역할 '+k+' 이 어느 던전에도 안 나온다(죽은 역할)');
+      // ①-b 🧊 **3D 연결** — 역할의 이동 방식과 모델의 실제 성질이 어긋나면 3D 에서 티가 난다.
+      //     M3D 는 `FXLAB_AIR`(비행 모델 단일 출처)를 보고 **모델 id 로** 자동 부양시킨다.
+      //     그래서 way='air' 인데 지상 모델이면 비행체가 땅을 기고(옛 dg7 thornqueen),
+      //     지상 역할인데 비행 모델이면 걸어가야 할 놈이 떠 있다(옛 dg4 stinger). 둘 다 실제로 그랬다.
+      //     ⚠ 이 검사는 three.js 없이도 돌아야 한다 — M3D 유무로 건너뛰면 이 환경에선 영영 안 걸린다.
+      { assert(typeof FXLAB_AIR!=='undefined' && FXLAB_AIR.has, 'FXLAB_AIR(비행 모델 단일 출처)이 없다');
+        const bad=[];
+        for(const D of HB_DUNGEONS) for(const e of D.roster){
+          const air=FXLAB_AIR.has(e.mdl), wantAir=(hbKindOf(e.k).way==='air');
+          if(air!==wantAir) bad.push('던전'+D.dg+' '+e.k+'→'+e.mdl+(air?'(비행 모델인데 지상 역할)':'(지상 모델인데 비행 역할)')); }
+        assert(!bad.length,'역할과 모델의 공중/지상이 어긋남 — 3D 에서 뜨거나 기어간다: '+bad.join(' · ')); }
+      // ②-b 크기는 M3D 의 per-unit 손잡이(bossScale)로 넘어가야 한다 — u.size 는 메인 sync 가 안 본다
+      { const keep=window.M3D;
+        window.M3D={ hasModel:()=>true, footprintOf:()=>20, ensureUnits:()=>{} };
+        try{
+          _hb.foes.length=0;
+          const K=HB_FOE_KIND.brute;
+          _hb.foes.push({kind:'brute',ico:'x',mdl:'ultralisk',x:0,y:0,hp:1,hpMax:1,atk:1,spd:0,
+            sz:K.sz,rng:0,way:K.way,rw:K.rw,cdT:9e9,elite:false});
+          const list=hb3dList().filter(u=>u.id==='ultralisk');
+          assert(list.length===1,'적이 3D sync 목록에 안 실린다');
+          assert(Math.abs((list[0].bossScale||0)-K.sz)<0.01,
+            '크기가 3D 로 안 넘어간다(bossScale='+list[0].bossScale+' vs 종류 크기 '+K.sz+')');
+        } finally { window.M3D=keep; _hb.foes.length=0; } }
       // ② 보스는 늘 지상 근접 — 날거나 벽을 통과하는 보스는 벽·기지 설계를 통째로 무의미하게 만든다
       for(const D of HB_DUNGEONS){ const bp=mkBoss(D,{round:1});
         assert(bp.way==='ground' && !bp.rng, '던전'+D.dg+' 보스가 지상 근접이 아님: '+bp.way+'/'+bp.rng); }
@@ -2058,11 +2082,18 @@ async function groupLobby(){
     assert(f1!==f2,'던전 1과 2의 적이 같음 — 옮겨도 같은 곳으로 느껴진다');
     // 모델 키 오타 검사. MODELS는 모듈 스코프라 전역에서 못 본다 → M3D.modelKeys()로 카탈로그를 받아 대조한다.
     // ⚠ M3D가 없으면(three.js를 못 받는 환경) 검사를 '통과'시키지 말고 그렇게 밝힌다 — 헛도는 검사가 제일 위험하다
-    let keyChk='M3D 없음(모델 키 미검증)';
-    if(window.M3D && M3D.modelKeys){ const cat=new Set(M3D.modelKeys());
-      for(const D of HB_DUNGEONS) for(const f of D.roster)
-        assert(cat.has(f.mdl),'던전'+D.dg+'('+D.name+') 모델 키가 카탈로그에 없음: '+f.mdl);
-      keyChk='모델 키 '+new Set(HB_DUNGEONS.flatMap(d=>d.roster.map(f=>f.mdl))).size+'종 확인'; }
+    // 🧊 모델 키 오타 검사. M3D 가 있으면 카탈로그를 직접 묻고, 없으면(이 환경처럼 three.js 가 막히면)
+    //    **모듈 소스에서 MODELS 표를 읽어** 대조한다. 예전엔 M3D 가 없으면 통째로 건너뛰어
+    //    '미검증'인 채로 늘 통과했다 — 헛도는 검사가 제일 위험하다.
+    let cat=null, how='';
+    if(window.M3D && M3D.modelKeys){ cat=new Set(M3D.modelKeys()); how='M3D 카탈로그'; }
+    else{ try{ const src=await (await fetch('js/90-m3d.module.js')).text();
+        const m=src.match(/const MODELS=\{([\s\S]*?)\n?\};/);
+        if(m){ cat=new Set([...m[1].matchAll(/(\w+)\s*:\s*'/g)].map(x=>x[1])); how='모듈 소스'; } }catch(_e){} }
+    assert(cat && cat.size>0,'3D 모델 카탈로그를 못 읽었다 — 모델 키 오타를 못 잡는다');
+    for(const D of HB_DUNGEONS) for(const f of D.roster)
+      assert(cat.has(f.mdl),'던전'+D.dg+'('+D.name+') 모델 키가 카탈로그에 없음: '+f.mdl);
+    const keyChk='모델 키 '+new Set(HB_DUNGEONS.flatMap(d=>d.roster.map(f=>f.mdl))).size+'종 확인('+how+')';
     return HB_DUNGEONS.length+'곳 · 타일 '+tiles.length+'종 · 틴트 '+alpha(HB_DUNGEONS[0].tint)+'→'+prevA+' · '+keyChk; });
   // 관리자 실험장의 8방향 시트를 던전 전장이 '그대로' 쓴다(새로 만들지 않는다)
   await step('던전: 내 캐릭터가 실험장 8방향 시트를 그대로 쓴다', async()=>{

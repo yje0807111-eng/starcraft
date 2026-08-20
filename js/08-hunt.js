@@ -44,13 +44,14 @@ const HB_DUNGEONS=[
   {dg:3,  race:'aetherial', name:'잊혀진 회랑',   tile:'protoss_floor',     tint:'rgba(34,30,58,.34)',
    roster:[{k:'grunt', mdl:'worker_light',ico:'🔹', w:3},{k:'runner',mdl:'blade',    ico:'⚔️',w:4},{k:'flyer', mdl:'observer',  ico:'👁', w:3}]},
   {dg:4,  race:'swarm',     name:'산란장',       tile:'badlands',          tint:'rgba(40,44,20,.42)',
-   roster:[{k:'grunt', mdl:'snapper',     ico:'🦗', w:4},{k:'ranger',mdl:'hydra',    ico:'🐍',w:4},{k:'runner',mdl:'stinger',   ico:'💥', w:3}]},
+   roster:[{k:'grunt', mdl:'snapper',     ico:'🦗', w:4},{k:'ranger',mdl:'hydra',    ico:'🐍',w:4},
+           {k:'runner',mdl:'broodling',   ico:'🐛', w:3},{k:'flyer', mdl:'stinger',  ico:'💥',w:2}]},
   {dg:5,  race:'union',     name:'폐쇄된 시설',   tile:'installation',      tint:'rgba(26,32,44,.46)',
    roster:[{k:'ranger',mdl:'machinegun',  ico:'🔫', w:4},{k:'grunt', mdl:'medic',    ico:'💉',w:3},{k:'brute', mdl:'goliath',   ico:'🤖', w:2}]},
   {dg:6,  race:'aetherial', name:'봉인된 성소',   tile:'protoss_floor',     tint:'rgba(30,24,58,.50)',
    roster:[{k:'runner',mdl:'blade',       ico:'⚔️', w:4},{k:'ranger',mdl:'dragoon',  ico:'🔷',w:4},{k:'flyer', mdl:'falcon',    ico:'🦅', w:3}]},
   {dg:7,  race:'swarm',     name:'군단의 심장',   tile:'ashworld',          tint:'rgba(52,20,16,.54)',
-   roster:[{k:'ranger',mdl:'hydra',       ico:'🐍', w:4},{k:'flyer', mdl:'thornqueen',ico:'👑',w:3},{k:'brute', mdl:'ultralisk', ico:'🦏', w:2}]},
+   roster:[{k:'ranger',mdl:'hydra',       ico:'🐍', w:4},{k:'flyer', mdl:'wyvern',   ico:'🦇',w:3},{k:'brute', mdl:'ultralisk', ico:'🦏', w:2}]},
   {dg:8,  race:'union',     name:'함대 정박지',   tile:'space_platform',    tint:'rgba(20,26,40,.58)',
    roster:[{k:'brute', mdl:'goliath',     ico:'🤖', w:3},{k:'ranger',mdl:'tank',     ico:'🛡',w:4},{k:'flyer', mdl:'dreadnought',ico:'🚀', w:3}]},
   {dg:9,  race:'aetherial', name:'공허의 문',     tile:'protoss_floor',     tint:'rgba(26,14,46,.62)',
@@ -1986,8 +1987,13 @@ function hb3dList(){ const S=_hb, W=S.w||1, H=S.h||1, k=S.k||1, out=[];
   for(const a of S.allies){ if(!a.mdl) continue;                       // 🤝 동료도 캐릭터와 같은 경로로 그린다
     out.push(_hbU(a, a.mdl, nx(a.x), ny(a.y), a.face||0, true)); }
   for(const f of S.foes){ if(!f.mdl) continue;
-    const u=_hbU(f, f.mdl, nx(f.x), ny(f.y-((f.way==='air')?HB_AIR_LIFT:0)), f.face||0, !!f.mv);
-    u.size=13*(f.sz||1);                      // 크기는 종류가 정한다 — 2D 폴백(26*sz)과 같은 비율
+    // ⚠ 고도는 여기서 더하지 않는다 — M3D 가 모델 id 로 판정해(FXLAB_AIR) 알아서 띄운다.
+    //   여기서 y 를 빼면 화면에서 뜨는 게 아니라 **바닥 위를 북쪽으로 밀어** 두 번 어긋난다.
+    //   HB_AIR_LIFT 는 3D 가 없을 때의 2D 폴백 전용이다.
+    const u=_hbU(f, f.mdl, nx(f.x), ny(f.y), f.face||0, !!f.mv);
+    // 크기는 종류가 정한다. M3D 의 per-unit 크기 손잡이는 bossScale 하나뿐이라 그걸 쓴다
+    //   (u.size 는 메인 sync 가 안 본다 — 넣어도 3D 에서는 아무 일도 안 일어난다).
+    u.bossScale=(f.sz||1);
     out.push(u); }
   hb3dStructs(out, S, nx, ny, k);
   return out; }
