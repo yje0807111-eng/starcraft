@@ -71,8 +71,9 @@ async function groupLobby(){
     assert(visible($('authHub')),'로그인 방식 허브가 안 보임');
     assert(!visible($('authForm')),'허브인데 입력 폼이 이미 떠 있음');
     assert(visible($('authGuest')),'허브에 게스트 시작 버튼이 없음');
-    assert($('wayGoogle').classList.contains('lock'),'Google 버튼이 잠김 표시가 아님(대시보드 설정 전까지는 잠겨 있어야 한다)');
-    authWayLocked(); assert(visible($('authHub')),'잠긴 방식을 눌렀는데 화면이 넘어감');
+    // ⭐ Google 도 '되는 방식'으로 보인다(2026-08-20) — 곧 연동하므로 잠금 표기를 뺐다.
+    assert(!$('wayGoogle').classList.contains('lock'),'Google 에 잠금 표기가 되살아남');
+    authWayLocked(); assert(visible($('authHub')),'Google 을 눌렀는데 화면이 넘어감');
     // 아이디를 고르면 폼으로
     authOpenForm('id');
     assert(!visible($('authHub')) && visible($('authForm')),'아이디를 골랐는데 폼이 안 열림');
@@ -83,25 +84,40 @@ async function groupLobby(){
     assert($('authId').type==='email','이메일 방식인데 첫 칸이 email 타입이 아님: '+$('authId').type);
     assert(document.querySelectorAll('#auth input[type=password]').length===2,'비밀번호 칸이 폼마다 복제됨');
     authBackToHub(); assert(visible($('authHub')),'뒤로가기가 허브로 안 돌아감');
-    // ⚠ authShowHub 는 라벨을 다시 그린다 — 번호(.awIx)·화살표(.awAr)까지 지우면 행이 무너진다.
-    //   (옛 코드가 innerHTML 을 통째로 덮어쓰고 있었다)
-    assert($('wayId').querySelector('.awIx') && $('wayId').querySelector('.awAr'),
-      '허브로 돌아오니 행 번호/화살표가 사라짐: '+$('wayId').innerHTML);
+    assert($('wayId').textContent.trim()==='아이디로 로그인',
+      '허브로 돌아오니 라벨이 무너짐: '+JSON.stringify($('wayId').textContent));
     // ══ 🎬 시네마틱 행 목록 (2026-08-19 · C4) ══════════════════════════════════
     //   ⚠ 이 검사들은 **허브가 보이는 동안** 해야 한다 — 폼을 열면 허브가 display:none 이라
     //      getBoundingClientRect() 가 전부 0 이 되고, '가운데를 벗어남 11%' 같은 헛 실패가 난다(실제로 그랬다).
-    { // ① 블록은 화면 가운데 근처, 정중앙보다는 위(광학적 중앙)
+    { // ① 블록은 화면 '아래'에 있다 — 새 키 아트는 가운데에 주인공이 몰려 있어 거기를 덮으면 안 된다
       var sc=$('auth').getBoundingClientRect(), bl=document.querySelector('.authIn').getBoundingClientRect();
       var mid=((bl.top+bl.bottom)/2-sc.top)/sc.height*100;
-      assert(mid>38 && mid<50,'로그인 블록이 광학적 중앙을 벗어남: '+mid.toFixed(1)+'%');
-      // ② 방식은 '행'이다 — 판(면)이 없고 헤어라인으로 갈린다
+      assert(mid>60,'로그인 블록이 아래로 안 내려감(그림의 주인공을 덮는다): '+mid.toFixed(1)+'%');
+      assert(sc.bottom-bl.bottom < sc.height*0.12,
+        '블록이 바닥에서 너무 떠 있음: '+Math.round(sc.bottom-bl.bottom)+'px');
+      // ② 방식은 '행'이다 — 판(면)도 전폭 헤어라인도 없다. 구분은 짧은 가운데 선 하나뿐(M8)
       var w0=getComputedStyle($('wayId'));
       assert(w0.backgroundImage==='none','방식 칸에 판(면)이 되살아남: '+w0.backgroundImage);
-      assert(parseFloat(w0.borderBottomWidth)>0,'방식 칸을 가르는 헤어라인이 없음');
-      assert(document.querySelectorAll('.authWay .awIx').length===3,'행 번호(.awIx)가 3개가 아님');
-      // ③ ⭐ 주 표시는 화면에 하나뿐 — 광원이 둘이면 위계가 무너진다
-      assert(document.querySelectorAll('.authWay.pri').length===1,
-        '주 방식 표시가 1개가 아님: '+document.querySelectorAll('.authWay.pri').length);
+      assert(parseFloat(w0.borderBottomWidth)===0,'전폭 헤어라인이 되살아남(그림을 가로지른다)');
+      { var d=getComputedStyle($('wayEmail'),'::before');
+        assert(d.content && d.content!=='none','행 사이 가운데 선이 없음');
+        assert(parseFloat(d.width) < $('wayEmail').offsetWidth*0.45,
+          '가운데 선이 너무 길다(전폭 선과 다를 게 없어진다): '+d.width+' / '+$('wayEmail').offsetWidth+'px'); }
+      // ③ ⭐ 셋은 같은 무게다 — 번호도 주 방식 표시도 없다
+      assert(document.querySelectorAll('.authWay .awIx').length===0,'행 번호(.awIx)가 되살아남');
+      assert(document.querySelectorAll('.authWay.pri').length===0,'주 방식 표시(.pri)가 되살아남');
+      { var W=[...document.querySelectorAll('.authWay')].filter(visible);
+        assert(W.length===3,'방식이 3개가 아님: '+W.length);
+        var k=W.map(function(w){ var c=getComputedStyle(w); return c.color+'|'+c.fontSize+'|'+c.fontWeight; });
+        assert(k[0]===k[1] && k[1]===k[2],'셋의 무게가 다름: '+k.join(' / ')); }
+      // ④ 로고 블록 = 부팅 로딩과 같은 것 — 두 화면이 한 장면으로 이어진다
+      { var t=getComputedStyle(document.querySelector('.authLogo')), o=getComputedStyle(document.querySelector('.opTitle'));
+        assert(t.fontFamily===o.fontFamily && t.fontSize===o.fontSize,
+          '로그인 제목이 로딩 제목과 다름: '+t.fontFamily+' '+t.fontSize+' vs '+o.fontFamily+' '+o.fontSize);
+        assert(!/rgb\(255, 59, 59\)/.test(t.color),'제목에 빨강이 섞임(로딩은 흰 단색이다): '+t.color);
+        assert(document.querySelector('.authMark svg'),'로고 육각 마크가 없음');
+        assert($('authSub').textContent.trim()==='BATTLE ARENA',
+          '부제가 로고의 일부가 아님(안내 문구로 덮였다): '+$('authSub').textContent); }
       // ④ ⭐ 게스트는 판을 갖지 않는다 — 밑변 광원은 주 버튼의 서명이라
       //    게스트에 붙으면 "기본 동작은 게스트"가 된다(2026-08-19 정리).
       var gs=getComputedStyle($('authGuest'));
@@ -196,7 +212,10 @@ async function groupLobby(){
   await step('인증: 빈 칸은 막고, 게스트 버튼으로 입장', async()=>{ skipIf(typeof authSubmit!=='function','인증 없음');
     openAuth(); authOpenForm('id');   // 허브에서 아이디를 골라야 입력 폼이 나온다
     $('authId').value=''; $('authPw').value='';
-    await authSubmit(); await sleep(120);
+    await authSubmit();
+    // ⚠ 고정 대기(120ms)로 두면 간헐 실패한다 — authSubmit 이 Supabase 준비를 기다리는 경우가 있어
+    //   안내가 그보다 늦게 붙는다. 뜰 때까지 기다린다(최대 2초).
+    for(let i=0;i<40 && !(($('authErr').textContent||'').length); i++) await sleep(50);
     assert(visible($('auth')),'빈 칸인데 로그인 화면을 벗어남(자동 입장이 남아 있음)');
     assert(!visible($('hubScreen')),'빈 칸인데 게임 선택으로 넘어감');
     assert(($('authErr').textContent||'').length>0,'빈 칸인데 안내가 없음');
@@ -3042,6 +3061,54 @@ async function groupLobby(){
     [t8,c8,c4,t4].forEach(x=>assert(x.ov<=0.5,'슬롯 판이 스크롤됨(높이 식이 안 맞는다)'));
     close(); await sleep(150); openMapSelect(); await sleep(80);
     return '종족 '+STK_RACE_ORDER.length+'칸 · 잠김 ok · 슬롯 판 '+t8.h+'px 고정'; });
+  // ══ 실방 전파 — 종족은 presence, 대전 설정은 방장 시작 신호가 나른다 ══
+  await step('실방: 종족·대전 설정이 참가자에게 전파된다', async ()=>{
+    skipIf(typeof rtRoomMe!=='function' || typeof rtRoomOnStart!=='function','실방 경로 없음');
+    // ① presence 에 싣는 내 상태 — 종족이 들어가고 입장 시각(t)이 보존된다
+    //    ⚠ track 은 덮어쓰기라 일부만 보내면 t 가 지워져 슬롯 순서가 뒤바뀐다
+    RTROOM.joinT=12345; _selRace='zerg';
+    { const me=rtRoomMe();
+      assert(me.race==='zerg','presence 에 내 종족이 안 실림: '+me.race);
+      assert(me.t===12345,'presence 재전송에서 입장 시각이 지워짐: '+me.t);
+      assert(('uid' in me) && ('nick' in me) && ('host' in me) && ('ready' in me),
+        'presence 에 빠진 항목이 있다: '+Object.keys(me).join(',')); }
+    // ② 방 목록 → 입장 경로가 대전 설정을 나르는가
+    assert(/opts/.test(String(joinRoom)),'joinRoom 이 방의 대전 설정을 안 넘김');
+    assert(/opts/.test(String(lobbyStart)),'시작 신호에 대전 설정이 안 실림');
+    assert(/race/.test(String(lobbyStart)),'시작 신호에 슬롯별 종족이 안 실림');
+    // ③ 참가자 쪽 — 방장 신호를 실제로 태워 본다(게임 진입만 스텁)
+    // ⚠ 되돌릴 것을 하나라도 빠뜨리면 **뒤 스텝이 오염된다**(MAP 을 안 되돌렸다가 오토배틀 스텝이 깨졌다)
+    const keep={ start:window.startGameNow, coop:window.startGameCoop, room:_lobbyRoom,
+                 race:_selRace, selMap:_selMap, MAP:MAP, ovr:MAP_CFG_OVR, diff:_selDiff };
+    let got=null;
+    window.startGameNow=function(a,m,n){ got={active:a, my:m, ovr:MAP_CFG_OVR, race:_selRace, opts:_lobbyRoom&&_lobbyRoom.opts}; };
+    window.startGameCoop=function(){};
+    try{
+      _selMap=USEMAPS.cpu; MAP=USEMAPS.cpu; MAP_CFG_OVR=null; _selRace='terran';
+      _lobbyRoom={ real:true, num:777, name:'전파 확인', opts:null };
+      RTROOM.started=false;
+      const OPTS={cycleTime:10,startGold:700,incomeBase:70,hpMul:0.7};
+      rtRoomOnStart({ slots:[{num:1,uid:'other',race:'protoss'},{num:2,uid:myUid(),race:'zerg'}],
+                      names:{1:'방장',2:myNick()}, opts:OPTS, from:'other' });
+      await sleep(60);
+      assert(got,'시작 신호를 받고도 게임 진입 경로를 안 탐');
+      assert(got.race==='zerg','내 종족이 방장 신호에서 안 옴: '+got.race);
+      // ⚠ startGameNow 가 _lobbyRoom.opts 를 읽어 MAP_CFG_OVR 을 심는다 —
+      //    그러니 **게임 진입을 부르기 전에** 방에 실려 있어야 한다(순서가 뒤집히면 조용히 기본값으로 시작한다)
+      assert(got.opts && got.opts.cycleTime===10,'게임 진입 시점에 방 설정이 아직 안 실렸다(순서가 뒤집혔다)');
+      assert(/MAP_CFG_OVR/.test(String(startGameNow)) && /_lobbyRoom/.test(String(startGameNow)),
+        'startGameNow 가 방 설정을 안 읽는다');
+      // 받은 설정이 실제 엔진 값으로 풀리는가
+      { const cfg=stkCfgFromOpts(got.opts);
+        assert(cfg && cfg.cycleTime===10 && cfg.baseHp===Math.round(USEMAPS.cpu.cfg.baseHp*0.7),
+          '받은 설정이 엔진 값으로 안 풀림'); }
+    } finally {
+      window.startGameNow=keep.start; window.startGameCoop=keep.coop;
+      _lobbyRoom=keep.room; _selRace=keep.race; _selMap=keep.selMap; MAP=keep.MAP;
+      MAP_CFG_OVR=keep.ovr; _selDiff=keep.diff;
+      RTROOM.started=false; RTROOM.joinT=0;
+      const l=$('lobby'); if(l) l.classList.add('hide'); }
+    return '종족 presence · 설정 시작신호 · 순서 ok'; });
   // ══ 방 만들기 — 전체 화면 · 난이도는 스테퍼 · 오토배틀은 프리셋/사용자 지정 ══
   await step('방 만들기: 전체 화면 · 난이도 스테퍼 · 대전 설정이 실제 cfg 로 간다', async ()=>{
     skipIf(typeof createRoom!=='function','방 만들기 없음');
@@ -6021,10 +6088,17 @@ async function groupGame(){
         const want=Math.round(probe.getBoundingClientRect().height); probe.remove();
         assert(want>0,'--bpBodyH 기준값을 못 잼: '+want);
         for(const [n,fn] of [['건설지',()=>strikeSwitchTab('Build')],['특수무기',()=>strikeSwitchTab('Upgrade')],['관전',()=>strikeSwitchTab('Players')]]){
-          fn(); await sleep(180);
-          const body=document.getElementById(G.tab==='Build'?'btSheetBody':'unitCmd');
-          const h=Math.round(body.getBoundingClientRect().height);
-          assert(h>0, n+' 하단 본문 높이가 0 — 판이 아예 안 떠 있다(#bot 이 display:none 인지, 부팅이 화면을 가져갔는지 볼 것)');
+          fn();
+          // ⚠ 고정 대기(180ms)로 재면 안 된다 — 시트 정렬(_syncSheetLift)이 **220ms** 뒤에 끝나므로
+          //   높이가 0인 순간을 잡아 간헐 실패했다(앞 그룹이 길어지면 더 자주 걸렸다). 값이 설 때까지 기다린다.
+          let h=0;
+          for(let i=0;i<40;i++){ await sleep(50);
+            const body=document.getElementById(G.tab==='Build'?'btSheetBody':'unitCmd');
+            h=Math.round(body.getBoundingClientRect().height);
+            if(Math.abs(h-want)<=1) break; }
+          // ⚠ 하단 콘솔이 통째로 사라지면(#bot display:none) 높이가 0으로 나온다 — 원인을 바로 알 수 있게 적는다
+          if(h===0 && !document.getElementById('phone').classList.contains('inGame'))
+            throw new Error(n+' 하단 콘솔이 없다 — 게임 중인데 .inGame 이 꺼졌다(예열 완료 후 openHome 이 끌어갔는지 볼 것)');
           assert(Math.abs(h-want)<=1, n+' 하단 본문 높이가 네모와 다름: '+h+' vs '+want); } }
       // ⑨ 누적 수입(earned) — umProgress()가 '번 돈을 얼마나 굴렸나'를 이 값으로 역산한다.
       //    ⚠ 소모처(광산·강화·무기·건설)를 세지 않고 수입만 세는 구조라, 여기가 끊기면 진행도가 통째로 0이 된다.

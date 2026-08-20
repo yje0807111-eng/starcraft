@@ -2410,17 +2410,15 @@
   @keyframes loadBreath{0%,100%{transform:scale(1.015) translateY(0)}50%{transform:scale(1.06) translateY(-1.2%)}}
   /* 부팅 로딩 딤은 .opArt::after 가 맡는다(아래) — 여기 ::after 는 진입 카운트다운(.counting)일 때만 쓴다 */
   #opening.counting::after{background:linear-gradient(180deg, rgba(2,3,8,.5) 0%, rgba(2,3,8,.32) 40%, rgba(2,3,8,.6) 100%)}
-  /* 🎬 로그인 비네트 — ⭐ '글자가 놓일 자리'를 어둡게 만드는 장치다. 블록을 옮기면 이것도 같이 옮긴다.
-     옛 값은 아래쪽을 까는 그라데였고(유즈맵 팝업에서 물려받은 「위는 아트·아래는 정보」 구조),
-     블록이 가운데로 오면서 어두운 띠도 가운데로 왔다. ⛔ 한쪽만 옮기면 밝은 그림 위에 글자가 얹힌다.
-     정거장은 블록 중심(광학적 중앙 46%)에 묶여 있다 — 블록을 옮기면 여기 %도 같이 옮길 것. */
-  #auth::after{background:
-    linear-gradient(180deg, rgba(2,3,8,.5) 0%, rgba(2,3,8,.12) 14%, rgba(4,5,10,.86) 34%,
-      rgba(4,5,10,.88) 62%, rgba(2,3,8,.18) 84%, rgba(2,3,8,.6) 100%),
-    radial-gradient(78% 44% at 50% 44%, rgba(255,59,59,.1), transparent 70%)}
+  /* 🎬 로그인 딤 — ⭐ '글자가 놓일 자리'를 어둡게 만드는 장치다. 블록을 옮기면 이것도 같이 옮긴다.
+     2026-08-20: 블록을 아래로 내렸으므로 딤도 **부팅 로딩(.opArt::after)과 같은 값**으로 되돌렸다.
+     가운데를 파던 비네트와 붉은 오라는 뺐다 — 새 키 아트는 가운데에 도시·함선이 몰려 있어
+     거기를 어둡게 하면 그림의 주인공이 죽는다. ⛔ 한쪽만 옮기면 밝은 그림 위에 글자가 얹힌다. */
+  #auth::after{background:linear-gradient(180deg,rgba(4,6,11,.06) 0%,rgba(4,6,11,.10) 40%,
+    rgba(5,6,10,.62) 74%,rgba(5,6,10,.96) 100%)}
   #opening .opWrap{position:relative;z-index:1}
   /* 로그인/회원가입 */
-  #auth{z-index:48;align-items:center;justify-content:center;padding:22px}
+  #auth{z-index:48;align-items:center;justify-content:flex-end;padding:22px}
   /* ══ 🎬 로그인 = 시네마틱 행 목록 (2026-08-19 · C4 광학적 중앙) ══════════════════════
      판(카드)을 없앴다. 조작은 헤어라인으로 갈린 '행'이고, 배경 그림이 그대로 비친다.
      ⭐ 정중앙에 두지 않는다 — 수치상 가운데면 눈에는 아래로 처져 보인다(표지·포스터가 제목을 늘 위에 두는 이유).
@@ -2429,12 +2427,15 @@
         · transform:translateY(%) → **제 높이** 기준이다. 블록이 300px 이면 4% 는 12px 밖에 안 된다.
         블록 높이는 허브(≈300px)와 폼(≈360px)이 다르므로, 퍼센트로 두면 화면마다 리프트가 달라진다.
         그래서 고정 px 로 올린다 — 어느 컨테이너에서도 같은 양만큼 움직인다. */
+  /* 2026-08-20: 블록이 화면 아래로 내려왔다(L1). 리프트(--authLift)는 이제 '바닥에서 띄우는 양'이다.
+     ⚠ 퍼센트로 두지 말 것 — 아래 주석의 두 함정(padding %는 폭 기준 · translateY %는 제 높이 기준)이 그대로 산다. */
   .authIn{position:relative;z-index:1;display:flex;flex-direction:column;
-    width:100%;max-width:330px;margin-bottom:var(--authLift,58px)}
+    width:100%;max-width:330px;margin-bottom:var(--authLift,26px)}
   /* 블록 자체가 제 그림자를 갖는다 — 화면 비네트만으로는 폼(허브보다 두 배 길다)을 다 못 덮는다.
      radial 이라 블록 높이를 따라 알아서 늘어난다. */
-  .authIn::before{content:'';position:absolute;inset:-34px -30px;z-index:-1;pointer-events:none;
-    background:radial-gradient(58% 50% at 50% 50%,rgba(3,4,8,.82),rgba(3,4,8,.5) 62%,transparent 100%)}
+  /* 블록 제 그림자 — 딤이 아래만 덮으므로 로고 윗머리가 밝은 하늘에 걸릴 때를 받쳐 준다 */
+  .authIn::before{content:'';position:absolute;inset:-30px -30px -10px;z-index:-1;pointer-events:none;
+    background:radial-gradient(60% 54% at 50% 56%,rgba(3,4,8,.78),rgba(3,4,8,.44) 64%,transparent 100%)}
   .authHead{margin-bottom:20px}
   /* 액센트는 사냥터와 같은 빨강(--neon 계열). 면은 푸른기를 걷은 중성 검정 — 사냥터 패널과 같은 톤이다. */
   /* ⚠ .authCard 는 이제 '판'이 아니라 액센트 토큰(--acRGB)만 들고 있는 껍데기다(2026-08-19).
@@ -2452,51 +2453,45 @@
   .authDia{display:block;width:9px;height:9px;margin:0 auto 9px;transform:rotate(45deg);
     background:linear-gradient(135deg,#ff9b9b,var(--ac))}
   /* ⚠ font-weight:900 을 되돌리지 말 것 — 제목 글꼴(--font-ti)은 400 단일 굵기라 브라우저가 가짜 볼드를 그린다 */
-  .authLogo{font-family:var(--font-ti);font-size:32px;font-weight:400;letter-spacing:1.6px;line-height:1.05;text-align:center;margin-bottom:7px}
-  .authLogo .alg1{color:#f3f6fb;text-shadow:0 2px 10px rgba(0,0,0,.9)}   /* 판이 없으니 그림자로 그림에서 띄운다 */
-  .authLogo .alg2{color:var(--ac);text-shadow:0 2px 10px rgba(0,0,0,.9)}
-  /* 부제 = 좌우 선 + 화살촉으로 감싼 형태(카드 전폭 구분선 대체) */
-  .authSub{display:flex;align-items:center;justify-content:center;gap:8px;
-    font-size:var(--fs-xs);color:#8b97a6;text-align:center;letter-spacing:.6px;margin-bottom:0}
-  .authSub::before,.authSub::after{content:'';flex:0 0 34px;height:1px;
-    background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--ac) 60%,transparent))}
-  .authSub::after{background:linear-gradient(270deg,transparent,color-mix(in srgb,var(--ac) 60%,transparent))}
+  /* 🖼 로고 블록 = **부팅 로딩(.opLogo/.opTitle/.opSub)과 같은 것**(2026-08-20).
+     두 화면이 같은 그림 위에서 같은 자리에 같은 덩어리를 보여 준다 — 한 장면으로 이어진다.
+     ⛔ 제목에 빨강을 섞지 말 것: 로딩은 흰 단색이라 두 화면이 다르게 보였다. */
+  .authMark{width:44px;height:44px;margin:0 auto 8px;color:#dbe4ef}
+  .authMark svg{width:100%;height:100%;filter:drop-shadow(0 2px 8px #000)}
+  .authLogo{font-family:var(--font-ti);font-size:31px;font-weight:400;letter-spacing:.02em;line-height:1.1;
+    text-align:center;white-space:nowrap;color:#fff;text-shadow:0 3px 20px #000,0 1px 3px #000;margin-bottom:7px}
+  .authSub{font-family:var(--font-num);font-size:var(--fs-sm);color:#96a1af;letter-spacing:.42em;
+    text-align:center;white-space:nowrap;text-shadow:0 1px 4px #000;margin-bottom:0}
   /* ══ 방식 선택 허브 ══ 모바일 기준: 칸은 전폭 · 높이 46px(터치 타겟 44px 이상) · 세로로 쌓는다.
      칸 재질은 게스트 버튼(.authGuest)과 같은 규칙을 그대로 상속받는다 — 새 버튼 스타일을 만들지 않는다. */
   .authHub,.authForm{display:flex;flex-direction:column}
-  .authHub{border-top:1px solid rgba(255,255,255,.08)}
+  .authHub{}
   .authHub.hide,.authForm.hide{display:none}
-  /* 🎬 방식 = '행'이다. 판이 없고 헤어라인으로만 갈린다.
-     ⚠ 위 테두리는 첫 행이 아니라 목록(.authHub)이 그린다 — 행마다 그리면 두 줄이 겹친다. */
-  .authWay{position:relative;display:flex;align-items:center;gap:11px;width:100%;min-height:52px;
+  /* 🎬 방식 = '행'이다. 판이 없다(M8안, 2026-08-20).
+     셋은 **같은 무게**다 — 번호도, 주 방식 광선도, 잠금 표기도 없다.
+     구분은 **행 사이 짧은 가운데 선** 하나뿐이라 그림을 가로지르지 않고 로고와 같은 중앙 축을 쓴다.
+     ⚠ 전폭 헤어라인으로 되돌리지 말 것 — 선이 그림을 잘라 아트가 배경이 아니라 '표'가 된다. */
+  .authWay{position:relative;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:44px;
     padding:0 2px;margin:0;box-sizing:border-box;cursor:pointer;border:none;border-radius:0;
-    border-bottom:1px solid rgba(255,255,255,.08);background:none;box-shadow:none;
-    font-family:inherit;font-size:var(--fs-lg);font-weight:700;letter-spacing:.02em;color:#dfe7f0;text-align:left}
-  /* 🔢 인덱스 번호 — 아이콘 대신. 숫자 폭이 일정해(tabular) 왼쪽 정렬이 칼같이 맞는다. */
-  .awIx{flex:none;width:19px;font-style:normal;font-family:var(--font-num);font-size:var(--fs-lg);
-    font-weight:600;letter-spacing:.06em;color:#5c6068;font-variant-numeric:tabular-nums}
-  .awAr{margin-left:auto;font-style:normal;font-family:var(--font-num);font-size:14px;color:#5c6068}
-  /* ⭐ 주 방식 = 화면에 하나뿐. 면이 아니라 '왼쪽 22px 광선' 하나로 표시한다(사냥터 탭 띠와 같은 문법).
-     ⛔ 게스트에 이 표시를 주지 말 것 — 밑변 광원은 이 앱에서 주 버튼의 서명이라,
-        게스트에 붙이면 "기본 동작은 게스트"라고 말하게 된다. */
-  .authWay.pri{color:#fff}
-  .authWay.pri .awIx{color:var(--ac)}
-  .authWay.pri::after{content:'';position:absolute;left:0;bottom:-1px;width:22px;height:1px;pointer-events:none;
-    background:var(--ac);box-shadow:0 0 4px rgba(var(--acRGB),.9),0 0 9px rgba(var(--acRGB),.5)}
+    background:none;box-shadow:none;
+    font-family:inherit;font-size:var(--fs-md);font-weight:700;letter-spacing:.02em;color:#dfe7f0;text-align:center}
+  .authWay+.authWay::before{content:'';position:absolute;left:50%;top:0;width:56px;height:1px;
+    transform:translateX(-50%);pointer-events:none;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent)}
+  /* ⛔ 인덱스 번호(.awIx)·화살표(.awAr)는 폐지했다(2026-08-20) — 셋을 같은 무게로 두기로 했고,
+     번호는 "01이 기본"이라는 위계를 다시 만든다. 마크업에서도 뺐다. */
+  /* ⛔ 주 방식 표시(.pri 왼쪽 광선)도 폐지했다(2026-08-20). 셋 다 실제로 되는 방식이라
+     하나만 권하면 나머지가 '덜 되는 것'으로 읽힌다. 밑변 광원은 여전히 주 버튼(.authBtn)의 서명이다. */
   .authWay.hide{display:none}
   .authWay._old::before{content:'';position:absolute;inset:0;z-index:-1;padding:1px;background:var(--btnLine,var(--metal-edge));
     -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
     -webkit-mask-composite:xor;mask-composite:exclude;
     clip-path:polygon(var(--ch) 0,calc(100% - var(--ch)) 0,100% var(--ch),100% calc(100% - var(--ch)),
       calc(100% - var(--ch)) 100%,var(--ch) 100%,0 calc(100% - var(--ch)),0 var(--ch))}
+  /* 판이 없으니 '누를 것'이라는 신호는 반응이 낸다 — 밝아지고 살짝 눌린다(앱 공용 문법) */
   .authWay:hover{color:#fff}
-  .authWay:active{transform:translateY(1px)}
-  /* 아직 못 쓰는 방식 — 빨강도 빼고 중성 테두리로. 눌러도 들어가지 않는다는 걸 색과 꼬리표로 말한다 */
-  .authWay.lock{color:#7b838e;cursor:default}
-  .authWay.lock .awIx{color:#4e5158}
+  .authWay:active{transform:translateY(1px);color:#fff}
   .awG{flex:none;width:16px;font-style:normal;font-weight:900;font-size:15px;text-align:center;color:#e8eaed}
-  .awTag{margin-left:auto;font-style:normal;font-size:var(--fs-xs);font-weight:700;letter-spacing:.2px;
-    color:#6f7a88;padding:2px 6px;border:1px solid rgba(255,255,255,.1);border-radius:var(--r-bar)}
   /* 폼 → 허브로 돌아가는 줄 */
   .authBack{align-self:flex-start;display:flex;align-items:center;gap:6px;margin-bottom:10px;padding:2px 0;
     background:none;border:none;cursor:pointer;font-family:inherit;font-size:var(--fs-xs);font-weight:700;
@@ -4963,15 +4958,16 @@
       <div class="authCard">
         <div class="authIn">
         <div class="authHead">
-          <div class="authLogo"><span class="alg1">STAR </span><span class="alg2">WAR</span></div>
-          <div class="authSub" id="authSub">로그인하고 시작하세요</div>
+          <div class="authMark" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M32 5 55 18.5v27L32 59 9 45.5v-27z"/><path d="M32 19 43 25.5v13L32 45 21 38.5v-13z" opacity=".55"/><path d="M32 25.5v13M26 29v6M38 29v6" stroke-width="1.2" opacity=".8"/></svg></div>
+          <div class="authLogo">STAR WAR</div>
+          <div class="authSub" id="authSub">BATTLE ARENA</div>
         </div>
         <!-- ① 방식 선택 허브 — 첫 화면. 아이디/이메일을 고르면 아래 ② 폼으로 바뀐다.
              판이 없는 '행 목록'이다 — 주 방식(.pri)은 왼쪽 광선 하나로만 표시한다. -->
         <div class="authHub" id="authHub">
-          <button class="authWay pri" id="wayId" onclick="authOpenForm('id')"><i class="awIx">01</i>아이디로 로그인<i class="awAr">›</i></button>
-          <button class="authWay" id="wayEmail" onclick="authOpenForm('email')"><i class="awIx">02</i>이메일로 로그인<i class="awAr">›</i></button>
-          <button class="authWay lock" id="wayGoogle" onclick="authWayLocked()"><i class="awIx">03</i>Google로 로그인<i class="awTag">준비 중</i></button>
+          <button class="authWay" id="wayId" onclick="authOpenForm('id')">아이디로 로그인</button>
+          <button class="authWay" id="wayEmail" onclick="authOpenForm('email')">이메일로 로그인</button>
+          <button class="authWay" id="wayGoogle" onclick="authWayLocked()">Google로 로그인</button>
           <div class="authOr hide" id="authHubOr">또는</div>
           <button class="authGuest" id="authGuest" onclick="authGuest()">계정 없이 <u>게스트로 시작</u></button>
         </div>
@@ -9918,6 +9914,13 @@ async function enterAfterWarm(){
   await warmAll((n,t)=>opBarReal(base+(1-base)*(t?n/t:1)));
   await opBarDone();
   opBarReset();
+  // ⚠ 예열은 오래 걸린다(헤드리스 소프트웨어 렌더러에선 20초를 넘긴다). 그 사이 사용자가 이미
+  //    **게임에 들어가 있으면 끌어오지 않는다** — 무조건 openHome() 을 부르면 게임 중에
+  //    setInGame(false) 가 걸려 하단 콘솔(#bot)이 통째로 사라진다(스모크가 간헐 실패했다).
+  //    bootApp() 의 '이미 다른 화면으로 넘어갔으면 건드리지 않는다' 와 같은 규칙이다.
+  //    ⛔ '#opening 이 감춰졌으면 return' 으로 넓게 잡지 말 것 — 예열 중 다른 경로가 오프닝을
+  //       내리는 경우가 있어 정상 진입까지 막힌다(실제로 게스트가 HOME 에 못 갔다).
+  { const ph=document.getElementById('phone'); if(ph && ph.classList.contains('inGame')) return; }
   openHome(); }
 function hb3dAttach(){ const cv=document.getElementById('cvMarine'), host=document.getElementById('homeScreen');
   if(!cv||!host||_hb3dHome) return;
@@ -16423,8 +16426,7 @@ let _authTab='login', _authKind='id';
 // 게스트 → 정식 계정 '연결' 모드. 같은 폼을 쓰되 제출만 authLinkAccount 로 간다(폼을 또 만들지 않는다).
 let _authLink=false;
 function openAuthLink(){ if(!authCanLink()) return;
-  _authLink=true; openAuth();
-  document.getElementById('authSub').textContent='게스트 진행도를 계정에 연결합니다'; }
+  _authLink=true; openAuth(); }   // 연결 안내 문구는 authShowHub 가 세운다(한 곳)
 function authLinkCancel(){ _authLink=false; if(typeof openHome==='function') openHome(); }
 const AUTH_WAYS={ id:{label:'아이디', ico:'user'}, email:{label:'이메일', ico:'mail'}, guest:{label:'게스트', ico:'user'} };
 function authRememberWay(k){ try{ _lsSet('nm_last_auth', k); }catch(e){} }   // 재방문 때 그 방식 폼으로 바로 연다
@@ -16433,18 +16435,19 @@ function authLastWay(){ const k=_lsGet('nm_last_auth', null); return AUTH_WAYS[k
 function authShowHub(){
   document.getElementById('authHub').classList.remove('hide');
   document.getElementById('authForm').classList.add('hide');
-  document.getElementById('authSub').textContent=_authLink?'게스트 진행도를 계정에 연결합니다':'로그인하고 시작하세요';
+  // ⚠ 부제는 로고 블록의 'BATTLE ARENA' 다 — 안내 문구로 덮지 말 것(로고가 무너진다).
+  //    연결 모드 안내는 아래 #authErr 가 맡는다.
   // 연결 모드엔 게스트로 다시 들어갈 이유가 없다 — 아이디/이메일만 남긴다
   document.getElementById('authGuest').classList.toggle('hide', _authLink);
   document.getElementById('wayGoogle').classList.toggle('hide', _authLink);
-  // ⚠ 라벨만 갈아 끼운다 — 번호(.awIx)와 화살표(.awAr)까지 지우면 행이 통째로 무너진다.
+  // 라벨만 갈아 끼운다.
   //   ⛔ innerHTML 을 통째로 덮어쓰지 말 것(예전엔 아이콘 span 을 그렇게 다시 그렸다).
-  { const put=(id,tx)=>{ const b=document.getElementById(id); if(!b) return;
-      const ix=b.querySelector('.awIx'), ar=b.querySelector('.awAr');
-      b.textContent=tx; if(ix) b.insertBefore(ix,b.firstChild); if(ar) b.appendChild(ar); };
+  { const put=(id,tx)=>{ const b=document.getElementById(id); if(b) b.textContent=tx; };   // 행은 글자 하나뿐이다(번호·화살표 폐지)
     put('wayId',   _authLink?'아이디로 연결':'아이디로 로그인');
     put('wayEmail',_authLink?'이메일로 연결':'이메일로 로그인'); }
-  document.getElementById('authErr').textContent=''; }
+  { const e=document.getElementById('authErr');
+    e.classList.toggle('info', _authLink);
+    e.textContent=_authLink?'게스트 진행도를 계정에 연결합니다':''; } }
 function authOpenForm(kind, quiet){
   _authKind=(kind==='email')?'email':'id';
   const f=document.getElementById('authId');
@@ -16486,7 +16489,8 @@ function authMode(m){ _authTab=m;
   document.getElementById('authNick').classList.toggle('hide', !wantFull);
   document.getElementById('authPw2').classList.toggle('hide', !wantFull);
   document.getElementById('authBtn').textContent = _authLink?'계정 연결':(m==='login'?'로그인':'가입하기');
-  if(!_authLink) document.getElementById('authSub').textContent = m==='login'?(K+'로 로그인하세요'):(K+'로 가입하기');
+  // ⚠ 부제(.authSub)는 로고 블록의 'BATTLE ARENA' 로 고정이다(2026-08-20) — 화면 안내로 쓰지 말 것.
+  //    무엇을 하는 중인지는 탭 바(로그인/회원가입)와 버튼 글자가 이미 말한다.
   // 비밀번호 재설정은 진짜 메일함이 있는 이메일 계정에서만 뜻이 있다(아이디는 가짜 주소라 메일이 안 간다)
   const note=document.getElementById('authNote');
   if(note) note.classList.toggle('hide', _authLink || m!=='login');
@@ -17689,8 +17693,8 @@ function joinRoom(r){ if(r.status!=='wait'||r.cur>=r.max) return;
   if(need>free){ if(typeof playSfx==='function') playSfx('ui_denied'); toast('⚠️ 파티 인원이 초과되었습니다 (남은 자리 '+free+' / 필요 '+need+')'); return; }
   if(r.real && rtRoomsActive()){   // 실제 방: 대기실 채널 presence로 입장
     rtRoomJoin(r.num, false);
-    openLobby({real:true, num:r.num, name:r.name, host:r.host, hostUid:r.hostUid, startCount:r.cur, joining:true, visibility:r.visibility, diff:r.diff}); return; }
-  openLobby({num:r.num, name:r.name, host:r.host, startCount:r.cur, joining:true, diff:r.diff}); }   // (오프라인 폴백) 시뮬 방
+    openLobby({real:true, num:r.num, name:r.name, host:r.host, hostUid:r.hostUid, startCount:r.cur, joining:true, visibility:r.visibility, diff:r.diff, inf:r.inf, opts:r.opts||null}); return; }
+  openLobby({num:r.num, name:r.name, host:r.host, startCount:r.cur, joining:true, diff:r.diff, inf:r.inf, opts:r.opts||null}); }   // (오프라인 폴백) 시뮬 방
 function quickJoin(){ const need=partySize(), wait=_roomList.filter(r=>r.status==='wait'&&(r.max-r.cur)>=need);
   if(!wait.length){ if(need>1){ toast('⚠️ 파티가 들어갈 빈 자리가 있는 방이 없습니다'); return; } createRoom(); return; }   // 빈 방 없으면 새로 생성(혼자일 때)
   joinRoom(wait[Math.floor(Math.random()*wait.length)]); }
@@ -18072,7 +18076,14 @@ function renderSpectate(num, dt){ const board=buildInterpBoard(num);
 //     슬롯을 차지하고, broadcast(rchat=채팅, start=게임 시작, close=방 닫힘).
 //   · RT 미연결(오프라인/로컬 계정)이면 기존 봇 시뮬 방으로 폴백.
 // ============================================================================
-const RTROOM={ listChan:null, chan:null, num:null, host:false, meta:null, started:false };
+const RTROOM={ listChan:null, chan:null, num:null, host:false, meta:null, started:false, joinT:0 };
+// 대기실 presence 에 싣는 내 상태. ⚠ track 은 **덮어쓰기**라 매번 전부 실어야 한다 —
+//   일부만 보내면 나머지(입장 시각 t 등)가 지워져 슬롯 순서가 뒤바뀐다.
+function rtRoomMe(){ return { uid:myUid(), nick:myNick(), ready:true, host:!!RTROOM.host,
+  race:(typeof _selRace!=='undefined' && _selRace) || 'terran', t:RTROOM.joinT||Date.now() }; }
+// 내 종족이 바뀌면 presence 를 다시 실어 상대 화면에도 반영한다
+function rtRoomSetRace(){ if(!RTROOM.chan) return;
+  try{ RTROOM.chan.track(rtRoomMe()); }catch(e){ console.warn('rtRoomSetRace', e); } }
 function rtRoomsActive(){ return typeof RT!=='undefined' && RT.active && _sb; }
 // 방 목록 채널 구독(1회) — presence sync로 _roomList 실시간 갱신
 function rtRoomsEnsure(){ if(!rtRoomsActive() || RTROOM.listChan) return;
@@ -18111,7 +18122,8 @@ function rtRoomJoin(num, asHost){ rtRoomLeaveChan(); RTROOM.num=num; RTROOM.host
       .on('broadcast',{event:'start'}, m=>rtRoomOnStart(m.payload))
       .on('broadcast',{event:'close'}, m=>rtRoomKicked('방장이 방을 닫았습니다'))
       .subscribe(st=>{ if(st==='SUBSCRIBED'){
-          try{ RTROOM.chan.track({ uid:myUid(), nick:myNick(), ready:true, host:!!asHost, t:Date.now() }); }catch(e){}
+          RTROOM.joinT=Date.now();   // 내 입장 시각 — 종족을 다시 track 할 때도 순서가 안 흔들리게 보존한다
+          try{ RTROOM.chan.track(rtRoomMe()); }catch(e){}
         } else if(st==='CHANNEL_ERROR'||st==='TIMED_OUT'){ toast('⚠️ 대기실 연결이 불안정합니다'); } });
   }catch(e){ console.warn('rtRoomJoin', e); toast('⚠️ 방 입장에 실패했습니다'); rtRoomLeaveChan(); } }
 function rtRoomLeaveChan(){ if(RTROOM.chan){ try{ _sb.removeChannel(RTROOM.chan); }catch(e){} RTROOM.chan=null; } RTROOM.num=null; }
@@ -18127,7 +18139,8 @@ function rtRoomSync(){ if(!RTROOM.chan || !_lobbyRoom || !_lobbyRoom.real) retur
     if(!RTROOM.host && _lobbyRoom.hostUid && !mem.some(m=>m.uid===_lobbyRoom.hostUid)){ rtRoomKicked('방장이 방을 나갔습니다'); return; }
     const before=_lobbySlots.filter(Boolean).length;
     _lobbySlots=[null,null,null,null,null,null,null,null];
-    mem.forEach((m,k)=>{ _lobbySlots[k]={ name:'P'+(k+1), label:m.nick, uid:m.uid, me:m.uid===myUid(), bot:false, ready:m.ready!==false, host:!!m.host }; });
+    mem.forEach((m,k)=>{ _lobbySlots[k]={ name:'P'+(k+1), label:m.nick, uid:m.uid, me:m.uid===myUid(), bot:false, ready:m.ready!==false, host:!!m.host,
+      race:(m.race && STK_RACES[m.race]) ? m.race : undefined }; });   // 상대 종족 = presence 값(없으면 renderLobby 가 배정)
     renderLobby(); updateLobbyStart();
     const now=mem.length;
     if(before && now>before){ addLobbyMsg('', (mem[now-1].nick||'플레이어')+'님이 입장하였습니다.'); if(typeof playSfxT==='function') playSfxT('notify',400); }
@@ -18145,6 +18158,12 @@ function rtRoomOnStart(p){ if(!_lobbyRoom || !_lobbyRoom.real || RTROOM.started)
   let myNum=0; slots.forEach(x=>{ if(x.uid===myUid()) myNum=x.num; });
   if(!myNum){ rtRoomKicked('게임 시작 명단에 없습니다'); return; }
   if(p.diff && DIFFICULTY[p.diff]) _selDiff=p.diff;
+  // 방장이 정한 판 조건이 권위다 — 대전 설정·무한 여부·내 종족을 받아 적용한다.
+  // ⚠ startGameNow 는 _lobbyRoom.opts 를 보고 MAP_CFG_OVR 을 심으므로 **그 전에** 넣어야 한다.
+  _lobbyRoom.opts = p.opts || null;
+  if(p.inf && USEMAPS.nemo_inf) _selMap=USEMAPS.nemo_inf;
+  { const mine=slots.find(function(x){ return x.uid===myUid(); });
+    if(mine && mine.race && STK_RACES[mine.race]) _selRace=mine.race; }
   document.getElementById('lobby').classList.add('hide');
   startGameNow(active, myNum, names);
   startGameCoop(slots);
@@ -18186,8 +18205,10 @@ function lobbyStart(){ const players=_lobbySlots.filter(Boolean); if(players.len
   if(_lobbyRoom && _lobbyRoom.real){   // 실제 방: 방장만 시작 가능, 슬롯 배정을 payload로 전파(권위=방장)
     if(!RTROOM.host || RTROOM.started) return; RTROOM.started=true;
     const slots=[], names={}; let myNum=1;
-    _lobbySlots.forEach((sl,i)=>{ if(sl){ slots.push({num:i+1, uid:sl.uid}); names[i+1]=sl.me?myNick():(sl.label||sl.name); if(sl.me) myNum=i+1; } });
-    try{ if(RTROOM.chan) RTROOM.chan.send({type:'broadcast', event:'start', payload:{slots:slots, names:names, diff:_lobbyRoom.diff, from:myUid()}}); }catch(e){ toast('⚠️ 시작 신호 전송 실패'); RTROOM.started=false; return; }
+    // ⚠ 종족은 **슬롯마다** 실어야 한다 — 각자 다른 것을 고르므로 방 단위 값이 아니다
+    _lobbySlots.forEach((sl,i)=>{ if(sl){ slots.push({num:i+1, uid:sl.uid, race:sl.race||undefined}); names[i+1]=sl.me?myNick():(sl.label||sl.name); if(sl.me) myNum=i+1; } });
+    try{ if(RTROOM.chan) RTROOM.chan.send({type:'broadcast', event:'start',
+      payload:{slots:slots, names:names, diff:_lobbyRoom.diff, inf:!!_lobbyRoom.inf, opts:_lobbyRoom.opts||null, from:myUid()}}); }catch(e){ toast('⚠️ 시작 신호 전송 실패'); RTROOM.started=false; return; }
     if(RTROOM.meta){ RTROOM.meta.status='playing'; RTROOM.meta.round=1; rtRoomPublish(RTROOM.meta); }   // 목록에 '게임중' 표시
     document.getElementById('lobby').classList.add('hide');
     startGameNow(slots.map(x=>x.num), myNum, names);
@@ -18316,7 +18337,7 @@ function renderLobbyRace(){ const box=document.getElementById('lbRaceSec'); if(!
 function setLobbyRace(k){ if(!STK_RACES[k]) return;
   const me=_lobbySlots.find(function(s){ return s&&s.me; }); if(me) me.race=k;
   _selRace=k; renderLobby(); renderLobbyRace();
-  // ⚠ 실방(Supabase presence)으로 내 종족을 전파하는 경로는 아직 없다 — 로컬/봇 방에서만 반영된다.
+  if(typeof rtRoomSetRace==='function') rtRoomSetRace();   // 실방이면 presence 를 다시 실어 상대 화면에도 반영
   if(typeof playSfx==='function') playSfx('ui_tab'); }
 // 팀전 유즈맵(cfg.teams) = 앞 절반 1팀 / 뒤 절반 2팀. 자리를 옮기면 팀도 따라 바뀜
 function lobbyTeams(){ return !!(_selMap && _selMap.cfg && _selMap.cfg.teams); }   // MAP(=플레이 중 맵)이 아니라 선택한 맵 기준 — 안 그러면 직전 게임의 맵이 대기실에 남는다
