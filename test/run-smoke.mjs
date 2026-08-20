@@ -42,6 +42,25 @@ const groupsArg=process.argv[2];
 const GROUPS=(groupsArg && groupsArg!=='duo')?[groupsArg]:(groupsArg==='duo'?[]:['lobby','game','sandbox']);
 const SMOKE_SRC=fs.readFileSync(path.join(ROOT,'test','smoke.js'),'utf8');
 
+// ── 프리플라이트: css/ 안의 상대 경로가 살아 있는가 ─────────────────────
+// ⚠ CSS 의 url() 은 **CSS 파일 위치** 기준으로 풀린다. 스타일이 sc-ums-web.html 안에
+//   있을 땐 assets/... 가 맞았지만 css/ 로 옮긴 뒤로는 ../assets/... 여야 한다.
+//   실제로 이걸 놓쳐 로딩 화면 배경 아트가 통째로 안 떴다(2026-08-20). 브라우저는
+//   배경 이미지가 없어도 조용히 넘어가므로 스모크로는 안 잡힌다 — 여기서 정적으로 막는다.
+{ const cssDir=path.join(ROOT,'css'); const bad=[];
+  for(const f of (fs.existsSync(cssDir)?fs.readdirSync(cssDir):[])){
+    if(!f.endsWith('.css')) continue;
+    const src=fs.readFileSync(path.join(cssDir,f),'utf8');
+    for(const m of src.matchAll(/url\(\s*(['"]?)([^)'"]+)\1\s*\)/g)){
+      const u=m[2].trim();
+      if(/^(data:|https?:|\/\/|\/)/.test(u)) continue;          // 데이터 URI·원격·절대경로는 검사 대상 아님
+      const rel=u.split('?')[0].split('#')[0];
+      if(!fs.existsSync(path.resolve(cssDir, rel))) bad.push(`css/${f} → ${u}`);
+    } }
+  if(bad.length){ console.error('\n❌ CSS 상대 경로가 깨졌습니다 (css/ 기준으로 풀립니다 — ../assets/… 여야 합니다):');
+    bad.forEach(b=>console.error('   · '+b)); process.exit(1); }
+  console.log('✓ CSS 상대 경로 확인'); }
+
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const PORT=server.address().port;
 const browser=await puppeteer.launch({ executablePath:CHROME, headless:process.env.HEADFUL?false:'new',

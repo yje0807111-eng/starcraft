@@ -1,0 +1,176 @@
+<!-- 유즈맵 결과·나가기 팝업 — 개선 8안 + 새 방식 4안 (2026-08-20, 2차)
+     로비(유즈맵 선택)·부팅 로딩·게임 진입 로딩과 **같은 언어**로 다시 그렸다:
+     키 아트 배경 · 굵은 한글 제목 · 좌측 컬러 액센트 바 · 재화 칩 · 밑변 광원 버튼 · 아바타 덱.
+     ⚠ 토큰을 복사하지 않고 css/00-base.css 를 링크한다. 에셋도 실물을 쓴다. -->
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>결과·나가기 팝업 12안</title>
+<link rel="stylesheet" href="../../css/00-base.css">
+<style>
+  html,body{display:block;height:auto;overflow:visible;background:#08090b}   /* 게임 body(폰 가운데 flex) 되돌리기 */
+  body{font-family:var(--font-ko);color:var(--txt);padding:20px;width:1316px}
+  h2{font-family:var(--font-ti);font-size:19px;color:#fff;margin:8px 0 2px}
+  h2 small{font-family:var(--font-ko);font-size:11px;color:var(--txt-mute);margin-left:8px}
+  .sheet{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:12px 0 28px}
+  .p{background:#0d0e11;border:1px solid rgba(255,255,255,.06);border-radius:9px;padding:11px}
+  .tag{font-family:var(--font-ti);font-size:13px;color:#fff}
+  .note{font-size:10px;line-height:1.5;color:var(--txt-mute);min-height:44px;margin:2px 0 8px}
+  /* 폰 한 대 — 실제 비율(390:844)을 그대로 줄인다 */
+  .ph{position:relative;width:100%;aspect-ratio:390/844;border-radius:10px;overflow:hidden;background:#050609;
+    display:flex;flex-direction:column;font-size:11px}
+  .art{position:absolute;inset:0;background:url(../../assets/backgrounds/usemaps/nemo.webp) center/cover;opacity:.55}
+  .art::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,6,9,.35) 0%,rgba(5,6,9,.72) 46%,#050609 88%)}
+  .dim{position:absolute;inset:0;background:radial-gradient(ellipse 46% 26% at 50% 46%,var(--aura,rgba(255,210,74,.16)),transparent 70%),rgba(5,6,9,.6)}
+  .mid{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:0 12px}
+  /* 로비·진입 화면 어휘 */
+  .kt{font-family:var(--font-ti);font-size:26px;color:#fff;letter-spacing:-.5px;text-shadow:0 2px 14px rgba(0,0,0,.8)}
+  .kt.win{color:var(--gold);text-shadow:0 0 16px rgba(255,210,74,.55)}
+  .kt.lose{color:#ff6b7a;text-shadow:0 0 16px rgba(255,107,122,.5)}
+  .en{font-family:var(--font-num);font-size:10px;letter-spacing:4px;color:var(--txt-mute)}
+  .chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border:1px solid var(--metal-edge);border-radius:3px;
+    background:rgba(0,0,0,.5);font-family:var(--font-ti);font-size:10px;color:#dfe3e8}
+  .res{display:flex;gap:6px}
+  .res b{display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border-radius:3px;background:rgba(0,0,0,.55);
+    border:1px solid rgba(255,255,255,.09);font-family:var(--font-num);font-size:13px;color:#fff}
+  .res img{width:14px;height:14px}
+  .avs{display:flex;gap:5px}
+  .av{width:52px;background:rgba(10,11,13,.86);border:1px solid rgba(255,255,255,.08);border-radius:4px;padding:7px 3px;text-align:center}
+  .av i{display:block;width:24px;height:24px;border-radius:50%;margin:0 auto 4px;font-style:normal;line-height:24px;font-size:10px;color:#0b0b0c;font-family:var(--font-ti)}
+  .av s{display:block;text-decoration:none;font-size:8px;color:var(--txt-mute)}
+  .av.me{border-color:var(--gold)} .av.me s{color:#fff}
+  .bar{width:100%;height:3px;border-radius:2px;background:rgba(255,255,255,.1);overflow:hidden}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),#ff9f3b)}
+  /* 하단 액션 = 실제 .actBtn 문법(각진 판 + 밑변 광원 한 줄) */
+  .acts{position:relative;display:flex;gap:8px;padding:10px 12px 12px}
+  .btn{flex:1;height:40px;border:1px solid #2b2d33;border-radius:3px;font-family:var(--font-ti);font-size:13px;color:#d8dade;
+    background:linear-gradient(180deg,#26282d 0%,#191a1e 60%,#111216 100%);position:relative}
+  .btn::after{content:'';position:absolute;left:8%;right:8%;bottom:-1px;height:2px;background:var(--neon);opacity:0;border-radius:2px}
+  .btn.pri{color:#fff} .btn.pri::after{opacity:1;box-shadow:0 0 9px var(--neon)}
+  .btn.gold::after{background:var(--gold);box-shadow:0 0 9px var(--gold)}
+  .card{position:relative;width:88%;background:linear-gradient(180deg,rgba(18,19,23,.96),rgba(8,9,12,.97));
+    border:1px solid var(--metal-edge);border-radius:6px;padding:14px 13px;text-align:center}
+  .lbar{position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:2px;background:var(--gold)}
+</style>
+
+<h2>개선 8안 <small>로비·로딩 화면의 어휘로 다시 — 키 아트 · 굵은 한글 · 재화 칩 · 밑변 광원 버튼</small></h2>
+<div class="sheet" id="s8">
+
+  <div class="p"><div class="tag">A · 키 아트 헤더</div><div class="note">카드 위에 <b>맵 키 아트</b>가 들어간다. 게임 진입 화면과 짝이 되어 "이 맵의 결과"로 읽힌다.</div>
+    <div class="ph"><div class="dim"></div><div class="mid">
+      <div class="card" style="padding:0;overflow:hidden">
+        <div style="height:74px;background:url(../../assets/backgrounds/usemaps/nemo.webp) center/cover;position:relative">
+          <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent,rgba(8,9,12,.96))"></div>
+          <div class="kt win" style="position:absolute;left:0;right:0;bottom:6px;font-size:22px">승리</div></div>
+        <div style="padding:10px 12px 13px"><div class="en">NEMO DEFENSE · ROUND 14</div>
+          <div class="res" style="justify-content:center;margin-top:9px"><b><img src="../../assets/icons/res_mineral.webp">2,840</b><b>◎ 17</b></div></div></div></div>
+      <div class="acts"><button class="btn">관전하기</button><button class="btn pri gold">확인</button></div></div></div>
+
+  <div class="p"><div class="tag">B · 보상 칩 줄</div><div class="note">획득물을 <b>실제 재화 아이콘 칩</b>으로. 유즈맵 상단 재화 바와 같은 문법이라 바로 읽힌다.</div>
+    <div class="ph"><div class="art"></div><div class="dim"></div><div class="mid">
+      <div class="kt win">승리</div><div class="en">VICTORY</div>
+      <div class="res" style="margin-top:6px"><b><img src="../../assets/icons/res_mineral.webp">2,840</b><b><img src="../../assets/icons/res_gas.webp">120</b><b>◎ 17</b></div></div>
+      <div class="acts"><button class="btn">관전하기</button><button class="btn pri gold">확인</button></div></div></div>
+
+  <div class="p"><div class="tag">C · 좌측 액센트 바</div><div class="note">유즈맵 목록 행의 <b>왼쪽 컬러 바</b>를 결과 카드에. 승=금 / 패=빨강 — 색 하나로 결과가 정해진다.</div>
+    <div class="ph"><div class="art"></div><div class="dim"></div><div class="mid">
+      <div class="card" style="text-align:left;padding-left:16px"><span class="lbar"></span>
+        <div class="kt win" style="font-size:22px">승리</div>
+        <div style="font-size:10px;color:var(--txt-mute);margin-top:3px">네모네모 디펜스 · 라운드 14 클리어</div>
+        <div class="res" style="margin-top:9px"><b><img src="../../assets/icons/res_mineral.webp">2,840</b><b>◎ 17</b></div></div></div>
+      <div class="acts"><button class="btn">관전하기</button><button class="btn pri gold">확인</button></div></div></div>
+
+  <div class="p"><div class="tag">D · 플레이어 덱</div><div class="note">진입 화면의 <b>아바타 카드 덱</b>을 결과에도. 내 카드만 금색 — 멀티에서 누가 살아남았는지 보인다.</div>
+    <div class="ph"><div class="art"></div><div class="dim"></div><div class="mid">
+      <div class="kt win">승리</div>
+      <div class="avs" style="margin-top:4px">
+        <div class="av me"><i style="background:#c9a24a">지</i><s>지휘관</s></div>
+        <div class="av"><i style="background:#8e5bb5">S</i><s>탈락</s></div>
+        <div class="av"><i style="background:#4a8ab5">노</i><s>탈락</s></div></div>
+      <div class="res" style="margin-top:7px"><b><img src="../../assets/icons/res_mineral.webp">2,840</b><b>◎ 17</b></div></div>
+      <div class="acts"><button class="btn">관전하기</button><button class="btn pri gold">확인</button></div></div></div>
+
+  <div class="p"><div class="tag">E · 진행 바 + 큰 숫자</div><div class="note">진입 화면의 <b>0/3</b> 문법. 몇 라운드까지 갔는지가 결과의 주인공이 된다 — 무한 모드와도 맞는다.</div>
+    <div class="ph"><div class="art"></div><div class="dim"></div><div class="mid">
+      <div class="kt win">승리</div>
+      <div style="width:78%;margin-top:8px">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:4px">
+          <span style="font-size:10px;color:var(--txt-mute)">도달 라운드</span>
+          <span style="font-family:var(--font-num);font-size:22px;color:#fff;line-height:1">14<span style="font-size:12px;color:var(--txt-mute)">/14</span></span></div>
+        <div class="bar"><i style="width:100%"></i></div></div>
+      <div class="res" style="margin-top:9px"><b>◎ 17</b></div></div>
+      <div class="acts"><button class="btn">관전하기</button><button class="btn pri gold">확인</button></div></div></div>
+
+  <div class="p"><div class="tag">F · 하단 도크</div><div class="note">로그인 시네마틱 문법 — 결과를 <b>하단 도크</b>로 내리고 위는 전장이 그대로 보인다. 딤이 얕아도 읽힌다.</div>
+    <div class="ph"><div class="art"></div><div class="dim" style="background:rgba(5,6,9,.34)"></div>
+      <div class="mid" style="justify-content:flex-end;padding:0">
+        <div style="width:100%;background:linear-gradient(180deg,transparent,rgba(5,6,9,.93) 26%);padding:22px 14px 8px;text-align:center">
+          <div class="kt win" style="font-size:23px">승리</div>
+          <div class="res" style="justify-content:center;margin-top:7px"><b><img src="../../assets/icons/res_mineral.webp">2,840</b><b>◎ 17</b></div></div></div>
+      <div class="acts"><button class="btn">관전하기</button><button class="btn pri gold">확인</button></div></div></div>
+
+  <div class="p"><div class="tag">G · 난이도 배지</div><div class="note">진입 화면의 <b>NORMAL 칩</b> 문법을 그대로. 어느 난이도를 깼는지가 결과와 한 줄에 붙는다.</div>
+    <div class="ph"><div class="art"></div><div class="dim"></div><div class="mid">
+      <div class="kt win">승리</div>
+      <div style="display:flex;align-items:center;gap:7px;margin-top:5px">
+        <span class="chip" style="border-color:var(--info);color:var(--info)">NORMAL</span>
+        <span style="font-size:10px;color:var(--txt-mute)">네모네모 디펜스 · 14 라운드</span></div>
+      <div class="res" style="margin-top:9px"><b><img src="../../assets/icons/res_mineral.webp">2,840</b><b>◎ 17</b></div></div>
+      <div class="acts"><button class="btn">관전하기</button><button class="btn pri gold">확인</button></div></div></div>
+
+  <div class="p"><div class="tag">H · 전체 화면 결과</div><div class="note">팝업을 없애고 <b>진입 화면과 같은 골격</b>으로. 들어갈 때와 나올 때가 대칭이 된다 — 지금 통계 창이 하던 일을 결과가 직접 한다.</div>
+    <div class="ph"><div class="art" style="opacity:.7"></div>
+      <div class="mid" style="justify-content:flex-start;padding-top:64px;gap:9px">
+        <div class="kt win" style="font-size:30px">승리</div>
+        <span class="chip" style="border-color:var(--info);color:var(--info)">NORMAL</span>
+        <div style="font-size:10px;color:var(--txt-mute)">네모네모 디펜스</div>
+        <div class="avs" style="margin-top:6px"><div class="av me"><i style="background:#c9a24a">지</i><s>1위</s></div>
+          <div class="av"><i style="background:#8e5bb5">S</i><s>2위</s></div><div class="av"><i style="background:#4a8ab5">노</i><s>3위</s></div></div>
+        <div class="res" style="margin-top:6px"><b><img src="../../assets/icons/res_mineral.webp">2,840</b><b>◎ 17</b></div></div>
+      <div class="acts"><button class="btn">관전하기</button><button class="btn pri gold">확인</button></div></div></div>
+</div>
+
+<h2>완전히 새로운 방식 4안 <small>팝업이라는 형식 자체를 바꾼다</small></h2>
+<div class="sheet" id="s4">
+
+  <div class="p"><div class="tag">N1 · 리본 배너</div><div class="note">화면을 가로지르는 <b>각진 리본</b>. 위아래로 전장이 살아 있어 "게임이 끝났다"가 아니라 "이 판의 결과"로 읽힌다.</div>
+    <div class="ph"><div class="art"></div><div class="dim" style="background:rgba(5,6,9,.3)"></div>
+      <div class="mid" style="padding:0">
+        <div style="width:112%;transform:skewY(-3deg);background:linear-gradient(90deg,transparent,rgba(255,210,74,.16) 14%,rgba(16,13,5,.95) 32%,rgba(16,13,5,.95) 68%,rgba(255,210,74,.16) 86%,transparent);border-top:1px solid rgba(255,210,74,.6);border-bottom:1px solid rgba(255,210,74,.6);padding:13px 0;text-align:center">
+          <div style="transform:skewY(3deg)"><div class="kt win" style="font-size:25px">승리</div>
+            <div style="font-size:9px;color:var(--txt-mute);margin-top:2px">라운드 14 · 처치 372 · ◎ +17</div></div></div></div>
+      <div class="acts"><button class="btn">관전하기</button><button class="btn pri gold">확인</button></div></div></div>
+
+  <div class="p"><div class="tag">N2 · 순위 덱</div><div class="note">멀티 결과를 <b>순위 카드</b>로. 1위 카드만 키우고 금색. 협동이 아니라 경쟁으로 읽히게 만드는 안이다.</div>
+    <div class="ph"><div class="art"></div><div class="dim"></div>
+      <div class="mid" style="gap:9px">
+        <div class="en">MATCH RESULT</div>
+        <div style="display:flex;align-items:flex-end;gap:6px">
+          <div class="av" style="width:46px;opacity:.72"><i style="background:#8e5bb5">S</i><s>2위</s></div>
+          <div class="av me" style="width:62px;padding:11px 3px"><i style="width:30px;height:30px;line-height:30px;font-size:12px;background:#c9a24a">지</i>
+            <s style="color:var(--gold);font-family:var(--font-ti);font-size:11px">1위</s></div>
+          <div class="av" style="width:46px;opacity:.72"><i style="background:#4a8ab5">노</i><s>3위</s></div></div>
+        <div class="res"><b><img src="../../assets/icons/res_mineral.webp">2,840</b><b>◎ 17</b></div></div>
+      <div class="acts"><button class="btn">관전하기</button><button class="btn pri gold">확인</button></div></div></div>
+
+  <div class="p"><div class="tag">N3 · 보상 개봉</div><div class="note">모바일 게임 결과창 정석 — 획득물이 <b>한 줄씩 쌓인다</b>. 재화 아이콘이 주인공이라 "뭘 벌었나"가 즉시 보인다.</div>
+    <div class="ph"><div class="art" style="opacity:.35"></div><div class="dim"></div>
+      <div class="mid" style="gap:7px">
+        <div class="kt win" style="font-size:22px">승리</div>
+        <div style="width:80%;display:flex;flex-direction:column;gap:4px;margin-top:2px">
+          <div style="display:flex;align-items:center;gap:7px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.08);border-left:2px solid var(--gold);border-radius:3px;padding:6px 8px">
+            <img src="../../assets/icons/res_mineral.webp" style="width:15px"><span style="flex:1;font-size:10px;color:var(--txt-mute)">미네랄</span><b style="font-family:var(--font-num);font-size:13px;color:#fff">+2,840</b></div>
+          <div style="display:flex;align-items:center;gap:7px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.08);border-left:2px solid var(--gold);border-radius:3px;padding:6px 8px">
+            <img src="../../assets/icons/res_gas.webp" style="width:15px"><span style="flex:1;font-size:10px;color:var(--txt-mute)">에너지</span><b style="font-family:var(--font-num);font-size:13px;color:#fff">+120</b></div>
+          <div style="display:flex;align-items:center;gap:7px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.08);border-left:2px solid var(--gold);border-radius:3px;padding:6px 8px">
+            <span style="width:15px;text-align:center;color:var(--gold)">◎</span><span style="flex:1;font-size:10px;color:var(--txt-mute)">포인트</span><b style="font-family:var(--font-num);font-size:13px;color:var(--gold)">+17</b></div></div></div>
+      <div class="acts"><button class="btn">관전하기</button><button class="btn pri gold">확인</button></div></div></div>
+
+  <div class="p"><div class="tag">N4 · 전장 각인</div><div class="note">팝업이 <b>없다</b>. 전장 위에 결과가 각인되고 액션은 하단 바로 내려간다. 딤 최소 — 마지막 순간의 전장이 그대로 남는다.</div>
+    <div class="ph"><div class="art" style="opacity:.8"></div>
+      <div class="dim" style="background:radial-gradient(ellipse 50% 24% at 50% 44%,rgba(255,210,74,.13),transparent 70%),rgba(5,6,9,.22)"></div>
+      <div class="mid"><div class="kt win" style="font-size:34px;letter-spacing:2px">승리</div>
+        <div class="en" style="letter-spacing:5px;margin-top:-2px">VICTORY</div>
+        <div style="font-size:9px;color:#9aa0a8;margin-top:5px">라운드 14 · 처치 372 · ◎ +17</div></div>
+      <div class="acts" style="background:linear-gradient(180deg,transparent,rgba(0,0,0,.6));border-top:1px solid rgba(255,210,74,.3)">
+        <button class="btn" style="background:transparent;border-color:transparent">관전하기</button>
+        <button class="btn pri gold" style="background:transparent;border-color:transparent">확인</button></div></div></div>
+</div>

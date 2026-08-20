@@ -1329,7 +1329,7 @@
 
 
   .twGround{position:absolute;inset:-25.0% -21.0%;pointer-events:none;
-    background:linear-gradient(rgba(6,8,12,.42),rgba(6,8,12,.52)),url('assets/backgrounds/town/town_ground.webp') 50% 50%/cover no-repeat,url('assets/tiles/terran_tile_light.webp') 0 0/128px repeat}   /* 마을 바닥 그림(없으면 아래 타일이 그대로 보인다) */
+    background:linear-gradient(rgba(6,8,12,.42),rgba(6,8,12,.52)),url('../assets/backgrounds/town/town_ground.webp') 50% 50%/cover no-repeat,url('../assets/tiles/terran_tile_light.webp') 0 0/128px repeat}   /* 마을 바닥 그림(없으면 아래 타일이 그대로 보인다) */
   .twGround::after{content:'';position:absolute;inset:0;pointer-events:none;   /* 가장자리 비네트 — 월드 끝이 자연스럽게 어두워짐 */
     background:radial-gradient(ellipse at 50% 50%,transparent 52%,rgba(0,0,0,.55) 100%)}
   .twZone{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;z-index:2}
