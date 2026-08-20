@@ -2777,8 +2777,9 @@
   .mgSlot.empty{border-style:dashed;opacity:.55}
   .mgSlot.lock{border-style:dashed;opacity:.8;background:rgba(255,255,255,.025)}
   .mgSlot.lock .mgIco{font-size:19px}
-  /* 잠긴 칸 자물쇠 — 공용 .stIco(21px)는 이 줄에서 크다. 이모지였을 때(19px)와 같은 크기로 맞춘다 */
-  .mgSlot .mgIco .stIco{width:19px;height:19px}
+  /* 잠긴 칸 자물쇠 — 40px 카드 안에서 이만큼이 균형이다(이모지 19px 보다 크다).
+     ⚠ 1px 내린다: 자물쇠는 위쪽 고리가 가늘어 사각 상자 기준으로 가운데에 두면 **눈에는 떠 보인다**. */
+  .mgSlot .mgIco .stIco{width:24px;height:24px;position:relative;top:1px}
   .mgSlot.pick{background:rgba(255,255,255,.11)}
   .mgCard{position:relative;flex:0 0 auto;width:40px;height:40px;display:flex;align-items:center;justify-content:center;
     border-radius:var(--r-md);border:1px solid var(--metal-edge);background:rgba(0,0,0,.32)}
@@ -3397,10 +3398,6 @@
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .hmUpVl .nx{color:#fff}
   .hmArw{display:block;width:7px;height:7px;flex:none;fill:none;stroke:#6f6f6f;stroke-width:3.2;stroke-linecap:round}
-  /* ⚠ `.hmLk` 는 선 SVG(폴백)와 그림(<img>) 둘 다에 붙는다 — 크기는 공용, 선 속성은 SVG 에만 먹는다.
-     그림은 색이 있으므로 `stroke`/`fill` 이 무시되는 게 맞다. */
-  .hmLk{display:block;width:8px;height:8px;flex:none;fill:none;stroke:#7a7a7a;stroke-width:2;stroke-linejoin:round}
-  img.hmLk{object-fit:contain}
   /* 버튼 — 오른쪽 정사각. 위 = 레벨 변화(잠김은 자물쇠) · 아래 = 비용 */
   /* 작은 버튼은 은색 메탈 그대로 — 빨강은 카드 테두리(.hmUp)가 맡는다 */
   /* 링·안쪽 선 — 색은 여기 두 토큰에서만 꺼낸다(B3안, 2026-08-19).
@@ -3435,7 +3432,8 @@
     border-bottom:1px solid rgba(0,0,0,.62);box-shadow:0 1px 0 rgba(255,255,255,.16);
     border-radius:2px 2px 0 0}
   .hmUpBl .nx{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8),0 0 6px rgba(255,255,255,.28)}
-  .hmUpBl .hmLk{width:11px;height:11px;stroke:#c8c8c8}
+  /* 잠긴 칸의 자물쇠 — 이 띠는 글자 9.5px 이라 그림도 그만큼 작게 */
+  .hmUpBl .stIco{width:13px;height:13px}
   .hmUpBc{gap:3px;font-size:9.5px;font-weight:700;color:#ececec;border-radius:0 0 2px 2px}
   .hmUpBc .ri{display:block;width:10px;height:10px;flex:none}
   .hmUpBtn.off{--btnRing:linear-gradient(315deg,#222 0%,#3e3e3e 66%,#5a5a5a 100%);
@@ -6848,7 +6846,7 @@ function hmUpCardHTML(o){
   const arw=(a,b)=>(b==null||b==='')?a:(a+HM_ARW+'<b class="nx">'+b+'</b>');
   const head=o.lock ? '<span class="hmUpLk">'+(o.lockTx||'해금 필요')+'</span>'
                     : '<span class="hmUpVl">'+arw(o.val,o.next)+'</span>';
-  const foot='<span class="hmUpBl">'+(o.lock?'':o.lv)+'</span>'
+  const foot='<span class="hmUpBl">'+(o.lock?stIco('lock','🔒'):o.lv)+'</span>'
             +'<span class="hmUpBc">'+o.cost+'</span>';
   return '<div class="hmUp'+(o.lock?' lk':'')+'" data-k="'+o.key+'">'
     +'<span class="hmUpIco">'+o.ico+'</span>'

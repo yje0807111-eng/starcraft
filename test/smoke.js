@@ -2489,7 +2489,10 @@ async function groupLobby(){
       //   `querySelector('img')` 로 잡으면 자물쇠가 걸려 엉뚱한 것을 잰다(실제로 그랬다). 둘 다 각각 본다.
       { const row=document.querySelector('#gearBody .mgSlot.lock'), ic=row.querySelector('img.gi');
         const lk=row.querySelector('.mgIco img');
-        if(lk) assert(lk.getBoundingClientRect().height<=20,k+': 잠긴 칸 자물쇠가 너무 큼: '+Math.round(lk.getBoundingClientRect().height)+'px');
+        // 자물쇠는 40px 카드 안에 여백을 두고 앉아야 한다 — 카드의 70% 를 넘으면 꽉 찬 것이다
+        if(lk){ const card=row.querySelector('.mgCard').getBoundingClientRect(), h=lk.getBoundingClientRect().height;
+          assert(h<=card.height*0.7,k+': 잠긴 칸 자물쇠가 카드를 꽉 채움: '+Math.round(h)+'/'+Math.round(card.height)+'px');
+          assert(h>=20,k+': 잠긴 칸 자물쇠가 너무 작음: '+Math.round(h)+'px'); }
         assert(ic,k+': 잠긴 줄에 재화 아이콘이 없음');
         assert(ic.getBoundingClientRect().height<=20,k+': 재화 아이콘이 너무 큼(크기 클래스 누락): '+Math.round(ic.getBoundingClientRect().height)+'px');
         assert(row.getBoundingClientRect().height<=90,k+': 잠긴 줄 높이가 비정상: '+Math.round(row.getBoundingClientRect().height)+'px'); }
@@ -3277,7 +3280,12 @@ async function groupLobby(){
     { const h=stIco('lock','🔒');
       assert(h.indexOf('st_lock.webp')>=0,'잠김 자물쇠 경로가 틀림');
       assert(h.indexOf('data-fb="🔒"')>=0,'자물쇠 폴백이 원래 이모지가 아님');
-      assert(typeof hmLockHTML==='undefined','사냥터 카드용 자물쇠가 되살아남'); }
+      assert(typeof hmLockHTML==='undefined','옛 사냥터 전용 자물쇠 함수가 되살아남(공용 stIco 를 쓴다)');
+      // 사냥터 카드는 **작은 레벨 버튼**에만 자물쇠를 둔다 — 머리줄은 `해금 필요` 글자뿐이다
+      { const c=hmUpCardHTML({key:'x', lock:true, lv:'LV.0', name:'테스트'});
+        assert(/hmUpBl[^>]*>[^<]*<img[^>]*st_lock\.webp/.test(c.replace(/\s+/g,' ')),'잠긴 카드의 작은 버튼에 자물쇠가 없음');
+        const head=(c.match(/<span class="hmUpLk">[\s\S]*?<\/span>/)||[''])[0];
+        assert(head.indexOf('<img')<0,'머리줄에 자물쇠가 되살아남(글자만이어야 한다)'); } }
     // ④ 상태 아이콘은 **원래 이모지**로 되돌아간다(pIco 표에 없는 이모지가 많다)
     { const h=stIco('rebirth','🔁');
       assert(h.indexOf('st_rebirth.webp')>=0,'환생 아이콘 경로가 틀림');
