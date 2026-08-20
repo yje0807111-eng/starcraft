@@ -2720,11 +2720,15 @@ async function groupLobby(){
     { const H2=hbHunt();
       assert(Object.keys(H2.upg).length===0,'미네랄 업그레이드가 안 지워짐');
       assert(PROF().pcoin===0,'미네랄 재화가 안 지워짐');
-      // ⭐ 진행 던전·라운드는 **유지**한다(2026-08-19) — 되돌리면 이미 이긴 구간을 매 사이클 다시 걷는다.
-      //    실측: 환생 20회 동안 116라운드를 20번 재등반했고, 그때 공격력 6.8e20 vs 적 5.4e8 이었다(벽이 아니었다).
-      assert(H2.dg===1 && H2.round===31,'진행 던전/라운드가 유지되지 않음: '+H2.dg+'-'+H2.round);
+      // ⭐ 진행은 던전 1-1 로 되돌아간다 — 되감기가 환생의 값이다.
+      assert(H2.dg===1 && H2.round===1,'진행 던전/라운드가 안 돌아감: '+H2.dg+'-'+H2.round);
       assert(H2.unl.crit===1,'업그레이드 해금이 지워짐(유지해야 한다)');
-      assert((H2.best[1]||0)===31,'최고 기록이 지워짐(유지해야 한다)'); }
+      assert((H2.best[1]||0)===31,'최고 기록이 지워짐(유지해야 한다)');
+      // ⭐ '깼던 구간은 열려 있다' — 되돌아갈 길이 남아야 되감기가 벌이 아니라 리셋이 된다
+      assert(hbBest(1)===31,'환생 뒤 라운드 선택 상한이 최고 기록을 안 따라감: '+hbBest(1));
+      hbSetRound(31);
+      assert(hbHunt().round===31,'환생 뒤 깼던 라운드로 되돌아갈 수 없음: '+hbHunt().round);
+      hbSetRound(1); }
     assert(PROF().gas===777 && c.unit.evoStars===2,'가스·진화★가 지워짐');
     // ⑥ 배수는 **곱이 아니라 합**으로 쌓인다 (1.05 와 1.25 → 1.30)
     assert(Math.abs(profXpMul(c)-(1+gain))<1e-9,'첫 환생 배수가 다름');

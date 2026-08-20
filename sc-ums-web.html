@@ -6565,10 +6565,12 @@ function profRebirth(c){ c=c||CHAR(); if(!profCanRebirth(c)) return 0;
   //      best 를 지우면 던전 해금과 라운드 선택이 통째로 사라진다.
   try{ const p=PROF(), H=hbHunt();
     H.upg={};                                        // 미네랄 업그레이드 레벨
-    // ⭐ 진행 던전·라운드는 **되돌리지 않는다**(2026-08-19). 전투력의 지수 축(환생 포인트)이 영구라
-    //    직전 자리에서 바로 이어 싸울 수 있다. 약하면 hbDie 가 알아서 라운드를 내린다 — 자동 보정된다.
-    //    ⛔ 1-1 로 되돌리지 말 것: 실측에서 환생 20회 동안 116라운드를 20번 다시 걸었고,
-    //       사이클 시간이 전부 '이미 이긴 구간 재등반'에 쓰였다(공격력 6.8e20 vs 적 5.4e8 — 벽이 아니었다).
+    // ⭐ 진행은 **던전 1-1 부터 다시** 시작한다 — 되감기가 환생의 값이다.
+    //    ⚠ 다만 '깼던 구간'은 열린 채로 남는다: hunt.best 를 지우지 않으므로
+    //       라운드 선택(hbSetRound)·던전 이동(hbGoDungeon)으로 곧장 돌아갈 수 있다.
+    //       환생 포인트가 영구라 대개 바로 복귀할 수 있고, 약하면 hbDie 가 알아서 내려 준다.
+    //    ⛔ hunt.best 를 같이 지우지 말 것 — 그러면 던전 해금과 복귀 경로가 통째로 사라진다.
+    H.dg=1; H.round=1;
     p.pcoin=0;                                       // 미네랄 재화 — 안 지우면 즉시 되사서 리셋이 무의미
   }catch(e){}
   try{ saveMeta(); }catch(e){}
@@ -7578,7 +7580,7 @@ function renderGrowModal(){ const box=document.getElementById('hbGrowBody'); if(
       +(can ? ('Lv.'+c.level+' 환생 — 경험치 ×'+(profXpMul(c)+gain).toFixed(2)+' · 미네랄 ×'
                +(profCoinMul(c)+PROF_REB_COIN_R*gain).toFixed(2))
             : (N+'회차 환생'))+'</b>'
-      +'<em>'+(can ? ('레벨·레벨 포인트·<b>미네랄 업그레이드·미네랄</b>이 처음으로 돌아갑니다. 던전·라운드·해금·기록·장비·펫·환생 포인트는 그대로.'
+      +'<em>'+(can ? ('레벨·레벨 포인트·<b>미네랄 업그레이드·미네랄·던전/라운드</b>가 처음으로 돌아갑니다. <b>깼던 구간은 열려 있어</b> 곧장 되돌아갈 수 있습니다. 해금·기록·장비·펫·환생 포인트는 그대로.'
                       +'<br>받는 것: 환생 포인트 +'+rp+' · 배수 +'+gain.toFixed(2)+' — <b>더 밀수록 커집니다</b>')
                   : (lvOk ? ('🔒 ◎ 포인트 '+pNeed+' 필요 (보유 '+pHave+') — 포인트는 <b>유즈맵에서만</b> 나옵니다')
                           : ('🔒 Lv.'+need+' 필요 — Lv.'+PROF_REB_MIN_LV+'부터 언제든, 몇 번이든 할 수 있습니다'
@@ -7629,13 +7631,19 @@ function hbDoRebirth(){ const c=CHAR(); if(!c || !profCanRebirth(c)) return;
   const N=profRebDone(c)+1, gain=profRebGainAt(c.level);
   if(typeof confirm==='function' && !confirm(
       'Lv.'+c.level+' 에서 '+N+'회차 환생을 합니다.\n\n'
-     +'· 레벨·레벨 포인트 → 1\n· 미네랄 업그레이드 레벨 → 0\n· 보유 미네랄 → 0\n\n'
+     +'· 레벨·레벨 포인트 → 1\n· 미네랄 업그레이드 레벨 → 0\n· 보유 미네랄 → 0\n· 던전/라운드 → 1-1 (깬 구간은 열려 있습니다)\n\n'
      +'남는 것: 업그레이드 해금 · 최고 기록 · 환생 포인트 · 장비 · 펫\n'
      +'받는 것: 환생 포인트 +'+profRebGrantAt(c.level)
      +' · 경험치 ×'+(profXpMul(c)+gain).toFixed(2)
      +' · 미네랄 ×'+(profCoinMul(c)+PROF_REB_COIN_R*gain).toFixed(2)+'\n\n'
      +'※ 더 높은 레벨에서 누를수록 배수가 커집니다.\n\n계속할까요?')) return;
   if(!profRebirth(c)) return;
+  // ⚠ 되돌아갈 수 있다는 걸 알려 준다 — 모르면 1-1 부터 손으로 걸어 올라간다.
+  { const H=hbHunt(); let bd=1,br=1;
+    for(const d in H.best){ const dd=+d, rr=Math.min(HB_ROUND_MAX,H.best[d]||1);
+      if(hbProg(dd,rr)>hbProg(bd,br)){ bd=dd; br=rr; } }
+    if(hbProg(bd,br)>1 && typeof toast==='function')
+      toast('🔁 환생 완료 — 최고 기록 '+bd+'-'+br+' 까지 열려 있습니다 (좌상단 깃발에서 이동)'); }
   if(_hb){ _hb.dg=hbHunt().dg; _hb.round=1; _hb.wave=1; _hb.phase='fight'; _hb._pat=null;
     _hb.foes.length=0; _hb.pend.length=0; _hb.chests&&(_hb.chests.length=0);
     if(typeof hbEnsureModels==='function') hbEnsureModels(_hb.dg);
