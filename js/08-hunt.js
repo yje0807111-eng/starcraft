@@ -946,9 +946,13 @@ function hbPump(){ const S=_hb; if(!S||!S.on||S.manual) return;   // manual = �
   const now=performance.now(); let dt=(now-(S.lastSim||now))/1000; if(dt<=0) return;
   S.lastSim=now;
   dt=Math.min(dt,.25);                                            // 오래 멎었다 와도 한 번에 크게 점프하지 않는다
+  // ⏩ 배속 = **평소 크기의 스텝을 여러 번**. 총 sub×dt 만큼 전진한다.
+  //   ⛔ hbStep(dt*배속) 로 하지 말 것 — 한 스텝이 커지면 충돌·사거리 판정이 통째로 샌다
+  //      (적이 벽을 통과하고 사거리를 건너뛴다).
+  //   ⛔ hbStep(dt/배속) 을 여러 번도 아니다 — 그건 총합이 dt 라 **배속이 아예 안 걸린다**
+  //      (2026-08-20 실제로 그렇게 짰고, 스모크가 그 버그를 보증하고 있었다).
   const sub=Math.max(1, Math.min(HB_SUB_MAX, Math.round(S.speed||1)));   // speed 미설정 = 1 = 옛 동작 그대로
-  const st=dt/sub;
-  for(let i=0;i<sub;i++){ hbStep(st); if(_hb!==S) break; }         // 스텝 도중 세션이 걷히면(사망·클리어) 즉시 중단
+  for(let i=0;i<sub;i++){ hbStep(dt); if(_hb!==S) break; }         // 스텝 도중 세션이 걷히면(사망·클리어) 즉시 중단
 }
 // 살아 있는 세션을 **전부** 민다 — 배경 세션도 여기서 진행한다.
 // ⚠ 반드시 원래 보던 세션으로 되돌려 놓는다(finally). 안 하면 다음 그리기가 남의 세션을 그린다.

@@ -987,6 +987,11 @@
   .dgOpenBtn{padding:5px 15px;border:none;border-radius:var(--r-bar);background:#3aa0ff;color:#06121f;font-family:inherit;font-weight:800;font-size:12px;cursor:pointer}
   .dgTix{display:flex;gap:14px;justify-content:center;padding:8px 4px 2px;color:#c6ccd4;font-size:var(--fs-md);font-weight:700}
   .dgTix b{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:#fff;margin-left:3px}
+  /* 다음 단계 입장 = 두 갈래(자동·직접). 소탕과 줄을 나눠 '이전/다음'이 눈으로 갈리게 한다 */
+  .dgSheetGo{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:8px}
+  .dgSheetGo .dgGo{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 6px;line-height:1.15}
+  .dgSheetGo .dgGo b{font-size:13px;font-weight:800}
+  .dgSheetGo .dgGo i{font-style:normal;font-size:10px;font-weight:700;opacity:.62}
   .dgSheet{position:absolute;inset:0;z-index:64;display:flex;align-items:center;justify-content:center;
     background:radial-gradient(ellipse 300px 220px at 50% 46%,rgba(92,214,255,.12),transparent 72%),rgba(2,4,9,.62)}
   .dgSheet.hide{display:none}

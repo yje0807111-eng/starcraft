@@ -2013,7 +2013,7 @@ async function groupLobby(){
     } finally{ hunt.manual=wasManual; hbSetSess('dg', null); hbUse('hunt'); } });
   // ⏩ 자동 토벌 배속 — 같은 '실제 경과시간'에 전투가 몇 배 진행되는가.
   //   시뮬 시간(S.t)이 아니라 **실제 벽시계 대비 진행량**을 본다: hbStep 호출 횟수 × 스텝 크기.
-  await step('배속은 dt 를 키우지 않고 잘게 쪼갠다(충돌·사거리 판정 보존)', async()=>{
+  await step('배속 = 평소 크기 스텝을 여러 번(총 전진 배수 · 판정 보존)', async()=>{
     skipIf(typeof HBS==='undefined' || typeof hbPumpAll!=='function','세션 레지스트리 없음');
     openHome(); await sleep(120);
     skipIf(!HBS.hunt || !HBS.hunt.on,'사냥터 세션이 안 돌고 있음');
@@ -2022,13 +2022,18 @@ async function groupLobby(){
     try{
       S.manual=false;
       window.hbStep=function(dt){ seen.push(dt); };   // 스텝 크기를 가로채 센다(실제 전진은 막는다)
+      const sum=a=>a.reduce((x,y)=>x+y,0);
       S.speed=1; S.lastSim=performance.now()-160; seen.length=0; hbPumpAll();
-      const n1=seen.length, m1=Math.max.apply(null,seen);
+      const n1=seen.length, m1=Math.max.apply(null,seen), s1=sum(seen);
       S.speed=8; S.lastSim=performance.now()-160; seen.length=0; hbPumpAll();
-      const n8=seen.length, m8=Math.max.apply(null,seen);
+      const n8=seen.length, m8=Math.max.apply(null,seen), s8=sum(seen);
       assert(n1===1,'배속 1인데 스텝이 '+n1+'번');
       assert(n8===8,'배속 8인데 스텝이 '+n8+'번');
-      assert(m8<m1,'배속을 올렸는데 스텝 크기가 안 줄었다 — dt 를 키우면 적이 벽을 통과한다: '+m1+' → '+m8);
+      // ⛔ 한 스텝이 커지면 적이 벽을 통과하고 사거리를 건너뛴다 — 크기는 **그대로**여야 한다
+      assert(Math.abs(m8-m1)/m1<0.25,'배속이 스텝 크기를 바꿨다(판정이 샌다): '+m1+' → '+m8);
+      // ⛔ 그리고 총 전진량은 실제로 배가 되어야 한다 — 안 그러면 '잘게 쪼개기'일 뿐 배속이 아니다
+      //    (2026-08-20 실제로 dt/sub 로 짜서 총합이 dt 였고, 옛 단언이 그 버그를 보증했다)
+      assert(s8/s1>6.5,'배속을 올렸는데 총 전진량이 안 늘었다 — 쪼개기만 하고 있다: '+s1.toFixed(4)+' → '+s8.toFixed(4)+' ('+(s8/s1).toFixed(2)+'배)');
       // 상한 — 아무리 올려도 HB_SUB_MAX 를 넘지 않는다(한 프레임을 통째로 잡아먹지 않게)
       S.speed=999; S.lastSim=performance.now()-160; seen.length=0; hbPumpAll();
       assert(seen.length===HB_SUB_MAX,'배속 상한이 안 걸린다: '+seen.length+' ≠ '+HB_SUB_MAX);
@@ -5164,13 +5169,79 @@ async function groupLobby(){
     //   ⛔ 옛 규칙(모든 토벌이 장비권 + 5·10층마다 펫·동료권)으로 되돌리지 말 것 —
     //      그러면 "장비를 원하면 장비 토벌로 간다"가 무너져 종류를 나눈 뜻이 사라진다.
     for(const d of DG_DUNGEONS){ const t=PROF().tickets, k=d.rw.tix;
-      const b0=Object.assign({}, t); const got=dgAwardTickets(3, d.id);
-      if(!k){ assert(got===null,'일반 토벌이 뽑기권을 줬다: '+JSON.stringify(got));
+      const b0=Object.assign({}, t), r=dgFloorReward(3, d.id); dgGrantReward(r);
+      if(!k){ assert(!r.tixKind && !r.tixN,'일반 토벌이 뽑기권을 줬다: '+r.tixKind+'×'+r.tixN);
         for(const q of TIX_KINDS) assert(t[q]===b0[q],'일반 토벌이 '+q+' 권을 건드림'); continue; }
-      assert(t[k]===(b0[k]||0)+1, d.name+'이 '+k+' 권을 안 줌');
+      assert(r.tixKind===k && r.tixN>0, d.name+'의 권종이 틀림: '+r.tixKind+'×'+r.tixN);
+      assert(t[k]===(b0[k]||0)+r.tixN, d.name+'이 '+k+' 권을 안 줌');
       for(const q of TIX_KINDS) if(q!==k) assert(t[q]===b0[q], d.name+'이 엉뚱한 권('+q+')도 줌'); }
+    // 🎟 단계가 깊을수록 더 많이 — "초반은 적게, 위로 갈수록 조금씩 더해진다"(사용자 확정)
+    { const lo=dgFloorReward(1,'gear').tixN, mid=dgFloorReward(11,'gear').tixN, hi=dgFloorReward(31,'gear').tixN;
+      assert(lo>=1,'1단계가 뽑기권을 아예 안 줌: '+lo);
+      assert(mid>lo && hi>mid,'단계가 깊어져도 뽑기권이 안 늘어난다: 1='+lo+' 11='+mid+' 31='+hi);
+      // 재화도 같이 늘어야 한다 — '각 요소들'이 전부 상위 단계에서 더 나와야 한다
+      assert(dgFloorReward(31,'normal').pc>dgFloorReward(1,'normal').pc*5,'상위 단계 재화가 충분히 안 늘어난다'); }
+    // 🧹 소탕도 **그 단계의 보상을 그대로** 받는다(계획서 원문). 뽑기권이 빠지면 장비 토벌 소탕이 무의미해진다.
+    { const cc2=CHAR(); cc2.dgFloors={}; dgSetFloor('gear', 11);
+      const p2=PROF(); p2.dgKeys={}; const t0=p2.tickets.gear, m0=Math.floor(p2.pcoin);
+      _dgSheetId='gear'; dgSheetSweep();
+      const want=dgFloorReward(11,'gear');
+      assert(p2.tickets.gear===t0+want.tixN,'소탕이 뽑기권을 안 줌: '+t0+' → '+p2.tickets.gear+' (기대 +'+want.tixN+')');
+      assert(Math.floor(p2.pcoin)>=m0+want.pc,'소탕이 재화를 안 줌');
+      cc2.dgFloors={}; dgSetFloor('normal',2); _dgSheetId='normal'; }
     dgCloseSheet(); openHome();
     return '카드'+DG_DUNGEONS.length+'·팝업·소탕·열쇠게이트·권종'+TIX_KINDS.length+'종 ok'; });
+  // ⚔ 자동 / 직접 두 갈래(2026-08-20 확정) — 다른 점은 셋이다:
+  //   ① 자동은 화면에 안 들어간다  ② 자동은 제자리에서 싸운다  ③ 자동은 배속으로 돈다
+  //   ⛔ 자동에도 접근 이동을 켜면 둘이 같아져 '직접'을 고를 이유가 사라진다.
+  await step('토벌 자동 전투: 화면 없이 · 제자리 · 배속', async()=>{
+    skipIf(typeof dgStart!=='function' || typeof DG_AUTO_SPEED==='undefined','자동 전투 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','던전'); saveMeta(); }
+    const c=CHAR(); c.level=40; c.dgFloors={};
+    { const H=hbHunt(); H.unl={}; H.upg={atk:30,hp:30,aspd:10,crit:10}; }
+    try{
+      // ① 화면 — 직접은 들어가고 자동은 안 들어간다
+      DG=null; dgStart(3, {id:'normal'}); dgStopLoop();
+      assert(visible($('dgScreen')),'직접 전투가 화면에 안 들어감');
+      assert(!DG.auto,'직접인데 auto 가 켜짐');
+      DG=null; showAppScreen('homeScreen');
+      dgStart(3, {auto:true, id:'normal'}); dgStopLoop();
+      assert(DG && DG.auto,'자동 전투가 안 켜짐');
+      assert(!visible($('dgScreen')),'자동 전투가 화면에 들어갔다 — "화면에 입장하지 않고도"가 요구다');
+      // ② 제자리 — 적을 멀리 두고 밀어도 캐릭터가 움직이면 안 된다
+      DG.phase='fight'; DG.gap=99;
+      DG.foes=[{key:'slime',name:'슬라임',ico:'🟢',hp:1e9,hpMax:1e9,atk:0,spd:0,range:30,cd:9,t:9,id:'f1',x:20,y:20}];
+      const x0=DG.me.x, y0=DG.me.y;
+      for(let i=0;i<30;i++) dgStep(0.05);
+      assert(DG.me.x===x0 && DG.me.y===y0,'자동인데 캐릭터가 적에게 다가갔다: ('+x0+','+y0+') → ('+DG.me.x+','+DG.me.y+')');
+      // 직접이면 같은 상황에서 다가가야 한다(대조군 — 없으면 위 단언이 '아무도 안 움직인다'로 통과한다)
+      DG.auto=false; for(let i=0;i<30;i++) dgStep(0.05);
+      assert(DG.me.x!==x0 || DG.me.y!==y0,'직접인데 캐릭터가 안 움직인다 — 위 제자리 검사가 무의미해진다');
+      // ③ 배속 — 같은 실제 dt 에 자동이 DG_AUTO_SPEED 배만큼 스텝을 밟는다
+      const real=dgStep; let n=0;
+      try{ window.dgStep=function(){ n++; };
+        DG.auto=false; n=0; _dgLast=performance.now()-16; dgTick(performance.now());
+        const n1=n;
+        DG.auto=true;  n=0; _dgLast=performance.now()-16; dgTick(performance.now());
+        assert(n1===1,'직접인데 한 틱에 '+n1+'스텝');
+        assert(n===DG_AUTO_SPEED,'자동 배속이 안 걸림: '+n+' ≠ '+DG_AUTO_SPEED);
+      } finally{ window.dgStep=real; dgStopLoop(); }
+      return '화면없음 ok · 제자리 ok · '+DG_AUTO_SPEED+'배속 ok';
+    } finally{ DG=null; dgStopLoop(); c.dgFloors={}; openHome(); } });
+  // 실패해도 열쇠는 안 쓴다 — 자동이 1초 만에 끝나므로 실패가 잦아진다(이 규칙이 없으면 열쇠가 순식간에 마른다)
+  await step('토벌 실패는 열쇠를 쓰지 않는다', async()=>{
+    skipIf(typeof dgStart!=='function','토벌 없음');
+    const c=CHAR(); c.dgFloors={}; const p=PROF(); p.dgKeys={};
+    const k0=dgKeyN('normal');
+    try{
+      DG=null; dgStart(3, {auto:true, id:'normal', key:true}); dgStopLoop();
+      DG.me.hp=1; DG.phase='fight'; DG.gap=99;
+      DG.foes=[{key:'x',name:'즉사',ico:'💀',hp:1e9,hpMax:1e9,atk:9999,spd:0,range:999,cd:0.01,t:0,id:'f1',x:DG.me.x,y:DG.me.y}];
+      for(let i=0;i<20 && DG && !DG.over;i++) dgStep(0.05);
+      assert(DG && DG.over<0,'패배 처리가 안 됨: over='+(DG&&DG.over));
+      assert(dgKeyN('normal')===k0,'실패인데 열쇠를 썼다: '+k0+' → '+dgKeyN('normal'));
+    } finally{ DG=null; dgStopLoop(); c.dgFloors={}; } 
+    return '열쇠 '+k0+' 유지'; });
   // 종류별 진행도 — 이걸 공유하면 새 종류를 여는 순간 고단계로 시작해 보상이 한 번에 쏟아진다.
   await step('토벌 단계는 종류마다 따로 쌓인다', ()=>{ skipIf(typeof dgSetFloor!=='function','토벌 진행도 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','던전'); saveMeta(); }

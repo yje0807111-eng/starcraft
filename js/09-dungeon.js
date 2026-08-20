@@ -31,11 +31,31 @@ const DG_SKILLS={                    // 직업 계열별 1스킬
 // ⚠ 아래 두 배수는 **아직 실측 전이다**(BALANCE.md §5 A5). 바꿨으면 거기 표도 갱신할 것.
 const DG_CUR_MUL=6;       // 일반 토벌 = '대량' 지급 배수(다른 종류가 주는 기본 재화 대비)
 const DG_GAS_RATE=0.35;   // 일반 토벌이 주는 가스 = 그 미네랄의 이 비율
+// 🎟 뽑기권도 **단계가 깊을수록 더 많이** 나온다 (2026-08-20 사용자 확정).
+//   "초반은 적게 주지만 라운드가 올라갈수록 조금씩 더해지면서 상위 라운드로 갈수록 더 많은 보상."
+//   ⛔ 항상 1장으로 되돌리지 말 것 — 그러면 깊이 갈 이유가 재화밖에 안 남아 종류를 나눈 뜻이 반쯤 사라진다.
+const DG_TIX_STEP=5;   // 이 단계마다 1장씩 더 (1~5단계=1장 · 6~10=2장 · …)
+function dgTixN(floor){ return 1+Math.floor((Math.max(1,floor|0)-1)/DG_TIX_STEP); }
 function dgFloorReward(floor, id){ const n=Math.max(1, floor|0), d=dgDef(id);
   const base=Math.round(40+n*22);
-  const r={ pc:base, gas:0, xp:Math.round(25+n*14), tix:null };
+  const r={ floor:n, id:d.id, pc:base, gas:0, xp:Math.round(25+n*14), tixKind:null, tixN:0 };
   if(d.rw.cur){ r.pc=Math.round(base*DG_CUR_MUL); r.gas=Math.round(base*DG_CUR_MUL*DG_GAS_RATE); }
+  if(d.rw.tix){ r.tixKind=d.rw.tix; r.tixN=dgTixN(n); }
   return r; }
+// 보상 지급 — **입장(전투 클리어)과 소탕(이전 단계 즉시)이 같은 한 곳을 지난다.**
+// ⚠ 두 벌로 나누면 반드시 어긋난다: 옛 코드가 실제로 그랬고, 소탕만 뽑기권을 못 받아
+//   "장비 토벌을 소탕하면 장비권이 안 나오는" 상태였다(2026-08-20 사용자 지적으로 발견).
+function dgGrantReward(r){ const p=PROF(), c=CHAR(); if(!p||!r) return r;
+  p.pcoin=(p.pcoin||0)+r.pc; if(r.gas) p.gas=(p.gas||0)+r.gas;
+  if(r.tixKind && r.tixN>0) dgAddTicket(r.tixKind, r.tixN);
+  if(c){ profGainXp(c, r.xp); profApplyLevelUps(c); }
+  return r; }
+// 보상 한 줄(사람이 읽는 문구) — 표에서만 나온다
+function dgRewardText(r){ if(!r) return '';
+  let h=resIco('mineral','gi')+' <b>'+r.pc.toLocaleString()+'</b>';
+  if(r.gas) h+=' · '+resIco('gas','gi')+' <b>'+r.gas.toLocaleString()+'</b>';
+  if(r.tixKind && r.tixN>0) h+=' · '+resIco('ticket_'+r.tixKind,'gi')+' <b>'+r.tixN+'</b>';
+  return h; }
 // ── 단계 진행도는 **종류마다 따로** 쌓인다(2026-08-20 확정) ─────────────────
 // 보상 성격이 다르니 "오늘은 장비 파러 간다"가 성립해야 한다. 공유하면 새 종류를 열자마자
 // 고단계로 시작해 그 종류의 보상이 한 번에 쏟아진다.
@@ -75,10 +95,19 @@ let DG=null, _dgRaf=0, _dgLast=0;
 function dgEnter(floor){ if(floor>dgFloorCap()){ showTownToast('Lv.'+dgFloorReqLv(floor)+'부터 도전할 수 있습니다'); return; }
   dgStopLoop(); closeTownPanel(); twStopLoop(); _townOpen=false;
   if(typeof playSfx==='function') playSfx('ui_open'); dgStart(floor); }
-function dgStart(floor){ const c=CHAR(); if(!c) return false;
-  const sp=dgMySpec();
+// ⏩ 자동 전투 배속 — 한 판이 12~20초다(2026-08-20 실측: 1단계 12.4s · 5단계 19.9s).
+//    10배면 1.2~2.0초에 끝난다 = 사용자 요구 "거의 1초정도".
+//    ⛔ dgStep(dt*배속) 로 올리지 말 것 — 충돌·사거리 판정이 샌다. hbPump 와 같은 규칙(같은 dt 를 여러 번).
+const DG_AUTO_SPEED=10;
+// opt: { auto:자동 전투(화면 없이 배속) · id:토벌 종류 · key:완료 시 열쇠 소모 }
+// ⚠ id/key 를 **여기서** 심는다 — 자동은 이 함수 안에서 판이 끝날 수도 있어, 호출부에서
+//   dgStart(...) 뒤에 심으면 이미 dgWin 이 지나간 뒤가 된다(보상이 엉뚱한 종류로 들어간다).
+function dgStart(floor, opt){ const c=CHAR(); if(!c) return false;
+  const o=opt||{}, sp=dgMySpec();
   DG={ floor:floor, wave:0, gap:0.3, over:0, reward:null, _els:null,
+       auto:!!o.auto, dgId:o.id||'normal', needKey:!!o.key,
        h:DG_H, me:{ x:DG_W/2, y:DG_H-46, hp:sp.hpMax, sp:sp, t:0 }, skill:{ cd:0, left:0 }, foes:[] };
+  if(DG.auto){ DG.h=DG_H; DG.me.y=DG.h-46; dgStartLoop(); return true; }   // 자동 = 화면에 안 들어간다
   showAppScreen('dgScreen');
   const ar=document.getElementById('dgArena');
   if(ar){ ar.innerHTML='';
@@ -102,8 +131,12 @@ function dgStep(dt){ if(!DG || DG.over) return;
     dgRender(); return; }
   let t=null, td=1e9;                                        // 가장 가까운 적을 향해
   for(const f of DG.foes){ const d=Math.hypot(f.x-me.x, f.y-me.y); if(d<td){ td=d; t=f; } }
-  if(td>sp.range){ const k=Math.min(1, sp.spd*dash*dt/Math.max(td,1e-6));
-    me.x+=(t.x-me.x)*k; me.y+=(t.y-me.y)*k; }
+  // 🤖 자동 = **제자리에서** 싸운다(사용자 확정). 적이 알아서 오므로 판은 끝난다.
+  //    직접 전투가 이동·후퇴·카이팅으로 이길 확률을 올리는 것이 두 갈래를 나눈 이유다 —
+  //    ⛔ 자동에도 접근 이동을 켜면 둘이 같아져서 '직접'을 고를 이유가 사라진다.
+  if(DG.auto && DG.skill.cd<=0 && DG.foes.length) dgSkill();   // 스킬도 자동 사용
+  if(td>sp.range){ if(!DG.auto){ const k=Math.min(1, sp.spd*dash*dt/Math.max(td,1e-6));
+      me.x+=(t.x-me.x)*k; me.y+=(t.y-me.y)*k; } }
   else { me.t-=dt*haste;
     if(me.t<=0){ me.t=sp.cd;
       const crit=Math.random()<sp.crit, dmg=Math.round(sp.atk*(crit?2:1));
@@ -127,11 +160,10 @@ function dgWin(){ const c=CHAR(), p=PROF(), id=(DG&&DG.dgId)||'normal', r=dgFloo
   DG.over=1; DG.reward=r;
   const sl=profSlots();   // 층이 깊을수록 고등급·고레벨(profMakeItem이 층을 레벨로 받는다)
   r.item=(sl.length && Math.random()<DG_DROP_P) ? profAddItem(profMakeItem(sl[Math.floor(Math.random()*sl.length)], DG.floor)) : null;
-  p.pcoin+=r.pc; if(r.gas) p.gas=(p.gas||0)+r.gas;                  // 일반 토벌만 가스를 준다(종류표가 정한다)
-  const prevMax=dgMaxFloor(id), isNew=!!(c && DG.floor>prevMax);    // ⚠ '그 종류'의 최고 단계와 견준다
-  if(c){ profGainXp(c, r.xp); profApplyLevelUps(c); if(isNew) dgSetFloor(id, DG.floor); }
+  const prevMax=dgMaxFloor(id);                                     // ⚠ '그 종류'의 최고 단계와 견준다
+  dgGrantReward(r);                                                 // 재화·가스·뽑기권·XP 는 전부 여기서
+  if(c && DG.floor>prevMax) dgSetFloor(id, DG.floor);
   if(DG.needKey && DG.dgId && typeof dgSpendKey==='function') dgSpendKey(DG.dgId);   // 완료 시 열쇠 1 소모(실패 시 미소모)
-  r.tix=isNew ? dgAwardTickets(DG.floor, id) : null;                // 새 단계 클리어 = 그 종류의 뽑기권
   if(typeof dqNote==='function') dqNote('dgWin',1);                 // 📅 일일 — 토벌 단계 클리어
   profSyncUnlocks(); saveMeta(); dgStopLoop(); dgRender(); }
 function dgLose(){ DG.over=-1; dgStopLoop(); dgRender(); }
@@ -159,11 +191,8 @@ function dgKeyN(id){ const p=PROF(); if(!p) return 0; if(!p.dgKeys) p.dgKeys={};
   const dk=_dgDayKey(); let e=p.dgKeys[id]; if(!e || e.day!==dk){ e={n:DG_KEY_DAILY, day:dk}; p.dgKeys[id]=e; } return e.n; }
 function dgSpendKey(id){ if(dgKeyN(id)<=0) return false; PROF().dgKeys[id].n--; saveMeta(); return true; }
 function dgAddTicket(kind,n){ const p=PROF(); if(!p.tickets) p.tickets=emptyTickets(); p.tickets[kind]=(p.tickets[kind]||0)+(n||1); }
-// 새 단계를 **처음** 깼을 때만 주는 뽑기권 — 그 토벌의 종류가 곧 권종이다.
-// ⚠ 일반 토벌은 재화가 보상이라 권종이 없다(null). 옛 규칙(모든 토벌이 장비권 + 5·10층마다 펫·동료권)은
-//   종류가 하나뿐일 때의 임시안이었다 — 이제 "장비를 원하면 장비 토벌로 간다"가 규칙이다.
-function dgAwardTickets(floor, id){ const d=dgDef(id); if(!d.rw.tix) return null;
-  const g={}; g[d.rw.tix]=1; dgAddTicket(d.rw.tix, 1); return g; }
+// ⛔ 옛 dgAwardTickets 는 없앴다 — 지급 입구가 둘이면 반드시 어긋난다(실제로 소탕이 빠져 있었다).
+//    권종·수량은 dgFloorReward() 가 정하고, 지급은 dgGrantReward() 한 곳이 한다.
 function openDungeonHub(){ if(typeof loadMeta==='function') loadMeta();
   profEnsureChar();   // 캐릭터가 없으면 조용히 기본 유닛을 지급한다(선택 화면 없음)
   const home=document.getElementById('homeScreen');
@@ -197,11 +226,6 @@ function dgOpenSheet(id){ const d=DG_DUNGEONS.find(x=>x.id===id), c=CHAR(); if(!
   if(s){ s.classList.remove('hide'); if(typeof fxPop==='function') fxPop(s.querySelector('.dgSheetCard')); }
   if(typeof playSfx==='function') playSfx('ui_open'); }
 function dgCloseSheet(){ const s=document.getElementById('dgSheet'); if(s) s.classList.add('hide'); _dgSheetId=null; }
-// 보상 한 줄 — 종류표가 정한다. ⛔ 권종을 여기에 직접 쓰지 말 것(옛 코드가 '장비권 + 5·10층마다'를 박아 뒀었다).
-function dgRewardLine(floor, id){ const d=dgDef(id), r=dgFloorReward(floor, id);
-  const cur=resIco('mineral','gi')+' <b>'+r.pc.toLocaleString()+'</b>'+(r.gas?(' · '+resIco('gas','gi')+' <b>'+r.gas.toLocaleString()+'</b>'):'');
-  const tix=d.rw.tix ? (' · '+resIco('ticket_'+d.rw.tix,'gi')+' <b>1</b>'+'<span class="dgRwNew">새 단계</span>') : '';
-  return '보상: '+cur+tix; }
 function renderDgSheet(){ const d=DG_DUNGEONS.find(x=>x.id===_dgSheetId), c=CHAR(); if(!d||!c) return;
   // ⚠ 단계는 **그 종류의** 기록을 본다 — dgMaxFloor() 를 인자 없이 부르면 전 종류 최고가 나와,
   //   장비 토벌을 처음 열었는데 일반 토벌 12단계 다음이 뜬다(실제로 그럴 뻔했다).
@@ -210,34 +234,63 @@ function renderDgSheet(){ const d=DG_DUNGEONS.find(x=>x.id===_dgSheetId), c=CHAR
   set('dgSheetName', d.name); const ico=document.getElementById('dgSheetIco'); if(ico) ico.textContent=d.ico;
   const art=document.getElementById('dgSheetArt'); if(art) art.style.setProperty('--dgTint', d.tint);
   set('dgSheetStage', '난이도 <b>'+nx+'단계</b>');
-  set('dgSheetReward', dgRewardLine(nx, d.id));
+  set('dgSheetReward', '보상: '+dgRewardText(dgFloorReward(nx, d.id)));
   set('dgSheetKey', '🗝 '+k+'/'+DG_KEY_DAILY);
-  const bSweep=document.getElementById('dgSheetSweep'), bEnter=document.getElementById('dgSheetEnter');
-  if(bSweep) bSweep.disabled=!(mx>0 && k>0);
-  if(bEnter){ bEnter.disabled=!(okLv && k>0); bEnter.textContent = okLv?'입장':('Lv.'+dgFloorReqLv(nx)+' 필요'); } }
-function dgSheetEnter(){ const d=DG_DUNGEONS.find(x=>x.id===_dgSheetId); if(!d) return; const nx=dgMaxFloor(d.id)+1;
+  const bS=document.getElementById('dgSheetSweep');
+  if(bS) bS.disabled=!(mx>0 && k>0);
+  // 자동·직접 두 버튼 — ⚠ textContent 로 덮지 말 것(안의 <b>/<i> 두 줄이 통째로 날아간다).
+  //   잠긴 이유는 라벨을 갈아끼우는 대신 아랫줄(i)에만 적는다.
+  const gate=okLv?(k>0?'':'열쇠 없음'):('Lv.'+dgFloorReqLv(nx)+' 필요');
+  for(const [bid,sub] of [['dgSheetAuto','제자리 · 즉시'],['dgSheetEnter','이동·카이팅 · 확률↑']]){
+    const b=document.getElementById(bid); if(!b) continue;
+    b.disabled=!(okLv && k>0);
+    const i=b.querySelector('i'); if(i) i.textContent=gate||sub; } }
+// 다음 단계 입장 — auto=1 이면 화면에 들어가지 않고 배속으로 돌린다.
+function dgSheetEnter(auto){ const d=DG_DUNGEONS.find(x=>x.id===_dgSheetId); if(!d) return;
+  if(DG){ if(typeof toast==='function') toast('⚔ 이미 토벌이 진행 중입니다'); return; }   // 자동이 도는 중에 또 누르면 판이 덮인다
+  const nx=dgMaxFloor(d.id)+1;
   if(nx>dgFloorCap()){ if(typeof toast==='function') toast('Lv.'+dgFloorReqLv(nx)+'부터 도전할 수 있습니다'); return; }
   if(dgKeyN(d.id)<1){ if(typeof toast==='function') toast('🗝 열쇠가 없습니다(매일 09:00 보충)'); return; }
-  const did=d.id; dgCloseSheet(); if(typeof playSfx==='function') playSfx('ui_open');
-  if(dgStart(nx) && DG){ DG.dgId=did; DG.needKey=true; } }
+  dgCloseSheet(); if(typeof playSfx==='function') playSfx('ui_open');
+  if(auto && typeof toast==='function') toast('⚔ '+d.name+' '+nx+'단계 자동 전투…');
+  dgStart(nx, { auto:!!auto, id:d.id, key:true }); }
 // 이전 단계 토벌(소탕) — 그 종류의 최고 단계 보상을 즉시 지급. 전투 없음.
 function dgSheetSweep(){ const d=DG_DUNGEONS.find(x=>x.id===_dgSheetId), c=CHAR(), p=PROF(); if(!d||!c||!p) return;
   const mx=dgMaxFloor(d.id); if(mx<1){ if(typeof toast==='function') toast('클리어한 단계가 없습니다'); return; }
   if(dgKeyN(d.id)<1){ if(typeof toast==='function') toast('🗝 열쇠가 없습니다(매일 09:00 보충)'); return; }
-  dgSpendKey(d.id); const r=dgFloorReward(mx, d.id);
-  p.pcoin+=r.pc; if(r.gas) p.gas=(p.gas||0)+r.gas;
-  profGainXp(c, r.xp); profApplyLevelUps(c); profSyncUnlocks(); saveMeta();
+  // 계획서 원문: "이전 스테이지 토벌 시 **해당 스테이지의 보상이 즉시 지급**".
+  // 그래서 소탕도 입장과 **같은 보상**을 받는다(뽑기권 포함). 다른 것은 '전투가 없다'와
+  // '이미 깬 단계까지만'뿐이다 — 소탕=천장에서 수확 / 입장=천장을 민다.
+  dgSpendKey(d.id); const r=dgGrantReward(dgFloorReward(mx, d.id));
+  profSyncUnlocks(); saveMeta();
   if(typeof playSfx==='function') playSfx('hero_merge');
-  // ⚠ 소탕은 **이미 깬 단계**를 다시 도는 것이라 뽑기권이 없다(권은 '새 단계' 보상이다).
-  if(typeof toast==='function') toast('🗝 소탕 +'+r.pc.toLocaleString()+' M'+(r.gas?(' · +'+r.gas.toLocaleString()+' G'):'')+' · +'+r.xp+' XP');
+  if(typeof toast==='function') toast('🗝 '+mx+'단계 소탕 · +'+r.pc.toLocaleString()+' M'
+    +(r.gas?(' · +'+r.gas.toLocaleString()+' G'):'')
+    +(r.tixN?(' · 🎟 +'+r.tixN):'')+' · +'+r.xp+' XP');
   renderDgSheet(); renderDungeonHub(); }
 function dgAgain(next){ const did=(DG&&DG.dgId)||'normal', floor=(DG?DG.floor:dgMaxFloor(did))+(next?1:0);
   if(floor>dgFloorCap()){ if(typeof toast==='function') toast('Lv.'+dgFloorReqLv(floor)+'부터 도전할 수 있습니다'); return; }
   if(dgKeyN(did)<1){ if(typeof toast==='function') toast('🗝 열쇠가 없습니다(매일 09:00 보충)'); return; }
-  if(typeof playSfx==='function') playSfx('ui_open'); if(dgStart(floor) && DG){ DG.dgId=did; DG.needKey=true; } }
+  const wasAuto=!!(DG&&DG.auto);
+  if(typeof playSfx==='function') playSfx('ui_open'); dgStart(floor, { auto:wasAuto, id:did, key:true }); }
 function dgTick(ts){ if(!DG){ _dgRaf=0; return; }
   const dt=_dgLast? Math.min(0.05,(ts-_dgLast)/1000) : 0.016; _dgLast=ts;
-  dgStep(dt); if(DG && !DG.over) _dgRaf=requestAnimationFrame(dgTick); else _dgRaf=0; }
+  const sub=DG.auto? DG_AUTO_SPEED : 1;
+  for(let i=0;i<sub;i++){ dgStep(dt); if(!DG||DG.over) break; }   // 배속 = 같은 dt 를 여러 번
+  if(DG && !DG.over) _dgRaf=requestAnimationFrame(dgTick);
+  else { _dgRaf=0; if(DG && DG.auto) dgAutoDone(); } }
+// 자동 전투가 끝났다 — 화면이 없으니 결과는 토스트로 알리고 허브를 새로 그린다.
+function dgAutoDone(){ if(!DG) return;
+  const won=DG.over>0, fl=DG.floor, r=DG.reward, d=dgDef(DG.dgId);
+  DG=null; dgStopLoop();
+  if(typeof playSfx==='function') playSfx(won?'hero_merge':'ui_close');
+  if(typeof toast==='function'){
+    if(won){ let tx='⚔ '+d.name+' '+fl+'단계 클리어 · +'+r.pc.toLocaleString()+' M';
+      if(r.gas) tx+=' · +'+r.gas.toLocaleString()+' G';
+      if(r.tixN) tx+=' · 🎟 +'+r.tixN;
+      toast(tx+' · +'+r.xp+' XP'); }
+    else toast('⚔ '+d.name+' '+fl+'단계 실패 — 🗝 열쇠는 소모되지 않았습니다'); }
+  renderDungeonHub(); if(_dgSheetId) renderDgSheet(); }
 function dgStartLoop(){ if(_dgRaf) return; _dgLast=0; _dgRaf=requestAnimationFrame(dgTick); }
 function dgStopLoop(){ if(_dgRaf){ cancelAnimationFrame(_dgRaf); _dgRaf=0; } }
 
@@ -279,7 +332,7 @@ function dgRender(){ if(!DG) return;
   if(rs){ if(!DG.over) rs.classList.add('hide');
     else { rs.classList.remove('hide');
       rs.innerHTML = (DG.over>0)
-        ? '<div class="dgRCard"><div class="dgRT ok">'+DG.floor+'층 클리어!</div><div class="dgRS">+'+DG.reward.pc+' P · +'+DG.reward.xp+' XP'
+        ? '<div class="dgRCard"><div class="dgRT ok">'+DG.floor+'단계 클리어!</div><div class="dgRS">'+dgRewardText(DG.reward)+' · +'+DG.reward.xp+' XP'
           +(DG.reward.item? ('<br><b style="color:'+(TIER_COLOR[DG.reward.item.tier]||'#fff')+'">'+profItemName(DG.reward.item)+'</b> 획득') : '')+'</div>'
           +'<div class="dgRBtns"><button class="twBtn" onclick="dgAgain(true)">다음 단계 🗝1</button><button class="twBtn" onclick="dgToHub()">던전으로</button></div></div>'
         : '<div class="dgRCard"><div class="dgRT bad">패배</div><div class="dgRS">'+DG.floor+'층 '+DG.wave+'웨이브에서 쓰러졌습니다</div>'
