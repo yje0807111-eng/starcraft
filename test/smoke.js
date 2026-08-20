@@ -1390,7 +1390,10 @@ async function groupLobby(){
     assert(card,'대조할 업그레이드 카드(.hmUp)를 못 찾음');
     { const a=getComputedStyle(document.querySelector('#hbBar .hbSk:not(.cool)')), b=getComputedStyle(card);
       for(const prop of ['backgroundImage','clipPath','borderRadius','borderTopWidth']){
-        assert(a[prop]===b[prop],'스킬 칸이 업그레이드 카드와 다름 ['+prop+']\n  스킬: '+a[prop]+'\n  카드: '+b[prop]); } }
+        assert(a[prop]===b[prop],'스킬 칸이 업그레이드 카드와 다름 ['+prop+']\n  스킬: '+a[prop]+'\n  카드: '+b[prop]); }
+      // 치수는 2026-08-19 에 0.8배(46 → 37px) — 껍데기 네 속성은 위에서 그대로 대조한다
+      { const w=document.querySelector('#hbBar .hbSk').getBoundingClientRect().width;
+        assert(w>=34&&w<=40,'스킬 칸이 0.8배(37px) 규격을 벗어남: '+w.toFixed(1)+'px'); } }
     // ③ 쿨 = 붉은 발광만 꺼진다(잠긴 카드 문법). 아이콘은 남는다 — 무엇이 도는 중인지 보여야 한다
     const el=document.querySelector('#hbBar .hbSk[data-k="nova"]');
     _hb.skT.nova=0; hbSkCdPaint();
@@ -4877,8 +4880,14 @@ async function groupGame(){
   await step('가챠: drawGacha 3회', ()=>{ hackCredits(); const b=G.units.length; drawGacha(); drawGacha(); drawGacha();
     assert(G.units.length>=b+3,'유닛 증가 없음 '+b+'→'+G.units.length); return G.units.length+'기'; });
   await step('대량 스폰 30기', async()=>{ const c=spawnMany(30); await sleep(1200); assert(c>=30,'spawn '+c); return G.units.length+'기'; });
-  await step('전체 선택 → 프로필 표시', ()=>{ G.sel=G.units.map(u=>u.uid); refreshSelCard();
-    assert($('unitCmd').classList.contains('on'),'unitCmd off'); return G.sel.length+'기 선택'; });
+  await step('전체 선택 → 프로필 표시 · 지정 해제(🗑) 아이콘 크기', ()=>{ G.sel=G.units.map(u=>u.uid); refreshSelCard();
+    assert($('unitCmd').classList.contains('on'),'unitCmd off');
+    // 🗑 종류 지정 해제 — 13px 은 좁은 줄에서 눌러야 할 것으로 안 보였다(2026-08-19, 17px 로 키움)
+    // ⚠ 이 스텝에선 하단 판이 아직 접혀 있어 rect 가 0 이다 — CSS 값으로 잰다
+    { const tr=document.querySelector('#unitCmd .cgTrash'), ic=tr&&tr.querySelector('img,svg');
+      if(ic){ const w=parseFloat(getComputedStyle(ic).width)||0;
+        assert(w>=16,'지정 해제 아이콘이 다시 작아짐: '+w.toFixed(1)+'px'); } }
+    return G.sel.length+'기 선택'; });
   // 🎛 판 '밖' 오른쪽 위에 붙는 조작 버튼(.cgTopOut)은 .bp 의 overflow-y:auto 에 통째로 잘려 사라진 적이 있다.
   //   위치만 재면 통과한다(레이아웃 사각형은 잘려도 그대로다) → **실제로 눌리는지**(elementFromPoint) 까지 본다.
   await step('메인 프로필: 판 밖 조작 버튼이 잘리지 않는다 · UI 아이콘 6종 로드', async()=>{
@@ -4912,6 +4921,9 @@ async function groupGame(){
         assert(ts.clipPath!=='none','조작 트레이에 모서리 컷이 없음');
         const cell=to.querySelector('.cgSelAll,.cgRally,.cgLift');
         if(cell){ const cs=getComputedStyle(cell), bg=cs.backgroundImage||'';
+          // 치수는 2026-08-19 에 0.8배(38 → 30px). 판 밖에 떠 있어 클수록 전장을 가린다
+          { const w=cell.getBoundingClientRect().width;
+            assert(w>=27&&w<=33,'조작 칸이 0.8배(30px) 규격을 벗어남: '+w.toFixed(1)+'px'); }
           assert(cs.clipPath!=='none','조작 칸에 모서리 컷이 없음');
           assert(parseFloat(cs.borderTopLeftRadius)<=3,'조작 칸이 덜 각짐: '+cs.borderTopLeftRadius);
           // ⛔ 버튼마다 다른 색(초록·파랑·시안)으로 되돌아가면 여기서 잡힌다 — 테두리는 붉은 계열 하나뿐이다
