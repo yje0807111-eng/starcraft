@@ -204,6 +204,11 @@ node test/bench-strike.mjs 400 80 4   # 대규모 전투 렌더 벤치(유닛수
 - 수정 후 `npm test` 통과 없이 "완료" 선언 금지. 구문 검사는 vm.Script(classic)+`node --check`(module).
 
 ## 10. 함정 목록 (실제로 밟았던 것)
+- **`#vUnit`/`#bpUnit`(옛 유닛뽑기 화면)은 아무도 못 여는 죽은 화면이다 — 감사 대상이 아니다** (2026-08-20 확인).
+  「유닛뽑기」 탭의 `onclick` 은 `openGachaSheet()` → `openMainSheet('gacha', el, 'Unit')` 이고, **이건 `G.tab` 을 `'Main'` 에 둔 채 `#unitCmd` 에 시트만 올린다.** `G.tab='Unit'` 로 가는 유일한 길인 `switchTab('Unit', …)` 은 `openGachaSheet` 안의 `if(G.strike)` 분기 하나뿐인데, 그건 첫 줄에서 `strikeSwitchTab` 으로 빠져 이 코드에 닿지 않는다. 관리자 샌드박스에서는 Unit 탭이 **이펙트 랩**으로 갈아끼워지며 `shopProfile`·`prodHint`·`gachaActions`·`opsManual` 을 명시적으로 숨긴다.
+  - 그래서 비콘 시계 필드(`buildClock`·시민·`moveCitizenTo`) · `#gachaActions`(`.gaBtn` 6칸) · `#opsManual`(생산고 운용 안내) · `#rateMini`(뽑기 확률표) 는 **어느 모드에서도 화면에 나오지 않는다**. 지금 쓰는 것은 `renderGachaSheet()` → `renderCmdGrid` 시트 한 벌뿐이다.
+  - ⛔ **디자인 감사에서 `switchTab('Unit')` 을 직접 불러 화면을 띄우지 말 것.** 실제로 그렇게 뽑은 스크린샷이 "옛 스타일이 남은 화면" 1순위로 올라갔고, 그 여파로 네모네모 디펜스 유즈맵을 잘못 내렸다(되돌림). 감사는 **실제 조작 경로로만** 도달한 화면을 대상으로 한다.
+  - 걷어내는 것 자체는 별건이다 — `DRAW_BEACONS` 는 지금 시트도 쓰고(`GACHA_SEC_CELLS`), `M3D` 비콘 풀·`G.citizen` 이 물려 있어 의존을 하나씩 끊어야 한다.
 - **죽은 코드 판정에 이름 검색을 쓰면 조립되는 이름을 못 본다** (2026-08-14, 실제로 회귀를 냈다). 클래스·에셋 이름의 상당수가 문자열로 조립된다 — `'mcLine sc-'+scope` · `'fDot-'+st` · `'bld_'+key` · `'up_'+UPG_ICO[k]` · `'sk_'+(SKILL_ICO[k]||k)` · `'dg'+n` · `'vc-'+spd`. 문서 전체 검색으로 0회라고 지우면 **로비 채팅이 통째로 안 보이는** 식으로 조용히 깨진다(`.msChat .mcLine{display:none}` + `.sc-*{display:block}` 구조라 CSS만 지워도 기능이 죽는다).
   - 판정 절차: ① 이름이 그대로 나오는가 → ② 안 나오면 **조립 접두사 대조**(`'P'+` 형태의 문자열 리터럴을 모아 `name.startsWith(P)` 확인) → ③ 그래도 애매하면 브라우저에서 화면을 돌며 `document.querySelector('.'+c)` 로 실물 확인.
   - 지운 목록·오탐 목록은 `CLEANUP.md` 에 남긴다.
