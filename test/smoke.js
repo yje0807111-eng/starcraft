@@ -1837,6 +1837,121 @@ async function groupLobby(){
     Object.assign(_hb.char,_cSave); _hb.foes.length=0; _hb.pend.length=0;
     hbHunt().base={tiles:{},open:1}; hbLayoutBase(); saveMeta();
     return '직진·우회·벽 미파괴·캐릭터 충돌·기지 밖 소환 ok'; });
+  // 👾 몹 다양화(2026-08-20) — 역할은 HB_FOE_KIND 한 표, 얼굴은 던전 roster. 둘을 분리해 뒀다.
+  //   ⚠ 위치·스탯만 재면 안 된다. 예전에 이동 방식을 f.mv 에 담았다가 '움직이는 중' 플래그(f.mv=1)에
+  //     덮여 유령이 지상처럼 걸어 다녔다 — 겉으론 멀쩡했고 스탯도 맞았다. 그래서 **실제로 벽을 지났는지**를 본다.
+  await step('사냥터 몹: 여섯 역할 · 벽 통과 규약 · 사거리 · 크기', async()=>{
+    skipIf(typeof HB_FOE_KIND==='undefined' || typeof hbPickFoe!=='function','몹 종류 표 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    openHome(); await sleep(60); _hb.manual=true;
+    const _cSave={..._hb.char};
+    try{
+      // ① 편성표 무결성 — 죽은 역할·오타난 키·빠진 모델이 없어야 한다
+      const seen=new Set(), bad=[];
+      for(const D of HB_DUNGEONS){
+        if(!D.roster || !D.roster.length){ bad.push('던전'+D.dg+': roster 없음'); continue; }
+        for(const e of D.roster){
+          if(!HB_FOE_KIND[e.k]) bad.push('던전'+D.dg+': 없는 역할 '+e.k);
+          if(!e.mdl || typeof e.mdl!=='string') bad.push('던전'+D.dg+'/'+e.k+': 모델 없음');
+          if(!(e.w>0)) bad.push('던전'+D.dg+'/'+e.k+': 가중치가 0 이하');
+          seen.add(e.k); } }
+      assert(!bad.length, bad.join(' · '));
+      for(const k of Object.keys(HB_FOE_KIND))
+        assert(seen.has(k), '역할 '+k+' 이 어느 던전에도 안 나온다(죽은 역할)');
+      // ② 보스는 늘 지상 근접 — 날거나 벽을 통과하는 보스는 벽·기지 설계를 통째로 무의미하게 만든다
+      for(const D of HB_DUNGEONS){ const bp=mkBoss(D,{round:1});
+        assert(bp.way==='ground' && !bp.rng, '던전'+D.dg+' 보스가 지상 근접이 아님: '+bp.way+'/'+bp.rng); }
+      // ③ 사거리는 벙커 도발 반경을 넘으면 안 된다 — 넘는 순간 사수가 벙커 밖에서 캐릭터만 쏜다.
+      //    ⛔ max(R, rng+pad) > rng 같은 상수 비교는 **항상 참**이라 아무것도 못 잡는다(그렇게 짰다가 걷어냈다).
+      //    이건 표를 직접 훑으므로 누가 사거리를 키우면 그 자리에서 걸린다.
+      for(const k of Object.keys(HB_FOE_KIND)){ const K=HB_FOE_KIND[k];
+        assert(K.rng<=HB_BUNKER_R, k+' 사거리('+K.rng+')가 벙커 도발 반경('+HB_BUNKER_R+')을 넘는다 — 벙커가 대신 맞아주지 못한다'); }
+      // 그리고 사수가 벙커를 실제로 때리는지도 본다(대상 전환이 사거리 판정까지 따라가는가).
+      { const c0=_hb.char; c0.x=0; c0.y=0; c0.hpMax=1e9; c0.hp=1e9; c0.atk=0; c0.regen=0;
+        const bkSave=_hb.bunkers.slice();
+        // 캐릭터와 사수 사이에 벙커를 놓는다 — 사거리 밖(HB_BUNKER_R 밖)이라 옛 규칙이면 그냥 지나쳐 캐릭터를 쏜다
+        const K=HB_FOE_KIND.ranger, bx=-(HB_BUNKER_R+K.rng);
+        _hb.bunkers=[{x:bx, y:0, hp:1e9, hpMax:1e9}];
+        _hb.foes.length=0; _hb.shots.length=0;
+        const f={kind:'ranger',ico:'x',mdl:null,x:bx-K.rng-40,y:0,hp:1e9,hpMax:1e9,atk:5,spd:K.spd,
+          sz:K.sz,rng:K.rng,way:K.way,rw:K.rw,cdT:0,elite:false};
+        _hb.foes.push(f);
+        const hp0=_hb.bunkers[0].hp;
+        for(let i=0;i<400;i++){ _hb.phase='fight'; _hb.waveT=99; hbStep(0.05); }
+        const hit=hp0-_hb.bunkers[0].hp;
+        _hb.bunkers=bkSave; _hb.foes.length=0;
+        assert(hit>0,'사수가 벙커를 그냥 지나쳤다 — 도발 반경이 사거리를 못 따라간다(벙커가 대신 맞아주지 못한다)'); }
+      // ④ 실제 이동 — 캐릭터를 벽으로 두르고(입구 한 칸) 반대편에서 출발시킨다
+      hbHunt().base={tiles:{},open:99}; hbLayoutBase();
+      const c=_hb.char; c.x=0;c.y=0;c.tx=null;c.ty=null;c.hpMax=1e9;c.hp=1e9;c.atk=0;c.range=1;c.regen=0;
+      const RR=8;                                  // 고리를 크게 잡아야 사거리가 긴 놈도 '넘어야만' 닿는다
+      const T=hbBase().tiles;
+      for(let g=-RR;g<=RR;g++) for(const cell of [[g,-RR],[g,RR],[-RR,g],[RR,g]]){
+        if(cell[0]===RR&&cell[1]===0) continue; T[hbKey(cell[0],cell[1])]={k:'wall'}; }
+      hbLayoutBase();
+      const walk=(kind)=>{ const K=HB_FOE_KIND[kind]; _hb.foes.length=0; _hb.pend.length=0; _hb.shots.length=0;
+        const f={kind:kind,ico:'x',mdl:null,x:-320,y:0,hp:1e9,hpMax:1e9,atk:1,spd:K.spd,
+          sz:K.sz,rng:K.rng,way:K.way,rw:K.rw,cdT:9e9,elite:false};
+        _hb.foes.push(f); let crossed=false, minD=1e9, shot=0;
+        // ⚠ 반복 횟수를 상수로 두면 **느린 놈만** 못 도착해 '못 붙었다'로 잘못 잡힌다(중장갑 spd 32).
+        //    우회로가 직선의 서너 배라 걸음 예산은 속도에 반비례해야 한다.
+        const N=Math.min(4000, Math.ceil(2600/(K.spd*0.05)));
+        for(let i=0;i<N;i++){ _hb.phase='fight'; _hb.waveT=99; hbStep(0.05);
+          if(!hbWalkable(f.x,f.y)) crossed=true;
+          shot+=_hb.shots.filter(s=>s.foe).length;
+          const d=Math.hypot(f.x,f.y); if(d<minD) minD=d; }
+        return { crossed, minD, shot }; };
+      for(const k of Object.keys(HB_FOE_KIND)){ const K=HB_FOE_KIND[k], r=walk(k);
+        // 벽 규약 — 지상은 절대 못 지나고, 유령·공중은 반드시 지나야 한다
+        if(K.way==='ground') assert(!r.crossed, k+'(지상)이 벽을 통과했다');
+        else assert(r.crossed, k+'('+K.way+')이 벽을 못 지났다 — 이동 방식이 안 먹고 있다(f.way 가 덮였는지 볼 것)');
+        // 사거리 규약 — 근접은 붙고, 사수는 사거리에서 멈춰 쏜다
+        if(K.rng>0){ assert(r.minD>HB_STOP+8, k+'(사거리 '+K.rng+')가 근접까지 붙었다: '+Math.round(r.minD));
+          assert(Math.abs(r.minD-K.rng)<=12, k+' 가 사거리에서 안 멈췄다: '+Math.round(r.minD)+' vs '+K.rng);
+          assert(r.shot>0, k+' 가 사거리 안인데 쏘지 않았다'); }
+        else assert(r.minD<=HB_STOP+4, k+'(근접)가 캐릭터에 못 붙었다: '+Math.round(r.minD)); }
+      // ⑤ 크기 — 중장갑 > 기본 > 돌격. 화면에서 역할이 구분되는 근거다
+      assert(HB_FOE_KIND.brute.sz > HB_FOE_KIND.grunt.sz && HB_FOE_KIND.grunt.sz > HB_FOE_KIND.runner.sz,
+        '크기 서열이 중장갑>기본>돌격 이 아니다');
+      assert(HB_AIR_LIFT>0,'공중을 띄우는 높이가 0 — 지상과 구분이 안 된다');
+      // ⑥ 💰 **시급 보존** — 이번 작업에서 제일 중요한 검사다.
+      //    사냥터 시급(hunt.rate)은 umRate() 를 거쳐 유즈맵 보상 앵커까지 그대로 간다.
+      //    실측(10회×240초): 이 엔진의 처리량은 **웨이브 페이스**가 정한다 — 편성을 바꿔도 분당 처치는
+      //    거의 안 변하고(42.9→39.8), 시급은 오직 '처치당 보상'을 따라간다. 그래서 지켜야 할 값은
+      //    **던전의 평균 처치 보상 = 1.0** 하나다. hbRwNorm(D) 이 편성과 무관하게 이걸 맞춘다.
+      //    ⛔ '보상÷체력'을 맞추는 것으로는 부족하다(그렇게 짰다가 던전1 R20 시급이 −32% 났다).
+      { const off=[];
+        for(const D of HB_DUNGEONS){ let tw=0, rw=0;
+          for(const e of D.roster){ const w=e.w||1; tw+=w; rw+=hbFoeProto(e,{round:1},D).rw*w; }
+          const mean=rw/tw;
+          if(Math.abs(mean-1)>0.02) off.push('던전'+D.dg+' '+mean.toFixed(3)); }
+        assert(!off.length,'던전 평균 처치 보상이 1.0 이 아님 — 편성만 바꿨는데 시급이 움직인다(유즈맵 보상까지 따라간다): '+off.join(' · ')); }
+      // ⑦ 보상 배수가 hbKill 한 경로로 흐른다 — 오래 걸리는 놈이 시급만 깎으면 안 된다.
+      //    ⛔ hbKill.toString() 에 /f\.rw/ 를 걸면 **주석에 적힌 f.rw** 가 매칭돼 코드를 지워도 통과한다(그렇게 짰다가 걷어냈다).
+      //    그래서 실제로 잡아 보고 들어온 미네랄을 비교한다.
+      assert(HB_FOE_KIND.brute.rw > HB_FOE_KIND.grunt.rw, '중장갑 보상이 기본보다 크지 않다');
+      // ⚠ 재는 동안 일일 퀘스트(dqNote→dqGive)를 끊는다 — 퀘스트가 완료되는 순간 보상이 같이 들어와
+      //    배수가 3배로 부풀어 보였다(실제로 그렇게 잘못 읽었다). 처치 보상만 남겨야 비교가 된다.
+      // ⚠ 재는 동안 '처치 보상 말고 미네랄이 들어오는 경로'를 전부 끊는다 —
+      //    일일 퀘스트(dqNote→dqGive)와 **레벨업(profApplyLevelUps, 레벨당 미네랄)** 둘 다.
+      //    안 끊으면 두 번째 처치에서 레벨업이 터져 배수가 5배로 부풀어 보인다(전체 실행에서 실제로 그랬다).
+      { const dqSave=window.dqNote, lvSave=window.profApplyLevelUps;
+        window.dqNote=function(){}; window.profApplyLevelUps=function(){ return 0; };
+        try{
+          const gain=(rw)=>{ _hb.foes.length=0;
+            const f={kind:'x',ico:'x',mdl:null,x:9e3,y:9e3,hp:0,hpMax:1,atk:0,spd:0,sz:1,rng:0,way:'ground',rw:rw,cdT:9e9,elite:false};
+            _hb.foes.push(f);
+            const p=PROF(), before=p.pcoin||0; hbKill(f); return (p.pcoin||0)-before; };
+          const g1=gain(1), g2=gain(HB_FOE_KIND.brute.rw);
+          assert(g1>0,'처치 보상이 0 — 비교할 수가 없다');
+          const ratio=g2/g1;
+          assert(Math.abs(ratio-HB_FOE_KIND.brute.rw)/HB_FOE_KIND.brute.rw < 0.15,
+            '종류 보상 배수가 실제 지급에 안 반영됨: 배수 '+HB_FOE_KIND.brute.rw+' 인데 실측 '+ratio.toFixed(2)+'배');
+        } finally { window.dqNote=dqSave; window.profApplyLevelUps=lvSave; } }
+      return Object.keys(HB_FOE_KIND).length+'역할 · 편성 '+HB_DUNGEONS.length+'던전 ok';
+    } finally { Object.assign(_hb.char,_cSave); _hb.foes.length=0; _hb.pend.length=0; _hb.shots.length=0;
+      hbHunt().base={tiles:{},open:1}; hbLayoutBase(); saveMeta(); }
+  });
   // 🧱 3D 건물 — 이 환경엔 three.js(CDN)가 없어 M3D가 아예 없다. 목록 생성 로직만 스텁으로 검사한다.
   await step('기지 3D: sync 목록에 건물이 실린다(화면 밖 컬링)', async()=>{ skipIf(typeof hb3dStructs!=='function','3D 구조물 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
@@ -1921,8 +2036,8 @@ async function groupLobby(){
     for(let i=0;i<HB_DUNGEONS.length;i++){ const D=HB_DUNGEONS[i], at='던전'+(i+1)+'('+D.name+')';
       assert(D.dg===i+1, at+' 번호가 어긋남: '+D.dg);
       assert(D.name && !names[D.name], at+' 이름이 없거나 중복');  names[D.name]=1;
-      assert(D.foes && D.foes.length===3, at+' 적이 3종이 아님');
-      for(const f of D.foes){
+      assert(D.roster && D.roster.length>=3, at+' 편성이 3종 미만');   // (구) foes 표는 roster 로 통합됐다 — 역할·얼굴·가중치를 한 줄이 갖는다
+      for(const f of D.roster){
         assert(f.mdl, at+' 모델 키가 비어 있음');
         assert(f.ico, at+' 폴백 이모지가 없음: '+f.mdl); }
       // 갈수록 어두워야 '무서워지는' 느낌이 난다
@@ -1939,15 +2054,15 @@ async function groupLobby(){
         im.onload=()=>res(true); im.onerror=()=>res(false); im.src='assets/tiles/'+t+'.webp'; });
       assert(ok,'바닥 타일 파일이 없음: assets/tiles/'+t+'.webp'); }
     // 던전을 옮기면 적 구성이 실제로 바뀌어야 한다
-    const f1=HB_DUNGEONS[0].foes.map(f=>f.mdl).join(), f2=HB_DUNGEONS[1].foes.map(f=>f.mdl).join();
+    const f1=HB_DUNGEONS[0].roster.map(f=>f.mdl).join(), f2=HB_DUNGEONS[1].roster.map(f=>f.mdl).join();
     assert(f1!==f2,'던전 1과 2의 적이 같음 — 옮겨도 같은 곳으로 느껴진다');
     // 모델 키 오타 검사. MODELS는 모듈 스코프라 전역에서 못 본다 → M3D.modelKeys()로 카탈로그를 받아 대조한다.
     // ⚠ M3D가 없으면(three.js를 못 받는 환경) 검사를 '통과'시키지 말고 그렇게 밝힌다 — 헛도는 검사가 제일 위험하다
     let keyChk='M3D 없음(모델 키 미검증)';
     if(window.M3D && M3D.modelKeys){ const cat=new Set(M3D.modelKeys());
-      for(const D of HB_DUNGEONS) for(const f of D.foes)
+      for(const D of HB_DUNGEONS) for(const f of D.roster)
         assert(cat.has(f.mdl),'던전'+D.dg+'('+D.name+') 모델 키가 카탈로그에 없음: '+f.mdl);
-      keyChk='모델 키 '+new Set(HB_DUNGEONS.flatMap(d=>d.foes.map(f=>f.mdl))).size+'종 확인'; }
+      keyChk='모델 키 '+new Set(HB_DUNGEONS.flatMap(d=>d.roster.map(f=>f.mdl))).size+'종 확인'; }
     return HB_DUNGEONS.length+'곳 · 타일 '+tiles.length+'종 · 틴트 '+alpha(HB_DUNGEONS[0].tint)+'→'+prevA+' · '+keyChk; });
   // 관리자 실험장의 8방향 시트를 던전 전장이 '그대로' 쓴다(새로 만들지 않는다)
   await step('던전: 내 캐릭터가 실험장 8방향 시트를 그대로 쓴다', async()=>{
