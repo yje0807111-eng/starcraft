@@ -10,6 +10,9 @@
 
 **게임에 들어갈 이미지를 생성하기 전에.** 유즈맵 키 아트·던전 배경·화면 배경 등 "장면"을 만드는 모든 경우.
 
+**계열이 둘이다** — §2~§7 은 **유즈맵 키 아트**(내려다보는 맵 그림), §8 은 **타이틀 배경**(부팅 로딩, 올려다보는 전투 그림).
+노출·안개·금지 블록은 같고 시점·구도·후처리가 다르다. 새 그림이 어느 쪽인지 먼저 정하고 그 계열의 규격을 쓸 것.
+
 이 문서가 다루지 **않는** 것: 아이콘(`assets/icons`)·유닛 초상(`assets/portraits`)·타일(`assets/tiles`).
 그건 이미 만들어진 에셋이고, 새로 필요하면 **먼저 기존 것을 찾아 쓴다**(CLAUDE.md 아이콘 일반 원칙).
 
@@ -239,3 +242,47 @@ Moody sci-fi game environment key art, clearly readable exposure with rich midto
 → 두 가지로 막았다. ① **§6에 실제로 쓴 전문을 통째로 박아둔다**(요약만 남기면 다음 사람이 다른 그림을 뽑는다).
 ② **`scripts/art-lint.mjs`** 가 고정 블록 6종·금지 표현·맵 표↔`UMAP_BG` 일치를 기계로 검사한다.
 이 어긋남을 실제로 잡아낸 것도 그 린트였고, 6장을 규격대로 다시 뽑아 문서와 실물을 맞췄다.
+
+---
+
+## 8. 타이틀 배경 계열 — 부팅 로딩 (2026-08-20)
+
+**유즈맵 키 아트와 규격이 다르다.** 목적이 다르기 때문이다 — 유즈맵은 팝업 뒤에 깔리고 위쪽 절반만 보이지만, 타이틀은 **화면 전체를 채우고 그 위에 제목·엠블럼·숫자가 얹힌다.**
+
+| 항목 | 유즈맵 키 아트(§2) | **타이틀 배경** |
+|---|---|---|
+| 시점 | `high aerial angle` 고정(게임이 내려다보므로) | **`low three-quarter angle`** — 올려다보는 각. 타이틀은 게임 화면이 아니다 |
+| 구도 | `The very center of the frame is calm` (미니맵 자리) | **`The upper third of the frame is calm open sky`** (엠블럼·제목 자리) |
+| 인물 | `no characters` | **`All figures are distant silhouettes, no close-up faces`** — 전투 장면이라 병력이 필요하다 |
+| 밝기 | 55 | **58** |
+| 채도 | ×0.45 ~ **1.4** (색이 살아야) | ×0.45 ~ **1.0 — 낮추기만** (글자가 배경을 이겨야) |
+| 크롭 | 디테일 띠를 찾아 자름 | **안 자름** (프롬프트가 구도를 잡는다) |
+| **비율** | `3:4` (팝업 뒤 299×350 칸에 맞춤) | **`9:16`** — 폰 프레임(390×809 · 비 0.482)을 화면 전체로 덮기 때문 |
+| 도구 | `scripts/usemap-bg.mjs` | **`scripts/title-bg.mjs`** |
+
+A(노출) · C(안개 + 대항 문장 셋) · 금지(텍스트·로고·UI·워터마크)는 **§2 와 똑같다.** 바뀌는 것은 위 표의 다섯 줄뿐이다.
+
+- ⚠ **비율을 §1(유즈맵용 `3:4`)에서 가져오지 말 것.** 타이틀은 폰 프레임(비 **0.482**)을 `cover` 로 덮으므로 원본이 가로로 넓을수록 **양옆이 잘린다.** 실측:
+
+  | 원본 비율 | 화면에 남는 가로 | 양옆 잘림 |
+  |---|---|---|
+  | `3:4` (0.750) | 64% | 18%씩 |
+  | `2:3` (0.667) | 72% | 14%씩 |
+  | **`9:16` (0.563)** | **86%** | **7%씩** |
+
+  다섯 종족을 좌우로 펼쳐 놓는 그림이라 양옆이 잘리면 **바깥 종족이 통째로 사라진다.** 반드시 `9:16` 으로 뽑을 것.
+- ⚠ **밝기만 올리면 글자가 안 읽히고, 비네트만 걷으면 그림이 어둡다.** 둘을 같이 움직여야 한다.
+  실제 화면의 딤은 `#opening .opArt::after` 가 갖고 있고 **글자가 앉는 아래쪽만** 덮는다(`.06 → .10 → .62 → .96`).
+  예전 값(`.25 → .55 → .96`)은 전장을 통째로 눌러 무엇이 싸우는지 안 보였다.
+- **종족은 다섯이다** — 유니온(파랑 보병·기계) · 에테리얼(금색 사이오닉) · 스웜(초록 유기체) · 페럴(수인 무리) · 콜로서스(거신 포격).
+  ⚠ 페럴·콜로서스는 **아직 코드에 없다**(`STK_RACES` 는 셋뿐). RACES.md 의 설계를 그림이 먼저 보여 주고 있다는 뜻이다.
+
+### 실제로 쓴 프롬프트 — `assets/backgrounds/title/boot.webp`
+
+```
+Moody sci-fi battle key art, bright and clearly readable exposure with rich midtones, well lit, not underexposed. Five visually distinct armies fighting through the ruins of a shattered city, broken towers and collapsed overpasses framing the street below, seen from a low three-quarter angle at blue hour. Blue-lit human power-armour infantry with tracked tanks; golden psionic alien warriors with glowing energy blades and hovering crystalline craft; a green chitinous insectile swarm pouring from a breached wall; a fast pack of feral gene-forged beast-soldiers with horns and claws bounding over rubble; and towering colossal artillery machines with long barrels braced on deployed legs firing between the towers. Tracer fire, energy beams and heavy shellfire cross the street, explosions blooming mid-ground. Thin volumetric haze catches the light and separates the armies into distinct depth layers without hiding them. Muted desaturated colour, the palette is a tint over neutral greys, not a monochrome wash. Steel blue base palette with distinct faction accents, strong value separation between armies and background, atmospheric perspective, layered depth, strong sense of motion. The upper third of the frame is calm open sky and uncluttered. Painterly concept art, cinematic, detailed environment clearly visible throughout the frame. All figures are distant silhouettes, no close-up faces. No text, no logos, no user interface, no watermark.
+```
+
+> 다섯 종족 묘사(위 두 번째 문장)는 **고정 블록**이다. 새 타이틀 배경을 뽑을 때 그 문장을 그대로 두고 **전장·시점·조명만** 바꾼다.
+> 여덟 장을 그렇게 뽑아 비교했다(열린 계곡 · 굽이친 전선 · **폐허 도시(채택)** · 협곡 관문 · 궤도 강하 · 야간 화염 · 사막 폭풍 · 크리스탈 평원).
+
