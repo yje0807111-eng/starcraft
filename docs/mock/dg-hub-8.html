@@ -1,0 +1,261 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>토벌 허브 8안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;700&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+<style>
+/* ═══ 앱 토큰 — css/00-base.css 에서 그대로 가져왔다(값을 새로 정하지 않는다) ═══ */
+:root{
+  --font-ko:'Noto Sans KR','Apple SD Gothic Neo',sans-serif;
+  --font-ti:'Jua','Apple SD Gothic Neo',sans-serif;
+  --font-num:'Rajdhani','Noto Sans KR',sans-serif;
+  --neon:#ff3b3b; --metal-edge:#3c3e46; --glass-edge:rgba(255,255,255,.12);
+  --txt:#e0dcdc; --txt-mute:#9aa0a8; --gold:#ffd24a; --ok:#5dff8f; --info:#4aa8ff; --warn:#ffb14d;
+  --acc-sel:#5cd6ff; --neon-soft:rgba(255,59,59,.34);
+  --r-bar:3px; --r-md:6px; --r-lg:9px;
+  --fs-xs:9.5px; --fs-sm:10px; --fs-md:11px; --fs-lg:12px; --fs-xl:13px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#07080b;color:var(--txt);font-family:var(--font-ko);font-size:var(--fs-md)}
+button{font-family:inherit;background:none;border:none;color:inherit;text-align:left}
+.wrap{max-width:1500px;margin:0 auto;padding:22px}
+h1{font-family:var(--font-ti);font-size:19px;margin:0 0 4px;color:#fff}
+.lead{color:var(--txt-mute);font-size:var(--fs-lg);margin:0 0 20px;line-height:1.7}
+.lead b{color:var(--gold)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:20px}
+.cell{min-width:0}
+.cap{font-family:var(--font-ti);font-size:var(--fs-xl);color:#fff;margin:0 0 3px}
+.cap i{font-style:normal;color:var(--neon)}
+.note{color:var(--txt-mute);font-size:var(--fs-sm);line-height:1.6;margin:0 0 9px;min-height:44px}
+/* 폰 프레임 — 실제 팝업 폭(320)에 맞춘다 */
+.phone{width:320px;background:#0a0b0e;border:1px solid #23252b;border-radius:var(--r-bar);overflow:hidden}
+
+/* ═══ 공용 컴포넌트 — 앱에서 그대로 (⛔ 새로 만들지 않는다) ═══ */
+.hbmCard{width:100%;display:flex;flex-direction:column;padding-bottom:12px;
+  background:linear-gradient(180deg,#191919,#0e0e0e);border:1px solid rgba(255,255,255,.07);border-radius:var(--r-bar)}
+.hbmHead{flex:none;display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px;
+  font-family:var(--font-ti);font-size:15px;font-weight:700;letter-spacing:.6px;color:#ececec}
+.hbmX{width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:#9a9a9a}
+.hbmX svg{width:15px;height:15px}
+.body{padding:0 12px}
+.hint{font-size:var(--fs-sm);color:var(--txt-mute);line-height:1.6;padding:0 0 10px}
+.hint b{color:var(--gold);font-family:var(--font-num)}
+
+/* 공용 액션 버튼 .actBtn — DESIGN.md §2 확정 */
+.actBtn{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;
+  height:44px;padding:0 14px;cursor:pointer;overflow:hidden;
+  font-family:var(--font-ti);font-size:var(--fs-xl);letter-spacing:.3px;color:#c6cdd6;
+  border:1px solid var(--metal-edge);border-radius:var(--r-bar);
+  background:linear-gradient(180deg,#24262b 0%,#15161a 46%,#0c0d10 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.13),inset 0 -6px 9px -6px #000,0 2px 4px -2px rgba(0,0,0,.7)}
+.actBtn::after{content:'';position:absolute;left:8%;right:8%;bottom:1px;height:2px;pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent)}
+.actBtn.pri{color:#fff;border-color:rgba(255,59,59,.34)}
+.actBtn.pri::after{background:linear-gradient(90deg,transparent,var(--neon),transparent);box-shadow:0 0 9px var(--neon)}
+.actBtn:disabled{cursor:default;color:#5f6772;border-color:#2b2d33;
+  background:linear-gradient(180deg,#131316,#0a0a0c);box-shadow:inset 0 3px 6px -4px #000}
+.actBtn:disabled::after{background:linear-gradient(90deg,transparent,#33363c,transparent);box-shadow:none}
+.actBtn.sm{height:34px;font-size:var(--fs-md);padding:0 10px}
+
+/* 목록 행 .roomItem — 방 찾기 원본. 밑변 광원 --dc 가 그 줄의 성격을 말한다 */
+.rmList{display:flex;flex-direction:column;gap:7px}
+.roomItem{position:relative;flex:0 0 auto;height:58px;overflow:hidden;
+  display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 13px;cursor:pointer;
+  border-radius:var(--r-bar);border:1px solid rgba(255,255,255,.07);
+  background:linear-gradient(180deg,#16171b,#0b0c0e);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
+.roomItem::after{content:'';position:absolute;left:8%;right:8%;bottom:0;height:2px;pointer-events:none;
+  background:linear-gradient(90deg,transparent,var(--dc,rgba(255,255,255,.3)),transparent);
+  box-shadow:0 0 7px var(--dcGlow,transparent)}
+.roomItem.locked{cursor:default;opacity:.5;box-shadow:inset 0 3px 6px -4px #000;
+  background:linear-gradient(180deg,#131316,#0a0a0c);border-color:#2b2d33}
+.roomItem.locked::after{background:linear-gradient(90deg,transparent,#33363c,transparent);box-shadow:none}
+.riMain{min-width:0;flex:1}
+.riName{font-size:var(--fs-xl);font-weight:700;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.riSub{font-size:var(--fs-xs);color:var(--txt-mute);margin-top:2px}
+.riRight{text-align:right;flex:none}
+.riCnt{font-family:var(--font-num);font-size:15px;font-weight:700;color:#cfe0ec;line-height:1;font-variant-numeric:tabular-nums}
+.riStat{font-size:var(--fs-xs);font-weight:700;margin-top:2px;color:var(--txt-mute)}
+.riDiff{font-size:8.5px;font-weight:700;letter-spacing:.3px;color:var(--dc,#888);border:1px solid var(--dc,#888);
+  border-radius:var(--r-bar);padding:0 4px;margin-right:5px;vertical-align:1px}
+
+/* 세그먼트 띠 .pdSeg — segNavHTML 공용(글자만) */
+.pdSeg{--pad:3px;position:relative;display:flex;gap:0;padding:var(--pad);margin-bottom:10px;
+  background:#000;border:1px solid rgba(255,255,255,.07);border-radius:var(--r-bar)}
+.pdSegBtn{flex:1 1 0;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;
+  font-size:var(--fs-md);font-weight:700;color:#7c828b;position:relative;z-index:1;background:none;border:none;font-family:inherit}
+.pdSegBtn.on{color:#fff}
+.pdSegInd{position:absolute;top:var(--pad);bottom:var(--pad);border-radius:var(--r-bar);
+  background:linear-gradient(180deg,#1c1d21,#0e0f12);border:1px solid rgba(255,255,255,.07);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08);transition:left .16s}
+.pdSegInd::after{content:'';position:absolute;left:14%;right:14%;bottom:-1px;height:1px;
+  background:var(--segCol,rgba(255,255,255,.34))}
+
+/* 재화·티켓 아이콘 — 앱은 resIco() webp. 목업은 같은 자리·같은 크기의 대역 */
+.ri,.gi{width:15px;height:15px;flex:none;display:inline-block;vertical-align:middle;border-radius:2px}
+.ri.min,.gi.min{background:linear-gradient(160deg,#8fdcff,#2f8fd0)}
+.ri.gas,.gi.gas{background:linear-gradient(160deg,#9dfba8,#2f9d4a)}
+.gi.tg{background:linear-gradient(160deg,#ffd98a,#c08a1e)}
+.gi.tp{background:linear-gradient(160deg,#8ff0e0,#1f9d8a)}
+.gi.ta{background:linear-gradient(160deg,#d5a8ff,#7a3fc0)}
+.gi.tr{background:linear-gradient(160deg,#b7a8ff,#5a3fc0)}
+.num{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:700}
+
+/* 토벌 종류 아이콘 자리 — 앱에선 assets/icons/ 를 먼저 찾아 쓴다 */
+.dgIco{width:30px;height:30px;flex:none;display:flex;align-items:center;justify-content:center;
+  border-radius:var(--r-bar);border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.035);
+  font-size:15px;line-height:1}
+.dgIco.lk{opacity:.45}
+
+/* 열쇠 표시 — 점 N개(숫자보다 잔여가 한눈에 들어온다) */
+.keyDots{display:inline-flex;gap:3px;align-items:center;vertical-align:middle}
+.keyDots i{width:6px;height:6px;border-radius:50%;background:#33363c;display:block}
+.keyDots i.on{background:var(--gold);box-shadow:0 0 5px rgba(255,210,74,.6)}
+
+.tixBar{display:flex;gap:12px;justify-content:center;padding:10px 4px 2px;color:#c6ccd4;font-size:var(--fs-md);font-weight:700}
+.tixBar b{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:#fff;margin-left:4px}
+.sec{font-size:var(--fs-xs);font-weight:700;letter-spacing:.4px;color:#61666e;padding:9px 0 5px}
+</style></head><body><div class="wrap">
+<h1>토벌 허브 — 8안</h1>
+<p class="lead">
+전부 <b>기존 공용 컴포넌트만 조합</b>했다 — <code>.actBtn</code>(액션) · <code>.roomItem</code>(목록 행) · <code>.pdSeg</code>(세그먼트 띠) · <code>.hbmCard</code>(팝업 껍데기) · <code>resIco()</code>(재화). 새 컴포넌트를 만든 안은 없다.<br>
+공통으로 걷어낸 옛 스타일: <b>색으로 채운 카드 면</b> · <b>파란 면 버튼</b> · <b>🗝🎟 이모지</b> · 9px 넘는 라운드.<br>
+상태는 전부 같게 뒀다 — 일반 12단계 / 장비 3단계 / 펫 미개척 / 동료·룬 잠김(Lv.50·100).
+</p>
+<div class="grid" id="g"></div>
+</div>
+<script>
+/* ── 공통 데이터 ────────────────────────────────────────────── */
+const D=[
+  {id:'normal',nm:'일반 토벌', ic:'⚔️', sub:'미네랄·가스 대량', fl:12, key:2, dc:'rgba(255,255,255,.30)', rw:'cur'},
+  {id:'gear',  nm:'장비 토벌', ic:'🛡️', sub:'장비 뽑기권',     fl:3,  key:1, dc:'rgba(255,210,74,.55)',  rw:'tg'},
+  {id:'pet',   nm:'펫 토벌',   ic:'🐾', sub:'펫 뽑기권',       fl:0,  key:2, dc:'rgba(93,255,143,.5)',   rw:'tp'},
+  {id:'ally',  nm:'동료 토벌', ic:'🤝', sub:'동료 뽑기권',     fl:0,  lock:50, dc:'rgba(213,168,255,.5)',rw:'ta'},
+  {id:'rune',  nm:'룬 토벌',   ic:'🔮', sub:'룬 뽑기권',       fl:0,  lock:100,dc:'rgba(183,168,255,.5)',rw:'tr'}
+];
+const keyDots=(n,max)=>{ let h='<span class="keyDots">'; for(let i=0;i<(max||2);i++) h+='<i class="'+(i<n?'on':'')+'"></i>'; return h+'</span>'; };
+const rwIco=k=> k==='cur' ? '<span class="ri min"></span><span class="ri gas"></span>' : '<span class="gi '+k+'"></span>';
+const flTx=d=> d.lock? ('Lv.'+d.lock) : (d.fl? d.fl+'단계' : '미개척');
+const X='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg>';
+const shell=(inner)=>'<div class="phone"><div class="hbmCard"><div class="hbmHead"><b>토벌</b><span class="hbmX">'+X+'</span></div>'+inner+'</div></div>';
+const tix='<div class="tixBar"><span><span class="gi tg"></span><b>4</b></span><span><span class="gi tp"></span><b>2</b></span><span><span class="gi ta"></span><b>1</b></span><span><span class="gi tr"></span><b>0</b></span></div>';
+
+/* ── 8안 ──────────────────────────────────────────────────── */
+const V=[];
+
+/* A · 방 찾기 목록 그대로 — 밑변 광원 = 보상 성격 */
+V.push({t:'A · 목록 행(.roomItem) 그대로',
+ n:'방 찾기 목록 컴포넌트를 그대로 빌린다. 밑변 광원 색이 곧 보상 성격이라 배지를 안 읽어도 훑힌다(원본의 난이도 색과 같은 문법). 새 판을 안 만든다는 점에서 가장 규칙에 충실.',
+ h:'<div class="body"><div class="hint">열쇠는 <b>매일 09:00</b> 보충 · 완료할 때만 소모</div><div class="rmList">'
+   +D.map(d=>'<div class="roomItem'+(d.lock?' locked':'')+'" style="--dc:'+d.dc+'">'
+     +'<div class="riMain"><div class="riName">'+d.nm+'</div>'
+     +'<div class="riSub">'+rwIco(d.rw)+' '+d.sub+'</div></div>'
+     +'<div class="riRight"><div class="riCnt">'+(d.lock?'Lv.'+d.lock:(d.fl||'—'))+'</div>'
+     +'<div class="riStat">'+(d.lock?'잠김':keyDots(d.key,2))+'</div></div></div>').join('')
+   +'</div></div>'+tix});
+
+/* B · 아이콘 + 행 — 종류를 그림으로 먼저 가른다 */
+V.push({t:'B · 아이콘 왼쪽 + 행',
+ n:'A에 종류 아이콘 칸을 더한다. 5종이 되면서 이름만으로는 훑기 어려워진 것을 그림이 받는다. 아이콘 자리는 정사각 30px — 앱에선 assets/icons/ 를 먼저 찾아 쓴다.',
+ h:'<div class="body"><div class="hint">열쇠는 <b>매일 09:00</b> 보충 · 완료할 때만 소모</div><div class="rmList">'
+   +D.map(d=>'<div class="roomItem'+(d.lock?' locked':'')+'" style="--dc:'+d.dc+'">'
+     +'<span class="dgIco'+(d.lock?' lk':'')+'">'+d.ic+'</span>'
+     +'<div class="riMain"><div class="riName">'+d.nm+'</div>'
+     +'<div class="riSub">'+rwIco(d.rw)+' '+d.sub+'</div></div>'
+     +'<div class="riRight"><div class="riCnt">'+(d.lock?'Lv.'+d.lock:(d.fl||'—'))+'</div>'
+     +'<div class="riStat">'+(d.lock?'잠김':keyDots(d.key,2))+'</div></div></div>').join('')
+   +'</div></div>'+tix});
+
+/* C · 세그먼트 띠 + 한 종류 상세 */
+V.push({t:'C · 세그먼트 띠 + 상세 한 판',
+ n:'목록을 없애고 위 띠(.pdSeg)로 종류를 고른다. 고른 하나만 크게 보여 준다 — 보상·단계·열쇠가 한눈에 들어오고 버튼이 바로 아래 온다. 탭이 5개라 글자가 빡빡한 게 약점.',
+ h:'<div class="body">'
+   +'<div class="pdSeg" style="--segCol:rgba(255,210,74,.55)"><span class="pdSegInd" style="left:calc(20% + 3px);width:calc(20% - 6px)"></span>'
+   +['일반','장비','펫','동료','룬'].map((s,i)=>'<button class="pdSegBtn'+(i===1?' on':'')+'">'+s+'</button>').join('')+'</div>'
+   +'<div class="roomItem" style="--dc:rgba(255,210,74,.55);height:auto;padding:13px;flex-direction:column;align-items:stretch;gap:9px">'
+     +'<div style="display:flex;align-items:center;gap:9px"><span class="dgIco">🛡️</span>'
+     +'<div class="riMain"><div class="riName" style="font-size:15px">장비 토벌</div><div class="riSub">장비 뽑기권 · 최고 3단계</div></div></div>'
+     +'<div style="display:flex;justify-content:space-between;font-size:var(--fs-md);color:var(--txt-mute)">'
+       +'<span>다음 <b class="num" style="color:#fff">4</b>단계</span>'
+       +'<span>보상 <span class="ri min"></span> <b class="num" style="color:#fff">128</b> · <span class="gi tg"></span> <b class="num" style="color:#fff">1</b></span></div>'
+     +'<div style="display:flex;justify-content:space-between;font-size:var(--fs-md);color:var(--txt-mute)"><span>열쇠</span>'+keyDots(1,2)+'</div>'
+   +'</div>'
+   +'<div style="display:flex;gap:8px;margin-top:10px"><button class="actBtn" style="flex:0 0 34%">이전 단계</button>'
+   +'<button class="actBtn" style="flex:1">자동</button><button class="actBtn pri" style="flex:1">직접</button></div>'
+   +'</div>'+tix});
+
+/* D · 진행 막대를 행 안에 */
+V.push({t:'D · 행 + 단계 진행 막대',
+ n:'행 안에 얇은 막대(--r-bar)로 "레벨이 열어 준 상한 대비 어디까지 왔나"를 보여 준다. 5종의 진도 차이가 숫자보다 빨리 읽힌다. 막대는 3px 바 규격 그대로.',
+ h:'<div class="body"><div class="hint">개방 <b>20</b>단계 · 열쇠 매일 09:00 보충</div><div class="rmList">'
+   +D.map(d=>{const pct=d.lock?0:Math.min(100,d.fl/20*100);
+     return '<div class="roomItem'+(d.lock?' locked':'')+'" style="--dc:'+d.dc+'">'
+     +'<span class="dgIco'+(d.lock?' lk':'')+'">'+d.ic+'</span>'
+     +'<div class="riMain"><div class="riName">'+d.nm+'</div>'
+     +'<div style="height:3px;border-radius:var(--r-bar);background:rgba(255,255,255,.07);margin:5px 0 3px;overflow:hidden">'
+       +'<i style="display:block;height:100%;width:'+pct+'%;background:'+d.dc.replace(/[\d.]+\)$/,'.9)')+'"></i></div>'
+     +'<div class="riSub">'+rwIco(d.rw)+' '+d.sub+'</div></div>'
+     +'<div class="riRight"><div class="riCnt">'+(d.lock?'Lv.'+d.lock:(d.fl||'—'))+'</div>'
+     +'<div class="riStat">'+(d.lock?'잠김':keyDots(d.key,2))+'</div></div></div>';}).join('')
+   +'</div></div>'+tix});
+
+/* E · 행마다 버튼 — 한 번 탭으로 들어간다 */
+V.push({t:'E · 행마다 액션 버튼',
+ n:'행을 눌러 시트를 여는 대신 버튼을 행에 둔다. 탭이 한 번 준다. 대신 행이 높아지고(72px) 자동·직접 선택이 시트로 밀린다 — 그건 다음 화면에서 고른다.',
+ h:'<div class="body"><div class="hint">열쇠는 <b>매일 09:00</b> 보충 · 완료할 때만 소모</div><div class="rmList">'
+   +D.map(d=>'<div class="roomItem'+(d.lock?' locked':'')+'" style="--dc:'+d.dc+';height:72px">'
+     +'<span class="dgIco'+(d.lock?' lk':'')+'">'+d.ic+'</span>'
+     +'<div class="riMain"><div class="riName">'+d.nm+'</div>'
+     +'<div class="riSub">'+rwIco(d.rw)+' '+d.sub+' · '+flTx(d)+'</div>'
+     +'<div class="riSub" style="margin-top:3px">'+(d.lock?'':keyDots(d.key,2))+'</div></div>'
+     +'<button class="actBtn sm'+(d.lock?'':' pri')+'" '+(d.lock?'disabled':'')+' style="flex:0 0 62px">'+(d.lock?'잠김':'입장')+'</button>'
+     +'</div>').join('')
+   +'</div></div>'+tix});
+
+/* F · 열림/잠김 두 구역 */
+V.push({t:'F · 열린 것 / 잠긴 것 두 구역',
+ n:'잠긴 것을 아래로 내리고 라벨로 가른다. 지금 할 수 있는 것이 위에 모여 훑기가 빠르다. 잠긴 줄은 목표라 지우지 않고 남긴다 — 무엇이 언제 열리는지가 동기다.',
+ h:'<div class="body"><div class="hint">열쇠는 <b>매일 09:00</b> 보충 · 완료할 때만 소모</div>'
+   +'<div class="sec">지금 갈 수 있는 곳</div><div class="rmList">'
+   +D.filter(d=>!d.lock).map(d=>'<div class="roomItem" style="--dc:'+d.dc+'">'
+     +'<span class="dgIco">'+d.ic+'</span>'
+     +'<div class="riMain"><div class="riName">'+d.nm+'</div><div class="riSub">'+rwIco(d.rw)+' '+d.sub+'</div></div>'
+     +'<div class="riRight"><div class="riCnt">'+(d.fl||'—')+'</div><div class="riStat">'+keyDots(d.key,2)+'</div></div></div>').join('')
+   +'</div><div class="sec">더 강해지면</div><div class="rmList">'
+   +D.filter(d=>d.lock).map(d=>'<div class="roomItem locked" style="--dc:'+d.dc+'">'
+     +'<span class="dgIco lk">'+d.ic+'</span>'
+     +'<div class="riMain"><div class="riName">'+d.nm+'</div><div class="riSub">'+rwIco(d.rw)+' '+d.sub+'</div></div>'
+     +'<div class="riRight"><div class="riCnt">Lv.'+d.lock+'</div><div class="riStat">잠김</div></div></div>').join('')
+   +'</div></div>'+tix});
+
+/* G · 보상을 오른쪽 주역으로 */
+V.push({t:'G · 보상이 오른쪽 주역',
+ n:'오른쪽 숫자를 "단계"가 아니라 "이번에 받는 것"으로 바꾼다. 토벌을 고르는 이유가 보상이므로 그걸 제일 크게 둔다. 단계는 왼쪽 부제로 내린다.',
+ h:'<div class="body"><div class="hint">보상은 <b>단계가 깊을수록</b> 커진다 · 열쇠 매일 09:00</div><div class="rmList">'
+   +D.map(d=>{const n=d.lock?0:(d.rw==='cur'? '1,956' : (1+Math.floor(Math.max(0,d.fl-1)/5)));
+     return '<div class="roomItem'+(d.lock?' locked':'')+'" style="--dc:'+d.dc+'">'
+     +'<span class="dgIco'+(d.lock?' lk':'')+'">'+d.ic+'</span>'
+     +'<div class="riMain"><div class="riName">'+d.nm+'</div>'
+     +'<div class="riSub">'+(d.lock?('Lv.'+d.lock+' 필요'):(flTx(d)+' · 열쇠 '))+(d.lock?'':keyDots(d.key,2))+'</div></div>'
+     +'<div class="riRight" style="display:flex;align-items:center;gap:5px">'
+       +(d.lock?'<span class="riStat">잠김</span>':(rwIco(d.rw)+'<span class="riCnt">'+n+'</span>'))+'</div></div>';}).join('')
+   +'</div></div>'+tix});
+
+/* H · 오늘 남은 열쇠를 머리로 */
+V.push({t:'H · 오늘 남은 열쇠가 머리줄',
+ n:'열쇠가 이 화면의 진짜 자원이다. 총 잔여를 머리줄로 올리고 행에서는 뺀다. 행이 가벼워지고 "오늘 몇 번 더 가능한가"가 먼저 읽힌다. 잔여 0이면 머리줄이 회색으로 죽는다.',
+ h:'<div class="body">'
+   +'<div style="display:flex;align-items:center;justify-content:space-between;padding:2px 2px 10px">'
+     +'<span style="font-size:var(--fs-md);color:var(--txt-mute)">오늘 남은 열쇠</span>'
+     +'<span style="display:flex;align-items:center;gap:7px"><span class="num" style="font-size:17px;color:var(--gold)">5</span>'
+     +'<span style="font-size:var(--fs-sm);color:#61666e">/ 10</span></span></div>'
+   +'<div class="rmList">'
+   +D.map(d=>'<div class="roomItem'+(d.lock?' locked':'')+'" style="--dc:'+d.dc+';height:52px">'
+     +'<span class="dgIco'+(d.lock?' lk':'')+'">'+d.ic+'</span>'
+     +'<div class="riMain"><div class="riName">'+d.nm+'</div><div class="riSub">'+rwIco(d.rw)+' '+d.sub+'</div></div>'
+     +'<div class="riRight"><div class="riCnt" style="font-size:13px">'+(d.lock?'Lv.'+d.lock:(d.fl?d.fl+'단계':'미개척'))+'</div></div></div>').join('')
+   +'</div></div>'+tix});
+
+document.getElementById('g').innerHTML=V.map((v,i)=>
+  '<div class="cell"><p class="cap"><i>'+String.fromCharCode(65+i)+'</i>'+v.t.slice(1)+'</p><p class="note">'+v.n+'</p>'+shell(v.h)+'</div>').join('');
+</script></body></html>
