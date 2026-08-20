@@ -95,6 +95,13 @@
 - `G` — 게임 전체 상태. 주요 필드: `phase`('ready'/'playing'), `sandbox`, `strike`, `tab`('Main'/'Unit'/'Upgrade'/'Players'/'Battle'/'Build'), `mainSheet`('gacha'|'upgrade'|'players'|'boss'|null), `sel`(uid배열), `selEnemy`, `units`, `enemies`, `pendSpawn`(적 등장 대기열), `credits/mineral/gas`, `pbossCds`, `opt`(품질·사운드), `metaB`(영구강화), `tech`(건설 상태), `view`(줌/팬).
 - 유닛 인스턴스: `{uid, id(프록시), gid/gtier/gname/gmodel(가챠), hero, x,y(0..1 정규화), hp/sh/en, moveTo, moving, fixed, atBoss, cargo}`.
 - 맵 값 주입: 항상 `mapCfg('키', 기본값)` — 하드코딩 금지.
+- **`_hb` 는 세션이 아니라 포인터다** (2026-08-20). 진짜 전투 세션은 `HBS={hunt, dg}` 안에 있고, `_hb` 는 *지금 화면이 보는 쪽*을 가리킨다. 사냥터(방치)와 토벌이 **동시에** 돌아야 해서 이렇게 갈랐다.
+  - 불변식 **`_hb === HBS[_hbView]`**. `hbUse(k)`(포인터 재조준) · `hbSetSess(k,S)`(세션 교체) · `hbWith(k,fn)`(잠깐 그 세션으로) — ⛔ **`_hb` 에 직접 대입 금지.**
+  - `hbPumpAll()`(50ms 인터벌)이 살아 있는 세션을 **전부** 민다. `hbPump()` 는 `_hb` 하나만. 그리기(`hbFrame`)는 보는 세션만.
+  - 시뮬 시계는 세션마다(`S.lastSim`). 전역 하나로 두면 배경 세션이 앞 세션의 시각을 물려받아 돌아온 순간 큰 `dt` 로 점프한다.
+  - ⛔ **getter 로 가로채는 방법은 없다**(실측): 파일 스코프 `let` 은 window 프로퍼티가 아니라 `defineProperty` 가 무효이고, `var` 로 바꿔도 전역 var 는 `configurable:false` 라 던진다. 그래서 포인터 재조준 방식이다.
+  - 다행히 시뮬 경로는 `S.dg`/`S.round` 를 **세션에서** 읽는다. 저장 진행도(`hbHunt()`)를 만지는 곳은 결과 지점 셋뿐 — `hbSettle()`(클리어) · `hbDie()`(사망) · `hbSpawnWave()`의 벙커 체력 동기화(`hbBase()`). 토벌 분기는 여기서만 갈리면 된다.
+  - 스모크 「전투 세션 둘이 동시에 돌고 서로 오염되지 않는다」가 불변식·병행·오염을 검사한다.
 
 ## 4. 프레임 파이프라인 (loop → …) ⚠️ 성능 핵심
 `loop()`(찾기: `function loop(now)`) 매 프레임:

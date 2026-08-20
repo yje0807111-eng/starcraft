@@ -923,22 +923,51 @@ function hbUseSkill(k){ const S=_hb, SK=HB_SKILLS[k]; if(!S||!SK) return;
   else if(k==='slow'){ S.slowT=HB_SLOW_S;
     S.floats.push({x:0,y:-40,tx:'🕸 감속',cl:'#9ad0ff',t:0}); }
   S.skT[k]=SK.cd; if(typeof playSfx==='function') playSfx('ui_open'); renderHbBar(); }
-let _hb=null,_hbRaf=0,_hbTick=0,_hbLastSim=0;
+// ══ 전투 세션 레지스트리 — 사냥터와 토벌이 **동시에** 돈다 (2026-08-20) ══════════════════
+// `_hb` 는 세션이 아니라 **'지금 화면이 보는 세션'을 가리키는 포인터**다. 진짜 세션은 HBS 안에 있다.
+// 159개 함수가 `_hb` 를 직접 읽으므로, 포인터만 재조준하면 그 함수들을 한 줄도 안 고치고 두 세션을 굴린다.
+//   ⛔ `_hb` 에 직접 대입하지 말 것 — 반드시 hbUse()/hbSetSess() 를 지날 것.
+//      불변식: **_hb === HBS[_hbView]**. 이게 깨지면 한 세션이 다른 세션의 적·재화를 먹는다(스모크가 검사).
+//   ⛔ getter 로 가로채는 방법은 쓸 수 없다(2026-08-20 실측): 파일 스코프 `let` 은 window 프로퍼티가
+//      아니라 defineProperty 가 무효이고, `var` 로 바꿔도 전역 var 는 configurable:false 라 던진다.
+//   ⚠ 시뮬 시계(lastSim)도 세션마다 따로다 — 전역 하나로 두면 배경 세션이 앞 세션의 시각을 물려받아
+//      돌아온 순간 큰 dt 로 한 번에 점프한다.
+const HBS={ hunt:null, dg:null };   // hunt = 자동사냥(방치) · dg = 토벌
+let _hbView='hunt';                 // _hb 가 지금 가리키는 쪽
+let _hb=null,_hbRaf=0,_hbTick=0;
+function hbUse(k){ _hbView=k; _hb=HBS[k]||null; return _hb; }                        // 포인터 재조준(세션 생성 아님)
+function hbSetSess(k,S){ HBS[k]=S||null; if(_hbView===k) _hb=HBS[k]; return HBS[k]; }// 세션 교체 — 보고 있으면 포인터도 따라간다
+function hbWith(k,fn){ const v=_hbView; try{ hbUse(k); return fn(HBS[k]); } finally{ hbUse(v); } }  // 그 세션 기준으로 잠깐 실행
+// ⏩ 자동 토벌 배속 상한 — dt 를 키우면 충돌·사거리 판정이 통째로 샌다(적이 벽을 통과하고 사거리를 건너뛴다).
+//    그래서 '한 번에 크게'가 아니라 **작은 dt 로 여러 번** 민다. 값은 BALANCE.md 가 단일 소스.
+const HB_SUB_MAX=16;
 // 시뮬 시계 — rAF와 분리(50ms 인터벌이 진행을 보장한다. 이 환경·백그라운드 탭에서 rAF가 멎어도 전투는 돈다)
 function hbPump(){ const S=_hb; if(!S||!S.on||S.manual) return;   // manual = 스모크가 hbStep을 직접 돌릴 때
-  const now=performance.now(); let dt=(now-_hbLastSim)/1000; if(dt<=0) return;
-  _hbLastSim=now; hbStep(Math.min(dt,.25)); }   // 오래 멎었다 와도 한 번에 크게 점프하지 않는다
+  const now=performance.now(); let dt=(now-(S.lastSim||now))/1000; if(dt<=0) return;
+  S.lastSim=now;
+  dt=Math.min(dt,.25);                                            // 오래 멎었다 와도 한 번에 크게 점프하지 않는다
+  const sub=Math.max(1, Math.min(HB_SUB_MAX, Math.round(S.speed||1)));   // speed 미설정 = 1 = 옛 동작 그대로
+  const st=dt/sub;
+  for(let i=0;i<sub;i++){ hbStep(st); if(_hb!==S) break; }         // 스텝 도중 세션이 걷히면(사망·클리어) 즉시 중단
+}
+// 살아 있는 세션을 **전부** 민다 — 배경 세션도 여기서 진행한다.
+// ⚠ 반드시 원래 보던 세션으로 되돌려 놓는다(finally). 안 하면 다음 그리기가 남의 세션을 그린다.
+function hbPumpAll(){ const v=_hbView;
+  try{ for(const k in HBS){ const S=HBS[k]; if(!S||!S.on||S.manual) continue; hbUse(k); hbPump(); } }
+  finally{ hbUse(v); } }
 function hbStart(){ const cv=document.getElementById('hbCv'); if(!cv) return;
+  hbUse('hunt');                                      // ⚠ 사냥터 화면이므로 포인터를 사냥터 세션으로 — 토벌을 보다 왔을 수 있다
   if(_hb && _hb.on){                                  // 이미 돌고 있던 판 — 라운드·웨이브·적을 그대로 이어받는다
     _hb.bg=false; _hb.cv=cv; _hb.ctx=cv.getContext('2d'); _hb._pat=null;
     _hb.vTop=0; _hb.vBot=0;                           // 카메라는 새 레이아웃으로 '즉시' 맞춘다(보간하면 돌아온 순간 어긋나 보인다)
     hbSyncChar();                                     // 자리를 비운 사이 산 업그레이드·레벨·포인트를 반영
-    if(!_hbTick) _hbTick=setInterval(hbPump,50);
-    _hbLastSim=performance.now();
+    if(!_hbTick) _hbTick=setInterval(hbPumpAll,50);
+    _hb.lastSim=performance.now();
     if(!_hbRaf) _hbRaf=requestAnimationFrame(hbFrame);
     hbResize(); hbHud(); renderHbBar(); return; }
   const H=hbHunt(), st=hbCharStats();
-  _hb={ on:true, cv, ctx:cv.getContext('2d'), w:0,h:0,d:1, vTop:0, vBot:0, cx:0, cy:0, k:1, t:0,
+  hbSetSess('hunt', { on:true, mode:'hunt', speed:1, lastSim:performance.now(),
+    cv, ctx:cv.getContext('2d'), w:0,h:0,d:1, vTop:0, vBot:0, cx:0, cy:0, k:1, t:0,
     dg:H.dg||1, round:H.round||1, wave:1, phase:'fight', waveT:hbWaveTime(1), gapT:0, downT:0,
     pend:[], pendT:0, foes:[], chests:[], shots:[], floats:[], kills:0, rt0:0, charDir:4, charFace:0, atkT:0,
     allies:[], turrets:[], bunkers:[], pets:[], skT:{nova:0,heal:0,slow:0}, slowT:0, skDirty:false,
@@ -948,12 +977,13 @@ function hbStart(){ const cv=document.getElementById('hbCv'); if(!cv) return;
            shd:st.shdMax, shdMax:st.shdMax, shdReg:st.shdReg,
            lifest:st.lifest, knock:st.knock, chestDmg:st.chestDmg, multiC:st.multiC, multiN:st.multiN,
            bncC:st.bncC, bncN:st.bncN, scritC:st.scritC, scritM:st.scritM,
-           mspd:st.mspd, rrng:st.rrng } };
+           mspd:st.mspd, rrng:st.rrng } });
+  hbUse('hunt');
   hbEnsureModels(_hb.dg);                            // ⚔ 현재 던전 적 모델 준비(없으면 이모지로 시작)
   hbResize(); hbLayoutAllies(); hbSpawnWave(); hbHud(); renderHbBar();
-  _hbLastSim=performance.now();
+  _hb.lastSim=performance.now();
   _hbRaf=requestAnimationFrame(hbFrame);            // 그리기
-  _hbTick=setInterval(hbPump,50); }                 // 진행 보장
+  if(!_hbTick) _hbTick=setInterval(hbPumpAll,50); }  // 진행 보장(세션 전부)
 // 화면을 떠나도 전투는 계속 돈다 — '그리기'만 멈추고 시뮬(setInterval)은 살려 둔다.
 // ⚠ 여기서 반드시 저장한다. 처치 보상은 메모리에만 있어서, 다음 화면의 loadMeta()가 그대로 덮어쓴다(재화가 사라지던 원인).
 // ⚠ 3D 캔버스는 공용이라 떠날 때 무조건 반납한다(안 하면 유즈맵 3D가 사라진다).
@@ -962,8 +992,11 @@ function hbStop(){ if(_hbRaf) cancelAnimationFrame(_hbRaf); _hbRaf=0;
     _hb.bg=true; _hb.arm=null; _hbDirty=false; if(typeof saveMeta==='function') saveMeta(); }
   if(typeof hbArmBtns==='function') hbArmBtns();   // 🧱 배치 중이었으면 확정 버튼도 걷는다(안 그러면 다른 화면 위에 남는다)
   hb3dDetach(); }
-// 전투를 진짜로 끝낼 때(로그아웃) — 진행 상태까지 버린다
-function hbEnd(){ hbStop(); if(_hbTick) clearInterval(_hbTick); _hbTick=0; if(_hb) _hb.on=false; _hb=null; }
+// 전투를 진짜로 끝낼 때(로그아웃) — 진행 상태까지 버린다.
+// ⚠ 세션 **전부**를 버린다 — 토벌만 남으면 인터벌이 죽은 뒤로 영영 안 돈다.
+function hbEnd(){ hbStop(); if(_hbTick) clearInterval(_hbTick); _hbTick=0;
+  for(const k in HBS){ if(HBS[k]) HBS[k].on=false; hbSetSess(k, null); }
+  hbUse('hunt'); }
 // 전장은 화면 전체가 아니라 '보이는 영역'이다 — 위는 재화 바 아래, 아래는 업그레이드 카드 위.
 // 카드를 접으면 그만큼 전장이 넓어지고 캐릭터도 내려온다(매 프레임 다시 재므로 토글이 바로 반영된다).
 function hbResize(){ const S=_hb, cv=S.cv, w=cv.clientWidth||1, h=cv.clientHeight||1, d=Math.min(2,window.devicePixelRatio||1);

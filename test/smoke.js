@@ -1974,6 +1974,66 @@ async function groupLobby(){
         im.onload=()=>res(true); im.onerror=()=>res(false); im.src=sh.url[st]; });
       assert(ok,'시트 이미지가 없음: '+sh.url[st]); }
     return 'marine 시트 공유 · 공격 '+a.frames+'f/'+a.fps+'fps'; });
+  // ══ 전투 세션 레지스트리(2026-08-20) — 사냥터와 토벌이 동시에 돈다 ══
+  //   `_hb` 는 포인터일 뿐이고 진짜 세션은 HBS 안에 있다. 여기서 지키는 것은 두 가지:
+  //   ① 불변식 _hb === HBS[_hbView] 가 펌프 뒤에도 유지되는가(안 그러면 다음 그리기가 남의 세션을 그린다)
+  //   ② 두 세션이 각각 자기 시계로 돌고, 서로의 적·버프를 먹지 않는가
+  await step('전투 세션 둘이 동시에 돌고 서로 오염되지 않는다', async()=>{
+    skipIf(typeof HBS==='undefined' || typeof hbPumpAll!=='function','세션 레지스트리 없음');
+    openHome(); await sleep(200);
+    skipIf(!HBS.hunt || !HBS.hunt.on,'사냥터 세션이 안 돌고 있음');
+    const hunt=HBS.hunt;
+    // 토벌 세션 흉내 — 그리기 자원(cv/ctx) 없이 시뮬만 도는 배경 세션
+    const dg=JSON.parse(JSON.stringify({ on:true, mode:'dg', speed:1, t:0,
+      dg:1, round:1, wave:1, phase:'gap', gapT:99, waveT:99, downT:0, gapOnly:1,
+      pend:[], pendT:0, foes:[], chests:[], shots:[], floats:[], kills:0, rt0:0,
+      allies:[], turrets:[], bunkers:[], pets:[], skT:{nova:0,heal:0,slow:0}, slowT:0,
+      buf:{min:0,gas:0,xp:0,kills:0} }));
+    dg.char=JSON.parse(JSON.stringify(hunt.char)); dg.bg=true;
+    const wasManual=hunt.manual;   // ⚠ 앞 스텝들이 manual 을 켜 두고 나간다 — 켜져 있으면 펌프가 건너뛴다
+    try{
+      hunt.manual=false; hbSetSess('dg', dg);
+      const t0h=hunt.t, t0d=dg.t, view0=_hbView;
+      // ⚠ 실제 경과시간으로 도는 펌프라 촘촘히 부르면 dt≈0 이다 — 시계를 과거로 밀어 dt 를 만든다
+      hunt.lastSim=performance.now()-100; dg.lastSim=performance.now()-100;
+      hbPumpAll();
+      assert(_hbView===view0,'펌프가 보던 세션을 안 돌려놨다: '+view0+' → '+_hbView);
+      assert(_hb===HBS[_hbView],'불변식 깨짐: _hb !== HBS[_hbView]');
+      assert(dg.t>t0d,'배경(토벌) 세션이 안 돌았다: t '+t0d+' → '+dg.t);
+      assert(hunt.t>t0h,'사냥터 세션이 안 돌았다: t '+t0h+' → '+hunt.t);
+      // 오염 검사 — 한쪽에만 적을 넣고 민다. 상대 쪽으로 새면 안 된다.
+      dg.foes.push({ico:'🟢',mdl:'snapper',x:200,y:0,hp:1e9,hpMax:1e9,atk:0,spd:0,cdT:99,elite:false});
+      const hn0=hunt.foes.length;
+      hunt.lastSim=performance.now()-100; dg.lastSim=performance.now()-100; hbPumpAll();
+      assert(hunt.foes.length===hn0,'토벌 적이 사냥터로 샜다: '+hn0+' → '+hunt.foes.length);
+      assert(dg.foes.length===1,'토벌 적이 사라졌다: '+dg.foes.length);
+      // ⏩ 배속 자체는 다음 스텝이 정확히 잰다(hbStep 호출 횟수·크기).
+      //    여기서 벽시계로 재면 두 번의 performance.now() 간격이 미세하게 달라 뜬다 — 실제로 그랬다.
+      return '두 세션 병행 ok · 오염 없음';
+    } finally{ hunt.manual=wasManual; hbSetSess('dg', null); hbUse('hunt'); } });
+  // ⏩ 자동 토벌 배속 — 같은 '실제 경과시간'에 전투가 몇 배 진행되는가.
+  //   시뮬 시간(S.t)이 아니라 **실제 벽시계 대비 진행량**을 본다: hbStep 호출 횟수 × 스텝 크기.
+  await step('배속은 dt 를 키우지 않고 잘게 쪼갠다(충돌·사거리 판정 보존)', async()=>{
+    skipIf(typeof HBS==='undefined' || typeof hbPumpAll!=='function','세션 레지스트리 없음');
+    openHome(); await sleep(120);
+    skipIf(!HBS.hunt || !HBS.hunt.on,'사냥터 세션이 안 돌고 있음');
+    const S=HBS.hunt; const wasManual=S.manual, wasSpeed=S.speed;
+    const seen=[]; const real=hbStep;
+    try{
+      S.manual=false;
+      window.hbStep=function(dt){ seen.push(dt); };   // 스텝 크기를 가로채 센다(실제 전진은 막는다)
+      S.speed=1; S.lastSim=performance.now()-160; seen.length=0; hbPumpAll();
+      const n1=seen.length, m1=Math.max.apply(null,seen);
+      S.speed=8; S.lastSim=performance.now()-160; seen.length=0; hbPumpAll();
+      const n8=seen.length, m8=Math.max.apply(null,seen);
+      assert(n1===1,'배속 1인데 스텝이 '+n1+'번');
+      assert(n8===8,'배속 8인데 스텝이 '+n8+'번');
+      assert(m8<m1,'배속을 올렸는데 스텝 크기가 안 줄었다 — dt 를 키우면 적이 벽을 통과한다: '+m1+' → '+m8);
+      // 상한 — 아무리 올려도 HB_SUB_MAX 를 넘지 않는다(한 프레임을 통째로 잡아먹지 않게)
+      S.speed=999; S.lastSim=performance.now()-160; seen.length=0; hbPumpAll();
+      assert(seen.length===HB_SUB_MAX,'배속 상한이 안 걸린다: '+seen.length+' ≠ '+HB_SUB_MAX);
+      return '1배 '+n1+'스텝 / 8배 '+n8+'스텝 / 상한 '+HB_SUB_MAX;
+    } finally{ window.hbStep=real; S.manual=wasManual; S.speed=wasSpeed; } });
   // 이동이 '미끄러지지' 않으려면 적이 가는 쪽을 봐야 한다 — 실제로 dir이 갱신되는지
   await step('던전: 적이 가는 방향을 본다(메인 게임과 같은 연속 각도)', async()=>{
     skipIf(typeof hbStart!=='function' || typeof _hb==='undefined','자동사냥 없음');
