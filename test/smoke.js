@@ -2787,6 +2787,67 @@ async function groupLobby(){
     return '간격 '+HB_RW_EVERY+' · 최초 1회 · 던전별 분리 ok'; });
 
   // 친구 목록은 네비 밖(마을 상단 바)에서 연다 — 네비 칸 수가 바뀌어도 진입점이 사라지지 않게 지킨다.
+  // 🚪 게임 진입 화면 — 막대가 100% 가 되기 전에는 시작 버튼을 못 누른다(막대·버튼에 뜻을 준다)
+  await step('게임 진입: 로딩 100% 전에는 시작 버튼이 잠겨 있다', async ()=>{
+    skipIf(typeof gameStartCountdown!=='function','진입 화면 없음');
+    openMapSelect(); _selMap=USEMAPS.nemo; await sleep(40);
+    gameStartCountdown(()=>{});
+    await sleep(60);
+    const sb=$('opStart'), fill=$('gsBarFill');
+    const pct=()=>parseFloat(fill.style.width)||0;
+    assert(sb.disabled, '로딩 중인데 시작 버튼이 이미 열려 있음');
+    assert(pct()<100, '로딩이 시작하자마자 100%');
+    // 다 찰 때까지 기다린다(GS_LOAD_MS 기준 + 여유)
+    const t0=performance.now();
+    while(sb.disabled && performance.now()-t0 < GS_LOAD_MS+1200) await sleep(30);
+    assert(!sb.disabled, '막대가 다 찼는데 시작 버튼이 안 열림');
+    assert(pct()>=100, '버튼이 열렸는데 막대가 100% 가 아님: '+pct()+'%');
+    const took=Math.round(performance.now()-t0);
+    if(typeof gsQuitToMaps==='function') gsQuitToMaps();
+    await sleep(40);
+    assert(!$('opStart').disabled, '나가기 뒤에도 버튼 잠금이 남음(다음 진입에서 못 누른다)');
+    return '잠김 해제까지 '+took+'ms · GS_LOAD_MS='+GS_LOAD_MS;
+  });
+  // 🔁 부팅 막대는 **한 번만** 시작한다 — 중간에 0 으로 되돌아가면 사용자에게는 로딩이 두 번 도는 것으로 보인다.
+  //    (CSS 애니 opLoad 는 첫 페인트에, JS 막대는 스크립트 파싱 때 시작해서 예전엔 둘이 겹쳤다)
+  await step('부팅 막대: 데우기로 넘어갈 때 0 으로 되돌아가지 않는다', async()=>{
+    skipIf(typeof enterAfterWarm!=='function' || typeof opBarStart!=='function','막대 없음');
+    const cs=getComputedStyle(document.querySelector('#opening .opBar'));
+    assert(cs.animationName==='none','.opBar 에 CSS 애니메이션이 다시 들어옴 — JS 막대와 겹쳐 두 번 돈다: '+cs.animationName);
+    const orig=window.opBarStart; let starts=0;
+    window.opBarStart=function(){ starts++; return orig.apply(null,arguments); };
+    try{
+      orig(400);                                   // 부팅 막대가 도는 상황을 만든다
+      starts=0;
+      const pr=enterAfterWarm(); await sleep(200);
+      assert(starts===0,'데우기가 막대를 다시 시작했다 — 0 으로 되돌아간다');
+      await pr;
+    } finally { window.opBarStart=orig; }
+    return '재시작 '+starts+'회 · CSS 애니 none';
+  });
+
+  // ⏳ 로딩 막대 — '항상 100% 까지 찬 뒤 0.2초' 가 규칙이다. 예전엔 막대(CSS 1.6s)와 전환 타이머(1.1s)가
+  //    따로 돌아 80% 쯤에서 잘린 채 넘어갔다. 전환이 막대를 기다리는지 검사한다.
+  await step('로딩 막대: 100% 를 채우고 0.2초 뒤에 넘어간다', async ()=>{
+    skipIf(typeof showLoading!=='function' || typeof opBarDone!=='function','로딩 막대 없음');
+    const op=$('opening'), bar=op.querySelector('.opBar'), wrap=bar.parentElement;
+    op.classList.remove('hide','counting'); await sleep(50);
+    const W=wrap.getBoundingClientRect().width; assert(W>1,'막대 칸 폭이 0 — 화면이 안 보인다');
+    let peak=0, fullAt=null, hidAt=null; const t0=performance.now();
+    const iv=setInterval(()=>{ const w=bar.getBoundingClientRect().width/W*100, t=performance.now()-t0;
+      if(w>peak) peak=w;
+      if(fullAt===null && w>=99) fullAt=t;
+      if(hidAt===null && op.classList.contains('hide')) hidAt=t; }, 16);
+    await new Promise(r=>showLoading(r, 400));
+    await sleep(40); clearInterval(iv);
+    assert(peak>=99, '막대가 100% 를 못 채우고 넘어감(최대 '+peak.toFixed(0)+'%)');
+    assert(fullAt!==null && hidAt!==null, '100% 도달·전환 시점을 못 잼');
+    const gap=hidAt-fullAt;
+    assert(gap>=LOAD_HOLD*0.5, '100% 를 보여 주지 않고 바로 넘어감(간격 '+Math.round(gap)+'ms)');
+    assert(gap<=LOAD_HOLD*3+250, '100% 뒤 너무 오래 머묾(간격 '+Math.round(gap)+'ms)');
+    op.classList.add('hide'); if(typeof opBarReset==='function') opBarReset();
+    return '최대 '+peak.toFixed(0)+'% · 100%→전환 '+Math.round(gap)+'ms';
+  });
     await step('유즈맵 선택 → 네모네모 모드 팝업', ()=>{ openMapSelect(); openModeSheet(USEMAPS.nemo_inf||USEMAPS.nemo);
     const mo=document.querySelector('#modeSheet .moCard'); assert(visible(mo),'moCard 안 보임');
     const w=mo.getBoundingClientRect().width; assert(w>200&&w<400,'moCard 폭 이상: '+w); closeModeSheet(); return 'w='+w; });
@@ -3137,7 +3198,10 @@ async function groupLobby(){
     openMapSelect(); await sleep(60);
     _selMap=USEMAPS.nemo; _selDiff='easy';
     G.activePlayers=[1,2,3,4,5,6,7,8]; G.myPlayer=1; G.playerNames={2:'호랑이',3:'까치',4:'별똥',5:'무쇠',6:'파랑',7:'노을',8:'단비'};
-    gameStartCountdown(); await sleep(120); freeze();
+    gameStartCountdown(); await sleep(120);
+    // ⏳ 로딩 단계(막대 0→100%)가 끝나야 준비 표기가 나온다 — 그 전에는 LOADING% 다(2026-08-19)
+    { const t0=performance.now(); while(_gsLoading && performance.now()-t0<GS_LOAD_MS+1200) await sleep(30); }
+    freeze();
     _gsReady=new Set([1,2,4,5,7]); _renderGsPlayers(); await sleep(60);
     assert(!root.classList.contains('solo') && !root.classList.contains('teamed'),'협동인데 solo/teamed 가 붙음');
     assert($('gsDeck').querySelectorAll('.gsRow').length===2,'협동 덱이 4장씩 두 줄이 아님');
@@ -3159,7 +3223,10 @@ async function groupLobby(){
       assert(/nemo/.test(art.style.backgroundImage||''),'키 아트가 안 실림: '+(art.style.backgroundImage||'')); }
     // ② 팀전 4v4 — 팀마다 한 줄 · 팀 색은 **윗변**, 준비는 **밑변**(자리가 달라 안 섞인다)
     op.classList.add('hide'); _selMap=USEMAPS.cpu; _lobbyMax=8;
-    gameStartCountdown(); await sleep(120); freeze();
+    gameStartCountdown(); await sleep(120);
+    // ⏳ 로딩 단계(막대 0→100%)가 끝나야 준비 표기가 나온다 — 그 전에는 LOADING% 다(2026-08-19)
+    { const t0=performance.now(); while(_gsLoading && performance.now()-t0<GS_LOAD_MS+1200) await sleep(30); }
+    freeze();
     _gsReady=new Set([1,2,4,5,7]); _renderGsPlayers(); await sleep(60);
     assert(root.classList.contains('teamed'),'팀 맵인데 .teamed 가 없음');
     assert($('gsDeck').querySelectorAll('.gsTlb').length===2,'팀 라벨이 둘이 아님');
@@ -5022,6 +5089,31 @@ async function groupGame(){
     assert(G.mainSheet==='gacha','선택 중 시트 상태 소실'); G.sel=[]; refreshSelCard();
     assert(G.mainSheet==='gacha' && $('unitCmd').classList.contains('on'),'해제 후 시트 미복원'); openMainHome(); return 'ok'; });
   // 하단 프로필 구역 = 사냥터 톤(회색 판 + 검정 속살 + 각진 윗변). 섹션마다 높이가 달라 튀던 것도 여기서 막는다.
+  // 🟦 프로필 칸은 정사각형 — 유닛 초상이든 업그레이드·건물 아이콘이든 같은 크기여야 한다.
+  //    예전엔 유닛만 aspect 1.2 라 정사각 초상의 위아래가 잘리고 옆 아이콘과 크기가 달라 보였다.
+  // 🟦 프로필 칸은 정사각형 — 유닛 초상이든 업그레이드·건물 아이콘이든 같은 크기여야 한다.
+  await step('프로필 칸: 유닛 초상과 업그레이드 아이콘이 같은 정사각', async()=>{
+    skipIf(typeof openGachaSheet!=='function','하단 시트 없음');
+    const ph=$('phone'), faked=ph && !ph.classList.contains('inGame'); if(faked) ph.classList.add('inGame');
+    document.body.classList.add('sheetOpen');
+    const got={};
+    for(const [n,fn] of [['유닛뽑기',openGachaSheet],['업그레이드',openUpgradeSheet]]){
+      fn(); await sleep(140);
+      const pane=document.querySelector('.bp.on');
+      const pros=[...(pane?pane.querySelectorAll('.cmdG .cgPro'):[])]
+        .filter(e=>!e.closest('.cgBunk'))   // 벙커(1.35)는 의도된 예외
+        .map(e=>e.getBoundingClientRect()).filter(r=>r.width>4&&r.height>4);
+      assert(pros.length, n+" 섹션에 프로필 칸이 없음");
+      for(const r of pros) assert(Math.abs(r.width/r.height-1)<=0.08,
+        n+" 프로필 칸이 정사각이 아님: "+Math.round(r.width)+"x"+Math.round(r.height));
+      got[n]=Math.round(pros[0].width)+"x"+Math.round(pros[0].height);
+    }
+    // 유닛 초상과 업그레이드 아이콘이 **같은 크기**여야 한다(옆에 나란히 놓였을 때 어긋나지 않게)
+    assert(got["유닛뽑기"]===got["업그레이드"],
+      "유닛과 업그레이드 프로필 크기가 다름: "+got["유닛뽑기"]+" vs "+got["업그레이드"]);
+    if(faked) ph.classList.remove("inGame"); document.body.classList.remove("sheetOpen");
+    return "유닛·업그레이드 모두 "+got["유닛뽑기"];
+  });
   await step('하단 프로필: 다섯 섹션 같은 높이 · 회색 판 · 검정 속살', async()=>{
     // ⚠ 헤드리스에선 three.js(esm.sh)가 막혀 로딩 게이트가 안 걷히고 #phone.inGame 이 안 켜진다
     //    → #bot 이 display:none 이라 하단 패널 높이가 전부 0으로 측정된다. 재는 동안만 켠다.

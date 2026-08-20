@@ -273,6 +273,44 @@ node test/bench-strike.mjs 400 80 4   # 대규모 전투 렌더 벤치(유닛수
 - **캐릭터 삭제 환급은 "재화로 넣은 것"만 돌려준다**(`profSpentOn`/`profRefundOf`): 장비 강화 + 전직(뿌리까지 `PROF_JOB_PARENT`로 역추적) + 진화. 레벨·경험치·스탯포인트는 환급 없음 = 삭제의 유일한 비용. 비율은 `PROF_REFUND_RATE`(현재 1.0). ⚠️ **캐릭터별 어빌리티/뽑기를 나중에 붙일 땐 환급 대상에서 빼거나 비율을 낮출 것** — 전액 환급이면 "좋은 게 나올 때까지 만들고 지우기"가 공짜가 된다. 비용 공식은 `profGearCost`/`profClassCost`/`profEvolveCost` 한 곳뿐이라 환급이 자동으로 따라온다(새 지출을 만들면 `profSpentOn`에도 더할 것).
 - **`PLAYER_META.profile`은 계정 공용 + 캐릭터별로 나뉜다**(ver3): 공용 = `pcoin`·`pets`·`equip`·`unlocks`·`idle`, 캐릭터별 = `chars[]`의 `level/xp/statPoints/unit{jobId,stats,gear,evoStars}`. **`PROF()`는 계정, `CHAR()`는 현재 캐릭터** — 새 코드에서 레벨·스탯을 `PROF()`에서 읽으면 조용히 틀린다(ver2까지는 거기 있었다). 캐릭터 종류 = 뿌리 직업 id(`ranger`/`scout`/`warden`)로 `PROF_CLASSES`와 `PROF_JOBS`가 같은 키를 공유한다. 마이그레이션은 `migrateProfile`(ver2 단일 캐릭터 → `chars[0]`)과 `fixChar`.
 - **시설 팝업은 "내가 지정한 구역"에 도착했을 때만 열린다**(`twCheckZones` + `_twGoZone`): 구역 아이콘·가장자리 방향 표시를 눌러야 지정되고(`townGo`), 땅을 누르거나 꾹 눌러 이동하면 지정이 풀린다(`twSetTarget`/`dir` 모드에서 `_twGoZone=null`). **반경 안에 있다는 사실만으로는 절대 열리지 않는다** — 옆을 스쳐 지나가도, 걸어가서 구역 위에 겹쳐 서도 안 열리고, 그 자리에서 구역을 다시 눌러야 열린다(아바타는 `pointer-events:none`이라 겹쳐도 아래 아이콘이 눌린다). 반경 근접만으로 열던 초기 구현은 광장→모서리 경로에서 옆 구역을 스쳐 팝업이 튀어나왔다(여유가 54px뿐이었다). 스모크 `마을: 지정하지 않으면 안 열림(스쳐 지남·겹쳐 섬)`이 세 경우를 모두 지킨다.
+- **게임 진입 화면은 두 단계다 — 로딩(막대) → 준비(버튼)**(2026-08-19). 예전엔 시작 버튼이 처음부터 눌려서 **막대도 버튼도 뜻이 없었다**(막대는 그냥 5초 타이머).
+  - ① `_gsEnterLoading()` — 막대 `#gsBarFill` 이 **실제 로딩**을 따라 찬다. 그동안 `#opStart` 는 `disabled`(잠김 모습은 공용 `.actBtn:disabled` 가 갖는다).
+    - **실제 = 그 맵의 3D 모델**(`M3D.loadMapModels(id, done, onProg)` → `ensureModels` 의 `onProg(받은수,전체)`). `MAP_ASSETS` 기준이고 **아직 없는 것만** 큐잉하므로, 로그인 때 데워졌으면 총 0개라 즉시 끝난다(두 번째 진입이 느려지지 않는다).
+    - 표시값은 **시간과 실제 중 늦은 쪽**이다: `min(경과/GS_LOAD_MS, 실제진행률)`. 실제가 빨라도 `GS_LOAD_MS`(800ms)는 채워 깜빡임을 막고, 최소 시간이 지나도 실제가 안 끝났으면 기다린다 — **막대가 거짓말하지 않는다.**
+    - ⚠ 안전판 `GS_LOAD_MAX`(15s) — 모델 하나가 영영 안 오면 막대를 100%로 열어 준다. 없으면 사용자가 진입 화면에 갇힌다.
+  - ② 100% 가 되는 순간 버튼이 열리고 스스로 `_gsEnterReady()` 로 넘어간다 — 거기서부터 시작 버튼 진행 표시(자동 시작 `GS_READY_MS`)가 돈다.
+  - 막대의 뜻이 단계마다 다르다: 로딩 중 = **LOADING %** (혼자든 여럿이든) · 그 뒤 = 혼자면 「시작을 누르세요」, 여럿이면 **준비 n/N**. `_gsPaintCount` 가 `_gsLoading` 으로 가른다.
+  - ⚠ `_gsLoading` 플래그는 **나가기(`gsQuitToMaps`)·종료(`_gsFinish`)에서도 내린다** — 잠금이 남으면 다음 진입에서 시작 버튼을 영영 못 누른다.
+  - ⚠ 스모크에서 준비 인원 표기를 검사하려면 **로딩이 끝나기를 기다려야** 한다(`while(_gsLoading)`). 안 그러면 `LOADING 15%` 를 읽는다.
+- **부팅 로딩(`#opening` 비-counting)은 시네마틱이다**(2026-08-20). 구조는 `.opArt`(키 아트) + `.opWrap > [.opMid(엠블럼·제목·서브) · .opDock(라벨·숫자·막대)]`.
+  진입 카운트다운(`.counting`)은 `.opWrap` 을 감추고 `#gsRoot` 만 띄우는 **별개 층**이라 서로 안 건드린다(`#opening.counting .opArt{display:none}`).
+  - ⚠ `.opWrap` 은 통계 창(`#resultScreen`)과 공용 — 부팅 값은 전부 `#opening` 안에서만 덮는다. 특히 `align-items:center`(공용)를 `stretch` 로 덮지 않으면 하단 도크가 내용 폭으로 쪼그라든다.
+  - ⚠ `.opLoading` 은 이제 **진행률 숫자**다(옛 `LOADING…` 문구가 아니다). `opBarStart/Done` 이 이 요소의 `innerHTML` 에 `n<s>%</s>` 를 쓴다.
+  - ⚠ 마지막 100% 는 **CSS 전환 없이 즉시** 채운다 — 전환은 프레임이 있어야 진행되므로 탭이 가려지면 막대가 0 에 남는다(실측: 인라인 `width:100%` 인데 계산값 `0px`). 그래서 구 `LOAD_SNAP` 은 폐지했다.
+  - 배경 그림 규격은 **ART.md §8**(타이틀 계열) — `scripts/title-bg.mjs`. 유즈맵 키 아트(`usemap-bg.mjs`)와 시점·구도·밝기·채도 규칙이 다르다.
+- **로딩 막대는 `.opBar` 하나이고 규칙은 「항상 100% → 0.2초 → 전환」이다**(2026-08-19).
+  전에는 막대(CSS `opLoad 1.6s`)와 화면 전환(`showLoading` 의 1.1~1.3초 타이머)이 **따로 돌아** 막대가 80% 쯤에서 잘린 채 넘어갔다.
+  이제 전환은 반드시 **`opBarDone()` 의 약속을 기다린다** — 새 타이머를 따로 두지 말 것.
+  - 입구 넷: `opBarStart(dur)` 시작 · `opBarReal(p)` 실제 진행률 먹이기 · `opBarDone()` 100%+0.2초 뒤 resolve · `opBarReset()` 원복.
+  - 막대는 **시간과 실제 진행률 중 앞선 쪽**을 따른다. 실제 로딩이 순식간에 끝나도 `LOAD_FILL`(700ms)만큼은 차오르는 걸 보여 준다.
+  - 값 셋: `LOAD_FILL` 차는 시간 · `LOAD_SNAP` 마지막 칸(110ms) · `LOAD_HOLD` 100% 유지(200ms). ⚠ **0.2초는 다 찬 뒤부터**다 — LOAD_SNAP 과 겹쳐 두면 실측이 144ms 로 줄어든다.
+  - 쓰는 곳: 부팅(파싱 시점) · 로그인/게스트→HOME(`enterAfterWarm`) · 게임 종료→맵 선택(`showLoading`) · 모델 로드 진행률(`ensureModels`→`opBarReal`).
+  - ⚠ **부팅 막대는 「한 번만」 시작한다 — 두 번 시작하면 사용자에겐 로딩이 두 번 돈다**(2026-08-19). 두 가지가 겹쳐서 실제로 그랬다:
+    ① `.opBar` 의 CSS 애니(`opLoad 1.6s`)는 **첫 페인트**에 시작 ② `bootApp` 은 `window.load` 라 한참 뒤에 돌며 막대를 0 으로 되돌렸다
+    → 숫자 없는 바가 차다가 처음으로 돌아가 숫자 바가 다시 차 보였다. **CSS 애니를 지웠고**(다시 넣지 말 것), JS 막대는 **스크립트가 읽히는 순간** 시작한다.
+  - **부팅 → 데우기는 한 막대로 잇는다.** `bootApp` 이 `BOOT_AUTH_P`(0.35)까지 채우고, `enterAfterWarm` 은 **`_opBar` 가 살아 있으면 새로 시작하지 않고** 0.35~1 구간을 이어 채운다. 로그인·게스트로 들어올 때만(막대가 없을 때만) 새로 시작한다.
+  - 스모크가 `.opBar` 에 CSS 애니가 되살아났는지, 데우기가 막대를 다시 시작하는지 둘 다 검사한다.
+  - ⚠ `ensureModels` 는 `bar.style.width` 를 **직접 쓰지 않는다** — 막대는 rAF 가 몰고 있어 서로 덮어쓴다. `opBarReal()` 로만 먹인다.
+  - ⚠ 탭이 숨겨지면 rAF 가 멈춰 막대가 안 움직인다(전환은 setTimeout 이라 진행됨). 브라우저 창이 가려진 상태에서 재면 측정이 걸린다 — 스모크로 검사한다.
+- ⚠ **모든 화면·팝업은 `#phone` 안에 있어야 한다 — `</div>` 하나가 어긋나면 전체 화면으로 퍼진다**(2026-08-19).
+  `.appScreen` 은 `position:absolute;inset:0` 이라 **가장 가까운 positioned 조상**을 기준으로 잡는다. 그게 `#phone`(relative)이면 390×809 프레임에 갇히지만,
+  프레임 밖으로 나가면 `body` 는 static 이라 **뷰포트**가 기준이 되어 화면 전체를 덮는다. 실제로 `#dgScreen` 뒤에 병합 잔재 `</div>` 가 하나 남아 있어
+  `#townPanel`·`#pointPanel`·`#ptHelpPop`·`#settingsPop`·`#setSubPop`·`#exitConfirm`·**`#opening`(로딩·게임 진입 카운트다운)** 일곱이 프레임 밖에 있었다.
+  증상은 「게임 들어갈 때 화면이 모바일 영역을 넘어 전체로 넓어진다」였고, 원인은 CSS 가 아니라 **태그 균형**이었다.
+  - **진단법**: 브라우저에서 `[...document.body.children].map(e=>e.id)` — `phone` 과 `gachaDex`(의도된 폰 밖 패널) 말고 다른 id 가 있으면 그게 새어 나온 것이다.
+    소스에서는 `<div` / `</div>` 개수를 `#phone` 시작~끝 범위에서 세어 **0** 인지 본다(그때는 -1 이었다).
+  - `#phone` 은 **파일 끝에서 한 번만** 닫는다(`</div><!-- /#phone … -->`). 중간에 닫는 태그를 넣지 말 것 — 그 자리에 경고 주석을 남겨 두었다.
+  - 원래 의도는 `c44a6ee fix(layout): 모든 화면을 #phone 프레임 안으로 통합(비율 일원화)` 그대로다.
 - **메인 화면 = HOME 대시보드(`#homeScreen`)이다** (2026-08-07). 로그인·게스트·유즈맵 뒤로가기가 `openHome()`으로 모인다. 화면 이동은 **전역 하단 네비 `#navBar` 하나**로만 한다 — 화면마다 바를 만들지 말 것. `showAppScreen()`이 네비를 무조건 숨기고, `openHome()`/`openTown()`이 `navShow(tab)`으로 다시 켠다(새 메인 화면을 만들면 이 호출을 빠뜨리기 쉽다). ⚠ **HOME에 카드는 POWER UPGRADES(`.hmUpg`·스탯 4종·`profAllocStat`) 하나뿐이다**(2026-08-07 정리). 바로가기 줄·리그 순위표·라이브 매치 바·수입 줄(`.hmRes`)·매치 화면(`.hmStage`)과 더미 상수 `HOME_DUMMY`는 **전부 삭제됐다** — 되살리지 말 것. 위쪽 빈 자리는 `.spaceBg`가 보이라고 비워 둔 것이고 카드는 `margin-top:auto`로 네비 바로 위에 붙는다. 톤은 네비바와 같은 순수 회색(`--hmPanel`/`--hbEdge`), 라운드는 `--r-bar`(3px) — 푸른기를 다시 넣으면 스모크가 잡는다. 상단 재화 바는 HOME에서만 `.curBar.bare`(면·구분선 없음)로 배경이 이어져 보이게 하는데, `#curBar`는 마을·유즈맵 **공용**이라 전역으로 고치지 말고 `BARE_CUR_SCREENS`에 화면 id를 넣을 것.
 - **게스트 = Supabase 익명 로그인**(2026-08-13). `authGuestStart()`가 `signInAnonymously()`를 먼저 시도하고, **실패하면 예전의 로컬 게스트(`authGuestUser`, `local:true`)로 떨어진다** — 대시보드에서 Anonymous sign-in 이 꺼져 있어도 입장은 항상 된다. 익명이면 uid 가 있으므로 `sbReady()`가 켜져 클라우드 저장·소셜이 동작한다.
   - **게스트 판정은 `sbUser()` 한 곳**에서 `guest:!!u.is_anonymous`로 정한다 — 세션 복원(새로고침) 뒤에도 유지된다.
