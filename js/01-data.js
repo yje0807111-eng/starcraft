@@ -355,10 +355,7 @@ function enemyRace(n){ return ENEMY_RACE[n]||'terran'; }
 const USEMAPS={
   nemo:  { id:'nemo',   name:'네모네모 디펜스', desc:'유닛을 뽑고 합성해 트랙의 적을 막는 협동 디펜스', long:'유닛을 뽑아 같은 유닛 3개를 합치면 더 높은 등급으로 진화합니다. 사각 트랙을 도는 적을 막아내고, 라운드마다 모은 자원으로 경제와 화력을 강화하며 버티세요. 10라운드마다 나오는 월드보스를 함께 잡으면 포인트을 얻어 영구 강화까지. 혼자서도, 최대 8인 협동으로도 즐길 수 있습니다.',
            feats:[ {ic:'merge',kw:'합성',tx:'같은 유닛 3개 → 상위 등급'}, {ic:'shield',kw:'디펜스',tx:'트랙을 도는 적 막기'}, {ic:'growth',kw:'성장',tx:'라운드마다 경제·화력 강화'}, {ic:'boss',kw:'월드보스',tx:'협동 처치로 포인트·영구 강화'}, {ic:'coop',kw:'협동',tx:'솔로 또는 최대 8인'} ],
-           // ⛔ 폐지(2026-08-20) — 더 이상 쓰지 않는 모드다. 목록·방·솔로 진입에서 전부 내렸다.
-           //    ⚠ 객체를 지우지는 않았다: USEMAPS.admin(관리자용)·USEMAPS.fogtest 가 이 cfg 를 복제하고,
-           //      엔진의 기본 밸런스(NEMO_BAL)와 MAP 폴백도 여기를 본다. 코드까지 걷으려면 그 셋을 먼저 떼어내야 한다.
-           players:'1-8', pop:9820, icon:'🟥', rec:false, isNew:false, playable:false, hidden:true,
+           players:'1-8', pop:9820, icon:'🟥', rec:true,  isNew:false, playable:true,
            cfg:{ stats:true,   // 종료 후 통계 화면 사용(필요한 맵만)
                  rounds:30, roundTime:90, prepTime:10, startCredits:250, startEnergy:0, maxUnits:100,
                  killCredit:1, killEnergy:0.03, specialCredit:12, gachaCost:50, energyDrawCost:50, coopBoss:true, roster:'all',
@@ -402,8 +399,7 @@ const ADMIN_BAL = JSON.parse(JSON.stringify(NEMO_BAL));   // nemo 밸런스 깊�
 try{ USEMAPS.admin = { id:'admin', name:'관리자용 (테스트)', desc:'밸런스·기능 테스트 전용 — nemo 복제본(독립 조정)', players:'1-8', pop:0, icon:'🛠️', rec:false, isNew:false, playable:true,
   cfg: Object.assign({}, USEMAPS.nemo.cfg, { bal:ADMIN_BAL, mode:'sandbox' }) }; }catch(e){}
 // 무한 디펜스 — nemo 엔진 재사용 + 무한 루프(노말 고정). 해금: 노말 클리어.
-// ⛔ 무한 디펜스도 같이 폐지(2026-08-20) — 네모네모 엔진 위에 얹힌 모드라 함께 내린다.
-try{ USEMAPS.nemo_inf = { id:'nemo_inf', name:'무한 디펜스', desc:'노말 난이도로 끝없이 이어지는 무한 라운드 — 얼마나 오래 버티나', players:'1', pop:0, icon:'♾️', rec:false, isNew:true, playable:false, hidden:true,
+try{ USEMAPS.nemo_inf = { id:'nemo_inf', name:'무한 디펜스', desc:'노말 난이도로 끝없이 이어지는 무한 라운드 — 얼마나 오래 버티나', players:'1', pop:0, icon:'♾️', rec:false, isNew:true, playable:true, hidden:true,
   cfg: Object.assign({}, USEMAPS.nemo.cfg, { infinite:true, rounds:999999, infLoopHpMul:2.2, infIncomeLoop:1.5, infSoftCap:200, infWallMul:1.4, fixedDiff:'normal' }) }; }catch(e){}
 // 🎛 방 설정 오버라이드 — 방장이 정한 '사용자 지정' 값이 여기 실린다.
 // ⚠ 유즈맵 cfg 를 직접 고치지 말 것(다음 판까지 남는다). 게임 시작 때 심고 끝나면 지운다.
