@@ -1,0 +1,1636 @@
+/* ============================================================================
+ * 10-game.css — 인게임 — HUD · 전장 · 유닛 · 하단 콘솔 · 설정 · 건설/테크 · 커맨드카드
+ * sc-ums-web.html 에서 분리(2026-08-20). 로드 순서 = 파일명 번호 순.
+ * ⛔ 순서를 바꾸거나 파일을 합치지 말 것 — 전역 스코프를 공유하는 통짜 코드다.
+ * ========================================================================== */
+  /* GAME AREA */
+  #gameArea{flex:1;position:relative;overflow:hidden;background:#060e0a;min-height:0;transition:filter .35s}
+  #gameArea.gray{filter:grayscale(.82) brightness(.92)}   /* 일시정지 중 무채색 */
+  canvas{position:absolute;inset:0;width:100%;height:100%}
+  #cvMarine{z-index:6;pointer-events:none}  /* 마린 3D 오버레이(트랙 위, 유닛 라벨 아래) */
+  #cvFx{z-index:7;pointer-events:none}       /* 투사체 오버레이(3D 모델 위 — 미사일이 몸에 안 가림) */
+  .gview{position:absolute;inset:0;display:none;touch-action:none}.gview.on{display:block}   /* touch-action:none → 모바일 스와이프를 스크롤로 뺏기지 않고 드래그 이동/업글로 처리 */
+  .gview canvas{touch-action:none}   /* 캔버스(터치 대상)에도 직접 부여 — 부모만으론 팬 제스처가 가로채질 수 있음 */
+
+  /* HUD — 좌(킬·맵·라운드 세로) / 중앙(제한시간 박스) / 우(자원 가로) */
+  /* z-index 24 = 포인트방 입력 차단막(#bossPanel z22) 위. 20 이던 시절엔 아레나에서 우상단 ☰ 가 통째로 먹혔다.
+     ⚠ #hud 는 z-index 를 가진 순간 쌓임 맥락을 만든다 — 자식(#settingsBtn)만 올려도 절대 못 빠져나온다. 바를 올려야 한다.
+     화면 맨 위에만 있고 pointer-events:none 이라 하단 시트(z22)·건설 시트(z30)를 가리지 않는다. */
+  #hud{position:absolute;top:0;left:0;right:0;z-index:24;padding:calc(env(safe-area-inset-top,0px) + 18px) 9px 0;
+    display:flex;align-items:flex-start;justify-content:space-between;pointer-events:none;
+    font-family:var(--font-num);   /* 모던 테크 폰트(가시성↑) */
+    background:linear-gradient(180deg,rgba(8,12,20,.85),rgba(8,12,20,.42) 60%,transparent);opacity:.82}   /* 상단 HUD 구역 구분용 반투명 배경(아래로 자연스레 페이드) — 전 영역 공통 */
+  #hudL{display:flex;flex-direction:column;gap:3px;white-space:nowrap;line-height:1.15;
+    text-shadow:0 2px 4px #000,0 0 8px #000,0 1px 2px #000}   /* 진한 드롭쉐도우(배경 없이 가독) */
+  /* 라운드: ROUND 라벨 + 현재값 청록 네온 강조 / 최대값 흐리게 */
+  #hudL .stage{font-size:var(--fs-md);color:var(--txt);font-weight:800;letter-spacing:1.5px}
+  #hudL .stage b{font-size:14px;color:var(--hud);letter-spacing:0;text-shadow:0 0 6px var(--hud-glow),0 2px 3px #000}
+  #hudL .stage #hRoundMax{font-size:var(--fs-md);color:rgba(214,226,240,.5);letter-spacing:0}
+  #hudL .kill{font-size:var(--fs-lg);color:#fff;font-weight:800;letter-spacing:.5px}#hudL .kill b{color:var(--hud)}  /* Kill 텍스트=흰 / 숫자=청록 */
+  /* 미션 타이머 — 좌상단 ROUND/Kill과 동일한 텍스트 스타일(박스 없음). #hudL 드롭쉐도우 상속 */
+  #hudC{align-self:flex-start;pointer-events:none}
+  #hudC .time{font-family:var(--font-num);font-size:18px;font-weight:800;line-height:1.1;
+    letter-spacing:1px;color:var(--hud);font-variant-numeric:tabular-nums;
+    text-shadow:0 0 9px var(--hud-glow),0 2px 4px #000,0 0 8px #000}   /* 제한시간 = 좌상단에서 가장 크게(가독 우선) */
+  #hudRwrap{display:flex;flex-direction:column;align-items:flex-end;gap:4px;margin-top:2px}
+  /* ⚙ 인게임 설정 — 네비 칸에서 빼 HUD 우상단으로. 상자 규격은 디자인 시스템 공용. */
+  #hudTopRow{display:flex;align-items:center;gap:8px;pointer-events:auto}   /* 재화 줄과 설정 상자를 한 행에 — 높이가 달라도 align-items가 중앙을 맞춘다 */
+  .hudSet{position:relative;width:24px;height:24px;   /* 선 18px 에 딱 맞는 상자 — 여백 3px + 테두리 1px */display:grid;place-items:center;cursor:pointer;
+    color:rgba(234,238,245,.92);background:rgba(4,6,10,.34);border:1px solid rgba(255,255,255,.26);
+    filter:drop-shadow(0 1px 3px rgba(0,0,0,.8));transition:color .15s,border-color .15s}
+  .hudSet:hover{color:#fff;border-color:rgba(255,255,255,.45)}
+  .hudSet svg{display:block;width:18px;height:18px}
+  .hudSet .icoX{display:none}                      /* 열려 있으면 ☰ 가 X 로 바뀐다 */
+  .hudSet.on .icoBars{display:none}
+  .hudSet.on .icoX{display:block}   /* block — inline이면 라인박스 하단 여백이 생겨 아이콘이 위로 뜬다 */
+  #hudR{display:flex;align-items:center;gap:10px;font-size:var(--fs-md);font-weight:800;white-space:nowrap;text-shadow:0 2px 4px #000,0 0 8px #000}
+  .res{display:flex;align-items:center;gap:4px}   /* 상단 재화 바(.curBar)와 같은 간격 */
+  .res .ri{width:14px;height:14px;display:block;flex:none;filter:drop-shadow(0 1px 3px rgba(0,0,0,.95))}   /* 숫자 높이에 맞춤 — .curBar와 동일 */
+  /* 자원 숫자: 밝은 흰색 + 진한 드롭쉐도우(배경 없는 HUD) */
+  .res b{display:flex;align-items:center;height:14px;color:#f2f6fb;font-family:var(--font-num);font-weight:700;font-size:12.5px;
+    letter-spacing:.2px;font-variant-numeric:tabular-nums;text-shadow:0 1px 3px rgba(0,0,0,.95),0 0 10px rgba(0,0,0,.6)}   /* 아이콘과 같은 높이 박스로 중앙 정렬 */
+  .res b .ru{font-style:normal;font-size:.6em;font-weight:700;color:var(--hud);opacity:.85;margin-left:1.5px;letter-spacing:0}  /* 자원 단위 C/E/CP — 청록 */
+
+  #zoneLabel{display:none}   /* 구역 설명 텍스트 제거(사용자 요청) */
+  /* 관전 라벨(좌상단 킬 아래) — 은은한 플레이어색(덜 띄게) */
+  #specLabel{display:none;margin-top:4px;align-self:flex-start;font-size:var(--fs-sm);font-weight:700;letter-spacing:.3px;
+    color:var(--pc,var(--info));opacity:.62;background:rgba(6,12,22,.45);border-left:2px solid var(--pc,var(--info));border-radius:2px;padding:1px 7px;
+    text-shadow:0 1px 2px #000}
+  #specLabel.on{display:inline-block}
+  /* 채팅: 게임 배경 위 오버레이 — 입력창 좌측 위에 떠올랐다 일정시간 후 사라짐 */
+  #chatLog{position:absolute;left:9px;right:74px;bottom:50px;z-index:18;display:flex;flex-direction:column;gap:2px;pointer-events:none}
+  .cmsg{font-size:var(--fs-md);line-height:1.4;color:#cfe0f4;text-shadow:0 0 5px #000,0 1px 2px #000,0 0 2px #000;white-space:normal;overflow-wrap:anywhere;word-break:break-word;
+    opacity:1;transition:opacity .8s}
+  .cmsg.fade{opacity:0}
+  .cmsg b{font-weight:800}
+  .cmsg.sys{color:#a5d4ee;font-style:normal;opacity:.95}   /* 시스템 알림 = 은은한 하늘색 하나로 통일(플레이어 채팅과 구분) */
+  /* 시스템 메시지 아이콘 = 이모지 대체(라인 아이콘 한 벌) · 기본 빨강, 상태색만 예외 */
+  .mIco{width:12.5px;height:12.5px;flex:none;display:inline-block;vertical-align:-2px;margin-right:5px;color:var(--neon);
+    filter:drop-shadow(0 1px 2px rgba(0,0,0,.9))}
+  .mIco.ok{color:var(--ok)} .mIco.coin{color:#ffd24a}
+  /* 커맨드 그리드 초상·구역 라벨용 = 같은 아이콘을 크게, 색은 빨강으로 통일 */
+  .pIco{display:inline-flex;align-items:center;justify-content:center;color:var(--neon)}
+  /* 🎨 역할별 아이콘 색 — 화면이 아니라 역할로 정한다(DESIGN.md) */
+  .pIco.ic-gold{color:var(--gold)}      /* 재화·보상·강화 */
+  .pIco.ic-info{color:var(--info)}      /* 정보·일반 기능 */
+  .pIco.ic-danger{color:var(--neon)}    /* 위험·파괴·나가기 */
+/* 완료·확정 */
+/* 조건 미충족 경고 */
+  .pIco .mIco{width:22px;height:22px;margin:0;vertical-align:0;color:inherit}
+  .cgPort .pIco .mIco,.qpro .pIco .mIco{width:24px;height:24px}
+  .pIco.sm .mIco{width:12px;height:12px}   /* 배지·버튼 안 작은 아이콘 */
+  .pIco.md .mIco{width:15px;height:15px}
+  /* 채팅 표시 끄기 — 플레이어 채팅·입력창·로비 채팅만 감춘다(시스템 알림 .cmsg.sys 는 남긴다) */
+  body.chatOff #chatLog .cmsg:not(.sys){display:none}
+  body.chatOff #chatBar,body.chatOff .msChatWrap{display:none}
+  #chatBar{position:absolute;left:9px;right:74px;bottom:9px;z-index:18;display:flex;gap:6px}   /* 우하단 우측열 버튼(58px 정사각) 한 줄 자리만 비움 → 채팅 영역 확장 */
+  /* 채팅창·전송 — 반투명 어두운 내부 + 테두리/텍스트 또렷하게(밝은 맵 위에서도 가독) */
+  #chatField{flex:1;min-width:0;background:rgba(6,12,18,.55);border:1px solid rgba(0,229,255,.42);border-radius:var(--r-md);color:#e9f7ff;font-size:var(--fs-lg);padding:9px 13px;outline:none;text-shadow:0 1px 2px #000;transition:border-color .15s}
+  #chatField:focus{border-color:rgba(0,229,255,.7);box-shadow:0 0 7px var(--hud-glow)}
+  #chatField::placeholder{color:rgba(150,205,230,.72)}
+  #chatSend{background:rgba(6,12,18,.55);border:1px solid rgba(0,229,255,.5);color:var(--hud);border-radius:var(--r-md);padding:0 17px;font-size:var(--fs-lg);font-weight:700;cursor:pointer;white-space:nowrap;letter-spacing:.5px;text-shadow:0 0 5px var(--hud-glow),0 1px 2px #000;transition:all .15s}
+  #chatSend:active{transform:translateY(1px);background:rgba(0,229,255,.1)}
+
+  /* 전투 미니맵(좌하단) — 메인 외 탭에서 전투를 도트로 표시 */
+  #miniWrap{position:absolute;bottom:8px;right:8px;z-index:20;display:none;width:58px;pointer-events:none}
+  #miniWrap.on{display:block}
+  /* 조합 버튼(메인 탭 — 메시지 전송 버튼과 같은 높이, 버튼 느낌) */
+  #mergeFab{position:absolute;bottom:9px;right:9px;z-index:20;width:66px;height:34px;border-radius:var(--r-md);cursor:pointer;pointer-events:auto;
+    display:flex;align-items:center;justify-content:center;
+    border:1px solid rgba(0,229,255,.55);
+    background:linear-gradient(180deg,rgba(11,42,56,.95),rgba(6,22,32,.95));
+    color:var(--hud);text-shadow:0 0 5px var(--hud-glow),0 1px 2px #000;
+    box-shadow:0 0 8px -3px var(--hud-glow),0 2px 4px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.09);
+    transition:transform .08s,background .15s,box-shadow .15s}
+  #mergeFab.hide{display:none}
+  #mergeFab:active{transform:translateY(1px);background:rgba(0,229,255,.16);box-shadow:0 1px 2px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.06)}
+  #mergeFab .mfi{display:none}   /* 조합 아이콘 제거 */
+  #mergeFab .mfl{font-size:var(--fs-xl);font-weight:800;letter-spacing:1.5px}
+  /* 스킬 FAB — 메인 화면, 조합 버튼 위(에너지 시안 톤) */
+  #skillFab{position:absolute;bottom:88px;right:8px;z-index:20;width:58px;height:58px;border-radius:10px;cursor:pointer;pointer-events:auto;overflow:hidden;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    border:1px solid rgba(0,229,255,.55);background:linear-gradient(180deg,rgba(11,40,54,.95),rgba(5,16,26,.95));
+    color:#bfeeff;text-shadow:0 0 5px rgba(0,200,255,.5),0 1px 2px #000;
+    box-shadow:0 0 14px -3px rgba(0,200,255,.45),0 4px 9px var(--shade),inset 0 1px 0 rgba(255,255,255,.14);transition:transform .08s,box-shadow .15s,border-color .15s}
+  #skillFab.hide{display:none}
+  #skillFab::before{content:'';position:absolute;left:0;right:0;top:0;height:44%;border-radius:10px 10px 50% 50%;background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,0));pointer-events:none;z-index:2}
+  #skillFab .sfIco{line-height:0;position:relative;z-index:3}
+  #skillFab .sfIco svg{width:23px;height:23px;filter:drop-shadow(0 0 4px rgba(0,200,255,.6))}
+  #skillFab .sfName{font-size:var(--fs-xs);font-weight:800;letter-spacing:.2px;white-space:nowrap;position:relative;z-index:3}
+  #skillFab .sfOver{position:absolute;left:0;right:0;bottom:0;height:0;background:rgba(2,8,14,.7);z-index:4;pointer-events:none;transition:height .12s linear}
+  #skillFab .sfCd{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:5;font-family:var(--font-num);font-size:19px;font-weight:800;color:#fff;text-shadow:0 1px 2px #000;pointer-events:none}
+  #skillFab.active{border-color:#7fffd4;box-shadow:0 0 16px -2px rgba(90,255,200,.65),0 4px 9px var(--shade),inset 0 0 12px rgba(90,255,200,.22)}  /* 버프 활성 */
+  #skillFab:active{transform:translateY(1px)}
+  /* 🎆 이펙트 테스트베드(관리자 Unit 탭) — 빈 땅 + 유닛 배너 → 3D 소환 무한 반복 */
+  #fxLabWrap{display:none;flex-direction:column;gap:0;flex:0 0 auto;min-height:0}
+  #fxLabWrap.on{display:flex}
+  #fxLabGrid{flex:0 0 auto;min-height:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;overflow-y:auto;padding:4px 4px 8px;align-content:start;max-height:214px}   /* 2줄까지 표시 후 스크롤(시트도 콘텐츠에 맞춰 축소) */
+  .fxlRaceHead{grid-column:1/-1;padding:3px 6px 2px;font-size:10px;font-weight:800;letter-spacing:.6px;border-radius:4px;margin-top:6px}
+  .fxlRaceHead.fxrl0{margin-top:0}
+  .fxlRaceHead.union{color:#4aa8ff;background:rgba(74,168,255,.1)}
+  .fxlRaceHead.swarm{color:#9fd356;background:rgba(159,211,86,.1)}
+  .fxlRaceHead.aetherial{color:#ffc040;background:rgba(255,192,64,.1)}
+  .fxlCard{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;border-radius:8px;cursor:pointer;
+    background:linear-gradient(160deg,rgba(30,44,66,.6),rgba(12,18,28,.6));border:1px solid rgba(120,160,210,.22)}
+  .fxlCard.on{border-color:#7fd0ff;box-shadow:inset 0 0 12px -4px rgba(127,208,255,.6),0 0 10px -4px rgba(127,208,255,.5)}
+  .fxlCard.todo{opacity:.35;pointer-events:none;cursor:default}
+  .fxlCard:not(.todo):active{transform:translateY(1px)}
+  .fxlCard .pic{width:46px;height:46px;border-radius:7px;overflow:hidden;position:relative;background:rgba(8,14,22,.6)}
+  .fxlCard .pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .fxlCard .nm{font-size:10.5px;font-weight:800;color:#eaf2ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .fxlCard .ks{font-size:8.5px;font-weight:700;color:#86a0bb}
+  #fxLabActs{position:absolute;right:8px;bottom:8px;z-index:21;display:flex;flex-direction:column;gap:6px;pointer-events:auto}
+  #fxLabActs.hide{display:none}
+  .fxlAct{width:58px;height:40px;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:4px;cursor:pointer;border-radius:9px;
+    background:linear-gradient(160deg,rgba(30,44,66,.62),rgba(10,16,28,.66));border:1px solid rgba(120,160,210,.3);color:#cfe0f4}
+  .fxlAct span{font-size:16px;line-height:1}
+  .fxlAct b{font-size:11px;font-weight:800}
+  .fxlAct.on{border-color:#7fd0ff;color:#fff;box-shadow:inset 0 0 13px -4px rgba(127,208,255,.7),0 0 11px -4px rgba(127,208,255,.6)}
+  .fxlAct:active{transform:translateY(1px)}
+  
+  
+  
+  
+  
+  
+  /* 우상단 = 소환 가능 보스 수: 박스 없이 숫자만(네온) */
+  
+  
+  
+  
+  
+  /* 자동화 묶음 버튼 — 좌상단 킬 스코어 바로 아래, 작은 가로 칩 */
+  /* 자동화 설정 = 하단 그리드 시트로 이동(팝업 #autoPopup 제거) */
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  /* 자동 배치 랠리 화살표(등급별) — 드래그해서 집결 지점 지정 */
+  .rallyArrow{position:absolute;z-index:16;transform:translate(-50%,-90%);display:none;flex-direction:column;align-items:center;gap:0;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+  .rallyArrow:active{cursor:grabbing}
+  .rallyArrow .raIco{width:20px;height:20px;color:var(--rc,#fff);filter:drop-shadow(0 0 4px var(--rc)) drop-shadow(0 1px 2px rgba(0,0,0,.9))}
+  .rallyArrow .raLbl{font-size:8px;font-weight:800;color:#fff;background:rgba(8,6,10,.66);padding:0 4px;border-radius:3px;border:1px solid var(--rc,#888);text-shadow:0 1px 1px #000;white-space:nowrap;letter-spacing:.2px;margin-top:-1px}
+  
+  
+  
+  
+  
+  /* 카드 상단 띠 = 해금 조건(왼쪽) + 자동소환 라벨·토글(오른쪽) */
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  /* 선택 해제 아이콘 버튼(우상단, 자원 표시 아래) — 노란 금지표시, 유닛 지정 시에만 표시 */
+  /* 선택 해제 — 투명 배경 + 빨강 테마(하단 톤) */
+  #deselTop{position:absolute;top:100px;right:10px;z-index:25;display:none;cursor:pointer;pointer-events:auto;
+    width:42px;height:42px;border-radius:var(--r-lg);align-items:center;justify-content:center;
+    background:rgba(10,12,16,.2);border:1px solid rgba(255,59,59,.4);color:var(--neon);
+    box-shadow:0 2px 5px rgba(0,0,0,.4),inset 0 0 8px rgba(0,0,0,.3)}
+  #deselTop.on{display:flex}
+  #deselTop svg{filter:drop-shadow(0 0 5px var(--neon-glow))}
+  #deselTop:active{transform:translateY(1px);border-color:var(--neon);box-shadow:0 0 12px var(--neon-glow)}
+  /* 상시 공용 보스 HP 바 */
+  /* 심플: 피통(HP 바)만 또렷, 이름·테두리는 반투명으로 배경과 어우러짐 */
+  #coopBossBar{position:absolute;top:60px;right:9px;z-index:19;pointer-events:none;width:166px;
+    transform:scale(.8);transform-origin:top right;   /* 우상단 보스 구역 0.8 축소(왼쪽 화면 침범 방지) */
+    display:flex;flex-direction:column;background:none;border:none;box-shadow:none;padding:0}
+  #coopBossBar.hide{display:none}
+  #coopBossBar .cbMid{width:100%}
+  #coopBossBar .cbTop{display:flex;align-items:baseline;justify-content:center;gap:6px;margin-bottom:2px}
+  #coopBossBar .cbName{font-size:var(--fs-xs);font-weight:700;color:rgba(255,208,214,.66);letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 2px rgba(0,0,0,.85)}
+  #coopBossBar .cbBarOuter{position:relative;height:13px;border-radius:var(--r-md);background:rgba(0,0,0,.42);overflow:hidden;border:1px solid rgba(255,255,255,.1)}
+  #coopBossBar .cbBarFill{height:100%;border-radius:var(--r-md);width:100%;background:linear-gradient(90deg,#c4203a,#ff5c6e);
+    box-shadow:0 0 6px rgba(255,80,100,.5);transition:width .25s ease-out}
+  #coopBossBar .cbHpTxt{position:absolute;top:0;left:0;right:0;text-align:center;font-family:var(--font-num);
+    font-size:var(--fs-sm);font-weight:800;color:#fff;line-height:13px;letter-spacing:.3px;text-shadow:0 1px 2px #000,0 0 3px rgba(0,0,0,.9)}
+  /* 보스 토벌장 진입 시 — 화면 중앙 상단 보스 체력바 */
+  #coopBossBar.bossMode{left:50%;right:auto;transform:translateX(-50%);top:84px;width:64%;max-width:250px;z-index:24}
+  #coopBossBar.bossMode .cbTop{justify-content:center}
+  #coopBossBar.bossMode .cbName{font-size:var(--fs-sm);color:rgba(255,210,216,.95)}
+  #coopBossBar.bossMode .cbBarOuter{height:15px}
+  #coopBossBar.bossMode .cbHpTxt{font-size:var(--fs-md);line-height:15px}
+  /* 공용 보스 토벌장 팝업 — 아레나(vBoss/cvMarine)는 뒤로 비치고, 컨트롤만 위에 */
+  #bossPanel{position:absolute;inset:0;z-index:22;pointer-events:auto}   /* 게임 화면 위 입력 차단(다른 화면처럼) */
+  #bossPanel.hide{display:none}
+  #bossPanel::before{content:'';position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 42%,rgba(0,0,0,0) 52%,rgba(4,3,8,.62) 100%);
+    box-shadow:inset 0 0 0 1px rgba(255,90,110,.25)}
+  /* 토벌장 컨트롤(파견/회수/돌아가기)은 하단 시트 4그리드로 이동 — 상단 플로팅 버튼 제거 */
+  
+  
+  .bossDeployBar{position:absolute;left:10px;right:10px;bottom:12px;pointer-events:auto;
+    background:linear-gradient(180deg,rgba(26,12,14,.78),rgba(8,6,9,.84));border:1px solid rgba(176,60,80,.4);
+    border-radius:11px;padding:8px 9px;backdrop-filter:blur(2px);box-shadow:0 4px 14px -4px #000}
+  
+  
+  
+  
+  
+  
+  
+  /* 보기 전용 — 입장 경로는 하단 네비(보스 > 포인트방) 하나뿐이다(2026-08-14). 클릭을 받지 않는다. */
+  #coopBossBar{cursor:default;pointer-events:none}
+  /* 메인 홈 하단 — 좌(판매)·우(보스 파견): 칸 없이 중앙 구분선으로만 분리 */
+  .homeCols{position:relative;display:flex;gap:0;align-items:stretch;flex:1;min-height:0}
+  .homeSell{display:flex;flex-direction:column;gap:4px;padding:0 8px;background:none;border:none;min-width:0}
+  .homeSell{flex:1;position:relative;justify-content:flex-start;min-height:0}   /* 단일 칼럼(풀폭) · 좌우 패딩 대칭(0 8px) */
+  /* .homeBoss 제거 — 보스는 탭으로 통합 */
+  /* .homeSell::after 분리선 제거 — 단일 칼럼 */
+  
+  
+  /* 판매: 등급 칩 + 초상화 그리드 */
+  /* 등급 배너 = SC 콘솔식(등급색 네온 액센트 + 사선 모서리, 모바일 탭 영역 확보) */
+  /* 등급 필터 = 작은 알약 칩(3차 — 가장 가볍게, 선택된 등급만 채워짐) */
+  /* 등급 띠 = 공용 세그먼트 바(.pdSeg — 장비창 섹션 바·사냥터 탭과 한 함수).
+     여기서 덮는 건 두 가지뿐: 전폭으로 펴기(공용 기본은 286px 가운데 정렬)와 칸 높이. */
+  .hsTiers{flex:none;padding:0 0 4px}
+  .hsTiers .pdSeg{max-width:none;margin:0}
+  .hsTiers .pdSegBtn{padding:6px 4px;font-size:11px}   /* 얇은 띠 — 터치 타겟은 34px 로 유지된다(패딩 6+글자 22) */
+  /* 고정 4열 · 왼쪽부터 채움 · stretch = 카드가 칸 높이를 채운다(아래가 비지 않게).
+     ⚠ 카드 폭은 항상 (뷰 - 3*--hsGap)/4 여야 '한 화면에 딱 4장'이 지켜진다.
+     카드를 좁히고 싶으면 폭이 아니라 --hsGap 을 키울 것 — 폭만 줄이면 5번째가 삐져나와 잘려 보인다. */
+  .hsGrid{--hsGap:6px;display:flex;flex-wrap:nowrap;justify-content:flex-start;gap:var(--hsGap);align-items:stretch;overflow-x:auto;overflow-y:hidden;padding-bottom:1px;flex:1;min-height:0}
+  .hsGrid::-webkit-scrollbar{height:4px}.hsGrid::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
+  /* 유닛 셀 = 통일된 SC 카드(메탈+네온 엣지+사선 모서리+스캔라인) */
+  /* 카드 = 사냥터 업그레이드 카드(.hmUp)와 같은 문법: 완전 검정 면 + 위가 밝고 아래로 스러지는 붉은 테두리.
+     ⚠ 테두리 그라데는 `면 padding-box, 액센트 border-box, 금속링 border-box` 3층이다 —
+       금속을 아래 깔지 않으면 순색 빨강이 되어 너무 쌀해 보인다(사냥터에서 이미 겪은 것).
+     ⚠ border-color 로는 이 테두리를 못 바꾼다(그라데라서) — hover/선택은 box-shadow 로 낸다. */
+  .hsCell{--accRGB:255,59,59;
+    position:relative;flex:0 0 calc((100% - 3*var(--hsGap))/4);min-width:0;padding:0;cursor:pointer;overflow:hidden;transition:box-shadow .12s,transform .12s;display:flex;flex-direction:column;
+    clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
+  /* 윗면 하이라이트 — 잘린 왼쪽 위를 피해서 시작한다(.hmUp::before 와 같은 규칙) */
+  .hsCell::after{content:'';position:absolute;left:7px;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.13) 30%,rgba(255,255,255,.13) 70%,transparent);pointer-events:none;z-index:4}
+  .hsCell:hover{box-shadow:0 0 10px -3px rgba(var(--accRGB),.6)}
+  .hsCell:active{transform:translateY(1px)}
+  /* 초상 — 카드 폭은 꽉 채우고 여백은 여기 안쪽 패딩으로 만든다(그림이 칸 벽에 붙지 않게) */
+  .hsThumb{position:relative;width:100%;flex:1;min-height:34px;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:3px 9px;
+    background:none}   /* 카드 면(완전 검정)이 그대로 비친다 — 회색 타일을 덮지 않는다 */
+  .hsThumb img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))}.hsThumb svg{width:28px;height:28px}
+  /* 초상 아래 글자 묶음 — 이름 + 줄들(수량 · 가격 · 등급 화살표). 세 화면이 같은 마크업(_hsCardHTML)을 쓴다 */
+  .hsInfo{flex:none;display:flex;flex-direction:column;align-items:center;gap:0;padding:2px 3px 3px;
+    background:none;border-top:1px solid rgba(255,255,255,.07)}   /* 면은 카드가 갖는다 — 글자 묶음은 구분선 한 줄만 */
+  .hsName{max-width:100%;font-size:10.5px;font-weight:700;color:#e8eef6;text-align:center;line-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* 수량 = 초상 **우상단** 뱃지(줄이 아니다 — 두 곳에 같은 값을 두지 않는다).
+     카드의 잘린 모서리는 왼쪽 위라 뱃지는 반대편에 둔다.
+     ⚠ 글자는 flex 로 세운다 — line-height 로 맞추면 숫자 글꼴의 여백 때문에 위로 뜬다(실제로 그랬다). */
+  .hsCnt{position:absolute;top:3px;right:3px;z-index:5;display:flex;align-items:center;justify-content:center;
+    min-width:19px;height:15px;padding:0 4px;box-sizing:border-box;
+    font-family:var(--font-num);font-size:var(--fs-sm);font-weight:800;color:#fff;line-height:1;
+    border-radius:0;background:rgba(6,8,12,.85);border:1px solid rgba(255,255,255,.18);text-shadow:0 1px 2px #000}
+  .hsVal{display:flex;align-items:center;gap:2px;font-family:var(--font-num);font-size:10px;font-weight:800;color:var(--gold);line-height:13px;text-shadow:0 1px 2px #000}
+  .hsVal .riSm{width:9px;height:9px;object-fit:contain;display:block}
+  /* 조합 결과 — "일반 › 에픽". 색은 등급색 두 개뿐이고 화살표는 중립이다 */
+  .hsUp{display:flex;align-items:center;gap:2px;max-width:100%;font-size:9px;font-weight:800;line-height:13px;white-space:nowrap;overflow:hidden}
+  .hsUp i{font-style:normal;color:var(--cf)} .hsUp em{font-style:normal;color:#6b7480;font-weight:700}
+  .hsEmpty{font-size:var(--fs-xs);color:#7d8590;padding:8px 2px}
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  @keyframes bpop{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+  
+  
+  
+  
+  
+  
+  
+  /* 보스 액션 버튼 = SC 콘솔(사선 모서리·네온·스캔라인) */
+  
+  
+  
+  @keyframes bpArmPulse{0%,100%{box-shadow:0 0 9px -3px rgba(255,140,60,.7),inset 0 1px 0 rgba(255,255,255,.16)}50%{box-shadow:0 0 16px 0 rgba(255,140,60,.95),inset 0 1px 0 rgba(255,255,255,.2)}}
+  
+  
+  
+  
+  
+  
+  #miniBox{position:relative;width:58px;height:58px;border-radius:2px;overflow:hidden;
+    border:1px solid rgba(0,229,255,.16);
+    background:rgba(8,16,26,.2)}
+
+  /* 유닛 (자유 배치) */
+  .unit{position:absolute;cursor:pointer;transform:translate(-50%,-50%);
+    display:flex;flex-direction:column;align-items:center;gap:1px;z-index:10}
+  .unit.sel .ubox{border-color:var(--neon);box-shadow:0 0 12px var(--neon-glow),inset 0 0 8px var(--neon-faint)}
+  /* 유닛 아이콘 박스: 어두운 코어 + 유닛 고유색 테두리/발광. 안에 SVG(currentColor=유닛색) */
+  .ubox{border-radius:var(--r-lg);border:1.5px solid currentColor;
+    background:radial-gradient(circle at 50% 35%,rgba(255,255,255,.10),rgba(8,16,28,.92));
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 0 7px -1px currentColor,inset 0 0 6px var(--shade);
+    filter:drop-shadow(0 0 2px currentColor);transition:box-shadow .15s,border-color .15s}
+  .ubox svg{filter:drop-shadow(0 0 1px currentColor)}
+  .ubox.model3d{background:none;border-color:transparent;box-shadow:none;filter:none}  /* 3D 모델 자리(투명) */
+  .unit.sel .ubox.model3d{border-color:transparent;box-shadow:none}  /* 선택 시 네모 글로우 제거(하단 3D 링으로 대체) */
+  .ubox.hero{border-width:2px;box-shadow:0 0 11px currentColor,inset 0 0 8px rgba(255,210,74,.25);
+    background:radial-gradient(circle at 50% 35%,rgba(255,225,150,.18),rgba(20,14,4,.92))}
+  .ubox.hero.model3d{border-color:transparent!important;box-shadow:none!important;background:none!important}  /* 3D 영웅: 네모 칸 제거(별★·금색 라벨로만 구분) */
+  .ulbl{font-size:8px;color:#9fc4dc;font-weight:600;letter-spacing:.3px;text-shadow:0 0 6px #000,0 1px 1px #000;white-space:nowrap}
+  .ulbl.hero{color:#ffc040}
+  /* 선택 유닛 위 얇은 체력/실드 바(스타크래프트식) */
+  /* 쉴드(하늘색)+HP=한 칸(딱 붙음) · 마나(보라)=한 줄 띄워 별도 칸(에테리얼 쉴드=위, HP=중간, 마나=아래) */
+  .uhp{display:flex;flex-direction:column;gap:0;margin:2px 0 1px}
+  .uhpMain{display:flex;flex-direction:column;gap:0;border-radius:1.5px;overflow:hidden;border:1px solid rgba(0,0,0,.78);background:rgba(4,8,12,.92);box-shadow:0 0 3px rgba(0,0,0,.5)}
+  .uhp .ub{height:2px;background:transparent;border:0;border-radius:0;overflow:hidden}
+  .uhp .uH{height:1px}   /* HP = 순수 초록 채움 1px(가는 선) · 쉴드↔HP 구분선/테두리 없음 → 초록 위 검은 줄 제거 · 쉴드 유무와 무관하게 통일 */
+  .uhp .ub i{display:block;height:100%;border-radius:0}
+  .uhp .uS i{background:#5ad1ff;box-shadow:0 0 5px rgba(90,209,255,.7)}
+  .uhp .uH i{box-shadow:0 0 4px rgba(70,211,105,.5)}
+  .uhp .uE{height:4px;margin-top:2px;border-radius:1.5px;overflow:hidden;border:1px solid rgba(0,0,0,.78);background:rgba(4,8,12,.92);box-shadow:0 0 3px rgba(0,0,0,.5)}   /* 마나 = 살짝 띄운 별도 칸(내부 채움 2px = HP 두께와 동일) */
+  .uhp .uE i{background:#b06bff;box-shadow:0 0 5px rgba(176,107,255,.6)}
+  .bentBar{position:absolute;transform:translateX(-50%);z-index:22;pointer-events:none}   /* 건설 탭: 지정 유닛·건물 위 바 래퍼 */
+  .bent.illusion{opacity:.45;filter:hue-rotate(200deg) saturate(1.4)}   /* 👥 할루시네이션 환영 = 반투명·푸른 틴트 */
+
+  /* 합체존 = 우하단 구석 지정 베이(테두리 없음 — 비콘 발판이 구역을 표시, 상단 표지 라벨만) */
+  #mergeZone{position:absolute;z-index:5;pointer-events:none;display:flex;align-items:flex-start;justify-content:center}
+  #mergeZone .mz{position:absolute;left:50%;bottom:100%;transform:translate(-50%,-2px);   /* 합체존 테두리 바로 위에 붙임 */
+    display:flex;align-items:center;justify-content:center;line-height:1;   /* 박스 안 정중앙 */
+    font-size:var(--fs-sm);color:#d6f1ff;font-weight:800;letter-spacing:1.5px;text-indent:1.5px;text-shadow:0 1px 3px #000,0 0 6px rgba(0,0,0,.7);white-space:nowrap;  /* text-indent=자간 보정 */
+    background:rgba(8,22,36,.28);backdrop-filter:blur(1.5px);-webkit-backdrop-filter:blur(1.5px);   /* 투명 배너(뒤가 비침) */
+    padding:3px 12px;border-radius:var(--r-md);border:1px solid rgba(140,210,255,.25);box-shadow:0 1px 2px rgba(0,0,0,.35)}
+    /* 라벨 페이드는 JS 루프에서 인라인 opacity 보간(1라운드만 표시) */
+
+  /* 유닛뽑기: 패드 위 유닛 + 패드 아래 라벨(가림 방지) */
+  .shopUnit{position:absolute;transform:translate(-50%,-50%);width:96px;height:92px;z-index:10;cursor:pointer}
+  .shopUnit.off{opacity:.5;filter:grayscale(.5)}
+  
+  
+  
+  
+  /* 유닛 정보 버튼(아이콘 우상단) */
+  
+  
+  
+  .sn{font-size:var(--fs-xs);color:#eaf2ff;font-weight:700;letter-spacing:.2px;text-shadow:0 1px 2px #000,0 0 5px #000}
+  .sc{font-size:var(--fs-xs);color:#ffd766;font-weight:800;font-family:var(--font-num);letter-spacing:.2px;text-shadow:0 1px 2px #000,0 0 5px #000;display:flex;align-items:center;justify-content:center;gap:2px}
+  .citizen{position:absolute;transform:translate(-50%,-50%);text-align:center;z-index:11;pointer-events:none}
+  .cframe{position:relative;width:40px;height:40px;box-sizing:border-box;padding:7px;border-radius:50%;border:2px solid var(--gold);
+    background:radial-gradient(circle at 50% 28%,rgba(255,236,170,.28),rgba(38,30,7,.95) 72%);
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 0 12px rgba(255,210,74,.5),inset 0 0 9px var(--shade),inset 0 1px 0 rgba(255,255,255,.22),0 3px 5px var(--shade)}
+  .cframe::after{content:'';position:absolute;inset:3px;border-radius:50%;border:1px solid var(--gold-lt);opacity:.35;pointer-events:none}
+  .cframe svg{width:100%;height:100%;display:block;filter:drop-shadow(0 0 2px rgba(255,210,74,.8))}
+  .cn{font-size:8px;color:var(--gold);margin-top:2px;text-shadow:0 1px 2px #000}
+
+
+  /* BOTTOM PANEL */
+  /* 하단 패널: 상단 발광 라인 + 미세 그라데이션으로 게임화면과 분리 */
+  /* 하단 콘솔 — 스타크래프트식 브러시드 메탈 + 상단 위험띠 + 리벳 */
+  #bot{height:auto;flex-shrink:0;display:flex;flex-direction:column;position:relative;   /* 하단 콘솔=탭 바만(패널 영역 제거) → 화면 맨 아래 네비. 각 섹션은 위로 올라오는 시트로 전환 예정 */
+    background:none;   /* 투명 — 프레임의 지형 타일이 그대로 비침(한 지면처럼) */
+    box-shadow:0 -10px 24px -6px rgba(0,0,0,.55)}   /* 위쪽으로 부드러운 그림자 → 자연스러운 섹션 경계 */
+  #phone:not(.inGame) #bot{display:none}   /* 게임 중(.inGame)에만 하단 콘솔 표시 — 타이틀/방찾기/로비 등에서는 숨김 */
+  #bot::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;z-index:2;   /* 상단 경계 = 중립 저채도 하이라이트(빨강 제거) */
+    background:linear-gradient(90deg,transparent,rgba(150,170,200,.28) 50%,transparent);opacity:.7;box-shadow:none}
+  /* 최상위 네비 = 하나의 통(단일 바) — 섹션은 얇은 세로줄로만 구분, 활성=청록 포인트 인디케이터 */
+  #tabs{flex-shrink:0;position:relative;margin:0;padding:0;z-index:45}   /* 유즈맵 인게임 탭바 — 배치만. 색·타이포·선택표시는 하단 바 공용 룩(.navBar와 동일 규칙) */
+  .tab .ti{display:block;line-height:0;transition:color .16s}
+  /* 탭 우상단 알림 배지(보스 탭 = 소환 가능 보스 수) — FAB의 .pbDot을 탭 규격으로 이식 */
+  .tab .tabDot{display:none;position:absolute;top:2px;left:calc(50% + 9px);color:#ff9a9a;font-family:var(--font-num);font-size:12px;font-weight:800;line-height:1;text-shadow:0 0 6px rgba(255,90,90,.85),0 1px 2px #000;pointer-events:none}
+  .tab .tabDot.show{display:block}
+
+/* 우측 고정폭 설정 칸 — 주 탭보다 작고 조용하게 */
+  /* 설정 팝업 */
+  #settingsPop{position:absolute;inset:0;z-index:72;   /* 허브(60)·마을(60)·캐릭터(61)보다 위 */display:flex;align-items:center;justify-content:center;
+    background-color:rgba(2,3,6,.62);
+    background-image:radial-gradient(ellipse 300px 320px at 50% 50%,rgba(92,214,255,.13),transparent 72%);
+    backdrop-filter:blur(2px) saturate(.95);-webkit-backdrop-filter:blur(2px) saturate(.95)}
+  #settingsPop.hide{display:none}
+  /* 컨텍스트: 앱(로비/로그인)에선 게임 전용 항목 숨기고 로그아웃 표시 */
+  #settingsPop.appCtx{background:rgba(2,3,6,.82)}                                       /* 뒤 화면 강하게 가림 */
+  #settingsPop.appCtx .setCard{background:linear-gradient(180deg,rgba(25,25,25,.985),rgba(14,14,14,.99))}   /* 거의 불투명(겹침 방지) */
+  #settingsPop.appCtx #si-mission,#settingsPop.appCtx #body-mission,#settingsPop.appCtx #qrow-spd,#settingsPop.appCtx #body-spd,#settingsPop.appCtx #setPauseBtn,#settingsPop.appCtx #setExit{display:none}
+  #settingsPop:not(.appCtx) #setLogout{display:none}
+  /* 게임 안에서는 프로필 머리줄·닉네임·버전을 두지 않는다 — 전장 위 카드에 더 얹을 자리가 없다 */
+  #settingsPop:not(.appCtx) .setMe,#settingsPop:not(.appCtx) #si-nick,#settingsPop:not(.appCtx) #si-ver{display:none}
+  /* ══ 게임 밖 설정(유즈맵 ☰) — 2026-08-18 · H안 ══
+     ⛔ 금색 스캔라인을 뺐다: 금색은 DESIGN §2 에서 **재화·보상 전용**이고, 이 화면의 성격색은 빨강이다.
+        바로 뒤의 목록 카드·소셜 카드가 쓰는 붉은 헤어라인과 같은 값으로 맞춘다. */
+  /* ⚠ 하위 팝업(#setSubPop)에도 같이 건다 — `openSetSub` 가 부모의 `.appCtx` 를 그대로 옮겨 붙인다.
+     안 그러면 '닉네임 변경'만 금색 선인 채로 남는다(실제로 그랬다). */
+  #settingsPop.appCtx .setTitle::after,#setSubPop.appCtx .setTitle::after{
+    background:linear-gradient(90deg,transparent,rgba(255,59,59,.72) 18%,rgba(255,59,59,.72) 82%,transparent);
+    box-shadow:0 0 7px -1px rgba(255,59,59,.5)}
+  /* ⚠ 닫기 ✕ 의 터치 타겟이 31.5×17.5px 이었다 — §0 권고 44px 의 절반도 안 됐다.
+     글자 크기는 그대로 두고 패딩으로만 키우고, 음수 마진으로 제목줄 높이는 건드리지 않는다. */
+  #settingsPop.appCtx .setX,#setSubPop.appCtx .setX{width:44px;height:44px;padding:0;margin:-11px -11px -11px 0;
+    display:flex;align-items:center;justify-content:center}   /* 글리프 크기는 그대로 두고 상자만 44px */
+  /* ⛔ 켜짐을 빨강으로 칠하지 않는다 — 빨강은 위험·파괴·나가기다. 켜짐 = 중립 강조(밝은 면 + 흰 손잡이). */
+  #settingsPop.appCtx .setSw.on{background:linear-gradient(180deg,rgba(255,255,255,.24),rgba(255,255,255,.09)) padding-box,var(--metal-ring) border-box}
+  #settingsPop.appCtx .setSw.on>i{background:linear-gradient(180deg,#fff,#d6dde6)}
+  /* 두 판(즉시조작 · 리스트)을 한 판으로 — 구분선만으로 나눈다 */
+  #settingsPop.appCtx .setQuick{margin-bottom:0;clip-path:none;border-radius:var(--r-bar) var(--r-bar) 0 0}
+  #settingsPop.appCtx .setMenu{border-top:0;border-radius:0 0 var(--r-bar) var(--r-bar)}
+  #settingsPop.appCtx .setMenu .setItem:first-child{border-top:1px solid rgba(255,255,255,.07)}
+  /* 내 프로필 한 줄 — 초상·닉은 기존 것(avatarHTML·myNick)을 그대로 쓴다 */
+  .setMe{display:flex;align-items:center;gap:9px;margin-bottom:9px;padding:8px 10px;
+    border:1px solid rgba(255,255,255,.07);border-radius:var(--r-bar);background:linear-gradient(180deg,#0a0a0a,#000)}
+  .setMe .fAva{width:28px;height:28px;font-size:var(--fs-lg)}
+  .setMeN{flex:1;min-width:0;font-size:var(--fs-lg);font-weight:700;color:#e8eef5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .setMeN i{font-style:normal;font-size:var(--fs-sm);color:#7d8b98;margin-left:3px}
+  /* 배지 = 계정 상태. 게스트일 때만 **버튼**(계정 연결 입구)이고, 물성은 머리줄 버튼(.ptFind)과 같다. */
+  .setMeTag{flex:0 0 auto;font-family:inherit;font-style:normal;font-size:var(--fs-xs);font-weight:700;color:#aeb7c1;
+    padding:5px 8px;border:1px solid var(--metal-edge);border-radius:var(--r-bar);background:rgba(255,255,255,.045)}
+  .setMeTag.go{cursor:pointer;color:#dfe4ea}
+  .setMeTag.go:active{opacity:.75;transform:translateY(1px)}
+  /* ⚠ `.setItem b` 가 `--setAcc`(게임 밖 = 빨강)로 칠한다 — 여기서 이겨야 버전이 붉게 남지 않는다.
+     버전은 강조할 값이 아니라 참고 값이다. */
+  .setItem b.setVer{font-family:var(--font-num);font-size:var(--fs-md);font-weight:700;color:#7d8b98}
+  #si-ver{cursor:default}
+  /* 닉네임 변경 하위 팝업 */
+  .setNickInp{width:100%;height:40px;padding:0 10px;box-sizing:border-box;font-family:inherit;font-size:var(--fs-lg);
+    color:var(--txt);background:rgba(255,255,255,.04);border:1px solid var(--metal-edge);border-radius:var(--r-bar);outline:none}
+  .setNickInp:focus{border-color:rgba(255,255,255,.28)}
+  .setNickSave{width:100%;height:42px;margin-top:9px;cursor:pointer;font-family:inherit;font-size:var(--fs-lg);font-weight:800;
+    color:#dfe7f0;border:1px solid transparent;border-radius:var(--r-bar);
+    background:var(--nav-plate) padding-box,var(--metal-ring) border-box}
+  .setNickSave:active{transform:translateY(1px)}
+  .setLogout{margin-top:8px;width:100%;height:44px;padding:0;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-lg);font-weight:800;letter-spacing:.3px;cursor:pointer;
+    color:#dfe7f0;background:rgba(255,255,255,.07);border:1px solid var(--glass-edge);transition:background .16s,border-color .16s}
+  .setLogout:active{transform:translateY(1px);background:rgba(255,255,255,.1)}
+  /* 로그인 화면 우상단 설정 버튼 */
+  /* 육각형 배너 — 아이콘(17px)보다 살짝만 큰 26px. 테두리는 같은 육각형을 1px 키워 뒤에 깐다(clip-path는 border를 잘라낸다) */
+  .authGear{position:absolute;top:16px;right:16px;z-index:2;display:inline-flex;align-items:center;justify-content:center;
+    width:26px;height:26px;padding:1px;cursor:pointer;color:#cfe0ec;border:none;background:none;transition:color .16s}
+  .authGear::before{content:'';position:absolute;inset:0;z-index:-1;background:rgba(150,190,235,.5);
+    clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)}
+  .authGear::after{content:'';position:absolute;inset:1px;z-index:-1;background:linear-gradient(180deg,rgba(30,38,52,.95),rgba(8,11,17,.97));
+    clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)}
+  .authGear:hover{color:#fff}
+  .authGear:hover::before{background:var(--ac,#5cd6ff)}
+  .authGear:active{transform:scale(.93)}
+  .authGear svg{width:14px;height:14px}
+  /* 반투명 + 각진 박스. 세로로 시원하게(기본 닫힌 상태 ~1.5배 높이) */
+  /* 설정 창 = 열린 곳에 맞춘 톤. 게임 내부(기본) = 각진 콘솔 패널 + 청록 포인트 */
+  .setCard{--setAcc:#ececec;--setAccS:rgba(255,255,255,.34);   /* 시안 폐기 — 중립 강조(DESIGN.md §2) */
+    position:relative;width:86%;max-width:320px;padding:14px 14px 13px;color:var(--txt);box-sizing:border-box;max-height:92%;overflow:hidden;
+    display:flex;flex-direction:column;
+    background:linear-gradient(180deg,rgba(25,25,25,.9),rgba(14,14,14,.92));border:1px solid var(--metal-edge);
+    clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px);
+    box-shadow:0 16px 44px -12px #000,inset 0 1px 0 rgba(255,255,255,.05)}
+  /* ══ 게임 안 창 = 이중 테두리 프레임 ══
+     바깥 1px(금속 엣지) + 안쪽 1px(액센트 헤어라인). 선을 굵히지 않고 "두 겹"으로 화려하게.
+     안쪽 선은 ::before에 같은 모양의 모서리 컷을 줘서 카드 윤곽을 따라간다. */
+  .setCard,.ecCard,.ovCard{position:relative}
+  /* 안쪽 시안 헤어라인(이중 테두리)은 못 박아 냈다 — 팝업은 바깥 1px 하나로 끝낸다 */
+  /* 코너 브래킷 — 위 양쪽 L자. 패널·팝업 공통 장식(디자인 시스템) */
+  /* 코너 브래킷(금색 ㄱ자)은 못 박아 냈다 — 팝업은 면·테두리만으로 읽히게 한다 */
+  .setCard>*,.ecCard>*,.ovCard>*{position:relative;z-index:1}
+  #settingsPop.appCtx .setCard::before{display:none}   /* 게임 밖은 별도 방향 — 프레임 미적용 */
+  .ecCard{--frameAcc:rgba(92,214,255,.5)}
+  .ovCard{--frameAcc:rgba(92,214,255,.5)}
+  .ovCard.win{--frameAcc:rgba(255,210,74,.62)}
+  .ovCard.lose{--frameAcc:rgba(255,107,122,.6)}
+  /* 바깥 화면(유즈맵 선택 등) = 라운드 글래스 팝업 + 메인 강조색 */
+  #settingsPop.appCtx .setCard{--setAcc:var(--neon);--setAccS:var(--neon-soft);
+    border:1px solid var(--metal-edge);   /* 라운드 16px → 챔퍼 — 업그레이드 패널과 같은 각진 모서리 */
+    box-shadow:0 18px 46px -12px #000,0 0 0 1px var(--shade)}
+  .setCard::-webkit-scrollbar{width:5px}
+  .setCard::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
+  .setCard::-webkit-scrollbar-track{background:transparent}
+  /* 일시정지(상단) / 나가기(하단) */
+  .setPause{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin:10px 0 0;height:44px;padding:0;cursor:pointer;
+    font-family:inherit;font-size:var(--fs-lg);font-weight:800;letter-spacing:.3px;color:#dfe7f0;
+    /* 하단 네비 '선택 안 된 칸'과 같은 면·테두리 */
+    border:1px solid transparent;border-radius:var(--r-bar);
+    background:var(--nav-plate) padding-box, var(--metal-ring) border-box;
+    transition:background .16s}
+  .setPause .pIco{font-size:var(--fs-lg);color:var(--setAcc)}
+  .setPause.paused{color:#fff;filter:brightness(1.3)}   /* 면·테두리는 네비 물성 그대로 — 상태는 밝기·글자로만 */
+  .setPause:active{transform:translateY(1px)}
+  .setPause.disabled{opacity:.4;pointer-events:none}   /* 일시정지 횟수 소진 */
+  /* 항목 = 박스 나열 대신 하나의 패널 + 구분선 행(방 만들기 폼·대기실과 같은 방식) */
+  /* 상단 즉시조작 묶음 — 업그레이드 칸(.hmUp)과 같은 검정 면 + 깎인 모서리 */
+  .setQuick{padding:0 12px;margin-bottom:9px;border:1px solid transparent;border-radius:var(--r-bar);
+    background:linear-gradient(180deg,#0a0a0a,#000) padding-box, var(--metal-ring-n) border-box;
+    clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
+  .setQRow{display:flex;align-items:center;justify-content:space-between;gap:8px;
+    padding:9px 0;font-size:var(--fs-lg);font-weight:700;color:#dbe3ec}
+  .setQRow+.setQRow{border-top:1px solid rgba(255,255,255,.07)}   /* 리스트와 같은 구분선 */
+  /* 켜짐/꺼짐 스위치 — 꺼짐 = 선택 안 된 네비 칸, 켜짐 = 선택된 칸 */
+  .setSw{position:relative;flex:0 0 auto;width:46px;height:25px;padding:0;cursor:pointer;
+    border:1px solid transparent;border-radius:var(--r-bar);   /* 알약 금지 — 라운드 토큰(0/3/6/9) */
+    background:var(--nav-plate) padding-box, var(--metal-ring) border-box;
+    transition:background .16s}
+  .setSw>i{position:absolute;top:2px;left:2px;width:19px;height:19px;border-radius:var(--r-bar);
+    background:linear-gradient(180deg,#9aa0aa,#5e646e);transition:left .16s,background .16s}
+  .setSw.on{background:var(--nav-plate-on) padding-box, var(--nav-ring-on-d) border-box}
+  .setSw.on>i{left:22px;background:linear-gradient(180deg,#fff,#ffb0b0)}
+  .setSw:active{transform:translateY(1px)}
+  /* 리스트 화살표는 오른쪽을 가리킨다(펼침이 아니라 다음 화면) */
+  .setSoon{padding:34px 0;text-align:center;color:var(--txt-mute);font-size:var(--fs-lg)}
+  #setSubPop{position:absolute;inset:0;z-index:73;   /* 설정(72) 위에 한 겹 더 */
+    display:flex;align-items:center;justify-content:center;background-color:rgba(2,3,6,.5)}
+  #setSubPop.hide{display:none}
+  .setSubBody{min-height:0;overflow-y:auto;padding:2px 0 2px;
+    scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}
+  .setSubBody>.setBody{display:block;background:none;box-shadow:none;padding:2px 0 0;margin:0}   /* 리스트 안에서 쓰던 장식 제거 */
+  .setMenu{display:flex;flex-direction:column;min-height:0;overflow-y:auto;padding:0 12px;border-radius:var(--r-bar);
+    background:linear-gradient(180deg,#0a0a0a,#000);border:1px solid var(--metal-edge);   /* 업그레이드 칸(.hmUp)과 같은 검정 면 */
+    scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}
+  .setMenu::-webkit-scrollbar{width:5px} .setMenu::-webkit-scrollbar-thumb{background:rgba(120,140,170,.4);border-radius:3px}
+  /* 배속 선택 — 세 칸 세그먼트(선택=강조색) + 아래 현재값 한 줄 */
+  .spdNow{color:var(--setAcc,var(--neon));font-family:var(--font-num);font-size:var(--fs-xl);margin-left:5px}
+  .voteCols{display:flex;gap:5px}
+  .voteCol{flex:1;min-width:0;min-height:76px;border:1px solid var(--metal-edge);border-radius:var(--r-lg);background:rgba(255,255,255,.04);cursor:pointer;
+    padding:9px 3px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+    transition:border-color .16s,background .16s}
+  .voteCol.active{border-color:var(--setAccS,var(--neon-soft));background:rgba(255,255,255,.09)}
+  .voteCol:active{transform:translateY(1px)}
+  .vcSpd{font-family:var(--font-num);font-weight:800;font-size:17px;line-height:1;color:#9aa6b4;letter-spacing:.5px}
+  .voteCol.active .vcSpd{color:var(--setAcc,var(--neon))}
+  /* 투표 칩 = 플레이어 색 타일 + 번호(8인 2줄 고정 높이 → 인원수와 무관하게 칸 크기 일정) */
+  .vcPlayers{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;align-content:flex-start;height:35px;overflow:hidden}
+  .vChip{--pc:#888;flex:0 0 auto;width:16px;height:16px;border-radius:var(--r-bar);display:flex;align-items:center;justify-content:center;box-sizing:border-box;
+    font:800 9px/1 var(--font-num);color:var(--pc);letter-spacing:0;
+    background:color-mix(in srgb,var(--pc) 16%,transparent);border:1px solid color-mix(in srgb,var(--pc) 50%,transparent)}
+  .vChip.me{color:#fff;background:color-mix(in srgb,var(--pc) 34%,transparent);border-color:var(--pc)}   /* 나=진하게 + 흰 숫자 */
+  /* 현재 배속 = 구분선 위 한 줄(라벨 좌 / 값 우) */
+  .voteResult{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding-top:9px;
+    font-size:var(--fs-sm);font-weight:700;letter-spacing:.3px;color:var(--txt-mute);border-top:1px solid rgba(255,255,255,.07)}
+  .voteResult b{color:var(--setAcc,var(--neon));font-family:var(--font-num);font-size:15px;margin-left:0}
+  /* 위험 액션 = 채움 대신 붉은 글자·테두리만(차분하게) */
+  .setExit{display:block;width:100%;margin:8px 0 0;height:44px;padding:0;cursor:pointer;
+    font-family:inherit;font-size:var(--fs-lg);font-weight:800;letter-spacing:.3px;color:#ff9a9a;
+    /* 하단 네비 '선택된 칸'과 같은 면·테두리 — 주의를 끌어야 하는 동작 */
+    border:1px solid transparent;border-radius:var(--r-bar);
+    background:var(--nav-plate-on) padding-box, var(--nav-ring-on) border-box;
+    transition:background .16s}
+  .setExit:active{transform:translateY(1px);background:rgba(255,80,80,.14)}
+  /* 나가기 확인 창 */
+  #exitConfirm{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
+    background-color:rgba(2,3,6,.6);
+    background-image:radial-gradient(ellipse 290px 180px at 50% 50%,rgba(92,214,255,.14),transparent 72%);
+    backdrop-filter:blur(2px) saturate(.95);-webkit-backdrop-filter:blur(2px) saturate(.95)}
+  #exitConfirm.hide{display:none}
+  /* 나가기 확인 = 설정 창과 같은 규격(각진 카드 · 제목+강조 언더라인 · 44px 버튼) */
+  .ecCard{--ecAcc:#5cd6ff;width:86%;max-width:320px;padding:18px 14px 17px;box-sizing:border-box;text-align:center;
+    background:linear-gradient(180deg,rgba(25,25,25,.9),rgba(14,14,14,.92));border:1px solid var(--metal-edge);
+    clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px);
+    box-shadow:0 16px 44px -12px #000,inset 0 1px 0 rgba(255,255,255,.05)}
+  .ecTitle{position:relative;font-size:17px;font-weight:800;letter-spacing:.5px;color:#eaf1fb;text-shadow:0 1px 3px rgba(0,0,0,.65);
+    margin-bottom:11px;padding-bottom:9px}
+  .ecTitle::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;background:linear-gradient(90deg,var(--ecAcc),transparent 72%);opacity:.5}
+  .ecMsg{font-size:var(--fs-sm);font-weight:500;line-height:1.55;color:var(--txt-mute);letter-spacing:.2px;margin:0 0 12px;word-break:keep-all}
+  .ecBtns{display:flex;gap:8px;justify-content:center}
+  /* 버튼 = 설정 규격(중립 글래스 / 위험은 붉은 글자·테두리만) — 방 만들기 버튼과 공유하지 않게 카드 안에서만 재정의 */
+  .ecCard .ecCancel,.ecCard .ecGo,.hbModal .ecCancel,.hbModal .ecGo{flex:1 1 0;min-width:0;padding:0 8px;
+    font-family:inherit;font-size:var(--fs-md);font-weight:800;letter-spacing:.3px;
+    display:flex;align-items:center;justify-content:center;box-shadow:none;transition:background .16s,border-color .16s}
+  /* 이중 테두리 = 바깥 border 1px + inset 1px 어두운 틈 + inset 2px 안쪽 선. 선을 굵히지 않는다 */
+  .setPause,.setExit,.setLogout,.twBtn{
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.55),inset 0 0 0 2px var(--btnIn,rgba(255,255,255,.1))}
+  /* ⚠ 위 이중 인셋은 새 테두리 위에 옆 링을 한 겹 더 긋는다 — 네비 물성을 쓰는 둘만 끌다 */
+  .setPause,.setExit{box-shadow:none}
+  /* ══ 팝업 액션 버튼(확인·관전하기·취소·나가기) = 살짝 볼록한 각진 판 ══
+     윗변 안쪽 하이라이트 + 아래로 말려드는 안쪽 그림자 + 바깥 아래 그림자 = 솟아 있는 느낌.
+     위는 완전히 평평(라운드 0), 아래만 --r-bar(3px) — 둥글면 볼록함이 물방울처럼 보인다.
+     폭은 max-width 120px로 묶는다(flex:1 1 0라 안 묶으면 카드 폭까지 늘어난다). */
+  .ecCard .ecCancel,.ecCard .ecGo,.hbModal .ecCancel,.hbModal .ecGo,#ovBtn,#ovBtn2.ghost,.authBtn,.authGuest{
+    height:36px;max-width:120px;
+    border-radius:0 0 var(--r-bar) var(--r-bar);   /* 위는 완전히 평평, 아래만 살짝 — 둘 다 토큰 값 */
+    /* 면 색은 토큰 3개로만 뺀다 — 화면이 덮는 것은 색뿐이고 모양·볼륨은 공유한다(§세그먼트 바와 같은 규칙) */
+    background:linear-gradient(180deg,var(--btnA,rgba(26,32,44,.72)) 0%,var(--btnB,rgba(12,16,23,.82)) 52%,var(--btnC,rgba(4,6,10,.9)) 100%);
+    border:1px solid var(--metal-edge);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.13),      /* 윗변 하이라이트 = 볼록 */
+               inset 0 -4px 6px -3px rgba(0,0,0,.8),     /* 아래로 말려드는 그림자 */
+               0 2px 4px -2px rgba(0,0,0,.7)}            /* 바깥 아래 그림자 = 솟아 있음 */
+  .ecCard .ecCancel:active,.ecCard .ecGo:active,.hbModal .ecCancel:active,.hbModal .ecGo:active,#ovBtn:active,#ovBtn2.ghost:active,.authBtn:active,.authGuest:active{
+    background:linear-gradient(180deg,rgba(16,20,29,.8),rgba(4,6,10,.92));
+    box-shadow:inset 0 2px 4px -1px rgba(0,0,0,.85),0 0 0 rgba(0,0,0,0)}   /* 누르면 눌려 들어간다 */
+  .twBtn{--btnIn:rgba(92,214,255,.26)} .twBtn.del{--btnIn:rgba(255,120,120,.3)}
+  /* 팝업 액션 버튼은 카드 액센트를 따라가지 않고 한 스타일로 통일한다(기준 = 나가기 버튼) */
+  .ecCard .ecCancel,.ecCard .ecGo,.hbModal .ecCancel,.hbModal .ecGo{color:#dfe7f0}
+  
+  
+  
+  
+  /* 제목 = 흰색 + 강조색 언더라인(콘솔 프로필 헤더와 같은 언어) */
+  .setTitle{position:relative;display:flex;align-items:center;justify-content:space-between;
+    font-family:var(--font-ti);font-size:18px;font-weight:400;letter-spacing:.1em;
+    color:#eaf1fb;text-shadow:0 1px 3px rgba(0,0,0,.65);margin-bottom:13px;padding-bottom:11px;border-bottom:none}
+  .setTitle::after{content:'';position:absolute;left:2px;right:2px;bottom:0;height:1px;opacity:1;
+    background:linear-gradient(90deg,transparent,rgba(240,180,41,.5) 22%,rgba(240,180,41,.5) 78%,transparent)}   /* 양끝이 사라지는 골드 스캔라인 — 데모 헤더와 같은 규칙 */
+  .setX{font-size:var(--fs-xl);color:var(--txt-mute);cursor:pointer;padding:2px 7px;border-radius:var(--r-bar);line-height:1}
+  .setX:active{background:rgba(255,255,255,.08)}
+  .setItem{display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;font-size:var(--fs-lg);font-weight:700;color:#dbe3ec;
+    padding:12px 0;margin:0;border-radius:0;background:none;border:none;box-shadow:none}
+  .setItem+.setItem,.setBody+.setItem{border-top:1px solid rgba(255,255,255,.07)}   /* 행 사이 구분선만 */
+  .setItem:active{background:rgba(255,255,255,.03)}
+  .setItem b{font-size:13px;color:var(--setAcc);font-family:var(--font-num)}
+  /* 화살표도 <b> 라 위 규칙에 걸린다 — 값 배지가 아니라 '다음 화면' 표시이므로 특이도를 한 단 올려 되돌린다 */
+  .setItem .setArr{font-size:10px;color:var(--txt-mute)}
+  /* 항목 본문 — 보관함(#setStash)에 접어 두고 하위 팝업이 열릴 때만 꺼내 쓴다 */
+  .setBody{display:none;margin:0;padding:2px 0 12px}
+  .setItem{transition:background .18s}
+  .setRowLbl{font-size:var(--fs-md);color:var(--txt);font-weight:700;padding:2px 4px 6px}
+  .setSeg{display:flex;gap:5px;margin-bottom:7px}
+  .segBtn{flex:1;padding:5px 0;font-size:var(--fs-md);font-weight:700;color:var(--txt-dim);cursor:pointer;font-family:inherit;
+    background:rgba(0,0,0,.16);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+  .segBtn.on{color:#0b1016;font-weight:800;background:var(--setAcc,var(--neon));border-color:var(--setAcc,var(--neon));box-shadow:none}
+  .setHint{font-size:var(--fs-sm);line-height:1.4;color:var(--txt-dim);padding:5px 3px 3px;word-break:keep-all;white-space:normal}
+  .setHint.save{color:var(--setAcc,var(--neon));font-weight:600}
+  /* 배속 '변경' = 업그레이드 작은 버튼(.hmUpBtn) — 붉은 링 + 짙은 적갈 면 */
+  .setQGo{flex:0 0 auto;min-width:50px;padding:4px 11px;font-size:var(--fs-md);
+    color:#ececec;border:1.5px solid transparent;border-radius:var(--r-bar);
+    background:linear-gradient(180deg,#2a1214,#261012 55%,#170a0c) padding-box,
+      var(--nav-ring-on-d) border-box}
+  .setQGo:active{transform:translateY(1px)}
+  
+  
+  body.lite *{backdrop-filter:none!important;box-shadow:none!important}
+  
+  
+  /* 임무 목표 — 라벨 + 정렬 목록 (현재+5줄까지 확장 후 내부 스크롤) */
+  #body-mission{max-height:240px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+  #body-mission::-webkit-scrollbar{width:5px}
+  #body-mission::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:var(--r-bar)}
+  #body-mission::-webkit-scrollbar-track{background:transparent}
+  .missBlock{margin-bottom:12px}
+  .missBlock:last-child{margin-bottom:0}
+  .missLbl{font-size:var(--fs-sm);font-weight:800;letter-spacing:1.5px;color:var(--setAcc,var(--neon));margin-bottom:7px;padding-left:2px}
+  .missList{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px}
+  .missList li{position:relative;font-size:var(--fs-md);line-height:1.55;color:var(--txt);padding-left:13px;word-break:keep-all}
+  .missList li::before{content:'';position:absolute;left:2px;top:6px;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.3)}
+  .missList b{color:#fff;font-weight:700}
+  /* 하단 섹션 = 위로 올라오는 슬라이드 시트(탭 바 바로 위, 게임 위로 오버레이). 활성 탭 패널만 존재(.on), body.sheetOpen일 때 올라옴 */
+  .bp{position:absolute;left:0;right:0;bottom:100%;z-index:22;box-sizing:border-box;
+    display:none;flex-direction:column;gap:5px;padding:10px 12px 12px;max-height:min(46vh,342px);overflow-y:auto;
+    background:none;border:none;border-radius:0;box-shadow:0 -9px 26px rgba(0,0,0,.6);
+    transform:translateY(112%);transition:transform .26s cubic-bezier(.2,.8,.25,1);pointer-events:none}
+  /* 판의 '면'은 여기(::before)다 — 요소 자체에 clip-path 를 걸면 시트 밖으로 나가 있는
+     자식(예: ⊘ 지정 해제 버튼)까지 잘려 사라진다. z-index:-1 은 .bp/#btSheet 가 z-index 를 가져
+     쌓임 맥락을 만들기 때문에 판 안에만 머문다(자식 위로 새지 않는다).
+     모서리 컷은 사냥터 카드(.hmUp)와 같은 7px — 위 두 귀퉁이만 자른다(아래는 화면 끝에 붙는다). */
+  .bp::before,#btSheet::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;--ch:7px;
+    background:var(--panelBig);
+    border-top:1px solid var(--panelBigEdge);box-sizing:border-box;
+    clip-path:polygon(var(--ch) 0,calc(100% - var(--ch)) 0,100% var(--ch),100% 100%,0 100%,0 var(--ch))}
+  .bp.on{display:flex}   /* 활성 탭 패널만 렌더(내려간 상태로 대기) */
+  body.sheetOpen .bp.on{transform:translateY(0);pointer-events:auto}   /* 시트 올라옴 */
+  /* 시트 올라오면 하단 사이드 배너(채팅·자동·개인보스)도 시트 위로 함께 상승 */
+  #chatBar,#chatLog,#fxLabActs{transition:transform .26s cubic-bezier(.2,.8,.25,1)}
+  body.sheetOpen:not(.cstMode) #chatBar,body.sheetOpen:not(.cstMode) #chatLog,body.sheetOpen:not(.cstMode) #fxLabActs{transform:translateY(calc(-1 * var(--sheetH,0px)))}   /* 이펙트 랩 동작 배너(공격/이동/사망)도 시트 위로 함께 상승 */
+
+  .row{display:flex;gap:7px;flex-shrink:0;flex-wrap:wrap}
+  /* 버튼: 스타크래프트식 메탈 베벨 박스 */
+  /* 실제 각진 메탈 버튼: conic-gradient 4면 미터 베벨(위 밝고 아래 어두움) + 안쪽 면 */
+  .btn{flex:1;min-width:54px;padding:9px 4px;cursor:pointer;position:relative;transition:all .07s;
+    display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center;
+    border:1.5px solid var(--metal-edge);border-radius:var(--r-md);background:none;   /* 배경 제거 — 투명(뒤 우주 비침) */
+    box-shadow:0 0 8px -3px var(--neon-glow),0 0 0 1px var(--neon-faint),inset 0 1px 0 var(--glass)}
+  .btn:active{transform:translateY(1px);background:rgba(0,0,0,.28);box-shadow:inset 0 0 9px rgba(0,0,0,.6),0 0 0 1px var(--neon-faint)}
+  .btn.off{opacity:.4;pointer-events:none;filter:grayscale(.6)}
+  .btn .bi{font-size:14px;line-height:1;filter:drop-shadow(0 1px 1px #000)}
+  .btn .bl{font-size:var(--fs-xs);color:var(--txt);font-weight:700;text-shadow:0 1px 2px #000,0 0 4px #000}
+  /* 버튼 라벨 색 통일 — 식별 카테고리 클래스는 유지 */
+  .btn.blue .bl,.btn.pu .bl,.btn.amb .bl{color:var(--neon-lt)}.btn.red .bl{color:#ff9a9a}
+  .btn.on{border-color:var(--neon);background:rgba(255,59,59,.08);
+    box-shadow:0 0 12px var(--neon-glow),0 0 0 1px var(--neon-soft)}
+  .btn.on .bl{color:var(--neon)}
+
+  /* 메인 선택 프로필 호스트 = 건설 시트 본문(#btSheetBody)과 동일 규격 — 크기 규칙은 아래 #btSheetBody 쪽에 공동 정의(단일 소스) */
+  #unitCmd{display:none}#unitCmd.on{display:flex}
+  /* 조합: 메탈 박스 + 초록 발광 강조 */
+  .mergeBig{flex:1.4;cursor:pointer;position:relative;color:#ffd9d9;font-size:15px;font-weight:800;transition:all .07s;
+    display:flex;align-items:center;justify-content:center;gap:6px;text-shadow:0 1px 2px #000,0 0 5px #000;
+    border:2px solid var(--neon);border-radius:var(--r-md);background:rgba(255,59,59,.07);   /* 투명 + 옅은 빨강 */
+    box-shadow:0 0 14px var(--neon-glow),0 0 0 1px var(--neon-soft),inset 0 0 12px rgba(255,59,59,.08)}
+  .mergeBig:active{transform:translateY(1px);background:rgba(255,59,59,.14);
+    box-shadow:inset 0 0 11px var(--shade),0 0 12px var(--neon-glow)}
+  /* 유닛 선택 카드: 초상화 강조 + 정보 영역 박스 */
+  
+  .portrait{width:48px;height:48px;border-radius:11px;border:1.5px solid var(--metal-edge);
+    background:radial-gradient(circle at 50% 35%,#262226,#141214);
+    display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;
+    box-shadow:inset 0 0 8px var(--shade),0 0 6px var(--neon-faint)}
+  
+  /* ── 유닛 콘솔 카드: 세련된 SC 우주전쟁 톤(메탈 그라데이션 + 네온 엣지 + 사선 모서리 + 스캔라인) ── */
+  .scPanel{position:relative;display:flex;align-items:stretch;gap:9px;flex-shrink:0;padding:7px 10px;
+    background:linear-gradient(155deg,rgba(40,46,58,.5),rgba(9,11,16,.85));
+    border:1px solid var(--metal-edge);border-left:2px solid var(--neon-soft);
+    clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05),inset 0 0 22px rgba(0,0,0,.45)}
+  .scPanel::after{content:'';position:absolute;left:10px;right:4px;top:0;height:1px;background:linear-gradient(90deg,rgba(255,90,90,.45),transparent 75%);pointer-events:none}
+  /* 유닛 명령 버튼 행(홀드/공격이동/반복이동/스킬/전체) */
+  #cmdRow{display:none;flex:none;gap:6px;margin-top:7px;align-items:stretch}
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  /* (구 #skillBar / .skBtn CSS 제거 — 스킬은 커맨드 그리드 카드로 표시) */
+  /* ⚔ 전투 실험 — 아군 배치 피커 */
+  .btPickHead{display:flex;align-items:center;gap:6px;font-size:var(--fs-sm);font-weight:800;color:#cfe0ff;margin:2px 0 5px}
+  .btPickHead .sbcSub{font-weight:600;color:#8aa0b8;opacity:.85}
+  
+  .btPicker{display:flex;flex-wrap:wrap;gap:4px;max-height:154px;overflow-y:auto;padding-right:2px}
+  .btpRaceHead{flex:0 0 100%;font-size:var(--fs-xs);font-weight:700;color:#9fb4cc;margin:3px 0 1px;opacity:.9}
+  .btpCard{display:flex;flex-direction:column;align-items:center;gap:2px;width:52px;padding:4px 2px;cursor:pointer;font-family:inherit;border-radius:7px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.012));border:1px solid var(--metal-edge);transition:all .12s}
+  .btpCard:hover{border-color:rgba(120,180,255,.5)}
+  .btpCard:active{transform:translateY(1px)}
+  .btpCard .btpPic{position:relative;width:30px;height:30px;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:4px}
+  .btpCard .btpPic img{width:100%;height:100%;object-fit:cover;border-radius:4px}
+  .btpCard .btpPic svg{width:24px;height:24px}
+  .btpCard .btpNm{font-size:8.5px;font-weight:700;color:#cfd8e4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  /* ⚔ 전투 실험 바(관리자) — 붉은 사선 서브패널 */
+  
+  
+  
+  
+  /* ⚔ 전투실험 — 화면 내 컨트롤 오버레이(Battle 탭에서만) */
+  #btCtl{position:absolute;top:38px;left:50%;transform:translateX(-50%);z-index:30;display:none;flex-wrap:wrap;justify-content:center;gap:5px;align-items:center;max-width:94%;pointer-events:none;padding:4px 7px;border-radius:11px;background:linear-gradient(180deg,rgba(14,10,12,.74),rgba(8,5,7,.62));border:1px solid rgba(255,90,90,.3);box-shadow:0 2px 10px rgba(0,0,0,.42)}
+  #btCtl .btCtlBtn{pointer-events:auto;padding:5px 8px;font-size:11px;font-weight:800;color:#e6d2d2;cursor:pointer;font-family:inherit;white-space:nowrap;border-radius:7px;background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.015));border:1px solid var(--metal-edge);transition:all .12s}
+  #btCtl .btCtlBtn:active{transform:translateY(1px)}
+  #btCtl .btCtlBtn.on{color:#fff;background:linear-gradient(180deg,#bb3636,#5e1616);border-color:#ff5b5b;box-shadow:0 0 10px -2px rgba(255,80,80,.55)}
+  #btCtl .btCtlCnt{pointer-events:none;font:800 11px var(--font-num);color:#ffb0b0;padding:0 4px;white-space:nowrap}
+  /* ⚖ 밸런스 자동검증 패널 */
+  #balPanel{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center}
+  #balPanel.hide{display:none}
+  #balPanel .balBackdrop{position:absolute;inset:0;background:rgba(0,0,0,.62)}
+  #balPanel .balCard{position:relative;width:min(440px,92vw);max-height:86vh;display:flex;flex-direction:column;background:linear-gradient(160deg,rgba(30,36,50,.97),rgba(8,10,16,.99));border:1px solid var(--metal-edge);border-radius:12px;box-shadow:0 12px 44px rgba(0,0,0,.62)}
+  #balPanel .balHead{display:flex;align-items:center;gap:8px;padding:11px 14px;font-size:15px;font-weight:800;color:#dfeaff;border-bottom:1px solid rgba(255,255,255,.08)}
+  #balPanel .balSub{font-size:10.5px;font-weight:600;color:#8fa8c8}
+  #balPanel .balX{margin-left:auto;background:none;border:none;color:#9aabbc;font-size:16px;cursor:pointer;line-height:1}
+  #balPanel .balBody{overflow-y:auto;padding:10px 12px 14px}
+  #balPanel .balRaceRow{display:flex;gap:8px;margin-bottom:8px}
+  #balPanel .balRaceRow .rc{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;padding:7px 4px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid var(--metal-edge)}
+  #balPanel .balRaceRow .rc b{font-size:17px;font-family:var(--font-num);line-height:1}
+  #balPanel .balRow{display:flex;align-items:center;gap:7px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+  #balPanel .balRow .bn{flex:0 0 80px;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #balPanel .balRow .bbar{position:relative;flex:1;height:10px;border-radius:5px;background:rgba(255,255,255,.06);overflow:hidden}
+  #balPanel .balRow .bbar i{position:absolute;top:0;bottom:0}
+  #balPanel .balRow .bsc{flex:0 0 62px;text-align:right;font:700 12px var(--font-num)}
+  /* 🧪 스프라이트 유닛 실험장 */
+  #sprLab{position:absolute;inset:0;z-index:38;display:none;pointer-events:none}
+  #sprLab.on{display:block}
+  .sprArena{position:absolute;inset:0;pointer-events:auto;overflow:hidden;
+    background:radial-gradient(120% 90% at 50% 42%, #1a2130 0%, #0c1018 62%, #070a10 100%)}
+  .sprArena::before{content:'';position:absolute;inset:0;pointer-events:none;
+    background-image:linear-gradient(rgba(120,150,190,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(120,150,190,.06) 1px,transparent 1px);
+    background-size:36px 36px}
+  .sprHint{position:absolute;left:0;right:0;top:10px;text-align:center;font-size:10.5px;color:#8593a4;padding:0 16px;line-height:1.5;pointer-events:none}
+  .sprUnit{position:absolute;left:50%;top:55%;background-repeat:no-repeat;transform:translate(-50%,-88%);
+    image-rendering:auto;filter:drop-shadow(0 4px 4px rgba(0,0,0,.5))}
+  .sprHud{position:absolute;left:12px;bottom:12px;font-family:var(--font-num),monospace;font-size:12px;font-weight:800;color:#cfe0ec;
+    background:rgba(6,10,16,.72);border:1px solid var(--metal-edge);border-radius:8px;padding:4px 10px;pointer-events:none}
+  /* 하단 컨트롤 */
+  .sprCtl{display:flex;gap:6px;flex-wrap:wrap;padding:6px 2px 4px}
+  .sprBtn{flex:1;min-width:56px;padding:9px 6px;border-radius:9px;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;
+    color:#dfe7f0;background:rgba(255,255,255,.06);border:1px solid var(--metal-edge);transition:all .12s}
+  .sprBtn:hover{background:rgba(255,255,255,.12);border-color:var(--glass-edge)} .sprBtn:active{transform:translateY(1px)}
+  .sprBtn.atk{color:#ffd9d9;background:rgba(255,80,80,.12);border-color:rgba(255,80,80,.4)}
+  .sprCtl2{display:flex;align-items:center;gap:9px;padding:2px 4px 4px}
+  .sprCtl2 label{font-size:11px;font-weight:800;color:var(--txt-mute)}
+  .sprCtl2 input[type=range]{flex:1;accent-color:var(--neon)}
+  .sprMeta{font-size:10px;color:#7d8b98;white-space:nowrap}
+  /* 🏗 건설 테스트(데이터 전용) */
+  #vBuild{overflow:hidden}
+  #cstMain{position:absolute;inset:0;overflow-y:auto;padding:10px 11px 16px;font-size:13px;color:#d7dee9;background:linear-gradient(180deg,#0c1017,#090c12);z-index:6}
+  #cstMain.hasPrev{padding-bottom:188px}
+  #cstPrev{position:absolute;left:0;right:0;bottom:0;height:174px;background:linear-gradient(0deg,#080b11,#0d1420f2);border-top:1px solid #2b3c55;z-index:8;display:none;box-shadow:0 -6px 20px rgba(0,0,0,.55)}
+  #cstPrev.on{display:block}
+  #cstPrevCv{position:absolute;left:10px;top:12px;width:150px;height:150px;background:radial-gradient(circle at 50% 38%,#18243a,#090d15);border:1px solid #24344c;border-radius:9px}
+  #cstPrevName{position:absolute;left:174px;top:16px;font-weight:800;color:#ffe0a0;font-size:15px;letter-spacing:.3px}
+  #cstPrevInfo{position:absolute;left:174px;top:44px;right:40px;color:#aab6c6;font-size:12px;line-height:1.55}
+  #cstPrevX{position:absolute;top:9px;right:10px;background:#141b28;border:1px solid #3a4a60;color:#9fb0c4;border-radius:6px;padding:3px 9px;font-size:13px;cursor:pointer}
+  
+  
+  
+  
+  
+  
+  
+  
+  
+    
+  
+  
+  
+  
+  /* 🏗 테크트리 건설 — RTS 배치 맵 + 하단 커맨드 그리드 */
+  #vBuild.on{display:flex;flex-direction:column;min-height:0}   /* .on일 때만 표시 — 없으면 .gview{display:none}로 숨김(탭 이탈 시 건설 상단바·시트 잔류 방지) */
+  #cstMain{flex:1;min-height:0;width:100%;position:relative;overflow:hidden;padding:0}
+  #bpBuild{display:none}   /* 건설은 자체 슬라이드 시트(#btSheet) 사용 → 하단 패널 미사용(다른 탭에서 32px 잔여공간 제거) */
+  .bmap{position:absolute;inset:0;overflow:hidden;cursor:crosshair;background:#0a0d14}
+  .bmapFloor{position:absolute;inset:0;z-index:0;pointer-events:none;transform-origin:0 0;   /* 바닥 타일·격자 = 메인맵 viewApply와 동일한 변환(translate 50% · scale zoom · translate -v)으로 유닛과 함께 확대/축소/팬 */
+    background:linear-gradient(0deg,rgba(120,150,190,.06) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(120,150,190,.06) 1px,transparent 1px),
+      url('/assets/tiles/badlands.webp');
+    background-repeat:repeat;background-size:28px 28px,28px 28px,132px 132px}
+  /* 오토배틀 건설지: 바닥만 오토배틀 보드 타일로 교체(격자선 제거·어둡게) — 그리드·발판·프로필 등 시스템은 관리자와 동일 */
+  .bmap.stk{background:#05080c}
+  .bmap.stk .bmapFloor{background:url('assets/tiles/terran_tile_light.webp?v=1');background-repeat:repeat;background-size:150px 150px}
+  .bmap.stk .bmapFloor::after{content:'';position:absolute;inset:-200%;background:rgba(7,11,16,.62)}   /* 오토배틀 보드와 같은 어두운 오버레이 */
+  .bmap.stk .bHill,.bmap.stk .bGasZone{display:none}   /* ⛰ 언덕·⛽ 가스 구역 = 관리자 전용 지형(오토배틀은 채취 경제 미사용) */
+  .bmap.stk .bhint{display:none}   /* 조작 안내 문구 미사용(오토배틀) */
+  .bOob{position:absolute;z-index:2;pointer-events:none;background:#05080c}   /* 진입 불가 구역 — 4면 같은 농도(맵 배경색과 동일하게 완전히 비움) */
+  .bmap.arming{cursor:copy}
+  .bmapTop{position:absolute;top:0;left:0;right:0;z-index:30;pointer-events:none}   /* 상단 오버레이 — 유닛/건물·HP바(22)·배치버튼(26) 위로 떠서 겹치지 않게(z-index 30) · 종족(좌상단) · 토글 · 자원(우상단) */
+  .bmapTop .techSide{position:absolute;top:6px;left:7px;display:flex;flex-direction:column;gap:7px;pointer-events:auto}
+  .bmapTop .techTabs{display:flex;flex-direction:column;gap:4px}
+  .bmapTop .techTab{min-width:54px;text-align:center;padding:6px 11px;font-size:12px;font-weight:800;border-radius:7px;cursor:pointer;white-space:nowrap;
+    background:linear-gradient(180deg,rgba(15,21,33,.9),rgba(9,13,21,.92));border:1px solid var(--metal-edge);color:#cbd5e6}
+  .bmapTop .techTab.on{color:#fff;background:linear-gradient(180deg,#2f6fbf,#173a6e);border-color:#5aa8ff;box-shadow:0 0 10px -3px rgba(90,168,255,.6)}
+  .bmapTop .techBtns{display:flex;flex-direction:column;gap:4px}
+  .bmapTop .cbtn{width:54px;box-sizing:border-box;text-align:center;padding:5px 0;border-radius:6px;cursor:pointer;font-weight:800;font-size:14px;border:1px solid var(--metal-edge);background:linear-gradient(180deg,rgba(15,21,33,.85),rgba(9,13,21,.9));color:#dbe3ee}
+  .bmapTop .cbtn.on{color:#fff;background:linear-gradient(180deg,#2f7d4a,#173a24);border-color:#46f06a}
+  /* 🎨 플레이어 색 확인 패널 — 실제 게임 렌더러로 8색을 즉시 전환해 비교 */
+  .bmap .pcPanel{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:31;pointer-events:auto;
+    display:flex;flex-direction:column;gap:6px;align-items:center;padding:8px 10px;border-radius:9px;
+    background:linear-gradient(180deg,rgba(13,18,28,.94),rgba(8,11,17,.96));border:1px solid var(--metal-edge);
+    box-shadow:0 6px 18px rgba(0,0,0,.55)}
+  .bmap .pcHead{font-size:11.5px;font-weight:800;color:#dbe3ee;letter-spacing:.3px}
+  .bmap .pcChips{display:flex;gap:5px}
+  .bmap .pcChip{width:24px;height:24px;border-radius:5px;cursor:pointer;display:flex;align-items:center;
+    justify-content:center;font:800 11px/1 var(--font-num);color:#0b0e13;background:var(--pcc);
+    border:2px solid transparent;box-shadow:inset 0 0 0 1px rgba(0,0,0,.35)}
+  .bmap .pcChip.on{border-color:#fff;box-shadow:0 0 9px -1px var(--pcc),inset 0 0 0 1px rgba(0,0,0,.35)}
+  .bmap .pcActs{display:flex;gap:5px}
+  .bmap .pcAct{padding:4px 9px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:800;
+    border:1px solid var(--metal-edge);background:linear-gradient(180deg,rgba(15,21,33,.85),rgba(9,13,21,.9));color:#dbe3ee}
+  /* 메인 화면 색 확인 — 패널 자체는 건설 구역과 같은 .pcPanel 스타일을 공유 */
+  #pcFab{position:absolute;left:8px;bottom:120px;z-index:26;width:34px;height:34px;border-radius:9px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;font-size:17px;
+    border:1px solid var(--metal-edge);background:linear-gradient(180deg,rgba(15,21,33,.9),rgba(9,13,21,.94));
+    box-shadow:0 3px 10px rgba(0,0,0,.5)}
+  #pcFab.hide{display:none}
+  #pcMain{position:absolute;left:0;right:0;bottom:8px;z-index:27;display:flex;justify-content:center;pointer-events:none}
+  #pcMain .pcPanel{position:static;transform:none;pointer-events:auto;
+    display:flex;flex-direction:column;gap:6px;align-items:center;padding:8px 10px;border-radius:9px;
+    background:linear-gradient(180deg,rgba(13,18,28,.94),rgba(8,11,17,.96));border:1px solid var(--metal-edge);
+    box-shadow:0 6px 18px rgba(0,0,0,.55)}
+  #pcMain .pcHead{font-size:11.5px;font-weight:800;color:#dbe3ee;letter-spacing:.3px}
+  #pcMain .pcChips{display:flex;gap:5px}
+  #pcMain .pcChip{width:24px;height:24px;border-radius:5px;cursor:pointer;display:flex;align-items:center;
+    justify-content:center;font:800 11px/1 var(--font-num);color:#0b0e13;background:var(--pcc);
+    border:2px solid transparent;box-shadow:inset 0 0 0 1px rgba(0,0,0,.35)}
+  #pcMain .pcChip.on{border-color:#fff;box-shadow:0 0 9px -1px var(--pcc),inset 0 0 0 1px rgba(0,0,0,.35)}
+  #pcMain .pcActs{display:flex;gap:5px}
+  #pcMain .pcAct{padding:4px 9px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:800;
+    border:1px solid var(--metal-edge);background:linear-gradient(180deg,rgba(15,21,33,.85),rgba(9,13,21,.9));color:#dbe3ee}
+  .bmapTop .cbtn.dz{width:auto;padding:5px 9px;font-size:12px;color:#ffc0c0;border-color:rgba(255,90,90,.5);background:rgba(70,18,18,.55)}
+  .bmapTop .bres{position:absolute;top:8px;right:10px;display:flex;align-items:center;gap:9px;pointer-events:auto;
+    font-size:var(--fs-md);font-weight:800;white-space:nowrap;text-shadow:0 2px 4px #000,0 0 8px #000}   /* 메인 #hudR과 완전 동일(전역 .res/.ri/b 규칙 그대로 사용, 박스 없음) */
+  .bent{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;z-index:2}
+  .bent .be-ico{font-size:26px;line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))}
+  .bent.bldg{width:54px;height:54px;border-radius:9px;background:radial-gradient(circle at 50% 35%,rgba(70,90,120,.5),rgba(8,12,20,.72));border:1px solid var(--metal-edge)}
+  .bent.bldg.live3d{background:none;border:none;width:auto;height:auto;justify-content:flex-end}
+  #techMap3d{position:absolute;inset:0;pointer-events:none;z-index:7}
+#cstFog{position:absolute;inset:0;pointer-events:none;z-index:7;filter:blur(3px)}   /* 🌫️ 건설 안개 오버레이(DOM 엔티티 위) — blur=칸 경계 부드럽게 */
+  .bent.worker .be-ico{font-size:23px}
+  .bent.unit{width:22px;height:22px}
+  .bent.unit svg,.bent.unit img{width:20px;height:20px}
+  .bent.sel{outline:2px solid #5aa8ff;outline-offset:2px;box-shadow:0 0 14px -2px rgba(90,168,255,.75);border-radius:9px}
+  
+  .bent .bprog{position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);width:46px;height:6px;border-radius:3px;background:rgba(0,0,0,.62);overflow:hidden;border:1px solid rgba(120,150,190,.3)}
+  .bent .bprog i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#2f7d4a,#5adf8a);box-shadow:0 0 6px rgba(90,223,138,.5);transition:width .12s linear}
+  .bent .bprog.prod i{background:linear-gradient(90deg,#2f6fbf,#5cc8ff);box-shadow:0 0 6px rgba(92,200,255,.5)}
+  
+  .bent.bldg.live3d.sel,.bent.unit.live3d.sel,.bent.worker.live3d.sel,.bent.larvaE.live3d.sel,.bent.eggE.live3d.sel{outline:none!important;box-shadow:none!important}   /* 3D 렌더 중엔 2D 파랑 아웃라인 제거(선택 표시는 3D 하단 링) */
+  .bhint{position:absolute;bottom:66px;left:50%;transform:translateX(-50%);z-index:5;font-size:11px;font-weight:700;color:#bcd;
+    background:rgba(6,9,14,.75);border:1px solid var(--metal-edge);border-radius:8px;padding:5px 12px;max-width:92%;text-align:center;pointer-events:none}
+  .bhint.on{color:#ffe27a;border-color:var(--gold);box-shadow:0 0 12px -3px rgba(255,210,74,.5)}
+  /* 🏗 건물 배치 고스트(반투명·유효성 색) + 확정/취소 버튼 */
+  .bghost{z-index:24;pointer-events:none;opacity:.9}
+  .bghost .be-ico{font-size:26px;opacity:.85;filter:drop-shadow(0 0 5px currentColor)}
+  .bghost.ok{color:#46f06a}
+  .bghost.bad{color:#ff5a5a}
+  /* 배치 footprint(점유 셀) 하이라이트 — 셀 격자선 + 유효성 색 */
+  .bfoot{position:absolute;z-index:23;pointer-events:none;border-radius:2px;box-sizing:border-box;
+    background-image:linear-gradient(rgba(255,255,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.07) 1px,transparent 1px);background-position:0 0}
+  .bfoot.ok{border:1px solid rgba(70,240,106,.4);background-color:rgba(70,240,106,.06)}
+  .bfoot.bad{border:1px solid rgba(255,90,90,.45);background-color:rgba(255,90,90,.09)}
+  .bfootBlk{position:absolute;z-index:24;pointer-events:none;box-sizing:border-box;border:1px solid rgba(255,70,70,.75);background-color:rgba(255,60,60,.32)}   /* 유닛이 점유한 셀 = 빨간색(건설 불가) */
+  .bGasZone{position:absolute;z-index:2;pointer-events:none;box-sizing:border-box;border:1.5px dashed rgba(120,232,150,.5);border-radius:4px;   /* ⛽ 가스 광산(고정 지형) — 가스 건물 전용 부지 */
+    background:radial-gradient(ellipse at 50% 45%,rgba(96,220,130,.20),rgba(60,160,95,.10) 62%,rgba(30,80,50,.06));
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+  .bGasZone .gzIco{font-size:15px;line-height:1;filter:drop-shadow(0 0 4px rgba(120,255,160,.5));animation:gzPuff 2.6s ease-in-out infinite}
+  .bGasZone .gzLbl{font:800 8px/1 sans-serif;color:#9fe8b4;text-shadow:0 1px 2px #000;letter-spacing:.4px}
+  .bGasZone.hot{border-color:rgba(140,255,170,.9);background:radial-gradient(ellipse at 50% 45%,rgba(96,232,130,.34),rgba(60,180,95,.18) 62%,rgba(30,90,50,.10));box-shadow:0 0 14px -2px rgba(110,240,150,.45)}   /* 가스 건물 배치 중 = 강조 */
+  @keyframes gzPuff{0%,100%{transform:translateY(0);opacity:.75}50%{transform:translateY(-2px);opacity:1}}
+  .bHill{position:absolute;z-index:1;pointer-events:none;box-sizing:border-box;border-radius:7px;   /* ⛰ 고지대(언덕) — 지형(엔티티 아래) */
+    border:2px solid rgba(158,136,98,.78);
+    background:linear-gradient(180deg,rgba(126,110,80,.44),rgba(80,68,49,.34) 55%,rgba(52,44,32,.30));
+    box-shadow:inset 0 3px 0 rgba(214,194,152,.38), 0 6px 12px -2px rgba(0,0,0,.6);
+    display:flex;align-items:flex-start;justify-content:flex-start}
+  .bHill .hillLbl{font:800 9px/1 sans-serif;color:#ecdbad;text-shadow:0 1px 2px #000;letter-spacing:.5px;padding:3px 6px}
+  .bLiftShadow{position:absolute;z-index:1;transform:translate(-50%,-50%);background:radial-gradient(ellipse at 50% 50%,rgba(0,0,0,.6),rgba(0,0,0,0) 68%);border-radius:50%;pointer-events:none}   /* 🛫 부양 건물 지면 그림자 */
+  .bRallyLine{position:absolute;height:2px;background:repeating-linear-gradient(90deg,rgba(70,240,106,.7) 0 4px,transparent 4px 11px);transform-origin:0 50%;pointer-events:none;z-index:9}   /* 🟢 건물→랠리 얇은 듬성 초록 점선 */
+  .bRallyLine.hot{background:repeating-linear-gradient(90deg,rgba(110,255,140,.95) 0 4px,transparent 4px 11px)}
+  .bRallyMark{position:absolute;width:22px;height:22px;transform:translate(-50%,-50%);pointer-events:none;z-index:10;filter:drop-shadow(0 0 3px rgba(70,240,106,.6))}   /* 🟢 초록 원+점(이동 지시자) */
+  .tkFx{position:absolute;border-radius:50%;pointer-events:none;z-index:7}   /* 🪄 스킬 FX(원형) — 스타일은 상태 기반 인라인 */
+  .tkBeam{position:absolute;height:3px;background:linear-gradient(90deg,rgba(160,220,255,.95),rgba(90,160,255,.5));transform-origin:0 50%;pointer-events:none;z-index:9;box-shadow:0 0 8px rgba(120,190,255,.9);border-radius:2px}
+  .tkLock,.tkHeal{position:absolute;width:20px;height:20px;transform:translate(-50%,-140%);pointer-events:none;z-index:10}
+  .tkLock svg{width:100%;height:100%;color:#ffd24a;filter:drop-shadow(0 0 4px rgba(255,200,60,.8))}
+  .tkHeal svg{width:100%;height:100%;color:#6ff0a0;filter:drop-shadow(0 0 4px rgba(90,240,150,.8))}
+  .cmdG .cgPro .skPro{display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:#8fd4ff}   /* 스킬 카드 아이콘(메인 SKILL_ICON svg 재사용) */
+  .cmdG .cgPro .skPro svg{width:68%;height:68%}
+  .bRallyMark svg{width:100%;height:100%;display:block}
+  .bRallyMark.hot{animation:rallyPulse .9s ease-in-out infinite}
+  @keyframes rallyPulse{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:1}50%{transform:translate(-50%,-50%) scale(1.18);opacity:.75}}
+  .bMineral{position:absolute;z-index:2;pointer-events:none;box-sizing:border-box;border:1.5px solid rgba(90,190,255,.6);border-radius:5px;   /* 💎 미네랄 덩어리 */
+    background:radial-gradient(ellipse at 50% 42%,rgba(96,190,255,.28),rgba(50,120,220,.14) 62%,rgba(24,60,130,.07));
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0px}
+  .bMineral .mnIco{font-size:16px;line-height:1;filter:drop-shadow(0 0 5px rgba(120,200,255,.6));animation:mnGlint 2.2s ease-in-out infinite}
+  
+  .bMineral.d3{border:none!important;background:none!important;box-shadow:none!important;justify-content:flex-end}   /* 3D 노드 표시 시 2D 사각 박스 숨김(수량 라벨만) */
+  .bGasZone.d3{border:none!important;background:none!important;box-shadow:none!important}   /* 3D 가스 노드 표시 시 하단 사각 박스 숨김 */
+  .bGasZone.d3 .gzLbl{display:none}
+  @keyframes mnGlint{0%,100%{transform:scale(1);opacity:.85}50%{transform:scale(1.08);opacity:1}}
+  .bGasGlow{position:absolute;width:46px;height:46px;transform:translate(-50%,-58%);pointer-events:none;border-radius:50%;mix-blend-mode:screen;   /* ⛽ 가스 건물 활성 발광(작동 중) */
+    background:radial-gradient(circle,rgba(120,255,160,.55),rgba(80,220,120,.22) 46%,transparent 70%);animation:bGasPulse 1.5s ease-in-out infinite}
+  @keyframes bGasPulse{0%,100%{opacity:.32;transform:translate(-50%,-58%) scale(.82)}50%{opacity:.8;transform:translate(-50%,-58%) scale(1.18)}}
+  .bGasFx{position:absolute;pointer-events:none;transform:translate(-50%,-55%);width:0;height:0}   /* ⛽ 피어오르는 초록 연기 */
+  .bGasFx i{position:absolute;display:block;width:11px;height:11px;border-radius:50%;filter:blur(.6px);opacity:0;
+    background:radial-gradient(circle at 50% 40%,rgba(160,255,185,.95),rgba(90,225,135,.6) 55%,rgba(50,155,90,0) 80%);animation:bGasSmoke 1.7s ease-out infinite}
+  .bGasFx i:nth-child(1){left:-8px;animation-delay:0s}
+  .bGasFx i:nth-child(2){left:-1px;animation-delay:.34s}
+  .bGasFx i:nth-child(3){left:6px;animation-delay:.68s}
+  .bGasFx i:nth-child(4){left:-4px;animation-delay:1.02s}
+  .bGasFx i:nth-child(5){left:2px;animation-delay:1.36s}
+  @keyframes bGasSmoke{0%{transform:translateY(5px) scale(.5);opacity:0}20%{opacity:.92}100%{transform:translateY(-24px) scale(1.55);opacity:0}}
+  .bent .carryOre{position:absolute;left:64%;top:-5px;font-size:9px;line-height:1;pointer-events:none;z-index:3;   /* 🎒 운반 중 광물 덩어리(손 위치쯤, 살짝 들썩) */
+    filter:drop-shadow(0 0 3px rgba(120,200,255,.85));animation:carryBob .5s ease-in-out infinite alternate}
+  .bent i.carryOre{width:7px;height:7px;display:block}
+  .bent .carryOre.gas{border-radius:50%;background:radial-gradient(circle at 35% 30%,#d2ffe2,#41d772 58%,#1d8342);filter:drop-shadow(0 0 3px rgba(110,240,150,.85))}
+  @keyframes carryBob{from{transform:translate(-50%,0)}to{transform:translate(-50%,2.2px)}}
+  .bPsi{position:absolute;z-index:2;pointer-events:none;border-radius:50%;border:1.5px dashed rgba(110,170,255,.55);   /* 🔵 파일런 동력장(배치 중 표시) */
+    background:radial-gradient(ellipse at 50% 50%,rgba(90,150,255,.16),rgba(70,120,230,.08) 60%,rgba(50,90,200,.03) 82%,transparent)}
+  .bPsi.new{border-color:rgba(150,205,255,.85);background:radial-gradient(ellipse at 50% 50%,rgba(110,170,255,.24),rgba(85,140,240,.12) 60%,rgba(60,100,210,.05) 82%,transparent)}   /* 예비 파일런의 미래 동력장(강조) */
+  .bCreep{position:absolute;z-index:1;pointer-events:none;border-radius:50%;   /* 🟣 크립(스웜 점막) — 항상 표시 */
+    background:radial-gradient(ellipse at 50% 50%,rgba(150,80,200,.20),rgba(110,55,160,.12) 58%,rgba(70,35,110,.05) 82%,transparent)}
+  .bCreep.hot{background:radial-gradient(ellipse at 50% 50%,rgba(175,95,235,.32),rgba(130,65,190,.18) 58%,rgba(85,40,130,.08) 82%,transparent);box-shadow:0 0 16px -4px rgba(170,90,230,.4)}   /* 스웜 건물 배치 중 강조 */
+  .bent.larvaE{font-size:11px;z-index:14} .bent.larvaE .lvWig{display:inline-block;animation:lvWig 1.7s ease-in-out infinite}
+  @keyframes lvWig{0%,100%{transform:translateX(-1.5px) rotate(-9deg)}50%{transform:translateX(1.5px) rotate(9deg)}}
+  .bent.eggE{font-size:13px;z-index:14} .bent.eggE .eggWig{display:inline-block;animation:eggPls 1.1s ease-in-out infinite;filter:drop-shadow(0 0 4px rgba(190,120,255,.6))}
+  @keyframes eggPls{0%,100%{transform:scale(1)}50%{transform:scale(1.14)}}
+  .bldNoPow{position:absolute;z-index:9;pointer-events:none;transform:translate(-50%,-130%);font:800 8.5px/1 sans-serif;color:#ffd9a0;   /* 🛑 블랙아웃 라벨 */
+    background:rgba(40,20,10,.82);border:1px solid rgba(255,170,80,.55);border-radius:5px;padding:2px 5px;white-space:nowrap;text-shadow:0 1px 1px #000}
+  .bArmBtns{position:absolute;z-index:26;display:flex;gap:6px;transform:translate(-50%,10px);pointer-events:auto}   /* 발판 하단 중앙에 앵커 → 바로 아래에 떠서 함께 이동 · #cstLabels(pointer-events:none) 안에서도 버튼은 클릭 가능 */
+  .bArmBtn{font-size:14px;font-weight:900;width:30px;height:30px;display:flex;align-items:center;justify-content:center;padding:0;border-radius:9px;border:1.5px solid rgba(255,255,255,.16);background:linear-gradient(160deg,rgba(36,42,54,.5),rgba(15,18,25,.52));color:#eaf0f8;cursor:pointer;-webkit-tap-highlight-color:transparent;box-shadow:0 3px 9px rgba(0,0,0,.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}   /* 확정/취소·재개/철거 동일 — 반투명 글래스 버튼 */
+  .bArmBtn.ok{border-color:rgba(90,223,138,.7);color:#9bf5bd;background:linear-gradient(160deg,rgba(26,54,39,.5),rgba(12,27,19,.52))}
+  .bArmBtn.ok.dis{opacity:.4;filter:grayscale(.6);pointer-events:none}
+  .bArmBtn.cancel{border-color:rgba(255,130,130,.62);color:#ffbcbc;background:linear-gradient(160deg,rgba(52,31,35,.5),rgba(25,13,16,.52))}
+  .bArmBtn:active{transform:translateY(1px) scale(.95)}
+  .bldHp{position:absolute;z-index:11;transform:translate(-50%,3px);height:5px;min-width:22px;border-radius:3px;background:rgba(0,0,0,.62);border:1px solid rgba(120,150,190,.4);overflow:hidden;pointer-events:none}   /* 각 건물 하단 체력/진행 바 — 발판 바로 아래 */
+  .bldHp i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#2f7d4a,#5adf8a);box-shadow:0 0 5px rgba(90,223,138,.5);transition:width .12s linear}
+  .bldHp.bld i{background:linear-gradient(90deg,#2f6fbf,#5cc8ff);box-shadow:0 0 5px rgba(92,200,255,.5)}   /* 건설 중 = 파란 진행 바 */
+  .bldTime{position:absolute;z-index:12;transform:translate(-50%,15px);font:800 11px var(--font-num);color:#dff0ff;white-space:nowrap;pointer-events:none;text-shadow:0 1px 3px #000,0 0 5px #000,0 0 3px #000}   /* 건설 남은시간 — HP 바 아래 */
+  .bldSpin{display:inline-block;width:14px;height:14px;border:2px solid rgba(210,230,255,.28);border-top-color:#dff0ff;border-radius:50%;animation:bldSpin .7s linear infinite;vertical-align:middle}   /* 일꾼 오는 중 = 로딩 스피너 */
+  @keyframes bldSpin{to{transform:rotate(360deg)}}
+  #cstLabels{position:absolute;inset:0;pointer-events:none;z-index:8}   /* 건설 남은시간 라벨 전용 오버레이 — 3D 캔버스(cvMarine z6·cvFx z7)보다 위 → 유닛에 안 가림 */
+  /* ── ExoMiner식 하단 인터페이스: 아이콘 독(상시) + 슬라이드 시트(필요 시 올라옴) ── */
+  #bpBuild.on{display:none}   /* 기존 하단 패널 영역 제거 → 맵이 화면을 가득 채움 */
+  
+  
+  
+  
+  
+  
+  #btSheet{position:absolute;left:0;right:0;bottom:0;z-index:30;transform:translateY(103%);transition:transform .26s cubic-bezier(.2,.8,.25,1);display:flex;flex-direction:column}
+  /* 프로필 시트 박스 규격(배경·테두리·모서리·그림자·여백) = 건설 시트가 단일 소스. 메인 프로필 표시 중(#bpMain에 #unitCmd.on)도 그대로 공유 → 높이·폭 동일.
+     ※ display/위치는 각자 유지(건설=맵 위 슬라이드 시트 / 메인=하단 패널) */
+  #playerProfile{display:none}#playerProfile.on{display:flex}   /* 관전 프로필 = 메인 프로필과 동일 커맨드 그리드 호스트 */
+  #btSheet,#bpMain:has(#unitCmd.on),#bpMain:has(#defaultCmd:not(.hide)),#bpPlayers:has(#playerProfile.on){
+    background:none;border:none;border-radius:0;
+    box-shadow:0 -8px 24px rgba(0,0,0,.55);padding:9px 8px 12px;gap:0;
+    overflow:visible}   /* 프로필 중에는 .bp 의 overflow-y:auto 를 끈다 — 판 '밖'(위쪽)에 붙는 조작 버튼(.cgTopOut)이 잘려 사라진다. 프로필 호스트는 스스로 높이가 고정이라 바깥 스크롤이 필요 없다. */
+  #bpPlayers{padding-top:9px}   /* 관전 탭 기본(플레이어 그리드) 하단 높이 = 메인/유닛뽑기/업그레이드(#bpMain 9px)와 통일 — .bp 기본 10px에서 1px 보정 */
+  #btSheet.open{transform:translateY(0)}
+  /* (제거) #btCardCtl — 하단 시트 접기(간소화/최소화) 버튼. 시트 높이는 이제 --bpBodyH 하나로 고정이다. */
+  #btSheet.simple #btSheetBody,#unitCmd.simple,#playerProfile.simple{height:var(--bpBodyH);max-height:var(--bpBodyH)}   /* 간소화 = 1줄 그리드 · 높이 고정(건물 프로필 기준 ≈120px · 개인·다중·혼합 모두 동일) · 메인 프로필(#unitCmd)도 동일 규격 */
+  #btSheet.simple .cmdG .cgGrid,#unitCmd.simple .cmdG .cgGrid{grid-template-rows:1fr}
+  #btSheetBody,#unitCmd,#playerProfile{height:min(48vh,246px);max-height:min(48vh,246px);min-height:0;flex-direction:column}   /* 일꾼 지정 패널 크기로 고정(건물·유닛 모두 동일 높이) · #unitCmd는 display만 .on에서 제어 */
+  #btSheetBody{display:flex}
+  #techSkTip{position:fixed;z-index:60;max-width:210px;padding:7px 9px;border-radius:10px;pointer-events:none;   /* 🔮 스킬 롱프레스 설명 팝업 — 프로필 시트와 동일 글래스 톤 */
+    background:linear-gradient(180deg,rgba(16,22,34,.98),rgba(9,13,21,.99));border:1px solid rgba(90,140,210,.35);box-shadow:0 6px 20px rgba(0,0,0,.6);color:#dfe7f2}
+  #techSkTip.hide{display:none}
+  #techSkTip .tskH{display:flex;align-items:center;gap:5px;margin-bottom:4px}
+  #techSkTip .tskH b{font-size:11px;color:#fff;font-weight:800}
+  #techSkTip .tskC{margin-left:auto;display:inline-flex;gap:4px;font:800 9px/1 var(--font-num)}
+  #techSkTip .tskC .cc.en{color:var(--cgEn)} #techSkTip .tskC .cc.cr{color:var(--cgCr)} #techSkTip .tskC .cc.hp{color:#ff8a8a} 
+  #techSkTip .tskC .tskT{color:#9fd0ff}   /* 우상단 소요 시간 */
+  #techSkTip .tskD{font-size:9.5px;line-height:1.4;color:var(--cgMuted)}
+  /* 📖 설명 팝업 섹션 — 제목(연구/생산/해금…) 아래에 항목 나열 */
+  #techSkTip .tskSec{margin-top:6px} #techSkTip .tskSec:first-child{margin-top:0}
+  #techSkTip .tskSecT{font:800 9px/1 sans-serif;letter-spacing:.6px;color:#9fd0ff;margin-bottom:3px}
+  #techSkTip .tskSecL{font-size:9.5px;line-height:1.45;color:#c2ccda}
+  #btDesel{position:absolute;top:44px;right:10px;z-index:26;display:none;cursor:pointer;pointer-events:auto;
+    width:42px;height:42px;border-radius:var(--r-lg);align-items:center;justify-content:center;
+    background:rgba(10,12,16,.2);border:1px solid rgba(255,59,59,.4);color:var(--neon);
+    box-shadow:0 2px 5px rgba(0,0,0,.4),inset 0 0 8px rgba(0,0,0,.3)}
+  #btDesel.on{display:flex}
+  #btDesel svg{filter:drop-shadow(0 0 5px var(--neon-glow))}
+  #btDesel:active{transform:translateY(1px);border-color:var(--neon);box-shadow:0 0 12px var(--neon-glow)}
+  body.cstMode #chatBar,body.cstMode #chatLog,body.cstMode #miniWrap,body.cstMode #deselTop,body.cstMode #mergeFab,body.cstMode #skillFab,body.cstMode #btCtl{display:none !important}
+  /* 🏗 관리자 건설은 자체 상단바(.bmapTop = 종족 탭·치트 버튼·자원)만 쓴다 → 게임 HUD 숨김(이중 표시 방지).
+     오토배틀 건설지(.stkCst)는 반대다 — 상단이 전투 화면과 **같아야** 하므로 #hud 를 그대로 두고
+     건설맵 쪽 자원 복제본(.bres)을 만들지 않는다(techMapRender 가 techWallet() 일 때 생략). */
+  body.cstMode:not(.stkCst) #hud{display:none !important}
+  body.cstMode .bmapTop{top:0}                 /* #hud 숨김 → 건설 자체 상단바를 최상단으로 */
+  body.cstMode.stkCst .bmapTop{top:34px}       /* #hud 표시 → 좌측 도구열(철거)이 시계 아래로 */
+  /* 적군 유닛 구분(붉은 링) */
+  .unit.foe .ubox:not(.model3d){box-shadow:0 0 0 2px rgba(255,66,66,.62),0 0 9px rgba(255,54,54,.5)!important}   /* 2D 폴백 전용 — 3D는 플레이어색 본체 틴트로 구분(적/아군 구분 안 함) */
+  
+  /* 초상화 — 쿨 메탈 프레임 + 사선 모서리(카드와 통일) */
+  .scPortrait{width:64px;height:64px;flex:none;align-self:center;position:relative;overflow:hidden;color:var(--neon);
+    border:1px solid var(--metal-edge);
+    clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+    background:radial-gradient(circle at 50% 38%,rgba(74,86,110,.38),#080a10 78%);
+    display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 14px rgba(0,0,0,.62)}
+  .scPortrait svg{width:42px;height:42px;filter:drop-shadow(0 0 5px var(--neon))}
+  
+  
+  
+  /* 커스텀 초상화 이미지(둥근 사각형 크롭) — 프로필 카드 공통 */
+  .portImg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:1;transform:scale(1.14);transform-origin:center 44%}
+  /* 생성 아이콘(건물·스킬·업그레이드) = 정사각 원본 그대로. 유닛 초상과 달리 크롭·확대하지 않는다 */
+  .icoImg{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;z-index:1;transform:none}
+  .icoFb{position:absolute;inset:0;z-index:1}   /* 아이콘 파일이 없을 때의 라인SVG 폴백 — .icoImg와 같은 자리 */
+  .pIco.icoFb .mIco{width:62%;height:62%}
+  .scPortrait::after{content:'';position:absolute;inset:0;pointer-events:none;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,.0) 0 2px,rgba(0,0,0,.22) 2px 3px)}
+  .scMid{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}
+  .scName{font-size:13px;font-weight:800;color:var(--neon-lt);text-shadow:0 0 8px var(--neon-glow);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  
+  
+  .scType{font-size:var(--fs-md);color:var(--neon);text-shadow:0 0 6px var(--neon-glow);margin-top:1px;white-space:nowrap}
+  .scHp{margin-top:7px;display:flex;flex-direction:column;gap:3px;font-family:var(--font-num)}
+  .scHp .hpline{font-size:var(--fs-md);font-weight:700;line-height:1;display:flex;align-items:center;gap:4px;white-space:nowrap;letter-spacing:.3px}
+  .scHp .hpline .lab{flex:none;font-family:var(--font-ko);font-size:8px;font-weight:700;letter-spacing:0;
+    opacity:.92;align-self:center}   /* 라벨이 글자에 딱 붙음(값이 바로 옆에) */
+  .scHp .hp{color:var(--ok);text-shadow:0 0 6px rgba(60,255,120,.45)}
+  .scHp .shd{color:#7fd0ff;text-shadow:0 0 6px rgba(120,200,255,.45)}
+  .scHp .en{color:#c0a0ff;text-shadow:0 0 6px rgba(180,140,255,.4)}
+  /* 초록 테두리 스탯 박스 — 크기 고정, 숫자 넘치면 JS로 폰트 축소 */
+  .scStats{display:flex;flex-wrap:nowrap;gap:3px;flex:none;align-items:center;justify-content:flex-end}
+  /* 사거리·공속: 카드 하단의 작은 보조 정보 라인 */
+  
+  
+  .scBox{position:relative;width:50px;flex:none;height:52px;padding:0 3px;overflow:hidden;border-radius:3px;
+    border:1px solid var(--metal-edge);background:linear-gradient(160deg,rgba(46,52,64,.52),rgba(10,12,17,.74));
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05),inset 0 0 8px rgba(0,0,0,.4)}
+  .scBox::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.13),transparent);pointer-events:none}
+  .scBox.atkBox{overflow:visible;cursor:pointer}
+  .scBox.atkBox .atkPeek{position:absolute;right:calc(100% + 6px);top:50%;transform:translateY(-50%);display:none;white-space:nowrap;z-index:40;   /* 박스 왼쪽(카드 안쪽)으로 — 패널 밖 삐짐 방지 */
+    font-size:var(--fs-lg);font-weight:700;font-family:var(--font-num);color:#ffe0b8;letter-spacing:.2px;
+    background:rgba(14,9,6,.96);border:1px solid rgba(255,154,106,.5);border-radius:var(--r-md);padding:4px 10px;box-shadow:0 3px 8px rgba(0,0,0,.55)}
+  .scBox.atkBox .atkPeek::after{content:'';position:absolute;left:100%;top:50%;transform:translateY(-50%);border:4px solid transparent;border-left-color:rgba(255,154,106,.5)}
+  .scBox.atkBox.peek .atkPeek{display:block}
+  .scBox .sv{font-size:18px;color:var(--neon-lt);font-weight:800;font-family:var(--font-num),'Courier New',monospace;text-shadow:0 0 9px var(--neon-glow);line-height:1;white-space:nowrap}
+  .scBox .sv .up{color:#e0f9ff;font-size:.7em;margin-left:1px;text-shadow:0 0 8px var(--neon)}
+  .scBox .sl{font-size:8.5px;font-weight:700;letter-spacing:0;white-space:nowrap;line-height:1.2}
+  .scBox .sl.def{color:#9ec2ff}.scBox .sl.shd{color:#8fd8ff}.scBox .sl.atk{color:#ffb088}  /* 칩 없이 방어=파랑·쉴드=청록·공격=주황 텍스트 */
+  /* (구 다중선택 칩 UI CSS 제거 — 프로필은 커맨드 그리드(.cmdG)가 담당) */
+  #defaultCmd{display:flex;flex-direction:column;gap:4px;height:var(--bpBodyH);max-height:var(--bpBodyH);min-height:0;overflow:hidden}#defaultCmd.hide{display:none}   /* 유닛지정/판매도 프로필 시트와 동일 고정 높이(무선택·유닛유무 무관) → 시트 교체 시 높이 안 튐 */
+
+  /* 안내문: 검은 인셋 패널(SC 정보창 느낌) */
+  .hint{font-size:var(--fs-md);color:var(--txt);text-align:center;margin:auto;line-height:1.7;padding:8px 12px;
+    background:none;border:none;text-shadow:0 1px 2px #000,0 0 5px #000}   /* 배경 제거 — 텍스트만 */
+  .hint b{color:var(--neon);text-shadow:0 0 6px var(--neon-glow),0 1px 2px #000}
+  /* 가챠 뽑기 바(유닛뽑기 탭) */
+  
+  /* 생산고 운용 안내(설명서) — 메인 콘솔과 통일된 SC 우주전쟁 톤 */
+  .opsManual{flex:1;min-height:0;display:flex;flex-direction:column;gap:6px;width:100%;max-width:360px;margin:0 auto;padding:4px 4px 0;box-sizing:border-box;overflow:hidden}
+  /* 유닛뽑기 시민/유닛 프로필 = 컴팩트(생산고 안내와 함께 한 화면에 들어오게) */
+  #shopProfile{flex:0 0 auto;padding:6px 9px;gap:8px;align-items:center}
+  #shopProfile .scPortrait{width:54px;height:54px}
+  #shopProfile .scPortrait svg{width:38px;height:38px}
+  #shopProfile .scName{font-size:12px}
+  #shopProfile .scStats .scBox{width:50px;height:44px}
+  /* 직스 선택 정보(하단 콘솔) — 유닛/신전 프로필 */
+  #stSelInfo{flex:0 0 auto;display:flex;align-items:center;justify-content:center;width:100%;margin:auto;box-sizing:border-box}
+  #stSelInfo.hide{display:none}
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  .opsManual .omHead{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;color:#dfe7f2;letter-spacing:.4px;padding-bottom:5px;border-bottom:1px solid var(--glass-edge);text-shadow:0 1px 2px #000}
+  .opsManual .omBar{width:3px;height:12px;background:var(--neon);box-shadow:0 0 6px var(--neon-glow);border-radius:1px;flex:0 0 auto}
+  
+  .opsManual .omGrid{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:5px;align-content:start}
+  .opsManual .omCell{display:flex;align-items:center;gap:7px;padding:5px 7px;position:relative;
+    background:linear-gradient(160deg,rgba(46,52,64,.42),rgba(10,12,18,.62));border:1px solid var(--metal-edge);border-left:2px solid var(--c,#888);
+    clip-path:polygon(4px 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%,0 4px);box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+  .opsManual .omCell::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent)}
+  .opsManual .omIco{width:17px;height:17px;flex:0 0 auto;color:var(--c,#cfd);filter:drop-shadow(0 0 4px var(--c))}
+  .opsManual .omTx{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.18;overflow:hidden}
+  .opsManual .omTx b{font-size:10.5px;font-weight:800;color:#eaf0f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .opsManual .omTx i{font-size:8.5px;font-style:normal;color:var(--txt-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  
+  .opsManual .omLv{font-family:var(--font-num);font-size:10px;font-weight:800;color:var(--c);flex:0 0 auto;text-shadow:0 0 5px var(--c)}
+  
+  
+  .opsManual.hide{display:none}
+  /* 프로필 미표시(기본 대기 상태) — 카드를 세로로 늘려 레벨/수량이 잘 보이도록 */
+  #bpUnit:not(.profOn) .opsManual .omGrid{align-content:start;grid-auto-rows:44px;gap:7px}
+  #bpUnit:not(.profOn) .opsManual .omCell{padding:6px 11px;gap:9px}
+  #bpUnit:not(.profOn) .opsManual .omIco{width:18px;height:18px}
+  #bpUnit:not(.profOn) .opsManual .omTx b{font-size:11.5px}
+  #bpUnit:not(.profOn) .opsManual .omLv{font-size:15px}
+  
+  .gachaResult{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:1px;padding:7px 11px;border-radius:var(--r-lg);
+    background:linear-gradient(180deg,rgba(20,16,18,.7),rgba(8,7,9,.75));border:1px solid var(--gc,var(--metal-edge));
+    box-shadow:0 0 12px -6px var(--gc,transparent)}
+  
+  .gachaResult .grTier{font-size:var(--fs-sm);font-weight:800;letter-spacing:1px}
+  .gachaResult .grName{font-size:var(--fs-xl);font-weight:800;color:var(--txt);line-height:1.1}
+  .gachaResult .grType{font-size:var(--fs-xs);color:var(--txt-hud)}
+  
+  .gachaResult.pop{animation:grPop .3s ease-out}
+  /* 비콘 코어 작은 글자(10연차 '10' 등 2글자 이상) */
+  
+  /* 뽑기 확률 — 화면 안 상시 표시(우상단, '유닛 생산고' 텍스트 바로 아래) */
+  .rateMini{position:absolute;top:64px;right:8px;z-index:12;pointer-events:none;
+    padding:5px 9px 6px;border:none;border-radius:0;
+    background:linear-gradient(180deg,rgba(26,20,22,.78),rgba(8,7,9,.84));
+    clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
+    box-shadow:0 0 0 1px var(--neon-faint),0 4px 14px -6px #000;backdrop-filter:blur(1px);
+    font-family:var(--font-num);min-width:112px}
+  .rateMini .rmTitle{font-size:8.5px;font-weight:800;color:#cfd6de;margin-bottom:2px;letter-spacing:.3px;opacity:.85;text-align:right}
+  .rateMini .rmRow{display:flex;justify-content:space-between;gap:10px;font-size:8.5px;font-weight:700;line-height:1.5}
+  .rateMini .rmRow span:last-child{color:#d8dee6}
+  .pickHint{font-size:var(--fs-md);color:var(--txt-hud);text-align:center;margin-bottom:12px}.pickHint b{color:#fff}   /* 난이도 패널 등과 공용 */
+  /* 시민 프로필 설명 */
+  .czDesc{font-size:var(--fs-md);color:#c2c8d2;line-height:1.5}
+  .czDesc b{color:var(--neon)}
+  .czCost{color:var(--gold);font-weight:800;margin-left:3px}
+  @keyframes grPop{0%{transform:scale(.92);opacity:.4}60%{transform:scale(1.03)}100%{transform:scale(1);opacity:1}}
+  /* 테스트 도감(폰 밖 우측 고정 패널) — 28종 등급별 카드. 탭=즉시 소환, 상단=랜덤 뽑기 */
+  .gachaDex{position:fixed;top:50%;right:16px;transform:translateY(-50%);z-index:60;
+    display:flex;flex-direction:column;gap:6px;width:236px;max-height:94vh;overflow-y:auto;
+    padding:0 12px 12px;box-sizing:border-box;border-radius:13px;
+    background:linear-gradient(180deg,rgba(14,12,18,.97),rgba(8,7,11,.98));
+    border:1px solid rgba(120,140,170,.28);box-shadow:0 0 34px -8px #000,inset 0 0 0 1px rgba(255,255,255,.03)}
+  .gxTop{display:flex;align-items:center;justify-content:space-between;gap:8px;position:sticky;top:0;
+    background:linear-gradient(180deg,rgba(14,12,18,.99),rgba(14,12,18,.86));padding:11px 0 7px;margin-bottom:1px;z-index:2}
+  /* 폰이 화면을 꽉 채우는 좁은 뷰포트에서는 겹치므로 숨김 */
+  @media(max-width:760px){.gachaDex{display:none !important}}
+  .gachaDex.hide{display:none !important}   /* 관리자 샌드박스 등 네모네모 외 구역에서 가챠 도감 숨김 */
+  .gxTitle{font-size:var(--fs-md);font-weight:800;color:#cdd6e2;letter-spacing:.4px}
+  .gxTitle small{font-weight:600;color:var(--txt-mute);margin-left:4px}
+  .gxRoll{font-size:var(--fs-md);font-weight:800;color:var(--gold-lt);padding:4px 11px;border-radius:var(--r-md);
+    background:linear-gradient(180deg,rgba(48,36,18,.85),rgba(14,10,6,.9));border:1px solid #6a5520;
+    box-shadow:0 0 10px -5px #ffcf5e;cursor:pointer;white-space:nowrap}
+  .gxRoll:active{transform:scale(.95)}
+  .gxRow{display:flex;align-items:center;gap:6px}
+  .gxTag{flex:0 0 30px;font-size:var(--fs-xs);font-weight:800;text-align:center;letter-spacing:.2px;color:var(--tc);text-shadow:0 0 6px var(--tc)}
+  .gxCells{display:flex;gap:5px;flex:1;min-width:0}
+  .gxCell{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;
+    padding:3px 1px 4px;border-radius:var(--r-md);background:rgba(12,10,14,.5);border:1px solid var(--tc);box-shadow:0 0 9px -6px var(--tc)}
+  .gxCell:active{transform:scale(.93)}
+  .gxThumb{position:relative;width:33px;height:33px;border-radius:var(--r-md);overflow:hidden;
+    background:radial-gradient(circle at 50% 35%,rgba(255,255,255,.08),rgba(0,0,0,.35));border:1px solid var(--tc)}
+  .gxThumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+  .gxThumb svg{position:absolute;inset:0;width:100%;height:100%;color:var(--tc)}
+  .gxName{font-size:8.5px;font-weight:700;color:#e2e7ef;line-height:1;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .gxStar{font-size:7px;line-height:1;letter-spacing:-1.2px;text-shadow:0 0 4px currentColor}
+  /* 뽑기 비콘(유닛뽑기 보드) — 시민이 올라서면 뽑기 */
+  .drawZone{position:absolute;transform:translate(-50%,-50%);z-index:9;pointer-events:none;width:0;height:0}
+  /* 바닥 링 = 캔버스 금속 패드 테두리에 정확히 얹히는 원근 타원(평면 원 제거 — 3D 비콘과 한 공간) */
+  .drawZone .dzRing{position:absolute;left:0;top:5px;transform:translate(-50%,-50%);width:56px;height:33px;border-radius:50%;
+    border:1.6px solid var(--neon-soft);
+    box-shadow:0 0 12px -5px var(--neon-glow),inset 0 0 12px -6px var(--neon-glow)}
+  .drawZone .dzFx{position:absolute;inset:-6px;border-radius:50%;pointer-events:none;
+    background:radial-gradient(ellipse,var(--neon-glow),transparent 66%);filter:blur(3px);opacity:.3;animation:dzAura 2.4s ease-in-out infinite}
+  /* 아이콘 = 비콘 꼭대기 위 공중 부유(살짝 둥실) */
+  .drawZone .dzGlyph{position:absolute;left:0;top:-26px;transform:translateX(-50%);width:19px;height:19px;color:var(--neon);
+    filter:drop-shadow(0 0 3px var(--neon-glow));animation:dzBob 2.6s ease-in-out infinite}
+  .drawZone .dzBadge{position:absolute;left:10px;top:-33px;font-family:var(--font-num);font-size:var(--fs-xs);font-weight:800;color:#f0eaea;
+    background:rgba(8,6,8,.82);border:1px solid var(--neon-soft);border-radius:var(--r-md);padding:0 3px;line-height:1.35}
+  .drawZone .dzLabel{position:absolute;left:0;top:26px;transform:translateX(-50%);display:flex;align-items:center;gap:3px;
+    padding:2px 6px;border-radius:var(--r-md);background:rgba(6,5,8,.72);border:1px solid var(--metal-edge)}
+  .drawZone .dzName{font-size:8.5px;font-weight:800;color:#e6e0e0;letter-spacing:.2px;white-space:nowrap}
+  .drawZone .dzCost{display:flex;align-items:center;gap:2px;font-family:var(--font-num);font-size:var(--fs-xs);font-weight:700;color:#e0c98a}
+  .drawZone .dzCost .dzMax{color:#9ad6a0;font-weight:800;letter-spacing:.5px}
+  .drawZone .dzCost .dzCd{color:#ff8a8a;font-weight:800;letter-spacing:.3px}   /* 개인 보스 쿨다운 */
+  .drawZone .dzCost .dzGo{color:#ff5b5b;font-weight:800;letter-spacing:.5px;text-shadow:0 0 6px rgba(255,59,59,.6)}   /* 소환 가능 */
+  .drawZone.active .dzRing{border-color:var(--neon);box-shadow:0 0 18px -3px var(--neon-glow),inset 0 0 14px -4px var(--neon-glow)}
+  .drawZone.active .dzFx{opacity:.55;animation-duration:1.1s}
+  .drawZone.active .dzGlyph{animation-duration:1.2s}
+  /* ×10 비콘 = 상위 행동: 큰 바닥 링 + 바깥 이중 타원 링 */
+  .drawZone.big .dzRing{width:70px;height:42px}
+  .drawZone.big .dzRing::after{content:'';position:absolute;inset:-5px;border-radius:50%;pointer-events:none;
+    border:1px solid var(--neon-faint);box-shadow:0 0 10px -5px var(--neon-glow)}
+  .drawZone.big .dzGlyph{width:23px;height:23px;top:-30px}
+  .drawZone.big .dzBadge{left:12px;top:-37px}
+  .drawZone.big .dzLabel{top:31px}
+  @keyframes dzAura{0%,100%{opacity:.22;transform:scale(.95)}50%{opacity:.45;transform:scale(1.06)}}
+  @keyframes dzBob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,-2px)}}
+  /* 생산 버튼: 투명 + 빨강 네온 엣지 */
+  
+  
+  
+  
+  
+  /* ── 업그레이드 패널: 좌(초상화+설명/진행) | 우(정사각 커맨드 그리드) ── */
+  
+  @keyframes upgPulse{0%,100%{opacity:.5}50%{opacity:1}}
+  /* 좌측: 건물 초상화 + 메타(설명 또는 진행) */
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  /* 진행 표시(좌측, 연구 중) */
+  
+  
+  
+  
+  
+  
+  /* 우측: 1:1 정사각 커맨드 그리드 — 패널 높이를 꽉 채움(우측 끝까지) */
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  /* 연구 가능 = 솟은 입체 버튼 */
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  /* 연구 중 = 취소 버튼(빨강, 그리드의 해당 슬롯에 표시) */
+  
+  
+  
+  
+  /* ══ 재사용 커맨드 그리드(업그레이드·생산·건설 공용) — data-mode로 강조색만 교체 ══ */
+  .cmdG{position:relative;display:flex;flex-direction:column;flex:1;width:100%;height:100%;min-height:0;
+    --ca:var(--neon);--caG:var(--neon-glow);--caS:var(--neon-soft);--caL:var(--neon-lt);
+    --cgDim:#8a94a6;--cgMuted:#657085;--cgGood:#6ff0a0;--cgBad:#ff7676;--cgCr:#8fd8ff;--cgEn:#ffd24a;--cgPop:#c8b6ff}
+  .cmdG[data-mode="prod"]{--ca:#5cd6ff;--caG:rgba(92,214,255,.45);--caS:rgba(92,214,255,.5);--caL:#dff4ff}
+  .cmdG[data-mode="build"]{--ca:var(--gold);--caG:rgba(255,210,74,.45);--caS:rgba(255,210,74,.5);--caL:var(--gold-lt)}
+  .cmdG[data-mode="boss"]{--ca:#ff5c6e;--caG:rgba(255,92,110,.45);--caS:rgba(255,92,110,.5);--caL:#ffd6db}   /* 보스 시트 = 붉은 강조 */
+  .cmdG{position:relative}
+  /* 건물 조작(일꾼 스텝퍼·랠리·부양)과 전체지정은 **판 밖 오른쪽 위**에 띄운다.
+     머리줄 안에 두면 버튼 높이(38px)가 머리줄을 밀어 올려 그리드가 그만큼 짧아졌다.
+     ── 한 판 트레이(2026-08-19 · E+S3안) ────────────────────────────────
+     사냥터 스킬 바(.hbTray/.hbSk)와 **같은 구조**다: 회색 판 하나에 검정 칸을 담고, 판·칸 모두 모서리 7px 컷.
+     그래서 '붉은 테두리 = 지금 만질 수 있는 칸'이 스킬과 조작 버튼에서 한 뜻이 된다.
+     ⛔ 예전처럼 버튼마다 다른 색(랠리=초록·부양=파랑·전체지정=시안)을 주지 말 것 — 특히 시안은
+        DESIGN §2 에서 '지금 선택된 것' 전용(화면당 한 곳)이라 상시로 쓰면 그 뜻이 닳는다. */
+  .cmdG .cgTopOut{position:absolute;right:0;bottom:calc(100% + 10px);display:flex;align-items:stretch;gap:3px;padding:3px;
+    z-index:31;pointer-events:auto;
+    background:var(--trayPanel);border:1px solid var(--metal-edge);border-radius:var(--r-bar);
+    clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
+  .cmdG .cgHead{display:flex;align-items:center;gap:9px;padding:5px 2px 9px;position:relative;flex:none}
+  .cmdG .cgHead::after{content:'';position:absolute;left:2px;right:6px;bottom:0;height:1px;background:linear-gradient(90deg,var(--caS),transparent 72%)}
+  /* 머리줄 초상(.cgPort)은 폐지했다(2026-08-14) — 제목은 글자 하나로 읽는다. 모델의 icon 은 그대로 두되 그리지 않는다.
+     ⚠ 되살릴 거면 renderCmdGrid 의 머리줄 마크업도 같이 되돌릴 것(여기 CSS만 넣으면 아무 데도 안 붙는다). */
+  /* 제목과 HP/실드는 **같은 줄**이다. 세로로 쌓으면 머리줄이 그만큼 두꺼워지고 아래 그리드가 눌린다
+     (실측: 일꾼 42.8px ↔ 건물 52px → 그리드 97.2 ↔ 88). 설명 줄(.cgS)만 아래로 내린다. */
+  .cmdG .cgTtl{flex:1;min-width:0;display:flex;align-items:baseline;flex-wrap:wrap;gap:0 8px}
+  .cmdG .cgN{font-size:var(--fs-xl);font-weight:800;color:#fff;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .cmdG .cgN .nsub{font-size:10px;font-weight:700;color:#9fb0c2;text-shadow:none;margin-left:3px}   /* 이름 옆 작은 괄호 수치(라바 수 등) */
+  .cmdG .cgS{flex-basis:100%;margin-top:1px;font-size:var(--fs-xs);color:var(--cgDim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .cmdG .cgS b{color:#cfe0f5;font-weight:700}
+  .cmdG .cgHpsh{flex:none;display:flex;gap:9px;font-family:var(--font-num);font-weight:800;font-size:12.5px;line-height:1}
+  .cmdG .cgHpsh .hpv{color:#7ee081} .cmdG .cgHpsh .shv{color:#8fd8ff} .cmdG .cgHpsh .env{color:#b06bff}
+  .cmdG .cgHpsh .stAb{font-style:normal;font-size:8.5px;font-weight:700;opacity:.7;margin-right:2px;vertical-align:1px;letter-spacing:.3px}   /* S/H/E 약자 프리픽스(아이콘 대체) */
+  .cmdG .cgPill{flex:none;align-self:flex-start;font:800 9px/1 sans-serif;letter-spacing:.5px;padding:4px 6px;border-radius:5px;color:var(--caL);background:rgba(255,255,255,.04);border:1px solid var(--caS)}
+  .cmdG .cgPill.idle{color:var(--cgMuted);border-color:var(--metal-edge)}
+  /* 칸 = 스킬 칸(.hbSk)과 같은 값 — 완전 검정 면 + 붉은 알파 그라데 테두리 + 금속 링 + 모서리 컷 7px.
+     ⚠ 치수는 2026-08-19 에 **0.8배**로 줄였다(38 → 30px · 아이콘 21 → 17px · 트레이 여백 4 → 3px).
+        판 '밖'에 떠 있어서 클수록 전장을 그만큼 더 가린다.
+     ⛔ `clip-path` 는 7px 그대로다 — 스킬 칸·업그레이드 카드와 **같은 값이어야 하는 계약**이고 스모크가 대조한다. */
+  .cmdG .cgLift,.cmdG .cgRally,.cmdG .cgSelAll{flex:none;width:30px;height:30px;padding:0;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;color:#ececec;
+    border:1px solid transparent;border-radius:var(--r-bar);
+    clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
+    background:var(--bpFace) padding-box,var(--trayEdge) border-box,var(--metal-ring-n) border-box;
+    box-shadow:0 0 7px -5px rgba(255,59,59,.35)}
+  .cmdG .cgLift svg,.cmdG .cgRally svg,.cmdG .cgSelAll svg{width:17px;height:17px;display:block}
+  /* 켜짐(랠리 지정 중 · 부양 중) = 붉은 발광. 스킬 칸의 '지금 도는 중'과 같은 신호다 */
+  .cmdG .cgLift.on,.cmdG .cgRally.on{background:var(--bpFace) padding-box,var(--trayEdgeOn) border-box,var(--metal-ring-n) border-box;
+    box-shadow:0 0 9px -3px rgba(255,59,59,.65)}
+  .cmdG .cgLift:active,.cmdG .cgRally:active,.cmdG .cgSelAll:active{transform:translateY(1px)}
+  .cmdG .cgLift.busy{opacity:.45;cursor:default}
+  /* 일꾼 수(S3안) — **넓은 칸 하나**다. 세 칸으로 늘어놓으면 트레이가 5칸이 되어
+     숫자 조정이 랠리·부양보다 커 보였다. 껍데기는 위 칸과 같고 안쪽만 구분선으로 나눈다. */
+  .cmdG .cgGasAuto{flex:none;width:61px;height:30px;display:flex;align-items:stretch;gap:0;padding:0;overflow:hidden;
+    border:1px solid transparent;border-radius:var(--r-bar);
+    clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
+    background:var(--bpFace) padding-box,var(--trayEdge) border-box,var(--metal-ring-n) border-box;
+    box-shadow:0 0 7px -5px rgba(255,59,59,.35)}
+  /* 🎛 UI 조작 아이콘(투명 배경 계열) — 판이 없으므로 버튼 면이 색을 낸다 */
+  .cmdG .uiIco{width:17px;height:17px;display:block;object-fit:contain}
+  /* 🗑 종류 지정 해제 아이콘 — 13 → 17 → 20px(2026-08-19). 칸 아래 좁은 줄에서 13px 은 눌러야 할 것으로 안 보였다.
+     색은 그대로 회색이고 누를 때만 빨강이다 — 커진 것은 크기뿐이라 유닛 아트보다 세지지 않는다. */
+  .cmdG .cgTrash .uiIco{width:20px;height:20px}
+  .cmdG .cgTrash{display:flex;align-items:center;justify-content:center;width:100%;margin-top:auto;color:#6d7787;cursor:pointer;padding:0}   /* 🗑 종류 지정 해제 — 파괴 동작이라도 평소엔 초상보다 약해야 한다 */
+  .cmdG .cgTrash svg{width:20px;height:20px;display:block}
+  .cmdG .cgTrash:active{color:var(--neon);transform:scale(.88)}
+  .cmdG .cgProg .pl .pt{color:var(--caL);font:800 9px/1 var(--font-num);margin-left:4px;letter-spacing:.2px}   /* 생산 중 옆 남은시간(작게) */
+  /* ⚠ `.gaBtn` 은 전역에도 같은 이름의 다른 버튼이 있다 — 반드시 `.cmdG .cgGasAuto` 아래로 좁혀 쓸 것 */
+  .cmdG .cgGasAuto .gaBtn{flex:none;width:18px;height:100%;padding:0;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    background:none;border:0;border-radius:0;color:#c3cad3;font:700 12px/1 var(--font-num)}
+  .cmdG .cgGasAuto .gaBtn:first-of-type{border-right:1px solid rgba(255,255,255,.10)}
+  .cmdG .cgGasAuto .gaBtn:last-of-type{border-left:1px solid rgba(255,255,255,.10)}
+  .cmdG .cgGasAuto .gaBtn:active{background:rgba(255,255,255,.07)}
+  .cmdG .cgGasAuto .gaN{flex:1;min-width:0;height:100%;display:flex;align-items:center;justify-content:center;
+    padding:0;text-align:center;font:800 13px/1 var(--font-num);color:#ececec}
+  .cmdG .cgBody{display:flex;gap:8px;align-items:stretch;flex:1;min-height:0}
+  /* 좌측 보조 정보 */
+  .cmdG .cgInfo{flex:0 0 31%;max-width:158px;min-width:110px;display:flex;flex-direction:column;gap:4px;padding:7px 8px;overflow:hidden;
+    background:var(--bpFace);border:1px solid var(--metal-edge);border-radius:9px}
+  .cmdG .cgInfo:has(.cgUnits){padding-top:2px;padding-bottom:3px}   /* 👥 유닛 HP 칩 프로필: 세로 패딩 축소 → 칩 영역 넓혀 칩/텍스트 1.2× · 8기 4줄 무스크롤 유지 */
+  .cmdG .cgEb{font:800 8px/1 sans-serif;letter-spacing:1px;color:var(--cgMuted)} .cmdG .cgDn{font-size:var(--fs-md);font-weight:800;color:#eaf1fb;line-height:1.15;word-break:keep-all}
+  .cmdG .cgDd{font-size:9.5px;color:var(--cgDim);line-height:1.4;word-break:keep-all;overflow-wrap:break-word}   /* 한글 단어 안 끊기고 줄바꿈(잘림 방지) */
+  .cmdG .cgVal{display:flex;align-items:baseline;gap:4px;font-family:var(--font-num);font-weight:700}
+  .cmdG .cgVal .cur{font-size:13px;color:#c2ccda;font-variant-numeric:tabular-nums} .cmdG .cgVal .arw{color:var(--cgMuted);font-size:10px}
+  .cmdG .cgVal .nxt{font-size:16px;color:var(--ca);text-shadow:0 0 7px var(--caG);font-variant-numeric:tabular-nums} .cmdG .cgVal .u{font-size:8.5px;color:var(--cgMuted);font-weight:600}
+  .cmdG .cgVal.sm{margin-top:3px;gap:3px}   /* 진행 바 아래 작은 단계 표시(0Lv ▸ 1Lv) */
+  .cmdG .cgVal.sm .cur{font-size:9.5px;color:#93a1b4} .cmdG .cgVal.sm .arw{font-size:8px} .cmdG .cgVal.sm .nxt{font-size:10.5px;text-shadow:none}
+  .cmdG .cgStats{display:flex;flex-direction:column;gap:2px} .cmdG .cgStat{display:flex;justify-content:space-between;font-size:9.5px}
+  .cmdG .cgStat span{color:#9aa6b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cmdG .cgStat b{color:#e6eefc;font-family:var(--font-num);font-size:11.5px;font-variant-numeric:tabular-nums}
+  .cmdG .cgStats.cgScr .cgStat+.cgStat{border-top:1px solid rgba(255,255,255,.045)}   /* 행 구분 — 5줄이 한 덩어리로 뭉치지 않게 */
+  /* 👥 다중 지정: 유닛별 HP 칩 그리드 — 칩 탭=개별 지정 */
+  .cmdG .cgUnits{display:grid;grid-template-columns:repeat(2,1fr);gap:2px;overflow-y:auto;align-content:start;grid-auto-rows:calc((100% - 6px)/4);flex:1 1 auto;min-height:0;max-height:none;margin-top:0;scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}   /* 👥 유닛별 HP 칩 그리드 — 2열 고정 · 행 높이=구역의 1/4(gap 3칸 제외) → 8기=4줄이 구역을 정확히 꽉 채움 / 소수 선택 시엔 늘어나지 않고 정상 높이 유지 / 8기 초과=스크롤 */
+  .cmdG .cgUChip{position:relative;min-height:11px;border-radius:3px;background:rgba(0,0,0,.5);border:1px solid var(--glass);overflow:hidden;cursor:pointer;box-shadow:inset 0 0 3px rgba(0,0,0,.6)}   /* 높이=그리드 행 stretch로 채움(min 11px) */
+  .cmdG .cgUChip:active{border-color:var(--ca)}
+  .cmdG .cgUFill{position:absolute;left:0;top:50%;transform:translateY(-50%);height:7px;border-radius:2px;transition:width .15s linear,background .2s}   /* HP 선 — 세로 중앙 · 비율↓=빨강(hpBarColor) · 칩 커짐에 맞춰 두께 6→7px */
+  .cmdG .cgUHp{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:800 8.5px/1 var(--font-num);color:#fff;text-shadow:0 1px 1px #000,0 0 2px #000;font-variant-numeric:tabular-nums;letter-spacing:-.3px;pointer-events:none}   /* 칩 중앙 HP 수치 40/40(바 위 오버레이) · 가독성 7→8.5px */
+  .cmdG .cgUMore{align-self:stretch;height:10px;display:flex;align-items:center;justify-content:center;color:var(--cgMuted);font:800 8px/1 sans-serif;border:1px dashed var(--glass);border-radius:3px}
+  .cmdG .cgStats.cgScr{flex:1 1 auto;min-height:0;max-height:none;gap:1px;justify-content:flex-start;overflow-y:auto;padding-right:3px;scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}   /* 혼합 다중지정 좌측 종류 목록 = 왼쪽 구역 전체를 써서 4종류가 스크롤 없이 딱 맞음(행이 늘어나 채움), 초과 시 스크롤 */
+  .cmdG .cgStats.cgScr .cgStat{flex:1 1 0;min-height:11px;align-items:center}   /* 행이 남는 높이를 나눠 가짐(min 11px) → 4줄 꽉 참 · 초과분은 min 유지하며 스크롤 */
+  .cmdG .cgUnits::-webkit-scrollbar,.cmdG .cgStats.cgScr::-webkit-scrollbar{width:4px;height:4px}
+  .cmdG .cgUnits::-webkit-scrollbar-thumb,.cmdG .cgStats.cgScr::-webkit-scrollbar-thumb{background:rgba(120,140,170,.4);border-radius:3px}
+  .cmdG .cgUnits::-webkit-scrollbar-track,.cmdG .cgStats.cgScr::-webkit-scrollbar-track{background:transparent}
+  /* ↩ 전체(소프트선택 복귀)는 `.cgLift` 변형이라 **트레이 칸 껍데기·크기를 그대로 물려받는다**(전용 치수 없음).
+     자리는 트레이 맨 왼쪽 — `renderCmdGrid` 가 `m.back` 을 `.cgTopOut` 앞에 붙인다. */
+  .cmdG .cgProg{margin-top:1px} .cmdG .cgProg .pl{display:flex;justify-content:space-between;font-size:8.5px;color:var(--cgMuted);margin-bottom:2px} .cmdG .cgProg .pl b{color:var(--caL);font-family:var(--font-num);font-size:10px}
+  .cmdG .cgBar{height:6px;border-radius:3px;background:rgba(0,0,0,.55);overflow:hidden;box-shadow:inset 0 0 4px rgba(0,0,0,.7)}
+  .cmdG .cgBar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,color-mix(in srgb,var(--ca) 55%,#000),var(--ca));box-shadow:0 0 7px var(--caG);transition:width .12s linear}
+  .cmdG .cgQBar{height:3px;border-radius:2px;background:rgba(0,0,0,.5);overflow:hidden;margin-top:3px}   /* 🔢 진행 바 아래 얇은 대기열 구분선 */
+  .cmdG .cgQBar i{display:block;height:100%;border-radius:2px;background:#fff;box-shadow:0 0 5px rgba(255,255,255,.45);transition:width .15s linear,background .2s linear}
+  .cmdG .cgDcost{display:flex;align-items:center;gap:5px;margin-top:auto;padding-top:2px;font-family:var(--font-num);font-weight:800;font-size:11.5px;flex-wrap:wrap}
+  .cmdG .cgDcost .time{color:var(--cgMuted);font-size:9.5px;width:100%}
+  /* 🔢 생산 대기열(최대 5) — 왼쪽 정보 영역. 앞 칸=진행바, 탭=취소(100% 환불) */
+  .cmdG .cgQ{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:1fr;gap:4px;margin-top:3px;flex:1;min-height:0} .cmdG .cgQlbl{font:800 8px/1 sans-serif;letter-spacing:.5px;color:var(--cgMuted);margin-top:2px}
+  .cmdG .cgQ .qs{border-radius:6px;background:rgba(0,0,0,.42);border:1px solid var(--glass);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+  .cmdG .cgQ .qs.empty{opacity:.32;background:rgba(0,0,0,.22)}
+  .cmdG .cgQ .qs.front{border-color:var(--ca);box-shadow:0 0 6px var(--caG)}
+  .cmdG .cgQ .qs.rdy{border-color:#46f06a;background:rgba(70,240,106,.16);box-shadow:0 0 5px rgba(70,240,106,.35)}
+  .cmdG .cgQ .qs .qpro{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:16px;line-height:1}
+  .cmdG .cgQ .qs .qpro>*{max-width:100%;max-height:100%} .cmdG .cgQ .qs .qpro img{width:100%;height:100%;object-fit:cover} .cmdG .cgQ .qs .qpro .pemoji{font-size:22px}
+  .cmdG .cgQ .qs .qb{position:absolute;left:0;bottom:0;height:3px;background:var(--ca);box-shadow:0 0 5px var(--caG);transition:width .12s linear}
+  /* 그리드(주역) + 페이저 */
+  .cmdG .cgCol{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+  .cmdG .cgGrid{flex:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(2,1fr);gap:4px;min-height:0}
+  /* ⚠ 비용 줄은 아래에 붙박이(.cgCost margin-top:auto)이고 초상은 정사각으로 크기가 묶여 있다 →
+     **수치와 비용 사이의 틈 = 남는 높이 전부**다. 틈만 따로 줄일 수가 없다(gap 을 줄이면 그만큼 남는 높이가 늘어 제자리).
+     그래서 남는 높이를 초상이 먹게 한다 — 좌우 여백을 줄이면 초상이 그만큼 커지고 틈이 닫힌다. */
+  .cmdG .cgSlot{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:2px;cursor:pointer;padding:7px 2px 6px;touch-action:none;
+    border:1px solid var(--metal-edge);border-radius:var(--r-lg);background:var(--bpFace);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05);transition:.12s}
+  .cmdG .cgSlot::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent)}
+  /* 초상은 남는 높이만 갖는다(flex:0 1 auto + min-height:0) — 글자 줄을 밀어내지 않게.
+     이미지는 object-fit:contain 이라 눌려도 찌그러지지 않고 레터박스가 된다. */
+  /* 프로필 칸은 **정사각형**이다 — 유닛 초상이든 업그레이드·건물 아이콘이든 같은 크기(2026-08-19).
+     ⚠ 예전 기본값 1.2 는 유닛만 가로로 긴 칸이라, 정사각(512²·256²)으로 구운 초상의 **위아래가 잘려** 있었고
+       바로 옆 업그레이드 아이콘(정사각)과 크기가 달라 보였다. 초상 원본이 정사각이므로 1 이 맞다.
+     ⚠ flex:0 1 auto + min-height:0 이라 칸이 좁으면 세로로 눌려 다시 직사각이 된다 — 스모크가 정사각인지 검사한다.
+     예외는 벙커(.cgBunk 1.35) 하나뿐. */
+  .cmdG .cgPro{width:100%;aspect-ratio:1;flex:0 1 auto;min-height:0;position:relative;overflow:hidden;color:var(--ca);border:1px solid var(--caS);border-radius:var(--r-md);
+    background:var(--bpTile);display:flex;align-items:center;justify-content:center;font-size:22px}
+  /* 스캔라인 + 아래쪽 비네트 — 초상이 커진 만큼 재질을 주고 이름줄과 분리한다 */
+  .cmdG .cgPro::after{content:'';position:absolute;inset:0;
+    background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.26) 2px 3px),
+               linear-gradient(180deg,rgba(0,0,0,0) 58%,rgba(4,6,10,.55))}
+  .cmdG .cgPro svg{width:76%;height:76%} .cmdG .cgPro img{width:100%;height:100%;object-fit:cover} .cmdG .cgPro .pemoji{font-size:20px}
+  /* 생성 아이콘은 정사각 원본 그대로 — 크롭 금지, 칸도 정사각으로 */
+  .cmdG .cgPro:has(.icoImg){aspect-ratio:1}
+  .cmdG .cgPro img.icoImg{object-fit:contain;transform:none}
+  /* 업그레이드 아이콘 = 네모 초상 틀은 유지하고, 안쪽 배지 원만 없앤 뒤 아이콘을 크게 */
+  .cmdG .cgPro svg.cgIco{width:84%;height:84%}            /* SVG 폴백만 84% */
+  .cmdG .cgPro:has(img.cgIco){aspect-ratio:1}
+  .cmdG .cgPro img.cgIco{width:100%;height:100%;object-fit:contain}   /* 실제 아이콘 이미지 = 초상처럼 칸을 꽉 채움 */
+  .cmdG .cgPro:has(img.cgIco)::after{display:none}        /* 실제 아이콘 위에는 가로 스캔라인을 덮지 않는다(아이콘 자체 질감이 있음) */
+  .cmdG .cgSlot.iconFill{justify-content:center;padding:6px} .cmdG .cgSlot.iconFill .cgPro{width:72%;height:auto;aspect-ratio:1;border:none;background:none;box-shadow:none} .cmdG .cgSlot.iconFill .cgPro svg{width:100%;height:100%} .cmdG .cgSlot.iconFill .cgName,.cmdG .cgSlot.iconFill .cgCost{display:none}   /* 아이콘만 채우는 칸(일시정지 등): 빈 이름/비용 줄 숨겨 아이콘이 칸 정중앙에 크게 */
+  /* ⚠ 글자 줄은 절대 눌리지 않는다(flex:none). 칸이 모자라면 초상이 줄어든다 —
+     반대로 두면 이름이 4px 로 뭉개져 읽을 수 없게 된다(오토배틀 건설 카드에서 실제로 그랬다). */
+  /* ⚠ 줄높이는 글자 잉크보다 커야 한다. 10px 한글의 잉크는 최대 11px 인데 줄상자가 10.5px(1.05)여서
+     overflow:hidden 에 **윗획이 잘렸다**(체력·공격력 등). 1.3 = 13px 로 잉크(11px)에 여유 2px.
+     늘어난 만큼은 아래 여백(.cgSub margin-top)에서 뺀다 — 카드 총 높이는 그대로 두고 이름만 살린다.
+     ⚠ 비율(단위 없는 1.3)이라 renderCmdGrid 의 폰트 축소(최소 6px)를 그대로 따라간다. px 로 박지 말 것. */
+  /* ⚠ align-self:stretch 가 없으면 칸이 `align-items:center` 라 이름 폭이 **글자 폭 그대로**가 된다.
+     그러면 renderCmdGrid 의 폰트 축소 루프(scrollWidth>clientWidth)가 영원히 거짓이라 안 돌고,
+     긴 이름이 카드 밖으로 삐져나가 좌우가 잘린다(실측: '파괴형 관통 탄두' 가 양쪽으로 넘쳤다).
+     폭을 칸에 맞춰 고정해야 축소도 돌고 말줄임도 제자리에서 걸린다. */
+  .cmdG .cgName{flex:none;align-self:stretch;font:800 10px/1.3 sans-serif;letter-spacing:-.2px;color:#e6eefc;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* 수치 줄은 **최대한 얇게** — 이 줄이 없는 칸(건설 등)과 높이 차이가 작아야 한 격자 안에서 카드가 고르게 보인다. */
+  .cmdG .cgSub{flex:none;font:800 7px/1 var(--font-num);color:var(--caL);text-align:center;margin-top:-1px;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .cmdG .cgSlot.max .cgSub{color:var(--cgGood)}
+  .cmdG .cgCost .ri{width:8px;height:8px;flex:none}   /* 옆 숫자와 같은 높이 — 아이콘이 숫자보다 커 보이지 않게 */
+  .cmdG .cgDcost .ri{width:12px;height:12px;flex:none}
+  /* 🧱 벙커 탑승 슬롯: 가로 꽉 찬 초상 → 이름 → HP 세로 스택 */
+  .cmdG .cgSlot.cgBunk{justify-content:flex-start;gap:3px;padding:5px 4px}
+  .cmdG .cgSlot.cgBunk .cgPro{width:100%;height:auto;aspect-ratio:1.35;border-radius:6px}
+  .cmdG .cgSlot.cgBunk .cgPro svg{width:62%;height:62%} .cmdG .cgSlot.cgBunk .cgPro img{width:100%;height:100%}
+  .cmdG .cgBunkHp{font:800 10px/1 var(--font-num);color:#ff9a9a;text-align:center;margin-top:auto;text-shadow:0 1px 2px #000}
+  .cmdG .cgCost{display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap;line-height:1;margin-top:auto}
+  .cmdG[data-build="1"] .cgName{text-overflow:clip;max-width:none}   /* 생략(...) 없이 — JS가 폰트 축소로 한 줄 */
+  .cmdG[data-build="1"] .cgCost{flex-direction:column;flex-wrap:nowrap;gap:0;margin-top:auto}   /* 미네랄(위)/가스(아래) 각 한 줄 — 자리 고정 */
+  .cmdG[data-build="1"] .cgCost .cc{font-size:8.5px;min-height:9px;display:flex;align-items:center;justify-content:center;gap:2px}   /* 빈 줄도 높이 유지(자리 예약) */
+  .cmdG .cgCost.cgRwd{flex-direction:row;flex-wrap:nowrap;gap:4px;font-size:9px;font-weight:800;color:var(--cgGood);white-space:nowrap}   /* 보스 셀: 소환 무료 → 코스트 대신 처치 보상(+초록=획득 신호, 한 줄) */
+  .cmdG .cgCost.cgRwd span{display:inline-flex;align-items:center;gap:2px}
+  
+  .cmdG .cc{display:inline-flex;align-items:center;gap:1px;font:800 10px/1 var(--font-num);font-variant-numeric:tabular-nums}
+  .cmdG .cc.cr{color:var(--cgCr)} .cmdG .cc.en{color:var(--cgEn)} .cmdG .cc.hp{color:#ff8a8a}   /* 스킬 HP 코스트(아드레날린) */
+  .cmdG .cgMeta{position:absolute;top:5px;right:5px;display:inline-flex;align-items:center;gap:1px;font:800 8.5px/1 var(--font-num);
+    color:var(--cgPop);background:rgba(10,12,20,.72);border:1px solid rgba(200,182,255,.3);border-radius:4px;padding:2px 3px;font-variant-numeric:tabular-nums;z-index:2}
+  /* ⚠ z-index 2 인 이유: 배지는 .cgPro 의 '형제'인데 초상 이미지(.icoImg)도 z-index 1 이다.
+     같은 층이면 트리 순서가 늦은 초상이 이겨 배지가 통째로 가려진다(생성 아이콘을 쓰는 카드에서 실제로 그랬다). */
+  .cmdG .cgMeta.lv{color:var(--caL);border-color:var(--caS)}
+  .cmdG .cgSlot.sel{border-color:var(--ca);box-shadow:0 0 13px -2px var(--caG),inset 0 0 10px rgba(0,0,0,.35)}
+  .cmdG .cgSlot.sel .cgPro{box-shadow:0 0 9px -2px var(--caG)}
+  .cmdG .cgSlot:active{transform:translateY(1px)} .cmdG .cgSlot.dim{opacity:.5} .cmdG .cgSlot.dim .cc{color:var(--cgBad)!important}
+  /* 자동화 시트 셀: 이름 아래 on/off 토글 스위치(시각용 · 클릭은 셀 전체가 처리) */
+  .cgSwWrap{display:flex;align-items:center;justify-content:center;margin-top:2px;pointer-events:none;font-size:11px}
+  .cgSwWrap.lk{color:#c8b06a}
+  .cgSw{display:inline-block;width:30px;height:15px;border-radius:8px;background:rgba(255,255,255,.16);position:relative;transition:.14s;pointer-events:none}
+  .cgSw::after{content:'';position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:#cfd6dc;transition:.14s}
+  .cmdG .cgSlot.sel .cgSw{background:#46f06a}
+  .cmdG .cgSlot.sel .cgSw::after{left:17px;background:#0c1410}
+  .cmdG .cgSlot.max{cursor:default;opacity:.6} .cmdG .cgSlot.busy .cgPro{color:var(--cgBad);border-color:var(--cgBad)} .cmdG .cgSlot.busy .cgName{color:var(--cgBad)}
+  .cmdG .cgSlot.empty{border-style:dashed;border-color:var(--glass);background:linear-gradient(180deg,rgba(10,10,10,.5),rgba(0,0,0,.6));cursor:default;box-shadow:none} .cmdG .cgSlot.empty::after{display:none}
+  .cmdG .cgPage{display:flex;align-items:center;justify-content:center;gap:7px;height:20px;flex:0 0 auto;margin-left:auto}   /* 헤더 우측 상단 */
+  .cmdG .cgPage button{width:24px;height:19px;border-radius:5px;border:1px solid var(--metal-edge);background:rgba(255,255,255,.04);color:var(--caL);cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center}
+  .cmdG .cgPage button:disabled{opacity:.3;cursor:default} .cmdG .cgPage .dots{display:flex;gap:5px}
+  .cmdG .cgPage .dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.18)} .cmdG .cgPage .dot.on{background:var(--ca);box-shadow:0 0 6px var(--caG)}
+  .cmdG .cgPage .pn{font:800 10px/1 var(--font-num);color:var(--cgDim);letter-spacing:.5px}
+  /* 플레이어 선택: 8인 그리드(4×2) — 깔끔한 다크 카드 + 컬러 액센트 */
+  #plGridWrap{display:flex;flex-direction:column;flex:none;height:var(--bpBodyH);max-height:var(--bpBodyH);min-height:0}   /* 다른 하단 섹션(유닛지정/뽑기/업그레이드)과 동일 높이 — 값은 --bpBodyH 하나뿐 */
+  /* 플레이어 관전 슬롯 = 통일된 SC 카드(메탈+사선 모서리+플레이어색 좌측 액센트+스캔라인) */
+  .plGrid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:minmax(58px,1fr);align-content:stretch;gap:6px;flex:1;min-height:0;padding:2px 0}
+  /* 오토배틀 관전 시트 = 전용 .plbtn 그리드를 시트 호스트에 그대로(커맨드 그리드 아님) */
+  #unitCmd.stkSpec,#btSheetBody.stkSpec{display:flex;flex-direction:column;min-height:0;padding:2px 6px 4px}
+  #unitCmd.stkSpec .plGrid,#btSheetBody.stkSpec .plGrid{flex:1;min-height:0;grid-auto-rows:auto;grid-template-rows:repeat(2,1fr);padding:0}   /* 4×2=8칸이 시트 높이에 꽉 차게 */
+  .plbtn{--pc:var(--info);position:relative;cursor:pointer;overflow:hidden;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;padding:7px 10px;
+    background:var(--bpFace);border:1px solid var(--metal-edge);
+    clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.04);transition:all .12s}
+  .plbtn::after{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--pc);opacity:.6}  /* 좌측 컬러 액센트 */
+  .plbtn::before{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);pointer-events:none}
+  .plbtn:hover{border-color:var(--pc)}
+  .plbtn:active{transform:translateY(1px)}
+  .plbtn.me{border-color:var(--pc);background:linear-gradient(160deg,rgba(58,44,50,.58),rgba(18,12,16,.74));box-shadow:0 0 13px -4px var(--pc),inset 0 1px 0 rgba(255,255,255,.08)}  /* 관전 중 */
+  .plbtn.me::after{opacity:1;box-shadow:0 0 6px var(--pc)}
+  .plbtn.off{cursor:default;pointer-events:none;filter:brightness(.6) saturate(.12)}   /* 빈 자리(미입장): 색 없음 · 흰색 계열 + 약한 어둠 */
+  .plbtn.off::after{opacity:.14}
+  .plbtn.off .plnum{color:#b6bdc8}.plbtn.off .plst{color:#7d8590}
+  .plbtn.mine{cursor:default;pointer-events:none;filter:saturate(.6) brightness(.72)}   /* 내 슬롯: 내 색 유지 · 채도↓·어둡게 · 관전 불가(잠금 아이콘 없음) */
+  .plbtn.mine::after{opacity:.7}
+  .plbtn.gone{cursor:default;pointer-events:none;filter:saturate(.55) brightness(.58)}   /* 탈락: 그 플레이어 색 유지 + 어두운 필터 · 관전 불가 */
+  .plbtn.gone::after{opacity:.5}
+  .plnum{font-size:18px;font-weight:800;font-family:var(--font-num);color:var(--pc);line-height:1;text-shadow:0 1px 2px #000}
+  .plst{font-size:var(--fs-xs);font-weight:700;letter-spacing:.3px;color:#9aa6b4;max-width:96%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  /* ===== 공유 우주 로딩방 배경 (멀티플레이/방 찾기/방 생성/로비 공통) =====
+     게임과 동일한 space_bg 타일을 어둡게 깔고 빨강 비네트로 기존 분위기 유지.
+     아래 화면들은 position:absolute 라서 폰 프레임(#phone) 안에만 적용됨. */
+  .spaceBg{overflow:hidden}
+  .spaceBg::before{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;
+    background:url('assets/tiles/space_bg.webp') center/360px repeat #04050b;
+    animation:spaceDrift 120s linear infinite}
+  .spaceBg::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;
+    background:
+      radial-gradient(ellipse at 50% 34%, rgba(60,10,14,.40), transparent 64%),
+      linear-gradient(180deg, rgba(3,4,10,.70), rgba(2,3,8,.84))}
+  @keyframes spaceDrift{from{background-position:0 0}to{background-position:0 -720px}}
+  /* 오버레이(시작/승패) */
+  /* 시작 화면 — 검정+빨강 네온 카드 */
+  /* 승/패 오버레이 = 게임 화면 위 모달(뒤로 게임이 흐리게 비침) */
+  #ov{position:absolute;inset:0;z-index:46;display:flex;align-items:center;justify-content:center;text-align:center;padding:26px;
+    --aura:rgba(92,214,255,.15);
+    background:radial-gradient(ellipse 300px 220px at 50% 50%,var(--aura),transparent 72%),
+               radial-gradient(circle at 50% 42%,rgba(40,8,12,.3),rgba(3,5,10,.6) 82%);
+    backdrop-filter:blur(2px) saturate(.95);-webkit-backdrop-filter:blur(2px) saturate(.95)}
+  /* 오라 색은 카드 상태를 따라간다 — 카드에 clip-path가 있어 바깥 그림자를 못 쓰기 때문에 덮개 배경으로 낸다 */
+  #ov:has(.ovCard.win){--aura:rgba(255,210,74,.17)}
+  #ov:has(.ovCard.lose){--aura:rgba(255,107,122,.16)}
+  #ov.hide{display:none}
+  #ov:not(.hide) .ovCard{animation:ovPop .26s cubic-bezier(.2,.9,.3,1.2)}
+  @keyframes ovPop{from{opacity:0;transform:translateY(8px) scale(.94)}to{opacity:1;transform:none}}
+  /* ── 결과 카드 = 설정 창과 같은 규격: 제목+강조 언더라인 → 글래스 패널 → 44px 버튼 ── */
+  .ovCard.win{--ovAcc:var(--gold);--ovAccG:rgba(255,210,74,.5)}     /* 승리 = 보상 금색 */
+  .ovCard.lose{--ovAcc:#ff6b7a;--ovAccG:rgba(255,107,122,.5)}       /* 패배 = 위험 빨강 */
+  .ovCard.win .ovTop::after,.ovCard.lose .ovTop::after{opacity:.9;height:2px}
+  /* VICTORY / DEFEAT = 카드의 주인공. 한글 제목(기록 종료·게임 종료)엔 적용하지 않는다 */
+  .ovCard.win #ovTitle,.ovCard.lose #ovTitle{font-size:27px;line-height:1.05;letter-spacing:2px;font-weight:800}
+  .ovCard.win .ovTop,.ovCard.lose .ovTop{padding-bottom:10px;margin-bottom:10px}
+  .ovCard.win #ovTitle{color:var(--gold-lt);text-shadow:0 0 4px rgba(255,210,74,.5),0 0 18px rgba(255,210,74,.4),0 2px 4px #000}
+  .ovCard.lose #ovTitle{color:#ffd0d6;text-shadow:0 0 4px rgba(255,107,122,.5),0 0 18px rgba(255,107,122,.35),0 2px 4px #000}
+  .ovCard{width:86%;max-width:320px;padding:18px 14px 17px;text-align:center;--ovAcc:#5cd6ff;--ovAccG:rgba(92,214,255,.5);
+    display:flex;flex-direction:column;box-sizing:border-box;
+    background:linear-gradient(180deg,rgba(25,25,25,.9),rgba(14,14,14,.92));border:1px solid var(--metal-edge);
+    clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px);
+    box-shadow:0 16px 44px -12px #000,inset 0 1px 0 rgba(255,255,255,.05)}
+  /* 제목 줄 = 설정 제목과 동일(흰 제목 + 강조 언더라인) · 아이콘 없음 */
+  .ovTop{position:relative;margin-bottom:11px;padding-bottom:9px}
+  .ovTop::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;background:linear-gradient(90deg,var(--ovAcc),transparent 72%);opacity:.5}
+  .ovTtl{min-width:0}
+  #ovTitle{font-size:17px;font-weight:800;letter-spacing:.5px;color:#eaf1fb;margin:0;line-height:1.2;text-shadow:0 1px 3px rgba(0,0,0,.65);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* 본문 = 별도 상자 없이 카드 안에 그대로 */
+  .ovPanel{padding:2px 2px 0}
+  #ovDesc{font-size:var(--fs-sm);font-weight:500;color:var(--txt-mute);line-height:1.5;margin:0;letter-spacing:.2px;white-space:pre-line;word-break:keep-all}
+  /* 결과 통계(플레이타임·도달 라운드·받은 포인트) */
+  /* 결과 통계 = 하나의 글래스 패널 + 구분선(방 만들기 폼·대기실과 통일) */
+  .ovStats{display:flex;flex-direction:column;gap:0;margin:0 0 12px;text-align:left;padding:0 12px;border-radius:var(--r-lg);
+    background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.016));border:1px solid var(--metal-edge)}
+  .ovStat{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;
+    background:none;border:none;border-bottom:1px solid rgba(255,255,255,.07)}
+  .ovStat:last-child{border-bottom:none}
+  .ovStat .osL{font-size:var(--fs-sm);font-weight:700;color:var(--txt-mute);letter-spacing:.3px}
+  .ovStat .osV{font-family:var(--font-num);font-size:15px;font-weight:800;color:#eaf0f8;text-shadow:0 1px 2px #000;white-space:nowrap}
+  .ovStat .osCoin{font-family:var(--font-num);font-size:18px;font-weight:800;color:#ffd24a;text-shadow:0 0 10px rgba(255,210,74,.35)}   /* 핵심 보상 강조 */
+  .ovStat .osNew{font-size:11px;font-weight:800;color:#7ee081;background:rgba(126,224,129,.13);border:1px solid rgba(126,224,129,.34);border-radius:6px;padding:2px 7px}
+  
+  /* 하단 액션 = 설정 버튼과 같은 규격(44px · 라운드 11 · 중립 글래스) — 왼쪽 관전하기 / 오른쪽 확인 */
+  .ovBtns{display:flex;gap:8px;align-items:stretch;justify-content:center;margin-top:10px}
+  /* 자동 진행 표시 = 버튼을 왼→오른쪽으로 채우는 빛(시작 화면 진행 표시와 같은 언어) */
+  .autoBar{--abC:var(--ovAcc,#5cd6ff);position:absolute;left:0;top:0;bottom:0;width:0;pointer-events:none;
+    background:linear-gradient(90deg,transparent 0%,color-mix(in srgb,var(--abC) 10%,transparent) 42%,color-mix(in srgb,var(--abC) 26%,transparent) 100%)}
+  /* 앞머리 선·발광은 두지 않는다 — 면이 차오르는 것만 */
+  .autoBar.run{animation:opBarSweep var(--autoDur,5s) linear forwards}
+  .ovBtnTx{position:relative;z-index:1}
+  #ovBtn,#ovBtn2.ghost{position:relative;overflow:hidden;flex:1 1 0;min-width:0;padding:0 8px;
+    font-family:inherit;font-size:var(--fs-md);font-weight:800;letter-spacing:.3px;cursor:pointer;white-space:nowrap;
+    display:flex;align-items:center;justify-content:center;transition:background .16s,border-color .16s}
+  #ovBtn2.ghost{order:-1}
+  /* 확인·관전하기도 같은 한 스타일 — 카드가 금색이든 붉은빛이든 버튼은 안 바뀐다 */
+  #ovBtn,#ovBtn2.ghost{color:#dfe7f0}
+  #ovBtn .autoBar{--abC:#dfe7f0}   /* 차오르는 빛도 버튼 색을 따른다 */
+  #ovBtn,#ovBtn2.ghost{transform:none}
+  #ovBtn:active,#ovBtn2.ghost:active{transform:translateY(1px)}

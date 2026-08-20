@@ -1,7 +1,8 @@
 # 관리자 페이지 작업 진행 상태 (PROGRESS)
 
 > 이 파일 하나만 보고 새 세션에서 페이지별로 바로 이어갈 수 있도록 정리한 핸드오프 문서.
-> 대상 파일은 **단일 파일** `sc-ums-web.html` (빌드 없음, vanilla JS + inline CSS/HTML, Three.js 3D `M3D` 모듈).
+> 대상은 `sc-ums-web.html`(마크업) + `css/` 5개 + `js/` 19개 (빌드 없음, vanilla JS, Three.js 3D `M3D` 모듈).
+> **2026-08-20 분할** — 어느 파일인지는 `ARCHITECTURE.md` §1 「파일 지도」에서 먼저 좁힐 것.
 > "관리자 페이지"란 `enterSandbox()`로 진입하는 **샌드박스(G.sandbox=true) 모드의 각 탭(섹션)** 을 말한다.
 > 줄번호는 편집으로 이동하므로 **함수명 / 요소 ID를 기준 앵커**로 쓰고, 줄번호는 "대략"으로 참고만.
 
@@ -46,12 +47,11 @@ await pg.evaluate(()=>{ enterSandbox();
 벗겨 `#bot`(탭 바/시트)이 사라지는 경우가 있다. 측정이 갑자기 0높이/빈 상태로 나오면, 측정 전에
 `window.showAppScreen=function(){}` 로 스텁하고 재측정할 것. **실게임에선 발생하지 않음.**
 
-**JS 문법 검사**(편집 후 필수): 비-module `<script>`를 추출해 `new vm.Script(code)`.
+**JS 문법 검사**(편집 후 필수): 고친 파일만 검사하면 된다.
 ```
-node -e 'const fs=require("fs"),vm=require("vm");const h=fs.readFileSync("sc-ums-web.html","utf8");
-const re=/<script(?![^>]*type=["\x27]module)[^>]*>([\s\S]*?)<\/script>/g;let m,bad=0;
-while((m=re.exec(h))){if(!m[1].trim())continue;try{new vm.Script(m[1]);}catch(e){bad++;console.log(e.message);}}
-console.log("errors:",bad);'
+node --check js/11-cmdcard.js                      # classic 스크립트
+node --input-type=module --check < js/90-m3d.module.js   # module 스크립트
+for f in js/*.js; do case $f in *module*) continue;; esac; node --check "$f" || echo "✗ $f"; done   # 전부
 ```
 
 ---
