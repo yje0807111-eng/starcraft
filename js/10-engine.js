@@ -444,7 +444,38 @@ function drawProd(){ const {ctx,W,H}=setup('cvUnit'); drawShopBg(ctx,W,H);
 }
 // 업그레이드 플랫폼 — 통일 타일(우주 정거장 금속) 라운드 사각, 우주에 떠 있는 느낌
 // (삭제) 업그레이드 가동 파티클(UPG_EMIT/drawUpgFx) — 건물 화면 폐지로 제거.
+// ══ 게임 종료 — 승/패 공통 단일 출구 ══════════════════════════════
+// ⚠ 상대에게 알리지 않으면 상대 화면에서 내가 **영원히 살아 있는 것으로** 보인다
+//   (내 브로드캐스트는 phase!=='playing' 이면 멈추므로 마지막 값에 얼어붙는다).
+//  · 패배 = 내 자리가 **죽은 자리**가 된다 — 유닛·적·투사체를 전부 지운다.
+//  · 승리 = **게임 전체가 정지**한다 — 유닛은 그대로 서 있고 시간만 멈춘다(관전용).
+//    step(dt) 는 phase!=='playing' 이면 안 도므로 새 유닛·새 적은 어느 쪽이든 안 생긴다.
+function nemoGameOver(result){ if(typeof G==='undefined'||!G) return;
+  if(G._overSent) return; G._overSent=result;   // 판당 1회
+  if(typeof coopBossDmgFlush==='function') coopBossDmgFlush();   // 남은 보스 데미지 누적분을 흘려보낸 뒤 끝낸다
+  if(typeof coopSend==='function') coopSend('over', { result:result, round:G.round||0 });
+  if(result==='lost') clearMyField(); }
+// 내 전장을 비운다 — 배열을 직접 비운다(사망 처리 함수를 타면 킬·보상이 늘어난다)
+function clearMyField(){ if(typeof G==='undefined'||!G) return;
+  ['units','enemies','pendSpawn','shots','beams','muzzles','impacts','sparks','debris','recalls','pendingHits']
+    .forEach(k=>{ if(Array.isArray(G[k])) G[k].length=0; });
+  G.sel=[]; G.selEnemy=null;
+  if(typeof renderUnits==='function') renderUnits();                             // DOM 유닛 카드 정리
+  if(window.M3D && window.M3D.clearGameModels) window.M3D.clearGameModels(); }    // 3D 잔상 제거(숨기지 말고 지운다)
 function drawPlayer(){ drawMain('cvPlayer'); }   // 실제 전장 렌더(관전 라벨은 좌상단 DOM #specLabel)
+// 죽은 자리·빈 자리 관전 — 배경(트랙)만 그리고 그 위엔 아무것도 없다.
+// ⚠ 이 분기가 없으면 drawPlayer() 로 떨어져 **내 유닛·내 적**이 남의 자리에 그려진다(옛 동작).
+//   renderSpectate 와 같은 수법: 배열을 잠깐 비워서 그리고 원상복구한다.
+function renderEmptySlot(){ if(typeof G==='undefined'||!G) return;
+  const sv={ units:G.units, enemies:G.enemies, shots:G.shots, beams:G.beams, muzzles:G.muzzles,
+             sel:G.sel, selEnemy:G.selEnemy, impacts:G.impacts, sparks:G.sparks, debris:G.debris, recalls:G.recalls };
+  G.units=[]; G.enemies=[]; G.shots=[]; G.beams=[]; G.muzzles=[];
+  G.sel=[]; G.selEnemy=null; G.impacts=[]; G.sparks=[]; G.debris=[]; G.recalls=[];
+  // ⚠ 캔버스가 아직 크기를 못 받았을 수 있다(탭 전환 첫 프레임) — 그리기 실패가 프레임 루프를 끊지 않게 막는다
+  try{ drawMain('cvPlayer'); }catch(e){ console.warn('renderEmptySlot', e); } finally{ Object.assign(G, sv); }
+  if(window.M3D && window.M3D.clearGameModels) window.M3D.clearGameModels();   // 3D 잔상 제거(숨기지 말고 지운다)
+  const mcv=document.getElementById('cvMarine'); if(mcv) mcv.style.display='none';
+  const fcv=document.getElementById('cvFx');     if(fcv) fcv.style.display='none'; }
 // 관전 라벨 갱신(좌상단 킬 아래) — 플레이어 탭에서만, 플레이어색으로
 function updateSpecLabel(){ const el=document.getElementById('specLabel'); if(!el) return;
   if(G.tab==='Players'){ const pc=PLAYER_VIEW_COLORS[(G.curPlayer-1)%PLAYER_VIEW_COLORS.length];
@@ -1173,9 +1204,9 @@ function step(dt){
   } else {                       // 전투 단계: 제한시간 종료 시 바로 다음 라운드(준비시간 없음)
     if(G.roundTime<=0){
       if(isBossRound(G.round) && G.enemies.some(e=>e.boss && !e.pboss)){   // 보스 라운드: 2분 내 보스 미처치 → 통과 실패(패배)
-        G.phase='lost'; if(typeof addChat==='function') addChat('', '⏱ 보스를 제한시간 내에 처치하지 못해 방어선이 무너졌습니다.'); if(typeof playSfx==='function') playSfx('lose'); showOverlay(); return; }
+        G.phase='lost'; if(typeof addChat==='function') addChat('', '⏱ 보스를 제한시간 내에 처치하지 못해 방어선이 무너졌습니다.'); if(typeof playSfx==='function') playSfx('lose'); showOverlay(); nemoGameOver('lost'); return; }
       const n=G.round+1;
-      if(n>mapCfg('rounds',TOTAL_ROUNDS) && !mapCfg('infinite')){ G.phase='won'; if(typeof playSfx==='function') playSfx('win'); showOverlay(); return; }
+      if(n>mapCfg('rounds',TOTAL_ROUNDS) && !mapCfg('infinite')){ G.phase='won'; if(typeof playSfx==='function') playSfx('win'); showOverlay(); nemoGameOver('won'); return; }
       gainGas(mapCfg('roundClearEnergyBase',1)+Math.floor(G.round*mapCfg('roundClearEnergyPer',0.34)));   // 라운드 클리어 보너스(하향)
     { const _cap=(mapCfg('interestCap',500)+((G.metaB&&G.metaB.interestCap)||0))*infIncomeMul(); const _per=mapCfg('interestPer',100);   // 라운드 정산 이자: 보유 크레딧 100당 N%(한도까지) — 비축 보상(무한=한도 수입배율)
       const _int=Math.floor(Math.min(G.mineral,_cap)/_per)*Math.round(_per*mapCfg('interestRate',0.05));
@@ -1209,7 +1240,7 @@ function step(dt){
   if(G.pbossCds){ for(const k in G.pbossCds){ if(G.pbossCds[k]>0) G.pbossCds[k]=Math.max(0,G.pbossCds[k]-dt); } }   // 개인 보스 재소환 쿨다운(보스별 개별)
   const _regCnt=G.enemies.reduce((a,e)=>a+(e.pboss?0:1),0);   // 탈락 누적은 일반 적만(개인 보스 제외)
   checkEnemyWarn(_regCnt);
-  if(_regCnt>=mapCfg('loseCount',LOSE_COUNT)){ addChat('', '⚠️ '+(G.myPlayer||1)+'번 플레이어가 탈락하였습니다.'); G.phase='lost'; if(typeof playSfx==='function') playSfx('lose'); showOverlay(); return; }
+  if(_regCnt>=mapCfg('loseCount',LOSE_COUNT)){ addChat('', '⚠️ '+(G.myPlayer||1)+'번 플레이어가 탈락하였습니다.'); G.phase='lost'; if(typeof playSfx==='function') playSfx('lose'); showOverlay(); nemoGameOver('lost'); return; }
   unitAI(dt);   // 명령 이동(공격이동/반복이동) + 스킬 타이머
   // 보스방 파견 유닛 → 공용 보스 직접 공격(트랙 방어 제외) + 유닛별 공격 이펙트
   if(G.coopBoss && !G.coopBoss.dead){ const sentB=G.units.filter(u=>u.atBoss);

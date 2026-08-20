@@ -1868,16 +1868,58 @@ function startGameNow(activePlayers, myNum, names){
   renderUnits(); updateHud(); placeMergeZone();
   gameStartCountdown();   // G 셋업 후: 미니맵+설명 / 3·2·1 / 플레이어·시작 준비(폰 전체 덮음)
 }
-// 게임 중 플레이어 이탈 → 관전 버튼 비활성화
-function playerLeave(n){ if(!G.activePlayers) return; const mine=G.myPlayer||1; if(n===mine) return;
-  const i=G.activePlayers.indexOf(n); if(i<0) return;
-  G.activePlayers.splice(i,1);
-  (G.eliminated=G.eliminated||[]).push(n);   // 탈락 기록(관전 그리드: 색 유지·어둡게 표시)
-  addChat('', '⚠️ '+n+'번 플레이어가 탈락하였습니다.');
-  if(G.curPlayer===n){ const other=G.activePlayers.filter(x=>x!==mine); G.curPlayer=other[0]||mine;
-    if(G.tab==='Players'){ if(typeof drawPlayer==='function') drawPlayer(); updateSpecLabel(); } }
-  if(G.tab==='Players') renderPlayers();
-}
+// ══ 자리(슬롯) 상태 — 단일 소스 ══════════════════════════════
+// 관전 그리드·관전 렌더·적 카운트·3D 가 전부 이 함수 하나만 본다.
+//   me    = 나
+//   live  = 게임 중인 다른 플레이어(관전 가능)
+//   dead  = 탈락했거나 나간 자리 → **죽은 자리**. 아무것도 그리지 않는다.
+//   empty = 애초에 아무도 안 들어온 자리 → 죽은 자리와 같게 취급
+// ⛔ 여기 말고 다른 곳에서 activePlayers/eliminated 를 직접 뒤져 판정하지 말 것.
+function slotState(n){ n=+n; if(!n) return 'empty';
+  if(n===((typeof G!=='undefined'&&G&&G.myPlayer)||1)) return 'me';
+  if(((G&&G.finished)||[]).indexOf(n)>=0) return 'done';   // 승리 = 정지된 자리(유닛은 그대로 · 관전만 가능)
+  const act=(G&&G.activePlayers)||null;
+  if(!act) return 'live';                                  // 명단 자체가 없는 화면(샌드박스 등) = 옛 동작 유지
+  if(act.indexOf(n)>=0) return 'live';
+  if(((G&&G.eliminated)||[]).indexOf(n)>=0) return 'dead';
+  return 'empty'; }
+function slotDead(n){ const st=slotState(n); return st==='dead'||st==='empty'; }   // 아무것도 그리지 않는 자리
+function slotWatchable(n){ const st=slotState(n); return st==='live'||st==='done'; }   // 관전 가능한 자리
+// 승리한 자리 — 죽이지 않는다. 마지막 스냅을 그대로 얼려 두고 관전만 계속 되게 한다.
+function finishSlot(n, nick){ n=+n; if(!n||typeof G==='undefined'||!G) return;
+  if(n===(G.myPlayer||1)) return;
+  if((G.finished=G.finished||[]).indexOf(n)>=0) return;
+  G.finished.push(n);
+  addChat('', '🏁 '+(nick||('P'+n))+'님이 방어에 성공했습니다 — 그 자리는 정지되었습니다.');
+  if(G.tab==='Players'){ if(typeof renderPlayers==='function') renderPlayers();
+    if(typeof updateSpecLabel==='function') updateSpecLabel(); } }
+// 자리를 죽인다 — 탈락(lost)·이탈(left) 이 **같은 정리**를 탄다.
+// ⚠ 숨기는 게 아니라 지운다(CLAUDE.md 「잔상 금지」) — 남겨 두면 관전 보드가 얼어붙은 채로 계속 보인다.
+function killSlot(n, reason, nick){ n=+n; if(!n||typeof G==='undefined'||!G) return;
+  if(n===(G.myPlayer||1)) return;                                   // 내 자리는 여기서 죽이지 않는다(패배 처리는 따로)
+  const i=(G.activePlayers||[]).indexOf(n);
+  if(i<0 && (G.eliminated||[]).indexOf(n)>=0) return;               // 이미 죽은 자리 — 중복 처리 금지
+  if(i>=0) G.activePlayers.splice(i,1);
+  if((G.eliminated=G.eliminated||[]).indexOf(n)<0) G.eliminated.push(n);
+  const hadTeam=!!(G.coopTeamB && G.coopTeamB[n]);
+  ['coopBoard','coopBoardPrev','coopState','coopBossU','coopTeamB','coopSpeed','coopUpg','vote'].forEach(k=>{ if(G[k]) delete G[k][n]; });
+  if(G.coopWatchers && G.coopNumToUid && G.coopNumToUid[n]) delete G.coopWatchers[G.coopNumToUid[n]];   // 죽은 자리는 더 이상 나를 보지 않는다
+  if(G.pSim && G.pSim[n]) G.pSim[n].dead=true;                      // 봇 시뮬도 같은 규칙
+  if(hadTeam && typeof metaBonus==='function') G.metaB=metaBonus(); // 이탈자 팀 강화 제외 → 재계산(이미 준 미네랄은 회수하지 않는다)
+  if(G.curPlayer===n){                                              // 이 자리를 보고 있었으면 내 화면으로
+    const other=(G.activePlayers||[]).filter(x=>x!==(G.myPlayer||1));
+    G.curPlayer=other[0]||(G.myPlayer||1);
+    if(window.M3D && window.M3D.clearGameModels) window.M3D.clearGameModels();   // 남의 유닛 모델 잔상 제거
+    if(G.tab==='Players'){ if(typeof drawPlayer==='function') drawPlayer(); if(typeof updateSpecLabel==='function') updateSpecLabel(); } }
+  addChat('', reason==='left' ? ('ℹ️ '+(nick||('P'+n))+'님이 게임에서 나갔습니다.')
+                              : ('⚠️ '+n+'번 플레이어가 탈락하였습니다.'));
+  if(typeof computeSpeed==='function') computeSpeed();
+  if(typeof renderVote==='function') renderVote();
+  if(G.tab==='Players'){ if(typeof renderPlayers==='function') renderPlayers();
+    if(typeof updatePlayerCounts==='function') updatePlayerCounts();
+    if(typeof updateSpecLabel==='function') updateSpecLabel(); } }
+// 게임 중 플레이어 탈락 → 죽은 자리로(옛 이름 유지 — 호출부가 여럿)
+function playerLeave(n){ killSlot(n, 'lost'); }
 let _leaveT=1e9;
 // ── 멀티 플레이어 시뮬레이션: 각 플레이어 트랙의 적 누적 수(나는 실제 G.enemies, 나머지는 시뮬) ──
 function initPlayerSim(){ G.pSim={}; const mine=G.myPlayer||1;
@@ -1885,6 +1927,7 @@ function initPlayerSim(){ G.pSim={}; const mine=G.myPlayer||1;
     G.pSim[n]={ count:0, skill:0.78+Math.random()*0.55, w1:false, w2:false, dead:false }; }); }
 function playerEnemyCount(n){ const mine=G.myPlayer||1;
   if(n===mine) return G.enemies.length;
+  if(slotDead(n)) return 0;   // 죽은 자리·빈 자리 = 아무것도 없다(마지막 값이 얼어붙어 남지 않게)
   if(G.coop && G.coopState && G.coopState[n]) return G.coopState[n].count;   // 협동: 실제 상대 적 수
   const s=G.pSim&&G.pSim[n]; return s? Math.round(s.count) : 0; }
 function tickPlayerSim(dt){ if(G.phase!=='playing'||!G.pSim||G.coop) return;   // 협동: 시뮬 대신 실제 상태 사용
@@ -1896,7 +1939,7 @@ function tickPlayerSim(dt){ if(G.phase!=='playing'||!G.pSim||G.coop) return;   /
     s.count=Math.max(0, s.count + (arrival-clear)*ed);
     if(s.count>=WARN2){ if(!s.w2){ s.w2=true; addChat('', '⚠️ '+n+'번 플레이어 적 '+WARN2+'기 누적!'); } } else if(s.count<WARN2-10) s.w2=false;
     if(s.count>=WARN1){ if(!s.w1){ s.w1=true; addChat('', '⚠️ '+n+'번 플레이어 적 '+WARN1+'기 누적'); } } else if(s.count<WARN1-10) s.w1=false;
-    if(s.count>=mapCfg('loseCount',LOSE_COUNT)){ s.dead=true; playerLeave(n); }   // 200 누적 → 탈락
+    if(s.count>=mapCfg('loseCount',LOSE_COUNT)){ s.dead=true; killSlot(n,'lost'); }   // 200 누적 → 죽은 자리
   } }
 function tickPresence(dt){ tickPlayerSim(dt); }   // 루프 훅 → 플레이어 시뮬 구동
 // ══ 협동(파티) 게임 실시간 동기화: 배속/일시정지/채팅/관전상태 공유 ══
@@ -1926,6 +1969,25 @@ window.addEventListener('online', ()=>{ if(typeof toast==='function') toast('✓
   if(typeof RTROOM!=='undefined' && RTROOM.listChan===null && typeof rtRoomsActive==='function' && rtRoomsActive()) rtRoomsEnsure(); });
 function onCoopBossDmg(p){ if(!p||p.uid===myUid()) return; const num=(G.coopUidToNum&&G.coopUidToNum[p.uid])||p.num||0;
   if(typeof coopBossDamage==='function') coopBossDamage(p.amt||0, num, true); }
+// ══ 관전 신호 — 전장 데이터를 '보는 사람이 있을 때만' 보내기 위한 것 ══════
+// ⚠ 이게 없으면 아무도 안 보는데도 유닛·적·탄 전부를 10Hz 로 계속 뿌린다
+//   (실측: R30 에서 한 번에 11.3KB · 8인방이면 각자 초당 790KB 를 받는다).
+// 바뀔 때만 보낸다 — 프레임마다 비교만 하므로 공짜다.
+function coopWatchSync(){ if(typeof coopActive!=='function'||!coopActive()) return;
+  const t=(G.tab==='Players' && G.curPlayer!==(G.myPlayer||1)) ? (G.curPlayer||0) : 0;
+  if(t===G._watchSent) return; G._watchSent=t; coopSend('watch',{ num:t }); }
+function onCoopWatch(p){ if(!p||p.uid===myUid()) return; (G.coopWatchers=G.coopWatchers||{})[p.uid]=+p.num||0; }
+// 나를 보고 있는 사람이 하나라도 있나
+function iAmWatched(){ const me=G.myPlayer||1, w=G.coopWatchers; if(!w) return false;
+  for(const k in w){ if(w[k]===me) return true; } return false; }
+// 누군가 토벌장을 열고 있나 — 열려 있으면 파견 유닛(bu)과 보스 상태를 제때 보내야 한다
+function anyBossArenaOpen(){ if(G.bossOpen) return true;
+  const st=G.coopState||{}; for(const k in st){ if(st[k]&&st[k].bo) return true; } return false; }
+// 상대 판 종료 수신 — 이게 없으면 상대가 져도 내 화면에선 영원히 살아 있다
+function onCoopOver(p){ if(!p||p.uid===myUid()) return;
+  const num=(G.coopUidToNum&&G.coopUidToNum[p.uid])||p.num; if(!num) return;
+  if(p.result==='won') finishSlot(num);            // 승리 = 정지(유닛 그대로 · 계속 관전 가능)
+  else killSlot(num, 'lost'); }                    // 패배 = 죽은 자리(전부 지운다)
 function startGameCoop(slotInfo){ stopGameCoop();
   if(!(typeof RT!=='undefined' && RT.active && _lobbyRoom && (_lobbyRoom.party||_lobbyRoom.real))) return;
   const ids=(slotInfo||[]).filter(s=>s.uid); if(ids.length<2) return;   // 실제 파티원 2명 이상만
@@ -1941,9 +2003,12 @@ function startGameCoop(slotInfo){ stopGameCoop();
       .on('broadcast',{event:'gchat'}, m=>onCoopChat(m.payload))
       .on('broadcast',{event:'pstate'}, m=>onCoopState(m.payload))
       .on('broadcast',{event:'bossdmg'}, m=>onCoopBossDmg(m.payload))   // 공용 보스 데미지 공유
+      .on('broadcast',{event:'over'}, m=>onCoopOver(m.payload))   // 상대 판 종료(패배=죽은 자리 · 승리=정지된 자리)
+      .on('broadcast',{event:'watch'}, m=>onCoopWatch(m.payload))   // 누가 누구를 관전 중인가(전장 데이터 송신 여부를 정한다)
       .on('presence',{event:'leave'}, e=>{ (e.leftPresences||[]).forEach(s=>onCoopPlayerLeft(s)); })   // 이탈 감지
       .subscribe(function(st){ if(st==='SUBSCRIBED'){ try{ G.coopChan.track({uid:myUid(), num:G.myPlayer||1, nick:myNick()}); }catch(e){}
         ensureVote(); G.vote[G.myPlayer||1]=1; G.coopSpeed[G.myPlayer||1]=1; coopSend('speed',{mul:1}); computeSpeed();
+        G._watchSent=-1;   // 재구독 = 관전 대상 다시 알린다(안 하면 상대가 '아무도 안 본다'로 오해한다)
         if(_coopRetryN){ _coopRetryN=0; addChat('', '✓ 재접속 완료 — 협동 동기화가 복구되었습니다.'); }
       } else if(st==='CHANNEL_ERROR'||st==='TIMED_OUT'){ coopReconnect(); } });   // 끊김 → 백오프 재접속(CLOSED는 의도적 종료라 제외
     G.coopStateT=setInterval(coopBroadcastState, 100);   // 10Hz 스냅 → 보간/외삽으로 매끄럽게
@@ -1959,25 +2024,21 @@ function onCoopSpeed(p){ if(!p||p.uid===myUid()) return; const num=G.coopUidToNu
   computeSpeed();   // 효과 배속 = 전원 투표 최소
   if(G.speedMul!==old){ addChat('', 'ℹ️ 게임 배속 '+old+'배 → '+G.speedMul+'배'); if(typeof playSfxT==='function') playSfxT('speed',300); }
   if(typeof renderVote==='function') renderVote(); }
-function onCoopPlayerLeft(s){ if(!s||s.uid===myUid()) return; const num=G.coopUidToNum[s.uid]||s.num;
-  addChat('', 'ℹ️ '+(s.nick||('P'+num))+'님이 게임에서 나갔습니다.');
-  if(num){ if(G.coopBoard) delete G.coopBoard[num]; if(G.coopState) delete G.coopState[num];
-    if(G.activePlayers){ const i=G.activePlayers.indexOf(num); if(i>=0) G.activePlayers.splice(i,1); }
-    if(G.curPlayer===num){ G.curPlayer=G.myPlayer||1; }
-    if(G.coopBossU) delete G.coopBossU[num];   // 이탈자 토벌장 파견 유닛 제거
-    if(G.coopTeamB && G.coopTeamB[num]){ delete G.coopTeamB[num]; G.metaB=metaBonus(); }   // 이탈자 팀 강화 제외 → 재계산
-    if(G.coopSpeed) delete G.coopSpeed[num];   // 이탈자 배속 투표 제거 → 남은 인원 기준 재계산
-    if(G.vote) delete G.vote[num];
-    if(typeof computeSpeed==='function') computeSpeed(); if(typeof renderVote==='function') renderVote(); }
-  if(G.tab==='Players'){ if(typeof renderPlayers==='function') renderPlayers(); if(typeof updateSpecLabel==='function') updateSpecLabel(); } }
+function onCoopPlayerLeft(s){ if(!s||s.uid===myUid()) return;
+  const num=(G.coopUidToNum&&G.coopUidToNum[s.uid])||s.num;
+  killSlot(num, 'left', s.nick); }   // 정리는 killSlot 한 곳에서(단일 소스)
 function onCoopPause(p){ if(!p||p.uid===myUid()) return; if(G.paused===p.paused) return;
   G.paused=p.paused; const ga=document.getElementById('gameArea'); if(ga) ga.classList.toggle('gray', p.paused);
   addChat('', 'ℹ️ '+(p.nick||'상대')+'님이 일시정지를 '+(p.paused?'사용':'해제')+'하였습니다.'); updatePauseBtn(); }
 function onCoopChat(p){ if(!p||p.uid===myUid()) return; if(typeof playNotify==='function') playNotify(); addChat(p.nick||'상대', p.text, p.color||'#7fc8ff'); }
 function onCoopState(p){ if(!p||p.uid===myUid()) return; const num=G.coopUidToNum[p.uid]; if(!num) return;
+  if(p.w!==undefined) (G.coopWatchers=G.coopWatchers||{})[p.uid]=+p.w||0;   // watch 이벤트를 놓쳐도 여기서 복구된다
   const boPrev=G.coopState[num]&&G.coopState[num].bo;
   G.coopState[num]={ count:p.count||0, round:p.round||0, bo:p.bo?1:0 };
   if((p.bo?1:0)!==(boPrev||0) && G.tab==='Players' && typeof renderPlayers==='function') renderPlayers();   // 토벌장 입퇴장 배지 갱신
+  // ⚠ 전장 데이터(u)가 없는 = '아무도 안 볼 때 오는 가벼운 스냅'이다. 기존 보드를 빈 배열로 덮으면
+  //   관전을 켠 순간 화면이 비어 버린다 — 그럴 땐 보드를 건드리지 않고 지표(count/round/bs/tb)만 받는다.
+  if(p.u){
   const pf='r'+num+'_';   // 내 유닛/적 키와 충돌 방지(M3D 모델 추적용)
   const snap={ t:Date.now(),
     units:(p.u||[]).map(a=>({id:a[0], uid:pf+a[1], x:a[2], y:a[3], hero:!!a[4], fireSeq:a[5]||0, hp:a[6], maxHp:a[7], sh:a[8], maxSh:a[9], en:a[10], maxEn:a[11], lv:a[12]||1})),
@@ -1989,6 +2050,7 @@ function onCoopState(p){ if(!p||p.uid===myUid()) return; const num=G.coopUidToNu
     const prevB=G.coopBoard[num]; if(prevB){ const pm={}; prevB.units.forEach(x=>pm[x.uid]=x.fireSeq||0);
       for(const x of snap.units){ if((x.fireSeq||0)>(pm[x.uid]||0)){ playUnitAttack(x.id); break; } } } }   // 스냅당 1회(소음 방지)
   G.coopBoardPrev[num]=G.coopBoard[num]; G.coopBoard[num]=snap;   // 직전/현재 스냅(보간용)
+  }
   if(p.atk) (G.coopUpg=G.coopUpg||{})[num]=p.atk;   // 상대 공격 업그레이드 레벨
   // 전체 강화(팀 공유): 상대 레벨 수신 → 최고 레벨 기준으로 효과 재계산. 시작 크레딧이 늘면 차액 소급 지급
   if(p.tb){ const cur=(G.coopTeamB=G.coopTeamB||{})[num];
@@ -2011,14 +2073,23 @@ function onCoopState(p){ if(!p||p.uid===myUid()) return; const num=G.coopUidToNu
     if(typeof updateCoopBossBar==='function') updateCoopBossBar(); }
   if(G.tab==='Players' && typeof updatePlayerCounts==='function') updatePlayerCounts(); }
 function coopBroadcastState(){ if(!coopActive()||G.phase!=='playing') return;
-  const u=G.units.map(x=>[x.id, x.uid, +x.x.toFixed(3), +x.y.toFixed(3), x.hero?1:0, x.fireSeq||0, Math.round(x.hp||0), Math.round(x.maxHp||0), Math.round(x.sh||0), Math.round(x.maxSh||0), Math.round(x.en||0), Math.round(x.maxEn||0), x.lv||1]);
-  const e=G.enemies.map(x=>[+x.d.toFixed(4), x.boss?1:0, x.special?1:0, x.shape, +(x.ph||0).toFixed(2), x.eid, x.model3d||0]);
-  const s=G.shots.map(x=>[+x.x.toFixed(1), +x.y.toFixed(1), +(x.vx||0).toFixed(1), +(x.vy||0).toFixed(1), x.kind, x.color]);
-  const b=G.beams.map(x=>[+x.x1.toFixed(1), +x.y1.toFixed(1), +x.x2.toFixed(1), +x.y2.toFixed(1), x.color, x.w||2, +(x.life||0).toFixed(2)]);
+  // ⚠ 전장 데이터(u/e/s/b)는 **관전 중인 사람이 있을 때만** 싣는다 — 쓰는 곳이 관전 화면뿐이다.
+  //   보는 사람이 없으면 페이로드가 11.3KB → 164B 로 줄고 주기도 10Hz → 2Hz 가 된다(실측).
+  const watched=iAmWatched(), bossOn=anyBossArenaOpen(), fast=watched||bossOn;
+  G._pstateN=(G._pstateN||0)+1;
+  if(!fast && (G._pstateN%5)) return;   // 아무도 안 볼 땐 5틱(=500ms)에 한 번만
   const bs=(coopAuthNum()===(G.myPlayer||1) && G.coopBoss)?[Math.round(G.coopBoss.hp), G.coopBoss.max, G.coopBoss.lv, G.coopBoss.dead?1:0]:0;   // 권위자만 보스 상태 동봉
-  const bu=G.units.filter(x=>x.atBoss).map(x=>[x.gmodel||x.id, x.id, x.uid, +(x.bx!=null?x.bx:0.5).toFixed(3), +(x.by!=null?x.by:0.54).toFixed(3), x.hero?1:0, x.fireSeq||0, x.gid||0]);   // 내 보스장 파견 유닛(gid 포함 — 초월·갓 이펙트 재생)
   const tb=_TEAM_IDS.map(id=>buildLevel(id));   // 내 전체 강화 레벨(팀 공유 — 최고 레벨 적용)
-  coopSend('pstate', { count:G.enemies.length, round:G.round, u:u, e:e, s:s, b:b, atk:G.atkLv||{}, bs:bs, bu:bu, tb:tb, bo:G.bossOpen?1:0 }); }
+  const pl={ count:G.enemies.length, round:G.round, atk:G.atkLv||{}, bs:bs, tb:tb,
+             bo:G.bossOpen?1:0, w:(G._watchSent||0) };   // w = 내가 보고 있는 자리(이벤트를 놓쳐도 여기서 복구된다)
+  if(watched){   // 관전 중인 사람이 있을 때만 — 여기가 페이로드의 98%다
+    pl.u=G.units.map(x=>[x.id, x.uid, +x.x.toFixed(3), +x.y.toFixed(3), x.hero?1:0, x.fireSeq||0, Math.round(x.hp||0), Math.round(x.maxHp||0), Math.round(x.sh||0), Math.round(x.maxSh||0), Math.round(x.en||0), Math.round(x.maxEn||0), x.lv||1]);
+    pl.e=G.enemies.map(x=>[+x.d.toFixed(4), x.boss?1:0, x.special?1:0, x.shape, +(x.ph||0).toFixed(2), x.eid, x.model3d||0]);
+    pl.s=G.shots.map(x=>[+x.x.toFixed(1), +x.y.toFixed(1), +(x.vx||0).toFixed(1), +(x.vy||0).toFixed(1), x.kind, x.color]);
+    pl.b=G.beams.map(x=>[+x.x1.toFixed(1), +x.y1.toFixed(1), +x.x2.toFixed(1), +x.y2.toFixed(1), x.color, x.w||2, +(x.life||0).toFixed(2)]); }
+  if(bossOn)   // 토벌장이 열려 있을 때만 — 내 파견 유닛(gid 포함 · 초월·갓 이펙트 재생)
+    pl.bu=G.units.filter(x=>x.atBoss).map(x=>[x.gmodel||x.id, x.id, x.uid, +(x.bx!=null?x.bx:0.5).toFixed(3), +(x.by!=null?x.by:0.54).toFixed(3), x.hero?1:0, x.fireSeq||0, x.gid||0]);
+  coopSend('pstate', pl); }
 function specRemoteBoard(){ return (coopActive() && G.tab==='Players' && G.curPlayer!==(G.myPlayer||1) && G.coopBoard && G.coopBoard[G.curPlayer]) ? G.curPlayer : null; }
 function _clerp(a,b,f){ return a+(b-a)*f; }
 function _clerpWrap(a,b,f){ let d=b-a; if(d>0.5)d-=1; else if(d<-0.5)d+=1; let v=a+d*f; if(v<0)v+=1; else if(v>=1)v-=1; return v; }   // 트랙 d(0~1 순환) 경계 래핑 보간
@@ -2032,7 +2103,10 @@ function buildInterpBoard(num){ const cur=G.coopBoard[num]; if(!cur) return {uni
     units=cur.units.map(u=>{ const q=pu[u.uid]; return q? Object.assign({},u,{x:_clerp(q.x,u.x,f),y:_clerp(q.y,u.y,f)}) : u; });
     const pe={}; prev.enemies.forEach(e=>pe[e.eid]=e);
     enemies=cur.enemies.map(e=>{ const q=pe[e.eid]; return q? Object.assign({},e,{d:_clerpWrap(q.d,e.d,f)}) : e; }); }   // 한 바퀴 경계(1→0)에서 역주행 점프 방지
-  const el=(now-cur.t)/1000;   // 투사체: 속도(px/초)로 외삽 → 매끄럽게 비행
+  // 투사체: 속도(px/초)로 외삽 → 매끄럽게 비행.
+  // ⚠ 한 스냅 간격까지만 외삽한다 — 상대가 이겨서 정지했거나 끊기면 (now-cur.t) 가 무한정 커져
+  //   탄이 화면 밖으로 영원히 날아간다(정지된 자리는 멈춰 있어야 한다).
+  const el=Math.min((now-cur.t)/1000, span? span/1000 : 0.15);
   const shots=(cur.shots||[]).map(s=>({x:s.x+(s.vx||0)*el, y:s.y+(s.vy||0)*el, vx:s.vx, vy:s.vy, kind:s.kind, color:s.color}));
   return { units, enemies, shots, beams:cur.beams||[] }; }
 // 관전: 상대 보드 데이터로 통째 교체 후 메인 게임과 동일하게 3D + 이펙트 렌더

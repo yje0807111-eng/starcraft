@@ -1804,16 +1804,17 @@ function tickResearch(dt){ if(!G.research) return;
 //   각 hex의 HSL이 그대로 틴트 파라미터가 됨(단일 소스): H=색조 · S=채도 · L=명도 배율(L/0.58)
 const PLAYER_VIEW_COLORS=['#4570d3','#d6292f','#eadb3e','#2ba143','#ad5cd6','#ed691d','#6d422c','#dfe0e2'];
 function renderPlayers(){ const g=document.getElementById('plGrid'); g.innerHTML='';
-  const mine=G.myPlayer||1; const active=G.activePlayers||[1,2,3,4,5,6,7,8];   // 게임에 입장한 플레이어만 활성
-  for(let n=1;n<=8;n++){ const isMe=(n===mine), present=active.indexOf(n)>=0;
-    const elim=!isMe && !present && (G.eliminated||[]).indexOf(n)>=0;   // 입장했다가 탈락한 슬롯(색 유지·어둡게)
+  const mine=G.myPlayer||1;
+  // ⚠ 자리 판정은 slotState() 하나가 갖는다 — 여기서 activePlayers/eliminated 를 직접 뒤지지 말 것
+  for(let n=1;n<=8;n++){ const st=slotState(n), isMe=(st==='me'), present=slotWatchable(n);
+    const elim=(st==='dead');   // 입장했다가 탈락/이탈한 자리(색 유지·어둡게) — 빈 자리(empty)와 같게 취급된다
     const el=document.createElement('div');
-    el.className='plbtn'+(isMe?' mine':(present?(n===G.curPlayer?' me':''):(elim?' gone':' off')));   // 나=mine · 활성=관전가능(현재관전=me) · 탈락=gone · 빈자리=off
+    el.className='plbtn'+(isMe?' mine':(present?((st==='done'?' done':'')+(n===G.curPlayer?' me':'')):(elim?' gone':' off')));   // 나=mine · 활성=관전가능(현재관전=me) · 승리정지=done · 탈락=gone · 빈자리=off
     const showColor=(isMe||present||elim);   // 빈 자리만 무채색(흰색 계열)
     el.style.setProperty('--pc', showColor?PLAYER_VIEW_COLORS[(n-1)%PLAYER_VIEW_COLORS.length]:'#b6bdc8');
     const _bo=!isMe && present && G.coopState && G.coopState[n] && G.coopState[n].bo;   // 상대가 토벌장 보는 중
 el.innerHTML='<div class="plnum">'+n+'P</div><div class="plst">'+(isMe?escHtml(myNick()):(present?(escHtml(playerName(n))+(_bo?(' <span title="보스방 입장 중">'+pIco('👹','sm')+'</span>'):'')):(elim?escHtml(playerName(n)):'빈 자리')))+'</div>';
-    if(!isMe && present) el.onclick=()=>{ G.curPlayer=n; renderPlayers(); drawPlayer(); updateSpecLabel(); };   // 입장한 다른 플레이어만 관전 가능
+    if(!isMe && present) el.onclick=()=>{ G.curPlayer=n; renderPlayers(); drawPlayer(); updateSpecLabel(); };   // 입장한 다른 플레이어만 관전 가능   // 죽은 자리·빈 자리는 클릭 불가
     g.appendChild(el);
   } }
 function updatePlayerCounts(){ const active=G.activePlayers||[];   // Players 탭에서 실시간 적 수 갱신
@@ -1825,7 +1826,10 @@ function ensureVote(){ if(!G.vote){ G.vote={1:1,2:2,3:4,4:4,5:4,6:2,7:4,8:1}; G.
 function computeSpeed(){ ensureVote();
   let sp;
   if(typeof coopActive==='function' && coopActive()){   // 협동: 전원 투표 중 최소(만장일치로만 가속)
-    sp=Infinity; Object.keys(G.coopNumToUid||{}).forEach(k=>{ const v=(G.coopSpeed&&G.coopSpeed[+k])||1; if(v<sp) sp=v; }); if(sp===Infinity) sp=1;
+    // ⚠ 죽은 자리는 투표에서 뺀다 — 안 빼면 없는 사람이 계속 1배속에 표를 던져 판이 영원히 1배속에 묶인다
+    sp=Infinity; Object.keys(G.coopNumToUid||{}).forEach(k=>{ const n=+k;
+      if(typeof slotDead==='function' && slotDead(n)) return;
+      const v=(G.coopSpeed&&G.coopSpeed[n])||1; if(v<sp) sp=v; }); if(sp===Infinity) sp=1;
   } else sp=G.vote[G.myPlayer||1]||1;
   G.speedMul=sp;
   const r=document.getElementById('voteResult'); if(r) r.textContent=sp+'x';
