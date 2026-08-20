@@ -903,6 +903,37 @@ function hbLayoutBase(){ hbGridDirty();   // 구조물이 바뀌었을 수 있�
     ph:i/Math.max(1,eq.length)*Math.PI*2, x:0, y:0, cdT:Math.random()*.5 })); }
 function hbLayoutAllies(){ return hbLayoutBase(); }   // 옛 이름 유지(호출부·스모크가 쓴다)
 // 아군 한 명의 사격 — 가장 가까운 적을 친다(공용: 동료·펫·터렛)
+// ✨ 공격 이펙트 = **관리자 페이지·유즈맵과 같은 공용 FX 코어**(FX/ATK_STYLE, js/18-strike.js).
+//   ⛔ 사냥터 전용 사격선을 따로 만들지 말 것 — 예전엔 S.shots 에 직선 하나를 그렸다(두 번째 구현).
+//   사격 주체는 전부 진짜 유닛 id 를 갖고 있어(캐릭터=PROF_CLASSES[cls].unit · 동료/몹=mdl)
+//   ATK_STYLE 이 바로 걸린다 → 레인저는 3연사, 히드라는 가시, 드라군은 플라즈마로 각자 다르게 나간다.
+// 캐릭터의 유닛 id — 3D 모델과 공격 이펙트가 **같은 값**을 봐야 한다(직업이 바뀌면 둘 다 따라간다)
+function hbCharMdl(){ const ch=(typeof CHAR==='function')?CHAR():null;
+  return (ch && PROF_CLASSES[ch.cls] && PROF_CLASSES[ch.cls].unit) || 'marine'; }
+// ⚠ 이름은 hbFxStore 다. 사냥터엔 이미 hbFx(dt)(이펙트 스텝)가 있어서 hbFx 로 두면
+//    같은 이름의 선언 둘이 서로를 덮어 무한 재귀가 난다(실제로 그랬다 — 스택 오버플로).
+// 좌표계: 월드 390 = 관리자 화면 폭 1.0. 오토배틀의 STK_FX_SPAN(1400)과 같은 뜻이고,
+//   사냥터는 월드가 거의 1:1 px 이라 390 이면 관리자와 **크기·오프셋 체감이 같아진다**.
+const HB_FX_SPAN=390;
+function hbFxStore(){ const S=_hb; if(!S || typeof FX==='undefined') return null;
+  if(!S.fx || !S.fx.shots) S.fx=FX.store();          // 월드 좌표 스토어 — 사망 이펙트용
+  return S.fx; }
+function hbFxUnit(){ const S=_hb; if(!S || typeof FX==='undefined') return null;
+  if(!S.fxU || !S.fxU.store) S.fxU={ store:FX.store(), pend:[] };   // 정규화 스토어 — 유닛별 발사 이펙트용
+  return S.fxU; }
+// ✨ 발사는 **관리자(이펙트 랩·전투실험)와 같은 디스패처** unitFireFx 를 지난다.
+//   ⛔ FX.spawn 을 직접 부르지 말 것 — 그건 한 단계 아래라 골리앗 어깨 미사일·레이서 쌍권총 같은
+//     유닛별 연출이 통째로 빠진다(오토배틀도 unitFireFx 를 쓰고 FX.spawn 은 폴백으로만 둔다).
+function hbFire(sx,sy,tx,ty,mdl,size,tgtAir){
+  const L=hbFxUnit(); if(!L) return; const W=HB_FX_SPAN;
+  if(typeof unitFireFx==='function'){
+    const pu={ uid:'hb'+(mdl||'?'), id:mdl||'marine', gmodel:mdl||null, x:sx/W, y:sy/W, size:size||FX.REF, face:Math.atan2(tx-sx,ty-sy) };
+    try{ unitFireFx(L, pu, tx/W, ty/W, size||FX.REF, !!tgtAir); return; }catch(e){}
+  }
+  FX.spawn(L.store, mdl||'_default', sx/W,sy/W, tx/W,ty/W, {unitSize:size||FX.REF});   // 폴백
+}
+function hbFoeSize(f){ return FX.REF*(f&&f.sz||1); }
+function hbIsAir(mdl){ return (typeof FXLAB_AIR!=='undefined') && FXLAB_AIR.has(mdl); }
 function hbUnitFire(u, dps, rangeMul, dt, cdMul){ const S=_hb, c=S.char;
   u.cdT-=dt; if(u.cdT>0) return;
   const rng=c.range*(rangeMul||1); let best=null,bd=1e18;
@@ -910,7 +941,7 @@ function hbUnitFire(u, dps, rangeMul, dt, cdMul){ const S=_hb, c=S.char;
   if(!best || bd>rng) return;
   if(u.face!==undefined) u.face=Math.atan2(best.x-u.x, best.y-u.y);   // 쏠 땐 표적을 본다
   u.cdT=c.cd*(cdMul||1); const dmg=c.atk*dps*(hbBoostOn('atk')?2:1);
-  best.hp-=dmg; S.shots.push({x1:u.x,y1:u.y,x2:best.x,y2:best.y,t:0,ally:1});
+  best.hp-=dmg; hbFire(u.x,u.y-6, best.x,best.y, u.mdl, FX.REF, hbIsAir(best.mdl));
   if(best.hp<=0) hbKill(best); }
 // 스킬
 function hbSkillReady(k){ const S=_hb; return !!S && (S.skT&&S.skT[k]||0)<=0; }
@@ -965,7 +996,7 @@ function hbStart(){ const cv=document.getElementById('hbCv'); if(!cv) return;
   const H=hbHunt(), st=hbCharStats();
   _hb={ on:true, cv, ctx:cv.getContext('2d'), w:0,h:0,d:1, vTop:0, vBot:0, cx:0, cy:0, k:1, t:0,
     dg:H.dg||1, round:H.round||1, wave:1, phase:'fight', waveT:hbWaveTime(1), gapT:0, downT:0,
-    pend:[], pendT:0, foes:[], chests:[], shots:[], floats:[], kills:0, rt0:0, charDir:4, charFace:0, atkT:0,
+    pend:[], pendT:0, foes:[], chests:[], fx:null, floats:[], kills:0, rt0:0, charDir:4, charFace:0, atkT:0,
     allies:[], turrets:[], bunkers:[], pets:[], skT:{nova:0,heal:0,slow:0}, slowT:0, skDirty:false,
     buf:{min:0,gas:0,xp:0,kills:0},
     char:{ x:0,y:0, hp:st.hpMax, hpMax:st.hpMax, atk:st.atk, cd:st.cd, crit:st.crit, critDmg:st.critDmg,
@@ -1178,7 +1209,7 @@ function hbAdvanceDungeon(){ const S=_hb, H=hbHunt();
   S.floats.push({x:S.char.x,y:S.char.y-64,tx:'🏁 던전 '+nd+' 진입',cl:'#7ad1ff',t:0}); }
 function hbDie(){ const S=_hb, H=hbHunt();
   S.buf={min:0,gas:0,xp:0,kills:0};                               // 클리어 보너스 몫 소실(처치 보상은 이미 받았다)
-  S.foes.length=0; S.shots.length=0; S.pend.length=0;
+  S.foes.length=0; S.pend.length=0; S.fx=null; S.fxU=null;
   // ⭐ 라운드 하강 — 1 밑으로 내려가면 **이전 던전 마지막 라운드**로 물러난다(hbAdvanceDungeon 의 반대).
   //    ⛔ Math.max(1, …) 로만 막지 말 것: 자동 이동으로 올라간 던전 1라운드에서 약해지면
   //       내려올 길이 없어 영영 갇힌다(실측 — 환생 직후 던전3 1라운드에서 40시간을 헛돌았다).
@@ -1200,7 +1231,7 @@ function hbRetreatDungeon(){ const S=_hb, H=hbHunt();
 // 라운드가 내려가지 않는다. 3초 뒤 캐릭터가 가운데에서 최대 체력으로 다시 선다.
 function hbWaveFail(){ const S=_hb; if(!S) return;
   S.buf={min:0,gas:0,xp:0,kills:0};                                // 클리어 보너스 몫 소실(처치 보상은 이미 받았다)
-  S.foes.length=0; S.shots.length=0; S.pend.length=0;
+  S.foes.length=0; S.pend.length=0; S.fx=null; S.fxU=null;
   if(S.chests) S.chests.length=0;
   S.phase='fail'; S.failT=HB_FAIL_S;
   S.floats.push({x:S.char.x, y:S.char.y-32, tx:'시간 초과 — 1웨이브부터', cl:'#ff8a9a', t:0});
@@ -1223,7 +1254,7 @@ function hbCharHit(t, mul){ const S=_hb, c=S.char;
   const k=sup ? (c.scritM||3) : (crit ? (c.critDmg||HB_CRIT_DMG) : 1);
   const dmg=c.atk*k*(mul||1)*(hbBoostOn('atk')?2:1);
   t.hp-=dmg;
-  S.shots.push({x1:c.x,y1:c.y-10,x2:t.x,y2:t.y,t:0});
+  hbFire(c.x,c.y-10, t.x,t.y, hbCharMdl(), FX.REF, hbIsAir(t.mdl));
   S.floats.push({x:t.x,y:t.y-20,tx:(sup?'★':(crit?'✦':''))+fmtCur(dmg),
                  cl:sup?'#ff6bd6':(crit?'#ffd24a':'#ececec'),t:0});
   if(c.lifest>0 && c.hp<c.hpMax){                                   // 🩸 생명력 흡수 — 준 피해의 %
@@ -1408,7 +1439,7 @@ document.addEventListener('pointercancel', hbFieldUp, true);
 // 되돌리고 시계를 멈춘다. 나가면(오른쪽 위 ⊘ 또는 ✕) 1웨이브부터 새로 시작한다.
 function hbBuildEnter(){ const S=_hb; if(!S||S.build) return;
   S.build=true;
-  S.foes.length=0; S.pend.length=0; S.shots.length=0;
+  S.foes.length=0; S.pend.length=0; S.fx=null; S.fxU=null;
   if(S.chests) S.chests.length=0;
   S.wave=1; S.phase='fight'; S.waveT=hbWaveTime(1); S.buf={min:0,gas:0,xp:0,kills:0};
   S.char.tx=null; S.char.ty=null; S.char.mv=0;      // 캐릭터도 멈춘다
@@ -1564,8 +1595,10 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char;
         hbSlide(f, ux*sp, uy*sp); }
       f.face=Math.atan2(ux, uy); f.mv=1; }            // ⚠ 게임과 같은 식: atan2(dx,dy). -dy로 쓰면 모델이 정반대를 본다
     else{ f.mv=0; f.face=Math.atan2(dx/d, dy/d);      // 멈춰 쏠 때도 대상을 본다(등 뒤로 쏘는 것처럼 보이지 않게)
-      if(inRange) S.shots.push({x1:f.x,y1:f.y-8*(f.sz||1),x2:tg.x,y2:tg.y,t:0,foe:1});   // 적 사격선 — 아군(초록)과 색이 갈린다
       f.cdT-=dt; if(f.cdT<=0){ f.cdT=1.1;
+      // ✨ 공격이 **실제로 일어나는 순간**에 그 유닛의 이펙트를 낸다(ATK_STYLE 이 근접·투사체를 알아서 가른다)
+      //   ⛔ 사거리 판정에 걸지 말 것 — 그러면 근접 몹은 자기 이펙트(발톱·낫)가 영영 안 나온다.
+      hbFire(f.x,f.y-8*(f.sz||1), tg.x,tg.y, f.mdl, hbFoeSize(f), false);   // 대상=캐릭터/벙커=지상
       if(bk){ bk.hp-=f.atk; if(bk.q){ const _bt=hbBase().tiles[bk.q]; if(_bt) _bt.hp=Math.max(0,bk.hp); }   // 타일이 단일 소스 — 재배치해도 체력이 되살아나지 않는다
         S.floats.push({x:bk.x,y:bk.y-20,tx:'-'+fmtCur(f.atk),cl:'#c9a24a',t:0}); }
       else hbCharTake(f.atk);                                     // 🛡 실드 → 체력 순서는 hbCharTake 한 곳에서만
@@ -1586,7 +1619,7 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char;
       for(const ch of S.chests){ const d=Math.hypot(ch.x-c.x, ch.y-c.y); if(d<cd2){ cd2=d; cb=ch; } }
       if(cb && cd2<=c.range){ c.cdT=c.cd;
         const dmg=c.atk*(c.chestDmg||1)*(hbBoostOn('atk')?2:1);   // 🔀 사거리 상한 초과분이 여기로 온다
-        cb.hp-=dmg; S.shots.push({x1:c.x,y1:c.y-10,x2:cb.x,y2:cb.y,t:0});
+        cb.hp-=dmg; hbFire(c.x,c.y-10, cb.x,cb.y, hbCharMdl(), FX.REF);
         S.atkT=HB_ATK_SHOW; if(S._u) S._u.fireSeq=(S._u.fireSeq||0)+1;
         if(cb.hp<=0) hbBreakChest(cb); } } }
   // 아군 — 동료는 캐릭터 주위를 천천히 돌고, 터렛은 고정, 펫은 가깝게 붙어 돈다
@@ -1624,6 +1657,8 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char;
   hbFx(dt); }
 // 처치 1건 — 캐릭터·동료·펫·터렛·스킬이 전부 이 한 곳을 지난다(보상 규칙을 여러 벌 두지 않는다)
 function hbKill(f){ const S=_hb, i=S.foes.indexOf(f); if(i<0) return; S.foes.splice(i,1); S.kills++;
+  // 💥 사망 이펙트도 공용 코어 — 크기가 큰 놈은 크게 터진다(FX.REF 대비 f.sz)
+  { const st=hbFxStore(); if(st && FX.death) FX.death(st, f.x, f.y, {unitSize:hbFoeSize(f)}); }
   if(typeof dqNote==='function') dqNote('kill',1);   // 📅 일일 — 적 처치
   // 처치 보상은 즉시 지급 — 재화 바가 바로 오른다. 사망 시 잃는 것은 '라운드 클리어 보너스'뿐.
   // ⚠ 종류 배수(f.rw)는 **여기 한 곳에서만** 곱한다 — 보상 경로를 두 벌 만들지 않는다.
@@ -1653,7 +1688,8 @@ function hbKill(f){ const S=_hb, i=S.foes.indexOf(f); if(i<0) return; S.foes.spl
   if(S.saveT>=HB_SAVE_KILLS){ S.saveT=0; _hbDirty=false; if(typeof saveMeta==='function') saveMeta(); }
   S.floats.push({x:f.x,y:f.y-34,tx:'+'+fmtCur(r.min),cl:'#ffd24a',t:0}); hbHud(); }
 function hbFx(dt){ const S=_hb;
-  for(const s of S.shots) s.t+=dt;  S.shots=S.shots.filter(s=>s.t<.12);
+  { const st=hbFxStore(); if(st) FX.advance(st, dt);                          // 사망 이펙트(월드 좌표)
+    const L=hbFxUnit(); if(L){ if(typeof tickUnitFx==='function') tickUnitFx(L, dt); FX.advance(L.store, dt); } }   // 유닛별 발사(정규화) — 오토배틀과 같은 순서
   for(const f of S.floats) f.t+=dt; S.floats=S.floats.filter(f=>f.t<.9); }
 // ── 던전 겉모습: 적 스프라이트 · 바닥 타일 ──
 // 3D 모델은 로드·굽기가 비동기라 준비되기 전엔 null을 준다 → 그리는 쪽이 이모지로 폴백한다.
@@ -1850,8 +1886,13 @@ function hbDraw(){ const S=_hb, x=S.ctx, c=S.char; if(!x) return;
     x.fillRect(-S.w,-S.h,S.w*2,S.h*2); x.restore(); }               // 감속 중 화면 틴트
   x.save(); x.globalAlpha=.25; x.strokeStyle='#7fa8ff'; x.lineWidth=1;   // 바닥 링(수비 반경 암시)
   x.beginPath(); x.ellipse(c.x,c.y+8,c.range*.62,c.range*.24,0,0,Math.PI*2); x.stroke(); x.restore();
-  for(const s of S.shots){ x.save(); x.globalAlpha=1-s.t/.12; x.strokeStyle=s.foe?'#ff6b7a':(s.ally?'#8fe0a0':'#ffd24a'); x.lineWidth=s.foe?1.2:1.5;   // 적 사격선은 붉게 — 캐릭터(금)·아군(초록)과 한눈에 갈린다
-    x.beginPath(); x.moveTo(s.x1,s.y1); x.lineTo(s.x2,s.y2); x.stroke(); x.restore(); }
+  if(typeof FX!=='undefined' && FX.drawShots){   // ✨ 공용 FX 코어가 그린다(월드 변환 안이라 좌표 변환만 맞춘다)
+    const st=hbFxStore(); if(st) FX.drawShots(x, st, (px,py)=>({x:px,y:py}), 1);            // 사망 = 월드 좌표 그대로
+    // 발사 = 정규화 → 월드. 크기는 **줌을 따라간다**(오토배틀 strikeDrawFx 와 같은 환산) —
+    //   고정값으로 두면 확대했을 때 이펙트만 그대로라 유닛에 비해 쪼그라들어 보인다.
+    const L=hbFxUnit();
+    if(L){ const szU=Math.max(0.55, Math.min(2.2, (HB_FX_SPAN*(S.k||1))/390));
+      FX.drawShots(x, L.store, (px,py)=>({x:px*HB_FX_SPAN,y:py*HB_FX_SPAN}), szU); } }
   x.textAlign='center'; x.textBaseline='middle';
   for(const ch of S.chests){                                       // 📦 상자 — 유닛보다 먼저(발밑에 깔린다)
     x.font='17px sans-serif'; x.fillText('📦', ch.x, ch.y);
@@ -1982,7 +2023,7 @@ function _hbU(host, id, x, y, face, moving){
 function hb3dList(){ const S=_hb, W=S.w||1, H=S.h||1, k=S.k||1, out=[];
   const nx=(wx)=>((S.cx||W/2)+wx*k)/W, ny=(wy)=>((S.cy||H/2)+wy*k)/H;
   const c=S.char, ch=(typeof CHAR==='function')?CHAR():null;
-  const mdl=(ch && PROF_CLASSES[ch.cls] && PROF_CLASSES[ch.cls].unit) || 'marine';
+  const mdl=hbCharMdl();   // 공격 이펙트(hbFire)와 같은 단일 소스
   out.push(_hbU(S, mdl, nx(c.x), ny(c.y), S.charFace||0, false));
   for(const a of S.allies){ if(!a.mdl) continue;                       // 🤝 동료도 캐릭터와 같은 경로로 그린다
     out.push(_hbU(a, a.mdl, nx(a.x), ny(a.y), a.face||0, true)); }
@@ -2050,7 +2091,7 @@ function tw3dDetach(){ const cv=document.getElementById('cvMarine');
     if(window.M3D && M3D.clearGameModels){ try{ M3D.clearGameModels(); }catch(e){} } }
   _tw3dHome=null; _tw3dU=null; }
 function tw3dList(){ const ch=(typeof CHAR==='function')?CHAR():null;
-  const mdl=(ch && PROF_CLASSES[ch.cls] && PROF_CLASSES[ch.cls].unit) || 'marine';   // 내가 고른 캐릭터의 유닛(던전과 같은 출처)
+  const mdl=hbCharMdl();   // 내가 고른 캐릭터의 유닛(3D·이펙트와 같은 단일 소스)
   if(!_tw3dU || _tw3dU.id!==mdl) _tw3dU={ uid:'tw1', id:mdl, x:.5, y:.5, face:0, moving:false, fireSeq:0, size:13, hidden:false };
   _tw3dU.x=.5; _tw3dU.y=.5;                                  // 화면 정중앙 고정
   _tw3dU.face=(_twChar.face<0)? -Math.PI/2 : Math.PI/2;      // 좌우 바라보기

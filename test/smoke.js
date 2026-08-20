@@ -1882,6 +1882,28 @@ async function groupLobby(){
           assert(Math.abs((list[0].bossScale||0)-K.sz)<0.01,
             '크기가 3D 로 안 넘어간다(bossScale='+list[0].bossScale+' vs 종류 크기 '+K.sz+')');
         } finally { window.M3D=keep; _hb.foes.length=0; } }
+      // ①-c ✨ **공격 이펙트는 공용 코어(FX/ATK_STYLE)를 쓴다** — 사냥터 전용 사격선을 두 번째로 만들지 않는다.
+      //     사격 주체가 전부 진짜 유닛 id 를 가지므로(캐릭터=PROF_CLASSES[cls].unit · 동료/몹=mdl)
+      //     레인저는 3연사, 히드라는 가시, 드라군은 플라즈마로 각자 다르게 나가야 한다.
+      { assert(typeof FX!=='undefined' && typeof ATK_STYLE!=='undefined','공용 FX 코어가 없다');
+        assert(typeof hbFxStore==='function' && typeof hbFire==='function','사냥터가 공용 FX 에 안 붙어 있다');
+        assert(ATK_STYLE[hbCharMdl()], '캐릭터 유닛 id('+hbCharMdl()+')가 ATK_STYLE 에 없다 — 내 공격만 기본 이펙트로 나온다');
+        // 편성표 모델들이 서로 다른 공격 스타일을 갖는가(전부 _default 면 다양화가 화면에 안 보인다)
+        const kinds=new Set();
+        for(const D of HB_DUNGEONS) for(const e of D.roster){ const st=ATK_STYLE[e.mdl]; if(st&&st.kind) kinds.add(st.kind); }
+        assert(kinds.size>=6,'몹 공격 스타일이 '+kinds.size+'종뿐 — 유닛별 이펙트가 안 갈린다');
+        // 실제로 공격 한 번 → 공용 스토어에 쌓이는가
+        _hb.fx=null; _hb.fxU=null; _hb.foes.length=0;
+        const c2=_hb.char; c2.x=0; c2.y=0; c2.hpMax=1e9; c2.hp=1e9; c2.atk=0; c2.regen=0;
+        const K2=HB_FOE_KIND.ranger;
+        _hb.foes.push({kind:'ranger',ico:'x',mdl:'hydra',x:60,y:0,hp:1e9,hpMax:1e9,atk:1,spd:0,
+          sz:K2.sz,rng:K2.rng,way:K2.way,rw:K2.rw,cdT:0,elite:false});
+        // ⚠ 발사는 정규화 스토어(_hb.fxU.store), 사망은 월드 스토어(_hb.fx) — 둘 다 본다
+        const cnt=()=>{ let n=0; for(const st of [_hb.fx, _hb.fxU&&_hb.fxU.store]){ if(!st) continue;
+          n+=(st.shots||[]).length+(st.melee||[]).length+(st.impacts||[]).length+(st.flashes||[]).length; } return n; };
+        let n=0; for(let i=0;i<40;i++){ _hb.phase='fight'; _hb.waveT=99; hbStep(0.05); n=Math.max(n,cnt()); }
+        _hb.foes.length=0; _hb.fx=null; _hb.fxU=null;
+        assert(n>0,'적이 공격했는데 공용 FX 스토어가 비어 있다 — 이펙트가 안 나간다'); }
       // ② 보스는 늘 지상 근접 — 날거나 벽을 통과하는 보스는 벽·기지 설계를 통째로 무의미하게 만든다
       for(const D of HB_DUNGEONS){ const bp=mkBoss(D,{round:1});
         assert(bp.way==='ground' && !bp.rng, '던전'+D.dg+' 보스가 지상 근접이 아님: '+bp.way+'/'+bp.rng); }
@@ -1896,7 +1918,7 @@ async function groupLobby(){
         // 캐릭터와 사수 사이에 벙커를 놓는다 — 사거리 밖(HB_BUNKER_R 밖)이라 옛 규칙이면 그냥 지나쳐 캐릭터를 쏜다
         const K=HB_FOE_KIND.ranger, bx=-(HB_BUNKER_R+K.rng);
         _hb.bunkers=[{x:bx, y:0, hp:1e9, hpMax:1e9}];
-        _hb.foes.length=0; _hb.shots.length=0;
+        _hb.foes.length=0; _hb.fx=null;
         const f={kind:'ranger',ico:'x',mdl:null,x:bx-K.rng-40,y:0,hp:1e9,hpMax:1e9,atk:5,spd:K.spd,
           sz:K.sz,rng:K.rng,way:K.way,rw:K.rw,cdT:0,elite:false};
         _hb.foes.push(f);
@@ -1913,16 +1935,16 @@ async function groupLobby(){
       for(let g=-RR;g<=RR;g++) for(const cell of [[g,-RR],[g,RR],[-RR,g],[RR,g]]){
         if(cell[0]===RR&&cell[1]===0) continue; T[hbKey(cell[0],cell[1])]={k:'wall'}; }
       hbLayoutBase();
-      const walk=(kind)=>{ const K=HB_FOE_KIND[kind]; _hb.foes.length=0; _hb.pend.length=0; _hb.shots.length=0;
+      const walk=(kind)=>{ const K=HB_FOE_KIND[kind]; _hb.foes.length=0; _hb.pend.length=0; _hb.fx=null; _hb.fxU=null;
         const f={kind:kind,ico:'x',mdl:null,x:-320,y:0,hp:1e9,hpMax:1e9,atk:1,spd:K.spd,
-          sz:K.sz,rng:K.rng,way:K.way,rw:K.rw,cdT:9e9,elite:false};
+          sz:K.sz,rng:K.rng,way:K.way,rw:K.rw,cdT:0,elite:false};   // ⚠ cdT:0 — 실제로 공격해야 이펙트가 나온다(캐릭터는 hp 1e9 라 안전)
         _hb.foes.push(f); let crossed=false, minD=1e9, shot=0;
         // ⚠ 반복 횟수를 상수로 두면 **느린 놈만** 못 도착해 '못 붙었다'로 잘못 잡힌다(중장갑 spd 32).
         //    우회로가 직선의 서너 배라 걸음 예산은 속도에 반비례해야 한다.
         const N=Math.min(4000, Math.ceil(2600/(K.spd*0.05)));
         for(let i=0;i<N;i++){ _hb.phase='fight'; _hb.waveT=99; hbStep(0.05);
           if(!hbWalkable(f.x,f.y)) crossed=true;
-          shot+=_hb.shots.filter(s=>s.foe).length;
+          for(const st of [_hb.fx, _hb.fxU&&_hb.fxU.store]) if(st) shot+=(st.shots||[]).length+(st.melee||[]).length+(st.impacts||[]).length+(st.flashes||[]).length;   // 공용 FX 코어로 나간다
           const d=Math.hypot(f.x,f.y); if(d<minD) minD=d; }
         return { crossed, minD, shot }; };
       for(const k of Object.keys(HB_FOE_KIND)){ const K=HB_FOE_KIND[k], r=walk(k);
@@ -1973,7 +1995,7 @@ async function groupLobby(){
             '종류 보상 배수가 실제 지급에 안 반영됨: 배수 '+HB_FOE_KIND.brute.rw+' 인데 실측 '+ratio.toFixed(2)+'배');
         } finally { window.dqNote=dqSave; window.profApplyLevelUps=lvSave; } }
       return Object.keys(HB_FOE_KIND).length+'역할 · 편성 '+HB_DUNGEONS.length+'던전 ok';
-    } finally { Object.assign(_hb.char,_cSave); _hb.foes.length=0; _hb.pend.length=0; _hb.shots.length=0;
+    } finally { Object.assign(_hb.char,_cSave); _hb.foes.length=0; _hb.pend.length=0; _hb.fx=null; _hb.fxU=null;
       hbHunt().base={tiles:{},open:1}; hbLayoutBase(); saveMeta(); }
   });
   // 🧱 3D 건물 — 이 환경엔 three.js(CDN)가 없어 M3D가 아예 없다. 목록 생성 로직만 스텁으로 검사한다.
