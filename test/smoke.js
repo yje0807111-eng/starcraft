@@ -4886,7 +4886,7 @@ async function groupGame(){
     // ⚠ 이 스텝에선 하단 판이 아직 접혀 있어 rect 가 0 이다 — CSS 값으로 잰다
     { const tr=document.querySelector('#unitCmd .cgTrash'), ic=tr&&tr.querySelector('img,svg');
       if(ic){ const w=parseFloat(getComputedStyle(ic).width)||0;
-        assert(w>=16,'지정 해제 아이콘이 다시 작아짐: '+w.toFixed(1)+'px'); } }
+        assert(w>=19,'지정 해제 아이콘이 다시 작아짐: '+w.toFixed(1)+'px'); } }
     return G.sel.length+'기 선택'; });
   // 🎛 판 '밖' 오른쪽 위에 붙는 조작 버튼(.cgTopOut)은 .bp 의 overflow-y:auto 에 통째로 잘려 사라진 적이 있다.
   //   위치만 재면 통과한다(레이아웃 사각형은 잘려도 그대로다) → **실제로 눌리는지**(elementFromPoint) 까지 본다.

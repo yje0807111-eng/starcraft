@@ -1512,11 +1512,11 @@
     box-shadow:0 0 7px -5px rgba(255,59,59,.35)}
   /* 🎛 UI 조작 아이콘(투명 배경 계열) — 판이 없으므로 버튼 면이 색을 낸다 */
   .cmdG .uiIco{width:17px;height:17px;display:block;object-fit:contain}
-  /* 🗑 종류 지정 해제 아이콘 — 13 → 17px(2026-08-19). 칸 아래 좁은 줄에서 13px 은 눌러야 할 것으로 안 보였다.
+  /* 🗑 종류 지정 해제 아이콘 — 13 → 17 → 20px(2026-08-19). 칸 아래 좁은 줄에서 13px 은 눌러야 할 것으로 안 보였다.
      색은 그대로 회색이고 누를 때만 빨강이다 — 커진 것은 크기뿐이라 유닛 아트보다 세지지 않는다. */
-  .cmdG .cgTrash .uiIco{width:17px;height:17px}
+  .cmdG .cgTrash .uiIco{width:20px;height:20px}
   .cmdG .cgTrash{display:flex;align-items:center;justify-content:center;width:100%;margin-top:auto;color:#6d7787;cursor:pointer;padding:0}   /* 🗑 종류 지정 해제 — 파괴 동작이라도 평소엔 초상보다 약해야 한다 */
-  .cmdG .cgTrash svg{width:17px;height:17px;display:block}
+  .cmdG .cgTrash svg{width:20px;height:20px;display:block}
   .cmdG .cgTrash:active{color:var(--neon);transform:scale(.88)}
   .cmdG .cgProg .pl .pt{color:var(--caL);font:800 9px/1 var(--font-num);margin-left:4px;letter-spacing:.2px}   /* 생산 중 옆 남은시간(작게) */
   /* ⚠ `.gaBtn` 은 전역에도 같은 이름의 다른 버튼이 있다 — 반드시 `.cmdG .cgGasAuto` 아래로 좁혀 쓸 것 */
