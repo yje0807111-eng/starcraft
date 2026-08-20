@@ -1552,10 +1552,8 @@
   .cmdG .cgUnits::-webkit-scrollbar,.cmdG .cgStats.cgScr::-webkit-scrollbar{width:4px;height:4px}
   .cmdG .cgUnits::-webkit-scrollbar-thumb,.cmdG .cgStats.cgScr::-webkit-scrollbar-thumb{background:rgba(120,140,170,.4);border-radius:3px}
   .cmdG .cgUnits::-webkit-scrollbar-track,.cmdG .cgStats.cgScr::-webkit-scrollbar-track{background:transparent}
-  /* ↩ 전체(소프트선택 복귀) — `.cgLift` 변형이라 트레이 칸 껍데기를 그대로 물려받는다.
-     ⚠ 자리는 머리줄 안이다(트레이가 아니다) — 되돌아가기는 '지금 보는 프로필'에 딸린 것이라 제목 옆이 맞다. */
-  .cmdG .cgBack{width:30px;height:30px}
-  .cmdG .cgBack svg,.cmdG .cgBack .uiIco{width:17px;height:17px}
+  /* ↩ 전체(소프트선택 복귀)는 `.cgLift` 변형이라 **트레이 칸 껍데기·크기를 그대로 물려받는다**(전용 치수 없음).
+     자리는 트레이 맨 왼쪽 — `renderCmdGrid` 가 `m.back` 을 `.cgTopOut` 앞에 붙인다. */
   .cmdG .cgProg{margin-top:1px} .cmdG .cgProg .pl{display:flex;justify-content:space-between;font-size:8.5px;color:var(--cgMuted);margin-bottom:2px} .cmdG .cgProg .pl b{color:var(--caL);font-family:var(--font-num);font-size:10px}
   .cmdG .cgBar{height:6px;border-radius:3px;background:rgba(0,0,0,.55);overflow:hidden;box-shadow:inset 0 0 4px rgba(0,0,0,.7)}
   .cmdG .cgBar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,color-mix(in srgb,var(--ca) 55%,#000),var(--ca));box-shadow:0 0 7px var(--caG);transition:width .12s linear}
@@ -15312,9 +15310,13 @@ function renderCmdGrid(host, m){ const el=(typeof host==='string')?document.getE
   let dots=''; for(let p=0;p<pages;p++) dots+='<span class="dot'+(p===pg?' on':'')+'"></span>';
   const pager=(pages>1)?('<div class="cgPage"><button onclick="_cgTurn(this,-1)">◀</button><span class="dots">'+dots+'</span><span class="pn">'+(pg+1)+' / '+pages+'</span><button onclick="_cgTurn(this,1)">▶</button></div>'):'';
   const pill=m.status?('<span class="cgPill'+(m.statusIdle?' idle':'')+'">'+m.status+'</span>'):'';
+  // 🎛 판 밖 오른쪽 위 트레이 = [🔙 되돌아가기][일꾼 수·랠리·부양·전체지정].
+  //   되돌아가기가 **맨 왼쪽**이다 — '나가는 문'이라 손이 먼저 닿는 쪽에 둔다.
+  //   ⚠ 머리줄에 두지 않는다: 버튼 높이가 머리줄을 밀어 올려 그리드가 그만큼 짧아지고, 조작 버튼이 두 곳으로 갈린다.
+  const tray=(m.back||'')+(m.topRight||'');
   el.innerHTML='<div class="cmdG" data-mode="'+(m.mode||'upg')+'" data-compact="'+(m.compact?1:0)+'" data-build="'+(m.build?1:0)+'">'
-    +(m.topRight?('<div class="cgTopOut">'+m.topRight+'</div>'):'')   // 판 밖 오른쪽 위 = 자원 스텝퍼·랠리·부양·전체지정(머리줄을 두껍게 하지 않는다)
-    +'<div class="cgHead"><div class="cgTtl"><div class="cgN">'+(m.title||'')+'</div>'+(m.hpsh?'<div class="cgHpsh">'+m.hpsh+'</div>':(m.sub?'<div class="cgS">'+m.sub+'</div>':''))+'</div>'+pill+pager+(m.back||'')+'</div>'   // 머리줄 = [제목 HP/실드 / 설명][상태칩][◀페이지▶][🔙]
+    +(tray?('<div class="cgTopOut">'+tray+'</div>'):'')
+    +'<div class="cgHead"><div class="cgTtl"><div class="cgN">'+(m.title||'')+'</div>'+(m.hpsh?'<div class="cgHpsh">'+m.hpsh+'</div>':(m.sub?'<div class="cgS">'+m.sub+'</div>':''))+'</div>'+pill+pager+'</div>'   // 머리줄 = [제목 HP/실드 / 설명][상태칩][◀페이지▶]
     +'<div class="cgBody"><div class="cgInfo">'+_cgInfoHTML(m.info)+'</div><div class="cgCol"><div class="cgGrid">'+cells.join('')+'</div></div></div></div>';
   if(m.build){ const nms=el.querySelectorAll('.cgName'); for(const nm of nms){ let fs=10; nm.style.fontSize=fs+'px'; let g=0; while(nm.scrollWidth>nm.clientWidth+0.5 && fs>6 && g++<12){ fs-=0.5; nm.style.fontSize=fs+'px'; } } } }   // 이름 생략(...) 대신 폰트 축소로 한 줄에 전부
 function _cgTurn(btn,delta){ let h=btn; while(h && !h._cgModel) h=h.parentElement; if(!h||!h._cgModel) return; h._cgModel.page=(h._cgPage||0)+delta; renderCmdGrid(h,h._cgModel); }

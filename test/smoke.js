@@ -5973,7 +5973,8 @@ async function groupSandbox(){
       const nm=g.querySelector('.cgN'), hp=g.querySelector('.cgHpsh'), head=g.querySelector('.cgHead'), to=g.querySelector('.cgTopOut');
       const H=head?head.getBoundingClientRect().height:0;
       if(g.querySelector('.cgHpsh .env')) bad.push(label+': 마나가 머리줄에 있음');
-      if(head && head.querySelector('.cgGasAuto,.cgRally,.cgLift,.cgSelAll')) bad.push(label+': 조작 버튼이 머리줄 안');
+      // ⛔ 조작 버튼은 전부 트레이(.cgTopOut)다 — 되돌아가기(.cgBack)까지 포함해서 머리줄에 남으면 안 된다
+      if(head && head.querySelector('.cgGasAuto,.cgRally,.cgLift,.cgSelAll,.cgBack')) bad.push(label+': 조작 버튼이 머리줄 안');
       // 일꾼 수는 **넓은 칸 하나**다(S3안) — 세 칸으로 늘어놓으면 트레이가 5칸이 되어 숫자 조정이 제일 커 보인다
       { const ga=g.querySelector('.cgGasAuto');
         if(ga){ const gs=getComputedStyle(ga), w=ga.getBoundingClientRect().width;
