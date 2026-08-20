@@ -190,6 +190,9 @@ const SKILL_ICO={ nuke:'bomb' };
 | `ui/` | `ui_<키>.webp` | **조작 버튼**(투명 배경 계열) — `UI_SVG` 표 · `uiIco(키)` |
 | `upgrades/` | `up_mine.webp` | 오토배틀 **강화 > 광산** — `UPG_ICO` 를 안 거치고 `_icoImg('upgrades','up_mine')` 로 직접 부른다 |
 | 루트 | `res_<키>.webp` | `resIco()` — 미네랄·가스·젬·인구 |
+| 루트 | `av_guest.webp` | **자리표시 초상** — `avatarHTML(nick,cls,st,guest)` 가 게스트·닉 없음일 때 이니셜 위에 덮는다 |
+| 루트 | `res_ticket_<종류>.webp` | 🎟 뽑기권 3종(gear·pet·ally) — `RES_ICON` 에 등록돼 `resIco('ticket_pet')` 로 나온다 |
+| `state/` | `st_<키>.webp` | 상태 표시(잠김·환생) — `stIco(키, 폴백이모지)` · 잠김은 단일 소스 `hmLockHTML()` |
 
 **폴백:** 파일이 없으면 `_icoFail()` 이 공용 라인 SVG(`pIco`)로 바꿔 넣는다.
 빈칸이 생기지 않으므로 **아이콘을 나중에 넣어도 화면이 깨지지 않는다.**
@@ -411,3 +414,162 @@ node test/png2icon.mjs <입력.png> assets/icons/ui/ui_<키>.webp 0.82 --alpha
 
 넣은 뒤에는 `npm test` 의 **「메인 프로필: 판 밖 조작 버튼이 잘리지 않는다 · UI 아이콘 6종 로드」**
 가 파일이 실제로 열리는지(`naturalWidth>0`)까지 확인한다.
+
+---
+
+# 공통 블록 C — 커런시/무판 계열 (`res_*` · `av_guest`)
+
+판 위에 얹는 A·B와 **다른 계열**이다. 판이 없고 배경을 오려낸다 —
+기존 `res_*` 4장은 128×128 · 알파 있음 · 투명 픽셀 40%대다.
+(예전 표에서 `res_*` 를 A 계열로 적어 뒀던 것은 잘못이다.)
+
+```
+--- RENDER SPEC ---
+A single mobile game HUD currency icon. One object only, centered and filling roughly
+85% of the frame, near-front view tilted 10 degrees from above. Even margin on all four sides.
+SUBJECT: [[SUBJECT]]
+COMPOSITION: square to the viewer with zero left-right rotation — the front face points
+straight at the camera and both sides are equally visible. The only tilt is the 10 degrees
+from above; there is no yaw and no turning. Symmetrical subjects stay perfectly symmetrical
+left to right.
+FORM: hard-surface and angular. Corners are CHAMFERED — cut off at 45 degrees rather
+than rounded. Bold readable silhouette at 24 pixels. Few large shapes, no clutter.
+TREATMENT: bright, vivid and high-contrast — the icon must pop against a black
+background. Rich saturated color across the body is expected. Add crisp bright edge
+highlights along facet and rim edges, and a soft glow hugging the outline so the
+shape stays legible when small.
+SHADING: clean stylized shading with three clear value steps plus edge highlights.
+No muddy midtones, no ambient occlusion, no texture noise, no photoreal material.
+Translucent materials may show light passing through the interior.
+LIGHT: single key light upper-left. Bright rim light along upper-right chamfers.
+Emissive areas glow outward with a tight falloff, no wide hazy bloom.
+BACKGROUND: flat solid pure black #000000 filling the entire frame, completely empty.
+No gradient, no vignette, no stars, no ground plane, no cast shadow, no pedestal,
+no frame, no border.
+OUTPUT: 512x512 PNG, crisp vector-like edges, no outline stroke.
+--- NEGATIVE ---
+three-quarter view, rotated, yaw, turned to the side, angled perspective, isometric,
+oblique projection, foreshortening, perspective distortion, pure side profile,
+white background, light background, grey background, gradient background, transparent
+checkerboard, vignette, stars, photorealistic, soft shadows, drop shadow, ground shadow,
+floor, pedestal, text, letters, numbers, watermark, logo, frame, border, multiple
+objects, scene, character, cute, rounded corners, soft rounded shapes, glossy plastic,
+chrome, lens flare, wide bloom, bokeh, grain, thick outline, dark desaturated body,
+low contrast, muddy colors, small object, tiny subject, empty space
+```
+
+## 왜 이 세 줄이 붙었나 (전부 실패해서 배운 것)
+| 문구 | 없으면 |
+|---|---|
+| `filling roughly 85% of the frame` + NEGATIVE 의 `small object, tiny subject` | 프레임의 45%만 차서 기존 4장 옆에서 혼자 작다 |
+| `COMPOSITION: … zero left-right rotation …` + 시점 네거티브 | **사선으로 돌아간다**. A 블록의 `straight from the front, square to the viewer` 와 같은 이유 — 원 스펙은 위아래 기울기만 말하고 yaw 를 안 막았다 |
+| SUBJECT 에 **채도 있는 색을 명시** | `gunmetal steel` 처럼 무채색을 쓰면 `Rich saturated color` 와 싸워 회색으로 나온다 |
+
+---
+
+# 자리표시 초상 `av_guest.webp` — 계열이 또 다르다
+
+친구 목록의 **22px 원형 초상**(`.fAva`) 자리다. 옆에 색 이니셜 원(`단`·`연`·`옛`)이 늘어서므로
+HUD 계열(각진 챔퍼 · 채도 · 발광)로 만들면 혼자 튀고 22px 에서 챔퍼가 뭉갠다.
+**원형 · 평면 2톤 · 저채도** 세 가지가 반대다.
+
+| | 커런시(C) | 자리표시 초상 |
+|---|---|---|
+| 형태 | 각진 챔퍼 | **원형 디스크**(`.fAva` 가 `border-radius:50%`) |
+| 마감 | 3단 셰이딩 + 엣지 하이라이트 + 발광 | **완전 평면 2톤** |
+| 채도 | 높게 | **낮게** — '아직 아무도 아니다' |
+| 크기 기준 | 24px | **18px**(파티 슬롯 `.ptAva`) |
+| 프레임 | 85% | **가장자리까지 100%** — 디스크가 곧 아바타 원 |
+
+```
+--- RENDER SPEC ---
+A flat vector avatar placeholder for a dark mobile game friend list. One circular badge
+that fills the entire square frame edge to edge, dead centered, seen perfectly straight on
+with no perspective and no tilt.
+SUBJECT: a simple anonymous person mark centered inside the disc — one circle for the head
+and one wide shoulder arc beneath it, drawn as two solid filled shapes with a clean gap
+between them. No neck, no arms, no facial features, no hair, no outline around the figure.
+COMPOSITION: the disc is the artwork. Its edge touches all four sides of the frame. The
+person mark sits centered and occupies about 55% of the disc width, so a clear even ring of
+empty disc surrounds it on every side. Left and right halves mirror each other exactly.
+COLOR: muted and desaturated on purpose — this marks an empty, unassigned slot and must sit
+quieter than the colorful avatars beside it. Disc is a dark cool slate grey, roughly #2b323b.
+The person mark is a soft mid grey, roughly #77828f. Two flat tones only.
+TREATMENT: completely flat vector fills. No gradient, no shading, no highlight, no bevel,
+no chamfer, no glow, no rim light, no depth, no thickness, no texture. The figure reads as a
+silhouette cut out of the disc, like a modern app placeholder avatar.
+READABILITY: the whole badge must stay clear at 18 pixels. Only two shapes plus the disc.
+Generous spacing, thick solid forms, no thin strokes, no fine detail.
+BACKGROUND: flat solid pure black #000000 in the four corners outside the disc, completely
+empty.
+OUTPUT: 512x512 PNG, crisp clean edges, flat vector illustration.
+--- NEGATIVE ---
+chamfer, bevel, faceted, angular, hard surface, 3D render, extruded, metal, brass, steel,
+glow, emissive, rim light, specular, bloom, glossy, shiny, gradient, shading, ambient
+occlusion, drop shadow, cast shadow, texture, noise, saturated color, vivid, bright,
+high contrast body, neon, HUD icon, game currency icon, crystal, gem,
+facial features, eyes, mouth, nose, hair, helmet, visor, armor, character portrait,
+photorealistic, realistic, detailed, ornate, decorative, frame, border, ring outline,
+text, letters, numbers, watermark, logo, multiple figures, scene, cute, mascot,
+square badge, rounded square, transparent checkerboard, white background, grey background
+```
+
+**변환 — 검정 키잉이 아니라 원형 마스크다.** 디스크가 프레임을 꽉 채우게 그렸으므로 잘라내면 끝이다(결정적):
+```bash
+node -e "const sharp=require('sharp');const S=128;
+const m=Buffer.from('<svg width=\"'+S+'\" height=\"'+S+'\"><circle cx=\"64\" cy=\"64\" r=\"64\" fill=\"#fff\"/></svg>');
+sharp('guest512.png').resize(S,S,{fit:'cover'}).composite([{input:m,blend:'dest-in'}])
+  .webp({quality:88}).toFile('assets/icons/av_guest.webp')"
+```
+
+**배선** — `avatarHTML(nick, cls, st, guest)` 의 4번째 인자. 게스트이거나 닉이 비면 이니셜 **위에** `<img class="fAvaImg">` 를 덮는다.
+- ⚠ **색은 인라인으로 나간다.** `.fAva.guest{border-color:…}` 를 CSS 로 써 봐야 인라인에 진다 — 실제로 남색 링이 남았다. 자리표시일 때는 `avatarHTML` 이 중성색을 직접 쓴다.
+- ⚠ 파일이 없으면 `onerror="this.remove()"` 가 `<img>` 만 지우고 **밑에 깔린 이니셜이 드러난다** — 칸이 비지 않는다.
+- 지금 켜지는 곳은 설정 프로필 머리줄(`setPaintMe`, 정식 계정이 아닐 때) 하나다. 친구·파티는 닉이 있으므로 색 이니셜 그대로다.
+
+## 검정 배경 → 알파 (블록 C 전용 변환)
+
+```bash
+node scripts/icon-cutout.mjs <입력.png> <출력.webp> [knee=32]
+```
+
+`npm run img`(판 아이콘용)와 **다른 길이다.** 판 아이콘은 배경이 판이라 그대로 눌러 담지만,
+블록 C 는 검정을 알파로 빼야 한다.
+
+| 항목 | 값 | 왜 |
+|---|---|---|
+| 알파 | `clamp(휘도 / knee, 0, 1)` | 단순 임계값으로 자르면 **글로우가 통째로 날아가** 테두리가 톱니처럼 남는다. 밝기에 비례시키면 글로우가 자연스럽게 흐려진다 |
+| `knee` | **32** | 기존 `res_*` 4장을 재보니 불투명 픽셀의 최저 휘도가 20~43, 반투명이 6~9% 였다. 32가 그 사이 |
+| un-premultiply | 함 | 검정과 섞여 어두워진 가장자리 색을 알파로 나눠 되돌린다. 안 하면 밝은 배경에서 테두리에 검은 띠가 돈다 |
+| 순서 | **줄이고 → 알파** | 리사이즈 AA 가 검정과 섞이며 부드러운 가장자리를 만든 뒤 알파를 씌운다 |
+
+넣은 결과(2026-08-19): 투명 32~46% · 반투명 9~22% · 5~7KB. 기존 `res_*`(투명 42%대)와 같은 결이다.
+
+## 배선된 자리
+| 아이콘 | 어디 | 폴백 |
+|---|---|---|
+| `res_ticket_*` | 동료·펫 뽑기 줄 · 장비 뽑기 줄 · 던전 허브 보유 · 일일 퀘스트 보상 3곳 · **상점 특가**(한글 이름 매칭) | `resIco` 가 빈 문자열(키가 없을 때만) |
+| `state/st_lock` | **정비 펫·동료 — 잠긴 칸**(칸이 통째로 잠긴 자리) | 원래 이모지 `🔒` |
+| `state/st_rebirth` | 성장 > 환생 줄 | 원래 이모지 `🔁` |
+| `av_guest` | 설정 프로필 머리줄(정식 계정 아닐 때) | 밑에 깔린 **이니셜 글자** |
+
+## 이모지를 남겨 둔 자리 (2026-08-19 전수 확인)
+
+`🎟`·`🔒`·`🔁` 전체 **57곳** 중 손댈 수 있는 UI 자리는 **12곳뿐**이었다.
+나머지는 주석이거나, 이미 아이콘으로 나가거나, **구조상 글자만 되는 자리**다.
+
+| 분류 | 왜 이모지가 맞나 |
+|---|---|
+| `showTownToast` · `lobbyToast` | **`textContent`** 라 HTML 이 안 들어간다 |
+| `toast()` | `addChat` → `_msgIco` 가 **맨 앞 이모지를 라인 SVG 로 이미 바꿔 준다** |
+| `S.floats.push({tx:…})` | 캔버스 `fillText` — 이미지 불가 |
+| `pIco('🔒','sm')` 쓰는 카드 배지 | 이미 라인 SVG 로 통일돼 있다 |
+| 문장 속 잠김 안내(`Lv.20 필요` 꼴) | 컬러 그림을 끼우면 잠김 안내가 **보상처럼** 보인다. 글자와 죽은 색이 이미 말한다 |
+
+⛔ **사냥터 업그레이드 카드에는 자물쇠를 두지 않는다**(2026-08-19). 한때 넣었다가 뺐다 —
+`해금 필요` 글자와 죽은 색이 이미 잠김을 말하고, 칸마다 자물쇠가 붙으면 격자가 시끄럽다.
+같은 이유로 **환생·던전의 잠김 안내에서도 `🔒` 를 뺐다**(글자만 남긴다).
+자물쇠 그림은 **칸 하나가 통째로 잠긴 자리**(정비 펫·동료)에만 쓴다.
+
+⚠ 잠긴 칸의 자물쇠는 `.stIco` 기본값(21px)이 그 줄에서 크다 — `.mgSlot .mgIco .stIco{19px}` 로
+이모지였을 때와 같은 크기로 맞춘다. 스모크가 20px 상한으로 지킨다.

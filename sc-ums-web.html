@@ -105,6 +105,12 @@
      뒤 배경이 살짝 비치는 반투명이 기본이다 — 값이 흩어지면 화면마다 투명도가 달라진다.
      ⚠ --hmPanel/--hbEdge 를 쓰지 말 것: 그 둘은 #homeScreen 안에서만 정의돼 다른 화면에선 면이 통째로 사라진다. */
   :root{--panelBig:linear-gradient(180deg,rgba(25,25,25,.88),rgba(14,14,14,.9));--panelBigEdge:rgba(255,255,255,.07)}
+  /* 🖼 타이틀 키 아트(단일 소스) — 부팅 로딩(.opArt)과 로그인 화면(#auth::before)이 **같은 그림**을 쓴다.
+     그림을 갈아 끼울 땐 여기 한 줄만 고친다. 규격·프롬프트는 ART.md §8. */
+  /* ⚠ ?v= 는 캐시 무력화용이다 — 파일명이 boot.webp 로 고정이라 그림을 갈아 끼워도
+     브라우저가 옛 그림을 계속 보여 준다(실제로 그랬다). **그림을 바꿀 때마다 숫자를 올릴 것.**
+     프로젝트의 다른 에셋(타일 ?v=1·3, 초상 ?v=4)도 같은 방식이다. */
+  :root{--titleArt:url('assets/backgrounds/title/boot.webp?v=2')}
   /* 🎛 유즈맵 하단 프로필 구역(.bp · #btSheet)의 속살 — 사냥터 업그레이드 패널과 같은 문법이다.
      판은 회색(--panelBig), 그 안의 칸(좌측 설명·그리드 카드)은 완전 검정. 푸른 톤을 되살리지 말 것.
      ⚠ 색을 여기 세 토큰으로만 두는 이유: 같은 구역이 시트(뽑기·업그레이드·보스)·메인 홈·플레이어 셋으로
@@ -1468,7 +1474,7 @@
      그래서 '붉은 테두리 = 지금 만질 수 있는 칸'이 스킬과 조작 버튼에서 한 뜻이 된다.
      ⛔ 예전처럼 버튼마다 다른 색(랠리=초록·부양=파랑·전체지정=시안)을 주지 말 것 — 특히 시안은
         DESIGN §2 에서 '지금 선택된 것' 전용(화면당 한 곳)이라 상시로 쓰면 그 뜻이 닳는다. */
-  .cmdG .cgTopOut{position:absolute;right:0;bottom:calc(100% + 12px);display:flex;align-items:stretch;gap:4px;padding:4px;
+  .cmdG .cgTopOut{position:absolute;right:0;bottom:calc(100% + 10px);display:flex;align-items:stretch;gap:3px;padding:3px;
     z-index:31;pointer-events:auto;
     background:var(--trayPanel);border:1px solid var(--metal-edge);border-radius:var(--r-bar);
     clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
@@ -1488,14 +1494,16 @@
   .cmdG .cgPill{flex:none;align-self:flex-start;font:800 9px/1 sans-serif;letter-spacing:.5px;padding:4px 6px;border-radius:5px;color:var(--caL);background:rgba(255,255,255,.04);border:1px solid var(--caS)}
   .cmdG .cgPill.idle{color:var(--cgMuted);border-color:var(--metal-edge)}
   /* 칸 = 스킬 칸(.hbSk)과 같은 값 — 완전 검정 면 + 붉은 알파 그라데 테두리 + 금속 링 + 모서리 컷 7px.
-     ⚠ 크기만 38px 로 줄였다(스킬은 46px). 이건 판 '밖'에 떠 있어서 46px 면 전장을 그만큼 더 가린다. */
-  .cmdG .cgLift,.cmdG .cgRally,.cmdG .cgSelAll{flex:none;width:38px;height:38px;padding:0;cursor:pointer;
+     ⚠ 치수는 2026-08-19 에 **0.8배**로 줄였다(38 → 30px · 아이콘 21 → 17px · 트레이 여백 4 → 3px).
+        판 '밖'에 떠 있어서 클수록 전장을 그만큼 더 가린다.
+     ⛔ `clip-path` 는 7px 그대로다 — 스킬 칸·업그레이드 카드와 **같은 값이어야 하는 계약**이고 스모크가 대조한다. */
+  .cmdG .cgLift,.cmdG .cgRally,.cmdG .cgSelAll{flex:none;width:30px;height:30px;padding:0;cursor:pointer;
     display:flex;align-items:center;justify-content:center;color:#ececec;
     border:1px solid transparent;border-radius:var(--r-bar);
     clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
     background:var(--bpFace) padding-box,var(--trayEdge) border-box,var(--metal-ring-n) border-box;
     box-shadow:0 0 7px -5px rgba(255,59,59,.35)}
-  .cmdG .cgLift svg,.cmdG .cgRally svg,.cmdG .cgSelAll svg{width:21px;height:21px;display:block}
+  .cmdG .cgLift svg,.cmdG .cgRally svg,.cmdG .cgSelAll svg{width:17px;height:17px;display:block}
   /* 켜짐(랠리 지정 중 · 부양 중) = 붉은 발광. 스킬 칸의 '지금 도는 중'과 같은 신호다 */
   .cmdG .cgLift.on,.cmdG .cgRally.on{background:var(--bpFace) padding-box,var(--trayEdgeOn) border-box,var(--metal-ring-n) border-box;
     box-shadow:0 0 9px -3px rgba(255,59,59,.65)}
@@ -1503,27 +1511,29 @@
   .cmdG .cgLift.busy{opacity:.45;cursor:default}
   /* 일꾼 수(S3안) — **넓은 칸 하나**다. 세 칸으로 늘어놓으면 트레이가 5칸이 되어
      숫자 조정이 랠리·부양보다 커 보였다. 껍데기는 위 칸과 같고 안쪽만 구분선으로 나눈다. */
-  .cmdG .cgGasAuto{flex:none;width:76px;height:38px;display:flex;align-items:stretch;gap:0;padding:0;overflow:hidden;
+  .cmdG .cgGasAuto{flex:none;width:61px;height:30px;display:flex;align-items:stretch;gap:0;padding:0;overflow:hidden;
     border:1px solid transparent;border-radius:var(--r-bar);
     clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
     background:var(--bpFace) padding-box,var(--trayEdge) border-box,var(--metal-ring-n) border-box;
     box-shadow:0 0 7px -5px rgba(255,59,59,.35)}
   /* 🎛 UI 조작 아이콘(투명 배경 계열) — 판이 없으므로 버튼 면이 색을 낸다 */
-  .cmdG .uiIco{width:21px;height:21px;display:block;object-fit:contain}
-  .cmdG .cgTrash .uiIco{width:13px;height:13px}
+  .cmdG .uiIco{width:17px;height:17px;display:block;object-fit:contain}
+  /* 🗑 종류 지정 해제 아이콘 — 13 → 17 → 20px(2026-08-19). 칸 아래 좁은 줄에서 13px 은 눌러야 할 것으로 안 보였다.
+     색은 그대로 회색이고 누를 때만 빨강이다 — 커진 것은 크기뿐이라 유닛 아트보다 세지지 않는다. */
+  .cmdG .cgTrash .uiIco{width:20px;height:20px}
   .cmdG .cgTrash{display:flex;align-items:center;justify-content:center;width:100%;margin-top:auto;color:#6d7787;cursor:pointer;padding:0}   /* 🗑 종류 지정 해제 — 파괴 동작이라도 평소엔 초상보다 약해야 한다 */
-  .cmdG .cgTrash svg{width:13px;height:13px;display:block}
+  .cmdG .cgTrash svg{width:20px;height:20px;display:block}
   .cmdG .cgTrash:active{color:var(--neon);transform:scale(.88)}
   .cmdG .cgProg .pl .pt{color:var(--caL);font:800 9px/1 var(--font-num);margin-left:4px;letter-spacing:.2px}   /* 생산 중 옆 남은시간(작게) */
   /* ⚠ `.gaBtn` 은 전역에도 같은 이름의 다른 버튼이 있다 — 반드시 `.cmdG .cgGasAuto` 아래로 좁혀 쓸 것 */
-  .cmdG .cgGasAuto .gaBtn{flex:none;width:22px;height:100%;padding:0;cursor:pointer;
+  .cmdG .cgGasAuto .gaBtn{flex:none;width:18px;height:100%;padding:0;cursor:pointer;
     display:flex;align-items:center;justify-content:center;
-    background:none;border:0;border-radius:0;color:#c3cad3;font:700 15px/1 var(--font-num)}
+    background:none;border:0;border-radius:0;color:#c3cad3;font:700 12px/1 var(--font-num)}
   .cmdG .cgGasAuto .gaBtn:first-of-type{border-right:1px solid rgba(255,255,255,.10)}
   .cmdG .cgGasAuto .gaBtn:last-of-type{border-left:1px solid rgba(255,255,255,.10)}
   .cmdG .cgGasAuto .gaBtn:active{background:rgba(255,255,255,.07)}
   .cmdG .cgGasAuto .gaN{flex:1;min-width:0;height:100%;display:flex;align-items:center;justify-content:center;
-    padding:0;text-align:center;font:800 16px/1 var(--font-num);color:#ececec}
+    padding:0;text-align:center;font:800 13px/1 var(--font-num);color:#ececec}
   .cmdG .cgBody{display:flex;gap:8px;align-items:stretch;flex:1;min-height:0}
   /* 좌측 보조 정보 */
   .cmdG .cgInfo{flex:0 0 31%;max-width:158px;min-width:110px;display:flex;flex-direction:column;gap:4px;padding:7px 8px;overflow:hidden;
@@ -1552,10 +1562,8 @@
   .cmdG .cgUnits::-webkit-scrollbar,.cmdG .cgStats.cgScr::-webkit-scrollbar{width:4px;height:4px}
   .cmdG .cgUnits::-webkit-scrollbar-thumb,.cmdG .cgStats.cgScr::-webkit-scrollbar-thumb{background:rgba(120,140,170,.4);border-radius:3px}
   .cmdG .cgUnits::-webkit-scrollbar-track,.cmdG .cgStats.cgScr::-webkit-scrollbar-track{background:transparent}
-  /* ↩ 전체(소프트선택 복귀) — `.cgLift` 변형이라 트레이 칸 껍데기를 그대로 물려받는다.
-     ⚠ 자리는 머리줄 안이다(트레이가 아니다) — 되돌아가기는 '지금 보는 프로필'에 딸린 것이라 제목 옆이 맞다. */
-  .cmdG .cgBack{width:30px;height:30px}
-  .cmdG .cgBack svg,.cmdG .cgBack .uiIco{width:17px;height:17px}
+  /* ↩ 전체(소프트선택 복귀)는 `.cgLift` 변형이라 **트레이 칸 껍데기·크기를 그대로 물려받는다**(전용 치수 없음).
+     자리는 트레이 맨 왼쪽 — `renderCmdGrid` 가 `m.back` 을 `.cgTopOut` 앞에 붙인다. */
   .cmdG .cgProg{margin-top:1px} .cmdG .cgProg .pl{display:flex;justify-content:space-between;font-size:8.5px;color:var(--cgMuted);margin-bottom:2px} .cmdG .cgProg .pl b{color:var(--caL);font-family:var(--font-num);font-size:10px}
   .cmdG .cgBar{height:6px;border-radius:3px;background:rgba(0,0,0,.55);overflow:hidden;box-shadow:inset 0 0 4px rgba(0,0,0,.7)}
   .cmdG .cgBar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,color-mix(in srgb,var(--ca) 55%,#000),var(--ca));box-shadow:0 0 7px var(--caG);transition:width .12s linear}
@@ -1584,7 +1592,12 @@
   .cmdG .cgSlot::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent)}
   /* 초상은 남는 높이만 갖는다(flex:0 1 auto + min-height:0) — 글자 줄을 밀어내지 않게.
      이미지는 object-fit:contain 이라 눌려도 찌그러지지 않고 레터박스가 된다. */
-  .cmdG .cgPro{width:100%;aspect-ratio:1.2;flex:0 1 auto;min-height:0;position:relative;overflow:hidden;color:var(--ca);border:1px solid var(--caS);border-radius:var(--r-md);
+  /* 프로필 칸은 **정사각형**이다 — 유닛 초상이든 업그레이드·건물 아이콘이든 같은 크기(2026-08-19).
+     ⚠ 예전 기본값 1.2 는 유닛만 가로로 긴 칸이라, 정사각(512²·256²)으로 구운 초상의 **위아래가 잘려** 있었고
+       바로 옆 업그레이드 아이콘(정사각)과 크기가 달라 보였다. 초상 원본이 정사각이므로 1 이 맞다.
+     ⚠ flex:0 1 auto + min-height:0 이라 칸이 좁으면 세로로 눌려 다시 직사각이 된다 — 스모크가 정사각인지 검사한다.
+     예외는 벙커(.cgBunk 1.35) 하나뿐. */
+  .cmdG .cgPro{width:100%;aspect-ratio:1;flex:0 1 auto;min-height:0;position:relative;overflow:hidden;color:var(--ca);border:1px solid var(--caS);border-radius:var(--r-md);
     background:var(--bpTile);display:flex;align-items:center;justify-content:center;font-size:22px}
   /* 스캔라인 + 아래쪽 비네트 — 초상이 커진 만큼 재질을 주고 이름줄과 분리한다 */
   .cmdG .cgPro::after{content:'';position:absolute;inset:0;
@@ -1965,16 +1978,32 @@
   /* ===== 공통 HUD 카드(방 만들기 스타일로 통일): 반투명 + 각진 외형 + 네온 그라데이션 테두리 ===== */
   /* ⚠ .moCard(유즈맵 팝업)는 2026-08-18에 이 목록에서 빠졌다 — 시네마틱으로 바뀌며
      모서리 컷·붉은 네온 테두리를 버렸다(맵 액센트와 색이 경쟁했다). 되돌리지 말 것. */
-  .cpCard,.rmCard,.lbCard,.foCtxCard,.ptInviteCard{position:relative;
+  .cpCard,.rmCard,.lbCard,.foCtxCard{position:relative;
     background:linear-gradient(180deg,rgba(26,20,22,.62),rgba(8,7,9,.7));
     border:none;border-radius:0;
     clip-path:polygon(15px 0,100% 0,100% calc(100% - 15px),calc(100% - 15px) 100%,0 100%,0 15px);
     box-shadow:0 0 0 1px var(--shade),0 12px 40px -10px #000,0 0 40px -10px var(--neon-glow)}
-  .cpCard::before,.rmCard::before,.lbCard::before,.foCtxCard::before,.ptInviteCard::before{content:'';position:absolute;inset:0;padding:1px;pointer-events:none;z-index:0;
+  .cpCard::before,.rmCard::before,.lbCard::before,.foCtxCard::before{content:'';position:absolute;inset:0;padding:1px;pointer-events:none;z-index:0;
     background:linear-gradient(155deg,var(--neon),rgba(255,59,59,.14) 46%,var(--neon-soft));
     clip-path:polygon(15px 0,100% 0,100% calc(100% - 15px),calc(100% - 15px) 100%,0 100%,0 15px);
     -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
   .cpCard>*,.rmCard>*,.lbCard>*,.foCtxCard>*,.ptInviteCard>*{position:relative;z-index:1}
+
+  /* ══ 팝업 껍데기(2026-08-19 확정) — 팝업으로 '남은' 창들의 단일 소스 ══════════════
+     방 찾기·방 만들기·대기실·로그인이 전체 화면으로 나가면서 카드 틀을 벗었다.
+     팝업으로 남은 것들(유즈맵 · 난이도 · 친구 초대/추가 · 파티 찾기)은 이 껍데기 하나를 함께 쓴다.
+       면 #08080a — **불투명**이어야 한다. 유즈맵 목록·마을 위에 뜨므로 반투명이면 뒤 글자가 비쳐 못 읽는다
+       테두리 1px rgba(255,255,255,.08) · 라운드 --r-bar(3px)
+     ⛔ 모서리 컷(clip-path)·붉은 네온 그라데 테두리를 다시 붙이지 말 것 —
+        화면마다 자기 액센트(맵색·난이도색)가 있어서 붉은 테두리와 색이 경쟁한다.
+     ⚠ .pfOv .rmCard 는 위 옛 공용 껍데기의 ::before(네온 프레임)를 상속한다 — 아래에서 함께 끈다.
+        명시도(0,2,0 > 0,1,0)로 이기므로 순서와 무관하지만, 옛 목록에서 .rmCard 를 빼면 안 된다
+        (#rooms 전체 화면이 그 목록을 기준으로 자기 것을 덮고 있다). */
+  .moCard,#soloDiffPanel .cpCard,.ptInviteCard,.pfOv .rmCard{position:relative;
+    clip-path:none;border-radius:var(--r-bar);
+    background:#08080a;border:1px solid rgba(255,255,255,.08);
+    box-shadow:0 16px 44px -12px #000}
+  .moCard::before,#soloDiffPanel .cpCard::before,.ptInviteCard::before,.pfOv .rmCard::before{display:none}
   .cpCard{width:300px;max-width:84vw;padding:20px}
   .cpTitle{font-size:17px;font-weight:800;color:#eef1f6;text-shadow:0 1px 3px rgba(0,0,0,.65);margin-bottom:16px;text-align:center;display:flex;align-items:center;justify-content:center;gap:7px}   /* 제목 = 화이트 통일(방 만들기·난이도·종족 선택 공용) */
   .cpTitle [data-ico] .ic{width:18px;height:18px}
@@ -1998,16 +2027,12 @@
   #logoutPanel.hide{display:none}
   #soloDiffPanel{position:absolute;inset:0;z-index:54;display:flex;align-items:center;justify-content:center;background:rgba(2,3,6,.84);backdrop-filter:blur(3px);padding:20px}   /* 뒤 화면과 확실히 구분 = 진한 딤 */
   #soloDiffPanel.hide{display:none}
-  /* 난이도 선택 = 유즈맵 팝업(.moCard) 바로 다음에 뜬다. 크기뿐 아니라 **껍데기도 같은 언어**로 맞춘다(2026-08-18).
-     면 검정 · 1px 중립 테두리 · 라운드 3 · 위쪽 맵색 오라 · 바깥 맵색 발광 — 시네마틱 카드에서 아트만 뺀 것이다.
-     ⚠ .moCard 값을 바꾸면 여기도 같이 바꿀 것 — 같아야 하는 두 값이다.
+  /* 난이도 선택 = 유즈맵 팝업(.moCard) 바로 다음에 뜬다. 껍데기는 공용 '팝업 껍데기'가 맡고
+     여기서 정하는 것은 **크기·여백·맵색 발광**뿐이다(2026-08-19 단일 소스로 정리).
      ⚠ .cpCard 는 방 만들기·종족 선택·로그아웃과 공용이다 — 반드시 #soloDiffPanel 안에서만 덮을 것. */
   #soloDiffPanel .cpCard{width:var(--popW);max-width:var(--popMaxW);height:min(474px,90%);max-height:90%;
     display:flex;flex-direction:column;overflow:hidden;padding:20px 16px 16px;
-    clip-path:none;border-radius:var(--r-bar);
-    background:#08080a;border:1px solid rgba(255,255,255,.08);
     box-shadow:0 16px 44px -12px #000,0 0 40px -16px var(--mapAccent,#4aa8ff)}
-  #soloDiffPanel .cpCard::before{display:none}   /* 공용 붉은 네온 프레임 제거 — 맵 액센트와 색이 경쟁한다 */
   /* 위쪽 맵색 오라 = 유즈맵 팝업 아트의 마지막 층과 같은 것. var() 색엔 알파를 못 얹으므로 opacity 로 낮춘다.
      z-index 를 주지 않는다 — .cpCard>* 가 z:1 이라 내용은 자동으로 이 위에 온다 */
   #soloDiffPanel .cpCard::after{content:'';position:absolute;inset:0;pointer-events:none;opacity:.14;
@@ -2220,19 +2245,44 @@
   @keyframes fxPushIn{0%{opacity:0;transform:translateX(42px)}50%{opacity:1}100%{opacity:1;transform:translateX(0)}}
   /* 오프닝 로딩 */
   #opening{z-index:90;align-items:center;justify-content:center;text-align:center}
+  /* ══ 부팅 로딩 = 시네마틱 (2026-08-20) ══════════════════════════════════════
+     ⚠ .opWrap 은 통계 창(#resultScreen)과 공용이다 — 부팅 값은 전부 #opening 안에 가둔다. */
   .opWrap{display:flex;flex-direction:column;align-items:center;gap:14px;padding:30px}
-  .opLogo{width:82px;height:82px;display:flex;align-items:center;justify-content:center;color:var(--neon)}   /* 방패 엠블럼 = 박스 없이 아이콘만(글로우 펄스) */
-  .opLogo svg{width:76px;height:76px;filter:drop-shadow(0 0 8px var(--neon-glow));animation:opPulse 1.7s ease-in-out infinite}
-  @keyframes opPulse{0%,100%{filter:drop-shadow(0 0 7px var(--neon-glow))}50%{filter:drop-shadow(0 0 15px var(--neon-glow))}}
-  .opTitle{font-size:22px;font-weight:800;letter-spacing:3px;text-shadow:0 2px 4px #000}   /* 2톤: UMS(흰) + ARENA(네온) */
-  .opTitle .opT1{color:#f3f6fb;text-shadow:0 0 10px rgba(255,255,255,.22),0 2px 4px #000}
-  .opTitle .opT2{color:var(--neon);text-shadow:0 0 16px var(--neon-glow),0 2px 4px #000}
-  .opSub{display:flex;align-items:center;gap:8px;font-size:var(--fs-xs);color:#8b939f;letter-spacing:3px}   /* 양옆 얇은 디바이더 라인 */
-  .opSub::before,.opSub::after{content:'';height:1px;width:26px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent)}
-  .opBarWrap{width:170px;height:5px;border-radius:var(--r-bar);background:rgba(255,255,255,.08);overflow:hidden;margin-top:5px}
-  .opBar{height:100%;width:8%;border-radius:var(--r-bar);background:linear-gradient(90deg,var(--neon-d2),var(--neon));box-shadow:0 0 10px var(--neon-glow);animation:opLoad 1.6s ease-out forwards}
+  /* ⚠ align-items:stretch — 공용 .opWrap 은 center 라 하단 도크가 내용 폭(87px)으로 쪼그라든다.
+     ⚠ overflow:hidden — 아트가 숨쉬는 동안(scale 1.06) 안쪽 여백이 프레임 밖으로 8px 샜다. */
+  #opening .opWrap{position:relative;z-index:2;width:100%;height:100%;gap:0;padding:0;
+    align-items:stretch;justify-content:flex-end;overflow:hidden}
+  /* 키 아트 — 화면을 채우고 아주 느리게 숨을 쉰다(정지 화면으로 안 보이게) */
+  #opening .opArt{position:absolute;inset:0;z-index:0;
+    background:var(--titleArt) center center / cover no-repeat #05070c;
+    animation:opBreathe 18s ease-in-out infinite}
+  @keyframes opBreathe{0%,100%{transform:scale(1.02)}50%{transform:scale(1.06) translateY(-.8%)}}
+  /* ⚠ 딤은 **글자가 앉는 아래쪽만** 덮는다. 전장을 통째로 누르면 무엇이 싸우는지 안 보인다(실제로 그랬다). */
+  #opening .opArt::after{content:'';position:absolute;inset:0;
+    background:linear-gradient(180deg,rgba(4,6,11,.06) 0%,rgba(4,6,11,.10) 40%,rgba(5,6,10,.62) 74%,rgba(5,6,10,.96) 100%)}
+  #opening.counting .opArt{display:none}   /* 진입 카운트다운은 자기 아트(.gsArt)를 쓴다 */
+  #opening .opMid{margin-top:auto;display:flex;flex-direction:column;align-items:center;gap:11px;padding:0 22px 22px}
+  /* 엠블럼 = 새로 그린 육각 라인(옛 방패는 폐지). 아트 위에 얹히므로 가볍게 */
+  .opLogo{width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:#dbe4ef}
+  .opLogo svg{width:44px;height:44px;filter:drop-shadow(0 2px 8px #000)}
+  /* 제목 = 제목 폰트 한 가족. 옛 2톤(흰+네온)은 폐지 — 색은 막대 하나만 갖는다 */
+  .opTitle{font-family:var(--font-ti);font-weight:400;font-size:31px;letter-spacing:.02em;
+    text-shadow:0 3px 20px #000,0 1px 3px #000}
+  .opTitle .opT1,.opTitle .opT2{color:#fff;text-shadow:inherit}
+  .opSub{font-family:var(--font-num);font-size:var(--fs-sm);color:#96a1af;letter-spacing:.42em;text-shadow:0 1px 4px #000}
+  /* 하단 도크 = 유즈맵 진입(.gsBot)과 같은 자리·같은 규격 */
+  #opening .opDock{padding:0 20px 34px}
+  #opening .opCnt{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px}
+  #opening .opCnt i{font-style:normal;font-size:var(--fs-md);letter-spacing:.2em;color:#8a929c}
+  .opBarWrap{width:100%;height:3px;border-radius:2px;background:rgba(255,255,255,.12);overflow:hidden;margin-top:0}
+  .opBar{height:100%;width:0;border-radius:var(--r-bar);background:linear-gradient(90deg,var(--neon-d2),var(--neon));box-shadow:0 0 10px var(--neon-glow)}
+  /* ⚠ 여기에 CSS 애니메이션을 다시 넣지 말 것(2026-08-19). CSS 애니는 **첫 페인트**에 시작하고
+     JS 막대는 스크립트가 읽힐 때 시작한다 — 둘이 겹치면 숫자 없는 바가 차다가 0 으로 되돌아가
+     숫자 바가 다시 차는 「로딩 두 번」이 된다. 막대 주인은 opBarStart/Real/Done 하나뿐이다. */
   @keyframes opLoad{0%{width:8%}60%{width:72%}100%{width:100%}}
-  .opLoading{font-size:var(--fs-xs);color:#7a8390;letter-spacing:2px}
+  /* .opLoading = 진행률 숫자(막대와 같은 값). opBarStart/Done 이 이 요소의 글자를 쓴다 */
+  .opLoading{font-family:var(--font-num);font-size:23px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:0}
+  .opLoading s{text-decoration:none;font-size:14px;color:#7d8792}
   /* 게임 시작 로딩 = 카드 덱(H안) — 부팅 오프닝(.opWrap)은 통째로 감추고 #gsRoot 만 띄운다.
      ⚠ .opWrap/.opMap/.opBtns 는 통계 창(#resultScreen)과 공용이다 — 여기서 덮지 말 것. */
   #opening.counting .opWrap{display:none}
@@ -2351,11 +2401,15 @@
   @keyframes opOut{0%{transform:scale(1);opacity:1;filter:blur(0)}
     45%{opacity:.72;filter:blur(3px)}
     100%{transform:scale(1.13);opacity:0;filter:blur(12px)}}
-  /* 로딩/로그인 화면 배경: loading_bg.png 전체 cover(9:16), 콘텐츠는 위 레이어 */
-  #opening::before,#auth::before{background:url('assets/backgrounds/loading_bg.webp') center center / cover no-repeat #04050b;
+  /* 로그인 화면 배경 = **부팅 로딩과 같은 키 아트**(2026-08-20). 첫 두 화면이 이어져 보인다.
+     ⚠ #opening 은 자기 층(.opArt)으로 깐다 — 여기 ::before 로 합치지 말 것(카운트다운 .counting 에서
+       #gsRoot 의 맵 아트와 겹친다). 파일 이름은 --titleArt 한 곳에서만 정한다.
+     (구 loading_bg.webp 는 이제 어디서도 안 쓴다) */
+  #auth::before{background:var(--titleArt) center center / cover no-repeat #04050b;
     transform-origin:center center;animation:loadBreath 14s ease-in-out infinite}
   @keyframes loadBreath{0%,100%{transform:scale(1.015) translateY(0)}50%{transform:scale(1.06) translateY(-1.2%)}}
-  #opening::after{background:linear-gradient(180deg, rgba(2,3,8,.5) 0%, rgba(2,3,8,.32) 40%, rgba(2,3,8,.6) 100%)}
+  /* 부팅 로딩 딤은 .opArt::after 가 맡는다(아래) — 여기 ::after 는 진입 카운트다운(.counting)일 때만 쓴다 */
+  #opening.counting::after{background:linear-gradient(180deg, rgba(2,3,8,.5) 0%, rgba(2,3,8,.32) 40%, rgba(2,3,8,.6) 100%)}
   /* 🎬 로그인 비네트 — ⭐ '글자가 놓일 자리'를 어둡게 만드는 장치다. 블록을 옮기면 이것도 같이 옮긴다.
      옛 값은 아래쪽을 까는 그라데였고(유즈맵 팝업에서 물려받은 「위는 아트·아래는 정보」 구조),
      블록이 가운데로 오면서 어두운 띠도 가운데로 왔다. ⛔ 한쪽만 옮기면 밝은 그림 위에 글자가 얹힌다.
@@ -2775,6 +2829,9 @@
   .mgSlot.empty{border-style:dashed;opacity:.55}
   .mgSlot.lock{border-style:dashed;opacity:.8;background:rgba(255,255,255,.025)}
   .mgSlot.lock .mgIco{font-size:19px}
+  /* 잠긴 칸 자물쇠 — 40px 카드 안에서 이만큼이 균형이다(이모지 19px 보다 크다).
+     ⚠ 1px 내린다: 자물쇠는 위쪽 고리가 가늘어 사각 상자 기준으로 가운데에 두면 **눈에는 떠 보인다**. */
+  .mgSlot .mgIco .stIco{width:24px;height:24px;position:relative;top:1px}
   .mgSlot.pick{background:rgba(255,255,255,.11)}
   .mgCard{position:relative;flex:0 0 auto;width:40px;height:40px;display:flex;align-items:center;justify-content:center;
     border-radius:var(--r-md);border:1px solid var(--metal-edge);background:rgba(0,0,0,.32)}
@@ -3180,11 +3237,13 @@
      스킬과 업그레이드에서 한 뜻이 된다. 목업: docs/mock/hb-skill-tray-4.html */
   .hbSkWrap{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
   .hbTray{--hmAccRGB:255,59,59;   /* 업그레이드 패널과 같은 계열 — 알파를 얹어 쓰므로 색이 아니라 채널 셋으로 둔다 */
-    display:flex;align-items:stretch;gap:4px;padding:4px;
+    display:flex;align-items:stretch;gap:3px;padding:3px;   /* 여백도 0.8배(4 → 3px) — 게임 안 조작 트레이와 같은 값 */
     background:var(--trayPanel);border:1px solid var(--metal-edge);border-radius:var(--r-bar);   /* 게임 안 조작 트레이(.cgTopOut)와 같은 토큰 */
     clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
-  /* 칸 — .hmUp 과 같은 값(완전 검정 면 · 붉은 알파 그라데 테두리 · 모서리 컷 7px) */
-  .hbSk{position:relative;flex:0 0 auto;width:46px;height:46px;
+  /* 칸 — .hmUp 과 같은 값(완전 검정 면 · 붉은 알파 그라데 테두리 · 모서리 컷 7px)
+     ⚠ 치수는 2026-08-19 에 **0.8배**(46 → 37px). `clip-path`·라운드·면은 그대로다 —
+        업그레이드 카드(.hmUp)와 같은 값이어야 하는 계약이고 스모크가 네 속성을 직접 대조한다. */
+  .hbSk{position:relative;flex:0 0 auto;width:37px;height:37px;
     display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;color:#ececec;
     border:1px solid transparent;border-radius:var(--r-bar);
     clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
@@ -3204,13 +3263,13 @@
     box-shadow:none}
   /* 아이콘을 정확히 가운데로 — 이모지는 라인박스 때문에 그냥 두면 아래로 처진다
      ⚠ 공용 .icoImg 는 inset:0 이라 이 틀의 크기가 곧 아이콘 크기다(width 로 키우지 말 것) */
-  .hbSkIco{position:relative;z-index:1;width:26px;height:26px;display:flex;align-items:center;justify-content:center;
-    font-size:17px;line-height:1}
+  .hbSkIco{position:relative;z-index:1;width:21px;height:21px;display:flex;align-items:center;justify-content:center;
+    font-size:14px;line-height:1}
   .hbSkIco .icoImg{padding:0}
   .hbSk.cool .hbSkIco{opacity:.26}
   /* 남은 초 — 아이콘을 지우지 않고 그 위에 얹는다. 어떤 스킬이 도는 중인지가 보여야 한다 */
   .hbSkSec{position:absolute;z-index:3;pointer-events:none;font-family:var(--font-num);
-    font-size:15px;font-weight:800;color:#e6e9ee;text-shadow:0 1px 2px #000,0 0 6px rgba(0,0,0,.9)}
+    font-size:12px;font-weight:800;color:#e6e9ee;text-shadow:0 1px 2px #000,0 0 6px rgba(0,0,0,.9)}
   /* 남은 시간 = 칸 아래 얇은 바. 껍데기는 --cd 로만 움직인다(다시 그리지 않음) */
   .hbCd{position:absolute;z-index:2;left:3px;right:3px;bottom:3px;height:2px;border-radius:2px;
     pointer-events:none;background:rgba(255,255,255,.07)}
@@ -3391,7 +3450,6 @@
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .hmUpVl .nx{color:#fff}
   .hmArw{display:block;width:7px;height:7px;flex:none;fill:none;stroke:#6f6f6f;stroke-width:3.2;stroke-linecap:round}
-  .hmLk{display:block;width:8px;height:8px;flex:none;fill:none;stroke:#7a7a7a;stroke-width:2;stroke-linejoin:round}
   /* 버튼 — 오른쪽 정사각. 위 = 레벨 변화(잠김은 자물쇠) · 아래 = 비용 */
   /* 작은 버튼은 은색 메탈 그대로 — 빨강은 카드 테두리(.hmUp)가 맡는다 */
   /* 링·안쪽 선 — 색은 여기 두 토큰에서만 꺼낸다(B3안, 2026-08-19).
@@ -3426,7 +3484,8 @@
     border-bottom:1px solid rgba(0,0,0,.62);box-shadow:0 1px 0 rgba(255,255,255,.16);
     border-radius:2px 2px 0 0}
   .hmUpBl .nx{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8),0 0 6px rgba(255,255,255,.28)}
-  .hmUpBl .hmLk{width:11px;height:11px;stroke:#c8c8c8}
+  /* 잠긴 칸의 자물쇠 — 이 띠는 글자 9.5px 이라 그림도 그만큼 작게 */
+  .hmUpBl .stIco{width:13px;height:13px}
   .hmUpBc{gap:3px;font-size:9.5px;font-weight:700;color:#ececec;border-radius:0 0 2px 2px}
   .hmUpBc .ri{display:block;width:10px;height:10px;flex:none}
   .hmUpBtn.off{--btnRing:linear-gradient(315deg,#222 0%,#3e3e3e 66%,#5a5a5a 100%);
@@ -3858,7 +3917,9 @@
   .dqC b{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:var(--fs-xs);font-weight:800;line-height:1}
   .dqC img{width:13px;height:13px;object-fit:contain;display:block}
   .dqC i{font-style:normal;font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:10px;line-height:1.1}
-  .dqC i.tk{font-size:13px}   /* 🎟 = 그림 자리 — 숫자보다 크게 */
+  .dqC i.tk{font-size:13px}   /* (폴백 이모지용) */
+  .dqC img.tk,.dqC .tk{width:15px;height:15px;object-fit:contain;display:block}   /* 🎟 = 그림 자리 — 숫자보다 크게 */
+  .stIco{width:21px;height:21px;object-fit:contain;display:block}                 /* 상태 아이콘(state/) 기본 크기 */
   .dqC.bn{background:rgba(255,210,74,.06);border-color:rgba(255,210,74,.24);color:#a89355;cursor:pointer}
   .dqC.bn[disabled]{cursor:default}
   .dqC.now{color:#fff;background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.5);
@@ -4266,13 +4327,18 @@
   .pfOv.hide{display:none}
   /* ⚠ 방 찾기는 전체 화면이 됐지만 파티 찾기는 **팝업 그대로**다 — 카드 크기·여백을 여기서 지킨다 */
   .pfOv .rmCard{width:var(--popW);max-width:var(--popMaxW);height:var(--popH);max-height:90%;padding:var(--popPad)}
-  .ptInviteCard{width:100%;max-width:300px;height:516px;max-height:calc(100% - 16px);display:flex;flex-direction:column;overflow:hidden;
-    /* ⚠ 공용 카드 면(.cpCard 계열)은 반투명이다 — 유즈맵 목록 위에 뜨면 뒤 카드가 글자 사이로 비쳐 못 읽는다.
-       이 팝업은 목록 위에 뜨는 것이 기본이므로 면을 불투명하게 덮는다(친구 초대·추가·파티 찾기 공통). */
-    background:linear-gradient(180deg,rgba(19,15,17,.975),rgba(6,6,8,.985))}
+  /* 면·테두리·라운드는 공용 '팝업 껍데기'가 맡는다 — 여기는 크기뿐 */
+  .ptInviteCard{width:100%;max-width:300px;height:516px;max-height:calc(100% - 16px);display:flex;flex-direction:column;overflow:hidden}
+  /* 머리줄 = 전체 화면들의 제목과 같은 규약(#rooms .rmTitle) — 제목 폰트 --font-ti · 굵기 400.
+     ⚠ 800 을 쓰면 브라우저가 가짜 볼드를 그려 획이 뭉갠다(DESIGN §2 — Jua 는 400 단일 굵기다). */
   .ptInviteHead{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:11px 13px;
-    border-bottom:1px solid rgba(255,255,255,.08);font-size:var(--fs-lg);font-weight:800;color:#e8eef5}
-  .ptInviteX{background:none;border:none;color:#8a939e;font-size:var(--fs-xl);cursor:pointer;padding:2px 5px}
+    border-bottom:1px solid rgba(255,255,255,.08);
+    font-family:var(--font-ti);font-size:17px;font-weight:400;color:#e8eef5}
+  /* 닫기 = 글자 ✕ 가 아니라 SVG(HOME 팝업 .hbmX 와 같은 물성) — 글자 닫기는 이 팝업에만 남아 있었다 */
+  .ptInviteX{width:26px;height:26px;display:flex;align-items:center;justify-content:center;
+    background:none;border:none;color:#8a939e;cursor:pointer;padding:0}
+  .ptInviteX svg{width:15px;height:15px}
+  .ptInviteX:active{transform:scale(.92)}
   .ptInviteSearch{flex:0 0 auto;padding:9px 12px 0}
   .ptInviteSearch input{width:100%;padding:8px 10px;border-radius:var(--r-md);background:var(--glass);border:1px solid var(--metal-edge);
     color:var(--txt);font-family:inherit;font-size:var(--fs-lg);outline:none}
@@ -4284,6 +4350,9 @@
   .ptRow{gap:9px}
   .fAva{position:relative;flex:0 0 auto;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;
     font-size:var(--fs-xl);font-weight:800;border:1px solid;overflow:visible}
+  /* 자리표시 초상 — 그림이 디스크를 통째로 그리므로 이니셜 위를 덮고, 색 테두리는 죽인다.
+     ⚠ `.fAva` 의 크기는 화면마다 다르다(18·22·28·30px) — 여기서 폭을 박지 말고 100% 로 따라가게 둔다. */
+  .fAva>.fAvaImg{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
   .fAvaDot{position:absolute;right:-1px;bottom:-1px;width:9px;height:9px;border-radius:50%;border:2px solid #060608}
   .fDot-online{background:var(--ok)}.fDot-ingame{background:#ffc04a}.fDot-offline{background:#6a727d}
   .fMeta{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;line-height:1.2}
@@ -4380,8 +4449,8 @@
      ⚠ .moThumb / .moMap / .moInfo / .moFeat 은 게임 시작(#opening)·결과(#resultScreen)
        화면과 공용이다. 여기서 바꾸는 값은 전부 #modeSheet 안에 가둘 것 —
        전역으로 고치면 시작 화면의 썸네일·제목이 같이 무너진다. */
-  .moCard{position:relative;width:var(--popW);max-width:var(--popMaxW);height:var(--popH);max-height:90%;   /* 전 유즈맵 공통 높이 — 항목이 많으면 카드를 늘리지 말고 설명 칸을 축소 */
-    border-radius:var(--r-bar);background:#08080a;border:1px solid rgba(255,255,255,.08);
+  /* 껍데기(면·테두리·라운드)는 공용 '팝업 껍데기'가 맡는다 — 여기는 크기와 맵색 발광만 */
+  .moCard{width:var(--popW);max-width:var(--popMaxW);height:var(--popH);max-height:90%;   /* 전 유즈맵 공통 높이 — 항목이 많으면 카드를 늘리지 말고 설명 칸을 축소 */
     box-shadow:0 16px 44px -12px #000,0 0 40px -16px var(--mapAccent,#4aa8ff)}   /* 바깥 오라 = 맵 아이덴티티. 카드 '뒤'에서만 난다(면은 검정) */
   /* overflow:hidden — 아트가 카드 모서리 밖으로 새지 않게 */
   .moInner{position:relative;z-index:1;width:100%;height:100%;display:flex;flex-direction:column;
@@ -5364,7 +5433,9 @@
     </div>
     <div id="dgResult" class="dgResult hide"></div>
   </div>
-  </div><!-- /#phone — dgScreen까지 프레임 안(비율 통합) -->
+  <!-- ⚠ 여기서 #phone 을 닫지 말 것 — 로딩창(#opening)·설정·마을 팝업이 프레임 밖으로 떨어져
+       .appScreen(position:absolute) 이 뷰포트 기준이 되어 전체 화면을 덮는다(2026-08-19 병합 잔재 제거).
+       #phone 은 파일 끝(모든 화면·팝업 뒤)에서 한 번만 닫는다. -->
 
   <!-- 마을 시설 팝업(구역 도착 시) -->
   <div id="townPanel" class="hide" onclick="if(event.target===this)closeTownPanel()">
@@ -5477,12 +5548,21 @@
 
   <!-- ===== 오프닝/게임 로딩(폰 전체 덮음) ===== -->
   <div id="opening" class="appScreen spaceBg">
+    <!-- 부팅 로딩 = 시네마틱(2026-08-20). 아트가 화면을 채우고 정보는 하단 도크로 모인다 —
+         유즈맵 진입 화면(#gsRoot)과 같은 골격이라 두 로딩이 한 세트로 읽힌다.
+         ⚠ .opWrap 은 통계 창(#resultScreen)과 공용이다. 여기 자식(.opMid/.opDock)만 부팅 전용이고
+           .opWrap 자체에는 #opening 안에서만 값을 덮는다. -->
+    <div class="opArt" aria-hidden="true"></div>
     <div class="opWrap">
-      <div class="opLogo"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M24 4 L40 9 V24 C40 33 33 39.5 24 43 C15 39.5 8 33 8 24 V9 Z"/><path d="M24 15 L27 23 L24 31 L21 23 Z" fill="currentColor" stroke="none"/><path d="M17 20 L24 23 L31 20" stroke-width="1.5"/></svg></div>
-      <div class="opTitle"><span class="opT1">STAR </span><span class="opT2">WAR</span></div>
-      <div class="opSub">BATTLE ARENA</div>
-      <div class="opBarWrap"><div class="opBar"></div></div>
-      <div class="opLoading">LOADING…</div>
+      <div class="opMid">
+        <div class="opLogo"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M32 5 55 18.5v27L32 59 9 45.5v-27z"/><path d="M32 19 43 25.5v13L32 45 21 38.5v-13z" opacity=".55"/><path d="M32 25.5v13M26 29v6M38 29v6" stroke-width="1.2" opacity=".8"/></svg></div>
+        <div class="opTitle"><span class="opT1">STAR </span><span class="opT2">WAR</span></div>
+        <div class="opSub">BATTLE ARENA</div>
+      </div>
+      <div class="opDock">
+        <div class="opCnt"><i>LOADING</i><div class="opLoading">0<s>%</s></div></div>
+        <div class="opBarWrap"><div class="opBar"></div></div>
+      </div>
     </div>
     <!-- 게임 진입 로딩 = 카드 덱(H안, 2026-08-19). 부팅 오프닝(.opWrap)과 **별개 층**이다 —
          .opWrap/.opMap/.opBtns 는 통계 창(#resultScreen)과 공용이라 여기서 건드리면 그쪽이 같이 바뀐다. -->
@@ -5506,7 +5586,7 @@
   </div>
 
   <!-- 화면 전환 HUD 스캔 와이프 오버레이 -->
-</div>
+</div><!-- /#phone — 모든 화면·팝업이 이 안에 있다(비율 일원화, c44a6ee) -->
 <!-- 테스트 도감(폰 밖 우측 고정 패널): 28종 등급별 카드. 탭=즉시 소환 / 상단=랜덤 뽑기 -->
 <div class="gachaDex" id="gachaDex"></div>
 <a class="backlink" href="#" onclick="location.reload();return false">↻ 새로</a>
@@ -6842,7 +6922,8 @@ function openHome(){ loadMeta();
 
 // 사냥터 업그레이드 표시 보조물
 const HM_ARW='<svg class="hmArw" viewBox="0 0 24 24"><path d="M6 12h11M13 7.5 17.5 12 13 16.5"/></svg>';
-const HM_LOCK='<svg class="hmLk" viewBox="0 0 24 24"><path d="M7.5 10.5V7.6a4.5 4.5 0 0 1 9 0v2.9M5.6 10.5h12.8v9.4H5.6z"/></svg>';
+// (사냥터 업그레이드 카드의 자물쇠는 2026-08-19 **아예 뺐다** — `해금 필요` 글자와 죽은 색이 이미 잠김을 말한다.
+//  자물쇠 그림이 필요한 곳은 칸 하나가 통째로 잠긴 자리(정비 펫·동료 칸)뿐이고, 거기서는 `stIco('lock','🔒')` 를 쓴다.)
 // 아이콘은 전부 기존 에셋 재사용 — 'upgrades/up_x' 처럼 폴더까지 담겨 있다
 // 경로형 아이콘 — 키에 하위폴더까지 들어 있는 표기('upgrades/up_range'). HB_UPG.ico 와 LP_STATS.ico 가 같이 쓴다.
 function _icoPathImg(path, fb){ return '<img class="icoImg" src="'+ICO_DIR+path+'.webp" alt="" draggable="false" data-fb="'+(fb||'⚙')+'" data-fbcls="" onerror="_icoFail(this)">'; }
@@ -6858,9 +6939,9 @@ const HM_SUF=['확률','배수','계수','재생','표적','수','흡수'];
 //    바로 위에서 이미 값이 어떻게 변하는지 화살표로 말하고 있어 같은 말이 두 번이었다.
 function hmUpCardHTML(o){
   const arw=(a,b)=>(b==null||b==='')?a:(a+HM_ARW+'<b class="nx">'+b+'</b>');
-  const head=o.lock ? '<span class="hmUpLk">'+HM_LOCK+(o.lockTx||'해금 필요')+'</span>'
+  const head=o.lock ? '<span class="hmUpLk">'+(o.lockTx||'해금 필요')+'</span>'
                     : '<span class="hmUpVl">'+arw(o.val,o.next)+'</span>';
-  const foot='<span class="hmUpBl">'+(o.lock?HM_LOCK:o.lv)+'</span>'
+  const foot='<span class="hmUpBl">'+(o.lock?stIco('lock','🔒'):o.lv)+'</span>'
             +'<span class="hmUpBc">'+o.cost+'</span>';
   return '<div class="hmUp'+(o.lock?' lk':'')+'" data-k="'+o.key+'">'
     +'<span class="hmUpIco">'+o.ico+'</span>'
@@ -7232,7 +7313,7 @@ function dqRwTx(rw){ if(!rw) return '';
   if(rw.pcoin) t.push(ri('mineral',rw.pcoin));
   if(rw.gas)   t.push(ri('gas',rw.gas));
   if(rw.gem)   t.push(ri('gem',rw.gem));
-  for(const k in DQ_TK) if(rw[k]) t.push('<span class="dqRw">🎟 '+DQ_TK[k]+' ×'+rw[k]+'</span>');   // '뽑기권'은 🎟 이 말한다
+  for(const k in DQ_TK) if(rw[k]) t.push('<span class="dqRw">'+resIco('ticket_'+k,'dqRi')+DQ_TK[k]+' ×'+rw[k]+'</span>');   // '뽑기권'은 🎟 이 말한다
   return t.join(''); }
 function dqRwPlain(rw){ if(!rw) return '';
   const t=[];
@@ -7244,7 +7325,7 @@ function dqRwPlain(rw){ if(!rw) return '';
 // 칸 안에 넣는 작은 표기 — 재화는 아이콘, 뽑기권은 🎟
 // 칸이 좁아 하나만 보여 준다 — 그 보상의 '얼굴'을 고른다(뽑기권 > 젬 > 미네랄 > 가스)
 function dqRwIco(rw){ if(!rw) return '';
-  for(const k in DQ_TK) if(rw[k]) return '<i class="tk">🎟</i>';
+  for(const k in DQ_TK) if(rw[k]) return resIco('ticket_'+k,'tk');
   if(rw.gem)   return resIco('gem')+'<i>'+rw.gem+'</i>';
   if(rw.pcoin) return resIco('mineral')+'<i>'+(rw.pcoin>=1000?Math.round(rw.pcoin/100)/10+'k':rw.pcoin)+'</i>';
   if(rw.gas)   return resIco('gas')+'<i>'+rw.gas+'</i>';
@@ -7365,7 +7446,7 @@ function dqClaimBtn(rw, act, done, got){
     if(rw.pcoin) t.push(ri('mineral',rw.pcoin));
     if(rw.gas)   t.push(ri('gas',rw.gas));
     if(rw.gem)   t.push(ri('gem',rw.gem));
-    for(const k in DQ_TK) if(rw[k]) t.push('<i>🎟 '+DQ_TK[k]+' ×'+rw[k]+'</i>');
+    for(const k in DQ_TK) if(rw[k]) t.push('<i>'+resIco('ticket_'+k,'dqRi')+DQ_TK[k]+' ×'+rw[k]+'</i>');
     r='<span class="dqRwB">'+t.join('')+'</span>'; }
   return '<button class="hbRowBtn dqBtn" onclick="'+act+'"'+((done&&!got)?'':' disabled')+'>'
     +r+'<b>'+(got?'완료':'받기')+'</b></button>'; }
@@ -7441,7 +7522,7 @@ function renderMateModal(){ const box=document.getElementById('hbMateBody'); if(
   // ① 뽑기 — 뽑기권으로만 영입한다. 지금 확률과 다음 단계까지 남은 횟수를 같이 보여 준다.
   { const pr=hbGachaProbs(), nx=hbGachaNext();
     h+='<div class="hbGrowLbl">동료 뽑기 <span class="hbStars">Lv.'+hbGachaLv()+'</span></div>';
-    h+='<div class="hbRow"><span class="hbRowIco">🎟</span>'
+    h+='<div class="hbRow"><span class="hbRowIco">'+resIco('ticket_ally')+'</span>'
       +'<span class="hbRowTx"><b>동료 뽑기권 <i>'+tk+'</i></b><em>'
       +(nx? ('다음 단계까지 '+nx.left+'회 — Lv.'+nx.lv+'가 되면 상위 등급이 더 열립니다') : '최고 단계')
       +'</em></span>'
@@ -7575,15 +7656,15 @@ function renderGrowModal(){ const box=document.getElementById('hbGrowBody'); if(
     const pNeed=profRebPoint(c), pHave=((typeof PLAYER_META!=='undefined'&&PLAYER_META.coins)||0);
     const lvOk=((c.level|0)>=need);
     const gain=profRebGainAt(c.level), rp=profRebGrantAt(c.level);
-    h+='<div class="hbRow"><span class="hbRowIco">🔁</span>'
+    h+='<div class="hbRow"><span class="hbRowIco">'+stIco('rebirth','🔁')+'</span>'
       +'<span class="hbRowTx"><b>'
       +(can ? ('Lv.'+c.level+' 환생 — 경험치 ×'+(profXpMul(c)+gain).toFixed(2)+' · 미네랄 ×'
                +(profCoinMul(c)+PROF_REB_COIN_R*gain).toFixed(2))
             : (N+'회차 환생'))+'</b>'
       +'<em>'+(can ? ('레벨·레벨 포인트·<b>미네랄 업그레이드·미네랄·던전/라운드</b>가 처음으로 돌아갑니다. <b>깼던 구간은 열려 있어</b> 곧장 되돌아갈 수 있습니다. 해금·기록·장비·펫·환생 포인트는 그대로.'
                       +'<br>받는 것: 환생 포인트 +'+rp+' · 배수 +'+gain.toFixed(2)+' — <b>더 밀수록 커집니다</b>')
-                  : (lvOk ? ('🔒 ◎ 포인트 '+pNeed+' 필요 (보유 '+pHave+') — 포인트는 <b>유즈맵에서만</b> 나옵니다')
-                          : ('🔒 Lv.'+need+' 필요 — Lv.'+PROF_REB_MIN_LV+'부터 언제든, 몇 번이든 할 수 있습니다'
+                  : (lvOk ? ('◎ 포인트 '+pNeed+' 필요 (보유 '+pHave+') — 포인트는 <b>유즈맵에서만</b> 나옵니다')
+                          : ('Lv.'+need+' 필요 — Lv.'+PROF_REB_MIN_LV+'부터 언제든, 몇 번이든 할 수 있습니다'
                              +(pNeed>0?(' · ◎ 포인트 '+pNeed):''))))+'</em></span>'
       +'<button class="hbRowBtn" onclick="hbDoRebirth()"'+(can?'':' disabled')+'>환생</button></div>'; }
   // 🔁 환생 포인트 — 환생으로만 얻고 환생해도 안 사라진다. 줄 모양은 스탯 화면의 레벨 포인트와 같은 컴포넌트.
@@ -8027,7 +8108,7 @@ const HB_FAIL_S=3;   // 웨이브 시간 초과 → 이만큼 뒤에 1웨이브�
 // 전장은 화면 픽셀이 아니라 '월드 좌표'다. 캐릭터가 원점(0,0)이고 적·사거리·글자가 전부 월드 단위.
 // 그리기 직전에 카메라 한 번(translate+scale)으로 화면에 맞춘다 → 보이는 영역이 커지면 배율 k가 커져
 // 캐릭터만 내려가는 게 아니라 장면 전체가 같은 비율로 확대된다.
-const HB_WARM_HOLD=220;    // 로딩 100%를 보여 주는 시간(ms) — 0이면 다 됐는지 모르고 튕겨 들어간다
+// (구 HB_WARM_HOLD 는 폐지 — 100% 유지 시간은 LOAD_HOLD 하나가 갖는다. 2026-08-19)
 const HB_BG_VIG_IN=0.42, HB_BG_VIG_A=0.62;   // 배경 그림 비네트: 시작 반경 비율 · 가장자리 불투명도
 // 움직이는 배경(dgN_f1..f4.webp)을 쓸지. 지금은 정지 그림만 쓰기로 해서 꺼 둔다.
 // 끄면 프레임 파일을 아예 요청하지 않는다 — 켜 두면 파일이 없는 던전마다 404가 4번씩 난다.
@@ -9822,14 +9903,16 @@ function warmAll(onStep){
 // 새 로딩 UI를 만들지 않는다 — 부팅 때 쓰는 그 화면의 막대와 문구를 그대로 쓴다.
 async function enterAfterWarm(){
   const op=document.getElementById('opening');
-  const bar=op&&op.querySelector('.opBar'), tx=op&&op.querySelector('.opLoading');
   showAppScreen('opening');
-  if(bar){ bar.style.animation='none'; bar.style.width='6%'; }   // CSS의 가짜 진행을 끄고 실제 값으로
-  const put=(p)=>{ if(bar) bar.style.width=Math.round(6+94*p)+'%'; if(tx) tx.textContent='LOADING '+Math.round(100*p)+'%'; };
-  put(0);
-  await warmAll((n,t)=>put(t?n/t:1));
-  put(1); await new Promise(r=>setTimeout(r,HB_WARM_HOLD));   // 100%를 잠깐 보여 주고 넘어간다
-  if(bar){ bar.style.animation=''; bar.style.width=''; } if(tx) tx.textContent='LOADING…';
+  // 막대는 공용 규칙(opBarStart/Real/Done)이 몬다.
+  // ⚠ 부팅에서 이어서 오면 **그 막대를 그대로 잇는다** — 여기서 0 으로 되돌리면 사용자에겐
+  //   '로딩이 두 번' 도는 것으로 보인다(2026-08-19). 로그인·게스트로 들어올 때만 새로 시작한다.
+  const cont = (typeof _opBar!=='undefined' && _opBar);
+  const base = cont ? BOOT_AUTH_P : 0;
+  if(!cont) opBarStart();
+  await warmAll((n,t)=>opBarReal(base+(1-base)*(t?n/t:1)));
+  await opBarDone();
+  opBarReset();
   openHome(); }
 function hb3dAttach(){ const cv=document.getElementById('cvMarine'), host=document.getElementById('homeScreen');
   if(!cv||!host||_hb3dHome) return;
@@ -10418,7 +10501,7 @@ function _mgK(){ return _gearTab==='pet' ? 'pet' : 'ally'; }
 // 아직 안 산 칸 — 무엇을 내면 열리는지 그 줄에서 바로 보여 준다
 function _mgLockRow(k, i){ const cost=mgSlotCost(i), can=Math.floor((PROF().pcoin||0))>=cost;
   return '<div class="mgSlot lock">'
-    +'<span class="mgCard"><span class="mgIco">🔒</span></span>'
+    +'<span class="mgCard"><span class="mgIco">'+stIco('lock','🔒')+'</span></span>'
     +'<span class="mgBody"><b class="mgName">'+(i+1)+'번째 칸</b>'
     +'<em class="mgStat">'+resIco('mineral','gi')+' '+cost.toLocaleString('en-US')+' 로 열립니다</em></span>'
     +'<span class="mgBtns"><button class="mgBtn'+(can?' on':'')+'" onclick="mgBuySlot(\''+k+'\')"'+(can?'':' disabled')+'>열기</button></span></div>'; }
@@ -10569,7 +10652,7 @@ function _mgPanel(k, note){ const M=MG[k], on=M.on(), mx=M.max();
     +'</div>';
   top+='</div>';
   const hint=_mgSwap&&_mgSwap.kind===k
-    ? '<div class="igEmpty sm feed">🔁 <b>'+M.name(_mgSwap.id)+'</b> 을 넣을 자리를 <b>위에서</b> 고르세요</div>'
+    ? '<div class="igEmpty sm feed">'+stIco('rebirth','🔁')+' <b>'+M.name(_mgSwap.id)+'</b> 을 넣을 자리를 <b>위에서</b> 고르세요</div>'
     : (note?'<div class="igEmpty sm">'+note+'</div>':'');
   return _gearFrame(M.sum(), top, '<span class="bagTtl">보유 '+M.label+'</span>',
     M.owned().length+M.unit, _mgGrid(k), hint+_mgPickSheet()+_mgMixSheet()); }
@@ -10606,8 +10689,14 @@ function renderProfStats(){ const c=CHAR(); if(!c) return '<div class="twHead">�
 // ── 💠 재화 아이콘 단일 소스 ────────────────────────────────────────────────
 // ⛔ 새 UI에서 미네랄·가스·젬·인구를 표시할 땐 **반드시 resIco()**를 쓴다. 이모지를 임의로 넣지 말 것.
 //    한글 이름으로도 찾는다 — resIco('미네랄') === resIco('mineral').
-const RES_ICON={ mineral:'res_mineral', gas:'res_gas', gem:'res_gem', pop:'res_pop' };
-const RES_ICON_KO={ '미네랄':'mineral', '가스':'gas', '젬':'gem', '인구':'pop' };
+// 🎟 뽑기권 3종도 여기 있다 — 세는 물건이라 재화와 같은 자리·같은 함수로 그린다(`resIco('ticket_pet')`).
+//   ⚠ 이모지 🎟 를 새로 박지 말 것: 세 종류가 색으로만 갈리는데 이모지는 하나뿐이라 구분이 사라진다.
+const RES_ICON={ mineral:'res_mineral', gas:'res_gas', gem:'res_gem', pop:'res_pop',
+  ticket_gear:'res_ticket_gear', ticket_pet:'res_ticket_pet', ticket_ally:'res_ticket_ally' };
+// ⚠ 한글 이름도 열쇠다 — 상점 특가는 `SHOP_GIVE_LABEL` 의 **한글 이름으로** `resIco()` 를 부른다.
+//   여기 세 줄이 없으면 그 줄만 이모지 폴백(🎟)으로 떨어져 세 종류가 같은 그림이 된다.
+const RES_ICON_KO={ '미네랄':'mineral', '가스':'gas', '젬':'gem', '인구':'pop',
+  '장비 뽑기권':'ticket_gear', '펫 뽑기권':'ticket_pet', '동료 뽑기권':'ticket_ally' };
 function resIco(k, cls){ const id=RES_ICON[k]||RES_ICON[RES_ICON_KO[k]];
   return id ? '<img class="'+(cls||'ri')+'" src="assets/icons/'+id+'.webp" alt="">' : ''; }
 // ── 🎁 상점 내용(단일 소스) — 모바일 재화상점 형태: 오늘의 특가 → 뽑기 → 젬(현질) → 보유 펫 ──
@@ -10669,7 +10758,7 @@ function _shopDrawHTML(){ const p=PROF(), eq=p.equip||[]; let h='';
   // 🎰 펫 뽑기 — 동료 뽑기와 같은 형태(뽑기권 + 단계별 확률 + 중복은 합성 재료)
   { const tk=profPetTicket(), nx=profPetNext();
     h+='<div class="shopRow"><div class="twRowInfo"><div class="twRowName">펫 뽑기 <span class="twStars">Lv.'+profPetLv()+'</span></div>'
-      +'<div class="twRowSub'+(tk?'':' lock')+'">보유 🎟 '+tk+' · '
+      +'<div class="twRowSub'+(tk?'':' lock')+'">보유 '+resIco('ticket_pet','gi')+' '+tk+' · '
       +(nx? ('다음 단계까지 '+nx.left+'회'):'최고 단계')+' · 중복은 합성 재료</div></div>'
       +'<button class="twBtn" onclick="profDoGacha()"'+(tk?'':' disabled')+'>뽑기</button></div>';
     h+='<div class="mateOdds">';
@@ -10681,7 +10770,7 @@ function _shopDrawHTML(){ const p=PROF(), eq=p.equip||[]; let h='';
   // 🎟 장비 뽑기권 — 자동사냥 엘리트 처치·토벌 클리어로 얻는다. 여기가 유일한 소비처.
   { const tk=((p.tickets&&p.tickets.gear)||0), full=profItems().length>=PROF_INV_MAX;
     h+='<div class="shopRow"><div class="twRowInfo"><div class="twRowName">장비 뽑기권 사용</div>'
-      +'<div class="twRowSub'+(tk?'':' lock')+'">'+(full?'가방이 가득 찼습니다':('보유 🎟 '+tk+' · 엘리트 처치·토벌에서 획득'))+'</div></div>'
+      +'<div class="twRowSub'+(tk?'':' lock')+'">'+(full?'가방이 가득 찼습니다':('보유 '+resIco('ticket_gear','gi')+' '+tk+' · 엘리트 처치·토벌에서 획득'))+'</div></div>'
       +'<button class="twBtn" onclick="profUseGearTicket()"'+((tk&&!full)?'':' disabled')+'>뽑기</button></div>'; }
   h+='</div></div>';
   h+=_shopPetPanel();   // 뽑은 펫은 뽑기 구역에서 바로 본다(정비 '펫' 탭과 같은 함수)
@@ -11043,9 +11132,9 @@ function renderDungeonHub(){ const body=document.getElementById('dgHubBody'); if
   for(const d of DG_DUNGEONS){ const lock=c.level<d.reqLv, k=lock?0:dgKeyN(d.id);
     h+='<div class="dgCard'+(lock?' lock':'')+'" style="--dgTint:'+d.tint+'"'+(lock?'':' onclick="dgOpenSheet(\''+d.id+'\')"')+'>'
       +'<div class="dgCardArt"><span class="dgCardIco">'+d.ico+'</span><span class="dgCardName">'+d.name+'</span></div>'
-      +'<div class="dgCardR"><span class="dgCardKey">🗝 '+(lock?('🔒 Lv.'+d.reqLv):(k+'/'+DG_KEY_DAILY))+'</span>'
+      +'<div class="dgCardR"><span class="dgCardKey">🗝 '+(lock?('Lv.'+d.reqLv):(k+'/'+DG_KEY_DAILY))+'</span>'
       +(lock?'':'<button class="dgOpenBtn" onclick="event.stopPropagation();dgOpenSheet(\''+d.id+'\')">열기</button>')+'</div></div>'; }
-  const tx=(PROF()&&PROF().tickets)||{}; h+='<div class="dgTix">🎟 장비<b>'+(tx.gear||0)+'</b> · 펫<b>'+(tx.pet||0)+'</b> · 동료<b>'+(tx.ally||0)+'</b></div>';
+  const tx=(PROF()&&PROF().tickets)||{}; h+='<div class="dgTix">'+resIco('ticket_gear','gi')+'<b>'+(tx.gear||0)+'</b> '+resIco('ticket_pet','gi')+'<b>'+(tx.pet||0)+'</b> '+resIco('ticket_ally','gi')+'<b>'+(tx.ally||0)+'</b></div>';
   body.innerHTML=h; }
 // 던전 팝업 — 이전 스테이지 소탕 + 입장
 let _dgSheetId=null;
@@ -11067,7 +11156,7 @@ function renderDgSheet(){ const d=DG_DUNGEONS.find(x=>x.id===_dgSheetId), c=CHAR
   set('dgSheetKey', '🗝 '+k+'/'+DG_KEY_DAILY);
   const bSweep=document.getElementById('dgSheetSweep'), bEnter=document.getElementById('dgSheetEnter');
   if(bSweep) bSweep.disabled=!(mx>0 && k>0);
-  if(bEnter){ bEnter.disabled=!(okLv && k>0); bEnter.textContent = okLv?'입장':('🔒 Lv.'+dgFloorReqLv(nx)); } }
+  if(bEnter){ bEnter.disabled=!(okLv && k>0); bEnter.textContent = okLv?'입장':('Lv.'+dgFloorReqLv(nx)+' 필요'); } }
 function dgSheetEnter(){ const d=DG_DUNGEONS.find(x=>x.id===_dgSheetId); if(!d) return; const nx=dgMaxFloor()+1;
   if(nx>dgFloorCap()){ if(typeof toast==='function') toast('Lv.'+dgFloorReqLv(nx)+'부터 도전할 수 있습니다'); return; }
   if(dgKeyN(d.id)<1){ if(typeof toast==='function') toast('🗝 열쇠가 없습니다(매일 09:00 보충)'); return; }
@@ -15417,9 +15506,13 @@ function renderCmdGrid(host, m){ const el=(typeof host==='string')?document.getE
   let dots=''; for(let p=0;p<pages;p++) dots+='<span class="dot'+(p===pg?' on':'')+'"></span>';
   const pager=(pages>1)?('<div class="cgPage"><button onclick="_cgTurn(this,-1)">◀</button><span class="dots">'+dots+'</span><span class="pn">'+(pg+1)+' / '+pages+'</span><button onclick="_cgTurn(this,1)">▶</button></div>'):'';
   const pill=m.status?('<span class="cgPill'+(m.statusIdle?' idle':'')+'">'+m.status+'</span>'):'';
+  // 🎛 판 밖 오른쪽 위 트레이 = [🔙 되돌아가기][일꾼 수·랠리·부양·전체지정].
+  //   되돌아가기가 **맨 왼쪽**이다 — '나가는 문'이라 손이 먼저 닿는 쪽에 둔다.
+  //   ⚠ 머리줄에 두지 않는다: 버튼 높이가 머리줄을 밀어 올려 그리드가 그만큼 짧아지고, 조작 버튼이 두 곳으로 갈린다.
+  const tray=(m.back||'')+(m.topRight||'');
   el.innerHTML='<div class="cmdG" data-mode="'+(m.mode||'upg')+'" data-compact="'+(m.compact?1:0)+'" data-build="'+(m.build?1:0)+'">'
-    +(m.topRight?('<div class="cgTopOut">'+m.topRight+'</div>'):'')   // 판 밖 오른쪽 위 = 자원 스텝퍼·랠리·부양·전체지정(머리줄을 두껍게 하지 않는다)
-    +'<div class="cgHead"><div class="cgTtl"><div class="cgN">'+(m.title||'')+'</div>'+(m.hpsh?'<div class="cgHpsh">'+m.hpsh+'</div>':(m.sub?'<div class="cgS">'+m.sub+'</div>':''))+'</div>'+pill+pager+(m.back||'')+'</div>'   // 머리줄 = [제목 HP/실드 / 설명][상태칩][◀페이지▶][🔙]
+    +(tray?('<div class="cgTopOut">'+tray+'</div>'):'')
+    +'<div class="cgHead"><div class="cgTtl"><div class="cgN">'+(m.title||'')+'</div>'+(m.hpsh?'<div class="cgHpsh">'+m.hpsh+'</div>':(m.sub?'<div class="cgS">'+m.sub+'</div>':''))+'</div>'+pill+pager+'</div>'   // 머리줄 = [제목 HP/실드 / 설명][상태칩][◀페이지▶]
     +'<div class="cgBody"><div class="cgInfo">'+_cgInfoHTML(m.info)+'</div><div class="cgCol"><div class="cgGrid">'+cells.join('')+'</div></div></div></div>';
   if(m.build){ const nms=el.querySelectorAll('.cgName'); for(const nm of nms){ let fs=10; nm.style.fontSize=fs+'px'; let g=0; while(nm.scrollWidth>nm.clientWidth+0.5 && fs>6 && g++<12){ fs-=0.5; nm.style.fontSize=fs+'px'; } } } }   // 이름 생략(...) 대신 폰트 축소로 한 줄에 전부
 function _cgTurn(btn,delta){ let h=btn; while(h && !h._cgModel) h=h.parentElement; if(!h||!h._cgModel) return; h._cgModel.page=(h._cgPage||0)+delta; renderCmdGrid(h,h._cgModel); }
@@ -15563,7 +15656,8 @@ function setPaintMe(){ const el=document.getElementById('setMe'); if(!el) return
   const badge = acct ? '<em class="setMeTag">계정</em>'
     : '<button class="setMeTag go" onclick="setAcctGo()">'
       +(!u ? '로그인' : ((typeof authCanLink==='function'&&authCanLink()) ? '게스트 연결' : '게스트'))+' ›</button>';
-  el.innerHTML=(typeof avatarHTML==='function'?avatarHTML(nick,''):'')
+  // 정식 계정이 아니면(게스트·미로그인) 초상도 자리표시로 — 배지 글자와 그림이 같은 말을 한다
+  el.innerHTML=(typeof avatarHTML==='function'?avatarHTML(nick,'',null,!acct):'')
     +'<span class="setMeN">'+escHtml(nick)+(tag?'<i>'+escHtml(tag)+'</i>':'')+'</span>'+badge; }
 // 게스트 → 계정. 클라우드 게스트는 uid 를 그대로 두고 붙일 수 있고(진행도 유지),
 // 로컬 게스트(supabase 폴백)는 붙일 uid 가 없다 — 그 사실을 숨기지 않고 알린다.
@@ -15873,7 +15967,7 @@ function overlayToLobby(){
   if(typeof G!=='undefined'&&G&&G.strike && typeof STK!=='undefined') STK=null;
   if(typeof resetGameChrome==='function') resetGameChrome();   // 크롬 원복은 단일 소스로
   if(typeof stopGameCoop==='function') stopGameCoop(); if(typeof rtRoomClose==='function') rtRoomClose();
-  G=newGame(); showLoading(openMapSelect, 1100); }
+  G=newGame(); showLoading(openMapSelect); }   // 시간은 LOAD_FILL 하나가 갖는다(옛 1100ms 타이머 폐지)
 function overlaySpectate(){ _ovClearAuto(); document.getElementById('ov').classList.add('hide'); setInGame(true);   // 관전하기 = 창을 닫고 전장 보기(자동 진행 취소)
   if(typeof coopActive==='function' && coopActive()){ const pt=document.querySelector('.tab[data-tab="Players"]'); if(pt) pt.click(); } }   // 멀티만 팀 관전 탭으로
 // ── 결과 → 통계 → 로비 자동 진행(상호작용 없으면 스스로 넘어감) ──
@@ -16062,9 +16156,56 @@ function resetGameChrome(){
   { const r=document.getElementById('stResult'); if(r){ try{ r.remove(); }catch(_){ } } }
 }
 // 게임 진입/종료 시 잠깐 노출되는 로딩 화면(#opening 재사용). display 토글로 로딩바 애니 재생됨.
+// ⏳ 로딩 막대 단일 소스 — **항상 100%까지 찬 뒤 0.2초 있다가 넘어간다**(2026-08-19).
+//   ⚠ 예전엔 막대(CSS `opLoad 1.6s`)와 화면 전환(showLoading 의 1.1~1.3초 타이머)이 **따로 돌았다**.
+//     타이머가 먼저 끝나 막대가 80% 쯤에서 잘린 채 넘어갔다 — 두 개를 한 곳으로 묶는다.
+//     전환은 반드시 opBarDone() 의 약속을 기다릴 것. 새 타이머를 따로 두지 말 것.
+const LOAD_HOLD=200;   // 100% 를 보여 주는 시간(ms) — 0 이면 다 찼는지 모르고 튕겨 들어간다
+const LOAD_FILL=700;   // 막대가 0→100% 로 차는 기본 시간. 실제 로딩이 더 빨라도 이만큼은 보여 준다
+const BOOT_AUTH_P=0.35; // 부팅 막대에서 '인증까지' 가 차지하는 구간 — 나머지 0.35~1 은 데우기가 채운다
+// (구 LOAD_SNAP 폐지 2026-08-20 — 마지막 칸을 CSS 전환으로 채우다가 프레임이 없으면 0 에 멈췄다. 이제 즉시 채운다)
+let _opBar=null;
+function _opBarEls(){ const op=document.getElementById('opening');
+  return op ? { op:op, bar:op.querySelector('.opBar'), tx:op.querySelector('.opLoading') } : null; }
+// 막대를 0 에서 다시 시작한다. dur = 시간만으로 차는 데 걸리는 시간(실제 진행률이 앞서면 그쪽을 따른다)
+function opBarStart(dur){ const e=_opBarEls(); if(!e) return null;
+  opBarReset();
+  const st={ t0:performance.now(), dur:Math.max(200, dur||LOAD_FILL), real:0, raf:0, dead:false, bar:e.bar, tx:e.tx };
+  if(st.bar){ st.bar.style.animation='none'; st.bar.style.transition='none'; st.bar.style.width='0%'; }
+  const step=()=>{ if(st.dead) return;
+    const byTime=Math.min(1,(performance.now()-st.t0)/st.dur);
+    const p=Math.max(byTime*0.985, st.real);   // 시간·실제 중 앞선 쪽 · 0.985 = 마지막 칸은 opBarDone 이 채운다
+    if(st.bar) st.bar.style.width=(p*100).toFixed(1)+'%';
+    if(st.tx) st.tx.innerHTML=Math.round(p*100)+'<s>%</s>';   // .opLoading = 큰 숫자(라벨 LOADING 은 마크업이 갖는다)
+    st.raf=requestAnimationFrame(step); };
+  step(); _opBar=st; return st; }
+function opBarReal(p){ if(_opBar) _opBar.real=Math.max(0,Math.min(1,p||0)); }   // 실제 진행률(모델 로드 등)
+// 100% 를 채우고 LOAD_HOLD 만큼 보여 준 뒤 resolve. 아직 최소 시간이 안 됐으면 그만큼 더 기다린다.
+function opBarDone(){ const st=_opBar;
+  return new Promise(res=>{
+    if(!st){ setTimeout(res, LOAD_HOLD); return; }
+    const wait=Math.max(0, st.dur-(performance.now()-st.t0));
+    setTimeout(()=>{ st.dead=true; cancelAnimationFrame(st.raf);
+      // ⚠ 마지막 100% 는 **전환 없이 즉시** 채운다(2026-08-20).
+      //    CSS 전환은 프레임이 있어야 진행된다 — 탭이 가려지면 rAF 도 전환도 멈춰서
+      //    막대가 0 에 남은 채 화면만 넘어갔다(실측: 인라인 width:100% 인데 계산값 0px).
+      //    rAF 가 도는 평상시엔 이미 98.5% 까지 차 있어 눈에 띄는 점프가 없다.
+      if(st.bar){ st.bar.style.transition='none'; st.bar.style.width='100%'; }
+      if(st.tx) st.tx.innerHTML='100<s>%</s>';
+      setTimeout(res, LOAD_HOLD); }, wait); }); }
+function opBarReset(){ if(_opBar){ _opBar.dead=true; cancelAnimationFrame(_opBar.raf); _opBar=null; }
+  const e=_opBarEls(); if(!e) return;
+  if(e.bar){ e.bar.style.animation=''; e.bar.style.transition=''; e.bar.style.width=''; }
+  if(e.tx) e.tx.innerHTML='0<s>%</s>'; }
+// 부팅 막대는 **스크립트가 읽히는 순간** 시작한다 — bootApp 은 window.load 라
+// 그것만 기다리면 그 사이 막대가 비어 있다(전에는 CSS 가짜 애니가 돌다가 0 으로 되돌아갔다).
+try{ if(document.getElementById('opening')) opBarStart(1400); }catch(e){}
 function showLoading(done, ms){ const op=document.getElementById('opening'); if(!op){ if(typeof done==='function') done(); return; }
-  op.classList.remove('hide','counting'); clearTimeout(op._loadT);
-  op._loadT=setTimeout(()=>{ op.classList.add('hide'); if(typeof done==='function') done(); }, ms||1300); }
+  op.classList.remove('hide','counting');
+  const tok=(op._loadTok=(op._loadTok||0)+1);   // 그 사이 새 로딩이 시작되면 옛 약속은 버린다
+  opBarStart(ms);
+  opBarDone().then(()=>{ if(op._loadTok!==tok) return;
+    op.classList.add('hide'); opBarReset(); if(typeof done==='function') done(); }); }
 // 로딩 화면 미니맵 썸네일(네모=미니맵, 그 외=아이콘)
 // 유즈맵 썸네일(팝업·게임 시작 화면 공용 단일 소스): 네모=미니맵, 그 외=맵 아이콘
 // 🖼 유즈맵 키 아트 — 던전 배경(HB_BG_DIR)과 같은 구조: 코드가 경로를 조립하고 파일은 맵 id 로 찾는다.
@@ -16115,8 +16256,11 @@ function _gsPaintCount(list){ const op=document.getElementById('opening');
   const lb=document.getElementById('gsCntLb'), n=document.getElementById('gsCntN'), fill=document.getElementById('gsBarFill');
   if(!op||!n||!fill||!op.classList.contains('ready')) return;
   list=list||_gsList();
-  if(_gsSolo()){ const pc=Math.round((_gsSoloPct||0)*100);
+  // ① 로딩 단계 — 혼자든 여럿이든 막대는 **로딩 진행률**이다. 다 차야 시작 버튼이 열린다(2026-08-19)
+  if(_gsLoading){ const pc=Math.round((_gsSoloPct||0)*100);
     if(lb) lb.textContent='LOADING'; n.innerHTML=pc+'<s>%</s>'; fill.style.width=pc+'%'; return; }
+  // ② 로딩이 끝난 뒤 — 혼자면 '누르면 들어간다', 여럿이면 준비 인원
+  if(_gsSolo()){ if(lb) lb.textContent='준비 완료 — 시작을 누르세요'; n.innerHTML='100<s>%</s>'; fill.style.width='100%'; return; }
   const rdy=list.filter(function(p){ return _gsReady&&_gsReady.has(p); }).length;
   if(lb) lb.textContent='전원 준비하면 바로 진입합니다';
   n.innerHTML=rdy+'<s>/'+list.length+'</s>';
@@ -16129,6 +16273,8 @@ function _gsMarkMeReadyUI(){ const b=document.getElementById('opStart'), t=docum
 function gsReadyMe(){ if(typeof G==='undefined'||!_gsReady) return; const me=(G.myPlayer||1);
   if(_gsReady.has(me)) return;
   _gsMarkMeReadyUI(); _gsSet(me); }
+const GS_LOAD_MS=800;     // 진입 로딩 막대의 **최소** 시간(ms) — 실제 로딩이 더 빨라도 이만큼은 보여 준다
+const GS_LOAD_MAX=15000;  // 안전판 — 실제 로딩이 이 시간을 넘으면 막대를 100% 로 열어 준다(사용자를 가두지 않는다)
 const GS_READY_MS=5000;   // 준비 대기 시간(단일 소스) — 시작 버튼 진행 표시·자동 시작·상대 준비 시차가 모두 이 값을 따름
 const GS_HOLD_MS=500;     // 전원 준비 → 전환 시작까지 잠깐 머무는 시간
 const GS_WARP_MS=750;     // 서서히 흐려지며 게임으로 들어가는 전환 길이(CSS --gsWarp와 동일)
@@ -16141,18 +16287,46 @@ function _gsSet(p){ if(!_gsReady) return; _gsReady.add(p); _renderGsPlayers();
   if(list.every(function(x){ return _gsReady.has(x); })){   // 전원 준비 → 0.5초 머문 뒤 전환(즉시 잘리지 않게)
     const op=document.getElementById('opening'); if(op){ if(op._holdT) return; op._holdT=setTimeout(function(){ op._holdT=null; _gsFinish(); }, GS_HOLD_MS); _gsTimers.push(op._holdT); }
     else _gsFinish(); } }
-let _gsReady=null, _gsTimers=[], _gsDone=null, _gsSoloPct=0;   // _gsSoloPct = 개인 플레이 로딩 진행률(0~1)
+let _gsReady=null, _gsTimers=[], _gsDone=null, _gsSoloPct=0;   // _gsSoloPct = 진입 로딩 진행률(0~1)
+let _gsLoading=false;     // 로딩 단계인가 — true 면 막대는 LOADING%, 시작 버튼은 잠김
 // ⚠ 타이머 통에는 setInterval 도 들어간다({__iv}) — clearTimeout 만 돌리면 개인 로딩 진행률이 계속 돈다
 function _gsClearTimers(){ _gsTimers.forEach(function(t){ if(t&&t.__iv) clearInterval(t.__iv); else clearTimeout(t); }); _gsTimers=[]; }
 // 3·2·1 종료 → 준비 단계(시작 버튼이 채워지는 동안 다른 플레이어도 준비)
+// ⏳ ① 로딩 단계 — 막대가 0→100% 로 **빠르게** 찬다. 그동안 시작 버튼은 잠겨 있다(2026-08-19).
+//    예전엔 버튼이 처음부터 눌려서 막대도 버튼도 뜻이 없었다(막대는 그냥 5초 타이머였다).
+//    이제 막대가 '아직 들어갈 수 없다'는 뜻을 갖고, 다 차는 순간 버튼이 열린다 → 준비 단계로 넘어간다.
+function _gsEnterLoading(){ const op=document.getElementById('opening'); if(!op) return;
+  op.classList.add('ready');            // 카드 덱·하단 표기를 켠다(진행 표시 .timing 은 아직)
+  _gsLoading=true; _gsSoloPct=0;
+  const sb=document.getElementById('opStart'); if(sb){ sb.disabled=true; }   // 잠김 모습은 공용 .actBtn:disabled 가 갖는다
+  _renderGsPlayers();
+  // ── 실제 로딩과 연결 ─────────────────────────────────────────────
+  // 그 맵의 3D 모델(MAP_ASSETS)을 받는다. loadMapModels 는 **아직 없는 것만** 큐잉하므로
+  // 로그인 때 이미 데워졌으면 즉시 끝나고(총 0개) 최소 시간만 남는다 — 두 번째 진입이 느려지지 않는다.
+  let real=0, realDone=false;
+  const mid=(typeof _selMap!=='undefined' && _selMap) ? _selMap.id : null;
+  if(mid && window.M3D && M3D.loadMapModels){
+    try{ M3D.loadMapModels(mid, function(){ real=1; realDone=true; },
+                                function(d,t){ if(!t){ real=1; realDone=true; } else real=d/t; }); }
+    catch(e){ real=1; realDone=true; }
+  } else { real=1; realDone=true; }
+  const t0=(typeof performance!=='undefined'?performance.now():0);
+  const iv=setInterval(function(){
+    const el=(typeof performance!=='undefined'?performance.now():t0+GS_LOAD_MS)-t0;
+    const byTime=Math.min(1, el/GS_LOAD_MS);
+    // ⚠ 둘 중 **늦은 쪽**을 따른다 — 실제가 끝나도 최소 시간은 채우고(깜빡임 방지),
+    //    최소 시간이 지나도 실제가 안 끝났으면 기다린다(막대가 거짓말하지 않는다).
+    _gsSoloPct=Math.min(byTime, realDone?1:Math.max(0,real));
+    if(el>=GS_LOAD_MAX) _gsSoloPct=1;   // 안전판 — 모델 하나가 영영 안 오면 사용자를 가둔다
+    _gsPaintCount();
+    if(_gsSoloPct>=1){ clearInterval(iv); _gsLoading=false;
+      if(sb) sb.disabled=false;         // ← 100% 가 된 다음에야 누를 수 있다
+      _gsEnterReady(); } }, 30);
+  _gsTimers.push({__iv:iv}); }
+// ② 준비 단계 — 로딩이 끝난 뒤에만 들어온다. 시작 버튼 진행 표시(자동 시작)가 여기서 돈다.
 function _gsEnterReady(){ const op=document.getElementById('opening'); op.classList.add('ready'); _renderGsPlayers();   // 원 표시를 준비 인원으로 전환
   op.style.setProperty('--gsDur', (GS_READY_MS/1000)+'s');                      // CSS 진행 표시 길이 = JS 대기 시간과 동일
-  // 혼자면 준비할 사람이 없다 → 같은 대기 시간을 **로딩 진행률**로 보여 준다(자동 시작까지 남은 양과 같은 값)
-  if(_gsSolo()){ const t0=(typeof performance!=='undefined'?performance.now():0);
-    const iv=setInterval(function(){ const el=(typeof performance!=='undefined'?performance.now():t0+GS_READY_MS)-t0;
-      _gsSoloPct=Math.min(1, el/GS_READY_MS); _gsPaintCount();
-      if(_gsSoloPct>=1) clearInterval(iv); }, 60);
-    _gsTimers.push({__iv:iv}); }
+  _gsPaintCount();
   const bar=document.querySelector('#opStart .opStartBar'); if(bar){ bar.style.animation='none'; void bar.offsetWidth; bar.style.animation=''; }  // 진행 표시 애니 재시작
   op.classList.add('timing');                                                   // 진행 표시 시작
   const list=(G.activePlayers&&G.activePlayers.length)?G.activePlayers:[1], me=(G.myPlayer||1);
@@ -16163,6 +16337,7 @@ function _gsEnterReady(){ const op=document.getElementById('opening'); op.classL
 // 카운트다운/준비 단계에서 나가기 = 시작 취소 → 유즈맵 선택(게임 정리는 기존 종료 경로 재사용)
 function gsQuitToMaps(){ const op=document.getElementById('opening'); if(!op) return;
   clearTimeout(op._loadT); clearTimeout(op._cdEnd); clearTimeout(op._holdT); op._holdT=null; _gsClearTimers(); op._finished=false; _gsDone=null;
+  _gsLoading=false; { const sb=document.getElementById('opStart'); if(sb) sb.disabled=false; }   // 잠금이 남으면 다음 진입에서 못 누른다
   op.classList.remove('counting','ready','timing','warp');
   if(typeof G!=='undefined'&&G) G.loading=false;
   if(typeof G!=='undefined'&&G&&G.strike){ G.strike=false; STK=null; }   // 직스: 카운트다운 중 나가기(크롬 원복은 overlayToLobby의 resetGameChrome이 담당)
@@ -16198,15 +16373,15 @@ function gameStartCountdown(done){ const op=document.getElementById('opening');
       fe.className='gsFeat'+(has?' moFeats':'');   // ⚠ .moFeats 를 안 붙이면 아이콘 판·간격이 통째로 죽는다
       fe.innerHTML=_mapGuideHTML(m); } }
   if(typeof paintIcons==='function') paintIcons(op);
-  _gsSoloPct=0;
+  _gsSoloPct=0; _gsLoading=false;   // 로딩 단계는 _gsEnterLoading 이 다시 켠다
   _gsReady=new Set(); _renderGsPlayers();
   const sb=document.getElementById('opStart'), st=document.getElementById('opStartTxt');
   if(sb){ sb.disabled=false; sb.classList.remove('done'); } if(st){ st.textContent=_gsSolo()?'전투 시작':'준비 완료'; }
   op.classList.remove('hide','warp','ready','timing'); op.classList.add('counting');
   { const fill=document.getElementById('gsBarFill'); if(fill) fill.style.width='0%'; }
-  _gsEnterReady(); }   // 대기 없이 바로 준비 단계
+  _gsEnterLoading(); }   // 로딩 단계부터 — 막대가 100% 가 되면 스스로 준비 단계로 넘어간다
 // 준비 완료(전원 또는 5초 자동) → 워프 전환 후 게임 진행
-function _gsFinish(){ const op=document.getElementById('opening'); if(!op||op._finished) return; op._finished=true;
+function _gsFinish(){ const op=document.getElementById('opening'); if(!op||op._finished) return; op._finished=true; _gsLoading=false;
   _gsTimers.forEach(function(t){ if(t&&t.__iv) clearInterval(t.__iv); else clearTimeout(t); }); _gsTimers=[];
   op.style.setProperty('--gsWarp', (GS_WARP_MS/1000)+'s');   // CSS 전환 길이 = JS 대기 시간과 동일
   op.classList.add('warp');   // 'ready' 유지한 채 서서히 흐려지며 게임 안으로
@@ -16220,14 +16395,19 @@ async function bootApp(){
   // ⚠ initAuth 는 esm.sh 에서 supabase 를 받아오는 네트워크 대기다.
   //   아이콘은 인증과 무관하므로 먼저 칠한다 — 뒤에 두면 회선이 느릴 때 한참 뒤에 나타난다.
   if(typeof paintIcons==='function') paintIcons(document);   // data-ico → 라인아트 아이콘을 문서 전체에 1회
+  // ⚠ 여기서 opBarStart 를 다시 부르지 말 것 — 막대는 스크립트가 읽힐 때 이미 시작했다.
+  //   다시 부르면 0 으로 되돌아가 사용자에겐 '로딩이 두 번' 도는 것으로 보인다.
+  opBarReal(0.15);
   await initAuth();
-  // 오프닝 최소 노출 → 로그인/회원가입.
-  // ⚠ 이 타이머는 '오프닝을 걷어내는' 용도다. 그 사이 다른 화면으로 이미 넘어갔다면 건드리지 않는다 —
-  //    무조건 openAuth()를 부르면 1.7초 뒤에 사용자가 보고 있던 화면을 로그인 화면이 덮어버린다(스모크가 간헐 실패했다).
-  setTimeout(()=>{ const op=document.getElementById('opening');
+  opBarReal(BOOT_AUTH_P);      // 인증까지 끝 — 나머지 구간은 데우기(enterAfterWarm)가 이어 채운다
+  // 오프닝 걷어내기 → 로그인/회원가입.
+  // ⚠ 그 사이 다른 화면으로 이미 넘어갔다면 건드리지 않는다 — 무조건 openAuth()를 부르면
+  //    사용자가 보고 있던 화면을 로그인 화면이 덮어버린다(스모크가 간헐 실패했다).
+  { const op=document.getElementById('opening');
     if(op && op.classList.contains('hide')) return;                 // 이미 다른 화면으로 넘어갔다
-    if(AUTH.user){ enterAfterWarm(); return; }                      // 세션이 살아 있으면 로그인 화면을 건너뛴다
-    openAuth(); }, 1700); }
+    if(AUTH.user){ enterAfterWarm(); return; }                      // 세션이 살아 있으면 로그인 화면을 건너뛴다(막대를 **이어서** 쓴다)
+    await opBarDone(); opBarReset();                                // 로그인 화면으로 갈 때만 여기서 막대를 끝낸다
+    openAuth(); } }
 // 🧍 방치 하트비트: 앱 켜져 있으면 60초마다 100% 자동 적립(유즈맵과 무관)
 try{ setInterval(profIdleTick, 60000); }catch(e){}
 window.addEventListener('beforeunload', function(){ try{ profStampSeen(); }catch(e){} });   // 종료 시 시각 스탬프(다음 접속 오프라인 정산 기준)
@@ -16766,8 +16946,21 @@ function lastSeenText(f){ let m;
 function avatarColor(nick){ let s=0,n=nick||'?'; for(let i=0;i<n.length;i++) s=(s*31+n.charCodeAt(i))>>>0; const h=s%360;
   return {bg:'hsl('+h+' 42% 25%)', fg:'hsl('+h+' 78% 80%)', bd:'hsl('+h+' 55% 44%)'}; }
 function avatarInitial(nick){ const t=(nick||'?').trim(); return t? t[0] : '?'; }
-function avatarHTML(nick, cls, st){ const c=avatarColor(nick); const dot=st?'<span class="fAvaDot fDot-'+st+'"></span>':'';
-  return '<span class="fAva '+(cls||'')+'" style="background:'+c.bg+';color:'+c.fg+';border-color:'+c.bd+'">'+escHtml(avatarInitial(nick))+dot+'</span>'; }
+// 게스트·닉 없음 = 이니셜 대신 **자리표시 초상**. 다른 아이콘과 계열이 다르다(원형 디스크 · 평면 2톤 · 저채도) —
+//   옆 줄의 색 이니셜 원보다 조용해야 '아직 아무도 아니다'로 읽힌다.
+// ⚠ 파일이 없으면 `onerror` 가 <img> 만 지우고 **밑에 깔린 이니셜이 그대로 드러난다** — 칸이 비지 않는다.
+//   (아이콘 README 의 폴백 철학과 같다: 파일을 넣는 순간 그 자리만 교체된다)
+const AVATAR_GUEST_SRC='assets/icons/av_guest.webp';
+function avatarHTML(nick, cls, st, guest){ const c=avatarColor(nick); const dot=st?'<span class="fAvaDot fDot-'+st+'"></span>':'';
+  const anon=!!guest || !String(nick||'').trim();
+  // ⚠ 색은 **인라인**으로 나간다 — CSS 로 `.fAva.guest{border-color:…}` 를 써 봐야 인라인에 진다(실제로 남색 링이 남았다).
+  //   자리표시일 때는 여기서 바로 중성색을 쓴다. 닉 색은 '사람을 구분하는 색'이라 아직 아무도 아닌 자리에 쓰면 안 된다.
+  const sty=anon ? 'background:#20252c;color:#77828f;border-color:rgba(255,255,255,.10)'
+                 : 'background:'+c.bg+';color:'+c.fg+';border-color:'+c.bd;
+  return '<span class="fAva '+(anon?'guest ':'')+(cls||'')+'" style="'+sty+'">'
+    +escHtml(avatarInitial(nick))
+    +(anon?'<img class="fAvaImg" src="'+AVATAR_GUEST_SRC+'" alt="" draggable="false" onerror="this.remove()">':'')
+    +dot+'</span>'; }
 // 친구 상태 한 줄 설명(접속중/게임중·맵·시간/오프라인·마지막접속/파티중)
 function friendStatusSub(f){ const st=presenceOf(f); if(friendBusy(f)) return '다른 파티에 있음';
   if(st==='online') return '접속 중'; if(st==='ingame') return ingameMapName(f)+' · '+playTimeText(f); return '마지막 접속 '+lastSeenText(f); }
@@ -16975,6 +17168,11 @@ function renderPartyFind(){ const ov=document.getElementById('ptFindOv'); if(!ov
 // ── 로비 팝업 껍데기(공용) ──
 // ⚠ #phone 에 붙인다 — 소셜은 유즈맵 도크와 마을 시트를 오가므로 화면 하나에 매달면 반대쪽에서 안 보인다.
 //   .top 은 시트(63)·네비(62) 위로 올리는 변형.
+// 로비 팝업 닫기 버튼 — 친구 초대·친구 추가가 함께 쓴다(SVG를 두 번 베끼지 않는다).
+// 모양은 HOME 팝업 .hbmX 와 같은 것 — 게임 전체가 같은 닫기 글리프를 쓴다.
+function _ovXBtn(fn){ return '<button class="ptInviteX" onclick="'+fn+'" aria-label="닫기">'
+  +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">'
+  +'<path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>'; }
 function _lobbyOv(id, onClose, cls){ let ov=document.getElementById(id);
   if(!ov){ ov=document.createElement('div'); ov.id=id; ov.className=cls||'ptInviteOv top';
     (document.getElementById('phone')||document.body).appendChild(ov);
@@ -16984,7 +17182,7 @@ function _lobbyOv(id, onClose, cls){ let ov=document.getElementById(id);
 //    friendSearch()/friendAdd() 를 손대지 않고 재사용한다.
 function openFriendAdd(){ const ov=_lobbyOv('foAddOv', closeFriendAdd);
   ov.innerHTML='<div class="ptInviteCard">'
-    +'<div class="ptInviteHead"><span>친구 추가</span><button class="ptInviteX" onclick="closeFriendAdd()">✕</button></div>'
+    +'<div class="ptInviteHead"><span>친구 추가</span>'+_ovXBtn('closeFriendAdd()')+'</div>'
     +'<div class="ptInviteSearch"><div class="foAdd">'
     +'<input id="foSearch" placeholder="닉네임 또는 닉#코드" maxlength="30" autocomplete="off" onkeydown="if(event.key===\'Enter\')friendSearch()">'
     +'<button class="foSearchBtn" onclick="friendSearch()">검색</button></div></div>'
@@ -17005,7 +17203,7 @@ async function renderPartyInviteList(){ const ov=document.getElementById('ptInvi
   ensureParty();
   const all=await loadAllFriends(); _invitableCache=all.filter(f=>!inParty(f.id));
   const full=_party.members.length>=PARTY_MAX;
-  const head='<div class="ptInviteHead"><span>친구 초대</span><button class="ptInviteX" onclick="closePartyInvite()">✕</button></div>';
+  const head='<div class="ptInviteHead"><span>친구 초대</span>'+_ovXBtn('closePartyInvite()')+'</div>';
   const searchRow='<div class="ptInviteSearch"><input id="ptInviteInput" placeholder="이름 또는 #코드로 검색" maxlength="30" autocomplete="off" oninput="filterInviteRows(this.value)"></div>';
   let list;
   if(full){ list='<div class="foEmpty">파티가 가득 찼어요 ('+PARTY_MAX+'/'+PARTY_MAX+')</div>'; }
@@ -19656,6 +19854,10 @@ function _techUnitPortrait(id){ return (typeof unitPortraitHTML==='function'&&un
 // 🎨 생성 아이콘 연결 — 파일명이 키와 1:1이라 경로만 만들면 된다. 없는 키는 기존 표시로 자동 폴백.
 const ICO_DIR='assets/icons/';
 function _icoImg(sub, key, fb){ return '<img class="icoImg" src="'+ICO_DIR+sub+'/'+key+'.webp" alt="" draggable="false" data-fb="'+(fb||'\u{1F527}')+'" onerror="_icoFail(this)">'; }
+// 상태 표시 아이콘(state/) — 잠김·환생처럼 '재화도 스킬도 아닌' 것. 파일이 없으면 **원래 이모지 글자**로 돌아간다
+//   (`pIco` 표에 없는 이모지가 많아 공용 폴백을 쓰면 스패너가 뜬다).
+function stIco(key, fb){ return '<img class="stIco" src="'+ICO_DIR+'state/st_'+key+'.webp" alt="" draggable="false"'
+  +' data-fb="'+(fb||'')+'" onerror="this.outerHTML=this.getAttribute(\'data-fb\')||\'\'">'; }
 // 아이콘 파일이 없으면(404) 빈칸이 남던 것 → 공용 라인SVG로 교체. 새 아이콘을 넣기 전에도 자리가 비지 않는다(단일 소스: pIco 재사용)
 function _icoFail(im){ try{ const c=im.getAttribute('data-fbcls'); im.outerHTML=pIco(im.getAttribute('data-fb')||'\u{1F527}', c==null?'icoFb':c); }catch(_e){ try{ im.remove(); }catch(_e2){} } }
 // 연구 73종 → 아이콘 23종. 효과가 같은 것끼리 하나를 공유한다.
@@ -21998,7 +22200,7 @@ function strikeStart(activePlayers, myNum, names){ if(typeof bgmStop==='function
   strikeRestHome();   // 전투 = 무선택 기본 화면에서 시작
   G.loading=true;   // 로딩 동안 시뮬 정지(네모와 동일 — 오프닝 워프 후 진행)
   if(typeof gameStartCountdown==='function') gameStartCountdown();   // 네모와 동일한 게임 진입 로딩 화면(맵 썸네일·특징 설명·플레이어·준비) — 설명은 cpu.feats(오토배틀용)
-  else if(typeof showLoading==='function') showLoading(null, 1300);   // 폴백
+  else if(typeof showLoading==='function') showLoading(null);   // 폴백
   if(typeof playSfx==='function') playSfx('game_start');
 }
 function strikeEnd(){ if(!STK && !(G&&G.strike)) return;
@@ -24810,15 +25012,16 @@ function _disposeObj3D(root){ if(!root) return; root.traverse(o=>{
 }); }
 // 지정 모델 키들을 로드(이미 로드된 건 스킵). body 모델 한정(가장 큰 텍스처). onDone(로드 수) 콜백
 const MODEL_LOAD_CONC=6;   // 동시 GLB 로드 상한 — 대량 동시 로드 시 텍스처 blob 디코드 실패 방지 + 로딩 안정화
-function ensureModels(keys, onDone){ const L=new GLTFLoader();
+function ensureModels(keys, onDone, onProg){ const L=new GLTFLoader();
   const q=[]; for(const id of keys){ if(!bases[id] && MODELS[id]) q.push(id); }   // 미로드분만 큐잉
   const total=q.length; let doneN=0, idx=0, active=0;
-  // 로딩 화면(#opening)이 떠 있는 동안 실제 로딩 진행률을 opBar에 반영(가짜 CSS 애니 대체)
+  // 로딩 화면(#opening)이 떠 있는 동안 실제 로딩 진행률을 막대에 먹인다.
+  // ⚠ width 를 직접 쓰지 않는다 — 막대는 opBarStart 의 rAF 가 몰고 있어서 서로 덮어쓴다(2026-08-19).
   const bumpBar=()=>{ const op=document.getElementById('opening'); if(!op||op.classList.contains('hide')) return;
-    const bar=op.querySelector('.opBar'); if(!bar) return;
-    bar.style.animation='none'; bar.style.width=Math.max(8,Math.round(doneN/(total||1)*100))+'%'; };
-  if(total===0){ if(onDone) onDone(0); return 0; }
-  const fin=()=>{ active--; doneN++; bumpBar(); if(doneN>=total){ if(onDone) onDone(total); } else pump(); };
+    if(typeof opBarReal==='function') opBarReal(doneN/(total||1)); };
+  if(total===0){ if(onProg) try{ onProg(0,0); }catch(e){} if(onDone) onDone(0); return 0; }
+  const fin=()=>{ active--; doneN++; bumpBar(); if(onProg) try{ onProg(doneN,total); }catch(e){}
+    if(doneN>=total){ if(onDone) onDone(total); } else pump(); };
   const loadOne=(id)=>{
     const path='/assets/'+(MODELS[id].includes('/')?MODELS[id]:'models/'+MODELS[id]);
     L.load(path, g=>{ const s=g.scene; const box=new THREE.Box3().setFromObject(s);
@@ -24944,7 +25147,7 @@ window.M3D={
   modelKeys:()=>Object.keys(MODELS),   // 카탈로그(로드 여부 무관) — 던전 표 같은 '모델 키 오타' 검사가 실제로 걸리게 하려면 이게 필요하다
   modelCatalog:(id)=>!!MODELS[id],   // 카탈로그 존재 여부(필요 시)
   // ── 유즈맵별 에셋 지연 로드/해제(확장 토대) ──
-  loadMapModels:(mapId,cb)=>ensureModels(mapModelKeys(mapId), cb),   // 그 맵 모델만 로드(이미 있으면 스킵)
+  loadMapModels:(mapId,cb,onProg)=>ensureModels(mapModelKeys(mapId), cb, onProg),   // 그 맵 모델만 로드(이미 있으면 스킵) · onProg(받은수,전체)
   keepOnlyMap:(mapId)=>{ const keep=new Set(mapModelKeys(mapId)); const drop=Object.keys(bases).filter(k=>!keep.has(k)); return disposeModels(drop); },  // 그 맵 외 모델 VRAM 해제
   disposeModels:(keys)=>disposeModels(keys),
   loadedKeys:()=>Object.keys(bases),
