@@ -1,0 +1,131 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>M5 vs M8 — 다음 화면까지</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Rajdhani:wght@400;600;700&family=IBM+Plex+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --font-ko:'IBM Plex Sans KR','Apple SD Gothic Neo',sans-serif;
+  --font-num:'Rajdhani','IBM Plex Sans KR',sans-serif;
+  --font-ti:'Jua','Apple SD Gothic Neo',sans-serif;
+  --r-bar:3px; --r-md:6px; --r-lg:9px;
+  --metal-edge:#3c3e46;
+  --neon:#ff3b3b; --neon-d2:#380e0e; --neon-glow:rgba(255,59,59,.45);
+  --ac:rgb(255,59,59); --acRGB:255,59,59;
+  --fs-xs:9.5px; --fs-sm:10px; --fs-md:11px; --fs-lg:12px;
+  --art:url('../../assets/backgrounds/title/boot.webp');
+  --txt-mute:#9aa0a8;
+}
+*{box-sizing:border-box}
+button{margin:0;padding:0;font:inherit;color:inherit;background:none;border:none;cursor:pointer;text-align:left}
+body{margin:0;padding:22px 16px 60px;background:#08090c;color:#ececec;font-family:var(--font-ko)}
+h1{margin:0 0 4px;font-size:19px}
+.lead{margin:0 0 20px;font-size:12.5px;color:var(--txt-mute);line-height:1.65;max-width:900px}
+.lead b{color:#ececec}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;max-width:1320px}
+.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.cell{min-width:0}
+.cap{display:flex;align-items:baseline;gap:6px;margin:0 0 7px;font-size:12.5px;font-weight:700}
+.cap i{font-style:normal;font-family:var(--font-num);font-size:11px;color:#fff;background:#2a2c33;
+  border:1px solid var(--metal-edge);border-radius:var(--r-bar);padding:1px 5px}
+.cap.now i{background:#1b1d22;color:#8a9099}
+.note{margin:7px 2px 0;font-size:11px;color:var(--txt-mute);line-height:1.62}
+.note b{color:#cfd5dd;font-weight:700}
+/* ── 폰 틀 ── */
+.ph{position:relative;width:290px;height:600px;border-radius:var(--r-lg);overflow:hidden;
+  border:1px solid var(--metal-edge);background:#04050b;display:flex;flex-direction:column}
+.art{position:absolute;inset:0;background:var(--art) center center / cover no-repeat #05070c}
+/* 딤 = 로딩 화면 것 그대로(아래만 덮는다) */
+.dim{position:absolute;inset:0;background:linear-gradient(180deg,
+  rgba(4,6,11,.06) 0%,rgba(4,6,11,.10) 40%,rgba(5,6,10,.62) 74%,rgba(5,6,10,.96) 100%)}
+.gear{position:absolute;right:12px;top:12px;z-index:3;width:26px;height:26px;opacity:.7}
+.gear svg{width:100%;height:100%;fill:#cfd5dd;filter:drop-shadow(0 1px 4px #000)}
+.wrap{position:relative;z-index:2;width:100%;height:100%;display:flex;flex-direction:column;justify-content:flex-end}
+/* ── 로딩 화면에서 그대로 가져온 조각들 ── */
+.opLogo{width:44px;height:44px;margin:0 auto;color:#dbe4ef}
+.opLogo svg{width:100%;height:100%;filter:drop-shadow(0 2px 8px #000)}
+.opTitle{font-family:var(--font-ti);font-weight:400;font-size:31px;letter-spacing:.02em;color:#fff;white-space:nowrap;
+  text-align:center;text-shadow:0 3px 20px #000,0 1px 3px #000;line-height:1.1}
+.opSub{font-family:var(--font-num);font-size:var(--fs-sm);color:#96a1af;letter-spacing:.42em;white-space:nowrap;
+  text-align:center;text-shadow:0 1px 4px #000}
+.opMid{display:flex;flex-direction:column;align-items:center;gap:11px;padding:0 22px 18px}
+.opDock{padding:0 20px 26px}
+.opCnt{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px}
+.opCnt i{font-style:normal;font-size:var(--fs-md);letter-spacing:.2em;color:#8a929c}
+.opBarWrap{width:100%;height:3px;border-radius:2px;background:rgba(255,255,255,.12);overflow:hidden}
+.opBar{height:100%;width:78%;border-radius:var(--r-bar);
+  background:linear-gradient(90deg,var(--neon-d2),var(--neon));box-shadow:0 0 10px var(--neon-glow)}
+.hub{display:flex;flex-direction:column}
+.way{position:relative;display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:0 2px;
+  font-size:11px;font-weight:700;color:#dfe7f0}
+.guest{display:block;width:100%;margin-top:11px;text-align:center;font-size:var(--fs-md);color:#8b97a6}
+.guest u{color:#dfe7f0;text-underline-offset:3px}
+/* M5 · 고스트 버튼 */
+.m5 .hub{gap:6px}
+.m5 .way{justify-content:center;min-height:41px;border:1px solid rgba(255,255,255,.13);
+  border-radius:var(--r-bar);background:rgba(6,8,13,.42)}
+/* M8 · 짧은 가운데 선 */
+.m8 .way{justify-content:center;min-height:42px}
+.m8 .way+.way::before{content:'';position:absolute;left:50%;top:0;width:56px;height:1px;transform:translateX(-50%);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent)}
+/* ── 다음 화면(폼) — 본편 .authField / .authBtn 규격 그대로 ── */
+.back{display:flex;align-items:center;gap:6px;font-size:var(--fs-md);color:#8b97a6;margin-bottom:10px}
+.seg{display:flex;padding:2px;margin-bottom:12px;border-radius:var(--r-bar);
+  background:linear-gradient(180deg,#191919,#0e0e0e);border:1px solid #3c3e46}
+.seg b{flex:1;text-align:center;padding:7px 0;font-size:10px;font-weight:700;color:#8a9099}
+.seg b.on{color:#fff;background:linear-gradient(180deg,#0a0a0a,#000);border-radius:2px;position:relative}
+.seg b.on::after{content:'';position:absolute;left:6px;right:6px;bottom:0;height:1px;background:rgba(255,255,255,.62);
+  box-shadow:0 0 2px rgba(var(--acRGB),.9),0 0 5px rgba(var(--acRGB),.55)}
+.fld{width:100%;min-height:42px;padding:10px 12px;margin-bottom:8px;border-radius:var(--r-md);
+  background:linear-gradient(180deg,#0d0d0d,#000);border:1px solid var(--metal-edge);
+  color:#6f757d;font-size:11px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.sbt{position:relative;width:100%;min-height:44px;display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:800;letter-spacing:.5px;color:#fff;
+  background:linear-gradient(180deg,#0d0d0d,#000);border:1px solid var(--metal-edge);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
+.sbt::after{content:'';position:absolute;left:11%;right:11%;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.62) 50%,transparent 92%),
+    linear-gradient(90deg,transparent,rgba(var(--acRGB),.92),transparent);
+  box-shadow:0 0 2px rgba(var(--acRGB),.6),0 0 5px rgba(var(--acRGB),.24)}
+.fnote{margin-top:9px;text-align:center;font-size:var(--fs-sm);color:#8b97a6}
+</style>
+
+<h1>M5 vs M8 — 다음 화면까지 이어 본다</h1>
+<p class="lead">허브(방식 고르기)만 보면 둘 다 좋다. 갈리는 건 <b>고른 다음에 나오는 폼</b>이다 —
+폼의 입력칸(<code>.authField</code>)은 이미 <b>1px 금속 테두리 · 검정 그라데 면 · 안쪽 윗면 하이라이트</b>를 갖고 있다.
+아래 네 장은 왼쪽이 허브, 오른쪽이 그 다음 폼이다.</p>
+<div class="grid" id="grid"></div>
+
+<script>
+const HEX='<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">'
+ +'<path d="M32 5 55 18.5v27L32 59 9 45.5v-27z"/><path d="M32 19 43 25.5v13L32 45 21 38.5v-13z" opacity=".55"/>'
+ +'<path d="M32 25.5v13M26 29v6M38 29v6" stroke-width="1.2" opacity=".8"/></svg>';
+const GEAR='<svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg>';
+const LOGO='<div class="opMid"><div class="opLogo">'+HEX+'</div>'
+ +'<div class="opTitle">STAR WAR</div><div class="opSub">BATTLE ARENA</div></div>';
+const GUEST='<button class="guest">계정 없이 <u>게스트로 시작</u></button>';
+const HUB='<div class="hub">'+['아이디로 로그인','이메일로 로그인','Google로 로그인']
+  .map(n=>'<button class="way">'+n+'</button>').join('')+'</div>'+GUEST;
+const FORM='<div class="back">‹ 다른 방법으로</div>'
+  +'<div class="seg"><b class="on">로그인</b><b>회원가입</b></div>'
+  +'<div class="fld">아이디 (영문·숫자 3~16자)</div>'
+  +'<div class="fld">비밀번호 (영문·숫자 6자 이상)</div>'
+  +'<button class="sbt">로그인</button>'
+  +'<div class="fnote">비밀번호를 잊으셨나요? <i style="font-style:normal;color:#3e444d">|</i> 비밀번호 찾기</div>';
+function phone(cls, dock){
+  return '<div class="ph '+cls+'"><div class="art"></div><div class="dim"></div>'
+    +'<span class="gear">'+GEAR+'</span><div class="wrap">'+LOGO
+    +'<div class="opDock">'+dock+'</div></div></div>';
+}
+const V=[
+ {tag:'M5', t:'고스트 버튼', cls:'m5',
+  d:'허브의 상자와 폼의 <b>입력칸이 같은 물건으로 보인다</b> — 둘 다 1px 테두리 + 검정 면 + 윗면 하이라이트다. 앞 화면에서 상자를 눌러 왔는데 다음 화면의 똑같이 생긴 상자는 <b>누르는 게 아니라 적는 곳</b>이다. 게다가 이 화면의 확정문은 "판(카드)을 없앴다"이고, 코드에도 <b>⛔ 면·테두리를 되돌리지 말 것</b>이 박혀 있다.'},
+ {tag:'M8', t:'짧은 가운데 선', cls:'m8',
+  d:'허브는 <b>선만</b>, 폼은 <b>상자만</b>. 두 화면의 역할이 형태로 갈린다 — "고르는 곳"과 "적는 곳"이 헷갈릴 수 없다. 확정문(판 없음)과도 어긋나지 않고, 로고·제목과 같은 중앙 축을 쓴다. 약점은 <b>누를 것이라는 신호가 약한 것</b> 하나다.'},
+];
+document.getElementById('grid').innerHTML=V.map(v=>
+  '<div class="cell" style="grid-column:span 2"><div class="cap"><i>'+v.tag+'</i>'+v.t+' — 허브 ▸ 폼</div>'
+  +'<div class="pair">'+phone(v.cls,HUB)+phone(v.cls,FORM)+'</div>'
+  +'<div class="note">'+v.d+'</div></div>').join('');
+</script>
