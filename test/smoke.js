@@ -212,7 +212,10 @@ async function groupLobby(){
   await step('인증: 빈 칸은 막고, 게스트 버튼으로 입장', async()=>{ skipIf(typeof authSubmit!=='function','인증 없음');
     openAuth(); authOpenForm('id');   // 허브에서 아이디를 골라야 입력 폼이 나온다
     $('authId').value=''; $('authPw').value='';
-    await authSubmit(); await sleep(120);
+    await authSubmit();
+    // ⚠ 고정 대기(120ms)로 두면 간헐 실패한다 — authSubmit 이 Supabase 준비를 기다리는 경우가 있어
+    //   안내가 그보다 늦게 붙는다. 뜰 때까지 기다린다(최대 2초).
+    for(let i=0;i<40 && !(($('authErr').textContent||'').length); i++) await sleep(50);
     assert(visible($('auth')),'빈 칸인데 로그인 화면을 벗어남(자동 입장이 남아 있음)');
     assert(!visible($('hubScreen')),'빈 칸인데 게임 선택으로 넘어감');
     assert(($('authErr').textContent||'').length>0,'빈 칸인데 안내가 없음');
@@ -3058,6 +3061,54 @@ async function groupLobby(){
     [t8,c8,c4,t4].forEach(x=>assert(x.ov<=0.5,'슬롯 판이 스크롤됨(높이 식이 안 맞는다)'));
     close(); await sleep(150); openMapSelect(); await sleep(80);
     return '종족 '+STK_RACE_ORDER.length+'칸 · 잠김 ok · 슬롯 판 '+t8.h+'px 고정'; });
+  // ══ 실방 전파 — 종족은 presence, 대전 설정은 방장 시작 신호가 나른다 ══
+  await step('실방: 종족·대전 설정이 참가자에게 전파된다', async ()=>{
+    skipIf(typeof rtRoomMe!=='function' || typeof rtRoomOnStart!=='function','실방 경로 없음');
+    // ① presence 에 싣는 내 상태 — 종족이 들어가고 입장 시각(t)이 보존된다
+    //    ⚠ track 은 덮어쓰기라 일부만 보내면 t 가 지워져 슬롯 순서가 뒤바뀐다
+    RTROOM.joinT=12345; _selRace='zerg';
+    { const me=rtRoomMe();
+      assert(me.race==='zerg','presence 에 내 종족이 안 실림: '+me.race);
+      assert(me.t===12345,'presence 재전송에서 입장 시각이 지워짐: '+me.t);
+      assert(('uid' in me) && ('nick' in me) && ('host' in me) && ('ready' in me),
+        'presence 에 빠진 항목이 있다: '+Object.keys(me).join(',')); }
+    // ② 방 목록 → 입장 경로가 대전 설정을 나르는가
+    assert(/opts/.test(String(joinRoom)),'joinRoom 이 방의 대전 설정을 안 넘김');
+    assert(/opts/.test(String(lobbyStart)),'시작 신호에 대전 설정이 안 실림');
+    assert(/race/.test(String(lobbyStart)),'시작 신호에 슬롯별 종족이 안 실림');
+    // ③ 참가자 쪽 — 방장 신호를 실제로 태워 본다(게임 진입만 스텁)
+    // ⚠ 되돌릴 것을 하나라도 빠뜨리면 **뒤 스텝이 오염된다**(MAP 을 안 되돌렸다가 오토배틀 스텝이 깨졌다)
+    const keep={ start:window.startGameNow, coop:window.startGameCoop, room:_lobbyRoom,
+                 race:_selRace, selMap:_selMap, MAP:MAP, ovr:MAP_CFG_OVR, diff:_selDiff };
+    let got=null;
+    window.startGameNow=function(a,m,n){ got={active:a, my:m, ovr:MAP_CFG_OVR, race:_selRace, opts:_lobbyRoom&&_lobbyRoom.opts}; };
+    window.startGameCoop=function(){};
+    try{
+      _selMap=USEMAPS.cpu; MAP=USEMAPS.cpu; MAP_CFG_OVR=null; _selRace='terran';
+      _lobbyRoom={ real:true, num:777, name:'전파 확인', opts:null };
+      RTROOM.started=false;
+      const OPTS={cycleTime:10,startGold:700,incomeBase:70,hpMul:0.7};
+      rtRoomOnStart({ slots:[{num:1,uid:'other',race:'protoss'},{num:2,uid:myUid(),race:'zerg'}],
+                      names:{1:'방장',2:myNick()}, opts:OPTS, from:'other' });
+      await sleep(60);
+      assert(got,'시작 신호를 받고도 게임 진입 경로를 안 탐');
+      assert(got.race==='zerg','내 종족이 방장 신호에서 안 옴: '+got.race);
+      // ⚠ startGameNow 가 _lobbyRoom.opts 를 읽어 MAP_CFG_OVR 을 심는다 —
+      //    그러니 **게임 진입을 부르기 전에** 방에 실려 있어야 한다(순서가 뒤집히면 조용히 기본값으로 시작한다)
+      assert(got.opts && got.opts.cycleTime===10,'게임 진입 시점에 방 설정이 아직 안 실렸다(순서가 뒤집혔다)');
+      assert(/MAP_CFG_OVR/.test(String(startGameNow)) && /_lobbyRoom/.test(String(startGameNow)),
+        'startGameNow 가 방 설정을 안 읽는다');
+      // 받은 설정이 실제 엔진 값으로 풀리는가
+      { const cfg=stkCfgFromOpts(got.opts);
+        assert(cfg && cfg.cycleTime===10 && cfg.baseHp===Math.round(USEMAPS.cpu.cfg.baseHp*0.7),
+          '받은 설정이 엔진 값으로 안 풀림'); }
+    } finally {
+      window.startGameNow=keep.start; window.startGameCoop=keep.coop;
+      _lobbyRoom=keep.room; _selRace=keep.race; _selMap=keep.selMap; MAP=keep.MAP;
+      MAP_CFG_OVR=keep.ovr; _selDiff=keep.diff;
+      RTROOM.started=false; RTROOM.joinT=0;
+      const l=$('lobby'); if(l) l.classList.add('hide'); }
+    return '종족 presence · 설정 시작신호 · 순서 ok'; });
   // ══ 방 만들기 — 전체 화면 · 난이도는 스테퍼 · 오토배틀은 프리셋/사용자 지정 ══
   await step('방 만들기: 전체 화면 · 난이도 스테퍼 · 대전 설정이 실제 cfg 로 간다', async ()=>{
     skipIf(typeof createRoom!=='function','방 만들기 없음');
@@ -6032,9 +6083,17 @@ async function groupGame(){
         const want=Math.round(probe.getBoundingClientRect().height); probe.remove();
         assert(want>0,'--bpBodyH 기준값을 못 잼: '+want);
         for(const [n,fn] of [['건설지',()=>strikeSwitchTab('Build')],['특수무기',()=>strikeSwitchTab('Upgrade')],['관전',()=>strikeSwitchTab('Players')]]){
-          fn(); await sleep(180);
-          const body=document.getElementById(G.tab==='Build'?'btSheetBody':'unitCmd');
-          const h=Math.round(body.getBoundingClientRect().height);
+          fn();
+          // ⚠ 고정 대기(180ms)로 재면 안 된다 — 시트 정렬(_syncSheetLift)이 **220ms** 뒤에 끝나므로
+          //   높이가 0인 순간을 잡아 간헐 실패했다(앞 그룹이 길어지면 더 자주 걸렸다). 값이 설 때까지 기다린다.
+          let h=0;
+          for(let i=0;i<40;i++){ await sleep(50);
+            const body=document.getElementById(G.tab==='Build'?'btSheetBody':'unitCmd');
+            h=Math.round(body.getBoundingClientRect().height);
+            if(Math.abs(h-want)<=1) break; }
+          // ⚠ 하단 콘솔이 통째로 사라지면(#bot display:none) 높이가 0으로 나온다 — 원인을 바로 알 수 있게 적는다
+          if(h===0 && !document.getElementById('phone').classList.contains('inGame'))
+            throw new Error(n+' 하단 콘솔이 없다 — 게임 중인데 .inGame 이 꺼졌다(예열 완료 후 openHome 이 끌어갔는지 볼 것)');
           assert(Math.abs(h-want)<=1, n+' 하단 본문 높이가 네모와 다름: '+h+' vs '+want); } }
       // ⑨ 누적 수입(earned) — umProgress()가 '번 돈을 얼마나 굴렸나'를 이 값으로 역산한다.
       //    ⚠ 소모처(광산·강화·무기·건설)를 세지 않고 수입만 세는 구조라, 여기가 끊기면 진행도가 통째로 0이 된다.
