@@ -5228,6 +5228,72 @@ async function groupLobby(){
       } finally{ window.dgStep=real; dgStopLoop(); }
       return '화면없음 ok · 제자리 ok · '+DG_AUTO_SPEED+'배속 ok';
     } finally{ DG=null; dgStopLoop(); c.dgFloors={}; openHome(); } });
+  // ⚔ 4단계 — 자동 토벌이 **사냥터 엔진** 위에서 돈다. 지킬 것은 '규칙만 다르고 엔진은 하나'다.
+  await step('자동 토벌: 사냥터 엔진에서 · 사냥터와 동시에 · 보상이 안 샌다', async()=>{
+    skipIf(typeof dgHbStart!=='function','토벌 사냥터 세션 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','던전'); saveMeta(); }
+    const c=CHAR(); c.level=40; c.dgFloors={};
+    { const H=hbHunt(); H.unl={}; H.upg={atk:30,hp:30,aspd:10,crit:10}; }
+    openHome(); await sleep(250);
+    skipIf(!HBS.hunt || !HBS.hunt.on,'사냥터 세션이 안 돌고 있음');
+    const hunt=HBS.hunt, wasManual=hunt.manual;
+    const p=PROF(); p.dgKeys={}; p.tickets=emptyTickets(); p.pcoin=0; p.gas=0;
+    try{
+      hunt.manual=true;                                  // 사냥터는 멈춰 두고 토벌만 본다(보상 출처를 가른다)
+      const S=dgHbStart(4,'gear',{auto:true,key:true});
+      assert(S && HBS.dg===S,'토벌 세션이 안 생김');
+      assert(S.mode==='dg' && S.auto,'mode/auto 가 안 붙음: '+S.mode+'/'+S.auto);
+      assert(S.speed===DG_AUTO_SPEED,'자동인데 배속이 안 붙음: '+S.speed);
+      // ① 기지가 없다 — 사냥터 성벽이 토벌장에 서 있으면 안 된다
+      { const n=hbWith('dg',()=>{ const b=hbBlocked(); let k=0; for(let i=0;i<b.length;i++) k+=b[i]; return k; });
+        assert(n===0,'토벌장에 기지 벽이 '+n+'칸 서 있다'); }
+      // ② 회복 구역도 없다 — 있으면 원점에서 버티며 무한히 산다
+      hbWith('dg',()=>{ S.char.x=0; S.char.y=0; S.char.hp=1; S.char.tx=null;
+        const h0=S.char.hp; hbWalk(S,S.char,1.0);
+        assert(S.char.hp<=h0,'토벌인데 회복 구역이 살아 있다: '+h0+' → '+S.char.hp); });
+      // ③ 동료·펫·터렛·벙커 없음 — 토벌은 캐릭터 단독
+      assert(!S.allies.length && !S.pets.length && !S.turrets.length && !S.bunkers.length,'토벌에 아군이 붙었다');
+      // ④ 처치 보상이 안 샌다 — 토벌 처치는 재화도 뽑기권도 주지 않는다(보상은 클리어 때 한 번)
+      { const m0=Math.floor(p.pcoin), t0=Object.assign({},p.tickets);
+        hbWith('dg',()=>{ for(let i=0;i<6;i++){ const f=S.foes[0]||S.pend.length&&null; if(!S.foes.length) break; hbKill(S.foes[0]); } });
+        assert(Math.floor(p.pcoin)===m0,'토벌 처치가 사냥터 재화를 줬다: '+m0+' → '+Math.floor(p.pcoin));
+        for(const k of TIX_KINDS) assert((p.tickets[k]||0)===(t0[k]||0),'토벌 처치가 '+k+' 권을 떨궜다 — 종류를 나눈 뜻이 무너진다'); }
+      // ⑤ 사냥터는 그대로다 — 라운드·처치가 토벌 때문에 움직이면 안 된다
+      const hr=hunt.round, hk=hunt.kills;
+      hbWith('dg',()=>{ for(let i=0;i<40 && HBS.dg;i++) hbStep(0.05); });
+      assert(hunt.round===hr && hunt.kills===hk,'토벌이 사냥터 진행을 건드렸다: r'+hr+'→'+hunt.round+' k'+hk+'→'+hunt.kills);
+      return 'mode=dg · 배속'+DG_AUTO_SPEED+' · 벽0 · 회복없음 · 단독 · 보상격리 ok';
+    } finally{ hbSetSess('dg', null); hbUse('hunt'); hunt.manual=wasManual; c.dgFloors={}; } });
+  // 판이 끝나면 세션이 걷히고, 그 프레임에 남은 코드가 null 을 읽으면 안 된다(실제로 터졌다)
+  await step('자동 토벌: 클리어/실패로 세션이 깨끗이 걷힌다', async()=>{
+    skipIf(typeof dgHbStart!=='function','토벌 사냥터 세션 없음');
+    const c=CHAR(); c.dgFloors={}; const p=PROF(); p.dgKeys={}; p.tickets=emptyTickets();
+    try{
+      // 실패 경로 — 즉사시키고 한 스텝
+      const S=dgHbStart(3,'gear',{auto:true,key:true});
+      const k0=dgKeyN('gear');
+      // 🩹 먼저: 자동 토벌은 스킬을 알아서 쓴다 — 빈사에서 heal 이 실제로 살려낸다.
+      //   (이걸 안 재면 아래 '죽는다' 검사가 왜 쿨다운을 걸어야 하는지 알 수 없다)
+      hbWith('dg',()=>{ S.char.hp=1; S.char.hitT=0; S.skT.heal=0; hbStep(0.05); });
+      assert(S.char.hp>1,'자동인데 빈사에서 heal 스킬이 안 나갔다: hp='+S.char.hp);
+      // ⚠ 이제 진짜 죽인다 — heal 을 쿨다운에 걸어 두고, hitT 도 0 으로(실제 피격이 그렇게 한다.
+      //   9 로 두면 자연 재생이 먼저 돌아 hp 가 0 에서 살아난다).
+      hbWith('dg',()=>{ for(const k in S.skT) S.skT[k]=999;
+        S.char.hp=0; S.char.hitT=0; hbStep(0.05); });
+      assert(!HBS.dg,'실패인데 세션이 안 걷혔다');
+      assert(dgKeyN('gear')===k0,'실패인데 열쇠를 썼다: '+k0+' → '+dgKeyN('gear'));
+      assert(dgMaxFloor('gear')===0,'실패인데 단계가 올랐다: '+dgMaxFloor('gear'));
+      // 클리어 경로 — 마지막 웨이브를 비우고 한 스텝
+      const S2=dgHbStart(3,'gear',{auto:true,key:true});
+      const t0=PROF().tickets.gear;
+      hbWith('dg',()=>{ S2.wave=HB_WAVES; S2.phase='fight'; S2.foes.length=0; S2.pend.length=0; hbStep(0.05); });
+      assert(!HBS.dg,'클리어인데 세션이 안 걷혔다');
+      assert(dgMaxFloor('gear')===3,'클리어인데 단계가 안 올랐다: '+dgMaxFloor('gear'));
+      const want=dgFloorReward(3,'gear').tixN;
+      assert(PROF().tickets.gear===t0+want,'클리어 보상이 안 들어옴: '+t0+' → '+PROF().tickets.gear+' (기대 +'+want+')');
+      assert(dgKeyN('gear')===k0-1,'클리어인데 열쇠를 안 썼다');
+      return '실패·클리어 양쪽 정리 ok';
+    } finally{ hbSetSess('dg', null); hbUse('hunt'); c.dgFloors={}; } });
   // 실패해도 열쇠는 안 쓴다 — 자동이 1초 만에 끝나므로 실패가 잦아진다(이 규칙이 없으면 열쇠가 순식간에 마른다)
   await step('토벌 실패는 열쇠를 쓰지 않는다', async()=>{
     skipIf(typeof dgStart!=='function','토벌 없음');

@@ -734,13 +734,19 @@ function hbCanPlace(k,gx,gy){ const S=HB_STRUCT[k]; if(!S) return false;
 // 다시 굽는 조건: 목표가 다른 타일로 옮겼을 때 또는 구조물이 바뀌었을 때(_hbGridDirty)뿐.
 const HB_GRID_N=HB_GRID_R*2;
 let _hbBlk=null, _hbGridDirty=true, _hbBlkSeq=1;   // 막힌 칸(Uint8) 캐시 + 세대 번호(거리장 무효화용)
-let _hbChF=null,  _hbChAt='';                      // 캐릭터용 거리장(목표=탭한 자리)
-let _hbFoeAt='';                                   // 적용 거리장을 마지막으로 구운 캐릭터 칸(장 자체는 _hb.foeF)
+// ⚠ 거리장 캐시는 **세션 안**에 둔다(S._chF/S._chAt/S._foeAt). 2026-08-20 세션이 둘이 되면서 옮겼다 —
+//    전역에 두면 사냥터와 토벌이 번갈아 돌 때 서로의 '마지막으로 구운 칸' 키를 덮어써서
+//    거리장을 다시 굽지 않는다(적이 벽을 뚫고 오거나 엉뚱한 데로 돈다).
+//    막힌 칸 표(_hbBlk)는 기지에서 나오는 것이라 계정 단위가 맞다 — 대신 토벌은 기지가 없어 hbBlocked() 가 빈 표를 준다.
 // 구조물이 바뀌면 반드시 부른다 — 안 부르면 옛 길로 걸어 벽을 통과한다.
 // 타일을 바꾸는 곳은 전부 hbLayoutBase()를 지나므로 그쪽에서 한 번 부르면 충분하다.
-function hbGridDirty(){ _hbGridDirty=true; _hbBlkSeq++; _hbChAt=''; }
+function hbGridDirty(){ _hbGridDirty=true; _hbBlkSeq++; for(const k in HBS){ if(HBS[k]) HBS[k]._chAt=''; } }
 function hbFi(gx,gy){ return (gy+HB_GRID_R)*HB_GRID_N+(gx+HB_GRID_R); }
-function hbBlocked(){ if(_hbBlk && !_hbGridDirty) return _hbBlk;
+const _HB_NOBLK=new Uint8Array(HB_GRID_N*HB_GRID_N);   // 기지가 없는 판(토벌)용 — 전부 0
+// ⚔ 토벌은 기지가 없다. 사냥터 기지 벽을 그대로 물려받으면 토벌장 한가운데 성벽이 서 있게 된다.
+function hbNoBase(){ const S=_hb; return !!(S && S.mode==='dg'); }
+function hbBlocked(){ if(hbNoBase()) return _HB_NOBLK;
+  if(_hbBlk && !_hbGridDirty) return _hbBlk;
   const b=new Uint8Array(HB_GRID_N*HB_GRID_N), T=hbBase().tiles;
   for(const q in T){ const B=HB_STRUCT[T[q].k]; if(!B) continue;
     const p=q.split(','), gx=+p[0], gy=+p[1];
@@ -781,7 +787,7 @@ function hbFieldDir(d, wx, wy){ if(!d) return null;
 // 두 점 사이가 뚫려 있나 — 뚫려 있으면 거리장을 무시하고 곧장 간다.
 // 이게 없으면 열린 벌판에서도 타일 중심을 따라 계단처럼 걸어 부자연스럽다(각도도 4방향으로 뭉친다).
 let _hbAnyBlk=false;
-function hbLineClear(x0,y0,x1,y1){ if(!_hbAnyBlk) return true;
+function hbLineClear(x0,y0,x1,y1){ if(!_hbAnyBlk || hbNoBase()) return true;
   const dx=x1-x0, dy=y1-y0, d=Math.hypot(dx,dy); if(d<1) return true;
   const n=Math.min(64, Math.ceil(d/(HB_TILE*0.5)));
   for(let i=1;i<=n;i++){ const t=i/n; if(!hbWalkable(x0+dx*t, y0+dy*t)) return false; }
@@ -908,7 +914,10 @@ function hbToggleAuto(){ const H=hbHunt(); H.skAuto=H.skAuto?0:1;
 // 매 틱 — 켜 둔 스킬을 준비되는 대로 쓴다.
 // ⚠ 회복은 체력이 넓넓할 때 쓰면 그대로 버려진다 — 70% 아래일 때만 내보낸다.
 function hbAutoSkills(){ const S=_hb; if(!S||!S.char) return;
-  if(!hbHunt().skAuto) return;   // 한 번에 켜고 끕다
+  // ⚔ 자동 토벌은 "스킬도 자동사용됨"이 정의다 — 사냥터의 skAuto 토글과 무관하게 늘 켜져 있다.
+  //   직접 토벌은 수동이 기본(그게 '직접'을 고르는 이유다).
+  if(S.mode==='dg'){ if(!S.auto) return; }
+  else if(!hbHunt().skAuto) return;   // 한 번에 켜고 끈다
   for(const k in HB_SKILLS){ if(!hbSkillReady(k)) continue;
     if(k==='heal' && S.char.hp > S.char.hpMax*0.7) continue;
     hbUseSkill(k); } }
@@ -922,7 +931,7 @@ function hbUseSkill(k){ const S=_hb, SK=HB_SKILLS[k]; if(!S||!SK) return;
     S.floats.push({x:0,y:-40,tx:'💚 회복',cl:'#5dff8f',t:0}); }
   else if(k==='slow'){ S.slowT=HB_SLOW_S;
     S.floats.push({x:0,y:-40,tx:'🕸 감속',cl:'#9ad0ff',t:0}); }
-  S.skT[k]=SK.cd; if(typeof playSfx==='function') playSfx('ui_open'); renderHbBar(); }
+  S.skT[k]=SK.cd; if(typeof playSfx==='function') playSfx('ui_open'); if(!S.bg) renderHbBar(); }
 // ══ 전투 세션 레지스트리 — 사냥터와 토벌이 **동시에** 돈다 (2026-08-20) ══════════════════
 // `_hb` 는 세션이 아니라 **'지금 화면이 보는 세션'을 가리키는 포인터**다. 진짜 세션은 HBS 안에 있다.
 // 159개 함수가 `_hb` 를 직접 읽으므로, 포인터만 재조준하면 그 함수들을 한 줄도 안 고치고 두 세션을 굴린다.
@@ -988,6 +997,43 @@ function hbStart(){ const cv=document.getElementById('hbCv'); if(!cv) return;
   _hb.lastSim=performance.now();
   _hbRaf=requestAnimationFrame(hbFrame);            // 그리기
   if(!_hbTick) _hbTick=setInterval(hbPumpAll,50); }  // 진행 보장(세션 전부)
+// ══ ⚔ 토벌 세션 — 같은 엔진, 다른 규칙 (2026-08-20) ══════════════════════════════════
+// 사냥터와 **같은 hbStep** 을 쓴다. 이동·카이팅·스킬·3D 를 두 번 만들지 않기 위해서다(단일 소스).
+// 다른 것은 규칙뿐이고, 규칙 차이는 딱 다섯 군데다:
+//   ① 기지가 없다(hbNoBase) — 벽·회복 구역·기지 사각이 전부 빠진다
+//   ② 웨이브를 다 깨면 '라운드 다음'이 아니라 **단계 클리어**(hbSettle 분기)
+//   ③ 죽으면 라운드가 내려가는 게 아니라 **실패**(hbDie 분기)
+//   ④ 웨이브 재화를 안 준다(hbWaveReward 분기) — 보상은 클리어 때 한 번
+//   ⑤ 동료·펫·터렛·벙커가 없다 — 토벌은 '캐릭터가 직접 싸우는' 콘텐츠다
+// ⚠ 화면 없이도 돌아야 한다(자동 전투). 그래서 cv/ctx 없이 만들고, 화면 기하는 기본값을 심는다.
+const DG_HB_W=390, DG_HB_H=560;        // 화면이 없을 때 쓸 가상 화면 크기(적 출현 거리 계산에만 쓴다)
+// 토벌 단계 → 사냥터 곡선 좌표. 단계 하나가 라운드 하나다(곡선을 그대로 빌린다).
+//   ⚠ 아직 실측 전이다(BALANCE.md §5 A6). 토벌이 사냥터보다 쉬우면 아무도 사냥터를 안 한다.
+const DG_ROUND_PER_FLOOR=1;
+function dgHbRound(floor){ return Math.max(1, Math.round(floor*DG_ROUND_PER_FLOOR)); }
+function dgHbStart(floor, id, opt){ const c=CHAR(); if(!c) return null;
+  const o=opt||{}, st=hbCharStats(), cv=o.cv||null;
+  const S={ on:true, mode:'dg', auto:!!o.auto, speed:o.auto?DG_AUTO_SPEED:1, lastSim:performance.now(),
+    dgId:id||'normal', floor:floor, needKey:!!o.key, done:0,
+    cv:cv, ctx:cv?cv.getContext('2d'):null, bg:!cv,
+    w:DG_HB_W, h:DG_HB_H, d:1, vTop:0, vBot:DG_HB_H, cx:0, cy:0, k:1, t:0,
+    dg:1, round:dgHbRound(floor), wave:1, phase:'fight', waveT:hbWaveTime(1), gapT:0, downT:0,
+    pend:[], pendT:0, foes:[], chests:[], shots:[], floats:[], kills:0, rt0:0, charDir:4, charFace:0, atkT:0,
+    allies:[], turrets:[], bunkers:[], pets:[],   // ⑤ 캐릭터 단독 — 비워 두면 그 루프들이 안 돈다
+    skT:{nova:0,heal:0,slow:0}, slowT:0, skDirty:false, _chAt:'', _foeAt:'', _chF:null,
+    buf:{min:0,gas:0,xp:0,kills:0},
+    char:{ x:0,y:0, hp:st.hpMax, hpMax:st.hpMax, atk:st.atk, cd:st.cd, crit:st.crit, critDmg:st.critDmg,
+           range:st.range, regen:st.regen, cdT:0, hitT:9,
+           shd:st.shdMax, shdMax:st.shdMax, shdReg:st.shdReg,
+           lifest:st.lifest, knock:st.knock, chestDmg:st.chestDmg, multiC:st.multiC, multiN:st.multiN,
+           bncC:st.bncC, bncN:st.bncN, scritC:st.scritC, scritM:st.scritM,
+           mspd:st.mspd, rrng:st.rrng } };
+  hbSetSess('dg', S);
+  hbWith('dg', ()=>{ hbSpawnWave(); });      // ⚠ 반드시 그 세션을 보는 상태에서 — hbSpawnWave 는 _hb 를 읽는다
+  if(!_hbTick) _hbTick=setInterval(hbPumpAll,50);   // 자동은 rAF 없이 인터벌로 돈다(탭을 내려도 진행)
+  return S; }
+// 토벌 판을 끝낸다 — 결과는 dg 쪽(09-dungeon.js)이 처리한다.
+function dgHbEnd(){ const S=HBS.dg; hbSetSess('dg', null); return S; }
 // 화면을 떠나도 전투는 계속 돈다 — '그리기'만 멈추고 시뮬(setInterval)은 살려 둔다.
 // ⚠ 여기서 반드시 저장한다. 처치 보상은 메모리에만 있어서, 다음 화면의 loadMeta()가 그대로 덮어쓴다(재화가 사라지던 원인).
 // ⚠ 3D 캔버스는 공용이라 떠날 때 무조건 반납한다(안 하면 유즈맵 3D가 사라진다).
@@ -1048,7 +1094,7 @@ function hbSpawnWave(){ const S=_hb, n=hbFoeCount(S.round,S.wave);
     return { ico:f.ico, mdl:f.mdl, hpMul:r.hp, atkMul:r.atk, spd:r.spd*HB_FOE_SPD_MUL*(1+S.round*0.01) }; };
   const boss=(S.wave===HB_WAVES);   // 마지막 웨이브 = 보스가 함께 나온다
   if(S.chests) S.chests.length=0;                        // 📦 지난 웨이브 상자는 사라진다(모아 두는 플레이 방지)
-  hbSpawnChest();                                        // 📦 웨이브마다 하나
+  if(S.mode!=='dg') hbSpawnChest();                       // 📦 웨이브마다 하나(토벌엔 보급 상자가 없다)
   if(n<=HB_SPREAD_N){ for(let i=0;i<n;i++) hbPlaceFoe(mk()); if(boss) hbPlaceFoe(mkBoss(D,S)); }
   else{ for(let i=0;i<n;i++) S.pend.push(mk()); if(boss) S.pend.push(mkBoss(D,S)); S.pendT=0; }
   if(boss){ S.floats.push({x:S.char.x,y:S.char.y-46,tx:'⚠ 보스 출현',cl:'#ff3b3b',t:0});
@@ -1083,7 +1129,7 @@ function hbPlaceFoe(proto){ const S=_hb;
   //   기지가 차지한 사각 범위 안이면 같은 방향으로 그 바깥까지 밀어낸다.
   //   기지가 작을 땐 거의 그대로 → 초반 진행 속도가 안 바뀐다. 커질수록 자연히 바깥에서 온다.
   hbBlocked();
-  const BX=_hbBaseBox;
+  const BX=hbNoBase()? null : _hbBaseBox;
   if(BX && sx>BX.x0 && sx<BX.x1 && sy>BX.y0 && sy<BX.y1){
     for(let step=1; step<=HB_GRID_R*2; step++){ const nx=sx+ca*HB_TILE*step, ny=sy+sa*HB_TILE*step;
       sx=Math.max(-HB_FIELD_RX,Math.min(HB_FIELD_RX,nx)); sy=Math.max(-HB_FIELD_RY,Math.min(HB_FIELD_RY,ny));
@@ -1119,6 +1165,8 @@ function hbHud(){ const S=_hb; if(!S) return; const c=(typeof CHAR==='function')
   put('hbWaveTx','웨이브 '+Math.min(S.wave,HB_WAVES)+'/'+HB_WAVES);
   put('hbMode', hbHunt().climb?'등반':'반복'); }   // 킬수 표시는 제거(요청)
 function hbSettle(){ const S=_hb, p=PROF();
+  // ⚔ 토벌: 마지막 웨이브를 비웠다 = **단계 클리어**. 사냥터 진행도(hbHunt)는 한 줄도 안 건드린다.
+  if(S.mode==='dg'){ S.phase='done'; S.on=false; S.done=1; if(typeof dgHbWin==='function') dgHbWin(S); return; }
   hbNoteRate((S.buf.paid||0)+hbClearBonus(S.dg,S.round).min, Math.max(1,S.t-(S.rt0||0)));   // 방치 수입 기준 = 실제로 번 속도
   S.rt0=S.t;
   const bo=hbClearBonus(S.dg,S.round);        // 처치 보상은 이미 지급됨 — 여기서 주는 건 클리어 보너스뿐(사망 시 소실되는 몫)
@@ -1163,7 +1211,11 @@ function hbAdvanceDungeon(){ const S=_hb, H=hbHunt();
       S.floats.push({x:S.char.x,y:S.char.y-84,tx:'🎁 진입 보너스 +'+fmtCur(mn)+'M',cl:'#ffd24a',t:0}); } }
   if(typeof toast==='function') toast('🏁 던전 '+(nd-1)+' 완주 — 던전 '+nd+' · '+hbDun(nd).name+' 진입');
   S.floats.push({x:S.char.x,y:S.char.y-64,tx:'🏁 던전 '+nd+' 진입',cl:'#7ad1ff',t:0}); }
-function hbDie(){ const S=_hb, H=hbHunt();
+function hbDie(){ const S=_hb;
+  // ⚔ 토벌: 죽으면 **실패**다(라운드가 내려가는 게 아니다). 열쇠는 소모하지 않는다.
+  if(S.mode==='dg'){ S.phase='done'; S.on=false; S.done=-1; S.foes.length=0; S.pend.length=0;
+    if(typeof dgHbLose==='function') dgHbLose(S); return; }
+  const H=hbHunt();
   S.buf={min:0,gas:0,xp:0,kills:0};                               // 클리어 보너스 몫 소실(처치 보상은 이미 받았다)
   S.foes.length=0; S.shots.length=0; S.pend.length=0;
   // ⭐ 라운드 하강 — 1 밑으로 내려가면 **이전 던전 마지막 라운드**로 물러난다(hbAdvanceDungeon 의 반대).
@@ -1241,6 +1293,7 @@ function hbCharTake(dmg){ const S=_hb, c=S.char; c.hitT=0;
 // 🌊 웨이브를 비울 때마다 나오는 재화 — 업그레이드(mw/gw)로만 생긴다(0레벨이면 0).
 //    던전 배수를 같이 받아야 상위 던전에서도 의미가 남는다(처치 보상과 같은 규칙).
 function hbWaveReward(){ const S=_hb;
+  if(S.mode==='dg') return;   // ⚔ 토벌은 웨이브 재화가 없다 — 보상은 단계 클리어 때 한 번(dgFloorReward)
   const mn=hbUpgNum('mw'), gs=hbUpgNum('gw'); if(mn<=0 && gs<=0) return;
   const m=HB_DG_REW(S.dg)*(hbBoostOn('inc')?2:1), p=PROF();
   p.pcoin=(p.pcoin||0)+mn*m; p.gas=(p.gas||0)+gs*m;
@@ -1265,12 +1318,13 @@ function hbWalk(S,c,dt){
       let ux=dx/d, uy=dy/d;
       if(!hbLineClear(c.x,c.y,c.tx,c.ty)){                    // 가리는 게 있을 때만 길을 굽는다
         const key=hbGx(c.tx)+','+hbGx(c.ty);
-        if(_hbChAt!==key || S._chSeq!==_hbBlkSeq){ _hbChAt=key; S._chSeq=_hbBlkSeq; _hbChF=hbBakeField(hbGx(c.tx),hbGx(c.ty)); }
-        const f=hbFieldDir(_hbChF, c.x, c.y); if(f){ ux=f[0]; uy=f[1]; } }
+        if(S._chAt!==key || S._chSeq!==_hbBlkSeq){ S._chAt=key; S._chSeq=_hbBlkSeq; S._chF=hbBakeField(hbGx(c.tx),hbGx(c.ty)); }
+        const f=hbFieldDir(S._chF, c.x, c.y); if(f){ ux=f[0]; uy=f[1]; } }
       hbSlide(c, ux*sp, uy*sp);
       c.mv=1; S.charFace=Math.atan2(ux,uy); } else c.mv=0; }
   { const p=hbClampField(c.x,c.y); c.x=p[0]; c.y=p[1]; }   // 위치 자체를 가둔다 — 목적지만 걸러서는 보장이 안 된다
-  if(c.hp>0 && c.hp<c.hpMax && Math.hypot(c.x,c.y)<=hbHealR()){   // 회복 구역 — 조건 없음
+  // ⚔ 토벌에는 회복 구역이 없다 — 있으면 원점에서 카이팅하며 무한히 버틸 수 있어 단계 난이도가 무의미해진다
+  if(c.hp>0 && c.hp<c.hpMax && !hbNoBase() && Math.hypot(c.x,c.y)<=hbHealR()){   // 회복 구역 — 조건 없음
     c.hp=Math.min(c.hpMax, c.hp + c.hpMax*HB_HEAL_PCT*dt); c.healFx=1; } else c.healFx=0; }
 function hbSetDest(sx,sy){ const S=_hb; if(!S||!S.on) return;
   const p=hbClampField((sx-S.cx)/S.k, (sy-S.cy)/S.k);
@@ -1497,11 +1551,11 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char;
   if(S.build){ hbFx(dt); return; }   // 🛠 건설 중 = 시계도 전투도 멈춘다(이펙트만 사그라들게 둔다)
   S.t+=dt;
   // 📅 일일 — 사냥터 플레이타임(초). 건설 중은 위에서 빠지므로 '실제로 돈 시간'만 쌓인다.
-  { S.dqT=(S.dqT||0)+dt; if(S.dqT>=1){ const w=Math.floor(S.dqT); S.dqT-=w;
-      if(typeof dqNote==='function') dqNote('play',w); } }
+  if(S.mode!=='dg'){ S.dqT=(S.dqT||0)+dt; if(S.dqT>=1){ const w=Math.floor(S.dqT); S.dqT-=w;
+      if(typeof dqNote==='function') dqNote('play',w); } }   // 사냥터 플레이타임 — 토벌 시간은 안 센다
   // 적이 따라올 길 — 캐릭터가 다른 칸으로 넘어갔을 때만 다시 굽는다(900칸 BFS는 1ms 미만)
   { const key=hbGx(c.x)+','+hbGx(c.y);
-    if(_hbFoeAt!==key || S._blkSeq!==_hbBlkSeq){ _hbFoeAt=key; S._blkSeq=_hbBlkSeq; S.foeF=hbBakeField(hbGx(c.x),hbGx(c.y)); } }
+    if(S._foeAt!==key || S._blkSeq!==_hbBlkSeq){ S._foeAt=key; S._blkSeq=_hbBlkSeq; S.foeF=hbBakeField(hbGx(c.x),hbGx(c.y)); } }
   if(S.phase!=='down') hbWalk(S,c,dt);
   if(S.phase==='down'){ S.downT-=dt;
     if(S.downT<=0){ c.hp=c.hpMax; c.shd=c.shdMax||0; c.hitT=9; S.phase='fight'; S.wave=1; hbSpawnWave(); }
@@ -1524,6 +1578,10 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char;
       c2.hp=c2.hpMax; c2.shd=c2.shdMax||0; c2.hitT=9;
       S.wave=1; S.phase='fight'; hbSpawnWave(); hbHud(); } }
   else if(S.phase==='mop'){ if(!S.foes.length) hbSettle(); }       // (지금은 진입 경로 없음 — 옛 저장 호환)
+  // ⚔ 토벌이 위에서 끝났다(hbSettle→dgHbWin / hbDie→dgHbLose 가 세션을 걷었다).
+  //   ⚠ 여기서 안 끊으면 아래 전투·이펙트가 계속 돌고, hbFx 가 이미 null 이 된 _hb 를 읽어 터진다
+  //     (실측: "Cannot read properties of null (reading 'shots')").
+  if(S.done) return;
   // ── 전투(쓰러진 동안만 정지 — 웨이브 간격에도 잔존 적은 계속 싸운다) ──
   const spdMul=(S.slowT>0)?HB_SLOW_MUL:1;
   for(const f of S.foes){
@@ -1585,8 +1643,9 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char;
   if(S.slowT>0) S.slowT-=dt;
   for(const k in S.skT) if(S.skT[k]>0){ S.skT[k]-=dt; if(S.skT[k]<=0) S.skDirty=true; }
   hbAutoSkills();   // 자동 사용 — 켜 둔 것만, 준비됐을 때만
-  hbSkCdPaint();    // 쓰는 동안 돌아가는 껍데기
-  if(S.skDirty && typeof renderHbBar==='function'){ S.skDirty=false; renderHbBar(); }
+  // ⚠ 스킬 바는 **화면에 보이는 세션만** 그린다. 배경 세션이 만지면 사냥터 바에 토벌 쿨다운이 찍힌다.
+  if(!S.bg){ hbSkCdPaint();
+    if(S.skDirty && typeof renderHbBar==='function'){ S.skDirty=false; renderHbBar(); } }
   c.hitT+=dt;                                                     // 3초 무피격이면 서서히 회복(+회복 업그레이드)
   if(c.hitT>3 && c.hp<c.hpMax) c.hp=Math.min(c.hpMax, c.hp+(c.hpMax*.02+c.regen)*dt);
   // 🛡 실드 재생 — 체력과 달리 피격 직후에도 돈다(실드가 '먼저 닳는 완충재'로 굴러가게)
@@ -1599,7 +1658,11 @@ function hbStep(dt){ const S=_hb; if(!S) return; const c=S.char;
   hbFx(dt); }
 // 처치 1건 — 캐릭터·동료·펫·터렛·스킬이 전부 이 한 곳을 지난다(보상 규칙을 여러 벌 두지 않는다)
 function hbKill(f){ const S=_hb, i=S.foes.indexOf(f); if(i<0) return; S.foes.splice(i,1); S.kills++;
-  if(typeof dqNote==='function') dqNote('kill',1);   // 📅 일일 — 적 처치
+  if(typeof dqNote==='function') dqNote('kill',1);   // 📅 일일 — 적 처치(토벌 처치도 처치다)
+  // ⚔ 토벌은 **처치로 아무것도 주지 않는다**. 보상은 단계 클리어 때 dgFloorReward 한 번뿐이다.
+  //   ⛔ 이 분기를 빼면 토벌이 사냥터 수입원이 되고, 무엇보다 장비·동료·펫 뽑기권이
+  //      토벌 종류와 무관하게 쏟아져 종류를 나눈 뜻이 통째로 무너진다.
+  if(S.mode==='dg') return;
   // 처치 보상은 즉시 지급 — 재화 바가 바로 오른다. 사망 시 잃는 것은 '라운드 클리어 보너스'뿐.
   const rm=(f.elite?HB_ELITE_REW:1)*(hbBoostOn('inc')?2:1);
   // 💰 처치 재화 업그레이드(mk/gk)는 던전 배수를 같이 받는다 — 안 그러면 상위 던전에서 반올림 오차가 된다
@@ -1625,7 +1688,7 @@ function hbKill(f){ const S=_hb, i=S.foes.indexOf(f); if(i<0) return; S.foes.spl
   S.saveT=(S.saveT||0)+1;
   if(S.saveT>=HB_SAVE_KILLS){ S.saveT=0; _hbDirty=false; if(typeof saveMeta==='function') saveMeta(); }
   S.floats.push({x:f.x,y:f.y-34,tx:'+'+fmtCur(r.min),cl:'#ffd24a',t:0}); hbHud(); }
-function hbFx(dt){ const S=_hb;
+function hbFx(dt){ const S=_hb; if(!S) return;   // 세션이 걷힌 뒤에 불릴 수 있다(판이 끝나는 프레임)
   for(const s of S.shots) s.t+=dt;  S.shots=S.shots.filter(s=>s.t<.12);
   for(const f of S.floats) f.t+=dt; S.floats=S.floats.filter(f=>f.t<.9); }
 // ── 던전 겉모습: 적 스프라이트 · 바닥 타일 ──
