@@ -6015,11 +6015,18 @@ async function groupGame(){
         document.body.appendChild(probe);
         const want=Math.round(probe.getBoundingClientRect().height); probe.remove();
         assert(want>0,'--bpBodyH 기준값을 못 잼: '+want);
-        for(const [n,fn] of [['건설지',()=>strikeSwitchTab('Build')],['특수무기',()=>strikeSwitchTab('Upgrade')],['관전',()=>strikeSwitchTab('Players')]]){
-          fn(); await sleep(180);
-          const body=document.getElementById(G.tab==='Build'?'btSheetBody':'unitCmd');
-          const h=Math.round(body.getBoundingClientRect().height);
-          assert(Math.abs(h-want)<=1, n+' 하단 본문 높이가 네모와 다름: '+h+' vs '+want); } }
+        // ⚠ 헤드리스에선 three.js(esm.sh)가 막혀 로딩 게이트가 안 걷히고 #phone.inGame 이 안 켜진다
+        //    → #bot 이 display:none 이라 그 안의 #unitCmd 높이가 전부 0으로 나온다(#btSheetBody 는 #bot 밖이라
+        //    멀쩡해서 '건설지만 통과'로 보였다). 재는 동안만 켠다 — 「하단 프로필: 다섯 섹션 같은 높이」와 같은 처방.
+        const ph=$('phone'), faked=ph && !ph.classList.contains('inGame'); if(faked) ph.classList.add('inGame');
+        try{
+          for(const [n,fn] of [['건설지',()=>strikeSwitchTab('Build')],['특수무기',()=>strikeSwitchTab('Upgrade')],['관전',()=>strikeSwitchTab('Players')]]){
+            fn(); await sleep(180);
+            const body=document.getElementById(G.tab==='Build'?'btSheetBody':'unitCmd');
+            const h=Math.round(body.getBoundingClientRect().height);
+            assert(h>0, n+' 하단 본문 높이가 0 — 패널이 아예 안 떠 있다(부모가 display:none 인지 볼 것)');
+            assert(Math.abs(h-want)<=1, n+' 하단 본문 높이가 네모와 다름: '+h+' vs '+want); }
+        } finally { if(faked) ph.classList.remove('inGame'); } }
       // ⑨ 누적 수입(earned) — umProgress()가 '번 돈을 얼마나 굴렸나'를 이 값으로 역산한다.
       //    ⚠ 소모처(광산·강화·무기·건설)를 세지 않고 수입만 세는 구조라, 여기가 끊기면 진행도가 통째로 0이 된다.
       { const e0=STK.me.earned||0;
