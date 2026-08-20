@@ -1809,11 +1809,12 @@ function renderPlayers(){ const g=document.getElementById('plGrid'); g.innerHTML
   for(let n=1;n<=8;n++){ const st=slotState(n), isMe=(st==='me'), present=slotWatchable(n);
     const elim=(st==='dead');   // 입장했다가 탈락/이탈한 자리(색 유지·어둡게) — 빈 자리(empty)와 같게 취급된다
     const el=document.createElement('div');
-    el.className='plbtn'+(isMe?' mine':(present?((st==='done'?' done':'')+(n===G.curPlayer?' me':'')):(elim?' gone':' off')));   // 나=mine · 활성=관전가능(현재관전=me) · 승리정지=done · 탈락=gone · 빈자리=off
+    el.className='plbtn'+(isMe?' mine':(present?((st==='done'?' done':(st==='away'?' away':''))+(n===G.curPlayer?' me':'')):(elim?' gone':' off')));   // 나=mine · 활성=관전가능(현재관전=me) · 승리정지=done · 연결끊김=away · 탈락=gone · 빈자리=off
     const showColor=(isMe||present||elim);   // 빈 자리만 무채색(흰색 계열)
     el.style.setProperty('--pc', showColor?PLAYER_VIEW_COLORS[(n-1)%PLAYER_VIEW_COLORS.length]:'#b6bdc8');
     const _bo=!isMe && present && G.coopState && G.coopState[n] && G.coopState[n].bo;   // 상대가 토벌장 보는 중
-el.innerHTML='<div class="plnum">'+n+'P</div><div class="plst">'+(isMe?escHtml(myNick()):(present?(escHtml(playerName(n))+(_bo?(' <span title="보스방 입장 중">'+pIco('👹','sm')+'</span>'):'')):(elim?escHtml(playerName(n)):'빈 자리')))+'</div>';
+    const _away=(st==='away')?(' <span title="연결 끊김 — 돌아오기를 기다리는 중">📡</span>'):'';   // 자리를 잡아 둔 상태
+el.innerHTML='<div class="plnum">'+n+'P</div><div class="plst">'+(isMe?escHtml(myNick()):(present?(escHtml(playerName(n))+_away+(_bo?(' <span title="보스방 입장 중">'+pIco('👹','sm')+'</span>'):'')):(elim?escHtml(playerName(n)):'빈 자리')))+'</div>';
     if(!isMe && present) el.onclick=()=>{ G.curPlayer=n; renderPlayers(); drawPlayer(); updateSpecLabel(); };   // 입장한 다른 플레이어만 관전 가능   // 죽은 자리·빈 자리는 클릭 불가
     g.appendChild(el);
   } }
@@ -1994,7 +1995,10 @@ function exitGame(){
   const p=document.getElementById('exitConfirm'); if(p){ p.classList.remove('hide'); if(typeof fxPop==='function') fxPop(p.querySelector('.ecCard')); }   // 진행 중이든 아니든 확인부터
 }
 function confirmExitGame(){ closeExitConfirm();
-  if(G && G.phase==='playing'){ G.phase='quit';   // 진행 중 = 현재까지의 결과로 종료
+  if(G && G.phase==='playing'){
+    // ⚠ 일부러 나가는 것은 **끊김과 구분해서** 알린다 — 안 알리면 상대는 AWAY_MS 동안 빈 자리를 잡고 기다린다
+    if(typeof coopSend==='function') coopSend('bye', { num:G.myPlayer||1, nick:(typeof myNick==='function')?myNick():'' });
+    G.phase='quit';   // 진행 중 = 현재까지의 결과로 종료
     if(G.bossOpen && typeof closeBossArena==='function') closeBossArena();   // showOverlay가 하던 정리(보스 팝업/바/BGM)를 여기서 수행
     if(typeof updateCoopBossBar==='function') updateCoopBossBar();
     if(typeof bgmStop==='function') bgmStop();

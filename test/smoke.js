@@ -6346,6 +6346,103 @@ async function groupGame(){
       return '최초 +50 · 재접속 +0';
     } finally { G=keepG; if(keepMap) MAP=keepMap; window.metaBonus=keepMB; } });
 
+  // ══ 재접속 — 끊김(자리 유지)과 일부러 나감(영구)을 구분한다 ═══════════
+  await step('재접속: 연결이 끊기면 자리를 잡아 둔다(지우지 않는다)', async()=>{
+    skipIf(typeof onCoopPlayerLeft!=='function' || typeof awaySlot!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]);
+      G.coopBoard[2]={t:Date.now(),units:[{uid:'a'}],enemies:[],shots:[],beams:[]};
+      G.coopState[2]={count:42,round:5,bo:0};
+      onCoopPlayerLeft({ uid:'u2', nick:'P2' });
+      assert(slotState(2)==='away','끊긴 자리가 away 가 아님: '+slotState(2));
+      assert(G.coopBoard[2],'자리를 잡아 두는데 보드를 지웠다');
+      assert(slotWatchable(2),'끊긴 자리도 관전은 계속 돼야 한다');
+      assert(playerEnemyCount(2)===42,'끊긴 자리의 마지막 상태가 사라졌다: '+playerEnemyCount(2));
+      assert(!slotDead(2),'끊긴 자리를 죽은 자리로 취급하면 안 된다');
+      return 'away · 보드 유지 · 관전 가능';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('재접속: 일부러 나가면(bye) 기다리지 않고 바로 죽은 자리', async()=>{
+    skipIf(typeof onCoopBye!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]);
+      G.coopBoard[3]={t:Date.now(),units:[{uid:'a'}],enemies:[],shots:[],beams:[]};
+      onCoopBye({ uid:'u3', nick:'P3' });
+      assert(slotState(3)==='dead','bye 인데 dead 가 아님: '+slotState(3));
+      assert(!G.coopBoard[3],'bye 인데 보드가 남아 있다');
+      assert(!G.away||G.away[3]==null,'bye 인데 자리를 잡고 기다린다');
+      return 'dead 즉시';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('재접속: 돌아오면 자리와 보드가 그대로 이어진다', async()=>{
+    skipIf(typeof onCoopPlayerBack!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]);
+      G.coopBoard[2]={t:Date.now(),units:[{uid:'a'},{uid:'b'}],enemies:[],shots:[],beams:[]};
+      onCoopPlayerLeft({ uid:'u2', nick:'P2' });
+      assert(slotState(2)==='away','준비 실패');
+      onCoopPlayerBack({ uid:'u2', nick:'P2' });
+      assert(slotState(2)==='live','돌아왔는데 live 가 아님: '+slotState(2));
+      assert(G.coopBoard[2] && G.coopBoard[2].units.length===2,'복귀했는데 보드가 사라졌다');
+      assert(G.activePlayers.indexOf(2)>=0,'activePlayers 에 안 돌아왔다');
+      return 'live 복귀 · 유닛 2기 유지';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('재접속: 대기 시간을 넘기면 영구 죽은 자리', async()=>{
+    skipIf(typeof tickAway!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]);
+      G.coopBoard[2]={t:Date.now(),units:[{uid:'a'}],enemies:[],shots:[],beams:[]};
+      onCoopPlayerLeft({ uid:'u2', nick:'P2' });
+      G.away[2]=Date.now()-1;            // 시간을 앞당긴다(실제로 30초 기다리지 않는다)
+      tickAway();
+      assert(slotState(2)==='dead','대기 만료인데 dead 가 아님: '+slotState(2));
+      assert(!G.coopBoard[2],'만료됐는데 보드가 남아 있다');
+      assert(G.away[2]==null,'만료됐는데 대기 목록에 남아 있다');
+      // 뒤늦게 도착한 스냅이 죽은 자리를 되살리면 안 된다
+      onCoopState({ uid:'u2', count:9, round:5, tb:null });
+      assert(slotState(2)==='dead' && !G.coopBoard[2],'뒤늦은 스냅이 죽은 자리를 되살렸다');
+      return 'dead · 뒤늦은 스냅 무시';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('재접속: resync 가 끊긴 동안의 승/패를 따라잡는다', async()=>{
+    skipIf(typeof onCoopResync!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]); G.activePlayers=[1,2,3,4];
+      onCoopResync({ uid:'u2', num:2, over:null, speed:1, dead:[3], done:[4] });
+      assert(slotState(3)==='dead','놓친 패배를 못 따라잡았다: '+slotState(3));
+      assert(slotState(4)==='done','놓친 승리를 못 따라잡았다: '+slotState(4));
+      return 'P3 dead · P4 done';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('재접속: 네트워크가 돌아오면 재시도 상한이 풀린다', async()=>{
+    skipIf(typeof coopReconnect!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]);
+      _coopRetryN=5;   // 상한에 걸린 상태 — 이걸 안 풀면 coopReconnect 가 즉시 return 해서 영영 재접속이 안 된다
+      window.dispatchEvent(new Event('online'));
+      assert(_coopRetryN===0,'online 인데 재시도 카운터가 안 풀렸다: '+_coopRetryN);
+      return '카운터 리셋';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; _coopRetryN=0; } });
+
+  await step('재접속: 끊긴 사람은 보스 권위자가 되지 않는다', async()=>{
+    skipIf(typeof coopAuthNum!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]); G.myPlayer=2; G.curPlayer=2;   // 최저 번호(1)가 내가 아닌 상황
+      assert(coopAuthNum()===1,'준비 실패 — 권위자가 1이어야 한다: '+coopAuthNum());
+      onCoopPlayerLeft({ uid:'me', nick:'P1' });     // 1번이 끊긴다
+      assert(slotState(1)==='away','준비 실패: '+slotState(1));
+      assert(coopAuthNum()===2,'끊긴 사람이 권위를 쥐고 있다(보스 동기화가 멈춘다): '+coopAuthNum());
+      return '권위 1 → 2 승계';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
   await step('대역폭: 관전자가 없으면 전장 데이터를 안 보낸다', async()=>{
     skipIf(typeof coopBroadcastState!=='function','coopBroadcastState 없음');
     const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
