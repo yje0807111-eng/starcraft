@@ -4235,10 +4235,16 @@
   
   
   .foSoon{display:flex;align-items:center;justify-content:center;height:120px;color:#7d8b98;font-size:var(--fs-lg)}
-  .foAdd{display:flex;gap:6px;margin-bottom:9px}
-  .foAdd input{flex:1;min-width:0;padding:8px 10px;border-radius:var(--r-md);background:rgba(6,8,13,.72);border:1px solid rgba(255,255,255,.12);color:var(--txt);font-family:inherit;font-size:var(--fs-lg);outline:none}
-  .foAdd input:focus{border-color:var(--neon-soft)}
-  .foSearchBtn{flex:0 0 auto;padding:0 13px;border-radius:var(--r-md);cursor:pointer;font-family:inherit;font-weight:800;font-size:var(--fs-lg);color:var(--neon-lt);background:rgba(255,59,59,.14);border:1px solid var(--neon-soft)}
+  /* 검색 줄 = 방 찾기(.rmNum)와 같은 규격이다 — 라운드 3px 하나, 입력은 어두운 홈, 버튼은 공용 .actBtn.
+     ⚠ 옛 값은 6px 라운드 + 붉은 면(rgba(255,59,59,.14))이었다. 둥글고, 면을 칠해서
+       "위계는 색이 아니라 빛의 양" 규칙에서도 벗어나 있었다. 되돌리지 말 것. */
+  .foAdd{display:flex;gap:7px;margin-bottom:9px}
+  .foAdd input{flex:1;min-width:0;padding:10px 12px;border-radius:var(--r-bar);background:rgba(0,0,0,.32);border:1px solid var(--metal-edge);color:var(--txt);font-family:inherit;font-size:var(--fs-lg);outline:none;transition:border-color .12s}
+  .foAdd input:focus{border-color:rgba(255,59,59,.5)}
+  .foAdd input::placeholder{color:#6f757d}
+  /* 화면이 덮는 건 크기뿐 — 면·테두리·광원은 .actBtn 이 갖는다.
+     height:auto + stretch 라 입력칸이 정하는 높이에 맞춰 늘어난다(둘의 높이를 따로 적지 않는다). */
+  .foSearchBtn{flex:0 0 auto;height:auto;align-self:stretch;padding:0 15px;font-size:var(--fs-lg)}
   .foSecLbl{font-size:var(--fs-sm);font-weight:800;letter-spacing:.5px;color:#8a9aa8;margin:9px 1px 5px}.foSecLbl b{color:var(--neon)}
   .foSecAdd{display:flex;align-items:center;gap:4px;color:#aeb7c1;margin-top:2px}.foSecAdd .ic{width:12px;height:12px;color:var(--neon)}
   .foSecOn b{color:var(--ok)}
@@ -4340,7 +4346,7 @@
   .ptInviteX svg{width:15px;height:15px}
   .ptInviteX:active{transform:scale(.92)}
   .ptInviteSearch{flex:0 0 auto;padding:9px 12px 0}
-  .ptInviteSearch input{width:100%;padding:8px 10px;border-radius:var(--r-md);background:var(--glass);border:1px solid var(--metal-edge);
+  .ptInviteSearch input{width:100%;padding:10px 12px;border-radius:var(--r-bar);background:rgba(0,0,0,.32);border:1px solid var(--metal-edge);
     color:var(--txt);font-family:inherit;font-size:var(--fs-lg);outline:none}
   .ptInviteSearch input:focus{border-color:var(--neon-soft)}
   .ptInviteSearch input::placeholder{color:#6f757d}
@@ -17185,7 +17191,7 @@ function openFriendAdd(){ const ov=_lobbyOv('foAddOv', closeFriendAdd);
     +'<div class="ptInviteHead"><span>친구 추가</span>'+_ovXBtn('closeFriendAdd()')+'</div>'
     +'<div class="ptInviteSearch"><div class="foAdd">'
     +'<input id="foSearch" placeholder="닉네임 또는 닉#코드" maxlength="30" autocomplete="off" onkeydown="if(event.key===\'Enter\')friendSearch()">'
-    +'<button class="foSearchBtn" onclick="friendSearch()">검색</button></div></div>'
+    +'<button class="actBtn pri foSearchBtn" onclick="friendSearch()">검색</button></div></div>'
     +'<div class="ptInviteList"><div id="foSearchResult">'
     +'<div class="foEmpty">닉#코드로 정확히 입력하면 바로 찾을 수 있어요</div></div></div></div>';
   const inp=document.getElementById('foSearch'); if(inp) setTimeout(function(){ try{ inp.focus(); }catch(e){} },30);

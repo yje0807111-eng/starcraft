@@ -4287,6 +4287,15 @@ async function groupLobby(){
       body.querySelector('.ptFind.foAddBtn').click(); await sleep(80);
       assert(visible($('foAddOv')),'＋ 를 눌렀는데 친구 추가 팝업이 안 뜸');
       assert($('foAddOv').querySelector('#foSearch'),'팝업 안에 검색칸이 없음');
+      // 🔲 검색 줄은 각지다 — 라운드 3px 하나, 버튼은 공용 .actBtn(면을 칠하지 않는다)
+      { const inp=$('foSearch'), btn=$('foAddOv').querySelector('.foSearchBtn');
+        assert(getComputedStyle(inp).borderRadius==='3px','검색 입력칸 라운드가 3px 가 아님: '+getComputedStyle(inp).borderRadius);
+        assert(btn && btn.classList.contains('actBtn'),'검색 버튼이 공용 .actBtn 이 아님');
+        assert(getComputedStyle(btn).borderRadius==='3px','검색 버튼 라운드가 3px 가 아님: '+getComputedStyle(btn).borderRadius);
+        // 옛 붉은 면(rgba(255,59,59,.14)) 이 아니라 .actBtn 의 중립 그라디언트여야 한다
+        assert(/gradient/.test(getComputedStyle(btn).backgroundImage),'검색 버튼이 아직 단색 면을 칠하고 있음');
+        const hi=inp.getBoundingClientRect().height, hb=btn.getBoundingClientRect().height;
+        assert(Math.abs(hi-hb)<1.5,'입력칸과 검색 버튼 높이가 다름: '+hi.toFixed(1)+' vs '+hb.toFixed(1)); }
       closeFriendAdd(); }
     // 🎪 파티 = 게시판(이전 단계) → 참가/만들기 → 하단 내 파티
     navSub('chat'); await sleep(30);
