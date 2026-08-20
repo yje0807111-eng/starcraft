@@ -3395,7 +3395,10 @@
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .hmUpVl .nx{color:#fff}
   .hmArw{display:block;width:7px;height:7px;flex:none;fill:none;stroke:#6f6f6f;stroke-width:3.2;stroke-linecap:round}
+  /* ⚠ `.hmLk` 는 선 SVG(폴백)와 그림(<img>) 둘 다에 붙는다 — 크기는 공용, 선 속성은 SVG 에만 먹는다.
+     그림은 색이 있으므로 `stroke`/`fill` 이 무시되는 게 맞다. */
   .hmLk{display:block;width:8px;height:8px;flex:none;fill:none;stroke:#7a7a7a;stroke-width:2;stroke-linejoin:round}
+  img.hmLk{object-fit:contain}
   /* 버튼 — 오른쪽 정사각. 위 = 레벨 변화(잠김은 자물쇠) · 아래 = 비용 */
   /* 작은 버튼은 은색 메탈 그대로 — 빨강은 카드 테두리(.hmUp)가 맡는다 */
   /* 링·안쪽 선 — 색은 여기 두 토큰에서만 꺼낸다(B3안, 2026-08-19).
@@ -3862,7 +3865,9 @@
   .dqC b{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:var(--fs-xs);font-weight:800;line-height:1}
   .dqC img{width:13px;height:13px;object-fit:contain;display:block}
   .dqC i{font-style:normal;font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:10px;line-height:1.1}
-  .dqC i.tk{font-size:13px}   /* 🎟 = 그림 자리 — 숫자보다 크게 */
+  .dqC i.tk{font-size:13px}   /* (폴백 이모지용) */
+  .dqC img.tk,.dqC .tk{width:15px;height:15px;object-fit:contain;display:block}   /* 🎟 = 그림 자리 — 숫자보다 크게 */
+  .stIco{width:21px;height:21px;object-fit:contain;display:block}                 /* 상태 아이콘(state/) 기본 크기 */
   .dqC.bn{background:rgba(255,210,74,.06);border-color:rgba(255,210,74,.24);color:#a89355;cursor:pointer}
   .dqC.bn[disabled]{cursor:default}
   .dqC.now{color:#fff;background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.5);
@@ -6822,7 +6827,11 @@ function openHome(){ loadMeta();
 
 // 사냥터 업그레이드 표시 보조물
 const HM_ARW='<svg class="hmArw" viewBox="0 0 24 24"><path d="M6 12h11M13 7.5 17.5 12 13 16.5"/></svg>';
-const HM_LOCK='<svg class="hmLk" viewBox="0 0 24 24"><path d="M7.5 10.5V7.6a4.5 4.5 0 0 1 9 0v2.9M5.6 10.5h12.8v9.4H5.6z"/></svg>';
+// 🔒 잠긴 구역 — 그림(`state/st_lock.webp`)이 있으면 그것, 없으면 원래 선 SVG 로 되돌아간다(칸이 비지 않는다).
+//   ⚠ 상수가 아니라 함수다: `ICO_DIR` 은 이 줄보다 **한참 아래**에서 선언되므로 여기서 문자열로 굳히면 TDZ 로 죽는다.
+const HM_LOCK_SVG='<svg class="hmLk" viewBox="0 0 24 24"><path d="M7.5 10.5V7.6a4.5 4.5 0 0 1 9 0v2.9M5.6 10.5h12.8v9.4H5.6z"/></svg>';
+function hmLockHTML(){ return '<img class="hmLk" src="'+ICO_DIR+'state/st_lock.webp" alt="" draggable="false" onerror="_hmLockFail(this)">'; }
+function _hmLockFail(im){ try{ im.outerHTML=HM_LOCK_SVG; }catch(_e){ try{ im.remove(); }catch(_e2){} } }
 // 아이콘은 전부 기존 에셋 재사용 — 'upgrades/up_x' 처럼 폴더까지 담겨 있다
 // 경로형 아이콘 — 키에 하위폴더까지 들어 있는 표기('upgrades/up_range'). HB_UPG.ico 와 LP_STATS.ico 가 같이 쓴다.
 function _icoPathImg(path, fb){ return '<img class="icoImg" src="'+ICO_DIR+path+'.webp" alt="" draggable="false" data-fb="'+(fb||'⚙')+'" data-fbcls="" onerror="_icoFail(this)">'; }
@@ -6838,9 +6847,9 @@ const HM_SUF=['확률','배수','계수','재생','표적','수','흡수'];
 //    바로 위에서 이미 값이 어떻게 변하는지 화살표로 말하고 있어 같은 말이 두 번이었다.
 function hmUpCardHTML(o){
   const arw=(a,b)=>(b==null||b==='')?a:(a+HM_ARW+'<b class="nx">'+b+'</b>');
-  const head=o.lock ? '<span class="hmUpLk">'+HM_LOCK+(o.lockTx||'해금 필요')+'</span>'
+  const head=o.lock ? '<span class="hmUpLk">'+hmLockHTML()+(o.lockTx||'해금 필요')+'</span>'
                     : '<span class="hmUpVl">'+arw(o.val,o.next)+'</span>';
-  const foot='<span class="hmUpBl">'+(o.lock?HM_LOCK:o.lv)+'</span>'
+  const foot='<span class="hmUpBl">'+(o.lock?hmLockHTML():o.lv)+'</span>'
             +'<span class="hmUpBc">'+o.cost+'</span>';
   return '<div class="hmUp'+(o.lock?' lk':'')+'" data-k="'+o.key+'">'
     +'<span class="hmUpIco">'+o.ico+'</span>'
@@ -7212,7 +7221,7 @@ function dqRwTx(rw){ if(!rw) return '';
   if(rw.pcoin) t.push(ri('mineral',rw.pcoin));
   if(rw.gas)   t.push(ri('gas',rw.gas));
   if(rw.gem)   t.push(ri('gem',rw.gem));
-  for(const k in DQ_TK) if(rw[k]) t.push('<span class="dqRw">🎟 '+DQ_TK[k]+' ×'+rw[k]+'</span>');   // '뽑기권'은 🎟 이 말한다
+  for(const k in DQ_TK) if(rw[k]) t.push('<span class="dqRw">'+resIco('ticket_'+k,'dqRi')+DQ_TK[k]+' ×'+rw[k]+'</span>');   // '뽑기권'은 🎟 이 말한다
   return t.join(''); }
 function dqRwPlain(rw){ if(!rw) return '';
   const t=[];
@@ -7224,7 +7233,7 @@ function dqRwPlain(rw){ if(!rw) return '';
 // 칸 안에 넣는 작은 표기 — 재화는 아이콘, 뽑기권은 🎟
 // 칸이 좁아 하나만 보여 준다 — 그 보상의 '얼굴'을 고른다(뽑기권 > 젬 > 미네랄 > 가스)
 function dqRwIco(rw){ if(!rw) return '';
-  for(const k in DQ_TK) if(rw[k]) return '<i class="tk">🎟</i>';
+  for(const k in DQ_TK) if(rw[k]) return resIco('ticket_'+k,'tk');
   if(rw.gem)   return resIco('gem')+'<i>'+rw.gem+'</i>';
   if(rw.pcoin) return resIco('mineral')+'<i>'+(rw.pcoin>=1000?Math.round(rw.pcoin/100)/10+'k':rw.pcoin)+'</i>';
   if(rw.gas)   return resIco('gas')+'<i>'+rw.gas+'</i>';
@@ -7345,7 +7354,7 @@ function dqClaimBtn(rw, act, done, got){
     if(rw.pcoin) t.push(ri('mineral',rw.pcoin));
     if(rw.gas)   t.push(ri('gas',rw.gas));
     if(rw.gem)   t.push(ri('gem',rw.gem));
-    for(const k in DQ_TK) if(rw[k]) t.push('<i>🎟 '+DQ_TK[k]+' ×'+rw[k]+'</i>');
+    for(const k in DQ_TK) if(rw[k]) t.push('<i>'+resIco('ticket_'+k,'dqRi')+DQ_TK[k]+' ×'+rw[k]+'</i>');
     r='<span class="dqRwB">'+t.join('')+'</span>'; }
   return '<button class="hbRowBtn dqBtn" onclick="'+act+'"'+((done&&!got)?'':' disabled')+'>'
     +r+'<b>'+(got?'완료':'받기')+'</b></button>'; }
@@ -7421,7 +7430,7 @@ function renderMateModal(){ const box=document.getElementById('hbMateBody'); if(
   // ① 뽑기 — 뽑기권으로만 영입한다. 지금 확률과 다음 단계까지 남은 횟수를 같이 보여 준다.
   { const pr=hbGachaProbs(), nx=hbGachaNext();
     h+='<div class="hbGrowLbl">동료 뽑기 <span class="hbStars">Lv.'+hbGachaLv()+'</span></div>';
-    h+='<div class="hbRow"><span class="hbRowIco">🎟</span>'
+    h+='<div class="hbRow"><span class="hbRowIco">'+resIco('ticket_ally')+'</span>'
       +'<span class="hbRowTx"><b>동료 뽑기권 <i>'+tk+'</i></b><em>'
       +(nx? ('다음 단계까지 '+nx.left+'회 — Lv.'+nx.lv+'가 되면 상위 등급이 더 열립니다') : '최고 단계')
       +'</em></span>'
@@ -7552,7 +7561,7 @@ function renderGrowModal(){ const box=document.getElementById('hbGrowBody'); if(
   { const need=profRebNextLv(c), N=profRebDone(c)+1, can=profCanRebirth(c), last=(need===0);
     const pNeed=profRebPoint(c), pHave=((typeof PLAYER_META!=='undefined'&&PLAYER_META.coins)||0);
     const lvOk=(need>0 && (c.level|0)>=need && (c.level|0)>((c.rebLvMax|0)));
-    h+='<div class="hbRow"><span class="hbRowIco">🔁</span>'
+    h+='<div class="hbRow"><span class="hbRowIco">'+stIco('rebirth','🔁')+'</span>'
       +'<span class="hbRowTx"><b>'
       +(last ? ('환생 완료 — Lv.'+PROF_LV_CAP+' 고정 · 이제 기록이 포인트를 줍니다')
              : (can ? (N+'회차 환생 — 경험치 ×'+(profXpMul(c)+PROF_REB_GAIN*N).toFixed(2)+'로')
@@ -10508,7 +10517,10 @@ function renderProfStats(){ const c=CHAR(); if(!c) return '<div class="twHead">�
 // ── 💠 재화 아이콘 단일 소스 ────────────────────────────────────────────────
 // ⛔ 새 UI에서 미네랄·가스·젬·인구를 표시할 땐 **반드시 resIco()**를 쓴다. 이모지를 임의로 넣지 말 것.
 //    한글 이름으로도 찾는다 — resIco('미네랄') === resIco('mineral').
-const RES_ICON={ mineral:'res_mineral', gas:'res_gas', gem:'res_gem', pop:'res_pop' };
+// 🎟 뽑기권 3종도 여기 있다 — 세는 물건이라 재화와 같은 자리·같은 함수로 그린다(`resIco('ticket_pet')`).
+//   ⚠ 이모지 🎟 를 새로 박지 말 것: 세 종류가 색으로만 갈리는데 이모지는 하나뿐이라 구분이 사라진다.
+const RES_ICON={ mineral:'res_mineral', gas:'res_gas', gem:'res_gem', pop:'res_pop',
+  ticket_gear:'res_ticket_gear', ticket_pet:'res_ticket_pet', ticket_ally:'res_ticket_ally' };
 const RES_ICON_KO={ '미네랄':'mineral', '가스':'gas', '젬':'gem', '인구':'pop' };
 function resIco(k, cls){ const id=RES_ICON[k]||RES_ICON[RES_ICON_KO[k]];
   return id ? '<img class="'+(cls||'ri')+'" src="assets/icons/'+id+'.webp" alt="">' : ''; }
@@ -19573,6 +19585,10 @@ function _techUnitPortrait(id){ return (typeof unitPortraitHTML==='function'&&un
 // 🎨 생성 아이콘 연결 — 파일명이 키와 1:1이라 경로만 만들면 된다. 없는 키는 기존 표시로 자동 폴백.
 const ICO_DIR='assets/icons/';
 function _icoImg(sub, key, fb){ return '<img class="icoImg" src="'+ICO_DIR+sub+'/'+key+'.webp" alt="" draggable="false" data-fb="'+(fb||'\u{1F527}')+'" onerror="_icoFail(this)">'; }
+// 상태 표시 아이콘(state/) — 잠김·환생처럼 '재화도 스킬도 아닌' 것. 파일이 없으면 **원래 이모지 글자**로 돌아간다
+//   (`pIco` 표에 없는 이모지가 많아 공용 폴백을 쓰면 스패너가 뜬다).
+function stIco(key, fb){ return '<img class="stIco" src="'+ICO_DIR+'state/st_'+key+'.webp" alt="" draggable="false"'
+  +' data-fb="'+(fb||'')+'" onerror="this.outerHTML=this.getAttribute(\'data-fb\')||\'\'">'; }
 // 아이콘 파일이 없으면(404) 빈칸이 남던 것 → 공용 라인SVG로 교체. 새 아이콘을 넣기 전에도 자리가 비지 않는다(단일 소스: pIco 재사용)
 function _icoFail(im){ try{ const c=im.getAttribute('data-fbcls'); im.outerHTML=pIco(im.getAttribute('data-fb')||'\u{1F527}', c==null?'icoFb':c); }catch(_e){ try{ im.remove(); }catch(_e2){} } }
 // 연구 73종 → 아이콘 23종. 효과가 같은 것끼리 하나를 공유한다.

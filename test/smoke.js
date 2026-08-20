@@ -3251,6 +3251,30 @@ async function groupLobby(){
     closeSettings();
     return '프로필·붉은 선·✕ 44px·중립 ON·항목 5';
   });
+  // 🎟🔒🔁 무판 계열 아이콘 — 파일이 실제로 열리는지 + 배선이 이모지로 되돌아가지 않았는지
+  await step('무판 아이콘: 뽑기권 3종 · 자물쇠 · 환생 · 자리표시 초상', async()=>{
+    // ① 파일이 열린다(없으면 폴백이 조용히 삼켜서 눈에 안 띈다)
+    const files=['res_ticket_gear','res_ticket_pet','res_ticket_ally'].map(k=>ICO_DIR+k+'.webp')
+      .concat([ICO_DIR+'state/st_lock.webp', ICO_DIR+'state/st_rebirth.webp', AVATAR_GUEST_SRC]);
+    const bad=[];
+    await Promise.all(files.map(src=>new Promise(ok=>{ const im=new Image();
+      im.onload=()=>{ if(!(im.naturalWidth>0)) bad.push(src); ok(); };
+      im.onerror=()=>{ bad.push(src); ok(); }; im.src=src; })));
+    assert(!bad.length,'아이콘 파일이 안 열림: '+bad.join(', '));
+    // ② 뽑기권은 resIco 단일 소스를 지난다 — 세 종류가 서로 다른 파일이어야 색으로 구분된다
+    const t=['gear','pet','ally'].map(k=>resIco('ticket_'+k));
+    assert(t.every(h=>/^<img/.test(h)),'뽑기권이 resIco 로 안 나옴');
+    assert(new Set(t).size===3,'뽑기권 3종이 같은 그림을 씀(색 구분이 사라진다)');
+    // ③ 잠김 자물쇠 = 단일 소스 hmLockHTML() · 파일이 없으면 선 SVG 로 되돌아갈 길이 있다
+    assert(/^<img/.test(hmLockHTML()) && hmLockHTML().indexOf('st_lock.webp')>=0,'잠김 자물쇠가 그림이 아님');
+    assert(hmLockHTML().indexOf('_hmLockFail')>=0,'자물쇠 폴백 경로가 없음');
+    assert(typeof HM_LOCK_SVG==='string' && HM_LOCK_SVG.indexOf('<svg')===0,'자물쇠 폴백 SVG 가 사라짐');
+    // ④ 상태 아이콘은 **원래 이모지**로 되돌아간다(pIco 표에 없는 이모지가 많다)
+    { const h=stIco('rebirth','🔁');
+      assert(h.indexOf('st_rebirth.webp')>=0,'환생 아이콘 경로가 틀림');
+      assert(h.indexOf('data-fb="🔁"')>=0,'환생 폴백이 원래 이모지가 아님'); }
+    return files.length+'장 ok';
+  });
   await step('방찾기 열림+목록', ()=>{ openRooms(); const rm=document.querySelector('#rooms .rmCard'); assert(visible(rm),'rmCard 안 보임');
     const n=$('roomList').children.length; assert(n>0,'방 목록 비어있음'); $('rooms').classList.add('hide'); return n+'개 방'; });
     // 마을: 월드 좌표계 + 카메라. 헤드리스는 rAF가 멈춰 있어 twStep(dt)을 직접 pump한다.
