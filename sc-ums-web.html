@@ -4288,6 +4288,9 @@
   .ptRow{gap:9px}
   .fAva{position:relative;flex:0 0 auto;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;
     font-size:var(--fs-xl);font-weight:800;border:1px solid;overflow:visible}
+  /* 자리표시 초상 — 그림이 디스크를 통째로 그리므로 이니셜 위를 덮고, 색 테두리는 죽인다.
+     ⚠ `.fAva` 의 크기는 화면마다 다르다(18·22·28·30px) — 여기서 폭을 박지 말고 100% 로 따라가게 둔다. */
+  .fAva>.fAvaImg{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
   .fAvaDot{position:absolute;right:-1px;bottom:-1px;width:9px;height:9px;border-radius:50%;border:2px solid #060608}
   .fDot-online{background:var(--ok)}.fDot-ingame{background:#ffc04a}.fDot-offline{background:#6a727d}
   .fMeta{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;line-height:1.2}
@@ -15466,7 +15469,8 @@ function setPaintMe(){ const el=document.getElementById('setMe'); if(!el) return
   const badge = acct ? '<em class="setMeTag">계정</em>'
     : '<button class="setMeTag go" onclick="setAcctGo()">'
       +(!u ? '로그인' : ((typeof authCanLink==='function'&&authCanLink()) ? '게스트 연결' : '게스트'))+' ›</button>';
-  el.innerHTML=(typeof avatarHTML==='function'?avatarHTML(nick,''):'')
+  // 정식 계정이 아니면(게스트·미로그인) 초상도 자리표시로 — 배지 글자와 그림이 같은 말을 한다
+  el.innerHTML=(typeof avatarHTML==='function'?avatarHTML(nick,'',null,!acct):'')
     +'<span class="setMeN">'+escHtml(nick)+(tag?'<i>'+escHtml(tag)+'</i>':'')+'</span>'+badge; }
 // 게스트 → 계정. 클라우드 게스트는 uid 를 그대로 두고 붙일 수 있고(진행도 유지),
 // 로컬 게스트(supabase 폴백)는 붙일 uid 가 없다 — 그 사실을 숨기지 않고 알린다.
@@ -16666,8 +16670,21 @@ function lastSeenText(f){ let m;
 function avatarColor(nick){ let s=0,n=nick||'?'; for(let i=0;i<n.length;i++) s=(s*31+n.charCodeAt(i))>>>0; const h=s%360;
   return {bg:'hsl('+h+' 42% 25%)', fg:'hsl('+h+' 78% 80%)', bd:'hsl('+h+' 55% 44%)'}; }
 function avatarInitial(nick){ const t=(nick||'?').trim(); return t? t[0] : '?'; }
-function avatarHTML(nick, cls, st){ const c=avatarColor(nick); const dot=st?'<span class="fAvaDot fDot-'+st+'"></span>':'';
-  return '<span class="fAva '+(cls||'')+'" style="background:'+c.bg+';color:'+c.fg+';border-color:'+c.bd+'">'+escHtml(avatarInitial(nick))+dot+'</span>'; }
+// 게스트·닉 없음 = 이니셜 대신 **자리표시 초상**. 다른 아이콘과 계열이 다르다(원형 디스크 · 평면 2톤 · 저채도) —
+//   옆 줄의 색 이니셜 원보다 조용해야 '아직 아무도 아니다'로 읽힌다.
+// ⚠ 파일이 없으면 `onerror` 가 <img> 만 지우고 **밑에 깔린 이니셜이 그대로 드러난다** — 칸이 비지 않는다.
+//   (아이콘 README 의 폴백 철학과 같다: 파일을 넣는 순간 그 자리만 교체된다)
+const AVATAR_GUEST_SRC='assets/icons/av_guest.webp';
+function avatarHTML(nick, cls, st, guest){ const c=avatarColor(nick); const dot=st?'<span class="fAvaDot fDot-'+st+'"></span>':'';
+  const anon=!!guest || !String(nick||'').trim();
+  // ⚠ 색은 **인라인**으로 나간다 — CSS 로 `.fAva.guest{border-color:…}` 를 써 봐야 인라인에 진다(실제로 남색 링이 남았다).
+  //   자리표시일 때는 여기서 바로 중성색을 쓴다. 닉 색은 '사람을 구분하는 색'이라 아직 아무도 아닌 자리에 쓰면 안 된다.
+  const sty=anon ? 'background:#20252c;color:#77828f;border-color:rgba(255,255,255,.10)'
+                 : 'background:'+c.bg+';color:'+c.fg+';border-color:'+c.bd;
+  return '<span class="fAva '+(anon?'guest ':'')+(cls||'')+'" style="'+sty+'">'
+    +escHtml(avatarInitial(nick))
+    +(anon?'<img class="fAvaImg" src="'+AVATAR_GUEST_SRC+'" alt="" draggable="false" onerror="this.remove()">':'')
+    +dot+'</span>'; }
 // 친구 상태 한 줄 설명(접속중/게임중·맵·시간/오프라인·마지막접속/파티중)
 function friendStatusSub(f){ const st=presenceOf(f); if(friendBusy(f)) return '다른 파티에 있음';
   if(st==='online') return '접속 중'; if(st==='ingame') return ingameMapName(f)+' · '+playTimeText(f); return '마지막 접속 '+lastSeenText(f); }

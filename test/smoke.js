@@ -3187,6 +3187,24 @@ async function groupLobby(){
     // ① 내 프로필 한 줄 — 초상·닉은 기존 것(avatarHTML/myNick)을 그대로 쓴다(복제 금지)
     const me=$('setMe'); assert(me && visible(me),'프로필 머리줄이 없음');
     assert(me.querySelector('.fAva'),'프로필 초상이 avatarHTML 산출물이 아님');
+    // 🙍 자리표시 초상 — 게스트·미로그인은 이니셜 대신 공용 그림. 배지 글자와 그림이 같은 말을 해야 한다
+    { const guestNow=!(AUTH.user && !AUTH.user.guest);
+      assert(me.querySelector('.fAva').classList.contains('guest')===guestNow,
+        '초상의 자리표시 여부가 계정 상태와 어긋남');
+      // ⚠ 파일이 없어도 칸이 비면 안 된다 — <img> 밑에 이니셜이 깔려 있고 onerror 가 <img> 만 지운다
+      const h=avatarHTML('게스트7421','',null,true);
+      assert(/class="fAvaImg"/.test(h) && h.indexOf('av_guest.webp')>=0,'자리표시 초상에 그림이 안 붙음');
+      assert(h.indexOf('onerror="this.remove()"')>=0,'그림이 없을 때 이니셜로 돌아갈 길이 없음');
+      assert(h.indexOf('>게<')>=0,'그림 밑에 깔린 이니셜이 없음(파일이 없으면 칸이 빈다)');
+      // 일반 사용자는 지금까지대로 색 이니셜이다 — 전부 자리표시로 바뀌면 사람 구분이 사라진다
+      assert(!/fAvaImg/.test(avatarHTML('단짝','')),'일반 사용자 초상까지 자리표시로 바뀜');
+      assert(/fAvaImg/.test(avatarHTML('','')),'닉이 없는데 자리표시가 안 나옴');
+      // ⚠ 색은 인라인이라 CSS 로는 못 덮는다 — 자리표시 링이 닉 색(채도 있는 hsl)으로 남으면 안 된다
+      { const av=me.querySelector('.fAva');
+        if(av.classList.contains('guest')){
+          const bc=(getComputedStyle(av).borderTopColor.match(/\d+/g)||[0,0,0]).map(Number);
+          assert(Math.max(bc[0],bc[1],bc[2])-Math.min(bc[0],bc[1],bc[2])<=20,
+            '자리표시 초상 링에 닉 색이 남음: '+getComputedStyle(av).borderTopColor); } } }
     assert((me.querySelector('.setMeN')||{}).textContent.indexOf(myNick())===0,'프로필 닉이 myNick() 과 다름');
     // ② 배지 = 계정 상태. 게스트면 **버튼**이고 누르면 계정 연결 경로로 간다
     const badge=me.querySelector('.setMeTag');
