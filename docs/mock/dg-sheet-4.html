@@ -1,0 +1,149 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>토벌 시트 4안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;700&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{--font-ko:'Noto Sans KR','Apple SD Gothic Neo',sans-serif;--font-ti:'Jua','Apple SD Gothic Neo',sans-serif;
+ --font-num:'Rajdhani','Noto Sans KR',sans-serif;--neon:#ff3b3b;--metal-edge:#3c3e46;
+ --txt:#e0dcdc;--txt-mute:#9aa0a8;--gold:#ffd24a;--acc-sel:#5cd6ff;--r-bar:3px;
+ --fs-xs:9.5px;--fs-sm:10px;--fs-md:11px;--fs-lg:12px;--fs-xl:13px}
+*{box-sizing:border-box}
+body{margin:0;background:#07080b;color:var(--txt);font-family:var(--font-ko);font-size:var(--fs-md)}
+button{font-family:inherit;background:none;border:none;color:inherit}
+.wrap{max-width:1500px;margin:0 auto;padding:22px}
+h1{font-family:var(--font-ti);font-size:19px;margin:0 0 4px;color:#fff}
+.lead{color:var(--txt-mute);font-size:var(--fs-lg);margin:0 0 20px;line-height:1.7}
+.lead b{color:var(--gold)} .lead code{color:#cfe0ec}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:20px}
+.cap{font-family:var(--font-ti);font-size:var(--fs-xl);color:#fff;margin:0 0 3px}
+.cap i{font-style:normal;color:var(--neon)}
+.note{color:var(--txt-mute);font-size:var(--fs-sm);line-height:1.6;margin:0 0 9px;min-height:58px}
+/* 시트가 뜨는 자리 — 허브 위에 덮인다(딤 포함) */
+.stage{width:320px;height:330px;position:relative;overflow:hidden;border:1px solid #23252b;border-radius:var(--r-bar);
+ background:linear-gradient(180deg,#191919,#0e0e0e)}
+.dim{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+ background:radial-gradient(ellipse 300px 220px at 50% 46%,rgba(92,214,255,.10),transparent 72%),rgba(2,4,9,.62)}
+.bg{position:absolute;inset:0;padding:12px;opacity:.5}
+/* ═══ 앱의 실제 팝업 규격 (.setCard/.ecCard 그대로) ═══ */
+.dgCard2{position:relative;width:86%;max-width:290px;padding:16px 14px 15px;box-sizing:border-box;
+ background:linear-gradient(180deg,rgba(25,25,25,.9),rgba(14,14,14,.92));border:1px solid var(--metal-edge);
+ clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px);
+ box-shadow:0 16px 44px -12px #000,inset 0 1px 0 rgba(255,255,255,.05)}
+.dgCard2>*{position:relative;z-index:1}
+/* 제목 + 그 아래 그라데 헤어라인 — .ecTitle 문법 그대로. 액센트 색만 그 토벌 것으로 */
+.shTitle{position:relative;font-family:var(--font-ti);font-size:17px;letter-spacing:.5px;color:#eaf1fb;
+ text-shadow:0 1px 3px rgba(0,0,0,.65);margin-bottom:11px;padding-bottom:9px;display:flex;align-items:center;gap:8px}
+.shTitle::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;opacity:.5;
+ background:linear-gradient(90deg,var(--acc,#5cd6ff),transparent 72%)}
+.shTitle.ctr{justify-content:center;flex-direction:column;gap:6px;text-align:center}
+.shX{position:absolute;top:7px;right:7px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;
+ color:#9a9a9a;z-index:2}
+.shX svg{width:13px;height:13px}
+.dgIco{flex:none;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:17px;line-height:1;
+ border-radius:var(--r-bar);border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.035)}
+.dgIco.lg{width:46px;height:46px;font-size:26px}
+.stg{display:inline-flex;align-items:center;padding:1px 5px;border-radius:var(--r-bar);flex:none;
+ border:1px solid rgba(255,255,255,.14);font-family:var(--font-num);font-variant-numeric:tabular-nums;
+ font-weight:700;font-size:var(--fs-sm);color:#cfe0ec}
+.num{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:700}
+.ri{width:13px;height:13px;flex:none;display:inline-block;vertical-align:middle;border-radius:2px}
+.ri.min{background:linear-gradient(160deg,#8fdcff,#2f8fd0)}
+.ri.tg{background:linear-gradient(160deg,#ffd98a,#c08a1e)}
+.kIco{width:12px;height:12px;flex:none;display:block;fill:none;stroke:var(--gold);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.key{display:inline-flex;align-items:center;gap:3px;font-family:var(--font-num);font-variant-numeric:tabular-nums;
+ font-weight:700;font-size:var(--fs-lg);color:var(--gold)}
+.key s{text-decoration:none;color:#61666e;font-size:var(--fs-sm)}
+.actBtn{position:relative;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1px;
+ height:44px;padding:0 10px;cursor:pointer;overflow:hidden;
+ font-family:var(--font-ti);font-size:var(--fs-xl);letter-spacing:.3px;color:#c6cdd6;
+ border:1px solid var(--metal-edge);border-radius:var(--r-bar);
+ background:linear-gradient(180deg,#24262b 0%,#15161a 46%,#0c0d10 100%);
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.13),inset 0 -6px 9px -6px #000,0 2px 4px -2px rgba(0,0,0,.7)}
+.actBtn::after{content:'';position:absolute;left:8%;right:8%;bottom:1px;height:2px;
+ background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent)}
+.actBtn.pri{color:#fff;border-color:rgba(255,59,59,.34)}
+.actBtn.pri::after{background:linear-gradient(90deg,transparent,var(--neon),transparent);box-shadow:0 0 9px var(--neon)}
+.actBtn i{font-style:normal;font-size:var(--fs-xs);font-weight:400;opacity:.6;letter-spacing:0}
+.btns{display:flex;gap:8px;margin-top:12px}
+.btns .actBtn{flex:1 1 0}
+/* 정보 줄 */
+.iRow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 0;font-size:var(--fs-md);color:var(--txt-mute)}
+.iRow+.iRow{border-top:1px solid rgba(255,255,255,.05)}
+.iRow b{color:#e6edf5;display:flex;align-items:center;gap:5px}
+.big{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:700;font-size:20px;color:#fff}
+/* 허브 행(그대로 빌린 것) */
+.roomItem{position:relative;overflow:hidden;display:flex;align-items:center;gap:7px;padding:8px 8px;
+ border-radius:var(--r-bar);border:1px solid rgba(255,255,255,.07);
+ background:linear-gradient(180deg,#16171b,#0b0c0e);box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
+.roomItem::after{content:'';position:absolute;left:8%;right:8%;bottom:0;height:2px;
+ background:linear-gradient(90deg,transparent,var(--dc,rgba(255,255,255,.3)),transparent)}
+.riMain{min-width:0;flex:1}
+.riName{display:flex;align-items:center;gap:5px;font-size:var(--fs-xl);font-weight:700;color:var(--txt)}
+.vals{display:flex;flex-direction:column;align-items:flex-end;gap:1px}
+.vals span{display:flex;align-items:center;gap:3px;font-family:var(--font-num);font-variant-numeric:tabular-nums;
+ font-size:var(--fs-sm);font-weight:700;color:#96a0ab;line-height:1.15}
+</style></head><body><div class="wrap">
+<h1>토벌 시트 4안 — 앱 팝업 규격에 맞춤</h1>
+<p class="lead">
+옛 시트는 아트 헤더를 <b>황토색으로 채우고</b> 있었다(DESIGN.md §0 「면을 채우지 않는다」 위반).<br>
+넷 다 앱의 실제 팝업 규격을 그대로 쓴다 — <code>바깥 1px 금속 테두리</code> · <code>모서리 컷 11px</code> ·
+<code>제목 17px + 아래 그라데 헤어라인</code> · <code>.actBtn</code>. 색은 <b>헤어라인과 밑변 광원에만</b> 남긴다.<br>
+소탕이 허브 행으로 올라갔으므로 시트에 남는 것은 <b>“어떻게 싸울지” 하나</b>다. 장비 토벌 4단계 · 보상 128 M + 권 1 · 열쇠 1/2.
+</p>
+<div class="grid" id="g"></div></div>
+<script>
+const KEY='<svg class="kIco" viewBox="0 0 24 24"><circle cx="8.5" cy="8.5" r="4.2"/><path d="M11.6 11.6 20 20M17 17l-2 2M20 20l1.4-1.4"/></svg>';
+const X='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg>';
+const ACC='rgba(255,210,74,.55)';   /* 장비 토벌 색 — 허브 행의 밑변 광원과 같은 값 */
+const RW='<span class="ri min"></span><span class="num">128</span> <span class="ri tg"></span><span class="num">1</span>';
+const BTNS='<div class="btns"><button class="actBtn">자동<i>제자리 · 즉시</i></button>'
+          +'<button class="actBtn pri">직접<i>이동·카이팅 · 확률↑</i></button></div>';
+/* 뒤에 비치는 허브(딤 아래) */
+const BG='<div class="bg">'+[['일반 토벌','12단계','rgba(255,255,255,.30)'],['장비 토벌','3단계',ACC],['펫 토벌','미개척','rgba(93,255,143,.5)']]
+ .map(r=>'<div class="roomItem" style="--dc:'+r[2]+';height:56px;margin-bottom:7px"><span class="dgIco">🛡️</span>'
+  +'<div class="riMain"><div class="riName">'+r[0]+'<span class="stg">'+r[1]+'</span></div></div></div>').join('')+'</div>';
+const stage=i=>'<div class="stage">'+BG+'<div class="dim">'+i+'</div></div>';
+const V=[];
+
+V.push({t:'확인창 문법 그대로',
+ n:'앱의 확인창(.ecCard)과 완전히 같은 물성 — 제목 한 줄 + 헤어라인 + 정보 세 줄 + 버튼 둘. 새로 만드는 것이 하나도 없어 다른 팝업과 나란히 놓아도 어긋나지 않는다.',
+ h:'<div class="dgCard2" style="--acc:'+ACC+'"><span class="shX">'+X+'</span>'
+  +'<div class="shTitle"><span class="dgIco">🛡️</span>장비 토벌<span class="stg">4단계</span></div>'
+  +'<div class="iRow"><span>보상</span><b>'+RW+'</b></div>'
+  +'<div class="iRow"><span>열쇠</span><b><span class="key">'+KEY+'<span>1<s>/2</s></span></span></b></div>'
+  +'<div class="iRow"><span>최고 기록</span><b class="num">3단계</b></div>'
+  +BTNS+'</div>'});
+
+V.push({t:'아이콘을 크게 가운데',
+ n:'지금 구조(아트 헤더)와 가장 가깝되 면을 채우지 않는다 — 아이콘 46px 을 가운데 두고 그 색은 헤어라인에만 남긴다. 어느 토벌인지가 가장 먼저 읽힌다.',
+ h:'<div class="dgCard2" style="--acc:'+ACC+'"><span class="shX">'+X+'</span>'
+  +'<div class="shTitle ctr"><span class="dgIco lg">🛡️</span>'
+   +'<span style="display:flex;align-items:center;gap:6px">장비 토벌<span class="stg">4단계</span></span></div>'
+  +'<div class="iRow"><span>보상</span><b>'+RW+'</b></div>'
+  +'<div class="iRow"><span>열쇠</span><b><span class="key">'+KEY+'<span>1<s>/2</s></span></span></b></div>'
+  +BTNS+'</div>'});
+
+V.push({t:'단계를 크게 · 정보는 아래',
+ n:'"몇 단계에 들어가는가"가 이 시트의 결정 사항이므로 그 숫자를 가장 크게(20px) 세운다. 보상·열쇠는 그 아래 한 줄씩. 정보 밀도는 가장 낮지만 결정이 가장 빠르다.',
+ h:'<div class="dgCard2" style="--acc:'+ACC+'"><span class="shX">'+X+'</span>'
+  +'<div class="shTitle"><span class="dgIco">🛡️</span>장비 토벌</div>'
+  +'<div style="text-align:center;padding:2px 0 10px"><div class="big">4단계</div>'
+   +'<div style="font-size:var(--fs-xs);color:#61666e;margin-top:2px">최고 기록 3단계</div></div>'
+  +'<div class="iRow"><span>보상</span><b>'+RW+'</b></div>'
+  +'<div class="iRow"><span>열쇠</span><b><span class="key">'+KEY+'<span>1<s>/2</s></span></span></b></div>'
+  +BTNS+'</div>'});
+
+V.push({t:'허브 행을 그대로 얹는다',
+ n:'시트 안에 방금 누른 그 행(.roomItem)을 그대로 놓는다 — 무엇을 눌렀는지가 자리로 이어져 맥락이 끊기지 않는다. 컴포넌트를 새로 만들지 않는다는 점에서 가장 규칙에 충실.',
+ h:'<div class="dgCard2" style="--acc:'+ACC+'"><span class="shX">'+X+'</span>'
+  +'<div class="shTitle">어떻게 싸울까</div>'
+  +'<div class="roomItem" style="--dc:'+ACC+';height:60px"><span class="dgIco">🛡️</span>'
+   +'<div class="riMain"><div class="riName">장비 토벌<span class="stg">4단계</span></div>'
+   +'<div style="margin-top:5px"><span class="key">'+KEY+'<span>1<s>/2</s></span></span></div></div>'
+   +'<div class="vals"><span><span class="ri min"></span>128</span><span><span class="ri tg"></span>1</span></div></div>'
+  +BTNS+'</div>'});
+
+document.getElementById('g').innerHTML=V.map((v,i)=>
+ '<div class="cell"><p class="cap"><i>S'+(i+1)+' · </i>'+v.t+'</p><p class="note">'+v.n+'</p>'+stage(v.h)+'</div>').join('');
+</script></body></html>
