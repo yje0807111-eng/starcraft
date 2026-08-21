@@ -1844,7 +1844,7 @@ const FXLAB={ store:null, attId:'marine', attGm:null, scale:1, mode:'attack', ph
 let _fxLabAttSeq=0;
 const FXLAB_AA=new Set(['marine','ghost','goliath','dragoon','archon','hydra']);   // 공중 공격 가능 유닛(나머지는 지상만)
 // 비전투(공격 안 함) = U.dmg===0 유닛에서 자동 생성 + 예외(메두사=시전형 퀸, U.dmg>0이나 랩 기본공격 없음). 손 목록 대신 공용 U에서 유도 → 드리프트 제거
-const FXLAB_NOATK=(function(){ const s=new Set(['medusa']); if(typeof U!=='undefined') for(const k in U){ if(U[k] && (U[k].dmg||0)===0 && !(U[k].airDmg>0)) s.add(k); } return s; })();   // ⚠ airDmg만 있는 대공 전용(하울 슬링어·스카이 탈론·플랙 배터리·아크 라이트)은 '무공격'이 아니다 — 여기 걸리면 아무것도 못 때린다
+const FXLAB_NOATK=(function(){ const s=new Set(['medusa']); if(typeof U!=='undefined') for(const k in U){ if(U[k] && (U[k].dmg||0)===0 && !(U[k].airDmg>0)) s.add(k); } return s; })();   // ⚠ airDmg만 있는 대공 전용(대공 투석수·하늘 사냥수·플랙 배터리·아크 라이트)은 '무공격'이 아니다 — 여기 걸리면 아무것도 못 때린다
 const FXLAB_SWITCH_DELAY=0.35;   // 발사 후 방금 쏜 대상을 잠깐 더 바라본 뒤 다음 타겟으로 전환(허공 발사 방지)
 const FXLAB_AIR=new Set(['skyguard','skydancer','overlord','observer','pelican','seraph','hellfire','dreadnought','kronos','archangel','falcon','stinger','venom','medusa','wyvern','aegis','behemoth',
   'hawkeye','windcarrier','wyvernrider','skytalon','stormroc',            // 🐺 페럴 공중 5기(RACES.md §2)

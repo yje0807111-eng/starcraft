@@ -220,46 +220,46 @@ TECH_TREE.aetherial={ name:'에테리얼', res:{m:'크레딧', g:'에너지'}, b
 TECH_TREE.feral={ name:'페럴', res:{m:'크레딧', g:'에너지'}, buildings:[
   // ── 기본·자원 ──
   { k:'denrock', name:'둥지 바위', ico:'🪨', m:180, g:0, supply:10, req:[],
-    produces:[{id:'worker_feral', name:'채집자', m:50, g:0, pop:1}] },
+    produces:[{id:'worker_feral', name:'채집수', m:50, g:0, pop:1}] },
   { k:'bonepile', name:'뼈 무덤', ico:'🦴', m:110, g:0, supply:8, req:['denrock'],
-    produces:[{id:'wolfrunner', name:'울프러너', m:50, g:0, pop:1}] },
+    produces:[{id:'wolfrunner', name:'추격수', m:50, g:0, pop:1}] },
   { k:'gasmaw', name:'수액 아귀', ico:'🫗', m:75, g:0, gas:true, req:['denrock'] },
   // ── 생산 ──
   { k:'huntpen', name:'사냥 우리', ico:'🏕', m:190, g:0, req:['denrock'],
-    produces:[{id:'thornspitter', name:'쏜 스피터', m:75, g:0, pop:1}] },
+    produces:[{id:'thornspitter', name:'가시 사수', m:75, g:0, pop:1}] },
   { k:'clawpit', name:'발톱 구덩이', ico:'🕳', m:175, g:0, req:['bonepile'],
-    produces:[{id:'clawfighter', name:'클로 파이터', m:75, g:25, pop:1}] },
+    produces:[{id:'clawfighter', name:'포식수', m:75, g:25, pop:1}] },
   { k:'spitpit', name:'투척 구덩이', ico:'🪃', m:125, g:50, req:['huntpen'],
     produces:[
-      {id:'howlslinger', name:'하울 슬링어', m:75, g:25, pop:1},
-      {id:'venomfang', name:'베놈 팽', m:100, g:75, pop:2, req:['frenzycore']}] },
+      {id:'howlslinger', name:'대공 투석수', m:75, g:25, pop:1},
+      {id:'venomfang', name:'맹독수', m:100, g:75, pop:2, req:['frenzycore']}] },
   { k:'alphaden', name:'알파 소굴', ico:'🐺', m:200, g:100, req:['clawpit'],
     produces:[
-      {id:'hornedcharger', name:'혼드 차저', m:100, g:25, pop:2},
-      {id:'stalkercat', name:'스토커캣', m:125, g:50, pop:2},
-      {id:'alphawolf', name:'알파울프', m:200, g:150, pop:4, req:['frenzycore']}] },
+      {id:'hornedcharger', name:'돌진수', m:100, g:25, pop:2},
+      {id:'stalkercat', name:'암살수', m:125, g:50, pop:2},
+      {id:'alphawolf', name:'우두머리', m:200, g:150, pop:4, req:['frenzycore']}] },
   { k:'shamanhut', name:'샤먼 오두막', ico:'🔮', m:150, g:100, req:['huntpen'],
     produces:[
-      {id:'packshaman', name:'팩 샤먼', m:100, g:100, pop:2},
-      {id:'hawkeye', name:'호크아이', m:75, g:75, pop:1, detector:true}],
+      {id:'packshaman', name:'주술사', m:100, g:100, pop:2},
+      {id:'hawkeye', name:'정찰조', m:75, g:75, pop:1, detector:true}],
     research:[
       {k:'bloodhowl', name:'혈의 포효', desc:'팩 전체 공격속도 +30%(일시)', m:150, g:150},
       {k:'huntstart', name:'사냥 개시', desc:'광폭화 감쇠 정지', m:200, g:200, req:['beastpit']} ] },
   { k:'windcliff', name:'바람 절벽', ico:'🪶', m:150, g:100, req:['alphaden'],
     produces:[
-      {id:'windcarrier', name:'윈드 캐리어', m:100, g:100, pop:2},
-      {id:'wyvernrider', name:'와이번 라이더', m:150, g:100, pop:3},
-      {id:'skytalon', name:'스카이 탈론', m:125, g:125, pop:2}] },
+      {id:'windcarrier', name:'수송조', m:100, g:100, pop:2},
+      {id:'wyvernrider', name:'폭격 기수', m:150, g:100, pop:3},
+      {id:'skytalon', name:'하늘 사냥수', m:125, g:125, pop:2}] },
   { k:'beastpit', name:'야수 구덩이', ico:'🦁', m:200, g:200, req:['windcliff'],
     produces:[
-      {id:'stormroc', name:'스톰 로크', m:250, g:200, pop:6},
-      {id:'primalbeast', name:'원시신수', m:400, g:300, pop:8}],
+      {id:'stormroc', name:'뇌격수', m:250, g:200, pop:6},
+      {id:'primalbeast', name:'원시 군주', m:400, g:300, pop:8}],
     research:[{k:'leapstrike', name:'도약 강습', desc:'근접 유닛 도약 이동', m:200, g:200}] },
   // ── 업그레이드·보조·방어 ──
   { k:'bloodaltar', name:'혈흔 제단', ico:'🩸', m:125, g:0, req:['denrock'],
     research:[
-      {k:'fer_melee_atk', name:'근접 공격력', desc:'울프러너·클로 파이터·알파울프 등 +/티어', tier:[[100,100],[150,150],[200,200]]},
-      {k:'fer_range_atk', name:'원거리 공격력', desc:'쏜 스피터·하울 슬링어 등 +/티어', tier:[[100,100],[150,150],[200,200]]},
+      {k:'fer_melee_atk', name:'근접 공격력', desc:'추격수·포식수·우두머리 등 +/티어', tier:[[100,100],[150,150],[200,200]]},
+      {k:'fer_range_atk', name:'원거리 공격력', desc:'가시 사수·대공 투석수 등 +/티어', tier:[[100,100],[150,150],[200,200]]},
       {k:'fer_gnd_def', name:'지상 방어력', desc:'모든 지상 +/티어', tier:[[150,150],[225,225],[300,300]]} ] },
   { k:'frenzycore', name:'광폭 코어', ico:'💢', m:150, g:100, req:['clawpit'],
     research:[
@@ -473,7 +473,7 @@ const TECH_BLDG_UNIT={
   feral:{
     bonepile:{u:'wolfrunner',   n:3},   // 뼈 무덤 110 · pow 21 → 63
     spitpit:{u:'venomfang',     n:2},   // 투척 구덩이 185 · pow 29 → 58 · ⚠ 페럴의 첫 대공 — 다른 네 종족은 전부 첫 두 건물에 대공이 있다. 여기가 밀리면 공중 유닛에 일방적으로 진다
-    huntpen:{u:'thornspitter',  n:2},   // 사냥 우리 190 · pow 17 → 34   (하울 슬링어=대공 전용이라 지상전에서 무력 → 배출은 지상+공중인 베놈 팽이 맡는다)
+    huntpen:{u:'thornspitter',  n:2},   // 사냥 우리 190 · pow 17 → 34   (대공 투석수=대공 전용이라 지상전에서 무력 → 배출은 지상+공중인 맹독수이 맡는다)
     clawpit:{u:'clawfighter',   n:2},   // 발톱 구덩이 175 · pow 33 → 66
     alphaden:{u:'alphawolf',    n:1},   // 알파 소굴 320 · pow 80 → 80
     windcliff:{u:'wyvernrider', n:1},   // 바람 절벽 270 · pow 105 → 105

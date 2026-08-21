@@ -740,7 +740,7 @@ const RACE_ROSTER={
   swarm:[{n:'생산자',key:'worker_swarm'},{n:'수송충',key:'overlord'},{n:'척후병',key:'snapper'},{n:'스파이크',key:'hydra'},{n:'가시여왕',key:'thornqueen'},{n:'자폭충',key:'stinger'},{n:'비행충',key:'wyvern'},{n:'군단여왕',key:'medusa'},{n:'오염술사',key:'defiler'},{n:'산성충',key:'venom'},{n:'포격충',key:'behemoth'},{n:'스웜링',key:'broodling'},{n:'돌격괴수',key:'ultralisk'}],
   aetherial:[{n:'생산자',key:'worker_light'},{n:'센티넬',key:'dragoon'},{n:'광전사',key:'blade'},{n:'보이드',key:'archon'},{n:'팔콘',key:'falcon'},{n:'수송선',key:'seraph'},{n:'요격기',key:'skydancer'},{n:'모함',key:'archangel'},{n:'정찰기',key:'observer'},{n:'전함',key:'kronos'},{n:'다크세이지',key:'dark_templar'},{n:'하이세이지',key:'high_templar'},{n:'공성체',key:'larva'}],
   // 🐺 페럴 · 🗿 콜로서스 — RACES.md 로스터 그대로. 일꾼이 첫 자리(다른 종족과 같은 규약)
-  feral:[{n:'채집자',key:'worker_feral'},{n:'울프러너',key:'wolfrunner'},{n:'쏜 스피터',key:'thornspitter'},{n:'클로 파이터',key:'clawfighter'},{n:'혼드 차저',key:'hornedcharger'},{n:'하울 슬링어',key:'howlslinger'},{n:'베놈 팽',key:'venomfang'},{n:'스토커캣',key:'stalkercat'},{n:'팩 샤먼',key:'packshaman'},{n:'알파울프',key:'alphawolf'},{n:'호크아이',key:'hawkeye'},{n:'윈드 캐리어',key:'windcarrier'},{n:'와이번 라이더',key:'wyvernrider'},{n:'스카이 탈론',key:'skytalon'},{n:'스톰 로크',key:'stormroc'},{n:'원시신수',key:'primalbeast'}],
+  feral:[{n:'채집수',key:'worker_feral'},{n:'추격수',key:'wolfrunner'},{n:'가시 사수',key:'thornspitter'},{n:'포식수',key:'clawfighter'},{n:'돌진수',key:'hornedcharger'},{n:'대공 투석수',key:'howlslinger'},{n:'맹독수',key:'venomfang'},{n:'암살수',key:'stalkercat'},{n:'주술사',key:'packshaman'},{n:'우두머리',key:'alphawolf'},{n:'정찰조',key:'hawkeye'},{n:'수송조',key:'windcarrier'},{n:'폭격 기수',key:'wyvernrider'},{n:'하늘 사냥수',key:'skytalon'},{n:'뇌격수',key:'stormroc'},{n:'원시 군주',key:'primalbeast'}],
   colossus:[{n:'조립 드론',key:'worker_col'},{n:'포대병',key:'gunner'},{n:'가드 워커',key:'guardwalker'},{n:'트윈 캐논',key:'twincannon'},{n:'플랙 배터리',key:'flakbattery'},{n:'관측 드론',key:'spotterdrone'},{n:'레일건 플랫폼',key:'railgun'},{n:'정지장 기술자',key:'stasistech'},{n:'아크 라이트',key:'arclight'},{n:'보급 비행정',key:'supplylifter'},{n:'시즈 콜로서스',key:'siegecolossus'},{n:'스카이 랜스',key:'skylance'},{n:'궤도 앵커',key:'orbitalanchor'},{n:'월드 브레이커',key:'worldbreaker'}],
 };
 function _rosterName(key){ for(const r in RACE_ROSTER){ const f=RACE_ROSTER[r].find(u=>u.key===key); if(f) return f.n; } return (typeof U!=='undefined'&&U[key]&&U[key].name)||key; }   // 공용 표시 이름(전 구역 통일)
@@ -1019,17 +1019,17 @@ const STK_UNITS={
   // ── 🐺 페럴(수인) — 최단 사거리 · 최고 기동 · 광폭화(처치 스택). RACES.md §5 의 hp/cost 를 그대로 옮긴 것 ──
   //    ⚠ rng/cd/spd 는 표시값이다. 실전투는 strikeUnitStats 가 U 에서 환산한다(U.range×850 · U.cd/22 · U.moveSpd×1800).
   //    ⚠ 대공 전용 유닛(U.dmg=0 · airDmg 만 있음)은 오토배틀에 공중/지상 구분이 없어(RACES.md §9-4) sdmg 로 실효 공격을 준다.
-  wolfrunner:   {name:'울프러너',    ico:'🐺', cost:95,  hp:170, dmg:14, rng:38,  cd:0.82, spd:432, size:15, melee:true},
-  thornspitter: {name:'쏜 스피터',   ico:'🌵', cost:105, hp:150, dmg:16, rng:170, cd:1.09, spd:324, size:15},
-  clawfighter:  {name:'클로 파이터', ico:'🐾', cost:130, hp:250, dmg:20, rng:38,  cd:0.91, spd:414, size:16, melee:true},
-  hornedcharger:{name:'혼드 차저',   ico:'🐗', cost:190, hp:360, dmg:26, rng:43,  cd:1.27, spd:396, size:19, melee:true},
-  howlslinger:  {name:'하울 슬링어', ico:'🌀', cost:140, hp:190, dmg:30, sdmg:30, rng:187, cd:1.18, spd:324, size:16},   // 대공 전용(U.dmg 0) → sdmg=airDmg
-  venomfang:    {name:'베놈 팽',     ico:'🐍', cost:150, hp:300, dmg:18, rng:153, cd:1.00, spd:360, size:17},
-  stalkercat:   {name:'스토커캣',    ico:'🐆', cost:200, hp:330, dmg:28, rng:43,  cd:0.82, spd:504, size:16, melee:true},
-  alphawolf:    {name:'알파울프',    ico:'🐺', cost:280, hp:520, dmg:34, rng:43,  cd:0.91, spd:432, size:20, melee:true},
-  wyvernrider:  {name:'와이번 라이더',ico:'🦅',cost:330, hp:640, dmg:44, rng:136, cd:1.00, spd:468, size:20},
-  skytalon:     {name:'스카이 탈론', ico:'🪶', cost:290, hp:520, dmg:38, sdmg:38, rng:170, cd:0.73, spd:540, size:18},   // 대공 전용(U.dmg 0) → sdmg=airDmg
-  stormroc:     {name:'스톰 로크',   ico:'⛈', cost:430, hp:820, dmg:58, rng:187, cd:1.18, spd:396, size:24, splash:130},
+  wolfrunner:   {name:'추격수',    ico:'🐕', cost:95,  hp:170, dmg:14, rng:38,  cd:0.82, spd:432, size:15, melee:true},
+  thornspitter: {name:'가시 사수',   ico:'🦔', cost:105, hp:150, dmg:16, rng:170, cd:1.09, spd:324, size:15},
+  clawfighter:  {name:'포식수', ico:'🦡', cost:130, hp:250, dmg:20, rng:38,  cd:0.91, spd:414, size:16, melee:true},
+  hornedcharger:{name:'돌진수',   ico:'🐗', cost:190, hp:360, dmg:26, rng:43,  cd:1.27, spd:396, size:19, melee:true},
+  howlslinger:  {name:'대공 투석수', ico:'🐒', cost:140, hp:190, dmg:30, sdmg:30, rng:187, cd:1.18, spd:324, size:16},   // 대공 전용(U.dmg 0) → sdmg=airDmg
+  venomfang:    {name:'맹독수',     ico:'🐍', cost:150, hp:300, dmg:18, rng:153, cd:1.00, spd:360, size:17},
+  stalkercat:   {name:'암살수',    ico:'🦗', cost:200, hp:330, dmg:28, rng:43,  cd:0.82, spd:504, size:16, melee:true},
+  alphawolf:    {name:'우두머리',    ico:'🐺', cost:280, hp:520, dmg:34, rng:43,  cd:0.91, spd:432, size:20, melee:true},
+  wyvernrider:  {name:'폭격 기수',ico:'🦅',cost:330, hp:640, dmg:44, rng:136, cd:1.00, spd:468, size:20},
+  skytalon:     {name:'하늘 사냥수', ico:'🦇', cost:290, hp:520, dmg:38, sdmg:38, rng:170, cd:0.73, spd:540, size:18},   // 대공 전용(U.dmg 0) → sdmg=airDmg
+  stormroc:     {name:'뇌격수',   ico:'🌩', cost:430, hp:820, dmg:58, rng:187, cd:1.18, spd:396, size:24, splash:130},
   // ── 🗿 콜로서스(거신) — 최장 사거리 · 전개(deploy) · 최소 사거리(minRange). 붙으면 무력해지는 것이 페럴 상성의 축 ──
   gunner:       {name:'포대병',      ico:'🔩', cost:120, hp:210, dmg:22, rng:221, cd:1.36, spd:252, size:16},
   guardwalker:  {name:'가드 워커',   ico:'🦿', cost:140, hp:400, dmg:20, rng:51,  cd:1.00, spd:360, size:18, melee:true},
