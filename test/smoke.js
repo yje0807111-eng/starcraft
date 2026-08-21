@@ -5151,15 +5151,14 @@ async function groupLobby(){
     openDungeonHub();
     assert(visible($('dgHubScreen')),'던전 허브가 안 열림');
     // 종류표(DG_DUNGEONS)가 단일 소스 — 개수를 여기 박지 말고 표에서 꺼낸다
-    assert(document.querySelectorAll('#dgHubBody .dgCard').length===DG_DUNGEONS.length,
-      '카드 수가 종류표와 다름: '+document.querySelectorAll('#dgHubBody .dgCard').length+' ≠ '+DG_DUNGEONS.length);
+    assert(document.querySelectorAll('#dgHubBody .dgRow').length===DG_DUNGEONS.length,
+      '카드 수가 종류표와 다름: '+document.querySelectorAll('#dgHubBody .dgRow').length+' ≠ '+DG_DUNGEONS.length);
     const wantLock=DG_DUNGEONS.filter(d=>d.reqLv>6).length;
-    assert(document.querySelectorAll('#dgHubBody .dgCard.lock').length===wantLock,
-      'Lv6 에서 잠겨야 할 카드 수가 다름: '+document.querySelectorAll('#dgHubBody .dgCard.lock').length+' ≠ '+wantLock);
+    assert(document.querySelectorAll('#dgHubBody .dgRow.locked').length===wantLock,
+      'Lv6 에서 잠겨야 할 카드 수가 다름: '+document.querySelectorAll('#dgHubBody .dgRow.locked').length+' ≠ '+wantLock);
     assert(dgKeyN('normal')===DG_KEY_DAILY,'일반 던전 열쇠 초기값 불일치: '+dgKeyN('normal'));
-    // 팝업 열기 → 소탕 = 열쇠 1 소모 + 미네랄 증가
-    dgOpenSheet('normal'); assert(!$('dgSheet').classList.contains('hide'),'던전 팝업이 안 열림');
-    const k0=dgKeyN('normal'), m0=Math.floor(PROF().pcoin); dgSheetSweep();
+    // 소탕은 **목록 행에서 바로** 실행된다(시트를 안 지난다) — 열쇠 1 소모 + 미네랄 증가
+    const k0=dgKeyN('normal'), m0=Math.floor(PROF().pcoin); dgSweep('normal');
     assert(dgKeyN('normal')===k0-1,'소탕이 열쇠를 안 씀');
     assert(Math.floor(PROF().pcoin)>m0,'소탕이 미네랄을 안 줌');
     // 열쇠 0이면 입장이 전투로 진입하지 않는다
@@ -5182,13 +5181,14 @@ async function groupLobby(){
       // 재화도 같이 늘어야 한다 — '각 요소들'이 전부 상위 단계에서 더 나와야 한다
       assert(dgFloorReward(31,'normal').pc>dgFloorReward(1,'normal').pc*5,'상위 단계 재화가 충분히 안 늘어난다'); }
     // 🧹 소탕도 **그 단계의 보상을 그대로** 받는다(계획서 원문). 뽑기권이 빠지면 장비 토벌 소탕이 무의미해진다.
-    { const cc2=CHAR(); cc2.dgFloors={}; dgSetFloor('gear', 11);
+    // ⚠ dgSweep 은 해금 레벨도 본다(장비 = Lv.10) — 앞 스텝이 Lv.6 으로 낮춰 놨다
+    { const cc2=CHAR(); const lv0=cc2.level; cc2.level=Math.max(cc2.level,10); cc2.dgFloors={}; dgSetFloor('gear', 11);
       const p2=PROF(); p2.dgKeys={}; const t0=p2.tickets.gear, m0=Math.floor(p2.pcoin);
-      _dgSheetId='gear'; dgSheetSweep();
+      dgSweep('gear');
       const want=dgFloorReward(11,'gear');
       assert(p2.tickets.gear===t0+want.tixN,'소탕이 뽑기권을 안 줌: '+t0+' → '+p2.tickets.gear+' (기대 +'+want.tixN+')');
       assert(Math.floor(p2.pcoin)>=m0+want.pc,'소탕이 재화를 안 줌');
-      cc2.dgFloors={}; dgSetFloor('normal',2); _dgSheetId='normal'; }
+      cc2.level=lv0; cc2.dgFloors={}; dgSetFloor('normal',2); }
     dgCloseSheet(); openHome();
     return '카드'+DG_DUNGEONS.length+'·팝업·소탕·열쇠게이트·권종'+TIX_KINDS.length+'종 ok'; });
   // ⚔ 자동 / 직접 두 갈래(2026-08-20 확정) — 다른 점은 셋이다:
@@ -5391,6 +5391,45 @@ async function groupLobby(){
       assert(dgKeyN('normal')===k0,'실패인데 열쇠를 썼다: '+k0+' → '+dgKeyN('normal'));
     } finally{ DG=null; dgStopLoop(); c.dgFloors={}; } 
     return '열쇠 '+k0+' 유지'; });
+  // ⚔ 토벌 허브 = C1 규격(2026-08-21 확정) — 행마다 [소탕][입장] 과 **그 버튼이 주는 값**.
+  //   ⛔ 값을 하드코딩하지 말 것: dgFloorReward 에서 나와야 밸런스를 고쳐도 화면이 따라온다.
+  await step('토벌 허브: 행마다 소탕·입장 + 그 버튼이 주는 값 · 잘림 없음', ()=>{
+    skipIf(typeof openDungeonHub!=='function','토벌 허브 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','던전'); saveMeta(); }
+    const c=CHAR(); c.level=35; c.dgFloors={}; dgSetFloor('normal',12); dgSetFloor('gear',3);
+    PROF().dgKeys={}; saveMeta(); openDungeonHub();
+    const rows=[...document.querySelectorAll('#dgHubBody .dgRow')];
+    assert(rows.length===DG_DUNGEONS.length,'행 수가 종류표와 다름: '+rows.length);
+    // ① 행마다 버튼 둘 + 값 둘
+    rows.forEach((r,i)=>{ const d=DG_DUNGEONS[i];
+      assert(r.querySelectorAll('.actBtn').length===2, d.name+' 행에 버튼이 둘이 아님');
+      assert(r.querySelectorAll('.dgVals').length===2, d.name+' 행에 값 칸이 둘이 아님');
+      assert(r.querySelector('.dgStg'), d.name+' 단계 배지 없음'); });
+    // ② 값이 공식과 맞는가 — 소탕=최고 단계 / 입장=다음 단계
+    { const g=rows[DG_DUNGEONS.findIndex(d=>d.id==='gear')];
+      const v=[...g.querySelectorAll('.dgVals')].map(e=>e.textContent.replace(/[^0-9]/g,''));
+      const sw=dgFloorReward(3,'gear'), en=dgFloorReward(4,'gear');
+      assert(v[0].indexOf(String(sw.pc))===0,'소탕 값이 최고 단계 보상과 다름: '+v[0]+' vs '+sw.pc);
+      assert(v[1].indexOf(String(en.pc))===0,'입장 값이 다음 단계 보상과 다름: '+v[1]+' vs '+en.pc); }
+    // ③ 잠긴 종류는 두 버튼 다 잠기고, 클리어한 단계가 없으면 소탕만 잠긴다
+    { const pet=rows[DG_DUNGEONS.findIndex(d=>d.id==='pet')], b=pet.querySelectorAll('.actBtn');
+      assert(b[0].disabled && !b[1].disabled,'펫: 소탕만 잠겨야 한다(깬 단계 없음)');
+      const rune=rows[DG_DUNGEONS.findIndex(d=>d.id==='rune')], rb=rune.querySelectorAll('.actBtn');
+      assert(rb[0].disabled && rb[1].disabled,'룬: Lv.100 이라 둘 다 잠겨야 한다'); }
+    // ④ 잘림 — 320px 에 다 들어가야 한다. ⚠ 이름+배지가 104px 이라 아이콘·여백을 키우면 바로 잘린다.
+    { const bad=[];
+      rows.forEach(r=>{ const rr=r.getBoundingClientRect();
+        r.querySelectorAll('*').forEach(e=>{ const q=e.getBoundingClientRect(); if(!q.width) return;
+          if(q.right>rr.right+0.6||q.left<rr.left-0.6) bad.push('넘침:'+e.className);
+          if(e.scrollWidth>e.clientWidth+1 && getComputedStyle(e).overflow!=='visible')
+            bad.push('잘림:'+e.className+'('+e.scrollWidth+'>'+e.clientWidth+')'); }); });
+      assert(!bad.length,'행 안에서 잘린다: '+bad.slice(0,3).join(' | ')); }
+    // ⑤ ⛔ 옛 스타일이 안 남아 있다 — 색으로 채운 카드 면과 파란 면 버튼
+    assert(!document.querySelector('#dgHubBody .dgCard'),'옛 .dgCard 가 남아 있다');
+    { const b=rows[0].querySelector('.actBtn'), bg=getComputedStyle(b).backgroundImage+getComputedStyle(b).backgroundColor;
+      assert(bg.indexOf('58, 160, 255')<0 && bg.indexOf('#3aa0ff')<0,'옛 파란 면 버튼이 남아 있다'); }
+    closeDungeonHub(); c.dgFloors={};
+    return rows.length+'행 · 값 공식 일치 · 잘림 0'; });
   // 종류별 진행도 — 이걸 공유하면 새 종류를 여는 순간 고단계로 시작해 보상이 한 번에 쏟아진다.
   await step('토벌 단계는 종류마다 따로 쌓인다', ()=>{ skipIf(typeof dgSetFloor!=='function','토벌 진행도 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','던전'); saveMeta(); }

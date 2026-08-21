@@ -269,21 +269,56 @@ function openDungeonHub(){ if(typeof loadMeta==='function') loadMeta();
   if(typeof paintIcons==='function') paintIcons(document.getElementById('dgHubScreen')); }
 function closeDungeonHub(){ dgCloseSheet(); popHide('dgHubScreen');
   if(typeof playSfx==='function') playSfx('ui_close'); }
+// ── 목록 조각들 — 값은 전부 표(DG_DUNGEONS)와 공식(dgFloorReward)에서 나온다 ⛔ 하드코딩 금지 ──
+const DG_ICO_DIR='assets/icons/dungeons/';
+// 던전 아이콘 — 파일이 있으면 그것, 없으면 표의 이모지로 떨어진다(beaconProHTML·uiIco 와 같은 규칙).
+function dgIcoHTML(d){ return '<span class="dgIco"><img src="'+DG_ICO_DIR+'dg_'+d.id+'.webp" alt="" draggable="false"'
+  +' data-fb="'+escHtml(d.ico)+'" onerror="_dgIcoFail(this)"></span>'; }
+function _dgIcoFail(im){ try{ const p=im.parentNode; if(p) p.textContent=im.getAttribute('data-fb')||''; }
+  catch(_e){ try{ im.remove(); }catch(_e2){} } }
+// 🗝 열쇠 — ui_key.webp 가 들어오면 자동 교체. ⛔ 이모지를 박지 말 것(DESIGN.md 재화 아이콘 규칙)
+const _DG_KEY_SVG='<svg viewBox="0 0 24 24"><circle cx="8.5" cy="8.5" r="4.2"/><path d="M11.6 11.6 20 20M17 17l-2 2M20 20l1.4-1.4"/></svg>';
+function dgKeyHTML(n, max){ return '<span class="dgKey"><img src="assets/icons/ui/ui_key.webp" alt="" draggable="false" onerror="_dgKeyFail(this)">'
+  +'<span>'+n+'<s>/'+(max||DG_KEY_DAILY)+'</s></span></span>'; }
+function _dgKeyFail(im){ try{ im.outerHTML=_DG_KEY_SVG; }catch(_e){ try{ im.remove(); }catch(_e2){} } }
+// 단계 배지 — 12단계 / 미개척 / Lv.50 이 같은 자리에서 읽힌다
+function dgStgHTML(d, mx){ return '<span class="dgStg">'+(d.reqLvLocked? ('Lv.'+d.reqLv) : (mx? mx+'단계' : '미개척'))+'</span>'; }
+// 한 버튼이 주는 것 — 재화 아이콘 + 수치를 세로로. 없으면 '—'
+function dgValsHTML(r){ if(!r) return '<div class="dgVals off"><span>—</span></div>';
+  let h='<div class="dgVals"><span>'+resIco('mineral','ri')+r.pc.toLocaleString()+'</span>';
+  if(r.gas) h+='<span>'+resIco('gas','ri')+r.gas.toLocaleString()+'</span>';
+  if(r.tixKind && r.tixN>0) h+='<span>'+resIco('ticket_'+r.tixKind,'ri')+r.tixN+'</span>';
+  return h+'</div>'; }
 function renderDungeonHub(){ const body=document.getElementById('dgHubBody'); if(!body) return;
   const c=CHAR(); if(!c) return;
+  const cap=dgFloorCap();
   let h='<div class="dgHubHead">토벌 열쇠는 <b>매일 09:00</b>에 보충됩니다. 열쇠는 토벌을 완료할 때만 소모됩니다.</div>';
-  for(const d of DG_DUNGEONS){ const lock=c.level<d.reqLv, k=lock?0:dgKeyN(d.id);
-    const mx=dgMaxFloor(d.id);   // 단계는 **종류별**이라 카드마다 다르다
-    h+='<div class="dgCard'+(lock?' lock':'')+'" style="--dgTint:'+d.tint+'"'+(lock?'':' onclick="dgOpenSheet(\''+d.id+'\')"')+'>'
-      +'<div class="dgCardArt"><span class="dgCardIco">'+d.ico+'</span>'
-      +'<span class="dgCardTx"><span class="dgCardName">'+d.name+'</span>'
-      +'<span class="dgCardSub">'+escHtml(d.sub)+(lock?'':' · '+(mx?mx+'단계':'미개척'))+'</span></span></div>'
-      +'<div class="dgCardR"><span class="dgCardKey">🗝 '+(lock?('Lv.'+d.reqLv):(k+'/'+DG_KEY_DAILY))+'</span>'
-      +(lock?'':'<button class="dgOpenBtn" onclick="event.stopPropagation();dgOpenSheet(\''+d.id+'\')">열기</button>')+'</div></div>'; }
+  h+='<div class="rmList">';
+  for(const d of DG_DUNGEONS){
+    const lock=c.level<d.reqLv; d.reqLvLocked=lock;
+    const mx=lock?0:dgMaxFloor(d.id), k=lock?0:dgKeyN(d.id);
+    const nx=mx+1, okLv=nx<=cap;
+    // 소탕 = 이미 깬 최고 단계(없으면 잠김) · 입장 = 다음 단계(레벨 상한·열쇠가 막을 수 있다)
+    const canSwp=!lock && mx>0 && k>0, canEnt=!lock && okLv && k>0;
+    const rSwp=(!lock && mx>0)? dgFloorReward(mx, d.id) : null;
+    const rEnt=(!lock && okLv)? dgFloorReward(nx, d.id) : null;
+    const at=' onclick="event.stopPropagation();';
+    h+='<div class="roomItem dgRow'+(lock?' locked':'')+'" style="--dc:'+d.tint+'">'
+      +dgIcoHTML(d)
+      +'<div class="riMain"><div class="riName"><u>'+escHtml(d.name)+'</u>'+dgStgHTML(d,mx)+'</div>'
+      +'<div style="margin-top:5px">'+(lock?'':dgKeyHTML(k))+'</div></div>'
+      +'<div class="dgBtnW"><button class="actBtn"'+(canSwp?'':' disabled')+at+'dgSweep(\''+d.id+'\')">소탕</button>'
+        +dgValsHTML(canSwp?rSwp:null)+'</div>'
+      +'<div class="dgBtnW"><button class="actBtn'+(canEnt?' pri':'')+'"'+(canEnt?'':' disabled')+at+'dgOpenSheet(\''+d.id+'\')">'
+        +(lock?'잠김':(okLv?'입장':'Lv.'+dgFloorReqLv(nx)))+'</button>'
+        +dgValsHTML(canEnt?rEnt:null)+'</div>'
+      +'</div>'; }
+  h+='</div>';
   // 🎟 보유 뽑기권 — 종류가 늘어도 여기는 안 고친다(TIX_KINDS 가 단일 소스)
   const tx=(PROF()&&PROF().tickets)||{};
   h+='<div class="dgTix">'+TIX_KINDS.map(k=>resIco('ticket_'+k,'gi')+'<b>'+(tx[k]||0)+'</b>').join(' ')+'</div>';
-  body.innerHTML=h; }
+  body.innerHTML=h;
+  if(typeof paintIcons==='function') paintIcons(body); }
 // 던전 팝업 — 이전 스테이지 소탕 + 입장
 let _dgSheetId=null;
 function dgOpenSheet(id){ const d=DG_DUNGEONS.find(x=>x.id===id), c=CHAR(); if(!d||!c) return;
@@ -302,8 +337,8 @@ function renderDgSheet(){ const d=DG_DUNGEONS.find(x=>x.id===_dgSheetId), c=CHAR
   set('dgSheetStage', '난이도 <b>'+nx+'단계</b>');
   set('dgSheetReward', '보상: '+dgRewardText(dgFloorReward(nx, d.id)));
   set('dgSheetKey', '🗝 '+k+'/'+DG_KEY_DAILY);
-  const bS=document.getElementById('dgSheetSweep');
-  if(bS) bS.disabled=!(mx>0 && k>0);
+  // ⚠ 소탕은 목록 행으로 올라갔다 — 시트에는 자동/직접 선택만 남는다.
+  { const bS=document.getElementById('dgSheetSweep'); if(bS) bS.disabled=!(mx>0 && k>0); }
   // 자동·직접 두 버튼 — ⚠ textContent 로 덮지 말 것(안의 <b>/<i> 두 줄이 통째로 날아간다).
   //   잠긴 이유는 라벨을 갈아끼우는 대신 아랫줄(i)에만 적는다.
   const gate=okLv?(k>0?'':'열쇠 없음'):('Lv.'+dgFloorReqLv(nx)+' 필요');
@@ -323,19 +358,23 @@ function dgSheetEnter(auto){ const d=DG_DUNGEONS.find(x=>x.id===_dgSheetId); if(
     dgHbStart(nx, d.id, { auto:true, key:true }); return; }
   dgFightEnter(nx, d.id, true); }
 // 이전 단계 토벌(소탕) — 그 종류의 최고 단계 보상을 즉시 지급. 전투 없음.
-function dgSheetSweep(){ const d=DG_DUNGEONS.find(x=>x.id===_dgSheetId), c=CHAR(), p=PROF(); if(!d||!c||!p) return;
-  const mx=dgMaxFloor(d.id); if(mx<1){ if(typeof toast==='function') toast('클리어한 단계가 없습니다'); return; }
-  if(dgKeyN(d.id)<1){ if(typeof toast==='function') toast('🗝 열쇠가 없습니다(매일 09:00 보충)'); return; }
-  // 계획서 원문: "이전 스테이지 토벌 시 **해당 스테이지의 보상이 즉시 지급**".
-  // 그래서 소탕도 입장과 **같은 보상**을 받는다(뽑기권 포함). 다른 것은 '전투가 없다'와
-  // '이미 깬 단계까지만'뿐이다 — 소탕=천장에서 수확 / 입장=천장을 민다.
-  dgSpendKey(d.id); const r=dgGrantReward(dgFloorReward(mx, d.id));
+// 이전 단계 토벌(소탕) — 목록 행에서 바로 실행한다(시트를 안 지난다).
+// 계획서 원문: "이전 스테이지 토벌 시 **해당 스테이지의 보상이 즉시 지급**" — 입장과 같은 표·같은 지급을 쓴다.
+// 다른 것은 '전투가 없다'와 '이미 깬 단계까지만'뿐 — 소탕=천장에서 수확 / 입장=천장을 민다.
+function dgSweep(id){ const d=DG_DUNGEONS.find(x=>x.id===id), c=CHAR(), p=PROF(); if(!d||!c||!p) return;
+  if(c.level<d.reqLv){ if(typeof toast==='function') toast('Lv.'+d.reqLv+'부터 열립니다'); return; }
+  const mx=dgMaxFloor(id); if(mx<1){ if(typeof toast==='function') toast('클리어한 단계가 없습니다'); return; }
+  if(dgKeyN(id)<1){ if(typeof toast==='function') toast('🗝 열쇠가 없습니다(매일 09:00 보충)'); return; }
+  dgSpendKey(id); const r=dgGrantReward(dgFloorReward(mx, id));
   profSyncUnlocks(); saveMeta();
   if(typeof playSfx==='function') playSfx('hero_merge');
-  if(typeof toast==='function') toast('🗝 '+mx+'단계 소탕 · +'+r.pc.toLocaleString()+' M'
+  if(typeof toast==='function') toast('🗝 '+d.name+' '+mx+'단계 소탕 · +'+r.pc.toLocaleString()+' M'
     +(r.gas?(' · +'+r.gas.toLocaleString()+' G'):'')
     +(r.tixN?(' · 🎟 +'+r.tixN):'')+' · +'+r.xp+' XP');
-  renderDgSheet(); renderDungeonHub(); }
+  if(typeof updateCurBar==='function') updateCurBar();
+  renderDungeonHub(); if(_dgSheetId) renderDgSheet(); }
+// 옛 이름 — 시트 버튼이 사라졌지만 스모크·저장 호환으로 남긴다
+function dgSheetSweep(){ if(_dgSheetId) dgSweep(_dgSheetId); }
 function dgAgain(next){ const did=(DG&&DG.dgId)||'normal', floor=(DG?DG.floor:dgMaxFloor(did))+(next?1:0);
   if(floor>dgFloorCap()){ if(typeof toast==='function') toast('Lv.'+dgFloorReqLv(floor)+'부터 도전할 수 있습니다'); return; }
   if(dgKeyN(did)<1){ if(typeof toast==='function') toast('🗝 열쇠가 없습니다(매일 09:00 보충)'); return; }
