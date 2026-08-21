@@ -1,0 +1,227 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>토벌 허브 — B안 + 보상수치 + 소탕</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;700&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{--font-ko:'Noto Sans KR','Apple SD Gothic Neo',sans-serif;--font-ti:'Jua','Apple SD Gothic Neo',sans-serif;
+ --font-num:'Rajdhani','Noto Sans KR',sans-serif;--neon:#ff3b3b;--metal-edge:#3c3e46;
+ --txt:#e0dcdc;--txt-mute:#9aa0a8;--gold:#ffd24a;--ok:#5dff8f;--acc-sel:#5cd6ff;
+ --r-bar:3px;--fs-xs:9.5px;--fs-sm:10px;--fs-md:11px;--fs-lg:12px;--fs-xl:13px}
+*{box-sizing:border-box}
+body{margin:0;background:#07080b;color:var(--txt);font-family:var(--font-ko);font-size:var(--fs-md)}
+button{font-family:inherit;background:none;border:none;color:inherit}
+.wrap{max-width:1500px;margin:0 auto;padding:22px}
+h1{font-family:var(--font-ti);font-size:19px;margin:0 0 4px;color:#fff}
+.lead{color:var(--txt-mute);font-size:var(--fs-lg);margin:0 0 20px;line-height:1.7}
+.lead b{color:var(--gold)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:20px}
+.cap{font-family:var(--font-ti);font-size:var(--fs-xl);color:#fff;margin:0 0 3px}
+.cap i{font-style:normal;color:var(--neon)}
+.note{color:var(--txt-mute);font-size:var(--fs-sm);line-height:1.6;margin:0 0 9px;min-height:46px}
+.phone{width:320px;background:#0a0b0e;border:1px solid #23252b;border-radius:var(--r-bar);overflow:hidden}
+/* 공용 */
+.hbmCard{display:flex;flex-direction:column;padding-bottom:12px;background:linear-gradient(180deg,#191919,#0e0e0e);
+ border:1px solid rgba(255,255,255,.07);border-radius:var(--r-bar)}
+.hbmHead{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px;
+ font-family:var(--font-ti);font-size:15px;letter-spacing:.6px;color:#ececec}
+.hbmX{width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:#9a9a9a}
+.hbmX svg{width:15px;height:15px}
+.body{padding:0 12px}
+.hint{font-size:var(--fs-sm);color:var(--txt-mute);line-height:1.6;padding:0 0 10px}
+.hint b{color:var(--gold);font-family:var(--font-num)}
+.actBtn{position:relative;display:flex;align-items:center;justify-content:center;gap:4px;height:44px;padding:0 12px;
+ cursor:pointer;overflow:hidden;font-family:var(--font-ti);font-size:var(--fs-xl);letter-spacing:.3px;color:#c6cdd6;
+ border:1px solid var(--metal-edge);border-radius:var(--r-bar);
+ background:linear-gradient(180deg,#24262b 0%,#15161a 46%,#0c0d10 100%);
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.13),inset 0 -6px 9px -6px #000,0 2px 4px -2px rgba(0,0,0,.7)}
+.actBtn::after{content:'';position:absolute;left:8%;right:8%;bottom:1px;height:2px;
+ background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent)}
+.actBtn.pri{color:#fff;border-color:rgba(255,59,59,.34)}
+.actBtn.pri::after{background:linear-gradient(90deg,transparent,var(--neon),transparent);box-shadow:0 0 9px var(--neon)}
+.actBtn:disabled{cursor:default;color:#5f6772;border-color:#2b2d33;
+ background:linear-gradient(180deg,#131316,#0a0a0c);box-shadow:inset 0 3px 6px -4px #000}
+.actBtn:disabled::after{background:linear-gradient(90deg,transparent,#33363c,transparent);box-shadow:none}
+.actBtn.xs{height:30px;font-size:var(--fs-md);padding:0 8px}
+.actBtn.tiny{height:24px;font-size:var(--fs-sm);padding:0 7px}
+.actBtn.sq{padding:0;width:30px;flex:0 0 30px}
+.actBtn.sq::after{left:16%;right:16%}
+.actBtn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
+.rmList{display:flex;flex-direction:column;gap:7px}
+.roomItem{position:relative;overflow:hidden;display:flex;align-items:center;gap:9px;padding:8px 10px;cursor:pointer;
+ border-radius:var(--r-bar);border:1px solid rgba(255,255,255,.07);
+ background:linear-gradient(180deg,#16171b,#0b0c0e);box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
+.roomItem::after{content:'';position:absolute;left:8%;right:8%;bottom:0;height:2px;
+ background:linear-gradient(90deg,transparent,var(--dc,rgba(255,255,255,.3)),transparent);box-shadow:0 0 7px var(--dcGlow,transparent)}
+.roomItem.locked{cursor:default;opacity:.5;box-shadow:inset 0 3px 6px -4px #000;
+ background:linear-gradient(180deg,#131316,#0a0a0c);border-color:#2b2d33}
+.roomItem.locked::after{background:linear-gradient(90deg,transparent,#33363c,transparent);box-shadow:none}
+.riMain{min-width:0;flex:1}
+.riName{font-size:var(--fs-xl);font-weight:700;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+ display:flex;align-items:center;gap:5px}
+.riSub{font-size:var(--fs-xs);color:var(--txt-mute);margin-top:3px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.num{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:700}
+.ri{width:13px;height:13px;flex:none;display:inline-block;vertical-align:middle;border-radius:2px}
+.ri.min{background:linear-gradient(160deg,#8fdcff,#2f8fd0)}
+.ri.gas{background:linear-gradient(160deg,#9dfba8,#2f9d4a)}
+.ri.tg{background:linear-gradient(160deg,#ffd98a,#c08a1e)}
+.ri.tp{background:linear-gradient(160deg,#8ff0e0,#1f9d8a)}
+.ri.ta{background:linear-gradient(160deg,#d5a8ff,#7a3fc0)}
+.ri.tr{background:linear-gradient(160deg,#b7a8ff,#5a3fc0)}
+.rwSlot{flex:none;width:36px;height:36px;display:flex;align-items:center;justify-content:center;gap:3px;
+ border-radius:var(--r-bar);border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.035)}
+.rwSlot.lk{opacity:.45}
+.rwSlot.btn{cursor:pointer}
+.kIco{width:12px;height:12px;flex:none;display:block;fill:none;stroke:var(--gold);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.keyN{display:inline-flex;align-items:center;gap:3px;font-family:var(--font-num);font-variant-numeric:tabular-nums;
+ font-weight:700;font-size:var(--fs-lg);color:var(--gold);flex:none}
+.keyN s{text-decoration:none;color:#61666e;font-size:var(--fs-sm)}
+.stgBadge{display:inline-flex;align-items:center;padding:1px 5px;border-radius:var(--r-bar);
+ border:1px solid rgba(255,255,255,.14);font-family:var(--font-num);font-weight:700;font-size:var(--fs-sm);color:#cfe0ec;flex:none}
+.val{color:#cfe0ec}
+.btnCol{flex:none;display:flex;flex-direction:column;gap:4px}
+.btnRow{flex:none;display:flex;gap:5px}
+.bl{font-size:8.5px;color:#61666e;text-align:center;margin-top:2px;font-family:var(--font-num)}
+</style></head><body><div class="wrap">
+<h1>토벌 허브 — B안 + 보상 수치 + 소탕 버튼, 8안</h1>
+<p class="lead">
+고친 것 둘: ① 부제가 왼쪽 재화 아이콘과 <b>같은 말을 반복</b>하던 것을 <b>클리어 보상 수치</b>로 교체 ·
+② <b>소탕 버튼</b> 추가(이전 단계 보상 즉시).<br>
+수치는 <b>실제 공식 그대로</b>다 — 일반 13단계 1,956 M + 685 G / 장비 4단계 128 M + 권 1 / 펫 1단계 62 M + 권 1.
+소탕은 <b>이미 깬 최고 단계</b>라 한 칸 낮다(일반 12단계 1,824 M · 장비 3단계 106 M). 펫은 깬 단계가 없어 소탕이 잠긴다.<br>
+바뀌는 것은 <b>소탕을 어디에 두는가</b>와 <b>수치를 어떻게 보이는가</b>뿐.
+</p>
+<div class="grid" id="g"></div></div>
+<script>
+const KEY='<svg class="kIco" viewBox="0 0 24 24"><circle cx="8.5" cy="8.5" r="4.2"/><path d="M11.6 11.6 20 20M17 17l-2 2M20 20l1.4-1.4"/></svg>';
+const X='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg>';
+const SWEEP='<svg viewBox="0 0 24 24"><path d="M12 4v10"/><path d="M8 10.5 12 14.5 16 10.5"/><path d="M4.5 18.5h15"/></svg>';
+/* 실제 공식: base=40+n*22 · 일반 pc=base*6, gas=base*6*.35 · 나머지 pc=base, tix=1+⌊(n-1)/5⌋ */
+const D=[
+ {nm:'일반 토벌',rw:['min','gas'],fl:12,key:2,kmax:2,dc:'rgba(255,255,255,.30)',
+  ent:'<span class="ri min"></span><b class="num val">1,956</b> <span class="ri gas"></span><b class="num val">685</b>',
+  swp:'<span class="ri min"></span><b class="num val">1,824</b> <span class="ri gas"></span><b class="num val">638</b>', canSwp:1},
+ {nm:'장비 토벌',rw:['tg'],fl:3,key:1,kmax:2,dc:'rgba(255,210,74,.55)',
+  ent:'<span class="ri min"></span><b class="num val">128</b> <span class="ri tg"></span><b class="num val">1</b>',
+  swp:'<span class="ri min"></span><b class="num val">106</b> <span class="ri tg"></span><b class="num val">1</b>', canSwp:1},
+ {nm:'펫 토벌',rw:['tp'],fl:0,key:2,kmax:2,dc:'rgba(93,255,143,.5)',
+  ent:'<span class="ri min"></span><b class="num val">62</b> <span class="ri tp"></span><b class="num val">1</b>',
+  swp:'', canSwp:0},
+ {nm:'동료 토벌',rw:['ta'],fl:0,lock:50,kmax:2,dc:'rgba(213,168,255,.5)',ent:'',swp:'',canSwp:0},
+ {nm:'룬 토벌',rw:['tr'],fl:0,lock:100,kmax:2,dc:'rgba(183,168,255,.5)',ent:'',swp:'',canSwp:0}
+];
+const ic=d=>d.rw.map(k=>'<span class="ri '+k+'"></span>').join('');
+const stg=d=>d.lock?'Lv.'+d.lock:(d.fl?d.fl+'단계':'미개척');
+const key=d=>d.lock?'':'<span class="keyN">'+KEY+'<span>'+d.key+'<s>/'+d.kmax+'</s></span></span>';
+const sub=d=>d.lock?'<span style="color:#5f6772">Lv.'+d.lock+'부터</span>':d.ent;
+const shell=i=>'<div class="phone"><div class="hbmCard"><div class="hbmHead"><b>토벌</b><span class="hbmX">'+X+'</span></div>'+i+'</div></div>';
+const HINT='<div class="hint">열쇠는 <b>매일 09:00</b> 보충 · 완료할 때만 소모</div>';
+const V=[];
+
+/* A 옆으로 둘 */
+V.push({t:'소탕은 입장 왼쪽 — 나란히',
+ n:'요청대로 "옆". 소탕이 좁고 입장이 넓다(주 동작이 넓다는 .cpBtns 규칙과 같은 위계). 부제는 입장했을 때 받는 것.',
+ h:'<div class="body">'+HINT+'<div class="rmList">'
+ +D.map(d=>'<div class="roomItem'+(d.lock?' locked':'')+'" style="--dc:'+d.dc+';height:60px">'
+  +'<span class="rwSlot'+(d.lock?' lk':'')+'">'+ic(d)+'</span>'
+  +'<div class="riMain"><div class="riName">'+d.nm+'<span class="stgBadge">'+stg(d)+'</span></div><div class="riSub">'+sub(d)+'</div></div>'
+  +key(d)
+  +'<div class="btnRow"><button class="actBtn xs sq" '+(d.canSwp?'':'disabled')+' title="소탕">'+SWEEP+'</button>'
+  +'<button class="actBtn xs'+(d.lock?'':' pri')+'"'+(d.lock?' disabled':'')+' style="flex:0 0 48px">'+(d.lock?'잠김':'입장')+'</button></div>'
+  +'</div>').join('')+'</div></div>'});
+
+/* B 세로로 둘 */
+V.push({t:'소탕은 입장 아래 — 세로',
+ n:'요청대로 "아래". 두 버튼이 같은 폭이라 위계가 글자·광원으로만 갈린다(입장=주 동작 붉은 광원). 행이 68px 로 조금 높다.',
+ h:'<div class="body">'+HINT+'<div class="rmList">'
+ +D.map(d=>'<div class="roomItem'+(d.lock?' locked':'')+'" style="--dc:'+d.dc+';height:68px">'
+  +'<span class="rwSlot'+(d.lock?' lk':'')+'">'+ic(d)+'</span>'
+  +'<div class="riMain"><div class="riName">'+d.nm+'<span class="stgBadge">'+stg(d)+'</span></div><div class="riSub">'+sub(d)+'</div>'
+  +'<div class="riSub" style="margin-top:4px">'+key(d)+'</div></div>'
+  +'<div class="btnCol"><button class="actBtn tiny'+(d.lock?'':' pri')+'"'+(d.lock?' disabled':'')+' style="width:54px">'+(d.lock?'잠김':'입장')+'</button>'
+  +'<button class="actBtn tiny" '+(d.canSwp?'':'disabled')+' style="width:54px">소탕</button></div>'
+  +'</div>').join('')+'</div></div>'});
+
+/* C 버튼마다 수치 */
+V.push({t:'버튼마다 그 보상 수치',
+ n:'소탕과 입장이 주는 양이 다르다(한 칸 차이). 각 버튼 밑에 그 수치를 적어 무엇을 누르면 뭘 받는지 헷갈리지 않게 한다. 부제는 비운다.',
+ h:'<div class="body">'+HINT+'<div class="rmList">'
+ +D.map(d=>'<div class="roomItem'+(d.lock?' locked':'')+'" style="--dc:'+d.dc+';height:72px">'
+  +'<span class="rwSlot'+(d.lock?' lk':'')+'">'+ic(d)+'</span>'
+  +'<div class="riMain"><div class="riName">'+d.nm+'<span class="stgBadge">'+stg(d)+'</span></div>'
+  +'<div class="riSub" style="margin-top:5px">'+key(d)+'</div></div>'
+  +'<div class="btnRow" style="align-items:flex-start">'
+   +'<div><button class="actBtn tiny" '+(d.canSwp?'':'disabled')+' style="width:52px">소탕</button>'
+     +'<div class="bl">'+(d.canSwp?(d.rw[0]==='min'?'1,824':'106'):'—')+'</div></div>'
+   +'<div><button class="actBtn tiny'+(d.lock?'':' pri')+'"'+(d.lock?' disabled':'')+' style="width:52px">'+(d.lock?'잠김':'입장')+'</button>'
+     +'<div class="bl">'+(d.lock?'—':(d.rw[0]==='min'?'1,956':(d.fl?'128':'62')))+'</div></div></div>'
+  +'</div>').join('')+'</div></div>'});
+
+/* D 부제에 둘 다 */
+V.push({t:'부제에 소탕/입장 둘 다',
+ n:'한 줄에 "소탕 → / 입장 →" 두 값을 나란히 적는다. 차이가 눈으로 바로 비교된다. 대신 부제가 길어져 9.5px 로도 빡빡하다.',
+ h:'<div class="body">'+HINT+'<div class="rmList">'
+ +D.map(d=>'<div class="roomItem'+(d.lock?' locked':'')+'" style="--dc:'+d.dc+';height:64px">'
+  +'<span class="rwSlot'+(d.lock?' lk':'')+'">'+ic(d)+'</span>'
+  +'<div class="riMain"><div class="riName">'+d.nm+'<span class="stgBadge">'+stg(d)+'</span>'+key(d)+'</div>'
+  +'<div class="riSub">'+(d.lock?'<span style="color:#5f6772">Lv.'+d.lock+'부터</span>'
+     :('<span style="color:#61666e">소탕</span>'+(d.canSwp?d.swp:'<span style="color:#5f6772">—</span>')
+      +'<span style="color:#2f3238">│</span><span style="color:#61666e">입장</span>'+d.ent))+'</div></div>'
+  +'<div class="btnRow"><button class="actBtn xs sq" '+(d.canSwp?'':'disabled')+'>'+SWEEP+'</button>'
+  +'<button class="actBtn xs'+(d.lock?'':' pri')+'"'+(d.lock?' disabled':'')+' style="flex:0 0 44px">'+(d.lock?'잠김':'입장')+'</button></div>'
+  +'</div>').join('')+'</div></div>'});
+
+/* E 왼쪽 재화칸이 곧 소탕 */
+V.push({t:'왼쪽 재화 칸이 곧 소탕 버튼',
+ n:'"이 재화를 지금 받는다" = 소탕이므로 재화 칸 자체를 누르게 한다. 오른쪽은 입장 하나라 가장 단순하다. 다만 칸이 버튼이라는 걸 알려면 학습이 필요하다.',
+ h:'<div class="body"><div class="hint">왼쪽 재화 칸을 누르면 <b>이전 단계 즉시 수확</b></div><div class="rmList">'
+ +D.map(d=>'<div class="roomItem'+(d.lock?' locked':'')+'" style="--dc:'+d.dc+';height:60px">'
+  +'<span class="rwSlot'+(d.lock?' lk':'')+(d.canSwp?' btn':'')+'" style="'+(d.canSwp?'border-color:rgba(255,210,74,.34);box-shadow:inset 0 0 0 1px rgba(255,210,74,.10)':'')+'">'+ic(d)+'</span>'
+  +'<div class="riMain"><div class="riName">'+d.nm+'<span class="stgBadge">'+stg(d)+'</span></div><div class="riSub">'+sub(d)+'</div></div>'
+  +key(d)
+  +'<button class="actBtn xs'+(d.lock?'':' pri')+'"'+(d.lock?' disabled':'')+' style="flex:0 0 52px">'+(d.lock?'잠김':'입장')+'</button>'
+  +'</div>').join('')+'</div></div>'});
+
+/* F 2줄 행 */
+V.push({t:'2줄 행 — 아래에 보상 + 버튼 둘',
+ n:'윗줄은 이름·단계·열쇠, 아랫줄은 보상 수치와 버튼 둘. 각 요소가 자기 줄을 가져 겹침이 없다. 행 80px 로 가장 높지만 가장 안 답답하다.',
+ h:'<div class="body">'+HINT+'<div class="rmList">'
+ +D.map(d=>'<div class="roomItem'+(d.lock?' locked':'')+'" style="--dc:'+d.dc+';height:80px;flex-direction:column;align-items:stretch;gap:7px;padding:9px 10px">'
+  +'<div style="display:flex;align-items:center;gap:9px">'
+   +'<span class="rwSlot'+(d.lock?' lk':'')+'" style="width:26px;height:26px">'+ic(d)+'</span>'
+   +'<div class="riMain"><div class="riName">'+d.nm+'<span class="stgBadge">'+stg(d)+'</span></div></div>'+key(d)+'</div>'
+  +'<div style="display:flex;align-items:center;gap:7px">'
+   +'<div class="riSub" style="margin:0;flex:1">'+sub(d)+'</div>'
+   +'<button class="actBtn tiny" '+(d.canSwp?'':'disabled')+' style="width:46px">소탕</button>'
+   +'<button class="actBtn tiny'+(d.lock?'':' pri')+'"'+(d.lock?' disabled':'')+' style="width:46px">'+(d.lock?'잠김':'입장')+'</button></div>'
+  +'</div>').join('')+'</div></div>'});
+
+/* G 소탕은 아이콘, 수치는 그 옆 */
+V.push({t:'소탕 아이콘 + 옆에 그 수치',
+ n:'소탕 버튼을 아이콘만으로 좁히고 바로 왼쪽에 소탕 수치를 작게 적는다. 입장 수치는 부제에 있다. 두 값이 각자 자기 버튼 곁에 붙어 대응이 분명하다.',
+ h:'<div class="body">'+HINT+'<div class="rmList">'
+ +D.map(d=>'<div class="roomItem'+(d.lock?' locked':'')+'" style="--dc:'+d.dc+';height:60px">'
+  +'<span class="rwSlot'+(d.lock?' lk':'')+'">'+ic(d)+'</span>'
+  +'<div class="riMain"><div class="riName">'+d.nm+'<span class="stgBadge">'+stg(d)+'</span></div><div class="riSub">'+sub(d)+'</div></div>'
+  +'<div style="flex:none;display:flex;align-items:center;gap:4px">'
+   +'<span class="riSub" style="margin:0;font-size:8.5px">'+(d.canSwp?d.swp:'')+'</span>'
+   +'<button class="actBtn xs sq" '+(d.canSwp?'':'disabled')+'>'+SWEEP+'</button></div>'
+  +'<button class="actBtn xs'+(d.lock?'':' pri')+'"'+(d.lock?' disabled':'')+' style="flex:0 0 46px">'+(d.lock?'잠김':'입장')+'</button>'
+  +'</div>').join('')+'</div></div>'});
+
+/* H 소탕 없으면 입장이 자리를 먹는 적응형 */
+V.push({t:'적응형 — 소탕 없으면 입장이 넓어진다',
+ n:'깬 단계가 없으면(펫) 소탕 자리를 비우지 않고 입장이 그만큼 넓어진다. 잠긴 버튼이 줄어 화면이 덜 어수선하다. 잠긴 종류는 버튼 자체를 뺀다.',
+ h:'<div class="body">'+HINT+'<div class="rmList">'
+ +D.map(d=>'<div class="roomItem'+(d.lock?' locked':'')+'" style="--dc:'+d.dc+';height:60px">'
+  +'<span class="rwSlot'+(d.lock?' lk':'')+'">'+ic(d)+'</span>'
+  +'<div class="riMain"><div class="riName">'+d.nm+'<span class="stgBadge">'+stg(d)+'</span></div><div class="riSub">'+sub(d)+'</div></div>'
+  +key(d)
+  +(d.lock ? '<span style="flex:0 0 76px;text-align:right;font-size:var(--fs-md);color:#5f6772">잠김</span>'
+    : '<div class="btnRow">'+(d.canSwp?'<button class="actBtn xs" style="flex:0 0 40px">소탕</button>':'')
+      +'<button class="actBtn xs pri" style="flex:0 0 '+(d.canSwp?'44':'88')+'px">입장</button></div>')
+  +'</div>').join('')+'</div></div>'});
+
+document.getElementById('g').innerHTML=V.map((v,i)=>
+ '<div class="cell"><p class="cap"><i>'+String.fromCharCode(65+i)+' · </i>'+v.t+'</p><p class="note">'+v.n+'</p>'+shell(v.h)+'</div>').join('');
+</script></body></html>
