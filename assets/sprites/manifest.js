@@ -1083,7 +1083,11 @@ const SPRITE_MANIFEST = {
      "name": "가시 사수",
      "kind": "unit",
      "actions": {
-      "move": null,
+      "move": {
+       "dirs": 8,
+       "frames": 8,
+       "ext": "webp"
+      },
       "attack": null,
       "cast": null,
       "idle": null
