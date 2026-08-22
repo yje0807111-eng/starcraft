@@ -179,8 +179,16 @@ try {
       if (x < bx0) bx0 = x; if (x > bx1) bx1 = x; if (y < by0) by0 = y; if (y > by1) by1 = y;
       if (y >= PROBE * 0.75) { if (x < fx0) fx0 = x; if (x > fx1) fx1 = x; }   // 아래 25% = 발
     }
+    // 피사체 평균 밝기 — 프레임마다 화질·노출이 튀는 구간을 걸러내는 데 쓴다
+    let lum = 0, ln = 0;
+    for (let y = by0; y <= by1; y++) for (let x = bx0; x <= bx1; x++) {
+      const o = (y * PROBE + x) * 3;
+      if (Math.abs(raw[o] - bg[0]) + Math.abs(raw[o + 1] - bg[1]) + Math.abs(raw[o + 2] - bg[2]) <= 90) continue;
+      lum += (raw[o] + raw[o + 1] + raw[o + 2]) / 3; ln++;
+    }
     feet.push(fx1 - fx0 + 1);
-    box.push({ cx: (bx0 + bx1) / 2, cy: (by0 + by1) / 2, bg: bg, x0: bx0, y0: by0, x1: bx1, y1: by1 });
+    box.push({ cx: (bx0 + bx1) / 2, cy: (by0 + by1) / 2, bg: bg, x0: bx0, y0: by0, x1: bx1, y1: by1,
+      w: bx1 - bx0 + 1, h: by1 - by0 + 1, lum: ln ? lum / ln : 0 });
     probe.push(raw);
   }
   // 발 폭의 극대점 = 반보(半步)
@@ -245,17 +253,37 @@ try {
           }
           bodyD.push(sb / Math.max(1, nb)); legD.push(sl / Math.max(1, nl));
         }
-        let bestS = -1, at = 0;
+        // 다리 점수만으로는 부족하다. 실제로 점수 1.51(최고)인 구간을 골랐는데
+        // 두 프레임만 화질·크기가 튀어서 걸음이 끊겨 보인 적이 있다(가시 사수 #2).
+        // 그래서 '고른가'도 함께 잰다: 프레임마다 피사체 크기와 밝기가 얼마나 흔들리는지.
+        const cv = a => { const m = a.reduce((x, y) => x + y, 0) / a.length;
+          return Math.sqrt(a.reduce((s, v) => s + (v - m) * (v - m), 0) / a.length) / Math.max(1, m); };
+        const sd = a => { const m = a.reduce((x, y) => x + y, 0) / a.length;
+          return Math.sqrt(a.reduce((s, v) => s + (v - m) * (v - m), 0) / a.length); };
+        const cand = [];
         for (let s = 0; s + W < bodyD.length; s++) {
           let sl = 0, sb = 0;
           for (let k = s; k < s + W; k++) { sl += legD[k]; sb += bodyD[k]; }
-          const sc = (sl / W) / Math.max(0.5, sb / W);
-          if (sc > bestS) { bestS = sc; at = s; }
+          const win = box.slice(s, s + W + 1);
+          cand.push({ s,
+            leg: (sl / W) / Math.max(0.5, sb / W),
+            cvW: cv(win.map(b => b.w)), cvH: cv(win.map(b => b.h)), sdL: sd(win.map(b => b.lum)) });
         }
-        A = at * dt; B = (at + W) * dt;
+        // 크기·밝기가 흔들리는 구간을 먼저 걸러내고, 남은 것 중 다리 점수가 가장 높은 것
+        const OK_CV = 0.06, OK_LUM = 6;
+        let pool = cand.filter(c => c.cvW < OK_CV && c.cvH < OK_CV && c.sdL < OK_LUM);
+        const filtered = pool.length > 0;
+        if (!filtered) pool = cand;
+        pool.sort((a, b) => b.leg - a.leg);
+        const win = pool[0];
+        A = win.s * dt; B = (win.s + W) * dt;
         console.log('자동 선택 구간  ' + A.toFixed(2) + ' ~ ' + B.toFixed(2) + '초 (' +
-          (B - A).toFixed(2) + '초) · 다리/몸통 점수 ' + bestS.toFixed(2) +
-          (bestS < 0.7 ? ' ⚠ 몸통이 다리보다 많이 움직인다 — 클립을 다시 뽑는 게 낫다' : ''));
+          (B - A).toFixed(2) + '초) · 다리 ' + win.leg.toFixed(2) +
+          ' · 크기흔들림 ' + (Math.max(win.cvW, win.cvH) * 100).toFixed(1) + '%' +
+          ' · 밝기흔들림 ' + win.sdL.toFixed(1) +
+          '   (고른 구간 ' + (filtered ? pool.length : 0) + '/' + cand.length + ')');
+        if (!filtered) console.log('   ⚠ 클립 전체가 크기·밝기로 흔들린다 — 다시 뽑는 게 낫다');
+        if (win.leg < 0.7) console.log('   ⚠ 몸통이 다리보다 많이 움직인다');
         // ⚠ 이 점수는 방향에 따라 기준이 다르다. 옆모습은 1.3~1.5 가 보통이지만
         //   정면·후면은 몸통이 화면 대부분을 차지하고 엉덩이가 실제로 움직여야 해서
         //   제대로 나와도 0.8 근처다. 방향끼리 비교하지 말고 같은 방향의 구간끼리 비교할 것.
