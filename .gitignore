@@ -13,3 +13,9 @@ assets/backgrounds/dungeons/*.webm
 # 배포 제외 — package.json 이 보이면 Vercel 이 정적 사이트 대신 빌드를 시도한다
 /package.json
 /package-lock.json
+
+# 스프라이트 프레임 — 유닛이 확정되기 전에는 커밋하지 않는다.
+# git 은 파일의 모든 버전을 영구 보관한다. 시안 단계마다 커밋하면 4만 장 규모에서
+# 히스토리가 GB 단위로 불어난다(이미 재커밋된 바이너리로 팩이 1.9GB 다 — SPRITES.md §7).
+# 확정된 유닛만 골라서:  git add -f assets/sprites/<종족>/<id>
+assets/sprites/*/

@@ -99,7 +99,14 @@ function scanAction(dir) {
   const fl = fs.readdirSync(dir).filter(f => EXT.test(f)).sort();
   return fl.length ? { frames: fl.length, ext: path.extname(fl[0]).slice(1) } : null;
 }
+// unit-pack.mjs 가 남긴 자르기 상자 — 방향마다 크기가 달라서 그리는 쪽이 오프셋을 알아야 한다
+function readBox(entDir) {
+  const f = path.join(entDir, '_box.json');
+  if (!fs.existsSync(f)) return null;
+  try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch (e) { return null; }
+}
 function scanEntity(entDir, actions, dirActions) {
+  const bx = readBox(entDir);
   const got = {};
   for (const a of actions) {
     if (dirActions.indexOf(a) >= 0) {
@@ -107,9 +114,11 @@ function scanEntity(entDir, actions, dirActions) {
       for (let d = 0; d < DIRS; d++) per.push(scanAction(path.join(entDir, a + '_' + d)));
       const have = per.filter(Boolean).length;
       got[a] = have ? { dirs: have, frames: per.find(Boolean).frames, ext: per.find(Boolean).ext } : null;
+      if (got[a] && bx && bx[a]) { got[a].canvas = bx.canvas; got[a].box = bx[a]; }
     } else {
       const s = scanAction(path.join(entDir, a));
       got[a] = s ? { dirs: 0, frames: s.frames, ext: s.ext } : null;
+      if (got[a] && bx && bx[a]) { got[a].canvas = bx.canvas; got[a].box = bx[a]; }
     }
   }
   return got;
