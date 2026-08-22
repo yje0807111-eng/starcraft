@@ -12,6 +12,8 @@
  *   --keep-bg        배경을 지우지 않는다(기본은 마젠타 배경 제거 + 알파)
  *   --webp           png 대신 webp 로 쓴다(저장소 표준 — SPRITES.md §5)
  *   --degreen <n>    초록 얼룩 중화(0=끔·기본). 장비의 초록도 같이 바래므로 신중히
+ *   --density        이 동작에 몇 프레임이 필요한지 잰다(추출 대신 분석만)
+ *   --refine         --from 을 고정하고 --to 를 찾아 준다(구간을 정확히 한 사이클로)
  *   --best           박자만 보지 말고 '머리는 고요하고 다리만 움직이는' 구간을 고른다
  *                    (다리 있는 지상 유닛 전용 — 공중 유닛·건물엔 의미 없다)
  *
@@ -36,7 +38,7 @@ const VID = argv[0];
 const opt = (k, d) => { const i = argv.indexOf('--' + k); return i < 0 ? d : argv[i + 1]; };
 const flag = k => argv.includes('--' + k);
 if (!VID || VID.startsWith('--')) {
-  console.error('사용: node scripts/unit-frames.mjs <영상경로> [--out 폴더] [--frames 8] [--from 초 --to 초] [--scan] [--size px] [--sheet] [--webp] [--best] [--keep-bg] [--degreen n]');
+  console.error('사용: node scripts/unit-frames.mjs <영상경로> [--out 폴더] [--frames 8] [--from 초 --to 초] [--scan] [--size px] [--sheet] [--webp] [--best] [--density] [--refine] [--keep-bg] [--degreen n]');
   process.exit(2);
 }
 if (!fs.existsSync(VID)) { console.error('영상이 없습니다: ' + VID); process.exit(2); }
@@ -306,6 +308,124 @@ try {
   if (B === null) B = Math.min(dur * 0.99, A + 1.7);
 
   if (flag('scan')) { console.log('\n--scan: 측정만 하고 끝냅니다.'); }
+  else if (flag('refine')) {
+    // ── 구간 끝을 맞춘다 ──────────────────────────────────────────────
+    // --from 은 사람이 고른다(어느 걸음이 예쁜가는 눈으로만 안다). 끝은 계산으로 찾는다:
+    // 시작 프레임과 가장 비슷해지는 시각이 곧 한 바퀴 돈 지점이다.
+    // ⚠ 사람이 고른 구간도 실제로는 한 사이클이 아닌 경우가 많았다(이음새가 평균의 3배).
+    //   프레임을 늘려도 그 튐은 안 없어진다 — 끝을 맞춰야 없어진다.
+    const span = (B - A) * 1.6, STEPS = 120;
+    await reload();
+    const targets = Array.from({ length: STEPS }, (_, i) => A + span * (i / STEPS));
+    const shots = await capture(targets, null);
+    const CUT = !flag('keep-bg');
+    const small = [];
+    for (const s of shots) {
+      let buf = Buffer.from(s.png.split(',')[1], 'base64');
+      if (CUT) buf = (await cutout(buf)).png;
+      small.push(await sharp(buf).resize(128, 128, { fit: 'contain', background: '#00000000' })
+        .ensureAlpha().raw().toBuffer());
+    }
+    const dif = (a, b) => { let t = 0;
+      for (let i = 0; i < a.length; i += 4) { const wa = a[i + 3] / 255, wb = b[i + 3] / 255;
+        t += Math.abs(a[i] * wa - b[i] * wb) + Math.abs(a[i + 1] * wa - b[i + 1] * wb) +
+             Math.abs(a[i + 2] * wa - b[i + 2] * wb) + Math.abs(a[i + 3] - b[i + 3]); }
+      return t / (a.length / 4) / 4; };
+    const dt2 = span / STEPS;
+    const lo = Math.round((B - A) * 0.65 / dt2), hi = Math.min(STEPS - 1, Math.round((B - A) * 1.45 / dt2));
+    let best = Infinity, at = lo;
+    const curve = [];
+    for (let i = lo; i <= hi; i++) { const d = dif(small[0], small[i]);
+      curve.push({ t: i * dt2, d }); if (d < best) { best = d; at = i; } }
+    console.log('\n=== 구간 끝 맞추기 (시작 ' + A.toFixed(2) + '초 고정) ===');
+    console.log('길이(초)  시작프레임과의 차이');
+    for (let k = 0; k < curve.length; k += Math.max(1, Math.floor(curve.length / 14))) {
+      const c = curve[k];
+      console.log('  ' + c.t.toFixed(2).padStart(5) + '   ' + c.d.toFixed(1).padStart(5) + ' ' +
+        '█'.repeat(Math.max(1, Math.round(c.d))) + (Math.abs(c.t - at * dt2) < dt2 / 2 ? '   ← 최소' : ''));
+    }
+    console.log('\n권장:  --from ' + A.toFixed(2) + ' --to ' + (A + at * dt2).toFixed(2) +
+      '   (길이 ' + (at * dt2).toFixed(2) + '초 · 이음새 ' + best.toFixed(1) + ')');
+    console.log('       원래 길이 ' + (B - A).toFixed(2) + '초 대비 ' +
+      (((at * dt2) / (B - A) - 1) * 100).toFixed(0) + '%');
+  }
+  else if (flag('density')) {
+    // ── 몇 프레임이면 충분한가 ────────────────────────────────────────
+    // 8장은 확정값이 아니다. 느린 동작은 8장으로 충분하고 빠른 동작은 끊겨 보인다.
+    // 한 사이클을 촘촘히(32장) 뽑아 두고, 거기서 N장씩 솎아 냈을 때 프레임 사이가
+    // 얼마나 벌어지는지 잰다. 벌어짐이 더 이상 안 줄어드는 지점이 그 유닛의 N 이다.
+    // ⚠ 이건 픽셀 통계로 답이 나오는 문제다 — '걸음이 이어지는가'와 다르다(SPRITES.md §4).
+    const DENSE = 32;
+    await reload();
+    const targets = Array.from({ length: DENSE }, (_, i) => A + (B - A) * (i / DENSE));
+    const shots = await capture(targets, null);
+    const CUT = !flag('keep-bg');
+    const small = [];
+    for (const s of shots) {
+      let buf = Buffer.from(s.png.split(',')[1], 'base64');
+      if (CUT) buf = (await cutout(buf)).png;
+      small.push(await sharp(buf).resize(128, 128, { fit: 'contain', background: '#00000000' })
+        .ensureAlpha().raw().toBuffer());
+    }
+    const dif = (a, b) => { let t = 0;
+      for (let i = 0; i < a.length; i += 4) {
+        const wa = a[i + 3] / 255, wb = b[i + 3] / 255;
+        t += Math.abs(a[i] * wa - b[i] * wb) + Math.abs(a[i + 1] * wa - b[i + 1] * wb) +
+             Math.abs(a[i + 2] * wa - b[i + 2] * wb) + Math.abs(a[i + 3] - b[i + 3]);
+      }
+      return t / (a.length / 4) / 4; };
+    // ⚠ 이음새(마지막→첫)를 섞어 재면 안 된다. 그건 밀도가 아니라 구간이 한 사이클인지의
+    //   문제라, 프레임을 아무리 늘려도 안 줄어든다(32장에서도 11.6 이 나왔다).
+    //   여기서는 '안쪽 최대'로 밀도를 재고 이음새는 따로 보고한다.
+    console.log('\n=== 프레임 수별 벌어짐 (한 사이클을 ' + DENSE + '장으로 재서 솎음) ===');
+    console.log(' N    평균   안쪽최대   8장대비');
+    const rows = [];
+    for (const N of [6, 8, 10, 12, 16, 24, 32]) {
+      if (N > DENSE) continue;
+      const idx = Array.from({ length: N }, (_, i) => Math.round(i * DENSE / N) % DENSE);
+      const inner = [];
+      for (let i = 0; i + 1 < N; i++) inner.push(dif(small[idx[i]], small[idx[i + 1]]));
+      rows.push({ N, mean: inner.reduce((a, b) => a + b, 0) / inner.length, max: Math.max(...inner),
+        seam: dif(small[idx[N - 1]], small[idx[0]]) });
+    }
+    const base = (rows.find(r => r.N === 8) || rows[0]).max;
+    for (const r of rows)
+      console.log(String(r.N).padStart(2) + '  ' + r.mean.toFixed(1).padStart(6) +
+        '  ' + r.max.toFixed(1).padStart(8) + '   ' + (r.max / base).toFixed(2).padStart(6) +
+        '  ' + '█'.repeat(Math.max(1, Math.round(r.max / base * 12))));
+    const seam = rows[rows.length - 1].seam;
+    console.log('\n이음새(마지막→첫) ' + seam.toFixed(1) +
+      (seam > rows[rows.length - 1].mean * 2.5
+        ? '  ⚠ 구간이 한 사이클이 아니다 — 프레임 수가 아니라 --from/--to 를 고칠 것'
+        : '  ✔ 한 사이클이 맞다'));
+    // 안쪽 최대가 목표치 아래로 내려가는 **가장 작은** N.
+    // 목표 7.0 은 실측에서 잡았다 — 돌진수(사족·느림)는 8장에서 6.3 으로 매끄러웠고,
+    // 채집수(육족·빠름)는 8장에서 10.7 로 끊겨 보였다. 그 사이가 7 근처다.
+    // ⚠ '개선폭이 10% 미만이면 멈춘다' 식으로 잡으면 곡선이 울퉁불퉁해서 6장에서 멈춰 버린다.
+    const TARGET = 7.0;
+    const hit = rows.find(r => r.max <= TARGET);
+    console.log('권장 ' + (hit ? hit.N + '장 (안쪽최대 ' + hit.max.toFixed(1) + ' ≤ ' + TARGET + ')'
+      : '32장 이상 — 이 동작은 8장으로 못 담는다'));
+    console.log('⚠ 숫자는 참고다. 아래 시트를 눈으로 보고 정할 것.');
+    // 후보별 시트
+    const T = 150, tiles = [];
+    for (let r = 0; r < rows.length; r++) {
+      const N = rows[r].N, idx = Array.from({ length: N }, (_, i) => Math.round(i * DENSE / N) % DENSE);
+      for (let i = 0; i < Math.min(N, 16); i++) {
+        let buf = Buffer.from(shots[idx[i]].png.split(',')[1], 'base64');
+        if (CUT) buf = (await cutout(buf)).png;
+        const lbl = '<svg width="' + T + '" height="' + T + '"><text x="3" y="14" font-size="12" fill="#ff0" ' +
+          'font-family="monospace">' + N + '장 ' + i + '</text></svg>';
+        tiles.push({ input: await sharp(buf).resize(T, T, { fit: 'contain', background: '#00000000' })
+          .composite([{ input: Buffer.from(lbl), top: 0, left: 0 }]).png().toBuffer(), top: r * T, left: i * T });
+      }
+    }
+    fs.mkdirSync(OUT, { recursive: true });
+    const sh = path.join(OUT, '_density.jpg');
+    await sharp({ create: { width: 16 * T, height: rows.length * T, channels: 3, background: '#6e6e6e' } })
+      .composite(tiles).jpeg({ quality: 84 }).toFile(sh);
+    console.log('✓ ' + sh + '  (줄마다 프레임 수 · 16장까지만 표시)');
+  }
   else {
     // ── ② 구간 안에서 균등 추출 ────────────────────────────────────
     fs.mkdirSync(OUT, { recursive: true });
