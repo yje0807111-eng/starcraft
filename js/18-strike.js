@@ -55,7 +55,8 @@ const STK_TABLABEL ={ Build:'건설지', Upgrade:'특수무기', Players:'관전
 // ⚠ 인게임 탭 이름의 **실제 소스는 이 표**다 — startGameNow 가 strikeSetTabLabels(STK_NEMOLABEL) 로
 //    마크업 글자를 덮어쓴다. 마크업(#tabs 의 .tab 안 글자)은 게임 시작 전에만 보이므로 둘을 같이 고칠 것.
 const STK_NEMOLABEL={ Main:'관리', Unit:'유닛뽑기', Upgrade:'업그레이드', Players:'플레이어', Build:'건설' };
-const STK_TECH_RACE={ terran:'union', zerg:'swarm', protoss:'aetherial' };   // 직스 종족 → 관리자 건설 트리 종족
+const STK_TECH_RACE={ terran:'union', zerg:'swarm', protoss:'aetherial', feral:'feral', colossus:'colossus' };   // 직스 종족 → 관리자 건설 트리 종족(신규 2종족은 키가 같다)
+function stkTechRace(r){ return STK_TECH_RACE[r]||r; }   // ⚠ TECH_BLDG_UNIT·TECH_TREE·STK_RACE_SPAWN 는 전부 '건설 트리 종족 키'다. STK 종족 키로 바로 찾으면 조용히 빈 표가 나온다.
 const STK_TECH_COLS=48;      // 오토배틀 건설지 가로 칸 수(관리자 20칸 → 보드처럼 넓게, 이전 32칸의 1.5배)
 const STK_TECH_ROWS=30;      // 세로 칸 수(이전 12칸의 2.5배) — 밴드 높이는 이 행 수로 산출
 const STK_TECH_TOP=0.14;     // 밴드 위 경계 — 위쪽 진입 불가 구역은 얇게, 아래쪽을 넓게 남겨 하단 프로필 시트와 겹치지 않게
@@ -129,7 +130,7 @@ function strikeWpnTotal(){ const S=STK; if(!S||!S.me||!S.me.wpn) return 0;
   return STK_WEAPONS.reduce((n,w)=>n+(S.me.wpn[w.k]||0),0); }
 // 유닛 강화 배율(소환 시 적용) — 공격 +12%/Lv, 체력 +16%/Lv
 // 종족 전투 파워 배수(hp·공격 동시) — 배출 배수(테마)는 고정하고 이 값으로 종족 균형을 맞춘다. 밸런싱 단일 소스.
-const STK_RACE_POWER={ union:1.00, swarm:1.00, aetherial:1.00 };   // 종족 세기는 스탯(공격·체력)으로만 조절 — 전역 파워 배수는 중립(1). 상성이 승패를 결정하도록.
+const STK_RACE_POWER={ union:1.00, swarm:1.00, aetherial:1.00, feral:1.00, colossus:1.00 };   // 종족 세기는 스탯(공격·체력)으로만 조절 — 전역 파워 배수는 중립(1). 상성이 승패를 결정하도록.
 function _racePow(side){ return (side && STK_RACE_POWER[side.race]) || 1; }
 function strikeAtkMul(side){ return (1 + (side.atkLv||0)*0.12) * _racePow(side); }
 function strikeHpMul(side){ return (1 + (side.hpLv||0)*0.16) * _racePow(side); }
@@ -184,7 +185,7 @@ function strikeStart(activePlayers, myNum, names){ if(typeof bgmStop==='function
       return { uid:'cmp_'+s.id, id:s.id, nm:s.nm, x:W*0.5+(c-1.5)*sp, y:W*0.5+(r-0.5)*sp }; });
     if(window.M3D && M3D.loadMapModels) M3D.loadMapModels('cpu', ()=>{});
   }
-  if(typeof techUIInit==='function') techUIInit(STK_TECH_RACE[STK.me.race]||'union');   // 🏗 건설지 = 관리자 건설 시스템(G.tech)을 내 종족으로 초기화
+  if(typeof techUIInit==='function') techUIInit(stkTechRace(STK.me.race));   // 🏗 건설지 = 관리자 건설 시스템(G.tech)을 내 종족으로 초기화
   if(G.tech) G.tech.minerals=[];   // 오토배틀은 채취 경제 미사용 → 자원 노드 없음(일꾼은 건설만)
   if(G.tech){ const _wk=G.tech.ents.find(e=>e.type==='worker');   // 시작 일꾼 4기(기본 1기 + 3기)
     for(let i=1;i<STK_TECH_WORKERS;i++) G.tech.ents.push({eid:G.tech.eseq++, type:'worker', x:(_wk?_wk.x:0.3)+i*_techCW()*1.2, y:(_wk?_wk.y:0.4)}); }
@@ -418,10 +419,23 @@ function strikeSkillCost(sk){ return (sk && sk.enSc!=null) ? sk.enSc : ((sk&&sk.
 function strikeSkillAtkMul(u){ let m=1; const b=u.buff||{}, on=u.skillOn||{};
   if(b.stim>0) m*=(SKILLS.stim.atkMul||1); if(on.siege) m*=(SKILLS.siege.atkMul||1); return m; }
 function strikeRngMul(u){ return (u.skillOn&&u.skillOn.siege)?(SKILLS.siege.rngMul||1):1; }
+// ══ 🐺 광폭화(페럴 고유) — 아군이 처치할 때마다 **진영 전체** 스택 +1. 스택당 공속 +1%·이속 +0.5%.
+//    전투가 끊기면 감쇠한다. ⚠ 진영 값이지 유닛 값이 아니다 — 페럴이 아닌 진영은 스택이 안 쌓인다.
+const STK_FRZ_CAP=20, STK_FRZ_CD=0.01, STK_FRZ_SPD=0.005, STK_FRZ_HOLD=3.0, STK_FRZ_DECAY=1.6;   // 상한 · 스택당 공속/이속 · 유지(초) · 초당 감쇠
+function strikeFrenzy(sd){ return (sd&&sd.race==='feral')?(sd._frz||0):0; }
+function strikeFrzCdMul(u,sd){ return 1/(1+STK_FRZ_CD*strikeFrenzy(sd)); }     // 공속↑ = 쿨 ↓
+function strikeFrzSpdMul(u,sd){ return 1+STK_FRZ_SPD*strikeFrenzy(sd); }
+function strikeFrzKill(sd){ if(!sd||sd.race!=='feral') return; sd._frz=Math.min(STK_FRZ_CAP,(sd._frz||0)+1); sd._frzT=STK_FRZ_HOLD; }
+function strikeFrzStep(sd,dt){ if(!sd||sd.race!=='feral'||!sd._frz) return;
+  if((sd._frzT=(sd._frzT||0)-dt)<=0) sd._frz=Math.max(0, sd._frz-STK_FRZ_DECAY*dt); }
 // (제거) strikeSpdMul — 미사용(스팀 속도 로직은 14x 인라인으로 중복)
 // 종족 스탯 정규화 배율 — 파워 배수(중립1) 대신 "세기를 스탯으로" 조절하는 단일 노브.
 //   스폰 수 차이(스웜 다수·에테리얼 소수)를 상쇄해 army 밸런스 ~50%. hp·공격 양쪽에 곱(전투 소스 strikeUnitStats에만 반영 → 표시=전투 일치).
-const STK_RACE_STAT={ union:1.00, swarm:0.83, aetherial:1.15 };   // 개별튜닝(blade·dragoon 너프 등)으로 이동한 종족 총합 재센터링
+// ⚠ 2026-08-20 오각형 편입 때 실제 엔진 자동 플레이(양 진영 AI · 테크 깊이 2~7 · 판당 승패)로 다시 쟀다.
+//   그 전까지 AI 진영은 종족 키 불일치로 웨이브마다 **무작위 2기**만 냈다(strikeSpawnForPlayer). 그 버그를 고치자
+//   기존 값(swarm 0.83 · aetherial 1.15)이 실제 대전에서 스웜 22% · 에테리얼 92% 로 무너져서 함께 재조정했다.
+//   ⛔ 여기 값을 손대면 RACES.md §8 표를 다시 재고 갱신할 것 — 해석적 추정은 이 프로젝트에서 여러 번 빗나갔다.
+const STK_RACE_STAT={ union:1.00, swarm:0.94, aetherial:1.22, feral:1.00, colossus:1.12 };   // 오각형 상성 기준(RACES.md §6)
 function strikeUnitStats(id){ const s=STK_UNITS[id], d=U[id]||{};
   const rs=(typeof RACE_OF!=='undefined'&&STK_RACE_STAT[RACE_OF[id]])||1;   // 종족 세기 배율(스탯)
   const rng=(d.range!=null?d.range:0.2)*STK_RNG_MUL;                       // 사거리
@@ -431,10 +445,12 @@ function strikeUnitStats(id){ const s=STK_UNITS[id], d=U[id]||{};
   const armor=((s&&s.sarmor!=null)?s.sarmor:(d.armor||0));        // 방어 — strike 오버라이드(sarmor) 우선, 없으면 U
   const shield=((s&&s.sshield!=null)?s.sshield:(d.shield||0));    // 실드 — strike 오버라이드(sshield) 우선, 없으면 U
   const sharmor=((s&&s.sharmor!=null)?s.sharmor:(d.shArmor||0));  // 실드 전용 방어(방어와 별도)
+  // 🗿 최소 사거리·전개 — 사거리와 **같은 배율**로 환산해야 대역이 어긋나지 않는다(RACES.md §5)
+  const minRng=(d.minRange||0)*STK_RNG_MUL, dep=(d.deploy||0);
   if(s){ return { hp:Math.round(s.hp*rs), dmg:dmg, rng:rng, cdMax:cd, spd:spd, armor:armor, shield:shield, sharmor:sharmor,   // 체력·공격 × 종족배율
-      color:d.color||'#cfd6e2', size:strikeBodyR(id), splash:s.splash||0, melee:!!s.melee, acq:strikeAcq(rng) }; }
+      color:d.color||'#cfd6e2', size:strikeBodyR(id), splash:s.splash||0, melee:!!s.melee, acq:strikeAcq(rng), minRng:minRng, dep:dep }; }
   return { hp:Math.round((d.hp||40)*3*rs), dmg:dmg, rng:rng, cdMax:cd, spd:spd, armor:armor, shield:shield, sharmor:sharmor,   // 폴백(오토배틀 전용값 없는 유닛) — 체력만 U에서 환산 × 종족배율
-    color:d.color||'#cfd6e2', size:d.size||13, splash:0, melee:false, acq:strikeAcq(rng) }; }
+    color:d.color||'#cfd6e2', size:d.size||13, splash:0, melee:false, acq:strikeAcq(rng), minRng:minRng, dep:dep }; }
 function strikeHit(tgt, rawAtk, atk){   // 표준 데미지 적용: 실드 먼저(상성 무시) → 체력((공격−방어)×상성)
   if(tgt.sh>0){ const d=Math.max(0.5, rawAtk-(tgt.shArmor||0));   // 실드 상태: 상성 무시 · 실드 전용 방어
     if(d<=tgt.sh){ tgt.sh-=d; return; } tgt.hp-=(d-tgt.sh); tgt.sh=0; return; }   // 실드 초과분만 체력으로
@@ -451,6 +467,7 @@ function strikeSpawnUnit(side, forceId){ const S=STK, me=S[side]; if(!me||me.uni
   me.units.push({uid:'su'+(S.uidSeq=(S.uidSeq||0)+1), id:id, side:side, x:x, y:y, pcol:pcol,
     maxEn:((U[id]||{}).energy||0), en:((U[id]||{}).energy||0), skillCd:{}, skillOn:{}, buff:{},
     hp:_hp, maxHp:_hp, armor:st.armor||0, sh:_sh, maxSh:_sh, shArmor:st.sharmor||0, dmg:_dmg, rng:st.rng, acq:st.acq, splash:st.splash||0, melee:!!st.melee, tgtUid:null, cd:Math.random()*st.cdMax, cdMax:st.cdMax, spd:st.spd, color:st.color, size:st.size,
+    minRng:st.minRng||0, dep:st.dep||0, depT:st.dep||0,   // 🗿 최소 사거리 · 전개(정지 후 사격까지 지연) — depT 는 남은 전개 시간
     _flank:(Math.random()<0.5?1:-1),   // 좌우 전개 선호(대칭 혼잡 시 분산 방향)
     wait:0.5, face:Math.atan2(c-x, c-y), dead:false}); }   // 인지범위/광역/근접 스탯 반영 / 0.5초 대기 후 진격
 const STK_RALLY_D=560, STK_RALLY_R=150;   // 소환 후 집결 지점(본진 앞 대각선 거리) · 집결 완료 판정 반경
@@ -591,11 +608,12 @@ function strikeMoveToward(u,tx,ty,dt){ const S=STK; if(!S) return;
     else { u._pgHold=(_net<Math.max(12,(u.size||14)*0.5)); u._pgT=u._pgHold?STK_PG_HOLD:STK_PG_WIN; }
     u._pgX=u.x; u._pgY=u.y; }
   if(u._pgHold){ u._vx=0; u._vy=0; if(u._mvp){ u._mvp.vx=0; u._mvp.vy=0; } u.moving=false; return; }
+  if(u.dep>0) u.depT=u.dep;   // 🗿 움직이면 전개가 다시 걸린다(자리 잡는 시간이 곧 기동 페널티다)
   if(typeof stepUnitMove!=='function'){ const dx=tx-u.x, dy=ty-u.y, d=Math.hypot(dx,dy)||1;   // 폴백(공용 함수 없음)
     u.x+=dx/d*u.spd*dt; u.y+=dy/d*u.spd*dt; u.face=Math.atan2(dx,dy); u.moving=true; return; }
   const SP=STK_MOVE_SPAN, key=u.gm||u.id;
   if(u.skillOn&&u.skillOn.siege){ u.moving=false; return; }   // 공성 모드 = 고정
-  const p=u._mvp||(u._mvp={}); p.x=u.x/SP; p.y=u.y/SP; p.vx=u._vx||0; p.vy=u._vy||0; p.face=u.face; p._skSpdMul=(1/((typeof MOVE_MUL!=='undefined')?MOVE_MUL:1))*((u.buff&&u.buff.stim>0)?(SKILLS.stim.spdMul||1):1);   // 공용 함수는 def.moveSpd×MOVE_MUL로 달린다 → 오토배틀 기준 속도(moveSpd×1800)로 환산
+  const p=u._mvp||(u._mvp={}); p.x=u.x/SP; p.y=u.y/SP; p.vx=u._vx||0; p.vy=u._vy||0; p.face=u.face; p._skSpdMul=(1/((typeof MOVE_MUL!=='undefined')?MOVE_MUL:1))*((u.buff&&u.buff.stim>0)?(SKILLS.stim.spdMul||1):1)*strikeFrzSpdMul(u, S[u.side]);   // 공용 함수는 def.moveSpd×MOVE_MUL로 달린다 → 오토배틀 기준 속도(moveSpd×1800)로 환산 · 🐺 광폭화 이속
   const R=(u.size+46)*7, R2=R*R, staticN=[];
   { const _nb=strikeNear(u.x, u.y, R, u._nbBuf||(u._nbBuf=[]));   // ⚡ 격자 근접 질의(전체 순회 제거)
     for(let i=0;i<_nb.length;i++){ const o=_nb[i]; if(o===u||o.dead||o.moving) continue;   // 멈춰 있는 유닛만 회피 대상
@@ -1015,7 +1033,11 @@ const STK_TIERS={               // 종족이 달라도 같은 인덱스 = 같은
   zerg:   [['snapper'],['snapper','hydra'],['hydra','broodling','venom'],['venom','thornqueen','stinger'],
            ['thornqueen','matron','stinger'],['matron','medusa','ultralisk'],['ultralisk','medusa','behemoth']],
   protoss:[['blade'],['blade','dragoon'],['dragoon','falcon','dark_templar'],['falcon','archon','skydancer'],
-           ['archon','skydancer','dark_templar'],['archon','kronos','archangel'],['archangel','kronos','skydancer']] };
+           ['archon','skydancer','dark_templar'],['archon','kronos','archangel'],['archangel','kronos','skydancer']],
+  feral:  [['wolfrunner'],['wolfrunner','thornspitter'],['thornspitter','clawfighter','hornedcharger'],['clawfighter','howlslinger','venomfang'],
+           ['venomfang','stalkercat','alphawolf'],['alphawolf','wyvernrider','skytalon'],['wyvernrider','skytalon','stormroc']],
+  colossus:[['gunner'],['gunner','guardwalker'],['guardwalker','twincannon','flakbattery'],['twincannon','flakbattery','arclight'],
+           ['arclight','railgun','skylance'],['railgun','skylance','siegecolossus'],['skylance','siegecolossus','railgun']] };
 function _stkTierList(side){ const S=STK, t=STK_TIERS[S[side].race]||STK_TIERS.terran;
   const i=Math.min(t.length-1, Math.floor((S.round||0)/STK_STRESS_STEP));
   return t[i].filter(u=>STK_UNITS[u]) .length ? t[i].filter(u=>STK_UNITS[u]) : ['marine']; }
@@ -1072,10 +1094,12 @@ function strikeSpawnForPlayer(side, e){ const S=STK; let n=0;
     if(out.length && G.tab==='Build' && typeof techUIRender==='function') techUIRender();
     return n; }
   // 🤖 원격/AI 플레이어 = 그 종족 건물 구성으로 배출. 규모는 로컬 플레이어의 완성 생산건물 수에 연동(난이도 균형 유지).
-  const keys=Object.keys(TECH_BLDG_UNIT[e.race]||{}); if(!keys.length) return 0;
+  //   ⚠ e.race 는 직스 종족 키(terran/zerg/protoss)라 그대로 찾으면 표가 비어 폴백 2기만 나왔다(오각형 측정 전 발견한 버그).
+  const arace=stkTechRace(e.race);
+  const keys=Object.keys(TECH_BLDG_UNIT[arace]||{}); if(!keys.length) return 0;
   let pb=0; if(G.tech && G.tech.ents){ const mr=G.tech.race; for(const b of G.tech.ents){ if(b.type==='bldg' && (b.bt||0)<=0 && !b._dead && techBldgUnit(mr,b.bk)) pb++; } }
   pb=Math.max(2, pb);   // 최소 2
-  for(let i=0;i<pb;i++) _emit(e.race, keys[i%keys.length]);
+  for(let i=0;i<pb;i++) _emit(arace, keys[i%keys.length]);
   return n; }
 function strikeSpawnWave(){ const S=STK; if(!S) return;   // 출격 주기: 각 팀에서 이번 차례인 플레이어 1명씩만 출격
   if(S.stress){ strikeSpawnStress(); return; }   // 🧪 관측 모드 = 건물 무시, 양 진영 대칭 소환
@@ -1151,6 +1175,7 @@ function strikeTempleClampUnits(){ const S=STK; if(!S) return; const all=S.me.un
 function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
   strikeGridBuild();   // ⚡ 프레임 1회 격자 구축 — 회피 이웃 질의에 재사용
   for(const side of ['me','ai']){ const me=S[side], foe=S[side==='me'?'ai':'me'], col=side==='me'?'#7fd0ff':'#ff8a96';
+    strikeFrzStep(me, dt);   // 🐺 광폭화 감쇠(전투가 끊기면 줄어든다) — 진영당 프레임 1회
     const front=strikeFrontStruct(side);   // 가장 앞 신전 1개만 타겟(뒤 신전은 못 때림)
     const _load=new Map();   // 표적별 현재 배정 인원 — 한 표적에 전군이 몰리는 것을 막는다
     for(const x of me.units){ if(x.tgtUid) _load.set(x.tgtUid,(_load.get(x.tgtUid)||0)+1); }
@@ -1212,15 +1237,23 @@ function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
           if(u.tgtUid) _load.set(u.tgtUid, (_load.get(u.tgtUid)||0)+1); } }
       let _toTemple=!tgt, _fireT=false;   // _toTemple=신전 분기로 처리 · _fireT=표적에 못 닿는 동안 사거리 안 신전을 대신 사격
       if(tgt){ const d=Math.hypot(tgt.x-u.x,tgt.y-u.y);   // 유닛 우선 교전
-        if(d<=strikeReach(u,tgt)){ u.moving=false; u._blk=0; u._swp=0; u.face=Math.atan2(tgt.x-u.x, tgt.y-u.y); u.cd-=dt;
-          if(u.cd<=0){ u.cd=u.cdMax; u.fireSeq=(u.fireSeq||0)+1; strikeHit(tgt, u.dmg*strikeSkillAtkMul(u)*strikeAtkMul(me), u); strikeFx(u,tgt.x,tgt.y,col);   // fireSeq++ = 3D 공격 모션 · 실드/방어/상성 표준 적용
+        // 🗿 최소 사거리 — 이보다 가까우면 **쏠 수 없다**. 뒤로 물러나 거리를 되찾는다.
+        //   ⚠ 이것이 '페럴 > 콜로서스'의 핵심이다(RACES.md §1). 물러나면 전개도 다시 걸려 화력이 더 늦는다.
+        if(u.minRng>0 && d < u.minRng+(u.size||14)*0.95){
+          const _ax=u.x-(tgt.x-u.x), _ay=u.y-(tgt.y-u.y);   // 표적 반대 방향
+          strikeMoveToward(u, _ax, _ay, dt); u.depT=u.dep; u._blk=0; }
+        else if(d<=strikeReach(u,tgt)){ u.moving=false; u._blk=0; u._swp=0; u.face=Math.atan2(tgt.x-u.x, tgt.y-u.y);
+          // 🗿 전개 — 멈춘 뒤 dep 초가 지나야 쏜다. 움직이면 다시 채워진다(strikeMoveToward 가 채운다).
+          if(u.depT>0){ u.depT-=dt; }
+          else { u.cd-=dt;
+          if(u.cd<=0){ u.cd=u.cdMax*strikeFrzCdMul(u,me); u.fireSeq=(u.fireSeq||0)+1; strikeHit(tgt, u.dmg*strikeSkillAtkMul(u)*strikeAtkMul(me), u); strikeFx(u,tgt.x,tgt.y,col);   // fireSeq++ = 3D 공격 모션 · 실드/방어/상성 표준 적용
             { const _uAir=strikeIsAir(u);
               if(!tgt.tgtUid && (!tgt._atk || (_uAir? tgt._atk.air : tgt._atk.gnd))) tgt.tgtUid=u.uid;   // 반격은 때릴 수 있을 때만
               tgt._acqT=0; tgt._inrT=0;                           // 맞으면 즉시 재판단(사거리 안 스캔 주기도 리셋)
               strikeAlert(foe.units, u.uid, tgt.x, tgt.y, 420, _uAir); }   // 주변 아군 가담(때릴 수 있는 아군만)
             if(u.splash>0){ const sr2=u.splash*u.splash, sd=u.dmg*0.6;   // 광역: 타겟 주변 적에게 60% 추가타
-              for(const e of foe.units){ if(e===tgt||e.dead) continue; const ex=e.x-tgt.x, ey=e.y-tgt.y; if(ex*ex+ey*ey<=sr2){ strikeHit(e, sd, u); if(e.hp<=0){ e.dead=true; me.kills=(me.kills||0)+1; me.gold+=strikeKillGold(e); } } } }   // 실드/방어/대상별 상성
-            if(tgt.hp<=0){ tgt.dead=true; me.kills=(me.kills||0)+1; me.gold+=strikeKillGold(tgt); } } }   // 처치 집계 + 킬 보상
+              for(const e of foe.units){ if(e===tgt||e.dead) continue; const ex=e.x-tgt.x, ey=e.y-tgt.y; if(ex*ex+ey*ey<=sr2){ strikeHit(e, sd, u); if(e.hp<=0){ e.dead=true; me.kills=(me.kills||0)+1; me.gold+=strikeKillGold(e); strikeFrzKill(me); } } } }   // 실드/방어/대상별 상성 + 🐺 광폭화
+            if(tgt.hp<=0){ tgt.dead=true; me.kills=(me.kills||0)+1; me.gold+=strikeKillGold(tgt); strikeFrzKill(me); } } } }   // 처치 집계 + 킬 보상 + 🐺 광폭화 스택
         else { const _gq=(front&&!front.dead)?strikeTempleGap(front,u.x,u.y):1e9;
           // ⚠ 적 표적이 있으면 **접근이 실제로 막혔을 때만** 신전을 때린다.
           //   예전엔 "표적이 아직 사거리 밖"이기만 하면 그 자리에서 신전을 쐈고(_fireT=true),
@@ -1805,15 +1838,17 @@ function strikeWheel(e){ const S=STK; if(!S) return; if(e.cancelable) e.preventD
 // ════════════════════════════════════════════════════════════════
 // 이펙트랩 로스터도 공용 RACE_ROSTER에서 생성(id/gm 모두 key) — 메인·건설과 동일 유닛·이름·순서로 통일
 const FXLAB_ROSTER=(function(){ const o={}; const src=(typeof RACE_ROSTER!=='undefined')?RACE_ROSTER:{}; for(const r in src){ o[r]=src[r].map(u=>({n:u.n, id:u.key, gm:u.key})); } return o; })();
-const FXLAB_RACE_ORDER=['union','swarm','aetherial'];
-const FXLAB_RACE_KO={union:'🛡 유니온',swarm:'🦎 스웜',aetherial:'🔮 에테리얼'};
+const FXLAB_RACE_ORDER=['union','swarm','aetherial','feral','colossus'];
+const FXLAB_RACE_KO={union:'🛡 유니온',swarm:'🦎 스웜',aetherial:'🔮 에테리얼',feral:'🐺 페럴',colossus:'🗿 콜로서스'};
 const FXLAB={ store:null, attId:'marine', attGm:null, scale:1, mode:'attack', phase:'alive', t:0, cd:0, mv:1, ti:0, att:null, dummy:null, bldg:null, air:null };
 let _fxLabAttSeq=0;
 const FXLAB_AA=new Set(['marine','ghost','goliath','dragoon','archon','hydra']);   // 공중 공격 가능 유닛(나머지는 지상만)
 // 비전투(공격 안 함) = U.dmg===0 유닛에서 자동 생성 + 예외(메두사=시전형 퀸, U.dmg>0이나 랩 기본공격 없음). 손 목록 대신 공용 U에서 유도 → 드리프트 제거
-const FXLAB_NOATK=(function(){ const s=new Set(['medusa']); if(typeof U!=='undefined') for(const k in U){ if(U[k] && (U[k].dmg||0)===0) s.add(k); } return s; })();
+const FXLAB_NOATK=(function(){ const s=new Set(['medusa']); if(typeof U!=='undefined') for(const k in U){ if(U[k] && (U[k].dmg||0)===0 && !(U[k].airDmg>0)) s.add(k); } return s; })();   // ⚠ airDmg만 있는 대공 전용(대공 투석수·하늘 사냥수·플랙 배터리·아크 라이트)은 '무공격'이 아니다 — 여기 걸리면 아무것도 못 때린다
 const FXLAB_SWITCH_DELAY=0.35;   // 발사 후 방금 쏜 대상을 잠깐 더 바라본 뒤 다음 타겟으로 전환(허공 발사 방지)
-const FXLAB_AIR=new Set(['skyguard','skydancer','overlord','observer','pelican','seraph','hellfire','dreadnought','kronos','archangel','falcon','stinger','venom','medusa','wyvern','aegis','behemoth']);   // 공중(비행) 유닛 단일 출처 — 바닥 위로 부양. 3D 모듈 AIR_FLOAT도 이걸 참조
+const FXLAB_AIR=new Set(['skyguard','skydancer','overlord','observer','pelican','seraph','hellfire','dreadnought','kronos','archangel','falcon','stinger','venom','medusa','wyvern','aegis','behemoth',
+  'hawkeye','windcarrier','wyvernrider','skytalon','stormroc',            // 🐺 페럴 공중 5기(RACES.md §2)
+  'spotterdrone','supplylifter','arclight','skylance','worldbreaker']);   // 🗿 콜로서스 공중 5기(RACES.md §3)   // 공중(비행) 유닛 단일 출처 — 바닥 위로 부양. 3D 모듈 AIR_FLOAT도 이걸 참조
 try{ if(typeof window!=='undefined') window.FXLAB_AIR=FXLAB_AIR; }catch(_e){}   // M3D 모듈(별도 스코프)에서 공중 판정 공용 참조
 const FXLAB_AIR_LIFT=0.16;   // 공중유닛 부양 높이(정규화)
 const FXLAB_TGT_X=0.70, FXLAB_TGT_Y=0.52;   // 지상 타겟 기준선(시민)

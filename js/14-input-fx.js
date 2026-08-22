@@ -739,18 +739,34 @@ const RACE_ROSTER={
   union:[{n:'정비공',key:'worker_human'},{n:'레인저',key:'marine'},{n:'화력병',key:'machinegun'},{n:'의무병',key:'medic'},{n:'저격수',key:'ghost'},{n:'레이서',key:'racer'},{n:'공성전차',key:'tank'},{n:'기갑병',key:'goliath'},{n:'전투기',key:'skyguard'},{n:'수송선',key:'pelican'},{n:'지원 정찰기',key:'aegis'},{n:'폭격기',key:'hellfire'},{n:'전함',key:'dreadnought'}],
   swarm:[{n:'생산자',key:'worker_swarm'},{n:'수송충',key:'overlord'},{n:'척후병',key:'snapper'},{n:'스파이크',key:'hydra'},{n:'가시여왕',key:'thornqueen'},{n:'자폭충',key:'stinger'},{n:'비행충',key:'wyvern'},{n:'군단여왕',key:'medusa'},{n:'오염술사',key:'defiler'},{n:'산성충',key:'venom'},{n:'포격충',key:'behemoth'},{n:'스웜링',key:'broodling'},{n:'돌격괴수',key:'ultralisk'}],
   aetherial:[{n:'생산자',key:'worker_light'},{n:'센티넬',key:'dragoon'},{n:'광전사',key:'blade'},{n:'보이드',key:'archon'},{n:'팔콘',key:'falcon'},{n:'수송선',key:'seraph'},{n:'요격기',key:'skydancer'},{n:'모함',key:'archangel'},{n:'정찰기',key:'observer'},{n:'전함',key:'kronos'},{n:'다크세이지',key:'dark_templar'},{n:'하이세이지',key:'high_templar'},{n:'공성체',key:'larva'}],
+  // 🐺 페럴 · 🗿 콜로서스 — RACES.md 로스터 그대로. 일꾼이 첫 자리(다른 종족과 같은 규약)
+  feral:[{n:'채집수',key:'worker_feral'},{n:'추격수',key:'wolfrunner'},{n:'가시 사수',key:'thornspitter'},{n:'포식수',key:'clawfighter'},{n:'돌진수',key:'hornedcharger'},{n:'대공 투석수',key:'howlslinger'},{n:'맹독수',key:'venomfang'},{n:'암살수',key:'stalkercat'},{n:'주술사',key:'packshaman'},{n:'우두머리',key:'alphawolf'},{n:'정찰조',key:'hawkeye'},{n:'수송조',key:'windcarrier'},{n:'폭격 기수',key:'wyvernrider'},{n:'하늘 사냥수',key:'skytalon'},{n:'뇌격수',key:'stormroc'},{n:'원시 군주',key:'primalbeast'}],
+  colossus:[{n:'조립 드론',key:'worker_col'},{n:'포대병',key:'gunner'},{n:'가드 워커',key:'guardwalker'},{n:'트윈 캐논',key:'twincannon'},{n:'플랙 배터리',key:'flakbattery'},{n:'관측 드론',key:'spotterdrone'},{n:'레일건 플랫폼',key:'railgun'},{n:'정지장 기술자',key:'stasistech'},{n:'아크 라이트',key:'arclight'},{n:'보급 비행정',key:'supplylifter'},{n:'시즈 콜로서스',key:'siegecolossus'},{n:'스카이 랜스',key:'skylance'},{n:'궤도 앵커',key:'orbitalanchor'},{n:'월드 브레이커',key:'worldbreaker'}],
 };
 function _rosterName(key){ for(const r in RACE_ROSTER){ const f=RACE_ROSTER[r].find(u=>u.key===key); if(f) return f.n; } return (typeof U!=='undefined'&&U[key]&&U[key].name)||key; }   // 공용 표시 이름(전 구역 통일)
 // SANDBOX_ROSTER(관리자 메인 배치)는 공용 로스터에서 생성 — b/gm 모두 key(모델=스탯 키). 출력은 기존과 동일
 const SANDBOX_ROSTER=(function(){ const o={}; for(const r in RACE_ROSTER){ o[r]=RACE_ROSTER[r].map(u=>({n:u.n, b:u.key, gm:u.key})); } return o; })();
-const SANDBOX_RACE_ORDER=['union','swarm','aetherial'];   // 3종족(테란=유니온 / 저그=스웜 / 프로토스=에테리얼) — 일꾼은 각 종족 첫 자리
-const SANDBOX_RACE_KO={union:'유니온 (인간)',swarm:'스웜 (군체)',aetherial:'에테리얼 (외계)'};
+// 관리자 샌드박스 진열 순서 — 여기 있는 종족만 화면에 깔린다.
+// ⚠ 오토배틀 종족 목록(STK_RACE_ORDER)과 **다른 표다**. 페럴·콜로서스는 관리자에서 확정하는 중이라
+//    여기엔 있고 저기엔 없다 — 저쪽에 넣는 것은 유닛·건물이 확정된 뒤의 별도 작업이다.
+const SANDBOX_RACE_ORDER=['union','swarm','aetherial','feral','colossus'];   // 일꾼은 각 종족 첫 자리
+const SANDBOX_RACE_KO={union:'유니온 (인간)',swarm:'스웜 (군체)',aetherial:'에테리얼 (외계)',feral:'페럴 (수인)',colossus:'콜로서스 (거신)'};
+// 관리자 진열 — 종족·유닛이 늘어도 **한 화면에 들어오게** 간격을 역산한다.
+// ⚠ 예전엔 dy(0.072)·gap(0.04)이 상수였다. 3종족 39기 기준으로 맞춘 값이라 페럴·콜로서스를 더하자
+//    아래 두 종족이 채팅바·네비 밑으로 밀려 나갔다(2026-08-20). 총 줄 수에서 나눠 쓰도록 바꿨다.
+const SB_TOP=0.14, SB_BOT=0.90, SB_DY_MAX=0.072, SB_GAP_R=0.55;   // 위·아래 여백 · 줄 간격 상한 · 종족 사이 간격(줄 간격 배수)
 function placeSandboxUnits(){
   if(G.idSeq==null) G.idSeq=1; G.units.length=0; G._sandboxRows=[];
-  const COLS=5, dy=0.072, gap=0.04; let yc=0.17;
-  SANDBOX_RACE_ORDER.forEach(function(race){
-    const arr=SANDBOX_ROSTER[race]||[]; if(!arr.length) return;
-    G._sandboxRows.push({label:SANDBOX_RACE_KO[race]||race, y:yc-0.05});
+  const COLS=5;
+  const races=SANDBOX_RACE_ORDER.filter(function(r){ return (SANDBOX_ROSTER[r]||[]).length; });
+  const rows=races.reduce(function(n,r){ return n+Math.ceil(SANDBOX_ROSTER[r].length/COLS); }, 0);
+  // 전체 높이 = 줄들 + 종족 사이 틈. 상한을 두어 종족이 적을 땐 예전과 같은 간격을 유지한다.
+  const dy=Math.min(SB_DY_MAX, (SB_BOT-SB_TOP)/Math.max(1, rows+(races.length-1)*SB_GAP_R));
+  const gap=dy*SB_GAP_R;
+  let yc=SB_TOP;
+  races.forEach(function(race){
+    const arr=SANDBOX_ROSTER[race];
+    G._sandboxRows.push({label:SANDBOX_RACE_KO[race]||race, y:yc-dy*0.7});
     const subRows=Math.ceil(arr.length/COLS);
     arr.forEach(function(it, i){
       const c=i%COLS, r=(i/COLS)|0;
@@ -1003,13 +1019,39 @@ const STK_UNITS={
   broodling:  {name:'스웜링',  ico:'🐛', cost:70,  hp:105,  dmg:17, rng:60, cd:0.60, spd:380, size:12, melee:true},   // 스웜 초저가 고속 근접 다수 · 개별튜닝: 극단 과약(0.10) → hp80→105·dmg12→17
   ultralisk:  {name:'돌격괴수',ico:'🐂', cost:560, hp:1100, dmg:80, rng:80, cd:1.40, spd:150, size:26, melee:true},   // 스웜 대형 근접 보스(고체력)
   dark_templar:{name:'다크세이지', ico:'🌑', cost:210, hp:240,  dmg:48, rng:62, cd:1.05, spd:320, size:15, melee:true},   // 에테리얼 고화력 고속 근접 암살
+  // ── 🐺 페럴(수인) — 최단 사거리 · 최고 기동 · 광폭화(처치 스택). RACES.md §5 의 hp/cost 를 그대로 옮긴 것 ──
+  //    ⚠ rng/cd/spd 는 표시값이다. 실전투는 strikeUnitStats 가 U 에서 환산한다(U.range×850 · U.cd/22 · U.moveSpd×1800).
+  //    ⚠ 대공 전용 유닛(U.dmg=0 · airDmg 만 있음)은 오토배틀에 공중/지상 구분이 없어(RACES.md §9-4) sdmg 로 실효 공격을 준다.
+  wolfrunner:   {name:'추격수',    ico:'🐕', cost:95,  hp:170, dmg:14, rng:38,  cd:0.82, spd:432, size:15, melee:true},
+  thornspitter: {name:'가시 사수',   ico:'🦔', cost:105, hp:150, dmg:16, rng:170, cd:1.09, spd:324, size:15},
+  clawfighter:  {name:'포식수', ico:'🦡', cost:130, hp:250, dmg:20, rng:38,  cd:0.91, spd:414, size:16, melee:true},
+  hornedcharger:{name:'돌진수',   ico:'🐗', cost:190, hp:360, dmg:26, rng:43,  cd:1.27, spd:396, size:19, melee:true},
+  howlslinger:  {name:'대공 투석수', ico:'🐒', cost:140, hp:190, dmg:30, sdmg:30, rng:187, cd:1.18, spd:324, size:16},   // 대공 전용(U.dmg 0) → sdmg=airDmg
+  venomfang:    {name:'맹독수',     ico:'🐍', cost:150, hp:300, dmg:18, rng:153, cd:1.00, spd:360, size:17},
+  stalkercat:   {name:'암살수',    ico:'🦗', cost:200, hp:330, dmg:28, rng:43,  cd:0.82, spd:504, size:16, melee:true},
+  alphawolf:    {name:'우두머리',    ico:'🐺', cost:280, hp:520, dmg:34, rng:43,  cd:0.91, spd:432, size:20, melee:true},
+  wyvernrider:  {name:'폭격 기수',ico:'🦅',cost:330, hp:640, dmg:44, rng:136, cd:1.00, spd:468, size:20},
+  skytalon:     {name:'하늘 사냥수', ico:'🦇', cost:290, hp:520, dmg:38, sdmg:38, rng:170, cd:0.73, spd:540, size:18},   // 대공 전용(U.dmg 0) → sdmg=airDmg
+  stormroc:     {name:'뇌격수',   ico:'🌩', cost:430, hp:820, dmg:58, rng:187, cd:1.18, spd:396, size:24, splash:130},
+  // ── 🗿 콜로서스(거신) — 최장 사거리 · 전개(deploy) · 최소 사거리(minRange). 붙으면 무력해지는 것이 페럴 상성의 축 ──
+  gunner:       {name:'포대병',      ico:'🔩', cost:120, hp:210, dmg:22, rng:221, cd:1.36, spd:252, size:16},
+  guardwalker:  {name:'가드 워커',   ico:'🦿', cost:140, hp:400, dmg:20, rng:51,  cd:1.00, spd:360, size:18, melee:true},
+  twincannon:   {name:'트윈 캐논',   ico:'🎯', cost:250, hp:420, dmg:34, rng:255, cd:1.55, spd:216, size:20, splash:120},
+  flakbattery:  {name:'플랙 배터리', ico:'🎆', cost:190, hp:330, dmg:36, sdmg:36, rng:238, cd:0.91, spd:234, size:18},   // 대공 전용(U.dmg 0) → sdmg=airDmg
+  railgun:      {name:'레일건 플랫폼',ico:'📡',cost:400, hp:500, dmg:46, rng:306, cd:1.82, spd:180, size:21},
+  arclight:     {name:'아크 라이트', ico:'⚡', cost:250, hp:520, dmg:30, sdmg:30, rng:204, cd:0.73, spd:468, size:18},   // 대공 전용(U.dmg 0) → sdmg=airDmg
+  siegecolossus:{name:'시즈 콜로서스',ico:'🗿',cost:620, hp:900, dmg:88, rng:374, cd:2.36, spd:198, size:24, splash:150},
+  skylance:     {name:'스카이 랜스', ico:'🔱', cost:450, hp:760, dmg:50, rng:255, cd:1.27, spd:324, size:22, splash:140},
 };
 const STK_RACES={
   terran:  { key:'terran',  name:'유니온',   sub:'인간', desc:'보병·기계', col:'#4aa8ff', icon:'🛡️', units:['marine','ghost','machinegun','racer','goliath','tank','skyguard','hellfire','dreadnought'] },
   protoss: { key:'protoss', name:'에테리얼', sub:'외계', desc:'사이오닉', col:'#ffc040', icon:'🔮', units:['blade','dragoon','archon','falcon','skydancer','kronos','archangel','dark_templar'] },
   zerg:    { key:'zerg',    name:'스웜',     sub:'군체', desc:'유기체',   col:'#9fd356', icon:'🦎', units:['hydra','snapper','thornqueen','matron','venom','stinger','medusa','broodling','ultralisk'] },
+  // 🐺🗿 오각형 상성 2종족(RACES.md §1) — 키가 RACE_OF/TECH_TREE와 같다(기존 3종족만 terran/zerg/protoss 별칭을 쓴다)
+  feral:   { key:'feral',   name:'페럴',     sub:'수인', desc:'야수 무리', col:'#c98b5a', icon:'🐺', units:['wolfrunner','thornspitter','clawfighter','hornedcharger','howlslinger','venomfang','stalkercat','alphawolf','wyvernrider','skytalon','stormroc'] },
+  colossus:{ key:'colossus',name:'콜로서스', sub:'거신', desc:'중장 포격', col:'#9aa6b2', icon:'🗿', units:['gunner','guardwalker','twincannon','flakbattery','railgun','arclight','siegecolossus','skylance'] },
 };
-const STK_RACE_ORDER=['terran','zerg','protoss'];   // 표시 순서: 유니온 · 스웜 · 에테리얼 (관리자와 통일)
+const STK_RACE_ORDER=['terran','zerg','protoss','feral','colossus'];   // 표시 순서: 유니온 · 스웜 · 에테리얼 · 페럴 · 콜로서스 (관리자와 통일)
 // 종족별 생산 건물(스타식 이름) → 건물마다 출격 주기에 배정 유닛을 지정 수량만큼 자동 생산
 // fp:[w,h] = 건물 풋프린트(칸 단위, 30×20 그리드). 비율 다양화: 2×2(1:1)·2×3(1:1.5)·3×2·3×3·3×4(1.5:2)·4×3·4×4·4×5(2:2.5 최대)
 const STK_BUILDINGS={
@@ -1047,6 +1089,24 @@ const STK_BUILDINGS={
     {key:'tribunal',name:'심판정',            ico:'⏳', cost:580, fp:[4,3], produces:[{id:'kronos',    n:1}]},
     {key:'sanctum', name:'아크엔젤 성소',     ico:'👼', cost:700, fp:[4,4], produces:[{id:'archangel', n:1}]},
     {key:'archives',name:'기록 보관소',       ico:'🌑', cost:360, fp:[4,3], produces:[{id:'dark_templar', n:2}]},
+  ],
+  // 🐺 페럴 · 🗿 콜로서스 — cost = 골드 환산(m + g×1.2, RACES.md §9-1b). 배출 유닛·수량의 단일 소스는 TECH_BLDG_UNIT 이고 여기는 관전 데모용 표시.
+  feral:[
+    {key:'bonepile', name:'뼈 무덤',      ico:'🦴', cost:110, fp:[3,2], produces:[{id:'wolfrunner',  n:3}]},
+    {key:'clawpit',  name:'발톱 구덩이',  ico:'🕳', cost:175, fp:[3,2], produces:[{id:'clawfighter', n:2}]},
+    {key:'spitpit',  name:'투척 구덩이',  ico:'🪃', cost:185, fp:[4,3], produces:[{id:'venomfang',   n:2}]},
+    {key:'huntpen',  name:'사냥 우리',    ico:'🏕', cost:190, fp:[4,3], produces:[{id:'thornspitter',n:2}]},
+    {key:'windcliff',name:'바람 절벽',    ico:'🪶', cost:270, fp:[4,4], produces:[{id:'wyvernrider', n:1}]},
+    {key:'alphaden', name:'알파 소굴',    ico:'🐺', cost:320, fp:[4,4], produces:[{id:'alphawolf',   n:1}]},
+    {key:'beastpit', name:'야수 구덩이',  ico:'🦁', cost:440, fp:[4,5], produces:[{id:'stormroc',    n:1}]},
+  ],
+  colossus:[
+    {key:'strut',    name:'지지 기둥',    ico:'🏗', cost:85,  fp:[3,2], produces:[{id:'gunner',      n:3}]},
+    {key:'assembly', name:'조립 공장',    ico:'⚙️', cost:125, fp:[4,3], produces:[{id:'guardwalker', n:2}]},
+    {key:'ballistics',name:'탄도 연구소', ico:'📐', cost:150, fp:[3,2], produces:[{id:'twincannon',  n:1}]},
+    {key:'flakworks',name:'대공 공작소',  ico:'🎆', cost:215, fp:[4,3], produces:[{id:'flakbattery', n:1}]},
+    {key:'skydock',  name:'상공 도크',    ico:'🛰', cost:270, fp:[4,4], produces:[{id:'skylance',    n:1}]},
+    {key:'heavyyard',name:'중장비 야드',  ico:'🛠', cost:430, fp:[4,4], produces:[{id:'siegecolossus',n:1}]},
   ],
 };
 // 건물 key → 3D 모델 키(건물 모델 추가 시 여기에 매핑). 매핑/로드 전엔 2D 렌더로 폴백.
