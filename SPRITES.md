@@ -3,9 +3,20 @@
 **이 문서가 폴더 규칙·액션 목록의 단일 소스다.** 프레임을 뽑기 전에 여기부터 볼 것.
 17,000장 규모라 폴더 이름을 나중에 바꾸는 것은 아주 비싸다.
 
-보기: **`npm run sprites`** → http://localhost:4321/tools/sprites.html
-(색인을 갱신하고 서버를 띄운다. `tools/sprites.html` 을 그냥 더블클릭해도 열리게 만들어 두었다.)
-색인 갱신: **`node scripts/sprite-manifest.mjs`**
+**보는 법**
+
+```
+node scripts/sprite-manifest.mjs      색인 갱신 — 프레임을 넣거나 뺀 뒤 반드시
+npx -y serve -l 4321                  서버 띄우기
+→ http://localhost:4321/tools/sprites
+```
+
+`tools/sprites.html` 을 그냥 더블클릭해도 열리게 만들어 두었다(색인이 `fetch` 가 아니라
+전역 대입이라 `file://` 에서도 통과한다). 다만 확인해 둔 것은 위 서버 경로다.
+
+⚠ `package.json` 은 gitignore 되어 있다(`.gitignore` — Vercel 이 정적 사이트 대신 빌드를
+시도하는 것을 막는다). 그래서 `npm run sprites` 같은 스크립트는 **내 컴퓨터에만 있고
+클론한 곳에는 없다**. 문서에는 위처럼 명령을 직접 적는다.
 
 ---
 
