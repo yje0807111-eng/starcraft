@@ -3,7 +3,8 @@
 **이 문서가 폴더 규칙·액션 목록의 단일 소스다.** 프레임을 뽑기 전에 여기부터 볼 것.
 17,000장 규모라 폴더 이름을 나중에 바꾸는 것은 아주 비싸다.
 
-보기: **`tools/sprites.html`** 을 브라우저로 열면 된다(서버 불필요).
+보기: **`npm run sprites`** → http://localhost:4321/tools/sprites.html
+(색인을 갱신하고 서버를 띄운다. `tools/sprites.html` 을 그냥 더블클릭해도 열리게 만들어 두었다.)
 색인 갱신: **`node scripts/sprite-manifest.mjs`**
 
 ---
