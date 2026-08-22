@@ -10,6 +10,7 @@
  *   --size <px>      출력 한 변 크기(기본 원본 그대로)
  *   --sheet          대조 시트 <출력폴더>/_sheet.jpg 도 만든다
  *   --keep-bg        배경을 지우지 않는다(기본은 마젠타 배경 제거 + 알파)
+ *   --webp           png 대신 webp 로 쓴다(저장소 표준 — SPRITES.md §5)
  *   --degreen <n>    초록 얼룩 중화(0=끔·기본). 장비의 초록도 같이 바래므로 신중히
  *
  * ⚠ 전체 구간 균등 샘플링을 쓰지 않는다. AI 생성 영상은 10초에 스트라이드가 6회씩
@@ -33,7 +34,7 @@ const VID = argv[0];
 const opt = (k, d) => { const i = argv.indexOf('--' + k); return i < 0 ? d : argv[i + 1]; };
 const flag = k => argv.includes('--' + k);
 if (!VID || VID.startsWith('--')) {
-  console.error('사용: node scripts/unit-frames.mjs <영상경로> [--out 폴더] [--frames 8] [--from 초 --to 초] [--scan] [--size px] [--sheet] [--keep-bg] [--degreen n]');
+  console.error('사용: node scripts/unit-frames.mjs <영상경로> [--out 폴더] [--frames 8] [--from 초 --to 초] [--scan] [--size px] [--sheet] [--webp] [--keep-bg] [--degreen n]');
   process.exit(2);
 }
 if (!fs.existsSync(VID)) { console.error('영상이 없습니다: ' + VID); process.exit(2); }
@@ -237,10 +238,12 @@ try {
         if (c.keptPct > 60) note += ' ⚠ 배경이 덜 지워졌을 수 있음';
         if (c.keptPct < 3) note += ' ⚠ 피사체까지 지워졌을 수 있음';
       }
-      const f = path.join(OUT, 'f' + String(i).padStart(2, '0') + '.png');
+      const webp = flag('webp');
+      const f = path.join(OUT, 'f' + String(i).padStart(2, '0') + (webp ? '.webp' : '.png'));
       let im = sharp(buf);
-      if (SIZE) im = im.resize(SIZE, SIZE, { fit: 'inside' });
-      await im.png().toFile(f);
+      // fit:'contain' — 'inside' 로 줄이면 캔버스가 내용에 맞춰 달라져 프레임마다 크기가 흔들린다
+      if (SIZE) im = im.resize(SIZE, SIZE, { fit: 'contain', background: '#00000000' });
+      await (webp ? im.webp({ quality: 88, alphaQuality: 90 }) : im.png()).toFile(f);
       files.push(f);
       console.log('✓ ' + f + '  t=' + shots[i].t.toFixed(2) + 's  ' +
         (fs.statSync(f).size / 1024).toFixed(0) + 'KB' + note);

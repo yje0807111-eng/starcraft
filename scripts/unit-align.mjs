@@ -45,7 +45,8 @@ const OUT = opt('out', BASE + '_aligned');
 const MIRROR_FROM = { 5: 3, 6: 2, 7: 1 };   // 반전 대응(왼쪽 = 오른쪽의 거울)
 
 const dirOf = (base, d) => path.join(base, PREFIX + '_' + d);
-const framesIn = dir => fs.readdirSync(dir).filter(f => /^f\d+\.png$/.test(f)).sort()
+const FRAME_RE = /^f\d+\.(png|webp)$/i;   // 저장소 표준은 webp · 중간 산출물은 png 일 수 있다
+const framesIn = dir => fs.readdirSync(dir).filter(f => FRAME_RE.test(f)).sort()
   .map(f => path.join(dir, f));
 
 // 발이 바닥에 가장 많이 닿은 프레임 찾기 — 피사체 박스 아래 12% 띠의 화소 수.
@@ -85,7 +86,7 @@ for (let d = 0; d <= 4; d++) {
   fs.mkdirSync(dst, { recursive: true });
   for (let i = 0; i < fl.length; i++) {
     const from = fl[(i + at) % fl.length];
-    fs.copyFileSync(from, path.join(dst, 'f' + String(i).padStart(2, '0') + '.png'));
+    fs.copyFileSync(from, path.join(dst, 'f' + String(i).padStart(2, '0') + path.extname(from)));
   }
   // 진폭비가 낮으면 최댓값이 걸음이 아니라 노이즈일 수 있다 — 그대로 두지 말고 알려 준다
   const amp = Math.max.apply(null, sp) / Math.max(1, Math.min.apply(null, sp));
@@ -103,8 +104,12 @@ if (!flag('no-mirror')) {
     const dst = dirOf(OUT, d);
     fs.mkdirSync(dst, { recursive: true });
     const fl = framesIn(src);
-    for (let i = 0; i < fl.length; i++)
-      await sharp(fl[i]).flop().png().toFile(path.join(dst, 'f' + String(i).padStart(2, '0') + '.png'));
+    for (let i = 0; i < fl.length; i++) {
+      const e = path.extname(fl[i]).toLowerCase();
+      const im = sharp(fl[i]).flop();
+      await (e === '.webp' ? im.webp({ quality: 88, alphaQuality: 90 }) : im.png())
+        .toFile(path.join(dst, 'f' + String(i).padStart(2, '0') + e));
+    }
     console.log('방향 ' + d + '  ← 방향 ' + from + ' 좌우 반전 (' + fl.length + '장)');
   }
 }
