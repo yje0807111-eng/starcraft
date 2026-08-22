@@ -864,7 +864,7 @@
     background-repeat:repeat;background-size:28px 28px,28px 28px,132px 132px}
   /* 오토배틀 건설지: 바닥만 오토배틀 보드 타일로 교체(격자선 제거·어둡게) — 그리드·발판·프로필 등 시스템은 관리자와 동일 */
   .bmap.stk{background:#05080c}
-  .bmap.stk .bmapFloor{background:url('assets/tiles/terran_tile_light.webp?v=1');background-repeat:repeat;background-size:150px 150px}
+  .bmap.stk .bmapFloor{background:url('../assets/tiles/terran_tile_light.webp?v=1');background-repeat:repeat;background-size:150px 150px}
   .bmap.stk .bmapFloor::after{content:'';position:absolute;inset:-200%;background:rgba(7,11,16,.62)}   /* 오토배틀 보드와 같은 어두운 오버레이 */
   .bmap.stk .bHill,.bmap.stk .bGasZone{display:none}   /* ⛰ 언덕·⛽ 가스 구역 = 관리자 전용 지형(오토배틀은 채취 경제 미사용) */
   .bmap.stk .bhint{display:none}   /* 조작 안내 문구 미사용(오토배틀) */
@@ -1551,6 +1551,12 @@
   .plbtn.off .plnum{color:#b6bdc8}.plbtn.off .plst{color:#7d8590}
   .plbtn.mine{cursor:default;pointer-events:none;filter:saturate(.6) brightness(.72)}   /* 내 슬롯: 내 색 유지 · 채도↓·어둡게 · 관전 불가(잠금 아이콘 없음) */
   .plbtn.mine::after{opacity:.7}
+  /* 승리=정지된 자리: 색 그대로(관전 계속 가능) · 좌측 액센트만 또렷하게 */
+  .plbtn.done{filter:saturate(.85)}
+  .plbtn.done::after{opacity:1}
+  /* 연결 끊김: 자리는 잡혀 있고 관전도 된다 — 탈락(.gone .58)보다 덜 어둡게 두어 '아직 자리가 있다'가 읽히게 */
+  .plbtn.away{filter:saturate(.35) brightness(.72)}
+  .plbtn.away::after{opacity:.35}
   .plbtn.gone{cursor:default;pointer-events:none;filter:saturate(.55) brightness(.58)}   /* 탈락: 그 플레이어 색 유지 + 어두운 필터 · 관전 불가 */
   .plbtn.gone::after{opacity:.5}
   .plnum{font-size:18px;font-weight:800;font-family:var(--font-num);color:var(--pc);line-height:1;text-shadow:0 1px 2px #000}
@@ -1561,7 +1567,7 @@
      아래 화면들은 position:absolute 라서 폰 프레임(#phone) 안에만 적용됨. */
   .spaceBg{overflow:hidden}
   .spaceBg::before{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;
-    background:url('assets/tiles/space_bg.webp') center/360px repeat #04050b;
+    background:url('../assets/tiles/space_bg.webp') center/360px repeat #04050b;
     animation:spaceDrift 120s linear infinite}
   .spaceBg::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;
     background:

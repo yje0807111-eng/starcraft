@@ -632,10 +632,20 @@ function makeCoopBoss(lv){ const max=coopBossMaxHp(lv);
   return { lv:lv, hp:max, max:max, dead:false, name:coinBldgName(lv) }; }   // 포인트방 = 현 레벨 건물(부수면 다음 건물)
 function spawnCoopBoss(lv){ G.coopBoss=makeCoopBoss(lv); updateCoopBossBar(); }
 // 적에게 데미지를 줄 때 공용 보스 체력 차감(기여도 시스템 제거)
+// ⚠ 공격 1회마다 보내면 안 된다 — 유닛 평균 공격속도가 초당 2.02회라 파견 10기면 초당 20건이 넘고,
+//   이건 전장 스냅(10Hz)과 **별도로** 나간다. 누적해서 COOP_BOSSDMG_MS 마다 한 번만 보낸다.
+//   보스 HP 는 어차피 권위자(coopAuthNum)가 pstate 의 bs 로 수렴시키므로 정밀도 손해가 없다.
+const COOP_BOSSDMG_MS=150;
+let _bdAcc=0, _bdNum=0, _bdLast=0;
+function coopBossDmgFlush(){
+  if(_bdAcc>0 && typeof coopActive==='function' && coopActive()) coopSend('bossdmg',{ amt:_bdAcc, num:_bdNum });
+  _bdAcc=0; _bdLast=Date.now(); }
 function coopBossDamage(amt, num, remote){ const cb=G.coopBoss; if(!cb||cb.dead) return;
   cb.hp=Math.max(0, cb.hp-amt);
-  if(!remote && typeof coopActive==='function' && coopActive()) coopSend('bossdmg',{amt:amt, num:num});
-  if(cb.hp<=0) coopBossDown();
+  if(!remote && typeof coopActive==='function' && coopActive()){
+    _bdAcc+=amt; _bdNum=num;
+    if(Date.now()-_bdLast>=COOP_BOSSDMG_MS) coopBossDmgFlush(); }   // 첫 타는 _bdLast=0 이라 즉시 나간다
+  if(cb.hp<=0){ coopBossDmgFlush(); coopBossDown(); }               // 처치 순간은 남은 누적을 즉시 보낸다
   updateCoopBossBar(); }
 function coopBossDown(){ const cb=G.coopBoss; if(!cb||cb.dead) return; cb.dead=true;
   const rewardMul=1+buildLevel('boss_reward_up')*0.1;

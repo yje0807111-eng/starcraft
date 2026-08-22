@@ -5,7 +5,7 @@
  * ========================================================================== */
 // ══ 건설 탭 — RTS식 배치 맵(종족→일꾼→건물 배치) + 선택 건물 생산/연구 카드 ══
 const TECH_START={credit:1500, energy:1000};
-const _TECH_RKO={union:'유니온',swarm:'스웜',aetherial:'에테리얼'};
+const _TECH_RKO={union:'유니온',swarm:'스웜',aetherial:'에테리얼',feral:'페럴',colossus:'콜로서스'};
 const TECH_TIME_MUL=0.25;   // 스타 대비 생산·건설 시간 배율(전부 1/4=속도감↑, 기존 0.5에서 다시 절반)
 function techUIInit(race){ if(!TECH_TREE[race]) race='union'; _techEnsureRoster(race);   // 공용 로스터 전 유닛 생산 가능하게 보정
   const keep=G.tech?{inf:G.tech.inf,nocool:G.tech.nocool,fog:!!(G.tech.fog&&G.tech.fog.on)}:{};
@@ -23,7 +23,7 @@ function _techBuildTime(race,k){ if(G.tech.nocool) return 0; if(techWallet()) re
   return ((techBldgSpec(race,k)||{}).t||20)*TECH_TIME_MUL; }
 function _techProdTime(race,id){ if(G.tech.nocool) return 0; return ((techUnitSpec(race,id)||{}).t||15)*TECH_TIME_MUL; }
 function _techResearchTime(r){ if(G.tech.nocool) return 0; return (r&&r.t?r.t:(r&&r.tier?24:30))*TECH_TIME_MUL; }   // 업그레이드 소요(스펙 t 있으면 사용, 없으면 티어 24s·일회성 30s)
-const TECH_DEF_BLDG={ union:['bunker','turret'], swarm:['sunken','spore'], aetherial:['cannon'] };   // 🛡 방어 건물(공격형)
+const TECH_DEF_BLDG={ union:['bunker','turret'], swarm:['sunken','spore'], aetherial:['cannon'], feral:['thornburrow'], colossus:['bastion'] };   // 🛡 방어 건물(공격형)
 function _techIsDef(bk){ return (TECH_DEF_BLDG[G.tech.race]||[]).indexOf(bk)>=0; }
 function _techBldgKind(b){ if(!b) return '건물'; if(b.produces) return '생산'; if(_techResList(b).length) return '업그레이드'; if(b.gas) return '에너지 채취'; if(_techIsDef(b.k)) return '방어'; if(b.supply) return '인구 공급'; if(b.unlocks) return '해금'; return '건물'; }
 // ── 🚀 내부 장전 큐: 캐리어(요격기)·리버(스캐럽) 유닛 + 뉴클리어 사일로(핵) 단일 — 전투 없는 관리 탭이라 '장전 UI'(카운트+타이머+취소 환불) ──
@@ -338,7 +338,8 @@ function _techRoute(e, x, y){ const wp=_techFindPath(e, x, y); e._wp=wp; e._rr=0
 function _techSegClear(e, ax, ay, bx, by){ const rects=_techNavRects(e).concat(_techNavUnitRects(e, ax, ay, bx, by));
   for(const R of rects){ if(_segInRect(ax,ay,bx,by,R)) return false; } return true; }
 // 🔧 용접 스파크(엔지니어 일꾼 작업 중) — 오른손 근처에서 작은 불꽃이 튀며 낙하(cvFx에 직접 그림, 공용 FX 코어 무영향)
-const TECH_MINE_FX={ union:['#ffffff','#ffe28a','#ff9440','#fff7d8'], swarm:['#eaffce','#b6f06a','#6fce34','#ecffd6'], aetherial:['#eaf4ff','#9fd8ff','#ffd76a','#f0f8ff'] };   // 종족별 채취 스파크 색(스파크3 + 코어1)
+const TECH_MINE_FX={ union:['#ffffff','#ffe28a','#ff9440','#fff7d8'], swarm:['#eaffce','#b6f06a','#6fce34','#ecffd6'], aetherial:['#eaf4ff','#9fd8ff','#ffd76a','#f0f8ff'],
+  feral:['#fff2e2','#e8b487','#c98b5a','#ffe9d2'], colossus:['#f2f5f8','#c3ccd6','#9aa6b2','#e8eef4'] };   // 종족별 채취 스파크 색(스파크3 + 코어1)
 function _techEmitWeld(e, cols){ cols=cols||TECH_MINE_FX.union; if(!G._weldFx) G._weldFx=[]; if(G._weldFx.length>150) return;
   const fx=Math.sin(e.face||0), fy=Math.cos(e.face||0);   // 바라보는(대상) 방향
   const s=(typeof _techW2S==='function')?_techW2S(e.x + fx*0.0075, e.y + fy*0.0075 - 0.0025):null; if(!s) return;   // 손 위치 = 월드 오프셋(발에서 앞·위) → _techW2S가 줌 반영 → 축소해도 일꾼 바로 앞에서 나옴
@@ -808,7 +809,7 @@ try{ if(typeof window!=='undefined') window.CST_BLDG_CFG=CST_BLDG_CFG; }catch(_e
 const CST_YSHIFT=34;   // 건설 건물 3D 전체를 화면 아래로 내리는 양(px). 키우면 더 아래로.
 const CST_YAW=-0.52;   // 유니온·에테리얼 정면 회전(라디안). -0.52≈왼쪽 30°.
 try{ if(typeof window!=='undefined') window.CST_YAW=CST_YAW; }catch(_e){}   // 업그레이드 탭 각도 통일용(모듈에서 참조)
-const TECH_WORKER={ union:'worker_human', swarm:'worker_swarm', aetherial:'worker_light' };   // 종족별 일꾼 3D 모델
+const TECH_WORKER={ union:'worker_human', swarm:'worker_swarm', aetherial:'worker_light', feral:'worker_feral', colossus:'worker_col' };   // 종족별 일꾼(모델 없으면 2D 폴백)
 const TECH_UNIT_YOFF=6;   // 건설 맵 3D 유닛 바닥 보정(px) — 크기는 메인과 동일한 유닛별 SCALE 그대로
 const CST_BVIS=1.12;     // 🏢 건설 화면 건물 3D 모델 미세 확대(발판 대비)
 const TECH_UVIS=0.98;    // 🚶 건설 화면 전투 유닛 3D 모델 미세 축소(충돌·간격은 그대로)
@@ -988,7 +989,9 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
       if(_mHp>0) labels+='<div class="bentBar" style="left:'+(_bx*100).toFixed(2)+'%;top:'+_bTop+';width:'+(_bW*100).toFixed(2)+'%">'+_barsHTML({ hpR:_hpR, hpCol:hpBarColor(_hpR), shR:_shR, enR:_enR })+'</div>'; } }
   if(_btBox && _btBox.active){ const bx=Math.min(_btBox.sx0,_btBox.sx1),by=Math.min(_btBox.sy0,_btBox.sy1),bw=Math.abs(_btBox.sx1-_btBox.sx0),bh=Math.abs(_btBox.sy1-_btBox.sy0);   // 🔲 한 손가락 드래그 = 유닛 지정 박스
     ents+='<div class="techSelBox" style="left:'+(bx*100).toFixed(2)+'%;top:'+(by*100).toFixed(2)+'%;width:'+(bw*100).toFixed(2)+'%;height:'+(bh*100).toFixed(2)+'%;position:absolute;border:1.5px solid #46f06a;background:rgba(70,240,106,.14);pointer-events:none;z-index:23;border-radius:2px"></div>'; }
-  let tabs=''; ['union','swarm','aetherial'].forEach(r=>{ tabs+='<span class="techTab'+(r===race?' on':'')+'" onclick="techRace(event,\''+r+'\')">'+_TECH_RKO[r]+'</span>'; });
+  // 종족 탭 = TECH_TREE 에 있는 것 전부. ⛔ 목록을 여기 손으로 적지 말 것 —
+  //   종족을 늘렸을 때 데이터엔 있는데 탭에만 안 뜬다(페럴·콜로서스에서 실제로 그랬다).
+  let tabs=''; Object.keys(TECH_TREE).forEach(r=>{ tabs+='<span class="techTab'+(r===race?' on':'')+'" onclick="techRace(event,\''+r+'\')">'+(_TECH_RKO[r]||(TECH_TREE[r]&&TECH_TREE[r].name)||r)+'</span>'; });
   const selE=(G.tech.sel!=null)?G.tech.ents.find(e=>e.eid===G.tech.sel):null, canDemo=selE&&selE.type==='bldg'&&((techGetBldg(race,selE.bk)||{}).k!==TECH_TREE[race].buildings[0].k);
   let res='';   // 🔁 메인 #hudR DOM을 그대로 클론(복사본 마크업 유지 X) — 메인 HUD 디자인 변경 시 자동 반영. 숫자만 이 탭 값으로 치환
   //   ⚠ 오토배틀은 클론을 만들지 않는다 — 건설지에서도 진짜 #hud 가 그대로 떠 있어 두 번 표시된다(strikeHud 가 값을 채운다).

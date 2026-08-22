@@ -1,0 +1,178 @@
+<!-- 유즈맵 결과·나가기 팝업 — 4안 (2026-08-20, 4차)
+     ⛔ 통계 창(#resultScreen)은 옛 디자인이라 참고하지 않는다.
+     기준 = **최신 화면**: 멀티 대기방(2026-08-19) · 부팅 로딩(2026-08-20) · 유즈맵 선택.
+     가져온 부품 — 대기방 머리줄(굵은 한글 + 큰 숫자/작은 보조 + 난이도 칩) ·
+       4칸 조건 카드(라벨 위 / 값 아래 · 시안 광원) · 목록 판(행 + 구분선 + 색 번호) ·
+       점선 안내 상자 · 하단 2버튼 · 로딩창의 자간 라벨 + 우측 큰 숫자 + 얇은 바.
+     ⚠ css/00-base.css 링크(토큰 복사 금지). 게임 body(폰 가운데 flex)는 되돌린다. -->
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>결과·나가기 팝업 4안</title>
+<link rel="stylesheet" href="../../css/00-base.css">
+<style>
+  html,body{display:block;height:auto;overflow:visible;background:#08090b}
+  body{font-family:var(--font-ko);color:var(--txt);padding:20px;width:1320px}
+  h2{font-family:var(--font-ti);font-size:18px;color:#fff;margin:10px 0 2px}
+  h2 small{font-family:var(--font-ko);font-size:11px;color:var(--txt-mute);margin-left:8px}
+  .sheet{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:10px 0 26px}
+  .p{background:#0d0e11;border:1px solid rgba(255,255,255,.06);border-radius:9px;padding:11px}
+  .tag{font-family:var(--font-ti);font-size:13px;color:#fff}
+  .note{font-size:10px;line-height:1.5;color:var(--txt-mute);min-height:42px;margin:2px 0 6px}
+  .src{font-size:9px;color:#6e7681;margin:0 0 8px}.src b{color:#9aa0a8;font-weight:400}
+  .ph{position:relative;width:100%;aspect-ratio:390/660;border-radius:10px;overflow:hidden;
+    display:flex;align-items:center;justify-content:center;
+    background:repeating-linear-gradient(118deg,#12151b 0 16px,#0e1116 16px 32px)}
+  .ph::before{content:'';position:absolute;left:12%;right:12%;top:24%;height:20%;border-radius:8px;
+    background:linear-gradient(180deg,rgba(120,96,60,.5),rgba(40,30,16,.4));box-shadow:0 0 22px rgba(255,140,60,.2);filter:blur(2px)}
+  .ph::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 48% 24% at 50% 50%,var(--aura,rgba(255,210,74,.15)),transparent 70%),rgba(5,6,9,.63)}
+  .ph.lose{--aura:rgba(255,107,122,.15)} .ph.cy{--aura:rgba(92,214,255,.14)}
+
+  /* 팝업 카드 — 지금 골격 유지(모서리 컷 + 이중 테두리) */
+  .c{--acc:var(--gold);position:relative;z-index:2;width:86%;padding:13px 12px 12px;
+    background:linear-gradient(180deg,rgba(24,25,29,.95),rgba(11,12,15,.94));border:1px solid var(--metal-edge);
+    clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}
+  .c::before{content:'';position:absolute;inset:4px;border:1px solid var(--acc);opacity:.5;pointer-events:none}
+  .c>*{position:relative}
+  .c.lose{--acc:#ff6b7a} .c.cy{--acc:#5cd6ff}
+
+  /* ① 대기방 머리줄 — 굵은 한글 + 큰 숫자/작은 보조 + 우측 칩 */
+  .hd{display:flex;align-items:baseline;gap:7px;margin-bottom:10px}
+  .hd h3{font-family:var(--font-ti);font-size:18px;color:var(--acc);text-shadow:0 0 11px var(--acc)}
+  .hd h3.ko{color:#fff;text-shadow:none;font-size:16px}
+  .hd em{font-style:normal;font-family:var(--font-num);font-size:14px;color:#fff}
+  .hd em s{text-decoration:none;font-size:10px;color:var(--txt-mute)}
+  .hd .sp{flex:1}
+  .chip{border:1px solid var(--info);color:var(--info);border-radius:3px;padding:2px 7px;font-family:var(--font-ti);font-size:9px}
+  /* ② 4칸 조건 카드 — 라벨 위 / 값 아래 · 액센트 광원 */
+  .cond{display:flex;background:#08090c;border:1px solid color-mix(in srgb,var(--acc) 55%,transparent);border-radius:6px;
+    box-shadow:0 0 14px color-mix(in srgb,var(--acc) 16%,transparent),inset 0 1px 0 rgba(255,255,255,.06);
+    padding:8px 4px;margin-bottom:10px}
+  .cond i{flex:1;font-style:normal;text-align:center}
+  .cond i s{display:block;text-decoration:none;font-size:9px;color:var(--txt-mute);margin-bottom:2px}
+  .cond i b{font-family:var(--font-num);font-size:17px;color:#fff;font-weight:700}
+  .cond i b.a{color:var(--acc)}
+  .cond i b u{text-decoration:none;font-size:10px;color:var(--txt-mute)}
+  /* ③ 목록 판 — 행 + 구분선 + 색 번호 */
+  .list{border:1px solid rgba(255,255,255,.09);border-radius:6px;margin-bottom:10px;overflow:hidden}
+  .list div{display:flex;align-items:center;gap:9px;padding:8px 11px;border-bottom:1px solid rgba(255,255,255,.06)}
+  .list div:last-child{border-bottom:0}
+  .list u{text-decoration:none;font-family:var(--font-num);font-size:12px;width:12px}
+  .list span{flex:1;font-size:11px;color:#e6e8ea}
+  .list b{font-family:var(--font-num);font-size:14px;color:#fff}
+  .list b s{text-decoration:none}   /* /30 같은 보조 단위 — 취소선이 걸리면 안 된다 */
+  /* ④ 점선 안내 상자 */
+  .hint{border:1px dashed rgba(255,255,255,.18);border-radius:6px;padding:10px 11px;margin-bottom:10px;
+    font-size:10px;color:var(--txt-mute);display:flex;align-items:center;gap:7px;text-align:left}
+  /* ⑤ 로딩창 문법 — 자간 라벨 + 우측 큰 숫자 + 얇은 바 */
+  .load{margin-bottom:11px}
+  .load div{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:5px}
+  .load em{font-style:normal;font-family:var(--font-num);font-size:10px;letter-spacing:3px;color:var(--txt-mute)}
+  .load b{font-family:var(--font-num);font-size:22px;color:#fff;line-height:1}
+  .load b s{text-decoration:none;font-size:11px;color:var(--txt-mute)}
+  .load i{display:block;height:2px;background:#191b1f;border-radius:2px;overflow:hidden}
+  .load i em{display:block;height:100%;background:linear-gradient(90deg,color-mix(in srgb,var(--acc) 40%,#000),var(--acc))}
+  /* 하단 액션 — 대기방 하단 2버튼 */
+  .row{display:flex;gap:8px}
+  .b{flex:1;height:38px;border:1px solid #2a2c33;border-radius:6px;font-family:var(--font-ti);font-size:13px;
+    color:#c9ccd1;background:linear-gradient(180deg,#1b1d22,#101216);display:flex;align-items:center;justify-content:center}
+  .b.pri{color:#fff;border-color:color-mix(in srgb,var(--acc) 60%,#2a2c33);
+    box-shadow:inset 0 -1px 0 color-mix(in srgb,var(--acc) 45%,transparent)}
+</style>
+
+<h2>승리 <small>4안 — 최신 화면(대기방 · 로딩창)의 부품만 가져와 팝업 안에 넣었다</small></h2>
+<div class="sheet" id="w">
+
+  <div class="p"><div class="tag">1 · 조건 카드</div>
+    <div class="note">대기방의 <b>4칸 조건 카드</b>(라벨 위 / 값 아래 · 액센트 광원)를 결과 수치로. 들어가기 전에 본 판과 같은 판으로 읽힌다.</div>
+    <div class="src">가져온 것 — <b>대기방 조건 카드 · 머리줄 · 난이도 칩</b></div>
+    <div class="ph"><div class="c">
+      <div class="hd"><h3>VICTORY</h3><em>14<s>/30</s></em><span class="sp"></span><span class="chip">NORMAL</span></div>
+      <div class="cond"><i><s>처치</s><b>372</b></i><i><s>플레이</s><b>8:12</b></i><i><s>포인트</s><b class="a">+44</b></i></div>
+      <div class="row"><button class="b">관전하기</button><button class="b pri">확인</button></div></div></div></div>
+
+  <div class="p"><div class="tag">2 · 목록 판</div>
+    <div class="note">대기방의 <b>목록 판</b>(행 + 구분선 + 색 번호)을 결과 항목으로. 항목이 늘어나도 규격이 안 무너진다.</div>
+    <div class="src">가져온 것 — <b>대기방 슬롯 목록 판 · 머리줄</b></div>
+    <div class="ph"><div class="c">
+      <div class="hd"><h3>VICTORY</h3><span class="sp"></span><span class="chip">NORMAL</span></div>
+      <div class="list">
+        <div><u style="color:var(--gold)">◎</u><span>받은 포인트</span><b style="color:var(--gold)">44</b></div>
+        <div><u style="color:#4aa8ff">▸</u><span>도달 라운드</span><b>14<s style="font-size:10px;color:var(--txt-mute)">/30</s></b></div>
+        <div><u style="color:#ff6b7a">▸</u><span>처치</span><b>372</b></div>
+        <div><u style="color:#5dff8f">▸</u><span>미네랄</span><b style="color:#5dff8f">+720</b></div></div>
+      <div class="row"><button class="b">관전하기</button><button class="b pri">확인</button></div></div></div></div>
+
+  <div class="p"><div class="tag">3 · 로딩 바 문법</div>
+    <div class="note">로딩창의 <b>자간 라벨 + 우측 큰 숫자 + 얇은 바</b>를 그대로. 가장 조용하고, 게임 밖 화면과 가장 닮았다.</div>
+    <div class="src">가져온 것 — <b>부팅 로딩의 LOADING 99% 줄</b> + 대기방 머리줄</div>
+    <div class="ph"><div class="c">
+      <div class="hd"><h3>VICTORY</h3><span class="sp"></span><span class="chip">NORMAL</span></div>
+      <div class="load"><div><em>ROUND</em><b>14<s>/30</s></b></div><i><em style="width:47%"></em></i></div>
+      <div class="load"><div><em>KILL</em><b>372</b></div><i><em style="width:72%"></em></i></div>
+      <div class="cond" style="padding:7px 4px"><i><s>포인트</s><b class="a">+44</b></i><i><s>미네랄</s><b>+720</b></i></div>
+      <div class="row"><button class="b">관전하기</button><button class="b pri">확인</button></div></div></div></div>
+
+  <div class="p"><div class="tag">4 · 조건 카드 + 점선 안내</div>
+    <div class="note">조건 카드에 <b>점선 안내 상자</b>를 더한다. 승·패·나가기 세 상태가 <b>완전히 한 골격</b>이 된다 — 안내 문구만 갈린다.</div>
+    <div class="src">가져온 것 — <b>대기방 조건 카드 + 점선 안내 상자</b></div>
+    <div class="ph"><div class="c">
+      <div class="hd"><h3>VICTORY</h3><em>14<s>/30</s></em><span class="sp"></span><span class="chip">NORMAL</span></div>
+      <div class="cond"><i><s>처치</s><b>372</b></i><i><s>플레이</s><b>8:12</b></i><i><s>포인트</s><b class="a">+44</b></i></div>
+      <div class="hint">🏁 방어에 성공했습니다 — 보상이 정산되었습니다</div>
+      <div class="row"><button class="b">관전하기</button><button class="b pri">확인</button></div></div></div></div>
+</div>
+
+<h2>패배 <small>같은 안 · 액센트만 빨강</small></h2>
+<div class="sheet" id="l">
+  <div class="p"><div class="tag">1 · 조건 카드</div><div class="ph lose"><div class="c lose">
+    <div class="hd"><h3>DEFEAT</h3><em>9<s>/30</s></em><span class="sp"></span><span class="chip">NORMAL</span></div>
+    <div class="cond"><i><s>처치</s><b>148</b></i><i><s>플레이</s><b>4:36</b></i><i><s>포인트</s><b class="a">+12</b></i></div>
+    <div class="row"><button class="b">관전하기</button><button class="b pri">확인</button></div></div></div></div>
+
+  <div class="p"><div class="tag">2 · 목록 판</div><div class="ph lose"><div class="c lose">
+    <div class="hd"><h3>DEFEAT</h3><span class="sp"></span><span class="chip">NORMAL</span></div>
+    <div class="list"><div><u style="color:#ff6b7a">◎</u><span>받은 포인트</span><b style="color:#ff6b7a">12</b></div>
+      <div><u style="color:#4aa8ff">▸</u><span>도달 라운드</span><b>9<s style="font-size:10px;color:var(--txt-mute)">/30</s></b></div>
+      <div><u style="color:#ff6b7a">▸</u><span>처치</span><b>148</b></div>
+      <div><u style="color:#5dff8f">▸</u><span>미네랄</span><b style="color:#5dff8f">+240</b></div></div>
+    <div class="row"><button class="b">관전하기</button><button class="b pri">확인</button></div></div></div></div>
+
+  <div class="p"><div class="tag">3 · 로딩 바 문법</div><div class="ph lose"><div class="c lose">
+    <div class="hd"><h3>DEFEAT</h3><span class="sp"></span><span class="chip">NORMAL</span></div>
+    <div class="load"><div><em>ROUND</em><b>9<s>/30</s></b></div><i><em style="width:30%"></em></i></div>
+    <div class="load"><div><em>KILL</em><b>148</b></div><i><em style="width:38%"></em></i></div>
+    <div class="cond" style="padding:7px 4px"><i><s>포인트</s><b class="a">+12</b></i><i><s>미네랄</s><b>+240</b></i></div>
+    <div class="row"><button class="b">관전하기</button><button class="b pri">확인</button></div></div></div></div>
+
+  <div class="p"><div class="tag">4 · 조건 카드 + 점선 안내</div><div class="ph lose"><div class="c lose">
+    <div class="hd"><h3>DEFEAT</h3><em>9<s>/30</s></em><span class="sp"></span><span class="chip">NORMAL</span></div>
+    <div class="cond"><i><s>처치</s><b>148</b></i><i><s>플레이</s><b>4:36</b></i><i><s>포인트</s><b class="a">+12</b></i></div>
+    <div class="hint">⚠ 적 200기가 쌓여 방어선이 무너졌습니다</div>
+    <div class="row"><button class="b">관전하기</button><button class="b pri">확인</button></div></div></div></div>
+</div>
+
+<h2>나가기 확인 <small>같은 골격 · 시안 액센트 · 지금까지의 판을 그대로 보여준다</small></h2>
+<div class="sheet" id="x">
+  <div class="p"><div class="tag">1 · 조건 카드</div><div class="ph cy"><div class="c cy">
+    <div class="hd"><h3 class="ko">게임에서 나가기</h3><span class="sp"></span><span class="chip">NORMAL</span></div>
+    <div class="cond"><i><s>라운드</s><b>14<u>/30</u></b></i><i><s>처치</s><b>372</b></i><i><s>포인트</s><b class="a">+44</b></i></div>
+    <div class="row"><button class="b">취소</button><button class="b pri">나가기</button></div></div></div></div>
+
+  <div class="p"><div class="tag">2 · 목록 판</div><div class="ph cy"><div class="c cy">
+    <div class="hd"><h3 class="ko">게임에서 나가기</h3></div>
+    <div class="list"><div><u style="color:#4aa8ff">▸</u><span>도달 라운드</span><b>14<s style="font-size:10px;color:var(--txt-mute)">/30</s></b></div>
+      <div><u style="color:#ff6b7a">▸</u><span>처치</span><b>372</b></div>
+      <div><u style="color:var(--gold)">◎</u><span>지금까지의 포인트</span><b style="color:var(--gold)">44</b></div></div>
+    <div class="row"><button class="b">취소</button><button class="b pri">나가기</button></div></div></div></div>
+
+  <div class="p"><div class="tag">3 · 로딩 바 문법</div><div class="ph cy"><div class="c cy">
+    <div class="hd"><h3 class="ko">게임에서 나가기</h3></div>
+    <div class="load"><div><em>ROUND</em><b>14<s>/30</s></b></div><i><em style="width:47%"></em></i></div>
+    <div class="cond" style="padding:7px 4px"><i><s>처치</s><b>372</b></i><i><s>포인트</s><b class="a">+44</b></i></div>
+    <div class="row"><button class="b">취소</button><button class="b pri">나가기</button></div></div></div></div>
+
+  <div class="p"><div class="tag">4 · 조건 카드 + 점선 안내</div><div class="ph cy"><div class="c cy">
+    <div class="hd"><h3 class="ko">게임에서 나가기</h3><span class="sp"></span><span class="chip">NORMAL</span></div>
+    <div class="cond"><i><s>라운드</s><b>14<u>/30</u></b></i><i><s>처치</s><b>372</b></i><i><s>포인트</s><b class="a">+44</b></i></div>
+    <div class="hint">🔒 지금 나가면 여기까지의 기록으로 정산됩니다</div>
+    <div class="row"><button class="b">취소</button><button class="b pri">나가기</button></div></div></div></div>
+</div>

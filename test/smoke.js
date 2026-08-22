@@ -1837,6 +1837,256 @@ async function groupLobby(){
     Object.assign(_hb.char,_cSave); _hb.foes.length=0; _hb.pend.length=0;
     hbHunt().base={tiles:{},open:1}; hbLayoutBase(); saveMeta();
     return '직진·우회·벽 미파괴·캐릭터 충돌·기지 밖 소환 ok'; });
+  // 👾 몹 다양화(2026-08-20) — 역할은 HB_FOE_KIND 한 표, 얼굴은 던전 roster. 둘을 분리해 뒀다.
+  //   ⚠ 위치·스탯만 재면 안 된다. 예전에 이동 방식을 f.mv 에 담았다가 '움직이는 중' 플래그(f.mv=1)에
+  //     덮여 유령이 지상처럼 걸어 다녔다 — 겉으론 멀쩡했고 스탯도 맞았다. 그래서 **실제로 벽을 지났는지**를 본다.
+  await step('사냥터 몹: 여섯 역할 · 벽 통과 규약 · 사거리 · 크기', async()=>{
+    skipIf(typeof HB_FOE_KIND==='undefined' || typeof hbWavePlan!=='function','몹 종류 표 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
+    openHome(); await sleep(60); _hb.manual=true;
+    const _cSave={..._hb.char};
+    try{
+      // ① 편성표 무결성 — 죽은 역할·오타난 키·빠진 모델이 없어야 한다
+      const seen=new Set(), bad=[];
+      for(const D of HB_DUNGEONS){
+        const R=hbRoster(D);
+        if(!R || !R.length){ bad.push('던전'+D.dg+': 얼굴표 없음'); continue; }
+        for(const e of R){
+          if(!HB_FOE_KIND[e.k]) bad.push('던전'+D.dg+': 없는 역할 '+e.k);
+          if(!e.mdl || typeof e.mdl!=='string') bad.push('던전'+D.dg+'/'+e.k+': 모델 없음');
+          seen.add(e.k); } }
+      assert(!bad.length, bad.join(' · '));
+      for(const k of Object.keys(HB_FOE_KIND))
+        assert(seen.has(k), '역할 '+k+' 이 어느 던전에도 안 나온다(죽은 역할)');
+      // ①-b 🧊 **3D 연결** — 역할의 이동 방식과 모델의 실제 성질이 어긋나면 3D 에서 티가 난다.
+      //     M3D 는 `FXLAB_AIR`(비행 모델 단일 출처)를 보고 **모델 id 로** 자동 부양시킨다.
+      //     그래서 way='air' 인데 지상 모델이면 비행체가 땅을 기고(옛 dg7 thornqueen),
+      //     지상 역할인데 비행 모델이면 걸어가야 할 놈이 떠 있다(옛 dg4 stinger). 둘 다 실제로 그랬다.
+      //     ⚠ 이 검사는 three.js 없이도 돌아야 한다 — M3D 유무로 건너뛰면 이 환경에선 영영 안 걸린다.
+      { assert(typeof FXLAB_AIR!=='undefined' && FXLAB_AIR.has, 'FXLAB_AIR(비행 모델 단일 출처)이 없다');
+        const bad=[];
+        for(const D of HB_DUNGEONS) for(const e of hbRoster(D)){
+          const air=FXLAB_AIR.has(e.mdl), wantAir=(hbKindOf(e.k).way==='air');
+          if(air!==wantAir) bad.push('던전'+D.dg+' '+e.k+'→'+e.mdl+(air?'(비행 모델인데 지상 역할)':'(지상 모델인데 비행 역할)')); }
+        assert(!bad.length,'역할과 모델의 공중/지상이 어긋남 — 3D 에서 뜨거나 기어간다: '+bad.join(' · ')); }
+      // ②-b 크기는 M3D 의 per-unit 손잡이(bossScale)로 넘어가야 한다 — u.size 는 메인 sync 가 안 본다
+      { const keep=window.M3D;
+        window.M3D={ hasModel:()=>true, footprintOf:()=>20, ensureUnits:()=>{} };
+        try{
+          _hb.foes.length=0;
+          const K=HB_FOE_KIND.brute;
+          _hb.foes.push({kind:'brute',ico:'x',mdl:'ultralisk',x:0,y:0,hp:1,hpMax:1,atk:1,spd:0,
+            sz:K.sz,rng:0,way:K.way,rw:K.rw,cdT:9e9,elite:false});
+          const list=hb3dList().filter(u=>u.id==='ultralisk');
+          assert(list.length===1,'적이 3D sync 목록에 안 실린다');
+          assert(Math.abs((list[0].bossScale||0)-K.sz)<0.01,
+            '크기가 3D 로 안 넘어간다(bossScale='+list[0].bossScale+' vs 종류 크기 '+K.sz+')');
+        } finally { window.M3D=keep; _hb.foes.length=0; } }
+      // ①-c ✨ **공격 이펙트는 공용 코어(FX/ATK_STYLE)를 쓴다** — 사냥터 전용 사격선을 두 번째로 만들지 않는다.
+      //     사격 주체가 전부 진짜 유닛 id 를 가지므로(캐릭터=PROF_CLASSES[cls].unit · 동료/몹=mdl)
+      //     레인저는 3연사, 히드라는 가시, 드라군은 플라즈마로 각자 다르게 나가야 한다.
+      { assert(typeof FX!=='undefined' && typeof ATK_STYLE!=='undefined','공용 FX 코어가 없다');
+        assert(typeof hbFxStore==='function' && typeof hbFire==='function','사냥터가 공용 FX 에 안 붙어 있다');
+        assert(ATK_STYLE[hbCharMdl()], '캐릭터 유닛 id('+hbCharMdl()+')가 ATK_STYLE 에 없다 — 내 공격만 기본 이펙트로 나온다');
+        // 편성표 모델들이 서로 다른 공격 스타일을 갖는가(전부 _default 면 다양화가 화면에 안 보인다)
+        const kinds=new Set();
+        for(const D of HB_DUNGEONS) for(const e of hbRoster(D)){ const st=ATK_STYLE[e.mdl]; if(st&&st.kind) kinds.add(st.kind); }
+        assert(kinds.size>=6,'몹 공격 스타일이 '+kinds.size+'종뿐 — 유닛별 이펙트가 안 갈린다');
+        // 실제로 공격 한 번 → 공용 스토어에 쌓이는가
+        _hb.fx=null; _hb.fxU=null; _hb.foes.length=0;
+        const c2=_hb.char; c2.x=0; c2.y=0; c2.hpMax=1e9; c2.hp=1e9; c2.atk=0; c2.regen=0;
+        const K2=HB_FOE_KIND.ranger;
+        _hb.foes.push({kind:'ranger',ico:'x',mdl:'hydra',x:60,y:0,hp:1e9,hpMax:1e9,atk:1,spd:0,
+          sz:K2.sz,rng:K2.rng,way:K2.way,rw:K2.rw,cdT:0,elite:false});
+        // ⚠ 발사는 정규화 스토어(_hb.fxU.store), 사망은 월드 스토어(_hb.fx) — 둘 다 본다
+        const cnt=()=>{ let n=0; for(const st of [_hb.fx, _hb.fxU&&_hb.fxU.store]){ if(!st) continue;
+          n+=(st.shots||[]).length+(st.melee||[]).length+(st.impacts||[]).length+(st.flashes||[]).length; } return n; };
+        let n=0; for(let i=0;i<40;i++){ _hb.phase='fight'; _hb.waveT=99; hbStep(0.05); n=Math.max(n,cnt()); }
+        _hb.foes.length=0; _hb.fx=null; _hb.fxU=null;
+        assert(n>0,'적이 공격했는데 공용 FX 스토어가 비어 있다 — 이펙트가 안 나간다'); }
+      // ② 보스는 늘 지상 근접 — 날거나 벽을 통과하는 보스는 벽·기지 설계를 통째로 무의미하게 만든다
+      for(const D of HB_DUNGEONS){ const bp=mkBoss(D,{round:1});
+        assert(bp.way==='ground' && !bp.rng, '던전'+D.dg+' 보스가 지상 근접이 아님: '+bp.way+'/'+bp.rng); }
+      // ③ 사거리는 벙커 도발 반경을 넘으면 안 된다 — 넘는 순간 사수가 벙커 밖에서 캐릭터만 쏜다.
+      //    ⛔ max(R, rng+pad) > rng 같은 상수 비교는 **항상 참**이라 아무것도 못 잡는다(그렇게 짰다가 걷어냈다).
+      //    이건 표를 직접 훑으므로 누가 사거리를 키우면 그 자리에서 걸린다.
+      for(const k of Object.keys(HB_FOE_KIND)){ const K=HB_FOE_KIND[k];
+        assert(K.rng<=HB_BUNKER_R, k+' 사거리('+K.rng+')가 벙커 도발 반경('+HB_BUNKER_R+')을 넘는다 — 벙커가 대신 맞아주지 못한다'); }
+      // 그리고 사수가 벙커를 실제로 때리는지도 본다(대상 전환이 사거리 판정까지 따라가는가).
+      { const c0=_hb.char; c0.x=0; c0.y=0; c0.hpMax=1e9; c0.hp=1e9; c0.atk=0; c0.regen=0;
+        const bkSave=_hb.bunkers.slice();
+        // 캐릭터와 사수 사이에 벙커를 놓는다 — 사거리 밖(HB_BUNKER_R 밖)이라 옛 규칙이면 그냥 지나쳐 캐릭터를 쏜다
+        const K=HB_FOE_KIND.ranger, bx=-(HB_BUNKER_R+K.rng);
+        _hb.bunkers=[{x:bx, y:0, hp:1e9, hpMax:1e9}];
+        _hb.foes.length=0; _hb.fx=null;
+        const f={kind:'ranger',ico:'x',mdl:null,x:bx-K.rng-40,y:0,hp:1e9,hpMax:1e9,atk:5,spd:K.spd,
+          sz:K.sz,rng:K.rng,way:K.way,rw:K.rw,cdT:0,elite:false};
+        _hb.foes.push(f);
+        const hp0=_hb.bunkers[0].hp;
+        for(let i=0;i<400;i++){ _hb.phase='fight'; _hb.waveT=99; hbStep(0.05); }
+        const hit=hp0-_hb.bunkers[0].hp;
+        _hb.bunkers=bkSave; _hb.foes.length=0;
+        assert(hit>0,'사수가 벙커를 그냥 지나쳤다 — 도발 반경이 사거리를 못 따라간다(벙커가 대신 맞아주지 못한다)'); }
+      // ④ 실제 이동 — 캐릭터를 벽으로 두르고(입구 한 칸) 반대편에서 출발시킨다
+      hbHunt().base={tiles:{},open:99}; hbLayoutBase();
+      const c=_hb.char; c.x=0;c.y=0;c.tx=null;c.ty=null;c.hpMax=1e9;c.hp=1e9;c.atk=0;c.range=1;c.regen=0;
+      const RR=8;                                  // 고리를 크게 잡아야 사거리가 긴 놈도 '넘어야만' 닿는다
+      const T=hbBase().tiles;
+      for(let g=-RR;g<=RR;g++) for(const cell of [[g,-RR],[g,RR],[-RR,g],[RR,g]]){
+        if(cell[0]===RR&&cell[1]===0) continue; T[hbKey(cell[0],cell[1])]={k:'wall'}; }
+      hbLayoutBase();
+      const walk=(kind)=>{ const K=HB_FOE_KIND[kind]; _hb.foes.length=0; _hb.pend.length=0; _hb.fx=null; _hb.fxU=null;
+        const f={kind:kind,ico:'x',mdl:null,x:-320,y:0,hp:1e9,hpMax:1e9,atk:1,spd:K.spd,
+          sz:K.sz,rng:K.rng,way:K.way,rw:K.rw,cdT:0,elite:false};   // ⚠ cdT:0 — 실제로 공격해야 이펙트가 나온다(캐릭터는 hp 1e9 라 안전)
+        _hb.foes.push(f); let crossed=false, minD=1e9, shot=0;
+        // ⚠ 반복 횟수를 상수로 두면 **느린 놈만** 못 도착해 '못 붙었다'로 잘못 잡힌다(중장갑 spd 32).
+        //    우회로가 직선의 서너 배라 걸음 예산은 속도에 반비례해야 한다.
+        const N=Math.min(4000, Math.ceil(2600/(K.spd*0.05)));
+        for(let i=0;i<N;i++){ _hb.phase='fight'; _hb.waveT=99; hbStep(0.05);
+          if(!hbWalkable(f.x,f.y)) crossed=true;
+          for(const st of [_hb.fx, _hb.fxU&&_hb.fxU.store]) if(st) shot+=(st.shots||[]).length+(st.melee||[]).length+(st.impacts||[]).length+(st.flashes||[]).length;   // 공용 FX 코어로 나간다
+          const d=Math.hypot(f.x,f.y); if(d<minD) minD=d; }
+        return { crossed, minD, shot }; };
+      for(const k of Object.keys(HB_FOE_KIND)){ const K=HB_FOE_KIND[k], r=walk(k);
+        // 벽 규약 — 지상은 절대 못 지나고, 유령·공중은 반드시 지나야 한다
+        if(K.way==='ground') assert(!r.crossed, k+'(지상)이 벽을 통과했다');
+        else assert(r.crossed, k+'('+K.way+')이 벽을 못 지났다 — 이동 방식이 안 먹고 있다(f.way 가 덮였는지 볼 것)');
+        // 사거리 규약 — 근접은 붙고, 사수는 사거리에서 멈춰 쏜다
+        if(K.rng>0){ assert(r.minD>HB_STOP+8, k+'(사거리 '+K.rng+')가 근접까지 붙었다: '+Math.round(r.minD));
+          assert(Math.abs(r.minD-K.rng)<=12, k+' 가 사거리에서 안 멈췄다: '+Math.round(r.minD)+' vs '+K.rng);
+          assert(r.shot>0, k+' 가 사거리 안인데 쏘지 않았다'); }
+        else assert(r.minD<=HB_STOP+4, k+'(근접)가 캐릭터에 못 붙었다: '+Math.round(r.minD)); }
+      // ④-b 🚶 유닛 간 회피 조향(엔진 unitAI 와 같은 레시피)이 실제로 겹침을 푸는가.
+      //     ⛔ 함수 존재만 확인하면 안 된다 — 사방에서 몰려오게 해 놓고 **겹친 쌍을 센다**.
+      //     실측: 회피 끔 48쌍 / 켬 11쌍(24기 기준). 미로 경로탐색은 그대로 두고 얹는 보정이다.
+      { assert(typeof hbAvoid==='function','회피 조향(hbAvoid)이 없다');
+        hbHunt().base={tiles:{},open:99}; hbLayoutBase();
+        const c3=_hb.char; c3.x=0; c3.y=0; c3.tx=null; c3.ty=null; c3.hpMax=1e9; c3.hp=1e9; c3.atk=0; c3.range=1; c3.regen=0;
+        const K3=HB_FOE_KIND.grunt, N=24;
+        _hb.foes.length=0; _hb.pend.length=0;
+        for(let i=0;i<N;i++){ const a=i/N*Math.PI*2;
+          _hb.foes.push({kind:'grunt',ico:'x',mdl:null,x:Math.cos(a)*260,y:Math.sin(a)*260,
+            hp:1e9,hpMax:1e9,atk:0,spd:K3.spd,sz:K3.sz,rng:0,way:'ground',rw:K3.rw,cdT:9e9,elite:false}); }
+        for(let i=0;i<300;i++){ _hb.phase='fight'; _hb.waveT=99; hbStep(0.05); }
+        let ov=0; const F=_hb.foes;
+        for(let i=0;i<F.length;i++) for(let j=i+1;j<F.length;j++)
+          if(Math.hypot(F[i].x-F[j].x,F[i].y-F[j].y) < hbFoeR(F[i])+hbFoeR(F[j])) ov++;
+        _hb.foes.length=0;
+        assert(ov<=25, N+'기가 몰렸을 때 겹친 쌍 '+ov+' — 회피 조향이 안 듣는다(끄면 48쌍 수준)'); }
+      // ④-c 🧱 배치 격자는 **지으려는 건물 둘레 한 칸까지만**. 화면 전체에 깔면 전장이 안 보인다.
+      //     ⛔ 함수 소스를 정규식으로 훑지 말 것 — 주석만 남아도 통과한다(그런 검사를 이미 두 번 걷어냈다).
+      //     캔버스 호출을 받아 적어 **격자선이 실제로 그려진 범위**를 잰다.
+      { assert(typeof hbDrawGrid==='function' && typeof HB_GRID_PAD!=='undefined','배치 격자 그리기가 없다');
+        const rec=[], filled=[]; let clipped=false, dash=0, col='';
+        const stub={ save(){}, restore(){}, beginPath(){}, stroke(){}, clip(){ clipped=true; },
+          rect(){}, fillRect(fx,fy,fw,fh){ filled.push([fx,fy,fw,fh]); }, strokeRect(){}, ellipse(){}, arc(){}, fill(){},
+          setLineDash(a){ if(a&&a.length) dash=a[0]; },
+          moveTo(x,y){ rec.push([x,y]); }, lineTo(x,y){ rec.push([x,y]); },
+          set strokeStyle(v){ if(rec.length===0) col=v; }, set fillStyle(v){}, set lineWidth(v){}, set globalAlpha(v){}, set font(v){} };
+        const armSave=_hb.arm;
+        _hb.arm={ k:(HB_STRUCT.wall?'wall':Object.keys(HB_STRUCT)[0]), gx:2, gy:1 };
+        try{
+          hbDrawGrid(stub, _hb);
+          assert(rec.length>0,'격자선을 하나도 안 그렸다');
+          assert(clipped,'격자를 클립 없이 그린다 — 범위를 좁히는 장치가 없다');
+          const B=HB_STRUCT[_hb.arm.k]||{w:1,h:1};
+          const gx=hbTx(_hb.arm.gx)-HB_TILE/2, gy=hbTx(_hb.arm.gy)-HB_TILE/2;
+          // 허용 범위 = 건물 자리 + 여백 칸 + 한 칸 여유(격자선이 칸 경계에 스냅되므로)
+          const okX0=gx-(HB_GRID_PAD+1)*HB_TILE, okX1=gx+B.w*HB_TILE+(HB_GRID_PAD+1)*HB_TILE;
+          const okY0=gy-(HB_GRID_PAD+1)*HB_TILE, okY1=gy+B.h*HB_TILE+(HB_GRID_PAD+1)*HB_TILE;
+          let out=0, far=0;
+          for(const [px,py] of rec){ if(px<okX0-0.5||px>okX1+0.5||py<okY0-0.5||py>okY1+0.5){ out++;
+            far=Math.max(far, Math.max(Math.abs(px-gx), Math.abs(py-gy))); } }
+          assert(out===0,'격자가 건물 둘레 '+HB_GRID_PAD+'칸을 벗어나 그려진다('+out+'점 · 최대 '+far.toFixed(0)+'px) — 화면 전체에 깔고 있다');
+          // 칠하는 면은 **배치 칸 표시 하나뿐**이어야 한다. 예전 격자 배경은 보이는 맵 전체를 덮었다.
+          //   ⛔ 'fillRect 가 0번'으로 재면 안 된다 — 배치 칸 표시(청록/빨강)까지 잡혀 헛돈다.
+          { let big=0, biggest=0;
+            for(const [fx,fy,fw,fh] of filled){
+              const inside=(fx>=okX0-0.5 && fx+fw<=okX1+0.5 && fy>=okY0-0.5 && fy+fh<=okY1+0.5);
+              if(!inside){ big++; biggest=Math.max(biggest, fw*fh); } }
+            assert(big===0,'격자 면이 건물 둘레를 넘어 깔린다('+big+'개 · 최대 '+Math.round(biggest)+'px²) — 화면 전체 배경이 남아 있다'); }
+          assert(dash>0,'격자가 점선이 아니다(setLineDash 미사용)');
+          // ⛔ '초록 채널이 크다'로만 재면 안 된다 — 옛 파란색 rgba(140,190,255) 도 초록이 190 이라 통과한다.
+          //    초록이 빨강·파랑보다 **우세**한지, 그리고 충분히 진한지(알파)를 본다.
+          { const m2=String(col).match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+))?/);
+            assert(m2,'격자 색을 못 읽었다: '+col);
+            const cr=+m2[1], cg=+m2[2], cb=+m2[3], ca=(m2[4]!=null?+m2[4]:1);
+            assert(cg>cr+40 && cg>cb+40,'격자 색이 초록이 아니다(r'+cr+' g'+cg+' b'+cb+')');
+            assert(ca>=0.5,'격자 색이 너무 흐리다(알파 '+ca+') — 진하게 보여야 한다'); }
+          // 🧱 배치 고스트 = 관리자 건설과 같은 반투명 3D. 새로 만들지 말고 ghost:true 로 같은 풀에 얹는다.
+          { const keepM=window.M3D;
+            window.M3D={ hasModel:()=>true, footprintOf:()=>20, cstEnsure:()=>true, ensureUnits:()=>{} };
+            try{
+              const armed=hb3dList().filter(u=>u.ghost);
+              assert(armed.length===1,'배치 중인데 3D 고스트가 '+armed.length+'개 — ghost:true 항목을 안 싣고 있다');
+              assert(/^cb_/.test(armed[0].id),'고스트 모델 id 가 건설 에셋(cb_*)이 아님: '+armed[0].id);
+              const save2=_hb.arm; _hb.arm=null;
+              assert(hb3dList().filter(u=>u.ghost).length===0,'배치 중이 아닌데 고스트가 남는다');
+              _hb.arm=save2;
+            } finally { window.M3D=keepM; } }
+        } finally { _hb.arm=armSave; } }
+      // ⑤ 크기 — 중장갑 > 기본 > 돌격. 화면에서 역할이 구분되는 근거다
+      assert(HB_FOE_KIND.brute.sz > HB_FOE_KIND.grunt.sz && HB_FOE_KIND.grunt.sz > HB_FOE_KIND.runner.sz,
+        '크기 서열이 중장갑>기본>돌격 이 아니다');
+      assert(HB_AIR_LIFT>0,'공중을 띄우는 높이가 0 — 지상과 구분이 안 된다');
+      // ⑥ 💰 **시급 보존** — 이번 작업에서 제일 중요한 검사다.
+      //    사냥터 시급(hunt.rate)은 umRate() 를 거쳐 유즈맵 보상 앵커까지 그대로 간다.
+      //    실측(10회×240초): 이 엔진의 처리량은 **웨이브 페이스**가 정한다 — 편성을 바꿔도 분당 처치는
+      //    거의 안 변하고(42.9→39.8), 시급은 오직 '처치당 보상'을 따라간다. 그래서 지켜야 할 값은
+      //    **그 웨이브의 평균 처치 보상 = 1.0** 하나다. 구성이 라운드·웨이브마다 달라지므로
+      //    hbRwNormPlan(plan) 이 매 웨이브 다시 맞춘다(예전엔 던전당 한 번이었다).
+      //    ⛔ '보상÷체력'을 맞추는 것으로는 부족하다(그렇게 짰다가 던전1 R20 시급이 −32% 났다).
+      { const off=[];
+        for(const D of [hbDun(1),hbDun(5),hbDun(10)])
+          for(const rd of [1,20,50,80,99]) for(const w of [1,2,3]){
+            const plan=hbWavePlan(D,rd,w,hbFoeCount(rd,w)), rwN=hbRwNormPlan(plan);
+            let sum=0; for(const k of plan) sum+=hbKindOf(k).rw*rwN;
+            const mean=sum/plan.length;
+            if(Math.abs(mean-1)>0.02) off.push('던전'+D.dg+' R'+rd+'W'+w+' '+mean.toFixed(3)); }
+        assert(!off.length,'웨이브 평균 처치 보상이 1.0 이 아님 — 구성이 바뀌면 시급이 움직인다(유즈맵 보상까지 따라간다): '+off.slice(0,5).join(' · ')); }
+      // ⑥-b 📈 **등장 규칙은 라운드·웨이브가 정한다**(던전이 아니다). 상한을 절대 안 넘어야 한다.
+      //     ⛔ 표만 읽지 말 것 — 실제로 편성표를 짜서 마릿수를 센다(297칸 전수).
+      { const over=[], D0=hbDun(1);
+        for(let rd=1; rd<=99; rd++) for(let w=1; w<=3; w++){
+          const n=hbFoeCount(rd,w), plan=hbWavePlan(D0,rd,w,n), c={};
+          for(const k of plan) c[k]=(c[k]||0)+1;
+          if(plan.length!==n) over.push('R'+rd+'W'+w+' 총원 '+plan.length+'≠'+n);
+          for(const k of Object.keys(HB_SPAWN)){ const cap=HB_SPAWN[k].cap; if(!cap) continue;
+            if((c[k]||0)>cap) over.push('R'+rd+'W'+w+' '+k+'='+c[k]+'>'+cap);
+            if(rd<HB_SPAWN[k].from && (c[k]||0)>0) over.push('R'+rd+' '+k+' 가 문턱(R'+HB_SPAWN[k].from+') 전에 나옴'); } }
+        assert(!over.length, '등장 규칙 위반 '+over.length+'건: '+over.slice(0,4).join(' · ')); }
+      // ⑥-c 웨이브가 뒤일수록 까다로운 놈이 많다 · 라운드가 오를수록 늘어난다
+      { const D0=hbDun(1), cnt=(rd,w)=>{ const p=hbWavePlan(D0,rd,w,hbFoeCount(rd,w));
+          return p.filter(k=>HB_SPAWN[k]&&HB_SPAWN[k].cap).length; };
+        // ⛔ >= 로 두면 웨이브 보정을 통째로 없애 1·3이 같아져도 통과한다(실제로 그랬다). 반드시 > 다.
+        assert(cnt(60,3)>cnt(60,1),'웨이브 3이 웨이브 1보다 까다롭지 않다: W1='+cnt(60,1)+' W3='+cnt(60,3));
+        assert(cnt(60,3)>cnt(10,3),'라운드가 올라도 안 늘어난다: R10='+cnt(10,3)+' R60='+cnt(60,3)); }
+      // ⑦ 보상 배수가 hbKill 한 경로로 흐른다 — 오래 걸리는 놈이 시급만 깎으면 안 된다.
+      //    ⛔ hbKill.toString() 에 /f\.rw/ 를 걸면 **주석에 적힌 f.rw** 가 매칭돼 코드를 지워도 통과한다(그렇게 짰다가 걷어냈다).
+      //    그래서 실제로 잡아 보고 들어온 미네랄을 비교한다.
+      assert(HB_FOE_KIND.brute.rw > HB_FOE_KIND.grunt.rw, '중장갑 보상이 기본보다 크지 않다');
+      // ⚠ 재는 동안 일일 퀘스트(dqNote→dqGive)를 끊는다 — 퀘스트가 완료되는 순간 보상이 같이 들어와
+      //    배수가 3배로 부풀어 보였다(실제로 그렇게 잘못 읽었다). 처치 보상만 남겨야 비교가 된다.
+      // ⚠ 재는 동안 '처치 보상 말고 미네랄이 들어오는 경로'를 전부 끊는다 —
+      //    일일 퀘스트(dqNote→dqGive)와 **레벨업(profApplyLevelUps, 레벨당 미네랄)** 둘 다.
+      //    안 끊으면 두 번째 처치에서 레벨업이 터져 배수가 5배로 부풀어 보인다(전체 실행에서 실제로 그랬다).
+      { const dqSave=window.dqNote, lvSave=window.profApplyLevelUps;
+        window.dqNote=function(){}; window.profApplyLevelUps=function(){ return 0; };
+        try{
+          const gain=(rw)=>{ _hb.foes.length=0;
+            const f={kind:'x',ico:'x',mdl:null,x:9e3,y:9e3,hp:0,hpMax:1,atk:0,spd:0,sz:1,rng:0,way:'ground',rw:rw,cdT:9e9,elite:false};
+            _hb.foes.push(f);
+            const p=PROF(), before=p.pcoin||0; hbKill(f); return (p.pcoin||0)-before; };
+          const g1=gain(1), g2=gain(HB_FOE_KIND.brute.rw);
+          assert(g1>0,'처치 보상이 0 — 비교할 수가 없다');
+          const ratio=g2/g1;
+          assert(Math.abs(ratio-HB_FOE_KIND.brute.rw)/HB_FOE_KIND.brute.rw < 0.15,
+            '종류 보상 배수가 실제 지급에 안 반영됨: 배수 '+HB_FOE_KIND.brute.rw+' 인데 실측 '+ratio.toFixed(2)+'배');
+        } finally { window.dqNote=dqSave; window.profApplyLevelUps=lvSave; } }
+      return Object.keys(HB_FOE_KIND).length+'역할 · 편성 '+HB_DUNGEONS.length+'던전 ok';
+    } finally { Object.assign(_hb.char,_cSave); _hb.foes.length=0; _hb.pend.length=0; _hb.fx=null; _hb.fxU=null;
+      hbHunt().base={tiles:{},open:1}; hbLayoutBase(); saveMeta(); }
+  });
   // 🧱 3D 건물 — 이 환경엔 three.js(CDN)가 없어 M3D가 아예 없다. 목록 생성 로직만 스텁으로 검사한다.
   await step('기지 3D: sync 목록에 건물이 실린다(화면 밖 컬링)', async()=>{ skipIf(typeof hb3dStructs!=='function','3D 구조물 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
@@ -1921,8 +2171,9 @@ async function groupLobby(){
     for(let i=0;i<HB_DUNGEONS.length;i++){ const D=HB_DUNGEONS[i], at='던전'+(i+1)+'('+D.name+')';
       assert(D.dg===i+1, at+' 번호가 어긋남: '+D.dg);
       assert(D.name && !names[D.name], at+' 이름이 없거나 중복');  names[D.name]=1;
-      assert(D.foes && D.foes.length===3, at+' 적이 3종이 아님');
-      for(const f of D.foes){
+      const _R=hbRoster(D);
+      assert(_R && _R.length>=6, at+' 얼굴표가 6역할 미만: '+_R.length);   // 역할 여섯이 전부 얼굴을 가져야 한다(종족 팔레트에서 유도)
+      for(const f of _R){
         assert(f.mdl, at+' 모델 키가 비어 있음');
         assert(f.ico, at+' 폴백 이모지가 없음: '+f.mdl); }
       // 갈수록 어두워야 '무서워지는' 느낌이 난다
@@ -1939,15 +2190,22 @@ async function groupLobby(){
         im.onload=()=>res(true); im.onerror=()=>res(false); im.src='assets/tiles/'+t+'.webp'; });
       assert(ok,'바닥 타일 파일이 없음: assets/tiles/'+t+'.webp'); }
     // 던전을 옮기면 적 구성이 실제로 바뀌어야 한다
-    const f1=HB_DUNGEONS[0].foes.map(f=>f.mdl).join(), f2=HB_DUNGEONS[1].foes.map(f=>f.mdl).join();
+    const f1=hbRoster(HB_DUNGEONS[0]).map(f=>f.mdl).join(), f2=hbRoster(HB_DUNGEONS[1]).map(f=>f.mdl).join();
     assert(f1!==f2,'던전 1과 2의 적이 같음 — 옮겨도 같은 곳으로 느껴진다');
     // 모델 키 오타 검사. MODELS는 모듈 스코프라 전역에서 못 본다 → M3D.modelKeys()로 카탈로그를 받아 대조한다.
     // ⚠ M3D가 없으면(three.js를 못 받는 환경) 검사를 '통과'시키지 말고 그렇게 밝힌다 — 헛도는 검사가 제일 위험하다
-    let keyChk='M3D 없음(모델 키 미검증)';
-    if(window.M3D && M3D.modelKeys){ const cat=new Set(M3D.modelKeys());
-      for(const D of HB_DUNGEONS) for(const f of D.foes)
-        assert(cat.has(f.mdl),'던전'+D.dg+'('+D.name+') 모델 키가 카탈로그에 없음: '+f.mdl);
-      keyChk='모델 키 '+new Set(HB_DUNGEONS.flatMap(d=>d.foes.map(f=>f.mdl))).size+'종 확인'; }
+    // 🧊 모델 키 오타 검사. M3D 가 있으면 카탈로그를 직접 묻고, 없으면(이 환경처럼 three.js 가 막히면)
+    //    **모듈 소스에서 MODELS 표를 읽어** 대조한다. 예전엔 M3D 가 없으면 통째로 건너뛰어
+    //    '미검증'인 채로 늘 통과했다 — 헛도는 검사가 제일 위험하다.
+    let cat=null, how='';
+    if(window.M3D && M3D.modelKeys){ cat=new Set(M3D.modelKeys()); how='M3D 카탈로그'; }
+    else{ try{ const src=await (await fetch('js/90-m3d.module.js')).text();
+        const m=src.match(/const MODELS=\{([\s\S]*?)\n?\};/);
+        if(m){ cat=new Set([...m[1].matchAll(/(\w+)\s*:\s*'/g)].map(x=>x[1])); how='모듈 소스'; } }catch(_e){} }
+    assert(cat && cat.size>0,'3D 모델 카탈로그를 못 읽었다 — 모델 키 오타를 못 잡는다');
+    for(const D of HB_DUNGEONS) for(const f of hbRoster(D))
+      assert(cat.has(f.mdl),'던전'+D.dg+'('+D.name+') 모델 키가 카탈로그에 없음: '+f.mdl);
+    const keyChk='모델 키 '+new Set(HB_DUNGEONS.flatMap(d=>hbRoster(d).map(f=>f.mdl))).size+'종 확인('+how+')';
     return HB_DUNGEONS.length+'곳 · 타일 '+tiles.length+'종 · 틴트 '+alpha(HB_DUNGEONS[0].tint)+'→'+prevA+' · '+keyChk; });
   // 관리자 실험장의 8방향 시트를 던전 전장이 '그대로' 쓴다(새로 만들지 않는다)
   await step('던전: 내 캐릭터가 실험장 8방향 시트를 그대로 쓴다', async()=>{
@@ -5544,6 +5802,42 @@ async function groupLobby(){
     host.innerHTML=renderProfStats();
     assert(host.textContent.indexOf('<b>x</b>')>=0,'광장에서 이름이 마크업으로 해석됨');
     return '이스케이프 확인'; });
+
+  // ══ 실방 정원 — 방장이 정한 max 를 presence sync 에서 강제한다 ═══════════
+  await step('실방 정원: 정원을 넘은 사람에게는 자리를 주지 않는다', async()=>{
+    skipIf(typeof rtRoomSync!=='function','rtRoomSync 없음');
+    const lb=document.getElementById('lobby'); skipIf(!lb,'#lobby 없음');
+    const hid=lb.classList.contains('hide');
+    const keepRoom=_lobbyRoom, keepMax=_lobbyMax, keepSlots=_lobbySlots, keepChan=RTROOM.chan, keepOver=RTROOM.overN;
+    const keepUid=window.myUid; window.myUid=()=>'me';   // 스모크는 비로그인이라 uid 가 비어 있다 — 고정한다
+    try{
+      lb.classList.remove('hide');
+      _lobbyRoom={ real:true, num:1234, name:'t', hostUid:'me', max:2 };
+      _lobbyMax=2; _lobbySlots=[null,null,null,null,null,null,null,null]; RTROOM.overN=0;
+      // 나(방장) + 늦게 들어온 4명 = 5명이 2인 방에 몰려 있는 상황
+      const st={ me:[{uid:'me', nick:'me', host:true, ready:true, t:1000}] };
+      for(let k=2;k<=5;k++) st['u'+k]=[{uid:'u'+k, nick:'P'+k, host:false, ready:true, t:1000+k}];
+      RTROOM.chan={ presenceState(){ return st; } };
+      rtRoomSync();
+      const n=_lobbySlots.filter(Boolean).length;
+      assert(n===2,'2인 방에 '+n+'명이 자리를 받았다(정원이 강제되지 않는다)');
+      assert(_lobbySlots[0] && _lobbySlots[0].uid==='me','방장이 P1 이 아니다: '+(_lobbySlots[0]&&_lobbySlots[0].uid));
+      assert(!_lobbySlots[2] && !_lobbySlots[4],'정원 밖 슬롯에 사람이 들어갔다');
+      return '5명 → 2자리 · 방장 P1';
+    } finally { _lobbyRoom=keepRoom; _lobbyMax=keepMax; _lobbySlots=keepSlots;
+      RTROOM.chan=keepChan; RTROOM.overN=keepOver; window.myUid=keepUid;
+      if(hid) lb.classList.add('hide'); } });
+
+  await step('실방 정원: 참가자에게도 방 정원이 전달된다', async()=>{
+    skipIf(typeof joinRoom!=='function','joinRoom 없음');
+    // 이 한 줄이 빠져 있어서 참가자는 _lobbyMax 가 8 로 잡혔다(2인 방이 8인 방으로 보였다)
+    assert(/max:\s*r\.max/.test(String(joinRoom)),'joinRoom 이 openLobby 에 max 를 안 넘긴다');
+    const keepRoom=_lobbyRoom, keepMax=_lobbyMax;
+    try{ openLobby({ real:true, num:1, name:'t', host:'h', hostUid:'x', startCount:1, joining:true, max:3 });
+      assert(_lobbyMax===3,'전달된 정원이 반영되지 않았다: '+_lobbyMax);
+      return '_lobbyMax=3';
+    } finally { _lobbyRoom=keepRoom; _lobbyMax=keepMax;
+      const lb=document.getElementById('lobby'); if(lb) lb.classList.add('hide'); } });
 }
 
 // ── 그룹: game (솔로 무한) ──
@@ -6213,6 +6507,32 @@ async function groupGame(){
     assert(_techSpawnText({k:'barracks'})==='', '관리자 건물 프로필에 오토배틀 배출 문구가 붙음');
     assert(_techSpawnCard('barracks')===null, '관리자 건물 프로필에 오토배틀 배출 카드가 붙음');
     return n+'항목'; });
+  // 🐺🗿 오각형 5종족 — 오토배틀에 종족을 넣을 때 **조용히 빠지는 표**가 여럿이다(전부 선례).
+  //   · SB_ATK_MODE 누락 → 기본값이 '지상 전용' → 공중 유닛을 영영 못 때려 그 종족이 100% 진다
+  //   · U.dmg 0 + airDmg 만 있는 대공 전용이 FXLAB_NOATK 에 걸리면 **아무것도** 못 때린다
+  //   · 배출표 앞 두 건물에 대공이 없으면 초반 공중 상대에 일방적으로 진다(전 종족 공통 조건)
+  await step('오각형 5종족: 오토배틀 편입 표 누락 없음', ()=>{
+    skipIf(typeof STK_RACES==='undefined' || typeof TECH_BLDG_UNIT==='undefined','오토배틀 표 없음');
+    assert(STK_RACE_ORDER.length===5, '종족이 5이 아님: '+STK_RACE_ORDER.length);
+    for(const rk of STK_RACE_ORDER){ assert(!!STK_RACES[rk], rk+': STK_RACES 없음');
+      assert(!!STK_BUILDINGS[rk], rk+': STK_BUILDINGS 없음');
+      assert(!!STK_TIERS[rk], rk+': STK_TIERS 없음');
+      const tr=stkTechRace(rk);
+      assert(Object.keys(TECH_BLDG_UNIT[tr]||{}).length>0, rk+' → '+tr+': 배출표가 비었다(AI가 폴백 2기만 낸다)');
+      assert(STK_RACE_STAT[tr]!=null && STK_RACE_SPAWN[tr]!=null, tr+': STAT/SPAWN 누락'); }
+    // 의도적 무공격(지원·시전형)은 예외. 그 외에 '아무것도 못 때리는' 유닛이 로스터에 있으면 표 누락이다.
+    const NOATK_OK=new Set(['medic','aegis','medusa']);
+    let nu=0, aa=0;
+    for(const rk of STK_RACE_ORDER){ for(const id of STK_RACES[rk].units){ nu++;
+      const m=_sbAtkMode({id:id}); assert(m.air||m.gnd||NOATK_OK.has(id), id+': 아무것도 못 때린다(FXLAB_NOATK/SB_ATK_MODE 확인)');
+      assert(!!UNIT_COMBAT_CLASS[id], id+': UNIT_COMBAT_CLASS 누락(상성 중립이 되어 밸런스가 어긋난다)'); } }
+    for(const rk of STK_RACE_ORDER){ const tr=stkTechRace(rk), keys=Object.keys(TECH_BLDG_UNIT[tr]);
+      const early=keys.slice(0,2).map(k=>TECH_BLDG_UNIT[tr][k].u);
+      assert(early.some(u=>_sbAtkMode({id:u}).air), tr+': 배출표 앞 두 건물에 대공 유닛이 없다 — 초반 공중에 무력하다');
+      aa++; }
+    for(const id of ['howlslinger','skytalon','flakbattery','arclight'])
+      assert(!FXLAB_NOATK.has(id), id+': 대공 전용인데 무공격으로 분류됐다');
+    return nu+'유닛 · '+aa+'종족 초반 대공 ok'; });
   // 관리자 건설에서 건물을 고르면 그 건물의 유닛 생산 버튼이 나와야 한다.
   // 오토배틀은 건물이 자동 배출하므로 수동 생산이 일꾼뿐 — 이 규칙이 관리자로 새면 생산 그리드가 통째로 빈다(선례 2회).
   await step('관리자 건설: 건물 유닛 생산 그리드 유지', ()=>{
@@ -6616,6 +6936,359 @@ async function groupGame(){
       return '앵커·진행도·난이도·첫클리어·포인트·관문 ok · 하루 '+UM_DAY_FULL+'판 체감 ok · 일일 바깥 '+DQ_OUT_N;
     } finally { G=keepG; MAP=keepMap; if(typeof STK!=='undefined') STK=keepSTK;
       PLAYER_META.umDay=keepDay0; p.pcoin=keepPc; p.gas=keepGas; p.hunt=keepHunt; } });
+
+  // ══ 협동(멀티) — 죽은 자리 · 정지된 자리 · 대역폭 ══════════════════════
+  // 가짜 채널을 물려 실제 송신 경로(coopSend)를 그대로 태운다. 실제 접속은 하지 않는다.
+  function _coopStub(cap){
+    G=newGame(); MAP=USEMAPS.nemo; G.phase='playing'; G.tab='Main';
+    G.myPlayer=1; G.curPlayer=1; G.activePlayers=[1,2,3]; G.eliminated=[]; G.finished=[];
+    G.coop=true; G.coopChan={ state:'joined', send(m){ cap.push(m); } };
+    G.coopNumToUid={1:'me',2:'u2',3:'u3'}; G.coopUidToNum={me:1,u2:2,u3:3};
+    G.coopState={}; G.coopBoard={}; G.coopBoardPrev={}; G.coopSpeed={};
+    G.coopUpg={}; G.coopBossU={}; G.coopTeamB={}; G.coopWatchers={};
+  }
+  await step('죽은 자리: 탈락하면 그 자리의 모든 것이 지워진다', async()=>{
+    skipIf(typeof killSlot!=='function','killSlot 없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]);
+      G.coopBoard[2]={t:Date.now(),units:[{}],enemies:[{}],shots:[],beams:[]};
+      G.coopState[2]={count:77,round:5,bo:0}; G.coopBossU[2]={}; G.coopSpeed[2]=2; G.coopWatchers.u2=1;
+      assert(slotState(2)==='live','죽이기 전엔 live 여야 한다');
+      killSlot(2,'lost');
+      assert(slotState(2)==='dead','탈락 뒤 dead 가 아님: '+slotState(2));
+      assert(G.activePlayers.indexOf(2)<0,'activePlayers 에 남아 있다');
+      assert(!G.coopBoard[2] && !G.coopState[2] && !G.coopBossU[2] && !G.coopSpeed[2],'보드/상태가 안 지워졌다');
+      assert(!G.coopWatchers.u2,'죽은 자리가 아직 나를 본다고 돼 있다');
+      assert(playerEnemyCount(2)===0,'죽은 자리 적 수가 0이 아님: '+playerEnemyCount(2));
+      assert(slotState(8)==='empty' && playerEnemyCount(8)===0,'미입장 자리도 빈 자리여야 한다');
+      assert(!slotWatchable(2) && !slotWatchable(8),'죽은/빈 자리는 관전 대상이 아니어야 한다');
+      // 죽은 자리가 배속 투표에 남아 있으면 판이 영원히 1배속에 묶인다
+      G.coopSpeed[1]=4; G.coopSpeed[3]=4; ensureVote(); computeSpeed();
+      assert(G.speedMul===4,'죽은 자리가 배속 투표를 붙잡고 있다: '+G.speedMul+'배');
+      return 'dead·empty 모두 0 · 관전 불가 · 배속 '+G.speedMul+'배';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('정지된 자리: 승리는 죽이지 않는다(유닛 유지 · 관전 계속)', async()=>{
+    skipIf(typeof finishSlot!=='function','finishSlot 없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]);
+      G.coopBoard[3]={t:Date.now(),units:[{uid:'a'},{uid:'b'}],enemies:[],shots:[],beams:[]};
+      finishSlot(3);
+      assert(slotState(3)==='done','승리 뒤 done 이 아님: '+slotState(3));
+      assert(slotWatchable(3),'정지된 자리는 계속 관전 가능해야 한다');
+      assert(G.coopBoard[3] && G.coopBoard[3].units.length===2,'승리한 자리의 유닛이 지워졌다');
+      assert(!slotDead(3),'정지된 자리를 죽은 자리로 취급하면 안 된다');
+      return 'done · 유닛 2기 유지 · 관전 가능';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('패배: 내 전장이 비워진다(유닛·적·투사체 전부)', async()=>{
+    skipIf(typeof clearMyField!=='function','clearMyField 없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]);
+      G.round=5; for(let i=0;i<8;i++) spawnEnemy({}); G.pendSpawn.splice(0).forEach(ps=>G.enemies.push(ps.e));
+      G.units.push(initUnitStats({uid:G.idSeq++, id:'marine', hero:false, lv:1, x:.3, y:.3, cd:0}));
+      G.shots.push({x:1,y:1,vx:0,vy:0,kind:'b',color:'#fff'});
+      const kills=G.kills||0;
+      assert(G.enemies.length>0 && G.units.length>0,'준비 실패');
+      clearMyField();
+      assert(G.units.length===0 && G.enemies.length===0 && G.shots.length===0 && G.pendSpawn.length===0,'전장이 안 비었다');
+      assert((G.kills||0)===kills,'전장을 비우면서 킬이 늘었다(사망 처리 함수를 탔다)');
+      return '유닛·적·탄 0 · 킬 변화 없음';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('팀 강화 공유: 재접속해도 다시 주지 않는다', async()=>{
+    skipIf(typeof onCoopState!=='function' || typeof killSlot!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null, keepMB=window.metaBonus;
+    try{
+      _coopStub([]);
+      let credit=100;
+      window.metaBonus=function(){ return { startCredit:credit }; };   // 경제 전체 대신 시작 크레딧만 흔든다
+      G.mineral=0; G.metaB={ startCredit:100 }; G._tbPeak=100;
+      credit=150; onCoopState({ uid:'u2', tb:[1], count:0, round:1 });   // 강화가 높은 사람이 합류 → 차액 지급
+      assert(G.mineral===50,'최초 지급이 안 됐다: '+G.mineral);
+      credit=100; killSlot(2,'left');                                    // 연결이 끊겨 이탈 → metaB 내려감
+      credit=150; onCoopState({ uid:'u2', tb:[1], count:0, round:1 });   // 재접속 → 같은 강화가 다시 온다
+      assert(G.mineral===50,'재접속에 같은 보너스를 또 줬다: '+G.mineral+' (50 이어야 한다)');
+      return '최초 +50 · 재접속 +0';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; window.metaBonus=keepMB; } });
+
+  // ══ 자리 비움 — 따라잡기(30초 이내) / 판 포기(초과) ═══════════════════
+  await step('따라잡기: 자리 비운 시간만큼 게임이 실제로 진행된다', async()=>{
+    skipIf(typeof nemoCatchUp!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]); G.round=11; G.speedMul=1;   // ⚠ 10·20·30 은 보스 라운드라 일반 적이 안 나온다
+      // ⚠ 스모크의 step(name,fn) 이 게임 step(dt) 을 가린다 → window.step 으로 부른다
+      if(typeof beginActivePhase==='function') beginActivePhase();   // 전투 단계여야 적이 유입된다
+      for(let i=0;i<60;i++) window.step(1/60);       // 자리 잡기
+      const t0=G.timeSec||0, e0=G.enemies.length;
+      nemoCatchUp(10000);                            // 10초 자리 비움
+      const dtSec=(G.timeSec||0)-t0;
+      assert(dtSec>8 && dtSec<12,'게임 시간이 10초만큼 안 흘렀다: '+dtSec.toFixed(1)+'초');
+      assert(G.enemies.length>e0,'따라잡았는데 적이 안 쌓였다: '+e0+'→'+G.enemies.length);
+      assert(!G._catchUp,'따라잡기 플래그가 안 꺼졌다');
+      return '+'+dtSec.toFixed(1)+'초 · 적 '+e0+'→'+G.enemies.length+'기';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('따라잡기: 배속을 곱해야 실제로 흐른 게임 시간과 맞는다', async()=>{
+    skipIf(typeof nemoCatchUp!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]); G.round=10; G.speedMul=2;
+      if(typeof beginActivePhase==='function') beginActivePhase();
+      for(let i=0;i<60;i++) window.step(1/60);
+      const t0=G.timeSec||0;
+      nemoCatchUp(10000);                            // 2배속에서 10초 = 게임 시간 20초
+      const dtSec=(G.timeSec||0)-t0;
+      assert(dtSec>17 && dtSec<23,'2배속 보정이 안 됐다: '+dtSec.toFixed(1)+'초 (20초 근처여야 한다)');
+      return '2배속 10초 → 게임 '+dtSec.toFixed(1)+'초';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('자리 비움 30초 초과: 보상도 기록도 없이 로비로', async()=>{
+    skipIf(typeof abandonRun!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    const keepLobby=window.overlayToLobby;
+    let wentLobby=false; window.overlayToLobby=function(){ wentLobby=true; };   // 화면 전환은 막고 호출만 본다
+    try{
+      _coopStub([]); G.round=10; G.points=999; G._pointsBanked=false; G._bankedAmt=0; G._runSum=null;
+      abandonRun(45000);
+      assert(wentLobby,'로비로 안 갔다');
+      assert(G.phase==='quit','판이 안 끝났다: '+G.phase);
+      assert(G._runSum===null,'판 요약이 만들어졌다(판으로 인정됐다)');
+      assert(typeof bankRunPoints!=='function' || bankRunPoints()===0,'보상이 정산됐다: '+bankRunPoints());
+      return 'quit · 정산 0 · 기록 없음';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; window.overlayToLobby=keepLobby; } });
+
+  await step('자리 비움: 30초가 따라잡기와 판 포기를 가른다', async()=>{
+    skipIf(typeof nemoOnShow!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    const keepCatch=window.nemoCatchUp, keepAband=window.abandonRun;
+    let called=null;
+    window.nemoCatchUp=function(ms){ called='catch:'+Math.round(ms/1000); };
+    window.abandonRun =function(ms){ called='abandon:'+Math.round(ms/1000); };
+    try{
+      _coopStub([]);
+      _hiddenAt=Date.now()-20000; called=null; nemoOnShow();
+      assert(called && called.indexOf('catch')===0,'20초인데 따라잡기가 아니다: '+called);
+      _hiddenAt=Date.now()-45000; called=null; nemoOnShow();
+      assert(called && called.indexOf('abandon')===0,'45초인데 판 포기가 아니다: '+called);
+      // 자리를 잡아 두는 시간(상대 화면)과 같은 값이어야 한다
+      assert(AWAY_MS===30000,'경계값이 30초가 아니다: '+AWAY_MS);
+      return '20초=따라잡기 · 45초=판 포기 · 경계 '+(AWAY_MS/1000)+'초';
+    } finally { G=keepG; if(keepMap) MAP=keepMap;
+      window.nemoCatchUp=keepCatch; window.abandonRun=keepAband; _hiddenAt=0; } });
+
+  // ══ 재접속 — 끊김(자리 유지)과 일부러 나감(영구)을 구분한다 ═══════════
+  await step('재접속: 연결이 끊기면 자리를 잡아 둔다(지우지 않는다)', async()=>{
+    skipIf(typeof onCoopPlayerLeft!=='function' || typeof awaySlot!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]);
+      G.coopBoard[2]={t:Date.now(),units:[{uid:'a'}],enemies:[],shots:[],beams:[]};
+      G.coopState[2]={count:42,round:5,bo:0};
+      onCoopPlayerLeft({ uid:'u2', nick:'P2' });
+      assert(slotState(2)==='away','끊긴 자리가 away 가 아님: '+slotState(2));
+      assert(G.coopBoard[2],'자리를 잡아 두는데 보드를 지웠다');
+      assert(slotWatchable(2),'끊긴 자리도 관전은 계속 돼야 한다');
+      assert(playerEnemyCount(2)===42,'끊긴 자리의 마지막 상태가 사라졌다: '+playerEnemyCount(2));
+      assert(!slotDead(2),'끊긴 자리를 죽은 자리로 취급하면 안 된다');
+      return 'away · 보드 유지 · 관전 가능';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('재접속: 일부러 나가면(bye) 기다리지 않고 바로 죽은 자리', async()=>{
+    skipIf(typeof onCoopBye!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]);
+      G.coopBoard[3]={t:Date.now(),units:[{uid:'a'}],enemies:[],shots:[],beams:[]};
+      onCoopBye({ uid:'u3', nick:'P3' });
+      assert(slotState(3)==='dead','bye 인데 dead 가 아님: '+slotState(3));
+      assert(!G.coopBoard[3],'bye 인데 보드가 남아 있다');
+      assert(!G.away||G.away[3]==null,'bye 인데 자리를 잡고 기다린다');
+      return 'dead 즉시';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('재접속: 돌아오면 자리와 보드가 그대로 이어진다', async()=>{
+    skipIf(typeof onCoopPlayerBack!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]);
+      G.coopBoard[2]={t:Date.now(),units:[{uid:'a'},{uid:'b'}],enemies:[],shots:[],beams:[]};
+      onCoopPlayerLeft({ uid:'u2', nick:'P2' });
+      assert(slotState(2)==='away','준비 실패');
+      onCoopPlayerBack({ uid:'u2', nick:'P2' });
+      assert(slotState(2)==='live','돌아왔는데 live 가 아님: '+slotState(2));
+      assert(G.coopBoard[2] && G.coopBoard[2].units.length===2,'복귀했는데 보드가 사라졌다');
+      assert(G.activePlayers.indexOf(2)>=0,'activePlayers 에 안 돌아왔다');
+      return 'live 복귀 · 유닛 2기 유지';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('재접속: 대기 시간을 넘기면 영구 죽은 자리', async()=>{
+    skipIf(typeof tickAway!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]);
+      G.coopBoard[2]={t:Date.now(),units:[{uid:'a'}],enemies:[],shots:[],beams:[]};
+      onCoopPlayerLeft({ uid:'u2', nick:'P2' });
+      G.away[2]=Date.now()-1;            // 시간을 앞당긴다(실제로 30초 기다리지 않는다)
+      tickAway();
+      assert(slotState(2)==='dead','대기 만료인데 dead 가 아님: '+slotState(2));
+      assert(!G.coopBoard[2],'만료됐는데 보드가 남아 있다');
+      assert(G.away[2]==null,'만료됐는데 대기 목록에 남아 있다');
+      // 뒤늦게 도착한 스냅이 죽은 자리를 되살리면 안 된다
+      onCoopState({ uid:'u2', count:9, round:5, tb:null });
+      assert(slotState(2)==='dead' && !G.coopBoard[2],'뒤늦은 스냅이 죽은 자리를 되살렸다');
+      return 'dead · 뒤늦은 스냅 무시';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('재접속: resync 가 끊긴 동안의 승/패를 따라잡는다', async()=>{
+    skipIf(typeof onCoopResync!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]); G.activePlayers=[1,2,3,4];
+      onCoopResync({ uid:'u2', num:2, over:null, speed:1, dead:[3], done:[4] });
+      assert(slotState(3)==='dead','놓친 패배를 못 따라잡았다: '+slotState(3));
+      assert(slotState(4)==='done','놓친 승리를 못 따라잡았다: '+slotState(4));
+      return 'P3 dead · P4 done';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('재접속: 네트워크가 돌아오면 재시도 상한이 풀린다', async()=>{
+    skipIf(typeof coopReconnect!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]);
+      _coopRetryN=5;   // 상한에 걸린 상태 — 이걸 안 풀면 coopReconnect 가 즉시 return 해서 영영 재접속이 안 된다
+      window.dispatchEvent(new Event('online'));
+      assert(_coopRetryN===0,'online 인데 재시도 카운터가 안 풀렸다: '+_coopRetryN);
+      return '카운터 리셋';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; _coopRetryN=0; } });
+
+  await step('재접속: 끊긴 사람은 보스 권위자가 되지 않는다', async()=>{
+    skipIf(typeof coopAuthNum!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]); G.myPlayer=2; G.curPlayer=2;   // 최저 번호(1)가 내가 아닌 상황
+      assert(coopAuthNum()===1,'준비 실패 — 권위자가 1이어야 한다: '+coopAuthNum());
+      onCoopPlayerLeft({ uid:'me', nick:'P1' });     // 1번이 끊긴다
+      assert(slotState(1)==='away','준비 실패: '+slotState(1));
+      assert(coopAuthNum()===2,'끊긴 사람이 권위를 쥐고 있다(보스 동기화가 멈춘다): '+coopAuthNum());
+      return '권위 1 → 2 승계';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('대역폭: 관전자가 없으면 전장 데이터를 안 보낸다', async()=>{
+    skipIf(typeof coopBroadcastState!=='function','coopBroadcastState 없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      const cap=[]; _coopStub(cap);
+      G.round=20; for(let i=0;i<120;i++) spawnEnemy({}); G.pendSpawn.splice(0).forEach(ps=>G.enemies.push(ps.e));
+      for(let i=0;i<30;i++) G.units.push(initUnitStats({uid:G.idSeq++, id:'marine', hero:false, lv:1, x:.2+i/100, y:.3, cd:0}));
+      G._pstateN=0; G.coopWatchers={};
+      cap.length=0; for(let i=0;i<5;i++) coopBroadcastState();
+      assert(cap.length===1,'관전자가 없는데 5틱 중 '+cap.length+'번 보냈다(500ms 주기여야 한다)');
+      const light=JSON.stringify(cap[0]).length;
+      assert(!cap[0].payload.u && !cap[0].payload.e,'관전자가 없는데 전장 데이터를 실었다');
+      G.coopWatchers={ u2:1 };
+      G._pstateN=0; cap.length=0; for(let i=0;i<5;i++) coopBroadcastState();
+      assert(cap.length===5,'관전 중인데 5틱 중 '+cap.length+'번만 보냈다(10Hz 여야 한다)');
+      const full=JSON.stringify(cap[0]).length;
+      assert(cap[0].payload.u && cap[0].payload.e,'관전 중인데 전장 데이터가 없다');
+      assert(light<1000,'가벼운 페이로드가 너무 크다: '+light+'B');
+      assert(full>light*3,'관전 유무로 페이로드가 안 갈린다: '+light+' vs '+full);
+      return light+'B(무관전) vs '+full+'B(관전) · '+Math.round(100-light/full*100)+'% 절감';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('대역폭: 보스 데미지는 합산해서 보낸다', async()=>{
+    skipIf(typeof coopBossDamage!=='function','coopBossDamage 없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      const cap=[]; _coopStub(cap);
+      G.coopBoss={ lv:1, hp:1e9, max:1e9, dead:false, name:'t' };
+      cap.length=0;
+      for(let i=0;i<20;i++) coopBossDamage(10, 1, false);
+      coopBossDmgFlush();
+      const sends=cap.filter(m=>m.event==='bossdmg');
+      assert(sends.length<=2,'20번 때렸는데 '+sends.length+'번 보냈다(합산이 안 된다)');
+      const sum=sends.reduce((a,m)=>a+(m.payload.amt||0),0);
+      assert(Math.abs(sum-200)<0.001,'합산 데미지가 어긋난다: '+sum+' ≠ 200');
+      return '20타 → '+sends.length+'건 · 합계 '+sum;
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  await step('관전 렌더: 죽은/빈 자리에 내 유닛이 새지 않는다', async()=>{
+    skipIf(typeof renderEmptySlot!=='function','renderEmptySlot 없음');
+    const src=String((typeof loop==='function')?loop:'');   // 프레임 루프(js/14-input-fx.js loop)
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]);
+      G.round=3; for(let i=0;i<5;i++) spawnEnemy({}); G.pendSpawn.splice(0).forEach(ps=>G.enemies.push(ps.e));
+      G.units.push(initUnitStats({uid:G.idSeq++, id:'marine', hero:false, lv:1, x:.3, y:.3, cd:0}));
+      const nu=G.units.length, ne=G.enemies.length;
+      // 그리는 **순간** 내 유닛/적이 실려 있는지가 핵심이다 — drawMain 을 잠깐 가로채 확인한다
+      let seen=null; const keepDraw=window.drawMain;
+      window.drawMain=function(id){ seen={ u:G.units.length, e:G.enemies.length, s:G.shots.length, id:id }; };
+      try{ renderEmptySlot(); } finally{ window.drawMain=keepDraw; }
+      assert(seen,'renderEmptySlot 이 전장을 그리지 않았다');
+      assert(seen.id==='cvPlayer','관전 캔버스가 아님: '+seen.id);
+      assert(seen.u===0 && seen.e===0 && seen.s===0,'빈 자리를 그리는데 내 유닛/적이 실려 있다: u='+seen.u+' e='+seen.e);
+      assert(G.units.length===nu && G.enemies.length===ne,'빈 자리를 그린 뒤 내 전장이 복구되지 않았다');
+      assert(/renderEmptySlot/.test(src),'프레임 루프에 죽은 자리 분기가 없다 — drawPlayer() 로 떨어지면 내 전장이 그려진다');
+      return '내 전장 원상복구 · 루프 분기 있음';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; } });
+
+  // ══ 판 저장/복구 — 탭이 죽어도 30초는 이어진다 ══════════════════════
+  await step('판 저장: 숨는 순간 저장되고, 복구하면 그대로 이어진다', async()=>{
+    skipIf(typeof saveRun!=='function' || typeof tryRestoreRun!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]); G.round=7; G.mineral=1234; G.kills=55; G.timeSec=90;
+      for(let i=0;i<5;i++) spawnEnemy({}); G.pendSpawn.splice(0).forEach(ps=>G.enemies.push(ps.e));
+      G.units.push(initUnitStats({uid:G.idSeq++, id:'marine', hero:false, lv:2, x:.3, y:.3, cd:0}));
+      const want={ round:G.round, mineral:G.mineral, kills:G.kills, u:G.units.length, e:G.enemies.length };
+      nemoOnHide();                                     // 화면 내림 = 저장
+      assert(_lsGet('nm_run',null),'숨었는데 저장이 안 됐다');
+      G=newGame();                                      // 탭이 죽었다 치고 판을 날린다
+      const ok=tryRestoreRun();
+      assert(ok,'복구가 실패했다');
+      assert(G.round===want.round && G.mineral===want.mineral && G.kills===want.kills,
+        '값이 어긋난다: 라운드 '+G.round+'/'+want.round+' 미네랄 '+G.mineral+'/'+want.mineral);
+      assert(G.units.length===want.u && G.enemies.length===want.e,
+        '유닛·적이 어긋난다: '+G.units.length+'/'+want.u+' · '+G.enemies.length+'/'+want.e);
+      assert(!_lsGet('nm_run',null),'복구 후 저장본이 남아 있다(다음 부팅에 또 복구된다)');
+      return '라운드 '+G.round+' · 미네랄 '+G.mineral+' · 유닛 '+G.units.length+' · 적 '+G.enemies.length;
+    } finally { G=keepG; if(keepMap) MAP=keepMap; clearRun(); } });
+
+  await step('판 저장: 30초를 넘긴 저장본은 복구하지 않고 버린다', async()=>{
+    skipIf(typeof tryRestoreRun!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _coopStub([]); G.round=7;
+      nemoOnHide();
+      const sv=_lsGet('nm_run',null); assert(sv,'준비 실패');
+      sv.t=Date.now()-45000; _lsSet('nm_run', sv);      // 45초 전으로 되돌린다
+      G=newGame();
+      const ok=tryRestoreRun();
+      assert(!ok,'30초를 넘겼는데 복구했다');
+      assert(G.round===1,'판이 남아 있다: 라운드 '+G.round);
+      assert(!_lsGet('nm_run',null),'버렸는데 저장본이 남아 있다');
+      // 판이 끝나면 저장본을 지운다 — 끝난 판을 복구하면 안 된다
+      assert(/clearRun\(\)/.test(String(overlayToLobby)),'overlayToLobby 가 저장본을 안 지운다');
+      return '45초 → 복구 안 함 · 저장본 삭제';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; clearRun(); } });
+
+  await step('판 저장: 깨진 저장본이 부팅을 막지 않는다', async()=>{
+    skipIf(typeof tryRestoreRun!=='function','없음');
+    const keepG=G, keepMap=(typeof MAP!=='undefined')?MAP:null;
+    try{
+      _lsSet('nm_run', { t:Date.now(), g:'{{{망가진 JSON', mapId:'nemo' });
+      let threw=false, ok=true;
+      try{ ok=tryRestoreRun(); }catch(e){ threw=true; }
+      assert(!threw,'깨진 저장본에서 예외가 났다 — 부팅이 멈춘다');
+      assert(!ok,'깨진 저장본으로 복구했다고 한다');
+      assert(!_lsGet('nm_run',null),'깨진 저장본이 남아 있다 — 다음 부팅도 같은 곳에서 걸린다');
+      return '예외 없음 · 저장본 삭제';
+    } finally { G=keepG; if(keepMap) MAP=keepMap; clearRun(); } });
 }
 
 // ── 그룹: sandbox (관리자) ──

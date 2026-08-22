@@ -39,8 +39,27 @@ const server=http.createServer((req,res)=>{
 });
 
 const groupsArg=process.argv[2];
-const GROUPS=groupsArg?[groupsArg]:['lobby','game','sandbox'];
+const GROUPS=(groupsArg && groupsArg!=='duo')?[groupsArg]:(groupsArg==='duo'?[]:['lobby','game','sandbox']);
 const SMOKE_SRC=fs.readFileSync(path.join(ROOT,'test','smoke.js'),'utf8');
+
+// ── 프리플라이트: css/ 안의 상대 경로가 살아 있는가 ─────────────────────
+// ⚠ CSS 의 url() 은 **CSS 파일 위치** 기준으로 풀린다. 스타일이 sc-ums-web.html 안에
+//   있을 땐 assets/... 가 맞았지만 css/ 로 옮긴 뒤로는 ../assets/... 여야 한다.
+//   실제로 이걸 놓쳐 로딩 화면 배경 아트가 통째로 안 떴다(2026-08-20). 브라우저는
+//   배경 이미지가 없어도 조용히 넘어가므로 스모크로는 안 잡힌다 — 여기서 정적으로 막는다.
+{ const cssDir=path.join(ROOT,'css'); const bad=[];
+  for(const f of (fs.existsSync(cssDir)?fs.readdirSync(cssDir):[])){
+    if(!f.endsWith('.css')) continue;
+    const src=fs.readFileSync(path.join(cssDir,f),'utf8');
+    for(const m of src.matchAll(/url\(\s*(['"]?)([^)'"]+)\1\s*\)/g)){
+      const u=m[2].trim();
+      if(/^(data:|https?:|\/\/|\/)/.test(u)) continue;          // 데이터 URI·원격·절대경로는 검사 대상 아님
+      const rel=u.split('?')[0].split('#')[0];
+      if(!fs.existsSync(path.resolve(cssDir, rel))) bad.push(`css/${f} → ${u}`);
+    } }
+  if(bad.length){ console.error('\n❌ CSS 상대 경로가 깨졌습니다 (css/ 기준으로 풀립니다 — ../assets/… 여야 합니다):');
+    bad.forEach(b=>console.error('   · '+b)); process.exit(1); }
+  console.log('✓ CSS 상대 경로 확인'); }
 
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const PORT=server.address().port;
@@ -63,6 +82,16 @@ try{
     report.pageErrors=pageErrors.slice(0,10);
     allReports.push(report);
     await page.close();
+  }
+  // ── 두 클라이언트 통합(멀티) — 그룹 지정이 없을 때만. 상대 시점까지 본다.
+  //    스모크는 가짜 채널로 '보내는 것'만 잡는다. 보내는 모양과 받는 모양이 어긋나는
+  //    (= 멀티가 조용히 죽는) 경우는 여기서만 잡힌다.
+  if(!groupsArg || groupsArg==='duo'){
+    const { runDuo }=await import('./duo.mjs');
+    const steps=await runDuo(browser, `http://127.0.0.1:${PORT}/sc-ums-web.html`);
+    allReports.push({ group:'duo(2인)', steps,
+      pass:steps.filter(s=>s.ok).length, fail:steps.filter(s=>!s.ok).length, skip:0,
+      ms:steps.reduce((a,s)=>a+s.ms,0), knownNoise:0, errors:[], pageErrors:[] });
   }
 }finally{ await browser.close(); server.close(); }
 

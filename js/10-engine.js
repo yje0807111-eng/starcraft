@@ -444,7 +444,125 @@ function drawProd(){ const {ctx,W,H}=setup('cvUnit'); drawShopBg(ctx,W,H);
 }
 // 업그레이드 플랫폼 — 통일 타일(우주 정거장 금속) 라운드 사각, 우주에 떠 있는 느낌
 // (삭제) 업그레이드 가동 파티클(UPG_EMIT/drawUpgFx) — 건물 화면 폐지로 제거.
+// ══ 화면이 꺼져 있던 시간 — 따라잡기 / 판 포기 ═══════════════════════
+// loop() 의 dt 는 100ms 로 잘려 있다. 그래서 탭이 숨겨져 있던 동안 게임 시간은 흐르지 않고
+// 돌아오면 그 자리에서 이어졌다. 이제는 **그 시간을 실제로 돌린다** — 그동안 명령을 못 냈으니
+// 적이 쌓인 채로 이어받는다(실측: 30초치 ≈ 1,800스텝 ≈ 0.2초).
+// AWAY_MS(30초)를 넘기면 실수가 아니라 의도적 이탈로 본다 — 보상도 기록도 없이 로비로.
+//   ⚠ 이 한계는 상대가 내 자리를 잡아 두는 시간(killSlot 대기)과 **같은 값**이어야 한다.
+let _hiddenAt=0;
+function nemoRunning(){ return !!(typeof G!=='undefined' && G && G.phase==='playing' && !G.sandbox && !G.strike); }
+function nemoOnHide(){ if(!nemoRunning()) return; _hiddenAt=Date.now(); saveRun(); }   // 탭이 죽을 수도 있다 — 숨는 순간 판을 저장한다
+function nemoOnShow(){ const t=_hiddenAt; _hiddenAt=0;
+  clearRun();   // 탭이 살아서 돌아왔다 = 저장본은 필요 없다(다음에 숨을 때 다시 쓴다)
+  if(!t || !nemoRunning()) return;
+  const away=Date.now()-t;
+  if(away>AWAY_MS){ abandonRun(away); return; }
+  nemoCatchUp(away); }
+// 숨겨져 있던 만큼 시뮬을 몰아서 돌린다. 배속을 곱해야 실제로 흐른 게임 시간과 같아진다.
+function nemoCatchUp(ms){ if(!nemoRunning()) return;
+  const dt=1/60, cap=AWAY_MS/1000;
+  const secs=Math.min(ms/1000, cap)*(G.speedMul||1);
+  const n=Math.round(secs/dt); if(n<6) return;   // 0.1초 미만은 원래 루프가 삼킨다
+  const e0=G.enemies.length, r0=G.round;
+  G._catchUp=true;   // 따라잡는 동안 효과음을 끈다 — 1,800스텝치가 한꺼번에 터진다(채팅은 남긴다: 무슨 일이 있었는지 읽을 수 있게)
+  try{ for(let i=0;i<n;i++){ if(!nemoRunning()) break; if(typeof tickResearch==='function') tickResearch(dt); step(dt); } }
+  finally{ G._catchUp=false; }
+  if(typeof addChat==='function') addChat('', '⏱ 자리를 비운 '+Math.round(ms/1000)+'초를 따라잡았습니다 — 라운드 '+r0+'→'+G.round+' · 적 '+e0+'→'+G.enemies.length+'기', '#ffd24a', true); }
+// 30초를 넘겨 돌아왔다 = 의도적 이탈. 보상도, 판 기록도 없다.
+function abandonRun(ms){ if(typeof G==='undefined'||!G) return;
+  if(typeof coopSend==='function') coopSend('bye', { num:G.myPlayer||1, nick:(typeof myNick==='function')?myNick():'' });   // 남들은 기다리지 말고 바로 지운다
+  G._pointsBanked=true; G._bankedAmt=0; G._runSum=null;   // 정산 차단 — 이 판은 없던 것으로(포인트·기록·일일 계측 전부)
+  G.phase='quit';
+  if(typeof toast==='function') toast('⚠️ '+Math.round(ms/1000)+'초 넘게 자리를 비워 판에서 나왔습니다 — 보상과 기록이 없습니다');
+  if(typeof overlayToLobby==='function') overlayToLobby(); }   // 결과창을 거치지 않는다(_runSummary 가 돌면 판으로 인정된다)
+// ══ 판 상태 저장/복구 — 탭이 죽어도 30초는 이어진다 ═════════════════
+// 화면을 내리면(홈·앱 전환·화면 잠금) 모바일 브라우저가 그 탭을 **통째로 버리는 일이 흔하다**.
+// 그러면 돌아왔을 때 페이지가 처음부터 다시 뜨고 G 가 사라진다 — 따라잡기(nemoCatchUp)로도
+// 못 살린다. 그래서 숨을 때 판을 저장해 두고, 돌아와서 30초 안이면 그대로 복구한다.
+//   ⚠ 한계도 AWAY_MS 하나를 쓴다 — 탭이 살아 있든 죽었든 사용자에겐 같은 규칙이어야 한다.
+const RUN_SAVE_KEY='nm_run';
+function saveRun(){ if(!nemoRunning()) return;
+  try{
+    // ⚠ 채널 객체·타이머 id 는 직렬화할 수 없다(순환 참조로 통째로 실패한다) — 빼고 저장한다
+    const g=JSON.stringify(G, (k,v)=>(k==='coopChan'||k==='coopStateT'||k==='_runSum')?undefined:v);
+    if(typeof _lsSet==='function') _lsSet(RUN_SAVE_KEY, { t:Date.now(), g:g,
+      mapId:(typeof MAP!=='undefined'&&MAP&&MAP.id)||'nemo',
+      cfg:(typeof MAP_CFG_OVR!=='undefined')?MAP_CFG_OVR:null,
+      room:(typeof _lobbyRoom!=='undefined'&&_lobbyRoom)?_lobbyRoom:null,
+      diff:(typeof _selDiff!=='undefined')?_selDiff:null });
+  }catch(e){ console.warn('saveRun', e); } }
+function clearRun(){ try{ localStorage.removeItem('nm_run'); }catch(e){} }
+// 부팅 때 한 번 — 복구했으면 true(그러면 HOME 으로 끌어가지 않는다)
+function tryRestoreRun(){
+  let sv=null;
+  try{ sv=(typeof _lsGet==='function')?_lsGet(RUN_SAVE_KEY,null):null; }catch(e){}
+  clearRun();   // ⛔ 읽는 즉시 지운다 — 깨진 저장이 부팅을 **영원히** 막는 사태를 원천봉쇄한다
+  if(!sv||!sv.g) return false;
+  const age=Date.now()-(sv.t||0);
+  if(age>AWAY_MS){   // 30초 초과 = 의도적 이탈. 보상도 기록도 없다(abandonRun 과 같은 규칙)
+    if(typeof toast==='function') toast('⚠️ '+Math.round(age/1000)+'초 넘게 자리를 비워 판이 사라졌습니다 — 보상과 기록이 없습니다');
+    return false; }
+  try{
+    const g=JSON.parse(sv.g);
+    if(!g || g.phase!=='playing') return false;
+    _selMap=(typeof USEMAPS!=='undefined' && USEMAPS[sv.mapId]) || USEMAPS.nemo;
+    MAP=_selMap; if(typeof applyMapBalance==='function') applyMapBalance();
+    MAP_CFG_OVR=sv.cfg||null;
+    if(sv.room && typeof _lobbyRoom!=='undefined') _lobbyRoom=sv.room;
+    if(sv.diff && typeof _selDiff!=='undefined') _selDiff=sv.diff;
+    if(typeof resetGameChrome==='function') resetGameChrome();
+    if(typeof bgmStop==='function') bgmStop();
+    G=g; G.loading=false; G.paused=false;
+    G.coop=false; G.coopChan=null; G.coopStateT=null;   // 채널은 새로 붙여야 한다(아래에서 시도)
+    const ov=document.getElementById('ov'); if(ov) ov.classList.add('hide');
+    const lb=document.getElementById('lobby'); if(lb) lb.classList.add('hide');
+    if(typeof setInGame==='function') setInGame(true);
+    if(typeof _setBottomTab==='function') _setBottomTab(G.tab||'Main');
+    if(typeof renderUnits==='function') renderUnits();
+    if(typeof updateHud==='function') updateHud();
+    if(typeof placeMergeZone==='function') placeMergeZone();
+    if(typeof updateCoopBossBar==='function') updateCoopBossBar();
+    nemoCatchUp(age);   // 탭이 죽어 있던 시간도 똑같이 따라잡는다
+    // 협동이었으면 채널에 다시 붙어 본다 — 실패해도 혼자 이어서 하면 되므로 판을 막지 않는다
+    if(sv.room && G.coopSlotInfo && typeof startGameCoop==='function'){ try{ startGameCoop(G.coopSlotInfo); }catch(e){} }
+    if(typeof addChat==='function') addChat('', '↻ 판을 복구했습니다 — 자리를 비운 '+Math.round(age/1000)+'초를 이어서 진행합니다.', '#ffd24a', true);
+    return true;
+  }catch(e){ console.warn('tryRestoreRun', e);
+    try{ G=newGame(); }catch(_e){}   // 반쯤 복구된 상태로 두지 않는다 — 깨끗이 되돌리고 평소 부팅으로
+    return false; } }
+// ══ 게임 종료 — 승/패 공통 단일 출구 ══════════════════════════════
+// ⚠ 상대에게 알리지 않으면 상대 화면에서 내가 **영원히 살아 있는 것으로** 보인다
+//   (내 브로드캐스트는 phase!=='playing' 이면 멈추므로 마지막 값에 얼어붙는다).
+//  · 패배 = 내 자리가 **죽은 자리**가 된다 — 유닛·적·투사체를 전부 지운다.
+//  · 승리 = **게임 전체가 정지**한다 — 유닛은 그대로 서 있고 시간만 멈춘다(관전용).
+//    step(dt) 는 phase!=='playing' 이면 안 도므로 새 유닛·새 적은 어느 쪽이든 안 생긴다.
+function nemoGameOver(result){ if(typeof G==='undefined'||!G) return;
+  if(G._overSent) return; G._overSent=result;   // 판당 1회
+  if(typeof coopBossDmgFlush==='function') coopBossDmgFlush();   // 남은 보스 데미지 누적분을 흘려보낸 뒤 끝낸다
+  if(typeof coopSend==='function') coopSend('over', { result:result, round:G.round||0 });
+  if(result==='lost') clearMyField(); }
+// 내 전장을 비운다 — 배열을 직접 비운다(사망 처리 함수를 타면 킬·보상이 늘어난다)
+function clearMyField(){ if(typeof G==='undefined'||!G) return;
+  ['units','enemies','pendSpawn','shots','beams','muzzles','impacts','sparks','debris','recalls','pendingHits']
+    .forEach(k=>{ if(Array.isArray(G[k])) G[k].length=0; });
+  G.sel=[]; G.selEnemy=null;
+  if(typeof renderUnits==='function') renderUnits();                             // DOM 유닛 카드 정리
+  if(window.M3D && window.M3D.clearGameModels) window.M3D.clearGameModels(); }    // 3D 잔상 제거(숨기지 말고 지운다)
 function drawPlayer(){ drawMain('cvPlayer'); }   // 실제 전장 렌더(관전 라벨은 좌상단 DOM #specLabel)
+// 죽은 자리·빈 자리 관전 — 배경(트랙)만 그리고 그 위엔 아무것도 없다.
+// ⚠ 이 분기가 없으면 drawPlayer() 로 떨어져 **내 유닛·내 적**이 남의 자리에 그려진다(옛 동작).
+//   renderSpectate 와 같은 수법: 배열을 잠깐 비워서 그리고 원상복구한다.
+function renderEmptySlot(){ if(typeof G==='undefined'||!G) return;
+  const sv={ units:G.units, enemies:G.enemies, shots:G.shots, beams:G.beams, muzzles:G.muzzles,
+             sel:G.sel, selEnemy:G.selEnemy, impacts:G.impacts, sparks:G.sparks, debris:G.debris, recalls:G.recalls };
+  G.units=[]; G.enemies=[]; G.shots=[]; G.beams=[]; G.muzzles=[];
+  G.sel=[]; G.selEnemy=null; G.impacts=[]; G.sparks=[]; G.debris=[]; G.recalls=[];
+  // ⚠ 캔버스가 아직 크기를 못 받았을 수 있다(탭 전환 첫 프레임) — 그리기 실패가 프레임 루프를 끊지 않게 막는다
+  try{ drawMain('cvPlayer'); }catch(e){ console.warn('renderEmptySlot', e); } finally{ Object.assign(G, sv); }
+  if(window.M3D && window.M3D.clearGameModels) window.M3D.clearGameModels();   // 3D 잔상 제거(숨기지 말고 지운다)
+  const mcv=document.getElementById('cvMarine'); if(mcv) mcv.style.display='none';
+  const fcv=document.getElementById('cvFx');     if(fcv) fcv.style.display='none'; }
 // 관전 라벨 갱신(좌상단 킬 아래) — 플레이어 탭에서만, 플레이어색으로
 function updateSpecLabel(){ const el=document.getElementById('specLabel'); if(!el) return;
   if(G.tab==='Players'){ const pc=PLAYER_VIEW_COLORS[(G.curPlayer-1)%PLAYER_VIEW_COLORS.length];
@@ -1173,9 +1291,9 @@ function step(dt){
   } else {                       // 전투 단계: 제한시간 종료 시 바로 다음 라운드(준비시간 없음)
     if(G.roundTime<=0){
       if(isBossRound(G.round) && G.enemies.some(e=>e.boss && !e.pboss)){   // 보스 라운드: 2분 내 보스 미처치 → 통과 실패(패배)
-        G.phase='lost'; if(typeof addChat==='function') addChat('', '⏱ 보스를 제한시간 내에 처치하지 못해 방어선이 무너졌습니다.'); if(typeof playSfx==='function') playSfx('lose'); showOverlay(); return; }
+        G.phase='lost'; if(typeof addChat==='function') addChat('', '⏱ 보스를 제한시간 내에 처치하지 못해 방어선이 무너졌습니다.'); if(typeof playSfx==='function') playSfx('lose'); showOverlay(); nemoGameOver('lost'); return; }
       const n=G.round+1;
-      if(n>mapCfg('rounds',TOTAL_ROUNDS) && !mapCfg('infinite')){ G.phase='won'; if(typeof playSfx==='function') playSfx('win'); showOverlay(); return; }
+      if(n>mapCfg('rounds',TOTAL_ROUNDS) && !mapCfg('infinite')){ G.phase='won'; if(typeof playSfx==='function') playSfx('win'); showOverlay(); nemoGameOver('won'); return; }
       gainGas(mapCfg('roundClearEnergyBase',1)+Math.floor(G.round*mapCfg('roundClearEnergyPer',0.34)));   // 라운드 클리어 보너스(하향)
     { const _cap=(mapCfg('interestCap',500)+((G.metaB&&G.metaB.interestCap)||0))*infIncomeMul(); const _per=mapCfg('interestPer',100);   // 라운드 정산 이자: 보유 크레딧 100당 N%(한도까지) — 비축 보상(무한=한도 수입배율)
       const _int=Math.floor(Math.min(G.mineral,_cap)/_per)*Math.round(_per*mapCfg('interestRate',0.05));
@@ -1209,7 +1327,7 @@ function step(dt){
   if(G.pbossCds){ for(const k in G.pbossCds){ if(G.pbossCds[k]>0) G.pbossCds[k]=Math.max(0,G.pbossCds[k]-dt); } }   // 개인 보스 재소환 쿨다운(보스별 개별)
   const _regCnt=G.enemies.reduce((a,e)=>a+(e.pboss?0:1),0);   // 탈락 누적은 일반 적만(개인 보스 제외)
   checkEnemyWarn(_regCnt);
-  if(_regCnt>=mapCfg('loseCount',LOSE_COUNT)){ addChat('', '⚠️ '+(G.myPlayer||1)+'번 플레이어가 탈락하였습니다.'); G.phase='lost'; if(typeof playSfx==='function') playSfx('lose'); showOverlay(); return; }
+  if(_regCnt>=mapCfg('loseCount',LOSE_COUNT)){ addChat('', '⚠️ '+(G.myPlayer||1)+'번 플레이어가 탈락하였습니다.'); G.phase='lost'; if(typeof playSfx==='function') playSfx('lose'); showOverlay(); nemoGameOver('lost'); return; }
   unitAI(dt);   // 명령 이동(공격이동/반복이동) + 스킬 타이머
   // 보스방 파견 유닛 → 공용 보스 직접 공격(트랙 방어 제외) + 유닛별 공격 이펙트
   if(G.coopBoss && !G.coopBoss.dead){ const sentB=G.units.filter(u=>u.atBoss);
