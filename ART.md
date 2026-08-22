@@ -2,7 +2,7 @@
 
 > **결정된 것만 적는다.** 새 이미지를 뽑을 때 §2 템플릿을 그대로 꺼내 쓰고, 바꾸는 것은 §2-B 한 칸뿐이다.
 > ⚠ **세션이 바뀌어도 같은 그림이 나와야 한다.** 프롬프트를 즉흥으로 새로 쓰지 말 것 —
-> 여기 문장들은 실패를 한 번씩 겪고 남은 것이다(§7). 마지막 갱신: 2026-08-18
+> 여기 문장들은 실패를 한 번씩 겪고 남은 것이다(§7·§9-9). 마지막 갱신: 2026-08-21
 
 ---
 
@@ -10,8 +10,16 @@
 
 **게임에 들어갈 이미지를 생성하기 전에.** 유즈맵 키 아트·던전 배경·화면 배경 등 "장면"을 만드는 모든 경우.
 
-**계열이 둘이다** — §2~§7 은 **유즈맵 키 아트**(내려다보는 맵 그림), §8 은 **타이틀 배경**(부팅 로딩, 올려다보는 전투 그림).
-노출·안개·금지 블록은 같고 시점·구도·후처리가 다르다. 새 그림이 어느 쪽인지 먼저 정하고 그 계열의 규격을 쓸 것.
+**계열이 셋이다.**
+
+| 계열 | 절 | 무엇 |
+|---|---|---|
+| 유즈맵 키 아트 | §2~§7 | 내려다보는 맵 그림. 가운데를 비운다(미니맵 자리) |
+| 타이틀 배경 | §8 | 올려다보는 전투 그림. 위쪽을 비운다(제목 자리) |
+| **유닛 참고 아트** | **§9** | **캐릭터**. 8방향 스프라이트의 원본이라 규칙이 앞 둘과 반대다(`no characters` 가 없다) |
+
+앞 둘은 노출·안개·금지 블록이 같고 시점·구도·후처리가 다르다. §9 는 목적 자체가 달라 별도 규격을 쓴다.
+새 그림이 어느 계열인지 **먼저 정하고** 그 계열의 규격을 꺼낼 것 — `scripts/art-lint.mjs` 가 계열별로 검사한다.
 
 이 문서가 다루지 **않는** 것: 아이콘(`assets/icons`)·유닛 초상(`assets/portraits`)·타일(`assets/tiles`).
 그건 이미 만들어진 에셋이고, 새로 필요하면 **먼저 기존 것을 찾아 쓴다**(CLAUDE.md 아이콘 일반 원칙).
@@ -275,7 +283,7 @@ A(노출) · C(안개 + 대항 문장 셋) · 금지(텍스트·로고·UI·워�
   실제 화면의 딤은 `#opening .opArt::after` 가 갖고 있고 **글자가 앉는 아래쪽만** 덮는다(`.06 → .10 → .62 → .96`).
   예전 값(`.25 → .55 → .96`)은 전장을 통째로 눌러 무엇이 싸우는지 안 보였다.
 - **종족은 다섯이다** — 유니온(파랑 보병·기계) · 에테리얼(금색 사이오닉) · 스웜(초록 유기체) · 페럴(수인 무리) · 콜로서스(거신 포격).
-  ⚠ 페럴·콜로서스는 **아직 코드에 없다**(`STK_RACES` 는 셋뿐). RACES.md 의 설계를 그림이 먼저 보여 주고 있다는 뜻이다.
+  (페럴·콜로서스는 2026-08-20 에 코드로 들어갔다 — 그림이 설계보다 먼저 나와 있었다.)
 
 ### 실제로 쓴 프롬프트 — `assets/backgrounds/title/boot.webp`
 
@@ -286,3 +294,246 @@ Moody sci-fi battle key art, bright and clearly readable exposure with rich midt
 > 다섯 종족 묘사(위 두 번째 문장)는 **고정 블록**이다. 새 타이틀 배경을 뽑을 때 그 문장을 그대로 두고 **전장·시점·조명만** 바꾼다.
 > 여덟 장을 그렇게 뽑아 비교했다(열린 계곡 · 굽이친 전선 · **폐허 도시(채택)** · 협곡 관문 · 궤도 강하 · 야간 화염 · 사막 폭풍 · 크리스탈 평원).
 
+
+
+---
+
+## 9. 유닛 참고 아트 계열 — 페럴 (2026-08-21)
+
+앞의 두 계열(§6 유즈맵 키 아트 · §8 타이틀 배경)은 **환경**이라 `no characters` 가 붙는다.
+이건 **캐릭터** 계열이라 규칙이 반대다. 목적도 다르다 — 감상용이 아니라 **8방향 스프라이트의 원본**이다.
+
+### 9-1. 형태는 둘로 갈린다
+
+`RACES.md §2` 의 형태 축을 그대로 따른다.
+
+| 계열 | 유닛 | 프롬프트 |
+|---|---|---|
+| **수인형** | 돌진수 · 대공 투석수 · 포식수 · 맹독수 · 암살수 · 주술사 · 우두머리 | 9-3 |
+| **짐승형** | 채집수 · 추격수 · 가시 사수 · 정찰조 · 수송조 · 하늘 사냥수 · 뇌격수 · 원시 군주 | 9-4 |
+| **혼합** | 폭격 기수(짐승 탈것 + 수인 기수) | 9-3 에서 두 줄 교체(9-7) |
+
+### 9-2. 파이프라인 — 세 단계다
+
+```
+① 정면 전신 시트(9-3 / 9-4)  →  ② 게임 카메라 각도로 재렌더(9-5, i2i)  →  ③ 턴테이블 영상(9-6) → 프레임 8장
+```
+
+**게임 카메라는 `VIEW_TILT = 0.65 rad = 37.2°` · 오쏘그래픽**(`js/90-m3d.module.js`).
+정통 아이소메트릭(35.3°)과 거의 같다. **이 두 값을 프롬프트에 반드시 박는다** —
+눈대중으로 "위에서 본"이라고 쓰면 45~60°가 나오고, 원근이 들어가면 앞다리만 부풀어 발밑 그림자·선택 링과 어긋난다.
+엔진의 `face=0`(`Math.atan2(dx,dy)`)이 **카메라 쪽**이라 ②의 정면이 곧 8방향의 0번이다.
+
+⚠ ③에서 **8방향을 따로 생성하지 말 것.** AI 영상은 방향이 바뀌는 동안 정체성이 흔들려 8마리의 다른 짐승이 나온다.
+제자리에 세워 두고 **카메라만 등속 1회전**시키면 `scripts/video-frames.mjs` 의 균등 샘플링이 8장 = 45°씩으로 딱 맞는다.
+
+### 9-3. 수인형 공통 프롬프트 (`[UNIT: …]` 한 칸만 교체)
+
+```
+Full-body character reference sheet of a single anthropomorphic beast-warrior, standing
+upright and facing the viewer, both feet on the ground, entire body inside the frame from
+head to feet with a small margin.
+
+Species: gene-forged beast-folk. A heavily muscled humanoid body carrying the head, pelt,
+hide and limbs of a real animal. Digitigrade legs, visible sinew and old scars, crude
+surgical grafts left over from gene-engineering. A soldier of a tribal war-pack, not a
+mascot and not a werewolf. Gear is primitive and hand-made: bone, tooth, horn, stone,
+rawhide strap, woven cord, scavenged plate lashed on with leather. No machined metal, no
+powered armour, no firearms.
+
+[UNIT: animal · battlefield role · weapon and how it attacks · one distinguishing feature]
+
+Palette: warm tan, ochre and dusty brown hide over neutral greys. Muted and desaturated,
+low-saturation accents only. The colour must read as earth and bone, never neon.
+
+Lighting: even neutral light from the front and slightly above, soft shadows, clearly
+readable exposure with rich midtones. Not underexposed, no rim-light drama, no coloured
+gels.
+
+Background: flat plain white, with only a soft contact shadow directly beneath the feet.
+Identical camera distance, eye-level angle and framing for every character so that body
+scale can be compared across sheets. Painterly concept-art rendering, clean and legible,
+detail visible across the whole figure.
+
+Pose: a settled combat-ready stance that shows how this warrior actually fights — the
+weapon or natural weapon held the way it is used. Not mid-swing, not airborne, not an
+action shot.
+
+No text, no logos, no user interface, no watermark, no background scenery, no second
+character, no weapon trails, no magic glow, no lens flare.
+```
+
+### 9-4. 짐승형 공통 프롬프트
+
+```
+Full-body reference sheet of a single gene-forged war beast, a real animal and not a
+humanoid, standing on the ground on all fours or on its own feet, presented in profile
+three-quarter view, entire body inside the frame from head to tail with a small margin.
+
+Species: a true beast raised and grafted by a tribal war-pack, not anthropomorphic. It
+keeps real animal anatomy throughout — no human torso, no hands, no upright posture, no
+clothing. It is oversized and battle-hardened: thickened hide or plumage, heavy scarring,
+crude surgical grafts left over from gene-engineering, torn ears and broken claws.
+
+Its only harness is primitive and hand-made: rawhide straps, bone toggles, woven cord and
+scavenged plate lashed on with leather, fitted by its handlers. No machined metal, no
+saddle rigging beyond rough straps, no armour plating that hides the animal's shape.
+
+[UNIT: animal · battlefield role · how it attacks with its natural weapons · one
+distinguishing feature]
+
+Palette: warm tan, ochre and dusty brown hide or feather over neutral greys. Muted and
+desaturated, low-saturation accents only. The colour must read as earth and bone, never
+neon.
+
+Lighting: even neutral light from the front and slightly above, soft shadows, clearly
+readable exposure with rich midtones. Not underexposed, no rim-light drama, no coloured
+gels.
+
+Background: flat plain white, with only a soft contact shadow directly beneath the body.
+Identical camera distance, eye-level angle and framing as the beast-folk sheets so that
+body scale can be compared between them. Painterly concept-art rendering, clean and
+legible, detail visible across the whole animal.
+
+Pose: standing and alert, wings folded or half-folded if it has them, showing how it
+actually fights. Not mid-flight, not mid-strike, not an action shot.
+
+No text, no logos, no user interface, no watermark, no background scenery, no rider, no
+second animal, no weapon trails, no magic glow, no lens flare.
+```
+
+### 9-5. 게임 각도로 재렌더 (i2i · 레퍼런스 이미지 첨부 필수)
+
+```
+Re-render the character from the attached reference image. Keep the exact same creature,
+anatomy, proportions, gear, markings and colours — only the camera changes.
+
+Camera: the camera sits only slightly above the character, about 37 degrees from the
+ground plane, the angle of an isometric strategy-game camera. The top of the head and the
+shoulders are visible but very little ground is seen behind the character. The figure
+still reads as standing, not lying down and not seen from directly overhead.
+
+Projection: flat orthographic projection like a technical illustration. The near and far
+parts of the body are drawn at exactly the same scale, and no limb is enlarged just
+because it is closer to the camera. No wide-angle lens, no fisheye, no foreshortening, no
+lens curvature.
+
+Facing: the character faces the camera, turned toward the bottom of the frame, as if about
+to walk toward the viewer.
+
+Pose: the head is raised and held level with the shoulders so the skull reads clearly in
+silhouette. A neutral standing stance with the weight settled evenly on every foot. Not
+crouching, not stalking, not lowering the head, not mid-step, not mid-swing, not airborne.
+The stance should still show how this one fights.
+
+Framing: a single character centred in frame, the whole body inside the frame from the top
+of the head to the feet with a small margin, feet planted on the ground.
+
+Background: flat plain white with only a soft contact shadow directly beneath the body,
+not offset to one side. No long cast shadow across the ground, no floor texture, no
+environment.
+
+Lighting: even neutral light from the front and slightly above, identical to the reference.
+Soft shadows, clearly readable midtones, no rim light, no coloured gels.
+
+No text, no logos, no user interface, no watermark, no background scenery, no second
+character, no weapon trails, no magic glow, no lens flare.
+```
+
+### 9-6. 턴테이블 영상 (8방향 원본 · 9-5 결과를 레퍼런스로)
+
+```
+Using the attached image as the exact reference for the character, create a short video.
+
+The animal stands still in a neutral standing pose and does not move, does not walk, does
+not attack and does not change its pose at any point. Only the camera moves.
+
+The camera orbits smoothly and continuously around the animal, one full 360 degree
+revolution at a constant speed, ending exactly where it started.
+
+Throughout the whole orbit the camera stays at a constant height, about 37 degrees above
+the ground plane, and at a constant distance, so the animal stays the same size in frame
+from the first frame to the last.
+
+Flat orthographic look: no perspective distortion, no wide-angle lens, no fisheye, no zoom,
+no dolly, no camera shake, no motion blur.
+
+The animal stays centred in frame at all times, its whole body inside the frame, feet on
+the ground, with a soft contact shadow directly beneath it.
+
+Background: flat plain white, completely static — no environment, no floor texture, no
+particles, no fog.
+
+Lighting stays exactly the same for the entire clip: even neutral light, no rim light, no
+coloured gels, no change as the camera moves.
+
+The creature's anatomy, fur colour, scars, stitches and bone necklace must stay identical
+in every frame. No morphing, no shape change, no added or removed details.
+
+No text, no logos, no user interface, no watermark, no second character.
+```
+
+### 9-7. 혼합형(폭격 기수)은 9-3 에서 두 줄만 바꾼다
+
+- 첫 줄 → `Full-body character reference sheet of a single mounted unit: a war beast with its rider, both standing upright...`
+- 마지막 줄에서 `no second character,` **삭제**
+
+### 9-8. 지금까지 확정한 개별 블록
+
+**추격수** (짐승형)
+```
+[UNIT: a lean feral hound, jackal-like with a short coarse tan pelt and a whip-thin
+running build. The cheapest and most numerous body the pack throws forward, fielded seven
+at a time. It fights with nothing but teeth, driving in low and biting at the legs of
+whatever is in front of it. Distinguishing feature: it carries no gear at all beyond a
+single rawhide collar strung with notched bones, and its ribs show.]
+```
+
+**가시 사수** (짐승형)
+```
+[UNIT: a hulking porcupine, low and broad, its whole back and flanks buried under a dense
+mantle of long banded quills. The pack's standing ranged animal, holding ground while the
+hounds close. It fights by planting its feet and snapping its body so the loose quills fire
+forward like darts. Distinguishing feature: bald patches across the back where quills have
+been thrown and have not regrown, and the mantle is flared wide in a warning bristle.]
+```
+
+**암살수** (수인형)
+```
+[UNIT: a mantis beast-folk — a tall narrow chitinous body, triangular head with large
+compound eyes, two long raptorial forelimbs folded tight against the chest. The pack's
+ambusher and the fastest thing it has on the ground. Fights by holding perfectly still
+until it strikes, then unfolding both blade-arms in a single leaping cut. Distinguishing
+feature: the chitin is matte earth-brown and dust-caked for hiding, never glossy green;
+the folded forelimbs read as a coiled spring about to release.]
+```
+
+**폭격 기수** (혼합형 — 9-7 적용)
+```
+[UNIT: a mounted pair — a huge war eagle whose wingspan is several times the rider's
+height, standing on the ground with wings half-folded, and a small wiry beast-folk lancer
+seated low on its shoulders. The pack's only airborne striker, diving to drive a long
+bone-tipped lance down into a single ground target, one heavy hit at a time.
+Distinguishing feature: the lancer is strapped in with rawhide so both hands stay free for
+the lance, and the eagle's talons are wrapped in leather.]
+```
+
+### 9-9. 실패 기록 — 이 문장들이 있는 이유
+
+**1차 시도(추격수)에서 세 가지가 한꺼번에 나갔다.**
+
+| 증상 | 원인 | 넣은 문장 |
+|---|---|---|
+| 앞발이 뒷다리보다 훨씬 크게 부풀었다 | `orthographic` 단어 하나로는 안 먹는다 | `like a technical illustration` + `no limb is enlarged just because it is closer` + 광각·어안 금지 |
+| 각도가 37°보다 한참 위에서 잡혔다 | 숫자만 주면 모델이 무시한다 | **보이는 것으로 기준을 준다** — `the top of the back is visible but very little ground is seen behind` |
+| 머리를 숙여 실루엣에서 머리가 사라졌다 | "combat-ready stance" 가 웅크림으로 해석됐다 | `the head is raised and held level with the shoulders so the skull reads clearly in silhouette` |
+
+**세 번째가 실전에서 제일 아프다.** 게임 화면에서 유닛은 **40~60px**로 보인다. 그 크기에서는 봉합선·목걸이가 전부 사라지고
+**실루엣만 남는다.** 뽑은 그림은 **48px로 줄여서 무엇인지 알아볼 수 있는지** 확인하고 넘어갈 것.
+
+### 9-10. 체크리스트
+- [ ] 정면 시트(9-3/9-4) — 형태 계열이 맞는가
+- [ ] 48px 실루엣 판독 통과
+- [ ] 게임 각도 재렌더(9-5) — 원근 없음 · 머리가 실루엣에 남음 · 그림자 발밑 정위치
+- [ ] 턴테이블 영상(9-6) — 한 바퀴 도는 동안 같은 개체인가
+- [ ] 프롬프트 전문을 9-8 에 추가하고 `node scripts/art-lint.mjs` 통과
