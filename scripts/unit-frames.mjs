@@ -12,6 +12,8 @@
  *   --keep-bg        배경을 지우지 않는다(기본은 마젠타 배경 제거 + 알파)
  *   --webp           png 대신 webp 로 쓴다(저장소 표준 — SPRITES.md §5)
  *   --degreen <n>    초록 얼룩 중화(0=끔·기본). 장비의 초록도 같이 바래므로 신중히
+ *   --best           박자만 보지 말고 '머리는 고요하고 다리만 움직이는' 구간을 고른다
+ *                    (다리 있는 지상 유닛 전용 — 공중 유닛·건물엔 의미 없다)
  *
  * ⚠ 전체 구간 균등 샘플링을 쓰지 않는다. AI 생성 영상은 10초에 스트라이드가 6회씩
  *   들어가는 일이 흔해서, 전체를 균등하게 뽑으면 서로 다른 사이클이 섞여 다리가
@@ -34,7 +36,7 @@ const VID = argv[0];
 const opt = (k, d) => { const i = argv.indexOf('--' + k); return i < 0 ? d : argv[i + 1]; };
 const flag = k => argv.includes('--' + k);
 if (!VID || VID.startsWith('--')) {
-  console.error('사용: node scripts/unit-frames.mjs <영상경로> [--out 폴더] [--frames 8] [--from 초 --to 초] [--scan] [--size px] [--sheet] [--webp] [--keep-bg] [--degreen n]');
+  console.error('사용: node scripts/unit-frames.mjs <영상경로> [--out 폴더] [--frames 8] [--from 초 --to 초] [--scan] [--size px] [--sheet] [--webp] [--best] [--keep-bg] [--degreen n]');
   process.exit(2);
 }
 if (!fs.existsSync(VID)) { console.error('영상이 없습니다: ' + VID); process.exit(2); }
@@ -165,7 +167,7 @@ try {
   // ── ① 보행 주기 + 카메라 고정 측정 ───────────────────────────────
   const scanT = Array.from({ length: SCAN_N }, (_, i) => dur * (i / SCAN_N) * 0.99);
   const scan = await capture(scanT, PROBE);
-  const feet = [], box = [];
+  const feet = [], box = [], probe = [];
   for (const s of scan) {
     const raw = await sharp(Buffer.from(s.png.split(',')[1], 'base64')).removeAlpha().raw().toBuffer();
     const bg = [raw[0], raw[1], raw[2]];                       // 좌상단 = 배경색
@@ -178,7 +180,8 @@ try {
       if (y >= PROBE * 0.75) { if (x < fx0) fx0 = x; if (x > fx1) fx1 = x; }   // 아래 25% = 발
     }
     feet.push(fx1 - fx0 + 1);
-    box.push({ cx: (bx0 + bx1) / 2, cy: (by0 + by1) / 2, bg: bg });
+    box.push({ cx: (bx0 + bx1) / 2, cy: (by0 + by1) / 2, bg: bg, x0: bx0, y0: by0, x1: bx1, y1: by1 });
+    probe.push(raw);
   }
   // 발 폭의 극대점 = 반보(半步)
   const raw方 = [];
@@ -199,18 +202,71 @@ try {
   if (half.length >= 3) {
     const gaps = half.slice(1).map((p, i) => p - half[i]);
     const med = gaps.slice().sort((a, b) => a - b)[gaps.length >> 1];
+    // 주기는 **첫 극대점~끝 극대점 전체**로 잰다(인접 간격의 중앙값이 아니라).
+    // ⚠ 100표본이면 한 걸음이 12~13표본뿐이라 인접 간격은 ±1표본 = ±8% 로 흔들린다.
+    //   같은 클립을 두 번 재서 0.85초와 0.73초가 나온 적이 있다. 전체 구간을 개수로
+    //   나누면 그 양자화 오차가 극대점 수만큼 줄어든다.
+    const spanAll = (half[half.length - 1] - half[0]) / (half.length - 1);
+    // 극대점을 하나 놓치면 평균이 부풀어 오른다 — 중앙값과 크게 다르면 중앙값을 쓴다
+    const gap = Math.abs(spanAll - med) > med * 0.35 ? med : spanAll;
     console.log('\n=== 보행 ===');
-    console.log('반보 ' + half.length + '회 · 중앙 간격 ' + med + '표본 = ' + (med * dt).toFixed(2) + '초');
-    console.log('한 스트라이드 ' + (med * 2 * dt).toFixed(2) + '초 · 클립 안에 약 ' + (dur / (med * 2 * dt)).toFixed(1) + '회');
-    // 가장 고른 한 스트라이드(연속한 두 반보 간격이 중앙값에 가장 가까운 곳)
+    console.log('반보 ' + half.length + '회 · 간격 ' + gap.toFixed(2) + '표본 = ' + (gap * dt).toFixed(2) + '초' +
+      (gap === med ? ' (중앙값 — 극대점 누락 의심)' : ' (전체 평균)'));
+    console.log('한 스트라이드 ' + (gap * 2 * dt).toFixed(2) + '초 · 클립 안에 약 ' + (dur / (gap * 2 * dt)).toFixed(1) + '회');
+    // 구간 길이는 **중앙 간격 × 2** 로 고정한다.
+    // ⚠ 예전엔 '반보 극대점 3개 사이'를 그대로 썼는데, 극대점 간격이 들쭉날쭉하면
+    //   짧은 쌍이 뽑혀 한 걸음의 86% 만 잘리는 일이 있었다(돌진수 #2: 스트라이드
+    //   0.85초인데 구간이 0.73초). 그러면 다리가 한 걸음을 못 채우고 되돌아가
+    //   종종거리는 것처럼 보인다. 시작점만 극대점에서 고르고 길이는 중앙값으로 준다.
     if (A === null) {
-      let best = Infinity, at = 0;
-      for (let i = 0; i + 2 < half.length; i++) {
-        const e = Math.abs(gaps[i] - med) + Math.abs(gaps[i + 1] - med);
-        if (e < best) { best = e; at = i; }
+      const span = gap * 2;                       // 한 스트라이드(표본 수)
+      const W = Math.max(3, Math.round(span));
+      if (flag('best')) {
+        // ── 걷기가 가장 잘 나온 구간 고르기 ──────────────────────────
+        // 극대점 위치만 보고 고르면 '박자'는 맞지만 '품질'은 못 본다 — 실제로 클립
+        // 앞쪽엔 멀쩡한 걸음이 있는데 중반의 머리 흔드는 구간을 고른 적이 있다.
+        // 여기서는 피사체를 두 띠로 나눠 본다:
+        //   위 55% = 머리·몸통 → 고요해야 좋다
+        //   아래 30% = 다리   → 움직여야 좋다
+        // 점수 = 다리 변화 / 몸통 변화. 높을수록 '머리는 가만, 다리만' 이다.
+        // ⚠ 다리가 없는 대상(공중 유닛·건물)에는 의미가 없다. 그래서 기본이 아니라 옵션이다.
+        const bodyD = [], legD = [];
+        for (let i = 0; i < probe.length - 1; i++) {
+          const b = box[i], h = b.y1 - b.y0 + 1;
+          const bodyEnd = b.y0 + Math.round(h * 0.55), legStart = b.y1 - Math.round(h * 0.30);
+          let sb = 0, nb = 0, sl = 0, nl = 0;
+          for (let y = b.y0; y <= b.y1; y++) for (let x = b.x0; x <= b.x1; x++) {
+            const o = (y * PROBE + x) * 3;
+            const d = Math.abs(probe[i][o] - probe[i + 1][o]) +
+                      Math.abs(probe[i][o + 1] - probe[i + 1][o + 1]) +
+                      Math.abs(probe[i][o + 2] - probe[i + 1][o + 2]);
+            if (y <= bodyEnd) { sb += d; nb++; }
+            if (y >= legStart) { sl += d; nl++; }
+          }
+          bodyD.push(sb / Math.max(1, nb)); legD.push(sl / Math.max(1, nl));
+        }
+        let bestS = -1, at = 0;
+        for (let s = 0; s + W < bodyD.length; s++) {
+          let sl = 0, sb = 0;
+          for (let k = s; k < s + W; k++) { sl += legD[k]; sb += bodyD[k]; }
+          const sc = (sl / W) / Math.max(0.5, sb / W);
+          if (sc > bestS) { bestS = sc; at = s; }
+        }
+        A = at * dt; B = (at + W) * dt;
+        console.log('자동 선택 구간  ' + A.toFixed(2) + ' ~ ' + B.toFixed(2) + '초 (' +
+          (B - A).toFixed(2) + '초) · 다리/몸통 점수 ' + bestS.toFixed(2) +
+          (bestS < 1.1 ? ' ⚠ 몸통이 다리만큼 움직인다 — 클립을 다시 뽑는 게 낫다' : ''));
+      } else {
+        let best = Infinity, at = 0;
+        for (let i = 0; i + 2 < half.length; i++) {
+          if (half[i] + span > SCAN_N - 1) continue;        // 클립 끝을 넘지 않게
+          const e = Math.abs(gaps[i] - gap) + Math.abs(gaps[i + 1] - gap);
+          if (e < best) { best = e; at = i; }
+        }
+        A = half[at] * dt; B = (half[at] + span) * dt;
+        console.log('자동 선택 구간  ' + A.toFixed(2) + ' ~ ' + B.toFixed(2) + '초 (' +
+          ((B - A)).toFixed(2) + '초 = 중앙 스트라이드)   ※ --best 로 품질까지 보고 고를 수 있다');
       }
-      A = half[at] * dt; B = half[at + 2] * dt;
-      console.log('자동 선택 구간  ' + A.toFixed(2) + ' ~ ' + B.toFixed(2) + '초 (한 스트라이드)');
     }
   } else if (A === null) {
     A = 0; B = dur * 0.99;
