@@ -289,31 +289,34 @@ function dgValsHTML(r){ if(!r) return '<div class="dgVals off"><span>—</span><
   if(r.gas) h+='<span>'+resIco('gas','ri')+r.gas.toLocaleString()+'</span>';
   if(r.tixKind && r.tixN>0) h+='<span>'+resIco('ticket_'+r.tixKind,'ri')+r.tixN+'</span>';
   return h+'</div>'; }
-function renderDungeonHub(){ const body=document.getElementById('dgHubBody'); if(!body) return;
-  const c=CHAR(); if(!c) return;
-  const cap=dgFloorCap();
-  let h='<div class="dgHubHead">토벌 열쇠는 <b>매일 09:00</b>에 보충됩니다. 열쇠는 토벌을 완료할 때만 소모됩니다.</div>';
-  h+='<div class="rmList">';
-  for(const d of DG_DUNGEONS){
-    const lock=c.level<d.reqLv; d.reqLvLocked=lock;
-    const mx=lock?0:dgMaxFloor(d.id), k=lock?0:dgKeyN(d.id);
-    const nx=mx+1, okLv=nx<=cap;
-    // 소탕 = 이미 깬 최고 단계(없으면 잠김) · 입장 = 다음 단계(레벨 상한·열쇠가 막을 수 있다)
-    const canSwp=!lock && mx>0 && k>0, canEnt=!lock && okLv && k>0;
-    const rSwp=(!lock && mx>0)? dgFloorReward(mx, d.id) : null;
-    const rEnt=(!lock && okLv)? dgFloorReward(nx, d.id) : null;
-    const at=' onclick="event.stopPropagation();';
-    h+='<div class="roomItem dgRow'+(lock?' locked':'')+'" style="--dc:'+d.tint+'">'
-      +dgIcoHTML(d)
-      +'<div class="riMain"><div class="riName"><u>'+escHtml(d.name)+'</u>'+dgStgHTML(d,mx)+'</div>'
-      +'<div style="margin-top:5px">'+(lock?'':dgKeyHTML(k))+'</div></div>'
-      +'<div class="dgBtnW"><button class="actBtn"'+(canSwp?'':' disabled')+at+'dgSweep(\''+d.id+'\')">소탕</button>'
-        +dgValsHTML(canSwp?rSwp:null)+'</div>'
+// ⚔ 토벌 목록 행 — **허브와 시트가 같은 함수를 쓴다**(단일 소스).
+//   mode 'hub'  = 버튼 둘 + 각 버튼이 주는 값
+//   mode 'sheet'= 버튼 없음 + 입장 보상만(시트에서는 '어떻게 싸울지'만 고른다)
+// ⛔ 시트용 행을 따로 만들지 말 것 — 두 벌이 되면 반드시 어긋난다(CLAUDE.md 단일 소스 원칙).
+function dgRowHTML(d, mode){ const c=CHAR(); if(!c) return '';
+  const lock=c.level<d.reqLv; d.reqLvLocked=lock;
+  const mx=lock?0:dgMaxFloor(d.id), k=lock?0:dgKeyN(d.id);
+  const nx=mx+1, okLv=nx<=dgFloorCap();
+  const canSwp=!lock && mx>0 && k>0, canEnt=!lock && okLv && k>0;
+  const rSwp=(!lock && mx>0)? dgFloorReward(mx, d.id) : null;
+  const rEnt=(!lock && okLv)? dgFloorReward(nx, d.id) : null;
+  let h='<div class="roomItem dgRow'+(lock?' locked':'')+'" style="--dc:'+d.tint+'">'
+    +dgIcoHTML(d)
+    +'<div class="riMain"><div class="riName"><u>'+escHtml(d.name)+'</u>'
+      +'<span class="dgStg">'+(lock?('Lv.'+d.reqLv):(mode==='sheet'? nx+'단계' : (mx? mx+'단계':'미개척')))+'</span></div>'
+    +'<div style="margin-top:5px">'+(lock?'':dgKeyHTML(k))+'</div></div>';
+  if(mode==='sheet'){ h+=dgValsHTML(rEnt); }        // 시트 = 이번에 받을 것 하나만
+  else { const at=' onclick="event.stopPropagation();';
+    h+='<div class="dgBtnW"><button class="actBtn"'+(canSwp?'':' disabled')+at+'dgSweep(\''+d.id+'\')">소탕</button>'
+       +dgValsHTML(canSwp?rSwp:null)+'</div>'
       +'<div class="dgBtnW"><button class="actBtn'+(canEnt?' pri':'')+'"'+(canEnt?'':' disabled')+at+'dgOpenSheet(\''+d.id+'\')">'
-        +(lock?'잠김':(okLv?'입장':'Lv.'+dgFloorReqLv(nx)))+'</button>'
-        +dgValsHTML(canEnt?rEnt:null)+'</div>'
-      +'</div>'; }
-  h+='</div>';
+       +(lock?'잠김':(okLv?'입장':'Lv.'+dgFloorReqLv(nx)))+'</button>'
+       +dgValsHTML(canEnt?rEnt:null)+'</div>'; }
+  return h+'</div>'; }
+function renderDungeonHub(){ const body=document.getElementById('dgHubBody'); if(!body) return;
+  if(!CHAR()) return;
+  let h='<div class="dgHubHead">토벌 열쇠는 <b>매일 09:00</b>에 보충됩니다. 열쇠는 토벌을 완료할 때만 소모됩니다.</div>';
+  h+='<div class="rmList">'+DG_DUNGEONS.map(d=>dgRowHTML(d,'hub')).join('')+'</div>';
   // 🎟 보유 뽑기권 — 종류가 늘어도 여기는 안 고친다(TIX_KINDS 가 단일 소스)
   const tx=(PROF()&&PROF().tickets)||{};
   h+='<div class="dgTix">'+TIX_KINDS.map(k=>resIco('ticket_'+k,'gi')+'<b>'+(tx[k]||0)+'</b>').join(' ')+'</div>';
@@ -330,23 +333,20 @@ function dgCloseSheet(){ const s=document.getElementById('dgSheet'); if(s) s.cla
 function renderDgSheet(){ const d=DG_DUNGEONS.find(x=>x.id===_dgSheetId), c=CHAR(); if(!d||!c) return;
   // ⚠ 단계는 **그 종류의** 기록을 본다 — dgMaxFloor() 를 인자 없이 부르면 전 종류 최고가 나와,
   //   장비 토벌을 처음 열었는데 일반 토벌 12단계 다음이 뜬다(실제로 그럴 뻔했다).
-  const mx=dgMaxFloor(d.id), cap=dgFloorCap(), nx=mx+1, k=dgKeyN(d.id), okLv=nx<=cap;
-  const set=(id,html)=>{const e=document.getElementById(id); if(e) e.innerHTML=html;};
-  set('dgSheetName', d.name); const ico=document.getElementById('dgSheetIco'); if(ico) ico.textContent=d.ico;
-  const art=document.getElementById('dgSheetArt'); if(art) art.style.setProperty('--dgTint', d.tint);
-  set('dgSheetStage', '난이도 <b>'+nx+'단계</b>');
-  set('dgSheetReward', '보상: '+dgRewardText(dgFloorReward(nx, d.id)));
-  set('dgSheetKey', '🗝 '+k+'/'+DG_KEY_DAILY);
-  // ⚠ 소탕은 목록 행으로 올라갔다 — 시트에는 자동/직접 선택만 남는다.
+  const mx=dgMaxFloor(d.id), nx=mx+1, k=dgKeyN(d.id), okLv=nx<=dgFloorCap();
+  // 🎨 S4 — 방금 누른 그 행을 시트 안에 **그대로** 얹는다(dgRowHTML 공용). 맥락이 자리로 이어진다.
+  const host=document.getElementById('dgSheetRow'); if(host) host.innerHTML=dgRowHTML(d,'sheet');
+  const card=document.querySelector('#dgSheet .dgSheetCard');
+  if(card) card.style.setProperty('--acc', d.tint);   // 제목 아래 헤어라인만 그 토벌 색을 받는다
+  // 소탕은 목록 행으로 올라갔다 — 시트에는 '어떻게 싸울지'만 남는다.
   { const bS=document.getElementById('dgSheetSweep'); if(bS) bS.disabled=!(mx>0 && k>0); }
-  // 자동·직접 두 버튼 — ⚠ textContent 로 덮지 말 것(안의 <b>/<i> 두 줄이 통째로 날아간다).
-  //   잠긴 이유는 라벨을 갈아끼우는 대신 아랫줄(i)에만 적는다.
   const gate=okLv?(k>0?'':'열쇠 없음'):('Lv.'+dgFloorReqLv(nx)+' 필요');
   for(const [bid,sub] of [['dgSheetAuto','제자리 · 즉시'],['dgSheetEnter','이동·카이팅 · 확률↑']]){
     const b=document.getElementById(bid); if(!b) continue;
     b.disabled=!(okLv && k>0);
-    const i=b.querySelector('i'); if(i) i.textContent=gate||sub; } }
-// 다음 단계 입장 — auto=1 이면 화면에 들어가지 않고 배속으로 돌린다.
+    b.classList.toggle('pri', bid==='dgSheetEnter' && okLv && k>0);   // 직접 = 주 동작(붉은 밑변 광원)
+    const i=b.querySelector('i'); if(i) i.textContent=gate||sub; }
+  if(typeof paintIcons==='function') paintIcons(document.getElementById('dgSheet')); }
 function dgSheetEnter(auto){ const d=DG_DUNGEONS.find(x=>x.id===_dgSheetId); if(!d) return;
   if(dgBusy()){ if(typeof toast==='function') toast('⚔ 이미 토벌이 진행 중입니다'); return; }
   const nx=dgMaxFloor(d.id)+1;

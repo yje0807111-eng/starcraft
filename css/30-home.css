@@ -1017,26 +1017,33 @@
   .dgVals .ri{width:11px;height:11px}
   .dgTix{display:flex;gap:14px;justify-content:center;padding:10px 4px 2px;color:#c6ccd4;font-size:var(--fs-md);font-weight:700}
   .dgTix b{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:#fff;margin-left:3px}
-  /* 다음 단계 입장 = 두 갈래(자동·직접). 소탕과 줄을 나눠 '이전/다음'이 눈으로 갈리게 한다 */
-  .dgSheetGo{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:8px}
-  .dgSheetGo .dgGo{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 6px;line-height:1.15}
-  .dgSheetGo .dgGo b{font-size:13px;font-weight:800}
-  .dgSheetGo .dgGo i{font-style:normal;font-size:10px;font-weight:700;opacity:.62}
+  /* 자동·직접 = 공용 .actBtn. ⛔ 면·테두리를 따로 쓰지 말 것 — 여기서 덮는 것은 크기와 2줄 배치뿐이다.
+     위계는 색이 아니라 빛의 양: 직접이 .pri(붉은 밑변 광원), 자동은 기본(중립 흰선). */
+  .dgSheetGo{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:12px}
+  .dgSheetGo .dgGo{flex-direction:column;gap:1px;height:44px;padding:0 8px;line-height:1.15}
+  .dgSheetGo .dgGo b{font-size:var(--fs-xl)}
+  .dgSheetGo .dgGo i{font-style:normal;font-family:var(--font-ko);font-size:var(--fs-xs);font-weight:400;opacity:.6;letter-spacing:0}
   .dgSheet{position:absolute;inset:0;z-index:64;display:flex;align-items:center;justify-content:center;
-    background:radial-gradient(ellipse 300px 220px at 50% 46%,rgba(92,214,255,.12),transparent 72%),rgba(2,4,9,.62)}
+    background:radial-gradient(ellipse 300px 220px at 50% 46%,rgba(92,214,255,.10),transparent 72%),rgba(2,4,9,.62)}
   .dgSheet.hide{display:none}
-  .dgSheetCard{position:relative;width:82%;max-width:320px;border:1px solid var(--metal-edge);border-radius:var(--r-bar);overflow:hidden;
-    background:linear-gradient(160deg,rgba(19,24,35,.96),rgba(6,9,14,.97))}
-  .dgSheetArt{height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-    background:linear-gradient(160deg,var(--dgTint,#2f4a72),rgba(6,9,14,.55))}
-  .dgSheetIco{font-size:34px}
-  .dgSheetArt b{font-size:15px;color:#fff;font-weight:800}
-  .dgSheetBody{padding:14px 14px 16px;display:flex;flex-direction:column;gap:10px;align-items:center}
-  .dgSheetStage{font-size:13px;color:#c6ccd4}.dgSheetStage b{font-family:var(--font-num);font-size:18px;color:#fff}
-  .dgSheetReward{font-size:12px;color:#c6ccd4}.dgSheetReward b{color:#ffd24a;font-family:var(--font-num)}
-  .dgSheetKey{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:800;color:#ffd24a}
-  /* ⛔ .dgSheetBtns 는 삭제했다 — 소탕이 목록 행으로 올라가면서 시트에 그 줄이 없어졌다 */
-  .dgSheetX{position:absolute;top:6px;right:6px;width:26px;height:26px;border:none;border-radius:var(--r-bar);background:rgba(0,0,0,.42);color:#fff;cursor:pointer;font-size:12px}
+  /* ⚔ 시트 카드 = 앱 팝업 규격 그대로(.setCard/.ecCard). ⛔ 면을 색으로 채우지 말 것 —
+     옛 아트 헤더(황토 그라데)가 DESIGN.md §0 위반이었다. 색은 제목 아래 헤어라인에만 남긴다. */
+  .dgSheetCard{position:relative;width:86%;max-width:290px;padding:16px 14px 15px;box-sizing:border-box;
+    background:linear-gradient(180deg,rgba(25,25,25,.9),rgba(14,14,14,.92));border:1px solid var(--metal-edge);
+    clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px);
+    box-shadow:0 16px 44px -12px #000,inset 0 1px 0 rgba(255,255,255,.05)}
+  .dgSheetCard>*{position:relative;z-index:1}
+  /* 제목 + 그라데 헤어라인 — .ecTitle 문법 그대로. --acc 는 그 토벌 색(renderDgSheet 가 심는다) */
+  .dgSheetTtl{position:relative;font-family:var(--font-ti);font-size:17px;letter-spacing:.5px;color:#eaf1fb;
+    text-shadow:0 1px 3px rgba(0,0,0,.65);margin-bottom:11px;padding-bottom:9px}
+  .dgSheetTtl::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;opacity:.5;
+    background:linear-gradient(90deg,var(--acc,var(--acc-sel)),transparent 72%)}
+  /* 방금 누른 그 행을 그대로 얹는다(dgRowHTML 'sheet') — 시트 안에서는 버튼 없이 이번에 받을 것만 */
+  #dgSheetRow .dgRow{height:60px;cursor:default}
+  #dgSheetRow .dgVals{margin-top:0;align-items:flex-end}
+  .dgSheetX{position:absolute;top:7px;right:7px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;
+    z-index:2;color:#9a9a9a;background:none;border:none;cursor:pointer}
+  .dgSheetX svg{width:13px;height:13px}
   .navIt,#tabs .tab{position:relative;z-index:1;flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
     cursor:pointer;font-family:var(--font-ko);font-size:11px;font-weight:700;letter-spacing:.1em;color:#b6bac2;
     text-shadow:0 1px 3px rgba(0,0,0,.95);

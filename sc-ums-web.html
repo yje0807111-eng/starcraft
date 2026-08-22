@@ -688,20 +688,20 @@
     <div id="gearToast" class="twToast hide"></div>
   </div>
   <!-- 토벌 팝업(열기) — 이전 단계 소탕 + 입장 -->
+  <!-- ⚔ 토벌 시트 — 소탕이 목록 행으로 올라가면서 여기 남는 것은 "어떻게 싸울지" 하나다.
+       S4안(2026-08-21): 방금 누른 그 행을 그대로 얹어 맥락이 자리로 이어지게 한다(dgRowHTML 공용).
+       ⚠ 카드는 앱 팝업 규격 그대로 — 바깥 1px + 모서리 컷 11px + 제목 아래 헤어라인. 면을 색으로 채우지 않는다. -->
   <div id="dgSheet" class="dgSheet hide">
     <div class="dgSheetCard">
-      <div class="dgSheetArt" id="dgSheetArt"><span class="dgSheetIco" id="dgSheetIco">⚔️</span><b id="dgSheetName">토벌</b></div>
-      <div class="dgSheetBody">
-        <div class="dgSheetStage" id="dgSheetStage">난이도 <b>1단계</b></div>
-        <div class="dgSheetReward" id="dgSheetReward"></div>
-        <div class="dgSheetKey" id="dgSheetKey">🗝 2/2</div>
-        <!-- ⚠ 소탕(이전 단계)은 목록 행으로 올라갔다 — 여기 남는 것은 '어떻게 싸울지' 하나뿐이다 -->
-        <div class="dgSheetGo">
-          <button class="twBtn dgGo" id="dgSheetAuto" onclick="dgSheetEnter(1)"><b>자동 전투</b><i>제자리 · 즉시</i></button>
-          <button class="twBtn dgGo" id="dgSheetEnter" onclick="dgSheetEnter(0)"><b>직접 전투</b><i>이동·카이팅 · 확률↑</i></button>
-        </div>
+      <button class="dgSheetX" onclick="dgCloseSheet()" aria-label="닫기">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg>
+      </button>
+      <div class="dgSheetTtl">어떻게 싸울까</div>
+      <div id="dgSheetRow"></div>
+      <div class="dgSheetGo">
+        <button class="actBtn dgGo" id="dgSheetAuto" onclick="dgSheetEnter(1)"><b>자동 전투</b><i>제자리 · 즉시</i></button>
+        <button class="actBtn dgGo" id="dgSheetEnter" onclick="dgSheetEnter(0)"><b>직접 전투</b><i>이동·카이팅 · 확률↑</i></button>
       </div>
-      <button class="dgSheetX" onclick="dgCloseSheet()" aria-label="닫기">✕</button>
     </div>
   </div>
 

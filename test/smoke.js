@@ -5430,6 +5430,33 @@ async function groupLobby(){
       assert(bg.indexOf('58, 160, 255')<0 && bg.indexOf('#3aa0ff')<0,'옛 파란 면 버튼이 남아 있다'); }
     closeDungeonHub(); c.dgFloors={};
     return rows.length+'행 · 값 공식 일치 · 잘림 0'; });
+  // ⚔ 토벌 시트 = S4 규격(2026-08-21) — 방금 누른 그 행을 **같은 함수(dgRowHTML)** 로 그대로 얹는다.
+  await step('토벌 시트: 허브 행을 그대로 얹는다 · 앱 팝업 규격', ()=>{
+    skipIf(typeof dgRowHTML!=='function','토벌 시트 없음');
+    const c=CHAR(); c.level=35; c.dgFloors={}; dgSetFloor('gear',3); PROF().dgKeys={}; saveMeta();
+    openDungeonHub(); dgOpenSheet('gear');
+    const card=$('dgSheet').querySelector('.dgSheetCard'), cs=getComputedStyle(card);
+    // ① 앱 팝업 규격 — 바깥 1px 금속 테두리 + 모서리 컷. ⛔ 면을 색으로 채우지 않는다(옛 아트 헤더가 그랬다)
+    assert(cs.clipPath!=='none','시트 카드에 모서리 컷이 없다');
+    assert(parseFloat(cs.borderTopWidth)===1,'바깥 테두리가 1px 이 아님: '+cs.borderTopWidth);
+    { const m=cs.borderTopColor.match(/\d+/g)||[]; const v=m.slice(0,3).map(Number);
+      assert(Math.max.apply(null,v)-Math.min.apply(null,v)<=30,'테두리가 회색이 아님(색을 입혔다): '+cs.borderTopColor); }
+    assert(!$('dgSheet').querySelector('.dgSheetArt'),'옛 아트 헤더가 남아 있다');
+    // ② 행이 허브와 **같은 함수**에서 나온다 — 클래스가 같아야 한다
+    const row=$('dgSheetRow').querySelector('.roomItem.dgRow');
+    assert(row,'시트에 허브 행이 안 얹혔다');
+    assert(row.querySelector('.dgStg') && row.querySelector('.dgKey'),'행의 단계·열쇠가 없다');
+    // ③ 시트 행은 **버튼이 없다**(어떻게 싸울지만 고른다) · 값은 '이번에 받을 것' 하나
+    assert(!row.querySelector('.actBtn'),'시트 행에 소탕/입장 버튼이 남아 있다 — 그건 허브 몫이다');
+    assert(row.querySelectorAll('.dgVals').length===1,'시트 행의 값 칸이 하나가 아님');
+    // ④ 시트 행의 단계 = **다음 단계**(허브는 최고 단계) — 들어갈 곳을 말해야 한다
+    assert(row.querySelector('.dgStg').textContent.trim()==='4단계','시트 단계가 다음 단계가 아님: '+row.querySelector('.dgStg').textContent);
+    // ⑤ 자동/직접 = 공용 .actBtn · 직접이 주 동작(.pri)
+    const A=$('dgSheetAuto'), E=$('dgSheetEnter');
+    assert(A.classList.contains('actBtn') && E.classList.contains('actBtn'),'자동/직접이 공용 .actBtn 이 아님');
+    assert(!A.classList.contains('pri') && E.classList.contains('pri'),'직접이 주 동작(.pri)이 아님');
+    dgCloseSheet(); closeDungeonHub(); c.dgFloors={};
+    return '팝업 규격 · 행 공용 · 다음 단계 표기 ok'; });
   // 종류별 진행도 — 이걸 공유하면 새 종류를 여는 순간 고단계로 시작해 보상이 한 번에 쏟아진다.
   await step('토벌 단계는 종류마다 따로 쌓인다', ()=>{ skipIf(typeof dgSetFloor!=='function','토벌 진행도 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','던전'); saveMeta(); }
