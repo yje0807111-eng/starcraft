@@ -14,6 +14,11 @@
  *   --degreen <n>    초록 얼룩 중화(0=끔·기본). 장비의 초록도 같이 바래므로 신중히
  *   --density        이 동작에 몇 프레임이 필요한지 잰다(추출 대신 분석만)
  *   --refine         --from 을 고정하고 --to 를 찾아 준다(구간을 정확히 한 사이클로)
+ *   --near <초>      refine 이 찾을 길이의 목표(±30%). 방향마다 반/온 사이클이 섞이는 것을 막는다
+ *   --strip          [--from,--to] 구간을 시각이 찍힌 필름 스트립으로 깔아 준다(끝점을 눈으로 고를 때)
+ *                    --strip-n <N> 으로 장수 조절(기본 48)
+ *   --pick           구간 안에서 **변화량 균등**으로 고른다(시간 균등이 아니라).
+ *                    원본이 중간에 느려졌다 빨라져도 화면에서는 고르게 이어진다
  *   --best           박자만 보지 말고 '머리는 고요하고 다리만 움직이는' 구간을 고른다
  *                    (다리 있는 지상 유닛 전용 — 공중 유닛·건물엔 의미 없다)
  *
@@ -38,7 +43,7 @@ const VID = argv[0];
 const opt = (k, d) => { const i = argv.indexOf('--' + k); return i < 0 ? d : argv[i + 1]; };
 const flag = k => argv.includes('--' + k);
 if (!VID || VID.startsWith('--')) {
-  console.error('사용: node scripts/unit-frames.mjs <영상경로> [--out 폴더] [--frames 8] [--from 초 --to 초] [--scan] [--size px] [--sheet] [--webp] [--best] [--density] [--refine] [--keep-bg] [--degreen n]');
+  console.error('사용: node scripts/unit-frames.mjs <영상경로> [--out 폴더] [--frames 8] [--from 초 --to 초] [--scan] [--size px] [--sheet] [--webp] [--best] [--density] [--refine] [--strip] [--pick] [--keep-bg] [--degreen n]');
   process.exit(2);
 }
 if (!fs.existsSync(VID)) { console.error('영상이 없습니다: ' + VID); process.exit(2); }
@@ -308,16 +313,45 @@ try {
   if (B === null) B = Math.min(dur * 0.99, A + 1.7);
 
   if (flag('scan')) { console.log('\n--scan: 측정만 하고 끝냅니다.'); }
+  else if (flag('strip')) {
+    // ── 끝점을 눈으로 고르기 위한 필름 스트립 ─────────────────────────
+    // 프레임마다 시각을 찍어 깔아 준다. 보고 원하는 시작·끝 초를 읽어
+    // --from/--to 로 넘기면 된다. 자동 선택이 못 잡는 '여기서 여기까지'를 사람이 정한다.
+    const N = parseInt(opt('strip-n', '48'), 10);
+    await reload();
+    const targets = Array.from({ length: N }, (_, i) => A + (B - A) * (i / (N - 1)) * 0.999);
+    const shots = await capture(targets, 256);
+    const CUT = !flag('keep-bg');
+    const COLS = 8, T = 190, tiles = [];
+    for (let i = 0; i < shots.length; i++) {
+      let buf = Buffer.from(shots[i].png.split(',')[1], 'base64');
+      if (CUT) buf = (await cutout(buf)).png;
+      const lbl = '<svg width="' + T + '" height="' + T + '"><text x="4" y="17" font-size="15" fill="#ff0" ' +
+        'font-family="monospace">' + shots[i].t.toFixed(2) + '</text></svg>';
+      tiles.push({ input: await sharp(buf).resize(T, T, { fit: 'contain', background: '#00000000' })
+        .composite([{ input: Buffer.from(lbl), top: 0, left: 0 }]).png().toBuffer(),
+        top: Math.floor(i / COLS) * T, left: (i % COLS) * T });
+    }
+    fs.mkdirSync(OUT, { recursive: true });
+    const sh = path.join(OUT, '_strip.jpg');
+    await sharp({ create: { width: COLS * T, height: Math.ceil(shots.length / COLS) * T, channels: 3, background: '#6e6e6e' } })
+      .composite(tiles).jpeg({ quality: 86 }).toFile(sh);
+    console.log('\n✓ ' + sh);
+    console.log('  ' + A.toFixed(2) + '~' + B.toFixed(2) + '초를 ' + N + '장으로 · 칸마다 시각(초)');
+    console.log('  원하는 시작·끝을 읽어  --from <초> --to <초> --pick  으로 넘기면 된다');
+  }
   else if (flag('refine')) {
     // ── 구간 끝을 맞춘다 ──────────────────────────────────────────────
     // --from 은 사람이 고른다(어느 걸음이 예쁜가는 눈으로만 안다). 끝은 계산으로 찾는다:
     // 시작 프레임과 가장 비슷해지는 시각이 곧 한 바퀴 돈 지점이다.
     // ⚠ 사람이 고른 구간도 실제로는 한 사이클이 아닌 경우가 많았다(이음새가 평균의 3배).
     //   프레임을 늘려도 그 튐은 안 없어진다 — 끝을 맞춰야 없어진다.
-    const span = (B - A) * 1.6, STEPS = 120;
+    const NEAR0 = opt('near', null) === null ? null : parseFloat(opt('near'));
+    const span = Math.max((B - A) * 1.7, NEAR0 ? NEAR0 * 1.45 : 0), STEPS = 140;
     await reload();
     const targets = Array.from({ length: STEPS }, (_, i) => A + span * (i / STEPS));
-    const shots = await capture(targets, null);
+    // 비교는 128px 로만 하므로 원본 해상도로 뜰 이유가 없다(20번 돌릴 단계라 속도가 중요하다)
+    const shots = await capture(targets, 256);
     const CUT = !flag('keep-bg');
     const small = [];
     for (const s of shots) {
@@ -332,7 +366,14 @@ try {
              Math.abs(a[i + 2] * wa - b[i + 2] * wb) + Math.abs(a[i + 3] - b[i + 3]); }
       return t / (a.length / 4) / 4; };
     const dt2 = span / STEPS;
-    const lo = Math.round((B - A) * 0.65 / dt2), hi = Math.min(STEPS - 1, Math.round((B - A) * 1.45 / dt2));
+    // 범위를 넓게 잡는다 — 반 사이클(대칭 생물)과 예상보다 짧은 주기까지 담아야 한다.
+    // 하한을 0.65 로 뒀더니 실제 주기가 그보다 짧은 클립에서 하한에 딱 걸려 나왔다.
+    // ⚠ 넓게 열어 두면 방향마다 반 사이클과 온 사이클이 섞여 나온다(같은 유닛에서
+    //   0.63~1.59초로 갈렸다). 그러면 방향마다 재생 속도가 달라진다.
+    //   --near <초> 로 목표 길이를 주면 그 ±30% 안에서만 찾는다 — 유닛의 중앙값을 넣는다.
+    const NEAR = opt('near', null) === null ? null : parseFloat(opt('near'));
+    const loR = NEAR ? NEAR * 0.72 : (B - A) * 0.40, hiR = NEAR ? NEAR * 1.32 : (B - A) * 1.60;
+    const lo = Math.max(1, Math.round(loR / dt2)), hi = Math.min(STEPS - 1, Math.round(hiR / dt2));
     let best = Infinity, at = lo;
     const curve = [];
     for (let i = lo; i <= hi; i++) { const d = dif(small[0], small[i]);
@@ -427,12 +468,48 @@ try {
     console.log('✓ ' + sh + '  (줄마다 프레임 수 · 16장까지만 표시)');
   }
   else {
-    // ── ② 구간 안에서 균등 추출 ────────────────────────────────────
+    // ── ② 구간 안에서 추출 ─────────────────────────────────────────
     fs.mkdirSync(OUT, { recursive: true });
     await reload();
-    const targets = Array.from({ length: NF }, (_, i) => A + (B - A) * (i / NF));
-    const shots = await capture(targets, null);
-    console.log('\n=== 추출 ' + A.toFixed(2) + '~' + B.toFixed(2) + '초 · ' + NF + '장 ===');
+    let shots;
+    if (flag('pick')) {
+      // 시간 균등이 아니라 **변화량 균등**으로 고른다.
+      // 시간으로 나누면 원본이 중간에 느려지거나 빨라진 것이 그대로 남아서, 어떤 구간은
+      // 뭉치고 어떤 구간은 건너뛴 것처럼 보인다("덜 진행된 상태에서 끊긴다").
+      // 촘촘히 떠 놓고 누적 변화량을 같은 간격으로 잘라 그 지점의 프레임을 쓴다.
+      const DENSE = Math.max(NF * 4, 40);
+      const dt = Array.from({ length: DENSE }, (_, i) => A + (B - A) * (i / DENSE));
+      const all = await capture(dt, null);
+      const sm = [];
+      for (const s of all) sm.push(await sharp(Buffer.from(s.png.split(',')[1], 'base64'))
+        .resize(128, 128, { fit: 'contain', background: '#00000000' }).ensureAlpha().raw().toBuffer());
+      const dif = (a, b) => { let t = 0;
+        for (let i = 0; i < a.length; i += 4) { const wa = a[i + 3] / 255, wb = b[i + 3] / 255;
+          t += Math.abs(a[i] * wa - b[i] * wb) + Math.abs(a[i + 1] * wa - b[i + 1] * wb) +
+               Math.abs(a[i + 2] * wa - b[i + 2] * wb) + Math.abs(a[i + 3] - b[i + 3]); }
+        return t / (a.length / 4) / 4; };
+      const cum = [0];
+      for (let i = 1; i < sm.length; i++) cum.push(cum[i - 1] + dif(sm[i - 1], sm[i]));
+      const total = cum[cum.length - 1] || 1;
+      const idx = [];
+      for (let k = 0; k < NF; k++) {
+        const want = total * k / NF;
+        let j = 0; while (j < cum.length - 1 && cum[j + 1] < want) j++;
+        idx.push(j);
+      }
+      // 같은 프레임이 연달아 뽑히면 한 칸씩 민다(원본에 그만큼의 장이 없다는 뜻)
+      let bumped = 0;
+      for (let k = 1; k < idx.length; k++)
+        if (idx[k] <= idx[k - 1]) { idx[k] = Math.min(cum.length - 1, idx[k - 1] + 1); bumped++; }
+      shots = idx.map(i => all[i]);
+      console.log('\n=== 추출 ' + A.toFixed(2) + '~' + B.toFixed(2) + '초 · ' + NF + '장 (변화량 균등) ===');
+      console.log('뽑은 시각  ' + shots.map(s => s.t.toFixed(2)).join(' '));
+      if (bumped) console.log('⚠ ' + bumped + '장은 변화량이 아니라 순서로 밀어냈다 — 원본 프레임이 모자란다. --frames 를 줄일 것');
+    } else {
+      const targets = Array.from({ length: NF }, (_, i) => A + (B - A) * (i / NF));
+      shots = await capture(targets, null);
+      console.log('\n=== 추출 ' + A.toFixed(2) + '~' + B.toFixed(2) + '초 · ' + NF + '장 ===');
+    }
     const CUT = !flag('keep-bg');
     const files = [];
     for (let i = 0; i < shots.length; i++) {
