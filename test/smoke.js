@@ -3977,6 +3977,10 @@ async function groupLobby(){
   // 전장 조각은 항상 떠 있고 앱 화면이 덮을 뿐이다 — 덮개가 한순간 투명해지면 그대로 비친다.
   await step('게임 밖에서는 전장이 안 보인다', async()=>{
     skipIf(typeof setInGame!=='function','setInGame 없음');
+    // 🏕 캠프에서 빠져나온 뒤에 잰다. 캠프는 .gview 층을 빌려 #vBuild 만 켜 두므로,
+    //    켜져 있으면 #vMain 이 display:none 이고 그 안 #cvMain 이 0×0 이 된다
+    //    (앱에서는 게임 시작 시 switchTab 이 다시 켜므로 문제가 없다 — 검사 격리용이다).
+    if(typeof campExit==='function') campExit();
     const was=$('phone').classList.contains('inGame');
     setInGame(false);
     for(const id of ['vMain','hud','mergeFab','chatBar','chatLog'])

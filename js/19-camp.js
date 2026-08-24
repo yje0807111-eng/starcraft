@@ -274,6 +274,7 @@ function campRestore(){
 let _campPrevTab = null;
 let _campOn = false;   // 캠프 화면이 지금 떠 있나 — campExit 이 남의 판을 저장하지 않게 하는 문지기
 let _campHome = null;    // #vBuild 의 원래 자리(돌려놓기 위해)
+let _campPrevView = null; // 캠프 진입 전에 켜져 있던 .gview 목록 — ⛔ 반드시 되돌린다
 let _campMarine = null;  // #cvMarine(공용 3D 캔버스)의 원래 자리 — ⛔ 반드시 되돌린다
 let _campSheet = null;   // #btSheet 의 원래 자리 — 캠프에선 맵 밖으로 꺼낸다(아래 설명)
 
@@ -329,7 +330,14 @@ function campShowView(){
   //   캠프는 HOME 안에 사는 화면이라 그 껍데기를 그대로 둬야 한다.
   const p = document.getElementById('phone'); if(p) p.classList.add('campMode');
   campMountView();
+  // ⛔ **빌린 것은 돌려놓는다.** .gview 는 전장(#vMain)과 공유하는 층이고 .on 이 빠지면
+  //   display:none 이라 그 안의 #cvMain 이 0×0 이 된다 — 크기를 재서 그리는 코드가 망가진다.
+  //   캠프가 켜 둔 동안 어느 뷰가 켜져 있었는지 적어 두고 campHideView 가 되돌린다.
   const vs = document.querySelectorAll('.gview');
+  if(_campPrevView === null){
+    _campPrevView = [];
+    for(let i = 0; i < vs.length; i++) if(vs[i].classList.contains('on')) _campPrevView.push(vs[i].id);
+  }
   for(let i = 0; i < vs.length; i++) vs[i].classList.toggle('on', vs[i].id === 'vBuild');
   // ⭐ **프레임 루프는 .gview 가 아니라 `G.tab` 으로 분기한다**(js/14-input-fx.js:894).
   //   뷰만 켜고 이걸 빼먹으면 건설 맵이 렌더 루프를 아예 못 타고, 대신 drawMain() 이
@@ -342,6 +350,11 @@ function campShowView(){
 function campHideView(){
   const p = document.getElementById('phone'); if(p) p.classList.remove('campMode');
   const v = document.getElementById('vBuild'); if(v) v.classList.remove('on');
+  if(_campPrevView){                                   // .gview 를 캠프 진입 전 상태로(위 설명)
+    const vs = document.querySelectorAll('.gview');
+    for(let i = 0; i < vs.length; i++) vs[i].classList.toggle('on', _campPrevView.indexOf(vs[i].id) >= 0);
+    _campPrevView = null;
+  }
   campUnmountView();                                   // #vBuild 를 원래 자리로
   campRestoreGas(); campUnpatchGas(); campUnpatchZoom();   // ⛽🔍 가스·줌 판정 원복(관리자 탭이 같은 것을 본다)
   { const g2=document.getElementById('campGas2'); if(g2) g2.remove(); }
