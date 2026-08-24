@@ -1,0 +1,240 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>종족 선택 — 8안 (로그인 문법 · 하단 시트)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;700&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{--font-ko:'Noto Sans KR','Apple SD Gothic Neo',sans-serif;--font-ti:'Jua','Apple SD Gothic Neo',sans-serif;
+ --font-num:'Rajdhani','Noto Sans KR',sans-serif;--metal-edge:#3c3e46;--acc-sel:#5cd6ff;
+ --txt:#e0dcdc;--txt-mute:#9aa0a8;--gold:#ffd24a;--r-bar:3px;--r-md:6px;--r-lg:9px;
+ --fs-xs:9.5px;--fs-sm:10px;--fs-md:11px;--fs-lg:12px;--fs-xl:13px}
+*{box-sizing:border-box}
+body{margin:0;background:#07080b;color:var(--txt);font-family:var(--font-ko);font-size:var(--fs-md)}
+button{font-family:inherit;background:none;border:none;color:inherit}
+.wrap{max-width:1560px;margin:0 auto;padding:22px}
+h1{font-family:var(--font-ti);font-size:19px;margin:0 0 4px;color:#fff}
+.lead{color:var(--txt-mute);font-size:var(--fs-lg);margin:0 0 6px;line-height:1.7}
+.lead b{color:var(--gold)}
+.rule{color:#8b939d;font-size:var(--fs-sm);line-height:1.75;margin:0 0 20px;padding:10px 12px;
+ border-left:2px solid #2b2e34;background:rgba(255,255,255,.02)}
+.rule b{color:#cfd6e2}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:20px}
+.cap{font-family:var(--font-ti);font-size:var(--fs-xl);color:#fff;margin:0 0 3px}
+.cap i{font-style:normal;color:var(--acc-sel)}
+.cap u{text-decoration:none;color:var(--gold);font-size:var(--fs-sm)}
+.note{color:var(--txt-mute);font-size:var(--fs-sm);line-height:1.6;margin:0 0 9px;min-height:92px}
+.note b{color:#cfd6e2}
+.phone{position:relative;width:300px;height:600px;overflow:hidden;background:#07080b;
+ border:1px solid #23252b;border-radius:var(--r-bar);display:flex;flex-direction:column}
+/* ── 미리보기(빈 자리) ── */
+.prev{position:relative;background:#0a0b0e}
+.prev.split{border-bottom:1px solid rgba(255,255,255,.09)}
+.prev.full{position:absolute;inset:0}
+.prev .hint{position:absolute;left:0;right:0;text-align:center;color:#4b525b;font-size:var(--fs-sm);letter-spacing:.4px}
+/* 로그인과 같은 딤 — 아래만 덮는다 */
+.dimBottom::after{content:'';position:absolute;left:0;right:0;bottom:0;height:62%;
+ background:linear-gradient(180deg,transparent,rgba(5,6,8,.88) 70%)}
+.topbar{position:absolute;left:0;right:0;top:0;z-index:2;display:flex;align-items:flex-start;
+ justify-content:space-between;padding:16px 14px 0}
+.ttl{font-family:var(--font-ti);font-size:19px;color:#fff;letter-spacing:.4px}
+.ttl .sub{display:block;font-family:var(--font-ko);font-size:var(--fs-sm);color:var(--txt-mute);
+ letter-spacing:0;margin-top:3px}
+.x{width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:#9a9a9a;font-size:15px;flex:0 0 auto}
+/* ── 시트 — 판을 쓰지 않는다 ── */
+.sheet{position:relative;z-index:3;display:flex;flex-direction:column;
+ padding:12px 14px 16px;border-top:1px solid rgba(255,255,255,.09);
+ background:linear-gradient(180deg,rgba(12,13,16,.94),rgba(6,7,9,.98))}
+.sheet.over{position:absolute;left:0;right:0;bottom:0;
+ border-radius:var(--r-lg) var(--r-lg) 0 0;box-shadow:0 -16px 36px -14px #000}
+.sheet.split{flex:1;min-height:0}
+.sheet.bare{border-top:0;background:none;box-shadow:none;border-radius:0}
+.grab{width:34px;height:3px;border-radius:2px;background:#2f3238;margin:0 auto 10px}
+.grab.big{width:44px;height:4px;background:#3a3e45;margin-bottom:12px}
+.shTtl{font-family:var(--font-ti);font-size:13px;color:#c9ced6;text-align:center;letter-spacing:.5px;margin-bottom:4px}
+.shWarn{font-size:9.5px;color:#79808a;text-align:center;margin-bottom:8px}
+/* 행 = 글자만 · 판 없음 · 행 사이 짧은 가운데 선 */
+.rows{display:flex;flex-direction:column}
+.rw{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;
+ min-height:50px;padding:6px 0;cursor:pointer}
+.rw+.rw::before{content:'';position:absolute;left:50%;top:0;width:56px;height:1px;
+ transform:translateX(-50%);background:rgba(255,255,255,.13)}
+.rNm{font-size:14px;font-weight:700;color:#8b939d;line-height:1.3;letter-spacing:.2px}
+.rDs{font-size:var(--fs-sm);color:#6a727c;margin-top:2px}
+.rw.on .rNm{color:#fff}
+.rw.on .rDs{color:var(--txt-mute)}
+.rw.on::after{content:'';position:absolute;left:50%;bottom:3px;width:34px;height:1px;
+ transform:translateX(-50%);background:var(--acc-sel);box-shadow:0 0 8px var(--acc-sel)}
+.ico{flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+ width:30px;height:30px;border-radius:var(--r-md);border:1px dashed rgba(255,255,255,.16);
+ color:#5b626b;font-size:7.5px;background:rgba(255,255,255,.02)}
+.rw.ic{flex-direction:row;gap:10px}
+.rw.ic .rMain{text-align:left}
+.rw.stk{min-height:0;padding:4px 0}
+.rw.stk .ico{width:26px;height:26px;margin-bottom:3px;font-size:7px}
+.rw.stk .rNm{font-size:13px}
+.rw.stk .rDs{font-size:9px;margin-top:1px}
+.rw.big .rNm{font-size:16px}
+/* 가로 3열 */
+.cols{display:flex;align-items:center;justify-content:center;gap:0}
+.col{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 2px;cursor:pointer}
+.col+.col::before{content:'';position:absolute;left:0;top:22%;bottom:22%;width:1px;background:rgba(255,255,255,.11)}
+.col .rNm{font-size:var(--fs-xl)}
+.col.on .rNm{color:#fff}
+.col.on::after{content:'';position:absolute;left:50%;bottom:0;width:30px;height:1px;
+ transform:translateX(-50%);background:var(--acc-sel);box-shadow:0 0 8px var(--acc-sel)}
+.colDs{text-align:center;font-size:var(--fs-sm);color:var(--txt-mute);margin-top:8px}
+/* 확정 = 글자 + 밑변 광원(주 버튼의 서명) */
+.actBtn{position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:44px;
+ margin-top:8px;overflow:hidden;font-family:var(--font-ti);font-size:var(--fs-xl);color:#fff;border:0;background:none}
+.actBtn::after{content:'';position:absolute;left:14%;right:14%;bottom:6px;height:1px;
+ background:linear-gradient(90deg,transparent,var(--acc-sel),transparent);box-shadow:0 0 9px var(--acc-sel)}
+.actBtn.sm{height:38px;font-size:var(--fs-lg)}
+.xf .l1,.xf .l2{position:absolute;inset:0}
+.xf .l1{background:radial-gradient(85% 60% at 50% 40%,rgba(74,168,255,.16),transparent 70%);opacity:.45}
+.xf .l2{background:radial-gradient(85% 60% at 50% 40%,rgba(159,211,86,.16),transparent 70%);opacity:.55}
+.xfTag{position:absolute;left:50%;transform:translateX(-50%);bottom:8px;z-index:2;font-size:9px;color:#7d848d}
+</style></head><body><div class="wrap">
+<h1>종족 선택 — 8안 (하단 시트 · 로그인 문법)</h1>
+<p class="lead">확정된 것: <b>3종족</b>(유니온·스웜·에테리얼) · <b>하단 시트</b>(E안) ·
+상단은 <b>전투 미리보기</b>(지금은 빈 자리, 나중에 녹화 영상) · 종족 전환은 <b>짧은 크로스페이드</b>.</p>
+<div class="rule"><b>로그인에서 가져온 규칙(8안 공통)</b> —
+① <b>판(상자)을 쓰지 않는다</b> · ② 행은 <b>가운데 정렬 · 글자 위주</b> ·
+③ 행 사이는 <b>짧은 가운데 선(56px)</b> · ④ <b>셋은 같은 무게</b>(번호·화살표 없음) ·
+⑤ <b>밑변 광원은 주 버튼의 서명</b> — 확정에만 · ⑥ 선택 표시는 <b>시안 한 곳</b>(흰 글자 + 짧은 밑줄).
+<br>바뀌는 것: <b>분할/얹힘 · 시트 높이 · 아이콘 자리 · 제목 위치 · 확정 방식</b>.</div>
+<div class="grid">
+
+<!-- 1 -->
+<div><div class="cap"><i>1</i> 기본 — 얹힘 42% · 아이콘 왼쪽 <u>추천</u></div>
+<div class="note"><b>미리보기 화면 전체 · 시트가 그 위에</b><br>로그인과 <b>구조가 그대로 같다</b>.
+제목은 영상 위 왼쪽, 선택지는 아래 가운데. 아이콘을 이름 왼쪽에 붙여 행이 낮아 42%에 여유 있게 들어간다.</div>
+<div class="phone"><div class="prev full">
+  <div class="topbar"><div class="ttl">종족 선택<span class="sub">한 번 고르면 바꿀 수 없습니다.</span></div><div class="x">✕</div></div>
+  <div class="hint" style="top:30%">전투 미리보기</div></div>
+ <div class="sheet over" style="height:42%"><div class="grab"></div>
+  <div class="rows">
+   <div class="rw ic on"><div class="ico">ICON</div><div class="rMain"><div class="rNm">유니온</div><div class="rDs">인간 · 보병·기계</div></div></div>
+   <div class="rw ic"><div class="ico">ICON</div><div class="rMain"><div class="rNm">스웜</div><div class="rDs">군체 · 유기체</div></div></div>
+   <div class="rw ic"><div class="ico">ICON</div><div class="rMain"><div class="rNm">에테리얼</div><div class="rDs">외계 · 사이오닉</div></div></div>
+  </div><button class="actBtn">유니온으로 시작</button></div>
+</div></div>
+
+<!-- 2 -->
+<div><div class="cap"><i>2</i> 분할 60/40 — 영상이 안 잘린다</div>
+<div class="note"><b>칸이 화면을 나눠 가진다</b><br>경계선이 있어 영상이 <b>통째로</b> 들어간다 —
+나중에 녹화할 때 <b>구도를 자유롭게</b> 잡아도 된다. 대신 로그인처럼 "배경이 화면 끝까지"인 느낌은 사라진다.</div>
+<div class="phone">
+ <div class="prev split" style="height:60%">
+  <div class="topbar"><div class="ttl">종족 선택<span class="sub">한 번 고르면 바꿀 수 없습니다.</span></div><div class="x">✕</div></div>
+  <div class="hint" style="top:50%;transform:translateY(-50%)">전투 미리보기</div></div>
+ <div class="sheet split">
+  <div class="rows">
+   <div class="rw ic on"><div class="ico">ICON</div><div class="rMain"><div class="rNm">유니온</div><div class="rDs">인간 · 보병·기계</div></div></div>
+   <div class="rw ic"><div class="ico">ICON</div><div class="rMain"><div class="rNm">스웜</div><div class="rDs">군체 · 유기체</div></div></div>
+   <div class="rw ic"><div class="ico">ICON</div><div class="rMain"><div class="rNm">에테리얼</div><div class="rDs">외계 · 사이오닉</div></div></div>
+  </div><button class="actBtn">유니온으로 시작</button></div>
+</div></div>
+
+<!-- 3 -->
+<div><div class="cap"><i>3</i> 제목도 시트 안 — 영상이 깨끗</div>
+<div class="note"><b>얹힘 48%</b><br>영상 위에 <b>아무것도 안 얹는다</b>(✕만 남김).
+로그인의 「로고 → 선택지」 세로 흐름과 축이 같아진다. 대신 제목이 작아진다.</div>
+<div class="phone"><div class="prev full">
+  <div class="topbar" style="justify-content:flex-end"><div class="x">✕</div></div>
+  <div class="hint" style="top:26%">전투 미리보기</div></div>
+ <div class="sheet over" style="height:48%"><div class="grab"></div>
+  <div class="shTtl">종족 선택</div><div class="shWarn">한 번 고르면 바꿀 수 없습니다.</div>
+  <div class="rows">
+   <div class="rw ic on"><div class="ico">ICON</div><div class="rMain"><div class="rNm">유니온</div><div class="rDs">인간 · 보병·기계</div></div></div>
+   <div class="rw ic"><div class="ico">ICON</div><div class="rMain"><div class="rNm">스웜</div><div class="rDs">군체 · 유기체</div></div></div>
+   <div class="rw ic"><div class="ico">ICON</div><div class="rMain"><div class="rNm">에테리얼</div><div class="rDs">외계 · 사이오닉</div></div></div>
+  </div><button class="actBtn">유니온으로 시작</button></div>
+</div></div>
+
+<!-- 4 -->
+<div><div class="cap"><i>4</i> 아이콘을 이름 위로 — 완전한 가운데 축</div>
+<div class="note"><b>얹힘 52% · 행 압축 필요</b><br>아이콘·이름·부제가 <b>한 축</b>에 쌓인다 —
+로그인의 로고 블록과 같은 축이 된다. 아이콘이 주인공이 되므로 <b>그림이 나온 뒤 가장 좋아진다</b>.
+대신 행이 높아 아이콘 26px 까지 줄여야 3행+확정이 들어간다.</div>
+<div class="phone"><div class="prev full xf">
+  <div class="l1"></div><div class="l2"></div>
+  <div class="topbar" style="justify-content:flex-end"><div class="x">✕</div></div>
+  <div class="hint" style="top:22%">전투 미리보기</div>
+  <div class="xfTag">↑ 전환 = 짧은 크로스페이드</div></div>
+ <div class="sheet over" style="height:52%"><div class="grab"></div>
+  <div class="shTtl">종족 선택</div>
+  <div class="rows">
+   <div class="rw stk on"><div class="ico">ICON</div><div class="rNm">유니온</div><div class="rDs">인간 · 보병·기계</div></div>
+   <div class="rw stk"><div class="ico">ICON</div><div class="rNm">스웜</div><div class="rDs">군체 · 유기체</div></div>
+   <div class="rw stk"><div class="ico">ICON</div><div class="rNm">에테리얼</div><div class="rDs">외계 · 사이오닉</div></div>
+  </div><button class="actBtn">유니온으로 시작</button></div>
+</div></div>
+
+<!-- 5 -->
+<div><div class="cap"><i>5</i> 글자만 — 로그인과 100% 동일</div>
+<div class="note"><b>얹힘 40% · 아이콘 없음</b><br>로그인의 방식 목록과 <b>글자 하나 다르지 않다</b>.
+가장 조용하고 규칙 위반이 0이다. 대신 <b>종족을 그림으로 구분할 수단이 사라진다</b> —
+아이콘을 미리보기 쪽에서 보여줄 수 있을 때만 성립한다.</div>
+<div class="phone"><div class="prev full">
+  <div class="topbar"><div class="ttl">종족 선택<span class="sub">한 번 고르면 바꿀 수 없습니다.</span></div><div class="x">✕</div></div>
+  <div class="hint" style="top:30%">전투 미리보기</div></div>
+ <div class="sheet over" style="height:40%"><div class="grab"></div>
+  <div class="rows">
+   <div class="rw big on"><div class="rNm">유니온</div><div class="rDs">인간 · 보병·기계</div></div>
+   <div class="rw big"><div class="rNm">스웜</div><div class="rDs">군체 · 유기체</div></div>
+   <div class="rw big"><div class="rNm">에테리얼</div><div class="rDs">외계 · 사이오닉</div></div>
+  </div><button class="actBtn">유니온으로 시작</button></div>
+</div></div>
+
+<!-- 6 -->
+<div><div class="cap"><i>6</i> 가로 3열 — 영상을 가장 크게</div>
+<div class="note"><b>얹힘 34%</b><br>이름 셋을 <b>한 줄에</b> 놓고 고른 것의 부제만 아래에 나타난다.
+시트가 얇아 <b>영상이 66%</b>로 가장 크다. 대신 부제를 셋 다 볼 수 없어 <b>비교가 어렵다</b>.</div>
+<div class="phone"><div class="prev full">
+  <div class="topbar"><div class="ttl">종족 선택<span class="sub">한 번 고르면 바꿀 수 없습니다.</span></div><div class="x">✕</div></div>
+  <div class="hint" style="top:34%">전투 미리보기</div></div>
+ <div class="sheet over" style="height:34%"><div class="grab"></div>
+  <div class="cols">
+   <div class="col on"><div class="ico">ICON</div><div class="rNm">유니온</div></div>
+   <div class="col"><div class="ico">ICON</div><div class="rNm">스웜</div></div>
+   <div class="col"><div class="ico">ICON</div><div class="rNm">에테리얼</div></div>
+  </div>
+  <div class="colDs">인간 · 보병·기계</div>
+  <button class="actBtn sm">유니온으로 시작</button></div>
+</div></div>
+
+<!-- 7 -->
+<div><div class="cap"><i>7</i> 즉시 확정 — 확정 버튼 없음</div>
+<div class="note"><b>얹힘 38% · 로그인과 같은 동작</b><br>로그인이 그렇듯 <b>누르면 바로 시작</b>한다.
+가장 짧고 군더더기가 없다. ⚠ 되돌릴 수 없는 선택이라 <b>오탭이 곧 결과</b>가 된다 —
+경고를 크게 두어 보완했지만 위험은 남는다.</div>
+<div class="phone"><div class="prev full">
+  <div class="topbar" style="justify-content:flex-end"><div class="x">✕</div></div>
+  <div class="hint" style="top:30%">전투 미리보기</div></div>
+ <div class="sheet over" style="height:38%"><div class="grab"></div>
+  <div class="shTtl">종족 선택</div>
+  <div class="shWarn" style="color:#c9a05a;font-size:10.5px">고르면 바로 시작합니다 · 나중에 바꿀 수 없습니다</div>
+  <div class="rows">
+   <div class="rw ic"><div class="ico">ICON</div><div class="rMain"><div class="rNm" style="color:#dfe4ea">유니온</div><div class="rDs">인간 · 보병·기계</div></div></div>
+   <div class="rw ic"><div class="ico">ICON</div><div class="rMain"><div class="rNm" style="color:#dfe4ea">스웜</div><div class="rDs">군체 · 유기체</div></div></div>
+   <div class="rw ic"><div class="ico">ICON</div><div class="rMain"><div class="rNm" style="color:#dfe4ea">에테리얼</div><div class="rDs">외계 · 사이오닉</div></div></div>
+  </div></div>
+</div></div>
+
+<!-- 8 -->
+<div><div class="cap"><i>8</i> 시트 없음 — 영상 위에 글자만</div>
+<div class="note"><b>판도 시트도 없다</b><br>로그인이 실제로 하는 그대로 —
+아트 위에 <b>글자가 직접</b> 얹히고 딤이 아래만 덮는다. 가장 순수하지만
+⚠ <b>영상이 밝으면 글자 대비가 무너진다</b>. 영상 아래쪽을 어둡게 찍는다는 전제가 필요하다.</div>
+<div class="phone"><div class="prev full dimBottom">
+  <div class="topbar"><div class="ttl">종족 선택<span class="sub">한 번 고르면 바꿀 수 없습니다.</span></div><div class="x">✕</div></div>
+  <div class="hint" style="top:24%">전투 미리보기</div></div>
+ <div class="sheet over bare" style="height:40%">
+  <div class="rows">
+   <div class="rw ic on"><div class="ico">ICON</div><div class="rMain"><div class="rNm">유니온</div><div class="rDs">인간 · 보병·기계</div></div></div>
+   <div class="rw ic"><div class="ico">ICON</div><div class="rMain"><div class="rNm">스웜</div><div class="rDs">군체 · 유기체</div></div></div>
+   <div class="rw ic"><div class="ico">ICON</div><div class="rMain"><div class="rNm">에테리얼</div><div class="rDs">외계 · 사이오닉</div></div></div>
+  </div><button class="actBtn">유니온으로 시작</button></div>
+</div></div>
+
+</div></div></body></html>
