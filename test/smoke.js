@@ -2797,7 +2797,10 @@ async function groupLobby(){
   await step('전투 세션 둘이 동시에 돌고 서로 오염되지 않는다', async()=>{
     skipIf(typeof HBS==='undefined' || typeof hbPumpAll!=='function','세션 레지스트리 없음');
     openHome(); await sleep(200);
-    skipIf(!HBS.hunt || !HBS.hunt.on,'사냥터 세션이 안 돌고 있음');
+    // ⚠ 건너뛰는 이유를 적는다 — 그냥 '안 돌고 있음'이면 버그로 오해하고 고치려 든다.
+    //   토벌은 GAME_DIRECTION §5-D 로 **유보**다(삭제 아님). 사냥터가 캠프로 바뀌면서
+    //   빌릴 화면이 멈췄을 뿐, 코드는 그대로 살아 있다.
+    skipIf(!HBS.hunt || !HBS.hunt.on,'🏕 캠프 전환으로 옛 사냥터 정지 — 토벌은 유보(GAME_DIRECTION §5-D)');
     const hunt=HBS.hunt;
     // 토벌 세션 흉내 — 그리기 자원(cv/ctx) 없이 시뮬만 도는 배경 세션
     const dg=JSON.parse(JSON.stringify({ on:true, mode:'dg', speed:1, t:0,
@@ -2832,7 +2835,10 @@ async function groupLobby(){
   await step('배속 = 평소 크기 스텝을 여러 번(총 전진 배수 · 판정 보존)', async()=>{
     skipIf(typeof HBS==='undefined' || typeof hbPumpAll!=='function','세션 레지스트리 없음');
     openHome(); await sleep(120);
-    skipIf(!HBS.hunt || !HBS.hunt.on,'사냥터 세션이 안 돌고 있음');
+    // ⚠ 건너뛰는 이유를 적는다 — 그냥 '안 돌고 있음'이면 버그로 오해하고 고치려 든다.
+    //   토벌은 GAME_DIRECTION §5-D 로 **유보**다(삭제 아님). 사냥터가 캠프로 바뀌면서
+    //   빌릴 화면이 멈췄을 뿐, 코드는 그대로 살아 있다.
+    skipIf(!HBS.hunt || !HBS.hunt.on,'🏕 캠프 전환으로 옛 사냥터 정지 — 토벌은 유보(GAME_DIRECTION §5-D)');
     const S=HBS.hunt; const wasManual=S.manual, wasSpeed=S.speed;
     const seen=[]; const real=hbStep;
     try{
@@ -6325,7 +6331,10 @@ async function groupLobby(){
     const c=CHAR(); c.level=40; c.dgFloors={};
     { const H=hbHunt(); H.unl={}; H.upg={atk:30,hp:30,aspd:10,crit:10}; }
     openHome(); await sleep(250);
-    skipIf(!HBS.hunt || !HBS.hunt.on,'사냥터 세션이 안 돌고 있음');
+    // ⚠ 건너뛰는 이유를 적는다 — 그냥 '안 돌고 있음'이면 버그로 오해하고 고치려 든다.
+    //   토벌은 GAME_DIRECTION §5-D 로 **유보**다(삭제 아님). 사냥터가 캠프로 바뀌면서
+    //   빌릴 화면이 멈췄을 뿐, 코드는 그대로 살아 있다.
+    skipIf(!HBS.hunt || !HBS.hunt.on,'🏕 캠프 전환으로 옛 사냥터 정지 — 토벌은 유보(GAME_DIRECTION §5-D)');
     const hunt=HBS.hunt, wasManual=hunt.manual;
     const p=PROF(); p.dgKeys={}; p.tickets=emptyTickets(); p.pcoin=0; p.gas=0;
     try{
@@ -6391,7 +6400,10 @@ async function groupLobby(){
     const c=CHAR(); c.level=40; c.dgFloors={}; dgSetFloor('gear',3);
     { const H=hbHunt(); H.unl={}; H.upg={atk:30,hp:30,aspd:10,crit:10}; }
     openHome(); await sleep(250);
-    skipIf(!HBS.hunt || !HBS.hunt.on,'사냥터 세션이 안 돌고 있음');
+    // ⚠ 건너뛰는 이유를 적는다 — 그냥 '안 돌고 있음'이면 버그로 오해하고 고치려 든다.
+    //   토벌은 GAME_DIRECTION §5-D 로 **유보**다(삭제 아님). 사냥터가 캠프로 바뀌면서
+    //   빌릴 화면이 멈췄을 뿐, 코드는 그대로 살아 있다.
+    skipIf(!HBS.hunt || !HBS.hunt.on,'🏕 캠프 전환으로 옛 사냥터 정지 — 토벌은 유보(GAME_DIRECTION §5-D)');
     // ⚠ dgFightEnter 는 openHome() 을 지나고 openHome 은 loadMeta() 로 프로필을 **다시 읽는다**.
     //   저장하지 않은 변경은 그때 사라진다 — 열쇠를 리셋했으면 반드시 saveMeta() 까지 해야 한다.
     PROF().dgKeys={}; saveMeta();
