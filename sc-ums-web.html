@@ -17,6 +17,19 @@
 </head>
 <body>
 <div id="phone">
+  <!-- 🖼 타이틀 키 아트 = 부팅 로딩·로그인이 **공유하는 한 장**. 화면이 바뀌어도 이 요소는 그대로라
+       호흡 애니가 리셋되지 않는다(그림이 안 튄다). 위에서는 막대·폼만 디졸브된다. -->
+  <div id="titleBg" aria-hidden="true"></div>
+  <!-- 🏷 타이틀 로고 = 부팅 로딩과 로그인이 **공유하는 한 벌**. 두 벌이면 안쪽 간격이 달라
+       반드시 어긋난다(마크 12px · 제목 9px 차이가 실제로 났다). -->
+  <!-- ⬛ 게임으로 들어갈 때 잠깐 머무는 검은 판. 로고보다 아래·게임 화면보다 위라
+       "검은 화면에 로고만" 이 만들어지고, 마지막에 로고와 함께 걷히며 게임이 드러난다. -->
+  <div id="titleBlack" aria-hidden="true"></div>
+  <div id="titleMark" class="authHead">
+        <div class="authMark" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M32 5 55 18.5v27L32 59 9 45.5v-27z"/><path d="M32 19 43 25.5v13L32 45 21 38.5v-13z" opacity=".55"/><path d="M32 25.5v13M26 29v6M38 29v6" stroke-width="1.2" opacity=".8"/></svg></div>
+        <div class="authLogo">STAR WAR</div>
+        <div class="authSub" id="authSub">BATTLE ARENA</div>
+  </div>
   <div id="gameArea">
     <div id="hud">
       <div id="hudL">
@@ -258,11 +271,6 @@
       <button class="authGear" data-sfx="ui_open" onclick="openAppSettings()" title="설정" aria-label="설정"><svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg></button>
       <div class="authCard">
         <div class="authIn">
-        <div class="authHead">
-          <div class="authMark" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M32 5 55 18.5v27L32 59 9 45.5v-27z"/><path d="M32 19 43 25.5v13L32 45 21 38.5v-13z" opacity=".55"/><path d="M32 25.5v13M26 29v6M38 29v6" stroke-width="1.2" opacity=".8"/></svg></div>
-          <div class="authLogo">STAR WAR</div>
-          <div class="authSub" id="authSub">BATTLE ARENA</div>
-        </div>
         <!-- ① 방식 선택 허브 — 첫 화면. 아이디/이메일을 고르면 아래 ② 폼으로 바뀐다.
              판이 없는 '행 목록'이다 — 주 방식(.pri)은 왼쪽 광선 하나로만 표시한다. -->
         <div class="authHub" id="authHub">
@@ -861,11 +869,7 @@
            .opWrap 자체에는 #opening 안에서만 값을 덮는다. -->
     <div class="opArt" aria-hidden="true"></div>
     <div class="opWrap">
-      <div class="opMid">
-        <div class="opLogo"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M32 5 55 18.5v27L32 59 9 45.5v-27z"/><path d="M32 19 43 25.5v13L32 45 21 38.5v-13z" opacity=".55"/><path d="M32 25.5v13M26 29v6M38 29v6" stroke-width="1.2" opacity=".8"/></svg></div>
-        <div class="opTitle"><span class="opT1">STAR </span><span class="opT2">WAR</span></div>
-        <div class="opSub">BATTLE ARENA</div>
-      </div>
+      <!-- 🏷 로고는 #titleMark 한 벌이 맡는다(로그인과 공유) — 여기서 또 그리면 간격이 달라 어긋난다. -->
       <div class="opDock">
         <div class="opCnt"><i>LOADING</i><div class="opLoading">0<s>%</s></div></div>
         <div class="opBarWrap"><div class="opBar"></div></div>

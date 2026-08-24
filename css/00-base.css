@@ -86,7 +86,10 @@
   .uiScroll::-webkit-scrollbar{width:5px}
   .uiScroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
   .uiScroll::-webkit-scrollbar-track{background:transparent}
-  html,body{height:100%;background:#010305;display:flex;align-items:center;justify-content:center;
+  /* 🖼 폰 **바깥** 여백 = 짙은 아이보리(2026-08-24). 검정이면 폰 밑변과 배경이 이어져 버려
+     하단 네비(면을 걷어낸 뒤로는 더더욱)가 어디서 끝나는지 안 보였다. 밝은 쪽으로 한 단 올려 폰의
+     윤곽 자체가 경계가 되게 한다. ⛔ 화면 안(#phone) 색이 아니다 — 안쪽 톤은 건드리지 않는다. */
+  html,body{height:100%;background:#c9c0ac;display:flex;align-items:center;justify-content:center;
     font-family:var(--font-ko);overflow:hidden}
   /* 모바일 고정 비율 — 세로로 긴 요즘 폰(963:1997 ≈ 1:2.074). 비율은 아래 두 변수 한 곳에서만 정한다.
      화면이 작으면 비율을 유지하며 축소. 패널 폭이 변해도 폰 모양은 불변. */
@@ -104,6 +107,17 @@
      브라우저가 옛 그림을 계속 보여 준다(실제로 그랬다). **그림을 바꿀 때마다 숫자를 올릴 것.**
      프로젝트의 다른 에셋(타일 ?v=1·3, 초상 ?v=4)도 같은 방식이다. */
   :root{--titleArt:url('../assets/backgrounds/title/boot.webp?v=2')}
+  /* 🎬 모션 — 지속시간은 여기서만 꺼낸다(라운드·간격 표와 같은 규칙).
+     ⚠ --artDur 는 JS 도 읽는다(위상 이어받기) — 값을 여기 말고 다른 데 적지 말 것. */
+  :root{--t-screen:.7s;    /* 화면 전환 디졸브 — 배경은 안 움직이고 앞의 글자·막대만 겹쳐 바뀐다 */
+        --artDur:16s;      /* 타이틀 키 아트 호흡 주기 — 부팅 로딩·로그인 공용 */
+        --t-auth:.95s;             /* 로그인 속 내용(버튼·폼)이 뜨고 지는 시간 — 화면 전환보다 느긋하게 */
+        --t-swap:.22s;             /* 로그인 안에서의 전환(허브↔폼 · 로그인↔회원가입) — 짧게 */
+        --t-authDelay:.38s;        /* 그 시작을 늦추는 양 — 로딩 막대가 걷히는 중에 슬며시 떠오른다 */
+        --titleMarkBottom:424px}   /* STAR WAR 로고 블록 밑변이 화면 밑에서 떨어진 거리.
+             로딩·로그인이 **같은 자리**여야 디졸브에서 로고가 움직이지 않는다.
+             ⚠ 기준은 **가장 긴 상태(회원가입 폼 · 입력칸 4칸)** 다 — 그 윗변이 399px 이라 그보다 위여야 안 겹친다.
+                로그인 폼(2칸)에만 맞췄다가 회원가입에서 로고가 45px 가려졌다. 짧은 상태를 기준으로 삼지 말 것. */
   /* 🎛 유즈맵 하단 프로필 구역(.bp · #btSheet)의 속살 — 사냥터 업그레이드 패널과 같은 문법이다.
      판은 회색(--panelBig), 그 안의 칸(좌측 설명·그리드 카드)은 완전 검정. 푸른 톤을 되살리지 말 것.
      ⚠ 색을 여기 세 토큰으로만 두는 이유: 같은 구역이 시트(뽑기·업그레이드·보스)·메인 홈·플레이어 셋으로
@@ -118,7 +132,12 @@
         --bpTile:radial-gradient(circle at 50% 34%,rgba(96,96,104,.32),#050505 82%);
         --bpBodyH:min(28vh,140px)}   /* 본문 높이 단일 소스 — 시트·메인 홈·플레이어 그리드가 같은 높이여야 섹션 전환에서 안 튄다.
                                        176→148: 머리줄 초상(48px)을 지운 만큼 낮췄다(등급 띠가 커진 21px 은 상쇄) */
-  :root{--phW:963;--phH:1997;--navH:56px;--curH:34px;--topPad:10px}   /* --topPad: 모바일에서 화면 끝에 붙으면 잘 안 보인다 — 상단을 그만큼 내린다 */   /* 하단 바 높이(네비·유즈맵 탭바 공용) — 61 → 56px 로 살짝 얇게 */
+  :root{--phW:963;--phH:1997;--navH:42px;--navHit:44px;--tabH:56px;--curH:34px;--topPad:10px}   /* --topPad: 모바일에서 화면 끝에 붙으면 잘 안 보인다 — 상단을 그만큼 내린다 */
+  /* --navH = 전역 하단 네비(.navBar) 높이. 61 → 56 → **42px**(2026-08-24): 아이콘과 글자를 세로로
+     쌓지 않고 **가로로** 놓으면서 둘 다 유지한 채 14px 을 돌려줬다. 이 값을 쓰는 화면들(HOME·상점·정비·
+     업그레이드·유즈맵 선택·마을 시트)의 하단 여백이 같이 따라온다.
+     --navHit = **누르는 높이**(보이는 높이와 따로 둔다 · DESIGN.md 의 44px 은 히트 영역 기준이다).
+     ⛔ --tabH 와 합치지 말 것 — 인게임 유즈맵 탭바(#tabs)는 전장 위에 얹혀 판이 필요하고 5칸이라 좁다. */
   #phone{width:390px;height:calc(390px * var(--phH) / var(--phW));aspect-ratio:var(--phW)/var(--phH);position:relative;
     /* 게임 배경 우주 타일(space_bg)을 캔버스와 같은 380px 스케일로 프레임 전체에 이어지게 — 어둡게 덮어 콘솔 가독성 유지 */
     background:linear-gradient(rgba(3,4,12,.5),rgba(3,4,12,.66)),url('../assets/tiles/space_bg.webp') center/380px repeat #05060d;

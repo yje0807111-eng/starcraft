@@ -486,15 +486,22 @@
   #opening .opWrap{position:relative;z-index:2;width:100%;height:100%;gap:0;padding:0;
     align-items:stretch;justify-content:flex-end;overflow:hidden}
   /* 키 아트 — 화면을 채우고 아주 느리게 숨을 쉰다(정지 화면으로 안 보이게) */
-  #opening .opArt{position:absolute;inset:0;z-index:0;
-    background:var(--titleArt) center center / cover no-repeat #05070c;
-    animation:opBreathe 18s ease-in-out infinite}
-  @keyframes opBreathe{0%,100%{transform:scale(1.02)}50%{transform:scale(1.06) translateY(-.8%)}}
-  /* ⚠ 딤은 **글자가 앉는 아래쪽만** 덮는다. 전장을 통째로 누르면 무엇이 싸우는지 안 보인다(실제로 그랬다). */
-  #opening .opArt::after{content:'';position:absolute;inset:0;
-    background:linear-gradient(180deg,rgba(4,6,11,.06) 0%,rgba(4,6,11,.10) 40%,rgba(5,6,10,.62) 74%,rgba(5,6,10,.96) 100%)}
+  /* ⚠ 그림은 #titleBg 가 깐다 — 여기는 자리만 잡는다(비워 두면 그림이 두 겹이 된다). */
+  #opening .opArt{position:absolute;inset:0;z-index:0}
+  /* ⚠ #opening 은 .spaceBg 라서 ::before 가 **우주 타일을 불투명하게** 깐다.
+     z-90 안쪽이라 공유 키 아트(z-40)를 통째로 덮어 배경이 사라진 것처럼 보인다 — 끈다.
+     ::after 의 어둡게 깔기도 마찬가지(딤은 #titleBg::after 가 맡는다).
+     ⛔ .counting 은 예외다 — 진입 카운트다운은 자기 맵 아트(.gsArt)와 자기 딤을 쓴다. */
+  #opening::before{background:none}
+  #opening:not(.counting)::after{background:none}
+  /* 🫁 키 아트 호흡 — **#titleBg 한 곳에서만** 돈다. 화면이 바뀌어도 그 요소는 그대로라 안 끊긴다.
+     예전엔 화면마다 따로 돌았고(opBreathe 18s / loadBreath 14s) 전환마다 0% 로 되돌아가
+     그림이 최대 4.4% 툭 작아졌다. */
+  @keyframes titleBreath{0%,100%{transform:scale(1.02) translateY(0)}50%{transform:scale(1.06) translateY(-1%)}}
+  /* ⚠ 딤은 **글자가 앉는 아래쪽만** 덮는다. 전장을 통째로 누르면 무엇이 싸우는지 안 보인다(실제로 그랬다).
+     이제 그림과 함께 #titleBg::after 가 맡는다 — 여기서 또 깔면 딤이 두 겹이 된다. */
   #opening.counting .opArt{display:none}   /* 진입 카운트다운은 자기 아트(.gsArt)를 쓴다 */
-  #opening .opMid{margin-top:auto;display:flex;flex-direction:column;align-items:center;gap:11px;padding:0 22px 22px}
+  /* ⚠ .opMid(로딩 전용 로고 블록)는 폐지했다 — 로고는 #titleMark 한 벌이다. */
   /* 엠블럼 = 새로 그린 육각 라인(옛 방패는 폐지). 아트 위에 얹히므로 가볍게 */
   .opLogo{width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:#dbe4ef}
   .opLogo svg{width:44px;height:44px;filter:drop-shadow(0 2px 8px #000)}
@@ -638,17 +645,46 @@
      ⚠ #opening 은 자기 층(.opArt)으로 깐다 — 여기 ::before 로 합치지 말 것(카운트다운 .counting 에서
        #gsRoot 의 맵 아트와 겹친다). 파일 이름은 --titleArt 한 곳에서만 정한다.
      (구 loading_bg.webp 는 이제 어디서도 안 쓴다) */
-  #auth::before{background:var(--titleArt) center center / cover no-repeat #04050b;
-    transform-origin:center center;animation:loadBreath 14s ease-in-out infinite}
-  @keyframes loadBreath{0%,100%{transform:scale(1.015) translateY(0)}50%{transform:scale(1.06) translateY(-1.2%)}}
+  /* 🖼 키 아트는 이제 **#titleBg 한 장**이 깐다(2026-08-23). 여기서는 지운다.
+     ⚠ #auth 는 .spaceBg 라서 비워 두면 우주 타일이 되살아난다 — 명시적으로 끈다. */
+  #auth::before{background:none;animation:none}
+  /* ══ 🖼 공유 키 아트 층 ══════════════════════════════════════════════════════
+     부팅 로딩과 로그인이 **같은 그림**을 쓴다. 화면마다 따로 그리면 화면이 바뀔 때
+     새 요소의 애니가 0% 부터 다시 시작해 그림이 툭 튄다 — 위상을 계산해 넣어 봐도
+     리셋 자체는 계속 일어난다. 그래서 **한 요소에 한 번 깔고 끄지 않는다.**
+     z-index 40 = #auth(48)·#opening(90) 아래, 전장 캔버스(6·7) 위. */
+  #titleBg{position:absolute;inset:0;z-index:40;pointer-events:none;
+    opacity:0;transition:opacity var(--t-screen) ease;
+    background:var(--titleArt) center center / cover no-repeat #04050b;
+    transform-origin:center center;animation:titleBreath var(--artDur) ease-in-out infinite}
+  /* 딤 = 글자가 앉는 아래쪽. 예전에 .opArt::after 와 #auth::after 가 같은 값을 따로 갖고 있었다. */
+  /* 🌑 국소 스크림 = **한 장**(2026-08-23). 로고 뒤·로그인 블록 뒤를 각각 깔았더니
+     두 타원이 겹치는 자리에 띠 경계가 생겼다(가로선처럼 보였다). 라디얼을 겹치면 반드시 이음매가 난다.
+     ⚠ 화면 전체를 덮는 한 요소에 넉넉한 타원 하나로 깐다 — 끝이 화면 밖에서 0 이 되어 잘릴 자리가 없다. */
+  #titleBg::before{content:'';position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(118% 52% at 50% 66%,rgba(3,5,9,.88) 0%,rgba(3,5,9,.66) 26%,
+      rgba(3,5,9,.40) 46%,rgba(3,5,9,.18) 66%,rgba(3,5,9,.06) 84%,transparent 100%)}
+  #titleBg::after{content:'';position:absolute;inset:0;
+    background:linear-gradient(180deg,rgba(4,6,11,.06) 0%,rgba(4,6,11,.10) 40%,
+      rgba(5,6,10,.62) 74%,rgba(5,6,10,.96) 100%)}
+  #phone.artBg #titleBg{opacity:1}
+  /* 🎬 화면 전환 — 로딩(#opening)만 흐려지며 들고 난다.
+     ⚠ .appScreen.hide 가 display:none 이라 그냥 두면 전환이 뚝 끊긴다. 로딩을
+        var(--t-screen) 동안 남겨 두고 겹쳐 넘긴다.
+     ⛔ **아래 화면에는 절대 걸지 말 것.** 위아래가 동시에 반투명이 되는 순간 그 밑의
+        게임 판(유즈맵 배경)이 잠깐 비친다. #opening 은 z-90 이라 이것만 흐려도 충분하다. */
+  #opening.fxIn{animation:screenIn var(--t-screen) ease both}
+  #opening.fxOut{animation:screenOut var(--t-screen) ease both;pointer-events:none}
+  @keyframes screenIn{from{opacity:0}to{opacity:1}}
+  @keyframes screenOut{from{opacity:1}to{opacity:0}}
   /* 부팅 로딩 딤은 .opArt::after 가 맡는다(아래) — 여기 ::after 는 진입 카운트다운(.counting)일 때만 쓴다 */
   #opening.counting::after{background:linear-gradient(180deg, rgba(2,3,8,.5) 0%, rgba(2,3,8,.32) 40%, rgba(2,3,8,.6) 100%)}
   /* 🎬 로그인 딤 — ⭐ '글자가 놓일 자리'를 어둡게 만드는 장치다. 블록을 옮기면 이것도 같이 옮긴다.
      2026-08-20: 블록을 아래로 내렸으므로 딤도 **부팅 로딩(.opArt::after)과 같은 값**으로 되돌렸다.
      가운데를 파던 비네트와 붉은 오라는 뺐다 — 새 키 아트는 가운데에 도시·함선이 몰려 있어
      거기를 어둡게 하면 그림의 주인공이 죽는다. ⛔ 한쪽만 옮기면 밝은 그림 위에 글자가 얹힌다. */
-  #auth::after{background:linear-gradient(180deg,rgba(4,6,11,.06) 0%,rgba(4,6,11,.10) 40%,
-    rgba(5,6,10,.62) 74%,rgba(5,6,10,.96) 100%)}
+  /* 딤도 #titleBg::after 로 옮겼다(그림과 한 몸이라 따로 두면 화면마다 어긋난다) */
+  #auth::after{background:none}
   #opening .opWrap{position:relative;z-index:1}
   /* 로그인/회원가입 */
   #auth{z-index:48;align-items:center;justify-content:flex-end;padding:22px}
@@ -662,14 +698,62 @@
         그래서 고정 px 로 올린다 — 어느 컨테이너에서도 같은 양만큼 움직인다. */
   /* 2026-08-20: 블록이 화면 아래로 내려왔다(L1). 리프트(--authLift)는 이제 '바닥에서 띄우는 양'이다.
      ⚠ 퍼센트로 두지 말 것 — 아래 주석의 두 함정(padding %는 폭 기준 · translateY %는 제 높이 기준)이 그대로 산다. */
-  .authIn{position:relative;z-index:1;display:flex;flex-direction:column;
-    width:100%;max-width:330px;margin-bottom:var(--authLift,26px)}
+  /* 🔡 로그인 속 내용(버튼·폼)은 **화면과 따로** 뜨고 진다.
+     화면만 여닫으면 버튼이 뚝 나타났다 뚝 사라진다 — 배경·로고는 그대로인데 그 앞만 바뀌므로
+     그 대비가 그대로 드러난다. 들어올 때만 늦춰서(--t-authDelay) 로딩 막대가 걷히는 중에 떠오르고,
+     나갈 때는 지체 없이 함께 흐려진다.
+     ⚠ 들어오는 쪽에만 delay 를 건다 — 전이는 **도착 상태**의 값을 쓴다(.inView 쪽에 적는 이유). */
+  /* ⚠ 아래가 아니라 **위(로고 밑)에 붙인다**(2026-08-23).
+     아래로 붙이면 내용 길이가 바뀔 때마다 블록이 통째로 오르내려서, 허브↔폼·로그인↔회원가입이
+     '올라갔다 내려가는' 것처럼 보였다. 위에 붙이면 윗변이 고정이라 길어져도 아래로만 자란다.
+     top = 화면 밑에서 로고 밑변(--titleMarkBottom)만큼 올라간 지점 + 여백. */
+  .authIn{position:absolute;left:0;right:0;top:calc(100% - var(--titleMarkBottom) + 22px);
+    z-index:1;display:flex;flex-direction:column;width:100%;max-width:330px;margin:0 auto;
+    opacity:0;transition:opacity var(--t-auth) ease}
+  #auth.inView .authIn{opacity:1;transition-delay:var(--t-authDelay)}
+  /* 🔀 로그인 **안에서** 내용이 바뀔 때(허브↔폼 · 로그인↔회원가입)는 짧은 디졸브.
+     화면 등장(--t-auth)만큼 끌면 답답하고, 그냥 바꾸면 뚝 끊긴다. 늦춤도 여기선 뺀다. */
+  /* 🔀 진짜 디졸브 — 나가는 것과 들어오는 것이 **동시에 존재**한다.
+     순서대로 흐렸다 나타내면 중간에 빈 순간이 생겨 '사라졌다 나타나는' 것으로 보인다(그렇게 만들었다가 되돌림).
+     나가는 쪽만 흐름에서 빼 같은 자리에 붙여 두면, 들어오는 쪽이 그 위에 겹쳐 뜬다.
+     ⚠ .hide 를 걸지 않고 잠깐 남긴다 — display:none 이면 애니가 안 돈다. */
+  /* ⚠ 자리는 JS 가 인라인으로 박는다(top·height) — bottom:0 으로 붙이면 원래 있던 곳보다
+     아래로 떨어져 버튼이 툭 내려오며 흐려진다(실제로 그랬다). */
+  #auth .swapGhost{position:absolute;left:0;right:0;z-index:0;pointer-events:none;
+    animation:authGhostOut var(--t-swap) ease forwards}
+  @keyframes authGhostOut{from{opacity:1}to{opacity:0}}
+  #auth .swapNew{animation:authGhostIn var(--t-swap) ease}
+  @keyframes authGhostIn{from{opacity:0}to{opacity:1}}
+  /* 탭 전환(로그인↔회원가입)은 판이 안 바뀌고 **입력칸만 늘고 준다.**
+     그 칸은 흐름 안에 있어야 하므로 겹치는 대신 높이와 함께 흐른다 — 그래야 툭 튀지 않는다. */
+  /* ⚠ .authField 의 min-height:46px 가 max-height 를 이긴다 — **키프레임 안에서만** 푼다.
+     (클래스로 풀면 애니가 끝난 뒤 클래스가 빠질 때 높이가 한 번 더 튄다) */
+  #auth .fieldGhost{pointer-events:none;overflow:hidden;animation:authFieldOut var(--t-swap) ease forwards}
+  @keyframes authFieldOut{from{opacity:1;max-height:56px;margin-bottom:6px}
+    to{opacity:0;max-height:0;min-height:0;margin-bottom:0;padding-top:0;padding-bottom:0}}
+  #auth .fieldNew{overflow:hidden;animation:authFieldIn var(--t-swap) ease}
+  @keyframes authFieldIn{from{opacity:0;max-height:0;min-height:0;margin-bottom:0;padding-top:0;padding-bottom:0}
+    to{opacity:1;max-height:56px;margin-bottom:6px}}
   /* 블록 자체가 제 그림자를 갖는다 — 화면 비네트만으로는 폼(허브보다 두 배 길다)을 다 못 덮는다.
      radial 이라 블록 높이를 따라 알아서 늘어난다. */
   /* 블록 제 그림자 — 딤이 아래만 덮으므로 로고 윗머리가 밝은 하늘에 걸릴 때를 받쳐 준다 */
-  .authIn::before{content:'';position:absolute;inset:-30px -30px -10px;z-index:-1;pointer-events:none;
-    background:radial-gradient(60% 54% at 50% 56%,rgba(3,4,8,.78),rgba(3,4,8,.44) 64%,transparent 100%)}
-  .authHead{margin-bottom:20px}
+  /* 🌑 국소 스크림 — 블록 뒤만 눌러 준다(2026-08-23 · 1안).
+     판을 두르지 않고 읽히게 하는 장치다. 화면 전체 딤만으로는 부족해서 글자가 그림에 묻혔다.
+     ⚠ 여기가 약해지면 아래 입력칸(밑줄만)이 통째로 안 보인다 — 둘은 한 세트다. */
+  /* 🏷 타이틀 로고 = **부팅 로딩과 로그인이 공유하는 한 벌**(#titleMark · #phone 직속).
+     예전엔 두 벌이었다(.authHead / .opMid). 밑변을 같은 값으로 맞춰도 **안쪽 간격이 달라**
+     반드시 어긋난다 — 실측에서 육각 마크 12px · 제목 9px 차이가 났다(.opMid 의 gap:11px,
+     제목 줄높이 39 vs 34). 그래서 자리를 맞추는 게 아니라 **하나로 합쳤다.**
+     ⚠ .authIn 안에 두지 말 것 — 거긴 position:relative 라 기준이 블록 자신이 되고,
+       허브(버튼 4줄)/폼(입력칸 여러 줄) 높이 차이만큼 로고가 오르내린다. */
+  /* ⚠ z 는 검은 판(88)보다 위, 로딩(#opening 90)보다 아래 — "검은 화면에 로고만" 이 성립한다. */
+  #titleMark{position:absolute;left:0;right:0;bottom:var(--titleMarkBottom);margin:0;text-align:center;
+    z-index:89;pointer-events:none;opacity:0;transition:opacity var(--t-screen) ease}
+  #phone.artMark #titleMark{opacity:1}
+  /* ⬛ 게임 진입 직전의 검은 판 — 게임 화면 위, 로고 아래. 마지막에 로고와 함께 걷힌다. */
+  #titleBlack{position:absolute;inset:0;z-index:88;background:#05070c;pointer-events:none;
+    opacity:0;transition:opacity var(--t-screen) ease}
+  #phone.artBlack #titleBlack{opacity:1}
   /* 액센트는 사냥터와 같은 빨강(--neon 계열). 면은 푸른기를 걷은 중성 검정 — 사냥터 패널과 같은 톤이다. */
   /* ⚠ .authCard 는 이제 '판'이 아니라 액센트 토큰(--acRGB)만 들고 있는 껍데기다(2026-08-19).
      ⛔ 면·테두리를 되돌리지 말 것 — 판을 없앤 것이 이 화면의 전부다.
@@ -681,8 +765,15 @@
   /* ⚠ 이 파일엔 전역 `.hide{display:none}` 이 없다 — 컴포넌트마다 제 숨김 규칙을 갖는다. 빠뜨리면 안 숨는다. */
   .authTabs{margin-bottom:12px}
   .authTabs.hide{display:none}
-  .authTabs .pdSeg{max-width:none;margin:0}
-  .authTabs .pdSegInd{--segCol:var(--acRGB)}   /* ⚠ --segCol 은 판(.pdSegInd)에 정의돼 있다 — 바에 얹으면 덮이지 않는다 */
+  /* ⚠ 로그인만 **판 없는 띠**를 쓴다(2026-08-23 · 1안). 이 화면은 입력칸·버튼에서 판을 전부
+     걷어냈는데 탭 띠만 검은 판이면 거기만 남아 튄다. 움직이는 표시는 살리되 1px 밑줄로 바꾼다.
+     ⛔ 공용 .pdSeg 를 고치지 말 것 — 장비창·사냥터 업그레이드·유즈맵 정렬 띠가 같은 것을 쓴다.
+        여기 예외는 **로그인 화면 안에서만** 덮는다. */
+  .authTabs .pdSeg{max-width:none;margin:0;padding:0;border:none;background:none;border-radius:0}
+  .authTabs .pdSegInd{--segCol:var(--acRGB);top:auto;bottom:0;height:1px;border:none;border-radius:0;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.85) 50%,transparent)}
+  .authTabs .pdSegInd::after{display:none}   /* 판이 없으니 밑변 광원도 뺀다(선이 곧 표시다) */
+  .authTabs .pdSegBtn{padding:9px 4px}
   .authDia{display:block;width:9px;height:9px;margin:0 auto 9px;transform:rotate(45deg);
     background:linear-gradient(135deg,#ff9b9b,var(--ac))}
   /* ⚠ font-weight:900 을 되돌리지 말 것 — 제목 글꼴(--font-ti)은 400 단일 굵기라 브라우저가 가짜 볼드를 그린다 */
@@ -698,6 +789,10 @@
   /* ══ 방식 선택 허브 ══ 모바일 기준: 칸은 전폭 · 높이 46px(터치 타겟 44px 이상) · 세로로 쌓는다.
      칸 재질은 게스트 버튼(.authGuest)과 같은 규칙을 그대로 상속받는다 — 새 버튼 스타일을 만들지 않는다. */
   .authHub,.authForm{display:flex;flex-direction:column}
+  /* 🔼 허브(버튼 4줄)만 더 올린다 — 로고가 올라가면서 그 아래가 허전해졌다(2026-08-23).
+     ⛔ --authLift 로 올리면 안 된다: 그건 폼에도 같이 걸리는데, 폼은 로고 밑변까지 여유가
+        23px 뿐이라 조금만 올려도 입력칸이 STAR WAR 를 덮는다(스모크가 잡는다). */
+  /* ⚠ 위에 붙이는 방식으로 바뀌어 허브를 따로 올릴 필요가 없다 */
   .authHub{}
   .authHub.hide,.authForm.hide{display:none}
   /* 🎬 방식 = '행'이다. 판이 없다(M8안, 2026-08-20).
@@ -732,12 +827,15 @@
   .authBack:hover{color:#dfe7f0}
   .authBack i{display:block;width:6px;height:6px;border-left:1.5px solid currentColor;border-bottom:1.5px solid currentColor;
     transform:rotate(45deg);margin-right:1px}
-  .authField{width:100%;box-sizing:border-box;min-height:46px;padding:10px 12px;margin-bottom:8px;border-radius:var(--r-md);
-    background:linear-gradient(180deg,#0d0d0d,#000);
-    border:1px solid var(--metal-edge);color:var(--txt);font-family:inherit;font-size:var(--fs-lg);outline:none;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.06);transition:border-color .13s,box-shadow .16s}
-  .authField:focus{border-color:rgba(var(--acRGB),.55);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 0 8px -4px rgba(var(--acRGB),.7)}
-  .authField::placeholder{color:#6f757d}
+  /* ✏️ 입력칸 = **밑줄 하나**(2026-08-23 · 1안). 면·테두리·안쪽 광원을 전부 뺐다.
+     허브가 판 없는 행 목록인데 폼만 상자를 두르고 있어서 두 단계가 다른 화면처럼 보였다.
+     ⚠ 읽히는 것은 #titleBg::before 스크림 **한 장**이 맡는다 — 그것 없이 이 규칙만 쓰면 안 보인다. */
+  .authField{width:100%;box-sizing:border-box;min-height:46px;padding:11px 2px;margin-bottom:6px;border-radius:0;
+    background:none;border:none;border-bottom:1px solid rgba(255,255,255,.30);
+    color:var(--txt);font-family:inherit;font-size:var(--fs-lg);outline:none;
+    box-shadow:none;transition:border-color .16s}
+  .authField:focus{border-bottom-color:rgba(var(--acRGB),.85)}
+  .authField::placeholder{color:#87909c}
   .authField.hide{display:none}
   .authErr{min-height:14px;font-size:var(--fs-sm);color:#ff6b6b;margin:1px 1px 7px;line-height:1.4}
   /* 재질·라운드·입체는 팝업 버튼 규칙(위)에서 상속 — 여기서는 폭과 글자만 */
@@ -745,14 +843,18 @@
   /* 주 동작 — 면을 채우지 않는다. 검정 판 위에 빨간 테두리와 밑변 광원만(사냥터 선택 탭과 같은 언어) */
   .authBtn{width:100%;max-width:none;min-height:46px;font-family:inherit;font-size:var(--fs-xl);font-weight:800;letter-spacing:.5px;
     cursor:pointer;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8);
-    background:linear-gradient(180deg,#0d0d0d,#000);padding:1px;box-sizing:border-box;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
+    /* ⚠ 면을 채우지 않는다(2026-08-23 · 1안). 입력칸이 밑줄만 남았는데 버튼만 검은 판을 깔면
+       거기만 무거워 보인다. 읽히는 것은 뒤의 국소 스크림이 맡고, 여기는 테두리와 밑변 광원만 남긴다. */
+    background:none;padding:1px;box-sizing:border-box;box-shadow:none}
   /* 밑변 1px 광원 — 심지는 희고 색은 halo 가 낸다 */
   .authBtn::after{content:'';position:absolute;left:11%;right:11%;bottom:0;height:1px;pointer-events:none;
     background:linear-gradient(90deg,transparent,rgba(255,255,255,.62) 50%,transparent 92%),
       linear-gradient(90deg,transparent,rgba(var(--acRGB),.92),transparent);
     box-shadow:0 0 2px rgba(var(--acRGB),.6),0 0 5px rgba(var(--acRGB),.24)}
-  .authBtn:active{background:linear-gradient(180deg,#000,#050505)}
+  /* 누름 반응 — 판이 없는 버튼이라 '눌려 들어가는 판'을 쓰지 않는다(공용 팝업 규칙에서 뺐다) */
+  .authBtn:active{background:rgba(255,255,255,.06);box-shadow:none}
+  .authGuest:active{color:#fff;background:none;box-shadow:none}
+  .authGuest:active u{border-bottom-color:rgba(255,255,255,.55)}
   /* '또는' 구분선 — 주 버튼과 게스트 버튼을 가른다 */
   .authOr{display:flex;align-items:center;gap:10px;margin:12px 0 10px;font-size:var(--fs-xs);color:#6f7a88;letter-spacing:.4px}
   .authOr::before,.authOr::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.09)}
@@ -781,8 +883,19 @@
   .authGuest::before{display:none}
   .authGuest u{text-decoration:none;color:#c8ccd2;font-weight:700;
     border-bottom:1px solid rgba(255,255,255,.22);padding-bottom:1px}
-  .authBtn:hover{color:#fff}
+  /* 1안 — 로그인 버튼도 **단순한 1px 테두리**. 모서리 컷과 밑변 광원을 뺀다.
+     입력칸이 선뿐인데 버튼만 컷·광원을 달고 있으면 거기만 장식이 남아 무거워 보인다. */
+  .authBtn{clip-path:none;border:1px solid rgba(var(--acRGB),.62);padding:0}
+  .authBtn::before,.authBtn::after{display:none}
+  .authBtn:hover{color:#fff;border-color:rgba(var(--acRGB),.9)}
   .authGuest:hover{color:#fff}
+  /* 🔎 포커스 — 브라우저 기본 **사각 링**을 끈다.
+     이 화면엔 판이 하나도 없어서 그 상자만 혼자 튀어나온다. 게스트 버튼에서 특히 눈에 띄었는데,
+     다른 버튼은 누르는 즉시 판이 바뀌어 사라지지만 게스트는 로딩 동안 화면에 남기 때문이다.
+     ⚠ 접근성을 버리지 않는다 — **키보드 초점(:focus-visible)** 에는 이 화면의 언어(밑변 1px 광원)로 남긴다. */
+  #auth button:focus{outline:none}
+  #auth button:focus-visible{outline:none;
+    box-shadow:0 1px 0 0 rgba(var(--acRGB),.9),0 2px 7px -3px rgba(var(--acRGB),.75)}
   .authGuest .ic{width:15px;height:15px}
   /* 로그인 탭은 가입 탭보다 두 칸 짧다 — 높이를 고정했으니 남는 자리를 여기서 흡수해
      안내가 카드 아래쪽에 붙게 한다(버튼 바로 밑에 두면 빈 공간이 꼬리처럼 남는다) */

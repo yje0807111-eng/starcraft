@@ -111,6 +111,64 @@ function updateCurBar(){ if(!PLAYER_META||!PLAYER_META.profile) return;
   set('curMin', fmtCur(profMineral()));
   set('curGas', fmtCur(profGas()));
   set('curGem', fmtCur(profGem())); }
+// 🎬 화면 전환 크로스페이드 (2026-08-23)
+// ⚠ `.appScreen.hide` 는 `display:none` 이다. 나가는 화면에 .hide 를 바로 걸면 전환이 뚝 끊긴다 —
+//   var(--t-screen) 동안 남겨 두고 겹쳐 넘긴다.
+// ⛔ **위에 덮이는 화면 하나만** 페이드한다. 둘 다 페이드하면 양쪽이 반투명인 순간이 생겨
+//    그 아래 게임 판(유즈맵 배경)이 잠깐 비친다 — 실제로 그랬다(2026-08-23).
+//    #opening 은 z-90 으로 항상 다른 화면 위다. 아래 화면은 즉시 불투명하게 세워 두면 틈이 없다.
+// ⛔ 여기 목록은 **전환을 마친 화면만** 넣는다(DESIGN.md §4 touch-it-fix-it). 전 화면 일괄 적용 금지.
+const FADE_SCREENS=['opening'];
+// 🖼 타이틀 키 아트(--titleArt)를 배경으로 쓰는 화면. **페이드 목록과 다른 표다** —
+//    페이드는 위에 덮이는 것만, 위상 이어받기는 그림을 쓰는 화면 전부가 필요하다.
+const ART_SCREENS=['opening','auth'];
+function _cssMs(name, def){ const v=parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name)); return ((v||def)*1000); }
+function _fadeMs(){ return _cssMs('--t-screen', .42); }
+// 아래 화면을 붙잡아 두는 시간 — 로그인 속 내용이 흐려지는 데 더 걸리므로 **긴 쪽**에 맞춘다.
+// 짧은 쪽에 맞추면 버튼이 사라지는 도중에 화면이 통째로 감춰져 뚝 끊긴다.
+function _holdMs(){ return Math.max(_fadeMs(), _cssMs('--t-auth', .95)); }
+// 🔡 로그인 속 내용(버튼·폼) 여닫기 — 화면 자체와 따로 논다.
+// ⚠ 한 프레임 뒤에 켜야 한다: 화면이 display:none 에서 막 나온 참이라 같은 프레임에 켜면 전이가 안 돈다.
+function authContentShow(on){ const a=document.getElementById('auth'); if(!a) return;
+  if(on){ a.classList.remove('inView'); void a.offsetWidth;   // 투명 상태를 확정시킨 뒤에 켜야 전이가 돈다
+    requestAnimationFrame(function(){ a.classList.add('inView'); }); }
+  else a.classList.remove('inView'); }
+function screenFadeIn(el){ if(!el) return;
+  clearTimeout(el._fadeT); el.classList.remove('fxOut','hide');
+  el.classList.remove('fxIn'); void el.offsetWidth; el.classList.add('fxIn'); }   // 같은 화면을 다시 열 때도 처음부터
+// 🫱 아래 화면 붙잡기 — 위에서 로딩이 **떠오르는 동안** 자리를 지킨다.
+// ⚠ 여기가 없으면 아래 화면이 즉시 사라지고 위는 아직 투명해서, 그 틈으로 바탕이 드러난다.
+//    디졸브의 핵심은 "겹쳐 있는 구간"이지 양쪽을 같이 흐리는 게 아니다.
+function screenHold(el){ if(!el || el.classList.contains('hide')) return;
+  clearTimeout(el._fadeT);
+  el._fadeT=setTimeout(function(){ el.classList.add('hide'); }, _holdMs()); }
+function screenFadeOut(el){ if(!el || el.classList.contains('hide')) return;
+  // 워프(게임 진입)·카운트다운은 자기 연출이 따로 있다 — 페이드를 겹치지 않는다
+  if(el.classList.contains('warp')||el.classList.contains('counting')){ el.classList.add('hide'); return; }
+  clearTimeout(el._fadeT); el.classList.remove('fxIn'); el.classList.add('fxOut');
+  el._fadeT=setTimeout(function(){ el.classList.add('hide'); el.classList.remove('fxOut'); }, _fadeMs()); }
+// 🖼 공유 키 아트 층(#titleBg) 켜기/끄기.
+// 그림은 화면마다 그리지 않는다 — **한 장을 깔아 두고 끄지 않는다.** 화면이 바뀌어도 그 요소가
+// 그대로라 호흡 애니가 리셋되지 않는다(예전엔 전환마다 0% 로 되돌아가 그림이 툭 튀었다).
+// ⚠ display 로 껐다 켜면 애니가 다시 시작한다 — opacity 로만 여닫는다(CSS #titleBg).
+// 층은 셋이다 — 그림(#titleBg) · 로고(#titleMark) · 검은 판(#titleBlack).
+// 평소엔 그림+로고가 같이 켜지지만, 게임으로 들어갈 때는 **그림만 먼저 걷고 로고를 남긴다.**
+function titleArtShow(on){ const ph=document.getElementById('phone'); if(!ph) return;
+  ph.classList.toggle('artBg', !!on); ph.classList.toggle('artMark', !!on);
+  if(!on) ph.classList.remove('artBlack'); }
+const _sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const TITLE_BLACK_HOLD=380;   // 검은 화면에서 머무는 시간(ms)
+// 🎬 게임으로 들어가는 마무리 ①: 그림과 막대를 걷어 **로고만 남은 검은 화면**으로.
+async function titleToBlack(){
+  const ph=document.getElementById('phone'); if(!ph) return;
+  ph.classList.add('artBlack');          // 검은 판이 떠오르는 동안
+  ph.classList.remove('artBg');          // 그림은 걷힌다 — 둘이 같은 시간이라 자연스레 검게 바뀐다
+  const op=document.getElementById('opening'); if(op) screenFadeOut(op);   // 막대도 함께
+  await _sleep(_fadeMs()+TITLE_BLACK_HOLD);
+}
+// 🎬 마무리 ②: 게임 화면이 뒤에 선 뒤에 부른다 — 검은 판과 로고가 **함께** 사라지며 화면이 드러난다.
+function titleOutroEnd(){ const ph=document.getElementById('phone'); if(!ph) return;
+  ph.classList.remove('artBlack','artMark'); }
 function showAppScreen(id){ setInGame(false);
   if(typeof navShow==='function') navShow(null);   // 하단 네비는 기본 숨김 — openHome/openTown이 다시 켠다
   if(typeof hbStop==='function') hbStop();         // 홈 배경 전투도 기본 정지 — openHome이 다시 켠다
@@ -124,7 +182,18 @@ function showAppScreen(id){ setInGame(false);
   for(const id of ['ptFindOv','foAddOv','ptInviteOv','foCtxOv']){ const el=document.getElementById(id); if(el) el.classList.add('hide'); }
   if(id!=='mapSelect' && id!=='modeSheet' && typeof stopMapLive==='function') stopMapLive();   // 유즈맵 화면 떠나면 실시간 갱신 정지
   ['ov','lobby','rooms','createPanel','pwPanel'].forEach(x=>{const e=document.getElementById(x); if(e)e.classList.add('hide');});
-  APP_SCREENS.forEach(s=>{ const e=document.getElementById(s); if(e) e.classList.toggle('hide', s!==id); });
+  titleArtShow(ART_SCREENS.indexOf(id)>=0);   // 키 아트를 쓰는 화면에서만 공유 배경을 켠다
+  const overlayIn=FADE_SCREENS.indexOf(id)>=0;   // 들어오는 것이 '위에 덮이는' 화면인가
+  APP_SCREENS.forEach(s=>{ const e=document.getElementById(s); if(!e) return;
+    const fade=FADE_SCREENS.indexOf(s)>=0;
+    // ⚠ 켜는 화면은 **먼저 예약된 감추기를 취소**한다 — 로딩으로 갔다가 금방 돌아오면
+    //    앞서 걸린 붙잡기 타이머가 뒤늦게 터져 방금 켠 화면을 도로 숨긴다(실제로 그랬다).
+    if(s===id){ clearTimeout(e._fadeT); e._fadeT=null;
+      if(fade) screenFadeIn(e); else e.classList.remove('hide'); }
+    else if(fade) screenFadeOut(e);        // 위에 있던 로딩 → 흐려지며 걷힌다
+    else if(overlayIn) screenHold(e);      // 로딩이 떠오르는 중 → 아래는 그대로 버틴다(틈 없음)
+    else e.classList.add('hide'); });
+  authContentShow(id==='auth');   // ⚠ 화면을 **켠 뒤에** 부른다 — display:none 상태에서 걸면 전이가 안 돈다
   const _cur=CUR_SCREENS.indexOf(id)>=0; curShow(_cur); curSetTitle(SCREEN_TITLE[id]||''); if(_cur) updateCurBar();   // 💠 공용 재화 바
   { const cb=document.getElementById('curBar');                                    // HOME만 배경 위 숫자(.bare) — 다른 화면은 판 그대로
     if(cb) cb.classList.toggle('bare', BARE_CUR_SCREENS.indexOf(id)>=0); }
@@ -195,13 +264,18 @@ function opBarReset(){ if(_opBar){ _opBar.dead=true; cancelAnimationFrame(_opBar
   if(e.tx) e.tx.innerHTML='0<s>%</s>'; }
 // 부팅 막대는 **스크립트가 읽히는 순간** 시작한다 — bootApp 은 window.load 라
 // 그것만 기다리면 그 사이 막대가 비어 있다(전에는 CSS 가짜 애니가 돌다가 0 으로 되돌아갔다).
-try{ if(document.getElementById('opening')) opBarStart(1400); }catch(e){}
+// ⚠ 공유 키 아트도 **여기서** 켠다. 부팅 로딩은 마크업에 그냥 떠 있어서 showAppScreen 을 안 거친다 —
+//    거기서만 켜면 첫 화면이 배경 없이 새까맣게 나오고, 투명해진 로딩 아래로 채팅바까지 비친다(실제로 그랬다).
+try{ if(document.getElementById('opening')){ titleArtShow(true); opBarStart(1400); } }catch(e){}
 function showLoading(done, ms){ const op=document.getElementById('opening'); if(!op){ if(typeof done==='function') done(); return; }
-  op.classList.remove('hide','counting');
+  op.classList.remove('counting'); titleArtShow(true); screenFadeIn(op);   // 배경은 그대로 두고 막대만 떠오른다
   const tok=(op._loadTok=(op._loadTok||0)+1);   // 그 사이 새 로딩이 시작되면 옛 약속은 버린다
   opBarStart(ms);
   opBarDone().then(()=>{ if(op._loadTok!==tok) return;
-    op.classList.add('hide'); opBarReset(); if(typeof done==='function') done(); }); }
+    // 다음 화면을 **먼저** 세우고, 그 위에서 로딩만 걷어낸다 — 검은 한 프레임이 안 생긴다.
+    if(typeof done==='function') done();
+    screenFadeOut(op);
+    setTimeout(()=>{ if(op._loadTok===tok) opBarReset(); }, _fadeMs()+40); }); }   // 막대 되감기는 사라진 뒤에
 // 로딩 화면 미니맵 썸네일(네모=미니맵, 그 외=아이콘)
 // 유즈맵 썸네일(팝업·게임 시작 화면 공용 단일 소스): 네모=미니맵, 그 외=맵 아이콘
 // 🖼 유즈맵 키 아트 — 던전 배경(HB_BG_DIR)과 같은 구조: 코드가 경로를 조립하고 파일은 맵 id 로 찾는다.
@@ -374,6 +448,7 @@ function gameStartCountdown(done){ const op=document.getElementById('opening');
   const sb=document.getElementById('opStart'), st=document.getElementById('opStartTxt');
   if(sb){ sb.disabled=false; sb.classList.remove('done'); } if(st){ st.textContent=_gsSolo()?'전투 시작':'준비 완료'; }
   op.classList.remove('hide','warp','ready','timing'); op.classList.add('counting');
+  titleArtShow(false);   // 진입 카운트다운은 자기 아트(.gsArt)를 쓴다 — 타이틀 그림을 뒤에 두지 않는다
   { const fill=document.getElementById('gsBarFill'); if(fill) fill.style.width='0%'; }
   _gsEnterLoading(); }   // 로딩 단계부터 — 막대가 100% 가 되면 스스로 준비 단계로 넘어간다
 // 준비 완료(전원 또는 5초 자동) → 워프 전환 후 게임 진행
@@ -402,8 +477,9 @@ async function bootApp(){
   { const op=document.getElementById('opening');
     if(op && op.classList.contains('hide')) return;                 // 이미 다른 화면으로 넘어갔다
     if(AUTH.user){ enterAfterWarm(); return; }                      // 세션이 살아 있으면 로그인 화면을 건너뛴다(막대를 **이어서** 쓴다)
-    await opBarDone(); opBarReset();                                // 로그인 화면으로 갈 때만 여기서 막대를 끝낸다
-    openAuth(); } }
+    await opBarDone();                                              // 로그인 화면으로 갈 때만 여기서 막대를 끝낸다
+    openAuth();                                                     // 로딩은 페이드로 걷히고 로그인이 겹쳐 들어온다
+    setTimeout(opBarReset, _fadeMs()+40); } }                       // ⚠ 막대를 먼저 0 으로 되감으면 사라지는 동안 그게 보인다
 // 🧍 방치 하트비트: 앱 켜져 있으면 60초마다 100% 자동 적립(유즈맵과 무관)
 try{ setInterval(profIdleTick, 60000); }catch(e){}
 window.addEventListener('beforeunload', function(){ try{ profStampSeen(); }catch(e){} });   // 종료 시 시각 스탬프(다음 접속 오프라인 정산 기준)
@@ -420,7 +496,55 @@ const AUTH_WAYS={ id:{label:'아이디', ico:'user'}, email:{label:'이메일', 
 function authRememberWay(k){ try{ _lsSet('nm_last_auth', k); }catch(e){} }   // 재방문 때 그 방식 폼으로 바로 연다
 function authLastWay(){ const k=_lsGet('nm_last_auth', null); return AUTH_WAYS[k]? k : null; }
 // 허브로 — '다른 방법으로'와 최초 진입이 같은 상태로 수렴한다
-function authShowHub(){
+// 🔀 로그인 **안에서** 내용을 바꿀 때(허브↔폼 · 로그인↔회원가입)는 짧게 흐렸다가 되돌린다.
+// 그냥 바꾸면 뚝 끊기고, 화면 등장 속도(--t-auth)로 끌면 답답하다 → --t-swap 을 따로 둔다.
+// ⚠ 화면이 아직 안 떠 있으면(openAuth 가 여는 중) 바로 실행한다 — 안 그러면 첫 화면이 늦게 뜬다.
+// ⚠ 중첩 호출(폼 열기가 안에서 모드도 바꾼다)은 한 번만 흐린다.
+// 🔀 로그인 **안에서** 내용이 바뀔 때(허브↔폼)는 진짜 디졸브 — 둘이 잠깐 겹친다.
+// ⚠ 본문을 미뤘다가 실행하면 '사라진 뒤 나타나는' 순차 페이드가 된다. 본문은 **즉시** 실행하고,
+//    방금 사라진 판만 흐름에서 빼 같은 자리에 남겨 둔다(그 위에 새 판이 겹쳐 뜬다).
+// ⚠ 재진입 방지 플래그다. 미뤄 둔 본문이 같은 함수를 다시 부르므로 '바쁨'으로 막으면 영영 안 바뀐다.
+let _authSwapRun=false;
+function authSwapDefer(fn, args){
+  const a=document.getElementById('auth');
+  if(_authSwapRun || !a || a.classList.contains('hide') || !a.classList.contains('inView')) return false;
+  const ms=_cssMs('--t-swap', .22);
+  // 판(허브↔폼)은 겹쳐서, 입력칸(탭 전환으로 늘고 주는 것)은 높이와 함께 흐른다
+  const panels=[document.getElementById('authHub'), document.getElementById('authForm')];
+  const fields=[document.getElementById('authNick'), document.getElementById('authPw2')];
+  const was=panels.map(p=>!!p && !p.classList.contains('hide'));
+  // ⚠ 자리는 **본문 실행 전에** 재 둔다 — 실행 뒤엔 이미 숨겨져 offsetTop 이 0 이다.
+  //    .authIn 은 위(로고 밑)에 붙어 있으므로 **윗변에서의 거리**로 잡아야 화면에서 안 움직인다.
+  const box=document.querySelector('.authIn');
+  const geo=panels.map(function(p){ if(!p || p.classList.contains('hide') || !box) return null;
+    return { top: p.offsetTop, h: p.offsetHeight }; });
+  const wasF=fields.map(p=>!!p && !p.classList.contains('hide'));
+  _authSwapRun=true; try{ fn.apply(null, args||[]); } finally { _authSwapRun=false; }
+  panels.forEach(function(p,i){ if(!p) return;
+    const now=!p.classList.contains('hide');
+    if(was[i] && !now){                       // 방금 사라진 판 → 잠깐 남겨 겹친다
+      clearTimeout(p._ghostT);
+      // ⚠ 흐름에서 빼기 **전에** 있던 자리를 재서 그대로 박는다 — 안 그러면 판이 움직이며 흐려진다
+      p.classList.remove('hide','swapNew');
+      if(geo[i]){ p.style.top=geo[i].top+'px'; p.style.height=geo[i].h+'px'; }
+      p.classList.add('swapGhost');
+      p._ghostT=setTimeout(function(){ p.classList.remove('swapGhost');
+        p.style.top=''; p.style.height=''; p.classList.add('hide'); }, ms);
+    } else if(!was[i] && now){                // 방금 나타난 판 → 그 위에 겹쳐 뜬다
+      clearTimeout(p._newT);
+      p.classList.remove('swapGhost','swapNew'); void p.offsetWidth; p.classList.add('swapNew');
+      p._newT=setTimeout(function(){ p.classList.remove('swapNew'); }, ms+60);
+    }});
+  fields.forEach(function(p,i){ if(!p) return;
+    const now=!p.classList.contains('hide');
+    if(wasF[i] && !now){ clearTimeout(p._ghostT);
+      p.classList.remove('hide','fieldNew'); p.classList.add('fieldGhost');
+      p._ghostT=setTimeout(function(){ p.classList.remove('fieldGhost'); p.classList.add('hide'); }, ms);
+    } else if(!wasF[i] && now){ clearTimeout(p._newT);
+      p.classList.remove('fieldGhost','fieldNew'); void p.offsetWidth; p.classList.add('fieldNew');
+      p._newT=setTimeout(function(){ p.classList.remove('fieldNew'); }, ms+60); }});
+  return true; }   // ⚠ 본문은 이미 위에서 실행했다 — false 를 주면 호출부가 한 번 더 실행한다
+function authShowHub(){ if(authSwapDefer(authShowHub)) return;
   document.getElementById('authHub').classList.remove('hide');
   document.getElementById('authForm').classList.add('hide');
   // ⚠ 부제는 로고 블록의 'BATTLE ARENA' 다 — 안내 문구로 덮지 말 것(로고가 무너진다).
@@ -436,7 +560,7 @@ function authShowHub(){
   { const e=document.getElementById('authErr');
     e.classList.toggle('info', _authLink);
     e.textContent=_authLink?'게스트 진행도를 계정에 연결합니다':''; } }
-function authOpenForm(kind, quiet){
+function authOpenForm(kind, quiet){ if(authSwapDefer(authOpenForm,[kind,quiet])) return;
   _authKind=(kind==='email')?'email':'id';
   const f=document.getElementById('authId');
   if(_authKind==='email'){ f.type='email'; f.removeAttribute('maxlength'); f.autocomplete='email';
@@ -467,7 +591,8 @@ function openAuth(){
   if(typeof paintIcons==='function') paintIcons(document.getElementById('auth'));   // data-ico → 아이콘(부팅 시점에만 의존하지 않게)
   authLockHeight();   // 화면이 보이는 상태에서 실측해야 한다(display:none이면 높이가 0)
   if(typeof bgmStart==='function') bgmStart('lobby'); }   // 로그인 화면부터 로비 BGM
-function authMode(m){ _authTab=m;
+function authMode(m){ if(authSwapDefer(authMode,[m])) return;
+  _authTab=m;
   const K=(_authKind==='email')?'이메일':'아이디';
   const tb=document.getElementById('authTabs');
   if(tb){ tb.classList.toggle('hide', _authLink);   // 연결 모드는 고를 탭이 없다

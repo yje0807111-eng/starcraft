@@ -418,6 +418,17 @@
     background:none;   /* 투명 — 프레임의 지형 타일이 그대로 비침(한 지면처럼) */
     box-shadow:0 -10px 24px -6px rgba(0,0,0,.55)}   /* 위쪽으로 부드러운 그림자 → 자연스러운 섹션 경계 */
   #phone:not(.inGame) #bot{display:none}   /* 게임 중(.inGame)에만 하단 콘솔 표시 — 타이틀/방찾기/로비 등에서는 숨김 */
+  /* 🎬 게임 밖에서는 전장을 **아예 안 보이게** 한다 (2026-08-23).
+     전장 조각(#vMain 바닥 캔버스 · HUD · 합체 버튼)은 항상 떠 있고 앱 화면이 덮고 있을 뿐이라,
+     화면 전환에서 덮개가 한순간 투명해지면 유즈맵 배경이 비쳤다.
+     ⛔ #gameArea 를 숨기면 안 된다 — 그건 앱 전체 컨테이너라 로그인·공용 3D 캔버스까지 들어 있다.
+     ⚠ display:none 이 아니라 visibility 다. 캔버스 크기를 재서 그리는 코드가 있어
+       display 를 끄면 0×0 이 되어 그리기가 망가진다. */
+  #phone:not(.inGame) #vMain,
+  #phone:not(.inGame) #hud,
+  #phone:not(.inGame) #mergeFab,
+  #phone:not(.inGame) #chatBar,
+  #phone:not(.inGame) #chatLog{visibility:hidden}
   #bot::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;z-index:2;   /* 상단 경계 = 중립 저채도 하이라이트(빨강 제거) */
     background:linear-gradient(90deg,transparent,rgba(150,170,200,.28) 50%,transparent);opacity:.7;box-shadow:none}
   /* 최상위 네비 = 하나의 통(단일 바) — 섹션은 얇은 세로줄로만 구분, 활성=청록 포인트 인디케이터 */
@@ -435,7 +446,11 @@
     backdrop-filter:blur(2px) saturate(.95);-webkit-backdrop-filter:blur(2px) saturate(.95)}
   #settingsPop.hide{display:none}
   /* 컨텍스트: 앱(로비/로그인)에선 게임 전용 항목 숨기고 로그아웃 표시 */
-  #settingsPop.appCtx{background:rgba(2,3,6,.82)}                                       /* 뒤 화면 강하게 가림 */
+
+  #settingsPop.appCtx .setMe{padding:12px 0;margin:0;background:none;border:none;border-radius:0;
+    border-bottom:1px solid rgba(255,255,255,.16)}
+
+
   #settingsPop.appCtx .setCard{background:linear-gradient(180deg,rgba(25,25,25,.985),rgba(14,14,14,.99))}   /* 거의 불투명(겹침 방지) */
   #settingsPop.appCtx #si-mission,#settingsPop.appCtx #body-mission,#settingsPop.appCtx #qrow-spd,#settingsPop.appCtx #body-spd,#settingsPop.appCtx #setPauseBtn,#settingsPop.appCtx #setExit{display:none}
   #settingsPop:not(.appCtx) #setLogout{display:none}
@@ -486,18 +501,21 @@
   .setLogout{margin-top:8px;width:100%;height:44px;padding:0;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-lg);font-weight:800;letter-spacing:.3px;cursor:pointer;
     color:#dfe7f0;background:rgba(255,255,255,.07);border:1px solid var(--glass-edge);transition:background .16s,border-color .16s}
   .setLogout:active{transform:translateY(1px);background:rgba(255,255,255,.1)}
-  /* 로그인 화면 우상단 설정 버튼 */
-  /* 육각형 배너 — 아이콘(17px)보다 살짝만 큰 26px. 테두리는 같은 육각형을 1px 키워 뒤에 깐다(clip-path는 border를 잘라낸다) */
-  .authGear{position:absolute;top:16px;right:16px;z-index:2;display:inline-flex;align-items:center;justify-content:center;
-    width:26px;height:26px;padding:1px;cursor:pointer;color:#cfe0ec;border:none;background:none;transition:color .16s}
-  .authGear::before{content:'';position:absolute;inset:0;z-index:-1;background:rgba(150,190,235,.5);
-    clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)}
-  .authGear::after{content:'';position:absolute;inset:1px;z-index:-1;background:linear-gradient(180deg,rgba(30,38,52,.95),rgba(8,11,17,.97));
-    clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)}
-  .authGear:hover{color:#fff}
-  .authGear:hover::before{background:var(--ac,#5cd6ff)}
+  /* 로그인 화면 우상단 설정 — **글리프만**(2026-08-23). 판·테두리 없음.
+     가운데 로고가 선 하나로 그린 그림인데 여기만 육각 판을 두르면 혼자 튄다.
+     방향 버튼(.arwBtn)과 같은 문법이다 — 판 대신 그림자로 띄우고, 흐릿하게 눌러 둔다.
+     ⚠ 글리프가 커져도 터치 영역은 규격(≥44px)을 지킨다(DESIGN.md §0). */
+  /* ⚠ 뜨고 지는 것은 로그인 내용(.authIn)과 **같은 값**을 쓴다 — 혼자 다른 박자로 나타나면
+     그것만 따로 노는 게 눈에 띈다. 평소 밝기(.55)는 켜진 상태의 값이다. */
+  .authGear{position:absolute;top:8px;right:8px;z-index:2;display:inline-flex;align-items:center;justify-content:center;
+    width:44px;height:44px;padding:0;cursor:pointer;color:#cfe0ec;border:none;background:none;
+    opacity:0;transition:opacity var(--t-auth) ease,color .16s}
+  .authGear::before,.authGear::after{content:none}   /* 옛 육각 판·테두리 폐지 */
+  #auth.inView .authGear{opacity:.55;transition-delay:var(--t-authDelay)}
+  /* 손이 닿으면 즉시 반응해야 한다 — 등장용 늦춤을 물려받으면 눌러도 한참 뒤에 밝아진다 */
+  #auth.inView .authGear:hover{color:#fff;opacity:.9;transition:opacity .16s ease,color .16s;transition-delay:0s}
   .authGear:active{transform:scale(.93)}
-  .authGear svg{width:14px;height:14px}
+  .authGear svg{width:25px;height:25px;filter:drop-shadow(0 1px 5px rgba(0,0,0,.9))}
   /* 반투명 + 각진 박스. 세로로 시원하게(기본 닫힌 상태 ~1.5배 높이) */
   /* 설정 창 = 열린 곳에 맞춘 톤. 게임 내부(기본) = 각진 콘솔 패널 + 청록 포인트 */
   .setCard{--setAcc:#ececec;--setAccS:rgba(255,255,255,.34);   /* 시안 폐기 — 중립 강조(DESIGN.md §2) */
@@ -633,9 +651,11 @@
     box-shadow:inset 0 1px 0 rgba(255,255,255,.13),      /* 윗변 하이라이트 = 볼록 */
                inset 0 -4px 6px -3px rgba(0,0,0,.8),     /* 아래로 말려드는 그림자 */
                0 2px 4px -2px rgba(0,0,0,.7)}            /* 바깥 아래 그림자 = 솟아 있음 */
-  .ecCard .ecCancel:active,.ecCard .ecGo:active,.hbModal .ecCancel:active,.hbModal .ecGo:active,#ovBtn:active,#ovBtn2.ghost:active,.authBtn:active,.authGuest:active{
+  .ecCard .ecCancel:active,.ecCard .ecGo:active,.hbModal .ecCancel:active,.hbModal .ecGo:active,#ovBtn:active,#ovBtn2.ghost:active{
     background:linear-gradient(180deg,rgba(16,20,29,.8),rgba(4,6,10,.92));
     box-shadow:inset 0 2px 4px -1px rgba(0,0,0,.85),0 0 0 rgba(0,0,0,0)}   /* 누르면 눌려 들어간다 */
+  /* ⛔ 로그인 화면 버튼(.authBtn/.authGuest)은 여기 넣지 말 것 — 그쪽은 판이 없어서
+     누를 때 없던 상자가 생긴다(실제로 게스트 버튼에서 그랬다). 누름 반응은 css/20-lobby.css 에 따로 있다. */
   .twBtn{--btnIn:rgba(92,214,255,.26)} .twBtn.del{--btnIn:rgba(255,120,120,.3)}
   /* 팝업 액션 버튼은 카드 액센트를 따라가지 않고 한 스타일로 통일한다(기준 = 나가기 버튼) */
   .ecCard .ecCancel,.ecCard .ecGo,.hbModal .ecCancel,.hbModal .ecGo{color:#dfe7f0}
@@ -674,6 +694,54 @@
     background:linear-gradient(180deg,#2a1214,#261012 55%,#170a0c) padding-box,
       var(--nav-ring-on-d) border-box}
   .setQGo:active{transform:translateY(1px)}
+  /* ══ 게임 밖 설정(.appCtx) = 로그인과 같은 언어로 (2026-08-23) ══════════════════
+     판·상자를 걷어내고 **헤어라인 행 + 국소 스크림**만 남긴다. 로그인 폼과 같은 문법이다.
+     ⛔ .appCtx 에만 건다 — 같은 #settingsPop 을 인게임도 쓴다(거긴 전장 위라 판이 필요하다). */
+  #settingsPop.appCtx{background:rgba(2,3,6,.72);z-index:95}
+  /* 🎬 여닫기 — 로그인 안의 전환과 같은 박자(--t-swap). 뚝 나타나지 않게. */
+  #settingsPop.appCtx{animation:setPopIn var(--t-swap) ease both}
+  #settingsPop.appCtx.closing{animation:setPopOut var(--t-swap) ease both;pointer-events:none}
+  @keyframes setPopIn{from{opacity:0}to{opacity:1}}
+  @keyframes setPopOut{from{opacity:1}to{opacity:0}}
+  /* 내용은 살짝 올라오며 자리를 잡는다 — 딤만 흐리면 판이 없어서 움직임이 안 읽힌다 */
+  #settingsPop.appCtx .setCard{animation:setCardIn var(--t-swap) ease both}
+  #settingsPop.appCtx.closing .setCard{animation:none}
+  @keyframes setCardIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}   /* ⚠ z: 타이틀 로고(89)보다 위 — 안 그러면 로고가 카드를 뚫고 보인다 */
+  #settingsPop.appCtx::after{content:'';position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(78% 54% at 50% 46%,rgba(3,5,9,.90),rgba(3,5,9,.50) 66%,transparent 100%)}
+  /* 카드 → 판 없음 */
+  #settingsPop.appCtx .setCard{width:calc(100% - 44px);max-width:340px;padding:0;z-index:1;
+    background:none;border:none;box-shadow:none;clip-path:none}
+  #settingsPop.appCtx .setCard::before{display:none}   /* 이중 테두리 프레임도 뺀다 */
+  /* 묶음(빠른 조작·메뉴) → 판 없이 행만 */
+  #settingsPop.appCtx .setQuick,#settingsPop.appCtx .setMenu{padding:0;margin:0;border:none;
+    background:none;border-radius:0;clip-path:none}
+  #settingsPop.appCtx .setQRow,#settingsPop.appCtx .setItem{padding:12px 0;border-top:none;
+    border-bottom:1px solid rgba(255,255,255,.16)}
+  /* ⚠ 이 블록은 **파일 뒤쪽**에 있어야 한다 — 앞쪽 .appCtx 규칙들과 특이도가 같아 앞에 두면 덮인다. */
+  /* 제목 — 로그인처럼 글자만. 밑줄 액센트는 이 화면에서 유일한 색 덩어리라 뺀다. */
+  #settingsPop.appCtx .setTitle{padding-bottom:12px;font-weight:700}
+  #settingsPop.appCtx .setTitle::after{display:none}
+  /* ⚠ .mIco 기본색이 빨강(--neon)이라 색을 물려받게 해야 한다 — 다른 화면들도 같은 처리를 해 뒀다 */
+  #settingsPop.appCtx .setX{color:#8b939f}
+  #settingsPop.appCtx .setX .mIco{color:inherit;margin:0}
+  /* 🔘 토글 = 알약 테두리만(5a). 면을 채우지 않는다 — 이 화면에서 색을 채우는 유일한 부품이었다. */
+  #settingsPop.appCtx .setSw{width:40px;height:22px;border-radius:11px;
+    background:none;border:1px solid rgba(255,255,255,.16);transition:border-color .16s,box-shadow .16s}
+  #settingsPop.appCtx .setSw>i{top:4px;left:4px;width:12px;height:12px;border-radius:50%;
+    background:#6d757f;transition:left .16s,background .16s,box-shadow .16s}
+  #settingsPop.appCtx .setSw.on{background:none;border-color:rgba(255,255,255,.34)}
+  #settingsPop.appCtx .setSw.on>i{left:22px;background:#fff;box-shadow:0 0 7px rgba(255,255,255,.55)}
+  /* '로그인 ›' — 판 없이 글자만(허브의 행과 같은 무게) */
+  #settingsPop.appCtx .setQGo{padding:6px 0 6px 10px;min-width:0;border:none;background:none;
+    color:#98a1ad;font-weight:400}
+  /* 글자 무게 — 로그인 행과 같게 낮춘다(판이 없어지면 굵은 글씨만 남아 무거워 보인다) */
+  #settingsPop.appCtx .setQRow,#settingsPop.appCtx .setItem,#settingsPop.appCtx .setMe{
+    font-size:13.5px;font-weight:400;color:#e6ebf2}
+  #settingsPop.appCtx .setItem b{font-weight:400;color:#98a1ad}
+  #settingsPop.appCtx .setItem .setArr{color:#7f8794}
+  /* ⚠ 위 블록은 **여기(파일 뒤쪽)** 에 있어야 한다 — 앞쪽 .appCtx 규칙들과 특이도가 같아
+     앞에 두면 그것들에 덮인다(실제로 제목 밑줄·로그인 칩이 안 바뀌었다). */
   
   
   body.lite *{backdrop-filter:none!important;box-shadow:none!important}

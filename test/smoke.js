@@ -93,8 +93,11 @@ async function groupLobby(){
       var sc=$('auth').getBoundingClientRect(), bl=document.querySelector('.authIn').getBoundingClientRect();
       var mid=((bl.top+bl.bottom)/2-sc.top)/sc.height*100;
       assert(mid>60,'로그인 블록이 아래로 안 내려감(그림의 주인공을 덮는다): '+mid.toFixed(1)+'%');
-      assert(sc.bottom-bl.bottom < sc.height*0.12,
-        '블록이 바닥에서 너무 떠 있음: '+Math.round(sc.bottom-bl.bottom)+'px');
+      // ⚠ 2026-08-23: 블록은 **위(로고 밑)에 붙는다**. 아래로 붙이면 내용 길이가 바뀔 때마다
+      //    통째로 오르내려 허브↔폼 전환이 튄다 → '바닥에 붙었는가' 대신 '로고 바로 밑인가'를 본다.
+      var mk=$('titleMark').getBoundingClientRect();
+      assert(Math.round(bl.top-mk.bottom)>=8 && Math.round(bl.top-mk.bottom)<=60,
+        '블록이 로고 바로 밑이 아님(간격 '+Math.round(bl.top-mk.bottom)+'px) — 자리가 고정이어야 전환이 안 튄다');
       // ② 방식은 '행'이다 — 판(면)도 전폭 헤어라인도 없다. 구분은 짧은 가운데 선 하나뿐(M8)
       var w0=getComputedStyle($('wayId'));
       assert(w0.backgroundImage==='none','방식 칸에 판(면)이 되살아남: '+w0.backgroundImage);
@@ -110,14 +113,73 @@ async function groupLobby(){
         assert(W.length===3,'방식이 3개가 아님: '+W.length);
         var k=W.map(function(w){ var c=getComputedStyle(w); return c.color+'|'+c.fontSize+'|'+c.fontWeight; });
         assert(k[0]===k[1] && k[1]===k[2],'셋의 무게가 다름: '+k.join(' / ')); }
-      // ④ 로고 블록 = 부팅 로딩과 같은 것 — 두 화면이 한 장면으로 이어진다
-      { var t=getComputedStyle(document.querySelector('.authLogo')), o=getComputedStyle(document.querySelector('.opTitle'));
-        assert(t.fontFamily===o.fontFamily && t.fontSize===o.fontSize,
-          '로그인 제목이 로딩 제목과 다름: '+t.fontFamily+' '+t.fontSize+' vs '+o.fontFamily+' '+o.fontSize);
-        assert(!/rgb\(255, 59, 59\)/.test(t.color),'제목에 빨강이 섞임(로딩은 흰 단색이다): '+t.color);
+      // ④ 로고 블록 = 부팅 로딩과 **같은 요소 하나**(2026-08-23). 예전엔 두 벌을 만들어 놓고
+      //    서로 같은지 비교했는데, 밑변을 맞춰도 안쪽 간격이 달라 어긋났다 → 하나로 합쳤다.
+      { assert(document.querySelectorAll('.authLogo, .opTitle').length===1,
+          'STAR WAR 로고가 한 벌이 아님 — 두 벌이면 화면 전환에서 어긋난다');
+        var t=getComputedStyle(document.querySelector('.authLogo'));
+        assert(!/rgb\(255, 59, 59\)/.test(t.color),'제목에 빨강이 섞임(흰 단색이다): '+t.color);
         assert(document.querySelector('.authMark svg'),'로고 육각 마크가 없음');
         assert($('authSub').textContent.trim()==='BATTLE ARENA',
           '부제가 로고의 일부가 아님(안내 문구로 덮였다): '+$('authSub').textContent); }
+      // ⑤ 폼 = **판 없이 밑줄만 + 국소 스크림**(2026-08-23 · 1안).
+      //    허브가 판 없는 행 목록인데 폼만 상자를 두르면 두 단계가 다른 화면처럼 보인다.
+      //    ⚠ 판을 뺀 대신 읽히게 하는 것은 .authIn::before 스크림이다 — 둘은 한 세트라 같이 검사한다.
+      { if(typeof authOpenForm==='function'){ authOpenForm('id'); }
+        var fd=getComputedStyle($('authId'));
+        assert(fd.backgroundImage==='none' && /rgba\(0, 0, 0, 0\)|transparent/.test(fd.backgroundColor),
+          '입력칸이 면을 채운다 — 밑줄만 남겨야 한다');
+        assert(parseFloat(fd.borderTopWidth)===0 && parseFloat(fd.borderLeftWidth)===0,
+          '입력칸에 상자 테두리가 남아 있다');
+        assert(parseFloat(fd.borderBottomWidth)>0,'입력칸 밑줄이 없다 — 어디를 누르는지 안 보인다');
+        var bt=getComputedStyle($('authBtn'));
+        assert(bt.backgroundImage==='none' && /rgba\(0, 0, 0, 0\)|transparent/.test(bt.backgroundColor),
+          '로그인 버튼이 면을 채운다 — 입력칸이 선뿐인데 버튼만 무거워진다');
+        assert(bt.clipPath==='none','로그인 버튼에 모서리 컷이 남아 있다 — 입력칸이 선뿐인데 버튼만 장식이 남는다');
+        // 탭 띠도 판을 벗는다. ⚠ 공용 .pdSeg 를 고치는 게 아니라 **로그인 안에서만** 덮은 것이다.
+        var sg=document.querySelector('.authTabs .pdSeg');
+        if(sg){ var sgs=getComputedStyle(sg);
+          assert(sgs.backgroundImage==='none' && /rgba\(0, 0, 0, 0\)|transparent/.test(sgs.backgroundColor),
+            '탭 띠가 판을 깔고 있다 — 이 화면만 판을 벗긴다');
+          var other=document.querySelector('#homeScreen .pdSeg, .hbUpg .pdSeg');
+          if(other) assert(getComputedStyle(other).backgroundImage!=='none',
+            '공용 세그먼트 바까지 판이 사라졌다 — 로그인 안에서만 덮어야 한다'); }
+        // ⚠ 스크림은 로고·로그인이 함께 쓰는 **한 장**(#titleBg::before)이다 — 블록마다 깔면 경계가 띠로 보인다
+        var sc=getComputedStyle($('titleBg'),'::before');
+        assert(/gradient/.test(sc.backgroundImage),'국소 스크림이 없다 — 판을 뺐으면 이게 글자를 읽히게 한다');
+        if(typeof authShowHub==='function') authShowHub(); }
+      // ⑥ 포커스 — 브라우저 기본 사각 링을 끈다. 판이 하나도 없는 화면이라 그 상자만 혼자 튄다.
+      //    게스트 버튼에서 특히 보였다(눌러도 로딩 동안 화면에 남아 있어서).
+      { var gb=$('authGuest'); if(gb){ gb.focus();
+          var fo=getComputedStyle(gb);
+          assert(fo.outlineStyle==='none' || parseFloat(fo.outlineWidth)===0,
+            '게스트 버튼에 기본 포커스 상자가 뜬다: '+fo.outline);
+          gb.blur(); } }
+      // ⑦ 누름 반응 — 판 없는 버튼에 '눌려 들어가는 판'을 씌우면 없던 상자가 생긴다(게스트에서 그랬다).
+      //    :active 는 스모크가 만들 수 없으므로 **규칙을 직접 훑어서** 본다.
+      { var badPress=[];
+        for(var si=0; si<document.styleSheets.length; si++){ var rules;
+          try{ rules=document.styleSheets[si].cssRules; }catch(e){ continue; }
+          for(var ri=0; ri<rules.length; ri++){ var rr=rules[ri]; if(!rr.selectorText) continue;
+            if(!/.(authGuest|authBtn):active/.test(rr.selectorText)) continue;
+            var bgv=(rr.style.background||'')+(rr.style.backgroundImage||'');
+            if(/gradient/.test(bgv)) badPress.push(rr.selectorText.slice(0,70)); } }
+        assert(!badPress.length,'누를 때 판이 생기는 규칙이 있다: '+badPress.join(' / ')); }
+      // ⑧ 설정 버튼 = **글리프만**. 판을 두르면 선으로 그린 가운데 로고 옆에서 혼자 튄다(2026-08-23).
+      { var gr=document.querySelector('.authGear'); assert(gr,'설정 버튼이 없음');
+        var gs=getComputedStyle(gr), gb=gr.getBoundingClientRect();
+        assert(getComputedStyle(gr,'::before').content==='none' && getComputedStyle(gr,'::after').content==='none',
+          '설정 버튼에 판이 남아 있다 — 글리프만 남겨야 한다');
+        assert(gs.backgroundImage==='none' && /rgba\(0, 0, 0, 0\)|transparent/.test(gs.backgroundColor),
+          '설정 버튼이 자기 면을 칠한다');
+        assert(+gs.opacity<0.8,'설정 버튼이 또렷하다 — 살짝 눌러 둔다: '+gs.opacity);
+        assert(gb.width>=44 && gb.height>=44,'터치 영역이 44px 미만: '+Math.round(gb.width)+'x'+Math.round(gb.height));
+        // 뜨고 지는 박자는 로그인 내용과 **같은 값**이어야 한다 — 혼자 다른 박자면 따로 노는 게 보인다
+        var ai=getComputedStyle(document.querySelector('.authIn'));
+        assert(gs.transitionDuration.indexOf(ai.transitionDuration.split(',')[0])===0,
+          '설정 버튼이 로그인 내용과 다른 속도로 뜬다: '+gs.transitionDuration+' vs '+ai.transitionDuration);
+        assert(parseFloat(gs.transitionDelay)===parseFloat(ai.transitionDelay),
+          '설정 버튼의 늦춤이 로그인 내용과 다르다: '+gs.transitionDelay+' vs '+ai.transitionDelay); }
       // ④ ⭐ 게스트는 판을 갖지 않는다 — 밑변 광원은 주 버튼의 서명이라
       //    게스트에 붙으면 "기본 동작은 게스트"가 된다(2026-08-19 정리).
       var gs=getComputedStyle($('authGuest'));
@@ -141,10 +203,13 @@ async function groupLobby(){
     //      '없는 상자'를 재고 통과하는 검사가 된다(실제로 그랬다).
     var ac=getComputedStyle(document.querySelector('.authCard'));
     assert(ac.display==='contents','.authCard 가 다시 판이 됨(display '+ac.display+')');
-    // 배경 아트 3층 — 그림 + 비네트. 비네트가 없으면 밝은 그림 위에 글자가 얹힌다.
-    { var bg=getComputedStyle($('auth'),'::before').backgroundImage;
+    // 배경 아트 + 비네트. 비네트가 없으면 밝은 그림 위에 글자가 얹힌다.
+    // ⚠ 2026-08-23: 그림·딤은 로그인이 직접 그리지 않는다 — **부팅 로딩과 공유하는 #titleBg 한 장**이다.
+    //    화면마다 그리면 전환할 때 호흡 애니가 리셋되어 그림이 툭 튄다.
+    { assert($('phone').classList.contains('artBg'),'로그인인데 공유 키 아트가 안 켜졌다');
+      var bg=getComputedStyle($('titleBg')).backgroundImage;
       assert(bg.indexOf('url(')>=0,'로그인 배경 아트가 없음');
-      var vg=getComputedStyle($('auth'),'::after').backgroundImage;
+      var vg=getComputedStyle($('titleBg'),'::after').backgroundImage;
       assert(vg.indexOf('gradient')>=0,'로그인 비네트가 없음 — 글자 자리가 안 어두워진다'); }
     // 액센트는 사냥터와 같은 빨강 — 푸른기로 되돌아가면 여기서 걸린다
     { var rgb=ac.getPropertyValue('--acRGB').trim().split(',').map(Number);
@@ -272,6 +337,9 @@ async function groupLobby(){
     openAuth();
     assert(visible($('auth')) && !visible($('homeScreen')),
       'openAuth()가 화면을 안 덮음 — 가드 검사가 무의미해졌으니 이 스텝을 다시 볼 것');
+    // ⚠ 화면 전환은 크로스페이드다(FADE_SCREENS) — .hide 는 var(--t-screen) 뒤에 걸린다.
+    //    "즉시 숨는가"가 아니라 "결국 숨는가"를 본다. 가드의 뜻은 그대로다.
+    await sleep(_fadeMs()+80);
     assert($('opening').classList.contains('hide'),'부팅 후에도 오프닝이 안 감춰짐');
     openHome(); await sleep(40);
     return '가드 있음 · openAuth는 화면을 덮는다(=가드가 필요하다)'; });
@@ -725,6 +793,7 @@ async function groupLobby(){
     // 로딩 게이트는 반드시 HOME에서 끝나야 한다
     await enterAfterWarm();
     assert(visible($('homeScreen')),'로딩 뒤 HOME이 안 열림');
+    await sleep(_fadeMs()+80);   // ⚠ 로딩은 HOME 이 선 뒤에 그 위에서 걷힌다(크로스페이드)
     assert(!visible($('opening')),'로딩 화면이 안 닫힘');
     const bar=$('opening').querySelector('.opBar');
     assert(!bar || !bar.style.width,'로딩 막대 인라인 폭이 남음 — 다음 로딩이 100%에서 시작한다');
@@ -3221,9 +3290,11 @@ async function groupLobby(){
     const iv=setInterval(()=>{ const w=bar.getBoundingClientRect().width/W*100, t=performance.now()-t0;
       if(w>peak) peak=w;
       if(fullAt===null && w>=99) fullAt=t;
-      if(hidAt===null && op.classList.contains('hide')) hidAt=t; }, 16);
+      // ⚠ 전환 시점 = 로딩이 **걷히기 시작하는** 순간(.fxOut). .hide 는 페이드가 끝난 뒤라
+      //    그것만 보면 전환이 늦게 잡힌다. 둘 중 먼저 오는 것을 쓴다.
+      if(hidAt===null && (op.classList.contains('fxOut')||op.classList.contains('hide'))) hidAt=t; }, 16);
     await new Promise(r=>showLoading(r, 400));
-    await sleep(40); clearInterval(iv);
+    await sleep(_fadeMs()+80); clearInterval(iv);
     assert(peak>=99, '막대가 100% 를 못 채우고 넘어감(최대 '+peak.toFixed(0)+'%)');
     assert(fullAt!==null && hidAt!==null, '100% 도달·전환 시점을 못 잼');
     const gap=hidAt-fullAt;
@@ -3232,6 +3303,272 @@ async function groupLobby(){
     op.classList.add('hide'); if(typeof opBarReset==='function') opBarReset();
     return '최대 '+peak.toFixed(0)+'% · 100%→전환 '+Math.round(gap)+'ms';
   });
+  // 🎬 부팅 로딩과 로그인은 **같은 키 아트가 이어지는 한 장면**이다.
+  //    예전엔 둘이 서로 다른 호흡 애니(18s/14s)를 따로 돌려서, 화면이 바뀌면 새 요소가 0% 부터
+  //    다시 시작해 그림이 최대 4.4% 툭 작아졌다. 게다가 .hide 가 즉시 걸려 전환이 뚝 끊겼다.
+  await step('화면 전환: 배경은 한 장으로 깔리고 앞의 것만 디졸브된다', async()=>{
+    skipIf(typeof showAppScreen!=='function' || typeof _fadeMs!=='function','전환 페이드 없음');
+    const op=$('opening'), au=$('auth'), art=$('titleBg'), ph=$('phone');
+    skipIf(!art,'공유 키 아트 층(#titleBg) 없음');
+    // ① 그림을 칠하는 요소는 **하나뿐**이어야 한다.
+    //    화면마다 자기 그림을 그리면 전환할 때 새 요소의 호흡 애니가 0% 부터 다시 시작해
+    //    그림이 툭 튄다(예전에 4.4% 작아졌다). 위상 보정으로는 리셋 자체를 못 막는다.
+    const painters=[...document.querySelectorAll('*')].filter(e=>{
+      for(const ps of [null,'::before','::after']){
+        if(/boot\.webp/.test(getComputedStyle(e,ps).backgroundImage)) return true; }
+      return false; }).map(e=>e.id||'.'+e.className.split(' ')[0]);
+    assert(painters.length===1 && painters[0]==='titleBg',
+      '키 아트를 여러 곳에서 그린다 — 전환마다 호흡이 리셋된다: '+painters.join(', '));
+    const s=getComputedStyle(art);
+    assert(s.animationName!=='none','공유 키 아트가 숨을 안 쉰다');
+    // ⭐ 위에 얹히는 화면은 **자기 배경을 칠하면 안 된다.** 칠하면 공유 아트를 덮어
+    //    "배경이 없어진" 것처럼 보인다. 두 화면 다 .spaceBg 라 기본값이 불투명이다 — 실제로 두 번 당했다.
+    for(const id of ['opening','auth']){ const el=$(id);
+      for(const ps of [null,'::before','::after']){ const c=getComputedStyle(el,ps);
+        const opaque = c.backgroundImage!=='none' ||
+          (c.backgroundColor && c.backgroundColor!=='rgba(0, 0, 0, 0)' && c.backgroundColor!=='transparent');
+        assert(!opaque, '#'+id+(ps||'')+' 가 자기 배경을 칠한다 — 공유 키 아트를 덮는다 ('
+          +(c.backgroundImage!=='none'?c.backgroundImage.slice(0,30):c.backgroundColor)+')'); } }
+    // ② 화면이 바뀌어도 **그 요소는 그대로** 있어야 한다(교체되면 애니가 다시 시작한다)
+    showAppScreen('auth'); await sleep(30);
+    assert(ph.classList.contains('artBg'),'로그인에서 공유 키 아트가 꺼져 있다');
+    const same=$('titleBg');
+    showAppScreen('opening'); await sleep(30);
+    assert(ph.classList.contains('artBg'),'로딩에서 공유 키 아트가 꺼져 있다');
+    assert($('titleBg')===same,'전환하면서 키 아트 요소가 갈렸다 — 호흡이 끊긴다');
+    // ③ 로고(STAR WAR)도 **한 벌뿐**이어야 한다.
+    //    자리만 맞추는 걸로는 안 된다 — 안쪽 간격이 달라 반드시 어긋난다(실측: 마크 12px · 제목 9px).
+    { const logos=document.querySelectorAll('.authLogo, .opTitle');
+      assert(logos.length===1,'STAR WAR 로고가 '+logos.length+'벌이다 — 두 벌이면 디졸브에서 어긋난다');
+      const marks=document.querySelectorAll('.authMark, .opLogo');
+      assert(marks.length===1,'육각 마크가 '+marks.length+'벌이다');
+      assert($('titleMark') && $('titleMark').parentElement===ph,
+        '로고가 #phone 직속이 아니다 — 화면 안에 두면 그 화면의 흐름을 타서 자리가 움직인다'); }
+    // ④ 로고 자리는 **가장 긴 상태(로그인 폼)** 도 안 덮어야 한다.
+    { const pr=ph.getBoundingClientRect();
+      const a1=Math.round(pr.bottom-$('titleMark').getBoundingClientRect().bottom);
+      if(typeof authOpenForm==='function'){ showAppScreen('auth'); authOpenForm('id'); await sleep(60);
+        const top=Math.round(pr.bottom-document.querySelector('.authIn').getBoundingClientRect().top);
+        assert(top < a1,'로그인 폼이 로고를 덮는다 — 폼 윗변 '+top+'px 가 로고 밑변 '+a1+'px 보다 위다');
+        if(typeof authShowHub==='function') authShowHub(); await sleep(30); } }
+    // ⚠ 위 폼 확인이 로그인 화면으로 돌아갔다 — 아래 '붙잡기' 검사는 **로딩으로 넘어가는 중**이어야 한다
+    showAppScreen('opening'); await sleep(30);
+    // 아래 화면은 페이드하지 않는다 — 둘 다 반투명이면 그 밑 바탕이 비친다
+    assert(!au.classList.contains('fxOut') && !au.classList.contains('fxIn'),
+      '아래 화면까지 페이드한다 — 전환 중 바탕이 새어 나온다');
+    // ⭐ 디졸브의 핵심: 로딩이 **떠오르는 동안** 아래 화면이 자리를 지켜야 한다.
+    //    즉시 감추면 위는 아직 투명하고 아래는 없어서 그 틈으로 바탕이 드러난다(게스트 로그인에서 그랬다).
+    assert(!au.classList.contains('hide'),'로딩이 떠오르는 중인데 아래 화면이 벌써 사라졌다 — 전환에 틈이 생긴다');
+    assert(getComputedStyle(au).opacity==='1','아래 화면이 흐려졌다 — 붙잡고 있어야 틈이 안 생긴다');
+    await sleep(_holdMs()+80);   // ⚠ 붙잡는 시간 = 화면 전환과 로그인 내용 중 **긴 쪽**
+    assert(au.classList.contains('hide'),'로딩이 다 떠올랐는데 아래 화면이 안 감춰짐');
+    showAppScreen('opening'); await sleep(30);   // 아래 ② 검사를 위해 다시 로딩 상태로
+    showAppScreen('auth');
+    assert(!op.classList.contains('hide'),'로딩이 즉시 사라진다 — 전환이 뚝 끊긴다');
+    assert(op.classList.contains('fxOut'),'나가는 화면에 페이드가 안 걸림');
+    await sleep(_fadeMs()+80);
+    assert(op.classList.contains('hide'),'페이드가 끝났는데 화면이 안 감춰짐');
+    openHome(); await sleep(40);
+    return '공유 배경 1장 · '+getComputedStyle($('titleBg')).animationDuration+' 호흡 · 디졸브 '+_fadeMs()+'ms'; });
+  // 🔡 로그인 속 내용(버튼·폼)은 화면과 **따로** 뜨고 진다 — 배경·로고는 그대로인데 그 앞만 바뀐다.
+  await step('로그인 버튼: 화면과 따로 슬며시 뜨고, 나갈 땐 흐려진다', async()=>{
+    skipIf(typeof authContentShow!=='function','로그인 내용 전이 없음');
+    const au=$('auth'), inn=()=>document.querySelector('.authIn');
+    // ① 들어올 때 — 늦게 시작한다(로딩 막대가 걷히는 중에 떠오르라고)
+    { const c=getComputedStyle(inn());
+      assert(parseFloat(c.transitionDuration)>0,'로그인 내용에 전이가 없다 — 뚝 나타난다');
+      assert(parseFloat(c.transitionDuration) > parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--t-screen')),
+        '로그인 내용이 화면 전환보다 빠르다 — 슬며시가 아니다'); }
+    showAppScreen('opening'); await sleep(_holdMs()+80);   // 완전히 걷힌 뒤에 — 되돌아오는 경우가 아니라 '처음 뜨는' 경우를 잰다
+    showAppScreen('auth'); await sleep(30);
+    assert(au.classList.contains('inView'),'로그인을 켰는데 내용이 안 켜졌다');
+    assert(!au.classList.contains('hide'),'로그인을 켰는데 감춰져 있다 — 예약된 감추기가 안 취소됐다');
+    assert(+getComputedStyle(inn()).opacity < 0.5,'내용이 지체 없이 다 떠 버렸다 — 늦춤(--t-authDelay)이 안 걸렸다');
+    // ② 나갈 때 — 흐려지는 동안 화면이 남아 있어야 한다(먼저 감추면 뚝 끊긴다)
+    await sleep(_holdMs()+120);
+    showAppScreen('opening'); await sleep(60);
+    assert(!au.classList.contains('inView'),'나가는데 내용이 그대로다');
+    assert(!au.classList.contains('hide'),'내용이 흐려지기도 전에 화면이 감춰졌다 — 뚝 끊긴다');
+    assert(_holdMs() >= _cssMs('--t-auth',.95)-1,'붙잡는 시간이 내용 전이보다 짧다 — 사라지는 중에 잘린다');
+    openHome(); await sleep(40);
+    return '전이 '+getComputedStyle(inn()).transitionDuration+' · 늦춤 '+getComputedStyle(inn()).transitionDelay; });
+  // ⚙ 게임 밖 설정(.appCtx) = 로그인과 같은 언어 — 판 없이 헤어라인 행, 토글은 알약 테두리만(5a).
+  await step('설정(게임 밖): 판 없이 행 · 토글은 면을 안 채운다', async()=>{
+    skipIf(typeof openAppSettings!=='function','설정 없음');
+    showAppScreen('auth'); await sleep(60);
+    openAppSettings(); await sleep(80);
+    const pop=$('settingsPop');
+    assert(pop.classList.contains('appCtx'),'게임 밖 설정이 아니다');
+    // ① 판이 없다 — 카드·묶음 상자 전부
+    for(const q of ['.setCard','.setQuick','.setMenu']){ const e=document.querySelector('#settingsPop '+q); if(!e) continue;
+      const c=getComputedStyle(e);
+      assert(c.backgroundImage==='none' && /rgba\(0, 0, 0, 0\)|transparent/.test(c.backgroundColor),
+        q+' 이 판을 깔고 있다 — 로그인처럼 행만 남긴다 ['+c.backgroundImage.slice(0,30)+' / '+c.backgroundColor+']');
+      assert(parseFloat(c.borderTopWidth)===0,q+' 에 테두리가 남아 있다'); }
+    // ② 토글 = 알약 테두리만. 켜짐을 **면으로 채우지 않는다**(이 화면에서 유일한 색 덩어리였다)
+    { const on=document.querySelector('#settingsPop .setSw.on')||document.querySelector('#settingsPop .setSw');
+      if(on){ const c=getComputedStyle(on);
+        assert(c.backgroundImage==='none' && /rgba\(0, 0, 0, 0\)|transparent/.test(c.backgroundColor),
+          '토글이 면을 채운다 — 켜짐은 빛으로만 말한다');
+        assert(parseFloat(c.borderTopWidth)>0,'토글 테두리가 없다 — 무엇을 누르는지 안 보인다'); } }
+    // ③ 타이틀 로고보다 위에 있어야 한다 — 아니면 로고가 설정을 뚫고 보인다(실제로 그랬다)
+    assert(+getComputedStyle(pop).zIndex > +getComputedStyle($('titleMark')).zIndex,
+      '설정이 타이틀 로고보다 아래다 — 로고가 뚫고 보인다');
+    // ④ 빨강이 남아 있으면 안 된다 — .mIco 기본색이 빨강이라 닫기 ✕ 가 물든다
+    { const ic=document.querySelector('#settingsPop .setX .mIco');
+      if(ic) assert(!/rgb(25[0-9], 5[0-9], 5[0-9])/.test(getComputedStyle(ic).color),
+        '닫기 ✕ 가 빨갛다 — .mIco 기본색을 안 막았다: '+getComputedStyle(ic).color); }
+    // ⑤ 여닫기 — 뚝 나타나거나 사라지지 않는다(로그인과 같은 박자)
+    assert(getComputedStyle(pop).animationName!=='none','설정이 애니 없이 뜬다');
+    closeSettings();
+    assert(!pop.classList.contains('hide'),'닫기가 즉시 감춘다 — 흐려질 틈이 없다');
+    assert(pop.classList.contains('closing'),'닫는 연출이 안 걸린다');
+    await sleep(_cssMs('--t-swap',.22)+140);
+    assert(pop.classList.contains('hide'),'연출이 끝났는데 안 감춰짐');
+    openHome(); await sleep(40);
+    return '판 없음 · 토글 테두리만 · 여닫기 '+_cssMs('--t-swap',.22)+'ms'; });
+  // 🔀 로그인 안에서 내용이 바뀔 때(허브↔폼 · 로그인↔회원가입)도 뚝 끊기지 않는다.
+  await step('로그인 내부 전환: 짧은 디졸브로 바뀐다', async()=>{
+    skipIf(typeof authSwapDefer!=='function' || typeof authOpenForm!=='function','내부 전환 없음');
+    const au=$('auth'), inn=()=>document.querySelector('.authIn');
+    showAppScreen('auth'); await sleep(_holdMs()+120);          // 완전히 뜬 상태에서 시작
+    assert(au.classList.contains('inView'),'로그인이 안 떠 있다');
+    // 스크림은 **한 장**이어야 한다 — 두 장을 겹치면 그 경계가 띠로 보인다(로고 뒤·블록 뒤를 따로 깔았다가 그랬다).
+    { const two=['.authIn','#titleMark'].filter(q=>{ const e=document.querySelector(q); if(!e) return false;
+        return /gradient/.test(getComputedStyle(e,'::before').backgroundImage); });
+      assert(!two.length,'스크림이 여러 장이다 — 겹치는 자리에 띠 경계가 생긴다: '+two.join(', ')); }
+    // 그리고 끝에서 0 에 닿아야 한다 — 색이 남으면 그 자리가 직선으로 잘려 보인다.
+    { const sc=getComputedStyle($('titleBg'),'::before').backgroundImage;
+      assert(/transparent|rgba\(0, 0, 0, 0\)/.test(sc),'스크림이 투명으로 안 끝난다 — 가장자리가 잘린다');
+      assert((sc.match(/rgba?\(/g)||[]).length>=4,'스크림 단계가 적어 끝이 급하다: '+sc.slice(0,60)); }
+    // ⭐ 진짜 디졸브 = 나가는 판과 들어오는 판이 **동시에 보인다**.
+    //    순서대로 흐렸다 나타내면 중간이 비어 '사라졌다 나타나는' 것으로 보인다(그렇게 만들었다가 되돌림).
+    authOpenForm('id'); await sleep(60);
+    const hub=$('authHub'), form=$('authForm');
+    const hs=getComputedStyle(hub), fs2=getComputedStyle(form);
+    assert(hs.display!=='none' && fs2.display!=='none',
+      '전환 중에 한쪽만 있다 — 겹치지 않으면 디졸브가 아니다 (허브 '+hs.display+' · 폼 '+fs2.display+')');
+    assert(+hs.opacity>0.03 && +hs.opacity<0.97 && +fs2.opacity>0.03 && +fs2.opacity<0.97,
+      '겹치는 구간이 없다 (허브 '+hs.opacity+' · 폼 '+fs2.opacity+')');
+    // ⭐ 겹치는 동안 **자리가 안 움직여야** 한다 — 나가는 판이 밀려나면 화면이 튀는 것처럼 보인다.
+    { const hr=hub.getBoundingClientRect(), fr=form.getBoundingClientRect();
+      assert(Math.abs(hr.top-fr.top)<=2,'전환 중 두 판의 윗변이 어긋난다 — 제자리 디졸브가 아니다 (허브 '
+        +Math.round(hr.top)+' · 폼 '+Math.round(fr.top)+')'); }
+    await sleep(_cssMs('--t-swap',.22)+240);
+    assert(getComputedStyle(hub).display==='none','전환이 끝났는데 옛 판이 남아 있다');
+    assert(!form.classList.contains('hide'),'폼이 안 열렸다 — 본문이 실행되지 않았다');
+    assert(+getComputedStyle(document.querySelector('.authIn')).opacity>0.9,'내용이 안 돌아왔다');
+    assert(_cssMs('--t-swap',.22) < _cssMs('--t-auth',.95),'내부 전환이 화면 등장보다 느리다');
+    if(typeof authShowHub==='function'){ authShowHub(); await sleep(_cssMs('--t-swap',.22)+240); }
+    openHome(); await sleep(40);
+    return '디졸브 '+_cssMs('--t-swap',.22)+'ms'; });
+  // 🎬 게임으로 들어가는 마무리 — 로딩 → **로고만 남은 검은 화면** → 게임 화면이 드러나며 로고도 함께 사라진다.
+  await step('게임 진입: 검은 화면에 로고만 남았다가 게임과 함께 걷힌다', async()=>{
+    skipIf(typeof titleToBlack!=='function' || typeof titleOutroEnd!=='function','진입 연출 없음');
+    const ph=$('phone'), z=id=>+getComputedStyle($(id)).zIndex;
+    // ① 층 순서 — 그림 < 검은 판 < 로고. 이게 어긋나면 "검은 화면에 로고만"이 성립하지 않는다.
+    assert(z('titleBg') < z('titleBlack'),'검은 판이 키 아트보다 아래다');
+    assert(z('titleBlack') < z('titleMark'),'로고가 검은 판에 덮인다');
+    assert(z('titleBlack') > z('homeScreen'),'검은 판이 게임 화면보다 아래다 — 덮지 못한다');
+    // ② 검은 화면 = 그림은 꺼지고 로고와 검은 판만 켜진 상태
+    showAppScreen('opening'); await sleep(40);
+    await titleToBlack();
+    assert(!ph.classList.contains('artBg'),'검은 화면인데 키 아트가 남아 있다');
+    assert(ph.classList.contains('artMark'),'검은 화면에 로고가 없다');
+    assert(ph.classList.contains('artBlack'),'검은 판이 안 깔렸다');
+    assert($('opening').classList.contains('hide'),'로딩 막대가 안 걷혔다');
+    // ③ 마무리 — 검은 판과 로고가 **함께** 걷힌다(한쪽만 남으면 화면이 잠기거나 로고가 떠 있다)
+    titleOutroEnd();
+    assert(!ph.classList.contains('artBlack') && !ph.classList.contains('artMark'),
+      '검은 판·로고가 안 걷혔다 — 화면이 검은 채로 잠긴다');
+    openHome(); await sleep(40);
+    return '층 '+z('titleBg')+' < '+z('titleBlack')+' < '+z('titleMark')+' · 정지 '+TITLE_BLACK_HOLD+'ms'; });
+  // 전장 조각은 항상 떠 있고 앱 화면이 덮을 뿐이다 — 덮개가 한순간 투명해지면 그대로 비친다.
+  await step('게임 밖에서는 전장이 안 보인다', async()=>{
+    skipIf(typeof setInGame!=='function','setInGame 없음');
+    const was=$('phone').classList.contains('inGame');
+    setInGame(false);
+    for(const id of ['vMain','hud','mergeFab','chatBar','chatLog'])
+      assert(getComputedStyle($(id)).visibility==='hidden', id+' 이 게임 밖에서도 보인다 — 로딩·로그인 화면에 전장 조각이 남는다');
+    assert(getComputedStyle($('cvMarine')).visibility!=='hidden','공용 3D 캔버스까지 가렸다 — HOME·마을 3D 가 사라진다');
+    const r=$('cvMain').getBoundingClientRect();
+    assert(r.width>1 && r.height>1,'전장 캔버스가 0×0 — display 로 껐다(크기를 재서 그리는 코드가 망가진다)');
+    setInGame(true);
+    for(const id of ['vMain','hud'])
+      assert(getComputedStyle($(id)).visibility!=='hidden', id+' 이 게임 중에도 안 보인다');
+    setInGame(was); openHome(); await sleep(40);
+    return '전장 가림 ok · 캔버스 '+Math.round(r.width)+'×'+Math.round(r.height)+' 유지'; });
+  // 🔻 하단 네비 = 로그인 화면과 같은 어휘(2026-08-24 · E안). 여기가 어긋나면 두 화면이 다른 앱처럼 보인다.
+  //    ⚠ 인게임 유즈맵 탭바(#tabs)는 함께 바뀌면 안 된다 — 전장 위라 판이 필요하다. 그것까지 같이 잰다.
+  await step('하단 네비: 판 없이 가로 42px · 선택은 밑변 광원 (인게임 탭바는 그대로)', async()=>{
+    skipIf(typeof navGo!=='function','네비 없음');
+    openHome(); await sleep(60);
+    const bar=$('navBar'); assert(bar,'navBar 없음');
+    const bh=Math.round(bar.getBoundingClientRect().height);
+    assert(bh<=44, '네비가 안 낮아졌다: '+bh+'px (42 이하여야 한다)');
+    const bs=getComputedStyle(bar);
+    assert(bs.backgroundImage==='none','네비 바가 면을 채웠다 — 로그인은 판을 전부 걷어냈다');
+    assert(getComputedStyle(bar,'::before').display==='none','윗변 광선이 남아 있다 — 면이 없으면 가를 경계도 없다');
+    navGo('shop'); await sleep(140);
+    const cells=[...bar.querySelectorAll('.navIt')].filter(e=>!e.classList.contains('navBk'));
+    assert(cells.length>=4,'칸이 없다: '+cells.length);
+    for(const c of cells){ const cs=getComputedStyle(c);
+      assert(cs.flexDirection==='row','칸이 아직 세로로 쌓인다 — 42px 이 안 나온다');
+      assert(cs.borderTopWidth==='0px'||cs.borderTopStyle==='none','칸에 테두리(금속 링)가 남아 있다');
+      assert(parseFloat(cs.borderTopLeftRadius)===0,'칸이 라운드다 — 로그인은 라운드 0');
+      assert(cs.backgroundImage==='none','칸이 판을 깔았다');
+      assert(c.getBoundingClientRect().height>=43.5,'히트 영역이 44px 미만: '+c.getBoundingClientRect().height); }
+    const on=bar.querySelector('.navIt.on,.navIt.cur'); assert(on,'선택된 칸이 없다');
+    const a=getComputedStyle(on,'::after');
+    assert(a.content!=='none','선택 표시가 없다 — 밑변 광원이 서명이다');
+    assert(a.height==='1px','선택 광원이 1px 이 아니다: '+a.height);
+    assert(a.backgroundImage.indexOf('255, 59, 59')>=0,'선택 광원에 액센트 halo 가 없다');
+    assert(a.boxShadow!=='none','선택 광원에 halo(box-shadow)가 없다');
+    const tb=$('tabs');
+    if(tb){ const th=getComputedStyle(tb).height;
+      assert(th==='56px','인게임 탭바까지 낮아졌다: '+th+' — #tabs 는 전장 위라 그대로 둔다');
+      const tab=tb.querySelector('.tab');
+      if(tab) assert(getComputedStyle(tab).backgroundImage!=='none','인게임 탭바 칸의 판까지 걷어냈다'); }
+    navBack(); openHome(); await sleep(40);
+    return '네비 '+bh+'px · 칸 '+cells.length+' · 탭바 '+(tb?getComputedStyle(tb).height:'-'); });
+  // 🖼 폰 바깥 여백 — 검정이면 폰 밑변과 이어져 하단 네비가 어디서 끝나는지 안 보인다.
+  await step('폰 바깥 여백: 화면 안보다 밝아 폰의 윤곽이 경계가 된다', ()=>{
+    // 정규식 없이 판다 — 'rgb(201, 192, 172)' 의 괄호 안을 콤마로 자른다
+    const lum=(c)=>{ const i=(c||'').indexOf('('), j=(c||'').indexOf(')');
+      if(i<0||j<0) return null;
+      const n=c.slice(i+1,j).split(',').map(x=>parseFloat(x));
+      if(n.length<3||n.some(isNaN)) return null;
+      const a=(n.length>3?n[3]:1);
+      return (0.2126*n[0]+0.7152*n[1]+0.0722*n[2])*a; };
+    const outside=lum(getComputedStyle(document.body).backgroundColor);
+    assert(outside!==null,'body 배경을 못 읽음');
+    assert(outside>120,'폰 바깥이 아직 어둡다(휘도 '+Math.round(outside)+') — 폰 밑변과 배경이 이어져 네비 끝이 안 보인다');
+    const bar=$('navBar'); const inside=bar?lum(getComputedStyle(bar).backgroundColor):null;
+    // 네비는 면이 없다(투명) — 그 뒤를 받는 #phone 바탕과 비교한다
+    const phoneLum=lum(getComputedStyle($('phone')).backgroundColor);
+    if(phoneLum!==null) assert(outside-phoneLum>80,'안팎 대비가 부족: 바깥 '+Math.round(outside)+' vs 안 '+Math.round(phoneLum));
+    return '바깥 휘도 '+Math.round(outside)+' · 안 '+(phoneLum===null?'-':Math.round(phoneLum)); });
+  // 🧹 예열은 유닛을 **화면 한가운데**(x:.5,y:.5) 세워 놓고 데운다. 지운 뒤 다시 그리지 않으면
+  //    캔버스에 그 마지막 프레임이 박제돼, 검은 판이 페이드되는 동안 로고 옆에 유닛이 떠 보인다.
+  //    ⚠ 프레임 루프도 같은 sync 를 부른다 — '마지막 호출'이 아니라 **예열 것들 뒤에 빈 호출이 왔는지**로 잰다.
+  await step('예열: 데운 유닛을 지운 뒤 캔버스까지 비운다', async()=>{
+    skipIf(typeof warmAll!=='function','예열 없음');
+    skipIf(!(window.M3D && M3D.ready && M3D.ready()),'3D 없음');
+    const calls=[];
+    const real=M3D.sync;
+    M3D.sync=function(list){ calls.push(Array.isArray(list)?list.length:-1); return real.apply(this, arguments); };
+    try{
+      _warmDone=false; _warmRun=null;          // 다시 데우게 한다
+      await warmAll(()=>{});
+    } finally { M3D.sync=real; }
+    // 예열이 세운 것 = 1기짜리 호출. 그 마지막 뒤에 0기(비우기) 호출이 있어야 한다.
+    const lastWarm=calls.lastIndexOf(1);
+    const lastEmpty=calls.lastIndexOf(0);
+    assert(lastWarm>=0,'예열이 유닛을 안 세웠다: '+calls.join(','));
+    assert(lastEmpty>lastWarm,
+      '데운 뒤 빈 sync 가 없다 — 지우기만 하고 다시 안 그렸다: 캔버스에 유닛이 박제된다 ('+calls.join(',')+')');
+    try{ M3D.clearGameModels(); }catch(e){}   // 뒤 스텝에 흔적을 남기지 않는다
+    return '호출 '+calls.join(',')+' → 비우기 ok'; });
     await step('유즈맵 선택 → 네모네모 모드 팝업', ()=>{ openMapSelect(); openModeSheet(USEMAPS.nemo_inf||USEMAPS.nemo);
     const mo=document.querySelector('#modeSheet .moCard'); assert(visible(mo),'moCard 안 보임');
     const w=mo.getBoundingClientRect().width; assert(w>200&&w<400,'moCard 폭 이상: '+w); closeModeSheet(); return 'w='+w; });
@@ -4808,7 +5145,7 @@ async function groupLobby(){
       const tight=cells.filter(e=>e.scrollWidth>e.clientWidth+1).map(e=>e.textContent.trim());
       assert(!tight.length,'네비 칸에 라벨이 안 들어감: '+tight.join(', ')); }
     navBack(); await sleep(40);
-    return '등폭 5칸 · 뒤로 48² · 소셜 도크 상주';
+    return '등폭 5칸 · 뒤로 정사각 · 소셜 도크 상주';
   });
 
   await step('상점: 전용 화면(팝업 아님) · 네비/마을 구역 두 경로', async()=>{ skipIf(typeof openShop!=='function','상점 화면 없음');

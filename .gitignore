@@ -19,3 +19,6 @@ assets/backgrounds/dungeons/*.webm
 # 히스토리가 GB 단위로 불어난다(이미 재커밋된 바이너리로 팩이 1.9GB 다 — SPRITES.md §7).
 # 확정된 유닛만 골라서:  git add -f assets/sprites/<종족>/<id>
 assets/sprites/*/
+
+# 세션 중 만든 검증용 렌더/프로브 산출물
+scratch_*

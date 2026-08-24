@@ -1893,7 +1893,9 @@ function _renderMission(){ const box=document.getElementById('body-mission'); if
   if(m&&m.feats&&m.feats.length){ box.innerHTML=block('이 유즈맵', m.feats.map(f=>'<b>'+escHtml(f.kw)+'</b> '+escHtml(f.tx))); return; }
   box.innerHTML=block('이 유즈맵', [escHtml((m&&(m.long||m.desc))||'준비 중인 유즈맵입니다.')]); }
 // 로비/로그인 화면 설정(게임 항목 숨김, 소리/비디오 + 로그아웃)
-function openAppSettings(){ const p=document.getElementById('settingsPop'); if(!p) return; p.classList.remove('hide'); p.classList.add('appCtx');
+function openAppSettings(){ const p=document.getElementById('settingsPop'); if(!p) return;
+  clearTimeout(p._closeT); p.classList.remove('hide','closing');   // ⚠ 닫는 중에 다시 열면 예약된 감추기를 취소한다
+  p.classList.add('appCtx');
   if(typeof fxPop==='function') fxPop(p.querySelector('.setCard'));
   const lo=document.getElementById('setLogout'); if(lo) lo.style.display=(typeof AUTH!=='undefined'&&AUTH.user)?'':'none';   // 로그인 상태에서만 로그아웃
   // 계정 연결은 '클라우드에 올라간 게스트'만 할 수 있다(로컬 게스트는 붙일 uid 가 없다)
@@ -1972,7 +1974,14 @@ function closeSetSub(){ const bd=document.getElementById('setSubBody');
     if(el&&st){ el.style.display=''; st.appendChild(el); } }   // 보관함으로 돌려놓는다
   bd.innerHTML=''; _setSubKey='';
   popHide('setSubPop'); }
-function closeSettings(){ closeSetSub(); popHide('settingsPop'); }
+// 게임 밖 설정은 흐려지며 닫힌다(로그인과 같은 박자). 인게임은 예전대로 즉시 닫는다.
+function closeSettings(){ closeSetSub();
+  const p=document.getElementById('settingsPop');
+  if(p && !p.classList.contains('hide') && p.classList.contains('appCtx') && typeof _cssMs==='function'){
+    clearTimeout(p._closeT); p.classList.add('closing');
+    p._closeT=setTimeout(function(){ p.classList.remove('closing'); p.classList.add('hide'); }, _cssMs('--t-swap', .22));
+    return; }
+  popHide('settingsPop'); }
 const PAUSE_MAX=3;
 function togglePause(){
   if(!G.paused){   // 일시정지 시도 — 횟수 제한

@@ -2195,7 +2195,16 @@ function warmAll(onStep){
       try{ M3D.sync([{uid:'_warm', id:id, x:0.5, y:0.5, face:0, moving:false, size:1}], 300, 300, .016, [], [], null, null); }catch(e){}
       n++; if(onStep) try{ onStep(n, ids.length); }catch(e){} }
     await new Promise(r=>requestAnimationFrame(()=>r()));
-    try{ M3D.clearGameModels(); }catch(e){}      // 데운 흔적은 지운다 — GPU 캐시는 남는다(그게 목적)
+    // 🧹 데운 흔적을 지운다 — GPU 캐시는 남는다(그게 목적).
+    // ⚠ clearGameModels() 는 scene.remove() 만 한다. **다시 그리지 않으면 캔버스에는 마지막 프레임이
+    //    그대로 박제된다** — 예열 유닛은 x:.5, y:.5 즉 화면 한가운데 서 있었다. 그 뒤 검은 판이
+    //    페이드로 덮이는 동안(--t-screen) 반투명한 그 사이로 비쳐, 로고 옆에 유닛이 공중에 뜬 것처럼
+    //    보였다(2026-08-24). 빈 목록으로 sync 를 한 번 더 돌려 캔버스를 실제로 비운다
+    //    (sync 는 끝에서 renderer.render 를 부른다 — '지우기'는 지운 뒤 한 번 더 그려야 완성된다).
+    //    ⛔ 뒤에 rAF 를 하나 더 두지 말 것 — renderer.render 는 동기라 기다릴 이유가 없는데,
+    //       그 한 프레임 사이에 게임 루프가 sync 를 불러 모델을 도로 만든다(스모크가 잡았다).
+    try{ M3D.clearGameModels();
+         M3D.sync([], 300, 300, .016, [], [], null, null); }catch(e){}
     _warmDone=true; return n; })();
   return _warmRun; }
 // 로그인/게스트 → 로딩 화면(#opening 재사용)에서 데우기를 끝낸 뒤 HOME으로.
@@ -2211,6 +2220,9 @@ async function enterAfterWarm(){
   if(!cont) opBarStart();
   await warmAll((n,t)=>opBarReal(base+(1-base)*(t?n/t:1)));
   await opBarDone();
+  // 🎬 그림·막대를 걷어 **로고만 남은 검은 화면**으로. 게임 화면은 그 뒤에 서고,
+  //    검은 판과 로고가 함께 사라지며 드러난다(titleOutroEnd).
+  if(typeof titleToBlack==='function') await titleToBlack();
   opBarReset();
   // ⚠ 예열은 오래 걸린다(헤드리스 소프트웨어 렌더러에선 20초를 넘긴다). 그 사이 사용자가 이미
   //    **게임에 들어가 있으면 끌어오지 않는다** — 무조건 openHome() 을 부르면 게임 중에
@@ -2218,11 +2230,13 @@ async function enterAfterWarm(){
   //    bootApp() 의 '이미 다른 화면으로 넘어갔으면 건드리지 않는다' 와 같은 규칙이다.
   //    ⛔ '#opening 이 감춰졌으면 return' 으로 넓게 잡지 말 것 — 예열 중 다른 경로가 오프닝을
   //       내리는 경우가 있어 정상 진입까지 막힌다(실제로 게스트가 HOME 에 못 갔다).
-  { const ph=document.getElementById('phone'); if(ph && ph.classList.contains('inGame')) return; }
+  // ⚠ 어느 갈래로 빠지든 검은 판·로고는 반드시 걷는다 — 안 걷으면 화면이 검은 채로 잠긴다.
+  { const ph=document.getElementById('phone'); if(ph && ph.classList.contains('inGame')){ if(typeof titleOutroEnd==='function') titleOutroEnd(); return; } }
   // 화면을 내린 사이 탭이 죽었을 수 있다 — 30초 안이면 그 판을 그대로 이어받는다(실패하면 평소대로 HOME)
   // ⛔ 부팅 경로다 — 여기서 예외가 나면 사용자가 HOME 에 영영 못 간다. 한 겹 더 감싼다.
-  try{ if(typeof tryRestoreRun==='function' && tryRestoreRun()) return; }catch(e){ console.warn('tryRestoreRun', e); }
-  openHome(); }
+  try{ if(typeof tryRestoreRun==='function' && tryRestoreRun()){ if(typeof titleOutroEnd==='function') titleOutroEnd(); return; } }catch(e){ console.warn('tryRestoreRun', e); }
+  openHome();
+  if(typeof titleOutroEnd==='function') titleOutroEnd(); }   // 게임 화면이 선 뒤 — 검은 판과 로고가 함께 걷힌다
 function hb3dAttach(){ const cv=document.getElementById('cvMarine'), host=document.getElementById('homeScreen');
   if(!cv||!host||_hb3dHome) return;
   if(_tw3dHome && typeof tw3dDetach==='function') tw3dDetach();   // 남이 쓰고 있으면 먼저 돌려받는다
