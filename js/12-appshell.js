@@ -108,8 +108,12 @@ function fmtCur(n){ n=Math.floor(n||0);
   return x.toFixed(1)+CUR_SUF[t2]; }   // ⭐ 소수 한 자리 고정 — 자릿수가 들쭉날쭉하면 표에서 줄이 흔들린다
 function updateCurBar(){ if(!PLAYER_META||!PLAYER_META.profile) return;
   const set=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
-  set('curMin', fmtCur(profMineral()));
-  set('curGas', fmtCur(profGas()));
+  // 🏕 캠프에서는 **캠프 재화**를 보여 준다 — 관리자 재화 줄(.bres)을 숨겼으므로 이 줄이 유일한 표시다.
+  //    ⛔ 줄을 두 개 두지 않는다(어느 쪽이 진짜인지 알 수 없어진다).
+  const _camp = (typeof campIsOn==='function' && campIsOn() && typeof G!=='undefined' && G.tech) ? G.tech : null;
+  set('curMin', fmtCur(_camp ? (_camp.credit||0) : profMineral()));
+  set('curGas', fmtCur(_camp ? (_camp.energy||0) : profGas()));
+  if(_camp) set('curPop', (_camp.sup||0) + '/' + (_camp.supCap||0));   // 🏕 인구 — 캠프에서만 보인다
   set('curGem', fmtCur(profGem())); }
 // 🎬 화면 전환 크로스페이드 (2026-08-23)
 // ⚠ `.appScreen.hide` 는 `display:none` 이다. 나가는 화면에 .hide 를 바로 걸면 전환이 뚝 끊긴다 —
@@ -172,6 +176,10 @@ function titleOutroEnd(){ const ph=document.getElementById('phone'); if(!ph) ret
 function showAppScreen(id){ setInGame(false);
   if(typeof navShow==='function') navShow(null);   // 하단 네비는 기본 숨김 — openHome/openTown이 다시 켠다
   if(typeof hbStop==='function') hbStop();         // 홈 배경 전투도 기본 정지 — openHome이 다시 켠다
+  // 🏕 캠프도 같은 규칙 — 화면을 옮기면 저장하고 걷는다(openHome 이 다시 켠다).
+  //    ⚠ 안 걷으면 G.tab='Build' 가 남아 유즈맵·마을이 건설 맵을 계속 그린다.
+  //    campExit 은 캠프가 켜져 있을 때만 동작한다(관리자 탭·오토배틀 판을 덮어쓰지 않게).
+  if(typeof campExit==='function') campExit();
   // ⚠ 마을은 '반납'만으로 부족하다 — twTick이 살아 있으면 매 프레임 캔버스를 다시 빌려 간다.
   // 루프를 세운 뒤에 반납해야 실제로 돌아온다. 단 마을로 들어가는 중이면 끄면 안 된다
   // (openTown이 _townOpen을 켜고 나서 이 함수를 부른다 — 끄면 마을 3D가 안 뜬다).
@@ -199,6 +207,10 @@ function showAppScreen(id){ setInGame(false);
     if(cb) cb.classList.toggle('bare', BARE_CUR_SCREENS.indexOf(id)>=0); }
   const tgt=document.getElementById(id); if(tgt && id!=='opening') playScreenFx(tgt); }   // 전환 FX(부팅 로딩 제외)
 function hideAppScreens(){ if(typeof stopMapLive==='function') stopMapLive(); curShow(false);
+  // 🏕 캠프도 같은 이유로 여기서 걷는다 — 캠프는 공용 3D 캔버스(#cvMarine)를 HOME 안으로 **빌려 간다.**
+  //    안 돌려주면 던전·유즈맵이 그걸 자기 자리로 되돌릴 때 엉뚱한 부모(#homeScreen)를 원위치로 삼는다
+  //    (스모크 「던전: 빌려 쓴 공용 3D 캔버스를 반드시 돌려놓는다」가 이걸 잡는다).
+  if(typeof campExit==='function') campExit();
   if(typeof hbStop==='function') hbStop();   // ⚠ 게임 진입 경로 — 여기서 안 멈추면 공용 3D 캔버스(#cvMarine)가 HOME에 남아 유즈맵 3D가 사라진다
   // ⚠ 마을은 '반납'만으로 부족하다 — twTick이 살아 있으면 매 프레임 캔버스를 다시 빌려 간다.
   // 루프를 세운 뒤에 반납해야 실제로 돌아온다(안 그러면 마을→유즈맵에서 3D가 통째로 사라진다).

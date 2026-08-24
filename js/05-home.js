@@ -15,7 +15,10 @@ function openHome(){ loadMeta();
   profEnsureChar();   // 캐릭터가 없으면 조용히 기본 유닛을 지급한다(선택 화면 없음)
   if(typeof bgmStart==='function') bgmStart('lobby');
   showAppScreen('homeScreen'); navShow('home'); renderHome();
-  hbStart();   // 배경 전투(웨이브 방어) 시작
+  // 🏕 캠프(2026-08-23) — HOME 을 열면 바로 캠프다. 종족을 아직 안 골랐으면 선택 시트가 뜬다.
+  // ⛔ 아래 hbStart() 는 **지우지 않았다**. 옛 사냥터(웨이브 방어)를 되살리려면 이 두 줄을 맞바꾼다.
+  //    hbStart();   // 배경 전투(웨이브 방어) 시작 — 캠프로 대체됨
+  if(typeof campOpen==='function') campOpen();
   if(typeof paintIcons==='function') paintIcons(document.getElementById('homeScreen')); }
 
 // 사냥터 업그레이드 표시 보조물

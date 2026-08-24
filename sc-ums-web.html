@@ -595,6 +595,9 @@
       <span class="res"><img class="ri" src="assets/icons/res_mineral.webp" alt=""><b id="curMin">0</b><i class="curPlus" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg></i></span>
       <span class="res"><img class="ri" src="assets/icons/res_gas.webp" alt=""><b id="curGas">0</b><i class="curPlus" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg></i></span>
       <span class="res"><img class="ri" src="assets/icons/res_gem.webp" alt=""><b id="curGem">0</b><i class="curPlus" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg></i></span>
+      <!-- 🏕 인구 — 캠프 전용. 관리자 재화 줄(.bres)을 걷었으므로 인구를 볼 곳이 여기뿐이다.
+           ⛔ 이모지를 쓰지 말 것 — 재화 아이콘은 assets/icons/res_*.webp 가 단일 소스(CLAUDE.md). -->
+      <span class="res curPop"><img class="ri" src="assets/icons/res_pop.webp" alt=""><b id="curPop">0/0</b></span>
       <div class="hudSet" id="curSettingsBtn" data-sfx="ui_open" onclick="hudTopMenu('app')" title="더보기"><i class="hbGrowDot" id="hbGrowDot">!</i><svg class="icoBars" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"><path d="M4.5 7h15M4.5 12h15M4.5 17h15"/></svg><svg class="icoX" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"><path d="M6.2 6.2 17.8 17.8M17.8 6.2 6.2 17.8"/></svg></div>
     </span>
   </div>
@@ -920,6 +923,7 @@
 <script src="js/16-build.js"></script>
 <script src="js/17-build-cards.js"></script>
 <script src="js/18-strike.js"></script>
+<script src="js/19-camp.js"></script>
 
 <!-- 유닛 3D 모델(Three.js) — assets/models/*.glb(마린/골리앗/고스트 + 마린총)를 WebGL로 렌더. 애니메이션은 코드로 구현(숨쉬기/공격기울임/사망), 가장 가까운 적 방향 자동 회전 -->
 <script type="module" src="js/90-m3d.module.js"></script>

@@ -898,6 +898,78 @@
   #phone.curOn #rooms{padding-top:0}   /* 방 찾기는 전체 화면 — 자기 여백(.rmCard)이 상단을 맡는다 */
   #mapSelect{padding-bottom:calc(var(--navH) + 12px)}   /* 하단 네비에 내용이 가리지 않게 */
   #phone.inGame #curBar{display:none}   /* 실경기(인게임)에선 자체 HUD(#hudR) 사용 — 공용 바 숨김 */
+  /* 🏕 캠프 — **HOME 껍데기를 그대로 쓴다.**
+     #homeScreen 은 .appScreen(z-index 60)이라 인게임 층(#vBuild, z 6)을 통째로 덮는다.
+     그래서 층을 다투지 않고 campMountView() 가 #vBuild 를 #homeScreen 안으로 **옮긴다**(복제 아님).
+     자리는 원래 #hbCv(옛 배경 전투 캔버스)가 쓰던 배경 자리 — 위에 HUD·네비가 그대로 얹힌다.
+     ⛔ setInGame(true) 를 쓰지 않으므로 재화 바·네비 예외도 필요 없다(원래 보인다). */
+  /* 🗂 하단 시트는 늘 떠 있되 **맵 위에 겹치는 오버레이**다(관리자 건설 탭과 같은 구조).
+     ⛔ 맵 높이를 시트만큼 줄이지 말 것. 두 번 시도해 봤고 둘 다 틀렸다:
+       ① #btSheet 이 #vBuild 의 자식이던 때 — 맵을 줄이면 시트도 끌려 올라가는 순환(실측 323px 겹침)
+       ② 시트를 맵 밖으로 뺀 뒤 — 순환은 풀렸지만, 건물을 지을 때 시트가 내려가도
+          **넓어지지 않는다.** 맵 좌표가 0~1 정규화라 맵 픽셀이 커져도 보이는 월드 범위는
+          그대로고 전부 확대될 뿐이다. 시트가 가려 둔 자리가 드러나야 실제로 넓어진다.
+     그래서 맵은 화면 전체(네비 위까지)를 쓰고, 시트가 그 위를 덮는다.
+     기지가 시트에 가리지 않는 것은 **배치**가 맡는다(CAMP_ROW_BASE / CAMP_ROW_MINE). */
+  #phone.campMode #homeScreen #btSheet{bottom:var(--navH);z-index:2}   /* 네비 위 · 맵과 3D 위 */
+  /* ⚠ 맵(#vBuild)과 3D 캔버스(#cvMarine)는 **같은 크기**여야 한다.
+     renderBuildTab 이 #cstMain 의 clientWidth/Height 를 그대로 3D 캔버스 크기로 넘기므로
+     (js/14-input-fx.js) 둘이 어긋나면 건물이 엉뚱한 자리에 선다. */
+  #phone.campMode #homeScreen #vBuild,
+  #phone.campMode #homeScreen #cvMarine{position:absolute;left:0;right:0;top:0;
+    bottom:var(--navH);height:auto;z-index:0}
+  #phone.campMode #homeScreen #cvMarine{z-index:1}
+  #phone.campMode #homeScreen #cstMain{position:absolute;inset:0}
+  /* 옛 사냥터 UI 는 캠프에서 뜻이 없다 — 업그레이드 카드는 사냥터 것이고,
+     가운데 줄은 옛 던전·웨이브를 보여 준다(캠프에는 웨이브가 없다). */
+  #phone.campMode #hmScroll{display:none}
+  #phone.campMode .hbMid{display:none}
+  /* 캐릭터 프로필(초상·레벨·XP)은 캠프에 없다 — 캠프는 기지를 키우는 게임이고 캐릭터가 없다. */
+  #phone.campMode .hbHudTop{display:none}
+  /* 인구 칸은 캠프에서만 — 다른 화면의 재화 바는 미네랄·가스·젬 셋 그대로다. */
+  .curBar .curPop{display:none}
+  #phone.campMode .curBar .curPop{display:flex}   /* ⚠ 다른 칸(.curBar .res)이 flex 다 — 맞춘다 */
+  /* 🧹 건설 탭에서 딸려온 UI 는 전부 걷는다 — 캠프는 자기 UI 를 따로 갖는다.
+     ⛔ DOM 을 지우지 말 것. 관리자 건설 탭·오토배틀이 같은 요소를 쓴다 —
+        여기서는 **캠프일 때만** 숨긴다(#phone.campMode 특이도로 이긴다). */
+  #phone.campMode #cstFog,           /* 건설 안개 */
+  #phone.campMode #cstPrev,          /* 건물 프리뷰 패널 */
+  #phone.campMode #techSkTip{display:none}   /* 스킬 롱프레스 툴팁 */
+  /* ⊘ 지정 해제 버튼(#btDesel)은 **숨기지 않는다** — 유닛·자원을 고르거나 배치 중일 때
+     techPanelRender 가 .on 을 붙여 띄운다(건설 배치 중에는 '취소'로 동작한다). */
+  /* ⛔ **#cstLabels 를 숨기지 말 것.** "건물 이름표" 인 줄 알고 껐다가 배치 확정(▶)·취소(✕)
+     버튼이 통째로 죽었다(16-build.js 가 .bArmBtns 를 이 레이어에 넣는다 — 3D 건물 위에
+     떠야 해서 z8 전용 오버레이를 쓴다). 여기 들어가는 것은 전부 캠프에도 필요하다:
+     건설 진행 바(.bldHp) · 남은시간(.bldTime) · 동력 경고(.bldNoPow) · 가스 이펙트 · 배치 버튼. */
+  /* 🧹 관리자 전용 조작 UI — 캠프는 플레이어 화면이다.
+     왼쪽 세로줄(종족 전환 5종) · 치트 버튼(무한자원·쿨없음·안개·팔레트·되돌리기) · 사이드 패널 */
+  #phone.campMode #cstMain .techTabs,
+  #phone.campMode #cstMain .techBtns,
+  #phone.campMode #cstMain .techSide{display:none}
+  /* 관리자 재화 줄(미네랄·가스·인구) — 재화는 **사냥터 재화 바(#curBar) 하나**만 쓴다.
+     ⛔ 두 줄이 되면 어느 쪽이 진짜인지 알 수 없다(단일 소스). */
+  #phone.campMode #cstMain .bres{display:none}
+  /* 🖐 화면 이동 모드 — 빈 바닥 0.5초 롱프레스로 켜진다(js/19-camp.js campPanMode).
+     지금 탭이 '지정'이 아니라 '이동'이라는 것을 테두리 하나로 알린다. 조작을 막지는 않는다. */
+  #phone.campMode #cstMain.campPan::after{content:'';position:absolute;inset:0;z-index:9;
+    pointer-events:none;border:2px solid rgba(120,210,255,.5);
+    box-shadow:inset 0 0 22px rgba(120,210,255,.16)}
+  /* 🎨 바닥 = 사냥터 던전 배경. --campBg 는 campEnter() 가 심는다.
+     ⚠ 인라인 style 로 주면 techMapRender 가 innerHTML 을 갈아 끼울 때 날아간다 → 변수로 준다. */
+  #phone.campMode #cstMain .bmapFloor{
+    background-image:var(--campBg,none);
+    /* ✂ **윗 배경을 잘라낸다.** 배경은 정사각(1536²)이고 맵은 세로로 길어(365×540) cover 로는
+       세로가 꽉 차 위가 하나도 안 잘린다. 세로를 --campBgZ 배로 키우고 **아래를 기준**으로
+       붙여, 넘치는 만큼이 위에서 잘려 나가게 한다. 기지가 화면 아래에 있으므로 지면 쪽이 남는다.
+       ⚠ 적이 위에서 내려오는 구역이 그만큼 짧아 보이는 효과도 같이 난다 — 값을 키울수록 더 잘린다. */
+    --campBgZ:150%;
+    background-size:auto var(--campBgZ);background-position:center bottom;background-repeat:no-repeat}
+  /* 맵 위에 얹힌 건설 장식·안내 */
+  #phone.campMode #cstMain .bhint,     /* 「건물을 골라 배치」 같은 안내 문구 */
+  #phone.campMode #cstMain .bHill{display:none}   /* 언덕 장식만 걷는다 — 가스 구역은 캠프도 쓴다 */
+  /* ⚠ HUD(.hbHudTop)는 손대지 않는다 — 이미 position:absolute · z-index:2 라 캠프 맵(z 0) 위다.
+     relative/z-1 로 덮었다가 위치가 깨질 뻔했다. 화면 가운데 위쪽에서 맵이 잡히는 것은
+     **거기 HUD 가 없어서**다(프로필은 left:8px 로 왼쪽에만 있다). 정상이다. */
   /* ⚔ 던전 허브 — 던전 목록 카드(배너) + 팝업(소탕/입장) */
   .dgHubHead{font-size:12px;color:var(--txt-mute);margin:2px 4px 12px;line-height:1.5;text-align:center}
   .dgHubHead b{color:#ffd24a}

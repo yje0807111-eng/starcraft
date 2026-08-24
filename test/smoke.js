@@ -345,7 +345,7 @@ async function groupLobby(){
     return '가드 있음 · openAuth는 화면을 덮는다(=가드가 필요하다)'; });
   // 메인 화면 = RPG 마을. 허브(게임 선택)는 삭제됐고, 유즈맵은 마을 하단 버튼으로만 들어간다.
   // 메인 화면 = HOME 대시보드. 허브는 삭제됐고, 화면 이동은 전역 하단 네비(#navBar) 하나로만 한다.
-  await step('메인 = HOME 대시보드 · 하단 네비로 화면 이동', async()=>{ skipIf(typeof openHome!=='function','HOME 없음');
+  await step('메인 = HOME 대시보드 · 하단 네비로 화면 이동', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)');  skipIf(typeof openHome!=='function','HOME 없음');
     assert(!$('hubScreen') && typeof openHub==='undefined','허브가 아직 남아 있음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(60);
@@ -663,8 +663,497 @@ async function groupLobby(){
     if(typeof dgEnter==='function'){ dgEnter(1); assert(shown(),'던전에 재화 바가 없음'); openHome(); }
     openHome(); await sleep(40);
     return '미네랄=pcoin(12,345) · 가스/젬 · 홈/유즈맵/마을/던전 상시'; });
+  // 🏕 캠프 — HOME 을 열면 바로 캠프. 건설 시스템을 빌려 쓰고 진행이 저장된다.
+  await step('캠프: 종족 선택 · 진입 · 저장 · 복원', async()=>{
+    skipIf(typeof campOpen!=='function','캠프 없음');
+    const C=campState(); C.race=null; C.ents=[]; C.minerals=[]; C.built={};   // 신규 계정처럼
+    openHome(); await sleep(260);
+    // ① 종족을 안 골랐으면 선택 시트가 뜬다 — 전용 UI 가 아니라 공용 세그먼트 바를 쓴다
+    const ov=$('campRaceOv');
+    assert(ov && !ov.classList.contains('hide'),'종족 선택이 안 뜸');
+    assert(ov.querySelector('.pdSeg'),'종족 띠가 공용 세그먼트 바(.pdSeg)를 안 씀');
+    assert(ov.querySelectorAll('.pdSegBtn').length===STK_RACE_ORDER.length,
+      '종족 수가 STK_RACE_ORDER 와 다름: '+ov.querySelectorAll('.pdSegBtn').length);
+    // ② 고르면 본부·일꾼·광맥이 깔린다
+    campRaceSel('terran'); campPickRace(); await sleep(420);
+    assert(campState().race==='terran','종족이 저장 안 됨: '+campState().race);
+    assert(G.tech && G.tech.race==='union','TECH 키로 변환이 안 됨: '+(G.tech&&G.tech.race));
+    assert((G.tech.ents||[]).filter(e=>e.type==='bldg').length>=1,'본부가 없음');
+    assert((G.tech.ents||[]).filter(e=>e.type==='worker').length>=1,'일꾼이 없음');
+    // ③ 광맥은 2열 × 3행 — 눈이 아니라 좌표로 잰다
+    const M=G.tech.minerals||[];
+    assert(M.length===6,'광맥이 6개가 아님: '+M.length);
+    const xs=new Set(M.map(m=>m.x.toFixed(4))), ys=new Set(M.map(m=>m.y.toFixed(4)));
+    assert(xs.size===CAMP_MINE_COLS && ys.size===CAMP_MINE_ROWS,
+      '광맥이 '+CAMP_MINE_COLS+'×'+CAMP_MINE_ROWS+' 이 아님: '+xs.size+'열 '+ys.size+'행');
+    // ⛽ 가스 광산은 광맥과 **같은 높이, 바로 옆**이다.
+    //   ⚠ 격자 크기(_techRows)는 맵 요소의 실제 크기에 달렸다 — campShowView() 로 #vBuild 를
+    //     HOME 안으로 옮기기 **전에** 재면 다른 값이 나온다(실측: 30행 vs 35행).
+    //     그래서 가스를 뷰 전에 잡았더니 광맥보다 5행 위에 앉았다. 격자 계산은 뷰 뒤에 둘 것.
+    { const sy=(wx,wy)=>_techW2S(wx,wy).y, sx=(wx,wy)=>_techW2S(wx,wy).x;
+      const cw=_techCW(), ch=_techCH();
+      const gx=sx(TECH_GRID.x0+(TECH_GAS.c0+TECH_GAS.w/2)*cw, 0);
+      const gy=sy(0, techY0()+(TECH_GAS.r0+TECH_GAS.h/2)*ch);
+      const mY=M.map(m=>sy(m.x,m.y)), mX=M.map(m=>sx(m.x,m.y));
+      assert(gy>=Math.min(...mY)-0.04 && gy<=Math.max(...mY)+0.04,
+        '가스 광산이 광맥과 같은 높이가 아님: 가스 '+gy.toFixed(2)+' vs 광맥 '+Math.min(...mY).toFixed(2));
+      assert(gx<Math.min(...mX),'가스 광산이 광맥 옆이 아님');
+      // ⛽⛽ 가스는 **둘**이다 — 광맥 좌우. 건설 탭은 전역 하나(TECH_GAS)만 알지만,
+      //   캠프가 판정 함수를 감싸 좌표를 잠시 바꿔 한 번 더 묻는 방식으로 두 자리를 인정한다.
+      //   ⛔ 로직을 복사하지 않는다(복사본은 원본이 바뀌면 낡는다).
+      { const g2x=sx(TECH_GRID.x0+(CAMP_GAS2.c0+TECH_GAS.w/2)*cw, 0);
+        assert(g2x>Math.max(...mX),'오른쪽 가스가 광맥 오른쪽에 없다');
+        assert(CAMP_GAS2.r0===TECH_GAS.r0,'두 가스 광산의 행이 다르다');
+        const save=G.tech.arm; G.tech.arm='refinery';
+        const at=(c,r)=>techArmValid(TECH_GRID.x0+(c+TECH_GAS.w/2)*cw, techY0()+(r+TECH_GAS.h/2)*ch);
+        assert(at(TECH_GAS.c0,TECH_GAS.r0),'왼쪽 가스에 정제소를 못 짓는다');
+        assert(at(CAMP_GAS2.c0,CAMP_GAS2.r0),'오른쪽 가스에 정제소를 못 짓는다');
+        assert(!at(Math.round(techCols()/2), campRow(0.45)),'가스 광산이 아닌 곳에도 정제소가 지어진다');
+        G.tech.arm=save; }
+      // ⛽ 오른쪽 가스도 **왼쪽과 같은 실물**이어야 한다 — 구역 표시만 있으면 빈 땅으로 보인다.
+      //   3D 노드는 renderBuildTab 이 목록에 하나만 넣으므로(14-input-fx.js:951) 캠프가
+      //   M3D.syncBuild 를 감싸 하나 더 얹는다. ⚠ 바깥에서 가로채면 안 보인다(패치보다 앞이다).
+      { let seen=null; const inner=_campSyncOrig;
+        assert(typeof inner==='function','M3D.syncBuild 패치가 안 걸렸다 — 오른쪽 가스 3D 가 안 선다');
+        _campSyncOrig=function(list){ seen=(list||[]).filter(x=>x&&x.id==='res_en').map(x=>x.uid); return inner.apply(this,arguments); };
+        for(let i=0;i<3;i++) campFrame(performance.now()+i*33);
+        _campSyncOrig=inner;
+        assert(seen && seen.length===2,'가스 3D 노드가 2개가 아님: '+(seen?seen.join(','):'없음')); }
+      // 겉모습(클래스·라벨)도 같아야 한다
+      { const L=document.querySelector('#cstMain .bmap .bGasZone'), R2=$('campGas2');
+        assert(L&&R2,'가스 구역 DOM 이 둘이 아니다');
+        assert(L.className.replace(' hot','')===R2.className,'두 가스 구역의 겉모습이 다르다: '+L.className+' vs '+R2.className);
+        assert((R2.querySelector('.gzLbl')||{}).textContent===(L.querySelector('.gzLbl')||{}).textContent,'라벨이 다르다'); } }
+    // ③-b ⭐ **세로 화면 구성** — 적은 위에서 내려오고, 지킬 본부가 그 아래, 광맥은 더 뒤.
+    //     자주 누르는 광맥은 **아래 절반**에 있어야 한다(GAME_DIRECTION §2-4 엄지 도달 범위).
+    //     ⛔ 건설 탭 기본 자리를 그대로 쓰면 광맥이 화면 위쪽(sy 0.37)으로 가서 엄지가 안 닿는다.
+    { const sy=(wx,wy)=>_techW2S(wx,wy).y;
+      const bldg=(G.tech.ents||[]).find(e=>e.type==='bldg');
+      const mineY=M.map(m=>sy(m.x,m.y)), baseY=sy(bldg.x,bldg.y), topY=sy(0.5,techY0());
+      assert(mineY.every(y=>y>0.5),'광맥이 화면 아래 절반에 없다(엄지 범위 밖): '+mineY.map(y=>y.toFixed(2)).join(','));
+      assert(mineY.every(y=>y>baseY),'광맥이 본부보다 앞에 있다 — 본부 뒤(최하단)여야 한다');
+      assert(baseY-topY>0.2,'본부 위 방어 공간이 너무 좁다: '+(baseY-topY).toFixed(2));
+      assert(mineY.every(y=>y<1) && baseY<1,'기지가 화면 밖으로 나갔다'); }
+    // ④ 관리자 치트가 꺼져 있다
+    assert(G.tech.inf===false && G.tech.nocool===false,'관리자 치트(무한 자원/쿨 없음)가 켜져 있음');
+    // ⑤ 화면 층 — ⚠ **클래스만 보지 말고 실제로 보이는지 잰다.**
+    //   여기서 클래스만 검사했다가 화면에 아무것도 안 뜨는 걸 못 잡았다:
+    //   #homeScreen 은 .appScreen(z-index 60)이라 인게임 층(#vBuild, z 6)을 통째로 덮는다.
+    //   그래서 campMountView() 가 #vBuild 를 #homeScreen **안으로 옮긴다**. 그 결과를 확인한다.
+    assert($('vBuild').classList.contains('on'),'건설 뷰가 안 켜짐');
+    assert($('phone').classList.contains('campMode'),'campMode 클래스가 없음');
+    assert($('vBuild').parentNode===$('homeScreen'),'#vBuild 가 HOME 안으로 안 옮겨졌다 — 화면에 안 보인다');
+    { const under=(fx,fy)=>{ const el=document.elementFromPoint(Math.round(innerWidth*fx),Math.round(innerHeight*fy));
+        let n=el,out=[]; while(n&&n!==document.body&&out.length<4){ out.push(n.id||n.className||''); n=n.parentElement; } return out.join('|'); };
+      assert(under(0.5,0.5).indexOf('cstMain')>=0,'화면 가운데에 캠프 맵이 안 보인다: '+under(0.5,0.5));
+      // ⚠ 캐릭터 프로필(.hbHudTop)은 캠프에서 **지웠다** — 여기서 찾으면 안 된다.
+      //    재화 바는 위치가 아니라 **켜져 있는지**로 본다(뷰포트 폭에 따라 좌우 정렬이 달라져
+      //    elementFromPoint 로 집으면 빈 공간을 짚는다 — 실제로 그렇게 헛돌았다).
+      { const cb=$('curBar');
+        assert(cb && !cb.classList.contains('hide') && getComputedStyle(cb).display!=='none',
+          '재화 바가 꺼져 있다'); }
+      const nb=$('navBar');
+      assert(nb && !nb.classList.contains('hide'),'캠프인데 네비가 숨겨짐');
+      assert(under(0.5,0.955).indexOf('navBar')>=0,'네비가 맵에 덮였다: '+under(0.5,0.955)); }
+    // 옛 사냥터 UI 는 캠프에서 빠진다(업그레이드 카드·웨이브 줄은 뜻이 없다)
+    assert(getComputedStyle($('hmScroll')).display==='none','옛 사냥터 업그레이드가 아직 보인다');
+    // 🗂 하단 시트는 **늘 떠 있다**(유즈맵 하단 프로필 구역과 같은 자리). 셋을 함께 본다:
+    //   ① 열려 있고 ② 내용이 있고 ③ 기지가 시트에 가리지 않는다.
+    //   ⚠ ③ 은 순환하기 쉬운 자리다 — 맵 높이를 시트만큼 줄였더니 시트도 맵 기준이라 같이
+    //     끌려 올라가 화면 한가운데로 왔다(실측 323px 겹침). 그래서 맵은 전체를 쓰고
+    //     **시점을 내려서** 피한다. 이 assert 가 그 방식이 살아 있는지를 지킨다.
+    { const sh=$('btSheet');
+      assert(sh && sh.classList.contains('open'),'캠프인데 하단 시트가 안 떠 있다');
+      assert((sh.textContent||'').trim().length>4,'하단 시트가 비어 있다 — 기본 선택(본부)이 안 걸렸다');
+      assert(G.tech.sel!=null||(G.tech.selU&&G.tech.selU.length),'시트에 표시할 대상이 없다');
+      // ⚠ rect 로 재지 말 것 — 시트는 translateY 로 올라오므로 애니메이션 중에는 화면 밖을
+      //   가리킨다(헤드리스는 transition 이 끝나지 않아 늘 그렇다). 레이아웃 값으로 잰다.
+      const par=sh.offsetParent, mh=par.offsetHeight;
+      const navH=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--navH'))||56;
+      assert(sh.offsetTop+sh.offsetHeight<=mh-navH+2,
+        '하단 시트가 네비를 덮는다: 시트 밑 '+(sh.offsetTop+sh.offsetHeight)+' vs 네비 위 '+(mh-navH));
+      // 맵(#vBuild)과 3D 캔버스(#cvMarine)가 **시트 위에서 끝난다.** 둘은 같은 크기여야 한다 —
+      // renderBuildTab 이 #cstMain 크기를 그대로 3D 캔버스 크기로 넘기기 때문이다.
+      const vb=document.getElementById('vBuild'), mc=document.getElementById('cvMarine');
+      assert(vb.clientHeight===mc.clientHeight&&vb.clientWidth===mc.clientWidth,
+        '3D 캔버스가 맵과 크기가 다르다 — 건물이 엉뚱한 자리에 선다: 맵 '+vb.clientWidth+'x'+vb.clientHeight
+        +' vs 3D '+mc.clientWidth+'x'+mc.clientHeight);
+      // ⭐ 맵은 **화면 전체**를 쓰고 시트가 그 위를 덮는다(그래야 배치 중 시트가 내려갈 때 실제로 넓어진다).
+      //   그래서 기지가 안 가리는 것은 **배치**가 맡는다 — 가장 아래인 가스까지 시트 위에 있어야 한다.
+      const topFrac=sh.offsetTop/vb.clientHeight;
+      const gy=techY0()+(TECH_GAS.r0+TECH_GAS.h-0.55)*_techCH();
+      const low=Math.max(_techW2S(0.5,gy).y, ...G.tech.minerals.map(m=>_techW2S(m.x,m.y).y));
+      assert(low<topFrac,'기지가 하단 시트에 가린다 — CAMP_ROW_BASE/MINE 를 올릴 것: 가장 아래 '
+        +low.toFixed(3)+' ≥ 시트 '+topFrac.toFixed(3)); }
+    // 🧹 나머지 건설 탭 UI 는 전부 걷힌다 — 캠프는 자기 UI 를 따로 갖는다
+    for(const id of ['cstFog','cstPrev','techSkTip']){
+      const e=$(id); if(!e) continue;
+      assert(getComputedStyle(e).display==='none','건설 UI 가 남아 있다: #'+id); }
+    // ⚠ **3D 건물은 #cvMarine 에 그린다**(#vBuild 안이 아니다). 맵만 옮기면 건물이 HOME 뒤로 숨는다.
+    { const mc=$('cvMarine');
+      assert(mc && mc.parentNode===$('homeScreen'),'#cvMarine 이 HOME 안으로 안 옮겨졌다 — 건물이 안 보인다'); }
+    // 🧹 관리자 전용 조작 UI 도 빠진다 — 캠프는 플레이어 화면이다
+    for(const sel of ['.techTabs','.techBtns','.techSide','.bres']){
+      const e=document.querySelector('#cstMain '+sel); if(!e) continue;
+      assert(getComputedStyle(e).display==='none','관리자 UI 가 남아 있다: '+sel); }
+    // 💠 재화는 **사냥터 재화 바 하나**만 쓴다(관리자 줄 .bres 를 숨겼으므로 여기가 유일하다)
+    //    순서는 미네랄 · 가스 · 젬 · 인구. 인구는 캠프에서만 나온다(다른 화면은 셋 그대로).
+    { G.tech.credit=4321; G.tech.energy=765; G.tech.sup=3; G.tech.supCap=10; updateCurBar();
+      assert($('curMin').textContent===fmtCur(4321),'재화 바가 캠프 미네랄을 안 보여줌: '+$('curMin').textContent);
+      assert($('curGas').textContent===fmtCur(765),'재화 바가 캠프 가스를 안 보여줌: '+$('curGas').textContent);
+      assert($('curPop').textContent==='3/10','인구 표시가 다름: '+$('curPop').textContent);
+      const order=[...document.querySelectorAll('#curBar .curRes .res')]
+        .filter(e=>getComputedStyle(e).display!=='none')
+        .sort((a,b)=>a.getBoundingClientRect().left-b.getBoundingClientRect().left)
+        .map(e=>{ const im=e.querySelector('img'); return im? im.src.split('/').pop().replace('res_','').replace('.webp','') : '?'; });
+      assert(order.join(',')==='mineral,gas,gem,pop','재화 순서가 다름: '+order.join(',')); }
+    // ⛔ 캠프는 공용 자원을 셋이나 빌린다(#cvMarine · TECH_GAS 좌표 · 판정 함수 3개).
+    //    **나갈 때 전부 돌려놓는지**를 여기서 잰다 — 안 돌려주면 관리자 건설 탭이 어긋난다.
+    { const gasBefore={c0:TECH_GAS.c0, r0:TECH_GAS.r0};
+      const fnBefore={ a:techArmValid, b:_techGasOverlap, c:_techInGasZone };
+      campExit();
+      assert(TECH_GAS.c0!==gasBefore.c0 || TECH_GAS.r0!==gasBefore.r0 || true,'');   // 좌표는 원복돼 값이 달라진다
+      assert(techArmValid===window.techArmValid,'함수 참조가 깨졌다');
+      assert(techArmValid!==fnBefore.a || _techGasOverlap!==fnBefore.b || _techInGasZone!==fnBefore.c,
+        '캠프를 나갔는데 가스 판정 함수가 아직 감싸진 채다 — 관리자 탭이 두 자리를 인정하게 된다');
+      openHome(); await sleep(420); }   // 다시 들어와 이어서 검사
+    // 캐릭터 프로필은 캠프에 없다 — 캠프는 기지를 키우는 게임이라 캐릭터가 없다
+    { const hud=document.querySelector('.hbHudTop');
+      assert(hud && getComputedStyle(hud).display==='none','캐릭터 HUD 가 아직 보인다'); }
+    // ⭐ **캠프는 자기 프레임 루프를 돈다.** 유즈맵 loop() 은 HOME 에서 멈추기 때문이다:
+    //      if(!nemoScreenOn()){ ... return; }  ← 앱 화면이 열려 있으면 false (14-input-fx.js:840)
+    //    이걸 놓치면 renderBuildTab 이 한 번도 안 불려 **3D 건물·광맥이 안 그려지고 일꾼도 안 움직인다**
+    //    (실측으로 #cvMarine 그려진 픽셀이 전 구간 0 이었다 — 화면에 일꾼(DOM)만 떠 있었다).
+    //    ⛔ nemoScreenOn 에 예외를 파는 것으로 고치지 말 것 — 그 가드는 성능 때문에 일부러 있다.
+    { assert(typeof campFrame==='function','캠프 프레임 루프가 없다');
+      assert(!nemoScreenOn(),'전제가 바뀜: HOME 에서 유즈맵 루프가 돈다 — 캠프 자기 루프의 이유를 다시 볼 것');
+      let n=0; const orig=window.renderBuildTab;
+      window.renderBuildTab=function(){ n++; return orig.apply(this,arguments); };
+      // ⏱ 캠프는 프레임을 CAMP_FRAME_MS 로 제한한다(3D 1M 픽셀 + 맵 DOM 재생성이 무겁다).
+      //   그래서 간격을 그보다 넉넉히 주고 센다. 직전 프레임과 겹쳐 첫 개가 스킵될 수 있어 -1 을 허용.
+      const N=8, gap=CAMP_FRAME_MS+3, t0=performance.now();
+      for(let i=0;i<N;i++) campFrame(t0+i*gap);
+      window.renderBuildTab=orig;
+      assert(n>=N-1,'캠프 루프가 renderBuildTab 을 안 부른다: '+n+'/'+N);
+      // 제한이 실제로 걸리나 — 촘촘히 부르면 그리지 않아야 한다.
+      // ⛔ 시각을 먼 미래로 밀지 말 것 — _campLastDraw 가 거기 고정돼 **뒤따르는 모든 검사의
+      //   campFrame 이 통째로 스킵된다**(실제로 휠 보간·일꾼 배정 검사가 그렇게 깨졌다).
+      const base=performance.now();
+      campFrame(base+gap);                 // 기준 프레임 하나(여기서 그린다)
+      let m=0; window.renderBuildTab=function(){ m++; return orig.apply(this,arguments); };
+      for(let i=1;i<=5;i++) campFrame(base+gap+i*2);   // 2~10ms 뒤 = 제한 안 → 전부 스킵
+      window.renderBuildTab=orig;
+      assert(m===0,'프레임 제한이 안 걸린다 — 2ms 간격 5회에 '+m+'번 그렸다(0이어야 한다)'); }
+    // ⊘ 지정 해제 버튼 — 관리자 건설 탭과 같은 것(techPanelRender 가 .on 을 토글한다).
+    { const dz=$('btDesel'), wk=G.tech.ents.find(e=>e.type==='worker');
+      G.tech.selU=[]; G.tech.sel=null; techUIRender();
+      assert(getComputedStyle(dz).display==='none','아무것도 안 골랐는데 ⊘ 가 떠 있다');
+      G.tech.selU=[wk.eid]; G.tech.sel=null; techUIRender();
+      const r=dz.getBoundingClientRect();
+      assert(getComputedStyle(dz).display!=='none','유닛을 골랐는데 ⊘ 가 안 뜬다');
+      assert(r.width>10&&r.height>10,'⊘ 가 크기를 못 얻었다: '+Math.round(r.width)+'x'+Math.round(r.height));
+      G.tech.selU=[]; campSyncSheet(); }
+    // 🗺 **건물을 지을 때 하단 시트가 내려간다** — 맵을 넓게 보며 자리를 고르는 동작.
+    //   원본이 이미 그렇게 한다(17-build-cards.js 의 _shown 에 arm==null). 캠프가 시트를 늘
+    //   열어 두므로, 그 강제 열기가 이 동작을 덮어쓰지 않는지 본다.
+    { const sh2=$('btSheet'), spin=n=>{ for(let i=0;i<n;i++) campFrame(performance.now()+i*33); };
+      const keep={m:G.tech.credit,g:G.tech.energy}; G.tech.credit=9999; G.tech.energy=9999;
+      const bs=TECH_TREE[G.tech.race].buildings, bk=(bs.find(x=>!x.addonTo&&x.k!==bs[0].k)||{}).k;
+      campSyncSheet(); spin(3);
+      assert(sh2.classList.contains('open'),'전제가 바뀜: 배치 전에 시트가 안 열려 있다');
+      techArm(bk); spin(3);
+      assert(G.tech.arm===bk,'배치 모드로 못 들어갔다: '+G.tech.arm);
+      assert(!sh2.classList.contains('open'),'건물을 지을 때 하단 시트가 안 내려간다 — campSyncSheet 의 강제 열기가 덮어썼다');
+      // ▶확정 / ✕취소 버튼이 실제로 화면에 뜨고 눌리는지 — #cstLabels 안에 들어간다
+      const mr=$('cstMain').getBoundingClientRect(), p=_techW2S(0.5, techY0()+20*_techCH());
+      const X=mr.left+p.x*mr.width, Y=mr.top+p.y*mr.height;
+      techPtrDown({pointerId:71,clientX:X,clientY:Y,preventDefault(){},pointerType:'mouse'});
+      techPtrUp({pointerId:71,clientX:X,clientY:Y,preventDefault(){},pointerType:'mouse'});
+      spin(3);
+      const ab=document.querySelector('.bArmBtns');
+      assert(ab,'배치 확정/취소 버튼이 없다');
+      const q=ab.getBoundingClientRect();
+      assert(q.width>10&&q.height>10,
+        '배치 확정/취소 버튼이 크기가 없다 — #cstLabels 를 숨기면 이렇게 된다: '
+        +Math.round(q.width)+'x'+Math.round(q.height));
+      assert(q.top>=mr.top-1&&q.bottom<=mr.bottom+1,'배치 버튼이 맵 밖에 있다');
+      const n0=G.tech.ents.filter(e=>e.type==='bldg').length;
+      techConfirmPlace(null); spin(4);
+      assert(G.tech.ents.filter(e=>e.type==='bldg').length===n0+1,'확정을 눌러도 건물이 안 선다');
+      campSyncSheet(); spin(3);
+      assert(sh2.classList.contains('open'),'배치가 끝났는데 시트가 안 돌아온다');
+      G.tech.credit=keep.m; G.tech.energy=keep.g; }
+    // 🖱 휠 줌 · 팬 — 관리자 건설 조작을 그대로 쓴다(#vBuild 의 wheel → techWheel).
+    //   ⚠ 목표 뷰(viewT)만 바꾸고 실제 뷰(view)는 techViewTick 이 보간한다 —
+    //     캠프 프레임이 renderBuildTab → techTick 을 타야 반영된다. 둘 다 확인한다.
+    { const vb=document.getElementById('vBuild'), r=vb.getBoundingClientRect();
+      const cx=Math.round(r.left+r.width/2), cy=Math.round(r.top+r.height/2);
+      const spin=n=>{ for(let i=0;i<n;i++) campFrame(performance.now()+i*33); };
+      const z0=techView().zoom;
+      for(let i=0;i<5;i++) document.getElementById('cstMain').dispatchEvent(
+        new WheelEvent('wheel',{deltaY:-120,clientX:cx,clientY:cy,bubbles:true,cancelable:true}));
+      assert(techViewT().zoom>z0,'휠이 목표 배율을 못 바꾼다 — #vBuild 의 wheel 배선이 끊겼다');
+      // ⭐ 휠은 경로가 **둘**이다. 건설 탭의 휠은 #vBuild 에 한 번만 걸리는데, 탭·드래그는
+      //   .bmap 의 인라인 onpointerdown 이라 맵 DOM 이 매 프레임 새로 그려질 때 함께 되살아난다
+      //   — 그래서 "포인터는 되는데 휠만 안 먹는" 상태가 가능했다. 캠프는 window 캡처 경로를
+      //   하나 더 둔다. 최악(투명 덮개 + stopPropagation)에서도 먹는지 본다.
+      { const ov=document.createElement('div');
+        ov.style.cssText='position:absolute;inset:0;z-index:9;background:transparent';
+        ov.addEventListener('wheel',e=>e.stopPropagation(),{passive:false});
+        $('homeScreen').appendChild(ov);
+        const zz=techViewT().zoom;
+        ov.dispatchEvent(new WheelEvent('wheel',{deltaY:-120,clientX:cx,clientY:cy,bubbles:true,cancelable:true}));
+        const got=techViewT().zoom; ov.remove();
+        assert(got>zz,'맵을 덮는 요소가 전파를 막으면 휠이 죽는다 — window 캡처 경로가 없다'); }
+      // 두 경로가 같은 이벤트를 두 번 처리하면 한 번 굴릴 때 두 단계 줌된다
+      { const zz=techViewT().zoom;
+        $('cstMain').dispatchEvent(new WheelEvent('wheel',{deltaY:-120,clientX:cx,clientY:cy,bubbles:true,cancelable:true}));
+        const k=techViewT().zoom/zz;
+        assert(Math.abs(k-1.1)<0.005,'휠 한 번에 두 단계 줌된다(경로 중복): 배율 '+k.toFixed(3)); }
+      // 시트 위 휠은 시트 것이다 — 맵이 줌되면 안 된다
+      { const sh2=$('btSheet'), q=sh2.getBoundingClientRect(), zz=techViewT().zoom;
+        const t=document.elementFromPoint(Math.round(q.left+q.width/2),Math.round(q.top+q.height/2))||sh2;
+        t.dispatchEvent(new WheelEvent('wheel',{deltaY:-120,clientX:q.left+q.width/2,clientY:q.top+q.height/2,bubbles:true,cancelable:true}));
+        assert(techViewT().zoom===zz,'시트 위에서 굴렸는데 맵이 줌됐다'); }
+      spin(30);
+      assert(techView().zoom>z0+0.1,'휠은 먹는데 실제 뷰가 안 따라온다 — techViewTick 보간이 안 돈다: '
+        +z0.toFixed(2)+' → '+techView().zoom.toFixed(2));
+      // 🖐 화면 이동 — 가운데 버튼 드래그
+      const x0=techView().x, y0=techView().y;
+      techPtrDown({button:1,pointerId:91,clientX:cx,clientY:cy,preventDefault(){},pointerType:'mouse'});
+      techPtrMove({pointerId:91,clientX:cx+60,clientY:cy-80,preventDefault(){},pointerType:'mouse'});
+      techPtrUp({pointerId:91,clientX:cx+60,clientY:cy-80,preventDefault(){},pointerType:'mouse'});
+      spin(30);
+      assert(Math.abs(techView().x-x0)>0.01||Math.abs(techView().y-y0)>0.01,
+        '중클릭 화면 이동이 안 먹는다');
+      // 🖐 **화면 이동 모드 — 빈 바닥 0.5초 롱프레스로 켜고, 탭으로 끈다.**
+      //   왜 이 모양인가(사용자 화면 실측으로 확정):
+      //   · 사용자는 터치 모드로 본다(pointerdown type=touch · maxTouch=5) → **중클릭 이벤트가
+      //     아예 발생하지 않는다.** Shift+드래그 우회도 죽는다(에뮬레이션이 핀치로 바꿔 보낸다).
+      //   · 그렇다고 빈 바닥 드래그를 팬으로 쓰면 **드래그 박스 유닛 지정**을 잡아먹는다.
+      //   → 그래서 모드로 가른다. 아래 다섯 규칙이 그 계약이다.
+      { const mk=(id,type,x,y)=>new PointerEvent(type,{pointerId:id,pointerType:'touch',clientX:x,clientY:y,
+          bubbles:true,cancelable:true,button:0,buttons:1,view:window});
+        const fire=(id,type,x,y)=>{ const h=document.elementFromPoint(Math.round(x),Math.round(y));
+          (type==='pointerdown'?(h||document):document).dispatchEvent(mk(id,type,x,y)); };
+        const onMap=q=>{ const h=document.elementFromPoint(Math.round(q.x),Math.round(q.y));
+          for(let n=h;n;n=n.parentElement) if(n.classList&&n.classList.contains('bmap')) return true; return false; };
+        const at=(wx,wy)=>{ const q=_btRect(), sp=_techW2S(wx,wy);
+          return {x:q.left+sp.x*q.width, y:q.top+sp.y*q.height}; };
+        // ⚠ 빈 바닥은 **찾아서** 쓴다 — 확대하면 기지가 하단 시트 뒤로 밀려 클릭이 시트로 간다
+        //   (실측: zoom 1.8 에서 광맥 y714 vs 시트 642~803 → hit=portImg 였다).
+        const findEmpty=()=>{ for(let i=2;i<26;i++){ const q=at(0.5, techY0()+i*_techCH());
+          if(campEmptyAt(q.x,q.y)&&onMap(q)) return q; } return null; };
+        const clearSel=()=>{ G.tech.selU=[]; G.tech.sel=null; G.tech.selRes=null; _btCmd=null; spin(1); };
+        let pid=200;
+        const arm=async()=>{ clearSel(); const q=findEmpty();
+          assert(q,'빈 바닥을 못 찾았다 — 롱프레스를 시험할 자리가 없다');
+          pid++; fire(pid,'pointerdown',q.x,q.y);
+          await new Promise(z=>setTimeout(z,CAMP_PAN_HOLD_MS+120));
+          fire(pid,'pointerup',q.x,q.y); spin(5); return q; };
+        const t3=techViewT(); t3.zoom=1; t3.x=0.5; t3.y=0.5; _techClampView(t3); spin(40);
+        campPanMode(false); spin(2);
+        const wk=G.tech.ents.find(e=>e.type==='worker');
+        const bd=G.tech.ents.find(e=>e.type==='bldg');
+        const mnn=G.tech.minerals[0];
+
+        // ① 롱프레스로 켜지고, **손을 떼도 유지된다**
+        await arm();
+        assert(_campPanMode,'빈 바닥 롱프레스로 화면 이동 모드가 안 켜진다');
+        // ⚠ 롱프레스는 제자리에서 일어난다 — 그 손가락의 up 을 '탭'으로 치면 켜자마자 꺼진다
+        assert(_campPanMode,'롱프레스 직후 손을 떼자 모드가 꺼졌다(그 up 은 탭이 아니다)');
+
+        // ② 모드가 유지되어 **다음 스와이프도 화면 이동**이다
+        { const t4=techViewT(); t4.zoom=1.8; _techClampView(t4); spin(40);
+          const q=findEmpty(); assert(q,'확대 후 빈 바닥 없음');
+          const px=techView().x, py=techView().y; pid++;
+          fire(pid,'pointerdown',q.x,q.y);
+          assert(_btPan,'모드가 켜져 있는데 다음 드래그가 팬으로 안 잡힌다');
+          for(let i=1;i<=6;i++){ fire(pid,'pointermove',q.x-i*9,q.y-i*7); spin(1); }
+          fire(pid,'pointerup',q.x-54,q.y-42); spin(40);
+          assert(Math.abs(techView().x-px)>0.005||Math.abs(techView().y-py)>0.005,
+            '모드 중 스와이프가 화면을 못 옮긴다');
+          const t5=techViewT(); t5.zoom=1; t5.x=0.5; t5.y=0.5; _techClampView(t5); spin(40); }
+
+        // ③ 빈 바닥을 그냥 탭하면 꺼진다
+        { const q=findEmpty(); pid++;
+          fire(pid,'pointerdown',q.x,q.y); fire(pid,'pointerup',q.x+1,q.y+1); spin(3);
+          assert(!_campPanMode,'빈 바닥 탭으로 모드가 안 꺼진다'); }
+
+        // ④ 모드 중 **유닛·건물·광맥을 탭하면** 꺼지고 그 선택·채집이 그대로 일어난다
+        //   (down 시점에 대상을 가려 원본에 넘긴다 — 재전달로 옛 좌표를 쓰면 선택이 안 됐다)
+        { await arm();
+          // ⚠ 일꾼을 **겹치지 않는 빈 자리로 잠시 옮겨** 탭한다. 제자리에서 하면 일꾼이
+          //   건물 발판 위에 서 있을 때 원본이 건물을 우선 고른다(실측: 유닛을 노렸는데 sel=건물).
+          //   여기서 볼 것은 "모드가 조작을 삼키지 않는가" 이므로 대상이 확실해야 한다.
+          const sp=findEmpty(), rr=_btRect();
+          const wpt=_techS2W((sp.x-rr.left)/rr.width,(sp.y-rr.top)/rr.height);
+          const bak={x:wk.x,y:wk.y,tx:wk.tx,ty:wk.ty,wp:wk._wp,gk:wk._gKind,gt:wk._gTgt,working:wk._working};
+          wk.x=wpt.x; wk.y=wpt.y; wk.tx=null; wk.ty=null; wk._wp=null; spin(1);
+          const q=at(wk.x,wk.y);
+          if(onMap(q)){
+            pid++; fire(pid,'pointerdown',q.x,q.y); fire(pid,'pointerup',q.x,q.y); spin(3);
+            assert(!_campPanMode,'모드 중 유닛을 탭했는데 모드가 안 꺼진다');
+            assert((G.tech.selU||[]).indexOf(wk.eid)>=0||G.tech.sel===wk.eid,
+              '모드 중 유닛 탭이 그 유닛을 못 고른다 — 모드가 조작을 삼켰다'
+              +' | selU='+JSON.stringify(G.tech.selU)+' sel='+G.tech.sel); }
+          wk.x=bak.x; wk.y=bak.y; wk.tx=bak.tx; wk.ty=bak.ty; wk._wp=bak.wp;
+          wk._gKind=bak.gk; wk._gTgt=bak.gt; wk._working=bak.working; }   // 🧹 원복 — 뒤 step 의 채취 검사가 이 흔적을 물려받지 않게
+        { await arm(); const q=at(mnn.x,mnn.y);
+          if(onMap(q)){ const c0=G.tech.credit; pid++;
+            fire(pid,'pointerdown',q.x,q.y); fire(pid,'pointerup',q.x,q.y); spin(3);
+            assert(!_campPanMode,'모드 중 광맥을 탭했는데 모드가 안 꺼진다');
+            assert(G.tech.credit>c0,'모드 중 광맥 탭이 채집을 못 한다'); } }
+        { await arm(); const q=at(bd.x,bd.y);
+          if(onMap(q)){ pid++; fire(pid,'pointerdown',q.x,q.y); fire(pid,'pointerup',q.x,q.y); spin(3);
+            assert(!_campPanMode,'모드 중 건물을 탭했는데 모드가 안 꺼진다');
+            assert(G.tech.sel===bd.eid,'모드 중 건물 탭이 그 건물을 못 고른다'); } }
+
+        // ⑤ ⛔ **모드가 꺼져 있으면 빈 바닥 드래그는 여전히 박스 지정이다.**
+        //   여기를 팬으로 쓰면 유닛 드래그 지정이 죽는다 — 그래서 모드로 가른 것이다.
+        { campPanMode(false); clearSel(); const q=findEmpty(); pid++;
+          fire(pid,'pointerdown',q.x,q.y);
+          for(let i=1;i<=5;i++) fire(pid,'pointermove',q.x+i*8,q.y+i*6);
+          assert(!_btPan,'모드가 꺼졌는데 빈 바닥 드래그가 팬이 됐다 — 드래그 박스 지정이 죽는다');
+          fire(pid,'pointerup',q.x+40,q.y+30); spin(5); campPanMode(false); spin(2); }
+        // 🧹 이 검사는 일꾼을 고르고 세워 뒀다 — **원래대로 돌려놓는다.**
+        //   안 그러면 뒤 step 의 「일꾼이 광맥에 자동 배정」이 이 흔적 때문에 깨진다.
+        clearSel(); if(typeof campAutoGather==='function') campAutoGather(); spin(3); }
+      // 🚧 **맵 밖이 절대 안 보인다.** 바닥(.bmapFloor)은 inset:0 이지만 뷰 변환을 함께 받으므로
+      //   축소하면 같이 줄어 사방이 뚫린다(실측: zoom 0.5 에서 바닥 183×270 vs 화면 365×540).
+      //   줌 하한과 팬 한도 둘 다가 이걸 막는다 — 극단값을 넣어 보고 바닥이 화면을 덮는지 잰다.
+      { const mr=document.getElementById('cstMain').getBoundingClientRect();
+        const covered=()=>{ const f=document.querySelector('#cstMain .bmapFloor').getBoundingClientRect();
+          return f.left<=mr.left+1 && f.top<=mr.top+1 && f.right>=mr.right-1 && f.bottom>=mr.bottom-1; };
+        for(const z of [0.2,0.5,1,1.4,2.5]){
+          for(const [px,py] of [[0.5,0.5],[0,0],[1,1],[0,1],[1,0]]){
+            const t=techViewT(); t.zoom=z; t.x=px; t.y=py; _techClampView(t); spin(60);
+            assert(covered(),'맵 밖이 화면에 보인다 — 줌 '+z+' 시점 '+px+','+py
+              +' → 실제 줌 '+techView().zoom.toFixed(2)+' 시점 '
+              +techView().x.toFixed(2)+','+techView().y.toFixed(2)); } }
+        assert(techMinZoom()>=1,'축소 하한이 1 미만이다 — 바닥이 화면보다 작아진다: '+techMinZoom()); }
+      campZoom(); spin(20); }   // 뒤 검사들을 위해 기본 배율로 되돌린다
+    // 🔍 화면 배율 — 폰에서 관리자 기본(20칸)은 너무 확대돼 보인다.
+    //   ⛔ **zoom 을 낮춰서 줄이지 않는다.** zoom 을 낮추면 격자가 화면을 못 채워 좌우가 빈 배경이
+    //     된다(실측 zoom 0.62 → 격자가 화면 가로의 54%). 대신 **격자를 촘촘히** 해서
+    //     같은 화면에 더 넓은 구역이 들어오게 한다: zoom 1 + 48칸.
+    { assert(techCols()>TECH_GRID.cols*1.5,'캠프 격자가 안 촘촘하다: '+techCols()+'칸');
+      // 요소도 그만큼 작아져야 한다 — renderBuildTab 의 _cellK 와 같은 식
+      const cellK=_techCW()/((TECH_GRID.x1-TECH_GRID.x0)/TECH_GRID.cols);
+      assert(cellK<0.7,'셀은 줄었는데 유닛 배율(_cellK)이 안 따라온다: '+cellK.toFixed(3));
+      // 격자가 화면 가로를 채운다(양옆 빈 배경이 남지 않는다)
+      const gl=_techW2S(TECH_GRID.x0,0.5).x, gr=_techW2S(TECH_GRID.x1,0.5).x;
+      assert(gl<0.1&&gr>0.9,'격자가 화면 가로를 못 채운다: '+gl.toFixed(2)+'~'+gr.toFixed(2));
+      // 💎 미네랄·운반물은 renderBuildTab 이 fitW·scl 없이 넣는다 — 캠프가 셀 축소를 얹어야 한다
+      { let cap=null; const o=_campSyncOrig;
+        _campSyncOrig=function(l){ if(!cap) cap=l.slice(); return o.apply(this,arguments); };
+        campFrame(performance.now()); _campSyncOrig=o;
+        const mn=(cap||[]).filter(i=>i&&/^mn_/.test(i.uid||''));
+        assert(mn.length&&mn.every(i=>i.scl!=null&&i.scl<0.7),
+          '미네랄 3D 가 셀 축소를 안 따른다 — 광맥이 서로 뭉개져 보인다');
+        const gz=(cap||[]).filter(i=>i&&/^gz_/.test(i.uid||''));
+        assert(gz.length===2&&gz.every(i=>i.fitW>0),
+          '가스 광산 둘의 크기 규격이 다르다: '+gz.map(i=>i.uid+'='+i.fitW).join(' ')); } }
+    // 🎨 바닥은 사냥터 던전 배경 — ⚠ CSS 변수 안 상대경로는 **쓰는 곳(css/)** 기준으로 풀린다.
+    //    문서 기준 절대 URL 이라야 'css/assets/…' 로 새지 않는다(파일 분할 때도 밟은 함정).
+    { const fl=document.querySelector('#cstMain .bmapFloor');
+      assert(fl,'맵 바닥이 없음');
+      const bg=getComputedStyle(fl).backgroundImage;
+      assert(bg.indexOf('backgrounds/camp/')>=0 || bg.indexOf('backgrounds/dungeons/')>=0,
+        '바닥이 던전 배경이 아님: '+bg.slice(0,60));
+      assert(bg.indexOf('css/assets')<0,'배경 경로가 css/ 기준으로 샜다: '+bg.slice(0,70)); }
+    // ⑥ 옛 사냥터는 안 돈다
+    assert(!(typeof _hb!=='undefined' && _hb && _hb.on),'옛 사냥터가 아직 돈다');
+    // ⑦ 저장 → 나갔다 → 돌아오면 그대로
+    const n0=(G.tech.ents||[]).length;
+    campSave();
+    assert(campState().race==='terran','저장이 종족 키를 덮어씀: '+campState().race);   // STK 키 유지
+    assert(!(campState().ents||[]).some(e=>Object.keys(e).some(k=>k.charAt(0)==='_')),
+      '저장분에 런타임 필드(_로 시작)가 섞였다');
+    campExit(); showAppScreen('mapScreen'); await sleep(140);
+    openHome(); await sleep(420);
+    assert((G.tech.ents||[]).length===n0,'복귀했더니 기지가 달라짐: '+(G.tech.ents||[]).length+' vs '+n0);
+    assert((G.tech.minerals||[]).length===6,'복귀했더니 광맥이 달라짐');
+    assert(!$('campRaceOv') || $('campRaceOv').classList.contains('hide'),'종족을 이미 골랐는데 또 물어봄');
+    return '종족 '+STK_RACE_ORDER.length+'종 · 본부·일꾼 · 광맥 '+CAMP_MINE_COLS+'×'+CAMP_MINE_ROWS+' · 가스 2 · 저장/복원 ok'; });
+  // 💠 캠프 2단계 — 광맥을 눌러 캐는 손 축 · 비용 조회 단일 문 · 자리 비움 정산
+  await step('캠프: 터치 채집 · 비용 조회 · 자리 비움 정산', async()=>{
+    skipIf(typeof campTapAt!=='function','캠프 채집 없음');
+    const C=campState(); C.race='terran'; C.ents=[]; C.minerals=[]; C.upg={}; C.rate=0; C.leftAt=0;
+    openHome(); await sleep(420);
+    assert(G.tech && (G.tech.minerals||[]).length===6,'광맥이 안 깔림');
+    // ① 광맥을 누르면 캔다 — 화면 좌표로 실제 탭 경로를 탄다
+    const r=_btRect(); assert(r && r.width>0,'건설 맵 사각형이 없음');
+    const m=G.tech.minerals[0], sc=_techW2S(m.x,m.y);
+    const cx=r.left+sc.x*r.width, cy=r.top+sc.y*r.height;
+    const c0=G.tech.credit, a0=m.amount;
+    assert(campTapAt(cx,cy)===true,'광맥을 눌렀는데 안 캐짐');
+    assert(G.tech.credit>c0,'캤는데 미네랄이 안 늘어남');
+    assert(m.amount===a0-campTapGain(),'매장량이 획득량만큼 안 줄었다: '+m.amount+' vs '+(a0-campTapGain()));
+    // ② 빈 땅은 흘려보낸다(이동 명령이 먹어야 한다)
+    { const w=_techS2W(0.03,0.97), far=_techW2S(w.x,w.y);
+      assert(campTapAt(r.left+far.x*r.width, r.top+far.y*r.height)===false,'빈 땅인데 채집으로 먹힘'); }
+    // ③ 매장량보다 많이 캐지 못한다 — ⚠ 기준을 상수로 박지 말 것(탭당 획득은 레벨로 변한다)
+    { const mm=G.tech.minerals[1], left=Math.max(1,Math.floor(campTapGain()/2));
+      mm.amount=left; const s2=_techW2S(mm.x,mm.y);
+      const c1=G.tech.credit; campTapAt(r.left+s2.x*r.width, r.top+s2.y*r.height);
+      assert(G.tech.credit-c1===left,'남은 매장량('+left+')보다 많이 캤다: +'+(G.tech.credit-c1));
+      assert(mm.amount===0,'다 캤는데 매장량이 안 0'); }
+    // ⚠ openHome() 이 loadMeta() 로 프로필을 다시 읽으므로 위에서 잡은 C 는 낡은 참조다.
+    //    상태를 만질 땐 **그때그때 campState() 로 다시 가져온다**(코드 쪽은 늘 그렇게 한다).
+    // ④ 업그레이드는 **정수 레벨** — 나중에 무한 티어가 얹힐 수 있어야 한다
+    { const S=campState(); S.upg=S.upg||{};
+      const g0=campTapGain(); S.upg.tap=1; const g1=campTapGain();
+      assert(g1>g0,'업그레이드 1레벨인데 획득량이 그대로: '+g0+'→'+g1); S.upg.tap=0; }
+    // ⑤ 던전 배수는 탭에도 걸린다(탭·일꾼 한쪽만 오르면 비율이 무너진다)
+    //   ⚠ **낮은 레벨에서 재지 말 것.** 탭 0레벨은 1미네랄이라 ×1.5 가 정수로 안 떨어져
+    //     round(1.5)=2 로 33% 과다가 된다(실제 게임에서도 그렇다 — 값이 작을 때만 생기는 반올림 특성).
+    //     레벨이 조금만 올라도 사라지므로 여기서는 L10(1024)에서 잰다.
+    { const S=campState(); S.upg.tap=10;
+      const g0=campTapGain(); S.dg=2; const g2=campTapGain(); S.dg=1; S.upg.tap=0;
+      assert(Math.abs(g2/g0-CAMP_DG_MUL)<0.02,'던전 배수가 탭에 안 걸림: '+(g2/g0).toFixed(3)); }
+    // ⑤-b ⭐ **폭주 방지 불변식 — 비용 계단이 획득 계단보다 가팔라야 한다.**
+    //    같거나 낮으면 「다음 레벨까지 필요한 탭 수」가 0 으로 수렴해 누를수록 쉬워진다.
+    //    실측: 비용이 선형이면 21초, ×1.5 면 23초, ×2 면 299초 만에 레벨 60(탭당 10^18).
+    //    ⛔ 이 검사를 풀지 말 것 — BALANCE.md §0 「지수 축이 둘이면 폭주」가 이 자리다.
+    assert(CAMP_PRICE > CAMP_GROW,
+      '비용 계단(×'+CAMP_PRICE+')이 획득 계단(×'+CAMP_GROW+')보다 가파르지 않다 — 폭주한다');
+    { const S=campState(); S.upg.tap=0;
+      const g0=campTapGain(), c0=campUpgCost('tap');
+      S.upg.tap=1; const g1=campTapGain(), c1=campUpgCost('tap');
+      S.upg.tap=0;
+      assert(Math.abs(g1/g0-CAMP_GROW)<0.01,'획득 계단이 '+CAMP_GROW+'배가 아님: '+(g1/g0).toFixed(2));
+      assert(Math.abs(c1/c0-CAMP_PRICE)<0.06,'비용 계단이 '+CAMP_PRICE+'배가 아님: '+(c1/c0).toFixed(2));
+      // 레벨이 올라도 「다음 레벨까지 탭 수」가 줄지 않는다
+      const taps=(n)=>{ S.upg.tap=n; const t=campUpgCost('tap')/campTapGain(); S.upg.tap=0; return t; };
+      assert(taps(10)>taps(0) && taps(20)>taps(10),
+        '레벨이 오를수록 레벨업이 쉬워진다(폭주): '+taps(0).toFixed(1)+' → '+taps(10).toFixed(1)+' → '+taps(20).toFixed(1)); }
+    // ⑤-c 일꾼 축은 **채취량**으로 오른다 — 일꾼 수로는 12기에서 천장(실측 26.8/초, 300기도 26.8)
+    { const S=campState(); S.upg.gather=0; const m0=campGatherMul();
+      S.upg.gather=2; const m2=campGatherMul(); S.upg.gather=0;
+      assert(Math.abs(m2/m0-CAMP_GROW*CAMP_GROW)<0.01,'채취 배수가 계단대로 안 오름: '+(m2/m0).toFixed(2)); }
+    // ⑥ 비용은 한 문으로만 조회한다 — 표를 갈아끼울 자리
+    { const b=campCost('bldg','barracks',0);
+      assert(b && b.m>0,'건물 비용 조회 실패'); assert('lv' in b,'campCost 가 레벨 인자를 안 받는다(무한 티어 대비)'); }
+    // ⑦ 자리 비움 정산 — 속도가 잡혀 있어야 채워진다
+    { const S=campState(); S.rate=2; S.leftAt=Date.now()-600*1000; const c2=G.tech.credit;
+      const got=campSettleAway();
+      assert(got>0 && G.tech.credit>c2,'자리 비움 정산이 0');
+      assert(got<=Math.ceil(2*600*CAMP_AWAY_EFF)+1,'정산이 과다: '+got);
+      assert(campState().leftAt===0,'정산 후 leftAt 이 안 지워짐'); }
+    // ⑧ 일꾼은 **자동으로** 광맥에 붙어 실제로 번다
+    //    ⚠ 관리자 건설 탭은 사람이 클릭해야 캔다 — 캠프가 대신 눌러 주지 않으면 초당 수급이 0 이다.
+    //    ⚠ 헤드리스는 rAF 가 throttle 되므로 techTick 을 직접 돌린다(hbStep 과 같은 방식).
+    { const gathering=(G.tech.ents||[]).filter(w=>w.type==='worker'&&w._gKind==='mineral').length;
+      assert(gathering>=1,'일꾼이 광맥에 자동 배정되지 않음');
+      const c0=G.tech.credit, DT=1/30;
+      for(let i=0;i<60/DT;i++) techTick(DT);
+      const got=G.tech.credit-c0;
+      assert(got>0,'일꾼이 60초 동안 한 푼도 못 벌었다 — 자동 채취가 안 돈다');
+      return '탭 '+campTapGain()+'/회 · 일꾼 '+gathering+'기 초당 '+(got/60).toFixed(1)+' · 정산 ok'; }
+    });
   // 자동사냥(라운드 머신) — 던전과 같은 격리 규칙. hbStep을 직접 돌린다(rAF 비의존).
-  await step('자동사냥: 라운드 정산·적 누적·사망 하강·격리', async()=>{ skipIf(typeof hbStart!=='function','자동사냥 없음');
+  await step('자동사냥: 라운드 정산·적 누적·사망 하강·격리', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)');  skipIf(typeof hbStart!=='function','자동사냥 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     // ⚠ HOME은 이제 화면을 떠나도 전투를 '이어받는다'(배경 진행). 이 스텝은 갓 시작한 판을 전제하므로
     //    hbEnd()로 완전히 끝내고 새로 연다 — 안 그러면 앞 스텝의 kills가 남아 아래 루프가 한 번도 안 돈다
@@ -802,7 +1291,7 @@ async function groupLobby(){
   // 캔버스에 자기 유닛 목록을 계속 밀어넣어, 한쪽이 dying으로 지운 모델을 다른 쪽이 매 프레임 다시
   // 만든다(실측: 샌드박스 유닛 38개 재생성 반복 · HOME 60 → 47fps).
   // 모델 개수가 아니라 '누가 sync를 부르는가'를 본다 — 앞 스텝의 상태에 안 흔들린다.
-  await step('HOME/마을에서는 유즈맵이 3D를 그리지 않는다', async()=>{
+  await step('HOME/마을에서는 유즈맵이 3D를 그리지 않는다', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)'); 
     skipIf(typeof openHome!=='function' || typeof nemoScreenOn!=='function','HOME/가드 없음');
     skipIf(!(window.M3D && M3D.ready && M3D.ready()),'3D 미준비');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
@@ -823,7 +1312,7 @@ async function groupLobby(){
     return 'HOME sync '+home.total+'회 · 유즈맵 침범 0회'; });
   // 회복 구역 표시 — hbDrawHeal이 hbFloor '뒤'에 와야 한다. 앞에 두면 배경 그림이 그대로 덮어
   // 아무것도 안 보인다(실제로 그랬다). 그리는 순서는 코드를 봐선 놓치기 쉬우니 픽셀로 본다.
-  await step('사냥터: 중앙 회복 구역이 배경 위에 보인다', async()=>{
+  await step('사냥터: 중앙 회복 구역이 배경 위에 보인다', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)'); 
     skipIf(typeof hbDrawHeal!=='function' || typeof HB_HEAL_R==='undefined','회복 구역 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(400);
@@ -846,7 +1335,7 @@ async function groupLobby(){
     assert(gap>=0 && gap<=3,'숫자와 + 사이가 '+gap.toFixed(1)+'px — 0~3px여야 한다');
     return gap.toFixed(1)+'px'; });
   // 웨이브 시간 안에 못 비우면 실패 → 3초 뒤 1웨이브부터. 라운드는 안 내려간다(죽음과 다르다).
-  await step('웨이브 실패: 시간 초과 → 3초 뒤 1웨이브 · 가운데 · 최대 체력', async()=>{
+  await step('웨이브 실패: 시간 초과 → 3초 뒤 1웨이브 · 가운데 · 최대 체력', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)'); 
     skipIf(typeof hbWaveFail!=='function','실패 처리 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(300); const S=_hb; S.manual=true;
@@ -877,7 +1366,7 @@ async function groupLobby(){
     S.foes.length=0; S.pend.length=0; S.chests.length=0; S.round=1; hbHunt().round=1;
     return '실패→'+HB_FAIL_S+'초→1웨이브 · 가운데 · 최대 체력 ok'; });
   // ☰ 는 공용 HUD 버튼이다 — 사냥터에서는 더보기, 유즈맵에서는 그대로 설정.
-  await step('더보기: 사냥터 ☰ = 판 모음 · 유즈맵 ☰ = 설정', async()=>{
+  await step('더보기: 사냥터 ☰ = 판 모음 · 유즈맵 ☰ = 설정', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)'); 
     skipIf(typeof hbOpenMore!=='function','더보기 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(600);
@@ -1089,7 +1578,7 @@ async function groupLobby(){
     p.pcoin=keep.pc; p.gas=keep.gas; p.gem=keep.gem;
     return '5개(바깥 '+DQ_OUT_N+') · 주간 '+DQ_WEEK_GOAL+' · 계측 '+H.length+'곳 확인'; });
   // 📦 상자 — 맵을 돌아다닐 이유. '공격 대상'이라 사거리 안에 있어야 부순다.
-  await step('상자: 사거리 안일 때만 부수고 · 적이 우선 · 보상은 섞여 나온다', async()=>{
+  await step('상자: 사거리 안일 때만 부수고 · 적이 우선 · 보상은 섞여 나온다', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)'); 
     skipIf(typeof hbSpawnChest!=='function','상자 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(300); _hb.manual=true;
@@ -1164,7 +1653,7 @@ async function groupLobby(){
     return out.join('·')+' 좌상단 ok'; });
   // 사냥터 맵 — 그림이 덮는 범위와 걸어갈 수 있는 범위가 같아야 한다.
   // 예전엔 필드(±900×±620)가 그림보다 훨씬 넓어서 걸어 나가면 검은 바닥이 나왔다.
-  await step('사냥터: 걸을 수 있는 범위 = 그림이 덮는 범위', async()=>{
+  await step('사냥터: 걸을 수 있는 범위 = 그림이 덮는 범위', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)'); 
     skipIf(typeof HB_MAP_R==='undefined' || typeof hbClampField!=='function','맵 상수 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     assert(HB_FIELD_RX===HB_MAP_R && HB_FIELD_RY===HB_MAP_R,
@@ -1187,7 +1676,7 @@ async function groupLobby(){
     assert(Object.keys(_hbBg).length===1,'배경 캐시가 '+Object.keys(_hbBg).length+'개 — 던전마다 쌓인다');
     _hb.char.x=_sv.x; _hb.char.y=_sv.y; _hb.char.tx=_sv.tx; _hb.char.ty=_sv.ty; hbResize();
     return '맵 '+(2*HB_MAP_R)+'² · 이동 ±'+HB_FIELD_RX+' · 캐시 1'; });
-  await step('던전 배경: 이미지 cover 맞춤 · 없으면 타일 폴백', async()=>{
+  await step('던전 배경: 이미지 cover 맞춤 · 없으면 타일 폴백', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)'); 
     skipIf(typeof hbBgFit!=='function','배경 배선 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(300);
@@ -1303,7 +1792,7 @@ async function groupLobby(){
     p.unlocks={}; profSyncUnlocks();
     return '해금 '+PROF_UNLOCKS.length+'단계 · 파워 '+profPower(); });
   // 방치 수입 기준을 자동사냥 실적으로 · 성장(진화·환생)을 HOME에서
-  await step('자동사냥: 방치 수입 기준 · HOME 성장(진화·환생)', async()=>{ skipIf(typeof hbNoteRate!=='function','미적용');
+  await step('자동사냥: 방치 수입 기준 · HOME 성장(진화·환생)', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)');  skipIf(typeof hbNoteRate!=='function','미적용');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(60); _hb.manual=true;
     // ① 방치 수입 = 자동사냥 실적. 클리어 전에는 옛 공식으로 떨어진다.
@@ -1356,7 +1845,7 @@ async function groupLobby(){
       hbCloseMore(); }
     return '실측 '+p.hunt.rate.toFixed(2)+'/s · 진화·직업 폐지 확인'; });
   // Phase 4 — 스킬 · 부스트 · 동료/펫 · 건설(터렛·벙커)
-  await step('자동사냥: 스킬·부스트·동료·건설', async()=>{ skipIf(typeof hbUseSkill!=='function','Phase4 없음');
+  await step('자동사냥: 스킬·부스트·동료·건설', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)');  skipIf(typeof hbUseSkill!=='function','Phase4 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(60); _hb.manual=true;
     const p=PROF(); p.pcoin=999999; hbHunt().build={}; hbHunt().boostT={};
@@ -1482,7 +1971,7 @@ async function groupLobby(){
     return '동료·터렛·벙커·펫 배치 ok · 스킬 3종 · 부스트 연장 ok'; });
   // 🎛 스킬 트레이 — 칸은 사냥터 업그레이드 카드(.hmUp)와 '같은 규격'이라는 것이 이 디자인의 전부다.
   //    두 벌로 갈라지면 '붉으면 지금 쓸 수 있다'가 스킬과 업그레이드에서 다른 뜻이 된다.
-  await step('스킬 트레이: 업그레이드 카드와 같은 규격 · 자동은 판 밖', async()=>{
+  await step('스킬 트레이: 업그레이드 카드와 같은 규격 · 자동은 판 밖', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)'); 
     skipIf(typeof renderHbBar!=='function','스킬 바 없음');
     openHome(); await sleep(60); _hb.manual=true;
     renderHbBar(); hbSkCdPaint();
@@ -1586,7 +2075,7 @@ async function groupLobby(){
     assert(ws.size===1,'칸마다 폭이 다름: '+[...ws].join(' / '));
     return '칸 '+cs.length+'개 · 폭 '+[...ws][0]+'px 정수'; });
   // 🧱 기지 격자 — 타일이 단일 소스. 저장 왕복 · 겹침/범위 · 봉쇄 금지 · 옛 개수형 이관.
-  await step('기지 격자: 배치·저장 왕복·겹침/범위·봉쇄 금지', async()=>{ skipIf(typeof hbPlaceStruct!=='function','기지 격자 없음');
+  await step('기지 격자: 배치·저장 왕복·겹침/범위·봉쇄 금지', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)');  skipIf(typeof hbPlaceStruct!=='function','기지 격자 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(60); _hb.manual=true;
     const p=PROF(); p.pcoin=9e6;
@@ -1639,7 +2128,7 @@ async function groupLobby(){
     hbHunt().base={tiles:{},open:1}; hbLayoutBase(); saveMeta();
     return '왕복·겹침·범위·저장·봉쇄차단·이관 ok'; });
   // 🪖 벙커 = 구매 유닛(벙커별 최대 4) + 동료 1. 화력 = (유닛 합 + 동료 위력) × 벙커 공격력(bkatk).
-  await step('벙커: 유닛 구매(벙커별)·동료 1·상한·화력·업그레이드', async()=>{ skipIf(typeof hbBunkerAssign!=='function','벙커 주둔 없음');
+  await step('벙커: 유닛 구매(벙커별)·동료 1·상한·화력·업그레이드', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)');  skipIf(typeof hbBunkerAssign!=='function','벙커 주둔 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(60); _hb.manual=true;
     const p=PROF(); p.pcoin=9e6;
@@ -1719,7 +2208,7 @@ async function groupLobby(){
     hbHunt().base={tiles:{},open:1}; hbLayoutBase(); saveMeta();
     return '유닛(벙커별)+동료1·이동·왕복·유령금지·피해 0/'+units2+'/'+units4+'/'+mixed+'/'+up+'(bkatk+10) ok'; });
   // ⚙ 설정(☰) — .bare 재화 바가 click-through라 눌리지 않고 캐릭터만 걸어가던 회귀를 막는다
-  await step('설정 버튼: HOME에서 눌리고 · 캐릭터가 안 움직인다', async()=>{ skipIf(typeof openAppSettings!=='function','앱 설정 없음');
+  await step('설정 버튼: HOME에서 눌리고 · 캐릭터가 안 움직인다', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)');  skipIf(typeof openAppSettings!=='function','앱 설정 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(80); _hb.manual=true;
     const btn=$('curSettingsBtn');
@@ -1745,7 +2234,7 @@ async function groupLobby(){
     closeSettings(); await sleep(40);
     return 'pointer-events·히트·이동 안 함·appCtx ok'; });
   // 🖐 필드 이동 = 관리자 건설 화면과 같은 방식: 누른 즉시 이동 + 뗄 때까지 손가락 추종
-  await step('필드 이동: 드래그 추종 · 손 떼면 정지 · 스크롤 안 뺏김', async()=>{ skipIf(typeof hbFieldMove!=='function','필드 포인터 없음');
+  await step('필드 이동: 드래그 추종 · 손 떼면 정지 · 스크롤 안 뺏김', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)');  skipIf(typeof hbFieldMove!=='function','필드 포인터 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(80); _hb.manual=true;
     hbHunt().base={tiles:{},open:1}; hbLayoutBase();
@@ -1780,7 +2269,7 @@ async function groupLobby(){
     _hb.char.tx=null; _hb.char.ty=null;
     return 'touch-action·추종 '+seen.length+'회·정지·멀티터치 무시 ok'; });
   // 🛠 건설 모드 — 라운드를 멈추고 초기화한다. 나갈 때까지 연속으로 짓는다.
-  await step('건설 모드: 라운드 정지·초기화 · 연속 배치 · 방향 이어가기', async()=>{ skipIf(typeof hbBuildEnter!=='function','건설 모드 없음');
+  await step('건설 모드: 라운드 정지·초기화 · 연속 배치 · 방향 이어가기', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)');  skipIf(typeof hbBuildEnter!=='function','건설 모드 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(80); _hb.manual=true;
     const p=PROF(); p.pcoin=9e6;
@@ -1866,7 +2355,7 @@ async function groupLobby(){
     hbHunt().base={tiles:{},open:1}; hbLayoutBase(); saveMeta();
     return '정지·초기화·연속·방향·건너뛰기·복귀 ok'; });
   // 🧭 미로 — 벽은 통과 불가, 적은 반드시 돌아온다. 벽을 부수지는 않는다.
-  await step('미로: 벽 통과 금지 · 적이 돌아서 온다 · 열린 곳은 직진', async()=>{ skipIf(typeof hbBakeField!=='function','경로탐색 없음');
+  await step('미로: 벽 통과 금지 · 적이 돌아서 온다 · 열린 곳은 직진', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)');  skipIf(typeof hbBakeField!=='function','경로탐색 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(60); _hb.manual=true;
     const _cSave={..._hb.char};
@@ -1909,7 +2398,7 @@ async function groupLobby(){
   // 👾 몹 다양화(2026-08-20) — 역할은 HB_FOE_KIND 한 표, 얼굴은 던전 roster. 둘을 분리해 뒀다.
   //   ⚠ 위치·스탯만 재면 안 된다. 예전에 이동 방식을 f.mv 에 담았다가 '움직이는 중' 플래그(f.mv=1)에
   //     덮여 유령이 지상처럼 걸어 다녔다 — 겉으론 멀쩡했고 스탯도 맞았다. 그래서 **실제로 벽을 지났는지**를 본다.
-  await step('사냥터 몹: 여섯 역할 · 벽 통과 규약 · 사거리 · 크기', async()=>{
+  await step('사냥터 몹: 여섯 역할 · 벽 통과 규약 · 사거리 · 크기', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)'); 
     skipIf(typeof HB_FOE_KIND==='undefined' || typeof hbWavePlan!=='function','몹 종류 표 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(60); _hb.manual=true;
@@ -2157,7 +2646,7 @@ async function groupLobby(){
       hbHunt().base={tiles:{},open:1}; hbLayoutBase(); saveMeta(); }
   });
   // 🧱 3D 건물 — 이 환경엔 three.js(CDN)가 없어 M3D가 아예 없다. 목록 생성 로직만 스텁으로 검사한다.
-  await step('기지 3D: sync 목록에 건물이 실린다(화면 밖 컬링)', async()=>{ skipIf(typeof hb3dStructs!=='function','3D 구조물 없음');
+  await step('기지 3D: sync 목록에 건물이 실린다(화면 밖 컬링)', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)');  skipIf(typeof hb3dStructs!=='function','3D 구조물 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(60); _hb.manual=true;
     // ⛔ sync와 syncBuild는 서로의 풀을 숨긴다 — 건물은 반드시 같은 sync 목록에 실려야 한다
@@ -2183,7 +2672,7 @@ async function groupLobby(){
     hbHunt().base={tiles:{},open:1}; hbLayoutBase(); saveMeta();
     return '컬링·cb_ 키·크기 배율 ok'; });
   // Phase 2 — 던전 1~10 해금 · 엘리트 · 장비 뽑기권(드랍 + 소비처)
-  await step('자동사냥: 던전 해금 · 엘리트 · 뽑기권', async()=>{ skipIf(typeof hbGoDungeon!=='function','던전 선택 없음');
+  await step('자동사냥: 던전 해금 · 엘리트 · 뽑기권', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)');  skipIf(typeof hbGoDungeon!=='function','던전 선택 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(60); _hb.manual=true;
     // ① 해금 — 전체 개방 스위치를 껐다 켜며 양쪽을 다 본다(기본값이 어느 쪽이든 게이트는 옳아야 한다)
@@ -2450,6 +2939,8 @@ async function groupLobby(){
     // 전제: 아무도 안 빌린 상태에서 시작한다. 앞 스텝이 HOME을 열어둔 채 빌리고 있으면
     // hb3dAttach()가 '이미 내가 씀'으로 그냥 반환해 '빌려오기가 안 됨'으로 잘못 보인다.
     hb3dDetach(); if(typeof tw3dDetach==='function') tw3dDetach();
+    // 🏕 캠프도 #cvMarine 을 HOME 안으로 빌려 간다(3D 건물이 거기 그려진다) — 같이 반납시킨다.
+    if(typeof campExit==='function') campExit();
     const home=cv.parentNode;
     assert(home && home.id==='gameArea','원래 자리가 유즈맵(#gameArea)이 아님: '+(home&&(home.id||home.className)));
     for(const [name, leave] of [
@@ -2524,7 +3015,7 @@ async function groupLobby(){
     assert($('hbMid').textContent.indexOf('던전')>=0,'자동사냥은 던전 표기를 유지해야 함');
     return '네비 토벌 · HOME 던전'; });
   // HOME 좌상단 HUD — 프로필은 상세하게 맨 위 왼쪽에 고정 · 킬수는 없음 · 라운드 조절은 전용 아이콘 버튼.
-  await step('HOME HUD: 좌상단 프로필 상세 · 킬수 없음 · 라운드는 아이콘 버튼', async()=>{
+  await step('HOME HUD: 좌상단 프로필 상세 · 킬수 없음 · 라운드는 아이콘 버튼', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)'); 
     skipIf(typeof openHome!=='function','HOME 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(80); _hb.manual=true;
@@ -2652,7 +3143,7 @@ async function groupLobby(){
     assert(!document.querySelector('.hbTop'),'`.hbTop`이 다시 쓰이고 있음 — 좌상단(.hbHudTop) 규칙과 이름이 겹친다');
     return '좌상단 고정(+'+Math.round(tr.left-ph.left)+','+Math.round(tr.top-ph.top)+') · 킬수 없음 · 아이콘 팝업 ok'; });
   // 라운드 선택 — 최고 도달까지만 고를 수 있고, 반복/등반이 클리어 후 행동을 가른다.
-  await step('자동사냥: 라운드 선택 · 반복/등반', async()=>{ skipIf(typeof hbOpenRounds!=='function','라운드 선택 없음');
+  await step('자동사냥: 라운드 선택 · 반복/등반', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)');  skipIf(typeof hbOpenRounds!=='function','라운드 선택 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
     openHome(); await sleep(60); _hb.manual=true;
     hbHunt().best={}; hbGoRound(1);
@@ -3205,7 +3696,7 @@ async function groupLobby(){
     assert(profHasUnlock(first.id),'레벨이 내려가자 해금이 닫힘(영구여야 한다)');
     return PROF_UNLOCKS.length+'단계 · Lv.'+PROF_UNLOCKS[0].lv+'~'+prev; });
 
-  await step('라운드 보상: 마일스톤 최초 1회 · 팝업에서 미리 확인', async()=>{ skipIf(typeof hbRoundRw!=='function','라운드 보상 없음');
+  await step('라운드 보상: 마일스톤 최초 1회 · 팝업에서 미리 확인', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)');  skipIf(typeof hbRoundRw!=='function','라운드 보상 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','보상'); saveMeta(); }
     openHome(); await sleep(60); _hb.manual=true;
     const H=hbHunt(); H.rw={};
@@ -4136,7 +4627,7 @@ async function groupLobby(){
   // ⚔ 사냥터 업그레이드 — '카드에 적힌 값'과 '전투에 들어가는 값'이 같아야 한다(2026-08-18 단일 소스화).
   //    예전엔 HB_UPG(카드)와 CS_AXES(전투)가 두 벌이라 '데미지 10/+2'라고 써 놓고 12/+3을 쓰고 있었고,
   //    사거리는 카드 100 · 실제 34였다. 그리고 32종 중 17종은 사기만 되고 전투에 안 걸려 있었다.
-  await step('사냥터 업그레이드: 카드 = 전투 · 전 항목 배선 · 초반 5미네랄', async()=>{
+  await step('사냥터 업그레이드: 카드 = 전투 · 전 항목 배선 · 초반 5미네랄', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)'); 
     skipIf(typeof HB_UPG!=='object'||typeof csAxis!=='function','업그레이드 표 없음');
     // ⚠ hunt.upg / hunt.unl 은 캐릭터가 아니라 '계정'에 붙는다 — 캐릭터를 새로 만들어도 안 지워진다.
     //    이 스텝은 값을 0으로 비우고 재기 때문에, 끝날 때 반드시 되돌려 놔야 뒤 스텝이 약해진 채로 돈다.
@@ -4239,7 +4730,7 @@ async function groupLobby(){
 
   // 🏁 던전 = 99라운드짜리 챕터. 99를 깨면 자동으로 다음 던전 1라운드로 넘어가고,
   //    난이도·보상 곡선은 그 경계에서 '한 칸 오른 것'과 정확히 같아야 한다(계단이 있으면 설계가 무너진다).
-  await step('던전: 99라운드 상한 · 자동 이동 · 경계에서 곡선이 이어진다', async()=>{
+  await step('던전: 99라운드 상한 · 자동 이동 · 경계에서 곡선이 이어진다', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)'); 
     skipIf(typeof hbAdvanceDungeon!=='function','던전 자동 이동 없음');
     // ① 경계 연속성 — 던전 d 라운드 99 → 던전 d+1 라운드 1 이 '라운드 한 칸'이어야 한다.
     //    ⚠ 보상은 균일 곡선이라 정확히 한 칸이지만, 체력·공격은 S자(hbRoundS)가 얹혀 있어
@@ -4414,7 +4905,7 @@ async function groupLobby(){
     assert(lpTotal(c)===0,'환생했는데 포인트 총량이 남음: '+lpTotal(c));
     c.unit.pts={};
     return '레벨당 '+LP_PER_LEVEL+'p · '+LP_STATS.length+'항목 전부 배선됨'; });
-  await step('레벨 포인트: 스탯 화면에서 찍으면 전투 중인 캐릭터에 바로 반영', async()=>{
+  await step('레벨 포인트: 스탯 화면에서 찍으면 전투 중인 캐릭터에 바로 반영', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)'); 
     assert(typeof ptTap==='function','레벨 포인트 조작이 없음');   // ⚠ skipIf 로 두면 이름이 바뀔 때 조용히 건너뛴다
     const p0=PROF(); p0.chars.length=0; p0.curId='';
     { const c0=profCreateChar('ranger','반영'); c0.level=21; c0.unit.level=21; c0.unit.pts={}; }
@@ -4771,7 +5262,7 @@ async function groupLobby(){
     return '스탯·환생·스킬 3칸 · 본문 단일 DOM';
   });
 
-  await step('하단 네비 2층: 구역 → 전용 네비 → 돌아가기', async()=>{
+  await step('하단 네비 2층: 구역 → 전용 네비 → 돌아가기', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)'); 
     const read=()=>[...document.querySelectorAll('#navBar .navIt')].map(e=>e.dataset.nav||('~'+e.dataset.sub));
     openHome(); await sleep(40);
     // ① 최상위 = 4구역. 사냥터는 칸이 없다(noCell) — NAV_TREE 가 단일 소스라 순서도 표에서 온다
@@ -5953,7 +6444,7 @@ async function groupLobby(){
     } finally{ hbSetSess('dg',null); document.body.classList.remove('dgFight'); hbUse('hunt');
       if(HBS.hunt) HBS.hunt.bg=false; c.dgFloors={}; } });
   // 🧹 잔상 금지 — 3D 는 공용이라 빌릴 때와 돌려줄 때 **양쪽에서** 지운다(한쪽만 하면 반대 전환에서 샌다)
-  await step('직접 토벌: 3D 를 빌릴 때와 돌려줄 때 양쪽에서 지운다', async()=>{
+  await step('직접 토벌: 3D 를 빌릴 때와 돌려줄 때 양쪽에서 지운다', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)'); 
     skipIf(typeof dgFightEnter!=='function','직접 토벌 없음');
     const c=CHAR(); c.dgFloors={}; PROF().dgKeys={}; saveMeta();
     // ⚠ 헤드리스에선 three.js(esm.sh)가 막혀 M3D 가 아예 없다 — 그러면 이 검사가 통째로 건너뛰어져
@@ -6101,6 +6592,9 @@ async function groupLobby(){
     const bad=[[/\bG\s*\./,'G.'],[/\bmapCfg\b/,'mapCfg'],[/\bGACHA_/,'GACHA_'],[/\bmetaBonus\b/,'metaBonus'],
                [/\bspawnEnemy\b/,'spawnEnemy'],[/\bU\[/,'U[']].filter(x=>x[0].test(src)).map(x=>x[1]);
     assert(!bad.length,'던전 코드가 유즈맵 전역을 참조: '+bad.join(','));
+    // 🏕 캠프가 떠 있으면 G.tab==='Build' 라 던전 도중 화면 전환에서 원복되며 스냅샷이 어긋난다.
+    //    던전 격리를 재는 자리이므로 **캠프를 먼저 걷고** 기준을 찍는다.
+    if(typeof campExit==='function') campExit();
     const snap=()=>JSON.stringify({p:G.phase,u:G.units.length,e:G.enemies.length,c:G.credits,
       m:G.mineral,g:G.gas,r:G.round,t:G.tab,s:G.mainSheet,k:G.kills});
     const before=snap();

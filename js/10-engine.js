@@ -286,7 +286,13 @@ function drawRecallSpawn(ctx,ox,oy,rc){ const life=Math.max(0,rc.life), p=1-life
 function fxLevel(){ return (typeof G!=='undefined'&&G.opt&&G.opt.fx)||'full'; }
 function fxLite(){ return fxLevel()!=='full'; }   // min·off → 빔/타격/스파크/연기/총구/충전/가동파티클 생략
 function fxOff(){ return fxLevel()==='off'; }      // off → 발사체까지 제거
-function drawMain(cvId){ const {ctx,W,H}=setup(cvId||'cvMain'); GW=W;GH=H;
+function drawMain(cvId){ const {ctx,W,H}=setup(cvId||'cvMain');
+  // 🛡 숨겨진 캔버스(0×0)에는 그리지 않는다. buildFloor 가 0크기 캔버스를 만들어 두면
+  //    다음 줄의 drawImage 가 InvalidStateError 를 던진다 — 화면에 안 보이는 채로 예외만 쌓인다.
+  //    다른 뷰(건설 등)가 켜져 있어 #cvMain 이 접혀 있을 때 실제로 그랬다.
+  //    ⚠ GW/GH 도 이때는 갱신하지 않는다 — 0 이 새면 좌표 계산이 통째로 망가진다.
+  if(!W || !H) return;
+  GW=W;GH=H;
   if(typeof G!=='undefined' && G.sandbox){ const _va=viewApply(ctx,W,H); if(G.tab==='Battle') drawBattleGround(ctx,W,H); else drawSandboxGround(ctx,W,H); viewRestore(ctx,_va); return; }
   const _vapply=viewApply(ctx,W,H);   // 화면 줌/팬 변환 시작(기본 뷰면 미적용)
   const {side,ox,oy}=geom(W,H); const R=10;
