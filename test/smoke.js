@@ -713,7 +713,10 @@ async function groupLobby(){
       // ⛽ 오른쪽 가스도 **왼쪽과 같은 실물**이어야 한다 — 구역 표시만 있으면 빈 땅으로 보인다.
       //   3D 노드는 renderBuildTab 이 목록에 하나만 넣으므로(14-input-fx.js:951) 캠프가
       //   M3D.syncBuild 를 감싸 하나 더 얹는다. ⚠ 바깥에서 가로채면 안 보인다(패치보다 앞이다).
-      { let seen=null; const inner=_campSyncOrig;
+      // ⚠ 3D 모듈(js/90-m3d.module.js)은 three.js 를 외부 CDN(esm.sh)에서 받는다. 오프라인·차단 환경에서는
+      //   window.M3D 가 아예 안 생기고, 그러면 campPatchSync 도 걸리지 않는 것이 정상이다(감쌀 대상이 없다).
+      //   그래서 3D 가 실제로 올라온 환경에서만 검사한다 — 다른 3D 스텝들의 '3D 미준비' 건너뜀과 같은 규칙.
+      if(window.M3D && typeof M3D.syncBuild==='function'){ let seen=null; const inner=_campSyncOrig;
         assert(typeof inner==='function','M3D.syncBuild 패치가 안 걸렸다 — 오른쪽 가스 3D 가 안 선다');
         _campSyncOrig=function(list){ seen=(list||[]).filter(x=>x&&x.id==='res_en').map(x=>x.uid); return inner.apply(this,arguments); };
         for(let i=0;i<3;i++) campFrame(performance.now()+i*33);
@@ -775,6 +778,8 @@ async function groupLobby(){
       // 맵(#vBuild)과 3D 캔버스(#cvMarine)가 **시트 위에서 끝난다.** 둘은 같은 크기여야 한다 —
       // renderBuildTab 이 #cstMain 크기를 그대로 3D 캔버스 크기로 넘기기 때문이다.
       const vb=document.getElementById('vBuild'), mc=document.getElementById('cvMarine');
+      // ⚠ 3D 캔버스 크기는 M3D 가 올라와야 잡힌다(three.js 를 외부 CDN 에서 받는다) — 없으면 0×0 이 정상이다
+      if(window.M3D && typeof M3D.syncBuild==='function')
       assert(vb.clientHeight===mc.clientHeight&&vb.clientWidth===mc.clientWidth,
         '3D 캔버스가 맵과 크기가 다르다 — 건물이 엉뚱한 자리에 선다: 맵 '+vb.clientWidth+'x'+vb.clientHeight
         +' vs 3D '+mc.clientWidth+'x'+mc.clientHeight);
@@ -1045,7 +1050,7 @@ async function groupLobby(){
       const gl=_techW2S(TECH_GRID.x0,0.5).x, gr=_techW2S(TECH_GRID.x1,0.5).x;
       assert(gl<0.1&&gr>0.9,'격자가 화면 가로를 못 채운다: '+gl.toFixed(2)+'~'+gr.toFixed(2));
       // 💎 미네랄·운반물은 renderBuildTab 이 fitW·scl 없이 넣는다 — 캠프가 셀 축소를 얹어야 한다
-      { let cap=null; const o=_campSyncOrig;
+      if(window.M3D && typeof M3D.syncBuild==='function'){ let cap=null; const o=_campSyncOrig;
         _campSyncOrig=function(l){ if(!cap) cap=l.slice(); return o.apply(this,arguments); };
         campFrame(performance.now()); _campSyncOrig=o;
         const mn=(cap||[]).filter(i=>i&&/^mn_/.test(i.uid||''));

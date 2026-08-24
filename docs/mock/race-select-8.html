@@ -1,0 +1,269 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>종족 선택 — 8안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;700&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{--font-ko:'Noto Sans KR','Apple SD Gothic Neo',sans-serif;--font-ti:'Jua','Apple SD Gothic Neo',sans-serif;
+ --font-num:'Rajdhani','Noto Sans KR',sans-serif;--neon:#ff3b3b;--metal-edge:#3c3e46;--acc-sel:#5cd6ff;
+ --txt:#e0dcdc;--txt-mute:#9aa0a8;--gold:#ffd24a;--r-bar:3px;--r-md:6px;--r-lg:9px;
+ --fs-xs:9.5px;--fs-sm:10px;--fs-md:11px;--fs-lg:12px;--fs-xl:13px}
+*{box-sizing:border-box}
+body{margin:0;background:#07080b;color:var(--txt);font-family:var(--font-ko);font-size:var(--fs-md)}
+button{font-family:inherit;background:none;border:none;color:inherit}
+.wrap{max-width:1560px;margin:0 auto;padding:22px}
+h1{font-family:var(--font-ti);font-size:19px;margin:0 0 4px;color:#fff}
+.lead{color:var(--txt-mute);font-size:var(--fs-lg);margin:0 0 20px;line-height:1.7}
+.lead b{color:var(--gold)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:20px}
+.cap{font-family:var(--font-ti);font-size:var(--fs-xl);color:#fff;margin:0 0 3px}
+.cap i{font-style:normal;color:var(--acc-sel)}
+.cap u{text-decoration:none;color:var(--gold);font-size:var(--fs-sm)}
+.note{color:var(--txt-mute);font-size:var(--fs-sm);line-height:1.6;margin:0 0 9px;min-height:74px}
+.note b{color:#cfd6e2}
+/* 폰 프레임 — 전체 화면 안을 보여준다 */
+.phone{position:relative;width:300px;height:600px;overflow:hidden;background:#07080b;
+ border:1px solid #23252b;border-radius:var(--r-bar)}
+/* 배경 처리 3종 */
+.bgArt::before{content:'';position:absolute;inset:0;
+ background:radial-gradient(120% 70% at 50% 12%,#1b2430 0%,#0b0e13 55%,#06070a 100%);opacity:.9}
+.bgArt::after{content:'';position:absolute;inset:0;
+ background:linear-gradient(180deg,transparent 40%,rgba(4,5,7,.86) 82%)}
+.bgFlat{background:#08090c}
+.bgDim::before{content:'';position:absolute;inset:0;background:rgba(4,4,6,.82);backdrop-filter:blur(3px)}
+/* 뒤에 비치는 가짜 게임 화면(팝업안 전용) */
+.fake{position:absolute;inset:0;padding:10px;opacity:.5}
+.fake i{display:block;height:9px;margin-bottom:6px;border-radius:2px;background:#191b20}
+.fake i:nth-child(3n){width:62%}
+.scr{position:relative;z-index:1;height:100%;display:flex;flex-direction:column;padding:16px 14px 0}
+.hd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px}
+.ttl{font-family:var(--font-ti);font-size:20px;color:#fff;letter-spacing:.4px}
+.ttl.sm{font-size:15px}
+.sub{color:var(--txt-mute);font-size:var(--fs-sm);line-height:1.6;margin:2px 0 16px}
+.x{width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:#9a9a9a;font-size:15px}
+/* 아이콘 자리 — 그림은 나중에 */
+.ico{flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+ width:34px;height:34px;border-radius:var(--r-md);border:1px dashed rgba(255,255,255,.16);
+ color:#6c757f;font-size:8px;letter-spacing:-.2px;background:rgba(255,255,255,.02)}
+.ico.lg{width:52px;height:52px;font-size:9px}
+.ico.xl{width:72px;height:72px;border-radius:var(--r-lg);font-size:9.5px}
+/* ── 행 목록(설정 화면 문법) ───────────────────────── */
+.rows{display:flex;flex-direction:column}
+.row{display:flex;align-items:center;gap:11px;padding:13px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+.row:last-child{border-bottom:0}
+.rMain{min-width:0;flex:1}
+.rNm{font-size:var(--fs-xl);font-weight:700;color:#fff;line-height:1.35}
+.rDs{font-size:var(--fs-sm);color:var(--txt-mute);margin-top:2px}
+.go{color:#7b838d;font-size:13px}
+.row.on .rNm{color:var(--acc-sel)}
+.row.on .go{color:var(--acc-sel)}
+/* 선택형 행(카드) */
+.pick{display:flex;align-items:center;gap:11px;padding:11px;margin-bottom:8px;cursor:pointer;
+ border:1px solid rgba(255,255,255,.07);border-radius:var(--r-bar);
+ background:linear-gradient(180deg,#16171b,#0b0c0e);box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
+.pick.on{border-color:rgba(92,214,255,.5);background:linear-gradient(180deg,#152028,#0a1016)}
+.pick.on .rNm{color:#fff}
+.pick.on::after{content:'✓';margin-left:auto;color:var(--acc-sel);font-size:12px}
+/* 세로 3분할 */
+.thirds{flex:1;display:flex;flex-direction:column;margin:0 -14px}
+.third{flex:1;display:flex;align-items:center;gap:12px;padding:0 16px;border-top:1px solid rgba(255,255,255,.06)}
+.third.on{background:linear-gradient(90deg,rgba(92,214,255,.10),transparent 70%)}
+.third.on .rNm{color:#fff}
+.third .bar{position:absolute;left:0;width:2px;height:34px;background:var(--acc-sel);box-shadow:0 0 8px var(--acc-sel)}
+/* 가로 카드 3장 */
+.cards{display:flex;gap:8px}
+.card{flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;padding:14px 6px;
+ border:1px solid rgba(255,255,255,.07);border-radius:var(--r-bar);
+ background:linear-gradient(180deg,#16171b,#0b0c0e)}
+.card .rNm{font-size:var(--fs-lg)}
+.card .rDs{text-align:center;font-size:9px}
+.card.on{border-color:rgba(92,214,255,.5);background:linear-gradient(180deg,#152028,#0a1016)}
+/* 세그먼트 바(공용 .pdSeg 문법) */
+.seg{display:flex;gap:2px;padding:2px;border:1px solid rgba(255,255,255,.07);border-radius:var(--r-bar);
+ background:#0b0c0e}
+.segB{flex:1;padding:9px 0;text-align:center;font-family:var(--font-ti);font-size:var(--fs-lg);color:#8b939d}
+.segB.on{position:relative;color:#fff;background:#000;border-radius:2px}
+.segB.on::after{content:'';position:absolute;left:14%;right:14%;bottom:1px;height:1px;
+ background:var(--acc-sel);box-shadow:0 0 7px var(--acc-sel)}
+/* 스테퍼 */
+.step{display:flex;align-items:center;justify-content:space-between;padding:6px 2px}
+.step .arw{width:30px;height:30px;display:flex;align-items:center;justify-content:center;color:#8b939d;font-size:15px}
+.step .now{font-family:var(--font-ti);font-size:17px;color:#fff}
+.dots{display:flex;gap:5px;justify-content:center;margin-top:8px}
+.dots i{width:5px;height:5px;border-radius:50%;background:#2b2e34}
+.dots i.on{background:var(--acc-sel);box-shadow:0 0 6px var(--acc-sel)}
+/* 상세 판 */
+.det{margin-top:12px;padding:13px;border:1px solid rgba(255,255,255,.07);border-radius:var(--r-bar);
+ background:linear-gradient(180deg,#131418,#0a0b0e)}
+.det .dl{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:var(--fs-sm)}
+.det .dl:last-child{border-bottom:0}
+.det .dl b{color:#cfd6e2;font-weight:400}
+.det .dl u{text-decoration:none;color:var(--txt-mute)}
+/* 하단 확정 버튼 */
+.foot{margin-top:auto;padding:14px 0 16px}
+.actBtn{position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:44px;
+ overflow:hidden;font-family:var(--font-ti);font-size:var(--fs-xl);letter-spacing:.3px;color:#c6cdd6;
+ border:1px solid var(--metal-edge);border-radius:var(--r-bar);
+ background:linear-gradient(180deg,#24262b 0%,#15161a 46%,#0c0d10 100%);
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.13),inset 0 -6px 9px -6px #000,0 2px 4px -2px rgba(0,0,0,.7)}
+.actBtn::after{content:'';position:absolute;left:8%;right:8%;bottom:1px;height:2px;
+ background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent)}
+.actBtn.pri{color:#fff}
+.actBtn.pri::after{background:linear-gradient(90deg,transparent,var(--acc-sel),transparent);box-shadow:0 0 9px var(--acc-sel)}
+/* 하단 시트 */
+.sheet{position:absolute;left:0;right:0;bottom:0;padding:14px 14px 16px;
+ border-top:1px solid rgba(255,255,255,.09);border-radius:var(--r-lg) var(--r-lg) 0 0;
+ background:linear-gradient(180deg,#141519,#0a0b0d);box-shadow:0 -14px 32px -14px #000}
+.grab{width:34px;height:3px;border-radius:2px;background:#2f3238;margin:0 auto 12px}
+/* 팝업 카드 */
+.pop{position:absolute;left:14px;right:14px;top:50%;transform:translateY(-50%);
+ border:1px solid rgba(255,255,255,.09);border-radius:var(--r-bar);overflow:hidden;
+ background:linear-gradient(180deg,#17181c,#0b0c0f);box-shadow:0 16px 44px -12px #000}
+.popHd{display:flex;align-items:center;justify-content:space-between;padding:12px 13px 9px;
+ font-family:var(--font-ti);font-size:14px;color:#ececec;border-bottom:1px solid rgba(255,255,255,.07)}
+.popBd{padding:4px 13px 13px}
+</style></head><body><div class="wrap">
+<h1>종족 선택 — 8안</h1>
+<p class="lead">기준: <b>로딩 · 로그인 · 설정</b>(전체 화면 · 판 없음 · 구분선 하나 · 전체폭 중립 버튼).
+종족 <b>3종</b>(유니온·스웜·에테리얼). 점선 사각형은 <b>아이콘 자리</b>(그림은 나중).
+선택 표시는 <b>시안 한 곳</b>만 — DESIGN.md 액센트 규칙.</p>
+<div class="grid">
+
+<!-- A -->
+<div><div class="cap"><i>A</i> 전체 화면 · 행 목록 (설정 그대로)</div>
+<div class="note"><b>전체 · 배경 아트 은은</b><br>설정 화면 문법 그대로 — 판 없음, 구분선만, 탭하면 즉시 확정.
+가장 단정하고 기준과 100% 일치. 다만 <b>되돌릴 수 없는 선택인데 확인 단계가 없다.</b></div>
+<div class="phone bgArt"><div class="scr">
+ <div class="hd"><div class="ttl">종족 선택</div><div class="x">✕</div></div>
+ <div class="sub">한 번 고르면 바꿀 수 없습니다.</div>
+ <div class="rows">
+  <div class="row"><div class="ico">ICON</div><div class="rMain"><div class="rNm">유니온</div><div class="rDs">인간 · 보병·기계</div></div><div class="go">›</div></div>
+  <div class="row"><div class="ico">ICON</div><div class="rMain"><div class="rNm">스웜</div><div class="rDs">군체 · 유기체</div></div><div class="go">›</div></div>
+  <div class="row"><div class="ico">ICON</div><div class="rMain"><div class="rNm">에테리얼</div><div class="rDs">외계 · 사이오닉</div></div><div class="go">›</div></div>
+ </div>
+</div></div></div>
+
+<!-- B -->
+<div><div class="cap"><i>B</i> 전체 화면 · 고르고 확정 <u>추천</u></div>
+<div class="note"><b>전체 · 배경 아트 은은</b><br>A와 같되 행이 <b>선택 상태</b>를 갖고 하단 전체폭 버튼으로 확정.
+설정의 「로그아웃」 자리를 그대로 씀. <b>되돌릴 수 없는 선택에 확인 한 단계</b>가 생긴다.</div>
+<div class="phone bgArt"><div class="scr">
+ <div class="hd"><div class="ttl">종족 선택</div><div class="x">✕</div></div>
+ <div class="sub">한 번 고르면 바꿀 수 없습니다.</div>
+ <div class="pick on"><div class="ico">ICON</div><div class="rMain"><div class="rNm">유니온</div><div class="rDs">인간 · 보병·기계</div></div></div>
+ <div class="pick"><div class="ico">ICON</div><div class="rMain"><div class="rNm">스웜</div><div class="rDs">군체 · 유기체</div></div></div>
+ <div class="pick"><div class="ico">ICON</div><div class="rMain"><div class="rNm">에테리얼</div><div class="rDs">외계 · 사이오닉</div></div></div>
+ <div class="foot"><button class="actBtn pri">유니온으로 시작</button></div>
+</div></div></div>
+
+<!-- C -->
+<div><div class="cap"><i>C</i> 전체 화면 · 세로 3분할</div>
+<div class="note"><b>전체 · 완전 검정</b><br>화면을 셋으로 나눠 각 종족이 한 칸씩. 고른 칸만 왼쪽 시안 바 + 옅은 발광.
+<b>세 개일 때만 성립</b>하는 배치라 종족이 늘면 못 쓴다. 대신 가장 시원하다.</div>
+<div class="phone bgFlat"><div class="scr">
+ <div class="hd"><div class="ttl">종족 선택</div><div class="x">✕</div></div>
+ <div class="sub">한 번 고르면 바꿀 수 없습니다.</div>
+ <div class="thirds">
+  <div class="third on" style="position:relative"><span class="bar"></span><div class="ico lg">ICON</div><div class="rMain"><div class="rNm">유니온</div><div class="rDs">인간 · 보병·기계</div></div></div>
+  <div class="third"><div class="ico lg">ICON</div><div class="rMain"><div class="rNm">스웜</div><div class="rDs">군체 · 유기체</div></div></div>
+  <div class="third"><div class="ico lg">ICON</div><div class="rMain"><div class="rNm">에테리얼</div><div class="rDs">외계 · 사이오닉</div></div></div>
+ </div>
+ <div class="foot"><button class="actBtn pri">유니온으로 시작</button></div>
+</div></div></div>
+
+<!-- D -->
+<div><div class="cap"><i>D</i> 전체 화면 · 가로 카드 3장</div>
+<div class="note"><b>전체 · 배경 아트 은은</b><br>아이콘을 크게 보여주는 배치. <b>아이콘이 주인공</b>이 되므로
+그림이 나온 뒤에 진가가 난다. 지금은 이름이 작아 읽기가 A·B보다 불리하다.</div>
+<div class="phone bgArt"><div class="scr">
+ <div class="hd"><div class="ttl">종족 선택</div><div class="x">✕</div></div>
+ <div class="sub">한 번 고르면 바꿀 수 없습니다.</div>
+ <div class="cards">
+  <div class="card on"><div class="ico xl">ICON</div><div class="rNm">유니온</div><div class="rDs">인간<br>보병·기계</div></div>
+  <div class="card"><div class="ico xl">ICON</div><div class="rNm">스웜</div><div class="rDs">군체<br>유기체</div></div>
+  <div class="card"><div class="ico xl">ICON</div><div class="rNm">에테리얼</div><div class="rDs">외계<br>사이오닉</div></div>
+ </div>
+ <div class="det">
+  <div class="dl"><b>주력</b><u>보병 · 기계</u></div>
+  <div class="dl"><b>사거리 대역</b><u>0.15 ~ 0.34</u></div>
+  <div class="dl"><b>성향</b><u>거점 · 수리로 버틴다</u></div>
+ </div>
+ <div class="foot"><button class="actBtn pri">유니온으로 시작</button></div>
+</div></div></div>
+
+<!-- E -->
+<div><div class="cap"><i>E</i> 하단 시트</div>
+<div class="note"><b>팝업 계열 · 뒤 화면 살아 있음</b><br>아래에서 올라오는 시트. 캠프를 계속 보여주므로
+<b>맥락이 안 끊긴다</b>. 반대로 "되돌릴 수 없는 선택"이라는 무게는 가장 약하다.</div>
+<div class="phone bgFlat"><div class="fake"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+ <div class="sheet"><div class="grab"></div>
+  <div class="ttl sm" style="margin-bottom:10px">종족 선택</div>
+  <div class="pick on"><div class="ico">ICON</div><div class="rMain"><div class="rNm">유니온</div><div class="rDs">인간 · 보병·기계</div></div></div>
+  <div class="pick"><div class="ico">ICON</div><div class="rMain"><div class="rNm">스웜</div><div class="rDs">군체 · 유기체</div></div></div>
+  <div class="pick"><div class="ico">ICON</div><div class="rMain"><div class="rNm">에테리얼</div><div class="rDs">외계 · 사이오닉</div></div></div>
+  <div style="margin-top:12px"><button class="actBtn pri">유니온으로 시작</button></div>
+ </div>
+</div></div>
+
+<!-- F -->
+<div><div class="cap"><i>F</i> 팝업 카드 (지금 구조 정리판)</div>
+<div class="note"><b>팝업 · 딤 강화 + 블러</b><br>지금 화면을 <b>최소 변경</b>으로 고친 안 —
+판 4겹을 카드 하나로 합치고, 제목줄·구분선·전체폭 버튼만 정리. 딤을 .62→.82로 올려 뒤를 죽였다.
+바꾸는 양이 가장 적다.</div>
+<div class="phone bgFlat"><div class="fake"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+ <div class="bgDim" style="position:absolute;inset:0"></div>
+ <div class="pop">
+  <div class="popHd"><span>종족 선택</span><span class="x">✕</span></div>
+  <div class="popBd">
+   <div class="rows">
+    <div class="row on"><div class="ico">ICON</div><div class="rMain"><div class="rNm">유니온</div><div class="rDs">인간 · 보병·기계</div></div><div class="go">✓</div></div>
+    <div class="row"><div class="ico">ICON</div><div class="rMain"><div class="rNm">스웜</div><div class="rDs">군체 · 유기체</div></div><div class="go"></div></div>
+    <div class="row"><div class="ico">ICON</div><div class="rMain"><div class="rNm">에테리얼</div><div class="rDs">외계 · 사이오닉</div></div><div class="go"></div></div>
+   </div>
+   <div style="margin-top:12px"><button class="actBtn pri">유니온으로 시작</button></div>
+  </div>
+ </div>
+</div></div>
+
+<!-- G -->
+<div><div class="cap"><i>G</i> 전체 화면 · 세그먼트 + 상세</div>
+<div class="note"><b>전체 · 배경 아트 은은</b><br>위 띠(공용 <b>segNavHTML</b>)로 고르고 아래에서 상세를 읽는다.
+개인 플레이 난이도 선택과 <b>같은 문법</b>이라 앱 안에서 일관된다. 3칸이라 띠가 넉넉하다.</div>
+<div class="phone bgArt"><div class="scr">
+ <div class="hd"><div class="ttl">종족 선택</div><div class="x">✕</div></div>
+ <div class="sub">한 번 고르면 바꿀 수 없습니다.</div>
+ <div class="seg"><div class="segB on">유니온</div><div class="segB">스웜</div><div class="segB">에테리얼</div></div>
+ <div style="display:flex;align-items:center;gap:12px;margin-top:16px">
+  <div class="ico xl">ICON</div>
+  <div><div class="rNm" style="font-size:17px">유니온</div><div class="rDs">인간 · 보병·기계</div></div>
+ </div>
+ <div class="det">
+  <div class="dl"><b>주력</b><u>보병 · 기계</u></div>
+  <div class="dl"><b>사거리 대역</b><u>0.15 ~ 0.34</u></div>
+  <div class="dl"><b>성향</b><u>거점 · 수리로 버틴다</u></div>
+  <div class="dl"><b>난이도</b><u>쉬움</u></div>
+ </div>
+ <div class="foot"><button class="actBtn pri">유니온으로 시작</button></div>
+</div></div></div>
+
+<!-- H -->
+<div><div class="cap"><i>H</i> 전체 화면 · 스테퍼(한 번에 하나)</div>
+<div class="note"><b>전체 · 종족색 옅은 발광</b><br>◀▶로 넘기며 <b>한 종족을 크게</b> 본다.
+난이도 스테퍼와 같은 문법. 몰입은 가장 크지만 <b>셋을 나란히 비교할 수 없다</b>.</div>
+<div class="phone" style="background:radial-gradient(90% 55% at 50% 30%,rgba(74,168,255,.13),transparent 70%),#07080b">
+ <div class="scr">
+ <div class="hd"><div class="ttl">종족 선택</div><div class="x">✕</div></div>
+ <div class="sub">한 번 고르면 바꿀 수 없습니다.</div>
+ <div class="step"><div class="arw">◀</div><div class="now">유니온</div><div class="arw">▶</div></div>
+ <div class="dots"><i class="on"></i><i></i><i></i></div>
+ <div style="display:flex;justify-content:center;margin:18px 0 10px"><div class="ico xl" style="width:96px;height:96px">ICON</div></div>
+ <div style="text-align:center" class="rDs">인간 · 보병·기계</div>
+ <div class="det">
+  <div class="dl"><b>주력</b><u>보병 · 기계</u></div>
+  <div class="dl"><b>사거리 대역</b><u>0.15 ~ 0.34</u></div>
+  <div class="dl"><b>성향</b><u>거점 · 수리로 버틴다</u></div>
+ </div>
+ <div class="foot"><button class="actBtn pri">유니온으로 시작</button></div>
+</div></div></div>
+
+</div></div></body></html>
