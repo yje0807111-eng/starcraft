@@ -1,0 +1,160 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>종족 선택 E안 — 화면 분할 4안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;700&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{--font-ko:'Noto Sans KR','Apple SD Gothic Neo',sans-serif;--font-ti:'Jua','Apple SD Gothic Neo',sans-serif;
+ --font-num:'Rajdhani','Noto Sans KR',sans-serif;--metal-edge:#3c3e46;--acc-sel:#5cd6ff;
+ --txt:#e0dcdc;--txt-mute:#9aa0a8;--gold:#ffd24a;--r-bar:3px;--r-md:6px;--r-lg:9px;
+ --fs-xs:9.5px;--fs-sm:10px;--fs-md:11px;--fs-lg:12px;--fs-xl:13px}
+*{box-sizing:border-box}
+body{margin:0;background:#07080b;color:var(--txt);font-family:var(--font-ko);font-size:var(--fs-md)}
+button{font-family:inherit;background:none;border:none;color:inherit}
+.wrap{max-width:1560px;margin:0 auto;padding:22px}
+h1{font-family:var(--font-ti);font-size:19px;margin:0 0 4px;color:#fff}
+.lead{color:var(--txt-mute);font-size:var(--fs-lg);margin:0 0 20px;line-height:1.7}
+.lead b{color:var(--gold)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:20px}
+.cap{font-family:var(--font-ti);font-size:var(--fs-xl);color:#fff;margin:0 0 3px}
+.cap i{font-style:normal;color:var(--acc-sel)}
+.cap u{text-decoration:none;color:var(--gold);font-size:var(--fs-sm)}
+.note{color:var(--txt-mute);font-size:var(--fs-sm);line-height:1.6;margin:0 0 9px;min-height:84px}
+.note b{color:#cfd6e2}
+.phone{position:relative;width:300px;height:600px;overflow:hidden;background:#07080b;
+ border:1px solid #23252b;border-radius:var(--r-bar);display:flex;flex-direction:column}
+/* ── 미리보기 칸 — 지금은 빈 자리(나중에 영상) ── */
+.prev{position:relative;background:#0a0b0e}
+.prev.split{border-bottom:1px solid rgba(255,255,255,.09)}
+.prev.full{position:absolute;inset:0}
+.prev .hint{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;
+ color:#4b525b;font-size:var(--fs-sm);letter-spacing:.4px}
+/* 상단 제목 — 미리보기 위에 얹는다 */
+.topbar{position:absolute;left:0;right:0;top:0;z-index:2;display:flex;align-items:flex-start;
+ justify-content:space-between;padding:16px 14px 0}
+.ttl{font-family:var(--font-ti);font-size:20px;color:#fff;letter-spacing:.4px}
+.ttl .sub{display:block;font-family:var(--font-ko);font-size:var(--fs-sm);color:var(--txt-mute);
+ letter-spacing:0;margin-top:3px}
+.x{width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:#9a9a9a;font-size:15px}
+/* ── 시트 ── */
+.sheet{position:relative;z-index:3;display:flex;flex-direction:column;
+ padding:12px 14px 16px;border-top:1px solid rgba(255,255,255,.09);
+ background:linear-gradient(180deg,#141519,#0a0b0d)}
+.sheet.over{position:absolute;left:0;right:0;bottom:0;
+ border-radius:var(--r-lg) var(--r-lg) 0 0;box-shadow:0 -16px 36px -14px #000}
+.sheet.split{flex:1;min-height:0}
+.grab{width:34px;height:3px;border-radius:2px;background:#2f3238;margin:0 auto 11px}
+.shTtl{font-family:var(--font-ti);font-size:14px;color:#ececec;margin-bottom:10px}
+.ico{flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+ width:34px;height:34px;border-radius:var(--r-md);border:1px dashed rgba(255,255,255,.16);
+ color:#6c757f;font-size:8px;background:rgba(255,255,255,.02)}
+.pick{display:flex;align-items:center;gap:11px;padding:11px;margin-bottom:8px;
+ border:1px solid rgba(255,255,255,.07);border-radius:var(--r-bar);
+ background:linear-gradient(180deg,#16171b,#0b0c0e);box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
+.pick.on{border-color:rgba(92,214,255,.5);background:linear-gradient(180deg,#152028,#0a1016)}
+.pick.on::after{content:'✓';margin-left:auto;color:var(--acc-sel);font-size:12px}
+.rMain{min-width:0;flex:1}
+.rNm{font-size:var(--fs-xl);font-weight:700;color:#fff;line-height:1.35}
+.pick.on .rNm{color:#fff}
+.rDs{font-size:var(--fs-sm);color:var(--txt-mute);margin-top:2px}
+/* 시트가 42% 이하일 때 — 행을 압축해야 3종족 + 버튼이 들어간다 */
+.cmp .pick{padding:8px 10px;margin-bottom:6px;gap:9px}
+.cmp .ico{width:28px;height:28px;font-size:7px}
+.cmp .rNm{font-size:var(--fs-lg)}
+.cmp .rDs{font-size:9px;margin-top:1px}
+.cmp .actBtn{height:40px;margin-top:2px}
+.cmp .grab{margin-bottom:8px}
+.actBtn{position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:44px;
+ margin-top:4px;overflow:hidden;font-family:var(--font-ti);font-size:var(--fs-xl);color:#fff;
+ border:1px solid var(--metal-edge);border-radius:var(--r-bar);
+ background:linear-gradient(180deg,#24262b 0%,#15161a 46%,#0c0d10 100%);
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.13),inset 0 -6px 9px -6px #000,0 2px 4px -2px rgba(0,0,0,.7)}
+.actBtn::after{content:'';position:absolute;left:8%;right:8%;bottom:1px;height:2px;
+ background:linear-gradient(90deg,transparent,var(--acc-sel),transparent);box-shadow:0 0 9px var(--acc-sel)}
+/* 크로스페이드 설명용 — 두 겹이 겹친 순간 */
+.xf .l1,.xf .l2{position:absolute;inset:0}
+.xf .l1{background:radial-gradient(85% 60% at 50% 45%,rgba(74,168,255,.16),transparent 70%);opacity:.45}
+.xf .l2{background:radial-gradient(85% 60% at 50% 45%,rgba(159,211,86,.16),transparent 70%);opacity:.55}
+.xfTag{position:absolute;left:50%;transform:translateX(-50%);bottom:10px;z-index:2;
+ font-size:9px;color:#7d848d;letter-spacing:.3px}
+</style></head><body><div class="wrap">
+<h1>종족 선택 — E안(하단 시트) 화면 분할 4안</h1>
+<p class="lead">미리보기 칸은 <b>지금은 빈 자리</b>(전투 시스템이 생긴 뒤 녹화 영상이 들어갑니다).
+종족을 바꾸면 그 칸이 <b>짧은 크로스페이드</b>로 갈립니다.
+왼쪽 둘 = <b>분할형</b>(칸이 화면을 나눠 가짐) · 오른쪽 둘 = <b>얹힘형</b>(칸이 화면 전체, 시트가 그 위에).</p>
+<div class="grid">
+
+<!-- A1 -->
+<div><div class="cap"><i>A1</i> 분할형 · 미리보기 60 / 시트 40</div>
+<div class="note"><b>칸이 화면을 나눠 가진다</b><br>경계선이 분명해 <b>영상이 어디까지인지</b> 한눈에 보인다.
+영상이 잘리지 않으므로 <b>구도를 그대로 살릴 수 있다</b>. 다만 <b>40%에는 행을 압축해야만</b> 3종족 + 버튼이 들어간다(아래가 그 압축본).</div>
+<div class="phone">
+ <div class="prev split" style="height:60%">
+  <div class="topbar"><div class="ttl">종족 선택<span class="sub">한 번 고르면 바꿀 수 없습니다.</span></div><div class="x">✕</div></div>
+  <div class="hint">전투 미리보기</div>
+ </div>
+ <div class="sheet split cmp">
+  <div class="pick on"><div class="ico">ICON</div><div class="rMain"><div class="rNm">유니온</div><div class="rDs">인간 · 보병·기계</div></div></div>
+  <div class="pick"><div class="ico">ICON</div><div class="rMain"><div class="rNm">스웜</div><div class="rDs">군체 · 유기체</div></div></div>
+  <div class="pick"><div class="ico">ICON</div><div class="rMain"><div class="rNm">에테리얼</div><div class="rDs">외계 · 사이오닉</div></div></div>
+  <button class="actBtn">유니온으로 시작</button>
+ </div>
+</div></div>
+
+<!-- A2 -->
+<div><div class="cap"><i>A2</i> 분할형 · 미리보기 50 / 시트 50</div>
+<div class="note"><b>칸이 화면을 나눠 가진다</b><br>A1과 같되 반반. 시트가 넉넉해 <b>종족 설명을 더 넣을 수 있고</b>
+손이 닿는 아래쪽에 선택지가 모인다. 대신 영상 칸이 가로로 길쭉해져 <b>전투 장면을 담기엔 좁다</b>.</div>
+<div class="phone">
+ <div class="prev split" style="height:50%">
+  <div class="topbar"><div class="ttl">종족 선택<span class="sub">한 번 고르면 바꿀 수 없습니다.</span></div><div class="x">✕</div></div>
+  <div class="hint">전투 미리보기</div>
+ </div>
+ <div class="sheet split">
+  <div class="pick on"><div class="ico">ICON</div><div class="rMain"><div class="rNm">유니온</div><div class="rDs">인간 · 보병·기계</div></div></div>
+  <div class="pick"><div class="ico">ICON</div><div class="rMain"><div class="rNm">스웜</div><div class="rDs">군체 · 유기체</div></div></div>
+  <div class="pick"><div class="ico">ICON</div><div class="rMain"><div class="rNm">에테리얼</div><div class="rDs">외계 · 사이오닉</div></div></div>
+  <button class="actBtn">유니온으로 시작</button>
+ </div>
+</div></div>
+
+<!-- B1 -->
+<div><div class="cap"><i>B1</i> 얹힘형 · 시트 42% <u>추천</u></div>
+<div class="note"><b>미리보기가 화면 전체, 시트가 그 위에</b><br>로그인·로딩과 같은 문법 — 배경이 화면 끝까지 간다.
+영상 아래쪽이 시트에 가리므로 <b>영상 구도를 위쪽에 잡아야</b> 한다. 시트를 내리면 영상이 더 보이는 여지도 생긴다. <b>42%도 행 압축이 필요하다.</b></div>
+<div class="phone">
+ <div class="prev full">
+  <div class="topbar"><div class="ttl">종족 선택<span class="sub">한 번 고르면 바꿀 수 없습니다.</span></div><div class="x">✕</div></div>
+  <div class="hint" style="top:32%">전투 미리보기</div>
+ </div>
+ <div class="sheet over cmp" style="height:42%">
+  <div class="grab"></div>
+  <div class="pick on"><div class="ico">ICON</div><div class="rMain"><div class="rNm">유니온</div><div class="rDs">인간 · 보병·기계</div></div></div>
+  <div class="pick"><div class="ico">ICON</div><div class="rMain"><div class="rNm">스웜</div><div class="rDs">군체 · 유기체</div></div></div>
+  <div class="pick"><div class="ico">ICON</div><div class="rMain"><div class="rNm">에테리얼</div><div class="rDs">외계 · 사이오닉</div></div></div>
+  <button class="actBtn">유니온으로 시작</button>
+ </div>
+</div></div>
+
+<!-- B2 -->
+<div><div class="cap"><i>B2</i> 얹힘형 · 시트 52% + 제목도 시트 안</div>
+<div class="note"><b>미리보기가 화면 전체, 시트가 그 위에</b><br>제목까지 시트로 내려 <b>영상 위에는 아무것도 안 얹는다</b> —
+영상이 가장 깨끗하다. 대신 화면 위쪽이 비어 보일 수 있고, 닫기(✕)가 시트 안으로 들어간다.</div>
+<div class="phone">
+ <div class="prev full xf">
+  <div class="l1"></div><div class="l2"></div>
+  <div class="hint" style="top:26%">전투 미리보기</div>
+  <div class="xfTag">↑ 종족 전환 = 짧은 크로스페이드(두 겹이 겹친 순간)</div>
+ </div>
+ <div class="sheet over" style="height:52%">
+  <div class="grab"></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+   <div class="shTtl" style="margin:0">종족 선택</div><div class="x">✕</div></div>
+  <div class="pick on"><div class="ico">ICON</div><div class="rMain"><div class="rNm">유니온</div><div class="rDs">인간 · 보병·기계</div></div></div>
+  <div class="pick"><div class="ico">ICON</div><div class="rMain"><div class="rNm">스웜</div><div class="rDs">군체 · 유기체</div></div></div>
+  <div class="pick"><div class="ico">ICON</div><div class="rMain"><div class="rNm">에테리얼</div><div class="rDs">외계 · 사이오닉</div></div></div>
+  <button class="actBtn">유니온으로 시작</button>
+ </div>
+</div></div>
+
+</div></div></body></html>
