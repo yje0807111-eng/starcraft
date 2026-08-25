@@ -1158,7 +1158,12 @@
        (카드 안에 카드가 겹치면 테두리가 두 줄로 보인다). 값은 목록 카드와 같은 토큰이라 같은 재질로 읽힌다.
      ⚠ 목록 카드에 붙으면 한 덩어리로 보인다 — 채팅 한 줄(17px)만큼 띄우고 그만큼 낮춘다(margin + calc).
        차지하는 총 높이가 그대로라 위 목록은 줄지 않는다. */
-  #msSocialDock{position:relative;flex:0 0 calc(30% - 24px);min-height:168px;display:flex;flex-direction:column;overflow:hidden;
+  /* --dockHandle = 펴진 도크 윗변의 손잡이 줄 높이. **한 곳에서만 정한다** — 손잡이의 높이이자
+     도크가 그만큼 더 받아야 하는 값이라 두 군데에 같은 숫자를 적으면 반드시 어긋난다.
+     ⚠ 높이 셈: 옛 도크는 (판 높이) + 위 여백 17px + 테두리 2px 를 썼다. 여백도 테두리도 없어졌으니
+       그 자리를 **안쪽 내용에 돌려준다** — 차지하는 총 높이는 옛것과 같고 쓸 수 있는 높이만 늘어난다. */
+  #msSocialDock{--dockHandle:15px;
+    position:relative;flex:0 0 calc(30% - 24px + 17px + var(--dockHandle));min-height:168px;display:flex;flex-direction:column;overflow:hidden;
     /* B안(2026-08-18 확정) — 목록 카드와 **같은 규격의 두 번째 카드**, 무게만 한 단 낮다.
        좌우 변·라운드·테두리를 목록 카드에 맞춘다(전폭 띠였던 옛 3안 '터미널'은 좌우가 26px 어긋나
        '화면 밖으로 샌' 것처럼 보였다). 폭만 바뀌므로 높이 계산(목록 5장·파티 8칸)은 그대로다. */
@@ -1188,7 +1193,7 @@
   /* 펴진 모습 = 윗변에 붙은 **손잡이 한 줄**(15px). 바텀시트의 그것과 같은 뜻이라 설명이 필요 없다.
      ⚠ 오른쪽 구석에 띄우지 말 것 — 채팅 첫 줄의 시각(.mcT)이 바로 거기에 떠서 글자가 겹친다(실제로 그랬다). */
   .msDockBar{position:relative;flex:0 0 auto;display:flex;align-items:center;justify-content:center;
-    width:100%;height:15px;padding:0;border:0;border-radius:0;background:none;cursor:pointer;color:#8c97a4}
+    width:100%;height:var(--dockHandle);padding:0;border:0;border-radius:0;background:none;cursor:pointer;color:#8c97a4}
   .msDockBar:active{color:#dfe7f0}
   .msDockBar .mdPeek{display:none}
   .msDockBar .mdChev{width:12px;height:12px;flex:none;transition:transform .18s}
@@ -1199,6 +1204,8 @@
   #msSocialDock.collapsed .msDockBar .mdPeek .mcWho{font-weight:800;color:#e2e9f1}
   #msSocialDock.collapsed .msDockBar .mdPeek .mcSep{color:#6b7682;font-weight:700}
   #msSocialDock.collapsed .msDockBar .mdPeek .mcT{display:none}   /* 한 줄에는 시각까지 넣지 않는다 */
+  /* 친구·파티는 대화가 아니라 **요약**이다 — 머리줄과 같은 무게로 밝게 */
+  #msSocialDock.collapsed .msDockBar .mdPeek.sum{font-weight:800;color:#dbe3ec}
   #msSocialDock.collapsed .msDockBar .mdChev{transform:rotate(180deg)}   /* 접힘 = 위로(펴기) */
   /* 헤어라인 — 목록 카드와 같은 붉은 광선이되 **윗변 한 줄뿐**이다(카드는 위·아래 두 줄).
      두 줄씩 넷이 되면 어느 판이 주인공인지 사라진다. 이 한 줄이 위아래를 같은 화면으로 묶는다. */

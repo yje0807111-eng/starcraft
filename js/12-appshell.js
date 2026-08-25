@@ -1042,7 +1042,8 @@ function setBottomTab(t){ _bottomTab=t;
     // ⛔ 게시판을 자동으로 띄우지 않는다 — 탭을 누를 때마다 판이 덮여 내 파티가 안 보였다.
     //    들어가는 길은 머리줄의 '파티 찾기' 버튼 하나뿐이다.
     if(t==='party') renderPartyTab();
-    else renderFriendList(); } }
+    else renderFriendList(); }
+  if(typeof mapDockPeek==='function') mapDockPeek(); }   // 접힌 줄도 지금 탭을 따라간다
    // 구버전 호환
 // ── 임시 친구(기능 확인용) + 파티(내가 초대하면 무조건 수락) ──
 const _tempFriends=[

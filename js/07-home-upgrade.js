@@ -528,8 +528,9 @@ function mapDockSocial(){ const dock=document.getElementById('msSocialDock'), so
   if(!dock||!so) return;
   if(so.parentNode!==dock) dock.appendChild(so);
   if(!_mapSocial) _mapSocial='chat';
-  mapDockApply();
-  if(typeof setBottomTab==='function') setBottomTab(_mapSocial); }
+  // ⚠ 판을 **먼저** 그리고 나서 접기를 적용한다 — 접힌 줄이 그 판의 머리줄을 읽어 가기 때문이다
+  if(typeof setBottomTab==='function') setBottomTab(_mapSocial);
+  mapDockApply(); }
 function mapOpenSocial(bt){ _mapSocial=bt;
   mapDockSet(true);   // 네비에서 채팅·친구·파티를 고른 것 = 펴 달라는 뜻
   if(typeof setBottomTab==='function') setBottomTab(bt);
@@ -549,6 +550,13 @@ function mapDockToggle(){ mapDockSet(!_mapDockOpen);
   if(_mapDockOpen){ const c=document.getElementById('msChat'); if(c) c.scrollTop=c.scrollHeight; } }
 // 접힌 줄 갱신 — 채팅이 한 줄 늘 때마다 addGlobalMsg/addWhisperMsg 가 불러 준다.
 function mapDockPeek(){ const peek=document.getElementById('msDockPeek'); if(!peek) return;
+  // 친구·파티 = 그 판의 **머리줄을 그대로** 읽는다(요약 문구를 새로 쓰지 않는다 — 수가 어긋날 자리가 없다).
+  // ⚠ innerHTML 로 베끼지 말 것 — 머리줄 안에 id(#foCount)가 있어 같은 id 가 둘이 된다.
+  if(_mapSocial && _mapSocial!=='chat'){
+    const t=document.querySelector('#msPanelBody .ptTitle');
+    peek.textContent = t ? t.textContent.replace(/\s+/g,' ').trim() : (_mapSocial==='party'?'파티':'친구');
+    peek.classList.add('sum'); return; }
+  peek.classList.remove('sum');
   const box=document.getElementById('msChat');
   // ⚠ 지금 범위(전체/파티/친구)에서 **실제로 보이는** 줄만 센다 — .msChat 의 표시 필터와 같은 규칙이다.
   //   전부 세면 파티 범위인데 전체 채팅 마지막 줄이 접힌 줄에 뜬다.
