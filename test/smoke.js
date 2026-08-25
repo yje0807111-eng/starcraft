@@ -5466,6 +5466,10 @@ async function groupLobby(){
         assert(!box.contains(mid),'가운데 선이 스크롤 상자 안에 있다 — 굴리면 같이 사라진다');
         const mr=mid.getBoundingClientRect(), br=box.getBoundingClientRect();
         assert(mr.top>=br.top-1 && mr.bottom<=br.bottom+1,'가운데 선이 피커 밖으로 나갔다'); }
+      // ⑥-2 던전 줄도 **밑선 정렬**이다 — 번호(Rajdhani)와 이름(NotoKR)은 글자 상자가 12 vs 16px 이라
+      //     가운데로 맞추면 글자가 서로 다른 높이에 앉는다. ⚠ rect 로는 못 잰다(칩 라운드 줄과 같은 이유).
+      { const ai=getComputedStyle(d().querySelector('.cdRow')).alignItems;
+        assert(ai==='baseline','던전 줄이 밑선 정렬이 아니다 — 번호와 이름이 어긋나 보인다: '+ai); }
       // ⑦ 고르기만 해서는 **안 바뀐다** — 확정 버튼이 있는 이유다
       d().querySelector('.cdRow[data-dg="5"]').click();
       d().querySelector('.cdRn[data-r="40"]').click();
@@ -5488,7 +5492,7 @@ async function groupLobby(){
       { const bar=$('curBar'); const had=bar.classList.contains('bare'); bar.classList.add('bare');
         const pe=getComputedStyle(t).pointerEvents; if(!had) bar.classList.remove('bare');
         assert(pe!=='none','.curBar.bare 에서 칩이 눌리지 않는다(뒤 화면이 대신 반응한다)'); }
-      return '던전 '+CAMP_DG_MAX+'줄 · 라운드 '+CAMP_RND_MAX+'칸 · 고르기≠이동 · 닫힘 확인';
+      return '던전 '+CAMP_DG_MAX+'줄 · 라운드 '+CAMP_RND_MAX+'칸 · 밑선 정렬 · 고르기≠이동 · 닫힘 확인';
     } finally {
       campDropClose();
       window.campIsOn=on0; window.campState=st0; window.campSkin=sk0;
