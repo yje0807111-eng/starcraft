@@ -4791,22 +4791,22 @@ async function groupLobby(){
       _hb.foes.length=0; _hb.pend.length=0; hbStep(0.05); };
     _hb.dg=1; hbHunt().dg=1; _hb.round=HB_ROUND_MAX-1; hbHunt().round=_hb.round;
     clearOnce();
-    assert(_hb.dg===1 && _hb.round===HB_ROUND_MAX,'98 클리어인데 99로 안 감: '+_hb.dg+'-'+_hb.round);
+    assert(_hb.dg===1 && _hb.round===HB_ROUND_MAX,'마지막 직전 라운드 클리어인데 마지막 라운드로 안 감: '+_hb.dg+'-'+_hb.round);
     clearOnce();
-    assert(_hb.dg===2 && _hb.round===1,'99 클리어인데 다음 던전으로 안 감: '+_hb.dg+'-'+_hb.round);
+    assert(_hb.dg===2 && _hb.round===1,'마지막 라운드 클리어인데 다음 던전으로 안 감: '+_hb.dg+'-'+_hb.round);
     assert(hbHunt().dg===2 && hbHunt().round===1,'저장쪽 던전/라운드가 안 따라옴');
-    assert((hbHunt().best[1]||0)===HB_ROUND_MAX,'이전 던전 최고 기록이 99로 안 찍힘: '+hbHunt().best[1]);
-    assert(hbDgOpen(2),'99를 깼는데 다음 던전이 안 열림');
+    assert((hbHunt().best[1]||0)===HB_ROUND_MAX,'이전 던전 최고 기록이 상한으로 안 찍힘: '+hbHunt().best[1]);
+    assert(hbDgOpen(2),'마지막 라운드를 깼는데 다음 던전이 안 열림');
     // ③ 반복(climb=false)에서는 넘어가지 않는다 — 그 라운드를 계속 도는 게 반복의 정의다
     hbHunt().climb=false; _hb.dg=2; hbHunt().dg=2; _hb.round=HB_ROUND_MAX; hbHunt().round=HB_ROUND_MAX;
     clearOnce();
     assert(_hb.dg===2 && _hb.round===HB_ROUND_MAX,'반복인데 던전이 넘어감: '+_hb.dg+'-'+_hb.round);
     hbHunt().climb=true;
-    // ④ 마지막 던전에서는 99에 머문다(넘어갈 곳이 없다)
+    // ④ 마지막 던전에서는 마지막 라운드에 머문다(넘어갈 곳이 없다)
     _hb.dg=HB_DG_MAX; hbHunt().dg=HB_DG_MAX; _hb.round=HB_ROUND_MAX; hbHunt().round=HB_ROUND_MAX;
     clearOnce();
     assert(_hb.dg===HB_DG_MAX && _hb.round===HB_ROUND_MAX,'마지막 던전에서 넘어가 버림: '+_hb.dg+'-'+_hb.round);
-    // ⑤ 라운드 이동은 99를 넘지 못한다
+    // ⑤ 라운드 이동은 상한을 넘지 못한다
     { const H=hbHunt(); H.dg=1; H.best[1]=HB_ROUND_MAX; _hb.dg=1;
       hbSetRound(HB_ROUND_MAX+50);
       assert(H.round<=HB_ROUND_MAX,'라운드가 상한을 넘음: '+H.round);

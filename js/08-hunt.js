@@ -101,12 +101,14 @@ const HB_DUNGEONS=[
 ];
 function hbDun(dg){ return HB_DUNGEONS[Math.min(HB_DUNGEONS.length, Math.max(1, dg||1))-1]; }
 const HB_DG_MAX=10;                 // 던전 1~10
-// 🏁 던전 하나 = 99라운드. 99를 깨면 자동으로 다음 던전 1라운드로 넘어간다(hbSettle).
-//    ⭐ 그래서 던전은 '난이도 점프'가 아니라 **100라운드짜리 챕터**다 — 곡선은 아래에서 이어 붙인다.
-const HB_ROUND_MAX=99;
+// 🏁 던전 하나 = 50라운드. 50을 깨면 자동으로 다음 던전 1라운드로 넘어간다(hbSettle).
+//    ⭐ 그래서 던전은 '난이도 점프'가 아니라 **50라운드짜리 챕터**다 — 곡선은 아래에서 이어 붙인다.
+//    ⚠ 2026-08-25 에 99 → 50 으로 줄였다. 설계 단일 소스(HUNT_R1.md §6-1)가 처음부터 50이었고
+//       코드만 99로 갈라져 있었다. 이 상수 하나에서 전부 파생된다(hbProg · hbCurve · hbRoundS · 해금).
+const HB_ROUND_MAX=50;
 // 🎁 던전 최초 진입 보너스 = 그 던전 1라운드 클리어 보너스의 이 배수. 한 번뿐이다.
 const HB_DG_ENTER=40;
-const HB_DG_UNLOCK=HB_ROUND_MAX;    // 다음 던전 해금 = 지금 던전을 끝까지(99) 깼을 때
+const HB_DG_UNLOCK=HB_ROUND_MAX;    // 다음 던전 해금 = 지금 던전을 끝까지(50) 깼을 때
 // ⚠ 배경·밸런스 확인용 전체 개방. 해금 진행을 되살리려면 이 한 줄만 false로.
 //    (const이 아니라 let인 이유: 스모크가 양쪽 상태를 다 검사한다)
 let HB_DG_ALL_OPEN=true;
@@ -491,11 +493,11 @@ function hbSyncChar(heal){ if(!_hb||!_hb.char) return null;
   { const prev=c.shdMax||0; c.shdMax=st.shdMax;
     c.shd=Math.min(st.shdMax, (c.shd||0)+Math.max(0, st.shdMax-prev)); }
   return st; }
-// ── 🌍 던전 배수 = 라운드 곡선을 HB_ROUND_MAX(99)칸 이어 붙인 것 (2026-08-18) ──
-//    던전 d 라운드 r 의 세기 = 곡선^(전역 진행도-1),  전역 진행도 = (d-1)*99 + r  (hbProg).
-//    ⭐ 그래서 '던전 99 → 다음 던전 1'이 한 칸 오른 것과 정확히 같다 — 자동 이동에 계단이 없다.
-//    ⛔ 옛 고정 배수(체력 8 · 공격 5 · 보상 24)로 되돌리지 말 것: 99라운드(체력 1.16^99 ≈ 240만 배)를
-//       민 뒤 다음 던전 1라운드가 8배로 떨어져 난이도가 통째로 무너진다.
+// ── 🌍 던전 배수 = 라운드 곡선을 HB_ROUND_MAX(50)칸 이어 붙인 것 (2026-08-18) ──
+//    던전 d 라운드 r 의 세기 = 곡선^(전역 진행도-1),  전역 진행도 = (d-1)*50 + r  (hbProg).
+//    ⭐ 그래서 '던전 50 → 다음 던전 1'이 한 칸 오른 것과 정확히 같다 — 자동 이동에 계단이 없다.
+//    ⛔ 옛 고정 배수(체력 8 · 공격 5 · 보상 24)로 되돌리지 말 것: 50라운드를 민 뒤
+//       다음 던전 1라운드가 8배로 떨어져 난이도가 통째로 무너진다.
 function hbProg(dg,round){ return (Math.max(1,dg||1)-1)*HB_ROUND_MAX + Math.max(1,round||1); }
 // ⚠ 아래 넷은 '던전 시작까지의 누적 배수'다 — hbCurve(base,dg,1) 과 같다(옛 이름 호환).
 function HB_DG_HP (dg){ return hbCurve(HB_ROUND_HP , dg, 1); }   // 적 체력
