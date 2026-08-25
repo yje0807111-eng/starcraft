@@ -5453,6 +5453,12 @@ async function groupLobby(){
       renderCampIdleSheet(box);
       assert(box.querySelector('.cmdG'),'요약 카드가 안 그려짐');
       assert(box.querySelectorAll('.cgStat').length===m.info.stats.length,'요약 줄 수가 다름');
+      // ③-2 안쪽 **전체**를 쓴다 — 빈 슬롯 4칸은 이 카드에서 의미가 없다
+      assert(!box.querySelector('.cgGrid'),'요약 카드에 빈 슬롯 그리드가 남았다');
+      { const w=box.querySelector('.cgStats.cgWide');
+        assert(w,'요약이 전폭 격자가 아니다');
+        const cols=(getComputedStyle(w).gridTemplateColumns||'').split(/\s+/).filter(Boolean).length;
+        assert(cols===4,'요약 격자가 4열이 아님(8줄을 두 줄로 편다): '+cols+'열'); }
       // ④ 값이 바뀌면 다시 그린다 — 시그니처가 안 움직이면 영영 옛 값이 남는다
       const sig1=box._gSig; prof.camp.upg.tap=9; renderCampIdleSheet(box);
       assert(box._gSig!==sig1,'값이 바뀌었는데 다시 안 그림(시그니처가 안 움직인다)');
@@ -5466,7 +5472,7 @@ async function groupLobby(){
         for(const k in keep) if(keep[k]) window[k]=keep[k];
         assert(!err,'캠프 함수가 없을 때 모델이 터진다: '+err);
         assert(m3 && m3.info && m3.info.stats.length,'캠프가 없을 때 모델이 비었다'); }
-      return m.info.stats.length+'줄 · 던전/일꾼/인구/강화 읽음 · 값 바뀌면 갱신';
+      return m.info.stats.length+'값 · 전폭 4열 2줄 · 던전/일꾼/인구/강화 읽음 · 값 바뀌면 갱신';
     } finally {
       box.remove();
       window.campIsOn=on0; window.campState=st0;
