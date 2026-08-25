@@ -2121,7 +2121,23 @@ function sendChat(){ const f=document.getElementById('chatField'); const t=(f.va
   addChat(myNick(), t, col); if(coopActive()) coopSend('gchat',{nick:myNick(), text:t, color:col});   // 협동: 채팅 공유
   f.value=''; f.focus(); }
 function tickFakeChat(dt){ }   // 가짜 채팅 제거(실제 채팅만 사용)
-function initChat(){ const f=document.getElementById('chatField'); if(f) f.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); sendChat(); } }); }
+// ── 채팅바 접기/펴기 ──────────────────────────────────────────────────────────
+// 평소엔 말풍선 아이콘만 떠 전장을 덜 가린다. 누르면 [∨ | 입력 | 전송] 이 열린다.
+// ⚠ 왼쪽 ∨ 가 **열려도 남는 것**이 이 설계의 핵심이다 — 접는 법을 따로 배울 필요가 없다.
+// 접히는 계기는 셋: ∨ 를 다시 누름 · Esc · 전장(바깥)을 눌러 입력칸이 포커스를 잃음.
+// 전송은 접지 않는다(연달아 치는 게 보통이다) — sendChat 이 입력칸에 포커스를 되돌린다.
+let _chatHold=0;   // 채팅바 안을 마지막으로 누른 시각 — 전송 탭이 만드는 blur 를 '바깥 탭'으로 오해하지 않게 한다
+function chatIsFold(){ const b=document.getElementById('chatBar'); return !b || b.classList.contains('fold'); }
+function chatOpenBar(){ const b=document.getElementById('chatBar'); if(!b || !b.classList.contains('fold')) return;
+  b.classList.remove('fold'); const f=document.getElementById('chatField'); if(f) setTimeout(()=>f.focus(),60); }   // 폭 전환이 시작된 뒤 포커스(모바일 키보드가 접힌 칸을 잡지 않게)
+function chatFoldBar(){ const b=document.getElementById('chatBar'); if(!b || b.classList.contains('fold')) return;
+  b.classList.add('fold'); const f=document.getElementById('chatField'); if(f) f.blur(); }                          // 입력 중이던 글은 남긴다 — 다시 열면 이어 쓴다
+function chatToggle(){ chatIsFold() ? chatOpenBar() : chatFoldBar(); }
+function initChat(){ const f=document.getElementById('chatField'), b=document.getElementById('chatBar');
+  if(f) f.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); sendChat(); }
+                                          else if(e.key==='Escape'){ e.preventDefault(); chatFoldBar(); } });
+  if(b) b.addEventListener('pointerdown',()=>{ _chatHold=Date.now(); },true);
+  if(f) f.addEventListener('blur',()=>{ setTimeout(()=>{ if(Date.now()-_chatHold>400) chatFoldBar(); },160); }); }
 
 // ── 토스트 ──
 // 스타크래프트식: 알림을 팝업 대신 채팅에 시스템 메시지로 표시(같은 메시지 연속 도배는 억제)

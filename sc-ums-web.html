@@ -107,7 +107,13 @@
       </div>
     </div>
     <div id="chatLog"></div>         <!-- 채팅: 배경 위에 떠올랐다 사라짐(입력창 좌측 위) -->
-    <div id="chatBar">
+    <!-- 채팅바 = 접힘/열림 **한 부품**(2026-08-25 · F1안). 평소엔 말풍선 아이콘만 떠 전장을 덜 가린다.
+         ⚠ 왼쪽 ∨ 는 열려도 남는다 — 그게 '접는 법'이라 따로 배울 게 없다. -->
+    <div id="chatBar" class="fold">
+      <button id="chatFold" onclick="chatToggle()" aria-label="채팅" title="채팅">
+        <svg class="cfOpen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M20 12a8 8 0 0 1-8 8H5l-2 2v-9a8 8 0 0 1 8-8h1a8 8 0 0 1 8 7z"/></svg>
+        <svg class="cfClose" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 9.5 12 15l5.5-5.5"/></svg>
+      </button>
       <input id="chatField" type="text" placeholder="메시지…" maxlength="120" autocomplete="off">
       <button id="chatSend" onclick="sendChat()">전송</button>
     </div>

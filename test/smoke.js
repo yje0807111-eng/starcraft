@@ -4068,6 +4068,37 @@ async function groupLobby(){
           '탭바 칸의 글자가 넘친다: scroll '+tab.scrollWidth+' > client '+tab.clientWidth); } }
     navBack(); openHome(); await sleep(40);
     return '네비 '+bh+'px · 칸 '+cells.length+' · 인게임 탭바 '+(tb?getComputedStyle(tb).height:'-'); });
+  // 💬 채팅바 = 접힘↔열림 **한 부품**(2026-08-25 · F1안). 평소엔 말풍선 아이콘만 떠 전장을 덜 가린다.
+  //    ⛔ 열렸을 때 왼쪽 ∨ 가 사라지면 접을 방법이 없다 — 앞선 안이 실제로 그 함정을 밟았다.
+  await step('채팅바: 접히면 아이콘만 · 열려도 접기 버튼이 남는다', async()=>{
+    skipIf(typeof chatToggle!=='function','채팅 접기 없음');
+    const bar=$('chatBar'), fold=$('chatFold'), fld=$('chatField'), snd=$('chatSend'), mf=$('mergeFab');
+    assert(bar&&fold&&fld&&snd,'채팅바 조각이 없다(접기 버튼·입력칸·전송)');
+    chatFoldBar(); await sleep(300);
+    const w0=bar.getBoundingClientRect().width;
+    assert(w0<=48,'접혀도 안 좁아졌다: '+Math.round(w0)+'px — 아이콘 하나 폭이어야 한다');
+    assert(+getComputedStyle(fld).opacity===0 && +getComputedStyle(snd).opacity===0,'접혔는데 입력칸·전송이 보인다');
+    assert(getComputedStyle(fold.querySelector('.cfOpen')).display!=='none','접힘 아이콘(말풍선)이 안 나온다');
+    chatOpenBar(); await sleep(320);
+    const r=bar.getBoundingClientRect();
+    assert(r.width>w0+120,'열려도 안 넓어졌다: '+Math.round(r.width)+'px');
+    assert(fold.getBoundingClientRect().width>=20,'열리니 접기 버튼이 사라졌다 — 다시 접을 방법이 없다');
+    assert(getComputedStyle(fold.querySelector('.cfClose')).display!=='none','열림 아이콘(∨)이 안 나온다');
+    assert(+getComputedStyle(fld).opacity===1 && +getComputedStyle(snd).opacity===1,'열렸는데 입력칸·전송이 안 보인다');
+    // 한 상자로 읽혀야 한다 — 테두리는 바깥 껍데기 하나뿐이고 구획은 1px 선이다
+    assert(parseFloat(getComputedStyle(bar).borderTopWidth)>0,'바깥 껍데기에 테두리가 없다 — 일체형으로 안 읽힌다');
+    for(const [n,e] of [['입력',fld],['전송',snd]])
+      assert(parseFloat(getComputedStyle(e).borderTopWidth)===0, n+'칸이 제 테두리를 갖고 있다 — 상자가 셋으로 갈라진다');
+    // ⛔ 항상 켜진 청록은 뺐다 — 액센트는 '지금 선택된 것' 전용이다(DESIGN §2)
+    for(const [n,e] of [['바',bar],['입력',fld],['전송',snd]]){
+      const c=getComputedStyle(e), all=c.borderColor+' '+c.boxShadow+' '+c.color+' '+c.backgroundColor;
+      assert(all.indexOf('229, 255')<0, n+'에 상시 청록이 남아 있다: '+all.slice(0,80)); }
+    // 조합 버튼과 같은 줄이다 — 높이가 다르거나 붙으면 한 줄로 안 읽힌다
+    if(mf){ const m=mf.getBoundingClientRect();
+      assert(Math.abs(m.height-r.height)<=1,'조합 버튼 높이가 채팅바와 다르다: '+Math.round(m.height)+' vs '+Math.round(r.height));
+      assert(r.right<=m.left-3,'채팅바가 조합 버튼과 붙었다/겹쳤다: right '+Math.round(r.right)+' vs left '+Math.round(m.left)); }
+    chatFoldBar(); await sleep(60);
+    return '접힘 '+Math.round(w0)+'px → 열림 '+Math.round(r.width)+'px · 높이 '+Math.round(r.height); });
   // 🖼 폰 바깥 여백 — 검정이면 폰 밑변과 이어져 하단 네비가 어디서 끝나는지 안 보인다.
   await step('폰 바깥 여백: 화면 안보다 밝아 폰의 윤곽이 경계가 된다', ()=>{
     // 정규식 없이 판다 — 'rgb(201, 192, 172)' 의 괄호 안을 콤마로 자른다

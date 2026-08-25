@@ -83,19 +83,39 @@
   /* 채팅 표시 끄기 — 플레이어 채팅·입력창·로비 채팅만 감춘다(시스템 알림 .cmsg.sys 는 남긴다) */
   body.chatOff #chatLog .cmsg:not(.sys){display:none}
   body.chatOff #chatBar,body.chatOff .msChatWrap{display:none}
-  #chatBar{position:absolute;left:9px;right:74px;bottom:9px;z-index:18;display:flex;gap:6px}   /* 우하단 우측열 버튼(58px 정사각) 한 줄 자리만 비움 → 채팅 영역 확장 */
-  /* 채팅창·전송 — 반투명 어두운 내부 + 테두리/텍스트 또렷하게(밝은 맵 위에서도 가독) */
-  #chatField{flex:1;min-width:0;background:rgba(6,12,18,.55);border:1px solid rgba(0,229,255,.42);border-radius:var(--r-md);color:#e9f7ff;font-size:var(--fs-lg);padding:9px 13px;outline:none;text-shadow:0 1px 2px #000;transition:border-color .15s}
-  #chatField:focus{border-color:rgba(0,229,255,.7);box-shadow:0 0 7px var(--hud-glow)}
+  /* ── 채팅바 = 일체형 한 부품 · 접힘↔열림 (2026-08-25 · F1안) ─────────────────
+     접힘 = 말풍선 아이콘 44px 만(전장을 덜 가린다) · 열림 = [∨ | 입력 | 전송] 한 상자.
+     구획은 **1px 선**으로만 나눈다 — 붉은 밑변 광원은 쓰지 않는다(그건 네비 선택 표시 전용).
+     ⚠ 항상 켜져 있던 청록 테두리를 뺐다: 액센트는 '지금 선택된 것' 전용이다(DESIGN §2).
+     ⚠ 접는 폭은 right 로 준다 — width:auto 는 전환이 안 붙는다. */
+  #chatBar{position:absolute;left:9px;right:81px;bottom:9px;z-index:18;   /* 오른쪽 = 조합 버튼 66px + 여백 9px + 틈 6px */
+    display:flex;align-items:stretch;height:30px;overflow:hidden;
+    background:rgba(6,8,12,.34);border:1px solid var(--metal-edge);border-radius:var(--r-bar);
+    transition:right .22s cubic-bezier(.2,.8,.25,1),border-color .15s}
+  #chatBar.fold{right:calc(100% - 9px - 44px)}
+  #chatBar:focus-within{border-color:rgba(126,140,162,.78)}
+  #chatBar>*{display:flex;align-items:center;justify-content:center}
+  #chatFold{flex:none;width:34px;padding:0;background:none;border:0;border-right:1px solid rgba(255,255,255,.10);
+    color:#c8d2df;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:width .22s cubic-bezier(.2,.8,.25,1)}
+  #chatFold svg{width:17px;height:17px;filter:drop-shadow(0 1px 2px #000)}
+  #chatBar.fold #chatFold{width:42px;border-right:0}
+  #chatFold .cfOpen{display:none}
+  #chatBar.fold #chatFold .cfOpen{display:block}
+  #chatBar.fold #chatFold .cfClose{display:none}
+  #chatField{flex:1;min-width:0;background:none;border:0;border-radius:0;color:#e6eefc;
+    font-size:12.5px;padding:0 11px;outline:none;text-shadow:0 1px 2px #000;transition:opacity .14s}
   #chatField::placeholder{color:rgba(150,205,230,.72)}
-  #chatSend{background:rgba(6,12,18,.55);border:1px solid rgba(0,229,255,.5);color:var(--hud);border-radius:var(--r-md);padding:0 17px;font-size:var(--fs-lg);font-weight:700;cursor:pointer;white-space:nowrap;letter-spacing:.5px;text-shadow:0 0 5px var(--hud-glow),0 1px 2px #000;transition:all .15s}
-  #chatSend:active{transform:translateY(1px);background:rgba(0,229,255,.1)}
+  #chatSend{flex:none;background:none;border:0;border-left:1px solid rgba(255,255,255,.15);border-radius:0;
+    color:#e6eefc;padding:0 13px;font-size:12.5px;font-weight:700;letter-spacing:.02em;cursor:pointer;
+    white-space:nowrap;text-shadow:0 1px 2px #000;transition:background .14s,opacity .14s}
+  #chatSend:active{background:rgba(255,255,255,.10)}
+  #chatBar.fold #chatField,#chatBar.fold #chatSend{opacity:0;pointer-events:none}
 
   /* 전투 미니맵(좌하단) — 메인 외 탭에서 전투를 도트로 표시 */
   #miniWrap{position:absolute;bottom:8px;right:8px;z-index:20;display:none;width:58px;pointer-events:none}
   #miniWrap.on{display:block}
   /* 조합 버튼(메인 탭 — 메시지 전송 버튼과 같은 높이, 버튼 느낌) */
-  #mergeFab{position:absolute;bottom:9px;right:9px;z-index:20;width:66px;height:34px;border-radius:var(--r-md);cursor:pointer;pointer-events:auto;
+  #mergeFab{position:absolute;bottom:9px;right:9px;z-index:20;width:66px;height:30px;border-radius:var(--r-bar);cursor:pointer;pointer-events:auto;
     display:flex;align-items:center;justify-content:center;
     border:1px solid rgba(0,229,255,.55);
     background:linear-gradient(180deg,rgba(11,42,56,.95),rgba(6,22,32,.95));

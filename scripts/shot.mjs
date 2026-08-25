@@ -140,7 +140,7 @@ try {
     else if (WHAT === 'home') { await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); openHome(); }); await new Promise(r=>setTimeout(r,900)); }
     else if (WHAT === 'settings') { await page.evaluate(() => openAppSettings()); await new Promise(r=>setTimeout(r,400)); }
     // 인게임 하단 — 프로필(#unitCmd) + 하단 네비(#tabs). 관리자 샌드박스로 바로 들어가 유닛을 하나 지정한다.
-    //   ingame       무선택(기본 상태)   ingame:sel  유닛 지정 → 프로필 카드
+    //   ingame       무선택(기본 상태)   ingame:sel  유닛 지정 → 프로필 카드   ingame:chat  채팅바 열림
     else if (WHAT.startsWith('ingame')) { const sel=WHAT.split(':')[1]||'';
       await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); enterSandbox();
         // 부팅 타이틀(#titleBlack/#titleMark)은 정상 진입 경로에서만 걷힌다 — 샌드박스는 직접 내린다
@@ -150,7 +150,8 @@ try {
       await page.evaluate(() => { document.body.classList.add('sheetOpen');
         if(typeof openMainHome==='function') openMainHome(); });
       await new Promise(r=>setTimeout(r,400));
-      if(sel) await page.evaluate(() => { const u=(G.units||[])[0]; if(u){ G.sel=[u.uid]; G.sheetDown=false;
+      if(sel==='chat') await page.evaluate(() => { if(typeof chatOpenBar==='function') chatOpenBar(); });   // 채팅바 열린 상태
+      else if(sel) await page.evaluate(() => { const u=(G.units||[])[0]; if(u){ G.sel=[u.uid]; G.sheetDown=false;
         document.body.classList.add('sheetOpen'); refreshSelCard(); } });
       await new Promise(r=>setTimeout(r,800)); }
     // 캠프 종족 선택 — race / race:zerg / race:protoss (딤이 그림을 제대로 눌러 주는지 종족별로 봐야 한다)
