@@ -5303,6 +5303,60 @@ async function groupLobby(){
     assert($('upgScreen') && $('gearScreen'), '옛 캐릭터·정비 화면 마크업이 사라졌다');
     return cells.join(' · ');
   });
+  // 🏕 캠프 좌상단 던전 칩(2026-08-25) — 재화 바 왼쪽 빈 슬롯에 얹는 얇은 판.
+  //   ⚠ 캠프 화면 자체는 3D 라 여기서 못 띄운다. 그래서 **캠프를 켜지 않고** 무는 검사로 세운다 —
+  //     ① 마크업 만드는 함수 ② 화면이 바뀔 때 걷히는가 ③ CSS 가 실제로 걸리는가.
+  await step('캠프 좌상단: 던전 칩(왼쪽 광원 띠 + 두 줄)', async()=>{
+    skipIf(typeof curChipHTML!=='function','칩 함수 없음');
+    const t=$('curTitle'); assert(t,'재화 바 왼쪽 슬롯(#curTitle)이 없음');
+    // ① 마크업 — 이름·라벨·숫자·진행 막대가 다 들어간다
+    t.classList.add('asChip');
+    t.innerHTML=curChipHTML({name:'잊혀진 회랑', lab:'던전', cur:3, max:10});
+    const nm=t.querySelector('.cdNm'), n=t.querySelector('.cdN'), bar=t.querySelector('.cdBar i');
+    assert(nm && nm.textContent==='잊혀진 회랑','던전 이름이 칩에 없음');
+    assert(t.querySelector('.cdLab') && t.querySelector('.cdLab').textContent==='던전','라벨이 없음');
+    assert(n && n.textContent==='3','현재 값이 없음');
+    assert(t.querySelector('.cdDim').textContent==='/10','최댓값 표기가 없음');
+    assert(bar,'진행 막대가 없음');
+    assert(Math.abs(parseFloat(bar.style.width)-30)<0.6,'진행 막대가 3/10=30% 가 아님: '+bar.style.width);
+    assert(t.querySelector('.cdRail'),'왼쪽 광원 띠(7안의 핵심)가 없음');
+    // ② CSS — 클래스만 붙이면 칩 물성이 실제로 걸리는가(규칙이 다른 파일에 있어 조용히 빠질 수 있다)
+    { const cs=getComputedStyle(t);
+      assert(parseFloat(cs.borderRadius)===3,'칩 모서리가 3px 이 아님(DESIGN 각진 규칙): '+cs.borderRadius);
+      assert(parseFloat(cs.borderTopWidth)>0,'칩 테두리가 없음 — .curTitle.asChip 규칙이 안 걸렸다');
+      const a=cs.backgroundColor.match(/[\d.]+/g)||[];
+      assert(a.length===4 && parseFloat(a[3])>0.3 && parseFloat(a[3])<0.95,
+        '칩 배경이 반투명하지 않음(맵 위에 얹히는 판이다): '+cs.backgroundColor);
+      // 숫자는 청록(--hud) 발광 — 초록만 재면 파랑도 통과하므로 파랑·초록이 빨강보다 크고 빛이 있는지로 잰다
+      const c=(getComputedStyle(n).color.match(/[\d.]+/g)||[]).map(Number);
+      assert(c[1]>120 && c[2]>150 && c[1]>c[0]+60 && c[2]>c[0]+60,'칩 숫자가 청록이 아님: '+getComputedStyle(n).color);
+      assert(/px/.test(getComputedStyle(n).textShadow||''),'칩 숫자에 발광이 없음'); }
+    // ②-2 칩은 재화 바 안에 들어가야 한다 — 두 줄을 그냥 쌓으면 바(34px)를 넘어 밖으로 삐져나온다(실측 44.7px)
+    { const bar=$('curBar'); const was=bar.classList.contains('hide');
+      if(was) curShow(true);
+      const bh=bar.getBoundingClientRect().height, ch=t.getBoundingClientRect().height;
+      if(was) curShow(false);
+      assert(bh>0,'재화 바 높이를 못 쟀다 — 이 검사가 헛돈다');
+      assert(ch<=bh,'칩이 재화 바를 넘는다(바 밖으로 삐져나온다): 칩 '+ch.toFixed(1)+'px > 바 '+bh.toFixed(1)+'px'); }
+    // ③ 다른 화면으로 가면 칩은 걷히고 글자로 돌아온다(안 걷으면 상점 제목 자리에 던전이 남는다)
+    curSetTitle('상점');
+    assert(!t.classList.contains('asChip'),'화면이 바뀌었는데 칩이 안 걷혔다');
+    assert(t.textContent==='상점' && !t.querySelector('.cdNm'),'칩 잔해가 남았다: '+t.innerHTML);
+    // ④ 값 출처 — 캠프가 아니면 아예 안 그린다(다른 화면 제목을 덮어쓰면 안 된다)
+    assert(campChipInfo()==null,'캠프가 아닌데 칩 정보가 나옴');
+    // ⑤ 라운드가 생기면 자동으로 라운드로 바뀐다 — 지금 캠프에는 라운드 칸이 없어 던전을 쓴다
+    { const on=window.campIsOn, st=window.campState;
+      window.campIsOn=()=>true; window.campState=()=>({dg:3});
+      const a=campChipInfo();
+      assert(a && a.lab==='던전' && a.cur===3 && a.max===10,'라운드가 없을 때 던전을 안 씀: '+JSON.stringify(a));
+      window.campState=()=>({dg:3, rnd:27});
+      const b=campChipInfo();
+      assert(b && b.lab==='라운드' && b.cur===27 && b.max===99,'라운드가 생겨도 안 따라감: '+JSON.stringify(b));
+      window.campIsOn=on; window.campState=st; }
+    curSetTitle('');
+    return '이름·던전 3/10 · 막대 30% · 바 안에 들어감 · 걷힘 확인';
+  });
+
   await step('하단 네비 2층: 구역 → 전용 네비 → 돌아가기', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)'); 
     const read=()=>[...document.querySelectorAll('#navBar .navIt')].map(e=>e.dataset.nav||('~'+e.dataset.sub));
     openHome(); await sleep(40);

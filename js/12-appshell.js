@@ -83,7 +83,38 @@ const SCREEN_TITLE={ upgScreen:'캐릭터', gearScreen:'정비', shopScreen:'상
 const CUR_SCREENS=['homeScreen','townScreen','mapSelect','modeSheet','dgScreen','shopScreen','gearScreen','upgScreen','researchScreen','questScreen'];   // 이 화면들은 공용 재화 바를 쓴다
 // 그중 바를 '판'이 아니라 배경 위 숫자로 두는 화면(.curBar.bare) — 배경이 상단까지 이어져 보여야 하는 곳
 const BARE_CUR_SCREENS=['homeScreen','townScreen','mapSelect','shopScreen','gearScreen','upgScreen','researchScreen','questScreen'];   // 재화 바를 '판'이 아니라 배경 위 숫자로 — 상단 줄이 겹쳐 답답해진다(구분선 없이 배경이 이어진다)
-function curSetTitle(t){ const e=document.getElementById('curTitle'); if(e) e.textContent=t||''; }   // 재화 바 왼쪽 제목(화면별)
+function curSetTitle(t){ const e=document.getElementById('curTitle'); if(!e) return;
+  e.classList.remove('asChip'); e.textContent=t||''; }   // 재화 바 왼쪽 제목(화면별) — 칩(asChip)이 붙어 있었다면 걷고 글자로 되돌린다
+// 🏕 캠프 좌상단 던전 칩 — 재화 바 왼쪽 빈 슬롯(#curTitle)에 얹힌다(목업 docs/mock/camp-dungeon-onechip-8.html 7안).
+//   ⛔ 캠프 파일(19-camp.js)은 다른 작업자 영역이라 손대지 않는다 — 여기서 상태를 **읽기만** 한다.
+//   ⭐ 무엇을 보여줄지는 이 함수 하나가 정한다(단일 소스). 캠프에 라운드가 생기면 여기 한 곳만 고친다.
+//   ⚠ 지금 캠프 상태(p.camp)에는 **라운드 칸이 없다** — 있는 것은 던전(dg 1~10)뿐이다.
+//      그래서 둘째 줄은 「던전 3/10」이다. C.rnd 가 생기는 순간 자동으로 「라운드 n/99」로 바뀐다.
+function campChipInfo(){
+  if(typeof campIsOn!=='function' || !campIsOn()) return null;
+  const C=(typeof campState==='function')?campState():null; if(!C) return null;
+  const dg=Math.max(1, Math.min(CAMP_CHIP_DG_MAX, C.dg||1));
+  const d=(typeof hbDun==='function')?hbDun(dg):null;
+  const hasRnd=(typeof C.rnd==='number');
+  return { name:(d&&d.name)||('던전 '+dg),
+           lab: hasRnd?'라운드':'던전',
+           cur: hasRnd?C.rnd:dg,
+           max: hasRnd?CAMP_CHIP_RND_MAX:CAMP_CHIP_DG_MAX }; }
+const CAMP_CHIP_DG_MAX=10;      // 던전 1~10 (HB_DUNGEONS 길이와 같다)
+const CAMP_CHIP_RND_MAX=99;     // 던전 하나 = 99라운드 (라운드가 생겼을 때만 쓰인다)
+// 칩 마크업 — 왼쪽 광원 띠 + 두 줄(이름 / 라벨·숫자·진행 막대)
+function curChipHTML(o){
+  const pct=Math.max(0, Math.min(100, (o.cur/o.max)*100));
+  return '<i class="cdRail"></i><span class="cdBody">'
+    +'<span class="cdNm">'+escHtml(o.name)+'</span>'
+    +'<span class="cdSub"><i class="cdLab">'+escHtml(o.lab)+'</i>'
+    +'<b class="cdN">'+o.cur+'</b><i class="cdDim">/'+o.max+'</i>'
+    +'<span class="cdBar"><i style="width:'+pct.toFixed(1)+'%"></i></span></span></span>'; }
+// 칩을 그리거나 걷는다. updateCurBar() 가 부른다 — 캠프가 수입마다 그걸 부르므로 따로 타이머를 두지 않는다.
+function curPaintChip(){ const e=document.getElementById('curTitle'); if(!e) return;
+  const o=campChipInfo();
+  if(!o){ if(e.classList.contains('asChip')){ e.classList.remove('asChip'); e.textContent=''; } return; }
+  e.classList.add('asChip'); e.innerHTML=curChipHTML(o); }
 function curShow(on){ const b=document.getElementById('curBar'), p=document.getElementById('phone');
   if(b) b.classList.toggle('hide', !on); if(p) p.classList.toggle('curOn', !!on); }
 // 💠 재화 표기 — 던전 보상 배수가 24^(dg-1)라 상위 던전에서는 자릿수가 폭주한다.
@@ -114,7 +145,8 @@ function updateCurBar(){ if(!PLAYER_META||!PLAYER_META.profile) return;
   set('curMin', fmtCur(_camp ? (_camp.credit||0) : profMineral()));
   set('curGas', fmtCur(_camp ? (_camp.energy||0) : profGas()));
   if(_camp) set('curPop', (_camp.sup||0) + '/' + (_camp.supCap||0));   // 🏕 인구 — 캠프에서만 보인다
-  set('curGem', fmtCur(profGem())); }
+  set('curGem', fmtCur(profGem()));
+  curPaintChip(); }   // 🏕 좌상단 던전 칩도 같은 박자로 갱신된다(캠프가 수입마다 이 함수를 부른다)
 // 🎬 화면 전환 크로스페이드 (2026-08-23)
 // ⚠ `.appScreen.hide` 는 `display:none` 이다. 나가는 화면에 .hide 를 바로 걸면 전환이 뚝 끊긴다 —
 //   var(--t-screen) 동안 남겨 두고 겹쳐 넘긴다.
