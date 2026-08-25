@@ -481,6 +481,10 @@
   #rooms .riNum{color:#78828e;font-weight:700;font-size:.96em;margin:0;flex:none}
   /* 방장 이름 = 셋 중 맨 아래 층. 공용 --fs-xs(9.5px)보다 반 단 더 내려 번호와 확실히 갈린다 */
   #rooms .riSub{font-size:9px}
+  /* 오른쪽도 같은 층 규칙을 따른다 — 인원이 제목보다 크면 목록에서 숫자가 먼저 읽힌다.
+     인원 15 → 13px(제목과 같은 층) · 상태 9.5 → 9px(방장과 같은 층). */
+  #rooms .riCnt{font-size:13px}
+  #rooms .riStat{font-size:9px}
   .rmBtns{display:flex;gap:9px;margin-top:14px;align-items:center}
   /* ⚠ 공용 .actBtn 의 좌우 여백(14px)을 그대로 두면 '파티 만들기'가 두 줄로 접힌다 — 여기선 조인다 */
   .rmBtns .actBtn{flex:1;min-width:0;height:46px;padding:0 6px;white-space:nowrap}
