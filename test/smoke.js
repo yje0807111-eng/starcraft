@@ -1252,6 +1252,67 @@ async function groupLobby(){
       return '캠프/던전 두 모습 · 진행 바 3px · 가림 없음 · 캐시 ok';
     } finally { C.dg=back.dg; C.cleared=back.cleared; campBarReset(); } });
 
+  // 🔁 환생 — HUNT_R1.md §4. 관문은 매번 같고, 배수는 로그 · 포인트는 제곱근 × 깊이.
+  await step('캠프 던전: 환생 — 관문 · 보상 · 되감기', async()=>{
+    skipIf(typeof campRebirth!=='function','환생 없음');
+    const C=campState();
+    const back=JSON.parse(JSON.stringify({dg:C.dg,cleared:C.cleared,earn:C.earn,earnGas:C.earnGas,
+      rebMul:C.rebMul,rbPts:C.rbPts,reb:C.reb,best:C.best,upg:C.upg,built:C.built}));
+    try{
+      // ① 관문 — 재화점수 100만. 모자라면 환생이 안 된다
+      C.dg=0; C.cleared=0; C.earn=0; C.earnGas=0; C.rebMul=0; C.rbPts=0; C.reb=0;
+      assert(!campCanRebirth(),'0 원인데 환생이 된다');
+      assert(campRebirth()===null,'관문을 못 넘었는데 환생이 실행됐다');
+      C.earn=CAMP_REB_COST-1; assert(!campCanRebirth(),'1 모자란데 환생이 된다');
+      C.earn=CAMP_REB_COST;   assert(campCanRebirth(),'딱 채웠는데 환생이 안 된다');
+      // ② 가스도 재화점수에 든다
+      C.earn=0; C.earnGas=CAMP_REB_COST/CAMP_GAS_RATE;
+      assert(campCanRebirth(),'가스만으로는 관문을 못 넘는다 — 가스가 안 세지나');
+      // ③ ⭐ 관문을 채운 그 순간 기준량이 정확히 1 — 관문과 포인트 기준선이 같은 숫자다
+      C.earn=CAMP_REB_COST; C.earnGas=0; C.dg=0; C.cleared=0;
+      assert(Math.abs(campRebPtGain()-1)<1e-9,'관문 충족 순간 포인트가 1 이 아님: '+campRebPtGain());
+      // ④ 재화를 100배 벌어야 포인트가 10배 — 제곱근이다
+      C.earn=CAMP_REB_COST*100;
+      assert(Math.abs(campRebPtGain()-10)<1e-9,'재화 100배에 포인트가 10배가 아님: '+campRebPtGain());
+      // ⑤ 깊이가 배수를 건다 — 던전 ×1.35 · 라운드 ×1.012
+      C.earn=CAMP_REB_COST; C.dg=3; C.cleared=0;
+      assert(Math.abs(campRebPtGain()-Math.pow(1.35,2))<1e-9,'던전 깊이 배수가 틀림: '+campRebPtGain());
+      C.dg=1; C.cleared=10;
+      assert(Math.abs(campRebPtGain()-Math.pow(1.012,10))<1e-9,'라운드 깊이 배수가 틀림: '+campRebPtGain());
+      // ⑥ 배수는 로그 — 난이도가 1만 배 올라도 +3.2 만 붙는다
+      C.dg=0; C.cleared=0;
+      assert(Math.abs(campRebMulGain()-0.2)<1e-9,'캠프에서 배수 하한(0.2)이 아님: '+campRebMulGain());
+      { const a=campRebMulGain(); C.dg=5; C.cleared=0; const b=campRebMulGain();
+        const d=Math.log10(campFoeDiff(5,0));
+        assert(Math.abs(b-0.8*d)<1e-9,'배수가 0.8×log10(난이도)가 아님: '+b);
+        assert(b>a && b<20,'배수가 로그답지 않다: '+b); }
+      // ⑦ 실행 — 배수·포인트는 **더해지고**, 그 밖은 되감긴다
+      C.dg=3; C.cleared=20; C.earn=CAMP_REB_COST*4; C.earnGas=0;
+      C.rebMul=1.5; C.rbPts=100; C.upg={tap:5}; C.built={x:1}; C.best={1:50};
+      if(typeof G!=='undefined' && G.tech){ G.tech.built=Object.assign({},G.tech.built,{x:1});
+        G.tech.credit=12345; }
+      const wantMul=campRebMulGain(), wantPt=campRebPtGain();
+      const got=campRebirth();
+      assert(got,'관문을 넘었는데 환생이 안 됨');
+      const C2=campState();
+      assert(C2, '환생 뒤 상태가 없다');
+      assert(Math.abs(C2.rebMul-(1.5+wantMul))<1e-9,'배수가 합산이 아님: '+C2.rebMul);
+      assert(Math.abs(C2.rbPts-(100+wantPt))<1e-9,'포인트가 합산이 아님: '+C2.rbPts);
+      assert(C2.dg===0 && C2.cleared===0,'환생 뒤 캠프로 안 돌아감: '+C2.dg);
+      assert(C2.earn===0 && C2.earnGas===0,'번 돈이 안 되감김');
+      assert(!Object.keys(C2.upg).length,'캠프 업그레이드가 안 되감김: '+JSON.stringify(C2.upg));
+      assert(!C2.built.x,'지어 둔 건물이 안 되감김: '+JSON.stringify(C2.built));
+      assert(!(typeof G!=='undefined' && G.tech && G.tech.built && G.tech.built.x),
+        '살아 있는 판이 안 되감김 — campWipeBoard 가 빠졌나');
+      assert(C2.best && C2.best[1]===50,'최고 기록이 지워졌다 — 그건 남아야 한다: '+JSON.stringify(C2.best));
+      assert(C2.reb===1,'회차가 안 올라감: '+C2.reb);
+      // ⑧ 환생 배수가 실제 수급에 걸린다(터치·일꾼 양쪽)
+      { C2.upg={}; C2.rebMul=0; const t0=campTapGain(), g0=campGatherMul();
+        C2.rebMul=1; const t1=campTapGain(), g1=campGatherMul();
+        assert(t1>t0 && Math.abs(g1/g0-2)<1e-9,'환생 배수가 수급에 안 걸린다: 탭 '+t0+'→'+t1+' 일꾼 ×'+(g1/g0).toFixed(2)); }
+      return '관문 '+(CAMP_REB_COST/1e4)+'만 · 배수 로그 · 포인트 √×깊이 · 되감기 ok';
+    } finally { const F=campState(); if(F) Object.assign(F, back); campSave(); } });
+
   await step('캠프: 터치 채집 · 비용 조회 · 자리 비움 정산', async()=>{
     skipIf(typeof campTapAt!=='function','캠프 채집 없음');
     const C=campState(); C.race='terran'; C.ents=[]; C.minerals=[]; C.upg={}; C.rate=0; C.leftAt=0;

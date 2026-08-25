@@ -83,6 +83,81 @@ function campFail(){ const C = campState(); if(!C) return 0;
 
 function campBest(dg){ const C = campState(); return (C && C.best && C.best[dg | 0]) | 0; }
 
+// ══ 🔁 환생 (2026-08-25 · 5단계) ═══════════════════════════════════════
+//   설계 단일 소스: HUNT_R1.md §4. 요지 셋 —
+//   ① 조건은 **매번 같다**: 그 회차 재화점수 100만. 회차가 늘어도 안 오른다.
+//      고정이라 후반에는 금방 채워진다 → 「특정 시점부터 자유롭게」가 저절로 이루어진다.
+//   ② 배수는 **로그**(폭주 방지) · 포인트는 **제곱근 × 깊이**(트리 비용이 지수라 같이 자라야 한다)
+//   ③ 기준선 100만과 포인트 공식의 기준선은 **같은 숫자**다 — 그래서 조건을 채운 그 순간
+//      기준량이 정확히 1 이고, 「지금 환생할까 더 벌고 환생할까」가 이 한 숫자에서 나온다.
+//
+//   ⚠ 통신소 스캔은 아직 입구로 안 붙였다(§4 의 화면 쪽). 지금 조건은 재화점수 하나다 —
+//      통신소는 유니온 테크에만 있어 다른 종족이 통째로 막힌다. UI 를 붙일 때 함께 푼다.
+const CAMP_REB_COST = 1e6;        // 환생 관문 = 포인트 공식의 기준선과 같은 숫자
+const CAMP_GAS_RATE = 8;          // 재화점수에서 가스 1 = 미네랄 몇인가
+const CAMP_REB_K = 0.8, CAMP_REB_MIN = 0.2;      // 배수 = max(MIN, K × log10(난이도))
+const CAMP_RP_DG = 1.35, CAMP_RP_RD = 1.012;     // 포인트 깊이 배수 — 던전 · 라운드
+
+// 그 회차에 번 것 — 미네랄과 가스를 하나로 본다
+function campWealth(){ const C = campState(); if(!C) return 0;
+  return (C.earn || 0) + (C.earnGas || 0) * CAMP_GAS_RATE; }
+function campCanRebirth(){ return campWealth() >= CAMP_REB_COST; }
+
+// ① 획득 배수 — 기존 배수에 **더한다**(곱이 아니다). 로그라 난이도가 1만 배 올라도 +3.2 만 붙는다.
+function campRebMulGain(){
+  return Math.max(CAMP_REB_MIN, CAMP_REB_K * Math.log10(Math.max(1, campFoeDiff(campDgN(), campCleared())))); }
+// ② 획득 포인트 — 기준량(번 재화) × 깊이 배수. 재화를 2배 벌어야 1.41배다.
+function campRebPtGain(){
+  const base = Math.sqrt(campWealth() / CAMP_REB_COST);
+  return base * Math.pow(CAMP_RP_DG, Math.max(0, campDgN() - 1)) * Math.pow(CAMP_RP_RD, campCleared()); }
+// 지금 환생 배수 — 터치와 일꾼 양쪽에 걸린다(campMineMul 과 같은 자리)
+function campRebMul(){ const C = campState(); return 1 + ((C && C.rebMul) || 0); }
+
+// 환생 실행. 남는 것: 종족 · 최고 기록 · 배수 · 포인트 · 트리.  그 밖은 전부 되감는다.
+function campRebirth(){
+  const C = campState(); if(!C || !campCanRebirth()) return null;
+  const got = { mul: campRebMulGain(), pts: campRebPtGain(), dg: campDgN(), cleared: campCleared() };
+  C.rebMul = (C.rebMul || 0) + got.mul;          // ⚠ 합이다 — 곱으로 두면 지수 축이 둘이 된다
+  C.rbPts  = (C.rbPts  || 0) + got.pts;
+  C.reb    = (C.reb | 0) + 1;
+  // ── 되감기 ──
+  C.dg = 0; C.cleared = 0;
+  C.earn = 0; C.earnGas = 0;
+  C.credit = 0; C.energy = 0;
+  C.built = {}; C.addon = {}; C.units = {}; C.research = {};
+  C.sup = 0; C.supCap = 0; C.eseq = 1; C.ents = []; C.minerals = [];
+  C.upg = {};                                     // 캠프 업그레이드(탭·채취)도 한 회차짜리다
+  C.rate = 0; C.leftAt = 0; C.tapped = 0;
+  // ⛔ C.best · C.rebMul · C.rbPts · C.rbTree 는 지우지 않는다 — 그게 환생의 값이다
+  //    ⚠ 다만 아래 campWipeBoard() 가 판을 새로 깔면서 **저장을 다시 읽을 수 있다** —
+  //       그러면 방금 올린 값이 통째로 옛 저장으로 되돌아간다(스모크가 잡았다).
+  //       그래서 남길 것을 손에 쥐고 있다가 비운 뒤 다시 얹는다.
+  const keep = { race:C.race, best:C.best, rebMul:C.rebMul, rbPts:C.rbPts, reb:C.reb, rbTree:C.rbTree };
+  campBattleClose(); campBarReset();
+  // ⛔ **살아 있는 판(G.tech)도 같이 비운다.** campSave() 는 G.tech 를 C 로 복사하므로,
+  //    저장 상태만 되감고 저장하면 **방금 지운 것이 그대로 되살아난다**(스모크가 잡았다).
+  campWipeBoard();
+  { const C2 = campState();          // 판을 다시 깔면서 저장을 읽었을 수 있다 — 남길 것을 다시 얹는다
+    if(C2){ C2.race = keep.race; C2.best = keep.best; C2.rebMul = keep.rebMul;
+      C2.rbPts = keep.rbPts; C2.reb = keep.reb; if(keep.rbTree) C2.rbTree = keep.rbTree;
+      C2.dg = 0; C2.cleared = 0; C2.earn = 0; C2.earnGas = 0; C2.upg = {}; } }
+  campSave();
+  return got; }
+
+// 살아 있는 건설 판을 새 판으로 되돌린다. 화면이 떠 있으면 다시 깔고, 아니면 비우기만 한다.
+function campWipeBoard(){
+  const C = campState(); if(!C || typeof G === 'undefined' || !G.tech) return false;
+  if(typeof techUIInit === 'function' && C.race){
+    techUIInit(campTechRace(C.race));               // 본부·일꾼만 있는 새 판
+    G.tech.inf = false; G.tech.nocool = false;      // 관리자 치트는 꺼진 채로
+    if(_campOn){ campLayBase(); campLayMinerals(); campLayGas(); campAutoGather(); }
+    if(typeof techUIRender === 'function') techUIRender();
+    return true; }
+  const T = G.tech;                                  // 종족이 없으면(테스트 등) 비우기만
+  T.credit = 0; T.energy = 0; T.built = {}; T.addon = {}; T.units = {}; T.research = {};
+  T.sup = 0; T.supCap = 0; T.ents = []; T.minerals = [];
+  return false; }
+
 // ══ ⚔ 던전 전투 (2026-08-25 · 2단계) ═══════════════════════════════════
 //   ⭐ **전투를 새로 짜지 않는다 — 오토배틀(18-strike.js)의 것을 빌린다.**
 //      유닛 스탯·상성·스킬·표적 선정·회피가 거기 다 있다. 새로 짜면 두 벌이 되어 언젠가 갈라진다.
@@ -249,6 +324,10 @@ function campState(){
   //    ⛔ 그냥 두면 옛 저장이 곧장 던전 1(적이 나오는 곳)에 서 있게 된다.
   if((p.camp.ver | 0) < 2){ p.camp.dg = Math.max(0, (p.camp.dg | 0) - 1); p.camp.ver = CAMP_VER; }
   if(typeof p.camp.cleared !== 'number') p.camp.cleared = 0;
+  if(typeof p.camp.earn !== 'number') p.camp.earn = 0;         // 🔁 그 회차 누적 미네랄(환생 관문·포인트 기준)
+  if(typeof p.camp.earnGas !== 'number') p.camp.earnGas = 0;
+  if(typeof p.camp.rebMul !== 'number') p.camp.rebMul = 0;     // 환생 배수 — 합산 누적
+  if(typeof p.camp.rbPts !== 'number') p.camp.rbPts = 0;       // 환생 포인트 — 트리에 쓴다(6단계)
   if(!p.camp.best || typeof p.camp.best !== 'object') p.camp.best = {};
   return p.camp;
 }
@@ -748,12 +827,12 @@ function campUpgCost(k){
 function campTapGain(){
   const C = campState(); if(!C) return CAMP_TAP_BASE;
   // ⭐ 던전 배수는 **탭과 일꾼 양쪽에 똑같이** 걸린다(한쪽만 올리면 두 수입의 비율이 무너진다)
-  return Math.max(1, Math.round(CAMP_TAP_BASE * Math.pow(CAMP_GROW, campUpgLv('tap')) * campMineMul()));
+  return Math.max(1, Math.round(CAMP_TAP_BASE * Math.pow(CAMP_GROW, campUpgLv('tap')) * campMineMul() * campRebMul()));
 }
 // 일꾼 채취 배수 — 일꾼 **수**로는 못 올린다(실측: 12기 26.8/초에서 천장. 300기도 26.8).
 //   광맥 6덩이가 한 번에 한 명씩만 캐서 나머지는 줄을 선다. 그래서 **1회 채취량**을 올린다.
 function campGatherMul(){ const C = campState(); if(!C) return 1;
-  return Math.pow(CAMP_GROW, campUpgLv('gather')) * campMineMul(); }
+  return Math.pow(CAMP_GROW, campUpgLv('gather')) * campMineMul() * campRebMul(); }
 // 눌린 곳이 광맥인가 — 맞으면 캐고 true
 function campTapAt(clientX, clientY){
   if(!_campOn || typeof G === 'undefined' || !G.tech) return false;
@@ -846,6 +925,10 @@ function campApplyGatherMul(){
     const m = campGatherMul();
     if(delta > 0 && m > 1) G.tech.credit = cur + Math.round(delta * (m - 1));
   } else if(delta < 0){ _campTapAcc = 0; }          // 건물을 샀다 = 지출. 누적을 흘려보낸다
+  // 🔁 환생 기준이 되는 **번 돈**을 여기서 센다 — 배수를 다 먹인 뒤의 실제 증가분이다.
+  //    ⛔ 지출은 빼지 않는다. '얼마나 벌었나'가 기준이지 '지금 얼마 있나'가 아니다.
+  { const gained = (G.tech.credit || 0) - _campLastCr;
+    if(gained > 0){ const C = campState(); if(C) C.earn = (C.earn || 0) + gained; } }
   _campLastCr = G.tech.credit || 0;
 }
 // ── 캠프 전용 프레임 루프 ────────────────────────────────────────────────
